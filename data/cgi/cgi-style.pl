@@ -1,10 +1,11 @@
-# $Id: cgi-style.pl,v 1.6 1996-10-06 03:49:03 jfieber Exp $
+# $Id: cgi-style.pl,v 1.7 1996-10-26 17:32:43 jfieber Exp $
 #
 # Perl routines to encapsulate various elements of HTML page style.
 
 # For future reference, when is now?
 ($se,$mn,$hr,$md,$mo,$yr,$wd,$yd,$dst) = localtime(time);
 $yr += 1900;
+$mo += 1;
 $timestamp = "$mo-$md-$yr";
 
 # Colors for the body
