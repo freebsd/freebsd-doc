@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.33 2002/12/07 06:39:31 marcus Exp $ -->
+<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.34 2003/02/07 17:53:24 marcus Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
 		xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -9,7 +9,7 @@
   <xsl:import href="includes.xsl"/>
 
   <xsl:variable name="base" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.33 2002/12/07 06:39:31 marcus Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.34 2003/02/07 17:53:24 marcus Exp $'"/>
   <xsl:variable name="title" select="'FreeBSD GNOME Project'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -109,7 +109,7 @@
 
               <p>The GNOME project has expanded its objectives over the past few
                 months to include addressing a number of problems in the existing
-                Unix infrastructure.</p>
+                <xsl:value-of select="$unix"/> infrastructure.</p>
 
               <p>The GNOME project acts as an umbrella.  The major components of
                 GNOME are:</p>
