@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/gnome/images/Makefile,v 1.4 2002/05/26 00:48:42 marcus Exp $
+# $FreeBSD: www/en/gnome/images/Makefile,v 1.5 2002/07/04 08:35:08 marcus Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -7,12 +7,22 @@
 .include "../Makefile.inc"
 .endif
 
+# For screenshots, please create 320x240 thumbnails of the images, and name
+# them <imagename>-tn.png.  This will minimize the load time for the index
+# page.  You can use the convert tool included with ImageMagick to do this:
+#
+# convert -geometry 320x240\! <imagename>.png <imagename>-tn.png
+
 DATA=	ss1.png
+DATA+=	ss1-tn.png
 DATA+=	ss2.png
+DATA+=	ss2-tn.png
 DATA+=	ss3.png
-DATA+=  ss4.png
+DATA+=	ss3-tn.png
 DATA+=  ss5.png
+DATA+=	ss5-tn.png
 DATA+=  ss6.png
+DATA+=	ss6-tn.png
 DATA+=	gnome.png
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
