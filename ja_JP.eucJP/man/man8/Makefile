@@ -25,6 +25,7 @@ MAN8 =	IPXrouted.8\
 	bootptest.8\
 	btxld.8\
 	burncd.8\
+	bsdlabel.8\
 	camcontrol.8\
 	ccdconfig.8\
 	chat.8\
@@ -43,7 +44,6 @@ MAN8 =	IPXrouted.8\
 	dev_mkdb.8\
 	dhclient-script.8\
 	dhclient.8\
-	disklabel.8\
 	diskless.8\
 	dmesg.8\
 	dump.8\
