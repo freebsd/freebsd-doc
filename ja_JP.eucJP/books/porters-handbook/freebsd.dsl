@@ -3,7 +3,7 @@
      The FreeBSD Japanese Documentation Project
 
      Original revision: 1.2
-     $FreeBSD: doc/ja_JP.eucJP/books/porters-handbook/freebsd.dsl,v 1.2 2000/07/16 17:51:49 hrs Exp $
+     $FreeBSD$
 -->
 
 <!-- Local DSSSL file for the Porter's Handbook.  This is so we can include
@@ -21,29 +21,17 @@
       <![ %output.html; [ 
 	(define ($email-footer$)
           (make sequence
-            (literal "FreeBSD ports システムに関する質問は <")
+            (literal "FreeBSD ports システムに関する質問は、(英語で) <")
             (make element gi: "a"
                   attributes: (list (list "href" "mailto:ports@freebsd.org"))
               (literal "ports@freebsd.org"))
-            (literal "> へ(英語で),")
+            (literal "> へ、")
             (make empty-element gi: "br")
-            (literal "FreeBSD ports に関する日本語での議論は <")
-              (make element gi: "a"
-                    attributes: (list (list "href" "mailto:ports-jp@jp.FreeBSD.org"))
-               (literal "ports-jp@jp.FreeBSD.org"))
-              (literal "> へお願いします.")
-            (make empty-element gi: "br")
-            (literal "この文書の原文に関するお問い合わせは <")
+            (literal "この文書の原文に関するお問い合わせは、(英語で) <")
               (make element gi: "a"
                     attributes: (list (list "href" "mailto:doc@freebsd.org"))
                (literal "doc@freebsd.org"))
-	    (literal "> へ(英語で),")
-            (make empty-element gi: "br")
-            (literal "日本語訳に関するお問い合わせは <")
-              (make element gi: "a"
-                    attributes: (list (list "href" "mailto:doc-jp@jp.FreeBSD.org"))
-                (literal "doc-jp@jp.FreeBSD.org"))
-	      (literal "> へお願いします.")))
+	    (literal "> までお願いします。")))
 
 	<!-- Convert " ... " to `` ... '' in the HTML output. -->
 	(element quote
