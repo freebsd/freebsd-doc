@@ -205,6 +205,7 @@ MLINKS+=sigsetmask.2 sigmask.2
 MLINKS+=stat.2 fstat.2 stat.2 lstat.2
 MLINKS+=statfs.2 fstatfs.2
 MLINKS+=syscall.2 __syscall.2
+MLINKS+=swapon.2 swapoff.2
 MLINKS+=truncate.2 ftruncate.2
 MLINKS+=utimes.2 futimes.2 utimes.2 lutimes.2
 MLINKS+=wait.2 wait3.2 wait.2 wait4.2 wait.2 waitpid.2
