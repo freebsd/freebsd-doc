@@ -1,5 +1,5 @@
 # 
-# $FreeBSD: doc/ja_JP.eucJP/books/handbook/Makefile,v 1.48 2001/06/21 03:38:31 chris Exp $
+# $FreeBSD: doc/ja_JP.eucJP/books/handbook/Makefile,v 1.49 2001/07/18 19:29:08 hrs Exp $
 #
 # Build the FreeBSD Handbook (Japanese).
 #
@@ -69,12 +69,10 @@ SRCS+= x11/chapter.sgml
 SRCS+= ports/chapter.sgml
 
 # Entities
-SRCS+= authors.ent 
 SRCS+= chapters.ent 
 
 # Japanese only
 SRCS+=	jcontrib/chapter.sgml
-SRCS+=	jauthors.ent
 
 SYMLINKS=	${DESTDIR} index.html handbook.html
 
