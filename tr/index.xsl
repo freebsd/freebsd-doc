@@ -4,7 +4,7 @@
      Original revision: 1.77
 -->
 
-<!-- $FreeBSD$ -->
+<!-- $FreeBSD: www/tr/index.xsl,v 1.1 2003/12/01 21:26:21 blackend Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -13,7 +13,7 @@
 
   <xsl:variable name="base" select="'.'"/>
   <xsl:variable name="enbase" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD$'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/tr/index.xsl,v 1.1 2003/12/01 21:26:21 blackend Exp $'"/>
   <xsl:variable name="title" select="'FreeBSD Projesi'"/>
 
   <xsl:output type="html" encoding="iso-8859-9"
@@ -359,7 +359,7 @@
 		<i>Ücretsizdir</i></font></h2>
 
 	      <a href="{$enbase}/copyright/daemon.html"><img
-		src="{$enbase}gifs/dae_up3.gif" alt="" height="81"
+		src="{$enbase}/gifs/dae_up3.gif" alt="" height="81"
 		width="72" align="right" border="0"/></a>
 
 	      <p>Bu özelliklere sahip bir iþletim sisteminin
