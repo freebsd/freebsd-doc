@@ -97,6 +97,13 @@
 #       GREYSCALE_IMAGES Convert the screenshots to greyscale before
 #                        embedding them into the PostScript output.
 #
+# Package building options:
+# 
+#       BZIP2_PACKAGE  Use bzip2(1) utility to compress package tarball
+#                      instead of gzip(1).  It results packages to have
+#                      suffix .tbz instead of .tgz.  Using bzip2(1)
+#                      provides better compression, but requires longer
+#                      time and utilizes more CPU resources than gzip(1).
 
 #
 # Documents should use the += format to access these.
@@ -893,11 +900,17 @@ packagelist:
 # target depends on the corresponding install target running.
 #
 
+.if defined(BZIP2_PACKAGE)
+PKG_SUFFIX=	tbz
+.else
+PKG_SUFFIX=	tgz
+.endif
+
 PKGDOCPFX!= realpath ${DOC_PREFIX}
 
 .for _curformat in ${KNOWN_FORMATS}
 
-${PACKAGES}/${.CURDIR:T}.${LANGCODE}.${_curformat}.tgz:
+${PACKAGES}/${.CURDIR:T}.${LANGCODE}.${_curformat}.${PKG_SUFFIX}:
 	${MKDIR} -p ${.OBJDIR}/pkg; \
 	(cd ${.CURDIR} && \
 		${MAKE} FORMATS=${_curformat} DOCDIR=${.OBJDIR}/pkg install); \
@@ -910,7 +923,7 @@ ${PACKAGES}/${.CURDIR:T}.${LANGCODE}.${_curformat}.tgz:
 			(${RM} -fr ${.TARGET} PLIST.${_curformat} && false); \
 	${RM} -rf ${.OBJDIR}/pkg
 
-package-${_curformat}: ${PACKAGES}/${.CURDIR:T}.${LANGCODE}.${_curformat}.tgz
+package-${_curformat}: ${PACKAGES}/${.CURDIR:T}.${LANGCODE}.${_curformat}.${PKG_SUFFIX}
 .endfor
 
 .if ${LOCAL_CSS_SHEET} != ${CSS_SHEET}
