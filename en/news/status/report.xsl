@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/en/news/status/report.xsl,v 1.4 2001/09/18 17:46:58 chris Exp $ -->
+<!-- $FreeBSD: www/en/news/status/report.xsl,v 1.5 2001/12/22 00:14:46 chris Exp $ -->
 
 <!-- Standard header material -->
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
@@ -111,7 +111,7 @@
     <p>
       <xsl:for-each select="url">
 	URL:
-	  <a href="{@href}">     <!-- Copy in the href attribute -->
+	  <a href="{@href}" title="{.}">     <!-- Copy in the href attribute -->
 	    <xsl:value-of select="@href"/>
 	  </a>
 	<xsl:if test="position() != last()"><br/></xsl:if>
