@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp 
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.51 2001-09-02 15:33:10 wosch Exp $
+# $Id: man.cgi,v 1.52 2001-09-02 16:17:08 wosch Exp $
 
 #use Data::Dumper;
 #use Carp;
@@ -802,6 +802,8 @@ sub encode_data {
     # Now convert our magic chars into our tag markers
     #s/\375/\&/g; s/\376/</g; s/\377/>/g;
 
+    s,.\010,,g;
+
     $_;
 }
 
@@ -907,7 +909,7 @@ ETX
 }
 
 sub copyright {
-    $id = '$Id: man.cgi,v 1.51 2001-09-02 15:33:10 wosch Exp $';
+    $id = '$Id: man.cgi,v 1.52 2001-09-02 16:17:08 wosch Exp $';
 
     return qq{\
 <PRE>
