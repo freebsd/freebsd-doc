@@ -131,17 +131,19 @@ REALPATH?=	/bin/realpath
 # Use suffix rules to convert .scr files to other formats
 .SUFFIXES:	.scr .pic .png .eps .txt
 
-# The .txt files are built on the fly with .png files.
-# The .txt files need to have any trailing spaces trimmed from
-# each line, which is why the output from ${SCR2TXT} is run
-# through ${SED}
 .scr.png:
 	${SCR2PNG} ${SCR2PNGOPTS} < ${.IMPSRC} > ${.TARGET}
-	${SCR2TXT} ${SCR2TXTOPTS} < ${.IMPSRC} | ${SED} -E -e 's/ +$$//' > ${.TARGET:S/.png$/.txt/}
+
 .scr.eps:
 	${SCR2PNG} ${SCR2PNGOPTS} < ${.ALLSRC} | \
 		${PNGTOPNM} ${PNGTOPNMOPTS} | \
 		${PNMTOPS} ${PNMTOPSOPTS} > ${.TARGET}
+
+# The .txt files need to have any trailing spaces trimmed from
+# each line, which is why the output from ${SCR2TXT} is run
+# through ${SED}
+.scr.txt:
+	${SCR2TXT} ${SCR2TXTOPTS} < ${.IMPSRC} | ${SED} -E -e 's/ +$$//' > ${.TARGET}
 
 # Some versions of ghostscript (7.04) have problems with the use of
 # relative path when the arguments are passed by peps; realpath will
