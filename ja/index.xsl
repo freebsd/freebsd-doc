@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
 
-<!-- $FreeBSD: www/ja/index.xsl,v 1.26 2003/06/10 20:45:06 hrs Exp $ -->
-<!-- Original revision: 1.66 -->
+<!-- $FreeBSD: www/ja/index.xsl,v 1.27 2003/07/07 21:10:41 hrs Exp $ -->
+<!-- Original revision: 1.68 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   
@@ -10,7 +10,7 @@
 
   <xsl:variable name="base" select="'.'"/>
   <xsl:variable name="enbase" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/ja/index.xsl,v 1.26 2003/06/10 20:45:06 hrs Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/ja/index.xsl,v 1.27 2003/07/07 21:10:41 hrs Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <xsl:output type="html" encoding="EUC-JP"
@@ -26,6 +26,8 @@
 	<meta name="keywords" content="FreeBSD, BSD, UNIX, Support, Gallery,
 	      Release, Application, Software, Handbook, FAQ, Tutorials, Bugs, 
 	      CVS, CVSup, News, Commercial Vendors, homepage, CTM, Unix"/>
+	<link rel="shortcut icon" href="/favicon.ico" type="image/x-icon"/>
+	<link rel="icon" href="/favicon.ico" type="image/x-icon"/>
       </head>
   
       <body bgcolor="#FFFFFF" text="#000000" link="#0000FF" vlink="#840084"
@@ -93,6 +95,7 @@
 		  <option value="http://www1.de.FreeBSD.org/">ドイツ/2</option>
 		  <option value="http://www2.de.FreeBSD.org/">ドイツ/3</option>
 		  <option value="http://www.gr.FreeBSD.org/">ギリシア</option>
+		  <option value="http://www.FreeBSD.gr/">ギリシア/1</option>
 		  <option value="http://www.hk.FreeBSD.org/">香港</option>
 		  <option value="http://www.hu.FreeBSD.org/">ハンガリー/1</option>
 		  <option value="http://www2.hu.FreeBSD.org/">ハンガリー/2</option>
