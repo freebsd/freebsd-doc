@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
 <!-- $FreeBSD$
-     $FreeBSDde: de-www/news/oldnewsflash.xsl,v 1.3 2003/09/23 22:38:11 mheinen Exp $
+     $FreeBSDde: de-www/news/oldnewsflash.xsl,v 1.4 2003/10/21 22:12:13 mheinen Exp $
      basiert auf: 1.5 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
@@ -77,9 +77,10 @@
 	  </xsl:attribute>
 	</a>
 
-	<b><xsl:value-of select="ancestor::day/name"/>
+	<b><xsl:value-of select="ancestor::day/name"/>.
 	  <xsl:text> </xsl:text>
-	  <xsl:value-of select="ancestor::month/name"/>,
+	  <xsl:value-of select="ancestor::month/name"/>
+	  <xsl:text> </xsl:text>
 	  <xsl:value-of select="ancestor::year/name"/>:</b><xsl:text> </xsl:text>
 	<xsl:apply-templates select="p"/>
 	</p>

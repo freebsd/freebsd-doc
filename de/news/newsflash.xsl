@@ -2,7 +2,7 @@
 
 <!--
      $FreeBSD$
-     $FreeBSDde: de-www/news/newsflash.xsl,v 1.7 2003/09/23 22:38:11 mheinen Exp $
+     $FreeBSDde: de-www/news/newsflash.xsl,v 1.8 2003/10/21 22:12:13 mheinen Exp $
      basiert auf: 1.9
 -->
 
@@ -108,9 +108,10 @@
 	  </xsl:attribute>
 	</a>
 
-	<b><xsl:value-of select="ancestor::day/name"/>
+	<b><xsl:value-of select="ancestor::day/name"/>.
 	  <xsl:text> </xsl:text>
-	  <xsl:value-of select="ancestor::month/name"/>,
+	  <xsl:value-of select="ancestor::month/name"/>
+	  <xsl:text> </xsl:text>
 	  <xsl:value-of select="ancestor::year/name"/>:</b><xsl:text> </xsl:text>
 	<xsl:apply-templates select="p"/>
 	</p>
