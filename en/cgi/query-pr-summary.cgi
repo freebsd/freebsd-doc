@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: query-pr-summary.cgi,v 1.11 1997-02-02 22:07:01 pst Exp $
+# $Id: query-pr-summary.cgi,v 1.12 1997-02-03 18:20:27 peter Exp $
 
 $html_mode     = 1 if $ENV{'DOCUMENT_ROOT'};
 $self_ref      = $ENV{'SCRIPT_NAME'};
@@ -7,7 +7,7 @@ $self_ref      = $ENV{'SCRIPT_NAME'};
 
 $ENV{'PATH'}   = '/bin:/usr/bin:/usr/sbin:/sbin:/usr/local/bin';
 
-$project       = "FreeBSD"
+$project       = "FreeBSD";
 $mail_prefix   = "freebsd-";
 $mail_unass    = "freebsd-bugs";
 
