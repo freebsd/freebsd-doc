@@ -1,4 +1,4 @@
-# $FreeBSD: www/ja/Makefile,v 1.45 2000/12/28 06:59:10 hrs Exp $
+# $FreeBSD: www/ja/Makefile,v 1.46 2000/12/30 14:25:12 hrs Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.58
 
@@ -44,7 +44,7 @@ SUBDIR+= internal
 SUBDIR+= java
 SUBDIR+= copyright
 SUBDIR+= search
-SUBDIR+= gallery
+#SUBDIR+= gallery
 SUBDIR+= projects
 SUBDIR+= platforms
 SUBDIR+= releases
