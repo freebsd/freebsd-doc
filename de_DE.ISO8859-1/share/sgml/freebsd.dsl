@@ -1,11 +1,15 @@
 <!--
 	$FreeBSD$
-	$FreeBSDde: de-docproj/share/sgml/freebsd.dsl,v 1.11 2003/01/24 23:02:49 mheinen Exp $
-	basiert auf: 1.17
+	$FreeBSDde: de-docproj/share/sgml/freebsd.dsl,v 1.12 2003/04/23 22:35:56 mheinen Exp $
+	basiert auf: 1.18
 -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
 <!ENTITY freebsd.dsl PUBLIC "-//FreeBSD//DOCUMENT DocBook Language Neutral Stylesheet//EN" CDATA DSSSL>
+
+<!ENTITY % freebsd.l10n PUBLIC "-//FreeBSD//ENTITIES DocBook Language Specific Entities//EN">
+%freebsd.l10n;
+
 <!ENTITY % output.html  "IGNORE"> 
 <!ENTITY % output.print "IGNORE">
 ]>
