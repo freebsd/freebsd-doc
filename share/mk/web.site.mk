@@ -1,5 +1,5 @@
 # bsd.web.mk
-# $FreeBSD: www/en/web.mk,v 1.30 2000/04/29 07:50:27 kuriyama Exp $
+# $FreeBSD: www/en/web.mk,v 1.31 2000/09/30 00:21:38 nbm Exp $
 
 #
 # Build and install a web site.
@@ -74,7 +74,11 @@ GENDOCS+=	${REVFILES}
 # things to install.
 
 .SUFFIXES:	.html
+.if !defined(OPENJADE)
 SGMLNORM=	sgmlnorm
+.else
+SGMLNORM=	osgmlnorm
+.endif
 PREFIX?=	/usr/local
 CATALOG?=	${PREFIX}/share/sgml/html/catalog
 SGMLNORMFLAGS=	-d ${SGMLNORMOPTS} -c ${CATALOG} -D ${.CURDIR}
