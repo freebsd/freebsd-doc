@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.29 1999-03-10 18:04:59 motoyuki Exp $
+# $Id: Makefile,v 1.30 1999-04-09 14:17:59 kuriyama Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.48
 
@@ -67,7 +67,6 @@ DOCSUBDIR=     FAQ handbook
 # Subdirectories that have linuxdoc docs and makefiles that use
 # <bsd.sgml.mk>.
 
-FORMATS?=	"html roff"
 SGMLOPTS=	-links -hdr ${.CURDIR}/doc.hdr -ftr ${.CURDIR}/doc.ftr -e EUC-JP
 
 
