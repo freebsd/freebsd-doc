@@ -1,4 +1,11 @@
-# $FreeBSD: www/zh/Makefile,v 1.3 1999/12/17 14:16:56 phantom Exp $
+# $FreeBSD: www/zh/Makefile,v 1.4 2000/02/28 12:51:21 phantom Exp $
+
+.if exists(../Makefile.conf)
+.include "../Makefile.conf"
+.endif
+.if exists(../Makefile.inc)
+.include "../Makefile.inc"
+.endif
 
 .if !defined(WEB_ONLY) || empty(WEB_ONLY)
 DOCSUBDIR=	FAQ
@@ -10,5 +17,4 @@ FORMATS= "html ps"
 
 WEBBASE=	/data/zh
 
-.include "../web.mk"
-
+.include "${WEB_PREFIX}/share/mk/web.site.mk"
