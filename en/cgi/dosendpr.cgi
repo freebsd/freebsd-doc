@@ -8,16 +8,21 @@
 #  GNU General Public License Version 2.  
 #     (http://www.gnu.ai.mit.edu/copyleft/gpl.html)
 #
-# $FreeBSD: www/en/cgi/dosendpr.cgi,v 1.12 2003/05/15 12:08:05 ceri Exp $
+# $FreeBSD: www/en/cgi/dosendpr.cgi,v 1.13 2003/09/04 15:16:15 ceri Exp $
 
 require "html.pl";
 
 use Socket;
+use DB_File;
+use Fcntl qw(:DEFAULT :flock);
 
 my $blackhole = "dnsbl.njabl.org";
 my $openproxyip = "127.0.0.9";
 my $blackhole_err = 0;
 my $openproxy;
+
+my $expiretime = 900;
+$dbpath = "/tmp/sendpr-code.db";
 
 # Environment variables to stuff in the PR header.
 my @ENV_captures = qw/	REMOTE_HOST
@@ -102,20 +107,51 @@ if (!$submitprog) { &prerror("submit program problem"); }
 &html_body ($gnsprepbody);
 
 # Verify the data ...
-if (!$cgi_data{'email'} || !$cgi_data{'originator'} ||
-    !$cgi_data{'synopsis'}) {
-    if ($gnsprepbad && -e $gnsprepbad )
-      { print `cat $gnsprepbad`; }
-    else {
-	print "<h1>Bad Data</h1>\nYou need to specify at least your ",
-          "electronic mail address, your name and a synopsis of the ",
-          "of the problem.\n  Please return to the form and add the ",
-          "missing information.  Thank you.\n";
-    }
-    &html_end();
 
-    exit(1);
+$db_obj = tie(%db_hash, 'DB_File', $dbpath, O_CREAT|O_RDWR, 0644)
+                    or die "dbcreate $dbpath $!";
+$fd = $db_obj->fd;
+open(DB_FH, "+<&=$fd") or die "fdopen $!";
+
+unless (flock (DB_FH, LOCK_EX | LOCK_NB)) {
+    unless (flock (DB_FH, LOCK_EX)) { die "flock: $!" }
 }
+
+$codeentered = $cgi_data{'code-confirm'};
+$currenttime = time();
+if (defined($codeentered) && $codeentered && $db_hash{$codeentered} && 
+  (($currenttime - $expiretime) <= $db_hash{$codeentered})) {
+    if (!$cgi_data{'email'} || !$cgi_data{'originator'} ||
+        !$cgi_data{'synopsis'}) {
+        if ($gnsprepbad && -e $gnsprepbad )
+          { print `cat $gnsprepbad`; }
+        else {
+	    print "<h1>Bad Data</h1>\nYou need to specify at least your ",
+              "electronic mail address, your name and a synopsis of the ",
+              "of the problem.\n  Please return to the form and add the ",
+              "missing information.  Thank you.\n";
+        }
+        &html_end();
+
+        exit(1);
+    }
+} else {
+	print "<h1>Incorrect safety code</h1>\nYou need to enter the correct ",
+          "code from the image displayed.  Please return to the form and enter the ",
+          "code exactly as shown. Thank you.\n";
+
+        &html_end();
+
+        exit(1);
+}
+
+delete $db_hash{"$codeentered"};
+$db_obj->sync();                   # to flush
+flock(DB_FH, LOCK_UN);
+undef $db_obj;                     # removing the last reference to the DB
+                                   # closes it. Closing DB_FH is implicit.
+untie %db_hash;
+
 
 $openproxy = isopenproxy($ENV{'REMOTE_ADDR'}, $blackhole, $openproxyip);
 if (defined $openproxy) {
@@ -134,7 +170,7 @@ $pr = "To: $gnemail\n" .
 if ($blackhole_err) {
       $pr .= "X-REMOTE_ADDR-Is-Open-Proxy: Maybe\n";
 }
-$pr .= "X-Send-Pr-Version: www-1.0\n\n" .
+$pr .= "X-Send-Pr-Version: www-2.0\n\n" .
       ">Submitter-Id:\t$cgi_data{'submitterid'}\n" .
       ">Originator:\t$cgi_data{'originator'}\n" .
       ">Organization:\t$cgi_data{'organization'}\n" .
