@@ -1,5 +1,5 @@
 #!/usr/bin/perl -T
-# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.34 2003/06/08 20:59:51 ceri Exp $
+# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.35 2003/06/09 14:58:00 ceri Exp $
 
 $ENV{'PATH'} = "/bin:/usr/bin:/usr/sbin:/sbin:/usr/local/bin";
 
@@ -219,13 +219,23 @@ sub srcref {
 }
 
 sub fixline {
-    local($line) = shift;
-    
-    $line =~ s/&/&amp;/g;
-    $line =~ s/</&lt;/g;
-    $line =~ s/>/&gt;/g;
-    $line =~ s%((http|ftp)://[^\s"\)\>,;]+)%<A HREF="$1">$1</A>%gi;
-    $line =~ s%(\WPR[:s# \t]+)([a-z3486]+\/)?([0-9]+)%$1<A HREF="query-pr.cgi?pr=$3">$2$3</A>%ig; 
-    
-    return &srcref($line);
+    local(@splitline) = split(/((?:https?|ftp):\/\/[^\s"\(\)<>,;]+)/, shift);
+
+    local($isurl) = 0;
+    foreach (@splitline) {
+	if ($isurl) {
+	    local($href) = local($html) = $_;
+	    $href =~ s/&/%26/g;
+	    $html =~ s/&/&amp;/g;
+	    $_ = "<A HREF=\"$href\">$html</A>";
+	} else {
+	    s/&/&amp;/g;
+	    s/</&lt;/g;
+	    s/>/&gt;/g;
+	    s%(\WPR[:s# \t]+)([a-z3486]+\/)?([0-9]+)%$1<A HREF="query-pr.cgi?pr=$3">$2$3</A>%ig;
+	}
+	$isurl = ! $isurl;
+    }
+
+    return &srcref(join('', @splitline));
 }
