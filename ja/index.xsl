@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
 
-<!-- $FreeBSD: www/ja/index.xsl,v 1.33 2003/11/24 18:26:33 hrs Exp $ -->
-<!-- Original revision: 1.81 -->
+<!-- $FreeBSD: www/ja/index.xsl,v 1.34 2004/01/12 21:27:00 hrs Exp $ -->
+<!-- Original revision: 1.92 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -10,8 +10,15 @@
 
   <xsl:variable name="base" select="'.'"/>
   <xsl:variable name="enbase" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/ja/index.xsl,v 1.33 2003/11/24 18:26:33 hrs Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/ja/index.xsl,v 1.34 2004/01/12 21:27:00 hrs Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
+
+  <!-- these params should be externally bound. The values
+       here are not used actually -->
+  <xsl:param name="advisories.xml" select="'none'"/>
+  <xsl:param name="mirrors.xml" select="'none'"/>
+  <xsl:param name="news.press.xml" select="'none'"/>
+  <xsl:param name="news.project.xml" select="'none'"/>
 
   <xsl:output type="html" encoding="EUC-JP"
               doctype-public="-//W3C//DTD HTML 4.01 Transitional//EN"/>
@@ -70,7 +77,7 @@
 		<xsl:text>&#160;</xsl:text>
 		<a href="{$enbase}/es/index.html" title="スペイン語">[es]</a>
 		<xsl:text>&#160;</xsl:text>
-		<a href="http://www.freebsd-fr.org/index-trad.html" title="フランス語">[fr]</a>
+		<a href="{$enbase}/fr/index.html" title="フランス語">[fr]</a>
 		<xsl:text>&#160;</xsl:text>
 		<a href="{$enbase}/it/index.html" title="イタリア語">[it]</a>
 		<xsl:text>&#160;</xsl:text>
@@ -141,7 +148,7 @@
 			      ・ <a href="http://www.FreeBSD.org/cgi/query-pr-summary.cgi">全バグ報告の表示</a><br/>
 			      ・ <a href="send-pr.html">バグ報告の送付</a><br/>
 			      ・ <a href="http://www.FreeBSD.org/cgi/query-pr.cgi">バグ ID で検索</a><br/>
-+			      ・ <a href="{$enbase}/doc/en_US.ISO8859-1/articles/problem-reports/article.html">バグ報告の書き方</a><br/>
++			      ・ <a href="{$enbase}/doc/ja_JP.eucJP/articles/problem-reports/article.html">バグ報告の書き方</a><br/>
 			    </small></p>
 
 			  <p>
@@ -157,10 +164,10 @@
 
 			  <p><font size="+1" color="#990000"><b>ベンダ</b></font>
 			    <small><br/>
-			      ・<a href="{$base}/../commercial/software_bycat.html">ソフトウェア</a><br/>
-			      ・<a href="{$base}/../commercial/hardware.html">ハードウェア</a><br/>
-			      ・<a href="{$base}/../commercial/consulting_bycat.html">コンサルティング</a><br/>
-			      ・<a href="{$base}/../commercial/misc.html">その他</a><br/>
+			      ・<a href="{$enbase}/commercial/software_bycat.html">ソフトウェア</a><br/>
+			      ・<a href="{$enbase}/commercial/hardware.html">ハードウェア</a><br/>
+			      ・<a href="{$enbase}/commercial/consulting_bycat.html">コンサルティング</a><br/>
+			      ・<a href="{$enbase}/commercial/misc.html">その他</a><br/>
 			    </small></p>
 
 			  <p><font size="+1" color="#990000"><b>寄付・寄贈</b></font>
@@ -181,7 +188,7 @@
 
 			  <p>
 			    <a href="mailto.html">
-			      <font size="+1" color="#990000"><b>FreeBSD の問い合わせ</b></font>
+			      <font size="+1" color="#990000"><b>FreeBSD の問い合わせ先</b></font>
 			    </a>
 			  </p>
 
@@ -212,7 +219,7 @@
 	    <td align="left" valign="top" rowspan="2">
 	      <h2><font color="#990000">FreeBSD とは?</font></h2>
 
-	      <p>FreeBSD は x86 互換機、DEC Alpha、IA-64、PC-98、UltraSPARC&#174;
+	      <p>FreeBSD は x86 互換機、AMD64, DEC Alpha, IA-64, PC-98, UltraSPARC&#174;
 		アーキテクチャ用の先進的なオペレーティングシステムです。
 		カリフォルニア大学バークレイ校で開発された <xsl:value-of select="$unix"/>
 		である BSD UNIX に由来し、
@@ -457,7 +464,7 @@
 		<xsl:value-of select="$date"/></small></td>
 
 	    <td align="right" 
-		valign="top"><small><a href="copyright/index.html">知的財産権について</a><br/> &#169; 1995-2003
+		valign="top"><small><a href="copyright/index.html">知的財産権について</a><br/> &#169; 1995-2004
 		The FreeBSD Project.<br/>
 		All rights reserved.</small></td>
 	  </tr>
