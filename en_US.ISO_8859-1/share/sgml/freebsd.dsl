@@ -1,4 +1,4 @@
-<!-- $FreeBSD: doc/en_US.ISO_8859-1/share/sgml/freebsd.dsl,v 1.7 2001/04/15 19:09:31 dd Exp $ -->
+<!-- $FreeBSD: doc/en_US.ISO_8859-1/share/sgml/freebsd.dsl,v 1.8 2001/06/02 23:06:17 dd Exp $ -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
 <!ENTITY freebsd.dsl PUBLIC "-//FreeBSD//DOCUMENT DocBook Language Neutral Stylesheet//EN" CDATA DSSSL>
@@ -19,7 +19,7 @@
                 (literal "This, and other documents, can be downloaded from ")
 		(create-link
 		  (list (list "HREF" "ftp://ftp.FreeBSD.org/pub/FreeBSD/doc/"))
-                  (literal "ftp.FreeBSD.org/pub/FreeBSD/doc/"))
+                  (literal "ftp://ftp.FreeBSD.org/pub/FreeBSD/doc/"))
                 (literal ".")))
             (make element gi: "p"
                   attributes: (list (list "align" "center"))
