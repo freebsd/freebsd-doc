@@ -43,8 +43,8 @@
 # SUCH DAMAGE.
 #
 # $zId: cvsweb.cgi,v 1.104 2000/11/01 22:05:12 hnordstrom Exp $
-# $Id: cvsweb.cgi,v 1.60 2000-12-18 04:43:56 knu Exp $
-# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.59 2000/12/18 04:39:52 knu Exp $
+# $Id: cvsweb.cgi,v 1.61 2000-12-28 18:42:21 knu Exp $
+# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.60 2000/12/18 04:43:56 knu Exp $
 #
 ###
 
@@ -80,7 +80,7 @@ use vars qw (
     $navigationHeaderColor $tableBorderColor $markupLogColor
     $tabstop $state $annTable $sel $curbranch @HideModules
     $module $use_descriptions %descriptions @mytz $dwhere $moddate
-    $use_moddate $has_zlib $gzip_open
+    $use_moddate $has_zlib $gzip_open $allow_tar
     $LOG_FILESEPARATOR $LOG_REVSEPARATOR
 );
 
@@ -215,7 +215,7 @@ $LOG_REVSEPARATOR = q/^-{28}$/;
 ##### End of configuration variables #####
 
 $cgi_style::hsty_base = 'http://www.FreeBSD.org';
-$_ = q$FreeBSD: www/en/cgi/cvsweb.cgi,v 1.59 2000/12/18 04:39:52 knu Exp $;
+$_ = q$FreeBSD: www/en/cgi/cvsweb.cgi,v 1.60 2000/12/18 04:43:56 knu Exp $;
 @_ = split;
 $cgi_style::hsty_date = "@_[3,4]";
 
@@ -242,9 +242,10 @@ $verbose = $v;
 $checkoutMagic = "~checkout~";
 $pathinfo = defined($ENV{PATH_INFO}) ? $ENV{PATH_INFO} : '';
 $where = $pathinfo;
+$where =~ tr|/|/|s;
 $doCheckout = ($where =~ /^\/$checkoutMagic/);
 $where =~ s|^/($checkoutMagic)?||;
-$where =~ s|/+$||;
+$where =~ s|/$||;
 $scriptname = defined($ENV{SCRIPT_NAME}) ? $ENV{SCRIPT_NAME} : '';
 $scriptname =~ s|^/?|/|;
 $scriptname =~ s|/+$||;
@@ -308,6 +309,7 @@ $query = $ENV{QUERY_STRING};
 
 if (defined($query) && $query ne '') {
     foreach (split(/&/, $query)) {
+	y/+/ /;
 	s/%(..)/sprintf("%c", hex($1))/ge;	# unquote %-quoted
 	if (/(\S+)=(.*)/) {
 	    $input{$1} = $2 if ($2 ne "");
@@ -418,7 +420,7 @@ foreach $k (keys %ICONS) {
     my ($itxt,$ipath,$iwidth,$iheight) = @{$ICONS{$k}};
     if ($ipath) {
 	${"${k}icon"} = sprintf('<IMG SRC="%s" ALT="%s" BORDER="0" WIDTH="%d" HEIGHT="%d">',
-				htmlquote($ipath), htmlquote($itxt), $iwidth, $iheight)
+				hrefquote($ipath), htmlquote($itxt), $iwidth, $iheight)
     }
     else {
 	${"${k}icon"} = $itxt;
@@ -485,10 +487,68 @@ $module = $1;
 if ($module && &forbidden_module($module)) {
     &fatal("403 Forbidden", "Access to $where forbidden.");
 }
+
+#
+# Handle tarball downloads before any headers are output.
+#
+if ($input{tarball}) {
+    &fatal("403 Forbidden", "Downloading tarballs is prohibited.")
+      unless $allow_tar;
+    $where =~ s,/[^/]*$,,;
+    $where =~ s,^/,,;
+    my($basedir) = ($where =~ m,([^/]+)$,);
+
+    if ($basedir eq '' || $where eq '') {
+	&fatal("500 Internal Error", "You cannot download the top level directory.");
+    }
+
+    my $tmpdir = "/tmp/.cvsweb.$$." . int(time);
+
+    mkdir($tmpdir, 0700)
+      or &fatal("500 Internal Error", "Unable to make temporary directory: $!");
+
+    my $fatal = '';
+
+    do {
+	chdir $tmpdir
+	  or $fatal = "500 Internal Error", "Unable to cd to temporary directory: $!"
+	    && last;
+
+	my @params = (exists $input{only_with_tag} && length $input{only_with_tag})
+	  ? ("-r", $input{only_with_tag}) : ();
+
+	system "cvs", "-RlQd", $cvsroot, "co", @params, $where
+	  and $fatal = "500 Internal Error","cvs co failure: $!: $where"
+	    && last;
+
+	chdir "$where/.."
+	  or $fatal = "500 Internal Error","Cannot find expected directory in checkout"
+	    && last;
+
+	$| = 1; # Essential to get the buffering right.
+
+	print "Content-type: application/x-gzip\r\n\r\n";
+
+	system "tar", "--ignore-failed-read", "--exclude", "CVS", "-zcf", "-", $basedir
+	  and $fatal = "500 Internal Error","tar zc failure: $!: $basedir"
+	    && last;
+
+	chdir $tmpdir
+	  or $fatal = "500 Internal Error","Unable to cd to temporary directory: $!"
+	    && last;
+    } while (0);
+
+    system "rm", "-rf", $tmpdir if -d $tmpdir;
+
+    &fatal($fatal) if $fatal;
+
+    exit;
+}
+
 ##############################
 # View a directory
 ###############################
-elsif (-d $fullname) {
+if (-d $fullname) {
 	my $dh = do {local(*DH);};
 	opendir($dh, $fullname) || &fatal("404 Not Found","$where: $!");
 	my @dir = readdir($dh);
@@ -826,6 +886,22 @@ elsif (-d $fullname) {
 	    print "<INPUT TYPE=SUBMIT VALUE=\"Go\">\n";
 	    print "</FORM>\n";
 	}
+
+	if ($allow_tar) {
+	    my($basefile) = ($where =~ m,(?:.*/)?([^/]+),);
+
+	    if ($basefile ne '') {
+		print "<HR NOSHADE>\n",
+		  "<DIV align=center>",
+		    &link("Download this directory in tarball",
+			  # Mangle the filename so browsers show a reasonable
+			  # filename to download.
+			  "$basefile.tar.gz$query".
+			  ($query ? "&" : "?")."tarball=1"),
+			    "</DIV>";
+	    }
+	}
+
 	my $formwhere = $scriptwhere;
 	$formwhere =~ s|Attic/?$|| if ($input{'hideattic'});
 
@@ -1134,7 +1210,7 @@ sub spacedHtmlText($;$) {
 sub link($$) {
 	my($name, $where) = @_;
 
-	sprintf '<A HREF="%s">%s</A>', htmlquote($where), $name;
+	sprintf '<A HREF="%s">%s</A>', hrefquote($where), $name;
 }
 
 sub revcmp($$) {
@@ -1578,10 +1654,10 @@ sub cvswebMarkup($$$) {
     my $url = download_url($fileurl, $revision, $mimetype);
     print "<HR noshade>";
     if ($mimetype =~ /^image/) {
-	printf '<IMG SRC="%s"><BR>', htmlquote("$url$barequery");
+	printf '<IMG SRC="%s"><BR>', hrefquote("$url$barequery");
     }
     elsif ($mimetype =~ m%^application/pdf%) {
-	printf '<EMBED SRC="%s" WIDTH="100%"><BR>', htmlquote("$url$barequery");
+	printf '<EMBED SRC="%s" WIDTH="100%"><BR>', hrefquote("$url$barequery");
     }
     else {
 	print "<PRE>";
@@ -2655,7 +2731,7 @@ sub navigateHeader($$$$$) {
     print qq`<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">`;
     print "<HTML>\n<HEAD>\n";
     print qq`<META name="robots" content="nofollow">\n`;
-    print '<!-- CVSweb $zRevision: 1.104 $  $Revision: 1.60 $ -->';
+    print '<!-- CVSweb $zRevision: 1.104 $  $Revision: 1.61 $ -->';
     print "\n<TITLE>$path$filename - $title - $rev</TITLE></HEAD>\n";
     print  "$body_tag_for_src\n";
     print "<table width=\"100%\" border=0 cellspacing=0 cellpadding=1 bgcolor=\"$navigationHeaderColor\">";
@@ -2878,7 +2954,7 @@ sub download_link($$$;$) {
     my ($url, $revision, $textlink, $mimetype) = @_;
     my ($fullurl) = download_url($url, $revision, $mimetype);
 
-    printf '<A HREF="%s"', htmlquote("$fullurl$barequery");
+    printf '<A HREF="%s"', hrefquote("$fullurl$barequery");
 
     if ($open_extern_window && (!defined($mimetype) || $mimetype ne "text/x-cvsweb-markup")) {
 	print ' target="cvs_checkout"';
@@ -2912,7 +2988,7 @@ sub download_link($$$;$) {
 	      if (defined($extern_window_height));
 
 	    printf q` onClick="window.open('%s','cvs_checkout','%s');"`,
-	      htmlquote($fullurl), join(',', @attr);
+	      hrefquote($fullurl), join(',', @attr);
 	}
     }
     print "><b>$textlink</b></A>";
@@ -2952,8 +3028,7 @@ sub urlencode($) {
 
     s/[\000-+{-\377]/sprintf("%%%02x", ord($&))/ge;
 
-
-       $_;
+    $_;
 }
 
 sub htmlquote($) {
@@ -2978,6 +3053,14 @@ sub htmlunquote($) {
     s/&amp;/&/g;
 
     $_;
+}
+
+sub hrefquote($) {
+    local($_) = @_;
+
+    y/ /+/;
+
+    htmlquote($_)
 }
 
 sub http_header(;$) {
@@ -3038,7 +3121,7 @@ sub http_header(;$) {
 
 sub html_header($) {
     my ($title) = @_;
-    my $version = '$zRevision: 1.104 $  $Revision: 1.60 $'; #'
+    my $version = '$zRevision: 1.104 $  $Revision: 1.61 $'; #'
     http_header(defined($charset) ? "text/html; charset=$charset" : "text/html");
 
     (my $header = &cgi_style::html_header) =~ s/^.*\n\n//; # remove HTTP response header
