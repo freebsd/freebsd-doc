@@ -34,14 +34,12 @@ require 'cgi-style.pl';
 
 %CVSROOT = (
 	    'freebsd', '/home/ncvs',
-	    'openbsd', '/home/OpenBSD/cvs',
 	    'learn', '/c/learncvs',
 	    'mozilla', '/a/mozilla-cvs',
 	    );
 
 %CVSROOTdescr = (
 	    'freebsd', 'FreeBSD',
-	    'openbsd', 'OpenBSD',
 	    'learn', 'Learn',
 	    'mozilla', 'Mozilla FreeBSD',
 	    );
