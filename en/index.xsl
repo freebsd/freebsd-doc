@@ -1,4 +1,4 @@
-<!-- $FreeBSD$ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.38 2002/11/04 15:05:09 roam Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   
@@ -6,7 +6,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD$'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.38 2002/11/04 15:05:09 roam Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -48,6 +48,7 @@
 		        which are not mirrored should be listed in
 		        support.sgml.  -->
 
+		  <option value="http://www2.at.FreeBSD.org/">IPv6 Austria</option>
 		  <option value="http://bsd.ipv6.uni-erlangen.de">IPv6 Germany</option>
 		  <option value="http://www.jp.FreeBSD.org/www.FreeBSD.org/">6Bone(IPv6), Japan</option>
 		  <option value="http://www2.no.FreeBSD.org/">IPv6 Norway</option>
