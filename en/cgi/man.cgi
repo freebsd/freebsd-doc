@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/perl -T
 #
 # Copyright (c) 1996-1999 Wolfram Schneider <wosch@FreeBSD.org>. Berlin.
 # All rights reserved.
@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp 
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.24 2001-01-11 19:56:37 wosch Exp $
+# $Id: man.cgi,v 1.25 2001-01-11 19:58:04 wosch Exp $
 
 #use Data::Dumper;
 #use Carp;
@@ -762,7 +762,7 @@ Please direct questions about this server to
 URL:  <A HREF="$BASE" target=_parent>$www{'home'}$BASE</a><br>
 ETX
 
-    print q{$Date: 2001-01-11 19:56:37 $ $Revision: 1.24 $};
+    print q{$Date: 2001-01-11 19:58:04 $ $Revision: 1.25 $};
     print "<br>\n";
     print "</BODY>\n</HTML>\n";
     0;
