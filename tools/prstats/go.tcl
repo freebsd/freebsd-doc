@@ -1,6 +1,6 @@
 #!/usr/local/bin/tclsh8.3
 #
-# $FreeBSD: www/tools/prstats/go.tcl,v 1.1 2001/10/29 01:58:12 murray Exp $
+# $FreeBSD: www/tools/prstats/go.tcl,v 1.2 2001/11/18 16:11:34 murray Exp $
 #
 # This script expects the directory of a GNATS database as its sole argument.
 
@@ -10,7 +10,8 @@ proc PR {fn} {
 	global fo
 
 	set n [lrange [split $fn /] end end]
-	set fi [open $fn]
+	set openrc [catch {set fi [open $fn]} openerr]
+	if {$openrc != 0} {return $openrc}
 	while {[gets $fi a] >= 0} {
 		if {[string range $a 0 12]      == "State-Changed"} {
 			if {[lindex $a 0] == "State-Changed-When:"} {
@@ -41,7 +42,7 @@ proc PR {fn} {
 }
 
 
-append gnatsdir {/*/[1-9]*}
+append gnatsdir {/*/*[0-9]}
 foreach pr [glob $gnatsdir] {
 	PR $pr
 }
