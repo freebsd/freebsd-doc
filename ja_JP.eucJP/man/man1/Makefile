@@ -194,7 +194,6 @@ MAN1 =	a2p.1\
 	merge.1\
 	mesg.1\
 	minigzip.1\
-	mk_cmds.1\
 	mkdep.1\
 	mkdir.1\
 	mkfifo.1\
