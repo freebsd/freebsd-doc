@@ -219,6 +219,7 @@ MAN1 =	a2p.1\
 	passwd.1\
 	paste.1\
 	patch.1\
+	pawd.1\
 	pax.1\
 	perl.1\
 	pfbtops.1\
