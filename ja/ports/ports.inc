@@ -1,6 +1,6 @@
-<!-- $Id: ports.inc,v 1.4 1998-01-20 04:09:34 hanai Exp $ -->
+<!-- $Id: ports.inc,v 1.5 1998-03-30 02:17:16 hanai Exp $ -->
 <!-- The FreeBSD Japanese Documentation Project -->
-<!-- Original revision: 1.19 -->
+<!-- Original revision: 1.20 -->
 <p>FreeBSD Ports コレクションは, ユーザや管理者が簡単にアプリケーショ
 ンのインストールを簡単に行う方法を提供します.
 ここに並べられている各 ``port'' には, FreeBSD でオリジナルのアプリケー
@@ -46,7 +46,7 @@
 
 <p>多くの ports はコンパイルと実行に X Window System を必要とします. 
 ports は <a href="http://www.xfree86.org/">XFree86</a> 上でテ
-ストされています. 最新のリリースは 3.3.1 です. いくつかの ports は古い
+ストされています. 最新のリリースは 3.3.2 です. いくつかの ports は古い
 リリースでは動作しないかも知れません. </p>
 
 <p>ports の追加, 更新, 削除についての情報や, アプリケーションの検索は
