@@ -4,9 +4,9 @@
      The FreeBSD Russian Documentation Project
 
      $FreeBSD$
-     $FreeBSDru: frdp/www/ru/index.xsl,v 1.30 2004/02/11 12:17:39 den Exp $
+     $FreeBSDru: frdp/www/ru/index.xsl,v 1.31 2004/02/17 08:06:36 andy Exp $
 
-     Original revision: 1.93
+     Original revision: 1.95
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -136,16 +136,16 @@
 
 	    <td></td>
 
-	    <!-- Main body column -->
+	    <!-- Колонка основного текста -->
 
 	    <td align="left" valign="top" rowspan="2">
 	      <h2><font color="#990000">Что такое FreeBSD?</font></h2>
 
 	      <p>FreeBSD - это мощная операционная система для компьютеров
-                архитектур, совместимых с x86, AMD64, DEC Alpha,
-                IA-64, PC-98 и UltraSPARC&#174;.  Она основана на BSD, версии
-                <xsl:value-of select="$unix"/>, разработанной в Университете
-                Калифорнии, Беркли.  Она разрабатывается и поддерживается <a
+                архитектур, совместимых с x86, AMD64, Alpha, IA-64, PC-98 и
+                UltraSPARC&#174;.  Она основана на BSD, версии
+                <xsl:value-of select="$unix"/>, созданной в Калифорнийском
+                Университете в Беркли.  Она разрабатывается и поддерживается <a
 		href="{$base}/doc/en_US.ISO8859-1/articles/contributors/index.html">
                 большой командой разработчиков</a>.  Поддержка <a
 		href="platforms/index.html">других платформ</a>
@@ -187,27 +187,23 @@
 
 	      <p>FreeBSD может быть установлена с различных носителей, включая
                 CD-ROM, DVD-ROM, дискеты, магнитную ленту, раздел MS-DOS&#174;,
-                либо, если у вас есть подключение к сети, можно установить
-		её <i>непосредственно</i> через FTP или NFS.  Всё, что вам
-                нужно иметь для этого - это пара чистых дискет объёмом 1.44МБ
-                и <a href="{$base}/doc/en_US.ISO8859-1/books/handbook/install.html">
+                либо, если у вас есть подключение к сети, можно установить её
+                <i>непосредственно</i> через FTP или NFS.  Всё, что вам нужно
+                для этого - несколько чистых дискет ёмкостью 1.44 Мбайта и <a
+                href="{$base}/doc/en_US.ISO8859-1/books/handbook/install.html">
                 эти указания</a>.</p>
 
 	      <h2><font color="#990000">FreeBSD распространяется
 		<i>свободно</i></font></h2>
 	    
 	      <a href="copyright/daemon.html"><img
-                                                   src="{$base}/gifs/dae_up3.gif" 
-						   alt=""
-						   height="81" width="72" 
-						   align="right" 
-						   border="0"/></a>
+                src="{$base}/gifs/dae_up3.gif" alt="" height="81" width="72" 
+		align="right" border="0"/></a>
 
-	      <p>Хотя вы можете предположить, что операционная система с такими
+	      <p>Хотя вы можете подумать, что операционная система с такими
 		возможностями продаётся по высокой цене, FreeBSD
-		распространяется <a
-		href="copyright/index.html">бесплатно</a> и
-		поставляется со всеми исходными текстами. Если вам захочется
+		распространяется <a href="copyright/index.html">бесплатно</a>
+                и поставляется со всеми исходными текстами. Если вам захочется
 		её попробовать, обратитесь к <a
 		href="{$base}/doc/en_US.ISO8859-1/books/handbook/mirrors.html">
 		следующей информации</a>.</p>
