@@ -1,5 +1,5 @@
 # bsd.web.mk
-# $FreeBSD: www/share/mk/web.site.mk,v 1.44 2003/04/20 21:03:24 murray Exp $
+# $FreeBSD: www/share/mk/web.site.mk,v 1.45 2003/05/11 21:24:42 phantom Exp $
 
 #
 # Build and install a web site.
@@ -75,7 +75,7 @@ PORTSBASE?=	/usr
 # Instruction for bsd.subdir.mk to not to process SUBDIR directive.
 # It is not neccessary since web.site.mk do it too.
 #
-#NO_SUBDIR=	YES
+NO_SUBDIR=	YES
 
 ##################################################################
 # Transformation rules
