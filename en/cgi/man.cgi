@@ -33,9 +33,10 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp 
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.22 2000-12-27 17:26:20 wosch Exp $
+# $Id: man.cgi,v 1.23 2001-01-04 19:44:13 wosch Exp $
 
 #use Data::Dumper;
+#use Carp;
 
 $www{'title'} = 'FreeBSD Hypertext Man Pages';
 $www{'home'} = 'http://www.FreeBSD.org';
@@ -82,6 +83,9 @@ $command{'man'} =     '/home/wosch/bin/cgi-man'; # 8Bit clean man
 );
 
 $sectionpath = {
+    'SunOS 5.8' => {
+	'path' => '1:1m:1s:2:3:3c:3malloc:3dl:3nsl:3socket:3ldap:3krb:3nisdb:3rac:3resolv:3rpc:3slp:3xfn:3proc:3rt:3thr:3elf:3kvm:3kstat:3m:3mp:3pam:3sched:3aio:3bsm:3cpc:3sec:3secdb:3cfgadm:3crypt:3devid:3devinfo:3door:3lib:3libucb:3head:7:7d:7fs:7i:7m:7p:9:9e:9f:9s:4:5:4b:3gen:3dmi:3snmp:3tnf:3volmgt:3mail:3layout:3ext:1b:1c:1f:3ucb:3xnet:3curses:3plot:3xcurses:6:l:n',
+    },
     'SunOS 5.7' => {
 	'path' => '1:1m:1c:1f:1s:1b:2:3:3c:3s:3x:3xc:3n:3r:3t:3xn:3m:3k:3g:3e:3b:9f:9s:9e:9:4:5:7:7d:7i:7m:7p:7fs:4b:6:l:n',
     },
@@ -192,6 +196,7 @@ $manPathDefault = 'FreeBSD 4.2-RELEASE';
      'Red Hat Linux/i386 6.1', "$manLocalDir/RedHat-6.1-i386",
      'Red Hat Linux/i386 6.2', "$manLocalDir/RedHat-6.2-i386",
 
+     'SunOS 5.8',	      "$manLocalDir/SunOS-5.8",
      'SunOS 5.7',	      "$manLocalDir/SunOS-5.7",
      'SunOS 5.6',	      "$manLocalDir/SunOS-5.6",
      'SunOS 5.5.1',	      "$manLocalDir/SunOS-5.5.1",
@@ -234,7 +239,7 @@ while (($key,$val) = each %manPath) {
      'xfree86', 'XFree86 4.0.2',
      'ultrix', 'ULTRIX 4.2',
      'solaris', 'SunOS 5.7',
-     'sunos5', 'SunOS 5.7',
+     'sunos5', 'SunOS 5.8',
      'sunos4', 'SunOS 4.1.3',
      'sunos', 'SunOS 4.1.3',
      'freebsd ports', 'FreeBSD Ports',
@@ -754,7 +759,7 @@ Please direct questions about this server to
 URL:  <A HREF="$BASE" target=_parent>$www{'home'}$BASE</a><br>
 ETX
 
-    print q{$Date: 2000-12-27 17:26:20 $ $Revision: 1.22 $};
+    print q{$Date: 2001-01-04 19:44:13 $ $Revision: 1.23 $};
     print "<br>\n";
     print "</BODY>\n</HTML>\n";
     0;
