@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/index.xsl,v 1.18 2001/12/24 23:21:22 kuriyama Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.19 2002/01/09 18:15:15 phantom Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   
@@ -6,7 +6,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.18 2001/12/24 23:21:22 kuriyama Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.19 2002/01/09 18:15:15 phantom Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -48,7 +48,8 @@
 		        which are not mirrored should be listed in
 		        support.sgml.  -->
 
-		  <option value="http://www.jp.FreeBSD.org/www.FreeBSD.org/">6Bone(IPv6)</option>
+		  <option value="http://www.jp.FreeBSD.org/www.FreeBSD.org/">6Bone(IPv6), Japan</option>
+		  <option value="http://www2.no.FreeBSD.org/">IPv6 Norway</option>
 		  <option value="http://www.au.FreeBSD.org/">Australia/1</option>
 		  <option value="http://freebsd.unixtech.be/">Belgium</option>
 		  <option value="http://www.br.FreeBSD.org/www.freebsd.org/">Brazil/1</option>
@@ -80,6 +81,7 @@
 		  <option value="http://www2.nl.FreeBSD.org/">Netherlands/2</option>
 		  <option value="http://www.nz.FreeBSD.org/">New Zealand</option>
 		  <option value="http://www.no.FreeBSD.org/">Norway</option>
+		  <option value="http://www2.no.FreeBSD.org/">Norway</option>
 		  <option value="http://www.pl.FreeBSD.org/">Poland/1</option>
 		  <option value="http://www2.pl.FreeBSD.org/">Poland/2</option>
 		  <option value="http://www.pt.FreeBSD.org/">Portugal/1</option>
