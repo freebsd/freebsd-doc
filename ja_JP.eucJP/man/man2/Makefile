@@ -1,3 +1,4 @@
+# $FreeBSD$
 MAN2 =	_exit.2\
 	accept.2\
 	access.2\
@@ -61,6 +62,7 @@ MAN2 =	_exit.2\
 	kldload.2\
 	kldnext.2\
 	kldstat.2\
+	kldsym.2\
 	kldunload.2\
 	kqueue.2\
 	ktrace.2\

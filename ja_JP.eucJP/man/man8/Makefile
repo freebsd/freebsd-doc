@@ -1,3 +1,4 @@
+# $FreeBSD$
 MAN8 =	IPXrouted.8\
 	MAKEDEV.8\
 	ac.8\
@@ -57,6 +58,7 @@ MAN8 =	IPXrouted.8\
 	fixmount.8\
 	fore_dnld.8\
 	fsck.8\
+	fsck_msdosfs.8\
 	fsdb.8\
 	fsinfo.8\
 	fsirand.8\
@@ -84,10 +86,12 @@ MAN8 =	IPXrouted.8\
 	isdndebug.8\
 	isdndecode.8\
 	isdnmonitor.8\
+	isdnphone.8\
 	isdntel.8\
 	isdntelctl.8\
 	isdntrace.8\
 	ispcvt.8\
+	ispppcontrol.8\
 	jail.8\
 	joy.8\
 	kernbb.8\
@@ -95,6 +99,7 @@ MAN8 =	IPXrouted.8\
 	kget.8\
 	kgmon.8\
 	kgzip.8\
+	kldconfig.8\
 	kldload.8\
 	kldstat.8\
 	kldunload.8\
@@ -252,6 +257,7 @@ MAN8 =	IPXrouted.8\
 	sticky.8\
 	stlload.8\
 	stlstats.8\
+	stlstty.8\
 	strfile.8\
 	svr4.8\
 	swapon.8\
