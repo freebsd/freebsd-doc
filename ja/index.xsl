@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
 
-<!-- $FreeBSD: www/ja/index.xsl,v 1.10 2002/02/20 13:01:34 kuriyama Exp $ -->
+<!-- $FreeBSD: www/ja/index.xsl,v 1.11 2002/02/24 00:25:46 hrs Exp $ -->
 <!-- Original revision: 1.19 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -10,7 +10,7 @@
 
   <xsl:variable name="base" select="'.'"/>
   <xsl:variable name="enbase" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/ja/index.xsl,v 1.10 2002/02/20 13:01:34 kuriyama Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/ja/index.xsl,v 1.11 2002/02/24 00:25:46 hrs Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <xsl:output type="html" encoding="EUC-JP"
@@ -118,9 +118,9 @@
 		<br/>
 		
 		<font color="#990000"><b>言語: </b></font> 
-		<a href="../">英語</a>, 
-		<a href="../es/index.html">スペイン語</a>, 
-		<a href="../ru/index.html">ロシア語</a>, 
+		<a href="../">英語</a>、
+		<a href="../es/index.html">スペイン語</a>、
+		<a href="../ru/index.html">ロシア語</a>、
 		<a href="support.html#web">その他</a>
 	      </form>
 	    </td>
@@ -227,53 +227,53 @@
 	      
 	      <h2><font color="#990000">FreeBSD とは?</font></h2>
 	
-	      <p>FreeBSD は Intel ia32 互換, DEC Alpha, PC-98
-		アーキテクチャ用の先進的なオペレーティングシステムです.
+	      <p>FreeBSD は Intel ia32 互換、DEC Alpha、PC-98
+		アーキテクチャ用の先進的なオペレーティングシステムです。
 		カリフォルニア大学バークレイ校で開発された UNIX
-		である BSD UNIX に由来し, 
+		である BSD UNIX に由来し、
 		<a href="{$enbase}/doc/ja_JP.eucJP/articles/contributors/index.html">多くの人たち</a> によって
-		によって保守・開発されています.
+		によって保守・開発されています。
 		その他の<a href="{$base}/platforms/index.html">プラットフォーム
-		</a> は現在開発中です.</p>
+		</a> は現在開発中です。</p>
 	      
 	      <h2><font color="#990000">最先端の機能</font></h2>
 
 	      <p>FreeBSD は (市販の最良のものも含めて) 他のオペレーティング
-		システムに未だに欠けている最先端のネットワーク, パフォーマンス,
-		セキュリティ, 互換性といった <a href="{$base}/features.html">
-		  機能</a> を今, 提供しています.</p>
+		システムに未だに欠けている最先端のネットワーク、パフォーマンス、
+		セキュリティ、互換性といった <a href="{$base}/features.html">
+		  機能</a> を今、提供しています。</p>
 	      
 	      <h2><font color="#990000">強力なインターネットサポート</font></h2>
 
 	      <p>FreeBSD は理想的な <a href="{$base}/internet.html">
-		  インターネットやイントラネット</a> サーバになります. 負荷が
-		極めて高くなった状態でさえ強固なネットワークサービスを提供し,
+		  インターネットやイントラネット</a> サーバになります。負荷が
+		極めて高くなった状態でさえ強固なネットワークサービスを提供し、
 		ユーザプロセスが同時に何千になっても良好な反応時間を
-		維持するようにメモリを効率的に利用します.
+		維持するようにメモリを効率的に利用します。
 		FreeBSD を利用したアプリケーションやサービスの例を
-		載せていますので, ぜひ我々の
+		載せていますので、ぜひ我々の
 		<a href="gallery/gallery.html">ギャラリー</a>
-		を訪れてみてください.</p>
+		を訪れてみてください。</p>
 	    
-	      <h2><font color="#990000">利用可能な, さまざまなアプリケーション
+	      <h2><font color="#990000">利用可能な、さまざまなアプリケーション
 		</font></h2>
 
 	      <p>FreeBSD の品質と今日の低価格で高速な PC ハードウェアが
-		結びつくことによって, FreeBSD は市販の UNIX ワークステーションと
-		比較してとても経済的な選択肢となります.
+		結びつくことによって、FreeBSD は市販の UNIX ワークステーションと
+		比較してとても経済的な選択肢となります。
 		非常に数多くのデスクトップ用やサーバ用の
 		<a href="{$base}/applications.html">アプリケーション</a>
-		が整っています.</p>
+		が整っています。</p>
 	    
 	      <h2><font color="#990000">簡単インストール</font></h2>
 
-	      <p>FreeBSD は CD-ROM やフロッピーディスク, 磁気テープ, MS-DOS
+	      <p>FreeBSD は CD-ROM やフロッピーディスク、磁気テープ、MS-DOS
 		パーティションなどのさまざまなメディアからインストールすることが
-		できます. ネットワークに接続しているなら, anonymous FTP や NFS
-		を用いて <i>直接</i> インストールすることもできます.
-		必要なのは 1.44MB の起動フロッピー 2 枚と,
+		できます。ネットワークに接続しているなら、anonymous FTP や NFS
+		を用いて <i>直接</i> インストールすることもできます。
+		必要なのは 1.44MB の起動フロッピー 2 枚と、
 		<a href="{$base}/handbook/install.html">これらの方法</a>
-		だけです.</p>
+		だけです。</p>
 
 	      <h2><font color="#990000">FreeBSD は<i>無料</i>です</font></h2>
 	    
@@ -284,45 +284,45 @@
 						   border="0"/></a>
 
 	      <p>このような特色を持ったオペレーティングシステムは高い値段で
-		販売されていると思われるかもしれませんが, FreeBSD
-		は <a href="{$base}/copyright/index.html">無料</a> で入手でき,
-		すべてのソースコードが付属しています.
-		試してみようかな, という方は
+		販売されていると思われるかもしれませんが、FreeBSD
+		は <a href="{$base}/copyright/index.html">無料</a> で入手でき、
+		すべてのソースコードが付属しています。
+		試してみようかな、という方は
 		<a href="{$enbase}/doc/ja_JP.eucJP/books/handbook/mirrors.html">
 		  より詳しい情報</a> を
-		ご覧ください.</p>
+		ご覧ください。</p>
 
 	      <h2><font color="#990000">FreeBSD への貢献</font></h2>
 
-	      <p>FreeBSD に貢献するのは簡単です.
-		あなたが FreeBSD の中で改善できそうな部分を探し,
-		その部分に変更を (注意深く, わかりやすく) 加えて
-		FreeBSD プロジェクトに届けるだけです.
-		その際には send-pr を使うか,
-		もし知っているなら, コミッターに直接連絡しても OK です.
-		変更は, FreeBSD の文書に対するものでも, FreeBSD
-		ソースコードに対するものでも構いません.
-		詳しくは, FreeBSD ハンドブックの
+	      <p>FreeBSD に貢献するのは簡単です。
+		あなたが FreeBSD の中で改善できそうな部分を探し、
+		その部分に変更を (注意深く、わかりやすく) 加えて
+		FreeBSD プロジェクトに届けるだけです。
+		その際には send-pr を使うか、
+		もし知っているなら、コミッターに直接連絡しても OK です。
+		変更は、FreeBSD の文書に対するものでも、FreeBSD
+		ソースコードに対するものでも構いません。
+		詳しくは、FreeBSD ハンドブックの
 		<!-- XXX: kuriyama: point to doc/ja_JP.eucJP/ar*/ -->
 		<a href="http://www.FreeBSD.org/ja/handbook/contrib.html">
 		  FreeBSD への貢献</a>
 		(<a href="{$base}/doc/en_US.ISO8859-1/articles/contributing/index.html">原文</a>)
-		というセクションをご覧ください.</p>
+		というセクションをご覧ください。</p>
 
-	      <p>もしあなたがプログラマでないとしても, いくつもの FreeBSD
-		に貢献する方法があります. FreeBSD Foundation は非営利団体
-		であり, 直接の寄付は税金の控除対象となります.
+	      <p>もしあなたがプログラマでないとしても、いくつもの FreeBSD
+		に貢献する方法があります。FreeBSD Foundation は非営利団体
+		であり、直接の寄付は税金の控除対象となります。
 		詳細に関しては <a href="mailto:bod@FreeBSDFoundation.org">
-		  bod@FreeBSDFoundation.org</a> にメールを送るか,
-		The FreeBSD Foundation,
-		7321 Brockway Dr.  Boulder, CO.  80303.  USA
-		まで手紙を書いてください.</p>
+		  bod@FreeBSDFoundation.org</a> にメールを送るか、
+		The FreeBSD Foundation、
+		7321 Brockway Dr. Boulder, CO. 80303.  USA
+		まで手紙を書いてください。</p>
 
-	      <p>Silicon Breeze 社は BSD デーモンの銅像を製作し,
-		これらの売り上げの 15% を FreeBSD Foundation に還元しています.
+	      <p>Silicon Breeze 社は BSD デーモンの銅像を製作し、
+		これらの売り上げの 15% を FreeBSD Foundation に還元しています。
 		この BSD デーモンの詳細と注文方法については
 		<a href="http://www.siliconbreeze.com/beastie/">このページ</a>
-		を見てください.</p>
+		を見てください。</p>
 	    </td>
 
 	    <td></td>
@@ -418,7 +418,7 @@
 			  FreeBSD に関連する
 			  <a href="{$base}/publish.html">出版物</a> や
 			  <a href="news/press.html">FreeBSD 関係の報道</a> の
-			  ギャラリーを訪ねたり, このウェブサイトを
+			  ギャラリーを訪ねたり、このウェブサイトを
 			  見てみてください!</td>
 		      </tr>
 		    </table>
@@ -455,7 +455,7 @@
 	  </tr>
 	</table>
 
-	<p><small>このウェブサイトは毎日 8:00 UTC と 20:00 UTC に更新しています.
+	<p><small>このウェブサイトは毎日 8:00 UTC と 20:00 UTC に更新しています。
 	  </small></p>
     
 	<table width="100%" cellpadding="0" border="0" cellspacing="0">
