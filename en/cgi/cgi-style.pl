@@ -1,4 +1,4 @@
-# $Id: cgi-style.pl,v 1.7 1996-10-26 17:32:43 jfieber Exp $
+# $Id: cgi-style.pl,v 1.8 1997-06-10 12:47:11 jfieber Exp $
 #
 # Perl routines to encapsulate various elements of HTML page style.
 
@@ -18,7 +18,18 @@ if (!defined($hsty_author)) {
     $hsty_author = "<a href=\"$hsty_base/mailto.html\">www\@freebsd.org</a>";
 }
 
-$i_daemon = "<img src=\"$hsty_base/gifs/daemon.gif\" alt=\"\" align=left>";
+$i_topbar = "<IMG SRC=\"$hsty_base/gifs/bar.gif\" ALT=\"\" WIDTH=\"565\" HEIGHT=\"33\" BORDER=0 usemap=\"#bar\">
+<map name=\"bar\">
+<area shape=\"rect\" coords=\"1,1,111,31\" href=\"$hsty_base/index.html\" ALT=\"\">
+<area shape=\"rect\" coords=\"112,11,196,31\" href=\"$hsty_base/ports/index.html\" ALT=\"\">
+<area shape=\"rect\" coords=\"196,12,257,33\" href=\"$hsty_base/support.html\" ALT=\"\">
+<area shape=\"rect\" coords=\"256,12,365,33\" href=\"$hsty_base/docs.html\" ALT=\"\"> 
+<area shape=\"rect\" coords=\"366,13,424,32\" href=\"$hsty_base/commercial.html\" ALT=\"\">
+<area shape=\"rect\" coords=\"425,16,475,32\" href=\"$hsty_base/search.html\" ALT=\"\">
+<area shape=\"rect\" coords=\"477,16,516,33\" href=\"$hsty_base/index-site.html\" ALT=\"\">
+<area shape=\"rect\" coords=\"516,15,562,33\" href=\"$hsty_base/index.html\" ALT=\"\">
+<area shape=\"rect\" href=\"$hsty_base/index.html\" coords=\"0,0,564,32\" ALT=\"\">
+</map>";
 
 if ($hsty_home eq "") {
     $hsty_home = "<a href=\"$hsty_base/\"><img src=\"$hsty_base/gifs/home.gif\"
@@ -30,8 +41,7 @@ sub html_header {
 
     return "Content-type: text/html\n\n" . 
 	"<html>\n<title>$title</title>\n</head>\n$t_body\n" .
-	"<center><img src=\"$hsty_base/gifs/topbar.gif\" alt=\"\"></center>" .
-	"$i_daemon <h1 align=right>$title</h1><br clear=all><hr noshade>\n";
+	"$i_topbar <h1><font color=\"#660000\">$title</font></h1>\n";
 }
 
 sub short_html_header {
@@ -39,9 +49,9 @@ sub short_html_header {
 
     return "Content-type: text/html\n\n" .
 	"<html>\n<title>$title</title>\n</head>\n$t_body\n" .
-        "<img src=\"$hsty_base/gifs/topbar.gif\" alt=\"\">";
+        "$i_topbar";
 }
 
 sub html_footer {
-    return "<hr noshade>$hsty_home<address>$hsty_author<br>$hsty_date</address>\n";
+    return "<hr><address>$hsty_author<br>$hsty_date</address>\n";
 }
