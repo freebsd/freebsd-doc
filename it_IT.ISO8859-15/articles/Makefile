@@ -7,6 +7,7 @@ SUBDIR+= explaining-bsd
 SUBDIR+= filtering-bridges
 SUBDIR+= multi-os
 SUBDIR+= new-users
+SUBDIR+= vm-design
 
 DOC_PREFIX?= ${.CURDIR}/../..
 
