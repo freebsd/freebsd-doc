@@ -1,4 +1,4 @@
-# $FreeBSD: doc/en_US.ISO_8859-1/articles/Makefile,v 1.9 2001/02/16 00:23:27 nik Exp $
+# $FreeBSD: doc/en_US.ISO_8859-1/articles/Makefile,v 1.10 2001/03/14 18:11:19 nik Exp $
 
 SUBDIR = committers-guide
 SUBDIR+= dialup-firewall
@@ -12,6 +12,7 @@ SUBDIR+= mh
 SUBDIR+= multi-os
 SUBDIR+= new-users
 SUBDIR+= programming-tools
+SUBDIR+= vm-design
 SUBDIR+= zip-drive
 
 # ROOT_SYMLINKS+= new-users
