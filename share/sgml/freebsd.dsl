@@ -1,4 +1,4 @@
-<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.43 2001/07/27 21:16:55 murray Exp $ -->
+<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.44 2001/08/02 03:24:04 murray Exp $ -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
 <!ENTITY % output.html		"IGNORE">
@@ -136,7 +136,8 @@
 	(element port
 	  (let* ((urlurl	"http://www.FreeBSD.org/cgi/url.cgi")
 		 (href		(string-append urlurl "?ports/"
-					       (data (current-node)))))
+					       (data (current-node))
+					       "/pkg-descr")))
 	    (create-link (list (list "HREF" href))
 			 ($mono-seq$))))
       ]]>
