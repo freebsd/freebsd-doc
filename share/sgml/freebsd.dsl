@@ -1,4 +1,4 @@
-<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.45 2001/08/09 00:14:42 chern Exp $ -->
+<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.46 2001/08/09 00:28:10 murray Exp $ -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
 <!ENTITY % output.html		"IGNORE">
@@ -394,44 +394,76 @@
            to automatically have the opening and closing braces inserted,
            and it should be in a mono-spaced font. -->
 
+      <!-- We would like the author attributions to show up in line
+           with the section they refer to.  Authors who made the same
+           contribution should be listed in a single <authorgroup> and 
+           only one of the <author> elements should contain a <contrib>
+           element that describes what the whole authorgroup was
+           responsible for.  For example:
+
+           <chapter1info>
+             <authorgroup>
+               <author>
+                 <firstname>Bob</firstname>
+                 <surname>Jones</surname>
+                 <contrib>Contributed by </contrib>
+               </author>
+               <author>
+                 <firstname>Sarah</firstname>
+                 <surname>Lee</surname>
+               </author>
+             </authorgroup>
+           </chapterinfo>
+
+           Would show up as "Contributed by Bob Jones and Sarah Lee".  Each
+           authorgroup shows up as a seperate sentence. -->
+  
+
       (element chapterinfo 
         (process-children))
       (element sect1info 
         (process-children))
       (element sect2info 
         (process-children))
+      (element sect3info 
+        (process-children))
+      (element sect4info 
+        (process-children))
+      (element sect5info 
+        (process-children))
       (element (chapterinfo authorgroup author)
-        (make sequence
-          (process-node-list (select-elements (descendants (current-node))
-                                (normalize "contrib")))
-          (literal (author-string))
-          (literal ".  ")))
+        (literal (author-list-string)))
       (element (sect1info authorgroup author)
-        (make sequence
-          (process-node-list (select-elements (descendants (current-node))
-                                (normalize "contrib")))
-          (literal (author-string))
-          (literal ".  ")))
+        (literal (author-list-string)))
       (element (sect2info authorgroup author)
-        (make sequence
-          (process-node-list (select-elements (descendants (current-node))
-                                (normalize "contrib")))
-          (literal (author-string))
-          (literal ".  ")))
-      (element (chapterinfo authorgroup)
-        ($italic-seq$
-          (process-children)))
-      (element (sect1info authorgroup)
-        ($italic-seq$
-          (process-children)))
-      (element (sect2info authorgroup)
-        ($italic-seq$
-          (process-children)))
+        (literal (author-list-string)))
+      (element (sect3info authorgroup author)
+        (literal (author-list-string)))
+      (element (sect4info authorgroup author)
+        (literal (author-list-string)))
+      (element (sect5info authorgroup author)
+        (literal (author-list-string)))
 
-      (element (author contrib)
-        (make sequence
-          (process-children)
-          (literal " by ")))
+      (define (custom-authorgroup)
+        ($italic-seq$
+          (make sequence
+            (process-node-list (select-elements (descendants (current-node))
+                                  (normalize "contrib")))
+            (process-children)
+            (literal ".  "))))
+
+      (element (chapterinfo authorgroup)
+        (custom-authorgroup))
+      (element (sect1info authorgroup)
+        (custom-authorgroup))
+      (element (sect2info authorgroup)
+        (custom-authorgroup))
+      (element (sect3info authorgroup)
+        (custom-authorgroup))
+      (element (sect4info authorgroup)
+        (custom-authorgroup))
+      (element (sect5info authorgroup)
+        (custom-authorgroup))
 
       (element sgmltag ($mono-seq$
           (make sequence
