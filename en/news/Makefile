@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/news/Makefile,v 1.30 2001/10/29 10:14:31 murray Exp $
+# $FreeBSD: www/en/news/Makefile,v 1.31 2001/12/12 11:57:37 phantom Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -37,7 +37,9 @@ CLEANFILES+=	newsflash.html news.rdf press.html
 newsflash.html: newsflash.xsl news.xml includes.xsl ../includes.xsl
 	${XSLTPROC} ${XSLTPROCOPTS} -o ${.TARGET} \
 		${.CURDIR}/newsflash.xsl ${.CURDIR}/news.xml
+.if !defined(NO_TIDY)
 	-${TIDY} ${TIDYOPTS} ${.TARGET}
+.endif
 
 news.rdf: news-rdf.xsl news.xml includes.xsl ../includes.xsl
 	${XSLTPROC} ${XSLTPROCOPTS} -o ${.TARGET} \
@@ -46,6 +48,8 @@ news.rdf: news-rdf.xsl news.xml includes.xsl ../includes.xsl
 press.html: press.xsl press.xml includes.xsl ../includes.xsl
 	${XSLTPROC} ${XSLTPROCOPTS} -o ${.TARGET} \
 		${.CURDIR}/press.xsl ${.CURDIR}/press.xml
+.if !defined(NO_TIDY)
 	-${TIDY} ${TIDYOPTS} ${.TARGET}
+.endif
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"

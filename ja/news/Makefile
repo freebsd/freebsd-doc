@@ -1,4 +1,4 @@
-# $FreeBSD: www/ja/news/Makefile,v 1.30 2001/11/19 15:35:42 hrs Exp $
+# $FreeBSD: www/ja/news/Makefile,v 1.31 2001/12/12 11:57:42 phantom Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.30
 
@@ -40,7 +40,9 @@ CLEANFILES+=	newsflash.html press.html
 newsflash.html: newsflash.xsl news.xml includes.xsl ../includes.xsl
 	${XSLTPROC} ${XSLTPROCFLAGS} -o ${.TARGET} \
 		${.CURDIR}/newsflash.xsl ${.CURDIR}/news.xml
+.if !defined(NO_TIDY)
 	-${TIDY} ${TIDYOPTS} ${.TARGET}
+.endif
 
 news.rdf: news-rdf.xsl news.xml includes.xsl ../includes.xsl
 	${XSLTPROC} ${XSLTPROCFLAGS} -o ${.TARGET} \
@@ -49,7 +51,9 @@ news.rdf: news-rdf.xsl news.xml includes.xsl ../includes.xsl
 press.html: press.xsl press.xml includes.xsl ../includes.xsl
 	${XSLTPROC} ${XSLTPROCFLAGS} -o ${.TARGET} \
 		${.CURDIR}/press.xsl ${.CURDIR}/press.xml
+.if !defined(NO_TIDY)
 	-${TIDY} ${TIDYOPTS} ${.TARGET}
+.endif
 
 ### Revision checking
 REVCHECK=	YES
