@@ -26,12 +26,13 @@
 #
 # url.cgi - make plain text URLs clickable
 #
-# $Id: url.cgi,v 1.5 1998-04-01 18:48:32 wosch Exp $
+# $Id: url.cgi,v 1.6 1998-05-15 09:24:21 wosch Exp $
 
 
 require LWP::UserAgent;
 
 $hsty_base = '';
+$hsty_email = 'ports@freebsd.org';
 
 require "./cgi-lib.pl";
 require "./cgi-style.pl";
