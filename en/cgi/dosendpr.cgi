@@ -8,7 +8,7 @@
 #  GNU General Public License Version 2.  
 #     (http://www.gnu.ai.mit.edu/copyleft/gpl.html)
 #
-# $FreeBSD: www/en/cgi/dosendpr.cgi,v 1.6 2001/06/13 00:04:42 dd Exp $
+# $FreeBSD$
 
 require "html.pl";
 
@@ -71,6 +71,7 @@ if (!$cgi_data{'email'} || !$cgi_data{'originator'} ||
 $pr = "To: $gnemail\n" .
       "From: $cgi_data{'originator'} <$cgi_data{'email'}>\n" . 
       "Subject: $cgi_data{'synopsis'}\n" .
+      "X-Originating-IP: $ENV{'REMOTE_ADDR'}\n" .
       "X-Send-Pr-Version: www-1.0\n\n" .
       ">Submitter-Id:\t$cgi_data{'submitterid'}\n" .
       ">Originator:\t$cgi_data{'originator'}\n" .
