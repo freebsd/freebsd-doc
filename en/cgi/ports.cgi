@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-#	$Id: ports.cgi,v 1.13 1998-02-15 16:03:21 wosch Exp $
+#	$Id: ports.cgi,v 1.14 1998-04-04 14:59:42 wosch Exp $
 #
 # ports.cgi - search engine for FreeBSD ports
 #             	o search for a port by name or description
@@ -41,7 +41,7 @@ sub init_variables {
     $ports_database = 'ports/INDEX';
     # unset $ENV{'CVSROOT'};
 
-    @cvscmd = ('cvs', '-Q', '-d', $cvsroot);
+    @cvscmd = ('cvs', '-Q', '-R', '-d', $cvsroot);
 
     # URL of ports tree for browsing
     $remotePrefixFtp =
