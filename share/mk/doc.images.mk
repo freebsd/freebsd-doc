@@ -114,6 +114,7 @@ EPSTOPDF?=	${PREFIX}/bin/epstopdf
 EPSTOPDFOPTS?=	${EPSTOPDFFLAGS}
 PS2EPS?=	${PREFIX}/bin/ps2epsi
 PIC2PS?=	${GROFF} -p -S -Wall -mtty-char -man 
+REALPATH?=	/bin/realpath
 
 # Use suffix rules to convert .scr files to .png files
 .SUFFIXES:	.scr .pic .png .eps
@@ -125,8 +126,12 @@ PIC2PS?=	${GROFF} -p -S -Wall -mtty-char -man
 		${PNGTOPNM} ${PNGTOPNMOPTS} | \
 		${PNMTOPS} ${PNMTOPSOPTS} > ${.TARGET}
 
+# Some versions of ghostscript (7.04) have problems with the use of
+# relative path when the arguments are passed by peps; realpath will
+# correct the problem.
 .pic.png: ${.TARGET:S/.png$/.eps/}
-	${EPS2PNG} ${EPS2PNGOPTS} -o ${.TARGET} ${.ALLSRC}
+	${EPS2PNG} ${EPS2PNGOPTS} -o ${.TARGET} \
+	`${REALPATH} ${.TARGET:S/.png$/.eps/}`
 
 .pic.eps:
 	${PIC2PS} ${.ALLSRC} > ${.TARGET:S/.eps$/.ps/}
@@ -139,7 +144,7 @@ PIC2PS?=	${GROFF} -p -S -Wall -mtty-char -man
 
 .for _curimage in ${IMAGES_GEN_PNG}
 ${_curimage}: ${_curimage:S/.png$/.eps/}
-	${EPS2PNG} ${EPS2PNGOPTS} -o ${.TARGET} ${.ALLSRC}
+	${EPS2PNG} ${EPS2PNGOPTS} -o ${.TARGET} `${REALPATH} ${.ALLSRC}`
 .endfor
 
 .for _curimage in ${IMAGES_GEN_EPS}
