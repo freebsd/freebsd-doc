@@ -188,6 +188,7 @@ NSGMLSFLAGS+=	-i${URL_RELPREFIX_ENT}
 # for ascii and printable format, always use URLS_ABSOLUTE.
 PRINTFLAGS+=	-ifreebsd.urls.absolute
 HTMLTXTFLAGS+=	-ifreebsd.urls.absolute
+OTHERFLAGS+=	-ifreebsd.urls.absolute
 
 # for packages, always use URLS_ABSOLUTE.
 PKGMAKEFLAGS+=	URLS_ABSOLUTE=yes
