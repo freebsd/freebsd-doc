@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/perl -T
 #
 #  Send-pr perl script to send a pr.
 #
@@ -8,7 +8,7 @@
 #  GNU General Public License Version 2.  
 #     (http://www.gnu.ai.mit.edu/copyleft/gpl.html)
 #
-# $FreeBSD$
+# $FreeBSD: www/en/cgi/dosendpr.cgi,v 1.2 2000/04/03 08:45:50 phantom Exp $
 
 require "html.pl";
 
@@ -26,7 +26,7 @@ sub prerror {
 &cgi_form_in();
 
 $gndb = $cgi_data{'gndb'};
-if (-e "$gndb.def")
+if ($gndb =~ /^[a-z]+$/ && -e "$gndb.def")
   { require "$gndb.def"; }
 else
   { &prerror("gndb problem"); }
