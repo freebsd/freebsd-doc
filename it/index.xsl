@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD$ -->
+<!-- $FreeBSD: www/it/index.xsl,v 1.1 2003/03/20 00:10:51 trhodes Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -9,7 +9,7 @@
 
   <xsl:variable name="base" select="'.'"/>
   <xsl:variable name="enbase" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD$'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/it/index.xsl,v 1.1 2003/03/20 00:10:51 trhodes Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -386,7 +386,7 @@
 			    <xsl:value-of select="$rel2.current"/></b></font><br/>
 			
 			    <small>&#183; <a href="{$u.rel2.announce}">Annuncio</a><br/>
-			      &#183; <a href="{$base}/doc/it_IT.ISO8859-15/books/handbook/install.html">Guida di Installazione</a><br/>
+			      &#183; <a href="{$enbase}/doc/it_IT.ISO8859-15/books/handbook/install.html">Guida di Installazione</a><br/>
 			      &#183; <a href="{$u.rel2.notes}">Note sulla Release</a><br/>
 			      &#183; <a href="{$u.rel2.hardware}">Note sull'Hardware</a><br/>
 			      &#183; <a href="{$u.rel2.errata}">Errata</a></small></p>
