@@ -25,7 +25,7 @@ CLEANFILES+= ${EXTRA_SRCS}
 SRCS= article.sgml ${EXTRA_SRCS}
 
 ${EXTRA_SRCS}:
-	${CP} ${DOC_PREFIX}/en_US.ISO8859-1/articles/releng/${.TARGET} ${.OBJDIR}/
+	${CP} ${DOC_PREFIX}/fr_FR.ISO8859-1/articles/releng/${.TARGET} ${.OBJDIR}/
 
 # IMAGES
 IMAGES_EN= branches.pic
