@@ -26,7 +26,7 @@
 #
 # url.cgi - make plain text URLs clickable
 #
-# $Id: url.cgi,v 1.14 1999-01-22 23:57:55 wosch Exp $
+# $Id: url.cgi,v 1.15 1999-02-01 14:27:03 wosch Exp $
 
 
 $hsty_base = '';
@@ -42,6 +42,11 @@ if ($file !~ m%^(http|ftp)://[a-z_\-0-9]+\.freebsd\.(com|org)%i) {
     &CgiError(("Wrong url: $file", "Only http://*.freebsd.* is allowed.\n"));
     exit(0);
 }
+
+# catch '..', multiple times
+# ports/japanese/ppxp/../../net/ppxp/pkg/DESCR 
+#	-> ports/net/ppxp/pkg/DESCR
+1 while $file =~ s%/[^/]+/\.\./%/%;
 
 my($cvsroot) = '/home/ncvs';
 $file =~ s%(http|ftp)://ftp.freebsd.org/pub/FreeBSD/FreeBSD-current/%%;
