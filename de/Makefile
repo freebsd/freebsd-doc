@@ -1,8 +1,8 @@
 # The FreeBSD Documentation Project
 # The FreeBSD German Documentation Project
 # $FreeBSD$
-# $FreeBSDde: de-www/Makefile,v 1.19 2003/12/02 00:33:32 mheinen Exp $
-# basiert auf: 1.101
+# $FreeBSDde: de-www/Makefile,v 1.20 2003/12/26 11:50:22 mheinen Exp $
+# basiert auf: 1.105
 
 .if exists(Makefile.conf)
 .include "Makefile.conf"
@@ -73,12 +73,14 @@ webcheck:
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
 
 index.html: index.xsl ${XML_INCLUDES}\
-		${XML_NEWS_INCLUDES} ${XML_NEWS_NEWS}\
+		${XML_NEWS_INCLUDES} ${XML_NEWS_NEWS} ${XML_NEWS_PRESS}\
 		${XML_MIRRORS} ${XML_ADVISORIES}
 	${XSLTPROC} ${XSLTPROCOPTS} \
 		-o $@ \
 		--param mirrors.xml "'${XML_MIRRORS}'" \
 		--param advisories.xml "'${XML_ADVISORIES}'" \
+		--param news.press.xml "'${XML_NEWS_PRESS}'" \
+		--param news.project.xml "'${XML_NEWS_NEWS}'" \
 		${.CURDIR}/index.xsl ${XML_NEWS_NEWS}
 .if !defined(NO_TIDY)
 	-${TIDY} ${TIDYOPTS} ${.TARGET}

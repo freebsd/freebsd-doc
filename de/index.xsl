@@ -2,8 +2,8 @@
 
 <!--
      $FreeBSD$
-     $FreeBSDde: de-www/index.xsl,v 1.21 2003/12/02 00:33:33 mheinen Exp $
-     basiert auf: 1.83
+     $FreeBSDde: de-www/index.xsl,v 1.24 2003/12/26 11:56:12 mheinen Exp $
+     basiert auf: 1.90
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -13,6 +13,13 @@
 
   <xsl:variable name="date" select="'$FreeBSD: www/de/index.xsl,v 1.4 2003/09/17 23:40:35 mheinen Exp $'"/>
   <xsl:variable name="title" select="'Das FreeBSD Projekt'"/>
+
+  <!-- these params should be externally bound. The values
+       here are not used actually -->
+  <xsl:param name="advisories.xml" select="'none'"/>
+  <xsl:param name="mirrors.xml" select="'none'"/>
+  <xsl:param name="news.press.xml" select="'none'"/>
+  <xsl:param name="news.project.xml" select="'none'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
               doctype-public="-//W3C//DTD HTML 4.01 Transitional//EN"/>
@@ -100,13 +107,15 @@
 			   bgcolor="#ffcc66" width="100%">
 		      <tr>
 			<td>
-			  <p><font size="+1" color="#990000"><b>Neuigkeiten</b></font>
-
-
+			  <p><a href="platforms/index.html">
+			    <font size="+1" color="#990000"><b>Plattformen</b></font></a>
 			    <small><br/>
-			      &#183; <a href="news/newsflash.html">Ank&#252;ndigungen</a><br/>
-			      &#183; <a href="news/press.html">Aus der Presse</a><br/>
-			      &#183; <a href="news/index.html">mehr ...</a>
+			      &#183; <a href="{$enbase}/smp/index.html">i386</a><br/>
+			      &#183; <a href="platforms/alpha.html">Alpha</a><br/>
+			      &#183; <a href="platforms/ia64/index.html">IA-64</a><br/>
+			      &#183; <a href="platforms/amd64.html">AMD64</a><br/>
+			      &#183; <a href="platforms/sparc.html">Sparc64</a><br/>
+			      &#183; <a href="platforms/index.html">weitere ...</a><br/>
 			    </small></p>
 
 			  <p><font size="+1" color="#990000"><b>Software</b></font>
@@ -116,47 +125,52 @@
 			      &#183; <a href="{$enbase}/ports/index.html">Anwendungen (Ports)</a><br/>
 			    </small></p>
 
-			  <p><font size="+1" color="#990000"><b>Dokumentation</b></font>
+			  <p><a href="{$enbase}/docs.html">
+			    <font size="+1" color="#990000"><b>Dokumentation</b></font></a>
 
 			    <small><br/>
-			      &#183; <a href="{$enbase}/projects/newbies.html">F&#252;r Einsteiger</a><br/>
-			      &#183; <a href="{$enbase}/doc/de_DE.ISO8859-1/books/handbook/index.html">Handbuch</a><br/>
 			      &#183; <a href="{$enbase}/doc/de_DE.ISO8859-1/books/faq/index.html">FAQ</a><br/>
+			      &#183; <a href="{$enbase}/doc/de_DE.ISO8859-1/books/handbook/index.html">Handbuch</a><br/>
 			      &#183; <a href="http://www.FreeBSD.org/cgi/man.cgi">Manual-Pages</a><br/>
+			      &#183; <a href="{$enbase}/projects/newbies.html">F&#252;r Einsteiger</a><br/>
 			      &#183; <a href="{$enbase}/docproj/index.html">Doc. Project</a><br/>
-			      &#183; <a href="{$enbase}/docs.html">mehr ...</a><br/>
 			    </small></p>
 
-			  <p><font size="+1" color="#990000"><b>Hilfe</b></font>
+			  <p><a href="{$enbase}/support.html">
+			    <font size="+1" color="#990000"><b>Hilfe</b></font></a>
 
 			    <small><br/>
 			      &#183; <a href="{$enbase}/support.html#mailing-list">Mailinglisten</a><br/>
 			      &#183; <a href="{$enbase}/support.html#newsgroups">Newsgroups</a><br/>
-			      &#183; <a href="{$enbase}/support.html#user">User Groups</a><br/>
+			      &#183; <a href="{$enbase}/support.html#user">Benutzergruppen</a><br/>
 			      &#183; <a href="{$enbase}/support.html#web">Web Ressourcen</a><br/>
 			      &#183; <a href="{$enbase}/security/index.html">Sicherheit</a><br/>
-			      &#183; <a href="{$enbase}/events/events.html">Veranstaltungen</a><br/>
-			      &#183; <a href="{$enbase}/support.html">mehr ...</a>
 			    </small></p>
 
-			  <p><font size="+1" color="#990000"><b>Fehlerberichte</b></font>
+			  <p><a href="{$enbase}/support.html#gnats">
+			    <font size="+1" color="#990000"><b>Fehlerberichte</b></font></a>
+
 			    <small><br/>
-			      &#183; <a href="{$enbase}/send-pr.html">einreichen</a><br/>
-			      &#183; <a href="http://www.FreeBSD.org/cgi/query-pr-summary.cgi">offene</a><br/>
+			      &#183; <a href="http://www.FreeBSD.org/cgi/query-pr-summary.cgi?query">suchen</a><br/>
 			      &#183; <a href="http://www.FreeBSD.org/cgi/query-pr.cgi">nach ID suchen</a><br/>
-			      &#183; <a href="{$enbase}/support.html#gnats">mehr ...</a><br/>
+			      &#183; <a href="http://www.FreeBSD.org/cgi/query-pr-summary.cgi">alle anzeigen</a><br/>
+			      &#183; <a href="{$enbase}/send-pr.html">einreichen</a><br/>
+			      &#183; <a href="{$enbase}/doc/en_US.ISO8859-1/articles/problem-reports/article.html">gute verfassen</a><br/>
 			    </small></p>
 
 
-			  <p><font size="+1" color="#990000"><b>Entwicklung</b></font>
+			  <p><a href="{$enbase}/projects/index.html">
+			    <font size="+1" color="#990000"><b>Entwicklung</b></font></a>
 
 			    <small><br/>
-			      &#183; <a href="{$enbase}/projects/index.html">Projekte</a><br/>
-			      &#183; <a href="{$enbase}/releng/index.html">Release Engineering</a><br/>
+			      &#183; <a href="{$enbase}/doc/en_US.ISO8859-1/books/developers-handbook/index.html">Developer's Handbook</a><br/>
+			      &#183; <a href="{$enbase}/doc/en_US.ISO8859-1/books/porters-handbook/index.html">Porter's Handbook</a><br/>
 			      &#183; <a href="{$enbase}/support.html#cvs">CVS Repository</a><br/>
+			      &#183; <a href="{$enbase}/releng/index.html">Release Engineering</a><br/>
+			      &#183; <a href="{$enbase}/doc/en_US.ISO8859-1/articles/contributing/index.html">Contributing to FreeBSD</a><br/>
 			    </small></p>
 
-			  <p><font size="+1" color="#990000"><b><!-- Kommerzielle -->Anbieter</b></font>
+			  <p><font size="+1" color="#990000"><b>Anbieter</b></font>
 
 			    <small><br/>
 			      &#183; <a href="{$enbase}/commercial/software_bycat.html">Software</a><br/>
@@ -172,13 +186,22 @@
 			      &#183; <a href="{$enbase}/donations/wantlist.html">gesucht</a><br/>
 			    </small></p>
 
-			  <p><font size="+1" color="#990000"><b>&#220;bersicht</b></font>
+			  <p><a href="{$enbase}/search/index-site.html">
+			    <font size="+1" color="#990000"><b>Inhalt</b></font></a>
 
 			    <small><br/>
-			      &#183; <a href="{$enbase}/search/index-site.html">Inhalt</a><br/>
-			      &#183; <a href="{$enbase}/search/search.html">Suchen</a><br/>
-			      &#183; <a href="{$enbase}/internal/index.html">mehr ...</a><br/>
+			      &#183; <a href="{$enbase}/search/search.html#web">nach Webseiten suchen</a><br/>
+			      &#183; <a href="{$enbase}/search/search.html#mailinglists">die Mailinglisten durchsuchen</a><br/>
+			      &#183; <a href="{$enbase}/search/search.html">alles durchsuchen</a><br/>
 			    </small></p>
+
+			  <p><a href="{$base}/mailto.html">
+			    <font size="+1" color="#990000"><b>Schreiben
+			      Sie uns</b></font></a></p>
+
+			  <p><a href="{$enbase}/copyright/index.html">
+			    <font size="+1" color="#990000"><b>BSD-Copyright</b>
+			      </font></a></p>
 
 			  <form action="http://www.FreeBSD.org/cgi/search.cgi" method="get">
 			    <small>Suche<br/>
@@ -202,7 +225,7 @@
 	      <h2><font color="#990000">Was ist FreeBSD?</font></h2>
 
 	      <p>FreeBSD ist ein modernes Betriebssystem f&#252;r
-		Intel kompatible (x86), DEC-Alpha, IA-64, PC-98 und
+		Intel kompatible (x86), AMD64, DEC-Alpha, IA-64, PC-98 und
 		UltraSPARC&#174;-Architekturen.  An der Unterst&#252;tzung weiterer
 		<a href="{$base}/platforms/index.html">Plattformen</a>
 		wird gearbeitet.  FreeBSD ist eine Weiterentwicklung von
@@ -318,8 +341,9 @@
 		    <table cellpadding="4" cellspacing="0" border="0"
 			   bgcolor="#ffcc66" width="100%">
 		      <tr>
-			<td valign="top"><p><font size="+1" color="#990000"><b>Neue Technik:
-			    <xsl:value-of select="$rel.current"/>-RELEASE</b></font><br/>
+			<td valign="top"><p><a href="{$u.rel.early}">
+			    <font size="+1" color="#990000"><b>Neue Technik:
+			    <xsl:value-of select="$rel.current"/>-RELEASE</b></font></a><br/>
 
 			    <small>&#183; <a href="{$u.rel.announce}">Ank&#252;ndigung</a><br/>
 			      &#183; <a href="{$enbase}/doc/en_US.ISO8859-1/books/handbook/install.html">Installation</a><br/>
@@ -328,8 +352,9 @@
 			      &#183; <a href="{$u.rel.errata}">Errata</a><br/>
 			      &#183; <a href="{$u.rel.early}">Early Adopter's Guide</a></small></p>
 
-			  <p><font size="+1" color="#990000"><b>Produktionsreife:
-			    <xsl:value-of select="$rel2.current"/>-RELEASE</b></font><br/>
+			  <p><a href="{$u.rel2.announce}">
+			    <font size="+1" color="#990000"><b>Produktionsreife:
+			    <xsl:value-of select="$rel2.current"/>-RELEASE</b></font></a><br/>
 
 			    <small>&#183; <a href="{$u.rel2.announce}">Ank&#252;ndigung</a><br/>
 			      &#183; <a href="{$enbase}/doc/en_US.ISO8859-1/books/handbook/install.html">Installation</a><br/>
@@ -340,31 +365,13 @@
 			  <p><font size="+1" color="#990000"><b>Ank&#252;ndigungen</b></font><br/>
 			    <font size="-1">
 			      aktualisiert am:
-			      <xsl:value-of
-				select="descendant::day[position() = 1]/name"/>
-			      <xsl:text>. </xsl:text>
-			      <xsl:value-of
-				select="descendant::month[position() = 1]/name"/>
-			      <xsl:text> </xsl:text>
-			      <xsl:value-of
-				select="descendant::year[position() = 1]/name"/>
+			      <xsl:call-template name="html-index-news-project-items-lastmodified">
+			        <xsl:with-param name="news.project.xml" select="$news.project.xml" />
+			      </xsl:call-template>
 			      <br/>
-			      <!-- Pull in the 10 most recent news items -->
-			      <xsl:for-each select="descendant::event[position() &lt;= 10]">
-				&#183;  <a>
-				  <xsl:attribute name="href">
-				    news/newsflash.html#<xsl:call-template name="generate-event-anchor"/>
-				  </xsl:attribute>
-				  <xsl:choose>
-				    <xsl:when test="count(child::title)">
-				      <xsl:value-of select="title"/><br/>
-				    </xsl:when>
-				    <xsl:otherwise>
-				      <xsl:value-of select="p"/><br/>
-				    </xsl:otherwise>
-				  </xsl:choose>
-				</a>
-			      </xsl:for-each>
+			      <xsl:call-template name="html-index-news-project-items">
+			        <xsl:with-param name="news.project.xml" select="$news.project.xml" />
+			      </xsl:call-template>
 			      <a href="news/newsflash.html">mehr ...</a>
 			    </font></p>
 
@@ -372,21 +379,13 @@
 
 			    <font size="-1">
 			      aktualisiert im:
-			      <xsl:value-of
-				select="document('news/press.xml')/descendant::month[position() = 1]/name"/>
-			      <xsl:text> </xsl:text>
-			      <xsl:value-of
-				select="document('news/press.xml')/descendant::year[position() = 1]/name"/>
+			      <xsl:call-template name="html-index-news-press-items-lastmodified">
+			        <xsl:with-param name="news.press.xml" select="$news.press.xml" />
+			      </xsl:call-template>
 			      <br/>
-			      <!-- Pull in the 10 most recent press items -->
-			      <xsl:for-each select="document('news/press.xml')/descendant::story[position() &lt; 10]">
-				&#183; <a>
-				  <xsl:attribute name="href">
-				    news/press.html#<xsl:call-template name="generate-story-anchor"/>
-				  </xsl:attribute>
-				  <xsl:value-of select="name"/>
-				</a><br/>
-			      </xsl:for-each>
+			      <xsl:call-template name="html-index-news-press-items">
+			        <xsl:with-param name="news.press.xml" select="$news.press.xml" />
+			      </xsl:call-template>
 			      <a href="news/press.html">mehr ...</a>
 			    </font>
 			  </p>
@@ -395,24 +394,13 @@
 
 			    <font size="-1">
 			      aktualisiert am:
-			      <xsl:value-of
-				select="document($advisories.xml)/descendant::day[position() = 1]/name"/>
-			      <xsl:text>. </xsl:text>
-			      <xsl:call-template name="translate-month">
-			        <xsl:with-param name="month"
-				  select="document($advisories.xml)/descendant::month[position() = 1]/name"/>
+			      <xsl:call-template name="html-index-advisories-items-lastmodified">
+			        <xsl:with-param name="advisories.xml" select="$advisories.xml" />
 			      </xsl:call-template>
-			      <xsl:text> </xsl:text>
-			      <xsl:value-of
-				select="document($advisories.xml)/descendant::year[position() = 1]/name"/>
 			      <br/>
-			      <!-- Pull in the 10 most recent security advisories -->
-			      <xsl:for-each select="document($advisories.xml)/descendant::advisory[position() &lt; 10]">
-				&#183; <a>
-				  <xsl:attribute name="href">ftp://ftp.freebsd.org/pub/FreeBSD/CERT/advisories/<xsl:value-of select="name"/>.asc</xsl:attribute>
-				  <xsl:value-of select="name"/>
-				</a><br/>
-			      </xsl:for-each>
+			      <xsl:call-template name="html-index-advisories-items">
+			        <xsl:with-param name="advisories.xml" select="$advisories.xml" />
+			      </xsl:call-template>
 			      <a href="{$enbase}/security/">mehr ...</a>
 			    </font>
 			  </p>

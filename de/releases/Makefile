@@ -1,5 +1,5 @@
 # $FreeBSD$
-# $FreeBSDde: de-www/releases/Makefile,v 1.3 2003/08/02 09:37:12 mheinen Exp $
+# $FreeBSDde: de-www/releases/Makefile,v 1.5 2004/01/03 01:26:28 mheinen Exp $
 # basiert auf: 1.37
 
 .if exists(../Makefile.conf)
@@ -11,7 +11,7 @@
 
 DOCS?=	index.sgml snapshots.sgml
 
-SUBDIR=		4.7R 4.8R
+SUBDIR=		4.6.2R 4.7R 4.8R 4.9R
 SUBDIR+=	5.0R 5.1R
 
 .if defined $(NEW_BUILD)
