@@ -228,8 +228,7 @@ print("going to dolog($fullname)\n") if ($verbose);
 	# Display a form offering diffs between said tags
 } else {
 	# Assume it's a module name with a potential path following it.
-	($module = $where) =~ s|/.*||;
-	$xtra = $&;
+	$xtra = $& if (($module = $where) =~ s|/.*||);
 	# Is there an indexed version of modules?
 	if (open(MODULES, "$cvsroot/CVSROOT/modules")) {
 		while (<MODULES>) {
