@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/index.xsl,v 1.111 2004/09/24 17:05:59 imp Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.112 2004/10/01 18:38:44 ceri Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   
@@ -6,7 +6,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.111 2004/09/24 17:05:59 imp Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.112 2004/10/01 18:38:44 ceri Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <!-- these params should be externally bound. The values
@@ -32,6 +32,10 @@
 	      CVS, CVSup, News, Commercial Vendors, homepage, CTM, Unix"/>
 	<link rel="shortcut icon" href="/favicon.ico" type="image/x-icon"/>
 	<link rel="icon" href="/favicon.ico" type="image/x-icon"/>
+	<link rel="alternate" type="application/rss+xml"
+	  title="FreeBSD Project News" href="{$base}/news/news.rdf" />
+	<link rel="alternate" type="application/rss+xml"
+	  title="FreeBSD Security Advisories" href="{$base}/security/advisories.rdf" />
 
 	<!-- Formatted to be easy to spam harvest, please do not reformat. -->
 	<xsl:comment>
