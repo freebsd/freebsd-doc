@@ -143,6 +143,7 @@ DSSSLCATALOG=	${PREFIX}/share/sgml/docbook/dsssl/modular/catalog
 COLLATEINDEX=	${PREFIX}/share/sgml/docbook/dsssl/modular/bin/collateindex.pl
 
 XSLTPROC?=	${PREFIX}/bin/xsltproc
+XSLTPROCFLAGS?=	--nonet
 XSLHTML?=	${DOC_PREFIX}/share/xsl/freebsd-html.xsl
 XSLHTMLCHUNK?=	${DOC_PREFIX}/share/xsl/freebsd-html-chunk.xsl
 XSLFO?=		${DOC_PREFIX}/share/xsl/freebsd-fo.xsl
@@ -157,6 +158,7 @@ CATALOGS+=	-c ${c}
 .endfor
 SGMLFLAGS+=	-D ${CANONICALOBJDIR}
 JADEOPTS=	${JADEFLAGS} ${SGMLFLAGS} ${CATALOGS}
+XSLTPROCOPTS=	${XSLTPROCFLAGS}
 
 KNOWN_FORMATS=	html html.tar html-split html-split.tar \
 		txt rtf ps pdf tex dvi tar pdb
@@ -436,7 +438,7 @@ index.html HTML.manifest: ${SRCS} ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} \
 .elif ${STYLESHEET_TYPE} == "xsl"
 index.html: ${DOC}.xml ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} \
 	${INDEX_SGML} ${HTML_SPLIT_INDEX} ${LOCAL_CSS_SHEET}
-	${XSLTPROC} --param freebsd.output.html.images "'1'" ${XSLHTMLCHUNK} \
+	${XSLTPROC} ${XSLTPROCOPTS} --param freebsd.output.html.images "'1'" ${XSLHTMLCHUNK} \
 		${DOC}.xml
 .endif
 .if !defined(NO_TIDY)
@@ -454,7 +456,7 @@ ${DOC}.html: ${SRCS} ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} \
 .elif ${STYLESHEET_TYPE} == "xsl"
 ${DOC}.html: ${DOC}.xml ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} \
 	${INDEX_SGML} ${LOCAL_CSS_SHEET}     
-	${XSLTPROC} --param freebsd.output.html.images "'1'" ${XSLHTML} \
+	${XSLTPROC} ${XSLTPROCOPTS} --param freebsd.output.html.images "'1'" ${XSLHTML} \
 		${DOC}.xml > ${.TARGET}
 .endif
 .if !defined(NO_TIDY)
@@ -471,7 +473,7 @@ ${DOC}.html-text: ${SRCS} ${INDEX_SGML} ${HTML_INDEX} ${LOCAL_IMAGES_TXT}
 		(${RM} -f ${.TARGET} && false)
 .elif ${STYLESHEET_TYPE} == "xsl"
 ${DOC}.html-text: ${DOC}.xml ${INDEX_SGML} ${HTML_INDEX}
-	${XSLTPROC} --param freebsd.output.html.images "'0'" ${XSLHTML} \
+	${XSLTPROC} ${XSLTPROCOPTS} --param freebsd.output.html.images "'0'" ${XSLHTML} \
 		${DOC}.xml > ${.TARGET}
 .endif
 
