@@ -26,7 +26,7 @@
 #
 # url.cgi - make plain text URLs clickable
 #
-# $FreeBSD: www/en/cgi/url.cgi,v 1.27 2000/10/09 12:27:01 phantom Exp $
+# $FreeBSD: www/en/cgi/url.cgi,v 1.28 2000/12/29 10:49:45 wosch Exp $
 
 use strict;
 
@@ -105,6 +105,9 @@ if ($file =~ m%^(ports/[\w-]+/\w[\w-+.]+)/pkg-descr%) {
 
 # print standard footer line
 print &html_footer; 
+
+# Sleep 0.35 seconds to avoid DoS attacks from broken robots
+select undef, undef, undef, 0.35;
 
 exit;
 
