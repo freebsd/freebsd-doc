@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/ports.cgi,v 1.77 2004/08/20 17:59:55 wosch Exp $
+# $FreeBSD: www/en/cgi/ports.cgi,v 1.78 2004/08/30 19:11:31 ceri Exp $
 #
 # ports.cgi - search engine for FreeBSD ports
 #             	o search for a port by name or description
@@ -567,9 +567,9 @@ FreeBSD Ports [short description <a href="$portsDesc">followed</a> ...]
 };
 
     print qq{
-"Package Name" search for the name of port or distribution.
-"Description" search case-insensitive in a short comment about the port.
-"All" search case-insensitive for the package name and in the
+"Package Name" searches for the name of a port or distribution.
+"Description" searches case-insensitive in a short comment about the port.
+"All" searches case-insensitive for the package name and in the
 description about the port.
 <p>
 
@@ -612,10 +612,10 @@ Search for:
 
     print qq{<hr noshade>
 <p>
-"New" print ports which are new in the ports collection
-or moved from an other ports section. "Changed" print updated ports.
-"Removed" print ports which are deleted from ports collections
-or moved to an other ports section.
+"New" lists ports which are new in the ports collection or moved from
+another ports section. "Changed" lists updated ports.
+"Removed" lists ports which have been deleted from ports collections
+or moved to another ports section.
 
 <FORM METHOD="GET" ACTION="$script_name">
 <SELECT NAME="type">
@@ -662,7 +662,7 @@ sub footer {
 <img ALIGN="RIGHT" src="/gifs/powerlogo.gif" alt="Powered by FreeBSD">
 &copy; 1996-2002 by Wolfram Schneider. All rights reserved.<br>
 };
-    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.77 2004/08/20 17:59:55 wosch Exp $} . "<br>\n";
+    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.78 2004/08/30 19:11:31 ceri Exp $} . "<br>\n";
     print qq{Please direct questions about this service to
 <I><A HREF="$mailtoURL">$mailto</A></I><br>\n};
     print qq{General questions about FreeBSD ports should be sent to } .
