@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/cgi/cgi-style.pl,v 1.16 2000/12/18 04:44:38 knu Exp $
+# $FreeBSD: www/en/cgi/cgi-style.pl,v 1.17 2000/12/29 09:24:40 knu Exp $
 #
 # Perl routines to encapsulate various elements of HTML page style.
 
@@ -10,6 +10,11 @@ $timestamp = "$mo-$md-$yr";
 
 # Colors for the body
 $t_body = "<body text=\"#000000\" bgcolor=\"#ffffff\">";
+
+# This can be set to either a string containing an inline CSS stylesheet
+# or to a <link> element that references an external CSS stylesheet, to
+# make local modifications to the style of a CGI script's output.
+$t_style = "";
 
 if (!defined($hsty_base)) { 
     $hsty_base = "..";
@@ -48,7 +53,7 @@ sub html_header {
 
     return "Content-type: text/html\n\n" . 
 	"<html>\n<head><title>$title</title>\n" .
-	    "<meta name=\"robots\" content=\"nofollow\">\n</head>\n$t_body\n" .
+	    "<meta name=\"robots\" content=\"nofollow\">\n$t_style\n</head>\n$t_body\n" .
 	"$i_topbar <h1><font color=\"#660000\">$title</font></h1>\n";
 }
 
