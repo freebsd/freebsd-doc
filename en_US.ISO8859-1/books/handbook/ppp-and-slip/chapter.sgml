@@ -1,7 +1,7 @@
 <!--
      The FreeBSD Documentation Project
 
-     $FreeBSD: doc/en_US.ISO8859-1/books/handbook/ppp-and-slip/chapter.sgml,v 1.47 2001/08/11 21:34:52 jim Exp $
+     $FreeBSD: doc/en_US.ISO8859-1/books/handbook/ppp-and-slip/chapter.sgml,v 1.48 2001/08/15 00:51:25 logo Exp $
 -->
 
 <chapter id="ppp-and-slip">
@@ -53,11 +53,13 @@
       the already existing kernel implementation of PPP.</para>
 
     <para>You may be wondering what the main difference is between User
-      PPP and kernel PPP.  The answer is simple; user PPP does not run as
-      a daemon, and can run as and when desired.  No PPP interface needs
-      to be compiled into their kernel; it runs as a user process, and uses
-      the tunnel device driver (<devicename>tun</devicename>) to get data
-      into and out of the kernel.</para>
+      PPP and kernel PPP.  The answer is simple; user PPP processes the
+      inbound and outbound data in userland rather than in the kernel.
+      This is expensive in terms of copying the data between the kernel
+      and userland, but allows a far more feature-rich ppp implementation.
+      User PPP uses the <devicename>tun</devicename> device to communicate
+      with the outside world whereas kernel-ppp uses the
+      <devicename>ppp</devicename> device.</para>
 
     <para>From here on out in this chapter, user ppp will simply be
       referred to as ppp unless a distinction needs to be made between it
@@ -151,7 +153,8 @@
 	      you can use the <command>enable dns</command> command in
 	      your <filename>ppp.conf</filename> file to tell
 	      <application>ppp</application> to set the name servers for
-	      you.</para>
+	      you.  This feature depends on your ISPs PPP implementation
+              supporting DNS negotiation.</para>
 	  </listitem>
 	</itemizedlist>
 
@@ -174,7 +177,7 @@
 	  <listitem>
 	    <para>The netmask you should use.  If your ISP has not
 	      provided you with one, you can safely use <hostid
-	      role="netmask">255.255.255.0</hostid>.</para>
+	      role="netmask">255.255.255.255</hostid>.</para>
 	  </listitem>
 
 	  <indexterm id="ppp-statis-ip">
@@ -195,85 +198,37 @@
 	<title>Preparing the Kernel</title>
 
         <para>As previously mentioned, <application>ppp</application>
-          uses the <devicename>tun</devicename> device, and whichever kernel
-          you are using must have <devicename>tun</devicename> configured.
-          The <devicename>tun</devicename> device is preconfigured
-          for the default <filename>GENERIC</filename> kernel that ships
-          with FreeBSD.  However, if you have installed a custom kernel,
-          you must make sure your kernel is configured for ppp.</para>
+          uses the <devicename>tun</devicename> device.  If this device
+          has not been compiled into your kernel,
+          <application>ppp</application> will load it on demand as a
+          module.  The tunnel driver is dynamic, so any number of
+          devices may be created (you are not limited by any kernel
+          configuration values).</para>
 
-	<indexterm id="ppp-kernel-compilation">
-	  <primary>kernel</primary>
-	  <secondary>compiling</secondary>
-	</indexterm>
-	<para>To check, go to your kernel compile directory
-	  (<filename>/sys/i386/conf</filename> or
-	  <filename>/sys/pc98/conf</filename>) and examine your
-	  configuration file.  It should have the following line somewhere
-	  in it:</para>
+	<note>It should be noted that the tunnel driver creates devices
+	  on demand, so <command>ifconfig -a</command> won't necessarily
+	  show up with any <devicename>tun</devicename> devices.</note>
 
-	<programlisting>pseudo-device	tun	1</programlisting>
-
-	<para>If this line is not present, you will need to add it to the
-	  configuration file and recompile your kernel.  The stock
-	  <filename>GENERIC</filename> kernel has this included, so if you
-	  have not installed a custom kernel or do not have a
-	  <filename>/sys</filename> directory, you do not have to change
-	  anything.  If you do need to recompile your kernel, please refer
-	  to the <link linkend="kernelconfig">kernel configuration</link>
-	  section for more information.</para>
-
-	<para>You can check how many tunnel devices your current kernel
-	  has by typing the following:</para>
-	  
-	<screen>&prompt.root; <userinput>ifconfig -a</userinput>
-tun0: flags=8051&lt;UP,POINTOPOINT,RUNNING,MULTICAST&gt; mtu 1500
-        inet 200.10.100.1 --&gt; 203.10.100.24 netmask 0xffffffff
-tun1: flags=8050&lt;POINTOPOINT,RUNNING,MULTICAST&gt; mtu 576
-tun2: flags=8051&lt;UP,POINTOPOINT,RUNNING,MULTICAST&gt; mtu 1500
-        inet 203.10.100.1 --&gt; 203.10.100.20 netmask 0xffffffff
-tun3: flags=8010&lt;POINTOPOINT,MULTICAST&gt; mtu 1500</screen>
-
-	<note>
-	  <para>In FreeBSD 4.0 and later releases, you will only see any
-	    <devicename>tun</devicename> devices which have already been
-	    used.  This means you might not see <emphasis>any</emphasis>
-	    <devicename>tun</devicename> devices.  If this is the case, do
-	    not worry; the device should be created dynamically when
-	    <command>ppp</command> attempts to use it.</para>
-	</note>
-
-	<para>This case shows four tunnel devices, two of which are
-	  currently configured and being used.  It should be noted that
-	  the <literal>RUNNING</literal> flag above indicates that the
-	  interface has been used at some point&mdash;it is not an error
-	  if your interface does not show up as
-	  <literal>RUNNING</literal>.</para>
-
-	<para>If for some reason you have a kernel that does not have the
-	  <devicename>tun</devicename> device in it and cannot recompile
-	  the kernel, all is not lost.  You should be able to dynamically
-	  load the code.  Please refer to the appropriate
-	  &man.modload.8; and &man.lkm.4; manual pages for further
-	  details.</para>
       </sect3>
 
       <sect3>
 	<title>Check the <devicename>tun</devicename> Device</title>
 
-	<para>Under normal circumstances, most users will only require one
+	<para>Under normal circumstances, most users will only use one
 	  <devicename>tun</devicename> device
-	  (<filename>/dev/tun0</filename>).  If you have specified more
-	  than one on the <literal>pseudo-device</literal> line for
-	  <devicename>tun</devicename> in your kernel configuration file,
-	  then alter all references to <devicename>tun0</devicename> below
-	  to reflect whichever device number you are using (e.g.,
-	  <devicename>tun2</devicename>).</para>
+	  (<filename>/dev/tun0</filename>).  References to
+	  <devicename>tun0</devicename> below may be changed to
+	  <devicename>tunN</devicename> where N is any unit number.</para>
 
+        <para>For FreeBSD installations that do not have DEVFS enabled,
+          the existence of the <devicename>tun0</devicename> device should
+          be verified (this is not necessary if DEVFS is enabled as device
+          nodes will be created on demand).
+          
 	<para>The easiest way to make sure that the
 	  <devicename>tun0</devicename> device is configured correctly,
-	  is to remake the device.  This process is quite easy.  To remake
-	  the device, do the following:</para>
+	  is to remake the device.  To remake the device, do the
+          following:</para>
 
 	<screen>&prompt.root; <userinput>cd /dev</userinput>
 &prompt.root; <userinput>./MAKEDEV tun0</userinput></screen>
@@ -284,22 +239,6 @@ tun3: flags=8010&lt;POINTOPOINT,MULTICAST&gt; mtu 1500</screen>
 
 	<screen>&prompt.root; <userinput>cd /dev</userinput>
 &prompt.root; <userinput>./MAKEDEV tun15</userinput></screen>
-
-	<para>To confirm that the kernel is configured correctly, issue
-	  the follow command and compare the results:</para>
-
-	<screen>&prompt.root; <userinput>ifconfig tun0</userinput>
-tun0: flags=8050&lt;POINTOPOINT,RUNNING,MULTICAST&gt; mut 1500</screen>
-
-	<para>The <literal>RUNNING</literal> flag may not yet be set, in
-	  which case you will see:</para>
-
-	<screen>&prompt.root; <userinput>ifconfig tun0</userinput>
-tun0: flags=8010&lt;POINTOPOINT,MULTICAST&gt; mtu 1500</screen>
-
-	<para>Remember from earlier that you might not see the device if it
-	  has not been used yet, as <devicename>tun</devicename> devices are
-	  created on demand in FreeBSD 4.0 and later releases.</para>
       </sect3>
 
       <sect3>
@@ -324,23 +263,34 @@ tun0: flags=8010&lt;POINTOPOINT,MULTICAST&gt; mtu 1500</screen>
 	  beyond the scope of this document.</para>
 
 	<para>The resolver is a set of system calls that do the name
-	  mappings, but you have to tell them where to find their
-	  information.  You do this by first editing the file
-	  <filename>/etc/host.conf</filename>.  Do <emphasis>not</emphasis>
-	  call this file <filename>/etc/hosts.conf</filename> (note the
-	  extra <literal>s</literal>) as the results can be
-	  confusing.</para>
+	  mappings, but you have to tell it where to find the
+	  information.  For versions of FreeBSD prior to 5.0, you do this
+          by first editing the file <filename>/etc/host.conf</filename>.
+          FreeBSD 5.0 uses the <filename>/etc/nsswitch.conf</filename> file.
 
 	<sect4>
 	  <title>Edit <filename>/etc/host.conf</filename></title>
 
-	  <para>This file should contain the following two lines (in this
-	    order):</para>
+	  <para>For versions of FreeBSD prior to 5.0, this file should
+            contain the following two lines (in this order):</para>
 
 	  <programlisting>hosts
 bind</programlisting>
 
-	  <para>These instruct the resolver to first look in the file
+	  <para>This instructs the resolver to first look in the file
+	    <filename>/etc/hosts</filename>, and then to consult the DNS
+	    if the name was not found.</para>
+	</sect4>
+
+	<sect4>
+	  <title>Edit <filename>/etc/nsswitch.conf</filename></title>
+
+	  <para>For FreeBSD version 5.0 or above, this file should
+            contain at least the following line:
+
+	  <programlisting>hosts: files, dns</programlisting>
+
+	  <para>This instructs the resolver to first look in the file
 	    <filename>/etc/hosts</filename>, and then to consult the DNS
 	    if the name was not found.</para>
 	</sect4>
@@ -348,7 +298,7 @@ bind</programlisting>
 	<sect4>
 	  <title>Edit <filename>/etc/hosts</filename></title>
 
-	  <para>This file should contain the IP addresses and names of
+	  <para>This file may contain the IP addresses and names of
 	    machines on your network.  At a bare minimum it should contain
 	    entries for the machine which will be running ppp.  Assuming
 	    that your machine is called <hostid
@@ -357,30 +307,29 @@ bind</programlisting>
 	    <filename>/etc/hosts</filename> should contain:</para>
 
 	  <programlisting>127.0.0.1	localhost.bar.com	localhost
-127.0.0.1	localhost.bar.com.
-10.0.0.1	foo.bar.com		foo
-10.0.0.1	foo.bar.com.</programlisting>
+::1	localhost.bar.com	localhost
+10.0.0.1	foo.bar.com		foo</programlisting>
 
 	  <para>The first two lines define the alias
 	    <hostid>localhost</hostid> as a synonym for the current
-	    machine.  Regardless of your own IP address, the IP address
-	    for this line should always be <hostid
-	    role="ipaddr">127.0.0.1</hostid>.  The second two lines map
+	    machine.  Regardless of your own IP address, the IP addresses
+	    for these lines should always be <hostid
+	    role="ipaddr">127.0.0.1</hostid> and <hostid
+            role="ipaddr">::1</hostid>.  The last line maps
 	    the name <hostid role="fqdn">foo.bar.com</hostid> (and the
 	    shorthand <hostid>foo</hostid>) to the IP address <hostid
 	    role="ipaddr">10.0.0.1</hostid>.</para>
 
 	  <para>If your provider allocates you a static IP address and
-	    name, use them in place of the <hostid
-	    role="ipaddr">10.0.0.1</hostid> entry.</para>
+	    name, and you are not using that as your host name, add this
+            to the <filename>/etc/hosts</filename> too.
 	</sect4>
 
 	<sect4>
 	  <title>Edit <filename>/etc/resolv.conf</filename></title>
 
 	  <para>The <filename>/etc/resolv.conf</filename> file tells the
-	    resolver how to behave.  If you are running your own DNS, you
-	    may leave this file empty.  Normally, you will need to enter
+	    resolver how to behave.  Normally, you will need to enter
 	    the following line(s):</para>
 
 	  <programlisting>domain <replaceable>bar.com</replaceable>
@@ -392,19 +341,23 @@ nameserver <replaceable>y.y.y.y</replaceable></programlisting>
 	    <hostid role="ipaddr"><replaceable>y.y.y.y</replaceable></hostid>
 	    addresses are those given to you by your ISP.  Add as many
 	    <literal>nameserver</literal> lines as your ISP provides.  The
-	    <literal>domain</literal> line defaults to your hostname's
-	    domain, and is probably unnecessary.  Refer to the
-	    &man.resolv.conf.5; manual page for details of other possible
-	    entries in this file.</para>
+	    <literal>domain</literal> line is set to your hosts
+	    domain name.  Refer to the &man.resolv.conf.5; manual page for
+            details of other possible entries in this file.</para>
+
+	  <para>If you are running a local name server, replace the
+            above nameserver lines with:</para>
+
+	  <programlisting>nameserver <replaceable>0.0.0.0</replaceable></programlisting>
 
 	  <indexterm><primary>PPP</primary></indexterm>
 	  <indexterm><primary>ISP</primary></indexterm>
-	  <para>If you are running PPP version 2 or greater, the
-	    <command>enable dns</command> command will tell PPP to request
-	    that your ISP confirms the nameserver values.  If your ISP
-	    supplies different addresses (or if there are no nameserver
-	    lines in <filename>/etc/resolv.conf</filename>), PPP will
-	    rewrite the file with the ISP-supplied values.</para>
+	  <para>The <command>enable dns</command> command (entered in the
+            <filename>/etc/ppp/ppp.conf</filename> file - see below) will
+            tell PPP to request that your ISP confirms the nameserver values.
+            If your ISP supplies different addresses (or if there are no
+            nameserver lines in <filename>/etc/resolv.conf</filename>), PPP
+            will rewrite the file with the ISP-supplied values.</para>
 	</sect4>
       </sect3>
 
@@ -414,9 +367,9 @@ nameserver <replaceable>y.y.y.y</replaceable></programlisting>
 	<indexterm><primary>PPP</primary><secondary>configuration</secondary></indexterm>
 	<para>Both <command>ppp</command> and <command>pppd</command>
 	  (the kernel level implementation of PPP) use the configuration
-	  files located in the <filename>/usr/share/examples/ppp</filename> directory.
-	  The sample configuration files provided are a good reference,
-	  so do not delete them.</para>
+	  files located in the <filename>/etc/ppp</filename> directory.
+          Examples for user ppp can be found in
+          <filename>/usr/share/examples/ppp/</filename>.
 
 	<para>Configuring <command>ppp</command> requires that you edit a
 	  number of files, depending on your requirements.  What you put
@@ -429,9 +382,9 @@ nameserver <replaceable>y.y.y.y</replaceable></programlisting>
 	  <title>PPP and Static IP Addresses</title>
 
 	  <indexterm><primary>PPP</primary><secondary>with static IP addresses</secondary></indexterm>
-	  <para>You will need to create a configuration file called
-	    <filename>/etc/ppp/ppp.conf</filename>.  It should look
-	    similar to the example below.</para>
+	  <para>You will need to edit the
+	    <filename>/etc/ppp/ppp.conf</filename> configuration file.  It
+            should look similar to the example below.</para>
 
 	  <note>
 	    <para>Lines that end in a <literal>:</literal> start in the
@@ -440,16 +393,23 @@ nameserver <replaceable>y.y.y.y</replaceable></programlisting>
 	  </note>
 
 	  <programlisting>1     default:
-2       set device /dev/cuaa0
-3       set speed 115200
-4       set dial "ABORT BUSY ABORT NO\\sCARRIER TIMEOUT 5 \"\" ATE1Q0 OK-AT-OK \\dATDT\\TTIMEOUT 40 CONNECT"
-5     provider:
-6       set phone "(123) 456 7890"
-7       set login "TIMEOUT 10 \"\" \"\" gin:--gin: foo word: bar col: ppp"
-8       set timeout 300
-9       set ifaddr <replaceable>x.x.x.x</replaceable> <replaceable>y.y.y.y</replaceable> 255.255.255.0 0.0.0.0
-10      add default HISADDR	  
-11      enable dns</programlisting>
+2       set log Phase Chat LCP IPCP CCP tun command
+3       ident user-ppp VERSION (built COMPILATIONDATE)
+4       set device /dev/cuaa0
+5       set speed 115200
+6       set dial "ABORT BUSY ABORT NO\\sCARRIER TIMEOUT 5 \
+7                 \"\" AT OK-AT-OK ATE1Q0 OK \\dATDT\\TTIMEOUT 40 CONNECT"
+8       set timeout 180
+9       enable dns
+10
+11    provider:
+12      set phone "(123) 456 7890"
+13      set authname foo
+14      set authkey bar
+15      set login "TIMEOUT 10 \"\" \"\" gin:--gin: \\U word: \\P col: ppp"
+16      set timeout 300
+17      set ifaddr <replaceable>x.x.x.x</replaceable> <replaceable>y.y.y.y</replaceable> 255.255.255.255 0.0.0.0
+18      add default HISADDR</programlisting>
 
 	  <para>Do not include the line numbers, they are just for
 	    reference in this discussion.</para>
@@ -468,6 +428,32 @@ nameserver <replaceable>y.y.y.y</replaceable></programlisting>
 	      <term>Line 2:</term>
 
 	      <listitem>
+		<para>Enables logging parameters.  When the configuration
+		  is working satisfactorily, this line should be reduced
+                  to saying
+
+	          <programlisting>set log phase tun</programlisting>
+
+                  in order to avoid excessive log file sizes.</para>
+	      </listitem>
+	    </varlistentry>
+
+	    <varlistentry>
+	      <term>Line 3:</term>
+
+	      <listitem>
+		<para>Tells PPP how to identify itself to the peer.
+                  PPP identifies itself to the peer if it has any trouble
+                  negotiating and setting up the link, providing information
+                  that the peers administrator may find useful when
+                  investigating such problems.
+	      </listitem>
+	    </varlistentry>
+
+	    <varlistentry>
+	      <term>Line 4:</term>
+
+	      <listitem>
 		<para>Identifies the device to which the modem is
 		  connected.  <devicename>COM1</devicename> is
 		  <filename>/dev/cuaa0</filename> and
@@ -477,7 +463,7 @@ nameserver <replaceable>y.y.y.y</replaceable></programlisting>
 	    </varlistentry>
 
 	    <varlistentry>
-	      <term>Line 3:</term>
+	      <term>Line 5:</term>
 
 	      <listitem>
 		<para>Sets the speed you want to connect at.  If 115200
@@ -487,7 +473,7 @@ nameserver <replaceable>y.y.y.y</replaceable></programlisting>
 	    </varlistentry>
 
 	    <varlistentry>
-	      <term>Line 4:</term>
+	      <term>Line 6 & 7:</term>
 
 	      <indexterm><primary>PPP</primary><secondary>user PPP</secondary></indexterm>
 	      <listitem>
@@ -495,11 +481,44 @@ nameserver <replaceable>y.y.y.y</replaceable></programlisting>
 		  syntax similar to the &man.chat.8; program.  Refer to
 		  the manual page for information on the features of this
 		  language.</para>
+
+		<para>Note that this command continues onto the next line
+                   for readability.  Any command in
+                   <filename>ppp.conf</filename> may do this if the last
+                   character on the line is a ``\'' character.</para>
 	      </listitem>
 	    </varlistentry>
 
 	    <varlistentry>
-	      <term>Line 5:</term>
+	      <term>Line 8:</term>
+
+	      <listitem>
+		<para>Sets the idle timeout for the link.  180 seconds
+		  is the default, so this line is purely cosmetic.</para>
+	      </listitem>
+	    </varlistentry>
+
+	    <varlistentry>
+	      <term>Line 9:</term>
+
+	      <listitem>
+		<para>Tells PPP to ask the peer to confirm the local
+		  resolver settings.  If you run a local name server, this
+                  line should be commented out or removed.</para>
+	      </listitem>
+	    </varlistentry>
+
+	    <varlistentry>
+	      <term>Line 10:</term>
+
+	      <listitem>
+		<para>A blank line for readability.  Blank lines are ignored
+		by PPP.</para>
+	      </listitem>
+	    </varlistentry>
+
+	    <varlistentry>
+	      <term>Line 11:</term>
 
 	      <listitem>
 		<para>Identifies an entry for a provider called
@@ -508,7 +527,7 @@ nameserver <replaceable>y.y.y.y</replaceable></programlisting>
 	    </varlistentry>
 
 	    <varlistentry>
-	      <term>Line 6:</term>
+	      <term>Line 12:</term>
 
 	      <listitem>
 		<para>Sets the phone number for this provider.  Multiple
@@ -525,10 +544,29 @@ nameserver <replaceable>y.y.y.y</replaceable></programlisting>
 	    </varlistentry>
 
 	    <varlistentry>
-	      <term>Line 7:</term>
+	      <term>Line 13 & 14:</term>
 
 	      <listitem>
-		<para>The login string is of the same chat-like syntax as
+		<para>Identifies the user name and password.  When connecting
+                  using a unix-style login prompt, these values are referred
+                  to by the <command>set login</command> command using the \U
+                  and \P variables.  When connecting using PAP or CHAP, these
+                  values are used at authentication time.</para>
+	      </listitem>
+	    </varlistentry>
+
+	    <varlistentry>
+	      <term>Line 15:</term>
+
+	      <listitem>
+		<indexterm><primary>PAP</primary></indexterm>
+		<indexterm><primary>CHAP</primary></indexterm>
+		<para>If you are using PAP or CHAP, there will be no login
+		  at this point, and this line should be commented out or
+		  removed.  See <link linkend="userppp-PAPnCHAP">PAP and CHAP
+		  authentication</link> for further details.</para>
+
+                <para>The login string is of the same chat-like syntax as
 		  the dial string.  In this example, the string works for
 		  a service whose login session looks like this:</para>
 
@@ -539,31 +577,27 @@ protocol: ppp</screen>
 
 		<para>You will need to alter this script to suit your own
 		  needs.  When you write this script for the first time,
-		  you should enable <quote>chat</quote> logging to ensure
-		  that the conversation is going as expected.</para>
-		<indexterm><primary>PAP</primary></indexterm>
-		<indexterm><primary>CHAP</primary></indexterm>
-		<para>If you are using PAP or CHAP, there will be no login
-		  at this point, so your login string can be left blank.
-		  See <link linkend="userppp-PAPnCHAP">PAP and CHAP
-		  authentication</link> for further details.</para>
+		  you should ensure that you have enabled <quote>chat</quote>
+                  logging so you can determine if the conversation is going
+                  as expected.</para>
 	      </listitem>
 	    </varlistentry>
 
 	    <varlistentry>
-	      <term>Line 8:</term>
+	      <term>Line 16:</term>
 
 	      <indexterm><primary>timeout</primary></indexterm>
 	      <listitem>
-		<para>Sets the default timeout (in seconds) for the
+		<para>Sets the default idle timeout (in seconds) for the
 		  connection.  Here, the connection will be closed
 		  automatically after 300 seconds of inactivity.  If you
-		  never want to timeout, set this value to zero.</para>
+		  never want to timeout, set this value to zero or use
+                  the <option>-ddial</option> command line switch.</para>
 	      </listitem>
 	    </varlistentry>
 
 	    <varlistentry>
-	      <term>Line 9:</term>
+	      <term>Line 17:</term>
 	      <indexterm><primary>ISP</primary></indexterm>
 	      <listitem>
 		<para>Sets the interface addresses.  The string
@@ -580,13 +614,12 @@ protocol: ppp</screen>
 		  instructions for <link linkend="userppp-dynamicIP">PPP
 		  and Dynamic IP addresses</link>.  If this line is
 		  omitted, <command>ppp</command> cannot run in
-		  <option>-auto</option> or <option>-dynamic</option>
-		  mode.</para>
+		  <option>-auto</option> mode.</para>
 	      </listitem>
 	    </varlistentry>
 
 	    <varlistentry>
-	      <term>Line 10:</term>
+	      <term>Line 18:</term>
 
 	      <listitem>
 		<para>Adds a default route to your ISP's gateway.  The
@@ -595,31 +628,24 @@ protocol: ppp</screen>
 		  important that this line appears after line 9,
 		  otherwise <literal>HISADDR</literal> will not yet be
 		  initialized.</para>
-	      </listitem>
-	    </varlistentry>
 
-	    <varlistentry>
-	      <term>Line 11:</term>
-	      <indexterm><primary>nameserver</primary></indexterm>
-	      <listitem>
-		<para>This line tells PPP to ask your ISP to confirm that
-		  your nameserver addresses are correct.  If your ISP
-		  supports this facility, PPP can then update
-		  <filename>/etc/resolv.conf</filename> with the correct
-		  nameserver entries.</para>
+		<para>If you do not wish to run ppp in <option>-auto</option>,
+		  this line should be moved to the
+                  <filename>ppp.linkup</filename> file.
 	      </listitem>
 	    </varlistentry>
 	  </variablelist>
 
 	  <para>It is not necessary to add an entry to
 	    <filename>ppp.linkup</filename> when you have a static IP
-	    address as your routing table entries are already correct
-	    before you connect.  You may however wish to create an entry
-	    to invoke programs after connection.  This is explained later
-	    with the sendmail example.</para>
+	    address and are running ppp in <option>-auto</option> mode as your
+            routing table entries are already correct before you connect.
+            You may however wish to create an entry to invoke programs after
+            connection.  This is explained later with the sendmail
+            example.</para>
 
 	  <para>Example configuration files can be found in the
-	    <filename>/usr/share/examples/ppp</filename> directory.</para>
+	    <filename>/usr/share/examples/ppp/</filename> directory.</para>
 	</sect4>
 
 	<sect4 id="userppp-dynamicIP">
@@ -636,15 +662,15 @@ protocol: ppp</screen>
 	    <link linkend="userppp-staticIP">PPP and Static IP
 	    Addresses</link>, with the following change:</para>
 
-	  <programlisting>9      set ifaddr 10.0.0.1/0 10.0.0.2/0 255.255.255.0</programlisting>
+	  <programlisting>17      set ifaddr 10.0.0.1/0 10.0.0.2/0 255.255.255.255</programlisting>
 
-	  <para>Again, do not include the line numbers, they are just for
+	  <para>Again, do not include the line number, it is just for
 	    reference.  Indentation of at least one space is
 	    required.</para>
 
 	  <variablelist>
 	    <varlistentry>
-	      <term>Line 9:</term>
+	      <term>Line 17:</term>
 
 	      <listitem>
 		<para>The number after the <literal>/</literal> character
@@ -654,28 +680,27 @@ protocol: ppp</screen>
 		  will always work.</para>
 
 		<para>The last argument (<literal>0.0.0.0</literal>) tells
-		  PPP to negotiate using address <hostid
+		  PPP to start negotiations using address <hostid
 		  role="ipaddr">0.0.0.0</hostid> rather than <hostid
-		  role="ipaddr">10.0.0.1</hostid>.  Do not use
-		  <literal>0.0.0.0</literal> as the first argument to
-		  <command>set ifaddr</command> as it prevents PPP from
-		  setting up an initial route in <option>-auto</option>
-		  mode.</para>
+		  role="ipaddr">10.0.0.1</hostid> and is necessary for some
+                  ISPs.  Do not use <literal>0.0.0.0</literal> as the first
+                  argument to <command>set ifaddr</command> as it prevents
+                  PPP from setting up an initial route in
+                  <option>-auto</option> mode.</para>
 	      </listitem>
 	    </varlistentry>
 	  </variablelist>
 
-	  <para>If you are running version 1.x of PPP, you will also need
-	    to create an entry in <filename>/etc/ppp/ppp.linkup</filename>.
+	  <para>If you are not running in <option>-auto</option> mode, you
+	    will need to create an entry in
+            <filename>/etc/ppp/ppp.linkup</filename>.
 	    <filename>ppp.linkup</filename> is used after a connection has
 	    been established.  At this point, <command>ppp</command> will
-	    know what IP addresses should <emphasis>really</emphasis> be
-	    used.  The following entry will delete the existing bogus
-	    routes, and create correct ones:</para>
+	    have assigned the interface addresses and it will now be
+	    possible to add the routing table entries:</para>
 
 	  <programlisting>1     provider:
-2      delete ALL
-3      add 0 0 HISADDR</programlisting>
+2      add default HISADDR</programlisting>
 
 	  <variablelist>
 	    <varlistentry>
@@ -698,21 +723,10 @@ protocol: ppp</screen>
 	      <term>Line 2:</term>
 
 	      <listitem>
-		<para>This line tells <command>ppp</command> to delete all
-		  of the existing routes for the acquired
-		  <devicename>tun</devicename> interface (except the
-		  direct route entry).</para>
-	      </listitem>
-	    </varlistentry>
-
-	    <varlistentry>
-	      <term>Line 3:</term>
-
-	      <listitem>
 		<para>This line tells <command>ppp</command> to add a
 		  default route that points to <literal>HISADDR</literal>.
 		  <literal>HISADDR</literal> will be replaced with the IP
-		  number of the gateway as negotiated in the IPCP.</para>
+		  number of the gateway as negotiated by the IPCP.</para>
 	      </listitem>
 	    </varlistentry>
 	  </variablelist>
@@ -721,15 +735,6 @@ protocol: ppp</screen>
 	    <filename>/usr/share/examples/ppp/ppp.conf.sample</filename> and
 	    <filename>/usr/share/examples/ppp/ppp.linkup.sample</filename> for a
 	    detailed example.</para>
-
-	  <para>Version 2 of PPP introduces <quote>sticky routes</quote>.
-	    Any <literal>add</literal> or <literal>delete</literal> lines
-	    that contain <literal>MYADDR</literal> or
-	    <literal>HISADDR</literal> will be remembered, and any time
-	    the actual values of <literal>MYADDR</literal> or
-	    <literal>HISADDR</literal> change, the routes will be
-	    reapplied.  This removes the necessity of repeating these
-	    lines in <filename>ppp.linkup</filename>.</para>
 	</sect4>
 
 	<sect4>
