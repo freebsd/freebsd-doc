@@ -93,6 +93,7 @@ MAN1 =	a2p.1\
 	gdb.1\
 	gdbserver.1\
 	gencat.1\
+	genclass.1\
 	getNAME.1\
 	getopt.1\
 	global.1\
@@ -188,6 +189,7 @@ MAN1 =	a2p.1\
 	mt.1\
 	mv.1\
 	ncal.1\
+	neqn.1\
 	netstat.1\
 	newaliases.1\
 	nfsstat.1\
@@ -213,6 +215,7 @@ MAN1 =	a2p.1\
 	printf.1\
 	ps.1\
 	psbb.1\
+	psroff.1\
 	pwd.1\
 	qcamcontrol.1\
 	quota.1\
@@ -297,8 +300,13 @@ MAN1 =	a2p.1\
 	unvis.1\
 	uptime.1\
 	users.1\
+	uuconv.1\
 	uucp.1\
 	uuencode.1\
+	uulog.1\
+	uuname.1\
+	uupick.1\
+	uuto.1\
 	uustat.1\
 	uux.1\
 	vacation.1\
