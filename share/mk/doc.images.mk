@@ -10,7 +10,7 @@
 #
 #  2.  Images that are document specific.
 #
-# For library images this file ensures that they are copied in to the 
+# For library images this file ensures that they are copied in to the
 # documents directory so that they can be reference properly.
 #
 # For library images *and* document specific images, this file ensures
@@ -154,7 +154,7 @@ PNMTOPSOPTS?=	-noturn ${PNMTOPSFLAGS}
 EPSTOPDF?=	${PREFIX}/bin/epstopdf
 EPSTOPDFOPTS?=	${EPSTOPDFFLAGS}
 #
-PIC2PS?=	${GROFF} -p -S -Wall -mtty-char -man 
+PIC2PS?=	${GROFF} -p -S -Wall -mtty-char -man
 #
 PS2EPS?=	${PREFIX}/bin/gs
 PS2EPSOPTS?=	-q -dNOPAUSE -dSAFER -dDELAYSAFER \
@@ -255,7 +255,7 @@ ${.OBJDIR}/${_curimage}: ${_curimage}
 # --------------------
 #
 # Each document that wants to use one or more library images has to
-# list them in the IMAGES_LIB variable.  For example, a document that wants 
+# list them in the IMAGES_LIB variable.  For example, a document that wants
 # to use callouts 1 thru 4 has to list
 #
 #  IMAGES_LIB= callouts/1.png callouts/2.png callouts/3.png callouts/4.png
@@ -278,7 +278,7 @@ IMAGES_LIB_DIR?=	${.CURDIR}/../../../share/images
 #
 # The name of the directory *in* the document directory where files and
 # directory hierarchies should be copied to.  "images" is too generic, and
-# might clash with local document images, so use "imagelib" by default 
+# might clash with local document images, so use "imagelib" by default
 # instead.  If you redefine this then you must also update the
 # %callout-graphics-path% variable in the .dsl file.
 #
@@ -287,7 +287,7 @@ CLEANDIRS+=	${LOCAL_IMAGES_LIB_DIR}
 
 #
 # Create a target for each image used from the library.  This target just
-# ensures that each image required is copied from its location in 
+# ensures that each image required is copied from its location in
 # ${IMAGES_LIB_DIR} to the same place in ${LOCAL_IMAGES_LIB_DIR}.
 #
 
