@@ -1,8 +1,10 @@
-<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.15 2000/07/25 10:31:35 nik Exp $ -->
+<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.16 2000/07/25 18:23:45 ben Exp $ -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
-<!ENTITY % output.html  "IGNORE">
-<!ENTITY % output.print "IGNORE">
+<!ENTITY % output.html		"IGNORE">
+<!ENTITY % output.html.images 	"IGNORE">
+<!ENTITY % output.print 	"IGNORE">
+<!ENTITY % output.print.pdf 	"IGNORE">
 
 <![ %output.html; [
 <!ENTITY docbook.dsl PUBLIC "-//Norman Walsh//DOCUMENT DocBook HTML Stylesheet//EN" CDATA DSSSL>
@@ -44,47 +46,6 @@
         (define html-manifest
           ;; Write a manifest?
           #f)
-
-        (define %callout-graphics%
-          ;; Use graphics in callouts?
-          #t)
-
-        (define %callout-graphics-ext%
-          ;; The extension to use for callout images.  This is an extension
-          ;; to the stylesheets, they do not support this functionality
-          ;; natively.
-          ".png")
-
-        (define %callout-graphics-path%
-          ;; Path to callout graphics
-          "./imagelib/callouts/")
-
-        ;; Redefine $callout-bug$ to support the %callout-graphic-ext%
-        ;; variable.
-        (define ($callout-bug$ conumber)
-	  (let ((number (if conumber (format-number conumber "1") "0")))
-	    (if conumber
-		(if %callout-graphics%
-	            (if (<= conumber %callout-graphics-number-limit%)
-		        (make empty-element gi: "IMG"
-			      attributes: (list (list "SRC"
-				                      (root-rel-path
-					               (string-append
-						        %callout-graphics-path%
-							number
-	                                                %callout-graphics-ext%)))
-		                                (list "HSPACE" "0")
-			                        (list "VSPACE" "0")
-				                (list "BORDER" "0")
-					        (list "ALT"
-						      (string-append
-	                                               "(" number ")"))))
-		        (make element gi: "B"
-			      (literal "(" (format-number conumber "1") ")")))
-	            (make element gi: "B"
-		          (literal "(" (format-number conumber "1") ")")))
-	        (make element gi: "B"
-	       (literal "(??)")))))
 
         <!-- Understand <segmentedlist> and related elements.  Simpleminded,
              and only works for the HTML output. -->
@@ -134,10 +95,96 @@
 
       ]]>
 
+      <!-- HTML with images  ............................................ -->
+
+      <![ %output.html.images [
+
+        (define %graphic-default-extension%
+          "png")
+
+        (define %callout-graphics%
+          ;; Use graphics in callouts?
+          #t)
+
+        (define %callout-graphics-ext%
+          ;; The extension to use for callout images.  This is an extension
+          ;; to the stylesheets, they do not support this functionality
+          ;; natively.
+          ".png")
+
+        (define %callout-graphics-path%
+          ;; Path to callout graphics
+          "./imagelib/callouts/")
+
+        ;; Redefine $callout-bug$ to support the %callout-graphic-ext%
+        ;; variable.
+        (define ($callout-bug$ conumber)
+	  (let ((number (if conumber (format-number conumber "1") "0")))
+	    (if conumber
+		(if %callout-graphics%
+	            (if (<= conumber %callout-graphics-number-limit%)
+		        (make empty-element gi: "IMG"
+			      attributes: (list (list "SRC"
+				                      (root-rel-path
+					               (string-append
+						        %callout-graphics-path%
+							number
+	                                                %callout-graphics-ext%)))
+		                                (list "HSPACE" "0")
+			                        (list "VSPACE" "0")
+				                (list "BORDER" "0")
+					        (list "ALT"
+						      (string-append
+	                                               "(" number ")"))))
+		        (make element gi: "B"
+			      (literal "(" (format-number conumber "1") ")")))
+	            (make element gi: "B"
+		          (literal "(" (format-number conumber "1") ")")))
+	        (make element gi: "B"
+	       (literal "(??)")))))
+      ]]>
+
       <!-- Print only ................................................... --> 
       <![ %output.print; [
 
+        ;; Norm's stylesheets are smart about working out what sort of
+        ;; object to display.  But this bites us.  Since we know that the
+        ;; first item is going to be displayable, always use that.
+        (define (find-displayable-object objlist notlist extlist)
+          (let loop ((nl objlist))
+            (if (node-list-empty? nl)
+              (empty-node-list)
+                (let* ((objdata  (node-list-filter-by-gi
+                                  (children (node-list-first nl))
+                                  (list (normalize "videodata")
+                                        (normalize "audiodata")
+                                        (normalize "imagedata"))))
+                       (filename (data-filename objdata))
+                       (extension (file-extension filename))
+                       (notation (attribute-string (normalize "format") objdata)))
+                  (node-list-first nl)))))
+
+        ;; When selecting a filename to use, don't append the default
+        ;; extension, instead, just use the bare filename, and let TeX
+        ;; work it out.  jadetex will use the .eps file, while pdfjadetex
+        ;; will use the .png file automatically.
+        (define (graphic-file filename)
+          (let ((ext (file-extension filename)))
+            (if (or tex-backend   ;; TeX can work this out itself
+                    (not filename)
+                    (not %graphic-default-extension%)
+                    (member ext %graphic-extensions%))
+                 filename
+                 (string-append filename "." %graphic-default-extension%))))
+
+
       ]]>
+
+      <![ %output.print.pdf [
+        (define %graphic-default-extension%
+          "png")
+      ]]>
+
 
       <!-- Both sets of stylesheets ..................................... -->
 
@@ -165,6 +212,18 @@
               (normalize "revhistory")
               (normalize "legalnotice")
               (normalize "abstract")))
+
+      (define %admon-graphics%
+        ;; Use graphics in admonitions?
+        #f)
+
+      (define %admon-graphics-path%
+        ;; Path to admonition images
+        "./imagelib/admon/")
+
+      (define ($admon-graphic$ #!optional (nd (current-node)))
+        ;; Admonition graphic file
+        (string-append %admon-graphics-path% (case-fold-down (gi nd)) ".png"))
 
       <!-- Slightly deeper customisations -->
 
@@ -260,6 +319,11 @@
                     (process-node-list restch))))
       ]]>
 
+      (element docinfo (process-children))
+
+      (element (docinfo authorgroup) (process-children))
+
+      (element (docinfo date) (process-children))
     </style-specification-body>
   </style-specification>
 
