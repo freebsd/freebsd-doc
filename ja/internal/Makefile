@@ -1,6 +1,6 @@
-# $FreeBSD: www/ja/internal/Makefile,v 1.16 2000/11/07 11:37:54 kuriyama Exp $
+# $FreeBSD: www/ja/internal/Makefile,v 1.17 2001/03/08 09:18:02 kuriyama Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.24
+# Original revision: 1.25
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"

@@ -1,6 +1,6 @@
-# $FreeBSD: www/ja/ports/Makefile,v 1.21 2000/11/07 11:37:57 kuriyama Exp $
+# $FreeBSD: www/ja/ports/Makefile,v 1.22 2001/01/02 02:22:50 kuriyama Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.31
+# Original revision: 1.32
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -37,6 +37,19 @@ ${INDEX}: ${cvsindex}
 # build the list of available packages only on the 
 # main FreeBSD machines
 hostname!= hostname
+
+
+#
+# don't build the packages links if NO_PACKAGES_LINK
+# is set and not empty.
+#
+# XXX: you can set NO_PACKAGES_LINK to your hostname to
+#      test the packages link generation
+#
+.if defined(NO_PACKAGES_LINK) && !empty(NO_PACKAGES_LINK)
+hostname=	${NO_PACKAGES_LINK}
+.endif
+
 
 .if defined(NOPORTSCVS)
 packages.exists:
