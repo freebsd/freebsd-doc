@@ -1,16 +1,16 @@
-#	$Id: Makefile,v 1.5 1998-01-18 22:27:42 jfieber Exp $
+#	$Id: Makefile,v 1.6 1998-04-08 16:46:07 wosch Exp $
 
 PORTINDEX=	./portindex
 INDEX=		ports/INDEX
 
-COOKIE=		index Makefile.gen
+COOKIE=		${INDEX} Makefile.gen
 
 .if exists(Makefile.gen)
 .include "Makefile.gen"
-CLEANFILES+=	${DOCS} Makefile.gen
+CLEANFILES+=	${DOCS} Makefile.gen ${INDEX}
 .endif
 
-index:
+${INDEX}:
 	cvs co ${INDEX}
 
 Makefile.gen: index.sgml .NOTMAIN
