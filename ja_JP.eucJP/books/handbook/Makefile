@@ -230,6 +230,7 @@ mirrors.sgml.${p}.inc: ${XML_MIRRORS} ${XSL_MIRRORS}
 	${XSLTPROC} ${XSLTPROCOPTS} \
 	    -o $@.tmp \
 	    --param 'transtable.xml' "'${XML_TRANSTABLE}'" \
+	    --param 'type' "'$p'" \
 	    --param 'proto' "'$p'" \
 	    --param 'target' "'handbook/mirrors/chapter.sgml'" \
 	    ${XSL_MIRRORS} ${XML_MIRRORS}
@@ -242,6 +243,7 @@ eresources.sgml.www.inc: ${XML_MIRRORS} ${XSL_MIRRORS}
 	${XSLTPROC} ${XSLTPROCOPTS} \
 	    -o $@.tmp \
 	    --param 'transtable.xml' "'${XML_TRANSTABLE}'" \
+	    --param 'type' "'www'" \
 	    --param 'proto' "'http'" \
 	    --param 'target' "'handbook/eresources/chapter.sgml'" \
 	    ${XSL_MIRRORS} ${XML_MIRRORS}
