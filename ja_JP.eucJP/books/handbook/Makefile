@@ -1,5 +1,5 @@
 # 
-# $Id: Makefile,v 1.34 1999-05-06 17:44:14 motoyuki Exp $
+# $Id: Makefile,v 1.35 1999-08-16 22:09:12 nik Exp $
 #
 # Build the FreeBSD Handbook (Japanese).
 #
@@ -11,7 +11,7 @@ MAINTAINER=kuriyama@FreeBSD.ORG
 JADEOPTS=	-ilang.ja
 TIDYFLAGS=	-raw
 
-DOC?= handbook
+DOC?= book
 
 FORMATS?= html-split
 
@@ -24,7 +24,7 @@ INSTALL_ONLY_COMPRESSED?=
 #
 
 # SGML content
-SRCS=  handbook.sgml
+SRCS=  book.sgml
 SRCS+= advanced-networking/chapter.sgml
 SRCS+= backups/chapter.sgml
 SRCS+= basics/chapter.sgml
@@ -64,4 +64,5 @@ SRCS+= mailing-lists.ent
 SRCS+=	jcontrib/chapter.sgml
 SRCS+=	jauthors.ent
 
-.include "../../share/mk/docproj.docbook.mk"
+DOC_PREFIX?= ../../..
+.include "../../../share/mk/docproj.docbook.mk"

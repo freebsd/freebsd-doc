@@ -1,26 +1,10 @@
-# $Id: Makefile,v 1.9 1999-03-27 15:56:08 nik Exp $
+# $Id: Makefile,v 1.10 1999-08-16 22:09:03 nik Exp $
 
-SUBDIR=	FAQ 
-
-# List of all language-specific subdirs.
-LANGSUBDIR=     en es ja ru zh
-
-# If ALLLANG is defined, descend to all language-specific subdirs too.
-# If ALLLANG is not defined, but DOC_LANG is defined and a subdirectory with
-# that name exists, descend to that directory too.
-# In either case, the default subdirectories are always traversed.
-
-.if defined(ALLLANG)
-SUBDIR+=	${LANGSUBDIR}
-.elif defined(DOC_LANG)
-.if exists(${.CURDIR}/${DOC_LANG})
-SUBDIR+=	${DOC_LANG}
-.endif
-.endif
-
-# Default output formats are ascii for troff documents, and 
-# ascii and html for sgml documents.  
-# To specify generate postscript versions of troff documents, use: 
-#  make PRINTER=ps
+SUBDIR =	FAQ 
+SUBDIR+=	en_US.ISO_8859-1
+SUBDIR+=	es_ES.ISO_8859-1
+SUBDIR+=	ja_JP.eucJP
+SUBDIR+=	ru_SU.KOI8-R
+SUBDIR+=	zh_TW.Big5
 
 .include <bsd.subdir.mk>
