@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.30 2002/10/14 03:58:32 marcus Exp $ -->
+<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.31 2002/11/24 08:28:40 marcus Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
 		xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -9,7 +9,7 @@
   <xsl:import href="includes.xsl"/>
 
   <xsl:variable name="base" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.30 2002/10/14 03:58:32 marcus Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.31 2002/11/24 08:28:40 marcus Exp $'"/>
   <xsl:variable name="title" select="'FreeBSD GNOME Project'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -73,7 +73,7 @@
                             <small>Search for:<br/>
                               <input type="text" name="words" size="10"/>
                               <input type="hidden" name="max" value="25"/>
-                              <input type="hidden" name="source" value="www"/>
+                              <input type="hidden" name="source" value="freebsd-gnome"/>
                               <input type="submit" value="Go"/>
                             </small>
                           </form>
