@@ -434,7 +434,26 @@
   	      (make sequence
 	        ($charseq$)
 	        (if %footnote-ulinks%
-	            ($ss-seq$ + (literal (footnote-number (current-node))))
+		    (if (and (equal? (print-backend) 'tex) bop-footnotes)
+		      (make sequence
+			    ($ss-seq$ + (literal (footnote-number (current-node))))
+			    (make page-footnote
+			          (make paragraph
+			font-size: (* %footnote-size-factor% %bf-size%)
+			font-posture: 'upright
+			quadding: %default-quadding%
+			line-spacing: (* (* %footnote-size-factor% %bf-size%)
+					 %line-spacing-factor%)
+			space-before: %para-sep%
+			space-after: %para-sep%
+			start-indent: %footnote-field-width%
+			first-line-start-indent: (- %footnote-field-width%)
+			(make line-field
+			  field-width: %footnote-field-width%
+			  (literal (footnote-number (current-node))
+				   (gentext-label-title-sep (normalize "footnote"))))
+			(literal (attribute-string (normalize "url"))))))
+		      ($ss-seq$ + (literal (footnote-number (current-node)))))
 	            (if (and %show-ulinks% 
 		             (not (equal? (fix-url (attribute-string (normalize "url")))
 				          (data-of (current-node)))))
