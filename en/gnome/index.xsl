@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.58 2004/09/19 18:20:12 pav Exp $ -->
+<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.59 2004/09/26 16:34:31 adamw Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
 		xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -9,7 +9,7 @@
   <xsl:import href="includes.xsl"/>
 
   <xsl:variable name="base" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.58 2004/09/19 18:20:12 pav Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.59 2004/09/26 16:34:31 adamw Exp $'"/>
   <xsl:variable name="title" select="'FreeBSD GNOME Project'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -129,26 +129,16 @@
 			    "<a href="http://www.gnome.org/about/">What is GNOME?</a>"
 			    page.</p>
 
-		<!--
-		<h2><font color="#990000">Upgrading to GNOME 2.6?</font></h2>
+		<h2><font color="#990000">Upgrading to GNOME 2.8?</font></h2>
 
-		<p>If you are upgrading from GNOME 2.4 to GNOME 2.6, read the
+		<p>If you are upgrading from GNOME 2.6 to GNOME 2.8, read the
 		  <a href="docs/faq26.html">Upgrade FAQ</a> for upgrade
 		  instructions, and be sure to use the
 		  <a href="gnome_upgrade.sh">upgrade script</a>!</p>
-		  -->
 
               <h2><font color="#990000">State of the port</font></h2>
 
-	      <p>Ports of GNOME 2.8 are ready, but will not be released into
-	        the FreeBSD ports tree until after the
-		<a href="/doc/en_US.ISO8859-1/articles/committers-guide/ports.html#Q12.3.1">ports freeze</a>
-		for <a href="/releases/5.3R/schedule.html">FreeBSD 5.3-RELEASE</a>.
-		In the meantime, you can get 2.8 ports from our
-		<a href="docs/develfaq.html">development server</a>, and 2.8 packages
-		from our <a href="docs/faq2.html#q21">Tinderbox</a>.</p>
-
-	      <p>GNOME for FreeBSD is currently supported on 4.9,
+	      <p>GNOME for FreeBSD is currently supported on
 		4.10, 5.2.1, 5.3, 4-STABLE, 5-STABLE and 6-CURRENT.
 		Most of GNOME has been ported to FreeBSD, but there is still
 		<a href="docs/volunteer.html">plenty left to be done</a>!</p>
