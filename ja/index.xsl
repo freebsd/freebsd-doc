@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
 
-<!-- $FreeBSD: www/ja/index.xsl,v 1.22 2003/01/05 18:27:51 hrs Exp $ -->
-<!-- Original revision: 1.46 -->
+<!-- $FreeBSD: www/ja/index.xsl,v 1.23 2003/01/22 04:11:07 hrs Exp $ -->
+<!-- Original revision: 1.56 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   
@@ -10,7 +10,7 @@
 
   <xsl:variable name="base" select="'.'"/>
   <xsl:variable name="enbase" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/ja/index.xsl,v 1.22 2003/01/05 18:27:51 hrs Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/ja/index.xsl,v 1.23 2003/01/22 04:11:07 hrs Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <xsl:output type="html" encoding="EUC-JP"
@@ -31,13 +31,13 @@
       <body bgcolor="#FFFFFF" text="#000000" link="#0000FF" vlink="#840084"
 	    alink="#0000FF">
     
-	<table border="0" cellspacing="0" cellpadding="0">
+	<table border="0" cellspacing="0" cellpadding="0" width="100%">
 	  <tr>
 	    <td><a href="http://www.FreeBSD.org/index.html">
 		<img src="../gifs/freebsd_1.gif" height="94" width="306"
 		     alt="FreeBSD: このパワーをあなたのために" border="0"/></a></td>
 	    
-	    <td align="right" valign="bottom" width="300">
+	    <td align="right" valign="bottom">
 	      <form action="http://www.FreeBSD.org/cgi/mirror.cgi" 
 		    method="get">
 		
@@ -54,10 +54,10 @@
 
 		  <option value="http://www2.at.FreeBSD.org/">IPv6 オーストリア</option>
 		  <option value="http://www.dk.FreeBSD.org/">IPv6 デンマーク</option>
-		  <option value="http://bsd.ipv6.uni-erlangen.de">IPv6 ドイツ</option>
-		  <option value="http://www.jp.FreeBSD.org/www.FreeBSD.org/">6Bone(IPv6), 日本</option>
-		  <option value="http://www2.no.FreeBSD.org/">IPv6 ノルウェー</option>
-		  <option value="http://www.ar.FreeBSD.org/">アルメニア</option>
+		  <option value="http://www2.de.FreeBSD.org">IPv6 ドイツ</option>
+		  <option value="http://www.jp.FreeBSD.org/www.FreeBSD.org/">IPv6 (6Bone) 日本</option>
+ 		  <option value="http://www2.no.FreeBSD.org/">IPv6 ノルウェー</option>
+		  <option value="http://www.ar.FreeBSD.org/">アルゼンチン</option>
 		  <option value="http://www.au.FreeBSD.org/">オーストラリア/1</option>
 		  <option value="http://www2.au.FreeBSD.org/">オーストラリア/2</option>
 		  <option value="http://www3.au.FreeBSD.org/">オーストラリア/3</option>
@@ -120,7 +120,6 @@
 		  <option value="http://www.pt.FreeBSD.org/">ポルトガル/1</option>
 		  -->
 		  <option value="http://www2.pt.FreeBSD.org/">ポルトガル/2</option>
-		  <option value="http://www3.pt.FreeBSD.org/">ポルトガル/3</option>
 		  <option value="http://www4.pt.FreeBSD.org/">ポルトガル/4</option>
 		  <option value="http://www.ro.FreeBSD.org/">ルーマニア</option>
 		  <option value="http://www2.ro.FreeBSD.org/">ルーマニア/2</option>
@@ -131,8 +130,7 @@
 		  <option value="http://www3.ru.FreeBSD.org/">ロシア/3</option>
 		  <option value="http://www4.ru.FreeBSD.org/">ロシア/4</option>
 		  <option value="http://www.sm.FreeBSD.org/">サンマリノ</option>
-		  <option value="http://www.sg.FreeBSD.org/">シンガポール/1</option>
-		  <option value="http://www2.sg.FreeBSD.org/">シンガポール/2</option>
+		  <option value="http://www2.sg.FreeBSD.org/">シンガポール</option>
 		  <option value="http://www.sk.FreeBSD.org/">スロバキア/1</option>
 		  <option value="http://www2.sk.FreeBSD.org/">スロバキア/2</option>
 		  <option value="http://www.si.FreeBSD.org/">スロベニア/1</option>
@@ -172,8 +170,9 @@
 		
 		<font color="#990000"><b>言語: </b></font> 
 		<a href="../">英語</a>、
-		<a href="../es/index.html">スペイン語</a>、
+		<a href="../it/index.html">イタリア語</a>、
 		<a href="../ru/index.html">ロシア語</a>、
+		<a href="../es/index.html">スペイン語</a>、
 		<a href="support.html#web">その他</a>
 	      </form>
 	    </td>
@@ -296,7 +295,7 @@
 	      
 	      <h2><font color="#990000">FreeBSD とは?</font></h2>
 	
-	      <p>FreeBSD は x86 互換機、DEC Alpha、PC-98
+	      <p>FreeBSD は x86 互換機、DEC Alpha、IA-64、PC-98
 		アーキテクチャ用の先進的なオペレーティングシステムです。
 		カリフォルニア大学バークレイ校で開発された UNIX
 		である BSD UNIX に由来し、
@@ -476,6 +475,30 @@
 			      </xsl:for-each>
 			      <a href="news/press.html">More...</a>
 			    </font>
+                          </p>
+
+                          <p><font size="+1" color="#990000"><b>セキュリティ勧告</b></font><br/>
+
+			    <font size="-1">
+			      最終更新:
+			      <xsl:value-of
+				select="document('../en/security/advisories.xml')/descendant::month[position() = 1]/name"/>
+			      <xsl:text> </xsl:text>
+			      <xsl:value-of
+				select="document('../en/security/advisories.xml')/descendant::day[position() = 1]/name"/>
+			      <xsl:text>, </xsl:text>
+			      <xsl:value-of
+				select="document('../en/security/advisories.xml')/descendant::year[position() = 1]/name"/>
+			      <br/>
+			      <!-- Pull in the 10 most recent security advisories -->
+			      <xsl:for-each select="document('../en/security/advisories.xml')/descendant::advisory[position() &lt; 10]">
+				・ <a>
+				  <xsl:attribute name="href">ftp://ftp.freebsd.org/pub/FreeBSD/CERT/advisories/<xsl:value-of select="name"/>.asc</xsl:attribute>
+				  <xsl:value-of select="name"/>
+				</a><br/>
+			      </xsl:for-each>
+			      <a href="security/">More...</a>
+                           </font>
 			  </p>
 			</td>
 		      </tr>
