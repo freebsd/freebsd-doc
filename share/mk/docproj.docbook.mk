@@ -1,5 +1,5 @@
 #
-# $Id: docproj.docbook.mk,v 1.9 1999-08-19 00:07:09 nik Exp $
+# $Id: docproj.docbook.mk,v 1.10 1999-08-26 19:37:13 nik Exp $
 #
 # This include file <docproj.docbook.mk> handles installing documentation
 # from the FreeBSD Documentation Project.
@@ -18,27 +18,29 @@
 #			Valid values are in ${KNOWN_FORMATS}
 #
 #  SRCS			One or more files that comprise your documentation.
+#
+#  DOC                  Controls several things
+#  
+#                       1. ${DOC}.sgml is assumed to be the name of the
+#                          master source file (which will use entities
+#                          to include any other .sgml files.
+#
+#                       2. ${DOC}.<foo> will be the name of the output
+#                          files (${DOC}.html, ${DOC}.tex, ${DOC}.ps, and
+#                          so on.  Ignored for the "html-split" format,
+#                          where the output file(s) start with index.html.
+#
 
 #
 # Optional variable definitions
 #
-#  DESTDIR              Directory in which files will be installed.  Defaults
-#                       to /usr/local/share/doc/fdp/{articles,books}/<name>,
-#                       but can be overridden.
-#
-#  DOC			Controls several things
-#
-#			1. ${DOC}.sgml is assumed to be the name of the
-#			   master source file (which will use entities
-#			   to include any other .sgml files.
-#
-#			2. ${DOC}.<foo> will be the name of the output
-#			   files (${DOC}.html, ${DOC}.tex, ${DOC}.ps, and
-#			   so on.  Ignored for the "html-split" format,
-#			   where the output file(s) start with index.html.
-#
-#			If not set, defaults to the name of the current
-#			directory.
+#  DESTDIR              Directory in which files will be installed.  Note 
+#                       that this works on a per-document basis.  If you
+#                       try and install two docs with the same DESTDIR they
+#                       will most likely overwrite one another.  If you 
+#                       want to install more than one document in to a new
+#                       directory tree you probably want to set the DOCDIR
+#                       variable.
 #
 #  JADEFLAGS		Additional options to pass to Jade.  Typically
 #			used to define "IGNORE" entities to "INCLUDE"
@@ -59,9 +61,9 @@
 #			(such as share/sgml/catalog) are expected to
 #			be under this path.  Defaults to /usr/doc.
 #
-#  DOC_INSTALL_PREFIX   The root prefix under which all docs are expected
-#                       to install themselves.  Defaults to 
-#                       /usr/local/share/doc/fdp
+#  DOCDIR		The root prefix under which all docs are expected
+#                       to install themselves.  Defaults to
+#                       /usr/share/doc
 #
 #  EXTRA_CATALOGS	Additional catalog files that should be used by
 #			any SGML processing applications.
@@ -75,10 +77,6 @@
 .include "${.CURDIR}/../Makefile.inc"
 .endif
 
-DOC?=		${.CURDIR:T}
-
-DOC_INSTALL_PREFIX?= /usr/local/share/doc/fdp
-
 JADE=		/usr/local/bin/jade
 DSLHTML=	${DOC_PREFIX}/share/sgml/freebsd.dsl
 DSLPRINT=	${DOC_PREFIX}/share/sgml/freebsd.dsl
@@ -90,7 +88,7 @@ DSSSLCATALOG=   /usr/local/share/sgml/docbook/dsssl/modular/catalog
 
 JADEOPTS=	${JADEFLAGS} -c ${FREEBSDCATALOG} -c ${DSSSLCATALOG} -c ${DOCBOOKCATALOG} -c ${JADECATALOG} ${EXTRA_CATALOGS:S/^/-c /g}
 
-KNOWN_FORMATS= html html-split html-split.tar txt rtf ps pdf tex dvi tar doc
+KNOWN_FORMATS= html html-split html-split.tar txt rtf ps pdf tex dvi tar
 
 # ------------------------------------------------------------------------
 # If DOC_PREFIX is not set then try and generate a sensible value for it.
@@ -153,6 +151,7 @@ DOC_PREFIX=/usr/doc
 # and INSTALL_COMPRESSED variables are wrong.
 #
 
+.if defined(DOC) && !empty(DOC)
 .for _curformat in ${FORMATS}
 _cf=${_curformat}
 .if ${_cf} == "html-split"
@@ -188,6 +187,7 @@ _docs+= ${DOC}.doc
 CLEANFILES+= ${DOC}.doc
 .endif
 .endfor
+.endif
 
 #
 # Build a list of install-${format}.${compress_format} targets to be
@@ -282,6 +282,36 @@ validate:
 
 # ------------------------------------------------------------------------
 #
+# Package building
+#
+
+#
+# Build a list of package targets for each output format.  Each package
+# target depends on the corresponding install target running.
+#
+.for _curformat in ${KNOWN_FORMATS}
+_cf=${_curformat}
+package-${_curformat}: install-${_curformat}
+	rm PLIST
+.if ${_cf} == "html-split"
+	cp HTML.manifest PLIST
+.else
+	echo ${DOC}.${_curformat} > PLIST
+.endif
+	pkg_create -v -c COMMENT -d DESCR -f PLIST -p ${DESTDIR} \
+		${DOC}.${_curformat}.tgz
+.endfor
+
+#
+# Build one or more pkg_add(1)'able packages, based on all the current
+# values of ${FORMATS}.  Do this by listing all the appropriate
+# package-* targets as dependencies.
+#
+
+package: ${FORMATS:S/^/package-/}
+
+# ------------------------------------------------------------------------
+#
 # Compress targets
 #
 
@@ -348,12 +378,15 @@ install: beforeinstall realinstall afterinstall
 # Build a list of install-format targets to be installed. These will be
 # dependencies for the "realinstall" target.
 #
+.if defined(DOC) && !empty(DOC)
 .if !defined(INSTALL_ONLY_COMPRESSED) || empty(INSTALL_ONLY_COMPRESSED)
 _curinst+= ${FORMATS:S/^/install-/g}
+.endif
 .endif
 
 realinstall: ${_curinst}
 
+.if defined(DOC) && !empty(DOC)
 .for _curformat in ${KNOWN_FORMATS}
 _cf=${_curformat}
 .if !target(install-${_cf})
@@ -396,6 +429,7 @@ install-${_cf}.${_compressext}: ${DOC}.${_cf}.${_compressext}
 .endif
 .endif
 .endfor
+.endif
 
 .for __target in beforeinstall afterinstall depend _SUBDIR
 .if !target(${__target})
