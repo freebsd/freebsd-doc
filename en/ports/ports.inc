@@ -1,4 +1,4 @@
-<!-- $Id: ports.inc,v 1.35 1999-03-22 00:30:56 asami Exp $ -->
+<!-- $Id: ports.inc,v 1.36 1999-04-17 20:28:54 wosch Exp $ -->
 <p>The FreeBSD Ports and Packages Collection offers a simple way for
 users and administrators to install applications.  The ports
 collection has been <a
@@ -12,7 +12,7 @@ simple as downloading the port, unpacking it and typing <tt>make</tt>
 in the port directory.  For even greater covenience, you can simply
 install the <a href="ftp://ftp.freebsd.org/pub/FreeBSD/branches/-current/ports.tar.gz">
 entire ports hierarchy</a> at installation time (or use
-<a href="../handbook/cvsup.html">CVSup</a> to track it on
+<a href="../handbook/synching.html#CVSUP">CVSup</a> to track it on
 an ongoing basis) and have thousands of applications right at your
 fingertips.
 
