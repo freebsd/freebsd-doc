@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/commercial/Makefile,v 1.10 2000/02/28 12:45:00 phantom Exp $
+# $FreeBSD: www/en/commercial/Makefile,v 1.11 2000/03/12 21:41:52 phantom Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -38,7 +38,7 @@ consulting_bycat.inc: gencommercial.pl commercial.desc consulting.raw
 
 hardware.inc: gencommercial.pl commercial.desc hardware.raw
 	${PERL} ./gencommercial.pl hardware
-	
+
 misc.inc: gencommercial.pl commercial.desc misc.raw
 	${PERL} ./gencommercial.pl misc
 
