@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/en/news/status/report.xsl,v 1.2 2001/09/17 07:40:26 chris Exp $ -->
+<!-- $FreeBSD: www/en/news/status/report.xsl,v 1.3 2001/09/18 12:22:07 chris Exp $ -->
 
 <!-- Standard header material -->
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
@@ -23,9 +23,9 @@
   </xsl:variable>
 
   <xsl:variable name="ucletters"
-    select="ABCDEFGHIJKLMNOPQRSTUVWXYZ"/>
+    select="'ABCDEFGHIJKLMNOPQRSTUVWXYZ'"/>
   <xsl:variable name="lcletters"
-    select="abcdefghijklmnopqrstuvwxyz"/>
+    select="'abcdefghijklmnopqrstuvwxyz'"/>
   
   <xsl:output type="html" encoding="iso-8859-1"/>
 
