@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/en/news/press.xsl,v 1.2 2001/09/20 11:43:31 chris Exp $ -->
+<!-- $FreeBSD: www/en/news/press.xsl,v 1.3 2002/05/15 08:27:28 jkoshy Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -33,7 +33,7 @@
 
 	<p>You also can visit <a href="{$base}/java/press.html">FreeBSD/Java
 	    Press</a> page for information about FreeBSD Java Project's Press
-	    News</p>
+	    News.</p>
 	
 	<xsl:apply-templates select="//month"/>
 	
