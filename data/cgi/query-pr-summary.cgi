@@ -1,21 +1,30 @@
 #!/usr/bin/perl
-# $Id: query-pr-summary.cgi,v 1.9 1997-02-02 17:50:04 fenner Exp $
+# $Id: query-pr-summary.cgi,v 1.10 1997-02-02 22:03:29 pst Exp $
 
-$self_ref = $ENV{'SCRIPT_NAME'};
-($query_pr_ref = $ENV{'SCRIPT_NAME'}) =~ s/-summary//;
+$html_mode     = 1 if $ENV{'DOCUMENT_ROOT'};
+$self_ref      = $ENV{'SCRIPT_NAME'};
+($query_pr_ref = $self_ref) =~ s/-summary//;
 
-$avail_file   = '/home/ncvs/CVSROOT/avail';
-$ENV{'PATH'}  = "/bin:/usr/bin:/usr/sbin:/sbin:/usr/local/bin";
+$ENV{'PATH'}   = '/bin:/usr/bin:/usr/sbin:/sbin:/usr/local/bin';
 
-$html_mode    = 1 if $ENV{'DOCUMENT_ROOT'} ne '';
+$project       = "FreeBSD"
+$mail_prefix   = "freebsd-";
+$mail_unass    = "freebsd-bugs";
 
+%statemap = (
+	"open",		"o",
+	"analyzed",	"a",
+	"feedback",	"f",
+	"suspended",	"s",
+	"closed",	"c"
+);
 
 require "cgi-lib.pl";
 require "cgi-style.pl";
 require "getopts.pl";
 
 if ($ENV{'QUERY_STRING'} eq 'query') {
-	print &html_header("Query FreeBSD problem reports");
+	print &html_header("Query $project problem reports");
 	&displayform;
 	print &html_footer;
 	exit(0);
@@ -83,16 +92,16 @@ if ($html_mode) {
 
 sub header_info {
     if ($html_mode) {
-	print &html_header("Current FreeBSD problem reports");
+	print &html_header("Current $project problem reports");
     }
     else {
-	print "Current FreeBSD problem reports\n";
+	print "Current $project problem reports\n";
     }
 
-print "
+print <<EOM unless $input{"quiet"};
 
-The following is a listing of current problems submitted by FreeBSD users.
-These represent problem reports covering all versions fo FreeBSD including
+The following is a listing of current problems submitted by $project users.
+These represent problem reports covering all versions including
 experimental development code and obsolete releases.
 ${p}
 Bugs can be in one of several states:
@@ -119,20 +128,21 @@ ${dt}${st}c - closed${st_e}
 ${dd}A problem report is closed when any changes have been integrated,
 ${dd_x}documented, and tested.
 ${dl_e}
-" if (!$input{"quiet"});
+EOM
 
 	if ($html_mode) {
+
 # These self references are attempts to only change a single variable at a time.
 # If someone does a multiple-variable query they will probably do weird things.
+
 $self_ref1 = $self_ref . '?';
-if ($input{'sort'}) {
-	$self_ref1 .= 'sort=' . $input{'sort'};
-}
+$self_ref1 .= 'sort=' . $input{'sort'} if $input{'sort'};
 print '<P>You may view summaries by <A HREF="', $self_ref1, '">Severity</A>, ';
 $self_ref1 .= '&' if ($self_ref1 !~/\?$/);
 print '<A HREF="', $self_ref1, 'state=summary">State</A>, ';
 print '<A HREF="', $self_ref1, 'category=summary">Category</A>, or ';
 print '<A HREF="', $self_ref1, 'responsible=summary">Responsible Party</A>.';
+
 $self_ref2 = $self_ref . '?';
 foreach ("category", "originator", "priority", "class", "responsible",
 	"severity", "state", "submitter", "text", "multitext", "closedtoo") {
@@ -141,6 +151,7 @@ foreach ("category", "originator", "priority", "class", "responsible",
 		$self_ref2 .= $_ . '=' . $input{$_};
 	}
 }
+
 print 'You may also sort by ';
 print '<A HREF="', $self_ref2, '&sort=lastmod">Last-Modified</A>, ';
 print '<A HREF="', $self_ref2, '&sort=category">Category</A>, or ';
@@ -150,13 +161,10 @@ print 'Or <A HREF="', $self_ref, '?query">formulate a specific query</A>.';
 }
 
 sub trailer_info {
-print &html_footer if $html_mode;
+    print &html_footer if $html_mode;
 }
 
 &header_info;
-
-# backwards compatibility
-$input{'responsible'} = $input{'engineer'} if $input{'engineer'};
 
 #Usage: query-pr [-FhiPqVx] [-C confidential] [-c category] [-d directory]
 #       [-e severity] [-m mtext] [-O originator] [-o outfile] [-p priority]
@@ -169,9 +177,7 @@ $input{'responsible'} = $input{'engineer'} if $input{'engineer'};
 #       [--list-categories] [--list-responsible] [--list-submitters]
 #       [--text=text] [--multitext=mtext] [PR] [PR]...
 
-if (!$input{"closedtoo"}) {
-	$query_args .= " --skip-closed";
-}
+$query_args .= " --skip-closed" unless $input{"closedtoo"};
 
 # Only read the appropriate PR's.
 foreach ("category", "originator", "priority", "class", "responsible",
@@ -280,7 +286,6 @@ sub resp_summary {
 
 sub state_query {
     local($state) = @_[0];
-    local(%statemap) = ("open", "o", "analyzed", "a", "feedback", "f", "suspended", "s", "closed", "c");
 
     print "${h3}Problems in state: $state${h3_e}\n";
     $state = $statemap{$state} if ($statemap{$state} ne '');
@@ -288,7 +293,8 @@ sub state_query {
 }
 
 sub state_summary {
-    foreach ("open", "analyzed", "feedback", "suspended") {
+    foreach (sort keys %statemap) {
+	next if ($_ eq "closed" && !$input{"closedtoo"});
 	&state_query($_);
     }
 }
@@ -304,11 +310,21 @@ sub severity_summary {
     &printcnt(&gnats_summary('$severity eq "non-critical"', $html_mode));
 }
 
+sub get_categories {
+    open(Q, "query-pr --list-categories 2>/dev/null |") ||
+	die "Cannot get categories\n";
+
+    while(<Q>) {
+	chop;
+	local ($cat, $desc, $responsible, $notify) = split(/:/);
+	push(@categories, $cat);
+    }
+}
+
 sub read_gnats {
     local($report)   = @_[0];
 
-    open(Q, "query-pr " . $report . " 2>/dev/null |") || 
-	die "Cannot query the PR's\n";
+    open(Q, "query-pr $report 2>/dev/null |") || die "Cannot query the PR's\n";
 
     while(<Q>) {
 	chop;
@@ -340,9 +356,8 @@ sub read_gnats {
 	    $resp = &getline($_);
 	    $resp =~ s/@.*//;
 	    $resp =~ tr/A-Z/a-z/;
-	    $resp = "" if ($resp =~ /freebsd-bugs/);
-	    $resp =~ s/^freebsd-//;
-	    $resp = substr($resp, 0, 8);
+	    $resp = "" if ($resp =~ /$mail_unass/);
+	    $resp =~ s/^$mail_prefix//;
 
 	} elsif (/>State:/) {
 	    $status = &getline($_);
@@ -383,7 +398,7 @@ sub gnats_summary {
 
 	next if (($report ne '') && (eval($report) == 0));
 
-	print "${pr}\nS  Submitted   Tracker    Engr.    Description${hr}"
+	print "${pr}\nS  Submitted   Tracker    Resp.    Description${hr}"
 	    if ($iteration++ == 0);
 
 	$syn = &html_fixline($syn) if $htmlmode;
