@@ -1,6 +1,6 @@
-# $FreeBSD: doc/ru_RU.KOI8-R/Makefile,v 1.7 1999/09/06 06:53:35 peter Exp $
+# $FreeBSD: doc/ru_RU.KOI8-R/Makefile,v 1.8 1999/09/29 05:02:56 peter Exp $
 
-#SUBDIR = books
+SUBDIR = books
 
 COMPAT_SYMLINK = ru
 
