@@ -1,4 +1,4 @@
-<!-- $Id: ports.inc,v 1.21 1998-06-11 18:33:29 jkh Exp $ -->
+<!-- $Id: ports.inc,v 1.22 1998-08-05 01:53:16 asami Exp $ -->
 <p>The FreeBSD Ports and Packages Collection offers a simple way for
 users and administrators to install applications.  Each ``port'' listed here
 contains any patches necessary to make the original application source
@@ -32,6 +32,9 @@ href="ftp://ftp.freebsd.org/pub/FreeBSD/packages-stable/Latest/222upgrade.tgz">2
 to 2.2-stable upgrade kit</a>; if you are a 2.2.5-release user,
 please install the <a
 href="ftp://ftp.freebsd.org/pub/FreeBSD/packages-stable/Latest/225upgrade.tgz">2.2.5
+to 2.2-stable upgrade kit</a>; if you are a 2.2.6 or 2.2.7-release user,
+please install the <a
+href="ftp://ftp.freebsd.org/pub/FreeBSD/packages-stable/Latest/227upgrade.tgz">2.2.7
 to 2.2-stable upgrade kit</a>.  (These
 are FreeBSD packages; please use pkg_add to install them.)  That
 should enable you to use all the ports listed here.  Note that it will
