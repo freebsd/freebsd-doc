@@ -10,7 +10,7 @@ DOC?= book
 
 FORMATS?= html-split
 
-HAS_INDEX= true
+#HAS_INDEX= true
 
 INSTALL_COMPRESSED?= gz
 INSTALL_ONLY_COMPRESSED?=
