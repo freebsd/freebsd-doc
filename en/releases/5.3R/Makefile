@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/releases/5.3R/Makefile,v 1.3 2004/08/19 06:53:01 scottl Exp $
+# $FreeBSD: www/en/releases/5.3R/Makefile,v 1.4 2004/11/06 20:27:57 scottl Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -16,7 +16,6 @@ DOCS+=	policy.sgml
 
 DATA=   docbook.css
 DATA+=  errata.html
-DATA+=  early-adopter.html
 DATA+=  hardware-alpha.html
 DATA+=  hardware-amd64.html
 DATA+=  hardware-ia64.html
