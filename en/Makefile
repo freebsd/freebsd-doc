@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/Makefile,v 1.55 2000/11/07 07:37:55 kuriyama Exp $
+# $FreeBSD: www/en/Makefile,v 1.56 2000/11/24 22:55:39 murray Exp $
 .if exists(Makefile.conf)
 .include "Makefile.conf"
 .endif
@@ -61,8 +61,7 @@ WEB_LANG?=	ja es ru zh
 
 .if !defined(ENGLISH_ONLY) || empty(ENGLISH_ONLY)
 .for DIR in ${WEB_LANG}
-#SUBDIR+=	../${DIR}
-SUBDIR+=	${DIR}
+SUBDIR+=	../${DIR}
 .endfor
 .endif
 
