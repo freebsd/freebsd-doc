@@ -1,4 +1,4 @@
-<!-- $Id: ports.inc,v 1.1.1.1 1997-11-23 22:23:06 max Exp $ -->
+<!-- $Id: ports.inc,v 1.2 1997-11-24 22:26:04 max Exp $ -->
 <!-- The FreeBSD Japanese Documentation Project -->
 <!-- Original revision: 1.17 -->
 <p>FreeBSD Ports コレクションは, ユーザや管理者が簡単にアプリケーショ
@@ -39,7 +39,7 @@
 完全なアップグレードが(まだ 2.2.1-release を使っている
 場合は特に)推奨されています.</p>
 
-<p>多くの ports はコンパイルと実行に X Windows System を必要とします. 
+<p>多くの ports はコンパイルと実行に X Window System を必要とします. 
 ports は <a href="http://www.xfree86.org/">XFree86</a> 上でテ
 ストされています. 最新のリリースは 3.3.1 です. いくつかの ports は古い
 リリースでは動作しないかも知れません. </p>
