@@ -1,7 +1,7 @@
-<!-- $FreeBSD$ -->
+<!-- $FreeBSD: doc/de_DE.ISO_8859-1/share/sgml/freebsd.dsl,v 1.1 2000/06/09 12:26:38 alex Exp $ -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
-<!ENTITY freebsd.dsl SYSTEM "../../../share/sgml/freebsd.dsl" CDATA DSSSL>
+<!ENTITY freebsd.dsl PUBLIC "-//FreeBSD//DOCUMENT DocBook Language Neutral Stylesheet//EN" CDATA DSSSL>
 ]>
 
 <style-sheet>

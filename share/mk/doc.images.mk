@@ -1,5 +1,5 @@
 #
-# $FreeBSD: doc/share/mk/doc.images.mk,v 1.1 2000/07/16 16:27:30 nik Exp $
+# $FreeBSD: doc/share/mk/doc.images.mk,v 1.2 2000/07/18 16:30:45 nik Exp $
 #
 # This include file <doc.images.mk> handles image processing.
 #
@@ -60,7 +60,7 @@ MKDIR?=		/bin/mkdir
 # ${LIB_IMAGES_DIR} to the same place in ${LOCAL_LIB_IMAGES_DIR}.
 #
 .for _curimage in ${LIB_IMAGES}
-${_curimage}: ${LIB_IMAGES_DIR}/${_curimage}
-	[ -d ${LOCAL_LIB_IMAGES_DIR}/${_curimage:H} ] || ${MKDIR} -p ${LOCAL_LIB_IMAGES_DIR}/${_curimage:H}
-	${CP} ${LIB_IMAGES_DIR}/${_curimage} ${LOCAL_LIB_IMAGES_DIR}/${_curimage}
+${LOCAL_LIB_IMAGES_DIR}/${_curimage}: ${LIB_IMAGES_DIR}/${_curimage}
+	@[ -d ${LOCAL_LIB_IMAGES_DIR}/${_curimage:H} ] || ${MKDIR} -p ${LOCAL_LIB_IMAGES_DIR}/${_curimage:H}
+	${INSTALL} -C -c ${LIB_IMAGES_DIR}/${_curimage} ${LOCAL_LIB_IMAGES_DIR}/${_curimage}
 .endfor
