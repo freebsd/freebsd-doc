@@ -18,7 +18,8 @@ MAN7 =	ascii.7\
 	ports.7\
 	re_format.7\
 	security.7\
-	symlink.7
+	symlink.7\
+	term.7
 
 MLINKS=	groff_me.7 me.7
 MLINKS+=groff_mm.7 mm.7
