@@ -1,5 +1,5 @@
 # bsd.web.mk
-# $FreeBSD: www/en/web.mk,v 1.27 1999/12/23 01:14:35 kuriyama Exp $
+# $FreeBSD: www/en/web.mk,v 1.28 2000/04/20 16:39:10 phantom Exp $
 
 #
 # Build and install a web site.
@@ -127,6 +127,11 @@ orphans:
 #
 .if !target(clean)
 clean: _PROGSUBDIR
+.if defined(DIRS_TO_CLEAN) && !empty(DIRS_TO_CLEAN)
+.for dir in ${DIRS_TO_CLEAN}
+	(cd ${dir} && ${MAKE} clean)
+.endfor
+.endif
 	rm -f Errs errs mklog ${GENDOCS} ${LOCAL} ${CLEANFILES}
 .endif
 
