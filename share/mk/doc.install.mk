@@ -1,5 +1,5 @@
 #
-# $FreeBSD: doc/share/mk/doc.install.mk,v 1.3 1999/09/09 17:11:28 wosch Exp $
+# $FreeBSD$
 #
 #
 # This include file <doc.install.mk> provides variables defining the default
@@ -80,7 +80,7 @@ DOCDIR?=	/usr/share/doc
 .if exists(${DOC_PREFIX}/packages)
 PACKAGES?=	${DOC_PREFIX}/packages
 .else
-PACKAGES?=	${.CURDIR}
+PACKAGES?=	${.OBJDIR}
 .endif
 
 # hack to set DOCOWN and DOCGRP to those of the user installing, if that
@@ -99,7 +99,25 @@ DOCGRP:=	${GROUPNAME}
 .endif
 .endif
 
+COPY?=	-C
+
 # installation "script"
 INSTALL_DOCS?= \
-	${INSTALL} -C ${INSTALL_FLAGS} -o ${DOCOWN} -g ${DOCGRP} -m ${DOCMODE}
+	${INSTALL} ${COPY} ${INSTALL_FLAGS} -o ${DOCOWN} -g ${DOCGRP} -m ${DOCMODE}
 
+# ------------------------------------------------------------------------
+#
+# Work out the language and encoding used for this document.
+#
+# Liberal default of maximum of 5 directories below to find it.
+#
+
+.if !defined(LANGCODE)
+LANGCODE:=	${.CURDIR}
+.for _ in 1 2 3 4 5 6 7 8 9 10
+.if !(${LANGCODE:H:T} == "doc")
+LANGCODE:=	${LANGCODE:H}
+.endif
+.endfor
+LANGCODE:=	${LANGCODE:T}
+.endif

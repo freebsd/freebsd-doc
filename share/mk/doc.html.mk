@@ -1,5 +1,5 @@
 #
-# $FreeBSD: doc/share/mk/doc.html.mk,v 1.7 2001/03/22 22:49:01 obrien Exp $
+# $FreeBSD$
 #
 # This include file <doc.html.mk> handles building and installing of
 # HTML documentation in the FreeBSD Documentation Project.
@@ -56,34 +56,63 @@ OPENJADE=	yes
 .endif
 
 .if defined(OPENJADE)
-NSGMLS?=	onsgmls
-SGMLNORM?=	osgmlnorm
+NSGMLS?=	${PREFIX}/bin/onsgmls
+SGMLNORM?=	${PREFIX}/bin/osgmlnorm
 .else
-NSGMLS?=	nsgmls
-SGMLNORM?=	sgmlnorm
+NSGMLS?=	${PREFIX}/bin/nsgmls
+SGMLNORM?=	${PREFIX}/bin/sgmlnorm
 .endif
+ 
+PKG_CREATE?=	/usr/sbin/pkg_create
+TAR?=		/usr/bin/tar
+XARGS?=		/usr/bin/xargs
+
+TIDY?=		${PREFIX}/bin/tidy
+TIDYFLAGS?=	-i -m -f /dev/null
+HTML2TXT?=	${PREFIX}/bin/links
+HTML2TXTFLAGS?=	-dump
+HTML2PDB?=	${PREFIX}/bin/iSiloBSD
+HTML2PDBFLAGS?=	-y -d0 -Idef
+
+GZIP?=	-9
+GZIP_CMD?=	gzip -qf ${GZIP}
+BZIP2?=	-9
+BZIP2_CMD?=	bzip2 -qf ${BZIP2}
+ZIP?=	-9
+ZIP_CMD?=	${PREFIX}/bin/zip -j ${ZIP}
+
 
 # ------------------------------------------------------------------------
 #
 
+.if ${.OBJDIR} != ${.CURDIR}
+LOCAL_CSS_SHEET=	${.OBJDIR}/${CSS_SHEET:T}
+.else
+LOCAL_CSS_SHEET=	${CSS_SHEET:T}
+.endif
+
 .for _curformat in ${FORMATS}
 _cf=${_curformat}
-.if ${_cf} == "html"
-_docs+= ${DOC}.html
-CLEANFILES+= ${DOC}.html
-.elif ${_cf} == "txt"
-_docs+= ${DOC}.txt
-CLEANFILES+= ${DOC}.html ${DOC}.txt
-.elif ${_cf} == "tar"
-_docs+= ${DOC}.tar
-.elif ${_cf} == "pdb"
-_docs+= ${DOC}.pdb ${.CURDIR:T}.pdb
-+CLEANFILES+= ${DOC}.pdb ${.CURDIR:T}.pdb
-.else
-# Create a 'bogus' doc for any other format we don't support.  This is so
+
+# Create a 'bogus' doc for any format we support or not.  This is so
 # that we can fake up a target for it later on, and this target can print
 # the warning message about the unsupported format. 
 _docs+= ${DOC}.${_curformat}
+CLEANFILES+= ${DOC}.${_curformat}
+CLEANFILES+= PLIST.${_curformat}
+
+.if ${_cf} == "txt"
+.if ${LOCAL_CSS_SHEET} != ${CSS_SHEET}
+CLEANFILES+= ${LOCAL_CSS_SHEET}
+.endif
+
+.elif ${_cf} == "txt"
+CLEANFILES+= ${DOC}.html
+
+.elif ${_cf} == "pdb"
+_docs+= ${.CURDIR:T}.pdb
+CLEANFILES+= ${.CURDIR:T}.pdb
+
 .endif
 .endfor
 
@@ -98,40 +127,51 @@ _docs+= ${DOC}.${_curformat}
 .for _curformat in ${FORMATS}
 _cf=${_curformat}
 .for _curcomp in ${INSTALL_COMPRESSED}
+
 .if ${_cf} != "html-split"
 _curinst+= install-${_curformat}.${_curcomp}
 _docs+= ${DOC}.${_curformat}.${_curcomp}
 CLEANFILES+= ${DOC}.${_curformat}.${_curcomp}
-.endif
-.endfor
-.endfor
-.endif
 
-.for _curimage in ${IMAGES_LIB} 
-LOCAL_IMAGES_LIB += ${LOCAL_IMAGES_LIB_DIR}/${_curimage} 
-.endfor 
+.if  ${_cf} == "pdb"
+_docs+= ${.CURDIR:T}.${_curformat}.${_curcomp}
+CLEANFILES+= ${.CURDIR:T}.${_curformat}.${_curcomp}
+
+.endif
+.endif
+.endfor
+.endfor
+.endif
 
 .MAIN: all
 
 all: ${_docs}
 
-${DOC}.html: ${SRCS} ${LOCAL_IMAGES_LIB} ${IMAGES_PNG} 
-	${SGMLNORM} -c ${HTMLCATALOG} ${SRCS} > ${.TARGET}
+${DOC}.html: ${SRCS} ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} ${LOCAL_CSS_SHEET}
+	${SGMLNORM} -c ${HTMLCATALOG} ${SRCS:S|^|${.CURDIR}/|} > ${.TARGET}
 .if !defined(NO_TIDY)
-	-tidy -i -m -f /dev/null ${TIDYFLAGS} ${.TARGET}
+	-${TIDY} ${TIDYFLAGS} ${.TARGET}
 .endif
 
 ${DOC}.txt: ${DOC}.html
-	links -dump ${.ALLSRC} > ${.TARGET}
+	${HTML2TXT} ${HTML2TXTFLAGS} ${.ALLSRC} > ${.TARGET}
 
-${DOC}.pdb: ${DOC}.html
-	iSiloBSD -y -d0 -Idef ${DOC}.html ${DOC}.pdb
+${DOC}.pdb: ${DOC}.html ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG}
+	${HTML2PDB} ${HTML2PDBFLAGS} ${DOC}.html ${.TARGET}
 
 ${.CURDIR:T}.pdb: ${DOC}.pdb
-	ln -f ${DOC}.pdb ${.CURDIR}.pdb
+	${LN} -f ${.ALLSRC} ${.TARGET}
 
-${DOC}.tar: ${SRCS}
-	tar cf ${.TARGET} ${.ALLSRC}
+.if defined(INSTALL_COMPRESSED) && !empty(INSTALL_COMPRESSED)
+.for _curcomp in ${INSTALL_COMPRESSED}
+${.CURDIR:T}.pdb.${_curcomp}: ${DOC}.pdb.${_curcomp}
+	${LN} -f ${.ALLSRC} ${.TARGET}
+.endfor
+.endif
+
+${DOC}.tar: ${SRCS} ${LOCAL_IMAGES} ${LOCAL_CSS_SHEET}
+	${TAR} cf ${.TARGET} -C ${.CURDIR} ${SRCS} \
+		-C ${.OBJDIR} ${IMAGES} ${CSS_SHEET:T}
 
 #
 # Build targets for any formats we've missed that we don't handle.
@@ -139,9 +179,10 @@ ${DOC}.tar: ${SRCS}
 .for _curformat in ${ALL_FORMATS}
 .if !target(${DOC}.${_curformat})
 ${DOC}.${_curformat}:
-	@echo \"${_curformat}\" is not a valid output format for this document.
+	@${ECHO_CMD} \"${_curformat}\" is not a valid output format for this document.
 .endif
 .endfor
+
 
 # ------------------------------------------------------------------------
 #
@@ -155,6 +196,7 @@ ${DOC}.${_curformat}:
 
 lint validate:
 	${NSGMLS} -s -c ${HTMLCATALOG} ${MASTERDOC}
+
 
 # ------------------------------------------------------------------------
 #
@@ -177,13 +219,13 @@ KNOWN_COMPRESS=	gz bz2 zip
 #
 
 _PROG_COMPRESS_gz: .USE
-	gzip -9 -c ${.ALLSRC} > ${.TARGET}
+	${GZIP_CMD} < ${.ALLSRC} > ${.TARGET}
 
 _PROG_COMPRESS_bz2: .USE
-	bzip2 -9 -c ${.ALLSRC} > ${.TARGET}
+	${BZIP2_CMD} < ${.ALLSRC} > ${.TARGET}
 
 _PROG_COMPRESS_zip: .USE
-	zip -j -9 ${.TARGET} ${.ALLSRC}
+	${ZIP_CMD} ${.TARGET} ${.ALLSRC}
 
 #
 # Build a list of targets for each compression scheme and output format.
@@ -203,7 +245,7 @@ ${DOC}.${_cf}.${_curcompress}: ${DOC}.${_cf} _PROG_COMPRESS_${_curcompress}
 .for _curcompress in ${KNOWN_COMPRESS}
 .if !target(${DOC}.${_curformat}.${_curcompress})
 ${DOC}.${_curformat}.${_curcompress}:
-	@echo \"${_curformat}.${_curcompress}\" is not a valid output format for this document.
+	@${ECHO_CMD} \"${_curformat}.${_curcompress}\" is not a valid output format for this document.
 .endif
 .endfor
 .endfor
@@ -233,29 +275,36 @@ realinstall: ${_curinst}
 .for _curformat in ${KNOWN_FORMATS}
 _cf=${_curformat}
 .if !target(install-${_cf})
-install-${_cf}: ${DOC}.${_cf}
-	@[ -d ${DESTDIR} ] || mkdir -p ${DESTDIR}
+install-${_curformat}: ${DOC}.${_curformat}
+	@[ -d ${DESTDIR} ] || ${MKDIR} -p ${DESTDIR}
 	${INSTALL_DOCS} ${.ALLSRC} ${DESTDIR}
+.if !empty(CSS_SHEET)
 	${INSTALL_DOCS} ${CSS_SHEET} ${DESTDIR}
+.endif
 .for _curimage in ${IMAGES_LIB}
-	@[ -d ${DESTDIR}/${LOCAL_IMAGES_LIB_DIR}/${_curimage:H} ] || mkdir -p ${DESTDIR}/${LOCAL_IMAGES_LIB_DIR}/${_curimage:H}
-	${INSTALL_DOCS} ${LOCAL_IMAGES_LIB_DIR}/${_curimage} ${DESTDIR}/${LOCAL_IMAGES_LIB_DIR}/${_curimage:H}
+	@[ -d ${DESTDIR}/${LOCAL_IMAGES_LIB_DIR}/${_curimage:H} ] || \
+		${MKDIR} -p ${DESTDIR}/${LOCAL_IMAGES_LIB_DIR}/${_curimage:H}
+	${INSTALL_DOCS} ${LOCAL_IMAGES_LIB_DIR}/${_curimage} \
+			${DESTDIR}/${LOCAL_IMAGES_LIB_DIR}/${_curimage:H}
 .endfor
 # Install the images.  First, loop over all the image names that contain a
 # directory seperator, make the subdirectories, and install.  Then loop over
 # the ones that don't contain a directory separator, and install them in the
 # top level.
 .for _curimage in ${IMAGES_PNG:M*/*}
-	mkdir -p ${DESTDIR}/${_curimage:H}
-	${INSTALL_DOCS} ${_curimage} ${DESTDIR}/${_curimage:H}
+	${MKDIR} -p ${DESTDIR}/${_curimage:H}
+	${INSTALL_DOCS} ${.CURDIR}/${_curimage} ${DESTDIR}/${_curimage:H}
 .endfor
 .for _curimage in ${IMAGES_PNG:N*/*}
-	${INSTALL_DOCS} ${_curimage} ${DESTDIR}
+	${INSTALL_DOCS} ${.CURDIR}/${_curimage} ${DESTDIR}
 .endfor
+.if ${_cf} == "pdb"
+	${LN} -f ${DESTDIR}/${.ALLSRC} ${DESTDIR}/${.CURDIR:T}.${_curformat}
+.endif
 
 .for _compressext in ${KNOWN_COMPRESS}
 install-${_cf}.${_compressext}: ${DOC}.${_cf}.${_compressext}
-	@[ -d ${DESTDIR} ] || mkdir -p ${DESTDIR}
+	@[ -d ${DESTDIR} ] || ${MKDIR} -p ${DESTDIR}
 	${INSTALL_DOCS} ${.ALLSRC} ${DESTDIR}
 .endfor
 .endif
@@ -268,14 +317,15 @@ install-${_cf}.${_compressext}: ${DOC}.${_cf}.${_compressext}
 .for _curformat in ${ALL_FORMATS}
 .if !target(install-${_curformat})
 install-${_curformat}:
-	@echo \"${_curformat}\" is not a valid output format for this document.
+	@${ECHO_CMD} \"${_curformat}\" is not a valid output format for this document.
 
 .for _compressext in ${KNOWN_COMPRESS}
 install-${_curformat}.${_compressext}:
-	@echo \"${_curformat}.${_compressext}\" is not a valid output format for this document.
+	@${ECHO_CMD} \"${_curformat}.${_compressext}\" is not a valid output format for this document.
 .endfor
 .endif
 .endfor
+
 
 # ------------------------------------------------------------------------
 #
@@ -293,7 +343,7 @@ install-${_curformat}.${_compressext}:
 
 realpackage: ${FORMATS:S/^/package-/}
 packagelist:
-	@echo ${FORMATS:S/^/package-/}
+	@${ECHO_CMD} ${FORMATS:S/^/package-/}
 
 #
 # Build a list of package targets for each output target.  Each package
@@ -302,9 +352,36 @@ packagelist:
 
 .for _curformat in ${KNOWN_FORMATS}
 _cf=${_curformat}
-package-${_curformat}: install-${_curformat}
-	@echo ${DOC}.${_curformat} > PLIST
-	@pkg_create -v -c -"FDP ${.CURDIR:T} ${_curformat} package" \
-		-d -"FDP ${.CURDIR:T} ${_curformat} package" -f PLIST \
-		-p ${DESTDIR} ${PACKAGES}/${.CURDIR:T}.${LANGCODE}.${_curformat}.tgz
+PLIST.${_curformat}: ${DOC}.${_curformat}
+	@${ECHO_CMD} ${DOC}.${_curformat} > PLIST.${_curformat}
+.if ${_cf} == "html" && \
+    (!empty(LOCAL_IMAGES_LIB) || !empty(IMAGES_PNG) || !empty(CSS_SHEET))
+	@${ECHO_CMD} ${LOCAL_IMAGES_LIB} ${IMAGES_PNG} ${CSS_SHEET} | \
+		${XARGS} -n1 >> PLIST.${_curformat}
+.elif ${_cf} == "pdb"
+	@${ECHO_CMD} ${.CURDIR:T}.${_curformat} >> PLIST.${_curformat}
+.endif
+
+${PACKAGES}/${.CURDIR:T}.${LANGCODE}.${_curformat}.tgz: PLIST.${_curformat}
+	@${PKG_CREATE} -v -f PLIST.${_curformat} -p ${DESTDIR} -s ${.OBJDIR} \
+		-c -"FDP ${.CURDIR:T} ${_curformat} package" \
+		-d -"FDP ${.CURDIR:T} ${_curformat} package" ${.TARGET}
+
+package-${_curformat}: ${PACKAGES}/${.CURDIR:T}.${LANGCODE}.${_curformat}.tgz
 .endfor
+
+#
+# Build install- targets for any formats we've missed that we don't handle.
+#
+
+.for _curformat in ${ALL_FORMATS}
+.if !target(package-${_curformat})
+package-${_curformat}:
+	@${ECHO_CMD} \"${_curformat}\" is not a valid output format for this document.
+.endif
+.endfor
+
+.if ${LOCAL_CSS_SHEET} != ${CSS_SHEET}
+${LOCAL_CSS_SHEET}: ${CSS_SHEET}
+	${CP} -p ${.ALLSRC} ${.TARGET}
+.endif
