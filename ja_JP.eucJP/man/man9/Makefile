@@ -1,7 +1,14 @@
 # $FreeBSD$
-MAN9 =	BUS_PRINT_CHILD.9\
+MAN9 =	BUF_LOCK.9\
+	BUF_LOCKFREE.9\
+	BUF_LOCKINIT.9\
+	BUF_REFCNT.9\
+	BUF_TIMELOCK.9\
+	BUF_UNLOCK.9\
+	BUS_PRINT_CHILD.9\
 	BUS_READ_IVAR.9\
 	BUS_SETUP_INTR.9\
+	CTASSERT.9\
 	DECLARE_MODULE.9\
 	DELAY.9\
 	DEVICE_ATTACH.9\
@@ -23,6 +30,7 @@ MAN9 =	BUS_PRINT_CHILD.9\
 	VFS_MOUNT.9\
 	VFS_QUOTACTL.9\
 	VFS_ROOT.9\
+	VFS_SET.9\
 	VFS_START.9\
 	VFS_STATFS.9\
 	VFS_SYNC.9\
@@ -39,6 +47,7 @@ MAN9 =	BUS_PRINT_CHILD.9\
 	VOP_GETACL.9\
 	VOP_GETEXTATTR.9\
 	VOP_GETPAGES.9\
+	VOP_GETVOBJECT.9\
 	VOP_INACTIVE.9\
 	VOP_IOCTL.9\
 	VOP_LEASE.9\
@@ -54,13 +63,14 @@ MAN9 =	BUS_PRINT_CHILD.9\
 	VOP_REALLOCBLKS.9\
 	VOP_REMOVE.9\
 	VOP_RENAME.9\
+	VOP_REVOKE.9\
 	VOP_SETACL.9\
 	VOP_SETEXTATTR.9\
 	VOP_STRATEGY.9\
-	acl.9\
 	accept_filter.9\
 	accf_data.9\
 	accf_http.9\
+	acl.9\
 	bios.9\
 	boot.9\
 	buf.9\
@@ -105,6 +115,7 @@ MAN9 =	BUS_PRINT_CHILD.9\
 	inittodr.9\
 	intro.9\
 	kernacc.9\
+	lock.9\
 	make_dev.9\
 	malloc.9\
 	mi_switch.9\
@@ -114,6 +125,7 @@ MAN9 =	BUS_PRINT_CHILD.9\
 	module.9\
 	panic.9\
 	physio.9\
+	printf.9\
 	psignal.9\
 	resettodr.9\
 	sbuf.9\
@@ -149,6 +161,8 @@ MLINKS+=VOP_CREATE.9 VOP_MKDIR.9
 MLINKS+=VOP_CREATE.9 VOP_MKNOD.9
 MLINKS+=VOP_CREATE.9 VOP_SYMLINK.9
 MLINKS+=VOP_GETPAGES.9 VOP_PUTPAGES.9
+MLINKS+=VOP_GETVOBJECT.9 VOP_CREATEVOBJECT.9
+MLINKS+=VOP_GETVOBJECT.9 VOP_DESTROYVOBJECT.9
 MLINKS+=VOP_INACTIVE.9 VOP_RECLAIM.9
 MLINKS+=VOP_LOCK.9 VOP_ISLOCKED.9
 MLINKS+=VOP_LOCK.9 VOP_UNLOCK.9
@@ -210,12 +224,19 @@ MLINKS+=devclass_add_driver.9 devclass_find_driver.9
 MLINKS+=BUS_READ_IVAR.9 BUS_WRITE_IVAR.9
 MLINKS+=bus_generic_read_ivar.9 bus_generic_write_ivar.9
 
+MLINKS+= lock.9 lockinit.9 lock.9 lockdestroy.9
+MLINKS+= lock.9 lockcount.9 lock.9 lockmgr.9
+MLINKS+= lock.9 lockstatus.9 lock.9 lockmgr_printinfo.9
+
 MLINKS+=microtime.9 getmicrotime.9
 MLINKS+=microtime.9 nanotime.9
 MLINKS+=microtime.9 getnanotime.9
 MLINKS+=microuptime.9 getmicrouptime.9
 MLINKS+=microuptime.9 nanouptime.9
 MLINKS+=microuptime.9 getnanouptime.9
+
+MLINKS+= printf.9 uprintf.9
+MLINKS+= printf.9 tprintf.9
 
 MLINKS+=suser.9 suser_cred.9
 
