@@ -1,5 +1,5 @@
 # 
-# $FreeBSD: doc/en_US.ISO8859-1/books/handbook/Makefile,v 1.40 2001/07/17 01:37:39 murray Exp $
+# $FreeBSD: doc/en_US.ISO8859-1/books/handbook/Makefile,v 1.41 2001/08/08 19:23:55 murray Exp $
 #
 # Build the FreeBSD Handbook.
 #
@@ -61,6 +61,7 @@ SRCS+= sound/chapter.sgml
 SRCS+= users/chapter.sgml
 SRCS+= x11/chapter.sgml
 SRCS+= ports/chapter.sgml
+SRCS+= colophon.sgml
 
 # Entities
 SRCS+= authors.ent 
