@@ -1,4 +1,6 @@
-# $Id: Makefile.inc,v 1.2 1997-01-20 12:48:55 jfieber Exp $
+# $Id: Makefile.inc,v 1.3 1997-11-23 22:55:07 max Exp $
+# The FreeBSD Japanese Documentation Project
+# Original revision: 1.5
 
 WEBBASE?=	/data/ja_JP.EUC
-SGMLOPTS+=	-hdr ${.CURDIR}/../doc.hdr -ftr ${.CURDIR}/../doc.ftr
+SGMLOPTS+=	-links -hdr ${.CURDIR}/../doc.hdr -ftr ${.CURDIR}/../doc.ftr
