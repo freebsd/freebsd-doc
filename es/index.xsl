@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/es/index.xsl,v 1.1 2004/03/05 22:42:32 jesusr Exp $ -->
+<!-- $FreeBSD$ -->
+<!-- $FreeBSDes$ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -9,7 +10,7 @@
 
   <xsl:variable name="base" select="'.'"/>
   <xsl:variable name="enbase" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/es/index.xsl,v 1.1 2004/03/05 22:42:32 jesusr Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/es/index.xsl,v 1.2 2004/04/12 05:37:24 den Exp $'"/>
   <xsl:variable name="title" select="'El Proyecto FreeBSD'"/>
 
   <!-- these params should be externally bound. The values
@@ -101,104 +102,9 @@
 			   bgcolor="#ffcc66" width="100%">
 		      <tr>
 			<td>
-			  <p>
-			    <a href="{$enbase}/platforms/index.html">
-			      <font size="+1" color="#990000"><b>Arquitecturas:</b></font>
-			    </a><small><br/>
-			      &#183; <a href="{$enbase}/smp/index.html">i386</a><br/>
-			      &#183; <a href="{$enbase}/platforms/alpha.html">Alpha</a><br/>
-			      &#183; <a href="{$enbase}/platforms/ia64/index.html">IA-64</a><br/>
-			      &#183; <a href="{$enbase}/platforms/amd64.html">AMD64</a><br/>
-			      &#183; <a href="{$enbase}/platforms/sparc.html">Sparc64</a><br/>
-			      &#183; <a href="{$enbase}/platforms/index.html">Otros</a><br/>
-			    </small></p>
-
-			  <p><font size="+1" color="#990000"><b>Software</b></font>
-			    <small><br/>
-			      &#183; <a href="{$enbase}/doc/es_ES.ISO8859-1/books/handbook/mirrors.html">Obtener FreeBSD</a><br/>
-			      &#183; <a href="{$base}/releases/index.html">Informaci&#243;n de releases</a><br/>
-			      &#183; <a href="{$base}/ports/index.html">Aplicaciones portadas</a><br/>
-			    </small></p>
-
-			  <p>
-			    <a href="docs.html">
-			      <font size="+1" color="#990000"><b>Documentaci&#243;n</b></font>
-			    </a><small><br/>
-			      &#183; <a href="{$enbase}/doc/es_ES.ISO8859-1/books/faq/index.html">FAQ</a><br/>
-			      &#183; <a href="{$enbase}/doc/es_ES.ISO8859-1/books/handbook/index.html">Handbook</a><br/>
-			      &#183; <a href="http://www.FreeBSD.org/cgi/man.cgi">Manuales</a><br/>
-			      &#183; <a href="{$base}/projects/newbies.html">Para principiantes</a><br/>
-			      &#183; <a href="{$base}/docproj/index.html">Doc. Project</a><br/>
-			    </small></p>
-
-			  <p>
-			    <a href="{$base}/support.html">
-			      <font size="+1" color="#990000"><b>Soporte</b></font>
-			    </a><small><br/>
-			      &#183; <a href="{$base}/support.html#mailing-list">Listas de distribuci&#243;n</a><br/>
-			      &#183; <a href="{$base}/support.html#newsgroups">Listas de news</a><br/>
-			      &#183; <a href="{$base}/support.html#user">Grupos de usuarios</a><br/>
-			      &#183; <a href="{$base}/support.html#web">Recursos Web</a><br/>
-			      &#183; <a href="{$base}/security/index.html">Seguridad</a><br/>
-			    </small></p>
-
-			  <p>
-			    <a href="{$base}/support.html#gnats">
-			      <font size="+1" color="#990000"><b>Informe de Bugs</b></font>
-			    </a><small><br/>
-			      &#183; <a href="http://www.FreeBSD.org/cgi/query-pr-summary.cgi?query">Buscar</a><br/>
-			      &#183; <a href="http://www.FreeBSD.org/cgi/query-pr.cgi">Ver un reporte</a><br/>
-			      &#183; <a href="http://www.FreeBSD.org/cgi/query-pr-summary.cgi">Ver todos los reportes</a><br/>
-			      &#183; <a href="{$base}/send-pr.html">Enviar un reporte</a><br/>
-			      &#183; <a href="{$enbase}/doc/en_US.ISO8859-1/articles/problem-reports/article.html">Escribir reporte</a><br/>
-			    </small></p>
-
-			  <p>
-			    <a href="{$base}/projects/index.html">
-			      <font size="+1" color="#990000"><b>Desarrollo</b></font>
-			    </a><small><br/>
-			      &#183; <a href="{$enbase}/doc/en_US.ISO8859-1/books/developers-handbook">Manual del desarrollador</a><br/>
-			      &#183; <a href="{$enbase}/doc/en_US.ISO8859-1/books/porters-handbook">Manual del Porter</a><br/>
-			      &#183; <a href="{$base}/support.html#cvs">Repositorio CVS</a><br/>
-			      &#183; <a href="{$enbase}/releng/index.html">Release Engineering</a><br/>
-			      &#183; <a href="{$enbase}/doc/en_US.ISO8859-1/articles/contributing/index.html">Contribuir a FreeBSD</a><br/>
-			    </small></p>
-
-			  <p><font size="+1" color="#990000"><b>Comercial</b></font>
-			    <small><br/>
-			      &#183; <a href="{$enbase}/commercial/software_bycat.html">Software</a><br/>
-			      &#183; <a href="{$enbase}/commercial/hardware.html">Hardware</a><br/>
-			      &#183; <a href="{$enbase}/commercial/consulting_bycat.html">Consultor&#237;a</a><br/>
-			      &#183; <a href="{$enbase}/commercial/misc.html">Varios</a><br/>
-			    </small></p>
-
-			  <p><font size="+1" color="#990000"><b>Donaci&#243;n</b></font>
-			    <small><br/>
-			      &#183; <a href="{$enbase}/donations/index.html">Equipo de Donaciones</a><br/>
-			      &#183; <a href="{$enbase}/donations/donors.html">Donaciones Actuales</a><br/>
-			      &#183; <a href="{$enbase}/donations/wantlist.html">Lista de necesidades</a><br/>
-			    </small></p>
-
-			  <p>
-			    <a href="{$base}/search/index-site.html">
-			      <font size="+1" color="#990000"><b>Mapa del web</b></font>
-			    </a><small><br/>
-			      &#183; <a href="{$base}/search/search.html#web">Buscar en sitio</a><br/>
-			      &#183; <a href="{$base}/search/search.html#mailinglist">Buscar en listas</a><br/>
-			      &#183; <a href="{$base}/search/search.html">Buscar en todo</a><br/>
-			    </small></p>
-
-			  <p>
-			    <a href="mailto.html">
-			      <font size="+1" color="#990000"><b>Contactar FreeBSD</b></font>
-			    </a>
-			  </p>
-
-			  <p>
-			    <a href="{$base}/copyright/index.html">
-			      <font size="+1" color="#990000"><b>El Copyright BSD</b></font>
-			    </a>
-			  </p>
+                           <xsl:call-template name="html-index-navigation-link-list">
+                             <xsl:with-param name="navigation.xml" select="$navigation.xml"/>
+                           </xsl:call-template>
 
 			  <form action="http://www.FreeBSD.org/cgi/search.cgi" method="get">
 			    <small>Buscar:<br/>
@@ -355,7 +261,7 @@
 			      &#183; <a href="{$u.rel2.errata}">Errata</a></small></p>
 
 			  <p><font size="+1" color="#990000"><b>Noticias del 
-			    Proyecto</b></font><br/>
+                            Proyecto</b></font><font color="990000">(<a href="{$enbase}/news/news.rdf">RSS</a>)</font><br/>
 			    <font size="-1">
 			      Ultima actualizaci&#243;n:
 			      <xsl:call-template name="html-index-news-project-items-lastmodified">
