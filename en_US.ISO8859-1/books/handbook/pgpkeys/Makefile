@@ -7,7 +7,7 @@
 CHAPTERS= 	pgpkeys/chapter.sgml
 
 PGPKEYS!=	perl -ne 'm/\"([\w-]+.key)\"/ && print "$$1\n"' \
-		    ${.CURDIR}/pgpkeys.ent
+		    ${DOC_PREFIX}/share/pgpkeys/pgpkeys.ent
 SRCS+=		${PGPKEYS}
 
 VPATH=		..
