@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/index.xsl,v 1.114 2004/11/04 18:22:53 ceri Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.115 2004/11/06 17:58:08 simon Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -6,7 +6,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.114 2004/11/04 18:22:53 ceri Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.115 2004/11/06 17:58:08 simon Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <!-- these params should be externally bound. The values
@@ -247,14 +247,14 @@
 		      <tr>
 			<td valign="top">
 			  <p><a href="{$u.rel.announce}">
-			      <font size="+1" color="#990000"><b>New Technology Release:
+			      <font size="+1" color="#990000"><b>Production Release:
 				  <xsl:value-of select="$rel.current"/></b></font></a><br/>
-			    <small>&#183;<a href="{$base}/doc/en_US.ISO8859-1/books/handbook/install.html">Installation Guide</a><br/>
+			    <small>&#183; <a href="{$base}/doc/en_US.ISO8859-1/books/handbook/install.html">Installation Guide</a><br/>
 			      &#183; <a href="{$u.rel.notes}">Release Notes</a><br/>
 			      &#183; <a href="{$u.rel.hardware}">Hardware Notes</a><br/>
 			      &#183; <a href="{$u.rel.installation}">Installation Notes</a><br/>
 			      &#183; <a href="{$u.rel.errata}">Errata</a><br/>
-			      &#183; <a href="{$u.rel.early}">Early Adopter's Guide</a></small>
+			      &#183; <a href="{$u.rel.migration}">Migration Guide</a></small>
 			  </p>
 
 			  <p><a href="{$u.rel2.announce}">
