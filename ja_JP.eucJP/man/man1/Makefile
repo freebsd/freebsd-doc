@@ -410,5 +410,6 @@ MLINKS+= cksum.1 sum.1
 MLINKS+= ktrace.1 trace.1
 MLINKS+= uuencode.1 uudecode.1
 MLINKS+= ncal.1 cal.1
+MLINKS+=enigma.1 crypt.1
 
 .include "bsd.prog.mk"
