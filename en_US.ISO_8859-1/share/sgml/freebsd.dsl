@@ -1,4 +1,4 @@
-<!-- $FreeBSD: doc/en_US.ISO_8859-1/share/sgml/freebsd.dsl,v 1.1 2000/03/23 09:00:02 nik Exp $ -->
+<!-- $FreeBSD: doc/en_US.ISO_8859-1/share/sgml/freebsd.dsl,v 1.2 2000/05/31 23:39:18 nik Exp $ -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
 <!ENTITY freebsd.dsl SYSTEM "../../../share/sgml/freebsd.dsl" CDATA DSSSL>
@@ -24,6 +24,13 @@
                     attributes: (list (list "href" "mailto:doc@FreeBSD.org"))
                 (literal "doc@FreeBSD.org"))
 	      (literal ">."))) 
+
+	<!-- Convert " ... " to `` ... '' in the HTML output. -->
+	(element quote
+	  (make sequence
+	    (literal "``")
+	    (process-children)
+	    (literal "''")))
       ]]>
     </style-specification-body>
   </style-specification>
