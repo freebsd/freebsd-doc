@@ -28,7 +28,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.34 1999/09/08 13:04:09 peter Exp $
+# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.35 1999/09/17 18:56:44 wosch Exp $
 #
 
 
@@ -145,10 +145,6 @@ if (!-d $cvsroot) {
 	&fatal("500 Internal Error",'$CVSROOT not found!<P>The server on which the CVS tree lives is probably down.  Please try again in a few minutes.');
 }
 
-# Set up for FreeBSD repo options.
-$ENV{'RCSLOCALID'} = 'FreeBSD=CVSHeader';
-$ENV{'RCSINCEXC'}  = 'iFreeBSD';
-$ENV{'CVSROOT'}    = $cvsroot;
 
 {
     local(@foo, $i);
