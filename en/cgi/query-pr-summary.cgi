@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $FreeBSD: www/en/cgi/query-pr-summary.cgi,v 1.26 2000/04/17 16:09:37 steve Exp $
+# $FreeBSD: www/en/cgi/query-pr-summary.cgi,v 1.27 2000/10/22 14:25:07 phantom Exp $
 
 $html_mode     = 1 if $ENV{'DOCUMENT_ROOT'};
 $self_ref      = $ENV{'SCRIPT_NAME'};
@@ -510,7 +510,8 @@ print qq`
 <OPTION>sw-bug</OPTION>
 <OPTION>doc-bug</OPTION>
 <OPTION>change-request</OPTION>
-<OPTION>support</OPTION>
+<OPTION>update</OPTION>
+<OPTION>maintainer-update</OPTION>
 <OPTION>wish</OPTION>
 </SELECT></TD>
 </TR><TR>
