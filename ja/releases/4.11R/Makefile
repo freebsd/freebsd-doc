@@ -1,4 +1,4 @@
-# $FreeBSD: www/ja/releases/4.11R/Makefile,v 1.1 2005/02/02 19:15:15 hrs Exp $
+# $FreeBSD: www/ja/releases/4.11R/Makefile,v 1.2 2005/02/03 04:21:33 rushani Exp $
 # Original revision: 1.3
 
 .if exists(../Makefile.conf)
@@ -16,7 +16,7 @@ DOCS+=	relnotes.sgml
 #DOCS+=	todo.sgml
 
 DATA=	docbook.css
-#DATA+=	errata.html
+DATA+=	errata.html
 #DATA+=	hardware-alpha.html
 #DATA+=	hardware-i386.html
 #DATA+=	installation-alpha.html
