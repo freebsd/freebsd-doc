@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.43 1998-08-16 13:12:03 wosch Exp $
+# $Id: Makefile,v 1.44 1998-08-17 09:47:47 jkh Exp $
 
 .if exists(Makefile.conf)
 .include "Makefile.conf"
@@ -10,7 +10,6 @@
 DOCS=  applications.sgml
 DOCS+= auditors.sgml
 DOCS+= availability.sgml
-DOCS+= branch.sgml
 DOCS+= docs.sgml 
 DOCS+= features.sgml
 DOCS+= register.sgml 
