@@ -27,7 +27,7 @@
 		    <p><font size="+1" color="#990000"><b>GNOME on FreeBSD</b></font>
 		      <small><br>
 		        <a href="http://www.FreeBSD.org/gnome/">GNOME on FreeBSD Home</a><br>
-		        <a href="docs/install-gnome.html">Installation Instructions</a><br>
+		        <a href="docs/faq.html#q1">Installation Instructions</a><br>
 		        <a href="../ports/gnome.html">Available Applications</a><br>
 		        <a href="docs/volunteer.html">How to Help</a><br>
 		        <a href="docs/bugging.html">Reporting a Bug</a><br>
