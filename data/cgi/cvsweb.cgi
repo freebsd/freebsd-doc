@@ -31,7 +31,17 @@ require 'ctime.pl';
 $hsty_base = "";
 require 'cgi-style.pl';
 
-$cvsroot = '/home/ncvs';
+%CVSROOT = (
+	    'freebsd', '/home/ncvs',
+	    'openbsd', '/home/OpenBSD/cvs',
+	    'learn', '/c/learncvs',
+	    );
+
+$cvstreedefault = 'freebsd';
+$cvstree = $cvstreedefault;
+$cvsroot = $CVSROOT{"$cvstree"} || "/home/ncvs";
+
+
 $intro = "
 This is a WWW interface to the FreeBSD CVS tree.
 You can browse the file hierarchy by picking directories
@@ -49,7 +59,7 @@ CVS tree, see <A HREF=\"http://www.freebsd.org/~fenner/cvsweb/\">
 the CVSWeb distribution site</A>.
 <p>
 Please send any suggestions, comments, etc. to
-<A HREF=\"mailto:fenner@freebsd.org\">Bill Fenner &lt;fenner@freebsd.org&gt;</A>
+<A HREF=\"mailto:fenner\@freebsd.org\">Bill Fenner &lt;fenner\@freebsd.org&gt;</A>
 ";
 $shortinstr = "
 Click on a directory to enter that directory. Click on a file to display
@@ -60,15 +70,11 @@ chance to display diffs between revisions.
 $verbose = $v;
 ($where = $ENV{'PATH_INFO'}) =~ s|^/||;
 $where =~ s|/$||;
-$fullname = $cvsroot . '/' . $where;
 ($scriptname = $ENV{'SCRIPT_NAME'}) =~ s|^/?|/|;
 $scriptname =~ s|/$||;
 $scriptwhere = $scriptname . '/' . $where;
 $scriptwhere =~ s|/$||;
 
-if (!-d $cvsroot) {
-	&fatal("500 Internal Error",'$CVSROOT not found!');
-}
 
 if ($query = $ENV{'QUERY_STRING'}) {
     foreach (split(/&/, $query)) {
@@ -81,6 +87,22 @@ if ($query = $ENV{'QUERY_STRING'}) {
     }
     $query = "?" . $query;
 }
+
+
+
+if ($input{'cvsroot'}) {
+    if ($CVSROOT{$input{'cvsroot'}}) {
+	$cvstree = $input{'cvsroot'};
+	$cvsroot = $CVSROOT{"$cvstree"};
+    }
+}
+
+$fullname = $cvsroot . '/' . $where;
+if (!-d $cvsroot) {
+	&fatal("500 Internal Error",'$CVSROOT not found!');
+}
+
+
 if (-d $fullname) {
 	opendir(DIR, $fullname) || &fatal("404 Not Found","$where: $!");
 	@dir = readdir(DIR);
@@ -344,7 +366,8 @@ if (-d $fullname) {
 		$nameprinted{$br}++;
 	    }
 	    print "\n";
-	    print "<A HREF=\"$scriptwhere?rev=$_\"><b>$_</b></A>";
+	    print "<A HREF=\"$scriptwhere?rev=$_" . 
+		&cvsroot . qq{"><b>$_</b></A>};
 	    if (/^1\.1\.1\.\d+$/) {
 		print " <i>(vendor branch)</i>";
 	    }
@@ -387,7 +410,7 @@ if (-d $fullname) {
 	    if ($prevrev[$#prevrev] != 0) {
 		$prev = join(".", @prevrev);
 		print "<BR><A HREF=\"${scriptwhere}.diff?r1=$prev";
-		print "&r2=$_\">Diffs to $prev</A>\n";
+		print "&r2=$_" . &cvsroot . qq{">Diffs to $prev</A>\n};
 		#
 		# Plus, if it's on a branch, and it's not a vendor branch,
 		# offer to diff with the immediately-preceding commit if it
@@ -401,7 +424,8 @@ if (-d $fullname) {
 		    @tmp2 = split(/\./, $_);
 		    if ($#tmp1 < $#tmp2) {
 			print "; <A HREF=\"${scriptwhere}.diff?r1=$revorder[$i+1]";
-			print "&r2=$_\">Diffs to $revorder[$i+1]</A>\n";
+			print "&r2=$_" . &cvsroot .
+                            qq{">Diffs to $revorder[$i+1]</A>\n};
 		    }
 		}
 	    }
@@ -419,6 +443,8 @@ if (-d $fullname) {
 	print "name using the type-in text box.\n";
 	print "</A><P>\n";
 	print "<FORM METHOD=\"GET\" ACTION=\"${scriptwhere}.diff\">\n";
+        print qq{<input type=hidden name=cvsroot value=$cvstree>\n}
+             if &cvsroot;
 	print "Diffs between \n";
 	print "<SELECT NAME=\"r1\">\n";
 	print "<OPTION VALUE=\"text\" SELECTED>Use Text Field\n";
@@ -442,6 +468,8 @@ if (-d $fullname) {
 	print "a single branch.\n";
 	print "</A><P>\n";
 	print "<FORM METHOD=\"GET\" ACTION=\"$scriptwhere\">\n";
+        print qq{<input type=hidden name=cvsroot value=$cvstree>\n}
+             if &cvsroot;
 	print "Branch: \n";
 	print "<SELECT NAME=\"only_on_branch\">\n";
 	print "<OPTION VALUE=\"\"";
@@ -703,4 +731,9 @@ sub dodiff {
 	    print $_;
 	}
 	close(RCSDIFF);
+}
+
+sub cvsroot {
+    return '' if $cvstree eq $cvstreedefault;
+    return "&cvsroot=" . $cvstree;
 }
