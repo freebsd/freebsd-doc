@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
 <!-- $FreeBSD$
-     $FreeBSDde: de-www/includes.xsl,v 1.5 2003/10/04 15:55:12 mheinen Exp $
+     $FreeBSDde: de-www/includes.xsl,v 1.6 2003/10/21 22:13:26 mheinen Exp $
      basiert auf: 1.16
 -->
 
@@ -9,7 +9,7 @@
 
   <xsl:variable name="base" select="'.'"/>
   <xsl:variable name="enbase" select="'..'"/>
-  <xsl:variable name="debase" select="'http://www.de.freebsd.org/de'"/>
+  <xsl:variable name="debase" select="'http://www.freebsd.de'"/>
 
   <xsl:variable name="i.daemon">
     <img src="{$enbase}/gifs/daemon.gif" alt="" align="left" width="80" height="76"/>

@@ -2,8 +2,8 @@
 
 <!--
      $FreeBSD$
-     $FreeBSDde: de-www/index.xsl,v 1.15 2003/10/04 15:57:04 mheinen Exp $
-     basiert auf: 1.77
+     $FreeBSDde: de-www/index.xsl,v 1.19 2003/10/21 22:40:03 mheinen Exp $
+     basiert auf: 1.79
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -52,7 +52,7 @@
 		<br/>
 
 		<select name="goto">
-		  <!--  Only list TRUE mirrrors here! Native language pages
+		  <!--  Only list TRUE mirrors here! Native language pages
 		        which are not mirrored should be listed in
 		        support.sgml.  -->
 
@@ -225,6 +225,7 @@
 			      &#183; <a href="{$enbase}/support.html#user">User Groups</a><br/>
 			      &#183; <a href="{$enbase}/support.html#web">Web Ressourcen</a><br/>
 			      &#183; <a href="{$enbase}/security/index.html">Sicherheit</a><br/>
+			      &#183; <a href="{$enbase}/events/events.html">Veranstaltungen</a><br/>
 			      &#183; <a href="{$enbase}/support.html">mehr ...</a>
 			    </small></p>
 
@@ -293,7 +294,7 @@
 	      <p>FreeBSD ist ein modernes Betriebssystem f&#252;r
 		Intel kompatible (x86), DEC-Alpha, IA-64, PC-98 und
 		UltraSPARC&#174;-Architekturen.  An der Unterst&#252;tzung weiterer
-		<a href="{$enbase}/platforms/index.html">Plattformen</a>
+		<a href="{$base}/platforms/index.html">Plattformen</a>
 		wird gearbeitet.  FreeBSD ist eine Weiterentwicklung von
 		BSD, dem <xsl:value-of select="$unix"/>-Betriebssystem der
 		University of California, Berkeley.  Das System wird
@@ -489,7 +490,7 @@
 			      <xsl:text>. </xsl:text>
 			      <xsl:call-template name="translate-month">
 			        <xsl:with-param name="month"
-				  select="descendant::month[position() = 1]/name"/>
+				  select="document('../en/security/advisories.xml')/descendant::month[position() = 1]/name"/>
 			      </xsl:call-template>
 			      <xsl:text> </xsl:text>
 			      <xsl:value-of
@@ -539,10 +540,9 @@
 
 	<table width="100%" border="0" cellspacing="0" cellpadding="3">
 	  <tr>
-	    <td><a href="{$debase}/cdrom.html">CD-ROM</a></td>
 	    <td><a href="{$debase}/mailinglists.html">Mailinglisten</a></td>
 	    <td><a href="{$debase}/mirror.html">Spiegel</a></td>
-	    <td><a href="{$debase}/doc.html">Dokumentation</a></td>
+	    <td><a href="{$debase}/cdrom.html">CD-ROM</a></td>
 	    <td><a href="{$debase}/people.html">Menschen</a></td>
 	    <td><a href="{$debase}/misc.html">Verschiedenes</a></td>
 	  </tr>
