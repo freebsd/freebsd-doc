@@ -655,7 +655,7 @@
            </chapterinfo>
 
            Would show up as "Contributed by Bob Jones and Sarah Lee".  Each
-           authorgroup shows up as a seperate sentence. -->
+           authorgroup shows up as a separate sentence. -->
   
 
       (element chapterinfo 
