@@ -8,7 +8,7 @@ DATA+=  handboo0.gif handboo1.gif dae_up2.gif bar.gif
 DATA+=  freebsd_1.gif powerani.gif pbfbsd2.gif 205-jp.jpg
 DATA+=  205-jpb.jpg bsdisc.jpg bsdiscb.jpg comp_b.jpg complete.jpg
 DATA+=  cover.jpg coverb.jpg daemon.gif fullcourse3.jpg
-DATA+=  fullcourse3b.jpg getstarb.jpg getstart.jpg giflist
+DATA+=  fullcourse3b.jpg getstarb.jpg getstart.jpg 
 DATA+=  jp.jpg jpb.jpg kr.jpg krb.jpg las5.jpg las512.jpg
 DATA+=  las512b.jpg las523.jpg
 .include "../web.mk"
