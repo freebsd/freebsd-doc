@@ -6,6 +6,7 @@ SUBDIR+= dialup-firewall
 SUBDIR+= explaining-bsd
 SUBDIR+= formatting-media
 SUBDIR+= freebsd-questions
+SUBDIR+= java-tomcat
 SUBDIR+= new-users
 
 DOC_PREFIX?= ${.CURDIR}/../..
