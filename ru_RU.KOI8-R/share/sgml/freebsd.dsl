@@ -2,7 +2,7 @@
      The FreeBSD Russian Documentation Project
 
      $FreeBSD$
-     $FreeBSDru: frdp/doc/ru_RU.KOI8-R/share/sgml/freebsd.dsl,v 1.8 2003/11/08 04:50:19 phantom Exp $
+     $FreeBSDru: frdp/doc/ru_RU.KOI8-R/share/sgml/freebsd.dsl,v 1.9 2004/04/09 07:06:07 den Exp $
 
      Original revision: 1.20
 -->
@@ -63,10 +63,16 @@
                   (literal "doc@FreeBSD.org"))
 	        (literal ">.")
                 (make empty-element gi: "br")
-                (literal "По вопросам связанным с русским переводом документации, пишите <")
+                (literal "По вопросам связанным с русским переводом документации, пишите в рассылку <")
 		(create-link (list (list "HREF" "mailto:frdp@FreeBSD.org.ua"))
                   (literal "frdp@FreeBSD.org.ua"))
-	        (literal ">.")))))
+	        (literal ">.")
+                (make empty-element gi: "br")
+                (literal "Информация по подписке на эту рассылку находится на ")
+		(create-link
+		  (list (list "HREF" "http://www.FreeBSD.org.ua/resources.html"))
+                  (literal "сайте проекта перевода"))
+                (literal ".")))))
       ]]>
 
       <!-- More aesthetically pleasing chapter headers for print output --> 
