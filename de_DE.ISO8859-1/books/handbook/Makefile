@@ -1,6 +1,6 @@
 #
 # $FreeBSD$
-# $FreeBSDde: de-docproj/books/handbook/Makefile,v 1.29 2003/12/22 23:52:46 mheinen Exp $
+# $FreeBSDde: de-docproj/books/handbook/Makefile,v 1.30 2003/12/30 16:08:25 mheinen Exp $
 # basiert auf: 1.74
 #
 # Build the FreeBSD Handbook in its German translation.
@@ -13,6 +13,7 @@ DOC?= book
 FORMATS?= html-split
 
 HAS_INDEX= true
+WITH_GLOSSARY?=
 
 INSTALL_COMPRESSED?= gz
 INSTALL_ONLY_COMPRESSED?=
@@ -87,6 +88,9 @@ SRCS+= newsgroups.ent
 CHAPTERS?= ${SRCS:M*chapter.sgml}
 
 SGMLFLAGS+= ${CHAPTERS:S/\/chapter.sgml//:S/^/-i chap./}
+.if defined(WITH_GLOSSARY) && !empty(WITH_GLOSSARY)
+SGMLFLAGS+= -i chap.freebsd-glossary
+.endif
 
 # XXX The Handbook build currently overflows some internal, hardcoded
 # limits in pdftex.  Until we split the Handbook up, build the PDF
