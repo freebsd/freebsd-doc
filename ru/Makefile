@@ -1,4 +1,4 @@
-# $FreeBSD: www/ru/Makefile,v 1.2 1999/09/06 07:03:30 peter Exp $
+# $FreeBSD: www/ru/Makefile,v 1.3 1999/11/02 10:01:26 andy Exp $
 
 .if exists(Makefile.conf)
 .include "Makefile.conf"
@@ -60,7 +60,6 @@ SGMLOPTS+=	-links -hdr ${.CURDIR}/doc.hdr -ftr ${.CURDIR}/doc.ftr
 SGMLOPTS+=	-e KOI8-R
 FORMATS=	"html ps koi8-r"
 
-WEBBASE=	/data/ru
 WEBDIR?=	data/ru
 
 .include "web.mk"
