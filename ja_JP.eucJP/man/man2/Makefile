@@ -24,6 +24,7 @@ MAN2 =	_exit.2\
 	creat.2\
 	dup.2\
 	execve.2\
+	extattr_get_file.2\
 	fcntl.2\
 	fhopen.2\
 	flock.2\
@@ -55,6 +56,7 @@ MAN2 =	_exit.2\
 	ioctl.2\
 	issetugid.2\
 	jail.2\
+	kenv.2\
 	kill.2\
 	killpg.2\
 	kldfind.2\
@@ -147,6 +149,7 @@ MAN2 =	_exit.2\
 	undelete.2\
 	unlink.2\
 	utimes.2\
+	uuidgen.2\
 	vfork.2\
 	wait.2\
 	write.2\
@@ -161,6 +164,12 @@ MLINKS+=chmod.2 fchmod.2 chmod.2 lchmod.2
 MLINKS+=chown.2 fchown.2 chown.2 lchown.2
 MLINKS+=clock_gettime.2 clock_getres.2 clock_gettime.2 clock_settime.2
 MLINKS+=dup.2 dup2.2
+MLINKS+=extattr_get_file.2 extattr_set_file.2 \
+	extattr_get_file.2 extattr_delete_file.2 \
+	extattr_get_file.2 extattr_get_fd.2 \
+	extattr_get_file.2 extattr_set_fd.2 \
+	extattr_get_file.2 extattr_delete_fd.2 \
+	extattr_get_file.2 extattr.2
 MLINKS+=fhopen.2 fhstat.2 fhopen.2 fhstatfs.2
 MLINKS+=getdirentries.2 getdents.2
 MLINKS+=getgid.2 getegid.2
