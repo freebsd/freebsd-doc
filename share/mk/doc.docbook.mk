@@ -199,7 +199,7 @@ HTMLOPTS?=	-ioutput.html -d ${DSLHTML} ${HTMLFLAGS}
 
 HTMLTXTOPTS?=	-ioutput.html -d ${DSLHTML} ${HTMLTXTFLAGS}
 
-PRINTOPTS?=	-ioutput.print -ifreebsd.urls.absolute -d ${DSLPRINT} ${PRINTFLAGS}
+PRINTOPTS?=	-ioutput.print -d ${DSLPRINT} ${PRINTFLAGS}
 
 .if defined(BOOK_OUTPUT)
 NICE_HEADERS=1
