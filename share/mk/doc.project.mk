@@ -91,6 +91,8 @@ PERL?=		perl
 .endif
 REALPATH?=	/bin/realpath
 SETENV?=	/usr/bin/env
+XSLTPROC?=	${PREFIX}/bin/xsltproc
+TIDY?=		${PREFIX}/bin/tidy
 
 # Image processing (contains code used by the doc.<format>.mk files, so must
 # be listed first).
