@@ -1,4 +1,4 @@
-#!/usr/bin/perl -T
+#!/usr/bin/perl
 #
 #  Send-pr perl script to send a pr.
 #
@@ -8,7 +8,7 @@
 #  GNU General Public License Version 2.  
 #     (http://www.gnu.ai.mit.edu/copyleft/gpl.html)
 #
-# $FreeBSD: www/en/cgi/dosendpr.cgi,v 1.2 2000/04/03 08:45:50 phantom Exp $
+# $FreeBSD: www/en/cgi/dosendpr.cgi,v 1.3 2000/11/29 13:39:37 wosch Exp $
 
 require "html.pl";
 
