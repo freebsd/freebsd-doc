@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-#	$Id: ports.cgi,v 1.11 1998-02-12 10:38:33 wosch Exp $
+#	$Id: ports.cgi,v 1.12 1998-02-12 10:55:18 wosch Exp $
 #
 # ports.cgi - search engine for FreeBSD ports
 #             	o search for a port by name or description
@@ -478,7 +478,7 @@ sub footer {
     print qq{Please direct questions about this service to
 <I><A HREF="$mailtoURL">$mailto</A></I><br>\n};
     print qq{General questions about FreeBSD ports should be sent to } .
-	q{<a href="mailto:$mailtoList">} . 
+	qq{<a href="mailto:$mailtoList">} . 
 	    qq{<i>$mailtoList</i></a><br>\n};
     print &last_update_message;
     print "<hr noshade>\n<P>\n";
