@@ -1,5 +1,7 @@
-# $FreeBSD: www/ru/java/links/Makefile,v 1.1 2000/03/05 16:52:30 phantom Exp $
-# Original version: 1.2
+# $FreeBSD$
+# The FreeBSD Russian Documentation Project
+# $FreeBSDru: frdp/www/ru/java/links/Makefile,v 1.2 2000/10/11 16:16:15 phantom Exp $
+# Original revision: 1.2
 
 DOCS =	freebsd.sgml
 DOCS+=	tools.sgml

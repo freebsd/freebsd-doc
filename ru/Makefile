@@ -1,4 +1,5 @@
-# $FreeBSD: www/ru/Makefile,v 1.12 2000/03/12 22:17:19 phantom Exp $
+# $FreeBSD$
+# $FreeBSDru: frdp/www/ru/Makefile,v 1.7 2000/10/27 11:26:06 phantom Exp $
 
 .if exists(Makefile.conf)
 .include "Makefile.conf"
@@ -33,16 +34,18 @@ DATA=	index.html
 # SGML
 SUBDIR=  security
 SUBDIR+= commercial
+SUBDIR+= conspectus
 SUBDIR+= docproj
 SUBDIR+= news
 SUBDIR+= alpha
 SUBDIR+= internal
 SUBDIR+= java
 SUBDIR+= copyright
-#SUBDIR+= search
+SUBDIR+= search
 SUBDIR+= gallery
 SUBDIR+= projects
 SUBDIR+= releases
+SUBDIR+= smp
 .if !defined(WEB_ONLY) || empty(WEB_ONLY)
 SUBDIR+= ports
 .endif
@@ -54,6 +57,7 @@ SUBDIR+= ports
 .if !defined(WEB_ONLY) || empty(WEB_ONLY)
 # Extern
 SUBDIR+= tutorials
+SUBDIR+= handbook
 
 #DOCSUBDIR=	FAQ handbook
 DOCSUBDIR=	FAQ
