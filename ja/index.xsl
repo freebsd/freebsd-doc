@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
 
-<!-- $FreeBSD: www/ja/index.xsl,v 1.15 2002/05/13 20:09:03 hrs Exp $ -->
-<!-- Original revision: 1.23 -->
+<!-- $FreeBSD: www/ja/index.xsl,v 1.16 2002/05/15 18:21:59 hrs Exp $ -->
+<!-- Original revision: 1.25 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   
@@ -10,7 +10,7 @@
 
   <xsl:variable name="base" select="'.'"/>
   <xsl:variable name="enbase" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/ja/index.xsl,v 1.15 2002/05/13 20:09:03 hrs Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/ja/index.xsl,v 1.16 2002/05/15 18:21:59 hrs Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <xsl:output type="html" encoding="EUC-JP"
@@ -182,13 +182,21 @@
 			      ・<a href="security/index.html">セキュリティ</a><br/>
 			      ・<a href="{$base}/support.html">さらに...</a>
 			    </small></p>
+
+			  <p><font size="+1" color="#990000"><b>障害報告</b></font>
+			    <small><br/>
+			      ・<a href="send-pr.html">障害報告の送付</a><br/>
+			      ・<a href="http://www.FreeBSD.org/cgi/query-pr-summary.cgi">未解決の報告の閲覧</a><br/>
+			      ・<a href="http://www.FreeBSD.org/cgi/query-pr.cgi">障害 ID で検索する</a><br/>
+			      ・<a href="{$base}/support.html#gnats">さらに...</a><br/>
+			    </small></p>
+
 	      
 			  <p><font size="+1" color="#990000"><b>開発</b></font>
 		
 			    <small><br/>
 			      ・<a href="projects/index.html">プロジェクト</a><br/>
 			      ・<a href="../releng/index.html">Release Engineering</a><br/>
-			      ・<a href="{$base}/support.html#gnats">バグレポート</a><br/>
 			      ・<a href="{$base}/support.html#cvs">CVS リポジトリ</a><br/>
 			    </small></p>
 	      
@@ -271,7 +279,7 @@
 	    
 	      <h2><font color="#990000">簡単インストール</font></h2>
 
-	      <p>FreeBSD は CD-ROM やフロッピーディスク、磁気テープ、MS-DOS
+	      <p>FreeBSD は CD-ROM や DVD-ROM、フロッピーディスク、磁気テープ、MS-DOS
 		パーティションなどのさまざまなメディアからインストールすることが
 		できます。ネットワークに接続しているなら、anonymous FTP や NFS
 		を用いて <i>直接</i> インストールすることもできます。

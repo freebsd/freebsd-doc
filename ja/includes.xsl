@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
 
-<!-- $FreeBSD: www/ja/includes.xsl,v 1.5 2002/01/14 13:38:53 kuriyama Exp $ -->
-<!-- Original revision: 1.6 -->
+<!-- $FreeBSD: www/ja/includes.xsl,v 1.6 2002/01/31 13:49:41 kuriyama Exp $ -->
+<!-- Original revision: 1.7 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -80,14 +80,14 @@
     <address><xsl:copy-of select="$author"/><br/>
       <xsl:copy-of select="$date"/><br/>
       (日本語訳に関するお問い合わせは
-      <a href="mailto:doc-jp@jp.FreeBSD.org">doc-jp@jp.FreeBSD.org</a>
+      <a href="http://www.jp.FreeBSD.org/ml.html#doc-jp">doc-jp@jp.FreeBSD.org</a>
       までお願いします)
     </address>
   </xsl:variable>
   
-  <xsl:variable name="rel.current" select="4.5"/>
+  <xsl:variable name="rel.current" select="4.6"/>
   <xsl:variable name="u.rel.notes">
-    <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel.current"/>R/notes.html</xsl:variable>
+    <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel.current"/>R/relnotes.html</xsl:variable>
 
   <xsl:variable name="u.rel.announce">
     <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel.current"/>R/announce.html</xsl:variable>
