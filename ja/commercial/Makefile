@@ -1,5 +1,5 @@
-# $Id: Makefile,v 1.1 1998-08-03 16:44:06 wosch Exp $
+# $Id: Makefile,v 1.2 1998-08-04 12:31:46 wosch Exp $
 
 DOCS = 	commercial.sgml
 
-.include <../web.mk>
+.include "../../web.mk"
