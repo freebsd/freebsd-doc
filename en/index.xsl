@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/index.xsl,v 1.23 2002/05/15 01:43:07 dannyboy Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.24 2002/06/07 17:46:40 schweikh Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   
@@ -6,7 +6,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.23 2002/05/15 01:43:07 dannyboy Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.24 2002/06/07 17:46:40 schweikh Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -178,13 +178,21 @@
 			      &#183; <a href="security/index.html">Security</a><br/>
 			      &#183; <a href="{$base}/support.html">More...</a>
 			    </small></p>
+
+			  <p><font size="+1" color="#990000"><b>Bug Reports</b></font>
+			    <small><br/>
+			      &#183; <a href="send-pr.html">Send a bug report</a><br/>
+			      &#183; <a href="http://www.FreeBSD.org/cgi/query-pr-summary.cgi">View open reports</a><br/>
+			      &#183; <a href="http://www.FreeBSD.org/cgi/query-pr.cgi">Search by bug ID</a><br/>
+			      &#183; <a href="{$base}/support.html#gnats">More...</a><br/>
+			    </small></p>
+
 	      
 			  <p><font size="+1" color="#990000"><b>Development</b></font>
 		
 			    <small><br/>
 			      &#183; <a href="projects/index.html">Projects</a><br/>
 			      &#183; <a href="releng/index.html">Release Engineering</a><br/>
-			      &#183; <a href="{$base}/support.html#gnats">Bug Reports</a><br/>
 			      &#183; <a href="{$base}/support.html#cvs">CVS Repository</a><br/>
 			    </small></p>
 	      
