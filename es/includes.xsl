@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD$ -->
+<!-- $FreeBSD: www/es/includes.xsl,v 1.1 2003/05/12 09:59:44 keramida Exp $ -->
 <!-- Original version: 1.13 $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -55,15 +55,15 @@
       <area shape="rect" coords="1,1,111,31"
 	    href="{$base}/index.html" alt="Top"/>
       <area shape="rect" coords="112,11,196,31"
-	    href="{$base}/ports/index.html" alt="Applications"/>
+	    href="{$base}/ports/index.html" alt="Aplicaciones"/>
       <area shape="rect" coords="196,12,257,33"
-	      href="{$base}/support.html" alt="Support"/>
+	      href="{$base}/support.html" alt="Soporte"/>
       <area shape="rect" coords="256,12,365,33"
-	    href="{$base}/docs.html" alt="Documentation"/>
+	    href="{$base}/docs.html" alt="Documentaci&#243;"/>
       <area shape="rect" coords="366,13,424,32"
 	    href="{$base}/commercial/commercial.html" alt="Vendors"/>
       <area shape="rect" coords="425,16,475,32"
-	      href="{$base}/search/search.html" alt="Search"/>
+	      href="{$base}/search/search.html" alt="Buscar"/>
       <area shape="rect" coords="477,16,516,33"
 	    href="{$base}/search/index-site.html" alt="Index"/>
       <area shape="rect" coords="516,15,562,33"
