@@ -175,7 +175,7 @@
 
 	      <h2><font color="#990000">FreeBSD è <i>libero</i></font></h2>
 
-	      <a href="copyright/daemon.html"><img src="{$enbase}/gifs/dae_up3.gif"
+	      <a href="{$enbase}/art.html"><img src="{$enbase}/gifs/dae_up3.gif"
 						   alt=""
 						   height="81" width="72"
 						   align="right"
@@ -202,8 +202,9 @@
 		to FreeBSD</a> per maggiori informazioni.</p>
 
 	      <p>Anche se non sei un programmatore, ci sono altri modi per
- 		contribuire a FreeBSD.  La FreeBSD Foundation è
- 		un'organizzazione no-profit, percui i contributi diretti sono
+ 		contribuire a FreeBSD.  La <a
+ 		  href="http://www.FreeBSDFoundation.org">FreeBSD Foundation</a>
+ 		è un'organizzazione no-profit, percui i contributi diretti sono
  		completamente deducibili dalle tasse.  Contatta	<a
  		  href="mailto:bod@FreeBSDFoundation.org">bod@FreeBSDFoundation.org</a>
 		per maggiori informazioni o scrivi a: The FreeBSD Foundation,
@@ -237,6 +238,7 @@
 			      &#183; <a href="{$enbase}/doc/it_IT.ISO8859-15/books/handbook/install.html">Guida di Installazione</a><br/>
 			      &#183; <a href="{$u.rel.notes}">Note sulla Release</a><br/>
 			      &#183; <a href="{$u.rel.hardware}">Note sull'Hardware</a><br/>
+			      &#183; <a href="{$u.rel.installation}">Note sull'Installazione</a><br/>
 			      &#183; <a href="{$u.rel.errata}">Errata</a><br/>
 			      &#183; <a href="{$u.rel.early}">Early Adopter's Guide</a></small></p>
 
@@ -248,9 +250,11 @@
 			      &#183; <a href="{$enbase}/doc/it_IT.ISO8859-15/books/handbook/install.html">Guida di Installazione</a><br/>
 			      &#183; <a href="{$u.rel2.notes}">Note sulla Release</a><br/>
 			      &#183; <a href="{$u.rel2.hardware}">Note sull'Hardware</a><br/>
+			      &#183; <a href="{$u.rel2.installation}">Note sull'Installazione</a><br/>
 			      &#183; <a href="{$u.rel2.errata}">Errata</a></small></p>
 
-			  <p><font size="+1" color="#990000"><b>Novità sul Progetto</b></font><br/>
+			  <p><font size="+1" color="#990000"><b>Novità sul Progetto</b></font>
+			    <font color="#990000">(<a href="{$enbase}/news/news.rdf">RSS</a>)</font><br/>
 			    <font size="-1">
 			      Ultimo aggiornamento:
 			      <xsl:call-template name="html-index-news-project-items-lastmodified">
