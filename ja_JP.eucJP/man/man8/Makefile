@@ -257,6 +257,7 @@ MAN8 =	IPXrouted.8\
 	swapon.8\
 	sync.8\
 	sysctl.8\
+	sysinstall.8\
 	syslogd.8\
 	talkd.8\
 	tcpdchk.8\
