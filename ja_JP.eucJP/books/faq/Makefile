@@ -3,7 +3,7 @@
 #
 # Build the FreeBSD FAQ
 #
-# Original revision: 1.6
+# Original revision: 1.10
 #
 
 MAINTAINER=kuriyama@FreeBSD.ORG
@@ -14,6 +14,8 @@ FORMATS?= html-split html
 
 INSTALL_COMPRESSED?= gz
 INSTALL_ONLY_COMPRESSED?=
+
+WITH_BIBLIOXREF_TITLE?=YES
 
 # 
 # SRCS lists the individual SGML files that make up the document. Changes
