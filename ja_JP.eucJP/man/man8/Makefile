@@ -171,6 +171,7 @@ MAN8 =	IPXrouted.8\
 	pccardd.8\
 	pciconf.8\
 	periodic.8\
+	picobsd.8\
 	ping.8\
 	ping6.8\
 	pnpinfo.8\
@@ -186,6 +187,7 @@ MAN8 =	IPXrouted.8\
 	pstat.8\
 	pw.8\
 	pwd_mkdb.8\
+	pxeboot.8\
 	quot.8\
 	quotacheck.8\
 	quotaon.8\
