@@ -1,5 +1,5 @@
 #!/usr/bin/perl -T
-# $FreeBSD: www/en/cgi/query-pr-summary.cgi,v 1.47 2004/10/13 10:55:55 keramida Exp $
+# $FreeBSD: www/en/cgi/query-pr-summary.cgi,v 1.48 2004/10/25 11:27:08 keramida Exp $
 
 sub escape($) { $_ = $_[0]; s/&/&amp;/g; s/</&lt;/g; s/>/&gt;/g; $_; }
 
@@ -538,12 +538,12 @@ sub gnats_summary_line_text {
     local($syn)      = shift;
 
     # Print the banner line if this is the first iteration.
-    print "${pr}\nS  Submitted    Tracker         Resp.       Description${hr}"
+    print "${pr}\nS Submitted  Tracker          Resp.     Description${hr}"
 	if ($counter == 0);
-    print "$state [$date] $title" .
-	(' ' x (16 - length($_))) .
-	$resp . (' ' x (12 - length($resp))) .
-	substr($syn,0,41) . "\n";
+    print "$state $date $title" .
+	(' ' x (17 - length($_))) .
+	$resp . (' ' x (10 - length($resp))) .
+	substr($syn,0,39) . "\n";
 }
 
 sub displayform {
