@@ -1,4 +1,12 @@
-# $Id: Makefile,v 1.14 1997-04-23 19:52:40 jfieber Exp $
+# $Id: Makefile,v 1.15 1997-04-24 23:03:54 jmg Exp $
+
+.if exists(Makefile.conf)
+.include "Makefile.conf"
+.endif
+
+ACCESS_LOG_DIR?=/home/www/server/logs
+ACCESS_LOG_FILE?=access_log
+ANALOG?=/home/www/bin/analog
 
 # These are turned into validated, normalized HTML files.
 
@@ -17,16 +25,18 @@ DATA=	COPYING COPYING.LIB README.mirror robots.txt
 
 LOCAL=	stats.html stats-img.html
 
-stats.html: /home/www/server/logs/access_log
+stats.html: ${ACCESS_LOG_DIR}/${ACCESS_LOG_FILE}
 	renice +10 $$$$; \
-	(cd /home/www/server/logs;zcat access_log.*.gz;cat access_log) | \
+	(cd ${ACCESS_LOG_DIR};zcat ${ACCESS_LOG_FILE}.*.gz; \
+	    cat ${ACCESS_LOG_FILE}) | \
 	egrep -iv '\.(gif|jpg|jpeg|au) ' | \
-	/home/www/bin/analog +i0 +R500 -o > ${.TARGET}
+	${ANALOG} +i0 +R500 -o > ${.TARGET}
 
-stats-img.html: /home/www/server/logs/access_log
+stats-img.html: ${ACCESS_LOG_DIR}/${ACCESS_LOG_FILE}
 	renice +10 $$$$; \
-	(cd /home/www/server/logs;zcat access_log.*.gz;cat access_log) | \
-	/home/www/bin/analog +i0 +R500 -o > ${.TARGET}
+	(cd ${ACCESS_LOG_DIR};zcat ${ACCESS_LOG_FILE}.*.gz; \
+	    cat ${ACCESS_LOG_FILE}) | \
+	${ANALOG} +i0 +R500 -o > ${.TARGET}
 
 # Subdirectories
 
