@@ -6,8 +6,6 @@
 # that much of the complexity brought about by the chroot environment
 # is unneeded.
 #
-DOC_PREFIX?=	${.CURDIR}/..
-
 HOSTNAME?=	/bin/hostname
 MKISOFS?=	mkisofs
 TAR?=		/usr/bin/tar
@@ -31,6 +29,12 @@ TOUCH?=		/usr/bin/touch
 # DOCROOTDIR	Top directory to use for document release building.
 #		This directory need not exist, and will be created
 #		if necessary.  This variable MUST be defined.
+#
+# CVSROOT	$CVSROOT for checking out a doc/ tree.  This variable
+#		MUST be defined.
+#
+# RELEASETAG	CVS tag to use for checkouts.  If not defined,
+#		treated as a checkout at HEAD.
 #
 # MAKE_ISOS	If defined, this will enable creation of an ISO image
 #		from the document release.  Creation of ISO images
@@ -57,12 +61,13 @@ INSTALL_COMPRESSED?=	zip gz
 #
 # Don't make the compatability symlinks.
 #
-MISCOPTIONS+=	NO_JPMAN=yes RLE=yes GEN_INDEX=1 IGNORE_COMPAT_SYMLINK=YES
+#MISCOPTIONS+=	NO_JPMAN=yes RLE=yes GEN_INDEX=1 IGNORE_COMPAT_SYMLINK=YES
+MISCOPTIONS+=	NO_JPMAN=yes RLE=yes IGNORE_COMPAT_SYMLINK=YES
 
-DOCOBJDIR=	${DOCROOTDIR}/obj
-DOCBUILDFILE=	${DOCOBJDIR}/build.txt
-DOCKEYFILE=	${DOCOBJDIR}/pgpkeyring.txt
-DOCSTAGEDIR=	${DOCROOTDIR}/doc
+DOC_PREFIX=	${DOCROOTDIR}/doc
+DOCSTAGEDIR=	${DOCROOTDIR}/R
+DOCBUILDFILE=	${DOCSTAGEDIR}/build.txt
+DOCKEYFILE=	${DOCSTAGEDIR}/pgpkeyring.txt
 DOCFTPSTAGEDIR=	${DOCSTAGEDIR}/ftp
 DOCCDROMSTAGEDIR=	${DOCSTAGEDIR}/cdrom
 
@@ -73,25 +78,31 @@ release.1:
 .if !defined(DOCROOTDIR)
 	@${ECHO} "To make a release you must define DOCROOTDIR" && false
 .endif
+.if !defined(CVSROOT)
+	@${ECHO} "To make a release you must define CVSROOT" && false
+.endif
 	@${ECHO} ">>> make ${.TARGET} started on `LC_ALL=C TZ=GMT date`"
 # If we're doing a release (from scratch), clean out DOCROOTDIR
-# (this is the equivalent of CHROOTDIR for src/release).
+# (this is the equivalent of CHROOTDIR for src/release) and checkout
+# a clean copy of the documentation.
 .if make(release)
 	${RM} -rf ${DOCROOTDIR}
 	${MKDIR} ${DOCROOTDIR}
-	${MKDIR} ${DOCOBJDIR}
-	find ${DOC_PREFIX} -type d -a \! -name CVS | sed -e s,^,${DOCOBJDIR}, | xargs ${MKDIR}
+.if defined(RELEASETAG)
+	cd ${DOCROOTDIR}; \
+	cvs -R -d ${CVSROOT} co -r${RELEASETAG} -P doc
+.else
+	cd ${DOCROOTDIR}; \
+	cvs -R -d ${CVSROOT} co -P doc
+.endif
 	${MKDIR} ${DOCSTAGEDIR}
 .endif
-# Build documents in the obj area.
-# We do this so as to avoid interference with any built documents that
-# happen to be sitting under ${DOC_PREFIX}, which might be built with
-# different options, etc.
+# Build documents.
 	cd ${DOC_PREFIX} && \
-	env MAKEOBJDIRPREFIX=${DOCOBJDIR} ${MAKE} all FORMATS="${FORMATS}" INSTALL_COMPRESSED="${INSTALL_COMPRESSED}" ${MISCOPTIONS}
+	${MAKE} all FORMATS="${FORMATS}" INSTALL_COMPRESSED="${INSTALL_COMPRESSED}" ${MISCOPTIONS}
 # Build PGP key ring
 	${RM} -f ${DOCKEYFILE}
-	cd ${DOC_PREFIX}/en_US.ISO8859-1/books/handbook && env ${MAKE} pgpkeyring > ${DOCKEYFILE}
+	cd ${DOC_PREFIX}/en_US.ISO8859-1/books/handbook && ${MAKE} pgpkeyring > ${DOCKEYFILE}
 # Construct the build.txt file with the documentation build info.
 	${RM} -f ${DOCBUILDFILE}
 	${TOUCH} ${DOCBUILDFILE}
@@ -106,7 +117,7 @@ ftp.1:
 	${RM} -rf ${DOCFTPSTAGEDIR}
 	${MKDIR} ${DOCFTPSTAGEDIR}
 	cd ${DOC_PREFIX} && \
-	env MAKEOBJDIRPREFIX=${DOCOBJDIR} ${MAKE} all install DOCDIR=${DOCFTPSTAGEDIR} FORMATS="${FORMATS}" INSTALL_COMPRESSED="${INSTALL_COMPRESSED}" ${MISCOPTIONS}
+	${MAKE} all install DOCDIR=${DOCFTPSTAGEDIR} FORMATS="${FORMATS}" INSTALL_COMPRESSED="${INSTALL_COMPRESSED}" ${MISCOPTIONS}
 # Copy newly generated files to staging area
 	${CP} ${DOCBUILDFILE} ${DOCKEYFILE} ${DOCFTPSTAGEDIR}
 # Copy any files in our texts/ directory to staging area
@@ -118,7 +129,7 @@ cdrom.1:
 	${RM} -rf ${DOCCDROMSTAGEDIR}
 	${MKDIR} ${DOCCDROMSTAGEDIR}
 	cd ${DOC_PREFIX} && \
-	env MAKEOBJDIRPREFIX=${DOCOBJDIR} ${MAKE} all install DOCDIR=${DOCCDROMSTAGEDIR} FORMATS="${FORMATS}" INSTALL_COMPRESSED="" ${MISCOPTIONS}
+	${MAKE} all install DOCDIR=${DOCCDROMSTAGEDIR} FORMATS="${FORMATS}" INSTALL_COMPRESSED="" ${MISCOPTIONS}
 # Copy newly generated files to staging area
 	${CP} ${DOCBUILDFILE} ${DOCKEYFILE} ${DOCCDROMSTAGEDIR}
 # Copy any files in our texts/ directory to the staging area.
@@ -129,4 +140,4 @@ cdrom.1:
 	cd ${DOCROOTDIR} && ${MKISOFS} -r -J -V fbsd_doc -o ${DOCSTAGEDIR}/doc.iso ${DOCCDROMSTAGEDIR}
 .endif
 
-.include "${DOC_PREFIX}/share/mk/doc.project.mk"
+.include "../share/mk/doc.project.mk"
