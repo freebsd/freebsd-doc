@@ -28,6 +28,7 @@ SUBDIR+= pxe
 SUBDIR+= pr-guidelines
 SUBDIR+= cvsup-advanced
 SUBDIR+= ipsec-must
+SUBDIR+= filtering-bridges
 
 ROOT_SYMLINKS+= new-users
 
