@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/ports/Makefile,v 1.32 2001/04/22 17:44:25 wosch Exp $
+# $FreeBSD: www/en/ports/Makefile,v 1.33 2001/06/14 03:09:56 dd Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -26,16 +26,15 @@ CVS_OPT+=	-d ${PORTSCVSROOT}
 
 .if defined(NOPORTSCVS)
 ${INDEX}: $${PORTSBASE}/${PINDEX}
-	cp ${PORTSBASE}/${PINDEX} ${INDEX}
+	${CP} ${PORTSBASE}/${PINDEX} ${INDEX}
 .else
 ${INDEX}:
-	cvs ${CVS_OPT} co -p ${PINDEX} > ${INDEX}
+	${CVS} ${CVS_OPT} co -p ${PINDEX} > ${INDEX}
 .endif
 
 # build the list of available packages only on the 
 # main FreeBSD machines
 hostname!= hostname
-
 
 #
 # don't build the packages links if NO_PACKAGES_LINK
@@ -48,29 +47,28 @@ hostname!= hostname
 hostname=	${NO_PACKAGES_LINK}
 .endif
 
-
 packages.exists:
 .if ${hostname} == "hub.freebsd.org" || ${hostname} == "freefall.freebsd.org"
-	@if sh ${.CURDIR}/packages > ${.TARGET}.temp; then \
-		mv ${.TARGET}.temp ${.TARGET}; \
+	@if ${SH} ${.CURDIR}/packages > ${.TARGET}.temp; then \
+		${MV} ${.TARGET}.temp ${.TARGET}; \
 	else \
-		rm ${.TARGET}.temp; touch ${.TARGET}; \
+		${RM} ${.TARGET}.temp; ${TOUCH} ${.TARGET}; \
 	fi;
 .else
-	touch ${.TARGET}
+	${TOUCH} ${.TARGET}
 .endif
 
 Makefile.gen: index.sgml .NOTMAIN
-	echo DOCS= *.sgml > Makefile.gen
+	${ECHO_CMD} DOCS= *.sgml > Makefile.gen
 
 index.sgml: ${INDEX} categories packages.exists portindex ports.inc .NOTMAIN
-	rm -f *.sgml
+	${RM} -f *.sgml
 	${PORTINDEX} ${INDEX} ${.CURDIR}
 
 install: all
 
 all install clean:
-	(cd ${.CURDIR} && ${MAKE}  ${MAKEFLAGS} -f Makefile.inc0 ${.TARGET})
-
+	cd ${.CURDIR}; \
+		${MAKE} ${MAKEFLAGS} -f ${.CURDIR}/Makefile.inc0 ${.TARGET}
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"

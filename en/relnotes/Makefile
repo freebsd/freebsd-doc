@@ -7,10 +7,10 @@
 # of relnotes should appear on the web site.  The second word is the
 # path to that relnotes set.
 #
-# $FreeBSD: www/en/relnotes/Makefile,v 1.3 2001/08/30 06:59:55 dd Exp $
+# $FreeBSD: www/en/relnotes/Makefile,v 1.4 2001/09/09 15:32:29 dd Exp $
 #
 
-RELNOTES=	CURRENT ${.CURDIR}/../../../relnotes/doc \
+RELNOTES?=	CURRENT ${.CURDIR}/../../../relnotes/doc \
 		4-STABLE ${.CURDIR}/../../../relnotes4/doc
 
 all install clean obj:
@@ -18,7 +18,7 @@ all install clean obj:
 	while :; do \
 		case $$# in \
 			0) break;; \
-			1) echo "bad \$$RELNOTES value"; false; break;; \
+			1) ${ECHO_CMD} "bad \$$RELNOTES value"; false; break;; \
 		esac; \
 		webname=$$1; shift; realpath=$$1; shift; \
 		(unset DESTDIR || true; \

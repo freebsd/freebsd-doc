@@ -1,5 +1,5 @@
 #
-# $FreeBSD: www/en/doc/Makefile,v 1.6 2001/06/11 02:38:59 ache Exp $i
+# $FreeBSD: www/en/doc/Makefile,v 1.7 2001/08/23 08:12:26 murray Exp $i
 #
 # Build the FreeBSD documentation *outside* of the www tree, and install it
 # in to the right place as necessary.
@@ -9,21 +9,44 @@
 # requirements here.
 #
 
-all:
-	(unset DESTDIR || true; cd ${.CURDIR}/../../../doc/en_US.ISO8859-1 && ${MAKE} FORMATS=html-split\ html all)
-	(unset DESTDIR || true; cd ${.CURDIR}/../../../doc/en_US.ISO8859-1 && ${MAKE} FORMATS=html-split\ html DOCDIR=${.CURDIR} install)
-	(unset DESTDIR || true; cd ${.CURDIR}/../../../doc/en_US.ISO8859-1/books/handbook && ${MAKE} pgpkeyring > ${.CURDIR}/pgpkeyring.txt)
+all: all-all all-install all-pgpkeyring
+
+all-all:
+	@unset DESTDIR || true; \
+	 cd ${.CURDIR}/../../../doc/en_US.ISO8859-1; \
+		${MAKE} FORMATS="html-split html" \
+			INSTALL_COMPRESSED= all
+all-install:
+	@unset DESTDIR || true; \
+	 cd ${.CURDIR}/../../../doc/en_US.ISO8859-1; \
+		${MAKE} FORMATS="html-split html" DOCDIR=${.OBJDIR} \
+			INSTALL_COMPRESSED= install
+all-pgpkeyring:
+	@unset DESTDIR || true; \
+	 cd ${.CURDIR}/../../../doc/en_US.ISO8859-1/books/handbook; \
+		${MAKE} \
+			pgpkeyring > ${.OBJDIR}/pgpkeyring.txt
 
 install clean:
-	(unset DESTDIR || true; cd ${.CURDIR}/../../../doc/en_US.ISO8859-1 && ${MAKE} FORMATS=html-split\ html DOCDIR=${DESTDIR}/data/doc ${.TARGET})
+	@unset DESTDIR || true; \
+	 cd ${.CURDIR}/../../../doc/en_US.ISO8859-1; \
+		${MAKE} FORMATS="html-split html" DOCDIR=${DESTDIR}/data/doc \
+			INSTALL_COMPRESSED= ${.TARGET}
 .if make(install)
-	(unset DESTDIR || true; cd ${.CURDIR}/../../../doc/en_US.ISO8859-1/books/handbook && ${MAKE} pgpkeyring > ${DESTDIR}/data/doc/pgpkeyring.txt)	
+	@unset DESTDIR || true; \
+	 cd ${.CURDIR}/../../../doc/en_US.ISO8859-1/books/handbook; \
+		${MAKE} \
+			pgpkeyring > ${DESTDIR}/data/doc/pgpkeyring.txt
 .endif
 .if make(clean)
-	rm -rf en* handbook faq pgpkeyring.txt
+	${RM} -rf en* handbook faq pgpkeyring.txt
 .endif
 
-obj:
-	cd ${.CURDIR}/../../../doc/en_US.ISO8859-1 && ${MAKE} ${.TARGET}
-
 .include "${.CURDIR}/../../share/mk/web.site.mk"
+
+obj: _OBJUSE
+
+_OBJUSE: .USE
+	@unset DESTDIR || true; \
+	 cd ${.CURDIR}/../../../doc/en_US.ISO8859-1; \
+		${MAKE} ${.TARGET}

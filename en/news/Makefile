@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/news/Makefile,v 1.28 2001/08/10 10:32:11 nik Exp $
+# $FreeBSD: www/en/news/Makefile,v 1.29 2001/09/05 15:31:58 kuriyama Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -35,14 +35,17 @@ DATA=		newsflash.html news.rdf press.html
 CLEANFILES+=	newsflash.html news.rdf press.html
 
 newsflash.html: newsflash.xsl news.xml includes.xsl ../includes.xsl
-	xsltproc -nonet -o newsflash.html newsflash.xsl news.xml
-	-tidy -i -m -f /dev/null newsflash.html
+	${XSLTPROC} ${XSLTPROCFLAGS} -o ${.TARGET} \
+		${.CURDIR}/newsflash.xsl ${.CURDIR}/news.xml
+	-${TIDY} ${TIDYFLAGS} ${.TARGET}
 
 news.rdf: news-rdf.xsl news.xml includes.xsl ../includes.xsl
-	xsltproc -nonet -o news.rdf news-rdf.xsl news.xml
+	${XSLTPROC} ${XSLTPROCFLAGS} -o ${.TARGET} \
+		${.CURDIR}/news-rdf.xsl ${.CURDIR}/news.xml
 
 press.html: press.xsl press.xml includes.xsl ../includes.xsl
-	xsltproc -nonet -o press.html press.xsl press.xml
-	-tidy -i -m -f /dev/null press.html
+	${XSLTPROC} ${XSLTPROCFLAGS} -o ${.TARGET} \
+		${.CURDIR}/press.xsl ${.CURDIR}/press.xml
+	-${TIDY} ${TIDYFLAGS} ${.TARGET}
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
