@@ -1,4 +1,4 @@
-<!-- $Id: porting.sgml,v 1.109 1998-08-23 01:58:23 obrien Exp $ -->
+<!-- $Id: porting.sgml,v 1.110 1998-09-17 01:52:04 asami Exp $ -->
 <!-- The FreeBSD Documentation Project -->
 
 <sect1><heading>Porting an existing piece of free software<label id="porting"></heading>
@@ -904,6 +904,136 @@ FETCH_DEPENDS=   ncftp2:${PORTSDIR}/net/ncftp2
 	  `<tt>-L/usr/X11R6/lib -lXm</tt>' or
 	  `<tt>/usr/X11R6/lib/libXm.a</tt>', so there is no need to
 	  add `<tt>-L</tt>' or `<tt>-l</tt>' in front.
+
+	<sect2>
+	  <heading>ELF support</heading>
+
+	  <p>Since FreeBSD is moving to ELF from 3.0-release onwards,
+	    we need to convert many ports that build shared libraries
+	    to support ELF.  Complicating this task is that a 3.0
+	    system can run as both ELF and a.out, and that there will
+	    be one more release (2.2.8) from the 2.2 branch.  Below
+	    are the guidelines on how to convert a.out only ports to
+	    support both a.out and ELF compilation.
+
+	  <p>Some part of this list is only applicable during the
+	    conversion, but will be left here for awhile for reference
+	    in case you have come across some old port you wish to
+	    upgrade.
+
+	  <sect3>
+	    <heading>Moving a.out libraries out of the way</heading>
+
+	    <p>A.out libraries should be moved out of
+	      <tt>/usr/local/lib</tt> and similar to an `<tt/aout/'
+	      subdirectory.  (If you don't move them out of the way,
+	      ELF ports will happily overwrite a.out libraries.)  The
+	      `<tt/move-aout-libs/' target in the -current
+	      <tt>src/Makefile</tt> (called from `<tt/aout-to-elf'/)
+	      will do this for you.  It will only move a.out libs so
+	      it is safe to call it on a system with both ELF and
+	      a.out libs in the standard directories.
+
+
+	  <sect3>
+	    <heading>Format</heading>
+
+	    <p>The ports tree will build packages in the format the
+	      machine is in.  This means a.out for 2.2 and a.out or
+	      ELF for 3.0 depending on what <tt>`objformat`</tt>
+	      returns.  Also, once users convert move a.out libraries
+	      to a subdirectory, building a.out libraries will be
+	      unsupported.  (I.e., it may still work if you know what
+	      you are doing, but you are on your own.)
+
+	  <sect3>
+	    <heading>PORTOBJFORMAT</heading>
+
+	    <p><tt/bsd.port.mk/ will set <tt/PORTOBJFORMAT/ to
+	      `<tt/aout/' or `<tt/elf/' and export it in the
+	      environments <tt/CONFIGURE_ENV/, <tt/SCRIPTS_ENV/ and
+	      <tt/MAKE_ENV/. (It's always going to be `<tt/aout/' in
+	      -stable).  It is also passed to <tt/PLIST_SUB/ as
+	      `<tt>PORTOBJFORMAT=${PORTOBJFORMAT}</tt>'.  (See comment 
+	      on <tt/ldconfig/ lines below.)
+
+	    <p>The variable is set using this line:
+<tscreen><verb>
+PORTOBJFORMAT!= test -x /usr/bin/objformat && /usr/bin/objformat || echo aout
+</verb></tscreen>
+	      in <tt/bsd.port.mk/.
+
+	    <p>Ports' make processes should use this variable to
+	      decide what to do.  However, if the port's
+	      <tt/configure/ script already automatically detects an
+	      ELF system, it is not necessary to refer to
+	      <tt/PORTOBJFORMAT/.
+
+	  <sect3>
+	    <heading>Building shared libraries</heading>
+
+	    <p>The following are differences in handling shared
+	      libraries for a.out and ELF.
+
+	    <descrip>
+	      <tag>Shared library versions</tag>An ELF shared library
+	        should be called "<tt/libfoo.so.M/" where <tt/M/ is
+	        the single version number, and an a.out library should
+	        be called "<tt/libfoo.so.M.N/" where <tt/M/ is the
+	        major version and <tt/N/ is the the minor version
+	        number.  Do not mix those; <em/never/ install an ELF
+	        shared library called "<tt/libfoo.so.N.M/" or an a.out
+	        shared library (or symlink) called "<tt/libfoo.so.N/".
+
+	     <tag>Linker command lines</tag>Assuming `<tt>cc
+	        -shared</tt>' is used rather than `<tt/ld/' directly,
+	        the only difference is that you need to add
+	        `<tt>-Wl,-soname,libfoo.so.M</tt>' on the command line
+	        for ELF.
+	    </descrip>
+
+	    <p>You need to install a symlink <tt>libfoo.so</tt> -&gt;
+	      <tt>libfoo.so.N</tt> to make ELF linkers happy.  Since
+	      it should be listed in <tt/PLIST/ too, and it won't hurt
+	      in the a.out case (some ports even require the link for
+	      dynamic loading), you should just make this link
+	      regardless of the setting of <tt/PORTOBJFORMAT/.
+
+	  <sect3>
+	    <heading><tt/LIB_DEPENDS/</heading>
+
+	    <p>All port Makefiles are edited to remove minor numbers
+	      from <tt/LIB_DEPENDS/, and also to have the regexp
+	      support removed.  (E.g.,
+	      `<tt>foo\\.1\\.\\(33|40\\)</tt>' -&gt; `<tt>foo.2</tt>'. 
+	      They will be matched using `<tt>grep -wF</tt>'.
+
+	  <sect3>
+	    <heading><tt/PLIST/</heading>
+
+	    <p><tt/PLIST/ should contain the short (ELF) shlib names
+	      if the a.out minor number is zero, and the long (a.out)
+	      names otherwise.  <tt/bsd.port.mk/ will automatically
+	      add `<tt/.0/' to the end of short shlib lines if
+	      <tt/PORTOBJFORMAT/ equals <tt/aout/, and will delete the
+	      minor number from long shlib names if <tt/PORTOBJFORMAT/
+	      equals <tt/elf/.
+
+	  <sect3>
+	    <heading><tt/ldconfig/</heading>
+
+	    <p>The <tt/ldconfig/ line in Makefiles should read:
+<tscreen><verb>
+${SETENV} OBJFORMAT=${PORTOBJFORMAT} ${LDCONFIG} -m ....
+</verb></tscreen>
+	      and in <tt/PLIST/:
+<tscreen><verb>
+@exec /usr/bin/env OBJFORMAT=%%PORTOBJFORMAT%% /sbin/ldconfig -m ...
+@unexec /usr/bin/env OBJFORMAT=%%PORTOBJFORMAT%% /sbin/ldconfig -R
+</verb></tscreen>
+	      This is to ensure that the correct <tt/ldconfig/ will be
+	      called depending on the format of the package, not the
+	      default format of the system.
 
     <sect2>
       <heading>Info files</heading>
