@@ -1,5 +1,5 @@
 # 
-# $Id: Makefile,v 1.9 1999-01-25 21:58:47 nik Exp $
+# $Id: Makefile,v 1.10 1999-01-25 22:00:40 nik Exp $
 #
 # Build the FreeBSD Handbook. Will eventually split in two, a generic .mk
 # file which can be used by many Makefiles, and a much smaller Makefile
@@ -221,9 +221,9 @@ ${DOC}.tex: ${SRCS}
 
 ${DOC}.dvi: ${DOC}.tex
 	@echo "==> TeX pass 1/3"
-	tex "&jadetex" ${DOC}.tex
+	-tex "&jadetex" ${DOC}.tex
 	@echo "==> TeX pass 2/3"
-	tex "&jadetex" ${DOC}.tex
+	-tex "&jadetex" ${DOC}.tex
 	@echo "==> Tex pass 3/3"
 	tex "&jadetex" ${DOC}.tex
 
