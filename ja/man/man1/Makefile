@@ -199,6 +199,9 @@ MAN1 =	a2p.1\
 	nohup.1\
 	nroff.1\
 	od.1\
+	opieinfo.1\
+	opiekey.1\
+	opiepasswd.1\
 	pagesize.1\
 	passwd.1\
 	paste.1\
