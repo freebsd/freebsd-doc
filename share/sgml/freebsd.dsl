@@ -60,7 +60,7 @@
           ;;
           ;; Naturally, this has no effect if you're building one big
           ;; HTML file.
-          #t)
+          #f)
 
         (define (book-titlepage-recto-elements)
           (list (normalize "title")
