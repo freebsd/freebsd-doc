@@ -141,13 +141,16 @@
                 ($italic-seq$)
                 ($charseq$)))))
 
-	(element port
-	  (let* ((urlurl	"http://www.FreeBSD.org/cgi/url.cgi")
-		 (href		(string-append urlurl "?ports/"
+	(element filename
+	  (let*	((class		(attribute-string (normalize "role"))))
+	    (cond
+	     ((equal? class "package")
+	      (let* ((urlurl	"http://www.FreeBSD.org/cgi/url.cgi")
+		     (href	(string-append urlurl "?ports/"
 					       (data (current-node))
 					       "/pkg-descr")))
-	    (create-link (list (list "HREF" href))
-			 ($mono-seq$))))
+		(create-link (list (list "HREF" href)) ($mono-seq$))))
+	     (else ($mono-seq$)))))
       ]]>
 
       <!-- HTML with images  ............................................ -->
@@ -394,9 +397,6 @@
 ;            (urlwrap)
 ;            (literal ">")))
 
-        (element port
-	    (pathwrap))
-          
         (element filename
 	    (pathwrap))
 
