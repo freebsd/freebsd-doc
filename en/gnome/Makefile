@@ -7,6 +7,8 @@
 .include "../Makefile.inc"
 .endif
 
+SUBDIR=	docs
+
 DOCS+=  index.sgml screenshots.sgml
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
