@@ -5,6 +5,7 @@ SUBDIR+= committers-guide
 SUBDIR+= console-server
 SUBDIR+= contributing
 SUBDIR+= contributors
+SUBDIR+= cvs-freebsd
 SUBDIR+= cvsup-advanced
 SUBDIR+= dialup-firewall
 SUBDIR+= diskless-x
