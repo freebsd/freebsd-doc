@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.13 1997-08-20 09:30:47 hanai Exp $
+# $Id: Makefile,v 1.14 1997-09-13 20:09:22 max Exp $
 # Original revision: 1.22
 # The FreeBSD Japanese Documentation Project
 
@@ -20,7 +20,7 @@ SRCS+= mirrors.sgml nfs.sgml nutshell.sgml pgpkeys.sgml policies.sgml
 SRCS+= porting.sgml ports.sgml ppp.sgml printing.sgml
 SRCS+= quotas.sgml relnotes.sgml routing.sgml russian.sgml
 SRCS+= serial.sgml scsi.sgml sections.sgml sio.sgml skey.sgml slipc.sgml 
-SRCS+= slips.sgml stable.sgml submitters.sgml sup.sgml synching.sgml 
+SRCS+= slips.sgml stable.sgml submitters.sgml synching.sgml 
 SRCS+= term.sgml userppp.sgml uart.sgml linuxemu.sgml
 SRCS+= jcontrib.sgml jmembers.sgml
 
