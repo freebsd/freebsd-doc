@@ -165,6 +165,7 @@ MAN1 =	addftinfo.1\
 	lkbib.1\
 	ln.1\
 	loadfont.1\
+	locale.1\
 	locate.1\
 	lock.1\
 	lockf.1\
