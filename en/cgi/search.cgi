@@ -15,7 +15,7 @@
 # Disclaimer:
 #   This is pretty ugly in places.
 #
-# $FreeBSD: www/en/cgi/search.cgi,v 1.16 2000/04/03 08:45:51 phantom Exp $
+# $FreeBSD: www/en/cgi/search.cgi,v 1.17 2000/10/10 19:40:43 wosch Exp $
 
 
 $server_root = '/usr/local/www';
@@ -251,7 +251,7 @@ sub docdone {
 #	print "<input type=\"checkbox\" name=\"rf\" value=\"$docnum\">";
 	print "Score: <em>$score</em>; ";
     	$_ = $date;
-    	/(..)(..)(..)/ && ($yr = $1 + 1900, $mo = $months[$2 - 1], $dy = $3);
+    	/(...?)(..)(..)/ && ($yr = $1 + 1900, $mo = $months[$2 - 1], $dy = $3);
 	print "Lines: <em>$lines</em>; ";
     	print "${dy}-${mo}-${yr}; ";
 	print "Archive: <em>$file</em>";
