@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/cgi/cgi-style.pl,v 1.14 1999/09/06 07:02:40 peter Exp $
+# $FreeBSD: www/en/cgi/cgi-style.pl,v 1.15 2000/01/05 15:47:42 phantom Exp $
 #
 # Perl routines to encapsulate various elements of HTML page style.
 
@@ -21,6 +21,10 @@ if (!defined($hsty_author)) {
     $hsty_author = "<a href=\"$hsty_base/mailto.html\">$hsty_email</a>";
 }
 
+if (!defined($hsty_date)) {
+    $hsty_date = "";
+}
+
 $i_topbar = "<IMG SRC=\"$hsty_base/gifs/bar.gif\" ALT=\"Navigation Bar\" WIDTH=\"565\" HEIGHT=\"33\" BORDER=0 usemap=\"#bar\">
 <map name=\"bar\">
 <area shape=\"rect\" coords=\"1,1,111,31\" href=\"$hsty_base/index.html\" ALT=\"Top\">
@@ -34,7 +38,7 @@ $i_topbar = "<IMG SRC=\"$hsty_base/gifs/bar.gif\" ALT=\"Navigation Bar\" WIDTH=\
 <area shape=\"rect\" href=\"$hsty_base/index.html\" coords=\"0,0,564,32\" ALT=\"Top\">
 </map>";
 
-if ($hsty_home eq "") {
+if (!defined($hsty_home)) {
     $hsty_home = "<a href=\"$hsty_base/\"><img src=\"$hsty_base/gifs/home.gif\"
   alt=\"FreeBSD Home Page\" border=\"0\" align=\"right\"></a>";
 }
