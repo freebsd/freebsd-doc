@@ -1,12 +1,12 @@
 # 
-# $FreeBSDru: frdp/doc/ru_RU.KOI8-R/books/ppp-primer/Makefile,v 1.1 2001/03/11 10:47:49 phantom Exp $
+# $FreeBSDru: frdp/doc/ru_RU.KOI8-R/books/ppp-primer/Makefile,v 1.2 2001/07/25 10:17:01 phantom Exp $
 # $FreeBSD$
 # Original revision: 1.1
 #
-# Build the PPP PrimerQ
+# Build the PPP Primer
 #
 
-MAINTAINER=nik@FreeBSD.org
+MAINTAINER=athome@ukrpost.net
 
 DOC?= book
 
