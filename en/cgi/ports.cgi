@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/ports.cgi,v 1.70 2003/10/23 10:44:34 wosch Exp $
+# $FreeBSD: www/en/cgi/ports.cgi,v 1.71 2003/10/29 10:50:37 wosch Exp $
 #
 # ports.cgi - search engine for FreeBSD ports
 #             	o search for a port by name or description
@@ -61,31 +61,31 @@ sub init_variables {
     $remotePrefixFtpPackagesDefault = '4.9-STABLE/i386';
     %remotePrefixFtpPackages = 
 	(
-	 '5.1-CURRENT/i386', "$p/packages-current/All",
+	 '5.2-CURRENT/i386', "$p/packages-current/All",
 	 '4.9-STABLE/i386', " $p/packages-4-stable/All",
 
+	 '5.2-RELEASE/i386', "$p/packages-5.2-release/All",
 	 '5.1-RELEASE/i386', "$p/packages-5.1-release/All",
-	 '5.0-RELEASE/i386', "$p/packages-5.0-release/All",
 	 '4.9-RELEASE/i386', "$p/packages-4.9-release/All",
 	 '4.8-RELEASE/i386', "$p/packages-4.8-release/All",
 
-	 '5.1-CURRENT/alpha', "$palpha/packages-current/All",
+	 '5.2-CURRENT/alpha', "$palpha/packages-current/All",
 	 '4.9-STABLE/alpha',  "$palpha/packages-4-stable/All",
 
+ 	 '5.2-RELEASE/alpha', "$palpha/packages-5.2-release/All",
 	 '5.1-RELEASE/alpha', "$palpha/packages-5.1-release/All",
-	 '5.0-RELEASE/alpha', "$palpha/packages-5.0-release/All",
 	 '4.9-RELEASE/alpha', "$palpha/packages-4.9-release/All",
 	 '4.8-RELEASE/alpha', "$palpha/packages-4.8-release/All",
 
-	 '5.1-CURRENT/ia64', "$pia64/packages-current/All",
+	 '5.2-CURRENT/ia64', "$pia64/packages-current/All",
 
+	 '5.2-RELEASE/ia64', "$pia64/packages-5.2-release/All",
 	 '5.1-RELEASE/ia64', "$pia64/packages-5.1-release/All",
-	 '5.0-RELEASE/ia64', "$pia64/packages-5.0-release/All",
 
-	 '5.1-CURRENT/sparc64', "$psparc64/packages-current/All",
+	 '5.2-CURRENT/sparc64', "$psparc64/packages-current/All",
 
+	 '5.2-RELEASE/sparc64', "$psparc64/packages-5.2-release/All",
 	 '5.1-RELEASE/sparc64', "$psparc64/packages-5.1-release/All",
-	 '5.0-RELEASE/sparc64', "$psparc64/packages-5.0-release/All",
 	);
 
     $remotePrefixHtml =
@@ -601,7 +601,7 @@ sub footer {
 <img ALIGN="RIGHT" src="/gifs/powerlogo.gif">
 &copy; 1996-2002 by Wolfram Schneider. All rights reserved.<br>
 };
-    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.70 2003/10/23 10:44:34 wosch Exp $} . "<br>\n";
+    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.71 2003/10/29 10:50:37 wosch Exp $} . "<br>\n";
     print qq{Please direct questions about this service to
 <I><A HREF="$mailtoURL">$mailto</A></I><br>\n};
     print qq{General questions about FreeBSD ports should be sent to } .
