@@ -727,4 +727,7 @@ package-${_curformat}: ${PACKAGES}/${.CURDIR:T}.${LANGCODE}.${_curformat}.tgz
 .if ${LOCAL_CSS_SHEET} != ${CSS_SHEET}
 ${LOCAL_CSS_SHEET}: ${CSS_SHEET}
 	${CP} -p ${.ALLSRC} ${.TARGET}
+.if defined(CSS_SHEET_ADDITIONS)
+	${CAT} ${.CURDIR}/${CSS_SHEET_ADDITIONS} >> ${.TARGET}
+.endif
 .endif
