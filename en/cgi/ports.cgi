@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/ports.cgi,v 1.46 2000/09/03 16:30:26 wosch Exp $
+# $FreeBSD: www/en/cgi/ports.cgi,v 1.47 2000/11/05 19:04:36 wosch Exp $
 #
 # ports.cgi - search engine for FreeBSD ports
 #             	o search for a port by name or description
@@ -537,7 +537,7 @@ sub footer {
 <img ALIGN="RIGHT" src="/gifs/powerlogo.gif">
 &copy; 1996-2000 by Wolfram Schneider. All rights reserved.<br>
 };
-    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.46 2000/09/03 16:30:26 wosch Exp $} . "<br>\n";
+    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.47 2000/11/05 19:04:36 wosch Exp $} . "<br>\n";
     print qq{Please direct questions about this service to
 <I><A HREF="$mailtoURL">$mailto</A></I><br>\n};
     print qq{General questions about FreeBSD ports should be sent to } .
@@ -647,6 +647,7 @@ if ($path_info eq "/source") {
 if ($stype eq 'pkgdescr') {
     local($url) = 
       'http://www.FreeBSD.org/cgi/search.cgi?source=pkgdescr&max=25';
+    $query =~ s/\s+/+/g;
     print "Location:  $url&words=$query\n";
     print "Content-type: text/plain\n\n";
     &exit;
