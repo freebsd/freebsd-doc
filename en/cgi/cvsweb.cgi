@@ -45,10 +45,9 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-#  FreeBSD: projects/cvsweb/cvsweb.cgi,v 1.119 2002/07/23 13:58:32 scop Exp
-# $Id: cvsweb.cgi,v 1.86 2002-09-26 22:18:25 scop Exp $
+# $Id: cvsweb.cgi,v 1.87 2002-09-30 20:14:06 scop Exp $
 # $Idaemons: /home/cvs/cvsweb/cvsweb.cgi,v 1.84 2001/10/07 20:50:10 knu Exp $
-# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.1.1.34 2002/09/26 22:09:02 scop Exp $
+# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.1.1.36 2002/09/30 19:48:52 scop Exp $
 #
 ###
 
@@ -94,7 +93,7 @@ use vars qw (
     $module $use_descriptions %descriptions @mytz $dwhere $moddate
     $use_moddate $has_zlib $gzip_open
     $allow_tar @tar_options @gzip_options @zip_options @cvs_options
-    $LOG_FILESEPARATOR $LOG_REVSEPARATOR
+    @annotate_options $LOG_FILESEPARATOR $LOG_REVSEPARATOR
     $tmpdir $HTML_DOCTYPE $HTML_META
 );
 
@@ -150,7 +149,7 @@ sub forbidden_module($);
 ##### Start of Configuration Area ########
 delete $ENV{PATH};
 
-$cvsweb_revision = '2.0.5';
+$cvsweb_revision = '2.0.6';
 
 use File::Basename ();
 
@@ -237,7 +236,7 @@ $LOG_REVSEPARATOR  = q/^-{28}$/;
 );
 
 $cgi_style::hsty_base = 'http://www.FreeBSD.org';
-$_ = q$FreeBSD: www/en/cgi/cvsweb.cgi,v 1.1.1.34 2002/09/26 22:09:02 scop Exp $;
+$_ = q$FreeBSD: www/en/cgi/cvsweb.cgi,v 1.86 2002/09/26 22:18:25 scop Exp $;
 @_ = split;
 $cgi_style::hsty_date = "@_[3,4]";
 
@@ -481,8 +480,7 @@ if ($input{'cvsroot'} && $CVSROOT{$input{'cvsroot'}}) {
 $cvsroot = $CVSROOT{$cvstree};
 
 # create icons out of description
-my $k;
-foreach $k (keys %ICONS) {
+foreach my $k (keys %ICONS) {
 	no strict 'refs';
 	my ($itxt, $ipath, $iwidth, $iheight) = @{$ICONS{$k}};
 	if ($ipath) {
@@ -494,7 +492,6 @@ foreach $k (keys %ICONS) {
 		${"${k}icon"} = $itxt;
 	}
 }
-undef $k;
 
 my $config_cvstree = "$config-$cvstree";
 
@@ -825,39 +822,37 @@ if (-d $fullname) {
 	my $filesexists;
 	my $filesfound;
 
-	foreach (sort { &fileSortCmp } @dir) {
-		if ($_ eq '.') {
-			next;
-		}
+	foreach my $file (sort { &fileSortCmp } @dir) {
+
+		next if ($file eq '.');
 
 		# ignore CVS lock and stale NFS files
-		next if (/^#cvs\.|^,|^\.nfs/);
+		next if ($file =~ /^#cvs\.|^,|^\.nfs/);
 
 		# Check whether to show the CVSROOT path
-		next if ($input{'hidecvsroot'} && ($_ eq 'CVSROOT'));
+		next if ($input{'hidecvsroot'} && $file eq 'CVSROOT');
 
 		# Check whether the module is in the restricted list
-		next if ($_ && &forbidden_module($_));
+		next if ($file && &forbidden_module($file));
 
 		# Ignore non-readable files
-		next if ($input{'hidenonreadable'} && !(-r "$fullname/$_"));
+		next if ($input{'hidenonreadable'} && !(-r "$fullname/$file"));
 
-		if (s|^Attic/||) {
+		if ($file =~ s|^Attic/||) {
 			$attic = " (in the Attic)&nbsp;" . $hideAtticToggleLink;
 		} else {
 			$attic = "";
 		}
 
-		if ($_ eq '..' || -d "$fullname/$_") {
-			next if ($_ eq '..' && $where eq '/');
-			my ($rev, $date, $log, $author, $filename);
-			($rev, $date, $log, $author, $filename) =
-			    @{$fileinfo{$_}}
-			    if (defined($fileinfo{$_}));
+		if ($file eq '..' || -d "$fullname/$file") {
+			next if ($file eq '..' && $where eq '/');
+			my ($rev, $date, $log, $author, $filename) =
+			    @{$fileinfo{$file}}
+			    if (defined($fileinfo{$file}));
 			printf "<tr style=\"background-color: %s\">\n<td>",
 			     $tabcolors[$dirrow % 2] if $dirtable;
 
-			if ($_ eq '..') {
+			if ($file eq '..') {
 				$url = "../$query";
 				if ($nofilelinks) {
 					print $backicon;
@@ -866,17 +861,17 @@ if (-d $fullname) {
 				}
 				print '&nbsp;', &link("Parent Directory", $url);
 			} else {
-				$url = './' . urlencode($_) . "/$query";
-				print "<a name=\"$_\"></a>";
+				$url = './' . urlencode($file) . "/$query";
+				print "<a name=\"$file\"></a>";
 
 				if ($nofilelinks) {
 					print $diricon;
 				} else {
 					print &link($diricon, $url);
 				}
-				print '&nbsp;', &link("$_/", $url), $attic;
+				print '&nbsp;', &link("$file/", $url), $attic;
 
-				if ($_ eq "Attic") {
+				if ($file eq "Attic") {
 					print "&nbsp; ";
 					print &link(
 						"[Don't hide]",
@@ -919,7 +914,7 @@ if (-d $fullname) {
 				}
 			} else {
 				my ($dwhere) =
-				    ($where ne "/" ? $where : "") . $_;
+				    ($where ne "/" ? $where : "") . $file;
 
 				if ($use_descriptions
 				    && defined $descriptions{$dwhere})
@@ -946,33 +941,29 @@ if (-d $fullname) {
 				print "<br>\n";
 			}
 			$dirrow++;
-		} elsif (s/,v$//) {
+		} elsif ($file =~ s/,v$//) {
 
 			# Skip forbidden files now so we'll give no hint
 			# about their existence.  This should probably have
 			# been done earlier, but it's straightforward here.
-			next if forbidden_file("$fullname/$_");
+			next if forbidden_file("$fullname/$file");
 
-			$fileurl = ($attic ? "Attic/" : "") . urlencode($_);
+			$fileurl = ($attic ? "Attic/" : "") . urlencode($file);
 			$url = './' . $fileurl . $query;
-			my $rev    = '';
-			my $date   = '';
-			my $log    = '';
-			my $author = '';
 			$filesexists++;
-			next if (!defined($fileinfo{$_}));
-			($rev, $date, $log, $author) = @{$fileinfo{$_}};
+			next if (!defined($fileinfo{$file}));
+			my ($rev, $date, $log, $author) = @{$fileinfo{$file}};
 			$filesfound++;
 			printf "<tr style=\"background-color: %s\">\n<td>",
 			    $tabcolors[$dirrow % 2] if $dirtable;
-			print "<a name=\"$_\"></a>";
+			print "<a name=\"$file\"></a>";
 
 			if ($nofilelinks) {
 				print $fileicon;
 			} else {
 				print &link($fileicon, $url);
 			}
-			print '&nbsp;', &link($_, $url), $attic;
+			print '&nbsp;', &link(htmlquote($file), $url), $attic;
 			print "</td>\n<td>&nbsp;" if ($dirtable);
 			download_link($fileurl, $rev, $rev,
 				$defaultViewable ? "text/x-cvsweb-markup" :
@@ -1426,6 +1417,7 @@ sub spacedHtmlText($;$) {
 	return $_;
 }
 
+# Note that this doesn't htmlquote the first argument...
 sub link($$) {
 	my ($name, $url) = @_;
 
@@ -1627,15 +1619,26 @@ sub doAnnotate($$) {
 	$| = 1;
 	$| = 0;    # Flush
 
+	# Work around a mod_perl bug (?) in order to make open2() work.
+	# Search for "untie STDIN" in mod_perl mailing list archives.
+	my $old_stdin;
+	if ($is_mod_perl && ($old_stdin = tied *STDIN)) {
+	  local $^W = undef;
+	  untie *STDIN;
+	}
+
 	# this annotate version is based on the
 	# cvs annotate-demo Perl script by Cyclic Software
 	# It was written by Cyclic Software, http://www.cyclic.com/, and is in
 	# the public domain.
 	# we could abandon the use of rlog, rcsdiff and co using
 	# the cvsserver in a similiar way one day (..after rewrite)
-	$pid = open2($reader, $writer, $CMD{cvs}, @cvs_options, "server")
+	$pid = open2($reader, $writer, $CMD{cvs}, @annotate_options, 'server')
 	    or fatal("500 Internal Error",
 		     'Fatal Error - unable to open cvs for annotation');
+
+	# Re-tie STDIN if we fiddled around with it earlier, just to be sure.
+	tie(*STDIN, ref($old_stdin), $old_stdin) if ($old_stdin && !tied(*STDIN));
 
 	# OK, first send the request to the server.  A simplified example is:
 	#     Root /home/kingdon/zwork/cvsroot
@@ -1780,6 +1783,8 @@ sub doAnnotate($$) {
 	} else {
 		print "</pre>";
 	}
+	html_footer();
+
 	close($reader) or warn "cannot close: $!";
 	wait;
 }
@@ -2122,7 +2127,7 @@ sub getDirLogs($$@) {
 	push (@files, &safeglob("$DirName/*,v"));
 	push (@files, &safeglob("$DirName/Attic/*,v"))
 	    if (!$input{'hideattic'});
-	foreach $file (@otherFiles) {
+	foreach my $file (@otherFiles) {
 		push (@files, "$DirName/$file");
 	}
 
