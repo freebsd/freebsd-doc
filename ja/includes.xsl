@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
 
-<!-- $FreeBSD: www/ja/includes.xsl,v 1.10 2003/01/05 18:27:51 hrs Exp $ -->
-<!-- Original revision: 1.12 -->
+<!-- $FreeBSD: www/ja/includes.xsl,v 1.11 2003/01/22 04:11:07 hrs Exp $ -->
+<!-- Original revision: 1.13 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -100,7 +100,7 @@
   <xsl:variable name="u.rel.early">
     <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel.current"/>R/early-adopter.html</xsl:variable>
   
-  <xsl:variable name="rel2.current" select='"4.7"'/>
+  <xsl:variable name="rel2.current" select='"4.8"'/>
   <xsl:variable name="u.rel2.notes">
     <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel2.current"/>R/relnotes.html</xsl:variable>
 
