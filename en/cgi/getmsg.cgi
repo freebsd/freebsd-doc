@@ -6,7 +6,7 @@
 # by John Fieber
 # February 26, 1998
 #
-# $Id: getmsg.cgi,v 1.5 1998-03-08 19:28:11 wosch Exp $
+# $Id: getmsg.cgi,v 1.6 1998-03-08 19:30:55 wosch Exp $
 #
 
 require "./cgi-lib.pl";
@@ -104,6 +104,16 @@ sub MessageToHTML
     if (length($hdr{'subject:'}) > 0) {
     	$message .= "<strong>Subject: </strong>  $hdr{'subject:'}\n";
     }
+
+    $message .= "<strong>Message-ID: </strong>  $hdr{'message-id:'}\n"
+	if $hdr{'message-id:'};
+    $message .= "<strong>Resent-Message-ID: </strong>  $hdr{'resent-message-id:'}\n"
+	    if $hdr{'resent-message-id:'};
+    $message .= "<strong>In-Reply-To: </strong>  $hdr{'in-reply-to:'}\n"
+	if $hdr{'in-reply-to:'};
+    $message .= "<strong>References: </strong>  $hdr{'references:'}\n"
+	if $hdr{'references:'};
+
     $message .= "</pre>\n";
 
     $message .= "<pre>\n$body\n</pre>\n";
