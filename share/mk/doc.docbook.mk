@@ -132,7 +132,7 @@ DSSSLCATALOG=	${PREFIX}/share/sgml/docbook/dsssl/modular/catalog
 COLLATEINDEX=	${PREFIX}/share/sgml/docbook/dsssl/modular/bin/collateindex.pl
 
 XSLTPROC?=	${PREFIX}/bin/xsltproc
-XSLHTML?=	${PREFIX}/share/xml/docbook/xsl/modular/html/docbook.xsl
+XSLHTML?=	${DOC_PREFIX}/share/xsl/default.xsl
 XSLFO?=		${PREFIX}/share/xml/docbook/xsl/modular/fo/docbook.xsl
 
 IMAGES_LIB?=
