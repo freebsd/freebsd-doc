@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/de/includes.xsl,v 1.8 2004/01/16 08:00:24 brueffer Exp $
-     $FreeBSDde: de-www/includes.xsl,v 1.13 2004/05/04 00:08:20 brueffer Exp $
+<!-- $FreeBSD$
+     $FreeBSDde: de-www/includes.xsl,v 1.15 2004/05/27 21:08:31 mheinen Exp $
      basiert auf: 1.20
 -->
 
@@ -103,21 +103,25 @@
     <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel.current"/>R/hardware.html</xsl:variable>
   <xsl:variable name="u.rel.installation">
     <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel.current"/>R/installation.html</xsl:variable>
+  <xsl:variable name="u.rel.readme">
+    <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel.current"/>R/readme.html</xsl:variable>
   <xsl:variable name="u.rel.early">
     <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel.current"/>R/early-adopter.html</xsl:variable>
 
-  <xsl:variable name="rel2.current" select='"4.9"'/>
+  <xsl:variable name="rel2.current" select='"4.10"'/>
   <xsl:variable name="u.rel2.notes">
-    <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel2.current"/>R/relnotes.html</xsl:variable>
+    <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel2.current"/>R/relnotes.html</xsl:variable>
 
   <xsl:variable name="u.rel2.announce">
-    <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel2.current"/>R/announce.html</xsl:variable>
+    <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel2.current"/>R/announce.html</xsl:variable>
   <xsl:variable name="u.rel2.errata">
-    <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel2.current"/>R/errata.html</xsl:variable>
+    <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel2.current"/>R/errata.html</xsl:variable>
   <xsl:variable name="u.rel2.hardware">
-    <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel2.current"/>R/hardware.html</xsl:variable>
+    <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel2.current"/>R/hardware.html</xsl:variable>
   <xsl:variable name="u.rel2.installation">
-    <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel2.current"/>R/installation.html</xsl:variable>
+    <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel2.current"/>R/installation.html</xsl:variable>
+  <xsl:variable name="u.rel2.readme">
+    <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel2.current"/>R/readme.html</xsl:variable>
 
   <!-- template: "html-index-advisories-items-lastmodified" -->
 
@@ -126,7 +130,12 @@
 
     <xsl:value-of select="document($advisories.xml)/descendant::day[position() = 1]/name"/>
     <xsl:text>. </xsl:text>
-    <xsl:value-of select="document($advisories.xml)/descendant::month[position() = 1]/name"/>
+    <xsl:call-template name="transtable-lookup">
+      <xsl:with-param name="word-group" select="'number-month'" />
+      <xsl:with-param name="word">
+        <xsl:value-of select="document($advisories.xml)/descendant::month[position() = 1]/name"/>
+      </xsl:with-param>
+    </xsl:call-template>
     <xsl:text> </xsl:text>
     <xsl:value-of select="document($advisories.xml)/descendant::year[position() = 1]/name"/>
   </xsl:template>
@@ -138,37 +147,13 @@
 
     <xsl:value-of select="document($news.project.xml)/descendant::day[position() = 1]/name"/>
     <xsl:text>. </xsl:text>
-    <xsl:value-of select="document($news.project.xml)/descendant::month[position() = 1]/name"/>
+    <xsl:call-template name="transtable-lookup">
+      <xsl:with-param name="word-group" select="'number-month'" />
+      <xsl:with-param name="word">
+        <xsl:value-of select="document($news.project.xml)/descendant::month[position() = 1]/name"/>
+      </xsl:with-param>
+    </xsl:call-template>
     <xsl:text> </xsl:text>
     <xsl:value-of select="document($news.project.xml)/descendant::year[position() = 1]/name"/>
-  </xsl:template>
-
-  <!-- template: "html-index-news-press-items-lastmodified" -->
-
-  <xsl:template name="html-index-news-press-items-lastmodified">
-    <xsl:param name="advisories.xml" select="''" />
-
-    <xsl:value-of select="document($news.press.xml)/descendant::month[position() = 1]/name"/>
-    <xsl:text> </xsl:text>
-    <xsl:value-of select="document($news.press.xml)/descendant::year[position() = 1]/name"/>
-  </xsl:template>
-
-  <!-- Translate month name -->
-  <xsl:template name="translate-month">
-    <xsl:param name="month"/>
-    <xsl:choose>
-      <xsl:when test="$month = 'January'">Januar</xsl:when>
-      <xsl:when test="$month = 'February'">Februar</xsl:when>
-      <xsl:when test="$month = 'March'">M&#228;rz</xsl:when>
-      <xsl:when test="$month = 'April'">April</xsl:when>
-      <xsl:when test="$month = 'May'">Mai</xsl:when>
-      <xsl:when test="$month = 'June'">Juni</xsl:when>
-      <xsl:when test="$month = 'July'">Juli</xsl:when>
-      <xsl:when test="$month = 'August'">August</xsl:when>
-      <xsl:when test="$month = 'September'">September</xsl:when>
-      <xsl:when test="$month = 'October'">Oktober</xsl:when>
-      <xsl:when test="$month = 'November'">November</xsl:when>
-      <xsl:when test="$month = 'December'">Dezember</xsl:when>
-    </xsl:choose>
   </xsl:template>
 </xsl:stylesheet>

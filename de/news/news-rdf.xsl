@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
 <!-- $FreeBSD$
-     $FreeBSDde: de-www/news/news-rdf.xsl,v 1.3 2003/08/17 16:55:27 mheinen Exp $
-     basiert auf: 1.5 -->
+     $FreeBSDde: de-www/news/news-rdf.xsl,v 1.4 2004/05/27 21:07:49 mheinen Exp $
+     basiert auf: 1.6 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -30,7 +30,7 @@
   </xsl:template>
 
   <!-- Generate the <item> elements and their content -->
-  <xsl:template match="event">
+  <xsl:template match="event" xmlns="http://my.netscape.com/rdf/simple/0.9/">
     <item>
       <xsl:choose>
 	<xsl:when test="count(child::title)">
