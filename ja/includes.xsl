@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
 
-<!-- $FreeBSD: www/ja/includes.xsl,v 1.17 2003/11/17 06:28:19 hrs Exp $ -->
-<!-- Original revision: 1.19 -->
+<!-- $FreeBSD: www/ja/includes.xsl,v 1.18 2003/11/24 18:26:33 hrs Exp $ -->
+<!-- Original revision: 1.20 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
