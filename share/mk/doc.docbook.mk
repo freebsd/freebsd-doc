@@ -576,7 +576,7 @@ ${DOC}.dvi: ${DOC}.tex ${LOCAL_IMAGES_EPS}
 
 .if !target(${DOC}.pdf)
 ${DOC}.pdf: ${DOC}.tex-pdf ${IMAGES_PDF}
-.for _curimage in ${IMAGES_PDF:M*share*}
+.for _curimage in ${IMAGES_PDF:M*share*} ${IMAGES_PNG:M*share*}
 	${CP} -p ${_curimage} ${.CURDIR:H:H}/${_curimage:H:S|${IMAGES_EN_DIR}/||:S|${.CURDIR}||}
 .endfor
 	@${ECHO} "==> PDFTeX pass 1/3"
