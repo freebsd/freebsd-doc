@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/it/index.xsl,v 1.5 2003/11/10 00:14:49 simon Exp $ -->
+<!-- $FreeBSD: www/it/index.xsl,v 1.6 2003/12/13 10:56:11 blackend Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -9,7 +9,7 @@
 
   <xsl:variable name="base" select="'.'"/>
   <xsl:variable name="enbase" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/it/index.xsl,v 1.5 2003/11/10 00:14:49 simon Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/it/index.xsl,v 1.6 2003/12/13 10:56:11 blackend Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <!-- these params should be externally bound. The values
@@ -72,7 +72,7 @@
 		<xsl:text>&#160;</xsl:text>
 		<a href="{$enbase}/es/index.html" title="Spagnolo">[es]</a>
 		<xsl:text>&#160;</xsl:text>
-		<a href="http://www.freebsd-fr.org/index-trad.html" title="Francese">[fr]</a>
+		<a href="{$enbase}/fr/index.html" title="Francese">[fr]</a>
 		<xsl:text>&#160;</xsl:text>
 		<span title="Italiano">[it]</span>
 		<xsl:text>&#160;</xsl:text>
@@ -450,7 +450,7 @@
 		<xsl:value-of select="$date"/></small></td>
 
 	    <td align="right"
-		valign="top"><small><a href="{$enbase}/copyright/index.html">Note legali</a> &#169; 1995-2003
+		valign="top"><small><a href="{$enbase}/copyright/index.html">Note legali</a> &#169; 1995-2004
 		The FreeBSD Project.<br/>
 		Tutti i diritti riservati.</small></td>
 	  </tr>
