@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/gifs/Makefile,v 1.44 2003/02/17 20:35:01 ceri Exp $
+# $FreeBSD: www/en/gifs/Makefile,v 1.45 2003/04/06 20:57:08 ceri Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -16,7 +16,7 @@ DATA+=  index0.gif index1.gif get0.gif get1.gif faq0.gif faq1.gif
 DATA+=  handboo0.gif handboo1.gif dae_up2.gif dae_up3.gif bar.gif
 DATA+=  freebsd_1.gif powerani.gif pbfbsd2.gif 205-jp.jpg
 DATA+=  205-jpb.jpg bsdisc.jpg bsdiscb.jpg comp_b.jpg complete.jpg
-DATA+=  cover.jpg coverb.jpg fullcourse3.jpg
+DATA+=  cover.jpg coverb.jpg fultus-cover.gif fullcourse3.jpg
 DATA+=  fullcourse3b.jpg getstarb.jpg getstart.jpg
 DATA+=  jp.jpg jpb.jpg kr.jpg krb.jpg las5.jpg las5b.jpg las512.jpg
 DATA+=  las512b.jpg las523.jpg las523b.jpg wc-docs.jpg wc-docsb.jpg
