@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/news/status/Makefile,v 1.4 2001/09/18 09:46:18 chris Exp $
+# $FreeBSD: www/en/news/status/Makefile,v 1.5 2001/09/18 10:03:21 chris Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -13,6 +13,7 @@ DOCS=	status.sgml
 
 DATA=	report-june-2001.html
 DATA+=	report-july-2001.html
+DATA+=	report-august-2001.html
 
 CLEANFILES+=	${DATA}
 
