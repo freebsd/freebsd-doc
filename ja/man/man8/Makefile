@@ -20,6 +20,8 @@ MAN8 =	IPXrouted.8\
 	bootptest.8\
 	ccdconfig.8\
 	chat.8\
+	chkgrp.8\
+	chkprintcap.8\
 	chown.8\
 	chroot.8\
 	clri.8\
@@ -56,12 +58,18 @@ MAN8 =	IPXrouted.8\
 	init.8\
 	intro.8\
 	iostat.8\
+	ipfstat.8\
 	ipfw.8\
+	ipmon.8\
 	ispcvt.8\
 	joy.8\
 	kernbb.8\
 	keyadmin.8\
+	keyserv.8\
 	kgmon.8\
+	kldload.8\
+	kldstat.8\
+	kldunload.8\
 	kvm_mkdb.8\
 	kzip.8\
 	ldconfig.8\
@@ -110,18 +118,22 @@ MAN8 =	IPXrouted.8\
 	ndc.8\
 	netboot.8\
 	newfs.8\
+	newfs_msdos.8\
+	newkey.8\
 	newsyslog.8\
 	nextboot.8\
 	nfsd.8\
 	nfsiod.8\
 	nologin.8\
 	nslookup.8\
+	nos-tun.8\
 	ntpdate.8\
 	ntpq.8\
 	ntptrace.8\
 	pac.8\
 	pccardd.8\
 	pciconf.8\
+	periodic.8\
 	ping.8\
 	pnpinfo.8\
 	portmap.8\
@@ -130,10 +142,10 @@ MAN8 =	IPXrouted.8\
 	pppd.8\
 	pppstats.8\
 	praliases.8\
+	procctl.8\
 	pstat.8\
 	pw.8\
 	pwd_mkdb.8\
-	qcam.8\
 	quot.8\
 	quotacheck.8\
 	quotaon.8\
@@ -216,6 +228,8 @@ MAN8 =	IPXrouted.8\
 	xtend.8\
 	yp_mkdb.8\
 	ypbind.8\
+	ypinit.8\
+	yppoll.8\
 	yppush.8\
 	ypserv.8\
 	ypset.8\
