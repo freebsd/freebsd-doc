@@ -1,4 +1,4 @@
-#	$Id: Makefile,v 1.4 1999-04-24 16:37:00 jesusr Exp $
+#	$Id: Makefile,v 1.5 1999-05-27 09:04:12 wosch Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -47,7 +47,11 @@ packages.exists:
 packages.exists: ${cvsindex} ${cvsy2k}
 .endif
 .if ${hostname} == "hub.freebsd.org" || ${hostname} == "freefall.freebsd.org"
+.if  exists(${.CURDIR}/../../en/ports/packages.exists)
+	cp ${.CURDIR}/../../en/ports/${.TARGET} .
+.else
 	sh ${.CURDIR}/packages > ${.TARGET}
+.endif
 .else
 	touch ${.TARGET}
 .endif
