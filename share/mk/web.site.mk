@@ -1,5 +1,5 @@
 # bsd.web.mk
-# $Id: web.site.mk,v 1.6 1996-10-06 00:08:08 jfieber Exp $
+# $Id: web.site.mk,v 1.7 1996-10-24 23:33:43 jfieber Exp $
 
 #
 # Build and install a web site.
@@ -137,7 +137,9 @@ orphans:
 cvsdir:
 .if defined(CVSDIR) && !empty(CVSDIR)
 	for i in ${CVSDIR}; do \
-		cvs co -P $$i; \
+		if [ ! -e $$i ]; then \
+			cvs co -P $$i; \
+		fi \
 	done
 .endif
 
