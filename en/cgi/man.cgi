@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp 
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.9 1999-12-25 13:21:05 wosch Exp $
+# $Id: man.cgi,v 1.10 2000-04-02 10:11:16 wosch Exp $
 
 #use Data::Dumper;
 
@@ -118,11 +118,12 @@ foreach my $os (keys %$sectionpath) {
      );
 
 $manLocalDir = '/usr/local/www/bsddoc/man';
-$manPathDefault = 'FreeBSD 3.4-RELEASE';
+$manPathDefault = 'FreeBSD 4.0-RELEASE';
 
 %manPath = 
     (
-     'FreeBSD 4.0-current',   "$manLocalDir/FreeBSD-4.0-current",
+     'FreeBSD 5.0-current',   "$manLocalDir/FreeBSD-5.0-current",
+     'FreeBSD 4.0-RELEASE',   "$manLocalDir/FreeBSD-4.0-RELEASE",
      'FreeBSD 3.4-RELEASE',   "$manLocalDir/FreeBSD-3.4-RELEASE",
      'FreeBSD 3.3-RELEASE',   "$manLocalDir/FreeBSD-3.3-RELEASE",
      'FreeBSD 3.2-RELEASE',   "$manLocalDir/FreeBSD-3.2-RELEASE",
@@ -207,9 +208,9 @@ while (($key,$val) = each %manPath) {
      'freebsd 2.2', 'FreeBSD 2.2.8-RELEASE', 
      'freebsd 2.2.x', 'FreeBSD 2.2.8-RELEASE', 
      'freebsd 2.2-release', 'FreeBSD 2.2.8-RELEASE',
-     'freebsd 4.0', 'FreeBSD 4.0-current',
-     'freebsd', 'FreeBSD 4.0-current',
-     'freebsd-current', 'FreeBSD 4.0-current',
+     'freebsd 4.0', 'FreeBSD 4.0-RELEASE',
+     'freebsd', 'FreeBSD 5.0-current',
+     'freebsd-current', 'FreeBSD 5.0-current',
      'freebsd 2.1.6-release', 'FreeBSD 2.1.6.1-RELEASE', 
      'freebsd 2.1.7-release', 'FreeBSD 2.1.7.1-RELEASE', 
      'slackware', 'Linux Slackware 3.1',
@@ -745,7 +746,7 @@ Please direct questions about this server to
 URL:  <A HREF="$BASE" target=_parent>$www{'home'}$BASE</a><br>
 ETX
 
-    print q{$Date: 1999-12-25 13:21:05 $ $Revision: 1.9 $};
+    print q{$Date: 2000-04-02 10:11:16 $ $Revision: 1.10 $};
     print "<br>\n";
     print "</BODY>\n</HTML>\n";
     0;
