@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/share/sgml/includes.misc.xsl,v 1.17 2005/01/02 12:37:49 ceri Exp $ -->
+<!-- $FreeBSD: www/share/sgml/includes.misc.xsl,v 1.18 2005/01/10 20:26:08 ceri Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -748,7 +748,7 @@
 
   <!-- template: "link" generates links inside of category -->
   <xsl:template match="link">
-    &#183;
+    <xsl:value-of select="$leadingmark" />
     <a>
       <xsl:attribute name="href">
 	<xsl:choose>
