@@ -2,7 +2,7 @@
 # The FreeBSD Russian Documentation Project
 #
 # $FreeBSD$
-# $FreeBSDru: frdp/www/ru/Makefile,v 1.30 2003/12/09 12:07:32 den Exp $
+# $FreeBSDru: frdp/www/ru/Makefile,v 1.31 2004/01/03 06:02:05 andy Exp $
 #
 # Original revision: 1.105
 #
@@ -59,7 +59,7 @@ SUBDIR+= smp
 SUBDIR+= donations
 .if !defined(WEB_ONLY) || empty(WEB_ONLY)
 SUBDIR+= ports
-#SUBDIR+= doc
+SUBDIR+= doc
 .endif
 .if defined(BUILD_RELNOTES)
 #SUBDIR+= relnotes
