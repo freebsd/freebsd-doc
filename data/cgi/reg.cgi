@@ -35,6 +35,7 @@ if ($FORM{"emaila"} eq "") {
 }
 
 $recipient = $FORM{'recipient'};
+exit(0) if $recipient !~ /^[a-z_\.\-]+\@freebsd\.org$/io; 
 $sub_recipient = "majordomo@freebsd.org";
 #
 # format the mail file
