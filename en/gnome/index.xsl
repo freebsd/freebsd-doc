@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.62 2004/11/09 17:11:55 marcus Exp $ -->
+<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.63 2005/01/29 01:01:53 marcus Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
 		xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -9,7 +9,7 @@
   <xsl:import href="includes.xsl"/>
 
   <xsl:variable name="base" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.62 2004/11/09 17:11:55 marcus Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.63 2005/01/29 01:01:53 marcus Exp $'"/>
   <xsl:variable name="title" select="'FreeBSD GNOME Project'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -40,7 +40,7 @@
                             <small><br/>
                               &#183; <a href="http://www.FreeBSD.org/gnome/">GNOME on FreeBSD Home</a><br/>
                               &#183; <a href="docs/faq2.html#q1">Installation Instructions</a><br/>
-                              &#183; <a href="docs/faq28.html#q2">Upgrade Instructions</a><br/>
+                              &#183; <a href="docs/faq210.html#q2">Upgrade Instructions</a><br/>
                               &#183; <a href="../ports/gnome.html">Available Applications</a><br/>
                               &#183; <a href="docs/volunteer.html">How to Help</a><br/>
                               &#183; <a href="docs/bugging.html">Reporting a Bug</a><br/>
@@ -51,10 +51,10 @@
                           <p><font size="+1" color="#990000"><b>Documentation</b></font>
                             <small><br/>
                               &#183; <a href="docs/faq2.html">FAQ</a><br/>
-                              &#183; <a href="docs/faq28.html">2.6 to 2.8 Upgrade FAQ</a><br/>
+                              &#183; <a href="docs/faq210.html">2.6 to 2.8 Upgrade FAQ</a><br/>
                               &#183; <a href="docs/develfaq.html">Development Branch FAQ</a><br/>
                               &#183; <a href="docs/porting.html">Creating Ports</a><br/>
-			      &#183; <a href="docs/faq28.html#q5">Known Issues</a><br/>
+			      &#183; <a href="docs/faq210.html#q5">Known Issues</a><br/>
                             </small></p>
 
                           <p><font size="+1" color="#990000"><b>Resources</b></font>
@@ -132,7 +132,7 @@
 		<h2><font color="#990000">Upgrading to GNOME 2.8?</font></h2>
 
 		<p>If you are upgrading from GNOME 2.6 to GNOME 2.8, read the
-		  <a href="docs/faq28.html">Upgrade FAQ</a> for upgrade
+		  <a href="docs/faq210.html">Upgrade FAQ</a> for upgrade
 		  instructions, and be sure to use the
 		  <a href="gnome_upgrade.sh">upgrade script</a>!</p>
 
