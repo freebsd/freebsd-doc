@@ -25,7 +25,7 @@
 #
 # ------------------------------------------------------------------------
 
-MAINTAINER= sysadmin@alexdupre.com
+MAINTAINER= ale@FreeBSD.org
 
 DOC?= book
 
