@@ -10,6 +10,7 @@ SUBDIR = faq
 SUBDIR+= handbook
 SUBDIR+= fdp-primer
 SUBDIR+= developers-handbook
+SUBDIR+= ppp-primer
 
 ROOT_SYMLINKS= faq handbook
 
