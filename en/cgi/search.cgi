@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl
+#!/usr/bin/perl
 #
 # mail-archive.pl  --  a CGI interface to a wais indexed maling list archive.
 #
