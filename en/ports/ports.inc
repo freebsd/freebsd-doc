@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/ports/ports.inc,v 1.45 2000/01/06 07:01:19 asami Exp $ -->
+<!-- $FreeBSD: www/en/ports/ports.inc,v 1.46 2000/02/17 20:14:18 billf Exp $ -->
 <p>The FreeBSD Ports and Packages Collection offers a simple way for
 users and administrators to install applications.  The ports
 collection has been <a
@@ -37,6 +37,15 @@ href="../handbook/porting.html">Porting applications</a>.  Both are
 part of the <a href="../handbook/">FreeBSD Handbook</a>.</p>
 
 <p>The ports listed on these web pages are continually being updated.
+It is recommended that you refresh the entire collection together, as
+many ports depend on other parts of the tree.  If that is not
+possible, at least make sure you get the latest make macro files in
+<tt>ports/Mk</tt>.  (If you are using <strong>cvsup</strong>, this
+means you need <tt>ports-base</tt> in your cvsupfile.)  If you still
+see errors even with the latest <tt>bsd.port.mk</tt> and friends,
+please fetch the entire collection.
+
+<p>
 The current ports tree officially supports only FreeBSD-current and
 FreeBSD-stable.
 Consequently, you may need to update a few files on your FreeBSD system 
