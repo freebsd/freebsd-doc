@@ -1,10 +1,10 @@
-<!-- $FreeBSD: www/ja/ports/ports.inc,v 1.19 2001/07/28 06:27:50 kuriyama Exp $ -->
+<!-- $FreeBSD: www/ja/ports/ports.inc,v 1.20 2001/09/17 03:07:39 kuriyama Exp $ -->
 <!-- The FreeBSD Japanese Documentation Project -->
-<!-- Original revision: 1.59 -->
+<!-- Original revision: 1.60 -->
 <p>FreeBSD Ports/Packages Collection は,
 ユーザや管理者がアプリケーションのインストールを簡単に行なえる方法を提供します.
 Ports Collection は<a
-href="http://www.freebsd.org/%7Easami/papers/growth.gif">驚異的な速度で
+href="http://www.FreeBSD.org/%7Easami/papers/growth.gif">驚異的な速度で
 その数を増してきました</a>.
 </p>
 
@@ -14,7 +14,7 @@ FreeBSD 上でオリジナルのアプリケーションのソースコードをコンパイルし,
 アプリケーションのインストールは簡単で, port をダウンロードし,
 それを展開し, その port のディレクトリで <tt>make</tt> と打つだけです.
 より便利にするためには, インストール時に
-<a href="ftp://ftp.freebsd.org/pub/FreeBSD/branches/-current/ports.tar.gz">
+<a href="ftp://ftp.FreeBSD.org/pub/FreeBSD/branches/-current/ports.tar.gz">
 ports 階層全体</a> をインストール
 (あるいは 
 <a href="../handbook/synching.html#CVSUP">CVSup</a>
@@ -40,10 +40,10 @@ ports 階層全体</a> をインストール
 <p>ports/packages の追加, 更新, 削除についての情報や,
 どのアプリケーションが
 ports/packages となっているかの検索は
-<a href="http://www.freebsd.org/cgi/ports.cgi">
+<a href="http://www.FreeBSD.org/cgi/ports.cgi">
 FreeBSD ports の更新情報</a> ページを参照してください. </p>
 
-<FORM METHOD="GET" ACTION="http://www.freebsd.org/cgi/ports.cgi">
+<FORM METHOD="GET" ACTION="http://www.FreeBSD.org/cgi/ports.cgi">
 検索:
 <INPUT NAME="query" VALUE="">
 <SELECT NAME="stype">
@@ -93,12 +93,12 @@ FreeBSD ports の更新情報</a> ページを参照してください. </p>
 
 <dl>
 <dt><a
-href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-4-stable/Latest/41upgrade.tgz">4.1
+href="ftp://ftp.FreeBSD.org/pub/FreeBSD/ports/i386/packages-4-stable/Latest/41upgrade.tgz">4.1
 から 4-STABLE へのアップグレードキット</a>
 <dd>4.1-RELEASE ユーザもしくは 2000 年 7 月 27 日から 2000 年 10 月 31 日
 の間の 4.1-STABLE ユーザ用
 <dt><a
-href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-4-stable/Latest/42upgrade.tgz">4.2
+href="ftp://ftp.FreeBSD.org/pub/FreeBSD/ports/i386/packages-4-stable/Latest/42upgrade.tgz">4.2
 から 4-STABLE へのアップグレードキット</a>
 <dd>4.2-RELEASE ユーザもしくは 2000 年 10 月 31 日から 2001 年 1 月 8 日
 の間の 4.x-STABLE もしくは 4.2-BETA もしくは 4.2-RC ユーザ用
