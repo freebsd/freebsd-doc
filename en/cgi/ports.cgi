@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/ports.cgi,v 1.68 2003/07/21 23:49:13 simon Exp $
+# $FreeBSD: www/en/cgi/ports.cgi,v 1.69 2003/10/19 17:01:24 wosch Exp $
 #
 # ports.cgi - search engine for FreeBSD ports
 #             	o search for a port by name or description
@@ -499,6 +499,7 @@ sub forms {
     print qq{<HTML>
 <HEAD>
 <TITLE>FreeBSD Ports Changes</TITLE>
+<meta name="robots" content="nofollow">
 </HEAD>
 <BODY BGCOLOR="#FFFFFF" TEXT="#000000">
 <H1><a href="../">FreeBSD Ports Changes</A> $daemonGif</H1>
@@ -600,7 +601,7 @@ sub footer {
 <img ALIGN="RIGHT" src="/gifs/powerlogo.gif">
 &copy; 1996-2002 by Wolfram Schneider. All rights reserved.<br>
 };
-    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.68 2003/07/21 23:49:13 simon Exp $} . "<br>\n";
+    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.69 2003/10/19 17:01:24 wosch Exp $} . "<br>\n";
     print qq{Please direct questions about this service to
 <I><A HREF="$mailtoURL">$mailto</A></I><br>\n};
     print qq{General questions about FreeBSD ports should be sent to } .
