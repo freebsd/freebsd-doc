@@ -45,7 +45,6 @@ MAN1 =	a2p.1\
 	crontab.1\
 	crunchgen.1\
 	crunchide.1\
-	csh.1\
 	ctags.1\
 	ctm.1\
 	ctm_rmail.1\
@@ -299,6 +298,7 @@ MAN1 =	a2p.1\
 	tcopy.1\
 	tcpdump.1\
 	tcpslice.1\
+	tcsh.1\
 	tee.1\
 	telnet.1\
 	test.1\
@@ -460,6 +460,7 @@ MLINKS+=ln.1 link.1
 MLINKS+=rm.1 unlink.1
 MLINKS+=opiekey.1 otp-md4.1
 MLINKS+=opiekey.1 otp-md5.1
+MLINKS+=tcsh.1 csh.1
 MLINKS+=ee.1 edit.1
 
 .include "bsd.prog.mk"
