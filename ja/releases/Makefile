@@ -1,6 +1,6 @@
-# $Id: Makefile,v 1.9 1999-03-01 16:38:29 motoyuki Exp $
+# $Id: Makefile,v 1.10 1999-06-25 08:03:02 motoyuki Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.17
+# Original revision: 1.18
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -10,7 +10,7 @@ DOCS?=	index.sgml snapshots.sgml
 
 #SUBDIR=	1.1 1.1.5 2.0 2.0.5R 2.1R
 SUBDIR=	2.1.5R 2.1.6R 2.1.7R 2.2R
-SUBDIR+=	2.2.1R 2.2.2R 2.2.5R 2.2.6R 2.2.7R 2.2.8R 3.0R 3.1R
+SUBDIR+=	2.2.1R 2.2.2R 2.2.5R 2.2.6R 2.2.7R 2.2.8R 3.0R 3.1R 3.2R
 
 .if defined $(NEW_BUILD)
 SUBDIR=
