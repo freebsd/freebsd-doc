@@ -1,4 +1,4 @@
-# $FreeBSD: www/ja/java/Makefile,v 1.8 2000/11/07 05:13:19 kuriyama Exp $
+# $FreeBSD: www/ja/java/Makefile,v 1.9 2000/11/07 11:37:54 kuriyama Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.3
 
@@ -18,7 +18,7 @@ SUBDIR =	dists
 DOCS+=  index.sgml
 DOCS+=  install.sgml
 DOCS+=  newsflash.sgml
-#DOCS+=  press.sgml
+DOCS+=  press.sgml
 
 ### Revision checking
 REVCHECK= YES
