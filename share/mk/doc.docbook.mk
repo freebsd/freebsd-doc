@@ -1,5 +1,5 @@
 #
-# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.21 2000/10/08 19:19:09 nik Exp $
+# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.22 2000/10/10 06:16:56 kuriyama Exp $
 #
 # This include file <doc.docbook.mk> handles building and installing of
 # DocBook documentation in the FreeBSD Documentation Project.
@@ -65,7 +65,7 @@ LANGUAGECATALOG=${DOC_PREFIX}/${LANGCODE}/share/sgml/catalog
 DOCBOOKCATALOG=	${PREFIX}/share/sgml/docbook/catalog
 DSSSLCATALOG=	${PREFIX}/share/sgml/docbook/dsssl/modular/catalog
 
-LIB_IMAGES?=
+IMAGES_LIB?=
 
 JADEOPTS=	${JADEFLAGS} -c ${LANGUAGECATALOG} -c ${FREEBSDCATALOG} -c ${DSSSLCATALOG} -c ${DOCBOOKCATALOG} -c ${JADECATALOG} ${EXTRA_CATALOGS:S/^/-c /g}
 
@@ -172,21 +172,21 @@ CLEANFILES+= ${DOC}.${_curformat}.${_curcomp}
 .endfor
 .endif
 
-.for _curimage in ${LIB_IMAGES} 
-LOCAL_LIB_IMAGES += ${LOCAL_LIB_IMAGES_DIR}/${_curimage} 
+.for _curimage in ${IMAGES_LIB} 
+LOCAL_IMAGES_LIB += ${LOCAL_IMAGES_LIB_DIR}/${_curimage} 
 .endfor 
 
 .MAIN: all
 
 all: ${_docs}
 
-index.html HTML.manifest: ${SRCS} ${LOCAL_LIB_IMAGES} ${IMAGES_PNG}
+index.html HTML.manifest: ${SRCS} ${LOCAL_IMAGES_LIB} ${IMAGES_PNG}
 	${JADE} -V html-manifest -ioutput.html -ioutput.html.images ${JADEOPTS} -d ${DSLHTML} -t sgml ${MASTERDOC}
 .if !defined(NO_TIDY)
 	-tidy -i -m -f /dev/null ${TIDYFLAGS} `xargs < HTML.manifest`
 .endif
 
-${DOC}.html: ${SRCS} ${LOCAL_LIB_IMAGES} ${IMAGES_PNG}
+${DOC}.html: ${SRCS} ${LOCAL_IMAGES_LIB} ${IMAGES_PNG}
 	${JADE} -ioutput.html -ioutput.html.images -V nochunks ${JADEOPTS} -d ${DSLHTML} -t sgml ${MASTERDOC} > ${.TARGET}
 .if !defined(NO_TIDY)
 	-tidy -i -m -f /dev/null ${TIDYFLAGS} ${.TARGET}
@@ -198,12 +198,12 @@ ${DOC}.html-text: ${SRCS}
 
 ${DOC}.html-split.tar: HTML.manifest
 	tar cf ${.TARGET} `xargs < HTML.manifest`
-	tar uf ${.TARGET} ${LIB_IMAGES}
+	tar uf ${.TARGET} ${IMAGES_LIB}
 	tar uf ${.TARGET} ${IMAGES_PNG}
 
 ${DOC}.html.tar: ${DOC}.html
 	tar cf ${.TARGET} ${DOC}.html
-	tar uf ${.TARGET} ${LIB_IMAGES}
+	tar uf ${.TARGET} ${IMAGES_LIB}
 	tar uf ${.TARGET} ${IMAGES_PNG}
 
 ${DOC}.txt: ${DOC}.html-text
@@ -227,8 +227,9 @@ ${DOC}.rtf: ${SRCS}
 ${DOC}.tex-ps: ${SRCS} ${IMAGES_EPS}
 	${JADE} -Vtex-backend -ioutput.print ${JADEOPTS} -d ${DSLPRINT} -t tex -o ${.TARGET} ${MASTERDOC}
 
-${DOC}.tex-pdf: ${SRCS} ${IMAGES_PNG}
-	${JADE} -Vtex-backend -ioutput.print -ioutput.print.pdf ${JADEOPTS} -d ${DSLPRINT} -t tex -o ${.TARGET} ${MASTERDOC}
+${DOC}.tex-pdf: ${SRCS} ${IMAGES_PDF}
+	cp ${DOC_PREFIX}/share/web2c/pdftex.def ${.TARGET}
+	${JADE} -Vtex-backend -ioutput.print -ioutput.print.pdf ${JADEOPTS} -d ${DSLPRINT} -t tex -o /dev/stdout ${MASTERDOC} >> ${.TARGET}
 
 ${DOC}.dvi: ${DOC}.tex-ps
 	@echo "==> TeX pass 1/3"
@@ -351,9 +352,12 @@ install-${_cf}: index.html
 	@if [ -f ${.OBJDIR}/${DOC}.ln ]; then \
 		(cd ${DESTDIR}; sh ${.OBJDIR}/${DOC}.ln); \
 	fi
-.for _curimage in ${LIB_IMAGES}
-	@[ -d ${DESTDIR}/${LOCAL_LIB_IMAGES_DIR}/${_curimage:H} ] || mkdir -p ${DESTDIR}/${LOCAL_LIB_IMAGES_DIR}/${_curimage:H}
-	${INSTALL_DOCS} ${LOCAL_LIB_IMAGES_DIR}/${_curimage} ${DESTDIR}/${LOCAL_LIB_IMAGES_DIR}/${_curimage:H}
+.for _curimage in ${IMAGES_LIB}
+	@[ -d ${DESTDIR}/${LOCAL_IMAGES_LIB_DIR}/${_curimage:H} ] || mkdir -p ${DESTDIR}/${LOCAL_IMAGES_LIB_DIR}/${_curimage:H}
+	${INSTALL_DOCS} ${LOCAL_IMAGES_LIB_DIR}/${_curimage} ${DESTDIR}/${LOCAL_IMAGES_LIB_DIR}/${_curimage:H}
+.endfor
+.for _curimage in ${IMAGES_PNG}
+	${INSTALL_DOCS} ${_curimage} ${DESTDIR}
 .endfor
 .for _compressext in ${KNOWN_COMPRESS}
 install-${_cf}.tar.${_compressext}: ${DOC}.${_cf}.tar.${_compressext}
@@ -364,9 +368,12 @@ install-${_cf}.tar.${_compressext}: ${DOC}.${_cf}.tar.${_compressext}
 install-${_cf}: ${DOC}.${_cf}
 	@[ -d ${DESTDIR} ] || mkdir -p ${DESTDIR}
 	${INSTALL_DOCS} ${.ALLSRC} ${DESTDIR}
-.for _curimage in ${LIB_IMAGES}
-	@[ -d ${DESTDIR}/${LOCAL_LIB_IMAGES_DIR}/${_curimage:H} ] || mkdir -p ${DESTDIR}/${LOCAL_LIB_IMAGES_DIR}/${_curimage:H}
-	${INSTALL_DOCS} ${LOCAL_LIB_IMAGES_DIR}/${_curimage} ${DESTDIR}/${LOCAL_LIB_IMAGES_DIR}/${_curimage:H}
+.for _curimage in ${IMAGES_LIB}
+	@[ -d ${DESTDIR}/${LOCAL_IMAGES_LIB_DIR}/${_curimage:H} ] || mkdir -p ${DESTDIR}/${LOCAL_IMAGES_LIB_DIR}/${_curimage:H}
+	${INSTALL_DOCS} ${LOCAL_IMAGES_LIB_DIR}/${_curimage} ${DESTDIR}/${LOCAL_IMAGES_LIB_DIR}/${_curimage:H}
+.endfor
+.for _curimage in ${IMAGES_PNG}
+	${INSTALL_DOCS} ${_curimage} ${DESTDIR}
 .endfor
 .else
 install-${_cf}: ${DOC}.${_cf}
@@ -410,9 +417,17 @@ _cf=${_curformat}
 package-${_curformat}: install-${_curformat}
 .if ${_cf} == "html-split"
 	@cp HTML.manifest PLIST
+	@for images_png in ${IMAGES_PNG}; do \
+		echo $$images_png >> PLIST; \
+	done
+.elif ${_cf} == "html"
+	@echo ${DOC}.${_curformat} > PLIST
+	@for images_png in ${IMAGES_PNG}; do \
+		echo $$images_png >> PLIST; \
+	done
 .else
 	@echo ${DOC}.${_curformat} > PLIST
-	@for lib_images in ${LIB_IMAGES}; do \
+	@for lib_images in ${IMAGES_LIB5}; do \
 		echo $$lib_images >> PLIST; \
 	done
 .endif

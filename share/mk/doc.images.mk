@@ -1,5 +1,5 @@
 #
-# $FreeBSD: doc/share/mk/doc.images.mk,v 1.3 2000/09/28 23:29:47 nbm Exp $
+# $FreeBSD: doc/share/mk/doc.images.mk,v 1.4 2000/10/08 19:17:42 nik Exp $
 #
 # This include file <doc.images.mk> handles image processing.
 #
@@ -41,14 +41,25 @@
 # of all the .eps images listed, but with a .png extension.  This is the
 # list of files we need to generate if we need PNG format images.
 #
+# The PDF generation, when it's looking for file 'foo', will first try
+# foo.pdf, and it will try foo.png.  There's no point converting PNG files
+# to PDF, as they'll be used directly.  However, we can convert the EPS files
+# to PDF, and hopefully get better quality.
+#
 
 IMAGES_GEN_PNG=${IMAGES:M*.eps:S/.eps$/.png/}
 IMAGES_GEN_EPS=${IMAGES:M*.png:S/.png$/.eps/}
+IMAGES_GEN_PDF=${IMAGES:M*.eps:S/.eps$/.pdf/}
 
-CLEANFILES+= ${IMAGES_GEN_PNG} ${IMAGES_GEN_EPS}
+CLEANFILES+= ${IMAGES_GEN_PNG} ${IMAGES_GEN_EPS} ${IMAGES_GEN_PDF}
 
 IMAGES_PNG=${IMAGES:M*.png} ${IMAGES_GEN_PNG}
 IMAGES_EPS=${IMAGES:M*.eps} ${IMAGES_GEN_EPS}
+
+# We only need to list ${IMAGES_GEN_PDF} here.  If all the source files are
+# EPS then they'll be in this variable; if any of the source files are PNG
+# then we can use them directly, and don't need to list them.
+IMAGES_PDF=${IMAGES_GEN_PDF}
 
 # We can't use suffix rules to generate the rules to convert EPS to PNG and
 # PNG to EPS.  This is because a .png file can depend on a .eps file, and
@@ -57,25 +68,39 @@ IMAGES_EPS=${IMAGES:M*.eps} ${IMAGES_GEN_EPS}
 
 .for _curimage in ${IMAGES_GEN_PNG}
 ${_curimage}: ${_curimage:S/.png$/.eps/}
-	convert -antialias ${_curimage:S/.png$/.eps/} ${_curimage}
+	convert -antialias -density 108x108 ${_curimage:S/.png$/.eps/} ${_curimage}
 .endfor
 
 .for _curimage in ${IMAGES_GEN_EPS}
 ${_curimage}: ${_curimage:S/.eps$/.png/}
-	convert -antialias ${_curimage:S/.eps$/.png/} ${_curimage}
+	convert -antialias -density 108x108 ${_curimage:S/.eps$/.png/} ${_curimage}
 .endfor
 
-.SUFFIXES:	.pdf .eps .png
+#
+# Trial and error here with the options to ImageMagick.
+#
+#  -density  seems to smooth out the images.  Something to do with the source
+#            images being different from the 72dpi that ImageMagick wants.
+#
+#  -crop 0x0 forces the images to be trimmed to the minimum size.  Otherwise
+#            each image takes up a full page, which is bad.
+#
+#  epdf:     forces the output format to be encapsulated PDF
+#
+.for _curimage in ${IMAGES_GEN_PDF}
+${_curimage}: ${_curimage:S/.pdf$/.eps/}
+	convert -antialias -crop 0x0 ${_curimage:S/.pdf$/.eps/} epdf:${_curimage}
+.endfor
 
 #
 # Using library images
 # --------------------
 #
 # Each document that wants to use one or more library images has to
-# list them in the LIB_IMAGES variable.  For example, a document that wants 
+# list them in the IMAGES_LIB variable.  For example, a document that wants 
 # to use callouts 1 thru 4 has to list
 #
-#  LIB_IMAGES= callouts/1.png callouts/2.png callouts/3.png callouts/4.png
+#  IMAGES_LIB= callouts/1.png callouts/2.png callouts/3.png callouts/4.png
 #
 # in the controlling Makefile.
 #
@@ -87,7 +112,7 @@ ${_curimage}: ${_curimage:S/.eps$/.png/}
 # The name of the directory that contains all the library images for this
 # language and encoding
 #
-LIB_IMAGES_DIR?=	${.CURDIR}/../../share/images
+IMAGES_LIB_DIR?=	${.CURDIR}/../../share/images
 
 #
 # The name of the directory *in* the document directory where files and
@@ -96,7 +121,7 @@ LIB_IMAGES_DIR?=	${.CURDIR}/../../share/images
 # instead.  If you redefine this then you must also update the
 # %callout-graphics-path% variable in the .dsl file.
 #
-LOCAL_LIB_IMAGES_DIR?= imagelib
+LOCAL_IMAGES_LIB_DIR?= imagelib
 
 CP?=		/bin/cp
 MKDIR?=		/bin/mkdir
@@ -104,10 +129,10 @@ MKDIR?=		/bin/mkdir
 #
 # Create a target for each image used from the library.  This target just
 # ensures that each image required is copied from its location in 
-# ${LIB_IMAGES_DIR} to the same place in ${LOCAL_LIB_IMAGES_DIR}.
+# ${IMAGES_LIB_DIR} to the same place in ${LOCAL_IMAGES_LIB_DIR}.
 #
-.for _curimage in ${LIB_IMAGES}
-${LOCAL_LIB_IMAGES_DIR}/${_curimage}: ${LIB_IMAGES_DIR}/${_curimage}
-	@[ -d ${LOCAL_LIB_IMAGES_DIR}/${_curimage:H} ] || ${MKDIR} -p ${LOCAL_LIB_IMAGES_DIR}/${_curimage:H}
-	${INSTALL} -C -c ${LIB_IMAGES_DIR}/${_curimage} ${LOCAL_LIB_IMAGES_DIR}/${_curimage}
+.for _curimage in ${IMAGES_LIB}
+${LOCAL_IMAGES_LIB_DIR}/${_curimage}: ${IMAGES_LIB_DIR}/${_curimage}
+	@[ -d ${LOCAL_IMAGES_LIB_DIR}/${_curimage:H} ] || ${MKDIR} -p ${LOCAL_IMAGES_LIB_DIR}/${_curimage:H}
+	${INSTALL} -C -c ${IMAGES_LIB_DIR}/${_curimage} ${LOCAL_IMAGES_LIB_DIR}/${_curimage}
 .endfor
