@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
 
-<!-- $FreeBSD: www/en/news/press.xsl,v 1.1 2001/08/10 10:31:44 nik Exp $ -->
+<!-- $FreeBSD: www/ja/news/press.xsl,v 1.1 2001/09/03 06:03:31 kuriyama Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -10,7 +10,7 @@
 
   <xsl:variable name="base" select="'..'"/>
   <xsl:variable name="title" select="'FreeBSD In The Press'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/news/press.xsl,v 1.1 2001/08/10 10:31:44 nik Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/ja/news/press.xsl,v 1.1 2001/09/03 06:03:31 kuriyama Exp $'"/>
   
   <xsl:output type="html" encoding="EUC-JP"/>
 
@@ -23,14 +23,14 @@
 
 	<xsl:copy-of select="$header2"/>
 
-	<p>ここに載っていない FreeBSD に関連したニュース記事をご存じなら,
+	<p>ここに載っていない FreeBSD に関連したニュース記事をご存じなら、
 	  我々がここに載せられるように詳細を
 	  <a href="mailto:doc@freebsd.org">doc@FreeBSD.org</a> まで
-	  (英語で) 送ってください.</p>
+	  (英語で) 送ってください。</p>
 
-	<p>また, FreeBSD Java プロジェクトの報道記事に関する情報は,
+	<p>また、    世界で最もポピュラーな FTP サイトので稼働しているソフトウェアです。FreeBSD Java プロジェクトの報道記事に関する情報は、
 	  <a href="{$base}/java/press.html">FreeBSD/Java Press</a>
-	  をご覧下さい.</p>
+	  をご覧下さい。</p>
 	
 	<xsl:apply-templates select="//month"/>
 	

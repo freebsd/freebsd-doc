@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
 
-<!-- $FreeBSD: www/ja/news/newsflash.xsl,v 1.4 2001/11/19 15:35:42 hrs Exp $ -->
+<!-- $FreeBSD: www/ja/news/newsflash.xsl,v 1.5 2001/12/01 05:45:27 hrs Exp $ -->
 <!-- Original revision: 1.3 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
@@ -41,24 +41,24 @@
 	<img src="{$base}/../gifs/news.jpg" align="right" border="0" width="193"
 	     height="144" alt="FreeBSD News"/>
 
-	<p>FreeBSD は急速に発展を続けるオペレーティングシステムなので,
-	  最新の進歩について行くのが面倒になる時がありますよね.
-	  情報通になるために, このページを定期的にチェックするようにしましょう.
+	<p>FreeBSD は急速に発展を続けるオペレーティングシステムなので、
+	  最新の進歩について行くのが面倒になる時がありますよね。
+	  情報通になるために、このページを定期的にチェックするようにしましょう。
 	  <a href="{$base}/handbook/eresources.html#ERESOURCES-MAIL">
 	    freebsd-announce メーリングリスト</a>を購読したい
-	  という方もいるかもしれませんね.</p>
+	  という方もいるかもしれませんね。</p>
 
 	<p>FreeBSD Java Project の最新情報については
 	  <a href="{$base}/java/newsflash.html">
-	    FreeBSD/Java ニュースフラッシュ</a>のページをご覧ください.</p>
+	    FreeBSD/Java ニュースフラッシュ</a>のページをご覧ください。</p>
 	  
-	<p>過去, 現在, そして将来のリリースの詳細については,
+	<p>過去、現在、そして将来のリリースの詳細については、
 	  <strong><a href="{$base}/releases/index.html">リリース情報</a>
 	  </strong>
-	  のページをご覧ください.</p>
+	  のページをご覧ください。</p>
 	
-	<p>FreeBSD セキュリティ勧告については, <a href="{$base}/security/#adv">
-	  セキュリティ情報</a> のページをご覧ください.</p>
+	<p>FreeBSD セキュリティ勧告については、<a href="{$base}/security/#adv">
+	  セキュリティ情報</a> のページをご覧ください。</p>
 	
 	<xsl:apply-templates select="descendant::month"/>
 	
