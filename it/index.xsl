@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/it/index.xsl,v 1.9 2004/01/26 18:20:06 ale Exp $ -->
+<!-- $FreeBSD: www/it/index.xsl,v 1.10 2004/02/03 22:26:58 ale Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
   <xsl:import href="includes.xsl"/>
   <xsl:import href="../en/news/includes.xsl"/>
 
-  <xsl:variable name="date" select="'$FreeBSD: www/it/index.xsl,v 1.9 2004/01/26 18:20:06 ale Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/it/index.xsl,v 1.10 2004/02/03 22:26:58 ale Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <!-- these params should be externally bound. The values
@@ -124,7 +124,7 @@
 	      <h2><font color="#990000">Cos'è FreeBSD?</font></h2>
 
 	      <p>FreeBSD è un sistema operativo avanzato per architetture
-		compatibili x86, AMD64, DEC Alpha, IA-64, PC-98 e
+		compatibili x86, AMD64, Alpha, IA-64, PC-98 e
 		UltraSPARC&#174;.
 		È derivato da BSD, la versione di
 		<xsl:value-of select="$unix"/> sviluppata
@@ -168,7 +168,7 @@
 	        inclusi CD-ROM, DVD-ROM, floppy disk, nastri magnetici,
 	        partizioni MS-DOS&#174;, o, se hai una connessione di rete, puoi
 	        installarlo <i>direttamente</i> tramite FTP anonimo o NFS.
-	        Tutto quello di cui hai bisogno è un paio di dischetti vuoti da
+	        Tutto quello di cui hai bisogno è qualche dischetto vuoto da
 	        1.44MB e <a
 	          href="{$enbase}/doc/it_IT.ISO8859-15/books/handbook/install.html">queste
 		  istruzioni</a>.</p>
