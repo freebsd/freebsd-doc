@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.11 1998-10-25 17:56:31 wosch Exp $
+# $Id: Makefile,v 1.12 1999-02-14 03:10:20 jkh Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -9,7 +9,6 @@ DOCS+=	internal.sgml
 DOCS+= 	about.sgml
 DOCS+= 	machines.sgml
 DOCS+= 	mirror.sgml
-DOCS+=	resignation.sgml
 DOCS+=	statistic.sgml
 
 INDEXLINK=	internal.html
