@@ -28,7 +28,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.36 1999/09/19 10:55:19 wosch Exp $
+# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.37 2000/01/05 15:47:43 phantom Exp $
 #
 
 
@@ -154,7 +154,7 @@ if (!-d $cvsroot) {
 	    push(@foo, $_);
 	}
     }
-    if ($#foo > 1) {
+    if ($#foo >= 1) {
 	$intro .= "<p>\nThis script supports the following CVS trees:\n";
 	for($i = 0; $i <= $#foo; $i++) {
 	    $intro .= qq{<a href="$scriptname?cvsroot=$foo[$i]">} .
