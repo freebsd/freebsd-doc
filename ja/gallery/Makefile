@@ -1,6 +1,6 @@
-# $FreeBSD: www/ja/gallery/Makefile,v 1.17 2001/12/12 11:57:38 phantom Exp $
+# $FreeBSD: www/ja/gallery/Makefile,v 1.18 2001/12/13 19:30:09 phantom Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.14
+# Original revision: 1.16
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -11,7 +11,7 @@
 
 XSLTPROCFLAGS=	--catalogs
 XSLT=	${SETENV} SGML_CATALOG_FILES=${PREFIX}/share/xml/dtd/xhtml/xhtml.soc \
-	${XSLTPROC} ${XSLTPROCFLAGS}
+	${XSLTPROC} ${XSLTPROCOPTS}
 
 SRC=	../../en/gallery/gallery.xml
 
