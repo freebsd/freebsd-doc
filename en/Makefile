@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/Makefile,v 1.63 2001/04/17 12:18:20 nik Exp $
+# $FreeBSD: www/en/Makefile,v 1.64 2001/04/22 17:34:53 wosch Exp $
 .if exists(Makefile.conf)
 .include "Makefile.conf"
 .endif
@@ -67,7 +67,7 @@ COOKIE=	FAQ handbook
 
 .if !defined(ENGLISH_ONLY) || empty(ENGLISH_ONLY)
 .for DIR in ${WEB_LANG}
-#SUBDIR+=	../${DIR}
+SUBDIR+=	../${DIR}
 .endfor
 .endif
 
