@@ -16,8 +16,8 @@ href="../handbook/porting.html">Porting applications</a>.  Both are
 part of the <a href="../handbook">FreeBSD Handbook</a>.</p>
 
 <p>If you are a 2.2.1-release user, please install the <a
-href="ftp://ftp.freebsd.org/pub/FreeBSD/packages-2.2/22upgrade-97.04.18.tgz">2.2.1
-to 2.2-stable upgrade kit</a> (last changed: April 18, 1997).  This
+href="ftp://ftp.freebsd.org/pub/FreeBSD/packages-2.2/22upgrade-97.05.06.tgz">2.2.1
+to 2.2-stable upgrade kit</a> (last changed: May 6, 1997).  This
 will enable you to use all the ports listed here.  Note that it will
 only change just enough files to enable ports/packages to be used; for
 a full upgrade to 2.2-stable, please refer to the <a
