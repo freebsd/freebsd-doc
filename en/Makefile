@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/Makefile,v 1.67 2001/06/09 23:09:21 nik Exp $
+# $FreeBSD: www/en/Makefile,v 1.68 2001/06/11 02:38:57 ache Exp $
 .if exists(Makefile.conf)
 .include "Makefile.conf"
 .endif
@@ -88,7 +88,7 @@ handbook:
 	ln -fs ${.CURDIR}/../../doc/en_US.ISO8859-1/books/handbook handbook
 
 afterinstall:
-	ln -fs ${.CURDIR}/doc/en_US.ISO8859-1/books/faq ${DOCINSTALLDIR}/FAQ
-	ln -fs ${.CURDIR}/doc/en_US.ISO8859-1/books/handbook ${DOCINSTALLDIR}/handbook
+	(cd ${DOCINSTALLDIR} && ln -fs doc/en_US.ISO8859-1/books/faq ${DOCINSTALLDIR}/FAQ)
+	(cd ${DOCINSTALLDIR} && ln -fs doc/en_US.ISO8859-1/books/handbook ${DOCINSTALLDIR}/handbook)
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
