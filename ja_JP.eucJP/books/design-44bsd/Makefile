@@ -1,11 +1,11 @@
 # $FreeBSD$
-# Original revision: 1.2
+# Original revision: 1.5
 
 DOC?= book
 
 FORMATS?= html
 
-IMAGES= fig1.eps fig2.eps
+IMAGES_EN= fig1.eps fig2.eps
 
 INSTALL_COMPRESSED?=gz
 INSTALL_ONLY_COMPRESSED?=
