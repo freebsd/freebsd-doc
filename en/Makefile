@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/Makefile,v 1.103 2003/12/05 19:58:36 blackend Exp $
+# $FreeBSD: www/en/Makefile,v 1.104 2003/12/05 20:00:19 blackend Exp $
 .if exists(Makefile.conf)
 .include "Makefile.conf"
 .endif
@@ -104,12 +104,14 @@ webcheck:
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
 
 index.html: index.xsl ${XML_INCLUDES}\
-		${XML_NEWS_INCLUDES} ${XML_NEWS_NEWS}\
+		${XML_NEWS_INCLUDES} ${XML_NEWS_NEWS} ${XML_NEWS_PRESS}\
 		${XML_MIRRORS} ${XML_ADVISORIES}
 	${XSLTPROC} ${XSLTPROCOPTS} \
 		-o $@ \
 		--param mirrors.xml "'${XML_MIRRORS}'" \
 		--param advisories.xml "'${XML_ADVISORIES}'" \
+		--param news.press.xml "'${XML_NEWS_PRESS}'" \
+		--param news.project.xml "'${XML_NEWS_NEWS}'" \
 		${.CURDIR}/index.xsl ${XML_NEWS_NEWS}
 .if !defined(NO_TIDY)
 	-${TIDY} ${TIDYOPTS} ${.TARGET}
