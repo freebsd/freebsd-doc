@@ -9,14 +9,24 @@ ipnat が受け付けるファイルの形式は、以下の文法で記述されるものです。
 ipmap :: = mapblock | redir | map .
 
 map ::= mapit ifname ipmask "->" ipmask [ mapport ] .
+map ::= mapit ifname fromto "->" ipmask [ mapport ] .
 mapblock ::= "map-block" ifname ipmask "->" ipmask [ ports ] .
-redir ::= "rdr" ifname [ fromspec ] ipmask "->" ip [ ports ] [ tcpudp ] .
+redir ::= "rdr" ifname ipmask dport "->" ip [ "," ip ] [ ports ] options .
+
+dport ::= "port" portnum [ "-" portnum ] .
 ports ::= "ports" numports | "auto" .
 mapit ::= "map" | "bimap" .
+fromto ::= "from" object "to" object .
 ipmask ::= ip "/" bits | ip "/" mask | ip "netmask" mask .
 mapport ::= "portmap" tcpudp portnumber ":" portnumber .
+options ::= [ tcpudp ] [ rr ] .
 
-fromspec ::= "from" ip "/" ipmask .
+object  = addr [ port-comp | port-range ] .
+addr    = "any" | nummask | host-name [ "mask" ipaddr | "mask" hexnumber ] .
+port-comp = "port" compare port-num .
+port-range = "port" port-num range port-num .
+
+rr ::= "round-robin" .
 tcpudp ::= "tcp" | "udp" | "tcp/udp" .
 portnumber ::= number { numbers } | "auto" .
 ifname ::= 'A' - 'Z' { 'A' - 'Z' } numbers .
@@ -46,7 +56,7 @@ TCP パケットと UDP パケットの再マップの際には、ソースポート番号の変更
 .\" There are found commands recognised by IP Filter's NAT code:
 .\" この部分、There are four commands ... の間違いではないかと send-pr 済み
 .\" (2000-1-19, by kuma)
-IP フィルタの NAT コードが認識するコマンドがあります:
+IP フィルタの NAT コードが認識するコマンドが 4 個あります:
 .TP
 .B map
 アドレスもしくはネットワークひとつを、統制なしのラウンドロビン法で
@@ -67,10 +77,27 @@ IP アドレスに基づく静的な変換を設定します。アドレスを絞り込み、目的の範囲に
 .PP
 基本的な NAT 機能とパケットのリダイレクトにおいては、プロトコルとともに
 変更可能性のあるアドレスを用いて、あるパケットを変更せねばならないか
-どうかをチェックします。リダイレクトについては、キーワード \fBfrom\fP
-を用いて、ソースアドレスに基づくパケット選択を行なうこともできます。
-それぞれの規則の "->" の左辺は、その規則のパケット \fI照合処理\fP
+どうかをチェックします。
+それぞれの規則の "->" の左辺は、その規則のパケット\fI照合処理\fP
 部分です。
+.PP
+パケットの照合処理は、より複雑な比較が可能なように拡張されました。
+変換されるアドレス部分においては、
+IP アドレスとポート番号の比較は、\fBipf\fP で使用可能な式を使用可能です。
+単純な NAT ルールは次のように記述可能です:
+.LP
+.nf
+map de0 10.1.0.0/16 -> 201.2.3.4/32
+.fi
+.LP
+または
+.LP
+.nf
+map de0 from 10.1.0.0/16 to any -> 201.2.3.4/32
+.fi
+.LP
+IP アドレスとポート番号のみ、比較対象にできます。
+これは、すべての NAT ルールで使用可能です。
 .SH 変換処理
 .PP
 "->" の右辺は、それ以前の制約条件との照合が既に成功している場合に、その
@@ -102,6 +129,30 @@ IP フィルタには、カーネルにロードされるコードの中に組み込まれた単純な
 コネクションのアドレスを決定するため、\fB/dev/ipnat\fP 経由で検索を
 行なうプロキシプログラムを用いて、localhost (127.0.0.1) のポートに
 対応付けるリダイレクト (\fBrdr\fP) 規則を用いて行なう必要があります。
+.SH 負荷分散
+.PP
+\fBrdr\fP と組み合わせて 2 個のオプションを使用可能です。
+これにより、原始的な\fIラウンドロビン\fPベースの負荷分散をサポートします。
+最初のオプションは、\fBrdr\fP 用に 2 番目の終点を、次のように指定します:
+.LP
+.nf
+rdr le0 203.1.2.3/32 port 80 -> 203.1.2.3,203.1.2.4 port 80 tcp
+.fi
+.LP
+これにより、203.1.2.3 と 203.1.2.4 へ交互に接続を送ります。
+より多くのサーバに不可を分散したい場合には、次のようにします:
+.LP
+.nf
+rdr le0 203.1.2.3/32 port 80 -> 203.1.2.3,203.1.2.4 port 80 tcp round-robin
+rdr le0 203.1.2.3/32 port 80 -> 203.1.2.5 port 80 tcp round-robin
+.fi
+.LP
+この場合、接続は 203.1.2.3 にまず向けられ、次に 203.1.2.4 に向けられ、
+そして 203.1.2.5 に向けられ、最後に 203.1.2.3 に戻ります。
+これを実現する際、必要に応じて自動的に、
+ルールがリストの先頭から取り除かれて最後に追加されます。
+これは、"ipnat -l" を使用したルール表示には影響せず、
+内部的な適用順序にのみ影響します。
 .SH 使用例
 .PP
 本セクションでは、\fBmap\fP コマンドとその変形を扱います。
