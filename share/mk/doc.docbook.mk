@@ -1,5 +1,5 @@
 #
-# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.35 2001/06/21 03:03:51 chris Exp $
+# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.36 2001/07/10 03:06:48 murray Exp $
 #
 # This include file <doc.docbook.mk> handles building and installing of
 # DocBook documentation in the FreeBSD Documentation Project.
@@ -135,23 +135,28 @@ _cf=${_curformat}
 .if ${_cf} == "html-split"
 _docs+= index.html HTML.manifest ln*.html
 CLEANFILES+= `[ -f HTML.manifest ] && xargs < HTML.manifest` HTML.manifest ln*.html
+CLEANFILES+= docbook.css
 
 .elif ${_cf} == "html-split.tar"
 _docs+= ${DOC}.html-split.tar
 CLEANFILES+= `[ -f HTML.manifest ] && xargs < HTML.manifest` HTML.manifest ln*.html
 CLEANFILES+= ${DOC}.html-split.tar
+CLEANFILES+= docbook.css
 
 .elif ${_cf} == "html"
 _docs+= ${DOC}.html
 CLEANFILES+= ${DOC}.html
+CLEANFILES+= docbook.css
 
 .elif ${_cf} == "html.tar"
 _docs+= ${DOC}.html.tar
 CLEANFILES+= ${DOC}.html ${DOC}.html.tar
+CLEANFILES+= docbook.css
 
 .elif ${_cf} == "txt"
 _docs+= ${DOC}.txt
 CLEANFILES+= ${DOC}.html ${DOC}.txt ${DOC}.html-text
+CLEANFILES+= docbook.css
 
 .elif ${_cf} == "dvi"
 _docs+= ${DOC}.dvi
@@ -205,13 +210,13 @@ CLEANFILES+= ${DOC}.${_curformat}.${_curcomp}
 # Index generation
 #
 INDEX_SGML?=		index.sgml
+CLEANFILES+= 		${INDEX_SGML}
 
 .if defined(GEN_INDEX)
 HTML_SPLIT_INDEX?=	html-split.index
 HTML_INDEX?=		html.index
 PRINT_INDEX?=		print.index
 
-CLEANFILES+= 		${INDEX_SGML}
 CLEANFILES+= 		${HTML_SPLIT_INDEX} ${HTML_INDEX} ${PRINT_INDEX}
 .endif
 
