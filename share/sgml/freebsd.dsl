@@ -1,4 +1,4 @@
-<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.28 2001/04/09 20:35:47 nik Exp $ -->
+<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.29 2001/05/20 17:30:44 ue Exp $ -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
 <!ENTITY % output.html		"IGNORE">
@@ -370,6 +370,7 @@
       
       (element hostid ($mono-seq$))
       (element username ($mono-seq$))
+      (element groupname ($mono-seq$))
       (element devicename ($mono-seq$))
       (element maketarget ($mono-seq$))
       (element makevar ($mono-seq$))
