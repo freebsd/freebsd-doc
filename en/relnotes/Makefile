@@ -7,7 +7,7 @@
 # of relnotes should appear on the web site.  The second word is the
 # path to that relnotes set.
 #
-# $FreeBSD: www/en/relnotes/Makefile,v 1.2 2001/06/14 23:21:03 dd Exp $
+# $FreeBSD: www/en/relnotes/Makefile,v 1.3 2001/08/30 06:59:55 dd Exp $
 #
 
 RELNOTES=	CURRENT ${.CURDIR}/../../../relnotes/doc \
@@ -27,5 +27,6 @@ all install clean obj:
 				DOCDIR=${DESTDIR}/data/${.CURDIR:T}/$$webname \
 				DOC_PREFIX=${.CURDIR}/../../../doc \
 				DIRPRFX=${.CURDIR:T}/$$webname/ \
+				NO_LANGCODE_IN_DESTDIR=true \
 				${.TARGET}); \
 	done;
