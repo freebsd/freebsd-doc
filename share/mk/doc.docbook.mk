@@ -174,14 +174,14 @@ XARGS?=		/usr/bin/xargs
 TEX?=		${PREFIX}/bin/tex
 PDFTEX?=	${PREFIX}/bin/pdftex
 TIDY?=		${PREFIX}/bin/tidy
-TIDYFLAGS?=	-i -m -f /dev/null
+TIDYOPTS?=	-i -m -f /dev/null ${TYDYFLAGS}
 HTML2TXT?=	${PREFIX}/bin/links
-HTML2TXTFLAGS?=	-dump
+HTML2TXTOPTS?=	-dump ${HTML2TXTFLAGS}
 HTML2PDB?=	${PREFIX}/bin/iSiloBSD
-HTML2PDBFLAGS?=	-y -d0 -Idef
+HTML2PDBOPTS?=	-y -d0 -Idef ${HTML2PDBFLAGS}
 DVIPS?=		${PREFIX}/bin/dvips
 .if defined(PAPERSIZE)
-DVIPSFLAGS?=	-t ${PAPERSIZE:L}
+DVIPSOPTS?=	-t ${PAPERSIZE:L} ${DVIPSFLAGS}
 .endif
 
 GZIP?=	-9
@@ -342,7 +342,7 @@ index.html HTML.manifest: ${SRCS} ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} \
 	${JADE} -V html-manifest ${HTMLOPTS} -ioutput.html.images \
 		${JADEOPTS} -t sgml ${MASTERDOC}
 .if !defined(NO_TIDY)
-	-${TIDY} ${TIDYFLAGS} $$(${XARGS} < HTML.manifest)
+	-${TIDY} ${TIDYOPTS} $$(${XARGS} < HTML.manifest)
 .endif
 
 ${DOC}.html: ${SRCS} ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} \
@@ -351,7 +351,7 @@ ${DOC}.html: ${SRCS} ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} \
 		${JADEOPTS} -t sgml ${MASTERDOC} > ${.TARGET} || \
 		(${RM} -f ${.TARGET} && false)
 .if !defined(NO_TIDY)
-	-${TIDY} ${TIDYFLAGS} ${.TARGET}
+	-${TIDY} ${TIDYOPTS} ${.TARGET}
 .endif
 
 # Special target to produce HTML with no images in it.
@@ -371,10 +371,10 @@ ${DOC}.html.tar: ${DOC}.html ${LOCAL_IMAGES_LIB} \
 		${LOCAL_IMAGES_LIB} ${IMAGES_PNG} ${CSS_SHEET:T}
 
 ${DOC}.txt: ${DOC}.html-text
-	${HTML2TXT} ${HTML2TXTFLAGS} ${.ALLSRC} > ${.TARGET}
+	${HTML2TXT} ${HTML2TXTOPTS} ${.ALLSRC} > ${.TARGET}
 
 ${DOC}.pdb: ${DOC}.html ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG}
-	${HTML2PDB} ${HTML2PDBFLAGS} ${DOC}.html ${.TARGET}
+	${HTML2PDB} ${HTML2PDBOPTS} ${DOC}.html ${.TARGET}
 
 ${.CURDIR:T}.pdb: ${DOC}.pdb
 	${LN} -f ${.ALLSRC} ${.TARGET}
@@ -426,7 +426,7 @@ ${DOC}.pdf: ${DOC}.tex-pdf ${IMAGES_PDF}
 	${PDFTEX} "&pdfjadetex" '\nonstopmode\input{${DOC}.tex-pdf}'
 
 ${DOC}.ps: ${DOC}.dvi
-	${DVIPS} -o ${.TARGET} ${.ALLSRC}
+	${DVIPS} ${DVIPSOPTS} -o ${.TARGET} ${.ALLSRC}
 
 ${DOC}.tar: ${SRCS} ${LOCAL_IMAGES} ${LOCAL_CSS_SHEET}
 	${TAR} cf ${.TARGET} -C ${.CURDIR} ${SRCS} \
