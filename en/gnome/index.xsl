@@ -23,7 +23,7 @@
 
         <table border="0" cellspacing="0" cellpadding="2">
           <tr>
-            <td valign="top">
+            <td valign="top" width="15%">
               <table border="0" cellspacing="0" cellpadding="1"
                      bgcolor="#000000" width="100%">
                 <tr>
@@ -87,6 +87,8 @@
 
             <td align="left" valign="top" rowspan="2">
               <h2><font color="#990000">What is GNOME?</font></h2>
+              <img src="{$base}/gnome/images/gnome.jpg" align="right"
+                   border="0" width="66" height="83" alt="GNOME Logo"/>
 
               <p>The GNOME project was born as an effort to create an entirely free
                 desktop environment for free systems.  From the start, the main
@@ -117,7 +119,7 @@
 
               <h2><font color="#990000">State of the port</font></h2>
 
-              <p>We currently support 4.x and 5-CURRENT FreeBSD Systems
+              <p>We currently support 4.x and 5-CURRENT FreeBSD systems
                 for GNOME 1.4.1.  Anything prior to FreeBSD 4.1 is not
                 supported.  Most of GNOME has been ported to FreeBSD;
                 however, there's plenty left to do!</p>
@@ -127,7 +129,7 @@
             <td></td>
 
             <!-- Right-most column -->
-            <td valign="top">
+            <td valign="top" width="20%">
               <!-- News table -->
               <table border="0" cellspacing="0" cellpadding="1"
                      bgcolor="#000000" width="100%">
