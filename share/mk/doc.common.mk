@@ -171,7 +171,13 @@ CLEANFILES+= ${XML_MIRRORS}.sort.tmp
 
 .if defined(URLS_ABSOLUTE)
 HTMLFLAGS+=	-ifreebsd.urls.absolute
-PRINTFLAGS+=	-ifreebsd.urls.absolute
 SGMLNORMFLAGS+=	-ifreebsd.urls.absolute
 NSGMLSFLAGS+=	-ifreebsd.urls.absolute
 .endif
+
+# for ascii and printable format, always use URLS_ABSOLUTE.
+PRINTFLAGS+=	-ifreebsd.urls.absolute
+HTMLTXTFLAGS+=	-ifreebsd.urls.absolute
+
+# for packages, always use URLS_ABSOLUTE.
+PKGMAKEFLAGS+=	URLS_ABSOLUTE=yes
