@@ -1,6 +1,6 @@
-<!-- $Id: ports.inc,v 1.7 1999-03-09 15:13:47 motoyuki Exp $ -->
+<!-- $Id: ports.inc,v 1.8 1999-03-10 18:38:51 motoyuki Exp $ -->
 <!-- The FreeBSD Japanese Documentation Project -->
-<!-- Original revision: 1.32 -->
+<!-- Original revision: 1.33 -->
 <p>FreeBSD の Ports と Packages のコレクションは,
 ユーザや管理者が簡単にアプリケーショ
 ンのインストールを簡単に行う方法を提供します.
@@ -69,11 +69,11 @@ href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-2.2-stable/Latest/22
 <dd>2.2.6-release, 2.2.7-release, 2.2.8-release もしくは
 2.2.6-release 以降の 2.2-stable ユーザ用
 <dt><a
-href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-current/Latest/30upgrade.tgz">3.0
+href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-3-stable/Latest/30upgrade.tgz">3.0
 から 3.1-stable へのアップグレードキット</a>
 <dd>3.0-release もしくは 3.0-release 以降の 3.0-stable ユーザ用
 <dt><a
-href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-current/Latest/31upgrade.tgz">3.1
+href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-3-stable/Latest/31upgrade.tgz">3.1
 から 3.1-stable へのアップグレードキット</a>
 <dd>3.1-release もしくは 3.1-release 以降の 3.1-stable ユーザ用
 </dl>
@@ -82,11 +82,14 @@ href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-current/Latest/31upg
 <strong>pkg_add</strong> を使ってください.
 これでここに載っている全ての ports を使うことができるようになります. 
 このアップグレードキットは ports やパッケージを使うのに必要なファイル
-だけを更新します. 2.2-stable や 3.1-stable への完全なアップグレードについては,
+だけを更新します. 3.1-stable への完全なアップグレードについては,
 ハンドブックの<a href="../handbook/synching.html">
 インターネットを通じたソースツリーの同期</a>を参照してください. 
 完全なアップグレードが (まだ 2.2.7-release より前のバージョンを使っている
-場合は特に)推奨されています.</p>
+場合は特に)推奨されています.
+さらに, 2.2.X 系列は現在 ports-current では公式にはサポートされていません.
+ここにリストされている ports を使う場合は, たとえあなたの 2.2.X システムの
+リリースに含まれているものであっても, ``自分の責任で'' 行なってください.</p>
 
 <p>多くの ports はコンパイルと実行に X Window System を必要とします. 
 ports は <a href="http://www.xfree86.org/">XFree86</a> 上でテ
