@@ -9,6 +9,6 @@
 
 SUBDIR=	docs
 
-DOCS+=  index.sgml screenshots.sgml
+DOCS+=  index.sgml screenshots.sgml contact.sgml
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
