@@ -9,6 +9,7 @@
 #             Ken Coar         <coar@Apache.Org>
 #             Dick Balaska     <dick@buckosoft.com>
 #             Akinori MUSHA    <knu@FreeBSD.org>
+#             Jens-Uwe Mager   <jum@helios.de>
 #
 # Based on:
 # * Bill Fenners cvsweb.cgi revision 1.28 available from:
@@ -41,9 +42,9 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $zId: cvsweb.cgi,v 1.94 2000/08/24 06:41:22 hnordstrom Exp $
-# $Id: cvsweb.cgi,v 1.50 2000-09-04 16:05:40 knu Exp $
-# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.49 2000/09/03 18:45:10 knu Exp $
+# $zId: cvsweb.cgi,v 1.101 2000/09/13 22:44:05 jumager Exp $
+# $Id: cvsweb.cgi,v 1.51 2000-09-19 20:20:06 knu Exp $
+# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.50 2000/09/04 16:05:40 knu Exp $
 #
 ###
 
@@ -77,19 +78,21 @@ use vars qw (
     $navigationHeaderColor $tableBorderColor $markupLogColor
     $tabstop $state $annTable $sel $curbranch @HideModules
     $module $use_descriptions %descriptions @mytz $dwhere $moddate
-    $use_moddate
+    $use_moddate $has_zlib $gzip_open
 );
 
 sub printDiffSelect($);
 sub findLastModifiedSubdirs(@);
 sub htmlify($;$);
-sub spacedHtmlText($);
+sub spacedHtmlText($;$);
 sub link($$);
 sub revcmp($$);
 sub fatal($$);
 sub redirect($);
 sub safeglob($);
 sub getMimeTypeFromSuffix($);
+sub head($;$);
+sub scan_directives(@);
 sub doAnnotate($$);
 sub doCheckout($$);
 sub cvswebMarkup($$$);
@@ -167,6 +170,13 @@ package main;
 use Time::Local;
 use IPC::Open2;
 
+# Check if the zlib C library interface is installed, and if yes
+# we can avoid using the extra gzip process.
+eval {
+	require Compress::Zlib;
+};
+$has_zlib = !$@;
+
 $verbose = $v;
 $checkoutMagic = "~checkout~";
 $pathinfo = defined($ENV{PATH_INFO}) ? $ENV{PATH_INFO} : '';
@@ -204,13 +214,12 @@ $nofilelinks = $is_textbased;
 #  braindamaged MS-Internet Exploders claim that they
 # accept gzip .. but don't in fact and
 # display garbage then :-/
-# Turn off gzip if running under mod_perl. piping does
-# not work as expected inside the server. One can probably
-# achieve the same result using Apache::GZIPFilter.
+# Turn off gzip if running under mod_perl and no zlib is available,
+# piping does not work as expected inside the server.
 $maycompress = (($ENV{HTTP_ACCEPT_ENCODING} =~ m`gzip`
 		 || $is_mozilla3)
 		&& !$is_msie
-		&& !$is_mod_perl);
+		&& !($is_mod_perl && !$has_zlib));
 
 # put here the variables we need in order
 # to hold our state - they will be added (with
@@ -366,7 +375,7 @@ $defaultViewable = $allow_markup && viewable($mimetype);
 # ge get an Internal Server Error if we try to pipe the
 # output through the nonexistent gzip ..
 # any more elegant ways to prevent this are welcome!
-if ($allow_compress && $maycompress) {
+if ($allow_compress && $maycompress && !$has_zlib) {
     foreach (split(/:/, $ENV{PATH})) {
 	if (-x "$_/gzip") {
 	    $GZIPBIN = "$_/gzip";
@@ -717,7 +726,8 @@ elsif (-d $fullname) {
 	    foreach my $var (@stickyvars) {
 		print "<INPUT TYPE=HIDDEN NAME=\"$var\" VALUE=\"$input{$var}\">\n"
 		    if (defined($input{$var})
-			&& $input{$var} ne $DEFAULTVALUE{$var}
+			&& (!defined($DEFAULTVALUE{$var})
+			    || $input{$var} ne $DEFAULTVALUE{$var})
 			&& $input{$var} ne ""
 			&& $var ne "only_with_tag");
 	    }
@@ -779,15 +789,18 @@ elsif (-d $fullname) {
     elsif (-f $fullname . ',v') {
 	if (defined($input{'rev'}) || $doCheckout) {
 	    &doCheckout($fullname, $input{'rev'});
+	    close(GZIP) if ($gzip_open);
 	    exit;
 	}
 	if (defined($input{'annotate'}) && $allow_annotate) {
 	    &doAnnotate($input{'annotate'});
+	    close(GZIP) if ($gzip_open);
 	    exit;
 	}
 	if (defined($input{'r1'}) && defined($input{'r2'})) {
 	    &doDiff($fullname, $input{'r1'}, $input{'tr1'},
 		    $input{'r2'}, $input{'tr2'}, $input{'f'});
+	    close(GZIP) if ($gzip_open);
 	    exit;
 	}
 	print("going to dolog($fullname)\n") if ($verbose);
@@ -810,6 +823,7 @@ elsif (-d $fullname) {
 	# e.g. foo.c
 	&doDiff($fullname, $input{'r1'}, $input{'tr1'},
 		$input{'r2'}, $input{'tr2'}, $input{'f'});
+	close(GZIP) if ($gzip_open);
 	exit;
     }
     elsif (($newname = $fullname) =~ s|/([^/]+)$|/Attic/$1| &&
@@ -843,6 +857,8 @@ elsif (-d $fullname) {
 	}
 	&fatal("404 Not Found","$where: no such file or directory");
     }
+
+close(GZIP) if ($gzip_open);
 ## End MAIN
 
 sub printDiffSelect($) {
@@ -923,35 +939,32 @@ sub htmlify($;$) {
 	return $string;
 }
 
-sub spacedHtmlText($) {
+sub spacedHtmlText($;$) {
 	local $_ = $_[0];
+	my $ts = $_[1] || $tabstop;
 
-	# Cut trailing spaces
-	s/\s+$/\n/;
+	# Cut trailing spaces and tabs
+	s/[ \t]+$//;
 
-	# Expand tabs
-	s/\t+/' ' x (length($&) * $tabstop - length($`) % $tabstop)/e
-	    if (defined($tabstop));
+        if (defined($ts)) {
+	    # Expand tabs
+	    1 while s/\t+/' ' x (length($&) * $ts - length($`) % $ts)/e
+	}
 
 	# replace <tab> and <space> (\001 is to protect us from htmlify)
 	# gzip can make excellent use of this repeating pattern :-)
-	s/\001/\001%/g; #protect our & substitute
 	if ($hr_breakable) {
 	    # make every other space 'breakable'
-	    s/	/ \001nbsp; \001nbsp; \001nbsp; \001nbsp;/g;    # <tab>
 	    s/  / \001nbsp;/g;                              # 2 * <space>
 	    # leave single space as it is
-	}
-	else {
-	    s/	/\001nbsp;\001nbsp;\001nbsp;\001nbsp;\001nbsp;\001nbsp;\001nbsp;\001nbsp;/g;
+	} else {
 	    s/ /\001nbsp;/g;
 	}
 
 	$_ = htmlify($_);
 
 	# unescape
-	s/\001([^%])/&$1/g;
-	s/\001%/\001/g;
+	y/\001/&/;
 
 	return $_;
 }
@@ -1071,6 +1084,40 @@ sub getMimeTypeFromSuffix($) {
 }
 
 ###############################
+# read first lines like head(1)
+###############################
+sub head($;$) {
+    my $fh = $_[0];
+    my $linecount = $_[1] || 10;
+
+    my @buf;
+
+    if ($linecount > 0) {
+	my $i;
+	for ($i = 0; !eof($fh) && $i < $linecount; $i++) {
+	    push @buf, scalar <$fh>;
+	}
+    } else {
+	@buf = <$fh>;
+    }
+
+    @buf;
+}
+
+###############################
+# scan vim and Emacs directives
+###############################
+sub scan_directives(@) {
+    my $ts = undef;
+
+    for (@_) {
+	$ts = $1 if /\b(?:ts|tabstop|tab-width)[:=]\s*([1-9]\d*)\b/;
+    }
+
+    ('tabstop' => $ts);
+}
+
+###############################
 # show Annotation
 ###############################
 sub doAnnotate($$) {
@@ -1171,7 +1218,15 @@ sub doAnnotate($$) {
     else {
 	print "<pre>";
     }
-    while (<$reader>) {
+
+    # prefetch several lines
+    my @buf = head($reader);
+
+    my %d = scan_directives(@buf);
+
+    while (@buf || !eof($reader)) {
+	$_ = @buf ? shift @buf : <$reader>;
+
 	my @words = split;
 	# Adding one is for the (single) space which follows $words[0].
 	my $rest = substr ($_, length ($words[0]) + 1);
@@ -1205,7 +1260,7 @@ sub doAnnotate($$) {
 
 	    print "<b>" if ($isCurrentRev);
 	    printf ("%8s%s%8s %4d:", $revprint, ($isCurrentRev ? "|" : " "), $usrprint, $lineNr);
-	    print spacedHtmlText($line);
+	    print spacedHtmlText($line, $d{'tabstop'});
 	    print "</b>" if ($isCurrentRev);
 	}
 	elsif ($words[0] eq "ok") {
@@ -1348,16 +1403,26 @@ sub cvswebMarkup($$$) {
 	    $input{only_with_tag};
     }
     print "</td></tr></table>";
-    my @content = <$filehandle>;
     my $url = download_url($fileurl, $revision, $mimetype);
     print "<HR noshade>";
     if ($mimetype =~ /^image/) {
 	print "<IMG SRC=\"$url$barequery\"><BR>";
     }
+    elsif ($mimetype =~ m%^application/pdf%) {
+	print "<EMBED SRC=\"$url$barequery\" WIDTH=\"100%\"><BR>";
+    }
     else {
 	print "<PRE>";
-	foreach (@content) {
-	    print spacedHtmlText($_);
+
+	# prefetch several lines
+	my @buf = head($filehandle);
+
+	my %d = scan_directives(@buf);
+
+	while (@buf || !eof($filehandle)) {
+	    $_ = @buf ? shift @buf : <$filehandle>;
+
+	    print spacedHtmlText($_, $d{'tabstop'});
 	}
 	print "</PRE>";
     }
@@ -1366,7 +1431,7 @@ sub cvswebMarkup($$$) {
 sub viewable($) {
     my ($mimetype) = @_;
 
-    $mimetype =~ m%^(text|image)/%;
+    $mimetype =~ m%^((text|image)/|application/pdf)% ;
 }
 
 ###############################
@@ -1464,6 +1529,7 @@ sub doDiff($$$$$$) {
 	if ($human_readable) {
 	    http_header();
 	    &human_readable_diff($fh, $rev2);
+	    close(GZIP) if ($gzip_open);
 	    exit;
 	}
 	else {
@@ -2133,40 +2199,42 @@ EOF
         foreach (@stickyvars) {
 	    print "<INPUT TYPE=HIDDEN NAME=\"$_\" VALUE=\"$input{$_}\">\n"
 		if (defined($input{$_})
-		    && ($input{$_} ne $DEFAULTVALUE{$_} && $input{$_} ne ""));
+		    && ((!defined($DEFAULTVALUE{$_})
+		         || $input{$_} ne $DEFAULTVALUE{$_})
+		        && $input{$_} ne ""));
 	}
-	print "Diffs between \n";
+	print "<TABLE><TR>\n";
+	print "<TD align=right>Diffs between \n";
 	print "<SELECT NAME=\"r1\">\n";
 	print "<OPTION VALUE=\"text\" SELECTED>Use Text Field\n";
 	print $sel;
 	print "</SELECT>\n";
 	$diffrev = $revdisplayorder[$#revdisplayorder];
 	$diffrev = $input{"r1"} if (defined($input{"r1"}));
-	print "<INPUT TYPE=\"TEXT\" SIZE=\"$inputTextSize\" NAME=\"tr1\" VALUE=\"$diffrev\" onChange='document.diff_select.r1.selectedIndex=0'>\n";
-	print " and \n";
+	print "<INPUT TYPE=\"TEXT\" SIZE=\"$inputTextSize\" NAME=\"tr1\" VALUE=\"$diffrev\" onChange='document.diff_select.r1.selectedIndex=0'></TD>";
+	print "<TD><BR></TD></TR>\n";
+	print "<TR><TD align=right>and \n";
 	print "<SELECT NAME=\"r2\">\n";
 	print "<OPTION VALUE=\"text\" SELECTED>Use Text Field\n";
 	print $sel;
 	print "</SELECT>\n";
 	$diffrev = $revdisplayorder[0];
 	$diffrev = $input{"r2"} if (defined($input{"r2"}));
-	print "<INPUT TYPE=\"TEXT\" SIZE=\"$inputTextSize\" NAME=\"tr2\" VALUE=\"$diffrev\" onChange='document.diff_select.r2.selectedIndex=0'>\n";
-        print "<BR>Type of Diff should be a&nbsp;";
-	printDiffSelect(0);
-	print "<INPUT TYPE=SUBMIT VALUE=\"  Get Diffs  \">\n";
+	print "<INPUT TYPE=\"TEXT\" SIZE=\"$inputTextSize\" NAME=\"tr2\" VALUE=\"$diffrev\" onChange='document.diff_select.r2.selectedIndex=0'></TD>";
+	print "<TD><INPUT TYPE=SUBMIT VALUE=\"  Get Diffs  \"></TD>\n";
 	print "</FORM>\n";
+	print "</TR></TABLE>\n";
 	print "<HR noshade>\n";
+	print "<TABLE>";
+	print "<FORM METHOD=\"GET\" ACTION=\"$scriptwhere\">\n";
+        print "<TR><TD align=right>Preferred Diff type:</TD>";
+        print "<TD>";
+	printDiffSelect($use_java_script);
+	print "</TD><TD></TD></TR>\n";
         if (@branchnames) {
+	    print "<TR><TD align=right>View only Branch:</TD>";
+	    print "<TD>";
 	    print "<A name=branch></A>\n";
-	    print "<FORM METHOD=\"GET\" ACTION=\"$scriptwhere\">\n";
-	    foreach (@stickyvars) {
-		next if ($_ eq "only_with_tag");
-		next if ($_ eq "logsort");
-		print "<INPUT TYPE=HIDDEN NAME=\"$_\" VALUE=\"$input{$_}\">\n"
-		    if (defined($input{$_}) && $input{$_} ne $DEFAULTVALUE{$_}
-			&& $input{$_} ne "");
-	    }
-	    print "View only Branch: \n";
 	    print "<SELECT NAME=\"only_with_tag\"";
 	    print " onchange=\"submit()\"" if ($use_java_script);
 	    print ">\n";
@@ -2180,29 +2248,31 @@ EOF
 			&& $input{"only_with_tag"} eq $_);
 		print ">${_}\n";
 	    }
-	    print "</SELECT>\n";
-	    print "<INPUT TYPE=SUBMIT VALUE=\"  View Branch  \">\n";
-	    print "</FORM>\n";
+	    print "</SELECT></TD><TD></TD></TR>\n";
 	}
-	print "<A name=logsort></A>\n";
-	print "<FORM METHOD=\"GET\" ACTION=\"$scriptwhere\">\n";
 	foreach (@stickyvars) {
+	    next if ($_ eq "f");
 	    next if ($_ eq "only_with_tag");
 	    next if ($_ eq "logsort");
 	    print "<INPUT TYPE=HIDDEN NAME=\"$_\" VALUE=\"$input{$_}\">\n"
-		if (defined($input{$_}) && $input{$_} ne $DEFAULTVALUE{$_}
+		if (defined($input{$_})
+		    && (!defined($DEFAULTVALUE{$_})
+		        || $input{$_} ne $DEFAULTVALUE{$_})
 		    && $input{$_} ne "");
 	}
-	print "Sort log by: \n";
-	print "<SELECT NAME=\"logsort\"";
+	print "<TR><TD align=right>";
+	print "<A name=logsort></A>\n";
+	print "Sort log by:</TD>";
+	print "<TD><SELECT NAME=\"logsort\"";
 	print " onchange=\"submit()\"" if ($use_java_script);
 	print ">\n";
 	print "<OPTION VALUE=cvs",$logsort eq "cvs" ? " SELECTED" : "", ">Not sorted";
 	print "<OPTION VALUE=date",$logsort eq "date" ? " SELECTED" : "", ">Commit date";
 	print "<OPTION VALUE=rev",$logsort eq "rev" ? " SELECTED" : "", ">Revision";
-	print "</SELECT>\n";
-	print "<INPUT TYPE=SUBMIT VALUE=\"  Sort  \">\n";
+	print "</SELECT></TD>";
+	print "<TD><INPUT TYPE=SUBMIT VALUE=\"  Set  \"></TD>";
 	print "</FORM>\n";
+	print "</TR></TABLE>";
         print &html_footer;
 	print "</BODY></HTML>\n";
 }
@@ -2242,7 +2312,7 @@ sub flush_diff_rows($$$$) {
 # human_readable_diff(String revision_to_return_to);
 ##
 sub human_readable_diff($){
-  my ($i,$difftxt, $where_nd, $filename, $pathname, $scriptwhere_nd);
+  my ($difftxt, $where_nd, $filename, $pathname, $scriptwhere_nd);
   my ($fh, $rev) = @_;
   my ($date1, $date2, $r1d, $r2d, $r1r, $r2r, $rev1, $rev2, $sym1, $sym2);
   my (@rightCol, @leftCol);
@@ -2296,8 +2366,14 @@ sub human_readable_diff($){
   # cascading style sheets because we've to set the
   # font and color for each row. anyone ...?
   ####
-  while (<$fh>) {
-      $difftxt = $_;
+
+  # prefetch several lines
+  my @buf = head($fh);
+
+  my %d = scan_directives(@buf);
+
+  while (@buf || !eof($fh)) {
+      $difftxt = @buf ? shift @buf : <$fh>;
 
       if ($difftxt =~ /^@@/) {
 	  ($oldline,$newline,$funname) = $difftxt =~ /@@ \-([0-9]+).*\+([0-9]+).*@@(.*)/;
@@ -2314,7 +2390,7 @@ sub human_readable_diff($){
       }
       else {
 	  ($diffcode,$rest) = $difftxt =~ /^([-+ ])(.*)/;
-	  $_ = spacedHtmlText ($rest);
+	  $_ = spacedHtmlText($rest, $d{'tabstop'});
 
 	  # Add fontface, size
 	  $_ = "$fs&nbsp;$_$fe";
@@ -2398,7 +2474,7 @@ sub navigateHeader($$$$$) {
     $swhere = urlencode($filename) if ($swhere eq "");
     print "<\!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\">";
     print "<HTML>\n<HEAD>\n";
-    print '<!-- CVSweb $zRevision: 1.94 $  $Revision: 1.50 $ -->';
+    print '<!-- CVSweb $zRevision: 1.101 $  $Revision: 1.51 $ -->';
     print "\n<TITLE>$path$filename - $title - $rev</TITLE></HEAD>\n";
     print  "<BODY BGCOLOR=\"$backcolor\">\n";
     print "<table width=\"100%\" border=0 cellspacing=0 cellpadding=1 bgcolor=\"$navigationHeaderColor\">";
@@ -2699,7 +2775,7 @@ sub http_header(;$) {
     my $content_type = shift || "text/html";
     if (defined($moddate)) {
 	if ($is_mod_perl) {
-	    Apache->request->header_out(Last_modified => scalar gmtime($moddate) . " GMT");
+	    Apache->request->header_out("Last-Modified" => scalar gmtime($moddate) . " GMT");
 	}
 	else {
 	    print "Last-Modified: " . scalar gmtime($moddate) . " GMT\r\n";
@@ -2712,8 +2788,7 @@ sub http_header(;$) {
 	    print "Content-type: $content_type\r\n";
     }
     if ($allow_compress && $maycompress) {
-	my $fh = do {local(*FH);};
-	if (defined($GZIPBIN) && open($fh, "|$GZIPBIN -1 -c")) {
+	if ($has_zlib || (defined($GZIPBIN) && open(GZIP, "|$GZIPBIN -1 -c"))) {
 	    if ($is_mod_perl) {
 		    Apache->request->content_encoding("x-gzip");
 		    Apache->request->header_out(Vary => "Accept-Encoding");
@@ -2725,7 +2800,11 @@ sub http_header(;$) {
 		    print "\r\n"; # Close headers
 	    }
 	    $| = 1; $| = 0; # Flush header output
-	    select ($fh);
+	    if ($has_zlib) {
+	    	tie *GZIP, __PACKAGE__, \*STDOUT;
+	    }
+	    select(GZIP);
+	    $gzip_open = 1;
 #	    print "<!-- gzipped -->" if ($content_type eq "text/html");
 	}
 	else {
@@ -2750,7 +2829,7 @@ sub http_header(;$) {
 
 sub html_header($) {
     my ($title) = @_;
-    my $version = '$zRevision: 1.94 $  $Revision: 1.50 $'; #'
+    my $version = '$zRevision: 1.101 $  $Revision: 1.51 $'; #'
     http_header();
 
     (my $header = &cgi_style::html_header) =~ s/^.*\n\n//; # remove HTTP response header
@@ -2794,4 +2873,72 @@ sub forbidden_module($) {
     }
 
     return 0;
+}
+
+# implement a gzipped file handle via the Compress:Zlib compression
+# library.
+
+sub MAGIC1() { 0x1f }
+sub MAGIC2() { 0x8b }
+sub OSCODE() { 3    }
+
+sub TIEHANDLE {
+	my ($class, $out) = @_;
+	my ($d) = Compress::Zlib::deflateInit(-Level => Compress::Zlib::Z_BEST_COMPRESSION(),
+		-WindowBits => -Compress::Zlib::MAX_WBITS()) or return undef;
+	my ($o) = {
+		handle => $out,
+		dh => $d,
+		crc => 0,
+		len => 0,
+	};
+	my ($header) = pack("c10", MAGIC1, MAGIC2, Compress::Zlib::Z_DEFLATED(), 0,0,0,0,0,0, OSCODE);
+	print {$o->{handle}} $header;
+	return bless($o, $class);
+}
+
+sub PRINT {
+	my ($o) = shift;
+	my ($buf) = join(defined $, ? $, : "",@_);
+	my ($len) = length($buf);
+	my ($compressed, $status) = $o->{dh}->deflate($buf);
+	print {$o->{handle}} $compressed if defined($compressed);
+	$o->{crc} = Compress::Zlib::crc32($buf, $o->{crc});
+	$o->{len} += $len;
+	return $len;
+}
+
+sub PRINTF {
+	my ($o) = shift;
+	my ($fmt) = shift;
+	my ($buf) = sprintf($fmt, @_);
+	my ($len) = length($buf);
+	my ($compressed, $status) = $o->{dh}->deflate($buf);
+	print {$o->{handle}} $compressed if defined($compressed);
+	$o->{crc} = Compress::Zlib::crc32($buf, $o->{crc});
+	$o->{len} += $len;
+	return $len;
+}
+
+sub WRITE {
+	my ($o, $buf, $len, $off) = @_;
+	my ($compressed, $status) = $o->{dh}->deflate(substr($buf, 0, $len));
+	print {$o->{handle}} $compressed if defined($compressed);
+	$o->{crc} = Compress::Zlib::crc32(substr($buf, 0, $len), $o->{crc});
+	$o->{len} += $len;
+	return $len;
+}
+
+sub CLOSE {
+	my ($o) = @_;
+	return if !defined( $o->{dh});
+	my ($buf) = $o->{dh}->flush();
+	$buf .= pack("V V", $o->{crc}, $o->{len});
+	print {$o->{handle}} $buf;
+	undef $o->{dh};
+}
+
+sub DESTROY {
+	my ($o) = @_;
+	CLOSE($o);
 }
