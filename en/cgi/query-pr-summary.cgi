@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: query-pr-summary.cgi,v 1.22 1999-02-26 22:05:58 billf Exp $
+# $Id: query-pr-summary.cgi,v 1.23 1999-07-20 14:26:21 sheldonh Exp $
 
 $html_mode     = 1 if $ENV{'DOCUMENT_ROOT'};
 $self_ref      = $ENV{'SCRIPT_NAME'};
@@ -10,6 +10,7 @@ $ENV{'PATH'}   = '/bin:/usr/bin:/usr/sbin:/sbin:/usr/local/bin';
 $project       = "FreeBSD";
 $mail_prefix   = "freebsd-";
 $mail_unass    = "freebsd-bugs";
+$closed_too    = 0;
 
 %statemap = (
 	"open",		"o",
@@ -59,6 +60,8 @@ if ($html_mode) {
 		$query_args   = '--restricted ';
 	}
 }
+
+$closed_too = 1 if $input{'state'} eq 'closed' || $input{'closedtoo'};
 
 #------------------------------------------------------------------------
 
@@ -203,7 +206,7 @@ sub trailer_info {
 #       [--list-categories] [--list-responsible] [--list-submitters]
 #       [--text=text] [--multitext=mtext] [PR] [PR]...
 
-$query_args .= " --skip-closed" unless $input{"closedtoo"};
+$query_args .= " --skip-closed" unless $closed_too;
 
 # Only read the appropriate PR's.
 foreach ("category", "originator", "priority", "class", "responsible",
