@@ -4,7 +4,7 @@
 # Build the FreeBSD Dutch Handbook.
 #
 
-MAINTAINER=remko@elvandar.org
+MAINTAINER=remko@FreeBSD.org
 
 DOC?= book
 
