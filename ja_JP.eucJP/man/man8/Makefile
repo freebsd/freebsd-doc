@@ -94,6 +94,7 @@ MAN8 =	IPXrouted.8\
 	kernbb.8\
 	keyserv.8\
 	kgmon.8\
+	kgzip.8\
 	kldconfig.8\
 	kldload.8\
 	kldstat.8\
