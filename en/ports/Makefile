@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/ports/Makefile,v 1.25 1999/09/06 07:02:48 peter Exp $
+# $FreeBSD: www/en/ports/Makefile,v 1.26 1999/09/19 09:39:23 wosch Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -53,7 +53,7 @@ packages.exists: ${cvsindex} ${cvsy2k}
 Makefile.gen: index.sgml .NOTMAIN
 	echo DOCS= *.sgml > Makefile.gen
 
-index.sgml: ${INDEX} ${Y2K} packages.exists portindex ports.inc .NOTMAIN
+index.sgml: ${INDEX} ${Y2K} categories packages.exists portindex ports.inc .NOTMAIN
 	rm -f *.sgml
 	${PORTINDEX} ${INDEX} ${Y2K}
 
