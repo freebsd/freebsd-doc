@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp 
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.8 1999-12-25 13:17:36 wosch Exp $
+# $Id: man.cgi,v 1.9 1999-12-25 13:21:05 wosch Exp $
 
 #use Data::Dumper;
 
@@ -255,7 +255,7 @@ $sections = join("|", @sections);		# sections regexp
 # mailto - Author
 # webmaster - who run this service
 $mailto = 'wosch@FreeBSD.org';
-$mailtoURL = 'http://www.de.freebsd.org/~wosch/';
+$mailtoURL = 'http://wolfram.schneider.org';
 $mailtoURL = "mailto:$mailto" if !$mailtoURL;
 $webmaster = $mailto;
 $webmasterURL = $mailtoURL;
@@ -745,7 +745,7 @@ Please direct questions about this server to
 URL:  <A HREF="$BASE" target=_parent>$www{'home'}$BASE</a><br>
 ETX
 
-    print q{$Date: 1999-12-25 13:17:36 $ $Revision: 1.8 $};
+    print q{$Date: 1999-12-25 13:21:05 $ $Revision: 1.9 $};
     print "<br>\n";
     print "</BODY>\n</HTML>\n";
     0;
