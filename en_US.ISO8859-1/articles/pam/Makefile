@@ -9,12 +9,15 @@ INSTALL_ONLY_COMPRESSED?=
 
 JADEFLAGS+=	-V %generate-article-toc%
 
-SRCS= article.sgml pam_app.c
+SRCS= article.sgml pam_app.c pam_module.c
 
-CLEANFILES+= pam_app.c
+CLEANFILES+= pam_app.c pam_module.c
 
 pam_app.c: su.c
-	perl -ne 'print unless m|^[/ ]\*|' su.c >${.TARGET}
+	sed -e '/^[\/ ]\*/d' ${.ALLSRC} >${.TARGET}
+
+pam_module.c: pam_unix.c
+	sed -e '/^[\/ ]\*/d' ${.ALLSRC} >${.TARGET}
 
 DOC_PREFIX?= ${.CURDIR}/../../..
 
