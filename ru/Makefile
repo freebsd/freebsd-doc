@@ -2,9 +2,9 @@
 # The FreeBSD Russian Documentation Project
 #
 # $FreeBSD$
-# $FreeBSDru: frdp/www/ru/Makefile,v 1.27 2003/10/22 16:55:50 andy Exp $
+# $FreeBSDru: frdp/www/ru/Makefile,v 1.29 2003/11/27 14:01:07 den Exp $
 #
-# Original revision: 1.98
+# Original revision: 1.102
 #
 
 .if exists(Makefile.conf)
@@ -86,13 +86,6 @@ WEBDIR?=	data/ru
 DATA+=		index.html
 CLEANFILES+=	index.html
 
-index.html: index.xsl news/news.xml news/press.xml includes.xsl news/includes.xsl ../en/security/advisories.xml
-	${XSLTPROC} ${XSLTPROCOPTS} -o ${.TARGET} \
-		${.CURDIR}/index.xsl ${.CURDIR}/news/news.xml
-.if !defined(NO_TIDY)
-	-${TIDY} ${TIDYOPTS} ${.TARGET}
-.endif
-
 WEBCHECK?=     ${PREFIX}/bin/webcheck
 WEBCHECKOPTS?= -ab ${WEBCHECKFLAGS}
 WEBCHECKDIR?=  /webcheck
@@ -104,3 +97,15 @@ webcheck:
 	${WEBCHECK} ${WEBCHECKOPTS} -o ${WEBCHECKINSTALLDIR} ${WEBCHECKURL}
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
+
+index.html: index.xsl ${XML_INCLUDES}\
+		${XML_NEWS_INCLUDES} ${XML_NEWS_NEWS}\
+		${XML_MIRRORS} ${XML_ADVISORIES}
+	${XSLTPROC} ${XSLTPROCOPTS} \
+		-o $@ \
+		--param mirrors.xml "'${XML_MIRRORS}'" \
+		--param advisories.xml "'${XML_ADVISORIES}'" \
+		${.CURDIR}/index.xsl ${XML_NEWS_NEWS}
+.if !defined(NO_TIDY)
+	-${TIDY} ${TIDYOPTS} ${.TARGET}
+.endif
