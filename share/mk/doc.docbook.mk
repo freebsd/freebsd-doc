@@ -304,7 +304,7 @@ CLEANFILES+= ${DOC}.aux ${DOC}.dvi ${DOC}.log ${DOC}.tex-ps ${DOC}.tex
 
 .elif ${_cf} == "pdf"
 CLEANFILES+= ${DOC}.aux ${DOC}.dvi ${DOC}.log ${DOC}.out ${DOC}.tex-pdf \
-		${DOC}.tex
+		${DOC}.tex ${DOC}.ps
 
 .elif ${_cf} == "pdb"
 _docs+= ${.CURDIR:T}.pdb
