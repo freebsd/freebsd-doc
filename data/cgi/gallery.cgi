@@ -3,7 +3,7 @@
 # A CGI form processor for FreeBSD Gallery submissions
 # 
 # John Fieber <jfieber@indiana.edu>
-# August 9 1996
+# $Id: gallery.cgi,v 1.3 1996-10-06 14:14:27 jfieber Exp $
 ##################################################################
 
 $curator = "jfieber@indiana.edu";
@@ -13,14 +13,14 @@ $subject = "Another gallery submission...";
 require 'cgi-lib.pl';
 &ReadParse;
 
-#$d_date = "$Date: 1996-10-01 19:46:14 $";
+$hsty_date = "\$Date: 1996-10-06 14:14:27 $";
 #$h_base = "..";
 #$d_author = "
 require 'cgi-style.pl';
 
 # Construct the gallery entry in HTML form
 $entry = "<li><a href=\"$in{'url'}\"><strong>$in{'organization'}</strong> " .
-    "-- $in{'description'}</a></li>";
+    "-- $in{'description'}</a> &i.new;</li>";
 
 # Try and figure out where the person came from so we can provide
 # links back to the correct place.
@@ -83,7 +83,7 @@ If anything is wrong, use your
 browser's <em>back</em> button and correct it.
 If everything is okay, press the <em>submit</em> button
 below.</p>
-<p>Contact person: $in{'contact'}</p>
+<p>Contact person: <strong>$in{'contact'}</strong></p>
 <hr><h2>$in{'category'}</h2>
 <ul>
 $entry
@@ -104,8 +104,8 @@ $entry
 
 # And this is where we thank them for submitting an entry.
 $formc = &html_header("Thank You!") .
-"<P>Please allow a few days for your entry to be added
-to the Gallery.</p>
+"<P>Thank you for your entry!  Please allow a few days for your
+entry to be added to the Gallery.</p>
 <p>$return</p>
 " . &html_footer();
 
@@ -118,9 +118,8 @@ elsif ($in{'action'} eq "submit") {
 #    close(STDOUT);
 
     open(M, "| mail -s \"$subject\" $curator");
-    print M "$in{'contact'} submitted the following to be added under\n";
-    print M "\"$in{'category'}\" in the gallery:\n\n";
-    print M "<!-- from $in{'contact'} on $timestamp -->\n";
+    print M "\"$in{'category'}\" gallery entry:\n\n";
+    print M "<!-- from $in{'contact'} ($ENV{'REMOTE_HOST'}) on $timestamp -->\n";
     print M "$entry\n";
     close(M);
 }
