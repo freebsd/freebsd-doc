@@ -1,4 +1,4 @@
-#	$Id: Makefile,v 1.14 1999-05-06 15:15:19 motoyuki Exp $
+#	$Id: Makefile,v 1.15 1999-05-27 08:58:19 wosch Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.22
 
@@ -49,7 +49,11 @@ packages.exists:
 packages.exists: ${cvsindex} ${cvsy2k}
 .endif
 .if ${hostname} == "hub.freebsd.org" || ${hostname} == "freefall.freebsd.org"
+.if  exists(${.CURDIR}/../../en/ports/packages.exists)
+	cp ${.CURDIR}/../../en/ports/${.TARGET} .
+.else
 	sh ${.CURDIR}/../../en/ports/packages > ${.TARGET}
+.endif
 .else
 	touch ${.TARGET}
 .endif
