@@ -1,5 +1,5 @@
 #
-# $FreeBSD: doc/share/mk/doc.install.mk,v 1.2 1999/09/06 06:53:39 peter Exp $
+# $FreeBSD: doc/share/mk/doc.install.mk,v 1.3 1999/09/09 17:11:28 wosch Exp $
 #
 #
 # This include file <doc.install.mk> provides variables defining the default
@@ -30,7 +30,7 @@
 #			Should accept a list of files to install
 #			followed by the directory to install into.
 #
-#	INSTALL_FLAGS	Flags to pass to the default INSTALL_DOCS'
+#	INSTALL_FLAGS	Flags to pass to the default INSTALL_DOCS
 #			install command.  Useful options are [CdDp].
 #			See install(1) for more information.
 #
@@ -47,14 +47,11 @@
 #			overriden by setting:
 #
 #	DOCGRP_OVERRIDE Override the use of primary group when the user
-#			installing is not root.  Sets GOCGRP to this
+#			installing is not root.  Sets DOCGRP to this
 #			instead.
 #
 #	DOCMODE		Mode of the documents when installed.  Defaults
 #			to 444.  See chmod(1).
-#
-#	DOCDIR		Installation directory.  Defaults to
-#			/usr/share/doc
 #
 #	PACKAGES	Directory in which to put packages.  Defaults to
 #			the packages directory under DOC_PREFIX, if it
