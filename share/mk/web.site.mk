@@ -1,5 +1,5 @@
 # bsd.web.mk
-# $FreeBSD: www/share/mk/web.site.mk,v 1.60 2004/04/12 11:52:38 phantom Exp $
+# $FreeBSD: www/share/mk/web.site.mk,v 1.61 2004/06/27 06:22:31 hrs Exp $
 
 #
 # Build and install a web site.
@@ -36,6 +36,9 @@ LN?=		/bin/ln
 MKDIR?=		/bin/mkdir
 MV?=		/bin/mv
 PERL?=		/usr/bin/perl5
+.if !exists(${PERL}) && exists(/usr/local/bin/perl5)
+PERL=		/usr/local/bin/perl5
+.endif
 RM?=		/bin/rm
 SED?=		/usr/bin/sed
 SH?=		/bin/sh
