@@ -1,5 +1,5 @@
 #!/usr/bin/perl -T
-# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.27 2001/11/07 16:32:13 sobomax Exp $
+# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.28 2002/08/04 22:24:29 wosch Exp $
 
 $ENV{'PATH'} = "/bin:/usr/bin:/usr/sbin:/sbin:/usr/local/bin";
 
@@ -49,7 +49,7 @@ if ($pr =~ /(\d+)/) {
 
 $pr = int($pr); 	# numeralize: "0123" -> 123
 
-if ($pr < 1 || $pr > 99999) {
+if ($pr < 1 || $pr > 499999) {
     print &html_header("FreeBSD Problem Report");
     print "<p>Invalid problem report number: $pr</p>\n";
     print &html_footer;
