@@ -1,10 +1,10 @@
-#	$Id: Makefile,v 1.15 1998-08-16 13:52:19 wosch Exp $
+#	$Id: Makefile,v 1.16 1998-08-25 00:00:34 wosch Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
 .endif
 
-PORTINDEX=	perl ./portindex
+PORTINDEX=	perl ${.CURDIR}/portindex
 INDEX=		INDEX
 PINDEX=		ports/${INDEX}
 
@@ -27,7 +27,7 @@ hostname!= hostname
 
 packages.exists: ${cvsindex}
 .if ${hostname} == "hub.freebsd.org" || ${hostname} == "freefall.freebsd.org"
-	./packages > ${.TARGET}
+	sh ${.CURDIR}/packages > ${.TARGET}
 .else
 	touch ${.TARGET}
 .endif
