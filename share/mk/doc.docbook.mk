@@ -143,6 +143,7 @@ XSLTPROC?=	${PREFIX}/bin/xsltproc
 XSLHTML?=	${DOC_PREFIX}/share/xsl/freebsd-html.xsl
 XSLHTMLCHUNK?=	${DOC_PREFIX}/share/xsl/freebsd-html-chunk.xsl
 XSLFO?=		${DOC_PREFIX}/share/xsl/freebsd-fo.xsl
+INDEXREPORTSCRIPT= ${DOC_PREFIX}/share/misc/indexreport.pl
 
 IMAGES_LIB?=
 
@@ -686,6 +687,11 @@ spellcheck:
 	@${HTML2TXT} ${HTML2TXTOPTS} ${.CURDIR}/${_entry} | ${ISPELL} ${ISPELLOPTS}
 .endfor
 
+indexreport:
+.for _entry in ${SRCS:M*.sgml}
+	@echo "indexreport ${_entry}"
+	@${PERL} ${INDEXREPORTSCRIPT} ${.CURDIR}/${_entry}
+.endfor
 
 #
 # Build a list of install-format targets to be installed. These will be
