@@ -30,6 +30,7 @@ CGIMODE?=	775
 CP?=		/bin/cp
 CVS?=		/usr/bin/cvs
 ECHO_CMD?=	echo
+FIND?=		/usr/bin/find
 SETENV?=	/usr/bin/env
 LN?=		/bin/ln
 MKDIR?=		/bin/mkdir
@@ -185,7 +186,6 @@ ORPHANS:=	${ORPHANS:N*.sgml}
 	-${TIDY} ${TIDYOPTS} ${.TARGET}
 .endif
 
-
 ##################################################################
 # Special Targets
 
@@ -208,6 +208,41 @@ spellcheck:
 webcheck:
 	@[ -d ${WEBCHECKINSTALLDIR} ] || ${MKDIR} ${WEBCHECKINSTALLDIR}
 	${WEBCHECK} ${WEBCHECKOPTS} -o ${WEBCHECKINSTALLDIR} ${WEBCHECKURL}
+
+#
+# Check if all directories and files in current directory are listed in
+# Makefile as processing source.  If anything not listed is found, then
+# user is warned about (it can be forgotten file or directory).
+#
+.if make(checkmissing)
+_DIREXCL=	! -name CVS
+.for entry in ${SUBDIR}
+_DIREXCL+=	! -name ${entry}
+.endfor
+MISSDIRS!=	${FIND} ./ -type d ${_DIREXCL} -maxdepth 1 | ${SED} "s%./%%g"
+
+_FILEEXCL=	! -name Makefile\* ! -name includes.\*
+.for entry in ${DOCS} ${DATA} ${CGI}
+_FILEEXCL+=	! -name ${entry}
+.endfor
+MISSFILES!=	${FIND} ./ -type f ${_FILEEXCL} -maxdepth 1 | ${SED} "s%./%%g"
+
+checkmissing:	_PROGSUBDIR
+.if !empty(MISSDIRS)
+	@${ECHO_CMD} -n "Directories not listed in SUBDIR: "
+.for entry in ${MISSDIRS}
+	@${ECHO_CMD} -n "${entry} "
+.endfor
+	@${ECHO_CMD}
+.endif
+.if !empty(MISSFILES)
+	@${ECHO_CMD} -n "Files not listed in DOCS/DATA/CGI: "
+.for entry in ${MISSFILES}
+	@${ECHO_CMD} -n "${entry} "
+.endfor
+	@${ECHO_CMD}
+.endif
+.endif
 
 ##################################################################
 # Main Targets
