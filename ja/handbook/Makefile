@@ -1,5 +1,5 @@
 #
-# $Id: Makefile,v 1.1 1999-05-03 14:37:25 kuriyama Exp $
+# $Id: Makefile,v 1.2 1999-05-11 14:26:25 wosch Exp $
 # Original Revision:	1.1
 #
 # Build the FreeBSD Handbook *outside* of the www tree, and install it
@@ -16,4 +16,4 @@
 #
 
 all install clean:
-	(cd ../../../doc/ja/handbook; make FORMATS=html-split DOC_PREFIX=../../../doc DESTDIR=${DESTDIR} DOCDIR=/data VOLUME=handbook ${.TARGET})
+	(cd ../../../doc/ja/handbook; make FORMATS=html-split DOC_PREFIX=../../../doc DESTDIR=${DESTDIR} DOCDIR=/data VOLUME=ja/handbook ${.TARGET})
