@@ -1,4 +1,4 @@
-# $Id: cgi-style.pl,v 1.3 1996-09-29 01:40:53 jfieber Exp $
+# $Id: cgi-style.pl,v 1.4 1996-09-29 02:19:27 jfieber Exp $
 #
 # Perl routines to encapsulate various elements of HTML page style.
 
@@ -10,10 +10,10 @@ $timestamp = "$mo-$md-$yr";
 # Colors for the body
 $t_body = "<body text=\"#000000\" bgcolor=\"#ffffff\">";
 
-if ($hsty_base eq "") { 
+if (!defined($hsty_base)) { 
     $hsty_base = "..";
 }
-if ($hsty_author eq "") {
+if (!defined($hsty_author)) {
     $hsty_author = "<a href=\"$hsty_base/mailto.html\">www\@freebsd.org</a>";
 }
 
