@@ -20,8 +20,9 @@ href="ftp://ftp.freebsd.org/pub/FreeBSD/packages-2.2.2/221upgrade-97.07.21.tgz">
 to 2.2-stable upgrade kit</a> (last changed: July 21, 1997); if you are
 a 2.2.2-release user, please install the <a
 href="ftp://ftp.freebsd.org/pub/FreeBSD/packages-2.2.2/222upgrade-97.07.21.tgz">2.2.2
-to 2.2-stable upgrade kit</a> (last changed: July 21, 1997).  This
-will enable you to use all the ports listed here.  Note that it will
+to 2.2-stable upgrade kit</a> (last changed: July 21, 1997).  (These
+are FreeBSD packages; please use pkg_add to install them.)  That
+should enable you to use all the ports listed here.  Note that it will
 only change just enough files to enable ports/packages to be used; for
 a full upgrade to 2.2-stable, please refer to the <a
 href="../handbook/synching.html">synchronizing your source tree</a>
