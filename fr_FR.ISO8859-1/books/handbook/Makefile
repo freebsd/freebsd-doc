@@ -2,7 +2,6 @@
 # The FreeBSD French Documentation Project
 #
 # $FreeBSD$
-# $Id: Makefile,v 1.15 2003-11-20 20:02:10 blackend Exp $
 # Original revision: 1.64
 #
 # Build the FreeBSD Handbook.
@@ -101,6 +100,11 @@ IMAGES_EN+= install/adduser3.scr
 IMAGES_EN+= install/mainexit.scr
 IMAGES+= install/disk-layout.eps
 IMAGES_EN+= install/edit-inetd-conf.scr
+IMAGES_EN+= install/mta-main.scr
+IMAGES_EN+= install/net-config-menu1.scr
+IMAGES_EN+= install/net-config-menu2.scr
+IMAGES_EN+= install/ntp-config.scr
+IMAGES_EN+= install/routed.scr
 
 IMAGES+= install/example-dir1.eps
 IMAGES+= install/example-dir2.eps
