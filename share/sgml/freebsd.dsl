@@ -1,4 +1,4 @@
-<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.30 2001/05/22 03:32:17 dd Exp $ -->
+<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.31 2001/06/02 23:02:13 dd Exp $ -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
 <!ENTITY % output.html		"IGNORE">
@@ -73,6 +73,11 @@
              redefine this as necessary. -->
         (define ($email-footer$)
           (empty-sosofo))
+
+	(define html-index-filename
+	  (if nochunks
+	    "html.index"
+	    "html-split.index"))
 
         <!-- This code handles displaying $email-footer$ at the bottom
              of each page.
