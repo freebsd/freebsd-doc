@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/share/sgml/includes.misc.xsl,v 1.14 2004/12/30 17:53:44 hrs Exp $ -->
+<!-- $FreeBSD: www/share/sgml/includes.misc.xsl,v 1.15 2004/12/31 07:24:05 hrs Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -11,6 +11,9 @@
   <xsl:variable name="java" select="'Java&#8482;'"/>
   <xsl:variable name="jdk" select="'JDK&#8482;'"/>
   <xsl:variable name="posix" select="'POSIX&#174;'"/>
+
+  <!-- URLS for downloading FreeBSD -->
+  <xsl:variable name="url.ftp" select="'ftp://ftp.FreeBSD.org/pub/FreeBSD'"/>
 
   <!-- for security advisories -->
   <xsl:variable name="ftpbase"
