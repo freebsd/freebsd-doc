@@ -232,6 +232,26 @@
 	    (literal "``")
 	    (process-children)
 	    (literal "''")))
+
+	;; The special FreeBSD version of the trademark tag handling.
+	;; This function was more or less taken from the DocBook DSSSL
+	;; stylesheets by Norman Walsh.
+	(element trademark
+	  (if (show-tm-symbol? (current-node))
+	      (make sequence
+		($charseq$)	
+		(cond
+		 ((equal? (attribute-string "class") (normalize "copyright"))
+		  (make entity-ref name: "copy"))
+		 ((equal? (attribute-string "class") (normalize "registered"))
+		  (make entity-ref name: "reg"))
+		 ((equal? (attribute-string "class") (normalize "service"))
+		  (make element gi: "SUP"
+			(literal "SM")))
+		 (else
+		  (make entity-ref name: "#8482"))))
+	      ($charseq$)))
+
       ]]>
 
       <!-- HTML with images  ............................................ -->
@@ -669,6 +689,29 @@
               scale: graphic-scale
               display?: display
               display-alignment: graphic-align)))
+
+	;; The special FreeBSD version of the trademark tag handling.
+	;; This function was more or less taken from the DocBook DSSSL
+	;; stylesheets by Norman Walsh.
+	(element trademark 
+	  (if (show-tm-symbol? (current-node))
+	      (make sequence
+		($charseq$)
+		(cond
+		 ((equal? (attribute-string "class") (normalize "copyright"))
+		  (literal "\copyright-sign;"))
+		 ((equal? (attribute-string "class") (normalize "registered"))
+		  (literal "\registered-sign;"))
+		 ((equal? (attribute-string "class") (normalize "service"))
+		  ($ss-seq$ + (literal "SM")))
+		 (else
+		  (literal "\trade-mark-sign;"))))
+	      ($charseq$)))
+
+	;; Make the trademark functions think print output has chunks.
+	(define (chunk-parent nd)
+	  (sgml-root-element nd))
+
       ]]>
 
       <![ %output.print.pdf; [
@@ -937,6 +980,47 @@
  		  attributes: attrlist
  		  target)
 	    target))
+
+      ;; Standard boolean XNOR (NOT Exclusive OR).
+      (define (xnor x y)
+	(or (and x y)
+	    (and (not x) (not y))))
+
+      ;; Standard boolean XOR (Exclusive OR).
+      (define (xor x y)
+	(not (xnor x y)))
+
+      ;; Determine if a given node is in a title.
+      (define (is-in-title? node)
+	(has-ancestor-member? node (list (normalize "title"))))
+
+      ;; Number of references to a trademark before the current
+      ;; reference in each chunk.  Trademarks in title tags, and
+      ;; trademarks in normal text (actually just text that is not in
+      ;; title tags) are counted separately.
+      (define ($chunk-trademark-number$ trademark)
+	(let* ((trademarks (select-elements
+			    (descendants (chunk-parent trademark))
+			    (normalize "trademark"))))
+	  (let loop ((nl trademarks) (num 1))
+	    (if (node-list-empty? nl)
+		num
+		(if (node-list=? (node-list-first nl) trademark)
+		    num
+		    (if (and (string=? (data trademark)
+				       (data (node-list-first nl)))
+			     (xnor (is-in-title? trademark)
+				   (is-in-title? (node-list-first nl))))
+			(loop (node-list-rest nl) (+ num 1))
+			(loop (node-list-rest nl) num)))))))
+
+      ;; Determine if we should show a trademark symbol.  Either in
+      ;; first occurrence in the proper context, or if the role
+      ;; attribute is set to force.
+      (define (show-tm-symbol? trademark)
+	(or (= ($chunk-trademark-number$ trademark) 1)
+	    (equal? (attribute-string (normalize "role") trademark) "force")))
+
     </style-specification-body>
   </style-specification>
       
