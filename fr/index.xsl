@@ -1,8 +1,8 @@
-<!-- $FreeBSD: www/fr/index.xsl,v 1.2 2003/01/26 13:59:03 stephane Exp $ -->
+<!-- $FreeBSD: www/fr/index.xsl,v 1.3 2003/04/06 16:35:25 stephane Exp $ -->
 
 <!-- 
    The FreeBSD French Documentation Project
-   Original revision: 1.56
+   Original revision: 1.66
    
    Version francaise : Stephane Legrand <stephane@freebsd-fr.org>
 -->
@@ -13,7 +13,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/fr/index.xsl,v 1.2 2003/01/26 13:59:03 stephane Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/fr/index.xsl,v 1.3 2003/04/06 16:35:25 stephane Exp $'"/>
   <xsl:variable name="title" select="'Le Projet FreeBSD'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -75,8 +75,8 @@
 		  <option value="http://www3.br.FreeBSD.org/">Br&#233;sil/3</option>
 		  <option value="http://www.bg.FreeBSD.org/">Bulgarie</option>
 		  <option value="http://www.ca.FreeBSD.org/">Canada</option>
-        <!--
 		  <option value="http://www2.ca.FreeBSD.org/">Canada/2</option>
+		  <--
 		  <option value="http://www3.ca.FreeBSD.org/">Canada/3</option>
 		  -->
 		  <option value="http://www.cn.FreeBSD.org/">Chine</option>
@@ -214,6 +214,7 @@
 			      &#183; <a href="projects/newbies.html">Pour les d&#233;butants</a><br/>
 			      &#183; <a href="{$base}/doc/en_US.ISO8859-1/books/handbook/index.html">Manuel de R&#233;f&#233;rence</a><br/>
 			      &#183; <a href="{$base}/doc/en_US.ISO8859-1/books/faq/index.html">FAQ</a><br/>
+			      &#183; <a href="http://www.FreeBSD.org/cgi/man.cgi">Pages de manuel</a><br/>
 			      &#183; <a href="{$base}/docproj/index.html">Projet de Documentation</a><br/>
 			      &#183; <a href="docs.html">Plus...</a><br/>
 			    </small></p>
@@ -293,7 +294,8 @@
 	
 	      <p>FreeBSD est un syst&#232;me d'exploitation avanc&#233; pour
 		les architectures compatibles x86, DEC Alpha, IA-64, PC-98 et UltraSPARC.
-		Il est d&#233;riv&#233; de UNIX BSD, la version d'UNIX d&#233;velopp&#233; &#224;
+		Il est d&#233;riv&#233; de UNIX BSD, la version d'<xsl:value-of select="$unix"/> 
+		d&#233;velopp&#233; &#224;
 		l'Universit&#233; de Californie, Berkeley.
 		Il est d&#233;velopp&#233; et maintenu par
 		<a
@@ -326,14 +328,15 @@
 
 	      <p>La qualit&#233; de FreeBSD combin&#233;e avec le co&#251;t tr&#232;s bas et
 		les hautes performances des PC actuels font de FreeBSD une alternative
-		&#233;conomique aux stations de travail UNIX commerciales. Il est tr&#232;s bien
+		&#233;conomique aux stations de travail <xsl:value-of select="$unix"/> 
+		commerciales. Il est tr&#232;s bien
 		adapt&#233; &#224; un grand nombre <a href="{$base}/applications.html">d'applications</a>
 		aussi bien pour les serveurs que pour les postes individuels.</p>
 
 	      <h2><font color="#990000">Facile &#224; installer</font></h2>
 
 	      <p>FreeBSD peut s'installer depuis divers supports comme des
-		CD-ROM, des DVD-ROM, des disquettes, des bandes magn&#233;tiques, une partition MS-DOS ou, si
+		CD-ROM, des DVD-ROM, des disquettes, des bandes magn&#233;tiques, une partition MS-DOS&#174; ou, si
 		vous avez une connexion r&#233;seau, 
 		<i>directement</i> depuis un serveur FTP anonyme ou un serveur NFS. Tout ce dont vous avez besoin
 		est de 2 disquettes vierges de 1.44 Mo et de
@@ -558,7 +561,7 @@
 		<xsl:value-of select="$date"/></small></td>
 
 	    <td align="right"
-		valign="top"><small><a href="copyright/index.html">Copyright</a> (c) 1995-2003
+		valign="top"><small><a href="copyright/index.html">Infos l&#233;gales</a><br/> &#169; 1995-2003
 		Le Projet FreeBSD.<br/>
 		Tous droits r&#233;serv&#233;s.</small></td>
 	  </tr>
