@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/share/sgml/includes.misc.xsl,v 1.10 2004/05/25 01:19:50 hrs Exp $ -->
+<!-- $FreeBSD: www/share/sgml/includes.misc.xsl,v 1.11 2004/06/27 06:22:31 hrs Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -83,7 +83,7 @@
 
 	  <xsl:call-template name="html-list-advisories-putitems">
 	    <xsl:with-param name="items" select="document($advisories.xml)
-	      //advisory[$relname = string(following::release/name[1])]" />
+	      //notice[$relname = string(following::release/name[1])]" />
 	    <xsl:with-param name="prefix" select="$ftpbaseerrata" />
 	    <xsl:with-param name="prefixold" select="$ftpbaseerrata" />
 	  </xsl:call-template>
@@ -95,7 +95,7 @@
 
 	<xsl:call-template name="html-list-advisories-putitems">
 	  <xsl:with-param name="items" select="document($advisories.xml)
-	    //advisory[not(following::release/name[1])]" />
+	    //notice[not(following::release/name[1])]" />
 	  <xsl:with-param name="prefix" select="$ftpbaseerrata" />
 	  <xsl:with-param name="prefixold" select="$ftpbaseerrata" />
 	</xsl:call-template>
