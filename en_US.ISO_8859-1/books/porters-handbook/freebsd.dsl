@@ -1,4 +1,4 @@
-<!-- $FreeBSD: doc/en_US.ISO_8859-1/books/porter-handbook/freebsd.dsl,v 1.1 2000/04/22 23:47:26 nik Exp $ -->
+<!-- $FreeBSD: doc/en_US.ISO_8859-1/books/porters-handbook/freebsd.dsl,v 1.1 2000/05/09 00:30:11 nik Exp $ -->
 
 <!-- Local DSSSL file for the Porter's Handbook.  This is so we can include
      a link to the -ports mailing list at the bottom of the HTML files, 
@@ -26,6 +26,13 @@
                     attributes: (list (list "href" "mailto:doc@freebsd.org"))
                 (literal "doc@freebsd.org"))
 	      (literal ">."))) 
+
+	<!-- Convert " ... " to `` ... '' in the HTML output. -->
+	(element quote
+	  (make sequence
+	    (literal "``")
+	    (process-children)
+	    (literal "''")))
       ]]>
     </style-specification-body>
   </style-specification>
