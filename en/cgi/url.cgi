@@ -26,7 +26,7 @@
 #
 # url.cgi - make plain text URLs clickable
 #
-# $Id: url.cgi,v 1.15 1999-02-01 14:27:03 wosch Exp $
+# $Id: url.cgi,v 1.16 1999-02-27 01:59:48 fenner Exp $
 
 
 $hsty_base = '';
@@ -50,7 +50,11 @@ if ($file !~ m%^(http|ftp)://[a-z_\-0-9]+\.freebsd\.(com|org)%i) {
 
 my($cvsroot) = '/home/ncvs';
 $file =~ s%(http|ftp)://ftp.freebsd.org/pub/FreeBSD/FreeBSD-current/%%;
-print &short_html_header($file);
+if ($file =~ m%^ports/([\w-]+/\w[\w-+.]+)/pkg/DESCR%) {
+    print &html_header("Port description for $1");
+} else {
+    print &short_html_header($file);
+}
 
 if ($file =~ m%^ports/[\w-]+/\w[\w-+.]+/pkg/DESCR% && 
     -f "$cvsroot/$file,v") {
