@@ -1,4 +1,4 @@
-# $FreeBSD: www/fr/Makefile,v 1.2 2003/12/16 21:39:05 stephane Exp $
+# $FreeBSD: www/fr/Makefile,v 1.3 2004/02/29 13:20:40 stephane Exp $
 
 # The FreeBSD French Documentation Project
 # Original revision: 1.107
@@ -42,7 +42,7 @@ SUBDIR+= docproj
 SUBDIR+= news
 SUBDIR+= advocacy
 
-# SUBDIR+= events
+SUBDIR+= events
 SUBDIR+= FAQ
 SUBDIR+= handbook
 SUBDIR+= internal
