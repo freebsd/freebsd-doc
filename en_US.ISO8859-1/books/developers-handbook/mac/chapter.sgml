@@ -369,8 +369,123 @@
     </sect2>
   </sect1>
   
-  <sect1 id="mac-entry-point">
-    <title>Entry Point Framework</title>
+  <sect1 id="mac-policy-declaration">
+    <title>MAC Policy Declaration</title>
+    
+    <para>Modules may be declared using the
+      <function>MAC_POLICY_SET()</function> macro, which names the
+      policy, provides a reference to the MAC entry point vector,
+      provides load-time flags determining how the policy framework
+      should handle the policy, and optionally requests the
+      allocation of label state by the framework.</para>
+
+    <programlisting>static struct mac_policy_ops mac_<replaceable>policy</replaceable>_ops =
+{                                   
+        .mpo_destroy = mac_<replaceable>policy</replaceable>_destroy,
+        .mpo_init = mac_<replaceable>policy</replaceable>_init,
+        .mpo_init_bpfdesc_label = mac_<replaceable>policy</replaceable>_init_bpfdesc_label,  
+        .mpo_init_cred_label = mac_<replaceable>policy</replaceable>_init_label,
+/* ... */
+        .mpo_check_vnode_setutimes = mac_<replaceable>policy</replaceable>_check_vnode_setutimes,
+        .mpo_check_vnode_stat = mac_<replaceable>policy</replaceable>_check_vnode_stat,
+        .mpo_check_vnode_write = mac_<replaceable>policy</replaceable>_check_vnode_write,
+};</programlisting>
+      
+    <para>The MAC policy entry point vector,
+      <varname>mac_<replaceable>policy</replaceable>_ops</varname> in this example, associates
+      functions defined in the module with specific entry points. A
+      complete listing of available entry points and their
+      prototypes may be found in the MAC entry point reference
+      section.  Of specific interest during module registration are
+      the <symbol>.mpo_destroy</symbol> and <symbol>.mpo_init</symbol>
+      entry points. <symbol>.mpo_init</symbol> will be invoked once a
+      policy is successfully registered with the module framework
+      but prior to any other entry points becoming active. This
+      permits the policy to perform any policy-specific allocation
+      and initialization, such as initialization of any data or
+      locks.  <symbol>.mpo_destroy</symbol> will be invoked when a
+      policy module is unloaded to permit releasing of any allocated
+      memory and destruction of locks.  Currently, these two entry
+      points are invoked with the MAC policy list mutex held to
+      prevent any other entry points from being invoked: this will
+      be changed, but in the mean time, policies should be careful
+      about what kernel primitives they invoke so as to avoid lock
+      ordering or sleeping problems.</para>
+      
+    <para>The policy declaration's module name field exists so that
+      the module may be uniquely identified for the purposes of
+      module dependencies. An appropriate string should be selected.
+      The full string name of the policy is displayed to the user
+      via the kernel log during load and unload events, and also
+      exported when providing status information to userland
+      processes.</para>
+      
+    <para>The policy flags field permits the module to provide the
+      framework with information about its capabilities at the
+      time the module is loaded.  Currently, three flags are
+      defined:</para>
+      
+    <variablelist>
+      <varlistentry>
+        <term>MPC_LOADTIME_FLAG_UNLOADOK</term>
+        
+        <listitem>
+          <para>This flag indicates that the policy module may be
+            unloaded.  If this flag is not provided, then the policy
+            framework will reject requests to unload the module.
+            This flag might be used by modules that allocate label
+            state and are unable to free that state at
+            runtime.</para>
+        </listitem>
+      </varlistentry>
+        
+      <varlistentry>
+        <term>MPC_LOADTIME_FLAG_NOTLATE</term>
+        
+        <listitem><para>This flag indicates that the policy module
+            must be loaded and initialized early in the boot
+            process.  If the flag is specified, attempts to register
+            the module following boot will be rejected.  The flag
+            may be used by policies that require pervasive labeling
+            of all system objects, and cannot handle objects that
+            have not been properly initialized by the policy.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<term>MPC_LOADTIME_FLAG_LABELMBUFS</term>
+
+	<listitem>
+	  <para>This flag indicates that the policy module requires
+	    labeling of Mbufs, and that memory should always be
+	    allocated for the storage of Mbuf labels.  By default,
+	    the MAC Framework will not allocate label storage for
+	    Mbufs unless at least one loaded policy has this flag
+	    set.  This measurably improves network performance when
+	    policies do not require Mbuf labeling.  A kernel option,
+	    <literal>MAC_ALWAYS_LABEL_MBUF</literal>, exists to
+	    force the MAC Framework to allocate Mbuf label storage
+	    regardless of the setting of this flag, and may be
+	    useful in some environments.</para>
+	</listitem>
+      </varlistentry>
+
+    </variablelist>
+      
+    <note><para>Policies using the
+      <literal>MPC_LOADTIME_FLAG_LABELMBUFS</literal> without the
+      <literal>MPC_LOADTIME_FLAG_NOTLATE</literal> flag set
+      must be able to correctly handle <literal>NULL</literal>
+      Mbuf label pointers passed into entry points.  This is necessary
+      as in-flight Mbufs without label storage may persist after a
+      policy enabling Mbuf labeling has been loaded.  If a policy
+      is loaded before the network subsystem is active (i.e., the
+      policy is not being loaded late), then all Mbufs are guaranteed
+      to have label storage.</para></note>
+  </sect1>
+
+  <sect1 id="mac-entry-point-intro">
+    <title>Entry Point Introduction</title>
     
     <para>Four classes of entry points are offered to policies
       registered with the framework: entry points associated with
@@ -404,121 +519,14 @@
       Policies that do not implement labels on kernel objects will
       be passed NULL pointers for label arguments to entry
       points.</para>
+  </sect1>
+
+  <sect1 id="mac-entry-point-reference">
+    <title>MAC Policy Entry Point Reference</title>
     
     <sect2 id="mac-mpo-general">
       <title>General-Purpose Module Entry Points</title>
       
-      <para>Modules may be declared using the
-        <function>MAC_POLICY_SET()</function> macro, which names the
-        policy, provides a reference to the MAC entry point vector,
-        provides load-time flags determining how the policy framework
-        should handle the policy, and optionally requests the
-        allocation of label state by the framework.</para>
-
-      <programlisting>static struct mac_policy_ops mac_<replaceable>policy</replaceable>_ops =
-{                                   
-        .mpo_destroy = mac_<replaceable>policy</replaceable>_destroy,
-        .mpo_init = mac_<replaceable>policy</replaceable>_init,
-        .mpo_init_bpfdesc_label = mac_<replaceable>policy</replaceable>_init_bpfdesc_label,  
-        .mpo_init_cred_label = mac_<replaceable>policy</replaceable>_init_label,
-/* ... */
-        .mpo_check_vnode_setutimes = mac_<replaceable>policy</replaceable>_check_vnode_setutimes,
-        .mpo_check_vnode_stat = mac_<replaceable>policy</replaceable>_check_vnode_stat,
-        .mpo_check_vnode_write = mac_<replaceable>policy</replaceable>_check_vnode_write,
-};</programlisting>
-      
-      <para>The MAC policy entry point vector,
-        <varname>mac_<replaceable>policy</replaceable>_ops</varname> in this example, associates
-        functions defined in the module with specific entry points. A
-        complete listing of available entry points and their
-        prototypes may be found in the MAC entry point reference
-        section.  Of specific interest during module registration are
-        the <symbol>.mpo_destroy</symbol> and <symbol>.mpo_init</symbol>
-        entry points. <symbol>.mpo_init</symbol> will be invoked once a
-        policy is successfully registered with the module framework
-        but prior to any other entry points becoming active. This
-        permits the policy to perform any policy-specific allocation
-        and initialization, such as initialization of any data or
-        locks.  <symbol>.mpo_destroy</symbol> will be invoked when a
-        policy module is unloaded to permit releasing of any allocated
-        memory and destruction of locks.  Currently, these two entry
-        points are invoked with the MAC policy list mutex held to
-        prevent any other entry points from being invoked: this will
-        be changed, but in the mean time, policies should be careful
-        about what kernel primitives they invoke so as to avoid lock
-        ordering or sleeping problems.</para>
-      
-      <para>The policy declaration's module name field exists so that
-        the module may be uniquely identified for the purposes of
-        module dependencies. An appropriate string should be selected.
-        The full string name of the policy is displayed to the user
-        via the kernel log during load and unload events, and also
-        exported when providing status information to userland
-        processes.</para>
-      
-      <para>The policy flags field permits the module to provide the
-        framework with information about its capabilities at the
-	time the module is loaded.  Currently, three flags are
-	defined:</para>
-      
-      <variablelist>
-        <varlistentry>
-          <term>MPC_LOADTIME_FLAG_UNLOADOK</term>
-          
-          <listitem>
-            <para>This flag indicates that the policy module may be
-              unloaded.  If this flag is not provided, then the policy
-              framework will reject requests to unload the module.
-              This flag might be used by modules that allocate label
-              state and are unable to free that state at
-              runtime.</para>
-          </listitem>
-        </varlistentry>
-        
-        <varlistentry>
-          <term>MPC_LOADTIME_FLAG_NOTLATE</term>
-          
-          <listitem><para>This flag indicates that the policy module
-              must be loaded and initialized early in the boot
-              process.  If the flag is specified, attempts to register
-              the module following boot will be rejected.  The flag
-              may be used by policies that require pervasive labeling
-              of all system objects, and cannot handle objects that
-              have not been properly initialized by the policy.</para>
-          </listitem>
-        </varlistentry>
-
-	<varlistentry>
-	  <term>MPC_LOADTIME_FLAG_LABELMBUFS</term>
-
-	  <listitem>
-	    <para>This flag indicates that the policy module requires
-	      labeling of Mbufs, and that memory should always be
-	      allocated for the storage of Mbuf labels.  By default,
-	      the MAC Framework will not allocate label storage for
-	      Mbufs unless at least one loaded policy has this flag
-	      set.  This measurably improves network performance when
-	      policies do not require Mbuf labeling.  A kernel option,
-	      <literal>MAC_ALWAYS_LABEL_MBUF</literal>, exists to
-	      force the MAC Framework to allocate Mbuf label storage
-	      regardless of the setting of this flag, and may be
-	      useful in some environments.</para>
-	  </listitem>
-	</varlistentry>
-
-      </variablelist>
-      
-      <note><para>Policies using the
-	<literal>MPC_LOADTIME_FLAG_LABELMBUFS</literal> without the
-	<literal>MPC_LOADTIME_FLAG_NOTLATE</literal> flag set
-	must be able to correctly handle <literal>NULL</literal>
-	Mbuf label pointers passed into entry points.  This is necessary
-	as in-flight Mbufs without label storage may persist after a
-	policy enabling Mbuf labeling has been loaded.  If a policy
-	is loaded before the network subsystem is active (i.e., the
-	policy is not being loaded late), then all Mbufs are guaranteed
-	to have label storage.</para></note>
-
       <sect3 id="mac-mpo-init">
         <title><function>&mac.mpo;_init</function</title>
         
