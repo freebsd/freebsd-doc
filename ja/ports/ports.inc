@@ -1,6 +1,6 @@
-<!-- $FreeBSD$ -->
+<!-- $FreeBSD: www/ja/ports/ports.inc,v 1.11 1999/09/06 07:03:22 peter Exp $ -->
 <!-- The FreeBSD Japanese Documentation Project -->
-<!-- Original revision: 1.35 -->
+<!-- Original revision: 1.41 -->
 <p>FreeBSD の Ports と Packages のコレクションは,
 ユーザや管理者が簡単にアプリケーショ
 ンのインストールを簡単に行う方法を提供します.
@@ -38,10 +38,12 @@ ports 階層全体</a> をインストール (あるいは
 <a href="../handbook/ports.html">ports コレクション</a> を参照してくだ
 さい. 新しい ports を作るには, 
 <a href="../handbook/porting.html">フリーソフトウェアの移植</a> を参照
-してください. どちらも <a href="../handbook">FreeBSD ハンドブック</a> 
+してください. どちらも <a href="../handbook/">FreeBSD ハンドブック</a> 
 の一部です.</p>
 
 <p>これらの web ページにリストされている ports は常に更新され続けています.
+最新の ports ツリーは FreeBSD-current と FreeBSD-stable だけを
+公式にサポートします.
 まず最初に, あなたが使っているバージョンの FreeBSD のリリース以降に
 開発された ports を使うためには FreeBSD システムのいくつかのファイルを
 更新する必要があるかもしれません.
@@ -74,19 +76,23 @@ href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-2.2-stable/Latest/22
 2.2.6-release 以降の 2.2-stable ユーザ用
 <dt><a
 href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-3-stable/Latest/30upgrade.tgz">3.0
-から 3.1-stable へのアップグレードキット</a>
+から 3.2-stable へのアップグレードキット</a>
 <dd>3.0-release もしくは 3.0-release 以降の 3.0-stable ユーザ用
 <dt><a
 href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-3-stable/Latest/31upgrade.tgz">3.1
-から 3.1-stable へのアップグレードキット</a>
+から 3.2-stable へのアップグレードキット</a>
 <dd>3.1-release もしくは 3.1-release 以降の 3.1-stable ユーザ用
+<dt><a
+href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-3-stable/Latest/32upgrade.tgz">3.2
+から 3.2-stable へのアップグレードキット</a>
+<dd>3.2-release もしくは 3.2-release 以降の 3.2-stable ユーザ用
 </dl>
 
 <p>これらは FreeBSD のパッケージになっています. インストールには
 <strong>pkg_add</strong> を使ってください.
 これでここに載っている全ての ports を使うことができるようになります. 
 このアップグレードキットは ports やパッケージを使うのに必要なファイル
-だけを更新します. 3.1-stable への完全なアップグレードについては,
+だけを更新します. 3.2-stable への完全なアップグレードについては,
 ハンドブックの<a href="../handbook/synching.html">
 インターネットを通じたソースツリーの同期</a>を参照してください. 
 完全なアップグレードが (まだ 2.2.7-release より前のバージョンを使っている
@@ -97,7 +103,7 @@ href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-3-stable/Latest/31up
 
 <p>多くの ports はコンパイルと実行に X Window System を必要とします. 
 ports は <a href="http://www.xfree86.org/">XFree86</a> 上でテ
-ストされています. 最新のリリースは 3.3.3.1 です. いくつかの ports は古い
+ストされています. 最新のリリースは 3.3.5 です. いくつかの ports は古い
 リリースでは動作しないかも知れません. </p>
 
 <p>ports/packages の追加, 更新, 削除についての情報や, アプリケーションが
