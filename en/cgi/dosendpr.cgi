@@ -8,7 +8,7 @@
 #  GNU General Public License Version 2.  
 #     (http://www.gnu.ai.mit.edu/copyleft/gpl.html)
 #
-# $FreeBSD: www/en/cgi/dosendpr.cgi,v 1.17 2004/02/16 14:38:05 ceri Exp $
+# $FreeBSD: www/en/cgi/dosendpr.cgi,v 1.18 2004/02/16 14:41:30 ceri Exp $
 
 require "html.pl";
 
@@ -103,8 +103,8 @@ else
 
 if (!$submitprog) { &prerror("submit program problem"); }
 
-&html_title ($gnspreptitle);
-&html_body ($gnsprepbody);
+&html_title ("Thank you for the problem report");
+&html_body ();
 
 # Verify the data ...
 
@@ -123,17 +123,13 @@ if (defined($codeentered) && $codeentered && $db_hash{$codeentered} &&
   (($currenttime - $expiretime) <= $db_hash{$codeentered})) {
     if (!$cgi_data{'email'} || !$cgi_data{'originator'} ||
         !$cgi_data{'synopsis'}) {
-        if ($gnsprepbad && -e $gnsprepbad )
-          { print `cat $gnsprepbad`; }
-        else {
-	    print "<h1>Bad Data</h1>\nYou need to specify at least your ",
+	  print "<h1>Bad Data</h1>\nYou need to specify at least your ",
               "electronic mail address, your name and a synopsis ",
               "of the problem.\n  Please return to the form and add the ",
               "missing information.  Thank you.\n";
-        }
-        &html_end();
+          &html_end();
 
-        exit(1);
+          exit(1);
     }
 } else {
 	print "<h1>Incorrect safety code</h1>\nYou need to enter the correct ",
@@ -175,7 +171,7 @@ $pr = "To: $gnemail\n" .
 if ($blackhole_err) {
       $pr .= "X-REMOTE_ADDR-Is-Open-Proxy: Maybe\n";
 }
-$pr .= "X-Send-Pr-Version: www-2.1\n\n" .
+$pr .= "X-Send-Pr-Version: www-2.2\n\n" .
       ">Submitter-Id:\t$cgi_data{'submitterid'}\n" .
       ">Originator:\t$cgi_data{'originator'}\n" .
       ">Organization:\t$cgi_data{'organization'}\n" .
@@ -199,12 +195,9 @@ if (open (SUBMIT, "|$submitprog")){
 
     print SUBMIT $pr;
     close (SUBMIT);
-    if ($gnspreppage && -e $gnspreppage )
-      { print `cat $gnspreppage`; }
-    else
-      { print "<h1>Thank You</h1>",
+    print "<h1>Thank You</h1>",
 	  "Thank you for the problem report.  You should receive confirmation",
-	  " of your report by electronic mail within a day."; }
+	  " of your report by electronic mail within a day.";
 } else {
     print "<h1>Error</h1>An error occured processing your problem report.";
 }
