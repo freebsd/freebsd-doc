@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/Makefile,v 1.101 2003/11/24 18:26:33 hrs Exp $
+# $FreeBSD: www/en/Makefile,v 1.102 2003/11/26 21:12:45 blackend Exp $
 .if exists(Makefile.conf)
 .include "Makefile.conf"
 .endif
@@ -73,7 +73,7 @@ SUBDIR+= tutorials
 SUBDIR+= gifs
 SUBDIR+= cgi
 
-WEB_LANG?=	da fr it ja es ru zh de pt_BR
+WEB_LANG?=	da de es fr it ja pt_BR ru zh
 
 COOKIE=	FAQ handbook
 
