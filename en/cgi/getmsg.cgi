@@ -6,7 +6,7 @@
 # by John Fieber
 # February 26, 1998
 #
-# $Id: getmsg.cgi,v 1.4 1998-03-08 17:38:00 wosch Exp $
+# $Id: getmsg.cgi,v 1.5 1998-03-08 19:28:11 wosch Exp $
 #
 
 require "./cgi-lib.pl";
@@ -87,22 +87,22 @@ sub MessageToHTML
 
     $message = "<pre>\n";
     if (length($hdr{'date:'}) > 0) {
-    	$message .= "<strong>Date: </strong>     $hdr{'Date:'}\n";
+    	$message .= "<strong>Date: </strong>     $hdr{'date:'}\n";
     }
     if (length($hdr{'from:'}) > 0) {
-    	$message .= "<strong>From: </strong>     $hdr{'From:'}\n";
+    	$message .= "<strong>From: </strong>     $hdr{'from:'}\n";
     }
     if (length($hdr{'to:'}) > 0) {
-    	$message .= "<strong>To: </strong>       $hdr{'To:'}\n";
+    	$message .= "<strong>To: </strong>       $hdr{'to:'}\n";
     }
     if (length($hdr{'cc:'}) > 0) {
-    	$message .= "<strong>Cc: </strong>       $hdr{'Cc:'}\n";
+    	$message .= "<strong>Cc: </strong>       $hdr{'cc:'}\n";
     }
-#    if (length($hdr{'Sender:'}) > 0) {
-#    	$message .= "<strong>Sender: </strong>   $hdr{'Sender:'}\n";
+#    if (length($hdr{'sender:'}) > 0) {
+#    	$message .= "<strong>Sender: </strong>   $hdr{'sender:'}\n";
 #    }
     if (length($hdr{'subject:'}) > 0) {
-    	$message .= "<strong>Subject: </strong>  $hdr{'Subject:'}\n";
+    	$message .= "<strong>Subject: </strong>  $hdr{'subject:'}\n";
     }
     $message .= "</pre>\n";
 
