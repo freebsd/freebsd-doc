@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/gnome/rss.xsl,v 1.1 2002/11/21 21:39:42 marcus Exp $ -->
+<!-- $FreeBSD: www/en/gnome/rss.xsl,v 1.2 2002/11/24 08:43:31 marcus Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
                 xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -9,7 +9,7 @@
   <xsl:import href="includes.xsl"/>
 
   <xsl:variable name="base" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD$'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/rss.xsl,v 1.2 2002/11/24 08:43:31 marcus Exp $'"/>
   <xsl:variable name="title" select="'FreeBSD GNOME Project News System'"/>
 
   <xsl:output type="xml" />
@@ -18,7 +18,7 @@
     <rdf:RDF
     xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
     xmlns="http://my.netscape.com/rdf/simple/0.9/">
-    
+
       <channel>
         <title>FreeBSD GNOME Project News</title>
 	<link>http://www.FreeBSD.org/gnome</link>
