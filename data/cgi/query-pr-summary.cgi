@@ -1,9 +1,9 @@
 #!/usr/bin/perl
-# $Id: query-pr-summary.cgi,v 1.4 1996-10-22 23:12:08 fenner Exp $
+# $Id: query-pr-summary.cgi,v 1.5 1996-11-13 03:02:37 fenner Exp $
 
 $self_ref = $ENV{'SCRIPT_NAME'};
 ($query_pr_ref = $ENV{'SCRIPT_NAME'}) =~ s/-summary//;
-$query_args   = '--restricted -s "open|analyzed|feedback|suspended"';
+$query_args   = '--restricted ';
 $state_args   = '--restricted ';
 
 $avail_file   = '/home/ncvs/CVSROOT/avail';
@@ -11,9 +11,17 @@ $ENV{'PATH'}  = "/bin:/usr/bin:/usr/sbin:/sbin:/usr/local/bin";
 
 $html_mode    = 1 if $ENV{'DOCUMENT_ROOT'} ne '';
 
+
 require "cgi-lib.pl";
 require "cgi-style.pl";
 require "getopts.pl";
+
+if ($ENV{'QUERY_STRING'} eq 'query') {
+	print &html_header("Query FreeBSD problem reports");
+	&displayform;
+	print &html_footer;
+	exit(0);
+}
 
 if ($html_mode) {
     &ReadParse(*input) if $html_mode;
@@ -110,25 +118,30 @@ ${dl_e}
 " if (!$input{"quiet"});
 
 	if ($html_mode) {
+# These self references are attempts to only change a single variable at a time.
+# If someone does a multiple-variable query they will probably do weird things.
 $self_ref1 = $self_ref . '?';
 if ($input{'sort'}) {
 	$self_ref1 .= 'sort=' . $input{'sort'};
 }
 print '<P>You may view summaries by <A HREF="', $self_ref1, '">Severity</A>, ';
-print '<A HREF="', $self_ref1, '&state=summary">State</A>, ';
-print '<A HREF="', $self_ref1, '&category=summary">Category</A>, or ';
-print '<A HREF="', $self_ref1, '&responsible=summary">Responsible Party</A>.';
+$self_ref1 .= '&' if ($self_ref1 !~/\?$/);
+print '<A HREF="', $self_ref1, 'state=summary">State</A>, ';
+print '<A HREF="', $self_ref1, 'category=summary">Category</A>, or ';
+print '<A HREF="', $self_ref1, 'responsible=summary">Responsible Party</A>.';
 $self_ref2 = $self_ref . '?';
-foreach ('responsible','state','category') {
+foreach ("category", "originator", "priority", "class", "responsible",
+	"severity", "state", "submitter", "text", "closedtoo") {
 	if ($input{$_}) {
+		$self_ref2 .= '&' if ($self_ref2 !~/\?$/);
 		$self_ref2 .= $_ . '=' . $input{$_};
-		last;
 	}
 }
 print 'You may also sort by ';
 print '<A HREF="', $self_ref2, '&sort=lastmod">Last-Modified</A>, ';
 print '<A HREF="', $self_ref2, '&sort=category">Category</A>, or ';
 print '<A HREF="', $self_ref2, '&sort=responsible">Responsible Party</A>.', "\n";
+print 'Or <A HREF="', $self_ref, '?query">formulate a specific query</A>.';
 	}
 }
 
@@ -140,6 +153,29 @@ print &html_footer if $html_mode;
 
 # backwards compatibility
 $input{'responsible'} = $input{'engineer'} if $input{'engineer'};
+
+#Usage: query-pr [-FhiPqVx] [-C confidential] [-c category] [-d directory]
+#       [-e severity] [-m mtext] [-O originator] [-o outfile] [-p priority]
+#       [-L class] [-r responsible] [-S submitter] [-s state] [-t text]
+#       [--full] [--help] [--sql] [--print-path] [--summary] [--version]
+#       [--skip-closed] [--category=category] [--confidential=yes|no]
+#       [--directory=directory] [--output=outfile] [--originator=name]
+#       [--priority=level] [--class=class] [--responsible=person]
+#       [--severity=severity] [--state=state] [--submitter=submitter]
+#       [--list-categories] [--list-responsible] [--list-submitters]
+#       [--text=text] [--multitext=mtext] [PR] [PR]...
+
+if (!$input{"closedtoo"}) {
+	$query_args .= " --skip-closed";
+}
+
+# Only read the appropriate PR's.
+foreach ("category", "originator", "priority", "class", "responsible",
+	"severity", "state", "submitter", "text") {
+	if ($input{$_} && $input{$_} ne "summary") {
+		$query_args .= " --${_}=$input{$_}";
+	}
+}
 
 &read_gnats($query_args);
 
@@ -153,26 +189,24 @@ if ($input{'sort'} eq 'lastmod') {
 	$input{'sort'} = 'none';
 }
 
-if ($input{'responsible'} eq 'summary') {
-	&resp_summary;
+if ($#prs < $[) {
+	print "<H1>No matches to your query</H1>\n";
 
-} elsif ($input{'responsible'} ne '') {
-	&resp_query($input{'responsible'});
+} elsif ($input{'responsible'} eq 'summary') {
+	&resp_summary;
 
 } elsif ($input{'state'} eq 'summary') {
 	&state_summary;
 
-} elsif ($input{'state'} ne '') {
-	&state_query($input{'state'});
-
 } elsif ($input{'category'} eq 'summary') {
 	&cat_summary;
 
-} elsif ($input{'category'} ne '') {
-	&cat_query($input{'category'});
+} elsif ($input{'severity'} eq '') {
+	&severity_summary;
 
 } else {
-	&severity_summary;
+	&printcnt(&gnats_summary(1, $html_mode));
+
 }
 
 &trailer_info;
@@ -360,7 +394,7 @@ sub gnats_summary {
 	print "$state [$date] $title" .
 	    (' ' x (11 - length($_))) .
 	    $resp . (' ' x (9 - length($resp))) .
-	    substr($syn,0,41)
+	    ($htmlmode ? $syn : substr($syn,0,41))
 	    . "\n";
 
 	++$counter;
@@ -369,4 +403,77 @@ sub gnats_summary {
     print "${pr_e}\n" if $iteration;
 
     $counter;
+}
+
+sub displayform {
+print qq`
+Please select the items you wish to search for.  Multiple items are AND'ed
+together.
+<P>
+<FORM METHOD=GET ACTION="`, $self_ref, qq`">
+
+<BR><B>Category</B>:
+<SELECT NAME="category">
+<OPTION VALUE="">Any</OPTION>
+<OPTION>bin</OPTION>
+<OPTION>conf</OPTION>
+<OPTION>docs</OPTION>
+<OPTION>gnu</OPTION>
+<OPTION>i386</OPTION>
+<OPTION>kern</OPTION>
+<OPTION>misc</OPTION>
+<OPTION>ports</OPTION>
+</SELECT>
+<BR><B>Originator</B>:
+<INPUT TYPE=TEXT NAME="originator">
+<BR><B>Priority</B>:
+<SELECT NAME="priority">
+<OPTION VALUE="">Any</OPTION>
+<OPTION>low</OPTION>
+<OPTION>medium</OPTION>
+<OPTION>high</OPTION>
+</SELECT>
+<BR><B>Class</B>:
+<SELECT NAME="class">
+<OPTION VALUE="">Any</OPTION>
+<OPTION>sw-bug</OPTION>
+<OPTION>doc-bug</OPTION>
+<OPTION>change-request</OPTION>
+<OPTION>support</OPTION>
+</SELECT>
+<BR><B>Responsible</B>:
+<INPUT TYPE=TEXT NAME="responsible">
+<BR><B>Severity</B>:
+<SELECT NAME="severity">
+<OPTION VALUE="">Any</OPTION>
+<OPTION>non-critical</OPTION>
+<OPTION>serious</OPTION>
+<OPTION>critical</OPTION>
+</SELECT>
+<BR><B>State</B>:
+<SELECT NAME="state">
+<OPTION VALUE="">Any</OPTION>
+<OPTION VALUE="open">Open</OPTION>
+<OPTION VALUE="analyzed">Analyzed</OPTION>
+<OPTION VALUE="feedback">Feedback</OPTION>
+<OPTION VALUE="suspended">Suspended</OPTION>
+<OPTION VALUE="closed">Closed</OPTION>
+</SELECT>
+<!-- We don't use submitter Submitter: -->
+<BR><B>Text</B>:
+<INPUT TYPE=TEXT NAME="text">
+<BR><B>Closed reports too</B>:
+<INPUT NAME="closedtoo" TYPE=CHECKBOX>
+<BR><B>Sort by</B>:
+<SELECT NAME="sort">
+<OPTION VALUE="none">No Sort</OPTION>
+<OPTION VALUE="lastmod">Last-Modiified</OPTION>
+<OPTION VALUE="category">Category</OPTION>
+<OPTION VALUE="responsible">Responsible Party</OPTION>
+</SELECT>
+<BR>
+<INPUT TYPE="SUBMIT" VALUE=" Query PR's ">
+<INPUT TYPE="RESET" VALUE=" Reset Form ">
+</FORM>
+`;
 }
