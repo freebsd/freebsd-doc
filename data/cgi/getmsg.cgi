@@ -6,7 +6,7 @@
 # by John Fieber
 # February 26, 1998
 #
-# $Id: getmsg.cgi,v 1.12 1998-03-28 16:51:15 wosch Exp $
+# $Id: getmsg.cgi,v 1.13 1998-03-30 13:40:20 wosch Exp $
 #
 
 require "./cgi-lib.pl";
@@ -161,6 +161,10 @@ sub MessageToHTML
 	$tref  =~ m%;([^&]+)&%) {
 	$message .= qq{| <a href="$mid?db=mid&id=$1">Previous in thread</a>\n};
     }
+    $message .= qq{| <a href="$ENV{'REQUEST_URI'}+raw">Raw E-Mail</a>\n};
+    $message .= qq{| <a href="$ENV{'REQUEST_URI'}+archive">Current Archive</a>\n};
+    $message .= qq{| <a href="../searchhints.html">Help</a>\n};
+
     $message .= "<HR NOSHADE>\n";
 
     $message .= "<p><pre>\n$body\n</pre>\n";
