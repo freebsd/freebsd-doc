@@ -1,5 +1,5 @@
 # 
-# $Id: Makefile,v 1.5 1998-11-12 01:20:35 nik Exp $
+# $Id: Makefile,v 1.6 1998-12-10 20:42:26 nik Exp $
 #
 # Build the FreeBSD Handbook. Will eventually split in two, a generic .mk
 # file which can be used by many Makefiles, and a much smaller Makefile
@@ -20,18 +20,24 @@ MAINTAINER=nik@FreeBSD.ORG
 # is assumed that the stylesheet names this. If not set, DOC defaults
 # to the name of the current directory.
 #
-DOC?= ${.CURDIR:T}
+DOC?= handbook
 
 #
 # FORMATS lists the output formats that should be generated. Valid values
 # are 
 #
-#    ascii html ps pdf rtf
+#    ascii html html-chunk tex dvi ps pdf rtf
 #
-FORMATS=  html
+# html-chunk is the file as one large HTML file, rather than broken up
+# into smaller files
+#
+# This setting also affects which files will be removed with 'make clean'.
+# If you 'make' with one setting, and 'make clean' with another, don't
+# be surprised if it doesn't work.
+FORMATS?=  html
 
 # 
-# SRCS lists the individual SGML files that make up the Handbook. Changes
+# SRCS lists the individual SGML files that make up the document. Changes
 # to any of these files will force a rebuild
 #
 
@@ -68,8 +74,9 @@ SRCS+= x11/chapter.sgml
 SRCS+= ports/chapter.sgml
 
 # Entities
-SRCS+= authors.ent chapters.ent mailing-lists.ent
-
+SRCS+= authors.ent 
+SRCS+= chapters.ent 
+SRCS+= mailing-lists.ent
 
 JADE=		/usr/local/bin/jade
 DSLHTML=	../../sgml/freebsd.dsl
@@ -80,7 +87,7 @@ DOCBOOKCATALOG= /usr/local/share/sgml/docbook/3.0/catalog
 JADECATALOG=	/usr/local/share/sgml/jade/catalog
 DSSSLCATALOG=   /usr/local/share/sgml/docbook/dsssl/modular/catalog
 
-JADEFLAGS?=	-c ${FREEBSDCATALOG} -c ${DSSSLCATALOG} -c ${DOCBOOKCATALOG} -c ${JADECATALOG}
+JADEFLAGS=	${JADEOPTS} -c ${FREEBSDCATALOG} -c ${DSSSLCATALOG} -c ${DOCBOOKCATALOG} -c ${JADECATALOG}
 
 # ------------------------------------------------------------------------
 #
@@ -97,6 +104,21 @@ _cf=${_curformat}
 .if ${_cf} == "html"
 _docs+= index.html
 CLEANFILES+= *.html HTML.manifest
+.elif ${_cf} == "html-chunk"
+_docs+= ${DOC}.html
+CLEANFILES+= ${DOC}.html
+.elif ${_cf} == "ascii"
+_docs+= ${DOC}.txt
+CLEANFILES+= ${DOC}.html ${DOC}.txt
+.elif ${_cf} == "dvi"
+_docs+= ${DOC}.dvi
+CLEANFILES+= ${DOC}.aux ${DOC}.dvi ${DOC}.log ${DOC}.tex
+.elif ${_cf} == "ps"
+_docs+= ${DOC}.ps
+CLEANFILES+= ${DOC}.aux ${DOC}.dvi ${DOC}.log ${DOC}.tex ${DOC}.ps
+.elif ${_cf} == "pdf"
+_docs+= ${DOC}.pdf
+CLEANFILES+= ${DOC}.aux ${DOC}.dvi ${DOC}.log ${DOC}.tex ${DOC}.pdf
 .else
 _docs+= ${DOC}.${_curformat}
 CLEANFILES+= ${DOC}.${_curformat}
@@ -118,14 +140,42 @@ CLEANFILES+= ${DOC}.${_curformat}
 all: ${_docs}
 
 index.html: ${SRCS}
-	${JADE} ${JADEFLAGS} -d ${DSLHTML} -t sgml handbook.sgml
+	${JADE} -ihtml ${JADEFLAGS} -d ${DSLHTML} -t sgml ${DOC}.sgml
 	./conv.pl *.html
+	tidy -i -m -f /dev/null *.html
+
+${DOC}.html: ${SRCS}
+	${JADE} -ihtml -V nochunks ${JADEFLAGS} -d ${DSLHTML} -t sgml ${DOC}.sgml > ${DOC}.html
+	./conv.pl ${DOC}.html
+	tidy -i -m -f /dev/null ${DOC}.html
+
+${DOC}.txt: ${DOC}.html
+	lynx -nolist -dump ${DOC}.html > ${DOC}.txt
 
 ${DOC}.rtf: ${SRCS}
-	${JADE} ${JADEFLAGS} -d ${DSLPRINT} -t rtf handbook.sgml
+	${JADE} -iprint ${JADEFLAGS} -d ${DSLPRINT} -t rtf ${DOC}.sgml
 
 ${DOC}.tex: ${SRCS}
-	${JADE} ${JADEFLAGS} -d ${DSLPRINT} -t tex handbook.sgml
+	${JADE} -iprint ${JADEFLAGS} -d ${DSLPRINT} -t tex ${DOC}.sgml
+
+${DOC}.dvi: ${DOC}.tex
+	@echo "==> TeX pass 1/3"
+	-tex "&jadetex" ${DOC}.tex
+	@echo "==> TeX pass 2/3"
+	-tex "&jadetex" ${DOC}.tex
+	@echo "==> Tex pass 3/3"
+	-tex "&jadetex" ${DOC}.tex
+
+${DOC}.pdf: ${DOC}.tex
+	@echo "==> PDFTeX pass 1/3"
+	-pdftex "&pdfjadetex" ${DOC}.tex
+	@echo "==> PDFTeX pass 2/3"
+	-pdftex "&pdfjadetex" ${DOC}.tex
+	@echo "==> PDFTeX pass 3/3"
+	-pdftex "&pdfjadetex" ${DOC}.tex
+
+${DOC}.ps: ${DOC}.dvi
+	dvips -o ${DOC}.ps ${DOC}.dvi
 
 .include <bsd.dep.mk>
 .include <bsd.obj.mk>
