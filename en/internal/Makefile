@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/internal/Makefile,v 1.15 1999/09/06 07:02:45 peter Exp $
+# $FreeBSD: www/en/internal/Makefile,v 1.16 1999/09/15 20:34:35 wosch Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -17,7 +17,7 @@ LOCAL=  committers-guide.html
 .endif
 
 committers-guide.html: ../../../doc/en_US.ISO_8859-1/articles/committers-guide/article.sgml
-	(cd ../../../doc/en_US.ISO_8859-1/articles/committers-guide && make FORMATS=html INSTALL_COMPRESSED='')
+	(cd ../../../doc/en_US.ISO_8859-1/articles/committers-guide && ${MAKE} FORMATS=html INSTALL_COMPRESSED='')
 	cp ../../../doc/en_US.ISO_8859-1/articles/committers-guide/article.html committers-guide.html
 
 INDEXLINK=	internal.html

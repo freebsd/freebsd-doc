@@ -1,5 +1,5 @@
 #
-# $FreeBSD: www/ja/handbook/Makefile,v 1.5 1999/09/06 07:03:19 peter Exp $
+# $FreeBSD: www/ja/handbook/Makefile,v 1.6 1999/09/07 15:15:48 kuriyama Exp $
 # Original revision:	1.4
 #
 # Build the FreeBSD Handbook *outside* of the www tree, and install it
@@ -16,4 +16,4 @@
 #
 
 all install clean:
-	(cd ../../../doc/ja_JP.eucJP/books/handbook && make FORMATS=html-split DESTDIR=${DESTDIR}/data/ja/handbook ${.TARGET})
+	(cd ../../../doc/ja_JP.eucJP/books/handbook && ${MAKE} FORMATS=html-split DESTDIR=${DESTDIR}/data/ja/handbook ${.TARGET})
