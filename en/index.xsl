@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/index.xsl,v 1.92 2004/01/08 00:42:58 stephane Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.93 2004/02/01 00:02:58 josef Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   
@@ -6,7 +6,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.92 2004/01/08 00:42:58 stephane Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.93 2004/02/01 00:02:58 josef Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <!-- these params should be externally bound. The values
@@ -173,7 +173,7 @@
 		CD-ROM, DVD-ROM, floppy disk, magnetic tape, an MS-DOS&#174; partition, or if
 		you have a network connection, you can install it
 		<i>directly</i> over anonymous FTP or NFS. All you need is a 
-		pair of blank, 1.44MB floppies and 
+		couple of formatted 1.44MB floppies and 
 		<a href="{$base}/doc/en_US.ISO8859-1/books/handbook/install.html">these 
 		  directions</a>.</p>
 
