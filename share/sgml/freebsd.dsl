@@ -1,4 +1,4 @@
-<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.53 2001/09/08 02:21:19 murray Exp $ -->
+<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.54 2001/09/11 02:06:03 murray Exp $ -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
 <!ENTITY % output.html		"IGNORE">
@@ -6,6 +6,7 @@
 <!ENTITY % output.print 	"IGNORE">
 <!ENTITY % output.print.pdf 	"IGNORE">
 <!ENTITY % output.print.justify	"IGNORE">
+<!ENTITY % output.print.twoside	"IGNORE">
 
 <![ %output.html; [
 <!ENTITY docbook.dsl PUBLIC "-//Norman Walsh//DOCUMENT DocBook HTML Stylesheet//EN" CDATA DSSSL>
@@ -204,6 +205,138 @@
 		          (literal "(" (format-number conumber "1") ")")))
 	        (make element gi: "B"
 	       (literal "(??)")))))
+      ]]>
+
+      <!-- Two-sided Print output ....................................... --> 
+      <![ %output.print.twoside; [
+
+;; From an email by Ian Castle to the DocBook-apps list
+
+(define (first-part?)
+  (let*
+      (
+        (book
+            (ancestor
+                (normalize "book")
+            )
+        )
+        (nd
+            (ancestor-member
+                (current-node)
+                (append
+                    (component-element-list)
+                    (division-element-list)
+                )
+            )
+        )
+        (bookch
+            (children book)
+        )
+     )
+     (let loop ((nl bookch))
+      (if (node-list-empty? nl)
+          #f
+          (if (equal? (gi (node-list-first nl)) (normalize "part"))
+              (if (node-list=? (node-list-first nl) nd)
+                  #t
+                  #f)
+              (loop (node-list-rest nl)))))))
+
+
+;; From an email by Ian Castle to the DocBook-apps list
+
+(define (first-chapter?)
+  ;; Returns #t if the current-node is in the first chapter of a book
+  (if
+    (has-ancestor-member? (current-node) (division-element-list))
+  #f
+  (let* ((book (ancestor (normalize "book")))
+         (nd   (ancestor-member
+                (current-node)
+                (append (component-element-list)
+(division-element-list))))
+         (bookch (children book))
+         (bookcomp (expand-children bookch (list (normalize "part")))))
+    (let loop ((nl bookcomp))
+      (if (node-list-empty? nl)
+          #f
+          (if (equal? (gi (node-list-first nl)) (normalize "chapter"))
+              (if (node-list=? (node-list-first nl) nd)
+                  #t
+                  #f)
+              (loop (node-list-rest nl)))))
+  )
+  )
+)
+
+
+
+; By default, the Part I title page will be given a roman numeral,
+; which is wrong so we have to fix it
+(define (part-titlepage elements #!optional (side 'recto))
+  (let ((nodelist (titlepage-nodelist 
+		   (if (equal? side 'recto)
+		       (part-titlepage-recto-elements)
+		       (part-titlepage-verso-elements))
+		   elements))
+        ;; partintro is a special case...
+	(partintro (node-list-first
+		    (node-list-filter-by-gi elements (list (normalize "partintro"))))))
+    (if (part-titlepage-content? elements side)
+	(make simple-page-sequence
+	  page-n-columns: %titlepage-n-columns%
+;; Make sure that page number format is correct.
+	  page-number-format: ($page-number-format$)
+;; Make sure that the page number is set to 1 if this is the first part
+;; in the book
+	  page-number-restart?: (first-part?)
+	  input-whitespace-treatment: 'collapse
+	  use: default-text-style
+	  
+	  ;; This hack is required for the RTF backend. If an external-graphic
+	  ;; is the first thing on the page, RTF doesn't seem to do the right
+	  ;; thing (the graphic winds up on the baseline of the first line
+	  ;; of the page, left justified).  This "one point rule" fixes
+	  ;; that problem.
+	  (make paragraph
+	    line-spacing: 1pt
+	    (literal ""))
+
+	  (let loop ((nl nodelist) (lastnode (empty-node-list)))
+	    (if (node-list-empty? nl)
+		(empty-sosofo)
+		(make sequence
+		  (if (or (node-list-empty? lastnode)
+			  (not (equal? (gi (node-list-first nl))
+				       (gi lastnode))))
+		      (part-titlepage-before (node-list-first nl) side)
+		      (empty-sosofo))
+		  (cond
+		   ((equal? (gi (node-list-first nl)) (normalize "subtitle"))
+		    (part-titlepage-subtitle (node-list-first nl) side))
+		   ((equal? (gi (node-list-first nl)) (normalize "title"))
+		    (part-titlepage-title (node-list-first nl) side))
+		   (else
+		    (part-titlepage-default (node-list-first nl) side)))
+		  (loop (node-list-rest nl) (node-list-first nl)))))
+
+	  (if (and %generate-part-toc%
+		   %generate-part-toc-on-titlepage%
+		   (equal? side 'recto))
+	      (make display-group
+		(build-toc (current-node)
+			   (toc-depth (current-node))))
+	      (empty-sosofo))
+
+	  ;; PartIntro is a special case
+	  (if (and (equal? side 'recto)
+		   (not (node-list-empty? partintro))
+		   %generate-partintro-on-titlepage%)
+	      ($process-partintro$ partintro #f)
+	      (empty-sosofo)))
+	(empty-sosofo))))
+
+
       ]]>
 
       <!-- Print with justification ..................................... --> 
