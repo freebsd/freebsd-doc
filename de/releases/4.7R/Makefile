@@ -1,8 +1,8 @@
 # The FreeBSD German Documentation Project
 # The FreeBSD Documentation Project
 # $FreeBSD$
-# $FreeBSDde: de-www/releases/4.7R/Makefile,v 1.2 2002/12/08 00:26:04 ue Exp $
-# basiert auf: 1.7
+# $FreeBSDde: de-www/releases/4.7R/Makefile,v 1.3 2004/05/16 22:09:33 mheinen Exp $
+# basiert auf: 1.10
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -11,11 +11,19 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS=	hardware.sgml relnotes.sgml announce.sgml
+DOCS=	announce.sgml
+DOCS+=	hardware.sgml
+DOCS+=	installation.sgml
+DOCS+=	relnotes.sgml
 
 DATA=	docbook.css
 DATA+=	errata.html
-DATA+=	hardware-alpha.html hardware-i386.html
-DATA+=	relnotes-alpha.html relnotes-i386.html
+DATA+=	installation-alpha.html
+DATA+=	installation-i386.html
+DATA+=	hardware-alpha.html
+DATA+=	hardware-i386.html
+DATA+=	readme.html
+DATA+=	relnotes-alpha.html
+DATA+=	relnotes-i386.html
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"

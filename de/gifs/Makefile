@@ -1,6 +1,6 @@
 # $FreeBSD$
-# $FreeBSDde: de-www/gifs/Makefile,v 1.1 2003/05/11 17:38:16 mheinen Exp $
-# basiert auf: 1.44
+# $FreeBSDde: de-www/gifs/Makefile,v 1.2 2004/05/16 22:06:56 mheinen Exp $
+# basiert auf: 1.50
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"

@@ -1,5 +1,5 @@
-# $FreeBSD: www/de/releases/Makefile,v 1.4 2004/01/03 14:21:33 mheinen Exp $
-# $FreeBSDde: de-www/releases/Makefile,v 1.5 2004/01/03 01:26:28 mheinen Exp $
+# $FreeBSD$
+# $FreeBSDde: de-www/releases/Makefile,v 1.6 2004/01/13 11:55:49 brueffer Exp $
 # basiert auf: 1.37
 
 .if exists(../Makefile.conf)
