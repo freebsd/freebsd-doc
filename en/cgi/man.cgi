@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp 
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.66 2002-02-26 11:27:26 wosch Exp $
+# $Id: man.cgi,v 1.67 2002-05-04 15:56:24 wosch Exp $
 
 #use Data::Dumper;
 #use Carp;
@@ -47,6 +47,7 @@ $www{'head'} = qq[<A HREF="$www{'home'}">$www{'title'}</a> ] .
 
 $command{'man'} =     'man'; # 8Bit clean man
 $command{'man'} =     '/home/wosch/bin/cgi-man'; # 8Bit clean man
+$command{'man'} =     '/usr/bin/man'; # 8Bit clean man
 
 
 # Config Options
@@ -925,7 +926,7 @@ ETX
 }
 
 sub copyright {
-    $id = '$Id: man.cgi,v 1.66 2002-02-26 11:27:26 wosch Exp $';
+    $id = '$Id: man.cgi,v 1.67 2002-05-04 15:56:24 wosch Exp $';
 
     return qq{\
 <PRE>
