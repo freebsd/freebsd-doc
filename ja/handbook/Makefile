@@ -1,7 +1,9 @@
 # 
-# $Id: Makefile,v 1.33 1999-04-22 14:38:16 kuriyama Exp $
+# $Id: Makefile,v 1.34 1999-05-06 17:44:14 motoyuki Exp $
 #
 # Build the FreeBSD Handbook (Japanese).
+#
+# Original revision: 1.21
 #
 
 MAINTAINER=kuriyama@FreeBSD.ORG
