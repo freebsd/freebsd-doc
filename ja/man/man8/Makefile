@@ -38,7 +38,6 @@ MAN8 =	IPXrouted.8\
 	dset.8\
 	dump.8\
 	dumpfs.8\
-	dumplfs.8\
 	dumpon.8\
 	edquota.8\
 	fdcontrol.8\
@@ -66,7 +65,6 @@ MAN8 =	IPXrouted.8\
 	kvm_mkdb.8\
 	kzip.8\
 	ldconfig.8\
-	lfs_cleanerd.8\
 	linux.8\
 	locate.updatedb.8\
 	lpc.8\
@@ -89,7 +87,6 @@ MAN8 =	IPXrouted.8\
 	mount.8\
 	mount_cd9660.8\
 	mount_ext2fs.8\
-	mount_lfs.8\
 	mount_msdos.8\
 	mount_nfs.8\
 	mount_null.8\
@@ -113,7 +110,6 @@ MAN8 =	IPXrouted.8\
 	ndc.8\
 	netboot.8\
 	newfs.8\
-	newlfs.8\
 	newsyslog.8\
 	nextboot.8\
 	nfsd.8\
