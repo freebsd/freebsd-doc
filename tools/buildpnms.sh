@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: www/tools/buildpnms.sh,v 1.1 2003/12/14 17:28:12 ceri Exp $
+# $FreeBSD: www/tools/buildpnms.sh,v 1.2 2004/07/27 20:34:40 ceri Exp $
 #
 # Shell script to generate the .pnm files required for the send-pr
 # mechanism.  This is not used by the build process, as it requires
@@ -19,7 +19,7 @@ do
     ${VERBOSE} Making ${char}.png...
     ${GOZER} -x 2 -t ${char} -f "#990000" -b "#ffffff" ${char}.png
     ${VERBOSE} DONE
-    ${VERBOSE} Converting ${char}.pnm to ${char}.png...
+    ${VERBOSE} Converting ${char}.png to ${char}.pnm...
     ${PNGTOPNM} ${char}.png > ${char}.pnm
     ${VERBOSE} DONE
     ${VERBOSE} Removing ${char}.png...
