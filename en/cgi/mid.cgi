@@ -26,32 +26,31 @@
 #
 # Search a mail by Message-ID, References or In-Reply-To field
 #
-# $FreeBSD$
+# $FreeBSD: www/en/cgi/mid.cgi,v 1.8 1999/09/06 07:02:40 peter Exp $
 
 $hsty_base = '';
 
 require "./cgi-lib.pl";
 require "./cgi-style.pl";
 
-$home = '/g/www/mid';
-$prefix= "/usr/local/www/db";
-$lookupdir = "$home/index"; # database(s) directory
+$home = '/usr/local/www/mailindex';
+$prefix= "/usr/local/www/db/text";
+$lookupdir = "$home/message-id"; # database(s) directory
 $databaseDefault = 'mid';           # default database
 $bindir = "$home/bin"; # where search scripts located
 $script = $ENV{'SCRIPT_NAME'};
 $shortid = 1;
-$lookCommand = "$home/bin/look";
+$lookCommand = "/usr/bin/look";
 
 sub get_id {
     local($query, $db) = @_;
 
     open(DB,  "-|") ||
-	exec("$lookCommand", $query,
-	     "$lookupdir/mid-current.$db", "$lookupdir/mid.$db") ||
+	exec("$lookCommand", $query, "$lookupdir/mid-current.$db") ||
 	do {
 	    print &midheader .
 		"Cannot connect to Message-ID database.<p>\n" . &foot;
-	    exit;
+    exit;
     	};
 
     local(@idlist);
@@ -59,6 +58,20 @@ sub get_id {
 	push(@idlist, $_);
     }
     close DB;
+    #warn "$lookCommand $query, $lookupdir/mid.$db";
+    open(DB,  "-|") ||
+	exec("$lookCommand", $query, "$lookupdir/mid.$db") ||
+	do {
+	    print &midheader .
+		"Cannot connect to Message-ID database.<p>\n" . &foot;
+	    exit;
+    	};
+
+    while(<DB>) {
+	push(@idlist, $_);
+    }
+    close DB;
+
 
     if ($#idlist < 0) {           # nothing found
 	print &midheader;
