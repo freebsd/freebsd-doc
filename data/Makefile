@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.30 1998-06-02 17:12:33 wosch Exp $
+# $Id: Makefile,v 1.31 1998-06-05 10:07:16 wosch Exp $
 
 .if exists(Makefile.conf)
 .include "Makefile.conf"
@@ -19,7 +19,7 @@ DOCS+= newsflash.sgml npgallery.sgml pgallery.sgml publish.sgml search.sgml
 DOCS+= searchhints.sgml send-pr.sgml security.sgml support.sgml where.sgml 
 DOCS+= resignation.sgml y2kbug.sgml search-mid.sgml press.sgml
 
-CLEANFILES+=atoz.sgml
+CLEANFILES+=atoz.sgml site.sgml
 
 # These will be directly installed.
 
@@ -42,9 +42,12 @@ stats-img.html: ${ACCESS_LOG_DIR}/${ACCESS_LOG_FILE}
 	    cat ${ACCESS_LOG_FILE}) | \
 	${ANALOG} +i0 +R500 -o > ${.TARGET}
 
-index-site.sgml: atoz.sgml
+index-site.sgml: atoz.sgml site.sgml
 atoz.sgml: web.atoz 
 	sort -fu web.atoz | perl atoz.pl > ${.TARGET}
+
+site.sgml: site.map
+	./site.pl < ${.ALLSRC} > ${.TARGET}
 
 cgallery.html: cgallery.sgml cgallery.inc
 cgallery.inc: gallery.db gengallery.pl
