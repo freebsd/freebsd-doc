@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.13 1998-08-11 11:43:52 wosch Exp $
+# $Id: Makefile,v 1.14 1998-10-16 23:47:36 jkh Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -7,7 +7,7 @@
 DOCS?=	index.sgml snapshots.sgml
 
 SUBDIR=	1.1 1.1.5 2.0 2.0.5A 2.0.5R 2.0A 2.1R 2.1.5R 2.1.6R 2.1.7R 2.2R
-SUBDIR+=	2.2.1R 2.2.2R 2.2.5R 2.2.6R 2.2.7R
+SUBDIR+=	2.2.1R 2.2.2R 2.2.5R 2.2.6R 2.2.7R 3.0R
 
 .if defined $(NEW_BUILD)
 SUBDIR=
