@@ -1,5 +1,5 @@
-#!/usr/bin/perl -T
-# $FreeBSD: www/en/cgi/query-pr-summary.cgi,v 1.29 2000/11/29 13:59:24 wosch Exp $
+#!/usr/bin/perl
+# $FreeBSD: www/en/cgi/query-pr-summary.cgi,v 1.30 2000/12/28 13:43:41 wosch Exp $
 
 $html_mode     = 1 if $ENV{'DOCUMENT_ROOT'};
 $self_ref      = $ENV{'SCRIPT_NAME'};
