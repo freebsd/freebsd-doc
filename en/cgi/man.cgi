@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp 
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.107 2003-06-23 09:09:56 wosch Exp $
+# $Id: man.cgi,v 1.108 2003-06-23 09:13:06 wosch Exp $
 
 #use Data::Dumper;
 #use Carp;
@@ -146,8 +146,9 @@ $manPathDefault = 'FreeBSD 4.8-RELEASE';
 
 %manPath = 
     (
-     'FreeBSD 5.0-current',   "$manLocalDir/FreeBSD-5.0-current",
-     'FreeBSD 4.7-stable',    "$manLocalDir/FreeBSD-4.7-stable",
+     'FreeBSD 5.1-current',   "$manLocalDir/FreeBSD-5.1-current",
+     'FreeBSD 4.8-stable',    "$manLocalDir/FreeBSD-4.8-stable",
+
      'FreeBSD 5.1-RELEASE',   "$manLocalDir/FreeBSD-5.1-RELEASE",
      'FreeBSD 5.0-RELEASE',   "$manLocalDir/FreeBSD-5.0-RELEASE",
      'FreeBSD 4.8-RELEASE',   "$manLocalDir/FreeBSD-4.8-RELEASE",
@@ -302,8 +303,8 @@ while (($key,$val) = each %manPath) {
 %manPathAliases = 
     (
      'freebsd', 'FreeBSD 4.8-RELEASE',
-     'freebsd-stable', 'FreeBSD 4.7-stable',
-     'freebsd-current', 'FreeBSD 5.0-current',
+     'freebsd-stable', 'FreeBSD 4.8-stable',
+     'freebsd-current', 'FreeBSD 5.1-current',
      'freebsd 5.1-release', 'FreeBSD 5.1-RELEASE',
      'slackware', 'Linux Slackware 3.1',
      'linux-de', 'deutsch - Linux/GNU',
@@ -983,7 +984,7 @@ ETX
 }
 
 sub copyright {
-    $id = '$Id: man.cgi,v 1.107 2003-06-23 09:09:56 wosch Exp $';
+    $id = '$Id: man.cgi,v 1.108 2003-06-23 09:13:06 wosch Exp $';
 
     return qq{\
 <PRE>
