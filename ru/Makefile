@@ -1,4 +1,4 @@
-# $FreeBSD: www/ru/Makefile,v 1.3 1999/11/02 10:01:26 andy Exp $
+# $FreeBSD: www/ru/Makefile,v 1.4 1999/11/09 00:04:56 phantom Exp $
 
 .if exists(Makefile.conf)
 .include "Makefile.conf"
@@ -33,7 +33,7 @@ DATA=	robots.txt index.html
 # SGML
 #SUBDIR=  security
 #SUBDIR+= commercial
-#SUBDIR+= docproj
+SUBDIR+= docproj
 #SUBDIR+= news
 SUBDIR+= alpha
 #SUBDIR+= internal
