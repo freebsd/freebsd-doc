@@ -1,7 +1,7 @@
 #
 # $FreeBSD$
 #
-# This include file <doc.project.mk> is the FreeBSD Documentation Project 
+# This include file <doc.project.mk> is the FreeBSD Documentation Project
 # co-ordination make file.
 #
 # This file includes the other makefiles, which contain enough
@@ -61,7 +61,7 @@
 DOCFORMAT?=	docbook
 MAINTAINER?=	doc@FreeBSD.org
 
-# Master list of known target formats.  The doc.<format>.mk files implement 
+# Master list of known target formats.  The doc.<format>.mk files implement
 # the code to convert from their source format to one or more of these target
 # formats
 ALL_FORMATS=	html html.tar html-split html-split.tar txt rtf ps pdf tex dvi tar pdb
