@@ -63,6 +63,12 @@ HTML2TXTOPTS?=	-dump ${HTML2TXTFLAGS}
 ISPELL?=	ispell
 ISPELLOPTS?=	-l -p /usr/share/dict/freebsd ${ISPELLFLAGS}
 
+WEBCHECK?=	${PREFIX}/bin/webcheck
+WEBCHECKOPTS?=	-ab ${WEBCHECKFLAGS}
+WEBCHECKDIR?=	/webcheck
+WEBCHECKINSTALLDIR?= ${DESTDIR}${WEBCHECKDIR} 
+WEBCHECKURL?=	http://www.FreeBSD.org/${WEBBASE:S/data//}/${WEBDIR:S/data//}/
+
 #
 # Install dirs derived from the above.
 #
@@ -191,6 +197,17 @@ spellcheck:
 	@echo "Spellcheck ${_entry}"
 	@${HTML2TXT} ${HTML2TXTOPTS} ${.CURDIR}/${_entry} | ${ISPELL} ${ISPELLOPTS}
 .endfor
+
+#
+# Check installed page's hypertext references.  Checking is done relatively
+# to ${.CURDIR} value, i.e. calling 'make webcheck' in www/ru/java
+# directory will force checking all URLs at http://www.FreeBSD.org/ru/java/
+#
+# NOTE: webcheck's output always stored to ${DESTDIR}/webcheck directory.
+#
+webcheck:
+	@[ -d ${WEBCHECKINSTALLDIR} ] || ${MKDIR} ${WEBCHECKINSTALLDIR}
+	${WEBCHECK} ${WEBCHECKOPTS} -o ${WEBCHECKINSTALLDIR} ${WEBCHECKURL}
 
 ##################################################################
 # Main Targets
