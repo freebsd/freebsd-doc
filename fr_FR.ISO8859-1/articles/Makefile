@@ -29,6 +29,7 @@ SUBDIR+= pr-guidelines
 SUBDIR+= cvsup-advanced
 SUBDIR+= ipsec-must
 SUBDIR+= filtering-bridges
+SUBDIR+= problem-reports
 
 ROOT_SYMLINKS+= new-users
 
