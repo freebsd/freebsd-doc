@@ -43,9 +43,9 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $Id: cvsweb.cgi,v 1.80 2002-04-11 01:55:34 fenner Exp $
+# $Id: cvsweb.cgi,v 1.81 2002-05-08 05:42:25 motoyuki Exp $
 # $Idaemons: /home/cvs/cvsweb/cvsweb.cgi,v 1.84 2001/10/07 20:50:10 knu Exp $
-# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.79 2002/04/10 20:26:27 knu Exp $
+# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.80 2002/04/11 01:55:34 fenner Exp $
 #
 ###
 
@@ -230,7 +230,7 @@ $LOG_REVSEPARATOR  = q/^-{28}$/;
 );
 
 $cgi_style::hsty_base = 'http://www.FreeBSD.org';
-$_ = q$FreeBSD: www/en/cgi/cvsweb.cgi,v 1.79 2002/04/10 20:26:27 knu Exp $;
+$_ = q$FreeBSD: www/en/cgi/cvsweb.cgi,v 1.80 2002/04/11 01:55:34 fenner Exp $;
 @_ = split;
 $cgi_style::hsty_date = "@_[3,4]";
 
@@ -1408,7 +1408,7 @@ sub fatal($$) {
 		print "Status: $errcode\r\n";
 	}
 	html_header("Error");
-	print "Error: $errmsg\n";
+	print "Error: " . htmlquote($errmsg) . "\n";
 	print &html_footer;
 	exit(1);
 }
