@@ -1,17 +1,15 @@
-<?xml version="1.0" encoding="ISO-8859-1"?>
-
-<!-- $FreeBSD: www/es/gnome/index.xsl,v 1.1 2003/05/11 19:49:25 jesusr Exp $ -->
+<!-- $FreeBSD: www/es/gnome/index.xsl,v 1.43 2003/10/30 13:41:49 marcus Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
-		xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
-		xmlns:rdf1="http://my.netscape.com/rdf/simple/0.9/"
-		version="1.0">
-  
+                xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+                xmlns:rdf1="http://my.netscape.com/rdf/simple/0.9/"
+                exclude-result-prefixes="rdf rdf1" version="1.0">
+
   <xsl:import href="../includes.xsl"/>
   <xsl:import href="includes.xsl"/>
 
   <xsl:variable name="base" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/es/gnome/index.xsl,v 1.1 2003/05/11 19:49:25 jesusr Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/es/gnome/index.xsl,v 1.43 2003/10/30 13:41:49 marcus Exp $'"/>
   <xsl:variable name="title" select="'Proyecto FreeBSD GNOME'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -40,24 +38,23 @@
 
                           <p><font size="+1" color="#990000"><b>GNOME en FreeBSD</b></font>
                             <small><br/>
-                              &#183; <a href="http://www.FreeBSD.org/gnome/">Inicio GNOME en FreeBSD</a><br/>
-                              &#183; <a href="docs/faq.html#q1">Instrucciones de Instalaci&#243;n para GNOME 1.4</a><br/>
-                              &#183; <a href="docs/faq2.html#q1">Instrucciones de Instalaci&#243;n para GNOME 2.0</a><br/>
+                              &#183; <a href="http://www.FreeBSD.org/es/gnome/">Inicio GNOME en FreeBSD</a><br/>
+                              &#183; <a href="docs/faq2.html#q1">Instrucciones de Instalaci&#243;n</a><br/>
                               &#183; <a href="../ports/gnome.html">Aplicaciones Disponibles</a><br/>
                               &#183; <a href="docs/volunteer.html">C&#243;mo Ayudar</a><br/>
-                              &#183; <a href="docs/bugging.html">Reportando un Error</a><br/>
-                              &#183; <a href="screenshots.html">Screenshots</a><br/>
+                              &#183; <a href="docs/bugging.html">Reportando un Error (Bug)</a><br/>
+                              &#183; <a href="screenshots.html">Capturas de Pantalla</a><br/>
                               &#183; <a href="contact.html">Cont&#225;ctenos</a><br/>
                             </small></p>
 
                           <p><font size="+1" color="#990000"><b>Documentaci&#243;n</b></font>
                             <small><br/>
-                              &#183; <a href="docs/faq.html">FAQ de GNOME 1.4</a><br/>
-                              &#183; <a href="docs/faq2.html">FAQ de GNOME 2.0</a><br/>
-                              &#183; <a href="docs/porting.html">Creaci&#243;n de Ports</a><br/>
+                              &#183; <a href="docs/faq2.html">GNOME FAQ</a><br/>
+                              &#183; <a href="docs/porting.html">Creando Ports</a><br/>
+                              &#183; <a href="docs/knownissues.html">Problemas Conocidos</a><br/>
                             </small></p>
 
-                          <p><font size="+1" color="#990000"><b>Recursos</b></font>
+                          <p><font size="+1" color="#990000"><b>Fuentes</b></font>
                             <small><br/>
                               &#183; <a href="http://www.gnome.org/">Proyecto GNOME</a><br/>
                               &#183; <a href="http://www.gnome.org/gnome-office/">GNOME Office</a><br/>
@@ -72,11 +69,11 @@
                             </small></p>
 
                           <form action="http://www.FreeBSD.org/cgi/search.cgi" method="get">
-                            <small>B&#250;squeda en los archivos de la lista de correo freebsd-gnome:<br/>
+                            <small>Buscar en archivos de la lista de correo freebsd-gnome:<br/>
                               <input type="text" name="words" size="10"/>
                               <input type="hidden" name="max" value="25"/>
                               <input type="hidden" name="source" value="freebsd-gnome"/>
-                              <input type="submit" value="Enviar"/>
+                              <input type="submit" value="Go"/>
                             </small>
                           </form>
 
@@ -94,50 +91,50 @@
 
             <td align="left" valign="top" rowspan="2">
               <h2><font color="#990000">&#191;Qu&#233; es GNOME?</font></h2>
-              <img src="../../en/gnome/images/gnome.png" align="right"
-                   border="0" width="66" height="83" alt="GNOME Logo"/>
+              <img src="{$base}/gnome/images/gnome.png" align="right"
+                   border="0" alt="GNOME Logo"/>
 
-              <p>El proyecto GNOME  nace para crear un entorno de
-                escritorio para sistemas abiertos  que sea completamente libre.
-                Desde un principio  el objetivo principal de GNOME ha sido disponer  
-                de un conjunto de aplicaciones y un entorno de escritorio de 
-                f&#225;cil uso.  El proyecto FreeBSD GNOME tiene como objetivo 
-                acercar GNOME al usuario de FreeBSD.</p>
+              <p>El proyecto GNOME nace como un esfuerzo de crear un entorno
+                completo de escritorio para sistemas libres.  Desde un comienzo,
+                el objetivo principal de GNOME ha sido el de proveer al usuario
+                un entorno de escritorio de f&#225;cil uso y una suite completa de
+                aplicaciones amigables.  El Proyecto FreeBSD GNOME consiste en
+                llevar GNOME al usuario de FreeBSD.</p>
 
-              <p>Como la mayor parte de los programas GNU, GNOME ha sido 
-                dise&#241;ado para ser ejecutado en todos los sistemas 
-                operativos modernos basados en UNIX.  Por medio del esfuerzo del
-                Proyecto FreeBSD GNOME e incontables voluntarios esos sistemas
-                operativos incluyen a FreeBSD.</p>
+              <p>Como sucede con la mayoria de los programas GNU, GNOME ha
+                sido dise&#241;ado para ejecutarse en todos los sistemas
+                operativos modernos basados en Unix.  A traves del esfuerzo
+                del Proyecto FreeBSD GNOME e infinidad de voluntarios, esa
+                lista de sistemas operativos incluye a FreeBSD.</p>
 
-              <p>En los pasados meses el proyecto GNOME ha expandido sus 
-                objetivos, para se&#241;alar cierto n&#250;mero de problemas que
-                existen en la infraestructura Unix.</p>
+              <p>En los ultimos meses, el proyecto GNOME ha expandido sus
+                objetivos para solucionar un sinfin de problemas en la
+                infrastructura existente.</p>
 
-              <p>El Proyecto GNOME  act&#250;a como sombrilla.  Los componentes 
-                m&#225;s importantes de GNOME  son:</p>
+              <p>El proyecto GNOME actua como sombrilla.  Los principales
+                componentes de GNOME son:</p>
               <ul>
-                <li>El <a href="http://www.gnome.org">escritorio GNOME</a>:  Un 
-                  entorno gr&#225;fico, basado en un entorno de ventanas, para
-                  el usuario.</li>
-                <li>La <a href="http://developer.gnome.org">plataforma de
+                <li>El <a href="http://www.gnome.org">escritorio GNOME</a>:
+                  Un entorno gr&#225;fico de f&#225;cil uso para usuarios.</li>
+                <li>La plataforma de <a href="http://developer.gnome.org">
                   desarrollo GNOME</a>:  Una rica colecci&#243;n de herramientas,
-                  librer&#237;as y componentes  para desarrollar poderosas
+                  librer&#237;as y componentes, para desarrollar potentes
                   aplicaciones en Unix.</li>
-                <li>La suite de <a href="http://www.gnome.org/gnome-office">Oficina
-                  de GNOME</a>:  Un conjunto de aplicaciones de oficina.</li>
+                <li>La <a href="http://www.gnome.org/gnome-office">GNOME
+                  Office</a>:  Un conjunto de aplicaciones de oficina y 
+                  productividad.</li>
               </ul>
 
-              <h2><font color="#990000">Est&#225;atus de la migraci&#243;n</font></h2>
+              <h2><font color="#990000">Estado de la migraci&#243;n</font></h2>
 
-              <p>Actualmente se cuenta con soporte para GNOME 1.4 y 2.0 para 
-                sistemas FreeBSD 4.x y 5 -CURRENT.  Cualquier versi&#243;n
-                anterior a FreeBSD 4.5  no est&#225; soportada.  La mayor parte de 
-                GNOME ha sido portado a FreeBSD aunque a&#250;n <a 
-                href="docs/volunteer.html">hay mucho por hacer</a>!.</p>
+              <p>Actualmente se soporta GNOME <xsl:copy-of select="$gnomever"/>
+                en los sistemas FreeBSD 4.x y 5-CURRENT.  Cualquier versi&#243;n
+                anterior a FreeBSD 4.8 no est&#225; soportada.  La mayor parte de
+                GNOME ha sido migrada aunque, a&#250;n queda 
+                <a href="docs/volunteer.html">mucho por hacer</a>!.</p>
 
             </td>
-            
+
             <td></td>
 
             <!-- Right-most column -->
@@ -151,10 +148,10 @@
                            bgcolor="#ffcc66" width="100%">
                       <tr>
                         <td valign="top">
-                        
+
                         <p><font size="+1" color="#990000"><b>Noticias FreeBSD GNOME</b></font><br/>
                           <font size="-1">
-                            Ultima actualizaci&#243;n: 
+                            Ultima Actualizacin:
                             <xsl:value-of
                               select="descendant::month[position() = 1]/name"/>
                             <xsl:text> </xsl:text>
@@ -180,9 +177,9 @@
                                 </xsl:choose>
                               </a>
                             </xsl:for-each>
-                            <a href="newsflash.html">More...</a>
+                            <a href="newsflash.html">Ms...</a>
                           </font></p>
-                          
+
                           <p><font size="+1" color="#990000"><b>Noticias Proyecto GNOME</b></font><br/>
                             <font size="-1">
                               <xsl:for-each select="document('http://gnomedesktop.org/backend.php')/rss/channel/*[name() = 'item'][position() &lt; 10]">
@@ -197,7 +194,7 @@
                               <xsl:for-each select="document('http://gnomedesktop.org/backend.php')/rss/*[name() = 'channel'][position() = 1]">
                                 <xsl:attribute name="href">
                                   <xsl:value-of select="link"/>
-                                </xsl:attribute>More...
+                                </xsl:attribute>Ms...
                               </xsl:for-each>
                             </a>
                           </font></p>
@@ -209,11 +206,11 @@
                 </tr>
               </table>
             </td>
-            
+
           </tr>
         </table>
         <xsl:copy-of select="$footer"/>
       </body>
     </html>
-  </xsl:template>    
+  </xsl:template>
 </xsl:stylesheet>
