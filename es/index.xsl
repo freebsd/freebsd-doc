@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/es/index.xsl,v 1.3 2004/06/14 00:29:45 jesusr Exp $ -->
-<!-- $FreeBSDes$ -->
+<!-- $FreeBSD$ -->
+<!-- $FreeBSDes: www/es/index.xsl,v 1.4 2004/09/07 21:46:11 jcamou Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -10,12 +10,13 @@
 
   <xsl:variable name="base" select="'.'"/>
   <xsl:variable name="enbase" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/es/index.xsl,v 1.3 2004/06/14 00:29:45 jesusr Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/es/index.xsl,v 1.2 2004/04/12 05:37:24 den Exp $'"/>
   <xsl:variable name="title" select="'El Proyecto FreeBSD'"/>
 
   <!-- these params should be externally bound. The values
        here are not used actually -->
   <xsl:param name="advisories.xml" select="'none'"/>
+  <xsl:param name="notices.xml" select="'none'"/>
   <xsl:param name="mirrors.xml" select="'none'"/>
   <xsl:param name="news.press.xml" select="'none'"/>
   <xsl:param name="news.project.xml" select="'none'"/>
@@ -42,7 +43,7 @@
 
 	<table border="0" cellspacing="0" cellpadding="0" width="100%">
 	  <tr>
-	    <td><a href="http://www.FreeBSD.org/it/index.html">
+	    <td><a href="http://www.FreeBSD.org/es/index.html">
 		<img src="{$enbase}/gifs/freebsd_1.gif" height="94" width="306"
 		     alt="FreeBSD: The Power to Serve" border="0"/></a></td>
 
@@ -238,14 +239,14 @@
 			   bgcolor="#ffcc66" width="100%">
 		      <tr>
 			<td valign="top"><p>
-			      <a href="{$u.rel.early}">
+			      <a href="{$u.rel.announce}">
 			      <font size="+1" color="#990000"><b>Nueva 
 			        Tecnolog&#237;a:
 			    <xsl:value-of select="$rel.current"/></b></font></a><br/>
-			    <small>&#183; <a href="{$u.rel.announce}">Anuncio</a><br/>
-			      &#183; <a href="{$enbase}/doc/es_ES.ISO8859-1/books/handbook/install.html">Gu&#237;a de Instalaci&#243;n</a><br/>
+			      <small>&#183; <a href="{$enbase}/doc/es_ES.ISO8859-1/books/handbook/install.html">Gu&#237;a de Instalaci&#243;n</a><br/>
 			      &#183; <a href="{$u.rel.notes}">Notas de Release</a><br/>
 			      &#183; <a href="{$u.rel.hardware}">Notas de Hardware</a><br/>
+			      &#183; <a href="{$u.rel.installation}">Notas de Instalaci&#243;n</a><br/>
 			      &#183; <a href="{$u.rel.errata}">Errata</a><br/>
 			      &#183; <a href="{$u.rel.early}">Early Adopter's Guide</a></small></p>
 
@@ -254,10 +255,10 @@
 			      <font size="+1" color="#990000"><b>Release en 
 			        Producci&#243;n:
 			    <xsl:value-of select="$rel2.current"/></b></font></a><br/>
-			    <small>&#183; <a href="{$u.rel2.announce}">Anuncio</a><br/>
-			      &#183; <a href="{$enbase}/doc/es_ES.ISO8859-1/books/handbook/install.html">Gu&#237;a de Instalaci&#243;n</a><br/>
+			      <small>&#183; <a href="{$enbase}/doc/es_ES.ISO8859-1/books/handbook/install.html">Gu&#237;a de Instalaci&#243;n</a><br/>
 			      &#183; <a href="{$u.rel2.notes}">Notas de Release</a><br/>
 			      &#183; <a href="{$u.rel2.hardware}">Notas de Hardware</a><br/>
+			      &#183; <a href="{$u.rel2.installation}">Notas de Instalaci&#243;n</a><br/> 
 			      &#183; <a href="{$u.rel2.errata}">Errata</a></small></p>
 
 			  <p><font size="+1" color="#990000"><b>Noticias del 
@@ -293,8 +294,7 @@
 			  <p><font size="+1" color="#990000"><b>Avisos de 
 			    Seguridad</b></font>
 			    <xsl:text> </xsl:text>
-			    <font color="#990000">(<a
-			    href="{$enbase}/security/advisories.rdf">RSS</a>)</font><br/>
+			    <font color="#990000">(<a href="{$enbase}/security/advisories.rdf">RSS</a>)</font><br/>
 
 			    <font size="-1">
 			      Ultima actualizaci&#243;n:
@@ -308,6 +308,23 @@
 			      <a href="{$base}/security/index.html">M&#225;s...</a>
 			    </font>
 			  </p>
+
+			  <p><font size="+1" color="#990000"><b>Noticias Errata</b></font>
+			    <xsl:text> </xsl:text>
+			    <br/>
+			    <font size="-1">
+			      Ultima actualizaci&#243;n:
+                              <xsl:call-template name="html-index-advisories-items-lastmodified">
+                                <xsl:with-param name="advisories.xml" select="$notices.xml" />
+                                <xsl:with-param name="type" select="'notice'" />
+                              </xsl:call-template>
+                              <br/>
+                              <xsl:call-template name="html-index-advisories-items">
+                                <xsl:with-param name="advisories.xml" select="$notices.xml" />
+                                <xsl:with-param name="type" select="'notice'" />
+                              </xsl:call-template>
+                            </font>
+                          </p>
 			</td>
 		      </tr>
 		    </table>
