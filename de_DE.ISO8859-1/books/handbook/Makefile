@@ -1,7 +1,7 @@
 #
 # $FreeBSD$
-# $FreeBSDde: de-docproj/books/handbook/Makefile,v 1.30 2003/12/30 16:08:25 mheinen Exp $
-# basiert auf: 1.74
+# $FreeBSDde: de-docproj/books/handbook/Makefile,v 1.34 2004/05/09 19:49:44 mheinen Exp $
+# basiert auf: 1.79
 #
 # Build the FreeBSD Handbook in its German translation.
 #
@@ -21,12 +21,21 @@ INSTALL_ONLY_COMPRESSED?=
 IMAGES_EN = advanced-networking/isdn-bus.eps
 IMAGES_EN+= advanced-networking/isdn-twisted-pair.eps
 IMAGES_EN+= advanced-networking/natd.eps
+IMAGES_EN+= advanced-networking/net-routing.pic
 IMAGES_EN+= install/disk-layout.eps
 IMAGES_EN+= install/example-dir1.eps
 IMAGES_EN+= install/example-dir2.eps
 IMAGES_EN+= install/example-dir3.eps
 IMAGES_EN+= install/example-dir4.eps
 IMAGES_EN+= install/example-dir5.eps
+IMAGES_EN+= mail/mutt1.scr
+IMAGES_EN+= mail/mutt2.scr
+IMAGES_EN+= mail/mutt3.scr
+IMAGES_EN+= mail/pine1.scr
+IMAGES_EN+= mail/pine2.scr
+IMAGES_EN+= mail/pine3.scr
+IMAGES_EN+= mail/pine4.scr
+IMAGES_EN+= mail/pine5.scr
 IMAGES_EN+= security/ipsec-network.pic
 IMAGES_EN+= security/ipsec-crypt-pkt.pic
 IMAGES_EN+= security/ipsec-encap-pkt.pic
@@ -68,6 +77,7 @@ SRCS+= l10n/chapter.sgml
 SRCS+= linuxemu/chapter.sgml
 SRCS+= mail/chapter.sgml
 SRCS+= mirrors/chapter.sgml
+SRCS+= multimedia/chapter.sgml
 SRCS+= pgpkeys/chapter.sgml
 SRCS+= ppp-and-slip/chapter.sgml
 SRCS+= ports/chapter.sgml
@@ -75,7 +85,6 @@ SRCS+= preface/preface.sgml
 SRCS+= printing/chapter.sgml
 SRCS+= security/chapter.sgml
 SRCS+= serialcomms/chapter.sgml
-SRCS+= sound/chapter.sgml
 SRCS+= users/chapter.sgml
 SRCS+= vinum/chapter.sgml
 SRCS+= x11/chapter.sgml
@@ -125,7 +134,6 @@ CLEANFILES+= eresources.sgml.www.inc.tmp
 mirrors.sgml.${p}.inc: ${XML_MIRRORS} ${XSL_MIRRORS}
 	${XSLTPROC} ${XSLTPROCOPTS} \
 	    -o $@.tmp \
-	    --param 'transtable.xml' "'${XML_TRANSTABLE}'" \
 	    --param 'type' "'$p'" \
 	    --param 'proto' "'$p'" \
 	    --param 'target' "'handbook/mirrors/chapter.sgml'" \
@@ -138,7 +146,6 @@ mirrors.sgml.${p}.inc: ${XML_MIRRORS} ${XSL_MIRRORS}
 eresources.sgml.www.inc: ${XML_MIRRORS} ${XSL_MIRRORS}
 	${XSLTPROC} ${XSLTPROCOPTS} \
 	    -o $@.tmp \
-	    --param 'transtable.xml' "'${XML_TRANSTABLE}'" \
 	    --param 'type' "'www'" \
 	    --param 'proto' "'http'" \
 	    --param 'target' "'handbook/eresources/chapter.sgml'" \
