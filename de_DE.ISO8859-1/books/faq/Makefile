@@ -5,8 +5,8 @@
 #    Build the FreeBSD FAQ in the German translation
 #
 #    $FreeBSD$
-#    $FreeBSDde: de-docproj/books/faq/Makefile,v 1.7 2002/04/06 18:47:12 ue Exp $
-#    basiert auf: 1.7
+#    $FreeBSDde: de-docproj/books/faq/Makefile,v 1.8 2003/03/08 18:27:30 mheinen Exp $
+#    basiert auf: 1.8
 #
 
 MAINTAINER=de-bsd-translators@DE.FreeBSD.org
@@ -18,14 +18,14 @@ FORMATS?= html-split html
 INSTALL_COMPRESSED?= gz
 INSTALL_ONLY_COMPRESSED?=
 
-JADEFLAGS+=-Vbiblio-xref-title
-# 
+WITH_BIBLIOXREF_TITLE=YES
+#
 # SRCS lists the individual SGML files that make up the document. Changes
 # to any of these files will force a rebuild
 #
 
 # SGML content
-SRCS=  book.sgml 
+SRCS=  book.sgml
 
 DOC_PREFIX?= ${.CURDIR}/../../..
 
