@@ -26,7 +26,7 @@
 #
 # url.cgi - make plain text URLs clickable
 #
-# $Id: url.cgi,v 1.13 1999-01-19 17:07:03 wosch Exp $
+# $Id: url.cgi,v 1.14 1999-01-22 23:57:55 wosch Exp $
 
 
 $hsty_base = '';
@@ -59,7 +59,7 @@ print "\n<HR>\n<pre>\n";
 my($content);
 $content .= $_ while(<CO>);
 $content =~ s/</&lt;/g;
-$content =~ s%((http|ftp)://[^\s"\)\>,;]+)%<A HREF="$1">$1</A>%gi;
+$content =~ s%((http|ftp)://\S+[^.;,"\s>])%<A HREF="$1">$1</A>%gi;
 
 print $content;
 print "</pre>\n";
