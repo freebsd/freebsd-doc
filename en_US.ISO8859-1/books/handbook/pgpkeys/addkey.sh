@@ -39,9 +39,15 @@ key=$(gpg --armor --export ${id})
 [ $? -eq 0 ] || exit 1
 
 keyfile="${me}.key"
+if [ -f "${keyfile}" ]; then
+    rcsid=$(grep '^<!-- \$Free.*-->$' "${keyfile}")
+fi
+if [ -z "${rcsid}" ]; then
+    rcsid='<!-- $''FreeBSD''$ -->'
+fi
 echo "Generating ${keyfile}..."
 (
-    echo '<!-- $FreeBSD$ -->'
+    echo "${rcsid}"
     echo '<!--'
     echo "sh $0 ${me} ${id};"
     echo '-->'
