@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
 
 <!--
-    $FreeBSD: www/ja/news/press.xsl,v 1.2 2002/03/04 12:12:40 hanai Exp $
-    Original revision: 1.3
+    $FreeBSD: www/ja/news/press.xsl,v 1.3 2002/07/30 12:43:21 hrs Exp $
+    Original revision: 1.5
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -13,7 +13,7 @@
 
   <xsl:variable name="base" select="'..'"/>
   <xsl:variable name="title" select="'FreeBSD In The Press'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/ja/news/press.xsl,v 1.2 2002/03/04 12:12:40 hanai Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/ja/news/press.xsl,v 1.3 2002/07/30 12:43:21 hrs Exp $'"/>
   
   <xsl:output type="html" encoding="EUC-JP"/>
 
@@ -28,7 +28,7 @@
 
 	<p>ここに載っていない FreeBSD に関連したニュース記事をご存じなら、
 	  我々がここに載せられるように詳細を
-	  <a href="mailto:doc@freebsd.org">doc@FreeBSD.org</a> まで
+	  <a href="mailto:www@freebsd.org">www@FreeBSD.org</a> まで
 	  (英語で) 送ってください。</p>
 
 	<p>また、FreeBSD Java プロジェクトの報道記事に関する情報は、
