@@ -1,7 +1,9 @@
 # 
-# $FreeBSDru: frdp/doc/ru_RU.KOI8-R/articles/Makefile.inc,v 1.1 2001/03/11 10:41:06 phantom Exp $
-# $FreeBSD: doc/ru_RU.KOI8-R/articles/Makefile.inc,v 1.1 2001/03/11 16:23:41 phantom Exp $
+# $FreeBSD$
+# $FreeBSDru: frdp/doc/ru_RU.KOI8-R/articles/Makefile.inc,v 1.4 2001/07/25 10:26:26 phantom Exp $
+#
 # Original revision: 1.3
 #
 
+TIDYFLAGS=	-latin1
 DESTDIR?=	${DOCDIR}/ru_RU.KOI8-R/articles/${.CURDIR:T}
