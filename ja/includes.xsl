@@ -1,9 +1,11 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
 
-<!-- $FreeBSD: www/ja/includes.xsl,v 1.2 2001/08/08 03:55:55 kuriyama Exp $ -->
+<!-- $FreeBSD: www/ja/includes.xsl,v 1.3 2001/11/16 17:14:12 hrs Exp $ -->
 <!-- Original revision: 1.4 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
+
+  <xsl:variable name="enbase" select='concat ($base, "/..")'/>
 
   <xsl:variable name="i.daemon">
     <img src="{$base}/gifs/daemon.gif" alt="" align="left" width="80" height="76"/>
@@ -91,5 +93,8 @@
     <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel.current"/>R/announce.html</xsl:variable>
   <xsl:variable name="u.rel.errata">
     <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel.current"/>R/errata.html</xsl:variable>
+  <!-- 2002/01/02:hrs - when the translation is finished, $enbase should be "$base" -->
+  <xsl:variable name="u.rel.hardware">
+    <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel.current"/>R/hardware.html</xsl:variable>
   
 </xsl:stylesheet>
