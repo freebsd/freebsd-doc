@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-#	$Id: ports.cgi,v 1.7 1997-10-11 15:58:38 wosch Exp $
+#	$Id: ports.cgi,v 1.8 1997-10-13 22:30:18 wosch Exp $
 #
 # ports.cgi - search engine for FreeBSD ports
 #             	o search for a port by name or description
@@ -70,10 +70,10 @@ sub init_variables {
 	(
 	 'current', 'today',
 	 'stable', 'today',
-	 '2.2.5', '10/5/97',
-	 '2.2.2', '5/16/97',
-	 '2.1.6', '11/16/96',
-	 '2.1.0', '11/19/95',
+	 '2.2.5', '1997-10-20',
+	 '2.2.2', '1997-5-16',
+	 '2.1.6', '1997-11-16',
+	 '2.1.0', '1997-11-19',
 	 );
 
     #
