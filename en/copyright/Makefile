@@ -1,11 +1,11 @@
-# $Id: Makefile,v 1.5 1998-10-13 04:48:44 jkh Exp $
+# $Id: Makefile,v 1.6 1998-10-15 19:29:45 wosch Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
 .endif
 
 DOCS=	license.sgml
-DOCS=	freebsd-license.sgml
+DOCS+=	freebsd-license.sgml
 DOCS+=	daemon.sgml
 DOCS+=	copyright.sgml
 
