@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/gifs/Makefile,v 1.50 2004/04/15 10:51:08 phantom Exp $
+# $FreeBSD: www/en/gifs/Makefile,v 1.51 2004/07/24 17:54:23 blackend Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -65,8 +65,8 @@ DATA+=  resources_and_links.png status_board.png blocked.png c99.jpg
 DATA+=  fbsdcng-english.png fbsdcng-japanese.png
 DATA+=  abs_bsd_cov.gif fbsd-ososfypc.jpg
 DATA+=  kapak.jpg kapak_sml.jpg
-DATA+=  1.pnm 2.pnm 3.pnm 4.pnm 5.pnm 6.pnm 7.pnm 8.pnm 9.pnm
-DATA+=  A.pnm B.pnm C.pnm D.pnm E.pnm F.pnm G.pnm H.pnm I.pnm J.pnm
+DATA+=  2.pnm 3.pnm 4.pnm 5.pnm 6.pnm 7.pnm 8.pnm 9.pnm
+DATA+=  A.pnm B.pnm C.pnm D.pnm E.pnm F.pnm G.pnm H.pnm J.pnm
 DATA+=  K.pnm L.pnm M.pnm N.pnm P.pnm Q.pnm R.pnm S.pnm T.pnm U.pnm
 DATA+=  V.pnm W.pnm X.pnm Y.pnm Z.pnm
 
