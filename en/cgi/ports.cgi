@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/ports.cgi,v 1.37 1999/12/25 17:44:14 wosch Exp $
+# $FreeBSD: www/en/cgi/ports.cgi,v 1.38 2000/01/05 15:47:45 phantom Exp $
 #
 # ports.cgi - search engine for FreeBSD ports
 #             	o search for a port by name or description
@@ -141,7 +141,7 @@ sub last_update {
     while(<DB>) {
 	$head = $1 if (/^head\s+([0-9.]+);?\s*$/);
 	if (/^date/ && /^date\s+([0-9]+)\.([0-9]+)\.([0-9]+)\.([0-9]+)\.([0-9]+)\.([0-9]+);\s+/) {
-	    $date = ($1 + 1900) . qq{-$2-$3 $4:$5:$6 UTC};
+	    $date = ($1 < 100 ? $1 + 1900 : $1) . qq{-$2-$3 $4:$5:$6 UTC};
 	    last;
 	}
     }
@@ -521,7 +521,7 @@ sub footer {
 <img ALIGN="RIGHT" src="/gifs/powerlogo.gif">
 &copy; 1996-1999 by Wolfram Schneider. All rights reserved.<br>
 };
-    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.37 1999/12/25 17:44:14 wosch Exp $} . "<br>\n";
+    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.38 2000/01/05 15:47:45 phantom Exp $} . "<br>\n";
     print qq{Please direct questions about this service to
 <I><A HREF="$mailtoURL">$mailto</A></I><br>\n};
     print qq{General questions about FreeBSD ports should be sent to } .
