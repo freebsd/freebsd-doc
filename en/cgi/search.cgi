@@ -107,7 +107,7 @@ sub do_wais {
 
     local(@mylist) = ();
     local($hits, $score, $headline, $lines, $bytes, $docid, $date, $file);
-    print "<pre>";
+
     while (<WAISOUT>) {
 	/:original-local-id.*#\(\s+([^\)]*)/ && 
 	    ($docid = pack("C*", split(/\s+/, $1)),
@@ -122,7 +122,6 @@ sub do_wais {
 			    push(@mylist, join("\t", $date, $headline, $docid, 
 					       $bytes, $lines, $file, $score, $hits)));
     }
-    print "</pre>";
 
     if ($in{'sort'} eq "date") {
 	foreach (reverse sort {$a <=> $b} @mylist) {
