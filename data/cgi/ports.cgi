@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-#	$Id: ports.cgi,v 1.19 1998-04-30 07:30:38 wosch Exp $
+#	$Id: ports.cgi,v 1.20 1998-06-01 16:15:03 wosch Exp $
 #
 # ports.cgi - search engine for FreeBSD ports
 #             	o search for a port by name or description
@@ -87,7 +87,7 @@ sub init_variables {
     $daemonGif = '<IMG SRC="/gifs/littlelogo.gif">';
 
     # visible E-Mail address, plain text
-    $mailto = 'wosch@FreeBSD.org';
+    $mailto = 'www@FreeBSD.org';
 
     # Mailinglist for FreeBSD Ports
     $mailtoList = 'ports@FreeBSD.org';
@@ -96,7 +96,7 @@ sub init_variables {
     $mailtoAdvanced = 'yes';
 
     # the URL if you click at the E-Mail address (see below)
-    $mailtoURL = 'http://www.de.freebsd.org/~wosch/';
+    $mailtoURL = 'http://www.freebsd.org/ports/';
     $mailtoURL = "mailto:$mailto" if !$mailtoURL;
 
     # security
