@@ -58,15 +58,6 @@
   </xsl:template>
 
   <xsl:template match="*[local-name() = $transtable-target-element]" mode="sortkey">
-    <xsl:text>  </xsl:text>
-
-    <xsl:comment>
-      <xsl:call-template name="transtable-lookup">
-	<xsl:with-param name="word" select="." />
-	<xsl:with-param name="word-group" select="$transtable-word-group" />
-      </xsl:call-template>
-    </xsl:comment>
-
     <xsl:element name="word">
       <xsl:attribute name="name">
 	<xsl:call-template name="transtable-lookup">
