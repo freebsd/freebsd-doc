@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/ports.cgi,v 1.38 2000/01/05 15:47:45 phantom Exp $
+# $FreeBSD: www/en/cgi/ports.cgi,v 1.39 2000/01/06 08:34:05 wosch Exp $
 #
 # ports.cgi - search engine for FreeBSD ports
 #             	o search for a port by name or description
@@ -44,8 +44,8 @@ sub init_variables {
     @cvscmd = ('cvs', '-Q', '-R', '-d', $cvsroot);
 
     # URL of ports tree for browsing
-    $remotePrefixFtp =
-	'ftp://ftp.FreeBSD.org/pub/FreeBSD/branches/-current/ports';
+    $remotePrefixFtp = 'ports';
+	# 'ftp://ftp.FreeBSD.org/pub/FreeBSD/branches/-current/ports';
 
     # URL of ports tree for download 
     $remotePrefixFtpDownload =
@@ -521,7 +521,7 @@ sub footer {
 <img ALIGN="RIGHT" src="/gifs/powerlogo.gif">
 &copy; 1996-1999 by Wolfram Schneider. All rights reserved.<br>
 };
-    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.38 2000/01/05 15:47:45 phantom Exp $} . "<br>\n";
+    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.39 2000/01/06 08:34:05 wosch Exp $} . "<br>\n";
     print qq{Please direct questions about this service to
 <I><A HREF="$mailtoURL">$mailto</A></I><br>\n};
     print qq{General questions about FreeBSD ports should be sent to } .
