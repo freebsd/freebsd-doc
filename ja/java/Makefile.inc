@@ -1,6 +1,6 @@
-# $FreeBSD: www/en/java/Makefile.inc,v 1.1 2000/03/02 15:55:14 phantom Exp $
+# $FreeBSD: www/ja/java/Makefile.inc,v 1.1 2000/04/27 02:05:06 kuriyama Exp $
 
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.1
 
-WEBBASE?= /data/java
+WEBBASE?= /data/ja/java
