@@ -1,4 +1,4 @@
-<!-- $FreeBSD: doc/en_US.ISO8859-1/share/sgml/freebsd.dsl,v 1.11 2001/07/20 02:53:08 murray Exp $ -->
+<!-- $FreeBSD: doc/en_US.ISO8859-1/share/sgml/freebsd.dsl,v 1.12 2001/07/28 03:00:03 murray Exp $ -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
 <!ENTITY freebsd.dsl PUBLIC "-//FreeBSD//DOCUMENT DocBook Language Neutral Stylesheet//EN" CDATA DSSSL>
@@ -154,11 +154,13 @@
 	  (make sequence
 	    (process-node-list subtitles))))
 
-      (make rule
-	length: 475pt
-	display-alignment: 'start
-	space-before: (* (HSIZE 5) %head-before-factor%)
-	line-thickness: 0.5pt))))
+      (if (equal? (gi) (normalize "index"))
+	(empty-sosofo)
+	(make rule
+	  length: 475pt
+	  display-alignment: 'start
+	  space-before: (* (HSIZE 5) %head-before-factor%)
+	  line-thickness: 0.5pt)))))
 
       (element authorgroup
         (empty-sosofo))
