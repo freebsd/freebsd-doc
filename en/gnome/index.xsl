@@ -122,7 +122,8 @@
               <p>We currently support 4.x and 5-CURRENT FreeBSD systems
                 for GNOME 1.4.1.  Anything prior to FreeBSD 4.1 is not
                 supported.  Most of GNOME has been ported to FreeBSD;
-                however, there's plenty left to do!</p>
+                however, there's <a href="docs/volunteer.html">plenty left to 
+				do</a>!</p>
 
             </td>
             
