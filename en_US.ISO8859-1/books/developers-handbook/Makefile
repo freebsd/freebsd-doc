@@ -41,6 +41,7 @@ SRCS+= x86/chapter.sgml
 SRCS+= vm/chapter.sgml
 SRCS+= dma/chapter.sgml
 SRCS+= kerneldebug/chapter.sgml
+SRCS+= sound/chapter.sgml
 
 # Entities
 
