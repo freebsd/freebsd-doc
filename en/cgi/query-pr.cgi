@@ -1,5 +1,5 @@
 #!/usr/bin/perl -T
-# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.35 2003/06/09 14:58:00 ceri Exp $
+# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.36 2003/11/12 20:58:13 ceri Exp $
 
 $ENV{'PATH'} = "/bin:/usr/bin:/usr/sbin:/sbin:/usr/local/bin";
 
@@ -11,6 +11,7 @@ $ENV{'PATH'} = "/bin:/usr/bin:/usr/sbin:/sbin:/usr/local/bin";
 require "./cgi-lib.pl";
 require "./cgi-style.pl";
 require "getopts.pl";
+require "./Gnats.pm";  import Gnats;
 
 &Getopts('p:');
 
@@ -56,7 +57,7 @@ if ($pr < 1 || $pr > 499999) {
     exit 0;
 }
 
-unless (open(Q, "query-pr.web -F $pr 2>&1 |")) {
+unless (open(Q, "$query_pr -F $pr 2>&1 |")) {
     print &html_header("Server error");
     print "<p>Unable to open PR database.</p>\n";
     print &html_footer;
