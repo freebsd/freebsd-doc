@@ -23,39 +23,34 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" %FreeBSD: src/share/man/man9/zone.9,v 1.9.2.4 2002/05/02 20:01:29 asmodai Exp %
+.\" %FreeBSD: src/share/man/man9/zone.9,v 1.21 2002/05/30 11:37:39 ru Exp %
 .\"
 .\" $FreeBSD$
-.Dd January 27, 2001
+.Dd May 18, 2002
 .Dt ZONE 9
 .Os
 .Sh 名称
-.Nm zbootinit ,
-.Nm zinitna ,
-.Nm zinit ,
-.Nm zalloc ,
-.Nm zfree ,
-.Nm zalloci ,
-.Nm zfreei ,
+.Nm uma_zcreate ,
+.Nm uma_zalloc ,
+.Nm uma_zfree ,
+.Nm uma_zdestroy
 .Nd ゾーンアロケータ
 .Sh 書式
 .In sys/param.h
 .In sys/queue.h
-.In vm/vm_zone.h
+.In vm/uma.h
+.Ft uma_zone_t
+.Fo uma_zcreate
+.Fa "char *name" "int size"
+.Fa "uma_ctor ctor" "uma_dtor dtor" "uma_init uminit" "uma_fini fini"
+.Fa "int align" "u_int16_t flags"
+.Fc
+.Ft "void *"
+.Fn uma_zalloc "uma_zone_t zone" "int flags"
 .Ft void
-.Fn zbootinit "vm_zone_t z" "char *name" "int size" "void *item" "int nitems"
-.Ft int
-.Fn zinitna "vm_zone_t z" "struct vm_object *obj" "char *name" "int size" "int nentries" "int flags" "int zalloc"
-.Ft vm_zone_t
-.Fn zinit "char *name" "int size" "int nentries" "int flags" "int zalloc"
-.Ft void *
-.Fn zalloc "vm_zone_t z"
+.Fn uma_zfree "uma_zone_t zone" "void *item"
 .Ft void
-.Fn zfree "vm_zone_t z" "void *item"
-.Ft void *
-.Fn zalloci "vm_zone_t z"
-.Ft void
-.Fn zfreei "vm_zone_t z" "void *item"
+.Fn uma_zdestroy "uma_zone_t zone"
 .Sh 解説
 ゾーンアロケータは動的に大きさが決められる類似した大きさの項目の集合を
 管理するための効率的なインタフェースを提供します。
@@ -74,7 +69,7 @@
 型が固定となるゾーンの特性を使用したい場合、
 ゾーンアロケータが内部で使用する先頭 2 つのポインタを
 この構造体が予約しておく必要があります。
-.Bd -literal
+.Bd -literal -offset indent
 struct my_item {
         struct my_item  *z_rsvd1;
         struct my_item  *z_rsvd2;
@@ -88,108 +83,42 @@ struct my_item {
 最近解放されたものが内容として残っているでしょうが、
 前述のフィールドは例外です。
 .Pp
-ゾーンはブートプロセスがどれだけ進捗しているかに依存して、
-2 つの流儀のうちの一方で作成されます。
-.Pp
-VM システムが完全に初期化されている場合には、
-.Fn zinit
-を使用して動的に割当てられたゾーンが作成できます。
+.Fn uma_zcreate
+関数は、これから項目が割当てられることが可能な新しいゾーンを作成します。
 .Fa name
-引数はゾーンのための短い記述的な名前へのポインタであるべきです。
-これは統計とデバッギング目的のために使用されます。
-.Fa size
-および
-.Fa nentries
-はそれぞれ、ゾーンによって保持される項目の大きさおよびそのゾーンの
-初期の大きさ (項目数で) です。
-割り込みコンテキストの中でゾーンから項目が割当てられる機会がある
-場合には、
+引数はデバッグおよびステータスのためのテキストのゾーン名です。
+このメモリは、ゾーンの割当てが解放されるまでは、解放されるべきではありません。
+.Pp
+項目はそのゾーンへのポインタを伴なう
+.Fn uma_zalloc
+の呼出しによって割当てられ、
 .Fa flags
-引数は
-.Dv ZONE_INTERRUPT
-に設定されるべきです。
-この場合、ゾーンは決して
-.Fa nentries
-項目よりも大きくならないことに注意してください。
-他の全ての場合には
-.Fa flags
-は 0 に設定されるべきです。
-最後の引数
-.Fa zalloc
-はゾーンが一杯になる度にそのゾーンが大きくなるべき VM ページの数を示します。
-.Pp
-VM システムが未だ完全に初期化されていない場合には、
-ゾーンアロケータは項目に分け与えるための VM ページを
-動的に割当てることができません。そのため、呼び出し側が静的な項目のプールを
-供給する必要があります。
-この場合、2 つの段階で初期化が完了します。最初に、ゾーンの最初の使用の前に
-.Fn zbootinit
-が呼び出され、後で VM システムが起動したときに、
-.Fn zinitna
-の呼び出しによってそのゾーンの初期化が完了されます。
-.Pp
-.Fn zbootinit
-への最初の引数は初期化されるべき静的な
-.Vt "struct vm_zone"
-へのポインタです。
-2 番目と 3 番目はゾーンの名前と保持される項目の大きさです。
-4 番目の引数はゾーンが完全に初期化されるまでの間にゾーンアロケータが
-そこから引き出すであろう静的な項目の配列へのポインタです。
-.Fa nitems
-引数は配列中の項目数です。
-.Pp
-.Fa zinitna
-への引数は
-.Fa zinit
-へのものと同じですが、初期化されるべきゾーンへのポインタ、および
-.Dv ZONE_INTERRUPT
-の場合にそこからページを割当てるための
-.Vt "struct vm_object"
-へのポインタが加わっています。
-.Pp
-ゾーンから項目を割当てるためには、単純にそのゾーンのポインタを伴なって
-.Fn zalloc
-を呼び出します。これは項目へのポインタを、または、ゾーンの中の全ての
-項目が使用中で且つアロケータがゾーンを大きくできないまれな場合には、
+引数に
+.Xr malloc 9
+として文書化された選択されたフラグを設定されます。
+その項目はそのゾーンに解放し戻されます。
+成功の場合には項目へのポインタを返します。
+ゾーン中の全項目が使用中で且つアロケータがゾーンを拡張できない稀な場合か、
+.Dv M_NOWAIT
+が明示されている場合、
 .Dv NULL
-を、返します。
-.Fn zalloc
-は割り込みセーフではないことに注意してください。
-割り込みセーフな割当てのためには
-.Fn zalloc
-と同じセマンティクスを持つ
-.Fn zalloci
-を使用します。
+を返します。
 .Pp
 項目はそのゾーンへのポインタおよびその項目へのポインタを伴なった
-.Fn zfree
-を呼び出しによって、割当てられていたゾーンに解放し戻されます。
-.Fn zalloci
-が使用されて行なわれた割当ての場合には対応する
-.Fn zfreei
-関数を使用します。
+.Fn uma_zfree
+の呼び出しによって、割当てられていたゾーンに解放し戻されます。
+.Pp
+空である作成されたゾーンは、
+.Fn uma_zdestroy
+を使用して、そのゾーンのために割当てられた全てのメモリを解放して、
+破壊されることが可能です。
+そのゾーンから
+.Fn uma_zalloc
+によって割当てられた項目は、その前に
+.Fn uma_zfree
+によって解放されなければなりません。
 .Sh 戻り値
-.Fn zinitna
-関数は成功時には 1 をそして失敗時には 0 を返します。
-唯一の失敗の場合は割り込みセーフなゾーンのためのアドレス空間を
-前もって割当てられないことです。
-.Pp
-.Fn zinit
-関数は完全に初期化された
-.Vt "struct vm_zone"
-へのポインタを、または
-.Vt "struct vm_zone"
-を
-.Fn malloc
-できなかった場合か
-.Dv ZONE_INTERRUPT
-フラグが設定されていて
-.Fn zinitna
-がアドレス空間の前割当てに失敗した場合に
-.Dv NULL
-を、返します。
-.Pp
-.Fn zalloc
+.Fn uma_zalloc
 関数は項目へのポインタを、またはゾーンの未使用項目が不足してアロケータが
 ゾーンを拡張できない場合に
 .Dv NULL
@@ -200,12 +129,21 @@ VM システムが未だ完全に初期化されていない場合には、
 ゾーンアロケータは
 .Fx 3.0
 ではじめて登場しました。
+スラブアロケータとしての機能のため、
+.Fx 5.0
+で根本的に変更されました。
 .Sh 作者
 .An -nosplit
 ゾーンアロケータは
 .An John S. Dyson
 が書きました。
+ゾーンアロケータは、スラブアロケータとしての機能のため、
+.An Jeff Roberson Aq jeff@FreeBSD.org
+が大部分を書き直しました。
 .Pp
 このマニュアルページは
 .An Dag-Erling Co\(:idan Sm\(/orgrav Aq des@FreeBSD.org
 が書きました。
+UMA のために
+.An Jeroen Ruigrok van der Werven Aq asmodai@FreeBSD.org
+が変更しました。
