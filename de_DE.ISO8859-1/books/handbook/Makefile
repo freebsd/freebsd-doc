@@ -1,6 +1,7 @@
 #
 # $FreeBSD$
-# $FreeBSDde: de-docproj/books/handbook/Makefile,v 1.27 2003/10/19 21:36:08 mheinen Exp $
+# $FreeBSDde: de-docproj/books/handbook/Makefile,v 1.29 2003/12/22 23:52:46 mheinen Exp $
+# basiert auf: 1.74
 #
 # Build the FreeBSD Handbook in its German translation.
 #
@@ -103,4 +104,41 @@ pgpkeyring: pgpkeys/chapter.sgml
 	@${JADE} -V nochunks ${JADEOPTS} -d ${DSLPGP} -t sgml ${MASTERDOC}
 
 DOC_PREFIX?= ${.CURDIR}/../../..
+
+.for p in ftp cvsup
+SRCS+= mirrors.sgml.${p}.inc
+CLEANFILES+= mirrors.sgml.${p}.inc
+CLEANFILES+= mirrors.sgml.${p}.inc.tmp
+.endfor
+
+SRCS+= eresources.sgml.www.inc
+CLEANFILES+= eresources.sgml.www.inc
+CLEANFILES+= eresources.sgml.www.inc.tmp
+
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"
+
+.for p in ftp cvsup
+mirrors.sgml.${p}.inc: ${XML_MIRRORS} ${XSL_MIRRORS}
+	${XSLTPROC} ${XSLTPROCOPTS} \
+	    -o $@.tmp \
+	    --param 'transtable.xml' "'${XML_TRANSTABLE}'" \
+	    --param 'type' "'$p'" \
+	    --param 'proto' "'$p'" \
+	    --param 'target' "'handbook/mirrors/chapter.sgml'" \
+	    ${XSL_MIRRORS} ${XML_MIRRORS}
+	${SED} -e 's,<\([^ >]*\)\([^>]*\)/>,<\1\2></\1>,;s,</anchor>,,'\
+	    < $@.tmp > $@ || (${RM} -f $@ && false)
+	${RM} -f $@.tmp
+.endfor
+
+eresources.sgml.www.inc: ${XML_MIRRORS} ${XSL_MIRRORS}
+	${XSLTPROC} ${XSLTPROCOPTS} \
+	    -o $@.tmp \
+	    --param 'transtable.xml' "'${XML_TRANSTABLE}'" \
+	    --param 'type' "'www'" \
+	    --param 'proto' "'http'" \
+	    --param 'target' "'handbook/eresources/chapter.sgml'" \
+	    ${XSL_MIRRORS} ${XML_MIRRORS}
+	${SED} -e 's,<\([^ >]*\)\([^>]*\)/>,<\1\2></\1>,;s,</anchor>,,'\
+	    < $@.tmp > $@ || (${RM} -f $@ && false)
+	${RM} -f $@.tmp
