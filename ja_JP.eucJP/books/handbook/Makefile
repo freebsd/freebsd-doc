@@ -3,7 +3,7 @@
 #
 # Build the FreeBSD Handbook (Japanese).
 #
-# Original revision: 1.72
+# Original revision: 1.74
 #
 
 # ------------------------------------------------------------------------
