@@ -96,21 +96,25 @@ EPS2PNG_RES?= 100
 IMAGES_PDF=${IMAGES_GEN_PDF}
 
 SCR2PNG?=	${PREFIX}/bin/scr2png
+SCR2PNGOPTS?=	${SCR2PNGFLAGS}
 EPS2PNG?=	${PREFIX}/bin/peps
-EPS2PNGFLAGS?=	-p -r ${EPS2PNG_RES}
+EPS2PNGOPTS?=	-p -r ${EPS2PNG_RES} ${EPS2PNGFLAGS}
 PNGTOPNM?=	${PREFIX}/bin/pngtopnm
+PNGTOPNMOPTS?=	${PNGTOPNMFLAGS}
 PNMTOPS?=	${PREFIX}/bin/pnmtops
-PNMTOPSFLAGS?=	-noturn
+PNMTOPSOPTS?=	-noturn ${PNMTOPSFLAGS}
 EPSTOPDF?=	${PREFIX}/bin/epstopdf
+EPSTOPDFOPTS?=	${EPSTOPDFFLAGS}
 
 # Use suffix rules to convert .scr files to .png files
 .SUFFIXES:	.scr .png .eps
 
 .scr.png:
-	${SCR2PNG} < ${.IMPSRC} > ${.TARGET}
+	${SCR2PNG} ${SCR2PNGOPTS} < ${.IMPSRC} > ${.TARGET}
 .scr.eps:
-	${SCR2PNG} < ${.ALLSRC} | ${PNGTOPNM} | \
-		${PNMTOPS} ${PNMTOPSFLAGS} > ${.TARGET}
+	${SCR2PNG} ${SCR2PNGOPTS} < ${.ALLSRC} | \
+		${PNGTOPNM} ${PNGTOPNMOPTS} | \
+		${PNMTOPS} ${PNMTOPSOPTS} > ${.TARGET}
 
 # We can't use suffix rules to generate the rules to convert EPS to PNG and
 # PNG to EPS.  This is because a .png file can depend on a .eps file, and
@@ -119,17 +123,19 @@ EPSTOPDF?=	${PREFIX}/bin/epstopdf
 
 .for _curimage in ${IMAGES_GEN_PNG}
 ${_curimage}: ${_curimage:S/.png$/.eps/}
-	${EPS2PNG} ${EPS2PNGFLAGS} -o ${.TARGET} ${.ALLSRC}
+	${EPS2PNG} ${EPS2PNGOPTS} -o ${.TARGET} ${.ALLSRC}
 .endfor
 
 .for _curimage in ${IMAGES_GEN_EPS}
 ${_curimage}: ${_curimage:S/.eps$/.png/}
-	${PNGTOPNM} ${.ALLSRC} | ${PNMTOPS} ${PNMTOPSFLAGS} > ${.TARGET}
+	${PNGTOPNM} ${PNGTOPNMOPTS} ${.ALLSRC} | \
+		${PNMTOPS} ${PNMTOPSOPTS} > ${.TARGET}
 .endfor
 
 .for _curimage in ${IMAGES_GEN_PDF}
 ${_curimage}: ${_curimage:S/.pdf$/.eps/}
-	${EPSTOPDF} --outfile=${.TARGET} ${.CURDIR}/${_curimage:S/.pdf$/.eps/}
+	${EPSTOPDF} ${EPSTOPDFOPTS} --outfile=${.TARGET} \
+		${.CURDIR}/${_curimage:S/.pdf$/.eps/}
 .endfor
 
 .if ${.OBJDIR} != ${.CURDIR}

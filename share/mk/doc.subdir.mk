@@ -47,8 +47,11 @@
 #			Remove the object directory, if any.
 #
 
+.if !target(__initialized__)
+__initialized__:
 .if exists(${.CURDIR}/../Makefile.inc)
 .include "${.CURDIR}/../Makefile.inc"
+.endif
 .endif
 
 .if !target(install)
