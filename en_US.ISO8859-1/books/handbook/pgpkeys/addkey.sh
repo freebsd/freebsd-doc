@@ -39,7 +39,7 @@ elif [ "${#id}" -gt 8 ]; then
 fi
 fp=$(gpg --fingerprint ${id})
 [ $? -eq 0 ] || exit 1
-key=$(gpg --armor --export ${id})
+key=$(gpg --no-version --armor --export ${id})
 [ $? -eq 0 ] || exit 1
 
 keyfile="${me}.key"
