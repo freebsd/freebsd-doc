@@ -1,5 +1,6 @@
-# $Id: Makefile,v 1.4 1997-02-22 12:58:03 peter Exp $
+# $Id: Makefile,v 1.5 1997-10-18 16:06:01 brian Exp $
 
+SGMLOPTS=-links
 DOC=	FAQ
 SRCS=	FAQ.sgml
 
