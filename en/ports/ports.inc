@@ -1,8 +1,8 @@
-<!-- $FreeBSD: www/en/ports/ports.inc,v 1.58 2001/07/08 00:20:08 dd Exp $ -->
+<!-- $FreeBSD: www/en/ports/ports.inc,v 1.59 2001/09/07 17:36:59 tom Exp $ -->
 <p>The FreeBSD Ports and Packages Collection offers a simple way for
 users and administrators to install applications.  The ports
 collection has been <a
-href="http://www.freebsd.org/%7Easami/papers/growth.gif">growing at a
+href="http://www.FreeBSD.org/%7Easami/papers/growth.gif">growing at a
 tremendous rate</a>.
 </p>
 
@@ -11,7 +11,7 @@ contains any patches necessary to make the original application source
 code compile and run on FreeBSD.  Installing an application is as
 simple as downloading the port, unpacking it and typing <tt>make</tt>
 in the port directory.  For even greater convenience, you can simply
-install the <a href="ftp://ftp.freebsd.org/pub/FreeBSD/branches/-current/ports.tar.gz">
+install the <a href="ftp://ftp.FreeBSD.org/pub/FreeBSD/branches/-current/ports.tar.gz">
 entire ports hierarchy</a> at installation time (or use
 <a href="../handbook/synching.html#CVSUP">CVSup</a> to track it on
 an ongoing basis) and have thousands of applications right at your
@@ -34,10 +34,10 @@ well as filenames.</p>
 <p>For more information about new, changed or removed ports/packages,
 or if you wish to search for a specific application to see if it's
 available as a port/package, please see the 
-<a href="http://www.freebsd.org/cgi/ports.cgi">FreeBSD Ports Changes</a>
+<a href="http://www.FreeBSD.org/cgi/ports.cgi">FreeBSD Ports Changes</a>
 page.</p>
 
-<FORM METHOD="GET" ACTION="http://www.freebsd.org/cgi/ports.cgi">
+<FORM METHOD="GET" ACTION="http://www.FreeBSD.org/cgi/ports.cgi">
 Search for:
 <INPUT NAME="query" VALUE="">
 <SELECT NAME="stype">
