@@ -1,4 +1,4 @@
-#	$Id: Makefile,v 1.1.1.1 1997-11-23 22:23:06 max Exp $
+#	$Id: Makefile,v 1.2 1997-12-07 15:44:05 max Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.4
 
@@ -17,7 +17,7 @@ Makefile.gen: index.sgml .NOTMAIN
 	echo DOCS= *.sgml > Makefile.gen
 	${MAKE} ${MAKEFLAGS} ${.IMPSRC}
 
-index.sgml: ${INDEX} portindex ports.inc .NOTMAIN
+index.sgml: ${INDEX} portindex ports.inc categories.ja_JP.EUC .NOTMAIN
 	rm -f *.sgml
 	${PORTINDEX} ${INDEX}
 
