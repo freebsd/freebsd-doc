@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: www/fr/news/Makefile,v 1.1 2002/12/08 16:45:35 stephane Exp $
 
 # The FreeBSD French Documentation Project
 # Original revision: 1.33
@@ -27,13 +27,13 @@ DOCS+= sou1999.sgml
 
 INDEXLINK= news.html
 
-## SUBDIR= 	1996
-## SUBDIR+= 	1997
-## SUBDIR+= 	1998
-# SUBDIR+= 	1999
-## SUBDIR+= 	2000
-## SUBDIR+= 	2001
-## SUBDIR+=	status
+SUBDIR= 	1996
+SUBDIR+= 	1997
+SUBDIR+= 	1998
+SUBDIR+= 	1999
+SUBDIR+= 	2000
+SUBDIR+= 	2001
+SUBDIR+=	status
 
 DATA=		newsflash.html news.rdf press.html
 CLEANFILES+=	newsflash.html news.rdf press.html
