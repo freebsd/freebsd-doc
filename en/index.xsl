@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/index.xsl,v 1.75 2003/08/18 16:45:29 kensmith Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.76 2003/09/01 18:54:27 kensmith Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   
@@ -6,7 +6,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.75 2003/08/18 16:45:29 kensmith Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.76 2003/09/01 18:54:27 kensmith Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -326,7 +326,7 @@
 	      <h2><font color="#990000">Easy to install</font></h2>
 	    
 	      <p>FreeBSD can be installed from a variety of media including
-		CD-ROM, DVD-ROM, floppy disk, magnetic tape, a MS-DOS&#174; partition, or if
+		CD-ROM, DVD-ROM, floppy disk, magnetic tape, an MS-DOS&#174; partition, or if
 		you have a network connection, you can install it
 		<i>directly</i> over anonymous FTP or NFS. All you need is a 
 		pair of blank, 1.44MB floppies and 
