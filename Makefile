@@ -29,7 +29,7 @@ SUPFLAGS+=	-h ${SUPHOST}
 .endif
 
 CVS?=		/usr/bin/cvs
-CVSFLAGS?=	-q
+CVSFLAGS?=	-R -q
 
 update:
 .if defined(SUP_UPDATE)
