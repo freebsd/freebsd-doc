@@ -1,18 +1,24 @@
 #
-# $FreeBSD: www/en/handbook/Makefile,v 1.4 1999/09/06 07:02:45 peter Exp $
-#
-# Build the FreeBSD Handbook *outside* of the www tree, and install it
-# in to the right place as necessary.
-#
-# The Handbook is no longer completely self contained in 
-# doc/en_US.ISO_8859-1/books/handbook, (it requires support files outside of 
-# this directory) and it is much simpler to build it outside the web tree 
-# than it is to make a nest of symlinks to try and build it inside the tree.
-#
-# This assumes that you have the www/ and doc/ trees checked out beside
-# one another -- this was always the case anyway, so there are no extra
-# requirements here.
+# $FreeBSD: www/en/FAQ/Makefile,v 1.4 1999/09/15 20:37:03 wosch Exp $
 #
 
-all install clean:
-	(cd ../../../doc/en_US.ISO_8859-1/books/handbook && ${MAKE} FORMATS=html-split DESTDIR=${DESTDIR}/data/handbook ${.TARGET})
+.if exists(../Makefile.conf)
+.include "../Makefile.conf"
+.endif
+.if exists(../Makefile.inc)
+.include "../Makefile.inc"
+.endif
+
+# At build time, we have to link to the doc/ directory at the same level
+# as the www/ tree.
+all:
+	ln -fs ${.CURDIR}/../../../doc/en_US.ISO_8859-1/books/handbook/* .
+
+# At install time the ../doc/ directory has been populated, so we can
+# link in to there instead.
+install:
+	[ -d ${DOCINSTALLDIR} ] || mkdir ${DOCINSTALLDIR}
+	(cd ${DOCINSTALLDIR} && ln -fs ../doc/en_US.ISO_8859-1/books/handbook/* ${DOCINSTALLDIR})
+
+.include "${WEB_PREFIX}/share/mk/web.site.mk"
+

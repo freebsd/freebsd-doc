@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/Makefile,v 1.60 2001/02/24 10:31:28 wosch Exp $
+# $FreeBSD: www/en/Makefile,v 1.61 2001/02/25 12:00:49 alex Exp $
 .if exists(Makefile.conf)
 .include "Makefile.conf"
 .endif
@@ -31,6 +31,7 @@ DATA=	robots.txt
 # SGML
 SUBDIR=	 security
 SUBDIR+= commercial
+SUBDIR+= doc
 SUBDIR+= docproj
 SUBDIR+= news
 SUBDIR+= alpha
@@ -48,6 +49,12 @@ SUBDIR+= conspectus
 SUBDIR+= ports
 .endif
 
+# These *must* be listed after the "doc" subdir, as they create symlinks
+# in to it.
+SUBDIR+= FAQ 
+SUBDIR+= handbook
+SUBDIR+= tutorials
+
 # Non-SGML
 SUBDIR+= gifs
 SUBDIR+= cgi
@@ -58,16 +65,10 @@ WEB_LANG?=	ja es ru zh de
 
 .if !defined(ENGLISH_ONLY) || empty(ENGLISH_ONLY)
 .for DIR in ${WEB_LANG}
-SUBDIR+=	../${DIR}
+#SUBDIR+=	../${DIR}
 .endfor
 .endif
 
-.if !defined(WEB_ONLY) || empty(WEB_ONLY)
-# Extern
-SUBDIR+= tutorials
-
-DOCSUBDIR=	FAQ handbook
-.endif
 SGMLOPTS+=      -links -hdr ${.CURDIR}/doc.hdr -ftr ${.CURDIR}/doc.ftr
 
 WEBDIR=		data
