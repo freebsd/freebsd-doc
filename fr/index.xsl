@@ -1,8 +1,8 @@
-<!-- $FreeBSD$ -->
+<!-- $FreeBSD: www/fr/index.xsl,v 1.1 2002/11/17 16:02:47 stephane Exp $ -->
 
 <!-- 
    The FreeBSD French Documentation Project
-   Original revision: 1.38
+   Original revision: 1.47
    
    Version francaise : Stephane Legrand <stephane@freebsd-fr.org>
 -->
@@ -13,7 +13,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD$'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/fr/index.xsl,v 1.1 2002/11/17 16:02:47 stephane Exp $'"/>
   <xsl:variable name="title" select="'Le Projet FreeBSD'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -42,7 +42,7 @@
 
 	    <td align="right" valign="bottom" width="300">
 	      <form action="http://www.FreeBSD.org/cgi/mirror.cgi"
-		    method="GET">
+		    method="get">
 
 		<br/>
 
@@ -54,7 +54,8 @@
 		  <!--  Only list TRUE mirrrors here! Native language pages
 		        which are not mirrored should be listed in
 		        support.sgml.  -->
-
+        <option value="http://www2.at.FreeBSD.org/">Autriche IPv6</option>
+        <option value="http://www.dk.FreeBSD.org/">Danemark IPv6</option>
         <option value="http://bsd.ipv6.uni-erlangen.de">Allemagne IPv6</option>
 		  <option value="http://www.jp.FreeBSD.org/www.FreeBSD.org/">6Bone (IPv6)</option>
         <option value="http://www2.no.FreeBSD.org/">Norv&#232;ge IPv6</option>
@@ -96,7 +97,6 @@
         <option value="http://www.is.FreeBSD.org/">Islande</option>
 		  <option value="http://www.ie.FreeBSD.org/">Irelande/1</option>
 		  <option value="http://www2.ie.FreeBSD.org/">Irelande/2</option>
-        <option value="http://www.il.FreeBSD.org/">Isra&#235;l</option>
 		  <option value="http://www.it.FreeBSD.org/">Italie/1</option>
 		  <option value="http://www.gufi.org/mirrors/www.freebsd.org/data/">Italie/2</option>
 		  <option value="http://www.jp.FreeBSD.org/www.FreeBSD.org/">Japon</option>
@@ -105,7 +105,6 @@
         <option value="http://www3.kr.FreeBSD.org/">Cor&#233;e/3</option>
 		  <option value="http://www.lv.FreeBSD.org/">Lettonie</option>
 		  <option value="http://www.lt.FreeBSD.org/">Lituanie</option>
-        <option value="http://rama.asiapac.net/freebsd/">Malaisie</option>
 		  <option value="http://www.nl.FreeBSD.org/">Pays-Bas/1</option>
 		  <option value="http://www2.nl.FreeBSD.org/">Pays-Bas/2</option>
 		  <option value="http://www.nz.FreeBSD.org/">Nouvelle-Z&#233;lande</option>
@@ -160,7 +159,6 @@
 		  <option value="http://www3.uk.FreeBSD.org/">Royaume-Uni/3</option>
         <option value="http://www4.uk.FreeBSD.org/">Royaume-Uni/4</option>
 		  <option value="http://www.FreeBSD.org/">USA/Californie</option>
-        <option value="http://www2.FreeBSD.org/">USA/Texas</option>
 		  <option value="http://www3.FreeBSD.org/">USA/3</option>
 		  <option value="http://www7.FreeBSD.org/">USA/7</option>
 		</select>
@@ -256,6 +254,14 @@
 			      &#183; <a href="{$base}/commercial/consulting_bycat.html">Consultants</a><br/>
 			      &#183; <a href="{$base}/commercial/misc.html">Divers</a><br/>
 			    </small></p>
+             
+           <p><font size="+1" color="#990000"><b>Donations</b></font>
+           
+             <small><br/>
+               &#183; <a href="{$base}/donations/index.html">Coordination donations</a><br/>
+               &#183; <a href="{$base}/donations/donors.html">Donations actuelles</a><br/>
+               &#183; <a href="{$base}/donations/wantlist.html">Liste des besoins</a><br/>
+             </small></p>
 
 			  <p><font size="+1" color="#990000"><b>Ce Site</b></font>
 
@@ -287,7 +293,7 @@
 	      <h2><font color="#990000">Qu'est-ce que FreeBSD ?</font></h2>
 	
 	      <p>FreeBSD est un syst&#232;me d'exploitation avanc&#233; pour
-		les architectures compatibles x86, DEC Alpha et PC-98.
+		les architectures compatibles x86, DEC Alpha, IA-64, PC-98 et UltraSPARC.
 		Il est d&#233;riv&#233; de UNIX BSD, la version d'UNIX d&#233;velopp&#233; &#224;
 		l'Universit&#233; de Californie, Berkeley.
 		Il est d&#233;velopp&#233; et maintenu par
@@ -391,14 +397,23 @@
 		    <table cellpadding="4" cellspacing="0" border="0"
 			   bgcolor="#ffcc66" width="100%">
 		      <tr>
-			<td valign="top"><p><font size="+1" color="#990000"><b>Version actuelle :
-			    <xsl:value-of select="$rel.current"/></b></font><br/>
+			     <td valign="top"><p><font size="+1" color="#990000"><b>Version la plus r&#233;cente :
+			       <xsl:value-of select="$rel.current"/></b></font><br/>
 
-			    <small>&#183; <a href="{$u.rel.announce}">Annonce</a><br/>
-			      &#183; <a href="{$base}/doc/en_US.ISO8859-1/books/handbook/install.html">Guide d'installation</a><br/>
-			      &#183; <a href="{$u.rel.notes}">Notes</a><br/>
-			      &#183; <a href="{$u.rel.hardware}">Compatibilit&#233; mat&#233;riel</a><br/>
-			      &#183; <a href="{$u.rel.errata}">Errata</a></small></p>
+			       <small>&#183; <a href="{$u.rel.announce}">Annonce</a><br/>
+			        &#183; <a href="{$base}/doc/en_US.ISO8859-1/books/handbook/install.html">Guide d'installation</a><br/>
+			        &#183; <a href="{$u.rel.notes}">Notes</a><br/>
+			        &#183; <a href="{$u.rel.hardware}">Compatibilit&#233; mat&#233;riel</a><br/>
+			        &#183; <a href="{$u.rel.errata}">Errata</a>
+                 &#183; <a href="{$u.rel.early}">Guide pour les premiers utilisateurs</a></small></p>
+           
+               <p><font size="+1" color="#990000"><b>Version de production :
+                 <xsl:value-of select="$rel2.current"/></b></font><br/>
+                 <small>&#183; <a href="{$u.rel2.announce}">Annonce</a><br/>
+                   &#183; <a href="{$base}/doc/en_US.ISO8859-1/books/handbook/install.html">Guide d'installation</a><br/>
+                   &#183; <a href="{$u.rel2.notes}">Notes</a><br/>
+                   &#183; <a href="{$u.rel2.hardware}">Compatibilit&#233; mat&#233;riel</a><br/>
+                   &#183; <a href="{$u.rel2.errata}">Errata</a></small></p>
 
 			  <p><font size="+1" color="#990000"><b>Nouvelles du Projet</b></font><br/>
 			    <font size="-1">
@@ -520,7 +535,7 @@
 		<xsl:value-of select="$date"/></small></td>
 
 	    <td align="right"
-		valign="top"><small><a href="copyright/index.html">Copyright</a> (c) 1995-2002
+		valign="top"><small><a href="copyright/index.html">Copyright</a> (c) 1995-2003
 		Le Projet FreeBSD.<br/>
 		Tous droits r&#233;serv&#233;s.</small></td>
 	  </tr>
