@@ -1,7 +1,7 @@
 #
 # $FreeBSD$
-# $FreeBSDde: de-docproj/books/fdp-primer/Makefile,v 1.3 2004/06/06 18:21:21 mheinen Exp $
-# basiert auf: 1.13
+# $FreeBSDde: de-docproj/books/fdp-primer/Makefile,v 1.4 2004/08/04 23:33:31 mheinen Exp $
+# basiert auf: 1.14
 #
 # Build the FreeBSD Documentation Project Primer.
 #
@@ -46,6 +46,7 @@ IMAGES_LIB+=	callouts/5.png
 # Entities
 SRCS+= chapters.ent
 
-DOC_PREFIX?= ${.CURDIR}/../../..
+URL_RELPREFIX?=	../../../..
+DOC_PREFIX?=	${.CURDIR}/../../..
 
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"
