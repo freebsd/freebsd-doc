@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/releases/5.2.1R/Makefile,v 1.1 2004/02/16 21:25:03 bmah Exp $
+# $FreeBSD: www/en/releases/5.2.1R/Makefile,v 1.2 2004/02/26 04:58:45 bmah Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -25,5 +25,12 @@ DATA+=  relnotes-ia64.html
 DATA+=  relnotes-i386.html
 DATA+=  relnotes-pc98.html
 DATA+=  relnotes-sparc64.html
+DATA+=  installation-alpha.html
+DATA+=  installation-amd64.html
+DATA+=  installation-ia64.html
+DATA+=  installation-i386.html
+DATA+=  installation-pc98.html
+DATA+=  installation-sparc64.html
+DATA+=  readme.html
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"

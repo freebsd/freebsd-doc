@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/releases/5.0R/Makefile,v 1.5 2003/01/16 19:11:26 bmah Exp $
+# $FreeBSD: www/en/releases/5.0R/Makefile,v 1.6 2003/01/19 16:04:02 bmah Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -28,6 +28,7 @@ DATA+=	installation-ia64.html
 DATA+=	installation-i386.html
 DATA+=	installation-pc98.html
 DATA+=	installation-sparc64.html
+DATA+=	readme.html
 
 SUBDIR=	DP1 DP2
 
