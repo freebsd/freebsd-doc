@@ -1,10 +1,12 @@
 #
-# $FreeBSD: www/ja/tutorials/Makefile,v 1.5 2000/07/20 12:42:51 hrs Exp $
+# $FreeBSD: www/ja/tutorials/Makefile,v 1.6 2000/10/02 07:54:41 kuriyama Exp $
 #
 # Original revision: 1.9
 #
 # Build the FreeBSD tutorials/articles outside of the www tree, and then
 # install them in to the right place.
+
+LOCALTOP= ..
 
 DOCS = index.sgml
 
@@ -20,8 +22,6 @@ all afterinstall:
 	(cd ${.CURDIR}/../../../doc/ja_JP.eucJP/books/ppp-primer && ${MAKE} 'FORMATS=html html-split' DESTDIR=${DESTDIR}/data/ja/tutorials/ppp ${.TARGET:S/afterinstall/install/})
 
 ### Revision checking
-REVFILES=	${DOCS:M*.sgml:S/.sgml$/.revinc/g}
-BUILDTOP=	../..
-DIR_IN_LOCAL=	tutorials
+REVCHECK=	YES
 
-.include "../web.mk"
+.include "${LOCALTOP}/web.mk"

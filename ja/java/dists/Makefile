@@ -1,7 +1,9 @@
-# $FreeBSD: www/ja/java/dists/Makefile,v 1.1 2000/04/27 02:05:10 kuriyama Exp $
+# $FreeBSD: www/ja/java/dists/Makefile,v 1.2 2000/09/28 11:58:23 hrs Exp $
 
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.3
+
+LOCALTOP= ../..
 
 DOCS=	10.sgml
 DOCS+=	11.sgml
@@ -14,4 +16,6 @@ REVFILES=	${DOCS:M*.sgml:S/.sgml$/.revinc/g}
 BUILDTOP=	../../..
 DIR_IN_LOCAL=	java/dists
 
-.include "../../web.mk"
+REVCHECK= YES
+
+.include "${LOCALTOP}/web.mk"

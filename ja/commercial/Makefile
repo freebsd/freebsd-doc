@@ -1,9 +1,11 @@
-# $FreeBSD: www/ja/commercial/Makefile,v 1.9 1999/12/23 01:15:46 kuriyama Exp $
+# $FreeBSD: www/ja/commercial/Makefile,v 1.10 2000/05/07 01:55:55 kuriyama Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.12
 
-.if exists(../Makefile.conf)
-.include "../Makefile.conf"
+LOCALTOP= ..
+
+.if exists(${LOCALTOP}/Makefile.conf)
+.include "${LOCALTOP}/Makefile.conf"
 .endif
 
 PERL=	perl5
@@ -19,8 +21,6 @@ DOCS = 	commercial.sgml
 INDEXLINK=commercial.html
 
 ### Revision checking
-REVFILES=	${DOCS:M*.sgml:S/.sgml$/.revinc/g}
-BUILDTOP=	../..
-DIR_IN_LOCAL=	commercial
+REVCHECK=	yes
 
-.include "../../web.mk"
+.include "${LOCALTOP}/web.mk"

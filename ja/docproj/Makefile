@@ -1,9 +1,11 @@
-# $FreeBSD: www/ja/docproj/Makefile,v 1.10 1999/09/07 15:15:47 kuriyama Exp $
+# $FreeBSD: www/ja/docproj/Makefile,v 1.11 1999/12/23 01:15:48 kuriyama Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.7
 
-.if exists(../Makefile.conf)
-.include "../Makefile.conf"
+LOCALTOP= ..
+
+.if exists(${LOCALTOP}/Makefile.conf)
+.include "${LOCALTOP}/Makefile.conf"
 .endif
 
 DOCS=  current.sgml 
@@ -17,8 +19,6 @@ DOCS+= docproj.sgml
 INDEXLINK= docproj.html
 
 ### Revision checking
-REVFILES=	${DOCS:M*.sgml:S/.sgml$/.revinc/g}
-BUILDTOP=	../..
-DIR_IN_LOCAL=	docproj
+REVCHECK=	yes
 
-.include "../../web.mk"
+.include "${LOCALTOP}/web.mk"

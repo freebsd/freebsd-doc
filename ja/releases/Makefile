@@ -1,9 +1,11 @@
-# $FreeBSD: www/ja/releases/Makefile,v 1.17 2000/06/29 00:06:23 motoyuki Exp $
+# $FreeBSD: www/ja/releases/Makefile,v 1.18 2000/08/28 21:40:15 hrs Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.24
 
-.if exists(../Makefile.conf)
-.include "../Makefile.conf"
+LOCALTOP= ..
+
+.if exists(${LOCALTOP}/Makefile.conf)
+.include "${LOCALTOP}/Makefile.conf"
 .endif
 
 DOCS?=	index.sgml snapshots.sgml
@@ -19,8 +21,6 @@ SUBDIR=
 .endif
 
 ### Revision checking
-REVFILES=	${DOCS:M*.sgml:S/.sgml$/.revinc/g}
-BUILDTOP=	../..
-DIR_IN_LOCAL=	releases
+REVCHECK=	YES
 
-.include "../../web.mk"
+.include "${LOCALTOP}/web.mk"
