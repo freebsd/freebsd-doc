@@ -1,6 +1,7 @@
 # $FreeBSD$
 
 SUBDIR = handbook
+SUBDIR+= unix-introduction
 
 ROOT_SYMLINKS= handbook
 
