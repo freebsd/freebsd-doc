@@ -1,4 +1,4 @@
-# $FreeBSD: www/ja/Makefile,v 1.36 1999/11/07 11:33:12 kuriyama Exp $
+# $FreeBSD: www/ja/Makefile,v 1.37 1999/12/23 01:14:38 kuriyama Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.50
 
@@ -59,7 +59,7 @@ SUBDIR+= java
 
 .if !defined(WEB_ONLY) || empty(WEB_ONLY)
 # Extern
-#SUBDIR+= tutorials
+SUBDIR+= tutorials
 
 DOCSUBDIR=	FAQ handbook
 .endif
