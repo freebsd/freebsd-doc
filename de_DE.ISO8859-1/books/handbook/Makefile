@@ -1,6 +1,6 @@
 # 
 # $FreeBSD$
-# $FreeBSDde: de-docproj/books/handbook/Makefile,v 1.16 2002/03/11 22:07:13 mheinen Exp $
+# $FreeBSDde: de-docproj/books/handbook/Makefile,v 1.17 2002/05/09 15:56:27 mheinen Exp $
 #
 # Build the FreeBSD Handbook in its German translation.
 #
@@ -32,6 +32,7 @@ IMAGES_LIB+= callouts/5.png
 SRCS+= book.sgml
 SRCS+= basics/chapter.sgml
 SRCS+= bibliography/chapter.sgml
+SRCS+= cutting-edge/chapter.sgml
 SRCS+= boot/chapter.sgml
 SRCS+= config/chapter.sgml
 SRCS+= disks/chapter.sgml
