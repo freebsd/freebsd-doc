@@ -1,7 +1,8 @@
 # Original Revision: 1.7
 # $FreeBSD$
 
-SUBDIR = books
+SUBDIR = articles
+SUBDIR+= books
 
 #COMPAT_SYMLINK = zh_CN
 
