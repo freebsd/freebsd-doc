@@ -1,5 +1,5 @@
 #
-# $FreeBSD$
+# $FreeBSD: doc/share/mk/doc.images.mk,v 1.1 2000/07/16 16:27:30 nik Exp $
 #
 # This include file <doc.images.mk> handles image processing.
 #
@@ -49,7 +49,7 @@ LIB_IMAGES_DIR?=	${.CURDIR}/../../share/images
 # instead.  If you redefine this then you must also update the
 # %callout-graphics-path% variable in the .dsl file.
 #
-LOCAL_LIB_IMAGES_DIR?= ${.CURDIR}/imagelib
+LOCAL_LIB_IMAGES_DIR?= imagelib
 
 CP?=		/bin/cp
 MKDIR?=		/bin/mkdir
