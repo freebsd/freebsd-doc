@@ -1,5 +1,5 @@
 #
-# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.14 2000/07/17 08:51:38 nbm Exp $
+# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.15 2000/07/17 22:30:03 nik Exp $
 #
 # This include file <doc.docbook.mk> handles building and installing of
 # DocBook documentation in the FreeBSD Documentation Project.
@@ -328,7 +328,8 @@ install-${_cf}: index.html
 		(cd ${DESTDIR}; sh ${.OBJDIR}/${DOC}.ln); \
 	fi
 .for _curimage in ${LIB_IMAGES}
-	${INSTALL_DOCS} ${_curimage} ${DESTDIR}/${_curimage:H}
+	@[ -d ${DESTDIR}/${LOCAL_LIB_IMAGES_DIR}/${_curimage:H} ] || mkdir -p ${DESTDIR}/${LOCAL_LIB_IMAGES_DIR}/${_curimage:H}
+	${INSTALL_DOCS} ${LOCAL_LIB_IMAGES_DIR}/${_curimage} ${DESTDIR}/${LOCAL_LIB_IMAGES_DIR}/${_curimage:H}
 .endfor
 .for _compressext in ${KNOWN_COMPRESS}
 install-${_cf}.tar.${_compressext}: ${DOC}.${_cf}.tar.${_compressext}
@@ -340,7 +341,8 @@ install-${_cf}: ${DOC}.${_cf}
 	@[ -d ${DESTDIR} ] || mkdir -p ${DESTDIR}
 	${INSTALL_DOCS} ${.ALLSRC} ${DESTDIR}
 .for _curimage in ${LIB_IMAGES}
-	${INSTALL_DOCS} ${_curimage} ${DESTDIR}/${_curimage:H}
+	@[ -d ${DESTDIR}/${LOCAL_LIB_IMAGES_DIR}/${_curimage:H} ] || mkdir -p ${DESTDIR}/${LOCAL_LIB_IMAGES_DIR}/${_curimage:H}
+	${INSTALL_DOCS} ${LOCAL_LIB_IMAGES_DIR}/${_curimage} ${DESTDIR}/${LOCAL_LIB_IMAGES_DIR}/${_curimage:H}
 .endfor
 .else
 install-${_cf}: ${DOC}.${_cf}
