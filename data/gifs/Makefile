@@ -1,3 +1,5 @@
+# $Id: Makefile,v 1.8 1997-07-01 03:52:17 max Exp $
+
 DATA=   apache.gif apachepower.gif daemon.gif dir.gif doc.gif
 DATA+=  home.gif littlelogo.gif new.gif power-button.gif
 DATA+=  powerlogo.gif ugu_icon.gif wclogo.gif topbar.gif
