@@ -98,6 +98,12 @@ IMAGES+= install/mainexit.scr
 IMAGES+= install/disk-layout.eps
 IMAGES+= install/edit-inetd-conf.scr
 
+IMAGES+= install/example-dir1.eps
+IMAGES+= install/example-dir2.eps
+IMAGES+= install/example-dir3.eps
+IMAGES+= install/example-dir4.eps
+IMAGES+= install/example-dir5.eps
+
 # Images from the cross-document image library
 IMAGES_LIB=  callouts/1.png
 IMAGES_LIB+= callouts/2.png
