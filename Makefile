@@ -1,4 +1,4 @@
-# $FreeBSD: www/Makefile,v 1.11 1999/12/17 14:16:52 phantom Exp $
+# $FreeBSD: www/Makefile,v 1.12 2000/02/28 12:41:23 phantom Exp $
 
 LINKS=	en/ja en/es en/ru en/zh
 LINKS+=	ja/web.mk es/web.mk ru/web.mk
@@ -36,7 +36,7 @@ ja/web.mk:
 	cd ja; ln -sf ../en/web.mk
 
 es/web.mk:
-	cd es; ln -sf ../es/web.mk
+	cd es; ln -sf ../en/web.mk
 
 ru/web.mk:
 	cd ru; ln -sf ../en/web.mk
