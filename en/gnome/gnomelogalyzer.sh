@@ -1,6 +1,6 @@
 #!/bin/sh
 #-
-# Copyright (c) 2004 FreeBSD GNOME Team <freebsd-gnome@FreeBSD.org>
+# Copyright (c) 2004-2005 FreeBSD GNOME Team <freebsd-gnome@FreeBSD.org>
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -26,7 +26,7 @@
 #
 # Heh. "Tort."
 #
-# $Id: gnomelogalyzer.sh,v 1.1 2004-06-06 20:29:19 marcus Exp $
+# $Id: gnomelogalyzer.sh,v 1.2 2005-03-19 21:10:36 adamw Exp $
 #
 
 
@@ -125,6 +125,21 @@ if grep -q 'error: XML::Parser perl module is required for intltool' ${buildlog}
 	soln_portupgrade "-f intltool"
 	echo
 	echo "If portupgrade does not work, and you recently updated Perl, you should reinstall all of your Perl modules.  The best way to do this is with the command: portupgrade -f p5-\*" | fmt 75 79
+	exit
+else
+	debug "OK"
+fi
+
+#####
+#
+# TEST: Pango without libXft
+#
+# SOLUTION: portupgrade -f libXft && portupgrade -f pango
+
+debug -n "Checking for a pango without libXft support... "
+if grep -q 'error: Xft Pango backend is required for x11 target' ${buildlog} ; then
+	echo "Your Pango installation lacks libXft support."
+	soln_portupgrade "-f -N libXft && portupgrade -f pango"
 	exit
 else
 	debug "OK"
