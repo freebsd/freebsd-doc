@@ -1,5 +1,5 @@
 #
-# $FreeBSD: doc/share/mk/doc.project.mk,v 1.2 1999/09/06 06:53:39 peter Exp $
+# $FreeBSD: doc/share/mk/doc.project.mk,v 1.3 2000/07/14 08:42:49 nbm Exp $
 #
 # This include file <doc.project.mk> is the FreeBSD Documentation Project 
 # co-ordination make file.
@@ -75,3 +75,5 @@ PRI_LANG?=	en_US.ISO_8859-1
 # Subdirectory glue and ownership information.
 .include "doc.subdir.mk"
 .include "doc.install.mk"
+.include "doc.images.mk"
+
