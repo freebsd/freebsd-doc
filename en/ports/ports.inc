@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/ports/ports.inc,v 1.42 1999/10/18 08:16:44 asami Exp $ -->
+<!-- $FreeBSD: www/en/ports/ports.inc,v 1.44 1999/12/16 02:54:29 jim Exp $ -->
 <p>The FreeBSD Ports and Packages Collection offers a simple way for
 users and administrators to install applications.  The ports
 collection has been <a
@@ -80,6 +80,10 @@ to 3-stable upgrade kit</a>
 href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-3-stable/Latest/32upgrade.tgz">3.2
 to 3-stable upgrade kit</a>
 <dd>For users of 3.2-release or 3.2-stable after 3.2-release
+<dt><a
+href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-3-stable/Latest/34upgrade.tgz">3.3 or 3.4
+to 3-stable upgrade kit</a>
+<dd>For users of 3.3/3.4-release or 3.4-stable after 3.4-release
 </dl>
 
 <p>These
