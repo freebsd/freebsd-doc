@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp 
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.97 2003-02-06 22:04:39 wosch Exp $
+# $Id: man.cgi,v 1.98 2003-02-06 22:07:04 wosch Exp $
 
 #use Data::Dumper;
 #use Carp;
@@ -974,7 +974,7 @@ ETX
 }
 
 sub copyright {
-    $id = '$Id: man.cgi,v 1.97 2003-02-06 22:04:39 wosch Exp $';
+    $id = '$Id: man.cgi,v 1.98 2003-02-06 22:07:04 wosch Exp $';
 
     return qq{\
 <PRE>
@@ -1036,11 +1036,10 @@ Copyright (c) 1996-2003 Wolfram Schneider <a href="$mailtoURL">&lt;$mailto&gt;</
 <li>Troff macros works only if defined in FreeBSD/groff. OS specific
 macros like `appeared in NetBSD version 1.2' are not supported.
 <li>Netscape is buggy, you may press twice the link 'Index Page and Help'
-<li>BSDI man pages are located at <a href="http://www.bsdi.com/bsdi-man/">http://www.bsdi.com/bsdi-man/</a>
 <li>Some OSs provide only formated manual pages (catpages), e.g. NetBSD
 and OpenBSD. In this case it is not possible to create Postscript
 and troff output.
-<li>The <a href="ftp://ftp.FreeBSD.org/pub/FreeBSD/FreeBSD-current/src/share/misc/bsd-family-tree">
+<li>The <a href="http://cvsweb.freebsd.org/src/share/misc/bsd-family-tree">
 Unix family tree, BSD part</a>.
 <li>The <a href="http://www.freebsd.org/cgi/ports.cgi">
 FreeBSD Ports Changes</a> script.
