@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-#	$Id: ports.cgi,v 1.31 1998-12-26 17:03:44 wosch Exp $
+#	$Id: ports.cgi,v 1.32 1999-01-18 13:19:19 wosch Exp $
 #
 # ports.cgi - search engine for FreeBSD ports
 #             	o search for a port by name or description
@@ -53,7 +53,7 @@ sub init_variables {
 	'ftp://ftp.freebsd.org/pub/FreeBSD/FreeBSD-current/ports';
 
     # where to get -current packages
-    local($p) = 'ftp://ftp.freebsd.org/pub/FreeBSD';
+    local($p) = 'ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386';
 
     $remotePrefixFtpPackagesDefault = '2.2.x-stable';
     %remotePrefixFtpPackages = 
