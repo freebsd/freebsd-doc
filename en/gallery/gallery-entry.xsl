@@ -11,7 +11,7 @@
 
   <xsl:variable name="base" select="'..'"/>
   
-  <xsl:variable name="date" select="'$FreeBSD$'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/gallery/gallery-entry.xsl,v 1.1 2001/08/06 07:02:44 nik Exp $'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"/>
 
@@ -61,7 +61,7 @@
 	    <xsl:copy-of select="$nonprofit-intro"/>
 	  </xsl:when>
 	  <xsl:when test="$type = 'personal'">
-	    <xsl:copy-of select="personal-intro"/>
+	    <xsl:copy-of select="$personal-intro"/>
 	  </xsl:when>
 	  <xsl:otherwise>
 	    <p>No clue what to put here for $type = 
