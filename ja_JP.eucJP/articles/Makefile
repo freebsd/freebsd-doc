@@ -1,4 +1,4 @@
-# $FreeBSD: doc/ja_JP.eucJP/articles/Makefile,v 1.6 2001/09/14 00:17:36 kuriyama Exp $
+# $FreeBSD: doc/ja_JP.eucJP/articles/Makefile,v 1.7 2001/09/30 10:33:19 hrs Exp $
 # Original revision: 1.18
 
 #SUBDIR = committers-guide
@@ -11,7 +11,7 @@ SUBDIR+= diskless-x
 #SUBDIR+= freebsd-questions
 #SUBDIR+= fonts
 #SUBDIR+= formatting-media
-#SUBDIR+= ipsec-must
+SUBDIR+= ipsec-must
 #SUBDIR+= laptop
 #SUBDIR+= mh
 SUBDIR+= multi-os
