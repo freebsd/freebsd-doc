@@ -4,7 +4,7 @@
 # $FreeBSD$
 #
 
-CHAPTERS= 	introduction/chapter.sgml
+CHAPTERS= 	basics/chapter.sgml
 
 VPATH=		..
 
