@@ -680,6 +680,13 @@ ${DOC}.${_curformat}.${_curcompress}:
 # Redefine them to do things before and after the files are installed,
 # respectively.
 
+spellcheck:
+.for _entry in ${_docs}
+	@echo "Spellcheck ${_entry}"
+	@${HTML2TXT} ${HTML2TXTOPTS} ${.CURDIR}/${_entry} | ${ISPELL} ${ISPELLOPTS}
+.endfor
+
+
 #
 # Build a list of install-format targets to be installed. These will be
 # dependencies for the "realinstall" target.

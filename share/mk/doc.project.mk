@@ -75,6 +75,10 @@ LN?=		/bin/ln
 MKDIR?=		/bin/mkdir -p
 RM?=		/bin/rm
 MV?=		/bin/mv
+HTML2TXT?=	${PREFIX}/bin/w3m
+HTML2TXTOPTS?=	-dump ${HTML2TXTFLAGS}
+ISPELL?=	ispell
+ISPELLOPTS?=	-l -p /usr/share/dict/freebsd ${ISPELLFLAGS}
 
 # Image processing (contains code used by the doc.<format>.mk files, so must
 # be listed first).
