@@ -58,6 +58,12 @@
 #	CSS_SHEET	Full path to a CSS stylesheet suitable for DocBook.
 #			Default is ${DOC_PREFIX}/share/misc/docbook.css
 #
+#
+#	SPELLCHECK	Use the special spellcheck.dsl stylesheet to render
+#			HTML that is suitable for processing through a 
+#			spellchecker.  For example, PGP keys and filenames
+#			will be ommitted from this output.
+#
 # Print-output options :
 #
 #       NICE_HEADERS    If defined, customized chapter headers will be created
@@ -118,6 +124,10 @@ STYLESHEET_TYPE?=	dsssl
 
 .if ${MACHINE_ARCH} != "i386"
 OPENJADE=	yes
+.endif
+
+.if defined(SPELLCHECK)
+DSLHTML?= ${DOC_PREFIX}/share/sgml/spellcheck.dsl
 .endif
 
 .if defined(OPENJADE)
