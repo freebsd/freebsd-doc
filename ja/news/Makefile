@@ -1,6 +1,6 @@
-# $FreeBSD: www/ja/news/Makefile,v 1.31 2001/12/12 11:57:42 phantom Exp $
+# $FreeBSD: www/ja/news/Makefile,v 1.32 2001/12/13 19:30:10 phantom Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.30
+# Original revision: 1.32
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -38,18 +38,18 @@ DATA=		newsflash.html press.html
 CLEANFILES+=	newsflash.html press.html
 
 newsflash.html: newsflash.xsl news.xml includes.xsl ../includes.xsl
-	${XSLTPROC} ${XSLTPROCFLAGS} -o ${.TARGET} \
+	${XSLTPROC} ${XSLTPROCOPTS} -o ${.TARGET} \
 		${.CURDIR}/newsflash.xsl ${.CURDIR}/news.xml
 .if !defined(NO_TIDY)
 	-${TIDY} ${TIDYOPTS} ${.TARGET}
 .endif
 
 news.rdf: news-rdf.xsl news.xml includes.xsl ../includes.xsl
-	${XSLTPROC} ${XSLTPROCFLAGS} -o ${.TARGET} \
+	${XSLTPROC} ${XSLTPROCOPTS} -o ${.TARGET} \
 		${.CURDIR}/news-rdf.xsl ${.CURDIR}/news.xml
 
 press.html: press.xsl press.xml includes.xsl ../includes.xsl
-	${XSLTPROC} ${XSLTPROCFLAGS} -o ${.TARGET} \
+	${XSLTPROC} ${XSLTPROCOPTS} -o ${.TARGET} \
 		${.CURDIR}/press.xsl ${.CURDIR}/press.xml
 .if !defined(NO_TIDY)
 	-${TIDY} ${TIDYOPTS} ${.TARGET}
