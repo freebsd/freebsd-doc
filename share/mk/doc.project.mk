@@ -1,5 +1,5 @@
 #
-# $FreeBSD: doc/share/mk/doc.project.mk,v 1.3 2000/07/14 08:42:49 nbm Exp $
+# $FreeBSD: doc/share/mk/doc.project.mk,v 1.4 2000/07/16 16:29:18 nik Exp $
 #
 # This include file <doc.project.mk> is the FreeBSD Documentation Project 
 # co-ordination make file.
@@ -57,6 +57,11 @@
 # Document-specific defaults
 DOCFORMAT?=	docbook
 MAINTAINER?=	doc@FreeBSD.org
+
+# Master list of known target formats.  The doc.<format>.mk files implement 
+# the code to convert from their source format to one or more of these target
+# formats
+ALL_FORMATS=	html html.tar html-split html-split.tar txt rtf ps pdf tex dvi tar pdb
 
 # User-modifiable
 PREFIX?=	/usr/local
