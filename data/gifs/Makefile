@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.11 1997-12-07 22:50:39 meganm Exp $
+# $Id: Makefile,v 1.12 1998-01-12 16:10:51 wosch Exp $
 
 DATA=   apache.gif apachepower.gif daemon.gif dir.gif doc.gif
 DATA+=  home.gif littlelogo.gif new.gif power-button.gif
@@ -11,7 +11,7 @@ DATA+=  freebsd_1.gif powerani.gif pbfbsd2.gif 205-jp.jpg
 DATA+=  205-jpb.jpg bsdisc.jpg bsdiscb.jpg comp_b.jpg complete.jpg
 DATA+=  cover.jpg coverb.jpg fullcourse3.jpg
 DATA+=  fullcourse3b.jpg getstarb.jpg getstart.jpg
-DATA+=  jp.jpg jpb.jpg kr.jpg krb.jpg las5.jpg las512.jpg
+DATA+=  jp.jpg jpb.jpg kr.jpg krb.jpg las5.jpg las5b.jpg las512.jpg
 DATA+=  las512b.jpg las523.jpg las523b.jpg wc-docs.jpg wc-docsb.jpg
 DATA+=  pc98-jp.jpg pc98-jpb.jpg pht.jpg phtb.jpg running.jpg
 DATA+=  runningb.jpg starkit.jpg starkitb.jpg tw.jpg twb.jpg
