@@ -116,6 +116,7 @@ DSLPGP?=	${DOC_PREFIX}/share/sgml/pgp.dsl
 FREEBSDCATALOG=	${DOC_PREFIX}/share/sgml/catalog
 LANGUAGECATALOG=${DOC_PREFIX}/${LANGCODE}/share/sgml/catalog
 
+ISO8879CATALOG=	${PREFIX}/share/sgml/iso8879/catalog
 DOCBOOKCATALOG=	${PREFIX}/share/sgml/docbook/catalog
 DSSSLCATALOG=	${PREFIX}/share/sgml/docbook/dsssl/modular/catalog
 COLLATEINDEX=	${PREFIX}/share/sgml/docbook/dsssl/modular/bin/collateindex.pl
@@ -123,8 +124,9 @@ COLLATEINDEX=	${PREFIX}/share/sgml/docbook/dsssl/modular/bin/collateindex.pl
 IMAGES_LIB?=
 
 CATALOGS=	-c ${LANGUAGECATALOG} -c ${FREEBSDCATALOG} \
-		-c ${DSSSLCATALOG} -c ${DOCBOOKCATALOG} \
-		-c ${JADECATALOG} ${EXTRA_CATALOGS:S/^/-c /g}
+		-c ${DSSSLCATALOG} -c ${ISO8879CATALOG} \
+		-c ${DOCBOOKCATALOG} -c ${JADECATALOG} \
+		${EXTRA_CATALOGS:S/^/-c /g}
 SGMLFLAGS+=	-D ${CANONICALOBJDIR}
 JADEOPTS=	${JADEFLAGS} ${SGMLFLAGS} ${CATALOGS}
 
