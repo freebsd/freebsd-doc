@@ -1,4 +1,4 @@
-# $FreeBSD: www/ja/copyright/Makefile,v 1.10 1999/09/07 14:22:57 kuriyama Exp $
+# $FreeBSD: www/ja/copyright/Makefile,v 1.11 1999/12/18 05:13:28 kuriyama Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.9
 
@@ -33,5 +33,10 @@ CVS_OPT+=	-R
 #${LEGAL}: $${CVSROOT}/${LEGAL_FILE},v
 #       cvs ${CVS_OPT} co -p ${LEGAL_FILE} > ${.TARGET}
 #.endif
+
+### Revision checking
+REVFILES=	${DOCS:M*.sgml:S/.sgml$/.revinc/g}
+BUILDTOP=	../..
+DIR_IN_LOCAL=	copyright
 
 .include "../../web.mk"

@@ -1,4 +1,4 @@
-# $FreeBSD: www/ja/search/Makefile,v 1.5 1999/09/06 07:03:29 peter Exp $
+# $FreeBSD: www/ja/search/Makefile,v 1.6 1999/09/07 15:15:59 kuriyama Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.5
 
@@ -21,5 +21,10 @@ atoz.sgml: web.atoz
 	sort -fu web.atoz | perl ../../en/search/atoz.pl > ${.TARGET}
 site.sgml: ../../en/search/site.map
 	perl ../../en/search/site.pl < ${.ALLSRC} > ${.TARGET}
+
+### Revision checking
+REVFILES=	${DOCS:M*.sgml:S/.sgml$/.revinc/g}
+BUILDTOP=	../..
+DIR_IN_LOCAL=	search
 
 .include "../../web.mk"

@@ -1,4 +1,4 @@
-# $FreeBSD: www/ja/gallery/Makefile,v 1.6 1999/09/06 07:03:18 peter Exp $
+# $FreeBSD: www/ja/gallery/Makefile,v 1.7 1999/09/07 15:15:48 kuriyama Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.7
 
@@ -9,5 +9,10 @@
 DOCS = gallery.sgml
 
 INDEXLINK= gallery.html
+
+### Revision checking
+REVFILES=	${DOCS:M*.sgml:S/.sgml$/.revinc/g}
+BUILDTOP=	../..
+DIR_IN_LOCAL=	gallery
 
 .include "../../web.mk"

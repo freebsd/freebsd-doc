@@ -1,4 +1,4 @@
-# $FreeBSD: www/ja/releases/Makefile,v 1.12 1999/09/07 15:15:51 kuriyama Exp $
+# $FreeBSD: www/ja/releases/Makefile,v 1.13 1999/10/19 02:41:57 kuriyama Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.19
 
@@ -16,5 +16,10 @@ SUBDIR+=	3.3R
 .if defined $(NEW_BUILD)
 SUBDIR=
 .endif
+
+### Revision checking
+REVFILES=	${DOCS:M*.sgml:S/.sgml$/.revinc/g}
+BUILDTOP=	../..
+DIR_IN_LOCAL=	releases
 
 .include "../../web.mk"
