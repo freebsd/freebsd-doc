@@ -1,6 +1,11 @@
-<!-- $Id: ports.inc,v 1.34 1999-03-10 22:46:38 asami Exp $ -->
+<!-- $Id: ports.inc,v 1.35 1999-03-22 00:30:56 asami Exp $ -->
 <p>The FreeBSD Ports and Packages Collection offers a simple way for
-users and administrators to install applications.  Each ``port'' listed here
+users and administrators to install applications.  The ports
+collection has been <a
+href="http://www.freebsd.org/%7Easami/papers/growth.gif">growing at a
+tremendous rate</a>.
+
+<p>Each ``port'' listed here
 contains any patches necessary to make the original application source
 code compile and run on FreeBSD.  Installing an application is as
 simple as downloading the port, unpacking it and typing <tt>make</tt>
