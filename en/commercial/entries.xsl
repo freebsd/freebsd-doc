@@ -24,7 +24,7 @@
      OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
      SUCH DAMAGE.
 
-     $FreeBSD: www/en/commercial/entries.xsl,v 1.2 2004/05/16 16:10:27 josef Exp $
+     $FreeBSD: www/en/commercial/entries.xsl,v 1.3 2004/07/18 22:23:07 josef Exp $
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
@@ -72,7 +72,7 @@
 	  <a name="{@id}" href="{url}">
 	    <xsl:value-of select="name"/>
 	  </a><br/>
-	  <xsl:value-of select="description"/><br/><br/>
+	  <xsl:copy-of select="description/child::node()"/><br/><br/>
 	</xsl:for-each>
 	<xsl:copy-of select="$footer"/>
       </body>
