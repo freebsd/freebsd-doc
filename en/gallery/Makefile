@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/gallery/Makefile,v 1.7 1999/09/06 07:02:43 peter Exp $
+# $FreeBSD: www/en/gallery/Makefile,v 1.8 2000/04/07 13:09:21 phantom Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -15,20 +15,20 @@ CLEANFILES+= cgallery.inc npgallery.inc pgallery.inc gallery.inc
 
 cgallery.html: cgallery.sgml cgallery.inc
 cgallery.inc: gallery.db gengallery.pl
-	perl ./gengallery.pl commercial gallery.db > cgallery.inc
+	${PERL} ./gengallery.pl commercial gallery.db > cgallery.inc
 
 npgallery.html: npgallery.sgml npgallery.inc
 npgallery.inc: gallery.db gengallery.pl
-	perl ./gengallery.pl nonprofit gallery.db > npgallery.inc
+	${PERL} ./gengallery.pl nonprofit gallery.db > npgallery.inc
 
 pgallery.html: pgallery.sgml pgallery.inc
 pgallery.inc: gallery.db gengallery.pl
-	perl ./gengallery.pl personal gallery.db > pgallery.inc
+	${PERL} ./gengallery.pl personal gallery.db > pgallery.inc
 
 gallery.html: gallery.sgml gallery.inc
 gallery.inc: gallery.db gallery.sgml
-	perl ./prune.pl gallery.db /dev/null | \
-	perl -ne 'chomp; m/([-\w]+):\s+(\d+)/ and \
+	${PERL} ./prune.pl gallery.db /dev/null | \
+	${PERL} -ne 'chomp; m/([-\w]+):\s+(\d+)/ and \
 	          print qq/<!ENTITY num./.lc($$1).qq/ CDATA "$$2">\n/' \
 	> gallery.inc
 
