@@ -26,6 +26,7 @@ SUBDIR+= mh
 SUBDIR+= multi-os
 SUBDIR+= new-users
 SUBDIR+= ntfs
+SUBDIR+= pam
 SUBDIR+= ppp
 SUBDIR+= pr-guidelines
 SUBDIR+= problem-reports
