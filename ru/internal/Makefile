@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: www/ru/internal/Makefile,v 1.5 2000/11/10 17:27:35 phantom Exp $
 # The FreeBSD Russian Documentation Project
 # $FreeBSDru: frdp/www/ru/internal/Makefile,v 1.3 2000/11/10 17:04:50 phantom Exp $
 # Original version: 1.23
@@ -28,13 +28,13 @@ hostname!= hostname
 DOCS+=	homepage.sgml
 .PHONY: homepage.inc
 
-SCRIPTDIR= ../../en/internal
+SCRIPTDIR= ${.CURDIR}/../../en/internal
 GENHOMEPAGE= $(SCRIPTDIR)/homepage.pl
 
 homepage.inc: ${GENHOMEPAGE}
 	${PERL} $(GENHOMEPAGE) > ${.TARGET}
 
-homepage.sgml:  $(GENHOMEPAGE) homepage.inc
+homepage.html:  $(GENHOMEPAGE) homepage.inc
 CLEANFILES+=	homepage.inc
 .endif
 
