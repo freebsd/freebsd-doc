@@ -1,7 +1,7 @@
-<!-- $FreeBSD: doc/ja_JP.eucJP/share/sgml/freebsd.dsl,v 1.1 2000/03/23 09:00:13 nik Exp $ -->
+<!-- $FreeBSD: doc/ja_JP.eucJP/share/sgml/freebsd.dsl,v 1.2 2000/03/27 04:38:47 kuriyama Exp $ -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
-<!ENTITY freebsd.dsl SYSTEM "../../../share/sgml/freebsd.dsl" CDATA DSSSL>
+<!ENTITY freebsd.dsl PUBLIC "-//FreeBSD//DOCUMENT DocBook Language Neutral Stylesheet//EN" CDATA DSSSL>
 <!ENTITY % lang.ja.dsssl "IGNORE">
 ]>
 
