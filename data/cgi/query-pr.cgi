@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: query-pr.cgi,v 1.10 1998-06-05 17:06:20 wosch Exp $
+# $Id: query-pr.cgi,v 1.11 1998-06-05 17:19:04 wosch Exp $
 
 $ENV{'PATH'} = "/bin:/usr/bin:/usr/sbin:/sbin:/usr/local/bin";
 
@@ -156,7 +156,7 @@ print "</dl>";
 $syn =~ s/[\?&%"]/"%" . sprintf("%02X", unpack(C, $&))/eg;
 $email =~ s/[\?&%]/"%" . sprintf("%02X", unpack(C, $&))/eg;
 
-print "<A HREF=\"mailto:freebsd-gnats-submit@freebsd.org,${email}?subject=Re: ${cat}/${number}: $syn\">Submit Followup</A>\n";
+print "<A HREF=\"mailto:freebsd-gnats-submit\@freebsd.org,${email}?subject=Re: ${cat}/${number}: $syn\">Submit Followup</A>\n";
 
 print &html_footer;
 
@@ -170,7 +170,7 @@ sub getline
 }
 
 sub fixline {
-    local($line) = @_[0];
+    local($line) = shift;
     
     $line =~ s/&/&amp;/g;
     $line =~ s/</&lt;/g;
