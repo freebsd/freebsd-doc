@@ -6,30 +6,31 @@
 #    Original revision: 1.3
 #
 
-SUBDIR = diskless-x
+SUBDIR = committers-guide
+SUBDIR+= cvsup-advanced
+SUBDIR+= ddwg
+SUBDIR+= dialup-firewall
+SUBDIR+= diskless-x
+SUBDIR+= euro
+SUBDIR+= filtering-bridges
 SUBDIR+= fonts
 SUBDIR+= formatting-media
 SUBDIR+= ip-aliasing
+SUBDIR+= ipsec-must
+SUBDIR+= java-tomcat
+SUBDIR+= laptop
 SUBDIR+= make-world
 SUBDIR+= mh
 SUBDIR+= multi-os
 SUBDIR+= new-users
 SUBDIR+= ntfs
 SUBDIR+= ppp
-SUBDIR+= programming-tools
-SUBDIR+= committers-guide
-SUBDIR+= zip-drive
-SUBDIR+= ddwg
-SUBDIR+= euro
-SUBDIR+= java-tomcat
-SUBDIR+= dialup-firewall
-SUBDIR+= laptop
-SUBDIR+= pxe
 SUBDIR+= pr-guidelines
-SUBDIR+= cvsup-advanced
-SUBDIR+= ipsec-must
-SUBDIR+= filtering-bridges
 SUBDIR+= problem-reports
+SUBDIR+= programming-tools
+SUBDIR+= pxe
+SUBDIR+= releng-packages
+SUBDIR+= zip-drive
 
 ROOT_SYMLINKS+= new-users
 
