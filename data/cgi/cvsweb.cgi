@@ -366,6 +366,7 @@ if (-d $fullname) {
 
 	for ($i = 0; $i <= $#revorder; $i++) {
 	    $_ = $revorder[$i];
+            print "<a NAME=\"rev$_\"></a>\n";
 #	    print "RCS revision <b>$_</b>\n";
 	    print "<A HREF=\"$scriptwhere?rev=$_\"><b>$_</b></A>";
 	    if (/^1\.1\.1\.\d+$/) {
