@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/ports/ports.inc,v 1.46 2000/02/17 20:14:18 billf Exp $ -->
+<!-- $FreeBSD: www/en/ports/ports.inc,v 1.47 2000/03/30 01:25:41 asami Exp $ -->
 <p>The FreeBSD Ports and Packages Collection offers a simple way for
 users and administrators to install applications.  The ports
 collection has been <a
@@ -30,11 +30,31 @@ on it or you can simply grab the link location and hand it straight
 to <strong>pkg_add</strong> since it's capable of accepting FTP URLs as
 well as filenames.</p>
 
+<p>For more information about new, changed or removed ports/packages,
+or if you wish to search for a specific application to see if it's
+available as a port/package, please see the 
+<a href="http://www.freebsd.org/cgi/ports.cgi">FreeBSD Ports Changes</a>
+page.</p>
+
+<FORM METHOD="GET" ACTION="http://www.freebsd.org/cgi/ports.cgi">
+Search for:
+<INPUT NAME="query" VALUE="">
+<SELECT NAME="stype">
+<OPTION VALUE="all">All</OPTION>
+<OPTION VALUE="name">Package Name</OPTION>
+<OPTION VALUE="text">Description</OPTION>
+</SELECT>
+<INPUT TYPE="submit" VALUE="Submit">
+</FORM>
+
+
 <p>For more information about using ports, see <a
 href="../handbook/ports.html">The ports collection</a>.  For
 information about creating new ports, see <a
 href="../handbook/porting.html">Porting applications</a>.  Both are
 part of the <a href="../handbook/">FreeBSD Handbook</a>.</p>
+
+<hr>
 
 <p>The ports listed on these web pages are continually being updated.
 It is recommended that you refresh the entire collection together, as
@@ -111,21 +131,4 @@ ones that were included in the release, on your 2.2.X system.</p>
 We compile and test our ports on <a
 href="http://www.xfree86.org/">XFree86</a>. Their current release is
 3.3.6.  Some ports may not work with older releases.</p>
-
-<p>For more information about new, changed or removed ports/packages,
-or if you wish to search for a specific application to see if it's
-available as a port/package, please see the 
-<a href="http://www.freebsd.org/cgi/ports.cgi">FreeBSD Ports Changes</a>
-page.</p>
-
-<FORM METHOD="GET" ACTION="http://www.freebsd.org/cgi/ports.cgi">
-Search for:
-<INPUT NAME="query" VALUE="">
-<SELECT NAME="stype">
-<OPTION VALUE="all">All</OPTION>
-<OPTION VALUE="name">Package Name</OPTION>
-<OPTION VALUE="text">Description</OPTION>
-</SELECT>
-<INPUT TYPE="submit" VALUE="Submit">
-</FORM>
 
