@@ -1,5 +1,5 @@
 #!/usr/bin/perl -T
-# $FreeBSD: www/en/cgi/query-pr-summary.cgi,v 1.40 2003/09/02 09:46:27 dougb Exp $
+# $FreeBSD: www/en/cgi/query-pr-summary.cgi,v 1.41 2003/12/27 14:32:15 ceri Exp $
 
 sub escape($) { $_ = $_[0]; s/&/&amp;/g; s/</&lt;/g; s/>/&gt;/g; $_; }
 
@@ -488,7 +488,7 @@ sub gnats_summary {
 	}
 
 	print "$state [$date] $title" .
-	    (' ' x (12 - length($_))) .
+	    (' ' x (16 - length($_))) .
 	    $resp . (' ' x (12 - length($resp))) .
 	    ($htmlmode ? $syn : substr($syn,0,41))
 	    . "\n";
