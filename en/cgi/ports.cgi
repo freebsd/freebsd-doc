@@ -1,6 +1,6 @@
 #!/usr/bin/perl -T
 #
-# Copyright (c) 1996-2001 Wolfram Schneider <wosch@FreeBSD.ORG>, Berlin.
+# Copyright (c) 1996-2002 Wolfram Schneider <wosch@FreeBSD.ORG>, Berlin.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/ports.cgi,v 1.61 2002/04/18 18:04:27 phantom Exp $
+# $FreeBSD: www/en/cgi/ports.cgi,v 1.62 2002/05/02 14:21:40 wosch Exp $
 #
 # ports.cgi - search engine for FreeBSD ports
 #             	o search for a port by name or description
@@ -55,39 +55,33 @@ sub init_variables {
     local($p) = 'ftp://ftp.FreeBSD.org/pub/FreeBSD/ports/i386';
     local($palpha) = 'ftp://ftp.FreeBSD.org/pub/FreeBSD/ports/alpha';
 
-    $remotePrefixFtpPackagesDefault = '4.5-STABLE/i386';
+    $remotePrefixFtpPackagesDefault = '4.6-STABLE/i386';
     %remotePrefixFtpPackages = 
 	(
 	 '5.0-CURRENT/i386', "$p/packages-current/All",
-	 '4.5-STABLE/i386', " $p/packages-4-stable/All",
+	 '4.6-STABLE/i386', " $p/packages-4-stable/All",
 
+	 '4.6-RELEASE/i386', "$p/packages-4.6-release/All",
 	 '4.5-RELEASE/i386', "$p/packages-4.5-release/All",
-	 '4.4-RELEASE/i386', "$p/packages-4.4-release/All",
-	 '4.3-RELEASE/i386', "$p/packages-4.3-release/All",
 
 	 '5.0-CURRENT/alpha', "$palpha/packages-current/All",
-	 '4.5-STABLE/alpha',  "$palpha/packages-4-stable/All",
+	 '4.6-STABLE/alpha',  "$palpha/packages-4-stable/All",
 
-	 '4.5-RELEASE/alpha', "$palpha/packages-4.5-release/All",
-	 '4.4-RELEASE/alpha', "$palpha/packages-4.4-release/All",
-	 '4.3-RELEASE/alpha', "$palpha/packages-4.3-release/All",
+	 '4.6-RELEASE/alpha', "$palpha/packages-4.6-release/All",
 	);
 
     %relDate = 
 	(
 	 '5.0-CURRENT/i386', 'today',
-	 '4.5-STABLE/i386', 'today',
+	 '4.6-STABLE/i386', 'today',
 
-	 '4.3-RELEASE/i386', '2001-04-18 21:37:31 UTC',
-	 '4.4-RELEASE/i386', '2001-09-16 01:02:45 UTC',
+	 '4.6-RELEASE/i386', '2002-06-15 23:01:20 UTC',
 	 '4.5-RELEASE/i386', '2002-01-19 04:56:32 UTC',
 
 	 '5.0-CURRENT/alpha', 'today',
-	 '4.5-STABLE/alpha', 'today',
+	 '4.6-STABLE/alpha', 'today',
 
-	 '4.3-RELEASE/alpha', '2001-04-18 21:37:31 UTC',
-	 '4.4-RELEASE/alpha', '2001-09-16 01:02:45 UTC',
-	 '4.5-RELEASE/alpha', '2002-01-19 04:56:32 UTC',
+	 '4.6-RELEASE/alpha', '2002-06-15 23:01:20 UTC',
 	  );
 
     $remotePrefixHtml =
@@ -555,9 +549,9 @@ sub footer {
 
     print qq{
 <img ALIGN="RIGHT" src="/gifs/powerlogo.gif">
-&copy; 1996-2001 by Wolfram Schneider. All rights reserved.<br>
+&copy; 1996-2002 by Wolfram Schneider. All rights reserved.<br>
 };
-    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.61 2002/04/18 18:04:27 phantom Exp $} . "<br>\n";
+    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.62 2002/05/02 14:21:40 wosch Exp $} . "<br>\n";
     print qq{Please direct questions about this service to
 <I><A HREF="$mailtoURL">$mailto</A></I><br>\n};
     print qq{General questions about FreeBSD ports should be sent to } .
