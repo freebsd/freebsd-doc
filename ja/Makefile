@@ -1,6 +1,6 @@
-# $FreeBSD: www/ja/Makefile,v 1.43 2000/11/07 08:18:36 kuriyama Exp $
+# $FreeBSD: www/ja/Makefile,v 1.44 2000/11/07 11:37:51 kuriyama Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.55
+# Original revision: 1.58
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -29,11 +29,9 @@ DOCS+= y2kbug.sgml
 # Japanese-only file
 DOCS+= jabout.sgml
 
-CLEANFILES+=atoz.sgml site.sgml
-
 # These will be directly installed.
 
-DATA=	index.html
+#DATA=	robots.txt
 
 # Subdirectories
 # SGML
@@ -48,6 +46,7 @@ SUBDIR+= copyright
 SUBDIR+= search
 SUBDIR+= gallery
 SUBDIR+= projects
+#SUBDIR+= platforms
 SUBDIR+= releases
 #SUBDIR+= smp
 SUBDIR+= conspectus
