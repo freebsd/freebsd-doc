@@ -4,7 +4,7 @@
      The FreeBSD Russian Documentation Project
 
      $FreeBSD$
-     $FreeBSDru: frdp/www/ru/news/newsflash.xsl,v 1.3 2002/02/15 15:01:35 phantom Exp $
+     $FreeBSDru: frdp/www/ru/news/oldnewsflash.xsl,v 1.3 2002/02/15 15:01:03 phantom Exp $
 
      Original revision: 1.5
 -->
@@ -16,8 +16,11 @@
   <xsl:import href="includes.xsl"/>
 
 
-  <xsl:variable name="base" select="'..'"/>
-  <xsl:variable name="title" select="'Последние новости FreeBSD'"/>
+  <xsl:variable name="year">
+    <xsl:value-of select="descendant::year/name"/>
+  </xsl:variable>
+  <xsl:variable name="base" select="'../..'"/>
+  <xsl:variable name="title" select="concat('Новости FreeBSD (', $year, ')')"/>
   <xsl:variable name="date">
     <xsl:value-of select="//cvs:keyword[@name='freebsd']"/>
   </xsl:variable>
@@ -47,37 +50,7 @@
 	<img src="{$base}/../gifs/news.jpg" align="right" border="0" width="193"
 	     height="144" alt="FreeBSD News"/>
 
-	<p>FreeBSD является быстро развивающейся операционной системой. Быть
-	  в курсе всех последних разработок бывает просто необходимо! Чтобы
-	  сделать это, периодически обращайтесь к этой страничке. Может быть, вы
-	  также захотите подписаться на <a
-	  href="{$base}/handbook/eresources.html#ERESOURCES-MAIL">список
-	  рассылки freebsd-announce</a>.</p>
-
-	<p>Чтобы узнать самые последние новости о проекте FreeBSD Java,
-          посетите, пожалуйста, страничку <a
-          href="{$base}/java/newsflash.html">Новостей FreeBSD/Java</a>.</p>
-
-	<p>Чтобы узнать самые последние новости о Проекте FreeBSD GNOME,
-          посетите, пожалуйста, страничку <a
-          href="{$base}/gnome/newsflash.html">Новостей FreeBSD/GNOME</a>.</p>
-
-	<p>Подробное описание прошлых, настоящих и будущих релизов находится на
-	  странице <strong><a href="{$base}/releases/index.html">Информации
-	  о релизах</a></strong>.</p>
-
-	<p>Бюллетени по безопасности FreeBSD находятся на странице <a
-	  href="{$base}/security/#adv">Информации о Безопасности</a>.</p>
-
 	<xsl:apply-templates select="descendant::month"/>
-
-	<p>Анонсы за прошлые годы:
-          <a href="2001/index.html">2001</a>,
-	  <a href="2000/index.html">2000</a>,
-	  <a href="1999/index.html">1999</a>,
-	  <a href="1998/index.html">1998</a>,
-	  <a href="1997/index.html">1997</a>,
-	  <a href="1996/index.html">1996</a></p>
 
 	<xsl:copy-of select="$newshome"/>
 	<xsl:copy-of select="$footer"/>
