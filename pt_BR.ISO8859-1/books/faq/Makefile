@@ -6,7 +6,7 @@
 # The FreeBSD Documentation Project
 # The FreeBSD Brazilian Portuguese Documentation Project
 #
-# Original revision: 1.7
+# Original revision: 1.10
 #
 
 MAINTAINER=lioux@FreeBSD.org
@@ -18,7 +18,8 @@ FORMATS?= html-split html
 INSTALL_COMPRESSED?= gz
 INSTALL_ONLY_COMPRESSED?=
 
-JADEFLAGS+=-Vbiblio-xref-title
+WITH_BIBLIOXREF_TITLE?=YES
+
 # 
 # SRCS lists the individual SGML files that make up the document. Changes
 # to any of these files will force a rebuild
