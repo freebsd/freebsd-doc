@@ -1,4 +1,4 @@
-<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.21 2001/02/13 19:21:31 nik Exp $ -->
+<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.20 2001/01/08 12:40:52 nik Exp $ -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
 <!ENTITY % output.html		"IGNORE">
@@ -54,25 +54,6 @@
           ;; HTML file.
           #t)
 
-        <!-- Understand <segmentedlist> and related elements.  Simpleminded,
-             and only works for the HTML output. -->
-
-        (element segmentedlist
-          (make element gi: "TABLE"
-            (process-children)))
-
-        (element seglistitem
-          (make element gi: "TR"
-            (process-children)))
-
-        (element seg
-          (make element gi: "TD"
-                attributes: '(("VALIGN" "TOP"))
-            (process-children)))
-
-        <!-- The next two definitions control the appearance of an
-             e-mail footer at the bottom of each page. -->
-
         <!-- This is the text to display at the bottom of each page.
              Defaults to nothing.  The individual stylesheets should
              redefine this as necessary. -->
@@ -95,10 +76,7 @@
               (if nochunks
                   (make empty-element gi: "hr")
                   (empty-sosofo))
-              (make element gi: "p"
-                    attributes: (list (list "align" "center"))
-                  (make element gi: "small"
-                    ($email-footer$))))))
+              ($email-footer$))))
 
       ]]>
 
@@ -220,14 +198,6 @@
       ]]>
 
       <![ %output.print.pdf; [
-        ;; If the heading-level is set to 2 then the PDF output will have 
-        ;; bookmarks inserted.  If the PDF reader supports them (as 
-        ;; Adobe's does) it makes navigation easier.
-        ;;
-        ;; Currently, this only seems to work if OpenJade is being used,
-        ;; but it doesn't seem to prevent Jade from processing the doc.
-        (declare-characteristic heading-level
-          "UNREGISTERED::James Clark//Characteristic::heading-level" 2)
 
       ]]>
 
@@ -323,8 +293,11 @@
       (element (caution para) ($admonpara$))
       (element (caution simpara) ($admonpara$))
 
-      (define en-warning-label-title-sep ": ")
-      (define en-caution-label-title-sep ": ")
+      (define (local-en-label-title-sep)
+        (list
+          (list (normalize "warning")		": ")
+	  (list (normalize "caution")		": ")
+          ))
 
       <!-- Tell the stylesheet about our local customisations -->
       
@@ -333,8 +306,6 @@
       (element devicename ($mono-seq$))
       (element maketarget ($mono-seq$))
       (element makevar ($mono-seq$))
-
-      <!-- QAndASet ..................................................... -->
 
       <!-- For the HTML version, display the questions in a bigger, bolder
            font. -->
@@ -357,24 +328,6 @@
                                     (process-node-list (children firstch)))))
                 (process-node-list restch))))
       ]]>
-
-      (element docinfo (process-children))
-
-      (element (docinfo authorgroup) (process-children))
-
-      (element (docinfo date) (process-children))
-
-      <!-- Override literallayout to handle 'class="monospaced"' properly -->
-      (element literallayout 
-	(if (equal? (attribute-string "class") (normalize "monospaced"))
-	  (make sequence
-	    ($verbatim-display$
-             %indent-literallayout-lines%
-             %number-literallayout-lines%))
-          (make sequence
-            ($linespecific-display$
-             %indent-literallayout-lines%
-             %number-literallayout-lines%))))
 
       <!-- Override generate-anchor.  This is used to generate a unique ID for
            each element that can be linked to.  The element-id function calls
