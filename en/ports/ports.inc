@@ -1,4 +1,4 @@
-<!-- $Id: ports.inc,v 1.27 1999-01-11 07:22:55 asami Exp $ -->
+<!-- $Id: ports.inc,v 1.28 1999-01-14 08:31:34 asami Exp $ -->
 <p>The FreeBSD Ports and Packages Collection offers a simple way for
 users and administrators to install applications.  Each ``port'' listed here
 contains any patches necessary to make the original application source
@@ -35,27 +35,27 @@ fast at times.
 
 <dl>
 <dt><a
-href="ftp://ftp.freebsd.org/pub/FreeBSD/packages-stable/Latest/221upgrade.tgz">2.2.1
+href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-2.2-stable/Latest/221upgrade.tgz">2.2.1
 to 2.2-stable upgrade kit</a>
 <dd>For users of 2.2.1-release or
 2.2-stable between 2.2.1-release and 2.2.2-release
 <dt><a
-href="ftp://ftp.freebsd.org/pub/FreeBSD/packages-stable/Latest/222upgrade.tgz">2.2.2
+href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-2.2-stable/Latest/222upgrade.tgz">2.2.2
 to 2.2-stable upgrade kit</a>
 <dd>For users of 2.2.2-release or
 2.2-stable between 2.2.2-release and 2.2.5-release
 <dt><a
-href="ftp://ftp.freebsd.org/pub/FreeBSD/packages-stable/Latest/225upgrade.tgz">2.2.5
+href="ftp://ftp.freebsd.org/pub/ports/i386/FreeBSD/packages-2.2-stable/Latest/225upgrade.tgz">2.2.5
 to 2.2-stable upgrade kit</a>
 <dd>For users of 2.2.5-release or
 2.2-stable between 2.2.5-release and 2.2.6-release
 <dt><a
-href="ftp://ftp.freebsd.org/pub/FreeBSD/packages-stable/Latest/227upgrade.tgz">2.2.7
+href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-2.2-stable/Latest/227upgrade.tgz">2.2.7
 to 2.2-stable upgrade kit</a>
 <dd>For users of 2.2.6-release, 2.2.7-release, 2.2.8-release or
 2.2-stable after 2.2.6-release
 <dt><a
-href="ftp://ftp.freebsd.org/pub/FreeBSD/packages-current/Latest/30upgrade.tgz">3.0
+href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-current/Latest/30upgrade.tgz">3.0
 to 3.0-current upgrade kit</a>
 <dd>For users of 3.0-release or 3.0-current after 3.0-release
 </dl>
