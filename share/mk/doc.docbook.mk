@@ -190,7 +190,7 @@ JADEOPTS=	${JADEFLAGS} ${SGMLFLAGS} ${CATALOGS}
 XSLTPROCOPTS=	${XSLTPROCFLAGS}
 
 KNOWN_FORMATS=	html html.tar html-split html-split.tar \
-		txt rtf ps pdf tex dvi tar pdb
+		txt rtf rtf.tar ps pdf tex dvi tar pdb
 
 CSS_SHEET?=	${DOC_PREFIX}/share/misc/docbook.css
 PDFTEX_DEF?=	${DOC_PREFIX}/share/web2c/pdftex.def
@@ -557,8 +557,15 @@ ${.CURDIR:T}.pdb.${_curcomp}: ${DOC}.pdb.${_curcomp}
 # RTF --------------------------------------------------------------------
 
 ${DOC}.rtf: ${SRCS} ${LOCAL_IMAGES_EPS} ${LOCAL_IMAGES_TXT}
-	${JADE_CMD} -V rtf-backend ${PRINTOPTS} \
+	${JADE_CMD} -V rtf-backend ${PRINTOPTS} -ioutput.rtf.images \
 		${JADEOPTS} -t rtf -o ${.TARGET} ${MASTERDOC}
+
+${DOC}.rtf.tar: ${DOC}.rtf ${LOCAL_IMAGES_PNG}
+	${TAR} cf ${.TARGET} ${DOC}.rtf ${IMAGES_PNG:N*share*}
+.for _curimage in ${IMAGES_PNG:M*share*}
+	${TAR} rf ${.TARGET} -C ${IMAGES_EN_DIR}/${DOC}s/${.CURDIR:T} \
+		${_curimage:S|${IMAGES_EN_DIR}/${DOC}s/${.CURDIR:T}/||}
+.endfor
 
 #
 # This sucks, but there's no way round it.  The PS and PDF formats need
@@ -857,6 +864,19 @@ install-${_curformat}: ${DOC}.${_curformat}
 .endfor
 .elif ${_cf} == "pdb"
 	${LN} -f ${DESTDIR}/${.ALLSRC} ${DESTDIR}/${.CURDIR:T}.${_curformat}
+
+.elif ${_cf} == "rtf"
+.for _curimage in ${IMAGES_PNG:M*/*:M*share*}
+	${MKDIR} -p ${DESTDIR:H:H}/${_curimage:H:S|${IMAGES_EN_DIR}/||:S|${.CURDIR}||}
+	${INSTALL_DOCS} ${_curimage} ${DESTDIR:H:H}/${_curimage:H:S|${IMAGES_EN_DIR}/||:S|${.CURDIR}||}
+.endfor
+.for _curimage in ${IMAGES_PNG:M*/*:N*share*}
+	${MKDIR} -p ${DESTDIR}/${_curimage:H}
+	${INSTALL_DOCS} ${_curimage} ${DESTDIR}/${_curimage:H}
+.endfor
+.for _curimage in ${IMAGES_PNG:N*/*}
+	${INSTALL_DOCS} ${_curimage} ${DESTDIR}/${_curimage}
+.endfor
 .endif
 
 .if ${_cf} == "html-split"
