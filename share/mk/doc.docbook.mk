@@ -1,5 +1,5 @@
 #
-# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.24 2000/10/29 18:01:54 nik Exp $
+# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.25 2000/10/31 14:39:13 kuriyama Exp $
 #
 # This include file <doc.docbook.mk> handles building and installing of
 # DocBook documentation in the FreeBSD Documentation Project.
@@ -42,10 +42,16 @@
 #
 #	NO_TIDY		If you do not want to use tidy, set this to "YES".
 #
+#       GEN_INDEX       If defined, index.sgml will be added to the list
+#                       of dependencies for source files, and collateindex.pl
+#                       will be run to generate index.sgml.
+#
 # Documents should use the += format to access these.
 #
 
-MASTERDOC?=	${.CURDIR}/${DOC}.sgml
+DOCBOOKSUFFIX?= sgml
+
+MASTERDOC?=	${.CURDIR}/${DOC}.${DOCBOOKSUFFIX}
 
 .if !defined(OPENJADE)
 JADE?=		${PREFIX}/bin/jade
@@ -55,6 +61,7 @@ NSGMLS?=	${PREFIX}/bin/nsgmls
 JADE?=		${PREFIX}/bin/openjade
 JADECATALOG?=	${PREFIX}/share/sgml/openjade/catalog
 NSGMLS?=	${PREFIX}/bin/onsgmls
+JADEFLAGS+=	-V openjade
 .endif
 
 DSLHTML?=	${DOC_PREFIX}/share/sgml/default.dsl
@@ -116,11 +123,11 @@ KNOWN_FORMATS=	html html.tar html-split html-split.tar txt rtf ps pdf tex dvi ta
 .for _curformat in ${FORMATS}
 _cf=${_curformat}
 .if ${_cf} == "html-split"
-_docs+= index.html HTML.manifest
-CLEANFILES+= `[ -f HTML.manifest ] && xargs < HTML.manifest` HTML.manifest
+_docs+= index.html HTML.manifest ln*.html
+CLEANFILES+= `[ -f HTML.manifest ] && xargs < HTML.manifest` HTML.manifest ln*.html
 .elif ${_cf} == "html-split.tar"
 _docs+= ${DOC}.html-split.tar
-CLEANFILES+= `[ -f HTML.manifest ] && xargs < HTML.manifest` HTML.manifest
+CLEANFILES+= `[ -f HTML.manifest ] && xargs < HTML.manifest` HTML.manifest ln*.html
 CLEANFILES+= ${DOC}.html-split.tar
 .elif ${_cf} == "html"
 _docs+= ${DOC}.html
@@ -148,9 +155,13 @@ _docs+= ${DOC}.tar
 CLEANFILES+= ${DOC}.tar
 .elif ${_cf} == "pdb"
 _docs+= ${DOC}.pdb ${.CURDIR:T}.pdb
-+CLEANFILES+= ${DOC}.pdb ${.CURDIR:T}.pdb
+CLEANFILES+= ${DOC}.pdb ${.CURDIR:T}.pdb
 .endif
 .endfor
+
+.if defined(GEN_INDEX)
+CLEANFILES+=HTML.index
+.endif
 
 #
 # Build a list of install-${format}.${compress_format} targets to be
@@ -181,12 +192,20 @@ LOCAL_IMAGES_LIB += ${LOCAL_IMAGES_LIB_DIR}/${_curimage}
 all: ${_docs}
 
 index.html HTML.manifest: ${SRCS} ${LOCAL_IMAGES_LIB} ${IMAGES_PNG}
+.if defined(GEN_INDEX)
+	${JADE} -V html-index -ioutput.html -ioutput.html.images ${JADEOPTS} -d ${DSLHTML} -t sgml ${MASTERDOC}
+	perl ${PREFIX}/share/sgml/docbook/dsssl/modular/bin/collateindex.pl -o index.sgml HTML.index
+.endif
 	${JADE} -V html-manifest -ioutput.html -ioutput.html.images ${JADEOPTS} -d ${DSLHTML} -t sgml ${MASTERDOC}
 .if !defined(NO_TIDY)
 	-tidy -i -m -f /dev/null ${TIDYFLAGS} `xargs < HTML.manifest`
 .endif
 
 ${DOC}.html: ${SRCS} ${LOCAL_IMAGES_LIB} ${IMAGES_PNG}
+.if defined(GEN_INDEX)
+	${JADE} -V html-index -ioutput.html -ioutput.html.images -V nochunks ${JADEOPTS} -d ${DSLHTML} -t sgml ${MASTERDOC}
+	perl ${PREFIX}/share/sgml/docbook/dsssl/modular/bin/collateindex.pl -o index.sgml HTML.index
+.endif
 	${JADE} -ioutput.html -ioutput.html.images -V nochunks ${JADEOPTS} -d ${DSLHTML} -t sgml ${MASTERDOC} > ${.TARGET} || (rm -f ${.TARGET} && false)
 .if !defined(NO_TIDY)
 	-tidy -i -m -f /dev/null ${TIDYFLAGS} ${.TARGET}
@@ -349,6 +368,9 @@ _cf=${_curformat}
 install-${_cf}: index.html
 	@[ -d ${DESTDIR} ] || mkdir -p ${DESTDIR}
 	${INSTALL_DOCS} `xargs < HTML.manifest` ${DESTDIR}
+	@if [ -f ln*.html ]; then \
+		${INSTALL_DOCS} ln*.html ${DESTDIR}; \
+	fi
 	@if [ -f ${.OBJDIR}/${DOC}.ln ]; then \
 		(cd ${DESTDIR}; sh ${.OBJDIR}/${DOC}.ln); \
 	fi
