@@ -28,7 +28,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $Id: cvsweb.cgi,v 1.22 1998-08-13 10:35:26 wosch Exp $
+# $Id: cvsweb.cgi,v 1.23 1998-08-15 09:59:11 wosch Exp $
 #
 
 
@@ -144,7 +144,7 @@ if (!-d $cvsroot) {
 {
     local(@foo, $i);
     local($scriptname) = $ENV{'SCRIPT_NAME'};
-    foreach (keys %CVSROOT) {
+    foreach (sort keys %CVSROOT) {
 	if (-d $CVSROOT{$_}) {
 	    push(@foo, $_);
 	}
