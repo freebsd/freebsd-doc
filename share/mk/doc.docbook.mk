@@ -171,7 +171,6 @@ CATALOG_PORTS_SGML=	${PREFIX}/share/sgml/catalog.ports
 DSSSLCATALOG=	${PREFIX}/share/sgml/docbook/dsssl/modular/catalog
 COLLATEINDEX=	${PREFIX}/share/sgml/docbook/dsssl/modular/bin/collateindex.pl
 
-XSLTPROC?=	${PREFIX}/bin/xsltproc
 XSLTPROCFLAGS?=	--nonet
 XSLHTML?=	${DOC_PREFIX}/share/xsl/freebsd-html.xsl
 XSLHTMLCHUNK?=	${DOC_PREFIX}/share/xsl/freebsd-html-chunk.xsl
@@ -264,7 +263,6 @@ PDFTEX_CMD?=	${PREFIX}/bin/pdftex
 JADETEX_CMD?=	${TEX_CMD} "&jadetex"
 PDFJADETEX_CMD?=${PDFTEX_CMD} "&pdfjadetex"
 GROFF?=		groff
-TIDY?=		${PREFIX}/bin/tidy
 TIDYOPTS?=	-wrap 90 -m -raw -preserve -f /dev/null -asxml ${TIDYFLAGS}
 HTML2TXT?=	${PREFIX}/bin/links
 HTML2TXTOPTS?=	-dump ${HTML2TXTFLAGS}
