@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: www/en/ports/Makefile,v 1.25 1999/09/06 07:02:48 peter Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -6,6 +6,13 @@
 .if exists(Makefile.inc)
 .include "Makefile.inc"
 .endif
+
+CVS_READONLY?=	YES
+CVS_OPT+=	-Q
+.if !empty(CVS_READONLY)
+CVS_OPT+=	-R
+.endif
+
 
 
 .if defined(NOPORTSCVS)
@@ -17,10 +24,10 @@ ${Y2K}: $${PORTSBASE}/${PY2K}
 
 .else
 ${INDEX}: ${cvsindex}
-	cvs -QR co -p ${PINDEX} > ${INDEX}
+	cvs ${CVS_OPT} co -p ${PINDEX} > ${INDEX}
 
 ${Y2K}: ${cvsy2k}
-	cvs -QR co -p ${PY2K} > ${Y2K}
+	cvs ${CVS_OPT} co -p ${PY2K} > ${Y2K}
 
 .endif
 
