@@ -68,5 +68,7 @@ s/&uuml;/ü/g;
 s/&yacute;/ý/g;
 s/&thorn;/þ/g;
 s/&yuml;/ÿ/g;
+s/&iexcl;/¡/g;
+s/&iquest;/¿/g;
 print;
 }
