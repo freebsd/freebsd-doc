@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: www/ja/smp/Makefile,v 1.1 2000/12/30 14:25:15 hrs Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.2
 
@@ -10,5 +10,8 @@
 .endif
 
 DOCS=   index.sgml
+
+### Revision checking
+REVCHECK=YES
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
