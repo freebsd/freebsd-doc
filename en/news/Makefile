@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/news/Makefile,v 1.16 1999/09/06 07:02:46 peter Exp $
+# $FreeBSD: www/en/news/Makefile,v 1.17 2000/03/09 21:00:25 jim Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -37,4 +37,6 @@ DOCS+= sou1999.sgml
 
 INDEXLINK= news.html
 
+SUBDIR= 	1996
+SUBDIR+= 	1997
 .include "../web.mk"
