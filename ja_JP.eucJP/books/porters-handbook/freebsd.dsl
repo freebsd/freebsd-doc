@@ -2,8 +2,8 @@
      The FreeBSD Documentation Project
      The FreeBSD Japanese Documentation Project
 
-     Original revision: 1.1
-     $FreeBSD$
+     Original revision: 1.2
+     $FreeBSD: doc/ja_JP.eucJP/books/porters-handbook/freebsd.dsl,v 1.2 2000/07/16 17:51:49 hrs Exp $
 -->
 
 <!-- Local DSSSL file for the Porter's Handbook.  This is so we can include
@@ -44,6 +44,13 @@
                     attributes: (list (list "href" "mailto:doc-jp@jp.FreeBSD.org"))
                 (literal "doc-jp@jp.FreeBSD.org"))
 	      (literal "> へお願いします.")))
+
+	<!-- Convert " ... " to `` ... '' in the HTML output. -->
+	(element quote
+	  (make sequence
+	    (literal "``")
+	    (process-children)
+	    (literal "''")))
       ]]>
     </style-specification-body>
   </style-specification>
