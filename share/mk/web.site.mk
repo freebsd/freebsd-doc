@@ -1,5 +1,5 @@
 # bsd.web.mk
-# $FreeBSD: www/en/web.mk,v 1.26 1999/11/29 15:11:56 kuriyama Exp $
+# $FreeBSD: www/en/web.mk,v 1.27 1999/12/23 01:14:35 kuriyama Exp $
 
 #
 # Build and install a web site.
@@ -26,6 +26,8 @@ WEBMODE?=	664
 CGIOWN?=	${USER}
 CGIGRP?=	www
 CGIMODE?=	775
+
+PERL?=		perl5
 
 #
 # Install dirs derived from the above.
