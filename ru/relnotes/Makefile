@@ -8,13 +8,14 @@
 # of relnotes should appear on the web site.  The second word is the
 # path to that relnotes set.
 #
-# $FreeBSDru$
+# $FreeBSDru: frdp/www/ru/relnotes/Makefile,v 1.2 2004/09/10 14:21:53 den Exp $
 # $FreeBSD$
 #
-# Original Revision: 1.5 
+# Original revision: 1.6 
 #
 
-RELNOTES?=	CURRENT ${.CURDIR}/../../../relnotes/doc/ru_RU.KOI8-R
+RELNOTES?=	CURRENT ${.CURDIR}/../../../relnotes/doc/ru_RU.KOI8-R \
+		5-STABLE ${.CURDIR}/../../../relnotes5/doc/ru_RU.KOI8-R
 
 all install clean obj:
 	@set ${RELNOTES}; \
