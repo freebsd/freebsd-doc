@@ -1,5 +1,6 @@
-# $FreeBSD: www/en/donations/Makefile,v 1.5 2003/01/27 16:42:27 trhodes Exp $
+# $FreeBSD: www/ru/donations/Makefile,v 1.1 2003/09/30 17:32:14 andy Exp $
 # $FreeBSDru: frdp/www/ru/donations/Makefile,v 1.1 2003/09/30 17:23:51 andy Exp $
+# Original revision: 1.5
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
