@@ -4,13 +4,13 @@
 # Crea l'Introduzione a Unix.
 #
 
-MAINTAINER= sysadmin@alexdupre.com
+MAINTAINER= ale@FreeBSD.org
 
 DOC?= book
 
 FORMATS?= html-split
 
-INSTALL_COMPRESSED?=gz
+INSTALL_COMPRESSED?= gz
 INSTALL_ONLY_COMPRESSED?=
 
 #
