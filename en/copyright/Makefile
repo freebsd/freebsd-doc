@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.6 1998-10-15 19:29:45 wosch Exp $
+# $Id: Makefile,v 1.7 1999-04-08 21:50:03 nik Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -16,7 +16,12 @@ DATA+= COPYING COPYING.LIB ${LEGAL}
 # FreeBSD Ports redistribution restrictions
 LEGAL= LEGAL
 CLEANFILES+= ${LEGAL}
+.if defined(NOPORTSCVS)
+${LEGAL}: $${PORTSBASE}/ports/LEGAL
+	cp ${PORTSBASE}/ports/LEGAL LEGAL
+.else
 ${LEGAL}: $${CVSROOT}/ports/LEGAL,v
 	co -q -p ${.ALLSRC} > ${.TARGET}
+.endif
 
 .include "../web.mk"

@@ -1,5 +1,5 @@
 # bsd.web.mk
-# $Id: web.mk,v 1.17 1999-04-02 22:06:58 wosch Exp $
+# $Id: web.mk,v 1.18 1999-04-08 21:50:02 nik Exp $
 
 #
 # Build and install a web site.
@@ -42,6 +42,11 @@ CGIINSTALLDIR=	${DESTDIR}${WEBBASE}/${CGIDIR}
 ORPHANS:=	${DOCS}
 
 COPY=	-C
+
+#
+# Where the ports live, if CVS isn't used (ie. NOPORTSCVS is defined)
+#
+PORTSBASE?=	/usr
 
 ##################################################################
 # Transformation rules

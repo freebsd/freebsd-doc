@@ -1,4 +1,4 @@
-#	$Id: Makefile,v 1.20 1999-03-12 10:13:06 wosch Exp $
+#	$Id: Makefile,v 1.21 1999-04-08 21:50:03 nik Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -24,6 +24,16 @@ cvsy2k= $${CVSROOT}/${PY2K},v
 cvswww= $${CVSROOT}/${PWWW},v
 _ALLINSTALL= packages.exists ${INDEX} ${Y2K} ${WWW}
 
+.if defined(NOPORTSCVS)
+${INDEX}: $${PORTSBASE}/${PINDEX}
+	cp ${PORTSBASE}/${PINDEX} ${INDEX}
+
+${Y2K}: $${PORTSBASE}/${PY2K}
+	cp ${PORTSBASE}/${PY2K} ${Y2K}
+
+${WWW}: $${PORTSBASE}/${PWWW}
+	cp ${PORTSBASE}/${PWWW} ${WWW}
+.else
 ${INDEX}: ${cvsindex}
 	cvs -QR co -p ${PINDEX} > ${INDEX}
 
@@ -32,12 +42,17 @@ ${Y2K}: ${cvsy2k}
 
 ${WWW}: ${cvswww}
 	cvs -QR co -p ${PWWW} > ${WWW}
+.endif
 
 # build the list of available packages only on the 
 # main FreeBSD machines
 hostname!= hostname
 
+.if defined(NOPORTSCVS)
+packages.exists:
+.else
 packages.exists: ${cvsindex} ${cvsy2k} ${cvswww}
+.endif
 .if ${hostname} == "hub.freebsd.org" || ${hostname} == "freefall.freebsd.org"
 	sh ${.CURDIR}/packages > ${.TARGET}
 .else
