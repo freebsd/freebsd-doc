@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/ports/Makefile,v 1.27 2000/02/28 12:46:46 phantom Exp $
+# $FreeBSD: www/en/ports/Makefile,v 1.28 2000/09/30 00:21:39 nbm Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -13,7 +13,13 @@ CVS_OPT+=	-Q
 CVS_OPT+=	-R
 .endif
 
-
+#
+# This hack is allows to build www/ tree for case when ports/ located
+# in other repository, for example Repository of Translation Project
+#
+.if defined(PORTSCVSROOT) && !empty(PORTSCVSROOT)
+CVS_OPT+=	-d ${PORTSCVSROOT}
+.endif
 
 .if defined(NOPORTSCVS)
 ${INDEX}: $${PORTSBASE}/${PINDEX}
