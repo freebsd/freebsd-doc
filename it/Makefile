@@ -27,19 +27,20 @@ CLEANFILES+=	index.html
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
 
 index.html: index.xsl ${XML_INCLUDES} \
-		${XML_NEWS_INCLUDES_MASTER} ${XML_NEWS_NEWS_MASTER} ${XML_NEWS_PRESS_MASTER} \
+		${XML_NEWS_INCLUDES_MASTER} \
+		${XML_NEWS_NEWS_MASTER} ${XML_NEWS_PRESS_MASTER} \
 		${XML_MIRRORS} ${XML_TRANSTABLE} \
 		${XML_ADVISORIES} ${XML_NOTICES} \
 		${XML_NAVIGATION}
 	${XSLTPROC} ${XSLTPROCOPTS} \
 		-o $@ \
-		--param mirrors.xml "'${XML_MIRRORS}'" \
 		--param advisories.xml "'${XML_ADVISORIES}'" \
-		--param notices.xml "'${XML_NOTICES}'" \
+		--param mirrors.xml "'${XML_MIRRORS}'" \
+		--param navigation.xml "'${XML_NAVIGATION}'" \
 		--param news.press.xml "'${XML_NEWS_PRESS_MASTER}'" \
 		--param news.project.xml "'${XML_NEWS_NEWS_MASTER}'" \
+		--param notices.xml "'${XML_NOTICES}'" \
 		--param transtable.xml "'${XML_TRANSTABLE}'" \
-		--param navigation.xml "'${XML_NAVIGATION}'" \
 		${.CURDIR}/index.xsl ${XML_NEWS_NEWS_MASTER}
 .if !defined(NO_TIDY)
 	-${TIDY} ${TIDYOPTS} ${.TARGET}

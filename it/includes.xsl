@@ -17,7 +17,7 @@
   </xsl:variable>
 
   <xsl:variable name="copyright">
-    <a href="{$enbase}/copyright/index.html">Copyright</a> &#169; 1995-2004 the FreeBSD Project.  Tutti i diritti riservati.
+    <a href="{$enbase}/copyright/index.html">Copyright</a> &#169; 1995-2005 the FreeBSD Project.  Tutti i diritti riservati.
   </xsl:variable>
 
   <xsl:variable name="home">
@@ -90,12 +90,12 @@
   </xsl:template>
 
   <!-- template: "html-index-news-project-items"
-       pulls in the 10 most recent project items -->
+       pulls in the 5 most recent project items -->
 
   <xsl:template name="html-index-news-project-items">
     <xsl:param name="news.project.xml" select="''" />
 
-    <xsl:for-each select="document($news.project.xml)/descendant::event[position() &lt;= 10]">
+    <xsl:for-each select="document($news.project.xml)/descendant::event[position() &lt;= 5]">
       <xsl:value-of select="$leadingmark" /><a>
 	<xsl:attribute name="href">
 	  <xsl:value-of select="$enbase"/>/news/newsflash.html#<xsl:call-template name="generate-event-anchor"/>
@@ -113,12 +113,12 @@
   </xsl:template>
 
   <!-- template: "html-index-news-press-items"
-       pulls in the 10 most recent press items -->
+       pulls in the 5 most recent press items -->
 
   <xsl:template name="html-index-news-press-items">
     <xsl:param name="news.press.xml" select="''" />
 
-    <xsl:for-each select="document($news.press.xml)/descendant::story[position() &lt; 10]">
+    <xsl:for-each select="document($news.press.xml)/descendant::story[position() &lt; 5]">
       <xsl:value-of select="$leadingmark" /><a>
 	<xsl:attribute name="href">
 	  <xsl:value-of select="$enbase"/>/news/press.html#<xsl:call-template name="generate-story-anchor"/>
@@ -131,18 +131,18 @@
   <!-- template: "html-index-news-project-items-lastmodified" -->
 
   <xsl:template name="html-index-news-project-items-lastmodified">
-    <xsl:param name="news.project.xml" select="''" />
+    <xsl:param name="news.project.xml-master" select="''" />
 
-    <xsl:value-of select="document($news.project.xml)/descendant::day[position() = 1]/name"/>
+    <xsl:value-of select="document($news.project.xml-master)/descendant::day[position() = 1]/name"/>
     <xsl:text> </xsl:text>
     <xsl:call-template name="transtable-lookup">
       <xsl:with-param name="word-group" select="'number-month'" />
       <xsl:with-param name="word">
-	<xsl:value-of select="document($news.project.xml)/descendant::month[position() = 1]/name"/>
+	<xsl:value-of select="document($news.project.xml-master)/descendant::month[position() = 1]/name"/>
       </xsl:with-param>
     </xsl:call-template>
     <xsl:text> </xsl:text>
-    <xsl:value-of select="document($news.project.xml)/descendant::year[position() = 1]/name"/>
+    <xsl:value-of select="document($news.project.xml-master)/descendant::year[position() = 1]/name"/>
   </xsl:template>
 
   <xsl:variable name="u.rel.notes">
@@ -158,9 +158,8 @@
     <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel.current"/>R/installation.html</xsl:variable>
   <xsl:variable name="u.rel.readme">
     <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel.current"/>R/readme.html</xsl:variable>
-  <xsl:variable name="u.rel.early">
-    <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel.current"/>R/early-adopter.html</xsl:variable>
-
+  <xsl:variable name="u.rel.migration">
+    <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel.current"/>R/migration-guide.html</xsl:variable>
   <xsl:variable name="u.rel2.notes">
     <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel2.current"/>R/relnotes.html</xsl:variable>
 
