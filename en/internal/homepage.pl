@@ -5,7 +5,7 @@ $homepagedir = 'public_html';
 @index = ('index.html', 'index.cgi');
 $noindex = '.noindex';
 
-open(P, $passwd) || die "open $passwd: $!\n";
+open(P, 'ypcat passwd |') || die "open $passwd: $!\n";
 undef @pages;
 while(<P>) {
 	($login,$passwd,$uid,$gid,$gcos,$home,$shell) = split(/:/);
