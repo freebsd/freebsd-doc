@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: query-pr.cgi,v 1.15 1998-07-01 10:30:47 wosch Exp $
+# $Id: query-pr.cgi,v 1.16 1999-08-06 05:58:14 hoek Exp $
 
 $ENV{'PATH'} = "/bin:/usr/bin:/usr/sbin:/sbin:/usr/local/bin";
 
@@ -157,10 +157,10 @@ close(Q);
 print "$trailer\n" unless ($blank);
 print "</dl>";
 
-$origsyn =~ s/[\?&%"]/"%" . sprintf("%02X", unpack(C, $&))/eg;
-$email =~ s/[\?&%]/"%" . sprintf("%02X", unpack(C, $&))/eg;
+$origsyn =~ s/[^a-zA-Z+.@-]/"%" . sprintf("%02X", unpack("C", $&))/eg;
+$email =~ s/[^a-zA-Z+.@-]/"%" . sprintf("%02X", unpack("C", $&))/eg;
 
-print "<A HREF=\"mailto:freebsd-gnats-submit\@freebsd.org,${email}?subject=Re: ${cat}/${number}: $origsyn\">Submit Followup</A>\n";
+print "<A HREF=\"mailto:freebsd-gnats-submit\@freebsd.org,${email}?subject=Re:%20${cat}/${number}:%20$origsyn\">Submit Followup</A>\n";
 
 print &html_footer;
 
