@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/Makefile,v 1.116 2004/12/18 12:35:25 ceri Exp $
+# $FreeBSD: www/en/Makefile,v 1.117 2004/12/30 17:53:43 hrs Exp $
 
 .if exists(Makefile.conf)
 .include "Makefile.conf"
@@ -57,6 +57,7 @@ SUBDIR+= releng
 SUBDIR+= search
 SUBDIR+= security
 SUBDIR+= smp
+SUBDIR+= snapshots
 SUBDIR+= tutorials
 .if !defined(WEB_ONLY) || empty(WEB_ONLY)
 SUBDIR+= doc
