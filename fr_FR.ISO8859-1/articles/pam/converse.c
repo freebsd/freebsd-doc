@@ -45,29 +45,30 @@ int
 converse(int n, const struct pam_message **msg,
 	struct pam_response **resp, void *data)
 {
+	struct pam_response *aresp;
 	char buf[PAM_MAX_RESP_SIZE];
 	int i;
 
 	data = data;
 	if (n <= 0 || n > PAM_MAX_NUM_MSG)
 		return (PAM_CONV_ERR);
-	if ((*resp = calloc(n, sizeof **resp)) == NULL)
+	if ((aresp = calloc(n, sizeof *aresp)) == NULL)
 		return (PAM_BUF_ERR);
 	for (i = 0; i < n; ++i) {
-		resp[i]->resp_retcode = 0;
-		resp[i]->resp = NULL;
+		aresp[i].resp_retcode = 0;
+		aresp[i].resp = NULL;
 		switch (msg[i]->msg_style) {
 		case PAM_PROMPT_ECHO_OFF:
-			resp[i]->resp = strdup(getpass(msg[i]->msg));
-			if (resp[i]->resp == NULL)
+			aresp[i].resp = strdup(getpass(msg[i]->msg));
+			if (aresp[i].resp == NULL)
 				goto fail;
 			break;
 		case PAM_PROMPT_ECHO_ON:
 			fputs(msg[i]->msg, stderr);
 			if (fgets(buf, sizeof buf, stdin) == NULL)
 				goto fail;
-			resp[i]->resp = strdup(buf);
-			if (resp[i]->resp == NULL)
+			aresp[i].resp = strdup(buf);
+			if (aresp[i].resp == NULL)
 				goto fail;
 			break;
 		case PAM_ERROR_MSG:
@@ -86,11 +87,16 @@ converse(int n, const struct pam_message **msg,
 			goto fail;
 		}
 	}
+	*resp = aresp;
 	return (PAM_SUCCESS);
  fail:
-	while (i)
-		free(resp[--i]);
-	free(*resp);
+        for (i = 0; i < n; ++i) {
+                if (aresp[i].resp != NULL) {
+                        memset(aresp[i].resp, 0, strlen(aresp[i].resp));
+                        free(aresp[i].resp);
+                }
+        }
+        memset(aresp, 0, n * sizeof *aresp);
 	*resp = NULL;
 	return (PAM_CONV_ERR);
 }
