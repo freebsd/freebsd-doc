@@ -1,4 +1,4 @@
-<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.19 2000/10/28 21:14:44 nik Exp $ -->
+<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.20 2001/01/08 12:40:52 nik Exp $ -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
 <!ENTITY % output.html		"IGNORE">
@@ -46,6 +46,13 @@
         (define html-manifest
           ;; Write a manifest?
           #f)
+
+        (define %generate-legalnotice-link%
+          ;; Should legal notices be a link to a separate file?
+          ;;
+          ;; Naturally, this has no effect if you're building one big
+          ;; HTML file.
+          #t)
 
         <!-- Understand <segmentedlist> and related elements.  Simpleminded,
              and only works for the HTML output. -->
