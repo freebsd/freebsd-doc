@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.27 2002/08/10 18:12:12 marcus Exp $ -->
+<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.28 2002/09/12 17:23:42 marcus Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
 		xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -9,7 +9,7 @@
   <xsl:import href="includes.xsl"/>
 
   <xsl:variable name="base" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.27 2002/08/10 18:12:12 marcus Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.28 2002/09/12 17:23:42 marcus Exp $'"/>
   <xsl:variable name="title" select="'FreeBSD GNOME Project'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -125,7 +125,7 @@
               <h2><font color="#990000">State of the port</font></h2>
 
               <p>We currently support 4.x and 5-CURRENT FreeBSD systems
-                for GNOME 1.4.1 and 2.0.1.  Anything prior to FreeBSD 4.5 is 
+                for GNOME 1.4.1 and 2.0.2.  Anything prior to FreeBSD 4.5 is 
 		not supported.  Most of GNOME has been ported to FreeBSD;
                 however, there is <a href="docs/volunteer.html">plenty left to 
 		do</a>!</p>
