@@ -1,7 +1,10 @@
-# $FreeBSD$
+# $FreeBSD: www/es/internal/Makefile,v 1.7 1999/09/06 07:03:02 peter Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
+.endif
+.if exists(../Makefile.inc)
+.include "../Makefile.inc"
 .endif
 
 DOCS=	photos.sgml	
@@ -16,4 +19,4 @@ INDEXLINK=	internal.html
 
 DATA+=	README.mirror
 
-.include "../web.mk"
+.include "${WEB_PREFIX}/share/mk/web.site.mk"
