@@ -52,7 +52,7 @@
 #
 #     _________________________________________________________________
 #                                      
-# $FreeBSD: www/en/cgi/missing_handler.cgi,v 1.12 2002/04/17 08:15:39 kuriyama Exp $
+# $FreeBSD: www/en/cgi/missing_handler.cgi,v 1.13 2002/05/04 18:48:05 wosch Exp $
 # ----------------------------------------------------------------------
 
 sub escape($) { $_ = $_[0]; s/&/&amp;/g; s/</&lt;/g; s/>/&gt;/g; $_; }
@@ -80,7 +80,7 @@ $redirect_url_save = escape2($ENV{'REDIRECT_URL'});
 $redirect_url_save =~ s/([^a-zA-Z0-9;\/?:&=])/sprintf("%%%02x",ord($1))/eg;
 
 
-$hsty_base = '';
+$hsty_base = 'http://www.freebsd.org';
 require './cgi-style.pl';
 print &html_header($title);
 
