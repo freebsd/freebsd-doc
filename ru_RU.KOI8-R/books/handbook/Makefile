@@ -3,7 +3,7 @@
 #
 # The FreeBSD Russian Documentation Project
 # $FreeBSD$
-# $FreeBSDru: frdp/doc/ru_RU.KOI8-R/books/handbook/Makefile,v 1.16 2000/11/15 17:21:30 phantom Exp $
+# $FreeBSDru: frdp/doc/ru_RU.KOI8-R/books/handbook/Makefile,v 1.18 2001/03/11 12:04:50 phantom Exp $
 # Original version: 1.28
 #
 
@@ -29,7 +29,7 @@ SRCS+= basics/chapter.sgml
 SRCS+= bibliography/chapter.sgml
 SRCS+= boot/chapter.sgml
 #SRCS+= contrib/chapter.sgml
-#SRCS+= cutting-edge/chapter.sgml
+SRCS+= cutting-edge/chapter.sgml
 SRCS+= disks/chapter.sgml
 #SRCS+= eresources/chapter.sgml
 #SRCS+= hw/chapter.sgml
@@ -44,7 +44,8 @@ SRCS+= linuxemu/chapter.sgml
 SRCS+= mail/chapter.sgml
 SRCS+= mirrors/chapter.sgml
 SRCS+= pgpkeys/chapter.sgml
-#SRCS+= policies/chapter.sgml
+SRCS+= policies/chapter.sgml
+SRCS+= ports/chapter.sgml
 #SRCS+= ppp-and-slip/chapter.sgml
 #SRCS+= printing/chapter.sgml
 SRCS+= security/chapter.sgml
@@ -52,7 +53,6 @@ SRCS+= security/chapter.sgml
 SRCS+= staff/chapter.sgml
 #SRCS+= users/chapter.sgml
 SRCS+= x11/chapter.sgml
-SRCS+= ports/chapter.sgml
 
 # Entities
 SRCS+= ../../../en_US.ISO_8859-1/books/handbook/authors.ent 
