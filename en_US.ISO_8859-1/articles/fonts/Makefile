@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.7 1999-09-03 17:40:09 nik Exp $
+# $FreeBSD$
 
 DOC?= article
 

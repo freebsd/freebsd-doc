@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.14 1999-09-03 17:24:37 nik Exp $
+ $FreeBSD$
 
 #
 # The user can override the default list of languages to build and install

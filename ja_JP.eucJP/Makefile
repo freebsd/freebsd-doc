@@ -1,4 +1,4 @@
-#       $Id: Makefile,v 1.11 1999-09-03 17:24:40 nik Exp $
+# $FreeBSD$
 #
 # Original revision: 1.5
 #
