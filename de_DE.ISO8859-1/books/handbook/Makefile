@@ -1,6 +1,6 @@
 #
 # $FreeBSD$
-# $FreeBSDde: de-docproj/books/handbook/Makefile,v 1.25 2003/08/24 12:45:29 mheinen Exp $
+# $FreeBSDde: de-docproj/books/handbook/Makefile,v 1.26 2003/08/29 12:32:40 mheinen Exp $
 #
 # Build the FreeBSD Handbook in its German translation.
 #
@@ -19,6 +19,10 @@ INSTALL_ONLY_COMPRESSED?=
 IMAGES_EN = advanced-networking/isdn-bus.eps
 IMAGES_EN+= advanced-networking/isdn-twisted-pair.eps
 IMAGES_EN+= advanced-networking/natd.eps
+IMAGES_EN+= security/ipsec-network.pic
+IMAGES_EN+= security/ipsec-crypt-pkt.pic
+IMAGES_EN+= security/ipsec-encap-pkt.pic
+IMAGES_EN+= security/ipsec-out-pkt.pic
 
 # Images from the cross-document image library
 IMAGES_LIB=  callouts/1.png
