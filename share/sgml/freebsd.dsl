@@ -1,4 +1,4 @@
-<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.35 2001/07/12 01:40:31 murray Exp $ -->
+<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.36 2001/07/16 05:00:20 murray Exp $ -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
 <!ENTITY % output.html		"IGNORE">
@@ -346,6 +346,18 @@
 
            to automatically have the opening and closing braces inserted,
            and it should be in a mono-spaced font. -->
+
+      (element chapterinfo 
+        (process-children))
+      (element (chapterinfo authorgroup author)
+        (make sequence
+          (process-node-list (select-elements (descendants (current-node))
+                                (normalize "contrib")))
+          (literal (author-list-string))))
+      (element (author contrib)
+        (make sequence
+          (process-children)
+          (literal " by ")))
 
       (element sgmltag ($mono-seq$
           (make sequence
