@@ -1,4 +1,4 @@
-DOCS=	10.sgml 11.sgml 12.sgml index.sgml
+DOCS=	10.sgml 11.sgml 12.sgml 13.sgml index.sgml
 
 WEBBASE=	/data/java
 
