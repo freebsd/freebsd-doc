@@ -1,5 +1,5 @@
 #
-# $Id: docproj.docbook.mk,v 1.3 1999-05-05 20:16:46 nik Exp $
+# $Id: docproj.docbook.mk,v 1.4 1999-05-18 17:51:40 nik Exp $
 #
 # This include file <docproj.docbook.mk> handles installing documentation
 # from the FreeBSD Documentation Project.
@@ -63,8 +63,6 @@
 #
 # You shouldn't need to change definitions below here
 
-DOC_PREFIX?=	/usr/doc
-
 VOLUME?=	${.CURDIR:T}
 DOC?=		${.CURDIR:T}
 DISTRIBUTION?=	doc
@@ -81,6 +79,27 @@ DSSSLCATALOG=   /usr/local/share/sgml/docbook/dsssl/modular/catalog
 JADEOPTS=	${JADEFLAGS} -c ${FREEBSDCATALOG} -c ${DSSSLCATALOG} -c ${DOCBOOKCATALOG} -c ${JADECATALOG} ${EXTRA_CATALOGS:S/^/-c /g}
 
 KNOWN_FORMATS= html html-split html-split.tar txt rtf ps pdf tex dvi tar doc
+
+# ------------------------------------------------------------------------
+# If DOC_PREFIX is not set then try and generate a sensible value for it.
+#
+# If they have used an unedited /usr/share/examples/cvsup/doc-supfile to
+# download these files then /usr/doc probably exists.  If it does, then
+# use that.  If it doesn't exist then tell the user they must specify
+# DOC_PREFIX by hand.
+#
+.BEGIN:
+.if !defined(DOC_PREFIX) || empty(DOC_PREFIX)
+.if exists(/usr/doc/share/mk/docproj.docbook.mk)
+DOC_PREFIX=/usr/doc
+.else
+	@echo "You must define the DOC_PREFIX variable.  This should contain"
+	@echo "the path to the top of your checked out doc/ repository.  For"
+	@echo "example, \"make DOC_PREFIX=/usr/doc\", if that is where the"
+	@echo "documentation has been checked out to."
+	@exit 1
+.endif
+.endif
 
 # ------------------------------------------------------------------------
 #
