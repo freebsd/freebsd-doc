@@ -2,7 +2,7 @@
      The FreeBSD Documentation Project
      The FreeBSD French Documentation Project
 
-     $Id: freebsd.dsl,v 1.11 2002-12-11 20:06:19 blackend Exp $
+     $Id: freebsd.dsl,v 1.12 2003-05-22 15:03:49 hrs Exp $
      $FreeBSD$
      Original revision: 1.17
 
@@ -19,6 +19,10 @@
     <style-specification-body>
  
       <![ %output.html; [ 
+
+	<!-- Generate links to HTML man pages -->                        
+        (define %refentry-xref-link% #t)                                 
+                                                                         
         <!-- Fix a problem with the French localisation.  This should really
              be a patch to the dsssl-docbook-modular port, but this gets it
              more widely available sooner.  A patch will be applied to the
@@ -54,30 +58,6 @@
                       attributes: (list (list "href" "mailto:doc@FreeBSD.org"))
                   (literal "doc@FreeBSD.org"))
                 (literal ">.")))))
-
-	<!-- Convert " ... " to `` ... '' in the HTML output. -->
-	(element quote
-	  (make sequence
-	    (literal "``")
-	    (process-children)
-	    (literal "''")))
-
-	<!-- Generate links to HTML man pages -->                        
-        (define %refentry-xref-link% #t)                                 
-                                                                         
-        <!-- Specify how to generate the man page link HREF -->          
-        (define ($create-refentry-xref-link$ #!optional (n (current-node)))
-          (let* ((r (select-elements (children n) (normalize "refentrytitle")))
-                 (m (select-elements (children n) (normalize "manvolnum")))
-                 (v (attribute-string (normalize "vendor") n))
-                 (u (string-append "http://www.FreeBSD.org/cgi/man.cgi?query="
-                         (data r) "&" "sektion=" (data m))))
-            (case v
-              (("current") (string-append u "&" "manpath=FreeBSD+5.0-current"))
-              (("xfree86") (string-append u "&" "manpath=XFree86+4.2.0"))
-              (("netbsd")  (string-append u "&" "manpath=NetBSD+1.5"))
-              (("ports")   (string-append u "&" "manpath=FreeBSD+Ports"))
-              (else u))))
       ]]>
 	<!-- Fix a problem with the French localisation. The bug was
 	submitted to authors of docbook project -->
