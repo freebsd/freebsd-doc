@@ -3,6 +3,7 @@
 
 SUBDIR =
 SUBDIR+= contributing
+SUBDIR+= cvs-freebsd
 SUBDIR+= dialup-firewall
 SUBDIR+= explaining-bsd
 SUBDIR+= fbsd-from-scratch
