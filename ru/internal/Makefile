@@ -1,7 +1,7 @@
 # $FreeBSD$
 # The FreeBSD Russian Documentation Project
-# $FreeBSDru: frdp/www/ru/internal/Makefile,v 1.4 2002/02/17 13:47:13 phantom Exp $
-# Original version: 1.23
+# $FreeBSDru: frdp/www/ru/internal/Makefile,v 1.5 2003/10/27 14:25:36 den Exp $
+# Original revision: 1.23
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -16,8 +16,11 @@ DOCS+=	internal.sgml
 DOCS+= 	about.sgml
 DOCS+= 	machines.sgml
 DOCS+= 	mirror.sgml
+DOCS+=	new-account.sgml
 DOCS+=	statistic.sgml
 DOCS+= 	developer.sgml
+DOCS+=	bylaws.sgml
+DOCS+=	expire-bits.sgml
 
 INDEXLINK=	internal.html
 
