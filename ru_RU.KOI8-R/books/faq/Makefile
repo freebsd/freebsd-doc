@@ -1,5 +1,5 @@
 # 
-# $FreeBSD$
+# $FreeBSD: doc/ru_RU.KOI8-R/books/faq/Makefile,v 1.10 2001/07/25 14:07:11 phantom Exp $
 # $FreeBSDru: frdp/doc/ru_RU.KOI8-R/books/faq/Makefile,v 1.6 2001/07/08 15:40:58 phantom Exp $
 #
 # Original revision: 1.6
@@ -23,9 +23,6 @@ JADEFLAGS+= -Vbiblio-xref-title
 
 # SGML content
 SRCS =	book.sgml 
-
-# entities
-SRCS+=	../../../en_US.ISO8859-1/books/handbook/authors.ent
 
 DOC_PREFIX?= ${.CURDIR}/../../..
 
