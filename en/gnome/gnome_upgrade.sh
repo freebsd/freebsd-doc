@@ -34,8 +34,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $Id: gnome_upgrade.sh,v 1.18 2005-03-13 19:13:20 adamw Exp $
-# $FreeBSD$
+# $Id: gnome_upgrade.sh,v 1.19 2005-03-14 02:52:25 marcus Exp $
 #
 
 # This script will aid in doing major upgrades to the GNOME Desktop (e.g.
@@ -188,14 +187,14 @@ upgrade_list=
 if [ "$1" = "-restart" ]; then
     upgrade_list=$2
     if [ -z "${upgrade_list}" ]; then
-	errormsg="ERROR: -restart requires a path to the list of GNOME ports to upgrade as its argument." | /usr/bin/fmt 75 79
+	errormsg="ERROR: -restart requires a path to the list of GNOME ports to upgrade as its argument."
     fi
     if [ ! -f ${upgrade_list} ]; then
-	errormsg="ERROR: ${upgrade_list} does not exist or is not a file." | /usr/bin/fmt 75 79
+	errormsg="ERROR: ${upgrade_list} does not exist or is not a file."
     fi
     if [ ! -z "${errormsg}" ]; then
     	echo "${errormsg}" | /usr/bin/fmt 75 79
-	possible_files=`ls ${TMPDIR}/gnome_upgrade_lst*`
+	possible_files=`/bin/ls ${TMPDIR}/gnome_upgrade_lst*`
 	if [ $? = 0 ]; then
 		echo "Possible upgrade lists from previous upgrade attempts: ${possible_files}" | /usr/bin/fmt 75 79
 	fi
