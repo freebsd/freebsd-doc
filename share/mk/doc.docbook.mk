@@ -1,5 +1,5 @@
 #
-# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.34 2001/06/21 02:55:59 chris Exp $
+# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.35 2001/06/21 03:03:51 chris Exp $
 #
 # This include file <doc.docbook.mk> handles building and installing of
 # DocBook documentation in the FreeBSD Documentation Project.
@@ -204,9 +204,9 @@ CLEANFILES+= ${DOC}.${_curformat}.${_curcomp}
 #
 # Index generation
 #
-.if defined(GEN_INDEX)
 INDEX_SGML?=		index.sgml
 
+.if defined(GEN_INDEX)
 HTML_SPLIT_INDEX?=	html-split.index
 HTML_INDEX?=		html.index
 PRINT_INDEX?=		print.index
@@ -319,9 +319,17 @@ lint validate:
 #
 # Generate a different .index file based on the format name
 #
+# If we're not generating an index (the default) then we need to create
+# an empty index.sgml file so that we can reference index.sgml in book.sgml
+#
 
+.if defined(GEN_INDEX)
 ${INDEX_SGML}:
 	perl ${PREFIX}/share/sgml/docbook/dsssl/modular/bin/collateindex.pl -N -o ${.TARGET}
+.else
+${INDEX_SGML}:
+	touch ${.TARGET}
+.endif
 
 ${HTML_INDEX}:
 	${JADE} -V html-index -ioutput.html -ioutput.html.images -V nochunks ${JADEOPTS} -d ${DSLHTML} -t sgml ${MASTERDOC} > /dev/null
