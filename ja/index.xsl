@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
 
-<!-- $FreeBSD: www/ja/index.xsl,v 1.29 2003/09/21 17:18:13 hrs Exp $ -->
-<!-- Original revision: 1.79 -->
+<!-- $FreeBSD: www/ja/index.xsl,v 1.30 2003/10/21 20:02:44 hrs Exp $ -->
+<!-- Original revision: 1.80 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   
@@ -10,7 +10,7 @@
 
   <xsl:variable name="base" select="'.'"/>
   <xsl:variable name="enbase" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/ja/index.xsl,v 1.29 2003/09/21 17:18:13 hrs Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/ja/index.xsl,v 1.30 2003/10/21 20:02:44 hrs Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <xsl:output type="html" encoding="EUC-JP"
@@ -162,11 +162,19 @@
 		<br/>
 		
 		<font color="#990000"><b>言語: </b></font> 
-		<a href="../">英語</a>、
-		<a href="../it/index.html">イタリア語</a>、
-		<a href="../ru/index.html">ロシア語</a>、
-		<a href="../es/index.html">スペイン語</a>、
-		<a href="support.html#web">その他</a>
+		<a href="{$enbase}/de/index.html" title="ドイツ語">[de]</a>
+		<xsl:text>&#160;</xsl:text>
+		<a href="{$enbase}/index.html" title="英語">[en]</a>
+		<xsl:text>&#160;</xsl:text>
+		<a href="{$enbase}/es/index.html" title="スペイン語">[es]</a>
+		<xsl:text>&#160;</xsl:text>
+		<a href="http://www.freebsd-fr.org/index-trad.html" title="フランス語">[fr]</a>
+		<xsl:text>&#160;</xsl:text>
+		<a href="{$enbase}/it/index.html" title="イタリア語">[it]</a>
+		<xsl:text>&#160;</xsl:text>
+		<span title="日本語">[ja]</span>
+		<xsl:text>&#160;</xsl:text>
+		<a href="{$enbase}/ru/index.html" title="ロシア語">[ru]</a>
 	      </form>
 	    </td>
 	  </tr>
