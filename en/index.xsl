@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/index.xsl,v 1.101 2004/05/26 04:29:00 hrs Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.102 2004/05/28 12:41:16 simon Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   
@@ -6,7 +6,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.101 2004/05/26 04:29:00 hrs Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.102 2004/05/28 12:41:16 simon Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <!-- these params should be externally bound. The values
@@ -31,6 +31,12 @@
 	      CVS, CVSup, News, Commercial Vendors, homepage, CTM, Unix"/>
 	<link rel="shortcut icon" href="/favicon.ico" type="image/x-icon"/>
 	<link rel="icon" href="/favicon.ico" type="image/x-icon"/>
+
+	<!-- Formatted to be easy to spam harvest, please do not reformat. -->
+	<xsl:comment>
+        Spamtrap, do not email:
+        &lt;a href="mailto:bruscar@freebsd.org"&gt;bruscar@freebsd.org&lt;/a&gt;
+	</xsl:comment>
       </head>
   
       <body bgcolor="#FFFFFF" text="#000000" link="#0000FF" vlink="#840084"
