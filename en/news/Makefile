@@ -1,10 +1,6 @@
-# $FreeBSD: www/en/news/Makefile,v 1.17 2000/03/09 21:00:25 jim Exp $
+# $FreeBSD: www/en/news/Makefile,v 1.18 2000/03/21 18:44:11 nik Exp $
 
 .if exists(../Makefile.conf)
-.include "../Makefile.conf"
-.endif
-
-.if exists("../Makefile.conf")
 .include "../Makefile.conf"
 .endif
 
