@@ -5,7 +5,7 @@
 # into another SGML file where the <UL></UL> list element pair is
 # already in existence.
 #
-# Syntax: dump.pl type < galleryfile.db > galleryfile.inc
+# Syntax: gengallery.pl type < galleryfile.db > galleryfile.inc
 # where type is one of: commerical, nonprofit, personal
 #
 # yymmdd own comments
@@ -13,6 +13,9 @@
 # 980311 nsj First pass
 # 980312 jrf Added sorting
 # 980313 nsj Wrapped file input routine with error checking
+# 981229 nsj Tried to be more intelligent in eliminating any
+#	     possible blank entries in the .db file and 
+#	     malformed url entries (missing http://).
 
 # Setup
 # Which sort program are we using?
@@ -55,6 +58,15 @@ while (<DBFILE>)
 	# Split the db line into its component parts.
 	($dummy, $name, $url, $description, $email, $dateadd, $datever) = 
 	m/([^\t]+)\t([^\t]+)\t([^\t]+)\t([^\t]*)\t([^\t]+)\t([^\t]+)\t([^\t]+)/;
+
+	# Skip bogus entries (in lieu of actually checking to
+	# eliminate them from the .db file.)
+	next if ($name =~ m/^$|^\s+$/);
+	next if ($url =~ m/^$|^\s+$|^http:\/\/\s+$/);
+
+	# Be semi-intelligent about entries without "http://" in front
+	# by prepending that to any that are missing it.
+	$url = "http://" . $url unless ($url =~ m/^http:\/\/.*$/);
 
 	# Dump it out to the file, in SGML <LI> format
 	if ($description ne "")
