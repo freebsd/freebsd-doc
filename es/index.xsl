@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD$ -->
+<!-- $FreeBSD: www/es/index.xsl,v 1.5 2004/09/20 18:10:24 jesusr Exp $ -->
 <!-- $FreeBSDes: www/es/index.xsl,v 1.4 2004/09/07 21:46:11 jcamou Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -10,7 +10,7 @@
 
   <xsl:variable name="base" select="'.'"/>
   <xsl:variable name="enbase" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/es/index.xsl,v 1.2 2004/04/12 05:37:24 den Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/es/index.xsl,v 1.5 2004/09/20 18:10:24 jesusr Exp $'"/>
   <xsl:variable name="title" select="'El Proyecto FreeBSD'"/>
 
   <!-- these params should be externally bound. The values
@@ -19,6 +19,7 @@
   <xsl:param name="notices.xml" select="'none'"/>
   <xsl:param name="mirrors.xml" select="'none'"/>
   <xsl:param name="news.press.xml" select="'none'"/>
+  <xsl:param name="news.project.xml-master" select="'none'"/>
   <xsl:param name="news.project.xml" select="'none'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -127,16 +128,18 @@
 	    <td align="left" valign="top" rowspan="2">
 	      <h2><font color="#990000">&#191;Qu&#233; es FreeBSD?</font></h2>
 
-	      <p>FreeBSD es un avanzado sistema operativo para arquitecturas 
-		 x86, AMD64, DEC Alpha, IA-64, PC-98 UltraSPARC&#174;.
-		 FreeBSD es un derivado de BSD UNIX, la versi&#243;n de
-		<xsl:value-of select="$unix"/> desarrollada en la Universidad
-		de California, Berkeley. FreeBSD es desarrollado y mantenido 
-		por un
-		<a href="{$enbase}/doc/en_US.ISO8859-1/articles/contributors/index.html">
-		numeroso equipo de personas</a>. El soporte para otras
-		<a href="{$enbase}/platforms/index.html">arquitecturas</a>
-		est&#225; en diferentes fases de desarrollo.</p>
+	      <p>FreeBSD es un avanzado sistema operativo para arquitecturas
+                x86 compatibles (incluyendo Pentium&#174; y Athlon&#8482;),
+                amd64 compatibles (incluyendo Opteron&#8482;, Athlon 64 y EM64T),
+                Alpha/AXP, IA-64, PC-98 y UltraSPARC&#174;. 
+                FreeBSD es un derivado de BSD, la versi&#243;n de
+                <xsl:value-of select="$unix"/> desarrollada en la Universidad
+                de California, Berkeley.  FreeBSD es desarrollado y mantenido 
+                por un
+                <a href="{$enbase}/doc/en_US.ISO8859-1/articles/contributors/index.html">
+                numeroso equipo de personas</a>.  El soporte para otras
+                <a href="{$enbase}/platforms/index.html">arquitecturas</a>
+                est&#225; en diferentes fases de desarrollo.</p>
 
 	      <h2><font color="#990000">Caracter&#237;sticas principales
 	        </font></h2>
@@ -155,11 +158,7 @@
 		Proporciona unos servicios de red robustos, incluso en 
 		situaciones de alta carga, haciendo un uso eficaz de la 
 		memoria para mantener buenos tiempos de repuesta con cientos 
-		o miles de procesos simult&#225;neos de usuarios. Visita 
-		nuestra
-		<a href="{$enbase}/gallery/gallery.html">galer&#237;a</a> 
-		para ver ejemplos de aplicaciones y servicios ofrecidos por 
-		FreeBSD.</p>
+		o miles de procesos simult&#225;neos de usuarios.</p>  
 
 	      <h2><font color="#990000">Ejecuta una gran variedad de 
 	        aplicaciones</font></h2>
@@ -215,15 +214,11 @@
 		FreeBSD es una organizaci&#243;n no lucrativa para la que 
 		todas las contribuciones directas directas son deducibles de 
 		impuestos en su totalidad.  Por favor, contactar con 
-		bod@FreeBSDFoundation.org para obtener m&#225;s 
+		<a href="mailto:bod@FreeBSDFoundation.org">
+		bod@FreeBSDFoundation.org</a> para obtener m&#225;s 
 		informaci&#243;n o escribir a The FreeBSD Foundation, 7321 
 		Brockway Dr. Boulder, CO 80303. USA.</p>
 
-	      <p>La compa&#241;ia Silicon Breeze ha realizado unas esculturas
-	        del BSD Daemon en metal y dona el 15% de todos los pedidos de
-		estas estatuillas a la Fundaci&#243;n FreeBSD. Para conocer 
-		la historia completa y como realizar pedidos, consultar 
- 		<a href="http://www.linuxjewellery.com/beastie/">esta p&#225;gina</a>.</p>
 	    </td>
 
 	    <td></td>
@@ -387,7 +382,7 @@
 		<xsl:value-of select="$date"/></small></td>
 
 	    <td align="right"
-		valign="top"><small><a href="{$base}/copyright/index.html">Copyright</a> &#169; 1995-2004
+		valign="top"><small><a href="{$base}/copyright/index.html">Copyright</a> &#169; 1995-2005
 		The FreeBSD Project.<br/>
 		All rights reserved.</small></td>
 	  </tr>
