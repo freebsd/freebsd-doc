@@ -1,4 +1,4 @@
-#	$Id: Makefile,v 1.3 1996-10-24 23:48:43 jfieber Exp $
+#	$Id: Makefile,v 1.4 1997-04-23 22:23:02 jfieber Exp $
 
 PORTINDEX=	./portindex
 INDEX=		ports/INDEX
@@ -15,7 +15,7 @@ Makefile.gen: index.sgml .NOTMAIN
 	echo DOCS= *.sgml > Makefile.gen
 	${MAKE} ${MAKEFLAGS} ${.IMPSRC}
 
-index.sgml: ${INDEX} .NOTMAIN
+index.sgml: ${INDEX} portindex ports.inc .NOTMAIN
 	rm -f *.sgml
 	${PORTINDEX} ${INDEX}
 
