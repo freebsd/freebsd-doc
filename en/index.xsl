@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/index.xsl,v 1.117 2004/11/10 04:55:46 hrs Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.118 2004/12/18 12:35:25 ceri Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -6,7 +6,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.117 2004/11/10 04:55:46 hrs Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.118 2004/12/18 12:35:25 ceri Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <!-- these params should be externally bound. The values
@@ -30,9 +30,9 @@
 	<meta name="keywords" content="FreeBSD, BSD, UNIX, Support, Gallery,
 	      Release, Application, Software, Handbook, FAQ, Tutorials, Bugs,
 	      CVS, CVSup, News, Commercial Vendors, homepage, CTM, Unix"/>
-	<link rel="shortcut icon" href="/favicon.ico" type="image/x-icon"/>
+	<link rel="shortcut icon" href="{$base}/favicon.ico" type="image/x-icon"/>
 	<link rel="stylesheet" type="text/css" href="{$base}/index.css" />
-	<link rel="icon" href="/favicon.ico" type="image/x-icon"/>
+	<link rel="icon" href="{$base}/favicon.ico" type="image/x-icon"/>
 	<link rel="alternate" type="application/rss+xml"
 	  title="FreeBSD Project News" href="{$base}/news/news.rdf" />
 	<link rel="alternate" type="application/rss+xml"
