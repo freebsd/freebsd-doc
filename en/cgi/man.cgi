@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp 
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.106 2003-06-10 15:12:53 bmah Exp $
+# $Id: man.cgi,v 1.107 2003-06-23 09:09:56 wosch Exp $
 
 #use Data::Dumper;
 #use Carp;
@@ -940,10 +940,11 @@ sub formquery {
 ETX
 
 
-    while(($key, $value) = each %sectionName) {
-	print "<OPTION" . (($key eq $section) ? ' SELECTED ' : ' ') .
-	      qq{VALUE="$key">$value</OPTION>\n};
+    foreach $key (sort keys %sectionName) {
+        print "<OPTION" . (($key eq $section) ? ' SELECTED ' : ' ') .
+                qq{VALUE="$key">$sectionName{$key}</OPTION>\n};
     };
+
 
     print qq{</SELECT>\n<SELECT NAME="manpath">\n};
 
@@ -982,7 +983,7 @@ ETX
 }
 
 sub copyright {
-    $id = '$Id: man.cgi,v 1.106 2003-06-10 15:12:53 bmah Exp $';
+    $id = '$Id: man.cgi,v 1.107 2003-06-23 09:09:56 wosch Exp $';
 
     return qq{\
 <PRE>
