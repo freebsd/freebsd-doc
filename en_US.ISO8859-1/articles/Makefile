@@ -13,6 +13,7 @@ SUBDIR+= dialup-firewall
 SUBDIR+= diskless-x
 SUBDIR+= euro
 SUBDIR+= explaining-bsd
+SUBDIR+= fbsd-from-scratch
 SUBDIR+= filtering-bridges
 SUBDIR+= fonts
 SUBDIR+= formatting-media
