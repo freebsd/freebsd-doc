@@ -1,7 +1,12 @@
-# 
+#
+# The FreeBSD Russian Documentation Project
+#
 # $FreeBSD$
-# $FreeBSDru: frdp/doc/ru_RU.KOI8-R/books/porters-handbook/Makefile,v 1.6 2001/12/18 14:12:23 phantom Exp $
-# Original reivision: 1.1
+# $FreeBSDru: frdp/doc/ru_RU.KOI8-R/books/porters-handbook/Makefile,v 1.7 2003/09/26 02:34:16 andy Exp $
+#
+# Original reivision: 1.4
+#
+
 #
 # Build the FreeBSD Porter's Handbook.
 #
