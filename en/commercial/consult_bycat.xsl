@@ -1,6 +1,7 @@
 <?xml version="1.0"?>
 
-<!-- Copyright (c) 2003 Josef El-Rayes <josef@FreeBSD.org>
+<!-- Copyright (c) 2004 Josef El-Rayes <josef@FreeBSD.org>
+     Copyright (c) 2003, 2004 Hiten Pandya <hmp@FreeBSD.org>
      All rights reserved.
 
      Redistribution and use in source and binary forms, with or without
@@ -24,7 +25,7 @@
      OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
      SUCH DAMAGE.
 
-     $FreeBSD$
+     $FreeBSD: www/en/commercial/consult_bycat.xsl,v 1.1 2004/05/02 21:53:07 josef Exp $
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
