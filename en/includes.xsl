@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/en/includes.xsl,v 1.14 2003/06/09 13:18:29 bmah Exp $ -->
+<!-- $FreeBSD: www/en/includes.xsl,v 1.15 2003/06/18 23:22:44 murray Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -20,6 +20,7 @@
   <xsl:variable name="unix" select="'UNIX&#174;'"/>
   <xsl:variable name="java" select="'Java&#8482;'"/>
   <xsl:variable name="jdk" select="'JDK&#8482;'"/>
+  <xsl:variable name="posix" select="'POSIX&#174;'"/>
 
   <xsl:variable name="email" select="'freebsd-questions'"/>
   <xsl:variable name="author">
