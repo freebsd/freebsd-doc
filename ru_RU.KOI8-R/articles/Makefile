@@ -4,7 +4,9 @@
 #
 # Original revision: 1.9
 
-#SUBDIR = committers-guide
+# SUBDIR+= 5-roadmap
+# SUBDIR+= checkpoint
+# SUBDIR = committers-guide
 SUBDIR+= dialup-firewall
 SUBDIR+= diskless-x
 SUBDIR+= explaining-bsd
@@ -13,9 +15,12 @@ SUBDIR+= formatting-media
 SUBDIR+= freebsd-questions
 SUBDIR+= ipsec-must
 SUBDIR+= mh
-#SUBDIR+= multi-os
-#SUBDIR+= new-users
-#SUBDIR+= programming-tools
+# SUBDIR+= multi-os
+# SUBDIR+= new-users
+SUBDIR+= pam
+# SUBDIR+= pr-guidelines
+# SUBDIR+= problem-reports
+# SUBDIR+= programming-tools
 SUBDIR+= pxe
 # SUBDIR+= releng
 # SUBDIR+= releng-packages
