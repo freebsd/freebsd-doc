@@ -69,6 +69,7 @@ PREFIX?=	${LOCALBASE}
 PRI_LANG?=	en_US.ISO8859-1
 
 CP?=		/bin/cp
+CAT?=		/bin/cat
 ECHO_CMD?=	echo
 LN?=		/bin/ln
 MKDIR?=		/bin/mkdir -p
