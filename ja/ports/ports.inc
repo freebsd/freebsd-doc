@@ -1,6 +1,6 @@
-<!-- $FreeBSD: www/ja/ports/ports.inc,v 1.18 2001/05/10 02:03:07 kuriyama Exp $ -->
+<!-- $FreeBSD: www/ja/ports/ports.inc,v 1.19 2001/07/28 06:27:50 kuriyama Exp $ -->
 <!-- The FreeBSD Japanese Documentation Project -->
-<!-- Original revision: 1.58 -->
+<!-- Original revision: 1.59 -->
 <p>FreeBSD Ports/Packages Collection は,
 ユーザや管理者がアプリケーションのインストールを簡単に行なえる方法を提供します.
 Ports Collection は<a
@@ -58,7 +58,7 @@ FreeBSD ports の更新情報</a> ページを参照してください. </p>
 <a href="../handbook/">FreeBSD ハンドブック</a> にある
 <a href="../handbook/ports.html">Ports Collection</a>
 を, また, 新しい ports を作るための情報は
-<a href="../porters-handbook/">アプリケーションの移植</a> を参照
+<a href="../../doc/en_US.ISO8859-1/books/porters-handbook/index.html">アプリケーションの移植</a> を参照
 してください. </p>
 
 <hr>
