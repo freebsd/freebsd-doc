@@ -1,5 +1,5 @@
 #
-# $FreeBSD: doc/share/mk/doc.images.mk,v 1.5 2000/10/29 02:39:10 nik Exp $
+# $FreeBSD: doc/share/mk/doc.images.mk,v 1.6 2001/02/12 17:03:54 nik Exp $
 #
 # This include file <doc.images.mk> handles image processing.
 #
@@ -68,25 +68,14 @@ IMAGES_PDF=${IMAGES_GEN_PDF}
 
 .for _curimage in ${IMAGES_GEN_PNG}
 ${_curimage}: ${_curimage:S/.png$/.eps/}
-	convert -antialias -density 108x108 ${_curimage:S/.png$/.eps/} ${_curimage}
+	eps2png ${.ALLSRC}
 .endfor
 
 .for _curimage in ${IMAGES_GEN_EPS}
 ${_curimage}: ${_curimage:S/.eps$/.png/}
-	convert -antialias -density 108x108 ${_curimage:S/.eps$/.png/} ${_curimage}
+	pngtopnm ${.ALLSRC} | pnmtops -noturn > ${.TARGET}
 .endfor
 
-#
-# Trial and error here with the options to ImageMagick.
-#
-#  -density  seems to smooth out the images.  Something to do with the source
-#            images being different from the 72dpi that ImageMagick wants.
-#
-#  -crop 0x0 forces the images to be trimmed to the minimum size.  Otherwise
-#            each image takes up a full page, which is bad.
-#
-#  epdf:     forces the output format to be encapsulated PDF
-#
 .for _curimage in ${IMAGES_GEN_PDF}
 ${_curimage}: ${_curimage:S/.pdf$/.eps/}
 	epstopdf ${_curimage:S/.pdf$/.eps/}
