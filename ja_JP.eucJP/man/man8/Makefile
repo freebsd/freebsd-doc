@@ -79,6 +79,7 @@ MAN8 =	IPXrouted.8\
 	iostat.8\
 	ip6fw.8\
 	ipf.8\
+	ipfs.8\
 	ipfstat.8\
 	ipfw.8\
 	ipmon.8\
@@ -138,6 +139,7 @@ MAN8 =	IPXrouted.8\
 	mount_null.8\
 	mount_nwfs.8\
 	mount_portal.8\
+	mount_smbfs.8\
 	mount_std.8\
 	mount_umap.8\
 	mount_union.8\
@@ -169,6 +171,7 @@ MAN8 =	IPXrouted.8\
 	nos-tun.8\
 	nslookup.8\
 	nsupdate.8\
+	ntp-genkeys.8\
 	ntpd.8\
 	ntpdate.8\
 	ntpdc.8\
