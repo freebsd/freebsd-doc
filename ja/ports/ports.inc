@@ -1,7 +1,8 @@
-<!-- $Id: ports.inc,v 1.5 1998-03-30 02:17:16 hanai Exp $ -->
+<!-- $Id: ports.inc,v 1.6 1998-08-12 13:06:48 hanai Exp $ -->
 <!-- The FreeBSD Japanese Documentation Project -->
-<!-- Original revision: 1.20 -->
-<p>FreeBSD Ports コレクションは, ユーザや管理者が簡単にアプリケーショ
+<!-- Original revision: 1.22 -->
+<p>FreeBSD の Ports と Packages のコレクションは,
+ユーザや管理者が簡単にアプリケーショ
 ンのインストールを簡単に行う方法を提供します.
 ここに並べられている各 ``port'' には, FreeBSD でオリジナルのアプリケー
 ションのソースコードをコンパイルし実行するために必要なパッチが全て含ま
@@ -14,6 +15,14 @@
 コンパイルします. 
 問題がないようなら, あとは<tt>make install</tt>と打つだけでアプリケー
 ションをインストールして package システムへ登録できます. </p>
+
+<p>ほとんどの ports には, あらかじめコンパイルされた <tt>package</tt>
+もあるので, すべてをコンパイルする時間を節約することができます.
+それぞれの port には対応する package へのリンクがあるので,
+そのファイルをダウンロードして <strong>pkg_add</strong> コマンドを
+実行することもできますし, また <strong>pkg_add</strong> ではファイル名
+と同じく FTP URL を使うこともできるのでリンク先を <strong>pkg_add</strong>
+することもできます.</p>
 
 <p>ports についてもう少し詳しく知りたい場合には, 
 <a href="../handbook/ports.html">ports コレクション</a> を参照してくだ
@@ -34,6 +43,10 @@
 <a href="ftp://ftp.freebsd.org/pub/FreeBSD/packages-stable/Latest/225upgrade.tgz">
 2.2.5 から 2.2-stable へのアップグレードキット</a>
 をインストールしてください.
+もしあなたが 2.2.6 または 2.2.7-release のユーザなら,
+<a href="ftp://ftp.freebsd.org/pub/FreeBSD/packages-stable/Latest/227upgrade.tgz">
+2.2-stable へのアップグレードキット</a>
+をインストールしてください.
 (これらは FreeBSD のパッケージになっています. インストールには pkg_add 
 を使ってください.)
 これでここに載っている全ての ports を使うことができるようになります. 
@@ -49,9 +62,10 @@ ports は <a href="http://www.xfree86.org/">XFree86</a> 上でテ
 ストされています. 最新のリリースは 3.3.2 です. いくつかの ports は古い
 リリースでは動作しないかも知れません. </p>
 
-<p>ports の追加, 更新, 削除についての情報や, アプリケーションの検索は
+<p>ports/packages の追加, 更新, 削除についての情報や, アプリケーションが
+ports/packages となっているかの検索は
 <a href="http://www.freebsd.org/cgi/ports.cgi">
-FreeBSD Ports 更新</a> スクリプトを参照してください. </p>
+FreeBSD Ports 更新</a> ページを参照してください. </p>
 
 <FORM METHOD="GET" ACTION="http://www.freebsd.org/cgi/ports.cgi">
 検索:
@@ -63,4 +77,3 @@ FreeBSD Ports 更新</a> スクリプトを参照してください. </p>
 </SELECT>
 <INPUT TYPE="submit" VALUE="Submit">
 </FORM>
-
