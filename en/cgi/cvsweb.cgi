@@ -28,7 +28,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $Id: cvsweb.cgi,v 1.26 1998-11-10 19:26:16 motoyuki Exp $
+# $Id: cvsweb.cgi,v 1.27 1998-12-30 19:31:43 hoek Exp $
 #
 
 
@@ -153,7 +153,7 @@ if (!-d $cvsroot) {
 	}
     }
     if ($#foo > 1) {
-	$intro .= "<p>\nThis script support the following CVS trees:\n";
+	$intro .= "<p>\nThis script supports the following CVS trees:\n";
 	for($i = 0; $i <= $#foo; $i++) {
 	    $intro .= qq{<a href="$scriptname?cvsroot=$foo[$i]">} .
 		($CVSROOTdescr{$foo[$i]} ? 
@@ -327,7 +327,9 @@ sub htmlify {
 	$string =~ s/>/&gt;/g;
 
 	if ($pr) {
-		$string =~ s|\bpr(\W+[a-z]+/\W*)(\d+)|<A HREF=/cgi/query-pr.cgi?pr=$2>$&</A>|ig;
+		$string =~ s|\bpr(\W+[a-z]+/\W*)(\d+)|<A HREF=/cgi/query-pr.cgi?pr=$2>$&</A>|ig ||
+		$string =~ s|\bpr[:#]?\s*#?(\d+)\b|<A HREF=/cgi/query-pr.cgi?pr=$1>$&</A>|ig ||
+		$string =~ s!\b(bin|conf|docs|gnu|i386|kern|misc|ports)\/(\d+)\b!<A HREF=/cgi/query-pr.cgi?pr=$2>$&</A>!ig;
 	}
 
 	$string;
