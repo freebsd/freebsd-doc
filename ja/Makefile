@@ -1,4 +1,4 @@
-# $FreeBSD: www/ja/Makefile,v 1.48 2001/08/08 03:55:55 kuriyama Exp $
+# $FreeBSD: www/ja/Makefile,v 1.49 2001/09/03 06:25:39 kuriyama Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.58
 
@@ -45,7 +45,7 @@ SUBDIR+= internal
 SUBDIR+= java
 SUBDIR+= copyright
 SUBDIR+= search
-#SUBDIR+= gallery
+SUBDIR+= gallery
 SUBDIR+= projects
 SUBDIR+= platforms
 SUBDIR+= releases
