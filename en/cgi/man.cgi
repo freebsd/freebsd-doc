@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp 
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.68 2002-05-04 15:58:29 wosch Exp $
+# $Id: man.cgi,v 1.69 2002-05-10 19:28:38 wosch Exp $
 
 #use Data::Dumper;
 #use Carp;
@@ -487,7 +487,7 @@ sub apropos {
     if (!$acounter) {
 	print "Sorry, no data found for `$query'.\n";
 	print qq{You may look for other } . 
-	    qq{<a href="../../search.html">FreeBSD Search Services</a>.\n};
+	    qq{<a href="../../search/">FreeBSD Search Services</a>.\n};
     }
     print "</DL>\n</BODY>\n</HTML>\n";
 }
@@ -599,7 +599,7 @@ sub man {
 	print "Sorry, no data found for `$html_name" .
 		($html_section ? "($html_section)": '') . "'.\n";
 	print qq{You may look for other } . 
-	    qq{<a href="../../search.html">FreeBSD Search Services</a>.\n};
+	    qq{<a href="../../search/">FreeBSD Search Services</a>.\n};
 	return;
     }
 
@@ -930,7 +930,7 @@ ETX
 }
 
 sub copyright {
-    $id = '$Id: man.cgi,v 1.68 2002-05-04 15:58:29 wosch Exp $';
+    $id = '$Id: man.cgi,v 1.69 2002-05-10 19:28:38 wosch Exp $';
 
     return qq{\
 <PRE>
