@@ -1,10 +1,21 @@
 # 
-# $FreeBSD: doc/ja_JP.eucJP/books/handbook/Makefile,v 1.47 2000/12/24 19:08:49 hrs Exp $
+# $FreeBSD: doc/ja_JP.eucJP/books/handbook/Makefile,v 1.48 2001/06/21 03:38:31 chris Exp $
 #
 # Build the FreeBSD Handbook (Japanese).
 #
-# Original revision: 1.30
+# Original revision: 1.40
 #
+
+# ------------------------------------------------------------------------
+#
+# Handbook-specific variables
+#
+#	WITH_PGPKEYS	The print version of the handbook only prints PGP
+#			fingerprints by default.  If you would like for the
+#			entire key to be displayed, then set this variable.
+#			This option has no affect on the HTML formats.
+#			
+# ------------------------------------------------------------------------
 
 MAINTAINER=kuriyama@FreeBSD.ORG
 
@@ -17,6 +28,10 @@ INSTALL_ONLY_COMPRESSED?=
 
 NO_TIDY=	YES
 
+#IMAGES = advanced-networking/isdn-bus.eps
+#IMAGES+= advanced-networking/isdn-twisted-pair.eps
+#IMAGES+= advanced-networking/natd.eps
+
 # 
 # SRCS lists the individual SGML files that make up the document. Changes
 # to any of these files will force a rebuild
@@ -28,24 +43,21 @@ SRCS+= advanced-networking/chapter.sgml
 SRCS+= backups/chapter.sgml
 SRCS+= basics/chapter.sgml
 SRCS+= bibliography/chapter.sgml
+#SRCS+= config/chapter.sgml
 SRCS+= boot/chapter.sgml
 SRCS+= contrib/chapter.sgml
 SRCS+= cutting-edge/chapter.sgml
 SRCS+= disks/chapter.sgml
 SRCS+= eresources/chapter.sgml
-SRCS+= hw/chapter.sgml
 SRCS+= install/chapter.sgml
-SRCS+= internals/chapter.sgml
 SRCS+= introduction/chapter.sgml
 SRCS+= kernelconfig/chapter.sgml
-SRCS+= kerneldebug/chapter.sgml
 SRCS+= kernelopts/chapter.sgml
 SRCS+= l10n/chapter.sgml
 SRCS+= linuxemu/chapter.sgml
 SRCS+= mail/chapter.sgml
 SRCS+= mirrors/chapter.sgml
 SRCS+= pgpkeys/chapter.sgml
-SRCS+= policies/chapter.sgml
 SRCS+= ppp-and-slip/chapter.sgml
 SRCS+= printing/chapter.sgml
 SRCS+= security/chapter.sgml
@@ -65,6 +77,30 @@ SRCS+=	jcontrib/chapter.sgml
 SRCS+=	jauthors.ent
 
 SYMLINKS=	${DESTDIR} index.html handbook.html
+
+# Turn on all the chapters.
+CHAPTERS?= ${SRCS:M*chapter.sgml}
+
+JADEFLAGS+= ${CHAPTERS:S/\/chapter.sgml//:S/^/-i chap./}
+
+# XXX The Handbook build currently overflows some internal, hardcoded 
+# limits in pdftex.  Until we split the Handbook up, build the PDF 
+# version using ps2pdf instead of pdftex.
+
+book.tex-pdf:
+	touch book.tex-pdf
+
+book.pdf: book.ps
+	ps2pdf book.ps book.pdf
+
+DOC_PREFIX?= ${.CURDIR}/../../..
+
+#
+# Handbook-specific variables
+#
+.if defined(WITH_PGPKEYS)
+JADEFLAGS+=	-V withpgpkeys
+.endif
 
 DOC_PREFIX?= ${.CURDIR}/../../..
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"
