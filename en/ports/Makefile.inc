@@ -1,3 +1,4 @@
+# $FreeBSD$
 
 PORTINDEX=	perl5 ${.CURDIR}/portindex
 INDEX=		INDEX
