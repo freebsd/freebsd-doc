@@ -1,5 +1,5 @@
 #!/usr/bin/perl -T
-# $FreeBSD: www/en/cgi/query-pr-summary.cgi,v 1.39 2003/03/06 23:51:58 wosch Exp $
+# $FreeBSD: www/en/cgi/query-pr-summary.cgi,v 1.40 2003/09/02 09:46:27 dougb Exp $
 
 sub escape($) { $_ = $_[0]; s/&/&amp;/g; s/</&lt;/g; s/>/&gt;/g; $_; }
 
@@ -589,8 +589,8 @@ print qq`</SELECT></TD>
 <TD><SELECT NAME="release">
 <OPTION SELECTED VALUE="">Any</OPTION>
 <OPTION VALUE="^FreeBSD [234]">Pre-5.x</OPTION>
-<OPTION VALUE="^FreeBSD 4">4.x only</OPTION>
 <OPTION VALUE="^FreeBSD 5">5.x only</OPTION>
+<OPTION VALUE="^FreeBSD 4">4.x only</OPTION>
 <OPTION VALUE="^FreeBSD 3">3.x only</OPTION>
 <OPTION VALUE="^FreeBSD 2">2.x only</OPTION>
 </SELECT>
