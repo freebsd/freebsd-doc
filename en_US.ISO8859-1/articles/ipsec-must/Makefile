@@ -1,8 +1,6 @@
-# $FreeBSD$
+# $FreeBSD: doc/en_US.ISO8859-1/articles/ipsec-must/Makefile,v 1.1 2000/06/26 09:10:24 nik Exp $
 
 DOC?= article
-
-DOCFORMAT= html
 
 FORMATS?= html
 
