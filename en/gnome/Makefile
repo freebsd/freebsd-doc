@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/gnome/Makefile,v 1.10 2002/05/21 09:15:41 sobomax Exp $
+# $FreeBSD: www/en/gnome/Makefile,v 1.11 2002/08/25 19:14:58 marcus Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -13,16 +13,24 @@ SUBDIR+=	images
 DOCS=	screenshots.sgml
 DOCS+=	contact.sgml
 
-DATA=	index.html newsflash.html
+DATA=	index.html newsflash.html news.rdf
 
 CLEANFILES=	index.html
 CLEANFILES+=	newsflash.html
+CLEANFILES+=	news.rdf
 
 index.html! index.xsl news.xml includes.xsl ../includes.xsl
 	${XSLTPROC} ${XSLTPROCOPTS:N-nonet} -o index.html \
 		${.CURDIR}/index.xsl ${.CURDIR}/news.xml
 .if !defined(NO_TIDY)
 	-${TIDY} ${TIDYOPTS} index.html
+.endif
+
+news.rdf! rss.xsl news.xml includes.xsl ../includes.xsl
+	${XSLTPROC} ${XSLTPROCOPTS:N-nonet} -o news.rdf \
+		${.CURDIR}/rss.xsl ${.CURDIR}/news.xml
+.if !defined(NO_TIDY)
+	-${TIDY} -xml -wrap 0 ${TIDYOPTS} news.rdf
 .endif
 
 newsflash.html: newsflash.xsl news.xml includes.xsl ../includes.xsl
