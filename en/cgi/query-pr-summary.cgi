@@ -1,5 +1,5 @@
-#!/usr/bin/perl
-# $FreeBSD: www/en/cgi/query-pr-summary.cgi,v 1.30 2000/12/28 13:43:41 wosch Exp $
+#!/usr/bin/perl -T
+# $FreeBSD: www/en/cgi/query-pr-summary.cgi,v 1.31 2001/01/04 22:22:38 peter Exp $
 
 $html_mode     = 1 if $ENV{'DOCUMENT_ROOT'};
 $self_ref      = $ENV{'SCRIPT_NAME'};
@@ -50,10 +50,16 @@ if ($html_mode) {
 } else {
 	&Getopts('CcqRr:s:');
 
-	$input{"responsible"} = "summary" if $opt_R;
-	$input{"responsible"} = $opt_r if $opt_r;
-	$input{"state"}	      = $opt_s if $opt_s;
-	$input{"quiet"}	      = $opt_q if $opt_q;
+	$input{"responsible"}	= "summary" if $opt_R;
+	if ($opt_r) {
+		($input{"responsible"})	= ($opt_r =~ m/^([-a-zA-Z0-9@.]*)$/);
+		die "Insecure args" if ($input{"responsible"} ne $opt_r)
+	}
+	if ($opt_s) {
+		($input{"state"})	= ($opt_s =~ m/^([a-zA-Z]*)$/);
+		die "Insecure args" if ($input{"state"} ne $opt_s)
+	}
+	$input{"quiet"}		= "yes" if $opt_q;
 	if ($opt_C) {
 		$query_args   = '--confidential=yes ';
 	} elsif (!$opt_c) {
