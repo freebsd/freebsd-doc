@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD$ -->
+<!-- $FreeBSD: www/fr/news/newsflash.xsl,v 1.1 2002/12/08 16:45:35 stephane Exp $ -->
 
 <!-- 
    The FreeBSD French Documentation Project
-   Original revision: 1.7
+   Original revision: 1.9
    
    Version francaise : Stephane Legrand <stephane@freebsd-fr.org>
 -->
@@ -57,7 +57,7 @@
           pour les mises &#224; jour sp&#233;cifiques &#224; ces projets.</p>
 
         <ul>
-          <li><a href="{$base}/java/newsflash.html">Java sur FreeBSD</a></li>
+          <li><a href="{$base}/java/newsflash.html"><xsl:value-of select="$java"/> sur FreeBSD</a></li>
           <li><a href="http://freebsd.kde.org/">KDE sur FreeBSD</a></li>
           <li><a href="{$base}/gnome/newsflash.html">GNOME sur FreeBSD</a></li>
         </ul>
@@ -72,7 +72,8 @@
 	<xsl:apply-templates select="descendant::month"/>
 
 	<p>Anciennes annonces :
-     <a href="2001/index.html">2001</a>,
+          <a href="2002/index.html">2002</a>,
+          <a href="2001/index.html">2001</a>,
 	  <a href="2000/index.html">2000</a>,
 	  <a href="1999/index.html">1999</a>,
 	  <a href="1998/index.html">1998</a>,
