@@ -1,5 +1,5 @@
 # 
-# $FreeBSD: doc/en_US.ISO_8859-1/books/handbook/Makefile,v 1.26 1999/09/06 06:52:44 peter Exp $
+# $FreeBSD$
 #
 # Build the FreeBSD Handbook.
 #
