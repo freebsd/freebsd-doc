@@ -1,5 +1,5 @@
 # 
-# $FreeBSD: doc/en_US.ISO8859-1/books/handbook/Makefile,v 1.39 2001/07/13 22:55:50 murray Exp $
+# $FreeBSD: doc/en_US.ISO8859-1/books/handbook/Makefile,v 1.40 2001/07/17 01:37:39 murray Exp $
 #
 # Build the FreeBSD Handbook.
 #
@@ -48,7 +48,6 @@ SRCS+= eresources/chapter.sgml
 SRCS+= install/chapter.sgml
 SRCS+= introduction/chapter.sgml
 SRCS+= kernelconfig/chapter.sgml
-SRCS+= kernelopts/chapter.sgml
 SRCS+= l10n/chapter.sgml
 SRCS+= linuxemu/chapter.sgml
 SRCS+= mail/chapter.sgml
@@ -59,7 +58,6 @@ SRCS+= printing/chapter.sgml
 SRCS+= security/chapter.sgml
 SRCS+= serialcomms/chapter.sgml
 SRCS+= sound/chapter.sgml
-SRCS+= staff/chapter.sgml
 SRCS+= users/chapter.sgml
 SRCS+= x11/chapter.sgml
 SRCS+= ports/chapter.sgml
