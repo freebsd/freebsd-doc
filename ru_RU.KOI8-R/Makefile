@@ -1,15 +1,8 @@
-#       $Id: Makefile,v 1.4 1999-08-26 19:42:12 nik Exp $
+#       $Id: Makefile,v 1.5 1999-08-29 16:52:23 nik Exp $
 
-SUBDIR = FAQ
+SUBDIR = books
 
 COMPAT_SYMLINK = ru
-
-# 
-# XXX Kludge -- this directory probably doesn't exist yet.  Pull this out 
-# when the FAQ is DocBook'ed
-beforeinstall:
-	[ -d ${DOCDIR}/ru_SU.KOI8-R/books/faq ] || 			\
-		mkdir -p ${DOCDIR}/ru_SU.KOI8-R/books/faq
 
 #
 # Put the compatability symlink in place.
@@ -25,4 +18,4 @@ afterinstall:
 .include <bsd.subdir.mk>
 
 DOC_PREFIX = ..
-.include "../share/mk/docproj.docbook.mk"
+.include "${DOC_PREFIX}/share/mk/docproj.docbook.mk"
