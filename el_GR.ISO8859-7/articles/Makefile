@@ -7,6 +7,7 @@ SUBDIR+= explaining-bsd
 SUBDIR+= formatting-media
 SUBDIR+= freebsd-questions
 SUBDIR+= java-tomcat
+SUBDIR+= laptop
 SUBDIR+= new-users
 
 DOC_PREFIX?= ${.CURDIR}/../..
