@@ -87,6 +87,7 @@ ZIP_CMD?=	${PREFIX}/bin/zip -j ${ZIP}
 
 .if ${.OBJDIR} != ${.CURDIR}
 LOCAL_CSS_SHEET=	${.OBJDIR}/${CSS_SHEET:T}
+CLEANFILES+=		${LOCAL_CSS_SHEET}
 .else
 LOCAL_CSS_SHEET=	${CSS_SHEET:T}
 .endif
