@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/index.xsl,v 1.49 2003/02/10 06:00:02 trhodes Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.50 2003/02/11 11:34:08 brueffer Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   
@@ -6,7 +6,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.49 2003/02/10 06:00:02 trhodes Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.50 2003/02/11 11:34:08 brueffer Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -463,6 +463,30 @@
 				</a><br/>
 			      </xsl:for-each>
 			      <a href="news/press.html">More...</a>
+			    </font>
+			  </p>
+
+			  <p><font size="+1" color="#990000"><b>Security Advisories</b></font><br/>
+
+			    <font size="-1">
+			      Latest update: 
+			      <xsl:value-of
+				select="document('security/advisories.xml')/descendant::month[position() = 1]/name"/>
+			      <xsl:text> </xsl:text>
+			      <xsl:value-of
+				select="document('security/advisories.xml')/descendant::day[position() = 1]/name"/>
+			      <xsl:text>, </xsl:text>
+			      <xsl:value-of
+				select="document('security/advisories.xml')/descendant::year[position() = 1]/name"/>
+			      <br/>
+			      <!-- Pull in the 10 most recent security advisories -->
+			      <xsl:for-each select="document('security/advisories.xml')/descendant::advisory[position() &lt; 10]">
+				&#183; <a>
+				  <xsl:attribute name="href">ftp://ftp.freebsd.org/pub/FreeBSD/CERT/advisories/<xsl:value-of select="name"/>.asc</xsl:attribute>
+				  <xsl:value-of select="name"/>
+				</a><br/>
+			      </xsl:for-each>
+			      <a href="security/">More...</a>
 			    </font>
 			  </p>
 			</td>
