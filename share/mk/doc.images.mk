@@ -57,12 +57,15 @@ IMAGES_GEN_EPS= ${_IMAGES_PNG:S/.png$/.eps/}
 IMAGES_GEN_PDF= ${_IMAGES_EPS:S/.eps$/.pdf/}
 IMAGES_SCR_PNG= ${_IMAGES_SCR:S/.scr$/.png/}
 IMAGES_SCR_EPS= ${_IMAGES_SCR:S/.scr$/.eps/}
+IMAGES_SCR_PDF= ${_IMAGES_SCR:S/.scr$/.pdf/}
 IMAGES_PIC_PNG= ${_IMAGES_PIC:S/.pic$/.png/}
 IMAGES_PIC_EPS= ${_IMAGES_PIC:S/.pic$/.eps/}
+IMAGES_PIC_PDF= ${_IMAGES_PIC:S/.pic$/.pdf/}
+IMAGES_GEN_PDF+= ${IMAGES_PIC_PDF} ${IMAGES_SCR_PDF}
 
 CLEANFILES+= ${IMAGES_GEN_PNG} ${IMAGES_GEN_EPS} ${IMAGES_GEN_PDF}
 CLEANFILES+= ${IMAGES_SCR_PNG} ${IMAGES_SCR_EPS}
-CLEANFILES+= ${IMAGES_PIC_PNG} ${IMAGES_PIC_EPS}
+CLEANFILES+= ${IMAGES_PIC_PNG} ${IMAGES_PIC_EPS} ${_IMAGES_PIC:S/.pic$/.ps/}
 
 IMAGES_PNG= ${_IMAGES_PNG} ${IMAGES_GEN_PNG} ${IMAGES_SCR_PNG} ${IMAGES_PIC_PNG}
 IMAGES_EPS= ${_IMAGES_EPS} ${IMAGES_GEN_EPS} ${IMAGES_SCR_EPS} ${IMAGES_PIC_EPS}
@@ -147,8 +150,7 @@ ${_curimage}: ${_curimage:S/.eps$/.png/}
 
 .for _curimage in ${IMAGES_GEN_PDF}
 ${_curimage}: ${_curimage:S/.pdf$/.eps/}
-	${EPSTOPDF} ${EPSTOPDFOPTS} --outfile=${.TARGET} \
-		${.CURDIR}/${_curimage:S/.pdf$/.eps/}
+	${EPSTOPDF} ${EPSTOPDFOPTS} --outfile=${.TARGET} ${.ALLSRC}
 .endfor
 
 .if ${.OBJDIR} != ${.CURDIR}
