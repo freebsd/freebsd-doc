@@ -16,5 +16,6 @@ href="../handbook/porting.html">Porting applications</a>.  Both are
 part of the <a href="../handbook">FreeBSD Handbook</a>.</p>
 
 <p>For more information about new ports, changed ports,
-or removed ports see the <a href="http://www.de.freebsd.org/de/cgi/ports.cgi">
+removed ports, or searching for an application see the 
+<a href="http://www.de.freebsd.org/de/cgi/ports.cgi">
 FreeBSD Ports Changes</a> script.</p>
