@@ -15,6 +15,7 @@ SUBDIR+= filtering-bridges
 SUBDIR+= fonts
 SUBDIR+= formatting-media
 SUBDIR+= freebsd-questions
+SUBDIR+= hubs
 SUBDIR+= ipsec-must
 SUBDIR+= laptop
 SUBDIR+= mh
