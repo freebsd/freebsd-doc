@@ -36,6 +36,7 @@ require 'cgi-style.pl';
 	    'freebsd', '/home/ncvs',
 	    'openbsd', '/home/OpenBSD/cvs',
 	    'learn', '/c/learncvs',
+	    'mozilla', '/a/mozilla-cvs',
 	    );
 
 $cvstreedefault = 'freebsd';
