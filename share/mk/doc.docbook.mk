@@ -1,5 +1,5 @@
 #
-# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.5 1999/12/24 01:25:27 nik Exp $
+# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.6 2000/01/24 20:02:50 nik Exp $
 #
 # This include file <doc.docbook.mk> handles building and installing of
 # DocBook documentation in the FreeBSD Documentation Project.
@@ -39,6 +39,8 @@
 #
 #	EXTRA_CATALOGS	Additional catalog files that should be used by
 #			any SGML processing applications.
+#
+#	NO_TIDY		If you do not want to use tidy, set this to "YES".
 #
 # Documents should use the += format to access these.
 #
@@ -166,11 +168,15 @@ all: ${_docs}
 
 index.html HTML.manifest: ${SRCS}
 	${JADE} -V html-manifest -ioutput.html ${JADEOPTS} -d ${DSLHTML} -t sgml ${MASTERDOC}
+.if !defined(NO_TIDY)
 	-tidy -i -m -f /dev/null ${TIDYFLAGS} `xargs < HTML.manifest`
+.endif
 
 ${DOC}.html: ${SRCS}
 	${JADE} -ioutput.html -V nochunks ${JADEOPTS} -d ${DSLHTML} -t sgml ${MASTERDOC} > ${.TARGET}
+.if !defined(NO_TIDY)
 	-tidy -i -m -f /dev/null ${TIDYFLAGS} ${.TARGET}
+.endif
 
 ${DOC}.html-split.tar: HTML.manifest
 	tar cf ${.TARGET} `xargs < HTML.manifest`
