@@ -1,6 +1,6 @@
 # 
 # $FreeBSD$
-# $FreeBSDde: de-docproj/books/handbook/Makefile,v 1.21 2002/09/05 19:50:09 mheinen Exp $
+# $FreeBSDde: de-docproj/books/handbook/Makefile,v 1.22 2002/11/29 12:48:18 mheinen Exp $
 #
 # Build the FreeBSD Handbook in its German translation.
 #
@@ -47,6 +47,7 @@ SRCS+= l10n/chapter.sgml
 SRCS+= linuxemu/chapter.sgml
 SRCS+= mail/chapter.sgml
 SRCS+= mirrors/chapter.sgml
+SRCS+= pgpkeys/chapter.sgml
 SRCS+= ppp-and-slip/chapter.sgml
 SRCS+= ports/chapter.sgml
 SRCS+= preface/preface.sgml
@@ -66,6 +67,21 @@ SRCS+= newsgroups.ent
 CHAPTERS?= ${SRCS:M*chapter.sgml}
 
 SGMLFLAGS+= ${CHAPTERS:S/\/chapter.sgml//:S/^/-i chap./}
+
+# XXX The Handbook build currently overflows some internal, hardcoded
+# limits in pdftex.  Until we split the Handbook up, build the PDF
+# version using ps2pdf instead of pdftex.
+
+PS2PDF?=	${PREFIX}/bin/ps2pdf
+
+book.tex-pdf:
+	${TOUCH} book.tex-pdf 
+
+book.pdf: book.ps       
+	${PS2PDF} book.ps book.pdf
+
+pgpkeyring: pgpkeys/chapter.sgml
+	@${JADE} -V nochunks ${JADEOPTS} -d ${DSLPGP} -t sgml ${MASTERDOC}
 
 DOC_PREFIX?= ${.CURDIR}/../../..
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"
