@@ -4,9 +4,9 @@
      The FreeBSD Russian Documentation Project
 
      $FreeBSD$
-     $FreeBSDru: frdp/www/ru/index.xsl,v 1.33 2004/04/08 07:08:51 den Exp $
+     $FreeBSDru: frdp/www/ru/index.xsl,v 1.34 2004/04/22 11:40:49 den Exp $
 
-     Original revision: 1.96
+     Original revision: 1.99
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -260,6 +260,7 @@
 			      &#183; <a href="{$base}/doc/ru_RU.KOI8-R/books/handbook/install.html">Руководство по установке</a><br/>
 			      &#183; <a href="{$u.rel.notes}">Информация о Релизе</a><br/>
 			      &#183; <a href="{$u.rel.hardware}">Поддерживаемое Оборудование</a><br/>
+			      &#183; <a href="{$u.rel.installation}">Заметки по установке</a><br/>
                               &#183; <a href="{$u.rel.errata}">Обнаруженные Проблемы</a><br/>
                               &#183; <a href="{$u.rel.early}">Руководство для новичков</a></small></p>
 
@@ -272,9 +273,11 @@
                               &#183; <a href="{$base}/doc/ru_RU.KOI8-R/books/handbook/install.html">Руководство по установке</a><br/>
                               &#183; <a href="{$u.rel2.notes}">Информация о релизе</a><br/>
                               &#183; <a href="{$u.rel2.hardware}">Информация об оборудовании</a><br/>
+			      &#183; <a href="{$u.rel2.installation}">Заметки по установке</a><br/>
                               &#183; <a href="{$u.rel2.errata}">Известные проблемы</a></small></p>
 
-			  <p><font size="+1" color="#990000"><b>Новости Проекта</b></font><br/>
+			  <p><font size="+1" color="#990000"><b>Новости Проекта</b></font>
+			    <font color="#990000">(<a href="news/news.rdf">RSS</a>)</font><br/>
 			    <font size="-1">
 			      Последние изменения: 
 			      <xsl:call-template name="html-index-news-project-items-lastmodified">
@@ -370,7 +373,7 @@
 		alt="[Daemon News]" height="45" width="130"
 		border="0"/></a></td>
 	  
-	    <td><a href="copyright/daemon.html"><img
+	    <td><a href="art.html"><img
 			     src="{$base}/gifs/powerlogo.gif" 
 			     alt="[Powered by FreeBSD]"
 			     height="64" 
