@@ -1,14 +1,42 @@
-# 
+#
 # $FreeBSD$
+# $FreeBSDnl: nl_NL.ISO8859-1/books/handbook/Makefile,v 1.11 2004/12/15 00:15:19 siebrand Exp $
+# Gebaseerd op: 1.91 (sortof)
 #
 # Build the FreeBSD Dutch Handbook.
 #
+
+# ------------------------------------------------------------------------
+#
+# Handboekspecifieke variabelen
+#
+#	WITH_PGPKEYS	De gedrukte verie van het handboek geeft standaard
+#		 	alleen PGP vingerafdrukken weer.  Als het gewenst
+#			is dat de complete sleutel wordt weergegeven dan
+#			dient deze variabele insteld te worden.  De optie
+#			heeft geen invloed op de HTML formaten.
+#
+# Handboekspecifieke doelen
+#
+#       pgpkeyring      Dit doel leest de inhoud van pgpkeys/chapter.sgml
+#			en schrijft dan alle PGP sleutels naar stdout.
+#			De uitvoer kan omgeleid worden naar een bestand
+#			en verspreid worden als een publieke sleutelring
+#			van FreeBSD ontwikkelaars die eenvoudig in
+#			PGP/GPG ingelezen kan worden.
+#
+# ------------------------------------------------------------------------
+
+.PATH: ${.CURDIR}/../../share/sgml/glossary/
 
 MAINTAINER=remko@FreeBSD.org
 
 DOC?= book
 
 FORMATS?= html-split
+
+HAS_INDEX= true
+WITH_GLOSSARY?=
 
 INSTALL_COMPRESSED?= gz
 INSTALL_ONLY_COMPRESSED?=
@@ -120,7 +148,7 @@ IMAGES_LIB+= callouts/8.png
 IMAGES_LIB+= callouts/9.png
 IMAGES_LIB+= callouts/10.png
 
-# 
+#
 # SRCS lists the individual SGML files that make up the document. Changes
 # to any of these files will force a rebuild
 #
@@ -128,6 +156,7 @@ IMAGES_LIB+= callouts/10.png
 # SGML content
 SRCS=  book.sgml
 SRCS+= colophon.sgml
+SRCS+= freebsd-glossary.sgml
 SRCS+= advanced-networking/chapter.sgml
 SRCS+= basics/chapter.sgml
 SRCS+= bibliography/chapter.sgml
@@ -137,6 +166,7 @@ SRCS+= cutting-edge/chapter.sgml
 SRCS+= desktop/chapter.sgml
 SRCS+= disks/chapter.sgml
 SRCS+= eresources/chapter.sgml
+SRCS+= firewalls/chapter.sgml
 SRCS+= install/chapter.sgml
 SRCS+= introduction/chapter.sgml
 SRCS+= kernelconfig/chapter.sgml
@@ -146,6 +176,7 @@ SRCS+= mac/chapter.sgml
 SRCS+= mail/chapter.sgml
 SRCS+= mirrors/chapter.sgml
 SRCS+= multimedia/chapter.sgml
+SRCS+= network-servers/chapter.sgml
 SRCS+= pgpkeys/chapter.sgml
 SRCS+= ports/chapter.sgml
 SRCS+= ppp-and-slip/chapter.sgml
@@ -158,7 +189,7 @@ SRCS+= vinum/chapter.sgml
 SRCS+= x11/chapter.sgml
 
 # Entities
-SRCS+= chapters.ent 
+SRCS+= chapters.ent
 
 SYMLINKS=	${DESTDIR} index.html handbook.html
 
@@ -166,12 +197,10 @@ SYMLINKS=	${DESTDIR} index.html handbook.html
 CHAPTERS?= ${SRCS:M*chapter.sgml}
 
 SGMLFLAGS+= ${CHAPTERS:S/\/chapter.sgml//:S/^/-i chap./}
-.if defined(WITH_GLOSSARY) && !empty(WITH_GLOSSARY)
 SGMLFLAGS+= -i chap.freebsd-glossary
-.endif
 
-# XXX The Handbook build currently overflows some internal, hardcoded 
-# limits in pdftex.  Until we split the Handbook up, build the PDF 
+# XXX The Handbook build currently overflows some internal, hardcoded
+# limits in pdftex.  Until we split the Handbook up, build the PDF
 # version using ps2pdf instead of pdftex.
 
 PS2PDF?=	${PREFIX}/bin/ps2pdf
@@ -193,6 +222,7 @@ pgpkeyring: pgpkeys/chapter.sgml
 JADEFLAGS+=	-V withpgpkeys
 .endif
 
+URL_RELPREFIX?=	../../../..
 DOC_PREFIX?= ${.CURDIR}/../../..
 
 .for p in ftp cvsup

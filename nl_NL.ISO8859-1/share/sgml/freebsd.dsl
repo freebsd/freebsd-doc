@@ -1,4 +1,8 @@
-<!-- $FreeBSD$ -->
+<!--
+      The FreeBSD Documentation Project
+      $FreeBSD$
+      Gebaseerd op: 1.20
+-->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
 <!ENTITY freebsd.dsl PUBLIC "-//FreeBSD//DOCUMENT DocBook Language Neutral Stylesheet//EN" CDATA DSSSL>
@@ -22,7 +26,7 @@
 	    (make element gi: "p"
                   attributes: (list (list "align" "center"))
               (make element gi: "small"
-                (literal "Deze, en andere documenten, kunnen worden gedownload van ")
+                (literal "Deze en andere documenten kunnen worden gedownload van ")
 		(create-link
 		  (list (list "HREF" "ftp://ftp.FreeBSD.org/pub/FreeBSD/doc/"))
                   (literal "ftp://ftp.FreeBSD.org/pub/FreeBSD/doc/"))
@@ -30,7 +34,7 @@
             (make element gi: "p"
                   attributes: (list (list "align" "center"))
               (make element gi: "small"  
-                (literal "Voor vragen over FreeBSD, lees de ")
+                (literal "Lees voor vragen over FreeBSD de ")
 		(create-link
 		  (list (list "HREF" "http://www.FreeBSD.org/docs.html"))
                   (literal "documentatie"))
@@ -40,7 +44,7 @@
                   (literal "questions@FreeBSD.org"))
                 (literal ">.")
                 (make empty-element gi: "br")
-                (literal "Voor vragen over deze documentatie, stuur een e-mail naar<")
+                (literal "Vragen over deze documentatie kunnen per e-mail naar<")
 		(create-link (list (list "HREF" "mailto:doc@FreeBSD.org"))
                   (literal "doc@FreeBSD.org"))
 	        (literal ">.")))))
