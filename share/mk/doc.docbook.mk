@@ -255,6 +255,13 @@ BZIP2_CMD?=	bzip2 -qf ${BZIP2}
 ZIP?=	-9
 ZIP_CMD?=	${PREFIX}/bin/zip -j ${ZIP}
 
+#
+# Instruction for bsd.subdir.mk to not to process SUBDIR directive.
+# It is not neccessary since doc.docbook.mk do it too.
+#
+NO_SUBDIR=      YES
+
+
 # ------------------------------------------------------------------------
 #
 # Look at ${FORMATS} and work out which documents need to be generated.
