@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/Makefile,v 1.82 2002/04/04 21:51:28 trhodes Exp $
+# $FreeBSD: www/en/Makefile,v 1.83 2002/05/09 13:07:12 mwlucas Exp $
 .if exists(Makefile.conf)
 .include "Makefile.conf"
 .endif
@@ -38,6 +38,8 @@ SUBDIR+= news
 SUBDIR+= advocacy
 
 SUBDIR+= events
+SUBDIR+= FAQ
+SUBDIR+= handbook
 SUBDIR+= internal
 SUBDIR+= java
 SUBDIR+= copyright
@@ -94,26 +96,6 @@ index.html: index.xsl news/news.xml news/press.xml includes.xsl news/includes.xs
 .if !defined(NO_TIDY)
 	-${TIDY} ${TIDYOPTS} index.html
 .endif
-
-# Handle the FAQ/ and handbook/ directories specially.
-FAQ:
-	${LN} -fs ${.OBJDIR}/../../doc/en_US.ISO8859-1/books/faq FAQ
-
-handbook:
-	${LN} -fs ${.OBJDIR}/../../doc/en_US.ISO8859-1/books/handbook handbook
-
-# In "make obj" case FAQ and handbook are symlinks and have to be removed
-# at "make clean"
-.if ${.OBJDIR} != ${.CURDIR}
-CLEANFILES+=	FAQ
-CLEANFILES+=	handbook
-.endif
-
-afterinstall:
-	cd ${DOCINSTALLDIR}; \
-		${LN} -fs doc/en_US.ISO8859-1/books/faq ${DOCINSTALLDIR}/FAQ
-	cd ${DOCINSTALLDIR}; \
-		${LN} -fs doc/en_US.ISO8859-1/books/handbook ${DOCINSTALLDIR}/handbook
 
 LINBOT?=	${PREFIX}/bin/linbot
 LINBOTOPTS?=	-ab
