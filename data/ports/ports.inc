@@ -1,6 +1,6 @@
-<!-- $Id: ports.inc,v 1.20 1998-03-28 22:27:27 asami Exp $ -->
-<p>The FreeBSD Ports Collection offers a simple way for users and
-administrators to install applications.  Each ``port'' listed here
+<!-- $Id: ports.inc,v 1.21 1998-06-11 18:33:29 jkh Exp $ -->
+<p>The FreeBSD Ports and Packages Collection offers a simple way for
+users and administrators to install applications.  Each ``port'' listed here
 contains any patches necessary to make the original application source
 code compile and run on FreeBSD.  Installing an application is as
 simple as downloading the port, unpacking it and typing <tt>make</tt>
@@ -9,6 +9,14 @@ application source code, either from a local disk, CDROM or via ftp,
 unpacks it on your system, applies the patches, and compiles.  If
 all goes well, simply type <tt>make install</tt> to install the
 application and register it with the package system.</p>
+
+<p>For most ports, a precompiled <tt>package</tt> also exists, saving
+the user the work of having to compile anything at all.  Each port
+contains a link to its corresponding package and you may either simply
+download that file and then run the <strong>pkg_add</strong> command
+on it or you can simply grab the link location and hand it straight
+to <strong>pkg_add</strong> since it's capable of accepting FTP URLs as
+well as filenames.</p>
 
 <p>For more information about using ports, see <a
 href="../handbook/ports.html">The ports collection</a>.  For
@@ -38,10 +46,11 @@ We compile and test our ports on <a
 href="http://www.xfree86.org/">XFree86</a>. Their current release is
 3.3.2.  Some ports may not work with older releases.</p>
 
-<p>For more information about new ports, changed ports,
-removed ports, or searching for an application see the 
-<a href="http://www.freebsd.org/cgi/ports.cgi">
-FreeBSD Ports Changes</a> script.</p>
+<p>For more information about new, changed or removed ports/packages,
+or if you wish to search for a specific application to see if it's
+available as a port/package, please see the 
+<a href="http://www.freebsd.org/cgi/ports.cgi">FreeBSD Ports Changes</a>
+page.</p>
 
 <FORM METHOD="GET" ACTION="http://www.freebsd.org/cgi/ports.cgi">
 Search for:
