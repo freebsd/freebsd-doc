@@ -2,7 +2,7 @@
 # The FreeBSD French Documentation Project
 #
 # $FreeBSD$
-# Original revision: 1.67
+# Original revision: 1.79
 #
 # Build the FreeBSD Handbook.
 #
@@ -112,6 +112,16 @@ IMAGES+= install/example-dir2.eps
 IMAGES+= install/example-dir3.eps
 IMAGES+= install/example-dir4.eps
 IMAGES+= install/example-dir5.eps
+
+IMAGES_EN+= mail/mutt1.scr
+IMAGES_EN+= mail/mutt2.scr
+IMAGES_EN+= mail/mutt3.scr
+IMAGES_EN+= mail/pine1.scr
+IMAGES_EN+= mail/pine2.scr
+IMAGES_EN+= mail/pine3.scr
+IMAGES_EN+= mail/pine4.scr
+IMAGES_EN+= mail/pine5.scr
+
 IMAGES_EN+= vinum/vinum-concat.pic
 IMAGES_EN+= vinum/vinum-mirrored-vol.pic
 IMAGES_EN+= vinum/vinum-raid10-vol.pic
@@ -221,7 +231,6 @@ CLEANFILES+= eresources.sgml.www.inc.tmp
 mirrors.sgml.${p}.inc: ${XML_MIRRORS} ${XSL_MIRRORS}
 	${XSLTPROC} ${XSLTPROCOPTS} \
 	    -o $@.tmp \
-	    --param 'transtable.xml' "'${XML_TRANSTABLE}'" \
 	    --param 'type' "'$p'" \
 	    --param 'proto' "'$p'" \
 	    --param 'target' "'handbook/mirrors/chapter.sgml'" \
@@ -234,7 +243,6 @@ mirrors.sgml.${p}.inc: ${XML_MIRRORS} ${XSL_MIRRORS}
 eresources.sgml.www.inc: ${XML_MIRRORS} ${XSL_MIRRORS}
 	${XSLTPROC} ${XSLTPROCOPTS} \
 	    -o $@.tmp \
-	    --param 'transtable.xml' "'${XML_TRANSTABLE}'" \
 	    --param 'type' "'www'" \
 	    --param 'proto' "'http'" \
 	    --param 'target' "'handbook/eresources/chapter.sgml'" \
