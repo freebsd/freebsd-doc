@@ -8,6 +8,7 @@ SUBDIR+= formatting-media
 SUBDIR+= freebsd-questions
 SUBDIR+= java-tomcat
 SUBDIR+= laptop
+SUBDIR+= multi-os
 SUBDIR+= new-users
 SUBDIR+= problem-reports
 SUBDIR+= releng
