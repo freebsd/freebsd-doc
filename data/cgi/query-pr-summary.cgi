@@ -1,6 +1,7 @@
 #!/usr/bin/perl
+# $Id: query-pr-summary.cgi,v 1.2 1996-09-29 03:14:13 jfieber Exp $
 
-$query_pr_ref = "http://www.freebsd.org/cgi-bin/query-pr.cgi";
+($query_pr_ref = $ENV{'SCRIPT_NAME'}) =~ s/-summary//;
 $query_args   = '--restricted -s "open|analyzed|feedback|suspended"';
 $state_args   = '--restricted ';
 
@@ -9,7 +10,8 @@ $ENV{'PATH'}  = "/bin:/usr/bin:/usr/sbin:/sbin:/usr/local/bin";
 
 $html_mode    = 1 if $ENV{'DOCUMENT_ROOT'} ne '';
 
-require "/usr/local/www/cgi-bin/cgi-lib.pl";
+require "cgi-lib.pl";
+require "cgi-style.pl";
 require "getopts.pl";
 
 if ($html_mode) {
@@ -47,7 +49,7 @@ if ($html_mode) {
     $dd = "<dd>";     $dd_x = "";
     $hr = "<hr>";
 
-    print "Content-type: text/html\n";
+#    print "Content-type: text/html\n";
 
 } else {
 
@@ -67,16 +69,14 @@ if ($html_mode) {
 }
 
 sub header_info {
-print "
-<html>
-<head>
-<title>Current FreeBSD problem reports</title>
-</head>
-<body>
-" if $html_mode;
+    if ($html_mode) {
+	print &html_header("Current FreeBSD problem reports");
+    }
+    else {
+	print "Current FreeBSD problem reports";
+    }
 
 print "
-${h2}Current FreeBSD problem reports${h2_e}
 
 The following is a listing of current problems submitted by FreeBSD users.
 These represent problem reports covering all versions fo FreeBSD including
@@ -84,25 +84,25 @@ experimental development code and obsolete releases.
 ${p}
 Bugs can be in one of several states:
 ${dl}
-${dt}${st}open${st_e}
+${dt}${st}o - open${st_e}
 ${dd}A problem report has been submitted, no sanity checking performed
 
-${dt}${st}analyzed${st_e}
+${dt}${st}a - analyzed${st_e}
 ${dd}The report has been examined by a team member and evaluated
 
-${dt}${st}feedback${st_e}
+${dt}${st}f - feedback${st_e}
 ${dd}The problem has been solved, and the originator has been given a
 ${dd_x}patch or a fix has been committed.  The PR remains in this state
 ${dd_x}pending a response from the originator.
 
-${dt}${st}suspended${st_e}
+${dt}${st}s - suspended${st_e}
 ${dd}Work on the problem has been postponsed.  This happens if a
 ${dd_x}timely solution is not possible or is not cost-effective at
 ${dd_x}the present time.  The PR continues to exist, though a solution
 ${dd_x}is not being actively sought.  If the problem cannot be solved at all,
 ${dd_x}it will be closed, rather than suspended.
 
-${dt}${st}closed${st_e}
+${dt}${st}c - closed${st_e}
 ${dd}A problem report is closed when any changes have been integrated,
 ${dd_x}documented, and tested.
 ${dl_e}
@@ -110,10 +110,7 @@ ${dl_e}
 }
 
 sub trailer_info {
-print "
-</body>
-</html>
-" if $html_mode;
+print &html_footer if $html_mode;
 }
 
 &header_info;
