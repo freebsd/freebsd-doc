@@ -42,9 +42,9 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $Id: cvsweb.cgi,v 1.71 2001-05-07 17:20:40 knu Exp $
+# $Id: cvsweb.cgi,v 1.72 2001-05-10 17:46:04 knu Exp $
 # $Idaemons: /home/cvs/cvsweb/cvsweb.cgi,v 1.71 2001/05/07 17:13:42 knu Exp $
-# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.70 2001/03/27 17:26:31 knu Exp $
+# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.71 2001/05/07 17:20:40 knu Exp $
 #
 ###
 
@@ -234,7 +234,7 @@ $LOG_REVSEPARATOR = q/^-{28}$/;
 ##### End of configuration variables #####
 
 $cgi_style::hsty_base = 'http://www.FreeBSD.org';
-$_ = q$FreeBSD: www/en/cgi/cvsweb.cgi,v 1.70 2001/03/27 17:26:31 knu Exp $;
+$_ = q$FreeBSD: www/en/cgi/cvsweb.cgi,v 1.71 2001/05/07 17:20:40 knu Exp $;
 @_ = split;
 $cgi_style::hsty_date = "@_[3,4]";
 
@@ -2776,7 +2776,7 @@ sub human_readable_diff($){
 sub navigateHeader($$$$$) {
     my ($swhere,$path,$filename,$rev,$title) = @_;
     $swhere = "" if ($swhere eq $scriptwhere);
-    $swhere = './', urlencode($filename) if ($swhere eq "");
+    $swhere = './' . urlencode($filename) if ($swhere eq "");
 
     print <<EOF;
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
