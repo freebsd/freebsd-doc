@@ -1,6 +1,6 @@
-<!-- $Id: ports.inc,v 1.3 1997-12-19 15:56:24 max Exp $ -->
+<!-- $Id: ports.inc,v 1.4 1998-01-20 04:09:34 hanai Exp $ -->
 <!-- The FreeBSD Japanese Documentation Project -->
-<!-- Original revision: 1.18 -->
+<!-- Original revision: 1.19 -->
 <p>FreeBSD Ports コレクションは, ユーザや管理者が簡単にアプリケーショ
 ンのインストールを簡単に行う方法を提供します.
 ここに並べられている各 ``port'' には, FreeBSD でオリジナルのアプリケー
@@ -23,13 +23,17 @@
 の一部です.</p>
 
 <p>もしあなたが 2.2.1-release のユーザなら, 
-<a href="ftp://ftp.freebsd.org/pub/FreeBSD/packages-2.2.2/221upgrade-97.07.21.tgz">
-2.2.1 から 2.2-stable へのアップグレードキット</a> (最終更新: 1997 年 
-7 月 21 日) をインストールしてください. 
+<a href="ftp://ftp.freebsd.org/pub/FreeBSD/packages-stable/Latest/221upgrade.tgz">
+2.2.1 から 2.2-stable へのアップグレードキット</a>
+をインストールしてください. 
 もしあなたが 2.2.2-release のユーザなら, 
-<a href="ftp://ftp.freebsd.org/pub/FreeBSD/packages-2.2.2/222upgrade-97.07.21.tgz">
-2.2.2 から 2.2-stable へのアップグレードキット</a> (最終更新: 1997 年 
-7 月 21 日) をインストールしてください.
+<a href="ftp://ftp.freebsd.org/pub/FreeBSD/packages-stable/Latest/222upgrade.tgz">
+2.2.2 から 2.2-stable へのアップグレードキット</a>
+をインストールしてください.
+もしあなたが 2.2.5-release のユーザなら, 
+<a href="ftp://ftp.freebsd.org/pub/FreeBSD/packages-stable/Latest/225upgrade.tgz">
+2.2.5 から 2.2-stable へのアップグレードキット</a>
+をインストールしてください.
 (これらは FreeBSD のパッケージになっています. インストールには pkg_add 
 を使ってください.)
 これでここに載っている全ての ports を使うことができるようになります. 
@@ -37,7 +41,7 @@
 だけを更新します. 2.2-stable への完全なアップグレードについては, ハン
 ドブックの<a href="../handbook/synching.html">
 インターネットを通じたソースツリーの同期</a>を参照してください. 
-完全なアップグレードが(まだ 2.2.1-release を使っている
+完全なアップグレードが(まだ 2.2.1-release や 2.2.2-release を使っている
 場合は特に)推奨されています.</p>
 
 <p>多くの ports はコンパイルと実行に X Window System を必要とします. 
