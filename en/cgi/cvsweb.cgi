@@ -1,4 +1,4 @@
-#!/usr/bin/perl5 -ws
+#!/usr/bin/perl -wT
 #
 # cvsweb - a CGI interface to CVS trees.
 #
@@ -43,10 +43,12 @@
 # SUCH DAMAGE.
 #
 # $zId: cvsweb.cgi,v 1.104 2000/11/01 22:05:12 hnordstrom Exp $
-# $Id: cvsweb.cgi,v 1.63 2001-01-02 00:03:51 knu Exp $
-# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.62 2000/12/29 09:22:50 knu Exp $
+# $Id: cvsweb.cgi,v 1.64 2001-01-02 12:45:29 knu Exp $
+# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.63 2001/01/02 00:03:51 knu Exp $
 #
 ###
+
+require 5.000;
 
 use strict;
 
@@ -131,16 +133,18 @@ sub link_tags($);
 sub forbidden_module($);
 
 ##### Start of Configuration Area ########
-use Cwd;
+use File::Basename;
 
 # == EDIT this ==
 # Locations to search for user configuration, in order:
 for (
-     $ENV{CVSWEB_CONFIG},
-     '/usr/local/etc/cvsweb.conf',
-     getcwd() . '/cvsweb.conf'
+     (dirname $0) . '/cvsweb.conf',
+     '/usr/local/etc/cvsweb.conf'
     ) {
-    $config = $_ if defined($_) && -r $_;
+    if (defined($_) && -r $_) {
+	($config) = /(.*)/; # untaint
+	last;
+    }
 }
 
 # == Configuration defaults ==
@@ -216,7 +220,7 @@ $LOG_REVSEPARATOR = q/^-{28}$/;
 ##### End of configuration variables #####
 
 $cgi_style::hsty_base = 'http://www.FreeBSD.org';
-$_ = q$FreeBSD: www/en/cgi/cvsweb.cgi,v 1.62 2000/12/29 09:22:50 knu Exp $;
+$_ = q$FreeBSD: www/en/cgi/cvsweb.cgi,v 1.63 2001/01/02 00:03:51 knu Exp $;
 @_ = split;
 $cgi_style::hsty_date = "@_[3,4]";
 
@@ -496,11 +500,11 @@ if ($module && &forbidden_module($module)) {
 if ($input{tarball}) {
     &fatal("403 Forbidden", "Downloading tarballs is prohibited.")
       unless $allow_tar;
-    $where =~ s,/[^/]*$,,;
-    $where =~ s,^/,,;
-    my($basedir) = ($where =~ m,([^/]+)$,);
+    my($module) = ($where =~ m,^/?(.*),);	# untaint
+    $module =~ s,/[^/]*$,,;
+    my($basedir) = ($module =~ m,([^/]+)$,);
 
-    if ($basedir eq '' || $where eq '') {
+    if ($basedir eq '' || $module eq '') {
 	&fatal("500 Internal Error", "You cannot download the top level directory.");
     }
 
@@ -511,34 +515,24 @@ if ($input{tarball}) {
 
     my $fatal = '';
 
-    do {
-	chdir $tmpdir
-	  or $fatal = "500 Internal Error", "Unable to cd to temporary directory: $!"
-	    && last;
-
+    while (1) {
 	my $tag = (exists $input{only_with_tag} && length $input{only_with_tag})
 	  ? $input{only_with_tag} : "HEAD";
 
-	system "cvs", @cvs_options, "-Qd", $cvsroot, "export", "-r", $tag, $where
-	  and $fatal = "500 Internal Error","cvs co failure: $!: $where"
-	    && last;
-
-	chdir "$where/.."
-	  or $fatal = "500 Internal Error","Cannot find expected directory in checkout"
+	system "cvs", @cvs_options, "-Qd", $cvsroot, "export", "-r", $tag, "-d", "$tmpdir/$basedir", $module
+	  and $fatal = "500 Internal Error","cvs co failure: $!: $module"
 	    && last;
 
 	$| = 1; # Essential to get the buffering right.
 
 	print "Content-type: application/x-gzip\r\n\r\n";
 
-	system "tar", "-zcf", "-", $basedir, @tar_options
+	system "tar", @tar_options, "-zcf", "-", "-C", $tmpdir, $basedir
 	  and $fatal = "500 Internal Error","tar zc failure: $!: $basedir"
 	    && last;
 
-	chdir $tmpdir
-	  or $fatal = "500 Internal Error","Unable to cd to temporary directory: $!"
-	    && last;
-    } while (0);
+	last;
+    }
 
     system "rm", "-rf", $tmpdir if -d $tmpdir;
 
@@ -1386,8 +1380,8 @@ sub doAnnotate($$) {
     # the public domain.
     # we could abandon the use of rlog, rcsdiff and co using
     # the cvsserver in a similiar way one day (..after rewrite)
-    $pid = open2($reader, $writer, "cvs @cvs_options -l server") || fatal ("500 Internal Error",
-							       "Fatal Error - unable to open cvs for annotation");
+    $pid = open2($reader, $writer, "cvs", @cvs_options, "server")
+      || fatal ("500 Internal Error", "Fatal Error - unable to open cvs for annotation");
 
     # OK, first send the request to the server.  A simplified example is:
     #     Root /home/kingdon/zwork/cvsroot
@@ -2735,7 +2729,7 @@ sub navigateHeader($$$$$) {
     print qq`<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">`;
     print "<HTML>\n<HEAD>\n";
     print qq`<META name="robots" content="nofollow">\n`;
-    print '<!-- CVSweb $zRevision: 1.104 $  $Revision: 1.63 $ -->';
+    print '<!-- CVSweb $zRevision: 1.104 $  $Revision: 1.64 $ -->';
     print "\n<TITLE>$path$filename - $title - $rev</TITLE></HEAD>\n";
     print  "$body_tag_for_src\n";
     print "<table width=\"100%\" border=0 cellspacing=0 cellpadding=1 bgcolor=\"$navigationHeaderColor\">";
@@ -3129,7 +3123,7 @@ sub http_header(;$) {
 
 sub html_header($) {
     my ($title) = @_;
-    my $version = '$zRevision: 1.104 $  $Revision: 1.63 $'; #'
+    my $version = '$zRevision: 1.104 $  $Revision: 1.64 $'; #'
     http_header(defined($charset) ? "text/html; charset=$charset" : "text/html");
 
     (my $header = &cgi_style::html_header) =~ s/^.*\n\n//; # remove HTTP response header
