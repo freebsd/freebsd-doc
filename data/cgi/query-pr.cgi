@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: query-pr.cgi,v 1.6 1998-02-19 20:14:53 fenner Exp $
+# $Id: query-pr.cgi,v 1.7 1998-04-21 14:55:39 wosch Exp $
 
 $ENV{'PATH'} = "/bin:/usr/bin:/usr/sbin:/sbin:/usr/local/bin";
 
@@ -35,6 +35,8 @@ if ($opt_p) {
 }
 
 $pr = $input{'pr'};
+# be tolerant to <category>/<PR id> queries
+$pr =~ s%^[a-z]+/([0-9]+)$%$1%; 
 
 if ($pr < 1 || $pr > 99999) {
     print &html_header("FreeBSD Problem Report");
