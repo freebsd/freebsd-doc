@@ -183,12 +183,12 @@ JUSTIFY=1
 #GEN_INDEX=1
 .endif
 .if defined(JUSTIFY)
-TEXCMDS+=	\RequirePackage{url}
+TEX_CMDSEQ+=	\RequirePackage{url}
 PRINTOPTS+=	-ioutput.print.justify
 .endif
 .if defined(TWO_SIDE)
 PRINTOPTS+=	-V %two-side% -ioutput.print.twoside
-TEXCMDS+=	\def\PageTwoSide{1}
+TEX_CMDSEQ+=	\def\PageTwoSide{1}
 .endif
 .if defined(NICE_HEADERS)
 PRINTOPTS+=    -ioutput.print.niceheaders
@@ -197,7 +197,7 @@ PRINTOPTS+=    -ioutput.print.niceheaders
 PRINTOPTS+=    -V minimal-section-labels
 .endif
 .if defined(TRACE)
-TEXCMDS+=	\tracingstats=${TRACE}
+TEX_CMDSEQ+=	\tracingstats=${TRACE}
 .endif
 .if defined(RLE)
 PNMTOPSFLAGS+=	-rle
@@ -231,11 +231,11 @@ TAR?=		/usr/bin/tar
 TOUCH?=		/usr/bin/touch
 XARGS?=		/usr/bin/xargs
 
-TEX?=		${PREFIX}/bin/tex
-LATEX?=		${PREFIX}/bin/latex
-PDFTEX?=	${PREFIX}/bin/pdftex
-JADETEX?=	${TEX} "&jadetex"
-PDFJADETEX?=	${PDFTEX} "&pdfjadetex"
+TEX_CMD?=	${PREFIX}/bin/tex
+LATEX_CMD?=	${PREFIX}/bin/latex
+PDFTEX_CMD?=	${PREFIX}/bin/pdftex
+JADETEX_CMD?=	${TEX_CMD} "&jadetex"
+PDFJADETEX_CMD?=${PDFTEX_CMD} "&pdfjadetex"
 GROFF?=		groff
 TIDY?=		${PREFIX}/bin/tidy
 TIDYOPTS?=	-wrap 90 -m -raw -preserve -f /dev/null -asxml ${TIDYFLAGS}
@@ -554,11 +554,11 @@ ${DOC}.dvi: ${DOC}.tex ${LOCAL_IMAGES_EPS}
 	${CP} -p ${_curimage} ${.CURDIR:H:H}/${_curimage:H:S|${IMAGES_EN_DIR}/||:S|${.CURDIR}||}
 .endfor
 	@${ECHO} "==> TeX pass 1/3"
-	-${JADETEX} '${TEXCMDS} \nonstopmode\input{${DOC}.tex}'
+	-${JADETEX_CMD} '${TEX_CMDSEQ} \nonstopmode\input{${DOC}.tex}'
 	@${ECHO} "==> TeX pass 2/3"
-	-${JADETEX} '${TEXCMDS} \nonstopmode\input{${DOC}.tex}'
+	-${JADETEX_CMD} '${TEX_CMDSEQ} \nonstopmode\input{${DOC}.tex}'
 	@${ECHO} "==> TeX pass 3/3"
-	-${JADETEX} '${TEXCMDS} \nonstopmode\input{${DOC}.tex}'
+	-${JADETEX_CMD} '${TEX_CMDSEQ} \nonstopmode\input{${DOC}.tex}'
 
 .if !target(${DOC}.pdf)
 ${DOC}.pdf: ${DOC}.tex-pdf ${IMAGES_PDF}
@@ -566,11 +566,11 @@ ${DOC}.pdf: ${DOC}.tex-pdf ${IMAGES_PDF}
 	${CP} -p ${_curimage} ${.CURDIR:H:H}/${_curimage:H:S|${IMAGES_EN_DIR}/||:S|${.CURDIR}||}
 .endfor
 	@${ECHO} "==> PDFTeX pass 1/3"
-	-${PDFJADETEX} '${TEXCMDS} \nonstopmode\input{${DOC}.tex-pdf}'
+	-${PDFJADETEX_CMD} '${TEX_CMDSEQ} \nonstopmode\input{${DOC}.tex-pdf}'
 	@${ECHO} "==> PDFTeX pass 2/3"
-	-${PDFJADETEX} '${TEXCMDS} \nonstopmode\input{${DOC}.tex-pdf}'
+	-${PDFJADETEX_CMD} '${TEX_CMDSEQ} \nonstopmode\input{${DOC}.tex-pdf}'
 	@${ECHO} "==> PDFTeX pass 3/3"
-	${PDFJADETEX} '${TEXCMDS} \nonstopmode\input{${DOC}.tex-pdf}'
+	${PDFJADETEX_CMD} '${TEX_CMDSEQ} \nonstopmode\input{${DOC}.tex-pdf}'
 .endif
 
 ${DOC}.ps: ${DOC}.dvi
