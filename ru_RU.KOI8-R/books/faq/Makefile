@@ -1,5 +1,5 @@
 # 
-# $FreeBSD$
+# $FreeBSD: doc/ru_RU.KOI8-R/books/faq/Makefile,v 1.8 2000/12/29 14:36:48 phantom Exp $
 # $FreeBSDru: frdp/doc/ru_RU.KOI8-R/books/faq/Makefile,v 1.4 2000/11/15 17:21:30 phantom Exp $
 #
 # Build the Russian FreeBSD FAQ
@@ -23,7 +23,7 @@ INSTALL_ONLY_COMPRESSED?=
 SRCS =	book.sgml 
 
 # entities
-SRCS+=	../../../en_US.ISO_8859-1/books/handbook/authors.ent
+SRCS+=	../../../en_US.ISO8859-1/books/handbook/authors.ent
 
 DOC_PREFIX?= ${.CURDIR}/../../..
 

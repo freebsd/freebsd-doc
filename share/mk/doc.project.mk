@@ -1,5 +1,5 @@
 #
-# $FreeBSD: doc/share/mk/doc.project.mk,v 1.7 2000/10/08 19:16:32 nik Exp $
+# $FreeBSD: doc/share/mk/doc.project.mk,v 1.8 2001/03/13 09:54:34 nik Exp $
 #
 # This include file <doc.project.mk> is the FreeBSD Documentation Project 
 # co-ordination make file.
@@ -66,7 +66,7 @@ ALL_FORMATS=	html html.tar html-split html-split.tar txt rtf ps pdf tex dvi tar 
 # User-modifiable
 LOCALBASE?=	/usr/local
 PREFIX?=	${LOCALBASE}
-PRI_LANG?=	en_US.ISO_8859-1
+PRI_LANG?=	en_US.ISO8859-1
 
 # Image processing (contains code used by the doc.<format>.mk files, so must
 # be listed first).
