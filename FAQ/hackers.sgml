@@ -1,4 +1,4 @@
-<!-- $Id: hackers.sgml,v 1.5 1998-09-06 10:54:05 wosch Exp $ -->
+<!-- $Id: hackers.sgml,v 1.6 1998-09-22 22:09:54 des Exp $ -->
 <!-- The FreeBSD Documentation Project -->
 
   <sect>
@@ -287,5 +287,183 @@
       is an area ripe for experimentation.</p>
 
       <p>Kirk McKusick, September 1998</p>
+
+    <sect1>
+      <heading>Making the most of a kernel panic</heading>
+
+      <p>      
+      <em>[This section was extracted from a mail written by <url
+      url="mailto:<wpaul@FreeBSD.ORG" name="Bill Paul"> on the
+      freebsd-current <ref id="mailing" name="mailing list"> by <url
+      url="mailto:des@FreeBSD.ORG" name="Dag-Erling Co&iuml;dan
+      Sm&oslash;rgrav">, who fixed a few typos and added the bracketed
+      comments]</em>
+
+      <p>
+      <verb>
+From: Bill Paul <wpaul@skynet.ctr.columbia.edu>
+Subject: Re: the fs fun never stops
+To: ben@rosengart.com
+Date: Sun, 20 Sep 1998 15:22:50 -0400 (EDT)
+Cc: current@FreeBSD.ORG
+      </verb>
+
+      <p>
+      <em>[&lt;ben@rosengart.com&gt; posted the following panic
+      message]</em>
+      <verb>
+> Fatal trap 12: page fault while in kernel mode
+> fault virtual address   = 0x40
+> fault code              = supervisor read, page not present
+> instruction pointer     = 0x8:0xf014a7e5
+                                ^^^^^^^^^^
+> stack pointer           = 0x10:0xf4ed6f24
+> frame pointer           = 0x10:0xf4ed6f28
+> code segment            = base 0x0, limit 0xfffff, type 0x1b
+>                         = DPL 0, pres 1, def32 1, gran 1
+> processor eflags        = interrupt enabled, resume, IOPL = 0
+> current process         = 80 (mount)
+> interrupt mask          =
+> trap number             = 12
+> panic: page fault
+      </verb>
+      
+      <p> [When] you see a message like this, it's not enough to just
+      reproduce it and send it in. The instruction pointer value that
+      I highlighted up there is important; unfortunately, it's also
+      configuration dependent. In other words, the value varies
+      depending on the exact kernel image that you're using. If you're
+      using a GENERIC kernel image from one of the snapshots, then
+      it's possible for somebody else to track down the offending
+      function, but if you're running a custom kernel then only
+      <em/you/ can tell us where the fault occured.
+
+      <p> What you should do is this:
+
+      <itemize>
+        <item>Write down the instruction pointer value. Note that the
+        <tt/0x8:/ part at the begining is not significant in this case:
+        it's the <tt/0xf0xxxxxx/ part that we want.
+	<item>When the system reboots, do the following:
+	  <verb>
+% nm /kernel.that.caused.the.panic | grep f0xxxxxx
+          </verb>	  
+	  where <tt/f0xxxxxx/ is the instruction pointer value. The
+	  odds are you will not get an exact match since the symbols
+	  in the kernel symbol table are for the entry points of
+	  functions and the instruction pointer address will be
+	  somewhere inside a function, not at the start. If you don't
+	  get an exact match, omit the last digit from the instruction
+	  pointer value and try again, i.e.:
+	  <verb>
+% nm /kernel.that.caused.the.panic | grep f0xxxxx
+	  </verb>
+	  If that doesn't yield any results, chop off another digit.
+	  Repeat until you get some sort of output. The result will be
+	  a possible list of functions which caused the panic. This is
+	  a less than exact mechanism for tracking down the point of
+	  failure, but it's better than nothing.
+      </itemize>
+
+      <p> I see people constantly show panic messages like this but
+      rarely do I see someone take the time to match up the
+      instruction pointer with a function in the kernel symbol table.
+
+      <p> The best way to track down the cause of a panic is by
+      capturing a crash dump, then using <tt/gdb(1)/ to to a stack
+      trace on the crash dump. Of course, this depends on <tt/gdb(1)/
+      in -current working correctly, which I can't guarantee (I recall
+      somebody saying that the new ELF-ized <tt/gdb(1)/ didn't handle
+      kernel crash dumps correctly: somebody should check this before
+      3.0 goes out of beta or there'll be a lot of red faces after the
+      CDs ship).
+
+      <p>
+      In any case, the method I nornally use is this:
+
+      <itemize>
+        <item>Set up a kernel config file, optionally adding 'options DDB' if you
+	think you need the kernel debugger for something. (I use this mainly
+	for setting beakpoints if I suspect an infinite loop condition of
+	some kind.)
+        <item>Use <tt/config -g KERNELCONFIG/ to set up the build directory.
+        <item><tt>cd /sys/compile/KERNELCONFIG; make</tt>
+        <item>Wait for kernel to finish compiling.
+        <item><tt/cp kernel kernel.debug/
+        <item><tt/strip -d kernel/
+        <item><tt/mv /kernel /kernel.orig/
+        <item><tt>cp kernel /</tt>
+        <item>reboot
+      </itemize>
+
+      <p> <em>[Note: currently, on 3.0-BETA, you must use <tt/strip
+      -aout -d/ instead of <tt/strip -d/]</em>
+
+      <p> Note that YOU DO <em/NOT/ WANT TO ACTUALLY BOOT THE KERNEL
+      WITH ALL THE DEBUG SYMBOLS IN IT. A kernel compiled with <tt/-g/
+      can easily be close to 10MB in size. You don't have to actually
+      boot this massive image: you only need it later for <tt/gdb(1)/
+      (<tt/gdb(1)/ wants the symbol table). Instead, you want to keep
+      a copy of the full image and create a second image with the
+      debug symbols stripped out using <tt/strip -d/. It is this
+      second stripped image that you want to boot.
+
+      <p> To make sure you capture a crash dump, you need edit
+      <tt>/etc/rc.conf</tt> and set <tt/dumpdev/ to point to your swap
+      partition. This will cause the <tt/rc(8)/ scripts to use the
+      <tt/dumpon(8)/ command to enable crash dumps. You can also run
+      <tt/dumpon(8)/ manually. After a panic, the crash dump can be
+      recovered using <tt/savecore(8)/; if <tt/dumpdev/ is set in
+      <tt>/etc/rc.conf</tt>, the <tt/rc(8)/ scripts will run
+      <tt/savecore(8)/ automatically and put the crash dump in
+      <tt>/var/crash</tt>.
+
+      <p> NOTE: FreeBSD crash dumps are usually the same size as the
+      physical RAM size of your machine. That is, if you have 64MB of
+      RAM, you will geta 64MB crash dump. Therefore you must make sure
+      there's enough space in <tt>/var/crash</tt> to hold the dump.
+      Alternatively, you run <tt/savecore(8)/ manually and have it
+      recover the crash dump to another directory where you have more
+      room. It's possible to limit the size of the crash dump by using
+      <tt/options MAXMEM=(foo)/ to set the amount of memory the kernel
+      will use to something a little more sensible. For example, if
+      you have 128MB of RAM, you can limit the kernel's memory usage
+      to 16MB so that your crash dump size will be 16MB instead of
+      128MB.
+
+      <p> Once you have recovered the crash dump, you can get a stack
+      trace with <tt/gdb(1)/ as follows:
+
+      <p>
+      <verb>
+% gdb -k /sys/compile/KERNELCONFIG/kernel.debug /var/crash/vmcore.0
+(gdb) where
+      </verb>
+
+      <p> Note that there may be several screens worth of information;
+      ideally you should use <tt/script(1)/ to capture all of them.
+      Using the unstripped kernel image with all the debug symbols
+      should show the exact line of kernel source code where the panic
+      occured. Usually you have to read the stack trace from the
+      bottom up in order to trace the exact sequence of events that
+      lead to the crash. You can also use <tt/gdb(1)/ to print out the
+      contents of various variables or structures in order to examine
+      the system state at the time of the crash.
+
+      <p> Now, if you're really insane and have a second computer, you
+      can also configure <tt/gdb(1)/ to do remote debugging such that
+      you can use <tt/gdb(1)/ on one system to debug the kernel on
+      another system, including setting breakpoints, single-stepping
+      through the kernel code, just like you can do with a normal
+      user-mode program. I haven't played with this yet as I don't
+      often have the chance to set up two machines side by side for
+      debugging purposes.
+
+      <p> <em>[Bill adds: "I forgot to mention one thing: if you have
+      DDB enabled and the kernel drops into the debugger, you can
+      force a panic (and a crash dump) just by typing 'panic' at the
+      ddb prompt. It may stop in the debugger again during the panic
+      phase. If it does, type 'continue' and it will finish the crash
+      dump." -ed]</em>
 
   </sect>
