@@ -119,7 +119,6 @@
       </td>
     </tr>
   </table>
-
   &footer;
 </body>
 </html>
