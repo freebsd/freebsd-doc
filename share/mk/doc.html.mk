@@ -1,5 +1,5 @@
 #
-# $FreeBSD: doc/share/mk/doc.html.mk,v 1.1 2000/06/26 09:04:24 nik Exp $
+# $FreeBSD: doc/share/mk/doc.html.mk,v 1.2 2000/07/19 01:46:48 jhb Exp $
 #
 # This include file <doc.html.mk> handles building and installing of
 # HTML documentation in the FreeBSD Documentation Project.
@@ -43,7 +43,7 @@
 
 MASTERDOC?=	${.CURDIR}/${DOC}.sgml
 
-KNOWN_FORMATS=	html txt ps pdf tex dvi tar pdb
+KNOWN_FORMATS=	html txt tar pdb
 
 HTMLCATALOG=	${PREFIX}/share/sgml/html/catalog
 
@@ -58,20 +58,16 @@ CLEANFILES+= ${DOC}.html
 .elif ${_cf} == "txt"
 _docs+= ${DOC}.txt
 CLEANFILES+= ${DOC}.html ${DOC}.txt
-.elif ${_cf} == "dvi"
-_docs+= ${DOC}.dvi
-CLEANFILES+= ${DOC}.aux ${DOC}.dvi ${DOC}.log ${DOC}.tex
-.elif ${_cf} == "ps"
-_docs+= ${DOC}.ps
-CLEANFILES+= ${DOC}.aux ${DOC}.dvi ${DOC}.log ${DOC}.tex ${DOC}.ps
-.elif ${_cf} == "pdf"
-_docs+= ${DOC}.pdf
-CLEANFILES+= ${DOC}.aux ${DOC}.dvi ${DOC}.log ${DOC}.tex ${DOC}.pdf
 .elif ${_cf} == "tar"
 _docs+= ${DOC}.tar
 .elif ${_cf} == "pdb"
 _docs+= ${DOC}.pdb ${.CURDIR:T}.pdb
 +CLEANFILES+= ${DOC}.pdb ${.CURDIR:T}.pdb
+.else
+# Create a 'bogus' doc for any other format we don't support.  This is so
+# that we can fake up a target for it later on, and this target can print
+# the warning message about the unsupported format. 
+_docs+= ${DOC}.${_curformat}
 .endif
 .endfor
 
@@ -116,6 +112,16 @@ ${.CURDIR:T}.pdb: ${DOC}.pdb
 
 ${DOC}.tar: ${SRCS}
 	tar cf ${.TARGET} ${.ALLSRC}
+
+#
+# Build targets for any formats we've missed that we don't handle.
+#
+.for _curformat in ${ALL_FORMATS}
+.if !target(${DOC}.${_curformat})
+${DOC}.${_curformat}:
+	@echo \"${_curformat}\" is not a valid output format for this document.
+.endif
+.endfor
 
 # ------------------------------------------------------------------------
 #
@@ -170,6 +176,19 @@ ${DOC}.${_cf}.${_curcompress}: ${DOC}.${_cf} _PROG_COMPRESS_${_curcompress}
 .endfor
 .endfor
 
+#
+# Build targets for any formats we've missed that we don't handle.
+#
+.for _curformat in ${ALL_FORMATS}
+.for _curcompress in ${KNOWN_COMPRESS}
+.if !target(${DOC}.${_curformat}.${_curcompress})
+${DOC}.${_curformat}.${_curcompress}:
+	@echo \"${_curformat}.${_curcompress}\" is not a valid output format for this document.
+.endif
+.endfor
+.endfor
+
+
 # ------------------------------------------------------------------------
 #
 # Install targets
@@ -186,7 +205,7 @@ ${DOC}.${_cf}.${_curcompress}: ${DOC}.${_cf} _PROG_COMPRESS_${_curcompress}
 #
 
 .if !defined(INSTALL_ONLY_COMPRESSED) || empty(INSTALL_ONLY_COMPRESSED)
-_curinst+= ${FORMATS:S/html-split//:S/^/install-/g}
+_curinst+= ${FORMATS:S/^/install-/g}
 .endif
 
 realinstall: ${_curinst}
@@ -202,6 +221,22 @@ install-${_cf}: ${DOC}.${_cf}
 install-${_cf}.${_compressext}: ${DOC}.${_cf}.${_compressext}
 	@[ -d ${DESTDIR} ] || mkdir -p ${DESTDIR}
 	${INSTALL_DOCS} ${.ALLSRC} ${DESTDIR}
+.endfor
+.endif
+.endfor
+
+#
+# Build install- targets for any formats we've missed that we don't handle.
+#
+
+.for _curformat in ${ALL_FORMATS}
+.if !target(install-${_curformat})
+install-${_curformat}:
+	@echo \"${_curformat}\" is not a valid output format for this document.
+
+.for _compressext in ${KNOWN_COMPRESS}
+install-${_curformat}.${_compressext}:
+	@echo \"${_curformat}.${_compressext}\" is not a valid output format for this document.
 .endfor
 .endif
 .endfor
