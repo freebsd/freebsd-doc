@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
 
-<!-- $FreeBSD: www/ja/index.xsl,v 1.19 2002/08/19 22:01:44 hrs Exp $ -->
-<!-- Original revision: 1.29 -->
+<!-- $FreeBSD: www/ja/index.xsl,v 1.20 2002/09/24 20:12:06 hrs Exp $ -->
+<!-- Original revision: 1.37 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   
@@ -10,7 +10,7 @@
 
   <xsl:variable name="base" select="'.'"/>
   <xsl:variable name="enbase" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/ja/index.xsl,v 1.19 2002/08/19 22:01:44 hrs Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/ja/index.xsl,v 1.20 2002/09/24 20:12:06 hrs Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <xsl:output type="html" encoding="EUC-JP"
@@ -52,6 +52,7 @@
 		        which are not mirrored should be listed in
 		        support.sgml.  -->
 
+		  <option value="http://bsd.ipv6.uni-erlangen.de">IPv6 Germany</option>
 		  <option value="http://www.jp.FreeBSD.org/www.FreeBSD.org/">6Bone(IPv6), Japan</option>
 		  <option value="http://www2.no.FreeBSD.org/">IPv6 Norway</option>
 		  <option value="http://www.au.FreeBSD.org/">オーストラリア/1</option>
@@ -73,7 +74,7 @@
 		  <option value="http://www.gr.FreeBSD.org/">ギリシア</option>
 		  <option value="http://www.hu.FreeBSD.org/">ハンガリー</option>
 		  <option value="http://www.ie.FreeBSD.org/">アイルランド</option>
-+		  <option value="http://www.is.FreeBSD.org/">アイスランド</option>
+		  <option value="http://www.is.FreeBSD.org/">アイスランド</option>
 		  <option value="http://www.it.FreeBSD.org/">イタリア/1</option>
 		  <option value="http://www.gufi.org/mirrors/www.freebsd.org/data/">イタリア/2</option>
 		  <option value="http://www.jp.FreeBSD.org/www.FreeBSD.org/">日本</option>
@@ -85,12 +86,15 @@
 		  <option value="http://www2.nl.FreeBSD.org/">オランダ/2</option>
 		  <option value="http://www.nz.FreeBSD.org/">ニュージーランド</option>
 		  <option value="http://www.no.FreeBSD.org/">ノルウェー</option>
+		  <option value="http://www.FreeBSD.org.ph/">フィリピン</option>
 		  <option value="http://www2.no.FreeBSD.org/">ノルウェー</option>
 		  <option value="http://www.pl.FreeBSD.org/">ポーランド/1</option>
 		  <option value="http://www2.pl.FreeBSD.org/">ポーランド/2</option>
 		  <option value="http://www.pt.FreeBSD.org/">ポルトガル/1</option>
 		  <option value="http://www2.pt.FreeBSD.org/">ポルトガル/2</option>
 		  <option value="http://www.ro.FreeBSD.org/">ルーマニア</option>
+		  <option value="http://www2.ro.FreeBSD.org/">ルーマニア/2</option>
+		  <option value="http://www3.ro.FreeBSD.org/">ルーマニア/3</option>
 		  <option value="http://www.ru.FreeBSD.org/">ロシア/1</option>
 		  <option value="http://www2.ru.FreeBSD.org/">ロシア/2</option>
 		  <option value="http://www3.ru.FreeBSD.org/">ロシア/3</option>
@@ -104,7 +108,7 @@
 		  <option value="http://www2.za.FreeBSD.org/">南アフリカ/2</option>
 		  <option value="http://www.se.FreeBSD.org/">スウェーデン</option>
 		  <option value="http://www.ch.FreeBSD.org/">スイス</option>
-		  <option value="http://www.tw.FreeBSD.org/www.freebsd.org/data/">台湾</option>
+		  <option value="http://www.tw.FreeBSD.org/">台湾</option>
 		  <option value="http://www.tr.FreeBSD.org/">トルコ</option>
 		  <option value="http://www.enderunix.org/freebsd/">トルコ/2</option>
 		  <option value="http://www.ua.FreeBSD.org/">ウクライナ/1</option>
@@ -239,7 +243,7 @@
 	      
 	      <h2><font color="#990000">FreeBSD とは?</font></h2>
 	
-	      <p>FreeBSD は Intel ia32 互換、DEC Alpha、PC-98
+	      <p>FreeBSD は x86 互換機、DEC Alpha、PC-98
 		アーキテクチャ用の先進的なオペレーティングシステムです。
 		カリフォルニア大学バークレイ校で開発された UNIX
 		である BSD UNIX に由来し、
@@ -263,19 +267,19 @@
 		ユーザプロセスが同時に何千になっても良好な反応時間を
 		維持するようにメモリを効率的に利用します。
 		FreeBSD を利用したアプリケーションやサービスの例を
-		載せていますので、ぜひ我々の
+		載せていますので、ぜひわたしたちの
 		<a href="gallery/gallery.html">ギャラリー</a>
-		を訪れてみてください。</p>
+		をご覧になってみてください。</p>
 	    
-	      <h2><font color="#990000">利用可能な、さまざまなアプリケーション
-		</font></h2>
+	      <h2><font color="#990000">数多くの対応アプリケーション</font></h2>
 
-	      <p>FreeBSD の品質と今日の低価格で高速な PC ハードウェアが
-		結びつくことによって、FreeBSD は市販の UNIX ワークステーションと
-		比較してとても経済的な選択肢となります。
-		非常に数多くのデスクトップ用やサーバ用の
+	      <p>高い品質を持つ FreeBSD と、今日の低価格で高速な
+                PC ハードウェアの組み合わせは、
+                市販の UNIX ワークステーションに匹敵する、
+                非常に経済的な選択肢になるでしょう。
+                デスクトップ用、サーバ用の両方について、膨大な数の
 		<a href="{$base}/applications.html">アプリケーション</a>
-		が整っています。</p>
+		も用意されています。</p>
 	    
 	      <h2><font color="#990000">簡単インストール</font></h2>
 
@@ -287,7 +291,7 @@
 		<a href="{$enbase}/doc/ja_JP.eucJP/books/handbook/install.html">これらの方法</a>
 		だけです。</p>
 
-	      <h2><font color="#990000">FreeBSD は<i>無料</i>です</font></h2>
+	      <h2><font color="#990000"><i>無料</i>で使える FreeBSD</font></h2>
 	    
 	      <a href="copyright/daemon.html"><img src="../gifs/dae_up3.gif" 
 						   alt=""
