@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.28 2002/09/12 17:23:42 marcus Exp $ -->
+<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.29 2002/09/15 19:21:54 marcus Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
 		xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -9,7 +9,7 @@
   <xsl:import href="includes.xsl"/>
 
   <xsl:variable name="base" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.28 2002/09/12 17:23:42 marcus Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.29 2002/09/15 19:21:54 marcus Exp $'"/>
   <xsl:variable name="title" select="'FreeBSD GNOME Project'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -39,7 +39,7 @@
                           <p><font size="+1" color="#990000"><b>GNOME on FreeBSD</b></font>
                             <small><br/>
                               &#183; <a href="http://www.FreeBSD.org/gnome/">GNOME on FreeBSD Home</a><br/>
-                              &#183; <a href="docs/faq.html#q1">Installation Instructions for GNOME 1.4.1</a><br/>
+                              &#183; <a href="docs/faq.html#q1">Installation Instructions for GNOME 1.4</a><br/>
                               &#183; <a href="docs/faq2.html#q1">Installation Instructions for GNOME 2.0</a><br/>
                               &#183; <a href="../ports/gnome.html">Available Applications</a><br/>
                               &#183; <a href="docs/volunteer.html">How to Help</a><br/>
@@ -50,7 +50,7 @@
 
                           <p><font size="+1" color="#990000"><b>Documentation</b></font>
                             <small><br/>
-                              &#183; <a href="docs/faq.html">GNOME 1.4.1 FAQ</a><br/>
+                              &#183; <a href="docs/faq.html">GNOME 1.4 FAQ</a><br/>
                               &#183; <a href="docs/faq2.html">GNOME 2.0 FAQ</a><br/>
                               &#183; <a href="docs/porting.html">Creating Ports</a><br/>
                             </small></p>
@@ -97,7 +97,7 @@
 
               <p>The GNOME project was born as an effort to create an entirely free
                 desktop environment for free systems.  From the start, the main
-                objective of GNOME has been to provide a user friendly suite of
+                objective of GNOME has been to provide a user-friendly suite of
                 applications and an easy-to-use desktop.  The FreeBSD GNOME Project
                 strives to bring GNOME to the FreeBSD user.</p>
 
@@ -110,11 +110,11 @@
                 months to include addressing a number of problems in the existing
                 Unix infrastructure.</p>
 
-              <p>The GNOME project acts as an umbrella, the major components of
+              <p>The GNOME project acts as an umbrella.  The major components of
                 GNOME are:</p>
               <ul>
                 <li>The <a href="http://www.gnome.org">GNOME desktop</a>:  An easy
-                  to use windows-based environment for users.</li>
+                  to use window-based environment for users.</li>
                 <li>The <a href="http://developer.gnome.org">GNOME development
                   platform</a>:  A rich collection of tools, libraries,
                   and components to develop powerful applications on Unix.</li>
@@ -125,7 +125,7 @@
               <h2><font color="#990000">State of the port</font></h2>
 
               <p>We currently support 4.x and 5-CURRENT FreeBSD systems
-                for GNOME 1.4.1 and 2.0.2.  Anything prior to FreeBSD 4.5 is 
+                for GNOME 1.4 and 2.0.  Anything prior to FreeBSD 4.5 is 
 		not supported.  Most of GNOME has been ported to FreeBSD;
                 however, there is <a href="docs/volunteer.html">plenty left to 
 		do</a>!</p>
