@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl -T
+#!/usr/local/bin/perl
 #
 # Copyright (c) Oct 1997 Wolfram Schneider <wosch@FreeBSD.org>. Berlin.
 # All rights reserved.
@@ -26,10 +26,10 @@
 #
 # url.cgi - make plain text URLs clickable
 #
-# $Id: url.cgi,v 1.9 1998-09-29 11:20:02 wosch Exp $
+# $Id: url.cgi,v 1.10 1998-11-03 11:47:27 wosch Exp $
 
 
-require LWP::UserAgent;
+#require LWP::UserAgent;
 
 $hsty_base = '';
 $hsty_email = 'ports@freebsd.org';
@@ -37,8 +37,8 @@ $hsty_email = 'ports@freebsd.org';
 require "./cgi-lib.pl";
 require "./cgi-style.pl";
 
-$ua = new LWP::UserAgent;
-$ua -> max_size(20*1024);
+#$ua = new LWP::UserAgent;
+#$ua -> max_size(20*1024);
 
 $file = $ENV{'QUERY_STRING'};
 $uri = "$file";
@@ -52,11 +52,12 @@ if (1) {
 	my($cvsroot) = '/home/ncvs';
 	$file =~ s%(http|ftp)://ftp.freebsd.org/pub/FreeBSD/FreeBSD-current/%%;
 	print &short_html_header($file);
-	if ($file =~ m%^ports/[\w-]+/[\w-]+/pkg/DESCR% && 
+	if ($file =~ m%^ports/[\w-]+/[\w-+]+/pkg/DESCR% && 
 		-f "$cvsroot/$file,v") {
 		 open(CO, "-|") || exec ('/usr/bin/co', '-p', '-q', "$cvsroot/$file,v");
 	} else {
-		print "bla\n";
+		print "<p>Port does not exists or invalid port name: $file\n";
+		print "<p>Please contact the webmaster!\n";
 		}
 	#print "$cvsroot/$file,v";
 	
