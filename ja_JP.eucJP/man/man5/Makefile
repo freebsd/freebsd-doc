@@ -47,6 +47,7 @@ MAN5 =	a.out.5\
 	kernfs.5\
 	keycap.5\
 	link.5\
+	linprocfs.5\
 	loader.conf.5\
 	login.access.5\
 	login.conf.5\
