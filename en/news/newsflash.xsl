@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/en/news/newsflash.xsl,v 1.4 2002/02/11 17:12:11 sobomax Exp $ -->
+<!-- $FreeBSD: www/en/news/newsflash.xsl,v 1.5 2002/02/12 08:41:37 sobomax Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -44,7 +44,7 @@
 	  the latest developments can be a chore!  To keep on top of things,
 	  be sure and check this page periodically.  Also, you may wish to
 	  subscribe to the 
-	  <a href="{$base}/handbook/eresources.html#ERESOURCES-MAIL">freebsd-announce
+	  <a href="{$base}/doc/en_US.ISO8859-1/books/handbook/eresources.html#ERESOURCES-MAIL">freebsd-announce
 	    mailing list</a>.</p>
 
 	<p>For latest news of FreeBSD Java Project please visit 
