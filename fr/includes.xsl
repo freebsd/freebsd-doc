@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/fr/includes.xsl,v 1.2 2003/01/26 13:59:03 stephane Exp $ -->
+<!-- $FreeBSD: www/fr/includes.xsl,v 1.3 2003/04/06 16:35:25 stephane Exp $ -->
 
 <!-- 
    The FreeBSD French Documentation Project
-   Original revision: 1.13
+   Original revision: 1.15
    
    Version francaise : Stephane Legrand <stephane@freebsd-fr.org>
 -->
@@ -19,7 +19,14 @@
     <img src="{$base}/gifs/new.gif" alt="[New!]" width="28" height="11"/>
   </xsl:variable>
 
-  <xsl:variable name="copyright" select="'Copyright (c) 1995-2003 Le Projet FreeBSD. Tous droits r&#233;serv&#233;s.'"/>
+  <xsl:variable name="copyright">
+    <a href="{$base}/copyright/index.html">Copyright</a> &#169; 1995-2003 Le Projet FreeBSD. Tous droits r&#233;serv&#233;s.
+  </xsl:variable>
+  
+  <!-- Often used trademarks -->
+  <xsl:variable name="unix" select="'UNIX&#174;'"/>
+  <xsl:variable name="java" select="'Java&#8482;'"/>
+  <xsl:variable name="jdk" select="'JDK&#8482;'"/>
 
   <xsl:variable name="email" select="'freebsd-questions'"/>
   <xsl:variable name="author">
@@ -27,7 +34,7 @@
       <xsl:attribute name="href">
 	<xsl:value-of select="concat($base, '/mailto.html')"/>
       </xsl:attribute>
-      <xsl:value-of select="$email"/>@FreeBSD.org</a><br/><xsl:value-of select="$copyright"/>
+      <xsl:value-of select="$email"/>@FreeBSD.org</a><br/><xsl:copy-of select="$copyright"/>
   </xsl:variable>
 
   <xsl:variable name="home">
@@ -85,7 +92,7 @@
       <xsl:copy-of select="$date"/></address>
   </xsl:variable>
   
-  <xsl:variable name="rel.current" select='"5.0"'/>
+  <xsl:variable name="rel.current" select='"5.1"'/>
   <xsl:variable name="u.rel.notes">
     <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel.current"/>R/relnotes.html</xsl:variable>
 
