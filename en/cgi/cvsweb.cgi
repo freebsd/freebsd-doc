@@ -30,6 +30,7 @@ require 'ctime.pl';
 
 $hsty_base = "";
 require 'cgi-style.pl';
+#&get_the_source;
 
 %CVSROOT = (
 	    'freebsd', '/home/ncvs',
@@ -89,6 +90,8 @@ if ($query = $ENV{'QUERY_STRING'}) {
 }
 
 
+$config = '/usr/local/etc/cvsweb';
+do "$config" if -f $config;
 
 if ($input{'cvsroot'}) {
     if ($CVSROOT{$input{'cvsroot'}}) {
@@ -96,6 +99,7 @@ if ($input{'cvsroot'}) {
 	$cvsroot = $CVSROOT{"$cvstree"};
     }
 }
+do "$config-$cvstree" if -f "$config-$cvstree";
 
 $fullname = $cvsroot . '/' . $where;
 if (!-d $cvsroot) {
