@@ -10,7 +10,7 @@
 SUBDIR =
 SUBDIR+= 5-roadmap
 SUBDIR+= checkpoint
-#SUBDIR+= committers-guide
+SUBDIR+= committers-guide
 SUBDIR+= console-server
 #SUBDIR+= contributing
 #SUBDIR+= contributors
