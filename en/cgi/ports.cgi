@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-#	$Id: ports.cgi,v 1.10 1998-01-06 19:43:58 wosch Exp $
+#	$Id: ports.cgi,v 1.11 1998-02-12 10:38:33 wosch Exp $
 #
 # ports.cgi - search engine for FreeBSD ports
 #             	o search for a port by name or description
@@ -98,7 +98,7 @@ sub init_variables {
     $mailtoAdvanced = 'yes';
 
     # the URL if you click at the E-Mail address (see below)
-    $mailtoURL = 'http://www.apfel.de/~wosch/';
+    $mailtoURL = 'http://www.de.freebsd.org/~wosch/';
     $mailtoURL = "mailto:$mailto" if !$mailtoURL;
 
     # security
