@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
 
-<!-- $FreeBSD: www/ja/news/press.xsl,v 1.1 2001/09/03 06:03:31 kuriyama Exp $ -->
+<!--
+    $FreeBSD: www/ja/news/press.xsl,v 1.2 2002/03/04 12:12:40 hanai Exp $
+    Original revision: 1.3
+-->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -10,7 +13,7 @@
 
   <xsl:variable name="base" select="'..'"/>
   <xsl:variable name="title" select="'FreeBSD In The Press'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/ja/news/press.xsl,v 1.1 2001/09/03 06:03:31 kuriyama Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/ja/news/press.xsl,v 1.2 2002/03/04 12:12:40 hanai Exp $'"/>
   
   <xsl:output type="html" encoding="EUC-JP"/>
 
@@ -28,7 +31,7 @@
 	  <a href="mailto:doc@freebsd.org">doc@FreeBSD.org</a> まで
 	  (英語で) 送ってください。</p>
 
-	<p>また、    世界で最もポピュラーな FTP サイトので稼働しているソフトウェアです。FreeBSD Java プロジェクトの報道記事に関する情報は、
+	<p>また、FreeBSD Java プロジェクトの報道記事に関する情報は、
 	  <a href="{$base}/java/press.html">FreeBSD/Java Press</a>
 	  をご覧下さい。</p>
 	
