@@ -6,7 +6,7 @@
 # by John Fieber
 # February 26, 1998
 #
-# $Id: getmsg.cgi,v 1.13 1998-03-30 13:40:20 wosch Exp $
+# $Id: getmsg.cgi,v 1.14 1998-04-13 00:16:43 wosch Exp $
 #
 
 require "./cgi-lib.pl";
@@ -50,7 +50,17 @@ sub Fetch
     {
 	@finfo = stat DATA;
     	seek DATA, $start, 0;
-    	read DATA, $message, $end - $start;
+	if ($end > $start && $start >= 0) {
+	    read DATA, $message, $end - $start;
+	} else {
+	    # Unknown length, guess the end of the E-Mail
+	    my($newline) = 0;
+	    while(<DATA>) {
+		last if ($newline && /^From /);
+		if (/^$/) { $newline = 1 } else { $newline = 0; }
+		$message .= $_;
+	    }
+	}
     	close(DATA);
 	print "last-modified: " .
 	    POSIX::strftime("%a, %d %b %Y %T GMT", gmtime($finfo[9])) . "\n";
