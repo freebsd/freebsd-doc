@@ -1,6 +1,7 @@
-# $FreeBSD: doc/en_US.ISO_8859-1/books/Makefile,v 1.6 1999/09/17 23:45:03 nik Exp $
+# $FreeBSD: doc/en_US.ISO_8859-1/books/Makefile,v 1.7 2000/05/17 18:25:44 nik Exp $
 
-SUBDIR = faq
+SUBDIR = design-44bsd
+SUBDIR+= faq
 SUBDIR+= fdp-primer
 SUBDIR+= handbook
 SUBDIR+= porters-handbook
