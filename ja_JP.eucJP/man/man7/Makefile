@@ -10,11 +10,13 @@ MAN7 =	ascii.7\
 	hostname.7\
 	intro.7\
 	mailaddr.7\
+	man.7\
 	mdoc.7\
 	mdoc.samples.7\
 	operator.7\
 	ports.7\
 	re_format.7\
+	security.7\
 	symlink.7
 
 MLINKS=	groff_me.7 me.7

@@ -68,6 +68,13 @@ MAN8 =	IPXrouted.8\
 	ipfstat.8\
 	ipfw.8\
 	ipmon.8\
+	isdnd.8\
+	isdndebug.8\
+	isdndecode.8\
+	isdnmonitor.8\
+	isdntel.8\
+	isdntelctl.8\
+	isdntrace.8\
 	ispcvt.8\
 	joy.8\
 	kernbb.8\
@@ -136,6 +143,7 @@ MAN8 =	IPXrouted.8\
 	ntpq.8\
 	ntptrace.8\
 	pac.8\
+	pam.8\
 	pccardd.8\
 	pciconf.8\
 	periodic.8\
@@ -215,6 +223,8 @@ MAN8 =	IPXrouted.8\
 	tunefs.8\
 	tzsetup.8\
 	umount.8\
+	usbd.8\
+	usbdevs.8\
 	uuchk.8\
 	uucico.8\
 	uucpd.8\
@@ -259,5 +269,6 @@ MLINKS+=	pstat.8 swapinfo.8
 MLINKS+=	quotaon.8 quotaoff.8
 MLINKS+=	vnconfig.8 swapfile.8
 MLINKS+= inetd.8 inetd.conf.5
+MLINKS+= pam.8 pam.conf.5 pam.8 pam.d.5
 
 .include "bsd.prog.mk"
