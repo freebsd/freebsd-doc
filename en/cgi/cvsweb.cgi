@@ -28,7 +28,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $Id: cvsweb.cgi,v 1.25 1998-08-24 16:41:42 wosch Exp $
+# $Id: cvsweb.cgi,v 1.26 1998-11-10 19:26:16 motoyuki Exp $
 #
 
 
@@ -71,7 +71,7 @@ require 'cgi-style.pl';
 
 %mirrors = (
 	    'Germany', 'http://www.de.freebsd.org/cgi/cvsweb.cgi',
-	'Japan', 'http://www.jp.freebsd.org/www.freebsd.org/cgi/cvsweb.cgi',
+	    'Japan', 'http://www.jp.freebsd.org/cgi/cvsweb.cgi',
 	   );
 
 $cvstreedefault = 'freebsd';
