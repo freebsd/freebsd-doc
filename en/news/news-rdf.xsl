@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/en/news/news-rdf.xsl,v 1.2 2001/08/07 01:54:42 kuriyama Exp $ -->
+<!-- $FreeBSD: www/en/news/news-rdf.xsl,v 1.3 2001/09/19 13:31:48 nik Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   
@@ -32,10 +32,10 @@
     <item>
       <xsl:choose>
 	<xsl:when test="count(child::title)">
-	  <title><xsl:value-of select="title"/></title>
+	  <title><xsl:value-of select="normalize-space(title)"/></title>
 	</xsl:when>
 	<xsl:otherwise>
-	  <title><xsl:value-of select="p"/></title>
+	  <title><xsl:value-of select="normalize-space(p)"/></title>
 	</xsl:otherwise>
       </xsl:choose>
       <link>http://www.FreeBSD.org/news/newsflash.html#<xsl:call-template name="generate-event-anchor"/></link>
