@@ -240,6 +240,12 @@
           (list (normalize "sect5")             "  ")
           ))
 
+	<!-- Fix a problem with the Danish localisation. -->
+	(define (local-da-label-title-sep)
+	(list
+	  (list (normalize "warning")           "\U-00A0;: ")
+	))
+
     </style-specification-body>
   </style-specification>
     
