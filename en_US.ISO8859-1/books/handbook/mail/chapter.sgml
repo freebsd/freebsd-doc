@@ -1129,6 +1129,146 @@ freefall		MX	20	who.cdrom.com</programlisting>
     </sect2>
   </sect1>
   
+  <sect1 id="SMTP-UUCP">
+  <title>SMTP with UUCP</title>
+
+    <para>The sendmail configuration that ships with FreeBSD is
+      designed for sites that connect directly to the Internet.  Sites
+      that wish to exchange their mail via UUCP must install another
+      sendmail configuration file.</para>
+
+    <para>Tweaking <filename>/etc/mail/sendmail.cf</filename> manually
+      is an advanced topic. Sendmail version 8 generates config files
+      via &man.m4.1; preprocessing, where the actual configuration
+      occurs on a higher abstraction level. The &man.m4.1
+      configuration files can be found under
+      <filename>/usr/src/usr.sbin/sendmail/cf</filename>.</para>
+
+    <para>If you did not install your system with full sources, the
+      sendmail config stuff has been broken out into a separate source
+      distribution tarball. Assuming you have your FreeBSD source code
+      CDROM mounted, do:</para>
+
+    <screen>&prompt.root; <userinput>cd /cdrom/src</userinput>
+&prompt.root; <userinput>cat scontrib.?? | tar xzf - -C /usr/src
+contrib/sendmail</userinput></screen>
+
+    <para>This extracts to only a few hundred kilobytes.  The file
+      <filename>README</filename> in the <filename>cf</filename>
+      directory can serve as a basic introduction to m4
+      configuration.</para>
+
+    <para>The best way to support UUCP delivery is to use the
+      <literal>mailertable</literal> feature.  This creates a database
+      that sendmail can use to make routing decisions.</para>
+
+    <para>First, you have to create your <filename>.mc</filename>
+      file.  The directory
+      <filename>/usr/src/usr.sbin/sendmail/cf/cf</filename> contains a
+      few examples.  Assuming you have named your file
+      <filename>foo.mc</filename>, all you need to do in order to
+      convert it into a valid <filename>sendmail.cf</filename>
+      is:</para>
+
+    <screen>&prompt.root; <userinput>cd /usr/src/usr.sbin/sendmail/cf/cf</userinput>
+&prompt.root; <userinput>make foo.cf</userinput>
+&prompt.root; <userinput>cp foo.cf /etc/mail/sendmail.cf</userinput></screen>
+
+    <para>A typical <filename>.mc</filename> file might look
+        like:</para>
+
+    <programlisting>VERSIONID(`<replaceable>Your version number</replaceable>') OSTYPE(bsd4.4)
+
+FEATURE(accept_unresolvable_domains)
+FEATURE(nocanonify)
+FEATURE(mailertable, `hash -o /etc/mail/mailertable')
+
+define(`UUCP_RELAY', <replaceable>your.uucp.relay</replaceable>)
+define(`UUCP_MAX_SIZE', 200000)
+define(`confDONT_PROBE_INTERFACES')
+
+MAILER(local)
+MAILER(smtp)
+MAILER(uucp)
+
+Cw    <replaceable>your.alias.host.name</replaceable>
+Cw    <replaceable>youruucpnodename.UUCP</replaceable></programlisting>
+
+    <para>The lines containing
+      <literal>accept_unresolvable_domains</literal>,
+      <literal>nocanonify</literal>, and
+      <literal>confDONT_PROBE_INTERFACES</literal> features will
+      prevent any usage of the DNS during mail delivery.  The
+      <literal>UUCP_RELAY</literal> clause is needed to support UUCP
+      delivery.  Simply put an Internet hostname there that is able to
+      handle .UUCP pseudo-domain addresses; most likely, you will
+      enter the mail relay of your ISP there.</para>
+
+    <para>Once you have this, you need an
+      <filename>/etc/mail/mailertable</filename> file.  If you have
+      only one link to the outside that is used for all your mails,
+      the following file will suffice:</para>
+
+    <programlisting>#
+# makemap hash /etc/mail/mailertable.db &lt; /etc/mail/mailertable
+.                             uucp-dom:<replaceable>your.uucp.relay</replaceable></programlisting>
+
+    <para>A more complex example might look like this:</para>
+
+    <programlisting>#
+# makemap hash /etc/mail/mailertable.db &lt; /etc/mail/mailertable
+#
+horus.interface-business.de   uucp-dom:horus
+.interface-business.de        uucp-dom:if-bus
+interface-business.de         uucp-dom:if-bus
+.heep.sax.de                  smtp8:%1
+horus.UUCP                    uucp-dom:horus
+if-bus.UUCP                   uucp-dom:if-bus
+.                             uucp-dom:</programlisting>
+
+
+    <para>The first three lines handle special cases where
+      domain-addressed mail should not be sent out to the default
+      route, but instead to some UUCP neighbor in order to
+      <quote>shortcut</quote> the delivery path. The next line handles
+      mail to the local Ethernet domain that can be delivered using
+      SMTP. Finally, the UUCP neighbors are mentioned in the .UUCP
+      pseudo-domain notation, to allow for a
+      <literal><replaceable>uucp-neighbor
+      </replaceable>!<replaceable>recipient</replaceable></literal>
+      override of the default rules. The last line is always a single
+      dot, matching everything else, with UUCP delivery to a UUCP
+      neighbor that serves as your universal mail gateway to the
+      world. All of the node names behind the
+      <literal>uucp-dom:</literal> keyword must be valid UUCP
+      neighbors, as you can verify using the command
+      <literal>uuname</literal>.</para>
+
+    <para>As a reminder that this file needs to be converted into a
+      DBM database file before use.  The command line to accomplish
+      this is best placed as a comment at the top of the mailertable.
+      You always have to execute this command each time you change
+      your mailertable.</para>
+
+    <para>Final hint: if you are uncertain whether some particular
+      mail routing would work, remember the <option>-bt</option>
+      option to sendmail. It starts sendmail in <emphasis>address test
+      mode</emphasis>; simply enter <literal>3,0</literal>, followed
+      by the address you wish to test for the mail routing.  The last
+      line tells you the used internal mail agent, the destination
+      host this agent will be called with, and the (possibly
+      translated) address. Leave this mode by typing Control-D.</para>
+
+    <screen>&prompt.user; <userinput>sendmail -bt</userinput>
+ADDRESS TEST MODE (ruleset 3 NOT automatically invoked)
+Enter &lt;ruleset&gt; &lt;address&gt;
+<prompt>&gt;</prompt> <userinput>3,0 foo@example.com</userinput>
+canonify           input: foo @ example . com
+...
+parse            returns: $# uucp-dom $@ <replaceable>your.uucp.relay</replaceable> $: foo &lt; @ example . com . &gt;
+<prompt>&gt;</prompt> <userinput>^D</userinput></screen>
+  </sect1>
+
   <sect1 id="SMTP-Auth">
     <title>SMTP Authentication</title>
     
