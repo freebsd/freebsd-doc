@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/ports.cgi,v 1.53 2001/05/07 22:12:44 wosch Exp $
+# $FreeBSD: www/en/cgi/ports.cgi,v 1.54 2001/05/13 17:26:12 wosch Exp $
 #
 # ports.cgi - search engine for FreeBSD ports
 #             	o search for a port by name or description
@@ -55,36 +55,36 @@ sub init_variables {
     local($p) = 'ftp://ftp5.FreeBSD.org/pub/FreeBSD/ports/i386';
     local($palpha) = 'ftp://ftp5.FreeBSD.org/pub/FreeBSD/ports/alpha';
 
-    $remotePrefixFtpPackagesDefault = '4.2-STABLE/i386';
+    $remotePrefixFtpPackagesDefault = '4.3-STABLE/i386';
     %remotePrefixFtpPackages = 
 	(
 	 '5.0-CURRENT/i386', "$p/packages-current/All",
+	 '4.3-RELEASE/i386', "$p/packages-4.3-release/All",
+	 '4.3-STABLE/i386', " $p/packages-4.3-stable/All",
 	 '4.2-RELEASE/i386', "$p/packages-4.2-release/All",
-	 '4.2-STABLE/i386', " $p/packages-4.2-stable/All",
-	 '4.1-RELEASE/i386', "$p/packages-4-release/All",
 	 '3.5-STABLE/i386',  "$p/packages-3-stable/All",
 	 '3.5-RELEASE/i386', "$p/packages-3.4-release/All",
 	 '2.2.8-STABLE/i386',  "$p/packages-2.2-stable/All",
 	 '2.2.8-RELEASE/i386', "$p/packages-2.2.8/All",
 
 	 '5.0-CURRENT/alpha', "$palpha/packages-current/All",
+	 '4.3-RELEASE/alpha', "$palpha/packages-4.3-release/All",
 	 '4.2-RELEASE/alpha', "$palpha/packages-4.2-release/All",
-	 '4.2-STABLE/alpha',  "$palpha/packages-4-stable/All",
-	 '4.1-RELEASE/alpha', "$palpha/packages-4.1-release/All",
+	 '4.3-STABLE/alpha',  "$palpha/packages-4-stable/All",
 	);
 
     %relDate = 
 	(
 	 '5.0-CURRENT/i386', 'today',
-	 '4.2-STABLE/i386', 'today',
-	 '4.2-RELEASE/i386', '2000-11-17 12:19:22 UTC',
-	 '4.1-RELEASE/i386', '2000-07-21 18:15:35 UTC',
+	 '4.3-STABLE/i386', 'today',
+	 '4.3-RELEASE/i386', '2001-04-18 21:37:31 UTC',
 
 	 '3.5-STABLE/i386', 'today',
 	 '3.5-RELEASE/i386', '2000-06-16 22:56:18 UTC',
+
 	 '5.0-CURRENT/alpha', 'today',
-	 '4.1-STABLE/alpha', 'today',
-	 '4.1-RELEASE/alpha', '2000-07-21 18:15:35 UTC',
+	 '4.3-STABLE/alpha', 'today',
+	 '4.3-RELEASE/alpha', '2001-04-18 21:37:31 UTC',
 
 	 '2.2.8-RELEASE/i386', '1998-11-30 01:50:01 UTC',
 	 '2.2.8-STABLE/i386', '1999-01-15',
@@ -557,7 +557,7 @@ sub footer {
 <img ALIGN="RIGHT" src="/gifs/powerlogo.gif">
 &copy; 1996-2001 by Wolfram Schneider. All rights reserved.<br>
 };
-    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.53 2001/05/07 22:12:44 wosch Exp $} . "<br>\n";
+    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.54 2001/05/13 17:26:12 wosch Exp $} . "<br>\n";
     print qq{Please direct questions about this service to
 <I><A HREF="$mailtoURL">$mailto</A></I><br>\n};
     print qq{General questions about FreeBSD ports should be sent to } .
