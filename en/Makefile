@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/Makefile,v 1.72 2001/10/22 20:15:18 bmah Exp $
+# $FreeBSD: www/en/Makefile,v 1.73 2001/10/24 18:14:41 phantom Exp $
 .if exists(Makefile.conf)
 .include "Makefile.conf"
 .endif
@@ -41,6 +41,7 @@ SUBDIR+= copyright
 SUBDIR+= search
 SUBDIR+= gallery
 SUBDIR+= projects
+SUBDIR+= prstats
 SUBDIR+= platforms
 SUBDIR+= releases 
 SUBDIR+= smp
@@ -79,20 +80,36 @@ WEBDIR=		data
 
 # index.html is special, and generated from index.xsl and news/news.xml
 DATA+=		index.html
+CLEANFILES+=	index.html
 
 index.html: index.xsl news/news.xml news/press.xml includes.xsl news/includes.xsl
-	xsltproc -nonet -o index.html index.xsl news/news.xml
-	-tidy -i -m -f /dev/null index.html
+	${XSLTPROC} ${XSLTPROCFLAGS} -o index.html \
+		${.CURDIR}/index.xsl ${.CURDIR}/news/news.xml
+	-${TIDY} ${TIDYFLAGS} index.html
 
 # Handle the FAQ/ and handbook/ directories specially.
+CLEANFILES+=	FAQ
 FAQ:
-	ln -fs ${.CURDIR}/../../doc/en_US.ISO8859-1/books/faq FAQ
+	${LN} -fs ${.OBJDIR}/../../doc/en_US.ISO8859-1/books/faq FAQ
 
+CLEANFILES+=	handbook
 handbook:
-	ln -fs ${.CURDIR}/../../doc/en_US.ISO8859-1/books/handbook handbook
+	${LN} -fs ${.OBJDIR}/../../doc/en_US.ISO8859-1/books/handbook handbook
 
 afterinstall:
-	(cd ${DOCINSTALLDIR} && ln -fs doc/en_US.ISO8859-1/books/faq ${DOCINSTALLDIR}/FAQ)
-	(cd ${DOCINSTALLDIR} && ln -fs doc/en_US.ISO8859-1/books/handbook ${DOCINSTALLDIR}/handbook)
+	cd ${DOCINSTALLDIR}; \
+		${LN} -fs doc/en_US.ISO8859-1/books/faq ${DOCINSTALLDIR}/FAQ
+	cd ${DOCINSTALLDIR}; \
+		${LN} -fs doc/en_US.ISO8859-1/books/handbook ${DOCINSTALLDIR}/handbook
+
+LINBOT?=	${PREFIX}/bin/linbot
+LINBOTFLAGS?=	-ab
+LINBOTDIR?=	/linbot
+LINBOTINSTALLDIR?= ${DESTDIR}${LINBOTDIR}
+LINBOTURL?=	http://www.FreeBSD.org/
+
+linbot:
+	@[ -d ${LINBOTINSTALLDIR} ] || ${MKDIR} ${LINBOTINSTALLDIR}
+	${LINBOT} ${LINBOTFLAGS} -o ${LINBOTINSTALLDIR} ${LINBOTURL}
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"

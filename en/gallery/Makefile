@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/gallery/Makefile,v 1.12 2001/08/07 15:55:35 nik Exp $
+# $FreeBSD: www/en/gallery/Makefile,v 1.13 2001/09/05 07:51:40 kuriyama Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -7,29 +7,33 @@
 .include "../Makefile.inc"
 .endif
 
-XSLT=	env SGML_CATALOG_FILES=/usr/local/share/xml/dtd/xhtml/xhtml.soc \
-	xsltproc --catalogs
+XSLTPROCFLAGS=	--catalogs
+XSLT=	${SETENV} SGML_CATALOG_FILES=${PREFIX}/share/xml/dtd/xhtml/xhtml.soc \
+	${XSLTPROC} ${XSLTPROCFLAGS}
 
 INDEXLINK= gallery.html
 
 DATA+=	gallery.html cgallery.html npgallery.html pgallery.html
 
-CLEANFILES+= cgallery.html npgallery.html pgallery.html gallery.html
+CLEANFILES+= ${DATA}
 
 gallery.html: gallery.xml gallery.xsl ../includes.xsl
-	${XSLT} gallery.xsl gallery.xml > gallery.html
-	-tidy -i -m -f /dev/null gallery.html
+	${XSLT} ${.CURDIR}/gallery.xsl ${.CURDIR}/gallery.xml > ${.TARGET}
+	-${TIDY} ${TIDYFLAGS} ${.TARGET}
 
 cgallery.html: gallery.xml gallery-entry.xsl
-	${XSLT} --param type \'commercial\' gallery-entry.xsl gallery.xml > cgallery.html
-	-tidy -i -m -f /dev/null cgallery.html
+	${XSLT} --param type \'commercial\' \
+		${.CURDIR}/gallery-entry.xsl ${.CURDIR}/gallery.xml > ${.TARGET}
+	-${TIDY} ${TIDYFLAGS} ${.TARGET}
 
 npgallery.html: gallery.xml gallery-entry.xsl
-	${XSLT} --param type \'nonprofit\' gallery-entry.xsl gallery.xml > npgallery.html
-	-tidy -i -m -f /dev/null npgallery.html
+	${XSLT} --param type \'nonprofit\' \
+		${.CURDIR}/gallery-entry.xsl ${.CURDIR}/gallery.xml > ${.TARGET}
+	-${TIDY} ${TIDYFLAGS} ${.TARGET}
 
 pgallery.html: gallery.xml gallery-entry.xsl
-	${XSLT} --param type \'personal\' gallery-entry.xsl gallery.xml > pgallery.html
-	-tidy -i -m -f /dev/null pgallery.html
+	${XSLT} --param type \'personal\' \
+		${.CURDIR}/gallery-entry.xsl ${.CURDIR}/gallery.xml > ${.TARGET}
+	-${TIDY} ${TIDYFLAGS} ${.TARGET}
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"

@@ -1,5 +1,5 @@
 # bsd.web.mk
-# $FreeBSD: www/share/mk/web.site.mk,v 1.35 2000/11/07 11:39:40 kuriyama Exp $
+# $FreeBSD: www/share/mk/web.site.mk,v 1.36 2000/11/22 02:35:42 kuriyama Exp $
 
 #
 # Build and install a web site.
@@ -27,7 +27,24 @@ CGIOWN?=	${USER}
 CGIGRP?=	www
 CGIMODE?=	775
 
-PERL?=		perl5
+CP?=		/bin/cp
+CVS?=		/usr/bin/cvs
+ECHO_CMD?=	echo
+SETENV?=	/usr/bin/env
+LN?=		/bin/ln
+MKDIR?=		/bin/mkdir
+MV?=		/bin/mv
+PERL?=		/usr/bin/perl5
+RM?=		/bin/rm
+SED?=		/usr/bin/sed
+SH?=		/bin/sh
+SORT?=		/usr/bin/sort
+TOUCH?=		/usr/bin/touch
+
+XSLTPROC?=	${PREFIX}/bin/xsltproc
+XSLTPROCFLAGS?=	-nonet
+TIDY?=		${PREFIX}/bin/tidy
+TIDYFLAGS?=	-i -m -f /dev/null
 
 #
 # Install dirs derived from the above.
@@ -64,42 +81,53 @@ PORTSBASE?=	/usr
 .if defined(REVCHECK)
 PREHTML=	${WEB_PREFIX}/ja/prehtml
 PREHTMLFLAGS=	${PREHTMLOPTS}
-CANONPREFIX0!=	cd ${WEB_PREFIX}; echo $${PWD};
+CANONPREFIX0!=	cd ${WEB_PREFIX}; ${ECHO_CMD} $${PWD};
 CANONPREFIX=	${PWD:S/^${CANONPREFIX0}//:S/^\///}
-LOCALTOP!=	echo ${CANONPREFIX} | perl -pe 's@[^/]+@..@g; $$_.="/." if($$_ eq".."); s@^\.\./@@;'
-DIR_IN_LOCAL!=	echo ${CANONPREFIX} | perl -pe 's@^[^/]+/?@@;'
+LOCALTOP!=	${ECHO_CMD} ${CANONPREFIX} | \
+	${PERL} -pe 's@[^/]+@..@g; $$_.="/." if($$_ eq".."); s@^\.\./@@;'
+DIR_IN_LOCAL!=	${ECHO_CMD} ${CANONPREFIX} | ${PERL} -pe 's@^[^/]+/?@@;'
 PREHTMLFLAGS+=	-revcheck "${LOCALTOP}" "${DIR_IN_LOCAL}"
 .else
 DATESUBST=	's/<!ENTITY date[ \t]*"$$Free[B]SD. .* \(.* .*\) .* .* $$">/<!ENTITY date	"Last modified: \1">/'
-PREHTML=	sed -e ${DATESUBST}
+PREHTML=	${SED} -e ${DATESUBST}
 .endif
 .if !defined(OPENJADE)
-SGMLNORM=	sgmlnorm
+SGMLNORM=	${PREFIX}/bin/sgmlnorm
 .else
-SGMLNORM=	osgmlnorm
+SGMLNORM=	${PREFIX}/bin/osgmlnorm
 .endif
-PREFIX?=	/usr/local
+LOCALBASE?=	/usr/local
+PREFIX?=	${LOCALBASE}
 CATALOG?=	${PREFIX}/share/sgml/html/catalog
 SGMLNORMFLAGS=	-d ${SGMLNORMOPTS} -c ${CATALOG} -D ${.CURDIR}
 GENDOCS+=	${DOCS:M*.sgml:S/.sgml$/.html/g}
 ORPHANS:=	${ORPHANS:N*.sgml}
 
 .sgml.html:
-	(${PREHTML} ${PREHTMLFLAGS} ${.IMPSRC} |\
-	SGML_CATALOG_FILES='' ${SGMLNORM} ${SGMLNORMFLAGS} > ${.TARGET})\
-	|| (rm -f ${.TARGET} && false)
+	${PREHTML} ${PREHTMLFLAGS} ${.IMPSRC} | \
+	${SETENV} SGML_CATALOG_FILES= \
+		${SGMLNORM} ${SGMLNORMFLAGS} > ${.TARGET} || \
+			(${RM} -f ${.TARGET} && false)
+.if !defined(NO_TIDY)
+	-${TIDY} ${TIDYFLAGS} ${.TARGET}
+.endif
 
 ###
 # file.docb --> file.html
 #
 # Generate HTML from docbook
 
+SGMLFMT?=	${PREFIX}/bin/sgmlfmt
+SGMLFMTFLAGS?=	-d docbook -f html ${SGMLOPTS}
 .SUFFIXES:	.docb
 GENDOCS+=	${DOCS:M*.docb:S/.docb$/.html/g}
 ORPHANS:=	${ORPHANS:N*.docb}
 
 .docb.html:
-	sgmlfmt -d docbook -f html ${SGMLOPTS} ${.IMPSRC}
+	${SGMLFMT} ${SGMLFMTFLAGS} ${.IMPSRC}
+.if !defined(NO_TIDY)
+	-${TIDY} ${TIDYFLAGS} ${.TARGET}
+.endif
 
 
 ##################################################################
@@ -120,7 +148,7 @@ all: ${COOKIE} orphans ${GENDOCS} ${DATA} ${LOCAL} ${CGI} _PROGSUBDIR
 #
 .if !empty(ORPHANS)
 orphans:
-	@echo Warning!  I don\'t know what to do with: ${ORPHANS}
+	@${ECHO} Warning!  I don\'t know what to do with: ${ORPHANS}
 .else
 orphans:
 .endif
@@ -132,10 +160,10 @@ orphans:
 clean: _PROGSUBDIR
 .if defined(DIRS_TO_CLEAN) && !empty(DIRS_TO_CLEAN)
 .for dir in ${DIRS_TO_CLEAN}
-	(cd ${.CURDIR}/${dir} && ${MAKE} clean)
+	cd ${.CURDIR}/${dir}; ${MAKE} clean
 .endfor
 .endif
-	rm -f Errs errs mklog ${GENDOCS} ${LOCAL} ${CLEANFILES}
+	${RM} -f Errs errs mklog ${GENDOCS} ${LOCAL} ${CLEANFILES}
 .endif
 
 #
@@ -143,8 +171,8 @@ clean: _PROGSUBDIR
 #
 .if !target(cleandir)
 cleandir: clean _PROGSUBDIR
-	rm -f ${.CURDIR}/tags .depend
-	cd ${.CURDIR}; rm -rf obj;
+	${RM} -f ${.CURDIR}/tags .depend
+	cd ${.CURDIR}; ${RM} -rf obj
 .endif
 
 #
@@ -158,30 +186,36 @@ beforeinstall:
 afterinstall:
 .endif
 
+INSTALL_WEB?=	\
+	${INSTALL} ${COPY} ${INSTALLFLAGS} -o ${WEBOWN} -g ${WEBGRP} -m ${WEBMODE}
+INSTALL_CGI?=	\
+	${INSTALL} ${COPY} ${INSTALLFLAGS} -o ${CGIOWN} -g ${CGIGRP} -m ${CGIMODE}
 _ALLINSTALL+=	${GENDOCS} ${DATA} ${LOCAL}
 
-realinstall: ${COOKIE} ${GENDOCS} ${DATA} ${LOCAL} ${CGI} _PROGSUBDIR
+realinstall: ${COOKIE} ${_ALLINSTALL} ${CGI} _PROGSUBDIR
 .if !empty(_ALLINSTALL)
-	@mkdir -p ${DOCINSTALLDIR}
-	for entry in ${_ALLINSTALL}; do \
-		${INSTALL} ${COPY} -o ${WEBOWN} -g ${WEBGRP} -m ${WEBMODE} \
-			${INSTALLFLAGS} $${entry} ${DOCINSTALLDIR}; \
-	done
+	@${MKDIR} -p ${DOCINSTALLDIR}
+.for entry in ${_ALLINSTALL}
+.if exists(${.CURDIR}/${entry})
+	${INSTALL_WEB} ${.CURDIR}/${entry} ${DOCINSTALLDIR}
+.else
+	${INSTALL_WEB} ${entry} ${DOCINSTALLDIR}
+.endif
+.endfor
 .if defined(INDEXLINK) && !empty(INDEXLINK)
-	(cd ${DOCINSTALLDIR}; ln -s -f ${INDEXLINK} index.html)
+	cd ${DOCINSTALLDIR}; ${LN} -fs ${INDEXLINK} index.html
 .endif
 .endif
 .if defined(CGI) && !empty(CGI)
-	@mkdir -p ${CGIINSTALLDIR}
-	for entry in ${CGI}; do \
-		${INSTALL} ${COPY} -o ${CGIOWN} -g ${CGIGRP} -m ${CGIMODE} \
-			${INSTALLFLAGS} $${entry} ${CGIINSTALLDIR}; \
-	done
+	@${MKDIR} -p ${CGIINSTALLDIR}
+.for entry in ${CGI}
+	${INSTALL_CGI} ${.CURDIR}/${entry} ${CGIINSTALLDIR}
+.endfor
 .endif
 .if defined(DOCSUBDIR) && !empty(DOCSUBDIR)
-	for entry in ${DOCSUBDIR}; do \
-		mkdir -p ${DOCINSTALLDIR}/$$entry; \
-	done
+.for entry in ${DOCSUBDIR}
+	@${MKDIR} -p ${DOCINSTALLDIR}/${entry}
+.endfor
 .endif
 
 # Set up install dependencies so they happen in the correct order.
@@ -197,26 +231,33 @@ realinstall2: realinstall
 #SUBDIR+=${DOCSUBDIR}
 _PROGSUBDIR: .USE
 .if defined(SUBDIR) && !empty(SUBDIR)
-	@for entry in ${SUBDIR}; do \
-		(${ECHODIR} "===> ${DIRPRFX}$$entry"; \
-		cd ${.CURDIR}/$${entry} && \
-		${MAKE} ${.TARGET:S/realinstall/install/:S/.depend/depend/} DIRPRFX=${DIRPRFX}$$entry/); \
-	done
+.for entry in ${SUBDIR}
+	@${ECHODIR} "===> ${DIRPRFX}${entry}"
+	@cd ${.CURDIR}/${entry}; \
+		${MAKE} ${.TARGET:S/realinstall/install/:S/.depend/depend/} \
+			DIRPRFX=${DIRPRFX}${entry}/
+.endfor
 .endif
 .if defined(DOCSUBDIR) && !empty(DOCSUBDIR)
-	@for entry in ${DOCSUBDIR}; do \
-		(${ECHODIR} "===> ${DIRPRFX}$$entry"; \
-		cd ${.CURDIR}/$${entry} && \
-		if [ ${WEBDIR} = "data" -a $$entry = "handbook" -o $$entry = "docproj-primer" ]; then \
-			${MAKE} ${.TARGET:S/realinstall/install/:S/.depend/depend/} DIRPRFX=${DIRPRFX}$$entry/ ${PARAMS} FORMATS="txt html html-split"; \
-		elif [ $$entry = "handbook" -a ${WEBDIR} = "data/ja" ]; then \
-			${MAKE} ${.TARGET:S/realinstall/install/:S/.depend/depend/} DIRPRFX=${DIRPRFX}$$entry/ ${PARAMS} FORMATS="html html-split"; \
-		else \
-			${MAKE} ${.TARGET:S/realinstall/install/:S/.depend/depend/} DIRPRFX=${DIRPRFX}$$entry/ ${PARAMS}; \
-		fi); \
-	done
+.for entry in ${DOCSUBDIR}
+	@${ECHODIR} "===> ${DIRPRFX}${entry}"
+.if (${WEBDIR} = "data" && ${entry} = "handbook") || ${entry} = "docproj-primer"
+	@cd ${.CURDIR}/${entry}; \
+		${MAKE} ${.TARGET:S/realinstall/install/:S/.depend/depend/} \
+			DIRPRFX=${DIRPRFX}${entry}/ ${PARAMS} \
+			FORMATS="txt html html-split"
+.elif ${WEBDIR} = "data/ja" && ${entry} = "handbook"
+	@cd ${.CURDIR}/${entry}; \
+		${MAKE} ${.TARGET:S/realinstall/install/:S/.depend/depend/} \
+			DIRPRFX=${DIRPRFX}${entry}/ ${PARAMS} \
+			FORMATS="html html-split"
+.else
+	@cd ${.CURDIR}/${entry}; \
+		${MAKE} ${.TARGET:S/realinstall/install/:S/.depend/depend/} \
+			DIRPRFX=${DIRPRFX}${entry}/ ${PARAMS}
 .endif
-
+.endfor
+.endif
 
 #
 # cruft for generating linuxdoc stuff
@@ -233,4 +274,5 @@ PARAMS+=	SGMLOPTS="${SGMLOPTS}"
 .endif
 
 .include <bsd.obj.mk>
+
 # THE END
