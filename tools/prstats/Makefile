@@ -1,5 +1,5 @@
 #
-# $FreeBSD: www/tools/prstats/Makefile,v 1.1 2001/10/29 01:58:12 murray Exp $
+# $FreeBSD: www/tools/prstats/Makefile,v 1.2 2001/11/18 16:11:34 murray Exp $
 #
 
 .if exists(../../en/Makefile.conf)
@@ -10,9 +10,9 @@
 .endif
 
 WEB_PREFIX?= ${.CURDIR}/../..
-GNATSDIR= /c/gnats
-PRGRAPHDIR= ${DESTDIR}${WEBBASE}/prstats
-GNUPLOT= /usr/local/bin/gnuplot
+GNATSDIR?= /c/gnats
+PRGRAPHDIR?= ${DESTDIR}${WEBBASE}/prstats
+GNUPLOT?= /usr/local/bin/gnuplot
 
 GRAPHS= gnats.png
 GRAPHS+= gnats1.png gnats1r.png
