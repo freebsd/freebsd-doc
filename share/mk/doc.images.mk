@@ -1,5 +1,5 @@
 #
-# $FreeBSD: doc/share/mk/doc.images.mk,v 1.2 2000/07/18 16:30:45 nik Exp $
+# $FreeBSD: doc/share/mk/doc.images.mk,v 1.3 2000/09/28 23:29:47 nbm Exp $
 #
 # This include file <doc.images.mk> handles image processing.
 #
@@ -17,14 +17,61 @@
 # that the images are converted from their repository format to the
 # correct output format.
 #
-# Note that this latter functionality is not yet implemented.
+
 #
+# Using document specific images
+# ------------------------------
+#
+# The images that each document provides *from the repository* are listed in
+# the IMAGES variable.
+#
+# We then need to build a list of images that must be generated from these.
+# This is to handle the case where a document might include some images as
+# bitmaps and some as vector images in the repository, but where, depending
+# on the output format, you want all the images in one format or another.
+#
+# This list of generated images can then be cleaned in the clean target
+# later
+#
+# This is the same for each format.  To use IMAGES_GEN_PNG as an example,
+# the substitution means "First match, using M, all the components of
+# ${IMAGES} that match the '*.eps' regexp.  Then, search/replace the .eps
+# in the matching filenames with .png.  Finally, stick the results in the
+# ${IMAGES_GEN_PNG} variable."  ${IMAGES_GEN_PNG} then contains the names
+# of all the .eps images listed, but with a .png extension.  This is the
+# list of files we need to generate if we need PNG format images.
+#
+
+IMAGES_GEN_PNG=${IMAGES:M*.eps:S/.eps$/.png/}
+IMAGES_GEN_EPS=${IMAGES:M*.png:S/.png$/.eps/}
+
+CLEANFILES+= ${IMAGES_GEN_PNG} ${IMAGES_GEN_EPS}
+
+IMAGES_PNG=${IMAGES:M*.png} ${IMAGES_GEN_PNG}
+IMAGES_EPS=${IMAGES:M*.eps} ${IMAGES_GEN_EPS}
+
+# We can't use suffix rules to generate the rules to convert EPS to PNG and
+# PNG to EPS.  This is because a .png file can depend on a .eps file, and
+# vice versa, leading to a loop in the dependency graph.  Instead, build
+# the targets on the fly.
+
+.for _curimage in ${IMAGES_GEN_PNG}
+${_curimage}: ${_curimage:S/.png$/.eps/}
+	convert -antialias ${_curimage:S/.png$/.eps/} ${_curimage}
+.endfor
+
+.for _curimage in ${IMAGES_GEN_EPS}
+${_curimage}: ${_curimage:S/.eps$/.png/}
+	convert -antialias ${_curimage:S/.eps$/.png/} ${_curimage}
+.endfor
+
+.SUFFIXES:	.pdf .eps .png
 
 #
 # Using library images
 # --------------------
 #
-# Each document that wants to use one or more library images  has to
+# Each document that wants to use one or more library images has to
 # list them in the LIB_IMAGES variable.  For example, a document that wants 
 # to use callouts 1 thru 4 has to list
 #
