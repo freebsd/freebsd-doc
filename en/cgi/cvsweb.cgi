@@ -28,7 +28,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.39 2000/02/19 13:58:12 wosch Exp $
+# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.40 2000/04/19 17:07:09 phantom Exp $
 #
 
 
@@ -330,7 +330,7 @@ sub htmlify {
 	$string =~ s/>/&gt;/g;
 
 	if ($pr) {
-		$string =~ s!\b((pr[:#]?\s*#?)|((bin|conf|docs|gnu|i386|kern|misc|ports)\/))(\d+)\b!<A HREF=http://www.FreeBSD.org/cgi/query-pr.cgi?pr=\5>$&</A>!ig;
+		$string =~ s!\b((pr[:#]?\s*#?)|((advocacy|alpha|bin|conf|docs|gnu|i386|kern|misc|ports|sparc)\/))(\d+)\b!<A HREF=http://www.FreeBSD.org/cgi/query-pr.cgi?pr=\5>$&</A>!ig;
 	}
 
 	$string;
