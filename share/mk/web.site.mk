@@ -1,5 +1,5 @@
 # bsd.web.mk
-# $FreeBSD: www/share/mk/web.site.mk,v 1.62 2004/06/27 14:40:04 simon Exp $
+# $FreeBSD: www/share/mk/web.site.mk,v 1.63 2004/11/13 12:23:19 ceri Exp $
 
 #
 # Build and install a web site.
@@ -115,7 +115,7 @@ INDEXURI?=	http://www.FreeBSD.org/ports/INDEX
 
 #
 # Instruct bsd.subdir.mk to NOT to process SUBDIR directive.  It is not
-# neccessary since web.site.mk do it using own rules.
+# necessary since web.site.mk does it using own rules.
 #
 NO_SUBDIR=	YES
 
