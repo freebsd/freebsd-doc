@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD$ -->
+<!-- $FreeBSD: www/fr/includes.xsl,v 1.1 2002/11/17 16:02:47 stephane Exp $ -->
 
 <!-- 
    The FreeBSD French Documentation Project
-   Original revision: 1.10
+   Original revision: 1.12
    
    Version francaise : Stephane Legrand <stephane@freebsd-fr.org>
 -->
@@ -19,7 +19,7 @@
     <img src="{$base}/gifs/new.gif" alt="[New!]" width="28" height="11"/>
   </xsl:variable>
 
-  <xsl:variable name="copyright" select="'Copyright (c) 1995-2002 Le Projet FreeBSD. Tous droits r&#233;serv&#233;s.'"/>
+  <xsl:variable name="copyright" select="'Copyright (c) 1995-2003 Le Projet FreeBSD. Tous droits r&#233;serv&#233;s.'"/>
 
   <xsl:variable name="email" select="'freebsd-questions'"/>
   <xsl:variable name="author">
@@ -85,7 +85,7 @@
       <xsl:copy-of select="$date"/></address>
   </xsl:variable>
   
-  <xsl:variable name="rel.current" select='"4.7"'/>
+  <xsl:variable name="rel.current" select='"5.0"'/>
   <xsl:variable name="u.rel.notes">
     <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel.current"/>R/relnotes.html</xsl:variable>
 
@@ -95,5 +95,16 @@
     <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel.current"/>R/errata.html</xsl:variable>
   <xsl:variable name="u.rel.hardware">
     <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel.current"/>R/hardware.html</xsl:variable>
+  <xsl:variable name="u.rel.early">
+    <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel.current"/>R/early-adopter.html</xsl:variable>
+  <xsl:variable name="rel2.current" select='"4.7"'/>
+  <xsl:variable name="u.rel2.notes">
+    <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel2.current"/>R/relnotes.html</xsl:variable>
+  <xsl:variable name="u.rel2.announce">
+    <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel2.current"/>R/announce.html</xsl:variable>
+  <xsl:variable name="u.rel2.errata">
+    <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel2.current"/>R/errata.html</xsl:variable>
+  <xsl:variable name="u.rel2.hardware">
+    <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel2.current"/>R/hardware.html</xsl:variable>
   
 </xsl:stylesheet>
