@@ -283,6 +283,7 @@ MAN1 =	a2p.1\
 	sdiff.1\
 	sed.1\
 	send-pr.1\
+	sftp.1\
 	sgsc.1\
 	sh.1\
 	shar.1\
@@ -297,6 +298,7 @@ MAN1 =	a2p.1\
 	ssh-add.1\
 	ssh-agent.1\
 	ssh-keygen.1\
+	ssh-keyscan.1\
 	ssh.1\
 	startslip.1\
 	strings.1\
