@@ -2,7 +2,6 @@ MAN8 =	IPXrouted.8\
 	MAKEDEV.8\
 	ac.8\
 	accton.8\
-	addgroup.8\
 	adding_user.8\
 	adduser.8\
 	adjkerntz.8\
@@ -127,6 +126,7 @@ MAN8 =	IPXrouted.8\
 	pccardd.8\
 	pciconf.8\
 	ping.8\
+	pnpinfo.8\
 	portmap.8\
 	ppp.8\
 	pppctl.8\
@@ -151,7 +151,6 @@ MAN8 =	IPXrouted.8\
 	rexecd.8\
 	rlogind.8\
 	rmail.8\
-	rmgroup.8\
 	rmt.8\
 	rmuser.8\
 	rndcontrol.8\
