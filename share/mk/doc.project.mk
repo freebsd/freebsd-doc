@@ -93,9 +93,14 @@ REALPATH?=	/bin/realpath
 SETENV?=	/usr/bin/env
 XSLTPROC?=	${PREFIX}/bin/xsltproc
 TIDY?=		${PREFIX}/bin/tidy
+.if exists(${PREFIX}/share/texmf-dist/LICENSE.texmf)
+TEX_CMD?=	${PREFIX}/bin/etex
+PDFTEX_CMD?=	${PREFIX}/bin/pdfetex
+.else
 TEX_CMD?=	${PREFIX}/bin/tex
-LATEX_CMD?=	${PREFIX}/bin/latex
 PDFTEX_CMD?=	${PREFIX}/bin/pdftex
+.endif
+LATEX_CMD?=	${PREFIX}/bin/latex
 JADETEX_CMD?=	${TEX_CMD} "&jadetex"
 PDFJADETEX_CMD?=${PDFTEX_CMD} "&pdfjadetex"
 FOP_CMD?=	${PREFIX}/share/fop/fop.sh
