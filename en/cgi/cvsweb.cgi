@@ -43,8 +43,8 @@
 # SUCH DAMAGE.
 #
 # $zId: cvsweb.cgi,v 1.104 2000/11/01 22:05:12 hnordstrom Exp $
-# $Id: cvsweb.cgi,v 1.58 2000-12-07 15:21:06 knu Exp $
-# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.57 2000/11/04 19:23:25 knu Exp $
+# $Id: cvsweb.cgi,v 1.59 2000-12-18 04:39:52 knu Exp $
+# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.58 2000/12/07 15:21:06 knu Exp $
 #
 ###
 
@@ -252,7 +252,7 @@ $is_mod_perl = defined($ENV{MOD_PERL});
 # in lynx, it it very annoying to have two links
 # per file, so disable the link at the icon
 # in this case:
-$Browser = $ENV{HTTP_USER_AGENT};
+$Browser = $ENV{HTTP_USER_AGENT} || '';
 $is_links = ($Browser =~ m`^Links `);
 $is_lynx = ($Browser =~ m`^Lynx/`i);
 $is_w3m = ($Browser =~ m`^w3m/`i);
@@ -917,13 +917,13 @@ elsif (-d $fullname) {
 	my $fh = do {local(*FH);};
 	my ($xtra, $module);
 	# Assume it's a module name with a potential path following it.
-	$xtra = $& if (($module = $where) =~ s|/.*||);
+	$xtra = (($module = $where) =~ s|/.*||) ? $& : '';
 	# Is there an indexed version of modules?
 	if (open($fh, "$cvsroot/CVSROOT/modules")) {
 	    while (<$fh>) {
 		if (/^(\S+)\s+(\S+)/o && $module eq $1
-		    && -d "${cvsroot}/$2" && $module ne $2) {
-		    &redirect($scriptname . '/' . $2 . $xtra);
+		    && -d "$cvsroot/$2" && $module ne $2) {
+		    &redirect("$scriptname/$2$xtra");
 		}
 	    }
 	}
@@ -1798,7 +1798,7 @@ again:
 	    } elsif (/^symbolic names:/) {
 		$state = "tags";
 		($branch = $head) =~ s/\.\d+$// if (!defined($branch));
-		$branch =~ s/(\.?)(\d+)$/${1}0.$2/;
+		$branch =~ s/(\d+)$/0.$1/;
 		$symrev{MAIN} = $branch;
 		$symrev{HEAD} = $branch;
 		$alltags{MAIN} = 1;
@@ -1824,7 +1824,7 @@ again:
 		if (defined($tag)) {
 		    if(defined($symrev{$tag}) || $tag eq "HEAD") {
 			$revwanted = $symrev{$tag eq "HEAD" ? "MAIN" : $tag};
-			($branch = $revwanted) =~ s/\.0\././;
+			($branch = $revwanted) =~ s/\b0\.//;
 			($branchpoint = $branch) =~ s/\.?\d+$//;
 			$revwanted = undef if ($revwanted ne $branch);
 		    } elsif ($tag ne "HEAD") {
@@ -2022,7 +2022,7 @@ sub readLog($;$) {
 # is the first commit listed on the appropriate branch.
 # This is not neccesary the same revision as marked as head in the RCS file.
 	my $headrev = $curbranch || "1";
-	($symrev{"MAIN"} = $headrev) =~ s/(\.?)(\d+)$/${1}0.$2/;
+	($symrev{"MAIN"} = $headrev) =~ s/(\d+)$/0.$1/;
 	foreach $rev (@revorder) {
 	    if ($rev =~ /^(\S*)\.\d+$/ && $headrev eq $1) {
 		$symrev{"HEAD"} = $rev;
@@ -2044,7 +2044,7 @@ sub readLog($;$) {
 
 	foreach (reverse sort keys %symrev) {
 	    $rev = $symrev{$_};
-	    if ($rev =~ /^((.*)\.)0\.(\d+)$/) {
+	    if ($rev =~ /^((.*)\.)?\b0\.(\d+)$/) {
 		push(@branchnames, $_);
 		#
 		# A revision number of A.B.0.D really translates into
@@ -2058,9 +2058,8 @@ sub readLog($;$) {
 		# it has no head to translate to if there is nothing on
 		# the branch, but I guess this can never happen?
 		#
-		# Since some stupid people actually import/check in
-		# files with version 0.X we assume that the above cannot
-		# happen, and regard 0.X(.*) as a revision and not a branch.
+		# (the code below gracefully forgets about the branch
+		# if it should happen)
 		#
 		$head = defined($2) ? $2 : "";
 		$branch = $3;
@@ -2090,7 +2089,7 @@ sub readLog($;$) {
 	my ($onlyonbranch, $onlybranchpoint);
 	if ($onlyonbranch = $input{'only_with_tag'}) {
 	    $onlyonbranch = $symrev{$onlyonbranch};
-	    if ($onlyonbranch =~ s/\.0\././) {
+	    if ($onlyonbranch =~ s/\b0\.//) {
 		($onlybranchpoint = $onlyonbranch) =~ s/\.\d+$//;
 	    }
             else {
@@ -2647,9 +2646,10 @@ sub navigateHeader($$$$$) {
     my ($swhere,$path,$filename,$rev,$title) = @_;
     $swhere = "" if ($swhere eq $scriptwhere);
     $swhere = urlencode($filename) if ($swhere eq "");
-    print "<\!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\">";
+    print qq`<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">`;
     print "<HTML>\n<HEAD>\n";
-    print '<!-- CVSweb $zRevision: 1.104 $  $Revision: 1.58 $ -->';
+    print qq`<META name="robots" content="nofollow">\n`;
+    print '<!-- CVSweb $zRevision: 1.104 $  $Revision: 1.59 $ -->';
     print "\n<TITLE>$path$filename - $title - $rev</TITLE></HEAD>\n";
     print  "$body_tag_for_src\n";
     print "<table width=\"100%\" border=0 cellspacing=0 cellpadding=1 bgcolor=\"$navigationHeaderColor\">";
@@ -2852,7 +2852,7 @@ sub fileSortCmp() {
 sub download_url($$;$) {
     my ($url,$revision,$mimetype) = @_;
 
-    $revision =~ s/\.0\././;
+    $revision =~ s/\b0\.//;
 
     if (defined($checkoutMagic)
 	&& (!defined($mimetype) || $mimetype ne "text/x-cvsweb-markup")) {
@@ -3032,7 +3032,7 @@ sub http_header(;$) {
 
 sub html_header($) {
     my ($title) = @_;
-    my $version = '$zRevision: 1.104 $  $Revision: 1.58 $'; #'
+    my $version = '$zRevision: 1.104 $  $Revision: 1.59 $'; #'
     http_header(defined($charset) ? "text/html; charset=$charset" : "text/html");
 
     (my $header = &cgi_style::html_header) =~ s/^.*\n\n//; # remove HTTP response header
