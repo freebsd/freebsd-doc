@@ -1,4 +1,4 @@
-#	$Id: Makefile,v 1.6 1998-04-08 16:46:07 wosch Exp $
+#	$Id: Makefile,v 1.7 1998-04-08 16:48:59 wosch Exp $
 
 PORTINDEX=	./portindex
 INDEX=		ports/INDEX
@@ -11,7 +11,7 @@ CLEANFILES+=	${DOCS} Makefile.gen ${INDEX}
 .endif
 
 ${INDEX}:
-	cvs co ${INDEX}
+	cvs -QR co ${INDEX}
 
 Makefile.gen: index.sgml .NOTMAIN
 	echo DOCS= *.sgml > Makefile.gen
