@@ -1,5 +1,5 @@
 # $FreeBSD$
-# $FreeBSDde: de-www/news/Makefile,v 1.3 2003/08/03 16:46:32 mheinen Exp $
+# $FreeBSDde: de-www/news/Makefile,v 1.4 2003/09/27 12:05:17 mheinen Exp $
 # basiert auf: 1.38
 
 .if exists(../Makefile.conf)
@@ -15,8 +15,8 @@ INDEXLINK= news.html
 
 SUBDIR= 	2002
 
-DATA=		newsflash.html news.rdf
-CLEANFILES+=	newsflash.html news.rdf
+DATA=		newsflash.html news.rdf press.html
+CLEANFILES+=	newsflash.html news.rdf press.html
 
 newsflash.html: newsflash.xsl news.xml includes.xsl ../includes.xsl
 	${XSLTPROC} ${XSLTPROCOPTS} -o ${.TARGET} \
