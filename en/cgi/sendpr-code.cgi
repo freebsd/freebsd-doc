@@ -1,6 +1,6 @@
 #!/usr/bin/perl -T
 #
-# $FreeBSD: www/en/cgi/sendpr-code.cgi,v 1.1 2003/12/14 17:28:13 ceri Exp $
+# $FreeBSD: www/en/cgi/sendpr-code.cgi,v 1.2 2004/01/03 21:24:51 ceri Exp $
 #
 # Copyright (c) 2003 Eric Anderson
 
@@ -15,9 +15,9 @@ my($fd, $db_obj, %db_hash, $currenttime, $randomcode, $pngbindata, $randompick, 
 my($expiretime, $pnmcat, $pnmtopng, $pnmdatadir, $dbpath);
 
 ############################################
-# generate 8 charactor code from A-Z0-9 (no o,O,0)
-my @availchars = qw(A B C D E F G H I J K L M N P Q R S T U V W X Y Z 
-                 1 2 3 4 5 6 7 8 9);
+# generate 8 character code from A-Z0-9 (no I,O,0,1 for clarity)
+my @availchars = qw(A B C D E F G H J K L M N P Q R S T U V W X Y Z 
+                 2 3 4 5 6 7 8 9);
 
 $pnmcat = "/usr/local/bin/pnmcat";
 $pnmtopng = "/usr/local/bin/pnmtopng";
