@@ -1,6 +1,6 @@
-#	$Id: Makefile,v 1.7 1998-04-08 16:48:59 wosch Exp $
+#	$Id: Makefile,v 1.8 1998-04-14 23:46:42 steve Exp $
 
-PORTINDEX=	./portindex
+PORTINDEX=	perl ./portindex
 INDEX=		ports/INDEX
 
 COOKIE=		${INDEX} Makefile.gen
