@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: www/ru/commercial/Makefile,v 1.3 2000/11/10 17:27:30 phantom Exp $
 # The FreeBSD Russian Documentation Project
 # $FreeBSDru: frdp/www/ru/commercial/Makefile,v 1.3 2000/11/10 17:04:48 phantom Exp $
 # Original revision: 1.14
@@ -11,8 +11,6 @@
 .include "../Makefile.inc"
 .endif
 
-PERL=	perl5
-
 DOCS = 	commercial.sgml
 # DOCS+=  consulting.sgml
 # DOCS+=  consulting_bycat.sgml
@@ -22,8 +20,5 @@ DOCS = 	commercial.sgml
 # DOCS+=  software_bycat.sgml
 
 INDEXLINK=commercial.html
-
-BUILDTOP=	../..
-DIR_IN_LOCAL=	commercial
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
