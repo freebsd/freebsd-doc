@@ -26,7 +26,7 @@
 #
 # Search and present a mail by Message-ID or In-Reply-To field
 #
-# $Id: mid.cgi,v 1.1 1998-03-15 22:00:09 wosch Exp $
+# $Id: mid.cgi,v 1.2 1998-03-18 19:20:38 wosch Exp $
 
 $hsty_base = '';
 
@@ -86,7 +86,7 @@ sub clickable {
 }
 
 print &short_html_header("FreeBSD Message-ID Mail Archives");
-print qq{<p><a href="mid.html">Back to the search interface</a><p>\n};
+print qq{<p><a href="../search.html">Back to the search interface</a><p>\n};
 
 &ReadParse(*input);
 
