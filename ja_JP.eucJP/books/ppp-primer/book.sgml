@@ -1,0 +1,2339 @@
+<!DOCTYPE BOOK PUBLIC "-//Davenport//DTD DocBook V3.0//EN">
+<!-- The FreeBSD Japanese Documentation Project -->
+<!-- Original revision: 1.2 -->
+<!-- $FreeBSD$ -->
+
+<!--
+訳:
+広瀬 昌一 shou@kt.rim.or.jp
+佐田 憲治 sada@rr.iij4u.or.jp
+
+DocBook化:
+杉村 貴士 sugimura@jp.FreeBSD.org
+-->
+
+<book>
+
+<bookinfo>
+<title>PPP - Pedantic PPP Primer</title>
+
+<authorgroup>
+<author>
+<firstname>Steve</firstname>			
+<surname>Sims</surname>
+<affiliation>
+<address><email>SimsS@IBM.net</email></address>
+</affiliation>
+</author>
+</authorgroup>
+
+<pubdate>$FreeBSD: doc/en_US.ISO_8859-1/books/ppp-primer/book.sgml,v 1.2 1999/09/17 23:43:40 nik Exp $</pubdate>
+
+<abstract><para>これは FreeBSD システムをローカル環境のダイアルアップルータ /
+ゲートウェイとしてセットアップするためのステップアップガイドです.
+内容は, 特に指定のない限り FreeBSD 2.2 以降のバージョンを想定しています.
+</para></abstract>
+
+</bookinfo>
+
+<preface>
+<title>概要:</title>
+
+<para>FreeBSD 2.2 におけるユーザモード PPP
+(<emphasis remap=it>"IIJ-PPP"</emphasis> としても知られています) は,
+現在ダイアルアップインターネット環境における Packet Aliasing をサポートしています.
+この機能は, "<emphasis remap=it>Masquerading</emphasis>",
+"<emphasis remap=it>IP Aliasing</emphasis>", そして
+"<emphasis remap=it>Network Address Translation</emphasis>" としても
+知られており, この機能を生かせば FreeBSD システムをイーサネットを基盤とした
+ローカルエリアネットワーク (LAN) とインターネットサービスプロバイダ間の
+ダイアルオンデマンドルータとして活用することができます.
+LAN 上のシステムは FreeBSD システムを経由することにより,
+単一のダイアルアップ接続を通してインターネットと情報を交換することが
+できるのです.</para>
+  
+<para>このガイドは
+<itemizedlist>
+
+<listitem>
+<para>FreeBSD システムをダイアルアウト接続できるように設定し,</para>
+</listitem>
+
+<listitem>
+<para>ダイアルアウト接続をネットワーク上の他のシステムと共用し,</para>
+</listitem>
+
+<listitem>
+<para>Windows システムが FreeBSD システムをインターネットへの
+ゲートウェイとして用いる</para>
+</listitem>
+
+</itemizedlist>
+のための方法を説明しています.
+</para>
+  
+<para>このガイドは IP Aliasing の設定を助けることに重点を置いたものですが,
+個々の構成要素をインストールし設定する時に必要となる具体例も含まれていますから,
+どの章をとっても, FreeBSD でネットワークに関する様々な設定を行うときの
+助けになるでしょう.</para>
+  
+</preface>
+
+<chapter>
+<title>ローカルエリアネットワーク (LAN) をつくる</title>
+
+<para>ppp は通常 <emphasis>一台の</emphasis> ローカルな FreeBSD マシンに
+サービスを提供するために設定されていますが, LAN に接続された資源とインターネット,
+またはその他のダイアルアップサービス間の「ゲートウェイ」(または「ルータ」)として
+使用することもできます.</para>
+
+<sect1>
+<title>典型的なネットワークトポロジ</title>
+
+<para>このガイドでは, 典型的なローカルエリアネットワークでは,
+次のような接続を行っていると想定しています.
+<programlisting> 
++---------+       ----&gt; ダイアルアップインターネット接続
+| FreeBSD |       \       (例: So-net, Infoweb, RIMNET, 等)
+|         |--------
+| "Curly" |
+|         |
++----+----+
+     |
+|----+-------------+-------------+----|  &lt;-- イーサネットネットワーク
+     |             |             |
+     |             |             |
++----+----+   +----+----+   +----+----+
+|         |   |         |   |         |
+|  Win95  |   |   WFW   |   |  WinNT  |
+| "Larry" |   |  "Moe"  |   | "Shemp" |
+|         |   |         |   |         |
++---------+   +---------+   +---------+</programlisting>
+</para>
+  
+</sect1>
+
+<sect1>
+<title>ローカルエリアネットワークに関する想定</title>
+
+<para>このガイド中のネットワークでは, 次のようなことを想定しています.</para>
+
+<para>三台のワークステーションとサーバはイーサネットでつながっています.
+
+<itemizedlist>
+
+<listitem>
+<para>FreeBSD サーバ ("Curly") は 'ed0' として設定された
+ NE-2000 アダプタを使用しています.</para>
+</listitem>
+
+<listitem>
+<para>Windows-95 ワークステーション ("Larry") は Microsoft
+「ネイティブ」な 32 ビット TCP/IP ドライバを使用しています.</para>
+</listitem>
+
+<listitem>
+<para>Windows for Wrokgroups ワークステーション ("Moe") は
+Microsoft の 16 ビット TCP/IP エクステンションを使用しています.</para>
+</listitem>
+
+<listitem>
+<para>Windows NT ワークステーション ("Shemp") は Microsoft
+「ネイティブ」な 32 ビット TCP/IP ドライバを使用しています.</para>
+</listitem>
+
+</itemizedlist>
+ </para>
+  
+<para>イーサネットで結ばれた LAN 内部での IP アドレスは, RFC-1597
+で提案された「予約」アドレスの中から選ばれています.
+具体的には以下の通り.
+<literallayout>Name		IP Address
+"Curly"		192.168.1.1	# FreeBSD マシン
+"Larry"		192.168.1.2	# Win'95 マシン
+"Moe"		192.168.1.3	# WfW マシン
+"Shemp"		192.168.1.4	# Windows NT マシン</literallayout>
+</para>
+  
+<para>このガイドではモデムは FreeBSD マシンの一番目のシリアルポート
+('<filename>/dev/cuaa0</filename>' DOS 用語では
+'<emphasis remap=tt>COM1:</emphasis>') に接続されているものとします.</para>
+
+<para>最後に, インターネットサービスプロバイダ (ISP) は PPP/FreeBSD
+サイドと ISP サイドの両方に自動的に IP アドレスを割り当てるものとします.
+(つまり, リンクの両端で動的 IP アドレス割り当てが行われます.)
+PPP のダイアルアウトの設定の詳細については, 第 2 章
+「FreeBSD システムの設定」で扱います.</para>
+  
+</sect1>
+</chapter>
+
+<chapter>
+<title>FreeBSD システムの設定</title>
+
+<para>ローカルエリアネットワーク (LAN) の統合を進める前に
+FreeBSD マシンについて基本的な情報を三つ知っておく必要があります.</para>
+  
+<para>
+<itemizedlist>
+
+<listitem>
+<para>FreeBSD システムのホスト名 (ガイドの例の中では "Curly"),</para>
+</listitem>
+
+<listitem>
+<para>ネットワークの設定,</para>
+</listitem>
+
+<listitem>
+<para><filename>/etc/hosts</filename> ファイル. (ネットワーク内の
+他のシステムの名前を IP アドレスをリストにしたもの)</para>
+</listitem>
+
+</itemizedlist>
+</para>
+  
+<para>FreeBSD システムをネットワークインストールした場合,
+これらの幾つかはすでに設定されている場合があります.</para>
+  
+<para>インストール時に FreeBSD システムの設定を正しく行った自信がある場合でも,
+後のステップでつまずかないよう, もう一度見直しておくと良いでしょう.</para>
+  
+
+<sect1>
+<title>FreeBSD のホスト名の確認</title>
+
+<para>FreeBSD システムのインストール時に, マシンのホスト名が指定,
+保存されている場合があります.
+確認のため, 以下のコマンドをプロンプトから入力してください.</para>
+  
+<para>
+<informalexample>
+<screen># hostname</screen>
+</informalexample>
+</para>
+  
+<para>FreeBSD システムのホスト名が表示されたはずです.
+もしホスト名が正しければ (すぐわかるでしょ :-),
+3.2 章「イーサネットインタフェイスの設定の確認」まで進んでください.</para>
+  
+<para>例えば, ガイド中のネットワークでは, インストール中 /
+後にホスト名を正しく設定していれば, 'hostname` コマンドは
+'curly.my.domain' を返します. (ここでは ".my.domain"
+の部分はあまり気にしないでください. それは後で片付けます.
+ここで大事なのは最初のドットまでの部分です.)</para>
+  
+<para>FreeBSD のインストール時にホスト名を設定していない場合,
+たぶん 'myname.my.domain` という答が返ってくるはずです.
+<filename>/etc/rc.conf</filename> を編集し, マシンに名前をつけてください.</para>
+  
+
+<sect2>
+<title>FreeBSD のホスト名を設定する</title>
+
+<para><emphasis><emphasis remap=bf>念のため: システム設定ファイルを編集するためには
+'root' でログインする必要があります!</emphasis></emphasis></para>
+
+<para><emphasis><emphasis remap=bf>警告: システム設定ファイルにおかしな変更を
+加えた場合, システムが正常に **起動しない** 可能性があります!
+くれぐれもご注意を!</emphasis></emphasis></para>
+
+<para>ブート時に FreeBSD システムのホスト名を決定している設定ファイルは
+<filename>/etc/rc.conf</filename> です. デフォルトのテキストエディタ
+('<emphasis remap=tt>ee</emphasis>') を使ってこのファイルを編集しましょう.</para>
+  
+<para>ユーザ 'root' でログインし, 以下のコマンドを入力して
+<filename>/etc/rc.conf</filename> をエディタに読み込みましょう.
+
+<informalexample>
+<screen># ee /etc/rc.conf</screen>
+</informalexample>
+</para>
+  
+<para>矢印キーや scroll down を使って, FreeBSD システムのホスト名を
+記述した部分を見つけましょう. デフォルトではこうなっているはずです.
+<informalexample>
+<screen>---
+### Basic network options: ###
+hostname="myname.my.domain"	# Set this!
+---</screen>
+</informalexample>
+
+これを次のように変えましょう.(あなたの環境に合わせてください)
+<informalexample>
+<screen>---
+### Basic network options: ###
+hostname="curly.my.domain"	# Set this!
+---</screen>
+</informalexample>
+</para>
+  
+<para>ホスト名を変更したら, 'Esc' キーを押してコマンドメニューを呼び出して下さい.
+"leave editor" を選択し, 確認を求めてきたら "save changes"
+を選びましょう.</para>
+  
+</sect2>
+</sect1>
+
+<sect1>
+<title>イーサネットインタフェイスの設定の確認</title>
+
+<para>もう一度確認ですが, このガイドでは FreeBSD
+システムのイーサネットインタフェイスとして '<emphasis remap=tt>ed0</emphasis>'
+が用いられていると想定しています. これは NE-1000, NE-2000,
+WD/SMC models 8003, 8013 と  Elite Ultra (8216)
+ネットワークアダプタがデフォルトで使用するものです.</para>
+  
+<para>これ以外のネットワークアダプタは FreeBSD
+では異なったデバイス名で参照されます. FAQ
+をチェックして, ネットワークアダプタの記述を探してください.
+アダプタのデバイス名が分からない場合は, FreeBSD FAQ を読んで,
+使用中のカードのデバイス名を確かめ, 以下のステップで登場するデバイス名をその名前
+(例えば '<emphasis remap=tt>de0</emphasis>',
+'<emphasis remap=tt>zp0</emphasis>' など) に読み替えてください.</para>
+  
+<para>ホスト名と同様, イーサネットインタフェイスも FreeBSD
+システムのインストール時に設定されている場合があります.</para>
+  
+<para>FreeBSD システムの (イーサネットその他の)
+インタフェイスに関する設定を表示するために,
+以下のコマンドを入力してください.
+<informalexample>
+<screen># ifconfig -a</screen>
+</informalexample>
+
+(フツーの言葉に直すと, 「うちのネットワークデバイスの
+<emphasis remap=bf>I</emphasis>nter<emphasis remap=bf>F</emphasis>ace
+<acronym>CONFIG</acronym>uration を見せて」って意味です)</para>
+  
+<para>例えば...
+<informalexample>
+<screen># ifconfig -a
+ ed0: flags=8843&lt;UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST&gt; mtu
+1500
+      inet 192.168.1.1 netmask 0xffffff00 broadcast 192.168.1.255
+      ether 01:02:03:04:05:06
+ lp0: flags=8810&lt;POINTOPOINT,SIMPLEX,MULTICAST&gt; mtu 1500
+ tun0: flags=8050&lt;POINTOPOINT,RUNNING, MULTICAST&gt; mtu 1500
+ sl0: flags=c010&lt;POINTOPOINT,LINK2,MULTICAST&gt; mtu 552
+ ppp0: flags=8010&lt;POINTOPOINT,MULTICAST&gt; mtu 1500
+ lo0: flags=8049&lt;UP,LOOPBACK,RUNNING,MULTICAST&gt; mtu 16384
+      inet 127.0.0.1 netmask 0xff000000
+# _</screen>
+</informalexample>
+</para>
+  
+<para>この例では, 以下のデバイスが表示されました.</para>
+  
+<para><emphasis remap=tt>ed0:</emphasis>  イーサネットインタフェイス</para>
+  
+<para><emphasis remap=tt>lp0:</emphasis>  パラレルポートインタフェイス (このガイドでは触れません)</para>
+  
+<para><emphasis remap=tt>tun0:</emphasis> 「トンネル」デバイス <emphasis>ユーザモード ppp が使うやつです!</emphasis></para>
+  
+<para><emphasis remap=tt>sl0:</emphasis>  SL/IP デバイス (このガイドでは触れません)</para>
+  
+<para><emphasis remap=tt>ppp0:</emphasis> もう一つの PPP デバイス (カーネル ppp 用. このガイドでは触れません)</para>
+  
+<para><emphasis remap=tt>lo0:</emphasis>  「ループバック」デバイス (このガイドでは触れません)</para>
+  
+<para>この例では, 'ed0' デバイスは「上がって」動作しています.
+以下の表示がキーになります.
+<orderedlist>
+
+<listitem>
+<para>このデバイスのステータスは "<acronym>UP</acronym>" で,</para>
+</listitem>
+
+<listitem>
+<para>インターネット ("<emphasis remap=tt>inet</emphasis>") アドレス
+(この例では 192.168.1.1) を持ち,</para>
+</listitem>
+
+<listitem>
+<para>有効なサブネットマスク ("netmask" 0xffffff00 は 255.255.255.0
+に等しい) を持ち,</para>
+</listitem>
+
+<listitem>
+<para>有効なブロードキャストアドレス (この例では 192.168.1.255)
+を持っている.</para>
+</listitem>
+
+</orderedlist>
+</para>
+  
+<para>もしイーサネットカードに関する表示がこんな感じだったら,
+<informalexample>
+<screen>ed0: flags=8802&lt;BROADCAST,SIMPLEX,MULTICAST&gt; mtu 1500
+        ether 01:02:03:04:05:06</screen>
+</informalexample>
+
+イーサネットカードはまだ設定されていません.</para>
+  
+<para>イーサネットインタフェイスの設定が正しく行われているなら,
+3.4 章「他の LAN ホストのリストをつくる」まで進んでください.
+そうでない場合はつぎの章に進みましょう.</para>
+  
+
+<sect2>
+<title>イーサネットインタフェイスの設定</title>
+
+<para><emphasis><emphasis remap=bf>年のため: システム設定ファイルを編集するためには
+'root' でログインする必要があります!</emphasis></emphasis></para>
+  
+<para><emphasis><emphasis remap=bf>警告: システム設定ファイルにおかしな変更を
+加えた場合, システムが正常に **起動しない** 可能性があります!
+くれぐれもご注意を!</emphasis></emphasis></para>
+  
+<para>ブート時に FreeBSD
+システムのネットワークインタフェイスの設定を決定している設定ファイルは
+<filename>/etc/rc.conf</filename> です. デフォルトのテキストエディタ ('ee')
+を使ってこのファイルを編集しましょう.</para>
+  
+<para>ユーザ 'root' でログインし, 以下のコマンドを入力して
+<filename>/etc/rc.conf</filename> をエディタに読み込みましょう.</para>
+  
+<para><command>  # ee /etc/rc.conf</command></para>
+  
+<para><filename>/etc/rc.conf</filename> の先頭から 20 行ほどの所に,
+システムのブート時にアクティブにするネットワークインタフェイスを記述する節があります.
+デフォルトの設定ファイルでは, 当該行は次のようになっています.</para>
+  
+<para>
+<informalexample>
+<screen>network_interfaces="lo0"       # List of network interfaces (lo0 is loopback).</screen>
+</informalexample>
+</para>
+  
+<para>FreeBSD に '<emphasis remap=tt>ed0</emphasis>' という名前の
+別のデバイスを加えることを伝えるには,
+この行を修正する必要があります. この行を次のように変えてください.</para>
+  
+<para>
+<informalexample>
+<screen>network_interfaces="lo0 ed0"   # List of network interfaces (lo0 is loopback).</screen>
+</informalexample>
+</para>
+  
+<para>(ループバックデバイス ("<emphasis remap=tt>lo0</emphasis>") と
+イーサネットデバイス ("<emphasis remap=tt>ed0</emphasis>") の定義の間に
+スペースを入れるのを忘れないでください!)</para>
+  
+<para><emphasis><emphasis remap=bf> 念のため: イーサネットカードの名前が
+'<emphasis remap=tt>ed0</emphasis>' でない場合,
+きちんとその正しいデバイス名を指定してください</emphasis></emphasis></para>
+  
+<para>FreeBSD をネットワークインストールした場合,
+ '<literal>network_interfaces=</literal>'
+の行がすでにイーサネットアダプタを参照している場合があります. その場合,
+それが正しいデバイス名かどうかを確認してください.</para>
+  
+<para>次に, イーサネットデバイス ('<emphasis remap=tt>ed0</emphasis>')
+インタフェイスの設定を行いましょう.</para>
+  
+<para>アクティブにするインタフェイスの指定行の下に,
+各インタフェイスに対する実際の設定を記述する行があります.
+<filename>/etc/rc.conf</filename> のデフォルトでは, この一行があるだけです.</para>
+  
+<para>
+<informalexample>
+<screen>ifconfig_lo0="inet 127.0.0.1"   # default loopback device configuration.</screen>
+</informalexample>
+</para>
+  
+<para>この下に '<emphasis remap=tt>ed0</emphasis>' デバイスの
+設定を記述する行を加えましょう.</para>
+  
+<para>FreeBSD をネットワークインストールした場合,
+'<literal>ifconfig_ed0=</literal>'
+の行がループバックデバイスの定義の下に存在する場合があります.
+その場合, 記述された値が正しいものであるかどうか確認してください.</para>
+  
+<para>このガイドでは,
+ループバックデバイスの定義のすぐ次の行に次の一文を加えることにします.</para>
+  
+<para>
+<informalexample>
+<screen>ifconfig_ed0="inet 192.168.1.1 netmask 255.255.255.0"</screen>
+</informalexample>
+</para>
+  
+<para><filename>/etc/rc.conf</filename> の編集が終わったとき,
+ネットワークインタフェイスの記述と設定を行う行は,
+だいたいこんな感じになっているはずです.</para>
+  
+<para>
+<informalexample>
+<screen>---
+network_interfaces="ed1 lo0"    # List of network interfaces (lo0 is loopback).
+ifconfig_lo0="inet 127.0.0.1"   # default loopback device configuration.
+ifconfig_ed1="inet 192.168.1.1  netmask 255.255.255.0"
+---</screen>
+</informalexample>
+</para>
+  
+<para><filename>/etc/rc.conf</filename> の編集が終わったら,
+'Esc' キーを押してコントロールメニューを呼び出して下さい.
+"leave editor" を選択し, 確認を求めてきたら "save changes"
+を選びましょう.</para>
+  
+</sect2>
+</sect1>
+
+<sect1>
+<title>パケットフォワーディングの有効化</title>
+
+<para>デフォルトでは, FreeBSD システムは様々なネットワークインタフェイス間で
+IP パケットのフォワードを行いません. 言い換えると, ルーティングの機能
+(ゲートウェイの機能とも言えます) は無効にされています.</para>
+  
+<para>FreeBSD システムただ一台をインターネット用のワークステーションとして使用し,
+LAN ノードと ISP 間とのゲートウェイとして使用しない場合は,
+3.4 章, 「他の LAN ホストのリストをつくる」まで進みましょう.</para>
+  
+<para>PPP プログラムを使用してローカルの FreeBSD マシンを LAN
+のワークステーション (つまりルータ) としても機能させる場合は,
+IP フォワーディングを有効にする必要があります.</para>
+  
+<para>IP パケットのフォワーディングを有効にするためには
+<filename>/etc/rc.conf</filename> を編集する必要があります.
+以下のコマンドを使って, エディタにこのファイルを読み込んでください.
+<informalexample>
+<screen># ee /etc/rc.conf</screen>
+</informalexample>
+</para>
+  
+<para>先頭から 85 行ほどの所に,
+IP フォワーディングの制御に関する設定を行うこんな節があるはずです.
+<informalexample>
+<screen>=====
+gateway_enable="NO"             # Set to YES if this host will be a gateway.
+=====</screen>
+</informalexample>
+</para>
+  
+<para>これを次のように変えましょう.
+<informalexample>
+<screen>=====
+gateway_enable="YES"            # Set to YES if this host will be a gateway.
+=====</screen>
+</informalexample>
+</para>
+  
+<para>変更したらエディタを抜けて結構です
+(変更点をセーブしておくのをお忘れなく!).</para>
+  
+<para><emphasis><emphasis remap=bf>注意: FreeBSD システムのインストール時に
+IP フォワーディングが有効になっていた場合, すでに
+'<literal>gateway_enable=YES</literal>'
+という設定が行われている場合があります.</emphasis></emphasis></para>
+</sect1>
+
+<sect1>
+<title>他の LAN ホストのリスト (<filename>/etc/hosts</filename>) をつくる</title>
+
+<para>FreeBSD システムの LAN に関する設定の最後のステップは,
+ローカルエリアネットワーク (LAN)
+に接続された様々なシステムのホスト名と TCP/IP アドレスのリストをつくることです.
+このリストは  '<filename>/etc/hosts</filename>' の中に記述されます.</para>
+  
+<para>デフォルトの状態では, このファイルにはホスト名が一つしか含まれていません.
+ループバックデバイス ('lo0') のホスト名とアドレスです.
+ネットワークに関する約束事にしたがって, このデバイス名はいつも "localhost"
+と名付けられ, 127.0.0.1 という IP アドレスを持つことになっています.
+(3.2 章にあるインタフェイスの設定例をご覧下さい.)</para>
+  
+<para><filename>/etc/hosts</filename> を編集するために,
+以下のコマンドを入力してください.
+<informalexample>
+<screen> # ee /etc/hosts </screen>
+</informalexample>
+</para>
+  
+<para>ファイルの終りまで一気に移動して,
+(途中のコメントも気をつけて見ておきましょう.
+有益な情報がいくつか書いてありますよ!)
+LAN 上のホストの IP アドレスとホスト名を入力してください.
+ガイド中のネットワークでは次のようになります.
+<informalexample>
+<screen>192.168.1.1    curly  curly.my.domain  # FreeBSD システム
+192.168.1.2    larry  larry.my.domain  # Windows '95 システム
+192.168.1.3    moe    moe.my.domain    # Windows for Workgroups
+システム
+192.168.1.4    shemp  shemp.my.domain  # Windows NT システム</screen>
+</informalexample>
+</para>
+  
+<para>('<emphasis remap=tt>127.0.0.1 localhost</emphasis>'
+のエントリが書かれた行は変更する必要はありません.)</para>
+  
+<para>入力を終えたら, 'Esc' キーを押してコントロールメニューを呼び出してください.
+"leave editor" を選択し, 確認を求めてきたら "save changes"
+を選びましょう.</para>
+  
+</sect1>
+
+<sect1>
+<title>FreeBSD システムのテスト</title>
+
+<para>おめでとう! これで FreeBSD システムはネットワークに接続された
+UNIX システムとして設定されました. <filename>/etc/rc.conf</filename>
+を変更した場合, ここで FreeBSD システムをリブートしてください.
+これには二つの大きな目的があります.
+<itemizedlist>
+
+<listitem>
+<para>インタフェイスの設定に加えた変更を反映させ,</para>
+</listitem>
+
+<listitem>
+<para>システムが設定エラーを報告せずに再起動することを確かめるためです.</para>
+</listitem>
+
+</itemizedlist>
+</para>
+  
+<para>システムのリブートが完了したら,
+ネットワークインタフェイスのテストを行ってください.</para>
+  
+
+<sect2>
+<title>ループバックデバイスの動作点検</title>
+
+<para>ループバックデバイスが正しく設定されているかどうか確かめるために,
+'root' でログインしてこう入力してください.
+<informalexample>
+<screen># ping localhost</screen>
+</informalexample>
+</para>
+  
+<para>こういうメッセージが見えるはずです.
+<informalexample>
+<screen># ping localhost
+PING localhost.my.domain. (127.0.0.1): 56 data bytes
+64 bytes from 127.0.0.1: icmp_seq=0 ttl=255 time=0.219 ms
+64 bytes from 127.0.0.1: icmp_seq=1 ttl=255 time=0.287 ms
+64 bytes from 127.0.0.1: icmp_seq=2 ttl=255 time=0.214 m
+[...]</screen>
+</informalexample>
+
+このメッセージは Ctrl-C を押すまで延々流れ続けます.</para>
+  
+</sect2>
+
+<sect2>
+<title>イーサネットデバイスの動作点検</title>
+
+<para>イーサネットデバイスが正しく設定されているかどうか確かめるために,
+こう入力してください.
+<informalexample>
+<screen># ping curly</screen>
+</informalexample>
+</para>
+  
+<para>こういうメッセージが見えるはずです.
+<informalexample>
+<screen># ping curly
+PING curly.my.domain. (192.168.1.1): 56 data bytes
+64 bytes from 192.168.1.1: icmp_seq=0 ttl=255 time=0.219 ms
+64 bytes from 192.168.1.1: icmp_seq=1 ttl=255 time=0.200 ms
+64 bytes from 192.168.1.1: icmp_seq=2 ttl=255 time=0.187 ms
+[...]</screen>
+</informalexample>
+</para>
+  
+<para>この二つの例で大事なのは, ホスト名 (loopback と curly) が正しく
+IP アドレス (127.0.0.1 と 192.168.1.1)
+に関連づけられているのを確認することです.
+これで <filename>/etc/hosts</filename> ファイルの内容が正しいかどうか確認できます.</para>
+  
+<para>もし "curly" の IP アドレスが 192.168.1.1 ではない, あるいは
+"localhost" のアドレスが 127.0.0.1 ではない場合, 3.4 章まで戻って
+<filename>/etc/hosts</filename> の内容を見直してください.</para>
+  
+<para>ping コマンドの出力でホスト名とアドレスは正しく対応づけられているが,
+何か他のエラーが表示されるなら,
+インタフェイスの設定がうまく行っていないのでしょう.
+3.1 章まで戻って最初から確認し直してください.</para>
+  
+<para>チェックが全部終わったら, つぎの章に進んでください.</para>
+  
+</sect2>
+</sect1>
+</chapter>
+
+<chapter>
+<title>PPP のダイアルアウト接続の設定</title>
+
+<para>ppp ドライバには, 基本的には "Interactive" と "Automatic"
+という二つの動作モードがあります.</para>
+  
+<para>Interactive モードでは,</para>
+  
+<para>
+<itemizedlist>
+
+<listitem>
+<para>手動で ISP に接続を確立し,</para>
+</listitem>
+
+<listitem>
+<para>ネットサーフィンを楽しんだり,
+ファイルやメールを転送したりのなにやかやの後で,</para>
+</listitem>
+
+<listitem>
+<para>手動で ISP との接続を切断することになります.</para>
+</listitem>
+
+</itemizedlist>
+</para>
+  
+<para>Automatic モードでは, PPP プログラムは FreeBSD
+システムが内部的にどういう処理を行っているかじっと観察していて,
+必要に応じて自動的に ISP と接続, 切断し,
+あたかもネットワークがインターネットに直接接続されているかのように振る舞います.</para>
+  
+<para>この章ではこの二つのモードのうち, `ppp` 環境を
+"Automatic" モードで動作させる設定に重点を置いて説明します.</para>
+  
+
+<sect1>
+<title>オリジナルの PPP 設定ファイルをバックアップする</title>
+
+<para>PPP 用のファイルに何か変更を加える前に, FreeBSD
+システムのインストール時につくられたデフォルトのファイルのコピーを取っておきましょう.</para>
+  
+<para>'root' でログインして, 次の手順を踏んでください.</para>
+  
+<para>'<filename>/etc</filename>' ディレクトリに移ります.</para>
+  
+<para><emphasis remap=tt># cd /etc</emphasis></para>
+  
+<para>'ppp' ディレクトリ内のオリジナルのファイルのバックアップをつくります.</para>
+  
+<para><emphasis remap=tt># cp -R ppp ppp.ORIGINAL</emphasis></para>
+  
+<para>これで '<filename>/etc</filename>' ディレクトリの下に '<emphasis remap=tt>ppp</emphasis>' と
+'<filename>ppp.ORIGINAL</filename>' という二つのサブディレクトリができました.</para>
+  
+</sect1>
+
+<sect1>
+<title>お手製の PPP 設定ファイルをつくる</title>
+
+<para>FreeBSD のインストール中に, たくさんの設定ファイルのサンプルが
+/etc/ppp ディレクトリの中につくられます.
+少し時間を取ってファイルの内容を眺めてみてください.
+これらのサンプルは実際の稼働例に基づいたもので, PPP
+プログラムの機能や特長がよくあらわれています.</para>
+  
+<para>これらのサンプルファイルを参考にし,
+必要に応じて実際の設定に生かすことを<emphasis>強く</emphasis>お勧めします.</para>
+  
+<para>`ppp` プログラムに関する詳細な情報がほしいなら, ppp の man を
+読んでください.
+<informalexample>
+<screen># man ppp</screen>
+</informalexample>
+</para>
+  
+<para>PPP ダイアラで使われている `chat`
+スクリプト言語に関する詳細な情報がほしいなら,
+chat の man を読んでください.
+<informalexample>
+<screen># man chat</screen>
+</informalexample>
+</para>
+  
+<para>この章の残りの部分は PPP 関連のファイルのお勧め設定です.</para>
+  
+
+<sect2>
+<title>'<filename>/etc/ppp/ppp.conf</filename>' ファイル</title>
+
+<para>'<filename>/etc/ppp/ppp.conf</filename>' ファイルにはダイアルアウト PPP
+接続に必要な設定と情報が含まれています.
+このファイルには複数の接続の設定が含まれていてもかまいません.
+FreeBSD ハンドブック (XXX URL? XXX) には,
+このファイルの内容と文法に関する詳しい記述があります.</para>
+  
+<para>この章では,
+ダイアルアウト接続を行うための必要最小限の設定についてのみ説明します.</para>
+  
+<para>下の /etc/ppp/ppp.conf ファイルは, ガイド中の LAN において,
+ダイアルアウトインターネットゲートウェイの機能を提供するのに十分なものです.
+<informalexample>
+<screen>################################################################
+# PPP 設定ファイル ('/etc/ppp/ppp.conf')
+#
+# デフォルト設定; PPP が発動した時常に実行され, 全ての
+# システム設定に適用される.
+################################################################
+default:
+set device /dev/cuaa0
+set speed 57600
+disable pred1
+deny pred1
+disable lqr
+deny lqr
+set dial "ABORT BUSY ABORT NO\\sCARRIER TIMEOUT 5 \"\" ATE1Q0M0
+OK-AT-OK\\dATDT\\T TIMEOUT 40 CONNECT"
+set redial 3 10
+#
+#
+################################################################
+#
+# interactive モード用の設定:
+#
+# `ppp -alias interactive` で発動せよ.
+#
+################################################################
+interactive:
+set authname _リモートシステムでのユーザ ID_
+set authkey _リモートシステムでのパスワード_
+set phone 1-800-123-4567
+set timeout 300
+set openmode active
+accept chap
+#
+################################################################
+#
+# demand-dial (automatic) モードではこの設定が使われる:
+#
+# 'ppp -auto -alias demand' で発動せよ.
+#
+################################################################
+demand:
+set authname _リモートシステムでのユーザ ID_
+set authkey _リモートシステムでのパスワード_
+set phone 1-800-123-4567
+set timeout 300
+set openmode active
+accept chap
+set ifaddr 127.1.1.1/0 127.2.2.2/0 255.255.255.0
+add 0 0 127.2.2.2
+################################################################
+# /etc/ppp/ppp.conf はこれでおしまい</screen>
+</informalexample>
+
+このファイル - 実際のシステムから持ってきたものですが - には,
+設定に関連する三つのセクションがあります.</para>
+  
+
+<sect3>
+<title>"<emphasis remap=tt>default</emphasis>" セクション</title>
+
+<para>'<emphasis remap=tt>default:</emphasis>' セクションには,
+このファイルの他のどのセクションからも参照される値と設定がおさめられています.
+このセクションの内容が, 
+暗黙の内に他のセクションの設定に書き加えられるものと考えておけば良いでしょう.</para>
+  
+<para>ここは全てのダイアルアップセッションにおいて共通な
+「グローバルなデフォルト設定」を置いておくのに丁度良い場所です.
+例えばモデムの設定やダイアルの前準備等の,
+通常接続先のシステムに応じて変更する必要のない設定を置くのに特に適しています.</para>
+  
+<para>サンプルとして挙げた '<filename>/etc/ppp/ppp.conf</filename>' ファイルの
+"default" セクションを一行づつ見ていきましょう.
+<informalexample>
+<screen>set device /dev/cuaa0</screen>
+</informalexample>
+
+この文は PPP プログラムに一番目のシリアルポートを使用するよう通知しています.
+FreeBSD 下における '<filename>/dev/cuaa0</filename>' デバイスとは, DOS, Windows,
+Windows 95 なんかで言うところの "<emphasis remap=tt>COM1:</emphasis>" と同じポートのことです.</para>
+  
+<para>モデムが <emphasis remap=tt>COM2:</emphasis> につながれている場合は, 
+'<filename>/dev/cua01</filename>' を指定してください. <emphasis remap=tt>COM3:</emphasis> の場合は
+'<filename>/dev/cua02</filename>' です.</para>
+  
+<para>
+<informalexample>
+<screen>set speed 57600 </screen>
+</informalexample>
+</para>
+  
+<para>この文はシリアルポートとモデム間での送信 / 受信速度を設定しています.
+この例で使用されているのは 28.8k のモデムですが, 値を 57600 に設定しておけば,
+最近のモデムに組み込みのデータ圧縮機能のおかげでスループットが上がり,
+シリアルリンク間でより高い転送速度を得ることができます.</para>
+  
+<para>モデムとの通信に問題がある場合, この設定を 38400,
+あるいは 19200 まで下げてみてください.</para>
+  
+<para>
+<informalexample>
+<screen>disable pred1
+deny pred1</screen>
+</informalexample>
+</para>
+  
+<para>この二行は PPP プログラムの "CCP/Predictor type 1"
+圧縮機能を無効にしています. 現在のバージョンの `ppp`
+は draft Internet standards に従ったデータ圧縮法をサポートしていますが,
+残念なことに, 多くの ISP
+では, この機能をサポートしていない機器が使用されています.
+どちらにせよ多くのモデムは実行時に圧縮を行っていますから, FreeBSD
+側でこの機能を無効にし, リモート側がこの機能を要求してきた場合に拒否しても,
+大してパフォーマンスは落ちないでしょう.</para>
+  
+<para>
+<informalexample>
+<screen>disable lqr
+deny lqr</screen>
+</informalexample>
+</para>
+  
+<para>この二行は Point-to-Point protocol (PPP) の完全な仕様の一部である
+"Line Quality Reporting" (回線品質報告) 機能を制御しています.
+(詳細は RFC-1989 を参照してください.)</para>
+  
+<para>一行目 "disable lqr"
+は回線の品質状態をリモートエンドのデバイスへ報告しないよう,
+PPP プログラムに命じています.</para>
+  
+<para>二行目, "deny lqr" はリモートエンドからの回線品質報告要求を拒否するよう,
+PPP プログラムに命じています.</para>
+  
+<para>最近のダイアルアップ用のモデムには大抵自動エラー検出 /
+訂正機能がついていますし, 
+LQR 報告機能は多くのベンダの製品で完全には実装されていませんから,
+通常はこの二行をデフォルト設定に加えておいても大丈夫でしょう.</para>
+  
+<para>
+<informalexample>
+<screen>set dial "ABORT BUSY ABORT NO\\sCARRIER TIMEOUT 5 \"\" ATE1Q0M0
+OK-AT-OK\\dATDT\\T TIMEOUT 40 CONNECT"</screen>
+</informalexample>
+</para>
+  
+<para><emphasis>注意: (このドキュメントでは改行が入っているように見えるかもしれませんが,
+実際にはこの文の途中で改行を入れないでください.)</emphasis></para>
+  
+<para>この行は PPP プログラムにモデムのダイアル法と,
+以下のようなダイアル時の基本的なガイドラインを指定しています.
+<itemizedlist>
+
+<listitem>
+<para>モデムが "BUSY" リザルトコードを返した場合,
+ダイアル試行は失敗したものとし,</para>
+</listitem>
+
+<listitem>
+<para>モデムが "NO CARRIER"
+リザルトコードを返した場合もダイアル試行は失敗したものとし,</para>
+</listitem>
+
+<listitem>
+<para>PPP プログラムは以下のイベント各々が 5
+秒間のタイムアウト期間内に終了するものと想定する.
+<itemizedlist>
+
+<listitem>
+<para>初期状態では, PPP プログラムはモデムに対して何も想定していない
+(上の例の \"\" の部分で指定されている)</para>
+</listitem>
+
+<listitem>
+<para>プログラムはモデムにモデム初期化文字列 "ATE1Q0M0"
+を送り, "OK" という返事が返ってくるのを待つ. レスポンスが帰ってこない場合,
+プログラムはモデムに attention コマンド ("AT") を送り,
+再び "OK" という返事が返ってくるのを待つ.</para>
+</listitem>
+
+<listitem>
+<para>プログラムは一秒間待ち時間を入れ ("\\d" の部分で指定されている),
+モデムにダイアリング文字列を送る. "ATDT"
+はトーンダイアリングを用いてダイアルを行う場合の標準モデムコマンドであり,
+回線がトーンダイアルではない場合, "ATDT" を "ATDP" と置換する必要がある.
+"\\T" 文字列は実際の電話番号が入る場所である ("set dial 123-4567"
+で指定された値が自動的に挿入される).</para>
+</listitem>
+
+</itemizedlist>
+</para>
+</listitem>
+
+<listitem>
+<para>最後に, (最大) 40 秒のタイムアウトの前に, PPP プログラムはモデムが
+"CONNECT" リザルトコードを返すと想定している.</para>
+</listitem>
+
+</itemizedlist>
+</para>
+  
+<para>この対話におけるいかなる時点での失敗もダイアリングの失敗と解釈され,
+PPP プログラムは接続に失敗します.</para>
+  
+<para>(PPP ダイアラで使用されているミニスクリプト言語の詳細については
+"chat" の man を参照してください.)</para>
+  
+<para>
+<informalexample>
+<screen>set redial 3 10</screen>
+</informalexample>
+
+この行はダイアル接続を直ちに確立することができなかった場合,
+リダイアルまで 10 秒の間隔を挟んで (必要な場合は 3 回まで)
+再試行するよう, PPP プログラムに指定しています.</para>
+  
+</sect3>
+
+<sect3>
+<title>"<emphasis remap=tt>interactive</emphasis>" セクション</title>
+
+<para>'<emphasis remap=tt>interactive:</emphasis>' セクションには,
+特定のリモートシステムと「対話的 (interactive)」に
+PPP セッションを確立するときに使用される値と設定がおさめられています.
+このセクションの設定には, "default" セクションの内容が自動的に追加されます.</para>
+  
+<para>このガイド中の "interactive" セクションの例では,
+接続先のリモートシステムは,
+何らかの風変わりなスクリプト言語を使用しないでもユーザ認証を行うことができるものと想定しています.
+つまり, このサンプルでは接続を確立するために CHAP プロトコルを使用します.</para>
+  
+<para>おおざっぱに言うと, もし Windows95
+のダイアラの「接続」ボタンを押しただけで接続が確立できる環境なら,
+このサンプルはうまく働きます.</para>
+  
+<para>一方, もし Microsoft Windows95 のダイアルアップネットワーク機能を利用して
+ISP に接続するとき, Microsoft Plus!
+の「ダイアルアップスクリプトツール」に頼るか, Windows 95
+の接続オプションで「ダイアル後にターミナルウィンドウを表示する」を選択しなければならない場合,
+ISP と接続を行うためには, PPP 設定ファイルのサンプルや ppp の man で
+"expect / response" スクリプトの例を参考にする必要があるでしょう.
+"set login" コマンドはそのような目的に使用できます.</para>
+  
+<para>まあ、それよりも PAP / CHAP 認証を提供している ISP
+を探した方が良いかもしれませんけどね!</para>
+  
+<para>この設定例は, 以下のプロパイダと接続するために使えることが分かっています.
+<itemizedlist>
+
+<listitem>
+<para>Various Shiva LanRovers</para>
+</listitem>
+
+<listitem>
+<para>The IBM Network (<ulink URL="http://www.ibm.net">http://www.ibm.net</ulink>)</para>
+</listitem>
+
+<listitem>
+<para>AT&amp;T WorldNet (<ulink URL="http://att.com/worldnet">http://att.com/worldnet</ulink>)</para>
+</listitem>
+
+<listitem>
+<para>Erol's (<ulink URL="http://www.erols.com">http://www.erols.com</ulink>)</para>
+</listitem>
+
+</itemizedlist>
+</para>
+  
+<para>サンプルとして挙げた '<filename>/etc/ppp/ppp.conf</filename>' ファイルの
+"interactive" セクションを一行づつ見ていきましょう.</para>
+  
+<para>
+<informalexample>
+<screen>set authname _リモートシステムでのユーザ ID_</screen>
+</informalexample>
+
+リモートシステムでログイン時に使用する名前を指定します.</para>
+  
+<para>
+<informalexample>
+<screen>set authkey _リモートシステムでのパスワード_</screen>
+</informalexample>
+
+リモートシステムで使用するパスワードです.</para>
+  
+<para>
+<informalexample>
+<screen>set phone 1-800-123-4567</screen>
+</informalexample>
+
+リモートシステムの電話番号です. PBX (Private Branch eXchange, 構内交換機)
+の内部にいる場合は, <emphasis remap=tt>9, </emphasis> を番号の前に加えることができます.</para>
+  
+<para>
+<informalexample>
+<screen>set timeout 300</screen>
+</informalexample>
+
+300 秒 (5 分) 間データが流れなかった場合, 自動的に回線を切断するよう PPP
+プログラムに命じています. この値は必要に応じて変更することができます.</para>
+  
+<para>
+<informalexample>
+<screen>set openmode active</screen>
+</informalexample>
+
+モデムが接続したらすぐに交渉を試みるよう PPP
+プログラムに命じています. 自動的にこれを行うリモートサイトもありますが,
+自分からは行わないサイトもあります.
+このオプションを使えば,
+リンクのこちら側でイニシアチブを取って接続確立を試みることができます.</para>
+  
+<para>
+<informalexample>
+<screen>accept chap</screen>
+</informalexample>
+
+ユーザ認証に "Challenge-Handshake Authentication Protocol"
+を用いるよう PPP プログラムに命じています. ローカル側とリモート側でユーザ ID
+とパスワードとしてやり取りされる値は, 上の 'authname' と 'authkey'
+のエントリからとられます.</para>
+  
+</sect3>
+
+<sect3>
+<title>"<emphasis remap=tt>demand</emphasis>" セクション</title>
+
+<para>特定のリモートサイトと「ダイアル・オン・デマンド」な PPP
+セッションを確立するときに使用される値と設定がおさめられています.
+このセクションの設定にも, "default" セクションの内容が自動的に追加されます.</para>
+  
+<para>最後の二行を除いて, このセクションの設定は "interactive"
+モードの設定で用いられているのと全く同じものです.</para>
+  
+<para>??? の部分でも述べているように, このガイド中にあらわれる
+"demand" セクションの例では, 接続先のリモートシステムは CHAP
+プロトコルを利用した接続確立法を理解できるものと想定しています.</para>
+  
+<para>サンプルとして挙げた '<filename>/etc/ppp/ppp.conf</filename>' ファイルの
+"demand" セクションを一行づつ見ていきましょう.</para>
+  
+<para>
+<informalexample>
+<screen>set authname _リモートシステムでのユーザ ID_</screen>
+</informalexample>
+
+リモートシステムでログイン時に使用する名前を指定します.</para>
+  
+<para>
+<informalexample>
+<screen>set authkey _リモートシステムでのパスワード_</screen>
+</informalexample>
+
+リモートシステムで使用するパスワードです.</para>
+  
+<para>
+<informalexample>
+<screen>set phone 1-800-123-4567</screen>
+</informalexample>
+
+リモートシステムの電話番号です.</para>
+  
+<para>
+<informalexample>
+<screen>set timeout 300</screen>
+</informalexample>
+</para>
+  
+<para>300 秒 (5 分) 間データが流れなかった場合, 自動的に回線を切断するよう PPP
+プログラムに命じています. この値は必要に応じて変更することができます.</para>
+  
+<para>
+<informalexample>
+<screen>set openmode active</screen>
+</informalexample>
+</para>
+  
+<para>モデムが接続したらすぐにネゴジェーションを試みるよう PPP
+プログラムに命じています. 自動的にこれを行うリモートサイトもありますが,
+自分からは行わないサイトもあります.
+このオプションを使えば,
+リンクのこちら側でイニシアチブを取って接続確立を試みることができます.</para>
+  
+<para>
+<informalexample>
+<screen>accept chap</screen>
+</informalexample>
+</para>
+  
+<para>ユーザ認証に "Challenge-Handshake Authentication Protocol"
+を用いるよう PPP プログラムに命じています. ローカル側とリモート側でユーザ ID
+とパスワードとしてやり取りされる値は, 上の 'authname' と 'authkey'
+のエントリからとられます.</para>
+  
+<para>
+<informalexample>
+<screen>set ifaddr 127.1.1.1/0 127.2.2.2/0 255.255.255.0</screen>
+</informalexample>
+</para>
+  
+<para>PPP リンクのローカル側とリモート側の「偽の」 IP アドレスのペアを設定し,
+ローカル側の '<emphasis remap=tt>tun0</emphasis>' (トンネル) デバイス
+(このデバイスの詳細は ?? 章にあります) に 127.1.1.1 の, リモート側には
+127.2.2.2 の IP アドレスを生成するように PPP プログラムに命じています.
+両方のアドレスに '<filename>/0</filename>' をつけておけば,
+それらのアドレスの先頭から 0 ビットまでが重要な部分で,
+残りの部分はリンクが確立されたときに,
+ローカル側とリモート側のシステムの交渉によって変更してもよい
+(というか, この場合は必ず変更されなければならない) と PPP
+プログラムに教えることができます.
+255.255.255.0 という文字列は,
+それらの仮想デバイス間に適用されるサブネットマスク値を
+PPP プログラムに教えています.</para>
+  
+<para>注意. この例では ISP がリンクの両端に対して IP
+アドレスを動的に提供するものと想定しています! もし ISP
+からローカル側で使用すべき具体的な IP アドレスの割り当てを受けている場合,
+<emphasis remap=tt>127.1.1.1</emphasis> の<emphasis>代わりに</emphasis>その IP アドレスを入力してください.</para>
+  
+<para>逆に, ISP がリモート側で使用する具体的な IP アドレスを指定している場合,
+<emphasis remap=tt>127.2.2.2</emphasis> の<emphasis>代わりに</emphasis>その IP アドレスを入力してください.</para>
+  
+<para>これらの場合においても, 各アドレスの後ろの '<filename>/0</filename>'
+を残しておくのが良い考えでしょう.
+もしそれらのアドレスが<emphasis>実際に</emphasis>変更された場合でも,
+PPP プログラムはその変更に対応することができるからです.</para>
+  
+<para>
+<informalexample>
+<screen>add 0 0 127.2.2.2</screen>
+</informalexample>
+</para>
+  
+<para>最後の行では, ISP システムの (偽の) IP アドレスを指す
+IP トラフィックのデフォルトルートを追加するよう,
+PPP プログラムに命じています.</para>
+  
+<para><emphasis><emphasis remap=bf>注意: 前の行で <emphasis remap=tt>127.2.2.2</emphasis> の代わりに ISP
+に指定されたアドレスを用いている場合, ここでも <emphasis remap=tt>127.2.2.2</emphasis>
+の代わりにその番号を使用してください</emphasis></emphasis>.</para>
+  
+<para>この「偽」の IP トラフィックルートを追加しておけば,
+アイドル中の PPP プログラムは以下の動作を自動的に行うことができます.
+<itemizedlist>
+
+<listitem>
+<para>ISP と「<emphasis>自動的に</emphasis>」 接続を確立し,</para>
+</listitem>
+
+<listitem>
+<para>リンクのローカル側とリモート側の IP アドレスを再設定し,</para>
+</listitem>
+
+<listitem>
+<para>ローカルのマシンと ISP 間でパケットを転送する.</para>
+</listitem>
+
+</itemizedlist>
+</para>
+  
+<para>"default" セクションの timeout の値に指定された秒間 TCP/IP
+のトラフィックが流れなかった場合,
+PPP プログラムは自動的にダイアルアップ接続を切断し,
+始めの状態に戻ります.</para>
+  
+</sect3>
+</sect2>
+
+<sect2>
+<title>'<filename>/etc/ppp/ppp.linkup</filename>' ファイル</title>
+
+<para>PPP の設定を完全にするために必要なもう一つのファイルが
+'<filename>/etc/ppp/ppp.linkup</filename>' です.
+このファイルにはダイアルアップリンクが確立した後に,
+PPP プログラムが実行すべき命令が含まれています.</para>
+  
+<para>ダイアルアップ接続の場合, PPP プログラムはリモート側の偽の IP アドレス
+(前の章の例では 127.2.2.2) に対して生成されたデフォルトルートを削除し,
+(ダイアルアップ接続の確立中にわかる) 実際のリモートエンドの IP
+アドレスを指す新しいデフォルトルートをインストールする必要があります.</para>
+  
+<para>典型的な '<filename>/etc/ppp/ppp.linkup</filename>' ファイル:
+<informalexample>
+<screen>#########################################################################=
+
+# PPP Link Up File ('/etc/ppp/ppp.linkup')
+#
+#  このファイルは PPP がネットワーク接続を確立した後でチェックされます.
+#
+#  このファイルは以下の順序で検索されます.
+#
+#  1) まず, ローカル側に割り当てられた IP アドレスが検索され,
+#     関連するコマンドが実行されます.      
+#
+#  2) IP アドレスが見つからない場合, PPP の起動時に指定されたラベル名が
+#     検索され, 関連するコマンドが実行されます.
+#
+#  3) いずれの場合にも当てはまらない場合, 'MYADDR:' ラベルの下の
+#     コマンドが実行されます.
+#
+#########################################################################=
+
+#
+# このセクションは /etc/ppp/ppp.conf 内の "demand" の設定で
+# 使用される.
+demand:
+ delete ALL
+ add 0 0 HISADDR
+#
+# /etc/ppp/ppp.conf 中の他の全ての設定ではこちらを用いる
+#
+MYADDR:
+ add 0 0 HISADDR
+########################################################################
+# End of /etc/ppp/ppp.linkup</screen>
+</informalexample>
+
+'<filename>/etc/ppp/ppp.conf</filename>' で使用されているのと全く同じ "demand:"
+というタグのセクションがあることに注意して下さい.
+このセクションでは, "demand" の設定を用いてリンクが確立された場合,
+<orderedlist>
+
+<listitem>
+<para>PPP プログラムが生成した全ての IP ルーティング情報を削除し,</para>
+</listitem>
+
+<listitem>
+<para>リモートエンドの実際のアドレスをデフォルトルートに追加する</para>
+</listitem>
+
+</orderedlist>
+
+よう, PPP プログラムに命じています.</para>
+  
+<para>'<filename>/etc/ppp/ppp.conf</filename>' 内で '<emphasis remap=tt>set ifaddr</emphasis>' や '<emphasis remap=tt>add 0 0</emphasis>'
+を使用している設定 (つまり, ダイアルオンデマンドの設定) においては,
+<filename>/etc/ppp/ppp.linkup</filename> 内で "delete ALL" や "add 0 0 HISADDR"
+コマンドを実行することが重要になります.</para>
+  
+<para><emphasis><emphasis remap=bf>これこそがリンクのオンデマンド設定を制御するメカニズムだからです.</emphasis></emphasis></para>
+  
+<para><filename>/etc/ppp/ppp.linkup</filename> 内で明示的に名前を指定されていない設定は,
+"MYADDR:" セクションにあるコマンドを (それが何であれ) 実行します.
+非デマンドダイアルの設定 (例えばサンプルの "interactive:")
+はこれに該当します. このセクションでは, ISP (リモートエンド) の IP
+アドレスをデフォルトルートに追加しているだけです.</para>
+  
+</sect2>
+</sect1>
+
+<sect1>
+<title>IP Aliasing</title>
+
+<para>今までのステップは, ISP にダイアルアップで接続しようとしているどのような
+FreeBSD システムにとっても共通のものです.</para>
+  
+<para>もしこのガイドを読む目的が FreeBSD とインターネットをダイアルアウト
+ppp で接続することだけである場合,
+第 6 章「ネットワークの点検」まで進んでください.</para>
+  
+<para>PPP プログラムをオンデマンドモードで動かす非常に大きな利点の一つは,
+プログラムがローカルエリアネットワーク (LAN) 上の他のシステム間の IP
+トラフィックを自動的にルーティングできる点にあります.
+この機能は "<emphasis>IP Aliasing</emphasis>",
+"<emphasis>Network Address Translation</emphasis>", "<emphasis>Address Masquerading</emphasis>" または
+"<emphasis>Transparent Proxying</emphasis>" などの様々な名前で知られています.</para>
+  
+<para>しかしながら, どのような呼び名が使用されるにせよ,
+このモードは自動的に得られるものではありません. PPP
+プログラムをごく普通に起動した場合, プログラムは LAN
+のインタフェイスとダイアルアウト接続間でパケットを転送しません.
+要するに, FreeBSD システムだけが ISP に接続され,
+他のワークステーションはその接続を「共用」することができないのです.</para>
+  
+<para>プログラムが以下のコマンドのいずれかで起動されたとしましょう.</para>
+  
+<para><emphasis remap=tt># ppp interactive   (Interactive mode)</emphasis></para>
+  
+<para> または</para>
+  
+<para><emphasis remap=tt># ppp -auto demand  (Dial-on-Demand mode)</emphasis></para>
+  
+<para>すると, システムは FreeBSD マシンに対して<emphasis>のみ</emphasis>,
+インターネットに接続されたワークステーションとしての機能を提供するでしょう.</para>
+  
+<para>PPP プログラムを LAN の資源とインターネット間のゲートウェイとして起動するには,
+代わりに以下のコマンドのいずれかを使用してください.</para>
+  
+<para><emphasis remap=tt># ppp -alias interactive   (Interactive mode)</emphasis></para>
+  
+<para> または</para>
+  
+<para><emphasis remap=tt># ppp -auto -alias demand  (Dial-on-Demand mode)</emphasis></para>
+  
+<para>また, <emphasis remap=tt>``alias enable yes''</emphasis> というコマンドを ppp
+の設定ファイルにいれておく方法をとることもできます
+(詳細については man をご覧ください).</para>
+  
+<para>第 5 章「Windows システムの設定」に進んでも,
+このことは忘れないでおいてください.</para>
+  
+</sect1>
+</chapter>
+
+<chapter>
+<title>Windows システムの設定</title>
+
+<para>第 1 章で説明したように, ガイド中のネットワークはローカルエリアネットワーク
+(LAN) 間のゲートウェイ (ルータ) として FreeBSD システム ("Curly")
+を使用しています.
+LAN 自体は二系統の Windows ワークステーションで構成されていますが,
+LAN のノードが Curly をルータとして使用するには,
+各ノードが適切に設定される必要があります.
+このセクションは Windows ワークステーションのダイアルアップネットワークの
+設定法を説明するものではありません. そちらの説明をお捜しなら,
+<ulink URL="http://www.aladdin.co.uk/techweb">http://www.aladdin.co.uk/techweb</ulink> をお勧めします.</para>
+  
+
+<sect1>
+<title>Windows 95 の設定</title>
+
+<para>Windows 95 を LAN に接続された資源として設定するのは比較的簡単です.
+Windows 95 のネットワークの設定で ISP に対するデフォルトのゲートウェイとして
+FreeBSD システムを使用するよう変更するだけで済むからです.
+以下の手順を踏んでください.</para>
+  
+<para><emphasis remap=bf>Windows 95 用の "hosts" ファイルをつくる</emphasis></para>
+  
+<para>LAN 上の他の TCP/IP システムに接続するためには, 3.4 章で
+FreeBSD システムにインストールした "hosts"
+ファイルとまったく同じものを作成してやる必要があります.</para>
+  
+<para>
+<itemizedlist>
+
+<listitem>
+<para>「スタート」ボタンを押し,「ファイル名を指定して実行」を選択して
+"notepad \WINDOWS\HOSTS" (引用符は除いてください) と入力し,
+「OK」ボタンを押してください.</para>
+</listitem>
+
+<listitem>
+<para>エディタが開いたら, 3.4 章の hosts
+ファイルに書いてあるアドレスとシステム名を入力してください.</para>
+</listitem>
+
+<listitem>
+<para>編集が終わったらノートパッドを閉じてください
+(ファイルをセーブするのをお忘れ無く!).</para>
+</listitem>
+
+</itemizedlist>
+</para>
+  
+<para><emphasis remap=bf>Windows 95 の TCP/IP ネットワークの設定</emphasis></para>
+  
+<para>
+<itemizedlist>
+
+<listitem>
+<para>タスクバーの「スタート」ボタンを押し,
+「設定」「コントロールパネル」を選択してください.</para>
+</listitem>
+
+<listitem>
+<para>「ネットワーク」アイコンをダブルクリックして開いてください.
+</para>
+
+<para>ネットワークのすべての構成要素に対する設定が表示されます.</para>
+</listitem>
+
+<listitem>
+<para>「ネットワークの設定」 タブを選択し,
+現在のネットワーク構成の中から "TCP/IP-&gt;<emphasis>インタフェイスのタイプ</emphasis>"
+を選択してください ("<emphasis>インタフェイスのタイプ</emphasis>" の部分には,
+あなたのシステムのイーサネットの名称かタイプが入ります).
+</para>
+
+<para>TCP/IP がネットワーク構成に入っていない場合は,
+次の作業に進む前に「追加」ボタンを押し, TCP/IP をインストールしてください.</para>
+
+<para>(ヒント: 「追加」「プロトコル」「Microsoft」「TCP/IP」「OK」)</para>
+</listitem>
+
+<listitem>
+<para>「プロパティ」ボタンを押し, TCP
+コンポーネント関連の設定を表示させて下さい.</para>
+</listitem>
+
+</itemizedlist>
+</para>
+  
+<para><emphasis remap=bf>IP アドレス情報の設定</emphasis>
+<itemizedlist>
+
+<listitem>
+<para>「IP アドレス」のタブをクリックし</para>
+</listitem>
+
+<listitem>
+<para>「IP アドレスを指定」ラジオボタンをクリックしてください.
+</para>
+
+<para>(ガイド中の LAN では Windows 95 システムは "Larry"
+という名前です.)</para>
+</listitem>
+
+<listitem>
+<para>「IP アドレス」のフィールドに "192.168.1.2" を入力してください.</para>
+</listitem>
+
+<listitem>
+<para>「サブネット マスク」フィールドに 255.255.255.0 を入力してください.</para>
+</listitem>
+
+</itemizedlist>
+</para>
+  
+<para><emphasis remap=bf>ゲートウェイの情報の設定</emphasis></para>
+  
+<para>
+<itemizedlist>
+
+<listitem>
+<para>「ゲートウェイ」タブをクリックしてください.
+</para>
+
+<para>ガイド中のネットワークでは, FreeBSD
+マシンがインターネットへのゲートウェイとして働き,
+イーサネットで結ばれた LAN と PPP
+ダイアルアップ接続間でパケットをルーティングします.
+FreeBSD のイーサネットインタフェイスの IP アドレス, 192.168.1.1
+を「新しいゲートウェイ」フィールドに入力し, 「追加」ボタンを押してください.
+他のゲートウェイが「インストール済のゲートウェイ」リスト内に定義されているなら,
+削除しておいたほうが良いかもしれません.</para>
+</listitem>
+
+</itemizedlist>
+</para>
+  
+<para><emphasis remap=bf>DNS 情報の設定</emphasis></para>
+  
+<para>このガイドでは, インターネットサービスプロバイダ (ISP)
+が利用可能なドメインネームサーバ (または「DNS サーバ」)
+のリストを提供しているものと想定しています. ローカル側の FreeBSD
+システム上で DNS サーバを走らせたいなら,
+第 6 章「熱心な学習者への練習問題」に DNS を FreeBSD
+システム上でセットアップする時の tips がありますので参照してみてください.</para>
+  
+<para>
+<itemizedlist>
+
+<listitem>
+<para>「DNS 設定」のタブをクリックしてください</para>
+</listitem>
+
+<listitem>
+<para>「DNS を使用する」のラジオボタンが選択されているかどうか確認してください.
+</para>
+
+<para>(このボタンが選択されていない場合, アクセスできるのは hosts
+ファイルに書かれたエントリだけなので,
+ネットサーフィンをしようとしてもうまく行きません!)</para>
+</listitem>
+
+<listitem>
+<para>「ホスト名」フィールドに Windows 95マシンの名前を入力してください.
+このガイドでは "Larry" です.</para>
+</listitem>
+
+<listitem>
+<para>「ドメイン名」フィールドにローカルネットワーク名を入力してください.
+このガイドでは "my.domain" です.</para>
+</listitem>
+
+<listitem>
+<para>「DNS サーバの検索順」セクションに ISP の
+DNS サーバの IP アドレスを入力してください. 一つ入力するごとに "Add"
+ボタンを押して,
+この作業を ISP の提供するアドレスをすべて入力するまで続けてください.</para>
+</listitem>
+
+</itemizedlist>
+</para>
+  
+<para><emphasis remap=bf>その他の Windows 95 の TCP/IP オプション</emphasis></para>
+  
+<para>このガイドでは,
+「詳細設定」「WINS 設定」「バインド」のタブの下にある設定は重要ではありません.</para>
+  
+<para>Windows Internet Naming Service ("WINS") を使用したいなら,
+<ulink URL="http://www.localnet.org">http://www.localnet.org</ulink> へ行ってみましょう. WINS の設定,
+特にインターネット透過でのファイル共有に関する詳細な情報が得られます.</para>
+  
+<para><emphasis remap=bf>後始末</emphasis>
+<itemizedlist>
+
+<listitem>
+<para>「OK」ボタンを押して TCP/IP プロパティのウィンドウを閉じてください.</para>
+</listitem>
+
+<listitem>
+<para>「OK」ボタンを押してネットワークコントロールパネルを閉じてください.</para>
+</listitem>
+
+<listitem>
+<para>要求された場合, コンピュータをリブートしてください.</para>
+</listitem>
+
+</itemizedlist>
+</para>
+  
+<para>これでおしまいです!</para>
+  
+</sect1>
+
+<sect1>
+<title>Windows NT の設定</title>
+
+<para>Windows NT を LAN の資源として設定するのも比較的簡単です.
+Windows NT を設定する手順は, ユーザインタフェイスの些細な差異を除けば
+Windows 95 と似ています.</para>
+  
+<para>ここでの手順は Windows NT 4.0 ワークステーション用のものですが,
+原則的には NT 3.5x でも同じです. Windows NT 3.5<emphasis remap=it>x</emphasis> を使用している場合,
+「Windows for Workgroups の設定」を参照するのも良いかもしれません.
+NT 3.5 と WfW はユーザインタフェイスが同じだからです.</para>
+  
+<para>次の手順を踏んでください.</para>
+  
+<para><emphasis remap=bf>Windows NT 用の "hosts" ファイルをつくる</emphasis></para>
+  
+<para>LAN 上の他の TCP/IP システムに接続するためには, 3.4 章で
+FreeBSD システムにインストールした "hosts"
+ファイルとまったく同じものを作成してやる必要があります.</para>
+  
+<para>
+<itemizedlist>
+
+<listitem>
+<para>「スタート」ボタンを押し, 「ファイル名を指定して実行」を選択して
+"notepad \WINDOWS\SYSTEM\DRIVERS\ETC\HOSTS" (引用符は除いてください)
+と入力し, 「OK」ボタンを押してください.</para>
+</listitem>
+
+<listitem>
+<para>エディタが開いたら, 3.4 章の hosts
+ファイルに書いてあるアドレスとシステム名を入力してください.</para>
+</listitem>
+
+<listitem>
+<para>編集が終わったらノートパッドを閉じてください
+(ファイルをセーブするのをお忘れ無く!).</para>
+</listitem>
+
+</itemizedlist>
+</para>
+  
+<para><emphasis remap=bf>Windows NT の TCP/IP ネットワークの設定</emphasis></para>
+  
+<para>
+<itemizedlist>
+
+<listitem>
+<para>タスクバーの「スタート」ボタンを押し,
+「設定」「コントロールパネル」を選択してください.</para>
+</listitem>
+
+<listitem>
+<para>「ネットワーク」アイコンをダブルクリックして開いてください.</para>
+</listitem>
+
+<listitem>
+<para>"Identification" タブを選択し, "Computer Name" と "Workgroup"
+フィールドの内容を確かめてください.
+このガイドでは "Shemp" を名前に, "Stooges" をワークグループに使用します.
+必要に応じて "Change" ボタンを押し, 内容を修正してください。</para>
+</listitem>
+
+<listitem>
+<para>"Protocols" タブを選択してください.
+</para>
+
+<para>インストール済のネットワークプロトコルが表示されます.
+プロトコルが幾つも表示されるかもしれませんが, このガイドで大事なのは
+「TCP/IP プロトコル」だけです. 「TCP/IP プロトコル」が表示されていない場合,
+「追加」ボタンを押してこのプロトコルを読み込んでください.</para>
+
+<para>(ヒント:「追加」「TCP/IP プロトコル」「OK」)</para>
+</listitem>
+
+<listitem>
+<para>「TCP/IP プロトコル」を選択し, 「プロパティ」ボタンを押してください.
+</para>
+
+<para>TCP/IP の様々な設定を行うためのタブが表示されるはずです.</para>
+</listitem>
+
+</itemizedlist>
+</para>
+  
+<para><emphasis remap=bf>IP アドレスの設定</emphasis></para>
+  
+<para>イーサネットインタフェイスが「アダプタ」ボックスの中に表示されているかどうか確かめてください.
+表示されていない場合,
+アダプタの一覧表をスクロールさせて正しいインタフェイスを探してください.
+<itemizedlist>
+
+<listitem>
+<para>「IP アドレスを指定する」ラジオボタンを押して,
+三つのテキストボックスを有効にしてください.
+</para>
+
+<para>ガイド中の LAN では, Windows NT システムは "Shemp"
+という名前です</para>
+</listitem>
+
+<listitem>
+<para>「IP アドレス」フィールドに "192.168.1.4" を入力してください.</para>
+</listitem>
+
+<listitem>
+<para>「サブネットマスク」フィールドに 255.255.255.0 を入力してください.</para>
+</listitem>
+
+</itemizedlist>
+</para>
+  
+<para><emphasis remap=bf>ゲートウェイの情報の設定</emphasis></para>
+  
+<para>ガイド中のネットワークでは, FreeBSD
+マシンがインターネットへのゲートウェイとして働き,
+イーサネットで結ばれた LAN と PPP
+ダイアルアップ接続間でパケットをルーティングします.
+<itemizedlist>
+
+<listitem>
+<para>FreeBSD のイーサネットインタフェイスの IP アドレス, 192.168.1.1
+を「新しいゲートウェイ」フィールドに入力し, 「追加」ボタンを押してください.
+</para>
+
+<para>他のゲートウェイが「インストール済のゲートウェイ」リスト内に定義されているなら,
+削除しておいたほうが良いかもしれません.</para>
+</listitem>
+
+</itemizedlist>
+</para>
+  
+<para><emphasis remap=bf>DNS の設定</emphasis></para>
+  
+<para>繰り返しますが, このガイドでは, インターネットサービスプロバイダ (ISP)
+が利用可能なドメインネームサーバ (または「 DNS サーバ」)
+のリストを提供しているものと想定しています.</para>
+  
+<para>ローカル側の FreeBSD システム上で DNS サーバを走らせたいなら,
+第 6 章「熱心な学習者への練習問題」に DNS を FreeBSD
+システム上でセットアップする時の tips がありますので参照してみてください.</para>
+  
+<para>
+<itemizedlist>
+
+<listitem>
+<para>「DNS」タブをクリックしてください.</para>
+</listitem>
+
+<listitem>
+<para>「ホスト名」フィールドに Windows NT マシンの名前を入力してください.
+このガイドでは "Shemp" です.</para>
+</listitem>
+
+<listitem>
+<para>「ドメイン名」フィールドにローカルネットワーク名を入力してください.
+このガイドでは "my.domain" です.</para>
+</listitem>
+
+<listitem>
+<para>「DNS サーバの検索順」セクションに ISP の
+DNS サーバの IP アドレスを入力してください. 一つ入力するごとに "Add"
+ボタンを押して,
+この作業を ISP の提供するアドレスをすべて入力するまで続けてください.</para>
+</listitem>
+
+</itemizedlist>
+</para>
+  
+<para><emphasis remap=bf>その他の Windows NT の TCP/IP オプション</emphasis></para>
+  
+<para>このガイドでは,
+"WINS Address" と "Routing" タブの下にある設定は使用しません.</para>
+  
+<para>Windows Internet Naming Service ("WINS") を使用したいなら,
+<ulink URL="http://www.localnet.org">http://www.localnet.org</ulink> へ行ってみましょう. WINS の設定,
+特にインターネット透過でのファイル共有に関する詳細な情報が得られます.</para>
+  
+<para><emphasis remap=bf>後始末</emphasis>
+<itemizedlist>
+
+<listitem>
+<para>「OK」ボタンを押して TCP/IP プロパティセクションを閉じてください.</para>
+</listitem>
+
+<listitem>
+<para>「閉じる」ボタンを押してネットワークコントロールパネルを閉じてください.</para>
+</listitem>
+
+<listitem>
+<para>要求された場合, コンピュータをリブートしてください.</para>
+</listitem>
+
+</itemizedlist>
+</para>
+  
+<para>これでおしまいです!</para>
+  
+</sect1>
+
+<sect1>
+<title>Windows for Workgroups の設定</title>
+
+<para>Windows for Workgroups をネットワーククライアントとして作動させるには,
+Microsoft TCP/IP-32
+ドライバディスクがワークステーションにインストールされている必要があります.
+TCP/IP ドライバは WfW の CD / ディスクには付属していません.
+コピーは <ulink URL="ftp://ftp.microsoft.com:/peropsys/windows/public/tcpip">ftp://ftp.microsoft.com:/peropsys/windows/public/tcpip</ulink>
+から手に入ります.</para>
+  
+<para>TCP/IP ドライバを読み込んだら、次の手続きを踏んでください.</para>
+  
+<para><emphasis remap=bf>Windows for Workgroups 用の "hosts" ファイルをつくる</emphasis></para>
+  
+<para>LAN 上の他の TCP/IP システムに接続するためには, 3.4 章で
+FreeBSD システムにインストールした "hosts"
+ファイルとまったく同じものを作成してやる必要があります.
+<itemizedlist>
+
+<listitem>
+<para>プログラムマネージャで "File" ボタンを押し, "Run" を選択して
+"notepad \WINDOWS\HOSTS"  (引用符は除いてください) と入力し,
+"OK" ボタンを押してください.</para>
+</listitem>
+
+<listitem>
+<para>エディタが開いたら, 3.4 章の hosts
+ファイルに書いてあるアドレスとシステム名を入力してください.</para>
+</listitem>
+
+<listitem>
+<para>編集が終わったらノートパッドを閉じてください
+(ファイルをセーブするのをお忘れ無く!).</para>
+</listitem>
+
+</itemizedlist>
+</para>
+  
+<para><emphasis remap=bf>Windows for Workgroups の TCP/IP ネットワークの設定</emphasis></para>
+  
+<para>
+<itemizedlist>
+
+<listitem>
+<para>プログラムマネージャのメインウィンドウで,
+"Network" グループのアイコンをダブルクリックして開いてください.</para>
+</listitem>
+
+<listitem>
+<para>"Network Setup" アイコンをダブルクリックしてください.</para>
+</listitem>
+
+<listitem>
+<para>"Network Drivers Box" で "Microsoft TCP/IP-32"
+のエントリをダブルクリックしてください.</para>
+</listitem>
+
+</itemizedlist>
+</para>
+  
+<para><emphasis remap=bf>Windows for Workgroups の IP アドレスの設定</emphasis></para>
+  
+<para>正しいイーサネットインタフェイスが "Adapter"
+リストで選択されているかどうか確認してください. 選択されていない場合,
+インタフェイスが表示されるまでリストをスクロールさせ,
+クリックして選択してください.
+<itemizedlist>
+
+<listitem>
+<para>"Enable Automatic DHCP Configuration"
+チェックボックスが選択されていないことを確かめてください. 選択されている場合,
+クリックして "X" 印を取り除いてください.</para>
+</listitem>
+
+<listitem>
+<para>ガイド中の LAN では, Windows for Workgroups システムは "Moe"
+という名前です. "IP Address" フィールドには "192.168.1.3" を入力してください.</para>
+</listitem>
+
+<listitem>
+<para>"Subnet Mask" フィールドに 255.255.255.0 を入力してください.</para>
+</listitem>
+
+</itemizedlist>
+</para>
+  
+<para><emphasis remap=bf>ゲートウェイの情報の設定</emphasis></para>
+  
+<para>ガイド中のネットワークでは, FreeBSD
+マシンがインターネットへのゲートウェイとして働き,
+イーサネットで結ばれた LAN と PPP
+ダイアルアップ接続間でパケットをルーティングします.</para>
+  
+<para>
+<itemizedlist>
+
+<listitem>
+<para>FreeBSD システムの IP アドレス, 192.168.1.1 を "Default Gateway"
+フィールドに入力してください.</para>
+</listitem>
+
+</itemizedlist>
+</para>
+  
+<para><emphasis remap=bf>DNS の設定</emphasis></para>
+  
+<para>繰り返しますが, このガイドでは, インターネットサービスプロバイダ (ISP)
+が利用可能なドメインネームサーバ (または「DNS サーバ」)
+のリストを提供しているものと想定しています.
+ローカル側の FreeBSD システム上で DNS サーバを走らせたいなら,
+第 6 章「インターネット初心者への課題」に DNS を FreeBSD
+システム上でセットアップする時の tips がありますので参照してみてください.
+<itemizedlist>
+
+<listitem>
+<para>"DNS" ボタンを押してください.</para>
+</listitem>
+
+<listitem>
+<para>"Host Name" フィールドに Windows for Workgroups
+マシンの名前を入力してください. このガイドでは "Moe" です.</para>
+</listitem>
+
+<listitem>
+<para>"Domain" フィールドにローカルネットワーク名を入力してください.
+このガイドでは "my.domain" です.</para>
+</listitem>
+
+<listitem>
+<para>"Domain Name Service (DNS) Search Order" セクションに ISP の
+DNS サーバの IP アドレスを入力してください. 一つ入力するごとに "Add"
+ボタンを押して,
+この作業を ISP の提供するアドレスをすべて入力するまで続けてください.</para>
+</listitem>
+
+</itemizedlist>
+</para>
+  
+<para><emphasis remap=bf>後始末</emphasis>
+<itemizedlist>
+
+<listitem>
+<para>"OK" ボタンを押して TCP/IP 設定ウィンドウを閉じてください.</para>
+</listitem>
+
+<listitem>
+<para>"OK" ボタンを押してネットワークセットアップウィンドウを閉じてください.</para>
+</listitem>
+
+<listitem>
+<para>要求された場合, コンピュータを再起動してください.</para>
+</listitem>
+
+</itemizedlist>
+</para>
+  
+<para>これでおしまいです!</para>
+  
+</sect1>
+</chapter>
+
+<chapter>
+<title>ネットワークのテスト</title>
+
+<para>上記の作業を適切に完了したなら,
+PPP をインターネットへのゲートウェイとして機能させることができるはずです.</para>
+  
+
+<sect1>
+<title>ダイアルアップリンクのテスト</title>
+
+<para>最初に, モデムと ISP 間で接続を確立できるかどうかテストします.</para>
+  
+</sect1>
+
+<sect1>
+<title>イーサネット LAN のテスト</title>
+
+<para> *** TBD ***</para>
+  
+</sect1>
+</chapter>
+
+<chapter>
+<title>熱心な学習者への練習問題</title>
+
+
+<sect1>
+<title>ミニ DNS システムの作成</title>
+
+<para>確かにドメインネームサービス (DNS)
+ヒエラルキーの管理は黒魔術にも似た作業ではありますが,
+FreeBSD システムを ISP へのゲートウェイとして作動させながら,
+同時に小さな DNS サーバとしても働かせることも可能なのです.</para>
+  
+<para>FreeBSD システムのインストール時に <filename>/etc/namedb</filename>
+ディレクトリに作成されるファイルを元にすれば,
+ガイド中のネットワークに権威を持ちながら,
+インターネットの DNS
+アーキテクチャに対する正面玄関としての役割も果たすネームサーバをつくることができるのです.</para>
+  
+<para>最小限の DNS の設定を行うには, 以下の三つのファイルが必要になります.
+<informalexample>
+<screen>/etc/namedb/named.boot
+/etc/namedb/named.root
+/etc/namedb/mydomain.db</screen>
+</informalexample>
+</para>
+  
+<para><filename>/etc/namedb/named.root</filename> ファイルは FreeBSD
+のベースインストールの一部として自動的にインストールされますが,
+他の二つのファイルは手で書いてやる必要があります.</para>
+  
+
+<sect2>
+<title><filename>/etc/namedb/named.boot</filename> ファイル</title>
+
+<para><filename>/etc/namedb/named.boot</filename> ファイルは DNS
+サーバのスタートアップ時の設定をコントロールします.
+基本的には, ネームサーバに以下の情報を伝えます.
+<orderedlist>
+
+<listitem>
+<para>どこに設定ファイルが存在し,</para>
+</listitem>
+
+<listitem>
+<para>どの「ドメイン名」を管理するのか. そして</para>
+</listitem>
+
+<listitem>
+<para>どこへ行けば他の DNS サーバを見つけられるのか.</para>
+</listitem>
+
+</orderedlist>
+</para>
+  
+<para> '<emphasis remap=tt>ee</emphasis>' エディタを使って, 以下の内容の
+<filename>/etc/namedb/named.boot</filename> ファイルをつくってください.
+<informalexample>
+<screen>; boot file for mini-name server
+
+directory	/etc/namedb
+
+; type    domain		source host/file		backup file
+
+cache     .			named.root
+primary   my.domain.		mydomain.db</screen>
+</informalexample>
+</para>
+  
+<para>セミコロンで始まる行はコメントです. このファイル内で重要な行は
+<itemizedlist>
+
+<listitem>
+<para><command>directory /etc/namedb</command>
+</para>
+
+<para>ネームサーバに '<filename>/etc/namedb/named.boot</filename>'
+の残りのセクションで参照される設定ファイルの存在するディレクトリを伝えています.</para>
+</listitem>
+
+<listitem>
+<para><emphasis remap=tt>cache . named.root</emphasis>
+</para>
+
+<para>ネームサーバにインターネットの "Top-Level" の DNS サーバの一覧が
+'<filename>named.root</filename>' ファイルに書いてあることを伝えています.
+(このファイルはベースインストールの一部に含まれているので,
+このドキュメントでは内容については説明しません.)</para>
+
+<para>ネームサーバに対して, "my.domain" という DNS ドメインを
+「管理する (authoritative)」こと, "my.domain" (このローカルネットワーク)
+上のシステムのホスト名と IP アドレスのリストは '<filename>mydomain.db</filename>'
+ファイル内にあることを伝えています.</para>
+</listitem>
+
+</itemizedlist>
+</para>
+  
+<para><filename>/etc/namedb/named.boot</filename> ファイルをつくってセーブしたら,
+つぎの章に進んで <filename>/etc/namedb/mydomain.db</filename> ファイルをつくってください.</para>
+  
+</sect2>
+
+<sect2>
+<title><filename>/etc/namedb/mydomain.db</filename> ファイル</title>
+
+<para><filename>/etc/namedb/mydomain.db</filename> ファイルはローカルエリアネットワーク
+(LAN) の<emphasis>すべての</emphasis>システムのホスト名と IP アドレスを一覧にしたものです.</para>
+  
+<para><emphasis>このファイルで使用されている文の詳細な説明については,
+<emphasis remap=tt>named</emphasis> の man を参照してください.</emphasis></para>
+  
+<para>このガイド中のネットワークで DNS サーバの設定を最低限行う
+<filename>/etc/namedb/mydomain.db</filename> ファイルは, 次のような内容になるでしょう.
+<informalexample>
+<screen>@	IN SOA	my.domain. root.my.domain.  (
+				961230	; 通し番号
+				3600	; 問い合わせ
+				300	; 再試行
+				3600000	; 無効化
+				3600 )	; 有効期間
+	IN NS	curly.my.domain.
+
+curly.my.domain.	IN A	192.168.1.1	# FreeBSD マシン
+larry.my.domain.	IN A	192.168.1.2	# Win'95 マシン
+moe.my.domain.		IN A	192.168.1.3	# WfW マシン
+shemp.my.domain.	IN A	192.168.1.4	# Windows NT マシン
+
+$ORIGIN 1.168.192.IN-ADDR.ARPA
+		IN NS	curly.my.domain.
+1		IN PTR	curly.my.domain.
+2		IN PTR	larry.my.domain.
+3		IN PTR	moe.my.domain.
+4		IN PTR	shemp.my.domain.
+
+$ORIGIN 0.0.127.IN-ADDR.ARPA
+		IN NS	curly.my.domain.
+1		IN PTR	localhost.my.domain.</screen>
+</informalexample>
+</para>
+  
+<para>簡単に説明すると, このファイルでは, ローカルの DNS
+サーバは以下のようであると宣言しています.
+<itemizedlist>
+
+<listitem>
+<para>'my.domain' というドメインに対する管理情報の始点
+(Start of Authority, "SOA") であり,</para>
+</listitem>
+
+<listitem>
+<para>'my.domain" に対するネームサーバ ("NS") であり,</para>
+</listitem>
+
+<listitem>
+<para>'192.168.1.' と '127.0.0.' で始まる全ての IP
+アドレスに対する逆引き情報に責任があること ("$ORIGIN ...")</para>
+</listitem>
+
+</itemizedlist>
+</para>
+  
+<para>このファイルにワークステーションのエントリを加えるとき,
+一つのシステムにつき二つの行を加える必要があります.
+一つは頭のセクション, ホスト名がインターネットアドレス ("IN A")
+に対応づけられる部分で, もう一つは <filename>$ORIGIN
+1.168.192.IN-ADDR.ARPA</filename> セクションの,
+アドレスをホスト名に逆付けする部分です.</para>
+  
+</sect2>
+
+<sect2>
+<title>DNS サーバの起動</title>
+
+<para>デフォルトではシステムのブート時に DNS サーバ
+('<filename>/usr/sbin/named</filename>') は起動しません. この振る舞いは,
+以下のように '<filename>/etc/rc.conf</filename>'
+を一行変えるだけで変更することができます.</para>
+  
+<para>'<emphasis remap=tt>ee</emphasis>' エディタを使って <filename>/etc/rc.conf</filename> を読み込み,
+このようなセクションに当たるまで 40 行ほど下ってください.
+<informalexample>
+<screen>---
+named_enable="NO"                       # Run named, the DNS server (or NO).
+named_flags="-b /etc/namedb/named.boot" # Flags to named (if enabled).
+---</screen>
+</informalexample>
+
+このセクションを次のように変えましょう.
+<informalexample>
+<screen>---
+named_enable="YES"                      # Run named, the DNS server (or NO).
+named_flags="-b /etc/namedb/named.boot" # Flags to named (if enabled).
+---</screen>
+</informalexample>
+
+ファイルをセーブしてマシンを再起動してください.</para>
+  
+<para>または, 次のコマンドを打ち込んでネームサーバデーモンを起動してください.
+<informalexample>
+<screen># named -b /etc/namedb/named.boot</screen>
+</informalexample>
+</para>
+  
+<para><filename>/etc/namedb</filename> 以下のファイルを変更した場合はいつも,
+変更に対応させるために,
+ネームサーバのプロセスにキックスタートをかけてやる必要があります.
+これは以下のシステムコマンドで実行できます.
+<informalexample>
+<screen># kill -HUP `cat /var/run/named.pid`</screen>
+</informalexample>
+</para>
+  
+</sect2>
+</sect1>
+
+<sect1>
+<title>PPP フィルタとの戯れ</title>
+
+<para>PPP プログラムには, PPP 経由のトラフィックに対して,
+選択的にフィルタをかける能力があります.
+これが正式のファイアウォールほどセキュアーだとはとても言えませんが,
+リンクの使用についてある種のアクセス制御を提供することはできるのです.</para>
+  
+<para>(FreeBSD システムをよりセキュアーにする方法を知りたい方は
+'<emphasis remap=tt>man ipfw</emphasis>' してください)</para>
+  
+<para>PPP 下で使用できる様々なフィルタとその制御法についての完全な説明は
+PPP の man にあります.</para>
+  
+<para>PPP プログラムに適用できる制御法には四つのクラスがあります.
+<itemizedlist>
+
+<listitem>
+<para><emphasis remap=tt>afilter</emphasis> - アクセスカウンタ (または "Keep Alive") のフィルタ
+</para>
+
+<para>設定ファイル中の <literal>set timeout=</literal>
+文に無視されるイベントの種類を制御します.</para>
+</listitem>
+
+<listitem>
+<para><emphasis remap=tt>dfilter</emphasis> - ダイアリングフィルタ
+</para>
+
+<para>デマンドダイアルモードの PPP に無視されるイベントの種類を制御します.</para>
+</listitem>
+
+<listitem>
+<para><emphasis remap=tt>ifilter</emphasis> - インプットフィルタ
+</para>
+
+<para>システムに入ってくるパケットを,
+破棄すべきものと通過してよいものに仕分けるやり方を制御します.</para>
+</listitem>
+
+<listitem>
+<para><emphasis remap=tt>ofilter</emphasis> - アウトプットフィルタ
+</para>
+
+<para>システムから出てゆくパケットを,
+破棄すべきものと通過してよいものに仕分けるやり方を制御します.</para>
+</listitem>
+
+</itemizedlist>
+</para>
+  
+<para>以下は実際に稼働しているオペレーティングシステムから一部拝借して来たものです.
+このシステムは「通常の」インターネットオペレーションに十分な素地を提供しつつ,
+PPP が<emphasis>すべての</emphasis>データをダイアルアップ接続越しにやり取りすることのないようにしています.
+各ルールセットのロジックを解説する簡単なコメントをつけてあります.
+<informalexample>
+<screen>#
+# KeepAlive フィルタ
+# ICMP,DNS と RIP パケットが流れても「通信中」とはみなさない
+#
+ set afilter 0 deny icmp
+ set afilter 1 deny udp src eq 53
+ set afilter 2 deny udp dst eq 53
+ set afilter 3 deny udp src eq 520
+ set afilter 4 deny udp dst eq 520
+ set afilter 5 permit 0/0 0/0
+#
+# ダイアルフィルタ
+#  注意:  この設定では ICMP もダイアルアウトのトリガになる
+#
+ set dfilter 0 permit 0/0 0/0
+#
+# ident パケットの通過を許可する
+#
+ set ifilter 0 permit tcp dst eq 113
+ set ofilter 0 permit tcp src eq 113
+#
+# インターネットへの telnet 接続を許可する
+#
+ set ifilter 1 permit tcp src eq 23 estab
+ set ofilter 1 permit tcp dst eq 23
+#
+# インターネットへの ftp アクセスを許可する
+#
+ set ifilter 2 permit tcp src eq 21 estab
+ set ofilter 2 permit tcp dst eq 21
+ set ifilter 3 permit tcp src eq 20 dst gt 1023
+ set ofilter 3 permit tcp dst eq 20
+#
+# DNS への問い合わせを許可する
+#
+ set ifilter 4 permit udp src eq 53
+ set ofilter 4 permit udp dst eq 53
+#
+# DNS ゾーン転送を許可する
+#
+ set ifilter 5 permit tcp src eq 53
+ set ofilter 5 permit tcp dst eq 53
+#
+# ローカルネットワークから / へのアクセスを許可する
+#
+ set ifilter 6 permit 0/0 192.168.1.0/24
+ set ofilter 6 permit 192.168.1.0/24 0/0
+#
+# ping と traceroute への返答を許可する
+#
+ set ifilter 7 permit icmp
+ set ofilter 7 permit icmp
+ set ifilter 8 permit udp dst gt 33433
+ set ofilter 9 permit udp dst gt 33433
+#
+# cvsup を許可する
+#
+ set ifilter 9 permit tcp src eq 5998
+ set ofilter 9 permit tcp dst eq 5998
+ set ifilter 10 permit tcp src eq 5999
+ set ofilter 10 permit tcp dst eq 5999
+#
+# 時間の同期のために NTP を許可する
+#
+ set ifilter 11 permit tcp src eq 123 dst eq 123
+ set ofilter 11 permit tcp src eq 123 dst eq 123
+ set ifilter 12 permit udp src eq 123 dst eq 123
+ set ofilter 12 permit udp src eq 123 dst eq 123
+#
+# SMTP もいいかも!
+#
+ set ifilter 13 permit tcp src eq 25
+ set ofilter 13 permit tcp dst eq 25
+#
+#
+# `whois` を多用するので, これも通す
+#
+ set ifilter 14 permit tcp src eq 43
+ set ofilter 14 permit tcp dst eq 43
+ set ifilter 15 permit udp src eq 43
+ set ofilter 15 permit udp dst eq 43
+#
+# 上記のどのルールにもマッチしない場合, パケットはブロックされる.
+#-------</screen>
+</informalexample>
+</para>
+  
+<para>フィルタクラス一つにつき,
+20 個までのフィルタリングルールを適用することができます.
+各クラスのルールは 0 から 20 までの連続した数字である必要がありますが,
+<emphasis>あるフィルタクラスに対するルールは, ルールセット '0'
+が定義されるまでは有効になりません!</emphasis></para>
+  
+<para>PPP の設定でフィルタリングルールを使用<emphasis>しない</emphasis>場合,
+ISP への接続中は<emphasis>すべての</emphasis>トラフィックがシステムに出入りすることになります.</para>
+  
+<para>フィルタリングルールを使用したいなら, 上記の設定を
+<filename>/etc/ppp/ppp.conf</filename> ファイルの "default:", "demand:", または
+"interactive:" セクションのどれか (あるいはすべて - 選ぶのはあなたです)
+に追加してください.</para>
+  
+</sect1>
+</chapter>
+</book>
