@@ -1,3 +1,5 @@
+# $Id: Makefile,v 1.5 1997-07-01 05:38:10 max Exp $
+
 DATA=	ftp.mirrors
 CGI=	ftp.cgi gallery.cgi mirror.cgi cgi-lib.pl cgi-style.pl
 CGI+=	search.cgi cvsweb.cgi query-pr.cgi query-pr-summary.cgi
