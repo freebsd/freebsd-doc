@@ -32,7 +32,7 @@
 		        <a href="docs/volunteer.html">How to Help</a><br>
 		        <a href="docs/bugging.html">Reporting a Bug</a><br>
 		        <a href="screenshots.html">Screenshots</a><br>
-		        <a href="docs/contact.html">Contact Us</a><br>
+		        <a href="contact.html">Contact Us</a><br>
 		      </small></p>
 
 		    <p><font size="+1" color="#990000"><b>Documentation</b></font>
