@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/ports/Makefile,v 1.34 2001/10/29 10:14:32 murray Exp $
+# $FreeBSD: www/en/ports/Makefile,v 1.35 2002/05/20 13:49:27 phantom Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -48,7 +48,7 @@ hostname=	${NO_PACKAGES_LINK}
 .endif
 
 packages.exists:
-.if ${hostname} == "hub.freebsd.org" || ${hostname} == "freefall.freebsd.org"
+.if ${hostname} == "hub.freebsd.org" || ${hostname} == "freefall.freebsd.org" || ${hostname} == "www.freebsd.org"
 	@if ${SH} ${.CURDIR}/packages > ${.TARGET}.temp; then \
 		${MV} ${.TARGET}.temp ${.TARGET}; \
 	else \
