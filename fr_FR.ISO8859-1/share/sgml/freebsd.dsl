@@ -2,14 +2,16 @@
      The FreeBSD Documentation Project
      The FreeBSD French Documentation Project
 
-     $Id: freebsd.dsl,v 1.10 2002-10-19 10:15:50 blackend Exp $
+     $Id: freebsd.dsl,v 1.11 2002-12-11 20:06:19 blackend Exp $
      $FreeBSD$
-     Original revision: 1.3
+     Original revision: 1.17
 
 -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
 <!ENTITY freebsd.dsl PUBLIC "-//FreeBSD//DOCUMENT DocBook Language Neutral Stylesheet//EN" CDATA DSSSL>
+<!ENTITY % output.html  "IGNORE">
+<!ENTITY % output.print "IGNORE">
 ]>
 
 <style-sheet>
@@ -52,6 +54,13 @@
                       attributes: (list (list "href" "mailto:doc@FreeBSD.org"))
                   (literal "doc@FreeBSD.org"))
                 (literal ">.")))))
+
+	<!-- Convert " ... " to `` ... '' in the HTML output. -->
+	(element quote
+	  (make sequence
+	    (literal "``")
+	    (process-children)
+	    (literal "''")))
 
 	<!-- Generate links to HTML man pages -->                        
         (define %refentry-xref-link% #t)                                 
