@@ -38,7 +38,7 @@
         (define %hyphenation% #f)        <!-- Silence a warning -->
 
         (define %html-header-tags% '(("META" ("HTTP-EQUIV" "Content-Type")
-          ("CONTENT" "text/html; charset=\"&doc.html.charset;\""))))
+          ("CONTENT" "text/html; charset=&doc.html.charset;"))))
 
         (define %gentext-nav-use-tables%
           ;; Use tables to build the navigation headers and footers?
