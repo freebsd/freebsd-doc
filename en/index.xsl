@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/index.xsl,v 1.82 2003/11/17 06:28:19 hrs Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.83 2003/11/24 18:26:33 hrs Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   
@@ -6,7 +6,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.82 2003/11/17 06:28:19 hrs Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.83 2003/11/24 18:26:33 hrs Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -94,13 +94,16 @@
 			   bgcolor="#ffcc66" width="100%">
 		      <tr>
 			<td>
-			  <p><font size="+1" color="#990000"><b>News</b></font>
-
-	      
-			    <small><br/>
-			      &#183; <a href="news/newsflash.html">Announcements</a><br/>
-			      &#183; <a href="news/press.html">In the Press</a><br/>
-			      &#183; <a href="news/index.html">More ...</a>
+			  <p>
+			    <a href="platforms/index.html">
+			      <font size="+1" color="#990000"><b>Platform Support:</b></font>
+			    </a><small><br/>
+			      &#183; <a href="smp/index.html">i386</a><br/>
+			      &#183; <a href="platforms/alpha.html">Alpha</a><br/>
+			      &#183; <a href="platforms/ia64.html">IA64</a><br/>
+			      &#183; <a href="platforms/amd64.html">AMD64</a><br/>
+			      &#183; <a href="platforms/sparc.html">Sparc</a><br/>
+			      &#183; <a href="platforms/index.html">More?</a><br/>
 			    </small></p>
 
 			  <p><font size="+1" color="#990000"><b>Software</b></font>
@@ -110,48 +113,52 @@
 			      &#183; <a href="{$base}/ports/index.html">Ported Applications</a><br/>
 			    </small></p>
 	    
-			  <p><font size="+1" color="#990000"><b>Documentation</b></font>
-		
-			    <small><br/>
-			      &#183; <a href="projects/newbies.html">For Newbies</a><br/>
-			      &#183; <a href="{$base}/doc/en_US.ISO8859-1/books/handbook/index.html">Handbook</a><br/>
+			  <p>
+			    <a href="docs.html">
+			      <font size="+1" color="#990000"><b>Documentation</b></font>
+			    </a><small><br/>
 			      &#183; <a href="{$base}/doc/en_US.ISO8859-1/books/faq/index.html">FAQ</a><br/>
+			      &#183; <a href="{$base}/doc/en_US.ISO8859-1/books/handbook/index.html">Handbook</a><br/>
 			      &#183; <a href="http://www.FreeBSD.org/cgi/man.cgi">Manual pages</a><br/>
+			      &#183; <a href="projects/newbies.html">For Newbies</a><br/>
 			      &#183; <a href="{$base}/docproj/index.html">Doc. Project</a><br/>
-			      &#183; <a href="docs.html">More...</a><br/>
 			    </small></p>
 			  
-			  <p><font size="+1" color="#990000"><b>Support</b></font>
-	      
-			    <small><br/>
+			  <p>
+			    <a href="support.html">
+			      <font size="+1" color="#990000"><b>Support</b></font>
+			    </a><small><br/>
 			      &#183; <a href="{$base}/support.html#mailing-list">Mailing lists</a><br/>
 			      &#183; <a href="{$base}/support.html#newsgroups">Newsgroups</a><br/>
 			      &#183; <a href="{$base}/support.html#user">User Groups</a><br/>
 			      &#183; <a href="{$base}/support.html#web">Web Resources</a><br/>
 			      &#183; <a href="security/index.html">Security</a><br/>
-			      &#183; <a href="{$base}/events/events.html">Events</a><br/>
-			      &#183; <a href="{$base}/support.html">More...</a>
 			    </small></p>
 
-			  <p><font size="+1" color="#990000"><b>Bug Reports</b></font>
-			    <small><br/>
+			  <p>
+			    <a href="{$base}/support.html#gnats">
+			      <font size="+1" color="#990000"><b>Bug Reports</b></font>
+			    </a><small><br/>
+			      &#183; <a href="http://www.FreeBSD.org/cgi/query-pr-summary.cgi?query">Search</a><br/>
+			      &#183; <a href="http://www.FreeBSD.org/cgi/query-pr.cgi">View one bug report</a><br/>
+			      &#183; <a href="http://www.FreeBSD.org/cgi/query-pr-summary.cgi">View all bug reports</a><br/>
 			      &#183; <a href="send-pr.html">Send a bug report</a><br/>
-			      &#183; <a href="http://www.FreeBSD.org/cgi/query-pr-summary.cgi">View open reports</a><br/>
-			      &#183; <a href="http://www.FreeBSD.org/cgi/query-pr.cgi">Search by bug ID</a><br/>
-			      &#183; <a href="{$base}/support.html#gnats">More...</a><br/>
+			      &#183; <a href="doc/en_US.ISO8859-1/articles/problem-reports/article.html">Writing Bug Reports</a><br/>
 			    </small></p>
 
 	      
-			  <p><font size="+1" color="#990000"><b>Development</b></font>
-		
-			    <small><br/>
-			      &#183; <a href="projects/index.html">Projects</a><br/>
-			      &#183; <a href="releng/index.html">Release Engineering</a><br/>
+			  <p>
+			    <a href="projects/index.html">
+			      <font size="+1" color="#990000"><b>Development</b></font>
+			    </a><small><br/>
+			      &#183; <a href="{$base}/doc/en_US.ISO8859-1/books/developers-handbook">Developer's Handbook</a><br/>
+			      &#183; <a href="{$base}/doc/en_US.ISO8859-1/books/porters-handbook">Porter's Handbook</a><br/>
 			      &#183; <a href="{$base}/support.html#cvs">CVS Repository</a><br/>
+			      &#183; <a href="releng/index.html">Release Engineering</a><br/>
+			      &#183; <a href="{$base}/doc/en_US.ISO8859-1/articles/contributing/index.html">Contributing to FreeBSD</a><br/>
 			    </small></p>
 	      
 			  <p><font size="+1" color="#990000"><b>Vendors</b></font>
-			    
 			    <small><br/>
 			      &#183; <a href="{$base}/commercial/software_bycat.html">Software</a><br/>
 			      &#183; <a href="{$base}/commercial/hardware.html">Hardware</a><br/>
@@ -165,15 +172,28 @@
 			      &#183; <a href="{$base}/donations/donors.html">Current Donations</a><br/>
 			      &#183; <a href="{$base}/donations/wantlist.html">List of needs</a><br/>
 			    </small></p>
-	      
-			  <p><font size="+1" color="#990000"><b>This Site</b></font>
-		
-			    <small><br/>
-			      &#183; <a href="{$base}/search/index-site.html">Site Map</a><br/>
-			      &#183; <a href="{$base}/search/search.html">Search</a><br/>
-			      &#183; <a href="internal/index.html">More ...</a><br/>
+
+			  <p>
+			    <a href="{$base}/search/index-site.html">
+			      <font size="+1" color="#990000"><b>This Site</b></font>
+			    </a><small><br/>
+			      &#183; <a href="{$base}/search/search.html#web">Search Website</a><br/>
+			      &#183; <a href="{$base}/search/search.html#mailinglists">Search Mailing Lists</a><br/>
+			      &#183; <a href="{$base}/search/search.html">Search All</a><br/>
 			    </small></p>
-	      
+
+			  <p>
+			    <a href="mailto.html">
+			      <font size="+1" color="#990000"><b>Contacting FreeBSD</b></font>
+			    </a>
+			  </p>
+
+			  <p>
+			    <a href="copyright/index.html">
+			      <font size="+1" color="#990000"><b>The BSD Copyright</b></font>
+			    </a>
+			  </p>
+
 			  <form action="http://www.FreeBSD.org/cgi/search.cgi" method="get">
 			    <small>Search for:<br/>
 			      <input type="text" name="words" size="10"/>
@@ -302,9 +322,10 @@
 		    <table cellpadding="4" cellspacing="0" border="0"
 			   bgcolor="#ffcc66" width="100%">
 		      <tr>
-			<td valign="top"><p><font size="+1" color="#990000"><b>New Technology Release:
-			    <xsl:value-of select="$rel.current"/></b></font><br/>
-			
+			<td valign="top"><p>
+			      <a href="{$u.rel.early}">
+			      <font size="+1" color="#990000"><b>New Technology Release:
+			    <xsl:value-of select="$rel.current"/></b></font></a><br/>
 			    <small>&#183; <a href="{$u.rel.announce}">Announcement</a><br/>
 			      &#183; <a href="{$base}/doc/en_US.ISO8859-1/books/handbook/install.html">Installation Guide</a><br/>
 			      &#183; <a href="{$u.rel.notes}">Release Notes</a><br/>
@@ -312,8 +333,10 @@
 			      &#183; <a href="{$u.rel.errata}">Errata</a><br/>
 			      &#183; <a href="{$u.rel.early}">Early Adopter's Guide</a></small></p>
 
-			  <p><font size="+1" color="#990000"><b>Production Release:
-			    <xsl:value-of select="$rel2.current"/></b></font><br/>
+			<p>
+			      <a href="{$u.rel2.announce}">
+			      <font size="+1" color="#990000"><b>Production Release:
+			    <xsl:value-of select="$rel2.current"/></b></font></a><br/>
 			
 			    <small>&#183; <a href="{$u.rel2.announce}">Announcement</a><br/>
 			      &#183; <a href="{$base}/doc/en_US.ISO8859-1/books/handbook/install.html">Installation Guide</a><br/>
