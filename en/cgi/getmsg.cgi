@@ -6,7 +6,7 @@
 # by John Fieber
 # February 26, 1998
 #
-# $FreeBSD: www/en/cgi/getmsg.cgi,v 1.35 2003/03/11 15:22:52 wosch Exp $
+# $FreeBSD: www/en/cgi/getmsg.cgi,v 1.36 2003/11/18 21:41:10 wosch Exp $
 #
 
 require "./cgi-lib.pl";
@@ -117,7 +117,7 @@ sub MessageToHTML
     my ($header, $body) = split(/\n\n/, $doc, 2);
     my ($i, %hdr, $field, $data, $message);
     my ($mid) = 'mid.cgi';
-    my ($mid_full_url) = 'http://docs.freebsd.org/cgi/mid.cgi';
+    my ($mid_full_url) = 'http://docs.FreeBSD.org/cgi/mid.cgi';
     my ($tmid,$tirt,$tref);
     
     $body = &AddAnchors(&EscapeHTML($body));
