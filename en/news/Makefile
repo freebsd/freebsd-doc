@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.11 1998-12-21 21:38:45 wosch Exp $
+# $Id: Makefile,v 1.12 1999-01-10 14:39:24 nik Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -22,6 +22,9 @@ DOCS+= press.sgml
 DOCS+= newsflash.sgml
 DOCS+= news.sgml
 DOCS+= webchanges.sgml
+
+# The yearly State of the Union address
+DOCS+= sou1999.sgml
 
 INDEXLINK= news.html
 
