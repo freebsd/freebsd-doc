@@ -126,6 +126,7 @@ MAN8 =	IPXrouted.8\
 	makewhatis.local.8\
 	manctl.8\
 	map-mbone.8\
+	mdconfig.8\
 	memcontrol.8\
 	mergemaster.8\
 	mixer.8\
@@ -326,6 +327,7 @@ MLINKS+=inetd.8 inetd.conf.5
 MLINKS+=init.8 securelevel.8
 MLINKS+=locate.updatedb.8 updatedb.8
 MLINKS+=makewhatis.local.8 catman.local.8
+MLINKS+=mdconfig.8 vnconfig.8
 MLINKS+=mount_std.8 mount_devfs.8
 MLINKS+=mount_std.8 mount_fdescfs.8
 MLINKS+=mount_std.8 mount_procfs.8
