@@ -43,8 +43,8 @@
 # SUCH DAMAGE.
 #
 # $zId: cvsweb.cgi,v 1.104 2000/11/01 22:05:12 hnordstrom Exp $
-# $Id: cvsweb.cgi,v 1.64 2001-01-02 12:45:29 knu Exp $
-# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.63 2001/01/02 00:03:51 knu Exp $
+# $Id: cvsweb.cgi,v 1.65 2001-01-03 03:46:29 knu Exp $
+# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.64 2001/01/02 12:45:29 knu Exp $
 #
 ###
 
@@ -54,7 +54,8 @@ use strict;
 
 use vars qw (
     $config $allow_version_select $verbose
-    %CVSROOT %CVSROOTdescr %MIRRORS %DEFAULTVALUE %ICONS %MTYPES
+    @CVSrepositories @CVSROOT %CVSROOT %CVSROOTdescr
+    %MIRRORS %DEFAULTVALUE %ICONS %MTYPES
     @DIFFTYPES %DIFFTYPES @LOGSORTKEYS %LOGSORTKEYS
     %alltags @tabcolors %fileinfo %tags @branchnames %nameprinted
     %symrev %revsym @allrevisions %date %author @revdisplayorder
@@ -139,7 +140,7 @@ use File::Basename;
 # Locations to search for user configuration, in order:
 for (
      (dirname $0) . '/cvsweb.conf',
-     '/usr/local/etc/cvsweb.conf'
+     '/usr/local/etc/cvsweb/cvsweb.conf'
     ) {
     if (defined($_) && -r $_) {
 	($config) = /(.*)/; # untaint
@@ -156,7 +157,8 @@ $allow_version_select = 1;
 
 ######## Configuration variables #########
 # These are defined to allow checking with perl -cw
-%CVSROOT = %MIRRORS = %DEFAULTVALUE = %ICONS = %MTYPES =
+@CVSrepositories = @CVSROOT = %CVSROOT =
+%MIRRORS = %DEFAULTVALUE = %ICONS = %MTYPES =
 %tags = %alltags = @tabcolors = ();
 $cvstreedefault = $body_tag = $body_tag_for_src =
 $logo = $defaulttitle = $address =
@@ -220,7 +222,7 @@ $LOG_REVSEPARATOR = q/^-{28}$/;
 ##### End of configuration variables #####
 
 $cgi_style::hsty_base = 'http://www.FreeBSD.org';
-$_ = q$FreeBSD: www/en/cgi/cvsweb.cgi,v 1.63 2001/01/02 00:03:51 knu Exp $;
+$_ = q$FreeBSD: www/en/cgi/cvsweb.cgi,v 1.64 2001/01/02 12:45:29 knu Exp $;
 @_ = split;
 $cgi_style::hsty_date = "@_[3,4]";
 
@@ -373,6 +375,10 @@ else {
 }
 undef @barequery;
 
+if (defined($input{path})) {
+    redirect("$scriptname/$input{path}$query");
+}
+
 # get actual parameters
 $sortby = $input{"sortby"};
 $bydate = 0;
@@ -400,6 +406,21 @@ $defaultDiffType = $input{'f'};
 
 $logsort = $input{'logsort'};
 
+my @tmp = @CVSrepositories;
+my @pair;
+
+while (@pair = splice(@tmp, 0, 2)) {
+    my($key, $val) = @pair;
+    my($descr, $cvsroot) = @$val;
+
+    next if !-d $cvsroot;
+
+    $CVSROOTdescr{$key} = $descr;
+    $CVSROOT{$key} = $cvsroot;
+    push @CVSROOT, $key;
+}
+undef @tmp;
+undef @pair;
 
 ## Default CVS-Tree
 if (!defined($CVSROOT{$cvstreedefault})) {
@@ -473,7 +494,7 @@ if (-d $fullname) {
     # to allow relative URL's. If they're not, make a redirect.
     ##
     if (!($pathinfo =~ m|/$|) || ($pathinfo =~ m |/{2,}$|)) {
-	redirect ($scriptwhere . '/' . $query);
+	redirect("$scriptwhere/$query");
     }
     else {
 	$where .= '/';
@@ -879,6 +900,8 @@ if (-d $fullname) {
 		       ">$tag\n";
 	    }
 	    print "</SELECT>\n";
+	    print " Module path or alias:\n";
+	    printf "<INPUT TYPE=TEXT NAME=\"path\" VALUE=\"%s\" SIZE=15>\n", htmlquote($where);
 	    print "<INPUT TYPE=SUBMIT VALUE=\"Go\">\n";
 	    print "</FORM>\n";
 	}
@@ -886,7 +909,7 @@ if (-d $fullname) {
 	if ($allow_tar) {
 	    my($basefile) = ($where =~ m,(?:.*/)?([^/]+),);
 
-	    if ($basefile ne '') {
+	    if (defined($basefile) && $basefile ne '') {
 		print "<HR NOSHADE>\n",
 		  "<DIV align=center>",
 		    &link("Download this directory in tarball",
@@ -981,7 +1004,7 @@ if (-d $fullname) {
 	# The file has been removed and is in the Attic.
 	# Send a redirect pointing to the file in the Attic.
 	(my $newplace = $scriptwhere) =~ s|/([^/]+)$|/Attic/$1|;
-	&redirect($newplace);
+	redirect("$newplace$query");
 	exit;
     }
     elsif (0 && (my @files = &safeglob($fullname . ",v"))) {
@@ -1001,7 +1024,7 @@ if (-d $fullname) {
 	    while (<$fh>) {
 		if (/^(\S+)\s+(\S+)/o && $module eq $1
 		    && -d "$cvsroot/$2" && $module ne $2) {
-		    &redirect("$scriptname/$2$xtra");
+		    redirect("$scriptname/$2$xtra$query");
 		}
 	    }
 	}
@@ -2729,7 +2752,7 @@ sub navigateHeader($$$$$) {
     print qq`<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">`;
     print "<HTML>\n<HEAD>\n";
     print qq`<META name="robots" content="nofollow">\n`;
-    print '<!-- CVSweb $zRevision: 1.104 $  $Revision: 1.64 $ -->';
+    print '<!-- CVSweb $zRevision: 1.104 $  $Revision: 1.65 $ -->';
     print "\n<TITLE>$path$filename - $title - $rev</TITLE></HEAD>\n";
     print  "$body_tag_for_src\n";
     print "<table width=\"100%\" border=0 cellspacing=0 cellpadding=1 bgcolor=\"$navigationHeaderColor\">";
@@ -2843,13 +2866,7 @@ sub clickablePath($$) {
 }
 
 sub chooseCVSRoot() {
-    my @foo;
-    foreach (sort keys %CVSROOT) {
-	if (-d $CVSROOT{$_}) {
-	    push(@foo, $_);
-	}
-    }
-    if (@foo > 1) {
+    if (2 <= @CVSROOT) {
 	my ($k);
 	print "<form method=\"GET\" action=\"${scriptwhere}\">\n";
 	foreach $k (keys %input) {
@@ -2864,18 +2881,25 @@ sub chooseCVSRoot() {
 	print "<td>\n<select name=\"cvsroot\"";
 	print " onchange=\"submit()\"" if ($use_java_script);
 	print ">\n";
-	foreach $k (@foo) {
+	foreach $k (@CVSROOT) {
 	    print "<option value=\"$k\"";
 	    print " selected" if ($k eq $cvstree);
 	    print ">", ($CVSROOTdescr{$k} ? $CVSROOTdescr{$k} : $k), "</option>\n";
 	}
 	print "</select>\n</td>";
-	print "<td><input type=submit value=\"Go\"></td>";
-	print "</tr></table></form>";
+	print "<td>";
     }
     else {
 	# no choice ..
 	print "CVS Root: <b>[$cvstree]</b>";
+    }
+
+    print " Module path or alias:\n";
+    print "<INPUT TYPE=TEXT NAME=\"path\" VALUE=\"\" SIZE=15>\n";
+    print "<input type=submit value=\"Go\">";
+
+    if (2 <= @CVSROOT) {
+	print "</td></tr></table></form>";
     }
 }
 
@@ -3123,7 +3147,7 @@ sub http_header(;$) {
 
 sub html_header($) {
     my ($title) = @_;
-    my $version = '$zRevision: 1.104 $  $Revision: 1.64 $'; #'
+    my $version = '$zRevision: 1.104 $  $Revision: 1.65 $'; #'
     http_header(defined($charset) ? "text/html; charset=$charset" : "text/html");
 
     (my $header = &cgi_style::html_header) =~ s/^.*\n\n//; # remove HTTP response header
