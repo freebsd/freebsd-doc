@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.2 1996-09-25 16:00:29 jfieber Exp $
+# $Id: Makefile,v 1.3 1996-09-28 22:17:15 jfieber Exp $
 
 # These are turned into validated, normalized HTML files.
 
@@ -6,6 +6,7 @@ DOCS=	about.sgml commercial.sgml daemon.sgml docproj.sgml docs.sgml
 DOCS+=	gallery.sgml index-site.sgml index.sgml license.sgml
 DOCS+=	mailto.sgml newsflash.sgml searchhints.sgml support.sgml
 DOCS+=	welcome.sgml where.sgml search.sgml
+DOCS+=	internet.sgml features.sgml applications.sgml availability.sgml
 
 # These will be directly installed.
 
