@@ -41,7 +41,6 @@ MAN8 =	IPXrouted.8\
 	diskpart.8\
 	dm.8\
 	dmesg.8\
-	dset.8\
 	dump.8\
 	dumpfs.8\
 	dumpon.8\

@@ -122,7 +122,6 @@ MAN1 =	a2p.1\
 	ident.1\
 	indent.1\
 	indxbib.1\
-	info.1\
 	install.1\
 	install-info.1\
 	intro.1\
