@@ -1,4 +1,4 @@
-# $FreeBSD: www/ja/releases/5.2R/Makefile,v 1.2 2004/01/14 00:51:57 hrs Exp $
+# $FreeBSD: www/ja/releases/5.2R/Makefile,v 1.3 2004/01/14 19:01:33 rushani Exp $
 # Original revision: 1.4
 
 .if exists(../Makefile.conf)
@@ -31,5 +31,8 @@ DATA+=	relnotes-ia64.html
 DATA+=	relnotes-i386.html
 DATA+=	relnotes-pc98.html
 DATA+=	relnotes-sparc64.html
+
+### Revision checking
+REVCHECK=	YES
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
