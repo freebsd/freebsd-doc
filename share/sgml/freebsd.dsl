@@ -1,4 +1,4 @@
-<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.47 2001/08/09 23:18:34 murray Exp $ -->
+<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.48 2001/08/14 05:18:06 dd Exp $ -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
 <!ENTITY % output.html		"IGNORE">
@@ -393,7 +393,7 @@
            element that describes what the whole authorgroup was
            responsible for.  For example:
 
-           <chapter1info>
+           <chapterinfo>
              <authorgroup>
                <author>
                  <firstname>Bob</firstname>
