@@ -55,7 +55,9 @@ INSTALL_COMPRESSED?=	zip gz
 #
 # Turn on RLE encoding and indexing.
 #
-MISCOPTIONS+=	NO_JPMAN=yes RLE=yes GEN_INDEX=1
+# Don't make the compatability symlinks.
+#
+MISCOPTIONS+=	NO_JPMAN=yes RLE=yes GEN_INDEX=1 IGNORE_COMPAT_SYMLINK=YES
 
 DOCOBJDIR=	${DOCROOTDIR}/obj
 DOCBUILDFILE=	${DOCOBJDIR}/build.txt
