@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/share/sgml/includes.release.xsl,v 1.7 2005/01/01 20:07:10 ceri Exp $ -->
+<!-- $FreeBSD: www/share/sgml/includes.release.xsl,v 1.8 2005/01/06 19:47:21 keramida Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -28,7 +28,7 @@
   <xsl:variable name="u.rel.migration">
     <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel.current"/>R/migration-guide.html</xsl:variable>
 
-  <xsl:variable name="rel2.current" select='"4.10"'/>
+  <xsl:variable name="rel2.current" select='"4.11"'/>
   <xsl:variable name="rel2.current.major" select='"4"'/>
 
   <xsl:variable name="u.rel2.notes">
