@@ -1,4 +1,4 @@
-<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.46 2001/08/09 00:28:10 murray Exp $ -->
+<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.47 2001/08/09 23:18:34 murray Exp $ -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
 <!ENTITY % output.html		"IGNORE">
@@ -386,14 +386,6 @@
 
       <!-- Slightly deeper customisations -->
 
-      <!-- I want things marked up with 'sgmltag' eg., 
-
-              <para>You can use <sgmltag>para</sgmltag> to indicate
-                paragraphs.</para>
-
-           to automatically have the opening and closing braces inserted,
-           and it should be in a mono-spaced font. -->
-
       <!-- We would like the author attributions to show up in line
            with the section they refer to.  Authors who made the same
            contribution should be listed in a single <authorgroup> and 
@@ -464,6 +456,14 @@
         (custom-authorgroup))
       (element (sect5info authorgroup)
         (custom-authorgroup))
+
+      <!-- I want things marked up with 'sgmltag' eg., 
+
+              <para>You can use <sgmltag>para</sgmltag> to indicate
+                paragraphs.</para>
+
+           to automatically have the opening and closing braces inserted,
+           and it should be in a mono-spaced font. -->
 
       (element sgmltag ($mono-seq$
           (make sequence
