@@ -1,5 +1,5 @@
 #!/usr/bin/perl -T
-# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.29 2002/08/05 19:05:29 wosch Exp $
+# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.30 2003/03/06 23:51:58 wosch Exp $
 
 $ENV{'PATH'} = "/bin:/usr/bin:/usr/sbin:/sbin:/usr/local/bin";
 
@@ -56,7 +56,7 @@ if ($pr < 1 || $pr > 499999) {
     exit 0;
 }
 
-unless (open(Q, "query-pr.web --restricted -F $pr 2>&1 |")) {
+unless (open(Q, "query-pr.web -F $pr 2>&1 |")) {
     print &html_header("Server error");
     print "<p>Unable to open PR database.</p>\n";
     print &html_footer;
@@ -87,8 +87,6 @@ while(<Q>) {
 	    print "<PRE>$_\n";
 	    print <Q>;
 	    print "</PRE>\n";
-	} elsif (($* = 1) && `query-pr.web $pr 2>&1` =~ /^>Confidential:\s+yes/) {
-	    print "<P>Sorry, PR $pr exists but is confidential\n";
 	} else {
 	    print "<p>No PR found matching $pr\n";
 	}
