@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-#	$Id: ports.cgi,v 1.3 1997-10-03 14:09:25 wosch Exp $
+#	$Id: ports.cgi,v 1.4 1997-10-03 16:04:25 wosch Exp $
 #
 # ports.cgi - search engine for FreeBSD ports
 #             	o search for a port by name or description
@@ -113,7 +113,7 @@ sub last_update {
     };
     while(<DB>) {
 	if (/^date/ && /^date\s+([0-9]+)\.([0-9]+)\.([0-9]+)\.([0-9]+)\.([0-9]+)\.([0-9]+);\s+/) {
-	    $date = ($1 + 1900) . qq{/$2/$3 $4:$5:$6 UTC};
+	    $date = ($1 + 1900) . qq{-$2-$3 $4:$5:$6 UTC};
 	    last;
 	}
     }
