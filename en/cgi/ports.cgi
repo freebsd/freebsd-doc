@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/ports.cgi,v 1.51 2001/02/24 20:43:29 wosch Exp $
+# $FreeBSD: www/en/cgi/ports.cgi,v 1.52 2001/03/25 20:22:02 wosch Exp $
 #
 # ports.cgi - search engine for FreeBSD ports
 #             	o search for a port by name or description
@@ -49,11 +49,11 @@ sub init_variables {
 
     # URL of ports tree for download 
     $remotePrefixFtpDownload =
-	'ftp://ftp.FreeBSD.org/pub/FreeBSD/branches/-current/ports';
+	'ftp://ftp5.FreeBSD.org/pub/FreeBSD/branches/-current/ports';
 
     # where to get -current packages
-    local($p) = 'ftp://ftp.FreeBSD.org/pub/FreeBSD/ports/i386';
-    local($palpha) = 'ftp://ftp.FreeBSD.org/pub/FreeBSD/ports/alpha';
+    local($p) = 'ftp://ftp5.FreeBSD.org/pub/FreeBSD/ports/i386';
+    local($palpha) = 'ftp://ftp5.FreeBSD.org/pub/FreeBSD/ports/alpha';
 
     $remotePrefixFtpPackagesDefault = '4.2-STABLE/i386';
     %remotePrefixFtpPackages = 
@@ -557,7 +557,7 @@ sub footer {
 <img ALIGN="RIGHT" src="/gifs/powerlogo.gif">
 &copy; 1996-2001 by Wolfram Schneider. All rights reserved.<br>
 };
-    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.51 2001/02/24 20:43:29 wosch Exp $} . "<br>\n";
+    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.52 2001/03/25 20:22:02 wosch Exp $} . "<br>\n";
     print qq{Please direct questions about this service to
 <I><A HREF="$mailtoURL">$mailto</A></I><br>\n};
     print qq{General questions about FreeBSD ports should be sent to } .
