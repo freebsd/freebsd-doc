@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: doc/ja_JP.eucJP/man/man7/Makefile,v 1.11 2001/09/23 03:41:53 horikawa Exp $
 MAN7 =	ascii.7\
 	clocks.7\
 	environ.7\
@@ -30,7 +30,7 @@ MAN7 =	ascii.7\
 MLINKS=groff_man.7 man.7
 MLINKS+=groff_mdoc.7 mdoc.7
 MLINKS+=groff_mdoc.7 mdoc.samples.7
-MLINKS=	groff_me.7 me.7
+MLINKS+=groff_me.7 me.7
 MLINKS+=groff_mm.7 mm.7
 MLINKS+=groff_mmse.7 mmse.7
 MLINKS+=groff_ms.7 ms.7
