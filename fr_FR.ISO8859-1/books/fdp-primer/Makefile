@@ -4,7 +4,7 @@
 #
 #    Compilation de l'Introduction au Projet de Documentation de FreeBSD
 #
-#    $FreeBSD: doc/fr_FR.ISO8859-1/books/fdp-primer/Makefile,v 1.2 2000/11/10 12:30:58 kuriyama Exp $
+#    $FreeBSD: doc/fr_FR.ISO8859-1/books/fdp-primer/Makefile,v 1.3 2001/06/11 01:19:01 ache Exp $
 #    Original revision: 1.6
 # 
 
@@ -39,7 +39,6 @@ SRCS+= writing-style/chapter.sgml
 
 # Entities
 SRCS+= chapters.ent 
-SRCS+= ../handbook/mailing-lists.ent
 SRCS+= ../../../en_US.ISO8859-1/books/handbook/authors.ent
 
 DOC_PREFIX?= ${.CURDIR}/../../..
