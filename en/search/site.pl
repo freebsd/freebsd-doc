@@ -6,7 +6,7 @@
 # Format: <url> | <description>
 # An empty url begin a new section
 #
-# $Id: site.pl,v 1.1 1998-06-05 10:07:17 wosch Exp $
+# $Id: site.pl,v 1.2 1998-06-24 12:50:16 wosch Exp $
 
 
 # print a dl list
@@ -25,6 +25,8 @@ sub dl {
 	
 	chop;
 	($url, $description) = split('\|');
+	$description =~ s/^\s+//;
+	$description =~ s/\s+$//;
 	
 	# new section
 	if (!$url && $description) {
