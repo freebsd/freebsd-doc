@@ -8,9 +8,38 @@
 #  GNU General Public License Version 2.  
 #     (http://www.gnu.ai.mit.edu/copyleft/gpl.html)
 #
-# $FreeBSD$
+# $FreeBSD: www/en/cgi/dosendpr.cgi,v 1.8 2002/05/20 07:14:41 dd Exp $
 
 require "html.pl";
+
+use Socket;
+
+my $blackhole = "relays.osirusoft.com";
+my $openproxyip = "127.0.0.9";
+my $blackhole_err = 0;
+my $openproxy;
+
+# isopenproxy ($ip, $blackhole_zone, $positive_ip)
+# Returns undef on error, 0 if DNS lookup fails, $positive_ip if verified
+# proxy. A DNS lookup failing can either means that there was a network
+# problem, or that the IP is not listed in the blackhole zone.
+sub isopenproxy ($$$) {
+	# If $? is already set, then a successful gethostbyname() leaves it set
+	local $?;
+	my ($ip, $zone, $proxyip) = @_;
+	my ($reversed_ip, $packed);
+	if (!defined $proxyip) { return undef };
+
+	$reversed_ip = join('.', reverse split(/\./, $ip));
+	$packed = gethostbyname("${reversed_ip}.${blackhole}");
+	return undef if $?;
+
+	if ($packed && (inet_ntoa($packed) eq $proxyip)) {
+		return $proxyip;
+	} else {
+		return 0;
+	}
+}
 
 sub prerror {
     &html_title ("Problem Report Error");
@@ -67,12 +96,24 @@ if (!$cgi_data{'email'} || !$cgi_data{'originator'} ||
     exit(1);
 }
 
+$openproxy = isopenproxy($ENV{'REMOTE_ADDR'}, $blackhole, $openproxyip);
+if (defined $openproxy) {
+	if ($openproxy) {
+		&prerror("$ENV{'REMOTE_ADDR'} is an open proxy server");
+	}
+} else {
+	$blackhole_err++;
+}
+
 # Build the PR.
 $pr = "To: $gnemail\n" .
       "From: $cgi_data{'originator'} <$cgi_data{'email'}>\n" . 
       "Subject: $cgi_data{'synopsis'}\n" .
-      "X-Originating-IP: $ENV{'REMOTE_ADDR'}\n" .
-      "X-Send-Pr-Version: www-1.0\n\n" .
+      "X-Originating-IP: $ENV{'REMOTE_ADDR'}\n";
+if ($blackhole_err) {
+      $pr .= "X-Originating-IP-Is-Open-Proxy: Maybe\n";
+}
+$pr .= "X-Send-Pr-Version: www-1.0\n\n" .
       ">Submitter-Id:\t$cgi_data{'submitterid'}\n" .
       ">Originator:\t$cgi_data{'originator'}\n" .
       ">Organization:\t$cgi_data{'organization'}\n" .
