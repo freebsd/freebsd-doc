@@ -10,7 +10,7 @@
 #             Dick Balaska     <dick@buckosoft.com>
 #             Akinori MUSHA    <knu@FreeBSD.org>
 #             Jens-Uwe Mager   <jum@helios.de>
-#             Ville Skyttä     <ville.skytta@iki.fi> (html cleanup)
+#             Ville Skyttä     <scop@FreeBSD.org>
 #
 # Based on:
 # * Bill Fenners cvsweb.cgi revision 1.28 available from:
@@ -18,9 +18,9 @@
 #
 # Copyright (c) 1996-1998 Bill Fenner
 #           (c) 1998-1999 Henner Zeller
-#	    (c) 1999      Henrik Nordstrom
-#	    (c) 2000-2002 Akinori MUSHA
-# All rights reserved.
+#           (c) 1999      Henrik Nordstrom
+#           (c) 2000-2002 Akinori MUSHA
+#           (c) 2002      Ville Skyttä‹# All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -43,10 +43,10 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-#  FreeBSD: projects/cvsweb/cvsweb.cgi,v 1.104 2002/05/22 08:10:18 knu Exp
-# $Id: cvsweb.cgi,v 1.83 2002-05-22 08:33:27 knu Exp $
+#  FreeBSD: projects/cvsweb/cvsweb.cgi,v 1.112 2002/07/06 18:15:19 scop Exp
+# $Id: cvsweb.cgi,v 1.84 2002-07-07 04:46:06 knu Exp $
 # $Idaemons: /home/cvs/cvsweb/cvsweb.cgi,v 1.84 2001/10/07 20:50:10 knu Exp $
-# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.82 2002/05/22 08:31:02 knu Exp $
+# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.83 2002/05/22 08:33:27 knu Exp $
 #
 ###
 
@@ -93,7 +93,7 @@ use vars qw (
     $use_moddate $has_zlib $gzip_open
     $allow_tar @tar_options @gzip_options @zip_options @cvs_options
     $LOG_FILESEPARATOR $LOG_REVSEPARATOR
-    $tmpdir $HTML_DOCTYPE
+    $tmpdir $HTML_DOCTYPE $HTML_META
 );
 
 sub printDiffSelect($);
@@ -148,7 +148,7 @@ sub forbidden_module($);
 ##### Start of Configuration Area ########
 delete $ENV{PATH};
 
-$cvsweb_revision = '2.0.3';
+$cvsweb_revision = '2.0.4';
 
 use File::Basename ();
 
@@ -186,7 +186,7 @@ $cvstreedefault = $body_tag = $body_tag_for_src = $logo = $defaulttitle =
     $extern_window_width = $extern_window_height = $edit_option_form   =
     $show_subdir_lastmod = $show_log_in_markup = $v = $navigationHeaderColor =
     $tableBorderColor = $markupLogColor = $tabstop = $use_moddate = $moddate =
-    $gzip_open = $HTML_DOCTYPE = undef;
+    $gzip_open = $HTML_DOCTYPE = $HTML_META = undef;
 $tmpdir = defined($ENV{TMPDIR}) ? $ENV{TMPDIR} : "/var/tmp";
 
 $LOG_FILESEPARATOR = q/^={77}$/;
@@ -235,7 +235,7 @@ $LOG_REVSEPARATOR  = q/^-{28}$/;
 );
 
 $cgi_style::hsty_base = 'http://www.FreeBSD.org';
-$_ = q$FreeBSD: www/en/cgi/cvsweb.cgi,v 1.82 2002/05/22 08:31:02 knu Exp $;
+$_ = q$FreeBSD: www/en/cgi/cvsweb.cgi,v 1.83 2002/05/22 08:33:27 knu Exp $;
 @_ = split;
 $cgi_style::hsty_date = "@_[3,4]";
 
@@ -248,6 +248,13 @@ package main;
 
 $HTML_DOCTYPE =
   '<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">';
+
+$HTML_META = <<EOM;
+<meta name="robots" content="nofollow">
+<meta name="generator" content="FreeBSD-CVSweb $cvsweb_revision">
+<meta http-equiv="Content-Script-Type" content="text/javascript">
+<meta http-equiv="Content-Style-Type" content="text/css">
+EOM
 
 ##### End of configuration variables #####
 
@@ -643,14 +650,14 @@ if (-d $fullname) {
 		print $short_instruction;
 	}
 
-	my $descriptions;
-	if (($use_descriptions) && open(DESC, "<$cvsroot/CVSROOT/descriptions"))
+	if ($use_descriptions && open(DESC, "<$cvsroot/CVSROOT/descriptions"))
 	{
 		while (<DESC>) {
 			chomp;
 			my ($dir, $description) = /(\S+)\s+(.*)/;
 			$descriptions{$dir} = $description;
 		}
+		close(DESC);
 	}
 
 	print "<p><a name=\"dirlist\"></a></p>\n";
@@ -1015,8 +1022,9 @@ if (-d $fullname) {
 			    || $input{$var} ne $DEFAULTVALUE{$var})
 			    && $input{$var} ne "" && $var ne "only_with_tag");
 		}
-		print "<p>Show only files with tag:\n";
-		print "<select name=\"only_with_tag\"";
+		print "<p><label for=\"only_with_tag\" accesskey=\"T\">";
+		print "Show only files with tag:</label>\n";
+		print "<select id=\"only_with_tag\" name=\"only_with_tag\"";
 		print " onchange=\"this.form.submit()\"" if $use_java_script;
 		print ">";
 		print "<option value=\"\">All tags / default branch</option>\n";
@@ -1028,10 +1036,11 @@ if (-d $fullname) {
 			    ">$tag</option>\n";
 		}
 		print "</select>\n";
-		print " Module path or alias:\n";
-		printf "<input type=\"text\" name=\"path\" value=\"%s\" size=\"15\">\n",
+		print " <label for=\"path\" accesskey=\"P\">";
+		print "Module path or alias:</label>\n";
+		printf "<input type=\"text\" id=\"path\" name=\"path\" value=\"%s\" size=\"15\">\n",
 		    htmlquote($where);
-		print "<input type=\"submit\" value=\"Go\"></p>\n";
+		print "<input type=\"submit\" value=\"Go\" accesskey=\"G\"></p>\n";
 		print "</form>\n";
 	}
 
@@ -1069,7 +1078,9 @@ if (-d $fullname) {
 		print "<center>\n<table cellpadding=\"0\" cellspacing=\"0\">";
 		print "\n<tr style=\"background-color: $columnHeaderColorDefault\">\n";
 		print "<th colspan=\"2\">Preferences</th>\n</tr>\n";
-		print "<tr>\n<td>Sort files by <select name=\"sortby\">\n";
+		print "<tr>\n<td>";
+		print "<label for=\"sortby\" accesskey=\"F\">Sort files by ";
+		print "</label><select id=\"sortby\" name=\"sortby\">\n";
 		print "<option value=\"\">File</option>\n";
 		print "<option", $bydate ? " selected" : "",
 		    " value=\"date\">Age</option>\n";
@@ -1081,18 +1092,21 @@ if (-d $fullname) {
 		print "<option", $bylog ? " selected" : "",
 		    " value=\"log\">Log message</option>\n";
 		print "</select>\n</td>\n";
-		print "<td>Sort log by: ";
+		print "<td><label for=\"logsort\" accesskey=\"L\">";
+		print "Sort log by: </label>";
 		printLogSortSelect(0);
 		print "</td>\n</tr>\n";
-		print "<tr>\n<td>Diff format: ";
+		print "<tr>\n<td><label for=\"f\" accesskey=\"D\">";
+		print "Diff format: </label>";
 		printDiffSelect(0);
 		print "</td>\n";
-		print "<td><label>Show Attic files: ";
-		print "<input name=\"hideattic\" type=\"checkbox\"",
+		print "<td><label for=\"hideattic\" accesskey=\"A\">";
+		print "Show Attic files: </label>";
+		print "<input id=\"hideattic\" name=\"hideattic\" type=\"checkbox\"",
 		    $input{'hideattic'} ? " checked" : "",
-		     "></label></td>\n</tr>\n";
+		     "></td>\n</tr>\n";
 		print "<tr>\n<td align=\"center\" colspan=\"2\">";
-		print "<input type=\"submit\" value=\"Change Options\">";
+		print "<input type=\"submit\" value=\"Change Options\" accesskey=\"C\">";
 		print "</td>\n</tr>\n</table>\n</center>\n</form>\n";
 	}
 	html_footer();
@@ -1197,7 +1211,7 @@ sub printDiffSelect($) {
 	my ($use_java_script) = @_;
 	my $f = $input{'f'};
 
-	print '<select name="f"';
+	print '<select id="f" name="f"';
 	print ' onchange="this.form.submit()"' if $use_java_script;
 	print ">\n";
 
@@ -1213,7 +1227,7 @@ sub printDiffSelect($) {
 sub printLogSortSelect($) {
 	my ($use_java_script) = @_;
 
-	print '<select name="logsort"';
+	print '<select id="logsort" name="logsort"';
 	print ' onchange="this.form.submit()"' if $use_java_script;
 	print ">\n";
 
@@ -2776,7 +2790,6 @@ sub printLog($;$) {
 			printDiffLinks($input{'r1'}, $url);
 		}
 
-		print '<br>' if $diff;
 	}
 	print "\n</p>\n<pre>\n";
 	print &htmlify($log{$_}, $allow_log_extra);
@@ -2838,41 +2851,47 @@ sub doLog($) {
 		    || $input{$_} ne $DEFAULTVALUE{$_}) && $input{$_} ne ""));
 	}
 	print "<table style=\"border: none\">\n<tr>\n";
-	print "<td align=\"right\">Diffs between \n";
-	print "<select name=\"r1\">\n";
+	print "<td align=\"right\">";
+	print "<label for=\"r1\" accesskey=\"1\">Diffs between </label>\n";
+	print "<select id=\"r1\" name=\"r1\">\n";
 	print "<option value=\"text\" selected>Use Text Field</option>\n";
 	print $sel;
 	print "</select>\n";
 	$diffrev = $revdisplayorder[$#revdisplayorder];
 	$diffrev = $input{"r1"} if (defined($input{"r1"}));
 	print
-	    "<input type=\"text\" size=\"$inputTextSize\" name=\"tr1\" value=\"$diffrev\" onchange=\"document.diff_select.r1.selectedIndex=0\"></td>\n";
+	    "<input type=\"text\" size=\"$inputTextSize\" name=\"tr1\" value=\"$diffrev\" onchange=\"this.form.r1.selectedIndex=0\"></td>\n";
 	print "<td><br></td>\n</tr>\n";
-	print "<tr>\n<td align=\"right\">and \n";
-	print "<select name=\"r2\">\n";
+	print "<tr>\n<td align=\"right\">";
+	print "<label for=\"r2\" accesskey=\"2\">and </label>\n";
+	print "<select id=\"r2\" name=\"r2\">\n";
 	print "<option value=\"text\" selected>Use Text Field</option>\n";
 	print $sel;
 	print "</select>\n";
 	$diffrev = $revdisplayorder[0];
 	$diffrev = $input{"r2"} if (defined($input{"r2"}));
 	print
-	    "<input type=\"text\" size=\"$inputTextSize\" name=\"tr2\" value=\"$diffrev\" onchange=\"document.diff_select.r2.selectedIndex=0\"></td>\n";
-	print "<td><input type=\"submit\" value=\"  Get Diffs  \"></td>\n";
+	    "<input type=\"text\" size=\"$inputTextSize\" name=\"tr2\" value=\"$diffrev\" onchange=\"this.form.r2.selectedIndex=0\"></td>\n";
+	print "<td><input type=\"submit\" value=\"  Get Diffs  \" accesskey=\"G\"></td>\n";
 	print "</tr>\n</table>\n";
 	print "</form>\n";
 	print "<hr noshade>\n";
 	print "<form method=\"get\" action=\"$scriptwhere\">\n";
 	print "<table style=\"border: none\">\n";
-	print "<tr>\n<td align=\"right\">Preferred Diff type:</td>\n";
+	print "<tr>\n<td align=\"right\">";
+	print "<label for=\"f\" accesskey=\"D\">Preferred Diff type:";
+	print "</label></td>\n";
 	print "<td>";
 	printDiffSelect($use_java_script);
 	print "</td>\n<td></td>\n</tr>\n";
 
 	if (@branchnames) {
-		print "<tr>\n<td align=\"right\">View only Branch:</td>\n";
+		print "<tr>\n<td align=\"right\">";
+		print "<label for=\"only_with_tag\" accesskey=\"B\">";
+		print "View only Branch:</label></td>\n";
 		print "<td>";
 		print "<a name=\"branch\"></a>\n";
-		print "<select name=\"only_with_tag\"";
+		print "<select id=\"only_with_tag\" name=\"only_with_tag\"";
 		print " onchange=\"this.form.submit()\"" if $use_java_script;
 		print ">\n";
 		print "<option value=\"\"";
@@ -2902,11 +2921,11 @@ sub doLog($) {
 	}
 	print "<tr>\n<td align=\"right\">";
 	print "<a name=\"logsort\"></a>\n";
-	print "Sort log by:</td>\n";
-	print "<td>";
+	print "<label for=\"logsort\" accesskey=\"L\">Sort log by:";
+	print "</label></td>\n<td>";
 	printLogSortSelect($use_java_script);
 	print "</td>\n";
-	print "<td><input type=\"submit\" value=\"  Set  \"></td>\n";
+	print "<td><input type=\"submit\" value=\"  Set  \" accesskey=\"S\"></td>\n";
 	print "</tr>\n</table>\n";
 	print "</form>\n";
 	html_footer();
@@ -3159,12 +3178,8 @@ sub navigateHeader($$$$$) {
 $HTML_DOCTYPE
 <html>
 <head>
-<meta name="robots" content="nofollow">
-<meta http-equiv="Content-Script-Type" content="application/x-javascript">
-<meta http-equiv="Content-Style-Type" content="text/css">
-<!-- FreeBSD-cvsweb $cvsweb_revision -->
 <title>$path$filename - $title - $rev</title>$css
-</head>
+$HTML_META</head>
 $body_tag_for_src
 <table width="100%" style="border: none; background-color: $navigationHeaderColor" cellspacing="0" cellpadding="1">
 <tr valign="bottom"><td>
@@ -3294,8 +3309,8 @@ sub chooseCVSRoot() {
 		# isn't gray and the form elements are not placed
 		# within a table ...
 		print "<table style=\"border: none\">\n<tr>\n";
-		print "<td>CVS Root:</td>\n";
-		print "<td>\n<select name=\"cvsroot\"";
+		print "<td><label for=\"cvsroot\" accesskey=\"C\">CVS Root:</label></td>\n";
+		print "<td>\n<select id=\"cvsroot\" name=\"cvsroot\"";
 		print " onchange=\"this.form.submit()\"" if $use_java_script;
 		print ">\n";
 
@@ -3314,9 +3329,10 @@ sub chooseCVSRoot() {
 		print "CVS Root: <b>[$cvstree]</b>";
 	}
 
-	print " Module path or alias:\n";
-	print "<input type=\"text\" name=\"path\" value=\"\" size=\"15\">\n";
-	print "<input type=\"submit\" value=\"Go\">";
+	print " <label for=\"path\" accesskey=\"P\">Module path or alias:";
+	print "</label>\n";
+	print "<input type=\"text\" id=\"path\" name=\"path\" value=\"\" size=\"15\">\n";
+	print "<input type=\"submit\" value=\"Go\" accesskey=\"G\">";
 
 	if (2 <= @CVSROOT) {
 		print "</td>\n</tr>\n</table>";
@@ -3336,7 +3352,7 @@ sub chooseMirror() {
 	#
 	# Should perhaps exlude the current site somehow..
 	if (keys %MIRRORS) {
-		print "\nThis cvsweb is mirrored in:\n";
+		print "\nThis CVSweb is mirrored in:\n";
 
 		foreach $mirror (keys %MIRRORS) {
 			print ", " if ($moremirrors);
@@ -3610,12 +3626,8 @@ sub html_header($) {
 $HTML_DOCTYPE
 <html>
 <head>
-<meta name="robots" content="nofollow">
-<meta http-equiv="Content-Script-Type" content="application/x-javascript">
-<meta http-equiv="Content-Style-Type" content="text/css">
 <title>$title</title>
-<!-- FreeBSD-cvsweb $cvsweb_revision -->
-</head>
+$HTML_META</head>
 $header
 EOH
 }
