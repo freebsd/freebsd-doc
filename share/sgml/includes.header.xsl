@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/share/sgml/includes.header.xsl,v 1.2 2004/01/02 14:07:33 blackend Exp $ -->
+<!-- $FreeBSD: www/share/sgml/includes.header.xsl,v 1.3 2005/01/01 12:01:53 simon Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -55,7 +55,7 @@
 
     <map name="bar">
       <area shape="rect" coords="1,1,111,31"
-	    href="{$base}/index.html" alt="Top"/>
+	    href="{$base}/index.html" alt="Site Root"/>
       <area shape="rect" coords="112,11,196,31"
 	    href="{$base}/ports/index.html" alt="Applications"/>
       <area shape="rect" coords="196,12,257,33"
@@ -67,11 +67,11 @@
       <area shape="rect" coords="425,16,475,32"
 	      href="{$base}/search/search.html" alt="Search"/>
       <area shape="rect" coords="477,16,516,33"
-	    href="{$base}/search/index-site.html" alt="Index"/>
+	    href="{$base}/search/index-site.html" alt="Site Index"/>
       <area shape="rect" coords="516,15,562,33"
-	    href="{$base}/index.html" alt="Top"/>
+	    href="{$base}/index.html" alt="Site Root"/>
 	<area shape="rect" coords="0,0,564,32"
-	      href="{$base}/index.html" alt="Top"/>
+	      href="{$base}/index.html" alt="Site Root"/>
     </map>
   </xsl:variable>
 
