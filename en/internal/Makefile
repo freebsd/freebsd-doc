@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/internal/Makefile,v 1.32 2003/02/07 12:24:17 ceri Exp $
+# $FreeBSD: www/en/internal/Makefile,v 1.33 2003/02/09 00:09:19 trhodes Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
