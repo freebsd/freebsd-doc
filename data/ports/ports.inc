@@ -1,14 +1,14 @@
-<!-- $Id: ports.inc,v 1.17 1997-09-20 08:16:03 wosch Exp $ -->
+<!-- $Id: ports.inc,v 1.18 1997-12-13 14:01:48 jkh Exp $ -->
 <p>The FreeBSD Ports Collection offers a simple way for users and
 administrators to install applications.  Each ``port'' listed here
 contains any patches necessary to make the original application source
 code compile and run on FreeBSD.  Installing an application is as
 simple as downloading the port, unpacking it and typing <tt>make</tt>
 in the port directory.  The <tt>Makefile</tt> automatically fetches the
-application source code, either from a local disk or via ftp,
+application source code, either from a local disk, CDROM or via ftp,
 unpacks it on your system, applies the patches, and compiles.  If
 all goes well, simply type <tt>make install</tt> to install the
-application.</p>
+application and register it with the package system.</p>
 
 <p>For more information about using ports, see <a
 href="../handbook/ports.html">The ports collection</a>.  For
