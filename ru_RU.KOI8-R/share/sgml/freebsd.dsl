@@ -1,7 +1,7 @@
-<!-- $FreeBSD: doc/ru_RU.KOI8-R/share/sgml/freebsd.dsl,v 1.2 2000/04/03 15:11:30 phantom Exp $ -->
+<!-- $FreeBSD: doc/ru_RU.KOI8-R/share/sgml/freebsd.dsl,v 1.3 2000/09/28 23:29:47 nbm Exp $ -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
-<!ENTITY freebsd.dsl SYSTEM "-//FreeBSD//DOCUMENT DocBook Language Neutral Stylesheet//EN" CDATA DSSSL>
+<!ENTITY freebsd.dsl PUBLIC "-//FreeBSD//DOCUMENT DocBook Language Neutral Stylesheet//EN" CDATA DSSSL>
 <!ENTITY % lang.ru.dsssl "IGNORE">
 ]>
 
