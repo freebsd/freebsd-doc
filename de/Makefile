@@ -1,7 +1,7 @@
 # The FreeBSD Documentation Project
 # The FreeBSD German Documentation Project
-# $FreeBSD: www/de/Makefile,v 1.1 2001/02/25 11:54:42 alex Exp $
-# $FreeBSDde: de-www/Makefile,v 1.6 2001/02/25 11:48:33 alex Exp $
+# $FreeBSD$
+# $FreeBSDde: de-www/Makefile,v 1.8 2002/12/06 21:56:35 ue Exp $
 
 .if exists(Makefile.conf)
 .include "Makefile.conf"
@@ -24,16 +24,18 @@ CLEANFILES+=atoz.sgml site.sgml
 
 # Subdirectories
 # SGML
-#.if !defined(WEB_ONLY) || empty(WEB_ONLY)
-#SUBDIR+= ports
-#.endif
-
+SUBDIR=  FAQ
+SUBDIR+= handbook
 .if !defined(WEB_ONLY) || empty(WEB_ONLY)
-# Extern
-#SUBDIR+= tutorials
-
-DOCSUBDIR=	FAQ handbook
+SUBDIR+= doc
 .endif
+
+# These *must* be listed after the "doc" subdir, as they create symlinks
+# in to it.
+.if !defined(WEB_ONLY) || empty(WEB_ONLY)
+#SUBDIR+= tutorials
+.endif
+
 SGMLFLAGS+=	-links -hdr ${.CURDIR}/doc.hdr -ftr ${.CURDIR}/doc.ftr
 
 WEBDIR=		data/de
