@@ -25,7 +25,7 @@
 	  <SMALL><BR>
 	    <A HREF="http://www.FreeBSD.org/gnome/">GNOME on FreeBSD Home</A><BR>
 	    <A HREF="docs/install-gnome.html">Installation Instructions</A><BR>
-	    <A HREF="http://www.FreeBSD.org/ports/gnome.html">Available Applications</A><BR>
+	    <A HREF="../ports/gnome.html">Available Applications</A><BR>
 	    <A HREF="docs/volunteer.html">How to Help</A><BR>
 	    <A HREF="docs/bugging.html">Reporting a Bug</A><BR>
 	    <A HREF="screenshots/screens.html">Screenshots</A><BR>
