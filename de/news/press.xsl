@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
 <!-- $FreeBSD$
-     $FreeBSDde: de-www/news/press.xsl,v 1.2 2003/10/04 15:53:04 mheinen Exp $
-     basiert auf: 1.4
+     $FreeBSDde: de-www/news/press.xsl,v 1.3 2003/11/18 00:48:50 mheinen Exp $
+     basiert auf: 1.5
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
@@ -32,7 +32,7 @@
 
 	<p>Kennen Sie einen hier nicht aufgef&#252;hrten Artikel?
 	  Senden Sie bitte die Einzelheiten an
-	  <a href="mailto:doc@freebsd.org">doc@FreeBSD.org</a> und
+	  <a href="mailto:www@freebsd.org">www@FreeBSD.org</a> und
 	  wir nehmen den Artikel auf.</p>
 
 	<p>Besuchen Sie auch die Seite
