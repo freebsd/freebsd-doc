@@ -24,6 +24,7 @@ MAN5 =	a.out.5\
 	exports.5\
 	fbtab.5\
 	fdesc.5\
+	finger.conf.5\
 	forward.5\
 	fs.5\
 	fstab.5\
@@ -67,6 +68,8 @@ MAN5 =	a.out.5\
 	pbm.5\
 	pccard.conf.5\
 	phones.5\
+	pim6dd.conf.5\
+	pim6sd.conf.5\
 	printcap.5\
 	procfs.5\
 	protocols.5\
