@@ -2,9 +2,9 @@
 # The FreeBSD Russian Documentation Project
 #
 # $FreeBSD$
-# $FreeBSDru: frdp/www/ru/Makefile,v 1.29 2003/11/27 14:01:07 den Exp $
+# $FreeBSDru: frdp/www/ru/Makefile,v 1.30 2003/12/09 12:07:32 den Exp $
 #
-# Original revision: 1.102
+# Original revision: 1.105
 #
 
 .if exists(Makefile.conf)
@@ -99,12 +99,14 @@ webcheck:
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
 
 index.html: index.xsl ${XML_INCLUDES}\
-		${XML_NEWS_INCLUDES} ${XML_NEWS_NEWS}\
+		${XML_NEWS_INCLUDES} ${XML_NEWS_NEWS} ${XML_NEWS_PRESS}\
 		${XML_MIRRORS} ${XML_ADVISORIES}
 	${XSLTPROC} ${XSLTPROCOPTS} \
 		-o $@ \
 		--param mirrors.xml "'${XML_MIRRORS}'" \
 		--param advisories.xml "'${XML_ADVISORIES}'" \
+		--param news.press.xml "'${XML_NEWS_PRESS}'" \
+		--param news.project.xml "'${XML_NEWS_NEWS}'" \
 		${.CURDIR}/index.xsl ${XML_NEWS_NEWS}
 .if !defined(NO_TIDY)
 	-${TIDY} ${TIDYOPTS} ${.TARGET}

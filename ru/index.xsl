@@ -4,9 +4,9 @@
      The FreeBSD Russian Documentation Project
 
      $FreeBSD$
-     $FreeBSDru: frdp/www/ru/index.xsl,v 1.25 2003/11/27 14:01:07 den Exp $
+     $FreeBSDru: frdp/www/ru/index.xsl,v 1.26 2003/12/09 12:07:33 den Exp $
 
-     Original revision: 1.83
+     Original revision: 1.90
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -17,6 +17,13 @@
   <xsl:variable name="base" select="'..'"/>
   <xsl:variable name="date" select="'$FreeBSD$'"/>
   <xsl:variable name="title" select="'Проект FreeBSD'"/>
+
+  <!-- these params should be externally bound. The values
+       here are not used actually -->
+  <xsl:param name="advisories.xml" select="'none'"/>
+  <xsl:param name="mirrors.xml" select="'none'"/>
+  <xsl:param name="news.press.xml" select="'none'"/>
+  <xsl:param name="news.project.xml" select="'none'"/>
 
   <xsl:output type="html" encoding="koi8-r"
               doctype-public="-//W3C//DTD HTML 4.01 Transitional//EN"/>
@@ -106,58 +113,67 @@
 			   bgcolor="#ffcc66" width="100%">
 		      <tr>
 			<td>
-			  <p><font size="+1" color="#990000"><b>Новости</b></font>
-
-
-			    <small><br/>
-			      &#183; <a href="news/newsflash.html">Анонсы</a><br/>
-			      &#183; <a href="news/press.html">Пресса</a><br/>
-			      &#183; <a href="news/index.html">Дополнительно ...</a>
+			  <p>
+			    <a href="platforms/index.html">
+			      <font size="+1" color="#990000"><b>Платформы:</b></font>
+			    </a><small><br/>
+			      &#183; <a href="{$base}/smp/index.html">i386</a><br/>
+			      &#183; <a href="platforms/alpha.html">Alpha</a><br/>
+			      &#183; <a href="platforms/ia64/index.html">IA-64</a><br/>
+			      &#183; <a href="platforms/amd64.html">AMD64</a><br/>
+			      &#183; <a href="platforms/sparc.html">Sparc64</a><br/>
+			      &#183; <a href="platforms/index.html">Еще?</a><br/>
 			    </small></p>
 
 			  <p><font size="+1" color="#990000"><b>Программы</b></font>
 			    <small><br/>
 			      &#183; <a href="{$base}/doc/en_US.ISO8859-1/books/handbook/mirrors.html">Где взять систему</a><br/>
 			      &#183; <a href="releases/index.html">Релизы</a><br/>
-			      &#183; <a href="{$base}/ports/index.html">Приложения</a><br/>
+			      &#183; <a href="ports/index.html">Приложения</a><br/>
 			    </small></p>
-	    
-			  <p><font size="+1" color="#990000"><b>Документация</b></font>
-		
-			    <small><br/>
-			      &#183; <a href="projects/newbies.html">Для новичков</a><br/>
+
+			  <p>
+			    <a href="docs.html">
+			      <font size="+1" color="#990000"><b>Документация</b></font>
+			    </a><small><br/>
+                              &#183; <a href="FAQ/FAQ.html">FAQ</a><br/>
                               &#183; <a href="{$base}/doc/en_US.ISO8859-1/books/handbook/index.html">Руководство</a><br/>
-                              &#183; <a href="{$base}/doc/en_US.ISO8859-1/books/faq/index.html">FAQ</a><br/>
                               &#183; <a href="http://www.FreeBSD.org/cgi/man.cgi">Страницы справочной системы</a><br/>
 			      &#183; <a href="docproj/index.html">Проект Документирования</a><br/>
-			      &#183; <a href="docs.html">Дополнительно..</a><br/>
+			      &#183; <a href="projects/newbies.html">Для новичков</a><br/>
 			    </small></p>
-			  
-			  <p><font size="+1" color="#990000"><b>Поддержка</b></font>
-	      
-			    <small><br/>
+
+			  <p>
+			    <a href="support.html">
+			      <font size="+1" color="#990000"><b>Поддержка</b></font>
+			    </a><small><br/>
 			      &#183; <a href="support.html#mailing-list">Списки рассылки</a><br/>
 			      &#183; <a href="support.html#newsgroups">Телеконференции</a><br/>
 			      &#183; <a href="support.html#user">Группы пользователей</a><br/>
 			      &#183; <a href="support.html#web">Ресурсы Internet</a><br/>
 			      &#183; <a href="security/index.html">Безопасность</a><br/>
-			      &#183; <a href="{$base}/events/events.html">События</a><br/>
-			      &#183; <a href="support.html">Дополнительно..</a>
 			    </small></p>
 
-                          <p><font size="+1" color="#990000"><b>Сообщения об ошибках</b></font>
-                            <small><br/>
+			  <p>
+			    <a href="{$base}/support.html#gnats">
+			      <font size="+1" color="#990000"><b>Сообщения об ошибках</b></font>
+			    </a><small><br/>
+			      &#183; <a href="http://www.FreeBSD.org/cgi/query-pr-summary.cgi?query">Поиск</a><br/>
+			      &#183; <a href="http://www.FreeBSD.org/cgi/query-pr.cgi">Просмотр сообщения об ошибке</a><br/>
+			      &#183; <a href="http://www.FreeBSD.org/cgi/query-pr-summary.cgi">Просмотр всех сообщений об ошибках</a><br/>
                               &#183; <a href="send-pr.html">Посылка сообщений об ошибке</a><br/>
-                              &#183; <a href="http://www.FreeBSD.org/cgi/query-pr-summary.cgi">Просмотр открытых проблем</a><br/>
-                              &#183; <a href="http://www.FreeBSD.org/cgi/query-pr.cgi">Поиск по номеру ошибки</a><br/>
-                              &#183; <a href="support.html#gnats">Дополнительно..</a><br/>
+			      &#183; <a href="{$base}/doc/en_US.ISO8859-1/articles/problem-reports/article.html">Составление сообщения об ошибке</a><br/>
                             </small></p>
 
-			  <p><font size="+1" color="#990000"><b>Разработка</b></font>
-			    <small><br/>
-			      &#183; <a href="projects/index.html">Проекты</a><br/>
-                              &#183; <a href="{$base}/releng/index.html">Выпуск релизов</a><br/>
+			  <p>
+			    <a href="projects/index.html">
+			      <font size="+1" color="#990000"><b>Разработка</b></font>
+			    </a><small><br/>
+			      &#183; <a href="{$base}/doc/en_US.ISO8859-1/books/developers-handbook">Руководство разработчика</a><br/>
+			      &#183; <a href="{$base}/doc/en_US.ISO8859-1/books/porters-handbook">Руководство по портированию</a><br/>
 			      &#183; <a href="support.html#cvs">Дерево CVS</a><br/>
+			      &#183; <a href="releng/index.html">Выпуск релизов</a><br/>
+			      &#183; <a href="{$base}/doc/en_US.ISO8859-1/articles/contributing/index.html">Помощь FreeBSD</a><br/>
 			    </small></p>
 	      
 			  <p><font size="+1" color="#990000"><b>Производители</b></font>
@@ -175,15 +191,28 @@
                               &#183; <a href="donations/donors.html">Имеющиеся пожертвования</a><br/>
                               &#183; <a href="donations/wantlist.html">Список требуемого</a><br/>
 			    </small></p>
-	      
-			  <p><font size="+1" color="#990000"><b>Этот сервер</b></font>
-		
-			    <small><br/>
-			      &#183; <a href="{$base}/search/index-site.html">Карта сервера</a><br/>
-			      &#183; <a href="{$base}/search/search.html">Поиск</a><br/>
-			      &#183; <a href="internal/index.html">Дополнительно ...</a><br/>
+ 
+			  <p>
+			    <a href="search/index-site.html">
+			      <font size="+1" color="#990000"><b>Этот сервер</b></font>
+			    </a><small><br/>
+			      &#183; <a href="search/search.html#web">Поиск по сайту</a><br/>
+			      &#183; <a href="search/search.html#mailinglists">Поиск в списках рассылки</a><br/>
+			      &#183; <a href="search/search.html">Поиск</a><br/>
 			    </small></p>
-	      
+
+			  <p>
+			    <a href="mailto.html">
+			      <font size="+1" color="#990000"><b>Свяжитесь с FreeBSD</b></font>
+			    </a>
+			  </p>
+
+			  <p>
+			    <a href="copyright/index.html">
+			      <font size="+1" color="#990000"><b>BSD Copyright</b></font>
+			    </a>
+			  </p>
+
 			  <form action="http://www.FreeBSD.org/cgi/search.cgi" method="get">
 			    <small>Поиск:<br/>
 			      <input type="text" name="words" size="10"/>
@@ -206,7 +235,7 @@
 	      <h2><font color="#990000">Что такое FreeBSD?</font></h2>
 
 	      <p>FreeBSD - это мощная операционная система для компьютеров
-                архитектур, совместимых с x86, DEC Alpha,
+                архитектур, совместимых с x86, AMD64, DEC Alpha,
                 IA-64, PC-98 и UltraSPARC&#174;.  Она основана на BSD, версии
                 <xsl:value-of select="$unix"/>, разработанной в Университете
                 Калифорнии, Беркли.  Она разрабатывается и поддерживается <a
@@ -317,8 +346,10 @@
 		    <table cellpadding="4" cellspacing="0" border="0"
 			   bgcolor="#ffcc66" width="100%">
 		      <tr>
-			<td valign="top"><p><font size="+1" color="#990000"><b>Новый технологический релиз:
-			    <xsl:value-of select="$rel.current"/></b></font><br/>
+			<td valign="top"><p>
+			      <a href="{$u.rel.early}">
+			      <font size="+1" color="#990000"><b>Новый технологический релиз:
+			    <xsl:value-of select="$rel.current"/></b></font></a><br/>
 
 			    <small>&#183; <a href="{$u.rel.announce}">Анонс</a><br/>
 			      &#183; <a href="{$base}/doc/en_US.ISO8859-1/books/handbook/install.html">Руководство по установке</a><br/>
@@ -327,8 +358,10 @@
                               &#183; <a href="{$u.rel.errata}">Обнаруженные Проблемы</a><br/>
                               &#183; <a href="{$u.rel.early}">Руководство для новичков</a></small></p>
 
-                          <p><font size="+1" color="#990000"><b>Продуктивный релиз:
-                            <xsl:value-of select="$rel2.current"/></b></font><br/>
+			<p>
+			      <a href="{$u.rel2.announce}">
+			      <font size="+1" color="#990000"><b>Продуктивный релиз:
+			    <xsl:value-of select="$rel2.current"/></b></font></a><br/>
 
                             <small>&#183; <a href="{$u.rel2.announce}">Анонс</a><br/>
                               &#183; <a href="{$base}/doc/en_US.ISO8859-1/books/handbook/install.html">Руководство по установке</a><br/>
@@ -339,31 +372,15 @@
 			  <p><font size="+1" color="#990000"><b>Новости Проекта</b></font><br/>
 			    <font size="-1">
 			      Последние изменения: 
-			      <xsl:value-of
-				select="descendant::month[position() = 1]/name"/>
-			      <xsl:text> </xsl:text>
-			      <xsl:value-of
-				select="descendant::day[position() = 1]/name"/>,
-			      <xsl:text> </xsl:text>
-			      <xsl:value-of
-				select="descendant::year[position() = 1]/name"/>
+			      <xsl:call-template name="html-index-news-project-items-lastmodified">
+				<xsl:with-param name="news.project.xml" select="$news.project.xml" />
+			      </xsl:call-template>
 			      <br/>
-			      <!-- Pull in the 10 most recent news items -->
-			      <xsl:for-each select="descendant::event[position() &lt;= 10]">
-				&#183;  <a>
-				  <xsl:attribute name="href">
-				    news/newsflash.html#<xsl:call-template name="generate-event-anchor"/>
-				  </xsl:attribute>
-				  <xsl:choose>
-				    <xsl:when test="count(child::title)">
-				      <xsl:value-of select="title"/><br/>
-				    </xsl:when>
-				    <xsl:otherwise>
-				      <xsl:value-of select="p"/><br/>
-				    </xsl:otherwise>
-				  </xsl:choose>
-				</a>
-			      </xsl:for-each>
+
+			      <xsl:call-template name="html-index-news-project-items">
+				<xsl:with-param name="news.project.xml" select="$news.project.xml" />
+			      </xsl:call-template>
+
 			      <a href="news/newsflash.html">Далее...</a>
 			    </font></p>
 			  
@@ -371,21 +388,16 @@
 
 			    <font size="-1">
 			      Последние изменения: 
-			      <xsl:value-of
-				select="document('news/press.xml')/descendant::month[position() = 1]/name"/>
-			      <xsl:text> </xsl:text>
-			      <xsl:value-of
-				select="document('news/press.xml')/descendant::year[position() = 1]/name"/>
+			      <xsl:call-template name="html-index-news-press-items-lastmodified">
+				<xsl:with-param name="news.press.xml" select="$news.press.xml" />
+			      </xsl:call-template>
+
 			      <br/>
-			      <!-- Pull in the 10 most recent press items -->
-			      <xsl:for-each select="document('news/press.xml')/descendant::story[position() &lt; 10]">
-				&#183; <a>
-				  <xsl:attribute name="href">
-				    news/press.html#<xsl:call-template name="generate-story-anchor"/>
-				  </xsl:attribute>
-				  <xsl:value-of select="name"/>
-				</a><br/>
-			      </xsl:for-each>
+
+			      <xsl:call-template name="html-index-news-press-items">
+				<xsl:with-param name="news.press.xml" select="$news.press.xml" />
+			      </xsl:call-template>
+
 			      <a href="news/press.html">Далее...</a>
                             </font>
                           </p>
@@ -394,22 +406,16 @@
 
                            <font size="-1">
                              Последнее обновление:
-                             <xsl:value-of
-			       select="document($advisories.xml)/descendant::month[position() = 1]/name"/>
-                             <xsl:text> </xsl:text>
-                             <xsl:value-of
-			       select="document($advisories.xml)/descendant::day[position() = 1]/name"/>
-                             <xsl:text>, </xsl:text>
-                             <xsl:value-of
-			       select="document($advisories.xml)/descendant::year[position() = 1]/name"/>
-                             <br/>
-                             <!-- Pull in the 10 most recent security advisories -->
-			     <xsl:for-each select="document($advisories.xml)/descendant::advisory[position() &lt; 10]">
-                               &#183; <a>
-                                 <xsl:attribute name="href">ftp://ftp.freebsd.org/pub/FreeBSD/CERT/advisories/<xsl:value-of select="name"/>.asc</xsl:attribute>
-                                 <xsl:value-of select="name"/>
-                               </a><br/>
-                             </xsl:for-each>
+			      <xsl:call-template name="html-index-advisories-items-lastmodified">
+				<xsl:with-param name="advisories.xml" select="$advisories.xml" />
+			      </xsl:call-template>
+
+			      <br/>
+
+			      <xsl:call-template name="html-index-advisories-items">
+				<xsl:with-param name="advisories.xml" select="$advisories.xml" />
+			      </xsl:call-template>
+
                              <a href="security/">Дополнительно...</a>
 			    </font>
 			  </p>
