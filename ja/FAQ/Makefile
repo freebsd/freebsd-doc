@@ -1,6 +1,6 @@
 #
-# $FreeBSD$
-# Original revision:	1.2
+# $FreeBSD: www/ja/FAQ/Makefile,v 1.3 1999/09/06 07:03:16 peter Exp $
+# Original revision:	1.3
 #
 # Build the FreeBSD FAQ *outside* of the www tree, and install it
 # in to the right place as necessary.
