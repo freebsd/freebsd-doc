@@ -1,5 +1,5 @@
 # bsd.web.mk
-# $FreeBSD: www/share/mk/web.site.mk,v 1.63 2004/11/13 12:23:19 ceri Exp $
+# $FreeBSD: www/share/mk/web.site.mk,v 1.64 2005/01/20 00:24:24 keramida Exp $
 
 #
 # Build and install a web site.
@@ -131,7 +131,8 @@ DOC_PREFIX?=	${WEB_PREFIX}/../doc
 .include "${DOC_PREFIX}/share/mk/doc.common.mk"
 .else
 .error	${DOC_PREFIX}/share/mk/doc.common.mk not found.\
-	Define $$WITHOUT_DOC for building without the doc/ module.
+	Define $$WITHOUT_DOC and $$WEB_ONLY for performing a partial\
+	build without the doc/ module.
 .endif
 .else # !defined(WITHOUT_DOC)
 #
