@@ -26,19 +26,14 @@
 #
 # url.cgi - make plain text URLs clickable
 #
-# $Id: url.cgi,v 1.11 1998-12-06 11:47:43 wosch Exp $
+# $Id: url.cgi,v 1.12 1999-01-19 17:00:49 wosch Exp $
 
-
-#require LWP::UserAgent;
 
 $hsty_base = '';
 $hsty_email = 'ports@freebsd.org';
 
 require "./cgi-lib.pl";
 require "./cgi-style.pl";
-
-#$ua = new LWP::UserAgent;
-#$ua -> max_size(20*1024);
 
 $file = $ENV{'QUERY_STRING'};
 $uri = "$file";
@@ -48,7 +43,6 @@ if ($file !~ m%^(http|ftp)://[a-z_\-0-9]+\.freebsd\.(com|org)%i) {
     exit(0);
 }
 
-if (1) {
 	my($cvsroot) = '/home/ncvs';
 	$file =~ s%(http|ftp)://ftp.freebsd.org/pub/FreeBSD/FreeBSD-current/%%;
 	print &short_html_header($file);
@@ -80,38 +74,3 @@ if (1) {
         }
 	print &html_footer; 
 	exit;
-}
-$request = new HTTP::Request('GET', "$uri");
-$response = $ua->request($request);
-
-if ($response -> is_success) {
-    if ($response -> content_type eq "text/plain") {
-	print &short_html_header("bla");
-	print "\n<HR>\n<pre>\n";
-	
-	my($content) = $response -> content;
-	$content =~ s/</&lt;/g;
-	$content =~ 
-	    s%((http|ftp)://[^\s"\)\>,;]+)%<A HREF="$1">$1</A>%gi;
-	print $content;
-	print "</pre>\n";
-
-	# Add 'source' link for freebsd ports
-	if ($file =~ 
-	    m%pub/FreeBSD/FreeBSD-current/(ports/[^/]+/[^/]+)/pkg/DESCR$%) {
-	    print qq{<HR><a href=\"pds.cgi?$1">Sources</a>\n};
-	    print qq{| <a href="../ports/">Help</a>\n};
-	    print qq{<BR>\n};
-        }
-	print &html_footer; 
-	exit;
-    } else {
-	# no plain text, do a redirect
-	print "Location: $uri\n";
-	print "Content-type: text/plain\n\n";
-    }
-} else {
-    # quick and dirty hack for non existings urls
-    print "Location: $uri\n";
-    print "Content-type: text/plain\n\n";
-}
