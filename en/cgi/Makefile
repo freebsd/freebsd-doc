@@ -1,7 +1,10 @@
-# $FreeBSD: www/en/cgi/Makefile,v 1.15 1999/09/06 07:02:39 peter Exp $
+# $FreeBSD: www/en/cgi/Makefile,v 1.16 2000/08/14 04:57:27 knu Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
+.endif
+.if exists(../Makefile.inc)
+.include "../Makefile.inc"
 .endif
 
 DATA=	ftp.mirrors
@@ -17,5 +20,4 @@ CGI+=	mailindex.cgi
 .C.cgi:
 	${CXX} ${CFLAGS} -o ${.TARGET} ${.IMPSRC}
 
-.include "../web.mk"
-
+.include "${WEB_PREFIX}/share/mk/web.site.mk"

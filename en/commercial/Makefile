@@ -1,7 +1,10 @@
-# $FreeBSD: www/en/commercial/Makefile,v 1.12 2000/04/04 09:21:21 kuriyama Exp $
+# $FreeBSD: www/en/commercial/Makefile,v 1.13 2000/09/30 00:21:38 nbm Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
+.endif
+.if exists(../Makefile.inc)
+.include "../Makefile.inc"
 .endif
 
 PERL=	perl5
@@ -48,4 +51,4 @@ software.inc: gencommercial.pl commercial.desc software.raw
 software_bycat.inc: gencommercial.pl commercial.desc software.raw
 	${PERL} ${.CURDIR}/gencommercial.pl -s ${.CURDIR} -c software
 
-.include <../web.mk>
+.include "${WEB_PREFIX}/share/mk/web.site.mk"

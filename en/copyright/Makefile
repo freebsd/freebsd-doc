@@ -1,7 +1,10 @@
-# $FreeBSD: www/en/copyright/Makefile,v 1.8 1999/09/06 07:02:42 peter Exp $
+# $FreeBSD: www/en/copyright/Makefile,v 1.9 1999/09/19 11:10:34 wosch Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
+.endif
+.if exists(../Makefile.inc)
+.include "../Makefile.inc"
 .endif
 
 DOCS=	license.sgml
@@ -32,4 +35,4 @@ ${LEGAL}: $${CVSROOT}/${LEGAL_FILE},v
 	cvs ${CVS_OPT} co -p ${LEGAL_FILE} > ${.TARGET}
 .endif
 
-.include "../web.mk"
+.include "${WEB_PREFIX}/share/mk/web.site.mk"

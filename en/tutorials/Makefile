@@ -1,8 +1,15 @@
 #
-# $FreeBSD: www/en/tutorials/Makefile,v 1.8 2000/05/19 00:10:09 nik Exp $
+# $FreeBSD: www/en/tutorials/Makefile,v 1.9 2000/09/30 00:21:39 nbm Exp $
 #
 # Build the FreeBSD tutorials/articles outside of the www tree, and then
 # install them in to the right place.
+
+.if exists(../Makefile.conf)
+.include "../Makefile.conf"
+.endif
+.if exists(../Makefile.inc)
+.include "../Makefile.inc"
+.endif
 
 DOCS = index.sgml
 
@@ -17,4 +24,4 @@ all afterinstall: index.html
 	(cd ${.CURDIR}/../../../doc/en_US.ISO_8859-1/books/porters-handbook && ${MAKE} 'FORMATS=html html-split' DESTDIR=${DESTDIR}/data/porters-handbook ${.TARGET:S/afterinstall/install/})
 	(cd ${.CURDIR}/../../../doc/en_US.ISO_8859-1/books/ppp-primer && ${MAKE} 'FORMATS=html html-split' DESTDIR=${DESTDIR}/data/tutorials/ppp ${.TARGET:S/afterinstall/install/})
 
-.include "../web.mk"
+.include "${WEB_PREFIX}/share/mk/web.site.mk"
