@@ -11,7 +11,6 @@ MAINTAINER=vkchan@kendryl.net hiten@uk.FreeBSD.org
 DOC?= article
 
 FORMATS?= html
-TIDYFLAGS+= -raw
 
 INSTALL_COMPRESSED?= gz
 INSTALL_ONLY_COMPRESSED?=
