@@ -1,6 +1,6 @@
-# $FreeBSD: www/ja/news/Makefile,v 1.16 1999/09/07 15:15:50 kuriyama Exp $
+# $FreeBSD: www/ja/news/Makefile,v 1.17 1999/12/23 01:15:51 kuriyama Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.16
+# Original revision: 1.18
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -33,6 +33,9 @@ DOCS+= press-rel-3.sgml
 #DOCS+=	sou1999.sgml
 
 INDEXLINK= news.html
+
+SUBDIR= 	1996
+SUBDIR+= 	1997
 
 ### Revision checking
 REVFILES=	${DOCS:M*.sgml:S/.sgml$/.revinc/g}
