@@ -1,5 +1,5 @@
 # 
-# $FreeBSD: doc/en_US.ISO_8859-1/books/fdp-primer/Makefile,v 1.8 2000/06/23 00:37:53 nik Exp $
+# $FreeBSD: doc/en_US.ISO_8859-1/books/fdp-primer/Makefile,v 1.9 2000/07/16 16:40:36 nik Exp $
 #
 # Build the FreeBSD Documentation Project Primer.
 #
@@ -36,11 +36,11 @@ SRCS+= writing-style/chapter.sgml
 SRCS+= examples/appendix.sgml
 
 # Images from the cross-document image library
-LIB_IMAGES=	callouts/1.png
-LIB_IMAGES+=	callouts/2.png
-LIB_IMAGES+=	callouts/3.png
-LIB_IMAGES+=	callouts/4.png
-LIB_IMAGES+=	callouts/5.png
+IMAGES_LIB=	callouts/1.png
+IMAGES_LIB+=	callouts/2.png
+IMAGES_LIB+=	callouts/3.png
+IMAGES_LIB+=	callouts/4.png
+IMAGES_LIB+=	callouts/5.png
 
 # Entities
 SRCS+= chapters.ent 
