@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp 
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.122 2004-01-14 09:42:31 www Exp $
+# $Id: man.cgi,v 1.123 2004-01-15 09:49:55 www Exp $
 
 #use Data::Dumper;
 #use Carp;
@@ -142,17 +142,18 @@ foreach my $os (keys %$sectionpath) {
      );
 
 $manLocalDir = '/usr/local/www/bsddoc/man';
-$manPathDefault = 'FreeBSD 5.1-RELEASE and Ports';
+$manPathDefault = 'FreeBSD 5.2-RELEASE and Ports';
 #$manPathDefault = 'FreeBSD 5.1-RELEASE';
 
 %manPath = 
     (
-     'FreeBSD 5.1-RELEASE and Ports',  "$manLocalDir/FreeBSD-5.1-RELEASE/man:$manLocalDir/FreeBSD-5.1-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-5.1-RELEASE",
+     'FreeBSD 5.2-RELEASE and Ports',  "$manLocalDir/FreeBSD-5.2-RELEASE/man:$manLocalDir/FreeBSD-5.2-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-5.1-RELEASE",
 
-     'FreeBSD 5.1-current',   "$manLocalDir/FreeBSD-5.1-current",
+     'FreeBSD 5.2-current',   "$manLocalDir/FreeBSD-5.2-current",
      'FreeBSD 4.9-stable',    "$manLocalDir/FreeBSD-4.9-stable",
 
      'FreeBSD 5.2-RELEASE',   "$manLocalDir/FreeBSD-5.2-RELEASE",
+     'FreeBSD 5.2-RELEASE',   "$manLocalDir/FreeBSD-5.2-RELEASE/man:$manLocalDir/FreeBSD-5.2-RELEASE/openssl/man",
      'FreeBSD 5.1-RELEASE',   "$manLocalDir/FreeBSD-5.1-RELEASE/man:$manLocalDir/FreeBSD-5.1-RELEASE/openssl/man",
      'FreeBSD 5.0-RELEASE',   "$manLocalDir/FreeBSD-5.0-RELEASE",
      'FreeBSD 4.9-RELEASE',   "$manLocalDir/FreeBSD-4.9-RELEASE",
@@ -321,10 +322,9 @@ while (($key,$val) = each %manPath) {
 # keywords must be in lower cases.
 %manPathAliases = 
     (
-     'freebsd', 'FreeBSD 5.1-RELEASE',
+     'freebsd', 'FreeBSD 5.2-RELEASE',
      'freebsd-stable', 'FreeBSD 4.9-stable',
-     'freebsd-current', 'FreeBSD 5.1-current',
-     'freebsd 5.1-release', 'FreeBSD 5.1-RELEASE',
+     'freebsd-current', 'FreeBSD 5.2-current',
      'slackware', 'Linux Slackware 3.1',
      'linux-de', 'deutsch - Linux/GNU',
      'redhat', 'Red Hat Linux/i386 9',
@@ -1016,7 +1016,7 @@ ETX
 }
 
 sub copyright {
-    $id = '$Id: man.cgi,v 1.122 2004-01-14 09:42:31 www Exp $';
+    $id = '$Id: man.cgi,v 1.123 2004-01-15 09:49:55 www Exp $';
 
     return qq{\
 <PRE>
