@@ -2,7 +2,7 @@
 #
 # Perl program to send mail.
 #
-# $FreeBSD: www/en/cgi/reg.cgi,v 1.7 2000/04/03 08:45:51 phantom Exp $
+# $FreeBSD: www/en/cgi/reg.cgi,v 1.8 2002/04/01 13:39:05 ceri Exp $
 
 sub do_header;
 sub close_body;
@@ -87,9 +87,7 @@ sub do_header {
   print "<HEAD>\n";
   print "<TITLE>$title</TITLE>\n";
   print "</HEAD>\n";
-  print "<BODY BGCOLOR=\"\#FFFFFF\" TEXT=\"\#660000\">\n";
-  print "<FONT SIZE=4> \n";
-  print "<CENTER>\n";
+  print "<BODY BGCOLOR=\"\#FFFFFF\" TEXT=\"\#000000\">\n";
   print "<IMG SRC=\"..\/gifs\/bar.gif\" BORDER=0 USEMAP=\"\#bar\">\n";
   print "<MAP NAME=\"bar\">\n";
   print "<AREA SHAPE=\"RECT\" COORDS=\"1,1,111,31\" HREF=\"../index.html\">\n";
@@ -102,6 +100,7 @@ sub do_header {
   print "<AREA SHAPE=\"RECT\" COORDS=\"516,15,562,33\" HREF=\"../index.html\">\n";
   print "<AREA SHAPE=\"RECT\" COORDS=\"0,0,564,32\" HREF=\"../index.html\">\n";
   print "</MAP>\n";
+  print "<CENTER>\n";
 }
 
 sub close_body {
