@@ -2,7 +2,7 @@
 # The FreeBSD Russian Documentation Project
 #
 # $FreeBSD$
-# $FreeBSDru: frdp/doc/ru_RU.KOI8-R/books/handbook/Makefile,v 1.34 2004/03/26 12:29:51 den Exp $
+# $FreeBSDru: frdp/doc/ru_RU.KOI8-R/books/handbook/Makefile,v 1.35 2004/04/09 07:51:22 phantom Exp $
 #
 # Original revision: 1.79
 # 
@@ -154,49 +154,49 @@ IMAGES_LIB+= callouts/10.png
 #
 
 # SGML content
-SRCS+=	book.sgml
+SRCS=	book.sgml
 SRCS+=	advanced-networking/chapter.sgml
-SRCS+= basics/chapter.sgml
-SRCS+= bibliography/chapter.sgml
-SRCS+= boot/chapter.sgml
-SRCS+= config/chapter.sgml
-SRCS+= cutting-edge/chapter.sgml
-SRCS+= disks/chapter.sgml
-SRCS+= eresources/chapter.sgml
-SRCS+= install/chapter.sgml
-SRCS+= introduction/chapter.sgml
-SRCS+= kernelconfig/chapter.sgml
-SRCS+= l10n/chapter.sgml
-SRCS+= linuxemu/chapter.sgml
-SRCS+= mail/chapter.sgml
-SRCS+= mirrors/chapter.sgml
-SRCS+= multimedia/chapter.sgml
-SRCS+= desktop/chapter.sgml
-SRCS+= pgpkeys/chapter.sgml
-SRCS+= preface/preface.sgml
-SRCS+= colophon.sgml
-SRCS+= ppp-and-slip/chapter.sgml
-SRCS+= printing/chapter.sgml
-SRCS+= security/chapter.sgml
-SRCS+= serialcomms/chapter.sgml
-SRCS+= users/chapter.sgml
-SRCS+= vinum/chapter.sgml
-SRCS+= x11/chapter.sgml
-SRCS+= ports/chapter.sgml
-SRCS+= preface/preface.sgml
-SRCS+= colophon.sgml
+SRCS+=	basics/chapter.sgml
+SRCS+=	bibliography/chapter.sgml
+SRCS+=	boot/chapter.sgml
+SRCS+=	config/chapter.sgml
+SRCS+=	cutting-edge/chapter.sgml
+SRCS+=	disks/chapter.sgml
+SRCS+=	eresources/chapter.sgml
+SRCS+=	install/chapter.sgml
+SRCS+=	introduction/chapter.sgml
+SRCS+=	kernelconfig/chapter.sgml
+SRCS+=	l10n/chapter.sgml
+SRCS+=	linuxemu/chapter.sgml
+SRCS+=	mail/chapter.sgml
+SRCS+=	mirrors/chapter.sgml
+SRCS+=	multimedia/chapter.sgml
+SRCS+=	desktop/chapter.sgml
+SRCS+=	pgpkeys/chapter.sgml
+SRCS+=	preface/preface.sgml
+SRCS+=	colophon.sgml
+SRCS+=	ppp-and-slip/chapter.sgml
+SRCS+=	printing/chapter.sgml
+SRCS+=	security/chapter.sgml
+SRCS+=	serialcomms/chapter.sgml
+SRCS+=	users/chapter.sgml
+SRCS+=	vinum/chapter.sgml
+SRCS+=	x11/chapter.sgml
+SRCS+=	ports/chapter.sgml
+SRCS+=	preface/preface.sgml
+SRCS+=	colophon.sgml
 
 # Entities
-SRCS+= chapters.ent 
+SRCS+=	chapters.ent 
 
 SYMLINKS=	${DESTDIR} index.html handbook.html
 
 # Turn on all the chapters.
-CHAPTERS?= ${SRCS:M*chapter.sgml}
+CHAPTERS?=	${SRCS:M*chapter.sgml}
 
-SGMLFLAGS+= ${CHAPTERS:S/\/chapter.sgml//:S/^/-i chap./}
+SGMLFLAGS+=	${CHAPTERS:S/\/chapter.sgml//:S/^/-i chap./}
 .if defined(WITH_GLOSSARY) && !empty(WITH_GLOSSARY)
-SGMLFLAGS+= -i chap.freebsd-glossary
+SGMLFLAGS+=	-i chap.freebsd-glossary
 .endif
 
 # XXX The Handbook build currently overflows some internal, hardcoded 
