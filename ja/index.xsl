@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
 
-<!-- $FreeBSD: www/ja/index.xsl,v 1.25 2003/04/02 06:26:38 hrs Exp $ -->
-<!-- Original revision: 1.60 -->
+<!-- $FreeBSD: www/ja/index.xsl,v 1.26 2003/06/10 20:45:06 hrs Exp $ -->
+<!-- Original revision: 1.66 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   
@@ -10,7 +10,7 @@
 
   <xsl:variable name="base" select="'.'"/>
   <xsl:variable name="enbase" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/ja/index.xsl,v 1.25 2003/04/02 06:26:38 hrs Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/ja/index.xsl,v 1.26 2003/06/10 20:45:06 hrs Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <xsl:output type="html" encoding="EUC-JP"
@@ -217,6 +217,7 @@
 			      ・<a href="projects/newbies.html">初心者のために</a><br/>
 			      ・<a href="{$enbase}/doc/ja_JP.eucJP/books/handbook/index.html">ハンドブック</a><br/>
 			      ・<a href="{$enbase}/doc/ja_JP.eucJP/books/faq/index.html">FAQ</a><br/>
+			      ・<a href="http://www.FreeBSD.org/cgi/man.cgi">マニュアルページ</a><br/>
 			      ・<a href="{$base}/docproj/index.html">Doc. Project</a><br/>
 			      ・<a href="docs.html">さらに...</a><br/>
 			    </small></p>
@@ -297,7 +298,7 @@
 	
 	      <p>FreeBSD は x86 互換機、DEC Alpha、IA-64、PC-98
 		アーキテクチャ用の先進的なオペレーティングシステムです。
-		カリフォルニア大学バークレイ校で開発された UNIX
+		カリフォルニア大学バークレイ校で開発された <xsl:value-of select="$unix"/>
 		である BSD UNIX に由来し、
 		<a href="{$enbase}/doc/ja_JP.eucJP/articles/contributors/index.html">多くの人たち</a>
 		によって保守・開発されています。
@@ -327,7 +328,7 @@
 
 	      <p>高い品質を持つ FreeBSD と、今日の低価格で高速な
                 PC ハードウェアの組み合わせは、
-                市販の UNIX ワークステーションに匹敵する、
+                市販の <xsl:value-of select="$unix"/> ワークステーションに匹敵する、
                 非常に経済的な選択肢になるでしょう。
                 デスクトップ用、サーバ用の両方について、膨大な数の
 		<a href="{$base}/applications.html">アプリケーション</a>
@@ -335,7 +336,7 @@
 	    
 	      <h2><font color="#990000">簡単インストール</font></h2>
 
-	      <p>FreeBSD は CD-ROM や DVD-ROM、フロッピーディスク、磁気テープ、MS-DOS
+	      <p>FreeBSD は CD-ROM や DVD-ROM、フロッピーディスク、磁気テープ、MS-DOS&#174;
 		パーティションなどのさまざまなメディアからインストールすることが
 		できます。ネットワークに接続しているなら、anonymous FTP や NFS
 		を用いて <i>直接</i> インストールすることもできます。
@@ -566,7 +567,7 @@
 		<xsl:value-of select="$date"/></small></td>
 
 	    <td align="right" 
-		valign="top"><small><a href="copyright/index.html">Copyright</a> (c) 1995-2003
+		valign="top"><small><a href="copyright/index.html">知的財産権について</a><br/> &#169; 1995-2003
 		The FreeBSD Project.<br/>
 		All rights reserved.</small></td>
 	  </tr>
