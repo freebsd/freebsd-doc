@@ -28,7 +28,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $Id: cvsweb.cgi,v 1.24 1998-08-16 13:45:12 wosch Exp $
+# $Id: cvsweb.cgi,v 1.25 1998-08-24 16:41:42 wosch Exp $
 #
 
 
@@ -62,13 +62,11 @@ require 'cgi-style.pl';
 %CVSROOT = (
 	    'freebsd', '/home/ncvs',
 	    'learn', '/c/learncvs',
-	    'mozilla', '/a/mozilla-cvs',
 	    );
 
 %CVSROOTdescr = (
 	    'freebsd', 'FreeBSD',
 	    'learn', 'Learn',
-	    'mozilla', 'Mozilla FreeBSD',
 	    );
 
 %mirrors = (
