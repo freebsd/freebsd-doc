@@ -2,7 +2,7 @@
 
 <!--
      $FreeBSD$
-     $FreeBSDde: de-www/index.xsl,v 1.13 2003/09/27 12:05:17 mheinen Exp $
+     $FreeBSDde: de-www/index.xsl,v 1.15 2003/10/04 15:57:04 mheinen Exp $
      basiert auf: 1.77
 -->
 
@@ -12,7 +12,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="date" select="'$FreeBSD: www/de/index.xsl,v 1.4 2003/09/17 23:40:35 mheinen Exp $'"/>
-  <xsl:variable name="title" select="'The FreeBSD Project'"/>
+  <xsl:variable name="title" select="'Das FreeBSD Projekt'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
               doctype-public="-//W3C//DTD HTML 4.01 Transitional//EN"/>
@@ -583,7 +583,7 @@
 		<xsl:value-of select="$date"/></small></td>
 
 	    <td align="right"
-		valign="top"><small><a href="copyright/index.html">Legal</a> &#169; 1995-2003
+		valign="top"><small><a href="{$enbase}/copyright/index.html">Legal</a> &#169; 1995-2003
 		The FreeBSD Project.<br/>
 		All rights reserved.</small></td>
 	  </tr>
