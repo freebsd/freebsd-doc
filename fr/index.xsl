@@ -1,8 +1,8 @@
-<!-- $FreeBSD: www/fr/index.xsl,v 1.8 2004/01/08 00:26:43 stephane Exp $ -->
+<!-- $FreeBSD: www/fr/index.xsl,v 1.9 2004/01/12 20:21:21 stephane Exp $ -->
 
 <!-- 
    The FreeBSD French Documentation Project
-   Original revision: 1.90
+   Original revision: 1.95
    
    Version francaise : Stephane Legrand <stephane@freebsd-fr.org>
 -->
@@ -13,7 +13,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/fr/index.xsl,v 1.8 2004/01/08 00:26:43 stephane Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/fr/index.xsl,v 1.9 2004/01/12 20:21:21 stephane Exp $'"/>
   <xsl:variable name="title" select="'Le Projet FreeBSD'"/>
 
   <!-- these params should be externally bound. The values
@@ -108,104 +108,9 @@
 			   bgcolor="#ffcc66" width="100%">
 		      <tr>
 			<td>
-			  <p>
-			    <a href="platforms/index.html">
-			      <font size="+1" color="#990000"><b>Plates-formes</b></font>
-			    </a><small><br/>
-			      &#183; <a href="smp/index.html">i386</a><br/>
-			      &#183; <a href="platforms/alpha.html">Alpha</a><br/>
-			      &#183; <a href="platforms/ia64/index.html">IA-64</a><br/>
-			      &#183; <a href="platforms/amd64.html">AMD64</a><br/>
-			      &#183; <a href="platforms/sparc.html">Sparc64</a><br/>
-			      &#183; <a href="platforms/index.html">Autres ?</a><br/>
-			    </small></p>
-
-			  <p><font size="+1" color="#990000"><b>Logiciels</b></font>
-			    <small><br/>
-			      &#183; <a href="{$enbase}/doc/{$url.doc.langcode}/books/handbook/mirrors.html">Obtenir FreeBSD</a><br/>
-			      &#183; <a href="releases/index.html">Information sur les versions</a><br/>
-			      &#183; <a href="{$base}/ports/index.html">Applications disponibles</a><br/>
-			    </small></p>
-	    
-			  <p>
-			    <a href="docs.html">
-			      <font size="+1" color="#990000"><b>Documentation</b></font>
-			    </a><small><br/>
-			      &#183; <a href="{$enbase}/doc/{$url.doc.langcode}/books/faq/index.html">FAQ</a><br/>
-			      &#183; <a href="{$enbase}/doc/{$url.doc.langcode}/books/handbook/index.html">Manuel de R&#233;f&#233;rence</a><br/>
-			      &#183; <a href="http://www.FreeBSD.org/cgi/man.cgi">Pages de manuel</a><br/>
-			      &#183; <a href="projects/newbies.html">Pour les d&#233;butants</a><br/>
-			      &#183; <a href="{$base}/docproj/index.html">Projet de Documentation</a><br/>
-			    </small></p>
-
-			  <p>
-			    <a href="support.html">
-			      <font size="+1" color="#990000"><b>Support</b></font>
-			    </a><small><br/>
-			      &#183; <a href="{$base}/support.html#mailing-list">Listes de diffusion</a><br/>
-			      &#183; <a href="{$base}/support.html#newsgroups">Forums de discussion</a><br/>
-			      &#183; <a href="{$base}/support.html#user">Groupes Utilisateurs</a><br/>
-			      &#183; <a href="{$base}/support.html#web">Ressources Web</a><br/>
-			      &#183; <a href="security/index.html">S&#233;curit&#233;</a><br/>
-			    </small></p>
-
-			  <p>
-			    <a href="{$base}/support.html#gnats">
-			      <font size="+1" color="#990000"><b>Rapports de Bugs</b></font>
-			    </a><small><br/>
-			      &#183; <a href="http://www.FreeBSD.org/cgi/query-pr-summary.cgi?query">Rechercher</a><br/>
-			      &#183; <a href="http://www.FreeBSD.org/cgi/query-pr.cgi">Voir un rapport</a><br/>
-			      &#183; <a href="http://www.FreeBSD.org/cgi/query-pr-summary.cgi">Consulter les rapports ouverts</a><br/>
-			      &#183; <a href="send-pr.html">Envoyer un rapport de bug</a><br/>
-			      &#183; <a href="{$enbase}doc/{$url.doc.langcode}/articles/problem-reports/article.html">Comment &#233;crire un rapport</a><br/>
-			    </small></p>
-
-			  <p>
-			    <a href="projects/index.html">
-			      <font size="+1" color="#990000"><b>D&#233;veloppement</b></font>
-			    </a><small><br/>
-			      &#183; <a href="{$enbase}/doc/{$url.doc.langcode}/books/developers-handbook">Manuel du d&#233;veloppeur</a><br/>
-			      &#183; <a href="{$enbase}/doc/en_US.ISO8859-1/books/porters-handbook">Manuel du porteur d'application</a><br/>
-			      &#183; <a href="{$base}/support.html#cvs">D&#233;p&#244;t CVS</a><br/>
-			      &#183; <a href="releng/index.html">Production des versions</a><br/>
-			      &#183; <a href="{$enbase}/doc/{$url.doc.langcode}/articles/contributing/index.html">Contribuer &#224; FreeBSD</a><br/>
-			    </small></p>
-
-			  <p><font size="+1" color="#990000"><b>Revendeurs</b></font>
-			    <small><br/>
-			      &#183; <a href="{$base}/commercial/software_bycat.html">Logiciels</a><br/>
-			      &#183; <a href="{$base}/commercial/hardware.html">Mat&#233;riels</a><br/>
-			      &#183; <a href="{$base}/commercial/consulting_bycat.html">Consultants</a><br/>
-			      &#183; <a href="{$base}/commercial/misc.html">Divers</a><br/>
-			    </small></p>
-             
-			  <p><font size="+1" color="#990000"><b>Donations</b></font>
-           
-			    <small><br/>
-			      &#183; <a href="{$base}/donations/index.html">Coordination donations</a><br/>
-			      &#183; <a href="{$base}/donations/donors.html">Donations actuelles</a><br/>
-			      &#183; <a href="{$base}/donations/wantlist.html">Liste des besoins</a><br/>
-			    </small></p>
-
-			  <p><a href="{$base}/search/index-site.html">
-			      <font size="+1" color="#990000"><b>Ce Site</b></font>
-			    </a><small><br/>
-			      &#183; <a href="{$base}/search/search.html#web">Recherche pages web</a><br/>
-			      &#183; <a href="{$base}/search/search.html#mailinglists">Recherche listes de diffusion</a><br/>
-			      &#183; <a href="{$base}/search/search.html">Recherche &#233;tendue</a><br/>
-			    </small></p>
-			  
-			  <p>
-			    <a href="mailto.html">
-			      <font size="+1" color="#990000"><b>Contacter FreeBSD</b></font>
-			    </a>
-			  </p>
-
-			  <p>
-			    <a href="copyright/index.html">
-			      <font size="+1" color="#990000"><b>Copyright BSD</b></font>
-			    </a>
-			  </p>
+                          <xsl:call-template name="html-index-navigation-link-list">
+                            <xsl:with-param name="navigation.xml" select="$navigation.xml"/>
+                          </xsl:call-template>
 
 			  <form action="http://www.FreeBSD.org/cgi/search.cgi" method="get">
 			    <small>Rechercher :<br/>
@@ -213,7 +118,8 @@
 			      <input type="hidden" name="max" value="25"/>
 			      <input type="hidden" name="source" value="www"/>
 			      <input type="submit" value="Go"/></small>
-			  </form></td>
+			  </form>
+                        </td>
 		      </tr>
 		    </table>
 		  </td>
@@ -229,7 +135,7 @@
 	      <h2><font color="#990000">Qu'est-ce que FreeBSD ?</font></h2>
 	
 	      <p>FreeBSD est un syst&#232;me d'exploitation avanc&#233; pour
-		les architectures compatibles x86, AMD64, DEC Alpha, IA-64, PC-98 et UltraSPARC.
+		les architectures compatibles x86, AMD64, Alpha, IA-64, PC-98 et UltraSPARC&#174;.
 		Il est d&#233;riv&#233; de UNIX BSD, la version d'<xsl:value-of select="$unix"/> 
 		d&#233;velopp&#233; &#224;
 		l'Universit&#233; de Californie, Berkeley.
@@ -472,7 +378,7 @@
 		<xsl:value-of select="$date"/></small></td>
 
 	    <td align="right"
-		valign="top"><small><a href="copyright/index.html">Infos l&#233;gales</a><br/> &#169; 1995-2003
+		valign="top"><small><a href="copyright/index.html">Infos l&#233;gales</a><br/> &#169; 1995-2004
 		Le Projet FreeBSD.<br/>
 		Tous droits r&#233;serv&#233;s.</small></td>
 	  </tr>
