@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.29 2002/09/15 19:21:54 marcus Exp $ -->
+<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.30 2002/10/14 03:58:32 marcus Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
 		xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -9,7 +9,7 @@
   <xsl:import href="includes.xsl"/>
 
   <xsl:variable name="base" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.29 2002/09/15 19:21:54 marcus Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.30 2002/10/14 03:58:32 marcus Exp $'"/>
   <xsl:variable name="title" select="'FreeBSD GNOME Project'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -179,18 +179,18 @@
                           
                           <p><font size="+1" color="#990000"><b>GNOME Project News</b></font><br/>
                             <font size="-1">
-                              <xsl:for-each select="document('http://news.gnome.org/gnome-news/rdf')/rdf:RDF/*[name() = 'item'][position() &lt; 10]">
+                              <xsl:for-each select="document('http://gnomedesktop.org/backend.php')/rss/channel/*[name() = 'item'][position() &lt; 10]">
                                 &#183; <a>
                                   <xsl:attribute name="href">
-                                    <xsl:value-of select="rdf1:link"/>
+                                    <xsl:value-of select="link"/>
                                   </xsl:attribute>
-                                  <xsl:value-of select="rdf1:title"/><br/>
+                                  <xsl:value-of select="title"/><br/>
                                 </a>
                               </xsl:for-each>
                             <a>
-                              <xsl:for-each select="document('http://news.gnome.org/gnome-news/rdf')/rdf:RDF/*[name() = 'channel'][position() = 1]">
+                              <xsl:for-each select="document('http://gnomedesktop.org/backend.php')/rss/*[name() = 'channel'][position() = 1]">
                                 <xsl:attribute name="href">
-                                  <xsl:value-of select="rdf1:link"/>
+                                  <xsl:value-of select="link"/>
                                 </xsl:attribute>More...
                               </xsl:for-each>
                             </a>
