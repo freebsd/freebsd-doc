@@ -231,7 +231,6 @@ MAN1 =	a2p.1\
 	perl.1\
 	pfbtops.1\
 	pic.1\
-	pim6stat.1\
 	pkg_add.1\
 	pkg_create.1\
 	pkg_delete.1\
