@@ -1,5 +1,5 @@
 #
-# $FreeBSD$
+# $FreeBSD: www/fr/doc/Makefile,v 1.1 2003/08/16 20:46:13 stephane Exp $
 #
 # Build the FreeBSD documentation *outside* of the www tree, and install it
 # in to the right place as necessary.
@@ -12,7 +12,8 @@
 # The FreeBSD French Documentation Project
 # Original revision: 1.8
 
-all: all-all all-install all-pgpkeyring
+# all: all-all all-install all-pgpkeyring
+all: all-all all-install
 
 all-all:
 	@unset DESTDIR || true; \
@@ -35,14 +36,15 @@ install clean:
 	 cd ${.CURDIR}/../../../doc/fr_FR.ISO8859-1; \
 		${MAKE} FORMATS="html-split html" DOCDIR=${DESTDIR}/data/doc \
 			INSTALL_COMPRESSED= ${.TARGET}
-.if make(install)
-	@unset DESTDIR || true; \
-	 cd ${.CURDIR}/../../../doc/fr_FR.ISO8859-1/books/handbook; \
-		${MAKE} \
-			pgpkeyring > ${DESTDIR}/data/doc/pgpkeyring.txt
-.endif
+# .if make(install)
+# 	@unset DESTDIR || true; \
+# 	 cd ${.CURDIR}/../../../doc/fr_FR.ISO8859-1/books/handbook; \
+# 		${MAKE} \
+# 			pgpkeyring > ${DESTDIR}/data/doc/pgpkeyring.txt
+# .endif
 .if make(clean)
-	${RM} -rf fr* handbook faq pgpkeyring.txt
+#	${RM} -rf fr* handbook faq pgpkeyring.txt
+	${RM} -rf fr*
 .endif
 
 .include "${.CURDIR}/../../share/mk/web.site.mk"
