@@ -4,9 +4,9 @@
      The FreeBSD Russian Documentation Project
 
      $FreeBSD$
-     $FreeBSDru: frdp/www/ru/news/newsflash.xsl,v 1.11 2004/04/08 07:08:54 den Exp $
+     $FreeBSDru: frdp/www/ru/news/newsflash.xsl,v 1.12 2004/04/09 11:18:50 phantom Exp $
 
-     Original revision: 1.10
+     Original revision: 1.11
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
@@ -51,7 +51,8 @@
 	  сделать это, периодически обращайтесь к этой страничке. Может быть, вы
 	  также захотите подписаться на <a
 	  href="../../doc/ru_RU.KOI8-R/books/handbook/eresources.html#ERESOURCES-MAIL">
-          список рассылки freebsd-announce</a>.</p>
+          список рассылки freebsd-announce</a> или использовать
+          <a href="news.rdf">RSS</a>.</p>
 
         <p>Следующие проекты имеют собственные страницы новостей, к которым
           нужно обращаться в поисках информации о событиях, произошедших в
