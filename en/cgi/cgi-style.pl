@@ -1,4 +1,4 @@
-# $Id: cgi-style.pl,v 1.1.1.1 1996-09-24 17:45:57 jfieber Exp $
+# $Id: cgi-style.pl,v 1.2 1996-09-24 20:50:58 jfieber Exp $
 #
 # Perl routines to encapsulate various elements of HTML page style.
 
@@ -17,7 +17,7 @@ if ($hsty_author eq "") {
     $hsty_author = "<a href=\"$hsty_base/mailto.html\">www\@freebsd.org</a>";
 }
 
-$i_daemon = "<img src=\"$hsty_base/gifs/biglogo.gif\" alt=\"\">";
+$i_daemon = "<img src=\"$hsty_base/gifs/daemon.gif\" alt=\"\" align=left>";
 
 if ($hsty_home eq "") {
     $hsty_home = "<a href=\"$hsty_base/\"><img src=\"$hsty_base/gifs/home.gif\"
@@ -28,7 +28,8 @@ sub html_header {
     local ($title) = @_;
 
     return &PrintHeader . "<html>\n<title>$title</title>\n</head>\n$t_body\n" .
-	"<h1>$i_daemon $title</h1><hr noshade>\n";
+	"<img src=\"$hsty_base/gifs/topbar.gif\" alt=\"\">" .
+	"$i_daemon <h1 align=right>$title</h1><br clear=all><hr noshade>\n";
 }
 
 sub html_footer {
