@@ -1,5 +1,5 @@
 # 
-# $Id: Makefile,v 1.5 1999-08-29 00:02:22 jhb Exp $
+# $Id: Makefile,v 1.6 1999-09-03 17:22:40 nik Exp $
 #
 # Build the FreeBSD Documentation Project Primer.
 #
@@ -26,8 +26,7 @@ SRCS+= see-also/chapter.sgml
 SRCS+= sgml-markup/chapter.sgml 
 SRCS+= sgml-primer/chapter.sgml 
 SRCS+= stylesheets/chapter.sgml 
-SRCS+= the-faq/chapter.sgml 
-SRCS+= the-handbook/chapter.sgml 
+SRCS+= structure/chapter.sgml
 SRCS+= the-website/chapter.sgml 
 SRCS+= tools/chapter.sgml 
 SRCS+= translations/chapter.sgml
@@ -36,6 +35,6 @@ SRCS+= writing-style/chapter.sgml
 # Entities
 SRCS+= chapters.ent 
 
-DOC_PREFIX?= ../../..
+DOC_PREFIX?= ${.CURDIR}/../../..
 
-.include "${DOC_PREFIX}/share/mk/docproj.docbook.mk"
+.include "${DOC_PREFIX}/share/mk/doc.project.mk"
