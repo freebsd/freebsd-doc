@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/copyright/Makefile,v 1.13 2003/06/17 20:00:28 murray Exp $
+# $FreeBSD: www/en/copyright/Makefile,v 1.14 2004/06/09 17:30:32 ceri Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -9,6 +9,7 @@
 
 DOCS=	copyright.sgml
 DOCS+=	daemon.sgml
+DOCS+=	freebsd-doc-license.sgml
 DOCS+=	freebsd-license.sgml
 DOCS+=	license.sgml
 DOCS+=	trademarks.sgml
