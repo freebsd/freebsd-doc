@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/en/includes.xsl,v 1.4 2001/10/21 23:21:26 bmah Exp $ -->
+<!-- $FreeBSD: www/en/includes.xsl,v 1.5 2002/01/09 18:15:15 phantom Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -78,7 +78,7 @@
       <xsl:copy-of select="$date"/></address>
   </xsl:variable>
   
-  <xsl:variable name="rel.current" select="4.4"/>
+  <xsl:variable name="rel.current" select="4.5"/>
   <xsl:variable name="u.rel.notes">
     <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel.current"/>R/notes.html</xsl:variable>
 
