@@ -1,5 +1,8 @@
-DOCS=	faq.sgml howtoports.sgml newbies.sgml tutorials.sgml
+# $FreeBSD$
 
-WEBBASE=        /data/java
+DOCS =	faq.sgml
+DOCS+=	howtoports.sgml
+DOCS+=	newbies.sgml
+DOCS+=	tutorials.sgml
 
 .include "../../web.mk"
