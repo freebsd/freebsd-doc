@@ -57,7 +57,13 @@ XSLTPROC?=	${PREFIX}/bin/xsltproc
 XSLTPROCOPTS?=	${XSLTPROCFLAGS}
 
 TIDY?=		${PREFIX}/bin/tidy
-TIDYOPTS?=	-i -m -raw -preserve -f /dev/null -asxml ${TIDYFLAGS}
+.if defined(TIDY_VERBOSE)
+_TIDYLOGFILE=	tidyerr.${.TARGET}
+CLEANFILES+=	tidyerr.*
+.else
+_TIDY_LOGFILE=	/dev/null
+.endif
+TIDYOPTS?=	-i -m -raw -preserve -f ${_TIDYLOGFILE} -asxml ${TIDYFLAGS}
 
 HTML2TXT?=	${PREFIX}/bin/w3m
 HTML2TXTOPTS?=	-dump ${HTML2TXTFLAGS}
