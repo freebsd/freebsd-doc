@@ -1,4 +1,4 @@
-# $FreeBSD: www/ja/projects/Makefile,v 1.14 2004/01/17 02:37:43 hrs Exp $
+# $FreeBSD: www/ja/projects/Makefile,v 1.15 2004/01/22 16:20:23 hrs Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.15
 
@@ -18,6 +18,7 @@ DOCS+=	cvsweb.sgml
 INDEXLINK= projects.html
 
 #SUBDIR=  busdma c99 gnats4 mips 
+SUBDIR=	mips 
 
 ### Revision checking
 REVCHECK=	yes
