@@ -52,11 +52,11 @@
 #
 #     _________________________________________________________________
 #                                      
-#   $Date: 1997-12-23 18:39:47 $
+#   $Date: 1998-02-12 11:04:03 $
 # ----------------------------------------------------------------------
 #
 #
-# $Id: missing_handler.cgi,v 1.2 1997-12-23 18:39:47 wosch Exp $
+# $Id: missing_handler.cgi,v 1.3 1998-02-12 11:04:03 wosch Exp $
 
 # output title
 $title = $ENV{'MISSING_HANDLER_TITLE'} || 
@@ -73,20 +73,8 @@ $server_admin=$ENV{'SERVER_ADMIN'};
 $http_host=$ENV{'HTTP_HOST'};
 $server_name=$ENV{'SERVER_NAME'};
 
-
-# HTTP header
-print "Content-type: text/html\n\n";
-
-# HTML title
-print <<EOF;
-<html><head>
-<title>$title</title>
-</head>
-<BODY BGCOLOR="#FFFFFF" TEXT="#000033" ALINK="#FFCC33">
-
-
-<h1>$title</h1>
-EOF
+require 'cgi-style.pl';
+print &html_header($title);
 
 # HTML body
 print qq[The file <blockquote><b>
@@ -112,12 +100,5 @@ Please contact the server administrator
 Thank you very much!<p>
 ];
 
-# HTML footer
-print <<EOF;
-<HR noshade>
-$footer
-\$Date: 1997-12-23 18:39:47 $
-</body></html>
-EOF
-
-exit(0);
+print&html_footer;
+exit;
