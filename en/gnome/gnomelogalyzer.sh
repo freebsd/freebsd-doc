@@ -26,7 +26,7 @@
 #
 # Heh. "Tort."
 #
-# $Id: gnomelogalyzer.sh,v 1.2 2005-03-19 21:10:36 adamw Exp $
+# $Id: gnomelogalyzer.sh,v 1.3 2005-03-20 07:43:36 marcus Exp $
 #
 
 
@@ -143,6 +143,21 @@ if grep -q 'error: Xft Pango backend is required for x11 target' ${buildlog} ; t
 	exit
 else
 	debug "OK"
+fi
+
+#####
+#
+# TEST: Libtool out-of-date
+#
+# SOLUTION: portupgrade libtool-1.5\*
+
+debug -n "Checking for an out-of-date libtool15... "
+if grep -q 'libtool15: link: `1000:0' ${buildlog} ; then
+    echo "Your libtool15 is out-of-date."
+    soln_portupgrade "libtool-1.5\*"
+    exit
+else
+    debug "OK"
 fi
 
 #####
