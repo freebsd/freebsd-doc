@@ -1,5 +1,5 @@
 # 
-# $Id: Makefile,v 1.6 1998-12-10 20:42:26 nik Exp $
+# $Id: Makefile,v 1.7 1998-12-20 20:33:49 nik Exp $
 #
 # Build the FreeBSD Handbook. Will eventually split in two, a generic .mk
 # file which can be used by many Makefiles, and a much smaller Makefile
@@ -140,23 +140,21 @@ CLEANFILES+= ${DOC}.${_curformat}
 all: ${_docs}
 
 index.html: ${SRCS}
-	${JADE} -ihtml ${JADEFLAGS} -d ${DSLHTML} -t sgml ${DOC}.sgml
-	./conv.pl *.html
+	${JADE} -ioutput.html ${JADEFLAGS} -d ${DSLHTML} -t sgml ${DOC}.sgml
 	tidy -i -m -f /dev/null *.html
 
 ${DOC}.html: ${SRCS}
-	${JADE} -ihtml -V nochunks ${JADEFLAGS} -d ${DSLHTML} -t sgml ${DOC}.sgml > ${DOC}.html
-	./conv.pl ${DOC}.html
+	${JADE} -ioutput.html -V nochunks ${JADEFLAGS} -d ${DSLHTML} -t sgml ${DOC}.sgml > ${DOC}.html
 	tidy -i -m -f /dev/null ${DOC}.html
 
 ${DOC}.txt: ${DOC}.html
 	lynx -nolist -dump ${DOC}.html > ${DOC}.txt
 
 ${DOC}.rtf: ${SRCS}
-	${JADE} -iprint ${JADEFLAGS} -d ${DSLPRINT} -t rtf ${DOC}.sgml
+	${JADE} -ioutput.print ${JADEFLAGS} -d ${DSLPRINT} -t rtf ${DOC}.sgml
 
 ${DOC}.tex: ${SRCS}
-	${JADE} -iprint ${JADEFLAGS} -d ${DSLPRINT} -t tex ${DOC}.sgml
+	${JADE} -ioutput.print ${JADEFLAGS} -d ${DSLPRINT} -t tex ${DOC}.sgml
 
 ${DOC}.dvi: ${DOC}.tex
 	@echo "==> TeX pass 1/3"

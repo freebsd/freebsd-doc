@@ -1,36 +1,80 @@
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
-<!ENTITY dbstyle PUBLIC "-//Norman Walsh//DOCUMENT DocBook HTML Stylesheet//EN" CDATA DSSSL>
+<!ENTITY % output.html  "IGNORE">
+<!ENTITY % output.print "IGNORE">
+<![ %output.html; [
+<!ENTITY docbook.dsl PUBLIC "-//Norman Walsh//DOCUMENT DocBook HTML Stylesheet//EN" CDATA DSSSL>
+]]>
+<![ %output.print; [
+<!ENTITY docbook.dsl PUBLIC "-//Norman Walsh//DOCUMENT DocBook Print Stylesheet//EN" CDATA DSSSL>
+]]>
 ]>
 
 <style-sheet>
   <style-specification use="docbook">
     <style-specification-body>
 
-      <!-- Configure the stylesheet using documented variables -->
+      <!-- HTML only .................................................... -->
+      
+      <![ %output.html; [
+        <!-- Configure the stylesheet using documented variables -->
 
-      (define %stylesheet%
-        "handbook.css")
+        (define %stylesheet%
+          "handbook.css")
 
-      (define %gentext-nav-use-tables%
-        ;; Use tables to build the navigation headers and footers?
-        #t)
+        (define %gentext-nav-use-tables%
+          ;; Use tables to build the navigation headers and footers?
+          #t)
 
-      (define %html-ext%
-        ;; Default extension for HTML output files
-        ".html")
+        (define %html-ext%
+          ;; Default extension for HTML output files
+          ".html")
 
-      (define %shade-verbatim%
-        ;; Should verbatim environments be shaded?
-        #f)
+        (define %shade-verbatim%
+          ;; Should verbatim environments be shaded?
+          #f)
 
-      (define %use-id-as-filename%
-        ;; Use ID attributes as name for component HTML files?
-        #t)
+        (define %use-id-as-filename%
+          ;; Use ID attributes as name for component HTML files?
+          #t)
  
-      (define %root-filename%
-        ;; Name for the root HTML document
-        "index")
+        (define %root-filename%
+          ;; Name for the root HTML document
+          "index")
 
+        <!-- This replaces the existing mechanism for showing verbatim
+             blocks of text (programlistings, screens, and so forth.
+
+             Norm's stylesheet renders these in a table, with optional
+             shading if %shade-verbatim% is set. Previous practice for
+             the LinuxDoc DTD (and John Fieber's stylesheet) was to
+             indent them using <blockquote>. Stick with previous practice.
+
+             Norm says he will introduce a tweakable knob to affect this
+             in the future. -->
+(define ($verbatim-display$ line-numbers?)
+  (let ((content (make element gi: "BLOCKQUOTE"
+                       attributes: (list
+                                    (list "CLASS" (gi)))
+                       (make element gi: "PRE"
+                           (if line-numbers?
+                               ($verbatim-content-with-linenumbers$)
+                               ($verbatim-content$))))))
+    (if %shade-verbatim%
+        (make element gi: "TABLE"
+              attributes: ($shade-verbatim-attr$)
+              (make element gi: "TR"
+                    (make element gi: "TD"
+                          content)))
+        content)))
+      ]]>
+
+      <!-- Print only ................................................... --> 
+      <![ %output.print; [
+
+      ]]>
+
+      <!-- Both sets of stylesheets .................................... -->
+      
       <!-- Slightly deeper customisations -->
 
       <!-- I want things marked up with 'sgmltag' eg., 
@@ -88,34 +132,8 @@
            /usr/local/share/sgml/docbook/dsssl/modular/html/dblist.dsl is
            enough to bring me out in cold, Lisp induced sweats. . . -->
 
-      <!-- This replaces the existing mechanism for showing verbatim
-           blocks of text (programlistings, screens, and so forth.
-
-           Norm's stylesheet renders these in a table, with optional
-           shading if %shade-verbatim% is set. Previous practice for
-           the LinuxDoc DTD (and John Fieber's stylesheet) was to
-           indent them using <blockquote>. Stick with previous practice.
-
-           Norm says he will introduce a tweakable knob to affect this
-           in the future. -->
-(define ($verbatim-display$ line-numbers?)
-  (let ((content (make element gi: "BLOCKQUOTE"
-                       attributes: (list
-                                    (list "CLASS" (gi)))
-                       (make element gi: "PRE"
-                           (if line-numbers?
-                               ($verbatim-content-with-linenumbers$)
-                               ($verbatim-content$))))))
-    (if %shade-verbatim%
-        (make element gi: "TABLE"
-              attributes: ($shade-verbatim-attr$)
-              (make element gi: "TR"
-                    (make element gi: "TD"
-                          content)))
-        content)))
-
     </style-specification-body>
   </style-specification>
 
-  <external-specification id="docbook" document="dbstyle">
+  <external-specification id="docbook" document="docbook.dsl">
 </style-sheet>
