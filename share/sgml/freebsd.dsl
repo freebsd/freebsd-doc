@@ -1,4 +1,4 @@
-<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.27 2001/04/05 13:19:59 nik Exp $ -->
+<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.28 2001/04/09 20:35:47 nik Exp $ -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
 <!ENTITY % output.html		"IGNORE">
@@ -414,8 +414,40 @@
             (string-append "Q" (question-answer-label)))
           (else
             (string-append "AEN" (number->string (all-element-number nd))))))
+      
+      (define (xref-biblioentry target)
+        (let* ((abbrev (node-list-first
+                        (node-list-filter-out-pis (children target))))
+               (label  (attribute-string (normalize "xreflabel") target)))
+                    
+          (if biblio-xref-title
+              (let* ((citetitles (select-elements (descendants target)
+                                                  (normalize "citetitle")))
+                     (titles     (select-elements (descendants target)
+                                                  (normalize "title")))
+                     (isbn       (select-elements (descendants target)
+                                                  (normalize "isbn")))
+                     (publisher  (select-elements (descendants target)
+                                                  (normalize "publishername")))
+                     (title      (if (node-list-empty? citetitles)
+                                     (node-list-first titles)
+                                     (node-list-first citetitles))))
+                (with-mode xref-title-mode
+                  (make sequence
+                    (process-node-list title))))
+              (if biblio-number
+                  (make sequence
+                    (literal "[" (number->string (bibentry-number target)) "]"))
+                  (if label
+                      (make sequence
+                        (literal "[" label "]"))
+                      (if (equal? (gi abbrev) (normalize "abbrev"))
+                          (make sequence
+                            (process-node-list abbrev))
+                          (make sequence
+                            (literal "[" (id target) "]"))))))))
     </style-specification-body>
   </style-specification>
-
+      
   <external-specification id="docbook" document="docbook.dsl">
 </style-sheet>
