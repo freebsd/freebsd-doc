@@ -19,7 +19,8 @@
 $server_root = '/usr/local/www';
 $waisq = "/usr/local/www/bin/waisq";
 $sourcepath = "$server_root/db/index";
-$hints = "/searchhints.html";    
+$hints = "/searchhints.html"; 
+$searchpage = '/search.html';   
 $myurl = $ENV{'SCRIPT_NAME'};
 
 require "open2.pl";
@@ -178,6 +179,8 @@ sub do_wais {
 
     print "<p>Didn't get what you expected? ";
     print "<a href=\"$hints\">Look here for searching hints</a>.</p>";
+
+    print qq{<p><a href="$searchpage">Return to the search page</a></p>\n};
 
     if ($hits == 0) {
 	print "Nothing found.\n";
