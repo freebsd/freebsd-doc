@@ -1,5 +1,5 @@
 #
-# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.36 2001/07/10 03:06:48 murray Exp $
+# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.37 2001/07/12 00:24:59 dd Exp $
 #
 # This include file <doc.docbook.mk> handles building and installing of
 # DocBook documentation in the FreeBSD Documentation Project.
@@ -540,5 +540,5 @@ package-${_curformat}: install-${_curformat}
 		-p ${DESTDIR} ${PACKAGES}/${.CURDIR:T}.${LANGCODE}.${_curformat}.tgz
 .endfor
 
-docbook.css:
+docbook.css: ${CSS_SHEET}
 	cp ${CSS_SHEET} ${.CURDIR}/docbook.css
