@@ -31,11 +31,9 @@ SUBDIR+= releases
 .if !defined(WEB_ONLY) || empty(WEB_ONLY)
 SUBDIR+= doc
 .endif
-
-# This need some more analysis
-#.if defined(BUILD_RELNOTES)
-#SUBDIR+= relnotes
-#.endif
+.if defined(BUILD_RELNOTES)
+SUBDIR+= relnotes
+.endif
 
 # These *must* be listed after the "doc" subdir, as they create symlinks
 # in to it.
