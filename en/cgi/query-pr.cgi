@@ -1,5 +1,5 @@
 #!/usr/bin/perl -T
-# $FreeBSD$
+# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.27 2001/11/07 16:32:13 sobomax Exp $
 
 $ENV{'PATH'} = "/bin:/usr/bin:/usr/sbin:/sbin:/usr/local/bin";
 
@@ -178,6 +178,9 @@ $email =~ s/[^a-zA-Z+.@-]/"%" . sprintf("%02X", unpack("C", $&))/eg;
 print qq`<A HREF="mailto:freebsd-gnats-submit\@FreeBSD.org,${email}?subject=Re:%20${cat}/${number}:%20$origsyn">Submit Followup</A> | <A HREF="./query-pr.cgi?pr=$pr&amp;f=raw">Raw PR</A>\n`;
 
 print &html_footer;
+
+# Sleep 0.35 seconds to avoid DoS attacks from broken robots
+select undef, undef, undef, 0.35;
 
 exit 0;
 
