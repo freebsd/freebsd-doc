@@ -1,5 +1,7 @@
+# $FreeBSD$
+
 #SUBDIR = committers-guide
-#SUBDIR+= dialup-firewall
+SUBDIR+= dialup-firewall
 SUBDIR+= diskless-x
 #SUBDIR+= explaining-bsd
 #SUBDIR+= freebsd-questions
