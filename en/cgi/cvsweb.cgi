@@ -43,8 +43,8 @@
 # SUCH DAMAGE.
 #
 # $zId: cvsweb.cgi,v 1.103 2000/09/20 17:02:29 jumager Exp $
-# $Id: cvsweb.cgi,v 1.52 2000-09-23 20:37:58 knu Exp $
-# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.51 2000/09/19 20:20:06 knu Exp $
+# $Id: cvsweb.cgi,v 1.53 2000-09-30 18:57:41 knu Exp $
+# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.52 2000/09/23 20:37:58 knu Exp $
 #
 ###
 
@@ -126,14 +126,13 @@ sub forbidden_module($);
 use Cwd;
 
 # == EDIT this ==
-# User configuration is stored in
-$config = undef;
-
-for ($ENV{CVSWEB_CONFIG},
-#     '/home/knu/etc/cvsweb.conf',
+# Locations to search for user configuration, in order:
+for (
+     $ENV{CVSWEB_CONFIG},
      '/usr/local/etc/cvsweb.conf',
-     getcwd . '/cvsweb.conf') {
-  $config = $_ if defined($_) && -r $_;
+     getcwd() . '/cvsweb.conf'
+    ) {
+    $config = $_ if defined($_) && -r $_;
 }
 
 # == Configuration defaults ==
@@ -147,7 +146,7 @@ $allow_version_select = 1;
 # These are defined to allow checking with perl -cw
 %CVSROOT = %MIRRORS = %DEFAULTVALUE = %ICONS = %MTYPES =
 %tags = %alltags = @tabcolors = ();
-$cvstreedefault = $body_tag = $body_tag_for_src = 
+$cvstreedefault = $body_tag = $body_tag_for_src =
 $logo = $defaulttitle = $address =
 $long_intro = $short_instruction = $shortLogLen =
 $show_author = $dirtable = $tablepadding = $columnHeaderColorDefault =
@@ -231,9 +230,11 @@ $maycompress = (((defined($ENV{HTTP_ACCEPT_ENCODING})
 @stickyvars = qw(cvsroot hideattic sortby logsort f only_with_tag);
 
 if (-f $config) {
-    do $config;
-}
-else {
+   do $config
+     || &fatal("500 Internal Error",
+	       sprintf('Error in loading configuration file: %s<BR><BR>%s<BR>',
+		       $config, &htmlify($@)));
+} else {
    &fatal("500 Internal Error",
 	  'Configuration not found.  Set the variable <code>$config</code> '
           . 'in cvsweb.cgi, or the environment variable '
@@ -362,8 +363,15 @@ foreach my $k (keys %ICONS) {
     }
 }
 
+my $config_cvstree = "$config-$cvstree";
+
 # Do some special configuration for cvstrees
-do "$config-$cvstree" if (-f "$config-$cvstree");
+if (-f $config_cvstree) {
+   do $config_cvstree
+     || &fatal("500 Internal Error",
+	       sprintf('Error in loading configuration file: %s<BR><BR>%s<BR>',
+		       $config_cvstree, &htmlify($@)));
+}
 
 $prcategories = '(?:' . join('|', @prcategories) . ')';
 $prcgi .= '%s' if defined($prcgi) && $prcgi !~ /%s/;
@@ -1154,7 +1162,7 @@ sub doAnnotate($$) {
     # the public domain.
     # we could abandon the use of rlog, rcsdiff and co using
     # the cvsserver in a similiar way one day (..after rewrite)
-    $pid = open2($reader, $writer, "cvs server") || fatal ("500 Internal Error",
+    $pid = open2($reader, $writer, "cvs -Rl server") || fatal ("500 Internal Error",
 							       "Fatal Error - unable to open cvs for annotation");
 
     # OK, first send the request to the server.  A simplified example is:
@@ -2477,7 +2485,7 @@ sub navigateHeader($$$$$) {
     $swhere = urlencode($filename) if ($swhere eq "");
     print "<\!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\">";
     print "<HTML>\n<HEAD>\n";
-    print '<!-- CVSweb $zRevision: 1.103 $  $Revision: 1.52 $ -->';
+    print '<!-- CVSweb $zRevision: 1.103 $  $Revision: 1.53 $ -->';
     print "\n<TITLE>$path$filename - $title - $rev</TITLE></HEAD>\n";
     print  "$body_tag_for_src\n";
     print "<table width=\"100%\" border=0 cellspacing=0 cellpadding=1 bgcolor=\"$navigationHeaderColor\">";
@@ -2832,7 +2840,7 @@ sub http_header(;$) {
 
 sub html_header($) {
     my ($title) = @_;
-    my $version = '$zRevision: 1.103 $  $Revision: 1.52 $'; #'
+    my $version = '$zRevision: 1.103 $  $Revision: 1.53 $'; #'
     http_header();
 
     (my $header = &cgi_style::html_header) =~ s/^.*\n\n//; # remove HTTP response header
