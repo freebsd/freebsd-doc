@@ -204,6 +204,7 @@ MAN8 =	IPXrouted.8\
 	slstat.8\
 	smrsh.8\
 	spkrtest.8\
+	spppcontrol.8\
 	spray.8\
 	sticky.8\
 	stlload.8\
