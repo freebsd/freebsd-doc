@@ -1,17 +1,19 @@
 <?xml version="1.0" encoding="KOI8-R" ?>
 
-<!-- $FreeBSD$ -->
-<!-- The FreeBSD Russian Documentation Project -->
-<!-- $FreeBSDru: frdp/www/ru/news/press.xsl,v 1.1 2001/12/05 19:23:41 phantom Exp $ -->
-<!-- Original revision: 1.2 -->
+<!--
+     The FreeBSD Russian Documentation Project
 
+     $FreeBSD$
+     $FreeBSDru: frdp/www/ru/news/press.xsl,v 1.2 2003/09/22 19:05:46 andy Exp $
+
+     Original revision: 1.3
+-->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
 
   <xsl:import href="../includes.xsl"/>
   <xsl:import href="includes.xsl"/>
-
 
   <xsl:variable name="base" select="'..'"/>
   <xsl:variable name="title" select="'FreeBSD в прессе'"/>
@@ -34,8 +36,9 @@
 	  пошлите её URL на адрес <a
 	  href="mailto:doc@FreeBSD.ORG">doc@FreeBSD.ORG</a></p>
 
-	<p>Кроме того, новости прессы о проекте FreeBSD Java вы можете найти, посетив
-	  страничку <a href="{$base}/java/press.html">FreeBSD/Java Press</a></p>
+	<p>Кроме того, новости прессы о проекте FreeBSD Java вы можете найти,
+          посетив страничку <a
+          href="{$base}/java/press.html">FreeBSD/Java Press</a></p>
 
 	<xsl:apply-templates select="//month"/>
 	
