@@ -1,7 +1,7 @@
 <!--
      The FreeBSD Documentation Project
 
-     $Id: chapter.sgml,v 1.12 1999-05-28 14:07:23 hoek Exp $
+     $Id: chapter.sgml,v 1.13 1999-06-07 22:34:24 nik Exp $
 -->
 
 <chapter id="linuxemu">
@@ -809,6 +809,129 @@ richc.isdn.bcm.tmc.edu   9845-03452-90255</screen>
 	two guys like dogs to get it to the point where it runs Linux binaries
 	better than linux! <!-- smiley -->:-)</para>
     </sect2>
+  </sect1>
+
+  <sect1>
+    <title>How does the emulation work?</title>
+
+    <para>This section is based heavily on an e-mail written to the
+      <email>chat@FreeBSD.org</email> mailing list, written by Terry Lambert
+      <email>tlambert@primenet.com</email> (Message ID:
+      <literal>&lt;199906020108.SAA07001@usr09.primenet.com&gt;</literal>).</para>
+
+    <para>FreeBSD has an abstraction called an &ldquo;execution class
+      loader&rdquo;.  This is a wedge into the &man.execve.2; system
+      call.</para>
+    
+    <para>What happens is that FreeBSD has a list of loaders, instead of a
+      single loader with a failback to the <literal>#!</literal> loader for
+      running any shell interpreters or shell scripts.</para>
+                       
+    <para>Historically, the only loader on the UNIX platform examined the
+      magic number (generally the first 4 or 8 bytes of the file) to see if it
+      was a binary known to the system, and if so, invoked the binary
+      loader.</para>
+                       
+    <para>If it was not the binary type for the system, the &man.execve.2;
+      call returned a failure, and the shell attempted to start executing it
+      as shell commands.</para>
+                       
+    <para>The assumption was a default of &ldquo;whatever the current shell
+      is&rdquo;.</para>
+    
+    <para>Later, a hack was made for &man.sh.1; to examine the first two
+      characters, and if they were <literal>:\n</literal>, then it invoked the
+      &man.csh.1; shell instead (I believe SCO first made this hack, but am
+      willing to be corrected).</para>
+                       
+    <para>What FreeBSD does now is go through a list of loaders, with a
+      generic <literal>#!</literal> loader that knows about interpreters as
+      the characters which follow to the next whitespace next to last,
+      followed by a fallback to <filename>/bin/sh</filename>.</para>
+                       
+    <para>For the Linux binary emulation, FreeBSD sees the magic number as an
+      ELF binary (it makes no distinction between FreeBSD, Solaris, Linux, or
+      any other OS which has an ELF image tpye, at this point).</para>
+                       
+    <para>The ELF loader looks for a specialized <emphasis>brand</emphasis>,
+      which is a comment section in the ELF image, and which is not present on
+      SVR4/Solaris ELF binaries.</para>
+                       
+    <para>For Linux binaries to function, they must be
+      <emphasis>branded</emphasis> as type <literal>Linux</literal>; from
+      &man.brandelf.1;:</para>
+                       
+    <screen>&prompt.root; <userinput>brandelf -t Linux file</userinput></screen>
+                       
+    <para>When this is done, the ELF loader will see the
+      <literal>Linux</literal> brand on the file.</para>
+                       
+    <para>When the ELF loader sees the <literal>Linux</literal> brand, the
+      loader replaces a pointer in the <literallayout> proc</literallayout>
+      structure.  All system calls are indexed through this pointer (in a
+      traditional UNIX system, this would be the <literallayout>
+	sysent[]</literallayout> structure array, containing the system
+      calls).  In addition, the process is flagged for special handling of the
+      trap vector for the signal trampoline code, and sever other (minor)
+      fixups that are handled by the Linux kernel module.</para>
+
+    <para>The Linux system call vector contains, among other things, a list of
+      <literal>sysent[]</literal> entries whose addresses reside in the kernel
+      module.</para>
+
+    <para>When a system call is called by the Linux binary, the trap code
+      dereferences the system call function pointer off the
+      <literal>proc</literal> structure, and gets the Linux, not the FreeBSD,
+      system call entry points.</para>
+                       
+    <para>In addition, the Linux emulation dynamically
+      <emphasis>reroots</emphasis> lookups; this is, in effect, what the
+      <literal>union</literal> option to FS mounts ( <emphasis>not</emphasis>
+      the unionfs!) does.  First, an attempt is made to lookup the file in the
+      <filename>/compat/linux/<replaceable>original-path</replaceable></filename>
+      directory, <emphasis>then</emphasis> only if that fails, the lookup is
+      done in the
+      <filename>/<replaceable>original-path</replaceable></filename>
+      directory.  This makes sure that binaries that require other binaries
+      can run (e.g., the Linux toolchain can all run under emulation).  It
+      also means that the Linux binaries can load and exec FreeBSD binaries,
+      if there are no corresponding Linux binaries present, and that you could
+      place a &man.uname.1; command in the <filename>/compat/linux</filename>
+      directory tree to ensure that the Linux binaries could not tell they
+      were not running on Linux.</para>
+                       
+    <para>In effect, there is a Linux kernel in the FreeBSD kernel; the
+      various underlying functions that implement all of the services provided
+      by the kernel are identical to both the FreeBSD system call table
+      entries, and the Linux system call table entries: file system
+      operations, virtual memory operations, signal delivery, System V IPC,
+      etc&hellip;  The only difference is that FreeBSD binaries get the FreeBSD
+      <emphasis>glue</emphasis> functions, and Linux binaries get the Linux
+      <emphasis>glue</emphasis> functions (most older OS's only had their own
+      <emphasis>glue</emphasis> functions: addresses of functions in a static
+      global <literal>sysent[]</literal> structure array, instead of addresses
+      of functions dereferenced off a dynamically initialized pointer in the
+      <literal>proc</literal> structure of the process making the
+      call).</para>
+                       
+    <para>Which one is the native FreeBSD ABI?  It does not matter.  Basically
+      the only difference is that (currently; this could easily be changed in
+      a future release, and probably will be after this) the FreeBSD
+      <emphasis>glue</emphasis> functions are statically linked into the
+      kernel, and the Linux glue functions can be statically linked, or they
+      can be accessed via a kernel module.</para>
+                       
+    <para>Yeah, but is this really emulation?  No.  It is an ABI
+      implementation, not an emulation.  There is no emulator (or simulator,
+      to cut off the next question) involved.</para>
+    
+    <para>So why is it called &ldquo;Linux emulation&rdquo;?  To make it hard
+      to sell FreeBSD!  <!-- smiley -->8-).  Really, it is because the
+      historical implementation was done at a time when there was really no
+      word other than that to describe what was going on; saying that FreeBSD
+      ran Linux binaries was not true, if you did not compile the code in or
+      load a module, and there needed to be a word to describe what was being
+      loaded&mdash;hence &ldquo;the Linux emulator&rdquo;.</para>
   </sect1>
 </chapter>
 
