@@ -1,5 +1,8 @@
-<!--	$FreeBSDde: de-docproj/share/sgml/freebsd.dsl,v 1.6 2001/05/07 20:27:46 ue Exp $
-	$FreeBSD$ -->
+<!--
+	$FreeBSD$
+	$FreeBSDde: de-docproj/share/sgml/freebsd.dsl,v 1.9 2002/09/22 13:54:15 mheinen Exp $
+	basiert auf: 1.16
+-->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
 <!ENTITY freebsd.dsl PUBLIC "-//FreeBSD//DOCUMENT DocBook Language Neutral Stylesheet//EN" CDATA DSSSL>
