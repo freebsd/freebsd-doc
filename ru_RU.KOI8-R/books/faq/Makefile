@@ -2,9 +2,9 @@
 # The FreeBSD Russian Documentation Project
 #
 # $FreeBSD$
-# $FreeBSDru: frdp/doc/ru_RU.KOI8-R/books/faq/Makefile,v 1.9 2002/01/09 15:57:43 andy Exp $
+# $FreeBSDru: frdp/doc/ru_RU.KOI8-R/books/faq/Makefile,v 1.10 2003/12/20 17:53:19 andy Exp $
 #
-# Original revision: 1.7
+# Original revision: 1.10
 #
 # Build the FreeBSD FAQ
 #
@@ -18,14 +18,15 @@ FORMATS?= html-split html
 INSTALL_COMPRESSED?= gz
 INSTALL_ONLY_COMPRESSED?=
 
-JADEFLAGS+=-Vbiblio-xref-title
+WITH_BIBLIOXREF_TITLE?=YES
+
 # 
 # SRCS lists the individual SGML files that make up the document. Changes
 # to any of these files will force a rebuild
 #
 
 # SGML content
-SRCS =	book.sgml 
+SRCS=  book.sgml 
 
 DOC_PREFIX?= ${.CURDIR}/../../..
 
