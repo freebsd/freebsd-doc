@@ -52,11 +52,8 @@
 #
 #     _________________________________________________________________
 #                                      
-#   $FreeBSD: www/en/cgi/missing_handler.cgi,v 1.5 1999/09/06 07:02:40 peter Exp $
+# $FreeBSD: www/en/cgi/missing_handler.cgi,v 1.6 2000/01/05 15:47:44 phantom Exp $
 # ----------------------------------------------------------------------
-#
-#
-# $FreeBSD: www/en/cgi/missing_handler.cgi,v 1.5 1999/09/06 07:02:40 peter Exp $
 
 # output title
 $title = $ENV{'MISSING_HANDLER_TITLE'} || 
