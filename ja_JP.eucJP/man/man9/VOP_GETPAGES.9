@@ -1,6 +1,7 @@
 .\" -*- nroff -*-
 .\"
 .\" Copyright (c) 1996 Doug Rabson
+.\" Copyright 2003, Garrett A. Wollman
 .\"
 .\" All rights reserved.
 .\"
@@ -26,10 +27,10 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" %FreeBSD: src/share/man/man9/VOP_GETPAGES.9,v 1.7 2003/05/31 14:07:25 hmp Exp %
+.\" %FreeBSD: src/share/man/man9/VOP_GETPAGES.9,v 1.8 2003/09/28 03:15:21 wollman Exp %
 .\"
 .\" $FreeBSD$
-.Dd July 24, 1996
+.Dd September 27, 2003
 .Os
 .Dt VOP_GETPAGES 9
 .Sh 名称
@@ -45,30 +46,108 @@
 .Ft int
 .Fn VOP_PUTPAGES "struct vnode *vp" "vm_page_t *m" "int count" "int sync" "int *rtvals" "vm_ooffset_t offset"
 .Sh 解説
+.Fn VOP_GETPAGES
+メソッドは、通常のファイルが背後にある仮想メモリのページの読み込み
+のために、呼び出されます。
+他の隣接したページの背後に同じファイルの隣接した領域がある場合には、
+.Fn VOP_GETPAGES
+は同様にそれらのページを読み込ませるために要求されますが、そうすることが
+必須なわけではありません。
+.Fn VOP_PUTPAGES
+メソッドは反対のことを行います。
+すなわち、仮想メモリの隣接したダーティなページを書き出させます。
+.Pp
+入る時に、vnode のロックは保持されますが、ページキューと VM オブジェクトの
+ロックはどちらも保持されません。
+両方のメソッドは、成功して戻る時とエラーで戻る時と両方とも、
+そのままの状態で戻ります。
+.Pp
 引数は以下の通りです。
 .Bl -tag -width reqpage
 .It Fa vp
 アクセスするファイル。
 .It Fa m
-ページ ???。
+読み込まれるまたは書き込まれるべきファイルの連続した領域を表現する
+連続したページの配列の最初の要素へのポインタです。
 .It Fa count
-アクセスするページ数。
+その配列の中のページ数です。
 .It Fa sync
-書き込みが同期するべきである場合には 0 でない値。
+書き込みが同期されるべき場合には
+.Dv VM_PAGER_PUT_SYNC
+です。
 .It Fa rtvals
-???。
+.Fn VOP_PUTPAGES
+によって書き込まれたそれぞれのページの状態を示している VM システムの
+結果コードの配列です。
 .It Fa reqpage
-???。
+ページ配列の中の要求されたページのインデクスです。
+すなわち、このメソッドの実装が取り扱わなければならない、1 ページです。
 .It Fa offset
-アクセスを開始するファイルの中のオフセット。
+ファイルの中のそのマップされたページが始まる場所へのオフセットです。
 .El
 .Pp
-この引数については完全に確かではありません。
+.Fn VOP_PUTPAGES
+メソッドの状態は、配列
+.Fa rtvals[]
+の中に、個々のページごとに返されます。
+起こり得る状態値は以下の通りです。
+.Bl -tag -width VM_PAGER_ERROR
+.It Dv VM_PAGER_OK
+そのページは成功して書き込まれました。
+実装はそのページがクリーンであることを記録するために
+.Xr vm_pager_undirty 9
+を呼び出さなければなりません。
+.It Dv VM_PAGER_PEND
+そのページは非同期に書き込まれるようにスケジュールされました。
+書き込みが完了した時には、完了コールバックはビジーフラグをクリアし、
+このページをウェイトしている他のスレッドを起こすために、
+.Xr vm_object_pip_wakeup 9
+および
+.Xr vm_page_io_finish 9
+を呼び出すべきです。
+さらに
+.Xr vm_page_undirty 9
+を呼び出します。
+.It Dv VM_PAGER_BAD
+このページは完全に背後にあるファイルの終端を越えていました。
+その vnode のファイルシステムが正しく実装されている場合には、
+この状態は起こり得るべきではありません。
+.It Dv VM_PAGER_ERROR
+下位の保存メディアまたはプロトコルのエラーのため、
+このページは書き込まれることが出来ませんでした。
+.It Dv VM_PAGER_FAIL
+.Dv VM_PAGER_ERROR
+と同様に取り扱われました。
+.Dv VM_PAGER_ERROR
+.It Dv VM_PAGER_AGAIN
+そのページはこの要求によって取り扱われませんでした。
+.El
+.Pp
 .Sh 戻り値
-成功時には 0 が返され、そうでない場合にはエラーが返されます。
+成功して
+.Fa m[reqpage]
+を読み込んだ場合には
+.Fn VOP_GETPAGES
+は
+.Dv VM_PAGER_OK
+を返し、そうでない場合には
+.Dv VM_PAGER_ERROR
+を返します。
+慣習で、
+.Fn VOP_PUTPAGES
+の戻り値は
+.Fa rtvals[0]
+です。
 .Sh 関連項目
+.Xr vm_object_pip_wakeup 9 ,
+.Xr vm_page_free 9 ,
+.Xr vm_page_io_finish 9 ,
+.Xr vm_page_undirty 9 ,
+.Xr vm_page_wakeup 9 ,
 .Xr vnode 9
 .Sh 作者
 このマニュアルページは
 .An Doug Rabson
-が書きました。
+が書き、その後実質上
+.An Garrett Wollman
+が書き直しました。
