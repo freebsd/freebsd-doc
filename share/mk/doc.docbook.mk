@@ -467,12 +467,18 @@ ${DOC}.html-text: ${DOC}.xml ${INDEX_SGML} ${HTML_INDEX}
 ${DOC}.html-split.tar: HTML.manifest ${LOCAL_IMAGES_LIB} \
 		       ${LOCAL_IMAGES_PNG} ${LOCAL_CSS_SHEET}
 	${TAR} cf ${.TARGET} $$(${XARGS} < HTML.manifest) \
-		${LOCAL_IMAGES_LIB} ${IMAGES_PNG} ${CSS_SHEET:T}
+		${LOCAL_IMAGES_LIB} ${IMAGES_PNG:N*share*} ${CSS_SHEET:T}
+.for _curimage in ${IMAGES_PNG:M*share*}
+	${TAR} rf ${.TARGET} -C ${IMAGES_EN_DIR}/${DOC}s/${.CURDIR:T} ${_curimage:S|${IMAGES_EN_DIR}/${DOC}s/${.CURDIR:T}/||}
+.endfor
 
 ${DOC}.html.tar: ${DOC}.html ${LOCAL_IMAGES_LIB} \
 		 ${LOCAL_IMAGES_PNG} ${LOCAL_CSS_SHEET}
 	${TAR} cf ${.TARGET} ${DOC}.html \
-		${LOCAL_IMAGES_LIB} ${IMAGES_PNG} ${CSS_SHEET:T}
+		${LOCAL_IMAGES_LIB} ${IMAGES_PNG:N*share*} ${CSS_SHEET:T}
+.for _curimage in ${IMAGES_PNG:M*share*}
+	${TAR} rf ${.TARGET} -C ${IMAGES_EN_DIR}/${DOC}s/${.CURDIR:T} ${_curimage:S|${IMAGES_EN_DIR}/${DOC}s/${.CURDIR:T}/||}
+.endfor
 
 # TXT --------------------------------------------------------------------
 
