@@ -28,7 +28,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.33 1999/09/06 07:02:40 peter Exp $
+# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.34 1999/09/08 13:04:09 peter Exp $
 #
 
 
@@ -729,7 +729,7 @@ sub dolog {
 		print " <i>(vendor branch)</i>";
 	    }
 	    print " <i>" . &ctime($date{$_}) . " UTC</i> by ";
-	    print "<i><a href=\"mailto:" . $author{$_} . "\@FreeBSD.org\">" . $author{$_} . "</a></i>\n";
+	    print "<i>" . $author{$_} . "</i>\n";
 	    if ($revsym{$_}) {
 		print "<BR>CVS Tags: <b>$revsym{$_}</b>";
 	    }
