@@ -41,6 +41,10 @@
           ;; Name for the root HTML document
           "index")
 
+        (define html-manifest
+          ;; Write a manifest?
+          #t)
+
         <!-- This replaces the existing mechanism for showing verbatim
              blocks of text (programlistings, screens, and so forth.
 
