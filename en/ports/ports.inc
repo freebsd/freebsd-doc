@@ -1,4 +1,4 @@
-<!-- $Id: ports.inc,v 1.38 1999-06-21 12:15:06 sheldonh Exp $ -->
+<!-- $Id: ports.inc,v 1.39 1999-07-12 07:36:05 asami Exp $ -->
 <p>The FreeBSD Ports and Packages Collection offers a simple way for
 users and administrators to install applications.  The ports
 collection has been <a
@@ -37,6 +37,8 @@ href="../handbook/porting.html">Porting applications</a>.  Both are
 part of the <a href="../handbook/">FreeBSD Handbook</a>.</p>
 
 <p>The ports listed on these web pages are continually being updated.
+The current ports tree officially supports only FreeBSD-current and
+FreeBSD-stable.
 Consequently, you may need to update a few files on your FreeBSD system 
 to make use of ports developed after your version of FreeBSD was released.
 Please install one of the following depending on the release you are
@@ -68,11 +70,11 @@ to 2.2-stable upgrade kit</a>
 2.2-stable after 2.2.6-release
 <dt><a
 href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-3-stable/Latest/30upgrade.tgz">3.0
-to 3.1-stable upgrade kit</a>
+to 3.2-stable upgrade kit</a>
 <dd>For users of 3.0-release or 3.0-stable after 3.0-release
 <dt><a
 href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-3-stable/Latest/31upgrade.tgz">3.1
-to 3.1-stable upgrade kit</a>
+to 3.2-stable upgrade kit</a>
 <dd>For users of 3.1-release or 3.1-stable after 3.1-release
 <dt><a
 href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-3-stable/Latest/32upgrade.tgz">3.2
