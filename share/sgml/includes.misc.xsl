@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/share/sgml/includes.misc.xsl,v 1.11 2004/06/27 06:22:31 hrs Exp $ -->
+<!-- $FreeBSD: www/share/sgml/includes.misc.xsl,v 1.12 2004/06/27 08:28:21 hrs Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -279,12 +279,12 @@
   </xsl:template>
 
   <!-- template: "html-index-news-project-items"
-       pulls in the 10 most recent project items -->
+       pulls in the 5 most recent project items -->
 
   <xsl:template name="html-index-news-project-items">
     <xsl:param name="news.project.xml" select="''" />
 
-    <xsl:for-each select="document($news.project.xml)/descendant::event[position() &lt;= 10]">
+    <xsl:for-each select="document($news.project.xml)/descendant::event[position() &lt;= 5]">
       <xsl:value-of select="$leadingmark" /><a>
 	<xsl:attribute name="href">
 	  news/newsflash.html#<xsl:call-template name="generate-event-anchor"/>
@@ -319,12 +319,12 @@
   </xsl:template>
 
   <!-- template: "html-index-news-press-items"
-       pulls in the 10 most recent press items -->
+       pulls in the 5 most recent press items -->
 
   <xsl:template name="html-index-news-press-items">
     <xsl:param name="news.press.xml" select="''" />
 
-    <xsl:for-each select="document($news.press.xml)/descendant::story[position() &lt; 10]">
+    <xsl:for-each select="document($news.press.xml)/descendant::story[position() &lt;= 5]">
       <xsl:value-of select="$leadingmark" /><a>
 	<xsl:attribute name="href">
 	  news/press.html#<xsl:call-template name="generate-story-anchor"/>

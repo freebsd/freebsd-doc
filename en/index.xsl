@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/index.xsl,v 1.103 2004/06/12 23:29:40 dwmalone Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.104 2004/06/27 06:22:31 hrs Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   
@@ -6,7 +6,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.103 2004/06/12 23:29:40 dwmalone Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.104 2004/06/27 06:22:31 hrs Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <!-- these params should be externally bound. The values
@@ -240,11 +240,10 @@
 			   bgcolor="#ffcc66" width="100%">
 		      <tr>
 			<td valign="top"><p>
-			      <a href="{$u.rel.early}">
+			      <a href="{$u.rel.announce}">
 			      <font size="+1" color="#990000"><b>New Technology Release:
 			    <xsl:value-of select="$rel.current"/></b></font></a><br/>
-			    <small>&#183; <a href="{$u.rel.announce}">Announcement</a><br/>
-			      &#183; <a href="{$base}/doc/en_US.ISO8859-1/books/handbook/install.html">Installation Guide</a><br/>
+			    <small>&#183; <a href="{$base}/doc/en_US.ISO8859-1/books/handbook/install.html">Installation Guide</a><br/>
 			      &#183; <a href="{$u.rel.notes}">Release Notes</a><br/>
 			      &#183; <a href="{$u.rel.hardware}">Hardware Notes</a><br/>
 			      &#183; <a href="{$u.rel.installation}">Installation Notes</a><br/>
@@ -256,8 +255,7 @@
 			      <font size="+1" color="#990000"><b>Production Release:
 			    <xsl:value-of select="$rel2.current"/></b></font></a><br/>
 			
-			    <small>&#183; <a href="{$u.rel2.announce}">Announcement</a><br/>
-			      &#183; <a href="{$base}/doc/en_US.ISO8859-1/books/handbook/install.html">Installation Guide</a><br/>
+			    <small>&#183; <a href="{$base}/doc/en_US.ISO8859-1/books/handbook/install.html">Installation Guide</a><br/>
 			      &#183; <a href="{$u.rel2.notes}">Release Notes</a><br/>
 			      &#183; <a href="{$u.rel2.hardware}">Hardware Notes</a><br/>
 			      &#183; <a href="{$u.rel2.installation}">Installation Notes</a><br/>
