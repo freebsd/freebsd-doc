@@ -114,10 +114,12 @@ JADE?=		${PREFIX}/bin/openjade
 JADECATALOG?=	${PREFIX}/share/sgml/openjade/catalog
 NSGMLS?=	${PREFIX}/bin/onsgmls
 JADEFLAGS+=	-V openjade
+SX?=		${PREFIX}/bin/osx
 .else
 JADE?=		${PREFIX}/bin/jade
 JADECATALOG?=	${PREFIX}/share/sgml/jade/catalog
 NSGMLS?=	${PREFIX}/bin/nsgmls
+SX?=		${PREFIX}/bin/sx
 .endif
 
 DSLHTML?=	${DOC_PREFIX}/share/sgml/default.dsl
@@ -127,13 +129,20 @@ FREEBSDCATALOG=	${DOC_PREFIX}/share/sgml/catalog
 LANGUAGECATALOG=${DOC_PREFIX}/${LANGCODE}/share/sgml/catalog
 
 ISO8879CATALOG=	${PREFIX}/share/sgml/iso8879/catalog
+
+.if ${STYLESHEET_TYPE} == "dsssl"
 DOCBOOKCATALOG=	${PREFIX}/share/sgml/docbook/catalog
+.elif ${STYLESHEET_TYPE} == "xsl"
+DOCBOOKCATALOG= ${PREFIX}/share/xml/docbook/catalog
+.endif
+
 DSSSLCATALOG=	${PREFIX}/share/sgml/docbook/dsssl/modular/catalog
 COLLATEINDEX=	${PREFIX}/share/sgml/docbook/dsssl/modular/bin/collateindex.pl
 
 XSLTPROC?=	${PREFIX}/bin/xsltproc
-XSLHTML?=	${DOC_PREFIX}/share/xsl/default.xsl
-XSLFO?=		${PREFIX}/share/xml/docbook/xsl/modular/fo/docbook.xsl
+XSLHTML?=	${DOC_PREFIX}/share/xsl/freebsd-html.xsl
+XSLHTMLCHUNK?=	${DOC_PREFIX}/share/xsl/freebsd-html-chunk.xsl
+XSLFO?=		${DOC_PREFIX}/share/xsl/freebsd-fo.xsl
 
 IMAGES_LIB?=
 
@@ -358,17 +367,37 @@ CLEANFILES+= 		${HTML_SPLIT_INDEX} ${HTML_INDEX} ${PRINT_INDEX}
 
 all: ${_docs}
 
-${DOC}.xml: ${SRCS}
-	echo '<!DOCTYPE book SYSTEM "/usr/local/share/xml/docbook/docbookx.dtd">' > ${DOC}.xml
-	sx ${CATALOGS} ${SGMLFLAGS} -xlower -xndata ${MASTERDOC} | tail -n +2 >> ${DOC}.xml
+# XML --------------------------------------------------------------------
 
+# sx generates a lot of (spurious) errors of the form "reference to
+# internal SDATA entity ...".  So dump the errors to separate file, and
+# grep for any other errors to show them to the user.
+#
+# Better approaches to handling this would be most welcome
+
+${DOC}.xml: ${SRCS}
+	echo '<!DOCTYPE book SYSTEM "/usr/local/share/xml/docbook/4.1.2/docbookx.dtd">' > ${DOC}.xml
+	${SX} -xlower -xndata ${MASTERDOC} 2> .sxerr | tail -n +2 >> ${DOC}.xml 
+	@-grep -v 'reference to internal SDATA entity' .sxerr
+
+# HTML-SPLIT -------------------------------------------------------------
+
+.if ${STYLESHEET_TYPE} == "dsssl"
 index.html HTML.manifest: ${SRCS} ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} \
 			  ${INDEX_SGML} ${HTML_SPLIT_INDEX} ${LOCAL_CSS_SHEET}
 	${JADE} -V html-manifest ${HTMLOPTS} -ioutput.html.images \
 		${JADEOPTS} -t sgml ${MASTERDOC}
+.elif ${STYLESHEET_TYPE} == "xsl"
+index.html: ${DOC}.xml ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} \
+	${INDEX_SGML} ${HTML_SPLIT_INDEX} ${LOCAL_CSS_SHEET}
+	${XSLTPROC} --param freebsd.output.html.images "'1'" ${XSLHTMLCHUNK} \
+		${DOC}.xml
+.endif
 .if !defined(NO_TIDY)
 	-${TIDY} ${TIDYOPTS} $$(${XARGS} < HTML.manifest)
 .endif
+
+# HTML -------------------------------------------------------------------
 
 .if ${STYLESHEET_TYPE} == "dsssl"
 ${DOC}.html: ${SRCS} ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} \
@@ -379,17 +408,26 @@ ${DOC}.html: ${SRCS} ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} \
 .elif ${STYLESHEET_TYPE} == "xsl"
 ${DOC}.html: ${DOC}.xml ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} \
 	${INDEX_SGML} ${LOCAL_CSS_SHEET}     
-	${XSLTPROC} ${XSLHTML} ${DOC}.xml > ${.TARGET}
+	${XSLTPROC} --param freebsd.output.html.images "'1'" ${XSLHTML} \
+		${DOC}.xml > ${.TARGET}
 .endif
 .if !defined(NO_TIDY)
 	-${TIDY} ${TIDYOPTS} ${.TARGET}
 .endif
 
+# HTML-TEXT --------------------------------------------------------------
+
 # Special target to produce HTML with no images in it.
+.if ${STYLESHEET_TYPE} == "dsssl"
 ${DOC}.html-text: ${SRCS} ${INDEX_SGML} ${HTML_INDEX}
 	${JADE} -V nochunks ${HTMLOPTS} \
 		${JADEOPTS} -t sgml ${MASTERDOC} > ${.TARGET} || \
 		(${RM} -f ${.TARGET} && false)
+.elif ${STYLESHEET_TYPE} == "xsl"
+${DOC}.html-text: ${DOC}.xml ${INDEX_SGML} ${HTML_INDEX}
+	${XSLTPROC} --param freebsd.output.html.images "'0'" ${XSLHTML} \
+		${DOC}.xml > ${.TARGET}
+.endif
 
 ${DOC}.html-split.tar: HTML.manifest ${LOCAL_IMAGES_LIB} \
 		       ${LOCAL_IMAGES_PNG} ${LOCAL_CSS_SHEET}
@@ -401,8 +439,12 @@ ${DOC}.html.tar: ${DOC}.html ${LOCAL_IMAGES_LIB} \
 	${TAR} cf ${.TARGET} ${DOC}.html \
 		${LOCAL_IMAGES_LIB} ${IMAGES_PNG} ${CSS_SHEET:T}
 
+# TXT --------------------------------------------------------------------
+
 ${DOC}.txt: ${DOC}.html-text
 	${HTML2TXT} ${HTML2TXTOPTS} ${.ALLSRC} > ${.TARGET}
+
+# PDB --------------------------------------------------------------------
 
 ${DOC}.pdb: ${DOC}.html ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG}
 	${HTML2PDB} ${HTML2PDBOPTS} ${DOC}.html ${.TARGET}
@@ -416,6 +458,8 @@ ${.CURDIR:T}.pdb.${_curcomp}: ${DOC}.pdb.${_curcomp}
 	${LN} -f ${.ALLSRC} ${.TARGET}
 .endfor
 .endif
+
+# RTF --------------------------------------------------------------------
 
 ${DOC}.rtf: ${SRCS} ${LOCAL_IMAGES_EPS}
 	${JADE} -V rtf-backend ${PRINTOPTS} \
