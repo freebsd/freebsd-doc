@@ -18,14 +18,13 @@ MAN5 =	a.out.5\
 	dir.5\
 	disklabel.5\
 	disktab.5\
-	dm.conf.5\
 	drivers.conf.5\
 	editrc.5\
 	elf.5\
 	ethers.5\
 	exports.5\
 	fbtab.5\
-	fdesc.5\
+	fdescfs.5\
 	finger.conf.5\
 	forward.5\
 	fs.5\
@@ -37,7 +36,6 @@ MAN5 =	a.out.5\
 	groff_out.5\
 	groff_tmac.5\
 	group.5\
-	host.conf.5\
 	hosts.5\
 	hosts.equiv.5\
 	hosts.lpd.5\
@@ -52,7 +50,6 @@ MAN5 =	a.out.5\
 	isdnd.rates.5\
 	isdnd.rc.5\
 	kbdmap.5\
-	kernfs.5\
 	keycap.5\
 	link.5\
 	linprocfs.5\
@@ -62,7 +59,6 @@ MAN5 =	a.out.5\
 	magic.5\
 	mailer.conf.5\
 	make.conf.5\
-	modems.5\
 	motd.5\
 	named.conf.5\
 	netgroup.5\
@@ -84,7 +80,6 @@ MAN5 =	a.out.5\
 	publickey.5\
 	pw.conf.5\
 	radius.conf.5\
-	ranlib.5\
 	rc.conf.5\
 	rcsfile.5\
 	remote.5\
@@ -94,7 +89,6 @@ MAN5 =	a.out.5\
 	rtadvd.conf.5\
 	services.5\
 	shells.5\
-	skey.access.5\
 	ssh_config.5\
 	sshd_config.5\
 	stab.5\
@@ -106,7 +100,6 @@ MAN5 =	a.out.5\
 	terminfo.5\
 	texinfo.5\
 	ttys.5\
-	types.5\
 	tzfile.5\
 	usbd.conf.5\
 	utmp.5\
@@ -122,5 +115,7 @@ MLINKS+=resolver.5 resolv.conf.5
 MLINKS+=fs.5 inode.5
 MLINKS+=dir.5 dirent.5
 MLINKS+=groff_tmac.5 tmac.5
+MLINKS+=ipnat.5 ipnat.conf.5
+MLINKS+=passwd.5 master.passwd.5
 
 .include "bsd.prog.mk"
