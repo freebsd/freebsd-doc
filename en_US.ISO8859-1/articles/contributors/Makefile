@@ -10,6 +10,7 @@ INSTALL_ONLY_COMPRESSED?=
 WITH_ARTICLE_TOC?=YES
 
 SRCS= article.sgml
+SRCS+=contrib.ent
 SRCS+=contrib.386bsd.sgml
 SRCS+=contrib.additional.sgml
 SRCS+=contrib.committers.sgml
