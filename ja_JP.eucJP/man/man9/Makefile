@@ -130,7 +130,6 @@ MLINKS+=VOP_REMOVE.9 VOP_RMDIR.9
 MLINKS+=at_exit.9 rm_at_exit.9
 MLINKS+=at_fork.9 rm_at_fork.9
 MLINKS+=copy.9 copyin.9 copy.9 copyinstr.9 copy.9 copyout.9 copy.9 copystr.9
-MLINKS+=devfs_link.9 devfs_makelink.9
 #MLINKS+=devstat.9 devicestat.9 devstat.9 devstat_add_entry.9 
 #MLINKS+=devstat.9 devstat_remove_entry.9 devstat.9 devstat_start_transaction.9
 #MLINKS+=devstat.9 devstat_end_transaction.9
