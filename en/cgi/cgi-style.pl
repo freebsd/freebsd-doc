@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: www/en/cgi/cgi-style.pl,v 1.14 1999/09/06 07:02:40 peter Exp $
 #
 # Perl routines to encapsulate various elements of HTML page style.
 
@@ -15,7 +15,7 @@ if (!defined($hsty_base)) {
     $hsty_base = "..";
 }
 if (!defined($hsty_email)) {
-    $hsty_email = "www\@freebsd.org";
+    $hsty_email = "www\@FreeBSD.org";
 }
 if (!defined($hsty_author)) {
     $hsty_author = "<a href=\"$hsty_base/mailto.html\">$hsty_email</a>";

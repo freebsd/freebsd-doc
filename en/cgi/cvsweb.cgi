@@ -28,12 +28,12 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.35 1999/09/17 18:56:44 wosch Exp $
+# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.36 1999/09/19 10:55:19 wosch Exp $
 #
 
 
 #HTTP_USER_AGENT: Mozilla/1.1N (X11; I; SunOS 4.1.3_U1 sun4m) via proxy gateway CERN-HTTPD/3.0 libwww/2.17
-#SERVER_NAME: www.freebsd.org
+#SERVER_NAME: www.FreeBSD.org
 #QUERY_STRING: baz
 #SCRIPT_FILENAME: /usr/local/www/cgi-bin/env.pl
 #SERVER_PORT: 80
@@ -50,7 +50,7 @@
 #SCRIPT_NAME: /cgi-bin/env.pl
 #SERVER_SOFTWARE: Apache/1.0.0
 #REMOTE_HOST: beta.xerox.com
-#SERVER_ADMIN: webmaster@freebsd.org
+#SERVER_ADMIN: webmaster@FreeBSD.org
 #
 require 'timelocal.pl';
 require 'ctime.pl';
@@ -70,10 +70,10 @@ require 'cgi-style.pl';
 	    );
 
 %mirrors = (
-	    'Germany', 'http://www.de.freebsd.org/cgi/cvsweb.cgi',
-	    'Spain', 'http://www.es.freebsd.org/cgi/cvsweb.cgi',
-	    'California', 'http://www.freebsd.org/cgi/cvsweb.cgi',
-	    'Japan', 'http://www.jp.freebsd.org/cgi/cvsweb.cgi',
+	    'Germany', 'http://www.de.FreeBSD.org/cgi/cvsweb.cgi',
+	    'Spain', 'http://www.es.FreeBSD.org/cgi/cvsweb.cgi',
+	    'USA, California', 'http://www.FreeBSD.org/cgi/cvsweb.cgi',
+	    'Japan', 'http://www.jp.FreeBSD.org/cgi/cvsweb.cgi',
 	   );
 
 $cvstreedefault = 'freebsd';
@@ -94,12 +94,12 @@ a form at the bottom of the page that allows you to
 display diffs between arbitrary revisions.
 <p>
 If you would like to use this CGI script on your own web server and
-CVS tree, see <A HREF=\"http://www.freebsd.org/~fenner/cvsweb/\">
+CVS tree, see <A HREF=\"http://www.FreeBSD.org/~fenner/cvsweb/\">
 the CVSWeb distribution site</A> or the <a 
-href=\"http://www.freebsd.org/cgi/cvsweb.cgi/www/data/cgi/cvsweb.cgi\">current</a> FreeBSD version.
+href=\"http://www.FreeBSD.org/cgi/cvsweb.cgi/www/data/cgi/cvsweb.cgi\">current</a> FreeBSD version.
 <p>
 Please send any suggestions, comments, etc. to
-<A HREF=\"mailto:fenner\@freebsd.org\">Bill Fenner &lt;fenner\@freebsd.org&gt;</A>
+<A HREF=\"mailto:fenner\@FreeBSD.org\">Bill Fenner &lt;fenner\@FreeBSD.org&gt;</A>
 ";
 $shortinstr = "
 Click on a directory to enter that directory. Click on a file to display
@@ -329,7 +329,7 @@ sub htmlify {
 	$string =~ s/>/&gt;/g;
 
 	if ($pr) {
-		$string =~ s!\b((pr[:#]?\s*#?)|((bin|conf|docs|gnu|i386|kern|misc|ports)\/))(\d+)\b!<A HREF=http://www.freebsd.org/cgi/query-pr.cgi?pr=\5>$&</A>!ig;
+		$string =~ s!\b((pr[:#]?\s*#?)|((bin|conf|docs|gnu|i386|kern|misc|ports)\/))(\d+)\b!<A HREF=http://www.FreeBSD.org/cgi/query-pr.cgi?pr=\5>$&</A>!ig;
 	}
 
 	$string;

@@ -4,7 +4,7 @@ require 'cgi-lib.pl';
 require 'cgi-style.pl';
 
 
-$newloc = "http://www.freebsd.org/";
+$newloc = "http://www.FreeBSD.org/";
 
 print &html_header("FTP Download");
 

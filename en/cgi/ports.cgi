@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/ports.cgi,v 1.36 1999/10/16 10:24:30 wosch Exp $
+# $FreeBSD: www/en/cgi/ports.cgi,v 1.37 1999/12/25 17:44:14 wosch Exp $
 #
 # ports.cgi - search engine for FreeBSD ports
 #             	o search for a port by name or description
@@ -45,14 +45,14 @@ sub init_variables {
 
     # URL of ports tree for browsing
     $remotePrefixFtp =
-	'ftp://ftp.freebsd.org/pub/FreeBSD/branches/-current/ports';
+	'ftp://ftp.FreeBSD.org/pub/FreeBSD/branches/-current/ports';
 
     # URL of ports tree for download 
     $remotePrefixFtpDownload =
-	'ftp://ftp.freebsd.org/pub/FreeBSD/branches/-current/ports';
+	'ftp://ftp.FreeBSD.org/pub/FreeBSD/branches/-current/ports';
 
     # where to get -current packages
-    local($p) = 'ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386';
+    local($p) = 'ftp://ftp.FreeBSD.org/pub/FreeBSD/ports/i386';
 
     $remotePrefixFtpPackagesDefault = '3.4-STABLE';
     %remotePrefixFtpPackages = 
@@ -76,7 +76,7 @@ sub init_variables {
 
     # CVS Web interface
     $remotePrefixCvs =
-	'http://www.freebsd.org/cgi/cvsweb.cgi/ports';
+	'http://www.FreeBSD.org/cgi/cvsweb.cgi/ports';
 
     # Ports documentation
     $portsDesc = '../ports/';
@@ -94,7 +94,7 @@ sub init_variables {
     $mailtoAdvanced = 'yes';
 
     # the URL if you click at the E-Mail address (see below)
-    $mailtoURL = 'http://www.freebsd.org/ports/';
+    $mailtoURL = 'http://www.FreeBSD.org/ports/';
     $mailtoURL = "mailto:$mailto" if !$mailtoURL;
 
     # security
@@ -521,7 +521,7 @@ sub footer {
 <img ALIGN="RIGHT" src="/gifs/powerlogo.gif">
 &copy; 1996-1999 by Wolfram Schneider. All rights reserved.<br>
 };
-    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.36 1999/10/16 10:24:30 wosch Exp $} . "<br>\n";
+    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.37 1999/12/25 17:44:14 wosch Exp $} . "<br>\n";
     print qq{Please direct questions about this service to
 <I><A HREF="$mailtoURL">$mailto</A></I><br>\n};
     print qq{General questions about FreeBSD ports should be sent to } .
@@ -592,7 +592,7 @@ as database for all operation. INDEX,v will be updated by hand
 by the portsmeister.<p>
 
 You may also search the 
-<a href="http://www.freebsd.org/cgi/man.cgi?manpath=FreeBSD+Ports">ports manual pages</a>.<p>
+<a href="http://www.FreeBSD.org/cgi/man.cgi?manpath=FreeBSD+Ports">ports manual pages</a>.<p>
 
 Get the <a href ="source">Source</a> of this script.<p>
 
