@@ -1,4 +1,4 @@
-# $FreeBSD: www/ja/Makefile,v 1.35 1999/09/07 15:15:44 kuriyama Exp $
+# $FreeBSD: www/ja/Makefile,v 1.36 1999/11/07 11:33:12 kuriyama Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.50
 
@@ -22,7 +22,7 @@ DOCS+= send-pr.sgml
 DOCS+= support.sgml
 DOCS+= where.sgml 
 DOCS+= y2kbug.sgml 
- 
+
 # Japanese-only file
 DOCS+= jabout.sgml
 
@@ -66,6 +66,11 @@ DOCSUBDIR=	FAQ handbook
 SGMLOPTS=	-links -hdr ${.CURDIR}/doc.hdr -ftr ${.CURDIR}/doc.ftr -e EUC-JP
 
 WEBDIR=		data/ja
+
+### Revision checking
+REVFILES=	${DOCS:M*.sgml:S/.sgml$/.revinc/g}
+BUILDTOP=	..
+DIR_IN_LOCAL=	.
 
 .include "../web.mk"
 
