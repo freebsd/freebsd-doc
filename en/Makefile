@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/Makefile,v 1.52 2000/06/07 00:03:33 nik Exp $
+# $FreeBSD: www/en/Makefile,v 1.53 2000/09/30 00:21:38 nbm Exp $
 .if exists(Makefile.conf)
 .include "Makefile.conf"
 .endif
@@ -42,6 +42,7 @@ SUBDIR+= search
 SUBDIR+= gallery
 SUBDIR+= projects
 SUBDIR+= releases 
+SUBDIR+= smp
 SUBDIR+= conspectus
 .if !defined(WEB_ONLY) || empty(WEB_ONLY)
 SUBDIR+= ports
