@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/en/news/newsflash.xsl,v 1.9 2003/07/11 19:51:56 ceri Exp $ -->
+<!-- $FreeBSD: www/en/news/newsflash.xsl,v 1.10 2004/01/12 21:26:59 hrs Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -45,7 +45,7 @@
 	  be sure and check this page periodically.  Also, you may wish to
 	  subscribe to the 
 	  <a href="{$base}/doc/en_US.ISO8859-1/books/handbook/eresources.html#ERESOURCES-MAIL">freebsd-announce
-	    mailing list</a>.</p>
+	    mailing list</a> or the <a href="news.rdf">RSS feed</a>.</p>
 
         <p>The following projects have their own news pages, which should
           be checked for project specific updates.</p>
