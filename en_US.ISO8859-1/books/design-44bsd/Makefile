@@ -1,10 +1,10 @@
-# $FreeBSD: doc/en_US.ISO_8859-1/books/design-44bsd/Makefile,v 1.1 2001/02/20 20:01:32 nik Exp $
+# $FreeBSD$
 
 DOC?= book
 
 FORMATS?= html
 
-IMAGES= fig1.eps fig2.eps
+IMAGES_EN= fig1.eps fig2.eps
 
 INSTALL_COMPRESSED?=gz
 INSTALL_ONLY_COMPRESSED?=

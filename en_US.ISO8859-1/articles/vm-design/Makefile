@@ -1,10 +1,10 @@
-# $FreeBSD: doc/en_US.ISO_8859-1/articles/mh/Makefile,v 1.8 1999/09/06 06:52:37 peter Exp $
+# $FreeBSD$
 
 DOC?= article
 
 FORMATS?= html
 
-IMAGES=	fig1.eps fig2.eps fig3.eps fig4.eps
+IMAGES_EN=	fig1.eps fig2.eps fig3.eps fig4.eps
 
 INSTALL_COMPRESSED?=gz
 INSTALL_ONLY_COMPRESSED?=

@@ -47,11 +47,29 @@
 # to PDF, and hopefully get better quality.
 #
 
+IMAGES_EN?=
+LOCAL_IMAGES_EN?=
+
+#
+# The name of the directory that contains all the library images for this
+# language and encoding
+#
+IMAGES_EN_DIR?=	${.CURDIR}/../../../share/images
+
+.for _curimage in ${IMAGES_EN}
+LOCAL_IMAGES_EN += ${IMAGES_EN_DIR}/${DOC}s/${.CURDIR:T}/${_curimage}
+.endfor
+
 _IMAGES_PNG= ${IMAGES:M*.png}
+_IMAGES_PNG+= ${LOCAL_IMAGES_EN:M*.png}
 _IMAGES_EPS= ${IMAGES:M*.eps}
+_IMAGES_EPS+= ${LOCAL_IMAGES_EN:M*.eps}
 _IMAGES_SCR= ${IMAGES:M*.scr}
+_IMAGES_SCR+= ${LOCAL_IMAGES_EN:M*.scr}
 _IMAGES_TXT= ${IMAGES:M*.txt}
+_IMAGES_TXT+= ${LOCAL_IMAGES_EN:M*.txt}
 _IMAGES_PIC= ${IMAGES:M*.pic}
+_IMAGES_PIC+= ${LOCAL_IMAGES_EN:M*.pic}
 
 IMAGES_GEN_PNG= ${_IMAGES_EPS:S/.eps$/.png/}
 IMAGES_GEN_EPS= ${_IMAGES_PNG:S/.png$/.eps/}
@@ -154,7 +172,7 @@ REALPATH?=	/bin/realpath
 
 .pic.eps:
 	${PIC2PS} ${.ALLSRC} > ${.TARGET:S/.eps$/.ps/}
-	${PS2EPS} ${.OBJDIR}/${.TARGET:S/.eps$/.ps/} ${.OBJDIR}/${.TARGET}
+	${PS2EPS} ${.TARGET:S/.eps$/.ps/} ${.TARGET}
 
 # We can't use suffix rules to generate the rules to convert EPS to PNG and
 # PNG to EPS.  This is because a .png file can depend on a .eps file, and
@@ -180,7 +198,7 @@ ${_curimage}: ${_curimage:S/.pdf$/.eps/}
 .if ${.OBJDIR} != ${.CURDIR}
 .for _curimage in ${IMAGES}
 ${.OBJDIR}/${_curimage}: ${_curimage}
-	${CP} -p ${.ALLSRC} ${.TARGET}
+	@${CP} -p ${.ALLSRC} ${.TARGET}
 .endfor
 .endif
 
@@ -207,7 +225,7 @@ LOCAL_IMAGES_LIB ?=
 # The name of the directory that contains all the library images for this
 # language and encoding
 #
-IMAGES_LIB_DIR?=	${.CURDIR}/../../share/images
+IMAGES_LIB_DIR?=	${.CURDIR}/../../../share/images
 
 #
 # The name of the directory *in* the document directory where files and

@@ -4,10 +4,10 @@ DOC?= article
 
 FORMATS?= html
 
-IMAGES = ../../../en_US.ISO8859-1/articles/vm-design/fig1.eps
-IMAGES+= ../../../en_US.ISO8859-1/articles/vm-design/fig2.eps
-IMAGES+= ../../../en_US.ISO8859-1/articles/vm-design/fig3.eps
-IMAGES+= ../../../en_US.ISO8859-1/articles/vm-design/fig4.eps
+IMAGES_EN = fig1.eps
+IMAGES_EN+= fig2.eps
+IMAGES_EN+= fig3.eps
+IMAGES_EN+= fig4.eps
 
 INSTALL_COMPRESSED?=gz
 INSTALL_ONLY_COMPRESSED?=

@@ -292,9 +292,9 @@ install-${_curformat}: ${DOC}.${_curformat}
 # directory separator, make the subdirectories, and install.  Then loop over
 # the ones that don't contain a directory separator, and install them in the
 # top level.
-.for _curimage in ${IMAGES_PNG:M*/*}
-	${MKDIR} -p ${DESTDIR}/${_curimage:H}
-	${INSTALL_DOCS} ${.CURDIR}/${_curimage} ${DESTDIR}/${_curimage:H}
+.for _curimage in ${IMAGES_PNG:M*/*:M*share*}
+	${MKDIR} -p ${DESTDIR:H:H}/${_curimage:H:S|${IMAGES_EN_DIR}/||:S|${.CURDIR}||}
+	${INSTALL_DOCS} ${_curimage} ${DESTDIR:H:H}/${_curimage:H:S|${IMAGES_EN_DIR}/||:S|${.CURDIR}||}
 .endfor
 .for _curimage in ${IMAGES_PNG:N*/*}
 	${INSTALL_DOCS} ${.CURDIR}/${_curimage} ${DESTDIR}

@@ -4,7 +4,7 @@ DOC?= article
 
 FORMATS?= html
 
-IMAGES=	ad0b4aft.eps ad2b4aft.eps arch.eps
+IMAGES_EN=	ad0b4aft.eps ad2b4aft.eps arch.eps
 
 INSTALL_COMPRESSED?=gz
 INSTALL_ONLY_COMPRESSED?=
