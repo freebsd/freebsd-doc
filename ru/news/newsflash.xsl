@@ -3,10 +3,10 @@
 <!--
      The FreeBSD Russian Documentation Project
 
-     $FreeBSD: www/ru/news/newsflash.xsl,v 1.2 2002/02/17 13:51:48 phantom Exp $
-     $FreeBSDru: frdp/www/ru/news/newsflash.xsl,v 1.3 2002/02/15 15:01:35 phantom Exp $
+     $FreeBSD$
+     $FreeBSDru: frdp/www/ru/news/newsflash.xsl,v 1.9 2003/09/17 18:32:15 andy Exp $
 
-     Original revision: 1.5
+     Original revision: 1.9
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
@@ -14,7 +14,6 @@
 
   <xsl:import href="../includes.xsl"/>
   <xsl:import href="includes.xsl"/>
-
 
   <xsl:variable name="base" select="'..'"/>
   <xsl:variable name="title" select="'Последние новости FreeBSD'"/>
@@ -51,16 +50,21 @@
 	  в курсе всех последних разработок бывает просто необходимо! Чтобы
 	  сделать это, периодически обращайтесь к этой страничке. Может быть, вы
 	  также захотите подписаться на <a
-	  href="../../doc/en_US.ISO8859-1/books/handbook/eresources.html#ERESOURCES-MAIL">список
-	  рассылки freebsd-announce</a>.</p>
+	  href="../../doc/en_US.ISO8859-1/books/handbook/eresources.html#ERESOURCES-MAIL">
+          список рассылки freebsd-announce</a>.</p>
 
-	<p>Чтобы узнать самые последние новости о проекте FreeBSD Java,
-          посетите, пожалуйста, страничку <a
-          href="../../java/newsflash.html">Новостей FreeBSD/Java</a>.</p>
+        <p>Следующие проекты имеют собственные страницы новостей, к которым
+          нужно обращаться в поисках информации о событиях, произошедших в
+          соответствующих проектах.</p>
 
-	<p>Чтобы узнать самые последние новости о Проекте FreeBSD GNOME,
-          посетите, пожалуйста, страничку <a
-          href="../../gnome/newsflash.html">Новостей FreeBSD/GNOME</a>.</p>
+        <ul>
+          <li><a href="../../java/newsflash.html"><xsl:value-of
+            select="$java"/> на FreeBSD</a></li>
+
+          <li><a href="http://freebsd.kde.org/">KDE на FreeBSD</a></li>
+
+          <li><a href="../../gnome/newsflash.html">GNOME на FreeBSD</a></li>
+        </ul>
 
 	<p>Подробное описание прошлых, настоящих и будущих релизов находится на
 	  странице <strong><a href="{$base}/releases/index.html">Информации
@@ -71,7 +75,8 @@
 
 	<xsl:apply-templates select="descendant::month"/>
 
-	<p>Анонсы за прошлые годы:
+	<p>Анонсы прошлых лет:
+          <a href="2002/index.html">2002</a>,
           <a href="2001/index.html">2001</a>,
 	  <a href="2000/index.html">2000</a>,
 	  <a href="1999/index.html">1999</a>,
