@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.21 1998-07-30 12:54:01 hanai Exp $
+# $Id: Makefile,v 1.22 1998-08-03 16:40:10 wosch Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.36
 
@@ -8,14 +8,14 @@
 
 # These are turned into validated, normalized HTML files.
 
-DOCS=  about.sgml applications.sgml auditors.sgml availability.sgml branch.sgml
-DOCS+= commercial.sgml daemon.sgml docproj.sgml docs.sgml 
-DOCS+= features.sgml gallery.sgml index-site.sgml register.sgml 
-DOCS+= internet.sgml license.sgml 
-DOCS+= machines.sgml mailto.sgml mirror.sgml mozilla.sgml
-DOCS+= newbies.sgml newsflash.sgml press.sgml publish.sgml search.sgml 
-DOCS+= searchhints.sgml send-pr.sgml support.sgml where.sgml 
-DOCS+= resignation.sgml y2kbug.sgml search-mid.sgml
+DOCS=  applications.sgml auditors.sgml availability.sgml branch.sgml
+DOCS+= docs.sgml 
+DOCS+= features.sgml register.sgml 
+DOCS+= internet.sgml 
+DOCS+= mailto.sgml 
+DOCS+= publish.sgml
+DOCS+= send-pr.sgml support.sgml where.sgml 
+DOCS+= y2kbug.sgml
 
 # Japanese-only file
 DOCS+= jabout.sgml
@@ -29,21 +29,13 @@ CLEANFILES+=atoz.sgml site.sgml
 
 DATA=	index.html
 
-# Files or targets listed here are defined in this file.
-
-index-site.sgml: atoz.sgml site.sgml
-atoz.sgml: web.atoz 
-	sort -fu web.atoz | perl ../atoz.pl > ${.TARGET}
-site.sgml: ../site.map
-	perl ../site.pl < ${.ALLSRC} > ${.TARGET}
-
 
 # Subdirectories
 
 #SUBDIR=	security cgi commercial docproj gifs ports releases tutorials 
 #SUBDIR+=	news alpha projects
 SUBDIR=		security docproj ports releases
-SUBDIR+=	news alpha
+SUBDIR+=	news alpha copyright internal search projects
 
 # Subdirectories that have linuxdoc docs and makefiles that use
 # <bsd.sgml.mk>.
