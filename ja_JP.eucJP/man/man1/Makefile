@@ -1,6 +1,7 @@
 MAN1 =	a2p.1\
 	addftinfo.1\
 	addr2line.1\
+	afmtodit.1\
 	apply.1\
 	apropos.1\
 	ar.1\
@@ -101,10 +102,12 @@ MAN1 =	a2p.1\
 	gperf.1\
 	gprof.1\
 	grep.1\
+	grn.1\
 	grodvi.1\
 	groff.1\
 	grog.1\
 	grohtml.1\
+	grolbp.1\
 	grolj4.1\
 	grops.1\
 	grotty.1\
@@ -116,6 +119,7 @@ MAN1 =	a2p.1\
 	hexdump.1\
 	host.1\
 	hostname.1\
+	hpftodit.1\
 	id.1\
 	ident.1\
 	indent.1\
@@ -233,6 +237,8 @@ MAN1 =	a2p.1\
 	pkg_create.1\
 	pkg_delete.1\
 	pkg_info.1\
+	pkg_sign.1\
+	pkg_update.1\
 	pkg_version.1\
 	pr.1\
 	printenv.1\
@@ -250,6 +256,7 @@ MAN1 =	a2p.1\
 	rcsintro.1\
 	rcsmerge.1\
 	rdist.1\
+	realpath.1\
 	refer.1\
 	rev.1\
 	rlog.1\
@@ -462,5 +469,6 @@ MLINKS+=opiekey.1 otp-md4.1
 MLINKS+=opiekey.1 otp-md5.1
 MLINKS+=tcsh.1 csh.1
 MLINKS+=ee.1 edit.1
+MLINKS+=pkg_sign.1 pkg_check.1
 
 .include "bsd.prog.mk"

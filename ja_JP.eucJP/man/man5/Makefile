@@ -31,6 +31,7 @@ MAN5 =	a.out.5\
 	gettytab.5\
 	groff_font.5\
 	groff_out.5\
+	groff_tmac.5\
 	group.5\
 	hosts.5\
 	hosts.equiv.5\
@@ -55,6 +56,7 @@ MAN5 =	a.out.5\
 	login.conf.5\
 	magic.5\
 	mailer.conf.5\
+	make.conf.5\
 	modems.5\
 	motd.5\
 	named.conf.5\
@@ -111,5 +113,6 @@ MLINKS+=uuencode.format.5 uuencode.5
 MLINKS+=resolver.5 resolv.conf.5
 MLINKS+=fs.5 inode.5
 MLINKS+=dir.5 dirent.5
+MLINKS+=groff_tmac.5 tmac.5
 
 .include "bsd.prog.mk"
