@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: doc/ja_JP.eucJP/man/man5/Makefile,v 1.16 2001/09/23 03:41:53 horikawa Exp $
 MAN5 =	a.out.5\
 	acct.5\
 	aliases.5\
@@ -71,6 +71,7 @@ MAN5 =	a.out.5\
 	passwd.5\
 	pbm.5\
 	pccard.conf.5\
+	periodic.conf.5\
 	phones.5\
 	printcap.5\
 	procfs.5\
