@@ -4,7 +4,7 @@
 # 
 # John Fieber <jfieber@indiana.edu>
 # Modified for new gallery.db format by Nate Johnson <nsj@freebsd.org>
-# $Id: gallery.cgi,v 1.9 1998-05-26 19:52:58 nsj Exp $
+# $Id: gallery.cgi,v 1.10 1998-05-27 12:40:19 nsj Exp $
 ##################################################################
 
 $curator = "gallery@freebsd.org";
@@ -13,7 +13,7 @@ $subject = "Another gallery submission...";
 require 'cgi-lib.pl';
 &ReadParse;
 
-$hsty_date = "\$Date: 1998-05-26 19:52:58 $";
+$hsty_date = "\$Date: 1998-05-27 12:40:19 $";
 #$h_base = "..";
 #$d_author = "
 require 'cgi-style.pl';
@@ -126,9 +126,11 @@ elsif ($in{'action'} eq "submit") {
     $category =~ tr/A-Z/a-z/;
 
     ($mo,$da,$year) = $timestamp =~ m/(\d\d?)-(\d\d?)-(\d\d\d\d)/;
-    $year -= $1900;
+    $year -= 1900;
+    $mo = join('','0',$mo) if ($mo =~ /^\d$/);
+    $da = join('','0',$da) if ($da =~ /^\d$/);
     $date = join("",$year,$mo,$da);
-    print M "$category\t$in{'organization'}\t$in{'url'}\t$in{'description'}\t$i {'contact'}\t$date\t000000\n";
+    print M "$category\t$in{'organization'}\t$in{'url'}\t$in{'description'}\t$in{'contact'}\t$date\t000000\n";
 
     close(M);
 }
