@@ -52,6 +52,7 @@ MAN8 =	IPXrouted.8\
 	faithd.8\
 	fdcontrol.8\
 	fdisk.8\
+	ffsinfo.8\
 	fingerd.8\
 	fixmount.8\
 	fore_dnld.8\
@@ -64,6 +65,7 @@ MAN8 =	IPXrouted.8\
 	gensetdefs.8\
 	getty.8\
 	gifconfig.8\
+	growfs.8\
 	hlfsd.8\
 	ibcs2.8\
 	ifconfig.8\
