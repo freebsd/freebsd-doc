@@ -2,7 +2,7 @@
 #
 # ##################################################################
 # ##################################################################
-# ## If you want to upgrade your GNOME desktop from 2.4 to 2.6,   ##
+# ## If you want to upgrade your GNOME desktop from 2.6 to 2.8,   ##
 # ## you're on the right track! Read our upgrade FAQ at           ##
 # ## http://www.freebsd.org/gnome/docs/faq26.html for complete    ##
 # ## instructions!                                                ##
@@ -34,13 +34,13 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $Id: gnome_upgrade.sh,v 1.8 2004-08-23 22:04:37 adamw Exp $
+# $Id: gnome_upgrade.sh,v 1.9 2004-11-07 22:36:57 marcus Exp $
 #
 
 # This script will aid in doing major upgrades to the GNOME Desktop (e.g.
-# an upgrade from 2.4 --> 2.6).
+# an upgrade from 2.6 --> 2.8).
 
-GNOME_UPGRADE_SH_VER=42;	# This should be nailed down before releasing
+GNOME_UPGRADE_SH_VER=280;	# This should be nailed down before releasing
 
 ## BEGIN global variable declarations.
 VERBOSE=${VERBOSE:=0}
@@ -54,26 +54,26 @@ SUPPORT_EMAIL="freebsd-gnome@FreeBSD.org"
 
 SUPPORTED_FREEBSD_VERSIONS="4.9 4.10 5.2 5.2.1 5.3 6.0"
 	# Ports that must be up-to-date and installed for the Big Update to work
-EXTERNAL_DEPENDS="popt gettext* libiconv expat pkgconfig freetype2 XFree86-libraries* Xft libXft XFree86-fontScalable* XFree86-fontEncodings* xorg* png libaudiofile tiff jpeg libxml2 python libxslt gnomehier scrollkeeper intltool p5-XML-Parser docbook-sk xmlcatmgr docbook-xsl docbook-xml sdocbook-xml startup-notification gnome-icon-theme Hermes sox libmpeg2 guile libltdl aspell gle cdrtools mkisofs bitstream-vera openldap-client lcms libmng libtool ghostscript* gnomeuserdocs2"
+EXTERNAL_DEPENDS="popt gettext* libiconv expat pkgconfig freetype2 XFree86-libraries* Xft libXft XFree86-fontScalable* XFree86-fontEncodings* xorg* png libaudiofile tiff jpeg libxml2 python libxslt gnomehier scrollkeeper intltool p5-XML-Parser docbook-sk xmlcatmgr docbook-xsl docbook-xml sdocbook-xml startup-notification gnome-icon-theme Hermes libmpeg2 guile libltdl aspell gle cdrtools mkisofs bitstream-vera openldap-client lcms libmng libtool ghostscript* gnomeuserdocs2 libIDL libbonobo libgda2 libgsf libgtop2 libxklavier shared-mime-info hicolor-icon-theme linc ORBit2 libart_lgpl2 libmad libid3tag fam esound libglut nspr shared-mime-data hicolor-icon-theme"
 EXTERNAL_4_DEPENDS="libgnugetopt"
 EXTERNAL_5_DEPENDS="perl-5*"
 EXTERNAL_6_DEPENDS="perl-5*"
 	# Ports that are obsoleted by the new GNOME version
-RM_PORTS="acme gswitchit gnomevfs-extras libxklavier"
+RM_PORTS=""
 	# Files that need to be removed for the Big Update to work (chicken-and-egg kludge)
 RM_FILES=""
 	# The Big Update updates UPGRADE_TARGET and everything that depends on it
-UPGRADE_TARGET="glib-2*"
+UPGRADE_TARGET="atk pango"
 	# Ports that should be left until after the Big Update
-EXCLUDE_PORTS="libgtop2 gnomesystemmonitor gdesklets gnomeapplets2 gnome2 regexxer gnomemeeting"
+EXCLUDE_PORTS="gdesklets gnomeapplets2 gnome2 gnomemeeting gconf-editor"
 	# Ports that should be installed from scratch after the Big Update
 	# (Needs to be in category/port form, like editors/AbiWord2)
 POSTINSTALL_PORTS=""
 	# Ports that need to be rebuilt after the Big Update
 	# (Make sure to include upstream dependencies!)
-REINSTALL_PORTS="libgtop2 gnomesystemmonitor gdesklets gnomeapplets2 gnome2 gnomevfs2 libgnome AbiWord2* gnome2-office"
+REINSTALL_PORTS="gdesklets gnomeapplets2 gnome2 gnomevfs2 libgnome AbiWord2* gnome2-office gconf-editor"
 	# Variables to be set across every portupgrade run
-PORTUPGRADE_MAKE_ENV="GNOME_UPGRADE_SH_VER=${GNOME_UPGRADE_SH_VER}"
+PORTUPGRADE_MAKE_ENV="-m GNOME_UPGRADE_SH_VER=${GNOME_UPGRADE_SH_VER}"
 
 # the following exists to resolve chicken-and-egg dependency problems.
 #
@@ -85,13 +85,6 @@ PORTUPGRADE_MAKE_ENV="GNOME_UPGRADE_SH_VER=${GNOME_UPGRADE_SH_VER}"
 #        POSTINSTALL_PORTS="${POSTINSTALL_PORTS} editors/programY"
 #    fi
 #fi
-
-if [ -f ${X11BASE}/libdata/pkgconfig/gucharmap.pc ]; then
-	if [ -x ${X11BASE}/bin/abiword ]; then
-		RM_PORTS="${RM_PORTS} AbiWord2*"
-		POSTINSTALL_PORTS="${POSTINSTALL_PORTS} editors/AbiWord2"
-	fi
-fi
 
 ## END global variable declarations.
 
@@ -172,10 +165,10 @@ run_pkgdb()
 
 run_portupgrade()
 {
-    target="$1"
-    logfile=$2
+    logfile=$1
+    target="$*"
 
-    # insert custom env variables here, if necessary
+    # insert custom env variables here, if necessary.
     PORTUPGRADE_MAKE_ENV="${PORTUPGRADE_MAKE_ENV}"
 
     echo "===> Running ${PORTUPGRADE} -O -m "BATCH=yes ${PORTUPGRADE_MAKE_ENV}" ${PORTUPGRADE_ARGS} ${target}" >> ${logfile}
@@ -206,6 +199,11 @@ if [ ${VERBOSE} != 0 ]; then
     echo "INFO: OS version = ${version}, supported = ${supported}"
 fi
 
+restart=0
+if [ $1 = "-restart" ]; then
+    restart=1
+fi
+
 if [ ${supported} = 0 ]; then
     echo "===> FreeBSD ${version} is not supported by the FreeBSD GNOME project.  Please refer to ${PROJECT_URL} for a list of supported versions." | /usr/bin/fmt 75 79
     exit 1
@@ -218,8 +216,8 @@ echo
 echo "If necessary, hit Control-C now, drop to a terminal, and restart the upgrade." | /usr/bin/fmt 75 79
 echo
 # $i is a good clobberable variable name
-read -p "Hit <ENTER> to continue with the upgrade: " i
-echo
+#read -p "Hit <ENTER> to continue with the upgrade: " i
+#echo
 
 logfile=`get_tmpfile gnome_upgrade_log`
 if [ $? != 0 ]; then
@@ -237,10 +235,10 @@ echo "INFO: PORTSDIR = ${PORTSDIR}" >> ${logfile}
 
 echo "You can watch the upgrade process in real-time by running:"
 echo "		tail -f ${logfile}"
-echo "INFO: logfile = ${logfile}" >> ${logfile}
 if [ ${VERBOSE} != 0 ]; then
     echo "or by defining WATCH_BUILD in your environment."
 fi
+echo "INFO: logfile = ${logfile}" >> ${logfile}
 
 major_version=`echo ${version} | /usr/bin/cut -d'.' -f1`
 eval "EXTERNAL_DEPENDS=\"${EXTERNAL_DEPENDS} \${EXTERNAL_${major_version}_DEPENDS}\""
@@ -288,7 +286,7 @@ run_pkgdb "again, to resolve any inconsistencies that require manual interaction
 echo
 echo ">>>>> STAGE 2 of 5: Updating any out-of-date GNOME dependencies."
 echo "===> Running ${PORTUPGRADE} for external dependencies ..." >> ${logfile}
-run_portupgrade "${EXTERNAL_DEPENDS}" ${logfile}
+run_portupgrade ${logfile} "${EXTERNAL_DEPENDS}"
 if [ $? != 0 ]; then
     echo "FAILED."
     echo "===> ${PORTUPGRADE} failed to run for the external GNOME dependencies.  Please make sure that ${EXTERNAL_DEPENDS} are up-to-date, then re-run this script.  The output of the failed portupgrade can be found in ${logfile}.  If you require additional help, please compress ${logfile}, and send it to ${SUPPORT_EMAIL}." | /usr/bin/fmt 75 79
@@ -357,15 +355,23 @@ if [ ${VERBOSE} != 0 ]; then
 else
 	echo "Note: this will take a LONG time (a bit longer than it took to build it all the first time ...).  If you've been planning a day trip, now would be a great time to take it." | /usr/bin/fmt 75 79
 fi
-echo "===> Running portupgrade on ${UPGRADE_TARGET} and all dependent ports ..." >> ${logfile}
+if [ ${restart} = 1 ]; then
+    echo "===> Restarting portupgrade on ${UPGRADE_TARGET} and all dependent ports ..." >> ${logfile}
+else
+    echo "===> Running portupgrade on ${UPGRADE_TARGET} and all dependent ports ..." >> ${logfile}
+fi
 SAVE_PORTUPGRADE_ARGS="${PORTUPGRADE_ARGS}"
-PORTUPGRADE_ARGS="${PORTUPGRADE_ARGS} -r -f"
+if [ ${restart} = 1 ]; then
+    PORTUPGRADE_ARGS="${PORTUPGRADE_ARGS} -r"
+else
+    PORTUPGRADE_ARGS="${PORTUPGRADE_ARGS} -r -f"
+fi
 if [ ! -z "${EXCLUDE_PORTS}" ]; then
     for excl in ${EXCLUDE_PORTS}; do
 	    PORTUPGRADE_ARGS="${PORTUPGRADE_ARGS} -x ${excl}"
     done
 fi
-run_portupgrade ${UPGRADE_TARGET} ${logfile}
+run_portupgrade ${logfile} ${UPGRADE_TARGET}
 if [ $? != 0 ]; then
     echo
     echo "*** UPGRADE FAILED ***"
@@ -378,7 +384,7 @@ echo
 echo "${PORTUPGRADE} has finished.  That was the hard part!"
 
 echo
-echo ">>>>> STAGE 5 of 5: Rebuilding a couple ports that had to wait until new GNOME libraries were in place. (Almost done!)" | /usr/bin/fmt 75 79
+echo ">>>>> STAGE 5 of 5: Rebuilding a few ports that had to wait until new GNOME libraries were in place. (Almost done!)" | /usr/bin/fmt 75 79
 # Now, install anything that needs to be installed after other
 # things have been updated. This includes things that had to
 # be removed for chicken-and-egg problems. This is done before
@@ -390,7 +396,7 @@ if [ ! -z "${POSTINSTALL_PORTS}" ]; then
     for i in ${POSTINSTALL_PORTS}; do
         echo -n "===> Installing ${i} ..."
         echo "===> Installing ${i} ..." >> ${logfile}
-        run_portupgrade ${i} ${logfile}
+        run_portupgrade ${logfile} ${logfile}
         if [ $? != 0 ]; then
             echo "FAILED."
             echo "===> Failed to install ${i}.  Please install this port by hand.  The output of the failed build is in ${logfile}.  If you require additional assistance reinstalling this port, please compress ${logfile} and send it to ${SUPPORT_EMAIL}." | /usr/bin/fmt 75 79
@@ -407,7 +413,7 @@ PORTUPGRADE_ARGS="${PORTUPGRADE_ARGS} -f"
 for i in ${REINSTALL_PORTS}; do
     echo -n "===> Reinstalling ${i} ..."
     echo "===> Reinstalling ${i} ..." >> ${logfile}
-    run_portupgrade ${i} ${logfile}
+    run_portupgrade ${logfile} ${i}
     if [ $? != 0 ]; then
 	echo "FAILED."
 	echo "===> Failed to reinstall ${i}.  Please reinstall this port by hand.  The output of the failed build is in ${logfile}.  If you require additional assistance reinstalling this port, please compress ${logfile} and send it to ${SUPPORT_EMAIL}." | /usr/bin/fmt 75 79
