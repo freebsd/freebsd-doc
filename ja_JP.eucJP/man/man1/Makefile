@@ -66,7 +66,6 @@ MAN1 =	addftinfo.1\
 	dnskeygen.1\
 	dnsquery.1\
 	domainname.1\
-	doscmd.1\
 	dtmfdecode.1\
 	du.1\
 	echo.1\
@@ -276,7 +275,6 @@ MAN1 =	addftinfo.1\
 	rusers.1\
 	rwall.1\
 	rwho.1\
-	sasc.1\
 	scon.1\
 	scp.1\
 	script.1\
@@ -285,7 +283,6 @@ MAN1 =	addftinfo.1\
 	send-pr.1\
 	setfacl.1\
 	sftp.1\
-	sgsc.1\
 	sh.1\
 	shar.1\
 	size.1\
