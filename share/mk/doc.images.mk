@@ -247,7 +247,7 @@ CLEANDIRS+=	${LOCAL_IMAGES_LIB_DIR}
 LOCAL_IMAGES_LIB += ${LOCAL_IMAGES_LIB_DIR}/${_curimage}
 ${LOCAL_IMAGES_LIB_DIR}/${_curimage}: ${IMAGES_LIB_DIR}/${_curimage}
 	@[ -d ${LOCAL_IMAGES_LIB_DIR}/${_curimage:H} ] || \
-		${MKDIR} ${LOCAL_IMAGES_LIB_DIR}/${_curimage:H}
+		${MKDIR} -p ${LOCAL_IMAGES_LIB_DIR}/${_curimage:H}
 	${CP} -p ${IMAGES_LIB_DIR}/${_curimage} \
 		 ${LOCAL_IMAGES_LIB_DIR}/${_curimage}
 .endfor
