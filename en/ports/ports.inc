@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/ports/ports.inc,v 1.62 2002/05/20 13:49:27 phantom Exp $ -->
+<!-- $FreeBSD: www/en/ports/ports.inc,v 1.63 2002/07/11 14:34:39 bmah Exp $ -->
 <p>The FreeBSD Ports and Packages Collection offers a simple way for
 users and administrators to install applications.  The ports
 collection has been <a
@@ -111,5 +111,5 @@ stretched thin enough supporting ports-current.
 <p>Many of the ports require the X Window System to compile and run.
 We compile and test our ports on <a
 href="http://www.xfree86.org/">XFree86</a>. Their current release is
-3.3.6.  Some ports may not work with older or newer releases.</p>
+4.2.0.  Some ports may not work with older or newer releases.</p>
 
