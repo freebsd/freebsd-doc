@@ -1,7 +1,7 @@
-# $FreeBSD: www/fr/news/Makefile,v 1.2 2002/12/22 22:07:29 stephane Exp $
+# $FreeBSD: www/fr/news/Makefile,v 1.3 2003/08/16 18:24:05 stephane Exp $
 
 # The FreeBSD French Documentation Project
-# Original revision: 1.33
+# Original revision: 1.38
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -22,18 +22,21 @@ DOCS+= press-rel-3.sgml
 DOCS+= press-rel-4.sgml
 DOCS+= press-rel-5.sgml
 DOCS+= press-rel-6.sgml
+DOCS+= press-rel-7.sgml
 
 # The yearly State of the Union address
 DOCS+= sou1999.sgml
 
 INDEXLINK= news.html
 
-SUBDIR= 	1996
+# SUBDIR       	1993
+SUBDIR+= 	1996
 SUBDIR+= 	1997
 SUBDIR+= 	1998
 SUBDIR+= 	1999
 SUBDIR+= 	2000
 SUBDIR+= 	2001
+# SUBDIR+= 	2002
 SUBDIR+=	status
 
 DATA=		newsflash.html news.rdf press.html
