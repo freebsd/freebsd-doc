@@ -2,8 +2,8 @@
 
 <!--
      $FreeBSD$
-     $FreeBSDde: de-www/index.xsl,v 1.24 2003/12/26 11:56:12 mheinen Exp $
-     basiert auf: 1.90
+     $FreeBSDde: de-www/index.xsl,v 1.27 2004/01/11 00:16:07 mheinen Exp $
+     basiert auf: 1.92
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -79,7 +79,7 @@
 		<xsl:text>&#160;</xsl:text>
 		<a href="{$enbase}/es/index.html" title="Spanisch">[es]</a>
 		<xsl:text>&#160;</xsl:text>
-		<a href="http://www.freebsd-fr.org/index-trad.html" title="Franz&#246;sisch">[fr]</a>
+		<a href="{$enbase}/fr/index.html" title="Franz&#246;sisch">[fr]</a>
 		<xsl:text>&#160;</xsl:text>
 		<a href="{$enbase}/it/index.html" title="Italienisch">[it]</a>
 		<xsl:text>&#160;</xsl:text>
@@ -144,7 +144,7 @@
 			      &#183; <a href="{$enbase}/support.html#newsgroups">Newsgroups</a><br/>
 			      &#183; <a href="{$enbase}/support.html#user">Benutzergruppen</a><br/>
 			      &#183; <a href="{$enbase}/support.html#web">Web Ressourcen</a><br/>
-			      &#183; <a href="{$enbase}/security/index.html">Sicherheit</a><br/>
+			      &#183; <a href="security/index.html">Sicherheit</a><br/>
 			    </small></p>
 
 			  <p><a href="{$enbase}/support.html#gnats">
@@ -401,7 +401,7 @@
 			      <xsl:call-template name="html-index-advisories-items">
 			        <xsl:with-param name="advisories.xml" select="$advisories.xml" />
 			      </xsl:call-template>
-			      <a href="{$enbase}/security/">mehr ...</a>
+			      <a href="security/">mehr ...</a>
 			    </font>
 			  </p>
 			</td>
@@ -481,7 +481,7 @@
 		<xsl:value-of select="$date"/></small></td>
 
 	    <td align="right"
-		valign="top"><small><a href="{$enbase}/copyright/index.html">Legal</a> &#169; 1995-2003
+		valign="top"><small><a href="{$enbase}/copyright/index.html">Legal</a> &#169; 1995-2004
 		The FreeBSD Project.<br/>
 		All rights reserved.</small></td>
 	  </tr>
