@@ -1,5 +1,5 @@
 # 
-# $FreeBSD: doc/en_US.ISO_8859-1/books/handbook/Makefile,v 1.29 2000/07/12 14:35:51 nbm Exp $
+# $FreeBSD: doc/en_US.ISO_8859-1/books/handbook/Makefile,v 1.30 2000/12/01 00:58:11 jim Exp $
 #
 # Build the FreeBSD Handbook.
 #
@@ -58,6 +58,16 @@ SRCS+= chapters.ent
 SRCS+= mailing-lists.ent
 
 SYMLINKS=	${DESTDIR} index.html handbook.html
+
+# XXX The Handbook build currently overflows some internal, hardcoded 
+# limits in pdftex.  Until we split the Handbook up, build the PDF 
+# version using ps2pdf instead of pdftex.
+
+book.tex-pdf:
+	touch book.tex-pdf
+
+book.pdf: book.ps
+	ps2pdf book.ps book.pdf
 
 DOC_PREFIX?= ${.CURDIR}/../../..
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"
