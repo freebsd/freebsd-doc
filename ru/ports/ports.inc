@@ -2,7 +2,7 @@
      The FreeBSD Russian Documentation Project
 
      $FreeBSD$
-     $FreeBSDru: frdp/www/ru/ports/ports.inc,v 1.12 2004/01/06 07:54:18 den Exp $
+     $FreeBSDru: frdp/www/ru/ports/ports.inc,v 1.13 2004/04/08 07:08:55 den Exp $
 
      Original revision: 1.67
 -->
@@ -27,7 +27,7 @@
     удобства вы можете установить <a
     href="ftp://ftp.FreeBSD.org/pub/FreeBSD/ports/ports/ports.tar.gz">
     полное дерево портов</a> во время установки системы (или использовать <a
-    href="../../doc/en_US.ISO8859-1/books/handbook/synching.html#CVSUP">CVSup</a>
+    href="../../doc/ru_RU.KOI8-R/books/handbook/synching.html#CVSUP">CVSup</a>
     для постоянного отслеживания изменений) и моментально получить тысячи
     приложений.
 
@@ -63,9 +63,9 @@
   </FORM>
 
   <p>Более подробная информация об использовании портов находится в главе
-    <a href="../../doc/en_US.ISO8859-1/books/handbook/ports.html">Установка
+    <a href="../../doc/ru_RU.KOI8-R/books/handbook/ports.html">Установка
     Приложений: пакеты и порты</a> <a
-    href="../../doc/en_US.ISO8859-1/books/handbook/index.html">Руководства
+    href="../../doc/ru_RU.KOI8-R/books/handbook/index.html">Руководства
     FreeBSD</a>. Информация о создании новых портов находится в книге <a
     href="../../doc/ru_RU.KOI8-R/books/porters-handbook/index.html">
     Руководство по созданию портов</a>.</p>

@@ -4,7 +4,7 @@
      The FreeBSD Russian Documentation Project
 
      $FreeBSD$
-     $FreeBSDru: frdp/www/ru/index.xsl,v 1.32 2004/03/10 13:28:18 den Exp $
+     $FreeBSDru: frdp/www/ru/index.xsl,v 1.33 2004/04/08 07:08:51 den Exp $
 
      Original revision: 1.96
 -->
@@ -190,7 +190,7 @@
                 либо, если у вас есть подключение к сети, можно установить её
                 <i>непосредственно</i> через FTP или NFS.  Всё, что вам нужно
                 для этого - несколько чистых дискет ёмкостью 1.44 Мбайта и <a
-                href="{$base}/doc/en_US.ISO8859-1/books/handbook/install.html">
+                href="{$base}/doc/ru_RU.KOI8-R/books/handbook/install.html">
                 эти указания</a>.</p>
 
 	      <h2><font color="#990000">FreeBSD распространяется
@@ -205,7 +205,7 @@
 		распространяется <a href="copyright/index.html">бесплатно</a>
                 и поставляется со всеми исходными текстами. Если вам захочется
 		её попробовать, обратитесь к <a
-		href="{$base}/doc/en_US.ISO8859-1/books/handbook/mirrors.html">
+		href="{$base}/doc/ru_RU.KOI8-R/books/handbook/mirrors.html">
 		следующей информации</a>.</p>
 
 	      <h2><font color="#990000">Как принять участие</font></h2>
@@ -257,7 +257,7 @@
 			    <xsl:value-of select="$rel.current"/></b></font></a><br/>
 
 			    <small>&#183; <a href="{$u.rel.announce}">Анонс</a><br/>
-			      &#183; <a href="{$base}/doc/en_US.ISO8859-1/books/handbook/install.html">Руководство по установке</a><br/>
+			      &#183; <a href="{$base}/doc/ru_RU.KOI8-R/books/handbook/install.html">Руководство по установке</a><br/>
 			      &#183; <a href="{$u.rel.notes}">Информация о Релизе</a><br/>
 			      &#183; <a href="{$u.rel.hardware}">Поддерживаемое Оборудование</a><br/>
                               &#183; <a href="{$u.rel.errata}">Обнаруженные Проблемы</a><br/>
@@ -269,7 +269,7 @@
 			    <xsl:value-of select="$rel2.current"/></b></font></a><br/>
 
                             <small>&#183; <a href="{$u.rel2.announce}">Анонс</a><br/>
-                              &#183; <a href="{$base}/doc/en_US.ISO8859-1/books/handbook/install.html">Руководство по установке</a><br/>
+                              &#183; <a href="{$base}/doc/ru_RU.KOI8-R/books/handbook/install.html">Руководство по установке</a><br/>
                               &#183; <a href="{$u.rel2.notes}">Информация о релизе</a><br/>
                               &#183; <a href="{$u.rel2.hardware}">Информация об оборудовании</a><br/>
                               &#183; <a href="{$u.rel2.errata}">Известные проблемы</a></small></p>
