@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/ports.cgi,v 1.66 2003/05/15 12:08:05 ceri Exp $
+# $FreeBSD: www/en/cgi/ports.cgi,v 1.67 2003/07/20 21:03:14 simon Exp $
 #
 # ports.cgi - search engine for FreeBSD ports
 #             	o search for a port by name or description
@@ -58,56 +58,35 @@ sub init_variables {
     local($pia64) = 'ftp://ftp.FreeBSD.org/pub/FreeBSD/ports/ia64';
     local($psparc64) = 'ftp://ftp.FreeBSD.org/pub/FreeBSD/ports/sparc64';
 
-    $remotePrefixFtpPackagesDefault = '4.7-STABLE/i386';
+    $remotePrefixFtpPackagesDefault = '4.8-STABLE/i386';
     %remotePrefixFtpPackages = 
 	(
-	 '5.0-CURRENT/i386', "$p/packages-current/All",
-	 '4.7-STABLE/i386', " $p/packages-4-stable/All",
+	 '5.1-CURRENT/i386', "$p/packages-current/All",
+	 '4.8-STABLE/i386', " $p/packages-4-stable/All",
 
+	 '5.1-RELEASE/i386', "$p/packages-5.1-release/All",
 	 '5.0-RELEASE/i386', "$p/packages-5.0-release/All",
+	 '4.8-RELEASE/i386', "$p/packages-4.8-release/All",
 	 '4.7-RELEASE/i386', "$p/packages-4.7-release/All",
-	 '4.6-RELEASE/i386', "$p/packages-4.6-release/All",
 
-	 '5.0-CURRENT/alpha', "$palpha/packages-current/All",
-	 '4.7-STABLE/alpha',  "$palpha/packages-4-stable/All",
+	 '5.1-CURRENT/alpha', "$palpha/packages-current/All",
+	 '4.8-STABLE/alpha',  "$palpha/packages-4-stable/All",
 
+	 '5.1-RELEASE/alpha', "$palpha/packages-5.1-release/All",
 	 '5.0-RELEASE/alpha', "$palpha/packages-5.0-release/All",
+	 '4.8-RELEASE/alpha', "$palpha/packages-4.8-release/All",
 	 '4.7-RELEASE/alpha', "$palpha/packages-4.7-release/All",
-	 '4.6-RELEASE/alpha', "$palpha/packages-4.6-release/All",
 
-	 '5.0-CURRENT/ia64', "$pia64/packages-current/All",
+	 '5.1-CURRENT/ia64', "$pia64/packages-current/All",
 
+	 '5.1-RELEASE/ia64', "$pia64/packages-5.1-release/All",
 	 '5.0-RELEASE/ia64', "$pia64/packages-5.0-release/All",
 
-	 '5.0-CURRENT/sparc64', "$psparc64/packages-current/All",
+	 '5.1-CURRENT/sparc64', "$psparc64/packages-current/All",
 
+	 '5.1-RELEASE/sparc64', "$psparc64/packages-5.1-release/All",
 	 '5.0-RELEASE/sparc64', "$psparc64/packages-5.0-release/All",
 	);
-
-    %relDate = 
-	(
-	 '5.0-CURRENT/i386', 'today',
-	 '4.7-STABLE/i386', 'today',
-
-	 '5.0-RELEASE/i386', '2003-01-19 17:34:28 UTC',
-	 '4.7-RELEASE/i386', '2002-10-10 14:47:54 UTC',
-	 '4.6-RELEASE/i386', '2002-06-15 23:01:20 UTC',
-
-	 '5.0-CURRENT/alpha', 'today',
-	 '4.7-STABLE/alpha', 'today',
-
-	 '5.0-RELEASE/alpha', '2003-01-19 17:34:28 UTC',
-	 '4.7-RELEASE/alpha', '2002-10-10 14:47:54 UTC',
-	 '4.6-RELEASE/alpha', '2002-06-15 23:01:20 UTC',
-
-	 '5.0-CURRENT/ia64', 'today',
-
-	 '5.0-RELEASE/ia64', '2003-01-19 17:34:28 UTC',
-
-	 '5.0-CURRENT/sparc64', 'today',
-
-	 '5.0-RELEASE/sparc64', '2003-01-19 17:34:28 UTC',
-	  );
 
     $remotePrefixHtml =
 	'../ports';
@@ -132,7 +111,6 @@ sub init_variables {
     $mailtoAdvanced = 'yes';
 
     # the URL if you click at the E-Mail address (see below)
-    $mailtoURL = 'http://www.FreeBSD.org/ports/';
     $mailtoURL = "mailto:$mailto" if !$mailtoURL;
 
     # security
@@ -144,10 +122,41 @@ sub init_variables {
     # make plain text URLs clickable cgi script
     $url = 'url.cgi';
 
+    # extension type for packages
+    $packageExt = 'tgz';
+
     local($packageDB) = '../ports/packages.exists';
     &packages_exist($packageDB, *packages) if -f $packageDB;
 
 }
+
+# Parse selected version string and set version dependend settings
+sub parse_release {
+    if($release =~ /^(\d+)\.(\d+)(\.(\d+))?-(CURRENT|STABLE|RELEASE)\/(i386|alpha|ia64|sparc64|amd64)$/) {
+	$release_major = $1;
+	$release_minor = $2;
+	$release_patch = $4;
+	if($release_patch eq "") {
+	    $release_patch = "0";
+	}
+	$release_type = $5;
+	$release_arch = $6;
+	if($release_type eq "RELEASE") {
+	    $release_tag = "RELEASE_" . $release_major . "_" . $release_minor .
+		"_" . $release_patch;
+	}
+    } else {
+	&header;
+	print "Internal error: Could not parse release string ('$release')<br><br>\n";
+	&footer; &footer2; &exit(0);
+    }
+
+    if($release_major == 5) {
+	$packageExt = 'tbz';
+	$ports_database = 'ports/INDEX-5';
+    }
+}
+
 
 sub packages_exist {
     local($file, *p) = @_;
@@ -171,6 +180,8 @@ sub packages_exist {
 sub last_update {
     local($file) = "$cvsroot/$ports_database,v";
     local($date) = 'unknown';
+    local($filebasename) = $ports_database;
+    $filebasename =~ s/ports\///;
 
     open(DB, $file) || do {
 	&warn("$file: $!\n"); &exit;
@@ -184,7 +195,7 @@ sub last_update {
 	}
     }
     close DB;
-    return $date . "; based on  revision " . $head;
+    return $date . "; based on " . $filebasename . " revision " . $head;
 }
 
 sub last_update_message {
@@ -240,9 +251,12 @@ sub readindex {
     local($date, *var, *msec) = @_;
     local(@co) = ('co', '-p');
 
-    if ($date =~ /^rev([1-9]+\.[0-9]+)$/) {
+    if ($date =~ /^rev([1-9]+\.[0-9]+)$/ ||
+	$date =~ /^(RELEASE_\d+_\d+_\d+)$/) {
 	# diff by revision
 	push(@co, ('-r', $1));
+    } elsif ($date eq "") {
+      # Get HEAD, no date or revision
     } else {
 	# diff by date
 	push(@co, ('-D', $date));
@@ -405,7 +419,7 @@ sub out {
 	    $packages{"$version.tgz"}) ||
 	    $release ne $remotePrefixFtpPackagesDefault
 	    ) {
-	    print qq[<A HREF="$remotePrefixFtpPackages{$release}/$version.tgz">Package</A> <B>:</B>\n];
+	    print qq[<A HREF="$remotePrefixFtpPackages{$release}/$version.$packageExt">Package</A> <B>:</B>\n];
 	}
 print qq[<A HREF="$l">Changes</A> <B>:</B>
 <A HREF="$pathDownload">Download</A>
@@ -586,7 +600,7 @@ sub footer {
 <img ALIGN="RIGHT" src="/gifs/powerlogo.gif">
 &copy; 1996-2002 by Wolfram Schneider. All rights reserved.<br>
 };
-    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.66 2003/05/15 12:08:05 ceri Exp $} . "<br>\n";
+    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.67 2003/07/20 21:03:14 simon Exp $} . "<br>\n";
     print qq{Please direct questions about this service to
 <I><A HREF="$mailtoURL">$mailto</A></I><br>\n};
     print qq{General questions about FreeBSD ports should be sent to } .
@@ -684,6 +698,8 @@ $release = $remotePrefixFtpPackagesDefault
     if !$release  || !defined($remotePrefixFtpPackages{$release});
 $script_name = &env('SCRIPT_NAME');
 
+&parse_release;
+
 if ($path_info eq "/source") {
     print "Content-type: text/plain\n\n";
     open(R, $0) || do { print "ick!\n"; &exit; };
@@ -731,7 +747,7 @@ $counter = 0;
 
 # search
 if ($query) {
-    &readindex($relDate{$release}, *today, *msec);
+    &readindex($release_tag, *today, *msec);
     $query =~ s/([^\w\^])/\\$1/g;
     &search_ports;
 }
