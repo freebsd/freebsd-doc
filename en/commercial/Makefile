@@ -1,8 +1,10 @@
-# $Id: Makefile,v 1.7 1999-01-22 11:23:44 mbarkah Exp $
+# $Id: Makefile,v 1.8 1999-03-20 23:50:10 wosch Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
 .endif
+
+PERL=	perl5
 
 DOCS =  commercial.sgml
 DOCS+=  consulting.sgml
@@ -29,21 +31,21 @@ software.html: software.sgml software.inc
 software_bycat.html: software_bycat.sgml software_bycat.inc
 
 consulting.inc: consulting.raw
-	./gencommercial.pl consulting
+	${PERL} ./gencommercial.pl consulting
 
 consulting_bycat.inc: consulting.raw
-	./gencommercial.pl -c consulting
+	${PERL} ./gencommercial.pl -c consulting
 
 hardware.inc: hardware.raw
-	./gencommercial.pl hardware
+	${PERL} ./gencommercial.pl hardware
 	
 misc.inc: misc.raw
-	./gencommercial.pl misc
+	${PERL} ./gencommercial.pl misc
 
 software.inc: software.raw
-	./gencommercial.pl software
+	${PERL} ./gencommercial.pl software
 
 software_bycat.inc: software.raw
-	./gencommercial.pl -c software
+	${PERL} ./gencommercial.pl -c software
 
 .include <../web.mk>
