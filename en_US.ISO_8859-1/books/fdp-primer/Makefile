@@ -1,5 +1,5 @@
 # 
-# $FreeBSD$
+# $FreeBSD: doc/en_US.ISO_8859-1/books/fdp-primer/Makefile,v 1.7 1999/09/06 06:52:39 peter Exp $
 #
 # Build the FreeBSD Documentation Project Primer.
 #
@@ -27,6 +27,7 @@ SRCS+= sgml-markup/chapter.sgml
 SRCS+= sgml-primer/chapter.sgml 
 SRCS+= stylesheets/chapter.sgml 
 SRCS+= structure/chapter.sgml
+SRCS+= doc-build/chapter.sgml
 SRCS+= the-website/chapter.sgml 
 SRCS+= tools/chapter.sgml 
 SRCS+= translations/chapter.sgml
