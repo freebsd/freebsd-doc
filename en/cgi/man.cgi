@@ -33,8 +33,9 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp 
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.1 1999-05-09 14:05:46 wosch Exp $
+# $Id: man.cgi,v 1.2 1999-07-03 09:23:24 wosch Exp $
 
+#use Data::Dumper;
 
 $www{'title'} = 'FreeBSD Hypertext Man Pages';
 $www{'home'} = 'http://www.FreeBSD.org';
@@ -42,6 +43,7 @@ $www{'head'} = qq[<A HREF="$www{'home'}">$www{'title'}</a> ] .
                qq[<IMG SRC="/gifs/littlelogo.gif">] .
                 "";
 
+$command{'man'} =     'man'; # 8Bit clean man
 $command{'man'} =     '/home/wosch/bin/cgi-man'; # 8Bit clean man
 
 
@@ -79,6 +81,27 @@ $command{'man'} =     '/home/wosch/bin/cgi-man'; # 8Bit clean man
     'n', '-Sn',
 );
 
+$sectionpath = {
+    'SunOS 5.7' => {
+	'path' => '1:1m:1c:1f:1s:1b:2:3:3c:3s:3x:3xc:3n:3r:3t:3xn:3m:3k:3g:3e:3b:9f:9s:9e:9:4:5:7:7d:7i:7m:7p:7fs:4b:6:l:n',
+    },
+    'SunOS 5.6' => {
+	'path' => '1:1m:1c:1f:1s:1b:2:3:3c:3s:3x:3xc:3xn:3r:3t:3n:3m:3k:3g:3e:3b:9f:9s:9e:9:4:5:7:7d:7i:7m:7p:7fs:4b:6:l:n',
+    },
+    'SunOS 5.5.1' => {
+	'path' => '1:1m:1c:1f:1s:1b:2:3:3c:3s:3x:3xc:3xn:3r:3t:3n:3m:3k:3g:3e:3b:9f:9s:9e:9:4:5:7:7d:7i:7m:7p:7fs:4b:6:l:n',
+    },
+};
+
+foreach my $os (keys %$sectionpath) {
+    foreach my $section (split(/:/, $sectionpath->{$os}{'path'})) {
+	$section =~ /(.)(.*)/;
+	$sectionpath->{$os}{$1} .= 
+	    ($sectionpath->{$os}{$1} ? ':' : '') . $section;
+    }
+}
+
+
 %sectionName = 
     (
      '0', 'All Sections',
@@ -95,11 +118,12 @@ $command{'man'} =     '/home/wosch/bin/cgi-man'; # 8Bit clean man
      );
 
 $manLocalDir = '/usr/local/www/bsddoc/man';
-$manPathDefault = 'FreeBSD 3.1-RELEASE';
+$manPathDefault = 'FreeBSD 3.2-RELEASE';
 
 %manPath = 
     (
      'FreeBSD 4.0-current',   "$manLocalDir/FreeBSD-4.0-current",
+     'FreeBSD 3.2-RELEASE',   "$manLocalDir/FreeBSD-3.2-RELEASE",
      'FreeBSD 3.1-RELEASE',   "$manLocalDir/FreeBSD-3.1-RELEASE",
      'FreeBSD 3.0-RELEASE',   "$manLocalDir/FreeBSD-3.0-RELEASE",
      'FreeBSD 2.2.5-RELEASE',   "$manLocalDir/FreeBSD-2.2.5-RELEASE",
@@ -124,8 +148,10 @@ $manPathDefault = 'FreeBSD 3.1-RELEASE';
      'OpenBSD 2.2',           "$manLocalDir/OpenBSD-2.2",
      'OpenBSD 2.3',           "$manLocalDir/OpenBSD-2.3",
      'OpenBSD 2.4',           "$manLocalDir/OpenBSD-2.4",
+     'OpenBSD 2.5',           "$manLocalDir/OpenBSD-2.5",
      'NetBSD 1.2',            "$manLocalDir/NetBSD-1.2",
      'NetBSD 1.3',            "$manLocalDir/NetBSD-1.3",
+     'NetBSD 1.4',            "$manLocalDir/NetBSD-1.4",
 
      '2.8 BSD',             "$manLocalDir/2.8BSD",
      '2.9.1 BSD',             "$manLocalDir/2.9.1BSD",
@@ -148,6 +174,8 @@ $manPathDefault = 'FreeBSD 3.1-RELEASE';
      'XFree86 3.3',	      "$manLocalDir/XFree86-3.3",
      'ULTRIX 4.2',	      "$manLocalDir/ULTRIX-4.2",
      'SunOS 5.5.1',	      "$manLocalDir/SunOS-5.5.1",
+     'SunOS 5.6',	      "$manLocalDir/SunOS-5.6",
+     'SunOS 5.7',	      "$manLocalDir/SunOS-5.7",
      'SunOS 4.1.3',	      "$manLocalDir/SunOS-4.1.3",
      'Plan 9',		      "$manLocalDir/plan9",
      'Minix 2.0',             "$manLocalDir/Minix-2.0",
@@ -185,17 +213,16 @@ while (($key,$val) = each %manPath) {
      'linux-de', 'deutsch - Linux/GNU',
      'redhat', 'Red Hat Linux/i386 5.2',
      'linux', 'Red Hat Linux/i386 5.2',
-     'netbsd 1.x', 'NetBSD 1.2',
      'netbsd', 'NetBSD 1.3',
-     'openbsd 2.x', 'OpenBSD 2.3',
-     'openbsd', 'OpenBSD 2.4',
+     'openbsd 2.x', 'OpenBSD 2.5',
+     'openbsd', 'OpenBSD 2.5',
      'v7', 'Unix Seventh Edition', 
      'v7man', 'Unix Seventh Edition', 
      'x11', 'XFree86 3.3',
      'xfree86', 'XFree86 3.3',
      'ultrix', 'ULTRIX 4.2',
-     'solaris', 'SunOS 5.5.1',
-     'sunos5', 'SunOS 5.5.1',
+     'solaris', 'SunOS 5.7',
+     'sunos5', 'SunOS 5.7',
      'sunos4', 'SunOS 4.1.3',
      'sunos', 'SunOS 4.1.3',
      'freebsd ports', 'FreeBSD Ports',
@@ -406,7 +433,8 @@ sub man {
     local(@manargs);
     local($query) = $name;
 
-    $section =~ s/^([0-9ln]).*$/$1/;
+    # $section =~ s/^([0-9ln]).*$/$1/;
+    $section =~ tr/A-Z/a-z/;
 
     $prefix = "Man ";
     if ($alttitle) {
@@ -446,6 +474,8 @@ sub man {
     $html_name = &encode_data($name);
     $html_section = &encode_data($section);
 
+    #print Dumper($sectionpath);
+    #print "yy $section yy $manpath\n";
     if ($name =~ /^\s*$/) {	
 	print "Empty input, no man page given.\n";
 	return;
@@ -456,15 +486,23 @@ sub man {
 	return;
     }
 
-    if ($section !~ /^[0-9ln]$/ && $section ne '') {
+    if ($section !~ /^[0-9ln]\w*$/ && $section ne '') {
 	print "Sorry, section `$section' is not valid\n";
 	return;
     }
 
     if (!$section) {
-	$section =  '';
+	if ($sectionpath->{$manpath}) {
+	    $section = "-S " . $sectionpath->{$manpath}{'path'};
+	} else {
+	    $section =  '';
+	}
     } else {
-	$section = "-S$section";
+	if ($sectionpath->{$manpath}{$section}) {
+	    $section = "-S " . $sectionpath->{$manpath}{$section};
+	} else {
+	    $section = "-S $section";
+	}
     }
 
     @manargs = split(/ /, $section);
@@ -481,7 +519,7 @@ sub man {
 	}
     }
 
-	# print "X $command{'man'} @manargs -- x $name x\n";
+    # print "X $command{'man'} @manargs -- x $name x\n";
     &proc(*MAN, $command{'man'}, @manargs, "--", $name) ||
 	&mydie ("$0: open of $command{'man'} command failed: $!\n");
     if (eof(MAN)) {
@@ -704,7 +742,7 @@ Please direct questions about this server to
 URL:  <A HREF="$BASE" target=_parent>$www{'home'}$BASE</a><br>
 ETX
 
-    print q{$Date: 1999-05-09 14:05:46 $ $Revision: 1.1 $};
+    print q{$Date: 1999-07-03 09:23:24 $ $Revision: 1.2 $};
     print "<br>\n";
     print "</BODY>\n</HTML>\n";
     0;
