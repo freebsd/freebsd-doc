@@ -1,5 +1,5 @@
 # bsd.web.mk
-# $Id: web.mk,v 1.13 1998-01-18 22:27:31 jfieber Exp $
+# $Id: web.mk,v 1.14 1998-07-23 10:59:00 wosch Exp $
 
 #
 # Build and install a web site.
@@ -127,7 +127,7 @@ beforeinstall:
 afterinstall:
 .endif
 
-_ALLINSTALL=	${GENDOCS} ${DATA} ${LOCAL}
+_ALLINSTALL+=	${GENDOCS} ${DATA} ${LOCAL}
 
 realinstall: ${COOKIE} ${GENDOCS} ${DATA} ${LOCAL} ${CGI} _PROGSUBDIR
 .if !empty(_ALLINSTALL)
