@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: query-pr-summary.cgi,v 1.17 1998-08-07 15:05:55 fenner Exp $
+# $Id: query-pr-summary.cgi,v 1.18 1998-12-15 00:35:52 fenner Exp $
 
 $html_mode     = 1 if $ENV{'DOCUMENT_ROOT'};
 $self_ref      = $ENV{'SCRIPT_NAME'};
@@ -209,7 +209,10 @@ $query_args .= " --skip-closed" unless $input{"closedtoo"};
 foreach ("category", "originator", "priority", "class", "responsible",
 	"severity", "state", "submitter", "text", "multitext") {
 	if ($input{$_} && $input{$_} ne "summary") {
-		$query_args .= " --${_}=$input{$_}";
+		$d = $input{$_};
+		$d =~ s/^"(.*)"$/$&/;
+		$d =~ s/'/\\'/;
+		$query_args .= " --${_}='$input{$_}'";
 	}
 }
 
