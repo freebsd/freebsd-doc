@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="KOI8-R" ?>
+<?xml version="1.0" encoding="KOI8-R"?>
 
 <!-- $FreeBSD$ -->
 <!-- The FreeBSD Russian Documentation Project -->
