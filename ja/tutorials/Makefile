@@ -1,7 +1,7 @@
 #
-# $FreeBSD: www/ja/tutorials/Makefile,v 1.2 2000/02/20 02:37:02 motoyuki Exp $
+# $FreeBSD: www/ja/tutorials/Makefile,v 1.3 2000/04/23 14:33:58 phantom Exp $
 #
-# Original revision: 1.5
+# Original revision: 1.6
 #
 # Build the FreeBSD tutorials/articles outside of the www tree, and then
 # install them in to the right place.
