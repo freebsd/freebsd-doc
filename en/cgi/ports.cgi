@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/ports.cgi,v 1.64 2003/03/04 11:56:15 roam Exp $
+# $FreeBSD: www/en/cgi/ports.cgi,v 1.65 2003/03/14 08:19:26 wosch Exp $
 #
 # ports.cgi - search engine for FreeBSD ports
 #             	o search for a port by name or description
@@ -584,7 +584,7 @@ sub footer {
 <img ALIGN="RIGHT" src="/gifs/powerlogo.gif">
 &copy; 1996-2002 by Wolfram Schneider. All rights reserved.<br>
 };
-    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.64 2003/03/04 11:56:15 roam Exp $} . "<br>\n";
+    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.65 2003/03/14 08:19:26 wosch Exp $} . "<br>\n";
     print qq{Please direct questions about this service to
 <I><A HREF="$mailtoURL">$mailto</A></I><br>\n};
     print qq{General questions about FreeBSD ports should be sent to } .
@@ -624,7 +624,7 @@ sub check_input {
 	$time !~ /^rev[1-9]+\.[0-9]+$/
 	) 
     {
-	&warn("unkwnon date: `$time'\n");
+	&warn("unknown date: `$time'\n");
 	&exit(0);
     }
 }

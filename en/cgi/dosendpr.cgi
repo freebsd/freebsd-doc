@@ -8,7 +8,7 @@
 #  GNU General Public License Version 2.  
 #     (http://www.gnu.ai.mit.edu/copyleft/gpl.html)
 #
-# $FreeBSD: www/en/cgi/dosendpr.cgi,v 1.10 2002/11/02 01:21:41 ceri Exp $
+# $FreeBSD: www/en/cgi/dosendpr.cgi,v 1.11 2002/11/02 01:22:44 ceri Exp $
 
 require "html.pl";
 
@@ -66,7 +66,7 @@ sub prerror {
     &html_title ("Problem Report Error");
     &html_body();
     print "There is an error in the configuration of the problem\n",
-          "report form genator.  Please back up one page and report\n",
+          "report form generator.  Please back up one page and report\n",
           "the problem to the owner of that page.  Report $_[0].";
     &html_end();
     exit (1);
