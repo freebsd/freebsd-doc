@@ -1,5 +1,5 @@
 #
-# $FreeBSD: www/en/docs/Makefile,v 1.3 2001/02/24 18:04:10 nik Exp $i
+# $FreeBSD: www/en/doc/Makefile,v 1.1 2001/04/17 09:05:43 nik Exp $i
 #
 # Build the FreeBSD documentation *outside* of the www tree, and install it
 # in to the right place as necessary.
@@ -9,5 +9,12 @@
 # requirements here.
 #
 
-all install clean:
+all:
+	(unset DESTDIR || true; cd ${.CURDIR}/../../../doc/en_US.ISO_8859-1 && ${MAKE} FORMATS=html-split all)
+	(unset DESTDIR || true; cd ${.CURDIR}/../../../doc/en_US.ISO_8859-1 && ${MAKE} FORMATS=html-split DOCDIR=${.CURDIR} install)
+	
+install clean:
 	(unset DESTDIR || true; cd ${.CURDIR}/../../../doc/en_US.ISO_8859-1 && ${MAKE} FORMATS=html-split DOCDIR=${DESTDIR}/data/doc ${.TARGET})
+.if make(clean)
+	rm -rf en* handbook faq
+.endif
