@@ -2,7 +2,7 @@
 
 <!--
      $FreeBSD$
-     $FreeBSDde: de-www/index.xsl,v 1.12 2003/09/23 23:11:33 mheinen Exp $
+     $FreeBSDde: de-www/index.xsl,v 1.13 2003/09/27 12:05:17 mheinen Exp $
      basiert auf: 1.77
 -->
 
@@ -195,7 +195,7 @@
 
 			    <small><br/>
 			      &#183; <a href="news/newsflash.html">Ank&#252;ndigungen</a><br/>
-			      &#183; <a href="{$enbase}/news/press.html">Aus der Presse</a><br/>
+			      &#183; <a href="news/press.html">Aus der Presse</a><br/>
 			      &#183; <a href="news/index.html">mehr ...</a>
 			    </small></p>
 
@@ -457,7 +457,6 @@
 			      <a href="news/newsflash.html">mehr ...</a>
 			    </font></p>
 
-			  <!--
 			  <p><font size="+1" color="#990000"><b>Aus der Presse</b></font><br/>
 
 			    <font size="-1">
@@ -468,9 +467,7 @@
 			      <xsl:value-of
 				select="document('news/press.xml')/descendant::year[position() = 1]/name"/>
 			      <br/>
-			      -->
 			      <!-- Pull in the 10 most recent press items -->
-			      <!--
 			      <xsl:for-each select="document('news/press.xml')/descendant::story[position() &lt; 10]">
 				&#183; <a>
 				  <xsl:attribute name="href">
@@ -482,7 +479,6 @@
 			      <a href="news/press.html">mehr ...</a>
 			    </font>
 			  </p>
-			  -->
 
 			  <p><font size="+1" color="#990000"><b>Sicherheits-Hinweise</b></font><br/>
 

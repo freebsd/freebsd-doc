@@ -1,7 +1,7 @@
 # The FreeBSD Documentation Project
 # The FreeBSD German Documentation Project
 # $FreeBSD$
-# $FreeBSDde: de-www/Makefile,v 1.16 2003/09/21 22:54:51 mheinen Exp $
+# $FreeBSDde: de-www/Makefile,v 1.17 2003/09/27 12:05:17 mheinen Exp $
 # basiert auf: 1.98
 
 .if exists(Makefile.conf)
@@ -50,7 +50,6 @@ SUBDIR+= relnotes
 
 # Non-SGML
 SUBDIR+= gifs
-#SUBDIR+= cgi
 
 COOKIE=	FAQ handbook
 
@@ -60,8 +59,7 @@ WEBDIR?=	data/de
 DATA+=		index.html
 CLEANFILES+=	index.html
 
-#index.html: index.xsl news/news.xml news/press.xml includes.xsl news/includes.xsl security/advisories.xml
-index.html: index.xsl news/news.xml includes.xsl news/includes.xsl ../en/security/advisories.xml
+index.html: index.xsl news/news.xml news/press.xml includes.xsl news/includes.xsl ../en/security/advisories.xml
 	${XSLTPROC} ${XSLTPROCOPTS} -o ${.TARGET} \
 		${.CURDIR}/index.xsl ${.CURDIR}/news/news.xml
 .if !defined(NO_TIDY)
