@@ -70,8 +70,8 @@ if (!-d $cvsroot) {
 	&fatal("500 Internal Error",'$CVSROOT not found!');
 }
 
-if ($q = $ENV{'QUERY_STRING'}) {
-    foreach (split(/&/, $q)) {
+if ($query = $ENV{'QUERY_STRING'}) {
+    foreach (split(/&/, $query)) {
 	s/%(..)/sprintf("%c", hex($1))/ge;	# unquote %-quoted
 	if (/(\S+)=(.*)/) {
 	    $input{$1} = $2;
@@ -79,6 +79,7 @@ if ($q = $ENV{'QUERY_STRING'}) {
 	    $input{$_}++;
 	}
     }
+    $query = "?" . $query;
 }
 if (-d $fullname) {
 	opendir(DIR, $fullname) || &fatal("404 Not Found","$where: $!");
@@ -97,27 +98,68 @@ if (-d $fullname) {
 	# provides the results that I want in most browsers.  Another
 	# case of layout spooging up HTML.
 	print "<MENU>\n";
-	foreach (sort @dir) {
+	lookingforattic:
+	for ($i = 0; $i <= $#dir; $i++) {
+		if ($dir[$i] eq "Attic") {
+			last lookingforattic;
+		}
+	}
+	if (!$input{"showattic"} && ($i <= $#dir) &&
+				opendir(DIR, $fullname . "/Attic")) {
+		splice(@dir, $i, 1,
+			grep((s|^|Attic/|,!m|/\.|), readdir(DIR)));
+		closedir(DIR);
+	}
+	# Sort without the Attic/ pathname.
+	foreach (sort {($c=$a)=~s|.*/||;($d=$b)=~s|.*/||;($c cmp $d)} @dir) {
 	    if ($_ eq '.') {
 		next;
+	    }
+	    if (s|^Attic/||) {
+		$attic = " (in the Attic)";
+	    } else {
+		$attic = "";
 	    }
 	    if ($_ eq '..') {
 		next if ($where eq '');
 		($updir = $scriptwhere) =~ s|[^/]+$||;
 		print "<IMG SRC=\"/icons/back.gif\"> ",
-		    &link("Previous Directory",$updir), "<BR>";
+		    &link("Previous Directory",$updir . $query), "<BR>";
 #		print "<IMG SRC=???> ",
 #		    &link("Directory-wide diffs", $scriptwhere . '/*'), "<BR>";
 	    } elsif (-d $fullname . "/" . $_) {
 		print "<IMG SRC=\"/icons/dir.gif\"> ",
-		    &link($_ . "/", $scriptwhere . '/' . $_ . '/'), "<BR>";
+		    &link($_ . "/", $scriptwhere . '/' . $_ . '/' . $query), $attic, "<BR>";
 	    } elsif (s/,v$//) {
 # TODO: add date/time?  How about sorting?
 		print "<IMG SRC=\"/icons/text.gif\"> ",
-		    &link($_, $scriptwhere . '/' . $_), "<BR>";
+		    &link($_, $scriptwhere . '/' .
+			    ($attic ? "Attic/" : "") . $_ . $query),
+		    $attic, "<BR>";
 	    }
 	}
 	print "</MENU>\n";
+	if ($input{"only_on_branch"}) {
+	    print "<HR><FORM METHOD=\"GET\" ACTION=\"${scriptwhere}\">\n";
+	    print "Currently showing only branch $input{'only_on_branch'}.\n";
+	    $input{"only_on_branch"}="";
+	    foreach $k (keys %input) {
+		print "<INPUT TYPE=hidden NAME=$k VALUE=$input{$k}>\n" if $input{$k};
+	    }
+	    print "<INPUT TYPE=SUBMIT VALUE=\"Show all branches\">\n";
+	    print "</FORM>\n";
+	}
+	$formwhere = $scriptwhere;
+	$formwhere =~ s|Attic/?$|| if ($input{"showattic"});
+	print "<HR><FORM METHOD=\"GET\" ACTION=\"${formwhere}\">\n";
+	$input{"showattic"}=!$input{"showattic"};
+	foreach $k (keys %input) {
+	    print "<INPUT TYPE=hidden NAME=$k VALUE=$input{$k}>\n" if $input{$k};
+	}
+	print "<INPUT TYPE=SUBMIT VALUE=\"";
+	print ($input{"showattic"} ? "Show" : "Hide");
+	print " attic directories\">\n";
+	print "</FORM>\n";
 	print &html_footer;
 	print "</BODY></HTML>\n";
 } elsif (-f $fullname . ',v') {
@@ -178,7 +220,7 @@ if (-d $fullname) {
 	    }
 	    $_ = <RCS>;
 	    print "D:", $_ if ($verbose);
-	    if (m|^date:\s+(\d+)/(\d+)/(\d+)\s+(\d+):(\d+):(\d+);\s+author:\s+(\S+);|) {
+	    if (m|^date:\s+(\d+)/(\d+)/(\d+)\s+(\d+):(\d+):(\d+);\s+author:\s+(\S+);\s+state:\s+(\S+);|) {
 		$yr = $1;
 		# damn 2-digit year routines
 		if ($yr > 100) {
@@ -186,6 +228,7 @@ if (-d $fullname) {
 		}
 		$date{$rev} = &timelocal($6,$5,$4,$3,$2 - 1,$yr);
 		$author{$rev} = $7;
+		$state{$rev} = $8;
 	    } else {
 		&fatal("500 Internal Error", "Error parsing RCS output: $_");
 	    }
@@ -266,8 +309,8 @@ if (-d $fullname) {
 	}
 	print "Done associating revisions with branches\n" if ($verbose);
         print &html_header("CVS log for $where");
-	($upwhere = $where) =~ s|[^/]+$||;
-	print "Up to ", &link($upwhere,$scriptname . "/" . $upwhere);
+	($upwhere = $where) =~ s|(Attic/)?[^/]+$||;
+	print "Up to ", &link($upwhere,$scriptname . "/" . $upwhere . $query);
 	print "<BR>\n";
 	print "<A HREF=\"#diff\">Request diff between arbitrary revisions</A>\n";
 	print "<HR NOSHADE>\n";
@@ -362,6 +405,9 @@ if (-d $fullname) {
 		    }
 		}
 	    }
+	    if ($state{$_} eq "dead") {
+		print "<BR><B><I>FILE REMOVED</I></B>\n";
+	    }
 	    print "<PRE>\n";
 	    print &htmlify($log{$_}, 1);
 	    print "</PRE><HR NOSHADE>\n";
@@ -398,8 +444,13 @@ if (-d $fullname) {
 	print "<FORM METHOD=\"GET\" ACTION=\"$scriptwhere\">\n";
 	print "Branch: \n";
 	print "<SELECT NAME=\"only_on_branch\">\n";
+	print "<OPTION VALUE=\"\"";
+	print " SELECTED" if ($input{"only_on_branch"} eq "");
+	print ">Show all branches\n";
 	foreach (sort @branchnames) {
-		print "<OPTION>${_}\n";
+		print "<OPTION";
+		print " SELECTED" if ($input{"only_on_branch"} eq $_);
+		print ">${_}\n";
 	}
 	print "</SELECT>\n";
 	print "<INPUT TYPE=SUBMIT VALUE=\"View Branch\">\n";
@@ -408,8 +459,19 @@ if (-d $fullname) {
 	print "</BODY></HTML>\n";
 } elsif ($fullname =~ s/\.diff$// && -f $fullname . ",v" &&
 				$input{'r1'} && $input{'r2'}) {
+	# Allow diffs using the ".diff" extension
+	# so that browsers that default to the URL
+	# for a save filename don't save diff's as
+	# e.g. foo.c
 	&dodiff($fullname, $input{'r1'}, $input{'tr1'},
 		$input{'r2'}, $input{'tr2'}, $input{'f'});
+	exit;
+} elsif (($newname = $fullname) =~ s|/([^/]+)$|/Attic/$1| &&
+				 -f $newname . ",v") {
+	# The file has been removed and is in the Attic.
+	# Send a redirect pointing to the file in the Attic.
+	($newplace = $scriptwhere) =~ s|/([^/]+)$|/Attic/$1|;
+	&redirect($newplace);
 	exit;
 } elsif (0 && (@files = &safeglob($fullname . ",v"))) {
 	print "Content-type: text/plain\n\n";
