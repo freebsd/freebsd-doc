@@ -4,7 +4,7 @@
 # Build the FreeBSD Porter's Handbook.
 #
 
-MAINTAINER=nik@FreeBSD.org
+MAINTAINER=doc@FreeBSD.org
 
 DOC?= book
 

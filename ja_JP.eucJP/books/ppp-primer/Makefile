@@ -7,7 +7,7 @@
 # Build the PPP PrimerQ
 #
 
-MAINTAINER=nik@FreeBSD.org
+MAINTAINER=doc@FreeBSD.org
 
 DOC?= book
 
