@@ -1,10 +1,14 @@
 # $FreeBSD$
 # The FreeBSD Russian Documentation Project
-# $FreeBSDru: frdp/www/ru/gallery/Makefile,v 1.2 2000/10/12 10:02:51 phantom Exp $
-# Original revision: 1.10
+# $FreeBSDru: frdp/www/ru/gallery/Makefile,v 1.3 2000/11/10 17:04:49 phantom Exp $
+# Original revision: 1.11
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
+.endif
+
+.if exists(../Makefile.inc)
+.include "../Makefile.inc"
 .endif
 
 DOCS = gallery.sgml
@@ -39,5 +43,4 @@ gallery.inc: $(DBFILE) gallery.sgml
 	          print qq/<!ENTITY num./.lc($$1).qq/ CDATA "$$2">\n/' \
 	> gallery.inc
 
-.include "../web.mk"
-
+.include "${WEB_PREFIX}/share/mk/web.site.mk"

@@ -1,11 +1,16 @@
 # $FreeBSD$
 # The FreeBSD Russian Documentation Project
-# $FreeBSDru: frdp/www/ru/ports/Makefile,v 1.3 2000/10/11 16:25:56 phantom Exp $
-# Original revision: 1.29
+# $FreeBSDru: frdp/www/ru/ports/Makefile,v 1.4 2000/11/10 17:04:52 phantom Exp $
+# Original revision: 1.30
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
 .endif
+
+.if exists(../Makefile.inc)
+.include "../Makefile.inc"
+.endif
+
 .if exists(../../en/ports/Makefile.inc)
 .include "../../en/ports/Makefile.inc"
 .endif
@@ -75,4 +80,4 @@ install: all
 all install clean:
 	(cd ${.CURDIR} && ${MAKE}  ${MAKEFLAGS} -f Makefile.inc0 ${.TARGET})
 
-.include "../web.mk"
+.include "${WEB_PREFIX}/share/mk/web.site.mk"
