@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: www/ja/releases/4.5R/Makefile,v 1.1 2002/01/30 13:20:35 kuriyama Exp $
 # Original revision: 1.5
 
 .if exists(../Makefile.conf)
@@ -9,7 +9,7 @@
 .endif
 
 #DOCS=	hardware.sgml notes.sgml qa.sgml announce.sgml schedule.sgml
-DOCS=	notes.sgml
+DOCS=	announce.sgml notes.sgml
 
 DATA=	docbook.css
 DATA+=	errata.html
