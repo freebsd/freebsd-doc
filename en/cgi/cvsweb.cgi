@@ -41,9 +41,9 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $zId: cvsweb.cgi,v 1.93 2000/07/27 17:42:28 hzeller Exp $
-# $Id: cvsweb.cgi,v 1.47 2000-08-15 08:47:40 knu Exp $
-# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.46 2000/08/14 04:55:19 knu Exp $
+# $zId: cvsweb.cgi,v 1.94 2000/08/24 06:41:22 hnordstrom Exp $
+# $Id: cvsweb.cgi,v 1.48 2000-08-25 09:21:00 knu Exp $
+# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.47 2000/08/15 08:47:40 knu Exp $
 #
 ###
 
@@ -956,6 +956,10 @@ sub link($$) {
 
 sub revcmp($$) {
 	my($rev1, $rev2) = @_;
+
+	# make no comparison for a tag or a branch
+	return 0 if $rev1 =~ /[^\d.]/ || $rev2 =~ /[^\d.]/;
+
 	my(@r1) = split(/\./, $rev1);
 	my(@r2) = split(/\./, $rev2);
 	my($a,$b);
@@ -1070,7 +1074,7 @@ sub doAnnotate($$) {
 
     # make sure the revisions a wellformed, for security
     # reasons ..
-    if (!($rev =~ /^[\d\.]+$/)) {
+    if ($rev =~ /[^\w.]/) {
 	&fatal("404 Not Found",
 		"Malformed query \"$ENV{QUERY_STRING}\"");
     }
@@ -1221,9 +1225,13 @@ sub doCheckout($$) {
     my ($mimetype,$revopt);
     my $fh = do {local(*FH);};
 
+    if ($rev eq 'HEAD' || $rev eq '.') {
+	$rev = undef;
+    }
+
     # make sure the revisions a wellformed, for security
     # reasons ..
-    if (defined($rev) && !($rev =~ /^[\d\.]+$/)) {
+    if (defined($rev) && $rev =~ /[^\w.]/) {
 	&fatal("404 Not Found",
 		"Malformed query \"$ENV{QUERY_STRING}\"");
     }
@@ -1259,7 +1267,7 @@ sub doCheckout($$) {
     # Safely for a child process to read from.
     if (! open($fh, "-|")) { # child
       open(STDERR, ">&STDOUT"); # Redirect stderr to stdout
-      exec("cvs", "-d", $cvsroot, "co", "-p", $revopt, $where);
+      exec("cvs", "-Rld", $cvsroot, "co", "-p", $revopt, $where);
     }
 #===================================================================
 #Checking out squid/src/ftp.c
@@ -1376,9 +1384,10 @@ sub doDiff($$$$$$) {
 	    $rev2 = $tr2;
 	    $sym2 = "";
 	}
+
 	# make sure the revisions a wellformed, for security
 	# reasons ..
-	if (!($rev1 =~ /^[\d\.]+$/) || !($rev2 =~ /^[\d\.]+$/)) {
+	if ($rev1 =~ /[^\w.]/ || $rev2 =~ /[^\w.]/) {
 	    &fatal("404 Not Found",
 		    "Malformed query \"$ENV{QUERY_STRING}\"");
 	}
@@ -1420,7 +1429,7 @@ sub doDiff($$$$$$) {
 
 	# apply special options
 	if ($showfunc) {
-	    push @difftype, '-p';
+	    push @difftype, '-p' if $f =~ /^[cHhu]$/;
 
 	    my($re1, $re2);
 
@@ -2132,7 +2141,7 @@ EOF
 	print "</SELECT>\n";
 	$diffrev = $revdisplayorder[0];
 	$diffrev = $input{"r2"} if (defined($input{"r2"}));
-	print "<INPUT TYPE=\"TEXT\" SIZE=\"$inputTextSize\" NAME=\"tr2\" VALUE=\"$diffrev\" onChange='docuement.diff_select.r2.selectedIndex=0'>\n";
+	print "<INPUT TYPE=\"TEXT\" SIZE=\"$inputTextSize\" NAME=\"tr2\" VALUE=\"$diffrev\" onChange='document.diff_select.r2.selectedIndex=0'>\n";
         print "<BR>Type of Diff should be a&nbsp;";
 	printDiffSelect(0);
 	print "<INPUT TYPE=SUBMIT VALUE=\"  Get Diffs  \">\n";
@@ -2380,7 +2389,7 @@ sub navigateHeader($$$$$) {
     $swhere = urlencode($filename) if ($swhere eq "");
     print "<\!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\">";
     print "<HTML>\n<HEAD>\n";
-    print '<!-- CVSweb $zRevision: 1.93 $  $Revision: 1.47 $ -->';
+    print '<!-- CVSweb $zRevision: 1.94 $  $Revision: 1.48 $ -->';
     print "\n<TITLE>$path$filename - $title - $rev</TITLE></HEAD>\n";
     print  "<BODY BGCOLOR=\"$backcolor\">\n";
     print "<table width=\"100%\" border=0 cellspacing=0 cellpadding=1 bgcolor=\"$navigationHeaderColor\">";
@@ -2732,7 +2741,7 @@ sub http_header(;$) {
 
 sub html_header($) {
     my ($title) = @_;
-    my $version = '$zRevision: 1.93 $  $Revision: 1.47 $'; #'
+    my $version = '$zRevision: 1.94 $  $Revision: 1.48 $'; #'
     http_header();
 
     (my $header = &cgi_style::html_header) =~ s/^.*\n\n//; # remove HTTP response header
