@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/share/sgml/includes.misc.xsl,v 1.2 2003/12/06 07:39:32 hrs Exp $ -->
+<!-- $FreeBSD: www/share/sgml/includes.misc.xsl,v 1.3 2004/01/06 23:47:08 hrs Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -31,7 +31,12 @@
   <xsl:template name="html-index-advisories-items-lastmodified">
     <xsl:param name="advisories.xml" select="''" />
 
-    <xsl:value-of select="document($advisories.xml)/descendant::month[position() = 1]/name"/>
+    <xsl:call-template name="transtable-lookup">
+      <xsl:with-param name="word-group" select="'number-month'" />
+      <xsl:with-param name="word">
+	<xsl:value-of select="document($advisories.xml)/descendant::month[position() = 1]/name"/>
+      </xsl:with-param>
+    </xsl:call-template>
     <xsl:text> </xsl:text>
     <xsl:value-of select="document($advisories.xml)/descendant::day[position() = 1]/name"/>
     <xsl:text>, </xsl:text>
@@ -66,10 +71,15 @@
   <xsl:template name="html-index-news-project-items-lastmodified">
     <xsl:param name="news.project.xml" select="''" />
 
-    <xsl:value-of select="document($news.project.xml)/descendant::month[position() = 1]/name"/>
+    <xsl:call-template name="transtable-lookup">
+      <xsl:with-param name="word-group" select="'number-month'" />
+      <xsl:with-param name="word">
+	<xsl:value-of select="document($news.project.xml)/descendant::month[position() = 1]/name"/>
+      </xsl:with-param>
+    </xsl:call-template>
     <xsl:text> </xsl:text>
     <xsl:value-of select="document($news.project.xml)/descendant::day[position() = 1]/name"/>
-    <xsl:text> </xsl:text>
+    <xsl:text>, </xsl:text>
     <xsl:value-of select="document($news.project.xml)/descendant::year[position() = 1]/name"/>
   </xsl:template>
 
@@ -94,7 +104,12 @@
   <xsl:template name="html-index-news-press-items-lastmodified">
     <xsl:param name="news.press.xml" select="''" />
 
-    <xsl:value-of select="document($news.press.xml)/descendant::month[position() = 1]/name"/>
+    <xsl:call-template name="transtable-lookup">
+      <xsl:with-param name="word-group" select="'number-month'" />
+      <xsl:with-param name="word">
+	<xsl:value-of select="document($news.press.xml)/descendant::month[position() = 1]/name"/>
+      </xsl:with-param>
+    </xsl:call-template>
     <xsl:text> </xsl:text>
     <xsl:value-of select="document($news.press.xml)/descendant::year[position() = 1]/name"/>
   </xsl:template>
@@ -105,42 +120,54 @@
   <xsl:template name="html-index-mirrors-options-list">
     <xsl:param name="mirrors.xml" select="''" />
 
-    <xsl:for-each select="document($mirrors.xml)/mirrors/entry[
-						    (not(country/@role) or country/@role != 'primary')
-						    and host[@type = 'www']/url[@proto = 'httpv6']]">
-      <xsl:sort select="country" />
-
-      <xsl:for-each select="host[@type = 'www']/url[@proto = 'httpv6']">
-	<option><xsl:attribute name="value"><xsl:value-of select="." /></xsl:attribute>
-	  <xsl:choose>
-	    <xsl:when test="last() = 1">
-	      <xsl:value-of select="concat('IPv6 ', ../../country)" />
-	    </xsl:when>
-	    <xsl:otherwise>
-	      <xsl:value-of select="concat('IPv6 ', ../../country, '/', position())" />
-	    </xsl:otherwise>
-	  </xsl:choose>
+    <xsl:choose>
+      <xsl:when test="$mirrors.xml = ''">
+	<option value="NONE">
+	  **No Data**
 	</option>
-      </xsl:for-each>
-    </xsl:for-each>
+      </xsl:when>
 
-    <xsl:for-each select="document($mirrors.xml)/mirrors/entry[
-						      (not(country/@role) or country/@role != 'primary')
-						      and host[@type = 'www']/url[@proto = 'http']]">
-      <xsl:sort select="country" />
+      <xsl:otherwise>
+	<xsl:for-each select="document($mirrors.xml)/mirrors/entry[
+                              (not(country/@role) or country/@role != 'primary') and
+                              host[@type = 'www']/url[@proto = 'httpv6']]">
+	  <xsl:sort select="country/@sortkey" data-type="number" />
+	  <xsl:sort select="country" />
 
-      <xsl:for-each select="host[@type = 'www']/url[@proto = 'http']">
-	<option><xsl:attribute name="value"><xsl:value-of select="." /></xsl:attribute>
-	  <xsl:choose>
-	    <xsl:when test="last() = 1">
-	      <xsl:value-of select="../../country" />
-	    </xsl:when>
-	    <xsl:otherwise>
-	      <xsl:value-of select="concat(../../country, '/', position())" />
-	    </xsl:otherwise>
-	  </xsl:choose>
-	</option>
-      </xsl:for-each>
-    </xsl:for-each>
+	  <xsl:for-each select="host[@type = 'www']/url[@proto = 'httpv6']">
+	    <option><xsl:attribute name="value"><xsl:value-of select="." /></xsl:attribute>
+	      <xsl:choose>
+		<xsl:when test="last() = 1">
+		  <xsl:value-of select="concat('IPv6 ', ../../country)" />
+		</xsl:when>
+		<xsl:otherwise>
+		  <xsl:value-of select="concat('IPv6 ', ../../country, '/', position())" />
+		</xsl:otherwise>
+	      </xsl:choose>
+	    </option>
+	  </xsl:for-each>
+	</xsl:for-each>
+
+	<xsl:for-each select="document($mirrors.xml)/mirrors/entry[
+                              (not(country/@role) or country/@role != 'primary') and
+                              host[@type = 'www']/url[@proto = 'http']]">
+	  <xsl:sort select="country/@sortkey" data-type="number" />
+	  <xsl:sort select="country" />
+
+	  <xsl:for-each select="host[@type = 'www']/url[@proto = 'http']">
+	    <option><xsl:attribute name="value"><xsl:value-of select="." /></xsl:attribute>
+	      <xsl:choose>
+		<xsl:when test="last() = 1">
+		  <xsl:value-of select="../../country" />
+		</xsl:when>
+		<xsl:otherwise>
+		  <xsl:value-of select="concat(../../country, '/', position())" />
+		</xsl:otherwise>
+	      </xsl:choose>
+	    </option>
+	  </xsl:for-each>
+	</xsl:for-each>
+      </xsl:otherwise>
+    </xsl:choose>
   </xsl:template>
 </xsl:stylesheet>

@@ -1,5 +1,5 @@
 # bsd.web.mk
-# $FreeBSD: www/share/mk/web.site.mk,v 1.48 2003/11/24 18:26:34 hrs Exp $
+# $FreeBSD: www/share/mk/web.site.mk,v 1.49 2003/11/25 15:12:42 hrs Exp $
 
 #
 # Build and install a web site.
@@ -80,8 +80,29 @@ NO_SUBDIR=	YES
 #
 # for dependency
 #
+.if !defined(WITHOUT_DOC)
+#
+# When WITHOUT_DOC is not defined, we use doc.common.mk.
+#
 DOC_PREFIX?=	${WEB_PREFIX}/../doc
+.if exists(${DOC_PREFIX}/share/mk/doc.common.mk)
 .include "${DOC_PREFIX}/share/mk/doc.common.mk"
+.else
+.error	${DOC_PREFIX}/share/mk/doc.common.mk not found.\
+	Define $$WITHOUT_DOC for building without the doc/ module.
+.endif
+.else # !defined(WITHOUT_DOC)
+#
+# When WITHOUT_DOC is defined, we should not use files in doc/ module at all.
+#
+.if !defined(WWW_LANGCODE) || empty(WWW_LANGCODE)
+_WEB_PREFIX!=			realpath ${WEB_PREFIX}
+WWW_LANGCODE:=			${.CURDIR:S,^${_WEB_PREFIX}/,,:C,^([^/]+)/.*,\1,}
+.undef _WEB_PREFIX
+.endif
+.endif # !defined(WITHOUT_DOC)
+
+XML_ADVISORIES?=		${WEB_PREFIX}/share/sgml/advisories.xml
 
 XML_NEWS_NEWS_MASTER=		${WEB_PREFIX}/en/news/news.xml
 XML_NEWS_NEWS=			${WEB_PREFIX}/${WWW_LANGCODE}/news/news.xml
@@ -94,6 +115,7 @@ XML_INCLUDES=	${WEB_PREFIX}/${WWW_LANGCODE}/includes.xsl
 XML_INCLUDES+=	${WEB_PREFIX}/share/sgml/includes.header.xsl
 XML_INCLUDES+=	${WEB_PREFIX}/share/sgml/includes.misc.xsl
 XML_INCLUDES+=	${WEB_PREFIX}/share/sgml/includes.release.xsl
+XML_INCLUDES+=	${WEB_PREFIX}/share/sgml/transtable-common.xsl
 XML_INCLUDES+=	${WEB_PREFIX}/share/sgml/includes.xsl
 
 SGML_INCLUDES=	${WEB_PREFIX}/${WWW_LANGCODE}/includes.sgml
@@ -101,7 +123,6 @@ SGML_INCLUDES+=	${WEB_PREFIX}/share/sgml/includes.header.sgml
 SGML_INCLUDES+=	${WEB_PREFIX}/share/sgml/includes.misc.sgml
 SGML_INCLUDES+=	${WEB_PREFIX}/share/sgml/includes.release.sgml
 SGML_INCLUDES+=	${WEB_PREFIX}/share/sgml/includes.sgml
-
 
 ##################################################################
 # Transformation rules

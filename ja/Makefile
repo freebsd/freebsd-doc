@@ -1,4 +1,4 @@
-# $FreeBSD: www/ja/Makefile,v 1.61 2003/11/18 22:11:26 rushani Exp $
+# $FreeBSD: www/ja/Makefile,v 1.62 2003/11/24 18:26:33 hrs Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.83
 
@@ -91,12 +91,15 @@ REVCHECK=	yes
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
 
 index.html: index.xsl ${XML_INCLUDES}\
-		${XML_NEWS_INCLUDES} ${XML_NEWS_NEWS}\
+		${XML_NEWS_INCLUDES} ${XML_NEWS_NEWS} ${XML_NEWS_PRESS}\
 		${XML_MIRRORS} ${XML_ADVISORIES}
 	${XSLTPROC} ${XSLTPROCOPTS} \
 		-o $@ \
 		--param mirrors.xml "'${XML_MIRRORS}'" \
 		--param advisories.xml "'${XML_ADVISORIES}'" \
+		--param news.press.xml "'${XML_NEWS_PRESS}'" \
+		--param news.project.xml "'${XML_NEWS_NEWS}'" \
+		--param transtable.xml "'${XML_TRANSTABLE}'" \
 		${.CURDIR}/index.xsl ${XML_NEWS_NEWS}
 .if !defined(NO_TIDY)
 	-${TIDY} ${TIDYOPTS} ${.TARGET}
