@@ -41,7 +41,6 @@ MAN8 =	IPXrouted.8\
 	cron.8\
 	cvsbug.8\
 	daemon.8\
-	dev_mkdb.8\
 	dhclient-script.8\
 	dhclient.8\
 	diskless.8\

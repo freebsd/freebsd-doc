@@ -71,6 +71,7 @@ MAN1 =	addftinfo.1\
 	ed.1\
 	ee.1\
 	enigma.1\
+	env.1\
 	eqn.1\
 	expand.1\
 	expr.1\
@@ -443,7 +444,6 @@ MLINKS+=mail.1 Mail.1
 MLINKS+=mail.1 mailx.1
 MLINKS+=nawk.1 awk.1
 MLINKS+=passwd.1 yppasswd.1
-MLINKS+=printenv.1 env.1
 MLINKS+=rtld.1 ld-elf.so.1.1
 MLINKS+=rtld.1 ld.so.1
 MLINKS+=tip.1 cu.1
