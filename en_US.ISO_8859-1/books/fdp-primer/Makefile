@@ -1,5 +1,5 @@
 # 
-# $FreeBSD: doc/en_US.ISO_8859-1/books/fdp-primer/Makefile,v 1.7 1999/09/06 06:52:39 peter Exp $
+# $FreeBSD: doc/en_US.ISO_8859-1/books/fdp-primer/Makefile,v 1.8 2000/06/23 00:37:53 nik Exp $
 #
 # Build the FreeBSD Documentation Project Primer.
 #
@@ -32,6 +32,15 @@ SRCS+= the-website/chapter.sgml
 SRCS+= tools/chapter.sgml 
 SRCS+= translations/chapter.sgml
 SRCS+= writing-style/chapter.sgml 
+
+SRCS+= examples/appendix.sgml
+
+# Images from the cross-document image library
+LIB_IMAGES=	callouts/1.png
+LIB_IMAGES+=	callouts/2.png
+LIB_IMAGES+=	callouts/3.png
+LIB_IMAGES+=	callouts/4.png
+LIB_IMAGES+=	callouts/5.png
 
 # Entities
 SRCS+= chapters.ent 
