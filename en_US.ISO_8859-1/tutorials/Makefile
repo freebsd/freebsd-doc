@@ -1,5 +1,5 @@
 DOCS=		index.sgml
-SUBDIR=		devel disklessx fonts mh newuser
-DOCSUBDIR=	ddwg multios ppp
+SUBDIR=		devel disklessx fonts mh multios newuser
+DOCSUBDIR=	ddwg ppp
 
 .include "../web.mk"
