@@ -1,7 +1,7 @@
 # Taken from:
 #	Id: bsd.subdir.mk,v 1.27 1999/03/21 06:43:40 bde
 #
-# $FreeBSD: doc/share/mk/doc.subdir.mk,v 1.4 2000/07/16 16:34:08 nik Exp $
+# $FreeBSD: doc/share/mk/doc.subdir.mk,v 1.5 2000/10/29 02:39:10 nik Exp $
 #
 # This include file <doc.subdir.mk> contains the default targets
 # for building subdirectories in the FreeBSD Documentation Project.
@@ -60,7 +60,7 @@
 
 .if !defined(LANGCODE)
 LANGCODE:=	${.CURDIR}
-.for _ in 1 2 3 4 5
+.for _ in 1 2 3 4 5 6 7 8 9 10
 .if !(${LANGCODE:H:T} == "doc")
 LANGCODE:=	${LANGCODE:H}
 .endif
