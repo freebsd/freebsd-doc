@@ -249,16 +249,20 @@
 	(element email
 	  (let* ((class		(attribute-string (normalize "role"))))
 	    (cond
-	      ((or (equal? class "nolink") (string=?
-		(substring (data (current-node))
-		  (- (string-length (data (current-node))) 11)
-		  (- (string-length (data (current-node))) 4)) "example"))
+	     ((or (equal? class "nolink")
+		  (and (> (string-length (data (current-node)))
+			  11)
+		       (string=?
+			(substring (data (current-node))
+				   (- (string-length (data (current-node))) 11)
+				   (- (string-length (data (current-node))) 4))
+			"example")))
 	      ($code-seq$
-		(make sequence
-		  (literal "&#60;")
-		  (process-children)
-		  (literal "&#62;"))))
-	    (else
+	       (make sequence
+		 (literal "&#60;")
+		 (process-children)
+		 (literal "&#62;"))))
+	     (else
 	      (next-match)))))
 
 	;; Ensure that we start with no preferred mediaobject notations,
