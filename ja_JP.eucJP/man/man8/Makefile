@@ -37,12 +37,15 @@ MAN8 =	IPXrouted.8\
 	comcontrol.8\
 	comsat.8\
 	config.8\
+	conscontrol.8\
 	crash.8\
 	cron.8\
 	cvsbug.8\
 	daemon.8\
+	devinfo.8\
 	dhclient-script.8\
 	dhclient.8\
+	digictl.8\
 	diskless.8\
 	dmesg.8\
 	dump.8\
@@ -50,6 +53,7 @@ MAN8 =	IPXrouted.8\
 	dumpon.8\
 	editmap.8\
 	edquota.8\
+	extattrctl.8\
 	faithd.8\
 	fdcontrol.8\
 	fdisk.8\
@@ -58,6 +62,7 @@ MAN8 =	IPXrouted.8\
 	fixmount.8\
 	fore_dnld.8\
 	fsck.8\
+	fsck_ffs.8\
 	fsck_msdosfs.8\
 	fsdb.8\
 	fsinfo.8\
@@ -101,6 +106,8 @@ MAN8 =	IPXrouted.8\
 	kldload.8\
 	kldstat.8\
 	kldunload.8\
+	kldxref.8\
+	ktrdump.8\
 	lastlogin.8\
 	ldconfig.8\
 	loader.4th.8\
@@ -123,6 +130,7 @@ MAN8 =	IPXrouted.8\
 	mk-amd-map.8\
 	mknetid.8\
 	mknod.8\
+	mksnap_ffs.8\
 	mld6query.8\
 	mlxcontrol.8\
 	mount.8\
@@ -158,6 +166,7 @@ MAN8 =	IPXrouted.8\
 	newfs_msdos.8\
 	newkey.8\
 	newsyslog.8\
+	nextboot.8\
 	nfsd.8\
 	nfsiod.8\
 	ngctl.8\
@@ -206,6 +215,7 @@ MAN8 =	IPXrouted.8\
 	rbootd.8\
 	rc.8\
 	rc.sendmail.8\
+	rcorder.8\
 	reboot.8\
 	renice.8\
 	repquota.8\
@@ -231,6 +241,7 @@ MAN8 =	IPXrouted.8\
 	rpc.umntall.8\
 	rpc.yppasswdd.8\
 	rpc.ypxfrd.8\
+	rpcbind.8\
 	rpcinfo.8\
 	rrenumd.8\
 	rshd.8\
@@ -243,6 +254,7 @@ MAN8 =	IPXrouted.8\
 	scspd.8\
 	sendmail.8\
 	setfmac.8\
+	setfsmac.8\
 	setkey.8\
 	setpmac.8\
 	sftp-server.8\
@@ -279,6 +291,7 @@ MAN8 =	IPXrouted.8\
 	trpt.8\
 	tunefs.8\
 	tzsetup.8\
+	ugidfw.8\
 	umount.8\
 	usbd.8\
 	usbdevs.8\
@@ -300,7 +313,7 @@ MAN8 =	IPXrouted.8\
 	ypxfr.8\
 	zdump.8\
 	zic.8\
-	zzz.8\
+	zzz.8
 
 MLINKS+=apm.8 apmconf.8
 MLINKS+=boot_i386.8 boot.8
