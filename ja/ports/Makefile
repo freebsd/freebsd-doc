@@ -1,6 +1,6 @@
-# $FreeBSD: www/ja/ports/Makefile,v 1.17 1999/11/15 21:58:16 kuriyama Exp $
+# $FreeBSD: www/ja/ports/Makefile,v 1.18 2000/04/24 02:13:37 kuriyama Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.27
+# Original revision: 1.28
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -60,12 +60,12 @@ Makefile.gen: index.sgml .NOTMAIN
 
 index.sgml: ${INDEX} ${Y2K} categories packages.exists portindex ports.inc .NOTMAIN
 	rm -f *.sgml
-	${PORTINDEX} ${INDEX} ${Y2K}
+	${PORTINDEX} ${INDEX} ${Y2K} ${.CURDIR}
 
 install: all
 
 all install clean:
-	${MAKE}  ${MAKEFLAGS} -f Makefile.inc0 ${.TARGET}
+	(cd ${.CURDIR} && ${MAKE}  ${MAKEFLAGS} -f Makefile.inc0 ${.TARGET})
 
 
 .include "../../web.mk"

@@ -1,6 +1,6 @@
-# $FreeBSD: www/ja/gallery/Makefile,v 1.9 2000/04/24 02:10:48 kuriyama Exp $
+# $FreeBSD: www/ja/gallery/Makefile,v 1.10 2000/04/27 02:07:19 kuriyama Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.9
+# Original revision: 1.10
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -14,7 +14,7 @@ CLEANFILES+= gallery.inc
 
 gallery.html: gallery.sgml gallery.inc
 gallery.inc: ../../en/gallery/gallery.db gallery.sgml
-	${PERL} ../../en/gallery/prune.pl ../../en/gallery/gallery.db /dev/null | \
+	${PERL} ${.CURDIR}/../../en/gallery/prune.pl ${.CURDIR}/../../en/gallery/gallery.db /dev/null | \
 	${PERL} -ne 'chomp; m/([-\w]+):\s+(\d+)/ and print qq/<!ENTITY num./.lc($$1).qq/ CDATA "$$2">\n/'\
 	> gallery.inc
 
