@@ -1,8 +1,8 @@
 # The FreeBSD Documentation Project
 # The FreeBSD German Documentation Project
-# $FreeBSD: www/de/Makefile,v 1.18 2004/12/18 13:10:22 jkois Exp $
-# $FreeBSDde: de-www/Makefile,v 1.25 2004/11/22 19:29:20 jkois Exp $
-# basiert auf: 1.112
+# $FreeBSD$
+# $FreeBSDde: de-www/Makefile,v 1.27 2005/01/22 10:32:34 mheinen Exp $
+# basiert auf: 1.117
 
 .if exists(Makefile.conf)
 .include "Makefile.conf"
@@ -65,15 +65,15 @@ index.html: index.xsl ${XML_INCLUDES}\
 		${XML_NAVIGATION}
 	${XSLTPROC} ${XSLTPROCOPTS} \
 		-o $@ \
-		--param mirrors.xml "'${XML_MIRRORS}'" \
 		--param advisories.xml "'${XML_ADVISORIES}'" \
-		--param notices.xml "'${XML_NOTICES}'" \
+		--param mirrors.xml "'${XML_MIRRORS}'" \
+		--param navigation.xml "'${XML_NAVIGATION}'" \
 		--param news.press.xml-master "'${XML_NEWS_PRESS_MASTER}'" \
 		--param news.press.xml "'${XML_NEWS_PRESS}'" \
 		--param news.project.xml-master "'${XML_NEWS_NEWS_MASTER}'" \
 		--param news.project.xml "'${XML_NEWS_NEWS}'" \
+		--param notices.xml "'${XML_NOTICES}'" \
 		--param transtable.xml "'${XML_TRANSTABLE}'" \
-		--param navigation.xml "'${XML_NAVIGATION}'" \
 		${.CURDIR}/index.xsl ${XML_NEWS_NEWS}
 .if !defined(NO_TIDY)
 	-${TIDY} ${TIDYOPTS} ${.TARGET}
