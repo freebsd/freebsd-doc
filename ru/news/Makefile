@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: www/ru/news/Makefile,v 1.5 2001/12/17 21:07:12 phantom Exp $
 # The FreeBSD Russian Documentation Project
 # $FreeBSDru: frdp/www/ru/news/Makefile,v 1.6 2001/12/17 17:59:05 phantom Exp $
 # Original revision: 1.32
@@ -32,7 +32,8 @@ SUBDIR+=	1998
 SUBDIR+=	1999
 SUBDIR+=	2000
 
-DATA=		newsflash.html news.rdf press.html
+#DATA=		newsflash.html news.rdf press.html
+DATA=		newsflash.html press.html
 CLEANFILES+=	newsflash.html news.rdf press.html
 
 newsflash.html: newsflash.xsl news.xml includes.xsl ../includes.xsl
