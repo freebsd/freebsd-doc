@@ -1,5 +1,5 @@
 #
-# $Id: docproj.docbook.mk,v 1.5 1999-06-03 19:39:29 nik Exp $
+# $Id: docproj.docbook.mk,v 1.6 1999-08-05 20:22:49 nik Exp $
 #
 # This include file <docproj.docbook.mk> handles installing documentation
 # from the FreeBSD Documentation Project.
@@ -183,7 +183,7 @@ CLEANFILES+= ${DOC}.doc
 # ${_docs} and ${CLEANFILES} so they get built/cleaned by "all" and
 # "clean".
 #
-.if !empty(INSTALL_COMPRESSED)
+.if defined(INSTALL_COMPRESSED) && !empty(INSTALL_COMPRESSED)
 .for _curformat in ${FORMATS}
 _cf=${_curformat}
 .for _curcomp in ${INSTALL_COMPRESSED}
@@ -336,7 +336,7 @@ install: beforeinstall realinstall afterinstall
 # Build a list of install-format targets to be installed. These will be
 # dependencies for the "realinstall" target.
 #
-.if empty(INSTALL_ONLY_COMPRESSED)
+.if !defined(INSTALL_ONLY_COMPRESSED) || empty(INSTALL_ONLY_COMPRESSED)
 _curinst+= ${FORMATS:S/^/install-/g}
 .endif
 
