@@ -1,6 +1,6 @@
-# $FreeBSD: www/ja/news/Makefile,v 1.32 2001/12/13 19:30:10 phantom Exp $
+# $FreeBSD: www/ja/news/Makefile,v 1.33 2002/01/05 10:40:50 kuriyama Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.32
+# Original revision: 1.33
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -31,6 +31,7 @@ SUBDIR+= 	1997
 #SUBDIR+= 	1998
 #SUBDIR+= 	1999
 #SUBDIR+= 	2000
+#SUBDIR+= 	2001
 #SUBDIR+=	status
 
 DATA=		newsflash.html press.html

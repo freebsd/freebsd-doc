@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
 
-<!-- $FreeBSD: www/ja/index.xsl,v 1.14 2002/05/02 11:22:14 kuriyama Exp $ -->
-<!-- Original revision: 1.22 -->
+<!-- $FreeBSD: www/ja/index.xsl,v 1.15 2002/05/13 20:09:03 hrs Exp $ -->
+<!-- Original revision: 1.23 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   
@@ -10,7 +10,7 @@
 
   <xsl:variable name="base" select="'.'"/>
   <xsl:variable name="enbase" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/ja/index.xsl,v 1.14 2002/05/02 11:22:14 kuriyama Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/ja/index.xsl,v 1.15 2002/05/13 20:09:03 hrs Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <xsl:output type="html" encoding="EUC-JP"
@@ -318,13 +318,13 @@
 		詳細に関しては <a href="mailto:bod@FreeBSDFoundation.org">
 		  bod@FreeBSDFoundation.org</a> にメールを送るか、
 		The FreeBSD Foundation、
-		7321 Brockway Dr. Boulder, CO. 80303.  USA
+		7321 Brockway Dr. Boulder, CO 80303.  USA
 		まで手紙を書いてください。</p>
 
 	      <p>Silicon Breeze 社は BSD デーモンの銅像を製作し、
 		これらの売り上げの 15% を FreeBSD Foundation に還元しています。
 		この BSD デーモンの詳細と注文方法については
-		<a href="http://www.siliconbreeze.com/beastie/">このページ</a>
+		<a href="http://www.linuxjewellery.com/beastie/">このページ</a>
 		を見てください。</p>
 	    </td>
 
