@@ -8,7 +8,7 @@
 #  GNU General Public License Version 2.  
 #     (http://www.gnu.ai.mit.edu/copyleft/gpl.html)
 #
-# $FreeBSD: www/en/cgi/dosendpr.cgi,v 1.8 2002/05/20 07:14:41 dd Exp $
+# $FreeBSD: www/en/cgi/dosendpr.cgi,v 1.9 2002/10/05 12:17:19 ceri Exp $
 
 require "html.pl";
 
@@ -19,6 +19,27 @@ my $openproxyip = "127.0.0.9";
 my $blackhole_err = 0;
 my $openproxy;
 
+# Environment variables to stuff in the PR header.
+my @ENV_captures = qw/	REMOTE_HOST
+			REMOTE_ADDR
+			REMOTE_PORT
+			HTTP_REFERER
+			HTTP_CLIENT_IP
+			HTTP_FORWARDED
+			HTTP_VIA
+			HTTP_X_FORWARDED_FOR	/;
+
+# env2hdr (@ENV_captures)
+# Returns X-header style headers for inclusion in the header of a PR
+sub env2hdr (@) {
+	my $headers = "";
+	for my $var (shift @_) {
+		next unless $ENV{$var};
+		$headers .= "X-$var: $ENV{$var}\n";
+	}
+	return $headers;
+}
+		
 # isopenproxy ($ip, $blackhole_zone, $positive_ip)
 # Returns undef on error, 0 if DNS lookup fails, $positive_ip if verified
 # proxy. A DNS lookup failing can either means that there was a network
@@ -109,9 +130,9 @@ if (defined $openproxy) {
 $pr = "To: $gnemail\n" .
       "From: $cgi_data{'originator'} <$cgi_data{'email'}>\n" . 
       "Subject: $cgi_data{'synopsis'}\n" .
-      "X-Originating-IP: $ENV{'REMOTE_ADDR'}\n";
+      env2hdr(@ENV_captures);
 if ($blackhole_err) {
-      $pr .= "X-Originating-IP-Is-Open-Proxy: Maybe\n";
+      $pr .= "X-REMOTE_ADDR-Is-Open-Proxy: Maybe\n";
 }
 $pr .= "X-Send-Pr-Version: www-1.0\n\n" .
       ">Submitter-Id:\t$cgi_data{'submitterid'}\n" .
