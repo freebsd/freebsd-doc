@@ -26,7 +26,7 @@
 #
 # Search a mail by Message-ID, References or In-Reply-To field
 #
-# $Id: mid.cgi,v 1.4 1998-04-16 14:10:22 wosch Exp $
+# $Id: mid.cgi,v 1.5 1998-05-10 18:26:18 wosch Exp $
 
 $hsty_base = '';
 
@@ -36,7 +36,7 @@ require "./cgi-style.pl";
 $home = '/g/www/mid';
 $prefix= "/usr/local/www/db";
 $lookupdir = "$home/index"; # database(s) directory
-$database = 'mid';           # default database
+$databaseDefault = 'mid';           # default database
 $bindir = "$home/bin"; # where search scripts located
 $script = $ENV{'SCRIPT_NAME'};
 $shortid = 1;
@@ -106,21 +106,36 @@ sub midheader {
 
 sub foot { return &html_footer . "</BODY></HTML>\n"; }
 
+###
+# Main
+###
+
 &ReadParse(*input);
 $messageid = $input{'id'};
 $database = $input{'db'};
 
 
 if (!$messageid) {
-    print  &midheader;
-    print "No input given\n";
-    print &foot; exit;
+    # for lazy people ;-)
+    # allow the syntax  mid.cgi?messageid
+    if ($ENV{'QUERY_STRING'} =~ /<?[a-z0-9._>\-]+\S+$/) {
+	$messageid = $ENV{'QUERY_STRING'};
+	$database = $databaseDefault;
+    } 
+
+    # no message-id given
+    else {
+	print  &midheader;
+	print "No input given\n";
+	print &foot; exit;
+    }
 }
+
 $messageid =~ s/^<//;
 $messageid =~ s/>$//;
 $messageid =~ s/@.*// if $shortid;
 
-if ($database eq 'mid' || $database eq 'irt') {
-} else { $database = 'mid'; }
+$database = $databaseDefault
+    if (!($database eq 'mid' || $database eq 'irt'));
 
 &get_id($messageid, $database);
