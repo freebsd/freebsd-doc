@@ -149,13 +149,15 @@ IMAGES_LIB+= callouts/10.png
 #
 
 # SGML content
-SRCS+=  book.sgml
+SRCS+= book.sgml
+SRCS+= colophon.sgml
 SRCS+= advanced-networking/chapter.sgml
 SRCS+= basics/chapter.sgml
 SRCS+= bibliography/chapter.sgml
 SRCS+= config/chapter.sgml
 SRCS+= boot/chapter.sgml
 SRCS+= cutting-edge/chapter.sgml
+SRCS+= desktop/chapter.sgml
 SRCS+= disks/chapter.sgml
 SRCS+= eresources/chapter.sgml
 SRCS+= install/chapter.sgml
@@ -167,18 +169,16 @@ SRCS+= mac/chapter.sgml
 SRCS+= mail/chapter.sgml
 SRCS+= mirrors/chapter.sgml
 SRCS+= multimedia/chapter.sgml
-SRCS+= desktop/chapter.sgml
 SRCS+= pgpkeys/chapter.sgml
+SRCS+= ports/chapter.sgml
 SRCS+= ppp-and-slip/chapter.sgml
+SRCS+= preface/preface.sgml
 SRCS+= printing/chapter.sgml
 SRCS+= security/chapter.sgml
 SRCS+= serialcomms/chapter.sgml
 SRCS+= users/chapter.sgml
 SRCS+= vinum/chapter.sgml
 SRCS+= x11/chapter.sgml
-SRCS+= ports/chapter.sgml
-SRCS+= preface/preface.sgml
-SRCS+= colophon.sgml
 
 # Entities
 SRCS+= chapters.ent 
