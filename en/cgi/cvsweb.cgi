@@ -44,9 +44,9 @@
 # SUCH DAMAGE.
 #
 #  FreeBSD: projects/cvsweb/cvsweb.cgi,v 1.104 2002/05/22 08:10:18 knu Exp
-# $Id: cvsweb.cgi,v 1.82 2002-05-22 08:31:02 knu Exp $
+# $Id: cvsweb.cgi,v 1.83 2002-05-22 08:33:27 knu Exp $
 # $Idaemons: /home/cvs/cvsweb/cvsweb.cgi,v 1.84 2001/10/07 20:50:10 knu Exp $
-# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.81 2002/05/08 05:42:25 motoyuki Exp $
+# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.82 2002/05/22 08:31:02 knu Exp $
 #
 ###
 
@@ -235,7 +235,7 @@ $LOG_REVSEPARATOR  = q/^-{28}$/;
 );
 
 $cgi_style::hsty_base = 'http://www.FreeBSD.org';
-$_ = q$FreeBSD: www/en/cgi/cvsweb.cgi,v 1.81 2002/05/08 05:42:25 motoyuki Exp $;
+$_ = q$FreeBSD: www/en/cgi/cvsweb.cgi,v 1.82 2002/05/22 08:31:02 knu Exp $;
 @_ = split;
 $cgi_style::hsty_date = "@_[3,4]";
 
@@ -454,12 +454,6 @@ $logsort = $input{'logsort'};
 	}
 }
 
-{
-    print "..........@CVSrepositories.........\n";
-    while (my($x, $y) = each %CVSROOT) {
-	print "$x = $y\n";
-    }
-}
 ## Default CVS-Tree
 if (!defined($CVSROOT{$cvstreedefault})) {
 	fatal("500 Internal Error",
