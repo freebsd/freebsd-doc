@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/releases/4.6R/Makefile,v 1.3 2002/06/09 22:58:53 bmah Exp $
+# $FreeBSD: www/en/releases/4.6R/Makefile,v 1.4 2002/06/15 23:44:07 bmah Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -12,6 +12,7 @@ DOCS+=	hardware.sgml relnotes.sgml qa.sgml schedule.sgml
 
 DATA=	docbook.css
 DATA+=	errata.html
+DATA+=	installation-alpha.html installation-i386.html
 DATA+=	hardware-alpha.html hardware-i386.html
 DATA+=	relnotes-alpha.html relnotes-i386.html
 DATA+=	cd1.txt cd2.txt cd3.txt cd4.txt mini.txt
