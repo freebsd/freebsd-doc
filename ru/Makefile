@@ -1,4 +1,4 @@
-# $FreeBSD: www/ru/Makefile,v 1.6 2000/01/05 15:36:58 phantom Exp $
+# $FreeBSD: www/ru/Makefile,v 1.7 2000/01/05 15:39:27 phantom Exp $
 
 .if exists(Makefile.conf)
 .include "Makefile.conf"
@@ -27,7 +27,7 @@ CLEANFILES+=atoz.sgml site.sgml
 # These will be directly installed.
 
 #DATA=	COPYING COPYING.LIB README.mirror robots.txt index.html
-DATA=	robots.txt index.html
+DATA=	index.html
 
 # Subdirectories
 # SGML
