@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/Makefile,v 1.56 2000/11/24 22:55:39 murray Exp $
+# $FreeBSD: www/en/Makefile,v 1.57 2000/11/30 00:03:37 kuriyama Exp $
 .if exists(Makefile.conf)
 .include "Makefile.conf"
 .endif
@@ -23,12 +23,9 @@ DOCS+= support.sgml
 DOCS+= where.sgml 
 DOCS+= y2kbug.sgml 
 
-CLEANFILES+=atoz.sgml site.sgml
-
 # These will be directly installed.
 
-#DATA=	COPYING COPYING.LIB README.mirror robots.txt index.html
-DATA=	robots.txt index.html
+DATA=	robots.txt
 
 # Subdirectories
 # SGML
