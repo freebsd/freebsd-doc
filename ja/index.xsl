@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
 
-<!-- $FreeBSD: www/ja/index.xsl,v 1.16 2002/05/15 18:21:59 hrs Exp $ -->
+<!-- $FreeBSD: www/ja/index.xsl,v 1.17 2002/06/25 20:12:36 hrs Exp $ -->
 <!-- Original revision: 1.25 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -10,7 +10,7 @@
 
   <xsl:variable name="base" select="'.'"/>
   <xsl:variable name="enbase" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/ja/index.xsl,v 1.16 2002/05/15 18:21:59 hrs Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/ja/index.xsl,v 1.17 2002/06/25 20:12:36 hrs Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <xsl:output type="html" encoding="EUC-JP"
@@ -243,7 +243,7 @@
 		アーキテクチャ用の先進的なオペレーティングシステムです。
 		カリフォルニア大学バークレイ校で開発された UNIX
 		である BSD UNIX に由来し、
-		<a href="{$enbase}/doc/ja_JP.eucJP/articles/contributors/index.html">多くの人たち</a> によって
+		<a href="{$enbase}/doc/ja_JP.eucJP/articles/contributors/index.html">多くの人たち</a>
 		によって保守・開発されています。
 		その他の<a href="{$base}/platforms/index.html">プラットフォーム
 		</a> は現在開発中です。</p>
@@ -425,7 +425,7 @@
 		  <td>
 		    <table cellpadding="4" cellspacing="0" border="0"
 			   bgcolor="#FFFFFF" width="100%"><tr>
-			<td>FreeBSD についてもっとよく知りたくなったら,
+			<td>FreeBSD についてもっとよく知りたくなったら、
 			  FreeBSD に関連する
 			  <a href="{$base}/publish.html">出版物</a> や
 			  <a href="news/press.html">FreeBSD 関係の報道</a> の
