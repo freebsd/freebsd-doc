@@ -1,6 +1,7 @@
-# $FreeBSD: doc/en_US.ISO_8859-1/articles/Makefile,v 1.5 1999/10/18 09:48:57 wosch Exp $
+# $FreeBSD: doc/en_US.ISO_8859-1/articles/Makefile,v 1.6 2000/02/14 01:25:14 nik Exp $
 
 SUBDIR = committers-guide
+SUBDIR+= dialup-firewall
 SUBDIR+= diskless-x
 SUBDIR+= fonts
 SUBDIR+= formatting-media
