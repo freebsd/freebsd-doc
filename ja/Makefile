@@ -1,4 +1,4 @@
-# $FreeBSD: www/ja/Makefile,v 1.63 2004/01/12 21:27:00 hrs Exp $
+# $FreeBSD: www/ja/Makefile,v 1.64 2004/01/22 14:42:28 hrs Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.106
 
@@ -78,8 +78,6 @@ SUBDIR+= tutorials
 # Non-SGML
 #SUBDIR+= gifs
 #SUBDIR+= cgi
-
-SGMLFLAGS=	-links -hdr ${.CURDIR}/doc.hdr -ftr ${.CURDIR}/doc.ftr -e EUC-JP
 
 WEBDIR?=	data/ja
 
