@@ -1,6 +1,10 @@
-# $Id: Makefile,v 1.2 1998-08-09 16:22:18 kuriyama Exp $
+# $Id: Makefile,v 1.3 1998-08-11 05:38:32 hanai Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.2
+# Original revision: 1.3
+
+.if exists("../Makefile.conf")
+.include "../Makefile.conf"
+.endif
 
 # These are turned into validated, normalized HTML files.
 

@@ -1,6 +1,10 @@
-#	$Id: Makefile,v 1.7 1998-07-16 17:17:18 wosch Exp $
+#	$Id: Makefile,v 1.8 1998-08-11 05:38:32 hanai Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.8
+# Original revision: 1.13
+
+.if exists("../Makefile.conf")
+.include "../Makefile.conf"
+.endif
 
 PORTINDEX=	perl ./portindex
 INDEX=		INDEX
@@ -10,17 +14,32 @@ COOKIE=		${INDEX} Makefile.gen
 
 .if exists(Makefile.gen)
 .include "Makefile.gen"
-CLEANFILES+=	${DOCS} Makefile.gen ${INDEX}
 .endif
+CLEANFILES+=	${DOCS} Makefile.gen ${INDEX} packages.exists
 
-${INDEX}: $${CVSROOT}/${PINDEX},v
+cvsindex= $${CVSROOT}/${PINDEX},v
+_ALLINSTALL= packages.exists
+
+
+${INDEX}: ${cvsindex}
 	cvs -QR co -p ${PINDEX} > ${INDEX}
+
+# build the list of available packages only on the 
+# main FreeBSD machines
+hostname!= hostname
+
+packages.exists: ${cvsindex}
+.if ${hostname} == "hub.freebsd.org" || ${hostname} == "freefall.freebsd.org"
+	../../en/ports/packages > ${.TARGET}
+.else
+	touch ${.TARGET}
+.endif
 
 Makefile.gen: index.sgml .NOTMAIN
 	echo DOCS= *.sgml > Makefile.gen
 	${MAKE} ${MAKEFLAGS} ${.IMPSRC}
 
-index.sgml: ${INDEX} portindex ports.inc categories.ja_JP.EUC .NOTMAIN
+index.sgml: ${INDEX} packages.exists portindex ports.inc categories.ja_JP.EUC .NOTMAIN
 	rm -f *.sgml
 	${PORTINDEX} ${INDEX}
 

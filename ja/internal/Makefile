@@ -1,6 +1,10 @@
-# $Id: Makefile,v 1.4 1998-08-10 12:59:12 kuriyama Exp $
+# $Id: Makefile,v 1.5 1998-08-11 05:38:31 hanai Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.8
+# Original revision: 1.9
+
+.if exists("../Makefile.conf")
+.include "../Makefile.conf"
+.endif
 
 # DOCS=   photos.sgml     
 DOCS+=  internal.sgml   
@@ -9,7 +13,7 @@ DOCS+=  machines.sgml
 DOCS+=  mirror.sgml
 DOCS+=  resignation.sgml
 
-# INDEXLINK=      internal.html
+INDEXLINK=	internal.html
 
 # DATA+=  README.mirror
 
