@@ -6,7 +6,7 @@
 # by John Fieber
 # February 26, 1998
 #
-# $FreeBSD: www/en/cgi/getmsg.cgi,v 1.27 2000/11/05 10:18:10 wosch Exp $
+# $FreeBSD: www/en/cgi/getmsg.cgi,v 1.28 2000/11/29 22:05:34 wosch Exp $
 #
 
 require "./cgi-lib.pl";
@@ -62,7 +62,7 @@ sub Fetch
 	}
     }
 
-    if (($file =~ /^$messagepath/ && open(DATA, $file)) ||
+    if (($file =~ /^$messagepath/ && -f $file && open(DATA, $file)) ||
 	($file =~ m%^current/(cvs|freebsd)-[a-z0-9-]+$% &&
 	 open(DATA, "$messagepathcurrent$file")))
     {
