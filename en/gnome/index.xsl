@@ -102,7 +102,7 @@
 	<h2><font color="#990000">State of the port</font></h2>
 
 	<p>We currently support 4.x and 5-CURRENT FreeBSD Systems
-	  for GNOME 1.4.1b2.  Anything prior to FreeBSD 4.1 is not
+	  for GNOME 1.4.1.  Anything prior to FreeBSD 4.1 is not
 	  supported.  Most of GNOME has been ported to FreeBSD;
 	  however, there's plenty left to do!</p>
 
