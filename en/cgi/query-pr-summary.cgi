@@ -1,5 +1,7 @@
 #!/usr/bin/perl -T
-# $FreeBSD: www/en/cgi/query-pr-summary.cgi,v 1.35 2001/11/07 19:38:16 fenner Exp $
+# $FreeBSD: www/en/cgi/query-pr-summary.cgi,v 1.36 2002/03/22 15:38:24 fenner Exp $
+
+sub escape($) { $_ = $_[0]; s/&/&amp;/g; s/</&lt;/g; s/>/&gt;/g; $_; }
 
 $html_mode     = 1 if $ENV{'DOCUMENT_ROOT'};
 $self_ref      = $ENV{'SCRIPT_NAME'};
@@ -148,7 +150,7 @@ EOM
 # If someone does a multiple-variable query they will probably do weird things.
 
 $self_ref1 = $self_ref . '?';
-$self_ref1 .= 'sort=' . $input{'sort'} if $input{'sort'};
+$self_ref1 .= 'sort=' . escape($input{'sort'}) if $input{'sort'};
 print '<P>You may view summaries by <A HREF="', $self_ref1, '">Severity</A>, ';
 $self_ref1 .= '&' if ($self_ref1 !~/\?$/);
 print '<A HREF="', $self_ref1, 'state=summary">State</A>, ';
