@@ -52,7 +52,7 @@
 #
 #     _________________________________________________________________
 #                                      
-# $FreeBSD: www/en/cgi/missing_handler.cgi,v 1.14 2003/05/18 17:45:20 ceri Exp $
+# $FreeBSD: www/en/cgi/missing_handler.cgi,v 1.15 2004/04/04 21:49:38 phantom Exp $
 # ----------------------------------------------------------------------
 
 sub escape($) { $_ = $_[0]; s/&/&amp;/g; s/</&lt;/g; s/>/&gt;/g; $_; }
@@ -103,7 +103,7 @@ The closest match to your request is
 <a href="http://$server_name">http://$server_name</a>.
 
 Please contact the members of the
-FreeBSD Documentation Project &lt;<A HREF="mailto:freebsd-doc\@FreeBSD.ORG?subject=Document%20not%20found%20-%20http://$http_host$redirect_url_save&body=$http_referer_url">freebsd-doc\@FreeBSD.ORG</A>&gt; 
+FreeBSD Documentation Project &lt;<A HREF="mailto:freebsd-doc\@FreeBSD.org?subject=Document%20not%20found%20-%20http://$http_host$redirect_url_save&body=$http_referer_url">freebsd-doc\@FreeBSD.org</A>&gt; 
 or the server administrator
 <a href="mailto:$server_admin?subject=Document%20not%20found%20-%20http://$http_host$redirect_url_save&body=$http_referer_url">$server_admin</a>.<p>
 
