@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.8 1997-01-21 02:44:35 mbarkah Exp $
+# $Id: Makefile,v 1.9 1997-01-23 09:23:50 mbarkah Exp $
 
 # These are turned into validated, normalized HTML files.
 
@@ -28,7 +28,7 @@ stats-img.html: /home/www/server/logs/access_log
 
 # Subdirectories
 
-SUBDIR=		cgi gifs ports releases tutorials ja_JP.EUC
+SUBDIR=		cgi commercial gifs ports releases tutorials ja_JP.EUC
 
 # Subdirectories that have linuxdoc docs and makefiles that use
 # <bsd.sgml.mk>.
