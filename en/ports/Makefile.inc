@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/ports/Makefile.inc,v 1.3 2000/04/20 16:42:04 phantom Exp $
+# $FreeBSD: www/en/ports/Makefile.inc,v 1.4 2001/01/01 12:33:23 kuriyama Exp $
 
 PORTINDEX=	${PERL} ${.CURDIR}/portindex
 INDEX=		INDEX
@@ -13,5 +13,5 @@ CLEANFILES+=	Makefile.gen
 
 cvsindex= $${CVSROOT}/${PINDEX},v
 
-_ALLINSTALL= packages.exists ${INDEX}
+_ALLINSTALL= packages.exists ${INDEX} categories
 
