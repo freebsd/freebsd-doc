@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
 
-<!-- $FreeBSD: www/ja/index.xsl,v 1.3 2001/09/03 01:57:19 kuriyama Exp $ -->
+<!-- $FreeBSD: www/ja/index.xsl,v 1.4 2001/09/03 06:26:05 kuriyama Exp $ -->
 <!-- Original revision: 1.6 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -9,7 +9,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/ja/index.xsl,v 1.3 2001/09/03 01:57:19 kuriyama Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/ja/index.xsl,v 1.4 2001/09/03 06:26:05 kuriyama Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <xsl:output type="html" encoding="EUC-JP"
@@ -188,10 +188,10 @@
 			  <p><font size="+1" color="#990000"><b>ベンダ</b></font>
 			    
 			    <small><br/>
-			      ・<a href="{$base}/commercial/software_bycat.html">ソフトウェア</a><br/>
-			      ・<a href="{$base}/commercial/hardware.html">ハードウェア</a><br/>
-			      ・<a href="{$base}/commercial/consulting_bycat.html">コンサルティング</a><br/>
-			      ・<a href="{$base}/commercial/misc.html">その他</a><br/>
+			      ・<a href="{$base}/../commercial/software_bycat.html">ソフトウェア</a><br/>
+			      ・<a href="{$base}/../commercial/hardware.html">ハードウェア</a><br/>
+			      ・<a href="{$base}/../commercial/consulting_bycat.html">コンサルティング</a><br/>
+			      ・<a href="{$base}/../commercial/misc.html">その他</a><br/>
 			    </small></p>
 	      
 			  <p><font size="+1" color="#990000"><b>このサイトについて</b></font>
