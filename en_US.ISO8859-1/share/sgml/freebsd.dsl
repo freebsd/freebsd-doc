@@ -1,4 +1,4 @@
-<!-- $FreeBSD: doc/en_US.ISO_8859-1/share/sgml/freebsd.dsl,v 1.5 2001/02/20 19:41:41 nik Exp $ -->
+<!-- $FreeBSD: doc/en_US.ISO_8859-1/share/sgml/freebsd.dsl,v 1.6 2001/03/24 09:42:02 nik Exp $ -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
 <!ENTITY freebsd.dsl PUBLIC "-//FreeBSD//DOCUMENT DocBook Language Neutral Stylesheet//EN" CDATA DSSSL>
@@ -53,11 +53,8 @@
 
         <!-- Specify how to generate the man page link HREF -->
         (define ($create-refentry-xref-link$ refentrytitle manvolnum)
-          (string-append "http://www.FreeBSD.org/cgi/man.cgi?"
-                          refentrytitle
-                         "("
-                         manvolnum
-                         ")"))
+	  (string-append "http://www.FreeBSD.org/cgi/man.cgi?query="
+			 refentrytitle "&" "sektion=" manvolnum))
       ]]>
     </style-specification-body>
   </style-specification>
