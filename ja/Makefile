@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.32 1999-04-14 22:02:14 kuriyama Exp $
+# $Id: Makefile,v 1.33 1999-09-04 07:22:21 kuriyama Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.48
 
@@ -13,7 +13,7 @@ DOCS+= auditors.sgml
 DOCS+= availability.sgml
 DOCS+= docs.sgml 
 DOCS+= features.sgml
-DOCS+= register.sgml 
+DOCS+= register.sgml
 DOCS+= index.sgml
 DOCS+= internet.sgml 
 DOCS+= mailto.sgml 
@@ -33,10 +33,8 @@ CLEANFILES+=atoz.sgml site.sgml
 DATA=	index.html
 
 # Subdirectories
-
 # SGML
-
-SUBDIR=  security
+SUBDIR=	 security
 SUBDIR+= commercial
 SUBDIR+= docproj
 SUBDIR+= news
@@ -50,7 +48,6 @@ SUBDIR+= projects
 SUBDIR+= releases 
 
 # Japanese only.
-
 SUBDIR+= java
 
 # Non-SGML
@@ -61,14 +58,9 @@ SUBDIR+= java
 # Extern
 #SUBDIR+= tutorials
 
-DOCSUBDIR=     FAQ handbook
+DOCSUBDIR=	FAQ handbook
 .endif
-
-# Subdirectories that have linuxdoc docs and makefiles that use
-# <bsd.sgml.mk>.
-
 SGMLOPTS=	-links -hdr ${.CURDIR}/doc.hdr -ftr ${.CURDIR}/doc.ftr -e EUC-JP
-
 
 WEBDIR=		data/ja
 
