@@ -50,6 +50,7 @@ MAN8 =	IPXrouted.8\
 	dumpfs.8\
 	dumpon.8\
 	edquota.8\
+	faithd.8\
 	fdcontrol.8\
 	fdisk.8\
 	fingerd.8\
