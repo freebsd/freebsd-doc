@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/en/gnome/newsflash.xsl,v 1.3 2003/08/26 07:44:05 marcus Exp $ -->
+<!-- $FreeBSD: www/en/gnome/newsflash.xsl,v 1.4 2004/01/24 07:58:44 marcus Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS" exclude-result-prefixes="cvs">
@@ -83,6 +83,11 @@
   </xsl:template>
 
   <xsl:template match="date"/>    <!-- Deliberately left blank -->
+
+  <xsl:template match="i">
+    <i><xsl:value-of select="self::i"/></i>
+  </xsl:template>
+
 
   <!-- When the href attribute contains a '$base', expand it to the current
        value of the $base variable. -->
