@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/index.xsl,v 1.50 2003/02/11 11:34:08 brueffer Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.51 2003/02/14 10:27:02 alex Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   
@@ -6,7 +6,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.50 2003/02/11 11:34:08 brueffer Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.51 2003/02/14 10:27:02 alex Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -50,7 +50,7 @@
 
 		  <option value="http://www2.at.FreeBSD.org/">IPv6 Austria</option>
 		  <option value="http://www.dk.FreeBSD.org/">IPv6 Denmark</option>
-		  <option value="http://bsd.ipv6.uni-erlangen.de">IPv6 Germany</option>
+		  <option value="http://www2.de.freebsd.org">IPv6 Germany</option>
 		  <option value="http://www.jp.FreeBSD.org/www.FreeBSD.org/">6Bone(IPv6), Japan</option>
 		  <option value="http://www2.no.FreeBSD.org/">IPv6 Norway</option>
 		  <option value="http://www.ar.FreeBSD.org/">Argentina</option>
