@@ -9,26 +9,8 @@ unpacks it on your system, applies the patches, and compiles.  If
 all goes well, simply type <tt>make install</tt> to install the
 application.</p>
 
-<p>Below are the listings of ports currently available, arranged
-by application type.  Four links are available for each port listed:</p>
-
-<dl>
-<dt><b>Description</b></dt><dd>This fetches a description
-of the application from the FTP archive (ftp.freebsd.org).</dd>
-
-<dt><b>Browse</b></dt><dd>This is a link to the FTP archive directory
-for the port where you can examine the Makefile and patches.</dd>
-
-<dt><b>Download</b></dt><dd>This is a link to a gzip'd tar file
-containing the port. Be sure to tell your browser to <em>save</em>
-rather than <em>display</em>!</dd>
-
-<dt><b>Maintainer</b></dt><dd>The person responsible for maintaining
-the port.  If you have problems with a <em>specific</em> port,
-contact this person.</dd>
-</dl>
-
-<p>For more information, see <a href="../handbook/ports.html">The
-ports collection</a> and <a
-href="../handbook/porting.html">Porting applications</a> in the <a
-href="../handbook">FreeBSD Handbook</a>.</p>
+<p>For more information about using ports, see <a
+href="../handbook/ports.html">The ports collection</a>.  For
+information about creating new ports, see <a
+href="../handbook/porting.html">Porting applications</a>.  Both are
+part of the <a href="../handbook">FreeBSD Handbook</a>.</p>
