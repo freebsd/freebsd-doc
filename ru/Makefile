@@ -1,7 +1,7 @@
 #
 # The FreeBSD Russian Documentation Project
 #
-# $FreeBSD: www/ru/Makefile,v 1.41 2004/11/02 08:53:08 den Exp $
+# $FreeBSD: www/ru/Makefile,v 1.42 2004/12/30 17:53:44 hrs Exp $
 # $FreeBSDru: frdp/www/ru/Makefile,v 1.38 2004/10/22 12:33:49 den Exp $
 #
 # Original revision: 1.114
@@ -23,7 +23,6 @@ DOCS+= auditors.sgml
 DOCS+= availability.sgml
 DOCS+= docs.sgml
 DOCS+= features.sgml
-DOCS+= register.sgml
 DOCS+= internet.sgml
 DOCS+= mailto.sgml
 DOCS+= publish.sgml
@@ -77,9 +76,6 @@ DATA+=		index.html
 CLEANFILES+=	index.html
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
-
-# Use English versions for index.html (see also index.xsl and includes.xsl)
-XML_NEWS_PRESS=		${XML_NEWS_PRESS_MASTER}
 
 index.html: index.xsl ${XML_INCLUDES}\
 		${XML_NEWS_INCLUDES} \
