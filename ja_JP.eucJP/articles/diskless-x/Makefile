@@ -1,5 +1,9 @@
+#
 # $FreeBSD$
-# Original revision: 1.7
+#
+# Article: Diskless X Server: a how to guide
+#
+# Original revision: 1.8
 
 DOC?= article
 
@@ -8,7 +12,7 @@ FORMATS?= html
 INSTALL_COMPRESSED?=gz
 INSTALL_ONLY_COMPRESSED?=
 
-SRCS= article.sgml
+SRCS=	article.sgml
 
 DOC_PREFIX?= ${.CURDIR}/../../..
 
