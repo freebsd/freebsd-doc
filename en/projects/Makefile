@@ -14,6 +14,6 @@ DOCS+=	cvsweb.sgml
 
 INDEXLINK= projects.html
 
-SUBDIR=	 busdma c99 gnats4 mips bigdisk netperf
+SUBDIR=	 busdma c99 dingo gnats4 mips bigdisk netperf
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
