@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp 
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.43 2001-07-31 21:12:15 wosch Exp $
+# $Id: man.cgi,v 1.44 2001-07-31 21:22:48 wosch Exp $
 
 #use Data::Dumper;
 #use Carp;
@@ -313,7 +313,7 @@ sub do_man {
     &decode_form($form, *form, 0);
     
     $format = $form{'format'};
-    $format = 'html' if $format !~ /^(ps|ascii|latin1|dvi|troff)$/;
+    $format = 'html' if $format !~ /^(ps|pdf|ascii|latin1|dvi|troff)$/;
 
     local($fform) = &dec($form);
     if ($fform =~ m%^([a-zA-Z_\-]+)$%) {
@@ -496,6 +496,8 @@ sub man {
 	# Content-encoding: x-gzip
 	if ($format eq "ps") {
 	    &http_header("application/postscript");
+	} elsif ($format eq "pdf") {
+	    &http_header("application/pdf");
 	} elsif ($format eq "dvi") {
 	    &http_header("application/x-dvi");
 	} elsif ($format eq "troff") {
@@ -553,7 +555,7 @@ sub man {
 	}
     }
 
-    if ($format eq 'ps') {
+    if ($format =~ /^(ps|pdf)$/) {
         push(@manargs, '-t');
     }
 
@@ -572,6 +574,47 @@ sub man {
     if ($format ne "html") {
 	if ($format eq "latin1" || $format eq "ascii") {
 	    while(<MAN>) { s/.//g; print; }
+	} elsif ($format eq "pdf") {
+	    # 
+	    # run a PostScript to PDF converter
+	    #
+	    local(@args) = ('mktemp', '/tmp/_man.cgi-ps2pdf-XXXXXXXXXXXX');
+	    open(TMP, "-|") or 
+		exec(@args) or die "open @args: $!\n";
+	    local($tempfile) = <TMP>;
+	    close TMP;
+
+	    # chomp, avoid security warnings using -T switch
+	    #chop($tempfile);
+	    if ($tempfile =~ /(\S+)/) {
+		$tempfile = $1;
+	    }
+
+	    if (!$tempfile || ! -f $tempfile) {
+		die "Cannot create tempfile: $tempfile\n";
+	    }
+	    #warn $tempfile;
+
+	    #$tempfile = '/tmp/bla2';
+	    open(TMP, "> $tempfile") or die "open $tempfile: $!\n";
+	    while(<MAN>) {
+		print TMP $_;
+	    }
+	    close TMP;
+	    local($ENV{'PATH'}) = '/bin:/usr/bin:/usr/local/bin';
+	    open(PDF, "-|") or 
+		exec('ps2pdf', $tempfile, '/dev/stdout') or
+		die "open ps2pdf: $!\n";
+
+            # sleep and delete the temp file
+            select(undef, undef, undef, 0.5);
+	    unlink($tempfile);
+
+	    while(<PDF>) {
+		print;
+	    }
+	    close PDF;
+
 	} else {
 	    while(<MAN>) { print; }
 	}
@@ -832,9 +875,9 @@ ETX
 <SELECT NAME="format">
 ETX
 
-    foreach ('html', 'troff', 'ps', 
+    foreach ('html', 'ps', 'pdf',
 	     # 'dvi', # you need a 8 bit clean man, e.g. jp-man
-	     'ascii', 'latin1') {
+	     'ascii', 'latin1', 'troff') {
 	print qq{<OPTION VALUE="$_">$_</OPTION>\n};
     };
 
@@ -852,7 +895,7 @@ ETX
 }
 
 sub copyright {
-    $id = '$Id: man.cgi,v 1.43 2001-07-31 21:12:15 wosch Exp $';
+    $id = '$Id: man.cgi,v 1.44 2001-07-31 21:22:48 wosch Exp $';
 
     return qq{\
 <PRE>
