@@ -23,9 +23,9 @@ MAN8 =	IPXrouted.8\
 	bootpd.8\
 	bootpef.8\
 	bootptest.8\
+	bsdlabel.8\
 	btxld.8\
 	burncd.8\
-	bsdlabel.8\
 	camcontrol.8\
 	ccdconfig.8\
 	chat.8\
@@ -91,6 +91,8 @@ MAN8 =	IPXrouted.8\
 	isdntrace.8\
 	ispcvt.8\
 	jail.8\
+	jexec.8\
+	jls.8\
 	kernbb.8\
 	keyserv.8\
 	kgmon.8\
@@ -134,6 +136,7 @@ MAN8 =	IPXrouted.8\
 	mount_portalfs.8\
 	mount_smbfs.8\
 	mount_std.8\
+	mount_udf.8\
 	mount_umapfs.8\
 	mount_unionfs.8\
 	mountd.8\
@@ -253,8 +256,8 @@ MAN8 =	IPXrouted.8\
 	spkrtest.8\
 	spppcontrol.8\
 	spray.8\
-	sshd.8\
 	ssh-keysign.8\
+	sshd.8\
 	sticky.8\
 	stlload.8\
 	stlstats.8\
