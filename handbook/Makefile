@@ -1,6 +1,11 @@
-# $Id: Makefile,v 1.34 1999-02-06 20:20:16 dillon Exp $
+# $Id: Makefile,v 1.35 1999-03-27 16:07:28 nik Exp $
 
 .NOTPARALLEL:
+
+.BEGIN:
+	@echo "The LinuxDoc Handbook is now obsolete.  Please look at the"
+	@echo "Handbook in doc/en/handbook/ for more information."
+	@exit 1
 
 SGMLOPTS=-links
 SRCS= anoncvs.sgml authors.sgml backups.sgml basics.sgml bibliography.sgml
