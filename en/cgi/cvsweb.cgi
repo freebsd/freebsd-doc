@@ -18,7 +18,7 @@
 # Copyright (c) 1996-1998 Bill Fenner
 #           (c) 1998-1999 Henner Zeller
 #	    (c) 1999      Henrik Nordstrom
-#	    (c) 2000      Akinori MUSHA
+#	    (c) 2000-2001 Akinori MUSHA
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -42,9 +42,9 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $zId: cvsweb.cgi,v 1.104 2000/11/01 22:05:12 hnordstrom Exp $
-# $Id: cvsweb.cgi,v 1.67 2001-01-12 04:26:10 knu Exp $
-# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.66 2001/01/03 07:40:09 knu Exp $
+# $Id: cvsweb.cgi,v 1.68 2001-01-14 08:59:59 knu Exp $
+# $Idaemons: /home/cvs/cvsweb/cvsweb.cgi,v 1.64 2001/01/13 07:48:09 knu Exp $
+# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.67 2001/01/12 04:26:10 knu Exp $
 #
 ###
 
@@ -53,6 +53,7 @@ require 5.000;
 use strict;
 
 use vars qw (
+    $cvsweb_revision
     $mydir $uname $config $allow_version_select $verbose
     @CVSrepositories @CVSROOT %CVSROOT %CVSROOTdescr
     %MIRRORS %DEFAULTVALUE %ICONS %MTYPES
@@ -138,6 +139,10 @@ sub forbidden_module($);
 
 ##### Start of Configuration Area ########
 delete $ENV{PATH};
+
+$cvsweb_revision = join('.', '1.105', (split(/ /,
+ q$Idaemons: /home/cvs/cvsweb/cvsweb.cgi,v 1.64 2001/01/13 07:48:09 knu Exp $
+))[2]);
 
 use File::Basename;
 
@@ -229,7 +234,7 @@ $LOG_REVSEPARATOR = q/^-{28}$/;
 ##### End of configuration variables #####
 
 $cgi_style::hsty_base = 'http://www.FreeBSD.org';
-$_ = q$FreeBSD: www/en/cgi/cvsweb.cgi,v 1.66 2001/01/03 07:40:09 knu Exp $;
+$_ = q$FreeBSD: www/en/cgi/cvsweb.cgi,v 1.67 2001/01/12 04:26:10 knu Exp $;
 @_ = split;
 $cgi_style::hsty_date = "@_[3,4]";
 
@@ -262,7 +267,7 @@ $where =~ s|^/||;
 $scriptname = defined($ENV{SCRIPT_NAME}) ? $ENV{SCRIPT_NAME} : '';
 $scriptname =~ s|^/*|/|;
 
-# Let's workaround thttpd's stupidness..
+# Let's workaround thttpd's stupidity..
 if ($scriptname =~ m|/$|) {
     $pathinfo .= '/';
     my $re = quotemeta $pathinfo;
@@ -747,7 +752,8 @@ if (-d $fullname) {
 
 	    if ($_ eq '..' || -d "$fullname/$_") {
 		next if ($_ eq '..' && $where eq '/');
-		my ($rev,$date,$log,$author,$filename) = @{$fileinfo{$_}}
+		my ($rev,$date,$log,$author,$filename);
+		($rev,$date,$log,$author,$filename) = @{$fileinfo{$_}}
 		    if (defined($fileinfo{$_}));
 		printf '<tr bgcolor="%s"><td>', $tabcolors[$dirrow % 2] if $dirtable;
 		if ($_ eq '..') {
@@ -2766,14 +2772,19 @@ sub navigateHeader($$$$$) {
     my ($swhere,$path,$filename,$rev,$title) = @_;
     $swhere = "" if ($swhere eq $scriptwhere);
     $swhere = urlencode($filename) if ($swhere eq "");
-    print qq`<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">`;
-    print "<HTML>\n<HEAD>\n";
-    print qq`<META name="robots" content="nofollow">\n`;
-    print '<!-- CVSweb $zRevision: 1.104 $  $Revision: 1.67 $ -->';
-    print "\n<TITLE>$path$filename - $title - $rev</TITLE></HEAD>\n";
-    print  "$body_tag_for_src\n";
-    print "<table width=\"100%\" border=0 cellspacing=0 cellpadding=1 bgcolor=\"$navigationHeaderColor\">";
-    print "<tr valign=bottom><td>";
+
+    print <<EOF;
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML>
+<HEAD>
+<META name="robots" content="nofollow">
+<!-- knu-cvsweb $cvsweb_revision -->
+<TITLE>$path$filename - $title - $rev</TITLE></HEAD>
+$body_tag_for_src
+<table width="100%" border=0 cellspacing=0 cellpadding=1 bgcolor="$navigationHeaderColor">
+<tr valign=bottom><td>
+EOF
+
     print &link($backicon, "$swhere$query#rev$rev");
     print "</a> <b>Return to ", &link("$filename","$swhere$query#rev$rev")," CVS log";
     print "</b> $fileicon</td>";
@@ -3164,8 +3175,7 @@ sub http_header(;$) {
 
 sub html_header($) {
     my ($title) = @_;
-    my $version = '$zRevision: 1.104 $  $Revision: 1.67 $'; #'
-    http_header(defined($charset) ? "text/html; charset=$charset" : "text/html");
+    http_header("text/html");
 
     (my $header = &cgi_style::html_header) =~ s/^.*\n\n//; # remove HTTP response header
 
@@ -3173,7 +3183,7 @@ sub html_header($) {
 <!doctype html public "-//W3C//DTD HTML 4.0 Transitional//EN"
  "http://www.w3.org/TR/REC-html40/loose.dtd">
 $header
-<!-- CVSweb $version -->
+<!-- knu-cvsweb $cvsweb_revision -->
 EOH
 }
 
