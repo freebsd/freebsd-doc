@@ -1,7 +1,8 @@
-#	$Id: Makefile,v 1.9 1998-06-10 15:52:30 wosch Exp $
+#	$Id: Makefile,v 1.10 1998-07-16 17:03:54 wosch Exp $
 
 PORTINDEX=	perl ./portindex
-INDEX=		ports/INDEX
+INDEX=		INDEX
+PINDEX=		ports/${INDEX}
 
 COOKIE=		${INDEX} Makefile.gen
 
@@ -10,8 +11,8 @@ COOKIE=		${INDEX} Makefile.gen
 CLEANFILES+=	${DOCS} Makefile.gen ${INDEX} packages.exists
 .endif
 
-${INDEX}:
-	cvs -QR co ${INDEX}
+${INDEX}: $${CVSROOT}/${PINDEX},v
+	cvs -QR co -p ${PINDEX} > ${INDEX}
 
 packages.exists:
 	./packages > ${.TARGET}
