@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: query-pr-summary.cgi,v 1.19 1999-02-01 21:07:42 wosch Exp $
+# $Id: query-pr-summary.cgi,v 1.20 1999-02-24 23:10:07 billf Exp $
 
 $html_mode     = 1 if $ENV{'DOCUMENT_ROOT'};
 $self_ref      = $ENV{'SCRIPT_NAME'};
@@ -432,7 +432,7 @@ sub gnats_summary {
 
 	next if (($report ne '') && (eval($report) == 0));
 
-	print "${pr}\nS  Submitted   Tracker    Resp.    Description${hr}"
+	print "${pr}\nS  Submitted   Tracker     Resp.    Description${hr}"
 	    if ($iteration++ == 0);
 
 	$syn = &html_fixline($syn) if $htmlmode;
