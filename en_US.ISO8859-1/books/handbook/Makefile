@@ -1,5 +1,5 @@
 # 
-# $Id: Makefile,v 1.17 1999-03-27 16:03:49 nik Exp $
+# $Id: Makefile,v 1.18 1999-04-04 16:43:08 nik Exp $
 #
 # Build the FreeBSD Handbook. Will eventually split in two, a generic .mk
 # file which can be used by many Makefiles, and a much smaller Makefile
@@ -237,10 +237,10 @@ ${DOC}.txt: ${DOC}.html
 	lynx -nolist -dump ${DOC}.html > ${DOC}.txt
 
 ${DOC}.rtf: ${SRCS}
-	${JADE} -ioutput.print ${JADEFLAGS} -d ${DSLPRINT} -t rtf ${DOC}.sgml
+	${JADE} -Vrtf-backend -ioutput.print ${JADEFLAGS} -d ${DSLPRINT} -t rtf ${DOC}.sgml
 
 ${DOC}.tex: ${SRCS}
-	${JADE} -ioutput.print ${JADEFLAGS} -d ${DSLPRINT} -t tex ${DOC}.sgml
+	${JADE} -Vtex-backend -ioutput.print ${JADEFLAGS} -d ${DSLPRINT} -t tex ${DOC}.sgml
 
 ${DOC}.dvi: ${DOC}.tex
 	@echo "==> TeX pass 1/3"
