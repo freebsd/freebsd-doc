@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp 
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.102 2003-04-20 09:03:16 www Exp $
+# $Id: man.cgi,v 1.103 2003-05-07 10:21:07 www Exp $
 
 #use Data::Dumper;
 #use Carp;
@@ -114,6 +114,7 @@ $sectionpath = {
 	'path' => '1:2:3:3p:4:5:6:7:8:9',
     },
     'OpenBSD 3.2' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
+    'OpenBSD 3.3' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
 };
 
 foreach my $os (keys %$sectionpath) {
@@ -196,6 +197,7 @@ $manPathDefault = 'FreeBSD 4.8-RELEASE';
      'OpenBSD 3.0',           "$manLocalDir/OpenBSD-3.0",
      'OpenBSD 3.1',           "$manLocalDir/OpenBSD-3.1",
      'OpenBSD 3.2',           "$manLocalDir/OpenBSD-3.2",
+     'OpenBSD 3.3',           "$manLocalDir/OpenBSD-3.3",
 
     #'NetBSD 0.9',            "$manLocalDir/NetBSD-0.9",
      'NetBSD 1.0',            "$manLocalDir/NetBSD-1.0",
@@ -310,7 +312,7 @@ while (($key,$val) = each %manPath) {
      'macosx', 'Darwin 1.3 PPC',
 
      'netbsd', 'NetBSD 1.6.1',
-     'openbsd', 'OpenBSD 3.2',
+     'openbsd', 'OpenBSD 3.3',
      'v7', 'Unix Seventh Edition', 
      'v7man', 'Unix Seventh Edition', 
      'x11', 'XFree86 4.3.0',
@@ -977,7 +979,7 @@ ETX
 }
 
 sub copyright {
-    $id = '$Id: man.cgi,v 1.102 2003-04-20 09:03:16 www Exp $';
+    $id = '$Id: man.cgi,v 1.103 2003-05-07 10:21:07 www Exp $';
 
     return qq{\
 <PRE>
