@@ -151,6 +151,8 @@ MAN1 =	a2p.1\
 	ld.1\
 	ldd.1\
 	leave.1\
+	less.1\
+	lesskey.1\
 	lex.1\
 	limits.1\
 	lint.1\
@@ -193,7 +195,6 @@ MAN1 =	a2p.1\
 	mklocale.1\
 	mkstr.1\
 	mktemp.1\
-	more.1\
 	mptable.1\
 	msgs.1\
 	mt.1\
@@ -425,6 +426,7 @@ MLINKS+=ftp.1 pftp.1
 MLINKS+=ftp.1 gate-ftp.1
 MLINKS+=hexdump.1 hd.1
 MLINKS+=intro.1 introduction.1
+MLINKS+=less.1 more.1
 MLINKS+=lex.1 flex.1
 MLINKS+=lex.1 flex++.1
 MLINKS+=lex.1 lex++.1
