@@ -1,6 +1,6 @@
-# $FreeBSD: www/ja/news/Makefile,v 1.33 2002/01/05 10:40:50 kuriyama Exp $
+# $FreeBSD: www/ja/news/Makefile,v 1.34 2002/05/15 18:21:59 hrs Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.33
+# Original revision: 1.38
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -9,9 +9,7 @@
 .include "../Makefile.inc"
 .endif
 
-#DOCS= press.sgml
 DOCS+= news.sgml
-#DOCS+= webchanges.sgml
 
 # press releases
 DOCS+= pressreleases.sgml
@@ -20,18 +18,22 @@ DOCS+= press-rel-2.sgml
 DOCS+= press-rel-3.sgml
 DOCS+= press-rel-4.sgml
 DOCS+= press-rel-5.sgml
+#DOCS+= press-rel-6.sgml
+#DOCS+= press-rel-7.sgml
 
 # The yearly State of the Union address
 #DOCS+=	sou1999.sgml
 
 INDEXLINK= news.html
 
-SUBDIR= 	1996
+#SUBDIR= 	1993
+SUBDIR+= 	1996
 SUBDIR+= 	1997
 #SUBDIR+= 	1998
 #SUBDIR+= 	1999
 #SUBDIR+= 	2000
 #SUBDIR+= 	2001
+#SUBDIR+= 	2002
 #SUBDIR+=	status
 
 DATA=		newsflash.html press.html
