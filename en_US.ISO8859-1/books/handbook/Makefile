@@ -1,5 +1,5 @@
 # 
-# $FreeBSD: doc/en_US.ISO8859-1/books/handbook/Makefile,v 1.41 2001/08/08 19:23:55 murray Exp $
+# $FreeBSD: doc/en_US.ISO8859-1/books/handbook/Makefile,v 1.42 2001/08/10 00:30:43 murray Exp $
 #
 # Build the FreeBSD Handbook.
 #
@@ -27,6 +27,63 @@ INSTALL_ONLY_COMPRESSED?=
 IMAGES = advanced-networking/isdn-bus.eps
 IMAGES+= advanced-networking/isdn-twisted-pair.eps
 IMAGES+= advanced-networking/natd.eps
+IMAGES+= install/userconfig.scr
+IMAGES+= install/userconfig2.scr
+IMAGES+= install/hdwrconf.scr
+IMAGES+= install/probstart.scr
+IMAGES+= install/main1.scr
+IMAGES+= install/sysinstall-exit.scr
+IMAGES+= install/main-doc.scr
+IMAGES+= install/docmenu1.scr
+IMAGES+= install/main-keymap.scr
+IMAGES+= install/keymap.scr
+IMAGES+= install/main-options.scr
+IMAGES+= install/options.scr
+IMAGES+= install/main-std.scr
+IMAGES+= install/fdisk-drive1.scr
+IMAGES+= install/fdisk-edit1.scr
+IMAGES+= install/fdisk-edit2.scr
+IMAGES+= install/boot-mgr.scr
+IMAGES+= install/fdisk-drive2.scr
+IMAGES+= install/disklabel-ed1.scr
+IMAGES+= install/disklabel-auto.scr
+IMAGES+= install/disklabel-root1.scr
+IMAGES+= install/disklabel-root2.scr
+IMAGES+= install/disklabel-fs.scr
+IMAGES+= install/disklabel-root3.scr
+IMAGES+= install/disklabel-ed2.scr
+IMAGES+= install/dist-set.scr
+IMAGES+= install/dist-set2.scr
+IMAGES+= install/media.scr
+IMAGES+= install/ed0-conf.scr
+IMAGES+= install/ed0-conf2.scr
+IMAGES+= install/ftp-anon1.scr
+IMAGES+= install/ftp-anon2.scr
+IMAGES+= install/nfs-server-edit.scr
+IMAGES+= install/security.scr
+IMAGES+= install/console-saver1.scr
+IMAGES+= install/console-saver2.scr
+IMAGES+= install/console-saver3.scr
+IMAGES+= install/console-saver4.scr
+IMAGES+= install/timezone1.scr
+IMAGES+= install/timezone2.scr
+IMAGES+= install/timezone3.scr
+IMAGES+= install/mouse1.scr
+IMAGES+= install/mouse2.scr
+IMAGES+= install/mouse3.scr
+IMAGES+= install/mouse4.scr
+IMAGES+= install/mouse5.scr
+IMAGES+= install/mouse6.scr
+IMAGES+= install/xf86setup.scr
+IMAGES+= install/desktop.scr
+IMAGES+= install/pkg-cat.scr
+IMAGES+= install/pkg-sel.scr
+IMAGES+= install/pkg-install.scr
+IMAGES+= install/pkg-confirm.scr
+IMAGES+= install/adduser1.scr
+IMAGES+= install/adduser2.scr
+IMAGES+= install/adduser3.scr
+IMAGES+= install/mainexit.scr
 
 # 
 # SRCS lists the individual SGML files that make up the document. Changes
