@@ -3,7 +3,7 @@
 #
 # $FreeBSD$
 #
-# Original revision: 1.2
+# Original revision: 1.3
 
 CHAPTERS= 	pgpkeys/chapter.sgml
 
