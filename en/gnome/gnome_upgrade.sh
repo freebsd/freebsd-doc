@@ -34,13 +34,13 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $Id: gnome_upgrade.sh,v 1.13 2004-11-10 06:50:06 marcus Exp $
+# $Id: gnome_upgrade.sh,v 1.14 2005-02-06 03:11:05 adamw Exp $
 #
 
 # This script will aid in doing major upgrades to the GNOME Desktop (e.g.
 # an upgrade from 2.6 --> 2.8).
 
-GNOME_UPGRADE_SH_VER=280;	# This should be nailed down before releasing
+GNOME_UPGRADE_SH_VER=281;	# This should be nailed down before releasing
 
 ## BEGIN global variable declarations.
 VERBOSE=${VERBOSE:=0}
@@ -52,7 +52,7 @@ X11BASE=${X11BASE:=/usr/X11R6}
 PROJECT_URL="http://www.FreeBSD.org/gnome/"
 SUPPORT_EMAIL="freebsd-gnome@FreeBSD.org"
 
-SUPPORTED_FREEBSD_VERSIONS="4.10 5.3 6.0"
+SUPPORTED_FREEBSD_VERSIONS="4.10 4.11 5.3 6.0"
 	# Ports that must be up-to-date and installed for the Big Update to work
 EXTERNAL_DEPENDS="popt gettext* libiconv expat pkgconfig freetype2 XFree86-libraries* Xft libXft XFree86-fontScalable* XFree86-fontEncodings* xorg* png libaudiofile tiff jpeg libxml2 python libxslt gnomehier scrollkeeper intltool p5-XML-Parser docbook-sk xmlcatmgr docbook-xsl docbook-xml sdocbook-xml startup-notification gnome-icon-theme Hermes libmpeg2 guile libltdl aspell gle cdrtools mkisofs bitstream-vera openldap-client lcms libmng libtool ghostscript* gnomeuserdocs2 libIDL libbonobo libgda2 libgsf libgtop2 libxklavier shared-mime-info hicolor-icon-theme linc ORBit2 libart_lgpl2 libmad libid3tag fam esound libglut nspr shared-mime-data hicolor-icon-theme libsoup"
 EXTERNAL_4_DEPENDS="libgnugetopt"
