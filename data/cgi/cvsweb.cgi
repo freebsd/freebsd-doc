@@ -134,6 +134,9 @@ if (-d $fullname) {
 						"Failed to spawn rlog");
 	while (<RCS>) {
 	    print if ($verbose);
+	    if (/^branch:\s+([\d\.]+)/) {
+		$curbranch = $1;
+	    }
 	    if ($symnames) {
 		if (/^\s+([^:]+):\s+([\d\.]+)/) {
 		    $symrev{$1} = $2;
@@ -203,12 +206,13 @@ if (-d $fullname) {
 	print "Done sorting revisions\n" if ($verbose);
 #
 # HEAD is an artificial tag which is simply the highest tag number on the main
-# branch (I think!).  Find it by looking through @revorder; it should at least
-# be near the beginning (In fact, it *should* be the first commit listed on
-# the main branch.)
+# branch, unless there is a branch tag in the RCS file in which case it's the
+# highest revision on that branch.  Find it by looking through @revorder; it
+# is the first commit listed on the appropriate branch.
+	$headrev = $curbranch || "1";
 	revision:
 	for ($i = 0; $i <= $#revorder; $i++) {
-	    if ($revorder[$i] =~ /^\d+\.\d+$/) {
+	    if ($revorder[$i] =~ /^(\S*)\.\d+$/ && $headrev eq $1) {
 		if ($revsym{$revorder[$i]}) {
 		    $revsym{$revorder[$i]} .= ", ";
 		}
@@ -236,8 +240,6 @@ if (-d $fullname) {
 		# If there is no branch A.B.D, then it translates into
 		# the head A.B .
 		#
-		# This is pure speculation.
-		#
 		$head = $1;
 		$branch = $3;
 		$regex = $head . "." . $branch;
@@ -255,6 +257,10 @@ if (-d $fullname) {
 		}
 		$revsym{$rev} .= ", " if ($revsym{$rev});
 		$revsym{$rev} .= $_;
+		if ($rev ne $head) {
+		    $branchpoint{$head} .= ", " if ($branchpoint{$head});
+		    $branchpoint{$head} .= $_;
+		}
 	    }
 	    $sel .= "<OPTION VALUE=\"${rev}:${_}\">$_\n";
 	}
@@ -265,6 +271,13 @@ if (-d $fullname) {
 	print "<BR>\n";
 	print "<A HREF=\"#diff\">Request diff between arbitrary revisions</A>\n";
 	print "<HR NOSHADE>\n";
+	if ($curbranch) {
+	    print "Default branch is ";
+	    print ($revsym{$curbranch} || $curbranch);
+	} else {
+	    print "No default branch";
+	}
+	print "<BR><HR NOSHADE>\n";
 # The other possible U.I. I can see is to have each revision be hot
 # and have the first one you click do ?r1=foo
 # and since there's no r2 it keeps going & the next one you click
@@ -288,31 +301,32 @@ if (-d $fullname) {
 		$nameprinted{$br}++;
 	    }
 	    print "\n";
-#	    print "RCS revision <b>$_</b>\n";
 	    print "<A HREF=\"$scriptwhere?rev=$_\"><b>$_</b></A>";
 	    if (/^1\.1\.1\.\d+$/) {
 		print " <i>(vendor branch)</i>";
 	    }
-#	    print "<BR>\n";
-#	    print "Checked in on <i>" . &ctime($date{$_}) . "</i> by ";
-#	    print "<i>" . $author{$_} . "</i><BR>\n";
 	    print " <i>" . &ctime($date{$_}) . "</i> by ";
 	    print "<i>" . $author{$_} . "</i>\n";
 	    if ($revsym{$_}) {
-#		print "CVS Tags: <b>$revsym{$_}</b><BR>\n";
 		print "<BR>CVS Tags: <b>$revsym{$_}</b>";
 	    }
 	    if ($revsym{$br})  {
-#		print "Branch: <b>$revsym{$br}</b><BR>\n";
 		if ($revsym{$_}) {
 		    print "; ";
 		} else {
 		    print "<BR>";
 		}
-		print "Branch: <b>$revsym{$br}</b>";
+		print "Branch: <b>$revsym{$br}</b>\n";
+	    }
+	    if ($branchpoint{$_}) {
+		if ($revsym{$br} || $revsym{$_}) {
+		    print "; ";
+		} else {
+		    print "<BR>";
+		}
+		print "Branch point for: <b>$branchpoint{$_}</b>\n";
 	    }
 	    # Find the previous revision on this branch.
-	    # I think this can be done algorithmically.
 	    @prevrev = split(/\./, $_);
 	    if (--$prevrev[$#prevrev] == 0) {
 		# If it was X.Y.Z.1, just make it X.Y
@@ -348,7 +362,6 @@ if (-d $fullname) {
 		    }
 		}
 	    }
-#	    print "Log message:<BR>\n";
 	    print "<PRE>\n";
 	    print &htmlify($log{$_}, 1);
 	    print "</PRE><HR NOSHADE>\n";
@@ -411,9 +424,9 @@ if (-d $fullname) {
 	# Is there an indexed version of modules?
 	if (open(MODULES, "$cvsroot/CVSROOT/modules")) {
 		while (<MODULES>) {
-			if (/^${module}\s+(\S+)/o && -d "${cvsroot}/$1" &&
-					$module ne $1) {
-				&redirect($scriptname . '/' . $1 . $xtra);
+			if (/^(\S+)\s+(\S+)/o && $module eq $1
+				&& -d "${cvsroot}/$2" && $module ne $2) {
+				&redirect($scriptname . '/' . $2 . $xtra);
 			}
 		}
 	}
@@ -496,9 +509,10 @@ sub safeglob {
 	#	transform filename from glob to regex.  Deal with:
 	#	[, {, ?, * as glob chars
 	#	make sure to escape all other regex chars
-		$glob =~ s/\./\./g;
+		$glob =~ s/([\.\(\)\|\+])/\\$1/g;
 		$glob =~ s/\*/.*/g;
 		$glob =~ s/\?/./g;
+		$glob =~ s/{([^}]+)}/($t = $1) =~ s-,-|-g; "($t)"/eg;
 		foreach (readdir(DIR)) {
 			if (/^${glob}$/) {
 				push(@results, $dirname . "/" .$_);
@@ -508,16 +522,19 @@ sub safeglob {
 
 	@results;
 }
+
 sub checkout {
 	local($fullname, $rev) = @_;
 
 	open(RCS, "co -p$rev '$fullname' 2>&1 |") ||
 	    &fail("500 Internal Error", "Couldn't co: $!");
 # /home/ncvs/src/sys/netinet/igmp.c,v  -->  standard output
+# or
+# /home/ncvs/src/sys/netinet/igmp.c,v  -->  stdout
 # revision 1.1.1.2
 # /*
 	$_ = <RCS>;
-	if (/^$fullname,v\s+-->\s+standard output\s*$/o) {
+	if (/^(\S+),v\s+-->\s+st(andar)?d ?out(put)?\s*$/o && $1 eq $fullname) {
 	    # As expected
 	} else {
 	    &fatal("500 Internal Error",
