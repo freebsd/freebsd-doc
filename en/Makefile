@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/Makefile,v 1.68 2001/06/11 02:38:57 ache Exp $
+# $FreeBSD: www/en/Makefile,v 1.69 2001/06/22 09:52:05 nik Exp $
 .if exists(Makefile.conf)
 .include "Makefile.conf"
 .endif
@@ -14,7 +14,6 @@ DOCS+= availability.sgml
 DOCS+= docs.sgml 
 DOCS+= features.sgml
 DOCS+= register.sgml
-DOCS+= index.sgml
 DOCS+= internet.sgml 
 DOCS+= mailto.sgml 
 DOCS+= publish.sgml
@@ -35,6 +34,7 @@ SUBDIR+= commercial
 SUBDIR+= docproj
 SUBDIR+= news
 SUBDIR+= alpha
+
 SUBDIR+= internal
 SUBDIR+= java
 SUBDIR+= copyright
@@ -75,12 +75,16 @@ SUBDIR+=	../${DIR}
 .endfor
 .endif
 
-SGMLOPTS+=      -links -hdr ${.CURDIR}/doc.hdr -ftr ${.CURDIR}/doc.ftr
-
 WEBDIR=		data
 
-# Handle the FAQ/ and handbook/ directories specially.
+# index.html is special, and generated from index.xsl and news/news.xml
+DATA+=		index.html
 
+index.html: index.xsl news/news.xml includes.xsl news/includes.xsl
+	xsltproc -nonet -o index.html index.xsl news/news.xml
+	-tidy -i -m -f /dev/null index.html
+
+# Handle the FAQ/ and handbook/ directories specially.
 FAQ:
 	ln -fs ${.CURDIR}/../../doc/en_US.ISO8859-1/books/faq FAQ
 
