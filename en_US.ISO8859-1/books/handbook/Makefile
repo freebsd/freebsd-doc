@@ -1,8 +1,19 @@
 # 
-# $FreeBSD: doc/en_US.ISO8859-1/books/handbook/Makefile,v 1.35 2001/06/30 14:46:48 nik Exp $
+# $FreeBSD: doc/en_US.ISO8859-1/books/handbook/Makefile,v 1.36 2001/07/10 02:33:47 murray Exp $
 #
 # Build the FreeBSD Handbook.
 #
+
+# ------------------------------------------------------------------------
+#
+# Handbook-specific variables
+#
+#	WITH_PGPKEYS	The print version of the handbook only prints PGP
+#			fingerprints by default.  If you would like for the
+#			entire key to be displayed, then set this variable.
+#			This option has no affect on the HTML formats.
+#			
+# ------------------------------------------------------------------------
 
 MAINTAINER=nik@FreeBSD.org
 
@@ -76,4 +87,12 @@ book.pdf: book.ps
 	ps2pdf book.ps book.pdf
 
 DOC_PREFIX?= ${.CURDIR}/../../..
+
+#
+# Handbook-specific variables
+#
+.if defined(WITH_PGPKEYS)
+JADEFLAGS+=	-V withpgpkeys
+.endif
+
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"
