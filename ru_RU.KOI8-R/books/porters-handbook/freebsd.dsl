@@ -1,7 +1,11 @@
-<!-- $FreeBSD$ -->
-<!-- $FreeBSDru: frdp/doc/ru_RU.KOI8-R/books/porters-handbook/freebsd.dsl,v 1.3 2001/07/19 08:46:11 phantom Exp $ -->
-<!-- The FreeBSD Russian Documentation Project -->
-<!-- Original revision: 1.4 -->
+<!--
+     The FreeBSD Russian Documentation Project
+
+     $FreeBSD$
+     $FreeBSDru: frdp/doc/ru_RU.KOI8-R/books/porters-handbook/freebsd.dsl,v 1.4 2001/11/28 12:12:51 andy Exp $
+
+     Original revision: 1.5
+-->
 
 <!-- Local DSSSL file for the Porter's Handbook.  This is so we can include
      a link to the -ports mailing list at the bottom of the HTML files, 
@@ -9,6 +13,7 @@
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
 <!ENTITY freebsd.dsl SYSTEM "../../share/sgml/freebsd.dsl" CDATA DSSSL>
+<!ENTITY % output.html  "IGNORE">
 ]>
 
 <style-sheet>
