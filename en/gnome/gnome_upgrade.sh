@@ -4,7 +4,7 @@
 # ##################################################################
 # ## If you want to upgrade your GNOME desktop from 2.6 to 2.8,   ##
 # ## you're on the right track! Read our upgrade FAQ at           ##
-# ## http://www.freebsd.org/gnome/docs/faq26.html for complete    ##
+# ## http://www.freebsd.org/gnome/docs/faq28.html for complete    ##
 # ## instructions!                                                ##
 # ##################################################################
 # ##################################################################
@@ -34,7 +34,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $Id: gnome_upgrade.sh,v 1.12 2004-11-09 17:11:16 marcus Exp $
+# $Id: gnome_upgrade.sh,v 1.13 2004-11-10 06:50:06 marcus Exp $
 #
 
 # This script will aid in doing major upgrades to the GNOME Desktop (e.g.
