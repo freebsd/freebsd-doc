@@ -304,7 +304,6 @@ MAN1 =	addftinfo.1\
 	strip.1\
 	stty.1\
 	su.1\
-	symorder.1\
 	systat.1\
 	tabs.1\
 	tail.1\
