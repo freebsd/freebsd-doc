@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.24 2002/05/21 09:15:41 sobomax Exp $ -->
+<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.25 2002/05/26 00:48:42 marcus Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
 		xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -9,7 +9,7 @@
   <xsl:import href="includes.xsl"/>
 
   <xsl:variable name="base" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.24 2002/05/21 09:15:41 sobomax Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.25 2002/05/26 00:48:42 marcus Exp $'"/>
   <xsl:variable name="title" select="'FreeBSD GNOME Project'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -39,7 +39,8 @@
                           <p><font size="+1" color="#990000"><b>GNOME on FreeBSD</b></font>
                             <small><br/>
                               &#183; <a href="http://www.FreeBSD.org/gnome/">GNOME on FreeBSD Home</a><br/>
-                              &#183; <a href="docs/faq.html#q1">Installation Instructions</a><br/>
+                              &#183; <a href="docs/faq.html#q1">Installation Instructions for GNOME 1.4.1</a><br/>
+                              &#183; <a href="docs/faq2.html#q1">Installation Instructions for GNOME 2.0</a><br/>
                               &#183; <a href="../ports/gnome.html">Available Applications</a><br/>
                               &#183; <a href="docs/volunteer.html">How to Help</a><br/>
                               &#183; <a href="docs/bugging.html">Reporting a Bug</a><br/>
@@ -49,7 +50,8 @@
 
                           <p><font size="+1" color="#990000"><b>Documentation</b></font>
                             <small><br/>
-                              &#183; <a href="docs/faq.html">FAQ</a><br/>
+                              &#183; <a href="docs/faq.html">GNOME 1.4.1 FAQ</a><br/>
+                              &#183; <a href="docs/faq2.html">GNOME 2.0 FAQ</a><br/>
                               &#183; <a href="docs/porting.html">Creating Ports</a><br/>
                             </small></p>
 
