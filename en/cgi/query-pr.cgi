@@ -1,5 +1,5 @@
 #!/usr/bin/perl -T
-# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.32 2003/05/21 18:48:51 ceri Exp $
+# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.33 2003/05/21 18:57:10 ceri Exp $
 
 $ENV{'PATH'} = "/bin:/usr/bin:/usr/sbin:/sbin:/usr/local/bin";
 
@@ -90,6 +90,11 @@ while(<Q>) {
 	} else {
 	    print "<p>No PR found matching $pr\n";
 	}
+	print &html_footer;
+	exit;
+    } elsif (/^lockf: /) {
+	print "<p>The PR database is currently busy; please try ",
+	    "<A HREF=\"./query-pr.cgi?pr=$pr\">your query</A> again.";
 	print &html_footer;
 	exit;
     }
