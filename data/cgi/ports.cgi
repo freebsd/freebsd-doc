@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-#	$Id: ports.cgi,v 1.6 1997-10-06 13:44:23 wosch Exp $
+#	$Id: ports.cgi,v 1.7 1997-10-11 15:58:38 wosch Exp $
 #
 # ports.cgi - search engine for FreeBSD ports
 #             	o search for a port by name or description
@@ -108,6 +108,9 @@ sub init_variables {
 
     # ports download sources script
     $pds = 'pds.cgi';
+
+    # make plain text URLs clickable cgi script
+    $url = 'url.cgi';
 }
 
 # return the date of the last ports database update
@@ -300,7 +303,7 @@ sub out {
 	    print "<BR>\n";
 	}
 
-	print qq[<A HREF="$descfile">Description</A> <B>:</B>
+	print qq[<A HREF="$url?$descfile">Description</A> <B>:</B>
 <A HREF="$path/">Browse</A> <B>:</B>
 <A HREF="$pathDownload.tar.gz">Download</A> <B>:</B>
 <A HREF="$remotePrefixFtpPackages{$release}/$version.tgz">Package</A> <B>:</B>
