@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.37 2003/07/20 17:54:30 marcus Exp $ -->
+<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.38 2003/08/26 07:44:05 marcus Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
 		xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -9,7 +9,7 @@
   <xsl:import href="includes.xsl"/>
 
   <xsl:variable name="base" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.37 2003/07/20 17:54:30 marcus Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.38 2003/08/26 07:44:05 marcus Exp $'"/>
   <xsl:variable name="title" select="'FreeBSD GNOME Project'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -51,7 +51,7 @@
                             <small><br/>
                               &#183; <a href="docs/faq2.html">GNOME FAQ</a><br/>
                               &#183; <a href="docs/porting.html">Creating Ports</a><br/>
-                              &#183; <a href="docs/22knownissues.html">Known Issues</a><br/>
+                              &#183; <a href="docs/knownissues.html">Known Issues</a><br/>
                             </small></p>
 
                           <p><font size="+1" color="#990000"><b>Resources</b></font>
