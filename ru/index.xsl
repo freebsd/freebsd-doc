@@ -4,9 +4,9 @@
      The FreeBSD Russian Documentation Project
 
      $FreeBSD$
-     $FreeBSDru: frdp/www/ru/index.xsl,v 1.31 2004/02/17 08:06:36 andy Exp $
+     $FreeBSDru: frdp/www/ru/index.xsl,v 1.32 2004/03/10 13:28:18 den Exp $
 
-     Original revision: 1.95
+     Original revision: 1.96
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -222,7 +222,9 @@
                 здесь.</a></p>
 
 	      <p>Даже если Вы не программист, есть другие способы помочь
-		FreeBSD в развитии. The FreeBSD Foundation - это неприбыльная
+		FreeBSD в развитии. The <a
+		href="http://www.FreeBSDFoundation.org">FreeBSD Foundation</a>
+		- это неприбыльная
 		организация, для которой все пожертвования и денежная помощь
 		не облагаются налогами.  Для более подробной информации
 		пишите <a href="mailto:bod@FreeBSDFoundation.org">
