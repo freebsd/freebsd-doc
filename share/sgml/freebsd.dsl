@@ -1,4 +1,4 @@
-<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.29 2001/05/20 17:30:44 ue Exp $ -->
+<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.30 2001/05/22 03:32:17 dd Exp $ -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
 <!ENTITY % output.html		"IGNORE">
@@ -116,9 +116,8 @@
                  (href		($create-refentry-xref-link$   
                                                  (data refentrytitle)
                                                  (data manvolnum))))
-            (if %refentry-xref-link%
-	      (make element gi: "A"
-                    attributes: (list (list "HREF" href))
+	    (if %refentry-xref-link%
+	      (create-link (list (list "HREF" href))
                 (if %refentry-xref-italic%
                   ($italic-seq$)
                   ($charseq$)))
@@ -447,6 +446,41 @@
                             (process-node-list abbrev))
                           (make sequence
                             (literal "[" (id target) "]"))))))))
+ 
+       <!-- The (create-link) procedure should be used by all FreeBSD
+ 	   stylesheets to create links.  It calls (can-link-here) to
+ 	   determine whether it's okay to make a link in the current
+ 	   position.
+ 
+ 	   This check is necessary because links aren't allowed in,
+ 	   for example, <question> tags since the latter cause links
+ 	   to be created by themselves.  Obviously, nested links lead
+ 	   to all kinds of evil.  This normally wouldn't be a problem
+ 	   since no one in their right mind will put a <ulink> or
+ 	   <link> in a <question>, but it comes up when someone uses,
+ 	   say, a man page entity (e.g., &man.ls.1;); the latter may
+ 	   cause a link to be created, but its use inside a <question>
+ 	   is perfectly legal.
+ 
+ 	   The (can-link-here) routine isn't perfect; in fact, it's a
+ 	   hack and an ugly one at that.  Ideally, it would detect if
+ 	   the currect output would wind up in an <a> tag and return
+ 	   #f if that's the case.  Slightly less ideally it would
+ 	   check the current mode and return #f if, say, we're
+ 	   currently in TOC mode.  Right now, it makes a best guess
+ 	   attempt at guessing which tags might cause links to be
+ 	   generated.  -->
+      (define (can-link-here)
+ 	(cond ((has-ancestor-member? (current-node)
+				     '("TITLE" "QUESTION")) #f)
+ 	      (#t #t)))
+ 
+      (define (create-link attrlist target)
+ 	(if (can-link-here)
+ 	    (make element gi: "A"
+ 		  attributes: attrlist
+ 		  target)
+	    target))
     </style-specification-body>
   </style-specification>
       
