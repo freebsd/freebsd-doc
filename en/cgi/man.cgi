@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp 
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.94 2003-01-30 16:38:36 wosch Exp $
+# $Id: man.cgi,v 1.95 2003-02-06 22:01:18 wosch Exp $
 
 #use Data::Dumper;
 #use Carp;
@@ -90,6 +90,8 @@ $sectionpath = {
     'HP-UX 11.11' => { 'path' => '1:1m:2:3:4:5:7:9' },
     'HP-UX 11.00' => { 'path' => '1:1m:2:3:4:5:7:9' },
     'HP-UX 10.20' => { 'path' => '1:1m:2:3:4:5:7:9' },
+    'HP-UX 10.10' => { 'path' => '1:1m:2:3:4:5:7:9' },
+    'HP-UX 10.01' => { 'path' => '1:1m:2:3:4:5:7:9' },
     'SunOS 5.9' => {
 	'path' => '1:1m:1s:2:3:3c:3malloc:3dl:3nsl:3socket:3ldap:3nisdb:3rac:3resolv:3rpc:3slp:3xfn:3proc:3rt:3thr:3elf:3kvm:3kstat:3m:3mp:3pam:3sched:3aio:3bsm:3cpc:3sec:3secdb:3cfgadm:3crypt:3devid:3devinfo:3door:3lib:3libucb:3head:3nvpair:3rsm:7:7d:7fs:7i:7m:7p:9:9e:9f:9p:9s:4:5:4b:3gen:3exacct:3sysevent:3wsreg:3dmi:3snmp:3tnf:3volmgt:3mail:3layout:3ext:3picl:3picltree:3pool:3project:1b:1c:1f:3ucb:3xnet:3curses:3plot:3xcurses:3gss:6:l:n',
     },
@@ -252,6 +254,8 @@ $manPathDefault = 'FreeBSD 4.7-RELEASE';
      'HP-UX 11.11',	      "$manLocalDir/HP-UX-11.11",
      'HP-UX 11.00',	      "$manLocalDir/HP-UX-11.00",
      'HP-UX 10.20',	      "$manLocalDir/HP-UX-10.20",
+     'HP-UX 10.10',	      "$manLocalDir/HP-UX-10.10",
+     'HP-UX 10.01',	      "$manLocalDir/HP-UX-10.01",
 
      'SunOS 5.9',	      "$manLocalDir/SunOS-5.9",
      'SunOS 5.8',	      "$manLocalDir/SunOS-5.8",
@@ -970,7 +974,7 @@ ETX
 }
 
 sub copyright {
-    $id = '$Id: man.cgi,v 1.94 2003-01-30 16:38:36 wosch Exp $';
+    $id = '$Id: man.cgi,v 1.95 2003-02-06 22:01:18 wosch Exp $';
 
     return qq{\
 <PRE>
