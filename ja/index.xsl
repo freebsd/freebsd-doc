@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
 
-<!-- $FreeBSD: www/ja/index.xsl,v 1.34 2004/01/12 21:27:00 hrs Exp $ -->
+<!-- $FreeBSD: www/ja/index.xsl,v 1.35 2004/01/17 01:51:54 hrs Exp $ -->
 <!-- Original revision: 1.92 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -10,7 +10,7 @@
 
   <xsl:variable name="base" select="'.'"/>
   <xsl:variable name="enbase" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/ja/index.xsl,v 1.34 2004/01/12 21:27:00 hrs Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/ja/index.xsl,v 1.35 2004/01/17 01:51:54 hrs Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <!-- these params should be externally bound. The values
@@ -148,7 +148,7 @@
 			      ・ <a href="http://www.FreeBSD.org/cgi/query-pr-summary.cgi">全バグ報告の表示</a><br/>
 			      ・ <a href="send-pr.html">バグ報告の送付</a><br/>
 			      ・ <a href="http://www.FreeBSD.org/cgi/query-pr.cgi">バグ ID で検索</a><br/>
-+			      ・ <a href="{$enbase}/doc/ja_JP.eucJP/articles/problem-reports/article.html">バグ報告の書き方</a><br/>
+			      ・ <a href="{$enbase}/doc/ja_JP.eucJP/articles/problem-reports/article.html">バグ報告の書き方</a><br/>
 			    </small></p>
 
 			  <p>
