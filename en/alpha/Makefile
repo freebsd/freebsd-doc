@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.4 1998-08-11 11:43:45 wosch Exp $
+# $Id: Makefile,v 1.5 1998-09-30 07:20:50 jb Exp $
  
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -6,9 +6,6 @@
 
 DOCS=   alpha.sgml
  
-DOCS+=  current.sgml
-DOCS+=  bootstrapping.sgml
-
 INDEXLINK=alpha.html
  
 .include "../web.mk"
