@@ -1,4 +1,4 @@
-#	$Id: Makefile,v 1.11 1998-07-23 10:59:39 wosch Exp $
+#	$Id: Makefile,v 1.12 1998-08-09 13:55:10 wosch Exp $
 
 PORTINDEX=	perl ./portindex
 INDEX=		INDEX
@@ -8,16 +8,25 @@ COOKIE=		${INDEX} Makefile.gen
 
 .if exists(Makefile.gen)
 .include "Makefile.gen"
-CLEANFILES+=	${DOCS} Makefile.gen ${INDEX} packages.exists
 .endif
+CLEANFILES+=	${DOCS} Makefile.gen ${INDEX} packages.exists
 
+cvsindex= $${CVSROOT}/${PINDEX},v
 _ALLINSTALL= packages.exists
 
-${INDEX}: $${CVSROOT}/${PINDEX},v
+${INDEX}: ${cvsindex}
 	cvs -QR co -p ${PINDEX} > ${INDEX}
 
-packages.exists:
+# build the list of available packages only on the 
+# main FreeBSD machines
+hostname!= hostname
+
+packages.exists: ${cvsindex}
+.if ${hostname} == "hub.freebsd.org" || ${hostname} == "freefall.freebsd.org"
 	./packages > ${.TARGET}
+.else
+	touch ${.TARGET}
+.endif
 
 Makefile.gen: index.sgml .NOTMAIN
 	echo DOCS= *.sgml > Makefile.gen
