@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/ports/ports.inc,v 1.48 2000/04/02 11:11:28 wosch Exp $ -->
+<!-- $FreeBSD: www/en/ports/ports.inc,v 1.49 2000/06/15 10:24:53 kevlo Exp $ -->
 <p>The FreeBSD Ports and Packages Collection offers a simple way for
 users and administrators to install applications.  The ports
 collection has been <a
@@ -115,6 +115,10 @@ to 3-stable upgrade kit</a>
 href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-3-stable/Latest/34upgrade.tgz">3.3 or 3.4
 to 3-stable upgrade kit</a>
 <dd>For users of 3.3/3.4-release or 3.4-stable after 3.4-release
+<dt><a
+href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-4-stable/Latest/40upgrade.tgz">4.0
+to 4-stable upgrade kit</a>
+<dd>For users of 4.0-release or 4.0-stable after 4.0-release
 </dl>
 
 <p>These
@@ -124,7 +128,7 @@ only change just enough files to enable ports/packages to be used; for
 a full upgrade to 3-stable, please refer to the <a
 href="../handbook/synching.html">synchronizing your source tree</a>
 section of the handbook.  A full upgrade is recommended, especially if
-you are still using anything earlier than 2.2.7-release.  Also, the
+you are still using anything earlier than 3.5-release.  Also, the
 2.2.X line is now officially unsupported by ports-current; you are `on
 your own' if you wish to use the ports listed here, as opposed to the
 ones that were included in the release, on your 2.2.X system.</p>
