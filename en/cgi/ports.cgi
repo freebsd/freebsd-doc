@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #
-# Copyright (c) 1996-1998 Wolfram Schneider <wosch@FreeBSD.ORG>, Berlin.
+# Copyright (c) 1996-2000 Wolfram Schneider <wosch@FreeBSD.ORG>, Berlin.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/ports.cgi,v 1.39 2000/01/06 08:34:05 wosch Exp $
+# $FreeBSD: www/en/cgi/ports.cgi,v 1.40 2000/01/08 10:36:28 wosch Exp $
 #
 # ports.cgi - search engine for FreeBSD ports
 #             	o search for a port by name or description
@@ -519,9 +519,9 @@ sub footer {
 
     print qq{
 <img ALIGN="RIGHT" src="/gifs/powerlogo.gif">
-&copy; 1996-1999 by Wolfram Schneider. All rights reserved.<br>
+&copy; 1996-2000 by Wolfram Schneider. All rights reserved.<br>
 };
-    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.39 2000/01/06 08:34:05 wosch Exp $} . "<br>\n";
+    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.40 2000/01/08 10:36:28 wosch Exp $} . "<br>\n";
     print qq{Please direct questions about this service to
 <I><A HREF="$mailtoURL">$mailto</A></I><br>\n};
     print qq{General questions about FreeBSD ports should be sent to } .
