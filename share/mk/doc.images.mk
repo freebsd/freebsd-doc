@@ -1,5 +1,5 @@
 #
-# $FreeBSD: doc/share/mk/doc.images.mk,v 1.10 2001/07/13 12:09:59 nik Exp $
+# $FreeBSD$
 #
 # This include file <doc.images.mk> handles image processing.
 #
@@ -47,14 +47,42 @@
 # to PDF, and hopefully get better quality.
 #
 
-IMAGES_GEN_PNG=${IMAGES:M*.eps:S/.eps$/.png/}
-IMAGES_GEN_EPS=${IMAGES:M*.png:S/.png$/.eps/}
-IMAGES_GEN_PDF=${IMAGES:M*.eps:S/.eps$/.pdf/}
+_IMAGES_PNG= ${IMAGES:M*.png}
+_IMAGES_EPS= ${IMAGES:M*.eps}
+_IMAGES_SCR= ${IMAGES:M*.scr}
+
+IMAGES_GEN_PNG= ${_IMAGES_EPS:S/.eps$/.png/}
+IMAGES_GEN_EPS= ${_IMAGES_PNG:S/.png$/.eps/}
+IMAGES_GEN_PDF= ${_IMAGES_EPS:S/.eps$/.pdf/}
+IMAGES_SCR_PNG= ${_IMAGES_SCR:S/.scr$/.png/}
+IMAGES_SCR_EPS= ${_IMAGES_SCR:S/.scr$/.eps/}
 
 CLEANFILES+= ${IMAGES_GEN_PNG} ${IMAGES_GEN_EPS} ${IMAGES_GEN_PDF}
+CLEANFILES+= ${IMAGES_SCR_PNG} ${IMAGES_SCR_EPS}
 
-IMAGES_PNG=${IMAGES:M*.png} ${IMAGES_GEN_PNG} ${IMAGES:M*.scr:S/.scr$/.png/}
-IMAGES_EPS=${IMAGES:M*.eps} ${IMAGES_GEN_EPS} ${IMAGES:M*.scr:S/.scr$/.eps/}
+IMAGES_PNG= ${_IMAGES_PNG} ${IMAGES_GEN_PNG} ${IMAGES_SCR_PNG}
+IMAGES_EPS= ${_IMAGES_EPS} ${IMAGES_GEN_EPS} ${IMAGES_SCR_EPS}
+
+.if ${.OBJDIR} != ${.CURDIR}
+LOCAL_IMAGES= ${IMAGES:S|^|${.OBJDIR}/|}
+CLEANFILES+= ${LOCAL_IMAGES}
+
+.if !empty(_IMAGES_PNG)
+LOCAL_IMAGES_PNG= ${_IMAGES_PNG:S|^|${.OBJDIR}/|}
+.endif
+
+.if !empty(_IMAGES_EPS)
+LOCAL_IMAGES_EPS= ${_IMAGES_EPS:S|^|${.OBJDIR}/|}
+.endif
+
+.else
+LOCAL_IMAGES= ${IMAGES}
+LOCAL_IMAGES_PNG= ${_IMAGES_PNG}
+LOCAL_IMAGES_EPS= ${_IMAGES_EPS}
+.endif
+
+LOCAL_IMAGES_PNG+= ${IMAGES_GEN_PNG} ${IMAGES_SCR_PNG}
+LOCAL_IMAGES_EPS+= ${IMAGES_GEN_EPS} ${IMAGES_SCR_EPS}
 
 # The default resolution eps2png (82) assumes a 640x480 monitor, and is too
 # low for the typical monitor in use today. The resolution of 100 looks
@@ -67,13 +95,22 @@ EPS2PNG_RES?= 100
 # then we can use them directly, and don't need to list them.
 IMAGES_PDF=${IMAGES_GEN_PDF}
 
+SCR2PNG?=	${PREFIX}/bin/scr2png
+EPS2PNG?=	${PREFIX}/bin/peps
+EPS2PNGFLAGS?=	-p -r ${EPS2PNG_RES}
+PNGTOPNM?=	${PREFIX}/bin/pngtopnm
+PNMTOPS?=	${PREFIX}/bin/pnmtops
+PNMTOPSFLAGS?=	-noturn
+EPSTOPDF?=	${PREFIX}/bin/epstopdf
+
 # Use suffix rules to convert .scr files to .png files
 .SUFFIXES:	.scr .png .eps
 
 .scr.png:
-	scr2png < ${.IMPSRC} > ${.TARGET}
+	${SCR2PNG} < ${.IMPSRC} > ${.TARGET}
 .scr.eps:
-	scr2png < ${.ALLSRC} | pngtopnm | pnmtops -noturn > ${.TARGET}
+	${SCR2PNG} < ${.ALLSRC} | ${PNGTOPNM} | \
+		${PNMTOPS} ${PNMTOPSFLAGS} > ${.TARGET}
 
 # We can't use suffix rules to generate the rules to convert EPS to PNG and
 # PNG to EPS.  This is because a .png file can depend on a .eps file, and
@@ -82,18 +119,25 @@ IMAGES_PDF=${IMAGES_GEN_PDF}
 
 .for _curimage in ${IMAGES_GEN_PNG}
 ${_curimage}: ${_curimage:S/.png$/.eps/}
-	peps -r ${EPS2PNG_RES} -p -o ${.TARGET} ${.ALLSRC}
+	${EPS2PNG} ${EPS2PNGFLAGS} -o ${.TARGET} ${.ALLSRC}
 .endfor
 
 .for _curimage in ${IMAGES_GEN_EPS}
 ${_curimage}: ${_curimage:S/.eps$/.png/}
-	pngtopnm ${.ALLSRC} | pnmtops -noturn > ${.TARGET}
+	${PNGTOPNM} ${.ALLSRC} | ${PNMTOPS} ${PNMTOPSFLAGS} > ${.TARGET}
 .endfor
 
 .for _curimage in ${IMAGES_GEN_PDF}
 ${_curimage}: ${_curimage:S/.pdf$/.eps/}
-	epstopdf --outfile=${.TARGET} ${_curimage:S/.pdf$/.eps/}
+	${EPSTOPDF} --outfile=${.TARGET} ${.CURDIR}/${_curimage:S/.pdf$/.eps/}
 .endfor
+
+.if ${.OBJDIR} != ${.CURDIR}
+.for _curimage in ${IMAGES}
+${.OBJDIR}/${_curimage}: ${_curimage}
+	${CP} -p ${.ALLSRC} ${.TARGET}
+.endfor
+.endif
 
 #
 # Using library images
@@ -111,6 +155,9 @@ ${_curimage}: ${_curimage:S/.pdf$/.eps/}
 # as necessary.
 #
 
+IMAGES_LIB?=
+LOCAL_IMAGES_LIB ?=
+
 #
 # The name of the directory that contains all the library images for this
 # language and encoding
@@ -126,16 +173,21 @@ IMAGES_LIB_DIR?=	${.CURDIR}/../../share/images
 #
 LOCAL_IMAGES_LIB_DIR?= imagelib
 
-CP?=		/bin/cp
-MKDIR?=		/bin/mkdir
-
 #
 # Create a target for each image used from the library.  This target just
 # ensures that each image required is copied from its location in 
 # ${IMAGES_LIB_DIR} to the same place in ${LOCAL_IMAGES_LIB_DIR}.
 #
+
 .for _curimage in ${IMAGES_LIB}
+LOCAL_IMAGES_LIB += ${LOCAL_IMAGES_LIB_DIR}/${_curimage}
 ${LOCAL_IMAGES_LIB_DIR}/${_curimage}: ${IMAGES_LIB_DIR}/${_curimage}
-	@[ -d ${LOCAL_IMAGES_LIB_DIR}/${_curimage:H} ] || ${MKDIR} -p ${LOCAL_IMAGES_LIB_DIR}/${_curimage:H}
-	${INSTALL} -C -c ${IMAGES_LIB_DIR}/${_curimage} ${LOCAL_IMAGES_LIB_DIR}/${_curimage}
+	@[ -d ${LOCAL_IMAGES_LIB_DIR}/${_curimage:H} ] || \
+		${MKDIR} ${LOCAL_IMAGES_LIB_DIR}/${_curimage:H}
+	${CP} -p ${IMAGES_LIB_DIR}/${_curimage} \
+		 ${LOCAL_IMAGES_LIB_DIR}/${_curimage}
 .endfor
+
+.if !empty(IMAGES_LIB)
+CLEANFILES+= ${IMAGES_LIB:S|^|${LOCAL_IMAGES_LIB_DIR}/|}
+.endif

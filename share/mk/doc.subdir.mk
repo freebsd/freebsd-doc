@@ -1,7 +1,7 @@
 # Taken from:
 #	Id: bsd.subdir.mk,v 1.27 1999/03/21 06:43:40 bde
 #
-# $FreeBSD: doc/share/mk/doc.subdir.mk,v 1.5 2000/10/29 02:39:10 nik Exp $
+# $FreeBSD$
 #
 # This include file <doc.subdir.mk> contains the default targets
 # for building subdirectories in the FreeBSD Documentation Project.
@@ -51,24 +51,6 @@
 .include "${.CURDIR}/../Makefile.inc"
 .endif
 
-# ------------------------------------------------------------------------
-#
-# Work out the language and encoding used for this document.
-#
-# Liberal default of maximum of 5 directories below to find it.
-#
-
-.if !defined(LANGCODE)
-LANGCODE:=	${.CURDIR}
-.for _ in 1 2 3 4 5 6 7 8 9 10
-.if !(${LANGCODE:H:T} == "doc")
-LANGCODE:=	${LANGCODE:H}
-.endif
-.endfor
-LANGCODE:=	${LANGCODE:T}
-.endif
-
-
 .if !target(install)
 install: afterinstall symlinks 
 afterinstall: realinstall
@@ -79,7 +61,8 @@ package: realpackage symlinks
 realpackage: _SUBDIRUSE
 
 .if !defined(IGNORE_COMPAT_SYMLINK) && defined(COMPAT_SYMLINK)
-SYMLINKS+= ${DOCDIR} ${.CURDIR:T:ja_JP.eucJP=ja} ${COMPAT_SYMLINK:ja=ja_JP.eucJP}
+SYMLINKS+= ${DOCDIR} ${.CURDIR:T:ja_JP.eucJP=ja} \
+	   ${COMPAT_SYMLINK:ja=ja_JP.eucJP}
 .endif
 
 .if defined(PRI_LANG) && defined(ROOT_SYMLINKS) && !empty(ROOT_SYMLINKS)
@@ -93,11 +76,11 @@ SYMLINKS+= ${DOCDIR} ${LANGCODE:ja_JP.eucJP=ja}/${.CURDIR:T}/${_tmp} ${_tmp}
 .if !target(symlinks)
 symlinks:
 .if defined(SYMLINKS) && !empty(SYMLINKS)
-	@set `echo ${SYMLINKS}`; \
+	@set $$(${ECHO_CMD} ${SYMLINKS}); \
 	while : ; do \
 		case $$# in \
 			0) break;; \
-			[12]) echo "warn: empty SYMLINKS: $$1 $$2"; break;; \
+			[12]) ${ECHO_CMD} "warn: empty SYMLINKS: $$1 $$2"; break;; \
 		esac; \
 		d=$$1; shift; \
 		l=$$1; shift; \
@@ -106,8 +89,8 @@ symlinks:
 			${ECHO} "$${d}/$${l} doesn't exist, not linking"; \
 		else \
 			${ECHO} $${d}/$${t} -\> $${d}/$${l}; \
-			(cd $${d} && rm -rf $${t}); \
-			(cd $${d} && ln -s $${l} $${t}); \
+			(cd $${d} && ${RM} -rf $${t}); \
+			(cd $${d} && ${LN} -s $${l} $${t}); \
 		fi; \
 	done
 .endif
@@ -121,9 +104,10 @@ ${__target}:
 
 _SUBDIRUSE: .USE
 .for entry in ${SUBDIR}
-	@${ECHO} "===> ${DIRPRFX}${entry}"
-	@(cd ${.CURDIR}/${entry} && \
-	${MAKE} ${.TARGET:S/realpackage/package/:S/realinstall/install/} DIRPRFX=${DIRPRFX}${entry}/ )
+	@${ECHODIR} "===> ${DIRPRFX}${entry}"
+	@cd ${.CURDIR}/${entry} && \
+	${MAKE} ${.TARGET:S/realpackage/package/:S/realinstall/install/} \
+		DIRPRFX=${DIRPRFX}${entry}/
 .endfor
 
 .if !defined(NOINCLUDEMK)
@@ -136,8 +120,7 @@ _SUBDIRUSE: .USE
 .MAIN: all
 
 ${SUBDIR}::
-	cd ${.CURDIR}/${.TARGET}
-	${MAKE} all
+	@cd ${.CURDIR}/${.TARGET} && ${MAKE} all
 
 .for __target in all cleandir lint objlink install
 .if !target(${__target})
@@ -147,10 +130,10 @@ ${__target}: _SUBDIRUSE
 
 .if !target(obj)
 obj:	_SUBDIRUSE
-	@if ! test -d ${CANONICALOBJDIR}/; then \
-		mkdir -p ${CANONICALOBJDIR}; \
-		if ! test -d ${CANONICALOBJDIR}/; then \
-			${ECHO} "Unable to create ${CANONICALOBJDIR}."; \
+	@if ! [ -d ${CANONICALOBJDIR}/ ]; then \
+		${MKDIR} -p ${CANONICALOBJDIR}; \
+		if ! [ -d ${CANONICALOBJDIR}/ ]; then \
+			${ECHO_CMD} "Unable to create ${CANONICALOBJDIR}."; \
 			exit 1; \
 		fi; \
 		${ECHO} "${CANONICALOBJDIR} created ${.CURDIR}"; \
@@ -159,40 +142,67 @@ obj:	_SUBDIRUSE
 
 .if !target(objlink)
 objlink: _SUBDIRUSE
-	@if test -d ${CANONICALOBJDIR}/; then \
-		rm -f ${.CURDIR}/obj; \
-		ln -s ${CANONICALOBJDIR} ${.CURDIR}/obj; \
+	@if [ -d ${CANONICALOBJDIR}/ ]; then \
+		${RM} -f ${.CURDIR}/obj; \
+		${LN} -s ${CANONICALOBJDIR} ${.CURDIR}/obj; \
 	else \
-		echo "No ${CANONICALOBJDIR} to link to - do a make obj."; \
+		${ECHO_CMD} "No ${CANONICALOBJDIR} to link to - do a make obj."; \
 	fi
 .endif
 
 .if !target(whereobj)
 whereobj:
-	@echo ${.OBJDIR}
+	@${ECHO_CMD} ${.OBJDIR}
 .endif
 
 cleanobj:
 	@if [ -d ${CANONICALOBJDIR}/ ]; then \
-		rm -rf ${CANONICALOBJDIR}; \
+		${RM} -rf ${CANONICALOBJDIR}; \
 	else \
 		cd ${.CURDIR} && ${MAKE} clean cleandepend; \
 	fi
-	@if [ -h ${.CURDIR}/obj ]; then rm -f ${.CURDIR}/obj; fi
+	@if [ -h ${.CURDIR}/obj ]; then ${RM} -f ${.CURDIR}/obj; fi
 
 .if !target(clean)
 clean: _SUBDIRUSE
 .if defined(CLEANFILES) && !empty(CLEANFILES)
-	rm -f ${CLEANFILES}
+	${RM} -f ${CLEANFILES}
 .endif
 .if defined(CLEANDIRS) && !empty(CLEANDIRS)
-	rm -rf ${CLEANDIRS}
+	${RM} -rf ${CLEANDIRS}
 .endif
 .if defined(IMAGES_LIB) && !empty(LOCAL_IMAGES_LIB_DIR)
-	rm -rf ${LOCAL_IMAGES_LIB_DIR}
+	${RM} -rf ${LOCAL_IMAGES_LIB_DIR}
 .endif
 .endif
 
 cleandir: cleanobj _SUBDIRUSE
 
 .endif # end of NOINCLUDEMK section
+
+#
+# Create /usr/obj image subdirs when ${IMAGES} contains subdir/image.xxx
+#
+
+_imagesubdir=
+.for _imagedir in ${IMAGES:H}
+.if ${_imagesubdir:M${_imagedir}} == ""
+_imagesubdir+= ${_imagedir}
+.endif
+.endfor
+
+.if ${_imagesubdir} != ""
+_IMAGESUBDIR: .USE
+.for dir in ${_imagesubdir}
+	@if ! [ -d ${CANONICALOBJDIR}/${dir}/ ]; then \
+		${MKDIR} -p ${CANONICALOBJDIR}/${dir}; \
+		if ! [ -d ${CANONICALOBJDIR}/${dir}/ ]; then \
+			${ECHO_CMD} "Unable to create ${CANONICALOBJDIR}/${dir}/."; \
+			exit 1; \
+		fi; \
+		${ECHO} "${CANONICALOBJDIR}/${dir}/ created for ${.CURDIR}"; \
+	fi
+.endfor
+
+obj: _IMAGESUBDIR
+.endif
