@@ -1,6 +1,6 @@
 #!/usr/local/bin/perl
 #
-# Copyright (c) Oct 1997 Wolfram Schneider <wosch@FreeBSD.org>. Berlin.
+# Copyright (c) Oct 1997-1999 Wolfram Schneider <wosch@FreeBSD.org>. Berlin.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -26,7 +26,7 @@
 #
 # url.cgi - make plain text URLs clickable
 #
-# $Id: url.cgi,v 1.12 1999-01-19 17:00:49 wosch Exp $
+# $Id: url.cgi,v 1.13 1999-01-19 17:07:03 wosch Exp $
 
 
 $hsty_base = '';
@@ -43,34 +43,33 @@ if ($file !~ m%^(http|ftp)://[a-z_\-0-9]+\.freebsd\.(com|org)%i) {
     exit(0);
 }
 
-	my($cvsroot) = '/home/ncvs';
-	$file =~ s%(http|ftp)://ftp.freebsd.org/pub/FreeBSD/FreeBSD-current/%%;
-	print &short_html_header($file);
-	if ($file =~ m%^ports/[\w-]+/\w[\w-+.]+/pkg/DESCR% && 
-		-f "$cvsroot/$file,v") {
-		 open(CO, "-|") || exec ('/usr/bin/co', '-p', '-q', "$cvsroot/$file,v");
-	} else {
-		print "<p>Port does not exists or invalid port name: $file\n";
-		print "<p>Please contact the webmaster!\n";
-		}
-	#print "$cvsroot/$file,v";
-	
-	print "\n<HR>\n<pre>\n";
-	
-	my($content);
-	$content .= $_ while(<CO>);
-	$content =~ s/</&lt;/g;
-	$content =~ 
-	    s%((http|ftp)://[^\s"\)\>,;]+)%<A HREF="$1">$1</A>%gi;
-	print $content;
-	print "</pre>\n";
+my($cvsroot) = '/home/ncvs';
+$file =~ s%(http|ftp)://ftp.freebsd.org/pub/FreeBSD/FreeBSD-current/%%;
+print &short_html_header($file);
 
-	# Add 'source' link for freebsd ports
-	if ($file =~ 
-	    m%pub/FreeBSD/FreeBSD-current/(ports/[^/]+/[^/]+)/pkg/DESCR$%) {
-	    print qq{<HR><a href=\"pds.cgi?$1">Sources</a>\n};
-	    print qq{| <a href="../ports/">Help</a>\n};
-	    print qq{<BR>\n};
-        }
-	print &html_footer; 
-	exit;
+if ($file =~ m%^ports/[\w-]+/\w[\w-+.]+/pkg/DESCR% && 
+    -f "$cvsroot/$file,v") {
+    open(CO, "-|") || exec ('/usr/bin/co', '-p', '-q', "$cvsroot/$file,v");
+} else {
+    print "<p>Port does not exists or invalid port name: $file\n";
+    print "<p>Please contact the webmaster!\n";
+}
+print "\n<HR>\n<pre>\n";
+
+my($content);
+$content .= $_ while(<CO>);
+$content =~ s/</&lt;/g;
+$content =~ s%((http|ftp)://[^\s"\)\>,;]+)%<A HREF="$1">$1</A>%gi;
+
+print $content;
+print "</pre>\n";
+
+# Add 'source' link for freebsd ports
+if ($file =~ m%pub/FreeBSD/FreeBSD-current/(ports/[^/]+/[^/]+)/pkg/DESCR$%) {
+    print qq{<HR><a href=\"pds.cgi?$1">Sources</a>\n};
+    print qq{| <a href="../ports/">Help</a>\n};
+    print qq{<BR>\n};
+}
+
+print &html_footer; 
+exit;
