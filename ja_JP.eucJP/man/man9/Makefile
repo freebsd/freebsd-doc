@@ -58,6 +58,9 @@ MAN9 =	BUS_PRINT_CHILD.9\
 	VOP_SETEXTATTR.9\
 	VOP_STRATEGY.9\
 	acl.9\
+	accept_filter.9\
+	accf_data.9\
+	accf_http.9\
 	bios.9\
 	boot.9\
 	buf.9\
