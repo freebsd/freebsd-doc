@@ -1,4 +1,4 @@
-#	$Id: Makefile,v 1.9 1998-08-12 09:04:07 hanai Exp $
+#	$Id: Makefile,v 1.10 1998-08-20 04:12:12 hanai Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.14
 
@@ -18,8 +18,7 @@ COOKIE=		${INDEX} Makefile.gen
 CLEANFILES+=	${DOCS} Makefile.gen ${INDEX} packages.exists
 
 cvsindex= $${CVSROOT}/${PINDEX},v
-_ALLINSTALL= packages.exists
-
+_ALLINSTALL= packages.exists ${INDEX}
 
 ${INDEX}: ${cvsindex}
 	cvs -QR co -p ${PINDEX} > ${INDEX}

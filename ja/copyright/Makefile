@@ -1,6 +1,6 @@
-# $Id: Makefile,v 1.5 1998-08-12 09:04:06 hanai Exp $
+# $Id: Makefile,v 1.6 1998-08-20 04:12:12 hanai Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.3
+# Original revision: 1.4
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -8,7 +8,16 @@
 
 DOCS=	license.sgml
 DOCS+=	daemon.sgml
+DOCS+=  copyright.sgml
 
-# DATA+= COPYING COPYING.LIB
+INDEXLINK= copyright.html
+
+# DATA+= COPYING COPYING.LIB ${LEGAL}
+
+# FreeBSD Ports redistribution restrictions
+#LEGAL= LEGAL
+#CLEANFILES+= ${LEGAL}
+#${LEGAL}: $${CVSROOT}/ports/LEGAL,v
+#       co -q -p ${.ALLSRC} > ${.TARGET}
 
 .include "../../web.mk"

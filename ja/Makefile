@@ -1,6 +1,6 @@
-# $Id: Makefile,v 1.26 1998-08-09 16:22:14 kuriyama Exp $
+# $Id: Makefile,v 1.27 1998-08-20 04:12:11 hanai Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.42
+# Original revision: 1.44
 
 .if exists(Makefile.conf)
 .include "Makefile.conf"
@@ -11,7 +11,6 @@
 DOCS=  applications.sgml
 DOCS+= auditors.sgml
 DOCS+= availability.sgml
-DOCS+= branch.sgml
 DOCS+= docs.sgml 
 DOCS+= features.sgml
 DOCS+= register.sgml 
@@ -53,13 +52,16 @@ SUBDIR+= releases
 #SUBDIR+= gifs
 #SUBDIR+= cgi
 
+.if !defined(WEB_ONLY) || empty(WEB_ONLY)
 # Extern
 #SUBDIR+= tutorials
+
+DOCSUBDIR=     FAQ handbook
+.endif
 
 # Subdirectories that have linuxdoc docs and makefiles that use
 # <bsd.sgml.mk>.
 
-DOCSUBDIR=	FAQ handbook
 FORMATS?=	"html roff"
 SGMLOPTS=	-links -hdr ${.CURDIR}/doc.hdr -ftr ${.CURDIR}/doc.ftr -e EUC-JP
 
