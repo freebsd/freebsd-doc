@@ -1,6 +1,14 @@
-# $Id: Makefile,v 1.4 1997-07-01 05:38:13 max Exp $
+# $Id: Makefile,v 1.5 1999-08-16 22:09:06 nik Exp $
 
-DOCS=	fonts.docb
-INDEXLINK=	fonts.html
+DOC?= article
 
-.include "../../web.mk"
+FORMATS?= html
+
+INSTALL_COMPRESSED?=gz
+INSTALL_ONLY_COMPRESSED?=
+
+SRCS= article.sgml
+
+DOC_PREFIX?= ../../..
+
+.include "../../../share/mk/docproj.docbook.mk"
