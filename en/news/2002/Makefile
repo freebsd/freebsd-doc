@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/news/2002/Makefile,v 1.2 2004/01/12 21:27:00 hrs Exp $
+# $FreeBSD: www/en/news/2002/Makefile,v 1.3 2004/04/07 11:41:47 phantom Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -10,8 +10,8 @@
 DATA=		index.html press.html
 CLEANFILES+=	index.html press.html
 
-index.html: ../oldnewsflash.xsl news.xml\
-			../includes.xsl ../../includes.xsl ${XML_TRANSTABLE}
+index.html: ../oldnewsflash.xsl news.xml \
+		${XML_INCLUDES} ${XML_TRANSTABLE}
 	${XSLTPROC} ${XSLTPROCOPTS} -o ${.TARGET} \
 		--param transtable.xml "'${XML_TRANSTABLE}'" \
 		${.CURDIR}/../oldnewsflash.xsl ${.CURDIR}/news.xml
@@ -19,8 +19,8 @@ index.html: ../oldnewsflash.xsl news.xml\
 	-${TIDY} ${TIDYOPTS} ${.TARGET}
 .endif
 
-press.html: ../oldpress.xsl press.xml\
-			../includes.xsl ../../includes.xsl ${XML_TRANSTABLE}
+press.html: ../oldpress.xsl press.xml \
+		${XML_INCLUDES} ${XML_TRANSTABLE}
 	${XSLTPROC} ${XSLTPROCOPTS} -o ${.TARGET} \
 		--param transtable.xml "'${XML_TRANSTABLE}'" \
 		${.CURDIR}/../oldpress.xsl ${.CURDIR}/press.xml

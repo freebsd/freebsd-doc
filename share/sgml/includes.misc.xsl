@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/share/sgml/includes.misc.xsl,v 1.13 2004/06/27 19:18:00 simon Exp $ -->
+<!-- $FreeBSD: www/share/sgml/includes.misc.xsl,v 1.14 2004/12/30 17:53:44 hrs Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -22,15 +22,22 @@
   <xsl:variable name="ftpbaseerrata"
                 select="'ftp://ftp.FreeBSD.org/pub/FreeBSD/ERRATA/notices/'"/>
 
+  <!-- default format for date string -->
+  <xsl:param name="param-l10n-date-format-YMD"
+             select="'%D %M, %Y'" />
+  <xsl:param name="param-l10n-date-format-YM"
+             select="'%M %Y'" />
+  <xsl:param name="param-l10n-date-format-MD"
+             select="'%D %M'" />
+
   <!--
      template name                               used in
 
      html-news-list-newsflash                    news/newsflash.xsl
      html-news-list-press                        news/press.xsl
-     html-news-list-datelabel                    news/newsflash.xsl (for l10n)
+     html-news-list-datelabel                    news/newsflash.xsl
      html-news-generate-anchor                   news/newsflash.xsl
      html-news-make-olditems-list                news/newsflash.xsl (for l10n)
-     html-news-month-headings                    news/newsflash.xsl (for l10n)
 
      html-list-advisories                        security/mkindex.xsl
      html-list-advisories-putitems               security/mkindex.xsl
@@ -46,7 +53,69 @@
      html-index-news-press-items                 index.xsl
      html-index-news-press-items-lastmodified    index.xsl (for i10n)
      html-index-mirrors-options-list             index.xsl
+
+     misc-format-date-string                     generic
   -->
+
+  <!-- template: "misc-format-date-string"
+       format date string with localization if needed -->
+
+  <xsl:template name="misc-format-date-string">
+    <xsl:param name="year" select="'none'" />
+    <xsl:param name="month" select="'none'" />
+    <xsl:param name="day" select="'none'" />
+    <xsl:param name="date-format" select="$param-l10n-date-format-YMD" />
+
+    <xsl:param name="lmonth">
+      <xsl:call-template name="transtable-lookup">
+	<xsl:with-param name="word-group" select="'number-month'" />
+	<xsl:with-param name="word" select="$month" />
+      </xsl:call-template>
+    </xsl:param>
+
+    <xsl:param name="tmp-replace-year">
+      <xsl:call-template name="misc-format-date-string-replace">
+	<xsl:with-param name="target" select="$date-format" />
+	<xsl:with-param name="before" select="'%Y'" />
+	<xsl:with-param name="after" select="$year" />
+      </xsl:call-template>
+    </xsl:param>
+
+    <xsl:param name="tmp-replace-day">
+      <xsl:call-template name="misc-format-date-string-replace">
+	<xsl:with-param name="target" select="$tmp-replace-year" />
+	<xsl:with-param name="before" select="'%D'" />
+	<xsl:with-param name="after" select="$day" />
+      </xsl:call-template>
+    </xsl:param>
+
+    <xsl:call-template name="misc-format-date-string-replace">
+      <xsl:with-param name="target" select="$tmp-replace-day" />
+      <xsl:with-param name="before" select="'%M'" />
+      <xsl:with-param name="after" select="$lmonth" />
+    </xsl:call-template>
+  </xsl:template>
+
+  <xsl:template name="misc-format-date-string-replace">
+    <xsl:param name="target" select="''" />
+    <xsl:param name="before" select="''" />
+    <xsl:param name="after" select="''" />
+
+    <xsl:choose>
+      <xsl:when test="contains($target, $before)">
+	<xsl:value-of select="substring-before($target, $before)" />
+	<xsl:value-of select="$after" />
+	<xsl:call-template name="misc-format-date-string-replace">
+	  <xsl:with-param name="target" select="substring-after($target, $before)" />
+	  <xsl:with-param name="before" select="$before" />
+	  <xsl:with-param name="after" select="$after" />
+	</xsl:call-template>
+      </xsl:when>
+      <xsl:otherwise>
+	<xsl:value-of select="$target" />
+      </xsl:otherwise>
+    </xsl:choose>
+  </xsl:template>
 
   <!-- template: "html-news-make-olditems-list" -->
   <xsl:template name="html-news-make-olditems-list">
@@ -72,15 +141,10 @@
 	<xsl:param name="month" select="name" />
 
 	<h1>
-	  <!-- generate month headings -->
-	  <xsl:call-template name="html-news-month-headings">
+	  <xsl:call-template name="misc-format-date-string">
 	    <xsl:with-param name="year" select="$year" />
-	    <xsl:with-param name="month">
-	      <xsl:call-template name="transtable-lookup">
-		<xsl:with-param name="word-group" select="'number-month'" />
-		<xsl:with-param name="word" select="$month" />
-	      </xsl:call-template>
-	    </xsl:with-param>
+	    <xsl:with-param name="month" select="$month" />
+	    <xsl:with-param name="date-format" select="$param-l10n-date-format-YM" />
 	  </xsl:call-template>
 	</h1>
 
@@ -181,15 +245,10 @@
 	<xsl:param name="month" select="name" />
 
 	<h1>
-	  <!-- generate month headings -->
-	  <xsl:call-template name="html-news-month-headings">
+	  <xsl:call-template name="misc-format-date-string">
 	    <xsl:with-param name="year" select="$year" />
-	    <xsl:with-param name="month">
-	      <xsl:call-template name="transtable-lookup">
-		<xsl:with-param name="word-group" select="'number-month'" />
-		<xsl:with-param name="word" select="$month" />
-	      </xsl:call-template>
-	    </xsl:with-param>
+	    <xsl:with-param name="month" select="$month" />
+	    <xsl:with-param name="date-format" select="$param-l10n-date-format-YM" />
 	  </xsl:call-template>
 	</h1>
 
@@ -255,13 +314,19 @@
     </xsl:for-each>
   </xsl:template>
 
-  <!-- template: "html-news-datelabel" (for l10n) -->
+  <!-- template: "html-news-datelabel" -->
   <xsl:template name="html-news-datelabel">
     <xsl:param name="year" />
     <xsl:param name="month" />
     <xsl:param name="day" />
 
-    <xsl:value-of select="concat($day, ' ', $month, ', ', $year, ':')" />
+    <xsl:call-template name="misc-format-date-string">
+      <xsl:with-param name="month" select="$month" />
+      <xsl:with-param name="day" select="$day" />
+      <xsl:with-param name="date-format" select="$param-l10n-date-format-MD" />
+    </xsl:call-template>
+
+    <xsl:text>:</xsl:text>
   </xsl:template>
 
   <!-- template: "html-news-generate-anchor" (for l10n) -->
@@ -280,14 +345,6 @@
       <xsl:value-of select="format-number($day, '00')" />
     </xsl:if>
     <xsl:value-of select="format-number($pos, ':00')" />
-  </xsl:template>
-
-  <!-- template: "html-news-month-headings" (for l10n) -->
-  <xsl:template name="html-news-month-headings">
-    <xsl:param name="year" />
-    <xsl:param name="month" />
-
-    <xsl:value-of select="concat($month, ' ', $year)" />
   </xsl:template>
 
   <!-- template: "html-list-advisories"
@@ -449,29 +506,25 @@
 
     <xsl:choose>
       <xsl:when test="$type = 'advisory'">
-	<xsl:call-template name="transtable-lookup">
-	  <xsl:with-param name="word-group" select="'number-month'" />
-	  <xsl:with-param name="word">
-	    <xsl:value-of select="document($advisories.xml)/descendant::month[day/advisory[position() = 1]]/name"/>
-	  </xsl:with-param>
+	<xsl:call-template name="misc-format-date-string">
+	  <xsl:with-param name="year"
+	    select="document($advisories.xml)/descendant::year[month/day/advisory[position() = 1]]/name" />
+	  <xsl:with-param name="month"
+	    select="document($advisories.xml)/descendant::month[day/advisory[position() = 1]]/name"/>
+	  <xsl:with-param name="day"
+	    select="document($advisories.xml)/descendant::day[advisory[position() = 1]]/name" />
 	</xsl:call-template>
-	<xsl:text> </xsl:text>
-	<xsl:value-of select="document($advisories.xml)/descendant::day[advisory[position() = 1]]/name"/>
-	<xsl:text>, </xsl:text>
-	<xsl:value-of select="document($advisories.xml)/descendant::year[month/day/advisory[position() = 1]]/name"/>
       </xsl:when>
 
       <xsl:when test="$type = 'notice'">
-	<xsl:call-template name="transtable-lookup">
-	  <xsl:with-param name="word-group" select="'number-month'" />
-	  <xsl:with-param name="word">
-	    <xsl:value-of select="document($advisories.xml)/descendant::month[day/notice[position() = 1]]/name"/>
-	  </xsl:with-param>
+	<xsl:call-template name="misc-format-date-string">
+	  <xsl:with-param name="year"
+	    select="document($advisories.xml)/descendant::year[month/day/notice[position() = 1]]/name" />
+	  <xsl:with-param name="month"
+	    select="document($advisories.xml)/descendant::month[day/notice[position() = 1]]/name" />
+	  <xsl:with-param name="day"
+	    select="document($advisories.xml)/descendant::day[notice[position() = 1]]/name" />
 	</xsl:call-template>
-	<xsl:text> </xsl:text>
-	<xsl:value-of select="document($advisories.xml)/descendant::day[notice[position() = 1]]/name"/>
-	<xsl:text>, </xsl:text>
-	<xsl:value-of select="document($advisories.xml)/descendant::year[month/day/notice[position() = 1]]/name"/>
       </xsl:when>
     </xsl:choose>
   </xsl:template>
@@ -593,16 +646,14 @@
   <xsl:template name="html-index-news-project-items-lastmodified">
     <xsl:param name="news.project.xml-master" select="''" />
 
-    <xsl:call-template name="transtable-lookup">
-      <xsl:with-param name="word-group" select="'number-month'" />
-      <xsl:with-param name="word">
-	<xsl:value-of select="document($news.project.xml-master)/descendant::month[position() = 1]/name"/>
-      </xsl:with-param>
+    <xsl:call-template name="misc-format-date-string">
+      <xsl:with-param name="year"
+	select="document($news.project.xml-master)/descendant::year[position() = 1]/name" />
+      <xsl:with-param name="month"
+	select="document($news.project.xml-master)/descendant::month[position() = 1]/name" />
+      <xsl:with-param name="day"
+	select="document($news.project.xml-master)/descendant::day[position() = 1]/name" />
     </xsl:call-template>
-    <xsl:text> </xsl:text>
-    <xsl:value-of select="document($news.project.xml-master)/descendant::day[position() = 1]/name"/>
-    <xsl:text>, </xsl:text>
-    <xsl:value-of select="document($news.project.xml-master)/descendant::year[position() = 1]/name"/>
   </xsl:template>
 
   <!-- template: "html-index-news-press-items"
@@ -652,14 +703,14 @@
   <xsl:template name="html-index-news-press-items-lastmodified">
     <xsl:param name="news.press.xml-master" select="''" />
 
-    <xsl:call-template name="transtable-lookup">
-      <xsl:with-param name="word-group" select="'number-month'" />
-      <xsl:with-param name="word">
-	<xsl:value-of select="document($news.press.xml-master)/descendant::month[position() = 1]/name"/>
-      </xsl:with-param>
+    <xsl:call-template name="misc-format-date-string">
+      <xsl:with-param name="year"
+	select="document($news.press.xml-master)/descendant::year[position() = 1]/name" />
+      <xsl:with-param name="month"
+	select="document($news.press.xml-master)/descendant::month[position() = 1]/name" />
+      <xsl:with-param name="date-format"
+	select="$param-l10n-date-format-YM" />
     </xsl:call-template>
-    <xsl:text> </xsl:text>
-    <xsl:value-of select="document($news.press.xml-master)/descendant::year[position() = 1]/name"/>
   </xsl:template>
 
   <!-- template: "html-index-navigation-link-list"

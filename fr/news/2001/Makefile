@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: www/fr/news/2001/Makefile,v 1.1 2002/12/22 22:02:24 stephane Exp $
 
 # The FreeBSD French Documentation Project
 # Original revision: 1.1
@@ -13,8 +13,10 @@
 DATA=		index.html
 CLEANFILES+=	index.html
 
-index.html: ../oldnewsflash.xsl news.xml ../includes.xsl ../../includes.xsl
+index.html: ../oldnewsflash.xsl news.xml \
+		${XML_INCLUDES} ${XML_TRANSTABLE}
 	${XSLTPROC} ${XSLTPROCOPTS} -o ${.TARGET} \
+		--param "transtable.xml" "'${XML_TRANSTABLE}'" \
 		${.CURDIR}/../oldnewsflash.xsl ${.CURDIR}/news.xml
 .if !defined(NO_TIDY)
 	-${TIDY} ${TIDYOPTS} ${.TARGET}
