@@ -7,7 +7,7 @@
 # of relnotes should appear on the web site.  The second word is the
 # path to that relnotes set.
 #
-# $FreeBSD$
+# $FreeBSD: www/en/relnotes/Makefile,v 1.1 2001/05/25 05:08:03 dd Exp $
 #
 
 RELNOTES=	CURRENT ${.CURDIR}/../../../src/release/doc
@@ -24,6 +24,7 @@ all install clean obj:
 			cd $$realpath && ${MAKE} \
 				FORMATS=html\ html-split \
 				DOCDIR=${DESTDIR}/data/${.CURDIR:T}/$$webname \
+				DOC_PREFIX=${.CURDIR}/../../../doc \
 				DIRPRFX=${.CURDIR:T}/$$webname/ \
 				${.TARGET}); \
 	done;
