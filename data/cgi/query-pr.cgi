@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: query-pr.cgi,v 1.12 1998-06-08 13:51:30 wosch Exp $
+# $Id: query-pr.cgi,v 1.13 1998-06-16 06:46:15 fenner Exp $
 
 $ENV{'PATH'} = "/bin:/usr/bin:/usr/sbin:/sbin:/usr/local/bin";
 
@@ -68,12 +68,15 @@ while(<Q>) {
 
     if (/^query-pr: /) {
 	print &html_header("FreeBSD problem report");
-	print "<p>No PR found matching $pr</p>\n";
 	if ($_ ne "query-pr: no PRs matched") {
 	    print "<P>query-pr said:\n";
 	    print "<PRE>$_\n";
 	    print <Q>;
 	    print "</PRE>\n";
+	} elsif (($* = 1) && `query-pr $pr 2>&1` =~ /^>Confidential:\s+yes/) {
+	    print "<P>Sorry, PR $pr exists but is confidential\n";
+	} else {
+	    print "<p>No PR found matching $pr\n";
 	}
 	print &html_footer;
 	exit;
