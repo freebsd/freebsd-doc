@@ -147,7 +147,7 @@ sub do_wais {
         close(WAISOUT);
 	close(WAISIN);
 
-	&open2(WAISOUT, WAISIN, $waisq, "-v", $FORM_docnum);
+	&open2(WAISOUT, WAISIN, $waisq, "-m", $FORM_max, "-v", $FORM_docnum);
 	print WAISIN $w_result;
 
         while (<WAISOUT>) {
