@@ -18,7 +18,7 @@
 	    (make element gi: "p"
                   attributes: (list (list "align" "center"))
               (make element gi: "small"
-                (literal "Este y otros documentos pueden obtenerse en ")
+                (literal "This, and other documents, can be downloaded from ")
 		(create-link
 		  (list (list "HREF" "ftp://ftp.FreeBSD.org/pub/FreeBSD/doc/"))
                   (literal "ftp://ftp.FreeBSD.org/pub/FreeBSD/doc/"))
@@ -26,19 +26,19 @@
             (make element gi: "p"
                   attributes: (list (list "align" "center"))
               (make element gi: "small"  
-                (literal "Para preguntas sobre FreeBSD, leer la ")
+                (literal "For questions about FreeBSD, read the ")
 		(create-link
 		  (list (list "HREF" "http://www.FreeBSD.org/docs.html"))
-                  (literal "documentacion"))
-                (literal " antes de contactar <")
+                  (literal "documentation"))
+                (literal " before contacting <")
 		(create-link
 		  (list (list "HREF" "mailto:questions@FreeBSD.org"))
                   (literal "questions@FreeBSD.org"))
                 (literal ">.")
                 (make empty-element gi: "br")
-                (literal "Para preguntas sobre esta documentacion, e-mail a <")
-		(create-link (list (list "HREF" "mailto:doc@es.FreeBSD.org"))
-                  (literal "doc@es.FreeBSD.org"))
+                (literal "For questions about this documentation, e-mail <")
+		(create-link (list (list "HREF" "mailto:doc@FreeBSD.org"))
+                  (literal "doc@FreeBSD.org"))
 	        (literal ">.")))))
 
 
@@ -53,22 +53,17 @@
         (define %refentry-xref-link% #t)
 
         <!-- Specify how to generate the man page link HREF -->
-        (define ($create-refentry-xref-link$ #!optional (n (current-node)))
-          (let* ((r (select-elements (children n) (normalize "refentrytitle")))
-                 (m (select-elements (children n) (normalize "manvolnum")))
-                 (v (attribute-string (normalize "vendor") n))
-                 (u (string-append "http://www.FreeBSD.org/cgi/man.cgi?query="
-                         (data r) "&" "sektion=" (data m))))
-            (case v
-              (("xfree86") (string-append u "&" "manpath=XFree86+4.2.0"))
-              (("netbsd")  (string-append u "&" "manpath=NetBSD+1.5"))
-              (("ports")   (string-append u "&" "manpath=FreeBSD+Ports"))
-              (else u))))
+        (define ($create-refentry-xref-link$ refentrytitle manvolnum)
+	  (string-append "http://www.FreeBSD.org/cgi/man.cgi?query="
+			 refentrytitle "&" "sektion=" manvolnum))
       ]]>
 
       <!-- More aesthetically pleasing chapter headers for print output --> 
 
       <![ %output.print.niceheaders; [
+
+      (define niceheader-rule-spacebefore (* (HSIZE 5) %head-before-factor%))
+      (define niceheader-rule-spaceafter 0pt)
 
       (define ($component-title$)
 	(let* ((info (cond
@@ -165,9 +160,10 @@
       (if (equal? (gi) (normalize "index"))
 	(empty-sosofo)
 	(make rule
-	  length: 475pt
+	  length: %body-width%
 	  display-alignment: 'start
-	  space-before: (* (HSIZE 5) %head-before-factor%)
+	  space-before: niceheader-rule-spacebefore
+	  space-after: niceheader-rule-spaceafter
 	  line-thickness: 0.5pt)))))
 
       (element authorgroup
