@@ -427,6 +427,27 @@
         (element (tertiaryie ulink)
           (indexentry-link (current-node)))
 
+	;; Override the count-footnote? definition from dbblock.dsl
+	;; to fix a bug.  Basically, the original procedure would count
+	;; all ulink elements when doing %footnote-ulinks%.  It's
+	;; actually harder than that, because ulink elements with no
+	;; content shouldn't generate footnotes (the ulink element
+	;; definition just inserts the url attribute in-line, thus there
+	;; is no need for a footnote with the url).  So, when we figure
+	;; out which footnotes to count for the purpose of determining
+	;; footnote numbers, we only count the ulink elements containing
+	;; content.
+	(define (count-footnote? footnote)
+	  ;; don't count footnotes in comments (unless you're showing comments)
+	  ;; or footnotes in tables which are handled locally in the table
+	  (if (or (and (has-ancestor-member? footnote (list (normalize "comment")))
+		       (not %show-comments%))
+		  (has-ancestor-member? footnote (list (normalize "tgroup")))
+		  (and (has-ancestor-member? footnote (list (normalize "ulink")))
+		       (node-list-empty? (children footnote))))
+	      #f
+	      #t))
+
         (element ulink 
           (make sequence
             (if (node-list-empty? (children (current-node)))
