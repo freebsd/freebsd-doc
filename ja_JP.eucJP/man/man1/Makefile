@@ -203,6 +203,7 @@ MAN1 =	a2p.1\
 	msgs.1\
 	mt.1\
 	mv.1\
+	nawk.1\
 	ncal.1\
 	ncplist.1\
 	ncplogin.1\
