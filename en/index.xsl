@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/index.xsl,v 1.83 2003/11/24 18:26:33 hrs Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.84 2003/12/02 20:12:28 trhodes Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   
@@ -6,8 +6,15 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.83 2003/11/24 18:26:33 hrs Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.84 2003/12/02 20:12:28 trhodes Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
+
+  <!-- these params should be externally bound. The values
+       here are not used actually -->
+  <xsl:param name="advisories.xml" select="'none'"/>
+  <xsl:param name="mirrors.xml" select="'none'"/>
+  <xsl:param name="news.press.xml" select="'none'"/>
+  <xsl:param name="news.project.xml" select="'none'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
               doctype-public="-//W3C//DTD HTML 4.01 Transitional//EN"/>
@@ -347,31 +354,16 @@
 			  <p><font size="+1" color="#990000"><b>Project News</b></font><br/>
 			    <font size="-1">
 			      Latest update: 
-			      <xsl:value-of
-				select="descendant::month[position() = 1]/name"/>
-			      <xsl:text> </xsl:text>
-			      <xsl:value-of
-				select="descendant::day[position() = 1]/name"/>,
-			      <xsl:text> </xsl:text>
-			      <xsl:value-of
-				select="descendant::year[position() = 1]/name"/>
+			      <xsl:call-template name="html-index-news-project-items-lastmodified">
+				<xsl:with-param name="news.project.xml" select="$news.project.xml" />
+			      </xsl:call-template>
+
 			      <br/>
-			      <!-- Pull in the 10 most recent news items -->
-			      <xsl:for-each select="descendant::event[position() &lt;= 10]">
-				&#183;  <a>
-				  <xsl:attribute name="href">
-				    news/newsflash.html#<xsl:call-template name="generate-event-anchor"/>
-				  </xsl:attribute>
-				  <xsl:choose>
-				    <xsl:when test="count(child::title)">
-				      <xsl:value-of select="title"/><br/>
-				    </xsl:when>
-				    <xsl:otherwise>
-				      <xsl:value-of select="p"/><br/>
-				    </xsl:otherwise>
-				  </xsl:choose>
-				</a>
-			      </xsl:for-each>
+
+			      <xsl:call-template name="html-index-news-project-items">
+				<xsl:with-param name="news.project.xml" select="$news.project.xml" />
+			      </xsl:call-template>
+
 			      <a href="news/newsflash.html">More...</a>
 			    </font></p>
 			  
@@ -379,21 +371,16 @@
 
 			    <font size="-1">
 			      Latest update: 
-			      <xsl:value-of
-				select="document('news/press.xml')/descendant::month[position() = 1]/name"/>
-			      <xsl:text> </xsl:text>
-			      <xsl:value-of
-				select="document('news/press.xml')/descendant::year[position() = 1]/name"/>
+			      <xsl:call-template name="html-index-news-press-items-lastmodified">
+				<xsl:with-param name="news.press.xml" select="$news.press.xml" />
+			      </xsl:call-template>
+
 			      <br/>
-			      <!-- Pull in the 10 most recent press items -->
-			      <xsl:for-each select="document('news/press.xml')/descendant::story[position() &lt; 10]">
-				&#183; <a>
-				  <xsl:attribute name="href">
-				    news/press.html#<xsl:call-template name="generate-story-anchor"/>
-				  </xsl:attribute>
-				  <xsl:value-of select="name"/>
-				</a><br/>
-			      </xsl:for-each>
+
+			      <xsl:call-template name="html-index-news-press-items">
+				<xsl:with-param name="news.press.xml" select="$news.press.xml" />
+			      </xsl:call-template>
+
 			      <a href="news/press.html">More...</a>
 			    </font>
 			  </p>
@@ -402,22 +389,16 @@
 
 			    <font size="-1">
 			      Latest update: 
-			      <xsl:value-of
-				select="document($advisories.xml)/descendant::month[position() = 1]/name"/>
-			      <xsl:text> </xsl:text>
-			      <xsl:value-of
-				select="document($advisories.xml)/descendant::day[position() = 1]/name"/>
-			      <xsl:text>, </xsl:text>
-			      <xsl:value-of
-				select="document($advisories.xml)/descendant::year[position() = 1]/name"/>
+			      <xsl:call-template name="html-index-advisories-items-lastmodified">
+				<xsl:with-param name="advisories.xml" select="$advisories.xml" />
+			      </xsl:call-template>
+
 			      <br/>
-			      <!-- Pull in the 10 most recent security advisories -->
-			      <xsl:for-each select="document($advisories.xml)/descendant::advisory[position() &lt; 10]">
-				&#183; <a>
-				  <xsl:attribute name="href">ftp://ftp.freebsd.org/pub/FreeBSD/CERT/advisories/<xsl:value-of select="name"/>.asc</xsl:attribute>
-				  <xsl:value-of select="name"/>
-				</a><br/>
-			      </xsl:for-each>
+
+			      <xsl:call-template name="html-index-advisories-items">
+				<xsl:with-param name="advisories.xml" select="$advisories.xml" />
+			      </xsl:call-template>
+
 			      <a href="security/">More...</a>
 			    </font>
 			  </p>
