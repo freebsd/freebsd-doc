@@ -1,4 +1,4 @@
-<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.34 2001/06/24 02:46:40 murray Exp $ -->
+<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.35 2001/07/12 01:40:31 murray Exp $ -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
 <!ENTITY % output.html		"IGNORE">
@@ -202,7 +202,7 @@
           (if (string=? (gi nd) (normalize "book"))
               3
               1))
- 
+
         (element programlisting
           (if (and (equal? (attribute-string (normalize "role")) "pgpkey")
 		   (not withpgpkeys))
@@ -387,12 +387,6 @@
       (element (caution title) (empty-sosofo))
       (element (caution para) ($admonpara$))
       (element (caution simpara) ($admonpara$))
-
-      (define (local-en-label-title-sep)
-        (list
-          (list (normalize "warning")		": ")
-	  (list (normalize "caution")		": ")
-          ))
 
       <!-- Tell the stylesheet about our local customisations -->
       
