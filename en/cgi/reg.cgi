@@ -2,7 +2,7 @@
 #
 # Perl program to send mail.
 #
-# $FreeBSD: www/en/cgi/reg.cgi,v 1.9 2005/02/12 12:59:53 ceri Exp $
+# $FreeBSD: www/en/cgi/reg.cgi,v 1.10 2005/02/12 13:04:00 ceri Exp $
 
 sub do_header;
 sub close_body;

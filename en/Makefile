@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/Makefile,v 1.117 2004/12/30 17:53:43 hrs Exp $
+# $FreeBSD: www/en/Makefile,v 1.118 2005/02/13 19:51:22 hrs Exp $
 
 .if exists(Makefile.conf)
 .include "Makefile.conf"
@@ -15,7 +15,6 @@ DOCS+= auditors.sgml
 DOCS+= availability.sgml
 DOCS+= docs.sgml 
 DOCS+= features.sgml
-DOCS+= register.sgml
 DOCS+= internet.sgml 
 DOCS+= mailto.sgml 
 DOCS+= publish.sgml
