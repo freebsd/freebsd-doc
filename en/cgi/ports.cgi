@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-#	$Id: ports.cgi,v 1.22 1998-06-16 18:17:54 wosch Exp $
+#	$Id: ports.cgi,v 1.23 1998-07-23 12:36:11 wosch Exp $
 #
 # ports.cgi - search engine for FreeBSD ports
 #             	o search for a port by name or description
@@ -107,7 +107,29 @@ sub init_variables {
 
     # make plain text URLs clickable cgi script
     $url = 'url.cgi';
+
+    local($packageDB) = '../ports/packages.exists';
+    &packages_exist($packageDB, *packages) if -f $packageDB;
+
 }
+
+sub packages_exist {
+    local($file, *p) = @_;
+
+    open(P, $file) || do {
+        warn "open $file: $!\n";
+        warn "Cannot create packages links\n";
+        return 1;
+    };
+
+    while(<P>) {
+        chop;
+        $p{$_} = 1;
+    }
+    close P;
+    return 0;
+}
+
 
 # return the date of the last ports database update
 sub last_update {
@@ -301,9 +323,15 @@ sub out {
 
 	print qq[<A HREF="$url?$descfile">Description</A> <B>:</B>
 <A HREF="$path/">Browse</A> <B>:</B>
-<A HREF="$pathDownload.tar">Download</A> <B>:</B>
-<A HREF="$remotePrefixFtpPackages{$release}/$version.tgz">Package</A> <B>:</B>
-<A HREF="$l">Changes</A> <B>:</B>
+<A HREF="$pathDownload.tar">Download</A> <B>:</B>];
+
+	if (($release eq $remotePrefixFtpPackagesDefault &&
+	    $packages{"$version.tgz"}) ||
+	    $release ne $remotePrefixFtpPackagesDefault
+	    ) {
+	    print qq[<A HREF="$remotePrefixFtpPackages{$release}/$version.tgz">Package</A> <B>:</B>];
+	}
+print qq[<A HREF="$l">Changes</A> <B>:</B>
 <A HREF="$pds?$pathB">Sources</A>
 <p>
 ];
