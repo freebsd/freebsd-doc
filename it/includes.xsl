@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/it/includes.xsl,v 1.7 2004/01/14 11:11:14 ale Exp $ -->
+<!-- $FreeBSD: www/it/includes.xsl,v 1.8 2004/01/14 14:29:03 ale Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -136,6 +136,10 @@
     <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel.current"/>R/errata.html</xsl:variable>
   <xsl:variable name="u.rel.hardware">
     <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel.current"/>R/hardware.html</xsl:variable>
+  <xsl:variable name="u.rel.installation">
+    <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel.current"/>R/installation.html</xsl:variable>
+  <xsl:variable name="u.rel.readme">
+    <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel.current"/>R/readme.html</xsl:variable>
   <xsl:variable name="u.rel.early">
     <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel.current"/>R/early-adopter.html</xsl:variable>
 
@@ -148,5 +152,9 @@
     <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel2.current"/>R/errata.html</xsl:variable>
   <xsl:variable name="u.rel2.hardware">
     <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel2.current"/>R/hardware.html</xsl:variable>
+  <xsl:variable name="u.rel2.installation">
+    <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel2.current"/>R/installation.html</xsl:variable>
+  <xsl:variable name="u.rel2.readme">
+    <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel2.current"/>R/readme.html</xsl:variable>
 
 </xsl:stylesheet>
