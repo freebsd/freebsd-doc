@@ -1,6 +1,6 @@
-# $FreeBSD: www/ja/news/Makefile,v 1.28 2001/09/03 06:03:31 kuriyama Exp $
+# $FreeBSD: www/ja/news/Makefile,v 1.29 2001/09/05 15:32:56 kuriyama Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.29
+# Original revision: 1.30
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -38,15 +38,18 @@ DATA=		newsflash.html press.html
 CLEANFILES+=	newsflash.html press.html
 
 newsflash.html: newsflash.xsl news.xml includes.xsl ../includes.xsl
-	xsltproc -nonet -o newsflash.html newsflash.xsl news.xml
-#	-tidy -i -m -f /dev/null newsflash.html
+	${XSLTPROC} ${XSLTPROCFLAGS} -o ${.TARGET} \
+		${.CURDIR}/newsflash.xsl ${.CURDIR}/news.xml
+#	-${TIDY} ${TIDYFLAGS} ${.TARGET}
 
 news.rdf: news-rdf.xsl news.xml includes.xsl ../includes.xsl
-	xsltproc -nonet -o news.rdf news-rdf.xsl news.xml
+	${XSLTPROC} ${XSLTPROCFLAGS} -o ${.TARGET} \
+		${.CURDIR}/news-rdf.xsl ${.CURDIR}/news.xml
 
 press.html: press.xsl press.xml includes.xsl ../includes.xsl
-	xsltproc -nonet -o press.html press.xsl press.xml
-#	-tidy -i -m -f /dev/null press.html
+	${XSLTPROC} ${XSLTPROCFLAGS} -o ${.TARGET} \
+		${.CURDIR}/press.xsl ${.CURDIR}/press.xml
+#	-${TIDY} ${TIDYFLAGS} ${.TARGET}
 
 ### Revision checking
 REVCHECK=	YES

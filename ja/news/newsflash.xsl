@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
 
-<!-- $FreeBSD: www/ja/news/newsflash.xsl,v 1.2 2001/08/08 03:55:55 kuriyama Exp $ -->
-<!-- Original revision: 1.2 -->
+<!-- $FreeBSD: www/ja/news/newsflash.xsl,v 1.3 2001/09/03 05:59:47 kuriyama Exp $ -->
+<!-- Original revision: 1.3 -->
 
-<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
+<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
+  xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
 
   <xsl:import href="../includes.xsl"/>
   <xsl:import href="includes.xsl"/>
@@ -11,7 +12,9 @@
 
   <xsl:variable name="base" select="'..'"/>
   <xsl:variable name="title" select="'FreeBSD News Flash'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/ja/news/newsflash.xsl,v 1.2 2001/08/08 03:55:55 kuriyama Exp $'"/>
+  <xsl:variable name="date">
+    <xsl:value-of select="//cvs:keyword[@name='freebsd']"/>
+  </xsl:variable>
   
   <xsl:output type="html" encoding="EUC-JP"/>
 
