@@ -138,6 +138,7 @@ MAN9 =	BUF_LOCK.9\
 	microtime.9\
 	microuptime.9\
 	module.9\
+	namei.9\
 	panic.9\
 	physio.9\
 	printf.9\
@@ -207,6 +208,8 @@ MLINKS+=make_dev.9 make_dev_alias.9
 MLINKS+=malloc.9 FREE.9 malloc.9 MALLOC.9 malloc.9 free.9
 MLINKS+=malloc.9 realloc.9 malloc.9 reallocf.9
 MLINKS+=mi_switch.9 cpu_switch.9 mi_switch.9 cpu_throw.9
+MLINKS+=namei.9 NDINIT.9
+MLINKS+=namei.9 NDFREE.9
 MLINKS+=psignal.9 gsignal.9
 MLINKS+=psignal.9 pgsignal.9
 #MLINKS+=rtalloc.9 rtalloc1.9 rtalloc.9 rtalloc_ign.9
