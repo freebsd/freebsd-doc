@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #
-# Copyright (c) 1996-1997 Wolfram Schneider <wosch@FreeBSD.org>. Berlin.
+# Copyright (c) 1996-1999 Wolfram Schneider <wosch@FreeBSD.org>. Berlin.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp 
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.6 1999-12-12 18:51:41 wosch Exp $
+# $Id: man.cgi,v 1.7 1999-12-13 22:35:10 wosch Exp $
 
 #use Data::Dumper;
 
@@ -744,7 +744,7 @@ Please direct questions about this server to
 URL:  <A HREF="$BASE" target=_parent>$www{'home'}$BASE</a><br>
 ETX
 
-    print q{$Date: 1999-12-12 18:51:41 $ $Revision: 1.6 $};
+    print q{$Date: 1999-12-13 22:35:10 $ $Revision: 1.7 $};
     print "<br>\n";
     print "</BODY>\n</HTML>\n";
     0;
@@ -814,7 +814,7 @@ ETX
 sub copyright {
     return qq{\
 <PRE>
-Copyright (c) 1996-1997 Wolfram Schneider <A HREF="$mailtoURL">&lt;$mailto&gt;</A>. Berlin.
+Copyright (c) 1996-1999 Wolfram Schneider <A HREF="$mailtoURL">&lt;$mailto&gt;</A>. Berlin.
 Copyright (c) 1993-1995 Berkeley Software Design, Inc.
 
 This data is part of a licensed program from BERKELEY SOFTWARE
@@ -859,7 +859,7 @@ sub faq {
 
     return qq{\
 <PRE>
-Copyright (c) 1996-1997 Wolfram Schneider <a href="$mailtoURL">&lt;$mailto&gt;</a>. Berlin.
+Copyright (c) 1996-1999 Wolfram Schneider <a href="$mailtoURL">&lt;$mailto&gt;</a>. Berlin.
 </PRE>
 
 <h2>FAQ</h2>
