@@ -34,7 +34,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $Id: gnome_upgrade.sh,v 1.11 2004-11-08 03:04:48 marcus Exp $
+# $Id: gnome_upgrade.sh,v 1.12 2004-11-09 17:11:16 marcus Exp $
 #
 
 # This script will aid in doing major upgrades to the GNOME Desktop (e.g.
@@ -52,9 +52,9 @@ X11BASE=${X11BASE:=/usr/X11R6}
 PROJECT_URL="http://www.FreeBSD.org/gnome/"
 SUPPORT_EMAIL="freebsd-gnome@FreeBSD.org"
 
-SUPPORTED_FREEBSD_VERSIONS="4.9 4.10 5.2 5.2.1 5.3 6.0"
+SUPPORTED_FREEBSD_VERSIONS="4.10 5.3 6.0"
 	# Ports that must be up-to-date and installed for the Big Update to work
-EXTERNAL_DEPENDS="popt gettext* libiconv expat pkgconfig freetype2 XFree86-libraries* Xft libXft XFree86-fontScalable* XFree86-fontEncodings* xorg* png libaudiofile tiff jpeg libxml2 python libxslt gnomehier scrollkeeper intltool p5-XML-Parser docbook-sk xmlcatmgr docbook-xsl docbook-xml sdocbook-xml startup-notification gnome-icon-theme Hermes libmpeg2 guile libltdl aspell gle cdrtools mkisofs bitstream-vera openldap-client lcms libmng libtool ghostscript* gnomeuserdocs2 libIDL libbonobo libgda2 libgsf libgtop2 libxklavier shared-mime-info hicolor-icon-theme linc ORBit2 libart_lgpl2 libmad libid3tag fam esound libglut nspr shared-mime-data hicolor-icon-theme"
+EXTERNAL_DEPENDS="popt gettext* libiconv expat pkgconfig freetype2 XFree86-libraries* Xft libXft XFree86-fontScalable* XFree86-fontEncodings* xorg* png libaudiofile tiff jpeg libxml2 python libxslt gnomehier scrollkeeper intltool p5-XML-Parser docbook-sk xmlcatmgr docbook-xsl docbook-xml sdocbook-xml startup-notification gnome-icon-theme Hermes libmpeg2 guile libltdl aspell gle cdrtools mkisofs bitstream-vera openldap-client lcms libmng libtool ghostscript* gnomeuserdocs2 libIDL libbonobo libgda2 libgsf libgtop2 libxklavier shared-mime-info hicolor-icon-theme linc ORBit2 libart_lgpl2 libmad libid3tag fam esound libglut nspr shared-mime-data hicolor-icon-theme libsoup"
 EXTERNAL_4_DEPENDS="libgnugetopt"
 EXTERNAL_5_DEPENDS="perl-5*"
 EXTERNAL_6_DEPENDS="perl-5*"
@@ -222,6 +222,12 @@ echo
 logfile=`get_tmpfile gnome_upgrade_log`
 if [ $? != 0 ]; then
     echo "===> Failed to create temporary logfile."
+    exit 1
+fi
+tmpbase=`dirname ${logfile}`
+available=`/bin/df -m ${tmpbase} | /usr/bin/sed -E -e '/^[^\/]/D' | /usr/bin/awk '{print $4;}'`
+if [ "${available}" -lt "200" ]; then
+    echo "Not enough space in ${tmpbase} to log the upgrade.  Please set the MC_TMPDIR variable to a location that has at least 200 MB of free space, then restart the upgrade." | /usr/bin/fmt 75 79
     exit 1
 fi
 if [ ${WATCH_BUILD} != 0 ]; then
