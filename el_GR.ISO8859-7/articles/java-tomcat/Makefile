@@ -1,0 +1,24 @@
+#
+# FreeBSD Documentation Project
+# $FreeBSD$
+# Original revision: 1.1
+#
+# Makefile for "Java and FreeBSD First Steps"
+# Author: Victoria Chan, Hiten Pandya
+
+MAINTAINER=vkchan@kendryl.net hiten@uk.FreeBSD.org
+
+DOC?= article
+
+FORMATS?= html
+TIDYFLAGS+= -raw
+
+INSTALL_COMPRESSED?= gz
+INSTALL_ONLY_COMPRESSED?=
+
+# SGML content
+SRCS=  article.sgml
+
+DOC_PREFIX?= ${.CURDIR}/../../..
+
+.include "${DOC_PREFIX}/share/mk/doc.project.mk"
