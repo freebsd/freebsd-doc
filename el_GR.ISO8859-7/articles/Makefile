@@ -1,4 +1,5 @@
 # $FreeBSD$
+# Original version: 1.39
 
 SUBDIR =
 SUBDIR+= cvs-freebsd
