@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/internal/Makefile,v 1.22 2000/04/20 16:40:11 phantom Exp $
+# $FreeBSD: www/en/internal/Makefile,v 1.23 2000/11/07 04:05:15 kuriyama Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -31,6 +31,6 @@ homepage.sgml:  homepage.inc
 CLEANFILES+=	homepage.inc
 .endif
 
-DATA+=	README.mirror
+DATA+=	README.mirror ssh-keys.asc
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
