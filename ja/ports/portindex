@@ -4,9 +4,9 @@
 #
 # by John Fieber <jfieber@freebsd.org>
 # Mon May 13 10:31:58 EST 1996
-# $Id: portindex,v 1.12 1998-10-01 16:54:37 motoyuki Exp $
+# $Id: portindex,v 1.13 1999-03-09 15:13:47 motoyuki Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.19
+# Original revision: 1.23
 
 ############################################################
 
@@ -26,10 +26,13 @@ if ($ENV{'MASTER_FTP_SERVER'}) {
 $base = "$ftpserver/pub/FreeBSD/FreeBSD-current" if !$base;
 $baseHTTP = $base if !$baseHTTP;
 $urlcgi = 'http://www.freebsd.org/cgi/url.cgi' if !$urlcgi;
-$packagesURL = "$ftpserver/pub/FreeBSD/packages-stable/All/"
+$packagesURL = "$ftpserver/pub/FreeBSD/ports/i386/packages-stable/All/"
     if !$packagesURL;
 # support tar on the fly or gzip'ed tar on the fly
 $ftparchive = 'tar' if !$ftparchive;
+
+# ports download sources script
+$pds = 'http://www.freebsd.org/cgi/pds.cgi';
 
 # better layout and link to the sources
 if ($urlcgi) {
@@ -39,6 +42,7 @@ if ($urlcgi) {
 $today = &getdate;
 
 &packages_exist('packages.exists', *packages);
+&category_description('categories', *category_description);
 &main;
 
 sub getdate {
@@ -89,19 +93,31 @@ sub packages_exist {
     return 0;
 }
 
+sub category_description {
+    local($file, *p) = @_;
+
+    open(P, $file) || do {
+	warn "open $file: $!\n";
+	warn "Cannot find category description\n";
+	return 1;
+    };
+
+    local($category, $description);
+    while(<P>) {
+	# ignore comments
+	next if /^\s*#/;
+
+	($category, $description) = /^\s*"([^"]+)",\s*"([^"]+)/;
+        $p{$category} = $description;
+    }
+    close P;
+    return 0;
+}
+
 sub main {
 
     $sep = "<B>:</B>";
 
-    # 'category' translation database
-    if (open(CATF, "categories.ja_JP.EUC")) {
-	while (<CATF>) {
-	    ($a, $b) = split('\|');
-	    next if !defined($b);
-	    chop($b);
-	    $catsLANG{$a} = $b;
-	}
-    }
     # 'COMMENT' translation database
     if (open(COMF, "comments.ja")) {
 	while (<COMF>) {
@@ -123,7 +139,7 @@ sub main {
 
     	# Read a record
 	($name, $loc, $prefix, $desc, $ldesc, $owner, $cats, 
-	    $keys, $bdep, $rdep) = split('\|');
+	    $bdep, $rdep) = split('\|');
 
 	# Check for double hyphens in the name (--).
 	$name =~ s/--/-/g;
@@ -132,6 +148,9 @@ sub main {
 	@cat = split("[ \t]+", $cats);
 
     	$catkey{$name} = $cat[0];
+
+	local($sourcepath) = $loc;
+	$sourcepath =~ s%/usr/%%;
 
 	# desc translation
 	($lloc = $loc) =~ s@^/usr/ports/@@;
@@ -154,6 +173,8 @@ sub main {
 		$data{$i} .= qq{ | <a href="$packagesURL$name.tgz">パッケージ</a>};
 	    }
 
+	    $data{$i} .= qq{ | <A HREF="$pds?$sourcepath">ソース</A>};
+
     	    $ownerurl = $owner;
     	    $ownerurl =~ s/&lt;/</g;
     	    $owenrurl =~ s/&gt;/>/g;
@@ -164,8 +185,11 @@ sub main {
     	    if ($bdep ne "" || $rdep ne "") {
     	    	$data{$i} .= "<BR><I>必要なもの:</I> ";
     	    	@dep = split(/ /, "$bdep $rdep");
-    	    	foreach $j (@dep) {
-    	    	    $data{$i} .= " <A HREF=\"##$j##.html#$j\">$j</A>,";
+		local($last) = '';
+		foreach $j (sort @dep) {
+		    next if $j eq $last;
+		    $last = $j;
+     	    	    $data{$i} .= " <A HREF=\"##$j##.html#$j\">$j</A>,";
     	    	}
     	    	# remove the trailing comma
     	    	chop $data{$i};
@@ -213,20 +237,20 @@ sub main {
 
     @foos = sort(keys %stats);
     foreach $key  (@foos) {
-	# For translation
-	$subkey = "";
-	$subkey = " ($catsLANG{$key})"
-	    if ($catsLANG{$key} ne '');
 	# For the master file...
 	print MOUTF 
-	    "<LI><A HREF=\"$key.html\">\u$key$subkey</A> <em>($stats{$key})</em></LI>";
+	    "<LI><A HREF=\"$key.html\">\u$key</A> <em>($stats{$key})</em>";
+	if ($category_description{$key}) {
+	    print MOUTF " -- " . $category_description{$key};
+	}
+	print MOUTF "</LI>\n";
 
 	# Create the category file
 	open(OUTF, ">$key.sgml");
-	$subkey = "";
-	$subkey = " / $catsLANG{$key}"
-	    if ($catsLANG{$key} ne '');
-	&header(OUTF, "FreeBSD Ports: \u$key$subkey");
+	&header(OUTF, "FreeBSD Ports: \u$key");
+	if ($category_description{$key}) {
+	    print OUTF "<h3>", $category_description{$key}, "</h3>\n";
+	}
 	print OUTF "<DL>\n";
 	$d = join("\n", sort(split(/\n/, $data{$key})));
     	$d =~ s/##([^#]*)##/$catkey{$1}/g;
