@@ -100,6 +100,8 @@ JADETEX_CMD?=	${TEX_CMD} "&jadetex"
 PDFJADETEX_CMD?=${PDFTEX_CMD} "&pdfjadetex"
 FOP_CMD?=	${PREFIX}/share/fop/fop.sh
 XEP_CMD?=	sh ${HOME}/XEP/xep.sh
+JAVA_CMD?=	${PREFIX}/bin/javavm
+SAXON_CMD?=	${JAVA_CMD} -jar ${PREFIX}/share/java/classes/saxon.jar
 
 # Image processing (contains code used by the doc.<format>.mk files, so must
 # be listed first).
