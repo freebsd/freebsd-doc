@@ -1,4 +1,4 @@
-# $FreeBSD: doc/Makefile,v 1.17 1999/12/16 02:22:16 billf Exp $
+# $FreeBSD: doc/Makefile,v 1.18 2000/04/30 21:58:43 nik Exp $
 #
 # The user can override the default list of languages to build and install
 # with the DOC_LANG variable.
@@ -7,6 +7,7 @@
 SUBDIR = 	${DOC_LANG}
 .else
 SUBDIR =	en_US.ISO_8859-1
+SUBDIR+=	de_DE.ISO_8859-1
 SUBDIR+=	es_ES.ISO_8859-1
 SUBDIR+=	fr_FR.ISO_8859-1
 SUBDIR+=	ja_JP.eucJP
