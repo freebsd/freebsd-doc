@@ -2,7 +2,7 @@
 #
 # Perl program to send mail.
 #
-# $FreeBSD: www/en/cgi/reg.cgi,v 1.8 2002/04/01 13:39:05 ceri Exp $
+# $FreeBSD: www/en/cgi/reg.cgi,v 1.9 2005/02/12 12:59:53 ceri Exp $
 
 sub do_header;
 sub close_body;
@@ -38,8 +38,6 @@ if ($FORM{"emaila"} eq "") {
   exit(0);
 }
 
-$recipient = $FORM{'recipient'};
-exit(0) if $recipient !~ /^[a-z_\.\-]+\@freebsd\.org$/io; 
 $sub_recipient = "majordomo\@FreeBSD.org";
 #
 # format the mail file
