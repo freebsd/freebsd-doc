@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/Makefile,v 1.65 2001/04/25 22:51:43 wosch Exp $
+# $FreeBSD: www/en/Makefile,v 1.66 2001/05/25 05:08:02 dd Exp $
 .if exists(Makefile.conf)
 .include "Makefile.conf"
 .endif
@@ -25,7 +25,8 @@ DOCS+= y2kbug.sgml
 
 # These will be directly installed.
 
-DATA=	robots.txt
+DATA=	favicon.ico
+DATA+=	robots.txt
 
 # Subdirectories
 # SGML
