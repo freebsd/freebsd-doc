@@ -45,8 +45,6 @@ MAN8 =	IPXrouted.8\
 	dhclient.8\
 	disklabel.8\
 	diskless.8\
-	diskpart.8\
-	dm.8\
 	dmesg.8\
 	dump.8\
 	dumpfs.8\
@@ -56,7 +54,6 @@ MAN8 =	IPXrouted.8\
 	faithd.8\
 	fdcontrol.8\
 	fdisk.8\
-	ffsinfo.8\
 	fingerd.8\
 	fixmount.8\
 	fore_dnld.8\
@@ -66,13 +63,9 @@ MAN8 =	IPXrouted.8\
 	fsinfo.8\
 	fsirand.8\
 	ftpd.8\
-	genassym.8\
-	gensetdefs.8\
 	getty.8\
-	gifconfig.8\
 	growfs.8\
 	hlfsd.8\
-	ibcs2.8\
 	ifconfig.8\
 	ifmcstat.8\
 	ilmid.8\
@@ -86,7 +79,6 @@ MAN8 =	IPXrouted.8\
 	ipfstat.8\
 	ipfw.8\
 	ipmon.8\
-	ipnat.8\
 	isdnd.8\
 	isdndebug.8\
 	isdndecode.8\
@@ -97,12 +89,9 @@ MAN8 =	IPXrouted.8\
 	isdntrace.8\
 	ispcvt.8\
 	jail.8\
-	joy.8\
 	kernbb.8\
 	keyserv.8\
-	kget.8\
 	kgmon.8\
-	kgzip.8\
 	kldconfig.8\
 	kldload.8\
 	kldstat.8\
@@ -110,7 +99,6 @@ MAN8 =	IPXrouted.8\
 	kzip.8\
 	lastlogin.8\
 	ldconfig.8\
-	linux.8\
 	loader.4th.8\
 	loader.8\
 	locate.updatedb.8\
@@ -122,7 +110,6 @@ MAN8 =	IPXrouted.8\
 	mailwrapper.8\
 	makekey.8\
 	makemap.8\
-	makewhatis.local.8\
 	manctl.8\
 	map-mbone.8\
 	memcontrol.8\
@@ -136,16 +123,16 @@ MAN8 =	IPXrouted.8\
 	mount.8\
 	mount_cd9660.8\
 	mount_ext2fs.8\
-	mount_msdos.8\
+	mount_msdosfs.8\
 	mount_nfs.8\
 	mount_ntfs.8\
-	mount_null.8\
+	mount_nullfs.8\
 	mount_nwfs.8\
-	mount_portal.8\
+	mount_portalfs.8\
 	mount_smbfs.8\
 	mount_std.8\
-	mount_umap.8\
-	mount_union.8\
+	mount_umapfs.8\
+	mount_unionfs.8\
 	mountd.8\
 	moused.8\
 	mrinfo.8\
@@ -165,7 +152,6 @@ MAN8 =	IPXrouted.8\
 	newfs_msdos.8\
 	newkey.8\
 	newsyslog.8\
-	nextboot.8\
 	nfsd.8\
 	nfsiod.8\
 	ngctl.8\
@@ -182,7 +168,6 @@ MAN8 =	IPXrouted.8\
 	ntptime.8\
 	ntptrace.8\
 	pac.8\
-	pam.8\
 	pam_opie.8\
 	pam_opieaccess.8\
 	pam_radius.8\
@@ -196,14 +181,12 @@ MAN8 =	IPXrouted.8\
 	ping.8\
 	ping6.8\
 	pnpinfo.8\
-	portmap.8\
 	ppp.8\
 	pppctl.8\
 	pppd.8\
 	pppoed.8\
 	pppstats.8\
 	praliases.8\
-	prefix.8\
 	procctl.8\
 	pstat.8\
 	pw.8\
@@ -228,7 +211,6 @@ MAN8 =	IPXrouted.8\
 	rmail.8\
 	rmt.8\
 	rmuser.8\
-	rndcontrol.8\
 	route.8\
 	route6d.8\
 	routed.8\
@@ -270,9 +252,7 @@ MAN8 =	IPXrouted.8\
 	sticky.8\
 	stlload.8\
 	stlstats.8\
-	stlstty.8\
 	strfile.8\
-	svr4.8\
 	swapon.8\
 	sync.8\
 	sysctl.8\
@@ -293,11 +273,6 @@ MAN8 =	IPXrouted.8\
 	umount.8\
 	usbd.8\
 	usbdevs.8\
-	uuchk.8\
-	uucico.8\
-	uucpd.8\
-	uusched.8\
-	uuxqt.8\
 	vinum.8\
 	vipw.8\
 	vmstat.8\
@@ -328,14 +303,10 @@ MLINKS+=ftpd.8 lukemftpd.8
 MLINKS+=inetd.8 inetd.conf.5
 MLINKS+=init.8 securelevel.8
 MLINKS+=locate.updatedb.8 updatedb.8
-MLINKS+=makewhatis.local.8 catman.local.8
-MLINKS+=mount_std.8 mount_fdesc.8
-MLINKS+=mount_std.8 mount_kernfs.8
+MLINKS+=mount_std.8 mount_devfs.8
+MLINKS+=mount_std.8 mount_fdescfs.8
 MLINKS+=mount_std.8 mount_procfs.8
 MLINKS+=mount_std.8 mount_linprocfs.8
-MLINKS+=newfs.8 mount_mfs.8
-MLINKS+=newfs.8 mfs.8
-MLINKS+=newfs.8 tmpfs.8
 MLINKS+=pam.8 pam.conf.5
 MLINKS+=pam.8 pam.d.5
 MLINKS+=pstat.8 swapinfo.8
@@ -353,10 +324,10 @@ MLINKS+=reboot.8 halt.8
 MLINKS+=reboot.8 fastboot.8
 MLINKS+=reboot.8 fasthalt.8
 MLINKS+=restore.8 rrestore.8
+MLINKS+=rpc.lockd.8 lockd.8
 MLINKS+=rtsold.8 rtsol.8
 MLINKS+=slattach.8 slip.8
 MLINKS+=strfile.8 unstr.8
-MLINKS+=vnconfig.8 swapfile.8
 MLINKS+=yp.8 NIS.8
 MLINKS+=yp.8 YP.8
 MLINKS+=yp.8 nis.8
