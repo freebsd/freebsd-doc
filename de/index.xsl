@@ -2,8 +2,8 @@
 
 <!--
      $FreeBSD$
-     $FreeBSDde: de-www/index.xsl,v 1.9 2003/08/20 15:42:00 mheinen Exp $
-     basiert auf: 1.75
+     $FreeBSDde: de-www/index.xsl,v 1.10 2003/09/05 11:54:11 mheinen Exp $
+     basiert auf: 1.76
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -113,8 +113,9 @@
 		  <option value="http://www.FreeBSD.org.ph/">Philippinen</option>
 		  <option value="http://www.pl.FreeBSD.org/">Polen/1</option>
 		  <option value="http://www2.pl.FreeBSD.org/">Polen/2</option>
-		  <option value="http://www2.pt.FreeBSD.org/">Portugal/1</option>
-		  <option value="http://www4.pt.FreeBSD.org/">Portugal/4</option>
+		  <option value="http://www.pt.FreeBSD.org/">Portugal/1</option>
+		  <option value="http://www4.pt.FreeBSD.org/">Portugal/2</option>
+		  <option value="http://www5.pt.FreeBSD.org/">Portugal/3</option>
 		  <option value="http://www.ro.FreeBSD.org/">Rum&#228;nien/1</option>
 		  <option value="http://www2.ro.FreeBSD.org/">Rum&#228;nien/2</option>
 		  <option value="http://www3.ro.FreeBSD.org/">Rum&#228;nien/3</option>
