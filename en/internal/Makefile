@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.4 1998-08-03 09:42:03 wosch Exp $
+# $Id: Makefile,v 1.5 1998-08-03 12:03:41 wosch Exp $
 
 DOCS=	photos.sgml	
 DOCS+=	internal.sgml	
@@ -14,5 +14,7 @@ homepage.inc:
 
 homepage.sgml:  homepage.inc
 CLEANFILES+=	homepage.inc
+
+DATA+=	README.mirror
 
 .include "../web.mk"
