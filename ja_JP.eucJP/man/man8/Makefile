@@ -302,6 +302,7 @@ MLINKS+=apm.8 apmconf.8
 MLINKS+=apm.8 zzz.8
 MLINKS+=boot_i386.8 boot.8
 MLINKS+=bootpd.8 bootpgw.8
+MLINKS+=bsdlabel.8 disklabel.8
 MLINKS+=dump.8 rdump.8
 MLINKS+=inetd.8 inetd.conf.5
 MLINKS+=init.8 securelevel.8
