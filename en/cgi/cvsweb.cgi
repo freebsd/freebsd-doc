@@ -28,7 +28,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $Id: cvsweb.cgi,v 1.23 1998-08-15 09:59:11 wosch Exp $
+# $Id: cvsweb.cgi,v 1.24 1998-08-16 13:45:12 wosch Exp $
 #
 
 
@@ -70,6 +70,11 @@ require 'cgi-style.pl';
 	    'learn', 'Learn',
 	    'mozilla', 'Mozilla FreeBSD',
 	    );
+
+%mirrors = (
+	    'Germany', 'http://www.de.freebsd.org/cgi/cvsweb.cgi',
+	'Japan', 'http://www.jp.freebsd.org/www.freebsd.org/cgi/cvsweb.cgi',
+	   );
 
 $cvstreedefault = 'freebsd';
 $cvstree = $cvstreedefault;
@@ -156,6 +161,20 @@ if (!-d $cvsroot) {
 		($CVSROOTdescr{$foo[$i]} ? 
 		 $CVSROOTdescr{$foo[$i]} : $foo[$i]) . qq{</a>} .
 		     ($i == $#foo  ? ".\n" : ",\n");
+	}
+    }
+}
+
+
+{
+    local(@mirrors) = sort keys %mirrors;;
+    if ($#mirrors >= 0) {
+	$intro .= "<p>\nThis script is mirrored in:\n";
+	local($m);
+	for($m = 0; $m <= $#mirrors; $m++) {
+	    $intro .= qq(<a href="$mirrors{$mirrors[$m]}">$mirrors[$m]</a>);
+	    $intro .= ',' if $m != $#mirrors;
+	    $intro .= "\n";
 	}
     }
 }
