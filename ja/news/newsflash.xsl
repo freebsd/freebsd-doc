@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
 
-<!-- $FreeBSD: www/ja/news/newsflash.xsl,v 1.5 2001/12/01 05:45:27 hrs Exp $ -->
-<!-- Original revision: 1.3 -->
+<!-- $FreeBSD: www/ja/news/newsflash.xsl,v 1.6 2002/03/04 12:12:40 hanai Exp $ -->
+<!-- Original revision: 1.5 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -11,6 +11,7 @@
 
 
   <xsl:variable name="base" select="'..'"/>
+  <xsl:variable name="enbase" select="'../..'"/>
   <xsl:variable name="title" select="'FreeBSD News Flash'"/>
   <xsl:variable name="date">
     <xsl:value-of select="//cvs:keyword[@name='freebsd']"/>
@@ -48,9 +49,13 @@
 	    freebsd-announce メーリングリスト</a>を購読したい
 	  という方もいるかもしれませんね。</p>
 
-	<p>FreeBSD Java Project の最新情報については
+	<p>FreeBSD Java プロジェクトの最新情報については
 	  <a href="{$base}/java/newsflash.html">
 	    FreeBSD/Java ニュースフラッシュ</a>のページをご覧ください。</p>
+
+	<p>FreeBSD GNOME プロジェクトの最新情報については
+	  <a href="{$enbase}/gnome/newsflash.html">FreeBSD/GNOME ニュースフラッシュ</a>
+	  のページをご覧ください。</p>
 	  
 	<p>過去、現在、そして将来のリリースの詳細については、
 	  <strong><a href="{$base}/releases/index.html">リリース情報</a>
@@ -63,6 +68,7 @@
 	<xsl:apply-templates select="descendant::month"/>
 	
 	<p>Older announcements:
+	  <a href="../../2001/index.html">2001</a>,
 	  <a href="2000/index.html">2000</a>,
 	  <a href="1999/index.html">1999</a>,
 	  <a href="1998/index.html">1998</a>,
