@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-#	$Id: ports.cgi,v 1.27 1998-08-18 17:03:29 wosch Exp $
+#	$Id: ports.cgi,v 1.28 1998-08-18 17:31:08 wosch Exp $
 #
 # ports.cgi - search engine for FreeBSD ports
 #             	o search for a port by name or description
@@ -62,8 +62,7 @@ sub init_variables {
 	 '2.2.x-stable', "$p/packages-stable/All",
 	 '2.2.6', "$p/packages-2.2.6/All",
 	 '2.2.7', "$p/packages-2.2.7/All",
-	 '2.1.7', "$p/packages-2.1.7/All",
-	 );
+	);
 
     %relDate = 
 	(
@@ -71,9 +70,7 @@ sub init_variables {
 	 '2.2.x-stable', 'today',
 	 '2.2.6', '1998-03-24 05:30+00',
 	 '2.2.7', '1998-02-22 11:26:17',
-	 '2.1.7', '1997-02-19',
-	 );
-
+	  );
     #
     $remotePrefixHtml =
 	'../ports';
