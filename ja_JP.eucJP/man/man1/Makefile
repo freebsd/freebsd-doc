@@ -106,7 +106,6 @@ MAN1 =	a2p.1\
 	grodvi.1\
 	groff.1\
 	grog.1\
-	grohtml.1\
 	grolbp.1\
 	grolj4.1\
 	grops.1\
