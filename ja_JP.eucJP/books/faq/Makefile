@@ -1,9 +1,9 @@
 # 
-# $FreeBSD: doc/ja_JP.eucJP/books/faq/Makefile,v 1.7 1999/09/06 06:53:20 peter Exp $
+# $FreeBSD: doc/ja_JP.eucJP/books/faq/Makefile,v 1.8 2000/02/03 03:11:04 kuriyama Exp $
 #
 # Build the FreeBSD FAQ
 #
-# Original revision: 1.3
+# Original revision: 1.6
 #
 
 MAINTAINER=kuriyama@FreeBSD.ORG
