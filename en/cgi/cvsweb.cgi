@@ -2,10 +2,10 @@
 #
 # cvsweb - a CGI interface to CVS trees.
 #
-# Written in their spare time by 
+# Written in their spare time by
 #             Bill Fenner      <fenner@FreeBSD.org>   (original work)
 # extended by Henner Zeller    <zeller@think.de>,
-#             Henrik Nordstrom <hno@hem.passagen.se> 
+#             Henrik Nordstrom <hno@hem.passagen.se>
 #             Ken Coar         <coar@Apache.Org>
 #             Dick Balaska     <dick@buckosoft.com>
 #             Akinori MUSHA    <knu@FreeBSD.org>
@@ -42,8 +42,8 @@
 # SUCH DAMAGE.
 #
 # $zId: cvsweb.cgi,v 1.93 2000/07/27 17:42:28 hzeller Exp $
-# $Id: cvsweb.cgi,v 1.46 2000-08-14 04:55:19 knu Exp $
-# $FreeBSD$
+# $Id: cvsweb.cgi,v 1.47 2000-08-15 08:47:40 knu Exp $
+# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.46 2000/08/14 04:55:19 knu Exp $
 #
 ###
 
@@ -80,15 +80,56 @@ use vars qw (
     $use_moddate
 );
 
+sub printDiffSelect($);
+sub findLastModifiedSubdirs(@);
+sub htmlify($;$);
+sub spacedHtmlText($);
+sub link($$);
+sub revcmp($$);
+sub fatal($$);
+sub redirect($);
+sub safeglob($);
+sub getMimeTypeFromSuffix($);
+sub doAnnotate($$);
+sub doCheckout($$);
+sub cvswebMarkup($$$);
+sub viewable($);
+sub doDiff($$$$$$);
+sub getDirLogs($$@);
+sub readLog($;$);
+sub printLog($;$);
+sub doLog($);
+sub flush_diff_rows($$$$);
+sub human_readable_diff($);
+sub navigateHeader($$$$$);
+sub plural_write($$);
+sub readableTime($$);
+sub clickablePath($$);
+sub chooseCVSRoot();
+sub chooseMirror();
+sub fileSortCmp();
+sub download_url($$;$);
+sub download_link($$$;$);
+sub toggleQuery($$);
+sub urlencode($);
+sub http_header(;$);
+sub html_header($);
+sub html_footer();
+sub link_tags($);
+sub forbidden_module($);
+
 ##### Start of Configuration Area ########
 use Cwd;
 
-# == EDIT this == 
+# == EDIT this ==
 # User configuration is stored in
 $config = undef;
 
-for ($ENV{CVSWEB_CONFIG}, '/usr/local/etc/cvsweb.conf', getcwd . '/cvsweb.conf') {
-  $config = $_ if -r $_;
+for ($ENV{CVSWEB_CONFIG},
+#     '/home/knu/etc/cvsweb.conf',
+     '/usr/local/etc/cvsweb.conf',
+     getcwd . '/cvsweb.conf') {
+  $config = $_ if defined($_) && -r $_;
 }
 
 # == Configuration defaults ==
@@ -112,7 +153,7 @@ $difffontsize = $inputTextSize = $mime_types = $allow_annotate =
 $allow_markup = $use_java_script = $open_extern_window =
 $extern_window_width = $extern_window_height = $edit_option_form =
 $checkout_magic = $show_subdir_lastmod = $show_log_in_markup = $v =
-$navigationHeaderColor = $tableBorderColor = $markupLogColor = 
+$navigationHeaderColor = $tableBorderColor = $markupLogColor =
 $tabstop = $use_moddate = $moddate = undef;
 
 ##### End of configuration variables #####
@@ -146,7 +187,7 @@ $is_mod_perl = defined($ENV{MOD_PERL});
 # in lynx, it it very annoying to have two links
 # per file, so disable the link at the icon
 # in this case:
-$Browser = $ENV{HTTP_USER_AGENT} || '';
+$Browser = $ENV{HTTP_USER_AGENT};
 $is_lynx = ($Browser =~ m`^Lynx/`i);
 $is_w3m = ($Browser =~ m`^w3m/`i);
 $is_msie = ($Browser =~ m`MSIE`);
@@ -166,14 +207,14 @@ $nofilelinks = $is_textbased;
 # Turn off gzip if running under mod_perl. piping does
 # not work as expected inside the server. One can probably
 # achieve the same result using Apache::GZIPFilter.
-$maycompress =(($ENV{HTTP_ACCEPT_ENCODING} =~ m`gzip`
-		|| $is_mozilla3)
-	       && !$is_msie
-	       && !$is_mod_perl);
+$maycompress = (($ENV{HTTP_ACCEPT_ENCODING} =~ m`gzip`
+		 || $is_mozilla3)
+		&& !$is_msie
+		&& !$is_mod_perl);
 
 # put here the variables we need in order
 # to hold our state - they will be added (with
-# their current value) to any link/query string 
+# their current value) to any link/query string
 # you construct
 @stickyvars = qw(cvsroot hideattic sortby logsort f only_with_tag);
 
@@ -191,7 +232,7 @@ else {
 undef %input;
 $query = $ENV{QUERY_STRING};
 
-if ($query ne '') {
+if (defined($query) && $query ne '') {
     foreach (split(/&/, $query)) {
 	s/%(..)/sprintf("%c", hex($1))/ge;	# unquote %-quoted
 	if (/(\S+)=(.*)/) {
@@ -203,7 +244,7 @@ if ($query ne '') {
     }
 }
 
-# For backwards compability, set only_with_tag to only_on_branch if set. 
+# For backwards compability, set only_with_tag to only_on_branch if set.
 $input{only_with_tag} = $input{only_on_branch}
     if (defined($input{only_on_branch}));
 
@@ -230,11 +271,11 @@ foreach (keys %DEFAULTVALUE)
 	}
     }
 }
-    
+
 $barequery = "";
 foreach (@stickyvars) {
     # construct a query string with the sticky non default parameters set
-    if (defined($input{$_}) && $input{$_} ne '' && 
+    if (defined($input{$_}) && $input{$_} ne '' &&
 	!(defined($DEFAULTVALUE{$_}) && $input{$_} eq $DEFAULTVALUE{$_})) {
         if ($barequery) {
 	    $barequery = $barequery . "&amp;";
@@ -322,7 +363,7 @@ $defaultViewable = $allow_markup && viewable($mimetype);
 # search for GZIP if compression allowed
 # We've to find out if the GZIP-binary exists .. otherwise
 # ge get an Internal Server Error if we try to pipe the
-# output through the nonexistent gzip .. 
+# output through the nonexistent gzip ..
 # any more elegant ways to prevent this are welcome!
 if ($allow_compress && $maycompress) {
     foreach (split(/:/, $ENV{PATH})) {
@@ -403,13 +444,13 @@ elsif (-d $fullname) {
 		$input{only_with_tag};
 
 	}
-	 
+
 
 	print "<HR NOSHADE>\n";
 	# Using <MENU> in this manner violates the HTML2.0 spec but
 	# provides the results that I want in most browsers.  Another
 	# case of layout spooging up HTML.
-	
+
 	my $infocols = 0;
 	if ($dirtable) {
 	    if (defined($tableBorderColor)) {
@@ -418,8 +459,8 @@ elsif (-d $fullname) {
 	    }
 	    print "<table  width=\"100%\" border=0 cellspacing=1 cellpadding=$tablepadding>\n";
 	    $infocols++;
-	    print "<tr><th align=left bgcolor=\"" . (($byfile) ? 
-						   $columnHeaderColorSorted : 
+	    print "<tr><th align=left bgcolor=\"" . (($byfile) ?
+						   $columnHeaderColorSorted :
 						   $columnHeaderColorDefault) . "\">";
 	    print "<a href=\"./" . &toggleQuery("sortby","file") .
 		"#dirlist\">" if (!$byfile);
@@ -430,8 +471,8 @@ elsif (-d $fullname) {
 	    # with revision information:
 	    if (scalar(%fileinfo)) {
 		$infocols++;
-		print "<th align=left bgcolor=\"" . (($byrev) ? 
-						   $columnHeaderColorSorted : 
+		print "<th align=left bgcolor=\"" . (($byrev) ?
+						   $columnHeaderColorSorted :
 						   $columnHeaderColorDefault) . "\">";
 		print "<a href=\"./" . &toggleQuery ("sortby","rev") .
 		    "#dirlist\">" if (!$byrev);
@@ -439,8 +480,8 @@ elsif (-d $fullname) {
 		print "</a>" if (!$byrev);
 		print "</th>";
 		$infocols++;
-		print "<th align=left bgcolor=\"" . (($bydate) ? 
-						   $columnHeaderColorSorted : 
+		print "<th align=left bgcolor=\"" . (($bydate) ?
+						   $columnHeaderColorSorted :
 						   $columnHeaderColorDefault) . "\">";
 		print "<a href=\"./" . &toggleQuery ("sortby","date") .
 		    "#dirlist\">" if (!$bydate);
@@ -449,8 +490,8 @@ elsif (-d $fullname) {
 		print "</th>";
 		if ($show_author) {
 		    $infocols++;
-		    print "<th align=left bgcolor=\"" . (($byauthor) ? 
-						   $columnHeaderColorSorted : 
+		    print "<th align=left bgcolor=\"" . (($byauthor) ?
+						   $columnHeaderColorSorted :
 						   $columnHeaderColorDefault) . "\">";
 		    print "<a href=\"./" . &toggleQuery ("sortby","author") .
 			    "#dirlist\">" if (!$byauthor);
@@ -459,8 +500,8 @@ elsif (-d $fullname) {
 		    print "</th>";
 		}
 		$infocols++;
-		print "<th align=left bgcolor=\"" . (($bylog) ? 
-					       $columnHeaderColorSorted : 
+		print "<th align=left bgcolor=\"" . (($bylog) ?
+					       $columnHeaderColorSorted :
 					       $columnHeaderColorDefault) . "\">";
 		print "<a href=\"./", toggleQuery("sortby","log"), "#dirlist\">" if (!$bylog);
 		print "Last log entry";
@@ -478,7 +519,7 @@ elsif (-d $fullname) {
 	    print "<menu>\n";
 	}
 	my $dirrow = 0;
-	
+
 	my $i;
 	lookingforattic:
 	for ($i = 0; $i <= $#dir; $i++) {
@@ -493,7 +534,7 @@ elsif (-d $fullname) {
 	    closedir($dh);
 	}
 
-	my $hideAtticToggleLink = "<a href=\"./" . 
+	my $hideAtticToggleLink = "<a href=\"./" .
 	        &toggleQuery ("hideattic") .
 		"#dirlist\">[Hide]</a>" if (!$input{'hideattic'});
 
@@ -555,11 +596,11 @@ elsif (-d $fullname) {
 		    }
 		    print " ", &link($_ . "/", $url), $attic;
 		    if ($_ eq "Attic") {
-			print "&nbsp; <a href=\"./" . 
+			print "&nbsp; <a href=\"./" .
 			    &toggleQuery ("hideattic") .
 				"#dirlist\">[Don't hide]</a>";
 		    }
-		} 
+		}
 		# Show last change in dir
 		if ($filename) {
 		    print "</td><td>&nbsp;</td><td>&nbsp;" if ($dirtable);
@@ -628,7 +669,7 @@ elsif (-d $fullname) {
 		print " ", &link($_, $url), $attic;
 		print "</td><td>&nbsp;" if ($dirtable);
 		download_link($fileurl,
-			$rev, $rev, 
+			$rev, $rev,
 			$defaultViewable ? "text/x-cvsweb-markup" : undef);
 		print "</td><td>&nbsp;" if ($dirtable);
 		if ($date) {
@@ -656,15 +697,15 @@ elsif (-d $fullname) {
 	    print "</td></tr></table>";
 	}
 	print "". ($dirtable == 1) ? "</table>" : "</menu>" . "\n";
-	
+
 	if ($filesexists && !$filesfound) {
 	    print "<P><B>NOTE:</B> There are $filesexists files, but none matches the current tag ($input{only_with_tag})\n";
 	}
 	if ($input{only_with_tag} && (!%tags || !$tags{$input{only_with_tag}})) {
 	    %tags = %alltags
 	}
-	if (scalar %tags 
-	    || $input{only_with_tag} 
+	if (scalar %tags
+	    || $input{only_with_tag}
 	    || $edit_option_form
 	    || defined($input{"options"})) {
 	    print "<hr size=1 NOSHADE>";
@@ -685,8 +726,8 @@ elsif (-d $fullname) {
 	    print ">";
 	    print "<OPTION VALUE=\"\">All tags / default branch\n";
 	    foreach my $tag (reverse sort { lc $a cmp lc $b } keys %tags) {
-		print "<OPTION",defined($input{only_with_tag}) && 
-		       $input{only_with_tag} eq $tag ? " SELECTED":"",
+		print "<OPTION",defined($input{only_with_tag}) &&
+		       $input{only_with_tag} eq $tag ? " SELECTED" : "",
 		       ">$tag\n";
 	    }
 	    print "</SELECT>\n";
@@ -719,17 +760,17 @@ elsif (-d $fullname) {
 	    print "<OPTION VALUE=rev",$logsort eq "rev" ? " SELECTED" : "", ">Revision";
 	    print "</SELECT></td></tr>";
 	    print "<tr><td>Diff format: ";
-	    printDiffSelect();
+	    printDiffSelect(0);
 	    print "</td>";
 	    print "<td>Show Attic files: ";
-	    print "<INPUT NAME=hideattic TYPE=CHECKBOX", $input{'hideattic'}?" CHECKED":"", 
+	    print "<INPUT NAME=hideattic TYPE=CHECKBOX", $input{'hideattic'} ? " CHECKED" : "",
 	    "></td></tr>\n";
 	    print "<tr><td align=center colspan=2><input type=submit value=\"Change Options\">";
 	    print "</td></tr></table></center></FORM>\n";
 	}
 	print &html_footer;
 	print "</BODY></HTML>\n";
-    } 
+    }
 
 ###############################
 # View Files
@@ -803,9 +844,8 @@ elsif (-d $fullname) {
     }
 ## End MAIN
 
-sub printDiffSelect {
+sub printDiffSelect($) {
     my ($use_java_script) = @_;
-    $use_java_script = 0 if (!defined($use_java_script));
     my ($f) = $input{'f'};
     print "<SELECT NAME=\"f\"";
     print " onchange=\"submit()\"" if ($use_java_script);
@@ -818,7 +858,7 @@ sub printDiffSelect {
     print "</SELECT>";
 }
 
-sub findLastModifiedSubdirs {
+sub findLastModifiedSubdirs(@) {
     my (@dirs) = @_;
     my ($dirname, @files);
 
@@ -852,12 +892,12 @@ sub findLastModifiedSubdirs {
     return @files;
 }
 
-sub htmlify {
+sub htmlify($;$) {
 	my($string, $pr) = @_;
 
 	# Special Characters; RFC 1866
 	$string =~ s/&/&amp;/g;
-	$string =~ s/\"/&quot;/g; 
+	$string =~ s/\"/&quot;/g;
 	$string =~ s/</&lt;/g;
 	$string =~ s/>/&gt;/g;
 
@@ -875,46 +915,46 @@ sub htmlify {
 	return $string;
 }
 
-sub spacedHtmlText {
-	my($string, $pr) = @_;
+sub spacedHtmlText($) {
+	local $_ = $_[0];
 
 	# Cut trailing spaces
-	s/\s+$//;
+	s/\s+\n$//;
 
 	# Expand tabs
-	$string =~ s/\t+/' ' x (length($&) * $tabstop - length($`) % $tabstop)/e
+	s/\t+/' ' x (length($&) * $tabstop - length($`) % $tabstop)/e
 	    if (defined($tabstop));
 
 	# replace <tab> and <space> (\001 is to protect us from htmlify)
 	# gzip can make excellent use of this repeating pattern :-)
-	$string =~ s/\001/\001%/g; #protect our & substitute
+	s/\001/\001%/g; #protect our & substitute
 	if ($hr_breakable) {
 	    # make every other space 'breakable'
-	    $string =~ s/	/ \001nbsp; \001nbsp; \001nbsp; \001nbsp;/g;    # <tab>
-	    $string =~ s/  / \001nbsp;/g;                              # 2 * <space>
+	    s/	/ \001nbsp; \001nbsp; \001nbsp; \001nbsp;/g;    # <tab>
+	    s/  / \001nbsp;/g;                              # 2 * <space>
 	    # leave single space as it is
 	}
 	else {
-	    $string =~ s/	/\001nbsp;\001nbsp;\001nbsp;\001nbsp;\001nbsp;\001nbsp;\001nbsp;\001nbsp;/g; 
-	    $string =~ s/ /\001nbsp;/g;
+	    s/	/\001nbsp;\001nbsp;\001nbsp;\001nbsp;\001nbsp;\001nbsp;\001nbsp;\001nbsp;/g;
+	    s/ /\001nbsp;/g;
 	}
 
-	$string = htmlify($string);
+	$_ = htmlify($_);
 
 	# unescape
-	$string =~ s/\001([^%])/&$1/g;
-	$string =~ s/\001%/\001/g;
+	s/\001([^%])/&$1/g;
+	s/\001%/\001/g;
 
-	return $string;
+	return $_;
 }
 
-sub link {
+sub link($$) {
 	my($name, $where) = @_;
 
 	return "<A HREF=\"$where\">$name</A>\n";
 }
 
-sub revcmp {
+sub revcmp($$) {
 	my($rev1, $rev2) = @_;
 	my(@r1) = split(/\./, $rev1);
 	my(@r2) = split(/\./, $rev2);
@@ -930,7 +970,7 @@ sub revcmp {
 	return 0;
 }
 
-sub fatal {
+sub fatal($$) {
 	my($errcode, $errmsg) = @_;
 	if ($is_mod_perl) {
 		Apache->request->status((split(/ /, $errcode))[0]);
@@ -944,7 +984,7 @@ sub fatal {
 	exit(1);
 }
 
-sub redirect {
+sub redirect($) {
 	my($url) = @_;
 	if ($is_mod_perl) {
 		Apache->request->status(301);
@@ -960,7 +1000,7 @@ sub redirect {
 	exit(1);
 }
 
-sub safeglob {
+sub safeglob($) {
 	my ($filename) = @_;
 	my ($dirname);
 	my (@results);
@@ -989,7 +1029,7 @@ sub safeglob {
 	@results;
 }
 
-sub getMimeTypeFromSuffix {
+sub getMimeTypeFromSuffix($) {
     my ($fullname) = @_;
     my ($mimetype, $suffix);
     my $fh = do {local(*FH);};
@@ -997,7 +1037,7 @@ sub getMimeTypeFromSuffix {
     ($suffix = $fullname) =~ s/^.*\.([^.]*)$/$1/;
     $mimetype = $MTYPES{$suffix};
     $mimetype = $MTYPES{'*'} if (!$mimetype);
-    
+
     if (!$mimetype && -f $mime_types) {
 	# okey, this is something special - search the
 	# mime.types database
@@ -1010,7 +1050,7 @@ sub getMimeTypeFromSuffix {
 	}
 	close ($fh);
     }
-    
+
 # okey, didn't find anything useful ..
     if (!($mimetype =~ /\S\/\S/)) {
 	$mimetype = "text/plain";
@@ -1021,7 +1061,7 @@ sub getMimeTypeFromSuffix {
 ###############################
 # show Annotation
 ###############################
-sub doAnnotate ($$) {
+sub doAnnotate($$) {
     my ($rev) = @_;
     my ($pid);
     my ($pathname, $filename);
@@ -1040,7 +1080,7 @@ sub doAnnotate ($$) {
 
     http_header();
 
-    navigateHeader ($scriptwhere,$pathname,$filename,$rev, "annotate");
+    navigateHeader($scriptwhere,$pathname,$filename,$rev, "annotate");
     print "<h3 align=center>Annotation of $pathname$filename, Revision $rev</h3>\n";
 
     # this seems to be necessary
@@ -1052,9 +1092,9 @@ sub doAnnotate ($$) {
     # the public domain.
     # we could abandon the use of rlog, rcsdiff and co using
     # the cvsserver in a similiar way one day (..after rewrite)
-    $pid = open2($reader, $writer, "cvs server") || fatal ("500 Internal Error", 
+    $pid = open2($reader, $writer, "cvs server") || fatal ("500 Internal Error",
 							       "Fatal Error - unable to open cvs for annotation");
-    
+
     # OK, first send the request to the server.  A simplified example is:
     #     Root /home/kingdon/zwork/cvsroot
     #     Argument foo/xx
@@ -1064,7 +1104,7 @@ sub doAnnotate ($$) {
     #     /home/kingdon/zwork/cvsroot
     #     annotate
     # although as you can see there are a few more details.
-    
+
     print $writer "Root $cvsroot\n";
     print $writer "Valid-responses ok error Valid-requests Checked-in Updated Merged Removed M E\n";
     # Don't worry about sending valid-requests, the server just needs to
@@ -1084,7 +1124,7 @@ sub doAnnotate ($$) {
 	if ($path eq "") {
 	    # In our example, $_ is "dir".
 	    $path = $_;
-	} 
+	}
 	else {
 	    print $writer "Directory $path\n";
 	    print $writer "$cvsroot/$path\n";
@@ -1097,18 +1137,18 @@ sub doAnnotate ($$) {
     # And the last "Directory" before "annotate" is the top level.
     print $writer "Directory .\n";
     print $writer "$cvsroot\n";
-    
+
     print $writer "annotate\n";
     # OK, we've sent our command to the server.  Thing to do is to
     # close the writer side and get all the responses.  If "cvs server"
     # were nicer about buffering, then we could just leave it open, I think.
     close ($writer) || die "cannot close: $!";
-    
+
     # Ready to get the responses from the server.
     # For example:
     #     E Annotations for foo/xx
     #     E ***************
-    #     M 1.3          (kingdon  06-Sep-97): hello 
+    #     M 1.3          (kingdon  06-Sep-97): hello
     #     ok
     my ($lineNr) = 0;
     my ($oldLrev, $oldLusr) = ("", "");
@@ -1149,7 +1189,7 @@ sub doAnnotate ($$) {
 	    # is there a less timeconsuming way to strip spaces ?
 	    ($lrev = $lrev) =~ s/\s+//g;
 	    my $isCurrentRev = ($rev eq $lrev);
-	    
+
 	    print "<b>" if ($isCurrentRev);
 	    printf ("%8s%s%8s %4d:", $revprint, ($isCurrentRev ? "|" : " "), $usrprint, $lineNr);
 	    print spacedHtmlText($line);
@@ -1176,7 +1216,7 @@ sub doAnnotate ($$) {
 ###############################
 # make Checkout
 ###############################
-sub doCheckout {
+sub doCheckout($$) {
     my ($fullname, $rev) = @_;
     my ($mimetype,$revopt);
     my $fh = do {local(*FH);};
@@ -1210,7 +1250,7 @@ sub doCheckout {
 	    $moddate=$date{$symrev{HEAD}};
 	}
     }
-    
+
     ### just for the record:
     ### 'cvs co' seems to have a bug regarding single checkout of
     ### directories/files having spaces in it;
@@ -1220,7 +1260,7 @@ sub doCheckout {
     if (! open($fh, "-|")) { # child
       open(STDERR, ">&STDOUT"); # Redirect stderr to stdout
       exec("cvs", "-d", $cvsroot, "co", "-p", $revopt, $where);
-    } 
+    }
 #===================================================================
 #Checking out squid/src/ftp.c
 #RCS:  /usr/src/CVS/squid/src/ftp.c,v
@@ -1259,7 +1299,7 @@ sub doCheckout {
     close($fh);
 }
 
-sub cvswebMarkup {
+sub cvswebMarkup($$$) {
     my ($filehandle,$fullname,$revision) = @_;
     my ($pathname, $filename);
 
@@ -1269,7 +1309,7 @@ sub cvswebMarkup {
 
     http_header();
 
-    navigateHeader ($scriptwhere, $pathname, $filename, $revision, "view");
+    navigateHeader($scriptwhere, $pathname, $filename, $revision, "view");
     print "<HR noshade>";
     print "<table width=\"100%\"><tr><td bgcolor=\"$markupLogColor\">";
     print "File: ", &clickablePath($where, 1);
@@ -1277,7 +1317,7 @@ sub cvswebMarkup {
     &download_link(urlencode($fileurl), $revision, "(download)");
     if (!$defaultTextPlain) {
 	print "&nbsp;";
-	&download_link(urlencode($fileurl), $revision, "(as text)", 
+	&download_link(urlencode($fileurl), $revision, "(as text)",
 	       "text/plain");
     }
     print "<BR>\n";
@@ -1309,15 +1349,13 @@ sub cvswebMarkup {
 sub viewable($) {
     my ($mimetype) = @_;
 
-    $mimetype =~ m%^text/% ||
-    $mimetype =~ m%^image/% ||
-    0;
+    $mimetype =~ m%^(text|image)/%;
 }
 
 ###############################
 # Show Colored Diff
 ###############################
-sub doDiff {
+sub doDiff($$$$$$) {
 	my($fullname, $r1, $tr1, $r2, $tr2, $f) = @_;
         my $fh = do {local(*FH);};
 	my ($rev1, $rev2, $sym1, $sym2, @difftype, $diffname, $f1, $f2);
@@ -1461,7 +1499,7 @@ sub doDiff {
 ###############################
 # Show Logs ..
 ###############################
-sub getDirLogs {
+sub getDirLogs($$@) {
     my ($cvsroot,$dirname,@otherFiles) = @_;
     my ($state,$otherFiles,$tag, $file, $date, $branchpoint, $branch, $log);
     my ($rev, $revision, $revwanted, $filename, $head, $author);
@@ -1479,7 +1517,7 @@ sub getDirLogs {
     }
 
     # just execute rlog if there are any files
-    if ($#files < 0) { 
+    if ($#files < 0) {
 	return;
     }
 
@@ -1524,7 +1562,7 @@ again:
 	}
 	if ($state eq "head" && /^symbolic names/) {
 	    $state = "tags";
-	    ($branch = $head) =~ s/\.\d+$// if (!defined($branch)); 
+	    ($branch = $head) =~ s/\.\d+$// if (!defined($branch));
 	    $branch =~ s/(\.?)(\d+)$/${1}0.$2/;
 	    $symrev{MAIN} = $branch;
 	    $symrev{HEAD} = $branch;
@@ -1622,13 +1660,13 @@ again:
 	}
     }
     if ($. == 0) {
-	fatal("500 Internal Error", 
+	fatal("500 Internal Error",
 	      "Failed to spawn GNU rlog on <em>'".join(", ", @files)."'</em><p>did you set the <b>\$ENV{PATH}</b> in your configuration file correctly ?");
     }
     close($fh);
 }
 
-sub readLog {
+sub readLog($;$) {
 	my($fullname,$revision) = @_;
 	my ($symnames, $head, $rev, $br, $brp, $branch, $branchrev);
 	my $fh = do {local(*FH);};
@@ -1891,7 +1929,7 @@ sub printLog($;$) {
 	    }
 	    if (not $defaultTextPlain) {
 		print " / ";
-		&download_link($fileurl, $_, "(as text)", 
+		&download_link($fileurl, $_, "(as text)",
 			   "text/plain");
 	    }
 	    if (!$defaultViewable) {
@@ -2032,10 +2070,10 @@ sub printLog($;$) {
 	print "</PRE>\n";
 }
 
-sub doLog {
+sub doLog($) {
 	my($fullname) = @_;
 	my ($diffrev, $upwhere, $filename, $backurl);
-	
+
 	readLog($fullname);
 
         html_header("CVS log for $where");
@@ -2096,7 +2134,7 @@ EOF
 	$diffrev = $input{"r2"} if (defined($input{"r2"}));
 	print "<INPUT TYPE=\"TEXT\" SIZE=\"$inputTextSize\" NAME=\"tr2\" VALUE=\"$diffrev\" onChange='docuement.diff_select.r2.selectedIndex=0'>\n";
         print "<BR>Type of Diff should be a&nbsp;";
-	printDiffSelect();
+	printDiffSelect(0);
 	print "<INPUT TYPE=SUBMIT VALUE=\"  Get Diffs  \">\n";
 	print "</FORM>\n";
 	print "<HR noshade>\n";
@@ -2151,8 +2189,7 @@ EOF
 	print "</BODY></HTML>\n";
 }
 
-sub flush_diff_rows ($$$$)
-{
+sub flush_diff_rows($$$$) {
     my $j;
     my ($leftColRef,$rightColRef,$leftRow,$rightRow) = @_;
     if ($state eq "PreChangeRemove") {          # we just got remove-lines before
@@ -2197,7 +2234,7 @@ sub human_readable_diff($){
   ($pathname = $where_nd) =~ s/(Attic\/)?[^\/]*$//;
   ($scriptwhere_nd = $scriptwhere) =~ s/.diff$//;
 
-  navigateHeader ($scriptwhere_nd, $pathname, $filename, $rev, "diff");
+  navigateHeader($scriptwhere_nd, $pathname, $filename, $rev, "diff");
 
   # Read header to pick up read revision and date, if possible
   while (<$fh>) {
@@ -2213,7 +2250,7 @@ sub human_readable_diff($){
     $rev2 = $r2r;
     $date2 = $r2d;
   }
-  
+
   print "<h3 align=center>Diff for /$where_nd between version $rev1 and $rev2</h3>\n";
 
   print "<table border=0 cellspacing=0 cellpadding=0 width=\"100%\">\n";
@@ -2243,7 +2280,7 @@ sub human_readable_diff($){
   ####
   while (<$fh>) {
       $difftxt = $_;
-      
+
       if ($difftxt =~ /^@@/) {
 	  ($oldline,$newline,$funname) = $difftxt =~ /@@ \-([0-9]+).*\+([0-9]+).*@@(.*)/;
           print  "<tr bgcolor=\"$diffcolorHeading\"><td width=\"50%\">";
@@ -2263,7 +2300,7 @@ sub human_readable_diff($){
 
 	  # Add fontface, size
 	  $_ = "$fs&nbsp;$_$fe";
-	  
+
 	  #########
 	  # little state machine to parse unified-diff output (Hen, zeller@think.de)
 	  # in order to get some nice 'ediff'-mode output
@@ -2281,7 +2318,7 @@ sub human_readable_diff($){
 		  $state = "PreChange";
 		  $rightCol[$rightRow++] = $_;
 	      }
-	  } 
+	  }
 	  elsif ($diffcode eq '-') {
 	      $state = "PreChangeRemove";
 	      $leftCol[$leftRow++] = $_;
@@ -2337,13 +2374,13 @@ sub human_readable_diff($){
   print "</tr></table>";
 }
 
-sub navigateHeader ($$$$$) {
+sub navigateHeader($$$$$) {
     my ($swhere,$path,$filename,$rev,$title) = @_;
     $swhere = "" if ($swhere eq $scriptwhere);
     $swhere = urlencode($filename) if ($swhere eq "");
     print "<\!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\">";
     print "<HTML>\n<HEAD>\n";
-    print '<!-- CVSweb $zRevision: 1.93 $  $Revision: 1.46 $ -->';
+    print '<!-- CVSweb $zRevision: 1.93 $  $Revision: 1.47 $ -->';
     print "\n<TITLE>$path$filename - $title - $rev</TITLE></HEAD>\n";
     print  "<BODY BGCOLOR=\"$backcolor\">\n";
     print "<table width=\"100%\" border=0 cellspacing=0 cellpadding=1 bgcolor=\"$navigationHeaderColor\">";
@@ -2351,13 +2388,12 @@ sub navigateHeader ($$$$$) {
     print  "<a href=\"$swhere$query#rev$rev\">$backicon";
     print "</a> <b>Return to ", &link("$filename","$swhere$query#rev$rev")," CVS log";
     print "</b> $fileicon</td>";
-    
+
     print "<td align=right>$diricon <b>Up to ", &clickablePath($path, 1), "</b></td>";
     print "</tr></table>";
 }
 
-sub plural_write ($$)
-{
+sub plural_write($$) {
     my ($num,$text) = @_;
     if ($num != 1) {
 	$text = $text . "s";
@@ -2375,8 +2411,7 @@ sub plural_write ($$)
 # '..time ago'
 # H. Zeller <zeller@think.de>
 ##
-sub readableTime ($$)
-{
+sub readableTime($$) {
     my ($i, $break, $retval);
     my ($secs,$long) = @_;
 
@@ -2394,7 +2429,7 @@ sub readableTime ($$)
 		   31536000, 'year');
     my @breaks = sort {$a <=> $b} keys %desc;
     $i = 0;
-    while ($i <= $#breaks && $secs >= 2 * $breaks[$i]) { 
+    while ($i <= $#breaks && $secs >= 2 * $breaks[$i]) {
 	$i++;
     }
     $i--;
@@ -2405,7 +2440,7 @@ sub readableTime ($$)
 	my $rest = $secs % $break;
 	$i--;
 	$break = $breaks[$i];
-	my $resttime = plural_write(int ($rest / $break), 
+	my $resttime = plural_write(int ($rest / $break),
 				$desc{$break});
 	if ($resttime) {
 	    $retval = $retval . ", " . $resttime;
@@ -2423,9 +2458,9 @@ sub readableTime ($$)
 # basename (last directory/file) is a link as well
 ##
 sub clickablePath($$) {
-    my ($pathname,$clickLast) = @_;    
+    my ($pathname,$clickLast) = @_;
     my $retval = '';
-    
+
     if ($pathname eq '/') {
 	# this should never happen - chooseCVSRoot() is
 	# intended to do this
@@ -2467,7 +2502,7 @@ sub chooseCVSRoot() {
 	my ($k);
 	print "<form method=\"GET\" action=\"${scriptwhere}\">\n";
 	foreach $k (keys %input) {
-	    print "<input type=hidden NAME=$k VALUE=$input{$k}>\n" 
+	    print "<input type=hidden NAME=$k VALUE=$input{$k}>\n"
 		if ($input{$k}) && ($k ne "cvsroot");
 	}
 	# Form-Elements look wierd in Netscape if the background
@@ -2501,7 +2536,7 @@ sub chooseMirror() {
     # and may not be useful for your site; If you don't
     # set %MIRRORS this won't show up, anyway
     #
-    # Should perhaps exlude the current site somehow.. 
+    # Should perhaps exlude the current site somehow..
     if (keys %MIRRORS) {
 	print "\nThis cvsweb is mirrored in:\n";
 	foreach $mirror (keys %MIRRORS) {
@@ -2513,7 +2548,7 @@ sub chooseMirror() {
     }
 }
 
-sub fileSortCmp {
+sub fileSortCmp() {
     my ($comp) = 0;
     my ($c,$d,$af,$bf);
 
@@ -2544,7 +2579,7 @@ sub fileSortCmp {
 }
 
 # make A url for downloading
-sub download_url {
+sub download_url($$;$) {
     my ($url,$revision,$mimetype) = @_;
 
     $revision =~ s/\b0\.//;
@@ -2561,9 +2596,9 @@ sub download_url {
     return $url;
 }
 
-# Presents a link to download the 
+# Presents a link to download the
 # selected revision
-sub download_link {
+sub download_link($$$;$) {
     my ($url,$revision,$textlink,$mimetype) = @_;
     my ($fullurl) = download_url($url,$revision,$mimetype);
     my ($paren) = $textlink =~ /^\(/;
@@ -2635,14 +2670,14 @@ sub toggleQuery($$) {
     return "";
 }
 
-sub urlencode {
+sub urlencode($) {
     my ($in) = @_;
     my ($out);
     ($out = $in) =~ s/([\000-+{-\377])/sprintf("%%%02x", ord($1))/ge;
     return $out;
 }
 
-sub http_header {
+sub http_header(;$) {
     my $content_type = shift || "text/html";
     if (defined($moddate)) {
 	if ($is_mod_perl) {
@@ -2697,7 +2732,7 @@ sub http_header {
 
 sub html_header($) {
     my ($title) = @_;
-    my $version = '$zRevision: 1.93 $  $Revision: 1.46 $';
+    my $version = '$zRevision: 1.93 $  $Revision: 1.47 $'; #'
     http_header();
 
     (my $header = &cgi_style::html_header) =~ s/^.*\n\n//; # remove HTTP response header
@@ -2710,12 +2745,11 @@ $header
 EOH
 }
 
-sub html_footer {
+sub html_footer() {
     return &cgi_style::html_footer;
 }
 
-sub link_tags
-{
+sub link_tags($) {
     my ($tags) = @_;
     my ($ret) = "";
     my ($fileurl,$filename);
@@ -2734,9 +2768,9 @@ sub link_tags
 #
 # See if a module is listed in the config file's @HideModule list.
 #
-sub forbidden_module {
+sub forbidden_module($) {
     my($module) = @_;
-    
+
     for (my $i=0; $i < @HideModules; $i++) {
 	return 1 if $module eq $HideModules[$i];
     }
