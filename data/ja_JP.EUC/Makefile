@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.15 1998-07-26 11:59:14 wosch Exp $
+# $Id: Makefile,v 1.16 1998-07-27 04:46:58 hanai Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.24
 
@@ -11,15 +11,22 @@
 DOCS=  about.sgml applications.sgml auditors.sgml availability.sgml branch.sgml
 DOCS+= commercial.sgml daemon.sgml docproj.sgml docs.sgml 
 DOCS+= features.sgml gallery.sgml index-site.sgml register.sgml 
-DOCS+= internet.sgml license.sgml mailto.sgml mirror.sgml newsflash.sgml
-DOCS+= publish.sgml search.sgml searchhints.sgml
-DOCS+= send-pr.sgml security.sgml support.sgml where.sgml resignation.sgml
-DOCS+= machines.sgml
-DOCS+= jabout.sgml
-#DOCS+= cgallery.sgml npgallery.sgml pgallery.sgml
-DOCS+= y2kbug.sgml search-mid.sgml
+DOCS+= internet.sgml license.sgml 
+DOCS+= machines.sgml mailto.sgml mirror.sgml
+DOCS+= newsflash.sgml publish.sgml search.sgml 
+DOCS+= searchhints.sgml send-pr.sgml support.sgml where.sgml 
+DOCS+= resignation.sgml y2kbug.sgml search-mid.sgml
 
-CLEANFILES+=atoz.sgml
+# Japanese-only file
+DOCS+= jabout.sgml
+
+# Not translated into Japanese yet.
+#DOCS+= mozilla.sgml newbies.sgml press.sgml
+
+# Not available in Japanese version.
+#DOCS+= cgallery.sgml npgallery.sgml pgallery.sgml
+
+CLEANFILES+=atoz.sgml site.sgml
 
 # These will be directly installed.
 
@@ -27,15 +34,18 @@ DATA=	index.html
 
 # Files or targets listed here are defined in this file.
 
-index-site.sgml: atoz.sgml
+index-site.sgml: atoz.sgml site.sgml
 atoz.sgml: web.atoz 
 	sort -fu web.atoz | perl ../atoz.pl > ${.TARGET}
+site.sgml: ../site.map
+	perl ../site.pl < ${.ALLSRC} > ${.TARGET}
+
 
 # Subdirectories
 
-#SUBDIR=		cgi commercial gifs ports releases tutorials
-SUBDIR=			docproj ports releases
-SUBDIR+=		security
+#SUBDIR=	security cgi commercial docproj gifs ports releases tutorials 
+#SUBDIR+=	news alpha projects
+SUBDIR=		security docproj ports releases
 
 # Subdirectories that have linuxdoc docs and makefiles that use
 # <bsd.sgml.mk>.
