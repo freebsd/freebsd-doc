@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
 
-<!-- $FreeBSD: www/ja/index.xsl,v 1.9 2002/01/14 13:38:53 kuriyama Exp $ -->
+<!-- $FreeBSD: www/ja/index.xsl,v 1.10 2002/02/20 13:01:34 kuriyama Exp $ -->
 <!-- Original revision: 1.19 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -9,8 +9,8 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="enbase" select="'../..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/ja/index.xsl,v 1.9 2002/01/14 13:38:53 kuriyama Exp $'"/>
+  <xsl:variable name="enbase" select="'..'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/ja/index.xsl,v 1.10 2002/02/20 13:01:34 kuriyama Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <xsl:output type="html" encoding="EUC-JP"
