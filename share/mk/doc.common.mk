@@ -20,58 +20,83 @@ DOC_PREFIX?=	${WEB_PREFIX}/../doc
 # Liberal default of maximum of 10 directories below to find it.
 #
 
+.if defined(DOC_PREFIX) && !empty(DOC_PREFIX)
+DOC_PREFIX_NAME!=	realpath ${DOC_PREFIX}
+DOC_PREFIX_NAME:=	${DOC_PREFIX_NAME:T}
+.else
 DOC_PREFIX_NAME?=	doc
-WWW_PREFIX_NAME?=	www
+.endif
 
-.if !defined(LANGCODE) || empty(LANGCODE) || !defined(WWW_LANGCODE) || empty(WWW_LANGCODE)
-# Calculate LANGCODE.
-LANGCODE:=	${.CURDIR}
+.if defined(WEB_PREFIX) && !empty(WEB_PREFIX)
+WWW_PREFIX_NAME!=	realpath ${WEB_PREFIX}
+WWW_PREFIX_NAME:=	${WWW_PREFIX_NAME:T}
+.else
+WWW_PREFIX_NAME?=	www
+.endif
+
+.if (!defined(LANGCODE) || empty(LANGCODE)) && (!defined(WWW_LANGCODE) || empty(WWW_LANGCODE))
+# Calculate _LANGCODE.
+_LANGCODE:=	${.CURDIR}
 .for _ in 1 2 3 4 5 6 7 8 9 10
-.if !(${LANGCODE:H:T} == ${DOC_PREFIX_NAME}) && !(${LANGCODE:H:T} == ${WWW_PREFIX_NAME})
-LANGCODE:=	${LANGCODE:H}
+.if !(${_LANGCODE:H:T} == ${DOC_PREFIX_NAME}) && !(${_LANGCODE:H:T} == ${WWW_PREFIX_NAME})
+_LANGCODE:=	${_LANGCODE:H}
 .endif
 .endfor
-.if (${LANGCODE:H:T} == ${DOC_PREFIX_NAME})
+.if (${_LANGCODE:H:T} == ${DOC_PREFIX_NAME})
 # We are in doc/.
-LANGCODE:=	${LANGCODE:T}
-WWW_LANGCODE:=	.
+_LANGCODE:=	${_LANGCODE:T}
+_WWW_LANGCODE:=	.
 .else
 # We are in www/.
-WWW_LANGCODE:=	${LANGCODE:T}
-LANGCODE:=	.
+_WWW_LANGCODE:=	${_LANGCODE:T}
+_LANGCODE:=	.
+.endif
+.else
+# when LANGCODE or WWW_LANGCODE is defined, use the value.
+.if defined(LANGCODE) && !empty(LANGCODE)
+_LANGCODE?=	${LANGCODE}
+.else
+_LANGCODE?=	.
+.endif
+.if defined(WWW_LANGCODE) && !empty(WWW_LANGCODE)
+_WWW_LANGCODE?=	${WWW_LANGCODE}
+.else
+_WWW_LANGCODE?=	.
 .endif
 .endif
 
-# fixup LANGCODE
-.if (${LANGCODE} == .)
-# We have a short name such as `en' in ${WWW_LANGCODE} now.
-# Guess LANGCODE using WWW_LANGCODE.
-LANGCODE:=	${WWW_LANGCODE}
-.if (${LANGCODE} != .)
-LANGCODE!=	${ECHO} ${DOC_PREFIX}/${WWW_LANGCODE}*
+# fixup _LANGCODE
+.if (${_LANGCODE} == .)
+# We have a short name such as `en' in ${_WWW_LANGCODE} now.
+# Guess _LANGCODE using _WWW_LANGCODE.
+_LANGCODE:=	${_WWW_LANGCODE}
+.if (${_LANGCODE} != .)
+_LANGCODE!=	${ECHO} ${DOC_PREFIX}/${_WWW_LANGCODE}*
 .for _ in 1 2 3 4 5 6 7 8 9 10
-.if !(${LANGCODE:H:T} == ${DOC_PREFIX_NAME})
-LANGCODE:=	${LANGCODE:H}
+.if !(${_LANGCODE:H:T} == ${DOC_PREFIX_NAME})
+_LANGCODE:=	${_LANGCODE:H}
 .endif
 .endfor
-LANGCODE:=	${LANGCODE:T}
+_LANGCODE:=	${_LANGCODE:T}
 .endif
 .endif
+LANGCODE?=	${_LANGCODE}
 
-# fixup WWW_LANGCODE
-.if (${WWW_LANGCODE} == .)
+# fixup _WWW_LANGCODE
+.if (${_WWW_LANGCODE} == .)
 # We have a long name such as `en_US.ISO8859-1' in ${LANGCODE} now.
-# Guess WWW_LANGCODE using LANGCODE.
-WWW_LANGCODE!=	${ECHO} ${WEB_PREFIX}/*
-WWW2_LANGCODE!=	${ECHO} ${WWW_LANGCODE:T} |\
+# Guess _WWW_LANGCODE using _LANGCODE.
+_WWW_LANGCODE!=	${ECHO} ${WEB_PREFIX}/*
+_WWW2_LANGCODE!=	${ECHO} ${_WWW_LANGCODE:T} |\
 		${SED} -e 's,.*\(${LANGCODE:R:C,(..)_.*,\1,}[^. ]*\).*,\1,'
-.if ${WWW_LANGCODE:T} == ${WWW2_LANGCODE}
-WWW_LANGCODE:= .
+.if ${_WWW_LANGCODE:T} == ${_WWW2_LANGCODE}
+_WWW_LANGCODE:= .
 .else
-WWW_LANGCODE:= ${WWW2_LANGCODE}
+_WWW_LANGCODE:= ${_WWW2_LANGCODE}
 .endif
-.undef WWW2_LANGCODE
+.undef _WWW2_LANGCODE
 .endif
+WWW_LANGCODE?=	${_WWW_LANGCODE}
 
 # ------------------------------------------------------------------------
 #
