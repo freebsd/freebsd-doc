@@ -1,5 +1,5 @@
 # bsd.web.mk
-# $Id: web.mk,v 1.21 1999-08-19 20:40:26 nik Exp $
+# $Id: web.mk,v 1.22 1999-09-03 14:01:11 kuriyama Exp $
 
 #
 # Build and install a web site.
@@ -173,14 +173,14 @@ _PROGSUBDIR: .USE
 .if defined(SUBDIR) && !empty(SUBDIR)
 	@for entry in ${SUBDIR}; do \
 		(${ECHODIR} "===> ${DIRPRFX}$$entry"; \
-		cd ${.CURDIR}/$${entry}; \
+		cd ${.CURDIR}/$${entry} && \
 		${MAKE} ${.TARGET:S/realinstall/install/:S/.depend/depend/} DIRPRFX=${DIRPRFX}$$entry/); \
 	done
 .endif
 .if defined(DOCSUBDIR) && !empty(DOCSUBDIR)
 	@for entry in ${DOCSUBDIR}; do \
 		(${ECHODIR} "===> ${DIRPRFX}$$entry"; \
-		cd ${.CURDIR}/$${entry}; \
+		cd ${.CURDIR}/$${entry} && \
 		if [ ${WEBDIR} = "data" -a $$entry = "handbook" -o $$entry = "docproj-primer" ]; then \
 			${MAKE} ${.TARGET:S/realinstall/install/:S/.depend/depend/} DIRPRFX=${DIRPRFX}$$entry/ ${PARAMS} FORMATS="txt html html-split"; \
 		elif [ $$entry = "handbook" -a ${WEBDIR} = "data/ja" ]; then \
