@@ -3,18 +3,16 @@
 # A CGI form processor for FreeBSD Gallery submissions
 # 
 # John Fieber <jfieber@indiana.edu>
-# $Id: gallery.cgi,v 1.7 1996-12-13 16:24:32 jfieber Exp $
+# $Id: gallery.cgi,v 1.8 1997-01-12 05:13:22 jkh Exp $
 ##################################################################
 
-#$curator = "jfieber@indiana.edu";
-#$curator = "jkh@freebsd.org";
-$curator = "cawimm0@pop.uky.edu";
+$curator = "gallery@freebsd.org";
 $subject = "Another gallery submission...";
 
 require 'cgi-lib.pl';
 &ReadParse;
 
-$hsty_date = "\$Date: 1996-12-13 16:24:32 $";
+$hsty_date = "\$Date: 1997-01-12 05:13:22 $";
 #$h_base = "..";
 #$d_author = "
 require 'cgi-style.pl';
