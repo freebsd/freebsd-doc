@@ -147,7 +147,10 @@ NSGMLSWARNINGS=	-wempty -wunclosed
 SX?=		${PREFIX}/bin/sx
 .endif
 
-JADE_CMD=	${JADE}
+.if defined(SP_ENCODING)
+JADE_ENV+=	SP_ENCODING=${SP_ENCODING}
+.endif
+JADE_CMD=	${SETENV} ${JADE_ENV} ${JADE}
 
 DSLHTML?=	${DOC_PREFIX}/share/sgml/default.dsl
 DSLPRINT?=	${DOC_PREFIX}/share/sgml/default.dsl
@@ -451,17 +454,6 @@ CLEANFILES+= 		${HTML_SPLIT_INDEX} ${HTML_INDEX} ${PRINT_INDEX}
 .MAIN: all
 
 all: ${_docs}
-
-#
-# SP_ENCODING support
-#
-CUR_ENCODING!= 	${ECHO} ${LANGCODE} | ${SED} 's/^.*\.//' | \
-	${SED} 's/^ISO/ISO\-/'
-.for _sp_encoding in ${SP_ENCODING_LIST}
-.if ${CUR_ENCODING} == ${_sp_encoding}
-JADE_CMD=	SP_ENCODING=${CUR_ENCODING} ${JADE}
-.endif
-.endfor
 
 # XML --------------------------------------------------------------------
 

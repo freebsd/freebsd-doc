@@ -99,6 +99,12 @@ SETENV?=	/usr/bin/env
 # targets and variables commonly used in doc/ and www/ tree.
 .include "doc.common.mk"
 
+DOC_LOCAL_MK=	${DOC_PREFIX}/${LANGCODE}/share/mk/doc.local.mk
+
+.if exists(${DOC_LOCAL_MK})
+.include "${DOC_LOCAL_MK}"
+.endif
+
 # Ownership information.
 .include "doc.install.mk"
 
