@@ -1,4 +1,4 @@
-#	$Id: Makefile,v 1.14 1998-08-11 11:43:52 wosch Exp $
+#	$Id: Makefile,v 1.15 1998-08-16 13:52:19 wosch Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -16,7 +16,7 @@ COOKIE=		${INDEX} Makefile.gen
 CLEANFILES+=	${DOCS} Makefile.gen ${INDEX} packages.exists
 
 cvsindex= $${CVSROOT}/${PINDEX},v
-_ALLINSTALL= packages.exists
+_ALLINSTALL= packages.exists ${INDEX}
 
 ${INDEX}: ${cvsindex}
 	cvs -QR co -p ${PINDEX} > ${INDEX}
