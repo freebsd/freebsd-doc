@@ -9,9 +9,9 @@
 
   <!-- these params should be externally bound. The values
        here are not used actually -->
+  <xsl:param name="type" select="''" />
   <xsl:param name="proto" select="''" />
   <xsl:param name="target" select="''" />
-
 
   <xsl:param name="mirrors-docbook-country-anchor-id" select="translate($target, '/.', '--')" />
 
@@ -69,15 +69,19 @@
   <xsl:template name="mirrors-docbook-country-index-all">
     <para>
       <xsl:for-each select="mirrors/entry[country/@role = 'primary' and
-	                    (url[contains(@proto, $proto)] or host[contains(@proto, $proto)])]">
-	<xsl:call-template name="mirrors-docbook-country-index" />
+	                    host[@type = $type]]">
+	<xsl:call-template name="mirrors-docbook-country-index">
+	  <xsl:with-param name="mirrors-docbook-country-index-without-period" select="'true'" />
+	</xsl:call-template>
       </xsl:for-each>
 
       <xsl:for-each select="mirrors/entry[country/@role != 'primary' and
-	                    (url[contains(@proto, $proto)] or host[contains(@proto, $proto)])]">
+	                    host[@type = $type]]">
 	<xsl:sort select="country" />
 
-	<xsl:call-template name="mirrors-docbook-country-index" />
+	<xsl:call-template name="mirrors-docbook-country-index">
+	  <xsl:with-param name="mirrors-docbook-country-index-without-period" select="'false'" />
+	</xsl:call-template>
       </xsl:for-each>
     </para>
   </xsl:template>
@@ -85,12 +89,13 @@
   <xsl:template name="mirrors-docbook-country-index">
     <link>
       <xsl:attribute name="linkend">
-	<xsl:value-of select="concat($mirrors-docbook-country-anchor-id, '-', @id, '-', $proto)" />
+	<xsl:value-of select="concat($mirrors-docbook-country-anchor-id, '-', @id, '-', $type)" />
       </xsl:attribute>
       <xsl:value-of select="country" />
     </link>
     <xsl:choose>
-      <xsl:when test='position() = last()'><xsl:text>.</xsl:text></xsl:when>
+      <xsl:when test='$mirrors-docbook-country-index-without-period != "true" and
+	position() = last()'><xsl:text>.</xsl:text></xsl:when>
       <xsl:otherwise><xsl:text>, </xsl:text></xsl:otherwise>
     </xsl:choose>
   </xsl:template>
@@ -100,12 +105,12 @@
   <xsl:template name="mirrors-docbook-variablelist">
     <variablelist>
       <xsl:for-each select="mirrors/entry[country/@role = 'primary' and
-	                    (url[contains(@proto, $proto)] or host[contains(@proto, $proto)])]">
+	                    host[@type = $type]]">
 	<xsl:call-template name="mirrors-docbook-variablelist-entry" />
       </xsl:for-each>
 
       <xsl:for-each select="mirrors/entry[country/@role != 'primary' and
-	                    (url[contains(@proto, $proto)] or host[contains(@proto, $proto)])]">
+	                    host[@type = $type]]">
 	<xsl:sort select="country" />
 
 	<xsl:call-template name="mirrors-docbook-variablelist-entry" />
@@ -118,56 +123,60 @@
       <term>
 	<anchor>
 	  <xsl:attribute name="id">
-	    <xsl:value-of select="concat($mirrors-docbook-country-anchor-id, '-', @id, '-', $proto)" />
+	    <xsl:value-of select="concat($mirrors-docbook-country-anchor-id, '-', @id, '-', $type)" />
 	  </xsl:attribute>
 	</anchor>
 	<xsl:value-of select="country" />
       </term>
 
       <listitem>
-	<xsl:if test="$proto = 'ftp' and email">
+	<xsl:if test="$type = 'ftp' and email">
 	  <xsl:call-template name="mirrors-docbook-contact">
 	    <xsl:with-param name="email" select="email" />
 	  </xsl:call-template>
 	</xsl:if>
 
 	<itemizedlist>
-	  <xsl:for-each select="child::*[contains(@proto, $proto)]">
+	  <xsl:for-each select="host[@type = $type]">
 	    <listitem>
 	      <para>
 		<xsl:choose>
-		  <xsl:when test="self::url">
-		    <ulink>
-		      <xsl:attribute name="url"><xsl:value-of select="." /></xsl:attribute>
-		    </ulink>
+		  <xsl:when test="url[@proto = $proto]">
+		    <xsl:for-each select="url[@proto = $proto]">
+		      <ulink>
+			<xsl:attribute name="url"><xsl:value-of select="." /></xsl:attribute>
+			<xsl:value-of select="name" />
+		      </ulink>
+		    </xsl:for-each>
+
+		    <xsl:value-of select="' (ftp'" />
+
+		    <xsl:choose>
+		      <xsl:when test="url[@proto != $proto]">
+			<xsl:for-each select="url[@proto != $proto]">
+			  <xsl:value-of select="' / '" />
+			  <xsl:choose>
+			    <xsl:when test=". != ''">
+			      <ulink>
+				<xsl:attribute name="url"><xsl:value-of select="." /></xsl:attribute>
+				<xsl:value-of select="@proto" />
+			      </ulink>
+			    </xsl:when>
+			    <xsl:otherwise>
+			      <xsl:value-of select="@proto" />
+			    </xsl:otherwise>
+			  </xsl:choose>
+			</xsl:for-each>
+		      </xsl:when>
+		    </xsl:choose>
+
+		    <xsl:value-of select="') '" />
 		  </xsl:when>
+
 		  <xsl:otherwise>
-		    <xsl:value-of select="." />
+		    <xsl:value-of select="name" />
 		  </xsl:otherwise>
 		</xsl:choose>
-
-		<xsl:if test="$proto = 'ftp' and @proto">
-		  <xsl:value-of select="' (ftp'" />
-
-		  <xsl:choose>
-		    <xsl:when test="contains(@proto, 'http') and contains(@proto, 'rsync')">
-		      <xsl:value-of select="'/http/rsync'" />
-		    </xsl:when>
-		    <xsl:when test="contains(@proto, 'http') and not(contains(@proto, 'rsync'))">
-		      <xsl:value-of select="'/http'" />
-		    </xsl:when>
-		    <xsl:when test="not(contains(@proto, 'http')) and contains(@proto, 'rsync')">
-		      <xsl:value-of select="'/rsync'" />
-		    </xsl:when>
-		  </xsl:choose>
-		  <xsl:value-of select="')'" />
-
-		  <xsl:if test="contains(@proto, 'ftpv6')
-		    or contains(@proto, 'httpv6')
-		    or contains(@proto, 'rsyncv6')">
-		    <xsl:text> (IPv6)</xsl:text>
-		  </xsl:if>
-		</xsl:if>
 	      </para>
 	    </listitem>
 	  </xsl:for-each>
@@ -181,12 +190,12 @@
   <xsl:template name="mirrors-docbook-itemizedlist">
     <itemizedlist>
       <xsl:for-each select="mirrors/entry[country/@role = 'primary' and
-	                    (url[contains(@proto, $proto)] or host[contains(@proto, $proto)])]">
+	                    host[@type = $type]]">
 	<xsl:call-template name="mirrors-docbook-itemizedlist-listitem" />
       </xsl:for-each>
 
       <xsl:for-each select="mirrors/entry[country/@role != 'primary' and
-	                    (url[contains(@proto, $proto)] or host[contains(@proto, $proto)])]">
+	                    host[@type = $type]]">
         <xsl:sort select="country" />
 
 	<xsl:call-template name="mirrors-docbook-itemizedlist-listitem" />
@@ -198,24 +207,39 @@
     <listitem>
       <anchor>
 	<xsl:attribute name="id">
-	  <xsl:value-of select="concat($mirrors-docbook-country-anchor-id, '-', @id, '-', $proto)" />
+	  <xsl:value-of select="concat($mirrors-docbook-country-anchor-id, '-', @id, '-', $type)" />
 	</xsl:attribute>
       </anchor>
 
       <para><xsl:value-of select="country" /></para>
 
       <itemizedlist>
-	<xsl:for-each select="child::*[contains(@proto, $proto) and contains(@type, 'www')]">
-	  <xsl:if test="self::url">
-	    <listitem>
-	      <para>
-		<ulink>
-		  <xsl:attribute name="url"><xsl:value-of select="." /></xsl:attribute>
-		  <xsl:value-of select="." />
-		</ulink>
-	      </para>
-	    </listitem>
-	  </xsl:if>
+	<xsl:for-each select="host[@type = $type]">
+	  <listitem>
+	    <para>
+	      <xsl:choose>
+		<xsl:when test="url[@proto = $proto]">
+		  <xsl:for-each select="url[@proto = $proto]">
+		    <ulink>
+		      <xsl:attribute name="url"><xsl:value-of select="." /></xsl:attribute>
+		      <xsl:value-of select="name" />
+		    </ulink>
+		  </xsl:for-each>
+
+		  <xsl:if test="url[
+		    contains(@proto, 'ftpv6')
+		    or contains(@proto, 'httpv6')
+		    or contains(@proto, 'rsyncv6')]">
+		    <xsl:text> (IPv6)</xsl:text>
+		  </xsl:if>
+		</xsl:when>
+
+		<xsl:otherwise>
+		  <xsl:value-of select="name" />
+		</xsl:otherwise>
+	      </xsl:choose>
+	    </para>
+	  </listitem>
 	</xsl:for-each>
       </itemizedlist>
     </listitem>
