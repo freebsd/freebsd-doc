@@ -25,6 +25,7 @@ SUBDIR+= java-tomcat
 SUBDIR+= dialup-firewall
 SUBDIR+= laptop
 SUBDIR+= pxe
+SUBDIR+= pr-guidelines
 
 ROOT_SYMLINKS+= new-users
 
