@@ -42,9 +42,9 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $Id: cvsweb.cgi,v 1.75 2001-08-01 10:41:47 knu Exp $
+# $Id: cvsweb.cgi,v 1.76 2001-09-19 15:18:41 fenner Exp $
 # $Idaemons: /home/cvs/cvsweb/cvsweb.cgi,v 1.82 2001/08/01 09:54:52 knu Exp $
-# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.74 2001/07/06 09:58:17 knu Exp $
+# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.75 2001/08/01 10:41:47 knu Exp $
 #
 ###
 
@@ -234,7 +234,7 @@ $LOG_REVSEPARATOR  = q/^-{28}$/;
 ##### End of configuration variables #####
 
 $cgi_style::hsty_base = 'http://www.FreeBSD.org';
-$_ = q$FreeBSD: www/en/cgi/cvsweb.cgi,v 1.74 2001/07/06 09:58:17 knu Exp $;
+$_ = q$FreeBSD: www/en/cgi/cvsweb.cgi,v 1.75 2001/08/01 10:41:47 knu Exp $;
 @_ = split;
 $cgi_style::hsty_date = "@_[3,4]";
 
@@ -1135,7 +1135,11 @@ elsif (-f $fullname . ',v') {
 	# The file has been removed and is in the Attic.
 	# Send a redirect pointing to the file in the Attic.
 	(my $newplace = $scriptwhere) =~ s|/([^/]+)$|/Attic/$1|;
-	redirect("$newplace$query");
+	if ($ENV{QUERY_STRING} ne "") {
+		redirect("${newplace}?$ENV{QUERY_STRING}");
+	} else {
+		redirect($newplace);
+	}
 	exit;
 } elsif (0 && (my @files = &safeglob($fullname . ",v"))) {
 	http_header("text/plain");
