@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/index.xsl,v 1.104 2004/06/27 06:22:31 hrs Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.105 2004/06/27 19:18:00 simon Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   
@@ -6,7 +6,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.104 2004/06/27 06:22:31 hrs Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.105 2004/06/27 19:18:00 simon Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <!-- these params should be externally bound. The values
@@ -185,7 +185,7 @@
 	      <h2><font color="#990000">FreeBSD is <i>free</i></font></h2>
 	    
 	      <a href="copyright/daemon.html"><img src="gifs/dae_up3.gif" 
-						   alt=""
+						   alt="The BSD Daemon"
 						   height="81" width="72" 
 						   align="right" 
 						   border="0"/></a>
