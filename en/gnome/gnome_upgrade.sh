@@ -34,13 +34,14 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $Id: gnome_upgrade.sh,v 1.17 2005-03-12 19:26:03 adamw Exp $
+# $Id: gnome_upgrade.sh,v 1.18 2005-03-13 19:13:20 adamw Exp $
+# $FreeBSD$
 #
 
 # This script will aid in doing major upgrades to the GNOME Desktop (e.g.
 # an upgrade from 2.8 --> 2.10).
 
-GNOME_UPGRADE_SH_VER=2101;	# This should be nailed down before releasing
+GNOME_UPGRADE_SH_VER=2102;	# Increment this with every functional change
 
 ## BEGIN global variable declarations.
 VERBOSE=${VERBOSE:=0}
@@ -56,7 +57,7 @@ SUPPORTED_FREEBSD_VERSIONS="4.10 4.11 5.3 5.4 6.0"
 	# The Big Update updates UPGRADE_TARGET and everything that depends on it
 UPGRADE_TARGET="glib-2*"
 	# Variables to be set across every portupgrade run
-PORTUPGRADE_MAKE_ENV="GNOME_UPGRADE_SH_VER=${GNOME_UPGRADE_SH_VER}"
+PORTUPGRADE_MAKE_ENV="GNOME_UPGRADE_SH_VER=${GNOME_UPGRADE_SH_VER} DISABLE_VULNERABILITIES=1"
 
 ## END global variable declarations.
 
@@ -187,11 +188,17 @@ upgrade_list=
 if [ "$1" = "-restart" ]; then
     upgrade_list=$2
     if [ -z "${upgrade_list}" ]; then
-	echo "ERROR: -restart requires a path to the list of GNOME ports to upgrade as its argument." | /usr/bin/fmt 75 79
-	exit 1
+	errormsg="ERROR: -restart requires a path to the list of GNOME ports to upgrade as its argument." | /usr/bin/fmt 75 79
     fi
     if [ ! -f ${upgrade_list} ]; then
-	echo "ERROR: ${upgrade_list} does not exist or is not a file." | /usr/bin/fmt 75 79
+	errormsg="ERROR: ${upgrade_list} does not exist or is not a file." | /usr/bin/fmt 75 79
+    fi
+    if [ ! -z "${errormsg}" ]; then
+    	echo "${errormsg}" | /usr/bin/fmt 75 79
+	possible_files=`ls ${TMPDIR}/gnome_upgrade_lst*`
+	if [ $? = 0 ]; then
+		echo "Possible upgrade lists from previous upgrade attempts: ${possible_files}" | /usr/bin/fmt 75 79
+	fi
 	exit 1
     fi
     restart=1
