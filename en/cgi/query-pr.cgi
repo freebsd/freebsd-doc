@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: query-pr.cgi,v 1.4 1997-03-19 21:25:29 fenner Exp $
+# $Id: query-pr.cgi,v 1.5 1998-01-22 02:31:11 fenner Exp $
 
 $ENV{'PATH'} = "/bin:/usr/bin:/usr/sbin:/sbin:/usr/local/bin";
 
@@ -59,9 +59,15 @@ while(<Q>) {
 
     $html_fixup = 1;
 
-    if (/^query-pr: no PRs matched$/) {
+    if (/^query-pr: /) {
 	print &html_header("FreeBSD problem report");
 	print "<p>No PR found matching $pr</p>\n";
+	if ($_ ne "query-pr: no PRs matched") {
+	    print "<P>query-pr said:\n";
+	    print "<PRE>$_\n";
+	    print <Q>;
+	    print "</PRE>\n";
+	}
 	print &html_footer;
 	exit;
     }
@@ -84,7 +90,7 @@ while(<Q>) {
 
     s/^>Last-Modified:\s*$/>Last-Modified: never/;
 
-    if(/^>Number:/) {
+    if (/^>Number:/) {
 	$number = &getline($_);
 	$inhdr = 0;
     } elsif (/^>Category:/) {
@@ -99,13 +105,17 @@ while(<Q>) {
 	next if $inhdr;
 
 	if (/^>(\S+):\s*(.*)/) {
-	    print $trailer . "\n";
-	    print "<dt><strong>$1</strong><dd>\n";
-	    $trailer = $2;
-	    $trailer = &fixline($2) if $html_fixup;
-	    if ($1 eq "Originator" && $from ne "") {	# add email address
-	        $trailer .= " <A HREF=\"mailto:$email\">" . &fixline($from) . "</A>";
+	    print $trailer . "\n" unless ($blank);
+	    $trailer = "<dt><strong>$1</strong><dd>\n";
+	    if ($html_fixup) {
+		$trailer .= &fixline($2);
+	    } else {
+		$trailer .= $2;
 	    }
+	    if ($1 eq "Originator" && $from ne "") {	# add email address
+		$trailer .= " <A HREF=\"mailto:$email\">" . &fixline($from) . "</A>";
+	    }
+	    $blank = !($2);
 	    $multiline = 0;
 	} else {
 	    unless ($multiline) {
@@ -113,6 +123,7 @@ while(<Q>) {
 		print $trailer . "\n<listing>\n";
 	    }
 	    $multiline = 1;
+	    $blank = 0;
 	    print $html_fixup ? &fixline($_) : $_ , "\n";
 	    $trailer = "</listing>";
 	}
@@ -120,7 +131,8 @@ while(<Q>) {
 }
 close(Q);
 
-print "$trailer\n</dl>";
+print "$trailer\n" unless ($blank);
+print "</dl>";
 
 $syn =~ s/[\?&%"]/"%" . sprintf("%02X", unpack(C, $&))/eg;
 $email =~ s/[\?&%]/"%" . sprintf("%02X", unpack(C, $&))/eg;
