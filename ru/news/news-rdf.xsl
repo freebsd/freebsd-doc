@@ -2,7 +2,7 @@
 
 <!-- $FreeBSD$ -->
 <!-- The FreeBSD Russian Documentation Project -->
-<!-- $FreeBSDru: frdp/www/ru/news/news-rdf.xsl,v 1.3 2003/09/29 12:03:20 den Exp $ -->
+<!-- $FreeBSDru: frdp/www/ru/news/news-rdf.xsl,v 1.4 2004/04/09 11:18:19 phantom Exp $ -->
 <!-- Original revision: 1.5 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -20,7 +20,7 @@
 
       <channel>
 	<title>Новости FreeBSD</title>
-	<link>http://www.FreeBSD.org/news/</link>
+	<link>http://www.FreeBSD.org/ru/news/</link>
 	<description>Последние новости Проекта FreeBSD</description>
       </channel>
 
