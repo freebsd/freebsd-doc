@@ -12,6 +12,6 @@ DOCS+=	myths.sgml
 DOCS+=	letter.sgml
 
 
-INDEXLINK= advocacy.html
+INDEXLINK= index.html
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
