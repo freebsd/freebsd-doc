@@ -25,6 +25,8 @@
 # to nik@FreeBSD.ORG
 #
 
+MAINTAINER=nik@FreeBSD.ORG
+
 DOCS=	handbook.sgml
 
 # ------------------------------------------------------------------------
