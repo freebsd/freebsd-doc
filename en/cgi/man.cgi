@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp 
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.93 2003-01-30 13:33:27 wosch Exp $
+# $Id: man.cgi,v 1.94 2003-01-30 16:38:36 wosch Exp $
 
 #use Data::Dumper;
 #use Carp;
@@ -86,6 +86,7 @@ $command{'man'} =     '/usr/bin/man'; # 8Bit clean man
 
 $sectionpath = {
     'HP-UX 11.22' => { 'path' => '1:1m:2:3:4:5:7:9' },
+    'HP-UX 11.20' => { 'path' => '1:1m:2:3:4:5:7:9' },
     'HP-UX 11.11' => { 'path' => '1:1m:2:3:4:5:7:9' },
     'HP-UX 11.00' => { 'path' => '1:1m:2:3:4:5:7:9' },
     'HP-UX 10.20' => { 'path' => '1:1m:2:3:4:5:7:9' },
@@ -247,6 +248,7 @@ $manPathDefault = 'FreeBSD 4.7-RELEASE';
      'SuSE Linux/i386 7.3',   "$manLocalDir/SuSE-7.3-i386",
 
      'HP-UX 11.22',	      "$manLocalDir/HP-UX-11.22",
+     'HP-UX 11.20',	      "$manLocalDir/HP-UX-11.20",
      'HP-UX 11.11',	      "$manLocalDir/HP-UX-11.11",
      'HP-UX 11.00',	      "$manLocalDir/HP-UX-11.00",
      'HP-UX 10.20',	      "$manLocalDir/HP-UX-10.20",
@@ -968,7 +970,7 @@ ETX
 }
 
 sub copyright {
-    $id = '$Id: man.cgi,v 1.93 2003-01-30 13:33:27 wosch Exp $';
+    $id = '$Id: man.cgi,v 1.94 2003-01-30 16:38:36 wosch Exp $';
 
     return qq{\
 <PRE>
