@@ -1,5 +1,5 @@
 #
-# $Id: docproj.docbook.mk,v 1.1 1999-04-14 22:13:59 nik Exp $
+# $Id: docproj.docbook.mk,v 1.2 1999-04-20 15:58:36 kuriyama Exp $
 #
 # This include file <docproj.docbook.mk> handles installing documentation
 # from the FreeBSD Documentation Project.
@@ -39,6 +39,9 @@
 #  JADEOPTS		Additional options to pass to Jade.  Typically
 #			used to define "IGNORE" entities to "INCLUDE"
 #			with "-i<entity-name>"
+#
+#  TIDYFLAGS		Additional flags to pass to tidy.  Typically
+#			used to set "-raw" flag to handle 8bit characters.
 #
 #  INSTALL_COMPRESSED	List of compressed versions that will also be
 #			built (and installed).  See ${KNOWN_COMPRESS}
@@ -184,11 +187,11 @@ all: ${_docs}
 
 index.html HTML.manifest: ${SRCS}
 	${JADE} -V html-manifest -ioutput.html ${JADEFLAGS} -d ${DSLHTML} -t sgml ${DOC}.sgml
-	-tidy -i -m -f /dev/null *.html
+	-tidy -i -m -f /dev/null ${TIDYFLAGS} *.html
 
 ${DOC}.html: ${SRCS}
 	${JADE} -ioutput.html -V nochunks ${JADEFLAGS} -d ${DSLHTML} -t sgml ${DOC}.sgml > ${DOC}.html
-	-tidy -i -m -f /dev/null ${DOC}.html
+	-tidy -i -m -f /dev/null ${TIDYFLAGS} ${DOC}.html
 
 ${DOC}.html-split.tar: HTML.manifest
 	tar cf ${.TARGET} `xargs < HTML.manifest`
