@@ -2,6 +2,7 @@
 <!ENTITY % output.html  "IGNORE">
 <!ENTITY % output.print "IGNORE">
 <!ENTITY % lang.ja      "IGNORE">
+<!ENTITY % lang.ja.dsssl	"IGNORE">
 <![ %output.html; [
 <!ENTITY docbook.dsl PUBLIC "-//Norman Walsh//DOCUMENT DocBook HTML Stylesheet//EN" CDATA DSSSL>
 ]]>
@@ -15,7 +16,9 @@
     <style-specification-body>
       <!-- Locatization -->
       <![ %lang.ja; [
-	(define %gentext-language% "ja")
+	<![ %lang.ja.dsssl; [
+	  (define %gentext-language% "ja")
+	]]>
 	(define %html-header-tags% '(("META" ("HTTP-EQUIV" "Content-Type") ("CONTENT" "text/html; charset=EUC-JP"))))
       ]]>
 
