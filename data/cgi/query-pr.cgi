@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: query-pr.cgi,v 1.9 1998-06-05 16:58:07 wosch Exp $
+# $Id: query-pr.cgi,v 1.10 1998-06-05 17:06:20 wosch Exp $
 
 $ENV{'PATH'} = "/bin:/usr/bin:/usr/sbin:/sbin:/usr/local/bin";
 
@@ -175,7 +175,7 @@ sub fixline {
     $line =~ s/&/&amp;/g;
     $line =~ s/</&lt;/g;
     $line =~ s/>/&gt;/g;
-    $line =~ s|(http://\S+)|<A HREF="$1">$1</A>|g;
+    $line =~ s%((http|ftp)://[^\s"\)\>,;]+)%<A HREF="$1">$1</A>%gi;
     $line =~ s%(\WPR[:s# \t]+)([a-z386]+\/)?([0-9]+)%$1<A HREF="query-pr.cgi?pr=$3">$2$3</A>%ig; 
     
     $line;
