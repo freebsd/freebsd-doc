@@ -1,4 +1,4 @@
-# $Id: Gnats.pm,v 1.1 2004-02-16 16:57:10 ceri Exp $
+# $FreeBSD$
 package Gnats;
 
 # We probably don't have "our" in this Perl
