@@ -43,9 +43,10 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $Id: cvsweb.cgi,v 1.81 2002-05-08 05:42:25 motoyuki Exp $
+#  FreeBSD: projects/cvsweb/cvsweb.cgi,v 1.104 2002/05/22 08:10:18 knu Exp
+# $Id: cvsweb.cgi,v 1.82 2002-05-22 08:31:02 knu Exp $
 # $Idaemons: /home/cvs/cvsweb/cvsweb.cgi,v 1.84 2001/10/07 20:50:10 knu Exp $
-# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.80 2002/04/11 01:55:34 fenner Exp $
+# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.81 2002/05/08 05:42:25 motoyuki Exp $
 #
 ###
 
@@ -64,7 +65,8 @@ use vars qw (
     @revisions %state %difflines %log %branchpoint @revorder
     $prcgi @prcategories $re_prcategories $prkeyword $re_prkeyword $mancgi
     $checkoutMagic $doCheckout $scriptname $scriptwhere
-    $where $pathinfo $Browser $nofilelinks $maycompress @stickyvars
+    $where $pathinfo $Browser $nofilelinks $maycompress
+    @stickyvars @unsafevars
     %funcline_regexp $is_mod_perl
     $is_links $is_lynx $is_w3m $is_msie $is_mozilla3 $is_textbased
     %input $query $barequery $sortby $bydate $byrev $byauthor
@@ -79,8 +81,10 @@ use vars qw (
     $columnHeaderColorSorted $hr_breakable $showfunc $hr_ignwhite
     $hr_ignkeysubst $diffcolorHeading $diffcolorEmpty $diffcolorRemove
     $diffcolorChange $diffcolorAdd $diffcolorDarkChange $difffontface
-    $difffontsize $inputTextSize $mime_types $allow_annotate
-    $allow_markup $use_java_script $open_extern_window
+    $difffontsize $inputTextSize $mime_types
+    $allow_annotate $allow_markup
+    $allow_log_extra $allow_dir_extra $allow_source_extra
+    $use_java_script $open_extern_window
     $extern_window_width $extern_window_height $edit_option_form
     $show_subdir_lastmod $show_log_in_markup $preformat_in_markup $v
     $navigationHeaderColor $tableBorderColor $markupLogColor
@@ -89,7 +93,7 @@ use vars qw (
     $use_moddate $has_zlib $gzip_open
     $allow_tar @tar_options @gzip_options @zip_options @cvs_options
     $LOG_FILESEPARATOR $LOG_REVSEPARATOR
-    $tmpdir
+    $tmpdir $HTML_DOCTYPE
 );
 
 sub printDiffSelect($);
@@ -101,7 +105,7 @@ sub htmlify($;$);
 sub spacedHtmlText($;$);
 sub link($$);
 sub revcmp($$);
-sub fatal($$);
+sub fatal($$@);
 sub redirect($);
 sub safeglob($);
 sub search_path($);
@@ -144,11 +148,11 @@ sub forbidden_module($);
 ##### Start of Configuration Area ########
 delete $ENV{PATH};
 
-$cvsweb_revision = '2.0.1';
+$cvsweb_revision = '2.0.3';
 
-use File::Basename;
+use File::Basename ();
 
-($mydir) = (dirname($0) =~ /(.*)/);    # untaint
+($mydir) = (File::Basename::dirname($0) =~ /(.*)/);    # untaint
 
 # == EDIT this ==
 # Locations to search for user configuration, in order:
@@ -163,6 +167,7 @@ for ("$mydir/cvsweb.conf", '/usr/local/etc/cvsweb/cvsweb.conf') {
 # Defaults for configuration variables that shouldn't need
 # to be configured..
 $allow_version_select = 1;
+$allow_log_extra = 1;
 
 ##### End of Configuration Area   ########
 
@@ -181,7 +186,7 @@ $cvstreedefault = $body_tag = $body_tag_for_src = $logo = $defaulttitle =
     $extern_window_width = $extern_window_height = $edit_option_form   =
     $show_subdir_lastmod = $show_log_in_markup = $v = $navigationHeaderColor =
     $tableBorderColor = $markupLogColor = $tabstop = $use_moddate = $moddate =
-    $gzip_open = undef;
+    $gzip_open = $HTML_DOCTYPE = undef;
 $tmpdir = defined($ENV{TMPDIR}) ? $ENV{TMPDIR} : "/var/tmp";
 
 $LOG_FILESEPARATOR = q/^={77}$/;
@@ -230,7 +235,7 @@ $LOG_REVSEPARATOR  = q/^-{28}$/;
 );
 
 $cgi_style::hsty_base = 'http://www.FreeBSD.org';
-$_ = q$FreeBSD: www/en/cgi/cvsweb.cgi,v 1.80 2002/04/11 01:55:34 fenner Exp $;
+$_ = q$FreeBSD: www/en/cgi/cvsweb.cgi,v 1.81 2002/05/08 05:42:25 motoyuki Exp $;
 @_ = split;
 $cgi_style::hsty_date = "@_[3,4]";
 
@@ -241,10 +246,13 @@ package cgi_style;
 require "$main::mydir/cgi-style.pl";
 package main;
 
+$HTML_DOCTYPE =
+  '<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">';
+
 ##### End of configuration variables #####
 
-use Time::Local;
-use IPC::Open2;
+use Time::Local ();
+use IPC::Open2 qw(open2);
 
 # Check if the zlib C library interface is installed, and if yes
 # we can avoid using the extra gzip process.
@@ -307,21 +315,16 @@ $maycompress =
 # their current value) to any link/query string
 # you construct
 @stickyvars = qw(cvsroot hideattic sortby logsort f only_with_tag);
+@unsafevars = qw(logsort only_with_tag r1 r2 rev sortby tr1 tr2);
 
 if (-f $config) {
-	require $config || &fatal(
-		"500 Internal Error",
-		sprintf(
-			'Error in loading configuration file: %s<br><br>%s<br>',
-			$config,
-			&htmlify($@)
-		)
-	);
+	do "$config" or fatal("500 Internal Error",
+			      'Error in loading configuration file: %s<br><br>%s<br>',
+			      $config, $@);
 } else {
-	&fatal("500 Internal Error",
-		'Configuration not found.  Set the variable <code>$config</code> '
-		. 'in cvsweb.cgi to your <b>cvsweb.conf</b> configuration file first.'
-	);
+	fatal("500 Internal Error",
+	      'Configuration not found.  Set the variable <code>$config</code> in cvsweb.cgi to your <b>cvsweb.conf</b> configuration file first.'
+	     );
 }
 
 undef %input;
@@ -342,6 +345,20 @@ if (defined($query) && $query ne '') {
 # For backwards compability, set only_with_tag to only_on_branch if set.
 $input{only_with_tag} = $input{only_on_branch}
     if (defined($input{only_on_branch}));
+
+# Prevent cross-site scripting
+foreach (@unsafevars) {
+	if (defined($input{$_}) && $input{$_} =~ /[^\w\-.]/) {
+		fatal("500 Internal Error",
+		      'Malformed query (%s=%s)',
+		      $_, $input{$_});
+	}
+}
+
+if (defined($input{"content-type"})) {
+	fatal("500 Internal Error", "Unsupported content-type")
+	    if ($input{"content-type"} !~ /^[-0-9A-Za-z]+\/[-0-9A-Za-z]+$/);
+}
 
 $DEFAULTVALUE{'cvsroot'} = $cvstreedefault;
 
@@ -421,28 +438,33 @@ $defaultDiffType = $input{'f'};
 
 $logsort = $input{'logsort'};
 
-my @tmp = @CVSrepositories;
-my @pair;
+{
+	my @tmp = @CVSrepositories;
+	my @pair;
 
-while (@pair = splice(@tmp, 0, 2)) {
-	my ($key,   $val)     = @pair;
-	my ($descr, $cvsroot) = @$val;
+	while (@pair = splice(@tmp, 0, 2)) {
+		my ($key,   $val)     = @pair;
+		my ($descr, $cvsroot) = @$val;
 
-	next if !-d $cvsroot;
+		next if !-d $cvsroot;
 
-	$CVSROOTdescr{$key} = $descr;
-	$CVSROOT{$key}      = $cvsroot;
-	push @CVSROOT, $key;
+		$CVSROOTdescr{$key} = $descr;
+		$CVSROOT{$key}      = $cvsroot;
+		push @CVSROOT, $key;
+	}
 }
-undef @tmp;
-undef @pair;
 
+{
+    print "..........@CVSrepositories.........\n";
+    while (my($x, $y) = each %CVSROOT) {
+	print "$x = $y\n";
+    }
+}
 ## Default CVS-Tree
 if (!defined($CVSROOT{$cvstreedefault})) {
-	&fatal("500 Internal Error",
-		"<code>\$cvstreedefault</code> points to a repository ($cvstreedefault) "
-		. "not defined in <code>%CVSROOT</code> "
-		. "(edit your configuration file $config)");
+	fatal("500 Internal Error",
+	      '<code>$cvstreedefault</code> points to a repository (%s) not defined in <code>%%CVSROOT</code> (edit your configuration file %s)',
+	      $cvstreedefault, $config);
 }
 
 # alternate CVS-Tree, configured in cvsweb.conf
@@ -474,14 +496,10 @@ my $config_cvstree = "$config-$cvstree";
 
 # Do some special configuration for cvstrees
 if (-f $config_cvstree) {
-	require $config_cvstree || &fatal(
-		"500 Internal Error",
-		sprintf(
-			'Error in loading configuration file: %s<br><br>%s<br>',
-			$config_cvstree,
-			&htmlify($@)
-		)
-	);
+	do "$config_cvstree" or
+	    fatal("500 Internal Error",
+		  'Error in loading configuration file: %s<br><br>%s<br>',
+		  $config_cvstree, $@);
 }
 undef $config_cvstree;
 
@@ -518,9 +536,8 @@ if ($rewrite) {
 undef $rewrite;
 
 if (!-d $cvsroot) {
-	&fatal("500 Internal Error",
-		'$CVSROOT not found!<p>The server on which the CVS tree lives is probably down.  Please try again in a few minutes.'
-	);
+	fatal("500 Internal Error",
+	      '$CVSROOT not found!<p>The server on which the CVS tree lives is probably down.  Please try again in a few minutes.');
 }
 
 #
@@ -529,14 +546,17 @@ if (!-d $cvsroot) {
 $where =~ m:([^/]*):;
 $module = $1;
 if ($module && &forbidden_module($module)) {
-	&fatal("403 Forbidden", "Access to $where forbidden.");
+	fatal("403 Forbidden",
+	      'Access to %s forbidden.',
+	      $where);
 }
 
 #
 # Handle tarball downloads before any headers are output.
 #
 if ($input{tarball}) {
-	&fatal("403 Forbidden", "Downloading tarballs is prohibited.")
+	fatal("403 Forbidden",
+	      'Downloading tarballs is prohibited.')
 	    unless $allow_tar;
 	my ($module) = ($where =~ m,^/?(.*),);    # untaint
 	$module =~ s,/([^/]*)$,,;
@@ -544,15 +564,16 @@ if ($input{tarball}) {
 	my ($basedir) = ($module =~ m,([^/]+)$,);
 
 	if ($basedir eq '' || $module eq '') {
-		&fatal("500 Internal Error",
-			"You cannot download the top level directory.");
+		fatal("500 Internal Error",
+		      'You cannot download the top level directory.');
 	}
 
 	my $tmpexportdir = "$tmpdir/.cvsweb.$$." . int(time);
 
 	mkdir($tmpexportdir, 0700)
-	    or &fatal("500 Internal Error",
-		"Unable to make temporary directory: $!");
+	    or fatal("500 Internal Error",
+		     'Unable to make temporary directory: %s',
+		     $!);
 
 	my @fatal;
 
@@ -567,7 +588,9 @@ if ($input{tarball}) {
 	if (system $CMD{cvs}, @cvs_options, '-Qd', $cvsroot, 'export', '-r',
 	    $tag, '-d', "$tmpexportdir/$basedir", $module)
 	{
-		@fatal = ("500 Internal Error", "cvs co failure: $!: $module");
+		@fatal = ("500 Internal Error",
+			  'cvs co failure: %s: %s',
+			  $!, $module);
 	} else {
 		$| = 1;    # Essential to get the buffering right.
 
@@ -577,18 +600,22 @@ if ($input{tarball}) {
 			system
 			    "$CMD{tar} @tar_options -cf - -C $tmpexportdir $basedir | $CMD{gzip} @gzip_options -c"
 			    and @fatal =
-			    ("500 Internal Error",
-				"tar zc failure: $!: $basedir");
+				("500 Internal Error",
+				 'tar zc failure: %s: %s',
+			     $!, $basedir);
 		} elsif ($ext eq '.zip' && $CMD{zip}) {
 			print "Content-Type: application/zip\r\n\r\n";
 
 			system
 			    "cd $tmpexportdir && $CMD{zip} @zip_options -r - $basedir"
 			    and @fatal =
-			    ("500 Internal Error", "zip failure: $!: $basedir");
+				("500 Internal Error",
+				 'zip failure: %s: %s',
+				 $!, $basedir);
 		} else {
 			@fatal =
-			    ("500 Internal Error", "unsupported file type");
+			    ("500 Internal Error",
+			     'unsupported file type');
 		}
 	}
 
@@ -604,7 +631,9 @@ if ($input{tarball}) {
 ###############################
 if (-d $fullname) {
 	my $dh = do { local (*DH); };
-	opendir($dh, $fullname) || &fatal("404 Not Found", "$where: $!");
+	opendir($dh, $fullname) or fatal("404 Not Found",
+					 '%s: %s',
+					 $where, $!);
 	my @dir = readdir($dh);
 	closedir($dh);
 	my @subLevelFiles = findLastModifiedSubdirs(@dir)
@@ -653,16 +682,12 @@ if (-d $fullname) {
 
 	my $infocols = 0;
 	if ($dirtable) {
-		if (defined($tableBorderColor)) {
-
-			# Can't this be done by defining the border for the inner table?
-			print
-			    "<table border=\"0\" cellpadding=\"0\" width=\"100%\"><tr><td bgcolor=\"$tableBorderColor\">";
-		}
-		print
-		    "<table width=\"100%\" border=\"0\" cellspacing=\"1\" cellpadding=\"$tablepadding\">\n";
+		print "<table style=\"border-width: 0";
+		print "; background-color: $tableBorderColor"
+		    if (defined $tableBorderColor);
+		print "\" width=\"100%\" cellspacing=\"1\" cellpadding=\"$tablepadding\">\n";
 		$infocols++;
-		printf '<tr><th align="left" bgcolor="%s">',
+		printf "<tr>\n<th style=\"text-align: left; background-color: %s\">",
 		    $byfile ? $columnHeaderColorSorted :
 		    $columnHeaderColorDefault;
 
@@ -677,13 +702,13 @@ if (-d $fullname) {
 				)
 			);
 		}
-		print "</th>";
+		print "</th>\n";
 
 		# do not display the other column-headers, if we do not have any files
 		# with revision information:
 		if (scalar(%fileinfo)) {
 			$infocols++;
-			printf '<th align="left" bgcolor="%s">',
+			printf '<th style="text-align: left; background-color: %s">',
 			    $byrev ? $columnHeaderColorSorted :
 			    $columnHeaderColorDefault;
 
@@ -698,9 +723,9 @@ if (-d $fullname) {
 					)
 				);
 			}
-			print "</th>";
+			print "</th>\n";
 			$infocols++;
-			printf '<th align="left" bgcolor="%s">',
+			printf '<th style="text-align: left; background-color: %s">',
 			    $bydate ? $columnHeaderColorSorted :
 			    $columnHeaderColorDefault;
 
@@ -715,11 +740,11 @@ if (-d $fullname) {
 					)
 				);
 			}
-			print "</th>";
+			print "</th>\n";
 
 			if ($show_author) {
 				$infocols++;
-				printf '<th align="left" bgcolor="%s">',
+				printf '<th style="text-align: left; background-color: %s">',
 				    $byauthor ? $columnHeaderColorSorted :
 				    $columnHeaderColorDefault;
 
@@ -737,10 +762,10 @@ if (-d $fullname) {
 						)
 					);
 				}
-				print "</th>";
+				print "</th>\n";
 			}
 			$infocols++;
-			printf '<th align="left" bgcolor="%s">',
+			printf '<th style="text-align: left; background-color: %s">',
 			    $bylog ? $columnHeaderColorSorted :
 			    $columnHeaderColorDefault;
 
@@ -755,11 +780,11 @@ if (-d $fullname) {
 					)
 				);
 			}
-			print "</th>";
+			print "</th>\n";
 		} elsif ($use_descriptions) {
-			printf '<th align="left" bgcolor="%s">',
+			printf '<th style="text-align: left; background-color: s">',
 			    $columnHeaderColorDefault;
-			print "Description";
+			print "Description</th>\n";
 			$infocols++;
 		}
 		print "</tr>\n";
@@ -825,8 +850,8 @@ if (-d $fullname) {
 			($rev, $date, $log, $author, $filename) =
 			    @{$fileinfo{$_}}
 			    if (defined($fileinfo{$_}));
-			printf '<tr bgcolor="%s"><td>', $tabcolors[$dirrow % 2]
-			    if $dirtable;
+			printf "<tr style=\"background-color: %s\">\n<td>",
+			     $tabcolors[$dirrow % 2] if $dirtable;
 
 			if ($_ eq '..') {
 				$url = "../$query";
@@ -835,7 +860,7 @@ if (-d $fullname) {
 				} else {
 					print &link($backicon, $url);
 				}
-				print " ", &link("Parent Directory", $url);
+				print '&nbsp;', &link("Parent Directory", $url);
 			} else {
 				$url = './' . urlencode($_) . "/$query";
 				print "<a name=\"$_\"></a>";
@@ -845,7 +870,7 @@ if (-d $fullname) {
 				} else {
 					print &link($diricon, $url);
 				}
-				print " ", &link("$_/", $url), $attic;
+				print '&nbsp;', &link("$_/", $url), $attic;
 
 				if ($_ eq "Attic") {
 					print "&nbsp; ";
@@ -862,7 +887,7 @@ if (-d $fullname) {
 
 			# Show last change in dir
 			if ($filename) {
-				print "</td><td>&nbsp;</td><td>&nbsp;"
+				print "</td>\n<td>&nbsp;</td>\n<td>&nbsp;"
 				    if ($dirtable);
 				if ($date) {
 					print " <i>",
@@ -871,22 +896,22 @@ if (-d $fullname) {
 				}
 
 				if ($show_author) {
-					print "</td><td>&nbsp;" if ($dirtable);
+					print "</td>\n<td>&nbsp;" if ($dirtable);
 					print $author;
 				}
-				print "</td><td>&nbsp;" if ($dirtable);
+				print "</td>\n<td>&nbsp;" if ($dirtable);
 				$filename =~ s%^[^/]+/%%;
 				print "$filename/$rev";
 				print "<br>" if ($dirtable);
 
 				if ($log) {
-					print "&nbsp;<font size=\"-1\">",
+					print "&nbsp;<span style=\"font-size: smaller\">",
 					  &htmlify(
-						substr($log, 0, $shortLogLen));
+						substr($log, 0, $shortLogLen), $allow_dir_extra);
 					if (length $log > 80) {
 						print "...";
 					}
-					print "</font>";
+					print "</span>";
 				}
 			} else {
 				my ($dwhere) =
@@ -905,14 +930,14 @@ if (-d $fullname) {
 					# columns, so that the vertical seperators are visible
 					my ($cols) = $infocols;
 					while ($cols > 1) {
-						print "</td><td>&nbsp;";
+						print "</td>\n<td>&nbsp;";
 						$cols--;
 					}
 				}
 			}
 
 			if ($dirtable) {
-				print "</td></tr>\n";
+				print "</td>\n</tr>\n";
 			} else {
 				print "<br>\n";
 			}
@@ -928,8 +953,8 @@ if (-d $fullname) {
 			next if (!defined($fileinfo{$_}));
 			($rev, $date, $log, $author) = @{$fileinfo{$_}};
 			$filesfound++;
-			printf '<tr bgcolor="%s"><td>', $tabcolors[$dirrow % 2]
-			    if $dirtable;
+			printf "<tr style=\"background-color: %s\">\n<td>",
+			    $tabcolors[$dirrow % 2] if $dirtable;
 			print "<a name=\"$_\"></a>";
 
 			if ($nofilelinks) {
@@ -937,32 +962,32 @@ if (-d $fullname) {
 			} else {
 				print &link($fileicon, $url);
 			}
-			print " ", &link($_, $url), $attic;
-			print "</td><td>&nbsp;" if ($dirtable);
+			print '&nbsp;', &link($_, $url), $attic;
+			print "</td>\n<td>&nbsp;" if ($dirtable);
 			download_link($fileurl, $rev, $rev,
 				$defaultViewable ? "text/x-cvsweb-markup" :
 				undef);
-			print "</td><td>&nbsp;" if ($dirtable);
+			print "</td>\n<td>&nbsp;" if ($dirtable);
 
 			if ($date) {
 				print " <i>", readableTime(time() - $date, 0),
 				    "</i>";
 			}
 			if ($show_author) {
-				print "</td><td>&nbsp;" if ($dirtable);
+				print "</td>\n<td>&nbsp;" if ($dirtable);
 				print $author;
 			}
-			print "</td><td>&nbsp;" if ($dirtable);
+			print "</td>\n<td>&nbsp;" if ($dirtable);
 
 			if ($log) {
-				print " <font size=\"-1\">",
-				    &htmlify(substr($log, 0, $shortLogLen));
+				print " <span style=\"font-size: smaller\">",
+				    &htmlify(substr($log, 0, $shortLogLen), $allow_dir_extra);
 				if (length $log > 80) {
 					print "...";
 				}
-				print "</font>";
+				print "</span>";
 			}
-			print "</td>" if ($dirtable);
+			print "</td>\n" if ($dirtable);
 			print(($dirtable) ? "</tr>" : "<br>");
 			$dirrow++;
 		}
@@ -970,10 +995,6 @@ if (-d $fullname) {
 	}
 
 	print($dirtable ? "</table>\n" : "</menu>\n");
-
-	if ($dirtable && defined($tableBorderColor)) {
-		print "</td></tr></table>";
-	}
 
 	if ($filesexists && !$filesfound) {
 		print
@@ -987,7 +1008,7 @@ if (-d $fullname) {
 	if (scalar %tags || $input{only_with_tag} || $edit_option_form
 	    || defined($input{"options"}))
 	{
-		print "<hr size=\"1\" noshade>";
+		print "<hr size=\"1\" noshade>\n";
 	}
 
 	if (scalar %tags || $input{only_with_tag}) {
@@ -1036,49 +1057,51 @@ if (-d $fullname) {
 				    &link("zip archive", "./$basefile.zip$query"
 					. ($query ? "&" : "?") . "tarball=1");
 			}
-			print "</div>";
+			print "</div>\n";
 		}
 	}
 
-	my $formwhere = $scriptwhere;
-	$formwhere =~ s|Attic/?$|| if ($input{'hideattic'});
-
 	if ($edit_option_form || defined($input{"options"})) {
+
+		my $formwhere = $scriptwhere;
+		$formwhere =~ s|Attic/?$|| if ($input{'hideattic'});
+
 		print "<form method=\"get\" action=\"${formwhere}\">\n";
 		print "<input type=\"hidden\" name=\"copt\" value=\"1\">\n";
 		if ($cvstree ne $cvstreedefault) {
 			print
 			    "<input type=\"hidden\" name=\"cvsroot\" value=\"$cvstree\">\n";
 		}
-		print "<center><table cellpadding=\"0\" cellspacing=\"0\">";
-		print
-		    "<tr bgcolor=\"$columnHeaderColorDefault\"><th colspan=\"2\">Preferences</th></tr>";
-		print "<tr><td>Sort files by <select name=\"sortby\">";
-		print "<option value=\"\">File</option>";
+		print "<center>\n<table cellpadding=\"0\" cellspacing=\"0\">";
+		print "\n<tr style=\"background-color: $columnHeaderColorDefault\">\n";
+		print "<th colspan=\"2\">Preferences</th>\n</tr>\n";
+		print "<tr>\n<td>Sort files by <select name=\"sortby\">\n";
+		print "<option value=\"\">File</option>\n";
 		print "<option", $bydate ? " selected" : "",
-		    " value=\"date\">Age</option>";
+		    " value=\"date\">Age</option>\n";
 		print "<option", $byauthor ? " selected" : "",
-		    " value=\"author\">Author</option>"
+		    " value=\"author\">Author</option>\n"
 		    if ($show_author);
 		print "<option", $byrev ? " selected" : "",
-		    " value=\"rev\">Revision</option>";
+		    " value=\"rev\">Revision</option>\n";
 		print "<option", $bylog ? " selected" : "",
-		    " value=\"log\">Log message</option>";
-		print "</select></td>";
+		    " value=\"log\">Log message</option>\n";
+		print "</select>\n</td>\n";
 		print "<td>Sort log by: ";
 		printLogSortSelect(0);
-		print "</td></tr>";
-		print "<tr><td>Diff format: ";
+		print "</td>\n</tr>\n";
+		print "<tr>\n<td>Diff format: ";
 		printDiffSelect(0);
-		print "</td>";
+		print "</td>\n";
 		print "<td><label>Show Attic files: ";
 		print "<input name=\"hideattic\" type=\"checkbox\"",
-		    $input{'hideattic'} ? " checked" : "", "></label></td></tr>\n";
-		print
-		    "<tr><td align=\"center\" colspan=\"2\"><input type=\"submit\" value=\"Change Options\">";
-		print "</td></tr></table></center></form>\n";
+		    $input{'hideattic'} ? " checked" : "",
+		     "></label></td>\n</tr>\n";
+		print "<tr>\n<td align=\"center\" colspan=\"2\">";
+		print "<input type=\"submit\" value=\"Change Options\">";
+		print "</td>\n</tr>\n</table>\n</center>\n</form>\n";
 	}
-	print &html_footer;
+	html_footer();
 }
 
 ###############################
@@ -1167,7 +1190,9 @@ elsif (-f $fullname . ',v') {
 			}
 		}
 	}
-	&fatal("404 Not Found", "$where: no such file or directory");
+	fatal("404 Not Found",
+	      '%s: no such file or directory',
+	      $where);
 }
 
 gzipclose();
@@ -1180,11 +1205,11 @@ sub printDiffSelect($) {
 
 	print '<select name="f"';
 	print ' onchange="this.form.submit()"' if $use_java_script;
-	print '>';
+	print ">\n";
 
 	local $_;
 	for (@DIFFTYPES) {
-		printf('<option value="%s"%s>%s</option>', $_,
+		printf("<option value=\"%s\"%s>%s</option>\n", $_,
 		    $f eq $_ ? ' selected' : '', "\u$DIFFTYPES{$_}{'descr'}");
 	}
 
@@ -1196,11 +1221,11 @@ sub printLogSortSelect($) {
 
 	print '<select name="logsort"';
 	print ' onchange="this.form.submit()"' if $use_java_script;
-	print '>';
+	print ">\n";
 
 	local $_;
 	for (@LOGSORTKEYS) {
-		printf('<option value="%s"%s>%s</option>', $_,
+		printf("<option value=\"%s\"%s>%s</option>\n", $_,
 		    $logsort eq $_ ? ' selected' : '',
 		    "\u$LOGSORTKEYS{$_}{'descr'}");
 	}
@@ -1222,7 +1247,7 @@ sub findLastModifiedSubdirs(@) {
 		my ($lastmodtime) = undef;
 		my $dh = do { local (*DH); };
 
-		opendir($dh, $dir) || next;
+		opendir($dh, $dir) or next;
 		my (@filenames) = readdir($dh);
 		closedir($dh);
 
@@ -1283,8 +1308,7 @@ sub htmlify($;$) {
 	if ($extra) {
 
 		# get PR #'s as link: "PR#nnnn" "PR: nnnn, ..." "PR nnnn, ..." "bin/nnnn"
-		if (defined($prcgi) && defined($re_prcategories)
-		    && defined($re_prkeyword))
+		if (defined($prcgi) && defined($re_prkeyword))
 		{
 			my $prev;
 
@@ -1307,14 +1331,16 @@ sub htmlify($;$) {
 				    $_;
 			} while ($_ ne $prev);
 
-			$_ = htmlify_sub {
-				s{
-		  (\b$re_prcategories/(\d+)\b)
-		 }{
-		     &link($1, sprintf($prcgi, $2))
-		 }egox;
-			    }
-			    $_;
+			if (defined($re_prcategories)) {
+				$_ = htmlify_sub {
+					s{
+			  (\b$re_prcategories/(\d+)\b)
+			}{
+				&link($1, sprintf($prcgi, $2))
+			}egox;
+				    }
+				    $_;
+			}
 		}
 
 		# get manpage specs as link: "foo.1" "foo(1)"
@@ -1363,7 +1389,7 @@ sub spacedHtmlText($;$) {
 		s/ /\001nbsp;/g;
 	}
 
-	$_ = htmlify($_);
+	$_ = htmlify($_, $allow_source_extra);
 
 	# unescape
 	y/\001/&/;
@@ -1400,16 +1426,18 @@ sub revcmp($$) {
 	return 0;
 }
 
-sub fatal($$) {
-	my ($errcode, $errmsg) = @_;
+sub fatal($$@) {
+	my ($errcode, $format, @args) = @_;
 	if ($is_mod_perl) {
 		Apache->request->status((split (/ /, $errcode))[0]);
 	} else {
 		print "Status: $errcode\r\n";
 	}
 	html_header("Error");
-	print "Error: " . htmlquote($errmsg) . "\n";
-	print &html_footer;
+	print "<p>Error: ",
+	  sprintf($format, map(htmlquote($_), @args)),
+	  "</p>\n";
+	html_footer();
 	exit(1);
 }
 
@@ -1423,8 +1451,8 @@ sub redirect($) {
 		print "Location: $url\r\n";
 	}
 	html_header("Moved");
-	print "This document is located ", &link('here', $url), "\n";
-	print &html_footer;
+	print "<p>This document is located ", &link('here', $url), "</p>\n";
+	html_footer();
 	exit(1);
 }
 
@@ -1538,13 +1566,11 @@ sub scan_directives(@) {
 sub openOutputFilter() {
 	return if !defined($output_filter) || $output_filter eq '';
 
-	open(STDOUT, "|-") && return;
+	open(STDOUT, "|-") and return;
 
 	# child of child
 	open(STDERR, '>/dev/null');
-	exec($output_filter);
-
-	exit -1;
+	exec($output_filter) or exit -1;
 }
 
 ###############################
@@ -1560,14 +1586,14 @@ sub doAnnotate($$) {
 	# make sure the revisions are wellformed, for security
 	# reasons ..
 	if ($rev =~ /[^\w.]/) {
-		&fatal("404 Not Found",
-			"Malformed query \"$ENV{QUERY_STRING}\"");
+		fatal("404 Not Found",
+		      'Malformed query "%s"',
+		      $ENV{QUERY_STRING});
 	}
 
 	if (&forbidden_file($fullname)) {
-		&fatal("403 Forbidden",
-			"Access forbidden.  This file is mentioned in \@ForbiddenFiles"
-		);
+		fatal("403 Forbidden",
+		      'Access forbidden.  This file is mentioned in @ForbiddenFiles');
 		return;
 	}
 
@@ -1585,8 +1611,8 @@ sub doAnnotate($$) {
 	# we could abandon the use of rlog, rcsdiff and co using
 	# the cvsserver in a similiar way one day (..after rewrite)
 	$pid = open2($reader, $writer, $CMD{cvs}, @cvs_options, "server")
-	    || fatal("500 Internal Error",
-		"Fatal Error - unable to open cvs for annotation");
+	    or fatal("500 Internal Error",
+		     'Fatal Error - unable to open cvs for annotation');
 
 	# OK, first send the request to the server.  A simplified example is:
 	#     Root /home/kingdon/zwork/cvsroot
@@ -1641,13 +1667,13 @@ sub doAnnotate($$) {
 	# OK, we've sent our command to the server.  Thing to do is to
 	# close the writer side and get all the responses.  If "cvs server"
 	# were nicer about buffering, then we could just leave it open, I think.
-	close($writer) || die "cannot close: $!";
+	close($writer) or die "cannot close: $!";
 
 	http_header();
 
 	navigateHeader($scriptwhere, $pathname, $filename, $rev, "annotate");
 	print
-	    "<h3 align=\"center\">Annotation of $pathname$filename, Revision $rev</h3>\n";
+	    "<h3 style=\"text-align: center\">Annotation of $pathname$filename, Revision $rev</h3>\n";
 
 	# Ready to get the responses from the server.
 	# For example:
@@ -1660,7 +1686,7 @@ sub doAnnotate($$) {
 	my ($revprint, $usrprint);
 
 	if ($annTable) {
-		print "<table border=\"0\" cellspacing=\"0\" cellpadding=\"0\">\n";
+		print "<table style=\"border: none\" cellspacing=\"0\" cellpadding=\"0\">\n";
 	} else {
 		print "<pre>";
 	}
@@ -1721,7 +1747,8 @@ sub doAnnotate($$) {
 			# CVS command line client.  But for simplicity, we don't.
 		} elsif ($words[0] eq "error") {
 			fatal("500 Internal Error",
-				"Error occured during annotate: <b>$_</b>");
+			      'Error occured during annotate: <b>%s</b>',
+			      $_);
 		}
 	}
 
@@ -1730,7 +1757,7 @@ sub doAnnotate($$) {
 	} else {
 		print "</pre>";
 	}
-	close($reader) || warn "cannot close: $!";
+	close($reader) or warn "cannot close: $!";
 	wait;
 }
 
@@ -1749,14 +1776,14 @@ sub doCheckout($$) {
 	# make sure the revisions a wellformed, for security
 	# reasons ..
 	if (defined($rev) && $rev =~ /[^\w.]/) {
-		&fatal("404 Not Found",
-			"Malformed query \"$ENV{QUERY_STRING}\"");
+		fatal("404 Not Found",
+		      'Malformed query "%s"',
+		      $ENV{QUERY_STRING});
 	}
 
 	if (&forbidden_file($fullname)) {
-		&fatal("403 Forbidden",
-			"Access forbidden. This file is mentioned in \@ForbiddenFiles"
-		);
+		fatal("403 Forbidden",
+		      'Access forbidden.  This file is mentioned in @ForbiddenFiles');
 		return;
 	}
 
@@ -1794,12 +1821,19 @@ sub doCheckout($$) {
 		 # chdir to $tmpdir before to avoid non-readable cgi-bin directories
 		chdir($tmpdir);
 		open(STDERR, ">&STDOUT");    # Redirect stderr to stdout
-		exec($CMD{cvs}, @cvs_options, '-d', $cvsroot, 'co', '-p',
-		    $revopt, $where);
+
+		# work around a bug of cvs -p; expand symlinks
+		use Cwd 'abs_path';
+		exec($CMD{cvs}, @cvs_options,
+		     '-d', abs_path($cvsroot),
+		     'co', '-p',
+		     $revopt, $where) or exit -1;
 	}
 
 	if (eof($fh)) {
-		&fatal("404 Not Found", "$where is not (any longer) pertinent");
+		fatal("404 Not Found",
+		      '%s is not (any longer) pertinent',
+		      $where);
 	}
 
 	#===================================================================
@@ -1823,8 +1857,9 @@ sub doCheckout($$) {
 	}
 
 	if ($filename ne $where) {
-		&fatal("500 Internal Error",
-			"Unexpected output from cvs co: $cvsheader");
+		fatal("500 Internal Error",
+		      'Unexpected output from cvs co: %s',
+		      $cvsheader);
 	}
 	$| = 1;
 
@@ -1849,7 +1884,7 @@ sub cvswebMarkup($$$) {
 
 	navigateHeader($scriptwhere, $pathname, $filename, $revision, "view");
 	print "<hr noshade>";
-	print "<table width=\"100%\"><tr><td bgcolor=\"$markupLogColor\">";
+	print "<table width=\"100%\">\n<tr>\n<td style=\"background-color: $markupLogColor\">";
 	print "File: ", &clickablePath($where, 1);
 	print "&nbsp;(";
 	&download_link($fileurl, $revision, "download");
@@ -1870,7 +1905,7 @@ sub cvswebMarkup($$$) {
 		print "Tag: <b>", $input{only_with_tag}, "</b><br>\n"
 		    if $input{only_with_tag};
 	}
-	print "</td></tr></table>";
+	print "</td>\n</tr>\n</table>";
 	my $url = download_url($fileurl, $revision, $mimetype);
 	print "<hr noshade>";
 
@@ -1918,9 +1953,8 @@ sub doDiff($$$$$$) {
 	my ($rev1, $rev2, $sym1, $sym2, $f1, $f2);
 
 	if (&forbidden_file($fullname)) {
-		&fatal("403 Forbidden",
-			"Access forbidden. This file is mentioned in \@ForbiddenFiles"
-		);
+		fatal("403 Forbidden",
+		      'Access forbidden.  This file is mentioned in @ForbiddenFiles');
 		return;
 	}
 
@@ -1945,8 +1979,9 @@ sub doDiff($$$$$$) {
 	# make sure the revisions a wellformed, for security
 	# reasons ..
 	if ($rev1 =~ /[^\w.]/ || $rev2 =~ /[^\w.]/) {
-		&fatal("404 Not Found",
-			"Malformed query \"$ENV{QUERY_STRING}\"");
+		fatal("404 Not Found",
+		      'Malformed query "%s"',
+		      $ENV{QUERY_STRING});
 	}
 
 	#
@@ -1961,7 +1996,9 @@ sub doDiff($$$$$$) {
 	my $difftype = $DIFFTYPES{$f};
 
 	if (!$difftype) {
-		fatal("400 Bad arguments", "Diff format $f not understood");
+		fatal("400 Bad arguments",
+		      'Diff format %s not understood',
+		      $f);
 	}
 
 	my @difftype       = @{$difftype->{'opts'}};
@@ -1993,11 +2030,12 @@ sub doDiff($$$$$$) {
 	if (!open($fh, "-|")) {    # child
 		open(STDERR, ">&STDOUT");    # Redirect stderr to stdout
 		openOutputFilter();
-		exec($CMD{rcsdiff}, @difftype, "-r$rev1", "-r$rev2", $fullname);
+		exec($CMD{rcsdiff}, @difftype, "-r$rev1", "-r$rev2", $fullname) or exit -1;
 	}
 	if ($human_readable) {
 		http_header();
 		&human_readable_diff($fh, $rev2);
+		html_footer();
 		gzipclose();
 		exit;
 	} else {
@@ -2082,14 +2120,14 @@ sub getDirLogs($$@) {
 		if (!open($fh, "-|")) {    # child
 			open(STDERR, '>/dev/null'); # rlog may complain; ignore.
 			openOutputFilter();
-			exec($CMD{rlog}, @files);
+			exec($CMD{rlog}, @files) or exit -1;
 		}
 	} else {
 
 		if (!open($fh, "-|")) {    # child
 			open(STDERR, '>/dev/null'); # rlog may complain; ignore.
 			openOutputFilter();
-			exec($CMD{rlog}, '-r', @files);
+			exec($CMD{rlog}, '-r', @files) or exit -1;
 		}
 	}
 	$state = "start";
@@ -2147,7 +2185,7 @@ sub getDirLogs($$@) {
 		}
 
 		if ($state eq "tags") {
-			if (/^\s+(.+):\s+([\d\.]+)\s+$/) {
+			if (/^\s+([^:]+):\s+([\d\.]+)\s*$/) {
 				push (@filetags, $1);
 				$symrev{$1}  = $2;
 				$alltags{$1} = 1;
@@ -2239,8 +2277,8 @@ sub getDirLogs($$@) {
 				$state = "log";
 				$log   = '';
 				next;
-			} elsif ($rev eq '' && /^revision (.*)$/) {
-				$rev = $1;
+			} elsif ($rev eq '' && /^revision (\d+(?:\.\d+)+).*$/) {
+				$rev = $1; # .*$ eats up the locker(lockers?) info, if any
 				next;
 			} else {
 				$log .= $_;
@@ -2254,10 +2292,9 @@ sub getDirLogs($$@) {
 	}
 
 	if ($. == 0) {
-		fatal("500 Internal Error", "Failed to spawn GNU rlog on <em>'"
-			. join (", ", @files)
-			. "'</em><p>Did you set the <b>\$command_path</b> in your configuration file correctly ? (Currently '$command_path'"
-		);
+		fatal("500 Internal Error",
+		      'Failed to spawn GNU rlog on <em>"%s"</em>.  <p>Did you set the <b>$command_path</b> in your configuration file correctly ? (Currently "%s"',
+		      join (", ", @files), $command_path);
 	}
 	close($fh);
 }
@@ -2286,10 +2323,10 @@ sub readLog($;$) {
 	if (!open($fh, "-|")) {    # child
 		if ($revision ne '') {
 			openOutputFilter();
-			exec($CMD{rlog}, $revision, $fullname);
+			exec($CMD{rlog}, $revision, $fullname) or exit -1;
 		} else {
 			openOutputFilter();
-			exec($CMD{rlog}, $fullname);
+			exec($CMD{rlog}, $fullname) or exit -1;
 		}
 	}
 
@@ -2319,13 +2356,18 @@ sub readLog($;$) {
 	# date: 1995/11/29 22:15:52;  author: fenner;  state: Exp;  lines: +5 -3
 	# log info
 	# ----------------------------
+
+	# For a locked revision, the first line after the separator 
+	# becomes smth like
+	# revision 9.19	locked by: vassilii;
+
 	logentry:
 
 	while (!/$LOG_FILESEPARATOR/o) {
 		$_ = <$fh>;
 		last logentry if (!defined($_));    # EOF
 		print "R:", $_ if ($verbose);
-		if (/^revision ([\d\.]+)/) {
+		if (/^revision (\d+(?:\.\d+)+)/) {
 			$rev = $1;
 			unshift (@allrevisions, $rev);
 		} elsif (/$LOG_FILESEPARATOR/o || /$LOG_REVSEPARATOR/o) {
@@ -2340,8 +2382,6 @@ sub readLog($;$) {
 			# these lines since we don't know what revision they go with
 			# any more.
 			next logentry;
-
-			#		&fatal("500 Internal Error","Error parsing RCS output: $_");
 		}
 		$_ = <$fh>;
 		print "D:", $_ if ($verbose);
@@ -2361,8 +2401,9 @@ sub readLog($;$) {
 			$state{$rev}     = $8;
 			$difflines{$rev} = $10;
 		} else {
-			&fatal("500 Internal Error",
-				"Error parsing RCS output: $_");
+			fatal("500 Internal Error",
+			      'Error parsing RCS output: %s',
+			      $_);
 		}
 		line:
 
@@ -2469,7 +2510,8 @@ sub readLog($;$) {
 
 		if (!defined($onlyonbranch) || $onlybranchpoint eq "") {
 			fatal("404 Tag not found",
-				"Tag $input{'only_with_tag'} not defined");
+			      'Tag %s not defined',
+			      $input{'only_with_tag'});
 		}
 	}
 
@@ -2528,6 +2570,7 @@ sub printLog($;$) {
 	$link = 1 if (!defined($link));
 	$isDead = ($state{$_} eq "dead");
 
+	print "<p>\n";
 	if ($link && !$isDead) {
 		my ($filename);
 		($filename = $where) =~ s/^.*\///;
@@ -2649,7 +2692,8 @@ sub printLog($;$) {
 		my %diffrev = ();
 		$diffrev{$_} = 1;
 		$diffrev{""} = 1;
-		print "<br>Diff";
+		print '<br>';
+		my $diff = 'Diff';
 
 		#
 		# Offer diff to previous revision
@@ -2660,7 +2704,8 @@ sub printLog($;$) {
 			    sprintf('%s.diff?r1=%s&r2=%s%s', $scriptwhere,
 				$prev, $_, $barequery);
 
-			print " to previous ";
+			print $diff, " to previous ";
+			$diff = '';
 			printDiffLinks($prev, $url);
 		}
 
@@ -2674,7 +2719,8 @@ sub printLog($;$) {
 			    sprintf('%s.diff?r1=%s&r2=%s%s', $scriptwhere, $brp,
 				$_, $barequery);
 
-			print " to branchpoint ";
+			print $diff, " to branchpoint ";
+			$diff = '';
 			printDiffLinks($brp, $url);
 		}
 
@@ -2716,7 +2762,8 @@ sub printLog($;$) {
 					$scriptwhere, $nextmain, $_,
 					$barequery);
 
-				print " next main ";
+				print $diff, " next main ";
+				$diff = '';
 				printDiffLinks($nextmain, $url);
 			}
 		}
@@ -2730,12 +2777,15 @@ sub printLog($;$) {
 			    sprintf('%s.diff?r1=%s&r2=%s%s', $scriptwhere,
 				$input{'r1'}, $_, $barequery);
 
-			print " to selected ";
+			print $diff, " to selected ";
+			$diff = '';
 			printDiffLinks($input{'r1'}, $url);
 		}
+
+		print '<br>' if $diff;
 	}
-	print "<pre>\n";
-	print &htmlify($log{$_}, 1);
+	print "\n</p>\n<pre>\n";
+	print &htmlify($log{$_}, $allow_log_extra);
 	print "</pre>\n";
 }
 
@@ -2749,11 +2799,14 @@ sub doLog($) {
 	($upwhere  = $where) =~ s|(Attic/)?[^/]+$||;
 	($filename = $where) =~ s|^.*/||;
 	$backurl = $scriptname . "/" . urlencode($upwhere) . $query;
+	print "<p>\n ";
 	print &link($backicon, "$backurl#$filename"), " <b>Up to ",
-	    &clickablePath($upwhere, 1), "</b><p>\n";
+	    &clickablePath($upwhere, 1), "</b>\n</p>\n";
+	print "<p>\n ";
 	print &link('Request diff between arbitrary revisions', '#diff');
-	print '<hr noshade>';
+	print "\n</p>\n<hr noshade>\n";
 
+	print "<p>\n";
 	if ($curbranch) {
 		print "Default branch: ", ($revsym{$curbranch} || $curbranch);
 	} else {
@@ -2764,21 +2817,22 @@ sub doLog($) {
 	if ($input{only_with_tag}) {
 		print "Current tag: $input{only_with_tag}<br>\n";
 	}
+	print "</p>\n";
 
 	undef %nameprinted;
 
 	for (my $i = 0 ; $i <= $#revdisplayorder ; $i++) {
-		print "<hr size=\"1\" noshade>";
+		print "<hr size=\"1\" noshade>\n";
 		printLog($revdisplayorder[$i]);
 	}
 
-	print "<hr noshade>";
+	print "<hr noshade>\n<p>\n";
 	print "<a name=\"diff\">\n";
 	print "This form allows you to request diff's between any two\n";
 	print "revisions of a file.  You may select a symbolic revision\n";
 	print "name using the selection box or you may type in a numeric\n";
 	print "name using the type-in text box.\n";
-	print "</a><p>\n";
+	print "</a>\n</p>\n";
 	print
 	    "<form method=\"get\" action=\"${scriptwhere}.diff\" name=\"diff_select\">\n";
 
@@ -2789,7 +2843,7 @@ sub doLog($) {
 		    && ((!defined($DEFAULTVALUE{$_})
 		    || $input{$_} ne $DEFAULTVALUE{$_}) && $input{$_} ne ""));
 	}
-	print "<table><tr>\n";
+	print "<table style=\"border: none\">\n<tr>\n";
 	print "<td align=\"right\">Diffs between \n";
 	print "<select name=\"r1\">\n";
 	print "<option value=\"text\" selected>Use Text Field</option>\n";
@@ -2798,9 +2852,9 @@ sub doLog($) {
 	$diffrev = $revdisplayorder[$#revdisplayorder];
 	$diffrev = $input{"r1"} if (defined($input{"r1"}));
 	print
-	    "<input type=\"text\" size=\"$inputTextSize\" name=\"tr1\" value=\"$diffrev\" onchange=\"document.diff_select.r1.selectedIndex=0\"></td>";
-	print "<td><br></td></tr>\n";
-	print "<tr><td align=\"right\">and \n";
+	    "<input type=\"text\" size=\"$inputTextSize\" name=\"tr1\" value=\"$diffrev\" onchange=\"document.diff_select.r1.selectedIndex=0\"></td>\n";
+	print "<td><br></td>\n</tr>\n";
+	print "<tr>\n<td align=\"right\">and \n";
 	print "<select name=\"r2\">\n";
 	print "<option value=\"text\" selected>Use Text Field</option>\n";
 	print $sel;
@@ -2808,20 +2862,20 @@ sub doLog($) {
 	$diffrev = $revdisplayorder[0];
 	$diffrev = $input{"r2"} if (defined($input{"r2"}));
 	print
-	    "<input type=\"text\" size=\"$inputTextSize\" name=\"tr2\" value=\"$diffrev\" onchange=\"document.diff_select.r2.selectedIndex=0\"></td>";
+	    "<input type=\"text\" size=\"$inputTextSize\" name=\"tr2\" value=\"$diffrev\" onchange=\"document.diff_select.r2.selectedIndex=0\"></td>\n";
 	print "<td><input type=\"submit\" value=\"  Get Diffs  \"></td>\n";
+	print "</tr>\n</table>\n";
 	print "</form>\n";
-	print "</tr></table>\n";
 	print "<hr noshade>\n";
-	print "<table>";
 	print "<form method=\"get\" action=\"$scriptwhere\">\n";
-	print "<tr><td align=\"right\">Preferred Diff type:</td>";
+	print "<table style=\"border: none\">\n";
+	print "<tr>\n<td align=\"right\">Preferred Diff type:</td>\n";
 	print "<td>";
 	printDiffSelect($use_java_script);
-	print "</td><td></td></tr>\n";
+	print "</td>\n<td></td>\n</tr>\n";
 
 	if (@branchnames) {
-		print "<tr><td align=\"right\">View only Branch:</td>";
+		print "<tr>\n<td align=\"right\">View only Branch:</td>\n";
 		print "<td>";
 		print "<a name=\"branch\"></a>\n";
 		print "<select name=\"only_with_tag\"";
@@ -2840,7 +2894,7 @@ sub doLog($) {
 			    && $input{"only_with_tag"} eq $_);
 			print ">${_}</option>\n";
 		}
-		print "</select></td><td></td></tr>\n";
+		print "</select></td>\n<td></td>\n</tr>\n";
 	}
 
 	foreach (@stickyvars) {
@@ -2852,16 +2906,16 @@ sub doLog($) {
 		    && (!defined($DEFAULTVALUE{$_})
 		    || $input{$_} ne $DEFAULTVALUE{$_}) && $input{$_} ne "");
 	}
-	print "<tr><td align=\"right\">";
+	print "<tr>\n<td align=\"right\">";
 	print "<a name=\"logsort\"></a>\n";
-	print "Sort log by:</td>";
+	print "Sort log by:</td>\n";
 	print "<td>";
 	printLogSortSelect($use_java_script);
-	print "</td>";
-	print "<td><input type=\"submit\" value=\"  Set  \"></td>";
+	print "</td>\n";
+	print "<td><input type=\"submit\" value=\"  Set  \"></td>\n";
+	print "</tr>\n</table>\n";
 	print "</form>\n";
-	print "</tr></table>";
-	print &html_footer;
+	html_footer();
 }
 
 sub flush_diff_rows($$$$) {
@@ -2875,32 +2929,33 @@ sub flush_diff_rows($$$$) {
 	if ($state eq "PreChangeRemove") {    # we just got remove-lines before
 		for ($j = 0 ; $j < $leftRow ; $j++) {
 			print
-			    "<tr><td bgcolor=\"$diffcolorRemove\">@$leftColRef[$j]</td>";
+			    "<tr>\n<td class=\"diff-removed\">&nbsp;@$leftColRef[$j]</td>\n";
 			print
-			    "<td bgcolor=\"$diffcolorEmpty\">&nbsp;</td></tr>\n";
+			    "<td class=\"diff-empty\">&nbsp;</td>\n</tr>\n";
 		}
 	} elsif ($state eq "PreChange") {    # state eq "PreChange"
 		    # we got removes with subsequent adds
 
 		for ($j = 0 ; $j < $leftRow || $j < $rightRow ; $j++)
 		{    # dump out both cols
-			print "<tr>";
+			print "<tr>\n";
 			if ($j < $leftRow) {
 				print
-				    "<td bgcolor=\"$diffcolorChange\">@$leftColRef[$j]</td>";
+				    "<td class=\"diff-changed\">&nbsp;@$leftColRef[$j]</td>";
 			} else {
 				print
-				    "<td bgcolor=\"$diffcolorDarkChange\">&nbsp;</td>";
+				    "<td class=\"diff-changed-missing\">&nbsp;</td>";
 			}
+			print "\n";
 
 			if ($j < $rightRow) {
 				print
-				    "<td bgcolor=\"$diffcolorChange\">@$rightColRef[$j]</td>";
+				    "<td class=\"diff-changed\">&nbsp;@$rightColRef[$j]</td>";
 			} else {
 				print
-				    "<td bgcolor=\"$diffcolorDarkChange\">&nbsp;</td>";
+				    "<td class=\"diff-changed-missing\">&nbsp;</td>";
 			}
-			print "</tr>\n";
+			print "\n</tr>\n";
 		}
 	}
 }
@@ -2939,9 +2994,10 @@ sub human_readable_diff($) {
 	}
 
 	print
-	    "<h3 align=\"center\">Diff for /$where_nd between version $rev1 and $rev2</h3>\n",
+	    "<h3 style=\"text-align: center\">Diff for /$where_nd between version $rev1 and $rev2</h3>\n",
+	    # Using style=\"border: none\" here breaks NS 4.x badly...
 	    "<table border=\"0\" cellspacing=\"0\" cellpadding=\"0\" width=\"100%\">\n",
-	    "<tr bgcolor=\"#ffffff\">\n", "<th width=\"50%\" valign=\"top\">",
+	    "<tr style=\"background-color: #ffffff\">\n", "<th width=\"50%\" valign=\"top\">",
 	    "version $rev1";
 	print ", $date1"         if (defined($date1));
 	print "<br>Tag: $sym1\n" if ($sym1);
@@ -2950,18 +3006,11 @@ sub human_readable_diff($) {
 	print "<br>Tag: $sym2\n" if ($sym1);
 	print "</th>\n";
 
-	my $fs = "<font face=\"$difffontface\" size=\"$difffontsize\"><tt>";
-	my $fe = "</tt></font>";
-
 	my $leftRow  = 0;
 	my $rightRow = 0;
 	my ($oldline, $newline, $funname, $diffcode, $rest);
 
 	# Process diff text
-	# The diffrows are could make excellent use of
-	# cascading style sheets because we've to set the
-	# font and color for each row. anyone ...?
-	####
 
 	# prefetch several lines
 	my @buf = head($fh);
@@ -2975,17 +3024,18 @@ sub human_readable_diff($) {
 			($oldline, $newline, $funname) =
 			    $difftxt =~ /@@ \-([0-9]+).*\+([0-9]+).*@@(.*)/;
 			$funname = htmlquote($funname);
+			$funname =~ s/\s/&nbsp;/go;
 			print
-			    "<tr bgcolor=\"$diffcolorHeading\"><td width=\"50%\">";
+			    "<tr class=\"diff-heading\">\n<td width=\"50%\">";
 			print
-			    "<table width=\"100%\" border=\"1\" cellpadding=\"5\"><tr><td><b>Line $oldline</b>";
+			    "<table width=\"100%\" border=\"1\" cellpadding=\"5\">\n<tr>\n<td><b>Line&nbsp;$oldline</b>";
 			print
-			    "&nbsp;<font size=\"-1\">$funname</font></td></tr></table>";
-			print "</td><td width=\"50%\">";
+			    "&nbsp;<span style=\"font-size: smaller\">$funname</span></td>\n</tr>\n</table>";
+			print "</td>\n<td width=\"50%\">";
 			print
-			    "<table width=\"100%\" border=\"1\" cellpadding=\"5\"><tr><td><b>Line $newline</b>";
+			    "<table width=\"100%\" border=\"1\" cellpadding=\"5\">\n<tr>\n<td><b>Line&nbsp;$newline</b>";
 			print
-			    "&nbsp;<font size=\"-1\">$funname</font></td></tr></table>";
+			    "&nbsp;<span style=\"font-size: smaller\">$funname</span></td>\n</tr>\n</table>\n";
 			print "</td>\n";
 			$state    = "dump";
 			$leftRow  = 0;
@@ -2993,9 +3043,6 @@ sub human_readable_diff($) {
 		} else {
 			($diffcode, $rest) = $difftxt =~ /^([-+ ])(.*)/;
 			$_ = spacedHtmlText($rest, $d{'tabstop'});
-
-			# Add fontface, size
-			$_ = "$fs&nbsp;$_$fe";
 
 			#########
 			# little state machine to parse unified-diff output (Hen, zeller@think.de)
@@ -3010,7 +3057,7 @@ sub human_readable_diff($) {
 				if ($state eq "dump")
 				{ # 'change' never begins with '+': just dump out value
 					print
-					    "<tr><td bgcolor=\"$diffcolorEmpty\">&nbsp;</td><td bgcolor=\"$diffcolorAdd\">$_</td></tr>\n";
+					    "<tr>\n<td class=\"diff-empty\">&nbsp;</td>\n<td class=\"diff-added\">&nbsp;$_</td>\n</tr>\n";
 				} else {    # we got minus before
 					$state = "PreChange";
 					$rightCol[$rightRow++] = $_;
@@ -3021,7 +3068,7 @@ sub human_readable_diff($) {
 			} else {    # empty diffcode
 				flush_diff_rows \@leftCol, \@rightCol, $leftRow,
 				    $rightRow;
-				print "<tr><td>$_</td><td>$_</td></tr>\n";
+				print "<tr>\n<td class=\"diff-same\">&nbsp;$_</td>\n<td class=\"diff-same\">&nbsp;$_</td>\n</tr>\n";
 				$state    = "dump";
 				$leftRow  = 0;
 				$rightRow = 0;
@@ -3034,34 +3081,29 @@ sub human_readable_diff($) {
 
 	# state is empty if we didn't have any change
 	if (!$state) {
-		print "<tr><td colspan=\"2\">&nbsp;</td></tr>";
-		print "<tr bgcolor=\"$diffcolorEmpty\">";
+		print "<tr>\n<td colspan=\"2\">&nbsp;</td>\n</tr>\n";
+		print "<tr class=\"diff-empty\">\n";
 		print
-		    "<td colspan=\"2\" align=\"center\"><b>- No viewable change -</b></td></tr>";
+		    "<td colspan=\"2\" align=\"center\"><b>- No viewable change -</b></td>\n</tr>\n";
 	}
-	print "</table>";
+	print "</table>\n";
 
-	print "<br><hr noshade width=\"100%\">\n";
-
-	print "<table border=\"0\">";
-
-	print "<tr><td>";
+	print "<hr style=\"width: 100%\" noshade>\n";
+	print "<form method=\"get\" action=\"${scriptwhere}\">\n";
+	print "<table style=\"border: none\">\n<tr>\n<td>\n";
 
 	# print legend
-	print "<table border=\"1\"><tr><td>";
-	print "Legend:<br><table border=\"0\" cellspacing=\"0\" cellpadding=\"1\">\n";
+	print "<table border=\"1\">\n<tr>\n<td>";
+	print "Legend:<br><table style=\"border: none\" cellspacing=\"0\" cellpadding=\"1\">\n";
 	print
-	    "<tr><td align=\"center\" bgcolor=\"$diffcolorRemove\">Removed from v.$rev1</td><td bgcolor=\"$diffcolorEmpty\">&nbsp;</td></tr>";
+	    "<tr>\n<td align=\"center\" class=\"diff-removed\">Removed from v.$rev1</td>\n<td class=\"diff-empty\">&nbsp;</td>\n</tr>\n";
 	print
-	    "<tr bgcolor=\"$diffcolorChange\"><td align=\"center\" colspan=\"2\">changed lines</td></tr>";
+	    "<tr class=\"diff-changed\">\n<td align=\"center\" colspan=\"2\">changed lines</td>\n</tr>\n";
 	print
-	    "<tr><td bgcolor=\"$diffcolorEmpty\">&nbsp;</td><td align=\"center\" bgcolor=\"$diffcolorAdd\">Added in v.$rev2</td></tr>";
-	print "</table></td></tr></table>\n";
-
-	print "<td>";
+	    "<tr>\n<td class=\"diff-empty\">&nbsp;</td>\n<td align=\"center\" class=\"diff-added\">Added in v.$rev2</td>\n</tr>\n";
+	print "</table>\n</td>\n</tr>\n</table>\n</td>\n<td>";
 
 	# Print format selector
-	print "<form method=\"get\" action=\"${scriptwhere}\">\n";
 	foreach my $var (keys %input) {
 		next if ($var eq "f");
 		next
@@ -3072,10 +3114,10 @@ sub human_readable_diff($) {
 	}
 	printDiffSelect($use_java_script);
 	print "<input type=\"submit\" value=\"Show\">\n";
-	print "</form>\n";
-	print "</td>";
+	print "</td>\n";
 
-	print "</tr></table>";
+	print "</tr>\n</table>\n";
+	print "</form>\n";
 }
 
 sub navigateHeader($$$$$) {
@@ -3083,16 +3125,54 @@ sub navigateHeader($$$$$) {
 	$swhere = "" if ($swhere eq $scriptwhere);
 	$swhere = './' . urlencode($filename) if ($swhere eq "");
 
+	# TODO: this should be moved into external CSS file.
+	my $css = '';
+	if ($title eq 'diff') {
+	    $css = "
+<style type=\"text/css\">
+.diff-heading {
+  background-color: $diffcolorHeading;
+}
+.diff-same {
+  font-family: $difffontface;
+  font-size: smaller;
+}
+.diff-empty {
+  background-color: $diffcolorEmpty;
+}
+.diff-added {
+  background-color: $diffcolorAdd;
+  font-family: $difffontface;
+  font-size: smaller;
+}
+.diff-removed {
+  background-color: $diffcolorRemove;
+  font-family: $difffontface;
+  font-size: smaller;
+}
+.diff-changed {
+  background-color: $diffcolorChange;
+  font-family: $difffontface;
+  font-size: smaller;
+}
+.diff-changed-missing {
+  background-color: $diffcolorDarkChange;
+}
+</style>";
+	}
+
 	print <<EOF;
-<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+$HTML_DOCTYPE
 <html>
 <head>
 <meta name="robots" content="nofollow">
+<meta http-equiv="Content-Script-Type" content="application/x-javascript">
+<meta http-equiv="Content-Style-Type" content="text/css">
 <!-- FreeBSD-cvsweb $cvsweb_revision -->
-<title>$path$filename - $title - $rev</title>
+<title>$path$filename - $title - $rev</title>$css
 </head>
 $body_tag_for_src
-<table width="100%" border="0" cellspacing="0" cellpadding="1" bgcolor="$navigationHeaderColor">
+<table width="100%" style="border: none; background-color: $navigationHeaderColor" cellspacing="0" cellpadding="1">
 <tr valign="bottom"><td>
 EOF
 
@@ -3207,9 +3287,10 @@ sub clickablePath($$) {
 }
 
 sub chooseCVSRoot() {
+
+	print "<form method=\"get\" action=\"${scriptwhere}\">\n";
 	if (2 <= @CVSROOT) {
 		my ($k);
-		print "<form method=\"GET\" action=\"${scriptwhere}\">\n";
 		foreach $k (keys %input) {
 			print "<input type=\"hidden\" name=\"$k\" value=\"$input{$k}\">\n"
 			    if ($input{$k}) && ($k ne "cvsroot");
@@ -3218,8 +3299,8 @@ sub chooseCVSRoot() {
 		# Form-Elements look wierd in Netscape if the background
 		# isn't gray and the form elements are not placed
 		# within a table ...
-		print "<table><tr>";
-		print "<td>CVS Root:</td>";
+		print "<table style=\"border: none\">\n<tr>\n";
+		print "<td>CVS Root:</td>\n";
 		print "<td>\n<select name=\"cvsroot\"";
 		print " onchange=\"this.form.submit()\"" if $use_java_script;
 		print ">\n";
@@ -3230,12 +3311,12 @@ sub chooseCVSRoot() {
 			print ">",($CVSROOTdescr{$k} ? $CVSROOTdescr{$k} : $k),
 			    "</option>\n";
 		}
-		print "</select>\n</td>";
-		print "<td>";
+		print "</select>\n</td>\n<td>";
 	} else {
 
-		# no choice -- but we need the form to select module/path, at least for Netscape
-		print "<form method=\"get\" action=\"${scriptwhere}\">\n";
+		# no choice -- but we need the form to select module/path,
+		# at least for Netscape
+		print "<p>\n";
 		print "CVS Root: <b>[$cvstree]</b>";
 	}
 
@@ -3244,9 +3325,11 @@ sub chooseCVSRoot() {
 	print "<input type=\"submit\" value=\"Go\">";
 
 	if (2 <= @CVSROOT) {
-		print "</td></tr></table>";
+		print "</td>\n</tr>\n</table>";
+	} else {
+		print "</p>";
 	}
-	print "</form>";
+	print "\n</form>";
 }
 
 sub chooseMirror() {
@@ -3511,7 +3594,7 @@ sub http_header(;$) {
 				print "\r\n";    # Close headers
 			}
 			print
-			    "<font size=\"-1\">Unable to find gzip binary in the <b>\$command_path</b> ($command_path) to compress output</font><br>";
+			    "<span style=\"font-size: smaller\">Unable to find gzip binary in the <b>\$command_path</b> ($command_path) to compress output</span><br>";
 		}
 	} else {
 
@@ -3527,12 +3610,19 @@ sub html_header($) {
 	my ($title) = @_;
 	http_header("text/html");
 
-	(my $header = &cgi_style::html_header) =~ s/^.*\n\n//; # remove HTTP response header
+	(my $header = &cgi_style::html_header) =~ s,\A.*</head>\n,,s;
 
 	print <<EOH;
-<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
-$header
+$HTML_DOCTYPE
+<html>
+<head>
+<meta name="robots" content="nofollow">
+<meta http-equiv="Content-Script-Type" content="application/x-javascript">
+<meta http-equiv="Content-Style-Type" content="text/css">
+<title>$title</title>
 <!-- FreeBSD-cvsweb $cvsweb_revision -->
+</head>
+$header
 EOH
 }
 
