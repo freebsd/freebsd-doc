@@ -1,34 +1,21 @@
-<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.12 2000/02/14 01:29:17 nik Exp $ -->
+<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.13 2000/02/15 01:57:17 nik Exp $ -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
 <!ENTITY % output.html  "IGNORE">
 <!ENTITY % output.print "IGNORE">
-<!ENTITY % lang.ja      "IGNORE">
-<!ENTITY % lang.ja.dsssl	"IGNORE">
-<!ENTITY % lang.ru      "IGNORE">
+
 <![ %output.html; [
 <!ENTITY docbook.dsl PUBLIC "-//Norman Walsh//DOCUMENT DocBook HTML Stylesheet//EN" CDATA DSSSL>
 ]]>
 <![ %output.print; [
 <!ENTITY docbook.dsl PUBLIC "-//Norman Walsh//DOCUMENT DocBook Print Stylesheet//EN" CDATA DSSSL>
+
 ]]>
 ]>
 
 <style-sheet>
   <style-specification use="docbook">
     <style-specification-body>
-      <!-- Locatization -->
-      <![ %lang.ja; [
-	<![ %lang.ja.dsssl; [
-	  (define %gentext-language% "ja")
-	]]>
-	(define %html-header-tags% '(("META" ("HTTP-EQUIV" "Content-Type") ("CONTENT" "text/html; charset=EUC-JP"))))
-      ]]>
-
-      <![ %lang.ru; [
-	(define %html-header-tags% '(("META" ("HTTP-EQUIV" "Content-Type") ("CONTENT" "text/html; charset=koi8-r"))))
-      ]]>
-
       <!-- HTML only .................................................... -->
       
       <![ %output.html; [
@@ -74,12 +61,35 @@
                 attributes: '(("VALIGN" "TOP"))
             (process-children)))
 
-        <!-- Fix a problem with the French localisation.  This should really
-             be a patch to the dsssl-docbook-modular port, but this gets it
-             more widely available sooner.  A patch will be applied to the
-             port as well, and then this can be removed. -->
-        (define (gentext-fr-nav-prev prev)
-          (make sequence (literal "Pr\U-00E9;c\U-00E9;dent")))
+        <!-- The next two definitions control the appearance of an
+             e-mail footer at the bottom of each page. -->
+
+        <!-- This is the text to display at the bottom of each page.
+             Defaults to nothing.  The individual stylesheets should
+             redefine this as necessary. -->
+        (define ($email-footer$)
+          (empty-sosofo))
+
+        <!-- This code handles displaying $email-footer$ at the bottom
+             of each page.
+
+             If "nuchunks" is turned on then we make sure that an <hr>
+             is shown first.
+
+             Then create a centered paragraph ("<p>"), and reduce the font
+             size ("<small>").  Then run $email-footer$, which should
+             create the text and links as necessary. -->
+	(define ($html-body-end$)
+          (if (equal? $email-footer$ (normalize ""))
+            (empty-sosofo)
+            (make sequence
+              (if nochunks
+                  (make empty-element gi: "hr")
+                  (empty-sosofo))
+                (make element gi: "p"
+                      attributes: (list (list "align" "center"))
+                  (make element gi: "small"
+                    ($email-footer$))))))
       ]]>
 
       <!-- Print only ................................................... --> 
