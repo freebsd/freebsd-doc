@@ -1,7 +1,7 @@
 <!--
      The FreeBSD Documentation Project
 
-     $FreeBSD$
+     $FreeBSD: doc/en_US.ISO_8859-1/books/handbook/hw/chapter.sgml,v 1.26 1999/09/06 06:52:57 peter Exp $
 -->
 
 <chapter id="hw">
@@ -2785,6 +2785,118 @@ sio16: type 16550A (multiport master)</screen>
 		working port.</para>
 	    </step>
 	  </procedure>
+	</sect4>
+
+	<sect4>
+	  <title>Support for Cheap Multi-UART Cards</title>
+
+	  <para><emphasis>Contributed by Helge Oldach
+	    <email>hmo@sep.hamburg.com</email>, September
+	      1999</emphasis></para>
+	  
+	  <para>Ever wondered about FreeBSD support for your 20$ multi-I/O
+	    card with two (or more) COM ports, sharing IRQs? Here's
+	    how:</para>
+	  
+	  <para>Usually the only option to support these kind of boards is to
+	    use a distinct IRQ for each port.  For example, if your CPU board
+	    has an on-board <devicename>COM1</devicename> port (aka
+	    <devicename>sio0</devicename>&ndash;I/O address 0x3F8 and IRQ 4)
+	    and you have an extension board with two UARTs, you will commonly
+	    need to configure them as <devicename>COM2</devicename> (aka
+	    <devicename>sio1</devicename>&ndash;I/O address 0x2F8 and IRQ 3),
+	    and the third port (aka <devicename>sio2</devicename>) as I/O
+	    0x3E8 and IRQ 5.  Obviously this is a waste of IRQ ressources, as
+	    it should be basically possible to run both extension board ports
+	    using a single IRQ with the <literal>COM_MULTIPORT</literal>
+	    configuration described in the previous sections.</para>
+	  
+	  <para>Such cheap I/O boards commonly have a 4 by 3 jumper matrix for
+	    the COM ports, similar to the following:</para>
+
+<programlisting>            o  o  o  *
+Port A               |
+            o  *  o  *
+Port B         |
+            o  *  o  o
+IRQ         2  3  4  5</programlisting>
+
+	  <para>Shown here is port A wired for IRQ 5 and port B wired for IRQ
+	    3.  The IRQ columns on your specific board may vary&mdash;other
+	    boards may supply jumpers for IRQs 3, 4, 5, and 7 instead.</para>
+
+	  <para>One could conclude that wiring both ports for IRQ 3 using a
+	    handcrafted wire-made jumper covering all three connection points
+	    in the IRQ 3 column would solve the issue, but no.  You cannot
+	    duplicate IRQ 3 because the output drivers of each UART are wired
+	    in a &ldquo;totem pole&rdquo; fashion, so if one of the UARTs
+	    drives IRQ 3, the output signal will not be what you would expect.
+	    Depending on the implementation of the extension board or your
+	    motherboard, the IRQ 3 line will continuously stay up, or always
+	    stay low.</para>
+
+	  <para>You need to decouple the IRQ drivers for the two UARTs, so
+	    that the IRQ line of the board only goes up if (and only if) one
+	    of the UARTs asserts a IRQ, and stays low otherwise.  The solution
+	    was proposed by Jrg Wunsch
+	    <email>j@ida.interface-business.de</email>: To solder up a
+	    wired-or consisting of two diodes (Germanium or Schottky-types
+	    strongly preferred) and a 1 kOhm resistor.  Here is the schematic,
+	    starting from the 4 by 3 jumper field above:</para>
+
+<programlisting>                          Diode
+                +---------->|-------+
+               /                    |
+            o  *  o  o              |     1 kOhm
+Port A                              +----|######|-------+
+            o  *  o  o              |                   |
+Port B          `-------------------+                 ==+==
+            o  *  o  o              |                 Ground
+                \                   |
+                 +--------->|-------+
+IRQ         2  3  4  5    Diode</programlisting>
+
+	  <para>The cathodes of the diodes are connected to a common point,
+	    together with a 1 kOhm pull-down resistor.  It is essential to
+	    connect the resistor to ground to avoid floating of the IRQ line
+	    on the bus.</para>
+
+	  <para>Now we are ready to configure a kernel.  Staying with this
+	    example, we would configure:</para>
+
+	  <programlisting># standard on-board COM1 port
+device          sio0    at isa? port "IO_COM1" tty flags 0x10
+# patched-up multi-I/O extension board
+options         COM_MULTIPORT
+device          sio1    at isa? port "IO_COM2" tty flags 0x205
+device          sio2    at isa? port "IO_COM3" tty flags 0x205 irq 3</programlisting>
+
+	  <para>Note that the <literal>flags</literal> setting for
+	    <devicename>sio1</devicename> and <devicename>sio2</devicename> is
+	    truely essential; refer to
+	      &man.sio.4; for details. (Generally, the <literal>2</literal> in
+	    the "flags" attribute refers to <devicename>sio</devicename>2
+	    which holds the IRQ, and you surely want a <literal>5</literal>
+	    low nibble.)  With kernel verbose mode turned on this should yield
+	    something similar to this:</para>
+
+	  <screen>sio0: irq maps: 0x1 0x11 0x1 0x1
+sio0 at 0x3f8-0x3ff irq 4 flags 0x10 on isa
+sio0: type 16550A
+sio1: irq maps: 0x1 0x9 0x1 0x1
+sio1 at 0x2f8-0x2ff flags 0x205 on isa
+sio1: type 16550A (multiport)
+sio2: irq maps: 0x1 0x9 0x1 0x1
+sio2 at 0x3e8-0x3ef irq 3 flags 0x205 on isa
+sio2: type 16550A (multiport master)</screen>
+
+	  <para>Though <filename>/sys/i386/isa/sio.c</filename> is somewhat
+	    cryptic with its use of the &ldquo;irq maps&rdquo; array above,
+	    the basic idea is that you observe <literal>0x1</literal> in the
+	    first, third, and fourth place.  This means that the corresponding
+	    IRQ was set upon output and cleared after, which is just what we
+	    would expect. If your kernel does not display this behaviour, most
+	    likely there is something wrong with your wiring.</para>
 	</sect4>
       </sect3>
       
