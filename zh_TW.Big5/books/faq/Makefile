@@ -6,8 +6,6 @@
 
 MAINTAINER=foxfair@FreeBSD.org
 
-TIDYFLAGS=      -raw
-
 DOC?= book
 
 FORMATS?= html-split html

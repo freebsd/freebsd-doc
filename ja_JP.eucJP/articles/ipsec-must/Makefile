@@ -1,4 +1,4 @@
-# $FreeBSD: doc/ja_JP.eucJP/articles/ipsec-must/Makefile,v 1.2 2001/09/04 10:40:53 hrs Exp $
+# $FreeBSD$
 # Original revision: 1.2
 
 DOC?= article
@@ -9,8 +9,6 @@ INSTALL_COMPRESSED?=gz
 INSTALL_ONLY_COMPRESSED?=
 
 SRCS= article.sgml
-
-NO_TIDY=YES
 
 DOC_PREFIX?= ${.CURDIR}/../../..
 

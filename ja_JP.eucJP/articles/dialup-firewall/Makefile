@@ -10,8 +10,6 @@ INSTALL_ONLY_COMPRESSED?=
 
 SRCS= article.sgml
 
-NO_TIDY=YES
-
 DOC_PREFIX?= ${.CURDIR}/../../..
 
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"

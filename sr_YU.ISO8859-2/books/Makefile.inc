@@ -1,4 +1,4 @@
-TIDYFLAGS=   -raw
+# $FreeBSD$
 
 .if defined(OPENJADE)
 JADE=       SP_ENCODING=ISO-8859-2 ${PREFIX}/bin/openjade
