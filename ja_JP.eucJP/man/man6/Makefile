@@ -31,6 +31,7 @@ MAN6 =	adventure.6\
 	sail.6\
 	snake.6\
 	trek.6\
+	wargames.6\
 	worm.6\
 	worms.6\
 	wump.6
