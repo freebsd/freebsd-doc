@@ -1,19 +1,19 @@
-#	$Id: Makefile,v 1.4 1998-01-20 04:17:38 hanai Exp $
+#	$Id: Makefile,v 1.5 1998-04-25 16:41:06 kuriyama Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.5
+# Original revision: 1.8
 
-PORTINDEX=	./portindex
+PORTINDEX=	perl ./portindex
 INDEX=		ports/INDEX
 
-COOKIE=		index Makefile.gen
+COOKIE=		${INDEX} Makefile.gen
 
 .if exists(Makefile.gen)
 .include "Makefile.gen"
-CLEANFILES+=	${DOCS} Makefile.gen
+CLEANFILES+=	${DOCS} Makefile.gen ${INDEX}
 .endif
 
-index:
-	cvs co ${INDEX}
+${INDEX}:
+       cvs -QR co ${INDEX}
 
 Makefile.gen: index.sgml .NOTMAIN
 	echo DOCS= *.sgml > Makefile.gen
