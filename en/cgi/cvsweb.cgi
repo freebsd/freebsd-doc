@@ -65,7 +65,8 @@ display diffs between arbitrary revisions.
 <p>
 If you would like to use this CGI script on your own web server and
 CVS tree, see <A HREF=\"http://www.freebsd.org/~fenner/cvsweb/\">
-the CVSWeb distribution site</A>.
+the CVSWeb distribution site</A> or the <a 
+href=\"http://www.freebsd.org/cgi/cvsweb.cgi/www/data/cgi/cvsweb.cgi\">current</a> FreeBSD version.
 <p>
 Please send any suggestions, comments, etc. to
 <A HREF=\"mailto:fenner\@freebsd.org\">Bill Fenner &lt;fenner\@freebsd.org&gt;</A>
