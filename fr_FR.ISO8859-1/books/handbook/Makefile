@@ -2,8 +2,8 @@
 # The FreeBSD French Documentation Project
 #
 # $FreeBSD$
-# $Id: Makefile,v 1.7 2002-08-28 16:51:55 blackend Exp $
-# Original revision: 1.60
+# $Id: Makefile,v 1.8 2002-09-21 17:48:47 blackend Exp $
+# Original revision: 1.61
 #
 # Build the FreeBSD Handbook.
 #
@@ -150,6 +150,7 @@ SRCS+= linuxemu/chapter.sgml
 SRCS+= mail/chapter.sgml
 SRCS+= mirrors/chapter.sgml
 SRCS+= multimedia/chapter.sgml
+SRCS+= desktop/chapter.sgml
 SRCS+= pgpkeys/chapter.sgml
 SRCS+= ppp-and-slip/chapter.sgml
 SRCS+= printing/chapter.sgml
