@@ -1,4 +1,5 @@
-# $FreeBSD$
+# $FreeBSD: doc/ja_JP.eucJP/articles/diskless-x/Makefile,v 1.1 2000/03/22 06:32:12 kuriyama Exp $
+# Original revision: 1.5
 
 DOC?= article
 
