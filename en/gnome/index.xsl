@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.52 2004/05/22 02:28:28 marcus Exp $ -->
+<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.53 2004/05/27 15:27:12 marcus Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
 		xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -9,7 +9,7 @@
   <xsl:import href="includes.xsl"/>
 
   <xsl:variable name="base" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.52 2004/05/22 02:28:28 marcus Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.53 2004/05/27 15:27:12 marcus Exp $'"/>
   <xsl:variable name="title" select="'FreeBSD GNOME Project'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -134,6 +134,16 @@
 		4.10, 5.2.1, -STABLE, and -CURRENT.  Most of GNOME has been
 		ported to FreeBSD, but there is still
 		<a href="docs/volunteer.html">plenty left to be done</a>!</p>
+
+              <h2><font color="#990000">Simple solutions to build problems - quickly!</font></h2>
+
+	      <p>GNOME is simple and easy to build using FreeBSD ports, but
+	        there are caveats of which not everyone is aware.  If GNOME -- or
+		anything that uses GNOME libraries -- is not building the way it
+		should, simply give the new <a
+		href="/gnome/gnomelogalyzer.sh">gnomelogalyzer.sh</a>
+		tool a log of the failed build, and let the gnomelogalyzer figure
+		out what's wrong and how to fix it.</p>
 
             </td>
 
