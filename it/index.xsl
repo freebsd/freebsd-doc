@@ -1,18 +1,19 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/it/index.xsl,v 1.10 2004/02/03 22:26:58 ale Exp $ -->
+<!-- $FreeBSD$ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
   <xsl:import href="includes.xsl"/>
   <xsl:import href="../en/news/includes.xsl"/>
 
-  <xsl:variable name="date" select="'$FreeBSD: www/it/index.xsl,v 1.10 2004/02/03 22:26:58 ale Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD$'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <!-- these params should be externally bound. The values
        here are not used actually -->
   <xsl:param name="advisories.xml" select="'none'"/>
+  <xsl:param name="notices.xml" select="'none'"/>
   <xsl:param name="mirrors.xml" select="'none'"/>
   <xsl:param name="news.press.xml" select="'none'"/>
   <xsl:param name="news.project.xml" select="'none'"/>
@@ -148,9 +149,7 @@
 		<a href="{$enbase}/internet.html">Internet o Intranet</a>.
 		Fornisce servizi di rete robusti sotto i carichi più pesanti e
 		usa la memoria in maniera efficiente per mantenere buoni tempi
-		di risposta per migliaia di processi utente simultanei.  Visita
-		la nostra <a href="{$enbase}/gallery/gallery.html">galleria</a>
-		per esempi di applicazioni e servizi potenziati da FreeBSD.</p>
+		di risposta per migliaia di processi utente simultanei.</p>
 
 	      <h2><font color="#990000">Esegue un numero enorme di
 		  applicazioni</font></h2>
@@ -231,15 +230,15 @@
 			   bgcolor="#ffcc66" width="100%">
 		      <tr>
 			<td valign="top"><p>
-			      <a href="{$u.rel.early}">
+			      <a href="{$u.rel.announce}">
 			      <font size="+1" color="#990000"><b>Release con Nuove Tecnologie:
 			    <xsl:value-of select="$rel.current"/></b></font></a><br/>
 			    <small>&#183; <a href="{$u.rel.announce}">Annuncio</a><br/>
-			      &#183; <a href="{$enbase}/doc/it_IT.ISO8859-15/books/handbook/install.html">Guida di Installazione</a><br/>
+			      &#183; <a href="{$enbase}/doc/en_US.ISO8859-1/books/handbook/install.html">Guida di Installazione</a><br/>
 			      &#183; <a href="{$u.rel.notes}">Note sulla Release</a><br/>
 			      &#183; <a href="{$u.rel.hardware}">Note sull'Hardware</a><br/>
 			      &#183; <a href="{$u.rel.installation}">Note sull'Installazione</a><br/>
-			      &#183; <a href="{$u.rel.errata}">Errata</a><br/>
+			      &#183; <a href="{$u.rel.errata}">Errata Corrige</a><br/>
 			      &#183; <a href="{$u.rel.early}">Early Adopter's Guide</a></small></p>
 
 			<p>
@@ -247,13 +246,14 @@
 			      <font size="+1" color="#990000"><b>Release di Produzione:
 			    <xsl:value-of select="$rel2.current"/></b></font></a><br/>
 			    <small>&#183; <a href="{$u.rel2.announce}">Annuncio</a><br/>
-			      &#183; <a href="{$enbase}/doc/it_IT.ISO8859-15/books/handbook/install.html">Guida di Installazione</a><br/>
+			      &#183; <a href="{$enbase}/doc/en_US.ISO8859-1/books/handbook/install.html">Guida di Installazione</a><br/>
 			      &#183; <a href="{$u.rel2.notes}">Note sulla Release</a><br/>
 			      &#183; <a href="{$u.rel2.hardware}">Note sull'Hardware</a><br/>
 			      &#183; <a href="{$u.rel2.installation}">Note sull'Installazione</a><br/>
-			      &#183; <a href="{$u.rel2.errata}">Errata</a></small></p>
+			      &#183; <a href="{$u.rel2.errata}">Errata Corrige</a></small></p>
 
 			  <p><font size="+1" color="#990000"><b>Novità sul Progetto</b></font>
+			    <xsl:text> </xsl:text>
 			    <font color="#990000">(<a href="{$enbase}/news/news.rdf">RSS</a>)</font><br/>
 			    <font size="-1">
 			      Ultimo aggiornamento:
@@ -282,18 +282,38 @@
 			    </font>
 			  </p>
 
-			  <p><font size="+1" color="#990000"><b>Avvisi di Sicurezza</b></font><br/>
-
+			  <p><font size="+1" color="#990000"><b>Avvisi di Sicurezza</b></font>
+			    <xsl:text> </xsl:text>
+			    <font color="#990000">(<a href="{$enbase}/security/advisories.rdf">RSS</a>)</font><br/>
 			    <font size="-1">
 			      Ultimo Aggiornamento:
 			      <xsl:call-template name="html-index-advisories-items-lastmodified">
 				<xsl:with-param name="advisories.xml" select="$advisories.xml" />
+				<xsl:with-param name="type" select="'advisory'" />
 			      </xsl:call-template>
 			      <br/>
 			      <xsl:call-template name="html-index-advisories-items">
 				<xsl:with-param name="advisories.xml" select="$advisories.xml" />
+				<xsl:with-param name="type" select="'advisory'" />
 			      </xsl:call-template>
 			      <a href="{$enbase}/security/index.html">Altro...</a>
+			    </font>
+			  </p>
+
+			  <p><font size="+1" color="#990000"><b>Errata Corrige</b></font>
+			    <xsl:text> </xsl:text>
+			    <br/>
+			    <font size="-1">
+			      Ultimo Aggiornamento:
+			      <xsl:call-template name="html-index-advisories-items-lastmodified">
+				<xsl:with-param name="advisories.xml" select="$notices.xml" />
+				<xsl:with-param name="type" select="'notice'" />
+			      </xsl:call-template>
+			      <br/>
+			      <xsl:call-template name="html-index-advisories-items">
+				<xsl:with-param name="advisories.xml" select="$notices.xml" />
+				<xsl:with-param name="type" select="'notice'" />
+			      </xsl:call-template>
 			    </font>
 			  </p>
 			</td>

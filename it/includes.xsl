@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/it/includes.xsl,v 1.8 2004/01/14 14:29:03 ale Exp $ -->
+<!-- $FreeBSD$ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -58,17 +58,35 @@
 
   <xsl:template name="html-index-advisories-items-lastmodified">
     <xsl:param name="advisories.xml" select="''" />
+    <xsl:param name="type" select="'advisory'" />
 
-    <xsl:value-of select="document($advisories.xml)/descendant::day[position() = 1]/name"/>
-    <xsl:text> </xsl:text>
-    <xsl:call-template name="transtable-lookup">
-      <xsl:with-param name="word-group" select="'number-month'" />
-      <xsl:with-param name="word">
-	<xsl:value-of select="document($advisories.xml)/descendant::month[position() = 1]/name"/>
-      </xsl:with-param>
-    </xsl:call-template>
-    <xsl:text> </xsl:text>
-    <xsl:value-of select="document($advisories.xml)/descendant::year[position() = 1]/name"/>
+    <xsl:choose>
+      <xsl:when test="$type = 'advisory'">
+	<xsl:value-of select="document($advisories.xml)/descendant::day[advisory[position() = 1]]/name"/>
+	<xsl:text> </xsl:text>
+	<xsl:call-template name="transtable-lookup">
+	  <xsl:with-param name="word-group" select="'number-month'" />
+	  <xsl:with-param name="word">
+	    <xsl:value-of select="document($advisories.xml)/descendant::month[day/advisory[position() = 1]]/name"/>
+	  </xsl:with-param>
+	</xsl:call-template>
+	<xsl:text> </xsl:text>
+	<xsl:value-of select="document($advisories.xml)/descendant::year[month/day/advisory[position() = 1]]/name"/>
+      </xsl:when>
+
+      <xsl:when test="$type = 'notice'">
+	<xsl:value-of select="document($advisories.xml)/descendant::day[notice[position() = 1]]/name"/>
+	<xsl:text> </xsl:text>
+	<xsl:call-template name="transtable-lookup">
+	  <xsl:with-param name="word-group" select="'number-month'" />
+	  <xsl:with-param name="word">
+	    <xsl:value-of select="document($advisories.xml)/descendant::month[day/notice[position() = 1]]/name"/>
+	  </xsl:with-param>
+	</xsl:call-template>
+	<xsl:text> </xsl:text>
+	<xsl:value-of select="document($advisories.xml)/descendant::year[month/day/notice[position() = 1]]/name"/>
+      </xsl:when>
+    </xsl:choose>
   </xsl:template>
 
   <!-- template: "html-index-news-project-items"
@@ -147,7 +165,7 @@
     <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel2.current"/>R/relnotes.html</xsl:variable>
 
   <xsl:variable name="u.rel2.announce">
-    <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel2.current"/>R/announce.html</xsl:variable>
+    <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel2.current"/>R/announce.html</xsl:variable>
   <xsl:variable name="u.rel2.errata">
     <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel2.current"/>R/errata.html</xsl:variable>
   <xsl:variable name="u.rel2.hardware">
