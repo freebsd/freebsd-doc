@@ -1,6 +1,6 @@
 # $FreeBSD$
 # The FreeBSD Russian Documentation Project
-# $FreeBSDru: frdp/www/ru/Makefile,v 1.8 2000/11/10 17:04:45 phantom Exp $
+# $FreeBSDru: frdp/www/ru/Makefile,v 1.9 2000/12/29 13:17:32 phantom Exp $
 # Original revision: 1.55
 
 .if exists(Makefile.conf)
@@ -51,6 +51,7 @@ SUBDIR+= gallery
 SUBDIR+= projects
 SUBDIR+= releases
 SUBDIR+= smp
+SUBDIR+= platforms
 .if !defined(WEB_ONLY) || empty(WEB_ONLY)
 SUBDIR+= ports
 .endif
