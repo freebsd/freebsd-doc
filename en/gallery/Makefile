@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/gallery/Makefile,v 1.13 2001/09/05 07:51:40 kuriyama Exp $
+# $FreeBSD: www/en/gallery/Makefile,v 1.14 2001/10/29 10:14:31 murray Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -9,7 +9,7 @@
 
 XSLTPROCFLAGS=	--catalogs
 XSLT=	${SETENV} SGML_CATALOG_FILES=${PREFIX}/share/xml/dtd/xhtml/xhtml.soc \
-	${XSLTPROC} ${XSLTPROCFLAGS}
+	${XSLTPROC} ${XSLTPROCOPTS}
 
 INDEXLINK= gallery.html
 
@@ -19,21 +19,21 @@ CLEANFILES+= ${DATA}
 
 gallery.html: gallery.xml gallery.xsl ../includes.xsl
 	${XSLT} ${.CURDIR}/gallery.xsl ${.CURDIR}/gallery.xml > ${.TARGET}
-	-${TIDY} ${TIDYFLAGS} ${.TARGET}
+	-${TIDY} ${TIDYOPTS} ${.TARGET}
 
 cgallery.html: gallery.xml gallery-entry.xsl
 	${XSLT} --param type \'commercial\' \
 		${.CURDIR}/gallery-entry.xsl ${.CURDIR}/gallery.xml > ${.TARGET}
-	-${TIDY} ${TIDYFLAGS} ${.TARGET}
+	-${TIDY} ${TIDYOPTS} ${.TARGET}
 
 npgallery.html: gallery.xml gallery-entry.xsl
 	${XSLT} --param type \'nonprofit\' \
 		${.CURDIR}/gallery-entry.xsl ${.CURDIR}/gallery.xml > ${.TARGET}
-	-${TIDY} ${TIDYFLAGS} ${.TARGET}
+	-${TIDY} ${TIDYOPTS} ${.TARGET}
 
 pgallery.html: gallery.xml gallery-entry.xsl
 	${XSLT} --param type \'personal\' \
 		${.CURDIR}/gallery-entry.xsl ${.CURDIR}/gallery.xml > ${.TARGET}
-	-${TIDY} ${TIDYFLAGS} ${.TARGET}
+	-${TIDY} ${TIDYOPTS} ${.TARGET}
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
