@@ -4,7 +4,7 @@
 # Crea la Nuova Guida per i Committer di FreeBSD
 #
 
-MAINTAINER=sysadmin@alexdupre.com
+MAINTAINER=ale@FreeBSD.org
 
 DOC?= article
 
