@@ -1,5 +1,5 @@
 # bsd.web.mk
-# $FreeBSD: www/share/mk/web.site.mk,v 1.51 2004/02/01 00:02:58 josef Exp $
+# $FreeBSD: www/share/mk/web.site.mk,v 1.52 2004/02/01 22:56:56 ale Exp $
 
 #
 # Build and install a web site.
@@ -176,23 +176,6 @@ spellcheck:
 	-${TIDY} ${TIDYOPTS} ${.TARGET}
 .endif
 
-###
-# file.docb --> file.html
-#
-# Generate HTML from docbook
-
-SGMLFMT?=	${PREFIX}/bin/sgmlfmt
-SGMLFMTOPTS?=	-d docbook -f html ${SGMLFMTFLAGS} ${SGMLFLAGS}
-.SUFFIXES:	.docb
-GENDOCS+=	${DOCS:M*.docb:S/.docb$/.html/g}
-ORPHANS:=	${ORPHANS:N*.docb}
-
-.docb.html:
-	${SGMLFMT} ${SGMLFMTOPTS} ${.IMPSRC}
-.if !defined(NO_TIDY)
-	-${TIDY} ${TIDYOPTS} ${.TARGET}
-.endif
-
 
 ##################################################################
 # Targets
@@ -205,14 +188,15 @@ ORPHANS:=	${ORPHANS:N*.docb}
 #
 # Build most everything
 #
-all: ${COOKIE} orphans ${GENDOCS} ${DATA} ${LOCAL} ${CGI} _PROGSUBDIR
+all: ${COOKIE} orphans ${GENDOCS} ${DATA} ${CGI} _PROGSUBDIR
 
 #
-# Warn about anything in DOCS that has no translation
+# Warn about anything in DOCS that has no suffix translation rule
 #
 .if !empty(ORPHANS)
 orphans:
-	@${ECHO} Warning!  I don\'t know what to do with: ${ORPHANS}
+	@${ECHO} Warning!  I don\'t know what to do with: ${ORPHANS}; \
+	exit 1
 .else
 orphans:
 .endif
@@ -222,12 +206,7 @@ orphans:
 #
 .if !target(clean)
 clean: _PROGSUBDIR
-.if defined(DIRS_TO_CLEAN) && !empty(DIRS_TO_CLEAN)
-.for dir in ${DIRS_TO_CLEAN}
-	cd ${.CURDIR}/${dir}; ${MAKE} clean
-.endfor
-.endif
-	${RM} -f Errs errs mklog ${GENDOCS} ${LOCAL} ${CLEANFILES}
+	${RM} -f Errs errs mklog ${GENDOCS} ${CLEANFILES}
 .endif
 
 #
@@ -236,7 +215,10 @@ clean: _PROGSUBDIR
 .if !target(cleandir)
 cleandir: clean _PROGSUBDIR
 	${RM} -f ${.CURDIR}/tags .depend
-	cd ${.CURDIR}; ${RM} -rf obj
+.if ${.OBJDIR} != ${.CURDIR} && exists(${.OBJDIR}/)
+	${RM} -rf ${.OBJDIR}
+.endif
+	@if [ -L ${.CURDIR}/obj ]; then ${RM} -f ${.CURDIR}/obj; fi
 .endif
 
 #
@@ -254,7 +236,7 @@ INSTALL_WEB?=	\
 	${INSTALL} ${COPY} ${INSTALLFLAGS} -o ${WEBOWN} -g ${WEBGRP} -m ${WEBMODE}
 INSTALL_CGI?=	\
 	${INSTALL} ${COPY} ${INSTALLFLAGS} -o ${CGIOWN} -g ${CGIGRP} -m ${CGIMODE}
-_ALLINSTALL+=	${GENDOCS} ${DATA} ${LOCAL}
+_ALLINSTALL+=	${GENDOCS} ${DATA}
 
 realinstall: ${COOKIE} ${_ALLINSTALL} ${CGI} _PROGSUBDIR
 .if !empty(_ALLINSTALL)
@@ -276,11 +258,6 @@ realinstall: ${COOKIE} ${_ALLINSTALL} ${CGI} _PROGSUBDIR
 	${INSTALL_CGI} ${.CURDIR}/${entry} ${CGIINSTALLDIR}
 .endfor
 .endif
-.if defined(DOCSUBDIR) && !empty(DOCSUBDIR)
-.for entry in ${DOCSUBDIR}
-	@${MKDIR} -p ${DOCINSTALLDIR}/${entry}
-.endfor
-.endif
 
 # Set up install dependencies so they happen in the correct order.
 install: afterinstall
@@ -292,7 +269,6 @@ realinstall2: realinstall
 #
 # This recursively calls make in subdirectories.
 #
-#SUBDIR+=${DOCSUBDIR}
 _PROGSUBDIR: .USE
 .if defined(SUBDIR) && !empty(SUBDIR)
 .for entry in ${SUBDIR}
@@ -301,40 +277,6 @@ _PROGSUBDIR: .USE
 		${MAKE} ${.TARGET:S/realinstall/install/:S/.depend/depend/} \
 			DIRPRFX=${DIRPRFX}${entry}/
 .endfor
-.endif
-.if defined(DOCSUBDIR) && !empty(DOCSUBDIR)
-.for entry in ${DOCSUBDIR}
-	@${ECHODIR} "===> ${DIRPRFX}${entry}"
-	@if [ \( "${WEBDIR}" = "data" -a "${entry}" = "handbook" \) -o "${entry}" = "docproj-primer" ]; then \
-		cd ${.CURDIR}/${entry}; \
-		${MAKE} ${.TARGET:S/realinstall/install/:S/.depend/depend/} \
-			DIRPRFX=${DIRPRFX}${entry}/ ${PARAMS} \
-			FORMATS="txt html html-split"; \
-	elif [ "${WEBDIR}" = "data/ja" -a "${entry}" = "handbook" ]; then \
-		cd ${.CURDIR}/${entry}; \
-		${MAKE} ${.TARGET:S/realinstall/install/:S/.depend/depend/} \
-			DIRPRFX=${DIRPRFX}${entry}/ ${PARAMS} \
-			FORMATS="html html-split"; \
-	else \
-		cd ${.CURDIR}/${entry}; \
-		${MAKE} ${.TARGET:S/realinstall/install/:S/.depend/depend/} \
-			DIRPRFX=${DIRPRFX}${entry}/ ${PARAMS}; \
-	fi
-.endfor
-.endif
-
-#
-# cruft for generating linuxdoc stuff
-#
-
-.if defined (DOCSUBDIR) && !empty(DOCSUBDIR)
-
-FORMATS?=	"html ps latin1 ascii"
-PARAMS=		DESTDIR=${DESTDIR} DOCDIR=${WEBBASE}/${WEBDIR}
-PARAMS+=	DOCOWN=${WEBOWN} DOCGRP=${WEBGRP}
-PARAMS+=	FORMATS=${FORMATS} COPY="${COPY}"
-PARAMS+=	SGMLOPTS="${SGMLOPTS}"
-
 .endif
 
 .include <bsd.obj.mk>
