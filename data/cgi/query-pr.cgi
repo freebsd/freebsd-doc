@@ -1,4 +1,5 @@
 #!/usr/bin/perl
+# $Id: query-pr.cgi,v 1.2 1996-09-29 03:14:16 jfieber Exp $
 
 $ENV{'PATH'} = "/bin:/usr/bin:/usr/sbin:/sbin:/usr/local/bin";
 
@@ -7,7 +8,8 @@ $ENV{'PATH'} = "/bin:/usr/bin:/usr/sbin:/sbin:/usr/local/bin";
 	 'Jul', '07',  'Aug', '08',  'Sep', '09',
 	 'Oct', '10',  'Nov', '11',  'Dec', '12');
 
-require "/usr/local/www/cgi-bin/cgi-lib.pl";
+require "cgi-lib.pl";
+require "cgi-style.pl";
 require "getopts.pl";
 
 &Getopts('p:');
@@ -19,29 +21,32 @@ if ($opt_p) {
 } else {
 
     if (! &ReadParse(*input)) {
-	print &PrintHeader, "<h1>PR Query Interface</h1>\n";
-	print "Please enter the PR number you wish to query:\n";
+	print &html_header("PR Query Interface");
+	print "<p>Please enter the PR number you wish to query:</p>\n";
 	($scriptname = $ENV{'SCRIPT_NAME'}) =~ s|^/?|/|;
 	$scriptname =~ s|/$||;
+	($summary = $scriptname) =~ s/query-pr/query-pr-summary/;
 	print "<FORM METHOD=GET ACTION=\"$scriptname\">\n";
 	print "<INPUT TYPE=TEXT NAME=pr></FORM>\n";
-	print "<hr>\n";
-	print "See also the <A HREF=/cgi-bin/query-pr-summary.cgi>PR summary</A>\n";
+	print "<p>See also the <A HREF=\"$summary\">PR summary</A></p>\n";
+	print &html_footer;
 	exit 0;
     }
 }
 
-print &PrintHeader;
-
 $pr = $input{'pr'};
 
 if ($pr < 1 || $pr > 99999) {
-    print "Invalid problem report number: $pr\n";
+    print &html_header("FreeBSD Problem Report");
+    print "<p>Invalid problem report number: $pr</p>\n";
+    print &html_footer;
     exit 0;
 }
 
 unless (open(Q, "query-pr --restricted -F $pr 2>&1 |")) {
-    print "<h2>Error: unable to open PR database</h2>\n";
+    print &html_header("Server error");
+    print "<p>Unable to open PR database.</p>\n";
+    print &html_footer;
     die "Unable to query PR's";
 }
 
@@ -55,8 +60,9 @@ while(<Q>) {
     $html_fixup = 1;
 
     if (/^query-pr: no PRs matched$/) {
-	print "<head><title>FreeBSD problem report</title></head>\n";
-	print "<body><H1>No PR found matching $pr</H1></body>\n";
+	print &html_header("FreeBSD problem report");
+	print "<p>No PR found matching $pr</p>\n";
+	print &html_footer;
 	exit;
     }
 
@@ -87,14 +93,7 @@ while(<Q>) {
 	$syn = &getline($_);
 	$syn =~ s/[\t]+/ /g;
 	$syn = &fixline($syn);
-	print "
-<head>
-<title>
-FreeBSD problem report $cat/$number
-</title>
-</head>
-<body>";
-	print "<h2>Problem Report $cat/$number</h2>\n";
+	print &html_header("Problem Report $cat/$number");
 	print "<strong>$syn</strong><p>\n<dl>\n";
     } else {
 	next if $inhdr;
@@ -121,7 +120,7 @@ FreeBSD problem report $cat/$number
 }
 close(Q);
 
-print "$trailer\n</dl>\n</body>";
+print "$trailer\n</dl>" . &html_footer;
 
 exit 0;
 
