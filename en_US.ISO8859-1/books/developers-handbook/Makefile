@@ -1,5 +1,5 @@
 # 
-# $FreeBSD: doc/en_US.ISO_8859-1/books/developers-handbook/Makefile,v 1.3 2001/05/11 10:27:00 murray Exp $
+# $FreeBSD: doc/en_US.ISO8859-1/books/developers-handbook/Makefile,v 1.4 2001/05/14 02:52:41 murray Exp $
 #
 # Build the FreeBSD Developers' Handbook.
 #
@@ -13,6 +13,9 @@ FORMATS?= html-split
 INSTALL_COMPRESSED?= gz
 INSTALL_ONLY_COMPRESSED?=
 
+# Images
+IMAGES= sockets/layers.eps sockets/sain.eps sockets/sainfill.eps sockets/sainlsb.eps sockets/sainmsb.eps sockets/sainserv.eps sockets/serv.eps sockets/serv2.eps sockets/slayers.eps
+
 # 
 # SRCS lists the individual SGML files that make up the document. Changes
 # to any of these files will force a rebuild
@@ -23,6 +26,8 @@ SRCS=  book.sgml
 SRCS+= tools/chapter.sgml
 SRCS+= secure/chapter.sgml
 SRCS+= locking/chapter.sgml
+SRCS+= sockets/chapter.sgml
+SRCS+= ipv6/chapter.sgml
 SRCS+= isa/chapter.sgml
 SRCS+= pci/chapter.sgml
 SRCS+= usb/chapter.sgml
@@ -30,7 +35,6 @@ SRCS+= scsi/chapter.sgml
 SRCS+= x86/chapter.sgml
 SRCS+= vm/chapter.sgml
 SRCS+= dma/chapter.sgml
-SRCS+= ipv6/chapter.sgml
 
 # Entities
 
