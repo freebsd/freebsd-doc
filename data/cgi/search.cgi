@@ -10,7 +10,7 @@
 #
 # Format the mail messages a little nicer.
 # Add code to check database status before searching.
-#   John Fieber <jfieber@indiana.eud>, Aug 1996
+#   John Fieber <jfieber@indiana.edu>, Aug 1996
 #
 # Disclaimer:
 #   This is pretty ugly in places.
@@ -18,7 +18,7 @@
 
 $server_root = '/usr/local/www';
 $waisq = "/usr/local/www/bin/waisq";
-$sourcepath = "/f/jfieber/index";
+$sourcepath = "$server_root/db/index";
 $hints = "/searchhints.html";    
 $myurl = $ENV{'SCRIPT_NAME'};
 
