@@ -1,6 +1,6 @@
-# $Id: Makefile,v 1.4 1999-03-27 15:45:03 nik Exp $
+# $Id: Makefile,v 1.5 1999-04-15 22:46:38 nik Exp $
 
-LINKS= 	en/ja en/es en/ru en/zh en/tutorials ja/web.mk ja/FAQ en/FAQ en/handbook
+LINKS= 	en/ja en/es en/ru en/zh en/tutorials ja/web.mk ja/FAQ en/FAQ
 LINKS+=	ja/handbook web.mk es/FAQ ru/FAQ zh/FAQ ../doc/en/web.mk
 LINKS+= ../doc/en/includes.sgml
 
@@ -32,9 +32,6 @@ en/tutorials:
 
 en/FAQ:
 	cd en; ln -sf ../../doc/FAQ
-
-en/handbook:
-	cd en; ln -sf ../../doc/en/handbook
 
 ja/web.mk:
 	cd ja; ln -sf ../en/web.mk
