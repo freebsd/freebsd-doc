@@ -1,9 +1,13 @@
 <?xml version="1.0" encoding="KOI8-R" ?>
 
-<!-- $FreeBSD: www/ru/includes.xsl,v 1.4 2002/09/13 09:37:52 sobomax Exp $ -->
-<!-- The FreeBSD Russian Documentation Project -->
-<!-- $FreeBSDru: frdp/www/ru/includes.xsl,v 1.4 2002/02/17 12:39:59 phantom Exp $ -->
-<!-- Original revision: 1.6 -->
+<!--
+     The FreeBSD Russian Documentation Project
+
+     $FreeBSD$
+     $FreeBSDru: frdp/www/ru/includes.xsl,v 1.8 2003/09/16 08:36:34 andy Exp $
+
+     Original revision: 1.15
+-->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -15,7 +19,14 @@
     <img src="{$base}/../gifs/new.gif" alt="[New!]" width="28" height="11"/>
   </xsl:variable>
 
-  <xsl:variable name="copyright" select="'Copyright (c) 1995-2002 the FreeBSD Project.  All rights reserved.'"/>
+  <xsl:variable name="copyright">
+    <a href="{$base}/copyright/index.html">Copyright</a> &#169; 1995-2003 the FreeBSD Project.  All rights reserved.
+  </xsl:variable>
+
+  <!-- Often used trademarks -->
+  <xsl:variable name="unix" select="'UNIX&#174;'"/>
+  <xsl:variable name="java" select="'Java&#8482;'"/>
+  <xsl:variable name="jdk" select="'JDK&#8482;'"/>
 
   <xsl:variable name="email" select="'freebsd-questions'"/>
   <xsl:variable name="author">
@@ -23,7 +34,7 @@
       <xsl:attribute name="href">
 	<xsl:value-of select="concat($base, '/mailto.html')"/>
       </xsl:attribute>
-      <xsl:value-of select="$email"/>@FreeBSD.org</a><br/><xsl:value-of select="$copyright"/>
+      <xsl:value-of select="$email"/>@FreeBSD.org</a><br/><xsl:copy-of select="$copyright"/>
   </xsl:variable>
 
   <xsl:variable name="home">
@@ -81,7 +92,7 @@
       <xsl:copy-of select="$date"/></address>
   </xsl:variable>
   
-  <xsl:variable name="rel.current" select='"4.7"'/>
+  <xsl:variable name="rel.current" select='"5.1"'/>
   <xsl:variable name="u.rel.notes">
     <xsl:value-of select="$base"/>/../releases/<xsl:value-of select="$rel.current"/>R/relnotes.html</xsl:variable>
 
@@ -91,5 +102,21 @@
     <xsl:value-of select="$base"/>/../releases/<xsl:value-of select="$rel.current"/>R/errata.html</xsl:variable>
   <xsl:variable name="u.rel.hardware">
     <xsl:value-of select="$base"/>/../releases/<xsl:value-of select="$rel.current"/>R/hardware.html</xsl:variable>
-  
+  <xsl:variable name="u.rel.early">
+    <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel.current"/>R/early-adopter.html</xsl:variable>
+
+  <xsl:variable name="rel2.current" select='"4.8"'/>
+
+  <xsl:variable name="u.rel2.notes">
+    <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel2.current"/>R/relnotes.html</xsl:variable>
+
+  <xsl:variable name="u.rel2.announce">
+    <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel2.current"/>R/announce.html</xsl:variable>
+
+  <xsl:variable name="u.rel2.errata">
+    <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel2.current"/>R/errata.html</xsl:variable>
+
+  <xsl:variable name="u.rel2.hardware">
+    <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel2.current"/>R/hardware.html</xsl:variable>
+
 </xsl:stylesheet>
