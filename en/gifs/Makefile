@@ -1,9 +1,9 @@
 DATA=	apache.gif apachepower.gif daemon.gif dir.gif doc.gif
 DATA+=	home.gif littlelogo.gif new.gif power-button.gif
 DATA+=	powerlogo.gif ugu_icon.gif wclogo.gif topbar.gif
-DATA+=  1faq.gif 2faq.gif 1soft.gif 2soft.gif 1support.gif 2support.gif
-DATA+=  1doc.gif 2doc.gif 1vendor.gif 2vendor.gif 1search.gif 2search.gif
-DATA+=  1index.gif 2index.gif 1home.gif 2home.gif dae_up2.gif bar.gif
-DATA+=  freebsd_1.gif flash.gif 2flash.gif 1get.gif 2get.gif
-DATA+=  1handboo.gif 2handboo.gif powerani.gif pbfbsd2.gif
+DATA+=  flash0.gif flash1.gif soft0.gif soft1.gif support0.gif support1.gif
+DATA+=  docs0.gif docs1.gif vendors0.gif vendors1.gif search0.gif search1.gif
+DATA+=  index0.gif index1.gif get0.gif get1.gif faq0.gif faq1.gif
+DATA+=  handboo0.gif handboo1.gif dae_up2.gif bar.gif
+DATA+=  freebsd_1.gif powerani.gif pbfbsd2.gif
 .include "../web.mk"
