@@ -1,4 +1,4 @@
-<!-- $Id: ports.inc,v 1.25 1998-12-23 03:02:11 jkoshy Exp $ -->
+<!-- $Id: ports.inc,v 1.26 1999-01-08 12:34:47 asami Exp $ -->
 <p>The FreeBSD Ports and Packages Collection offers a simple way for
 users and administrators to install applications.  Each ``port'' listed here
 contains any patches necessary to make the original application source
@@ -27,25 +27,47 @@ part of the <a href="../handbook">FreeBSD Handbook</a>.</p>
 <p>The ports listed on these web pages are continually being updated.
 Consequently, you may need to update a few files on your FreeBSD system 
 to make use of ports developed after your version of FreeBSD was released.
-If you are a 2.2.1-release user, please install the <a
+Please install one of the following depending on the release you are
+running.  Also, if you are running FreeBSD-stable or FreeBSD-current
+that is more than a few days old, you are recommended to install an
+appropriate upgrade kit as well; the ports system is changing very
+fast at times.
+
+<dl>
+<dt><a
 href="ftp://ftp.freebsd.org/pub/FreeBSD/packages-stable/Latest/221upgrade.tgz">2.2.1
-to 2.2-stable ports upgrade kit</a>; if you are
-a 2.2.2-release user, please install the <a
+to 2.2-stable upgrade kit</a>
+<dd>For users of 2.2.1-release or
+2.2-stable between 2.2.1-release and 2.2.2-release
+<dt><a
 href="ftp://ftp.freebsd.org/pub/FreeBSD/packages-stable/Latest/222upgrade.tgz">2.2.2
-to 2.2-stable ports upgrade kit</a>; if you are a 2.2.5-release user,
-please install the <a
+to 2.2-stable upgrade kit</a>
+<dd>For users of 2.2.2-release or
+2.2-stable between 2.2.2-release and 2.2.5-release
+<dt><a
 href="ftp://ftp.freebsd.org/pub/FreeBSD/packages-stable/Latest/225upgrade.tgz">2.2.5
-to 2.2-stable ports upgrade kit</a>; if you are a 2.2.6, 2.2.7 or 3.0-release user,
-please install the <a
+to 2.2-stable upgrade kit</a>
+<dd>For users of 2.2.5-release or
+2.2-stable between 2.2.5-release and 2.2.6-release
+<dt><a
 href="ftp://ftp.freebsd.org/pub/FreeBSD/packages-stable/Latest/227upgrade.tgz">2.2.7
-to 2.2-stable ports upgrade kit</a>.  (These
-are FreeBSD packages; please use pkg_add to install them.)  That
+to 2.2-stable upgrade kit</a>
+<dd>For users of 2.2.6-release, 2.2.7-release, 2.2.8-release or
+2.2-stable after 2.2.6-release
+<dt><a
+href="ftp://ftp.freebsd.org/pub/FreeBSD/packages-current/Latest/30upgrade.tgz">3.0
+to 3.0-current upgrade kit</a>
+<dd>For users of 3.0-release or 3.0-current after 3.0-release
+</dl>
+
+These
+are FreeBSD packages; please use <strong>pkg_add</strong> to install them.  That
 should enable you to use all the ports listed here.  Note that it will
 only change just enough files to enable ports/packages to be used; for
-a full upgrade to 2.2-stable, please refer to the <a
+a full upgrade to 2.2-stable or 3.0-current, please refer to the <a
 href="../handbook/synching.html">synchronizing your source tree</a>
 section of the handbook.  A full upgrade is recommended, especially if
-you are still using 2.2.1-release or 2.2.2-release.</p>
+you are still using anything earlier than 2.2.7-release.</p>
 
 <p>Many of the ports require the X Window System to compile and run.
 We compile and test our ports on <a
