@@ -39,6 +39,18 @@ SRCS+= sysinit/chapter.sgml
 SRCS+= usb/chapter.sgml
 SRCS+= vm/chapter.sgml
 
+# Images from the cross-document image library
+IMAGES_LIB=  callouts/1.png
+IMAGES_LIB+= callouts/2.png
+IMAGES_LIB+= callouts/3.png
+IMAGES_LIB+= callouts/4.png
+IMAGES_LIB+= callouts/5.png
+IMAGES_LIB+= callouts/6.png
+IMAGES_LIB+= callouts/7.png
+IMAGES_LIB+= callouts/8.png
+IMAGES_LIB+= callouts/9.png
+IMAGES_LIB+= callouts/10.png
+
 # Entities
 
 DOC_PREFIX?= ${.CURDIR}/../../..
