@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/en/news/newsflash.xsl,v 1.6 2002/07/14 16:29:11 keramida Exp $ -->
+<!-- $FreeBSD: www/en/news/newsflash.xsl,v 1.7 2002/09/08 09:10:58 nik Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -51,7 +51,7 @@
           be checked for project specific updates.</p>
 
         <ul>
-          <li><a href="{$base}/java/newsflash.html">Java on FreeBSD</a></li>
+          <li><a href="{$base}/java/newsflash.html"><xsl:value-of select="$java"/> on FreeBSD</a></li>
           <li><a href="http://freebsd.kde.org/">KDE on FreeBSD</a></li>
           <li><a href="{$base}/gnome/newsflash.html">GNOME on FreeBSD</a></li>
         </ul>
