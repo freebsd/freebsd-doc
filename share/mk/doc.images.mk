@@ -1,5 +1,5 @@
 #
-# $FreeBSD: doc/share/mk/doc.images.mk,v 1.4 2000/10/08 19:17:42 nik Exp $
+# $FreeBSD: doc/share/mk/doc.images.mk,v 1.5 2000/10/29 02:39:10 nik Exp $
 #
 # This include file <doc.images.mk> handles image processing.
 #
@@ -89,7 +89,7 @@ ${_curimage}: ${_curimage:S/.eps$/.png/}
 #
 .for _curimage in ${IMAGES_GEN_PDF}
 ${_curimage}: ${_curimage:S/.pdf$/.eps/}
-	convert -antialias -crop 0x0 ${_curimage:S/.pdf$/.eps/} epdf:${_curimage}
+	epstopdf ${_curimage:S/.pdf$/.eps/}
 .endfor
 
 #
