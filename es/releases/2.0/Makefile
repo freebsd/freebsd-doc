@@ -1,4 +1,5 @@
 DOCS=	announce.sgml credits.sgml install.sgml notes.sgml
 
-.include "../../web.mk"
+.include "../Makefile.inc"
+.include "${WEB_PREFIX}/share/mk/web.site.mk"
 

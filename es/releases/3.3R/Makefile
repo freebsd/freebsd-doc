@@ -1,3 +1,4 @@
 DOCS=	announce.sgml notes.sgml errata.sgml
 
-.include "../../web.mk"
+.include "../Makefile.inc"
+.include "${WEB_PREFIX}/share/mk/web.site.mk"

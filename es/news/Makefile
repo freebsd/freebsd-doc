@@ -1,11 +1,10 @@
-# $FreeBSD$
+# $FreeBSD: www/es/news/Makefile,v 1.5 1999/09/06 07:03:03 peter Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
 .endif
-
-.if exists("../Makefile.conf")
-.include "../Makefile.conf"
+.if exists(../Makefile.inc)
+.include "../Makefile.inc"
 .endif
 
 # quick news letter
@@ -33,4 +32,4 @@ DOCS+= press-rel-3.sgml
 
 INDEXLINK= news.html
 
-.include "../web.mk"
+.include "${WEB_PREFIX}/share/mk/web.site.mk"

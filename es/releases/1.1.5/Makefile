@@ -3,4 +3,5 @@ DATA+=	COPYRIGHT.FreeBSD COPYRIGHT.USL KNOWNBUGS MIRROR.SITES
 DATA+=	PERSONAL.ACKS REGISTER.FreeBSD RELNOTES.FreeBSD ROSTER.FreeBSD
 DATA+=	SUPPORT.TXT TODO-1.1.5
 
-.include "../../web.mk"
+.include "../Makefile.inc"
+.include "${WEB_PREFIX}/share/mk/web.site.mk"
