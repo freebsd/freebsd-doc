@@ -1,11 +1,16 @@
+#
+# The FreeBSD Russian Documentation Project
+#
 # $FreeBSD$
-
-MAINTAINER = phantom@FreeBSD.org
+# $FreeBSDru: frdp/doc/ru_RU.KOI8-R/Makefile,v 1.3 2004/02/21 15:25:00 andy Exp $
+#
+# Original revision: 1.7
+#
 
 SUBDIR = articles
 SUBDIR+= books
 
 COMPAT_SYMLINK = ru
 
-DOC_PREFIX = ${.CURDIR}/..
+DOC_PREFIX?= ${.CURDIR}/..
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"
