@@ -169,17 +169,17 @@
                           
                           <p><font size="+1" color="#990000"><b>GNOME Project News</b></font><br/>
                             <font size="-1">
-                              <xsl:for-each select="document('gnotices.xml')/descendant::event[position() &lt; 10]">
+                              <xsl:for-each select="document('gnotices.rdf')/descendant::item[position() &lt; 10]">
                                 &#183; <a>
                                   <xsl:attribute name="href">
-                                    <xsl:value-of select="url"/>
+                                    <xsl:value-of select="link"/>
                                   </xsl:attribute>
                                   <xsl:value-of select="title"/><br/>
                                 </a>
                               </xsl:for-each>
                             <a>
                               <xsl:attribute name="href">
-                                <xsl:value-of select="document('gnotices.xml')/gnotices/base"/>
+                                <xsl:value-of select="document('gnotices.rdf')/descendant::channel/link"/>
                               </xsl:attribute>More...
                             </a>
                           </font></p>
