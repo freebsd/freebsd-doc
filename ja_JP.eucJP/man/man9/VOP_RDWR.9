@@ -1,0 +1,232 @@
+.\" -*- nroff -*-
+.\"
+.\" Copyright (c) 1996 Doug Rabson
+.\"
+.\" All rights reserved.
+.\"
+.\" This program is free software.
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE DEVELOPERS ``AS IS'' AND ANY EXPRESS OR
+.\" IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+.\" OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+.\" IN NO EVENT SHALL THE DEVELOPERS BE LIABLE FOR ANY DIRECT, INDIRECT,
+.\" INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+.\" NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+.\" DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+.\" THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+.\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+.\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+.\"
+.\" %FreeBSD: src/share/man/man9/VOP_RDWR.9,v 1.9 1999/12/13 02:28:53 alfred Exp %
+.\"
+.Dd July 24, 1996
+.Os
+.Dt VOP_RDWR 9
+.Sh 名称
+.Nm VOP_READ ,
+.Nm VOP_WRITE
+.Nd ファイルの読み込みまたは書き込み
+.Sh 書式
+.Fd #include <sys/param.h>
+.Fd #include <sys/vnode.h>
+.Fd #include <sys/uio.h>
+.Ft int
+.Fn VOP_READ "struct vnode *vp" "struct uio *uio" "int ioflag" "struct ucred *cred"
+.Ft int
+.Fn VOP_WRITE "struct vnode *vp" "struct uio *uio" "int ioflag" "struct ucred *cred"
+.Sh 解説
+これらのエントリポイントは、ファイルの内容を読み込みまたは書き込みます。
+.Pp
+引数は以下の通りです。
+.Bl -tag -width ioflag
+.It Ar vp
+ファイルの vnode。
+.It Ar uio
+読み込みまたは書き込み対象のデータの位置。
+.It Ar ioflag
+様々なフラグ。
+.It Ar cnp
+呼び出し側の証明。
+.El
+.Pp
+.Fa ioflag
+引数は、ファイルシステムに対する命令およびヒントを与えるために使用されます。
+読み込みを試みる時には、上位の 16 ビットは、
+ファイルシステムが試みるべき先読みのヒントを (ファイルシステムブロック単位で) 
+提供するために使用されます。
+下位の 16 ビットは、以下のフラグを含むことができるビットマスクです。
+.Bl -tag -width IO_NODELOCKED
+.It Dv IO_UNIT
+不可分に入出力を行ないます。
+.It Dv IO_APPEND
+末尾に追加書き込みを行ないます。
+.It Dv IO_SYNC
+同期的に入出力を行ないます。
+.It Dv IO_NODELOCKED
+下位層のノードは既にロックされています。
+.It Dv IO_NDELAY
+ファイルテーブルに
+.Dv FNDELAY
+フラグを設定します。
+.It Dv IO_VMIO
+仮想メモリ入出力 (VMIO) 領域にデータが既にあります。
+.El
+.Sh ロック
+入る時に、ファイルはロックされているべきで、終了時までロックされ続けます。
+.Sh 戻り値
+成功時には 0 が返され、そうでない場合にはエラーコードが返されます。
+.Sh 疑似コード
+.Bd -literal
+int
+vop_read(struct vnode *vp, struct uio *uio, int ioflag, struct ucred *cred)
+{
+    struct buf *bp;
+    off_t bytesinfile;
+    daddr_t lbn, nextlbn;
+    long size, xfersize, blkoffset;
+    int error;
+
+    size = block size of filesystem;
+
+    for (error = 0, bp = NULL; uio->uio_resid > 0; bp = NULL) {
+	bytesinfile = size of file - uio->uio_offset;
+	if (bytesinfile <= 0)
+	    break;
+
+	lbn = uio->uio_offset / size;
+	blkoffset = uio->uio_offset - lbn * size;
+
+	xfersize = size - blkoffset;
+	if (uio->uio_resid < xfersize)
+	    xfersize = uio->uio_resid;
+	if (bytesinfile < xfersize)
+	    xfersize = bytesinfile;
+	
+	error = bread(vp, lbn, size, NOCRED, &bp);
+	if (error) {
+	    brelse(bp);
+	    bp = NULL;
+	    break;
+	}
+
+	/*
+	 * 入出力エラーが起こった時には 0 でない b_resid のみ
+	 * を得ます。これは上で break を引き起こすべきです。
+	 * しかしながら、短い読み込みがエラーを起こさなかった
+	 * 場合には、間違ったまたは初期化されていないデータの
+	 * uiomove を行なわないことを保証したい。
+	 */
+	size -= bp->b_resid;
+	if (size < xfersize) {
+	    if (size == 0)
+		break;
+	    xfersize = size;
+	}
+	
+	error = uiomove((char *)bp->b_data + blkoffset, (int)xfersize, uio);
+	if (error)
+	    break;
+
+	bqrelse(bp);
+    }
+    if (bp != NULL)
+	bqrelse(bp);
+
+    return error;
+}
+
+int
+vop_write(struct vnode *vp, struct uio *uio, int ioflag, struct ucred *cred)
+{
+    struct buf *bp;
+    off_t bytesinfile;
+    daddr_t lbn, nextlbn;
+    off_t osize;
+    long size, resid, xfersize, blkoffset;
+    int flags;
+    int error;
+
+    osize = size of file;
+    size = block size of filesystem;
+    resid = uio->uio_resid;
+    if (ioflag & IO_SYNC)
+	flags = B_SYNC;
+    else
+	flags = 0;
+
+    for (error = 0; uio->uio_resid > 0;) {
+	lbn = uio->uio_offset / size;
+	blkoffset = uio->uio_offset - lbn * size;
+
+	xfersize = size - blkoffset;
+	if (uio->uio_resid < xfersize)
+	    xfersize = uio->uio_resid;
+	
+	if (uio->uio_offset + xfersize > size of file)
+	    vnode_pager_setsize(vp, uio->uio_offset + xfersize);
+
+	if (size > xfersize)
+	    flags |= B_CLRBUF;
+	else
+	    flags &= ~B_CLRBUF;
+
+	error = find_block_in_file(vp, lbn, blkoffset + xfersize,
+				   cred, &bp, flags);
+	if (error)
+	    break;
+
+	if (uio->uio_offset + xfersize > size of file)
+	    set size of file to uio->uio_offset + xfersize;
+
+	error = uiomove((char *)bp->b_data + blkoffset, (int) xfersize, uio);
+	/* XXX ufs はここでエラーチェックをしていません。何故? */
+
+	if (ioflag & IO_VMIO)
+	    bp->b_flags |= B_RELBUF; /* ??? */
+
+	if (ioflag & IO_SYNC)
+	    bwrite(bp);
+	else if (xfersize + blkoffset == size)
+	    bawrite(bp);
+	else
+	    bdwrite(bp);
+
+	if (error || xfersize == 0)
+	    break;
+    }
+
+    if (error) {
+	if (ioflag & IO_UNIT) {
+	    VOP_TRUNCATE(vp, osize, ioflag & IO_SYNC, cred, uio->uio_procp);
+	    uio->uio_offset -= resid - uio->uio_resid;
+	    uio->uio_resid = resid;
+	}
+    } else if (resid > uio->uio_resid && (ioflag & IO_SYNC)) {
+	struct timeval tv;
+	error = VOP_UPDATE(vp, &tv, &tv, 1); /* XXX これは何をしているの? */
+    }
+
+    return error;
+}
+.Ed
+.Sh エラー
+.Bl -tag -width Er
+.It Bq Er ENOSPC
+ファイルシステムが一杯です。
+.El
+.Sh 関連項目
+.Xr uiomove 9 ,
+.Xr vnode 9
+.Sh 作者
+このマニュアルページは
+.An Doug Rabson
+が書きました。
