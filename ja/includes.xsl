@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
 
-<!-- $FreeBSD: www/ja/includes.xsl,v 1.24 2004/12/31 07:24:05 hrs Exp $ -->
+<!-- $FreeBSD: www/ja/includes.xsl,v 1.25 2005/02/07 07:37:34 rushani Exp $ -->
 <!-- Original revision: 1.20 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -65,9 +65,6 @@
 
   <xsl:variable name="u.rel.errata">
     <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel.current"/>R/errata.html</xsl:variable>
-
-  <xsl:variable name="u.rel.hardware">
-    <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel.current"/>R/hardware.html</xsl:variable>
 
   <xsl:variable name="u.rel.installation">
     <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel.current"/>R/installation.html</xsl:variable>
