@@ -1,0 +1,409 @@
+<!--
+     The FreeBSD Russian Documentation Project
+
+     $FreeBSD$
+     $FreeBSDru: frdp/doc/ru_RU.KOI8-R/books/developers-handbook/driverbasics/chapter.sgml,v 1.1 2001/01/10 08:45:03 andy Exp $
+
+     Original revision: 1.3
+-->
+
+<chapter id="driverbasics">
+  <title>Написание драйверов устройств для FreeBSD</title>
+
+  <para>Эту главу написал Мюррэй Стокели (Murray Stokely) на основе множества
+    источников, включая справочную страницу intro(4), созданную Джоргом
+    Вуншем (Joerg Wunsch).</para>
+
+  <sect1>
+    <title>Введение</title>
+
+    <para>Эта глава является кратким введением в процесс написания драйверов
+      устройств для FreeBSD.  В этом контексте термин устройство используется
+      в основном для вещей, связанных с оборудованием, относящимся к системе,
+      таких, как диски, печатающие устройства или графические дисплеи с
+      клавиатурами.  Драйвер устройства является программной компонентой
+      операционной системы, управляющей некоторым устройством.  Имеются также
+      так называемые псевдо-устройства, в случае которых драйвер устройства
+      эмулирует поведение устройства программно, без наличия какой-либо
+      соответствующей аппаратуры.  Драйверы устройств могут быть
+      вкомпилированы в систему статически или могут загружаться по требованию
+      при помощи механизма динамического компоновщика ядра `kld'.</para>
+
+    <para>Большинство устройств в Unix-подобной операционной системе доступны
+      через файлы устройств (device-nodes), иногда также называемые
+      специальными файлами.  В иерархии файловой системы эти файлы обычно
+      находятся в каталоге <filename>/dev</filename>.  Пока система devfs
+      полностью не интегрирована во FreeBSD, каждый файл устройства должен
+      создаваться статически и вне зависимости от наличия соответствующего
+      драйвера устройста.  Большинство файлов устройств в системе создаются
+      при помощи команды <command>MAKEDEV</command>.</para>
+
+    <para>Драйверы устройств могут быть условно разделены на две категории;
+      драйверы символьных и сетевых устройств.</para>
+  </sect1>
+
+  <sect1>
+    <title>Механизм динамического компоновщика ядра - KLD</title>
+
+    <para>Интерфейс kld позволяет системным администраторам динамически
+      добавлять и убирать функциональность из работающей системы.  Это
+      позволяет разработчикам драйверов устройств загружать собственные
+      изменения в работающее ядро без постоянных перезагрузок для
+      тестирования изменений.</para>
+
+    <para>Для работы с интерфейсом kld используются следующие команды
+      администратора:
+
+      <itemizedlist>
+        <listitem>
+          <simpara>
+            <command>kldload</command> - загружает новый модуль ядра
+          </simpara>
+        </listitem>
+
+        <listitem>
+          <simpara>
+            <command>kldunload</command> - выгружает модуль ядра
+          </simpara>
+        </listitem>
+
+        <listitem>
+          <simpara>
+            <command>kldstat</command> - выводит список загруженных в данный
+            момент модулей
+          </simpara>
+        </listitem>
+      </itemizedlist>
+    </para>
+
+    <para>Скелет модуля ядра</para>
+
+    <programlisting>
+/*
+ * KLD Skeleton
+ * Inspired by Andrew Reiter's Daemonnews article
+ */
+
+#include &lt;sys/types.h&gt;
+#include &lt;sys/module.h&gt;
+#include &lt;sys/systm.h&gt;  /* uprintf */
+#include &lt;sys/errno.h&gt;
+#include &lt;sys/param.h&gt;  /* defines used in kernel.h */
+#include &lt;sys/kernel.h&gt; /* types used in module initialization */
+
+/*
+ * Load handler that deals with the loading and unloading of a KLD.
+ */
+
+static int
+skel_loader(struct module *m, int what, void *arg)
+{
+  int err = 0;
+
+  switch (what) {
+  case MOD_LOAD:                /* kldload */
+    uprintf("Skeleton KLD loaded.\n");
+    break;
+  case MOD_UNLOAD:
+    uprintf("Skeleton KLD unloaded.\n");
+    break;
+  default:
+    err = EINVAL;
+    break;
+  }
+  return(err);
+}
+
+/* Declare this module to the rest of the kernel */
+
+DECLARE_MODULE(skeleton, skel_loader, SI_SUB_KLD, SI_ORDER_ANY);
+    </programlisting>
+
+    <sect2>
+      <title>Makefile</title>
+
+      <para>Во FreeBSD имеются заготовки для включения в make-файлы, которые
+        вы можете использовать для быстрой компиляции собственных дополнений
+        к ядру.</para>
+
+      <programlisting>
+SRCS=skeleton.c
+KMOD=skeleton
+
+.include &lt;bsd.kmod.mk&gt;
+      </programlisting>
+
+      <para>Простой запуск команды <command>make</command> с этим make-файлом
+        приведет к созданию файла <filename>skeleton.ko</filename>, который
+        можно загрузить в вашу систему, набрав:
+
+        <screen>
+&prompt.root kldload -v ./skeleton.ko
+        </screen>
+      </para>
+    </sect2>
+  </sect1>
+
+  <sect1>
+    <title>Обращение к драйверу устройства</title>
+
+    <para>Unix дает некоторый общий набор системных вызовов для использования
+      в пользовательских приложениях.  Когда пользователь обращается к
+      файлу устройства, высокие уровни ядра перенаправляют эти обращения к
+      соответствующему драйверу устройства.  Скрипт
+      <command>/dev/MAKEDEV</command> создает большинство файлов устройств в
+      вашей системе, однако если вы ведете разработку своего собственного
+      драйвера, то может появиться необходимость в создании собственных
+      файлов устройств при помощи команды <command>mknod</command>.</para>
+
+    <sect2>
+      <title>Создание статических файлов устройств</title>
+
+      <para>Для создания файла устройства команде <command>mknod</command>
+        требуется указать четыре аргумента.  Вы должны указать имя этого
+        файла устройства, тип устройства, старшее число устройства и младшее
+        число устройства.</para>
+    </sect2>
+
+    <sect2>
+      <title>Динамические файлы устройств</title>
+
+      <para>Файловая система устройств, devfs, предоставляет доступ к
+        пространству имен устройств ядра из глобального пространства имен
+        файловой системы.  Это устраняет потенциальную проблемы наличия
+        драйвера без статического файла устройства или файла устройства без
+        установленного драйвера устройства.  Devfs все еще находится в
+        разработке, однако она уже достаточно хорошо работает.</para>
+    </sect2>
+  </sect1>
+
+  <sect1>
+    <title>Символьные устройства</title>
+
+    <para>Драйвер символьного устройства передает данные непосредственно в
+      или из процесса пользователя.  Это самый распространенный тип драйвера
+      устройства и в дереве исходных текстов имеется достаточно простых
+      примеров таких драйверов.</para>
+
+    <para>В этом простом примере псевдо-устройство запоминает какие угодно
+      значения, которые вы в него записываете, и затем может выдавать их
+      назад при чтении из этого устройства.</para>
+
+    <programlisting>
+/*
+ * Simple `echo' pseudo-device KLD
+ *
+ * Murray Stokely
+ */
+
+#define MIN(a,b) (((a) < (b)) ? (a) : (b))
+
+#include &lt;sys/types.h&gt;
+#include &lt;sys/module.h&gt;
+#include &lt;sys/systm.h&gt; /* uprintf */
+#include &lt;sys/errno.h&gt;
+#include &lt;sys/param.h&gt;  /* defines used in kernel.h */
+#include &lt;sys/kernel.h&gt; /* types used in module initialization */
+#include &lt;sys/conf.h&gt;   /* cdevsw struct */
+#include &lt;sys/uio.h&gt;    /* uio struct */
+#include &lt;sys/malloc.h&gt;
+
+#define BUFFERSIZE 256
+
+/* Function prototypes */
+d_open_t      echo_open;
+d_close_t     echo_close;
+d_read_t      echo_read;
+d_write_t     echo_write;
+
+/* Character device entry points */
+static struct cdevsw echo_cdevsw = {
+  echo_open,
+  echo_close,
+  echo_read,
+  echo_write,
+  noioctl,
+  nopoll,
+  nommap,
+  nostrategy,
+  "echo",
+  33,                   /* reserved for lkms - /usr/src/sys/conf/majors */
+  nodump,
+  nopsize,
+  D_TTY,
+  -1
+};
+
+typedef struct s_echo {
+  char msg[BUFFERSIZE];
+  int len;
+} t_echo;
+
+/* vars */
+static dev_t sdev;
+static int len;
+static int count;
+static t_echo *echomsg;
+
+MALLOC_DECLARE(M_ECHOBUF);
+MALLOC_DEFINE(M_ECHOBUF, "echobuffer", "buffer for echo module");
+
+/*
+ * This function acts is called by the kld[un]load(2) system calls to
+ * determine what actions to take when a module is loaded or unloaded.
+ */
+
+static int
+echo_loader(struct module *m, int what, void *arg)
+{
+  int err = 0;
+
+  switch (what) {
+  case MOD_LOAD:                /* kldload */
+    sdev = make_dev(<literal>&</literal>echo_cdevsw,
+                    0,
+                    UID_ROOT,
+                    GID_WHEEL,
+                    0600,
+                    "echo");
+    /* kmalloc memory for use by this driver */
+    /*    malloc(256,M_ECHOBUF,M_WAITOK); */
+    MALLOC(echomsg, t_echo *, sizeof(t_echo), M_ECHOBUF, M_WAITOK);
+    printf("Echo device loaded.\n");
+    break;
+  case MOD_UNLOAD:
+    destroy_dev(sdev);
+    FREE(echomsg,M_ECHOBUF);
+    printf("Echo device unloaded.\n");
+    break;
+  default:
+    err = EINVAL;
+    break;
+  }
+  return(err);
+}
+
+int
+echo_open(dev_t dev, int oflags, int devtype, struct proc *p)
+{
+  int err = 0;
+
+  uprintf("Opened device \"echo\" successfully.\n");
+  return(err);
+}
+
+int
+echo_close(dev_t dev, int fflag, int devtype, struct proc *p)
+{
+  uprintf("Closing device \"echo.\"\n");
+  return(0);
+}
+
+/*
+ * The read function just takes the buf that was saved via
+ * echo_write() and returns it to userland for accessing.
+ * uio(9)
+ */
+
+int
+echo_read(dev_t dev, struct uio *uio, int ioflag)
+{
+  int err = 0;
+  int amt;
+
+  /* How big is this read operation?  Either as big as the user wants,
+     or as big as the remaining data */
+  amt = MIN(uio->uio_resid, (echomsg->len - uio->uio_offset > 0) ? echomsg->len - uio->uio_offset : 0);
+  if ((err = uiomove(echomsg->msg + uio->uio_offset,amt,uio)) != 0) {
+    uprintf("uiomove failed!\n");
+  }
+
+  return err;
+}
+
+/*
+ * echo_write takes in a character string and saves it
+ * to buf for later accessing.
+ */
+
+int
+echo_write(dev_t dev, struct uio *uio, int ioflag)
+{
+  int err = 0;
+
+  /* Copy the string in from user memory to kernel memory */
+  err = copyin(uio->uio_iov->iov_base, echomsg->msg, MIN(uio->uio_iov->iov_len,BUFFERSIZE));
+
+  /* Now we need to null terminate */
+  *(echomsg->msg + MIN(uio->uio_iov->iov_len,BUFFERSIZE)) = 0;
+  /* Record the length */
+  echomsg->len = MIN(uio->uio_iov->iov_len,BUFFERSIZE);
+
+  if (err != 0) {
+    uprintf("Write failed: bad address!\n");
+  }
+
+  count++;
+  return(err);
+}
+
+DEV_MODULE(echo,echo_loader,NULL);
+    </programlisting>
+
+    <para>Перед тем, как устанавливать этот драйвер, в вашей файловой системе
+      вам нужно создать файл устройства при помощи команды, подобной
+      следующей:</para>
+
+    <screen>
+&prompt.root mknod /dev/echo c 33 0
+    </screen>
+
+    <para>Когда этот драйвер загружен, вы можете выполнять следующие
+      действия:</para>
+
+    <screen>
+&prompt.root echo -n "Test Data" > /dev/echo
+&prompt.root cat /dev/echo
+Test Data
+    </screen>
+
+    <para>Об устройствах, обслуживающих реальное оборудование, рассказывается
+      в следующей главе..</para>
+
+    <para>Дополнительные источники информации
+      <itemizedlist>
+        <listitem>
+          <simpara><ulink
+            url="http://www.daemonnews.org/200010/blueprints.html">Учебник
+            по программированию механизма динамического компоновщика ядра
+            (KLD)</ulink> - <ulink
+            url="http://www.daemonnews.org">Daemonnews</ulink>
+            Октябрь 2000
+          </simpara>
+        </listitem>
+
+        <listitem>
+          <simpara><ulink
+            url="http://www.daemonnews.org/200007/newbus-intro.html">Как
+            писать драйверы ядра в парадигме NEWBUS</ulink> - <ulink
+            url="http://www.daemonnews.org">Daemonnews</ulink> Июль 2000
+          </simpara>
+        </listitem>
+      </itemizedlist>
+    </para>
+  </sect1>
+
+  <sect1>
+    <title>Сетевые драйверы</title>
+
+    <para>В случае драйверов сетевых устройств файлы устройств для доступа к
+      ним не используются.  Их выбор основан на другом механизме, работающем
+      в ядре, и не использующем вызов open(); об использование сетевых
+      устройств в общем случае рассказано в описании системного вызова
+      socket(2).</para>
+
+    <para>Почитайте справочную информацию о вызове ifnet(), устройстве
+      loopback, почитайте драйверы Билла Пола (Bill Paul), и так
+      далее..</para>
+  </sect1>
+</chapter>
