@@ -191,6 +191,7 @@ SYMLINKS=	${DESTDIR} index.html handbook.html
 CHAPTERS?= ${SRCS:M*chapter.sgml}
 
 SGMLFLAGS+= ${CHAPTERS:S/\/chapter.sgml//:S/^/-i chap./}
+SGMLFLAGS+= -i chap.freebsd-glossary
 
 # XXX The Handbook build currently overflows some internal, hardcoded 
 # limits in pdftex.  Until we split the Handbook up, build the PDF 
