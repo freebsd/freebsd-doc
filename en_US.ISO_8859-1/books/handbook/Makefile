@@ -1,5 +1,5 @@
 # 
-# $Id: Makefile,v 1.18 1999-04-04 16:43:08 nik Exp $
+# $Id: Makefile,v 1.19 1999-04-12 21:40:25 nik Exp $
 #
 # Build the FreeBSD Handbook. Will eventually split in two, a generic .mk
 # file which can be used by many Makefiles, and a much smaller Makefile
@@ -28,15 +28,17 @@ DOC?= handbook
 # FORMATS lists the output formats that should be generated. Valid values
 # are 
 #
-#    txt html html-split ps pdf rtf tar
+#    txt html html-split html-split.tar ps pdf rtf tar
 #
 # html-split is the file split into (probably) many individual HTML files,
-# linked from one index.html file. 
+# linked from one index.html file.
+#
+# html-split.tar is all these HTML files tarred up.
 #
 # This setting also affects which files will be removed with 'make clean'.
 # If you 'make' with one setting, and 'make clean' with another, don't
 # be surprised if it doesn't work.
-FORMATS?= html-split
+FORMATS?= html-split.tar
 
 #
 # INSTALL_COMPRESSED lists the compressed versions to be installed by the
@@ -115,7 +117,7 @@ DSSSLCATALOG=   /usr/local/share/sgml/docbook/dsssl/modular/catalog
 
 JADEFLAGS=	${JADEOPTS} -c ${FREEBSDCATALOG} -c ${DSSSLCATALOG} -c ${DOCBOOKCATALOG} -c ${JADECATALOG}
 
-KNOWN_FORMATS= html html-split txt rtf ps pdf tex dvi tar
+KNOWN_FORMATS= html html-split html-split.tar txt rtf ps pdf tex dvi tar
 
 # ------------------------------------------------------------------------
 #
@@ -162,6 +164,10 @@ _cf=${_curformat}
 .if ${_cf} == "html-split"
 _docs+= index.html HTML.manifest
 CLEANFILES+= `xargs < HTML.manifest` HTML.manifest
+.elif ${_cf} == "html-split.tar"
+_docs+= ${DOC}.html-split.tar
+CLEANFILES+= `xargs < HTML.manifest` HTML.manifest
+CLEANFILES+= ${DOC}.html-split.tar
 .elif ${_cf} == "html"
 _docs+= ${DOC}.html
 CLEANFILES+= ${DOC}.html
@@ -196,10 +202,7 @@ CLEANFILES+= ${DOC}.tar
 .for _curformat in ${FORMATS}
 _cf=${_curformat}
 .for _curcomp in ${INSTALL_COMPRESSED}
-.if ${_cf} == "html-split" 
-_curinst+= install-html-split.tar.${_curcomp}
-_docs+= ${DOC}.html-split.tar.${_curcomp}
-.else 
+.if ${_cf} != "html-split" 
 _curinst+= install-${_curformat}.${_curcomp}
 _docs+= ${DOC}.${_curformat}.${_curcomp}
 CLEANFILES+= ${DOC}.${_curformat}.${_curcomp}
