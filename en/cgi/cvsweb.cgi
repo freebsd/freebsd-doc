@@ -28,7 +28,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $Id: cvsweb.cgi,v 1.31 1999-06-01 15:23:51 billf Exp $
+# $Id: cvsweb.cgi,v 1.32 1999-07-26 21:41:06 wosch Exp $
 #
 
 
@@ -329,7 +329,7 @@ sub htmlify {
 	$string =~ s/>/&gt;/g;
 
 	if ($pr) {
-		$string =~ s!\b((pr[:#]?\s*#?)|((bin|conf|docs|gnu|i386|kern|misc|ports)\/))(\d+)\b!<A HREF=/cgi/query-pr.cgi?pr=\5>$&</A>!ig;
+		$string =~ s!\b((pr[:#]?\s*#?)|((bin|conf|docs|gnu|i386|kern|misc|ports)\/))(\d+)\b!<A HREF=http://www.freebsd.org/cgi/query-pr.cgi?pr=\5>$&</A>!ig;
 	}
 
 	$string;
