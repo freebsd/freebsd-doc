@@ -2,6 +2,7 @@
 <!ENTITY base CDATA "..">
 <!ENTITY date "$FreeBSD$">
 <!ENTITY title "FreeBSD GNOME Project">
+<!ENTITY email 'freebsd-gnome'>
 <!ENTITY % includes SYSTEM "../includes.sgml"> %includes;
 ]>
 <html>
