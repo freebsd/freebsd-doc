@@ -1,12 +1,15 @@
-# $FreeBSD$
+#
 # The FreeBSD Russian Documentation Project
-# $FreeBSDru: frdp/www/ru/ports/Makefile,v 1.5 2001/12/06 12:25:32 phantom Exp $
-# Original revision: 1.34
+#
+# $FreeBSD$
+# $FreeBSDru: frdp/www/ru/ports/Makefile,v 1.6 2003/12/30 18:26:40 andy Exp $
+#
+# Original revision: 1.36
+#
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
 .endif
-
 .if exists(../Makefile.inc)
 .include "../Makefile.inc"
 .endif
@@ -33,7 +36,7 @@ CVS_OPT+=	-d ${PORTSCVSROOT}
 ${INDEX}: $${PORTSBASE}/${PINDEX}
 	${CP} ${PORTSBASE}/${PINDEX} ${INDEX}
 .else
-${INDEX}: ${cvsindex}
+${INDEX}:
 	${CVS} ${CVS_OPT} co -p ${PINDEX} > ${INDEX}
 .endif
 
@@ -49,18 +52,18 @@ hostname!= hostname
 #      test the packages link generation
 #
 .if defined(NO_PACKAGES_LINK) && !empty(NO_PACKAGES_LINK)
-hostname=      ${NO_PACKAGES_LINK}
+hostname=	${NO_PACKAGES_LINK}
 .endif
 
 packages.exists:
-.if ${hostname} == "hub.freebsd.org" || ${hostname} == "freefall.freebsd.org"
+.if ${hostname} == "hub.freebsd.org" || ${hostname} == "freefall.freebsd.org" || ${hostname} == "www.freebsd.org"
 .if  exists(${.CURDIR}/../../en/ports/packages.exists)
 	${CP} ${.CURDIR}/../../en/ports/${.TARGET} ${.CURDIR}
 .else
 	@if ${SH} ${.CURDIR}/../../en/ports/packages > ${.TARGET}.temp; then \
 		${MV} ${.TARGET}.temp ${.TARGET}; \
 	else \
-		${RM} ${.TARGET}.temp; touch ${.TARGET}; \
+		${RM} ${.TARGET}.temp; ${TOUCH} ${.TARGET}; \
 	fi;
 .endif
 .else
@@ -74,10 +77,18 @@ index.sgml: ${INDEX} categories packages.exists portindex ports.inc .NOTMAIN
 	${RM} -f *.sgml
 	${PORTINDEX} ${INDEX} ${.CURDIR}
 
-install: all
+install: all beforeinstall
 
 all install clean:
-	(cd ${.CURDIR}; \
-		 ${MAKE} ${MAKEFLAGS} -f ${.CURDIR}/Makefile.inc0 ${.TARGET})
+	cd ${.CURDIR}; \
+		${MAKE} ${MAKEFLAGS} -f ${.CURDIR}/Makefile.inc0 ${.TARGET}
+.if defined(WITH_PORTS_GROWTH)
+	cd growth; \
+		${MAKE} ${MAKEFLAGS} ${.TARGET}
+beforeinstall:
+.else
+beforeinstall:
+	${PERL} -pi -e 's/href=\"growth/href=\"http:\/\/www.FreeBSD.org\/ports\/growth/' index.html
+.endif
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
