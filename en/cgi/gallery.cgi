@@ -4,7 +4,7 @@
 # 
 # John Fieber <jfieber@indiana.edu>
 # Modified for new gallery.db format by Nate Johnson <nsj@FreeBSD.org>
-# $FreeBSD: www/en/cgi/gallery.cgi,v 1.17 2000/04/01 09:27:40 phantom Exp $
+# $FreeBSD: www/en/cgi/gallery.cgi,v 1.18 2000/04/01 09:39:35 phantom Exp $
 ##################################################################
 
 $curator = "gallery\@FreeBSD.org";
@@ -13,7 +13,7 @@ $subject = "Another gallery submission...";
 require 'cgi-lib.pl';
 &ReadParse;
 
-$hsty_date = '$FreeBSD: www/en/cgi/gallery.cgi,v 1.17 2000/04/01 09:27:40 phantom Exp $';
+$hsty_date = '$FreeBSD: www/en/cgi/gallery.cgi,v 1.18 2000/04/01 09:39:35 phantom Exp $';
 # Replace Id string with commit date and time.
 $hsty_date =~ s%\$FreeBSD. .* (.* .*) .* .* \$%Last modified: $1%;
 
@@ -67,6 +67,10 @@ $forma = &html_header("Gallery Submission") .
 <tr>
 <td right>Email Contact:</td>
 <td><input type=text name=\"contact\" size=\"50\"></td>
+</tr>
+<tr><td></td>
+<td right><b>NOTE: all non-english submissions are going to be rejected.
+Please use english language only<b/>.</td>
 </tr>
 <tr>
 <td colspan=\"2\" right><input type=submit value=\" Preview Entry \"></td>
