@@ -1,7 +1,7 @@
 <!--
 	$FreeBSD$
-	$FreeBSDde: de-docproj/share/sgml/freebsd.dsl,v 1.12 2003/04/23 22:35:56 mheinen Exp $
-	basiert auf: 1.18
+	$FreeBSDde: de-docproj/share/sgml/freebsd.dsl,v 1.14 2003/05/25 18:08:44 mheinen Exp $
+	basiert auf: 1.20
 -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
@@ -20,8 +20,8 @@
  
       <![ %output.html; [ 
 
-        <!-- Generate links to HTML man pages -->
-        (define %refentry-xref-link% #t)
+	<!-- Generate links to HTML man pages -->
+	(define %refentry-xref-link% #t)
 
 	(define ($email-footer$)
           (make sequence
