@@ -26,7 +26,7 @@
 #
 # url.cgi - make plain text URLs clickable
 #
-# $FreeBSD: www/en/cgi/url.cgi,v 1.23 1999/12/25 21:33:55 wosch Exp $
+# $FreeBSD: www/en/cgi/url.cgi,v 1.24 2000/01/05 15:47:46 phantom Exp $
 
 use strict;
 
@@ -56,7 +56,7 @@ if ($file !~ m%^(http|ftp)://[a-z_\-0-9]+\.freebsd\.(com|org)%i) {
 1 while $file =~ s%/[^/]+/\.\./%/%;
 
 # print HTML header
-$file =~ s%(http|ftp)://ftp.freebsd.org/pub/FreeBSD/(branches/|FreeBSD)-current/%%;
+$file =~ s%(http|ftp)://ftp.freebsd.org/pub/FreeBSD/(branches/|FreeBSD)-current/%%i;
 if ($file =~ m%^ports/([\w-]+)/(\w[\w-+.]+)/pkg/DESCR%) {
     print &html_header(
        "Port description for $1/$2");
