@@ -1,6 +1,6 @@
-# $FreeBSD: www/ja/ports/Makefile,v 1.22 2001/01/02 02:22:50 kuriyama Exp $
+# $FreeBSD: www/ja/ports/Makefile,v 1.23 2001/05/10 02:03:06 kuriyama Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.32
+# Original revision: 1.33
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -30,7 +30,7 @@ CVS_OPT+=	-d ${PORTSCVSROOT}
 ${INDEX}: $${PORTSBASE}/${PINDEX}
 	cp ${PORTSBASE}/${PINDEX} ${INDEX}
 .else
-${INDEX}: ${cvsindex}
+${INDEX}:
 	cvs ${CVS_OPT} co -p ${PINDEX} > ${INDEX}
 .endif
 
@@ -51,11 +51,7 @@ hostname=	${NO_PACKAGES_LINK}
 .endif
 
 
-.if defined(NOPORTSCVS)
 packages.exists:
-.else
-packages.exists: ${cvsindex}
-.endif
 .if ${hostname} == "hub.freebsd.org" || ${hostname} == "freefall.freebsd.org"
 .if  exists(${.CURDIR}/../../en/ports/packages.exists)
 	cp ${.CURDIR}/../../en/ports/${.TARGET} .
