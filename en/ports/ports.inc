@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/ports/ports.inc,v 1.65 2003/02/22 22:00:07 brueffer Exp $ -->
+<!-- $FreeBSD: www/en/ports/ports.inc,v 1.66 2003/07/12 23:00:19 kris Exp $ -->
 <p>The FreeBSD Ports and Packages Collection offers a simple way for
 users and administrators to install applications.  The ports
 collection has been <a
@@ -22,7 +22,7 @@ contains any patches necessary to make the original application source
 code compile and run on FreeBSD.  Installing an application is as
 simple as downloading the port, unpacking it and typing <tt>make</tt>
 in the port directory.  For even greater convenience, you can simply
-install the <a href="ftp://ftp.FreeBSD.org/pub/FreeBSD/branches/-current/ports.tar.gz">
+install the <a href="ftp://ftp.FreeBSD.org/pub/FreeBSD/ports/ports/ports.tar.gz">
 entire ports hierarchy</a> at installation time (or use
 <a href="../doc/en_US.ISO8859-1/books/handbook/synching.html#CVSUP">CVSup</a> to track it on
 an ongoing basis) and have thousands of applications right at your
