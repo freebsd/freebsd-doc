@@ -107,6 +107,8 @@ MAN8 =	IPXrouted.8\
 	makewhatis.local.8\
 	manctl.8\
 	map-mbone.8\
+	memcontrol.8\
+	mergemaster.8\
 	mixer.8\
 	mk-amd-map.8\
 	mknetid.8\
