@@ -1,5 +1,5 @@
 # $FreeBSD$
-# Original revision: 1.1
+# Original revision: 1.2
 
 DOC?= article
 
@@ -8,7 +8,7 @@ FORMATS?= html
 INSTALL_COMPRESSED?=gz
 INSTALL_ONLY_COMPRESSED?=
 
-JADEFLAGS+=	-V %generate-article-toc%
+WITH_ARTICLE_TOC=YES
 
 SRCS= article.sgml
 
