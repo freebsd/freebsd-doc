@@ -477,6 +477,7 @@ MLINKS+=ln.1 link.1
 MLINKS+=rm.1 unlink.1
 MLINKS+=opiekey.1 otp-md4.1
 MLINKS+=opiekey.1 otp-md5.1
+MLINKS+=opiekey.1 otp-sha.1
 MLINKS+=tcsh.1 csh.1
 MLINKS+=ee.1 edit.1
 MLINKS+=pkg_sign.1 pkg_check.1
