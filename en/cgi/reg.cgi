@@ -36,7 +36,7 @@ if ($FORM{"emaila"} eq "") {
 
 $recipient = $FORM{'recipient'};
 exit(0) if $recipient !~ /^[a-z_\.\-]+\@freebsd\.org$/io; 
-$sub_recipient = "majordomo\@freebsd.org";
+$sub_recipient = "majordomo\@FreeBSD.org";
 #
 # format the mail file
 format MAIL =
@@ -98,7 +98,7 @@ print "</MAP>\n";
 print "<P>Thank you, $FORM{'First'} $FORM{'Last'}, for your registration.\n";
 print "<BR>It has been submitted.\n";
 if ($FORM{"announce"} eq "yes") {
-print "<BR>As you requested, you have also been subscribed to announce\@freebsd.org.\n";
+print "<BR>As you requested, you have also been subscribed to announce\@FreeBSD.org.\n";
 }
 print "</CENTER>\n";
 print "</BODY>\n";

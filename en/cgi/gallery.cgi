@@ -3,17 +3,17 @@
 # A CGI form processor for FreeBSD Gallery submissions
 # 
 # John Fieber <jfieber@indiana.edu>
-# Modified for new gallery.db format by Nate Johnson <nsj@freebsd.org>
-# $FreeBSD$
+# Modified for new gallery.db format by Nate Johnson <nsj@FreeBSD.org>
+# $FreeBSD: www/en/cgi/gallery.cgi,v 1.15 1999/09/06 07:02:40 peter Exp $
 ##################################################################
 
-$curator = "gallery\@freebsd.org";
+$curator = "gallery\@FreeBSD.org";
 $subject = "Another gallery submission...";
 
 require 'cgi-lib.pl';
 &ReadParse;
 
-$hsty_date = '$FreeBSD$';
+$hsty_date = '$FreeBSD: www/en/cgi/gallery.cgi,v 1.15 1999/09/06 07:02:40 peter Exp $';
 #$h_base = "..";
 #$d_author = "
 require 'cgi-style.pl';

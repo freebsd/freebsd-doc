@@ -43,20 +43,20 @@
 #     
 #   does not exist at this server. You are coming from
 #   
-#      http://www.freebsd.org/~wosch/test/error.html.
+#      http://www.FreeBSD.org/~wosch/test/error.html.
 #     
-#   The closest match to your request is http://www.freebsd.org.
+#   The closest match to your request is http://www.FreeBSD.org.
 #   Please contact the server administrator wosch@FreeBSD.org.
 #   
 #   Thank you very much!
 #
 #     _________________________________________________________________
 #                                      
-#   $FreeBSD$
+#   $FreeBSD: www/en/cgi/missing_handler.cgi,v 1.5 1999/09/06 07:02:40 peter Exp $
 # ----------------------------------------------------------------------
 #
 #
-# $FreeBSD$
+# $FreeBSD: www/en/cgi/missing_handler.cgi,v 1.5 1999/09/06 07:02:40 peter Exp $
 
 # output title
 $title = $ENV{'MISSING_HANDLER_TITLE'} || 
