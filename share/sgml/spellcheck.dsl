@@ -34,25 +34,25 @@ example, the contents of <filename> tags should not be spellchecked.
 		    (next-match))))
 -->
 
-	  (element programlisting
-	    (empty-sosofo))
-
-	  (element screen
-	    (empty-sosofo))
-
-	  (element hostid
-	    (empty-sosofo))
-
-	  (element filename
+	  (element command
 	    (empty-sosofo))
 
 	  (element devicename
 	    (empty-sosofo))
 
+	  (element filename
+	    (empty-sosofo))
+
+	  (element hostid
+	    (empty-sosofo))
+
 	  (element otheraddr
 	    (empty-sosofo))
 
-	  (element command
+	  (element programlisting
+	    (empty-sosofo))
+
+	  (element screen
 	    (empty-sosofo))
 
       ]]>
