@@ -5,7 +5,7 @@
 #
 # Build the FreeBSD Documentation Project Primer.
 #
-MAINTAINER=nik@FreeBSD.org
+MAINTAINER=doc@FreeBSD.org
 
 DOC?= book
 

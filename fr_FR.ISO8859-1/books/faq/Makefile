@@ -6,7 +6,7 @@
 #
 #    $FreeBSD$
 #    Original revision: 1.7
-MAINTAINER=nik@FreeBSD.org
+MAINTAINER=doc@FreeBSD.org
 
 DOC?= book
 
