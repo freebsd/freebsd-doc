@@ -1,10 +1,9 @@
-# $Id: Makefile,v 1.3 1999-08-16 22:09:17 nik Exp $
+# $Id: Makefile,v 1.4 1999-08-19 20:36:01 nik Exp $
 
 .NOTPARALLEL:
 
 DOC=	FAQ
-VOLUME=	faq
-DOCDIR=	/usr/local/share/doc/fdp/ru_SU.KOI8-R/books
+DESTDIR=	${DOCDIR}/ru_RU.KOI8-R
 FORMATS?= html roff
 SGMLOPTS+=-e koi8-r
 SGMLOPTS+=-links
