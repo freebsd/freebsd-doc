@@ -1,6 +1,6 @@
-# $Id: Makefile,v 1.9 1998-08-11 01:18:38 wosch Exp $
+# $Id: Makefile,v 1.10 1998-08-11 11:43:52 wosch Exp $
 
-.if exists("../Makefile.conf")
+.if exists(../Makefile.conf)
 .include "../Makefile.conf"
 .endif
 
