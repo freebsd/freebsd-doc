@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
 
-<!-- $FreeBSD: www/ja/index.xsl,v 1.4 2001/09/03 06:26:05 kuriyama Exp $ -->
-<!-- Original revision: 1.6 -->
+<!-- $FreeBSD: www/ja/index.xsl,v 1.5 2001/09/17 07:53:02 kuriyama Exp $ -->
+<!-- Original revision: 1.17 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   
@@ -9,7 +9,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/ja/index.xsl,v 1.4 2001/09/03 06:26:05 kuriyama Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/ja/index.xsl,v 1.5 2001/09/17 07:53:02 kuriyama Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <xsl:output type="html" encoding="EUC-JP"
@@ -71,6 +71,7 @@
 		  <option value="http://www.gr.FreeBSD.org/">ギリシア</option>
 		  <option value="http://www.hu.FreeBSD.org/">ハンガリー</option>
 		  <option value="http://www.ie.FreeBSD.org/">アイルランド</option>
++		  <option value="http://www.is.FreeBSD.org/">アイスランド</option>
 		  <option value="http://www.it.FreeBSD.org/">イタリア/1</option>
 		  <option value="http://www.gufi.org/mirrors/www.freebsd.org/data/">イタリア/2</option>
 		  <option value="http://www.jp.FreeBSD.org/www.FreeBSD.org/">日本</option>
@@ -221,36 +222,14 @@
 	    <!-- Main body column -->
 
 	    <td align="left" valign="top" rowspan="2">
-	      <!-- Security alert -->
-	      <table border="0" cellspacing="1" cellpadding="4"
-		     bgcolor="#990000" width="100%">
-		<tr>
-		  <td>
-		    <table bgcolor="#FFFFFF" width="100%"
-			   cellpadding="4" cellspacing="0" border="0">
-		      <tr>
-			<td>
-			  <h2 align="center">重要</h2>
-			  
-			  <p>
-			    2001 年 7 月 23 日以前の FreeBSD には,
-			    リモートからの影響を受けるセキュリティ上の問題を
-			    含む telnet デーモンが含まれています.
-			    詳細は
-			    <a href="ftp://ftp.FreeBSD.org/pub/FreeBSD/CERT/advisories/FreeBSD-SA-01:49.telnetd.v1.1.asc">セキュリティ勧告</a>
-			    をご覧下さい.</p>
-			</td>
-		      </tr>
-		    </table>
-		  </td>
-		</tr>
-	      </table>
 	      
 	      <h2><font color="#990000">FreeBSD とは?</font></h2>
 	
-	      <p>FreeBSD は Intel 互換機 (x86), DEC Alpha, PC-98
-		アーキテクチャ用の先進的な BSD UNIX
-		オペレーティングシステムであり,
+	      <p>FreeBSD は Intel ia32 互換, DEC Alpha, PC-98
+		アーキテクチャ用の先進的なオペレーティングシステムです.
+		カリフォルニア大学バークレイ校で開発された UNIX
+		である BSD UNIX に由来し, 
+		<!-- XXX: kuriyama: point to doc/ja_JP.eucJP/articls/contributors/index.html -->
 		<a href="{$base}/handbook/staff.html">多くの人たち</a> によって
 		によって保守・開発されています.
 		その他の<a href="{$base}/platforms/index.html">プラットフォーム
@@ -268,7 +247,7 @@
 	      <p>FreeBSD は理想的な <a href="{$base}/internet.html">
 		  インターネットやイントラネット</a> サーバになります. 負荷が
 		極めて高くなった状態でさえ強固なネットワークサービスを提供し,
-		ユーザプロセスが同時に何百, 何千になっても良好な反応時間を
+		ユーザプロセスが同時に何千になっても良好な反応時間を
 		維持するようにメモリを効率的に利用します.
 		FreeBSD を利用したアプリケーションやサービスの例を
 		載せていますので, ぜひ我々の
@@ -323,10 +302,26 @@
 		変更は, FreeBSD の文書に対するものでも, FreeBSD
 		ソースコードに対するものでも構いません.
 		詳しくは, FreeBSD ハンドブックの
+		<!-- XXX: kuriyama: point to doc/ja_JP.eucJP/ar*/ -->
 		<a href="http://www.FreeBSD.org/ja/handbook/contrib.html">
 		  FreeBSD への貢献</a>
-		(<a href="http://www.FreeBSD.org/handbook/contrib.html">原文</a>)
+		(<a href="{$base}/doc/en_US.ISO8859-1/articles/contributing/index.html">原文</a>)
 		というセクションをご覧ください.</p>
+
+	      <p>もしあなたがプログラマでないとしても, いくつもの FreeBSD
+		に貢献する方法があります. FreeBSD Foundation は非営利団体
+		であり, 直接の寄付は税金の控除対象となります.
+		詳細に関しては <a href="mailto:bod@FreeBSDFoundation.org">
+		  bod@FreeBSDFoundation.org</a> にメールを送るか,
+		The FreeBSD Foundation,
+		7321 Brockway Dr.  Boulder, CO.  80303.  USA
+		まで手紙を書いてください.</p>
+
+	      <p>Silicon Breeze 社は BSD デーモンの銅像を製作し,
+		これらの売り上げの 15% を FreeBSD Foundation に還元しています.
+		この BSD デーモンの詳細と注文方法については
+		<a href="http://www.siliconbreeze.com/beastie/">このページ</a>
+		を見てください.</p>
 	    </td>
 
 	    <td></td>
@@ -347,10 +342,21 @@
 			    <small>・<a href="{$u.rel.announce}">アナウンス</a><br/>
 			      ・<a href="{$base}/handbook/install.html">インストールガイド</a><br/>
 			      ・<a href="{$u.rel.notes}">リリースノート</a><br/>
+<!-- XXX: not yet translated			      ・<a href="{$u.rel.hardware}">ハードウェア</a><br/> -->
 			      ・<a href="{$u.rel.errata}">Errata</a></small></p>
 
 			  <p><font size="+1" color="#990000"><b>Project News</b></font><br/>
 			    <font size="-1">
+			      最終更新: 
+			      <xsl:value-of
+				select="descendant::year[position() = 1]/name"/>
+			      <xsl:text>/</xsl:text>
+			      <xsl:value-of
+				select="descendant::month[position() = 1]/name"/>
+			      <xsl:text>/</xsl:text>
+			      <xsl:value-of
+				select="descendant::day[position() = 1]/name"/>,
+			      <br/>
 			      <!-- Pull in the 10 most recent news items -->
 			      <xsl:for-each select="descendant::event[position() &lt;= 10]">
 				・ <a>
@@ -373,6 +379,13 @@
 			  <p><font size="+1" color="#990000"><b>FreeBSD Press</b></font><br/>
 
 			    <font size="-1">
+			      最終更新: 
+			      <xsl:value-of
+				select="document('news/press.xml')/descendant::year[position() = 1]/name"/>
+			      <xsl:text>/</xsl:text>
+			      <xsl:value-of
+				select="document('news/press.xml')/descendant::month[position() = 1]/name"/>
+			      <br/>
 			      <!-- Pull in the 10 most recent press items -->
 			      <xsl:for-each select="document('news/press.xml')/descendant::story[position() &lt; 10]">
 				・ <a>
