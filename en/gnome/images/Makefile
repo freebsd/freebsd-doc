@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/gnome/images/Makefile,v 1.7 2002/10/15 00:06:13 marcus Exp $
+# $FreeBSD: www/en/gnome/images/Makefile,v 1.8 2003/02/01 01:14:22 marcus Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -19,10 +19,6 @@ DATA+=	ss2.png
 DATA+=	ss2-tn.png
 DATA+=	ss3.png
 DATA+=	ss3-tn.png
-DATA+=  ss5.png
-DATA+=	ss5-tn.png
-DATA+=  ss6.png
-DATA+=	ss6-tn.png
 DATA+=	ss7.png
 DATA+=	ss7-tn.png
 DATA+=	ss8.png
