@@ -1,6 +1,6 @@
-# $FreeBSD: www/ja/docproj/Makefile,v 1.13 2000/11/07 11:37:53 kuriyama Exp $
+# $FreeBSD: www/ja/docproj/Makefile,v 1.14 2001/11/18 22:33:58 hrs Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.9
+# Original revision: 1.10
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -12,6 +12,7 @@
 DOCS=  current.sgml 
 DOCS+= doc-set.sgml
 #DOCS+=	handbook.sgml
+#DOCS+=	handbook3.sgml
 DOCS+= sgml.sgml
 DOCS+= submitting.sgml
 DOCS+= who.sgml 
