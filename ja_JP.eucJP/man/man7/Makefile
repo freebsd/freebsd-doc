@@ -1,5 +1,6 @@
 # $FreeBSD$
 MAN7 =	ascii.7\
+	build.7\
 	clocks.7\
 	environ.7\
 	firewall.7\
