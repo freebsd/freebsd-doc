@@ -11,7 +11,7 @@ while(<P>) {
 	($login,$passwd,$uid,$gid,$gcos,$home,$shell) = split(/:/);
 
 	# cleanup gecos
-	$gcos =~ s/,+$//;
+	$gcos =~ s/,.*//;
 
 	# disable daemons
 	next if $uid <= 100;
