@@ -1,5 +1,5 @@
 # bsd.web.mk
-# $FreeBSD: www/share/mk/web.site.mk,v 1.61 2004/06/27 06:22:31 hrs Exp $
+# $FreeBSD: www/share/mk/web.site.mk,v 1.62 2004/06/27 14:40:04 simon Exp $
 
 #
 # Build and install a web site.
@@ -30,6 +30,7 @@ CGIMODE?=	775
 CP?=		/bin/cp
 CVS?=		/usr/bin/cvs
 ECHO_CMD?=	echo
+FETCH?=		/usr/bin/fetch
 FIND?=		/usr/bin/find
 SETENV?=	/usr/bin/env
 LN?=		/bin/ln
@@ -106,6 +107,11 @@ COPY=	-C
 # Where the ports live, if CVS isn't used (ie. NOPORTSCVS is defined)
 #
 PORTSBASE?=	/usr
+
+#
+# URL where INDEX can be found (define NOPORTSNET to disable)
+#
+INDEXURI?=	http://www.FreeBSD.org/ports/INDEX
 
 #
 # Instruct bsd.subdir.mk to NOT to process SUBDIR directive.  It is not

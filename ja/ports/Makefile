@@ -1,4 +1,4 @@
-# $FreeBSD: www/ja/ports/Makefile,v 1.25 2001/11/19 15:35:42 hrs Exp $
+# $FreeBSD: www/ja/ports/Makefile,v 1.26 2004/11/01 06:36:22 rushani Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.37
 
@@ -12,29 +12,17 @@
 .include "../../en/ports/Makefile.inc"
 .endif
 
-CVS_READONLY?=	YES
-CVS_OPT+=	-Q
-.if !empty(CVS_READONLY)
-CVS_OPT+=	-R
-.endif
-
-#
-# This hack is allows to build www/ tree for case when ports/ located
-# in other repository, for example Repository of Translation Project
-#
-.if defined(PORTSCVSROOT) && !empty(PORTSCVSROOT)
-CVS_OPT+=	-d ${PORTSCVSROOT}
-.endif
+FETCH_OPT?=	-am
 
 .if defined(PINDEX_OVERRIDE)
 ${INDEX}: ${PINDEX_OVERRIDE}
 	${CP} ${PINDEX_OVERRIDE} ${INDEX}
-.elif defined(NOPORTSCVS)
+.elif defined(NOPORTSNET)
 ${INDEX}: $${PORTSBASE}/${PINDEX}
 	${CP} ${PORTSBASE}/${PINDEX} ${INDEX}
 .else
 ${INDEX}:
-	${CVS} ${CVS_OPT} co -p ${PINDEX} > ${INDEX}
+	${FETCH} ${FETCH_OPT} ${INDEXURI}
 .endif
 
 # build the list of available packages only on the 

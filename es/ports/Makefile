@@ -1,4 +1,4 @@
-# $FreeBSD: www/es/ports/Makefile,v 1.10 2001/12/06 12:28:23 phantom Exp $
+# $FreeBSD: www/es/ports/Makefile,v 1.11 2001/12/12 11:57:37 phantom Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -10,12 +10,14 @@
 .include "Makefile.inc"
 .endif
 
+FETCH_OPT?=	-am
+
 .if defined(NOPORTSCVS)
 ${INDEX}: $${PORTSBASE}/${PINDEX}
 	cp ${PORTSBASE}/${PINDEX} ${INDEX}
 .else
 ${INDEX}:
-	cvs -QR co -p ${PINDEX} > ${INDEX}
+	${FETCH} ${FETCH_OPT} ${INDEXURI}
 .endif
 
 # build the list of available packages only on the 
