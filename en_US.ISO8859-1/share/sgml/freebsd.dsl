@@ -1,4 +1,4 @@
-<!-- $FreeBSD: doc/en_US.ISO8859-1/share/sgml/freebsd.dsl,v 1.9 2001/06/03 00:07:27 dd Exp $ -->
+<!-- $FreeBSD: doc/en_US.ISO8859-1/share/sgml/freebsd.dsl,v 1.10 2001/07/16 05:00:21 murray Exp $ -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
 <!ENTITY freebsd.dsl PUBLIC "-//FreeBSD//DOCUMENT DocBook Language Neutral Stylesheet//EN" CDATA DSSSL>
@@ -122,9 +122,9 @@
 	font-family-name: %title-font-family%
 	font-weight: 'bold
 	font-posture: 'italic
-	font-size: (HSIZE 4)
-	line-spacing: (* (HSIZE 4) %line-spacing-factor%)
-	space-before: (* (HSIZE 4) %head-before-factor%)
+	font-size: (HSIZE 6)
+	line-spacing: (* (HSIZE 6) %line-spacing-factor%)
+;	space-before: (* (HSIZE 5) %head-before-factor%)
 	start-indent: 0pt
 	first-line-start-indent: 0pt
 	quadding: %component-title-quadding%
@@ -152,8 +152,16 @@
 
 	(with-mode component-title-mode
 	  (make sequence
-	    (process-node-list subtitles)))))))
+	    (process-node-list subtitles))))
 
+      (make rule
+	length: 475pt
+	display-alignment: 'start
+	space-before: (* (HSIZE 5) %head-before-factor%)
+	line-thickness: 0.5pt))))
+
+      (element authorgroup
+        (empty-sosofo))
       ]]>
 
       <!-- Print only ................................................... --> 
