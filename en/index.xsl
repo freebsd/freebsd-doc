@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/index.xsl,v 1.9 2001/10/17 09:00:57 murray Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.10 2001/10/18 01:30:38 grog Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   
@@ -6,7 +6,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.9 2001/10/17 09:00:57 murray Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.10 2001/10/18 01:30:38 grog Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -218,30 +218,6 @@
 	    <!-- Main body column -->
 
 	    <td align="left" valign="top" rowspan="2">
-	      <!-- Security alert -->
-	      <table border="0" cellspacing="1" cellpadding="4"
-		     bgcolor="#990000" width="100%">
-		<tr>
-		  <td>
-		    <table bgcolor="#FFFFFF" width="100%"
-			   cellpadding="4" cellspacing="0" border="0">
-		      <tr>
-			<td>
-			  <h2 align="center">IMPORTANT</h2>
-			  
-			  <p>Please be aware that the telnet daemon shipping
-			    in FreeBSD prior to July 23, 2001 contains a
-			    remotely exploitable security problem. See 
-			    the
-			    <a href="ftp://ftp.FreeBSD.org/pub/FreeBSD/CERT/advisories/FreeBSD-SA-01:49.telnetd.v1.1.asc">
-			      security advisory</a> for more details.</p>
-			</td>
-		      </tr>
-		    </table>
-		  </td>
-		</tr>
-	      </table>
-	      
 	      <h2><font color="#990000">What is FreeBSD?</font></h2>
 	
 	      <p>FreeBSD is an advanced operating system for
