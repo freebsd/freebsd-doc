@@ -9,7 +9,7 @@ INSTALL_ONLY_COMPRESSED?=
 
 SRCS= article.sgml
 
-IMAGES=	networks.pic
+IMAGES_EN=	networks.pic
 
 DOC_PREFIX?= ${.CURDIR}/../../..
 

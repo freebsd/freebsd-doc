@@ -313,10 +313,19 @@ CLEANFILES+= ${DOC}.aux ${DOC}.log
 
 .elif ${_cf} == "ps"
 CLEANFILES+= ${DOC}.aux ${DOC}.dvi ${DOC}.log ${DOC}.tex-ps ${DOC}.tex
+.for _curimage in ${LOCAL_IMAGES_EPS:M*share*}
+CLEANFILES+= ${_curimage:T} ${_curimage:H:T}/${_curimage:T}
+.endfor
 
 .elif ${_cf} == "pdf"
 CLEANFILES+= ${DOC}.aux ${DOC}.dvi ${DOC}.log ${DOC}.out ${DOC}.tex-pdf \
-		${DOC}.tex ${DOC}.ps
+		${DOC}.tex
+.for _curimage in ${IMAGES_PDF:M*share*}
+CLEANFILES+= ${_curimage:T} ${_curimage:H:T}/${_curimage:T}
+.endfor
+.for _curimage in ${LOCAL_IMAGES_EPS:M*share*}
+CLEANFILES+= ${_curimage:T} ${_curimage:H:T}/${_curimage:T}
+.endfor
 
 .elif ${_cf} == "pdb"
 _docs+= ${.CURDIR:T}.pdb
@@ -490,7 +499,7 @@ ${DOC}.rtf: ${SRCS} ${LOCAL_IMAGES_EPS} ${LOCAL_IMAGES_TXT}
 #
 
 ${DOC}.tex: ${SRCS} ${LOCAL_IMAGES_EPS} ${INDEX_SGML} ${PRINT_INDEX} \
-		${LOCAL_IMAGES_TXT}
+		${LOCAL_IMAGES_TXT} ${LOCAL_IMAGES_EN}
 	${JADE} -V tex-backend ${PRINTOPTS} \
 		${JADEOPTS} -t tex -o ${.TARGET} ${MASTERDOC}
 
@@ -505,6 +514,9 @@ ${DOC}.tex-pdf: ${SRCS} ${IMAGES_PDF} ${INDEX_SGML} ${PRINT_INDEX} \
 		${JADEOPTS} -t tex -o /dev/stdout ${MASTERDOC} >> ${.TARGET}
 
 ${DOC}.dvi: ${DOC}.tex ${LOCAL_IMAGES_EPS}
+.for _curimage in ${LOCAL_IMAGES_EPS:M*share*}
+	${CP} -p ${_curimage} ${.CURDIR:H:H}/${_curimage:H:S|${IMAGES_EN_DIR}/||:S|${.CURDIR}||}
+.endfor
 	@${ECHO} "==> TeX pass 1/3"
 	-${TEX} "&jadetex" '${TEXCMDS} \nonstopmode\input{${DOC}.tex}'
 	@${ECHO} "==> TeX pass 2/3"
@@ -513,6 +525,9 @@ ${DOC}.dvi: ${DOC}.tex ${LOCAL_IMAGES_EPS}
 	-${TEX} "&jadetex" '${TEXCMDS} \nonstopmode\input{${DOC}.tex}'
 
 ${DOC}.pdf: ${DOC}.tex-pdf ${IMAGES_PDF}
+.for _curimage in ${IMAGES_PDF:M*share*}
+	${CP} -p ${_curimage} ${.CURDIR:H:H}/${_curimage:H:S|${IMAGES_EN_DIR}/||:S|${.CURDIR}||}
+.endfor
 	@${ECHO} "==> PDFTeX pass 1/3"
 	-${PDFTEX} "&pdfjadetex" '${TEXCMDS} \nonstopmode\input{${DOC}.tex-pdf}'
 	@${ECHO} "==> PDFTeX pass 2/3"
@@ -705,19 +720,23 @@ install-${_curformat}: ${DOC}.${_curformat}
 # directory separator, make the subdirectories, and install.  Then loop over
 # the ones that don't contain a directory separator, and install them in the
 # top level.
-# en_US.ISO8859-1 is replaced with the LANGCODE to allow installation of
-# images built in en_US.ISO8859-1/ directory
-.for _curimage in ${IMAGES_PNG:M*/*}
-	${MKDIR} -p ${DESTDIR}/${_curimage:H:S|${CURDIR}||:S|en_US.ISO8859-1|${LANGCODE}|}
-	${INSTALL_DOCS} ${_curimage} ${DESTDIR}/${_curimage:H:S|${CURDIR}||:S|en_US.ISO8859-1|${LANGCODE}|}
+# Install at first images from /usr/share/images then localized ones
+# cause of a different origin path.
+.for _curimage in ${IMAGES_PNG:M*/*:M*share*}
+	${MKDIR} -p ${DESTDIR:H:H}/${_curimage:H:S|${IMAGES_EN_DIR}/||:S|${.CURDIR}||}
+	${INSTALL_DOCS} ${_curimage} ${DESTDIR:H:H}/${_curimage:H:S|${IMAGES_EN_DIR}/||:S|${.CURDIR}||}
+.endfor
+.for _curimage in ${IMAGES_PNG:M*/*:N*share*}
+	${MKDIR} -p ${DESTDIR}/${_curimage:H}
+	${INSTALL_DOCS} ${_curimage} ${DESTDIR}/${_curimage:H}
 .endfor
 .for _curimage in ${IMAGES_PNG:N*/*}
-	${INSTALL_DOCS} ${_curimage} ${DESTDIR}
+	${INSTALL_DOCS} ${_curimage} ${DESTDIR}/${_curimage}
 .endfor
 .elif ${_cf} == "tex" || ${_cf} == "dvi"
 .for _curimage in ${IMAGES_EPS:M*/*}
-	${MKDIR} -p ${DESTDIR}/${_curimage:H:S|${CURDIR}||:S|en_US.ISO8859-1|${LANGCODE}|}
-	${INSTALL_DOCS} ${_curimage} ${DESTDIR}/${_curimage:H:S|${CURDIR}||:S|en_US.ISO8859-1|${LANGCODE}|}
+	${MKDIR} -p ${DESTDIR}/${_curimage:H:S|${IMAGES_EN_DIR}/||:S|${.CURDIR:T}/||}
+	${INSTALL_DOCS} ${_curimage} ${DESTDIR}/${_curimage:H:S|${IMAGES_EN_DIR}/||:S|${.CURDIR:T}/||}
 .endfor
 .for _curimage in ${IMAGES_EPS:N*/*}
 	${INSTALL_DOCS} ${_curimage} ${DESTDIR}
