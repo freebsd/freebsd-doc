@@ -1,5 +1,5 @@
 #
-# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.48 2001/09/11 00:38:32 murray Exp $
+# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.49 2001/09/11 02:32:32 murray Exp $
 #
 # This include file <doc.docbook.mk> handles building and installing of
 # DocBook documentation in the FreeBSD Documentation Project.
@@ -65,6 +65,11 @@
 #                       and 5th level section titles.  This would change 
 #                       "N.N.N.N Section title" into "Section Title" while
 #                       higher level sections are still printed with numbers.
+#
+#       TRACE={1,2}     Trace TeX's memory usage.  Set this to 1 for minimal
+#                       tracing or 2 for maximum tracing.  TeX memory 
+#                       statistics will be written out to <filename>.log.
+#                       For more information see the TeXbook, p301.
 #
 #       TWO_SIDE        If defined, two sided output will be created.  This 
 #                       means that new chapters will only start on odd 
@@ -145,6 +150,9 @@ PRINTOPTS+=    -ioutput.print.niceheaders
 .endif
 .if defined(MIN_SECT_LABELS)
 PRINTOPTS+=    -V minimal-section-labels
+.endif
+.if defined(TRACE)
+TEXCMDS+=	\tracingstats=${TRACE}
 .endif
 
 # ------------------------------------------------------------------------
