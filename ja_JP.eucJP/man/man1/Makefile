@@ -192,6 +192,7 @@ MAN1 =	addftinfo.1\
 	mklocale.1\
 	mkstr.1\
 	mktemp.1\
+	mmroff.1\
 	mptable.1\
 	msgs.1\
 	mt.1\
