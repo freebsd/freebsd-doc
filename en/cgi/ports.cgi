@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-#	$Id: ports.cgi,v 1.30 1998-12-18 17:30:39 wosch Exp $
+#	$Id: ports.cgi,v 1.31 1998-12-26 17:03:44 wosch Exp $
 #
 # ports.cgi - search engine for FreeBSD ports
 #             	o search for a port by name or description
@@ -138,14 +138,16 @@ sub last_update {
     open(DB, $file) || do {
 	&warn("$file: $!\n"); &exit;
     };
+    local($head);
     while(<DB>) {
+	$head = $1 if (/^head\s+([0-9.]+);?\s*$/);
 	if (/^date/ && /^date\s+([0-9]+)\.([0-9]+)\.([0-9]+)\.([0-9]+)\.([0-9]+)\.([0-9]+);\s+/) {
 	    $date = ($1 + 1900) . qq{-$2-$3 $4:$5:$6 UTC};
 	    last;
 	}
     }
     close DB;
-    return $date;
+    return $date . "; based on  revision " . $head;
 }
 
 sub last_update_message {
@@ -199,7 +201,19 @@ sub exit { exit 0 };
 
 sub readindex {
     local($date, *var, *msec) = @_;
-    local(@co) = ('co', '-p', '-D', $date, $ports_database);
+    local(@co) = ('co', '-p');
+
+    if ($date =~ /^rev([1-9]+\.[0-9]+)$/) {
+	# diff by revision
+	push(@co, ('-r', $1));
+    } else {
+	# diff by date
+	push(@co, ('-D', $date));
+    }
+    
+    push(@co, $ports_database);
+
+
     local(@tmp, @s);
 
     open(C, "-|") || exec (@cvscmd, @co);
@@ -543,7 +557,11 @@ sub check_input {
 	&exit(0);
     }
 
-    if ($time !~ /^[1-9][0-9]*\s+(month|week)\s+ago$/) {
+    if ($time !~ /^[1-9][0-9]*\s+(month|week)\s+ago$/ &&
+	# support diff by revision too
+	$time !~ /^rev[1-9]+\.[0-9]+$/
+	) 
+    {
 	&warn("unkwnon date: `$time'\n");
 	&exit(0);
     }
