@@ -1,15 +1,17 @@
-#	$Id: Makefile,v 1.4 1997-04-23 22:23:02 jfieber Exp $
+#	$Id: Makefile,v 1.5 1998-01-18 22:27:42 jfieber Exp $
 
 PORTINDEX=	./portindex
 INDEX=		ports/INDEX
-CVSDIR=		ports/INDEX
 
-COOKIE=		cvsdir Makefile.gen
+COOKIE=		index Makefile.gen
 
 .if exists(Makefile.gen)
 .include "Makefile.gen"
 CLEANFILES+=	${DOCS} Makefile.gen
 .endif
+
+index:
+	cvs co ${INDEX}
 
 Makefile.gen: index.sgml .NOTMAIN
 	echo DOCS= *.sgml > Makefile.gen

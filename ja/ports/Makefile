@@ -1,17 +1,19 @@
-#	$Id: Makefile,v 1.2 1997-12-07 15:44:05 max Exp $
+#	$Id: Makefile,v 1.3 1998-01-18 22:27:40 jfieber Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.4
 
 PORTINDEX=	./portindex
-INDEX=		../../ports/ports/INDEX
-#CVSDIR=	ports/INDEX
+INDEX=		ports/INDEX
 
-COOKIE=		cvsdir Makefile.gen
+COOKIE=		index Makefile.gen
 
 .if exists(Makefile.gen)
 .include "Makefile.gen"
 CLEANFILES+=	${DOCS} Makefile.gen
 .endif
+
+index:
+	cvs co ${INDEX}
 
 Makefile.gen: index.sgml .NOTMAIN
 	echo DOCS= *.sgml > Makefile.gen

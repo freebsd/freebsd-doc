@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.19 1997-06-30 06:30:17 jkh Exp $
+# $Id: Makefile,v 1.20 1998-01-18 22:27:30 jfieber Exp $
 
 .if exists(Makefile.conf)
 .include "Makefile.conf"
@@ -25,7 +25,7 @@ DATA=	COPYING COPYING.LIB README.mirror robots.txt index.html
 
 # Files or targets listed here are defined in this file.
 
-LOCAL=	stats.html stats-img.html
+#LOCAL=	stats.html stats-img.html
 
 stats.html: ${ACCESS_LOG_DIR}/${ACCESS_LOG_FILE}
 	renice +10 $$$$; \
@@ -52,11 +52,7 @@ SUBDIR=		cgi commercial gifs ports releases tutorials ja_JP.EUC
 # <bsd.sgml.mk>.
 
 DOCSUBDIR=	FAQ handbook
-
-# Directories that need to be checked out from the 
-# CVS repository.
-
-CVSDIR=		FAQ handbook
+SGMLOPTS+=      -links -hdr ${.CURDIR}/doc.hdr -ftr ${.CURDIR}/doc.ftr
 
 WEBDIR=		data
 

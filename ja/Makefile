@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.6 1998-01-01 19:38:26 max Exp $
+# $Id: Makefile,v 1.7 1998-01-18 22:27:36 jfieber Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.19
 
@@ -39,11 +39,8 @@ SUBDIR=			ports releases
 
 DOCSUBDIR=	FAQ handbook
 FORMATS?=	"html roff"
+SGMLOPTS=	-links -hdr ${.CURDIR}/doc.hdr -ftr ${.CURDIR}/doc.ftr
 
-# Directories that need to be checked out from the 
-# CVS repository.
-
-#CVSDIR=		FAQ handbook
 
 WEBDIR=		ja_JP.EUC
 
