@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: query-pr.cgi,v 1.11 1998-06-05 17:19:04 wosch Exp $
+# $Id: query-pr.cgi,v 1.12 1998-06-08 13:51:30 wosch Exp $
 
 $ENV{'PATH'} = "/bin:/usr/bin:/usr/sbin:/sbin:/usr/local/bin";
 
@@ -139,12 +139,12 @@ while(<Q>) {
 	} else {
 	    unless ($multiline) {
 		next if /^\s*$/;
-		print $trailer . "\n<listing>\n";
+		print $trailer . "\n<pre>\n";
 	    }
 	    $multiline = 1;
 	    $blank = 0;
 	    print $html_fixup ? &fixline($_) : $_ , "\n";
-	    $trailer = "</listing>";
+	    $trailer = "</pre>";
 	}
     }
 }
@@ -169,6 +169,29 @@ sub getline
     return $remainder;
 }
 
+
+
+
+sub cvsweb {
+    local($file) = shift;
+    $file =~ s/[,.;]$//;
+    return 'http://www.freebsd.org/cgi/cvsweb.cgi/' . $file;
+}
+    
+
+sub srcref {
+    local($_) = shift;
+
+    local($rev) = '(rev\.?|revision):?\s+[0-9]\.[0-9.]+(\s+of)?';
+    local($src) = '((src|www|doc|ports)/[^\s]+)';
+
+    if (m%$rev\s*$src%oi || m%$src\s*$ref%) {
+	s#$src#sprintf("<a href=%c%s%c>%s</a>", 34, &cvsweb($1), 34, $1)#ge;
+    }
+
+    return $_;
+}
+
 sub fixline {
     local($line) = shift;
     
@@ -178,5 +201,5 @@ sub fixline {
     $line =~ s%((http|ftp)://[^\s"\)\>,;]+)%<A HREF="$1">$1</A>%gi;
     $line =~ s%(\WPR[:s# \t]+)([a-z386]+\/)?([0-9]+)%$1<A HREF="query-pr.cgi?pr=$3">$2$3</A>%ig; 
     
-    $line;
+    return &srcref($line);
 }
