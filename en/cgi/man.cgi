@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp 
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.19 2000-12-27 11:57:41 wosch Exp $
+# $Id: man.cgi,v 1.20 2000-12-27 12:31:39 wosch Exp $
 
 #use Data::Dumper;
 
@@ -159,6 +159,7 @@ $manPathDefault = 'FreeBSD 4.2-RELEASE';
      'OpenBSD 2.6',           "$manLocalDir/OpenBSD-2.6",
      'OpenBSD 2.7',           "$manLocalDir/OpenBSD-2.7",
      'OpenBSD 2.8',           "$manLocalDir/OpenBSD-2.8",
+
      'NetBSD 1.2',            "$manLocalDir/NetBSD-1.2",
      'NetBSD 1.3',            "$manLocalDir/NetBSD-1.3",
      'NetBSD 1.3.1',          "$manLocalDir/NetBSD-1.3.1",
@@ -186,18 +187,20 @@ $manPathDefault = 'FreeBSD 4.2-RELEASE';
      'Red Hat Linux/i386 5.2', "$manLocalDir/RedHat-5.2-i386",
      'Red Hat Linux/i386 6.1', "$manLocalDir/RedHat-6.1-i386",
      'Red Hat Linux/i386 6.2', "$manLocalDir/RedHat-6.2-i386",
-#'japanese - FreeBSD 2.1', "$manLocalDir/jpman-2.1",
-     'deutsch - Linux/GNU',   "$manLocalDir/Linux-de",
-     'Unix Seventh Edition',  "$manLocalDir/v7man",
+
+     'SunOS 5.7',	      "$manLocalDir/SunOS-5.7",
+     'SunOS 5.6',	      "$manLocalDir/SunOS-5.6",
+     'SunOS 5.5.1',	      "$manLocalDir/SunOS-5.5.1",
+     'SunOS 4.1.3',	      "$manLocalDir/SunOS-4.1.3",
+
      'XFree86 3.2',	      "$manLocalDir/XFree86-3.2",
      'XFree86 3.3',	      "$manLocalDir/XFree86-3.3",
+
      'ULTRIX 4.2',	      "$manLocalDir/ULTRIX-4.2",
-     'SunOS 5.5.1',	      "$manLocalDir/SunOS-5.5.1",
-     'SunOS 5.6',	      "$manLocalDir/SunOS-5.6",
-     'SunOS 5.7',	      "$manLocalDir/SunOS-5.7",
-     'SunOS 4.1.3',	      "$manLocalDir/SunOS-4.1.3",
      'Plan 9',		      "$manLocalDir/plan9",
      'Minix 2.0',             "$manLocalDir/Minix-2.0",
+     'Unix Seventh Edition',  "$manLocalDir/v7man",
+     'deutsch - Linux/GNU',   "$manLocalDir/Linux-de",
 );
 
 # delete not existing releases
@@ -210,24 +213,8 @@ while (($key,$val) = each %manPath) {
 # keywords must be in lower cases.
 %manPathAliases = 
     (
-     '2.8bsd', '2.8 BSD',
-     '2.9 bsd', '2.9.1 BSD',
-     '2.9bsd', '2.9.1 BSD',
-     '2.10bsd', '2.10 BSD',
-     '2bsd', '2.11 BSD',
-     '2.11bsd', '2.11 BSD',
-     '386bsd', '386BSD 0.1',
-     '4.4bsd', '4.4BSD Lite2',
-     'freebsd 1.x', 'FreeBSD 1.1.5.1-RELEASE',
-     'freebsd 2.1.x', 'FreeBSD 2.1.7.1-RELEASE', 
-     'freebsd 2.2', 'FreeBSD 2.2.8-RELEASE', 
-     'freebsd 2.2.x', 'FreeBSD 2.2.8-RELEASE', 
-     'freebsd 2.2-release', 'FreeBSD 2.2.8-RELEASE',
-     'freebsd 4.0', 'FreeBSD 4.0-RELEASE',
-     'freebsd', 'FreeBSD 5.0-current',
+     'freebsd', 'FreeBSD 4.2-RELEASE',
      'freebsd-current', 'FreeBSD 5.0-current',
-     'freebsd 2.1.6-release', 'FreeBSD 2.1.6.1-RELEASE', 
-     'freebsd 2.1.7-release', 'FreeBSD 2.1.7.1-RELEASE', 
      'slackware', 'Linux Slackware 3.1',
      'linux-de', 'deutsch - Linux/GNU',
      'redhat', 'Red Hat Linux/i386 6.2',
@@ -760,7 +747,7 @@ Please direct questions about this server to
 URL:  <A HREF="$BASE" target=_parent>$www{'home'}$BASE</a><br>
 ETX
 
-    print q{$Date: 2000-12-27 11:57:41 $ $Revision: 1.19 $};
+    print q{$Date: 2000-12-27 12:31:39 $ $Revision: 1.20 $};
     print "<br>\n";
     print "</BODY>\n</HTML>\n";
     0;
