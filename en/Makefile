@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.47 1999-02-03 14:02:57 wosch Exp $
+# $Id: Makefile,v 1.48 1999-02-10 14:53:59 motoyuki Exp $
 
 .if exists(Makefile.conf)
 .include "Makefile.conf"
@@ -50,10 +50,14 @@ SUBDIR+= cgi
 
 # Non-English
 .if !defined(ENGLISH_ONLY) || empty(ENGLISH_ONLY)
+.if !defined(WEB_LANG) || empty(WEB_LANG)
 SUBDIR+= ja
 SUBDIR+= es
 SUBDIR+= ru
 SUBDIR+= zh
+.else
+SUBDIR+= ${WEB_LANG}
+.endif
 .endif
 
 .if !defined(WEB_ONLY) || empty(WEB_ONLY)
