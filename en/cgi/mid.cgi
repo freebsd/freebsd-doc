@@ -26,7 +26,7 @@
 #
 # Search a mail by Message-ID, References or In-Reply-To field
 #
-# $Id: mid.cgi,v 1.3 1998-04-13 19:04:27 wosch Exp $
+# $Id: mid.cgi,v 1.4 1998-04-16 14:10:22 wosch Exp $
 
 $hsty_base = '';
 
@@ -69,16 +69,17 @@ sub get_id {
 	}
 	print &foot;
 
-    } elsif ($#idlist == -1) {     # one hit
-    # } elsif ($#idlist ==  0) {     # currently not work
+    } elsif ($#idlist == 0) {     # one hit
 	local($location) = $ENV{'SCRIPT_NAME'};
 	local($id, $file, $start) = split($", $idlist[0]);
 	$location =~ s%/[^/]+$%%;
+	local($host) = $ENV{'HTTP_HOST'};
+	$location = 'http://' . $host . $location;
 
 	print "Location: $location/getmsg.cgi?fetch=$start+0+" .
 		($file =~ /^current/ ?  '' :  "$prefix/") . "$file\n";
-	warn "Location: $location/getmsg.cgi?fetch=$start+0+$prefix/$file\n";
 	print "Content-type: text/plain\n\n";
+	exit;
 
     } else {                      # more than one hit
 	local($id, $file, $start, $name);
@@ -111,6 +112,7 @@ $database = $input{'db'};
 
 
 if (!$messageid) {
+    print  &midheader;
     print "No input given\n";
     print &foot; exit;
 }
@@ -119,7 +121,6 @@ $messageid =~ s/>$//;
 $messageid =~ s/@.*// if $shortid;
 
 if ($database eq 'mid' || $database eq 'irt') {
-    $database = $database;
-}
+} else { $database = 'mid'; }
 
 &get_id($messageid, $database);
