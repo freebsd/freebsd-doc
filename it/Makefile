@@ -1,4 +1,4 @@
-# $FreeBSD: www/it/Makefile,v 1.1 2003/03/20 00:10:51 trhodes Exp $
+# $FreeBSD: www/it/Makefile,v 1.2 2003/11/10 00:14:49 simon Exp $
 .if exists(Makefile.conf)
 .include "Makefile.conf"
 .endif
@@ -8,8 +8,8 @@
 
 # These are turned into validated, normalized HTML files.
 
-DOCS=  docs.sgml 
-DOCS+= mailto.sgml 
+DOCS=  docs.sgml
+DOCS+= mailto.sgml
 
 # Subdirectories
 # SGML
@@ -23,11 +23,18 @@ WEBDIR?=	data/it
 DATA+=		index.html
 CLEANFILES+=	index.html
 
-index.html: index.xsl includes.xsl ../en/news/includes.xsl ../en/news/news.xml ../en/news/press.xml ../en/security/advisories.xml
-	${XSLTPROC} ${XSLTPROCOPTS} -o ${.TARGET} \
-		${.CURDIR}/index.xsl ${.CURDIR}/../en/news/news.xml
+.include "${WEB_PREFIX}/share/mk/web.site.mk"
+
+index.html: index.xsl ${XML_INCLUDES} \
+		${XML_NEWS_INCLUDES_MASTER} ${XML_NEWS_NEWS_MASTER} ${XML_NEWS_PRESS_MASTER} \
+		${XML_MIRRORS} ${XML_ADVISORIES}
+	${XSLTPROC} ${XSLTPROCOPTS} \
+		-o $@ \
+		--param mirrors.xml "'${XML_MIRRORS}'" \
+		--param advisories.xml "'${XML_ADVISORIES}'" \
+		--param news.press.xml "'${XML_NEWS_PRESS_MASTER}'" \
+		--param news.project.xml "'${XML_NEWS_NEWS_MASTER}'" \
+		${.CURDIR}/index.xsl ${XML_NEWS_NEWS_MASTER}
 .if !defined(NO_TIDY)
 	-${TIDY} ${TIDYOPTS} ${.TARGET}
 .endif
-
-.include "${WEB_PREFIX}/share/mk/web.site.mk"

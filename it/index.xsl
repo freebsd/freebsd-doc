@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/it/index.xsl,v 1.4 2003/07/07 15:59:26 blackend Exp $ -->
+<!-- $FreeBSD: www/it/index.xsl,v 1.5 2003/11/10 00:14:49 simon Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -9,8 +9,15 @@
 
   <xsl:variable name="base" select="'.'"/>
   <xsl:variable name="enbase" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/it/index.xsl,v 1.4 2003/07/07 15:59:26 blackend Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/it/index.xsl,v 1.5 2003/11/10 00:14:49 simon Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
+
+  <!-- these params should be externally bound. The values
+       here are not used actually -->
+  <xsl:param name="advisories.xml" select="'none'"/>
+  <xsl:param name="mirrors.xml" select="'none'"/>
+  <xsl:param name="news.press.xml" select="'none'"/>
+  <xsl:param name="news.project.xml" select="'none'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
               doctype-public="-//W3C//DTD HTML 4.01 Transitional//EN"/>
@@ -49,107 +56,9 @@
 		<br/>
 
 		<select name="goto">
-		  <option value="http://www2.at.FreeBSD.org/">IPv6 Austria</option>
-		  <option value="http://www.dk.FreeBSD.org/">IPv6 Danimarca</option>
-		  <option value="http://www2.de.FreeBSD.org">IPv6 Germania</option>
-		  <option value="http://www.jp.FreeBSD.org/www.FreeBSD.org/">IPv6 (6Bone) Giappone</option>
-		  <option value="http://www2.no.FreeBSD.org/">IPv6 Norvegia</option>
-		  <option value="http://www1.uk.FreeBSD.org/">IPv6 Regno Unito</option>
-		  <option value="http://www4.us.FreeBSD.org/">IPv6 USA/1</option>
-		  <option value="http://www5.us.FreeBSD.org/">IPv6 USA/2</option>
-		  <option value="http://www.ar.FreeBSD.org/">Argentina</option>
-		  <option value="http://www.au.FreeBSD.org/">Australia/1</option>
-		  <option value="http://www2.au.FreeBSD.org/">Australia/2</option>
-		  <option value="http://freebsd.itworks.com.au/">Australia/8</option>
-		  <option value="http://www.at.FreeBSD.org/">Austria/1</option>
-		  <option value="http://www2.at.FreeBSD.org/">Austria/2</option>
-		  <option value="http://freebsd.unixtech.be/">Belgio</option>
-		  <option value="http://www.br.FreeBSD.org/">Brasile/1</option>
-		  <option value="http://www2.br.FreeBSD.org/www.freebsd.org/">Brasile/2</option>
-		  <option value="http://www3.br.FreeBSD.org/">Brasile/3</option>
-		  <option value="http://www.bg.FreeBSD.org/">Bulgaria</option>
-		  <option value="http://www.ca.FreeBSD.org/">Canada/1</option>
-		  <option value="http://www2.ca.FreeBSD.org/">Canada/2</option>
-		  <option value="http://www.cn.FreeBSD.org/">Cina</option>
-		  <option value="http://www.kr.FreeBSD.org/">Corea/1</option>
-		  <option value="http://www2.kr.FreeBSD.org/">Corea/2</option>
-		  <option value="http://www.dk.FreeBSD.org/">Danimarca/1</option>
-		  <option value="http://www3.dk.FreeBSD.org/">Danimarca/2</option>
-		  <option value="http://www.ee.FreeBSD.org/">Estonia</option>
-		  <option value="http://www.FreeBSD.org.ph/">Filippine</option>
-		  <option value="http://www.fi.FreeBSD.org/">Finlandia/1</option>
-		  <option value="http://www2.fi.FreeBSD.org/">Finlandia/2</option>
-		  <option value="http://www.fr.FreeBSD.org/">Francia</option>
-		  <option value="http://www.de.FreeBSD.org/">Germania/1</option>
-		  <option value="http://www1.de.FreeBSD.org/">Germania/2</option>
-		  <option value="http://www2.de.FreeBSD.org/">Germania/3</option>
-		  <option value="http://www.jp.FreeBSD.org/www.FreeBSD.org/">Giappone</option>
-		  <option value="http://www.gr.FreeBSD.org/">Grecia/1</option>
-		  <option value="http://www.FreeBSD.gr/">Grecia/2</option>
-		  <option value="http://www.hk.FreeBSD.org/">Hong Kong</option>
-		  <option value="http://www.ie.FreeBSD.org/">Irlanda/1</option>
-		  <option value="http://www2.ie.FreeBSD.org/">Irlanda/2</option>
-		  <option value="http://www.is.FreeBSD.org/">Islanda</option>
-		  <option value="http://www.it.FreeBSD.org/">Italia/1</option>
-		  <option value="http://www.gufi.org/mirrors/www.freebsd.org/data/">Italia/2</option>
-		  <option value="http://www.kw.FreeBSD.org/">Kuwait</option>
-		  <option value="http://www.lv.FreeBSD.org/">Lettonia</option>
-		  <option value="http://www.lt.FreeBSD.org/">Lituania</option>
-		  <option value="http://www.no.FreeBSD.org/">Norvegia/1</option>
-		  <option value="http://www2.no.FreeBSD.org/">Norvegia/2</option>
-		  <option value="http://www.nz.FreeBSD.org/">Nuova Zelanda</option>
-		  <option value="http://www.nl.FreeBSD.org/">Olanda/1</option>
-		  <option value="http://www2.nl.FreeBSD.org/">Olanda/2</option>
-		  <option value="http://www.pl.FreeBSD.org/">Polonia/1</option>
-		  <option value="http://www2.pl.FreeBSD.org/">Polonia/2</option>
-		  <option value="http://www.pt.FreeBSD.org/">Portogallo/1</option>
-		  <option value="http://www4.pt.FreeBSD.org/">Portogallo/2</option>
-		  <option value="http://www4.pt.FreeBSD.org/">Portogallo/3</option>
-		  <option value="http://www.uk.FreeBSD.org/">Regno Unito/1</option>
-		  <option value="http://www2.uk.FreeBSD.org/">Regno Unito/2</option>
-		  <option value="http://www3.uk.FreeBSD.org/">Regno Unito/3</option>
-		  <option value="http://www4.uk.FreeBSD.org/">Regno Unito/4</option>
-		  <option value="http://www1.uk.FreeBSD.org/">Regno Unito/5</option>
-		  <option value="http://www.cz.FreeBSD.org/">Repubblica Ceca</option>
-		  <option value="http://www.sk.FreeBSD.org/">Repubblica Slovacca/1</option>
-		  <option value="http://www2.sk.FreeBSD.org/">Repubblica Slovacca/2</option>
-		  <option value="http://www.ro.FreeBSD.org/">Romania/1</option>
-		  <option value="http://www2.ro.FreeBSD.org/">Romania/2</option>
-		  <option value="http://www3.ro.FreeBSD.org/">Romania/3</option>
-		  <option value="http://www4.ro.FreeBSD.org/">Romania/4</option>
-		  <option value="http://www.ru.FreeBSD.org/">Russia/1</option>
-		  <option value="http://www2.ru.FreeBSD.org/">Russia/2</option>
-		  <option value="http://www3.ru.FreeBSD.org/">Russia/3</option>
-		  <option value="http://www4.ru.FreeBSD.org/">Russia/4</option>
-		  <option value="http://www.sm.FreeBSD.org/">San Marino</option>
-		  <option value="http://www2.sg.FreeBSD.org/">Singapore</option>
-		  <option value="http://www.si.FreeBSD.org/">Slovenia/1</option>
-		  <option value="http://www2.si.FreeBSD.org/">Slovenia/2</option>
-		  <option value="http://www.es.FreeBSD.org/">Spagna/1</option>
-		  <option value="http://www2.es.FreeBSD.org/">Spagna/2</option>
-		  <option value="http://www3.es.FreeBSD.org/">Spagna/3</option>
-		  <option value="http://www.za.FreeBSD.org/">Sud Africa/1</option>
-		  <option value="http://www2.za.FreeBSD.org/">Sud Africa/2</option>
-		  <option value="http://www.se.FreeBSD.org/">Svezia/1</option>
-		  <option value="http://www2.se.FreeBSD.org/">Svezia/2</option>
-		  <option value="http://www.ch.FreeBSD.org/">Svizzera/1</option>
-		  <option value="http://www2.ch.FreeBSD.org/">Svizzera/2</option>
-		  <option value="http://www.tw.FreeBSD.org/">Taiwan/1</option>
-		  <option value="http://www2.tw.FreeBSD.org/">Taiwan/2</option>
-		  <option value="http://www3.tw.FreeBSD.org/">Taiwan/3</option>
-		  <option value="http://www4.tw.FreeBSD.org/">Taiwan/4</option>
-		  <option value="http://www.tr.FreeBSD.org/">Turchia/1</option>
-		  <option value="http://www2.tr.FreeBSD.org/">Turchia/2</option>
-		  <option value="http://www.enderunix.org/freebsd/">Turchia/3</option>
-		  <option value="http://www.ua.FreeBSD.org/">Ucraina/1</option>
-		  <option value="http://www2.ua.FreeBSD.org/">Ucraina/2</option>
-		  <option value="http://www5.ua.FreeBSD.org/">Ucraina/3</option>
-		  <option value="http://www4.ua.FreeBSD.org/">Ucraina/Crimea</option>
-		  <option value="http://www.hu.FreeBSD.org/">Ungheria/1</option>
-		  <option value="http://www2.hu.FreeBSD.org/">Ungheria/2</option>
-		  <option value="http://www2.us.FreeBSD.org/">USA/1</option>
-		  <option value="http://www4.us.FreeBSD.org/">USA/2</option>
-		  <option value="http://www5.us.FreeBSD.org/">USA/3</option>
+		  <xsl:call-template name="html-index-mirrors-options-list">
+		    <xsl:with-param name="mirrors.xml" select="$mirrors.xml" />
+		  </xsl:call-template>
 		</select>
 
 		<input type="submit" value=" Vai "/>
@@ -191,11 +100,16 @@
 			   bgcolor="#ffcc66" width="100%">
 		      <tr>
 			<td>
-			  <p><font size="+1" color="#990000"><b>Novità</b></font>
-			    <small><br/>
-			      &#183; <a href="{$enbase}/news/newsflash.html">Annunci</a><br/>
-			      &#183; <a href="{$enbase}/news/press.html">Sulla Stampa</a><br/>
-			      &#183; <a href="{$enbase}/news/index.html">Altro...</a>
+			  <p>
+			    <a href="{$enbase}/platforms/index.html">
+			      <font size="+1" color="#990000"><b>Piattaforme:</b></font>
+			    </a><small><br/>
+			      &#183; <a href="{$enbase}/smp/index.html">i386</a><br/>
+			      &#183; <a href="{$enbase}/platforms/alpha.html">Alpha</a><br/>
+			      &#183; <a href="{$enbase}/platforms/ia64/index.html">IA-64</a><br/>
+			      &#183; <a href="{$enbase}/platforms/amd64.html">AMD64</a><br/>
+			      &#183; <a href="{$enbase}/platforms/sparc.html">Sparc64</a><br/>
+			      &#183; <a href="{$enbase}/platforms/index.html">Altre?</a><br/>
 			    </small></p>
 
 			  <p><font size="+1" color="#990000"><b>Software</b></font>
@@ -205,40 +119,48 @@
 			      &#183; <a href="{$enbase}/ports/index.html">Applicazioni Portate</a><br/>
 			    </small></p>
 
-			  <p><font size="+1" color="#990000"><b>Documentazione</b></font>
-			    <small><br/>
-			      &#183; <a href="{$enbase}/projects/newbies.html">Per i Niubbi</a><br/>
-			      &#183; <a href="{$enbase}/doc/it_IT.ISO8859-15/books/handbook/index.html">Manuale</a><br/>
+			  <p>
+			    <a href="docs.html">
+			      <font size="+1" color="#990000"><b>Documentazione</b></font>
+			    </a><small><br/>
 			      &#183; <a href="{$enbase}/doc/en_US.ISO8859-1/books/faq/index.html">FAQ</a><br/>
+			      &#183; <a href="{$enbase}/doc/it_IT.ISO8859-15/books/handbook/index.html">Manuale</a><br/>
 			      &#183; <a href="http://www.FreeBSD.org/cgi/man.cgi">Pagine man</a><br/>
+			      &#183; <a href="{$enbase}/projects/newbies.html">Per i Niubbi</a><br/>
 			      &#183; <a href="{$enbase}/docproj/index.html">Doc. Project</a><br/>
-			      &#183; <a href="docs.html">Altro...</a><br/>
 			    </small></p>
 
-			  <p><font size="+1" color="#990000"><b>Supporto</b></font>
-			    <small><br/>
-			      &#183; <a href="{$enbase}/support.html#mailing-list">Mailing list</a><br/>
+			  <p>
+			    <a href="{$enbase}/support.html">
+			      <font size="+1" color="#990000"><b>Supporto</b></font>
+			    </a><small><br/>
+			      &#183; <a href="{$enbase}/support.html#mailing-list">Mailing List</a><br/>
 			      &#183; <a href="{$enbase}/support.html#newsgroups">Newsgroup</a><br/>
 			      &#183; <a href="{$enbase}/support.html#user">Gruppi Utenti</a><br/>
 			      &#183; <a href="{$enbase}/support.html#web">Risorse Web</a><br/>
 			      &#183; <a href="{$enbase}/security/index.html">Sicurezza</a><br/>
-			      &#183; <a href="{$enbase}/events/events.html">Eventi</a><br/>
-			      &#183; <a href="{$enbase}/support.html">Altro...</a>
 			    </small></p>
 
-			  <p><font size="+1" color="#990000"><b>Bug Report</b></font>
-			    <small><br/>
-			      &#183; <a href="{$enbase}/send-pr.html">Invia un bug report</a><br/>
-			      &#183; <a href="http://www.FreeBSD.org/cgi/query-pr-summary.cgi">Visualizza i report</a><br/>
-			      &#183; <a href="http://www.FreeBSD.org/cgi/query-pr.cgi">Cerca tramite bug ID</a><br/>
-			      &#183; <a href="{$enbase}/support.html#gnats">Altro...</a><br/>
+			  <p>
+			    <a href="{$enbase}/support.html#gnats">
+			      <font size="+1" color="#990000"><b>Report di Bug</b></font>
+			    </a><small><br/>
+			      &#183; <a href="http://www.FreeBSD.org/cgi/query-pr-summary.cgi?query">Cerca</a><br/>
+			      &#183; <a href="http://www.FreeBSD.org/cgi/query-pr.cgi">Visualizza un Report</a><br/>
+			      &#183; <a href="http://www.FreeBSD.org/cgi/query-pr-summary.cgi">Elenca tutti i Report</a><br/>
+			      &#183; <a href="{$enbase}/send-pr.html">Invia un report</a><br/>
+			      &#183; <a href="{$enbase}/doc/en_US.ISO8859-1/articles/problem-reports/article.html">Scrivere i Report</a><br/>
 			    </small></p>
 
-			  <p><font size="+1" color="#990000"><b>Sviluppo</b></font>
-			    <small><br/>
-			      &#183; <a href="{$enbase}/projects/index.html">Progetti</a><br/>
-			      &#183; <a href="{$enbase}/releng/index.html">Release Engineering</a><br/>
+			  <p>
+			    <a href="{$enbase}/projects/index.html">
+			      <font size="+1" color="#990000"><b>Sviluppo</b></font>
+			    </a><small><br/>
+			      &#183; <a href="{$enbase}/doc/en_US.ISO8859-1/books/developers-handbook">Manuale dello Sviluppatore</a><br/>
+			      &#183; <a href="{$enbase}/doc/en_US.ISO8859-1/books/porters-handbook">Manuale del Porter</a><br/>
 			      &#183; <a href="{$enbase}/support.html#cvs">Repository CVS</a><br/>
+			      &#183; <a href="{$enbase}/releng/index.html">Release Engineering</a><br/>
+			      &#183; <a href="{$enbase}/doc/en_US.ISO8859-1/articles/contributing/index.html">Contribuire a FreeBSD</a><br/>
 			    </small></p>
 
 			  <p><font size="+1" color="#990000"><b>Fornitori</b></font>
@@ -253,15 +175,29 @@
 			    <small><br/>
 			      &#183; <a href="{$enbase}/donations/index.html">Info sul Progetto</a><br/>
 			      &#183; <a href="{$enbase}/donations/donors.html">Attuali Donazioni</a><br/>
-			      &#183; <a href="{$enbase}/donations/wantlist.html">Elenco delle richieste</a><br/>
+			      &#183; <a href="{$enbase}/donations/wantlist.html">Elenco delle Richieste</a><br/>
 			    </small></p>
 
-			  <p><font size="+1" color="#990000"><b>Questo Sito</b></font>
-			    <small><br/>
-			      &#183; <a href="{$enbase}/search/index-site.html">Mappa del Sito</a><br/>
-			      &#183; <a href="{$enbase}/search/search.html">Cerca</a><br/>
-			      &#183; <a href="{$enbase}/internal/index.html">Altro...</a><br/>
+			  <p>
+			    <a href="{$enbase}/search/index-site.html">
+			      <font size="+1" color="#990000"><b>Questo Sito</b></font>
+			    </a><small><br/>
+			      &#183; <a href="{$enbase}/search/search.html#web">Cerca nel Sito</a><br/>
+			      &#183; <a href="{$enbase}/search/search.html#mailinglists">Cerca nelle Mailing List</a><br/>
+			      &#183; <a href="{$enbase}/search/search.html">Cerca ovunque</a><br/>
 			    </small></p>
+
+			  <p>
+			    <a href="mailto.html">
+			      <font size="+1" color="#990000"><b>Contattare FreeBSD</b></font>
+			    </a>
+			  </p>
+
+			  <p>
+			    <a href="{$enbase}/copyright/index.html">
+			      <font size="+1" color="#990000"><b>Il Copyright BSD</b></font>
+			    </a>
+			  </p>
 
 			  <form action="http://www.FreeBSD.org/cgi/search.cgi" method="get">
 			    <small>Cerca:<br/>
@@ -284,7 +220,8 @@
 	      <h2><font color="#990000">Cos'è FreeBSD?</font></h2>
 
 	      <p>FreeBSD è un sistema operativo avanzato per architetture
-		compatibili x86, DEC Alpha, IA-64, PC-98 e UltraSPARC&#174;.
+		compatibili x86, AMD64, DEC Alpha, IA-64, PC-98 e
+		UltraSPARC&#174;.
 		È derivato da BSD, la versione di
 		<xsl:value-of select="$unix"/> sviluppata
 		all'Università della California, Berkeley.
@@ -388,9 +325,10 @@
 		    <table cellpadding="4" cellspacing="0" border="0"
 			   bgcolor="#ffcc66" width="100%">
 		      <tr>
-			<td valign="top"><p><font size="+1" color="#990000"><b>Release con Nuove Tecnologie:
-			    <xsl:value-of select="$rel.current"/></b></font><br/>
-
+			<td valign="top"><p>
+			      <a href="{$u.rel.early}">
+			      <font size="+1" color="#990000"><b>Release con Nuove Tecnologie:
+			    <xsl:value-of select="$rel.current"/></b></font></a><br/>
 			    <small>&#183; <a href="{$u.rel.announce}">Annuncio</a><br/>
 			      &#183; <a href="{$enbase}/doc/it_IT.ISO8859-15/books/handbook/install.html">Guida di Installazione</a><br/>
 			      &#183; <a href="{$u.rel.notes}">Note sulla Release</a><br/>
@@ -398,9 +336,10 @@
 			      &#183; <a href="{$u.rel.errata}">Errata</a><br/>
 			      &#183; <a href="{$u.rel.early}">Early Adopter's Guide</a></small></p>
 
-			  <p><font size="+1" color="#990000"><b>Release di Produzione:
-			    <xsl:value-of select="$rel2.current"/></b></font><br/>
-			
+			<p>
+			      <a href="{$u.rel2.announce}">
+			      <font size="+1" color="#990000"><b>Release di Produzione:
+			    <xsl:value-of select="$rel2.current"/></b></font></a><br/>
 			    <small>&#183; <a href="{$u.rel2.announce}">Annuncio</a><br/>
 			      &#183; <a href="{$enbase}/doc/it_IT.ISO8859-15/books/handbook/install.html">Guida di Installazione</a><br/>
 			      &#183; <a href="{$u.rel2.notes}">Note sulla Release</a><br/>
@@ -410,33 +349,13 @@
 			  <p><font size="+1" color="#990000"><b>Novità sul Progetto</b></font><br/>
 			    <font size="-1">
 			      Ultimo aggiornamento:
-			      <xsl:value-of
-				select="descendant::day[position() = 1]/name"/>
-			      <xsl:text> </xsl:text>
-			      <xsl:call-template name="translate-month">
-				<xsl:with-param name="month"
-				  select="descendant::month[position() = 1]/name"/>
+			      <xsl:call-template name="html-index-news-project-items-lastmodified">
+				<xsl:with-param name="news.project.xml" select="$news.project.xml" />
 			      </xsl:call-template>
-			      <xsl:text> </xsl:text>
-			      <xsl:value-of
-				select="descendant::year[position() = 1]/name"/>
 			      <br/>
-			      <!-- Pull in the 10 most recent news items -->
-			      <xsl:for-each select="descendant::event[position() &lt;= 10]">
-				&#183;  <a>
-				  <xsl:attribute name="href">
-				    <xsl:value-of select="$enbase"/>/news/newsflash.html#<xsl:call-template name="generate-event-anchor"/>
-				  </xsl:attribute>
-				  <xsl:choose>
-				    <xsl:when test="count(child::title)">
-				      <xsl:value-of select="title"/><br/>
-				    </xsl:when>
-				    <xsl:otherwise>
-				      <xsl:value-of select="p"/><br/>
-				    </xsl:otherwise>
-				  </xsl:choose>
-				</a>
-			      </xsl:for-each>
+			      <xsl:call-template name="html-index-news-project-items">
+				<xsl:with-param name="news.project.xml" select="$news.project.xml" />
+			      </xsl:call-template>
 			      <a href="{$enbase}/news/newsflash.html">Altro...</a>
 			    </font></p>
 
@@ -444,23 +363,13 @@
 
 			    <font size="-1">
 			      Ultimo aggiornamento:
-			      <xsl:call-template name="translate-month">
-				<xsl:with-param name="month"
-				  select="document('../en/news/press.xml')/descendant::month[position() = 1]/name"/>
+			      <xsl:call-template name="html-index-news-press-items-lastmodified">
+				<xsl:with-param name="news.press.xml" select="$news.press.xml" />
 			      </xsl:call-template>
-			      <xsl:text> </xsl:text>
-			      <xsl:value-of
-				select="document('../en/news/press.xml')/descendant::year[position() = 1]/name"/>
 			      <br/>
-			      <!-- Pull in the 10 most recent press items -->
-			      <xsl:for-each select="document('../en/news/press.xml')/descendant::story[position() &lt; 10]">
-				&#183; <a>
-				  <xsl:attribute name="href">
-				    <xsl:value-of select="$enbase"/>/news/press.html#<xsl:call-template name="generate-story-anchor"/>
-				  </xsl:attribute>
-				  <xsl:value-of select="name"/>
-				</a><br/>
-			      </xsl:for-each>
+			      <xsl:call-template name="html-index-news-press-items">
+				<xsl:with-param name="news.press.xml" select="$news.press.xml" />
+			      </xsl:call-template>
 			      <a href="{$enbase}/news/press.html">Altro...</a>
 			    </font>
 			  </p>
@@ -469,24 +378,13 @@
 
 			    <font size="-1">
 			      Ultimo Aggiornamento:
-			      <xsl:value-of
-				select="document('../en/security/advisories.xml')/descendant::day[position() = 1]/name"/>
-			      <xsl:text> </xsl:text>
-			      <xsl:call-template name="translate-month">
-				<xsl:with-param name="month"
-				  select="document('../en/security/advisories.xml')/descendant::month[position() = 1]/name"/>
+			      <xsl:call-template name="html-index-advisories-items-lastmodified">
+				<xsl:with-param name="advisories.xml" select="$advisories.xml" />
 			      </xsl:call-template>
-			      <xsl:text> </xsl:text>
-			      <xsl:value-of
-				select="document('../en/security/advisories.xml')/descendant::year[position() = 1]/name"/>
 			      <br/>
-			      <!-- Pull in the 10 most recent security advisories -->
-			      <xsl:for-each select="document('../en/security/advisories.xml')/descendant::advisory[position() &lt; 10]">
-				&#183; <a>
-				  <xsl:attribute name="href">ftp://ftp.freebsd.org/pub/FreeBSD/CERT/advisories/<xsl:value-of select="name"/>.asc</xsl:attribute>
-				  <xsl:value-of select="name"/>
-				</a><br/>
-			      </xsl:for-each>
+			      <xsl:call-template name="html-index-advisories-items">
+				<xsl:with-param name="advisories.xml" select="$advisories.xml" />
+			      </xsl:call-template>
 			      <a href="{$enbase}/security/index.html">Altro...</a>
 			    </font>
 			  </p>
