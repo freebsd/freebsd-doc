@@ -1,4 +1,4 @@
-<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.25 2001/03/04 18:05:19 nik Exp $ -->
+<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.26 2001/03/24 09:40:24 nik Exp $ -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
 <!ENTITY % output.html		"IGNORE">
@@ -89,6 +89,10 @@
           ;; AUTHOR N/A
           ;; /REFENTRY
           #f)
+
+        ; Empty function to quiet warnings
+        (define ($create-refentry-xref-link$ refentrytitle manvolnum)
+          (literal ""))
 
         (element citerefentry
           (let* ((refentrytitle	(select-elements (children (current-node))
