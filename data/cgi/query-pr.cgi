@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: query-pr.cgi,v 1.2 1996-09-29 03:14:16 jfieber Exp $
+# $Id: query-pr.cgi,v 1.3 1996-12-17 17:12:00 fenner Exp $
 
 $ENV{'PATH'} = "/bin:/usr/bin:/usr/sbin:/sbin:/usr/local/bin";
 
@@ -120,7 +120,11 @@ while(<Q>) {
 }
 close(Q);
 
-print "$trailer\n</dl>" . &html_footer;
+print "$trailer\n</dl>";
+
+print "<A HREF=\"mailto:freebsd-gnats-submit@freebsd.org,${email}?subject=Re: ${cat}/${number}: $syn\">Submit Followup</A>";
+
+print &html_footer;
 
 exit 0;
 
