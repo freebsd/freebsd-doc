@@ -1,5 +1,5 @@
 # 
-# $Id: Makefile,v 1.36 1999-08-26 19:11:32 nik Exp $
+# $Id: Makefile,v 1.37 1999-08-28 09:48:28 nik Exp $
 #
 # Build the FreeBSD Handbook (Japanese).
 #
@@ -7,9 +7,6 @@
 #
 
 MAINTAINER=kuriyama@FreeBSD.ORG
-
-JADEFLAGS=	-ilang.ja
-TIDYFLAGS=	-raw
 
 DOC?= book
 
