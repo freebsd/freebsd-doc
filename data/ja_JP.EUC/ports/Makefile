@@ -1,4 +1,4 @@
-#	$Id: Makefile,v 1.5 1998-04-25 16:41:06 kuriyama Exp $
+#	$Id: Makefile,v 1.6 1998-04-27 12:57:40 jfieber Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.8
 
@@ -13,7 +13,7 @@ CLEANFILES+=	${DOCS} Makefile.gen ${INDEX}
 .endif
 
 ${INDEX}:
-       cvs -QR co ${INDEX}
+	cvs -QR co ${INDEX}
 
 Makefile.gen: index.sgml .NOTMAIN
 	echo DOCS= *.sgml > Makefile.gen
