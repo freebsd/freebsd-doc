@@ -1,5 +1,5 @@
 #
-# $Id: docproj.docbook.mk,v 1.2 1999-04-20 15:58:36 kuriyama Exp $
+# $Id: docproj.docbook.mk,v 1.3 1999-05-05 20:16:46 nik Exp $
 #
 # This include file <docproj.docbook.mk> handles installing documentation
 # from the FreeBSD Documentation Project.
@@ -36,7 +36,7 @@
 #			If not set, defaults to the name of the current
 #			directory.
 #
-#  JADEOPTS		Additional options to pass to Jade.  Typically
+#  JADEFLAGS		Additional options to pass to Jade.  Typically
 #			used to define "IGNORE" entities to "INCLUDE"
 #			with "-i<entity-name>"
 #
@@ -54,6 +54,9 @@
 #  DOC_PREFIX		Path to the root of doc/ tree.  Support files
 #			(such as share/sgml/catalog) are expected to
 #			be under this path.  Defaults to /usr/doc.
+#
+#  EXTRA_CATALOGS	Additional catalog files that should be used by
+#			any SGML processing applications.
 #
 
 # ------------------------------------------------------------------------
@@ -75,9 +78,9 @@ DOCBOOKCATALOG= /usr/local/share/sgml/docbook/3.0/catalog
 JADECATALOG=	/usr/local/share/sgml/jade/catalog
 DSSSLCATALOG=   /usr/local/share/sgml/docbook/dsssl/modular/catalog
 
-JADEFLAGS=	${JADEOPTS} -c ${FREEBSDCATALOG} -c ${DSSSLCATALOG} -c ${DOCBOOKCATALOG} -c ${JADECATALOG}
+JADEOPTS=	${JADEFLAGS} -c ${FREEBSDCATALOG} -c ${DSSSLCATALOG} -c ${DOCBOOKCATALOG} -c ${JADECATALOG} ${EXTRA_CATALOGS:S/^/-c /g}
 
-KNOWN_FORMATS= html html-split html-split.tar txt rtf ps pdf tex dvi tar
+KNOWN_FORMATS= html html-split html-split.tar txt rtf ps pdf tex dvi tar doc
 
 # ------------------------------------------------------------------------
 #
@@ -149,6 +152,9 @@ CLEANFILES+= ${DOC}.rtf
 .elif ${_cf} == "tar"
 _docs+= ${DOC}.tar
 CLEANFILES+= ${DOC}.tar
+.elif ${_cf} == "doc"
+_docs+= ${DOC}.doc
+CLEANFILES+= ${DOC}.doc
 .endif
 .endfor
 
@@ -186,11 +192,11 @@ CLEANFILES+= ${DOC}.${_curformat}.${_curcomp}
 all: ${_docs}
 
 index.html HTML.manifest: ${SRCS}
-	${JADE} -V html-manifest -ioutput.html ${JADEFLAGS} -d ${DSLHTML} -t sgml ${DOC}.sgml
+	${JADE} -V html-manifest -ioutput.html ${JADEOPTS} -d ${DSLHTML} -t sgml ${DOC}.sgml
 	-tidy -i -m -f /dev/null ${TIDYFLAGS} *.html
 
 ${DOC}.html: ${SRCS}
-	${JADE} -ioutput.html -V nochunks ${JADEFLAGS} -d ${DSLHTML} -t sgml ${DOC}.sgml > ${DOC}.html
+	${JADE} -ioutput.html -V nochunks ${JADEOPTS} -d ${DSLHTML} -t sgml ${DOC}.sgml > ${DOC}.html
 	-tidy -i -m -f /dev/null ${TIDYFLAGS} ${DOC}.html
 
 ${DOC}.html-split.tar: HTML.manifest
@@ -200,10 +206,13 @@ ${DOC}.txt: ${DOC}.html
 	lynx -nolist -dump ${DOC}.html > ${DOC}.txt
 
 ${DOC}.rtf: ${SRCS}
-	${JADE} -Vrtf-backend -ioutput.print ${JADEFLAGS} -d ${DSLPRINT} -t rtf ${DOC}.sgml
+	${JADE} -Vrtf-backend -ioutput.print ${JADEOPTS} -d ${DSLPRINT} -t rtf ${DOC}.sgml
+
+${DOC}.doc: ${SRCS}
+	${JADE} -ioutput.print ${JADEOPTS} -d ${DSLPRINT} -t doc ${DOC}.sgml
 
 ${DOC}.tex: ${SRCS}
-	${JADE} -Vtex-backend -ioutput.print ${JADEFLAGS} -d ${DSLPRINT} -t tex ${DOC}.sgml
+	${JADE} -Vtex-backend -ioutput.print ${JADEOPTS} -d ${DSLPRINT} -t tex ${DOC}.sgml
 
 ${DOC}.dvi: ${DOC}.tex
 	@echo "==> TeX pass 1/3"
@@ -226,6 +235,19 @@ ${DOC}.ps: ${DOC}.dvi
 
 ${DOC}.tar:
 	tar cf ${.TARGET} ${SRCS}
+
+# ------------------------------------------------------------------------
+#
+# Validation targets
+#
+
+#
+# Lets you quickly check that the document conforms to the DTD without 
+# having to convert it to any other formats
+#
+
+validate:
+	nsgmls -s -c ${FREEBSDCATALOG} -c ${DOCBOOKCATALOG} ${EXTRA_CATALOGS:S/^/-c /g} ${DOC}.sgml
 
 # ------------------------------------------------------------------------
 #
