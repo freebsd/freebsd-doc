@@ -13,7 +13,7 @@ $subject = "Another gallery submission...";
 require 'cgi-lib.pl';
 &ReadParse;
 
-#$d_date = "$Date: 1996-09-24 17:45:57 $";
+#$d_date = "$Date: 1996-10-01 19:46:14 $";
 #$h_base = "..";
 #$d_author = "
 require 'cgi-style.pl';
@@ -120,7 +120,7 @@ elsif ($in{'action'} eq "submit") {
     open(M, "| mail -s \"$subject\" $curator");
     print M "$in{'contact'} submitted the following to be added under\n";
     print M "\"$in{'category'}\" in the gallery:\n\n";
-    print M "<-- from $in{'contact'} on $timestamp -->\n";
+    print M "<!-- from $in{'contact'} on $timestamp -->\n";
     print M "$entry\n";
     close(M);
 }
