@@ -236,6 +236,8 @@ MLINKS+=sbuf.9 sbuf_finish.9
 MLINKS+=sbuf.9 sbuf_data.9
 MLINKS+=sbuf.9 sbuf_len.9
 MLINKS+=sbuf.9 sbuf_delete.9
+MLINKS+=sbuf.9 sbuf_trim.9
+MLINKS+=sbuf.9 sbuf_vprintf.9
 
 MLINKS+=zone.9 zalloc.9
 MLINKS+=zone.9 zfree.9
