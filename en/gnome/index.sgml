@@ -2,7 +2,7 @@
 <!ENTITY base CDATA "..">
 <!ENTITY date "$FreeBSD$">
 <!ENTITY title "FreeBSD GNOME Project">
-<!ENTITY email 'freebsd-gnome'>
+<!ENTITY % gnomeincludes SYSTEM "includes.sgml"> %gnomeincludes;
 <!ENTITY % includes SYSTEM "../includes.sgml"> %includes;
 ]>
 <html>
@@ -44,6 +44,11 @@
 		    <p><font size="+1" color="#990000"><b>Resources</b></font>
 		      <small><br>
 		        <a href="http://www.gnome.org/">GNOME Project</a><br>
+		        <a href="XXX">GNOME on GNU/Darwin</a><br>
+		      </small></p>
+
+		    <p><font size="+1" color="#990000"><b>Related Projects</b></font>
+		      <small><br>
 		        <a href="http://www.kde.org/">KDE Project</a><br>
 		        <a href="http://freebsd.kde.org/">KDE on FreeBSD</a><br>
 		      </small></p>
