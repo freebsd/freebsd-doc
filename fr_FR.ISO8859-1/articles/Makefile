@@ -27,6 +27,7 @@ SUBDIR+= laptop
 SUBDIR+= pxe
 SUBDIR+= pr-guidelines
 SUBDIR+= cvsup-advanced
+SUBDIR+= ipsec-must
 
 ROOT_SYMLINKS+= new-users
 
