@@ -4,7 +4,7 @@
 # 
 # John Fieber <jfieber@indiana.edu>
 # Modified for new gallery.db format by Nate Johnson <nsj@FreeBSD.org>
-# $FreeBSD: www/en/cgi/gallery.cgi,v 1.16 2000/01/05 15:47:44 phantom Exp $
+# $FreeBSD: www/en/cgi/gallery.cgi,v 1.17 2000/04/01 09:27:40 phantom Exp $
 ##################################################################
 
 $curator = "gallery\@FreeBSD.org";
@@ -13,7 +13,10 @@ $subject = "Another gallery submission...";
 require 'cgi-lib.pl';
 &ReadParse;
 
-$hsty_date = '$FreeBSD: www/en/cgi/gallery.cgi,v 1.16 2000/01/05 15:47:44 phantom Exp $';
+$hsty_date = '$FreeBSD: www/en/cgi/gallery.cgi,v 1.17 2000/04/01 09:27:40 phantom Exp $';
+# Replace Id string with commit date and time.
+$hsty_date =~ s%\$FreeBSD. .* (.* .*) .* .* \$%Last modified: $1%;
+
 #$h_base = "..";
 #$d_author = "
 require 'cgi-style.pl';
