@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $Id: mailindex.cgi,v 1.2 1999-01-15 19:39:06 wosch Exp $
+# $Id: mailindex.cgi,v 1.3 1999-04-04 20:39:39 wosch Exp $
 
 
 use CGI;
@@ -45,7 +45,7 @@ $| = 1;
 $maildir = '/g/mail/archive';
 
 # mailindex program
-$mailindex = '/home/wosch/bin/mailindex4';
+$mailindex = '/usr/local/www/mid/bin/mailindex';
 
 
 $query = new CGI();
