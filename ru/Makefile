@@ -1,6 +1,6 @@
 # $FreeBSD$
 # The FreeBSD Russian Documentation Project
-# $FreeBSDru: frdp/www/ru/Makefile,v 1.11 2001/12/13 21:23:45 phantom Exp $
+# $FreeBSDru: frdp/www/ru/Makefile,v 1.12 2001/12/17 19:55:35 phantom Exp $
 # Original revision: 1.55
 
 .if exists(Makefile.conf)
@@ -32,6 +32,7 @@ CLEANFILES+=atoz.sgml site.sgml
 # These will be directly installed.
 
 #DATA=	COPYING COPYING.LIB README.mirror robots.txt index.html
+DATA=	index.html
 
 # Subdirectories
 # SGML
@@ -74,7 +75,6 @@ WEBDIR?=	data/ru
 
 # index.html is special, and generated from index.xsl and news/news.xml
 DATA+=		index.html
-CLEANFILES+=	index.html
 
 index.html: index.xsl news/news.xml news/press.xml includes.xsl news/includes.xsl
 	${XSLTPROC} ${XSLTPROCOPTS} -o index.html \
