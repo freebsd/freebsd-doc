@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp 
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.115 2003-11-04 14:30:57 www Exp $
+# $Id: man.cgi,v 1.116 2003-11-18 22:25:09 wosch Exp $
 
 #use Data::Dumper;
 #use Carp;
@@ -142,10 +142,13 @@ foreach my $os (keys %$sectionpath) {
      );
 
 $manLocalDir = '/usr/local/www/bsddoc/man';
+$manPathDefault = 'FreeBSD 5.1-RELEASE and Ports';
 $manPathDefault = 'FreeBSD 5.1-RELEASE';
 
 %manPath = 
     (
+     'FreeBSD 5.1-RELEASE and Ports',  "$manLocalDir/FreeBSD-5.1-RELEASE:$manLocalDir/FreeBSD-ports-5.0-RELEASE",
+
      'FreeBSD 5.1-current',   "$manLocalDir/FreeBSD-5.1-current",
      'FreeBSD 4.9-stable',    "$manLocalDir/FreeBSD-4.9-stable",
 
@@ -300,9 +303,15 @@ $manPathDefault = 'FreeBSD 5.1-RELEASE';
 
 # delete not existing releases
 while (($key,$val) = each %manPath) {
-    if ((! -d $val) && (! -l $val)) {
-	delete $manPath{"$key"} if $key ne $manPathDefault;
+    my $counter = 0;
+
+    # if the manpath contains colons, at least one directory must exists
+    foreach (split(/:/, $val)) {
+	$counter++ if -d;
     }
+
+    # give up and delete release
+    delete $manPath{"$key"} if !$counter && $key ne $manPathDefault;
 }
 
 # keywords must be in lower cases.
@@ -461,18 +470,31 @@ sub get_the_sources {
 sub download {
 
     $| = 1;
-    print qq{Content-type: application/x-tar\n} .
-	qq{Content-encoding: x-gzip\n\n};
+    my $filename = $manpath;
+    $filename =~ s/\s+/_/;
+    $filename = &encode_url($filename);
+    $filename .= '.tar.gz';
 
+    print qq{Content-type: application/x-tar\n} .
+	qq{Content-encoding: x-gzip\n} .
+	qq{Content-disposition: inline; filename="$filename"\n} .
+	"\n";
+
+    local(@m); 
     local($m) = $manPath{"$manpath"};
-    $m =~ s%^$manLocalDir/?%%;
+    foreach (split(/:/, $m)) {
+	push(@m, $_) if s%^$manLocalDir/?%%;
+    }
 
     chdir($manLocalDir) || do {
 	print "chdir: $!\n"; exit(0);
     };
 
+    $m = join(" ", @m);
+    #warn "find $m -print | cpio -o -H tar 2>/dev/null | gzip -cqf";
+
     sleep 1;
-    system("find $m/* -print | cpio -o -H tar 2>/dev/null | gzip -cqf");
+    system("find $m -print | cpio -o -H tar 2>/dev/null | gzip -cqf");
     exit(0);
 }
 
@@ -508,9 +530,9 @@ sub apropos {
     print "<H1>$www{'head'}</H1>\n\n";
     &formquery;
 
-    local($mpath) = ($manpath ? &dec($manpath) : $manPathDefault);
+    local($mpath) = $manPath{$manpath};
 
-    open(APROPOS, "$manPath{$mpath}/whatis") || do {
+    open(APROPOS, "env MANPATH=$mpath $command{'man'} -k . |") || do {
 	warn "$0: Cannot open whatis database for `$mpath'\n";
 	print "Cannot open whatis database for `$mpath'\n";
 	print "</DL>\n</BODY>\n</HTML>\n";
@@ -990,7 +1012,7 @@ ETX
 }
 
 sub copyright {
-    $id = '$Id: man.cgi,v 1.115 2003-11-04 14:30:57 www Exp $';
+    $id = '$Id: man.cgi,v 1.116 2003-11-18 22:25:09 wosch Exp $';
 
     return qq{\
 <PRE>
