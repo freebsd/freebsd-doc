@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/share/sgml/includes.misc.xsl,v 1.18 2005/01/10 20:26:08 ceri Exp $ -->
+<!-- $FreeBSD: www/share/sgml/includes.misc.xsl,v 1.19 2005/01/10 21:43:13 ceri Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -602,9 +602,18 @@
       <xsl:choose>
 	<xsl:when test="$localizeditems/event">
 	  <xsl:for-each select="$localizeditems/event">
+	    <xsl:param name="anchor-position" select="position()" />
+
 	    <xsl:value-of select="$leadingmark" /><a>
 	      <xsl:attribute name="href">
-		news/newsflash.html#<xsl:call-template name="generate-event-anchor"/>
+		<xsl:text>news/newsflash.html#</xsl:text>
+		<xsl:call-template name="html-news-generate-anchor">
+		  <xsl:with-param name="label" select="'event'" />
+		  <xsl:with-param name="year" select="$year" />
+		  <xsl:with-param name="month" select="$month" />
+		  <xsl:with-param name="day" select="$day" />
+		  <xsl:with-param name="pos" select="$anchor-position" />
+		</xsl:call-template>
 	      </xsl:attribute>
 
 	      <xsl:choose>
@@ -621,9 +630,18 @@
 
 	<xsl:otherwise>
 	  <xsl:for-each select="event">
+	    <xsl:param name="anchor-position" select="position()" />
+
 	    <xsl:value-of select="$leadingmark" /><a>
 	      <xsl:attribute name="href">
-		news/newsflash.html#<xsl:call-template name="generate-event-anchor"/>
+		<xsl:text>news/newsflash.html#</xsl:text>
+		<xsl:call-template name="html-news-generate-anchor">
+		  <xsl:with-param name="label" select="'event'" />
+		  <xsl:with-param name="year" select="$year" />
+		  <xsl:with-param name="month" select="$month" />
+		  <xsl:with-param name="day" select="$day" />
+		  <xsl:with-param name="pos" select="$anchor-position" />
+		</xsl:call-template>
 	      </xsl:attribute>
 
 	      <xsl:choose>
@@ -664,11 +682,18 @@
     <xsl:param name="news.press.xml" select="''" />
 
     <xsl:for-each select="document($news.press.xml-master)/descendant::story[position() &lt;= 5]">
-      <xsl:param name="year" select="../../year/name" />
-      <xsl:param name="month" select="../month/name" />
-      <xsl:param name="pos" select="position()" />
+      <xsl:param name="year" select="../../name" />
+      <xsl:param name="month" select="../name" />
       <xsl:param name="url" select="url" />
       <xsl:param name="site-url" select="site-url" />
+
+      <xsl:param name="pos">
+	<xsl:for-each select="../story">
+	  <xsl:if test="url = $url">
+	    <xsl:value-of select="position()" />
+	  </xsl:if>
+	</xsl:for-each>
+      </xsl:param>
 
       <!-- search localized items per story(URL) basis -->
       <xsl:param name="localizeditems"
@@ -680,7 +705,13 @@
       <xsl:value-of select="$leadingmark" />
       <a>
 	<xsl:attribute name="href">
-	  news/press.html#<xsl:call-template name="generate-story-anchor"/>
+	  <xsl:text>news/press.html#</xsl:text>
+	  <xsl:call-template name="html-news-generate-anchor">
+	    <xsl:with-param name="label" select="'story'" />
+	    <xsl:with-param name="year" select="$year" />
+	    <xsl:with-param name="month" select="$month" />
+	    <xsl:with-param name="pos" select="$pos" />
+	  </xsl:call-template>
 	</xsl:attribute>
 
 	<xsl:choose>
