@@ -1,5 +1,5 @@
 # 
-# $Id: Makefile,v 1.13 1999-03-08 21:44:45 nik Exp $
+# $Id: Makefile,v 1.14 1999-03-12 22:24:07 nik Exp $
 #
 # Build the FreeBSD Handbook. Will eventually split in two, a generic .mk
 # file which can be used by many Makefiles, and a much smaller Makefile
@@ -104,6 +104,7 @@ SRCS+= mailing-lists.ent
 
 VOLUME?=	${.CURDIR:T}
 DOC?=		${.CURDIR:T}
+DISTRIBUTION?=	doc
 
 JADE=		/usr/local/bin/jade
 DSLHTML=	../../share/sgml/freebsd.dsl
