@@ -1,9 +1,13 @@
-# $FreeBSD: doc/ja_JP.eucJP/books/Makefile,v 1.6 2000/02/20 02:16:51 motoyuki Exp $
+# $FreeBSD: doc/ja_JP.eucJP/books/Makefile,v 1.7 2000/07/16 20:32:31 hrs Exp $
 
-SUBDIR = faq
+#SUBDIR = corp-net-guide
+SUBDIR = design-44bsd
+#SUBDIR+= developers-handbook
+SUBDIR+= faq
+#SUBDIR+= fdp-primer
 SUBDIR+= handbook
-SUBDIR+= ppp-primer
 SUBDIR+= porters-handbook
+SUBDIR+= ppp-primer
 
 ROOT_SYMLINKS= faq handbook
 
