@@ -1,9 +1,9 @@
 # 
-# $FreeBSD: doc/ja_JP.eucJP/books/handbook/Makefile,v 1.43 2000/02/03 03:11:06 kuriyama Exp $
+# $FreeBSD: doc/ja_JP.eucJP/books/handbook/Makefile,v 1.44 2000/07/08 11:49:05 hrs Exp $
 #
 # Build the FreeBSD Handbook (Japanese).
 #
-# Original revision: 1.28
+# Original revision: 1.29
 #
 
 MAINTAINER=kuriyama@FreeBSD.ORG
@@ -64,6 +64,8 @@ SRCS+= mailing-lists.ent
 # Japanese only
 SRCS+=	jcontrib/chapter.sgml
 SRCS+=	jauthors.ent
+
+SYMLINKS=	${DESTDIR} index.html handbook.html
 
 DOC_PREFIX?= ${.CURDIR}/../../..
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"
