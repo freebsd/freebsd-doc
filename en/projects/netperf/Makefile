@@ -1,6 +1,6 @@
 # Summary for busdma project status
 #
-# $FreeBSD: www/en/projects/busdma/Makefile,v 1.1 2002/12/09 21:36:29 rwatson Exp $
+# $FreeBSD: www/en/projects/netperf/Makefile,v 1.1 2004/11/11 22:21:42 rwatson Exp $
 
 MAINTAINER=	rwatson
 
@@ -12,6 +12,7 @@ MAINTAINER=	rwatson
 .endif
 
 DOCS=	index.sgml
+DOCS+=	cluster.sgml
 DATA=	style.css
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
