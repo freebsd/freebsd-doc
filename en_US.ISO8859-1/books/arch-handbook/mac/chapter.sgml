@@ -188,9 +188,9 @@
 
       <itemizedlist>
 	<listitem><para>Framework management interfaces</para></listitem>
-	<listitem><para>Concurrency and synchronization management
+	<listitem><para>Concurrency and synchronization 
 	  primitives.</para></listitem>
-	<listitem><para>Policy registration and management</para></listitem>
+	<listitem><para>Policy registration</para></listitem>
 	<listitem><para>Extensible security label for kernel
 	  objects</para></listitem>
 	<listitem><para>Policy entry point composition
@@ -209,6 +209,76 @@
 	<listitem><para>Various security policies implemented as MAC
 	  policy modules</para></listitem>
       </itemizedlist>
+    </sect2>
+
+    <sect2 id="mac-framework-kernel-arch-management">
+      <title>Management Interfaces</title>
+
+      <para>The TrustedBSD MAC Framework may be directly managed using
+	sysctls, loader tunables, and system calls.</para>
+
+      <para>In most cases, sysctls and loader tunables modify the same
+	parameters, and control behavior such as enforcement of
+	protections relating to various kernel subsystems.  In addition,
+	if MAC debugging support is compiled into the kernel, a variety
+	of counters will be maintained tracking label allocation.  In
+	most cases, it is advised that per-subsystem enforcement
+	controls not be used to control policy behavior in production
+	environments, as they broadly impact the operation of all
+	active policies.  Instead, per-policy controls should be
+	preferred to ensure proper policy operation.</para>
+
+      <para>Loading and unloading of policy modules is performed
+	using the system module management system calls and other
+	system interfaces, including loader variables.</para>
+    </sect2>
+
+    <sect2 id="mac-framework-kernel-arch-synchronization">
+      <title>Concurrency and Synchronization</title>
+
+      <para>As the set of active policies may change at run-time,
+	and the invocation of entry points is non-atomic,
+	synchronization is required to prevent unloading or
+	loading of new policies while an entry point invocation
+	is progress, freezing the list of policies for the
+	duration.  This is accomplished by means of a Framework
+	busy count.  Whenever an entry point is entered, the
+	busy count is incremented; whenever it is exited, the
+	busy count is decremented.  While the busy count is
+	elevated, policy list changes are not permitted, and
+	threads attempting to modify the policy list will sleep
+	until the list is not busy.  The busy count is protected
+	by a mutex, and a condition variable is used to wake up
+	sleepers waiting on policy list modifications.</para>
+
+      <para>Various optimizations are used to reduce the overhead
+	of the busy count, including avoiding the full cost of
+	incrementing and decrementing if the list is empty or
+	contains only static entries (policies that are loaded
+	before the system starts, and cannot be unloaded).</para>
+    </sect2>
+
+    <sect2 id="mac-framework-kernel-arch-registration">
+      <title>Policy Registration</title>
+
+      <para>The MAC Framework maintains two lists of active
+	policies: a static list, and a dynamic list.  The lists
+	differ only with regards to their locking semantics: an
+	elevated reference count is not required to make use of
+	the static list.  When kernel modules containing MAC
+	Framework policies are loaded, the policy module will
+	use <literal>SYSINIT</literal> to invoke a registration
+	function; when a policy module is unloaded,
+	<literal>SYSINIT</literal> will likewise invoke a
+	de-registration function.  Registration may fail if a
+	policy module is loaded more than once, if insufficient
+	resources are available for the registration (for
+	example, the policy might require labeling and
+	insufficient labeling state might be available), or
+	other policy prerequisites might not be met (some
+	policies may only be loaded prior to boot).  Likewise,
+	de-registration may fail if a policy refuses an
+	unload.</para>
     </sect2>
 
     <sect2 id="mac-framework-kernel-arch-entrypoints">
@@ -260,11 +330,73 @@
 	of string-based labels provides by user applications, and can
 	expose multiple label elements to applications if desired.</para>
 
+      <para>In-memory labels are stored in <structname>struct
+	label</structname>, which consists of a fixed-length array
+	of unions, each holding a <literal>void *</literal> pointer
+	and a <literal>long</literal>.  Policies registering for
+	label storage will be assigned a "slot" identifier, which
+	may be used to dereference the label storage.  The semantics
+	of the storage are left entirely up to the policy module:
+	modules are provided with a variety of entry points
+	associated with the kernel object life cycle, including
+	initialization, association/creation, and destruction.  Using
+	these interfaces, it is possible to implement reference
+	counting and other storage mechanisms.  Direct access to
+	the kernel object is generally not required by policy
+	modules to retrieve a label, as the MAC Framework generally
+	passes both a pointer to the object and a direct pointer
+	to the object's label into entry points.</para>
+
+      <para>Initialization entry points frequently include a blocking
+	disposition flag indicating whether or not an initialization
+	is permitted to block; if blocking is not permitted, a failure
+	may be returned to cancel allocation of the label.  This may
+	occur, for example, in the network stack during interrupt
+	handling, where blocking is not permitted.  Due to the
+	performance cost of maintaining labels on in-flight network
+	packets (Mbufs), policies must specifically declare a
+	requirement that Mbuf labels be allocated.  Dynamically
+	loaded policies making use of labels must be able to handle
+	the case where their init function has not been called on
+	an object, as objects may already exist when the policy is
+	loaded.</para>
+
       <para>In the case of file system labels, special support is
 	provided for the persistent storage of security labels in
 	extended attributes.  Where available, EA transactions
 	are used to permit consistent compound updates of
 	security labels on vnodes.</para>
+
+      <note><para>Currently, if a labeled policy permits dynamic
+	unloading, its state slot cannot be reclaimed.</para></note>
+    </sect2>
+
+    <sect2 id="mac-framework-kernel-arch-syscalls">
+      <title>System Calls</title>
+
+      <para>The MAC Framework implements a number of system calls:
+	most of these calls support the policy-agnostic label
+	retrieval and manipulation APIs exposed to user
+	applications.</para>
+
+      <para>The label management calls accept a label description
+	structure, <structname>struct mac</structname>, which
+	contains a series of MAC label elements.  Each element
+	contains a character string name, and character string
+	value.  Each policy will be given the chance to claim a
+	particular element name, permitting policies to expose
+	multiple independent elements if desired.  Policy modules
+	perform the internalization and externalization between
+	kernel labels and user-provided labels via entry points,
+	permitting a variety of semantics.  Label management system
+	calls are generally wrapped by user library functions to
+	perform memory allocation and error handling.</para>
+
+      <para>In addition, <function>mac_syscall()</function>
+	permits policy modules to create new system calls without
+	allocating system calls.  <function>mac_execve()</function>
+	permits an atomic process credential label change when
+	executing a new image.</para>
     </sect2>
   </sect1>
 
