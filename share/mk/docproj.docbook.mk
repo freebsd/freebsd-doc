@@ -1,5 +1,5 @@
 #
-# $Id: docproj.docbook.mk,v 1.7 1999-08-16 21:08:12 nik Exp $
+# $Id: docproj.docbook.mk,v 1.8 1999-08-18 18:46:58 nik Exp $
 #
 # This include file <docproj.docbook.mk> handles installing documentation
 # from the FreeBSD Documentation Project.
@@ -365,9 +365,9 @@ install-${_cf}: index.html
 		exit 1;							\
 	fi
 	cp -f `xargs < HTML.manifest` ${DESTDIR}
-	for file in `xargs < HTML.manifest`; do				\
+	-for file in `xargs < HTML.manifest`; do			\
 		chmod ${DOCMODE} ${DESTDIR}/$$file;			\
-		-chown ${DOCOWN}:${DOCGROUP} ${DESTDIR}/$$file;		\
+		chown ${DOCOWN}:${DOCGROUP} ${DESTDIR}/$$file;		\
 	done
 	if [ -f ${.OBJDIR}/${DOC}.ln ]; then 				\
 		(cd ${DESTDIR}; sh ${.OBJDIR}/${DOC}.ln); 		\
