@@ -64,6 +64,7 @@ MAN1 =	a2p.1\
 	diff3.1\
 	dig.1\
 	dnsquery.1\
+	dnskeygen.1\
 	domainname.1\
 	doscmd.1\
 	dtmfdecode.1\
@@ -192,6 +193,7 @@ MAN1 =	a2p.1\
 	merge.1\
 	mesg.1\
 	minigzip.1\
+	mk_cmds.1\
 	mkdep.1\
 	mkdir.1\
 	mkfifo.1\
