@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp 
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.26 2001-01-21 15:46:08 wosch Exp $
+# $Id: man.cgi,v 1.27 2001-02-07 15:00:47 wosch Exp $
 
 #use Data::Dumper;
 #use Carp;
@@ -195,6 +195,7 @@ $manPathDefault = 'FreeBSD 4.2-RELEASE';
      'Red Hat Linux/i386 5.2', "$manLocalDir/RedHat-5.2-i386",
      'Red Hat Linux/i386 6.1', "$manLocalDir/RedHat-6.1-i386",
      'Red Hat Linux/i386 6.2', "$manLocalDir/RedHat-6.2-i386",
+     'Red Hat Linux/i386 7.0', "$manLocalDir/RedHat-7.0-i386",
 
      'SunOS 5.8',	      "$manLocalDir/SunOS-5.8",
      'SunOS 5.7',	      "$manLocalDir/SunOS-5.7",
@@ -229,8 +230,8 @@ while (($key,$val) = each %manPath) {
      'freebsd-current', 'FreeBSD 5.0-current',
      'slackware', 'Linux Slackware 3.1',
      'linux-de', 'deutsch - Linux/GNU',
-     'redhat', 'Red Hat Linux/i386 6.2',
-     'linux', 'Red Hat Linux/i386 6.2',
+     'redhat', 'Red Hat Linux/i386 7.0',
+     'linux', 'Red Hat Linux/i386 7.0',
      'netbsd', 'NetBSD 1.5',
      'openbsd', 'OpenBSD 2.8',
      'v7', 'Unix Seventh Edition', 
@@ -764,7 +765,7 @@ Please direct questions about this server to
 URL:  <A HREF="$BASE" target=_parent>$www{'home'}$BASE</a><br>
 ETX
 
-    print q{$Date: 2001-01-21 15:46:08 $ $Revision: 1.26 $};
+    print q{$Date: 2001-02-07 15:00:47 $ $Revision: 1.27 $};
     print "<br>\n";
     print "</BODY>\n</HTML>\n";
     0;
