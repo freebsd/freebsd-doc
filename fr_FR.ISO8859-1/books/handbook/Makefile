@@ -2,8 +2,8 @@
 # The FreeBSD French Documentation Project
 #
 # $FreeBSD$
-# $Id: Makefile,v 1.6 2002-07-29 17:53:02 blackend Exp $
-# Original revision: 1.56
+# $Id: Makefile,v 1.7 2002-08-28 16:51:55 blackend Exp $
+# Original revision: 1.60
 #
 # Build the FreeBSD Handbook.
 #
@@ -107,6 +107,13 @@ IMAGES+= install/example-dir2.eps
 IMAGES+= install/example-dir3.eps
 IMAGES+= install/example-dir4.eps
 IMAGES+= install/example-dir5.eps
+#IMAGES+= vinum/vinum-concat.pic
+#IMAGES+= vinum/vinum-mirrored-vol.pic
+#IMAGES+= vinum/vinum-raid10-vol.pic
+#IMAGES+= vinum/vinum-raid5-org.pic
+#IMAGES+= vinum/vinum-simple-vol.pic
+#IMAGES+= vinum/vinum-striped-vol.pic
+#IMAGES+= vinum/vinum-striped.pic
 
 # Images from the cross-document image library
 IMAGES_LIB=  callouts/1.png
@@ -149,6 +156,7 @@ SRCS+= printing/chapter.sgml
 SRCS+= security/chapter.sgml
 SRCS+= serialcomms/chapter.sgml
 SRCS+= users/chapter.sgml
+SRCS+= vinum/chapter.sgml
 SRCS+= x11/chapter.sgml
 SRCS+= ports/chapter.sgml
 SRCS+= preface/preface.sgml
