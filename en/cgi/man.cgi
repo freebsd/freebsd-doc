@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp 
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.23 2001-01-04 19:44:13 wosch Exp $
+# $Id: man.cgi,v 1.24 2001-01-11 19:56:37 wosch Exp $
 
 #use Data::Dumper;
 #use Carp;
@@ -347,7 +347,10 @@ sub debug {
 }
 
 sub get_the_sources {
-    open(R, $0) || &mydie("open $0: $!\n");
+    local($file) = '/usr/local/www/bsddoc/bin/man.cgi';
+    $file = $0 if ! -f $file;
+
+    open(R, $file) || &mydie("open $file: $!\n");
     print "Content-type: text/plain\n\n";
     while(<R>) { print }
     close R;
@@ -759,7 +762,7 @@ Please direct questions about this server to
 URL:  <A HREF="$BASE" target=_parent>$www{'home'}$BASE</a><br>
 ETX
 
-    print q{$Date: 2001-01-04 19:44:13 $ $Revision: 1.23 $};
+    print q{$Date: 2001-01-11 19:56:37 $ $Revision: 1.24 $};
     print "<br>\n";
     print "</BODY>\n</HTML>\n";
     0;
