@@ -1,7 +1,7 @@
 <!--
      The FreeBSD Documentation Project
 
-     $FreeBSD: doc/en_US.ISO8859-1/books/handbook/advanced-networking/chapter.sgml,v 1.42 2001/06/05 01:37:15 dd Exp $
+     $FreeBSD: doc/en_US.ISO8859-1/books/handbook/advanced-networking/chapter.sgml,v 1.43 2001/06/13 11:36:34 tom Exp $
 -->
 
 <chapter id="advanced-networking">
@@ -2944,7 +2944,7 @@ dhcp_flags=""</programlisting>
       <sect3>
         <title><filename>/etc/namedb/named.conf</filename></title>
 
-        <programlisting>// $FreeBSD: doc/en_US.ISO8859-1/books/handbook/advanced-networking/chapter.sgml,v 1.42 2001/06/05 01:37:15 dd Exp $
+        <programlisting>// $FreeBSD: doc/en_US.ISO8859-1/books/handbook/advanced-networking/chapter.sgml,v 1.43 2001/06/13 11:36:34 tom Exp $
 //
 // Refer to the named(8) man page for details.  If you are ever going
 // to setup a primary server, make sure you've understood the hairy
@@ -3451,6 +3451,217 @@ www             IN CNAME        @
     </sect2>
   </sect1>
 
+  <sect1 id="natd">
+    <title>Network Address Transalation daemon (natd)</title>
+    <para><emphasis>Contributed by &a.chern;, June 2001.
+          </emphasis>
+    </para>
+
+    <sect2 id="overview">
+      <title>Overview</title>
+      <para>FreeBSD's Network Address Transalation daemon, commonly known as
+        &man.natd.8; is a daemon that accepts incoming raw IP packets,
+        changes the source to the local machine and re-injects these packets
+        back into the outgoing IP packet stream. natd does this by changing 
+        the source ip and port such that when data is received back, it is 
+        able to determine the original location of the data and forward it 
+        back to its original requestor.</para>
+
+      <para>The most common use of NAT is to perform what is commonly known as
+        Internet Connection Sharing.</para>
+    </sect2>
+
+    <sect2 id="setup">
+      <title>Setup</title>
+      <para>Due to the diminishing ip space in ipv4, and the increased number
+        of users on high-speed consumer lines such as cable or DSL, people are
+        in more and more need of an Internet Connection Sharing solution.  The
+        ability to connect several computers online through one connection and
+        ip makes &man.natd.8; a reasonable choice.</para>
+
+      <para>Most commonly, a user has a machine connected to a cable or DSL
+        line with one ip and wishes to use this one connected computer to
+        provide internet access to several more over a LAN.</para>
+
+      <para>To do this, the FreeBSD machine on the Internet must act as a 
+        gateway.  This gateway machine must have two NICs--one for connecting
+        to the Internet router, the other connecting to a LAN.  All the
+        machines on the LAN are connected through a hub or switch.</para>
+
+      <programlisting>  _______       __________       ________
+ |       |     |          |     |        |
+ |  Hub  |-----| Client B |-----| Router |----- Internet
+ |_______|     |__________|     |________|
+     |
+ ____|_____
+|          |
+| Client A |
+|__________|</programlisting>
+      <para>With this setup, the machine without Internet access can use
+        the machine with access as a gateway to access the outside 
+        world.</para>
+    </sect2>
+
+    <sect2 id="configuration">
+      <title>Configuration</title>
+      <para>The following options must be in the kernel configuration
+        file:</para>
+      <programlisting>options IPFIREWALL
+options IPDIVERT</programlisting>
+
+      <para>Additionally, at choice, the following may also be suitable:</para>
+      <programlisting>options IPFIREWALL_DEFAULT_TO_ACCEPT
+options IPFIREWALL_VERBOSE</programlisting>
+
+      <para>The following must be in <filename>/etc/rc.conf</filename>:</para>
+
+      <programlisting>gateway_enable="YES"
+firewall_enable="YES"
+firewall_type="OPEN"
+natd_enable="YES"
+natd_interface="<replaceable>fxp0</replaceable>"
+natd_flags=""</programlisting>
+
+      <informaltable frame="none">
+        <tgroup cols="2">
+          <tbody>
+            <row>
+              <entry>gateway_enable="YES"</entry>
+              <entry>Sets up the machine to act as a gateway.  Running
+                <command>sysctl -w net.inet.ip.forwarding=1</command>
+                would have the same effect.</entry>
+            </row>
+            <row><entry>firewall_enable="YES"</entry>
+             <entry>Enables the firewall rules in 
+               <filename>/etc/rc.firewall</filename> at boot.</entry>
+            </row>
+            <row><entry>firewall_type="OPEN"</entry>
+              <entry>This specifies a predefined firewall ruleset that
+                allows anything in.  See
+                <filename>/etc/rc.firewall</filename> for additional
+                types.</entry>
+            </row>
+            <row>
+              <entry>natd_interface="fxp0"</entry>
+              <entry>Indicates which interface to forward packets through. 
+                (the interface connected to the Internet)</entry>
+            </row>
+            <row>
+              <entry>natd_flags=""</entry>
+              <entry>Any additional configuration options passed to 
+                &man.natd.8; on boot.</entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </informaltable>
+
+      <para>Having the previous options defined in 
+        <filename>/etc/rc.conf</filename> would run 
+        <command>natd -interface fxp0</command> at boot.  This can also 
+        be run manually.</para>
+
+      <para>Each machine and interface behind the LAN should be assigned ip 
+        numbers in the private network space as defined by
+        <ulink url="http://info.internet.isi.edu:80/in-notes/rfc/files/rfc1918.txt">RFC 1918</ulink>
+        and have a default gateway of the natd machine's internal ip.</para>
+
+      <para>For example, client a and b behind the LAN have ips of 192.168.0.2
+        and 192.168.0.3, while the natd machine's LAN interface has an ip of
+        192.168.0.1.  Client a and b's default gateway must be set to that of
+        the natd machine, 192.168.0.1.  The natd machine's external, or 
+        Internet interface does not require any special modification for natd
+        to work.</para>
+    </sect2>
+
+    <sect2 id="port-redirection">
+      <title>Port Redirection</title>
+
+      <para>The drawback with natd is that the LAN clients are not accessible
+        from the Internet. Clients on the LAN can make outgoing connections to
+        the world but cannot receive incoming ones.  This presents a problem 
+        if trying to run Internet services on one of the LAN client machines.
+        A simple way around this is to redirect selected Internet ports on the
+        natd machine to a LAN client.
+      </para>
+
+      <para>For example, an IRC server runs on Client A, and a web server runs
+        on Client B.  For this to work properly, connections received on ports
+        6667 (irc) and 80 (web) must be redirected to the respective machines.
+      </para>
+
+      <para>The <command>-redirect_port</command> must be passed to 
+        &man.natd.8; with the proper options.  The syntax is as follows:</para>
+      <para><programlisting>     -redirect_port proto targetIP:targetPORT[-targetPORT]
+                 [aliasIP:]aliasPORT[-aliasPORT]
+                 [remoteIP[:remotePORT[-remotePORT]]]</programlisting></para>
+
+      <para>In the above example, the argument should be:
+        <programlisting>    -redirect_port tcp 192.168.0.2:6667 6667
+    -redirect_port tcp 192.168.0.3:80 80</programlisting>
+        This will redirect the proper <emphasis>tcp</emphasis> ports to the 
+        LAN client machines.
+      </para>
+
+      <para>The -redirect_port argument can be used more versatily to indicate
+        port ranges over individual ports.  For example, 
+        <replaceable>tcp 192.168.0.2:2000-3000 2000-3000</replaceable> would 
+        redirect all connections received on ports 2000 to 3000 to ports 2000
+        to 3000 on Client A.</para>
+
+      <para>These options can be used when directly running 
+        &man.natd.8; or placed within the
+        <programlisting>natd_flags=""</programlisting> option in 
+        <filename>/etc/rc.conf</filename>.</para>
+
+      <para>For further configuration options, consult &man.natd.8;</para>
+    </sect2>
+
+    <sect2 id="address-redirection">
+      <title>Address Redirection</title>
+      <para>Address redirection is useful if several ips are available, yet
+        they must be on one machine.  With this, &man.natd.8; can assign each
+        LAN client its own external ip.  &man.natd.8; then rewrites outgoing
+        packets from the LAN clients with the proper external ip and redirects
+        all traffic incoming on that particular ip back to the specific LAN 
+        client.  This is also known as static NAT. For example, the ips 
+        128.1.1.1, 128.1.1.2, and 128.1.1.3 belong to the natd gateway 
+        machine.  128.1.1.1 can be used as the natd gateway machine's external
+        ip address, while 128.1.1.2 and 128.1.1.3 are forwarded back to LAN 
+        clients A and B.</para>
+
+      <para>The -redirect_address syntax is as follows:</para>
+      <para><programlisting> -redirect_address localIP publicIP</programlisting>
+      </para>
+
+      <informaltable frame="none">
+        <tgroup cols="2">
+          <tbody>
+            <row>
+              <entry>localIP</entry>
+              <entry>The internal ip of the LAN client.</entry>
+            </row>
+            <row>
+              <entry>publicIP</entry>
+              <entry>The external ip corresponding to the LAN client.</entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </informaltable>
+
+      <para>In the example, this argument would read:</para>
+      <programlisting>    -redirect_address 192.168.0.2 128.1.1.2
+    -redirect_address 192.168.0.3 128.1.1.3</programlisting>
+
+      <para>Like -redirect_port, these arguments are also placed within 
+        natd_flags of <filename>/etc/rc.conf</filename>.  With address 
+        redirection, there is no need for port redirection since all data 
+        received on a particular ip address is redirected.</para>
+
+      <para>The external ips on the natd machine must be active and aliased 
+        to the external inerface.  Look at &man.rc.conf.5; to do so.</para>
+
+    </sect2>
+  </sect1>
 </chapter>
 
 <!--
