@@ -22,7 +22,8 @@
       
       <xsl:copy-of select="$header1"/>
 
-      <body xsl:use-attribute-sets="att.body">
+      <body bgcolor="#FFFFFF" text="#000000" link="#0000FF" vlink="#840084"
+	    alink="#0000FF">
 
 	<xsl:copy-of select="$header2"/>
 
