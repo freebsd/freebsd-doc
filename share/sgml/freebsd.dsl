@@ -18,9 +18,6 @@
       <![ %output.html; [
         <!-- Configure the stylesheet using documented variables -->
 
-        (define %stylesheet%
-          "handbook.css")
-
         (define %gentext-nav-use-tables%
           ;; Use tables to build the navigation headers and footers?
           #t)
@@ -43,7 +40,7 @@
 
         (define html-manifest
           ;; Write a manifest?
-          #t)
+          #f)
 
         <!-- This replaces the existing mechanism for showing verbatim
              blocks of text (programlistings, screens, and so forth.
