@@ -285,7 +285,6 @@ MAN8 =	IPXrouted.8\
 	wicontrol.8\
 	wire-test.8\
 	wlconfig.8\
-	xtend.8\
 	yp.8\
 	yp_mkdb.8\
 	ypbind.8\
@@ -321,6 +320,7 @@ MLINKS+=rc.8 rc.network.8
 MLINKS+=rc.8 rc.pccard.8
 MLINKS+=rc.8 rc.serial.8
 MLINKS+=rc.8 rc.shutdown.8
+MLINKS+=rc.8 rc.d.8
 MLINKS+=reboot.8 halt.8
 MLINKS+=reboot.8 fastboot.8
 MLINKS+=reboot.8 fasthalt.8
