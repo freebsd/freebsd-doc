@@ -14,7 +14,6 @@ MAN8 =	IPXrouted.8\
 	atm.8\
 	atmarpd.8\
 	atrun.8\
-	bad144.8\
 	badsect.8\
 	boot0cfg.8\
 	boot_i386.8\
