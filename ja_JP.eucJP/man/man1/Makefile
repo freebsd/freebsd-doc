@@ -65,6 +65,7 @@ MAN1 =	a2p.1\
 	dig.1\
 	dnsquery.1\
 	domainname.1\
+	doscmd.1\
 	du.1\
 	echo.1\
 	ed.1\
