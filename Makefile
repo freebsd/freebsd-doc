@@ -1,6 +1,6 @@
-# $Id: Makefile,v 1.8 1999-03-12 22:25:16 nik Exp $
+# $Id: Makefile,v 1.9 1999-03-27 15:56:08 nik Exp $
 
-SUBDIR=	FAQ handbook
+SUBDIR=	FAQ 
 
 # List of all language-specific subdirs.
 LANGSUBDIR=     en es ja ru zh
