@@ -9,11 +9,14 @@ INSTALL_ONLY_COMPRESSED?=
 
 JADEFLAGS+=	-V %generate-article-toc%
 
-SRCS= article.sgml pam_app.c pam_module.c
+SRCS= article.sgml pam_app.c pam_conv.c pam_module.c
 
-CLEANFILES+= pam_app.c pam_module.c
+CLEANFILES+= pam_app.c pam_conv.c pam_module.c
 
 pam_app.c: su.c
+	sed -e '/^[\/ ]\*/d' ${.ALLSRC} >${.TARGET}
+
+pam_conv.c: converse.c
 	sed -e '/^[\/ ]\*/d' ${.ALLSRC} >${.TARGET}
 
 pam_module.c: pam_unix.c
