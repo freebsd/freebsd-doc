@@ -9,6 +9,7 @@ SUBDIR+= freebsd-questions
 SUBDIR+= java-tomcat
 SUBDIR+= laptop
 SUBDIR+= new-users
+SUBDIR+= releng
 
 DOC_PREFIX?= ${.CURDIR}/../..
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"
