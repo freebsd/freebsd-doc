@@ -1,7 +1,7 @@
 # $FreeBSD$
 # The FreeBSD Russian Documentation Project
-# $FreeBSDru: frdp/www/ru/alpha/Makefile,v 1.3 2000/11/10 17:04:48 phantom Exp $
-# Original revision: 
+# $FreeBSDru: frdp/www/ru/alpha/Makefile,v 1.4 2000/11/29 12:50:51 phantom Exp $
+# Original revision: 1.8
  
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
