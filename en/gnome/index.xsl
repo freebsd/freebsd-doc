@@ -35,33 +35,33 @@
 
                           <p><font size="+1" color="#990000"><b>GNOME on FreeBSD</b></font>
                             <small><br/>
-                              <a href="http://www.FreeBSD.org/gnome/">GNOME on FreeBSD Home</a><br/>
-                              <a href="docs/faq.html#q1">Installation Instructions</a><br/>
-                              <a href="../ports/gnome.html">Available Applications</a><br/>
-                              <a href="docs/volunteer.html">How to Help</a><br/>
-                              <a href="docs/bugging.html">Reporting a Bug</a><br/>
-                              <a href="screenshots.html">Screenshots</a><br/>
-                              <a href="contact.html">Contact Us</a><br/>
+                              &#183; <a href="http://www.FreeBSD.org/gnome/">GNOME on FreeBSD Home</a><br/>
+                              &#183; <a href="docs/faq.html#q1">Installation Instructions</a><br/>
+                              &#183; <a href="../ports/gnome.html">Available Applications</a><br/>
+                              &#183; <a href="docs/volunteer.html">How to Help</a><br/>
+                              &#183; <a href="docs/bugging.html">Reporting a Bug</a><br/>
+                              &#183; <a href="screenshots.html">Screenshots</a><br/>
+                              &#183; <a href="contact.html">Contact Us</a><br/>
                             </small></p>
 
                           <p><font size="+1" color="#990000"><b>Documentation</b></font>
                             <small><br/>
-                              <a href="docs/faq.html">FAQ</a><br/>
-                              <a href="docs/porting.html">Creating Ports</a><br/>
+                              &#183; <a href="docs/faq.html">FAQ</a><br/>
+                              &#183; <a href="docs/porting.html">Creating Ports</a><br/>
                             </small></p>
 
                           <p><font size="+1" color="#990000"><b>Resources</b></font>
                             <small><br/>
-                              <a href="http://www.gnome.org/">GNOME Project</a><br/>
-                              <a href="http://www.gnome.org/gnome-office/">GNOME Office</a><br/>
-                              <a href="http://gnu-darwin.sourceforge.net/GNOME/">GNOME on GNU/Darwin</a><br/>
+                              &#183; <a href="http://www.gnome.org/">GNOME Project</a><br/>
+                              &#183; <a href="http://www.gnome.org/gnome-office/">GNOME Office</a><br/>
+                              &#183; <a href="http://gnu-darwin.sourceforge.net/GNOME/">GNOME on GNU/Darwin</a><br/>
                             </small></p>
 
                           <p><font size="+1" color="#990000"><b>Related Projects</b></font>
                             <small><br/>
-                              <a href="http://www.kde.org/">KDE Project</a><br/>
-                              <a href="http://freebsd.kde.org/">KDE on FreeBSD</a><br/>
-                              <a href="http://www.opengroup.org/desktop/">CDE (commercial)</a><br/>
+                              &#183; <a href="http://www.kde.org/">KDE Project</a><br/>
+                              &#183; <a href="http://freebsd.kde.org/">KDE on FreeBSD</a><br/>
+                              &#183; <a href="http://www.opengroup.org/desktop/">CDE (commercial)</a><br/>
                             </small></p>
 
                           <form action="http://www.FreeBSD.org/cgi/search.cgi" method="get">
