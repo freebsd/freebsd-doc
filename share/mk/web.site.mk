@@ -1,5 +1,5 @@
 # bsd.web.mk
-# $FreeBSD$
+# $FreeBSD: www/share/mk/web.site.mk,v 1.57 2004/04/07 13:04:55 phantom Exp $
 
 #
 # Build and install a web site.
@@ -61,7 +61,7 @@ TIDY?=		${PREFIX}/bin/tidy
 _TIDYLOGFILE=	tidyerr.${.TARGET}
 CLEANFILES+=	tidyerr.*
 .else
-_TIDY_LOGFILE=	/dev/null
+_TIDYLOGFILE=	/dev/null
 .endif
 TIDYOPTS?=	-i -m -raw -preserve -f ${_TIDYLOGFILE} -asxml ${TIDYFLAGS}
 
