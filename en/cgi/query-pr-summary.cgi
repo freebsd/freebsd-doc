@@ -1,5 +1,5 @@
-#!/usr/bin/perl
-# $FreeBSD: www/en/cgi/query-pr-summary.cgi,v 1.28 2000/10/29 22:16:41 steve Exp $
+#!/usr/bin/perl -T
+# $FreeBSD: www/en/cgi/query-pr-summary.cgi,v 1.29 2000/11/29 13:59:24 wosch Exp $
 
 $html_mode     = 1 if $ENV{'DOCUMENT_ROOT'};
 $self_ref      = $ENV{'SCRIPT_NAME'};
@@ -32,8 +32,8 @@ $closed_too    = 0;
 	"low",		"l"
 );
 
-require "cgi-lib.pl";
-require "cgi-style.pl";
+require "./cgi-lib.pl";
+require "./cgi-style.pl";
 require "getopts.pl";
 
 if ($ENV{'QUERY_STRING'} eq 'query') {

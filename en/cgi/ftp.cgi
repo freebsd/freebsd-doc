@@ -1,9 +1,9 @@
-#!/usr/bin/perl
+#!/usr/bin/perl -T
 #
-# $FreeBSD$
+# $FreeBSD: www/en/cgi/ftp.cgi,v 1.3 2000/04/03 08:45:51 phantom Exp $
 
-require 'cgi-lib.pl';
-require 'cgi-style.pl';
+require './cgi-lib.pl';
+require './cgi-style.pl';
 
 
 $newloc = "http://www.FreeBSD.org/";
