@@ -2,7 +2,7 @@
      The FreeBSD Documentation Project
      The FreeBSD French Documentation Project
 
-     $Id: freebsd.dsl,v 1.5 2002-05-26 18:34:15 gioria Exp $
+     $Id: freebsd.dsl,v 1.6 2002-06-19 19:05:23 blackend Exp $
      $FreeBSD$
      Original revision: 1.3
 
@@ -52,6 +52,14 @@
                       attributes: (list (list "href" "mailto:doc@FreeBSD.org"))
                   (literal "doc@FreeBSD.org"))
                 (literal ">.")))))
+
+	<!-- Generate links to HTML man pages -->                        
+        (define %refentry-xref-link% #t)                                 
+                                                                         
+        <!-- Specify how to generate the man page link HREF -->          
+        (define ($create-refentry-xref-link$ refentrytitle manvolnum)    
+	  (string-append "http://www.FreeBSD.org/cgi/man.cgi?query="
+		 refentrytitle "&" "sektion=" manvolnum))
 
       ]]>
 	<!-- Fix a problem with the French localisation. The bug was
