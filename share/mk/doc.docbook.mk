@@ -131,6 +131,10 @@ DOCBOOKCATALOG=	${PREFIX}/share/sgml/docbook/catalog
 DSSSLCATALOG=	${PREFIX}/share/sgml/docbook/dsssl/modular/catalog
 COLLATEINDEX=	${PREFIX}/share/sgml/docbook/dsssl/modular/bin/collateindex.pl
 
+XSLTPROC?=	${PREFIX}/bin/xsltproc
+XSLHTML?=	${PREFIX}/share/xml/docbook/xsl/modular/html/docbook.xsl
+XSLFO?=		${PREFIX}/share/xml/docbook/xsl/modular/fo/docbook.xsl
+
 IMAGES_LIB?=
 
 CATALOGS=	-c ${LANGUAGECATALOG} -c ${FREEBSDCATALOG} \
@@ -354,6 +358,10 @@ CLEANFILES+= 		${HTML_SPLIT_INDEX} ${HTML_INDEX} ${PRINT_INDEX}
 
 all: ${_docs}
 
+${DOC}.xml: ${SRCS}
+	echo '<!DOCTYPE book SYSTEM "/usr/local/share/xml/docbook/docbookx.dtd">' > ${DOC}.xml
+	sx ${CATALOGS} ${SGMLFLAGS} -xlower -xndata ${MASTERDOC} | tail -n +2 >> ${DOC}.xml
+
 index.html HTML.manifest: ${SRCS} ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} \
 			  ${INDEX_SGML} ${HTML_SPLIT_INDEX} ${LOCAL_CSS_SHEET}
 	${JADE} -V html-manifest ${HTMLOPTS} -ioutput.html.images \
@@ -362,11 +370,17 @@ index.html HTML.manifest: ${SRCS} ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} \
 	-${TIDY} ${TIDYOPTS} $$(${XARGS} < HTML.manifest)
 .endif
 
+.if ${STYLESHEET_TYPE} == "dsssl"
 ${DOC}.html: ${SRCS} ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} \
 	     ${INDEX_SGML} ${HTML_INDEX} ${LOCAL_CSS_SHEET}
 	${JADE} -V nochunks ${HTMLOPTS} -ioutput.html.images \
 		${JADEOPTS} -t sgml ${MASTERDOC} > ${.TARGET} || \
 		(${RM} -f ${.TARGET} && false)
+.elif ${STYLESHEET_TYPE} == "xsl"
+${DOC}.html: ${DOC}.xml ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} \
+	${INDEX_SGML} ${LOCAL_CSS_SHEET}     
+	${XSLTPROC} ${XSLHTML} ${DOC}.xml > ${.TARGET}
+.endif
 .if !defined(NO_TIDY)
 	-${TIDY} ${TIDYOPTS} ${.TARGET}
 .endif
