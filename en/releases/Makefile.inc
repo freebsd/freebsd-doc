@@ -1,2 +1,2 @@
-WEBBASE=	/data/releases
+WEBBASE?=	/data/releases
 
