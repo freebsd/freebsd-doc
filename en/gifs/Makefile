@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.21 1998-10-31 11:54:53 wosch Exp $
+# $Id: Makefile,v 1.22 1998-11-01 12:55:38 wosch Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -34,5 +34,6 @@ DATA+=	bsdm.jpg
 DATA+=	bsdmb.jpg
 DATA+=	fhp_mini.jpg
 DATA+=  mall_title_tiny.gif
+DATA+=  plueschtier-tiny.jpg
 
 .include "../web.mk"
