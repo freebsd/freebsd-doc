@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/index.xsl,v 1.68 2003/07/18 08:12:08 blackend Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.69 2003/07/22 17:00:48 simon Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   
@@ -6,7 +6,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.68 2003/07/18 08:12:08 blackend Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.69 2003/07/22 17:00:48 simon Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -55,14 +55,11 @@
 		  <option value="http://www2.de.FreeBSD.org">IPv6 Germany</option>
 		  <option value="http://www.jp.FreeBSD.org/www.FreeBSD.org/">IPv6 (6Bone) Japan</option>
 		  <option value="http://www2.no.FreeBSD.org/">IPv6 Norway</option>
+		  <option value="http://www4.us.FreeBSD.org/">IPv6 USA/1</option>
+		  <option value="http://www5.us.FreeBSD.org/">IPv6 USA/2</option>
 		  <option value="http://www.ar.FreeBSD.org/">Argentina</option>
 		  <option value="http://www.au.FreeBSD.org/">Australia/1</option>
 		  <option value="http://www2.au.FreeBSD.org/">Australia/2</option>
-		  <option value="http://www3.au.FreeBSD.org/">Australia/3</option>
-		  <option value="http://www4.au.FreeBSD.org/">Australia/4</option>
-		  <option value="http://www5.au.FreeBSD.org/">Australia/5</option>
-		  <option value="http://www6.au.FreeBSD.org/">Australia/6</option>
-		  <option value="http://freebsd.itworks.com.au/">Australia/8</option>
 		  <option value="http://www.at.FreeBSD.org/">Austria/1</option>
 		  <option value="http://www2.at.FreeBSD.org/">Austria/2</option>
 		  <option value="http://freebsd.unixtech.be/">Belgium</option>
@@ -70,37 +67,31 @@
 		  <option value="http://www2.br.FreeBSD.org/www.freebsd.org/">Brazil/2</option>
 		  <option value="http://www3.br.FreeBSD.org/">Brazil/3</option>
 		  <option value="http://www.bg.FreeBSD.org/">Bulgaria</option>
-		  <option value="http://www.ca.FreeBSD.org/">Canada</option>
+		  <option value="http://www.ca.FreeBSD.org/">Canada/1</option>
 		  <option value="http://www2.ca.FreeBSD.org/">Canada/2</option>
-		  <!--
-		  <option value="http://www3.ca.FreeBSD.org/">Canada/3</option>
-		  -->
 		  <option value="http://www.cn.FreeBSD.org/">China</option>
 		  <option value="http://www.cz.FreeBSD.org/">Czech Republic</option>
-		  <!--
-		  <option value="http://www2.cz.FreeBSD.org/">Czech Republic/2</option>
-		  -->
 		  <option value="http://www.dk.FreeBSD.org/">Denmark/1</option>
-		  <option value="http://www3.dk.FreeBSD.org/">Denmark/3</option>
+		  <option value="http://www3.dk.FreeBSD.org/">Denmark/2</option>
 		  <option value="http://www.ee.FreeBSD.org/">Estonia</option>
-		  <option value="http://www.fi.FreeBSD.org/">Finland</option>
+		  <option value="http://www.fi.FreeBSD.org/">Finland/1</option>
 		  <option value="http://www2.fi.FreeBSD.org/">Finland/2</option>
 		  <option value="http://www.fr.FreeBSD.org/">France</option>
 		  <option value="http://www.de.FreeBSD.org/">Germany/1</option>
 		  <option value="http://www1.de.FreeBSD.org/">Germany/2</option>
 		  <option value="http://www2.de.FreeBSD.org/">Germany/3</option>
-		  <option value="http://www.gr.FreeBSD.org/">Greece</option>
-		  <option value="http://www.FreeBSD.gr/">Greece/1</option>
+		  <option value="http://www.gr.FreeBSD.org/">Greece/1</option>
+		  <option value="http://www.FreeBSD.gr/">Greece/2</option>
 		  <option value="http://www.hk.FreeBSD.org/">Hong Kong</option>
 		  <option value="http://www.hu.FreeBSD.org/">Hungary/1</option>
 		  <option value="http://www2.hu.FreeBSD.org/">Hungary/2</option>
-		  <option value="http://www.is.FreeBSD.org/">Iceland</option>
-		  <option value="http://www.ie.FreeBSD.org/">Ireland/1</option>
-		  <option value="http://www2.ie.FreeBSD.org/">Ireland/2</option>
+		  <option value="http://www.is.FreeBSD.org/">Iceland/1</option>
+		  <option value="http://www.ie.FreeBSD.org/">Ireland/2</option>
+		  <option value="http://www2.ie.FreeBSD.org/">Ireland</option>
 		  <option value="http://www.it.FreeBSD.org/">Italy/1</option>
 		  <option value="http://www.gufi.org/mirrors/www.freebsd.org/data/">Italy/2</option>
 		  <option value="http://www.jp.FreeBSD.org/www.FreeBSD.org/">Japan</option>
-		  <option value="http://www.kr.FreeBSD.org/">Korea</option>
+		  <option value="http://www.kr.FreeBSD.org/">Korea/1</option>
 		  <option value="http://www2.kr.FreeBSD.org/">Korea/2</option>
 		  <option value="http://www3.kr.FreeBSD.org/">Korea/3</option>
 		  <option value="http://www.lv.FreeBSD.org/">Latvia</option>
@@ -113,12 +104,9 @@
 		  <option value="http://www.FreeBSD.org.ph/">Philippines</option>
 		  <option value="http://www.pl.FreeBSD.org/">Poland/1</option>
 		  <option value="http://www2.pl.FreeBSD.org/">Poland/2</option>
-		  <!--
-		  <option value="http://www.pt.FreeBSD.org/">Portugal/1</option>
-		  -->
-		  <option value="http://www2.pt.FreeBSD.org/">Portugal/2</option>
-		  <option value="http://www4.pt.FreeBSD.org/">Portugal/4</option>
-		  <option value="http://www.ro.FreeBSD.org/">Romania</option>
+		  <option value="http://www2.pt.FreeBSD.org/">Portugal/1</option>
+		  <option value="http://www4.pt.FreeBSD.org/">Portugal/1</option>
+		  <option value="http://www.ro.FreeBSD.org/">Romania/1</option>
 		  <option value="http://www2.ro.FreeBSD.org/">Romania/2</option>
 		  <option value="http://www3.ro.FreeBSD.org/">Romania/3</option>
 		  <option value="http://www4.ro.FreeBSD.org/">Romania/4</option>
@@ -150,15 +138,15 @@
 		  <option value="http://www.enderunix.org/freebsd/">Turkey/3</option>
 		  <option value="http://www.ua.FreeBSD.org/">Ukraine/1</option>
 		  <option value="http://www2.ua.FreeBSD.org/">Ukraine/2</option> 
+		  <option value="http://www5.ua.FreeBSD.org/">Ukraine/3</option> 
 		  <option value="http://www4.ua.FreeBSD.org/">Ukraine/Crimea</option> 
-		  <option value="http://www5.ua.FreeBSD.org/">Ukraine/5</option> 
 		  <option value="http://www.uk.FreeBSD.org/">United Kingdom/1</option>
 		  <option value="http://www2.uk.FreeBSD.org/">United Kingdom/2</option>
 		  <option value="http://www3.uk.FreeBSD.org/">United Kingdom/3</option>
 		  <option value="http://www4.uk.FreeBSD.org/">United Kingdom/4</option>
-		  <option value="http://www.FreeBSD.org/">USA/California</option>
-		  <option value="http://www3.FreeBSD.org/">USA/3</option>
-		  <option value="http://www7.FreeBSD.org/">USA/7</option>
+		  <option value="http://www.FreeBSD.org/">USA/1</option>
+		  <option value="http://www4.us.FreeBSD.org/">USA/2</option>
+		  <option value="http://www5.us.FreeBSD.org/">USA/3</option>
 		</select>
 		
 		<input type="submit" value=" Go "/>
