@@ -24,7 +24,7 @@
 #
 # ------------------------------------------------------------------------
 
-MAINTAINER=nik@FreeBSD.org
+MAINTAINER=	doc@FreeBSD.org
 
 DOC?= book
 
@@ -164,13 +164,13 @@ SGMLFLAGS+= ${CHAPTERS:S/\/chapter.sgml//:S/^/-i chap./}
 # limits in pdftex.  Until we split the Handbook up, build the PDF 
 # version using ps2pdf instead of pdftex.
 
-PS2PDF?=	${PREFIX}/bin/ps2pdf
+#PS2PDF?=	${PREFIX}/bin/ps2pdf
 
-book.tex-pdf:
-	${TOUCH} book.tex-pdf
+#book.tex-pdf:
+#	${TOUCH} book.tex-pdf
 
-book.pdf: book.ps
-	${PS2PDF} book.ps book.pdf
+#book.pdf: book.ps
+#	${PS2PDF} book.ps book.pdf
 
 pgpkeyring: pgpkeys/chapter.sgml
 	@${JADE} -V nochunks ${JADEOPTS} -d ${DSLPGP} -t sgml ${MASTERDOC}
