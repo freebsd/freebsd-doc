@@ -1,6 +1,6 @@
 # 
 # $FreeBSD$
-# $FreeBSDde: de-docproj/books/handbook/Makefile,v 1.15 2002/01/27 14:35:08 mheinen Exp $
+# $FreeBSDde: de-docproj/books/handbook/Makefile,v 1.16 2002/03/11 22:07:13 mheinen Exp $
 #
 # Build the FreeBSD Handbook in its German translation.
 #
@@ -15,6 +15,13 @@ HAS_INDEX= true
 
 INSTALL_COMPRESSED?= gz
 INSTALL_ONLY_COMPRESSED?=
+
+# Images from the cross-document image library
+IMAGES_LIB=  callouts/1.png
+IMAGES_LIB+= callouts/2.png
+IMAGES_LIB+= callouts/3.png
+IMAGES_LIB+= callouts/4.png
+IMAGES_LIB+= callouts/5.png
 
 # 
 # SRCS lists the individual SGML files that make up the document. Changes
@@ -31,6 +38,7 @@ SRCS+= disks/chapter.sgml
 SRCS+= kernelconfig/chapter.sgml
 SRCS+= ports/chapter.sgml
 SRCS+= security/chapter.sgml
+SRCS+= serialcomms/chapter.sgml
 SRCS+= sound/chapter.sgml
 SRCS+= users/chapter.sgml
 
