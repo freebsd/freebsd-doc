@@ -1,5 +1,5 @@
 # bsd.web.mk
-# $FreeBSD: www/share/mk/web.site.mk,v 1.58 2004/04/08 09:43:04 phantom Exp $
+# $FreeBSD$
 
 #
 # Build and install a web site.
@@ -41,6 +41,7 @@ SED?=		/usr/bin/sed
 SH?=		/bin/sh
 SORT?=		/usr/bin/sort
 TOUCH?=		/usr/bin/touch
+TRUE?=		/usr/bin/true
 
 LOCALBASE?=	/usr/local
 PREFIX?=	${LOCALBASE}
@@ -74,7 +75,9 @@ WEBCHECK?=	${PREFIX}/bin/webcheck
 WEBCHECKOPTS?=	-ab ${WEBCHECKFLAGS}
 WEBCHECKDIR?=	/webcheck
 WEBCHECKINSTALLDIR?= ${DESTDIR}${WEBCHECKDIR} 
-WEBCHECKURL?=	http://www.FreeBSD.org/${WEBBASE:S/data//}/${WEBDIR:S/data//}/
+.if !defined(WEBCHECKURL)
+WEBCHECKURL!=	${ECHO_CMD} http://www.FreeBSD.org/${WEBBASE:S/data//}/${WEBDIR:S/data//}/ | ${SED} -E "s%/+%/%g"
+.endif
 
 #
 # Install dirs derived from the above.
@@ -221,12 +224,22 @@ webcheck:
 # user is warned about (it can be forgotten file or directory).
 #
 .if make(checkmissing)
+# skip printing '===> ...' while processing SUBDIRs
+ECHODIR=	${TRUE}
+
+# detect relative ${.CURDIR}
+_CURDIR!=	realpath ${.CURDIR}
+_PFXDIR!=	realpath ${WEB_PREFIX}
+CDIR=		${_CURDIR:S/${_PFXDIR}\///}
+
+# populate missing directories list based on $SUBDIR
 _DIREXCL=	! -name CVS
 .for entry in ${SUBDIR}
 _DIREXCL+=	! -name ${entry}
 .endfor
 MISSDIRS!=	${FIND} ./ -type d ${_DIREXCL} -maxdepth 1 | ${SED} "s%./%%g"
 
+# populate missing files list based on $DOCS, $DATA and $CGI
 _FILEEXCL=	! -name Makefile\* ! -name includes.\*
 .for entry in ${DOCS} ${DATA} ${CGI}
 _FILEEXCL+=	! -name ${entry}
@@ -235,18 +248,18 @@ MISSFILES!=	${FIND} ./ -type f ${_FILEEXCL} -maxdepth 1 | ${SED} "s%./%%g"
 
 checkmissing:	_PROGSUBDIR
 .if !empty(MISSDIRS)
-	@${ECHO_CMD} -n "Directories not listed in SUBDIR: "
+	@${ECHO_CMD} "===> ${CDIR}"
+	@${ECHO_CMD} "Directories not listed in SUBDIR:"
 .for entry in ${MISSDIRS}
-	@${ECHO_CMD} -n "${entry} "
+	@${ECHO_CMD} "    >>> ${entry}"
 .endfor
-	@${ECHO_CMD}
 .endif
 .if !empty(MISSFILES)
-	@${ECHO_CMD} -n "Files not listed in DOCS/DATA/CGI: "
+	@${ECHO_CMD} "===> ${CDIR}"
+	@${ECHO_CMD} "Files not listed in DOCS/DATA/CGI:"
 .for entry in ${MISSFILES}
-	@${ECHO_CMD} -n "${entry} "
+	@${ECHO_CMD} "    >>> ${entry} "
 .endfor
-	@${ECHO_CMD}
 .endif
 .endif
 
