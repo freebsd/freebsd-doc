@@ -1,8 +1,8 @@
-# $Id: Makefile,v 1.1 1998-08-04 11:15:50 wosch Exp $
+# $Id: Makefile,v 1.2 1998-08-09 22:39:24 wosch Exp $
 
 DOCSUBDIR=	FAQ
 FORMATS?=	"html roff"
-SGMLOPTS=	-links -hdr ${.CURDIR}/doc.hdr -ftr ${.CURDIR}/doc.ftr -e EUC-JP
+SGMLOPTS=	-links -hdr ${.CURDIR}/doc.hdr -ftr ${.CURDIR}/doc.ftr 
 
 
 WEBBASE=	/data
