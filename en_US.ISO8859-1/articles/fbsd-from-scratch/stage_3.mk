@@ -2,10 +2,12 @@
 #              Usage: make -f stage_3.mk all     (config everything)
 #                or   make -f stage_3.mk target  (to just config target)
 #
+# Author:      Jens Schweikhardt
+#
 # It is a good idea to make sure any target can be made more than
 # once without ill effect.
 #
-# $Id: stage_3.mk,v 1.2 2004-01-03 15:46:31 schweikh Exp $
+# $Id: stage_3.mk,v 1.3 2004-01-21 19:39:26 schweikh Exp $
 # $FreeBSD$
 
 .POSIX:
@@ -19,6 +21,7 @@ message:
 	@echo "config_nullplugin"
 	@echo "config_privoxy"
 	@echo "config_sgml"
+	@echo "config_smokeping"
 	@echo "config_sudo"
 	@echo "config_TeX"
 	@echo "config_tin"
@@ -34,6 +37,7 @@ all: \
 	config_nullplugin \
 	config_privoxy \
 	config_sgml \
+	config_smokeping \
 	config_sudo \
 	config_TeX \
 	config_tin \
@@ -42,15 +46,27 @@ all: \
 config_apache:
 	# 1. Modify httpd.conf.
 	perl -pi \
-	-e 's/#ServerName new.host.name/ServerName hal9000.s.shuttle.de/;' \
-	-e 's/^ServerAdmin.*/ServerAdmin schweikh\@schweikhardt.net/;' \
-	-e 's/^Listen.*/Listen 127.0.0.1:80/;' \
+	-e 's/^\s*ServerAdmin.*/ServerAdmin schweikh\@schweikhardt.net/;' \
+	-e 's/^\s*Listen.*/Listen 127.0.0.1:80/;' \
+	-e 's/^\s*StartServers.*/StartServers 2/;' \
+	-e 's/^\s*MinSpareServers.*/MinSpareServers 2/;' \
 	-e 's,/usr/local/www/cgi-bin/,/home/opt/www/cgi-bin/,;' \
 	  /usr/local/etc/apache2/httpd.conf
 	# 2. Restore symlinks to web pages.
 	cd /usr/local/www/data; \
 	ln -fs /home/schweikh/prj/homepage schweikhardt.net; \
 	ln -fs /home/opt/www/test .
+	# Test if the httpd.conf has changed.
+	@if ! cmp -s /usr/local/etc/apache2/httpd.conf httpd.conf; then \
+		echo "ATTENTION: the httpd.conf has changed. Please examine if"; \
+		echo "the modifications are still correct. Here is the diff:"; \
+		diff -u /usr/local/etc/apache2/httpd.conf httpd.conf; \
+	fi
+	if test -f /var/run/httpd.pid; then \
+		/usr/local/etc/rc.d/apache2.sh restart; \
+	else \
+		/usr/local/etc/rc.d/apache2.sh start; \
+	fi
 
 config_firebird:
 	# Make this group wheel writable to allow extensions being installed.
@@ -94,15 +110,15 @@ config_inn:
 		"shuttle/news2.shuttle.de:!junk,!control:B32768/512,Tf,Wfb:" \
 	>/usr/local/news/etc/newsfeeds
 	# Configure inn.conf.
-	perl -pi                                                   \
-	-e 's/^(organization:\s*).*/$$1 "An Open Pod Bay Door"/;'  \
-	-e 's/^(pathhost:\s*).*/$$1 hal9000.schweikhardt.net/;'    \
-	-e 's/^(server:).*/$$1 localhost/;'                        \
-	-e 's/^(domain:).*/$$1 schweikhardt.net/;'                 \
-	-e 's/^(fromhost:).*/$$1 schweikhardt.net/;'               \
-	-e 's,^(moderatormailer:).*,$$1 \%s\@moderators.isc.org,;' \
-	-e 's,^(pathdb:\s*).*,$$1/share/news/db,;'                 \
-	-e 's,/usr/local/news/spool,/share/news/spool,;'           \
+	perl -pi                                                        \
+	-e 's/^#*\s*(organization:\s*).*/$$1"An Open Pod Bay Door"/;'   \
+	-e 's/^#*\s*(pathhost:\s*).*/$$1hal9000.schweikhardt.net/;'     \
+	-e 's/^#*\s*(server:).*/$$1 localhost/;'                        \
+	-e 's/^#*\s*(domain:).*/$$1 schweikhardt.net/;'                 \
+	-e 's/^#*\s*(fromhost:).*/$$1 schweikhardt.net/;'               \
+	-e 's,^#*\s*(moderatormailer:).*,$$1 \%s\@moderators.isc.org,;' \
+	-e 's,^#*\s*(pathdb:\s*).*,$$1/share/news/db,;'                 \
+	-e 's,/usr/local/news/spool,/share/news/spool,;'                \
 	/usr/local/news/etc/inn.conf
 	# Create empty history, if none there.
 	# See post-install in /usr/ports/news/inn-stable/Makefile.
@@ -116,11 +132,22 @@ config_inn:
 			mv history.n.$${s} history.$${s}; \
 		done; \
 	fi
+	# Configure send-uucp.
+	echo shuttle:shuttle >/usr/local/news/etc/send-uucp.cf
 	# Satisfy inncheck:
 	cd /usr/local/news/etc; \
 	chown news:news *; \
 	chmod 640 control.ctl expire.ctl nntpsend.ctl readers.conf
 	/usr/local/news/bin/inncheck
+	# Test if the inn.conf has changed.
+	@if ! cmp -s /usr/local/news/etc/inn.conf inn.conf; then \
+		echo "ATTENTION: the inn.conf has changed. Please examine if"; \
+		echo "the modifications are still correct. Here is the diff:"; \
+		diff -u /usr/local/news/etc/inn.conf inn.conf; \
+	fi
+	if ! test -f /usr/local/news/run/innd.pid; then \
+		/usr/local/etc/rc.d/innd.sh start; \
+	fi
 
 config_javaplugin:
 	# Mozilla Firebird:
@@ -135,6 +162,7 @@ config_javaplugin:
 # this suppresses popup dialogs for unavailable plugins (flash, shockwave, ...)
 NULLPLUGINS = /usr/X11R6/lib/mozilla/libnullplugin.so \
               /usr/X11R6/lib/mozilla/plugins/libnullplugin.so
+
 config_nullplugin:
 	for p in $(NULLPLUGINS); do \
 	    if test -r $$p; then    \
@@ -143,12 +171,21 @@ config_nullplugin:
 	done
 
 config_privoxy:
-	install -C -o root -g wheel -m 644 config /usr/local/etc/privoxy
-	install -C -o root -g wheel -m 755 privoxy.sh /usr/local/etc/rc.d
+	install -C -o root -g wheel -m 644 conf/privoxy/config \
+		/usr/local/etc/privoxy
+	install -C -o root -g wheel -m 755 conf/privoxy/privoxy.sh \
+		/usr/local/etc/rc.d
+	/usr/local/etc/rc.d/privoxy.sh restart
 
 config_sgml:
 	cp -p /usr/local/share/gmat/sgml/ISO_8879-1986/entities/* \
 	      /usr/local/share/sgml/docbook/4.1
+
+config_smokeping:
+	cp conf/smokeping/config conf/smokeping/basepage.html \
+		/usr/local/etc/smokeping
+	/usr/local/etc/rc.d/smokeping.sh stop
+	/usr/local/etc/rc.d/smokeping.sh start
 
 config_sudo:
 	if ! grep -q schweikh /usr/local/etc/sudoers; then \
@@ -160,11 +197,17 @@ config_TeX:
 	# change the following settings to the listed values:
 	perl -pi                                   \
 	-e 's/^% original texmf.cnf/% texmf.cnf/;' \
-	-e 's/^(hash_extra\s*=).*/$$1 60000/;'     \
-	-e 's/^(pool_size\s*=).*/$$1 1000000/;'    \
-	-e 's/^(max_strings\s*=).*/$$1 70000/;'    \
-	-e 's/^(save_size\s*=).*/$$1 10000/;'      \
+	-e 's/^(hash_extra\s*=).*/$${1}60000/;'    \
+	-e 's/^(pool_size\s*=).*/$${1}1000000/;'   \
+	-e 's/^(max_strings\s*=).*/$${1}70000/;'   \
+	-e 's/^(save_size\s*=).*/$${1}10000/;'     \
 	/usr/local/share/texmf/web2c/texmf.cnf
+	# Test if the texmf.cnf has changed.
+	@if ! cmp -s /usr/local/share/texmf/web2c/texmf.cnf texmf.cnf; then \
+		echo "ATTENTION: the texmf.cnf has changed. Please examine if"; \
+		echo "the modifications are still correct. Here is the diff:"; \
+		diff -u /usr/local/share/texmf/web2c/texmf.cnf texmf.cnf; \
+	fi
 
 config_tin:
 	# Point tin to our files.
@@ -176,6 +219,8 @@ config_tin:
 
 config_uucp:
 	cd /etc/mail; make install SENDMAIL_MC=/etc/mail/hal9000.mc
+	# Make the uucp user's shell the correct uucico, so su(1) works.
+	chpass -s /usr/local/libexec/uucp/uucico uucp
 	# UUCP expects to find /usr/bin/rnews.
 	cd /usr/bin; ln -fs ../local/news/bin/rnews .
 	# Actual UUCP configuration.

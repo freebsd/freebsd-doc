@@ -5,7 +5,8 @@
 #              will read ./stage_1.conf.profile
 #              and write ./stage_1.log.profile
 #
-# $Id: stage_1.sh,v 1.3 2004-01-03 15:46:31 schweikh Exp $
+# Author:      Jens Schweikhardt
+# $Id: stage_1.sh,v 1.4 2004-01-21 19:39:26 schweikh Exp $
 # $FreeBSD$
 
 PATH=/bin:/usr/bin:/sbin:/usr/sbin
@@ -45,6 +46,7 @@ step_two () {
     chflags -R 0 ${TEMPROOT}
     rm -rf ${TEMPROOT}
   fi
+  export MAKEDEVPATH="/bin:/sbin:/usr/bin"
   mergemaster -i -m ${SRC}/etc -t ${TEMPROOT} -D ${DESTDIR}
   cap_mkdb ${DESTDIR}/etc/login.conf
   pwd_mkdb -d ${DESTDIR}/etc -p ${DESTDIR}/etc/master.passwd
@@ -123,6 +125,7 @@ do_steps () {
   echo "TYPE=${TYPE}"
   echo "REVISION=${REVISION}"
   echo "BRANCH=${BRANCH}"
+  echo "RELDATE=${RELDATE}"
   step_one
   step_two
   step_three
@@ -141,14 +144,21 @@ set -x -e -u # Stop for any error or use of an undefined variable.
 
 # Determine a few variables from the sources that were used to make the
 # world. The variables can be used to modify actions, e.g. depending on
-# whether we install a 4.x or 5.x system. The result of the eval will be
-# something like
+# whether we install a 4.x or 5.x system. The __FreeBSD_version numbers
+# for RELDATE are documented in the Porter's Handbook,
+# doc/en_US.ISO8859-1/books/porters-handbook/freebsd-versions.html.
+# Scheme is:  <major><two digit minor><0 if release branch, otherwise 1>xx
+# The result will be something like
 #
 #   TYPE="FreeBSD"
 #   REVISION="4.9"
-#   BRANCH="RC"
+#   BRANCH="RC"      { "CURRENT", "STABLE", "RELEASE" }
+#   RELDATE="502101"
 #
 eval $(awk '/^(TYPE|REVISION|BRANCH)=/' ${SRC}/sys/conf/newvers.sh)
+RELDATE=$(awk '/^[ \t]*#[ \t]*define[ \t][ \t]*__FreeBSD_version[ \t]/ {
+                print $3
+              }' ${SRC}/sys/sys/param.h)
 
 echo "=> Logging to stage_1.log.${PROFILE}"
 do_steps 2>&1 | tee stage_1.log.${PROFILE}
