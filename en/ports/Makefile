@@ -1,10 +1,10 @@
-#	$Id: Makefile,v 1.19 1999-03-11 20:17:54 scrappy Exp $
+#	$Id: Makefile,v 1.20 1999-03-12 10:13:06 wosch Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
 .endif
 
-PORTINDEX=	perl ${.CURDIR}/portindex
+PORTINDEX=	perl5 ${.CURDIR}/portindex
 INDEX=		INDEX
 PINDEX=		ports/${INDEX}
 Y2K=		YEAR2000
