@@ -6,7 +6,7 @@
 # by John Fieber
 # February 26, 1998
 #
-# $FreeBSD: www/en/cgi/getmsg.cgi,v 1.25 2000/10/29 16:29:45 jmb Exp $
+# $FreeBSD: www/en/cgi/getmsg.cgi,v 1.26 2000/11/01 09:52:06 wosch Exp $
 #
 
 require "./cgi-lib.pl";
@@ -205,12 +205,24 @@ sub MessageToHTML
     return $message;
 }
 
-
 sub AddAnchors
 {
     my ($text) = @_;
+    my $cvsweb = 'http://www.freebsd.org/cgi/cvsweb.cgi';
 
     $text =~ s/(http|https|ftp|gopher|mailto|news|file)(:[^\s]*?\/?)(\W?\s)/<a href="$1$2">$1$2<\/a>$3/goi;
+
+    if ($text =~ /Revision\s+Changes\s+Path/) {
+
+	
+	# match revsion and file name
+	#   1.10      +2 -2      ports/audio/xmradio/Makefile
+	# ->
+	#  cvsweb.cgi/ports/audio/xmradio/Makefile.diff?r1=1.9&r2=r.10
+	#
+	$text =~ s#([\d.]+\.)(\d+)(\s+[+-]\d+\s+[+-]\d+\s+)([a-zA-Z\d_:.+/-]+)#sprintf("%s%s%s<a href=\"$cvsweb/%s.diff?r1=%s%s&r2=%s%s\">%s</a>", $1, $2, $3, $4, $1, $2 - 1, $1, $2, $4)#ge;
+    }
+
 
     return $text;
 }
