@@ -3,6 +3,7 @@
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
 <!ENTITY % output.html		"IGNORE">
 <!ENTITY % output.html.images 	"IGNORE">
+<!ENTITY % output.rtf.images 	"IGNORE">
 <!ENTITY % output.print 	"IGNORE">
 <!ENTITY % output.print.pdf 	"IGNORE">
 <!ENTITY % output.print.justify	"IGNORE">
@@ -329,6 +330,18 @@
 		          (literal "(" (format-number conumber "1") ")")))
 	        (make element gi: "B"
 	       (literal "(??)")))))
+      ]]>
+
+      <!-- RTF with images  ............................................ -->
+
+      <![ %output.rtf.images [
+
+	(define %graphic-default-extension%
+	  "png")
+
+	(define %callout-graphics%
+	  ;; Use graphics in callouts?
+	  #f)
       ]]>
 
       <!-- Two-sided Print output ....................................... --> 
