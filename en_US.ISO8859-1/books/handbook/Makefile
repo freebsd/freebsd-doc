@@ -214,8 +214,6 @@ pgpkeyring: pgpkeys/chapter.sgml
 JADEFLAGS+=	-V withpgpkeys
 .endif
 
-DOC_PREFIX?= ${.CURDIR}/../../..
-
 .for p in ftp cvsup
 SRCS+= mirrors.sgml.${p}.inc
 CLEANFILES+= mirrors.sgml.${p}.inc
@@ -225,6 +223,9 @@ CLEANFILES+= mirrors.sgml.${p}.inc.tmp
 SRCS+= eresources.sgml.www.inc
 CLEANFILES+= eresources.sgml.www.inc
 CLEANFILES+= eresources.sgml.www.inc.tmp
+
+URL_RELPREFIX?=	../../../..
+DOC_PREFIX?=	${.CURDIR}/../../..
 
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"
 
