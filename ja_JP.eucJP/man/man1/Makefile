@@ -93,7 +93,6 @@ MAN1 =	addftinfo.1\
 	gcc.1\
 	gcore.1\
 	gdb.1\
-	gdbserver.1\
 	gencat.1\
 	getNAME.1\
 	getfacl.1\
