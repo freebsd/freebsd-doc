@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/Makefile,v 1.99 2003/10/29 20:42:50 simon Exp $
+# $FreeBSD: www/en/Makefile,v 1.100 2003/11/16 18:56:24 hrs Exp $
 .if exists(Makefile.conf)
 .include "Makefile.conf"
 .endif
@@ -91,13 +91,6 @@ WEBDIR?=	data
 DATA+=		index.html
 CLEANFILES+=	index.html
 
-index.html: index.xsl news/news.xml news/press.xml includes.xsl news/includes.xsl security/advisories.xml ../../doc/share/sgml/mirrors.xml
-	${XSLTPROC} ${XSLTPROCOPTS} -o ${.TARGET} \
-		${.CURDIR}/index.xsl ${.CURDIR}/news/news.xml
-.if !defined(NO_TIDY)
-	-${TIDY} ${TIDYOPTS} ${.TARGET}
-.endif
-
 WEBCHECK?=	${PREFIX}/bin/webcheck
 WEBCHECKOPTS?=	-ab ${WEBCHECKFLAGS}
 WEBCHECKDIR?=	/webcheck
@@ -109,3 +102,15 @@ webcheck:
 	${WEBCHECK} ${WEBCHECKOPTS} -o ${WEBCHECKINSTALLDIR} ${WEBCHECKURL}
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
+
+index.html: index.xsl ${XML_INCLUDES}\
+		${XML_NEWS_INCLUDES} ${XML_NEWS_NEWS}\
+		${XML_MIRRORS} ${XML_ADVISORIES}
+	${XSLTPROC} ${XSLTPROCOPTS} \
+		-o $@ \
+		--param mirrors.xml "'${XML_MIRRORS}'" \
+		--param advisories.xml "'${XML_ADVISORIES}'" \
+		${.CURDIR}/index.xsl ${XML_NEWS_NEWS}
+.if !defined(NO_TIDY)
+	-${TIDY} ${TIDYOPTS} ${.TARGET}
+.endif

@@ -1,4 +1,4 @@
-# $FreeBSD: www/ja/Makefile,v 1.60 2003/11/17 06:28:19 hrs Exp $
+# $FreeBSD: www/ja/Makefile,v 1.61 2003/11/18 22:11:26 rushani Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.83
 
@@ -85,14 +85,19 @@ WEBDIR=		data/ja
 DATA+=		index.html
 CLEANFILES+=	index.html
 
-index.html: index.xsl news/news.xml news/press.xml includes.xsl news/includes.xsl ../en/security/advisories.xml  ../../doc/share/sgml/mirrors.xml ../../doc/ja_JP.eucJP/share/sgml/transtable.xsl ../../doc/ja_JP.eucJP/share/sgml/transtable.xml
-	${XSLTPROC} ${XSLTPROCOPTS} -o index.html \
-		${.CURDIR}/index.xsl ${.CURDIR}/news/news.xml
-.if !defined(NO_TIDY)
-	-${TIDY} ${TIDYOPTS} ${.TARGET}
-.endif
-
 ### Revision checking
 REVCHECK=	yes
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
+
+index.html: index.xsl ${XML_INCLUDES}\
+		${XML_NEWS_INCLUDES} ${XML_NEWS_NEWS}\
+		${XML_MIRRORS} ${XML_ADVISORIES}
+	${XSLTPROC} ${XSLTPROCOPTS} \
+		-o $@ \
+		--param mirrors.xml "'${XML_MIRRORS}'" \
+		--param advisories.xml "'${XML_ADVISORIES}'" \
+		${.CURDIR}/index.xsl ${XML_NEWS_NEWS}
+.if !defined(NO_TIDY)
+	-${TIDY} ${TIDYOPTS} ${.TARGET}
+.endif

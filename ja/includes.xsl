@@ -1,61 +1,13 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
 
-<!-- $FreeBSD: www/ja/includes.xsl,v 1.16 2003/11/02 07:54:23 rushani Exp $ -->
+<!-- $FreeBSD: www/ja/includes.xsl,v 1.17 2003/11/17 06:28:19 hrs Exp $ -->
 <!-- Original revision: 1.19 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
-  <xsl:import href="../../doc/ja_JP.eucJP/share/sgml/transtable.xsl"/>
+  <xsl:import href="../share/sgml/includes.xsl" />
 
-  <xsl:variable name="mirrors" select="'../../doc/share/sgml/mirrors.xml'" />
-
-  <xsl:variable name="enbase" select='concat ($base, "/..")'/>
-
-  <xsl:variable name="i.daemon">
-    <img src="{$base}/gifs/daemon.gif" alt="" align="left" width="80" height="76"/>
-  </xsl:variable>
-
-  <xsl:variable name="i.new">
-    <img src="{$base}/gifs/new.gif" alt="[New!]" width="28" height="11"/>
-  </xsl:variable>
-
-  <xsl:variable name="copyright">
-    <a href="{$base}/copyright/index.html">Copyright</a> &#169; 1995-2003 the FreeBSD Project.  All rights reserved.
-  </xsl:variable>
-
-  <!-- Often used trademarks -->
-  <xsl:variable name="unix" select="'UNIX&#174;'"/>
-  <xsl:variable name="java" select="'Java&#8482;'"/>
-  <xsl:variable name="jdk" select="'JDK&#8482;'"/>
-  <xsl:variable name="posix" select="'POSIX&#174;'"/>
-
-  <xsl:variable name="email" select="'freebsd-questions'"/>
-  <xsl:variable name="author">
-    <a>
-      <xsl:attribute name="href">
-	<xsl:value-of select="concat($base, '/mailto.html')"/>
-      </xsl:attribute>
-      <xsl:value-of select="$email"/>@FreeBSD.org</a><br/><xsl:copy-of select="$copyright"/>
-  </xsl:variable>
-
-  <xsl:variable name="home">
-    <a href="{$base}/index.html"><img src="{$base}/gifs/home.gif" alt="FreeBSD Home Page" border="0" align="right" width="101" height="33"/></a>
-  </xsl:variable>
-
-  <xsl:variable name="header1">
-    <head>
-      <title><xsl:value-of select="$title"/></title>
-
-      <meta http-equiv="Content-Type" content="text/html; charset=EUC-JP"/>
-      <meta name="MSSmartTagsPreventParsing" content="TRUE"/>
-    </head>
-  </xsl:variable>
-
-  <xsl:attribute-set name="att.body">
-    <xsl:attribute name="text">#000000</xsl:attribute>
-    <xsl:attribute name="bgcolor">#FFFFFF</xsl:attribute>
-    <xsl:attribute name="alink">#FFCC33</xsl:attribute>
-  </xsl:attribute-set>
+  <xsl:variable name="url.doc.langcode" select="'ja_JP.eucJP'" />
 
   <xsl:variable name="header2">
     <img src="{$base}/../gifs/bar.gif" alt="メニュー" width="565" 
@@ -96,32 +48,47 @@
       までお願いします)
     </address>
   </xsl:variable>
-  
-  <xsl:variable name="rel.current" select='"5.1"'/>
+
+<!--
   <xsl:variable name="u.rel.notes">
     <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel.current"/>R/relnotes.html</xsl:variable>
+-->
 
+<!--
   <xsl:variable name="u.rel.announce">
     <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel.current"/>R/announce.html</xsl:variable>
+-->
+
+<!--
   <xsl:variable name="u.rel.errata">
     <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel.current"/>R/errata.html</xsl:variable>
+-->
 
+<!--
   <xsl:variable name="u.rel.hardware">
     <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel.current"/>R/hardware.html</xsl:variable>
+-->
 
+<!--
   <xsl:variable name="u.rel.early">
     <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel.current"/>R/early-adopter.html</xsl:variable>
-  
-  <xsl:variable name="rel2.current" select='"4.9"'/>
+-->
+
+<!--
   <xsl:variable name="u.rel2.notes">
     <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel2.current"/>R/relnotes.html</xsl:variable>
+-->
 
+<!--
   <xsl:variable name="u.rel2.announce">
     <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel2.current"/>R/announce.html</xsl:variable>
+-->
+
+<!--
   <xsl:variable name="u.rel2.errata">
-    <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel2.current"/>R/errata.html</xsl:variable>
+    <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel2.current"/>R/errata.html</xsl:variable>-->
+
   <xsl:variable name="u.rel2.hardware">
     <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel2.current"/>R/hardware.html</xsl:variable>
-  <!-- 2002/01/02:hrs - when the translation is finished, $enbase should be "$base" -->
 
 </xsl:stylesheet>
