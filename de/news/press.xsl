@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
 <!-- $FreeBSD$
-     $FreeBSDde: de-www/news/press.xsl,v 1.3 2003/11/18 00:48:50 mheinen Exp $
-     basiert auf: 1.5
+     $FreeBSDde: de-www/news/press.xsl,v 1.5 2004/05/13 22:15:35 brueffer Exp $
+     basiert auf: 1.8
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
@@ -32,12 +32,8 @@
 
 	<p>Kennen Sie einen hier nicht aufgef&#252;hrten Artikel?
 	  Senden Sie bitte die Einzelheiten an
-	  <a href="mailto:www@freebsd.org">www@FreeBSD.org</a> und
+	  <a href="mailto:www@FreeBSD.org">www@FreeBSD.org</a> und
 	  wir nehmen den Artikel auf.</p>
-
-	<p>Besuchen Sie auch die Seite
-	  <a href="{$enbase}/java/press.html">FreeBSD/Java Press</a>,
-	  die Artikel &#252;ber das FreeBSD Java Project enth&#228;lt.</p>
 
 	<xsl:apply-templates select="//month"/>
 
@@ -50,7 +46,13 @@
   <!-- Everything that follows are templates for the rest of the content -->
 
   <xsl:template match="month">
-    <h1><xsl:value-of select="name"/>
+    <h1>
+      <xsl:call-template name="transtable-lookup">
+	<xsl:with-param name="word-group" select="'number-month'" />
+	<xsl:with-param name="word">
+	  <xsl:value-of select="name"/>
+	</xsl:with-param>
+      </xsl:call-template>      
       <xsl:text> </xsl:text>
       <xsl:value-of select="ancestor::year/name"/></h1>
 
