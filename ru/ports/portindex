@@ -1,0 +1,297 @@
+#!/usr/bin/perl
+
+# convert a ports INDEX file to HTML
+#
+# by John Fieber <jfieber@freebsd.org>
+# Mon May 13 10:31:58 EST 1996
+# $FreeBSD$
+# The FreeBSD Russian Documentation Project
+# Original revision: 1.30
+
+############################################################
+
+# Load local config file. You can override in portindex.conf
+# the variables for the default web and the ftp server. This
+# make it easy to maintain a local web mirror and let the
+# URL point to yourself and not to the standard FreeBSD FTP server.
+$config = $0 . '.' . 'conf';
+do $config if -f $config;
+
+# This is the base of where we ftp stuff from
+if ($ENV{'MASTER_FTP_SERVER'}) {
+    $ftpserver = $ENV{'MASTER_FTP_SERVER'};
+} else {
+    $ftpserver = 'ftp://ftp.freebsd.org' if !$ftpserver;
+}
+$base = "$ftpserver/pub/FreeBSD/branches/-current" if !$base;
+$baseHTTP = $base if !$baseHTTP;
+$urlcgi = 'http://www.freebsd.org/cgi/url.cgi' if !$urlcgi;
+$packagesURL = "$ftpserver/pub/FreeBSD/ports/i386/packages-stable/All/"
+    if !$packagesURL;
+# support tar on the fly or gzip'ed tar on the fly
+$ftparchive = 'tar' if !$ftparchive;
+
+
+# ports download sources script
+$pds = 'http://www.freebsd.org/cgi/pds.cgi';
+
+# better layout and link to the sources
+if ($urlcgi) {
+    $baseHTTP = $urlcgi . '?' . $baseHTTP;
+}
+
+$today = &getdate;
+
+&packages_exist('packages.exists', *packages);
+&category_description('categories', *category_description);
+&y2k_statements;
+&main;
+
+sub y2k_statements {
+
+    open(Y2K, $ARGV[1]);
+    while(<Y2K>) {
+      chop();
+      ( $dir, $url ) = split(/\s+/);
+      $dir = $base . "/" . $dir;
+      $y2k{$dir} = $url;
+      
+    }
+    close(Y2K);
+
+}
+
+sub getdate {
+    @months = ("Января", "Февраля", "Марта", "Апреля", "Мая","Июня",
+	       "Июля", "Августа", "Сентября", "Октября", "Ноября", "Декабря");
+    ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
+    $year += 1900;
+    return "Последние изменения: $mday $months[$mon], $year";
+}
+
+sub header {
+    local ($fh, $htext) = @_;
+    print $fh "<!DOCTYPE html PUBLIC \"-//W3C//DTD HTML 3.2//EN\" [\n";
+    print $fh "<!ENTITY base CDATA '..'>";
+    print $fh "<!ENTITY date  \"<em>$today</em>\">\n";
+    print $fh "<!ENTITY title '$htext'>";
+    print $fh "<!ENTITY blurb  SYSTEM \"ports.inc\">\n";
+    print $fh "<!ENTITY % includes SYSTEM \"../includes.sgml\">\n";
+    print $fh "<!ENTITY email 'ports'>";
+    print $fh "%includes;\n";
+    print $fh "]>\n";
+    print $fh "<html>&header;\n";
+}
+
+sub footer {
+    local ($fh, $ftext) = @_;
+    print $fh "\n$ftext\n";
+    print $fh "&footer;\n";
+    print $fh "</BODY>\n</HTML>\n";
+}
+
+sub packages_exist {
+    local($file, *p) = @_;
+
+    open(P, $file) || do {
+	warn "open $file: $!\n";
+	warn "Cannot create packages links\n";
+	return 1;
+    };
+
+    while(<P>) {
+	chop;
+	$p{$_} = 1;
+    }
+    close P;
+    return 0;
+}
+
+sub category_description {
+    local($file, *p) = @_;
+
+    open(P, $file) || do {
+	warn "open $file: $!\n";
+	warn "Cannot find category description\n";
+	return 1;
+    };
+
+    local($category, $description);
+    while(<P>) {
+	# ignore comments
+	next if /^\s*#/;
+
+       ($category, $description) = /^\s*"([^"]+)",\s*"([^"]+)/;
+	$p{$category} = $description;
+    }
+    close P;
+    return 0;
+}
+
+sub main {
+
+    $sep = "<B>:</B>";
+
+    open(INDEX, $ARGV[0]);
+    while (<INDEX>) {
+	chop;
+	s/&/&amp;/g;
+    	s/</&lt;/g;
+    	s/>/&gt;/g;
+
+    	# Read a record
+	($name, $loc, $prefix, $desc, $ldesc, $owner, $cats, 
+	    $bdep, $rdep, $www) = split('\|');
+
+	# Check for double hyphens in the name (--).
+	$name =~ s/--/-/g;
+
+    	# Split the categories into an array
+	@cat = split("[ \t]+", $cats);
+
+    	$catkey{$name} = $cat[0];
+
+	local($sourcepath) = $loc;
+	$sourcepath =~ s%/usr/%%;
+	
+	foreach $i (@cat) {
+
+	    $stats{$i}++;
+
+    	    # figure out the FTP url
+	    $loc =~ s/\/usr/$base/;
+	    $ldesc =~ s/\/usr/$baseHTTP/;
+
+    	    # The name description and maintainer
+	    $data{$i} .= "<DT><B><A NAME=\"$name\"></A><A HREF=\"$loc.$ftparchive\">$name</A></B> ";
+     
+
+	    $data{$i} .= "<DD>$desc<BR><A HREF=\"$ldesc\">Полное описание</A>";
+	    if ($packages{"$name.tgz"}) { 
+		$data{$i} .= qq{ | <a href="$packagesURL$name.tgz">Пакадж</a>};
+	    }
+
+	    $data{$i} .= qq{ | <A HREF="$pds?$sourcepath">Исходные тексты</A>};
+
+            if ($y2k{"$loc"}) {
+		$data{$i} .= qq{ | <a href="$y2k{$loc}">Y2K</a>};
+            }
+
+            if ($www ne "") {
+		$data{$i} .= qq{ | <a href="$www">Основной Web сайт</a>};
+            }
+
+    	    $ownerurl = $owner;
+    	    $ownerurl =~ s/&lt;/</g;
+    	    $owenrurl =~ s/&gt;/>/g;
+	    $data{$i} .= 
+		"<BR><I>Поддержкой занимается:</I> <A HREF=\"mailto:$ownerurl\">$owner</A>";
+
+    	    # If there are any dependencies, list them
+    	    if ($bdep ne "" || $rdep ne "") {
+    	    	$data{$i} .= "<BR><I>Требует:</I> ";
+    	    	@dep = split(/ /, "$bdep $rdep");
+		local($last) = '';
+    	    	foreach $j (sort @dep) {
+		    next if $j eq $last;
+		    $last = $j;
+    	    	    $data{$i} .= " <A HREF=\"##$j##.html#$j\">$j</A>,";
+    	    	}
+    	    	# remove the trailing comma
+    	    	chop $data{$i};
+    	    }
+
+    	    # If the port is listed in more than one category, throw
+    	    # in some cross references
+    	    if ($#cat > 0) {
+    	    	$data{$i} .= "<BR><EM>Также присутствует в:</EM> ";
+    	    	foreach $j (@cat) {
+    	    	    if ($j ne $i) {
+			if ($j eq $cat[0]) {
+			    $data{$i} .= " <STRONG><A HREF=\"$j.html#$name\">\u$j</A></STRONG>,";
+			}
+			else {
+			    $data{$i} .= " <A HREF=\"$j.html#$name\">\u$j</A>,";
+			}
+    	    	    }
+    	    	}
+    	    	# remove the trailing comma
+    	    	chop($data{$i});
+    	    }
+    	    $data{$i} .= "<P></P></DD>\n"
+	}
+
+    	# Add an entry to the master index
+
+	# workaround for SGML bug, `--' is not allowed in comments
+	local ($sname) = $name; 
+	$sname =~ s/--/-=/g;
+    	$master[$portnumber] = 
+    	    "<!-- $sname --><STRONG><A HREF=\"$cat[0].html#$name\">$name</A></STRONG> " .
+    	    " -- <EM>$desc</EM><BR>\n";
+	$portnumber++;
+    }
+
+    open(MOUTF, ">index.sgml");
+
+    &header(MOUTF, "FreeBSD Ports");
+#    print MOUTF "<!--#include virtual=\"./ports.inc\" -->\n";
+    print MOUTF "&blurb;";
+    print MOUTF "<hr><P>В списке Коллекции Портов FreeBSD на данный момент
+присутствуют $portnumber портированых в FreeBSD програм.<br>
+<A HREF=\"$base/ports.tar.gz\">Выкачйте gzip архив содержащий все $portnumber
+портов</A> (около 7 Мегабайт) или просмотрите следующие категории:\n";
+
+    print MOUTF "<UL>\n";
+
+    @foos = sort(keys %stats);
+    foreach $key  (@foos) {
+	# For the master file...
+	print MOUTF 
+	    "<LI><A HREF=\"$key.html\">\u$key</A> <em>($stats{$key})</em>";
+	if ($category_description{$key}) {
+	    print MOUTF " -- " . $category_description{$key};
+	}
+
+	# Someone forgot to add a category to the description file
+	# or there is a typo in the category field.
+	else {
+	   warn "No description found for category: ``$key''!\n";
+	   warn "Please fix me or send an E-Mail to doc\@FreeBSD.org\a\n";
+	   sleep(3);
+	}
+ 
+	print MOUTF "</LI>\n";
+
+	# Create the category file
+	open(OUTF, ">$key.sgml");
+	&header(OUTF, "Порты FreeBSD: \u$key");
+	if ($category_description{$key}) {
+	    print OUTF "<h3>", $category_description{$key}, "</h3>\n";
+	}
+	print OUTF "<DL>\n";
+	$d = join("\n", sort(split(/\n/, $data{$key})));
+    	$d =~ s/##([^#]*)##/$catkey{$1}/g;
+	print OUTF $d;
+	print OUTF "</DL>\n";
+	&footer(OUTF, "<p></p><HR><A HREF=\"index.html\">Категории Портов</A>" .
+	    " -- <A HREF=\"master-index.html\">Index</A>");
+	close(OUTF);
+
+    }
+    print MOUTF "</UL>\n";
+    print MOUTF 
+    	"<UL><LI><A HREF=\"master-index.html\">Алфавитный список всех $portnumber портов</A></LI></UL>\n";
+    &footer(MOUTF, "");
+    close(MOUTF);
+
+    # Create the master index file
+    open(MINDEX, ">master-index.sgml");
+    &header(MINDEX, "Индекс Колекции Портов FreeBSD");
+    print MINDEX "<P>\n";
+    print MINDEX sort @master;
+    print MINDEX "</P>";
+    &footer(MINDEX, "<A HREF=\"index.html\">Категории Портов</A>");
+    close(MINDEX);
+    close(INDEX);
+}
