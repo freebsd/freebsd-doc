@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.55 2004/06/16 05:52:13 marcus Exp $ -->
+<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.56 2004/08/25 03:26:37 adamw Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
 		xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -9,7 +9,7 @@
   <xsl:import href="includes.xsl"/>
 
   <xsl:variable name="base" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.55 2004/06/16 05:52:13 marcus Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.56 2004/08/25 03:26:37 adamw Exp $'"/>
   <xsl:variable name="title" select="'FreeBSD GNOME Project'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -60,7 +60,10 @@
                           <p><font size="+1" color="#990000"><b>Resources</b></font>
                             <small><br/>
                               &#183; <a href="http://www.gnome.org/">GNOME Project</a><br/>
-                              &#183; <a href="http://www.gnome.org/gnome-office/">GNOME Office</a><br/>
+			      &#183; <a href="http://gnomedesktop.org">FootNotes</a><br/>
+			      &#183; <a
+				href="http://www.gnomefiles.org">GNOME
+				Files</a><br/>
                               &#183; <a href="http://gnu-darwin.sourceforge.net/GNOME/">GNOME on GNU/Darwin</a><br/>
                             </small></p>
 
@@ -115,8 +118,6 @@
               <ul>
                 <li>The <a href="http://www.gnome.org">GNOME desktop</a>:  An easy
                   to use window-based desktop environment.</li>
-                <li>The <a href="http://www.gnome.org/gnome-office">GNOME
-                  Office</a>:  A set of office productivity applications.</li>
                 <li>The <a href="http://developer.gnome.org">GNOME development
                   platform</a>:  A rich collection of tools, libraries,
                   and components to develop powerful applications on Unix.</li>
