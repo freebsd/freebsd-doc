@@ -1,6 +1,6 @@
-# $FreeBSD: www/ja/ports/Makefile,v 1.24 2001/09/06 13:35:08 kuriyama Exp $
+# $FreeBSD: www/ja/ports/Makefile,v 1.25 2001/11/19 15:35:42 hrs Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.34
+# Original revision: 1.37
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -26,7 +26,10 @@ CVS_OPT+=	-R
 CVS_OPT+=	-d ${PORTSCVSROOT}
 .endif
 
-.if defined(NOPORTSCVS)
+.if defined(PINDEX_OVERRIDE)
+${INDEX}: ${PINDEX_OVERRIDE}
+	${CP} ${PINDEX_OVERRIDE} ${INDEX}
+.elif defined(NOPORTSCVS)
 ${INDEX}: $${PORTSBASE}/${PINDEX}
 	${CP} ${PORTSBASE}/${PINDEX} ${INDEX}
 .else
@@ -51,7 +54,7 @@ hostname=	${NO_PACKAGES_LINK}
 .endif
 
 packages.exists:
-.if ${hostname} == "hub.freebsd.org" || ${hostname} == "freefall.freebsd.org"
+.if ${hostname} == "hub.freebsd.org" || ${hostname} == "freefall.freebsd.org" || ${hostname} == "www.freebsd.org"
 .if  exists(${.CURDIR}/../../en/ports/packages.exists)
 	cp ${.CURDIR}/../../en/ports/${.TARGET} .
 .else
@@ -72,11 +75,20 @@ index.sgml: ${INDEX} categories packages.exists portindex ports.inc .NOTMAIN
 	${RM} -f *.sgml
 	${PORTINDEX} ${INDEX} ${.CURDIR}
 
-install: all
+install: all beforeinstall
 
 all install clean:
 	cd ${.CURDIR}; \
 		${MAKE} ${MAKEFLAGS} -f ${.CURDIR}/Makefile.inc0 ${.TARGET}
-
+.if defined(WITH_PORTS_GROWTH)
+# Because We refer www/ports/growth/status.png on web site from ports.inc,
+# don't need to have local version of the image file.
+#	cd growth; \
+#		${MAKE} ${MAKEFLAGS} ${.TARGET}
+beforeinstall:
+.else
+beforeinstall:
+	${PERL} -pi -e 's/href=\"growth/href=\"http:\/\/www.FreeBSD.org\/ports\/growth/' index.html
+.endif
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
