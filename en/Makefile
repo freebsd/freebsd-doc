@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/Makefile,v 1.113 2004/07/09 23:27:27 linimon Exp $
+# $FreeBSD: www/en/Makefile,v 1.114 2004/09/27 12:00:03 josef Exp $
 
 .if exists(Makefile.conf)
 .include "Makefile.conf"
@@ -29,46 +29,45 @@ DOCS+= y2kbug.sgml
 # These will be directly installed.
 
 DATA=	favicon.ico
-DATA+=	robots.txt
 DATA+=	freebsd.css
+DATA+=	robots.txt
 DATA+=  vendors.html
 
 # Subdirectories
 # SGML
-SUBDIR=	 security
-SUBDIR+= commercial
-SUBDIR+= docproj
-SUBDIR+= news
+SUBDIR= FAQ
 SUBDIR+= advocacy
-
+SUBDIR+= commercial
+SUBDIR+= copyright
+SUBDIR+= docproj
+SUBDIR+= donations
 SUBDIR+= events
-SUBDIR+= FAQ
+SUBDIR+= gnome
 SUBDIR+= handbook
-SUBDIR+= tutorials
 SUBDIR+= internal
 SUBDIR+= java
-SUBDIR+= copyright
-SUBDIR+= search
+SUBDIR+= kse
+SUBDIR+= news
+SUBDIR+= platforms
 SUBDIR+= projects
 SUBDIR+= prstats
-SUBDIR+= platforms
 SUBDIR+= releases
 SUBDIR+= releng
+SUBDIR+= search
+SUBDIR+= security
 SUBDIR+= smp
-SUBDIR+= kse
-SUBDIR+= gnome
-SUBDIR+= donations
+SUBDIR+= tutorials
 .if !defined(WEB_ONLY) || empty(WEB_ONLY)
-SUBDIR+= ports
 SUBDIR+= doc
+SUBDIR+= ports
 .endif
 .if defined(BUILD_RELNOTES)
 SUBDIR+= relnotes
 .endif
 
 # Non-SGML
-SUBDIR+= gifs
 SUBDIR+= cgi
+SUBDIR+= gifs
 
 WEB_LANG?=	da de es fr it ja nl pt_BR ru tr zh
 
@@ -95,13 +94,13 @@ index.html: index.xsl ${XML_INCLUDES}\
 		${XML_NAVIGATION}
 	${XSLTPROC} ${XSLTPROCOPTS} \
 		-o $@ \
-		--param mirrors.xml "'${XML_MIRRORS}'" \
 		--param advisories.xml "'${XML_ADVISORIES}'" \
-		--param notices.xml "'${XML_NOTICES}'" \
+		--param mirrors.xml "'${XML_MIRRORS}'" \
+		--param navigation.xml "'${XML_NAVIGATION}'" \
 		--param news.press.xml "'${XML_NEWS_PRESS}'" \
 		--param news.project.xml "'${XML_NEWS_NEWS}'" \
+		--param notices.xml "'${XML_NOTICES}'" \
 		--param transtable.xml "'${XML_TRANSTABLE}'" \
-		--param navigation.xml "'${XML_NAVIGATION}'" \
 		${.CURDIR}/index.xsl ${XML_NEWS_NEWS}
 .if !defined(NO_TIDY)
 	-${TIDY} ${TIDYOPTS} ${.TARGET}
