@@ -61,9 +61,30 @@ while (<DBFILE>)
 
 	print OUTFILE "$type\t$name\t$url\t$description\t$email\t$dateadd\t$datever\n";
 
-	$numc++ if ($type =~ m/commercial/);
-	$numnp++ if ($type =~ m/non\s?profit/);
-	$nump++ if ($type =~ m/personal/);
+	if ($type =~ m/commercial/) {
+		$numc++;
+		if (defined $chash{$url}) {
+			$chash{$url}++;
+		} else {
+			$chash{$url} = 1;
+		}
+	};
+	if ($type =~ m/non\s?profit/) {
+		$numnp++;
+		if (defined $nphash{$url}) {
+			$nphash{$url}++;
+		} else {
+			$nphash{$url} = 1;
+		}
+	};
+	if ($type =~ m/personal/) {
+		$nump++;
+		if (defined $phash{$url}) {
+			$phash{$url}++;
+		} else {
+			$nphash{$url} = 1;
+		}
+	};
 
 	$lastname = $name;
 	$lasturl = $url;
@@ -76,6 +97,15 @@ close(OUTFILE);
 
 # Print Statistics
 print "Commercial: $numc\n";
+foreach $key (sort keys %chash) {
+	print "$chash{$key}: $key\n" if ($chash{$key} > 1);
+}
 print "Non-profit: $numnp\n";
+foreach $key (sort keys %nphash) {
+	print "$nphash{$key}: $key\n" if ($nphash{$key} > 1);
+}
 print "Personal: $nump\n";
+foreach $key (sort keys %phash) {
+	print "$phash{$key}: $key\n" if ($phash{$key} > 1);
+}
 print "Total: ",$numc+$numnp+$nump,"\n";
