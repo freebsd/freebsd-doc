@@ -8,7 +8,7 @@
 #  GNU General Public License Version 2.  
 #     (http://www.gnu.ai.mit.edu/copyleft/gpl.html)
 #
-# $FreeBSD: www/en/cgi/dosendpr.cgi,v 1.14 2003/12/14 17:28:13 ceri Exp $
+# $FreeBSD: www/en/cgi/dosendpr.cgi,v 1.15 2004/01/03 21:24:51 ceri Exp $
 
 require "html.pl";
 
@@ -127,7 +127,7 @@ if (defined($codeentered) && $codeentered && $db_hash{$codeentered} &&
           { print `cat $gnsprepbad`; }
         else {
 	    print "<h1>Bad Data</h1>\nYou need to specify at least your ",
-              "electronic mail address, your name and a synopsis of the ",
+              "electronic mail address, your name and a synopsis ",
               "of the problem.\n  Please return to the form and add the ",
               "missing information.  Thank you.\n";
         }
