@@ -6,7 +6,7 @@
 # by John Fieber
 # February 26, 1998
 #
-# $Id: getmsg.cgi,v 1.6 1998-03-08 19:30:55 wosch Exp $
+# $Id: getmsg.cgi,v 1.7 1998-03-18 19:40:33 wosch Exp $
 #
 
 require "./cgi-lib.pl";
@@ -73,11 +73,12 @@ sub MessageToHTML
     my ($doc) = @_;
     my ($header, $body) = split(/\n\n/, $doc, 2);
     my ($i, %hdr, $field, $data, $message);
+    my ($mid) = '/~wosch/test/mid/mid.cgi';
     
     $body = &AddAnchors(&EscapeHTML($body));
 
     $header = &EscapeHTML($header);
-    $header =~ s/\n  */ /g;
+    $header =~ s/\n[ \t]+/ /g;
 
     foreach $i (split(/\n/, $header)) {
     	($field, $data) = split(/ /, $i, 2);
@@ -105,14 +106,30 @@ sub MessageToHTML
     	$message .= "<strong>Subject: </strong>  $hdr{'subject:'}\n";
     }
 
-    $message .= "<strong>Message-ID: </strong>  $hdr{'message-id:'}\n"
-	if $hdr{'message-id:'};
-    $message .= "<strong>Resent-Message-ID: </strong>  $hdr{'resent-message-id:'}\n"
-	    if $hdr{'resent-message-id:'};
-    $message .= "<strong>In-Reply-To: </strong>  $hdr{'in-reply-to:'}\n"
-	if $hdr{'in-reply-to:'};
-    $message .= "<strong>References: </strong>  $hdr{'references:'}\n"
-	if $hdr{'references:'};
+    if ($hdr{'message-id:'}) {
+	$hdr{'message-id:'} =~ 
+	    s%;([^&]+)&%;<a href="$mid?db=irt&id=$1">$1</a>&%oi;
+	$message .= "<strong>Message-ID: </strong>  $hdr{'message-id:'}\n";
+    }
+
+    if ($hdr{'resent-message-id:'}) {
+	$hdr{'resent-message-id:'} =~ 
+	    s%;([^&]+)&%;<a href="$mid?db=irt&id=$1">$1</a>&%oi;
+	$message .= "<strong>Resent-Message-ID: </strong>  $hdr{'resent-message-id:'}\n";
+    }
+
+    if ($hdr{'in-reply-to:'}) {
+	$hdr{'in-reply-to:'} =~
+	    s%;([^&]+)&%;<a href="$mid?db=mid&id=$1">$1</a>&%oi;
+	$message .= "<strong>In-Reply-To: </strong>  $hdr{'in-reply-to:'}\n";
+    }
+
+    if ($hdr{'references:'}) {
+	$hdr{'references:'} =~
+	    s%;([^&\s]+)&%;<a href="$mid?db=mid&id=$1">$1</a>&%goi;
+	$message .= "<strong>References: </strong>  $hdr{'references:'}\n";
+    }
+
 
     $message .= "</pre>\n";
 
