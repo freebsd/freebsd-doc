@@ -1,5 +1,5 @@
 #
-# $FreeBSD: www/es/doc/Makefile,v 1.1 2002/11/25 12:26:21 jesusr Exp $
+# $FreeBSD: www/es/doc/Makefile,v 1.2 2002/11/25 16:52:43 jesusr Exp $
 #
 # Build the FreeBSD documentation *outside* of the www tree, and install it
 # in to the right place as necessary.
@@ -12,20 +12,23 @@
 all: all-all all-install
 
 all-all:
-        @unset DESTDIR || true; \
-	 cd ${.CURDIR}/../../../doc/es_ES.ISO8859-1; \
+	@unset DESTDIR || true; \
+	cd ${.CURDIR}/../../../doc/es_ES.ISO8859-1; \
 		${MAKE} FORMATS="html-split html" \
 			INSTALL_COMPRESSED= all
+
 all-install:
 	@unset DESTDIR || true; \
 	 cd ${.CURDIR}/../../../doc/es_ES.ISO8859-1; \
 		${MAKE} FORMATS="html-split html" DOCDIR=${.OBJDIR} \
 			INSTALL_COMPRESSED= install
+
 install clean:
 	@unset DESTDIR || true; \
 	 cd ${.CURDIR}/../../../doc/es_ES.ISO8859-1; \
 		${MAKE} FORMATS="html-split html" DOCDIR=${DESTDIR}/data/doc \
 			INSTALL_COMPRESSED= ${.TARGET}
+
 .if make(clean)
 	${RM} -rf es*
 .endif
