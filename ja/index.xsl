@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
 
-<!-- $FreeBSD: www/ja/index.xsl,v 1.2 2001/08/08 03:55:55 kuriyama Exp $ -->
-<!-- Original revision: 1.3 -->
+<!-- $FreeBSD: www/ja/index.xsl,v 1.3 2001/09/03 01:57:19 kuriyama Exp $ -->
+<!-- Original revision: 1.6 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   
@@ -9,10 +9,11 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/ja/index.xsl,v 1.2 2001/08/08 03:55:55 kuriyama Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/ja/index.xsl,v 1.3 2001/09/03 01:57:19 kuriyama Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
-  <xsl:output type="html" encoding="EUC-JP"/>
+  <xsl:output type="html" encoding="EUC-JP"
+              doctype-public="-//W3C//DTD HTML 4.01 Transitional//EN"/>
 
   <xsl:template match="/">
     <html>
@@ -52,6 +53,7 @@
 
 		  <option value="http://www.jp.FreeBSD.org/www.FreeBSD.org/">6Bone(IPv6)</option>
 		  <option value="http://www.au.FreeBSD.org/">オーストラリア/1</option>
+		  <option value="http://freebsd.unixtech.be/">ベルギー</option>
 		  <option value="http://www.br.FreeBSD.org/www.freebsd.org/">ブラジル/1</option>
 		  <option value="http://www2.br.FreeBSD.org/www.freebsd.org/">ブラジル/2</option>
 		  <option value="http://www3.br.FreeBSD.org/">ブラジル/3</option>
@@ -347,26 +349,42 @@
 			      ・<a href="{$u.rel.notes}">リリースノート</a><br/>
 			      ・<a href="{$u.rel.errata}">Errata</a></small></p>
 
-			  <p><font size="+1" color="#990000"><b>最新ニュース</b></font><br/>
-			  <font size="-1">
-			    <!-- Code to pull in the most recent four news
-			         items -->
-			    <xsl:for-each select="descendant::event[position() &lt;= 20]">
-			      ・ <a>
-				<xsl:attribute name="href">
-				  news/newsflash.html#<xsl:call-template name="generate-event-anchor"/>
-				</xsl:attribute>
-				<xsl:choose>
-				  <xsl:when test="count(child::title)">
-				    <xsl:value-of select="title"/><br/>
-				  </xsl:when>
-				  <xsl:otherwise>
-				    <xsl:value-of select="p"/><br/>
-				  </xsl:otherwise>
-				</xsl:choose>
-			      </a>
-			    </xsl:for-each>
-			  </font></p>
+			  <p><font size="+1" color="#990000"><b>Project News</b></font><br/>
+			    <font size="-1">
+			      <!-- Pull in the 10 most recent news items -->
+			      <xsl:for-each select="descendant::event[position() &lt;= 10]">
+				・ <a>
+				  <xsl:attribute name="href">
+				    news/newsflash.html#<xsl:call-template name="generate-event-anchor"/>
+				  </xsl:attribute>
+				  <xsl:choose>
+				    <xsl:when test="count(child::title)">
+				      <xsl:value-of select="title"/><br/>
+				    </xsl:when>
+				    <xsl:otherwise>
+				      <xsl:value-of select="p"/><br/>
+				    </xsl:otherwise>
+				  </xsl:choose>
+				</a>
+			      </xsl:for-each>
+			      <a href="news/newsflash.html">More...</a>
+			    </font></p>
+			  
+			  <p><font size="+1" color="#990000"><b>FreeBSD Press</b></font><br/>
+
+			    <font size="-1">
+			      <!-- Pull in the 10 most recent press items -->
+			      <xsl:for-each select="document('news/press.xml')/descendant::story[position() &lt; 10]">
+				・ <a>
+				  <xsl:attribute name="href">
+				    news/press.html#<xsl:call-template name="generate-story-anchor"/>
+				  </xsl:attribute>
+				  <xsl:value-of select="name"/>
+				</a><br/>
+			      </xsl:for-each>
+			      <a href="news/press.html">More...</a>
+			    </font>
+			  </p>
 			</td>
 		      </tr>
 		    </table>
