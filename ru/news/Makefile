@@ -1,7 +1,7 @@
 # $FreeBSD$
 # The FreeBSD Russian Documentation Project
-# $FreeBSDru: frdp/www/ru/news/Makefile,v 1.7 2002/02/15 15:00:19 phantom Exp $
-# Original revision: 1.33
+# $FreeBSDru: frdp/www/ru/news/Makefile,v 1.8 2003/09/22 07:54:13 den Exp $
+# Original revision: 1.38
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -32,6 +32,7 @@ SUBDIR+=	1998
 SUBDIR+=	1999
 SUBDIR+=	2000
 SUBDIR+=	2001
+SUBDIR+=	2002
 
 DATA=		newsflash.html news.rdf press.html
 CLEANFILES+=	newsflash.html news.rdf press.html
