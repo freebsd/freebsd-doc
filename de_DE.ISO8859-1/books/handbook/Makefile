@@ -1,6 +1,6 @@
-# 
+#
 # $FreeBSD$
-# $FreeBSDde: de-docproj/books/handbook/Makefile,v 1.22 2002/11/29 12:48:18 mheinen Exp $
+# $FreeBSDde: de-docproj/books/handbook/Makefile,v 1.23 2003/03/08 18:27:32 mheinen Exp $
 #
 # Build the FreeBSD Handbook in its German translation.
 #
@@ -23,7 +23,7 @@ IMAGES_LIB+= callouts/3.png
 IMAGES_LIB+= callouts/4.png
 IMAGES_LIB+= callouts/5.png
 
-# 
+#
 # SRCS lists the individual SGML files that make up the document. Changes
 # to any of these files will force a rebuild
 #
@@ -60,8 +60,8 @@ SRCS+= vinum/chapter.sgml
 SRCS+= x11/chapter.sgml
 
 # Entities
-SRCS+= chapters.ent 
-SRCS+= newsgroups.ent 
+SRCS+= chapters.ent
+SRCS+= newsgroups.ent
 
 # alle Kapitel bauen
 CHAPTERS?= ${SRCS:M*chapter.sgml}
@@ -75,9 +75,9 @@ SGMLFLAGS+= ${CHAPTERS:S/\/chapter.sgml//:S/^/-i chap./}
 PS2PDF?=	${PREFIX}/bin/ps2pdf
 
 book.tex-pdf:
-	${TOUCH} book.tex-pdf 
+	${TOUCH} book.tex-pdf
 
-book.pdf: book.ps       
+book.pdf: book.ps
 	${PS2PDF} book.ps book.pdf
 
 pgpkeyring: pgpkeys/chapter.sgml
