@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# Copyright (c) Juli 1997. Wolfram Schneider <wosch@FreeBSD.org>, Berlin.
+# Copyright (c) Juli 1997-2000. Wolfram Schneider <wosch@FreeBSD.org>, Berlin.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -70,6 +70,13 @@ $server_admin=$ENV{'SERVER_ADMIN'};
 $http_host=$ENV{'HTTP_HOST'};
 $server_name=$ENV{'SERVER_NAME'};
 
+# rfc1738 says that ";"|"/"|"?"|":"|"@"|"&"|"=" may be reserved.
+$http_referer_url = $http_referer;
+$http_referer_url =~ s/([^a-zA-Z0-9;\/?:&=])/sprintf("%%%02x",ord($1))/eg;
+$redirect_url_save = $redirect_url;
+$redirect_url_save =~ s/([^a-zA-Z0-9;\/?:&=])/sprintf("%%%02x",ord($1))/eg;
+
+
 $hsty_base = '';
 require 'cgi-style.pl';
 print &html_header($title);
@@ -83,7 +90,7 @@ does not exist at this server.\n];
 if ($http_referer) {
     print qq{You are coming from 
 <blockquote>
-<a href="$http_referer">$http_referer</a>.
+<a href="$http_referer_url">$http_referer</a>.
 </blockquote>
 <p>\n};
 }
@@ -93,7 +100,7 @@ The closest match to your request is
 <a href="http://$server_name">http://$server_name</a>.
 
 Please contact the server administrator
-<a href="mailto:$server_admin?subject=Document%20not%20found%20-%20http://$http_host$redirect_url">$server_admin</a>.<p>
+<a href="mailto:$server_admin?subject=Document%20not%20found%20-%20http://$http_host$redirect_url_save">$server_admin</a>.<p>
 
 Thank you very much!<p>
 ];
