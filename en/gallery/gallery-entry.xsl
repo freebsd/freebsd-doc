@@ -11,7 +11,7 @@
 
   <xsl:variable name="base" select="'..'"/>
   
-  <xsl:variable name="date" select="'$FreeBSD: www/en/gallery/gallery-entry.xsl,v 1.1 2001/08/06 07:02:44 nik Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/gallery/gallery-entry.xsl,v 1.2 2002/04/20 15:42:12 phantom Exp $'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"/>
 
@@ -28,14 +28,14 @@
 
   <xsl:variable name="commercial-intro">
     <p>FreeBSD is powering innovative Internet applications and services all
-      over the world.  This gallery is a showcase of commercial organisations
+      over the world.  This gallery is a showcase of commercial organizations
       who have put FreeBSD to work for them.  Browse and find out more about
       what FreeBSD can do for <b>you</b>.</p>
   </xsl:variable>
 
   <xsl:variable name="nonprofit-intro">
     <p>FreeBSD is powering innovative Internet applications and services all
-      over the world.  This gallery is a showcase of non-profit organisations
+      over the world.  This gallery is a showcase of non-profit organizations
       who have put FreeBSD to work for them.  Browse and find out more about
       what FreeBSD can do for <b>you</b>.</p>
   </xsl:variable>
