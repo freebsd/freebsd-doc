@@ -26,10 +26,10 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" %FreeBSD: src/share/man/man9/vnode.9,v 1.24 2003/03/06 23:55:51 ceri Exp %
+.\" %FreeBSD: src/share/man/man9/vnode.9,v 1.25 2003/05/24 18:19:11 hmp Exp %
 .\"
 .\" $FreeBSD$
-.Dd June 30, 1999
+.Dd May 20, 2003
 .Os
 .Dt VNODE 9
 .Sh 名称
@@ -38,116 +38,22 @@
 .Sh 書式
 .In sys/param.h
 .In sys/vnode.h
-.Pp
-.Bd -literal
-/*
- * vnode の型です。VNON は型が無いことを意味します。
- */
-enum vtype	{ VNON, VREG, VDIR, VBLK, VCHR, VLNK, VSOCK, VFIFO, VBAD };
-
-/*
- * 個々の下位ファイルシステムはその私的な領域を割り当て、それを
- * v_data から吊るします。ヌルでないならば、この領域は getnewvnode() で
- * 解放されます。
- */
-TAILQ_HEAD(buflists, buf);
-
-typedef	int 	vop_t((void *));
-struct namecache;
-
-/*
- * これらの項目の読込みまたは書込みは適切なロックの保持を要求します。
- * v_freelist はグローバル vnode_free_list 単純ロックでロックされます。
- * v_mntvnodes はグローバル mntvnodes 単純ロックでロックされます。
- * v_flag, v_usecount, v_holdcount および v_writecount は vinterlock
- *    単純ロックでロックされます。
- * v_pollinfo はその中に含まれているロックでロックされます。
- */
-struct vnode {
-	u_long	v_flag;				/* vnode フラグ (以下参照) */
-	int	v_usecount;			/* ユーザの参照カウント */
-	int	v_writecount;			/* 書込み者の参照カウント */
-	int	v_holdcnt;			/* ページ & バッファの参照 */
-	u_long	v_id;				/* ケーパビリティ識別子 */
-	struct	mount *v_mount;			/* 今いる VFS へのポインタ */
-	vop_t	**v_op;				/* vnode 操作ベクタ */
-	TAILQ_ENTRY(vnode) v_freelist;		/* vnode フリーリスト */
-	LIST_ENTRY(vnode) v_mntvnodes;		/* マウントポイントの vnode */
-	struct	buflists v_cleanblkhd;		/* 綺麗なブロックリスト先頭 */
-	struct	buflists v_dirtyblkhd;		/* 汚れたブロックリスト先頭 */
-	LIST_ENTRY(vnode) v_synclist;		/* 汚れたバッファ付き vnode */
-	long	v_numoutput;			/* 書き込み中の数 */
-	enum	vtype v_type;			/* vnode の型 */
-	union {
-		struct mount	*vu_mountedhere;/* マウントされた VFS へのポインタ (VDIR) */
-		struct socket	*vu_socket;	/* UNIX IPC (VSOCK) */
-		struct {
-			struct specinfo	*vu_specinfo; /* デバイス (VCHR, VBLK) */
-			SLIST_ENTRY(vnode) vu_specnext;
-		} vu_spec;
-		struct fifoinfo	*vu_fifoinfo;	/* FIFO (VFIFO) */
-	} v_un;
-	struct	nqlease *v_lease;		/* 貸出しのソフト参照 */
-	daddr_t	v_lastw;			/* 最後の書込み (クラスタ) */
-	daddr_t	v_cstart;			/* クラスタの開始ブロック */
-	daddr_t	v_lasta;			/* 最後の割当て */
-	int	v_clen;				/* 現在のクラスタ長 */
-	struct vm_object *v_object;		/* VM オブジェクトの保存場所 */
-	struct	simplelock v_interlock;		/* 使用カウントとフラグのロック */
-	struct	lock *v_vnlock;			/* 非ロックファイルシステム用 */
-	const	char *v_tag;			/* 下位データの型 */
-	void 	*v_data;			/* ファイルシステムの私的データ */
-	LIST_HEAD(, namecache) v_cache_src;	/* 我々からのキャッシュエントリ */
-	TAILQ_HEAD(, namecache) v_cache_dst;	/* 我々へのキャッシュエントリ */
-	struct	vnode *v_dd;			/* .. の vnode */
-	u_long	v_ddid;				/* .. のケーパビリティ識別子 */
-	struct	{
-		struct	simplelock vpi_lock;	/* 以下を保護するロック */
-		struct	selinfo vpi_selinfo;	/* ポーリング側の識別 */
-		short	vpi_events;		/* 何を探しているのか */
-		short	vpi_revents;		/* 何が起こったのか */
-	} v_pollinfo;
-};
-#define	v_mountedhere	v_un.vu_mountedhere
-#define	v_socket	v_un.vu_socket
-#define	v_rdev		v_un.vu_spec.vu_specinfo
-#define	v_specnext	v_un.vu_spec.vu_specnext
-#define	v_fifoinfo	v_un.vu_fifoinfo
-
-/*
- * vnode フラグです。
- */
-#define	VROOT		0x00001	/* ファイルシステムのルート */
-#define	VTEXT		0x00002	/* vnode は純粋なテキストプロトタイプ */
-#define	VSYSTEM		0x00004	/* vnode はカーネルが使用中 */
-#define	VISTTY		0x00008	/* vnode は tty を表現 */
-#define	VXLOCK		0x00100	/* vnode は下位の型の変更のためロック中 */
-#define	VXWANT		0x00200	/* プロセスが vnode を待っています */
-#define	VBWAIT		0x00400	/* 出力の完了を待っています */
-#define	VOBJBUF		0x02000	/* VM オブジェクトにバッファを割当て */
-#define	VAGE		0x08000	/* フリーリストの先頭に vnode を挿入 */
-#define	VOLOCK		0x10000	/* オブジェクトを待つために vnode がロック */
-#define	VOWANT		0x20000	/* プロセスが VOLOCK を待っています */
-#define	VDOOMED		0x40000	/* この vnode は再利用中 */
-#define	VFREE		0x80000	/* この vnode はフリーリスト上 */
-#define	VTBFREE		0x100000 /* この vnode はフリーリスト行き */
-#define	VONWORKLST	0x200000 /* syncer 作業リスト上 */
-#define	VMOUNT		0x400000 /* マウント処理中 */
-
-.Ed
 .Sh 解説
 vnode は
 .Ux
 でのファイル活動の中心です。
+vnode は
+.Vt "struct vnode"
+で記述されます。
 個々の活動中のファイル、
 個々の現在のディレクトリ、個々のマウントされたファイル、
 テキストファイル、およびルートのために割当てられた一意的な vnode があります。
 .Pp
 個々の vnode は 3 つの参照カウント、
-.Dv v_usecount ,
-.Dv v_holdcnt
+.Va v_usecount ,
+.Va v_holdcnt
 および
-.Dv v_writecount
+.Va v_writecount
 を持っています。
 最初のものはカーネル内でこの vnode を使用しているクライアントの数です。
 このカウントは
@@ -164,9 +70,9 @@ vnode は
 .Xr vdrop 9
 によって管理されます。
 vnode の
-.Dv v_usecount
+.Va v_usecount
 および
-.Dv v_holdcnt
+.Va v_holdcnt
 の両方が 0 に達すると、それからその vnode はフリーリスト上に置かれ、
 ことによっては別のファイルシステムで、
 別のファイルのために再利用されるかもしれません。
@@ -187,7 +93,7 @@ vnode を返すあらゆる呼び出し (例えば
 .Xr VFS_GET 9 ,
 .Xr VOP_LOOKUP 9
 など) は vnode の
-.Dv v_usecount
+.Va v_usecount
 を 1 ずつ増やします。
 呼び出し側が vnode の利用を完了したときには、この参照は
 .Xr vrele 9
@@ -197,16 +103,16 @@ vnode を返すあらゆる呼び出し (例えば
 .Pp
 その他の共通に使用される vnode 構造体のメンバは、
 名前キャッシュでの一貫性を管理するために使用される
-.Dv v_id
+.Va v_id
 と、その vnode を所有しているファイルシステムを指す
-.Dv v_mount
+.Va v_mount
 と、その vnode が表現するオブジェクトの型を含む
-.Dv v_type
+.Va v_type
 と、その vnode のファイルシステム特有のデータを保存するために
 ファイルシステムによって使用される
-.Dv v_data
+.Va v_data
 があります。
-.Dv v_op
+.Va v_op
 フィールドは vnode の機能を実装するファイルシステム内の関数を呼び出すための
 .Dv VOP_*
 マクロによって使用されます。
