@@ -2,7 +2,10 @@
 #
 # Perl program to send mail.
 #
-# $FreeBSD$
+# $FreeBSD: www/en/cgi/reg.cgi,v 1.7 2000/04/03 08:45:51 phantom Exp $
+
+sub do_header;
+sub close_body;
 
 $mailprog = '/usr/sbin/sendmail';
 
@@ -45,63 +48,66 @@ format MAIL =
 $value
 .
 
-# Open the mail file and write to it
-open (MAIL, "|$mailprog $recipient") || die "$mailprog not available.\n";
-print MAIL "From: $FORM{'emaila'}\n";
-print MAIL "Subject: FreeBSD Registration from $FORM{'emaila'}\n\n";
-
-print MAIL "<entry>\n";
-print MAIL "<first>$FORM{'First'}</first>\n";
-print MAIL "<last>$FORM{'Last'}</last>\n";
-print MAIL "<email>$FORM{'emaila'}</email>\n";
-print MAIL "<address>$FORM{'Address'}</address>\n";
-print MAIL "<city>$FORM{'City'}</city>\n";
-print MAIL "<state>$FORM{'State'}</state>\n";
-print MAIL "<zip>$FORM{'Zip'}</zip>\n";
-print MAIL "<options commerce_email=$FORM{'commerce_email'}";
-print MAIL " announce=$FORM{'announce'} newsletter=$FORM{'newsletter'}>";
-print MAIL " </options>\n";
-print MAIL "<version>$FORM{'version'}</version>\n";
-print MAIL "</entry>\n";
-print MAIL "\n";
-close (MAIL);
+my ($sub_announce, $sub_security, $unsub_announce, $unsub_security) = ();
+$sub_announce = 1 if $FORM{"announce"} eq "yes";
+$unsub_announce = 1 if $FORM{"announce"} eq "no";
+$sub_security = 1 if $FORM{"security-notifications"} eq "yes";
+$unsub_security = 1 if $FORM{"security-notifications"} eq "no";
 
 # Open the mail file and write to it
 # if user is subscribing to maillist 
-if ($FORM{"announce"} eq "yes") {
+# which they should be, otherwise why did they hit submit ?
+if ( $sub_announce || $sub_security || $unsub_announce || $unsub_security ) {
 open (MAIL, "|$mailprog $sub_recipient") || die "$mailprog not available.\n";
 print MAIL "From: $FORM{'emaila'}\n";
-print MAIL "Subject: subscribe freebsd-announce $FORM{'emaila'}\n\n";
+print MAIL "Subject: \n\n";
     
-print MAIL "subscribe freebsd-announce $FORM{'emaila'}\n";
+$sub_announce and print MAIL "subscribe freebsd-announce $FORM{'emaila'}\n";
+$unsub_announce and print MAIL "unsubscribe freebsd-announce $FORM{'emaila'}\n";
+$sub_security and print MAIL "subscribe freebsd-security-notifications $FORM{'emaila'}\n";
+$unsub_security and print MAIL "unsubscribe freebsd-security-notifications $FORM{'emaila'}\n";
 
 close (MAIL);
+} else {
+  &do_header("No action");
+  print "<P>No action chosen, hence no action taken.</p>";
+  &close_body;
+  exit;
 }
-print "<HTML>\n";
-print "<HEAD>\n";
-print "<TITLE>Mail Sent</TITLE>\n";
-print "</HEAD>\n";
-print "<BODY BGCOLOR=\"\#FFFFFF\" TEXT=\"\#660000\">\n";
-print "<FONT SIZE=4> \n";
-print "<CENTER>\n";
-print "<IMG SRC=\"..\/gifs\/bar.gif\" BORDER=0 USEMAP=\"\#bar\">\n";
-print "<MAP NAME=\"bar\">\n";
-print "<AREA SHAPE=\"RECT\" COORDS=\"1,1,111,31\" HREF=\"../index.html\">\n";
-print "<AREA SHAPE=\"RECT\" COORDS=\"112,11,196,31\" HREF=\"../ports/index.html\">\n";
-print "<AREA SHAPE=\"RECT\" COORDS=\"196,12,257,33\" HREF=\"../support.html\">\n";
-print "<AREA SHAPE=\"RECT\" COORDS=\"256,12,365,33\" HREF=\"../docs.html\">\n";
-print "<AREA SHAPE=\"RECT\" COORDS=\"366,13,424,32\" HREF=\"../commercial.html\">\n";
-print "<AREA SHAPE=\"RECT\" COORDS=\"425,16,475,32\" HREF=\"../search/search.html\">\n";
-print "<AREA SHAPE=\"RECT\" COORDS=\"477,16,516,33\" HREF=\"../search/index-site.html\">\n";
-print "<AREA SHAPE=\"RECT\" COORDS=\"516,15,562,33\" HREF=\"../index.html\">\n";
-print "<AREA SHAPE=\"RECT\" COORDS=\"0,0,564,32\" HREF=\"../index.html\">\n";
-print "</MAP>\n";
-print "<P>Thank you, $FORM{'First'} $FORM{'Last'}, for your registration.\n";
-print "<BR>It has been submitted.\n";
-if ($FORM{"announce"} eq "yes") {
-print "<BR>As you requested, you have also been subscribed to announce\@FreeBSD.org.\n";
-}
-print "</CENTER>\n";
-print "</BODY>\n";
 
+&do_header("Subscription processed");
+print "<P>Thank you, $FORM{'emaila'}, for your submission.\n";
+print "<BR>The request will need to be authenticated; check your mailbox ";
+print "for instructions on how to do this.\n";
+&close_body;
+
+sub do_header {
+  my $title = @_;
+  print "<HTML>\n";
+  print "<HEAD>\n";
+  print "<TITLE>$title</TITLE>\n";
+  print "</HEAD>\n";
+  print "<BODY BGCOLOR=\"\#FFFFFF\" TEXT=\"\#660000\">\n";
+  print "<FONT SIZE=4> \n";
+  print "<CENTER>\n";
+  print "<IMG SRC=\"..\/gifs\/bar.gif\" BORDER=0 USEMAP=\"\#bar\">\n";
+  print "<MAP NAME=\"bar\">\n";
+  print "<AREA SHAPE=\"RECT\" COORDS=\"1,1,111,31\" HREF=\"../index.html\">\n";
+  print "<AREA SHAPE=\"RECT\" COORDS=\"112,11,196,31\" HREF=\"../ports/index.html\">\n";
+  print "<AREA SHAPE=\"RECT\" COORDS=\"196,12,257,33\" HREF=\"../support.html\">\n";
+  print "<AREA SHAPE=\"RECT\" COORDS=\"256,12,365,33\" HREF=\"../docs.html\">\n";
+  print "<AREA SHAPE=\"RECT\" COORDS=\"366,13,424,32\" HREF=\"../commercial.html\">\n";
+  print "<AREA SHAPE=\"RECT\" COORDS=\"425,16,475,32\" HREF=\"../search/search.html\">\n";
+  print "<AREA SHAPE=\"RECT\" COORDS=\"477,16,516,33\" HREF=\"../search/index-site.html\">\n";
+  print "<AREA SHAPE=\"RECT\" COORDS=\"516,15,562,33\" HREF=\"../index.html\">\n";
+  print "<AREA SHAPE=\"RECT\" COORDS=\"0,0,564,32\" HREF=\"../index.html\">\n";
+  print "</MAP>\n";
+}
+
+sub close_body {
+  print "</CENTER>\n";
+  print "</BODY>\n";
+  print "</HTML>\n";
+}
 1;
+
