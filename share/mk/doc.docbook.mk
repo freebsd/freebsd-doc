@@ -653,17 +653,17 @@ lint validate:
 #
 
 ${INDEX_SGML}:
-	${PERL} ${COLLATEINDEX} -N -o ${.TARGET}
+	${PERL} ${COLLATEINDEX} -i doc-index -N -o ${.TARGET}
 
 ${HTML_INDEX}:
 	${JADE_CMD} -V html-index -V nochunks ${HTMLOPTS} -ioutput.html.images \
 		${JADEOPTS} -t sgml ${MASTERDOC} > /dev/null
-	${PERL} ${COLLATEINDEX} -g -o ${INDEX_SGML} ${.TARGET}
+	${PERL} ${COLLATEINDEX} -i doc-index -g -o ${INDEX_SGML} ${.TARGET}
 
 ${HTML_SPLIT_INDEX}:
 	${JADE_CMD} -V html-index ${HTMLOPTS} -ioutput.html.images \
 		${JADEOPTS} -t sgml ${MASTERDOC} > /dev/null
-	${PERL} ${COLLATEINDEX} -g -o ${INDEX_SGML} ${.TARGET}
+	${PERL} ${COLLATEINDEX} -i doc-index -g -o ${INDEX_SGML} ${.TARGET}
 
 ${PRINT_INDEX}: ${HTML_INDEX}
 	${CP} -p ${HTML_INDEX} ${.TARGET}
