@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-#	$Id: ports.cgi,v 1.26 1998-08-07 19:33:24 wosch Exp $
+#	$Id: ports.cgi,v 1.27 1998-08-18 17:03:29 wosch Exp $
 #
 # ports.cgi - search engine for FreeBSD ports
 #             	o search for a port by name or description
@@ -398,7 +398,11 @@ sub search_ports {
 	    &out($today{$key}, 0);
 	} elsif ($stype eq 'maintainer' && $a[5] =~ /$query/io) {
 	    &out($today{$key}, 0);
+	} elsif ($stype eq 'requires' && 
+		 ($a[7] =~ /$query/io || $a[8] =~ /$query/io)) {
+	    &out($today{$key}, 0);
 	}
+
     }
 }
 
@@ -434,9 +438,11 @@ Search for:
     %d = ('name', 'Package Name',
 	  'all', 'All',
 	  'maintainer', 'Maintainer',
-	  'text', 'Description');
+	  'text', 'Description',
+	  'requires', 'Requires',
+	  );
 
-    foreach ('all', 'name', 'text', 'maintainer') {
+    foreach ('all', 'name', 'text', 'maintainer', 'requires') {
 	print "<OPTION" . (($_ eq $stype) ? ' SELECTED ' : ' ') .
 	    qq{VALUE="$_">} . ($d{$_} ? $d{$_} : $_) . qq{</OPTION>\n};
     }
@@ -526,8 +532,9 @@ sub check_input {
 	if (!($stype eq "name" ||
 	      $stype eq "text" ||
 	      $stype eq "maintainer" ||
+	      $stype eq "requires" ||
 	      $stype eq "all")) {
-	    &warn("unknown search type ``$type'', use `all', `text', `name' or `maintainer'\n");
+	    &warn("unknown search type ``$type'', use `all', `text', `name', 'requires', or `maintainer'\n");
 	    &exit(0);
 	} else {
 	    return;
