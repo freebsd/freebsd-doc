@@ -26,7 +26,7 @@
 #
 # url.cgi - make plain text URLs clickable
 #
-# $FreeBSD: www/en/cgi/url.cgi,v 1.19 1999/09/09 12:58:56 chris Exp $
+# $FreeBSD: www/en/cgi/url.cgi,v 1.20 1999/10/19 12:24:26 wosch Exp $
 
 
 $hsty_base = '';
@@ -49,7 +49,7 @@ if ($file !~ m%^(http|ftp)://[a-z_\-0-9]+\.freebsd\.(com|org)%i) {
 1 while $file =~ s%/[^/]+/\.\./%/%;
 
 my($cvsroot) = '/home/ncvs';
-$file =~ s%(http|ftp)://ftp.freebsd.org/pub/FreeBSD/branches/-current/%%;
+$file =~ s%(http|ftp)://ftp.freebsd.org/pub/FreeBSD/(branches/|FreeBSD)-current/%%;
 if ($file =~ m%^ports/([\w-]+/\w[\w-+.]+)/pkg/DESCR%) {
     print &html_header("Port description for $1");
 } else {
@@ -74,7 +74,7 @@ print $content;
 print "</pre>\n";
 
 # Add 'source' link for freebsd ports
-if ($file =~ m%pub/FreeBSD/branches/-current/(ports/[^/]+/[^/]+)/pkg/DESCR$%) {
+if ($file =~ m%pub/FreeBSD/(branches/|FreeBSD)-current/(ports/[^/]+/[^/]+)/pkg/DESCR$%) {
     print qq{<HR><a href=\"pds.cgi?$1">Sources</a>\n};
     print qq{| <a href="../ports/">Help</a>\n};
     print qq{<BR>\n};
