@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-#	$Id: ports.cgi,v 1.15 1998-04-27 09:20:23 wosch Exp $
+#	$Id: ports.cgi,v 1.16 1998-04-27 09:44:06 wosch Exp $
 #
 # ports.cgi - search engine for FreeBSD ports
 #             	o search for a port by name or description
@@ -368,6 +368,8 @@ sub search_ports {
 	} elsif ($stype eq "all" &&
 		 ($text =~ /$query/oi || $name =~ /$query/io)) {
 	    &out($today{$key}, 0);
+	} elsif ($stype eq 'maintainer' && $a[5] =~ /$query/io) {
+	    &out($today{$key}, 0);
 	}
     }
 }
@@ -403,9 +405,10 @@ Search for:
     local(%d);
     %d = ('name', 'Package Name',
 	  'all', 'All',
+	  'maintainer', 'Maintainer',
 	  'text', 'Description');
 
-    foreach ('all', 'name', 'text') {
+    foreach ('all', 'name', 'text', 'maintainer') {
 	print "<OPTION" . (($_ eq $stype) ? ' SELECTED ' : ' ') .
 	    qq{VALUE="$_">} . ($d{$_} ? $d{$_} : $_) . qq{</OPTION>\n};
     }
@@ -494,8 +497,9 @@ sub check_input {
 	$stype = "all" if !$stype;
 	if (!($stype eq "name" ||
 	      $stype eq "text" ||
+	      $stype eq "maintainer" ||
 	      $stype eq "all")) {
-	    &warn("unknown search type ``$type'', use `all', `text', or `name'\n");
+	    &warn("unknown search type ``$type'', use `all', `text', `name' or `maintainer'\n");
 	    &exit(0);
 	} else {
 	    return;
