@@ -1,5 +1,5 @@
 # bsd.web.mk
-# $Id: web.mk,v 1.9 1997-01-19 21:29:03 jfieber Exp $
+# $Id: web.mk,v 1.10 1997-03-11 15:12:30 jfieber Exp $
 
 #
 # Build and install a web site.
@@ -26,12 +26,12 @@ CGIDIR?=	${.CURDIR:T}
 DESTDIR?=	${HOME}/public_html
 
 WEBOWN?=	${USER}
-WEBGRP?=	${USER}
-WEBMODE?=	${NOBINMODE}
+WEBGRP?=	www
+WEBMODE?=	664
 
 CGIOWN?=	${USER}
-CGIGRP?=	${USER}
-CGIMODE?=	${BINMODE}
+CGIGRP?=	www
+CGIMODE?=	775
 
 #
 # Install dirs derived from the above.
