@@ -1,5 +1,5 @@
 #
-# $FreeBSD: doc/share/mk/doc.images.mk,v 1.9 2001/06/22 10:12:23 nik Exp $
+# $FreeBSD: doc/share/mk/doc.images.mk,v 1.10 2001/07/13 12:09:59 nik Exp $
 #
 # This include file <doc.images.mk> handles image processing.
 #
@@ -54,7 +54,7 @@ IMAGES_GEN_PDF=${IMAGES:M*.eps:S/.eps$/.pdf/}
 CLEANFILES+= ${IMAGES_GEN_PNG} ${IMAGES_GEN_EPS} ${IMAGES_GEN_PDF}
 
 IMAGES_PNG=${IMAGES:M*.png} ${IMAGES_GEN_PNG} ${IMAGES:M*.scr:S/.scr$/.png/}
-IMAGES_EPS=${IMAGES:M*.eps} ${IMAGES_GEN_EPS}
+IMAGES_EPS=${IMAGES:M*.eps} ${IMAGES_GEN_EPS} ${IMAGES:M*.scr:S/.scr$/.eps/}
 
 # The default resolution eps2png (82) assumes a 640x480 monitor, and is too
 # low for the typical monitor in use today. The resolution of 100 looks
@@ -68,10 +68,12 @@ EPS2PNG_RES?= 100
 IMAGES_PDF=${IMAGES_GEN_PDF}
 
 # Use suffix rules to convert .scr files to .png files
-.SUFFIXES:	.scr .png
+.SUFFIXES:	.scr .png .eps
 
 .scr.png:
 	scr2png < ${.IMPSRC} > ${.TARGET}
+.scr.eps:
+	scr2png < ${.ALLSRC} | pngtopnm | pnmtops -noturn > ${.TARGET}
 
 # We can't use suffix rules to generate the rules to convert EPS to PNG and
 # PNG to EPS.  This is because a .png file can depend on a .eps file, and
