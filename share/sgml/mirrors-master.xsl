@@ -145,6 +145,29 @@
 		    <xsl:value-of select="." />
 		  </xsl:otherwise>
 		</xsl:choose>
+
+		<xsl:if test="$proto = 'ftp' and @proto">
+		  <xsl:value-of select="' (ftp'" />
+
+		  <xsl:choose>
+		    <xsl:when test="contains(@proto, 'http') and contains(@proto, 'rsync')">
+		      <xsl:value-of select="'/http/rsync'" />
+		    </xsl:when>
+		    <xsl:when test="contains(@proto, 'http') and not(contains(@proto, 'rsync'))">
+		      <xsl:value-of select="'/http'" />
+		    </xsl:when>
+		    <xsl:when test="not(contains(@proto, 'http')) and contains(@proto, 'rsync')">
+		      <xsl:value-of select="'/rsync'" />
+		    </xsl:when>
+		  </xsl:choose>
+		  <xsl:value-of select="')'" />
+
+		  <xsl:if test="contains(@proto, 'ftpv6')
+		    or contains(@proto, 'httpv6')
+		    or contains(@proto, 'rsyncv6')">
+		    <xsl:text> (IPv6)</xsl:text>
+		  </xsl:if>
+		</xsl:if>
 	      </para>
 	    </listitem>
 	  </xsl:for-each>
