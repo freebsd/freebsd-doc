@@ -1,9 +1,10 @@
-<!-- $FreeBSD: www/en/ports/ports.inc,v 1.52 2001/01/20 23:02:39 will Exp $ -->
+<!-- $FreeBSD: www/en/ports/ports.inc,v 1.53 2001/01/20 23:03:36 will Exp $ -->
 <p>The FreeBSD Ports and Packages Collection offers a simple way for
 users and administrators to install applications.  The ports
 collection has been <a
 href="http://www.freebsd.org/%7Easami/papers/growth.gif">growing at a
 tremendous rate</a>.
+</p>
 
 <p>Each ``port'' listed here
 contains any patches necessary to make the original application source
@@ -58,7 +59,8 @@ href="../porters-handbook/">Porting applications</a>.</p>
 
 <H1 ALIGN="LEFT"><FONT COLOR="#660000">Upgrade kits</FONT></H1>
 
-<p>The ports listed on these web pages are continually being updated.
+<p>
+The ports listed on these web pages are continually being updated.
 It is recommended that you refresh the entire collection together, as
 many ports depend on other parts of the tree.  If that is not
 possible, at least make sure you get the latest make macro files in
@@ -66,55 +68,22 @@ possible, at least make sure you get the latest make macro files in
 means you need <tt>ports-base</tt> in your cvsupfile.)  If you still
 see errors even with the latest <tt>bsd.port.mk</tt> and friends,
 please fetch the entire collection.
+</p>
 
 <p>
 The current ports tree officially supports only FreeBSD-current and
 FreeBSD-stable.
+
 Consequently, you may need to update a few files on your FreeBSD system 
 to make use of ports developed after your version of FreeBSD was released.
 Please install one of the following depending on the release you are
-running.  Also, if you are running FreeBSD-stable or FreeBSD-current
-that is more than a few days old, you are recommended to install an
-appropriate upgrade kit as well; the ports system is changing very
-fast at times.
+running.  If your system is newer than any of the packages listed below,
+you do not need an upgrade package.  If your system is older than 4.0-RELEASE,
+or is running any branch before 4.0, your only reasonable choice for using
+ports-current is to upgrade to some point along the 4.x branch.
+</p>
 
 <dl>
-<dt><a
-href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-2.2-stable/Latest/221upgrade.tgz">2.2.1
-to 2.2-STABLE upgrade kit</a>
-<dd>For users of 2.2.1-RELEASE or
-2.2-STABLE between 2.2.1-RELEASE and 2.2.2-RELEASE
-<dt><a
-href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-2.2-stable/Latest/222upgrade.tgz">2.2.2
-to 2.2-STABLE upgrade kit</a>
-<dd>For users of 2.2.2-RELEASE or
-2.2-STABLE between 2.2.2-RELEASE and 2.2.5-RELEASE
-<dt><a
-href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-2.2-stable/Latest/225upgrade.tgz">2.2.5
-to 2.2-STABLE upgrade kit</a>
-<dd>For users of 2.2.5-RELEASE or
-2.2-STABLE between 2.2.5-RELEASE and 2.2.6-RELEASE
-<dt><a
-href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-2.2-stable/Latest/227upgrade.tgz">2.2.7
-to 2.2-STABLE upgrade kit</a>
-<dd>For users of 2.2.6-RELEASE, 2.2.7-RELEASE, 2.2.8-RELEASE or
-2.2-STABLE after 2.2.6-RELEASE
-<dt><a
-href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-3-stable/Latest/30upgrade.tgz">3.0
-to 3-STABLE upgrade kit</a>
-<dd>For users of 3.0-RELEASE or 3.0-STABLE after 3.0-RELEASE
-<dt><a
-href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-3-stable/Latest/31upgrade.tgz">3.1
-to 3-STABLE upgrade kit</a>
-<dd>For users of 3.1-RELEASE or 3.1-STABLE after 3.1-RELEASE
-<dt><a
-href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-3-stable/Latest/32upgrade.tgz">3.2
-to 3-STABLE upgrade kit</a>
-<dd>For users of 3.2-RELEASE or 3.2-STABLE after 3.2-RELEASE
-<dt><a
-href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-3-stable/Latest/34upgrade.tgz">3.3 or 3.4
-to 3-STABLE upgrade kit</a>
-<dd>For users of 3.3/3.4-RELEASE or 3.4-STABLE after 3.4-RELEASE
 <dt><a
 href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-4-stable/Latest/40upgrade.tgz">4.0
 to 4-STABLE upgrade kit</a>
@@ -125,17 +94,26 @@ to 4-STABLE upgrade kit</a>
 <dd>For users of 4.1-RELEASE or 4.x-STABLE before January 8, 2001
 </dl>
 
-<p>These
-are FreeBSD packages; please use <strong>pkg_add</strong> to install them.  That
-should enable you to use all the ports listed here.  Note that it will
-only change just enough files to enable ports/packages to be used; for
-a full upgrade to 3-STABLE, please refer to the <a
+<p>
+These are FreeBSD packages; please use <strong>pkg_add</strong> to install
+them.  That should enable you to use all the ports listed here.  It is important
+to note that 4.0-RELEASE counts as "4.x-STABLE before January 8, 2001", i.e.
+if you are running 4.0-RELEASE or 4.x-STABLE before June 4, 2000, you will need
+both the "4.0 to 4-STABLE upgrade kit" and the "4.1 to 4-STABLE upgrade kit".  Note
+that it will only change just enough files to enable ports/packages to be used;
+for a full upgrade to -STABLE, please refer to the <a
 href="../handbook/synching.html">synchronizing your source tree</a>
-section of the handbook.  A full upgrade is recommended, especially if
-you are still using anything earlier than 3.5-release.  Also, the
-2.2.X line is now officially unsupported by ports-current; you are `on
-your own' if you wish to use the ports listed here, as opposed to the
-ones that were included in the release, on your 2.2.X system.</p>
+section of the handbook.
+
+The 3.x branch is fast approaching obsolescence as far as ports-current is
+concerned, and support for the branch will probably be dropped entirely as
+soon as 4.3-RELEASE is rolled.
+
+The 2.2.x branch is officially unsupported by ports-current.  While the
+ports tree as distributed with previous releases will probably work well
+these are also unsupported by the ports team, because time is already
+stretched thin enough supporting ports-current.
+</p>
 
 <p>Many of the ports require the X Window System to compile and run.
 We compile and test our ports on <a
