@@ -1,7 +1,7 @@
 # Taken from:
 #	Id: bsd.subdir.mk,v 1.27 1999/03/21 06:43:40 bde
 #
-# $FreeBSD$
+# $FreeBSD: doc/share/mk/doc.subdir.mk,v 1.2 1999/09/06 06:53:39 peter Exp $
 #
 # This include file <doc.subdir.mk> contains the default targets
 # for building subdirectories in the FreeBSD Documentation Project.
@@ -106,7 +106,7 @@ symlinks:
 			${ECHO} "$${d}/$${l} doesn't exist, not linking"; \
 		else \
 			${ECHO} $${d}/$${t} -\> $${d}/$${l}; \
-			(cd $${d} && rm -f $${t}); \
+			(cd $${d} && rm -rf $${t}); \
 			(cd $${d} && ln -s $${l} $${t}); \
 		fi; \
 	done
