@@ -3,7 +3,7 @@
 #
 # FreeBSD WWW mirror redirect
 #
-# $Id: mirror.cgi,v 1.2 1996-10-01 18:59:10 jfieber Exp $
+# $FreeBSD$
 
 $_ = $ENV{'QUERY_STRING'};
 

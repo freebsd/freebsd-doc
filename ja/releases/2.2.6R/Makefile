@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.3 1998-07-27 05:07:46 hanai Exp $
+# $FreeBSD$
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.1
 

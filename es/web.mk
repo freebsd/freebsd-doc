@@ -1,5 +1,5 @@
 # bsd.web.mk
-# $Id: web.mk,v 1.3 1999-09-05 13:20:48 wosch Exp $
+# $FreeBSD$
 
 #
 # Build and install a web site.

@@ -1,7 +1,7 @@
 #!/usr/bin/perl -- -*- C -*-
 # Perl Routines to Manipulate CGI input
 # S.E.Brenner@bioc.cam.ac.uk
-# $Header: /home/ncvs/www/en/cgi/cgi-lib.pl,v 1.2 1996-10-06 20:16:38 jfieber Exp $
+# $FreeBSD$
 #
 # Copyright 1994 Steven E. Brenner  
 # Unpublished work.
@@ -36,7 +36,7 @@
 # If a variable-glob parameter (e.g., *cgi_input) is passed to ReadParse,
 # information is stored there, rather than in $in, @in, and %in.
 #
-# $Id: cgi-lib.pl,v 1.2 1996-10-06 20:16:38 jfieber Exp $
+# $FreeBSD$
 #
 
 sub ReadParse {

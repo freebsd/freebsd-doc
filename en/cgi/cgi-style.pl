@@ -1,4 +1,4 @@
-# $Id: cgi-style.pl,v 1.13 1999-05-30 10:56:57 wosch Exp $
+# $FreeBSD$
 #
 # Perl routines to encapsulate various elements of HTML page style.
 

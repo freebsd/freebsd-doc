@@ -1,5 +1,5 @@
 #
-# $Id: Makefile,v 1.2 1999-09-03 14:01:15 kuriyama Exp $
+# $FreeBSD$
 #
 # Build the FreeBSD tutorials/articles outside of the www tree, and then
 # install them in to the right place.

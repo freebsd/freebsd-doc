@@ -26,7 +26,7 @@
 #
 # Search a mail by Message-ID, References or In-Reply-To field
 #
-# $Id: mid.cgi,v 1.7 1999-04-03 12:32:38 wosch Exp $
+# $FreeBSD$
 
 $hsty_base = '';
 

@@ -26,7 +26,7 @@
 # pds.cgi - FreeBSD Ports download sources cgi script
 #	    print a list of source files for a port
 #
-# $Id: pds.cgi,v 1.4 1999-01-13 04:00:26 fenner Exp $
+# $FreeBSD$
 
 $hsty_base = '';
 $hsty_email = 'ports@freebsd.org';

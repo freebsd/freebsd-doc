@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.8 1999-08-29 16:53:23 nik Exp $
+# $FreeBSD$
 
 LINKS= 	en/ja en/es en/ru en/zh ja/web.mk 
 LINKS+=	web.mk ../doc/en_US.ISO_8859-1/web.mk

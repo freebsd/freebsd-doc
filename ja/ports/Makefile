@@ -1,4 +1,4 @@
-#	$Id: Makefile,v 1.15 1999-05-27 08:58:19 wosch Exp $
+# $FreeBSD$
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.22
 

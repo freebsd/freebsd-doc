@@ -26,7 +26,7 @@
 #
 # url.cgi - make plain text URLs clickable
 #
-# $Id: url.cgi,v 1.17 1999-02-27 22:32:44 wosch Exp $
+# $FreeBSD$
 
 
 $hsty_base = '';

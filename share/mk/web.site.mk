@@ -1,5 +1,5 @@
 # bsd.web.mk
-# $Id: web.site.mk,v 1.22 1999-09-03 14:01:11 kuriyama Exp $
+# $FreeBSD$
 
 #
 # Build and install a web site.

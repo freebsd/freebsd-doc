@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.1 1998-12-30 17:54:06 wosch Exp $
+# $FreeBSD$
 
 DOCSUBDIR=	FAQ
 SGMLOPTS=	-links -hdr ${.CURDIR}/doc.hdr -ftr ${.CURDIR}/doc.ftr 
