@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/ports.cgi,v 1.60 2002/02/12 10:48:04 wosch Exp $
+# $FreeBSD: www/en/cgi/ports.cgi,v 1.61 2002/04/18 18:04:27 phantom Exp $
 #
 # ports.cgi - search engine for FreeBSD ports
 #             	o search for a port by name or description
@@ -36,7 +36,7 @@
 
 
 sub init_variables {
-    $cvsroot = '/home/ncvs';	# $CVSROOT
+    $cvsroot = '/usr/local/www/cvsroot/FreeBSD';	# $CVSROOT
     $localPrefix = '/usr/ports';	# ports prefix
     $ports_database = 'ports/INDEX';
     # unset $ENV{'CVSROOT'};
@@ -557,7 +557,7 @@ sub footer {
 <img ALIGN="RIGHT" src="/gifs/powerlogo.gif">
 &copy; 1996-2001 by Wolfram Schneider. All rights reserved.<br>
 };
-    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.60 2002/02/12 10:48:04 wosch Exp $} . "<br>\n";
+    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.61 2002/04/18 18:04:27 phantom Exp $} . "<br>\n";
     print qq{Please direct questions about this service to
 <I><A HREF="$mailtoURL">$mailto</A></I><br>\n};
     print qq{General questions about FreeBSD ports should be sent to } .

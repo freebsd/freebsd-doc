@@ -26,7 +26,7 @@
 #
 # url.cgi - make plain text URLs clickable
 #
-# $FreeBSD: www/en/cgi/url.cgi,v 1.29 2001/03/11 20:45:45 wosch Exp $
+# $FreeBSD: www/en/cgi/url.cgi,v 1.30 2001/12/11 21:37:30 wosch Exp $
 
 use strict;
 
@@ -70,7 +70,7 @@ if ($file =~ m%^ports/([\w-]+)/(\w[\w-+.]+)/pkg-descr%) {
 }
 
 # do cvs checkout 
-my($cvsroot) = '/home/ncvs';
+my($cvsroot) = '/usr/local/www/cvsroot/FreeBSD';
 if ($file =~ m%^ports/[\w-]+/\w[\w-+.]*/pkg-descr% && -f "$cvsroot/$file,v") {
     open(CO, "-|") || 
 	exec ('/usr/bin/co', '-p', '-q', "$cvsroot/$file,v") ||
