@@ -1,7 +1,7 @@
 # The FreeBSD Documentation Project
 # The FreeBSD German Documentation Project
 # $FreeBSD$
-# $FreeBSDde: de-www/Makefile,v 1.8 2002/12/06 21:56:35 ue Exp $
+# $FreeBSDde: de-www/Makefile,v 1.10 2002/12/08 00:18:43 ue Exp $
 
 .if exists(Makefile.conf)
 .include "Makefile.conf"
@@ -15,6 +15,7 @@
 
 DOCS+= availability.sgml
 DOCS+= index.sgml
+DOCS+= relnotes.sgml
 
 CLEANFILES+=atoz.sgml site.sgml
 
@@ -26,9 +27,15 @@ CLEANFILES+=atoz.sgml site.sgml
 # SGML
 SUBDIR=  FAQ
 SUBDIR+= handbook
+SUBDIR+= releases
 .if !defined(WEB_ONLY) || empty(WEB_ONLY)
 SUBDIR+= doc
 .endif
+
+# This need some more analysis
+#.if defined(BUILD_RELNOTES)
+#SUBDIR+= relnotes
+#.endif
 
 # These *must* be listed after the "doc" subdir, as they create symlinks
 # in to it.
