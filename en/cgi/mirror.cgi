@@ -1,9 +1,9 @@
-#!/usr/bin/perl
+#!/usr/bin/perl -T
 # (c) Wolfram Schneider, Berlin. June 1996. Public domain.
 #
 # FreeBSD WWW mirror redirect
 #
-# $FreeBSD$
+# $FreeBSD: www/en/cgi/mirror.cgi,v 1.3 1999/09/06 07:02:40 peter Exp $
 
 $_ = $ENV{'QUERY_STRING'};
 
