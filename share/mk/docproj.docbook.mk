@@ -1,5 +1,5 @@
 #
-# $Id: docproj.docbook.mk,v 1.6 1999-08-05 20:22:49 nik Exp $
+# $Id: docproj.docbook.mk,v 1.7 1999-08-16 21:08:12 nik Exp $
 #
 # This include file <docproj.docbook.mk> handles installing documentation
 # from the FreeBSD Documentation Project.
@@ -21,6 +21,10 @@
 
 #
 # Optional variable definitions
+#
+#  DESTDIR              Directory in which files will be installed.  Defaults
+#                       to /usr/local/share/doc/fdp/{articles,books}/<name>,
+#                       but can be overridden.
 #
 #  DOC			Controls several things
 #
@@ -55,6 +59,10 @@
 #			(such as share/sgml/catalog) are expected to
 #			be under this path.  Defaults to /usr/doc.
 #
+#  DOC_INSTALL_PREFIX   The root prefix under which all docs are expected
+#                       to install themselves.  Defaults to 
+#                       /usr/local/share/doc/fdp
+#
 #  EXTRA_CATALOGS	Additional catalog files that should be used by
 #			any SGML processing applications.
 #
@@ -63,9 +71,13 @@
 #
 # You shouldn't need to change definitions below here
 
-VOLUME?=	${.CURDIR:T}
+.if exists(${.CURDIR}/../Makefile.inc)
+.include "${.CURDIR}/../Makefile.inc"
+.endif
+
 DOC?=		${.CURDIR:T}
-DISTRIBUTION?=	doc
+
+DOC_INSTALL_PREFIX= /usr/local/share/doc/fdp
 
 JADE=		/usr/local/bin/jade
 DSLHTML=	${DOC_PREFIX}/share/sgml/freebsd.dsl
@@ -347,30 +359,39 @@ _cf=${_curformat}
 .if !target(install-${_cf})
 .if ${_cf} == "html-split"
 install-${_cf}: index.html
+	[ -d ${DESTDIR} ] || mkdir -p ${DESTDIR}
 	@if [ ! -f HTML.manifest ]; then				\
 		echo "HTML.manifest file does not exist, can't install";\
 		exit 1;							\
 	fi
-	${INSTALL} ${COPY} -o ${DOCOWN} -g ${DOCGRP} -m ${DOCMODE} 	\
-		`xargs < HTML.manifest` ${DESTDIR}${DOCDIR}/${VOLUME};	\
+	cp -f `xargs < HTML.manifest` ${DESTDIR}
+	for file in `xargs < HTML.manifest`; do				\
+		chmod ${DOCMODE} ${DESTDIR}/$$file;			\
+		-chown ${DOCOWN}:${DOCGROUP} ${DESTDIR}/$$file;		\
+	done
 	if [ -f ${.OBJDIR}/${DOC}.ln ]; then 				\
-		(cd ${DESTDIR}${DOCDIR}/${VOLUME}; 			\
-		sh ${.OBJDIR}/${DOC}.ln); 				\
+		(cd ${DESTDIR}; sh ${.OBJDIR}/${DOC}.ln); 		\
 	fi
 .for _compressext in ${KNOWN_COMPRESS}
 install-${_cf}.tar.${_compressext}: ${DOC}.${_cf}.tar.${_compressext}
-	${INSTALL} ${COPY} -o ${DOCOWN} -g ${DOCGRP} -m ${DOCMODE}	\
-		${.ALLSRC} ${DESTDIR}${DOCDIR}/${VOLUME}
+	[ -d ${DESTDIR} ] || mkdir -p ${DESTDIR}
+	cp -f ${.ALLSRC} ${DESTDIR}
+	chmod ${DOCMODE} ${DESTDIR}/${.ALLSRC}
+	-chown ${DOCOWN}:${DOCGROUP} ${DESTDIR}/${.ALLSRC}
 .endfor
 .else
 install-${_cf}: ${DOC}.${_cf}
-	${INSTALL} ${COPY} -o ${DOCOWN} -g ${DOCGRP} -m ${DOCMODE}	\
-		${.ALLSRC} ${DESTDIR}${DOCDIR}/${VOLUME}
+	[ -d ${DESTDIR} ] || mkdir -p ${DESTDIR}
+	cp -f ${.ALLSRC} ${DESTDIR}
+	chmod ${DOCMODE} ${DESTDIR}/${.ALLSRC}
+	-chown ${DOCOWN}:${DOCGROUP} ${DESTDIR}/${.ALLSRC}
 
 .for _compressext in ${KNOWN_COMPRESS}
 install-${_cf}.${_compressext}: ${DOC}.${_cf}.${_compressext}
-	${INSTALL} ${COPY} -o ${DOCOWN} -g ${DOCGRP} -m ${DOCMODE}	\
-		${.ALLSRC} ${DESTDIR}${DOCDIR}/${VOLUME}
+	[ -d ${DESTDIR} ] || mkdir -p ${DESTDIR}
+	cp -f ${.ALLSRC} ${DESTDIR}
+	chmod ${DOCMODE} ${DESTDIR}/${.ALLSRC}
+	-chown ${DOCOWN}:${DOCGROUP} ${DESTDIR}/${.ALLSRC}
 .endfor
 .endif
 .endif
@@ -382,17 +403,6 @@ ${__target}:
 .endif
 .endfor
 
-#
-# Distribution target
-#
-# Like "install", but places the files into the correct distribution
-#
-.if !target(distribute)
-distribute:
-.for dist in ${DISTRIBUTION}
-	cd ${.CURDIR}; $(MAKE) install DESTDIR=${DISTDIR}/${dist}
-.endfor
-.endif
-
+.include <bsd.own.mk>
 .include <bsd.dep.mk>
 .include <bsd.obj.mk>
