@@ -2,7 +2,7 @@
 # The FreeBSD French Documentation Project
 #
 # $FreeBSD$
-# Original revision: 1.64
+# Original revision: 1.67
 #
 # Build the FreeBSD Handbook.
 #
@@ -176,6 +176,9 @@ SYMLINKS=	${DESTDIR} index.html handbook.html
 CHAPTERS?= ${SRCS:M*chapter.sgml}
 
 SGMLFLAGS+= ${CHAPTERS:S/\/chapter.sgml//:S/^/-i chap./}
+.if defined(WITH_GLOSSARY) && !empty(WITH_GLOSSARY)
+SGMLFLAGS+= -i chap.freebsd-glossary
+.endif
 
 # XXX The Handbook build currently overflows some internal, hardcoded
 # limits in pdftex.  Until we split the Handbook up, build the PDF
