@@ -1,16 +1,20 @@
-<!-- $Id: ports.inc,v 1.2 1999-02-10 14:48:23 jesusr Exp $ -->
+<!-- $Id: ports.inc,v 1.3 1999-03-17 19:20:50 jesusr Exp $ -->
 <p>La colecci&oacute;n de Ports y Packages de FreeBSD ofrece una manera
 sencilla de instalci&oacute;n de aplicaciones para los usuarios y
 administradores. Cada "port" listado aqu&iacute; contiene los parches
 necesarios para hacer que la aplicaci&oacute;n original compile y
 se ejecute en FreeBSD. Instalar una aplicaci&oacute;n es t&aacute;n
 sencillo como obtener el ports, descomprimirlo y teclear <tt>make</tt>
-dentro del directorio del port. El <tt>Makefile</tt> automaticamente
-se encarga de obtener el c&oacute;digo fuente de la aplicaci&oacute;n ya sea
-del disco local, CDROM o v&iacute;a FTP, descomprimirla, aplicar los
-parches necesarios y compilarla. Si todo fue bi&eacute;n, un simple
-<tt>make install</tt> instalar&aacute; y registrar&aacute; la aplicaci&oacute;n
-en el sistema.</p>
+dentro del directorio del port. Para mayor facilidad, puedes, simplemente, instalar la <a href="ftp://ftp.freebsd.org/pub/FreeBSD/branches/-current/ports.tar.gz">colecci&oacute;n completa de ports</a> en el momento de la instalaci&oacute;n
+del sistema (o usar <a href="../handbook/cvsup.html">CVSup</a> para mantener
+la colecci&oacute;n actualizada) y tener miles de aplicaciones disponibles en
+la punta de tus dedos.
+
+El <tt>Makefile</tt> automaticamente se encarga de obtener el c&oacute;digo 
+fuente de la aplicaci&oacute;n ya sea del disco local, CDROM o v&iacute;a FTP, 
+descomprimirla, aplicar los parches necesarios y compilarla. Si todo fue 
+bi&eacute;n, un simple <tt>make install</tt> instalar&aacute; y 
+registrar&aacute; la aplicaci&oacute;n en el sistema.</p>
 
 <p>Para muchos ports, existe un <tt>package</tt> precompilado, ahorrando
 al usuario el trabajo de tener que compilar cada una de ellas. Cada port
@@ -24,35 +28,56 @@ informaci&oacute;n sobre crear nuevos ports, mira en <a
 href="../../handbook/porting.html">Porting applications</a>. Ambos son parte
 del <a href="../../handbook">Handbook</a>.</p>
 
-<p>Los ports listados en estas p&aacute;ginas son continuamente actualizados.
-Consecuentemente, quiz&aacute;s necesites actualizar algunos ficheros en tu
-sistema FreeBSD para poder usar los ports desarrollados posteriormente a la
-fecha en la que tu versi&oacute; fue lanzada.
-Si eres usuario de 2.2.1-release por favor instala el <a
-href="ftp://ftp.freebsd.org/pub/FreeBSD/packages-stable/Latest/221upgrade.tgz">
-kit de actualizaci&oacute;n de ports de 2.2.1 a 2.2-stable</a>; si eres usuario
-de 2.2.2-release, por favor instala el <a
-href="ftp://ftp.freebsd.org/pub/FreeBSD/packages-stable/Latest/222upgrade.tgz">
-kit de actualizaci&oacute;n de ports a 2.2-stable</a>; si eres usuario de 
-2.2.5-release, por favor, instala el <a
-href="ftp://ftp.freebsd.org/pub/FreeBSD/packages-stable/Latest/225upgrade.tgz">
-kit de actualizaci&oacute;n a 2.2-stable</a>; si eres usuario de 2.2.6, 2.2.7 
-o 3.0-release, por favor, instala el <a
-href="ftp://ftp.freebsd.org/pub/FreeBSD/packages-stable/Latest/227upgrade.tgz">
-kit de actualizaci&oacute;n a 2.2-stable</a>.  
-Estos son packaes de FreeBSD; por favor usa pkg_add para instalarlos. Esto
+<p>Los ports listados en estas p&aacute;ginas web son continuamente 
+actualizados. Consecuentemente, necesitar&aacute;s actualizar algunos ficheros
+en tu sistema FreeBSD para usar los ports desarrollados posteriormente a tu
+sistema. Por favor, instala uno de los packages siguientes dependiendo de la
+versi&oacute;n que est&eacute;s usando. Incluso, si est&aacute;s usando 
+FreeBSD-stable o FreeBSD-current con algunos d&iacute;s de antiguedad, 
+tambi&eacute;n te recomendamos instalar el kit de actualizaci&oacute;n
+apropiado; el sistema de ports a veces cambia muy r&aacute;pidamente.
+
+<dl>
+<dt><a
+href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-2.2-stable/Latest/221upgrade.tgz">Kit actualizaci&oacute;n de 2.2.1 a 2.2-stable</a>
+<dd>Para usuarios de 2.2.1-release o 2.2-stable entre 2.2.1-release y 
+2.2.2-release
+<dt><a
+href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-2.2-stable/Latest/222upgrade.tgz">Kit actualizaci&oacute;n de 2.2.2 a 2.2-stable</a>
+<dd>Para usuarios de 2.2.2-release o 2.2-stable entre 2.2.2-release y
+2.2.5-release
+<dt><a
+href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-2.2-stable/Latest/225upgrade.tgz">Kit actualizaci&oacute;n de 2.2.5 a 2.2-stable</a>
+<dd>Para usuarios de 2.2.5-release o 2.2-stable entre 2.2.5-release y
+2.2.6-release
+<dt><a
+href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-2.2-stable/Latest/227upgrade.tgz">Kit actualizaci&oacute;n de 2.2.7 a 2.2-stable</a>
+<dd>Para usuarios de 2.2.6-release, 2.2.7-release, 2.2.8-release o
+2.2-stable despu&eacute;s de 2.2.6-release
+<dt><a
+href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-3-stable/Latest/30upgrade.tgz">Kit actualizaci&oacute;n de 3.0 a 3.1-stable</a>
+<dd>Para usuarios de 3.0-release o 3.0-stable despu&eacute;s de 3.0-release
+<dt><a
+href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-3-stable/Latest/31upgrade.tgz">Kit actualizaci&oacute;n de 3.1 a 3.1-stable</a>
+<dd>Para usuarios de 3.1-release o 3.1-stable despu&eacute;s de 3.1-release
+</dl>
+
+<p>Estos son packages de FreeBSD; por favor usa pkg_add para instalarlos. Esto
 deber&iacute;a hacer que puedas usar todos los ports listados aqu&iacute;, ten
 en cuenta que solo se modificar&aacute;n algunos ficheros para permitir
 que los ports/packages puedan ser usados; para una actualizaci&oacute;n
 completa a 2.2-stable, por favor, mira en la secci&oacute;n <a
 href="../../handbook/synching.html">sincronizando el c&oacute;digo fuente</a>
 del handbook. Recomendamos una actualizaci&oacute;n completa, especialmente
-si todav&iacute;a est&aacute;s usando 2.2.1-release o 2.2.2-release.</p>
+si todav&iacute;a est&aacute;s usando cualquier versi&oacute;n anterior a 
+2.2.7-release. Comentar tambi&eacute;n que toda la rama 2.2.X ya no es
+oficialmente soportada por ports-current; est&aacute;s en "tu opci&oacute;n"
+si quieres usar los ports aqu&iacute; listados.</p>
 
 <p>Muchos de los ports requieren el sistema X Window para compilar y 
 ejecutarse. Nosotros compilamos y testeamos nuestros ports con <a
 href="http://www.xfree86.org/">XFree86</a>. Su versi&oacute;n actual es
-3.3.3. Algunos ports no trabajar&aacute;n con releases m&aacute;s
+3.3.3.1 Algunos ports no trabajar&aacute;n con releases m&aacute;s
 antiguas.</p>
 
 <p>Para m&aacute;s informaci&oacute;n sobre ports/packages nuevos, modificados
