@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/fr/includes.xsl,v 1.1 2002/11/17 16:02:47 stephane Exp $ -->
+<!-- $FreeBSD: www/fr/includes.xsl,v 1.2 2003/01/26 13:59:03 stephane Exp $ -->
 
 <!-- 
    The FreeBSD French Documentation Project
-   Original revision: 1.12
+   Original revision: 1.13
    
    Version francaise : Stephane Legrand <stephane@freebsd-fr.org>
 -->
@@ -97,9 +97,11 @@
     <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel.current"/>R/hardware.html</xsl:variable>
   <xsl:variable name="u.rel.early">
     <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel.current"/>R/early-adopter.html</xsl:variable>
-  <xsl:variable name="rel2.current" select='"4.7"'/>
+    
+  <xsl:variable name="rel2.current" select='"4.8"'/>
   <xsl:variable name="u.rel2.notes">
     <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel2.current"/>R/relnotes.html</xsl:variable>
+    
   <xsl:variable name="u.rel2.announce">
     <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel2.current"/>R/announce.html</xsl:variable>
   <xsl:variable name="u.rel2.errata">
