@@ -4,8 +4,8 @@
 #
 #    Build the FreeBSD FAQ in the German translation
 #
-#    $FreeBSD$
-#    $FreeBSDde: de-docproj/books/faq/Makefile,v 1.4 2001/02/01 21:24:28 alex Exp $
+#    $FreeBSD: doc/de_DE.ISO_8859-1/books/faq/Makefile,v 1.1 2001/02/01 21:29:56 alex Exp $
+#    $FreeBSDde: de-docproj/books/faq/Makefile,v 1.5 2001/05/20 22:15:47 ue Exp $
 #
 
 MAINTAINER=de-bsd-translators@DE.FreeBSD.org
@@ -16,6 +16,8 @@ FORMATS?= html-split html
 
 INSTALL_COMPRESSED?= gz
 INSTALL_ONLY_COMPRESSED?=
+
+JADEFLAGS+=-Vbiblio-xref-title
 
 # 
 # SRCS lists the individual SGML files that make up the document. Changes
