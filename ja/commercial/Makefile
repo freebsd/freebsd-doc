@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.6 1999-02-04 17:40:45 motoyuki Exp $
+# $FreeBSD$
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.7
 

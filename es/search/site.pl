@@ -6,7 +6,7 @@
 # Format: <url> | <description>
 # An empty url begin a new section
 #
-# $Id: site.pl,v 1.1.1.1 1999-02-08 19:26:12 wosch Exp $
+# $FreeBSD$
 
 
 # print a dl list

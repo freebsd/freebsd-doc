@@ -1,4 +1,4 @@
-<!-- $Id: ports.inc,v 1.10 1999-06-21 14:44:46 kuriyama Exp $ -->
+<!-- $FreeBSD$ -->
 <!-- The FreeBSD Japanese Documentation Project -->
 <!-- Original revision: 1.35 -->
 <p>FreeBSD の Ports と Packages のコレクションは,

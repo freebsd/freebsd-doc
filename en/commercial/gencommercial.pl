@@ -27,7 +27,7 @@
 # This program is made available to the general public under
 # the "BSD-style copyright" terms of agreement.
 #
-# $Id: gencommercial.pl,v 1.3 1999-05-25 16:20:57 hoek Exp $
+# $FreeBSD$
 
 #######################################################################
 ## Configuration Section

@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.1 1999-03-01 17:03:44 motoyuki Exp $
+# $FreeBSD$
 # The FreeBSD Japanese Documentation Project
 
 .if exists(../Makefile.conf)

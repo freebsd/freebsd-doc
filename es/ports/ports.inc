@@ -1,4 +1,4 @@
-<!-- $Id: ports.inc,v 1.8 1999-07-12 14:19:56 jesusr Exp $ -->
+<!-- $FreeBSD$ -->
 <p>La colecci&oacute;n de Ports y Packages de FreeBSD ofrece una manera
 sencilla de instalci&oacute;n de aplicaciones para los usuarios y
 administradores. La colecci&oacute;n de ports ha estado creciendo en los

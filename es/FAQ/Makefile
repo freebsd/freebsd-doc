@@ -1,5 +1,5 @@
 #
-# $Id: Makefile,v 1.1 1999-08-19 20:53:38 nik Exp $
+# $FreeBSD$
 #
 # Build the FreeBSD FAQ *outside* of the www tree, and install it
 # in to the right place as necessary.

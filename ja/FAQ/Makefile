@@ -1,5 +1,5 @@
 #
-# $Id: Makefile,v 1.2 1999-09-03 22:39:48 kuriyama Exp $
+# $FreeBSD$
 # Original revision:	1.2
 #
 # Build the FreeBSD FAQ *outside* of the www tree, and install it

@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.48 1999-02-10 14:53:59 motoyuki Exp $
+# $FreeBSD$
 
 .if exists(Makefile.conf)
 .include "Makefile.conf"

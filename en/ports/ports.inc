@@ -1,4 +1,4 @@
-<!-- $Id: ports.inc,v 1.39 1999-07-12 07:36:05 asami Exp $ -->
+<!-- $FreeBSD$ -->
 <p>The FreeBSD Ports and Packages Collection offers a simple way for
 users and administrators to install applications.  The ports
 collection has been <a

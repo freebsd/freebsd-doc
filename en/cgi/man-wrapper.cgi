@@ -3,7 +3,7 @@
 #
 # redirect FreeBSD man script
 #
-# $Id: man-wrapper.cgi,v 1.2 1998-06-08 08:50:37 wosch Exp $
+# $FreeBSD$
 
 exec('/usr/local/www/bsddoc/bin/man.cgi');
 

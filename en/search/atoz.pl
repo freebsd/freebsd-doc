@@ -4,7 +4,7 @@
 # atoz - create automatically an `A-Z Index' from a pre-sorted database
 #        (sort -uf) with the format `<titel>|<url>'
 #
-# $Id: atoz.pl,v 1.4 1998-05-26 16:36:47 wosch Exp $
+# $FreeBSD$
 
 if ($ARGV[0] eq '-u' && $#ARGV > 0) { 
     $urlprefix = $ARGV[1]; shift; shift;  # prefix for relative URLs
