@@ -217,6 +217,7 @@ IMAGES_LIB_DIR?=	${.CURDIR}/../../share/images
 # %callout-graphics-path% variable in the .dsl file.
 #
 LOCAL_IMAGES_LIB_DIR?= imagelib
+CLEANDIRS+=	${LOCAL_IMAGES_LIB_DIR}
 
 #
 # Create a target for each image used from the library.  This target just
