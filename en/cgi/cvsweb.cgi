@@ -45,9 +45,9 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $Id: cvsweb.cgi,v 1.87 2002-09-30 20:14:06 scop Exp $
+# $Id: cvsweb.cgi,v 1.88 2002-09-30 21:02:05 scop Exp $
 # $Idaemons: /home/cvs/cvsweb/cvsweb.cgi,v 1.84 2001/10/07 20:50:10 knu Exp $
-# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.1.1.36 2002/09/30 19:48:52 scop Exp $
+# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.87 2002/09/30 20:14:06 scop Exp $
 #
 ###
 
@@ -236,7 +236,7 @@ $LOG_REVSEPARATOR  = q/^-{28}$/;
 );
 
 $cgi_style::hsty_base = 'http://www.FreeBSD.org';
-$_ = q$FreeBSD: www/en/cgi/cvsweb.cgi,v 1.86 2002/09/26 22:18:25 scop Exp $;
+$_ = q$FreeBSD: www/en/cgi/cvsweb.cgi,v 1.87 2002/09/30 20:14:06 scop Exp $;
 @_ = split;
 $cgi_style::hsty_date = "@_[3,4]";
 
@@ -3651,7 +3651,7 @@ EOH
 }
 
 sub html_footer() {
-	return &cgi_style::html_footer;
+	print &cgi_style::html_footer;
 }
 
 sub link_tags($) {
