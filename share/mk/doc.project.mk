@@ -79,7 +79,7 @@ MKDIR?=		/bin/mkdir
 RM?=		/bin/rm
 MV?=		/bin/mv
 HTML2TXT?=	${PREFIX}/bin/links
-HTML2TXTOPTS?=	-dump ${HTML2TXTFLAGS}
+HTML2TXTOPTS?=	-dump -width 72 ${HTML2TXTFLAGS}
 ISPELL?=	ispell
 ISPELLOPTS?=	-l -p /usr/share/dict/freebsd ${ISPELLFLAGS}
 .if exists(/usr/bin/perl)
