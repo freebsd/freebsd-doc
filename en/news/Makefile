@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/news/Makefile,v 1.24 2001/04/13 00:53:57 eric Exp $
+# $FreeBSD: www/en/news/Makefile,v 1.25 2001/08/02 04:26:30 chris Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -8,7 +8,6 @@
 .endif
 
 DOCS+= press.sgml
-DOCS+= newsflash.sgml
 DOCS+= news.sgml
 #DOCS+= webchanges.sgml
 
@@ -31,5 +30,14 @@ SUBDIR+= 	1998
 SUBDIR+= 	1999
 SUBDIR+= 	2000
 SUBDIR+=	status
+
+DATA=		news.rdf
+
+newsflash.html: newsflash.xsl news.xml includes.xsl ../includes.xsl
+	xsltproc -nonet -o newsflash.html newsflash.xsl news.xml
+	-tidy -i -m -f /dev/null newsflash.html
+
+news.rdf: news-rdf.xsl news.xml includes.xsl ../includes.xsl
+	xsltproc -nonet -o news.rdf news-rdf.xsl news.xml
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
