@@ -1,6 +1,6 @@
-# $Id: Makefile,v 1.6 1998-08-20 04:12:12 hanai Exp $
+# $Id: Makefile,v 1.7 1998-09-21 22:54:26 motoyuki Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.6
+# Original revision: 1.7
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -11,6 +11,7 @@ DOCS=	qnewsletter.sgml
 DOCS+=	qnewsletter-1-1.sgml
 DOCS+=	qnewsletter-1-2.sgml
 DOCS+=	qnewsletter-1-3.sgml
+DOCS+=	qnewsletter-1-4.sgml 
 
 DOCS+=	press.sgml
 DOCS+=  newsflash.sgml
