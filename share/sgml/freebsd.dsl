@@ -1,4 +1,4 @@
-<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.33 2001/06/18 14:29:16 nik Exp $ -->
+<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.34 2001/06/24 02:46:40 murray Exp $ -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
 <!ENTITY % output.html		"IGNORE">
@@ -195,11 +195,22 @@
 
       <!-- Print only ................................................... --> 
       <![ %output.print; [
+        (define withpgpkeys
+          #f)
+
         (define (toc-depth nd)
           (if (string=? (gi nd) (normalize "book"))
               3
               1))
  
+        (element programlisting
+          (if (and (equal? (attribute-string (normalize "role")) "pgpkey")
+		   (not withpgpkeys))
+              (empty-sosofo)
+	      ($verbatim-display$
+	       %indent-programlisting-lines%
+	       %number-programlisting-lines%)))
+
         (define %body-start-indent% 
           0pi)
 
