@@ -1,6 +1,6 @@
 # 
-# $FreeBSD: doc/de_DE.ISO8859-1/books/handbook/Makefile,v 1.10 2001/07/16 17:59:27 alex Exp $
-# $FreeBSDde: de-docproj/books/handbook/Makefile,v 1.7 2001/07/16 18:07:39 alex Exp $
+# $FreeBSD$
+# $FreeBSDde: de-docproj/books/handbook/Makefile,v 1.11 2001/11/29 21:50:28 mheinen Exp $
 #
 # Build the FreeBSD Handbook in its German translation.
 #
@@ -21,11 +21,12 @@ INSTALL_ONLY_COMPRESSED?=
 
 # SGML content
 SRCS=  book.sgml
-SRCS+= backups/chapter.sgml
 SRCS+= basics/chapter.sgml
 SRCS+= bibliography/chapter.sgml
+SRCS+= config/chapter.sgml
 SRCS+= disks/chapter.sgml
 SRCS+= ports/chapter.sgml
+SRCS+= security/chapter.sgml
 SRCS+= sound/chapter.sgml
 SRCS+= users/chapter.sgml
 
