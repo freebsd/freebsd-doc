@@ -145,6 +145,26 @@ MAN8 =	IPXrouted.8\
 	newkey.8\
 	newsyslog.8\
 	nextboot.8\
+	ng_UI.8\
+	ng_async.8\
+	ng_bpf.8\
+	ng_cisco.8\
+	ng_echo.8\
+	ng_frame_relay.8\
+	ng_hole.8\
+	ng_iface.8\
+	ng_ksocket.8\
+	ng_lmi.8\
+	ng_ppp.8\
+	ng_pppoe.8\
+	ng_pptpgre.8\
+	ng_rfc1490.8\
+	ng_socket.8\
+	ng_tee.8\
+	ng_tty.8\
+	ng_vjc.8\
+	ngctl.8\
+	nghook.8\
 	nfsd.8\
 	nfsiod.8\
 	nologin.8\
@@ -166,6 +186,7 @@ MAN8 =	IPXrouted.8\
 	ppp.8\
 	pppctl.8\
 	pppd.8\
+	pppoed.8\
 	pppstats.8\
 	praliases.8\
 	procctl.8\
