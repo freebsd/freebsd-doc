@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.13 1998-08-11 11:43:50 wosch Exp $
+# $Id: Makefile,v 1.14 1999-01-15 19:31:26 wosch Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -9,6 +9,7 @@ CGI=	ftp.cgi gallery.cgi mirror.cgi cgi-lib.pl cgi-style.pl
 CGI+=	search.cgi cvsweb.cgi query-pr.cgi query-pr-summary.cgi
 CGI+= dosendpr.cgi freebsd.def html.pl reg.cgi missing_handler.cgi
 CGI+=	ports.cgi pds.cgi man.cgi url.cgi getmsg.cgi mid.cgi
+CGI+=	mailindex.cgi
 
 .SUFFIXES:	.C .cgi
 
