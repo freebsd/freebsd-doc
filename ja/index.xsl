@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
 
-<!-- $FreeBSD: www/ja/index.xsl,v 1.11 2002/02/24 00:25:46 hrs Exp $ -->
-<!-- Original revision: 1.19 -->
+<!-- $FreeBSD: www/ja/index.xsl,v 1.12 2002/03/02 06:34:55 kuriyama Exp $ -->
+<!-- Original revision: 1.21 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   
@@ -10,7 +10,7 @@
 
   <xsl:variable name="base" select="'.'"/>
   <xsl:variable name="enbase" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/ja/index.xsl,v 1.11 2002/02/24 00:25:46 hrs Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/ja/index.xsl,v 1.12 2002/03/02 06:34:55 kuriyama Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <xsl:output type="html" encoding="EUC-JP"
@@ -52,7 +52,8 @@
 		        which are not mirrored should be listed in
 		        support.sgml.  -->
 
-		  <option value="http://www.jp.FreeBSD.org/www.FreeBSD.org/">6Bone(IPv6)</option>
+		  <option value="http://www.jp.FreeBSD.org/www.FreeBSD.org/">6Bone(IPv6), Japan</option>
+		  <option value="http://www2.no.FreeBSD.org/">IPv6 Norway</option>
 		  <option value="http://www.au.FreeBSD.org/">オーストラリア/1</option>
 		  <option value="http://freebsd.unixtech.be/">ベルギー</option>
 		  <option value="http://www.br.FreeBSD.org/www.freebsd.org/">ブラジル/1</option>
@@ -84,6 +85,7 @@
 		  <option value="http://www2.nl.FreeBSD.org/">オランダ/2</option>
 		  <option value="http://www.nz.FreeBSD.org/">ニュージーランド</option>
 		  <option value="http://www.no.FreeBSD.org/">ノルウェー</option>
+		  <option value="http://www2.no.FreeBSD.org/">ノルウェー</option>
 		  <option value="http://www.pl.FreeBSD.org/">ポーランド/1</option>
 		  <option value="http://www2.pl.FreeBSD.org/">ポーランド/2</option>
 		  <option value="http://www.pt.FreeBSD.org/">ポルトガル/1</option>
@@ -184,6 +186,7 @@
 		
 			    <small><br/>
 			      ・<a href="projects/index.html">プロジェクト</a><br/>
+			      ・<a href="../releng/index.html">Release Engineering</a><br/>
 			      ・<a href="{$base}/support.html#gnats">バグレポート</a><br/>
 			      ・<a href="{$base}/support.html#cvs">CVS リポジトリ</a><br/>
 			    </small></p>
