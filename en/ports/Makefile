@@ -1,4 +1,8 @@
-#	$Id: Makefile,v 1.12 1998-08-09 13:55:10 wosch Exp $
+#	$Id: Makefile,v 1.13 1998-08-11 01:18:39 wosch Exp $
+
+.if exists("../Makefile.conf")
+.include "../Makefile.conf"
+.endif
 
 PORTINDEX=	perl ./portindex
 INDEX=		INDEX

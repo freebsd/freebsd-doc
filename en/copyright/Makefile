@@ -1,4 +1,8 @@
-# $Id: Makefile,v 1.1 1998-08-03 15:39:13 wosch Exp $
+# $Id: Makefile,v 1.2 1998-08-11 01:18:36 wosch Exp $
+
+.if exists("../Makefile.conf")
+.include "../Makefile.conf"
+.endif
 
 DOCS=	license.sgml
 DOCS+=	daemon.sgml
