@@ -1,5 +1,5 @@
 #
-# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.37 2001/07/12 00:24:59 dd Exp $
+# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.38 2001/07/14 18:04:06 chris Exp $
 #
 # This include file <doc.docbook.mk> handles building and installing of
 # DocBook documentation in the FreeBSD Documentation Project.
@@ -48,6 +48,11 @@
 #
 #	CSS_SHEET	Full path to a CSS stylesheet suitable for DocBook.
 #			Default is ${DOC_PREFIX}/share/misc/docbook.css
+#
+#       NICE_HEADERS    If defined, customized chapter headers will be created
+#			that you may find more aesthetically pleasing.	Note
+#			that this option only effects print output formats for
+#			Enlish language books.
 #
 # Documents should use the += format to access these.
 #
@@ -204,6 +209,10 @@ CLEANFILES+= ${DOC}.${_curformat}.${_curcomp}
 .endif
 .endfor
 .endfor
+.endif
+
+.if defined(NICE_HEADERS)
+JADEOPTS+=		-ioutput.print.niceheaders
 .endif
 
 #
