@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp 
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.54 2001-09-29 13:15:32 wosch Exp $
+# $Id: man.cgi,v 1.55 2001-12-12 15:25:46 wosch Exp $
 
 #use Data::Dumper;
 #use Carp;
@@ -910,7 +910,7 @@ ETX
 }
 
 sub copyright {
-    $id = '$Id: man.cgi,v 1.54 2001-09-29 13:15:32 wosch Exp $';
+    $id = '$Id: man.cgi,v 1.55 2001-12-12 15:25:46 wosch Exp $';
 
     return qq{\
 <PRE>
@@ -1017,7 +1017,7 @@ the query dialog.  There are also several hypertext links provided
 as short-cuts to various queries:  <I>Section Indexes</I> is apropos
 listings of all man pages by section.  <I>Explanations of Man
 Sections</I> contains pointers to the intro pages for various man
-sections.  Or you can select a catagory from <I>Quick Reference
+sections.  Or you can select a category from <I>Quick Reference
 Categories</I> and see man pages relevant to the selected topic.
 <P>
 };
