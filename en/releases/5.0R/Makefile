@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/releases/5.0R/Makefile,v 1.2 2002/04/05 22:30:13 bmah Exp $
+# $FreeBSD: www/en/releases/5.0R/Makefile,v 1.3 2002/08/31 08:48:09 murray Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -9,6 +9,6 @@
 
 DOCS=	schedule.sgml todo.sgml
 
-SUBDIR=	DP1
+SUBDIR=	DP1 DP2
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
