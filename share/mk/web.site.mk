@@ -1,5 +1,5 @@
 # bsd.web.mk
-# $Id: web.site.mk,v 1.8 1997-01-18 02:25:01 jfieber Exp $
+# $Id: web.site.mk,v 1.9 1997-01-19 21:29:03 jfieber Exp $
 
 #
 # Build and install a web site.
@@ -79,7 +79,7 @@ GENDOCS+=	${DOCS:M*.docb:S/.docb$/.html/g}
 ORPHANS:=	${ORPHANS:N*.docb}
 
 .docb.html:
-	sgmlfmt -d docbook -f html ${.IMPSRC}
+	sgmlfmt -d docbook -f html ${SGMLOPTS} ${.IMPSRC}
 
 ###
 # file.java --> file.class
