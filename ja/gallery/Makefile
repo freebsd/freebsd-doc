@@ -1,8 +1,8 @@
-# $Id: Makefile,v 1.4 1998-08-11 05:38:31 hanai Exp $
+# $Id: Makefile,v 1.5 1998-08-12 09:04:06 hanai Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.4
+# Original revision: 1.5
 
-.if exists("../Makefile.conf")
+.if exists(../Makefile.conf)
 .include "../Makefile.conf"
 .endif
 
