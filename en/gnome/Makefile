@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/gnome/Makefile,v 1.12 2002/11/21 21:39:42 marcus Exp $
+# $FreeBSD: www/en/gnome/Makefile,v 1.13 2003/08/25 21:05:31 marcus Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -13,7 +13,7 @@ SUBDIR+=	images
 DOCS=	screenshots.sgml
 DOCS+=	contact.sgml
 
-DATA=	index.html newsflash.html news.rdf
+DATA=	index.html newsflash.html news.rdf gnome_upgrade.sh
 
 CLEANFILES=	index.html
 CLEANFILES+=	newsflash.html

@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.46 2004/01/13 04:13:08 marcus Exp $ -->
+<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.47 2004/02/16 22:39:49 adamw Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
 		xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -9,7 +9,7 @@
   <xsl:import href="includes.xsl"/>
 
   <xsl:variable name="base" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.46 2004/01/13 04:13:08 marcus Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.47 2004/02/16 22:39:49 adamw Exp $'"/>
   <xsl:variable name="title" select="'FreeBSD GNOME Project'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -40,6 +40,7 @@
                             <small><br/>
                               &#183; <a href="http://www.FreeBSD.org/gnome/">GNOME on FreeBSD Home</a><br/>
                               &#183; <a href="docs/faq2.html#q1">Installation Instructions</a><br/>
+                              &#183; <a href="docs/faq26.html#q2">Upgrade Instructions</a><br/>
                               &#183; <a href="../ports/gnome.html">Available Applications</a><br/>
                               &#183; <a href="docs/volunteer.html">How to Help</a><br/>
                               &#183; <a href="docs/bugging.html">Reporting a Bug</a><br/>
@@ -50,7 +51,7 @@
                           <p><font size="+1" color="#990000"><b>Documentation</b></font>
                             <small><br/>
                               &#183; <a href="docs/faq2.html">FAQ</a><br/>
-                              &#183; <a href="docs/develfaq.html">Development Branch FAQ</a><br/>
+							  &#183; <a href="docs/faq26.html">2.4 to 2.6 Upgrade FAQ</a><br/>
                               &#183; <a href="docs/porting.html">Creating Ports</a><br/>
                               &#183; <a href="docs/knownissues.html">Known Issues</a><br/>
                             </small></p>
@@ -91,27 +92,23 @@
             <!-- Main body column -->
 
             <td align="left" valign="top" rowspan="2">
+			  <h2><font color="#990000">GNOME 2.6 Released!</font></h2>
+
+			  <p>GNOME 2.6 has hit the ports tree!  Read the
+				<a href="docs/faq26.html">Upgrade FAQ</a> for upgrade
+				instructions.  Be sure to use the
+				<a href="gnome_upgrade.sh">upgrade script</a>!</p>
+
               <h2><font color="#990000">What is GNOME?</font></h2>
               <img src="{$base}/gnome/images/gnome.png" align="right"
                    border="0" alt="GNOME Logo"/>
 
-              <p>The GNOME project was born to create an entirely free
-                desktop environment for free systems.  From the start, the main
-                objective of GNOME has been to provide a user-friendly suite of
-		applications and an easy-to-use desktop environment.  The FreeBSD GNOME
-		Project brings GNOME to the FreeBSD user.</p>
+			 <p>The GNOME project has created an entirely free, easy-to-use
+			   desktop environment and a user-friendly suite of applications, available
+			   for many different free systems.  The FreeBSD GNOME Project brings
+			   GNOME to FreeBSD.</p>
 
-              <p>As with most GNU programs, GNOME has been designed to run on all
-                modern Unix-like operating systems.  Through the efforts of the
-		FreeBSD GNOME Project and countless volunteers, GNOME is fully
-		supported on FreeBSD.</p>
-
-              <p>The GNOME project has expanded its objectives over the past few
-                months to address a number of problems in the existing
-                <xsl:value-of select="$unix"/> infrastructure.</p>
-
-              <p>The GNOME project acts as an umbrella.  The major components of
-                GNOME are:</p>
+			  <p>The major components of GNOME Project are:</p>
               <ul>
                 <li>The <a href="http://www.gnome.org">GNOME desktop</a>:  An easy
                   to use window-based environment for users.</li>
@@ -124,7 +121,7 @@
 
               <h2><font color="#990000">State of the port</font></h2>
 
-	      <p>GNOME for FreeBSD is currently supported on 4.8, 4.9, 5.2,
+	      <p>GNOME for FreeBSD is currently supported on 4.9, 5.2,
 		-STABLE, and -CURRENT.  Most of GNOME has been ported to
 		FreeBSD; however, there is
 		<a href="docs/volunteer.html">plenty left to do</a>!</p>
