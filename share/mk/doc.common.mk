@@ -165,19 +165,13 @@ CLEANFILES+= ${XML_MIRRORS}.sort
 CLEANFILES+= ${XML_MIRRORS}.sort.tmp
 
 #
-# urls.ent dependency.
+# when URLS_ABSOLUTE is specified, make
+# %freebsd.urls.absolute; "INCLUDE".
 #
 
-# XXX: .OBJDIR does not work.
-#URLS_ENT=	${.OBJDIR}/${DOC_PREFIX:S,^${.CURDIR}/,,}/share/sgml/urls.ent
-URLS_ENT=	${DOC_PREFIX}/share/sgml/urls.ent
-
-${URLS_ENT}:
-.if !defined(URLS_ABSOLUTE)
-	echo '<!ENTITY url.main "../../../..">' > $@
-.else
-	echo '<!ENTITY url.main "http://www.FreeBSD.org">' > $@
+.if defined(URLS_ABSOLUTE)
+HTMLFLAGS+=	-ifreebsd.urls.absolute
+PRINTFLAGS+=	-ifreebsd.urls.absolute
+SGMLNORMFLAGS+=	-ifreebsd.urls.absolute
+NSGMLSFLAGS+=	-ifreebsd.urls.absolute
 .endif
-
-SRCS+=		${URLS_ENT}
-CLEANFILES+=	${URLS_ENT}
