@@ -1,4 +1,4 @@
-# $FreeBSD: www/zh/Makefile,v 1.5 2000/11/07 05:20:40 kuriyama Exp $
+# $FreeBSD: www/zh/Makefile,v 1.6 2001/12/12 11:57:44 phantom Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -8,12 +8,8 @@
 .endif
 
 .if !defined(WEB_ONLY) || empty(WEB_ONLY)
-DOCSUBDIR=	FAQ
+SUBDIR=	FAQ
 .endif
-
-SGMLFLAGS+=	-links -hdr ${.CURDIR}/doc.hdr -ftr ${.CURDIR}/doc.ftr
-SGMLFLAGS+=	-e big5
-FORMATS=	"html ps"
 
 WEBBASE=	/data/zh
 
