@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.17.2.4 1996-12-23 12:27:48 joerg Exp $
+# $Id: Makefile,v 1.17.2.5 1997-03-15 23:29:06 jkh Exp $
 
 SRCS= authors.sgml basics.sgml bibliography.sgml boothelp.sgml
 SRCS+= booting.sgml contrib.sgml crypt.sgml ctm.sgml current.sgml cvsup.sgml

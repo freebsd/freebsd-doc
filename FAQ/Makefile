@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.2 1996-09-28 22:20:17 jfieber Exp $
+# $Id: Makefile,v 1.2.2.1 1997-03-15 23:29:04 jkh Exp $
 
 DOC=	FAQ
 SRCS=	FAQ.sgml
