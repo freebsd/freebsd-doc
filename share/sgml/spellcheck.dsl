@@ -40,6 +40,9 @@ example, the contents of <filename> tags should not be spellchecked.
 	  (element devicename
 	    (empty-sosofo))
 
+	  (element email
+	    (empty-sosofo))
+
 	  (element filename
 	    (empty-sosofo))
 
@@ -53,6 +56,12 @@ example, the contents of <filename> tags should not be spellchecked.
 	    (empty-sosofo))
 
 	  (element screen
+	    (empty-sosofo))
+
+	  (element ulink
+	    (empty-sosofo))
+
+	  (element username
 	    (empty-sosofo))
 
       ]]>
