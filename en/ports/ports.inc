@@ -1,4 +1,4 @@
-<!-- $Id: ports.inc,v 1.18 1997-12-13 14:01:48 jkh Exp $ -->
+<!-- $Id: ports.inc,v 1.19 1998-01-18 13:10:06 asami Exp $ -->
 <p>The FreeBSD Ports Collection offers a simple way for users and
 administrators to install applications.  Each ``port'' listed here
 contains any patches necessary to make the original application source
@@ -17,18 +17,21 @@ href="../handbook/porting.html">Porting applications</a>.  Both are
 part of the <a href="../handbook">FreeBSD Handbook</a>.</p>
 
 <p>If you are a 2.2.1-release user, please install the <a
-href="ftp://ftp.freebsd.org/pub/FreeBSD/packages-2.2.2/221upgrade-97.07.21.tgz">2.2.1
-to 2.2-stable upgrade kit</a> (last changed: July 21, 1997); if you are
+href="ftp://ftp.freebsd.org/pub/FreeBSD/packages-stable/Latest/221upgrade.tgz">2.2.1
+to 2.2-stable upgrade kit</a>; if you are
 a 2.2.2-release user, please install the <a
-href="ftp://ftp.freebsd.org/pub/FreeBSD/packages-2.2.2/222upgrade-97.07.21.tgz">2.2.2
-to 2.2-stable upgrade kit</a> (last changed: July 21, 1997).  (These
+href="ftp://ftp.freebsd.org/pub/FreeBSD/packages-stable/Latest/222upgrade.tgz">2.2.2
+to 2.2-stable upgrade kit</a>; if you are a 2.2.5-release user,
+please install the <a
+href="ftp://ftp.freebsd.org/pub/FreeBSD/packages-stable/Latest/225upgrade.tgz">2.2.5
+to 2.2-stable upgrade kit</a>.  (These
 are FreeBSD packages; please use pkg_add to install them.)  That
 should enable you to use all the ports listed here.  Note that it will
 only change just enough files to enable ports/packages to be used; for
 a full upgrade to 2.2-stable, please refer to the <a
 href="../handbook/synching.html">synchronizing your source tree</a>
 section of the handbook.  A full upgrade is recommended, especially if
-you are still using 2.2.1-release.</p>
+you are still using 2.2.1-release or 2.2.2-release.</p>
 
 <p>Many of the ports require the X Window System to compile and run.
 We compile and test our ports on <a
