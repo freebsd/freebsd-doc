@@ -1,4 +1,4 @@
-# $FreeBSD: www/Makefile,v 1.21 2003/10/28 23:04:04 simon Exp $
+# $FreeBSD: www/Makefile,v 1.22 2003/11/14 21:02:53 blackend Exp $
 
 WEB_PREFIX=	${.CURDIR}
 
@@ -6,7 +6,7 @@ SUBDIR= en
 
 .if !defined(ENGLISH_ONLY) || empty(ENGLISH_ONLY)
 .if make(obj)
-SUBDIR+= da fr it ja es ru zh de pt_BR
+SUBDIR+= da de es fr it ja pt_BR ru zh
 .endif
 .endif
 
