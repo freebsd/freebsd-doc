@@ -1,5 +1,5 @@
 #
-# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.27 2001/02/26 22:56:59 nik Exp $
+# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.28 2001/03/11 18:26:06 nik Exp $
 #
 # This include file <doc.docbook.mk> handles building and installing of
 # DocBook documentation in the FreeBSD Documentation Project.
@@ -53,15 +53,15 @@ DOCBOOKSUFFIX?= sgml
 
 MASTERDOC?=	${.CURDIR}/${DOC}.${DOCBOOKSUFFIX}
 
-.if !defined(OPENJADE) || ${MACHINE_ARCH} == "alpha"
-JADE?=		${PREFIX}/bin/jade
-JADECATALOG?=	${PREFIX}/share/sgml/jade/catalog
-NSGMLS?=	${PREFIX}/bin/nsgmls
-.else
+.if defined(OPENJADE) || ${MACHINE_ARCH} == "alpha"
 JADE?=		${PREFIX}/bin/openjade
 JADECATALOG?=	${PREFIX}/share/sgml/openjade/catalog
 NSGMLS?=	${PREFIX}/bin/onsgmls
 JADEFLAGS+=	-V openjade
+.else
+JADE?=		${PREFIX}/bin/jade
+JADECATALOG?=	${PREFIX}/share/sgml/jade/catalog
+NSGMLS?=	${PREFIX}/bin/nsgmls
 .endif
 
 DSLHTML?=	${DOC_PREFIX}/share/sgml/default.dsl
