@@ -132,6 +132,7 @@ main(int argc, char *argv[])
 
         /* close the session and release PAM resources */
         check("pam_close_session", pam_close_session(pamh, 0));
+        check("pam_setcred", pam_setcred(pamh, PAM_DELETE_CRED));
         check("pam_end", pam_end(pamh, 0));
 
         exit(status);
