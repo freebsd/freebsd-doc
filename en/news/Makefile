@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/news/Makefile,v 1.36 2003/05/21 07:57:57 murray Exp $
+# $FreeBSD: www/en/news/Makefile,v 1.37 2003/07/11 19:51:56 ceri Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -7,9 +7,7 @@
 .include "../Makefile.inc"
 .endif
 
-#DOCS+= press.sgml
 DOCS+= news.sgml
-#DOCS+= webchanges.sgml
 
 # press releases
 DOCS+= pressreleases.sgml
