@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD$ -->
+<!-- $FreeBSD: www/es/index.xsl,v 1.3 2004/06/14 00:29:45 jesusr Exp $ -->
 <!-- $FreeBSDes$ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -10,7 +10,7 @@
 
   <xsl:variable name="base" select="'.'"/>
   <xsl:variable name="enbase" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/es/index.xsl,v 1.2 2004/04/12 05:37:24 den Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/es/index.xsl,v 1.3 2004/06/14 00:29:45 jesusr Exp $'"/>
   <xsl:variable name="title" select="'El Proyecto FreeBSD'"/>
 
   <!-- these params should be externally bound. The values
@@ -291,7 +291,10 @@
 			  </p>
 
 			  <p><font size="+1" color="#990000"><b>Avisos de 
-			    Seguridad</b></font><br/>
+			    Seguridad</b></font>
+			    <xsl:text> </xsl:text>
+			    <font color="#990000">(<a
+			    href="{$enbase}/security/advisories.rdf">RSS</a>)</font><br/>
 
 			    <font size="-1">
 			      Ultima actualizaci&#243;n:
