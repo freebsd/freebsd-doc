@@ -7,6 +7,7 @@
 #
 
 SUBDIR = committers-guide
+SUBDIR+= contributing
 SUBDIR+= cvsup-advanced
 SUBDIR+= ddwg
 SUBDIR+= dialup-firewall
