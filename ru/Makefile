@@ -1,4 +1,4 @@
-# $FreeBSD: www/ru/Makefile,v 1.11 2000/03/05 17:10:03 phantom Exp $
+# $FreeBSD: www/ru/Makefile,v 1.12 2000/03/12 22:17:19 phantom Exp $
 
 .if exists(Makefile.conf)
 .include "Makefile.conf"
@@ -34,7 +34,7 @@ DATA=	index.html
 SUBDIR=  security
 SUBDIR+= commercial
 SUBDIR+= docproj
-#SUBDIR+= news
+SUBDIR+= news
 SUBDIR+= alpha
 SUBDIR+= internal
 SUBDIR+= java
