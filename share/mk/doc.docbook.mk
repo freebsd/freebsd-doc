@@ -1,5 +1,5 @@
 #
-# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.45 2001/08/23 07:59:06 murray Exp $
+# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.46 2001/09/07 10:21:41 murray Exp $
 #
 # This include file <doc.docbook.mk> handles building and installing of
 # DocBook documentation in the FreeBSD Documentation Project.
@@ -73,6 +73,10 @@
 #                       for double sided paper.  Blank pages may be added as
 #                       needed.
 #
+#       JUSTIFY         If defined, text will be right justified so that the
+#                       right edge is smooth.  Words may be hyphenated using
+#                       the defalt TeX hyphenation rules for this purpose.
+#
 #       BOOK_OUTPUT     A collection of options are set suitable for printing
 #                       a book.  This option may be an order of magnitude more
 #                       CPU intensive than the default build.
@@ -126,6 +130,10 @@ MIN_SECT_LABELS=1
 TWO_SIDE=1
 #WITH_FOOTNOTES=1
 #GEN_INDEX=1
+.endif
+.if defined(JUSTIFY)
+TEXCMDS+=	\RequirePackage{url}
+PRINTOPTS+=	-ioutput.print.justify
 .endif
 .if defined(TWO_SIDE)
 PRINTOPTS+=	-V %two-side%
