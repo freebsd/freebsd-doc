@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/Makefile,v 1.98 2003/08/11 20:50:57 simon Exp $
+# $FreeBSD: www/en/Makefile,v 1.99 2003/10/29 20:42:50 simon Exp $
 .if exists(Makefile.conf)
 .include "Makefile.conf"
 .endif
@@ -91,7 +91,7 @@ WEBDIR?=	data
 DATA+=		index.html
 CLEANFILES+=	index.html
 
-index.html: index.xsl news/news.xml news/press.xml includes.xsl news/includes.xsl security/advisories.xml
+index.html: index.xsl news/news.xml news/press.xml includes.xsl news/includes.xsl security/advisories.xml ../../doc/share/sgml/mirrors.xml
 	${XSLTPROC} ${XSLTPROCOPTS} -o ${.TARGET} \
 		${.CURDIR}/index.xsl ${.CURDIR}/news/news.xml
 .if !defined(NO_TIDY)
