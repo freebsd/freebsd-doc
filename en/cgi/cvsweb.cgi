@@ -43,8 +43,8 @@
 # SUCH DAMAGE.
 #
 # $zId: cvsweb.cgi,v 1.104 2000/11/01 22:05:12 hnordstrom Exp $
-# $Id: cvsweb.cgi,v 1.66 2001-01-03 07:40:09 knu Exp $
-# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.65 2001/01/03 03:46:29 knu Exp $
+# $Id: cvsweb.cgi,v 1.67 2001-01-12 04:26:10 knu Exp $
+# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.66 2001/01/03 07:40:09 knu Exp $
 #
 ###
 
@@ -53,7 +53,7 @@ require 5.000;
 use strict;
 
 use vars qw (
-    $mydir $config $allow_version_select $verbose
+    $mydir $uname $config $allow_version_select $verbose
     @CVSrepositories @CVSROOT %CVSROOT %CVSROOTdescr
     %MIRRORS %DEFAULTVALUE %ICONS %MTYPES
     @DIFFTYPES %DIFFTYPES @LOGSORTKEYS %LOGSORTKEYS
@@ -68,7 +68,8 @@ use vars qw (
     %input $query $barequery $sortby $bydate $byrev $byauthor
     $bylog $byfile $defaultDiffType $logsort $cvstree $cvsroot
     $mimetype $charset $defaultTextPlain $defaultViewable
-    $allow_compress $GZIPBIN $backicon $diricon $fileicon
+    $command_path %CMD $allow_compress
+    $backicon $diricon $fileicon
     $fullname $newname $cvstreedefault
     $body_tag $body_tag_for_src $logo $defaulttitle $address
     $long_intro $short_instruction $shortLogLen
@@ -83,7 +84,8 @@ use vars qw (
     $navigationHeaderColor $tableBorderColor $markupLogColor
     $tabstop $state $annTable $sel $curbranch @HideModules
     $module $use_descriptions %descriptions @mytz $dwhere $moddate
-    $use_moddate $has_zlib $gzip_open $allow_tar @tar_options @cvs_options
+    $use_moddate $has_zlib $gzip_open
+    $allow_tar @tar_options @gzip_options @cvs_options
     $LOG_FILESEPARATOR $LOG_REVSEPARATOR
 );
 
@@ -99,6 +101,7 @@ sub revcmp($$);
 sub fatal($$);
 sub redirect($);
 sub safeglob($);
+sub search_path($);
 sub getMimeTypeFromSuffix($);
 sub head($;$);
 sub scan_directives(@);
@@ -134,6 +137,8 @@ sub link_tags($);
 sub forbidden_module($);
 
 ##### Start of Configuration Area ########
+delete $ENV{PATH};
+
 use File::Basename;
 
 ($mydir) = (dirname($0) =~ /(.*)/); # untaint
@@ -224,7 +229,7 @@ $LOG_REVSEPARATOR = q/^-{28}$/;
 ##### End of configuration variables #####
 
 $cgi_style::hsty_base = 'http://www.FreeBSD.org';
-$_ = q$FreeBSD: www/en/cgi/cvsweb.cgi,v 1.65 2001/01/03 03:46:29 knu Exp $;
+$_ = q$FreeBSD: www/en/cgi/cvsweb.cgi,v 1.66 2001/01/03 07:40:09 knu Exp $;
 @_ = split;
 $cgi_style::hsty_date = "@_[3,4]";
 
@@ -251,17 +256,22 @@ $verbose = $v;
 $checkoutMagic = "~checkout~";
 $pathinfo = defined($ENV{PATH_INFO}) ? $ENV{PATH_INFO} : '';
 $where = $pathinfo;
-$where =~ tr|/|/|s;
-$doCheckout = ($where =~ /^\/$checkoutMagic/);
-$where =~ s|^/($checkoutMagic)?||;
-$where =~ s|/$||;
+$doCheckout = ($where =~ m|^/$checkoutMagic/|);
+$where =~ s|^/$checkoutMagic/|/|;
+$where =~ s|^/||;
 $scriptname = defined($ENV{SCRIPT_NAME}) ? $ENV{SCRIPT_NAME} : '';
-$scriptname =~ s|^/?|/|;
-$scriptname =~ s|/+$||;
-$scriptwhere = $scriptname;
-if ($where) {
-    $scriptwhere .= '/' . urlencode($where);
+$scriptname =~ s|^/*|/|;
+
+# Let's workaround thttpd's stupidness..
+if ($scriptname =~ m|/$|) {
+    $pathinfo .= '/';
+    my $re = quotemeta $pathinfo;
+    $scriptname =~ s/$re$//;
 }
+
+$scriptwhere = $scriptname;
+$scriptwhere .= '/' . urlencode($where);
+$where = '/' if ($where eq '');
 
 $is_mod_perl = defined($ENV{MOD_PERL});
 
@@ -476,33 +486,28 @@ $mimetype = &getMimeTypeFromSuffix ($fullname);
 $defaultTextPlain = ($mimetype eq "text/plain");
 $defaultViewable = $allow_markup && viewable($mimetype);
 
-# search for GZIP if compression allowed
-# We've to find out if the GZIP-binary exists .. otherwise
-# ge get an Internal Server Error if we try to pipe the
-# output through the nonexistent gzip ..
-# any more elegant ways to prevent this are welcome!
-if ($allow_compress && $maycompress && !$has_zlib) {
-    foreach (split(/:/, $ENV{PATH})) {
-	if (-x "$_/gzip") {
-	    $GZIPBIN = "$_/gzip";
-	    last;
-	}
-    }
+my $rewrite = 0;
+
+if ($pathinfo =~ m|//|) {
+    $pathinfo =~ y|/|/|s;
+    $rewrite = 1;
 }
 
-if (-d $fullname) {
-    #
-    # ensure, that directories always end with (exactly) one '/'
-    # to allow relative URL's. If they're not, make a redirect.
-    ##
-    if (!($pathinfo =~ m|/$|) || ($pathinfo =~ m |/{2,}$|)) {
-	redirect("$scriptwhere/$query");
-    }
-    else {
-	$where .= '/';
-	$scriptwhere .= '/';
-    }
+if (-d $fullname && $pathinfo !~ m|/$|) {
+    $pathinfo .= '/';
+    $rewrite = 1;
 }
+
+if (!-d $fullname && $pathinfo =~ m|/$|) {
+    chop $pathinfo;
+    $rewrite = 1;
+}
+
+if ($rewrite) {
+    redirect($scriptname . urlencode($pathinfo) . $query);
+}
+
+undef $rewrite;
 
 if (!-d $cvsroot) {
     &fatal("500 Internal Error",'$CVSROOT not found!<P>The server on which the CVS tree lives is probably down.  Please try again in a few minutes.');
@@ -542,7 +547,7 @@ if ($input{tarball}) {
 	my $tag = (exists $input{only_with_tag} && length $input{only_with_tag})
 	  ? $input{only_with_tag} : "HEAD";
 
-	system "cvs", @cvs_options, "-Qd", $cvsroot, "export", "-r", $tag, "-d", "$tmpdir/$basedir", $module
+	system $CMD{cvs}, @cvs_options, '-Qd', $cvsroot, 'export', '-r', $tag, '-d', "$tmpdir/$basedir", $module
 	  and $fatal = "500 Internal Error","cvs co failure: $!: $module"
 	    && last;
 
@@ -550,14 +555,14 @@ if ($input{tarball}) {
 
 	print "Content-type: application/x-gzip\r\n\r\n";
 
-	system "tar", @tar_options, "-zcf", "-", "-C", $tmpdir, $basedir
+	system "$CMD{tar} @tar_options -cf - -C $tmpdir $basedir | $CMD{gzip} @gzip_options -c"
 	  and $fatal = "500 Internal Error","tar zc failure: $!: $basedir"
 	    && last;
 
 	last;
     }
 
-    system "rm", "-rf", $tmpdir if -d $tmpdir;
+    system $CMD{rm}, '-rf', $tmpdir if -d $tmpdir;
 
     &fatal($fatal) if $fatal;
 
@@ -1022,7 +1027,7 @@ if (-d $fullname) {
 	# Assume it's a module name with a potential path following it.
 	$xtra = (($module = $where) =~ s|/.*||) ? $& : '';
 	# Is there an indexed version of modules?
-	if (open($fh, "$cvsroot/CVSROOT/modules")) {
+	if (open($fh, "< $cvsroot/CVSROOT/modules")) {
 	    while (<$fh>) {
 		if (/^(\S+)\s+(\S+)/o && $module eq $1
 		    && -d "$cvsroot/$2" && $module ne $2) {
@@ -1229,9 +1234,9 @@ sub spacedHtmlText($;$) {
 }
 
 sub link($$) {
-	my($name, $where) = @_;
+	my($name, $url) = @_;
 
-	sprintf '<A HREF="%s">%s</A>', hrefquote($where), $name;
+	sprintf '<A HREF="%s">%s</A>', hrefquote($url), $name;
 }
 
 sub revcmp($$) {
@@ -1313,6 +1318,17 @@ sub safeglob($) {
 	@results;
 }
 
+sub search_path($) {
+    my($command) = @_;
+    my $d;
+
+    for $d (split(/:/, $command_path)) {
+	return "$d/$command" if -x "$d/$command";
+    }
+
+    $command;
+}
+
 sub getMimeTypeFromSuffix($) {
     my ($fullname) = @_;
     my ($mimetype, $suffix);
@@ -1386,7 +1402,7 @@ sub doAnnotate($$) {
     my $reader = do {local(*FH);};
     my $writer = do {local(*FH);};
 
-    # make sure the revisions a wellformed, for security
+    # make sure the revisions are wellformed, for security
     # reasons ..
     if ($rev =~ /[^\w.]/) {
 	&fatal("404 Not Found",
@@ -1597,8 +1613,8 @@ sub doCheckout($$) {
     #
     # Safely for a child process to read from.
     if (! open($fh, "-|")) { # child
-      open(STDERR, ">&STDOUT"); # Redirect stderr to stdout
-      exec("cvs", @cvs_options, "-d", $cvsroot, "co", "-p", $revopt, $where);
+	open(STDERR, ">&STDOUT"); # Redirect stderr to stdout
+	exec($CMD{cvs}, @cvs_options, '-d', $cvsroot, 'co', '-p', $revopt, $where);
     }
 
     if (eof($fh)) {
@@ -1778,7 +1794,7 @@ sub doDiff($$$$$$) {
 	}
 	if (! open($fh, "-|")) { # child
 	    open(STDERR, ">&STDOUT"); # Redirect stderr to stdout
-	    exec("rcsdiff",@difftype,"-r$rev1","-r$rev2",$fullname);
+	    exec($CMD{rcsdiff}, @difftype, "-r$rev1", "-r$rev2", $fullname);
 	}
 	if ($human_readable) {
 	    http_header();
@@ -1862,15 +1878,14 @@ sub getDirLogs($$@) {
     if (defined($tag)) {
 	#can't use -r<tag> as - is allowed in tagnames, but misinterpreated by rlog..
 	if (! open($fh, "-|")) {
-		open(STDERR, '>/dev/null'); # rlog may complain; ignore.
-		exec('rlog', @files);
+	    open(STDERR, '>/dev/null'); # rlog may complain; ignore.
+	    exec($CMD{rlog}, @files);
 	}
     }
     else {
-    	my $kidpid = open($fh, "-|");
-	if (! $kidpid) {
-		open(STDERR, '>/dev/null'); # rlog may complain; ignore.
-		exec('rlog', '-r', @files);
+	if (! open($fh, "-|")) {
+	    open(STDERR, '>/dev/null'); # rlog may complain; ignore.
+	    exec($CMD{rlog}, '-r', @files);
 	}
     }
     $state = "start";
@@ -2000,7 +2015,7 @@ again:
     }
     if ($. == 0) {
 	fatal("500 Internal Error",
-	      "Failed to spawn GNU rlog on <em>'".join(", ", @files)."'</em><p>did you set the <b>\$ENV{PATH}</b> in your configuration file correctly ?");
+	      "Failed to spawn GNU rlog on <em>'".join(", ", @files)."'</em><p>Did you set the <b>\$command_path</b> in your configuration file correctly ? (Currently '$command_path'");
     }
     close($fh);
 }
@@ -2028,12 +2043,12 @@ sub readLog($;$) {
 
 	print("Going to rlog '$fullname'\n") if ($verbose);
 	if (! open($fh, "-|")) { # child
-		if ($revision ne '') {
-			exec("rlog",$revision,$fullname);
-		}
-		else {
-			exec("rlog",$fullname);
-		}
+	    if ($revision ne '') {
+		exec($CMD{rlog}, $revision, $fullname);
+	    }
+	    else {
+		exec($CMD{rlog}, $fullname);
+	    }
 	}
 	while (<$fh>) {
 	    print if ($verbose);
@@ -2754,7 +2769,7 @@ sub navigateHeader($$$$$) {
     print qq`<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">`;
     print "<HTML>\n<HEAD>\n";
     print qq`<META name="robots" content="nofollow">\n`;
-    print '<!-- CVSweb $zRevision: 1.104 $  $Revision: 1.66 $ -->';
+    print '<!-- CVSweb $zRevision: 1.104 $  $Revision: 1.67 $ -->';
     print "\n<TITLE>$path$filename - $title - $rev</TITLE></HEAD>\n";
     print  "$body_tag_for_src\n";
     print "<table width=\"100%\" border=0 cellspacing=0 cellpadding=1 bgcolor=\"$navigationHeaderColor\">";
@@ -3108,7 +3123,7 @@ sub http_header(;$) {
 	    print "Content-type: $content_type\r\n";
     }
     if ($allow_compress && $maycompress) {
-	if ($has_zlib || (defined($GZIPBIN) && open(GZIP, "|$GZIPBIN -1 -c"))) {
+	if ($has_zlib || (defined($CMD{gzip}) && open(GZIP, "| $CMD{gzip} -1 -c"))) {
 	    if ($is_mod_perl) {
 		    Apache->request->content_encoding("x-gzip");
 		    Apache->request->header_out(Vary => "Accept-Encoding");
@@ -3134,7 +3149,7 @@ sub http_header(;$) {
 	    else {
 		    print "\r\n"; # Close headers
 	    }
-	    print "<font size=-1>Unable to find gzip binary in the \$PATH to compress output</font><br>";
+	    print "<font size=-1>Unable to find gzip binary in the <b>\$command_path</b> ($command_path) to compress output</font><br>";
 	}
     }
     else {
@@ -3149,7 +3164,7 @@ sub http_header(;$) {
 
 sub html_header($) {
     my ($title) = @_;
-    my $version = '$zRevision: 1.104 $  $Revision: 1.66 $'; #'
+    my $version = '$zRevision: 1.104 $  $Revision: 1.67 $'; #'
     http_header(defined($charset) ? "text/html; charset=$charset" : "text/html");
 
     (my $header = &cgi_style::html_header) =~ s/^.*\n\n//; # remove HTTP response header
