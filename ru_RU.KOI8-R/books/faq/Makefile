@@ -1,10 +1,10 @@
 # 
-# $FreeBSD$
+# $FreeBSD: doc/ru_RU.KOI8-R/books/faq/Makefile,v 1.3 1999/09/06 06:53:39 peter Exp $
 #
-# Build the FreeBSD FAQ
+# Build the Russian FreeBSD FAQ
 #
 
-MAINTAINER=nik@FreeBSD.ORG
+MAINTAINER=andy@FreeBSD.org phantom@FreeBSD.org
 
 DOC?= book
 
