@@ -32,6 +32,7 @@ DOC?= book
 FORMATS?= html-split
 
 HAS_INDEX= true
+WITH_GLOSSARY?=
 
 INSTALL_COMPRESSED?= gz
 INSTALL_ONLY_COMPRESSED?=
@@ -39,70 +40,79 @@ INSTALL_ONLY_COMPRESSED?=
 IMAGES_EN = advanced-networking/isdn-bus.eps
 IMAGES_EN+= advanced-networking/isdn-twisted-pair.eps
 IMAGES_EN+= advanced-networking/natd.eps
-IMAGES_EN+= install/userconfig.scr
-IMAGES_EN+= install/userconfig2.scr
-IMAGES_EN+= install/hdwrconf.scr
-IMAGES_EN+= install/probstart.scr
-IMAGES_EN+= install/main1.scr
-IMAGES_EN+= install/sysinstall-exit.scr
-IMAGES_EN+= install/main-doc.scr
-IMAGES_EN+= install/docmenu1.scr
-IMAGES_EN+= install/main-keymap.scr
-IMAGES_EN+= install/keymap.scr
-IMAGES_EN+= install/main-options.scr
-IMAGES_EN+= install/options.scr
-IMAGES_EN+= install/main-std.scr
-IMAGES_EN+= install/fdisk-drive1.scr
-IMAGES_EN+= install/fdisk-edit1.scr
-IMAGES_EN+= install/fdisk-edit2.scr
+IMAGES_EN+= install/adduser1.scr
+IMAGES_EN+= install/adduser2.scr
+IMAGES_EN+= install/adduser3.scr
 IMAGES_EN+= install/boot-mgr.scr
-IMAGES_EN+= install/fdisk-drive2.scr
-IMAGES_EN+= install/disklabel-ed1.scr
-IMAGES_EN+= install/disklabel-auto.scr
-IMAGES_EN+= install/disklabel-root1.scr
-IMAGES_EN+= install/disklabel-root2.scr
-IMAGES_EN+= install/disklabel-fs.scr
-IMAGES_EN+= install/disklabel-root3.scr
-IMAGES_EN+= install/disklabel-ed2.scr
-IMAGES_EN+= install/dist-set.scr
-IMAGES_EN+= install/dist-set2.scr
-IMAGES_EN+= install/media.scr
-IMAGES_EN+= install/ed0-conf.scr
-IMAGES_EN+= install/ed0-conf2.scr
-IMAGES_EN+= install/ftp-anon1.scr
-IMAGES_EN+= install/ftp-anon2.scr
-IMAGES_EN+= install/nfs-server-edit.scr
-IMAGES_EN+= install/security.scr
 IMAGES_EN+= install/console-saver1.scr
 IMAGES_EN+= install/console-saver2.scr
 IMAGES_EN+= install/console-saver3.scr
 IMAGES_EN+= install/console-saver4.scr
-IMAGES_EN+= install/timezone1.scr
-IMAGES_EN+= install/timezone2.scr
-IMAGES_EN+= install/timezone3.scr
-IMAGES_EN+= install/mouse1.scr
-IMAGES_EN+= install/mouse2.scr
-IMAGES_EN+= install/mouse3.scr
-IMAGES_EN+= install/mouse4.scr
-IMAGES_EN+= install/mouse5.scr
-IMAGES_EN+= install/mouse6.scr
-IMAGES_EN+= install/xf86setup.scr
 IMAGES_EN+= install/desktop.scr
-IMAGES_EN+= install/pkg-cat.scr
-IMAGES_EN+= install/pkg-sel.scr
-IMAGES_EN+= install/pkg-install.scr
-IMAGES_EN+= install/pkg-confirm.scr
-IMAGES_EN+= install/adduser1.scr
-IMAGES_EN+= install/adduser2.scr
-IMAGES_EN+= install/adduser3.scr
-IMAGES_EN+= install/mainexit.scr
+IMAGES_EN+= install/disklabel-auto.scr
+IMAGES_EN+= install/disklabel-ed1.scr
+IMAGES_EN+= install/disklabel-ed2.scr
+IMAGES_EN+= install/disklabel-fs.scr
+IMAGES_EN+= install/disklabel-root1.scr
+IMAGES_EN+= install/disklabel-root2.scr
+IMAGES_EN+= install/disklabel-root3.scr
 IMAGES_EN+= install/disk-layout.eps
+IMAGES_EN+= install/dist-set.scr
+IMAGES_EN+= install/dist-set2.scr
+IMAGES_EN+= install/docmenu1.scr
+IMAGES_EN+= install/ed0-conf.scr
+IMAGES_EN+= install/ed0-conf2.scr
 IMAGES_EN+= install/edit-inetd-conf.scr
 IMAGES_EN+= install/example-dir1.eps
 IMAGES_EN+= install/example-dir2.eps
 IMAGES_EN+= install/example-dir3.eps
 IMAGES_EN+= install/example-dir4.eps
 IMAGES_EN+= install/example-dir5.eps
+IMAGES_EN+= install/fdisk-drive1.scr
+IMAGES_EN+= install/fdisk-drive2.scr
+IMAGES_EN+= install/fdisk-edit1.scr
+IMAGES_EN+= install/fdisk-edit2.scr
+IMAGES_EN+= install/ftp-anon1.scr
+IMAGES_EN+= install/ftp-anon2.scr
+IMAGES_EN+= install/hdwrconf.scr
+IMAGES_EN+= install/keymap.scr
+IMAGES_EN+= install/main1.scr
+IMAGES_EN+= install/mainexit.scr
+IMAGES_EN+= install/main-std.scr
+IMAGES_EN+= install/main-options.scr
+IMAGES_EN+= install/main-doc.scr
+IMAGES_EN+= install/main-keymap.scr
+IMAGES_EN+= install/media.scr
+IMAGES_EN+= install/mouse1.scr
+IMAGES_EN+= install/mouse2.scr
+IMAGES_EN+= install/mouse3.scr
+IMAGES_EN+= install/mouse4.scr
+IMAGES_EN+= install/mouse5.scr
+IMAGES_EN+= install/mouse6.scr
+IMAGES_EN+= install/mta-main.scr
+IMAGES_EN+= install/net-config-menu1.scr
+IMAGES_EN+= install/net-config-menu2.scr
+IMAGES_EN+= install/nfs-server-edit.scr
+IMAGES_EN+= install/ntp-config.scr
+IMAGES_EN+= install/options.scr
+IMAGES_EN+= install/pkg-cat.scr
+IMAGES_EN+= install/pkg-confirm.scr
+IMAGES_EN+= install/pkg-install.scr
+IMAGES_EN+= install/pkg-sel.scr
+IMAGES_EN+= install/probstart.scr
+IMAGES_EN+= install/routed.scr
+IMAGES_EN+= install/security.scr
+IMAGES_EN+= install/sysinstall-exit.scr
+IMAGES_EN+= install/timezone1.scr
+IMAGES_EN+= install/timezone2.scr
+IMAGES_EN+= install/timezone3.scr
+IMAGES_EN+= install/userconfig.scr
+IMAGES_EN+= install/userconfig2.scr
+IMAGES_EN+= install/xf86setup.scr
+IMAGES_EN+= security/ipsec-crypt-pkt.pic
+IMAGES_EN+= security/ipsec-encap-pkt.pic
+IMAGES_EN+= security/ipsec-network.pic
+IMAGES_EN+= security/ipsec-out-pkt.pic
 IMAGES_EN+= vinum/vinum-concat.pic
 IMAGES_EN+= vinum/vinum-mirrored-vol.pic
 IMAGES_EN+= vinum/vinum-raid10-vol.pic
@@ -168,6 +178,9 @@ SYMLINKS=	${DESTDIR} index.html handbook.html
 CHAPTERS?= ${SRCS:M*chapter.sgml}
 
 SGMLFLAGS+= ${CHAPTERS:S/\/chapter.sgml//:S/^/-i chap./}
+.if defined(WITH_GLOSSARY) && !empty(WITH_GLOSSARY)
+SGMLFLAGS+= -i chap.freebsd-glossary
+.endif
 
 # XXX La creazione del Manuale attualmente sfora dei limiti interni,
 # codificati in pdftex.  Finché non dividiamo il Manuale, crea la versione
@@ -184,8 +197,6 @@ book.pdf: book.ps
 pgpkeyring: pgpkeys/chapter.sgml
 	@${JADE} -V nochunks ${JADEOPTS} -d ${DSLPGP} -t sgml ${MASTERDOC}
 
-DOC_PREFIX?= ${.CURDIR}/../../..
-
 #
 # Variabili specifiche del Manuale
 #
@@ -193,4 +204,42 @@ DOC_PREFIX?= ${.CURDIR}/../../..
 JADEFLAGS+=	-V withpgpkeys
 .endif
 
+DOC_PREFIX?= ${.CURDIR}/../../..
+
+.for p in ftp cvsup
+SRCS+= mirrors.sgml.${p}.inc
+CLEANFILES+= mirrors.sgml.${p}.inc
+CLEANFILES+= mirrors.sgml.${p}.inc.tmp
+.endfor
+
+SRCS+= eresources.sgml.www.inc
+CLEANFILES+= eresources.sgml.www.inc
+CLEANFILES+= eresources.sgml.www.inc.tmp
+
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"
+
+.for p in ftp cvsup
+mirrors.sgml.${p}.inc: ${XML_MIRRORS} ${XSL_MIRRORS}
+	${XSLTPROC} ${XSLTPROCOPTS} \
+	    -o $@.tmp \
+	    --param 'transtable.xml' "'${XML_TRANSTABLE}'" \
+	    --param 'type' "'$p'" \
+	    --param 'proto' "'$p'" \
+	    --param 'target' "'handbook/mirrors/chapter.sgml'" \
+	    ${XSL_MIRRORS} ${XML_MIRRORS}
+	${SED} -e 's,<\([^ >]*\)\([^>]*\)/>,<\1\2></\1>,;s,</anchor>,,' \
+	    < $@.tmp > $@ || (${RM} -f $@ && false)
+	${RM} -f $@.tmp
+.endfor
+
+eresources.sgml.www.inc: ${XML_MIRRORS} ${XSL_MIRRORS}
+	${XSLTPROC} ${XSLTPROCOPTS} \
+	    -o $@.tmp \
+	    --param 'transtable.xml' "'${XML_TRANSTABLE}'" \
+	    --param 'type' "'www'" \
+	    --param 'proto' "'http'" \
+	    --param 'target' "'handbook/eresources/chapter.sgml'" \
+	    ${XSL_MIRRORS} ${XML_MIRRORS}
+	${SED} -e 's,<\([^ >]*\)\([^>]*\)/>,<\1\2></\1>,;s,</anchor>,,' \
+	    < $@.tmp > $@ || (${RM} -f $@ && false)
+	${RM} -f $@.tmp
