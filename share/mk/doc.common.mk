@@ -172,4 +172,5 @@ ${URLS_ENT}:
 	echo '<!ENTITY url.main "http://www.FreeBSD.org">' > $@
 .endif
 
+SRCS+=		${URLS_ENT}
 CLEANFILES+=	${URLS_ENT}
