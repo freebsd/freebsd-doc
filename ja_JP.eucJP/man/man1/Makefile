@@ -1,6 +1,5 @@
 # $FreeBSD$
-MAN1 =	a2p.1\
-	addftinfo.1\
+MAN1 =	addftinfo.1\
 	addr2line.1\
 	afmtodit.1\
 	apply.1\
@@ -20,7 +19,6 @@ MAN1 =	a2p.1\
 	cap_mkdb.1\
 	cat.1\
 	catman.1\
-	cccp.1\
 	cdcontrol.1\
 	checknr.1\
 	chflags.1\
@@ -44,13 +42,13 @@ MAN1 =	a2p.1\
 	compress.1\
 	cp.1\
 	cpio.1\
+	cpp.1\
 	crontab.1\
 	crunchgen.1\
 	crunchide.1\
 	ctags.1\
 	ctm.1\
 	ctm_rmail.1\
-	cu.1\
 	cursor.1\
 	cut.1\
 	cvs.1\
@@ -93,7 +91,6 @@ MAN1 =	a2p.1\
 	ftp.1\
 	g711conv.1\
 	gasp.1\
-	gawk.1\
 	gcc.1\
 	gcore.1\
 	gdb.1\
@@ -115,7 +112,6 @@ MAN1 =	a2p.1\
 	groups.1\
 	gzexe.1\
 	gzip.1\
-	h2ph.1\
 	head.1\
 	hexdump.1\
 	host.1\
@@ -132,6 +128,7 @@ MAN1 =	a2p.1\
 	ipcrm.1\
 	ipcs.1\
 	ipftest.1\
+	ipnat.1\
 	ipresend.1\
 	ipsend.1\
 	iptest.1\
@@ -142,9 +139,6 @@ MAN1 =	a2p.1\
 	kcon.1\
 	kdump.1\
 	kenv.1\
-	key.1\
-	keyinfo.1\
-	keyinit.1\
 	keylogin.1\
 	keylogout.1\
 	kill.1\
@@ -188,7 +182,6 @@ MAN1 =	a2p.1\
 	makewhatis.1\
 	man.1\
 	manpath.1\
-	mcon.1\
 	md5.1\
 	merge.1\
 	mesg.1\
@@ -230,7 +223,6 @@ MAN1 =	a2p.1\
 	patch.1\
 	pawd.1\
 	pax.1\
-	perl.1\
 	pfbtops.1\
 	pic.1\
 	pkg_add.1\
@@ -238,7 +230,6 @@ MAN1 =	a2p.1\
 	pkg_delete.1\
 	pkg_info.1\
 	pkg_sign.1\
-	pkg_update.1\
 	pkg_version.1\
 	pr.1\
 	printenv.1\
@@ -255,7 +246,6 @@ MAN1 =	a2p.1\
 	rcsfreeze.1\
 	rcsintro.1\
 	rcsmerge.1\
-	rdist.1\
 	readelf.1\
 	realpath.1\
 	refer.1\
@@ -274,7 +264,6 @@ MAN1 =	a2p.1\
 	rusers.1\
 	rwall.1\
 	rwho.1\
-	s2p.1\
 	sasc.1\
 	scon.1\
 	scp.1\
@@ -287,7 +276,6 @@ MAN1 =	a2p.1\
 	sh.1\
 	shar.1\
 	size.1\
-	skey.1\
 	sleep.1\
 	smbutil.1\
 	sockstat.1\
@@ -342,15 +330,7 @@ MAN1 =	a2p.1\
 	uptime.1\
 	usbhidctl.1\
 	users.1\
-	uuconv.1\
-	uucp.1\
 	uuencode.1\
-	uulog.1\
-	uuname.1\
-	uupick.1\
-	uustat.1\
-	uuto.1\
-	uux.1\
 	vacation.1\
 	vgrind.1\
 	vi.1\
@@ -383,7 +363,8 @@ MAN1 =	a2p.1\
 	zmore.1\
 	znew.1
 
-MLINKS= builtin.1 alias.1 builtin.1 alloc.1 builtin.1 bg.1 builtin.1 bindkey.1 \
+MLINKS=	builtin.1 alias.1 builtin.1 alloc.1 builtin.1 bg.1 builtin.1 bindkey.1 \
+	builtin.1 bind.1 \
 	builtin.1 break.1 builtin.1 breaksw.1 builtin.1 builtins.1 \
 	builtin.1 case.1 builtin.1 cd.1 builtin.1 chdir.1 builtin.1 command.1 \
 	builtin.1 complete.1 \
@@ -415,17 +396,16 @@ MLINKS= builtin.1 alias.1 builtin.1 alloc.1 builtin.1 bg.1 builtin.1 bindkey.1 \
 	builtin.1 while.1
 MLINKS+=ed.1 red.1
 MLINKS+=test.1 '[.1'
-MLINKS+=gawk.1 awk.1
 MLINKS+=gcc.1 cc.1 
 MLINKS+=gcc.1 c++.1
 MLINKS+=gcc.1 g++.1
 MLINKS+=gcc.1 CC.1
-MLINKS+=cccp.1 cpp.1
 MLINKS+=grep.1 egrep.1
 MLINKS+=grep.1 fgrep.1
 MLINKS+=grep.1 zgrep.1
 MLINKS+=grep.1 zegrep.1
 MLINKS+=grep.1 zfgrep.1
+MLINKS+=grep.1 bzgrep.1 grep.1 bzegrep.1 grep.1 bzfgrep.1
 MLINKS+=gzip.1 gunzip.1
 MLINKS+=gzip.1 zcat.1
 MLINKS+=gzip.1 gzcat.1
@@ -454,9 +434,11 @@ MLINKS+=lex.1 flex++.1
 MLINKS+=lex.1 lex++.1
 MLINKS+=mail.1 Mail.1
 MLINKS+=mail.1 mailx.1
+MLINKS+=nawk.1 awk.1
 MLINKS+=passwd.1 yppasswd.1
 MLINKS+=printenv.1 env.1
 MLINKS+=rtld.1 ld-elf.so.1.1
+MLINKS+=tip.1 cu.1
 MLINKS+=tput.1 clear.1
 MLINKS+=tset.1 reset.1
 MLINKS+=vi.1 ex.1
@@ -471,7 +453,9 @@ MLINKS+=kbdmap.1 vidfont.1
 MLINKS+=rtprio.1 idprio.1
 MLINKS+=cksum.1 sum.1
 MLINKS+=ktrace.1 trace.1
-MLINKS+=uuencode.1 uudecode.1
+MLINKS+=uuencode.1 uudecode.1 \
+	uuencode.1 b64encode.1 \
+	b64encode.1 b64decode.1
 MLINKS+=ncal.1 cal.1
 MLINKS+=enigma.1 crypt.1
 MLINKS+=ln.1 link.1
