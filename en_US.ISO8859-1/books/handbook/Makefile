@@ -201,7 +201,7 @@ DOC_PREFIX?= ${.CURDIR}/../../..
 
 .for p in ftp cvsup
 mirrors/chapter.sgml.${p}.inc: ${DOC_PREFIX}/share/sgml/mirrors.xml ${DOC_PREFIX}/share/sgml/mirrors.xsl
-	${XSLTPROC} ${XSLTPROCOPTS} --stringparam 'proto' '$p' \
+	${XSLTPROC} ${XSLTPROCOPTS} --param 'proto' "'$p'" \
 	    ${DOC_PREFIX}/share/sgml/mirrors.xsl \
 	    ${DOC_PREFIX}/share/sgml/mirrors.xml \
 	    | sed -e "s,<\([^ >]*\)\([^>]*\)/>,<\1\2></\1>,;s,</anchor>,," > $@
