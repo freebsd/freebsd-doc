@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
 <!--
-     $FreeBSD: www/de/news/newsflash.xsl,v 1.5 2004/12/30 17:53:43 hrs Exp $
-     $FreeBSDde: de-www/news/newsflash.xsl,v 1.11 2004/05/04 00:06:08 brueffer Exp $
-     basiert auf: 1.11
+     $FreeBSD$
+     $FreeBSDde: de-www/news/newsflash.xsl,v 1.13 2005/01/21 22:26:32 mheinen Exp $
+     basiert auf: 1.12
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
@@ -73,11 +73,11 @@
 	  <a href="{$enbase}/security/#adv">Security Information</a>.</p>
 
 	<xsl:call-template name="html-news-list-newsflash">
-          <xsl:with-param name="news.project.xml-master" select="$news.project.xml-master" />
-          <xsl:with-param name="news.project.xml" select="$news.project.xml" />
+	  <xsl:with-param name="news.project.xml-master" select="$news.project.xml-master" />
+	  <xsl:with-param name="news.project.xml" select="$news.project.xml" />
 	</xsl:call-template>
 
-        <xsl:call-template name="html-news-make-olditems-list" />
+	<xsl:call-template name="html-news-make-olditems-list" />
 
 	<xsl:copy-of select="$newshome"/>
 	<xsl:copy-of select="$footer"/>
