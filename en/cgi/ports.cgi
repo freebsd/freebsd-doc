@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/ports.cgi,v 1.74 2004/05/22 15:16:45 simon Exp $
+# $FreeBSD: www/en/cgi/ports.cgi,v 1.75 2004/05/25 22:08:43 hrs Exp $
 #
 # ports.cgi - search engine for FreeBSD ports
 #             	o search for a port by name or description
@@ -34,11 +34,19 @@
 # If you want use this script on your own host this line must
 # work for you: $ cvs rdiff -D'last week' ports/INDEX
 
+use POSIX qw(strftime);
+use Time::Local;
 
 sub init_variables {
     $cvsroot = '/usr/local/www/cvsroot/FreeBSD';	# $CVSROOT
     $localPrefix = '/usr/ports';	# ports prefix
-    $ports_database = 'ports/INDEX';
+
+    # Directory of the up-to-date INDEX/INDEX-5, or "CVS" if the HEAD
+    # version from the CVS repository should be used
+    $portsDatabaseHeadDir = "/usr/local/www/ports";
+
+    # Ports database file to use
+    $ports_database = 'INDEX';
     # unset $ENV{'CVSROOT'};
 
     @cvscmd = ('cvs', '-Q', '-R', '-d', $cvsroot);
@@ -160,7 +168,7 @@ sub parse_release {
 
     if($release_major == 5) {
 	$packageExt = 'tbz';
-	$ports_database = 'ports/INDEX-5';
+	$ports_database = 'INDEX-5';
     }
 }
 
@@ -184,11 +192,10 @@ sub packages_exist {
 
 
 # return the date of the last ports database update
-sub last_update {
-    local($file) = "$cvsroot/$ports_database,v";
+sub last_update_cvs {
+    local($file) = "$cvsroot/ports/$ports_database,v";
     local($date) = 'unknown';
     local($filebasename) = $ports_database;
-    $filebasename =~ s/ports\///;
 
     open(DB, $file) || do {
 	&warn("$file: $!\n"); &exit;
@@ -202,7 +209,29 @@ sub last_update {
 	}
     }
     close DB;
-    return $date . "; based on " . $filebasename . " revision " . $head;
+    return $date . " (" . $filebasename . " revision " . $head . ")";
+}
+
+sub last_update_file {
+    local($file) = "$portsDatabaseHeadDir/$ports_database";
+    local($modtime, $modtimestr);
+
+    $modtime = (stat($file))[9];
+    if (defined($modtime) && $modtime > 0) {
+	$modtimestr = strftime("%G-%m-%d %H:%M:%S UTC", gmtime($modtime));
+    } else {
+	$modtimestr = "Unknown";
+    }
+
+    return $modtimestr;
+}
+
+sub last_update {
+    if ($portsDatabaseHeadDir eq "CVS") {
+	return &last_update_cvs;
+    } else {
+	return &last_update_file;
+    }
 }
 
 sub last_update_message {
@@ -257,24 +286,35 @@ sub exit { exit 0 };
 sub readindex {
     local($date, *var, *msec) = @_;
     local(@co) = ('co', '-p');
+    local($use_cvs) = 1;
+    local($localportsdb) = "$portsDatabaseHeadDir/$ports_database";
 
     if ($date =~ /^rev([1-9]+\.[0-9]+)$/ ||
 	$date =~ /^(RELEASE_\d+_\d+_\d+)$/) {
 	# diff by revision
 	push(@co, ('-r', $1));
     } elsif ($date eq "") {
-      # Get HEAD, no date or revision
+	# Get HEAD, no date or revision
+	if ($portsDatabaseHeadDir ne "CVS") {
+	    $use_cvs = 0;
+	}
     } else {
 	# diff by date
 	push(@co, ('-D', $date));
     }
 
-    push(@co, $ports_database);
+    push(@co, "ports/$ports_database");
 
 
     local(@tmp, @s);
 
-    open(C, "-|") || exec (@cvscmd, @co);
+    if (!$use_cvs && -r $localportsdb) {
+	open(C, $localportsdb) || do {
+	    warn "Cannot open ports database $localportsdb: $!\n"; &exit;
+	};
+    } else {
+	open(C, "-|") || exec (@cvscmd, @co);
+    }
 
     while(<C>) {
 	chop;
@@ -294,6 +334,7 @@ sub readcoll {
 
     local(@a, @b, %key);
     local($file) = '../ports/categories';
+    local($localportsdb) = "$portsDatabaseHeadDir/$ports_database";
 
     if (-r $file && open(C, $file)) {
 	while(<C>) {
@@ -309,7 +350,13 @@ sub readcoll {
 	    }
 	}
     } else {
-	open(C, "-|") || exec (@cvscmd, @co);
+	if (-r $localportsdb) {
+	    open(C, $localportsdb) || do {
+		warn "Cannot open ports database $localportsdb: $!\n"; &exit;
+	    }
+	} else {
+	    open(C, "-|") || exec (@cvscmd, @co);
+	}
 
 	while(<C>) {
 	    chop;
@@ -556,6 +603,11 @@ Search for:
 </FORM>
 };
 
+    # Since we don't have frequent CVS versions of INDEX anymore it's
+    # not possible to make usable "new ports" listings based on INDEX.
+    print("<HR noshade>\n");
+    return;
+
     print qq{<hr noshade>
 <p>
 "New" print ports which are new in the ports collection
@@ -608,7 +660,7 @@ sub footer {
 <img ALIGN="RIGHT" src="/gifs/powerlogo.gif">
 &copy; 1996-2002 by Wolfram Schneider. All rights reserved.<br>
 };
-    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.74 2004/05/22 15:16:45 simon Exp $} . "<br>\n";
+    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.75 2004/05/25 22:08:43 hrs Exp $} . "<br>\n";
     print qq{Please direct questions about this service to
 <I><A HREF="$mailtoURL">$mailto</A></I><br>\n};
     print qq{General questions about FreeBSD ports should be sent to } .
@@ -674,8 +726,8 @@ version and <b>not</b> to the latest releases.<p>
 The script ports.cgi use the file
 <a href="$remotePrefixCvs/INDEX">
 FreeBSD-CVS/ports/INDEX,v</a>
-as database for all operation. INDEX,v will be updated by hand
-by the portsmeister.<p>
+as database for most operations. INDEX,v will be updated by hand
+by the portsmeister.  An updated INDEX file is used if available.<p>
 
 You may also search the
 <a href="http://www.FreeBSD.org/cgi/man.cgi?manpath=FreeBSD+Ports">ports manual pages</a>.<p>
@@ -707,6 +759,11 @@ $release = $remotePrefixFtpPackagesDefault
 $script_name = &env('SCRIPT_NAME');
 
 &parse_release;
+
+# Fallback to CVS if an updated INDEX isn't found
+if (!-r "$portsDatabaseHeadDir/$ports_database") {
+    $portsDatabaseHeadDir = "CVS";
+}
 
 if ($path_info eq "/source") {
     print "Content-type: text/plain\n\n";
