@@ -30,7 +30,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)mount.8	8.8 (Berkeley) 6/16/94
-.\" %FreeBSD: src/sbin/mount/mount.8,v 1.31.2.9 2002/04/21 18:29:34 dwmalone Exp %
+.\" %FreeBSD: src/sbin/mount/mount.8,v 1.52 2002/08/21 18:10:52 trhodes Exp %
 .\"
 .\" $FreeBSD$
 .\"
@@ -54,7 +54,7 @@
 .Ar special node
 .Sh 解説
 .Nm
-コマンドは
+ユーティリティは
 .Xr mount 2
 システムコールを使用して、
 .Ar "スペシャルデバイス"
@@ -182,6 +182,80 @@
 ファイルシステムのすべての
 .Tn I/O
 を同期的に行います。
+.It Cm snapshot
+本オプションにより、指定したファイルシステムのスナップショットを取得可能です。
+.Fl u
+フラグは、本オプションに必須です。
+スナップショットファイルは、
+スナップショットが取られるファイルシステム上に作成される必要があります。
+ファイルシステムごとに、最大 20 個のスナップショットを作成可能です。
+アクティブスナップショットはスーパブロックに記録されますので、
+アンマウントと再マウントを跨いだりシステムリブートを跨いても、
+これらは永続します。
+スナップショットがもう要らなくなったら、
+.Xr rm 1
+コマンドで削除可能です。
+スナップショットの削除順序は任意ですが、
+スナップショットに含まれていた空間すべてを取り返せないかもしれません。
+なぜなら、解放されるブロックを他のスナップショットが必要としているかも
+しれないためです。
+schg フラグはスナップショット上に設定されますので、
+root ユーザでなくともこれらのファイルに書き込み可能です。
+アンリンクコマンドはスナップショットファイルに対して例外であり、
+schg フラグが設定されていても削除可能とすることで、
+スナップショットファイル削除前に schg フラグをクリアしなくても
+良いようになっています。
+.Pp
+スナップショットの取得後、次の 3 つの事柄を実行可能です:
+.Pp
+.Bl -enum -compact
+.It
+スナップショットに
+.Xr fsck 8
+を実行できます。
+マウントされていたときのファイルシステムがクリーンな場合、
+スナップショットに対する fsck はクリーン (かつ無変更の) 結果が
+得られるはずです。
+これが、本質的にはバックグラウンド fsck 処理の動作です。
+.Pp
+.It
+スナップショットに
+.Xr dump 8
+を実行できます。
+スナップショットのタイムスタンプ時のファイルシステムと一致するダンプが
+得られるでしょう。
+.Pa /etc/dumpdates
+ファイルを正しく更新するように
+.Xr dump 8
+が変更されていませんので、
+これが直るまで実運用システムでは使用しないでください。
+.Pp
+.It
+ファイルシステムの凍結したイメージとして、スナップショットをマウントします。
+スナップショット
+.Pa /var/snapshot/snap1
+をマウントするには次のようにします。
+.Bd -literal
+mdconfig -a -t vnode -f /var/snapshot/snap1 -u 4
+mount -r /dev/md4 /mnt
+.Ed
+.Pp
+凍結した
+.Pa /var
+ファイルシステムは
+.Pa /mnt
+にあり、検査可能となりました。
+すべてが、スナップショットがとられた時期と同じ状況にあります。
+例外は、以前のスナップショットが長さ 0 のファイルとして見えることです。
+マウントしたスナップショットに関する処理が完了したら、次のようにします。
+.Bd -literal
+umount /mnt
+mdconfig -d -u 4
+.Ed
+.Pp
+Further details can be found in the file at
+.Pa /usr/src/sys/ufs/ffs/README.snapshot .
+.El
 .It Cm suiddir
 マウントされたファイルシステムにおけるディレクトリに
 SUID ビットがセットされると、
@@ -224,14 +298,14 @@ UFS ファイルシステムのみがこのオプションをサポートします。
 -option=valueの形で指定します。
 たとえば、
 .Bd -literal -offset indent
-mount -t mfs -o nosuid,-N,-s=4000 /dev/dk0b /tmp
+mount -t unionfs -o -b /sys $HOME/sys
 .Ed
 .Pp
 では、
 .Nm
 コマンドは以下と同じものを実行します:
 .Bd -literal -offset indent
-/sbin/mount_mfs -o nosuid -N -s 4000 /dev/dk0b /tmp
+/sbin/mount_unionfs -b /sys $HOME/sys
 .Ed
 .Pp
 ファイルシステムタイプに固有な追加オプションで、
@@ -254,7 +328,7 @@ mount -t mfs -o nosuid,-N,-s=4000 /dev/dk0b /tmp
 オプションで
 .Cm rdonly
 を指定するのと同じです。
-.It Fl t Ar "ufs \\*(Ba external type"
+.It Fl t Ar ufs | external_type
 .Fl t
 のあとの引数にはファイルシステムタイプを指定します。
 デフォルトは、
@@ -277,13 +351,13 @@ mount -t mfs -o nosuid,-N,-s=4000 /dev/dk0b /tmp
 ファイルシステムタイプを指定することができます。
 以下に例を示します:
 .Bd -literal -offset indent
-mount -a -t nonfs,mfs
+mount -a -t nonfs,nullfs
 .Ed
 .Pp
 は、
 .Tn NFS
 と
-.Tn MFS
+.Tn NULLFS
 を除いた、すべてのファイルシステムをマウントします。
 .Pp
 type を内部で解釈できない場合、
@@ -297,26 +371,9 @@ type を内部で解釈できない場合、
 というプログラムによってマウント
 されます。
 .Pp
-ほとんどのファイルシステム用モジュールは
-カーネル中にない場合、ファイルシステム別の
-.Nm
-プログラム
-によって動的に読み込まれます。
-そこでは
-.Xr vfsload 3
-サブルーチンが使われます。
-この機構には書き込み可能な作業領域が必要なため、
-.Pa /tmp
-があるファイルシステムタイプのモジュールはカーネルに
-組み込まれている必要があります。さらに
-.Pa /etc/fstab
-において、
-.Pa /tmp
-や
-.Pa /usr/bin/ld
-があるファイルシステムは
-動的に読み込まれるファイルシステムよりも前に
-記述されていなければいけません。
+ほとんどのファイルシステムは、
+まだ存在せず、カーネルモジュールが使用可能な場合、
+カーネルが動的にロードします。
 .It Fl u
 .Fl u
 フラグは、すでにマウントしているファイルシステム
@@ -351,14 +408,6 @@ type を内部で解釈できない場合、
 静的 (カーネルコンパイル時) もしくは動的 (
 .Xr kldload 8
 によってカーネルモジュールとしてロードされる) です。
-通常、
-.Nm
-もしくはそのサブプロセスは、
-ファイルシステムモジュールが静的に組み込まれていない場合は、
-.Xr vfsload 3
-を使用して動的にそのファイルシステムモジュールをロードしようとします。
-この場合上記エラーメッセージは、
-モジュールをロードするパーミッションを持たないことも意味する場合があります。
 .Sh 関連ファイル
 .Bl -tag -width /etc/fstab -compact
 .It Pa /etc/fstab
@@ -366,26 +415,26 @@ type を内部で解釈できない場合、
 .El
 .Sh 関連項目
 .Xr mount 2 ,
-.Xr vfsload 3 ,
 .Xr fstab 5 ,
 .Xr kldload 8 ,
 .Xr mount_cd9660 8 ,
+.Xr mount_devfs 8 ,
 .Xr mount_ext2fs 8 ,
-.Xr mount_fdesc 8 ,
-.Xr mount_kernfs 8 ,
+.Xr mount_fdescfs 8 ,
+.Xr mount_hpfs 8 ,
 .Xr mount_linprocfs 8 ,
-.Xr mount_mfs 8 ,
-.Xr mount_msdos 8 ,
+.Xr mount_msdosfs 8 ,
 .Xr mount_nfs 8 ,
 .Xr mount_ntfs 8 ,
-.Xr mount_null 8 ,
+.Xr mount_nullfs 8 ,
 .Xr mount_nwfs 8 ,
-.Xr mount_portal 8 ,
+.Xr mount_portalfs 8 ,
 .Xr mount_procfs 8 ,
 .Xr mount_smbfs 8 ,
 .Xr mount_std 8 ,
-.Xr mount_umap 8 ,
-.Xr mount_union 8 ,
+.Xr mount_udf 8 ,
+.Xr mount_umapfs 8 ,
+.Xr mount_unionfs 8 ,
 .Xr umount 8
 .Sh バグ
 異常なファイルシステムをマウントすると、
@@ -400,6 +449,6 @@ type を内部で解釈できない場合、
 パーミッションは 0111 (全員が実行可能) です。
 .Sh 歴史
 .Nm
-コマンドは
+ユーティリティは
 .At v1
 から登場しています。
