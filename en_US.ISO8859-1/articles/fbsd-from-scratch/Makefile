@@ -18,6 +18,7 @@ SRCS= article.sgml stage_1.sh stage_2.sh stage_3.mk
 DOC_PREFIX?= ${.CURDIR}/../../..
 
 afterinstall:
-	${INSTALL_DOCS} stage_1.sh stage_2.sh stage_3.mk ${DESTDIR}
+	${INSTALL_DOCS} ${.CURDIR}/stage_1.sh ${.CURDIR}/stage_2.sh \
+	    ${.CURDIR}/stage_3.mk ${DESTDIR}
 
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"
