@@ -1,25 +1,11 @@
-# $FreeBSD$
+# $FreeBSD: www/es/ports/Makefile,v 1.6 1999/09/06 07:03:04 peter Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
 .endif
-
-PORTINDEX=	perl5 ${.CURDIR}/portindex
-INDEX=		INDEX
-PINDEX=		ports/${INDEX}
-Y2K=		YEAR2000
-PY2K=		ports/${Y2K}
-
-COOKIE=		${INDEX} Makefile.gen
-
-.if exists(Makefile.gen)
-.include "Makefile.gen"
+.if exists(Makefile.inc)
+.include "Makefile.inc"
 .endif
-CLEANFILES+=	${DOCS} Makefile.gen ${INDEX} ${Y2K} packages.exists
-
-cvsindex= $${CVSROOT}/${PINDEX},v
-cvsy2k= $${CVSROOT}/${PY2K},v
-_ALLINSTALL= packages.exists ${INDEX} ${Y2K}
 
 .if defined(NOPORTSCVS)
 ${INDEX}: $${PORTSBASE}/${PINDEX}
@@ -58,10 +44,14 @@ packages.exists: ${cvsindex} ${cvsy2k}
 
 Makefile.gen: index.sgml .NOTMAIN
 	echo DOCS= *.sgml > Makefile.gen
-	${MAKE} ${MAKEFLAGS} ${.IMPSRC}
 
 index.sgml: ${INDEX} ${Y2K} packages.exists portindex ports.inc .NOTMAIN
 	rm -f *.sgml
 	${PORTINDEX} ${INDEX} ${Y2K}
+
+install: all
+
+all install clean:
+	${MAKE}  ${MAKEFLAGS} -f Makefile.inc0 ${.TARGET}
 
 .include "../web.mk"
