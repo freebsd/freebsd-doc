@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/share/sgml/includes.misc.xsl,v 1.1 2003/11/24 18:26:34 hrs Exp $ -->
+<!-- $FreeBSD: www/share/sgml/includes.misc.xsl,v 1.2 2003/12/06 07:39:32 hrs Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -105,8 +105,9 @@
   <xsl:template name="html-index-mirrors-options-list">
     <xsl:param name="mirrors.xml" select="''" />
 
-    <xsl:for-each select="document($mirrors.xml)/mirrors/entry[country/@role != 'primary' and
-                          host[@type = 'www']/url[@proto = 'httpv6']]">
+    <xsl:for-each select="document($mirrors.xml)/mirrors/entry[
+						    (not(country/@role) or country/@role != 'primary')
+						    and host[@type = 'www']/url[@proto = 'httpv6']]">
       <xsl:sort select="country" />
 
       <xsl:for-each select="host[@type = 'www']/url[@proto = 'httpv6']">
@@ -123,8 +124,9 @@
       </xsl:for-each>
     </xsl:for-each>
 
-    <xsl:for-each select="document($mirrors.xml)/mirrors/entry[country/@role != 'primary' and
-                          host[@type = 'www']/url[@proto = 'http']]">
+    <xsl:for-each select="document($mirrors.xml)/mirrors/entry[
+						      (not(country/@role) or country/@role != 'primary')
+						      and host[@type = 'www']/url[@proto = 'http']]">
       <xsl:sort select="country" />
 
       <xsl:for-each select="host[@type = 'www']/url[@proto = 'http']">
