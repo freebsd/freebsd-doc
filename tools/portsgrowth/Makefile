@@ -1,10 +1,10 @@
-# $FreeBSD$
+# $FreeBSD: www/tools/portsgrowth/Makefile,v 1.1 2002/05/20 10:46:13 phantom Exp $
 
-.if exists(../../Makefile.conf)
-.include "../../Makefile.conf"
+.if exists(../../en/Makefile.conf)
+.include "../../en/Makefile.conf"
 .endif
-.if exists(../../Makefile.inc)
-.include "../../Makefile.inc"
+.if exists(../../en/Makefile.inc)
+.include "../../en/Makefile.inc"
 .endif
 
 WEB_PREFIX?= ${.CURDIR}/../..
@@ -30,10 +30,11 @@ status.png:	ports.plt ports.log
 	rm ports.png
 
 install:	${IMG}
+	-mkdir -p ${PRGRAPHDIR}
 .if exists(${.CURDIR}/${IMG})
 	${INSTALL_WEB} ${.CURDIR}/${IMG} ${PRGRAPHDIR}
 .else
 	${INSTALL_WEB} ${IMG} ${PRGRAPHDIR}
 .endif
 
-.include "${WEB_PREFIX}/../share/mk/web.site.mk"
+.include "${WEB_PREFIX}/share/mk/web.site.mk"
