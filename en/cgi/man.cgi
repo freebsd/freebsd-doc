@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp 
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.40 2001-04-25 18:17:57 wosch Exp $
+# $Id: man.cgi,v 1.41 2001-04-25 18:32:24 wosch Exp $
 
 #use Data::Dumper;
 #use Carp;
@@ -123,11 +123,12 @@ foreach my $os (keys %$sectionpath) {
      );
 
 $manLocalDir = '/usr/local/www/bsddoc/man';
-$manPathDefault = 'FreeBSD 4.2-RELEASE';
+$manPathDefault = 'FreeBSD 4.3-RELEASE';
 
 %manPath = 
     (
      'FreeBSD 5.0-current',   "$manLocalDir/FreeBSD-5.0-current",
+     'FreeBSD 4.3-RELEASE',   "$manLocalDir/FreeBSD-4.3-RELEASE",
      'FreeBSD 4.2-RELEASE',   "$manLocalDir/FreeBSD-4.2-RELEASE",
      'FreeBSD 4.1.1-RELEASE', "$manLocalDir/FreeBSD-4.1.1-RELEASE",
      'FreeBSD 4.1-RELEASE',   "$manLocalDir/FreeBSD-4.1-RELEASE",
@@ -230,7 +231,7 @@ while (($key,$val) = each %manPath) {
 # keywords must be in lower cases.
 %manPathAliases = 
     (
-     'freebsd', 'FreeBSD 4.2-RELEASE',
+     'freebsd', 'FreeBSD 4.3-RELEASE',
      'freebsd-current', 'FreeBSD 5.0-current',
      'slackware', 'Linux Slackware 3.1',
      'linux-de', 'deutsch - Linux/GNU',
@@ -847,7 +848,7 @@ ETX
 }
 
 sub copyright {
-    $id = '$Id: man.cgi,v 1.40 2001-04-25 18:17:57 wosch Exp $';
+    $id = '$Id: man.cgi,v 1.41 2001-04-25 18:32:24 wosch Exp $';
 
     return qq{\
 <PRE>
