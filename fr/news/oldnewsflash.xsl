@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/fr/news/oldnewsflash.xsl,v 1.1 2002/12/22 22:06:04 stephane Exp $ -->
+<!-- $FreeBSD: www/fr/news/oldnewsflash.xsl,v 1.2 2003/12/29 17:23:43 stephane Exp $ -->
 
 <!-- 
    The FreeBSD French Documentation Project
@@ -20,6 +20,7 @@
     <xsl:value-of select="descendant::year/name"/>
   </xsl:variable>
   <xsl:variable name="base" select="'../..'"/>
+  <xsl:variable name="enbase" select="'../../..'"/>
   <xsl:variable name="title" select="concat('FreeBSD - Flash info (', $year, ')')"/>
   <!-- <xsl:variable name="title" select="$year"/> -->
   <xsl:variable name="date">

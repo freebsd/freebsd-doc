@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/fr/index.xsl,v 1.6 2003/12/29 16:41:05 stephane Exp $ -->
+<!-- $FreeBSD: www/fr/index.xsl,v 1.7 2003/12/29 18:07:00 stephane Exp $ -->
 
 <!-- 
    The FreeBSD French Documentation Project
@@ -13,7 +13,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/fr/index.xsl,v 1.6 2003/12/29 16:41:05 stephane Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/fr/index.xsl,v 1.7 2003/12/29 18:07:00 stephane Exp $'"/>
   <xsl:variable name="title" select="'Le Projet FreeBSD'"/>
 
   <!-- these params should be externally bound. The values
@@ -122,7 +122,7 @@
 
 			  <p><font size="+1" color="#990000"><b>Logiciels</b></font>
 			    <small><br/>
-			      &#183; <a href="{$base}/doc/{$url.doc.langcode}/books/handbook/mirrors.html">Obtenir FreeBSD</a><br/>
+			      &#183; <a href="{$enbase}/doc/{$url.doc.langcode}/books/handbook/mirrors.html">Obtenir FreeBSD</a><br/>
 			      &#183; <a href="releases/index.html">Information sur les versions</a><br/>
 			      &#183; <a href="{$base}/ports/index.html">Applications disponibles</a><br/>
 			    </small></p>
@@ -131,8 +131,8 @@
 			    <a href="docs.html">
 			      <font size="+1" color="#990000"><b>Documentation</b></font>
 			    </a><small><br/>
-			      &#183; <a href="{$base}/doc/{$url.doc.langcode}/books/faq/index.html">FAQ</a><br/>
-			      &#183; <a href="{$base}/doc/{$url.doc.langcode}/books/handbook/index.html">Manuel de R&#233;f&#233;rence</a><br/>
+			      &#183; <a href="{$enbase}/doc/{$url.doc.langcode}/books/faq/index.html">FAQ</a><br/>
+			      &#183; <a href="{$enbase}/doc/{$url.doc.langcode}/books/handbook/index.html">Manuel de R&#233;f&#233;rence</a><br/>
 			      &#183; <a href="http://www.FreeBSD.org/cgi/man.cgi">Pages de manuel</a><br/>
 			      &#183; <a href="projects/newbies.html">Pour les d&#233;butants</a><br/>
 			      &#183; <a href="{$base}/docproj/index.html">Projet de Documentation</a><br/>
@@ -157,18 +157,18 @@
 			      &#183; <a href="http://www.FreeBSD.org/cgi/query-pr.cgi">Voir un rapport</a><br/>
 			      &#183; <a href="http://www.FreeBSD.org/cgi/query-pr-summary.cgi">Consulter les rapports ouverts</a><br/>
 			      &#183; <a href="send-pr.html">Envoyer un rapport de bug</a><br/>
-			      &#183; <a href="doc/en_US.ISO8859-1/articles/problem-reports/article.html">Comment &#233;crire un rapport</a><br/>
+			      &#183; <a href="{$enbase}doc/en_US.ISO8859-1/articles/problem-reports/article.html">Comment &#233;crire un rapport</a><br/>
 			    </small></p>
 
 			  <p>
 			    <a href="projects/index.html">
 			      <font size="+1" color="#990000"><b>D&#233;veloppement</b></font>
 			    </a><small><br/>
-			      &#183; <a href="{$base}/doc/en_US.ISO8859-1/books/developers-handbook">Manuel du d&#233;veloppeur</a><br/>
-			      &#183; <a href="{$base}/doc/en_US.ISO8859-1/books/porters-handbook">Manuel du porteur d'application</a><br/>
+			      &#183; <a href="{$enbase}/doc/en_US.ISO8859-1/books/developers-handbook">Manuel du d&#233;veloppeur</a><br/>
+			      &#183; <a href="{$enbase}/doc/en_US.ISO8859-1/books/porters-handbook">Manuel du porteur d'application</a><br/>
 			      &#183; <a href="{$base}/support.html#cvs">D&#233;p&#244;t CVS</a><br/>
 			      &#183; <a href="releng/index.html">Production des versions</a><br/>
-			      &#183; <a href="{$base}/doc/{$url.doc.langcode}/articles/contributing/index.html">Contribuer &#224; FreeBSD</a><br/>
+			      &#183; <a href="{$enbase}/doc/{$url.doc.langcode}/articles/contributing/index.html">Contribuer &#224; FreeBSD</a><br/>
 			    </small></p>
 
 			  <p><font size="+1" color="#990000"><b>Revendeurs</b></font>
@@ -235,7 +235,7 @@
 		l'Universit&#233; de Californie, Berkeley.
 		Il est d&#233;velopp&#233; et maintenu par
 		<a
-		href="{$base}/doc/{$url.doc.langcode}/articles/contributors/index.html">une
+		href="{$enbase}/doc/{$url.doc.langcode}/articles/contributors/index.html">une
 		importante &#233;quipe de personnes</a>. D'autres
 		<a href="{$base}/platforms/index.html">plates-formes</a> sont &#224;
 		divers stades de d&#233;veloppement.</p>
@@ -276,7 +276,7 @@
 		vous avez une connexion r&#233;seau, 
 		<i>directement</i> depuis un serveur FTP anonyme ou un serveur NFS. Tout ce dont vous avez besoin
 		est de 2 disquettes vierges de 1.44 Mo et de
-		<a href="{$base}/doc/{$url.doc.langcode}/books/handbook/install.html">ces
+		<a href="{$enbase}/doc/{$url.doc.langcode}/books/handbook/install.html">ces
 		  instructions</a>.</p>
 
 	      <h2><font color="#990000">FreeBSD est <i>libre et gratuit</i></font></h2>
@@ -291,7 +291,7 @@
 		avec ce type de fonctions soit vendu &#224; un prix &#233;lev&#233;, FreeBSD est disponible
 		<a href="{$base}/copyright/index.html">gratuitement</a>
 		et est fourni avec l'int&#233;gralit&#233; de son code source. Si vous voulez l'essayer,
-		<a href="{$base}/doc/{$url.doc.langcode}/books/handbook/mirrors.html">de plus
+		<a href="{$enbase}/doc/{$url.doc.langcode}/books/handbook/mirrors.html">de plus
 		  amples informations sont disponibles</a>.</p>
 
 	      <h2><font color="#990000">Contribuer &#224; FreeBSD</font></h2>
@@ -302,7 +302,7 @@
 		puis de les soumettre au projet par l'interm&#233;diaire du programme "send-pr"
 		ou d'une personne y participant d&#233;j&#224;, si vous en connaissez une. Cela peut &#234;tre
 		de la documentation, du graphisme ou du code. Consultez l'article
-		<a href="{$base}/doc/{$url.doc.langcode}/articles/contributing/index.html">Contribuer
+		<a href="{$enbase}/doc/{$url.doc.langcode}/articles/contributing/index.html">Contribuer
 		&#224; FreeBSD</a>pour plus d'informations.</p>
 
 		<p>M&#234;me si vous n'&#234;tes pas un programmeur, il existe d'autres fa&#231;ons de
@@ -340,7 +340,7 @@
 			      <font size="+1" color="#990000"><b>Version la plus r&#233;cente :
 				  <xsl:value-of select="$rel.current"/></b></font></a><br/>
 			    <small>&#183; <a href="{$u.rel.announce}">Annonce</a><br/>
-			      &#183; <a href="{$base}/doc/{$url.doc.langcode}/books/handbook/install.html">Guide d'installation</a><br/>
+			      &#183; <a href="{$enbase}/doc/{$url.doc.langcode}/books/handbook/install.html">Guide d'installation</a><br/>
 			      &#183; <a href="{$u.rel.notes}">Notes</a><br/>
 			      &#183; <a href="{$u.rel.hardware}">Compatibilit&#233; mat&#233;riel</a><br/>
 			      &#183; <a href="{$u.rel.errata}">Errata</a><br/>
@@ -352,7 +352,7 @@
 				  <xsl:value-of select="$rel2.current"/></b></font></a><br/>
 
 			    <small>&#183; <a href="{$u.rel2.announce}">Annonce</a><br/>
-			      &#183; <a href="{$base}/doc/{$url.doc.langcode}/books/handbook/install.html">Guide d'installation</a><br/>
+			      &#183; <a href="{$enbase}/doc/{$url.doc.langcode}/books/handbook/install.html">Guide d'installation</a><br/>
 			      &#183; <a href="{$u.rel2.notes}">Notes</a><br/>
 			      &#183; <a href="{$u.rel2.hardware}">Compatibilit&#233; mat&#233;riel</a><br/>
 			      &#183; <a href="{$u.rel2.errata}">Errata</a></small></p>
