@@ -1,6 +1,6 @@
 #!/usr/bin/perl -T
 #
-# $FreeBSD: www/en/cgi/sendpr-code.cgi,v 1.2 2004/01/03 21:24:51 ceri Exp $
+# $FreeBSD: www/en/cgi/sendpr-code.cgi,v 1.3 2004/07/27 20:34:40 ceri Exp $
 #
 # Copyright (c) 2003 Eric Anderson
 
@@ -64,6 +64,7 @@ $/ = "";
 
 open(BUILDPNG, "$pnmcat -lr $pnmlist | $pnmtopng 2>/dev/null |");
 $pngbindata = <BUILDPNG>;
+print "Pragma: no-cache\n";
 print "Content-type: image/png\n\n";
 print "$pngbindata";
 close(BUILDPNG);
