@@ -1,5 +1,5 @@
 #
-# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.17 2000/09/25 08:17:03 nik Exp $
+# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.18 2000/09/28 23:29:47 nbm Exp $
 #
 # This include file <doc.docbook.mk> handles building and installing of
 # DocBook documentation in the FreeBSD Documentation Project.
@@ -47,7 +47,13 @@
 
 MASTERDOC?=	${.CURDIR}/${DOC}.sgml
 
-JADE=		${PREFIX}/bin/jade
+.if !defined(OPENJADE)
+JADE?=		${PREFIX}/bin/jade
+JADECATALOG?=	${PREFIX}/share/sgml/jade/catalog
+.else
+JADE?=		${PREFIX}/bin/openjade
+JADECATALOG?=	${PREFIX}/share/sgml/openjade/catalog
+.endif
 
 DSLHTML?=	${DOC_PREFIX}/share/sgml/default.dsl
 DSLPRINT?=	${DOC_PREFIX}/share/sgml/default.dsl
@@ -55,7 +61,6 @@ FREEBSDCATALOG=	${DOC_PREFIX}/share/sgml/catalog
 LANGUAGECATALOG=${DOC_PREFIX}/${LANGCODE}/share/sgml/catalog
 
 DOCBOOKCATALOG=	${PREFIX}/share/sgml/docbook/catalog
-JADECATALOG=	${PREFIX}/share/sgml/jade/catalog
 DSSSLCATALOG=	${PREFIX}/share/sgml/docbook/dsssl/modular/catalog
 
 LIB_IMAGES?=
@@ -241,7 +246,7 @@ ${DOC}.tar: ${SRCS}
 #
 
 lint validate:
-	nsgmls -s -c ${FREEBSDCATALOG} -c ${DSSSLCATALOG} -c ${DOCBOOKCATALOG} -c ${JADECATALOG} ${EXTRA_CATALOGS:S/^/-c /g} ${MASTERDOC}
+	${NSGMLS} -s -c ${FREEBSDCATALOG} -c ${DSSSLCATALOG} -c ${DOCBOOKCATALOG} -c ${JADECATALOG} ${EXTRA_CATALOGS:S/^/-c /g} ${MASTERDOC}
 
 # ------------------------------------------------------------------------
 #
