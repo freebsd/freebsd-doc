@@ -1,7 +1,7 @@
 <!--
      The FreeBSD Russian Documentation Project
 
-     $FreeBSD$
+     $FreeBSD: www/ru/ports/ports.inc,v 1.11 2004/04/08 07:46:46 den Exp $
      $FreeBSDru: frdp/www/ru/ports/ports.inc,v 1.13 2004/04/08 07:08:55 den Exp $
 
      Original revision: 1.67
@@ -9,7 +9,8 @@
 
   <p>Коллекция Портов и Пакетов FreeBSD даёт пользователям и администраторам
     простой метод установки приложений.  Коллекция портов <a
-    href="../../growth/status.png">растёт с потрясающей скоростью</a>.</p>
+    href="../../../ports/growth/status.png">растёт с потрясающей
+    скоростью</a>.</p>
 
   <p>Коллекция портов поддерживается на последних релизах веток
     FreeBSD-CURRENT и FreeBSD-STABLE.  Предыдущие релизы не поддерживаются
