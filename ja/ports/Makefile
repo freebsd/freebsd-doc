@@ -1,6 +1,6 @@
-# $FreeBSD: www/ja/ports/Makefile,v 1.18 2000/04/24 02:13:37 kuriyama Exp $
+# $FreeBSD: www/ja/ports/Makefile,v 1.19 2000/10/02 07:54:40 kuriyama Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.28
+# Original revision: 1.29
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -15,7 +15,13 @@ CVS_OPT+=	-Q
 CVS_OPT+=	-R
 .endif
 
-
+#
+# This hack is allows to build www/ tree for case when ports/ located
+# in other repository, for example Repository of Translation Project
+#
+.if defined(PORTSCVSROOT) && !empty(PORTSCVSROOT)
+CVS_OPT+=	-d ${PORTSCVSROOT}
+.endif
 
 .if defined(NOPORTSCVS)
 ${INDEX}: $${PORTSBASE}/${PINDEX}
