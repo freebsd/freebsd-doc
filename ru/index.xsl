@@ -4,7 +4,7 @@
      The FreeBSD Russian Documentation Project
 
      $FreeBSD$
-     $FreeBSDru: frdp/www/ru/index.xsl,v 1.22 2003/10/29 13:52:54 den Exp $
+     $FreeBSDru: frdp/www/ru/index.xsl,v 1.23 2003/10/31 06:16:33 den Exp $
 
      Original revision: 1.80
 -->
@@ -170,7 +170,7 @@
 		<font color="#990000"><b>Язык: </b></font> 
 		<a href="{$base}/de/index.html" title="Немецкий">[de]</a>
 		<xsl:text>&#160;</xsl:text>
-		<a href="{$base}/en/index.html" title="Английский">[en]</a>
+		<a href="{$base}/index.html" title="Английский">[en]</a>
 		<xsl:text>&#160;</xsl:text>
 		<a href="{$base}/es/index.html" title="Испанский">[es]</a>
 		<xsl:text>&#160;</xsl:text>
