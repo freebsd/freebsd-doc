@@ -1,6 +1,6 @@
 # 
 # $FreeBSD$
-# $FreeBSDru: frdp/doc/ru_RU.KOI8-R/articles/freebsd-questions/Makefile,v 1.2 2001/07/25 10:26:33 phantom Exp $
+# $FreeBSDru: frdp/doc/ru_RU.KOI8-R/articles/fonts/Makefile,v 1.2 2001/07/25 10:26:32 phantom Exp $
 #
 # Original revision: 1.1
 #
