@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/index.xsl,v 1.62 2003/06/17 20:31:36 murray Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.63 2003/06/18 23:23:40 murray Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   
@@ -6,7 +6,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.62 2003/06/17 20:31:36 murray Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.63 2003/06/18 23:23:40 murray Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -557,7 +557,7 @@
 		<xsl:value-of select="$date"/></small></td>
 
 	    <td align="right" 
-		valign="top"><small><a href="copyright/index.html">Copyright</a> &#169; 1995-2003
+		valign="top"><small><a href="copyright/index.html">Legal</a><br/> &#169; 1995-2003
 		The FreeBSD Project.<br/>
 		All rights reserved.</small></td>
 	  </tr>
