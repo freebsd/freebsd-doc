@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD$ -->
+<!-- $FreeBSD: www/en/gnome/includes.xsl,v 1.2 2002/01/29 05:52:23 sobomax Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -13,7 +13,7 @@
       <xsl:attribute name="href">                                               
         <xsl:value-of select="concat($base, '/gnome/contact.html')"/>           
       </xsl:attribute>                                                          
-      <xsl:value-of select="'freebsd-gnome'"/>@FreeBSD.org</a><br/><xsl:value-of select="$copyright"/>
+      <xsl:value-of select="'freebsd-gnome'"/>@FreeBSD.org</a><br/><xsl:copy-of select="$copyright"/>
   </xsl:variable>
 
   <!-- Generate a unique anchor for this event -->
