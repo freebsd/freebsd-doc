@@ -1,6 +1,6 @@
 # 
-# $FreeBSD: doc/de_DE.ISO8859-1/books/handbook/Makefile,v 1.7 2001/03/24 15:53:31 alex Exp $
-# $FreeBSDde: de-docproj/books/handbook/Makefile,v 1.4 2001/03/24 15:53:55 alex Exp $
+# $FreeBSD$
+# $FreeBSDde: de-docproj/books/handbook/Makefile,v 1.5 2001/06/12 09:04:48 alex Exp $
 #
 # Build the FreeBSD Handbook in its German translation.
 #
@@ -25,6 +25,7 @@ SRCS+= backups/chapter.sgml
 SRCS+= basics/chapter.sgml
 SRCS+= bibliography/chapter.sgml
 SRCS+= ports/chapter.sgml
+SRCS+= sound/chapter.sgml
 SRCS+= users/chapter.sgml
 
 # Entities
