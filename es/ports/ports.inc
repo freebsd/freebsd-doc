@@ -1,4 +1,4 @@
-<!-- $Id: ports.inc,v 1.7 1999-07-01 21:14:25 jesusr Exp $ -->
+<!-- $Id: ports.inc,v 1.8 1999-07-12 14:19:56 jesusr Exp $ -->
 <p>La colecci&oacute;n de Ports y Packages de FreeBSD ofrece una manera
 sencilla de instalci&oacute;n de aplicaciones para los usuarios y
 administradores. La colecci&oacute;n de ports ha estado creciendo en los
@@ -34,7 +34,9 @@ href="../../handbook/porting.html">Porting applications</a>. Ambos son parte
 del <a href="../../handbook/">Handbook</a>.</p>
 
 <p>Los ports listados en estas p&aacute;ginas web son continuamente 
-actualizados. Consecuentemente, necesitar&aacute;s actualizar algunos ficheros
+actualizados. El &aacute;arbol actual de ports s&acute;lo soporta
+FreeBSD-current y FreeBSD-stable.
+Consecuentemente, necesitar&aacute;s actualizar algunos ficheros
 en tu sistema FreeBSD para usar los ports desarrollados posteriormente a tu
 sistema. Por favor, instala uno de los packages siguientes dependiendo de la
 versi&oacute;n que est&eacute;s usando. Incluso, si est&aacute;s usando 
@@ -60,10 +62,10 @@ href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-2.2-stable/Latest/22
 <dd>Para usuarios de 2.2.6-release, 2.2.7-release, 2.2.8-release o
 2.2-stable despu&eacute;s de 2.2.6-release
 <dt><a
-href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-3-stable/Latest/30upgrade.tgz">Kit actualizaci&oacute;n de 3.0 a 3.1-stable</a>
+href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-3-stable/Latest/30upgrade.tgz">Kit actualizaci&oacute;n de 3.0 a 3.2-stable</a>
 <dd>Para usuarios de 3.0-release o 3.0-stable despu&eacute;s de 3.0-release
 <dt><a
-href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-3-stable/Latest/31upgrade.tgz">Kit actualizaci&oacute;n de 3.1 a 3.1-stable</a>
+href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-3-stable/Latest/31upgrade.tgz">Kit actualizaci&oacute;n de 3.1 a 3.2-stable</a>
 <dd>Para usuarios de 3.1-release o 3.1-stable despu&eacute;s de 3.1-release
 <dt><a
 href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-3-stable/Latest/32upgrade.tgz">Kit actualizaci&oacute;n de 3.2 a 3.2-stable</a>
