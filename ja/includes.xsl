@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
 
-<!-- $FreeBSD: www/ja/includes.xsl,v 1.23 2004/12/30 17:53:44 hrs Exp $ -->
+<!-- $FreeBSD: www/ja/includes.xsl,v 1.24 2004/12/31 07:24:05 hrs Exp $ -->
 <!-- Original revision: 1.20 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -69,8 +69,14 @@
   <xsl:variable name="u.rel.hardware">
     <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel.current"/>R/hardware.html</xsl:variable>
 
+  <xsl:variable name="u.rel.installation">
+    <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel.current"/>R/installation.html</xsl:variable>
+
   <xsl:variable name="u.rel.early">
     <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel.current"/>R/early-adopter.html</xsl:variable>
+
+  <xsl:variable name="u.rel.migration">
+    <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel.current"/>R/migration-guide.html</xsl:variable>
 
 <!--
   <xsl:variable name="u.rel2.notes">
@@ -87,5 +93,8 @@
 
   <xsl:variable name="u.rel2.hardware">
     <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel2.current"/>R/hardware.html</xsl:variable>
+
+  <xsl:variable name="u.rel2.installation">
+    <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel2.current"/>R/installation.html</xsl:variable>
 
 </xsl:stylesheet>
