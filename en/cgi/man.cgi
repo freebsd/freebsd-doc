@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp 
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.88 2003-01-27 19:19:17 wosch Exp $
+# $Id: man.cgi,v 1.89 2003-01-27 19:21:14 wosch Exp $
 
 #use Data::Dumper;
 #use Carp;
@@ -964,7 +964,7 @@ ETX
 }
 
 sub copyright {
-    $id = '$Id: man.cgi,v 1.88 2003-01-27 19:19:17 wosch Exp $';
+    $id = '$Id: man.cgi,v 1.89 2003-01-27 19:21:14 wosch Exp $';
 
     return qq{\
 <PRE>
@@ -983,6 +983,7 @@ This script has the revsion: $id
 Copyright (c) for man pages by OS vendors.
 <p>
 <a href="ftp://ftp.2bsd.com">2.11 BSD</a>,
+<a href="http://www.hp.com">HP</a>,
 <a href="http://www.freebsd.org">FreeBSD</a>,
 <a href="http://www.cs.vu.nl/~ast/minix.html">Minix</a>,
 <a href="http://slackware.com">Linux Slackware</a>,
