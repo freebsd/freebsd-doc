@@ -1,6 +1,6 @@
-#!/usr/bin/perl
+#!/usr/bin/perl -T
 #
-# Copyright (c) March 1998 Wolfram Schneider <wosch@FreeBSD.org>. Berlin.
+# Copyright (c) March 1998-2000 Wolfram Schneider <wosch@FreeBSD.org>. Berlin.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -26,7 +26,7 @@
 #
 # Search a mail by Message-ID, References or In-Reply-To field
 #
-# $FreeBSD: www/en/cgi/mid.cgi,v 1.9 2000/06/18 16:15:33 wosch Exp $
+# $FreeBSD: www/en/cgi/mid.cgi,v 1.10 2000/08/08 06:04:10 mharo Exp $
 
 $hsty_base = '';
 

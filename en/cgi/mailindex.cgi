@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/perl -T
 #
 # Copyright (c) Jan 1999 Wolfram Schneider <wosch@FreeBSD.org>
 # All rights reserved.
@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/mailindex.cgi,v 1.4 1999/09/06 07:02:40 peter Exp $
+# $FreeBSD: www/en/cgi/mailindex.cgi,v 1.5 1999/12/17 14:23:52 phantom Exp $
 
 
 use CGI;
