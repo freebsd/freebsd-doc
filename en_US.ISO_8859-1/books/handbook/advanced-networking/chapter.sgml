@@ -1,7 +1,7 @@
 <!--
      The FreeBSD Documentation Project
 
-     $FreeBSD: doc/en_US.ISO_8859-1/books/handbook/advanced-networking/chapter.sgml,v 1.27 2000/06/19 13:29:01 nik Exp $
+     $FreeBSD: doc/en_US.ISO_8859-1/books/handbook/advanced-networking/chapter.sgml,v 1.28 2000/07/19 13:14:15 ben Exp $
 -->
 
 <chapter id="advanced-networking">
@@ -1315,23 +1315,98 @@ ISDN BRI line</programlisting>
   <sect1 id="nis">
     <title>NIS/YP</title>
 
-    <para><emphasis>Written by &a.unfurl;, 21 January 2000.</emphasis></para>
+    <para><emphasis>Written by &a.unfurl;, 21 January 2000, enhanced
+      with parts and comments from Eric Ogren
+      <email>eogren@earthlink.net</email> and Udo Erdelhoff
+      <email>ue@nathan.ruhr.de</email> in June 2000.</emphasis></para>
 
     <sect2>
       <title>What is it?</title>
   
-      <para> NIS is an RPC-based client/server system that allows a group
+      <para>NIS, which stands for Network Information Services, was
+        developed by Sun Microsystems to centralize adminstration of Unix
+        (originally SunOS) systems.  It has now essentially become an
+        industry standard; all major Unices (Solaris, HP-UX, AIX, Linux,
+        NetBSD, OpenBSD, FreeBSD, etc) support NIS.</para>
+
+      <para>NIS was formerly known as Yellow Pages (or yp), but due to
+        copyright violations, Sun was forced to change the name.</para>
+
+      <para>It is a RPC-based client/server system that allows a group
 	of machines within an NIS domain to share a common set of
 	configuration files.  This permits a system administrator to set
 	up NIS client systems with only minimal configuration data and
 	add, remove or modify configuration data from a single
 	location.</para>
+
+      <para>It is similar to Windows NT's domain system; although the
+        internal implementation of the two aren't at all similar,
+        the basic functionality can be compared.</para>
     </sect2>
   
     <sect2>
+      <title>Terms/processes you should know</title>
+
+      <para>There are several terms and several important user processes
+        that you will come across when
+        attempting to implement NIS on FreeBSD, whether you are trying to
+        create an NIS server or act an NIS client:</para>
+
+      <itemizedlist>
+        <listitem>
+          <para><emphasis>The NIS domainname</emphasis>. An NIS master
+            server and all of its clients (including its slave servers) have
+            a NIS domainname. Similar to an NT domain name, the NIS
+            domainname does not have anything to do with DNS.</para>
+        </listitem>
+        <listitem>
+          <para><emphasis>portmap</emphasis>. <command>portmap</command>
+            must be running in order to enable RPC (Remote Procedure Call, a
+            network protocol used by NIS). If <command>portmap</command> is
+            not running, it will be impossible to run an NIS server, or to
+            act as an NIS client.</para>
+        </listitem>
+        <listitem>
+          <para><emphasis>ypbind</emphasis>. <command>ypbind</command>
+            &ldquo;binds&rdquo; an NIS client to its NIS server.
+            It will take the NIS domainname from the system, and
+            using RPC, connect to the server. <command>ypbind</command> is
+            the core of client-server communication in an NIS environment; if
+            <command>ypbind</command> dies on a client machine, it will not
+            be able to access the NIS server.</para>
+        </listitem>
+        <listitem>
+          <para><emphasis>ypserv</emphasis>. <command>ypserv</command>,
+            which should only be running on NIS servers, is the NIS server
+            process itself. If ypserv dies, then the server will no longer be
+            able to respond to NIS requests (hopefully, there is a slave
+            server to take over for it).</para>
+
+          <note><para>There are some implementations of NIS (but not the
+            FreeBSD one), that don't try to reconnect to another server
+            if the server it used before dies.  Often, the only thing
+            that helps in this case is to restart the server process (or
+            even the whole server) or the <command>ypbind</command> process
+            on the client.</para></note>
+        </listitem>
+        <listitem>
+          <para><emphasis>rpc.yppasswdd</emphasis>.
+            <command>rpc.yppasswdd</command>, another process that should
+            only be running on NIS master servers, is a daemon that will
+            allow NIS clients to change their NIS passwords.
+            If this daemon is not running, users will have to login to the
+            NIS master server and change their passwords there.</para>
+        </listitem>
+
+        <!-- XXX Missing: rpc.ypxfrd (not important, though) May only run
+             on the master -->
+      </itemizedlist>
+    </sect2>
+
+    <sect2>
       <title>How does it work?</title>
         
-      <para>There are 3 types of hosts in an NIS environment; master
+      <para>There are three types of hosts in an NIS environment; master
 	servers, slave servers, and clients.  Servers act as a central
 	repository for host configuration information.  Master servers
 	hold the authoritative copy of this information, while slave
@@ -1344,14 +1419,112 @@ ISDN BRI line</programlisting>
 	Whenever a process on a client needs information that would
 	normally be found in these files locally, it makes a query to the
 	server it is bound to, to get this information.</para>
+
+      <sect3>
+        <title>Machine types</title>
+
+        <itemizedlist>
+          <listitem>
+            <para>A <emphasis>NIS master server</emphasis>.
+              This server, analogous to a Windows
+              NT primary domain controller, maintains the files used by all
+              of the NIS clients.  The <filename>passwd</filename>,
+              <filename>group</filename>, and other various files used by the
+              NIS clients live on the master server.</para>
+       
+            <note><para>It is possible for one machine to be an NIS
+              master server for more than one NIS domain.  However, this will
+              not be covered in this introduction, which assumes a relatively
+              small-scale NIS environment.</para></note>
+          </listitem>
+          <listitem>
+            <para><emphasis>NIS slave servers</emphasis>.
+              Similar to NT's backup domain
+              controllers, NIS slave servers maintain copies of the NIS
+              master's data files.  NIS slave servers provide the redundancy,
+              which is needed in important enviroments. They also help
+              to balance the load of the master server:  NIS Clients always
+              attach to the NIS server, whose response they get first, and
+              this includes slave-server-replies.</para>
+          </listitem>
+          <listitem>
+            <para><emphasis>NIS clients</emphasis>. NIS clients, like most
+              NT workstations, authenticate against the NIS server (or the NT
+              domain controller in the NT Workstation case) to logon.</para>
+          </listitem>
+        </itemizedlist>
+      </sect3>
     </sect2>
     
     <sect2>
       <title>Using NIS/YP</title>
+
+      <para>This section will deal with setting up a sample NIS
+        environment.</para>
+
+      <note><para>This section assumes that you are running FreeBSD 3.3
+        or later.  The instructions given here will
+        <emphasis>probably</emphasis> work for any version of FreeBSD greater
+        than 3.0, but there are no guarantees that this is
+        true.</para></note>
+
   
       <sect3>
         <title>Planning</title>
   
+        <para>Let's assume that you are the administrator of a small
+          university lab.  This lab, which consists of 15 FreeBSD machines,
+          currently has no centralized point of administration;  each machine
+          has its own <filename>/etc/passwd</filename> and
+          <filename>/etc/master.passwd</filename>.  These files are kept in
+          sync with each other only through manual intervention;
+          currently, when you add a user to the lab, you must run
+          <command>adduser</command> on all 15 machines.
+          Clearly, this has to change, so you have decided to convert the
+          lab to use NIS, using two of the machines as servers.</para>
+
+        <para>Therefore, the configuration of the lab now looks something
+          like:</para>
+
+        <informaltable>
+          <tgroup cols="3">
+            <thead>
+              <row>
+                <entry>Machine name</entry>
+                <entry>IP address</entry>
+                <entry>Machine role</entry>
+              </row>
+            </thead>
+            <tbody>
+              <row>
+                <entry><hostid>ellington</hostid></entry>
+                <entry><hostid role="ipaddr">10.0.0.2</hostid></entry>
+                <entry>NIS master</entry>
+              </row>
+              <row>
+                <entry><hostid>coltrane</hostid></entry>
+                <entry><hostid role="ipaddr">10.0.0.3</hostid></entry>
+                <entry>NIS slave</entry>
+              </row>
+              <row>
+                <entry><hostid>basie</hostid></entry>
+                <entry><hostid role="ipaddr">10.0.0.4</hostid></entry>
+                <entry>Faculty workstation</entry>
+              </row>
+              <row>
+                <entry><hostid>bird</hostid></entry>
+                <entry><hostid role="ipaddr">10.0.0.5</hostid></entry>
+                <entry>Client machine</entry>
+              </row>
+              <row>
+                <entry><hostid>cli[1-11]</hostid></entry>
+                <entry><hostid role="ipaddr">10.0.0.[6-17]</hostid></entry>
+                <entry>Other client machines</entry>
+              </row>
+            </tbody>
+          </tgroup>
+        </informaltable>
+
         <para>If you are setting up a NIS scheme for the first time, it
 	  is a good idea to think through how you want to go about it.  No
 	  matter what the size of your network, there are a few decisions
@@ -1375,7 +1548,14 @@ ISDN BRI line</programlisting>
 	    NIS domainname should be unique within your network and it is
 	    helpful if it describes the group of machines it represents.
 	    For example, the Art department at Acme Inc. might be in the
-	    "acme-art" NIS domain.</para>
+	    "acme-art" NIS domain.  For this example, assume you have
+            chosen the name <emphasis>test-domain</emphasis>.</para>
+
+          <para>However, some operating systems (notably SunOS) use their
+            NIS domain name as their Internet domain name.
+            If one or more machines on your network have this restriction,
+            you <emphasis>must</emphasis> use the Internet domain name as
+            your NIS domain name.</para>
         </sect4>
   
         <sect4>
@@ -1424,128 +1604,138 @@ ISDN BRI line</programlisting>
 	  <title>Setting up a NIS master server</title>
 
 	  <para>Setting up a master NIS server can be relatively straight
-	    forward, depending on your needs.  FreeBSD comes with a handy
-	    script called <command>ypinit</command> that makes the initial
-	    setup procedure very easy.  A few steps are needed ahead of
-	    time to make the setup process go smoothly.</para>
+	    forward, depending on your needs.  FreeBSD comes with support
+            for NIS out-of-the-box.  All you need is to add the following
+            lines to <filename>/etc/rc.conf</filename>, and FreeBSD will
+            do the rest for you.</para>
 
-	  <itemizedlist>
-	    <listitem>
-	      <para>Make sure your NIS domainname is set, using the
-		<command>domainname</command> command.  You can run
-		<command>ypinit</command> for domains other than the one
-		your host is in but if <literal>domainname</literal> is
-		not set, now is a good time to do so.</para>
-	    </listitem>
+          <itemizedlist>
+            <listitem>
+              <para><programlisting>nisdomainname="test-domain"</programlisting>
+                This line will set the NIS domainname to
+                <emphasis>test-domain</emphasis>
+                upon network setup (e.g. after reboot).</para>
+            </listitem>
+            <listitem>
+              <para><programlisting>nis_server_enable="YES"</programlisting>
+                This will tell FreeBSD to start up the NIS server processes
+                when the networking is next brought up.</para>
+            </listitem>
+            <listitem>
+              <para><programlisting>nis_yppasswdd_enable="YES"</programlisting>
+                This will enable the <command>rpc.yppasswdd</command>
+                daemon, which, as mentioned above, will allow users to
+                change their NIS password from a client machine.</para>
+            </listitem>
+          </itemizedlist>
 
-	    <listitem>
-	      <para>Make sure a copy of the
-	        <filename>master.passwd</filename> file is in
-		<filename>/var/yp</filename>.  This where NIS will get the
-		password entries it will share with it's clients.
-		<command>ypinit</command> runs with errors if this file is
-		not present.  You can either start a new
-		<filename>master.passwd</filename> or copy the existing
-		one from <filename>/etc/master.passwd</filename>.  If you
-		do the latter, make sure the permissions are set properly
-		to disallow world/group reading of the file.</para>
-	    </listitem>
+          <para>Now, everything you have to do is to run the command
+            <command>/etc/netstart</command> as superuser.  It will
+            setup everything for you, using the values you defined in
+            <filename>/etc/rc.conf</filename>.</para>
+        </sect4>
 
-	    <listitem>
-	      <para>Start the <command>ypserv</command> daemon.
-		<command>ypinit</command> requires
-		<command>ypserv</command> to be running to answer some RPC
-		calls it makes.  In its basic configuration
-		<command>ypserv</command> does not need to be run with any
-		flags.</para>
-	    </listitem>
-	  </itemizedlist>
+        <sect4>
+          <title>Initializing the NIS maps</title>
 
-	  <para>Once you've done the above steps, run
-	    <command>ypinit</command> with the <option>-m</option> flag.
-	    You might want to specify the domain you are building a master
-	    server for if it is different than what the
-	    <literal>domainname</literal> is set to.  In this example,
-	    <filename>test-domain</filename> will be our NIS
-	    domainname.</para>
+          <para>The <emphasis>NIS maps</emphasis> are database files,
+            that are kept in the <filename>/var/yp</filename> directory.
+            They are generated from configuration files in the
+            <filename>/etc</filename> directory of the NIS master, with one
+            exception: the <filename>/etc/master.passwd</filename> file.
+            This is for a good reason; you don't want to propogate
+            passwords to your root and other administrative accounts to
+            all the servers in the NIS domain.  Therefore, before we
+            initialize the NIS maps, you should:</para>
 
-	  <screen>
-# ypinit -m test-domain
+          <screen>
+&prompt.root; <userinput>cp /etc/master.passwd /var/yp/master.passwd</userinput>
+&prompt.root; <userinput>cd /var/yp</userinput>
+&prompt.root; <userinput>vi master.passwd</userinput>
+          </screen>
+
+          <para>You should remove all entries regarding system accounts
+            (bin, tty, kmem, games, etc), as well as any accounts that you
+            don't want to be propogated to the NIS clients (for example
+            root and any other UID 0 (superuser) accounts).</para>
+
+          <note><para>Make sure the
+            <filename>/var/yp/master.passwd</filename> is neither group
+            nor world readable (mode 600)!  Use the
+            <command>chmod</command> command, if appreciate.</para></note>
+
+          <para>When you have finished, it's time to initialize the NIS
+            maps!  FreeBSD includes a script named
+            <command>ypinit</command> to do this for you
+            (see its man page for more information).  Note that this
+            script is available on most UNIX OSs, but not on all.
+            On Digital Unix/Compaq Tru64 it is called
+            <command>ypsetup</command>.
+            Because we are generating maps for an NIS master, we are
+            going to pass the <option>-m</option> option to
+            <command>ypinit</command>.
+            To generate the NIS maps, assuming you already performed
+            the steps above, run:</para>
+
+          <screen>
+ellington&prompt.root; <userinput>ypinit -m test-domain</userinput>
 Server Type: MASTER Domain: test-domain
-
 Creating an YP server will require that you answer a few questions.
 Questions will all be asked at the beginning of the procedure.
-
-Do you want this procedure to quit on non-fatal errors? [y/n: n]  n
-
+Do you want this procedure to quit on non-fatal errors? [y/n: n] <userinput>n</userinput>
 Ok, please remember to go back and redo manually whatever fails.
-If you don't, something might not work. 
-
+If you don't, something might not work.
 At this point, we have to construct a list of this domains YP servers.
-master.example.com is already known as master server.
+rod.darktech.org is already known as master server.
 Please continue to add any slave servers, one per line. When you are
-done with the list, type a &lt;Control D&gt;.
-        master server   :  master.example.com
-        next host to add:  <userinput>^D</userinput>
+done with the list, type a &lt;control D&gt;.
+master server   :  ellington
+next host to add:  <userinput>coltrane</userinput>
+next host to add:  <userinput>^D</userinput>
 The current list of NIS servers looks like this:
+ellington
+coltrane
+Is this correct?  [y/n: y] <userinput>y</userinput>
 
-master.example.com
+[..output from map generation..]
 
-Is this correct?  [y/n: y]  <userinput>y</userinput>
-Building /var/yp/test-domain/ypservers...
-Running /var/yp/Makefile...
-NIS Map update started on Fri Dec  3 16:54:12 PST 1999 for domain test-domain
-Updating hosts.byname...
-Creating new /var/yp/passwd file from /var/yp/master.passwd...
-Updating netid.byname...
-Updating hosts.byaddr...
-Updating networks.byaddr...
-Updating networks.byname...
-Updating protocols.bynumber...
-Updating protocols.byname...
-Updating rpc.byname...
-Updating rpc.bynumber...
-Updating services.byname...
-Updating group.byname...
-Updating group.bygid...
-Updating passwd.byname...
-Updating passwd.byuid...
-Updating master.passwd.byname...
-Updating master.passwd.byuid...
 NIS Map update completed.
+ellington has been setup as an YP master server without any errors.
+          </screen>
 
-master.example.com has been setup as an YP master server without any errors.</screen>
+          <para><command>ypinit</command> should have created
+            <filename>/var/yp/Makefile</filename> from
+            <filename>/var/yp/Makefile.dist</filename>.
+            When created, this file assumes that you are operating
+            in a single server NIS environment with only FreeBSD
+            machines.  Since <emphasis>test-domain</emphasis> has
+            a slave server as well, you must edit
+            <filename>/var/yp/Makefile</filename>:</para>
 
-	  <para>There are a few crucial lines that need to be added to
-	    your <filename>/etc/rc.conf</filename> in order for the NIS
-	    server to start properly.  Make sure that these lines are
-	    included:</para>
+          <screen>
+ellington&prompt.root; <userinput>vi /var/yp/Makefile</userinput>
+          </screen>
 
-	  <programlisting>
-nis_server_enable="YES"
-nis_server_flags=""
-nis_yppasswdd_enable="YES"
-nis_yppasswdd_flags=""</programlisting>
-
-	  <para>You will most likely want to run
-	    <command>yppasswd</command> on the NIS server.  This allows
-	    users on NIS client machines to change their passwords and
-	    other user information remotely. </para>
-	</sect4>
+          <para>You should comment out the line that says `NOPUSH =
+            "True"' (if it is not commented out already).</para>
+        </sect4>
 
         <sect4>
 	  <title>Setting up a NIS slave server</title>
 
 	  <para>Setting up an NIS slave server is even more simple than
-	    setting up the master. Again the <command>ypinit</command>
-	    command helps out a great deal. As in the previous example
-	    we'll use <quote>test-domain</quote> as our target NIS
-	    domainname.</para>
+	    setting up the master.  Logon to the slave server and edit the
+            file <filename>/etc/rc.conf</filename> as you did before.
+            The only difference is that we now must use the
+            <option>-s</option> option when running <command>ypinit</command>.
+            The <option>-s</option> option requires the name of the NIS
+            master be passed to it as well, so our command line looks
+            like:</para>
 
-	  <screen>
-# ypinit -s master.example.com test-domain
+  <screen>
+coltrane&prompt.root; <userinput>ypinit -s ellington test-domain</userinput>
 
-Server Type: SLAVE Domain: test-domain Master: master.example.com
+Server Type: SLAVE Domain: test-domain Master: ellington
 
 Creating an YP server will require that you answer a few questions.
 Questions will all be asked at the beginning of the procedure.
@@ -1555,7 +1745,7 @@ Do you want this procedure to quit on non-fatal errors? [y/n: n]  <userinput>n</
 Ok, please remember to go back and redo manually whatever fails.
 If you don't, something might not work. 
 There will be no further questions. The remainder of the procedure
-should take a few minutes, to copy the databases from master.example.com.
+should take a few minutes, to copy the databases from ellington.
 Transferring netgroup...
 ypxfr: Exiting: Map successfully transferred
 Transferring netgroup.byuser...
@@ -1597,8 +1787,8 @@ ypxfr: Exiting: Map successfully transferred
 Transferring hosts.byname...
 ypxfr: Exiting: Map successfully transferred
 
-slave.example.com has been setup as an YP slave server without any errors. 
-Don't forget to update map ypservers on master.example.com.</screen>
+coltrane has been setup as an YP slave server without any errors. 
+Don't forget to update map ypservers on ellington.</screen>
         
 	  <para>You should now have a directory called 
 	    <filename>/var/yp/test-domain</filename>.  Copies of the NIS
@@ -1606,7 +1796,7 @@ Don't forget to update map ypservers on master.example.com.</screen>
 	    need to make sure that these stay updated.  The following
 	    <filename>/etc/crontab</filename> entries on your slave 
 	    servers should do the job:</para>
-        
+
 	  <programlisting>
 20      *       *       *       *       root   /usr/libexec/ypxfr passwd.byname
 21      *       *       *       *       root   /usr/libexec/ypxfr passwd.byuid</programlisting>
@@ -1620,6 +1810,9 @@ Don't forget to update map ypservers on master.example.com.</screen>
 	    that it is a good idea to force the updates.  This is more
 	    important on busy networks where map updates might not always
 	    complete.</para>
+
+          <para>Now, run the command <command>/etc/netstart</command> on the
+            slave server as well, which again starts the NIS server.</para>
 	</sect4>
       </sect3>
 
@@ -1628,8 +1821,8 @@ Don't forget to update map ypservers on master.example.com.</screen>
 	
 	<para> An NIS client establishes what is called a binding to a
 	  particular NIS server using the
-	  <application>ypbind</application> daemon.
-	  <application>Ypbind</application> checks the system's default
+	  <command>ypbind</command> daemon.
+	  <command>ypbind</command> checks the system's default
 	  domain (as set by the <command>domainname</command> command),
 	  and begins broadcasting RPC requests on the local network.
 	  These requests specify the name of the domain for which
@@ -1641,7 +1834,7 @@ Don't forget to update map ypservers on master.example.com.</screen>
 	  several slaves, for example), <command>ypbind</command> will
 	  use the address of the first one to respond.  From that point
 	  on, the client system will direct all of its NIS requests to
-	  that server.  <application>Ypbind</application> will
+	  that server.  <command>Ypbind</command> will
 	  occasionally <quote>ping</quote> the server to make sure it is
 	  still up and running.  If it fails to receive a reply to one of
 	  its pings within a reasonable amount of time,
@@ -1657,12 +1850,14 @@ Don't forget to update map ypservers on master.example.com.</screen>
 	
 	  <itemizedlist>
 	    <listitem>
-	      <para>Set the host's NIS domainname with the
-		<command>domainname</command> command, or at boot time
-		with this entry in
-		<filename>/etc/rc.conf</filename>:</para>
+	      <para>Edit the file <filename>/etc/rc.conf</filename> and
+                add the following lines in order to set the NIS domainname
+                and start <command>ypbind</command> upon network
+                startup:</para>
 
-	      <programlisting>nisdomainname="test-domain"</programlisting>
+	      <programlisting>
+nisdomainname="test-domain"
+nis_client_enable="YES"</programlisting>
 	    </listitem>
 
 	    <listitem>
@@ -1677,7 +1872,10 @@ Don't forget to update map ypservers on master.example.com.</screen>
 		<para>This line will afford anyone with a valid account in
 		  the NIS server's password maps an account.  There are
 		  many ways to configure your NIS client by changing this
-		  line.  For more detailed reading see O'Reilly's book on
+		  line.
+<!-- XXX Add "Some examples are given below." when Udo explained the
+     Netgroup stuff -->
+                  For more detailed reading see O'Reilly's book on
 		  <literal>Managing NFS and NIS</literal>.</para>
 	      </note>
 	    </listitem>
@@ -1726,6 +1924,7 @@ Don't forget to update map ypservers on master.example.com.</screen>
 192.168.128.0 255.255.255.0
 # allow connections from any host
 # between 10.0.0.0 to 10.0.15.255
+# this includes the machines in the testlab
 10.0.0.0      255.255.240.0</programlisting>
 
       <para>If ypserv receives a request from an address that matches one
@@ -1745,6 +1944,110 @@ Don't forget to update map ypservers on master.example.com.</screen>
 	  security, they, like the privileged port test, are both
 	  vulnerable to <quote>IP spoofing</quote> attacks.</para>
       </note>
+
+      <!-- maybe add note about zeroed broadcasts problems, which causes
+           problems for SunOS -->
+    </sect2>
+
+    <sect2>
+      <title>Barring some users from logging on</title>
+
+      <para>In our lab, there is a machine <hostid>basie</hostid> that is
+        supposed to be a faculty only workstation. We don't want to take this
+         machine out of the NIS domain, yet the <filename>passwd</filename>
+       file on the master NIS server contains accounts for both faculty and
+        students. What can we do?</para>
+
+      <para>There is a way to bar specific users from logging on to a
+        machine, even if they are present in the NIS database. To do this,
+        all you must do is add
+        <emphasis>-<replaceable>username</replaceable></emphasis> to the end of
+        the <filename>/etc/master.passwd</filename> file on the client
+        machine, where <replaceable>username</replaceable> is the username of
+        the user you wish to bar from logging in. This should preferably be
+        done using <command>vipw</command>, since <command>vipw</command>
+        will sanity check your changes to
+        <filename>/etc/master.passwd</filename>, as well as
+        automatically rebuild the password database when you
+        finish editing. For example, if we wanted to bar user
+        <emphasis>bill</emphasis> from logging on to <hostid>basie</hostid>
+        we would:</para>
+
+        <screen>
+basie&prompt.root; <userinput>vipw</userinput>
+<userinput>[add -bill to the end, exit]</userinput>
+vipw: rebuilding the database...
+vipw: done
+
+basie&prompt.root; <userinput>cat /etc/master.passwd</userinput>
+
+root:[password]:0:0::0:0:The super-user:/root:/bin/csh
+toor:[password]:0:0::0:0:The other super-user:/root:/bin/sh
+daemon:*:1:1::0:0:Owner of many system processes:/root:/sbin/nologin
+operator:*:2:5::0:0:System &:/:/sbin/nologin
+bin:*:3:7::0:0:Binaries Commands and Source,,,:/:/sbin/nologin
+tty:*:4:65533::0:0:Tty Sandbox:/:/sbin/nologin
+kmem:*:5:65533::0:0:KMem Sandbox:/:/sbin/nologin
+games:*:7:13::0:0:Games pseudo-user:/usr/games:/sbin/nologin
+news:*:8:8::0:0:News Subsystem:/:/sbin/nologin
+man:*:9:9::0:0:Mister Man Pages:/usr/share/man:/sbin/nologin
+bind:*:53:53::0:0:Bind Sandbox:/:/sbin/nologin
+uucp:*:66:66::0:0:UUCP pseudo-user:/var/spool/uucppublic:/usr/libexec/uucp/uucico
+xten:*:67:67::0:0:X-10 daemon:/usr/local/xten:/sbin/nologin
+pop:*:68:6::0:0:Post Office Owner:/nonexistent:/sbin/nologin
+nobody:*:65534:65534::0:0:Unprivileged user:/nonexistent:/sbin/nologin
++:::::::::
+-bill
+
+basie&prompt.root;</screen>
+    </sect2>
+
+<!-- Netgroup examples by Udo Erdelhoff should go here, after they have
+     been written -->
+
+    <sect2>
+      <title>Important things to remember</title>
+
+      <para>There are still a couple of things that you will need to do
+        differently now that you are in an NIS environment.</para>
+
+      <itemizedlist>
+        <listitem>
+          <para>Every time you wish to add a user to the lab, you
+            must add it to the master NIS server <emphasis>only</emphasis>,
+            and <emphasis>you must remember to rebuild the NIS
+            maps</emphasis>.  If you forget to do this, the new user will
+            not be able to login anywhere except on the NIS master.
+            For example, if we needed to add a new user
+            &ldquo;jsmith&rdquo; to the lab, we would:</para>
+
+          <screen>
+&prompt.root; <userinput>pw useradd jsmith</userinput>
+&prompt.root; <userinput>cd /var/yp</userinput>
+&prompt.root; <userinput>make test-domain</userinput></screen>
+
+          <para>You could also run <command>adduser jsmith</command> instead
+            of <command>pw useradd jsmith</command>.</para>
+        </listitem>
+        <listitem>
+          <para><emphasis>Keep the administration accounts out of the NIS
+            maps</emphasis>. You don't want to be propogating administrative
+            accounts and passwords to machines that will have users that
+            shouldn't have access to those accounts.</para>
+        </listitem>
+        <listitem>
+          <para><emphasis>Keep the NIS master and slave
+            secure, and minimize their downtime</emphasis>.
+            If somebody either hacks or simply turns off
+            these machines, they have effectively rendered many people without
+            the ability to login to the lab.</para>
+
+          <para>This is the chief weakness of any centralized administration
+            system, and it is probably the most important weakness. If you do
+            not protect your NIS servers, you will have a lot of angry
+            users!</para>
+        </listitem>
+      </itemizedlist>
     </sect2>
 
     <sect2>
