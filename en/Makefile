@@ -1,3 +1,7 @@
+# $Id: Makefile,v 1.2 1996-09-25 16:00:29 jfieber Exp $
+
+# These are turned into validated, normalized HTML files.
+
 DOCS=	about.sgml commercial.sgml daemon.sgml docproj.sgml docs.sgml
 DOCS+=	gallery.sgml index-site.sgml index.sgml license.sgml
 DOCS+=	mailto.sgml newsflash.sgml searchhints.sgml support.sgml
@@ -20,8 +24,21 @@ stats-img.html: /home/www/server/logs/access_log
 	(cd /usr/local/www/server/logs;zcat access_log.*.gz;cat access_log) | \
 	/usr/local/www/bin/analog +i0 +R500 -o > ${.TARGET}
 
+# Subdirectories
+
 SUBDIR=		cgi gifs ports releases tutorials
+
+# Subdirectories that have linuxdoc docs and makefiles that use
+# <bsd.sgml.mk>.
+
 DOCSUBDIR=	FAQ handbook
+
+# Directories that need to be checked out from the 
+# CVS repository.
+
+CVSDIR=		FAQ handbook
+
 WEBDIR=		data
 
 .include "web.mk"
+

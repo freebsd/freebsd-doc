@@ -1,5 +1,5 @@
 # bsd.web.mk
-# $Id: web.mk,v 1.2 1996-09-24 18:56:00 jfieber Exp $
+# $Id: web.mk,v 1.3 1996-09-25 16:00:32 jfieber Exp $
 
 #
 # Build and install a web site.
@@ -119,7 +119,7 @@ ORPHANS:=	${ORPHANS:N*.m4}
 #
 # Build most everything
 #
-all: ${COOKIE} orphans cvsdirs ${GENDOCS} ${DATA} ${LOCAL} ${CGI} _PROGSUBDIR
+all: ${COOKIE} orphans cvsdir ${GENDOCS} ${DATA} ${LOCAL} ${CGI} _PROGSUBDIR
 
 #
 # Warn about anything in DOCS that has no translation
@@ -134,9 +134,9 @@ orphans:
 #
 # Check these things out from cvs
 #
-cvsdirs:
-.if defined{CVSDIRS} && !empty{CVSDIRS}
-	for i in ${CVSDIRS}; do \
+cvsdir:
+.if defined(CVSDIR) && !empty(CVSDIR)
+	for i in ${CVSDIR}; do \
 		cvs co -P $$i; \
 	done
 .endif
