@@ -376,6 +376,7 @@ MLINKS+=        ee.1 ree.1
 MLINKS+=	expand.1 unexpand.1
 MLINKS+= ftp.1 pftp.1 ftp.1 gate-ftp.1
 MLINKS+=	hexdump.1 hd.1
+MLINKS+=	intro.1 introduction.1
 MLINKS+=	lex.1 flex.1
 MLINKS+=	lex.1 flex++.1
 MLINKS+=	lex.1 lex++.1
