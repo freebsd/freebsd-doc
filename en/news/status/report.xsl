@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/en/news/status/report.xsl,v 1.3 2001/09/18 12:22:07 chris Exp $ -->
+<!-- $FreeBSD: www/en/news/status/report.xsl,v 1.4 2001/09/18 17:46:58 chris Exp $ -->
 
 <!-- Standard header material -->
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
@@ -112,17 +112,7 @@
       <xsl:for-each select="url">
 	URL:
 	  <a href="{@href}">     <!-- Copy in the href attribute -->
-	    <!-- If the <url> element is not empty then use it's contents
-                 as the body of the link.  Otherwise, duplicate the contents
-                 of the href so the user has something to click on. -->
-	    <xsl:choose>
-	      <xsl:when test="string-length()">
-		<xsl:value-of select="child::node()"/>
-	      </xsl:when>
-	      <xsl:otherwise>
-		<xsl:value-of select="@href"/>
-	      </xsl:otherwise>
-	    </xsl:choose>
+	    <xsl:value-of select="@href"/>
 	  </a>
 	<xsl:if test="position() != last()"><br/></xsl:if>
       </xsl:for-each>
