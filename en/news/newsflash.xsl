@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/en/news/newsflash.xsl,v 1.2 2001/08/16 11:41:21 nik Exp $ -->
+<!-- $FreeBSD: www/en/news/newsflash.xsl,v 1.3 2001/09/20 11:43:31 chris Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -49,6 +49,10 @@
 
 	<p>For latest news of FreeBSD Java Project please visit 
 	  <a href="{$base}/java/newsflash.html">FreeBSD/Java NewsFlash</a>
+	  page.</p>
+	  
+	<p>For latest news of FreeBSD GNOME Project please visit 
+	  <a href="{$base}/gnome/newsflash.html">FreeBSD/GNOME NewsFlash</a>
 	  page.</p>
 	  
 	<p>For a detailed description of past, present, and future releases,
