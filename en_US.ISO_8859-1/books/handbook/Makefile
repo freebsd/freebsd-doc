@@ -1,5 +1,5 @@
 # 
-# $Id: Makefile,v 1.12 1999-01-30 00:10:35 nik Exp $
+# $Id: Makefile,v 1.13 1999-03-08 21:44:45 nik Exp $
 #
 # Build the FreeBSD Handbook. Will eventually split in two, a generic .mk
 # file which can be used by many Makefiles, and a much smaller Makefile
@@ -365,6 +365,18 @@ install-${_cf}.${_compressext}: ${DOC}.${_cf}.${_compressext}
 ${__target}:
 .endif
 .endfor
+
+#
+# Distribution target
+#
+# Like "install", but places the files into the correct distribution
+#
+.if !target(distribute)
+distribute:
+.for dist in ${DISTRIBUTION}
+	cd ${.CURDIR}; $(MAKE) install DESTDIR=${DISTDIR}/${dist}
+.endfor
+.endif
 
 .include <bsd.dep.mk>
 .include <bsd.obj.mk>
