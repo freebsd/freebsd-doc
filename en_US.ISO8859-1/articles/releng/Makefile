@@ -16,14 +16,12 @@ SRCS=  article.sgml branches.ascii
 # IMAGES
 IMAGES= branches.eps
 
-CLEANFILES+= branch.aux branch.log branch.dvi
+CLEANFILES+= branches.ps branches.eps
 
 DOC_PREFIX?= ${.CURDIR}/../../..
 
-branch.dvi: branch.tex
-	${LATEX} branch.tex
-
-branches.eps: branch.dvi
-	${DVIPS} -o ${.TARGET} -E branch.dvi
+branches.eps: branches.pic
+	${PIC2PS} branches.pic > branches.ps
+	${PS2EPS} branches.ps branches.eps
 
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"
