@@ -1,5 +1,5 @@
 # 
-# $Id: Makefile,v 1.16 1999-03-22 22:16:23 nik Exp $
+# $Id: Makefile,v 1.17 1999-03-27 16:03:49 nik Exp $
 #
 # Build the FreeBSD Handbook. Will eventually split in two, a generic .mk
 # file which can be used by many Makefiles, and a much smaller Makefile
@@ -383,15 +383,11 @@ ${__target}:
 #
 # Like "install", but places the files into the correct distribution
 #
-#.if !target(distribute)
-#distribute:
-#.for dist in ${DISTRIBUTION}
-#	cd ${.CURDIR}; $(MAKE) install DESTDIR=${DISTDIR}/${dist}
-#.endfor
-#.endif
 .if !target(distribute)
 distribute:
-	@echo "'distribute' not yet enabled for DocBook Handbook"
+.for dist in ${DISTRIBUTION}
+	cd ${.CURDIR}; $(MAKE) install DESTDIR=${DISTDIR}/${dist}
+.endfor
 .endif
 
 .include <bsd.dep.mk>
