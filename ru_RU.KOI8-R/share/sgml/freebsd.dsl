@@ -2,7 +2,7 @@
      The FreeBSD Russian Documentation Project
 
      $FreeBSD$
-     $FreeBSDru: frdp/doc/ru_RU.KOI8-R/share/sgml/freebsd.dsl,v 1.12 2004/08/27 11:17:52 den Exp $
+     $FreeBSDru: frdp/doc/ru_RU.KOI8-R/share/sgml/freebsd.dsl,v 1.13 2004/09/16 14:37:31 den Exp $
 
      Original revision: 1.20
 -->
@@ -273,6 +273,7 @@
 	(define (local-ru-label-title-sep)
 	(list
 	  (list (normalize "warning")           ": ")
+	  (list (normalize "caution")           ": ")
 	))
 
 ;; Fix punctuation for authors list in russian localization (original
