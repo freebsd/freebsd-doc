@@ -4,9 +4,9 @@
      The FreeBSD Russian Documentation Project
 
      $FreeBSD$
-     $FreeBSDru: frdp/www/ru/index.xsl,v 1.27 2004/01/03 13:37:06 andy Exp $
+     $FreeBSDru: frdp/www/ru/index.xsl,v 1.29 2004/01/18 06:17:41 andy Exp $
 
-     Original revision: 1.91
+     Original revision: 1.92
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -87,7 +87,7 @@
 		<xsl:text>&#160;</xsl:text>
 		<a href="{$base}/es/index.html" title="Испанский">[es]</a>
 		<xsl:text>&#160;</xsl:text>
-		<a href="http://www.freebsd-fr.org/index-trad.html" title="Французский">[fr]</a>
+		<a href="{$base}/fr/index.html" title="Французский">[fr]</a>
 		<xsl:text>&#160;</xsl:text>
 		<a href="{$base}/it/index.html" title="Итальянский">[it]</a>
 		<xsl:text>&#160;</xsl:text>
@@ -98,9 +98,9 @@
 	    </td>
 	  </tr>
 	</table>
-	
+
 	<br/>
-	
+
 	<hr size="1" noshade="noshade"/>
 
 	<!-- Main layout table -->
@@ -164,7 +164,7 @@
 			      &#183; <a href="http://www.FreeBSD.org/cgi/query-pr.cgi">Просмотр одного</a><br/>
 			      &#183; <a href="http://www.FreeBSD.org/cgi/query-pr-summary.cgi">Просмотр всех</a><br/>
                               &#183; <a href="send-pr.html">Отправка сообщения</a><br/>
-			      &#183; <a href="{$base}/doc/en_US.ISO8859-1/articles/problem-reports/article.html">Составление сообщений об ошибке</a><br/>
+			      &#183; <a href="{$base}/doc/ru_RU.KOI8-R/articles/problem-reports/article.html">Составление сообщений об ошибке</a><br/>
                             </small></p>
 
 			  <p>
