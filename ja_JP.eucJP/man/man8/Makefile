@@ -222,6 +222,7 @@ MAN8 =	IPXrouted.8\
 	reboot.8\
 	renice.8\
 	repquota.8\
+	rescue.8\
 	restore.8\
 	revnetgroup.8\
 	rexecd.8\
