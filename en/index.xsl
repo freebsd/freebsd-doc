@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/index.xsl,v 1.91 2004/01/02 14:07:33 blackend Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.92 2004/01/08 00:42:58 stephane Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   
@@ -6,7 +6,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.91 2004/01/02 14:07:33 blackend Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.92 2004/01/08 00:42:58 stephane Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <!-- these params should be externally bound. The values
@@ -101,105 +101,9 @@
 			   bgcolor="#ffcc66" width="100%">
 		      <tr>
 			<td>
-			  <p>
-			    <a href="platforms/index.html">
-			      <font size="+1" color="#990000"><b>Platforms</b></font>
-			    </a><small><br/>
-			      &#183; <a href="smp/index.html">i386</a><br/>
-			      &#183; <a href="platforms/alpha.html">Alpha</a><br/>
-			      &#183; <a href="platforms/ia64/index.html">IA-64</a><br/>
-			      &#183; <a href="platforms/amd64.html">AMD64</a><br/>
-			      &#183; <a href="platforms/sparc.html">Sparc64</a><br/>
-			      &#183; <a href="platforms/index.html">More?</a><br/>
-			    </small></p>
-
-			  <p><font size="+1" color="#990000"><b>Software</b></font>
-			    <small><br/>
-			      &#183; <a href="{$base}/doc/en_US.ISO8859-1/books/handbook/mirrors.html">Getting FreeBSD</a><br/>
-			      &#183; <a href="releases/index.html">Release Information</a><br/>
-			      &#183; <a href="{$base}/ports/index.html">Ported Applications</a><br/>
-			    </small></p>
-	    
-			  <p>
-			    <a href="docs.html">
-			      <font size="+1" color="#990000"><b>Documentation</b></font>
-			    </a><small><br/>
-			      &#183; <a href="{$base}/doc/en_US.ISO8859-1/books/faq/index.html">FAQ</a><br/>
-			      &#183; <a href="{$base}/doc/en_US.ISO8859-1/books/handbook/index.html">Handbook</a><br/>
-			      &#183; <a href="http://www.FreeBSD.org/cgi/man.cgi">Manual pages</a><br/>
-			      &#183; <a href="projects/newbies.html">For Newbies</a><br/>
-			      &#183; <a href="{$base}/docproj/index.html">Doc. Project</a><br/>
-			    </small></p>
-			  
-			  <p>
-			    <a href="support.html">
-			      <font size="+1" color="#990000"><b>Support</b></font>
-			    </a><small><br/>
-			      &#183; <a href="{$base}/support.html#mailing-list">Mailing lists</a><br/>
-			      &#183; <a href="{$base}/support.html#newsgroups">Newsgroups</a><br/>
-			      &#183; <a href="{$base}/support.html#user">User Groups</a><br/>
-			      &#183; <a href="{$base}/support.html#web">Web Resources</a><br/>
-			      &#183; <a href="security/index.html">Security</a><br/>
-			    </small></p>
-
-			  <p>
-			    <a href="{$base}/support.html#gnats">
-			      <font size="+1" color="#990000"><b>Bug Reports</b></font>
-			    </a><small><br/>
-			      &#183; <a href="http://www.FreeBSD.org/cgi/query-pr-summary.cgi?query">Search</a><br/>
-			      &#183; <a href="http://www.FreeBSD.org/cgi/query-pr.cgi">View one bug report</a><br/>
-			      &#183; <a href="http://www.FreeBSD.org/cgi/query-pr-summary.cgi">View all bug reports</a><br/>
-			      &#183; <a href="send-pr.html">Send a bug report</a><br/>
-			      &#183; <a href="doc/en_US.ISO8859-1/articles/problem-reports/article.html">Writing Bug Reports</a><br/>
-			    </small></p>
-
-	      
-			  <p>
-			    <a href="projects/index.html">
-			      <font size="+1" color="#990000"><b>Development</b></font>
-			    </a><small><br/>
-			      &#183; <a href="{$base}/doc/en_US.ISO8859-1/books/developers-handbook">Developer's Handbook</a><br/>
-			      &#183; <a href="{$base}/doc/en_US.ISO8859-1/books/porters-handbook">Porter's Handbook</a><br/>
-			      &#183; <a href="{$base}/support.html#cvs">CVS Repository</a><br/>
-			      &#183; <a href="releng/index.html">Release Engineering</a><br/>
-			      &#183; <a href="{$base}/doc/en_US.ISO8859-1/articles/contributing/index.html">Contributing to FreeBSD</a><br/>
-			    </small></p>
-	      
-			  <p><font size="+1" color="#990000"><b>Vendors</b></font>
-			    <small><br/>
-			      &#183; <a href="{$base}/commercial/software_bycat.html">Software</a><br/>
-			      &#183; <a href="{$base}/commercial/hardware.html">Hardware</a><br/>
-			      &#183; <a href="{$base}/commercial/consulting_bycat.html">Consulting</a><br/>
-			      &#183; <a href="{$base}/commercial/misc.html">Misc</a><br/>
-			    </small></p>
-
-			  <p><font size="+1" color="#990000"><b>Donations</b></font>
-			    <small><br/>
-			      &#183; <a href="{$base}/donations/index.html">Donations Liaison</a><br/>
-			      &#183; <a href="{$base}/donations/donors.html">Current Donations</a><br/>
-			      &#183; <a href="{$base}/donations/wantlist.html">List of needs</a><br/>
-			    </small></p>
-
-			  <p>
-			    <a href="{$base}/search/index-site.html">
-			      <font size="+1" color="#990000"><b>This Site</b></font>
-			    </a><small><br/>
-			      &#183; <a href="{$base}/search/search.html#web">Search Website</a><br/>
-			      &#183; <a href="{$base}/search/search.html#mailinglists">Search Mailing Lists</a><br/>
-			      &#183; <a href="{$base}/search/search.html">Search All</a><br/>
-			    </small></p>
-
-			  <p>
-			    <a href="mailto.html">
-			      <font size="+1" color="#990000"><b>Contacting FreeBSD</b></font>
-			    </a>
-			  </p>
-
-			  <p>
-			    <a href="copyright/index.html">
-			      <font size="+1" color="#990000"><b>The BSD Copyright</b></font>
-			    </a>
-			  </p>
+			  <xsl:call-template name="html-index-navigation-link-list">
+			    <xsl:with-param name="navigation.xml" select="$navigation.xml"/>
+			  </xsl:call-template>
 
 			  <form action="http://www.FreeBSD.org/cgi/search.cgi" method="get">
 			    <small>Search for:<br/>
@@ -207,7 +111,8 @@
 			      <input type="hidden" name="max" value="25"/>
 			      <input type="hidden" name="source" value="www"/>
 			      <input type="submit" value="Go"/></small>
-			  </form></td>
+			  </form>
+			</td>
 		      </tr>
 		    </table>
 		  </td>
