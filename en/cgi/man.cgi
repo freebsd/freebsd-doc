@@ -1,6 +1,6 @@
 #!/usr/bin/perl -T
 #
-# Copyright (c) 1996-2003 Wolfram Schneider <wosch@FreeBSD.org>. Berlin.
+# Copyright (c) 1996-2004 Wolfram Schneider <wosch@FreeBSD.org>
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp 
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.128 2004-08-02 20:35:15 www Exp $
+# $Id: man.cgi,v 1.129 2004-08-23 20:59:13 wosch Exp $
 
 #use Data::Dumper;
 #use Carp;
@@ -1019,11 +1019,11 @@ ETX
 }
 
 sub copyright {
-    $id = '$Id: man.cgi,v 1.128 2004-08-02 20:35:15 www Exp $';
+    $id = '$Id: man.cgi,v 1.129 2004-08-23 20:59:13 wosch Exp $';
 
     return qq{\
 <PRE>
-Copyright (c) 1996-2003 Wolfram Schneider <A HREF="$mailtoURL">&lt;$mailto&gt;</A>. Berlin.
+Copyright (c) 1996-2004 Wolfram Schneider <A HREF="$mailtoURL">&lt;$mailto&gt;</A>
 Copyright (c) 1993-1995 Berkeley Software Design, Inc.
 
 This data is part of a licensed program from BERKELEY SOFTWARE
@@ -1072,7 +1072,7 @@ sub faq {
 
     return qq{\
 <PRE>
-Copyright (c) 1996-2003 Wolfram Schneider <a href="$mailtoURL">&lt;$mailto&gt;</a>. Berlin.
+Copyright (c) 1996-2004 Wolfram Schneider <a href="$mailtoURL">&lt;$mailto&gt;</a>
 </PRE>
 
 <h2>FAQ</h2>
@@ -1161,6 +1161,13 @@ sub html_header {
 <link rev="made" href="mailto:wosch\@FreeBSD.ORG">
 <META name="robots" content="nofollow">
 <meta content="text/html; charset=iso-8859-1" http-equiv="Content-Type">
+<style type="text/css">
+<!--
+body {color:#000000;background-color:#EEEEEE}
+b {color:#996600;background-color:#EEEEEE}
+i {color:#008000;background-color:#EEEEEE}
+//-->
+</style>
 </HEAD> 
 <BODY BGCOLOR="#FFFFFF" TEXT="#000000">\n\n};
 }
