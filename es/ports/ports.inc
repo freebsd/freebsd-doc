@@ -1,4 +1,4 @@
-<!-- $Id: ports.inc,v 1.4 1999-03-28 18:19:05 jesusr Exp $ -->
+<!-- $Id: ports.inc,v 1.5 1999-04-24 16:18:35 jesusr Exp $ -->
 <p>La colecci&oacute;n de Ports y Packages de FreeBSD ofrece una manera
 sencilla de instalci&oacute;n de aplicaciones para los usuarios y
 administradores. La colecci&oacute;n de ports ha estado creciendo en los
@@ -11,9 +11,9 @@ necesarios para hacer que la aplicaci&oacute;n original compile y
 se ejecute en FreeBSD. Instalar una aplicaci&oacute;n es t&aacute;n
 sencillo como obtener el ports, descomprimirlo y teclear <tt>make</tt>
 dentro del directorio del port. Para mayor facilidad, puedes, simplemente, instalar la <a href="ftp://ftp.freebsd.org/pub/FreeBSD/branches/-current/ports.tar.gz">colecci&oacute;n completa de ports</a> en el momento de la instalaci&oacute;n
-del sistema (o usar <a href="../handbook/cvsup.html">CVSup</a> para mantener
-la colecci&oacute;n actualizada) y tener miles de aplicaciones disponibles en
-la punta de tus dedos.
+del sistema (o usar <a href="../handbook/synching.html#CVSUP">CVSup</a> 
+para mantener la colecci&oacute;n actualizada) y tener miles de aplicaciones 
+disponibles en la punta de tus dedos.
 
 El <tt>Makefile</tt> automaticamente se encarga de obtener el c&oacute;digo 
 fuente de la aplicaci&oacute;n ya sea del disco local, CDROM o v&iacute;a FTP, 
