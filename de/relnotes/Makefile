@@ -8,7 +8,7 @@
 # path to that relnotes set.
 #
 # $FreeBSD$
-# $FreeBSDde: de-www/relnotes/Makefile,v 1.3 2002/12/08 20:39:52 ue Exp $
+# $FreeBSDde: de-www/relnotes/Makefile,v 1.4 2003/01/20 18:56:27 ue Exp $
 # basiert auf: 1.5
 #
 
@@ -25,7 +25,7 @@ all install clean obj:
 		webname=$$1; shift; realpath=$$1; shift; \
 		(unset DESTDIR || true; \
 			cd $$realpath && ${MAKE} \
-				FORMATS=html\ html-split \
+				FORMATS=html \
 				DOCDIR=${DESTDIR}/data/de/${.CURDIR:T}/$$webname \
 				DOC_PREFIX=${.CURDIR}/../../../doc \
 				DIRPRFX=${.CURDIR:T}/$$webname/ \
