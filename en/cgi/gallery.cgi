@@ -3,7 +3,8 @@
 # A CGI form processor for FreeBSD Gallery submissions
 # 
 # John Fieber <jfieber@indiana.edu>
-# $Id: gallery.cgi,v 1.8 1997-01-12 05:13:22 jkh Exp $
+# Modified for new gallery.db format by Nate Johnson <nsj@freebsd.org>
+# $Id: gallery.cgi,v 1.9 1998-05-26 19:52:58 nsj Exp $
 ##################################################################
 
 $curator = "gallery@freebsd.org";
@@ -12,7 +13,7 @@ $subject = "Another gallery submission...";
 require 'cgi-lib.pl';
 &ReadParse;
 
-$hsty_date = "\$Date: 1997-01-12 05:13:22 $";
+$hsty_date = "\$Date: 1998-05-26 19:52:58 $";
 #$h_base = "..";
 #$d_author = "
 require 'cgi-style.pl';
@@ -117,9 +118,18 @@ elsif ($in{'action'} eq "submit") {
 #    close(STDOUT);
 
     open(M, "| mail -s \"$subject\" $curator");
-    print M "\"$in{'category'}\" gallery entry:\n\n";
-    print M "<!-- from $in{'contact'} ($ENV{'REMOTE_HOST'}) on $timestamp -->\n";
-    print M "$entry\n";
+#    print M "\"$in{'category'}\" gallery entry:\n\n";
+#    print M "<!-- from $in{'contact'} ($ENV{'REMOTE_HOST'}) on $timestamp -->\n";
+#    print M "$entry\n";
+
+    $category = $in{'category'};
+    $category =~ tr/A-Z/a-z/;
+
+    ($mo,$da,$year) = $timestamp =~ m/(\d\d?)-(\d\d?)-(\d\d\d\d)/;
+    $year -= $1900;
+    $date = join("",$year,$mo,$da);
+    print M "$category\t$in{'organization'}\t$in{'url'}\t$in{'description'}\t$i {'contact'}\t$date\t000000\n";
+
     close(M);
 }
 else {
