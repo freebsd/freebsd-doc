@@ -124,10 +124,9 @@ LOCAL_IMAGES_TXT+= ${IMAGES_SCR_TXT}
 # a 640x480 monitor.
 EPS2PNG_RES?= 100
 
-# We only need to list ${IMAGES_GEN_PDF} here.  If all the source files are
-# EPS then they'll be in this variable; if any of the source files are PNG
-# then we can use them directly, and don't need to list them.
-IMAGES_PDF=${IMAGES_GEN_PDF}
+# We need to list ${_IMAGES_PNG} here since the images might be in a
+# shared image directory.
+IMAGES_PDF= ${IMAGES_GEN_PDF} ${_IMAGES_PNG}
 
 SCR2PNG?=	${PREFIX}/bin/scr2png
 SCR2PNGOPTS?=	${SCR2PNGFLAGS}
