@@ -20,6 +20,7 @@ SUBDIR+= programming-tools
 SUBDIR+= committers-guide
 SUBDIR+= zip-drive
 SUBDIR+= ddwg
+SUBDIR+= euro
 
 ROOT_SYMLINKS+= new-users
 
