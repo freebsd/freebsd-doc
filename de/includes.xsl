@@ -1,17 +1,14 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
 <!-- $FreeBSD$
-     $FreeBSDde: de-www/includes.xsl,v 1.2 2003/08/02 09:24:07 mheinen Exp $
+     $FreeBSDde: de-www/includes.xsl,v 1.4 2003/09/23 22:38:10 mheinen Exp $
      basiert auf: 1.15
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
   <xsl:variable name="base" select="'.'"/>
-  <!--
   <xsl:variable name="enbase" select="'..'"/>
-  -->
-  <xsl:variable name="enbase" select="'http://www.freebsd.org'"/>
   <xsl:variable name="debase" select="'http://www.de.freebsd.org/de'"/>
 
   <xsl:variable name="i.daemon">
@@ -119,4 +116,23 @@
     <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel2.current"/>R/errata.html</xsl:variable>
   <xsl:variable name="u.rel2.hardware">
     <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel2.current"/>R/hardware.html</xsl:variable>
+
+  <!-- Translate month name -->
+  <xsl:template name="translate-month">
+    <xsl:param name="month"/>
+    <xsl:choose>
+      <xsl:when test="$month = 'January'">Januar</xsl:when>
+      <xsl:when test="$month = 'February'">Februar</xsl:when>
+      <xsl:when test="$month = 'March'">M&#228;rz</xsl:when>
+      <xsl:when test="$month = 'April'">April</xsl:when>
+      <xsl:when test="$month = 'May'">Mai</xsl:when>
+      <xsl:when test="$month = 'June'">Juni</xsl:when>
+      <xsl:when test="$month = 'July'">Juli</xsl:when>
+      <xsl:when test="$month = 'August'">August</xsl:when>
+      <xsl:when test="$month = 'September'">September</xsl:when>
+      <xsl:when test="$month = 'October'">Oktober</xsl:when>
+      <xsl:when test="$month = 'November'">November</xsl:when>
+      <xsl:when test="$month = 'December'">Dezember</xsl:when>
+    </xsl:choose>
+  </xsl:template>
 </xsl:stylesheet>

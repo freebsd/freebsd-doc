@@ -2,8 +2,8 @@
 
 <!--
      $FreeBSD$
-     $FreeBSDde: de-www/index.xsl,v 1.10 2003/09/05 11:54:11 mheinen Exp $
-     basiert auf: 1.76
+     $FreeBSDde: de-www/index.xsl,v 1.12 2003/09/23 23:11:33 mheinen Exp $
+     basiert auf: 1.77
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -11,7 +11,7 @@
   <xsl:import href="includes.xsl"/>
   <xsl:import href="news/includes.xsl"/>
 
-  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.42 2002/12/16 21:10:22 keramida Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/de/index.xsl,v 1.4 2003/09/17 23:40:35 mheinen Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -489,16 +489,18 @@
 			    <font size="-1">
 			      aktualisiert am:
 			      <xsl:value-of
-				select="document('security/advisories.xml')/descendant::day[position() = 1]/name"/>
+				select="document('../en/security/advisories.xml')/descendant::day[position() = 1]/name"/>
 			      <xsl:text>. </xsl:text>
-			      <xsl:value-of
-				select="document('security/advisories.xml')/descendant::month[position() = 1]/name"/>
+			      <xsl:call-template name="translate-month">
+			        <xsl:with-param name="month"
+				  select="descendant::month[position() = 1]/name"/>
+			      </xsl:call-template>
 			      <xsl:text> </xsl:text>
 			      <xsl:value-of
-				select="document('security/advisories.xml')/descendant::year[position() = 1]/name"/>
+				select="document('../en/security/advisories.xml')/descendant::year[position() = 1]/name"/>
 			      <br/>
 			      <!-- Pull in the 10 most recent security advisories -->
-			      <xsl:for-each select="document('security/advisories.xml')/descendant::advisory[position() &lt; 10]">
+			      <xsl:for-each select="document('../en/security/advisories.xml')/descendant::advisory[position() &lt; 10]">
 				&#183; <a>
 				  <xsl:attribute name="href">ftp://ftp.freebsd.org/pub/FreeBSD/CERT/advisories/<xsl:value-of select="name"/>.asc</xsl:attribute>
 				  <xsl:value-of select="name"/>

@@ -2,7 +2,7 @@
 
 <!--
      $FreeBSD$
-     $FreeBSDde: de-www/news/newsflash.xsl,v 1.6 2003/08/10 15:22:58 mheinen Exp $
+     $FreeBSDde: de-www/news/newsflash.xsl,v 1.7 2003/09/23 22:38:11 mheinen Exp $
      basiert auf: 1.9
 -->
 
@@ -13,6 +13,7 @@
   <xsl:import href="includes.xsl"/>
 
   <xsl:variable name="base" select="'..'"/>
+  <xsl:variable name="enbase" select="'../..'"/>
   <xsl:variable name="title" select="'FreeBSD Ank&#252;ndigungen'"/>
   <xsl:variable name="date">
     <xsl:value-of select="//cvs:keyword[@name='freebsd']"/>
