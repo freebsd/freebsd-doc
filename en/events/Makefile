@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/events/Makefile,v 1.4 2003/10/12 17:24:21 simon Exp $
+# $FreeBSD: www/en/events/Makefile,v 1.5 2003/10/15 15:10:47 simon Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -11,7 +11,7 @@ SUBDIR=	2002 2003
 
 DATA=   events.css
 
-DATA=	events.html
+DATA+=	events.html
 CLEANFILES+= events.html curdate.xml
 
 INDEXLINK= events.html
