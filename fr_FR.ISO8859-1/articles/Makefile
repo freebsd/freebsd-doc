@@ -21,6 +21,8 @@ SUBDIR+= committers-guide
 SUBDIR+= zip-drive
 SUBDIR+= ddwg
 SUBDIR+= euro
+SUBDIR+= java-tomcat
+SUBDIR+= dialup-firewall
 
 ROOT_SYMLINKS+= new-users
 

@@ -1,0 +1,416 @@
+<!--
+     The FreeBSD Documentation Project
+     The FreeBSD French Documentation Project
+
+     $FreeBSD$
+     $Id: article.sgml,v 1.1 2002-04-16 21:07:13 gioria Exp $
+     Original revision: 1.24
+-->
+
+<!DOCTYPE article PUBLIC "-//FreeBSD//DTD DocBook V4.1-Based Extension//EN" [
+<!ENTITY % man PUBLIC "-//FreeBSD//ENTITIES DocBook Manual Page Entities//EN"> %man;
+<!ENTITY % urls PUBLIC "-//FreeBSD//ENTITIES Common Document URL Entities//FR"> %urls;
+<!ENTITY % abstract PUBLIC "-//FreeBSD//ENTITIES DocBook Abstract Entities//FR"> %abstract;
+<!ENTITY % artheader PUBLIC "-//FreeBSD//ENTITIES DocBook ArtHeader Entities//FR"> %artheader;
+<!ENTITY % translators PUBLIC "-//FreeBSD//ENTITIES DocBook Translator Entities//FR"> %translators;
+<!ENTITY % man PUBLIC "-//FreeBSD//ENTITIES DocBook Manual Page Entities//EN"> %man;
+<!ENTITY rel.current CDATA "3.2">
+]>
+
+<article lang="fr">
+  <articleinfo>
+    <title>Coupe-feu pour connexion par modem avec FreeBSD</title>
+    
+    <authorgroup>
+      <author>
+	<firstname>Marc</firstname>
+	<surname>Silver</surname>
+
+	<affiliation>
+	  <address><email>marcs@draenor.org</email></address>
+	</affiliation>
+      </author>
+    </authorgroup>
+
+    <pubdate>$FreeBSD$</pubdate>
+
+    <abstract>
+      <para>Cet article expose comment mettre en place un coupe-feu
+        utilisant une connexion PPP par modem avec FreeBSD et IPFW, et
+	spécifiquement l'utilisation de coupe-feux pour une connexion par
+	modem avec adresse IP dynamique.  Ce document ne couvre pas en
+	premier lieu la configuration de votre connexion PPP.</para>
+	&abstract.license;
+        &abstract.disclaimer;
+        &trans.a.fonvieille;
+    </abstract>
+  </articleinfo>
+
+  <sect1 id="preface">
+    <title>Préface</title>
+
+    <para>Coupe-feu pour connexion par modem avec FreeBSD</para>
+
+     <para>Ce document couvre le processus requit pour configurer un
+       coupe-feu avec FreeBSD quand votre fournisseur d'accès vous
+       assigne une adresse IP dynamique.  Alors que de nombreux efforts
+       ont été fait afin de rendre ce document aussi instructif et
+       correct que possible, vous êtes encouragés à envoyer vos
+       commentaires/suggestions à l'adresse
+       <email>marcs@draenor.org</email>.</para>
+   </sect1>
+
+  <sect1 id="kernel">
+    <title>Options du noyau</title>
+
+    <para>La première chose dont aurez besoin est de recompiler votre
+      noyau.  Si vous avez besoin de plus d'informations sur comment
+      recompiler un noyau, alors le meilleur endroit pour commencer est
+      la <ulink URL="../../books/handbook/kernelconfig.html">section de
+      configuration du noyau du manuel</ulink>.  Vous devez rajouter les
+      options suivantes dans le fichier de configuration de votre
+      noyau:</para>
+    
+    <variablelist>
+      <varlistentry>
+	<term><literal>options IPFIREWALL</literal></term>
+
+	<listitem>
+	  <para>Intègre au noyau le code de filtrage de paquets.</para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<term><literal>options IPFIREWALL_VERBOSE</literal></term>
+
+	<listitem>
+	  <para>Envoie les paquets tracés au système de traces.</para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<term><literal>options
+	    IPFIREWALL_VERBOSE_LIMIT=<replaceable>100</replaceable></literal></term>
+
+	<listitem>
+	  <para>Limite le nombre de paquets similaires tracés.  Cela
+	    évite que votre fichier de traces soit submergé de nombreuses
+	    entrées répétées.  <replaceable>100</replaceable> est une
+	    valeur raisonnable, mais vous pouvez l'ajuster en fonction
+	    de vos besoins.</para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<term><literal>options IPDIVERT</literal></term>
+
+	<listitem>
+	  <para>Autorise le <emphasis>détournement</emphasis> des 
+	  sockets, cela sera explicité plus tard.</para>
+	</listitem>
+      </varlistentry>
+    </variablelist>
+
+    <para>Il y a d'autres éléments <emphasis>optionnels</emphasis> que
+      vous pouvez rajouter dans le noyau pour plus de sécurité.  Ils ne
+      sont pas requis pour avoir un filtrage de paquets qui fonctionne,
+      mais il se peut que quelques utilisateurs un peu plus paranoïaques
+      désirent les utiliser.</para>
+    
+    <variablelist>
+      <varlistentry>
+	<term><literal>options TCP_DROP_SYNFIN</literal></term>
+
+	<listitem>
+	  <para>Cette option ignore les paquets TCP avec les indicateurs
+	    SYN et FIN activés.  Cela empêche certains utilitaires tel
+	    que nmap etc... d'identifier la pile TCP/IP de la machine,
+	    mais cela rompt le support des extensions RFC1644.  Cela
+	    <emphasis>n'est pas</emphasis> recommandé si la machine
+	    héberge un serveur web.</para>
+	</listitem>
+      </varlistentry>
+     </variablelist>
+
+    <para>Ne pas redémarrer une fois que vous avez recompilé le noyau.
+      Avec un peu de chance, nous n'aurons besoin de redémarrer qu'une
+      fois pour achever l'installation du coupe-feu.</para>
+  </sect1>
+
+  <sect1 id="rcconf">
+    <title>Modifier <filename>/etc/rc.conf</filename> pour charger le
+      coupe-feu</title>
+
+    <para>Nous avons maintenant besoin de quelques modifications de
+      <filename>/etc/rc.conf</filename> afin de signaler notre
+      coupe-feu.  Ajoutez simplement les lignes suivantes:</para>
+    
+    <programlisting>firewall_enable="YES"
+firewall_script="/etc/firewall/fwrules"
+natd_enable="YES"
+natd_interface="tun0"
+natd_flags="-dynamic"</programlisting>
+
+    <para>Pour plus d'informations sur la fonction de ces éléments
+      jetez un coup d'oeil à <filename>/etc/defaults/rc.conf</filename>
+      et lisez la page de manuel &man.rc.conf.5;.</para>
+  </sect1>
+
+  <sect1>
+    <title>Désactiver la traduction d'adresse réseau de PPP</title>
+    
+    <para>Il se peut que vous utilisiez déjà la traduction d'adresse
+      réseau (NAT) intégrée à PPP.  Si c'est le cas alors vous aurez à
+      la désactiver, étant donné que nos exemples utilisent &man.natd.8;
+      pour faire la même chose.</para>
+
+    <para>Si vous avez déjà un ensemble d'options pour démarrer
+      automatiquement PPP, cela doit probablement ressembler à
+      ceci:</para>
+    
+    <programlisting>ppp_enable="YES"
+ppp_mode="auto"
+ppp_nat="YES"
+ppp_profile="<replaceable>profile</replaceable>"</programlisting>
+
+    <para>Si c'est le cas, retirez la ligne
+      <literal>ppp_nat="YES"</literal>.  Vous aurez aussi besoin de
+      retirer les lignes <literal>nat enable yes</literal> ou
+      <literal>alias enable yes</literal> de
+      <filename>/etc/ppp/ppp.conf</filename>.</para>
+  </sect1>
+
+  <sect1 id="rules">
+    <title>Le jeu de règles pour le coupe-feu</title>
+
+    <para>Nous avons presque terminé.  Tout ce qu'il reste à faire est
+      de définir les règles du coupe-feu et alors nous pourrons
+      redémarrer, et notre coupe-feu devrait fonctionner.  Je me suis rendu
+      compte que chacun désirera quelque chose de légèrement différent
+      quand il est question de son ensemble de règles.  Ce que j'ai
+      essayé de faire est d'écrire un ensemble de règles qui conviendra
+      à la plupart des utilisateurs de modems.  Vous pouvez bien
+      évidement le modifier selon vos besoins en utilisant les règles
+      suivantes comme fondation pour votre propre ensemble de règles.
+      Tout d'abord commençons avec les bases du filtrage fermé.  Ce que
+      vous voulez faire est de refuser tout par défaut et ensuite
+      n'autoriser que les choses dont vous avez vraiment besoin.  Les
+      règles devraient être ordonnées de façon à autoriser tout d'abord
+      puis ensuite refuser.  Le principe est que vous ajoutez les règles
+      pour vos autorisations, et ensuite tout est refusé. :)</para>
+
+    <para>Maintenant, créons le répertoire <filename
+      class="directory">/etc/firewall</filename>.  Aller dans ce
+      répertoire et éditez le fichier <filename>fwrules</filename> comme
+      nous l'avons spécifié dans <filename>rc.conf</filename>.  S'il
+      vous plaît, notez que vous pouvez changer le nom de ce fichier
+      pour celui que vous désirez.  Ce guide donne juste un exemple de
+      nom de fichier.</para>
+    
+    <para>Maintenant, jettons un coup d'oeil à cet exemple de fichier de
+      coupe-feu, qui est minutieusement commenté.</para>
+    
+    <programlisting># Règles du coupe-feu
+# Ecrit par Marc Silver (marcs@draenor.org)
+# http://draenor.org/ipfw
+# Librement distribuable
+
+
+# Définie la commande du coupe-feu (comme dans /etc/rc.firewall)
+# pour une référence aisée. Facilite la lecture.
+fwcmd="/sbin/ipfw"
+
+# Vide les règles actuelles avant rechargement.
+$fwcmd -f flush
+
+# Détourne tous les paquets à travers l'interface tunnel
+$fwcmd add divert natd all from any to any via tun0
+
+# Autorise toutes les données de ma carte réseau et de l'hôte local.
+# Soyez sûr de changer votre carte réseau (la mienne était fxp0) avant
+# de redémarrer.  :)
+$fwcmd add allow ip from any to any via lo0
+$fwcmd add allow ip from any to any via fxp0
+
+# Autorise toute les connexions dont je suis l'initiateur.
+$fwcmd add allow tcp from any to any out xmit tun0 setup
+
+# Une fois les connexions établies, les autorise à rester ouvertes.
+$fwcmd add allow tcp from any to any via tun0 established
+
+# Tous le monde sur internet est autorisé à se connecter aux services
+# suivants sur la machine.  Cet exemple autorise spécifiquement les
+# connexions à ssh et apache.
+$fwcmd add allow tcp from any to any 80 setup
+$fwcmd add allow tcp from any to any 22 setup
+
+# Ceci envoie un RESET à tous les paquets ident.
+$fwcmd add reset log tcp from any to any 113 in recv tun0
+
+# Autorise les requettes DNS sortantes SEULEMENT vers les serveurs
+# spécifiés.
+$fwcmd add allow udp from any to <replaceable>x.x.x.x</replaceable> 53 out xmit tun0
+
+# Autorise leur retour avec les réponses...  :)
+$fwcmd add allow udp from <replaceable>x.x.x.x</replaceable> 53 to any in recv tun0
+
+# Autorise l'ICMP (pour permettre à ping et traceroute de fonctionner).
+# Vous pouvez peut-être désirer désactiver ceci, mais je pense que cela
+# réponds à mes besoins de les conserver ainsi.
+$fwcmd add allow icmp from any to any
+
+# Bloque tout le reste.
+$fwcmd add deny log ip from any to any</programlisting>
+
+    <para>Vous disposez désormais d'un coupe-feu tout à fait fonctionnel
+      qui autorisera les connexions sur les ports 80 et 22 et tracera
+      tout autre tentative de connexion.  Maintenant, vous devriez être 
+      en mesure de redémarrer sans risques et votre coupe-feu devrait se
+      lancer sans problèmes.  Si vous trouvez une quelconque erreur ou
+      expérimentez des problèmes, ou que vous avez des suggestions pour
+      améliorer ce document, s'il vous plaît écrivez-moi.</para>
+  </sect1>
+
+  <sect1>
+    <title>Questions</title>
+
+    <qandaset>
+      <qandaentry>
+	<question>
+	  <para>Pourquoi utilisez-vous &man.natd.8; et &man.ipfw.8;
+	    alors que vous pourriez utiliser les filtres intégrés à
+	    &man.ppp.8;?
+	  </para>
+	</question>
+	
+	<answer>
+	  <para>Je serais honnête et dirais qu'il n'y a aucune raison
+	    définitive pour que j'utilise <command>ipfw</command> et
+	    <command>natd</command> plutôt que les filtres intégrés à
+	    <command>ppp</command>.  D'après les discussions que j'ai eu
+	    avec de nombreuses personnes le consensus semble être 
+	    qu'<command>ipfw</command> est certainement plus
+	    puissant et configurable que les filtres
+	    <command>ppp</command>, mais ce qu'il apporte dans la
+	    fonctionnalité il le perd en facilité d'utilisation.  Une 
+	    des raisons de mon utilisation est que je préfère que le
+	    filtrage de paquets soit fait au niveau du noyau plutôt que
+	    par un programme utilisateur.</para>
+	</answer>
+      </qandaentry>
+
+      <qandaentry>
+        <question>
+	  <para>J'obtiens des messages du type <errorname>limit 100
+	    reached on entry 2800</errorname> et après cela je ne vois
+	    plus jamais de refus dans mes traces.  Mon coupe-feu
+	    fonctionne-t-il toujours?
+	  </para>
+        </question>
+
+	<answer>
+	  <para>Cela signifie simplement que le nombre maximal de 
+	    traces pour la règle a été atteint.  La règle fonctionne 
+	    toujours, mais elle n'enregistrera plus de trace jusqu'au 
+	    moment ou vous réinitialiserez les compteurs de traces.  
+	    Vous pouvez réinitialiser les compteurs de traces avec la 
+	    commande <command>ipfw resetlog</command>.  Alternativement, 
+	    vous pouvez augmenter la limite de trace dans la 
+	    configuration de votre noyau avec l'option
+	    <option>IPFIREWALL_VERBOSE_LIMIT</option> comme décrit
+	    précédemment.  Vous pouvez également changer cette limite 
+	    (sans recompiler votre noyau ou avoir à redémarrer) en 
+	    utilisant la valeur &man.sysctl.8;
+	    net.inet.ip.fw.verbose_limit.</para>
+        </answer>
+      </qandaentry>
+
+      <qandaentry>
+	<question>
+	  <para>Si j'utilise des adresses privées en interne, comme 
+	    dans la plage 192.168.0.0, pourrais-je ajouter une commande 
+	    comme <literal>$fwcmd add deny all from any to
+	    192.168.0.0:255.255.0.0 via tun0</literal> aux règles du
+	    coupe-feu pour prévenir les tentatives externes de
+	    connexions vers les machines internes?</para>
+	</question>
+
+	<answer>
+	  <para>Une réponse simple est non.  La raison de cela est que
+            <command>natd</command> effectue la traduction d'adresse
+	    pour <emphasis>tout</emphasis> ce qui sera détourné à
+	    travers le périphérique <devicename>tun0</devicename>.  En
+	    ce qui concerne les paquets entrant, ces derniers ne
+	    parleront qu'à l'adresse IP dynamiquement assignée et
+	    <emphasis>non pas</emphasis> au réseau interne.  Notez que
+	    cependant vous pouvez ajouter une règle comme
+	    <literal>$fwcmd add deny all from 192.168.0.4:255.255.0.0 to
+	    any via tun0</literal> qui limiterait un hôte de votre réseau
+	    interne de sortir via le coupe-feu.</para>
+	</answer>
+      </qandaentry>
+
+      <qandaentry>
+	<question>
+	  <para>Il doit y avoir quelque chose d'erroné.  J'ai suivi vos
+	  instructions à la lettre et maintenant tout est bloqué.</para>
+        </question>
+
+	<answer>
+	  <para>Ce guide suppose que vous utilisez
+            <emphasis>userland-ppp</emphasis> aussi le jeu de règle
+	    donné intervient sur l'interface
+	    <devicename>tun0</devicename>, qui correspond à la première
+	    connexion établie avec &man.ppp.8; (a.k.a.
+	    <emphasis>user-ppp</emphasis>).  Les connexions
+	    supplémentaires utiliseront <devicename>tun1</devicename>,
+	    <devicename>tun2</devicename> et ainsi de suite.</para>
+	  
+	  <para>Vous devriez également noter que &man.pppd.8; utilise 
+	    à la place l'interface <devicename>ppp0</devicename>, donc
+	    si vous établissez une connexion avec &man.pppd.8; vous
+	    devez remplacer <devicename>tun0</devicename> par
+	    <devicename>ppp0</devicename>.  Une façon rapide d'éditer
+	    les règles du coupe-feu pour refléter ce changement est
+	    présentée ci-dessous.  Le jeu de règles original est
+	    sauvegardé sous <filename>fwrules_tun0</filename>.</para>
+
+	  <screen>	    &prompt.user; <userinput>cd /etc/firewall</userinput>
+	    /etc/firewall&prompt.user; <userinput>su</userinput>
+	    <prompt>Password:</prompt>
+	    /etc/firewall&prompt.root; <userinput>mv fwrules fwrules_tun0</userinput>
+	    /etc/firewall&prompt.root; <userinput>cat fwrules_tun0 | sed s/tun0/ppp0/g > fwrules</userinput>
+	  </screen>
+
+	  <para>Pour savoir si vous utilisez actuellement &man.ppp.8; ou
+	    &man.pppd.8; vous pouvez examiner la sortie
+	    d'&man.ifconfig.8; une fois que la connexion est établie.
+	    E.g., pour une connexion faite par &man.pppd.8; vous verriez
+	    quelque chose comme ceci (on ne montre que les lignes
+	    importantes):</para>
+
+	  <screen>	    &prompt.user; <userinput>ifconfig</userinput>
+	    <emphasis>(skipped...)</emphasis>
+	    ppp0: flags=<replaceable>8051&lt;UP,POINTOPOINT,RUNNING,MULTICAST&gt; mtu 1524</replaceable>
+                    inet <replaceable>xxx.xxx.xxx.xxx</replaceable> --&gt; <replaceable>xxx.xxx.xxx.xxx</replaceable> netmask <replaceable>0xff000000</replaceable>
+	    <emphasis>(skipped...)</emphasis>
+	    </screen>
+
+	  <para>D'autre part, pour une connexion faite avec &man.ppp.8;
+	  (<emphasis>user-ppp</emphasis>) vous devriez voir quelque
+	  chose de similaire à:</para>
+	  
+	  <screen>	    &prompt.user; <userinput>ifconfig</userinput>
+	    <emphasis>(skipped...)</emphasis>
+	    ppp0: flags=<replaceable>8010&lt;POINTOPOINT,MULTICAST&gt; mtu 1500</replaceable>
+	    <emphasis>(skipped...)</emphasis>
+	    tun0: flags=<replaceable>8051&lt;UP,POINTOPOINT,RUNNING,MULTICAST&gt; mtu 1524</replaceable>
+	            <emphasis>(IPv6 stuff skipped...)</emphasis>
+                    inet <replaceable>xxx.xxx.xxx.xxx</replaceable> --&gt; <replaceable>xxx.xxx.xxx.xxx</replaceable> netmask <replaceable>0xffffff00</replaceable>
+                    Opened by PID <replaceable>xxxxx</replaceable>
+            <emphasis>(skipped...)</emphasis></screen>
+	</answer>
+      </qandaentry>
+    </qandaset>
+  </sect1>
+</article>
