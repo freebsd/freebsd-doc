@@ -12,7 +12,6 @@ MAN1 =	a2p.1\
 	bdes.1\
 	biff.1\
 	brandelf.1\
-	btreeop.1\
 	builtin.1\
 	c89.1\
 	calendar.1\
@@ -94,13 +93,11 @@ MAN1 =	a2p.1\
 	gasp.1\
 	gcc.1\
 	gcore.1\
-	gctags.1\
 	gdb.1\
 	gdbserver.1\
 	gencat.1\
 	getNAME.1\
 	getopt.1\
-	global.1\
 	gperf.1\
 	gprof.1\
 	grep.1\
@@ -112,7 +109,6 @@ MAN1 =	a2p.1\
 	grops.1\
 	grotty.1\
 	groups.1\
-	gtags.1\
 	gzexe.1\
 	gzip.1\
 	h2ph.1\
@@ -120,7 +116,6 @@ MAN1 =	a2p.1\
 	hexdump.1\
 	host.1\
 	hostname.1\
-	htags.1\
 	id.1\
 	ident.1\
 	indent.1\
@@ -453,5 +448,6 @@ MLINKS+=ln.1 link.1
 MLINKS+=rm.1 unlink.1
 MLINKS+=opiekey.1 otp-md4.1
 MLINKS+=opiekey.1 otp-md5.1
+MLINKS+=ee.1 edit.1
 
 .include "bsd.prog.mk"
