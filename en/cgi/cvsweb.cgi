@@ -642,7 +642,7 @@ sub dolog {
 	    if (/^1\.1\.1\.\d+$/) {
 		print " <i>(vendor branch)</i>";
 	    }
-	    print " <i>" . &ctime($date{$_}) . "</i> by ";
+	    print " <i>" . &ctime($date{$_}) . " UTC</i> by ";
 	    print "<i>" . $author{$_} . "</i>\n";
 	    if ($revsym{$_}) {
 		print "<BR>CVS Tags: <b>$revsym{$_}</b>";
