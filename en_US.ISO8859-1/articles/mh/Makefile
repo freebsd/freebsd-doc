@@ -1,5 +1,5 @@
-DOC=		mh
-SRCS=		mh.sgml
+DOCS=	mh.docb
+INDEXLINK=	mh.html
 
-.include <bsd.sgml.mk>
+.include "../../web.mk"
 
