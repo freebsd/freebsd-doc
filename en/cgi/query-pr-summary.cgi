@@ -1,10 +1,8 @@
 #!/usr/bin/perl
-# $Id: query-pr-summary.cgi,v 1.7 1996-12-17 04:03:41 peter Exp $
+# $Id: query-pr-summary.cgi,v 1.8 1996-12-17 04:07:33 peter Exp $
 
 $self_ref = $ENV{'SCRIPT_NAME'};
 ($query_pr_ref = $ENV{'SCRIPT_NAME'}) =~ s/-summary//;
-$query_args   = '--restricted ';
-$state_args   = '--restricted ';
 
 $avail_file   = '/home/ncvs/CVSROOT/avail';
 $ENV{'PATH'}  = "/bin:/usr/bin:/usr/sbin:/sbin:/usr/local/bin";
@@ -24,15 +22,21 @@ if ($ENV{'QUERY_STRING'} eq 'query') {
 }
 
 if ($html_mode) {
-    &ReadParse(*input) if $html_mode;
+	$query_args   = '--restricted ';
+	&ReadParse(*input) if $html_mode;
 
 } else {
-	&Getopts('qRr:s:');
+	&Getopts('CcqRr:s:');
 
 	$input{"responsible"} = "summary" if $opt_R;
 	$input{"responsible"} = $opt_r if $opt_r;
 	$input{"state"}	      = $opt_s if $opt_s;
 	$input{"quiet"}	      = $opt_q if $opt_q;
+	if ($opt_C) {
+		$query_args   = '--confidential=yes ';
+	} elsif (!$opt_c) {
+		$query_args   = '--restricted ';
+	}
 }
 
 #------------------------------------------------------------------------
