@@ -143,7 +143,10 @@ PNMTOPSOPTS?=	-noturn ${PNMTOPSFLAGS}
 EPSTOPDF?=	${PREFIX}/bin/epstopdf
 EPSTOPDFOPTS?=	${EPSTOPDFFLAGS}
 PS2EPS?=	${PREFIX}/bin/ps2epsi
-PIC2PS?=	${GROFF} -p -S -Wall -mtty-char -man 
+#
+# ps2epsi in ghostscript built with A4=yes fails to convert
+# grops outputs without -p option.
+PIC2PS?=	${GROFF} -P -p -P a4 -p -S -Wall -mtty-char -man 
 REALPATH?=	/bin/realpath
 
 # Use suffix rules to convert .scr files to other formats
