@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: www/fr/copyright/Makefile,v 1.1 2003/01/26 15:08:08 stephane Exp $
 
 # The FreeBSD French Documentation Project
 # Original revision: 1.12
@@ -24,8 +24,7 @@ CVS_OPT+=	-R
 .endif
 
 
-## ## DATA+= COPYING COPYING.LIB ${LEGAL}
-DATA+= ${LEGAL}
+DATA+= COPYING COPYING.LIB ${LEGAL}
 
 # FreeBSD Ports redistribution restrictions
 LEGAL= LEGAL
