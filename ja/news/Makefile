@@ -1,6 +1,6 @@
-# $FreeBSD: www/ja/news/Makefile,v 1.20 2000/08/02 08:04:44 kuriyama Exp $
+# $FreeBSD: www/ja/news/Makefile,v 1.21 2000/10/02 09:16:10 kuriyama Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.20
+# Original revision: 1.22
 
 LOCALTOP= ..
 
@@ -31,6 +31,7 @@ DOCS+= press-rel-1.sgml
 DOCS+= press-rel-2.sgml
 DOCS+= press-rel-3.sgml
 DOCS+= press-rel-4.sgml
+#DOCS+= press-rel-5.sgml
 
 # The yearly State of the Union address
 #DOCS+=	sou1999.sgml
