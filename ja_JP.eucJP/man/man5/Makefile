@@ -101,7 +101,7 @@ MAN5 =	a.out.5\
 
 MLINKS+=utmp.5 lastlog.5 utmp.5 wtmp.5
 MLINKS+=hosts.equiv.5 rhosts.5
-MLINKS+=uuencode.format.5 uudecode.5
+MLINKS+=uuencode.format.5 uuencode.5
 MLINKS+=resolver.5 resolv.conf.5
 MLINKS+=fs.5 inode.5
 MLINKS+=dir.5 dirent.5
