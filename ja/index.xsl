@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
 
-<!-- $FreeBSD: www/ja/index.xsl,v 1.8 2002/01/04 04:59:20 kuriyama Exp $ -->
+<!-- $FreeBSD: www/ja/index.xsl,v 1.9 2002/01/14 13:38:53 kuriyama Exp $ -->
 <!-- Original revision: 1.19 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -9,7 +9,8 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/ja/index.xsl,v 1.8 2002/01/04 04:59:20 kuriyama Exp $'"/>
+  <xsl:variable name="enbase" select="'../..'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/ja/index.xsl,v 1.9 2002/01/14 13:38:53 kuriyama Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <xsl:output type="html" encoding="EUC-JP"
@@ -153,7 +154,7 @@
 	    
 			  <p><font size="+1" color="#990000"><b>ソフトウェア</b></font>
 			    <small><br/>
-			      ・<a href="{$base}/handbook/mirrors.html">FreeBSD を手に入れる</a><br/>
+			      ・<a href="{$enbase}/doc/ja_JP.eucJP/books/handbook/mirrors.html">FreeBSD を手に入れる</a><br/>
 			      ・<a href="releases/index.html">リリース情報</a><br/>
 			      ・<a href="{$base}/ports/index.html">Ports Collection</a><br/>
 			    </small></p>
@@ -230,8 +231,7 @@
 		アーキテクチャ用の先進的なオペレーティングシステムです.
 		カリフォルニア大学バークレイ校で開発された UNIX
 		である BSD UNIX に由来し, 
-		<!-- XXX: kuriyama: point to doc/ja_JP.eucJP/articls/contributors/index.html -->
-		<a href="{$base}/handbook/staff.html">多くの人たち</a> によって
+		<a href="{$enbase}/doc/ja_JP.eucJP/articles/contributors/index.html">多くの人たち</a> によって
 		によって保守・開発されています.
 		その他の<a href="{$base}/platforms/index.html">プラットフォーム
 		</a> は現在開発中です.</p>
@@ -288,7 +288,7 @@
 		は <a href="{$base}/copyright/index.html">無料</a> で入手でき,
 		すべてのソースコードが付属しています.
 		試してみようかな, という方は
-		<a href="{$base}/handbook/mirrors.html">
+		<a href="{$enbase}/doc/ja_JP.eucJP/books/handbook/mirrors.html">
 		  より詳しい情報</a> を
 		ご覧ください.</p>
 
