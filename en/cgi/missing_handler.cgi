@@ -52,11 +52,11 @@
 #
 #     _________________________________________________________________
 #                                      
-# $FreeBSD: www/en/cgi/missing_handler.cgi,v 1.10 2001/01/01 19:46:55 wosch Exp $
+# $FreeBSD: www/en/cgi/missing_handler.cgi,v 1.11 2002/04/17 05:03:38 kuriyama Exp $
 # ----------------------------------------------------------------------
 
-sub escape($) { s/&/&amp;/g; s/</&lt;/g; s/>/&gt;/g; $_; }
-sub escape2($) { s/</&lt;/g; s/>/&gt;/g; $_; }
+sub escape($) { $_ = $_[0]; s/&/&amp;/g; s/</&lt;/g; s/>/&gt;/g; $_; }
+sub escape2($) { $_ = $_[0]; s/</&lt;/g; s/>/&gt;/g; $_; }
 
 # output title
 $title = $ENV{'MISSING_HANDLER_TITLE'} || 
