@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/gifs/Makefile,v 1.45 2003/04/06 20:57:08 ceri Exp $
+# $FreeBSD: www/en/gifs/Makefile,v 1.46 2003/06/24 13:27:54 phantom Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -62,5 +62,9 @@ DATA+=  not_planned.png not_started.png project_goal.png project_plan.png
 DATA+=  resources_and_links.png status_board.png blocked.png c99.jpg
 DATA+=  fbsdcng-english.png fbsdcng-japanese.png
 DATA+=  abs_bsd_cov.gif fbsd-ososfypc.jpg
+DATA+=  1.pnm 2.pnm 3.pnm 4.pnm 5.pnm 6.pnm 7.pnm 8.pnm 9.pnm
+DATA+=  A.pnm B.pnm C.pnm D.pnm E.pnm F.pnm G.pnm H.pnm I.pnm J.pnm
+DATA+=  K.pnm L.pnm M.pnm N.pnm P.pnm Q.pnm R.pnm S.pnm T.pnm U.pnm
+DATA+=  V.pnm W.pnm X.pnm Y.pnm Z.pnm
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
