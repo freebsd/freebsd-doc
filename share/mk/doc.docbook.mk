@@ -257,11 +257,6 @@ TAR?=		/usr/bin/tar
 TOUCH?=		/usr/bin/touch
 XARGS?=		/usr/bin/xargs
 
-TEX_CMD?=	${PREFIX}/bin/tex
-LATEX_CMD?=	${PREFIX}/bin/latex
-PDFTEX_CMD?=	${PREFIX}/bin/pdftex
-JADETEX_CMD?=	${TEX_CMD} "&jadetex"
-PDFJADETEX_CMD?=${PDFTEX_CMD} "&pdfjadetex"
 GROFF?=		groff
 TIDYOPTS?=	-wrap 90 -m -raw -preserve -f /dev/null -asxml ${TIDYFLAGS}
 HTML2TXT?=	${PREFIX}/bin/links
