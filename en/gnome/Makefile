@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/gnome/Makefile,v 1.8 2002/01/28 17:05:24 sobomax Exp $
+# $FreeBSD: www/en/gnome/Makefile,v 1.9 2002/02/11 16:54:52 sobomax Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -18,12 +18,9 @@ DATA=	index.html newsflash.html
 
 CLEANFILES=	index.html
 CLEANFILES+=	newsflash.html
-CLEANFILES+=	gnotices.rdf
 
-GNOTICES_RDF_URL=	http://news.gnome.org/gnome-news/rdf
-
-index.html: index.xsl news.xml includes.xsl ../includes.xsl gnotices.rdf
-	${XSLTPROC} ${XSLTPROCOPTS} -o index.html \
+index.html! index.xsl news.xml includes.xsl ../includes.xsl
+	${XSLTPROC} ${XSLTPROCOPTS:N-nonet} -o index.html \
 		${.CURDIR}/index.xsl ${.CURDIR}/news.xml
 .if !defined(NO_TIDY)
 	-${TIDY} ${TIDYOPTS} index.html
@@ -35,9 +32,5 @@ newsflash.html: newsflash.xsl news.xml includes.xsl ../includes.xsl
 .if !defined(NO_TIDY)
 	-${TIDY} ${TIDYOPTS} ${.TARGET}
 .endif
-
-gnotices.rdf::
-	/usr/bin/fetch -qo - ${GNOTICES_RDF_URL} | ${SED} 's|rdf:RDF|rdf| ; \
-		s|xmlns.*[^>]||' > ${.TARGET}
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
