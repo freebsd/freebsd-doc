@@ -4,7 +4,7 @@
      The FreeBSD Russian Documentation Project
 
      $FreeBSD$
-     $FreeBSDru: frdp/www/ru/index.xsl,v 1.37 2004/06/25 07:28:25 den Exp $
+     $FreeBSDru: frdp/www/ru/index.xsl,v 1.38 2004/10/22 12:33:49 den Exp $
 
      Original revision: 1.103
 -->
@@ -311,7 +311,7 @@
 				<xsl:with-param name="news.press.xml" select="$news.press.xml" />
 			      </xsl:call-template>
 
-			      <a href="news/press.html">Далее...</a>
+			      <a href="{$base}/news/press.html">Далее...</a>
                             </font>
                           </p>
 
