@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/index.xsl,v 1.59 2003/06/09 13:18:29 bmah Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.60 2003/06/09 17:05:25 bmah Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   
@@ -6,8 +6,9 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.59 2003/06/09 13:18:29 bmah Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.60 2003/06/09 17:05:25 bmah Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
+  <xsl:variable name="unix" select="'UNIX&#x2122;'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
               doctype-public="-//W3C//DTD HTML 4.01 Transitional//EN"/>
@@ -290,7 +291,8 @@
 	
 	      <p>FreeBSD is an advanced operating system for
 		x86 compatible, DEC Alpha, IA-64, PC-98 and UltraSPARC architectures.
-		It is derived from BSD UNIX, the version of UNIX developed at 
+		It is derived from BSD UNIX, the version of <xsl:value-of select="$unix"/>
+	        developed at 
 		the University of California, Berkeley.
 		It is developed and maintained by 
 		<a
@@ -322,7 +324,8 @@
 	    
 	      <p>The quality of FreeBSD combined with today's low-cost,
 		high-speed PC hardware makes FreeBSD a very economical
-		alternative to commercial UNIX workstations.  It is well-suited
+		alternative to commercial  <xsl:value-of select="$unix"/>
+	        workstations.  It is well-suited
 		for a great number of both desktop and server 
 		<a href="{$base}/applications.html">applications</a>.</p>
 	    
@@ -555,7 +558,7 @@
 		<xsl:value-of select="$date"/></small></td>
 
 	    <td align="right" 
-		valign="top"><small><a href="copyright/index.html">Copyright</a> (c) 1995-2003
+		valign="top"><small><a href="copyright/index.html">Copyright</a> &#169; 1995-2003
 		The FreeBSD Project.<br/>
 		All rights reserved.</small></td>
 	  </tr>
