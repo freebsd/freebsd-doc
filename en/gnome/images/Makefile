@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/gnome/images/Makefile,v 1.33 2005/02/21 02:21:40 marcus Exp $
+# $FreeBSD: www/en/gnome/images/Makefile,v 1.34 2005/03/08 19:34:09 adamw Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -35,6 +35,8 @@ DATA+=	ss29-1.png
 DATA+=	ss29-1-tn.png
 DATA+=	ss210-1.png
 DATA+=	ss210-1-tn.png
+DATA+=	ss210-2.png
+DATA+=	ss210-2-tn.png
 DATA+=	gnome.png
 
 # FreeBSD GNOME Vanity Project
