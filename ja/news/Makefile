@@ -1,6 +1,6 @@
-# $FreeBSD: www/ja/news/Makefile,v 1.27 2001/08/08 03:55:55 kuriyama Exp $
+# $FreeBSD: www/ja/news/Makefile,v 1.28 2001/09/03 06:03:31 kuriyama Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.23
+# Original revision: 1.29
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -35,6 +35,7 @@ SUBDIR+= 	1997
 
 DATA=		newsflash.html press.html
 #+= news.rdf
+CLEANFILES+=	newsflash.html press.html
 
 newsflash.html: newsflash.xsl news.xml includes.xsl ../includes.xsl
 	xsltproc -nonet -o newsflash.html newsflash.xsl news.xml
