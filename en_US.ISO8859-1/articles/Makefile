@@ -18,6 +18,7 @@ SUBDIR+= freebsd-questions
 SUBDIR+= hubs
 SUBDIR+= ipsec-must
 SUBDIR+= laptop
+SUBDIR+= java-tomcat
 SUBDIR+= mh
 SUBDIR+= multi-os
 SUBDIR+= new-users
