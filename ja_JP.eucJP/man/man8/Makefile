@@ -101,6 +101,7 @@ MAN8 =	IPXrouted.8\
 	jail.8\
 	jexec.8\
 	jls.8\
+	kerberos.8\
 	kernbb.8\
 	keyserv.8\
 	kgmon.8\
