@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: query-pr-summary.cgi,v 1.14 1998-04-12 18:54:36 phk Exp $
+# $Id: query-pr-summary.cgi,v 1.15 1998-05-23 09:05:39 phk Exp $
 
 $html_mode     = 1 if $ENV{'DOCUMENT_ROOT'};
 $self_ref      = $ENV{'SCRIPT_NAME'};
@@ -352,10 +352,15 @@ sub read_gnats {
 
 	} elsif (/>Last-Modified:/) {
 	    $lastmod = &getline($_);
-	    $lastmod =~ s/(\d\d:\d\d:\d\d)\D+(\d{4})$/\1 \2/;
-	    ($dow,$mon,$day,$time,$year,$xtra) = split(/[ \t]+/, $lastmod);
-	    $day = "0$day" if $day =~ /^[0-9]$/;
-	    $lastmod = "$year$mons{$mon}$day";
+	    if ($lastmod =~ /^[ 	]*$/) {	
+		$lastmod = $date;
+	    } else {
+	        # strip timezone if any (between HH:MM:SS and YYYY at end of line):
+		$lastmod =~ s/(\d\d:\d\d:\d\d)\D+(\d{4})$/\1 \2/;
+		($dow,$mon,$day,$time,$year,$xtra) = split(/[ \t]+/, $lastmod);
+		$day = "0$day" if $day =~ /^[0-9]$/;
+	        $lastmod = "$year/$mons{$mon}/$day";
+	    }
 
 	} elsif (/>Category:/) {
 	    $cat = &getline($_);
