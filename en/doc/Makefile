@@ -1,5 +1,5 @@
 #
-# $FreeBSD: www/en/doc/Makefile,v 1.3 2001/04/23 07:26:29 nik Exp $i
+# $FreeBSD: www/en/doc/Makefile,v 1.4 2001/04/25 18:43:49 wosch Exp $i
 #
 # Build the FreeBSD documentation *outside* of the www tree, and install it
 # in to the right place as necessary.
@@ -21,3 +21,5 @@ install clean:
 
 obj:
 	cd ${.CURDIR}/../../../doc/en_US.ISO_8859-1 && ${MAKE} ${.TARGET}
+
+.include "${.CURDIR}/../../share/mk/web.site.mk"
