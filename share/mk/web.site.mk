@@ -1,5 +1,5 @@
 # bsd.web.mk
-# $Id: web.site.mk,v 1.20 1999-04-27 18:31:42 nik Exp $
+# $Id: web.site.mk,v 1.21 1999-08-19 20:40:26 nik Exp $
 
 #
 # Build and install a web site.
@@ -155,17 +155,6 @@ realinstall: ${COOKIE} ${GENDOCS} ${DATA} ${LOCAL} ${CGI} _PROGSUBDIR
 .if defined(DOCSUBDIR) && !empty(DOCSUBDIR)
 	for entry in ${DOCSUBDIR}; do \
 		mkdir -p ${DOCINSTALLDIR}/$$entry; \
-	done
-.endif
-
-realinstall2:
-.if defined(DOCSUBDIR) && !empty(DOCSUBDIR)
-	for entry in ${DOCSUBDIR}; do \
-		if [ $$entry != "handbook" ]; then \
-			(cd ${DOCINSTALLDIR}/$$entry; \
-			if test -f $$entry.html; then tar czf $$entry-html.tar.gz *.html; fi; \
-			if test -f $$entry.html; then ln -fs $${entry}.html index.html;fi ) \
-		fi; \
 	done
 .endif
 
