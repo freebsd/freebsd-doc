@@ -1,5 +1,6 @@
 # 
-# $FreeBSD: doc/ru_RU.KOI8-R/books/faq/Makefile,v 1.4 1999/10/13 00:21:10 phantom Exp $
+# $FreeBSD$
+# $FreeBSDru: frdp/doc/ru_RU.KOI8-R/books/faq/Makefile,v 1.3 2000/10/17 16:55:05 phantom Exp $
 #
 # Build the Russian FreeBSD FAQ
 #
@@ -21,7 +22,10 @@ NO_TIDY=	YES
 #
 
 # SGML content
-SRCS=  book.sgml 
+SRCS =	book.sgml 
+
+# entities
+SRCS+=	../../../en_US.ISO_8859-1/books/handbook/authors.ent
 
 DOC_PREFIX?= ${.CURDIR}/../../..
 
