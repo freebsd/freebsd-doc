@@ -6,7 +6,7 @@
 # by John Fieber
 # February 26, 1998
 #
-# $Id: getmsg.cgi,v 1.20 1998-12-28 01:38:30 wosch Exp $
+# $Id: getmsg.cgi,v 1.21 1999-01-29 17:25:13 wosch Exp $
 #
 
 require "./cgi-lib.pl";
@@ -18,7 +18,7 @@ use POSIX qw(strftime);
 #
 $messagepath = "/usr/local/www/db/text/";
 $messagepathcurrent = "/usr/local/www/mid/archive/";
-$ftparchive = 'ftp://ftp.freebsd.org/pub/FreeBSD/mailing-lists/archive';
+$ftparchive = 'ftp://ftp.freebsd.org/pub/FreeBSD/doc/mailing-lists/archive';
 
 &ReadParse(*formdata);
 &Fetch($formdata{'fetch'});
