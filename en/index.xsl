@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/index.xsl,v 1.45 2003/01/16 22:14:41 kuriyama Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.46 2003/01/19 16:11:24 bmah Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   
@@ -6,7 +6,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.45 2003/01/16 22:14:41 kuriyama Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.46 2003/01/19 16:11:24 bmah Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -290,7 +290,7 @@
 	      <h2><font color="#990000">What is FreeBSD?</font></h2>
 	
 	      <p>FreeBSD is an advanced operating system for
-		x86 compatible, DEC Alpha, and PC-98 architectures.
+		x86 compatible, DEC Alpha, IA-64, PC-98 and UltraSPARC architectures.
 		It is derived from BSD UNIX, the version of UNIX developed at 
 		the University of California, Berkeley.
 		It is developed and maintained by 
