@@ -1,5 +1,5 @@
 # bsd.web.mk
-# $FreeBSD: www/share/mk/web.site.mk,v 1.34 2000/10/04 09:39:46 kuriyama Exp $
+# $FreeBSD: www/share/mk/web.site.mk,v 1.35 2000/11/07 11:39:40 kuriyama Exp $
 
 #
 # Build and install a web site.
@@ -54,26 +54,13 @@ PORTSBASE?=	/usr
 # Transformation rules
 
 ###
-# file.sgml --> file.revinc
-#
-# Generate temporary file for translation revision checking
-.SUFFIXES:	.sgml .revinc
-GENDOCS+=	${REVFILES}
-.sgml.revinc:
-	if [ -f ${BUILDTOP}/en/${DIR_IN_LOCAL}/${.IMPSRC} ]; then \
-	  ${BUILDTOP}/ja/revcheck ${BUILDTOP} ${DIR_IN_LOCAL} ${.IMPSRC} > ${.TARGET}; \
-	else \
-	  touch ${.TARGET}; \
-	fi
-
-###
 # file.sgml --> file.html
 #
 # Runs file.sgml through spam to validate and expand some entity
 # references are expanded.  file.html is added to the list of
 # things to install.
 
-.SUFFIXES:	.html
+.SUFFIXES:	.sgml .html
 .if defined(REVCHECK)
 PREHTML=	${WEB_PREFIX}/ja/prehtml
 PREHTMLFLAGS=	${PREHTMLOPTS}
