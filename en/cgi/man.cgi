@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp 
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.38 2001-03-11 11:06:23 wosch Exp $
+# $Id: man.cgi,v 1.39 2001-03-22 20:21:01 wosch Exp $
 
 #use Data::Dumper;
 #use Carp;
@@ -844,7 +844,7 @@ ETX
 }
 
 sub copyright {
-    $id = '$Id: man.cgi,v 1.38 2001-03-11 11:06:23 wosch Exp $';
+    $id = '$Id: man.cgi,v 1.39 2001-03-22 20:21:01 wosch Exp $';
 
     return qq{\
 <PRE>
@@ -908,9 +908,6 @@ which run on this server (FreeBSD-4.2)
 macros like `appeared in NetBSD version 1.2' are not supported.
 <li>Netscape is buggy, you may press twice the link 'Index Page and Help'
 <li>BSDI man pages are located at <a href="http://www.bsdi.com/bsdi-man/">http://www.bsdi.com/bsdi-man/</a>
-<li>Other man pages, from <a href="http://www.yahoo.com/">
-http://www.yahoo.com</a>
-at <a href="http://www.yahoo.com/Computers_and_Internet/Information_and_Documentation/Man_Pages/">Computers_and_Internet/Information_and_Documentation/Man_Pages/</a>
 <li>Some OSs provide only formated manual pages (catpages), e.g. NetBSD
 and OpenBSD. In this case it is not possible to create Postscript
 and troff output.
