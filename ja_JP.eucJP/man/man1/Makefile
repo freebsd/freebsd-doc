@@ -99,6 +99,7 @@ MAN1 =	addftinfo.1\
 	gasp.1\
 	gcc.1\
 	gcore.1\
+	gcov.1\
 	gdb.1\
 	gencat.1\
 	getNAME.1\
