@@ -1,6 +1,6 @@
-# $FreeBSD: www/ja/ports/Makefile,v 1.20 2000/11/07 08:01:02 kuriyama Exp $
+# $FreeBSD: www/ja/ports/Makefile,v 1.21 2000/11/07 11:37:57 kuriyama Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.30
+# Original revision: 1.31
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -29,16 +29,9 @@ CVS_OPT+=	-d ${PORTSCVSROOT}
 .if defined(NOPORTSCVS)
 ${INDEX}: $${PORTSBASE}/${PINDEX}
 	cp ${PORTSBASE}/${PINDEX} ${INDEX}
-
-${Y2K}: $${PORTSBASE}/${PY2K}
-	cp ${PORTSBASE}/${PY2K} ${Y2K}
-
 .else
 ${INDEX}: ${cvsindex}
 	cvs ${CVS_OPT} co -p ${PINDEX} > ${INDEX}
-
-${Y2K}: ${cvsy2k}
-	cvs ${CVS_OPT} co -p ${PY2K} > ${Y2K}
 .endif
 
 # build the list of available packages only on the 
@@ -48,7 +41,7 @@ hostname!= hostname
 .if defined(NOPORTSCVS)
 packages.exists:
 .else
-packages.exists: ${cvsindex} ${cvsy2k}
+packages.exists: ${cvsindex}
 .endif
 .if ${hostname} == "hub.freebsd.org" || ${hostname} == "freefall.freebsd.org"
 .if  exists(${.CURDIR}/../../en/ports/packages.exists)
@@ -67,9 +60,9 @@ packages.exists: ${cvsindex} ${cvsy2k}
 Makefile.gen: index.sgml .NOTMAIN
 	echo DOCS= *.sgml > Makefile.gen
 
-index.sgml: ${INDEX} ${Y2K} categories packages.exists portindex ports.inc .NOTMAIN
+index.sgml: ${INDEX} categories packages.exists portindex ports.inc .NOTMAIN
 	rm -f *.sgml
-	${PORTINDEX} ${INDEX} ${Y2K} ${.CURDIR}
+	${PORTINDEX} ${INDEX} ${.CURDIR}
 
 install: all
 
