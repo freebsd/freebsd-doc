@@ -452,7 +452,7 @@
 			  field-width: %footnote-field-width%
 			  (literal (footnote-number (current-node))
 				   (gentext-label-title-sep (normalize "footnote"))))
-			(literal (attribute-string (normalize "url"))))))
+			(literal (fix-url (attribute-string (normalize "url")))))))
 		      ($ss-seq$ + (literal (footnote-number (current-node)))))
 	            (if (and %show-ulinks% 
 		             (not (equal? (fix-url (attribute-string (normalize "url")))
