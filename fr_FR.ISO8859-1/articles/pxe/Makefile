@@ -3,10 +3,9 @@
 #    The FreeBSD French Documentation Project
 #
 #    $FreeBSD$
-#    Original revision: 1.1
+#    Original revision: 1.5
+#    Article: FreeBSD PXE Jumpstart Guide
 #
-
-
 DOC?= article
 
 FORMATS?= html
@@ -14,7 +13,20 @@ FORMATS?= html
 INSTALL_COMPRESSED?=gz
 INSTALL_ONLY_COMPRESSED?=
 
-SRCS= article.sgml
+EXTRAS=		dhcpd.conf
+EXTRAS+=	install.cfg
+EXTRAS+=	loader.rc
+EXTRAS+=	pkgmaker.sh
+EXTRAS+=	post
+EXTRAS+=	pre
+
+SRCS=   article.sgml
+
+afterinstall:
+.for entry in ${EXTRAS}
+	${INSTALL_DOCS} ${.CURDIR}/${entry} ${DESTDIR}
+.endfor
+
 
 DOC_PREFIX?= ${.CURDIR}/../../..
 
