@@ -1,5 +1,5 @@
-#!/usr/bin/perl
-# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.22 2000/12/05 16:22:14 knu Exp $
+#!/usr/bin/perl -T
+# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.23 2000/12/06 07:16:59 ps Exp $
 
 $ENV{'PATH'} = "/bin:/usr/bin:/usr/sbin:/sbin:/usr/local/bin";
 
@@ -8,8 +8,8 @@ $ENV{'PATH'} = "/bin:/usr/bin:/usr/sbin:/sbin:/usr/local/bin";
 	 'Jul', '07',  'Aug', '08',  'Sep', '09',
 	 'Oct', '10',  'Nov', '11',  'Dec', '12');
 
-require "cgi-lib.pl";
-require "cgi-style.pl";
+require "./cgi-lib.pl";
+require "./cgi-style.pl";
 require "getopts.pl";
 
 &Getopts('p:');

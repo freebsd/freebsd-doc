@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/perl -T
 #
 # mail-archive.pl  --  a CGI interface to a wais indexed maling list archive.
 #
@@ -15,7 +15,7 @@
 # Disclaimer:
 #   This is pretty ugly in places.
 #
-# $FreeBSD: www/en/cgi/search.cgi,v 1.18 2000/10/28 18:20:39 wosch Exp $
+# $FreeBSD: www/en/cgi/search.cgi,v 1.19 2000/11/05 19:05:43 wosch Exp $
 
 
 $server_root = '/usr/local/www';
@@ -26,8 +26,8 @@ $searchpage = '/search/search.html';
 $myurl = $ENV{'SCRIPT_NAME'};
 
 require "open2.pl";
-require "cgi-lib.pl";
-require "cgi-style.pl";
+require "./cgi-lib.pl";
+require "./cgi-style.pl";
 
 @months = ('Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec');
 

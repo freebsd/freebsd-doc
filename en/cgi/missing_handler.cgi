@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/perl -T
 # Copyright (c) Juli 1997-2000. Wolfram Schneider <wosch@FreeBSD.org>, Berlin.
 # All rights reserved.
 #
@@ -52,7 +52,7 @@
 #
 #     _________________________________________________________________
 #                                      
-# $FreeBSD: www/en/cgi/missing_handler.cgi,v 1.6 2000/01/05 15:47:44 phantom Exp $
+# $FreeBSD: www/en/cgi/missing_handler.cgi,v 1.8 2000/10/03 19:50:16 wosch Exp $
 # ----------------------------------------------------------------------
 
 # output title
@@ -78,7 +78,7 @@ $redirect_url_save =~ s/([^a-zA-Z0-9;\/?:&=])/sprintf("%%%02x",ord($1))/eg;
 
 
 $hsty_base = '';
-require 'cgi-style.pl';
+require './cgi-style.pl';
 print &html_header($title);
 
 # HTML body
