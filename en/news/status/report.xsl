@@ -1,17 +1,26 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/en/news/status/report.xsl,v 1.1 2001/09/16 22:36:46 chris Exp $ -->
+<!-- $FreeBSD: www/en/news/status/report.xsl,v 1.2 2001/09/17 07:40:26 chris Exp $ -->
 
 <!-- Standard header material -->
-<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
+<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
+  xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
 
   <xsl:import href="../../includes.xsl"/>
   <xsl:import href="../includes.xsl"/>
   <xsl:import href="includes.xsl"/>
 
   <xsl:variable name="base" select="'../..'"/>
-  <xsl:variable name="title" select="'FreeBSD Status Reports'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/news/status/report.xsl,v 1.1 2001/09/16 22:36:46 chris Exp $'"/>
+
+  <xsl:variable name="title">
+    <xsl:value-of select="report/date/month"/>
+    <xsl:text> </xsl:text>
+    <xsl:value-of select="report/date/year"/> Status Report
+  </xsl:variable>
+
+  <xsl:variable name="date">
+    <xsl:value-of select="//cvs:keyword[@name='freebsd']"/>
+  </xsl:variable>
 
   <xsl:variable name="ucletters"
     select="ABCDEFGHIJKLMNOPQRSTUVWXYZ"/>
