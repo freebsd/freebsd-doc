@@ -48,6 +48,9 @@
 #	doc.subdir.mk	Subdirectory related configuration, including
 #			handling "obj" builds.
 #
+# 	doc.common.mk	targets and variables commonly used in doc/ and
+#			www/ tree.
+#
 # DOCFORMAT-specific make files, like:
 #
 #	doc.docbook.mk	Building and installing docbook documentation.
@@ -83,6 +86,9 @@ ISPELLOPTS?=	-l -p /usr/share/dict/freebsd ${ISPELLFLAGS}
 # Image processing (contains code used by the doc.<format>.mk files, so must
 # be listed first).
 .include "doc.images.mk"
+
+# targets and variables commonly used in doc/ and www/ tree.
+.include "doc.common.mk"
 
 # Ownership information.
 .include "doc.install.mk"
