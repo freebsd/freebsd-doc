@@ -1,5 +1,5 @@
 # bsd.web.mk
-# $FreeBSD: www/share/mk/web.site.mk,v 1.41 2001/12/12 11:57:44 phantom Exp $
+# $FreeBSD: www/share/mk/web.site.mk,v 1.42 2002/03/13 13:09:45 murray Exp $
 
 #
 # Build and install a web site.
@@ -48,7 +48,7 @@ ISPELLOPTS?=	-l -p ${WEB_PREFIX}/en/share/dict/words ${ISPELLFLAGS}
 XSLTPROC?=	${PREFIX}/bin/xsltproc
 XSLTPROCOPTS?=	-nonet ${XSLTPROCFLAGS}
 TIDY?=		${PREFIX}/bin/tidy
-TIDYOPTS?=	-i -m -raw -preserve -f /dev/null ${TIDYFLAGS}
+TIDYOPTS?=	-i -m -raw -preserve -f /dev/null -asxml ${TIDYFLAGS}
 
 #
 # Install dirs derived from the above.
