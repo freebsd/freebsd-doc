@@ -1,4 +1,4 @@
-# $FreeBSD: www/ja/platforms/Makefile,v 1.5 2003/10/17 22:53:05 rushani Exp $
+# $FreeBSD: www/ja/platforms/Makefile,v 1.6 2003/10/29 20:18:31 hrs Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.7
 
@@ -13,7 +13,7 @@ DOCS=	alpha.sgml
 DOCS+=	amd64.sgml
 DOCS+=	ia64.sgml
 DOCS+=	index.sgml
-#DOCS+=	mips.sgml
+DOCS+=	mips.sgml
 DOCS+=	pc98.sgml
 DOCS+=	ppc.sgml
 DOCS+=	sparc.sgml
