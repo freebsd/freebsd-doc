@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/conspectus/advocacy/2000/11/Makefile,v 1.2 2000/11/16 06:24:56 jim Exp $
+# $FreeBSD: www/en/conspectus/advocacy/2000/11/Makefile,v 1.3 2000/11/27 21:40:24 jim Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -10,5 +10,6 @@
 DOCS=	05.sgml
 DOCS+=	12.sgml
 DOCS+=	19.sgml
+DOCS+=	26.sgml
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
