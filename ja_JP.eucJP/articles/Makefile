@@ -1,5 +1,5 @@
 # $FreeBSD$
-# Original revision: 1.36
+# Original revision: 1.42
 
 SUBDIR =
 #SUBDIR+= 5-roadmap
@@ -22,16 +22,18 @@ SUBDIR+= fonts
 #SUBDIR+= hats
 #SUBDIR+= hubs
 SUBDIR+= ipsec-must
-#SUBDIR+= laptop
 #SUBDIR+= java-tomcat
+#SUBDIR+= laptop
+#SUBDIR+= mailing-list-faq
 #SUBDIR+= mh
 SUBDIR+= multi-os
 #SUBDIR+= new-users
 #SUBDIR+= pam
+#SUBDIR+= portbuild
 #SUBDIR+= pr-guidelines
 SUBDIR+= problem-reports
-#SUBDIR+= programming-tools
 #SUBDIR+= pxe
+#SUBDIR+= relaydelay
 #SUBDIR+= releng
 #SUBDIR+= releng-packages
 #SUBDIR+= serial-uart
