@@ -1,7 +1,10 @@
-# $FreeBSD: www/en/internal/Makefile,v 1.21 2000/03/12 21:44:02 phantom Exp $
+# $FreeBSD: www/en/internal/Makefile,v 1.22 2000/04/20 16:40:11 phantom Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
+.endif
+.if exists(../Makefile.inc)
+.include "../Makefile.inc"
 .endif
 
 DOCS=	photos.sgml	
@@ -30,4 +33,4 @@ CLEANFILES+=	homepage.inc
 
 DATA+=	README.mirror
 
-.include "../web.mk"
+.include "${WEB_PREFIX}/share/mk/web.site.mk"

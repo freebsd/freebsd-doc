@@ -1,7 +1,10 @@
-# $FreeBSD: www/en/news/Makefile,v 1.21 2000/10/03 09:48:09 wosch Exp $
+# $FreeBSD: www/en/news/Makefile,v 1.22 2000/10/21 16:39:25 phantom Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
+.endif
+.if exists(../Makefile.inc)
+.include "../Makefile.inc"
 .endif
 
 DOCS+= press.sgml
@@ -24,4 +27,5 @@ INDEXLINK= news.html
 
 SUBDIR= 	1996
 SUBDIR+= 	1997
-.include "../web.mk"
+
+.include "${WEB_PREFIX}/share/mk/web.site.mk"

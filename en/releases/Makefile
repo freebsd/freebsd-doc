@@ -1,7 +1,10 @@
-# $FreeBSD: www/en/releases/Makefile,v 1.24 2000/07/27 13:07:13 jkh Exp $
+# $FreeBSD: www/en/releases/Makefile,v 1.25 2000/10/02 17:55:04 phantom Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
+.endif
+.if exists(../Makefile.inc)
+.include "../Makefile.inc"
 .endif
 
 DOCS?=	index.sgml snapshots.sgml
@@ -14,4 +17,4 @@ SUBDIR+=	3.3R 3.4R 3.5R 4.0R 4.1R 4.1.1R
 SUBDIR=
 .endif
 
-.include "../web.mk"
+.include "${WEB_PREFIX}/share/mk/web.site.mk"

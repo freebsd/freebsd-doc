@@ -1,7 +1,10 @@
-# $FreeBSD: www/en/search/Makefile,v 1.6 2000/04/20 16:41:32 phantom Exp $
+# $FreeBSD: www/en/search/Makefile,v 1.7 2000/09/30 00:21:39 nbm Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
+.endif
+.if exists(../Makefile.inc)
+.include "../Makefile.inc"
 .endif
 
 DOCS+= index-site.sgml
@@ -20,5 +23,4 @@ atoz.sgml: web.atoz
 site.sgml: site.map
 	${PERL} ${.CURDIR}/site.pl < ${.ALLSRC} > ${.TARGET}
 
-.include "../web.mk"
-
+.include "${WEB_PREFIX}/share/mk/web.site.mk"

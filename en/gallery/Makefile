@@ -1,7 +1,10 @@
-# $FreeBSD: www/en/gallery/Makefile,v 1.9 2000/04/20 16:40:58 phantom Exp $
+# $FreeBSD: www/en/gallery/Makefile,v 1.10 2000/09/30 00:21:39 nbm Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
+.endif
+.if exists(../Makefile.inc)
+.include "../Makefile.inc"
 .endif
 
 DOCS = gallery.sgml
@@ -32,5 +35,4 @@ gallery.inc: gallery.db gallery.sgml
 	          print qq/<!ENTITY num./.lc($$1).qq/ CDATA "$$2">\n/' \
 	> gallery.inc
 
-.include "../web.mk"
-
+.include "${WEB_PREFIX}/share/mk/web.site.mk"
