@@ -1,6 +1,7 @@
 # $FreeBSD$
 
-SUBDIR = committers-guide
+SUBDIR =
+SUBDIR+= committers-guide
 SUBDIR+= console-server
 SUBDIR+= contributing
 SUBDIR+= contributors
@@ -9,14 +10,15 @@ SUBDIR+= dialup-firewall
 SUBDIR+= diskless-x
 SUBDIR+= explaining-bsd
 SUBDIR+= filtering-bridges
-SUBDIR+= freebsd-questions
 SUBDIR+= fonts
 SUBDIR+= formatting-media
+SUBDIR+= freebsd-questions
 SUBDIR+= ipsec-must
 SUBDIR+= laptop
 SUBDIR+= mh
 SUBDIR+= multi-os
 SUBDIR+= new-users
+SUBDIR+= problem-reports
 SUBDIR+= programming-tools
 SUBDIR+= pxe
 SUBDIR+= serial-uart
