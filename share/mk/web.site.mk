@@ -1,5 +1,5 @@
 # bsd.web.mk
-# $FreeBSD: www/en/web.mk,v 1.33 2000/10/02 09:16:03 kuriyama Exp $
+# $FreeBSD: www/share/mk/web.site.mk,v 1.34 2000/10/04 09:39:46 kuriyama Exp $
 
 #
 # Build and install a web site.
@@ -75,11 +75,12 @@ GENDOCS+=	${REVFILES}
 
 .SUFFIXES:	.html
 .if defined(REVCHECK)
-PREHTML=	${.CURDIR}/${BUILDTOP}/ja/prehtml
+PREHTML=	${WEB_PREFIX}/ja/prehtml
 PREHTMLFLAGS=	${PREHTMLOPTS}
-BUILDTOP=	${LOCALTOP}/..
-LOCALPREFIX!=	cd ${LOCALTOP}; echo $${PWD};
-DIR_IN_LOCAL=   ${PWD:S/^${LOCALPREFIX}//:S/^\///}
+CANONPREFIX0!=	cd ${WEB_PREFIX}; echo $${PWD};
+CANONPREFIX=	${PWD:S/^${CANONPREFIX0}//:S/^\///}
+LOCALTOP!=	echo ${CANONPREFIX} | perl -pe 's@[^/]+@..@g; $$_.="/." if($$_ eq".."); s@^\.\./@@;'
+DIR_IN_LOCAL!=	echo ${CANONPREFIX} | perl -pe 's@^[^/]+/?@@;'
 PREHTMLFLAGS+=	-revcheck "${LOCALTOP}" "${DIR_IN_LOCAL}"
 .else
 DATESUBST=	's/<!ENTITY date[ \t]*"$$Free[B]SD. .* \(.* .*\) .* .* $$">/<!ENTITY date	"Last modified: \1">/'
@@ -144,7 +145,7 @@ orphans:
 clean: _PROGSUBDIR
 .if defined(DIRS_TO_CLEAN) && !empty(DIRS_TO_CLEAN)
 .for dir in ${DIRS_TO_CLEAN}
-	(cd ${dir} && ${MAKE} clean)
+	(cd ${.CURDIR}/${dir} && ${MAKE} clean)
 .endfor
 .endif
 	rm -f Errs errs mklog ${GENDOCS} ${LOCAL} ${CLEANFILES}
