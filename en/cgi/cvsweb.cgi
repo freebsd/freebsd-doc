@@ -42,9 +42,9 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $Id: cvsweb.cgi,v 1.72 2001-05-10 17:46:04 knu Exp $
-# $Idaemons: /home/cvs/cvsweb/cvsweb.cgi,v 1.71 2001/05/07 17:13:42 knu Exp $
-# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.71 2001/05/07 17:20:40 knu Exp $
+# $Id: cvsweb.cgi,v 1.73 2001-06-05 10:59:20 knu Exp $
+# $Idaemons: /home/cvs/cvsweb/cvsweb.cgi,v 1.74 2001/06/05 04:46:21 knu Exp $
+# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.72 2001/05/10 17:46:04 knu Exp $
 #
 ###
 
@@ -141,7 +141,7 @@ sub forbidden_module($);
 delete $ENV{PATH};
 
 $cvsweb_revision = '1.106' . '.' . (split(/ /,
- q$Idaemons: /home/cvs/cvsweb/cvsweb.cgi,v 1.71 2001/05/07 17:13:42 knu Exp $
+ q$Idaemons: /home/cvs/cvsweb/cvsweb.cgi,v 1.74 2001/06/05 04:46:21 knu Exp $
 ))[2];
 
 use File::Basename;
@@ -234,7 +234,7 @@ $LOG_REVSEPARATOR = q/^-{28}$/;
 ##### End of configuration variables #####
 
 $cgi_style::hsty_base = 'http://www.FreeBSD.org';
-$_ = q$FreeBSD: www/en/cgi/cvsweb.cgi,v 1.71 2001/05/07 17:20:40 knu Exp $;
+$_ = q$FreeBSD: www/en/cgi/cvsweb.cgi,v 1.72 2001/05/10 17:46:04 knu Exp $;
 @_ = split;
 $cgi_style::hsty_date = "@_[3,4]";
 
@@ -762,7 +762,7 @@ if (-d $fullname) {
 		    else {
 			print &link($backicon, $url);
 		    }
-		    print " ", &link("Previous Directory", $url);
+		    print " ", &link("Parent Directory", $url);
 		}
 		else {
 		    $url = './' . urlencode($_) . "/$query";
@@ -1120,11 +1120,11 @@ sub findLastModifiedSubdirs(@) {
 
 sub htmlify_sub(&$) {
     (my $proc, local $_) = @_;
-    local @_ = split(m`(<a [^>]+>[^<]*</a>)`i);
+    my @a = split(m`(<a [^>]+>[^<]*</a>)`i);
     my $linked;
     my $result = '';
 
-    while (($_, $linked) = splice(@_, 0, 2)) {
+    while (($_, $linked) = splice(@a, 0, 2)) {
 	&$proc();
 	$result .= $_ if defined($_);
 	$result .= $linked if defined($linked);
@@ -2682,6 +2682,7 @@ sub human_readable_diff($){
 
       if ($difftxt =~ /^@@/) {
 	  ($oldline,$newline,$funname) = $difftxt =~ /@@ \-([0-9]+).*\+([0-9]+).*@@(.*)/;
+          $funname = htmlquote($funname);
           print  "<tr bgcolor=\"$diffcolorHeading\"><td width=\"50%\">";
 	  print  "<table width=\"100%\" border=1 cellpadding=5><tr><td><b>Line $oldline</b>";
 	  print  "&nbsp;<font size=-1>$funname</font></td></tr></table>";
