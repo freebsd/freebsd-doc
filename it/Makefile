@@ -1,4 +1,4 @@
-# $FreeBSD: www/it/Makefile,v 1.3 2003/12/13 10:56:11 blackend Exp $
+# $FreeBSD: www/it/Makefile,v 1.4 2004/01/14 11:11:14 ale Exp $
 .if exists(Makefile.conf)
 .include "Makefile.conf"
 .endif
@@ -13,8 +13,9 @@ DOCS+= mailto.sgml
 
 # Subdirectories
 # SGML
+SUBDIR=  releases
 .if !defined(WEB_ONLY) || empty(WEB_ONLY)
-SUBDIR=  doc
+SUBDIR+= doc
 .endif
 
 WEBDIR?=	data/it
