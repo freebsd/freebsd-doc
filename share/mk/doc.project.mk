@@ -1,5 +1,5 @@
 #
-# $FreeBSD: doc/share/mk/doc.project.mk,v 1.6 2000/09/28 23:29:47 nbm Exp $
+# $FreeBSD: doc/share/mk/doc.project.mk,v 1.7 2000/10/08 19:16:32 nik Exp $
 #
 # This include file <doc.project.mk> is the FreeBSD Documentation Project 
 # co-ordination make file.
@@ -30,7 +30,7 @@
 #	PREFIX		Standard path to document-building applications
 #			installed to serve the documentation build
 #			process, usually by installing the docproj port
-#			or package.  Default is /usr/local
+#			or package.  Default is ${LOCALBASE} or /usr/local
 #
 #	NOINCLUDEMK	Whether to include the standard BSD make files,
 #			or just to emulate them poorly.  Set this if you
@@ -64,7 +64,8 @@ MAINTAINER?=	doc@FreeBSD.org
 ALL_FORMATS=	html html.tar html-split html-split.tar txt rtf ps pdf tex dvi tar pdb
 
 # User-modifiable
-PREFIX?=	/usr/local
+LOCALBASE?=	/usr/local
+PREFIX?=	${LOCALBASE}
 PRI_LANG?=	en_US.ISO_8859-1
 
 # Image processing (contains code used by the doc.<format>.mk files, so must
