@@ -36,7 +36,16 @@ sub do_wais {
     @FORM_source = split(/\0/, $in{"source"});
     $FORM_max = $in{"max"};
     $FORM_docnum = $in{"docnum"};
-    
+   
+    if ($#FORM_words < 0) {
+    	print &html_header("Mail Archive Search") .
+    	    "<p>No search term given.";
+    	print "<p>\nPlease return to the " .
+    	    "search page and fill out the 'Search for' field!\n";
+	print &html_footer;
+    	exit 0;
+    }
+
     @AVAIL_source = &checksource(@FORM_source);
     if ($#FORM_source != $#AVAIL_source) {
     	$j = 0;
