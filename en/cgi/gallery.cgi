@@ -4,7 +4,7 @@
 # 
 # John Fieber <jfieber@indiana.edu>
 # Modified for new gallery.db format by Nate Johnson <nsj@FreeBSD.org>
-# $FreeBSD: www/en/cgi/gallery.cgi,v 1.18 2000/04/01 09:39:35 phantom Exp $
+# $FreeBSD: www/en/cgi/gallery.cgi,v 1.19 2001/10/24 17:29:39 phantom Exp $
 ##################################################################
 
 $curator = "gallery\@FreeBSD.org";
@@ -13,7 +13,7 @@ $subject = "Another gallery submission...";
 require 'cgi-lib.pl';
 &ReadParse;
 
-$hsty_date = '$FreeBSD: www/en/cgi/gallery.cgi,v 1.18 2000/04/01 09:39:35 phantom Exp $';
+$hsty_date = '$FreeBSD: www/en/cgi/gallery.cgi,v 1.19 2001/10/24 17:29:39 phantom Exp $';
 # Replace Id string with commit date and time.
 $hsty_date =~ s%\$FreeBSD. .* (.* .*) .* .* \$%Last modified: $1%;
 
@@ -22,8 +22,8 @@ $hsty_date =~ s%\$FreeBSD. .* (.* .*) .* .* \$%Last modified: $1%;
 require 'cgi-style.pl';
 
 # Construct the gallery entry in HTML form
-$entry = "<li><a href=\"$in{'url'}\"><strong>$in{'organization'}</strong> " .
-    "-- $in{'description'}</a></li>";
+$entry = "<li><a href=\"$in{'url'}\"><strong>$in{'organization'}</strong></a> " .
+    "-- $in{'description'}</li>";
 
 # Try and figure out where the person came from so we can provide
 # links back to the correct place.
