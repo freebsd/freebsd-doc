@@ -9,6 +9,7 @@ SUBDIR+= cvs-freebsd
 SUBDIR+= cvsup-advanced
 SUBDIR+= dialup-firewall
 SUBDIR+= diskless-x
+SUBDIR+= euro
 SUBDIR+= explaining-bsd
 SUBDIR+= filtering-bridges
 SUBDIR+= fonts
