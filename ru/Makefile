@@ -2,7 +2,7 @@
 # The FreeBSD Russian Documentation Project
 #
 # $FreeBSD$
-# $FreeBSDru: frdp/www/ru/Makefile,v 1.22 2003/09/30 17:31:32 andy Exp $
+# $FreeBSDru: frdp/www/ru/Makefile,v 1.23 2003/09/30 18:58:55 andy Exp $
 #
 # Original revision: 1.98
 #
@@ -27,7 +27,7 @@ DOCS+= internet.sgml
 DOCS+= mailto.sgml
 DOCS+= publish.sgml
 #DOCS+= relnotes.sgml
-#DOCS+= send-pr.sgml
+DOCS+= send-pr.sgml
 DOCS+= support.sgml
 DOCS+= where.sgml
 DOCS+= y2kbug.sgml
