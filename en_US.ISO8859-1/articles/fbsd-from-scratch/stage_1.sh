@@ -168,7 +168,7 @@ EOF
   mkdir -m 755 -p ${DESTDIR}/dvd;       chown root:wheel ${DESTDIR}/dvd
   mkdir -m 755 -p ${DESTDIR}/home;      chown root:wheel ${DESTDIR}/home
   mkdir -m 755 -p ${DESTDIR}/usr/ports; chown root:wheel ${DESTDIR}/usr/ports
-  # Setup time zone info; pretty much mandatory.
+  # Set up time zone info; pretty much mandatory.
   cp ${DESTDIR}/usr/share/zoneinfo/Europe/Berlin ${DESTDIR}/etc/localtime
   if test -r /etc/wall_cmos_clock; then
      cp -p /etc/wall_cmos_clock ${DESTDIR}/etc/wall_cmos_clock
