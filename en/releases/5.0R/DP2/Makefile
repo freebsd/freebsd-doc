@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/releases/5.0R/DP2/Makefile,v 1.1 2002/11/17 00:57:31 bmah Exp $
+# $FreeBSD: www/en/releases/5.0R/DP2/Makefile,v 1.2 2002/11/18 21:25:54 bmah Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -8,7 +8,7 @@
 .endif
 
 DOCS=	hardware.sgml relnotes.sgml installation.sgml
-# DOCS+=	announce.sgml
+DOCS+=	announce.sgml
 # contents.sgml
 
 DATA=	docbook.css
