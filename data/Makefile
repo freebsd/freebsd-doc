@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.15 1997-04-24 23:03:54 jmg Exp $
+# $Id: Makefile,v 1.16 1997-05-04 19:59:36 wosch Exp $
 
 .if exists(Makefile.conf)
 .include "Makefile.conf"
@@ -16,6 +16,8 @@ DOCS+= features.sgml gallery.sgml index-site.sgml index.sgml
 DOCS+= internet.sgml license.sgml mailto.sgml mirror.sgml newsflash.sgml
 DOCS+= npgallery.sgml pgallery.sgml search.sgml searchhints.sgml send-pr.sgml
 DOCS+= security.sgml support.sgml welcome.sgml where.sgml resignation.sgml
+
+CLEANFILES+=atoz.sgml
 
 # These will be directly installed.
 
@@ -37,6 +39,10 @@ stats-img.html: ${ACCESS_LOG_DIR}/${ACCESS_LOG_FILE}
 	(cd ${ACCESS_LOG_DIR};zcat ${ACCESS_LOG_FILE}.*.gz; \
 	    cat ${ACCESS_LOG_FILE}) | \
 	${ANALOG} +i0 +R500 -o > ${.TARGET}
+
+index-site.sgml: atoz.sgml
+atoz.sgml: web.atoz 
+	sort -fu web.atoz | perl atoz.pl > ${.TARGET}
 
 # Subdirectories
 
