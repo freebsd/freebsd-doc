@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.63 2005/01/29 01:01:53 marcus Exp $ -->
+<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.64 2005/03/12 10:22:04 marcus Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
 		xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -9,7 +9,7 @@
   <xsl:import href="includes.xsl"/>
 
   <xsl:variable name="base" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.63 2005/01/29 01:01:53 marcus Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.64 2005/03/12 10:22:04 marcus Exp $'"/>
   <xsl:variable name="title" select="'FreeBSD GNOME Project'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -51,7 +51,7 @@
                           <p><font size="+1" color="#990000"><b>Documentation</b></font>
                             <small><br/>
                               &#183; <a href="docs/faq2.html">FAQ</a><br/>
-                              &#183; <a href="docs/faq210.html">2.6 to 2.8 Upgrade FAQ</a><br/>
+                              &#183; <a href="docs/faq210.html">2.8 to 2.10 Upgrade FAQ</a><br/>
                               &#183; <a href="docs/develfaq.html">Development Branch FAQ</a><br/>
                               &#183; <a href="docs/porting.html">Creating Ports</a><br/>
 			      &#183; <a href="docs/faq210.html#q5">Known Issues</a><br/>
@@ -129,9 +129,9 @@
 			    "<a href="http://www.gnome.org/about/">What is GNOME?</a>"
 			    page.</p>
 
-		<h2><font color="#990000">Upgrading to GNOME 2.8?</font></h2>
+		<h2><font color="#990000">Upgrading to GNOME 2.10?</font></h2>
 
-		<p>If you are upgrading from GNOME 2.6 to GNOME 2.8, read the
+		<p>If you are upgrading from GNOME 2.8 to GNOME 2.10, read the
 		  <a href="docs/faq210.html">Upgrade FAQ</a> for upgrade
 		  instructions, and be sure to use the
 		  <a href="gnome_upgrade.sh">upgrade script</a>!</p>
