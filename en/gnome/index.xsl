@@ -53,13 +53,15 @@
                           <p><font size="+1" color="#990000"><b>Resources</b></font>
                             <small><br/>
                               <a href="http://www.gnome.org/">GNOME Project</a><br/>
-                              <a href="XXX">GNOME on GNU/Darwin</a><br/>
+                              <a href="http://www.gnome.org/gnome-office/">GNOME Office</a><br/>
+                              <a href="http://gnu-darwin.sourceforge.net/GNOME/">GNOME on GNU/Darwin</a><br/>
                             </small></p>
 
                           <p><font size="+1" color="#990000"><b>Related Projects</b></font>
                             <small><br/>
                               <a href="http://www.kde.org/">KDE Project</a><br/>
                               <a href="http://freebsd.kde.org/">KDE on FreeBSD</a><br/>
+                              <a href="http://www.opengroup.org/desktop/">CDE (commercial)</a><br/>
                             </small></p>
 
                           <form action="http://www.FreeBSD.org/cgi/search.cgi" method="get">
