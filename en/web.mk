@@ -1,5 +1,5 @@
 # bsd.web.mk
-# $Id: web.mk,v 1.18 1999-04-08 21:50:02 nik Exp $
+# $Id: web.mk,v 1.19 1999-04-11 00:43:53 kuriyama Exp $
 
 #
 # Build and install a web site.
@@ -194,6 +194,8 @@ _PROGSUBDIR: .USE
 		cd ${.CURDIR}/$${entry}; \
 		if [ $$entry = "handbook" -a ${WEBDIR} = "data" ]; then \
 			${MAKE} ${.TARGET:S/realinstall/install/:S/.depend/depend/} DIRPRFX=${DIRPRFX}$$entry/ ${PARAMS} FORMATS="txt html html-split"; \
+		elif [ $$entry = "handbook" -a ${WEBDIR} = "data/ja" ]; then \
+			${MAKE} ${.TARGET:S/realinstall/install/:S/.depend/depend/} DIRPRFX=${DIRPRFX}$$entry/ ${PARAMS} FORMATS="html html-split"; \
 		else \
 			${MAKE} ${.TARGET:S/realinstall/install/:S/.depend/depend/} DIRPRFX=${DIRPRFX}$$entry/ ${PARAMS}; \
 		fi); \
