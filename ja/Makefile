@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.16 1998-07-27 04:46:58 hanai Exp $
+# $Id: Makefile,v 1.17 1998-07-27 05:44:03 hanai Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.24
 
@@ -46,6 +46,7 @@ site.sgml: ../site.map
 #SUBDIR=	security cgi commercial docproj gifs ports releases tutorials 
 #SUBDIR+=	news alpha projects
 SUBDIR=		security docproj ports releases
+SUBDIR+=	news
 
 # Subdirectories that have linuxdoc docs and makefiles that use
 # <bsd.sgml.mk>.
