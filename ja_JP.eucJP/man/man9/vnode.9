@@ -26,7 +26,7 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" %FreeBSD: src/share/man/man9/vnode.9,v 1.10.2.5 2001/12/17 11:30:19 ru Exp %
+.\" %FreeBSD: src/share/man/man9/vnode.9,v 1.20 2002/10/10 00:29:22 alfred Exp %
 .\"
 .\" $FreeBSD$
 .Dd June 30, 1999
@@ -51,9 +51,10 @@ enum vtype	{ VNON, VREG, VDIR, VBLK, VCHR, VLNK, VSOCK, VFIFO, VBAD };
  * によって検査されるべきではありません。
  */
 enum vtagtype	{
-	VT_NON, VT_UFS, VT_NFS, VT_MFS, VT_PC, VT_LFS, VT_LOFS, VT_FDESC,
+	VT_NON, VT_UFS, VT_NFS, VT_UNUSED, VT_PC, VT_LFS, VT_LOFS, VT_FDESC,
 	VT_PORTAL, VT_NULL, VT_UMAP, VT_KERNFS, VT_PROCFS, VT_AFS, VT_ISOFS,
-	VT_UNION, VT_MSDOSFS, VT_TFS, VT_VFS, VT_CODA, VT_NTFS
+	VT_UNION, VT_MSDOSFS, VT_DEVFS, VT_TFS, VT_VFS, VT_CODA, VT_NTFS,
+	VT_HPFS, VTNWFS, VT_PSEUDOFS
 };
 
 /*
@@ -63,7 +64,7 @@ enum vtagtype	{
  */
 TAILQ_HEAD(buflists, buf);
 
-typedef	int 	vop_t __P((void *));
+typedef	int 	vop_t((void *));
 struct namecache;
 
 /*
@@ -79,7 +80,6 @@ struct vnode {
 	int	v_usecount;			/* ユーザの参照カウント */
 	int	v_writecount;			/* 書込み者の参照カウント */
 	int	v_holdcnt;			/* ページ & バッファの参照 */
-	daddr_t	v_lastr;			/* 最後の読込み (先読み) */
 	u_long	v_id;				/* ケーパビリティ識別子 */
 	struct	mount *v_mount;			/* 今いる VFS へのポインタ */
 	vop_t	**v_op;				/* vnode 操作ベクタ */
@@ -93,7 +93,10 @@ struct vnode {
 	union {
 		struct mount	*vu_mountedhere;/* マウントされた VFS へのポインタ (VDIR) */
 		struct socket	*vu_socket;	/* UNIX IPC (VSOCK) */
-		struct specinfo	*vu_specinfo;	/* デバイス (VCHR, VBLK) */
+		struct {
+			struct specinfo	*vu_specinfo; /* デバイス (VCHR, VBLK) */
+			SLIST_ENTRY(vnode) vu_specnext;
+		} vu_spec;
 		struct fifoinfo	*vu_fifoinfo;	/* FIFO (VFIFO) */
 	} v_un;
 	struct	nqlease *v_lease;		/* 貸出しのソフト参照 */
@@ -101,7 +104,6 @@ struct vnode {
 	daddr_t	v_cstart;			/* クラスタの開始ブロック */
 	daddr_t	v_lasta;			/* 最後の割当て */
 	int	v_clen;				/* 現在のクラスタ長 */
-	int	v_maxio;			/* 最大 I/O クラスタサイズ */
 	struct vm_object *v_object;		/* VM オブジェクトの保存場所 */
 	struct	simplelock v_interlock;		/* 使用カウントとフラグのロック */
 	struct	lock *v_vnlock;			/* 非ロックファイルシステム用 */
@@ -120,7 +122,8 @@ struct vnode {
 };
 #define	v_mountedhere	v_un.vu_mountedhere
 #define	v_socket	v_un.vu_socket
-#define	v_specinfo	v_un.vu_specinfo
+#define	v_rdev		v_un.vu_spec.vu_specinfo
+#define	v_specnext	v_un.vu_spec.vu_specnext
 #define	v_fifoinfo	v_un.vu_fifoinfo
 
 /*
@@ -133,10 +136,7 @@ struct vnode {
 #define	VXLOCK		0x00100	/* vnode は下位の型の変更のためロック中 */
 #define	VXWANT		0x00200	/* プロセスが vnode を待っています */
 #define	VBWAIT		0x00400	/* 出力の完了を待っています */
-#define	VALIASED	0x00800	/* vnode に別名があります */
-#define	VDIROP		0x01000	/* LFS: vnode がディレクトリ操作に関与 */
 #define	VOBJBUF		0x02000	/* VM オブジェクトにバッファを割当て */
-#define	VNINACT		0x04000	/* LFS: lfs_vunref で ufs_inactive() しない */
 #define	VAGE		0x08000	/* フリーリストの先頭に vnode を挿入 */
 #define	VOLOCK		0x10000	/* オブジェクトを待つために vnode がロック */
 #define	VOWANT		0x20000	/* プロセスが VOLOCK を待っています */
@@ -148,7 +148,9 @@ struct vnode {
 
 .Ed
 .Sh 解説
-vnode は UNIX でのファイル活動の中心です。
+vnode は
+.Ux
+でのファイル活動の中心です。
 個々の活動中のファイル、
 個々の現在のディレクトリ、個々のマウントされたファイル、
 テキストファイル、およびルートのために割当てられた一意的な vnode があります。
