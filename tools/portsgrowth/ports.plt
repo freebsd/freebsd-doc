@@ -1,5 +1,5 @@
-# $FreeBSD$
-set terminal png color
+# $FreeBSD: www/tools/portsgrowth/ports.plt,v 1.1 2002/05/20 10:44:35 phantom Exp $
+set terminal png
 set output "ports.png"
 set ylabel "Number of ports"
 set timefmt "%Y/%m/%d %H:%M:%S"
