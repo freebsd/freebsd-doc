@@ -157,7 +157,7 @@ ${XML_MIRRORS}: ${XML_MIRRORS_MASTER} ${XSL_TRANSTABLE} ${XSL_TRANSTABLE_MASTER}
 	  | env -i LANG="${LANGCODE}" ${SORT} -f > $@.sort.tmp
 	env -i ${GREP} "^<?xml" < $@.sort.tmp > $@.sort
 	${ECHO} "<sortkeys>" >> $@.sort
-	env -i ${AWK} '/^  / {sub(/@sortkey@/, ++line); print;}' < $@.sort.tmp >> $@.sort
+	env -i ${AWK} '/@sortkey@/ {sub(/@sortkey@/, ++line); print;}' < $@.sort.tmp >> $@.sort
 	${ECHO} '</sortkeys>' >> $@.sort
 	${XSLTPROC} ${XSLTPROCOPTS} -o $@ \
 	    --param 'transtable.xml' "'${XML_TRANSTABLE}'" \
