@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: www/de/releases/Makefile,v 1.1 2002/12/08 16:46:16 ue Exp $
 # $FreeBSDde: de-www/releases/Makefile,v 1.1 2002/12/08 00:05:54 ue Exp $
 # basiert auf: 1.35
 
@@ -11,7 +11,7 @@
 
 DOCS?=	index.sgml snapshots.sgml
 
-SUBDIR=	4.7R
+SUBDIR=	4.7R 5.0R
 
 .if defined $(NEW_BUILD)
 SUBDIR=
