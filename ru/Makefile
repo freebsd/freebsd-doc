@@ -1,10 +1,10 @@
 #
 # The FreeBSD Russian Documentation Project
 #
-# $FreeBSD: www/ru/Makefile,v 1.35 2004/04/05 14:17:52 phantom Exp $
-# $FreeBSDru: frdp/www/ru/Makefile,v 1.34 2004/02/11 12:17:39 den Exp $
+# $FreeBSD$
+# $FreeBSDru: frdp/www/ru/Makefile,v 1.36 2004/04/22 12:00:22 den Exp $
 #
-# Original revision: 1.107
+# Original revision: 1.110
 #
 
 .if exists(Makefile.conf)
@@ -18,6 +18,7 @@
 # These are turned into validated, normalized HTML files.
 
 DOCS=  applications.sgml
+DOCS+= art.sgml
 DOCS+= auditors.sgml
 DOCS+= availability.sgml
 DOCS+= docs.sgml
