@@ -1,4 +1,4 @@
-<!-- $Id: ports.inc,v 1.6 1999-05-08 15:40:46 jesusr Exp $ -->
+<!-- $Id: ports.inc,v 1.7 1999-07-01 21:14:25 jesusr Exp $ -->
 <p>La colecci&oacute;n de Ports y Packages de FreeBSD ofrece una manera
 sencilla de instalci&oacute;n de aplicaciones para los usuarios y
 administradores. La colecci&oacute;n de ports ha estado creciendo en los
@@ -65,13 +65,16 @@ href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-3-stable/Latest/30up
 <dt><a
 href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-3-stable/Latest/31upgrade.tgz">Kit actualizaci&oacute;n de 3.1 a 3.1-stable</a>
 <dd>Para usuarios de 3.1-release o 3.1-stable despu&eacute;s de 3.1-release
+<dt><a
+href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-3-stable/Latest/32upgrade.tgz">Kit actualizaci&oacute;n de 3.2 a 3.2-stable</a>
+<dd>Para usuarios de 3.2-release o 3.2-stable despu&eacute;s de 3.2-release
 </dl>
 
 <p>Estos son packages de FreeBSD; por favor usa pkg_add para instalarlos. Esto
 deber&iacute;a hacer que puedas usar todos los ports listados aqu&iacute;, ten
 en cuenta que solo se modificar&aacute;n algunos ficheros para permitir
 que los ports/packages puedan ser usados; para una actualizaci&oacute;n
-completa a 2.2-stable, por favor, mira en la secci&oacute;n <a
+completa a 3.2-stable, por favor, mira en la secci&oacute;n <a
 href="../../handbook/synching.html">sincronizando el c&oacute;digo fuente</a>
 del handbook. Recomendamos una actualizaci&oacute;n completa, especialmente
 si todav&iacute;a est&aacute;s usando cualquier versi&oacute;n anterior a 
