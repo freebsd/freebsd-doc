@@ -8,5 +8,6 @@
 .endif
 
 DOCS=	faq.sgml
+DOCS+=  porting.sgml
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
