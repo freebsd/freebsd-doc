@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.27 1998-04-16 10:39:00 wosch Exp $
+# $Id: Makefile,v 1.28 1998-04-16 12:51:43 wosch Exp $
 
 .if exists(Makefile.conf)
 .include "Makefile.conf"
@@ -59,7 +59,10 @@ pgallery.inc: gallery.db gengallery.pl
 
 # Subdirectories
 
-SUBDIR=		cgi commercial docproj gifs ports releases tutorials ja_JP.EUC
+SUBDIR=		cgi commercial docproj gifs ports releases tutorials 
+.if !defined(ENGLISH_ONLY) || empty(ENGLISH_ONLY)
+SUBDIR+=	ja_JP.EUC
+.endif
 
 # Subdirectories that have linuxdoc docs and makefiles that use
 # <bsd.sgml.mk>.
