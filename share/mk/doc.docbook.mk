@@ -325,6 +325,10 @@ CLEANFILES+= ${.CURDIR:T}.pdb
 .endif
 .endif
 
+.if (${STYLESHEET_TYPE} == "xsl")
+CLEANFILES+= ${DOC}.xml .sxerr
+.endif
+
 .if (${LOCAL_CSS_SHEET} != ${CSS_SHEET}) && \
     (${_cf} == "html-split" || ${_cf} == "html-split.tar" || \
      ${_cf} == "html" || ${_cf} == "html.tar" || ${_cf} == "txt")
