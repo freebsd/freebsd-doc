@@ -243,6 +243,24 @@
 		(create-link (list (list "HREF" href)) ($mono-seq$))))
 	     (else ($mono-seq$)))))
 
+	;; Do not render email with mailto: when nolink role attribute
+	;; is used or when the email address matches
+	;; @example.{com|net|org}
+	(element email
+	  (let* ((class		(attribute-string (normalize "role"))))
+	    (cond
+	      ((or (equal? class "nolink") (string=?
+		(substring (data (current-node))
+		  (- (string-length (data (current-node))) 11)
+		  (- (string-length (data (current-node))) 4)) "example"))
+	      ($code-seq$
+		(make sequence
+		  (literal "&#60;")
+		  (process-children)
+		  (literal "&#62;"))))
+	    (else
+	      (next-match)))))
+
 	;; Ensure that we start with no preferred mediaobject notations,
 	;; so that in the text-only case we don't choose any of the
 	;; possible images, and fallback to the most appropriate
