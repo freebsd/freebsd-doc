@@ -1,4 +1,3 @@
-# $Id: Makefile.inc,v 1.5 1997-07-01 03:51:59 max Exp $
+# $Id: Makefile.inc,v 1.6 1998-01-18 22:27:30 jfieber Exp $
 
 WEBBASE?=	/data
-SGMLOPTS+=	-links -hdr ${.CURDIR}/../doc.hdr -ftr ${.CURDIR}/../doc.ftr
