@@ -1,5 +1,5 @@
 # $FreeBSD$
-# Original version: 1.4
+# Original version: 1.5
 #
 # Στήνοντας ένα CVS repository με τα εργαλεία του FreeBSD.
 
@@ -14,5 +14,7 @@ INSTALL_ONLY_COMPRESSED?=
 
 SRCS=	article.sgml
 
+URL_RELPREFIX?=	../../../..
 DOC_PREFIX?= ${.CURDIR}/../../..
+
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"
