@@ -1,7 +1,9 @@
+<?xml version="1.0" encoding="KOI8-R" ?>
+
 <!--
      The FreeBSD Russian Documentation Project
 
-     $FreeBSDru: frdp/www/ru/gnome/index.xsl,v 1.2 2004/01/01 21:47:25 andy Exp $
+     $FreeBSDru: frdp/www/ru/gnome/index.xsl,v 1.4 2004/01/03 08:49:51 andy Exp $
 
      Original revision: 1.45
 -->
@@ -44,7 +46,7 @@
 
                           <p><font size="+1" color="#990000"><b>GNOME на FreeBSD</b></font>
                             <small><br/>
-                              &#183; <a href="http://www.FreeBSD.org/gnome/">GNOME на FreeBSD: главная страница</a><br/>
+                              &#183; <a href="http://www.FreeBSD.org/ru/gnome/">Главная страница</a><br/>
                               &#183; <a href="docs/faq2.html#q1">Инструкции по установке</a><br/>
                               &#183; <a href="../ports/gnome.html">Доступные приложения</a><br/>
                               &#183; <a href="docs/volunteer.html">Как помочь</a><br/>
@@ -68,7 +70,7 @@
                               &#183; <a href="http://gnu-darwin.sourceforge.net/GNOME/">GNOME на GNU/Darwin</a><br/>
                             </small></p>
 
-                          <p><font size="+1" color="#990000"><b>Близкие Projects</b></font>
+                          <p><font size="+1" color="#990000"><b>Близкие проекты</b></font>
                             <small><br/>
                               &#183; <a href="http://www.kde.org/">Проект KDE</a><br/>
                               &#183; <a href="http://freebsd.kde.org/">KDE на FreeBSD</a><br/>
@@ -83,7 +85,6 @@
                               <input type="submit" value="Искать"/>
                             </small>
                           </form>
-
                         </td>
                       </tr>
                     </table>
