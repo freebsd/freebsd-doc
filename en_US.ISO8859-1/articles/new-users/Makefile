@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.5 1999-08-29 00:02:20 jhb Exp $
+# $Id: Makefile,v 1.6 1999-09-03 17:40:12 nik Exp $
 
 DOC?= article
 
@@ -9,6 +9,6 @@ INSTALL_ONLY_COMPRESSED?=
 
 SRCS= article.sgml
 
-DOC_PREFIX?= ../../..
+DOC_PREFIX?= ${.CURDIR}/../../..
 
-.include "${DOC_PREFIX}/share/mk/docproj.docbook.mk"
+.include "${DOC_PREFIX}/share/mk/doc.project.mk"
