@@ -1,5 +1,5 @@
 #
-# $FreeBSD: www/ja/tutorials/Makefile,v 1.1.1.1 2000/01/06 12:51:59 kuriyama Exp $
+# $FreeBSD: www/ja/tutorials/Makefile,v 1.2 2000/02/20 02:37:02 motoyuki Exp $
 #
 # Original revision: 1.5
 #
@@ -8,7 +8,11 @@
 
 DOCS = index.sgml
 
-all afterinstall clean:
+DIRS_TO_CLEAN =	../../../doc/ja_JP.eucJP/articles \
+		../../../doc/ja_JP.eucJP/books/ppp-primer
+#		../../../doc/ja_JP.eucJP/books/fdp-primer \
+
+all afterinstall:
 	(cd ../../../doc/ja_JP.eucJP/articles && ${MAKE} 'FORMATS=html html-split' 'DESTDIR=${DESTDIR}/data/ja/tutorials/$${.CURDIR:T}' ${.TARGET:S/afterinstall/install/})
 #	(cd ../../../doc/ja_JP.eucJP/books/fdp-primer && ${MAKE} 'FORMATS=html html-split' DESTDIR=${DESTDIR}/data/ja/tutorials/docproj-primer ${.TARGET:S/afterinstall/install/})
 	(cd ../../../doc/ja_JP.eucJP/books/ppp-primer && ${MAKE} 'FORMATS=html html-split' DESTDIR=${DESTDIR}/data/ja/tutorials/ppp ${.TARGET:S/afterinstall/install/})
