@@ -1,5 +1,5 @@
 # 
-# $FreeBSD: doc/en_US.ISO8859-1/books/handbook/Makefile,v 1.45 2001/08/21 23:38:28 nik Exp $
+# $FreeBSD: doc/en_US.ISO8859-1/books/handbook/Makefile,v 1.46 2001/08/22 20:38:03 rpratt Exp $
 #
 # Build the FreeBSD Handbook.
 #
@@ -13,6 +13,15 @@
 #			entire key to be displayed, then set this variable.
 #			This option has no affect on the HTML formats.
 #			
+# Handbook-specific targets
+#
+#       pgpkeyring      This target will read the contents of
+#                       pgpkeys/chapter.sgml and will extract all of
+#                       the pgpkeys to standard out.  This output can then
+#                       be redirected into a file and distributed as a 
+#                       public keyring of FreeBSD developers that can
+#                       easily be imported into PGP/GPG.
+#
 # ------------------------------------------------------------------------
 
 MAINTAINER=nik@FreeBSD.org
@@ -142,6 +151,9 @@ book.tex-pdf:
 
 book.pdf: book.ps
 	ps2pdf book.ps book.pdf
+
+pgpkeyring: pgpkeys/chapter.sgml
+	@${JADE} -V nochunks ${JADEOPTS} -d ${DSLPGP} -t sgml ${MASTERDOC}
 
 DOC_PREFIX?= ${.CURDIR}/../../..
 
