@@ -17,7 +17,7 @@
 
 
 $server_root = '/usr/local/www';
-$waisq = "/usr/local/bin/waisq";
+$waisq = "/usr/local/www/bin/waisq";
 $sourcepath = "$server_root/db/index";
 $hints = "/searchhints.html";    
 $myurl = $ENV{'SCRIPT_NAME'};
