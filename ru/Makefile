@@ -1,10 +1,15 @@
 # $FreeBSD$
-# $FreeBSDru: frdp/www/ru/Makefile,v 1.7 2000/10/27 11:26:06 phantom Exp $
+# The FreeBSD Russian Documentation Project
+# $FreeBSDru: frdp/www/ru/Makefile,v 1.8 2000/11/10 17:04:45 phantom Exp $
+# Original revision: 1.55
 
 .if exists(Makefile.conf)
 .include "Makefile.conf"
 .endif
 
+.if exists(../Makefile.inc)
+.include "../Makefile.inc"
+.endif
 
 # These are turned into validated, normalized HTML files.
 
@@ -69,5 +74,4 @@ FORMATS=	"html ps koi8-r"
 
 WEBDIR?=	data/ru
 
-.include "web.mk"
-
+.include "${WEB_PREFIX}/share/mk/web.site.mk"

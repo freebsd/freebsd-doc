@@ -1,9 +1,14 @@
 # $FreeBSD$
-# $FreeBSDru: frdp/www/ru/internal/Makefile,v 1.2 2000/10/27 11:26:10 phantom Exp $
-# Original version: 1.20
+# The FreeBSD Russian Documentation Project
+# $FreeBSDru: frdp/www/ru/internal/Makefile,v 1.3 2000/11/10 17:04:50 phantom Exp $
+# Original version: 1.23
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
+.endif
+
+.if exists(../Makefile.inc)
+.include "../Makefile.inc"
 .endif
 
 DOCS=	photos.sgml
@@ -26,8 +31,8 @@ DOCS+=	homepage.sgml
 SCRIPTDIR= ../../en/internal
 GENHOMEPAGE= $(SCRIPTDIR)/homepage.pl
 
-homepage.inc:
-	perl $(GENHOMEPAGE) > ${.TARGET}
+homepage.inc: ${GENHOMEPAGE}
+	${PERL} $(GENHOMEPAGE) > ${.TARGET}
 
 homepage.sgml:  $(GENHOMEPAGE) homepage.inc
 CLEANFILES+=	homepage.inc
@@ -35,4 +40,4 @@ CLEANFILES+=	homepage.inc
 
 DATA+=	README.mirror
 
-.include "../web.mk"
+.include "${WEB_PREFIX}/share/mk/web.site.mk"
