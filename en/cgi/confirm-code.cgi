@@ -1,6 +1,6 @@
 #!/usr/bin/perl -T
 #
-# $FreeBSD$
+# $FreeBSD: www/en/cgi/sendpr-code.cgi,v 1.1 2003/12/14 17:28:13 ceri Exp $
 #
 # Copyright (c) 2003 Eric Anderson
 
@@ -23,7 +23,7 @@ $pnmcat = "/usr/local/bin/pnmcat";
 $pnmtopng = "/usr/local/bin/pnmtopng";
 $pnmdatadir = "../gifs/";
 $dbpath = "/tmp/sendpr-code.db";
-$expiretime = 900;		# seconds until code expires
+$expiretime = 2700;		# seconds until code expires
 ############################################
 
 $currenttime = time();
