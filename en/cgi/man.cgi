@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp 
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.69 2002-05-10 19:28:38 wosch Exp $
+# $Id: man.cgi,v 1.70 2002-05-13 07:40:24 wosch Exp $
 
 #use Data::Dumper;
 #use Carp;
@@ -744,9 +744,12 @@ sub decode_form {
 	$_   =~ s/%([\da-f]{1,2})/pack(C,hex($1))/eig;	# undo % escapes
 	$key =~ s/%([\da-f]{1,2})/pack(C,hex($1))/eig;	# undo % escapes
 	$_   =~ s/[\r\n]+/\n\t/g if defined($indent);	# indent data after \n
-	$data{$key} = $_;
+	$data{$key} = &escape($_);
     }
 }
+
+# block cross-site scripting attacks (css)
+sub escape($) { $_ = $_[0]; s/&/&amp;/g; s/</&lt;/g; s/>/&gt;/g; $_; }
 
 sub dec {
     local($_) = @_;
@@ -930,7 +933,7 @@ ETX
 }
 
 sub copyright {
-    $id = '$Id: man.cgi,v 1.69 2002-05-10 19:28:38 wosch Exp $';
+    $id = '$Id: man.cgi,v 1.70 2002-05-13 07:40:24 wosch Exp $';
 
     return qq{\
 <PRE>
