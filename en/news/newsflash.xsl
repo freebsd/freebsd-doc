@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/en/news/newsflash.xsl,v 1.7 2002/09/08 09:10:58 nik Exp $ -->
+<!-- $FreeBSD: www/en/news/newsflash.xsl,v 1.8 2003/06/18 23:41:16 murray Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -66,6 +66,7 @@
 	<xsl:apply-templates select="descendant::month"/>
 	
 	<p>Older announcements:
+	  <a href="2002/index.html">2002</a>,
 	  <a href="2001/index.html">2001</a>,
 	  <a href="2000/index.html">2000</a>,
 	  <a href="1999/index.html">1999</a>,
