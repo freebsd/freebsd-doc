@@ -1,5 +1,5 @@
 # bsd.web.mk
-# $FreeBSD: www/en/web.mk,v 1.24 1999/09/19 11:56:18 wosch Exp $
+# $FreeBSD: www/en/web.mk,v 1.25 1999/11/28 22:32:38 kuriyama Exp $
 
 #
 # Build and install a web site.
@@ -65,7 +65,7 @@ CATALOG?=	${PREFIX}/share/sgml/html/catalog
 SGMLNORMFLAGS=	-d ${SGMLNORMOPTS} -c ${CATALOG}
 GENDOCS+=	${DOCS:M*.sgml:S/.sgml$/.html/g}
 ORPHANS:=	${ORPHANS:N*.sgml}
-DATESUBST=	's/<!ENTITY date[ \t]*"$$FreeBSD: .* \(.* .*\) .* .* $$">/<!ENTITY date	"Last modified: \1">/'
+DATESUBST=	's/<!ENTITY date[ \t]*"$$Free[B]SD. .* \(.* .*\) .* .* $$">/<!ENTITY date	"Last modified: \1">/'
 
 .sgml.html:
 	sed -e ${DATESUBST} ${.IMPSRC} |\
