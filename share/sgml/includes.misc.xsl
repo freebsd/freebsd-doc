@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/share/sgml/includes.misc.xsl,v 1.5 2004/01/17 18:58:07 hrs Exp $ -->
+<!-- $FreeBSD: www/share/sgml/includes.misc.xsl,v 1.6 2004/01/24 12:10:02 hrs Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -210,6 +210,43 @@
     </xsl:call-template>
     <xsl:text> </xsl:text>
     <xsl:value-of select="document($news.press.xml)/descendant::year[position() = 1]/name"/>
+  </xsl:template>
+
+  <!-- template: "html-index-navigation-link-list"
+       generates navigation bar in index.html -->
+
+  <xsl:template name="html-index-navigation-link-list">
+    <xsl:param name="navigation.xml" select="''" />
+    <xsl:for-each select="document($navigation.xml)/navigation/category">
+      <p>
+	<xsl:if test="@src != ''">
+	<a>
+	    <xsl:attribute name="href">
+	      <xsl:value-of select="@src"/>
+	    </xsl:attribute>
+	    <font size="+1" color="#990000"><b><xsl:value-of select="@name"/></b></font>
+	</a>
+	</xsl:if>
+
+	<xsl:if test="not(@src != '')">
+	  <font size="+1" color="#990000"><b><xsl:value-of select="@name"/></b></font>
+	</xsl:if>
+	<br/>
+	<small>
+	  <xsl:apply-templates select="link"/>
+	</small>
+      </p>
+    </xsl:for-each>
+  </xsl:template>
+
+  <!-- template: "link" generates links inside of category -->
+  <xsl:template match="link">
+    &#183;
+    <a>
+      <xsl:attribute name="href">
+	<xsl:value-of select="@src"/>
+      </xsl:attribute>
+      <xsl:value-of select="@name"/></a><br/>
   </xsl:template>
 
   <!-- template: "html-index-mirrors-options-list"
