@@ -4,7 +4,7 @@
 # atoz - create automatically an `A-Z Index' from a pre-sorted database
 #        (sort -uf) with the format `<titel>|<url>'
 #
-# $Id: atoz.pl,v 1.1 1997-05-04 19:59:36 wosch Exp $
+# $Id: atoz.pl,v 1.2 1997-07-08 11:11:00 wosch Exp $
 
 if ($ARGV[0] eq '-u' && $#ARGV > 0) { 
     $urlprefix = $ARGV[1]; shift; shift;  # prefix for relative URLs
@@ -12,6 +12,7 @@ if ($ARGV[0] eq '-u' && $#ARGV > 0) {
 
 $top = 'ruebezahl';       # HTML tag name for `go to top of page'
 $hr = "<HR NOSHADE>\n\n"; $h2 = 'H2';
+$table = 1;               # use table output for alphabet
 sub eol { "</UL>\n\n" }
 
 $firstold = ''; @az = (); @list = ();
@@ -34,10 +35,16 @@ while(<>) {
 push(@list, &eol); # close last list
 
 # Output header, list, and copyright
-print qq{<A NAME="$top"></A>\n\n};
+print qq{<A NAME="$top"></A>\n};
+print qq{<TABLE BORDER=4><TR>\n} if $table;
 foreach (@az) {
-    print qq{<A HREF="#$_">$_</A>\n};
+    if ($table) {
+	print qq{<TD><A HREF="#$_">$_</A></TD>\n};
+    } else { 
+	print qq{<A HREF="#$_">$_</A>\n};
+    }
 }
-print $hr; print @list; # print $hr;
-print qq{<!--\nCreated by <A HREF="http://www.apfel.de/~wosch/">atoz</A>\n};
-print qq{at } . `date -u +"%Y/%m/%d %T"` . "UTC\n-->\n";
+print "</TR></TABLE>\n" if $table;
+print $hr; print @list;  print $hr;
+#print qq{<link ref="made" href="http://www.apfel.de/~wosch/">\n};
+
