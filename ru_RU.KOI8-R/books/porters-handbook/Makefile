@@ -1,6 +1,6 @@
 # 
-# $FreeBSD: doc/ru_RU.KOI8-R/books/porters-handbook/Makefile,v 1.1 2000/10/17 17:25:01 phantom Exp $
-# $FreeBSDru: frdp/doc/ru_RU.KOI8-R/books/porters-handbook/Makefile,v 1.2 2000/09/17 15:15:41 phantom Exp $
+# $FreeBSD$
+# $FreeBSDru: frdp/doc/ru_RU.KOI8-R/books/porters-handbook/Makefile,v 1.3 2000/11/15 17:21:30 phantom Exp $
 #
 # Build the FreeBSD Porter's Handbook.
 #

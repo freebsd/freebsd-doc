@@ -1,6 +1,6 @@
 # 
 # $FreeBSD$
-# $FreeBSDru: frdp/doc/ru_RU.KOI8-R/books/faq/Makefile,v 1.3 2000/10/17 16:55:05 phantom Exp $
+# $FreeBSDru: frdp/doc/ru_RU.KOI8-R/books/faq/Makefile,v 1.4 2000/11/15 17:21:30 phantom Exp $
 #
 # Build the Russian FreeBSD FAQ
 #
