@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/ru/ports/ports.inc,v 1.3 2000/03/18 15:48:40 andy Exp $ -->
+<!-- $FreeBSD: www/ru/ports/ports.inc,v 1.4 2000/04/03 05:24:41 andy Exp $ -->
 
 <p>Коллекция Портов и Пакаджей FreeBSD даёт пользователям и администраторам
   простой метод установки приложений.  Коллекция портов <a
@@ -29,12 +29,30 @@
   в командной строке при запуске <strong>pkg_add</strong>, так как
   эта утилита способна воспринимать как имена файлов, так и URL.</p>
 
+<p>Для получения более подробной информации о новых, изменённых или удалённых
+  портах/пакаджах, или в том случае, когда вы хотите найти конкретное
+  приложение в виде порта/пакаджа, обратитесь к странице <a
+  href="http://www.freebsd.org/cgi/ports.cgi">Изменений портов FreeBSD</a>.</p>
+
+<FORM
+  METHOD="GET" ACTION="http://www.freebsd.org/cgi/ports.cgi">Поиск по полям:
+  <INPUT NAME="query" VALUE="">
+  <SELECT NAME="stype">
+    <OPTION VALUE="all">Все</OPTION>
+    <OPTION VALUE="name">Название пакаджа</OPTION>
+    <OPTION VALUE="text">Описание</OPTION>
+  </SELECT>
+  <INPUT TYPE="submit" VALUE="Искать">
+</FORM>
+
 <p>Более подробная информация об использовании портов находится в
   <a href="../../handbook/ports.html">соответствующей главе</a> Руководства.
   Информация о создании новых портов находится в главе о <a
   href="../../handbook/porting.html">портировании приложений</a> Руководства.
   Обе главы являются частью обширного <a
   href="../../handbook/">Руководства по FreeBSD</a>.</p>
+
+<hr>
 
 <p>Порты, перечисляемые здесь, постоянно обновляются.  Вам же рекомендуется
   обновлять полностью всю Коллекцию, так как многие порты находятся в
@@ -108,21 +126,5 @@ href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-3-stable/Latest/32up
 
 <p>Многим портам для компиляции и запуска требуется X Window System.  Мы
   компилируем и тестируем наши порты с <a
-  href="http://www.xfree86.org/">XFree86</a>.  Их текущий релиз 3.3.6.
-  Некоторые порты могут не работать с более ранними релизами.</p>
-
-<p>Для получения более подробной информации о новых, изменённых или
-  удалённых портах/пакаджах или если вы хотите найти конкретное
-  приложение в виде порта/пакаджа, обратитесь к странице <a
-  href="http://www.freebsd.org/cgi/ports.cgi">Изменений портов FreeBSD</a>.</p>
-
-<FORM
-  METHOD="GET" ACTION="http://www.freebsd.org/cgi/ports.cgi">Поиск по полям:
-  <INPUT NAME="query" VALUE="">
-  <SELECT NAME="stype">
-    <OPTION VALUE="all">Все</OPTION>
-    <OPTION VALUE="name">Название пакаджа</OPTION>
-    <OPTION VALUE="text">Описание</OPTION>
-  </SELECT>
-  <INPUT TYPE="submit" VALUE="Искать">
-</FORM>
+  href="http://www.xfree86.org/">XFree86</a>.  Текущим релизом является 3.3.6.
+  Некоторые порты могут не работать с более ранними версиями этой системы.</p>
