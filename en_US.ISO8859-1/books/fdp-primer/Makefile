@@ -1,5 +1,5 @@
 # 
-# $FreeBSD: doc/en_US.ISO_8859-1/books/fdp-primer/Makefile,v 1.9 2000/07/16 16:40:36 nik Exp $
+# $FreeBSD$
 #
 # Build the FreeBSD Documentation Project Primer.
 #
@@ -9,6 +9,8 @@ MAINTAINER=nik@FreeBSD.org
 DOC?= book
 
 FORMATS?= html-split html
+
+WITH_DOCFORMAT_NAVI_LINK?=YES
 
 INSTALL_COMPRESSED?= gz
 INSTALL_ONLY_COMPRESSED?=

@@ -35,6 +35,8 @@ FORMATS?= html-split
 INSTALL_COMPRESSED?= gz
 INSTALL_ONLY_COMPRESSED?=
 
+WITH_DOCFORMAT_NAVI_LINK?=YES
+
 #IMAGES = advanced-networking/isdn-bus.eps
 #IMAGES+= advanced-networking/isdn-twisted-pair.eps
 #IMAGES+= advanced-networking/natd.eps
