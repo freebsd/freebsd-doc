@@ -46,32 +46,6 @@
         (define html-manifest
           ;; Write a manifest?
           #f)
-
-        <!-- This replaces the existing mechanism for showing verbatim
-             blocks of text (programlistings, screens, and so forth.
-
-             Norm's stylesheet renders these in a table, with optional
-             shading if %shade-verbatim% is set. Previous practice for
-             the LinuxDoc DTD (and John Fieber's stylesheet) was to
-             indent them using <blockquote>. Stick with previous practice.
-
-             Norm says he will introduce a tweakable knob to affect this
-             in the future. -->
-(define ($verbatim-display$ line-numbers?)
-  (let ((content (make element gi: "BLOCKQUOTE"
-                       attributes: (list
-                                    (list "CLASS" (gi)))
-                       (make element gi: "PRE"
-                           (if line-numbers?
-                               ($verbatim-content-with-linenumbers$)
-                               ($verbatim-content$))))))
-    (if %shade-verbatim%
-        (make element gi: "TABLE"
-              attributes: ($shade-verbatim-attr$)
-              (make element gi: "TR"
-                    (make element gi: "TD"
-                          content)))
-        content)))
       ]]>
 
       <!-- Print only ................................................... --> 
@@ -80,6 +54,15 @@
       ]]>
 
       <!-- Both sets of stylesheets .................................... -->
+
+      (define %may-format-variablelist-as-table%
+        #f)
+      
+      (define %indent-programlisting-lines%
+        "    ")
+ 
+      (define %indent-screen-lines%
+        "    ")
       
       <!-- Slightly deeper customisations -->
 
@@ -123,8 +106,8 @@
       (element (caution para) ($admonpara$))
       (element (caution simpara) ($admonpara$))
 
-      (define usen-warning-label-title-sep ": ")
-      (define usen-caution-label-title-sep ": ")
+      (define en-warning-label-title-sep ": ")
+      (define en-caution-label-title-sep ": ")
 
       <!-- Tell the stylesheet about our local customisations -->
       
