@@ -1,11 +1,12 @@
-<!-- $FreeBSD: www/ja/ports/ports.inc,v 1.15 2000/04/24 02:13:38 kuriyama Exp $ -->
+<!-- $FreeBSD: www/ja/ports/ports.inc,v 1.16 2000/12/30 14:25:14 hrs Exp $ -->
 <!-- The FreeBSD Japanese Documentation Project -->
-<!-- Original revision: 1.51 -->
+<!-- Original revision: 1.55 -->
 <p>FreeBSD Ports/Packages Collection は,
 ユーザや管理者がアプリケーションのインストールを簡単に行なえる方法を提供します.
 Ports Collection は<a
 href="http://www.freebsd.org/%7Easami/papers/growth.gif">驚異的な速度で
 その数を増してきました</a>.
+</p>
 
 <p>ここに並べられている各 ``port'' には,
 FreeBSD 上でオリジナルのアプリケーションのソースコードをコンパイルし,
@@ -60,77 +61,65 @@ FreeBSD ports の更新情報</a> ページを参照してください. </p>
 <a href="../porters-handbook/">アプリケーションの移植</a> を参照
 してください. </p>
 
+<hr>
+
 <H1 ALIGN="LEFT"><FONT COLOR="#660000">アップグレードキット</FONT></H1>
 
-<p>これらの web ページにリストされている ports は常に更新され続けています.
+<p>
+これらの web ページにリストされている ports は常に更新され続けています.
+多くの ports は ports ツリーの他の部分に依存しますので, コレクション
+全体を同時に更新することをお勧めします. もしそれができないなら, 
+少なくとも <tt>ports/Mk</tt> にある make マクロが最新のものであることを
+確認してください. (つまり, あなたが <strong>cvsup</strong> を使って
+いるのなら, <tt>ports-base</tt> が cvsupfile の中に必要だということです.)
+<tt>bsd.port.mk</tt> その他が最新でもまだエラーが出るなら, 
+すみませんがコレクション全体を入手してください. 
+</p>
+
+<p>
 最新の ports ツリーは FreeBSD-current と FreeBSD-stable だけを
 公式にサポートします.
-まず最初に, あなたが使っているバージョンの FreeBSD のリリース以降に
+したがって, あなたが使っているバージョンの FreeBSD のリリース以降に
 開発された ports を使うためには FreeBSD システムのいくつかのファイルを
 更新する必要があるかもしれません.
-以下のリストの中から, あなたが使っている release にあったものをインストール
+以下のリストの中から, あなたが使っているリリースにあったものをインストール
 してください.
-ここ数日のものより以前の FreeBSD-stable や FreeBSD-current を使っている
-場合にも, 適切なアップグレードキットをインストールするのをお勧めします.
-ports システムは時により非常に速く変更されます.
+もしあなたのシステムが以下の packages リストにあるものより新しいなら,
+更新用 packges は必要ありません. もしあなたのシステムが 4.1-RELEASE
+より古かったり, 4.1 より古いブランチを使っているなら, ports-current
+を使うためには 4.x ブランチの (訳注: 4.1 以降の) 適当な時点まで
+アップグレードしてください. それが唯一の合理的な選択肢です. 
+</p>
 
 <dl>
 <dt><a
-href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-2.2-stable/Latest/221upgrade.tgz">2.2.1
-から 2.2-stable へのアップグレードキット</a>
-<dd>2.2.1-release もしくは 2.2.1-release から 2.2.2-release の間の 2.2-stable
-ユーザ用
+href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-4-stable/Latest/41upgrade.tgz">4.1
+から 4-STABLE へのアップグレードキット</a>
+<dd>4.1-RELEASE ユーザもしくは 2000 年 7 月 27 日から 2000 年 10 月 31 日
+の間の 4.1-STABLE ユーザ用
 <dt><a
-href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-2.2-stable/Latest/222upgrade.tgz">2.2.2
-から 2.2-stable へのアップグレードキット</a>
-<dd>2.2.2-release もしくは 
-2.2.2-release から 2.2.5-release の間の 2.2-stable ユーザ用
-<dt><a
-href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-2.2-stable/Latest/225upgrade.tgz">2.2.5
-から 2.2-stable へのアップグレードキット</a>
-<dd>2.2.5-release もしくは
-2.2.5-release から 2.2.6-release の間の 2.2-stable ユーザ用
-<dt><a
-href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-2.2-stable/Latest/227upgrade.tgz">2.2.7
-から 2.2-stable へのアップグレードキット</a>
-<dd>2.2.6-release, 2.2.7-release, 2.2.8-release もしくは
-2.2.6-release 以降の 2.2-stable ユーザ用
-<dt><a
-href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-3-stable/Latest/30upgrade.tgz">3.0
-から 3-stable へのアップグレードキット</a>
-<dd>3.0-release もしくは 3.0-release 以降の 3.0-stable ユーザ用
-<dt><a
-href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-3-stable/Latest/31upgrade.tgz">3.1
-から 3-stable へのアップグレードキット</a>
-<dd>3.1-release もしくは 3.1-release 以降の 3.1-stable ユーザ用
-<dt><a
-href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-3-stable/Latest/32upgrade.tgz">3.2
-から 3-stable へのアップグレードキット</a>
-<dd>3.2-release もしくは 3.2-release 以降の 3.2-stable ユーザ用
-<dt><a
-href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-3-stable/Latest/34upgrade.tgz">3.3 もしくは 3.4
-から 3-stable へのアップグレードキット</a>
-<dd>3.3/3.4-release もしくは 3.4-release 以降の 3.4-stable ユーザ用
-<dt><a
-href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-4-stable/Latest/40upgrade.tgz">4.0
-から 4-stable へのアップグレードキット</a>
-<dd>4.0-release のユーザおよび, 4.0-release 以降の 4.0-stable ユーザ用
+href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-4-stable/Latest/42upgrade.tgz">4.2
+から 4-STABLE へのアップグレードキット</a>
+<dd>4.2-RELEASE ユーザもしくは 2000 年 10 月 31 日から 2001 年 1 月 8 日
+の間の 4.x-STABLE もしくは 4.2-BETA もしくは 4.2-RC ユーザ用
 </dl>
 
-<p>これらは FreeBSD のパッケージになっています. インストールには
+<p>
+これらは FreeBSD のパッケージになっています. インストールには
 <strong>pkg_add</strong> を使ってください.
 これでここに載っている全ての ports を使うことができるようになります. 
 このアップグレードキットは ports やパッケージを使うのに必要なファイル
-だけを更新します. 3-stable への完全なアップグレードについては,
+だけを更新します. -STABLE への完全なアップグレードについては,
 ハンドブックの<a href="../handbook/synching.html">
 インターネットを通じたソースツリーの同期</a>を参照してください. 
-完全なアップグレードが (まだ 3.5-release より前のバージョンを使っている
-場合は特に)推奨されています.
-さらに, 2.2.X 系列は現在 ports-current では公式にはサポートされていません.
-ここにリストされている ports を使う場合は, たとえあなたの 2.2.X システムの
-リリースに含まれているものであっても, ``自分の責任で'' 行なってください.</p>
+
+2.2.X ブランチおよび 3.X ブランチは ports-current では公式にはサポート
+されていません. 過去のリリースといっしょに配布された ports ツリーは
+多分うまく動くでしょうが, これも ports team はサポートしません. なぜなら
+ports-current を十分にサポートするだけですでに時間がいっぱいだからです. 
+</p>
 
 <p>多くの ports はコンパイルと実行に X Window System を必要とします. 
 ports は <a href="http://www.xfree86.org/">XFree86</a> 上でテ
-ストされています. 最新のリリースは 3.3.6 です. いくつかの ports は古い
-リリースでは動作しないかも知れません. </p>
+ストされています. 最新のリリースは 3.3.6 です. いくつかの ports は
+これ以外のリリースでは動作しないかも知れません. </p>
