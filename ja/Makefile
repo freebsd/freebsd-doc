@@ -1,6 +1,6 @@
-# $FreeBSD: www/ja/Makefile,v 1.62 2003/11/24 18:26:33 hrs Exp $
+# $FreeBSD: www/ja/Makefile,v 1.63 2004/01/12 21:27:00 hrs Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.83
+# Original revision: 1.106
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -34,6 +34,7 @@ DOCS+= jabout.sgml
 #DATA=	favicon.ico
 #DATA+=	robots.txt
 DATA+=	freebsd.css
+#DATA+=  vendors.html
 
 # Subdirectories
 # SGML
@@ -43,6 +44,9 @@ SUBDIR+= docproj
 SUBDIR+= news
 #SUBDIR+= advocacy
 
+#SUBDIR+= events
+SUBDIR+= FAQ
+SUBDIR+= handbook
 SUBDIR+= internal
 SUBDIR+= java
 SUBDIR+= copyright
@@ -54,7 +58,7 @@ SUBDIR+= platforms
 SUBDIR+= releases
 #SUBDIR+= releng
 SUBDIR+= smp
-SUBDIR+= conspectus
+#SUBDIR+= kse
 #SUBDIR+= gnome
 #SUBDIR+= donations
 .if !defined(WEB_ONLY) || empty(WEB_ONLY)
@@ -69,8 +73,6 @@ SUBDIR+= doc
 # in to it.
 .if !defined(WEB_ONLY) || empty(WEB_ONLY)
 SUBDIR+= tutorials
-
-#DOCSUBDIR=	FAQ handbook
 .endif
 
 # Non-SGML
@@ -79,7 +81,7 @@ SUBDIR+= tutorials
 
 SGMLFLAGS=	-links -hdr ${.CURDIR}/doc.hdr -ftr ${.CURDIR}/doc.ftr -e EUC-JP
 
-WEBDIR=		data/ja
+WEBDIR?=	data/ja
 
 # index.html is special, and generated from index.xsl and news/news.xml
 DATA+=		index.html
