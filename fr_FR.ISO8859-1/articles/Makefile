@@ -24,6 +24,7 @@ SUBDIR+= euro
 SUBDIR+= java-tomcat
 SUBDIR+= dialup-firewall
 SUBDIR+= laptop
+SUBDIR+= pxe
 
 ROOT_SYMLINKS+= new-users
 
