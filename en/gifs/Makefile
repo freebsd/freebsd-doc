@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/gifs/Makefile,v 1.49 2004/04/12 22:07:42 simon Exp $
+# $FreeBSD: www/en/gifs/Makefile,v 1.50 2004/04/15 10:51:08 phantom Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -51,6 +51,7 @@ DATA+=	wc-bsdalph-4.2.gif
 DATA+=	wc-freebsd-4.2.gif wc-freebsd-4.2b.gif
 DATA+=	bsdcomp-4.2.gif
 DATA+=	lob-freebsd-4.2.gif lob-freebsd-4.4-small.gif lob-freebsd-4.4.gif
+DATA+=	cahiers_adm_cov.jpg
 DATA+=	daemon_hammer.jpg
 DATA+=	daemon_hammer-tn15.jpg daemon_hammer-tn20.jpg daemon_hammer-tn25.jpg
 DATA+=	daemon-phk.png
