@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-#	$Id: ports.cgi,v 1.21 1998-06-16 18:07:52 wosch Exp $
+#	$Id: ports.cgi,v 1.22 1998-06-16 18:17:54 wosch Exp $
 #
 # ports.cgi - search engine for FreeBSD ports
 #             	o search for a port by name or description
@@ -379,7 +379,7 @@ sub forms {
 <TITLE>FreeBSD Ports Changes</TITLE>
 </HEAD>
 <BODY BGCOLOR="#FFFFFF" TEXT="#000000">
-<H1><a href="../../">FreeBSD Ports Changes</A> $daemonGif</H1>
+<H1><a href="../">FreeBSD Ports Changes</A> $daemonGif</H1>
 
 <P>
 FreeBSD Ports [short description <a href="$portsDesc">followed</a> ...]
