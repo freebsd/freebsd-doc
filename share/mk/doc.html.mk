@@ -1,5 +1,5 @@
 #
-# $FreeBSD: doc/share/mk/doc.html.mk,v 1.6 2001/03/13 18:29:06 nik Exp $
+# $FreeBSD: doc/share/mk/doc.html.mk,v 1.7 2001/03/22 22:49:01 obrien Exp $
 #
 # This include file <doc.html.mk> handles building and installing of
 # HTML documentation in the FreeBSD Documentation Project.
@@ -45,7 +45,11 @@ MASTERDOC?=	${.CURDIR}/${DOC}.sgml
 
 KNOWN_FORMATS=	html txt tar pdb
 
+CSS_SHEET?=
+
 HTMLCATALOG=	${PREFIX}/share/sgml/html/catalog
+
+IMAGES_LIB?=
 
 .if ${MACHINE_ARCH} == "alpha"
 OPENJADE=	yes
@@ -103,12 +107,16 @@ CLEANFILES+= ${DOC}.${_curformat}.${_curcomp}
 .endfor
 .endif
 
+.for _curimage in ${IMAGES_LIB} 
+LOCAL_IMAGES_LIB += ${LOCAL_IMAGES_LIB_DIR}/${_curimage} 
+.endfor 
+
 .MAIN: all
 
 all: ${_docs}
 
-${DOC}.html: ${SRCS}
-	${SGMLNORM} -c ${HTMLCATALOG} ${.ALLSRC} > ${.TARGET}
+${DOC}.html: ${SRCS} ${LOCAL_IMAGES_LIB} ${IMAGES_PNG} 
+	${SGMLNORM} -c ${HTMLCATALOG} ${SRCS} > ${.TARGET}
 .if !defined(NO_TIDY)
 	-tidy -i -m -f /dev/null ${TIDYFLAGS} ${.TARGET}
 .endif
@@ -228,6 +236,22 @@ _cf=${_curformat}
 install-${_cf}: ${DOC}.${_cf}
 	@[ -d ${DESTDIR} ] || mkdir -p ${DESTDIR}
 	${INSTALL_DOCS} ${.ALLSRC} ${DESTDIR}
+	${INSTALL_DOCS} ${CSS_SHEET} ${DESTDIR}
+.for _curimage in ${IMAGES_LIB}
+	@[ -d ${DESTDIR}/${LOCAL_IMAGES_LIB_DIR}/${_curimage:H} ] || mkdir -p ${DESTDIR}/${LOCAL_IMAGES_LIB_DIR}/${_curimage:H}
+	${INSTALL_DOCS} ${LOCAL_IMAGES_LIB_DIR}/${_curimage} ${DESTDIR}/${LOCAL_IMAGES_LIB_DIR}/${_curimage:H}
+.endfor
+# Install the images.  First, loop over all the image names that contain a
+# directory seperator, make the subdirectories, and install.  Then loop over
+# the ones that don't contain a directory separator, and install them in the
+# top level.
+.for _curimage in ${IMAGES_PNG:M*/*}
+	mkdir -p ${DESTDIR}/${_curimage:H}
+	${INSTALL_DOCS} ${_curimage} ${DESTDIR}/${_curimage:H}
+.endfor
+.for _curimage in ${IMAGES_PNG:N*/*}
+	${INSTALL_DOCS} ${_curimage} ${DESTDIR}
+.endfor
 
 .for _compressext in ${KNOWN_COMPRESS}
 install-${_cf}.${_compressext}: ${DOC}.${_cf}.${_compressext}
