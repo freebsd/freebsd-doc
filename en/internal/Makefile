@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.13 1999-05-02 19:47:35 wosch Exp $
+# $Id: Makefile,v 1.14 1999-09-03 17:33:47 nik Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -11,6 +11,12 @@ DOCS+= 	machines.sgml
 DOCS+= 	mirror.sgml
 DOCS+=	statistic.sgml
 DOCS+= 	developer.sgml
+
+LOCAL=  committers-guide.html
+
+committers-guide.html: ../../../doc/en_US.ISO_8859-1/articles/committers-guide/article.sgml
+	(cd ../../../doc/en_US.ISO_8859-1/articles/committers-guide && make FORMATS=html INSTALL_COMPRESSED='')
+	cp ../../../doc/en_US.ISO_8859-1/articles/committers-guide/article.html committers-guide.html
 
 INDEXLINK=	internal.html
 
