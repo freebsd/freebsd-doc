@@ -1,5 +1,5 @@
 #
-# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.13 2000/07/16 16:32:27 nik Exp $
+# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.14 2000/07/17 08:51:38 nbm Exp $
 #
 # This include file <doc.docbook.mk> handles building and installing of
 # DocBook documentation in the FreeBSD Documentation Project.
@@ -158,7 +158,7 @@ _docs+= ${DOC}.pdb ${.CURDIR:T}.pdb
 .for _curformat in ${FORMATS}
 _cf=${_curformat}
 .for _curcomp in ${INSTALL_COMPRESSED}
-.if ${_cf} != "html-split"
+.if ${_cf} != "html-split" && ${_cf} != "html"
 _curinst+= install-${_curformat}.${_curcomp}
 _docs+= ${DOC}.${_curformat}.${_curcomp}
 CLEANFILES+= ${DOC}.${_curformat}.${_curcomp}
@@ -272,7 +272,8 @@ _PROG_COMPRESS_zip: .USE
 
 #
 # Build a list of targets for each compression scheme and output format.
-# Don't compress the html-split output format.
+# Don't compress the html-split or html output format (because they need
+# to be rolled in to tar files first).
 #
 .for _curformat in ${KNOWN_FORMATS}
 _cf=${_curformat}
