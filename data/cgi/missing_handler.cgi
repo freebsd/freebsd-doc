@@ -52,11 +52,11 @@
 #
 #     _________________________________________________________________
 #                                      
-#   $Date: 1998-02-12 11:04:03 $
+#   $Date: 1998-06-07 00:13:03 $
 # ----------------------------------------------------------------------
 #
 #
-# $Id: missing_handler.cgi,v 1.3 1998-02-12 11:04:03 wosch Exp $
+# $Id: missing_handler.cgi,v 1.4 1998-06-07 00:13:03 wosch Exp $
 
 # output title
 $title = $ENV{'MISSING_HANDLER_TITLE'} || 
@@ -73,6 +73,7 @@ $server_admin=$ENV{'SERVER_ADMIN'};
 $http_host=$ENV{'HTTP_HOST'};
 $server_name=$ENV{'SERVER_NAME'};
 
+$hsty_base = '';
 require 'cgi-style.pl';
 print &html_header($title);
 
