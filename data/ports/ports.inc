@@ -30,10 +30,10 @@ section of the handbook, especially if you are still using 2.2.1-release.
 
 <p>For more information about new ports, changed ports,
 removed ports, or searching for an application see the 
-<a href="http://www.de.freebsd.org/de/cgi/ports.cgi">
+<a href="http://www.freebsd.org/~wosch/test/de/cgi/ports.cgi">
 FreeBSD Ports Changes</a> script.</p>
 
-<FORM METHOD="GET" ACTION="http://www.de.freebsd.org/de/cgi/ports.cgi">
+<FORM METHOD="GET" ACTION="http://www.freebsd.org/~wosch/test/de/cgi/ports.cgi">
 Search for:
 <INPUT NAME="query" VALUE="">
 <SELECT NAME="stype">
