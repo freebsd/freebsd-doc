@@ -438,13 +438,13 @@
 	be manually dereferenced to access the credential label.  This
 	may change in future revisions of the MAC Framework.</para>
 
-      <para>Initialization entry points frequently include a blocking
+      <para>Initialization entry points frequently include a sleeping
 	disposition flag indicating whether or not an initialization
-	is permitted to block; if blocking is not permitted, a failure
+	is permitted to sleep; if sleeping is not permitted, a failure
 	may be returned to cancel allocation of the label (and hence
 	object).  This may
 	occur, for example, in the network stack during interrupt
-	handling, where blocking is not permitted, or while the caller
+	handling, where sleeping is not permitted, or while the caller
 	holds a mutex.  Due to the
 	performance cost of maintaining labels on in-flight network
 	packets (Mbufs), policies must specifically declare a
@@ -721,7 +721,11 @@
         </informaltable>
         
         <para>Policy load event.  The policy list mutex is held, so
-          caution should be applied.</para>
+	  sleep operations cannot be performed, and calls out to other
+	  kernel subsystems must be made with caution.  If potentially
+	  sleeping memory allocations are required during policy
+	  initialization, they should be made using a separate module
+	  SYSINIT().</para>
       </sect3>
       
       <sect3 id="mpo-destroy">
@@ -781,7 +785,7 @@
 
               <row>
                 <entry><parameter>call</parameter></entry>
-                <entry>Syscall number</entry>
+                <entry>Policy-specific syscall number</entry>
               </row>
 
               <row>
@@ -838,13 +842,25 @@
 
         <!-- XXX: Maybe rewrite this section. -->
         <para>This entry point permits policy modules to perform
-          MAC-related events when a thread returns to user space.
+          MAC-related events when a thread returns to user space, via
+	  a system call return, trap return, or otherwise.
           This is required for policies that have floating process
           labels, as it is not always possible to acquire the process
           lock at arbitrary points in the stack during system call
           processing; process labels might represent traditional
           authentication data, process history information, or other
-          data.</para>
+          data.  To employ this mechanism, intended changes to the
+	  process credential label may be stored in the
+	  <literal>p_label</literal> protected by a per-policy spin
+	  lock, and then set the per-thread
+	  <literal>TDF_ASTPENDING</literal> flag and per-process
+	  <literal>PS_MACPENDM</literal> flag to schedule a call
+	  to the userret entry point.  From this entry point, the
+	  policy may create a replacement credential with less
+	  concern about the locking context.  Policy writers are
+	  cautioned that event ordering relating to scheduling an
+	  AST and the AST being performed may be complex and
+	  interlaced in multithreaded applications.</para>
       </sect3>
     </sect2>
 
@@ -878,7 +894,7 @@
         </informaltable>
         
         <para>Initialize the label on a newly instantiated bpfdesc (BPF
-          descriptor)</para>
+          descriptor).  Sleeping is permitted.</para>
       </sect3>
 
       <sect3 id="mac-mpo-init-cred-label">
@@ -908,7 +924,7 @@
         </informaltable>
         
         <para>Initialize the label for a newly instantiated
-          user credential.</para>
+          user credential.  Sleeping is permitted.</para>
       </sect3>
 
       <sect3 id="mac-mpo-init-devfsdirent">
@@ -938,7 +954,7 @@
         </informaltable>
         
         <para>Initialize the label on a newly instantiated devfs
-          entry.</para>
+          entry.  Sleeping is permitted.</para>
       </sect3>
 
       <sect3 id="mac-mpo-init-ifnet">
@@ -968,7 +984,7 @@
         </informaltable>
         
         <para>Initialize the label on a newly instantiated network
-          interface.</para>
+          interface.  Sleeping is permitted.</para>
       </sect3>
       
       <sect3 id="mac-mpo-init-ipq">
@@ -997,7 +1013,7 @@
 
               <row>
                 <entry><parameter>flag</parameter></entry>
-                <entry>Blocking/non-blocking &man.malloc.9;; see
+                <entry>Sleeping/non-sleeping &man.malloc.9;; see
 		  below</entry>
               </row>
             </tbody>
@@ -1007,11 +1023,11 @@
         <para>Initialize the label on a newly instantiated IP fragment
           reassembly queue.  The <parameter>flag</parameter> field may
 	  be one of <symbol>M_WAITOK</symbol> and <symbol>M_NOWAIT</symbol>,
-	  and should be employed to avoid performing a blocking
+	  and should be employed to avoid performing a sleeping
           &man.malloc.9; during this initialization call.  IP fragment
 	  reassembly queue allocation frequently occurs in performance
 	  sensitive environments, and the implementation should be careful
-	  to avoid blocking or long-lived operations.  This entry point
+	  to avoid sleeping or long-lived operations.  This entry point
           is permitted to fail resulting in the failure to allocate
           the IP fragment reassembly queue.</para>
       </sect3>
@@ -1037,7 +1053,7 @@
             <tbody>
               <row>
                 <entry><parameter>flag</parameter></entry>
-                <entry>Blocking/non-blocking &man.malloc.9;; see
+                <entry>Sleeping/non-sleeping &man.malloc.9;; see
                   below</entry>
               </row>
               
@@ -1053,11 +1069,11 @@
           header (<parameter>mbuf</parameter>).  The
           <parameter>flag</parameter> field may be one of
           <symbol>M_WAITOK</symbol> and <symbol>M_NOWAIT</symbol>, and
-          should be employed to avoid performing a blocking
+          should be employed to avoid performing a sleeping
           &man.malloc.9; during this initialization call.  Mbuf
           allocation frequently occurs in performance sensitive
           environments, and the implementation should be careful to
-          avoid blocking or long-lived operations.  This entry point
+          avoid sleeping or long-lived operations.  This entry point
           is permitted to fail resulting in the failure to allocate
           the mbuf header.</para>
       </sect3>
@@ -1099,7 +1115,7 @@
         </informaltable>
         
         <para>Initialize the labels on a newly instantiated mount
-          point.</para>
+          point.  Sleeping is permitted.</para>
       </sect3>
 
       <sect3 id="mac-mpo-init-mount-fs-label">
@@ -1129,7 +1145,7 @@
         </informaltable>
 
         <para>Initialize the label on a newly mounted file
-          system.</para>
+          system.  Sleeping is permitted</para>
       </sect3>
 
       <sect3 id="mac-mpo-init-pipe-label">
@@ -1158,7 +1174,8 @@
           </tgroup>
         </informaltable>
 
-        <para>Initialize a label for a newly instantiated pipe.</para>
+        <para>Initialize a label for a newly instantiated pipe. Sleeping
+	  is permitted.</para>
       </sect3>
       
       <sect3 id="mac-mpo-init-socket">
@@ -1194,7 +1211,10 @@
         </informaltable>
         
         <para>Initialize a label for a newly instantiated
-          socket.</para>
+          socket.  The <parameter>flag</parameter> field may be one of  
+	  <symbol>M_WAITOK</symbol> and <symbol>M_NOWAIT</symbol>, and
+	  should be employed to avoid performing a sleeping &man.malloc.9;
+	  during this initialization call.</para>
       </sect3>
 
       <sect3 id="mac-mpo-init-socket-peer-label">
@@ -1230,7 +1250,10 @@
         </informaltable>
 
         <para>Initialize the peer label for a newly instantiated
-          socket.</para>
+          socket.  The <parameter>flag</parameter> field may be one of  
+	  <symbol>M_WAITOK</symbol> and <symbol>M_NOWAIT</symbol>, and
+	  should be employed to avoid performing a sleeping &man.malloc.9;
+	  during this initialization call.</para>
       </sect3>
       
       <sect3 id="mac-mpo-init-proc-label">
@@ -1260,7 +1283,7 @@
         </informaltable>
         
         <para>Initialize the label for a newly instantiated
-          process.</para>
+          process.  Sleeping is permitted.</para>
       </sect3>
 
 
@@ -1290,7 +1313,8 @@
           </tgroup>
         </informaltable>
         
-        <para>Initialize the label on a newly instantiated vnode.</para>
+        <para>Initialize the label on a newly instantiated vnode.  Sleeping
+	  is permitted.</para>
       </sect3>
       <sect3 id="mac-mpo-destroy-bpfdesc">
         <title><function>&mac.mpo;_destroy_bpfdesc_label</function></title>
