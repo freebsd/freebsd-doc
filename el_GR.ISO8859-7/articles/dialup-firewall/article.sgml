@@ -1,0 +1,389 @@
+<!--
+        Dialup Firewall
+        The FreeBSD Greek Documentation Project
+        Original version: 1.17
+-->
+
+<!DOCTYPE article PUBLIC "-//FreeBSD//DTD DocBook V4.1-Based Extension//EN" [
+<!ENTITY % man PUBLIC "-//FreeBSD//ENTITIES DocBook Manual Page Entities//EN">
+%man;
+]>
+
+<article>
+  <articleinfo>
+    <title>Σύνδεση μέσω τηλεφώνου και firewalling στο FreeBSD</title>
+
+    <authorgroup>
+      <author>
+        <firstname>Marc</firstname>
+        <surname>Silver</surname>
+
+        <affiliation>
+          <address><email>marcs@draenor.org</email></address>
+        </affiliation>
+      </author>
+    </authorgroup>
+
+    <pubdate>$FreeBSD$</pubdate>
+
+    <abstract>
+      <para>Αυτό το άρθρο περιγράφει πως μπορείτε να ρυθμίσετε ένα firewall
+        χρησιμοποιώντας μια PPP σύνδεση μέσω τηλεφώνου στο FreeBSD με το IPFW.
+        Πιο συγκεκριμένα, ένα firewall πάνω από μια σύνδεση μέσω τηλεφώνου που
+        έχει δυναμική IP διεύθυνση.  Αυτό το κείμενο δεν ασχολείται με το πως
+        θα ρυθμίσετε την PPP σύνδεσή σας.</para>
+    </abstract>
+  </articleinfo>
+
+  <sect1 id="preface">
+    <title>Πρόλογος</title>
+
+    <para>Σύνδεση μέσω τηλεφώνου και firewalling στο FreeBSD</para>
+
+     <para>Αυτό το κείμενο περιγράφει την διαδικασία που χρειάζεται για να
+       ρυθμίσετε ένα firewall στο FreeBSD όταν η IP διεύθυνση δίνεται δυναμικά
+       από τον ISP σας.  Παρόλο που έχω προσπαθήσει να κάνω αυτό το κείμενο
+       όσο το δυνατόν πιο πλήρες και σωστό, είστε ευπρόσδεκτοι να στείλετε τα
+       σχόλιά ή τις προτάσεις σας στην διεύθυνση
+       <email>marcs@draenor.org</email>.</para>    
+   </sect1>
+
+  <sect1 id="kernel">
+    <title>Παράμετροι του πυρήνα</title>
+    
+    <para>Το πρώτο πράγμα που θα χρειαστεί να κάνετε είναι να μεταγλωττίσετε
+      τον πυρήνα σας.  Αν χρειάζεστε βοήθεια για να το κάνετε αυτό, τότε το
+      καλύτερο μέρος να ξεκινήσετε είναι το <ulink
+        URL="http://www.freebsd.org/handbook/kernelconfig.html">τμήμα
+      ρυθμίσεων του πυρήνα στο Εγχειρίδιο</ulink>.  Θα πρέπει να προσθέσετε
+      τις παρακάτω επιλογές στις ρυθμίσεις του πυρήνα σας:</para>
+
+    <variablelist>
+      <varlistentry>
+        <term><literal>options IPFIREWALL</literal></term>
+
+        <listitem>
+          <para>Ενεργοποιεί τον firewall κώδικα του πυρήνα.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><literal>options IPFIREWALL_VERBOSE</literal></term>
+
+        <listitem>
+          <para>Στέλνει τα μηνύματα για τα κατάλληλα πακέτα στο log του
+            συστήματος.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><literal>options
+            IPFIREWALL_VERBOSE_LIMIT=<replaceable>100</replaceable></literal></term>
+
+        <listitem>
+          <para>Βάζει κάποιο όριο στις φορές που κάποια εγγραφή θα
+            καταγράφεται.  Αυτό εμποδίζει τα log αρχεία σας από το να γεμίσουν
+            με πολλές επαναλαμβανόμενες εγγραφές.
+            <replaceable>100</replaceable> είναι μια αρκετά λογική τιμή, αλλά
+            μπορείτε να το ρυθμίσετε ανάλογα με τις απαιτήσεις σας.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><literal>options IPDIVERT</literal></term>
+
+        <listitem>
+          <para>Ενεργοποιεί τα <emphasis>divert</emphasis> sockets, που θα
+            δούμε αργότερα τι κάνουν.</para>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+
+    <para>Υπάρχουν κι άλλα <emphasis>προαιρετικά</emphasis> πράγματα που
+      μπορείτε να προσθέσετε στον πυρήνα σας για ακόμα μεγαλύτερη ασφάλεια.
+      Δεν είναι απαραίτητα για να ρυθμίσετε ένα firewall έτσι ώστε να
+      δουλεύει, αλλά κάποιοι αρκετά παρανοϊκοί χρήστες μπορεί να θέλουν να τα
+      ενεργοποιήσουν.</para>
+
+    <variablelist>
+      <varlistentry>
+        <term><literal>options TCP_DROP_SYNFIN</literal></term>
+
+        <listitem>
+          <para>Αυτή η επιλογή δίνει την δυνατότητα στον πυρήνα να αγνοεί τα
+            TCP πακέτα που έχουν και την SYN και την FIN επιλογή.  Έτσι
+            εμποδίζονται εργαλεία όπως το nmap κλπ. στην προσπάθειά τους να
+            αναγνωρίσουν το TCP stack του μηχανήματος, αλλά επίσης είναι
+            ασύμβατο με τις επεκτάσεις που περιγράφει το RFC1644.  Αυτό
+            <emphasis>δεν</emphasis> προτείνεται για ένα μηχάνημα που θα
+            τρέχει κάποιο web server.</para>
+        </listitem>
+      </varlistentry>
+     </variablelist>
+
+    <para>Μην κάνετε reboot όταν έχετε μεταγλωττίσει τον πυρήνα.  Ελπίζουμε
+      πως θα χρειαστεί μόνο μια επανεκκίνηση, στο τέλος της
+      εγκατάστασης του firewall.</para>
+  </sect1>
+
+  <sect1 id="rcconf">
+    <title>Αλλαγές στο <filename>/etc/rc.conf</filename> για να φορτώνεται
+      το firewall</title>
+    
+    <para>Τώρα πρέπει να κάνουμε κάποιες αλλαγές στο
+      <filename>/etc/rc.conf</filename> με τις ρυθμίσεις μας για το
+      firewall.  Απλά προσθέστε τις παρακάτω γραμμές:</para>
+    
+    <programlisting>firewall_enable="YES"
+firewall_script="/etc/firewall/fwrules"
+natd_enable="YES"
+natd_interface="tun0"
+natd_flags="-dynamic"</programlisting>
+
+    <para>Για περισσότερες πληροφορίες σχετικά με τη σημασίας καθεμιάς από
+      αυτές τις γραμμές, ρίξτε μια ματιά στο
+      <filename>/etc/defaults/rc.conf</filename> και διαβάστε την man σελίδα
+      &man.rc.conf.5;</para>
+  </sect1>
+
+  <sect1>
+    <title>Απενεργοποιήστε την ενσωματωμένη μετάφραση διευθύνσεων του
+      PPP</title>
+    
+    <para>Μπορεί ήδη να χρησιμοποιείτε την ενσωματωμένη μετάφραση διευθύνσεων
+      του PPP (NAT).  Αν ναι, τότε θα πρέπει να την απενεργοποιήσετε, αφού τα
+      παραδείγματα που θα δούμε παρακάτω χρησιμοποιούν το &man.natd.8; για να
+      κάνουν το ίδιο πράγμα.</para>
+
+    <para>Αν έχετε ήδη τις απαραίτητες γραμμές για να ξεκινάει το PPP
+      αυτόματα, μάλλον μοιάζουν κάπως έτσι:</para>
+
+    <programlisting>ppp_enable="YES"
+ppp_mode="auto"
+ppp_nat="YES"
+ppp_profile="<replaceable>profile</replaceable>"</programlisting>
+
+    <para>Αν ναι, αφαιρέστε την γραμμή <literal>ppp_nat="YES"</literal>.
+      Θα πρέπει επίσης να αφαιρέσετε τυχόν <literal>nat enable yes</literal> ή
+      <literal>alias enable yes</literal> έχει το
+      <filename>/etc/ppp/ppp.conf</filename> σας.</para>
+  </sect1>
+
+  <sect1 id="rules">
+    <title>Οι κανόνες του firewall</title>
+    
+    <para>Έχουμε σχεδόν τελειώσει.  Το μόνο που απομένει τώρα είναι να
+      ορίσουμε τους κανόνες του firewall και τότε μπορούμε να επανεκκινήσουμε
+      το σύστημα ώστε να ξεκινήσει το firewall.  Καταλαβαίνω πως ο καθένας θα
+      θέλει κάτι λίγο ή πολύ διαφορετικό στους κανόνες του.  Αυτό που
+      προσπάθησα να κάνω είναι να γράψω κάποιους βασικούς κανόνες που
+      ταιριάζουν στους πιο πολλούς χρήστες που συνδέονται στο δίκτυο μέσω
+      τηλεφώνου.  Μπορείτε προφανώς να κάνετε αλλαγές σύμφωνα με τις ανάγκες
+      σας, χρησιμοποιώντας τους παρακάτω κανόνες σαν την βάση για το δικό σας
+      σετ κανόνων.  Ας αρχίσουμε όμως με τις βασικές αρχές ενός κλειστού
+      firewall.  Αυτό που θέλετε να κάνετε είναι να κλείσετε τα πάντα και μετά
+      να ανοίξετε μόνο ότι πραγματικά σας χρειάζεται.  Οι κανόνες θα πρέπει
+      λοιπόν πρώτα να επιτρέπουν και μετά να απαγορεύουν.  Η λογική πίσω από
+      αυτό είναι ότι πρώτα βάζετε τους κανόνες που επιτρέπουν πράγματα να
+      περάσουν και ύστερα όλα τα άλλα απαγορεύονται. :)</para>
+
+    <para>Ύστερα, φτιάξτε ένα κατάλογο <filename
+      class="directory">/etc/firewall</filename>.  Αλλάξτε κατάλογο μέσα σε
+      αυτόν και δημιουργήστε το αρχείο <filename>fwrules</filename> που το
+      όνομά του είχαμε γράψει στο <filename>rc.conf</filename>.  Σημειώστε πως
+      μπορείτε να αλλάξετε το όνομα του αρχείου αυτού σε ότι θέλετε.  Αυτός ο
+      οδηγός δίνει αυτό το όνομα σαν παράδειγμα και μόνο.</para>
+
+    <para>Ας δούμε τώρα ένα παράδειγμα firewall, που έχει αρκετά καλά
+      σχόλια.</para>
+
+    <programlisting># Firewall rules
+# Written by Marc Silver (marcs@draenor.org)
+# http://draenor.org/ipfw
+# Freely distributable 
+
+
+# Define the firewall command (as in /etc/rc.firewall) for easy
+# reference.  Helps to make it easier to read.
+fwcmd="/sbin/ipfw"
+
+# Force a flushing of the current rules before we reload.
+$fwcmd -f flush
+
+# Divert all packets through the tunnel interface.
+$fwcmd add divert natd all from any to any via tun0
+
+# Allow all data from my network card and localhost.  Make sure you
+# change your network card (mine was fxp0) before you reboot.  :)
+$fwcmd add allow ip from any to any via lo0
+$fwcmd add allow ip from any to any via fxp0
+
+# Allow all connections that I initiate.
+$fwcmd add allow tcp from any to any out xmit tun0 setup
+
+# Once connections are made, allow them to stay open.
+$fwcmd add allow tcp from any to any via tun0 established
+
+# Everyone on the internet is allowed to connect to the following
+# services on the machine.  This example shows that people may connect
+# to ssh and apache.
+$fwcmd add allow tcp from any to any 80 setup
+$fwcmd add allow tcp from any to any 22 setup
+
+# This sends a RESET to all ident packets.
+$fwcmd add reset log tcp from any to any 113 in recv tun0
+
+# Allow outgoing DNS queries ONLY to the specified servers.
+$fwcmd add allow udp from any to <replaceable>x.x.x.x</replaceable> 53 out xmit tun0
+
+# Allow them back in with the answers...  :)
+$fwcmd add allow udp from <replaceable>x.x.x.x</replaceable> 53 to any in recv tun0
+
+# Allow ICMP (for ping and traceroute to work).  You may wish to
+# disallow this, but I feel it suits my needs to keep them in.
+$fwcmd add 65435 allow icmp from any to any
+
+# Deny all the rest.
+$fwcmd add 65435 deny log ip from any to any</programlisting>
+
+    <para>Τώρα έχετε ένα ολοκληρωμένο firewall που επιτρέπει συνδέσεις στις
+      θύρες 22 και 80 και καταγράφει όλες τις άλλες συνδέσεις στο log του
+      συστήματος.  Πλέον είστε έτοιμοι για επανεκκίνηση και το firewall θα
+      πρέπει να ξεκινήσει να δουλεύει.  Αν δείτε ότι αυτό είναι λάθος, ή έχετε
+      οποιαδήποτε προβλήματα, ή ακόμα καλύτερα έχετε κάποιες προτάσεις για να
+      διορθωθεί αυτή η σελίδα, επικοινωνήστε μαζί μου με email.</para>
+  </sect1>
+
+  <sect1>
+    <title>Ερωτήσεις</title>
+    
+    <qandaset>
+      <qandaentry>
+        <question>
+          <para>Γιατί χρησιμοποιείς το &man.natd.8; και το &man.ipfw.8; αφού
+            θα μπορούσες να χρησιμοποιήσεις τα φίλτρα του &man.ppp.8;;</para>
+        </question>
+        
+        <answer>
+          <para>Θα πρέπει να είμαι ειλικρινής και να πω ότι δεν υπάρχει
+            κάποιος σοβαρός λόγος που χρησιμοποιώ το <command>ipfw</command>
+            και το <command>natd</command> αντί για τα ενσωματωμένα φίλτρα του
+            <command>ppp</command>.  Από συζητήσεις που είχα με διάφορα άτομα
+            φαίνεται πως οι πιο πολλοί συμφωνούν στο εξής: το
+            <command>ipfw</command> έχει σαφώς πιο πολλές δυνατότητες και
+            είναι πιο ευέλικτο στις ρυθμίσεις του από ότι τα φίλτρα του
+            <command>ppp</command>, αλλά ότι κερδίζει σε δυνατότητες το χάνει
+            σε ευκολία τροποποίησης των ρυθμίσεων.  Ένας από τους λόγους που
+            το χρησιμοποιώ είναι επειδή προτιμώ το φιλτράρισμα του firewall να
+            γίνεται στο επίπεδο του πυρήνα, κι όχι από ένα πρόγραμμα στο
+            επίπεδο του χρήστη.</para>
+        </answer>
+      </qandaentry>
+
+      <qandaentry>
+        <question>
+          <para>Βλέπω μηνύματα όπως <errorname>limit 100 reached on entry
+            2800</errorname> και μετά από αυτό δεν ξαναβλέπω ποτέ μηνύματα στο
+            log μου.  Δουλεύει ακόμα το firewall μου;</para>
+        </question>
+
+        <answer>
+          <para>Αυτό απλά σημαίνει πως έχει χρησιμοποιηθεί το μέγιστο όριο
+            καταγραφής (logging) για αυτό τον κανόνα.  Ο κανόνας ο ίδιος
+            εξακολουθεί να δουλεύει, αλλά δεν θα στέλνει πια μηνύματα στο log
+            του συστήματος μέχρι να μηδενίσετε πάλι τους μετρητές.  Μπορείτε
+            να μηδενίσετε τους μετρητές με την εντολή <command>ipfw
+            resetlog</command>.  Εναλλακτικά, μπορείτε να αυξήσετε το όριο
+            καταγραφής στις ρυθμίσεις του πυρήνα σας με την επιλογή
+            <option>IPFIREWALL_VERBOSE_LIMIT</option> όπως περιγράψαμε
+            παραπάνω.</para>
+        </answer>
+      </qandaentry>
+
+      <qandaentry>
+        <question>
+          <para>Αν χρησιμοποιώ διευθύνσεις εσωτερικά που ανήκουν στην ομάδα
+            192.168.0.0 range, μπορώ να αλλάξω την εντολή σε κάτι όπως
+            <literal>$fwcmd add deny all from any to 192.168.0.0:255.255.0.0
+            via tun0</literal> στους κανόνες του firewall για να εμποδίσω τα
+            μηχανήματα έξω από το δίκτυο από το να συνδέονται με τα εσωτερικά
+            μηχανήματα;</para>
+        </question>
+
+        <answer>
+          <para>Η σύντομη απάντηση είναι όχι.  Ο λόγος γι αυτό είναι ότι το
+            <command>natd</command> κάνει μετάφραση διευθύνσεων για
+            <emphasis>οτιδήποτε</emphasis> περνάει μέσω του interface
+            <devicename>tun0</devicename>.  Έτσι, τα εισερχόμενα πακέτα θα
+            εμφανίζονται μόνο στην δυναμικά ορισμένη IP διεύθυνση του
+            ξωτερικού interface και <emphasis>όχι</emphasis> στην διεύθυνση
+            του εσωτερικού δικτύου.  Σημειώστε όμως ότι μπορείτε να προσθέσετε
+            ένα κανόνα <literal>$fwcmd add deny all from
+            192.168.0.4:255.255.0.0 to any via tun0</literal> ο οποίος θα
+            απαγορεύει σε ένα μηχάνημα του εσωτερικού δικτύου να στείλει
+            οτιδήποτε πέρα από το firewall.</para>
+        </answer>
+      </qandaentry>
+
+      <qandaentry>
+        <question>
+          <para>Κάποιο λάθος πρέπει να έγινε.  Ακολούθησα τις εντολές κατά
+          γράμμα και τώρα κλειδώθηκα απέξω.</para>
+        </question>
+
+        <answer>
+          <para>Αυτός ο οδηγός υποθέτει ότι χρησιμοποιείτε το
+            <emphasis>userland-ppp</emphasis>, γι αυτό κι οι κανόνες που
+            δίνονται χρησιμοποιούν το <devicename>tun0</devicename> interface,
+            που αντιστοιχεί στην πρώτη σύνδεση που φτιάχνεται με το
+            &man.ppp.8; (αλλιώς γνωστό και ως <emphasis>user-ppp</emphasis>).
+            Η επόμενη σύνδεση θα χρησιμοποιούσε το
+            <devicename>tun1</devicename>, μετά το
+            <devicename>tun2</devicename> και πάει λέγοντας.</para>
+
+          <para>Θα πρέπει επίσης να θυμάστε ότι το &man.pppd.8; χρησιμοποιεί
+            το interface <devicename>ppp0</devicename>, οπότε αν ξεκινήσετε τη
+            σύνδεσή σας με το &man.pppd.8; θα πρέπει να αντικαταστήσετε το
+            <devicename>tun0</devicename> με <devicename>ppp0</devicename>.
+            Παρακάτω θα δείξουμε ένα εύκολο τρόπο να αλλάξετε τους κανόνες του
+            firewall κατάλληλα.  Οι αρχικοί κανόνες σώζονται σε ένα αρχείο με
+            όνομα <filename>fwrules_tun0</filename>.</para>
+
+          <screen>          &prompt.user; <userinput>cd /etc/firewall</userinput>
+            /etc/firewall&prompt.user; <userinput>su</userinput>
+            <prompt>Password:</prompt>
+            /etc/firewall&prompt.root; <userinput>mv fwrules fwrules_tun0</userinput>
+            /etc/firewall&prompt.root; <userinput>cat fwrules_tun0 | sed s/tun0/ppp0/g > fwrules</userinput>
+          </screen>
+
+          <para>Για να καταλάβετε αν χρησιμοποιείτε το &man.ppp.8; ή το
+            &man.pppd.8; μπορείτε να εξετάσετε την έξοδο της &man.ifconfig.8;
+            αφού ενεργοποιηθεί η σύνδεσή σας.  Π.χ., για μια σύνδεση που
+            ενεργοποιήθηκε από το &man.pppd.8; θα δείτε κάτι σαν αυτό
+            (δείχνονται μόνο οι σχετικές γραμμές):</para>
+
+          <screen>          &prompt.user; <userinput>ifconfig</userinput>
+            <emphasis>(skipped...)</emphasis>
+            ppp0: flags=<replaceable>8051&lt;UP,POINTOPOINT,RUNNING,MULTICAST&gt; mtu 1524</replaceable>
+                    inet <replaceable>xxx.xxx.xxx.xxx</replaceable> --&gt; <replaceable>xxx.xxx.xxx.xxx</replaceable> netmask <replaceable>0xff000000</replaceable>
+            <emphasis>(skipped...)</emphasis>
+            </screen>
+
+          <para>Από την άλλη, για μια σύνδεση που ενεργοποιήθηκε με το
+            &man.ppp.8; (<emphasis>user-ppp</emphasis>) θά πρεπε να δείτε κάτι
+            παρόμοιο με το παρακάτω:</para>
+
+          <screen>          &prompt.user; <userinput>ifconfig</userinput>
+            <emphasis>(skipped...)</emphasis>
+            ppp0: flags=<replaceable>8010&lt;POINTOPOINT,MULTICAST&gt; mtu 1500</replaceable>
+            <emphasis>(skipped...)</emphasis>
+            tun0: flags=<replaceable>8051&lt;UP,POINTOPOINT,RUNNING,MULTICAST&gt; mtu 1524</replaceable>
+                    <emphasis>(IPv6 stuff skipped...)</emphasis>
+                    inet <replaceable>xxx.xxx.xxx.xxx</replaceable> --&gt; <replaceable>xxx.xxx.xxx.xxx</replaceable> netmask <replaceable>0xffffff00</replaceable>
+                    Opened by PID <replaceable>xxxxx</replaceable>
+            <emphasis>(skipped...)</emphasis></screen>
+        </answer>
+      </qandaentry>
+    </qandaset>
+  </sect1>
+</article>
