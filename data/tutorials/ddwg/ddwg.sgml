@@ -6,7 +6,7 @@
   ++
   ++ Copyright Eric L. Hernes - Wednesday, August 2, 1995
   ++
-  ++ $Id: ddwg.sgml,v 1.4 1997-10-03 20:53:38 wosch Exp $
+  ++ $Id: ddwg.sgml,v 1.5 1998-06-12 13:59:49 eivind Exp $
   ++
   ++ Sgml doc for something
   -->
@@ -153,7 +153,100 @@ is limited to one page (4k on the i386).
 <sect3> d_stop()
 <sect3> d_reset()
 <sect3> d_devtotty()
-<sect3> d_select()
+<sect3> d_poll() (3.0+) or d_select() (2.2)
+<p>
+d_poll()'s argument list is as follows:
+<code>
+void
+d_poll(dev_t dev, int events, struct proc *p)
+</code>
+
+<p> d_poll() is used to find out if a device is ready for IO.  An
+example is waiting for data to become available from the network, or
+waiting for the user to press a key.  This correspond to the poll()
+call in userland.
+
+<p>The d_poll() call should check for the events specified in the
+event mask.  If none of the requested events are active, but they may
+become active later, it should record this for the kernel's later
+persual.  d_poll() does this by calling selrecord() with a selinfo
+structure for this device.  The sum of all these activities look
+something like this:
+
+<code>
+static struct my_softc {
+	struct queue rx_queue;  /* As example only - not required */
+	struct queue tx_queue;  /* As example only - not required */
+	struct selinfo selp;    /* Required */
+} my_softc[NMYDEV];
+
+...
+
+static int
+mydevpoll(dev_t dev, int events, struct proc *p)
+{
+	int revents = 0;	/* Events we found */
+	int s;
+	struct my_softc *sc = &amp;my_softc[dev];
+
+	/* We can only check for IN and OUT */
+	if ((events &amp; (POLLIN|POLLOUT)) == 0)
+		return(POLLNVAL);
+	
+	s = splhigh();
+	/* Writes are if the transmit queue can take them */
+	if ((events &amp; POLLOUT) &amp;&amp;
+	    !IF_QFULL(sc->tx_queue))
+		revents |= POLLOUT;
+	/* ... while reads are OK if we have any data */
+	if ((events &amp; POLLIN) &amp;&amp;
+	    !IF_QEMPTY(sc->rx_queue))
+		revents |= POLLIN;
+	if (revents == 0)
+		selrecord(p, &amp;sc->selp);
+	splx(s);
+	return revents;
+}
+</code>
+
+<p>
+d_select() is used in 2.2 and previous versions of FreeBSD.  Instead
+of 'events' it take a single int 'rw', which can be FREAD for reads
+(as in POLLIN above), FWRITE for write (as in POLLOUT above), and 0
+for 'exception' - something exceptional happened, like a card being
+inserted or removed for the pccard driver.
+
+<p>For select, the above code fragment would look like this:
+<code>
+static int
+mydevselect(dev_t dev, int rw, struct proc *p)
+{
+	int ret = 0;
+	int s;
+	struct my_softc *sc = &amp;my_softc[dev];
+
+	s = splhigh();
+	switch (rw) {
+	case FWRITE:
+		/* Writes are if the transmit queue can take them */
+		if (!IF_QFULL(sc->tx_queue))
+			ret = 1;
+		break;
+	case FREAD:
+		/* ... while reads are OK if we have any data */
+		if (!IF_QEMPTY(sc->rx_queue))
+			ret = 1;
+		break;
+	case 0:
+		/* This driver never get any exceptions */
+		break;
+	if(ret == 0)
+		selrecord(p, &amp;sc->selp);
+	splx(s);
+	return(revents);
+}
+</code>
+
 <sect3> d_mmap()
 <sect3> d_strategy()
 <p>
