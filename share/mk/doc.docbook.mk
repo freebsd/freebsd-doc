@@ -1,5 +1,5 @@
 #
-# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.20 2000/10/07 16:31:04 nbm Exp $
+# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.21 2000/10/08 19:19:09 nik Exp $
 #
 # This include file <doc.docbook.mk> handles building and installing of
 # DocBook documentation in the FreeBSD Documentation Project.
@@ -172,17 +172,21 @@ CLEANFILES+= ${DOC}.${_curformat}.${_curcomp}
 .endfor
 .endif
 
+.for _curimage in ${LIB_IMAGES} 
+LOCAL_LIB_IMAGES += ${LOCAL_LIB_IMAGES_DIR}/${_curimage} 
+.endfor 
+
 .MAIN: all
 
 all: ${_docs}
 
-index.html HTML.manifest: ${SRCS} ${LIB_IMAGES} ${IMAGES_PNG}
+index.html HTML.manifest: ${SRCS} ${LOCAL_LIB_IMAGES} ${IMAGES_PNG}
 	${JADE} -V html-manifest -ioutput.html -ioutput.html.images ${JADEOPTS} -d ${DSLHTML} -t sgml ${MASTERDOC}
 .if !defined(NO_TIDY)
 	-tidy -i -m -f /dev/null ${TIDYFLAGS} `xargs < HTML.manifest`
 .endif
 
-${DOC}.html: ${SRCS} ${LIB_IMAGES} ${IMAGES_PNG}
+${DOC}.html: ${SRCS} ${LOCAL_LIB_IMAGES} ${IMAGES_PNG}
 	${JADE} -ioutput.html -ioutput.html.images -V nochunks ${JADEOPTS} -d ${DSLHTML} -t sgml ${MASTERDOC} > ${.TARGET}
 .if !defined(NO_TIDY)
 	-tidy -i -m -f /dev/null ${TIDYFLAGS} ${.TARGET}
