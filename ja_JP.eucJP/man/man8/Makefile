@@ -299,6 +299,7 @@ MAN8 =	IPXrouted.8\
 	wire-test.8\
 	wlconfig.8\
 	xtend.8\
+	yp.8\
 	yp_mkdb.8\
 	ypbind.8\
 	ypinit.8\
