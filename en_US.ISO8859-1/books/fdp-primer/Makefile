@@ -45,6 +45,7 @@ IMAGES_LIB+=	callouts/5.png
 # Entities
 SRCS+= chapters.ent 
 
-DOC_PREFIX?= ${.CURDIR}/../../..
+URL_RELPREFIX?=	../../../..
+DOC_PREFIX?=	${.CURDIR}/../../..
 
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"

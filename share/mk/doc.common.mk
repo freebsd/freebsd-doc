@@ -106,6 +106,13 @@ WWW_LANGCODE?=	${_WWW_LANGCODE}
 DOC_PREFIX!=	${REALPATH} ${DOC_PREFIX}
 WEB_PREFIX!=	${REALPATH} ${WEB_PREFIX}
 
+.if !defined(URL_RELPREFIX)
+URLS_ABSOLUTE=	YES
+.elif !defined(URLS_ABSOLUTE)
+_URL_RELPREFIX_LEVEL!=	set -- ${URL_RELPREFIX:S,/$,,:S,/, ,g}; echo "$$\#"
+URL_RELPREFIX_ENT=	freebsd.urls.relprefix.${_URL_RELPREFIX_LEVEL}
+.endif
+
 # ------------------------------------------------------------------------
 #
 # mirrors.xml dependency.
@@ -168,11 +175,14 @@ CLEANFILES+= ${XML_MIRRORS}.sort.tmp
 # when URLS_ABSOLUTE is specified, make
 # %freebsd.urls.absolute; "INCLUDE".
 #
-
 .if defined(URLS_ABSOLUTE)
 HTMLFLAGS+=	-ifreebsd.urls.absolute
 SGMLNORMFLAGS+=	-ifreebsd.urls.absolute
 NSGMLSFLAGS+=	-ifreebsd.urls.absolute
+.elif defined(URL_RELPREFIX_ENT) && !empty(URL_RELPREFIX_ENT)
+HTMLFLAGS+=	-i${URL_RELPREFIX_ENT}
+SGMLNORMFLAGS+=	-i${URL_RELPREFIX_ENT}
+NSGMLSFLAGS+=	-i${URL_RELPREFIX_ENT}
 .endif
 
 # for ascii and printable format, always use URLS_ABSOLUTE.

@@ -20,5 +20,7 @@ SRCS+=	contrib.core.sgml
 SRCS+=	contrib.corealumni.sgml
 SRCS+=	contrib.develalumni.sgml
 
-DOC_PREFIX?= ${.CURDIR}/../../..
+URL_RELPREFIX?=	../../../..
+DOC_PREFIX?=	${.CURDIR}/../../..
+
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"
