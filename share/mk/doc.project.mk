@@ -82,6 +82,15 @@ HTML2TXT?=	${PREFIX}/bin/links
 HTML2TXTOPTS?=	-dump ${HTML2TXTFLAGS}
 ISPELL?=	ispell
 ISPELLOPTS?=	-l -p /usr/share/dict/freebsd ${ISPELLFLAGS}
+.if exists(/usr/bin/perl)
+PERL?=		/usr/bin/perl
+.elif exists(/usr/local/bin/perl)
+PERL?=		/usr/local/bin/perl
+.else
+PERL?=		perl
+.endif
+REALPATH?=	/bin/realpath
+SETENV?=	/usr/bin/env
 
 # Image processing (contains code used by the doc.<format>.mk files, so must
 # be listed first).
