@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/ports/Makefile,v 1.35 2002/05/20 13:49:27 phantom Exp $
+# $FreeBSD: www/en/ports/Makefile,v 1.36 2003/05/11 21:16:56 ceri Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -24,7 +24,10 @@ CVS_OPT+=	-R
 CVS_OPT+=	-d ${PORTSCVSROOT}
 .endif
 
-.if defined(NOPORTSCVS)
+.if defined(PINDEX_OVERRIDE)
+${INDEX}: ${PINDEX_OVERRIDE}
+	${CP} ${PINDEX_OVERRIDE} ${INDEX}
+.elif defined(NOPORTSCVS)
 ${INDEX}: $${PORTSBASE}/${PINDEX}
 	${CP} ${PORTSBASE}/${PINDEX} ${INDEX}
 .else
