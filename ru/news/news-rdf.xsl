@@ -1,9 +1,12 @@
 <?xml version="1.0" encoding="KOI8-R"?>
 
-<!-- $FreeBSD$ -->
-<!-- The FreeBSD Russian Documentation Project -->
-<!-- $FreeBSDru: frdp/www/ru/news/news-rdf.xsl,v 1.4 2004/04/09 11:18:19 phantom Exp $ -->
-<!-- Original revision: 1.5 -->
+<!--
+     The FreeBSD Russian Documentation Project
+
+     $FreeBSDru: frdp/www/ru/news/news-rdf.xsl,v 1.5 2004/10/22 13:25:41 den Exp $
+
+     Original revision: 1.6
+-->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   
@@ -31,7 +34,7 @@
   </xsl:template>
 
   <!-- Generate the <item> elements and their content -->
-  <xsl:template match="event">
+  <xsl:template match="event" xmlns="http://my.netscape.com/rdf/simple/0.9/">
     <item>
       <xsl:choose>
 	<xsl:when test="count(child::title)">
