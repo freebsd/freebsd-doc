@@ -74,6 +74,7 @@ MAN8 =	IPXrouted.8\
 	init.8\
 	intro.8\
 	iostat.8\
+	ip6fw.8\
 	ipf.8\
 	ipfstat.8\
 	ipfw.8\
@@ -119,6 +120,7 @@ MAN8 =	IPXrouted.8\
 	mk-amd-map.8\
 	mknetid.8\
 	mknod.8\
+	mld6query.8\
 	mlxcontrol.8\
 	mount.8\
 	mount_cd9660.8\
