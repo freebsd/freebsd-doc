@@ -242,6 +242,7 @@ MAN1 =	addftinfo.1\
 	pkg_info.1\
 	pkg_sign.1\
 	pkg_version.1\
+	pkill.1\
 	pr.1\
 	printenv.1\
 	printf.1\
@@ -294,6 +295,7 @@ MAN1 =	addftinfo.1\
 	soelim.1\
 	sort.1\
 	split.1\
+	sscop.1\
 	ssh-add.1\
 	ssh-agent.1\
 	ssh-keygen.1\
@@ -341,6 +343,7 @@ MAN1 =	addftinfo.1\
 	units.1\
 	unvis.1\
 	uptime.1\
+	usbhidaction.1\
 	usbhidctl.1\
 	users.1\
 	uuencode.1\
