@@ -340,6 +340,7 @@ MAN1 =	a2p.1\
 	units.1\
 	unvis.1\
 	uptime.1\
+	usbhidctl.1\
 	users.1\
 	uuconv.1\
 	uucp.1\
