@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/ports.cgi,v 1.35 1999/09/06 07:16:52 peter Exp $
+# $FreeBSD: www/en/cgi/ports.cgi,v 1.36 1999/10/16 10:24:30 wosch Exp $
 #
 # ports.cgi - search engine for FreeBSD ports
 #             	o search for a port by name or description
@@ -54,19 +54,21 @@ sub init_variables {
     # where to get -current packages
     local($p) = 'ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386';
 
-    $remotePrefixFtpPackagesDefault = '3.3-stable';
+    $remotePrefixFtpPackagesDefault = '3.4-STABLE';
     %remotePrefixFtpPackages = 
 	(
-	 '4.0-current', "$p/packages-current/All",
-	 '3.3-stable', "$p/packages-stable/All",
-	 '3.3-release', "$p/packages-3.3-release/All",
+	 '4.0-CURRENT', "$p/packages-current/All",
+	 '3.4-STABLE',  "$p/packages-stable/All",
+	 '3.3-RELEASE', "$p/packages-3.3-release/All",
+	 '3.4-RELEASE', "$p/packages-3.4-release/All",
 	);
 
     %relDate = 
 	(
-	 '4.0-current', 'today',
-	 '3.3-stable', 'today',
-	 '3.3-release', "1999-09-14 22:58:50 UTC",
+	 '4.0-CURRENT', 'today',
+	 '3.4-STABLE', 'today',
+	 '3.3-release', '1999-09-14 22:58:50 UTC',
+	 '3.4-release', '1999-12-11 22:56:16 UTC',
 	  );
 
     $remotePrefixHtml =
@@ -519,7 +521,7 @@ sub footer {
 <img ALIGN="RIGHT" src="/gifs/powerlogo.gif">
 &copy; 1996-1999 by Wolfram Schneider. All rights reserved.<br>
 };
-    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.35 1999/09/06 07:16:52 peter Exp $} . "<br>\n";
+    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.36 1999/10/16 10:24:30 wosch Exp $} . "<br>\n";
     print qq{Please direct questions about this service to
 <I><A HREF="$mailtoURL">$mailto</A></I><br>\n};
     print qq{General questions about FreeBSD ports should be sent to } .
