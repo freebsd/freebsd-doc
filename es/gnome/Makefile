@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: www/es/gnome/Makefile,v 1.13 2003/08/25 21:05:31 marcus Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -26,8 +26,8 @@ index.html! index.xsl news.xml includes.xsl ../includes.xsl
 	-${TIDY} ${TIDYOPTS} index.html
 .endif
 
-news.rdf! rss.xsl news.xml includes.xsl ../includes.xsl
-	${XSLTPROC} ${XSLTPROCOPTS:N-nonet} -o news.rdf \
+news.rdf: rss.xsl news.xml includes.xsl ../includes.xsl
+	${XSLTPROC} ${XSLTPROCOPTS} -o news.rdf \
 		${.CURDIR}/rss.xsl ${.CURDIR}/news.xml
 .if !defined(NO_TIDY)
 	-${TIDY} -xml -wrap 0 ${TIDYOPTS} news.rdf
