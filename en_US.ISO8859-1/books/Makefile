@@ -1,8 +1,9 @@
-# $FreeBSD: doc/en_US.ISO_8859-1/books/Makefile,v 1.5 1999/09/06 06:52:39 peter Exp $
+# $FreeBSD: doc/en_US.ISO_8859-1/books/Makefile,v 1.6 1999/09/17 23:45:03 nik Exp $
 
 SUBDIR = faq
 SUBDIR+= fdp-primer
 SUBDIR+= handbook
+SUBDIR+= porters-handbook
 SUBDIR+= ppp-primer
 
 ROOT_SYMLINKS= faq handbook
