@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
 
-<!-- $FreeBSD: www/ja/includes.xsl,v 1.13 2003/06/10 20:45:06 hrs Exp $ -->
-<!-- Original revision: 1.15 -->
+<!-- $FreeBSD: www/ja/includes.xsl,v 1.14 2003/07/07 21:10:41 hrs Exp $ -->
+<!-- Original revision: 1.16 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -23,6 +23,7 @@
   <xsl:variable name="unix" select="'UNIX&#174;'"/>
   <xsl:variable name="java" select="'Java&#8482;'"/>
   <xsl:variable name="jdk" select="'JDK&#8482;'"/>
+  <xsl:variable name="posix" select="'POSIX&#174;'"/>
 
   <xsl:variable name="email" select="'freebsd-questions'"/>
   <xsl:variable name="author">
