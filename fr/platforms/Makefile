@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: www/fr/platforms/Makefile,v 1.1 2003/12/15 16:05:03 stephane Exp $
 
 # The FreeBSD French Documentation Project
 # Original revision: 1.7
@@ -12,6 +12,7 @@
 
 DOCS=	alpha.sgml
 DOCS+=	amd64.sgml
+DOCS+=	arm.sgml
 DOCS+=	ia64.sgml
 DOCS+=	index.sgml
 DOCS+=	mips.sgml
