@@ -42,9 +42,9 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $Id: cvsweb.cgi,v 1.70 2001-03-27 17:26:31 knu Exp $
-# $Idaemons: /home/cvs/cvsweb/cvsweb.cgi,v 1.70 2001/03/27 17:20:46 knu Exp $
-# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.69 2001/03/22 19:55:43 knu Exp $
+# $Id: cvsweb.cgi,v 1.71 2001-05-07 17:20:40 knu Exp $
+# $Idaemons: /home/cvs/cvsweb/cvsweb.cgi,v 1.71 2001/05/07 17:13:42 knu Exp $
+# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.70 2001/03/27 17:26:31 knu Exp $
 #
 ###
 
@@ -141,7 +141,7 @@ sub forbidden_module($);
 delete $ENV{PATH};
 
 $cvsweb_revision = '1.106' . '.' . (split(/ /,
- q$Idaemons: /home/cvs/cvsweb/cvsweb.cgi,v 1.70 2001/03/27 17:20:46 knu Exp $
+ q$Idaemons: /home/cvs/cvsweb/cvsweb.cgi,v 1.71 2001/05/07 17:13:42 knu Exp $
 ))[2];
 
 use File::Basename;
@@ -234,7 +234,7 @@ $LOG_REVSEPARATOR = q/^-{28}$/;
 ##### End of configuration variables #####
 
 $cgi_style::hsty_base = 'http://www.FreeBSD.org';
-$_ = q$FreeBSD: www/en/cgi/cvsweb.cgi,v 1.69 2001/03/22 19:55:43 knu Exp $;
+$_ = q$FreeBSD: www/en/cgi/cvsweb.cgi,v 1.70 2001/03/27 17:26:31 knu Exp $;
 @_ = split;
 $cgi_style::hsty_date = "@_[3,4]";
 
@@ -1790,7 +1790,7 @@ sub doDiff($$$$$$) {
 
 	    while (($re1, $re2) = each %funcline_regexp) {
 		if ($fullname =~ /$re1/) {
-		    push @difftype, '-F', '$re2';
+		    push @difftype, '-F', $re2;
 		    last;
 		}
 	    }
