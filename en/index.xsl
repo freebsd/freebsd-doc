@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/index.xsl,v 1.69 2003/07/22 17:00:48 simon Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.70 2003/07/27 16:19:17 ceri Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   
@@ -6,7 +6,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.69 2003/07/22 17:00:48 simon Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.70 2003/07/27 16:19:17 ceri Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -85,9 +85,9 @@
 		  <option value="http://www.hk.FreeBSD.org/">Hong Kong</option>
 		  <option value="http://www.hu.FreeBSD.org/">Hungary/1</option>
 		  <option value="http://www2.hu.FreeBSD.org/">Hungary/2</option>
-		  <option value="http://www.is.FreeBSD.org/">Iceland/1</option>
-		  <option value="http://www.ie.FreeBSD.org/">Ireland/2</option>
-		  <option value="http://www2.ie.FreeBSD.org/">Ireland</option>
+		  <option value="http://www.is.FreeBSD.org/">Iceland</option>
+		  <option value="http://www.ie.FreeBSD.org/">Ireland</option>
+		  <option value="http://www2.ie.FreeBSD.org/">Ireland/2</option>
 		  <option value="http://www.it.FreeBSD.org/">Italy/1</option>
 		  <option value="http://www.gufi.org/mirrors/www.freebsd.org/data/">Italy/2</option>
 		  <option value="http://www.jp.FreeBSD.org/www.FreeBSD.org/">Japan</option>
@@ -105,7 +105,7 @@
 		  <option value="http://www.pl.FreeBSD.org/">Poland/1</option>
 		  <option value="http://www2.pl.FreeBSD.org/">Poland/2</option>
 		  <option value="http://www2.pt.FreeBSD.org/">Portugal/1</option>
-		  <option value="http://www4.pt.FreeBSD.org/">Portugal/1</option>
+		  <option value="http://www4.pt.FreeBSD.org/">Portugal/2</option>
 		  <option value="http://www.ro.FreeBSD.org/">Romania/1</option>
 		  <option value="http://www2.ro.FreeBSD.org/">Romania/2</option>
 		  <option value="http://www3.ro.FreeBSD.org/">Romania/3</option>
