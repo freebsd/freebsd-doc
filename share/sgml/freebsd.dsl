@@ -1,4 +1,4 @@
-<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.42 2001/07/24 23:09:25 chern Exp $ -->
+<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.43 2001/07/27 21:16:55 murray Exp $ -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
 <!ENTITY % output.html		"IGNORE">
@@ -204,6 +204,12 @@
       <![ %output.print; [
         (define withpgpkeys
           #f)
+
+        (define %default-quadding%
+          'justify)
+
+        (define %hyphenation%
+          #t)
 
         ;; If a link is entered as "file://localhost/usr/ports" in the docs
         ;; then we only want to display "/usr/ports" in printed form.
