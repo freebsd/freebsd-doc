@@ -1,10 +1,10 @@
-# $FreeBSD$
+# $FreeBSD: doc/es_ES.ISO8859-1/FAQ/Makefile,v 1.6 1999/09/06 06:53:13 peter Exp $
 
 .NOTPARALLEL: 
 
 DOC=    FAQ
 VOLUME=	faq
-DOCDIR= /usr/local/share/doc/fdp/es_ES.ISO_8859-1/books
+DOCDIR= /usr/local/share/doc/fdp/es_ES.ISO8859-1/books
 FORMATS?= html roff
 SGMLOPTS+=-links
 
