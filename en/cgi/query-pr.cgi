@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.19 2000/01/05 15:47:45 phantom Exp $
+# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.20 2000/01/16 02:46:36 chris Exp $
 
 $ENV{'PATH'} = "/bin:/usr/bin:/usr/sbin:/sbin:/usr/local/bin";
 
@@ -54,6 +54,13 @@ unless (open(Q, "query-pr --restricted -F $pr 2>&1 |")) {
     print "<p>Unable to open PR database.</p>\n";
     print &html_footer;
     die "Unable to query PR's";
+}
+
+if ($input{'f'} eq 'raw') {
+    print "Content-Type: text/plain\r\n\r\n";
+    print <Q>;
+    close(Q);
+    exit 0;
 }
 
 $inhdr = 1;
@@ -160,7 +167,7 @@ print "</dl>";
 $origsyn =~ s/[^a-zA-Z+.@-]/"%" . sprintf("%02X", unpack("C", $&))/eg;
 $email =~ s/[^a-zA-Z+.@-]/"%" . sprintf("%02X", unpack("C", $&))/eg;
 
-print "<A HREF=\"mailto:freebsd-gnats-submit\@FreeBSD.org,${email}?subject=Re:%20${cat}/${number}:%20$origsyn\">Submit Followup</A>\n";
+print qq`<A HREF="mailto:freebsd-gnats-submit\@FreeBSD.org,${email}?subject=Re:%20${cat}/${number}:%20$origsyn">Submit Followup</A> | <A HREF="./query-pr.cgi?pr=$pr&amp;f=raw">Raw PR</A>\n`;
 
 print &html_footer;
 
