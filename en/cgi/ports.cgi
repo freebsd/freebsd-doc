@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD$
+# $FreeBSD: www/en/cgi/ports.cgi,v 1.59 2001/11/07 16:32:12 sobomax Exp $
 #
 # ports.cgi - search engine for FreeBSD ports
 #             	o search for a port by name or description
@@ -55,10 +55,11 @@ sub init_variables {
     local($p) = 'ftp://ftp.FreeBSD.org/pub/FreeBSD/ports/i386';
     local($palpha) = 'ftp://ftp.FreeBSD.org/pub/FreeBSD/ports/alpha';
 
-    $remotePrefixFtpPackagesDefault = '4.4-STABLE/i386';
+    $remotePrefixFtpPackagesDefault = '4.5-RELEASE/i386';
     %remotePrefixFtpPackages = 
 	(
 	 '5.0-CURRENT/i386', "$p/packages-current/All",
+	 '4.5-RELEASE/i386', "$p/packages-4.5-release/All",
 	 '4.4-RELEASE/i386', "$p/packages-4.4-release/All",
 	 '4.3-RELEASE/i386', "$p/packages-4.3-release/All",
 	 '4.4-STABLE/i386', " $p/packages-4.4-stable/All",
@@ -66,6 +67,7 @@ sub init_variables {
 	 '3.5-RELEASE/i386', "$p/packages-3.4-release/All",
 
 	 '5.0-CURRENT/alpha', "$palpha/packages-current/All",
+	 '4.5-RELEASE/alpha', "$palpha/packages-4.5-release/All",
 	 '4.4-RELEASE/alpha', "$palpha/packages-4.4-release/All",
 	 '4.3-RELEASE/alpha', "$palpha/packages-4.3-release/All",
 	 '4.4-STABLE/alpha',  "$palpha/packages-4-stable/All",
@@ -76,14 +78,16 @@ sub init_variables {
 	 '5.0-CURRENT/i386', 'today',
 	 '4.4-STABLE/i386', 'today',
 	 '4.3-RELEASE/i386', '2001-04-18 21:37:31 UTC',
-	 '4.4-RELEASE/i386', '2001-09.16 01:02:45 UTC',
+	 '4.4-RELEASE/i386', '2001-09-16 01:02:45 UTC',
+	 '4.5-RELEASE/i386', '2002-01-19 04:56:32 UTC',
 
 	 '3.5-STABLE/i386', 'today',
 	 '3.5-RELEASE/i386', '2000-06-16 22:56:18 UTC',
 
 	 '5.0-CURRENT/alpha', 'today',
 	 '4.4-STABLE/alpha', 'today',
-	 '4.4-RELEASE/alpha', '2001-09.16 01:02:45 UTC',
+	 '4.4-RELEASE/alpha', '2001-09-16 01:02:45 UTC',
+	 '4.5-RELEASE/alpha', '2002-01-19 04:56:32 UTC',
 	  );
 
     $remotePrefixHtml =
@@ -553,7 +557,7 @@ sub footer {
 <img ALIGN="RIGHT" src="/gifs/powerlogo.gif">
 &copy; 1996-2001 by Wolfram Schneider. All rights reserved.<br>
 };
-    #print q{$FreeBSD$} . "<br>\n";
+    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.59 2001/11/07 16:32:12 sobomax Exp $} . "<br>\n";
     print qq{Please direct questions about this service to
 <I><A HREF="$mailtoURL">$mailto</A></I><br>\n};
     print qq{General questions about FreeBSD ports should be sent to } .
