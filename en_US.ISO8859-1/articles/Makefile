@@ -1,6 +1,7 @@
 # $FreeBSD$
 
 SUBDIR =
+SUBDIR+= 5-roadmap
 SUBDIR+= checkpoint
 SUBDIR+= committers-guide
 SUBDIR+= console-server
