@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: query-pr.cgi,v 1.5 1998-01-22 02:31:11 fenner Exp $
+# $Id: query-pr.cgi,v 1.6 1998-02-19 20:14:53 fenner Exp $
 
 $ENV{'PATH'} = "/bin:/usr/bin:/usr/sbin:/sbin:/usr/local/bin";
 
@@ -53,6 +53,7 @@ unless (open(Q, "query-pr --restricted -F $pr 2>&1 |")) {
 $inhdr = 1;
 $multiline = 0;
 $from = "";
+$replyto = "";
 
 while(<Q>) {
     chop;
@@ -72,11 +73,24 @@ while(<Q>) {
 	exit;
     }
 
-    if (/^From:\s*(.*)$/) {
+    # In e-mail header
+    if ($inhdr && /^From:\s*(.*)$/i) {
 	$from = $1;
-	($email = $from) =~ s/.*<(.*)>.*/$1/;
-	$email =~ s/\s*\(.*\)\s*//;
+	$from =~ s/.*<(.*)>.*/$1/;
+	$from =~ s/\s*\(.*\)\s*//;
+    }
+    if ($inhdr && /^Reply-to:\s*(.*)$/i) {
+	$replyto = $1;
+	$replyto =~ s/.*<(.*)>.*/$1/;
+	$replyto =~ s/\s*\(.*\)\s*//;
+    }
+
+    # End of e-mail header
+    if ($inhdr && /^$/) {
+	$from = $replyto if ($replyto);
+	$email = $from;
 	$email .= '@freebsd.org' unless ($email =~ /@/);
+	$inhdr = 0;
     }
 
     if (/^>Responsible:/) {
@@ -92,7 +106,6 @@ while(<Q>) {
 
     if (/^>Number:/) {
 	$number = &getline($_);
-	$inhdr = 0;
     } elsif (/^>Category:/) {
 	$cat = &getline($_);
     } elsif (/^>Synopsis:/) {
