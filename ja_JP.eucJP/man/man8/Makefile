@@ -176,8 +176,6 @@ MAN8 =	IPXrouted.8\
 	pciconf.8\
 	periodic.8\
 	picobsd.8\
-	pim6dd.8\
-	pim6sd.8\
 	ping.8\
 	ping6.8\
 	pnpinfo.8\
