@@ -1,5 +1,5 @@
-# $Id: Makefile,v 1.16 1997-12-28 08:37:52 asami Exp $
-# Original revision: 1.22
+# $Id: Makefile,v 1.17 1998-01-12 02:53:22 hanai Exp $
+# Original revision: 1.28
 # The FreeBSD Japanese Documentation Project
 
 DOC=	handbook
