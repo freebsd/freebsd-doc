@@ -1,12 +1,13 @@
-# $Id: Makefile,v 1.6 1998-08-20 04:12:12 hanai Exp $
+# $Id: Makefile,v 1.7 1999-01-14 15:25:41 motoyuki Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.4
+# Original revision: 1.6
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
 .endif
 
 DOCS=	license.sgml
+#DOCS+= freebsd-license.sgml
 DOCS+=	daemon.sgml
 DOCS+=  copyright.sgml
 
