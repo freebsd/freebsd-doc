@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.47 2004/02/16 22:39:49 adamw Exp $ -->
+<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.48 2004/04/04 22:07:06 adamw Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
 		xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -9,7 +9,7 @@
   <xsl:import href="includes.xsl"/>
 
   <xsl:variable name="base" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.47 2004/02/16 22:39:49 adamw Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.48 2004/04/04 22:07:06 adamw Exp $'"/>
   <xsl:variable name="title" select="'FreeBSD GNOME Project'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -118,6 +118,10 @@
                 <li>The <a href="http://www.gnome.org/gnome-office">GNOME
                   Office</a>:  A set of office productivity applications.</li>
               </ul>
+
+			  <p>For more information about what GNOME is and isn't, check out
+				the GNOME Project's
+				<a href="http://www.gnome.org/about/">About GNOME page</a>.</p>
 
               <h2><font color="#990000">State of the port</font></h2>
 
