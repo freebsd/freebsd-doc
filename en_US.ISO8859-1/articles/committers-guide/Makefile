@@ -3,8 +3,6 @@
 #
 # Article: The FreeBSD Committers Guide
 
-MAINTAINER=jhb@FreeBSD.org
-
 DOC?= article
 
 FORMATS?= html
