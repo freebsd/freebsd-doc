@@ -1,5 +1,5 @@
 #
-# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.19 2000/09/28 23:34:49 nbm Exp $
+# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.20 2000/10/07 16:31:04 nbm Exp $
 #
 # This include file <doc.docbook.mk> handles building and installing of
 # DocBook documentation in the FreeBSD Documentation Project.
@@ -130,16 +130,16 @@ _docs+= ${DOC}.html.tar
 CLEANFILES+= ${DOC}.html ${DOC}.html.tar
 .elif ${_cf} == "txt"
 _docs+= ${DOC}.txt
-CLEANFILES+= ${DOC}.html ${DOC}.txt
+CLEANFILES+= ${DOC}.html ${DOC}.txt ${DOC}.html-text
 .elif ${_cf} == "dvi"
 _docs+= ${DOC}.dvi
 CLEANFILES+= ${DOC}.aux ${DOC}.dvi ${DOC}.log ${DOC}.tex
 .elif ${_cf} == "ps"
 _docs+= ${DOC}.ps
-CLEANFILES+= ${DOC}.aux ${DOC}.dvi ${DOC}.log ${DOC}.tex ${DOC}.ps
+CLEANFILES+= ${DOC}.aux ${DOC}.dvi ${DOC}.log ${DOC}.tex-ps ${DOC}.ps
 .elif ${_cf} == "pdf"
 _docs+= ${DOC}.pdf
-CLEANFILES+= ${DOC}.aux ${DOC}.dvi ${DOC}.log ${DOC}.tex ${DOC}.pdf
+CLEANFILES+= ${DOC}.aux ${DOC}.dvi ${DOC}.log ${DOC}.out ${DOC}.tex-pdf ${DOC}.pdf
 .elif ${_cf} == "rtf"
 _docs+= ${DOC}.rtf
 CLEANFILES+= ${DOC}.rtf
@@ -176,32 +176,34 @@ CLEANFILES+= ${DOC}.${_curformat}.${_curcomp}
 
 all: ${_docs}
 
-index.html HTML.manifest: ${SRCS}
-	${JADE} -V html-manifest -ioutput.html ${JADEOPTS} -d ${DSLHTML} -t sgml ${MASTERDOC}
+index.html HTML.manifest: ${SRCS} ${LIB_IMAGES} ${IMAGES_PNG}
+	${JADE} -V html-manifest -ioutput.html -ioutput.html.images ${JADEOPTS} -d ${DSLHTML} -t sgml ${MASTERDOC}
 .if !defined(NO_TIDY)
 	-tidy -i -m -f /dev/null ${TIDYFLAGS} `xargs < HTML.manifest`
 .endif
 
-${DOC}.html: ${SRCS}
-	${JADE} -ioutput.html -V nochunks ${JADEOPTS} -d ${DSLHTML} -t sgml ${MASTERDOC} > ${.TARGET}
+${DOC}.html: ${SRCS} ${LIB_IMAGES} ${IMAGES_PNG}
+	${JADE} -ioutput.html -ioutput.html.images -V nochunks ${JADEOPTS} -d ${DSLHTML} -t sgml ${MASTERDOC} > ${.TARGET}
 .if !defined(NO_TIDY)
 	-tidy -i -m -f /dev/null ${TIDYFLAGS} ${.TARGET}
 .endif
 
-.for _curimage in ${LIB_IMAGES}
-${_docs}: ${LOCAL_LIB_IMAGES_DIR}/${_curimage}
-.endfor
+# Special target to produce HTML with no images in it.
+${DOC}.html-text: ${SRCS}
+	${JADE} -ioutput.html -V nochunks ${JADEOPTS} -d ${DSLHTML} -t sgml ${MASTERDOC} > ${.TARGET}
 
 ${DOC}.html-split.tar: HTML.manifest
 	tar cf ${.TARGET} `xargs < HTML.manifest`
 	tar uf ${.TARGET} ${LIB_IMAGES}
+	tar uf ${.TARGET} ${IMAGES_PNG}
 
 ${DOC}.html.tar: ${DOC}.html
 	tar cf ${.TARGET} ${DOC}.html
 	tar uf ${.TARGET} ${LIB_IMAGES}
+	tar uf ${.TARGET} ${IMAGES_PNG}
 
-${DOC}.txt: ${DOC}.html
-	w3m -S -dump ${.ALLSRC} > ${.TARGET}
+${DOC}.txt: ${DOC}.html-text
+	w3m -T text/html -S -dump ${.ALLSRC} > ${.TARGET}
 
 ${DOC}.pdb: ${DOC}.html
 	iSiloBSD -y -d0 -Idef ${DOC}.html ${DOC}.pdb
@@ -212,10 +214,19 @@ ${.CURDIR:T}.pdb: ${DOC}.pdb
 ${DOC}.rtf: ${SRCS}
 	${JADE} -Vrtf-backend -ioutput.print ${JADEOPTS} -d ${DSLPRINT} -t rtf -o ${.TARGET} ${MASTERDOC}
 
-${DOC}.tex: ${SRCS}
+#
+# This sucks, but there's no way round it.  The PS and PDF formats need
+# to use different image formats, which are chosen at the .tex stage.  So,
+# we need to create a different .tex file depending on our eventual output
+# format, which will then lead on to a different .dvi file as well.
+#
+${DOC}.tex-ps: ${SRCS} ${IMAGES_EPS}
 	${JADE} -Vtex-backend -ioutput.print ${JADEOPTS} -d ${DSLPRINT} -t tex -o ${.TARGET} ${MASTERDOC}
 
-${DOC}.dvi: ${DOC}.tex
+${DOC}.tex-pdf: ${SRCS} ${IMAGES_PNG}
+	${JADE} -Vtex-backend -ioutput.print -ioutput.print.pdf ${JADEOPTS} -d ${DSLPRINT} -t tex -o ${.TARGET} ${MASTERDOC}
+
+${DOC}.dvi: ${DOC}.tex-ps
 	@echo "==> TeX pass 1/3"
 	-tex "&jadetex" ${.ALLSRC}
 	@echo "==> TeX pass 2/3"
@@ -223,7 +234,7 @@ ${DOC}.dvi: ${DOC}.tex
 	@echo "==> TeX pass 3/3"
 	-tex "&jadetex" ${.ALLSRC}
 
-${DOC}.pdf: ${DOC}.tex
+${DOC}.pdf: ${DOC}.tex-pdf
 	@echo "==> PDFTeX pass 1/3"
 	-pdftex "&pdfjadetex" ${.ALLSRC}
 	@echo "==> PDFTeX pass 2/3"
