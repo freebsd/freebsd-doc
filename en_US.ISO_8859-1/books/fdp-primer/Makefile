@@ -1,5 +1,5 @@
 # 
-# $Id: Makefile,v 1.4 1999-08-28 19:49:38 jhb Exp $
+# $Id: Makefile,v 1.5 1999-08-29 00:02:22 jhb Exp $
 #
 # Build the FreeBSD Documentation Project Primer.
 #
@@ -38,4 +38,4 @@ SRCS+= chapters.ent
 
 DOC_PREFIX?= ../../..
 
-.include "../../../share/mk/docproj.docbook.mk"
+.include "${DOC_PREFIX}/share/mk/docproj.docbook.mk"

@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.5 1999-08-16 22:09:10 nik Exp $
+# $Id: Makefile,v 1.6 1999-08-29 00:02:21 jhb Exp $
 
 DOC?= article
 
@@ -11,4 +11,4 @@ SRCS= article.sgml
 
 DOC_PREFIX?= ../../..
 
-.include "../../../share/mk/docproj.docbook.mk"
+.include "${DOC_PREFIX}/share/mk/docproj.docbook.mk"
