@@ -1,0 +1,836 @@
+<!--
+     The FreeBSD Dutch Documentation Project
+
+     $FreeBSD$
+     gebaseerd op: 1.56
+-->
+
+<chapter id="boot">
+  <title>Het &os; opstartproces</title>
+
+  <sect1 id="boot-synopsis">
+    <title>Samenvatting</title>
+    <indexterm><primary>booting</primary></indexterm>
+    <indexterm><primary>bootstrap</primary></indexterm>
+
+    <para>Het proces van het starten van de computer en het laden van
+      het besturingssysteem wordt het <quote>bootstrapproces</quote>
+      of simpelweg <quote>booten</quote> genoemd.  Het &os;
+      opstartproces levert een grote mate van flexibiliteit door het
+      kunnen wijzigen wat er gebeurt als het systeem gestart wordt, en
+      geeft de mogelijkheid om te kiezen uit verschillende
+      ge&iuml;nstalleerde besturingssystemen op dezelfde computer of
+      zelfs verschillende versies van hetzelfde besturingssysteem of
+      ge&iuml;nstalleerde kernel.</para>
+
+    <para>Dit hoofdstuk geeft gedetailleerde informatie over
+      configuratie-instellingen die je kan gebruiken en hoe het &os;
+      opstartproces verandert kan worden.  Dit bevat alles wat er
+      gebeurt totdat de &os; kernel wordt geladen, gezocht heeft naar
+      apparaten en &man.init.8; start.  Het moment waarop dit plaats
+      vindt is als tijdens het booten de tekstkleur verandert van
+      helder wit naar grijs.</para>
+
+    <para>Na het lezen van dit hoofdstuk weet je:</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>Wat de onderdelen zijn van het &os; bootstrap-systeem, en
+	  hoe zij onderling communiceren.</para>
+      </listitem>
+
+      <listitem>
+	<para>De opties die je mee kunt geven aan de componenten in
+	  de bootstrap om het proces te sturen.</para>
+      </listitem>
+
+      <listitem>
+	<para>Algemene kennis van &man.device.hints.5;.</para>
+      </listitem>
+    </itemizedlist>
+
+    <note>
+      <title>Alleen voor x86</title>
+
+      <para>Dit hoofdstuk beschrijft alleen het opstartproces van &os;
+	dat draait op een Intel x86 systeem.</para>
+    </note>
+  </sect1>
+
+  <sect1 id="boot-introduction">
+    <title>Het boot probleem</title>
+
+    <para>Het aanzetten van een computer en het starten van het
+      besturingssysteem zorgt voor een interessant dilemma.  Vast staat
+      dat een computer niet weet wat het moet doen totdat het
+      besturingssysteem gestart is.  Daar valt ook het starten van
+      programma's op schijf onder.  Dus, als een computer geen programma
+      van schijf kan starten zonder besturingssysteem, en het
+      besturingssysteem staat op schijf, hoe wordt dan het
+      besturingssysteem gestart?</para>
+
+    <para>Dit is een gelijksoortig probleem als dat in het boek
+      <citetitle>De avonturen van Baron van Munchausen</citetitle>.
+      Iemand was in een put gevallen en heeft zichzelf eruit gehaald
+      door zijn laarsriempjes (bootstraps) vast te pakken en zich op te
+      trekken.  In het begin van het computer tijdperk werd de term
+      <firstterm>bootstrap</firstterm> gegeven aan het mechanisme dat
+      het besturingssysteem laadde.  Later werd dit afgekort tot
+      <quote>booten</quote>.</para>
+
+    <para>Op x86 machines is het Basis Input/Output System (BIOS)
+      verantwoordelijk voor het laden van het besturingssysteem.
+      Om dit te doen zoekt het BIOS op de harde schijf naar het Master
+      Boot Record (MBR), die op een vaste plek op de schijf staat.  Het
+      BIOS heeft voldoende kennis om het MBR te starten en gaat er
+      vanuit dat de MBR de rest van de taken uitvoert die nodig zijn om
+      het besturingssysteem te kunnen laden.</para>
+
+    <indexterm>
+      <primary>BIOS</primary>
+      <secondary>Basis Input/Output System</secondary>
+    </indexterm>
+
+    <para>Als je maar &eacute;&eacute;n besturingssysteem
+      ge&iuml;nstalleerd hebt op je schijven, voldoet de standaard MBR.
+      Dit MBR zoekt naar de eerste opstartbare slice op schijf, en start
+      de code op deze slice om de rest van het besturingssysteem te
+      laden.</para>
+
+    <para>Indien je meerdere besturingssystemen op je schijven hebt, kan
+      er een ander MBR worden ge&iuml;nstalleerd; &euml;&euml;n die een
+      die lijst toont met verschillende besturingssystemen en de
+      mogelijkheid geeft om er hieruit &eacute;&eacute;n te kiezen
+      waarvan opgestart moet worden.  &os; wordt met zo'n MBR geleverd
+      die ge&iuml;nstalleerd kan worden.  Andere
+      besturingssysteemleveranciers hebben alternatieven MBRs
+      hiervoor.</para>
+
+    <para>Het resterende deel van het &os; bootstrap-systeem is verdeeld
+      in drie fases.  De eerste fase wordt gestart door het MBR, die net
+      voldoende informatie heeft om de computer in een bepaalde toestand
+      te zetten en de tweede fase te starten.  De tweede fase kan net
+      iets meer doen voordat hij de derde fase start.  De derde fase
+      voltooit het laden van het besturingssysteem.  Dit proces is
+      verdeeld in drie fases omdat de PC-standaarden grenzen stellen aan
+      de grootte van programma's die gedraaid kunnen worden in de eerste
+      twee fases van dit proces.  Door deze taken aan elkaar te koppelen
+      krijgt &os; een flexibeler laadgedeelte.</para>
+
+    <indexterm><primary>kernel</primary></indexterm>
+    <indexterm><primary><command>init</command></primary></indexterm>
+
+    <para>De kernel wordt daarna gestart en begint met het zoeken
+      naar apparaten en deze te initialiseren voor gebruik.  Zodra
+      het kernel-opstartproces klaar is, geeft de kernel de controle
+      over aan het gebruikerproces &man.init.8;, die controleert of
+      de schijven een bruikbare status hebben.  Daarna start
+      &man.init.8; de gebruikersniveau-bronconfiguratie die de
+      bestanssystemen koppelt, de netwerkkaarten instelt voor
+      communicatie met het netwerk, en in het algemeen worden de
+      processen gestart die moeten draaien op een &os; systeem bij
+      het opstarten.</para>
+  </sect1>
+
+  <sect1 id="boot-blocks">
+    <title>Het MBR en de boot fases &eacute;&eacute;n,
+      twee en drie</title>
+
+    <sect2 id="boot-boot0">
+      <title>MBR, <filename>/boot/boot0</filename></title>
+      <indexterm><primary>Master Boot Record (MBR)</primary></indexterm>
+
+      <para>Het &os; MBR bevind zich in
+	<filename>/boot/boot0</filename>.  Dit is een
+	<emphasis>kopie</emphasis> van het MBR, omdat het echte MBR
+	op een speciale plek op de schijf, los van de plek van &os;,
+	moet staan.</para>
+
+      <para><filename>boot0</filename> is erg simpel, omdat het
+	programma in het <abbrev>MBR</abbrev> uit slechts 512 bytes mag
+	bestaan.  Indien je het &os; MBR hebt ge&iuml;nstalleerd en
+	meerdere besturingssystemen hebt ge&iuml;nstalleerd op je harde
+	schijven, zal je bij het opstarten een scherm zien dat er
+	ongeveer zo uitziet:</para>
+
+      <example id="boot-boot0-example">
+	<title><filename>boot0</filename> Screenshot</title>
+
+      <screen>F1 DOS
+F2 &os;
+F3 Linux
+F4 ??
+F5 Drive 1
+
+Default: F2</screen>
+      </example>
+
+      <para>Andere besturingssystemen, hoofdzakelijk &windows;&nbsp;95,
+	staan er om bekend dat zij bestaande MBRs overschrijven met die
+	van henzelf.  Als dit je ook overkomt, of als je het bestaande
+	MBR wilt vervangen met het &os; MBR, gebruik dan het volgende
+	commando:</para>
+
+      <screen>&prompt.root; <userinput>fdisk -B -b /boot/boot0 <replaceable>device</replaceable></userinput></screen>
+
+      <para>Waar <replaceable>device</replaceable> het apparaat is waar
+	je van boot, zoals <devicename>ad0</devicename> voor de eerste
+	IDE-schijf <devicename>ad2</devicename> voor de eerste
+	IDE-schijf op de tweede IDE-controller,
+	<devicename>da0</devicename> voor de eerste SCSI-schijf, en ga
+	zo maar door.</para>
+
+      <para>Indien je een Linux gebruiker bent en je prefereert dat
+	<application>LILO</application> het opstartproces beheert, dan
+	moet je <filename>/etc/lilo.conf</filename> wijzigen voor &os;,
+	of <option>Leave The Master Boot Record Untouched</option>
+	kiezen tijdens het &os; installatieproces.  Als je de &os; boot
+	manager hebt ge&iuml;nstalleerd, kan je terug in Linux
+	opstarten en het <application>LILO</application>
+	configuratiebestand <filename>/etc/lilo.conf</filename> openen
+	en de volgende opties toevoegen:</para>
+
+      <programlisting>other=/dev/hdXY
+table=/dev/hdb
+loader=/boot/chain.b
+label=&os;</programlisting>
+
+      <para>die er voor zorgen dat zowel &os; en Linux via
+	<application>LILO</application> kunnen opstarten.  In ons
+	voorbeeld, gebruiken we <replaceable>XY</replaceable> om
+	drive-nummer en partitie te kunnen bepalen.  Als je een
+	<acronym>SCSI</acronym> drive gebruikt, zal je
+	<replaceable>/dev/hdXY</replaceable> moeten wijzigen om iets te
+	kunnen lezen als <replaceable>/dev/sdXY</replaceable>, die dan
+	ook de <replaceable>XY</replaceable> schrijfwijze gebruikt.  De
+	<option>loader=/boot/chain.b</option> kan weggelaten worden als
+	beide besturingssystemen op dezelfde drive staan.  Je kan nu
+	<command>/sbin/lilo -v</command> starten om de net gemaakte
+	wijzigingen door te voeren in het systeem, dit kan
+	gecontroleerd worden aan de hand van de schermmeldingen.</para>
+    </sect2>
+
+    <sect2 id="boot-boot1">
+      <title>Fase &eacute;&eacute;n <filename>/boot/boot1</filename>, en
+	fase twee <filename>/boot/boot2</filename></title>
+
+      <para>Conceptueel zijn de eerste en tweede fase hetzelfde
+	programma op hetzelfde stukje schijf.  Door ruimte beperkingen
+	zijn ze in twee stukken gesplitst.  Ze worden echter altijd
+	samen ge&iuml;nstalleerd.</para>
+
+      <para>Deze staan in de opstart-sector van de opstart-slice, daar
+	waar <link linkend="boot-boot0">boot0</link>, of ieder ander
+	programma in het <abbrev>MBR</abbrev>, programma's verwacht te
+	vinden om het opstartproces te kunnen voltooien.  De bestanden
+	in de <filename>/boot</filename> directory zijn kopie&euml;n van
+	de echte bestanden, die opgeslagen zijn buiten het
+	&os; bestandssysteem.</para>
+
+      <para><filename>boot1</filename> is erg simpel, omdat ook deze
+	slechts 512 bytes groot kan zijn, en net genoeg weet over het
+	&os; <firstterm>disklabel</firstterm>, dat informatie bevat
+	over de slice om <filename>boot2</filename> te vinden en te
+	starten.</para>
+
+      <para><filename>boot2</filename> is iets verfijnder en begrijpt
+	het &os; bestandssysteem genoeg om er bestanden op te vinden, en
+	geeft een simpele interface om de kernel of loader te kiezen,
+	dat gestart dient te worden.</para>
+
+      <para><filename>boot2</filename> start meestal de
+	<link linkend="boot-loader"> loader</link>, doordat deze veel
+	slimmer is en een gebruiksvriendelijke opstartconfiguratie
+	heeft, echter voorheen was het zijn taak om direct de kernel te
+	starten.</para>
+
+      <example id="boot-boot2-example">
+	<title><filename>boot2</filename> Screenshot</title>
+
+	<screen>&gt;&gt; &os;/i386 BOOT
+Default: 0:ad(0,a)/kernel
+boot:</screen>
+      </example>
+
+      <para>Als je ooit eens de ge&iuml;nstalleerde
+	<filename>boot1</filename> en <filename>boot2</filename> moet
+	vervangen gebruik dan &man.disklabel.8;:</para>
+
+      <screen>&prompt.root; <userinput>disklabel -B <replaceable>diskslice</replaceable></userinput></screen>
+
+      <para>Waar <replaceable>diskslice</replaceable> de schijf en
+	slice zijn, waar je van opstart, zoals
+	<devicename>ad0s1</devicename> voor de eerste slice op de
+	eerste IDE-schijf.</para>
+
+      <warning>
+	<title>Gevaarlijk toegewijde wijze</title>
+
+	<para>Als je alleen de schijfnaam, zoals
+	  <devicename>ad0</devicename> gebruikt in het &man.disklabel.8;
+	  commando, dan maak je een gevaarlijk toegewijde schijf, zonder
+	  slices.  Het is vrijwel zeker dat je dit niet wilt, dus
+	  controleer de &man.disklabel.8; commandoregel dubbel voordat
+	  je op <keycap>Return</keycap> drukt.</para>
+      </warning>
+    </sect2>
+
+  <sect2 id="boot-loader">
+    <title>Fase drie, <filename>/boot/loader</filename></title>
+
+    <indexterm><primary>boot-loader</primary></indexterm>
+    <para>De loader is de laatse fase van de drietraps-bootstrap, en
+      deze bevindt zich op het bestandssysteem, meestal als
+      <filename>/boot/loader</filename>.</para>
+
+    <para>De loader is bedoeld als een gebruikersvriendelijke manier
+      voor de configuratie, door gebruik te maken van een makkelijke
+      commandoverzameling, gesteund door een krachtige interpreter, met
+      een wat complexe commandoverzameling.</para>
+
+    <sect3 id="boot-loader-flow">
+      <title>Loader programmaverloop</title>
+
+      <para>Tijdens de initialisatie zoekt de loader naar een
+	console en schijven en kijkt van welke schijf er opgestart
+	wordt.  Variabelen worden hiernaar gezet en een interpreter
+	wordt gestart zodat gebruikercommando's interactief of via een
+	script kunnen worden doorgegeven.</para>
+      <indexterm><primary>loader</primary></indexterm>
+      <indexterm><primary>loader-configuration</primary></indexterm>
+
+      <para>De loader leest dan
+	<filename>/boot/loader.rc</filename>, die dan standaard
+	<filename>/boot/defaults/loader.conf</filename> leest.  Deze
+	plaatst redelijke standaarden in variabelen en leest
+	<filename>/boot/loader.conf</filename> voor lokale wijzigingen
+	op deze variabelen.  <filename>loader.rc</filename> reageert op
+	deze variabelen door de geselecteerde modules en kernel te
+	laden.</para>
+
+      <para>Als laatste wordt standaard door de loader 10 seconden
+	gewacht op toetsinvoer en boot de kernel indien dit niet wordt
+	onderbroken.  Als het wel wordt onderbroken, krijgt de gebruiker
+	een prompt aangeboden die een eenvoudige commandoverzameling
+	begrijpt.  Hier kan de gebruiker variabelen wijzigen, alle
+	modules stoppen en/of starten en uiteindelijk opstarten of
+	herstarten.</para>
+
+    </sect3>
+
+    <sect3 id="boot-loader-commands">
+      <title>De ingebouwde Loader-commando's</title>
+
+      <para>Dit zijn de meest gebruikte loader-commando's.  Voor een
+	volledige omschrijving van alle beschikbare commando's zie
+	&man.loader.8;.</para>
+
+      <variablelist>
+	<varlistentry>
+	  <term>autoboot <replaceable>seconden</replaceable></term>
+
+	  <listitem>
+	    <para>Gaat door met het opstarten van de kernel indien deze
+	      niet wordt onderbroken binnen de opgegeven tijd, in
+	      seconden.  Er wordt een aftelproces getoond die standaard
+	      op 10 seconden staat.</para>
+	  </listitem>
+	</varlistentry>
+
+	<varlistentry>
+	  <term>boot
+	    <optional><replaceable>-opties</replaceable></optional>
+	    <optional><replaceable>kernelnaam</replaceable></optional></term>
+
+	  <listitem>
+	    <para>Start direct de kernel op met de opgegeven opties en
+	      naam indien meegegeven.</para>
+	  </listitem>
+	</varlistentry>
+
+	<varlistentry>
+	  <term>boot-conf</term>
+
+	  <listitem>
+	    <para>Doorloopt dezelfde automatische configuratie van modules
+	      gebaseerd op variabelen zoals ook gebeurt bij het opstarten.
+	      Dit is alleen zinnig als je eerst het
+	      <command>unload</command> gebruikt en enkele variabelen
+	      wijzigt, meestal <envar>kernel</envar>.</para>
+	  </listitem>
+	</varlistentry>
+
+	<varlistentry>
+	  <term>help
+	    <optional><replaceable>onderwerp</replaceable></optional></term>
+
+	  <listitem>
+	    <para>Toont hulpberichten van
+	      <filename>/boot/loader.help</filename>.  Als het opgegeven
+	      onderwerp <literal>index</literal> is, wordt een lijst met
+	      beschikbare onderwerpen getoond.</para>
+	  </listitem>
+	</varlistentry>
+
+	<varlistentry>
+	  <term>include <replaceable>bestandsnaam</replaceable>
+	    &hellip;</term>
+
+	  <listitem>
+	    <para>Verwerkt het bestand met de opgegeven naam.  Het
+	      bestand wordt ingelezen, en regel voor regel
+	      ge&iuml;nterpreteerd.  Iedere foutmelding zal het
+	      include-commando direct stoppen.</para>
+	  </listitem>
+	</varlistentry>
+	<varlistentry>
+	  <term>load <optional><option>-t</option>
+	    <replaceable>type</replaceable></optional>
+	    <replaceable>bestandsnaam</replaceable></term>
+
+	  <listitem>
+	    <para>Laad de kernel, kernel-module, of bestand van
+	      opgegeven type en naam.  Ieder argument achter de
+	      bestandsnaam wordt doorgegeven aan het bestand.</para>
+	  </listitem>
+	</varlistentry>
+	<varlistentry>
+	  <term>ls <optional><option>-l</option></optional>
+	    <optional><replaceable>padnaam</replaceable></optional></term>
+
+	  <listitem>
+	    <para>Toont de lijst bestanden van het opgegeven pad, of van
+	      de rootdirectory, indien geen pad wordt opgegeven.  Als
+	      <option>-l</option> wordt meegegeven, zal ook de
+	      bestandsgrootte worden weergegeven.</para>
+	  </listitem>
+	</varlistentry>
+	<varlistentry>
+	  <term>lsdev <optional><option>-v</option></optional></term>
+
+	  <listitem>
+	    <para>Toont de lijst met alle apparaten waarvan het mogelijk
+	      is om modules te kunnen laden.  Als <option>-v</option>
+	      wordt meegegeven, zullen meer details getoond
+	      worden.</para>
+	  </listitem>
+	</varlistentry>
+
+	<varlistentry>
+	  <term>lsmod <optional><option>-v</option></optional></term>
+
+	  <listitem>
+	    <para>Toont geladen modules.  Als <option>-v</option> wordt
+	      meegegeven, zullen meer details getoont worden.</para>
+	  </listitem>
+	</varlistentry>
+
+	<varlistentry>
+	  <term>more <replaceable>bestandsnaam</replaceable></term>
+
+	  <listitem>
+	    <para>Toont de inhoud van het opgegeven bestand, met een
+	      pauze na iedere <varname>LINES</varname> regels.</para>
+	  </listitem>
+	</varlistentry>
+
+	<varlistentry>
+	  <term>reboot</term>
+
+	  <listitem>
+	    <para>Herstart het systeem onmiddelijk.</para>
+	  </listitem>
+	</varlistentry>
+
+	<varlistentry>
+	  <term>set <replaceable>variabele</replaceable></term>
+	  <term>set
+	    <replaceable>variabele</replaceable>=<replaceable>waarde</replaceable></term>
+
+	  <listitem>
+	    <para>Vult de omgevingsvariabele van de loader.</para>
+	  </listitem>
+	</varlistentry>
+
+	<varlistentry>
+	  <term>unload</term>
+
+	  <listitem>
+	    <para>Verwijdert alle geladen modules.</para>
+	  </listitem>
+	</varlistentry>
+      </variablelist>
+    </sect3>
+
+    <sect3 id="boot-loader-examples">
+      <title>Loader-voorbeelden</title>
+
+      <para>Hier zijn wat practische voorbeelden van loader gebruik:</para>
+
+      <itemizedlist>
+	<indexterm><primary>single-user mode</primary></indexterm>
+	<listitem>
+	  <para>Simpelweg opstarten van de kernel, maar dan in
+	    single-user mode:</para>
+
+	  <screen><userinput>boot -s</userinput></screen>
+	</listitem>
+
+	<listitem>
+	  <para>De gebruikelijke kernel en modules ontladen, om daarna
+	    de oude (of een andere) kernel te laden:</para>
+    <indexterm>
+      <primary><filename>kernel.old</filename></primary>
+    </indexterm>
+
+	  <screen><userinput>unload</userinput>
+<userinput>load <replaceable>kernel.old</replaceable></userinput></screen>
+
+	  <para>Je kan <filename>kernel.GENERIC</filename> gebruiken
+	    als je de algemene kernel wilt, die meegeleverd is bij de
+	    installatieschijf of <filename>kernel.old</filename> om de
+	    voorgaande ge&iuml;nstalleerde kernel te gebruiken (als je
+	    bijvoorbeeld je eigen kernel hebt vernieuwd of
+	    geconfigureerd).</para>
+
+	  <note>
+	    <para>Doe het volgende om de bekende modules te laden met
+	      een andere kernel:</para>
+
+	    <screen><userinput>unload</userinput>
+<userinput>set kernel="<replaceable>kernel.old</replaceable>"</userinput>
+<userinput>boot-conf</userinput></screen></note>
+	</listitem>
+
+	<listitem>
+	  <para>Voor het laden van een kernel-configuratiescript (een
+	    script dat zaken doet die je normaliter doet met de
+	    kernel-opstarttijd-configureerder):</para>
+
+	  <screen><userinput>load -t userconfig_script <replaceable>/boot/kernel.conf</replaceable></userinput></screen>
+	</listitem>
+      </itemizedlist>
+  </sect3>
+    </sect2>
+  </sect1>
+
+  <sect1 id="boot-kernel">
+    <title>Kernel-interactie tijdens opstarten</title>
+    <indexterm>
+      <primary>kernel</primary>
+      <secondary>boot-interactie</secondary>
+    </indexterm>
+
+    <para>Zodra de kernel is geladen door de <link
+      linkend="boot-loader">loader</link> (zoals gewoonlijk)
+      of door <link linkend="boot-boot1">boot2</link> (zonder de
+      loader), wordt er gekeken naar de opstartvlaggen, indien aanwezig,
+      en wordt het gedrag indien noodzakelijk aangepast.</para>
+
+    <sect2 id="boot-kernel-bootflags">
+      <indexterm>
+	<primary>kernel</primary>
+	<secondary>opstartvlaggen</secondary>
+      </indexterm>
+      <title>Kernel-opstartvlaggen</title>
+
+      <para>De meest voorkomende opstartvlaggen:</para>
+
+      <variablelist id="boot-kernel-bootflags-list">
+	<varlistentry>
+	  <term><option>-a</option></term>
+
+	  <listitem>
+	    <para>vraag tijdens de kernel-initialisatie om
+	      het apparaat dat gekoppeld dient te worden als
+	      root-bestandssysteem.</para>
+	  </listitem>
+	</varlistentry>
+
+	<varlistentry>
+	  <term><option>-C</option></term>
+
+	  <listitem>
+	    <para>boot van CDROM.</para>
+	  </listitem>
+	</varlistentry>
+
+	<varlistentry>
+	  <term><option>-c</option></term>
+
+	  <listitem>
+	    <para>start UserConfig, de opstarttijd-
+	      kernel-configureerder</para>
+	  </listitem>
+	</varlistentry>
+
+	<varlistentry>
+	  <term><option>-s</option></term>
+
+	  <listitem>
+	    <para>start naar single-user mode</para>
+	  </listitem>
+	</varlistentry>
+
+	<varlistentry>
+	  <term><option>-v</option></term>
+
+	  <listitem>
+	    <para>meer tekst en uitleg tijdens het opstarten van de
+	      kernel</para>
+	  </listitem>
+	</varlistentry>
+      </variablelist>
+
+      <note>
+	<para>Er zijn meerdere boot vlaggen, lees voor meer informatie
+	  &man.boot.8; .</para></note>
+    </sect2>
+  </sect1>
+
+  <sect1 id="device-hints">
+    <sect1info>
+      <authorgroup>
+	<author>
+	  <firstname>Tom</firstname>
+	  <surname>Rhodes</surname>
+	  <contrib>Bijgedragen door </contrib>
+	</author>
+      </authorgroup>
+    </sect1info>
+    <indexterm>
+      <primary>device.hints</primary>
+    </indexterm>
+    <title>Device hints</title>
+
+    <note><para>Dit is iets van &os;&nbsp;5.0 en later en bestaat
+      niet in eerdere versies.</para></note>
+
+    <para>Tijdens het opstarten van het systeem leest de boot
+      &man.loader.8; het &man.device.hints.5; bestand.  Dit bestand
+      slaat kernel-opstartinformatie op in variabelen, ook wel
+      <quote>device hints</quote> genoemd.  Deze
+      <quote>device hints</quote> worden door stuurprogramma's gebruikt
+      voor apparaatconfiguratie.</para>
+
+    <para>Device hints kunnen ook bij de <link linkend="boot-loader">
+      Fase drie boot loader</link> prompt gespecificeerd worden.
+      Variabelen kunnen toegevoegd worden met behulp van
+      <command>set</command>, verwijderd worden met
+      <command>unset</command> en bekeken worden met het
+      <command>show</command> comando.  Variabelen die ge-set zijn in
+      <filename>/boot/device.hints</filename> kunnen hier ook worden
+      overschreven.  Device hints die ingevoerd zijn bij de boot loader
+      zijn niet permanent en worden vergeten bij de volgende
+      reboot.</para>
+
+    <para>Zodra het systeem opgestart is, kan het &man.kenv.1; commando
+      gebruikt worden om alle variabelen te bekijken.</para>
+
+    <para>De schrijfwijze voor het <filename>/boot/device.hints</filename>
+      bestand is een variabele per regel, het standaardhekje gebruikend
+      <quote>#</quote> om commentaar in te voeren.  Regels worden als
+      volgt opgebouwd:</para>
+
+    <screen><userinput>hint.driver.unit.keyword="<replaceable>waarde</replaceable>"</userinput></screen>
+
+    <para>De schrijfwijze voor de Fase 3 boot loader is:</para>
+    <screen><userinput>set hint.driver.unit.keyword=<replaceable>waarde</replaceable></userinput></screen>
+
+    <para><literal>driver</literal> is de naam van het
+      apparaatstuurprogramma, <literal>unit</literal> is het
+      apparaatnummer van het stuurprogramma, en
+      <literal>keyword</literal> is het hint-sleutelwoord.  Dit
+      sleutelwoord kan bestaan uit de volgende opties:</para>
+
+    <itemizedlist>
+      <listitem>
+	<para><literal>at</literal>: specificeert de bus waarop het
+	  apparaat zit aangesloten.</para>
+      </listitem>
+
+      <listitem>
+	<para><literal>port</literal>: specificeert het startadres van
+	  de <acronym>I/O</acronym> dat gebruikt wordt.</para>
+      </listitem>
+
+      <listitem>
+	<para><literal>irq</literal>: specificeert het interrupt request
+	  nummer dat gebruikt wordt.</para>
+      </listitem>
+
+      <listitem>
+	<para><literal>drq</literal>: specificeert het DMA
+	  kanaalnummer.</para>
+      </listitem>
+
+      <listitem>
+	<para><literal>maddr</literal>: specificeert het fysieke
+	  geheugenadres dat gebruikt wordt door het apparaat.</para>
+      </listitem>
+
+      <listitem>
+	<para><literal>flags</literal>: zet verschillende vlagbits voor
+	  het apparaat.</para>
+      </listitem>
+
+      <listitem>
+	<para><literal>disabled</literal>: indien <literal>1</literal>
+	  dan is het apparaat uit gezet.</para>
+      </listitem>
+    </itemizedlist>
+
+    <para>Apparaatstuurprogramma's kunnen meerdere hints, die hier niet
+      genoemd zijn, accepteren (of eisen).  Zie hiervoor de betreffende
+      handleiding.  Voor meer informatie, zie de &man.device.hints.5;,
+      &man.kenv.1;, &man.loader.conf.5;, en &man.loader.8; handleiding
+      pagina's.</para>
+  </sect1>
+
+  <sect1 id="boot-init">
+    <indexterm>
+      <primary><command>init</command></primary>
+    </indexterm>
+    <title>Init: Initialisatie van procesbesturing</title>
+
+    <para>Zodra de kernel klaar is met opstarten, geeft deze de
+      besturing over aan het gebruikerproces &man.init.8;, te vinden in
+      <filename>/sbin/init</filename>, of de padnaam die gespecificeerd
+      is in de <envar>init_path</envar> variabele in
+      <command>loader</command>.</para>
+
+    <sect2 id="boot-autoreboot">
+      <title>Automatische herstartvolgorde</title>
+
+      <para>De automatische herstartvolgorde controleren of de
+	beschikbare bestandssystemen betrouwbaar zijn.  Als ze dat niet
+	zijn en &man.fsck.8; kan de fouten niet repareren, zal
+	&man.init.8; het systeem terugbrengen naar
+	<link linkend="boot-singleuser">single-user mode</link>
+	voor de systeembeheerder, die het probleem dan directer kan
+	aanpakken.</para>
+    </sect2>
+
+    <sect2 id="boot-singleuser">
+      <title>Single-User Mode</title>
+      <indexterm><primary>single-user mode</primary></indexterm>
+      <indexterm><primary>console</primary></indexterm>
+
+      <para>Naar single-User mode gaan kan door middel van <link
+	linkend="boot-autoreboot">automatische herstart te
+	doorlopen</link>, of door de gebruiker die opstart met de
+	<option>-s</option> optie of die de <envar>boot_single</envar>
+	variabele aanzet in de <command>loader</command>.</para>
+
+      <para>Het kan ook door &man.shutdown.8; te starten zonder
+	de reboot (<option>-r</option>) of halt (<option>-h</option>)
+	optie, vanuit
+	<link linkend="boot-multiuser">multi-user mode</link>.</para>
+
+      <para>Als het systeem <literal>console</literal> op
+	<literal>insecure</literal> staat in
+	<filename>/etc/ttys</filename>, dan vraagt het systeem om het
+	<username>root</username> wachtwoord voordat de single-user mode
+	wordt ge&iuml;nitialiseerd.</para>
+
+      <example id="boot-insecure-console">
+	<title>Een onveilige (insecure) console in <filename>/etc/ttys</filename></title>
+
+	<programlisting># name  getty                           type    status          comments
+#
+# If console is marked "insecure", then init will ask for the root password
+# when going to single-user mode.
+console none                            unknown off insecure</programlisting>
+      </example>
+
+      <note>
+	<para>Met een <literal>insecure</literal> console wordt bedoeld
+	  dat de fysieke beveiliging van het console niet goed is, en
+	  dat je er zeker van wilt zijn dat alleen personen die het
+	  <username>root</username> wachtwoord kennen naar single-user
+	  mode mogen gaan, en het betekent niet dat je het console
+	  onveilig wilt instellen.  Dus, als je van veiligheid houdt,
+	  kies je voor <literal>insecure</literal>, en niet
+	  <literal>secure</literal> (veilig).</para>
+      </note>
+    </sect2>
+
+    <sect2 id="boot-multiuser">
+      <title>Multi-User Mode</title>
+      <indexterm><primary>multi-user mode</primary></indexterm>
+
+      <para>Als &man.init.8; vind dat het bestandssysteem
+	in orde is, of zodra de gebruiker klaar is in <link
+	linkend="boot-singleuser">single-user mode</link>, gaat
+	het systeem over naar multi-user mode, waarin het de
+	resource configuration (bronconfiguratie) van het systeem
+	start.</para>
+
+      <sect3 id="boot-rc">
+      <indexterm><primary>rc-bestanden</primary></indexterm>
+	<title>Bronconfiguratie (rc)</title>
+
+	<para>Het bronconfiguratiesysteem leest de
+	  configuratiestandaarden in vanuit
+	  <filename>/etc/defaults/rc.conf</filename>, en
+	  systeem-specifieke details uit
+	  <filename>/etc/rc.conf</filename>, en gaat daarna door
+	  met het koppelen van de systeembestandssystemen die genoemd
+	  worden in <filename>/etc/fstab</filename>, start
+	  netwerkdiensten, start andere systeem-daemons, en
+	  start als laatst de opstartscripts van lokaal
+	  ge&iuml;nstalleerde packages.</para>
+
+	<para>De &man.rc.8; handleiding is een goede referentie voor
+	  het bronconfiguratiesysteem, evenals het inzien van de scripts
+	  zelf.</para>
+      </sect3>
+    </sect2>
+  </sect1>
+
+  <sect1 id="boot-shutdown">
+    <title>Shutdown-volgorde</title>
+    <indexterm>
+      <primary><command>shutdown</command></primary>
+    </indexterm>
+
+    <para>Bij een gecontroleerde shutdown, met &man.shutdown.8;, zal
+      &man.init.8; proberen om het script
+      <filename>/etc/rc.shutdown</filename> te starten, en daarna aan
+      alle processen het <literal>TERM</literal> signaal te sturen, en
+      eventueel het <literal>KILL</literal> signaal aan alle processen
+      die niet op tijd zijn gestopt.</para>
+
+    <para>Om een &os; machine uit te zetten die energiebeheer
+      ondersteund, kan simpelweg het commando
+      <command>shutdown -p now</command> gegeven worden om gelijk de
+      stroom af te schakelen.  Dient er een herstart plaats te vinden
+      dan kan <command>shutdown -r now</command> gebruikt worden.
+      Je moet wel <username>root</username> zijn of lid van
+      de <groupname>operator</groupname> groep om &man.shutdown.8; te
+      kunnen gebruiken.  Het &man.halt.8; en &man.reboot.8; commando kan
+      ook gebruikt worden, kijk hiervoor in betreffende
+      handleidingpagina's en bij die van &man.shutdown.8; voor meer
+      informatie.</para>
+
+    <note>
+      <para>Voor energie beheer is &man.acpi.4; ondersteuning in de
+	kernel noodzakelijk of dient geladen te worden als module voor
+	&os;&nbsp;5.X, en bij &os;&nbsp;4.X, &man.apm.4; ondersteuning
+	noodzakelijk.</para>
+    </note>
+
+  </sect1>
+</chapter>
+
+<!--
+     Local Variables:
+     mode: sgml
+     sgml-declaration: "../chapter.decl"
+     sgml-indent-data: t
+     sgml-omittag: nil
+     sgml-always-quote-attributes: t
+     sgml-parent-document: ("../book.sgml" "part" "chapter")
+     End:
+-->
+
