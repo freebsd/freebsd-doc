@@ -6,6 +6,10 @@
 
 CHAPTERS= 	pgpkeys/chapter.sgml
 
+PGPKEYS!=	perl -ne 'm/\"([\w-]+.key)\"/ && print "$$1\n"' \
+		    ${.CURDIR}/pgpkeys.ent
+SRCS+=		${PGPKEYS}
+
 VPATH=		..
 
 MASTERDOC=	${.CURDIR}/../${DOC}.${DOCBOOKSUFFIX}
