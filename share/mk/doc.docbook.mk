@@ -1,5 +1,5 @@
 #
-# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.46 2001/09/07 10:21:41 murray Exp $
+# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.47 2001/09/08 01:59:22 murray Exp $
 #
 # This include file <doc.docbook.mk> handles building and installing of
 # DocBook documentation in the FreeBSD Documentation Project.
@@ -128,6 +128,7 @@ PRINTOPTS?=    -ioutput.print
 NICE_HEADERS=1
 MIN_SECT_LABELS=1
 TWO_SIDE=1
+JUSTIFY=1
 #WITH_FOOTNOTES=1
 #GEN_INDEX=1
 .endif
