@@ -1,7 +1,7 @@
 ###|
 ###| The FreeBSD Russian Documentation Project
 ###|
-###| $FreeBSD$
+###| $FreeBSD: www/ru/ports/comments.ru,v 1.5 2004/02/19 07:35:00 andy Exp $
 ###| $FreeBSDru: frdp/www/ru/ports/comments.ru,v 1.8 2004/02/18 16:48:53 andy Exp $
 ###|
 ###| Original Revision: ports/INDEX 1.272
@@ -25,7 +25,6 @@ archivers/bzip2|Архиватор файлов с блочной сортировкой
 archivers/deepforest|Простая утилита сортировки используемая в JDE
 archivers/fastjar|Версия архиватора jar из поставки JDK написанная полностью с использованием C
 archivers/freeze|Программа архивации - часто используемая в QNX
-archivers/gshar+gunshar|Позволяет архивировать и разархивировать shell-архивы
 archivers/ha|Архиватор HA использующий метод сжатия HSC
 archivers/hpack.non-usa.only|Многосистемный архиватор с поддержкой шифрования с открытым ключем на базе PGP
 archivers/lha|Архиватор файлов использующий метод компрессии LZW (.lzh файлы)
@@ -36,6 +35,7 @@ archivers/nulib|Архиватор NuFX
 archivers/p5-Compress-Zlib|Perl5 интерфейс для библиотеки архивации zlib
 archivers/pkzip|Создает/изменяет/показывает содержимое/тестирует/извлекает содержимое pkzip ZIP файлов
 archivers/rar|Архиватор файлов (бинарный порт)
+archivers/sharutils|Позволяет архивировать и разархивировать shell-архивы
 archivers/unace|Распаковывает, просматривает и тестирует ACE архивы
 archivers/unarj|Позволяет извлекать файлы из ARJ архивов
 archivers/unrar|Распаковывает, просматривает и тестирует RAR архивы
