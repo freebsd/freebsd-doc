@@ -1,0 +1,356 @@
+<!DOCTYPE article PUBLIC "-//FreeBSD//DTD DocBook V4.1-Based Extension//EN" [
+<!ENTITY % man PUBLIC "-//FreeBSD//ENTITIES DocBook Manual Page Entities//EN">
+%man;
+]>
+
+<article>
+  <articleinfo>
+    <title>Filtering Bridges</title>
+
+    <authorgroup>
+      <author>
+        <firstname>Nick</firstname>
+        <surname>Sayer</surname>
+        
+        <affiliation>
+          <address><email>nsayer@FreeBSD.org</email></address>
+        </affiliation>
+      </author>
+    </authorgroup>
+    
+    <pubdate>$FreeBSD$</pubdate>
+
+    <abstract>
+      <para>For those of you who don't know, DSL differs from more traditional
+        connectivity methods in that the "connectivity spigot" that comes
+        out of the wall has no possibility for packet filtering.  If you get
+        a T1 line or some such it will come with a router that can generally
+        include a packet filter.  If you get ISDN or a dialup link, you also
+        either have a software routing component (a PPP daemon, specifically)
+        that can do some filtering or can be combined with a filter on the
+        machine running the link.  But with DSL you only get a little white
+        box with some Blinkenlights on it and an Ethernet port that takes
+        your traffic back and forth from the Internet and nothing else (to
+        some extent the same can be said of other mass-market high speed
+        connectivity methods, like cable modems or high speed wireless links
+        as well.  The same technique I plan to describe works just as well
+        for them, or for any other technology that provides an Ethernet
+        port with no filtering).</para>
+    </abstract>
+  </articleinfo>
+
+  <sect1 id="filtering-bridges-why">
+    <title>Why use a filtering bridge?</title>
+
+    <para>Bridging is not the only conceivable option.  It is possible to
+    set up a two Ethernet machine as a router instead of a bridge.
+    Where it is possible to do so, it is actually a better idea.
+    Bridges run their interfaces in promiscuous mode, meaning they
+    must process every packet presented to them.  The problem is
+    that routers can only route traffic between different subnets.
+    Also, subnets can only be made by by cutting an existing space in
+    half or defining a new space that is typically unroutable (see
+    <ulink url="ftp://nis.nsf.net/internet/documents/rfc/rfc1918.txt">RFC 1918</ulink>
+    ).  This wastes half of the useful addresses (or at least puts
+    them on the "wrong" side of the router -- the thing that is
+    doing the packet filtering that makes the inside network safe).
+    Using a bridge costs some CPU cycles, but makes all of the
+    problems of adding a 2nd router go away.</para>
+  </sect1>
+
+  <sect1 id="filtering-bridges-kernel">
+    <title>Configuring a Kernel</title>
+    
+    <important>
+      <para>After configuring and installing a kernel as shown here, you
+	should carry out the other
+	<link linkend="filtering-bridges-finalprep">final preperation</link>
+	tasks <emphasis>before</emphasis> booting into your new kernel.</para>
+    </important>
+
+    <para>Adding bridging to a FreeBSD machine is not hard to do.  It means
+      having 2 (or more, but we'll just use 2 here) Ethernet cards and adding
+      a couple of lines to the kernel configuration.  Since May of 2000,
+      RELENG_4 and -current have had bridging support for all Ethernet
+      interfaces.  This does not mean that any Ethernet interface will work.
+      For them to work, they have to support a working promiscuous mode for
+      both reception and transmition -- that is, they have to be able to
+      transmit Ethernet packets with any source address, not just their own.
+      In order to get good throughput, the cards should also be PCI bus
+      mastering cards. The best choices still are the Intel EtherExpress Pro
+      100 cards, with 3com 3c9xx cards being second.</para>
+
+    <para>So you will want to add the following to your kernel configuration
+      file:</para>
+    
+    <programlisting>device fxp (or whatever is appropriate for the cards you're using)
+options BRIDGE
+options IPFIREWALL
+options IPFIREWALL_VERBOSE</programlisting>
+
+    <para>Note that recent versions of FreeBSD support dynamically loading the
+      IP Firewall code into the kernel.  You can't do this, however, with
+      bridging, as the bridge code itself needs to interact with IPFIREWALL
+      in a special way.</para>
+
+    <para>It is also a good idea at this point to see if Luigi has updated
+      versions of the bridge code available that are more recent than what is
+      in the distribution.  As an example, 3.3-RELEASE comes with 981214, but
+      as of this writing, the most up-to-date bridge code is 990810.  You can
+      fetch the latest version from
+      <ulink url="http://www.iet.unipi.it/~luigi/">http://www.iet.unipi.it/~luigi/</ulink>. You will want to fetch <filename>bridge.c</filename> and <filename>bridge.h</filename> and drop them into <filename>sys/net/</filename>.</para>
+
+    <para>For instructions on how to build and install a new kernel, refer to
+      the
+      <ulink url="http://www.FreeBSD.org/handbook/kernelconfig-building.html">Building and Installing a Custom Kernel</ulink> section of the handbook</para>
+  </sect1>
+
+  <sect1 id="filtering-bridges-finalprep">
+    <title>Final Preperation</title>
+
+    <para>Before you boot the new kernel, you must make some preparations in
+      <filename>rc.boot</filename> and <filename>rc.firewall</filename>. The
+      default rule for the firewall is to drop all packets on the floor.  You
+      will want to override this by setting up the 'open' firewall in
+      <filename>/etc/rc.conf</filename>. Put these lines in
+      <filename>/etc/rc.conf</filename> to achieve this:</para>
+
+<programlisting>firewall_enable="YES"
+firewall_type="open"</programlisting>
+
+    <para>There is one more thing that is necessary.  When running IP over
+      Ethernet, there are actually two Ethernet protocols in use.  One
+      is IP, the other is ARP.  ARP is used when a machine must figure out
+      what Ethernet address coresponds to a given IP address.  ARP is not
+      a part of the IP layer, since it only applies to IP when run over
+      Ethernet.  The standard ipfirewall rule for the open firewall is</para>
+
+    <programlisting>pass ip from any to any</programlisting>
+
+    <para>but what about ARP?  If ARP is not passed, no IP traffic can flow at
+      all.  But IPFIREWALL has no provisions for dealing with non-IP
+      protocols, and that includes ARP.  Fortunately, a hackish extension was
+      made to the ipfirewall code to assist filtering bridges.  If you set up
+      a special rule for UDP packets from IP address
+      <hostid role="ipaddr">0.0.0.0</hostid>, the UDP port number will be used
+      to match the Ethernet protocol number for bridged packets. In this way
+      your bridge can be configured to pass or reject non IP protocols. So add
+      this line just below the two lines near the top of
+      <filename>/etc/rc.firewall</filename> that deal with
+      <devicename>lo0</devicename> (the ones that say that you should almost
+      never change those two rules).</para>
+
+    <programlisting>${fwcmd} add allow udp from 0.0.0.0 2054 to 0.0.0.0</programlisting>
+
+    <para>This rule makes almost no sense at all from a normal perspective on
+      IPFIREWALL, but the bridge code will use it to pass ARP packets without
+      restriction (which you almost certainly want to do).</para>
+
+    <para>Now you should be able to reboot your machine and have it act no
+      differently than it did before.  There will be some new boot messages
+      about bridging, but the bridging will not be enabled.  If there are any
+      problems, you should try and sort them out at this point before
+      proceeding.</para>
+  </sect1>
+
+  <sect1 id="filtering-bridges-enabling">
+    <title>Enabling The Bridge</title>
+    
+    <para>Next, you should do this:</para>
+
+    <screen>&prompt.root; <userinput>sysctl -w net.link.ether.bridge_ipfw=1</userinput>
+&prompt.root; <userinput>sysctl -w net.link.ether.bridge=1</userinput></screen>
+
+    <para>At this point, the bridge should be enabled, and because of the
+      previous changes to <filename>/etc/rc.conf</filename>, the firewall
+      should be wide open.  At this point, you should be able to insert the
+      machine between two sets of hosts and go back and forth without
+      difficulty.  If so, the next step is to add those two sysctl lines to
+      either <filename>/etc/rc.local</filename> or add the net.link.[blah
+      blah]=1 portions of the lines to <filename>/etc/sysctl.conf</filename>
+      (which path you take depends on what version of FreeBSD you
+      have).</para>
+
+    <para>Now before we started all of this, you should have had a machine
+      with two Ethernet interfaces, but with only one of them configured. That
+      is, there should only be one ifconfig line
+      <filename>/etc/rc.conf</filename>.  With the bridge in place, that is
+      still true.  But there is a detail that deserves some thought.  The
+      bridge is not in place by default.  That means that until the sysctls
+      are run that turn the bridge on, rather late in the startup, it is still
+      an ordinary machine with two interfaces, only one of which is configured
+      by <filename>/etc/rc.conf</filename>.  This becomes important for those
+      portions of the startup that require network access, say for DNS
+      resolution.  Some care must be made in picking which interface is going
+      to be the configured one.  In most cases, you are best to pick the
+      "outside" one (that is, the interface connected to the Internet).  Let's
+      presume for the sake of the examples to come, that
+      <devicename>fxp0</devicename> is the "outside" interface, and
+      <devicename>fxp1</devicename> is the "inside" one.  That means that fxp0
+      should be mentioned in <filename>/etc/rc.conf</filename>'s ifconfig
+      sections, but <devicename>fxp1</devicename> should not be.  The sysctl
+      that turns the bridge on will make <devicename>fxp1</devicename> start
+      working automagically.</para>
+  </sect1>
+  
+  <sect1 id="filtering-bridges-ipfirewall">
+    <title>Configuring The Firewall</title>
+    
+    <para>Now it is time to start adding ipfirewall rules to secure the inside
+      network.  There are some complications in doing this because not all of
+      the ipfirewall functionality is available on bridged packets.  Also,
+      there is a difference between packets that are in the process of being
+      bridged and packets that are being received by the local machine.  In
+      general, packets being bridged are only run through ipfirewall once, not
+      twice as is usually the case.  Bridged packets are filtered while they
+      are being received, so rules that use 'out' or 'xmit' will never match.
+      I usually use 'in via' which is an older syntax, but one that makes
+      sense as you read it.  Another limitation is that you are restricted
+      only to 'pass' or 'drop' for filtering bridged packets.  Sophisticated
+      things like 'divert' or 'forward' or 'reject' are not available. Such
+      options can still be used, but only on traffic to or from the bridge
+      machine itself.</para>
+
+    <para>New in FreeBSD 4.0 is the concept of stateful filtering.  This is a
+      big boost for UDP traffic, which typically is a request going out,
+      followed shortly thereafter by a response with the exact same set of IP
+      addresses and port numbers (but with source and dest reversed, of
+      course).  For firewalls that have no statekeeping, there is almost no
+      way to deal with this sort of traffic short of setting up proxies.  But
+      a firewall that can "remember" an outgoing UDP packet and for the next
+      few minutes allow a response, handling UDP services is trivial.  The
+      example to follow shows how to do this.  The truly paranoid can also set
+      up rules like this to handle TCP.  This allows you to avoid some sorts
+      of denial of service attacks or other nasty tricks, but it also
+      typically makes your state table mushroom in size.</para>
+
+    <para>Let's look at an example setup.  Note first that at the top of
+      <filename>/etc/rc.firewall</filename> we should already have taken care
+      of the loopback interface and the special hack for ARP should still be
+      in place.  So we won't worry about them any further.</para>
+
+<programlisting>us_ip=192.168.1.1
+oif=fxp0
+iif=fxp1
+
+# Things that we've kept state on before get to go through in a hurry.
+${ipfw} add check-state
+
+# Throw away RFC 1918 networks
+${ipfw} add deny log ip from 10.0.0.0/8 to any in via ${oif}
+${ipfw} add deny log ip from 172.16.0.0/12 to any in via ${oif}
+${ipfw} add deny log ip from 192.68.0.0/16 to any in via ${oif}
+
+# Allow the bridge machine to say anything it wants (keep state if UDP)
+${ipfw} add pass udp from ${us_ip} to any keep-state
+${ipfw} add pass ip from ${us_ip} to any
+
+# Allow the inside net to say anything it wants (keep state if UDP)
+${ipfw} add pass udp from any to any in via ${iif} keep-state
+${ipfw} add pass ip from any to any in via ${iif}
+
+# Allow all manner of ICMP
+${ipfw} add pass icmp from any to any
+
+# TCP section
+# established TCP sessions are ok everywhere.
+${ipfw} add pass tcp from any to any established
+# Pass the "quarantine" range.
+${ipfw} add pass tcp from any to any 49152-65535 in via ${oif}
+# Pass ident probes.  It's better than waiting for them to timeout
+${ipfw} add pass tcp from any to any 113 in via ${oif}
+# Pass SSH.
+${ipfw} add pass tcp from any to any 22 in via ${oif}
+# Pass DNS.  Only if you have name servers inside.
+#${ipfw} add pass tcp from any to any 53 in via ${oif}
+# Pass SMTP to the mail server only
+${ipfw} add pass tcp from any to mailhost 25 in via ${oif}
+
+# UDP section
+# Pass the "quarantine" range"
+${ipfw} add pass udp from any to any 49152-65535 in via ${oif}
+# Pass DNS.  Only if you have name servers inside.
+#${ipfw} add pass udp from any to any 53 in via ${oif}
+
+# Everything else is suspect
+${ipfw} add deny log ip from any to any</programlisting>
+
+    <para>Those of you who have set up firewalls before may notice some things
+      missing.  In particular, there are no anti-spoofing rules.  That is,
+      we did <emphasis>not</emphasis> add:</para>
+
+    <programlisting>${ipfw} add deny ip from ${us_ip}/24 to any in via ${oif}</programlisting>
+
+    <para>That is, drop packets claiming to be from our network that are
+      coming in from the outside.  This is something that you would commonly
+      do to make sure that someone doesn't try and evade the packet filter by
+      generating nefarious packets that look like they are from the inside.
+      The problem with that is that there is at least one host on the outside
+      interface that you do not want to ignore -- your router.  In my
+      particular case, I have some machines on the outside and some on the
+      inside, but I don't necessarily want the outside machines to have
+      routine access to the inside.  At the same time, I don't want to throw
+      their traffic away.  In my own case, my ISP anti-spoofs at their router,
+      so I don't need to bother.  And in general, the fewer rules the better,
+      since it will take time and CPU to process each one.</para>
+
+    <para>Note also that the last rule is almost an exact duplicate of the
+      default rule 65536.  There are two major differences when it comes to
+      bridging, however.  Our rule logs what it drops, of course, but our rule
+      will only apply to IP traffic.  Apart from the UDP
+      <hostid role="ipaddr">0.0.0.0</hostid> trick there is no way to deal
+      with non IP traffic, so the default rule at 65536 will drop ALL traffic,
+      not merely all non-IP traffic.  So the net effect is that unmatched IP
+      traffic will be logged, but not non-IP traffic.  If you want, you can
+      add option <literal>IPFIREWALL_DEFAULT_TO_ACCEPT</literal> to your
+      <link linkend="filtering-bridges-kernel">kernel configuration</link> and
+      non-IP traffic will be passed instead of dropped.  But in the case of a
+      filtering bridge between you and the Internet, it is unlikely that you
+      would want to do this (if you are sufficiently paranoid).</para>
+
+    <para>There is a rule for passing SMTP to a mailhost if you have one.
+      Obviously the whole ruleset above should be flavored to taste, and
+      that is an example of a specific service exemption.  Note that
+      in order for 'mailhost' to work, name service lookups must work
+      BEFORE the bridge is enabled.  This is an example of making sure
+      that you enable the correct interface.</para>
+
+    <para>Another item to note is that the DNS rules are set up only to
+      allow DNS servers to work.  This means that if don't set up a
+      DNS server, you don't need them.</para>
+
+    <para>Folks used to setting up IP firewalls also probably are used to
+      either having a 'reset' or a 'forward' rule for ident packets
+      (TCP port 113).  Unfortunately, this is not an option with the
+      bridging code, so the path of least resistance is to simply pass
+      them to their destination.  As long as that destination machine
+      isn't running an ident daemon, this is relatively harmless.
+      The alternative is dropping port 113 connections, which makes
+      firing up things like IRC take forever (the ident probe must
+      timeout).</para>
+
+    <para>The only other thing that's a little weird that you may have noticed
+      is that there is a rule to let ${us_ip} speak and a separate rule to
+      allow the inside network to speak.  Remember that this is because the
+      two sets of traffic will be taking different paths through the kernel
+      and into the packet filter.  The inside net will be going through the
+      bridge code.  The local machine, however, will be using the normal IP
+      stack to speak.  Thus the two rules to handle the different cases.  The
+      in via ${oif} rules work for both paths.  In general if you use in via
+      rules throughout the filter, you will need to make an exception for
+      locally generated packets, because they didn't "come in" via
+      anything.</para>
+  </sect1>
+
+  <sect1 id="filtering-bridges-contributors">
+    <title>Contributors</title>
+
+    <para>To some extent the material for this discussion is a combination of 
+      the items that were discussed by Luigi Rizzo in his Dummynet lecture at
+      FreeBSDcon '99 and by Mark Murray during his Network Security lecture.
+      In addition, for quite some time now I have been putting together 
+      filtering bridges for friends and coleagues who were getting DSL
+      connections for their home.</para>
+    </sect1>
+</article>
+
