@@ -1,9 +1,13 @@
 <?xml version="1.0" encoding="KOI8-R" ?>
 
-<!-- $FreeBSD$ -->
-<!-- The FreeBSD Russian Documentation Project -->
-<!-- $FreeBSDru: frdp/www/ru/index.xsl,v 1.3 2001/12/17 17:02:47 phantom Exp $ -->
-<!-- Original revision: 1.16 -->
+<!--
+     The FreeBSD Russian Documentation Project
+
+     $FreeBSD$
+     $FreeBSDru: frdp/www/ru/index.xsl,v 1.5 2002/02/11 13:46:22 andy Exp $
+
+     Original revision: 1.19
+-->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   
@@ -83,6 +87,7 @@
 		  <option value="http://www.kr.FreeBSD.org/">Корея</option>
 		  <option value="http://www2.kr.FreeBSD.org/">Корея/2</option>
 		  <option value="http://www.lv.FreeBSD.org/">Латвия</option>
+                  <option value="http://www.lt.FreeBSD.org/">Литва</option>
 		  <option value="http://www.nl.FreeBSD.org/">Нидерланды</option>
 		  <option value="http://www2.nl.FreeBSD.org/">Нидерланды/2</option>
 		  <option value="http://www.nz.FreeBSD.org/">Новая Зеландия</option>
@@ -459,7 +464,7 @@
 		<xsl:value-of select="$date"/></small></td>
 
 	    <td align="right" 
-		valign="top"><small><a href="copyright/index.html">Copyright</a> (c) 1995-2001
+		valign="top"><small><a href="copyright/index.html">Copyright</a> (c) 1995-2002
 		The FreeBSD Project.<br/>
 		Все права защищены.</small></td>
 	  </tr>
