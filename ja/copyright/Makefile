@@ -1,29 +1,37 @@
-# $FreeBSD: www/ja/copyright/Makefile,v 1.9 1999/09/06 07:03:17 peter Exp $
+# $FreeBSD: www/ja/copyright/Makefile,v 1.10 1999/09/07 14:22:57 kuriyama Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.8
+# Original revision: 1.9
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
 .endif
 
 DOCS=	license.sgml
-DOCS+= freebsd-license.sgml
+DOCS+=	freebsd-license.sgml
 DOCS+=	daemon.sgml
-DOCS+=  copyright.sgml
+DOCS+=	copyright.sgml
 
 INDEXLINK= copyright.html
+
+CVS_READONLY?=	YES
+CVS_OPT+=	-Q
+.if !empty(CVS_READONLY)
+CVS_OPT+=	-R
+.endif
+
 
 # DATA+= COPYING COPYING.LIB ${LEGAL}
 
 # FreeBSD Ports redistribution restrictions
 #LEGAL= LEGAL
+#LEGAL_FILE=	ports/LEGAL
 #CLEANFILES+= ${LEGAL}
 #.if defined(NOPORTSCVS)
-#${LEGAL}: $${PORTSBASE}/ports/LEGAL
-#	cp ${PORTSBASE}/ports/LEGAL LEGAL
+#${LEGAL}: $${PORTSBASE}/${LEGAL_FILE}
+#	cp ${PORTSBASE}/${LEGAL_FILE} LEGAL
 #.else
-#${LEGAL}: $${CVSROOT}/ports/LEGAL,v
-#       co -q -p ${.ALLSRC} > ${.TARGET}
+#${LEGAL}: $${CVSROOT}/${LEGAL_FILE},v
+#       cvs ${CVS_OPT} co -p ${LEGAL_FILE} > ${.TARGET}
 #.endif
 
 .include "../../web.mk"
