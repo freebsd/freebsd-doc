@@ -1,12 +1,12 @@
 # 
-# $Id: Makefile,v 1.21 1999-05-05 20:31:23 nik Exp $
+# $Id: Makefile,v 1.22 1999-08-17 21:35:54 nik Exp $
 #
 # Build the FreeBSD Handbook.
 #
 
 MAINTAINER=nik@FreeBSD.ORG
 
-DOC?= handbook
+DOC?= book
 
 FORMATS?= html-split
 
@@ -19,7 +19,7 @@ INSTALL_ONLY_COMPRESSED?=
 #
 
 # SGML content
-SRCS=  handbook.sgml
+SRCS=  book.sgml
 SRCS+= advanced-networking/chapter.sgml
 SRCS+= backups/chapter.sgml
 SRCS+= basics/chapter.sgml
@@ -55,4 +55,5 @@ SRCS+= authors.ent
 SRCS+= chapters.ent 
 SRCS+= mailing-lists.ent
 
-.include "../../share/mk/docproj.docbook.mk"
+DOC_PREFIX?= ../../..
+.include "../../../share/mk/docproj.docbook.mk"
