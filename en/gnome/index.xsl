@@ -1,15 +1,15 @@
-<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.44 2003/12/27 23:03:10 marcus Exp $ -->
+<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.45 2003/12/28 01:46:10 marcus Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
 		xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
 		xmlns:rdf1="http://my.netscape.com/rdf/simple/0.9/"
 		exclude-result-prefixes="rdf rdf1" version="1.0">
-  
+
   <xsl:import href="../includes.xsl"/>
   <xsl:import href="includes.xsl"/>
 
   <xsl:variable name="base" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.44 2003/12/27 23:03:10 marcus Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.45 2003/12/28 01:46:10 marcus Exp $'"/>
   <xsl:variable name="title" select="'FreeBSD GNOME Project'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -124,13 +124,13 @@
 
               <h2><font color="#990000">State of the port</font></h2>
 
-	      <p>GNOME for FreeBSD is currently support on 4.8, 4.9, 5.1,
-		-STABLE, and -CURRENT.  Most of GNOME has been ported to 
-		FreeBSD; however, there is 
+	      <p>GNOME for FreeBSD is currently support on 4.8, 4.9, 5.2,
+		-STABLE, and -CURRENT.  Most of GNOME has been ported to
+		FreeBSD; however, there is
 		<a href="docs/volunteer.html">plenty left to do</a>!</p>
 
             </td>
-            
+
             <td></td>
 
             <!-- Right-most column -->
@@ -144,10 +144,10 @@
                            bgcolor="#ffcc66" width="100%">
                       <tr>
                         <td valign="top">
-                        
+
                         <p><font size="+1" color="#990000"><b>FreeBSD GNOME News</b></font><br/>
                           <font size="-1">
-                            Latest update: 
+                            Latest update:
                             <xsl:value-of
                               select="descendant::month[position() = 1]/name"/>
                             <xsl:text> </xsl:text>
@@ -175,7 +175,7 @@
                             </xsl:for-each>
                             <a href="newsflash.html">More...</a>
                           </font></p>
-                          
+
                           <p><font size="+1" color="#990000"><b>GNOME Project News</b></font><br/>
                             <font size="-1">
                               <xsl:for-each select="document('http://gnomedesktop.org/backend.php')/rss/channel/*[name() = 'item'][position() &lt; 10]">
@@ -202,11 +202,11 @@
                 </tr>
               </table>
             </td>
-            
+
           </tr>
         </table>
         <xsl:copy-of select="$footer"/>
       </body>
     </html>
-  </xsl:template>    
+  </xsl:template>
 </xsl:stylesheet>
