@@ -1,6 +1,7 @@
 # $FreeBSD$
 
 SUBDIR = euro
+SUBDIR+= pxe
 
 
 DOC_PREFIX?= ${.CURDIR}/../..
