@@ -1,9 +1,9 @@
-# $Id: Makefile,v 1.10 1998-03-25 12:25:59 jkh Exp $
+# $Id: Makefile,v 1.11 1998-07-24 20:09:53 jkh Exp $
 
 DOCS?=	index.sgml snapshots.sgml
 
 SUBDIR=	1.1 1.1.5 2.0 2.0.5A 2.0.5R 2.0A 2.1R 2.1.5R 2.1.6R 2.1.7R 2.2R
-SUBDIR+=	2.2.1R 2.2.2R 2.2.5R 2.2.6R
+SUBDIR+=	2.2.1R 2.2.2R 2.2.5R 2.2.6R 2.2.7R
 
 .if defined $(NEW_BUILD)
 SUBDIR=
