@@ -1,4 +1,4 @@
-# $FreeBSD: www/fr/Makefile,v 1.3 2004/02/29 13:20:40 stephane Exp $
+# $FreeBSD: www/fr/Makefile,v 1.4 2004/03/06 17:33:18 stephane Exp $
 
 # The FreeBSD French Documentation Project
 # Original revision: 1.107
@@ -94,16 +94,6 @@ WEBDIR?=	data/fr
 # index.html is special, and generated from index.xsl and news/news.xml
 DATA+=		index.html
 CLEANFILES+=	index.html
-
-WEBCHECK?=	${PREFIX}/bin/webcheck
-WEBCHECKOPTS?=	-ab ${WEBCHECKFLAGS}
-WEBCHECKDIR?=	/webcheck
-WEBCHECKINSTALLDIR?= ${DESTDIR}${WEBCHECKDIR}
-WEBCHECKURL?=	http://www.FreeBSD.org/
-
-webcheck:
-	@[ -d ${WEBCHECKINSTALLDIR} ] || ${MKDIR} ${WEBCHECKINSTALLDIR}
-	${WEBCHECK} ${WEBCHECKOPTS} -o ${WEBCHECKINSTALLDIR} ${WEBCHECKURL}
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
 
