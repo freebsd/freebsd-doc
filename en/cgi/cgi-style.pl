@@ -1,4 +1,4 @@
-# $Id: cgi-style.pl,v 1.12 1999-03-24 17:29:55 max Exp $
+# $Id: cgi-style.pl,v 1.13 1999-05-30 10:56:57 wosch Exp $
 #
 # Perl routines to encapsulate various elements of HTML page style.
 
@@ -43,7 +43,8 @@ sub html_header {
     local ($title) = @_;
 
     return "Content-type: text/html\n\n" . 
-	"<html>\n<title>$title</title>\n</head>\n$t_body\n" .
+	"<html>\n<head><title>$title</title>\n" .
+	    "<meta name=\"robots\" content=\"nofollow\">\n</head>\n$t_body\n" .
 	"$i_topbar <h1><font color=\"#660000\">$title</font></h1>\n";
 }
 
@@ -51,7 +52,8 @@ sub short_html_header {
     local ($title) = @_;
 
     return "Content-type: text/html\n\n" .
-	"<html>\n<title>$title</title>\n</head>\n$t_body\n" .
+	"<html>\n<head><title>$title</title>\n" . 
+	    "<meta name=\"robots\" content=\"nofollow\">\n</head>\n$t_body\n" .
         "$i_topbar";
 }
 
