@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/fr/news/newsflash.xsl,v 1.1 2002/12/08 16:45:35 stephane Exp $ -->
+<!-- $FreeBSD: www/fr/news/newsflash.xsl,v 1.2 2003/07/27 18:43:55 gioria Exp $ -->
 
 <!-- 
    The FreeBSD French Documentation Project
@@ -44,7 +44,7 @@
 	<!-- Also notice that because this is now XML and not SGML, empty
              elements, like IMG, must have a trailing "/" just inside the 
    	     closing angle bracket, like this " ... />" -->
-	<img src="{$base}/gifs/news.jpg" align="right" border="0" width="193"
+	<img src="{$enbase}/gifs/news.jpg" align="right" border="0" width="193"
 	     height="144" alt="Nouvelles FreeBSD"/>
 
 	<p>FreeBSD est un syst&#232;me d'exploitation en constante &#233;volution. Se tenir inform&#233;
