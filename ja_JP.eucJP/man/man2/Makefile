@@ -79,6 +79,7 @@ MAN2 =	_exit.2\
 	mkfifo.2\
 	mknod.2\
 	mlock.2\
+	mlockall.2\
 	mmap.2\
 	modfind.2\
 	modnext.2\
@@ -189,7 +190,9 @@ MLINKS+=getuid.2 geteuid.2
 MLINKS+=intro.2 errno.2
 MLINKS+=jail.2 jail_attach.2
 MLINKS+=kqueue.2 kevent.2
+MLINKS+=madvise.2 posix_madvise.2
 MLINKS+=mlock.2 munlock.2
+MLINKS+=mlockall.2 munlockall.2
 MLINKS+=modnext.2 modfnext.2
 MLINKS+=mount.2 unmount.2
 MLINKS+=pathconf.2 fpathconf.2
