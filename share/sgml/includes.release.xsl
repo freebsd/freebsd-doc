@@ -1,12 +1,14 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/share/sgml/includes.release.xsl,v 1.6 2004/11/06 21:57:41 simon Exp $ -->
+<!-- $FreeBSD: www/share/sgml/includes.release.xsl,v 1.7 2005/01/01 20:07:10 ceri Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
   <xsl:variable name="rel.head" select='"6.0"'/>
+  <xsl:variable name="rel.head.major" select='"6"'/>
 
   <xsl:variable name="rel.current" select='"5.3"'/>
+  <xsl:variable name="rel.current.major" select='"5"'/>
 
   <xsl:variable name="u.rel.notes">
     <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel.current"/>R/relnotes.html</xsl:variable>
@@ -27,6 +29,8 @@
     <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel.current"/>R/migration-guide.html</xsl:variable>
 
   <xsl:variable name="rel2.current" select='"4.10"'/>
+  <xsl:variable name="rel2.current.major" select='"4"'/>
+
   <xsl:variable name="u.rel2.notes">
     <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel2.current"/>R/relnotes.html</xsl:variable>
 
