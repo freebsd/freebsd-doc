@@ -2,7 +2,7 @@
 # The FreeBSD Russian Documentation Project
 #
 # $FreeBSD$
-# $FreeBSDru: frdp/doc/ru_RU.KOI8-R/articles/fbsd-from-scratch/Makefile,v 1.1 2004/02/01 17:20:25 andy Exp $
+# $FreeBSDru: frdp/doc/ru_RU.KOI8-R/articles/fbsd-from-scratch/Makefile,v 1.2 2004/02/20 17:57:24 phantom Exp $
 #
 # Article: FreeBSD From Scratch
 #
@@ -19,22 +19,19 @@ INSTALL_COMPRESSED?= gz
 INSTALL_ONLY_COMPRESSED?=
 
 # SGML content
-SRCS= article.sgml \
-	${DOC_PREFIX}/en_US.ISO8859-1/articles/fbsd-from-scratch/stage_1.conf.default \
-	${DOC_PREFIX}/en_US.ISO8859-1/articles/fbsd-from-scratch/stage_1.sh \
-	${DOC_PREFIX}/en_US.ISO8859-1/articles/fbsd-from-scratch/stage_2.conf.default \
-	${DOC_PREFIX}/en_US.ISO8859-1/articles/fbsd-from-scratch/stage_2.sh \
-	${DOC_PREFIX}/en_US.ISO8859-1/articles/fbsd-from-scratch/stage_3.mk
+EXTRA_SRCS= stage_1.sh stage_1.conf.default \
+	stage_2.sh stage_2.conf.default stage_3.mk
+
+CLEANFILES+= ${EXTRA_SRCS}
+
+SRCS= article.sgml ${EXTRA_SRCS}
+
+${EXTRA_SRCS}:
+	${CP} ${DOC_PREFIX}/en_US.ISO8859-1/articles/fbsd-from-scratch/${.TARGET} ${.OBJDIR}/
 
 DOC_PREFIX?= ${.CURDIR}/../../..
 
 afterinstall:
-	${INSTALL_DOCS} \
-	${DOC_PREFIX}/en_US.ISO8859-1/articles/fbsd-from-scratch/stage_1.sh \
-	${DOC_PREFIX}/en_US.ISO8859-1/articles/fbsd-from-scratch/stage_1.conf.default \
-	${DOC_PREFIX}/en_US.ISO8859-1/articles/fbsd-from-scratch/stage_2.sh \
-	${DOC_PREFIX}/en_US.ISO8859-1/articles/fbsd-from-scratch/stage_2.conf.default \
-	${DOC_PREFIX}/en_US.ISO8859-1/articles/fbsd-from-scratch/stage_3.mk \
-	${DESTDIR}
+	${INSTALL_DOCS} ${EXTRA_SRCS} ${DESTDIR}
 
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"
