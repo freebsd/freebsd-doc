@@ -2,8 +2,8 @@
 
 <!--
      $FreeBSD$
-     $FreeBSDde: de-www/index.xsl,v 1.34 2004/11/09 13:48:55 brueffer Exp $
-     basiert auf: 1.116
+     $FreeBSDde: de-www/index.xsl,v 1.36 2004/11/21 15:11:50 mheinen Exp $
+     basiert auf: 1.117
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -270,10 +270,10 @@
 			      &#183; <a href="{$u.rel.hardware}">Hardware Notes</a><br/>
 			      &#183; <a href="{$u.rel.installation}">Installation Notes</a><br/>
 			      &#183; <a href="{$u.rel.errata}">Errata</a><br/>
-			      &#183; <a href="{$u.rel.migration}">Migration Guide</a></small></p>
+			      &#183; <a href="{$u.rel.migration}">Migrationsleitfaden</a></small></p>
 
 			  <p><a href="{$u.rel2.announce}">
-			    <font size="+1" color="#990000"><b>Produktionsreife:
+			    <font size="+1" color="#990000"><b>Ausgereift:
 			    <xsl:value-of select="$rel2.current"/>-RELEASE</b></font></a><br/>
 
 			    <small>&#183; <a href="{$enbase}/doc/de_DE.ISO8859-1/books/handbook/install.html">Installation</a><br/>
