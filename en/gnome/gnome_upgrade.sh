@@ -34,13 +34,14 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $Id: gnome_upgrade.sh,v 1.19 2005-03-14 02:52:25 marcus Exp $
+# $Id: gnome_upgrade.sh,v 1.20 2005-03-15 22:28:11 adamw Exp $
+# $FreeBSD$
 #
 
 # This script will aid in doing major upgrades to the GNOME Desktop (e.g.
 # an upgrade from 2.8 --> 2.10).
 
-GNOME_UPGRADE_SH_VER=2102;	# Increment this with every functional change
+GNOME_UPGRADE_SH_VER=2.10-3;	# Increment this with every functional change
 
 ## BEGIN global variable declarations.
 VERBOSE=${VERBOSE:=0}
@@ -165,6 +166,19 @@ run_portupgrade()
 }
 
 ## BEGIN main block.
+# Print some basic version information
+if [ "$1" = "-v" ]; then
+    echo "FreeBSD GNOME Upgrade tool: gnome_upgrade.sh"
+    echo "--"
+    echo "Script version: ${GNOME_UPGRADE_SH_VER}"
+    echo 'MarcusCom revision: $Id: gnome_upgrade.sh,v 1.20 2005-03-15 22:28:11 adamw Exp $'
+    echo 'FreeBSD revision: $FreeBSD$'
+    echo "--"
+    echo "Visit http://www.freebsd.org/gnome for more information"
+    echo ""
+    exit 0
+ fi
+
 if [ `/usr/bin/id -u` != 0 ]; then
     echo "ERROR: You must be root to run this script."
     exit 1
@@ -332,12 +346,20 @@ echo "ignore the issue, or, if (and only if!) you are very familiar with"
 echo "pkgdb(1), you can hit CTRL-D to remove the dependency."
 echo
 
-# Now we need to run pkgdb to make sure our database is consistent.
-run_pkgdb "to start with a consistent package database" ${logfile}
+# We run pkgdb twice. The first time, we run pkgdb -fu, which rebuilds the
+# entire database from scratch. This takes a decent chunk of time (a minute
+# or two), but if the database is inconsistent, portupgrade(1) will fail. And
+# when portupgrade fails, external dependencies don't actually get updated.
+# The second time, we run pkgdb -F just in case. Once we're sure that pkgdb -fu
+# does what we want it to do, the second time can probably just be removed.
 
-# if there are any problems that could not be corrected in the previous step,
-# an interactive run is necessary to resolve them. if the db is consistent,
-# this step is just a time-consuming noop.
+# Run pkgdb -fu to force a clean database.
+run_pkgdb "the Long Way to make sure the package database is clean" ${logfile} "-fu"
+
+# If there are any problems that could not be corrected in the previous step,
+# an interactive run is necessary to resolve them. If the db is consistent,
+# this step is just a time-consuming NOOP. In fact, given that we force a
+# database rebuild, this step is probably a NOOP no matter what.
 run_pkgdb "again, to resolve any inconsistencies that require manual interaction" ${logfile} "-F"
 
 # Run portupgrade on all the external dependencies.
