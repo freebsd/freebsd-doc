@@ -81,5 +81,5 @@ echo "      <title>&a.${me};</title>"
 echo "      &pgpkey.${me};"
 echo "    </sect2>"
 echo
-echo "Don't forget to 'cvs add ${keyfile}' if this is a new entry,"
-echo "and check your diffs before committing!"
+echo "If this is a new entry, don't forget to 'cvs add ${keyfile}',"
+echo "and to commit both ${keyfile} and pgpkeys.ent."
