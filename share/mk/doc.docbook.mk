@@ -1,5 +1,5 @@
 #
-# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.9 2000/03/23 09:00:15 nik Exp $
+# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.10 2000/03/24 19:31:34 nbm Exp $
 #
 # This include file <doc.docbook.mk> handles building and installing of
 # DocBook documentation in the FreeBSD Documentation Project.
@@ -107,10 +107,10 @@ KNOWN_FORMATS=	html html-split html-split.tar txt rtf ps pdf tex dvi tar pdb
 _cf=${_curformat}
 .if ${_cf} == "html-split"
 _docs+= index.html HTML.manifest
-CLEANFILES+= `xargs < HTML.manifest` HTML.manifest
+CLEANFILES+= `[ -f HTML.manifest ] && xargs < HTML.manifest` HTML.manifest
 .elif ${_cf} == "html-split.tar"
 _docs+= ${DOC}.html-split.tar
-CLEANFILES+= `xargs < HTML.manifest` HTML.manifest
+CLEANFILES+= `[ -f HTML.manifest ] && xargs < HTML.manifest` HTML.manifest
 CLEANFILES+= ${DOC}.html-split.tar
 .elif ${_cf} == "html"
 _docs+= ${DOC}.html
