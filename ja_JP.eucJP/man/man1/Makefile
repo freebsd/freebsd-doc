@@ -88,6 +88,7 @@ MAN1 =	a2p.1\
 	fontedit.1\
 	from.1\
 	fstat.1\
+	fsync.1\
 	ftp.1\
 	g711conv.1\
 	gasp.1\
@@ -137,6 +138,7 @@ MAN1 =	a2p.1\
 	kbdmap.1\
 	kcon.1\
 	kdump.1\
+	kenv.1\
 	key.1\
 	keyinfo.1\
 	keyinit.1\
@@ -227,6 +229,7 @@ MAN1 =	a2p.1\
 	perl.1\
 	pfbtops.1\
 	pic.1\
+	pim6stat.1\
 	pkg_add.1\
 	pkg_create.1\
 	pkg_delete.1\
@@ -258,6 +261,7 @@ MAN1 =	a2p.1\
 	rpcgen.1\
 	rs.1\
 	rsh.1\
+	rtld.1\
 	rtprio.1\
 	rup.1\
 	ruptime.1\
@@ -309,6 +313,7 @@ MAN1 =	a2p.1\
 	tr.1\
 	troff.1\
 	true.1\
+	truncate.1\
 	truss.1\
 	tset.1\
 	tsort.1\
@@ -433,6 +438,7 @@ MLINKS+=lex.1 lex++.1
 MLINKS+=mail.1 Mail.1
 MLINKS+=passwd.1 yppasswd.1
 MLINKS+=printenv.1 env.1
+MLINKS+=rtld.1 ld-elf.so.1
 MLINKS+=tput.1 clear.1
 MLINKS+=tset.1 reset.1
 MLINKS+=vi.1 ex.1
