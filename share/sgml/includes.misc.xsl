@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/share/sgml/includes.misc.xsl,v 1.16 2005/01/01 21:15:08 ceri Exp $ -->
+<!-- $FreeBSD: www/share/sgml/includes.misc.xsl,v 1.17 2005/01/02 12:37:49 ceri Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -119,7 +119,7 @@
 
   <!-- template: "html-news-make-olditems-list" -->
   <xsl:template name="html-news-make-olditems-list">
-    <p>Old announcement:
+    <p>Old announcements:
       <a href="2002/index.html">2002</a>,
       <a href="2001/index.html">2001</a>,
       <a href="2000/index.html">2000</a>,
