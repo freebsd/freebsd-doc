@@ -2,7 +2,7 @@
 # The FreeBSD French Documentation Project
 #
 # $FreeBSD$
-# $Id: Makefile,v 1.12 2003-07-07 13:29:49 blackend Exp $
+# $Id: Makefile,v 1.13 2003-08-10 14:41:10 blackend Exp $
 # Original revision: 1.64
 #
 # Build the FreeBSD Handbook.
@@ -99,14 +99,14 @@ IMAGES_EN+= install/adduser1.scr
 IMAGES_EN+= install/adduser2.scr
 IMAGES_EN+= install/adduser3.scr
 IMAGES_EN+= install/mainexit.scr
-IMAGES_EN+= install/disk-layout.eps
+IMAGES = install/disk-layout.eps
 IMAGES_EN+= install/edit-inetd-conf.scr
 
-IMAGES_EN+= install/example-dir1.eps
-IMAGES_EN+= install/example-dir2.eps
-IMAGES_EN+= install/example-dir3.eps
-IMAGES_EN+= install/example-dir4.eps
-IMAGES_EN+= install/example-dir5.eps
+IMAGES+= install/example-dir1.eps
+IMAGES+= install/example-dir2.eps
+IMAGES+= install/example-dir3.eps
+IMAGES+= install/example-dir4.eps
+IMAGES+= install/example-dir5.eps
 IMAGES_EN+= vinum/vinum-concat.pic
 IMAGES_EN+= vinum/vinum-mirrored-vol.pic
 IMAGES_EN+= vinum/vinum-raid10-vol.pic
