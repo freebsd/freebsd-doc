@@ -7,7 +7,7 @@
 # It is a good idea to make sure any target can be made more than
 # once without ill effect.
 #
-# $Id: stage_3.mk,v 1.3 2004-01-21 19:39:26 schweikh Exp $
+# $Id: stage_3.mk,v 1.4 2004-07-19 20:42:14 schweikh Exp $
 # $FreeBSD$
 
 .POSIX:
@@ -15,13 +15,12 @@
 message:
 	@echo "Please use one of the following targets:"
 	@echo "config_apache"
-	@echo "config_firebird"
+	@echo "config_firefox"
 	@echo "config_inn"
 	@echo "config_javaplugin"
 	@echo "config_nullplugin"
 	@echo "config_privoxy"
-	@echo "config_sgml"
-	@echo "config_smokeping"
+	@echo "config_smartd"
 	@echo "config_sudo"
 	@echo "config_TeX"
 	@echo "config_tin"
@@ -31,17 +30,17 @@ message:
 
 all: \
 	config_apache \
-	config_firebird \
+	config_firefox \
 	config_inn \
 	config_javaplugin \
 	config_nullplugin \
 	config_privoxy \
-	config_sgml \
-	config_smokeping \
+	config_smartd \
 	config_sudo \
 	config_TeX \
 	config_tin \
 	config_uucp
+
 
 config_apache:
 	# 1. Modify httpd.conf.
@@ -63,14 +62,15 @@ config_apache:
 		diff -u /usr/local/etc/apache2/httpd.conf httpd.conf; \
 	fi
 	if test -f /var/run/httpd.pid; then \
-		/usr/local/etc/rc.d/apache2.sh restart; \
+		/usr/local/etc/rc.d/apache2.sh stop; \
+		/usr/local/etc/rc.d/apache2.sh start; \
 	else \
 		/usr/local/etc/rc.d/apache2.sh start; \
 	fi
 
-config_firebird:
+config_firefox:
 	# Make this group wheel writable to allow extensions being installed.
-	chmod -R g+w /usr/X11R6/lib/firebird/lib/mozilla-1.5/chrome
+	chmod -R g+w /usr/X11R6/lib/firefox/lib/mozilla-1.6/chrome
 
 config_inn:
 	pw usermod -n news -d /usr/local/news -s /bin/sh
@@ -150,25 +150,18 @@ config_inn:
 	fi
 
 config_javaplugin:
-	# Mozilla Firebird:
-	cd /usr/X11R6/lib/firebird/lib/mozilla-1.5/plugins; \
+	# Mozilla Firefox:
+	cd /usr/X11R6/lib/firefox/lib/mozilla-1.6/plugins; \
 	ln -fs /usr/local/jdk1.4.2/jre/plugin/i386/ns610/libjavaplugin_oji.so
 	# Plain Mozilla:
-	cd /usr/X11R6/lib/mozilla/plugins; \
-	ln -fs /usr/local/jdk1.4.2/jre/plugin/i386/ns610/libjavaplugin_oji.so
+	#cd /usr/X11R6/lib/mozilla/plugins; \
+	#ln -fs /usr/local/jdk1.4.2/jre/plugin/i386/ns610/libjavaplugin_oji.so
 
 # Move the nullplugin out of the way. With a .mozilla/*/*/prefs.js entry of
 # user_pref("plugin.display_plugin_downloader_dialog", false);
-# this suppresses popup dialogs for unavailable plugins (flash, shockwave, ...)
-NULLPLUGINS = /usr/X11R6/lib/mozilla/libnullplugin.so \
-              /usr/X11R6/lib/mozilla/plugins/libnullplugin.so
-
+# this suppresses popup dialogs for unavailable plugins (flash, ...)
 config_nullplugin:
-	for p in $(NULLPLUGINS); do \
-	    if test -r $$p; then    \
-	        mv $$p $$p.orig;    \
-	    fi;                     \
-	done
+	find /usr/X11R6/lib -name libnullplugin.so -exec mv {} {}.orig \;
 
 config_privoxy:
 	install -C -o root -g wheel -m 644 conf/privoxy/config \
@@ -177,15 +170,9 @@ config_privoxy:
 		/usr/local/etc/rc.d
 	/usr/local/etc/rc.d/privoxy.sh restart
 
-config_sgml:
-	cp -p /usr/local/share/gmat/sgml/ISO_8879-1986/entities/* \
-	      /usr/local/share/sgml/docbook/4.1
-
-config_smokeping:
-	cp conf/smokeping/config conf/smokeping/basepage.html \
-		/usr/local/etc/smokeping
-	/usr/local/etc/rc.d/smokeping.sh stop
-	/usr/local/etc/rc.d/smokeping.sh start
+config_smartd:
+	cp smartd.sh /usr/local/etc/rc.d/smartd.sh
+	cp smartd.conf /usr/local/etc/smartd.conf
 
 config_sudo:
 	if ! grep -q schweikh /usr/local/etc/sudoers; then \
@@ -195,12 +182,12 @@ config_sudo:
 config_TeX:
 	# textproc/docproj advises: to typeset the FreeBSD Handbook with JadeTeX,
 	# change the following settings to the listed values:
-	perl -pi                                   \
-	-e 's/^% original texmf.cnf/% texmf.cnf/;' \
-	-e 's/^(hash_extra\s*=).*/$${1}60000/;'    \
-	-e 's/^(pool_size\s*=).*/$${1}1000000/;'   \
-	-e 's/^(max_strings\s*=).*/$${1}70000/;'   \
-	-e 's/^(save_size\s*=).*/$${1}10000/;'     \
+	perl -pi                                      \
+	-e 's/^% original texmf.cnf/% texmf.cnf/;'    \
+	-e 's/^(hash_extra\s*=\s*).*/$${1}60000/;'    \
+	-e 's/^(pool_size\s*=\s*).*/$${1}1000000/;'   \
+	-e 's/^(max_strings\s*=\s*).*/$${1}70000/;'   \
+	-e 's/^(save_size\s*=\s*).*/$${1}10000/;'     \
 	/usr/local/share/texmf/web2c/texmf.cnf
 	# Test if the texmf.cnf has changed.
 	@if ! cmp -s /usr/local/share/texmf/web2c/texmf.cnf texmf.cnf; then \
