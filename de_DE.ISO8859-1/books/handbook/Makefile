@@ -1,10 +1,12 @@
 #
 # $FreeBSD$
-# $FreeBSDde: de-docproj/books/handbook/Makefile,v 1.37 2004/07/24 15:17:14 jkois Exp $
-# basiert auf: 1.81
+# $FreeBSDde: de-docproj/books/handbook/Makefile,v 1.42 2004/08/04 19:44:40 mheinen Exp $
+# basiert auf: 1.90
 #
 # Build the FreeBSD Handbook in its German translation.
 #
+
+.PATH: ${.CURDIR}/../../share/sgml/glossary
 
 MAINTAINER=de-bsd-translators@de.FreeBSD.org
 
@@ -13,7 +15,6 @@ DOC?= book
 FORMATS?= html-split
 
 HAS_INDEX= true
-WITH_GLOSSARY?=
 
 INSTALL_COMPRESSED?= gz
 INSTALL_ONLY_COMPRESSED?=
@@ -23,7 +24,70 @@ IMAGES_EN+= advanced-networking/isdn-twisted-pair.eps
 IMAGES_EN+= advanced-networking/natd.eps
 IMAGES_EN+= advanced-networking/net-routing.pic
 IMAGES_EN+= advanced-networking/static-routes.pic
+IMAGES_EN+= install/adduser1.scr
+IMAGES_EN+= install/adduser2.scr
+IMAGES_EN+= install/adduser3.scr
+IMAGES_EN+= install/boot-mgr.scr
+IMAGES_EN+= install/console-saver1.scr
+IMAGES_EN+= install/console-saver2.scr
+IMAGES_EN+= install/console-saver3.scr
+IMAGES_EN+= install/console-saver4.scr
+IMAGES_EN+= install/desktop.scr
+IMAGES_EN+= install/disklabel-auto.scr
+IMAGES_EN+= install/disklabel-ed1.scr
+IMAGES_EN+= install/disklabel-ed2.scr
+IMAGES_EN+= install/disklabel-fs.scr
+IMAGES_EN+= install/disklabel-root1.scr
+IMAGES_EN+= install/disklabel-root2.scr
+IMAGES_EN+= install/disklabel-root3.scr
 IMAGES_EN+= install/disk-layout.eps
+IMAGES_EN+= install/dist-set.scr
+IMAGES_EN+= install/dist-set2.scr
+IMAGES_EN+= install/docmenu1.scr
+IMAGES_EN+= install/ed0-conf.scr
+IMAGES_EN+= install/ed0-conf2.scr
+IMAGES_EN+= install/edit-inetd-conf.scr
+IMAGES_EN+= install/fdisk-drive1.scr
+IMAGES_EN+= install/fdisk-drive2.scr
+IMAGES_EN+= install/fdisk-edit1.scr
+IMAGES_EN+= install/fdisk-edit2.scr
+IMAGES_EN+= install/ftp-anon1.scr
+IMAGES_EN+= install/ftp-anon2.scr
+IMAGES_EN+= install/hdwrconf.scr
+IMAGES_EN+= install/keymap.scr
+IMAGES_EN+= install/main1.scr
+IMAGES_EN+= install/mainexit.scr
+IMAGES_EN+= install/main-std.scr
+IMAGES_EN+= install/main-options.scr
+IMAGES_EN+= install/main-doc.scr
+IMAGES_EN+= install/main-keymap.scr
+IMAGES_EN+= install/media.scr
+IMAGES_EN+= install/mouse1.scr
+IMAGES_EN+= install/mouse2.scr
+IMAGES_EN+= install/mouse3.scr
+IMAGES_EN+= install/mouse4.scr
+IMAGES_EN+= install/mouse5.scr
+IMAGES_EN+= install/mouse6.scr
+IMAGES_EN+= install/mta-main.scr
+IMAGES_EN+= install/net-config-menu1.scr
+IMAGES_EN+= install/net-config-menu2.scr
+IMAGES_EN+= install/nfs-server-edit.scr
+IMAGES_EN+= install/ntp-config.scr
+IMAGES_EN+= install/options.scr
+IMAGES_EN+= install/pkg-cat.scr
+IMAGES_EN+= install/pkg-confirm.scr
+IMAGES_EN+= install/pkg-install.scr
+IMAGES_EN+= install/pkg-sel.scr
+IMAGES_EN+= install/probstart.scr
+IMAGES_EN+= install/routed.scr
+IMAGES_EN+= install/security.scr
+IMAGES_EN+= install/sysinstall-exit.scr
+IMAGES_EN+= install/timezone1.scr
+IMAGES_EN+= install/timezone2.scr
+IMAGES_EN+= install/timezone3.scr
+IMAGES_EN+= install/userconfig.scr
+IMAGES_EN+= install/userconfig2.scr
+IMAGES_EN+= install/xf86setup.scr
 IMAGES_EN+= install/example-dir1.eps
 IMAGES_EN+= install/example-dir2.eps
 IMAGES_EN+= install/example-dir3.eps
@@ -61,28 +125,30 @@ IMAGES_LIB+= callouts/10.png
 
 # SGML content
 SRCS+= book.sgml
+SRCS+= colophon.sgml
+SRCS+= freebsd-glossary.sgml
 SRCS+= advanced-networking/chapter.sgml
 SRCS+= basics/chapter.sgml
 SRCS+= bibliography/chapter.sgml
 SRCS+= boot/chapter.sgml
-SRCS+= cutting-edge/chapter.sgml
-SRCS+= colophon.sgml
 SRCS+= config/chapter.sgml
+SRCS+= cutting-edge/chapter.sgml
 SRCS+= desktop/chapter.sgml
 SRCS+= disks/chapter.sgml
 SRCS+= eresources/chapter.sgml
-SRCS+= kernelconfig/chapter.sgml
 SRCS+= install/chapter.sgml
 SRCS+= introduction/chapter.sgml
+SRCS+= kernelconfig/chapter.sgml
 SRCS+= l10n/chapter.sgml
 SRCS+= linuxemu/chapter.sgml
+SRCS+= mac/chapter.sgml
 SRCS+= mail/chapter.sgml
 SRCS+= mirrors/chapter.sgml
 SRCS+= multimedia/chapter.sgml
 SRCS+= network-servers/chapter.sgml
 SRCS+= pgpkeys/chapter.sgml
-SRCS+= ppp-and-slip/chapter.sgml
 SRCS+= ports/chapter.sgml
+SRCS+= ppp-and-slip/chapter.sgml
 SRCS+= preface/preface.sgml
 SRCS+= printing/chapter.sgml
 SRCS+= security/chapter.sgml
@@ -99,9 +165,7 @@ SRCS+= newsgroups.ent
 CHAPTERS?= ${SRCS:M*chapter.sgml}
 
 SGMLFLAGS+= ${CHAPTERS:S/\/chapter.sgml//:S/^/-i chap./}
-.if defined(WITH_GLOSSARY) && !empty(WITH_GLOSSARY)
 SGMLFLAGS+= -i chap.freebsd-glossary
-.endif
 
 # XXX The Handbook build currently overflows some internal, hardcoded
 # limits in pdftex.  Until we split the Handbook up, build the PDF
@@ -116,9 +180,7 @@ book.pdf: book.ps
 	${PS2PDF} book.ps book.pdf
 
 pgpkeyring: pgpkeys/chapter.sgml
-	@${JADE} -V nochunks ${JADEOPTS} -d ${DSLPGP} -t sgml ${MASTERDOC}
-
-DOC_PREFIX?= ${.CURDIR}/../../..
+	@${JADE} -V nochunks ${OTHERFLAGS} ${JADEOPTS} -d ${DSLPGP} -t sgml ${MASTERDOC}
 
 .for p in ftp cvsup
 SRCS+= mirrors.sgml.${p}.inc
@@ -129,6 +191,9 @@ CLEANFILES+= mirrors.sgml.${p}.inc.tmp
 SRCS+= eresources.sgml.www.inc
 CLEANFILES+= eresources.sgml.www.inc
 CLEANFILES+= eresources.sgml.www.inc.tmp
+
+URL_RELPREFIX?=	../../../..
+DOC_PREFIX?= ${.CURDIR}/../../..
 
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"
 
