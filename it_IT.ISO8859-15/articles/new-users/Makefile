@@ -1,9 +1,4 @@
-#    The FreeBSD Documentation Project
-#    The FreeBSD Italian Documentation Project
-#
-#    $FreeBSD$
-#    Original revision: 1.4
-#
+# $FreeBSD$
 
 DOC?= article
 
