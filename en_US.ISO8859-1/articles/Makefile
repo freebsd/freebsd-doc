@@ -25,6 +25,7 @@ SUBDIR+= problem-reports
 SUBDIR+= programming-tools
 SUBDIR+= pxe
 SUBDIR+= releng
+SUBDIR+= releng-packages
 SUBDIR+= serial-uart
 SUBDIR+= solid-state
 SUBDIR+= storage-devices
