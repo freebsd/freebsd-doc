@@ -15,7 +15,7 @@
 # Disclaimer:
 #   This is pretty ugly in places.
 #
-# $FreeBSD: www/en/cgi/search.cgi,v 1.21 2001/02/22 11:51:39 wosch Exp $
+# $FreeBSD: www/en/cgi/search.cgi,v 1.22 2001/10/30 07:26:27 kuriyama Exp $
 
 
 $server_root = '/usr/local/www';
@@ -31,11 +31,13 @@ require "./cgi-style.pl";
 
 @months = ('Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec');
 
+sub escape($) { $_ = $_[0]; s/&/&amp;/g; s/</&lt;/g; s/>/&gt;/g; $_; }
+
 sub do_wais {
     &ReadParse;
     
-    @FORM_words = split(/ /, $in{"words"});
-    @FORM_source = split(/\0/, $in{"source"});
+    @FORM_words = split(/ /, escape($in{"words"}));
+    @FORM_source = split(/\0/, escape($in{"source"}));
     $FORM_max = $in{"max"};
     $FORM_docnum = $in{"docnum"};
     $FORM_index = $in{"index"};
@@ -116,7 +118,6 @@ sub do_wais {
     else {
 	print "The archive <em>@AVAIL_source</em> contains ";
     }
-    @FORM_words = map { s/&/&amp;/g; s/</&lt;/g; s/>/&gt;/g; $_; } @FORM_words;
     print " the following items relevant to \`@FORM_words\':\n";
     print "<OL>\n";
 
@@ -229,19 +230,12 @@ sub checksource {
     return(@goodsources);
 }
 
-sub htmlescape {
-    local ($data) = @_;
-    $data =~ s/&/&amp;/g;
-    $data =~ s/</&lt;/g;
-    return $data;
-}
-
 sub docdone {
     $file =~ s/\.src$//;
     if ($headline =~ /Search produced no result/) {
 	print "<p>The archive <em>$file</em> contains no relevant documents.</p>"
     } else {
-        $headline = &htmlescape($headline);
+        $headline = escape($headline);
         $headline =~ s/\\"/\"/g;
         if ($file eq "www" || $file eq 'pkgdescr') {
             print "<li><a href=\"$headline\">$headline</a>\n";
