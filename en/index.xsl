@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/index.xsl,v 1.123 2005/01/01 12:01:53 simon Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.124 2005/01/01 21:15:08 ceri Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -6,7 +6,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.123 2005/01/01 12:01:53 simon Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.124 2005/01/01 21:15:08 ceri Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <!-- these params should be externally bound. The values
@@ -228,17 +228,6 @@
 		    <table class="panel" cellpadding="4" cellspacing="0">
 		      <tr>
 			<td valign="top">
-			  <p><a href="{$url.ftp}/releases">
-			    <font size="+1"
-			      color="#990000"><b>Download</b></font></a><br/>
-			    <small>&#183;
-			      <a href="{$url.ftp}/releases/alpha">alpha</a>&#183;
-			      <a href="{$url.ftp}/releases/amd64">amd64</a>&#183;
-			      <a href="{$url.ftp}/releases/i386">i386</a>&#183;
-			      <a href="{$url.ftp}/releases/ia64">ia64</a>&#183;
-			      <a href="{$url.ftp}/releases/pc98">pc98</a>&#183;
-			      <a href="{$url.ftp}/releases/sparc64">sparc64</a>
-			    </small></p>
 			  <p><a href="{$u.rel.announce}">
 			      <font size="+1" color="#990000"><b>Production Release:
 				  <xsl:value-of select="$rel.current"/></b></font></a><br/>
