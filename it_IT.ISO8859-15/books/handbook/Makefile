@@ -1,5 +1,6 @@
 #
 # $FreeBSD$
+# Original revision: 1.90
 #
 # Crea il Manuale di FreeBSD.
 #
@@ -25,6 +26,8 @@
 #
 # ------------------------------------------------------------------------
 
+.PATH: ${.CURDIR}/../../share/sgml/glossary
+
 MAINTAINER= ale@FreeBSD.org
 
 DOC?= book
@@ -32,7 +35,6 @@ DOC?= book
 FORMATS?= html-split
 
 HAS_INDEX= true
-WITH_GLOSSARY?=
 
 INSTALL_COMPRESSED?= gz
 INSTALL_ONLY_COMPRESSED?=
@@ -41,6 +43,7 @@ IMAGES_EN = advanced-networking/isdn-bus.eps
 IMAGES_EN+= advanced-networking/isdn-twisted-pair.eps
 IMAGES_EN+= advanced-networking/natd.eps
 IMAGES_EN+= advanced-networking/net-routing.pic
+IMAGES_EN+= advanced-networking/static-routes.pic
 IMAGES_EN+= install/adduser1.scr
 IMAGES_EN+= install/adduser2.scr
 IMAGES_EN+= install/adduser3.scr
@@ -149,11 +152,13 @@ IMAGES_LIB+= callouts/10.png
 
 # Contenuto SGML
 SRCS = book.sgml
+SRCS+= colophon.sgml
+SRCS+= freebsd-glossary.sgml
 SRCS+= advanced-networking/chapter.sgml
 SRCS+= basics/chapter.sgml
 SRCS+= bibliography/chapter.sgml
-SRCS+= config/chapter.sgml
 SRCS+= boot/chapter.sgml
+SRCS+= config/chapter.sgml
 SRCS+= cutting-edge/chapter.sgml
 SRCS+= desktop/chapter.sgml
 SRCS+= disks/chapter.sgml
@@ -167,17 +172,17 @@ SRCS+= mac/chapter.sgml
 SRCS+= mail/chapter.sgml
 SRCS+= mirrors/chapter.sgml
 SRCS+= multimedia/chapter.sgml
+SRCS+= network-servers/chapter.sgml
 SRCS+= pgpkeys/chapter.sgml
+SRCS+= ports/chapter.sgml
 SRCS+= ppp-and-slip/chapter.sgml
+SRCS+= preface/preface.sgml
 SRCS+= printing/chapter.sgml
 SRCS+= security/chapter.sgml
 SRCS+= serialcomms/chapter.sgml
 SRCS+= users/chapter.sgml
 SRCS+= vinum/chapter.sgml
 SRCS+= x11/chapter.sgml
-SRCS+= ports/chapter.sgml
-SRCS+= preface/preface.sgml
-SRCS+= colophon.sgml
 
 # Entities
 SRCS+= chapters.ent
@@ -188,9 +193,7 @@ SYMLINKS=	${DESTDIR} index.html handbook.html
 CHAPTERS?= ${SRCS:M*chapter.sgml}
 
 SGMLFLAGS+= ${CHAPTERS:S/\/chapter.sgml//:S/^/-i chap./}
-.if defined(WITH_GLOSSARY) && !empty(WITH_GLOSSARY)
 SGMLFLAGS+= -i chap.freebsd-glossary
-.endif
 
 # XXX La creazione del Manuale attualmente sfora dei limiti interni,
 # codificati in pdftex.  Finché non dividiamo il Manuale, crea la versione
@@ -205,7 +208,7 @@ book.pdf: book.ps
 	${PS2PDF} book.ps book.pdf
 
 pgpkeyring: pgpkeys/chapter.sgml
-	@${JADE} -V nochunks ${JADEOPTS} -d ${DSLPGP} -t sgml ${MASTERDOC}
+	@${JADE} -V nochunks ${OTHERFLAGS} ${JADEOPTS} -d ${DSLPGP} -t sgml ${MASTERDOC}
 
 #
 # Variabili specifiche del Manuale
@@ -213,8 +216,6 @@ pgpkeyring: pgpkeys/chapter.sgml
 .if defined(WITH_PGPKEYS)
 JADEFLAGS+=	-V withpgpkeys
 .endif
-
-DOC_PREFIX?= ${.CURDIR}/../../..
 
 .for p in ftp cvsup
 SRCS+= mirrors.sgml.${p}.inc
@@ -225,6 +226,9 @@ CLEANFILES+= mirrors.sgml.${p}.inc.tmp
 SRCS+= eresources.sgml.www.inc
 CLEANFILES+= eresources.sgml.www.inc
 CLEANFILES+= eresources.sgml.www.inc.tmp
+
+URL_RELPREFIX?= ../../../..
+DOC_PREFIX?= ${.CURDIR}/../../..
 
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"
 
