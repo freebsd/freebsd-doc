@@ -1,8 +1,10 @@
-# $FreeBSD: www/en/Makefile,v 1.53 2000/09/30 00:21:38 nbm Exp $
+# $FreeBSD: www/en/Makefile,v 1.54 2000/10/22 09:22:37 phantom Exp $
 .if exists(Makefile.conf)
 .include "Makefile.conf"
 .endif
-
+.if exists(../Makefile.inc)
+.include "../Makefile.inc"
+.endif
 
 # These are turned into validated, normalized HTML files.
 
@@ -73,5 +75,4 @@ SGMLOPTS+=      -links -hdr ${.CURDIR}/doc.hdr -ftr ${.CURDIR}/doc.ftr
 
 WEBDIR=		data
 
-.include "web.mk"
-
+.include "${WEB_PREFIX}/share/mk/web.site.mk"
