@@ -1,7 +1,7 @@
 #
 # The FreeBSD Russian Documentation Project
 #
-# $FreeBSD$
+# $FreeBSD: www/ru/ports/Makefile,v 1.5 2003/12/30 18:27:40 andy Exp $
 # $FreeBSDru: frdp/www/ru/ports/Makefile,v 1.6 2003/12/30 18:26:40 andy Exp $
 #
 # Original revision: 1.36
@@ -82,13 +82,13 @@ install: all beforeinstall
 all install clean:
 	cd ${.CURDIR}; \
 		${MAKE} ${MAKEFLAGS} -f ${.CURDIR}/Makefile.inc0 ${.TARGET}
-.if defined(WITH_PORTS_GROWTH)
-	cd growth; \
-		${MAKE} ${MAKEFLAGS} ${.TARGET}
-beforeinstall:
-.else
+#.if defined(WITH_PORTS_GROWTH)
+#	cd growth; \
+#		${MAKE} ${MAKEFLAGS} ${.TARGET}
+#beforeinstall:
+#.else
 beforeinstall:
 	${PERL} -pi -e 's/href=\"growth/href=\"http:\/\/www.FreeBSD.org\/ports\/growth/' index.html
-.endif
+#.endif
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
