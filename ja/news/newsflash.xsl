@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
 
-<!-- $FreeBSD: www/ja/news/newsflash.xsl,v 1.1 2001/08/07 03:58:32 kuriyama Exp $ -->
-<!-- Original revision: 1.1 -->
+<!-- $FreeBSD: www/ja/news/newsflash.xsl,v 1.2 2001/08/08 03:55:55 kuriyama Exp $ -->
+<!-- Original revision: 1.2 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -11,7 +11,7 @@
 
   <xsl:variable name="base" select="'..'"/>
   <xsl:variable name="title" select="'FreeBSD News Flash'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/ja/news/newsflash.xsl,v 1.1 2001/08/07 03:58:32 kuriyama Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/ja/news/newsflash.xsl,v 1.2 2001/08/08 03:55:55 kuriyama Exp $'"/>
   
   <xsl:output type="html" encoding="EUC-JP"/>
 
@@ -89,14 +89,13 @@
   </xsl:template>
 
   <xsl:template match="event">
-    <li>
-      <a>
-	<xsl:attribute name="name">
-	  <xsl:call-template name="generate-event-anchor"/>
-	</xsl:attribute>
-      </a>
+    <li><p><a>
+	  <xsl:attribute name="name">
+	    <xsl:call-template name="generate-event-anchor"/>
+	  </xsl:attribute>
+	</a>
 
-      <p><b><xsl:value-of select="ancestor::year/name"/> /
+	<b><xsl:value-of select="ancestor::day/name"/>
 	  <xsl:value-of select="ancestor::month/name"/> /
 	  <xsl:value-of select="ancestor::day/name"/> : </b><xsl:text> </xsl:text>
 	<xsl:apply-templates select="p"/>
