@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.22 1998-03-12 21:41:57 jfieber Exp $
+# $Id: Makefile,v 1.23 1998-03-15 05:00:23 jfieber Exp $
 
 .if exists(Makefile.conf)
 .include "Makefile.conf"
@@ -51,11 +51,11 @@ cgallery.inc: gallery.db gengallery.pl
 
 npgallery.html: npgallery.sgml npgallery.inc
 npgallery.inc: gallery.db gengallery.pl
-	./gengallery.pl nonprofit < gallery.db > npgallery.inc
+	./gengallery.pl nonprofit gallery.db > npgallery.inc
 
 pgallery.html: pgallery.sgml pgallery.inc
 pgallery.inc: gallery.db gengallery.pl
-	./gengallery.pl personal < gallery.db > pgallery.inc
+	./gengallery.pl personal gallery.db > pgallery.inc
 
 # Subdirectories
 
