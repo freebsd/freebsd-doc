@@ -52,7 +52,7 @@
 #
 #     _________________________________________________________________
 #                                      
-# $FreeBSD: www/en/cgi/missing_handler.cgi,v 1.11 2002/04/17 05:03:38 kuriyama Exp $
+# $FreeBSD: www/en/cgi/missing_handler.cgi,v 1.12 2002/04/17 08:15:39 kuriyama Exp $
 # ----------------------------------------------------------------------
 
 sub escape($) { $_ = $_[0]; s/&/&amp;/g; s/</&lt;/g; s/>/&gt;/g; $_; }
@@ -102,8 +102,10 @@ print qq[
 The closest match to your request is 
 <a href="http://$server_name">http://$server_name</a>.
 
-Please contact the server administrator
-<a href="mailto:$server_admin?subject=Document%20not%20found%20-%20http://$http_host$redirect_url_save">$server_admin</a>.<p>
+Please contact the members of the
+FreeBSD Documentation Project &lt;<A HREF="mailto:freebsd-doc\@FreeBSD.ORG?subject=Document%20not%20found%20-%20http://$http_host$redirect_url_save&body=$http_referer_url">freebsd-doc\@FreeBSD.ORG</A>&gt; 
+or the server administrator
+<a href="mailto:$server_admin?subject=Document%20not%20found%20-%20http://$http_host$redirect_url_save&body=$http_referer_url">$server_admin</a>.<p>
 
 <center>
 Please try our 
@@ -112,6 +114,16 @@ Please try our
 </center>
 <p>
 
+<center>
+<form action="http://www.FreeBSD.org/cgi/search.cgi" method="GET">
+<input type="TEXT" name="words" size="25">
+<input type="hidden" name="source" value="www">
+<input type="hidden" name="max" value="60">
+<input type="SUBMIT" value="Search">
+
+</form>
+</center>
+<p>
 Thank you very much!<p>
 ];
 
