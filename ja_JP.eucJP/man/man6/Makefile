@@ -18,6 +18,7 @@ MAN6 =	adventure.6\
 	intro.6\
 	larn.6\
 	mille.6\
+	morse.6\
 	number.6\
 	phantasia.6\
 	piano.6\
