@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp 
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.127 2004-08-02 17:58:17 www Exp $
+# $Id: man.cgi,v 1.128 2004-08-02 20:35:15 www Exp $
 
 #use Data::Dumper;
 #use Carp;
@@ -533,7 +533,7 @@ sub apropos {
     }
 
     &http_header("text/html");
-    print &html_header("$www{'title'}: Apropos $title");
+    print &html_header("Apropos $title");
     print "<H1>$www{'head'}</H1>\n\n";
     &formquery;
 
@@ -601,7 +601,7 @@ sub man {
 
     if ($format eq "html") {
 	&http_header("text/html");
-	print &html_header("$www{'title'}: $title");
+	print &html_header("$title");
 	print "<H1>$www{'head'}</H1>\n\n";
 	&formquery;
 	print "<PRE>\n";
@@ -1019,7 +1019,7 @@ ETX
 }
 
 sub copyright {
-    $id = '$Id: man.cgi,v 1.127 2004-08-02 17:58:17 www Exp $';
+    $id = '$Id: man.cgi,v 1.128 2004-08-02 20:35:15 www Exp $';
 
     return qq{\
 <PRE>
