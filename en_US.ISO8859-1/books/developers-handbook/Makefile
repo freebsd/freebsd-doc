@@ -39,5 +39,7 @@ SRCS+= x86/chapter.sgml
 
 # Entities
 
-DOC_PREFIX?= ${.CURDIR}/../../..
+URL_RELPREFIX?=	../../../..
+DOC_PREFIX?=	${.CURDIR}/../../..
+
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"
