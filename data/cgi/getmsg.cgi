@@ -6,7 +6,7 @@
 # by John Fieber
 # February 26, 1998
 #
-# $Id: getmsg.cgi,v 1.2 1998-02-27 02:56:26 jfieber Exp $
+# $Id: getmsg.cgi,v 1.3 1998-02-27 03:45:29 jfieber Exp $
 #
 
 require "./cgi-lib.pl";
@@ -74,7 +74,7 @@ sub MessageToHTML
     my ($header, $body) = split(/\n\n/, $doc, 2);
     my ($i, %hdr, $field, $data, $message);
     
-    $body = &EscapeHTML($body);
+    $body = &AddAnchors(&EscapeHTML($body));
 
     $header = &EscapeHTML($header);
     $header =~ s/\n  */ /g;
@@ -108,4 +108,14 @@ sub MessageToHTML
     $message .= "<pre>\n$body\n</pre>\n";
     
     return $message;
+}
+
+
+sub AddAnchors
+{
+    my ($text) = @_;
+
+    $text =~ s/(http|https|ftp|gopher|mailto|news|file)(:[^\s]*?\/?)(\W?\s)/<a href="$1$2">$1$2<\/a>$3/g;
+
+    return $text;
 }
