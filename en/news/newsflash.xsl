@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/en/news/newsflash.xsl,v 1.5 2002/02/12 08:41:37 sobomax Exp $ -->
+<!-- $FreeBSD: www/en/news/newsflash.xsl,v 1.6 2002/07/14 16:29:11 keramida Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -47,13 +47,14 @@
 	  <a href="{$base}/doc/en_US.ISO8859-1/books/handbook/eresources.html#ERESOURCES-MAIL">freebsd-announce
 	    mailing list</a>.</p>
 
-	<p>For latest news of FreeBSD Java Project please visit 
-	  <a href="{$base}/java/newsflash.html">FreeBSD/Java NewsFlash</a>
-	  page.</p>
-	  
-	<p>For latest news of FreeBSD GNOME Project please visit 
-	  <a href="{$base}/gnome/newsflash.html">FreeBSD/GNOME NewsFlash</a>
-	  page.</p>
+        <p>The following projects have their own news pages, which should
+          be checked for project specific updates.</p>
+
+        <ul>
+          <li><a href="{$base}/java/newsflash.html">Java on FreeBSD</a></li>
+          <li><a href="http://freebsd.kde.org/">KDE on FreeBSD</a></li>
+          <li><a href="{$base}/gnome/newsflash.html">GNOME on FreeBSD</a></li>
+        </ul>
 	  
 	<p>For a detailed description of past, present, and future releases,
 	  see the <strong><a href="{$base}/releases/index.html">Release
