@@ -1,0 +1,526 @@
+#!/usr/bin/perl -s
+#
+# cvsweb - a CGI interface to the CVS tree.
+#
+# Written by Bill Fenner <fenner@parc.xerox.com> on his own time.
+# Insert BSD copyright here.
+#
+#HTTP_USER_AGENT: Mozilla/1.1N (X11; I; SunOS 4.1.3_U1 sun4m) via proxy gateway CERN-HTTPD/3.0 libwww/2.17
+#SERVER_NAME: www.freebsd.org
+#QUERY_STRING: baz
+#SCRIPT_FILENAME: /usr/local/www/cgi-bin/env.pl
+#SERVER_PORT: 80
+#HTTP_ACCEPT: */*, image/gif, image/x-xbitmap, image/jpeg
+#SERVER_PROTOCOL: HTTP/1.0
+#HTTP_COOKIE: s=beta26429821397802167
+#PATH_INFO: /foo/bar
+#REMOTE_ADDR: 13.1.64.94
+#DOCUMENT_ROOT: /usr/local/www/data/
+#PATH: /sbin:/bin:/usr/sbin:/usr/bin
+#PATH_TRANSLATED: /usr/local/www/data//foo/bar
+#GATEWAY_INTERFACE: CGI/1.1
+#REQUEST_METHOD: GET
+#SCRIPT_NAME: /cgi-bin/env.pl
+#SERVER_SOFTWARE: Apache/1.0.0
+#REMOTE_HOST: beta.xerox.com
+#SERVER_ADMIN: webmaster@freebsd.org
+#
+require 'timelocal.pl';
+require 'ctime.pl';
+
+$cvsroot = '/home/ncvs';
+$intro = "
+This is a WWW interface to the FreeBSD CVS tree.
+You can browse the file hierarchy by picking directories
+(which have slashes after them, e.g. <b>src/</b>).
+If you pick a file, you will see the revision history
+for that file.
+Selecting a revision number will download that revision of
+the file.  There is a link at each revision to display
+diffs between that revision and the previous one, and
+a form at the bottom of the page that allows you to
+display diffs between arbitrary revisions.
+<p>
+Please send any suggestions, comments, etc. to
+<A HREF=\"mailto:fenner@freebsd.org\">Bill Fenner &lt;fenner@freebsd.org&gt;</A>
+";
+$shortinstr = "
+Click on a directory to enter that directory. Click on a file to display
+its revision history and to get a
+chance to display diffs between revisions. 
+";
+
+$verbose = $v;
+($where = $ENV{'PATH_INFO'}) =~ s|^/||;
+$where =~ s|/$||;
+$fullname = $cvsroot . '/' . $where;
+($scriptname = $ENV{'SCRIPT_NAME'}) =~ s|^/?|/|;
+$scriptname =~ s|/$||;
+$scriptwhere = $scriptname . '/' . $where;
+$scriptwhere =~ s|/$||;
+
+if (!-d $cvsroot) {
+	&fatal("500 Internal Error",'$CVSROOT not found!');
+}
+if (-d $fullname) {
+# Something that would be nice to support, although I have no real
+# good idea of how, would be to get full directory diff's, using
+# symbolic names (revision numbers would be meaningless).
+# The problem is finding a list of symbolic names that is common
+# to all the files in the directory.
+#
+	opendir(DIR, $fullname) || &fatal("404 Not Found","$where: $!");
+	@dir = readdir(DIR);
+	closedir(DIR);
+	print "Content-type: text/html\n\n";
+	print "<HTML><HEAD><TITLE>FreeBSD CVS Tree: /$where</TITLE></HEAD>\n";
+	print "<BODY>\n";
+	print "<h1><img src=\"/gifs/biglogo.gif\" alt=\"\"> ";
+        print "FreeBSD CVS Tree</h1>\n<hr>\n";
+#	print "<!-- I wish there was a \"halign=center\" for IMG... -->\n";
+#	print "<center>\n";
+#	print "<IMG SRC=\"/gifs/daemonbar.gif\" alt=\"\">\n";
+#	print "</center>\n";
+#	print "<H1 align=center>FreeBSD CVS Tree</H1>\n";
+	if ($where eq '') {
+	    print $intro;
+	} else {
+	    print $shortinstr;
+	}
+	print "<p>Current directory: <b>/$where</b>\n";
+	print "<P><HR>\n";
+	# Using <MENU> in this manner violates the HTML2.0 spec but
+	# provides the results that I want in most browsers.  Another
+	# case of layout spooging up HTML.
+	print "<MENU>\n";
+	foreach (sort @dir) {
+	    if ($_ eq '.') {
+		next;
+	    }
+	    if ($_ eq '..') {
+		next if ($where eq '');
+		($updir = $scriptwhere) =~ s|[^/]+$||;
+		print "<IMG SRC=\"/icons/back.gif\"> ",
+		    &link("Previous Directory",$updir), "<BR>";
+	    } elsif (-d $fullname . "/" . $_) {
+		print "<IMG SRC=\"/icons/dir.gif\"> ",
+		    &link($_ . "/", $scriptwhere . '/' . $_ . '/'), "<BR>";
+	    } elsif (s/,v$//) {
+		print "<IMG SRC=\"/icons/text.gif\"> ",
+		    &link($_, $scriptwhere . '/' . $_), "<BR>";
+	    }
+	}
+	print "</MENU>\n";
+print "<hr>
+<a href=\"/\"><img src=\"/gifs/home.gif\" alt=\"FreeBSD Home
+  Page\" border=\"0\" align=\"right\"></a>
+<address>
+  <a href=\"/mailto.html\">www@freebsd.org</a>
+</address>\n";
+#	print "<HR>\n";
+#	print "<A HREF=\"/\"><IMG SRC=\"/gifs/home.gif\" ALT=\"FreeBSD Home Page\">\n";
+#	print "</A>\n";
+	print "</BODY></HTML>\n";
+} elsif (-f $fullname . ',v') {
+	if ($_ = $ENV{'QUERY_STRING'}) {
+	    s/%(..)/sprintf("%c", hex($1))/ge;	# unquote %-quoted
+	    if (/rev=([\d\.]+)/) {
+		$rev = $1;
+		open(RCS, "co -p$rev '$fullname' 2>&1 |") ||
+		    &fail("500 Internal Error", "Couldn't co: $!");
+# /home/ncvs/src/sys/netinet/igmp.c,v  -->  standard output
+# revision 1.1.1.2
+# /*
+		$_ = <RCS>;
+		if (/^$fullname,v\s+-->\s+standard output\s*$/o) {
+		    # As expected
+		} else {
+		    &fatal("500 Internal Error",
+			"Unexpected output from co: $_");
+		}
+		$_ = <RCS>;
+		if (/^revision\s+$rev\s*$/) {
+		    # As expected
+		} else {
+		    &fatal("500 Internal Error",
+			"Unexpected output from co: $_");
+		}
+		$| = 1;
+		print "Content-type: text/plain\n";
+		print "Content-encoding: x-gzip\n\n";
+		open(GZIP, "|gzip -1 -c");	# need lightweight compression
+		print GZIP <RCS>;
+		close(GZIP);
+		close(RCS);
+		exit;
+	    }
+	    if (/r1=([^&:]+)(:([^&]+))?/) {
+		$rev1 = $1;
+		$sym1 = $3;
+	    }
+	    if ($rev1 eq 'text') {
+		if (/tr1=([^&]+)/) {
+		    $rev1 = $1;
+		}
+	    }
+	    if (/r2=([^&:]+)(:([^&]+))?/) {
+		$rev2 = $1;
+		$sym2 = $3;
+	    }
+	    if ($rev2 eq 'text') {
+		if (/tr2=([^&]+)/) {
+		    $rev2 = $1;
+		}
+	    }
+	    if (!($rev1 =~ /^[\d\.]+$/) || !($rev2 =~ /^[\d\.]+$/)) {
+		&fatal("404 Not Found",
+			"Malformed query \"$ENV{'QUERY_STRING'}\"");
+	    }
+#
+# rev1 and rev2 are now both numeric revisions.
+# Thus we do a DWIM here and swap them if rev1 is after rev2.
+# XXX should we warn about the fact that we do this?
+	    if (&revcmp($rev1,$rev2) > 0) {
+		($tmp1, $tmp2) = ($rev1, $sym1);
+		($rev1, $sym1) = ($rev2, $sym2);
+		($rev2, $sym2) = ($tmp1, $tmp2);
+	    }
+#
+	    $difftype = "-u";
+	    $diffname = "Unidiff";
+	    if (/f=([^&]+)/) {
+		if ($1 eq 'c') {
+		    $difftype = '-c';
+		    $diffname = "Context diff";
+		}
+	    }
+# XXX should this just be text/plain
+# or should it have an HTML header and then a <pre>
+	    print "Content-type: text/plain\n\n";
+	    open(RCSDIFF, "rcsdiff $difftype -r$rev1 -r$rev2 '$fullname' 2>&1 |") ||
+		&fail("500 Internal Error", "Couldn't rcsdiff: $!");
+#
+#===================================================================
+#RCS file: /home/ncvs/src/sys/netinet/tcp_output.c,v
+#retrieving revision 1.16
+#retrieving revision 1.17
+#diff -c -r1.16 -r1.17
+#*** /home/ncvs/src/sys/netinet/tcp_output.c     1995/11/03 22:08:08     1.16
+#--- /home/ncvs/src/sys/netinet/tcp_output.c     1995/12/05 17:46:35     1.17
+#
+# Ideas:
+# - nuke the stderr output if it's what we expect it to be
+# - Add "no differences found" if the diff command supplied no output.
+#
+#*** src/sys/netinet/tcp_output.c     1995/11/03 22:08:08     1.16
+#--- src/sys/netinet/tcp_output.c     1995/12/05 17:46:35     1.17 RELENG_2_1_0
+# (bogus example, but...)
+#
+	    if ($difftype eq '-u') {
+		$f1 = '---';
+		$f2 = '\+\+\+';
+	    } else {
+		$f1 = '\*\*\*';
+		$f2 = '---';
+	    }
+	    while (<RCSDIFF>) {
+		if (m|^$f1 $cvsroot|o) {
+		    s|$cvsroot/||o;
+		    if ($sym1) {
+			chop;
+			$_ .= " " . $sym1 . "\n";
+		    }
+		} elsif (m|^$f2 $cvsroot|o) {
+		    s|$cvsroot/||o;
+		    if ($sym2) {
+			chop;
+			$_ .= " " . $sym2 . "\n";
+		    }
+		}
+		print $_;
+	    }
+	    close(RCSDIFF);
+	    exit;
+	}
+	open(RCS, "rlog '$fullname'|") || &fatal("500 Internal Error",
+						"Failed to spawn rlog");
+	while (<RCS>) {
+	    print if ($verbose);
+	    if ($symnames) {
+		if (/^\s+([^:]+):\s+([\d\.]+)/) {
+		    $symrev{$1} = $2;
+		    if ($revsym{$2}) {
+			$revsym{$2} .= ", ";
+		    }
+		    $revsym{$2} .= $1;
+		} else {
+		    $symnames = 0;
+		}
+	    } elsif (/^symbolic names/) {
+		$symnames = 1;
+	    } elsif (/^-----/) {
+		last;
+	    }
+	}
+# each log entry is of the form:
+# ----------------------------
+# revision 3.7.1.1
+# date: 1995/11/29 22:15:52;  author: fenner;  state: Exp;  lines: +5 -3
+# log info
+# ----------------------------
+	logentry:
+	while (!/^=========/) {
+	    $_ = <RCS>;
+	    print "R:", $_ if ($verbose);
+	    if (/^revision ([\d\.]+)/) {
+		$rev = $1;
+	    } elsif (/^========/ || /^----------------------------$/) {
+		next logentry;
+	    } else {
+		&fatal("500 Internal Error","Error parsing RCS output: $_");
+	    }
+	    $_ = <RCS>;
+	    print "D:", $_ if ($verbose);
+	    if (m|^date:\s+(\d+)/(\d+)/(\d+)\s+(\d+):(\d+):(\d+);\s+author:\s+(\S+);|) {
+		$yr = $1;
+		# damn 2-digit year routines
+		if ($yr > 100) {
+		    $yr -= 1900;
+		}
+		$date{$rev} = &timelocal($6,$5,$4,$3,$2 - 1,$yr);
+		$author{$rev} = $7;
+	    } else {
+		&fatal("500 Internal Error", "Error parsing RCS output: $_");
+	    }
+	    line:
+	    while (<RCS>) {
+		print "L:", $_ if ($verbose);
+		next line if (/^branches:\s/);
+		last line if (/^----------------------------$/ || /^=========/);
+		$log{$rev} .= $_;
+	    }
+	    print "E:", $_ if ($verbose);
+	}
+	close(RCS);
+	print "Done reading RCS file\n" if ($verbose);
+#
+# Sort the revisions into commit-date order.
+	@revorder = sort {$date{$b} <=> $date{$a}} keys %date;
+	print "Done sorting revisions\n" if ($verbose);
+#
+# HEAD is an artificial tag which is simply the highest tag number on the main
+# branch (I think!).  Find it by looking through @revorder; it should at least
+# be near the beginning (In fact, it *should* be the first commit listed on
+# the main branch.)
+	revision:
+	for ($i = 0; $i <= $#revorder; $i++) {
+	    if ($revorder[$i] =~ /^\d+\.\d+$/) {
+		if ($revsym{$revorder[$i]}) {
+		    $revsym{$revorder[$i]} .= ", ";
+		}
+		$revsym{$revorder[$i]} .= "HEAD";
+		$symrev{"HEAD"} = $revorder[$i];
+		last revision;
+	    }
+	}
+	print "Done finding HEAD\n" if ($verbose);
+#
+# Now that we know all of the revision numbers, we can associate
+# absolute revision numbers with all of the symbolic names, and
+# pass them to the form so that the same association doesn't have
+# to be built then.
+#
+# should make this a case-insensitive sort
+	foreach (sort keys %symrev) {
+	    $rev = $symrev{$_};
+	    if ($rev =~ /^(\d+(\.\d+)+)\.0\.(\d+)$/) {
+		#
+		# A revision number of A.B.0.D really translates into
+		# "the highest current revision on branch A.B.D".
+		#
+		# If there is no branch A.B.D, then it translates into
+		# the head A.B .
+		#
+		# This is pure speculation.
+		#
+		$head = $1;
+		$branch = $3;
+		$regex = $head . "." . $branch;
+		$regex =~ s/\./\./g;
+		#             <
+		#           \____/
+		$rev = $head;
+
+		revision:
+		foreach $r (@revorder) {
+		    if ($r =~ /^${regex}/) {
+			$rev = $head . "." . $branch;
+			last revision;
+		    }
+		}
+		$revsym{$rev} .= ", " if ($revsym{$rev});
+		$revsym{$rev} .= $_;
+	    }
+	    $sel .= "<OPTION VALUE=\"${rev}:${_}\">$_\n";
+	}
+	print "Done associating revisions with branches\n" if ($verbose);
+	print "Content-type: text/html\n\n";
+	print "<HTML><HEAD><TITLE>CVS log for $where</TITLE></HEAD>\n";
+	print "<BODY>\n";
+	print "<H1 align=center>CVS log for $where</H1>\n";
+	($upwhere = $where) =~ s|[^/]+$||;
+	print "Up to ", &link($upwhere,$scriptname . "/" . $upwhere);
+	print "<BR>\n";
+	print "<A HREF=\"#diff\">Request diff between arbitrary revisions</A>\n";
+	print "<HR>\n";
+# The other possible U.I. I can see is to have each revision be hot
+# and have the first one you click do ?r1=foo
+# and since there's no r2 it keeps going & the next one you click
+# adds ?r2=foo and performs the query.
+# I suppose there's no reason we can't try both and see which one
+# people prefer...
+
+	for ($i = 0; $i <= $#revorder; $i++) {
+	    $_ = $revorder[$i];
+#	    print "RCS revision <b>$_</b>\n";
+	    print "<A HREF=\"$scriptwhere?rev=$_\"><b>$_</b></A>";
+	    if (/^1\.1\.1\.\d+$/) {
+		print " <i>(vendor branch)</i>";
+	    }
+#	    print "<BR>\n";
+#	    print "Checked in on <i>" . &ctime($date{$_}) . "</i> by ";
+#	    print "<i>" . $author{$_} . "</i><BR>\n";
+	    print " <i>" . &ctime($date{$_}) . "</i> by ";
+	    print "<i>" . $author{$_} . "</i>\n";
+	    if ($revsym{$_}) {
+#		print "CVS Tags: <b>$revsym{$_}</b><BR>\n";
+		print "<BR>CVS Tags: <b>$revsym{$_}</b>";
+	    }
+	    if (($br = $_) =~ s/\.\d+$// && $revsym{$br})  {
+#		print "Branch: <b>$revsym{$br}</b><BR>\n";
+		if ($revsym{$_}) {
+		    print "; ";
+		} else {
+		    print "<BR>";
+		}
+		print "Branch: <b>$revsym{$br}</b>";
+	    }
+	    # Find the previous revision on this branch.
+	    # I think this can be done algorithmically.
+	    @prevrev = split(/\./, $_);
+	    if (--$prevrev[$#prevrev] == 0) {
+		# If it was X.Y.Z.1, just make it X.Y
+		if ($#prevrev > 1) {
+		    pop(@prevrev);
+		    pop(@prevrev);
+		} else {
+		    # It was rev 1.1 (XXX does CVS use revisions
+		    # greater than 1.x?)
+		    if ($prevrev[0] != 1) {
+			print "<i>* I can't figure out the previous revision! *</i>\n";
+		    }
+		}
+	    }
+	    if ($prevrev[$#prevrev] != 0) {
+		$prev = join(".", @prevrev);
+		print "<BR><A HREF=\"$scriptwhere?r1=$prev";
+		print "&r2=$_\">Diffs to $prev</A>\n";
+		#
+		# Plus, if it's on a branch, and it's not a vendor branch,
+		# offer to diff with the immediately-preceding commit if it
+		# is not the previous revision as calculated above
+		# and if it is on the HEAD (or at least on a higher branch)
+		# (e.g. change gets committed and then brought
+		# over to -stable)
+		if (!/^1\.1\.1\.\d+$/ && ($i != $#revorder) &&
+					($prev ne $revorder[$i+1])) {
+		    @tmp1 = split(/\./, $revorder[$i+1]);
+		    @tmp2 = split(/\./, $_);
+		    if ($#tmp1 < $#tmp2) {
+			print "; <A HREF=\"$scriptwhere?r1=$revorder[$i+1]";
+			print "&r2=$_\">Diffs to $revorder[$i+1]</A>\n";
+		    }
+		}
+	    }
+#	    print "Log message:<BR>\n";
+	    print "<PRE>\n";
+	    print &htmlify($log{$_});
+	    print "</PRE><HR>\n";
+	}
+	print "<A NAME=diff>\n";
+	print "This form allows you to request diff's between any two\n";
+	print "revisions of a file.  You may select a symbolic revision\n";
+	print "name using the selection box or you may type in a numeric\n";
+	print "name using the type-in text box.\n";
+	print "</A><P>\n";
+	print "<FORM METHOD=\"GET\" ACTION=\"$scriptwhere\">\n";
+	print "Diffs between \n";
+	print "<SELECT NAME=\"r1\">\n";
+	print "<OPTION VALUE=\"text\" SELECTED>Use Text Field\n";
+	print $sel;
+	print "</SELECT>\n";
+	print "<INPUT TYPE=\"TEXT\" NAME=\"tr1\" VALUE=\"$revorder[$#revorder]\">\n";
+	print " and \n";
+	print "<SELECT NAME=\"r2\">\n";
+	print "<OPTION VALUE=\"text\" SELECTED>Use Text Field\n";
+	print $sel;
+	print "</SELECT>\n";
+	print "<INPUT TYPE=\"TEXT\" NAME=\"tr2\" VALUE=\"$revorder[0]\">\n";
+	print "<BR><INPUT TYPE=RADIO NAME=\"f\" VALUE=u CHECKED>Unidiff<br>\n";
+	print "<INPUT TYPE=RADIO NAME=\"f\" VALUE=c>Context diff<br>\n";
+	print "<INPUT TYPE=SUBMIT VALUE=\"Get Diffs\">\n";
+	print "</FORM>\n";
+print "<hr>
+<a href=\"/\"><img src=\"/gifs/home.gif\" alt=\"FreeBSD Home
+  Page\" border=\"0\" align=\"right\"></a>
+<address>
+  <a href=\"/mailto.html\">www@freebsd.org</a>
+</address>\n";
+#	print "<HR>\n";
+#	print "<A HREF=\"/\"><IMG SRC=\"/gifs/home.gif\" ALT=\"FreeBSD Home Page\">\n";
+#	print "</A>\n";
+	print "</BODY></HTML>\n";
+} else {
+	&fatal("404 Not Found","$where: no such file or directory");
+}
+
+sub htmlify {
+	local($string) = @_;
+
+	$string =~ s/</&lt;/g;
+	$string =~ s/>/&gt;/g;
+
+	$string;
+}
+
+sub link {
+	local($name, $where) = @_;
+
+	"<A HREF=\"$where\">$name</A>\n";
+}
+
+sub revcmp {
+	local($rev1, $rev2) = @_;
+	local(@r1) = split(/\./, $rev1);
+	local(@r2) = split(/\./, $rev2);
+	local($a,$b);
+
+	while (($a = pop(@r1)) && ($b = pop(@r2))) {
+	    if ($a != $b) {
+		return $a <=> $b;
+	    }
+	}
+	if (@r1) { return 1; }
+	if (@r2) { return -1; }
+	return 0;
+}
+
+sub fatal {
+	local($errcode, $errmsg) = @_;
+	print "Status: $errcode\n";
+	print "Content-type: text/html\n";
+	print "\n";
+	print "<HTML><HEAD><TITLE>Error</TITLE></HEAD>\n";
+	print "<BODY>Error: $errmsg</BODY></HTML>\n";
+	exit(1);
+}
