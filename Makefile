@@ -1,9 +1,9 @@
-# $Id: Makefile,v 1.3 1998-07-20 17:18:49 nik Exp $
+# $Id: Makefile,v 1.4 1998-12-28 19:22:01 ache Exp $
 
 SUBDIR=	FAQ handbook
 
 # List of all language-specific subdirs.
-LANGSUBDIR=	es ja
+LANGSUBDIR=     es ja ru
 
 # If ALLLANG is defined, descend to all language-specific subdirs too.
 # If ALLLANG is not defined, but DOC_LANG is defined and a subdirectory with
