@@ -183,6 +183,7 @@ MAN1 =	a2p.1\
 	mkfifo.1\
 	mklocale.1\
 	mkstr.1\
+	mktemp.1\
 	more.1\
 	mset.1\
 	msgs.1\
