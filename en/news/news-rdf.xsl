@@ -1,12 +1,14 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD$ -->
+<!-- $FreeBSD: www/en/news/news-rdf.xsl,v 1.2 2001/08/07 01:54:42 kuriyama Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   
   <xsl:import href="includes.xsl"/>
 
   <xsl:output method="xml" indent="yes"/>
+
+  <xsl:variable name="base" select="'..'"/>
 
   <!-- Generate the main body of the RDF file -->
   <xsl:template match="news">
