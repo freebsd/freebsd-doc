@@ -1,4 +1,4 @@
-# $Id: Makefile.inc,v 1.1 1996-11-19 14:18:37 jfieber Exp $
+# $Id: Makefile.inc,v 1.2 1997-01-20 12:48:55 jfieber Exp $
 
 WEBBASE?=	/data/ja_JP.EUC
-SGMLOPTS+=	-white -hdr ${.CURDIR}/../doc.hdr -ftr ${.CURDIR}/../doc.ftr
+SGMLOPTS+=	-hdr ${.CURDIR}/../doc.hdr -ftr ${.CURDIR}/../doc.ftr
