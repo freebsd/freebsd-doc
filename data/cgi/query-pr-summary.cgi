@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: query-pr-summary.cgi,v 1.5 1996-11-13 03:02:37 fenner Exp $
+# $Id: query-pr-summary.cgi,v 1.6 1996-12-17 03:58:53 peter Exp $
 
 $self_ref = $ENV{'SCRIPT_NAME'};
 ($query_pr_ref = $ENV{'SCRIPT_NAME'}) =~ s/-summary//;
@@ -190,7 +190,7 @@ if ($input{'sort'} eq 'lastmod') {
 }
 
 if ($#prs < $[) {
-	print "<H1>No matches to your query</H1>\n";
+	print "${h1}No matches to your query${h1_e}\n";
 
 } elsif ($input{'responsible'} eq 'summary') {
 	&resp_summary;
