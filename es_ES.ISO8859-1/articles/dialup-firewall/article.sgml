@@ -1,0 +1,429 @@
+<!--
+     The FreeBSD Documentation Project
+-->
+
+<!DOCTYPE article PUBLIC "-//FreeBSD//DTD DocBook V4.1-Based Extension//EN" [
+<!ENTITY % man PUBLIC "-//FreeBSD//ENTITIES DocBook Manual Page Entities//EN">
+%man;
+]>
+
+<article lang=es>
+  <articleinfo>
+    <title>Cortafuegos con Dialup en FreeBSD</title>
+
+    <authorgroup>
+      <author>
+	<firstname>Marc</firstname>
+	<surname>Silver</surname>
+
+	<affiliation>
+	  <address><email>marcs@draenor.org</email></address>
+	</affiliation>
+      </author>
+    </authorgroup>
+
+    <pubdate>$FreeBSD$</pubdate>
+
+    <abstract>
+      <para>En &eacute;ste art&iacute;culo se describe c&oacute;mo 
+        configurar un cortafuegos que utiliza conexi&oacute;n PPP con 
+        FreeBSD e IPFW y m&aacute;s concretamente el uso de un 
+        cortafuegos en una conexi&oacute;n telef&oacute;nica  
+        a la que se le asigna una IP din&aacute;mica.  &Eacute;ste 
+        documento no se ocupa de la configuraci&oacute;n de la 
+        conexi&oacute;n PPP necesaria.</para>
+    </abstract>
+  </articleinfo>
+
+  <sect1 id="preface">
+    <title>Prefacio</title>
+
+    <para>Uso de un Cortafuegos en una Conexi&oacute;n Telef&oacute;nica 
+       en FreeBSD</para>
+
+     <para>En &eacute;ste documento se expone el proceso necesario para 
+       configurar un cortafuegos en FreeBSD cuando la direcci&oacute;n IP 
+       es asignada din&aacute;micamente por el ISP.  Aunque se ha hecho 
+       todo lo posible por hacer &eacute;ste documento tan informativo 
+       y correcto como sea posible puede enviar comentarios y/o 
+       sugerencias al autor a <email>marcs@draenor.org</email>, que 
+       ser&aacute;n bien recibidas.</para>
+   </sect1>
+
+  <sect1 id="kernel">
+    <title>Configuraci&oacute;n del Kernel</title>
+
+    <para>Lo primero que tendr&aacute; que hacer es recompilar su 
+      kernel.  Si necesita m&aacute;s informaci&oacute;n sobre c&oacute;mo 
+      hacerlo el mejor recurso es <ulink
+	URL="../../books/handbook/kernelconfig.html">la secci&oacute;n de 
+       Handbook acerca de la configuraci&oacute;n del 
+      kernel</ulink>.  Necesitar&aacute; a&ntilde;adir a su fichero de 
+      configuraci&oacute;n del kernel las siguientes opciones:</para> 
+
+    <variablelist>
+      <varlistentry>
+	<term><literal>options IPFIREWALL</literal></term>
+
+	<listitem>
+          <para>Activa el c&oacute;digo necesario para el cortafuegos 
+            en el kernel.</para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<term><literal>options IPFW2</literal></term>
+
+	<listitem>
+          <para>Activa la nueva versi&oacute;n de IPFW.</para>
+	  <important><para>Esto solo debe hacerse en FreeBSD 4.X puesto 
+          que en las versiones m&aacute;s recientes vienen inclu&iacute;do 
+          por defecto.</para></important>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<term><literal>options IPFIREWALL_VERBOSE</literal></term>
+
+	<listitem>
+          <para>Envia los paquetes que se ha decidido sean inclu&iacute;dos 
+            en un <filename>log</filename> a la aplicaci&oacute;n encargada 
+            de gestionar los <filename>logs</filename> del sistema.</para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<term><literal>options
+	    IPFIREWALL_VERBOSE_LIMIT=<replaceable>100</replaceable></literal></term>
+
+	<listitem>
+          <para>Limita el n&uacute;mero de veces que una entrada que cumple 
+            las reglas puede ser inclu&iacute;da en los <filename>logs
+            </filename> del sistema. Esto previene que sus <filename>logs
+            </filename> se vean inundados por entradas repetidas.  
+	    <replaceable>100</replaceable> es un n&uacute;mero razonable, 
+            pero puede ajustarlo a sus necesidades.</para> 
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<term><literal>options IPDIVERT</literal></term>
+
+	<listitem>
+          <para>Activa los <quote>sockets</quote> <emphasis>divert</emphasis>,  
+            que ser&aacute;n descritos m&aacute;s tarde.</para>
+	</listitem>
+      </varlistentry>
+    </variablelist>
+
+    <para>Hay otras entradas <emphasis>opcionales</emphasis> que pueden 
+      compilarse en el kernel para incrementar la seguridad.  No hacen 
+      falta para el funcionamiento del cortafuegos pero algunos usuarios 
+      especialmente paranoicos pueden querer usarlos.</para> 
+
+    <variablelist>
+      <varlistentry>
+	<term><literal>options TCP_DROP_SYNFIN</literal></term>
+
+	<listitem>
+          <para>Ignorar paquetes TCP con SYN y FIN.  Esto evita ser 
+           vulnerable al uso de herramientas como 
+	  <filename role="package">security/nmap</filename>, que permiten 
+           identificar la pila TCP/IP de la m&aacute;quina, pero incumple 
+           el soporte a las extensiones inclu&iacute;das en el 
+           RFC1644.  <emphasis>No</emphasis> se recomienda hacer tal cosa 
+           si la m&aacute;quina va a ejecutar un servidor web.</para> 
+	</listitem>
+      </varlistentry>
+     </variablelist>
+
+    <para>No reinicie tras recompilar el kernel.  Si todo sale bien 
+      s&oacute;lo necesitaremos reiniciar una vez en todo el proceso 
+      de instalaci&oacute;n del cortafuegos.</para>
+  </sect1>
+
+  <sect1 id="rcconf">
+    <title>Modificaci&oacute;n de <filename>/etc/rc.conf</filename> para 
+      cargar el cortafuegos</title>
+
+    <para>Necesitamos hacer algunos cambios en 
+      <filename>/etc/rc.conf</filename> para darle ciertos detalles 
+      del cortafuegos.  Es tan simple como a&ntilde;adir las siguientes 
+      l&iacute;neas:</para>
+
+    <programlisting>firewall_enable="YES"
+firewall_script="/etc/firewall/fwrules"
+natd_enable="YES"
+natd_interface="tun0"
+natd_flags="-dynamic"</programlisting>
+
+    <para>Para m&aacute;s informaci&oacute;n sobre &eacute;stas entradas 
+     consulte 
+     <filename>/etc/defaults/rc.conf</filename> y lea 
+      &man.rc.conf.5;</para>
+  </sect1>
+
+  <sect1>
+    <title>Desactivaci&oacute;n de la Traducci&oacute;n de Direcciones 
+      de Red (NAT) de PPP</title>
+
+    <para>Es posible que ya est&eacute; usando la NAT que incluye 
+      PPP.  Si es su caso tendr&aacute; que desactivarla puesto que 
+      los casos que vamos a usar emplean &man.natd.8; para hacerlo.</para>
+
+    <para>Si ya dispone de un grupo de entradas para arrancar 
+      autom&aacute;ticamente PPP probablemente se parezca a 
+      &eacute;sto:</para>
+
+    <programlisting>ppp_enable="YES"
+ppp_mode="auto"
+ppp_nat="YES"
+ppp_profile="<replaceable>profile</replaceable>"</programlisting>
+
+    <para>Si es su caso, tendr&aacute; que desactivar 
+      espec&iacute;ficamente <literal>ppp_nat</literal> 
+      asegur&aacute;ndose de que 
+      <literal>ppp_nat="NO"</literal> existe en su  
+in <filename>/etc/rc.conf</filename>. Tendr&aacute; tambi&eacute; que 
+      borrar todas las entradas como 
+      <literal>nat enable yes</literal> o 
+      <literal>alias enable yes</literal> en
+      <filename>/etc/ppp/ppp.conf</filename>.</para>
+  </sect1>
+
+  <sect1 id="rules">
+    <title>Las Reglas del Cortafuegos</title>
+
+    <para>Casi hemos acabado.  Lo &uacute;nico que nos falta es 
+      definir las reglas del cortafuegos, reiniciar y deber&iacute;amos 
+      tener nuestro cortafuegos funcionando perfectamente.  Soy 
+      consciente de que cada cual tendr&aacute; necesidades distintas 
+      como reglas b&aacute;sicas.  He intentado escribir unas reglas 
+      b&aacute;sicas que puedan cubrir las necesidades de un usuario 
+      de conexi&oacute;n telef&oacute;nica normal.  Vamos a comenzar 
+      por lo b&aacute;sico de un cortafuegos cerrado.  Lo que se 
+      busca es rechazar todo por defecto y dejar pasar solamente 
+      lo que necesitemos.  Las reglas deber&iacute;an ir en la forma 
+      <quote>al principio permitir, luego rechazar</quote>.  La premisa 
+      es que vamos a an&tilde;adir reglas para lo que vamos a aceptar y 
+      luego rechazamos todo lo dem&aacute;s. :)</para>  
+
+    <para>Ahora vamos a crear el directorio <filename
+      class="directory">/etc/firewall</filename>. Sit&uacute;ese en el
+      directorio y edite el fichero <filename>fwrules</filename> tal y 
+      como hemos escrito dentro de <filename>rc.conf</filename>.  Por favor, 
+      no olvide que puede cambiar el nombre del fichero por cualquier otro 
+      que prefiera. &Eacute;ste documento solamente facilita un ejemplo 
+      del nombre del fichero.</para> 
+
+    <para>Vamos a echar un vistazo a un ejemplo de fichero de 
+      configuraci&oacute;n del cortafuegos que hemos comentado 
+      cuidadosamente.</para> 
+
+    <programlisting># Definimos el comando con el que invocamos al cortafuegos  
+# (tal y como hemos inclu&iacute;do en /etc/rc.firewall) para 
+# facilitarnos la lectura.  
+fwcmd="/sbin/ipfw"
+
+# Fuerza el borrado de todas las reglas existentes en nuestro 
+# cortafuegos antes de cargar el contenido de &eacute;ste fichero.
+$fwcmd -f flush
+
+# Desv&iacute;a todos los paquetes a trav&eacute;s del interfaz tunnel.
+$fwcmd add divert natd all from any to any via tun0
+
+# Permite todas las conexiones inclu&iacute;das en reglas 
+# din&aacute;micas pero rechaza todas aquellas conexiones 
+# establecidas que no est&eacute;n inclu&iacute;das en alguna
+# regla din&aacute;mica. 
+$fwcmd add check-state
+$fwcmd add deny tcp from any to any established
+
+# Aceptar todas las conexiones de localhost.
+$fwcmd add allow tcp from me to any out via lo0 setup keep-state
+$fwcmd add deny  tcp from me to any out via lo0
+$fwcmd add allow ip  from me to any out via lo0 keep-state
+
+# Aceptar todas las conexiones desde mi tarjeta de red que yo inicie. 
+$fwcmd add allow tcp from me to any out xmit any setup keep-state
+$fwcmd add deny  tcp from me to any
+$fwcmd add allow ip from me to any out xmit any keep-state
+
+# Todo el mundo a lo largo y ancho de Internet puede conectarse 
+# a los siguientes servicios de la m&aacute;quina.  &Eacute;ste 
+# ejemplo permite espec&iacute;ficamente las conexiones a sshd 
+# y al servidor web.
+$fwcmd add allow tcp from any to me dst-port 22,80 in recv any setup keep-state
+
+# &Eacute;sto env&iacute;a un RESET a todos los paquetes ident.
+$fwcmd add reset log tcp from any to me 113 in recv any
+
+# Activa ICMP: borre el tipo 8 si no quiere que su m&aacute;quina 
+# responda al ping.
+$fwcmd add allow icmp from any to any icmptypes 0,3,8,11,12,13,14
+
+# Rechazamos todo lo dem&aacute;s.
+$fwcmd add deny log ip from any to any</programlisting>
+
+    <para>Ya tiene usted un cortafuegos totalmente funcional que 
+      acepta todas las conexiones a los puertos 22 y 80 y registrar&aacute; 
+      cualquier otro tipo de intento de conexi&oacute;n en un fichero 
+      <filename>log</filename>.  Ahora podemos reiniciar tranquilamente 
+      y su cortafuegos deber&iacute;a empezar a trabajar tal y como le 
+      hemos dicho.  Si le parece que hay alg&uacute;n dato incorrecto o 
+      tiene alguna sugerencia para mejorar &eacute;ste documento por 
+      favor env&iacute;eme un correo electr&oacute;nico.</para> 
+  </sect1>
+
+  <sect1>
+    <title>Preguntas</title>
+
+    <qandaset>
+      <qandaentry>
+	<question>
+          <para>&iquest;Por qu&eacute; utiliza &man.natd.8; y 
+            &man.ipfw.8; cuando podr&iacute;a usar  los filtros 
+            inclu&iacute;dos en &man.ppp.8;?</para> 
+	</question>
+
+	<answer>
+          <para>Ser&eacute; honesto y dir&eacute; que no hay una 
+            raz&oacute;n clara por la que use <command>ipfw</command> y 
+            <command>natd</command> en lugar de los filtros que incorpora 
+            <command>ppp</command>.  Tras hablarlo con mucha gente el 
+            consenso parece ser que <command>ipfw</command> 
+             es mucho m&aacute;s potente y configurable que el filtrado 
+             de <command>ppp</command> pero lo que se gana en 
+             funcionalidad lo pierde en facilidad de 
+             personalizaci&oacute;n.  Una de las razones por las que 
+             prefiero usar esas aplicaciones es que creo m&aacute; conveniente 
+             ejecutar un cortafuegos desde el kernel que desde una 
+             aplicaci&oacute;n de entorno de usuario.</para>
+             
+	</answer>
+      </qandaentry>
+
+      <qandaentry>
+        <question>
+          <para>Me aparecen mensajes como <errorname>limit 100 reached on 
+            entry 2800</errorname> y despu&eacute;s de eso ya no me aparecen 
+            m&aacute;s entradas indicando tr&aacute;fico rechazado en mis 
+            <filename>logs</filename>.  &iquest;Funciona mi 
+            cortafuegos?</para> 
+        </question>
+
+	<answer>
+          <para>Esto significa simplemente que se ha alcanzado el 
+            m&aacute;ximo de entradas que pueden inclu&iacute;rse en el  
+            <filename>log</filename> cuando una determinada regla 
+            se ha cumplido.  Esa regla sigue 
+            funcionando pero no enviar&iacute;a m&aacute;s entradas al 
+            <filename>log</filename> hasta que el contador vuelva a 
+            cero. Puede poner a cero ese contador mediante 
+            <command>ipfw resetlog</command>.  Adem&aacute;s es posible 
+            elevar el l&iacute;mite de entradas a introducir en el 
+            <filename>log</filename> incluyendo la <quote>option</quote> 
+            <option>IPFIREWALL_VERBOSE_LIMIT</option> en el fichero de 
+            de configuraci&oacute;n del kernel. Por otra parte puede 
+            modificar ese valor (sin modificar su kernel y en consecuencia 
+            sin reiniciar la m&aacute;quina) mediante el valor de 
+            &man.sysctl.8; net.inet.ip.fw.verbose_limit.</para> 
+        </answer>
+      </qandaentry>
+
+      <qandaentry>
+	<question>
+          <para>Supongamos que estoy usando direcciones privadas internas, 
+            por ejemplo el rango 192.168.0.0. &iquest;Puedo a&ntilde;adir 
+            una regla al cortafuegos mediante un comando como 
+	    <literal>$fwcmd add 
+	      deny all from any to 192.168.0.0:255.255.0.0 via tun0</literal>
+            para prevenir intentos de acceso desde el exterior para conectar 
+            con m&aacute;quinas de mi red?.</para>
+	</question>
+
+	<answer>
+          <para>La respuesta corta es no.  La raz&oacute;n es que 
+	    <command>natd</command> efect&uacute;a la traducci&oacute;n  
+            de direcciones para <emphasis>cualquier cosa</emphasis> que 
+            sea redirigida a trav&eacute;s del dispositivo  
+	    <devicename>tun0</devicename>.  Eso significa que todos los 
+            paquetes entrantes hablar&aacute;n exclusivamente con la IP 
+            asignada din&aacute;micamente y <emphasis>no</emphasis> con la 
+            red interna.  Hay que tener en cuenta sin embargo que es posible 
+            a&ntilde;adir una regla como  
+	    <literal>$fwcmd add deny all from 192.168.0.4:255.255.0.0
+	    to any via tun0</literal>, que evitar&iacute;a que una de las 
+            m&aacute;quinas de esa red enviara tr&aacute;fico al exterior 
+            a trav&eacute;s del cortafuegos.</para> 
+	</answer>
+      </qandaentry>
+
+      <qandaentry>
+	<question>
+          <para>Debo de haber hecho algo mal.  He seguido las instrucciones 
+            al pie de la letra y no tengo acceso a Internet.</para>
+        </question>
+
+	<answer>
+          <para>Estamos asumiendo que est&aacute; usando 
+	    <emphasis>userland-ppp</emphasis>, en consecuencia el conjunto 
+            de reglas que aqu&iacute; se proponen operan en el interfaz  
+	    <devicename>tun0</devicename>, que corresponde a la primera 
+            conexi&oacute;n efectuada mediante &man.ppp.8; (m&aacute;s 
+            conocido como <emphasis>user-ppp</emphasis>).  Las conexiones 
+            efectuadas m&aacute;s tarde recibir&aacute;n nombres como 
+	    <devicename>tun1</devicename>, <devicename>tun2</devicename> y  
+	    as&iacute; sucesivamente.</para>
+
+          <para>Hay que tener tambi&eacute;n presente que &man.pppd.8; 
+            en cambio utiliza el interfaz <devicename>ppp0</devicename>, 
+            de modo que si se inicia la conexi&oacute;n con &man.pppd.8; hay 
+            que sustitu&iacute;r <devicename>tun0</devicename> por 
+	    <devicename>ppp0</devicename>.  A continuaci&oacute;n se muestra 
+            una forma muy limpia de modificar las reglas del 
+            cortafuegos.  Conservaremos un fichero con las reglas originales 
+            con el nombre de 
+	    <filename>fwrules_tun0</filename>.</para>
+
+	  <screen>	    &prompt.user; <userinput>cd /etc/firewall</userinput>
+	    /etc/firewall&prompt.user; <userinput>su</userinput>
+	    <prompt>Password:</prompt>
+	    /etc/firewall&prompt.root; <userinput>mv fwrules fwrules_tun0</userinput>
+	    /etc/firewall&prompt.root; <userinput>cat fwrules_tun0 | sed s/tun0/ppp0/g > fwrules</userinput>
+	  </screen>
+
+          <para>Para saber exactamente si est&aacute; usando &man.ppp.8; o 
+            &man.pppd.8; examine la salida de &man.ifconfig.8; una vez que 
+            establezca la conexi&oacute;n.  V.g., en una conexi&oacute;n 
+            hecha mediante &man.pppd.8; deber&iacute;a encontrarse con 
+            algo muy similar a lo siguiente (se muestran s&oacute;lo las 
+            l&iacute;neas relevantes):</para>
+
+	  <screen>	    &prompt.user; <userinput>ifconfig</userinput>
+	    <emphasis>(eliminado...)</emphasis>
+	    ppp0: flags=<replaceable>8051&lt;UP,POINTOPOINT,RUNNING,MULTICAST&gt; mtu 1524</replaceable>
+                    inet <replaceable>xxx.xxx.xxx.xxx</replaceable> --&gt; <replaceable>xxx.xxx.xxx.xxx</replaceable> netmask <replaceable>0xff000000</replaceable>
+	    <emphasis>(eliminado...)</emphasis>
+	    </screen>
+
+
+          <para>Si por el contrario la conexi&oacute;n fu&eacute; 
+            establecida mediante &man.ppp.8; 
+	    (<emphasis>user-ppp</emphasis>) &eacute;sto es m&aacute;s o 
+            menos lo que se encontrar&iacute;a:</para> 
+
+	  <screen>	    &prompt.user; <userinput>ifconfig</userinput>
+	    <emphasis>(eliminado...)</emphasis>
+	    ppp0: flags=<replaceable>8010&lt;POINTOPOINT,MULTICAST&gt; mtu 1500</replaceable>
+	    <emphasis>(skipped...)</emphasis>
+	    tun0: flags=<replaceable>8051&lt;UP,POINTOPOINT,RUNNING,MULTICAST&gt; mtu 1524</replaceable>
+	            <emphasis>(IPv6 stuff skipped...)</emphasis>
+                    inet <replaceable>xxx.xxx.xxx.xxx</replaceable> --&gt; <replaceable>xxx.xxx.xxx.xxx</replaceable> netmask <replaceable>0xffffff00</replaceable>
+                    Opened by PID <replaceable>xxxxx</replaceable>
+            <emphasis>(eliminado...)</emphasis></screen>
+	</answer>
+      </qandaentry>
+    </qandaset>
+  </sect1>
+</article>
