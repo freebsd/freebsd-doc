@@ -67,7 +67,6 @@ PKG_CREATE?=	/usr/sbin/pkg_create
 TAR?=		/usr/bin/tar
 XARGS?=		/usr/bin/xargs
 
-TIDY?=		${PREFIX}/bin/tidy
 TIDYOPTS?=	-i -m -raw -preserve -f /dev/null -asxml ${TIDYFLAGS}
 HTML2PDB?=	${PREFIX}/bin/iSiloBSD
 HTML2PDBOPTS?=	-y -d0 -Idef ${HTML2PDBFLAGS}
