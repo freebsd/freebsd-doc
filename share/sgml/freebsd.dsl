@@ -1,4 +1,4 @@
-<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.13 2000/02/15 01:57:17 nik Exp $ -->
+<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.15 2000/07/25 10:31:35 nik Exp $ -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
 <!ENTITY % output.html  "IGNORE">
@@ -181,6 +181,17 @@
             (literal "<")
             (process-children)
             (literal ">"))))
+
+      <!-- Add double quotes around <errorname> text. -->
+
+      (element errorname
+        (make sequence
+          <![ %output.print; [ (make entity-ref name: "ldquo") ]]>
+          <![ %output.html;  [ (literal "``") ]]>
+          ($mono-seq$ (process-children))
+          <![ %output.print; [ (make entity-ref name: "rdquo") ]]>
+          <![ %output.html;  [ (literal "''") ]]>
+          ))
 
       <!-- John Fieber's 'instant' translation specification had 
            '<command>' rendered in a mono-space font, and '<application>'
