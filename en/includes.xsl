@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/en/includes.xsl,v 1.16 2003/10/03 22:42:03 simon Exp $ -->
+<!-- $FreeBSD: www/en/includes.xsl,v 1.17 2003/10/29 07:35:52 murray Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
+
+  <xsl:variable name="mirrors" select="'../../doc/share/sgml/mirrors.xml'" />
 
   <xsl:variable name="i.daemon">
     <img src="{$base}/gifs/daemon.gif" alt="" align="left" width="80" height="76"/>
