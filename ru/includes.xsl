@@ -2,7 +2,7 @@
 
 <!-- $FreeBSD$ -->
 <!-- The FreeBSD Russian Documentation Project -->
-<!-- $FreeBSDru: frdp/www/ru/includes.xsl,v 1.2 2001/12/05 19:12:44 phantom Exp $ -->
+<!-- $FreeBSDru: frdp/www/ru/includes.xsl,v 1.3 2001/12/17 20:10:53 phantom Exp $ -->
 <!-- Original revision: 1.4 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -83,13 +83,13 @@
   
   <xsl:variable name="rel.current" select="4.4"/>
   <xsl:variable name="u.rel.notes">
-    <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel.current"/>R/notes.html</xsl:variable>
+    <xsl:value-of select="$base"/>/../releases/<xsl:value-of select="$rel.current"/>R/notes.html</xsl:variable>
 
   <xsl:variable name="u.rel.announce">
-    <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel.current"/>R/announce.html</xsl:variable>
+    <xsl:value-of select="$base"/>/../releases/<xsl:value-of select="$rel.current"/>R/announce.html</xsl:variable>
   <xsl:variable name="u.rel.errata">
-    <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel.current"/>R/errata.html</xsl:variable>
+    <xsl:value-of select="$base"/>/../releases/<xsl:value-of select="$rel.current"/>R/errata.html</xsl:variable>
   <xsl:variable name="u.rel.hardware">
-    <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel.current"/>R/hardware.html</xsl:variable>
+    <xsl:value-of select="$base"/>/../releases/<xsl:value-of select="$rel.current"/>R/hardware.html</xsl:variable>
   
 </xsl:stylesheet>

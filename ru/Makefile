@@ -1,6 +1,6 @@
-# $FreeBSD: www/ru/Makefile,v 1.18 2001/12/12 11:57:43 phantom Exp $
+# $FreeBSD$
 # The FreeBSD Russian Documentation Project
-# $FreeBSDru: frdp/www/ru/Makefile,v 1.9 2000/12/29 13:17:32 phantom Exp $
+# $FreeBSDru: frdp/www/ru/Makefile,v 1.11 2001/12/13 21:23:45 phantom Exp $
 # Original revision: 1.55
 
 .if exists(Makefile.conf)
@@ -19,7 +19,6 @@ DOCS+= availability.sgml
 DOCS+= docs.sgml
 DOCS+= features.sgml
 DOCS+= register.sgml
-DOCS+= index.sgml
 DOCS+= internet.sgml
 DOCS+= mailto.sgml
 DOCS+= publish.sgml
@@ -33,7 +32,6 @@ CLEANFILES+=atoz.sgml site.sgml
 # These will be directly installed.
 
 #DATA=	COPYING COPYING.LIB README.mirror robots.txt index.html
-DATA=	index.html
 
 # Subdirectories
 # SGML
@@ -42,7 +40,6 @@ SUBDIR+= commercial
 SUBDIR+= conspectus
 SUBDIR+= docproj
 SUBDIR+= news
-SUBDIR+= alpha
 SUBDIR+= internal
 SUBDIR+= java
 SUBDIR+= copyright
@@ -69,10 +66,21 @@ SUBDIR+= handbook
 DOCSUBDIR=	FAQ
 .endif
 
-SGMLFLAGS+=	-links -hdr ${.CURDIR}/doc.hdr -ftr ${.CURDIR}/doc.ftr
-SGMLFLAGS+=	-e KOI8-R
+SGMLOPTS+=	-links -hdr ${.CURDIR}/doc.hdr -ftr ${.CURDIR}/doc.ftr
+SGMLOPTS+=	-e KOI8-R
 FORMATS=	"html ps koi8-r"
 
 WEBDIR?=	data/ru
+
+# index.html is special, and generated from index.xsl and news/news.xml
+DATA+=		index.html
+CLEANFILES+=	index.html
+
+index.html: index.xsl news/news.xml news/press.xml includes.xsl news/includes.xsl
+	${XSLTPROC} ${XSLTPROCOPTS} -o index.html \
+		${.CURDIR}/index.xsl ${.CURDIR}/news/news.xml
+.if !defined(NO_TIDY)
+	-${TIDY} ${TIDYOPTS} ${.TARGET}
+.endif
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
