@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/index.xsl,v 1.34 2002/08/31 21:23:55 trhodes Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.35 2002/09/20 16:08:40 keramida Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   
@@ -6,7 +6,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.34 2002/08/31 21:23:55 trhodes Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.35 2002/09/20 16:08:40 keramida Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -103,7 +103,7 @@
 		  <option value="http://www2.za.FreeBSD.org/">South Africa/2</option>
 		  <option value="http://www.se.FreeBSD.org/">Sweden</option>
 		  <option value="http://www.ch.FreeBSD.org/">Switzerland</option>
-		  <option value="http://www.tw.FreeBSD.org/www.freebsd.org/data/">Taiwan</option>
+		  <option value="http://www.tw.FreeBSD.org/">Taiwan</option>
 		  <option value="http://www.tr.FreeBSD.org/">Turkey</option>
 		  <option value="http://www.enderunix.org/freebsd/">Turkey/2</option>
 		  <option value="http://www.ua.FreeBSD.org/">Ukraine/1</option>
