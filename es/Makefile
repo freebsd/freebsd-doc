@@ -1,4 +1,4 @@
-# $FreeBSD: www/es/Makefile,v 1.12 2001/12/12 11:57:37 phantom Exp $
+# $FreeBSD: www/es/Makefile,v 1.13 2002/11/25 12:27:39 jesusr Exp $
 
 .if exists(Makefile.conf)
 .include "Makefile.conf"
@@ -46,6 +46,7 @@ SUBDIR+= search
 SUBDIR+= projects
 SUBDIR+= releases 
 #SUBDIR+= doc-es
+SUBDIR+= gnome
 
 .if !defined(WEB_ONLY) || empty(WEB_ONLY)
 SUBDIR+= ports
