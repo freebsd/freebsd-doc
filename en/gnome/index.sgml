@@ -28,7 +28,7 @@
 	    <A HREF="../ports/gnome.html">Available Applications</A><BR>
 	    <A HREF="docs/volunteer.html">How to Help</A><BR>
 	    <A HREF="docs/bugging.html">Reporting a Bug</A><BR>
-	    <A HREF="screenshots/screens.html">Screenshots</A><BR>
+	    <A HREF="screenshots.html">Screenshots</A><BR>
 	    <A HREF="docs/contact.html">Contact Us</A><BR>
 	  </SMALL>
 	  
