@@ -4,7 +4,7 @@
 # 
 # John Fieber <jfieber@indiana.edu>
 # Modified for new gallery.db format by Nate Johnson <nsj@FreeBSD.org>
-# $FreeBSD: www/en/cgi/gallery.cgi,v 1.15 1999/09/06 07:02:40 peter Exp $
+# $FreeBSD: www/en/cgi/gallery.cgi,v 1.16 2000/01/05 15:47:44 phantom Exp $
 ##################################################################
 
 $curator = "gallery\@FreeBSD.org";
@@ -13,7 +13,7 @@ $subject = "Another gallery submission...";
 require 'cgi-lib.pl';
 &ReadParse;
 
-$hsty_date = '$FreeBSD: www/en/cgi/gallery.cgi,v 1.15 1999/09/06 07:02:40 peter Exp $';
+$hsty_date = '$FreeBSD: www/en/cgi/gallery.cgi,v 1.16 2000/01/05 15:47:44 phantom Exp $';
 #$h_base = "..";
 #$d_author = "
 require 'cgi-style.pl';
@@ -127,7 +127,7 @@ elsif ($in{'action'} eq "submit") {
     $category =~ tr/ //;
 
     ($mo,$da,$year) = $timestamp =~ m/(\d\d?)-(\d\d?)-(\d\d\d\d)/;
-    $year -= 1900;
+    $year -= 2000;
     $mo = join('','0',$mo) if ($mo =~ /^\d$/);
     $da = join('','0',$da) if ($da =~ /^\d$/);
     $date = join("",$year,$mo,$da);
