@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/ports.cgi,v 1.43 2000/01/29 17:19:51 wosch Exp $
+# $FreeBSD: www/en/cgi/ports.cgi,v 1.44 2000/04/03 08:50:23 phantom Exp $
 #
 # ports.cgi - search engine for FreeBSD ports
 #             	o search for a port by name or description
@@ -55,7 +55,7 @@ sub init_variables {
     local($p) = 'ftp://ftp.FreeBSD.org/pub/FreeBSD/ports/i386';
     local($palpha) = 'ftp://ftp.FreeBSD.org/pub/FreeBSD/ports/alpha';
 
-    $remotePrefixFtpPackagesDefault = '3.4-STABLE/i386';
+    $remotePrefixFtpPackagesDefault = '4.0-STABLE/i386';
     %remotePrefixFtpPackages = 
 	(
 	 '5.0-CURRENT/i386', "$p/packages-current/All",
@@ -529,7 +529,7 @@ sub footer {
 <img ALIGN="RIGHT" src="/gifs/powerlogo.gif">
 &copy; 1996-2000 by Wolfram Schneider. All rights reserved.<br>
 };
-    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.43 2000/01/29 17:19:51 wosch Exp $} . "<br>\n";
+    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.44 2000/04/03 08:50:23 phantom Exp $} . "<br>\n";
     print qq{Please direct questions about this service to
 <I><A HREF="$mailtoURL">$mailto</A></I><br>\n};
     print qq{General questions about FreeBSD ports should be sent to } .
