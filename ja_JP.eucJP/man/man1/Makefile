@@ -453,6 +453,7 @@ MLINKS+=lex.1 flex.1
 MLINKS+=lex.1 flex++.1
 MLINKS+=lex.1 lex++.1
 MLINKS+=mail.1 Mail.1
+MLINKS+=mail.1 mailx.1
 MLINKS+=passwd.1 yppasswd.1
 MLINKS+=printenv.1 env.1
 MLINKS+=rtld.1 ld-elf.so.1.1
