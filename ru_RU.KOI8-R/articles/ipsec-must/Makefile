@@ -1,20 +1,21 @@
 #
+# The FreeBSD Russian Documentation Project
+#
 # $FreeBSD$
-# $FreeBSDru: frdp/doc/ru_RU.KOI8-R/articles/ipsec-must/Makefile,v 1.1 2001/07/09 06:56:28 kappa Exp $
+# $FreeBSDru: frdp/doc/ru_RU.KOI8-R/articles/ipsec-must/Makefile,v 1.3 2004/02/20 07:52:54 andy Exp $
 #
-# Original revision: 1.1
+# Original revision: 1.4
 #
 
-MAINTAINER=	kappa@FreeBSD.org.ua
+DOC?= article
 
-DOC?=	article
+FORMATS?= html
 
-FORMATS?=	html
-
-INSTALL_COMPRESSED?=	gz
+INSTALL_COMPRESSED?=gz
 INSTALL_ONLY_COMPRESSED?=
 
-SRCS=	article.sgml
+SRCS= article.sgml
 
-DOC_PREFIX?=	${.CURDIR}/../../..
-.include	"${DOC_PREFIX}/share/mk/doc.project.mk"
+DOC_PREFIX?= ${.CURDIR}/../../..
+
+.include "${DOC_PREFIX}/share/mk/doc.project.mk"
