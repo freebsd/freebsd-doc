@@ -1,4 +1,4 @@
-# $FreeBSD: doc/ja_JP.eucJP/man/man5/Makefile,v 1.16 2001/09/23 03:41:53 horikawa Exp $
+# $FreeBSD$
 MAN5 =	a.out.5\
 	acct.5\
 	aliases.5\
@@ -18,6 +18,7 @@ MAN5 =	a.out.5\
 	disklabel.5\
 	disktab.5\
 	dm.conf.5\
+	drivers.conf.5\
 	editrc.5\
 	elf.5\
 	ethers.5\
@@ -33,6 +34,7 @@ MAN5 =	a.out.5\
 	groff_out.5\
 	groff_tmac.5\
 	group.5\
+	host.conf.5\
 	hosts.5\
 	hosts.equiv.5\
 	hosts.lpd.5\
