@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp 
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.3 1999-12-12 14:55:17 wosch Exp $
+# $Id: man.cgi,v 1.4 1999-12-12 14:56:35 wosch Exp $
 
 #use Data::Dumper;
 
@@ -719,12 +719,12 @@ sub indexpage {
 
     print "<B><I>Section Indexes</I></B>: ";
     foreach ('1', '2', '3', '4', '5', '6', '7', '8', '9', 'n') {
-	print qq{&#164 <A HREF="$BASE?query=($_)&sektion=&apropos=1&manpath=$m&title=Section%20$_Index">$_</A>\n};
+	print qq{&#164; <A HREF="$BASE?query=($_)&sektion=&apropos=1&manpath=$m&title=Section%20$_Index">$_</A>\n};
     }
 
     print "<BR><B><I>Explanations of Man Sections:</I></B>";
     foreach ('1', '2', '3', '4', '5', '6', '7', '8', '9') {
-	print qq{&#164 <A HREF="$BASE?query=intro&sektion=$_&apropos=0&manpath=$m&title=Introduction%20Section%20$_">intro($_)</A>\n};
+	print qq{&#164; <A HREF="$BASE?query=intro&sektion=$_&apropos=0&manpath=$m&title=Introduction%20Section%20$_">intro($_)</A>\n};
     }
 
     print "<BR>\n<B><I>Quick Reference Categories:</I></B>\n";
@@ -732,7 +732,7 @@ sub indexpage {
              'nis', 'protocol', 'ppp', 'roff', 'string', 'scsi', 
 	     'statistic', 'tcl', 'tcp', 'time') 
     {
-	print qq{&#164 <A HREF="$BASE?query=$_&sektion=&apropos=1&manpath=$m&title=Quick%20Ref%20$_">$_</A>\n};
+	print qq{&#164; <A HREF="$BASE?query=$_&sektion=&apropos=1&manpath=$m&title=Quick%20Ref%20$_">$_</A>\n};
     }
 
     print <<ETX if $mailto;
@@ -743,7 +743,7 @@ Please direct questions about this server to
 URL:  <A HREF="$BASE" target=_parent>$www{'home'}$BASE</a><br>
 ETX
 
-    print q{$Date: 1999-12-12 14:55:17 $ $Revision: 1.3 $};
+    print q{$Date: 1999-12-12 14:56:35 $ $Revision: 1.4 $};
     print "<br>\n";
     print "</BODY>\n</HTML>\n";
     0;
