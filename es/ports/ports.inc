@@ -1,4 +1,4 @@
-<!-- $Id: ports.inc,v 1.1.1.1 1999-02-08 19:26:11 wosch Exp $ -->
+<!-- $Id: ports.inc,v 1.2 1999-02-10 14:48:23 jesusr Exp $ -->
 <p>La colecci&oacute;n de Ports y Packages de FreeBSD ofrece una manera
 sencilla de instalci&oacute;n de aplicaciones para los usuarios y
 administradores. Cada "port" listado aqu&iacute; contiene los parches
@@ -19,10 +19,10 @@ bajarte el fichero y ejecutar el comando <strong>pkg_add</strong>. Este
 comando acepta tanto nombres de ficheros como URL's FTP.</p>
 
 <p>Para m&aacute;s informaci&oacute;n sobre el uso de los ports mira en <a
-href="../handbook/ports.html">La colecci&oacute;n de Ports</a>. Para
+href="../../handbook/ports.html">La colecci&oacute;n de Ports</a>. Para
 informaci&oacute;n sobre crear nuevos ports, mira en <a
-href="../handbook/porting.html">Porting applications</a>. Ambos son parte
-del <a href="../handbook">Handbook</a>.</p>
+href="../../handbook/porting.html">Porting applications</a>. Ambos son parte
+del <a href="../../handbook">Handbook</a>.</p>
 
 <p>Los ports listados en estas p&aacute;ginas son continuamente actualizados.
 Consecuentemente, quiz&aacute;s necesites actualizar algunos ficheros en tu
@@ -45,7 +45,7 @@ deber&iacute;a hacer que puedas usar todos los ports listados aqu&iacute;, ten
 en cuenta que solo se modificar&aacute;n algunos ficheros para permitir
 que los ports/packages puedan ser usados; para una actualizaci&oacute;n
 completa a 2.2-stable, por favor, mira en la secci&oacute;n <a
-href="../handbook/synching.html">sincronizando el c&oacute;digo fuente</a>
+href="../../handbook/synching.html">sincronizando el c&oacute;digo fuente</a>
 del handbook. Recomendamos una actualizaci&oacute;n completa, especialmente
 si todav&iacute;a est&aacute;s usando 2.2.1-release o 2.2.2-release.</p>
 
