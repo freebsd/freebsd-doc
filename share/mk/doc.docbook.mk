@@ -1,5 +1,5 @@
 #
-# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.2 1999/09/06 06:53:39 peter Exp $
+# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.3 1999/11/01 19:41:02 nik Exp $
 #
 # This include file <doc.docbook.mk> handles building and installing of
 # DocBook documentation in the FreeBSD Documentation Project.
@@ -57,7 +57,7 @@ DSSSLCATALOG=	${PREFIX}/share/sgml/docbook/dsssl/modular/catalog
 
 JADEOPTS=	${JADEFLAGS} -c ${FREEBSDCATALOG} -c ${DSSSLCATALOG} -c ${DOCBOOKCATALOG} -c ${JADECATALOG} ${EXTRA_CATALOGS:S/^/-c /g}
 
-KNOWN_FORMATS=	html html-split html-split.tar txt rtf ps pdf tex dvi tar
+KNOWN_FORMATS=	html html-split html-split.tar txt rtf ps pdf tex dvi tar pdb
 
 # ------------------------------------------------------------------------
 #
@@ -134,6 +134,9 @@ CLEANFILES+= ${DOC}.tar
 .elif ${_cf} == "doc"
 _docs+= ${DOC}.doc
 CLEANFILES+= ${DOC}.doc
+.elif ${_cf} == "pdb"
+_docs+= ${DOC}.pdb
++CLEANFILES+= ${DOC}.pdb
 .endif
 .endfor
 
@@ -205,6 +208,9 @@ ${DOC}.ps: ${DOC}.dvi
 
 ${DOC}.tar: ${SRCS}
 	tar cf ${.TARGET} ${.ALLSRC}
+
+${DOC}.pdb: ${DOC}.txt
+	pilot_makedoc ${DOC}.txt ${DOC}.pdb ${DOC}
 
 # ------------------------------------------------------------------------
 #
