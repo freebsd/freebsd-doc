@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/ports/ports.inc,v 1.50 2000/07/11 22:58:04 asami Exp $ -->
+<!-- $FreeBSD: www/en/ports/ports.inc,v 1.51 2000/07/30 20:28:56 billf Exp $ -->
 <p>The FreeBSD Ports and Packages Collection offers a simple way for
 users and administrators to install applications.  The ports
 collection has been <a
@@ -81,51 +81,55 @@ fast at times.
 <dl>
 <dt><a
 href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-2.2-stable/Latest/221upgrade.tgz">2.2.1
-to 2.2-stable upgrade kit</a>
-<dd>For users of 2.2.1-release or
-2.2-stable between 2.2.1-release and 2.2.2-release
+to 2.2-STABLE upgrade kit</a>
+<dd>For users of 2.2.1-RELEASE or
+2.2-STABLE between 2.2.1-RELEASE and 2.2.2-RELEASE
 <dt><a
 href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-2.2-stable/Latest/222upgrade.tgz">2.2.2
-to 2.2-stable upgrade kit</a>
-<dd>For users of 2.2.2-release or
-2.2-stable between 2.2.2-release and 2.2.5-release
+to 2.2-STABLE upgrade kit</a>
+<dd>For users of 2.2.2-RELEASE or
+2.2-STABLE between 2.2.2-RELEASE and 2.2.5-RELEASE
 <dt><a
 href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-2.2-stable/Latest/225upgrade.tgz">2.2.5
-to 2.2-stable upgrade kit</a>
-<dd>For users of 2.2.5-release or
-2.2-stable between 2.2.5-release and 2.2.6-release
+to 2.2-STABLE upgrade kit</a>
+<dd>For users of 2.2.5-RELEASE or
+2.2-STABLE between 2.2.5-RELEASE and 2.2.6-RELEASE
 <dt><a
 href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-2.2-stable/Latest/227upgrade.tgz">2.2.7
-to 2.2-stable upgrade kit</a>
-<dd>For users of 2.2.6-release, 2.2.7-release, 2.2.8-release or
-2.2-stable after 2.2.6-release
+to 2.2-STABLE upgrade kit</a>
+<dd>For users of 2.2.6-RELEASE, 2.2.7-RELEASE, 2.2.8-RELEASE or
+2.2-STABLE after 2.2.6-RELEASE
 <dt><a
 href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-3-stable/Latest/30upgrade.tgz">3.0
-to 3-stable upgrade kit</a>
-<dd>For users of 3.0-release or 3.0-stable after 3.0-release
+to 3-STABLE upgrade kit</a>
+<dd>For users of 3.0-RELEASE or 3.0-STABLE after 3.0-RELEASE
 <dt><a
 href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-3-stable/Latest/31upgrade.tgz">3.1
-to 3-stable upgrade kit</a>
-<dd>For users of 3.1-release or 3.1-stable after 3.1-release
+to 3-STABLE upgrade kit</a>
+<dd>For users of 3.1-RELEASE or 3.1-STABLE after 3.1-RELEASE
 <dt><a
 href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-3-stable/Latest/32upgrade.tgz">3.2
-to 3-stable upgrade kit</a>
-<dd>For users of 3.2-release or 3.2-stable after 3.2-release
+to 3-STABLE upgrade kit</a>
+<dd>For users of 3.2-RELEASE or 3.2-STABLE after 3.2-RELEASE
 <dt><a
 href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-3-stable/Latest/34upgrade.tgz">3.3 or 3.4
-to 3-stable upgrade kit</a>
-<dd>For users of 3.3/3.4-release or 3.4-stable after 3.4-release
+to 3-STABLE upgrade kit</a>
+<dd>For users of 3.3/3.4-RELEASE or 3.4-STABLE after 3.4-RELEASE
 <dt><a
 href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-4-stable/Latest/40upgrade.tgz">4.0
-to 4-stable upgrade kit</a>
-<dd>For users of 4.0-release or 4.0-stable after 4.0-release
+to 4-STABLE upgrade kit</a>
+<dd>For users of 4.0-RELEASE or 4.x-STABLE before June 4, 2000
+<dt><a
+href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-4-stable/Latest/41upgrade.tgz">4.1
+to 4-STABLE upgrade kit</a>
+<dd>For users of 4.1-RELEASE or 4.x-STABLE before January 8, 2001
 </dl>
 
 <p>These
 are FreeBSD packages; please use <strong>pkg_add</strong> to install them.  That
 should enable you to use all the ports listed here.  Note that it will
 only change just enough files to enable ports/packages to be used; for
-a full upgrade to 3-stable, please refer to the <a
+a full upgrade to 3-STABLE, please refer to the <a
 href="../handbook/synching.html">synchronizing your source tree</a>
 section of the handbook.  A full upgrade is recommended, especially if
 you are still using anything earlier than 3.5-release.  Also, the
