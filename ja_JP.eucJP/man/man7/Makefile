@@ -1,4 +1,4 @@
-# $FreeBSD: doc/ja_JP.eucJP/man/man7/Makefile,v 1.11 2001/09/23 03:41:53 horikawa Exp $
+# $FreeBSD$
 MAN7 =	ascii.7\
 	clocks.7\
 	environ.7\
@@ -20,6 +20,7 @@ MAN7 =	ascii.7\
 	operator.7\
 	ports.7\
 	re_format.7\
+	release.7\
 	roff.7\
 	security.7\
 	style.perl.7\
