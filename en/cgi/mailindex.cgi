@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $Id: mailindex.cgi,v 1.1 1999-01-15 19:31:26 wosch Exp $
+# $Id: mailindex.cgi,v 1.2 1999-01-15 19:39:06 wosch Exp $
 
 
 use CGI;
@@ -74,14 +74,14 @@ sub file_not_exists {
     exit;
 }
 
-if ($file =~ s%archive/%%) {
+if ($file =~ s%^archive/%%) {
     $maildir = '/g/www/db/text';
-    &file_not_exists(" 1 $maildir/$file") if (! -f "$maildir/$file");
-} elsif ($file =~ s%current/%% && $file =~ /^freebsd-|^cvs-/) {
-    &file_not_exists("2 $file") if (! -f "$maildir/$file");
+    &file_not_exists("$maildir/$file") if (! -f "$maildir/$file");
+} elsif ($file =~ s%^current/%% && $file =~ /^freebsd-|^cvs-/) {
+    &file_not_exists("$file") if (! -f "$maildir/$file");
     $up = 0;
 } else {
-    &file_not_exists("3 $file");
+    &file_not_exists("$file");
 }
 
 chdir($maildir) or die "chdir $maildir: $!\n";
