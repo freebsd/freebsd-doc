@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/it/includes.xsl,v 1.4 2003/11/10 00:14:49 simon Exp $ -->
+<!-- $FreeBSD: www/it/includes.xsl,v 1.5 2003/12/13 10:56:11 blackend Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -17,7 +17,7 @@
   </xsl:variable>
 
   <xsl:variable name="copyright">
-    <a href="{$enbase}/copyright/index.html">Copyright</a> &#169; 1995-2003 the FreeBSD Project.  Tutti i diritti riservati.
+    <a href="{$enbase}/copyright/index.html">Copyright</a> &#169; 1995-2004 the FreeBSD Project.  Tutti i diritti riservati.
   </xsl:variable>
 
   <xsl:variable name="home">
