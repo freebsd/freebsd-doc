@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: www/en/commercial/Makefile,v 1.9 1999/09/06 07:02:41 peter Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -30,22 +30,22 @@ software.html: software.sgml software.inc
 
 software_bycat.html: software_bycat.sgml software_bycat.inc
 
-consulting.inc: consulting.raw
+consulting.inc: commercial.desc consulting.raw
 	${PERL} ./gencommercial.pl consulting
 
-consulting_bycat.inc: consulting.raw
+consulting_bycat.inc: commercial.desc consulting.raw
 	${PERL} ./gencommercial.pl -c consulting
 
-hardware.inc: hardware.raw
+hardware.inc: commercial.desc hardware.raw
 	${PERL} ./gencommercial.pl hardware
 	
-misc.inc: misc.raw
+misc.inc: commercial.desc misc.raw
 	${PERL} ./gencommercial.pl misc
 
-software.inc: software.raw
+software.inc: commercial.desc software.raw
 	${PERL} ./gencommercial.pl software
 
-software_bycat.inc: software.raw
+software_bycat.inc: commercial.desc software.raw
 	${PERL} ./gencommercial.pl -c software
 
 .include <../web.mk>
