@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/gifs/Makefile,v 1.29 1999/10/18 10:27:30 wosch Exp $
+# $FreeBSD: www/en/gifs/Makefile,v 1.30 1999/10/20 19:49:15 motoyuki Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -41,5 +41,6 @@ DATA+=	releases.jpg bug.jpg doc.jpg news.jpg power.jpg
 DATA+=	gourchin3.gif
 DATA+=	darbylogo.gif
 DATA+=	bsdmagazine.jpg
+DATA+=	aboutf.jpg aboutfb.jpg
 
 .include "../web.mk"
