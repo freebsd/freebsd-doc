@@ -5,10 +5,8 @@
 #    Compilation de la FAQ FreeBSD
 #
 #    $FreeBSD$
-#    Original revision: 1.5
-#
-
-MAINTAINER=nik@FreeBSD.ORG
+#    Original revision: 1.7
+MAINTAINER=nik@FreeBSD.org
 
 DOC?= book
 
@@ -17,6 +15,7 @@ FORMATS?= html-split html
 INSTALL_COMPRESSED?= gz
 INSTALL_ONLY_COMPRESSED?=
 
+JADEFLAGS+=-Vbiblio-xref-title
 # 
 # SRCS lists the individual SGML files that make up the document. Changes
 # to any of these files will force a rebuild
@@ -24,21 +23,6 @@ INSTALL_ONLY_COMPRESSED?=
 
 # SGML content
 SRCS=  book.sgml 
-SRCS+= acknowledgments.sgml 
-SRCS+= admin.sgml 
-SRCS+= applications.sgml 
-SRCS+= commercial.sgml 
-SRCS+= hackers.sgml 
-SRCS+= hardware.sgml 
-SRCS+= includes.sgml 
-SRCS+= install.sgml 
-SRCS+= kernelconfig.sgml 
-SRCS+= misc.sgml 
-SRCS+= network.sgml 
-SRCS+= preface.sgml 
-SRCS+= serial.sgml 
-SRCS+= troubleshoot.sgml 
-SRCS+= x.sgml 
 
 DOC_PREFIX?= ${.CURDIR}/../../..
 
