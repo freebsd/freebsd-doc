@@ -1,6 +1,6 @@
 #!/usr/bin/perl -T
 #
-# Copyright (c) 1996-2002 Wolfram Schneider <wosch@FreeBSD.ORG>, Berlin.
+# Copyright (c) 1996-2003 Wolfram Schneider <wosch@FreeBSD.ORG>
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD$
+# $FreeBSD: www/en/cgi/ports.cgi,v 1.64 2003/03/04 11:56:15 roam Exp $
 #
 # ports.cgi - search engine for FreeBSD ports
 #             	o search for a port by name or description
@@ -49,7 +49,8 @@ sub init_variables {
 
     # URL of ports tree for download 
     $remotePrefixFtpDownload =
-	'ftp://ftp.FreeBSD.org/pub/FreeBSD/branches/-current/ports';
+	'http://cvsweb.FreeBSD.org/ports';
+    $remoteSuffixFtpDownload = '%s.tar.gz?tarball=1';
 
     # where to get -current packages
     local($p) = 'ftp://ftp.FreeBSD.org/pub/FreeBSD/ports/i386';
@@ -335,6 +336,14 @@ sub out {
 
     $path =~ s/^$localPrefix/$remotePrefixFtp/o;
     $pathDownload =~ s/^$localPrefix/$remotePrefixFtpDownload/o;
+    if ($remoteSuffixFtpDownload) {
+       if (substr($remoteSuffixFtpDownload, 0, 2) eq '%s') {
+	   $pathDownload =~ m,([^/]+)+$,;
+	   $pathDownload .= "/$1" . substr($remoteSuffixFtpDownload, 2);
+       } else {
+	   $pathDownload .= $remoteSuffixFtpDownload;
+       }
+    }
     $descfile =~ s/^$localPrefix/$remotePrefixFtp/o;
 
     print qq{<DT><B><A NAME="$version">$version</A></B>\n};
@@ -575,7 +584,7 @@ sub footer {
 <img ALIGN="RIGHT" src="/gifs/powerlogo.gif">
 &copy; 1996-2002 by Wolfram Schneider. All rights reserved.<br>
 };
-    #print q{$FreeBSD$} . "<br>\n";
+    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.64 2003/03/04 11:56:15 roam Exp $} . "<br>\n";
     print qq{Please direct questions about this service to
 <I><A HREF="$mailtoURL">$mailto</A></I><br>\n};
     print qq{General questions about FreeBSD ports should be sent to } .
