@@ -1,5 +1,5 @@
 #
-# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.3 1999/11/01 19:41:02 nik Exp $
+# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.4 1999/12/13 18:14:41 nik Exp $
 #
 # This include file <doc.docbook.mk> handles building and installing of
 # DocBook documentation in the FreeBSD Documentation Project.
@@ -176,7 +176,10 @@ ${DOC}.html-split.tar: HTML.manifest
 	tar cf ${.TARGET} `xargs < HTML.manifest`
 
 ${DOC}.txt: ${DOC}.html
-	lynx -nolist -dump ${.ALLSRC} > ${.TARGET}
+	w3m -S -dump ${.ALLSRC} > ${.TARGET}
+
+${DOC}.pdb: ${DOC}.html
+	iSilo386 -y -d0 -Idef ${DOC}.html ${DOC}.pdb
 
 ${DOC}.rtf: ${SRCS}
 	${JADE} -Vrtf-backend -ioutput.print ${JADEOPTS} -d ${DSLPRINT} -t rtf -o ${.TARGET} ${MASTERDOC}
@@ -208,9 +211,6 @@ ${DOC}.ps: ${DOC}.dvi
 
 ${DOC}.tar: ${SRCS}
 	tar cf ${.TARGET} ${.ALLSRC}
-
-${DOC}.pdb: ${DOC}.txt
-	pilot_makedoc ${DOC}.txt ${DOC}.pdb ${DOC}
 
 # ------------------------------------------------------------------------
 #
