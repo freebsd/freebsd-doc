@@ -1,4 +1,4 @@
-<!-- $Id: ports.inc,v 1.24 1998-12-23 02:54:48 jkoshy Exp $ -->
+<!-- $Id: ports.inc,v 1.25 1998-12-23 03:02:11 jkoshy Exp $ -->
 <p>The FreeBSD Ports and Packages Collection offers a simple way for
 users and administrators to install applications.  Each ``port'' listed here
 contains any patches necessary to make the original application source
@@ -50,7 +50,7 @@ you are still using 2.2.1-release or 2.2.2-release.</p>
 <p>Many of the ports require the X Window System to compile and run.
 We compile and test our ports on <a
 href="http://www.xfree86.org/">XFree86</a>. Their current release is
-3.3.2.  Some ports may not work with older releases.</p>
+3.3.3.  Some ports may not work with older releases.</p>
 
 <p>For more information about new, changed or removed ports/packages,
 or if you wish to search for a specific application to see if it's
