@@ -393,7 +393,7 @@ all: ${_docs}
 # Better approaches to handling this would be most welcome
 
 ${DOC}.xml: ${SRCS}
-	echo '<!DOCTYPE book SYSTEM "/usr/local/share/xml/docbook/4.1.2/docbookx.dtd">' > ${DOC}.xml
+	echo '<!DOCTYPE book SYSTEM "/usr/local/share/xml/docbook/4.2/docbookx.dtd">' > ${DOC}.xml
 	${SX} -xlower -xndata ${MASTERDOC} 2> .sxerr | tail -n +2 >> ${DOC}.xml 
 	@-grep -v 'reference to internal SDATA entity' .sxerr
 
