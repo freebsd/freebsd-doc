@@ -179,8 +179,6 @@ PDFTEX_DEF?=	${DOC_PREFIX}/share/web2c/pdftex.def
 
 HTMLOPTS?=	-ioutput.html -d ${DSLHTML} ${HTMLFLAGS}
 
-HTMLTXTOPTS?=	-ioutput.html -d ${DSLHTML} ${HTMLTXTFLAGS}
-
 PRINTOPTS?=	-ioutput.print -d ${DSLPRINT} ${PRINTFLAGS}
 
 .if defined(BOOK_OUTPUT)
@@ -490,7 +488,7 @@ ${DOC}.html: ${DOC}.xml ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} \
 # Special target to produce HTML with no images in it.
 .if ${STYLESHEET_TYPE} == "dsssl"
 ${DOC}.html-text: ${SRCS} ${INDEX_SGML} ${HTML_INDEX} ${LOCAL_IMAGES_TXT}
-	${JADE} -V nochunks ${HTMLTXTOPTS} \
+	${JADE} -V nochunks ${HTMLOPTS} \
 		${JADEOPTS} -t sgml ${MASTERDOC} > ${.TARGET} || \
 		(${RM} -f ${.TARGET} && false)
 .elif ${STYLESHEET_TYPE} == "xsl"
@@ -915,10 +913,7 @@ PKGDOCPFX!= realpath ${DOC_PREFIX}
 ${PACKAGES}/${.CURDIR:T}.${LANGCODE}.${_curformat}.${PKG_SUFFIX}:
 	${MKDIR} -p ${.OBJDIR}/pkg; \
 	(cd ${.CURDIR} && \
-		${MAKE} FORMATS=${_curformat} \
-			DOCDIR=${.OBJDIR}/pkg \
-			${PKGMAKEFLAGS} \
-			install); \
+		${MAKE} FORMATS=${_curformat} DOCDIR=${.OBJDIR}/pkg install); \
 	PKGSRCDIR=${.OBJDIR}/pkg/${.CURDIR:S/${PKGDOCPFX}\///}; \
 	/bin/ls -1 $$PKGSRCDIR > ${.OBJDIR}/PLIST.${_curformat}; \
 	${PKG_CREATE} -v -f ${.OBJDIR}/PLIST.${_curformat} \
