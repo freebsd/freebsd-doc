@@ -1,7 +1,7 @@
 #
 # The FreeBSD Russian Documentation Project
 #
-# $FreeBSD$
+# $FreeBSD: www/ru/Makefile,v 1.33 2004/02/11 13:59:55 den Exp $
 # $FreeBSDru: frdp/www/ru/Makefile,v 1.34 2004/02/11 12:17:39 den Exp $
 #
 # Original revision: 1.107
@@ -76,9 +76,6 @@ SUBDIR+= tutorials
 #SUBDIR+= cgi
 
 COOKIE=		FAQ handbook
-
-SGMLOPTS+=	-e KOI8-R
-FORMATS=	"html ps koi8-r"
 
 WEBDIR?=	data/ru
 
