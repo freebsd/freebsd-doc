@@ -1,6 +1,6 @@
 # $FreeBSD$
-# $FreeBSDru: frdp/www/ru/news/2001/Makefile,v 1.1 2002/02/15 14:59:38 phantom Exp $
-# Original revision: 1.1
+# $FreeBSDru: frdp/www/ru/news/2001/Makefile,v 1.2 2004/01/22 15:09:52 den Exp $
+# Original revision: 1.2
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -12,8 +12,10 @@
 DATA=		index.html
 CLEANFILES+=	index.html
 
-index.html: ../oldnewsflash.xsl news.xml ../includes.xsl ../../includes.xsl
+index.html: ../oldnewsflash.xsl news.xml\
+			../includes.xsl ../../includes.xsl ${XML_TRANSTABLE}
 	${XSLTPROC} ${XSLTPROCOPTS} -o ${.TARGET} \
+		--param transtable.xml "'${XML_TRANSTABLE}'" \
 		${.CURDIR}/../oldnewsflash.xsl ${.CURDIR}/news.xml
 .if !defined(NO_TIDY)
 	-${TIDY} ${TIDYOPTS} ${.TARGET}

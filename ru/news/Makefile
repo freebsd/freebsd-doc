@@ -1,7 +1,7 @@
 # $FreeBSD$
 # The FreeBSD Russian Documentation Project
-# $FreeBSDru: frdp/www/ru/news/Makefile,v 1.8 2003/09/22 07:54:13 den Exp $
-# Original revision: 1.38
+# $FreeBSDru: frdp/www/ru/news/Makefile,v 1.9 2004/01/22 15:09:47 den Exp $
+# Original revision: 1.39
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -37,19 +37,25 @@ SUBDIR+=	2002
 DATA=		newsflash.html news.rdf press.html
 CLEANFILES+=	newsflash.html news.rdf press.html
 
-newsflash.html: newsflash.xsl news.xml includes.xsl ../includes.xsl
+newsflash.html: newsflash.xsl news.xml\
+			includes.xsl ../includes.xsl ${XML_TRANSTABLE}
 	${XSLTPROC} ${XSLTPROCOPTS} -o ${.TARGET} \
+		--param transtable.xml "'${XML_TRANSTABLE}'" \
 		${.CURDIR}/newsflash.xsl ${.CURDIR}/news.xml
 .if !defined(NO_TIDY)
 	-${TIDY} ${TIDYOPTS} ${.TARGET}
 .endif
 
-news.rdf: news-rdf.xsl news.xml includes.xsl ../includes.xsl
+news.rdf: news-rdf.xsl news.xml\
+		includes.xsl ../includes.xsl ${XML_TRANSTABLE}
 	${XSLTPROC} ${XSLTPROCOPTS} -o ${.TARGET} \
+		--param transtable.xml "'${XML_TRANSTABLE}'" \
 		${.CURDIR}/news-rdf.xsl ${.CURDIR}/news.xml
 
-press.html: press.xsl press.xml includes.xsl ../includes.xsl
+press.html: press.xsl press.xml\
+		includes.xsl ../includes.xsl ${XML_TRANSTABLE}
 	${XSLTPROC} ${XSLTPROCOPTS} -o ${.TARGET} \
+		--param transtable.xml "'${XML_TRANSTABLE}'" \
 		${.CURDIR}/press.xsl ${.CURDIR}/press.xml
 .if !defined(NO_TIDY)
 	-${TIDY} ${TIDYOPTS} ${.TARGET}
