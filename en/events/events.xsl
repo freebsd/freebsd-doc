@@ -24,7 +24,7 @@
      OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
      SUCH DAMAGE.
 
-     $FreeBSD$
+     $FreeBSD: www/en/events/events.xsl,v 1.1 2003/10/12 17:24:21 simon Exp $
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
@@ -77,7 +77,7 @@
 	  can be included.</p>
 
 	<h2 id="upcoming">
-	  <xsl:text>Current/upcoming events:</xsl:text>
+	  <xsl:text>Current/Upcoming Events:</xsl:text>
 	</h2>
 
 	<xsl:for-each select="event[generate-id() =
@@ -118,7 +118,7 @@
 	</xsl:for-each>
 
 	<h2 id="past">
-	  <xsl:text>Past events:</xsl:text>
+	  <xsl:text>Past Events:</xsl:text>
 	</h2>
 
 	<xsl:for-each select="event[generate-id() =
