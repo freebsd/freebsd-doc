@@ -1,5 +1,5 @@
 #!/usr/bin/perl -T
-# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.24 2000/12/28 13:41:45 wosch Exp $
+# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.25 2000/12/29 12:43:12 wosch Exp $
 
 $ENV{'PATH'} = "/bin:/usr/bin:/usr/sbin:/sbin:/usr/local/bin";
 
@@ -136,7 +136,8 @@ while(<Q>) {
 	$syn =~ s/[\t]+/ /g;
 	$origsyn = $syn;
 	$syn = &fixline($syn);
-	print &html_header("Problem Report $cat/$number");
+	print &short_html_header("Problem Report $cat/$number: $syn");
+	print "<h1><font color=\"#660000\">Problem Report $cat/$number</font></h1>\n";
 	print "<strong>$syn</strong><p>\n<dl>\n";
     } else {
 	next if $inhdr;
