@@ -106,6 +106,7 @@ sub do_wais {
 	&open2(WAISOUT, WAISIN, $waisq, "-g");
 	print WAISIN $w_question;
 
+	local(@mylist) = ();
         local($hits, $score, $headline, $lines, $bytes, $type, $date, $file);
         while (<WAISOUT>) {
             /:score\s+(\d+)/ && ($score = $1);
@@ -113,9 +114,64 @@ sub do_wais {
             /:number-of-lines\s+(\d+)/ && ($lines = $1);
             /:number-of-bytes\s+(\d+)/ && ($bytes = $1);
             /:type "(.*)"/ && ($type = $1);
-            /:headline "(.*)"/ && ($headline = $1);         # XXX
-            /:date "(\d+)"/ && ($date = $1, $hits++, &docdone);
+            /:headline "(.*)"/ && ($headline = $1, 
+				   $headline =~ s/Re:\sRe:\s/Re: /);  # XXX
+            /:date "(\d+)"/ && ($date = $1, $hits++, 
+		push(@mylist, join("\t", $date, $headline, $type, 
+				   $bytes, $lines, $file, $score, $hits)));
         }
+
+	if ($in{'sort'} eq "date") {
+	    foreach (reverse sort {$a <=> $b} @mylist) {
+		($date, $headline, $type, $bytes, $lines, 
+		 $file, $score, $hits) = split("\t");
+		&docdone;
+	    }
+	} elsif ($in{'sort'} eq "subject") {
+	    local(@a, @c, $b, $d);
+	    foreach (@mylist) {
+		@a = split("\t");
+		$b = $a[0];
+		# swap date and subject
+		if ($a[1] =~ /(^[^:]+)(Re:.*)/) {
+		    $a[0] = "$2\t$1";
+		} else {
+		    $a[0] = "$a[1]\t.";
+		}
+		$a[1] = $b;
+		push(@c, join("\t", @a));
+	    } 
+	    local($subject, $author);
+	    foreach (sort {$a cmp $b} @c) {
+		($subject, $author, $date, $type, $bytes, 
+		 $lines, $file, $score, $hits) = split("\t");
+		$headline = $author . $subject;
+		&docdone;
+	    }
+
+	} elsif ($in{'sort'} eq "author") {
+	    local(@a, @c, $b);
+	    foreach (@mylist) {
+		@a = split("\t");
+		# swap date and subject
+		$b = $a[0]; $a[0] = $a[1]; $a[1] = $b;
+		push(@c, join("\t", @a));
+	    } 
+	    foreach (sort {$a cmp $b} @c) {
+		($headline, $date, $type, $bytes, 
+		 $lines, $file, $score, $hits) = split("\t");
+		&docdone;
+	    }
+
+	} else {
+	    foreach (@mylist) {
+		($date, $headline, $type, $bytes, 
+		 $lines, $file, $score, $hits) = split("\t");
+		&docdone;
+	    }
+	}
+	#print qq[in: $in{'sort'}\n];
+
         print "</OL>\n";
 
 	print "<p>Didn't get what you expected? ";
