@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/cgi/cgi-style.pl,v 1.15 2000/01/05 15:47:42 phantom Exp $
+# $FreeBSD: www/en/cgi/cgi-style.pl,v 1.16 2000/12/18 04:44:38 knu Exp $
 #
 # Perl routines to encapsulate various elements of HTML page style.
 
@@ -77,5 +77,6 @@ sub get_the_source {
     while(<R>) { print }
     close R;
     exit;
-}            
+}
 
+1;
