@@ -3,8 +3,8 @@
 #    The FreeBSD German Documentation Project
 #
 #    $FreeBSD$
-#    $FreeBSDde: de-docproj/articles/explaining-bsd/Makefile,v 1.1 2004/11/28 21:13:46 jkois Exp $
-#    basiert auf: 1.16
+#    $FreeBSDde: de-docproj/articles/explaining-bsd/Makefile,v 1.2 2005/01/06 20:22:43 mheinen Exp $
+#    basiert auf: 1.6
 #
 # Article: Hintergrundwissen zu BSD
 
