@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/fr/news/newsflash.xsl,v 1.2 2003/07/27 18:43:55 gioria Exp $ -->
+<!-- $FreeBSD: www/fr/news/newsflash.xsl,v 1.3 2003/12/29 17:23:43 stephane Exp $ -->
 
 <!-- 
    The FreeBSD French Documentation Project
@@ -17,6 +17,7 @@
 
 
   <xsl:variable name="base" select="'..'"/>
+  <xsl:variable name="enbase" select="'../..'"/>
   <xsl:variable name="title" select="'Nouvelles FreeBSD'"/>
   <xsl:variable name="date">
     <xsl:value-of select="//cvs:keyword[@name='freebsd']"/>
@@ -51,7 +52,7 @@
 	  des derniers d&#233;veloppements peut devenir une corv&#233;e ! Pour rester &#224; jour,
 	  consultez cette page r&#233;guli&#232;rement. Vous pouvez &#233;galement
 	  vous inscrire &#224; la liste de diffusion
-	  <a href="{$base}/doc/en_US.ISO8859-1/books/handbook/eresources.html#ERESOURCES-MAIL">freebsd-announce</a>.</p>
+	  <a href="{$enbase}/doc/en_US.ISO8859-1/books/handbook/eresources.html#ERESOURCES-MAIL">freebsd-announce</a>.</p>
 
 	     <p>Les projets suivants ont leurs propres pages de nouvelles, vous pouvez les consulter
           pour les mises &#224; jour sp&#233;cifiques &#224; ces projets.</p>

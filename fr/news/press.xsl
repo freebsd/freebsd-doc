@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD$ -->
+<!-- $FreeBSD: www/fr/news/press.xsl,v 1.1 2002/12/08 16:45:35 stephane Exp $ -->
 
 <!-- 
    The FreeBSD French Documentation Project
@@ -17,6 +17,7 @@
 
 
   <xsl:variable name="base" select="'..'"/>
+  <xsl:variable name="enbase" select="'../..'"/>
   <xsl:variable name="title" select="'FreeBSD dans la Presse'"/>
   <xsl:variable name="date">
     <xsl:value-of select="//cvs:keyword[@name='freebsd']"/>
