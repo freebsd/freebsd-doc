@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/gifs/Makefile,v 1.34 2000/12/31 14:56:50 wosch Exp $
+# $FreeBSD: www/en/gifs/Makefile,v 1.35 2000/12/31 16:38:08 wosch Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -50,5 +50,6 @@ DATA+=	wc-bsdtool.gif
 DATA+=	wc-bsdalph-4.2.gif
 DATA+=	wc-freebsd-4.2.gif wc-freebsd-4.2b.gif
 DATA+=	bsdcomp-4.2.gif
+DATA+=	lob-freebsd-4.2.gif
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
