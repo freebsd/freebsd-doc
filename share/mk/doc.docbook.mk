@@ -1,5 +1,5 @@
 #
-# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.40 2001/07/16 15:11:54 nik Exp $
+# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.41 2001/07/21 03:44:27 murray Exp $
 #
 # This include file <doc.docbook.mk> handles building and installing of
 # DocBook documentation in the FreeBSD Documentation Project.
@@ -49,10 +49,17 @@
 #	CSS_SHEET	Full path to a CSS stylesheet suitable for DocBook.
 #			Default is ${DOC_PREFIX}/share/misc/docbook.css
 #
+# Print-output options :
+#
 #       NICE_HEADERS    If defined, customized chapter headers will be created
 #			that you may find more aesthetically pleasing.	Note
 #			that this option only effects print output formats for
 #			Enlish language books.
+#
+#       MIN_SECT_LABELS If defined, do not display the section number for 4th
+#                       and 5th level section titles.  This would change 
+#                       "N.N.N.N Section title" into "Section Title" while
+#                       higher level sections are still printed with numbers.
 #
 # Documents should use the += format to access these.
 #
@@ -91,6 +98,15 @@ JADEOPTS=	${JADEFLAGS} -c ${LANGUAGECATALOG} -c ${FREEBSDCATALOG} -c ${DSSSLCATA
 KNOWN_FORMATS=	html html.tar html-split html-split.tar txt rtf ps pdf tex dvi tar pdb
 
 CSS_SHEET?=	${DOC_PREFIX}/share/misc/docbook.css
+
+PRINTOPTS?=    -ioutput.print
+
+.if defined(NICE_HEADERS)
+PRINTOPTS+=    -ioutput.print.niceheaders
+.endif
+.if defined(MIN_SECT_LABELS)
+PRINTOPTS+=    -V minimal-section-labels
+.endif
 
 # ------------------------------------------------------------------------
 #
@@ -271,7 +287,7 @@ ${.CURDIR:T}.pdb: ${DOC}.pdb
 	ln -f ${DOC}.pdb ${.CURDIR}.pdb
 
 ${DOC}.rtf: ${SRCS}
-	${JADE} -Vrtf-backend -ioutput.print ${JADEOPTS} -d ${DSLPRINT} -t rtf -o ${.TARGET} ${MASTERDOC}
+	${JADE} -Vrtf-backend ${PRINTOPTS} ${JADEOPTS} -d ${DSLPRINT} -t rtf -o ${.TARGET} ${MASTERDOC}
 
 #
 # This sucks, but there's no way round it.  The PS and PDF formats need
@@ -279,17 +295,13 @@ ${DOC}.rtf: ${SRCS}
 # we need to create a different .tex file depending on our eventual output
 # format, which will then lead on to a different .dvi file as well.
 #
-.if defined(NICE_HEADERS)
+
 ${DOC}.tex-ps: ${SRCS} ${IMAGES_EPS} ${INDEX_SGML} ${PRINT_INDEX}
-	${JADE} -Vtex-backend -ioutput.print -ioutput.print.niceheaders ${JADEOPTS} -d ${DSLPRINT} -t tex -o ${.TARGET} ${MASTERDOC}
-.else
-${DOC}.tex-ps: ${SRCS} ${IMAGES_EPS} ${INDEX_SGML} ${PRINT_INDEX}
-	${JADE} -Vtex-backend -ioutput.print ${JADEOPTS} -d ${DSLPRINT} -t tex -o ${.TARGET} ${MASTERDOC}
-.endif
+	${JADE} -Vtex-backend ${PRINTOPTS} ${JADEOPTS} -d ${DSLPRINT} -t tex -o ${.TARGET} ${MASTERDOC}
 
 ${DOC}.tex-pdf: ${SRCS} ${IMAGES_PDF} ${INDEX_SGML} ${PRINT_INDEX}
 	cp ${DOC_PREFIX}/share/web2c/pdftex.def ${.TARGET}
-	${JADE} -Vtex-backend -ioutput.print -ioutput.print.pdf ${JADEOPTS} -d ${DSLPRINT} -t tex -o /dev/stdout ${MASTERDOC} >> ${.TARGET}
+	${JADE} -Vtex-backend ${PRINTOPTS} -ioutput.print.pdf ${JADEOPTS} -d ${DSLPRINT} -t tex -o /dev/stdout ${MASTERDOC} >> ${.TARGET}
 
 ${DOC}.dvi: ${DOC}.tex-ps
 	@echo "==> TeX pass 1/3"
