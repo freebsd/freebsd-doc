@@ -18,7 +18,6 @@
 	    (literal "¡°")
 	    (process-children)
 	    (literal "¡±")))
-      (define %html-header-tags% '(("META" ("HTTP-EQUIV" "Content-Type") ("CONTENT" "text/html; charset=GB2312")))) 
     </style-specification-body>
   </style-specification>
 

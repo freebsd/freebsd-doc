@@ -45,8 +45,6 @@
                   (literal "doc@FreeBSD.org"))
 	        (literal ">.")))))
       ]]>
-
-       (define %html-header-tags% '(("META" ("HTTP-EQUIV" "Content-Type") ("CONTENT" "text/html; charset=iso-8859-2")))) 
     </style-specification-body>
   </style-specification>
 

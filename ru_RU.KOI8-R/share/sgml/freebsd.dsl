@@ -30,8 +30,6 @@
         (define %gentext-language% "ru")
       ]]>
 
-      (define %html-header-tags% '(("META" ("HTTP-EQUIV" "Content-Type") ("CONTENT" "text/html; charset=koi8-r")))) 
-
         <!-- Generate links to HTML man pages -->
         (define %refentry-xref-link% #t)
 
