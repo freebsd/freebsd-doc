@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/index.xsl,v 1.94 2004/02/15 18:42:48 wilko Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.95 2004/02/15 18:53:41 wilko Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   
@@ -6,7 +6,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.94 2004/02/15 18:42:48 wilko Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.95 2004/02/15 18:53:41 wilko Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <!-- these params should be externally bound. The values
@@ -205,7 +205,7 @@
 		to FreeBSD</a> article for more information.</p>
 
 		<p>Even if you are not a programmer, there are other ways to
- 		contribute to FreeBSD. The FreeBSD Foundation is a
+ 		contribute to FreeBSD. The <a href="http://www.FreeBSDFoundation.org">FreeBSD Foundation</a> is a
 		non-profit organization for which direct contributions
 		are fully tax deductible.  Please contact
 		<a href="mailto:bod@FreeBSDFoundation.org">bod@FreeBSDFoundation.org</a>
