@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/ports/Makefile,v 1.26 1999/09/19 09:39:23 wosch Exp $
+# $FreeBSD: www/en/ports/Makefile,v 1.27 2000/02/28 12:46:46 phantom Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -55,12 +55,12 @@ Makefile.gen: index.sgml .NOTMAIN
 
 index.sgml: ${INDEX} ${Y2K} categories packages.exists portindex ports.inc .NOTMAIN
 	rm -f *.sgml
-	${PORTINDEX} ${INDEX} ${Y2K}
+	${PORTINDEX} ${INDEX} ${Y2K} ${.CURDIR}
 
 install: all
 
 all install clean:
-	${MAKE}  ${MAKEFLAGS} -f Makefile.inc0 ${.TARGET}
+	(cd ${.CURDIR} && ${MAKE}  ${MAKEFLAGS} -f Makefile.inc0 ${.TARGET})
 
 
 .include "../web.mk"

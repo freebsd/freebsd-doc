@@ -1,5 +1,5 @@
 # bsd.web.mk
-# $FreeBSD: www/en/web.mk,v 1.29 2000/04/23 14:31:21 phantom Exp $
+# $FreeBSD: www/en/web.mk,v 1.30 2000/04/29 07:50:27 kuriyama Exp $
 
 #
 # Build and install a web site.
@@ -77,7 +77,7 @@ GENDOCS+=	${REVFILES}
 SGMLNORM=	sgmlnorm
 PREFIX?=	/usr/local
 CATALOG?=	${PREFIX}/share/sgml/html/catalog
-SGMLNORMFLAGS=	-d ${SGMLNORMOPTS} -c ${CATALOG}
+SGMLNORMFLAGS=	-d ${SGMLNORMOPTS} -c ${CATALOG} -D ${.CURDIR}
 GENDOCS+=	${DOCS:M*.sgml:S/.sgml$/.html/g}
 ORPHANS:=	${ORPHANS:N*.sgml}
 DATESUBST=	's/<!ENTITY date[ \t]*"$$Free[B]SD. .* \(.* .*\) .* .* $$">/<!ENTITY date	"Last modified: \1">/'
@@ -229,4 +229,5 @@ PARAMS+=	SGMLOPTS="${SGMLOPTS}"
 
 .endif
 
+.include <bsd.obj.mk>
 # THE END

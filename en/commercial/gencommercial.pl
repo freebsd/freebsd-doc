@@ -27,7 +27,7 @@
 # This program is made available to the general public under
 # the "BSD-style copyright" terms of agreement.
 #
-# $FreeBSD: www/en/commercial/gencommercial.pl,v 1.5 1999/12/17 14:24:14 phantom Exp $
+# $FreeBSD: www/en/commercial/gencommercial.pl,v 1.6 2000/04/04 09:23:41 kuriyama Exp $
 
 #######################################################################
 ## Configuration Section
@@ -36,7 +36,7 @@
 # The $description_file contains the definitions for each Category
 # and Sub-category.
 
-$description_file = "./commercial.desc";
+$description_file = "commercial.desc";
 
 # If you want to change the output file naming convention,
 # modify the two lines below.
@@ -60,18 +60,20 @@ require 5.001;
 # Parse the command line 
 
 sub usage_exit {
-   print STDERR "Usage: gencommercial.pl [-ac] category\n";
+   print STDERR "Usage: gencommercial.pl [-ac] [-s directory] category\n";
    exit (1);
 }
 
 use Getopt::Long;
  
 $good_result = GetOptions ("alphabetical" => \$opt_alpha, 
-                           "categorical"  => \$opt_cat);
+                           "categorical"  => \$opt_cat,
+                           "sourcedir=s"    => \$opt_srcdir);
 &usage_exit() if (not $good_result);
 &usage_exit() if (@ARGV != 1);
 $opt_alpha = 1 if (! $opt_alpha && ! $opt_cat );   # -a is default;
 $category = $ARGV[0];
+$srcdir = $opt_srcdir || ".";
 
 #######################################################################
 # Now, we parse the description file.
@@ -92,9 +94,9 @@ $category = $ARGV[0];
 #
 # A '#' at the *beginning* of a line marks a comment. 
 
-if (open (DESC, "< $description_file") == 0)
+if (open (DESC, "< $srcdir/$description_file") == 0)
 {
-   print "ERROR: Unable to open $description_file file.\n";
+   print "ERROR: Unable to open $srcdir/$description_file file.\n";
    print "ERROR: $!. Exiting.\n";
    exit 1;
 }
@@ -193,9 +195,9 @@ else
 # In this version, the CATEGORY is actually determined by the name
 # of the .raw file, so it is not used.
 
-if (open (RAW, "< ${category}.raw") == 0)
+if (open (RAW, "< ${srcdir}/${category}.raw") == 0)
 {
-   print "ERROR: Unable to open ${category}.raw file.\n";
+   print "ERROR: Unable to open ${srcdir}/${category}.raw file.\n";
    print "ERROR: $!. Exiting.\n";
    exit 1;
 }
