@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: query-pr-summary.cgi,v 1.13 1997-10-27 05:10:43 fenner Exp $
+# $Id: query-pr-summary.cgi,v 1.14 1998-04-12 18:54:36 phk Exp $
 
 $html_mode     = 1 if $ENV{'DOCUMENT_ROOT'};
 $self_ref      = $ENV{'SCRIPT_NAME'};
@@ -130,10 +130,9 @@ ${dd_x}patch or a fix has been committed.  The PR remains in this state
 ${dd_x}pending a response from the originator.
 
 ${dt}${st}s - suspended${st_e}
-${dd}Work on the problem has been postponed.  This happens if a
-${dd_x}timely solution is not possible or is not cost-effective at
-${dd_x}the present time.  The PR continues to exist, though a solution
-${dd_x}is not being actively sought.  If the problem cannot be solved at all,
+${dd}The problem is not being worked on.  This is a prime candidate
+${dd_x}for somebody who is looking for a project to do.
+${dd_x}If the problem cannot be solved at all,
 ${dd_x}it will be closed, rather than suspended.
 
 ${dt}${st}c - closed${st_e}
