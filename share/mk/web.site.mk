@@ -1,5 +1,5 @@
 # bsd.web.mk
-# $Id: web.site.mk,v 1.3 1996-09-25 16:00:32 jfieber Exp $
+# $Id: web.site.mk,v 1.4 1996-09-28 23:18:10 jfieber Exp $
 
 #
 # Build and install a web site.
@@ -197,9 +197,7 @@ realinstall2:
 	for entry in ${DOCSUBDIR}; do \
 		(cd ${DOCINSTALLDIR}/$$entry; \
 		tar czf $$entry-html.tar.gz $${entry}.html $${entry}_toc.html \
-			$$entry[0-9]*.html; \
-		${BATCHSSI} $$entry ${HDR} ${FTR} \
-			$${entry}.html $${entry}_toc.html $$entry[0-9]*.html); \
+			$$entry[0-9]*.html ) \
 	done
 .endif
 
@@ -240,16 +238,7 @@ _PROGSUBDIR: .USE
 FORMATS?=	"html ascii latin1 ps"
 PARAMS=		DESTDIR=${DESTDIR} DOCDIR=${WEBBASE}/${WEBDIR}
 PARAMS+=	DOCOWN=${WEBOWN} DOCGRP=${WEBGRP}
-PARAMS+=	SGMLOPTS="-ssi -links" FORMATS=${FORMATS} COPY="${COPY}"
-#DOCDIR=		${WEBBASE}/${WEBDIR}
-#DOCOWN=		${WEBOWN}
-#DOCGRP=		${WEBGRP}
-#MANMODE=	${WEBMODE}
-#PARAMS+=	MANGRP=${CGIGRP} MANMODE=${MANMODE} MANOWN=${CGIOWN}
-
-BATCHSSI=	batchssi
-HDR=	${.CURDIR}/doc.hdr
-FTR=	${.CURDIR}/doc.ftr
+PARAMS+=	SGMLOPTS="-links" FORMATS=${FORMATS} COPY="${COPY}"
 
 .endif
 
