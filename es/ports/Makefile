@@ -1,4 +1,4 @@
-# $FreeBSD: www/es/ports/Makefile,v 1.7 1999/11/15 20:37:56 jesusr Exp $
+# $FreeBSD: www/es/ports/Makefile,v 1.8 2000/11/29 23:56:58 kuriyama Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -13,17 +13,9 @@
 .if defined(NOPORTSCVS)
 ${INDEX}: $${PORTSBASE}/${PINDEX}
 	cp ${PORTSBASE}/${PINDEX} ${INDEX}
-
-${Y2K}: $${PORTSBASE}/${PY2K}
-	cp ${PORTSBASE}/${PY2K} ${Y2K}
-
 .else
 ${INDEX}: ${cvsindex}
 	cvs -QR co -p ${PINDEX} > ${INDEX}
-
-${Y2K}: ${cvsy2k}
-	cvs -QR co -p ${PY2K} > ${Y2K}
-
 .endif
 
 # build the list of available packages only on the 
@@ -33,7 +25,7 @@ hostname!= hostname
 .if defined(NOPORTSCVS)
 packages.exists:
 .else
-packages.exists: ${cvsindex} ${cvsy2k}
+packages.exists: ${cvsindex}
 .endif
 .if ${hostname} == "hub.freebsd.org" || ${hostname} == "freefall.freebsd.org"
 .if  exists(${.CURDIR}/../../en/ports/packages.exists)
@@ -48,9 +40,9 @@ packages.exists: ${cvsindex} ${cvsy2k}
 Makefile.gen: index.sgml .NOTMAIN
 	echo DOCS= *.sgml > Makefile.gen
 
-index.sgml: ${INDEX} ${Y2K} packages.exists portindex ports.inc .NOTMAIN
+index.sgml: ${INDEX} packages.exists portindex ports.inc .NOTMAIN
 	rm -f *.sgml
-	${PORTINDEX} ${INDEX} ${Y2K} ${.CURDIR}
+	${PORTINDEX} ${INDEX} ${.CURDIR}
 
 install: all
 
