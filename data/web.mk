@@ -1,5 +1,5 @@
 # bsd.web.mk
-# $Id: web.mk,v 1.4 1996-09-28 23:18:10 jfieber Exp $
+# $Id: web.mk,v 1.5 1996-10-01 23:41:29 jfieber Exp $
 
 #
 # Build and install a web site.
@@ -197,7 +197,8 @@ realinstall2:
 	for entry in ${DOCSUBDIR}; do \
 		(cd ${DOCINSTALLDIR}/$$entry; \
 		tar czf $$entry-html.tar.gz $${entry}.html $${entry}_toc.html \
-			$$entry[0-9]*.html ) \
+			$$entry[0-9]*.html; \
+		ln -fs $${entry}.html index.html ) \
 	done
 .endif
 
@@ -235,7 +236,7 @@ _PROGSUBDIR: .USE
 
 .if defined (DOCSUBDIR) && !empty(DOCSUBDIR)
 
-FORMATS?=	"html ascii latin1 ps"
+FORMATS?=	"html ps latin1 ascii"
 PARAMS=		DESTDIR=${DESTDIR} DOCDIR=${WEBBASE}/${WEBDIR}
 PARAMS+=	DOCOWN=${WEBOWN} DOCGRP=${WEBGRP}
 PARAMS+=	SGMLOPTS="-links" FORMATS=${FORMATS} COPY="${COPY}"
