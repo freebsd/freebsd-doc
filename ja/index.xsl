@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
 
-<!-- $FreeBSD: www/ja/index.xsl,v 1.12 2002/03/02 06:34:55 kuriyama Exp $ -->
+<!-- $FreeBSD: www/ja/index.xsl,v 1.13 2002/03/14 11:15:35 kuriyama Exp $ -->
 <!-- Original revision: 1.21 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -10,7 +10,7 @@
 
   <xsl:variable name="base" select="'.'"/>
   <xsl:variable name="enbase" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/ja/index.xsl,v 1.12 2002/03/02 06:34:55 kuriyama Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/ja/index.xsl,v 1.13 2002/03/14 11:15:35 kuriyama Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <xsl:output type="html" encoding="EUC-JP"
@@ -306,10 +306,9 @@
 		変更は、FreeBSD の文書に対するものでも、FreeBSD
 		ソースコードに対するものでも構いません。
 		詳しくは、FreeBSD ハンドブックの
-		<!-- XXX: kuriyama: point to doc/ja_JP.eucJP/ar*/ -->
-		<a href="http://www.FreeBSD.org/ja/handbook/contrib.html">
+		<a href="{$enbase}/doc/ja_JP.eucJP/articles/contributing/index.html">
 		  FreeBSD への貢献</a>
-		(<a href="{$base}/doc/en_US.ISO8859-1/articles/contributing/index.html">原文</a>)
+		(<a href="{$enbase}/doc/en_US.ISO8859-1/articles/contributing/index.html">原文</a>)
 		というセクションをご覧ください。</p>
 
 	      <p>もしあなたがプログラマでないとしても、いくつもの FreeBSD
