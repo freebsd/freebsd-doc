@@ -1,26 +1,31 @@
 # $FreeBSD$
-# Original revision: 1.18
+# Original revision: 1.22
 
-#SUBDIR = committers-guide
+SUBDIR =
+#SUBDIR+= committers-guide
 #SUBDIR+= console-server
-SUBDIR = contributors
+SUBDIR+= contributing
+SUBDIR+= contributors
+#SUBDIR+= cvsup-advanced
 SUBDIR+= dialup-firewall
 SUBDIR+= diskless-x
 #SUBDIR+= explaining-bsd
 #SUBDIR+= filtering-bridges
-#SUBDIR+= freebsd-questions
 SUBDIR+= fonts
 #SUBDIR+= formatting-media
+#SUBDIR+= freebsd-questions
 SUBDIR+= ipsec-must
 #SUBDIR+= laptop
 #SUBDIR+= mh
 SUBDIR+= multi-os
 #SUBDIR+= new-users
+#SUBDIR+= problem-reports
 #SUBDIR+= programming-tools
 #SUBDIR+= pxe
 #SUBDIR+= serial-uart
 #SUBDIR+= solid-state
 #SUBDIR+= storage-devices
+#SUBDIR+= vinum
 #SUBDIR+= vm-design
 SUBDIR+= zip-drive
 

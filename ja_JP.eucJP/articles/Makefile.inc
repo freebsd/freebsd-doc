@@ -1,7 +1,7 @@
 # 
-# $FreeBSD: doc/ja_JP.eucJP/articles/Makefile.inc,v 1.1.1.1 2000/01/06 07:22:40 kuriyama Exp $
+# $FreeBSD$
 #
-# Original revision: 1.3
+# Original revision: 1.4
 
 TIDYFLAGS=      -raw
 
