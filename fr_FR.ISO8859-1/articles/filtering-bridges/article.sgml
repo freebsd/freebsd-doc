@@ -1,0 +1,483 @@
+<!--
+	The FreeBSD Project - http://www.FreeBSD.org
+	The FreeBSD French Documentation Project
+
+	$FreeBSD$
+	$Id: article.sgml,v 1.1 2002-06-08 09:55:07 gioria Exp $
+	Original revision: 1.10
+-->
+<!DOCTYPE article PUBLIC "-//FreeBSD//DTD DocBook V4.1-Based Extension//EN" [
+<!ENTITY % man PUBLIC "-//FreeBSD//ENTITIES DocBook Manual Page Entities//EN">
+%man;
+<!ENTITY % abstract PUBLIC "-//FreeBSD//ENTITIES DocBook Abstract Entities//FR"> %abstract;
+<!ENTITY % artheader PUBLIC "-//FreeBSD//ENTITIES DocBook ArtHeader Entities//FR"> %artheader;
+<!ENTITY % translators PUBLIC "-//FreeBSD//ENTITIES DocBook Translator Entities//FR"> %translators;
+<!ENTITY % man PUBLIC "-//FreeBSD//ENTITIES DocBook Manual Page Entities//EN">
+%man;
+]>
+
+<article>
+  <articleinfo>
+    <title>Ponts filtrants</title>
+
+    <authorgroup>
+      <author>
+        <firstname>Alex</firstname>
+        <surname>Dupre</surname>
+        <affiliation>
+          <address><email>sysadmin@alexdupre.com</email></address>
+        </affiliation>
+      </author>
+    </authorgroup>
+
+    <pubdate>$FreeBSD$</pubdate>
+
+    <abstract>
+      <para>Souvent il est utile de diviser un r&eacute;seau physique (comme un
+	r&eacute;seau Ethernet) en deux segments s&eacute;par&eacute;s sans 
+	avoir a cr&eacute;er des sous-r&eacute;seaux, et utiliser de routeur 
+	pour les relier ensemble.  Le dispositif qui connecte les deux 
+	r&eacute;seaux de cette mani&egrave;re est
+	appel&eacute; un pont.  Un syst&egrave;me FreeBSD avec deux cartes 
+	r&eacute;seau est suffisant pour jouer le r&ocirc;le d'un pont.</para>
+
+      <para>Un pont fonctionne en scannant les adresses au niveau
+	<acronym>MAC</acronym> (adresses Ethernet) des cartes connect&eacute;es
+	&agrave; chacune de ses interfaces r&eacute;seau et puis 
+	transf&egrave;re le trafic entre les deux r&eacute;seaux si la 
+	source et la destination sont situ&eacute;s sur un segment 
+	diff&eacute;rent.  Sous beaucoup de points de vue
+	un pont est similaire &agrave; un commutateur (switch) Ethernet avec
+	uniquement deux ports.</para>
+	&abstract.license;
+	&abstract.disclaimer;
+	&trans.a.fonvieille;
+    </abstract>
+  </articleinfo>
+
+  <sect1 id="filtering-bridges-why">
+    <title>Pourquoi utiliser un pont filtrant?</title>
+
+    <para>De plus en plus fr&eacute;quemment, gr&acirc;ce &agrave; la 
+      baisse des co&ucirc;ts des connexions Internet haut d&eacute;bit 
+      (xDSL) et aussi en raison de la r&eacute;duction des adresses 
+      IPv4 disponibles, beaucoup de compagnies
+      sont connect&eacute;es &agrave; l'Internet 24 heures sur 24 et 
+      avec peu (parfois m&ecirc;me pas une puissance de 2) d'adresses IP.  
+      Dans ces situations il est souvent d&eacute;sirable d'avoir un 
+      coupe-feu qui filtre le trafic
+      entrant et sortant depuis et vers l'Internet, mais la solution
+      d'un filtrage de paquet bas&eacute; sur un routeur peut ne pas 
+      &ecirc;tre applicable, soit en raison de probl&egrave;mes de 
+      sous-r&eacute;seau, le routeur appartient au fournisseur 
+      d'acc&egrave;s (<acronym>ISP</acronym>), ou
+      parce qu'il ne supporte pas une telle fonction.  Dans ces
+      sc&eacute;narios l'utilisation d'un pont filtrant est fortement
+      conseill&eacute;e.</para>
+
+    <para>Un coupe-feu bas&eacute; sur un pont peut &ecirc;tre 
+      configur&eacute; et ins&eacute;r&eacute;
+      entre le routeur xDSL et votre concentrateur/commutateur Ethernet
+      sans aucun probl&egrave;me d'adresse d'IP.</para>
+  </sect1>
+
+  <sect1 id="filtering-bridges-how">
+    <title>Comment l'installer</title>
+
+    <para>Ajouter les fonctions de pont &agrave; un syst&egrave;me 
+      FreeBSD n'est pas difficile.  Depuis la 4.5-RELEASE il est possible 
+      de charger de telles fonctionnalit&eacute;s sous forme de module 
+      au lieu d'avoir &agrave; recompiler le noyau, simplifiant 
+      &eacute;norm&eacute;ment la proc&eacute;dure.  Dans
+      les sous-sections suivantes j'expliquerai les deux m&eacute;thodes
+      d'installation.</para>
+
+    <important>
+      <para><emphasis>Ne pas</emphasis> suivre les deux m&eacute;thodes: une
+	proc&eacute;dure <emphasis>exclue</emphasis> l'autre.  Choisissez la
+	meilleure en fonction de vos besoins et capacit&eacute;s.</para>
+    </important>
+
+    <para>Avant d'aller plus loin, soyez s&ucirc;r de disposer deux cartes
+      Ethernet qui supportent le mode promiscuous pour la r&eacute;ception et
+      la transmission, comme elles doivent &ecirc;tre capable d'envoyer des
+      paquets Ethernet avec n'importe quelle adresse, et non pas juste
+      pour la leur.  De plus, pour avoir de bonnes performances, les
+      cartes devront &ecirc;tre capable contr&ocirc;ler le bus
+      PCI (PCI bus mastering).  Les meilleurs choix sont toujours
+      l'Intel EtherExpress Pro, suivie de la s&eacute;rie 3c9xx de chez 3Com.
+      Pour simplifier la configuration il peut &ecirc;tre utile d'avoir deux
+      cartes de diff&eacute;rents constructeurs (utilisant un pilote de
+      p&eacute;riph&eacute;rique diff&eacute;rent) afin de distinguer 
+      clairement quelle interface est connect&eacute;e au routeur et 
+      quelle autre est connect&eacute;e au r&eacute;seau.</para>
+
+    <sect2 id="filtering-bridges-kernel">
+      <title>Configuration du noyau</title>
+
+      <para>Donc vous avez d&eacute;cid&eacute; d'utiliser la bonne 
+	vieille m&eacute;thode d'installation.  Pour commencer, vous 
+	devez ajouter les lignes suivantes &agrave; votre fichier de 
+	configuration du noyau:</para>
+
+      <programlisting>options BRIDGE
+options IPFIREWALL
+options IPFIREWALL_VERBOSE</programlisting>
+
+      <para>La premi&egrave;re ligne est pour compiler le support du pont, la
+	seconde est le coupe-feu et la troisi&egrave;me sont les fonctions de
+	traces du coupe-feu.</para>
+
+      <para>Maintenant il est n&eacute;cessaire de compiler et d'installer le
+	nouveau noyau.  Vous pourrez trouver des instructions 
+	d&eacute;taill&eacute;e dans la section <ulink 
+	url="../../books/handbook/kernelconfig-building.html">Compiler
+	et installer un noyau sur mesures</ulink> du Manuel de
+	FreeBSD.</para>
+    </sect2>
+
+    <sect2 id="filtering-bridges-modules">
+      <title>Le chargement de modules</title>
+
+      <para>Si vous avez choisi d'employer cette m&eacute;thode nouvelle et 
+	plus simple; la seule chose &agrave; faire maintenant est d'ajouter la
+	ligne suivante au fichier 
+	<filename>/boot/loader.conf</filename>:</para>
+
+      <programlisting>bridge_load="YES"</programlisting>
+
+      <para>De cette fa&ccedil;on, durant le d&eacute;marrage du 
+	syst&egrave;me le module <filename>bridge.ko</filename> sera 
+	charg&eacute; avec le noyau.  Il n'est pas n&eacute;cessaire 
+	de rajouter une ligne pour le module 
+	<filename>ipfw.ko</filename>, &eacute;tant donn&eacute; qu'il 
+	sera charg&eacute; automatiquement apr&egrave;s 
+	l'ex&eacute;cution des &eacute;tapes pr&eacute;sent&eacute;es dans la
+	section suivante.</para>
+    </sect2>
+  </sect1>
+
+  <sect1 id="filtering-bridges-finalprep">
+    <title>Derni&egrave;re pr&eacute;paration</title>
+
+    <para>Avant de red&eacute;marrer afin de charger le nouveau noyau ou les
+      modules n&eacute;cessaires (selon la m&eacute;thode d'installation 
+      pr&eacute;c&eacute;demment retenue), vous devez faire quelques 
+      modifications dans le fichier
+      de configuration <filename>/etc/rc.conf</filename>.  La r&egrave;gle de
+      d&eacute;faut du coupe-feu est de rejeter tous les paquets IP.  Au
+      d&eacute;part nous configurerons un coupe-feu &ldquo;ouvert&rdquo;, afin
+      de v&eacute;rifier son fonctionnement sans probl&egrave;me relatif au 
+      filtrage de paquet (dans le cas o&ugrave; vous faite cela &agrave; 
+      distance, une telle configuration vous &eacute;vitera de rester 
+      isol&eacute; du r&eacute;seau).  Ajoutez les lignes suivantes dans
+      <filename>/etc/rc.conf</filename>:</para>
+
+    <programlisting>firewall_enable="YES"
+firewall_type="open"
+firewall_quiet="YES"
+firewall_logging="YES"</programlisting>
+
+    <para>La premi&egrave;re ligne activera le coupe-feu (et chargera le module
+      <filename>ipfw.ko</filename> s'il n'est pas compil&eacute; dans le
+      noyau), la seconde le configurera dans le mode
+      &ldquo;ouvert&rdquo; (comme expliqu&eacute; dans
+      <filename>/etc/rc.firewall</filename>), la troisi&egrave;me ligne rendra
+      le chargement des r&egrave;gles silencieux (sans affichage) et la
+      quatri&egrave;me activera le support de trace d'activit&eacute; 
+      du coupe-feu.</para>
+
+    <para>Au sujet de la configuration des interfaces r&eacute;seau, la 
+      m&eacute;thode la plus utilis&eacute;e est d'assigner une adresse 
+      IP &agrave; une seul des cartes r&eacute;seau, mais le pont 
+      fonctionnera &agrave; l'identique si les deux
+      interfaces ou aucune n'ont d'adresse IP configur&eacute;e.  Dans le
+      dernier cas (sans adresse IP) la machine faisant office de pont
+      sera toujours cach&eacute;e et inaccessible depuis le r&eacute;seau: 
+      pour la configurer, vous devez vous attacher depuis la console ou 
+      &agrave; travers une troisi&egrave;me interface r&eacute;seau 
+      s&eacute;par&eacute;e du pont.  Parfois, durant
+      le d&eacute;marrage du syst&egrave;me, certains programmes ont 
+      besoin d'acc&eacute;der au r&eacute;seau, par exemple pour la 
+      r&eacute;solution de noms: dans ce cas il
+      est n&eacute;cessaire d'assigner une adresse IP &agrave; 
+      l'interface externe (celle connect&eacute;e &agrave; l'Internet 
+      o&ugrave; le serveur <acronym>DNS</acronym>
+      r&eacute;side), puisque le pont sera activ&eacute; &agrave; la 
+      fin de la proc&eacute;dure de d&eacute;marrage.  Cela signifie que 
+      l'interface <devicename>fxp0</devicename> (dans notre cas) doit 
+      &ecirc;tre mentionn&eacute;e dans la section concernant ifconfig 
+      du fichier <filename>/etc/rc.conf</filename>, mais pas
+      <devicename>xl0</devicename>.  Assigner une adresse IP aux deux
+      cartes r&eacute;seau n'a pas beaucoup de sens, &agrave; moins que, 
+      durant la proc&eacute;dure de d&eacute;marrage, des applications 
+      devront acc&eacute;der &agrave; des
+      services sur les deux segments Ethernet.</para>
+
+    <para>Il y a une autre chose importante &agrave; savoir.  Quand on utilise
+      l'IP sur Ethernet, il y a en fait deux protocoles Ethernet
+      utilis&eacute;s: l'un est l'IP, l'autre est l'<acronym>ARP</acronym>.
+      <acronym>ARP</acronym> effectue la conversion de l'adresse IP d'un
+      h&ocirc;te en son adresse Ethernet (couche <acronym>MAC</acronym>).
+      Afin d'autoriser la communication entre deux h&ocirc;tes 
+      s&eacute;par&eacute;s par le
+      pont, il est n&eacute;cessaire que le pont transmette les paquets
+      <acronym>ARP</acronym>.  Un tel protocole n'est pas inclut dans la
+      couche IP, puisque qu'il n'appara&icirc;t qu'avec l'utilisation de l'IP
+      sur Ethernet.  Le coupe-feu de FreeBSD filtre exclusivement la
+      couche IP et donc tous les paquets non-IP (<acronym>ARP</acronym>
+      compris) seront transmis sans &ecirc;tre filtr&eacute;s, m&ecirc;me 
+      si le coupe-feu est configur&eacute; pour ne rien laisser passer.</para>
+
+    <para>Il est maintenant temps de red&eacute;marrer le syst&egrave;me et de
+      l'utiliser comme auparavant: il y aura de nouveau messages
+      concernant le pont et le coupe-feu, mais le pont ne sera pas
+      activ&eacute; et le coupe-feu, &eacute;tant en mode &ldquo;ouvert&rdquo;,
+      n'interdira aucune op&eacute;ration.</para>
+
+    <para>Si il y a un quelconque probl&egrave;me, vous devriez le corriger
+      maintenant avant de continuer.</para>
+  </sect1>
+
+  <sect1 id="filtering-bridges-enabling">
+    <title>Activer le pont</title>
+
+    <para>A ce point, pour activer le pont, vous devez ex&eacute;cuter les
+      commandes suivantes (en pensant bien de remplacer les noms des deux
+      interfaces r&eacute;seau <devicename>fxp0</devicename> et
+      <devicename>xl0</devicename> avec les v&ocirc;tres):</para>
+
+    <screen>&prompt.root; <userinput>sysctl net.link.ether.bridge_cfg=fxp0:0,xl0:0</userinput>
+&prompt.root; <userinput>sysctl net.link.ether.bridge_ipfw=1</userinput>
+&prompt.root; <userinput>sysctl net.link.ether.bridge=1</userinput></screen>
+
+    <para>La premi&egrave;re ligne sp&eacute;cifie quelles interfaces 
+      devront &ecirc;tre activ&eacute;es par le pont, la seconde 
+      activera le coupe-feu sur le pont
+      et enfin la troisi&egrave;me activera le pont.</para>
+
+    <para>A ce moment l&agrave;, vous devriez &ecirc;tre en mesure 
+      d'ins&eacute;rer la machine entre deux ensembles d'h&ocirc;tes 
+      sans compromettre de capacit&eacute;s de communication entre eux.  
+      Ensuite, l'&eacute;tape suivante est d'ajouter les parties
+      <literal>net.link.ether.<replaceable>[bla]</replaceable>=<replaceable>[bla]</replaceable></literal>
+      de ces lignes dans le fichier
+      <filename>/etc/sysctl.conf</filename> afin de les ex&eacute;cuter au
+      d&eacute;marrage.</para>
+  </sect1>
+
+  <sect1 id="filtering-bridges-ipfirewall">
+    <title>Configurer le coupe-feu</title>
+
+    <para>Il est maintenant temps de cr&eacute;er votre propre fichier de 
+      r&egrave;gle personnalis&eacute; pour le coupe-feu, afin de 
+      s&eacute;curiser le r&eacute;seau
+      interne.  Il y aura quelques complication &agrave; faire cela parce que
+      toute les fonctionnalit&eacute;s du coupe-feu ne sont pas disponibles sur
+      un pont.  En outre, il y a une diff&eacute;rence entre les paquets qui
+      sont en cours de transmission et les paquets qui sont re&ccedil;us par la
+      machine locale.  En g&eacute;n&eacute;ral, les paquets entrants 
+      traversent le coupe-feu une seule fois, et pas deux comme c'est 
+      normalement le cas; en fait ils sont filtr&eacute;s &agrave; la 
+      r&eacute;ception, aussi les r&egrave;gles qui
+      utilisent &ldquo;out&rdquo; ou &ldquo;xmit&rdquo; n'agirons
+      jamais.  Personnellement, j'utilise &ldquo;in via&rdquo; qui est
+      une ancienne syntaxe, mais qui a un sens quand vous la lisez.  Une
+      autre limitation est que vous &ecirc;tes r&eacute;duit &agrave; 
+      l'utilisation seulement des commandes &ldquo;pass&rdquo; ou 
+      &ldquo;drop&rdquo; pour les paquets filtr&eacute;s par un pont.  
+      Les choses sophistiqu&eacute;es comme &ldquo;divert&rdquo;, 
+      &ldquo;forward&rdquo; ou &ldquo;reject&rdquo; ne sont pas 
+      disponibles.  De telles options peuvent toujours &ecirc;tre 
+      utilis&eacute;es, mais uniquement sur le trafic &agrave;
+      destination ou depuis le pont lui-m&ecirc;me (s'il poss&egrave;de 
+      une adresse IP).</para>
+
+    <para>Une nouveaut&eacute; de FreeBSD 4.0, est le concept de filtrage avec
+      gestion des &eacute;tats (stateful).  C'est une grande 
+      am&eacute;lioration pour le trafic <acronym>UDP</acronym>, qui 
+      typiquement est une requ&ecirc;te de sortie, suivie peu de temps 
+      apr&egrave;s par une r&eacute;ponse avec le m&ecirc;me ensemble 
+      d'adresses IP et de num&eacute;ro de ports (mais avec
+      une source et une destination r&eacute;serv&eacute;e, bien s&ucirc;r).  
+      Pour les coupe-feux qui n'ont pas de gestion des &eacute;tats, 
+      il n'y a presque pas de possibilit&eacute; de g&eacute;rer ce type 
+      de trafic en une seule session.  Mais avec un coupe-feu qui peut se 
+      &ldquo;souvenir&rdquo; d'un paquet <acronym>UDP</acronym> sortant et 
+      qui, pour quelques minutes, autorise une r&eacute;ponse, la gestion 
+      des services <acronym>UDP</acronym> est triviale.  L'exemple suivant 
+      montre comment le faire.  Il est possible de faire la m&ecirc;me 
+      chose avec les paquets <acronym>TCP</acronym>.  Cela vous permet 
+      d'&eacute;viter certaines attaques par refus de service et autres 
+      d&eacute;sagr&eacute;ables probl&egrave;mes, mais augmente 
+      &eacute;galement rapidement la taille de votre 
+      table des &eacute;tats.</para>
+
+    <para>Regardons un exemple de configuration.  Notez tout d'abord
+      qu'au d&eacute;but du fichier <filename>/etc/rc.firewall</filename> 
+      il y a d&eacute;j&agrave; des r&egrave;gles standards pour 
+      l'interface de boucle locale
+      <devicename>lo0</devicename>, aussi nous ne devrions pas y faire
+      attention.  Les r&egrave;gles personnalis&eacute;es devraient 
+      &ecirc;tre plac&eacute;es dans un fichier s&eacute;par&eacute; (disons
+      <filename>/etc/rc.firewall.local</filename>) et charg&eacute;es au
+      d&eacute;marrage du syst&egrave;me, en modifiant la ligne de
+      <filename>/etc/rc.conf</filename> o&ugrave; nous avions d&eacute;fini le
+      coupe-feu &ldquo;ouvert&rdquo;:</para>
+
+    <programlisting>firewall_type="/etc/rc.firewall.local"</programlisting>
+
+    <important>
+      <para>Vous devez pr&eacute;ciser le chemin <emphasis>complet</emphasis>,
+	sinon il ne sera pas charg&eacute; avec le risque de rester 
+	isol&eacute; du r&eacute;seau.</para>
+    </important>
+
+    <para>Pour notre exemple imaginez que nous avons l'interface
+      <devicename>fxp0</devicename> connect&eacute;e vers l'ext&eacute;rieur
+      (Internet) et l'interface <devicename>xl0</devicename> vers
+      l'int&eacute;rieur (<acronym>LAN</acronym>).  Le pont poss&egrave;de 
+      une adresse IP <hostid role="ipaddr">1.2.3.4</hostid> (il n'est pas 
+      possible que votre fournisseur d'acc&egrave;s puisse vous donner une 
+      adresse de classe A comme celle-ci, mais pour cet exemple cela 
+      ira).</para>
+
+    <programlisting># Les choses dont nous avons gard&eacute; l'&eacute;tat avant de
+continuer
+add check-state
+
+# Rejeter les r&eacute;seaux RFC 1918
+add drop all from 10.0.0.0/8 to any in via fxp0
+add drop all from 172.16.0.0/12 to any in via fxp0
+add drop all from 192.68.0.0/16 to any in via fxp0
+
+# Autorise la machine pont &agrave; communiquer si elle le d&eacute;sire
+# (si la machine est sans adresse IP, ne pas inclure ces lignes)
+add pass tcp from 1.2.3.4 to any setup keep-state
+add pass udp from 1.2.3.4 to any keep-state
+add pass ip from 1.2.3.4 to any
+
+# Autorise les h&ocirc;tes internes &agrave; communiquer
+add pass tcp from any to any in via xl0 setup keep-state
+add pass udp from any to any in via xl0 keep-state
+add pass ip from any to any in via xl0
+
+# Section TCP
+# Autoriser SSH
+add pass tcp from any to any 22 in via fxp0 setup keep-state
+# Autoriser SMTP seulement vers le serveur de courrier
+add pass tcp from any to relay 25 in via fxp0 setup keep-state
+# Autoriser le transfert de zone seulement par le serveur de noms esclave [dns2.nic.it]
+add pass tcp from 193.205.245.8 to ns 53 in via fxp0 setup keep-state
+# Laisser passer les sondes d'ident.  C'est pr&eacute;f&eacute;rable plut&ocirc;t que d'attendre
+# qu'elles s'arr&ecirc;tent
+add pass tcp from any to any 113 in via fxp0 setup keep-state
+# Laisser passer la zone de "quarantaine"
+add pass tcp from any to any 49152-65535 in via fxp0 setup keep-state
+
+# Section UDP
+# Autorise le DNS seulement vers le serveur de noms
+add pass udp from any to ns 53 in via fxp0 keep-state
+# Laisser passer la zone de "quarantaine"
+add pass udp from any to any 49152-65535 in via fxp0 keep-state
+
+# Section ICMP 
+# Laisser passer 'ping'
+add pass icmp from any to any icmptypes 8 keep-state
+# Laisser passer les messages d'erreurs g&eacute;n&eacute;r&eacute;s par 'traceroute'
+add pass icmp from any to any icmptypes 3
+add pass icmp from any to any icmptypes 11
+
+# Tout le reste est suspect
+add drop log all from any to any</programlisting>
+
+    <para>Ceux qui parmi vous ont d&eacute;j&agrave; install&eacute; 
+      des coupe-feux auparavant pourront noter l'absence de certaines 
+      choses.  En particulier, il n'y a pas de r&egrave;gles contre le 
+      forgeage d'adresses, en fait nous n'avons <emphasis>pas</emphasis> 
+      ajout&eacute;:</para>
+
+    <programlisting>add deny all from 1.2.3.4/8 to any in via fxp0</programlisting>
+
+    <para>Cela, bloque les paquets provenant de l'ext&eacute;rieur et clamant
+      &ecirc;tre en provenance de votre r&eacute;seau.  C'est quelque chose 
+      que vous devriez habituellement faire pour &ecirc;tre s&ucirc;r que 
+      personne n'essaie de passer outre votre filtre de paquet, en 
+      g&eacute;n&eacute;rant d'infames paquets qui sont comme s'il venaient 
+      de l'int&eacute;rieur.  Le probl&egrave;me
+      avec cela est qu'il y a <emphasis>au moins</emphasis> un h&ocirc;te de
+      l'ext&eacute;rieur que vous ne voulez pas ignorer: le routeur.  Mais
+      habituellement, les fournisseurs d'acc&egrave;s contrent le forgeage sur
+      leur routeur, aussi nous ne devons pas nous en pr&eacute;occuper plus que
+      cela.</para>
+
+    <para>La derni&egrave;re r&egrave;gle semble &ecirc;tre une copie 
+      conforme de la r&egrave;gle par d&eacute;faut, qui ne laisse passer 
+      rien de ce qui n'est pas sp&eacute;cifiquement autoris&eacute;.  Mais 
+      il y a une diff&eacute;rence: tout le
+      trafic suspect sera trac&eacute;.</para>
+
+    <para>Il y a deux r&egrave;gles pour faire passer le trafic
+      <acronym>SMTP</acronym> et <acronym>DNS</acronym> vers le serveur
+      de courrier et le serveur de noms, si vous en avez.  Evidemment
+      l'ensemble du jeu de r&egrave;gle devra &ecirc;tre arrang&eacute; 
+      selon vos go&ucirc;ts
+      personnels, c'est juste un exemple particulier (le format des
+      r&egrave;gles est d&eacute;crit pr&eacute;cis&eacute;ment dans la 
+      page de manuel &man.ipfw.8;).  Notez qu'afin que &ldquo;relay&rdquo; et
+      &ldquo;ns&rdquo; puissent fonctionner, les services de r&eacute;solution
+      de nom doivent fonctionner <emphasis>avant</emphasis> que le pont 
+      soit activ&eacute;.  C'est un exemple pour &ecirc;tre s&ucirc;r que 
+      vous avez configur&eacute; l'adresse IP sur la bonne carte 
+      r&eacute;seau.  Alternativement
+      il est possible de sp&eacute;cifier l'adresse IP au lieu du nom
+      (n&eacute;cessaire si la machine est sans adresse IP).</para>
+
+    <para>Les personnes qui ont l'habitude de configurer des coupe-feux
+      ont probablement &eacute;galement utilis&eacute; soit une r&egrave;gle 
+      &ldquo;reset&rdquo; soit une r&egrave;gle &ldquo;forward&rdquo; pour les
+      paquets ident (<acronym>TCP</acronym> port 113).  Malheureusement,
+      ce n'est pas une option applicable avec un pont, aussi la
+      meilleure solution est de laisser les passer vers leur
+      destination.  Aussi longtemps que la machine de destination de
+      fait pas tourner un daemon d'ident, cela est relativement
+      inoffensif.  L'alternative est de bloquer les connexions sur le
+      port 113, ce qui pose probl&egrave;me avec des services comme
+      l'<acronym>IRC</acronym> (la sonde d'ident doit s'arr&ecirc;ter).</para>
+
+    <para>La seule autre chose qui est un peu &eacute;trange que vous avez
+      peut-&ecirc;tre not&eacute; est qu'il y a une r&egrave;gle pour 
+      laisser le pont communiquer, et une autre pour les h&ocirc;tes 
+      internes.  Rappelez-vous que c'est parce que les deux ensembles de 
+      trafic prendront un chemin diff&eacute;rent &agrave; travers le noyau 
+      et dans le filtre de paquet.  Le r&eacute;seau interne ira &agrave; 
+      travers le pont, alors que la machine
+      locale utilisera la pile IP normale pour communiquer.  Ainsi les
+      deux r&egrave;gles s'occupent de cas diff&eacute;rents.  La 
+      r&egrave;gle &ldquo;in via <devicename>fxp0</devicename>&rdquo; 
+      fonctionne pour les deux chemins.  En g&eacute;n&eacute;ral, si 
+      vous employez des r&egrave;gles &ldquo;in via&rdquo; dans tous le 
+      filtre, vous devrez faire une exception pour les paquets 
+      g&eacute;n&eacute;r&eacute;s localement, parce qu'ils ne sont pas
+      pass&eacute;s par une de nos interfaces.</para>
+  </sect1>
+
+  <sect1 id="filtering-bridges-contributors">
+    <title>Participants</title>
+
+    <para>Plusieurs parties de cet article proviennent, et furent mises 
+      &agrave; jour et adapt&eacute;es d'un vieux texte sur les ponts, 
+      &eacute;crit par Nick Sayer.  Cet article est &eacute;galement 
+      inspir&eacute; d'une introduction sur les ponts
+      de Steve Peterson.</para>
+
+    <para>Un grand merci &agrave; Luigi Rizzo pour l'impl&eacute;mentation 
+      du code de pont dans FreeBSD et pour le temps qu'il a pass&eacute; 
+      &agrave; r&eacute;pondre &agrave; toutes 
+      mes questions &agrave; ce sujet.</para>
+
+    <para>Un remerciement &eacute;galement &agrave; Tom Rhodes qui a 
+      supervis&eacute; mon travail de traduction de l'Italien (langue 
+      d'origine de cet article) &agrave; l'Anglais.</para>
+  </sect1>
+</article>
