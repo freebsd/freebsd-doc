@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/Makefile,v 1.73 2001/10/24 18:14:41 phantom Exp $
+# $FreeBSD: www/en/Makefile,v 1.74 2001/10/29 10:14:30 murray Exp $
 .if exists(Makefile.conf)
 .include "Makefile.conf"
 .endif
@@ -88,13 +88,18 @@ index.html: index.xsl news/news.xml news/press.xml includes.xsl news/includes.xs
 	-${TIDY} ${TIDYFLAGS} index.html
 
 # Handle the FAQ/ and handbook/ directories specially.
-CLEANFILES+=	FAQ
 FAQ:
 	${LN} -fs ${.OBJDIR}/../../doc/en_US.ISO8859-1/books/faq FAQ
 
-CLEANFILES+=	handbook
 handbook:
 	${LN} -fs ${.OBJDIR}/../../doc/en_US.ISO8859-1/books/handbook handbook
+
+# In "make obj" case FAQ and handbook are symlinks and have to be removed
+# at "make clean"
+.if ${.OBJDIR} != ${.CURDIR}
+CLEANFILES+=	FAQ
+CLEANFILES+=	handbook
+.endif
 
 afterinstall:
 	cd ${DOCINSTALLDIR}; \
