@@ -1,4 +1,6 @@
-# $FreeBSD: doc/ru_RU.KOI8-R/Makefile,v 1.8 1999/09/29 05:02:56 peter Exp $
+# $FreeBSD: doc/ru_RU.KOI8-R/Makefile,v 1.9 1999/09/29 11:56:18 jhb Exp $
+
+MAINTAINER = phantom@FreeBSD.org
 
 SUBDIR = books
 
