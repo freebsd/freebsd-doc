@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.10 1997-07-19 04:59:58 meganm Exp $
+# $Id: Makefile,v 1.11 1997-12-07 22:50:39 meganm Exp $
 
 DATA=   apache.gif apachepower.gif daemon.gif dir.gif doc.gif
 DATA+=  home.gif littlelogo.gif new.gif power-button.gif
@@ -22,4 +22,5 @@ DATA+=  wc-217.jpg wc-217b.jpg wc-21b.jpg wc-221.jpg wc-221b.jpg
 DATA+=  wc-222.jpg wc-222b.jpg wc-22snap.jpg wc-22snapb.jpg 
 DATA+=  wc-44lite2.jpg wc-44lite2b.jpg wc-blun.jpg wc-blunb.jpg 
 DATA+=  wc-30snab.jpg wc-30sna.jpg newsletb.jpg newslett.jpg
+DATA+=  banner1.gif banner2.gif banner3.gif banner4.gif
 .include "../web.mk"
