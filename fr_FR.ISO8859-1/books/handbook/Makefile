@@ -204,4 +204,40 @@ DOC_PREFIX?= ${.CURDIR}/../../..
 JADEFLAGS+=	-V withpgpkeys
 .endif
 
+.for p in ftp cvsup
+SRCS+= mirrors.sgml.${p}.inc
+CLEANFILES+= mirrors.sgml.${p}.inc
+CLEANFILES+= mirrors.sgml.${p}.inc.tmp
+.endfor
+
+SRCS+= eresources.sgml.www.inc
+CLEANFILES+= eresources.sgml.www.inc
+CLEANFILES+= eresources.sgml.www.inc.tmp
+
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"
+
+.for p in ftp cvsup
+mirrors.sgml.${p}.inc: ${XML_MIRRORS} ${XSL_MIRRORS}
+	${XSLTPROC} ${XSLTPROCOPTS} \
+	    -o $@.tmp \
+	    --param 'transtable.xml' "'${XML_TRANSTABLE}'" \
+	    --param 'type' "'$p'" \
+	    --param 'proto' "'$p'" \
+	    --param 'target' "'handbook/mirrors/chapter.sgml'" \
+	    ${XSL_MIRRORS} ${XML_MIRRORS}
+	${SED} -e 's,<\([^ >]*\)\([^>]*\)/>,<\1\2></\1>,;s,</anchor>,,'\
+	    < $@.tmp > $@ || (${RM} -f $@ && false)
+	${RM} -f $@.tmp
+.endfor
+
+eresources.sgml.www.inc: ${XML_MIRRORS} ${XSL_MIRRORS}
+	${XSLTPROC} ${XSLTPROCOPTS} \
+	    -o $@.tmp \
+	    --param 'transtable.xml' "'${XML_TRANSTABLE}'" \
+	    --param 'type' "'www'" \
+	    --param 'proto' "'http'" \
+	    --param 'target' "'handbook/eresources/chapter.sgml'" \
+	    ${XSL_MIRRORS} ${XML_MIRRORS}
+	${SED} -e 's,<\([^ >]*\)\([^>]*\)/>,<\1\2></\1>,;s,</anchor>,,'\
+	    < $@.tmp > $@ || (${RM} -f $@ && false)
+	${RM} -f $@.tmp
