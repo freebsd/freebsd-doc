@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/Makefile,v 1.80 2002/03/16 08:40:25 murray Exp $
+# $FreeBSD: www/en/Makefile,v 1.81 2002/03/25 04:23:42 murray Exp $
 .if exists(Makefile.conf)
 .include "Makefile.conf"
 .endif
@@ -35,6 +35,7 @@ SUBDIR=	 security
 SUBDIR+= commercial
 SUBDIR+= docproj
 SUBDIR+= news
+SUBDIR+= advocacy
 
 SUBDIR+= events
 SUBDIR+= internal
