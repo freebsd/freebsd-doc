@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/ports.cgi,v 1.76 2004/05/27 20:27:55 simon Exp $
+# $FreeBSD: www/en/cgi/ports.cgi,v 1.77 2004/08/20 17:59:55 wosch Exp $
 #
 # ports.cgi - search engine for FreeBSD ports
 #             	o search for a port by name or description
@@ -114,7 +114,7 @@ sub init_variables {
     $portsDesc = '../ports/';
 
     # location of the tiny BSD daemon
-    $daemonGif = '<IMG SRC="/gifs/littlelogo.gif">';
+    $daemonGif = '<IMG SRC="/gifs/littlelogo.gif" ALT="Really small BSD Daemon">';
 
     # visible E-Mail address, plain text
     $mailto = 'www@FreeBSD.org';
@@ -659,10 +659,10 @@ or moved to an other ports section.
 sub footer {
 
     print qq{
-<img ALIGN="RIGHT" src="/gifs/powerlogo.gif">
+<img ALIGN="RIGHT" src="/gifs/powerlogo.gif" alt="Powered by FreeBSD">
 &copy; 1996-2002 by Wolfram Schneider. All rights reserved.<br>
 };
-    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.76 2004/05/27 20:27:55 simon Exp $} . "<br>\n";
+    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.77 2004/08/20 17:59:55 wosch Exp $} . "<br>\n";
     print qq{Please direct questions about this service to
 <I><A HREF="$mailtoURL">$mailto</A></I><br>\n};
     print qq{General questions about FreeBSD ports should be sent to } .
