@@ -1,4 +1,4 @@
-# $FreeBSD: www/ja/Makefile,v 1.59 2002/05/13 20:09:03 hrs Exp $
+# $FreeBSD: www/ja/Makefile,v 1.60 2003/11/17 06:28:19 hrs Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.83
 
@@ -33,7 +33,7 @@ DOCS+= jabout.sgml
 
 #DATA=	favicon.ico
 #DATA+=	robots.txt
-#DATA+=	freebsd.css
+DATA+=	freebsd.css
 
 # Subdirectories
 # SGML
