@@ -103,6 +103,7 @@ IMAGES_EN+= install/example-dir2.eps
 IMAGES_EN+= install/example-dir3.eps
 IMAGES_EN+= install/example-dir4.eps
 IMAGES_EN+= install/example-dir5.eps
+IMAGES_EN+= security/ipsec-network.pic
 IMAGES_EN+= vinum/vinum-concat.pic
 IMAGES_EN+= vinum/vinum-mirrored-vol.pic
 IMAGES_EN+= vinum/vinum-raid10-vol.pic
