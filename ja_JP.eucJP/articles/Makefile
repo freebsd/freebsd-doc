@@ -1,17 +1,27 @@
-# $FreeBSD: doc/ja_JP.eucJP/articles/Makefile,v 1.5 2001/09/04 10:40:52 hrs Exp $
-# Original revision: 1.9
+# $FreeBSD: doc/ja_JP.eucJP/articles/Makefile,v 1.6 2001/09/14 00:17:36 kuriyama Exp $
+# Original revision: 1.18
 
 #SUBDIR = committers-guide
-SUBDIR = dialup-firewall
+#SUBDIR+= console-server
+SUBDIR = contributors
+SUBDIR+= dialup-firewall
 SUBDIR+= diskless-x
+#SUBDIR+= explaining-bsd
+#SUBDIR+= filtering-bridges
 #SUBDIR+= freebsd-questions
 #SUBDIR+= fonts
 #SUBDIR+= formatting-media
 #SUBDIR+= ipsec-must
+#SUBDIR+= laptop
 #SUBDIR+= mh
 SUBDIR+= multi-os
 #SUBDIR+= new-users
 #SUBDIR+= programming-tools
+#SUBDIR+= pxe
+#SUBDIR+= serial-uart
+#SUBDIR+= solid-state
+#SUBDIR+= storage-devices
+#SUBDIR+= vm-design
 SUBDIR+= zip-drive
 
 # ROOT_SYMLINKS+= new-users
