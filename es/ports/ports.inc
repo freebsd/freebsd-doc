@@ -1,4 +1,4 @@
-<!-- $Id: ports.inc,v 1.5 1999-04-24 16:18:35 jesusr Exp $ -->
+<!-- $Id: ports.inc,v 1.6 1999-05-08 15:40:46 jesusr Exp $ -->
 <p>La colecci&oacute;n de Ports y Packages de FreeBSD ofrece una manera
 sencilla de instalci&oacute;n de aplicaciones para los usuarios y
 administradores. La colecci&oacute;n de ports ha estado creciendo en los
@@ -31,7 +31,7 @@ comando acepta tanto nombres de ficheros como URL's FTP.</p>
 href="../../handbook/ports.html">La colecci&oacute;n de Ports</a>. Para
 informaci&oacute;n sobre crear nuevos ports, mira en <a
 href="../../handbook/porting.html">Porting applications</a>. Ambos son parte
-del <a href="../../handbook">Handbook</a>.</p>
+del <a href="../../handbook/">Handbook</a>.</p>
 
 <p>Los ports listados en estas p&aacute;ginas web son continuamente 
 actualizados. Consecuentemente, necesitar&aacute;s actualizar algunos ficheros
