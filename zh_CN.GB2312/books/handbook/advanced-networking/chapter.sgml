@@ -1,0 +1,3779 @@
+<!--
+     The FreeBSD Documentation Project
+     The FreeBSD Chinese Documentation Project
+
+     Original revision: 1.344
+     $FreeBSD$
+-->
+
+<chapter id="advanced-networking">
+  <title>高级网络</title>
+
+  <sect1 id="advanced-networking-synopsis">
+    <title>概述</title>
+
+    <para>本章将介绍许多与高级网络有关的话题。</para>
+
+    <para>读完这一章，您将会知道：</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>网关和路由基础</para>
+      </listitem>
+
+      <listitem>
+	<para>如何安装 IEEE 802.11 和 &bluetooth;(蓝牙)设备。</para>
+      </listitem>
+
+      <listitem>
+	<para>怎样用 FreeBSD 做"桥接(bridge)"。</para>
+      </listitem>
+
+      <listitem>
+	<para>如何为无盘机设置网络启动。</para>
+      </listitem>
+
+      <listitem>
+	<para>如何设置网络地址翻译(NAT)。</para>
+      </listitem>
+
+      <listitem>
+	<para>如何使用 PLIP 连接两台计算机。</para>
+      </listitem>
+
+      <listitem>
+	<para>如何在 FreeBSD 主机上设置 IPv6。</para>
+      </listitem>
+
+      <listitem>
+	<para>如何在 &os;5.X 下配置 ATM。</para>
+      </listitem>
+    </itemizedlist>
+
+    <para>在读这章之前，您应该：</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>理解 <filename>/etc/rc</filename> 脚本的基本知识。</para>
+      </listitem>
+
+      <listitem>
+	<para>相关的基本网络术语。</para>
+      </listitem>
+
+      <listitem>
+	<para>了解如何配置和安装新的 FreeBSD 内核
+          (<xref linkend="kernelconfig">)。</para>
+      </listitem>
+
+      <listitem>
+	<para>了解如何安装第三方软件 (<xref linkend="ports">)。</para>
+      </listitem>
+
+    </itemizedlist>
+  </sect1>
+
+  <sect1 id="network-routing">
+    <sect1info>
+      <authorgroup>
+	<author>
+	  <firstname>Coranth</firstname>
+	  <surname>Gryphon</surname>
+	  <contrib>贡献者：</contrib>
+	</author>
+      </authorgroup>
+      <authorgroup>
+	<author>
+	  <firstname>张</firstname>
+	  <surname>雪平</surname>
+	  <contrib>中文翻译：</contrib>
+	  <affiliation>
+	    <address><email>zxpmyth@yahoo.com.cn</email></address>
+	  </affiliation>
+	</author>
+	<author>
+	  <firstname>袁</firstname>
+	  <surname>苏义</surname>
+	</author>
+      </authorgroup>
+    </sect1info>
+    <title>网关和路由</title>
+
+    <indexterm><primary>路由</primary></indexterm>
+    <indexterm><primary>网关</primary></indexterm>
+    <indexterm><primary>子网</primary></indexterm>
+    <para>为了让一台主机在网能找到另一台主机，
+      就必须要有一种机制来描述如何从一台主机连至另一台上。这个就叫做
+      <firstterm>路由选择(routing)</firstterm>。
+      一个<quote>路由</quote>是一对预先定义的地址：
+      <quote>目的地(destination)</quote>和<quote>网关(gateway)</quote>。
+      这对地址表明如果您想要试着到达这个<emphasis>目的地(destination)</emphasis>，
+      那么就通过这个<emphasis>网关(gateway)</emphasis>进行通信。
+      目的地有三种类型： 单个主机(individual hosts)，
+      子网(subnets)和<quote>默认(default)</quote>。
+      如果没有其它路由应用，就使用<quote>默认路由(default route)</quote>。
+      关于默认路由我们以后为讨论多一点。有三种类型的网关：
+      单个主机，接口(也叫<quote>连接(links)</quote>)和以太网硬件地址(MAC addresses)。
+    </para>
+
+    <sect2>
+      <title>实例</title>
+
+      <para>为了说明路由选择的各个部分，我们使用以用下面这个例子。
+	以下是命令 <command>netstat</command> 的输出：</para>
+
+      <screen>&prompt.user; <userinput>netstat -r</userinput>
+Routing tables
+
+Destination      Gateway            Flags     Refs     Use     Netif Expire
+
+default          outside-gw         UGSc       37      418      ppp0
+localhost        localhost          UH          0      181       lo0
+test0            0:e0:b5:36:cf:4f   UHLW        5    63288       ed0     77
+10.20.30.255     link#1             UHLW        1     2421
+example.com      link#1             UC          0        0
+host1            0:e0:a8:37:8:1e    UHLW        3     4601       lo0
+host2            0:e0:a8:37:8:1e    UHLW        0        5       lo0 =>
+host2.example.com link#1             UC          0        0
+224              link#1             UC          0        0</screen>
+
+      <indexterm><primary>默认路由</primary></indexterm>
+      <para>头两行指定默认路由 (我们会在<link
+	linkend="network-routing-default">下一节</link>说明)
+	和<hostid>本地(localhost)</hostid>路由。</para>
+
+      <indexterm><primary>回环设备</primary></indexterm>
+      <para>这张路由表里指定用于<literal>localhost</literal>的接口
+	(<literal>Netif</literal> 列)是<devicename>lo0</devicename>，
+	也就是众所周知的<quote>回环设备(loopback device)</quote>。
+	这就使得所有以此为<quote>目的地</quote>的通信留在了内部，
+	而不是通过LAN发送出去，因为它会在开始的地方就结束返回。</para>
+
+      <indexterm>
+	<primary>以太网</primary> <secondary>MAC 地址</secondary>
+      </indexterm>
+      <para>接着出现的是以 <hostid role="mac">0:e0:</hostid>
+	开头的地址。这些是以太网硬件地址，也称为 MAC 地址。
+	FreeBSD 会自动识别在同一个以太网中的任何主机(如
+	<hostid>test0</hostid>)，并为这个主机新增一个路由，
+	以并通过那个以太网接口——<devicename>ed0</devicename>
+	直接到达它(译者注：那台主机。与这类路由表相关的也有一个超时项
+	(<literal>Expire</literal>列)，当我们在指定时间内没有收到从那个主机发来的信息，
+	这项就派上用场了。这种情况下，到这个主机的路由就会被自动删除。
+	这些主机被使用一种叫做RIP(路由信息协议--Routing Information
+	Protocol)的机制所识别，这种机制利用基于<quote>最短路径选择
+	(shortest path determination)</quote>的办法计算出到本地主机的路由。</para>
+
+      <indexterm><primary>子网</primary></indexterm>
+      <para>FreeBSD 也会为本地子网添加子网路由(<hostid
+	role="ipaddr">10.20.30.255</hostid> 是子网
+	<hostid role="ipaddr">10.20.30</hostid> 的广播地址，而 <hostid
+	role="domainname">example.com</hostid> 是这个子网相联的域名)。
+	名称 <literal>link#1</literal> 代表主机上的第一块以太网卡。
+	您会发现，对于它们没有指定另外的接口。</para>
+
+      <para>这两个组(本地网络主机和本地子网)的路由是由守护进程
+	<application>routed</application> 自动配置的。如果它没有运行，
+	那就只有被静态定义 (例如，明确输入的) 的路由才存在了。</para>
+
+      <para><literal>host1</literal> 行代表我们的主机，它通过以太网地址来识别。
+	因为我们是发送端，FreeBSD知道使用回还接口 (<devicename>lo0</devicename>)
+	而不是通过以太网接口来进行发送。</para>
+
+      <para>两个 <literal>host2</literal> 是我们使用 &man.ifconfig.8;
+	别名 (请看关于以太网的那部分就会知道我们为什么这么做)
+	时产生的一个实例。在 <devicename>lo0</devicename>
+	接口之后的 <literal>=></literal> 符号表明我们不仅使用了回环
+	(因为这个地址也涉及了本地主机)，而且明确指出它是个别名。
+	这类路由只有在支持别名的主机上才能显现出来。
+	所有本地网上的其它的主机对于这类路由只会简单拥有
+	<literal>link#1</literal>。</para>
+
+      <para>最后一行 (目标子网<hostid role="ipaddr">224</hostid>)
+	用于处理多播——它会覆盖到其它的区域。</para>
+
+      <para>最后，每个路由的不同属性可以在 <literal>Flags</literal>
+	列中看到。下边是个关于这些标志和它们的含义的一个简表：</para>
+
+      <informaltable frame="none">
+	<tgroup cols="2">
+	  <colspec colwidth="1*">
+	  <colspec colwidth="4*">
+
+	  <tbody>
+	    <row>
+	      <entry>U</entry>
+	      <entry>Up: 路由处于活动状态。</entry>
+	    </row>
+
+	    <row>
+	      <entry>H</entry>
+	      <entry>Host: 路由目标是单个主机。</entry>
+	    </row>
+
+	    <row>
+	      <entry>G</entry>
+	      <entry>Gateway: 所有发到目的地的网络传到这一远程系统上，
+		并由它决定最后发到哪里。</entry>
+	    </row>
+
+	    <row>
+	      <entry>S</entry>
+	      <entry>Static: 这个路由是手工配置的，不是由系统自动生成的。</entry>
+	    </row>
+
+	    <row>
+	      <entry>C</entry>
+	      <entry>Clone: 生成一个新的路由，
+		通过这个路由我们可以连接上这些机子。
+		这种类型的路由通常用于本地网络。</entry>
+	    </row>
+
+	    <row>
+	      <entry>W</entry>
+	      <entry>WasCloned: 指明一个路由——它是基于本地区域网络
+		(克隆) 路由自动配置的。</entry>
+	    </row>
+
+	    <row>
+	      <entry>L</entry>
+	      <entry>Link: 路由涉及到了以太网硬件。</entry>
+	    </row>
+	  </tbody>
+	</tgroup>
+      </informaltable>
+
+    </sect2>
+
+    <sect2 id="network-routing-default">
+      <title>默认路由</title>
+
+      <indexterm><primary>默认路由</primary></indexterm>
+      <para>当本地系统需要与远程主机建立连接时，
+	它会检查路由表以决定是否有已知的路径存在。
+	如果远程主机属于一个我们已知如何到达 (克隆的路由)
+	的子网内，那么系统会检查看沿着那个接口是否能够连接。</para>
+
+      <para>如果所有已知路径都失败，系统还有最后一个选择：
+	<quote>默认</quote>路由。这个路由是特殊类型的网关路由
+	(通常只有一个存在于系统里)，并且总是在标志栏使用一个
+	<literal>c</literal>来进行标识。对于本地区域网络里的主机，
+	这个网关被设置到任何与外界有直接连接的机子里 (无论是通过
+	PPP、DSL、cable modem、T1 或其它的网络接口连接)。</para>
+
+      <para>如果您正为某台本身就做为网关连接外界的机子配置默认路由的话，
+	那么该默认路由应该是您的<quote>互联网服务商
+	(ISP)</quote>那方的网关机子。</para>
+
+      <para>让我们来看一个关于默认路由的例子。这是个很普遍的配置：</para>
+
+      <mediaobject>
+	<imageobject>
+	  <imagedata fileref="advanced-networking/net-routing">
+	</imageobject>
+
+	<textobject>
+	  <literallayout class="monospaced">
+[Local2]  &lt;--ether--&gt;  [Local1]  &lt;--PPP--&gt; [ISP-Serv]  &lt;--ether--&gt;  [T1-GW]
+      </literallayout>
+	</textobject>
+      </mediaobject>
+
+      <para>主机 <hostid>Local1</hostid> 和 <hostid>Local2</hostid>
+	在您那边。<hostid>Local1</hostid> 通过 PPP 拨号连接到了 ISP。这个
+	PPP 服务器通过一个局域网连接到另一台网关机子——它又通过一个外部接口连接到
+	ISP 提供的互联网上。</para>
+
+      <para>您的每一台机子的默认路由应该是：</para>
+
+      <informaltable frame="none">
+	<tgroup cols="3">
+	  <thead>
+	    <row>
+	      <entry>Host</entry>
+	      <entry>Default Gateway</entry>
+	      <entry>Interface</entry>
+	    </row>
+	  </thead>
+
+	  <tbody>
+	    <row>
+	      <entry>Local2</entry>
+	      <entry>Local1</entry>
+	      <entry>Ethernet</entry>
+	    </row>
+
+	    <row>
+	      <entry>Local1</entry>
+	      <entry>T1-GW</entry>
+	      <entry>PPP</entry>
+	    </row>
+	  </tbody>
+	</tgroup>
+      </informaltable>
+
+      <para>一个常见的问题是<quote>我们为什么 (或怎样)
+	能 <hostid>T1-GW</hostid> 设置成为 <hostid>Local1</hostid>
+	默认网关，而不是它所连接 ISP 服务器？</quote></para>
+
+      <para>记住，因为 PPP 接口使用的一个地址是在 ISP
+	的局域网里的，用于您那边的连接，对于 ISP
+	的局域网里的其它机子，其路由会自动产生。
+	因此，您就已经知道了如何到达机子 <hostid>T1-GW</hostid>，
+	那么也就没必要中那一步了——发送通信给 ISP 服务器。</para>
+
+      <para>通常使用地址 <hostid
+	role="ipaddr">X.X.X.1</hostid> 做为一个局域网的网关。
+	因此 (使用相同的例子)，如果您本地的 C 类地址空间是
+	<hostid role="ipaddr">10.20.30</hostid>，而您的 ISP
+	使用的是 <hostid role="ipaddr">10.9.9</hostid>，
+	那么默认路由表将是：</para>
+
+      <informaltable frame="none">
+	<tgroup cols="2">
+	  <thead>
+	    <row>
+	      <entry>Host</entry>
+	      <entry>Default Route</entry>
+	    </row>
+	  </thead>
+	  <tbody>
+	    <row>
+	      <entry>Local2 (10.20.30.2)</entry>
+	      <entry>Local1 (10.20.30.1)</entry>
+	    </row>
+	    <row>
+	      <entry>Local1 (10.20.30.1, 10.9.9.30)</entry>
+	      <entry>T1-GW (10.9.9.1)</entry>
+	    </row>
+	  </tbody>
+	</tgroup>
+      </informaltable>
+
+      <para>您可以很轻易地通过 <filename>/etc/rc.conf</filename>
+	文件设定默认路由。在我们的实例里，在主机 <hostid>Local2</hostid>
+	里，我们在文件 <filename>/etc/rc.conf</filename>
+	里增加了下边内容：</para>
+
+      <programlisting>defaultrouter="10.20.30.1"</programlisting>
+
+      <para>也可以直接在命令行使用 &man.route.8; 命令:</para>
+
+      <screen>&prompt.root; <userinput>route add default 10.20.30.1</userinput></screen>
+
+      <para>想要了解更多关于手工处理网络路由表的信息，参考
+	&man.route.8; 手册页。</para>
+    </sect2>
+
+    <sect2>
+      <title>重宿主机(Dual Homed Hosts)</title>
+      <indexterm><primary>重宿 主机</primary></indexterm>
+      <para>还有一种其它的类型的配置是我们要提及的，
+	这就是一个主机处于两个不同的网络。技术上，任何做为网关
+	(上边的实例中，使用了 PPP 连接) 的机子就算作是重宿主机。
+	但这个词实际上仅用来指那种处于两个局域网这中的机子。</para>
+
+      <para>有一种情形，一台机子有两个网卡，
+	对于各个子网都有各自的一个地址。另一种情况，
+	这台机子仅有一张网卡，但使用 &man.ifconfig.8;
+	做了别名。如果有两个独立的以太网在使用的情形就使用前者，
+	如果只有一个物理网段，但逻辑上分成了两个独立的子网，
+	就使用后者。</para>
+
+      <para>每种情况都要设置路由表以便两子网都知道这台主机是到其它子网的网关——入站路由
+	(inbound route)。将一台主机配置成两个子网间的路由器，
+	这种配置经常在我们需要实现单向或双向的包过滤或防火墙时被用到。</para>
+
+      <para>如果想让主机在两个接口间转发数据包，您需要激活
+	FreBSD 的这项功能。至于怎么做，请看下一部分了解更多。</para>
+    </sect2>
+
+    <sect2 id="network-dedicated-router">
+      <title>建立路由器</title>
+
+      <indexterm><primary>路由器</primary></indexterm>
+
+      <para>网络路由器只是一个将数据包从一个接口转发到另一个接口的系统。
+	互联网标准和良好的工程实践阻止了 FreeBSD 计划在 FreeBSD
+	中把它置成默认地。您在可以在 &man.rc.conf.5; 中改变下列变量的值为
+	<literal>YES</literal>，使用这个功能生效：</para>
+
+      <programlisting>gateway_enable=YES          # Set to YES if this host will be a gateway</programlisting>
+
+      <para>这个选项会把&man.sysctl.8;
+	变量——<varname>net.inet.ip.forwarding</varname>
+	设置成 <literal>1</literal>。如果您要临时地停止路由，
+	您可以把它重为 <literal>0</literal>。</para>
+
+      <para>新的路由器需要有路由才知道将数据传向何处。
+	如果网络够简单，您可以使用静态路由。FreeBSD
+	也自带一个标准的BSD路由选择守护进程 &man.routed.8;，
+	称之为 RIP ( version 1和 version 2) 和 IRDP。对 BGP v4，OSPF v2
+	和其它复杂路由选择协议的支持可以从
+	<filename role="package">net/zebra</filename> 包中得到。
+	像 <application>&gated;</application>
+	一样的商业产品也提供了更复杂的网络路由解决方案。</para>
+
+<indexterm><primary>BGP</primary></indexterm>
+<indexterm><primary>RIP</primary></indexterm>
+<indexterm><primary>OSPF</primary></indexterm>
+
+      <para>即使 FreeBSD 按照这种方法进行了配置，
+	它也并不完全符合 Internet 标准对路由器的要求。
+	但对于一般应用已经足够了。</para>
+    </sect2>
+
+    <sect2>
+      <sect2info>
+	<authorgroup>
+	  <author>
+	    <firstname>Coranth</firstname>
+	    <surname>Gryphon</surname>
+	    <contrib>贡献者：</contrib>
+	  </author>
+	</authorgroup>
+      <authorgroup>
+	<author>
+	  <firstname>张</firstname>
+	  <surname>雪平</surname>
+	  <contrib>中文翻译：</contrib>
+	  <affiliation>
+	    <address><email>zxpmyth@yahoo.com.cn</email></address>
+	  </affiliation>
+	</author>
+	<author>
+	  <firstname>袁</firstname>
+	  <surname>苏义</surname>
+	</author>
+      </authorgroup>
+      </sect2info>
+      <!-- Feb 2004 --> <title>设置静态路由</title>
+
+      <sect3>
+	<title>手动配置</title>
+
+	<para>假设如下这样一个网络：</para>
+
+	<mediaobject>
+	  <imageobject>
+	    <imagedata fileref="advanced-networking/static-routes">
+	  </imageobject>
+
+	  <textobject>
+	<literallayout class="monospaced">
+    INTERNET
+      | (10.0.0.1/24) Default Router to Internet
+      |
+      |Interface xl0
+      |10.0.0.10/24
+   +------+
+   |      | RouterA
+   |      | (FreeBSD gateway)
+   +------+
+      | Interface xl1
+      | 192.168.1.1/24
+      |
+  +--------------------------------+
+   Internal Net 1      | 192.168.1.2/24
+                       |
+                   +------+
+                   |      | RouterB
+                   |      |
+                   +------+
+                       | 192.168.2.1/24
+                       |
+                     Internal Net 2
+	</literallayout>
+	  </textobject>
+	</mediaobject>
+
+	<para>在这里，<hostid>RouterA</hostid> 是我们的 &os;
+	  机子，它充当连接到互联网其它部分的路由器的角色。
+	  默认路由设置为<hostid 
+	  role="ipaddr">10.0.0.1</hostid>，
+	  它就允许与外界连接。我们假定已经正确配置了
+	  <hostid>RouterB</hostid>，并且知道如何连接到想去的任何地方。
+	  (在这个图里很简单。只须在 <hostid>RouterB</hostid>
+	  上增加默认路由，使用 <hostid>192.168.1.1</hostid> 做为网关。)</para>
+
+	<para>如果我们查看一下<hostid>RouterA</hostid>的路由表，
+	  我们就会看到如下一些内容：</para>
+
+	<screen>&prompt.user; <userinput>netstat -nr</userinput>
+Routing tables
+
+Internet:
+Destination        Gateway            Flags    Refs      Use  Netif  Expire
+default            10.0.0.1           UGS         0    49378    xl0
+127.0.0.1          127.0.0.1          UH          0        6    lo0
+10.0.0/24          link#1             UC          0        0    xl0
+192.168.1/24       link#2             UC          0        0    xl1</screen>
+
+	<para>使用当前的路由表，<hostid>RouterA</hostid>
+	  是不能到达我们的内网——Internal Net 2 的。它没有到 <hostid
+	  role="ipaddr">192.168.2.0/24</hostid> 的路由。
+	  一种可以接受的方法是手工增加这条路由。以下的命令会把
+	  Internal Net 2 网络加入到 <hostid>RouterA</hostid> 的路由表中，使用<hostid
+	  role="ipaddr">192.168.1.2</hostid> 做为下一个跳跃：</para>
+
+	<screen>&prompt.root; <userinput>route add -net 192.168.2.0/24 192.168.1.2</userinput></screen>
+
+	<para>现在 <hostid>RouterA</hostid>
+	  就可以到达 <hostid role="ipaddr">192.168.2.0/24</hostid>
+	  网络上的任何主机了。</para>
+      </sect3>
+
+      <sect3>
+	<title>永久的配置</title>
+
+	<para>上面的实例对于运行着的系统来说配置静态路由是相当不错了。
+	  只是，有一个问题——如果您重启您的 &os; 机子，路由信息就会消失。
+	  处理附加的静态路由的方法是把它放到您的
+	  <filename>/etc/rc.conf</filename> 文件里去。</para>
+
+	<programlisting># Add Internal Net 2 as a static route
+static_routes="internalnet2"
+route_internalnet2="-net 192.168.2.0/24 192.168.1.2"</programlisting>
+
+	<para>配置变量 <literal>static_routes</literal>
+	  是一串以空格格开的字符串。每一串表示一个路由名字。
+	  在上面的例子中我们中有一个串在 <literal>static_routes</literal>
+	  里。这个字符串中 <replaceable>internalnet2</replaceable>。
+	  然后我们新增一个配置变量
+	  <literal>route_<replaceable>internalnet2</replaceable></literal>，
+	  这里我们把所有传给 &man.route.8;命令的参数拿了过来。
+	  在上面的实例中的我使用的命令是：</para>
+
+	  <screen>&prompt.root; <userinput>route add -net 192.168.2.0/24 192.168.1.2</userinput></screen>
+
+	  <para>因此，我们需要的是 <literal>"-net 192.168.2.0/24 192.168.1.2"</literal>。</para>
+
+	<para>前边已经说了，我们可以有不只一个字符串的
+	  <literal>static_routes</literal> 里边。
+	  下面我们就建立多个静态路由。下面几行显示了一个为 <hostid
+	  role="ipaddr">192.168.0.0/24</hostid> 和 <hostid
+	  role="ipaddr">192.168.1.0/24</hostid>
+	  网络在一个假想的路由器上增加静态路由的例子：</para>
+
+        <programlisting>static_routes="net1 net2"
+route_net1="-net 192.168.0.0/24 192.168.0.1"
+route_net2="-net 192.168.1.0/24 192.168.1.1"</programlisting>
+      </sect3>
+    </sect2>
+
+    <sect2>
+      <title>路由传播</title>
+      <indexterm><primary>路由 传播</primary></indexterm>
+      <para>我们已经讨论了如何定义通向外界的路由，
+	但未谈及外界是如何找到我们的。</para>
+
+      <para>我们已经知道可以设置路由表，
+	这样任何指向特定地址空间 (在我们的例子中是一个
+	C 类子网) 的数据都会被送往网络上特定的主机，
+	然后由这台主机向地址空间内部转发数据。</para>
+
+      <para>当您得到一个分配给您的网络的地址空间时，
+	ISP(网络服务商)会设置它们的路由表，
+	这样指向您子网的数据就会通过 PPP 连接下传到您的网络。
+	但是其它跨越国界的网络是如何知道将数据传给您的
+	ISP 的呢？</para>
+
+      <para>有一个系统(很像分布式 DNS 信息系统)，
+	它一直跟踪被分配的地址空间，
+	并说明它们连接到互联网骨干(Internet backbone)的点。
+	<quote>骨干(Backbone)</quote> 指的是负责全世界和跨国的传输的主要干线。
+	每一台骨干主机(backbone machine)有一份主要表集的拷贝，
+	它将发送给特定网络的数据导向相应的骨干载体上(backbone carrier)，
+	从结点往下遍历服务提供商链，直到数据到达您的网络。</para>
+
+      <para>服务提供商的任务是向骨干网络广播他们就是到到达您的网点的连接结点
+	(以及进入的路径)。这就是路由传播。</para>
+    </sect2>
+
+    <sect2>
+      <title>问题解答</title>
+      <indexterm>
+        <primary><command>traceroute</command></primary>
+      </indexterm>
+      <para>有时候，路由传播会有一个问题，一些网络无法与您连接。
+	或许能帮您找出路由是在哪里中断的最有用的命令就是
+	&man.traceroute.8;了。当您无法与远程主机连接时，
+	这个命令一样有用(例如 &man.ping.8; 失败)。</para>
+
+      <para>&man.traceroute.8; 命令将以您想连接的主机的名字作为参数执行。
+	不管是到达了目标，还是因为没有连接而终止，
+	它都会显示所经过的所有网关主机。</para>
+
+      <para>想了解更多的信息，查看 &man.traceroute.8; 的手册。</para>
+    </sect2>
+
+    <sect2>
+      <title>多播路由</title>
+      <indexterm>
+	<primary>多播</primary> <secondary>MROUTING 选项</secondary>
+      </indexterm>
+      <para>FreeBSD 一开始就支持多播应用软件和多播路由选择。
+	多播程序并不要求FreeBSD的任何特殊的配置，
+	就可以工作得很好。多播路由需要支持被编译入内核：</para>
+
+      <programlisting>options MROUTING</programlisting>
+
+      <para>另外，多播路由守护进程——&man.mrouted.8;
+	必须通过 <filename>/etc/mrouted.conf</filename>
+	配置来开启通道和 <acronym>DVMRP</acronym>。
+	更多关于多播路由配置的信息可以在 &man.mrouted.8;
+	的手册里找到。</para>
+    </sect2>
+  </sect1>
+
+
+
+<sect1 id="network-wireless">
+    <sect1info>
+      <authorgroup>
+	<author>
+	  <firstname>Eric</firstname>
+	  <surname>Anderson</surname>
+	  <contrib>作者：</contrib>
+	</author>
+      </authorgroup>
+      <authorgroup>
+	<author>
+	  <firstname>张</firstname>
+	  <surname>雪平</surname>
+	  <contrib>中文翻译：</contrib>
+	  <affiliation>
+	    <address><email>zxpmyth@yahoo.com.cn</email></address>
+	  </affiliation>
+	</author>
+	<author>
+	  <firstname>袁</firstname>
+	  <surname>苏义</surname>
+	</author>
+      </authorgroup>
+    </sect1info>
+    <title>无线网络</title>
+
+   <indexterm><primary>无线网络</primary></indexterm> <indexterm><primary>802.11</primary> <see>无线网络</see></indexterm>
+
+   <sect2>
+      <title>简介</title>
+      <para>如果可以使用没有烦人的随时都通过网线连接的计算机，
+	会真的很有用。FreeBSD 可以充当无线客户端，
+	甚至可以做为无线<quote>接入点(access point)</quote>。</para>
+   </sect2>
+
+   <sect2>
+     <title>无线操作模式</title>
+     <para>802.11无线设备有两种不同的配置方式：BSS 和 IBSS.</para>
+
+     <sect3>
+       <title>BSS 模式</title>
+       <para>BSS 模式是常用的模式。
+	它也被叫做<quote>底层结构(infrastructure)</quote>模式。
+	在此种模式里，一些无线接入点连接到有线网络。
+	每个无线网络有个名字。这个名字被称为网络的 SSID。</para>
+
+       <para>无线客户端连接到这些无线接入点上。
+	IEEE 802.11 标准定义了用于无线网络连接的协议。
+	在设定了 SSID 后，一个无线客户端可以连接到一个指定的网络。
+	若不明确指定 SSID，一个无线客户端可以被连接到任何的网络。</para>
+     </sect3>
+
+     <sect3>
+       <title>IBSS 模式</title>
+       <para>IBSS 模式，也叫专属(ad-hoc)模式，
+	是设计来进行点对点的接连的。实际上有两种类型的专属模式。
+	一种是 IBSS 模式，也叫"ad-hoc" 或"IEEE ad-hoc"模式。
+	这个模式由 IEEE 802.11 标准定义。
+	第二个叫做演示专属 (demo ad-hoc) 模式或朗讯专属
+	(Lucent ad-hoc) 模式 (而有时与专属模式是混淆的)。
+	这个是早先的，准 802.11 专属模式，并且应该只用于过渡性的安装里。
+	对于两类专属模式我不再做进一步介绍了。</para>
+     </sect3>
+   </sect2>
+
+   <sect2>
+     <title>底层结构 (Infrastructure) 模式</title>
+     <sect3>
+       <title>接入点</title>
+
+       <para>接入点是一种无线网络设备，
+	它允许一个或更多的无线客户端使用此设备作为中心集线器 (hub)。
+	使用接入点时， 所有的客户端通过接入点通信。
+	常用多个接入点来覆盖一个完整的区域，比如一所住房、
+	一片商业区，或一座公园。</para>
+
+       <para>接入点一般具有多个网络连接：无线网卡、
+	一块或多块用于连接其它网络有线的以太网适配器。</para>
+
+       <para>可以购买预建的接入点，
+	您也可以使用 FreeBSD 及其兼容的无线网卡自己建立接入点。
+	一些产商制造了带有不同功能的无线接入点和无线网卡。</para>
+     </sect3>
+
+     <sect3>
+       <title>建立 FreeBSD 接入点</title> <indexterm><primary>无线网络</primary> <secondary>接入点</secondary></indexterm>
+
+       <sect4><title>要求</title>
+
+         <para>为了在 FreeBSD 上建立接入点，您要有一块兼容的无线网卡。
+	 至今为止，FreeBSD 只支持带有 Prism 芯片组的网卡。
+	 您还需要被 FreeBSD 支持的有线网卡 (这个不难找到，FreeBSD
+	 支持很多不同的设备)。在这里，我们假定您要桥接 (&man.bridge.4;)
+	 有线网卡连接的网络与无线设备之间的所有传输。</para>
+
+	 <para>FreeBSD 用来实现接入点的"hostap"功能与一定版本的
+	   firmware (固件) 工作得很好。Prism 2 网卡应该使用
+	   firmware1.3.4或更新的版本。Prism 2.5 和 Prism 3
+	   网卡应使用firmware1.4.9。老版本的firmware
+	   可能无法正常工作。这时候，升级网卡的唯一方式是使用厂商提供的
+	   &windows; firmware 升级工具。</para>
+       </sect4>
+
+       <sect4>
+         <title>设置并运行</title>
+         <para>首先，确保您的系统能识别无线网卡：</para>
+         <screen>&prompt.root; <userinput>ifconfig -a</userinput>
+wi0: flags=8843&lt;UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST&gt; mtu 1500
+        inet6 fe80::202:2dff:fe2d:c938%wi0 prefixlen 64 scopeid 0x7
+        inet 0.0.0.0 netmask 0xff000000 broadcast 255.255.255.255
+        ether 00:09:2d:2d:c9:50
+        media: IEEE 802.11 Wireless Ethernet autoselect (DS/2Mbps)
+        status: no carrier
+        ssid ""
+        stationname "FreeBSD Wireless node"
+        channel 10 authmode OPEN powersavemode OFF powersavesleep 100
+        wepmode OFF weptxkey 1</screen>
+
+         <para>现在不用考虑细节部分，只要确认有信息表明您已安装了无线网卡。
+	   如果您无法找到无线接口，您可能使用的是 PC 卡，需要查看
+	   &man.pccardc.8; 和 &man.pccardd.8; 联机手册以获取更多信息。</para>
+
+         <para>下一步，您需要加载一个模块使 FreeBSD
+	   的桥接部分为接入点作好准备。 加载桥接 &man.bridge.4;
+	   模块，只需运行以下命令：</para>
+
+         <screen>&prompt.root; <userinput>kldload bridge</userinput></screen>
+
+         <para>加载模块应该不会产生任何错误。如果发生了错误，
+	   您就需要将桥接 &man.bridge.4; 代码编译入内核。手册的<link
+	   linkend="network-bridging">桥接(Bridging)</link>
+	   部分应该能帮您完成这个任务。</para>
+
+         <para>现在已经完成了桥接的组件，
+	   接着我们需要告诉内核将哪些接口桥接在一起。
+	   我们使用 &man.sysctl.8; 来完成：</para>
+
+         <screen>&prompt.root; <userinput>sysctl net.link.ether.bridge=1</userinput>
+&prompt.root; <userinput>sysctl net.link.ether.bridge_cfg="wi0,xl0"</userinput>
+&prompt.root; <userinput>sysctl net.inet.ip.forwarding=1</userinput></screen>
+
+	<para>在 &os; 5.2-RELEASE 以及更新版本上，您必须使用下面的选项：</para>
+
+	<screen>&prompt.root; <userinput>sysctl net.link.ether.bridge.enable=1</userinput>
+&prompt.root; <userinput>sysctl net.link.ether.bridge.config="wi0,xl0"</userinput>
+&prompt.root; <userinput>sysctl net.inet.ip.forwarding=1</userinput></screen>
+
+         <para>现在来设置并启动无线网卡。以下的命令将网卡设置为接入点状态：</para>
+
+         <screen>
+&prompt.root; <userinput>ifconfig wi0 ssid <replaceable>my_net</replaceable> channel 11 media DS/11Mbps mediaopt hostap up stationname "<replaceable>FreeBSD AP</replaceable>"</userinput>
+         </screen>
+
+         <para>&man.ifconfig.8; 行用于启动 <devicename>wi0</devicename> 接口，
+	   并把它的 SSID 设置为 <replaceable>my_net</replaceable>，
+	   还有把工作站名设置为 <replaceable>FreeBSD AP</replaceable>。
+	   <option>media DS/11Mbps</option> 是把卡设置成 11Mbps 模式，
+	   它是任何<option>mediaopt</option>产生作用所必需的。
+	   <option>mediaopt hostap</option> 选项把接口设置成接入点模式。
+	   <option>channel 11</option> 选项设置为要使用的 802.11b channel(频道)。
+	   &man.wicontrol.8; 手册包含一些有效的channel选项。</para>
+
+         <para>现在应该启动并运行着一个完全功能的接入点。
+	   推荐阅读 &man.wicontrol.8;，&man.ifconfig.8; 和
+	   &man.wi.4; 以求更深入的了解。
+         </para>
+
+         <para>同样建议您阅读接着关于加密那一节。</para>
+       </sect4>
+
+       <sect4>
+         <title>状态信息</title>
+	 <para>一旦接入点配置完成且可操作，
+	   操作者都会希望查看连入接入点的客户。
+	   在任何时候，都可以键入：</para>
+
+         <screen>&prompt.root; <userinput>wicontrol -l</userinput>
+1 station:
+00:09:b7:7b:9d:16  asid=04c0, flags=3&lt;ASSOC,AUTH&gt;, caps=1&lt;ESS&gt;, rates=f&lt;1M,2M,5.5M,11M&gt;, sig=38/15
+</screen>
+
+         <para>显示连接了一个站点，接着的是各种参数。
+	   显示的信号通常只作为强度的相对指示。到
+	   dBm 或其它单元的转换因 firmware 版本的不同而有所差异。</para>
+       </sect4>
+     </sect3>
+
+     <sect3>
+       <title>客户端</title>
+
+       <para>一个无线客户端是一个连入接入点或直接连接另一个客户端的系统。 </para>
+
+       <para>一般地，无线客户端只有一个网络设备，也就是无线网卡。</para>
+
+       <para>配置无线客户端的方法有好几种。基于不同的无线模式，一般有
+	 BSS (infrastructure 模式，它需要有一个接入点) 和 IBSS 模式
+	 (ad-hoc，或点对点模式)。在我们的例子中我们使用了最流行的BSS模式，
+	 讨论接入点。</para>
+
+       <sect4>
+       <title>要求</title>
+       <para>将FreeBSD设置为无线客户端事实上只有一个条件。
+	 就是您需要有一块能被FreeBSD支持的无线网卡。</para>
+       </sect4>
+
+       <sect4>
+       <title>设置FreeBSD无线客户端</title>
+
+       <para>在开始之前，您需要了解有关要连入的无线网络的一些信息。
+	 在本例中，我们将连入一个名为 <replaceable>my_net</replaceable>
+	 的无线网络，且关闭了加密功能。</para>
+
+       <note><para>在本例中，我们不使用加密，这是非常危险的。
+	 在下一节中，您将会学到如何开启加密和这样做的重要性的原因，
+	 以及为什么一些加密技术仍不能完全地保护您。</para></note>
+
+       <para>确保您的网卡能被 FreeBSD 识别：</para>
+
+       <screen>&prompt.root; <userinput>ifconfig -a</userinput>
+wi0: flags=8843&lt;UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST&gt; mtu 1500
+        inet6 fe80::202:2dff:fe2d:c938%wi0 prefixlen 64 scopeid 0x7
+        inet 0.0.0.0 netmask 0xff000000 broadcast 255.255.255.255
+        ether 00:09:2d:2d:c9:50
+        media: IEEE 802.11 Wireless Ethernet autoselect (DS/2Mbps)
+        status: no carrier
+        ssid ""
+        stationname "FreeBSD Wireless node"
+        channel 10 authmode OPEN powersavemode OFF powersavesleep 100
+        wepmode OFF weptxkey 1</screen>
+
+       <para>现在，我们要正确地设置网卡：</para>
+
+       <screen>&prompt.root; <userinput>ifconfig wi0 inet <replaceable>192.168.0.20</replaceable> netmask <replaceable>255.255.255.0</replaceable> ssid <replaceable>my_net</replaceable></userinput></screen>
+
+       <para>将 <hostid role="ipaddr">192.168.0.20</hostid> 和
+	 <hostid role="netmask">255.255.255.0</hostid>
+	 替换为有线网络上合法的 IP 地址和网络掩码。记住，
+	 接入点桥连了无线网络和有线网络之间的数据，
+	 所以对于网络上的其它设备来说，您就如同在有线网络上。</para>
+
+       <para>完成了这些，您应该能 ping 通有线网络上的主机，
+	 就像是通过有线网络连接的一样。</para>
+
+       <para>如果您遇到了问题，确认您是否连上了接入点：</para>
+
+       <screen>&prompt.root; <userinput>ifconfig wi0</userinput></screen>
+
+       <para>此命令会返回一些信息，您应该能看到：</para>
+       <screen>status: associated</screen>
+
+       <para>如果显示没有<literal>连接上 (associated)</literal>，
+	 那您可能在接入点的范围以外，需要关闭加密或者可能有配置问题。</para>
+
+       </sect4>
+     </sect3>
+
+     <sect3>
+      <title>加密</title> <indexterm><primary>无线网络</primary> <secondary>加密</secondary></indexterm>
+
+      <para>无线网络的加密非常重要因为您无法让网络处于一个被良好保护的区域。
+	您的无线数据会向整个社区广播，任何人都可以读到它。
+	这就需要加密。通过加密向电波发送的数据，
+	使得任何有兴趣的组织从电波中提取数据变得更难。 </para>
+
+     <para>加密客户端与接入点之间数据的最常用的方法有两种：WEP和&man.ipsec.4;。</para>
+
+     <sect4>
+     <title>WEP</title> <indexterm><primary>WEP</primary></indexterm>
+
+      <para>WEP 是 Wired Equivalency Protocol(有线等效协议)
+	的缩写。 WEP试图使无线网络变得如有线网络一样安全与可靠。
+	不幸的是它已经被攻破，是非常容易被破解的。
+	这也意味着它不适用于加密敏感数据。</para>
+
+      <para>但有总比没有好，使用以下命令 FreeBSD 接入点上打开 WEP：</para>
+
+      <screen>&prompt.root; <userinput>ifconfig wi0 inet up ssid <replaceable>my_net</replaceable> wepmode on wepkey <replaceable>0x1234567890</replaceable> media DS/11Mbps mediaopt hostap</userinput></screen>
+
+      <para>您可以使用以下这个命令在客户端上打开 WEP：</para>
+
+      <screen>&prompt.root; <userinput>ifconfig wi0 inet <replaceable>192.168.0.20</replaceable> netmask <replaceable>255.255.255.0</replaceable> ssid <replaceable>my_net</replaceable> wepmode on wepkey <replaceable>0x1234567890</replaceable></userinput></screen>
+
+      <para>注意您应该将 <replaceable>0x1234567890</replaceable> 替换为更独特的密钥。</para>
+
+     </sect4>
+
+     <sect4>
+     <title>IPsec</title>
+
+     <para>&man.ipsec.4; 是一个更加强大的网络数据加密工具。
+	它无疑是加密无线网络数据的首选。在手册的
+	<link linkend="ipsec">IPsec</link> 部分，您将能更多了解
+	&man.ipsec.4; 的安全性及其实现。</para>
+     </sect4>
+    </sect3>
+
+    <sect3>
+    <title>工具</title>
+
+    <para>有少量用于诊断和设置无线网络的工具，这里我们将介绍几个这样的工具。</para>
+
+    <sect4>
+    <title><application>bsd-airtools</application>包</title>
+
+    <para><application>bsd-airtools</application>
+	包是一套完整的工具集，包括了用于破解 WEP
+	密匙的无线审核工具，接入点检测等等。</para>
+
+    <para><application>bsd-airtools</application>
+	工具集可以从<filename
+	role="package">net/bsd-airtools</filename> port
+	里安装。关于安装 ports 的信息可以在手册的
+	<xref linkend="ports"> 里找到。</para>
+
+    <para><command>dstumbler</command> 是一个用于接入点发现和显示音噪比
+	(noise ratio) 图表的工具。在您启动运行接入点有困难时，
+	<command>dstumbler</command> 可能会帮您大忙。</para>
+
+    <para>为了测试无线网络的安全性，您可以选用
+	<quote>dweputils</quote> (<command>dwepcrack</command>，
+	<command>dwepdump</command> 和 <command>dwepkeygen</command>)
+	来帮您测定 WEP 是否是您的无线网络安全需要的正确解决方案。</para>
+
+    </sect4>
+
+    <sect4>
+    <title><command>wicontrol</command>， <command>ancontrol</command> 和 <command>raycontrol</command> 工具集</title>
+
+    <para>这些工具用于控制无线网卡在无线网络上行为。
+	在以上的例子中，我们选择了 &man.wicontrol.8;，
+	因为我们的无线网卡是 <devicename>wi0</devicename> 接口。
+	如果您有 Cisco (思科) 的无线设备，出现的将是
+	<devicename>an0</devicename>，于是您可以使用
+	&man.ancontrol.8;。</para>
+
+    </sect4>
+
+    <sect4>
+    <title><command>ifconfig</command> 命令</title> <indexterm><primary>ifconfig</primary></indexterm>
+
+    <para>&man.ifconfig.8; 命令可以用来处理大量与
+	&man.wicontrol.8; 相同的设置，但它还是少了几个选项。
+	查看 &man.ifconfig.8; 可以了解到命令行参数和选项。</para>
+
+    </sect4>
+
+    </sect3>
+
+    <sect3>
+    <title>支持的卡</title>
+    <sect4>
+    <title>接入点</title>
+
+    <para>现在唯一被支持用于 BSS (作为接入点) 模式的卡都是基于
+	Prism 2、2.5，或 3 芯片组的。要完整的列表，
+	查看 &man.wi.4;。</para>
+
+    </sect4>
+
+    <sect4>
+    <title>客户端</title>
+
+    <para>现在几乎所有的 802.11b 无线网卡都能被 FreeBSD
+	支持。大多数基于 Prism、Spectrum24、Hermes、Aironet
+	和 Raylink 的网卡能在 IBSS (ad-hoc， peer-to-peer， 和
+	BSS)模式下工作。</para>
+
+    </sect4>
+    </sect3>
+
+   </sect2>
+  </sect1>
+
+  <sect1 id="network-bluetooth">
+    <sect1info>
+      <authorgroup>
+        <author><firstname>Pav</firstname>
+	  <surname>Lucistnik</surname>
+	  <contrib>作者：</contrib>
+	  <affiliation>
+	    <address><email>pav@oook.cz</email></address>
+	  </affiliation>
+	</author>
+      </authorgroup>
+      <authorgroup>
+	<author>
+	  <firstname>张</firstname>
+	  <surname>雪平</surname>
+	  <contrib>中文翻译：</contrib>
+	  <affiliation>
+	    <address><email>zxpmyth@yahoo.com.cn</email></address>
+	  </affiliation>
+	</author>
+	<author>
+	  <firstname>袁</firstname>
+	  <surname>苏义</surname>
+	</author>
+      </authorgroup>
+    </sect1info>
+    <title>蓝牙</title>
+
+    <indexterm><primary>蓝牙</primary></indexterm>
+    <sect2>
+      <title>简介</title>
+      <para>Bluetooth (蓝牙) 是一项无线技术，
+	用于建立带宽为 2.4GHZ，波长为 10 米的私有网络。
+	网络一般是由便携式设备，比加手机 (cellular phone)，
+	掌上电脑 (handhelds) 和膝上电脑 (laptops)) 以 ad-hoc
+	形式组成。不象其它流行的无线技术——Wi-Fi，Bluetooth
+	提供了更高级的服务层面，像类 FTP 的文件服务、文件推送
+	(file pushing)、语音传送、串行线模拟等等。</para>
+
+      <para>在 &os; 里，蓝牙栈 (Bluetooth stack) 通过使用
+	Netgraph 框架 (请看 &man.netgraph.4;) 来的实现。
+	大量的"Bluetooth USB dongle"由 &man.ng.ubt.4; 驱动程序支持。
+	基于 Broadcom BCM2033 芯片组的 Bluetooth 设备可以通过
+	&man.ubtbcmfw.4; 和 &man.ng.ubt.4; 驱动程序支持。
+	3Com Bluetooth PC 卡 3CRWB60-A 由 &man.ng.bt3c.4; 驱动程序支持。
+	基于 Serial 和 UART 的蓝牙设备由 &man.sio.4;、&man.ng.h4.4;
+	和 &man.hcseriald.8;。本节介绍 USB Bluetooth dongle
+	的使用。在 &os; 5.0 及更新的系统里，都可以支持 Bluetooth。</para>
+    </sect2>
+
+    <sect2>
+      <title>插入设备</title>
+      <para>默认的 Bluetooth 设备驱动程序已存在于内核模块里。
+	接入设备前，您需要将驱动程序加载入内核：</para>
+
+      <screen>&prompt.root; <userinput>kldload ng_ubt</userinput></screen>
+
+      <para>如果系统启动时 Bluetooth 设备已经存在于系统里，
+	那么从 <filename>/boot/loader.conf</filename> 里加载这个模块：</para>
+
+      <programlisting>ng_ubt_load="YES"</programlisting>
+
+      <para>插入USB dongle。控制台(console)(或syslog中)会出现类似如下的信息：</para>
+
+      <screen>ubt0: vendor 0x0a12 product 0x0001, rev 1.10/5.25, addr 2
+ubt0: Interface 0 endpoints: interrupt=0x81, bulk-in=0x82, bulk-out=0x2
+ubt0: Interface 1 (alt.config 5) endpoints: isoc-in=0x83, isoc-out=0x3,
+      wMaxPacketSize=49, nframes=6, buffer size=294</screen>
+
+      <para>复制 <filename>/usr/share/examples/netgraph/bluetooth/rc.bluetooth</filename>
+	到一个合适的地方，如 <filename>/etc/rc.bluetooth</filename>。
+	这个脚本用于启动和停止 Bluetooth stack (蓝牙栈)。
+	最好在拔出设备前停止 stack(stack)，当然也不是非做不可。
+	启动 stack (栈) 时，会得到如下的输出：</para>
+
+      <screen>&prompt.root; <userinput>/etc/rc.bluetooth start ubt0</userinput>
+BD_ADDR: 00:02:72:00:d4:1a
+Features: 0xff 0xff 0xf 00 00 00 00 00
+&lt;3-Slot&gt; &lt;5-Slot&gt; &lt;Encryption&gt; &lt;Slot offset&gt;
+&lt;Timing accuracy&gt; &lt;Switch&gt; &lt;Hold mode&gt; &lt;Sniff mode&gt;
+&lt;Park mode&gt; &lt;RSSI&gt; &lt;Channel quality&gt; &lt;SCO link&gt;
+&lt;HV2 packets&gt; &lt;HV3 packets&gt; &lt;u-law log&gt; &lt;A-law log&gt; &lt;CVSD&gt;
+&lt;Paging scheme&gt; &lt;Power control&gt; &lt;Transparent SCO data&gt;
+Max. ACL packet size: 192 bytes
+Number of ACL packets: 8
+Max. SCO packet size: 64 bytes
+Number of SCO packets: 8</screen>
+
+    </sect2>
+
+    <indexterm><primary>HCI</primary></indexterm>
+    <sect2>
+      <title>主控制器接口 (HCI)</title>
+
+      <para>主控制器接口 (HCI)
+	提供了通向基带控制器和连接管理器的命令接口及访问硬件状态字和控制寄存器的通道。
+	这个接口提供了访问蓝牙基带 (Bluetooth baseband) 功能的统一方式。
+	主机上的 HCI 层与蓝牙硬件上的 HCI 固件交换数据和命令。
+	主控制器的传输层 (如物理总线) 驱动程序提供两个 HCI
+	层交换信息的能力。</para>
+
+      <para>为每个蓝牙 (Bluetooth) 设备创建一个
+	<emphasis>hci</emphasis> 类型的 Netgraph 结点。
+	HCI 结点一般连接蓝牙设备的驱动结点 (下行流) 和
+	L2CAP 结点 (上行流)。 所有的HCI操作必须在 HCI
+	结点上进行而不是设备驱动结点。HCI 结点的默认名是
+	<quote>devicehci</quote>。更多细节请参考
+	&man.ng.hci.4; 的联机手册。</para>
+
+      <para>最常见的任务是发现在 RF proximity
+	中的蓝牙 (Bluetooth) 设备。这个就叫做
+	<emphasis>质询(inquiry)</emphasis>。质询及 HCI
+	相关的操作可以由 &man.hccontrol.8; 工具来完成。
+	以下的例子展示如何找出范围内的蓝牙设备。
+	在几秒钟内您应该得到一张设备列表。
+	注意远程主机只有被置于
+	<emphasis>discoverable(可发现)</emphasis>
+	模式才能答应质询。</para>
+
+      <screen>&prompt.user; <userinput>hccontrol -n ubt0hci inquiry</userinput>
+Inquiry result, num_responses=1
+Inquiry result #0
+       BD_ADDR: 00:80:37:29:19:a4
+       Page Scan Rep. Mode: 0x1
+       Page Scan Period Mode: 00
+       Page Scan Mode: 00
+       Class: 52:02:04
+       Clock offset: 0x78ef
+Inquiry complete. Status: No error [00]</screen>
+
+      <para><literal>BD_ADDR</literal> 是蓝牙设备的特定地址，
+	类似于网卡的 MAC 地址。需要用此地址与某个设备进一步地通信。
+	可以为 BD_ADDR 分配由人可读的名字 (human readable name)。
+	文件 <filename>/etc/bluetooth/hosts</filename>
+	包含已知蓝牙主机的信息。
+	下面的例子展示如何获得分配给远程设备的可读名。</para>
+
+      <screen>&prompt.user; <userinput>hccontrol -n ubt0hci remote_name_request 00:80:37:29:19:a4</userinput>
+BD_ADDR: 00:80:37:29:19:a4
+Name: Pav's T39</screen>
+
+      <para>如果在远程蓝牙上运行质询，您会发现您的计算机是
+	<quote>your.host.name (ubt0)</quote>。
+	分配给本地设备的名字可随时改变。</para>
+
+      <para>蓝牙系统提供点对点连接 (只有两个蓝牙设备参与)
+	和点对多点连接。在点对多点连接中，连接由多个蓝牙设备共享。
+	以下的例子展示如何取得本地设备的活动基带 (baseband)
+	连接列表。</para>
+
+      <screen>&prompt.user; <userinput>hccontrol -n ubt0hci read_connection_list</userinput>
+Remote BD_ADDR    Handle Type Mode Role Encrypt Pending Queue State
+00:80:37:29:19:a4     41  ACL    0 MAST    NONE       0     0 OPEN</screen>
+
+      <para><emphasis>connection handle(连接柄)</emphasis>
+	在需要终止基带连接时有用。注意：一般不需要手动完成。
+	栈 (stack) 会自动终止不活动的基带连接。</para>
+
+      <screen>&prompt.root; <userinput>hccontrol -n ubt0hci disconnect 41</userinput>
+Connection handle: 41
+Reason: Connection terminated by local host [0x16]</screen>
+
+      <para>参考 <command>hccontrol help</command>
+	获取完整的 HCI 命令列表。大部分 HCI
+	命令不需要超级用户权限。</para>
+
+    </sect2>
+
+    <indexterm><primary>L2CAP</primary></indexterm>
+    <sect2>
+      <title>逻辑连接控制和适配协议(L2CAP)</title>
+
+      <para>逻辑连接控制和适配协议 (L2CAP)
+	为上层协议提供面向连接和无连接的数据服务，
+	并提供多协议功能和分割重组操作。L2CAP
+	充许上层协议和应用软件传输和接收最大长度为
+	64K 的 L2CAP 数据包。</para>
+
+      <para>L2CAP 基于 <emphasis>通道(channel)</emphasis> 的概念。
+	通道 (Channel) 是位于基带 (baseband) 连接之上的逻辑连接。
+	每个通道以多对一的方式绑定一个单一协议 (single protocol)。
+	多个通道可以绑定同一个协议，但一个通道不可以绑定多个协议。
+	每个在通道里接收到的 L2CAP 数据包被传到相应的上层协议。
+	多个通道可共享同一个基带连接。</para>
+
+      <para>为每个蓝牙 (Bluetooth) 设备创建一个
+	<emphasis>l2cap</emphasis> 类型的 Netgraph 结点。
+	L2CAP 结点一般连接 HCI 结点(下行流)和蓝牙设备的驱动结点(上行流)。
+	L2CAP 结点的默认名是 <quote>devicel2cap</quote>。
+	更多细节请参考 &man.ng.l2cap.4; 的联机手册。</para>
+
+      <para>一个有用的命令是 &man.l2ping.8;，
+	它可以用来 ping 其它设备。
+	一些蓝牙实现可能不会返回所有发送给它们的数据，
+	所以下例中的 <literal>0 bytes</literal> 是正常的。</para>
+
+      <screen>&prompt.root; <userinput>l2ping -a 00:80:37:29:19:a4</userinput>
+0 bytes from 0:80:37:29:19:a4 seq_no=0 time=48.633 ms result=0
+0 bytes from 0:80:37:29:19:a4 seq_no=1 time=37.551 ms result=0
+0 bytes from 0:80:37:29:19:a4 seq_no=2 time=28.324 ms result=0
+0 bytes from 0:80:37:29:19:a4 seq_no=3 time=46.150 ms result=0</screen>
+
+      <para>&man.l2control.8; 工具用于在 L2CAP 上进行多种操作。
+	以下这个例子展示如何取得本地设备的逻辑连接 (通道)
+	和基带连接的列表：</para>
+
+      <screen>&prompt.user; <userinput>l2control -a 00:02:72:00:d4:1a read_channel_list</userinput>
+L2CAP channels:
+Remote BD_ADDR     SCID/ DCID   PSM  IMTU/ OMTU State
+00:07:e0:00:0b:ca    66/   64     3   132/  672 OPEN
+&prompt.user; <userinput>l2control -a 00:02:72:00:d4:1a read_connection_list</userinput>
+L2CAP connections:
+Remote BD_ADDR    Handle Flags Pending State
+00:07:e0:00:0b:ca     41 O           0 OPEN</screen>
+
+      <para>另一个诊断工具是 &man.btsockstat.1;。
+	它完成与 &man.netstat.1; 类似的操作，
+	只是用了蓝牙网络相关的数据结构。
+	以下这个例子显示与 &man.l2control.8; 相同的逻辑连接。</para>
+
+      <screen>&prompt.user; <userinput>btsockstat</userinput>
+Active L2CAP sockets
+PCB      Recv-Q Send-Q Local address/PSM       Foreign address   CID   State
+c2afe900      0      0 00:02:72:00:d4:1a/3     00:07:e0:00:0b:ca 66    OPEN
+Active RFCOMM sessions
+L2PCB    PCB      Flag MTU   Out-Q DLCs State
+c2afe900 c2b53380 1    127   0     Yes  OPEN
+Active RFCOMM sockets
+PCB      Recv-Q Send-Q Local address     Foreign address   Chan DLCI State
+c2e8bc80      0    250 00:02:72:00:d4:1a 00:07:e0:00:0b:ca 3    6    OPEN</screen>
+
+    </sect2>
+
+    <indexterm><primary>RFCOMM</primary></indexterm>
+    <sect2>
+      <title>RFCOMM 协议</title>
+
+      <para>RFCOMM 协议提供基于 L2CAP 协议的串行端口模拟。
+	该协议基于 ETSI TS 07.10 标准。RFCOMM 是一个简单的传输协议，
+	附加了摸拟 9 针 RS-232(EIATIA-232-E) 串行端口的定义。
+	RFCOMM 协议最多支持 60 个并发连接 (RFCOMM通道)。</para>
+
+      <para>为了实现 RFCOMM，
+	运行于不同设备上的应用程序建立起一条关于它们之间通信段的通信路径。
+	RFCOMM实际上适用于使用串行端口的应用软件。
+	通信段是一个设备到另一个设备的蓝牙连接 (直接连接)。</para>
+
+      <para>RFCOMM 关心的只是直接连接设备之间的连接，
+	或在网络里一个设备与 modem 之间的连接。RFCOMM 能支持其它的配置，
+	比如在一端通过蓝牙无线技术通讯而在另一端使用有线接口。</para>
+
+      <para>在&os;，RFCOMM 协议在蓝牙套接字层 (Bluetooth sockets layer) 实现。</para>
+    </sect2>
+
+    <indexterm><primary>结对</primary></indexterm>
+    <sect2>
+      <title>设备的结对(Pairing of Devices)</title>
+
+      <para>默认情况下，蓝牙通信是不需要验证的，
+	任何设备可与其它任何设备对话。一个蓝牙设备 (比如手机)
+	可以选择通过验证以提供某种特殊服务 (比如拨号服务)。
+	蓝牙验证一般使用 <emphasis>PIN码(PIN codes)</emphasis>。
+	一个 PIN 码是最长为 16 个字符的 ASCII 字符串。
+	用户需要在两个设备中输入相同的PIN码。用户输入了 PIN 码后，
+	两个设备会生成一个 <emphasis>连接密匙(link key)</emphasis>。
+	接着连接密钥可以存储在设备或存储器中。
+	连接时两个设备会使用先前生成的连接密钥。
+	以上介绍的过程被称为 <emphasis>结对(pairing)</emphasis>。
+	注意如果任何一方丢失了连接密钥，必须重新进行结对。</para>
+
+      <para>守护进程 &man.hcsecd.8; 负责处理所有蓝牙验证请求。
+	默认的配置文件是 <filename>/etc/bluetooth/hcsecd.conf</filename>。
+	下面的例子显示一个手机的 PIN 码被预设为<quote>1234</quote>：</para>
+
+      <programlisting>device {
+        bdaddr  00:80:37:29:19:a4;
+        name    "Pav's T39";
+        key     nokey;
+        pin     "1234";
+      }</programlisting>
+
+      <para>PIN 码没有限制(除了长度)。有些设备
+	(例如蓝牙耳机) 会有一个预置的 PIN 码。<option>-d</option>
+	开关强制 &man.hcsecd.8; 守护进程处于前台，因此很容易看清发生了什么。
+	设置远端设备准备接收结对 (pairing)，然后启动蓝牙连接到远端设备。
+	远端设备应该回应接收了结对并请求PIN码。输入与
+	<filename>hcsecd.conf</filename> 中一样的 PIN 码。
+	现在您的个人计算机已经与远程设备结对了。
+	另外您也可以在远程设备上初始结点。以下是简单的
+	<application>hcsecd</application> 服务输出样本：</para>
+
+<programlisting>hcsecd[16484]: Got Link_Key_Request event from 'ubt0hci', remote bdaddr 0:80:37:29:19:a4
+hcsecd[16484]: Found matching entry, remote bdaddr 0:80:37:29:19:a4, name 'Pav's T39', link key doesn't exist
+hcsecd[16484]: Sending Link_Key_Negative_Reply to 'ubt0hci' for remote bdaddr 0:80:37:29:19:a4
+hcsecd[16484]: Got PIN_Code_Request event from 'ubt0hci', remote bdaddr 0:80:37:29:19:a4
+hcsecd[16484]: Found matching entry, remote bdaddr 0:80:37:29:19:a4, name 'Pav's T39', PIN code exists
+hcsecd[16484]: Sending PIN_Code_Reply to 'ubt0hci' for remote bdaddr 0:80:37:29:19:a4</programlisting>
+
+    </sect2>
+
+    <indexterm><primary>SDP</primary></indexterm>
+    <sect2>
+      <title>服务发现协议 (SDP)</title>
+      <para>服务发现协议 (SDP) 提供给客户端软件一种方法，
+	它能发现由服务器软件提供的服务及属性。
+	服务的属性包括所提供服务的类型或类别，
+	使用该服务所需要的机制或协议。</para>
+
+      <para>SDP 包括 SDP 服务器和 SDP 客户端之间的通信。
+	服务器维护一张服务记录列表，它介绍服务器上服务的特性。
+	每个服务记录包含关于单个服务的信息。通过发出 SDP 请求，
+	客户端会得到服务记录列表的信息。如果客户端 (或者客户端上的应用软件)
+	决定使用一个服务，为了使用这个服务它必须与服务提供都建立一个独立的连接。
+	SDP 提供了发现服务及其属性的机制，但它并不提供使用这些服务的机制。</para>
+
+      <para>一般地，SDP客户端按照服务的某种期望特征来搜索服务。
+	但是，即使没有任何关于由 SDP 服务端提供的服务的预设信息，
+	有时也能令人满意地发现它的服务记录里所描述的是哪种服务类型。
+	这种发现所提供服务的过程称为 <emphasis>浏览(browsing)</emphasis>。</para>
+
+      <para>蓝牙 SDP 服务端 &man.sdpd.8; 和命令行客户端
+	&man.sdpcontrol.8; 都包括在了标准的 &os; 安装里。
+	下面的例子展示如何进行 SDP 浏览查询。</para>
+
+      <screen>&prompt.user; <userinput>sdpcontrol -a 00:01:03:fc:6e:ec browse</userinput>
+Record Handle: 00000000
+Service Class ID List:
+        Service Discovery Server (0x1000)
+Protocol Descriptor List:
+        L2CAP (0x0100)
+                Protocol specific parameter #1: u/int/uuid16 1
+                Protocol specific parameter #2: u/int/uuid16 1
+
+Record Handle: 0x00000001
+Service Class ID List:
+        Browse Group Descriptor (0x1001)
+
+Record Handle: 0x00000002
+Service Class ID List:
+        LAN Access Using PPP (0x1102)
+Protocol Descriptor List:
+        L2CAP (0x0100)
+        RFCOMM (0x0003)
+                Protocol specific parameter #1: u/int8/bool 1
+Bluetooth Profile Descriptor List:
+        LAN Access Using PPP (0x1102) ver. 1.0
+</screen>
+
+      <para>...等等。注意每个服务有一个属性
+	(比如 RFCOMM 通道)列表。
+	根据服务您可能需要为一些属性做个注释。
+	有些<quote>蓝牙实现 (Bluetooth implementation)</quote>不支持服务浏览，
+	可能会返回一个空列表。这种情况，可以搜索指定的服务。
+	下面的例子展示如何搜索 OBEX Object Push (OPUSH) 服务：</para>
+
+      <screen>&prompt.user; <userinput>sdpcontrol -a 00:01:03:fc:6e:ec search OPUSH</userinput></screen>
+
+      <para>要在 &os; 里为蓝牙客户端提供服务，可以使用 &man.sdpd.8; 服务：</para>
+      <screen>&prompt.root; <userinput>sdpd</userinput></screen>
+
+      <para>需要为远端提供蓝牙服务的本地的服务程序会使用本地 SDP
+	进程注册服务。像这样的程序就有 &man.rfcomm.pppd.8;。
+	一旦启动它，就会使用本地 SDP 进程注册蓝牙 LAN 服务。</para>
+
+      <para>使用本地 SDP 进程注册的服务列表，可以通过本地控制通道发出
+	SDP 浏览查询获得：</para>
+
+      <screen>&prompt.root; <userinput>sdpcontrol -l browse</userinput></screen>
+
+    </sect2>
+
+    <sect2>
+      <title>拨号网络 (DUN) 和使用 PPP(LAN) 层面的网络接入</title>
+
+      <para>拨号网络 (DUN) 配置通常与 modem 和手机一起使用。
+	如下是这一配置所涉及的内容：</para>
+
+      <itemizedlist>
+        <listitem><para>计算机使用手机或 modem 作为无线
+	  modem 来连接拨号因特网连入服务器，
+	  或者使用其它的拨号服务；</para></listitem>
+
+        <listitem><para>计算机使用手机或 modem 接收数据请求。</para></listitem></itemizedlist>
+
+      <para>使用 PPP(LAN) 层面的网络接入常使用在如下情形：</para>
+
+      <itemizedlist><listitem><para>单个蓝牙设备的局域网连入；
+           </para></listitem>
+
+        <listitem><para>多个蓝牙设备的局域网接入；
+          </para></listitem>
+
+        <listitem><para>PC 到 PC (使用基于串行线模拟的 PPP 网络)。</para></listitem></itemizedlist>
+
+      <para>在 &os; 中，两个层面使用 &man.ppp.8; 和
+	&man.rfcomm.pppd.8; (一种封装器，可以将 RFCOMM
+	蓝牙连接转换为 PPP 可操作的东西) 来实现。
+	在使用任何层面之前，一个新的 PPP 标识必须在
+	<filename>/etc/ppp/ppp.conf</filename> 中建立。
+	想要实例请参考 &man.rfcomm.pppd.8;。</para>
+
+      <para>在下面的例子中，&man.rfcomm.pppd.8; 用来在
+	NUN RFCOMM 通道上打开一个到 BD_ADDR 为 00:80:37:29:19:a4
+	的设备的 RFCOMM 连接。具体的 RFCOMM 通道号要通过 SDP
+	从远端设备获得。也可以手动指定通 RFCOMM，这种情况下
+	&man.rfcomm.pppd.8; 将不能执行 SDP 查询。使用
+	&man.sdpcontrol.8; 来查找远端设备上的 RFCOMM 通道。</para>
+
+      <screen>&prompt.root; <userinput>rfcomm_pppd -a 00:80:37:29:19:a4 -c -C dun -l rfcomm-dialup</userinput></screen>
+
+      <para>为了提供 PPP(LAN) 网络接入服务，必须运行
+	&man.sdpd.8; 服务。一个新的 LAN 客户端条目必须在
+	<filename>/etc/ppp/ppp.conf</filename> 文件中建立。
+	想要实例请参考 &man.rfcomm.pppd.8;。
+	最后，在有效地通道号上开始 RFCOMM PPP 服务。
+	RFCOMM PPP 服务会使用本地 SDP 进程自动注册蓝牙 LAN
+	服务。下面的例子展示如何启动 RFCOMM PPP 服务。</para>
+
+      <screen>&prompt.root; <userinput>rfcomm_pppd -s -C 7 -l rfcomm-server</userinput></screen>
+
+    </sect2>
+
+    <indexterm><primary>OBEX</primary></indexterm>
+    <sect2>
+      <title>OBEX 对象推送 (OBEX Object Push - OPUSH) 层面</title>
+      <para>OBEX协议被广泛地用于移动设备之间简单的文件传输。
+	它的主要用处是在红外线通信领域，
+	被用于笔记本或手持设备之间的一般文件传输。</para>
+
+      <para>OBEX 服务器和客户端由第三方软件包
+	<application>obexapp</application>实现，它可以从
+	<filename role="package">comms/obexapp</filename>
+	port 安装。</para>
+
+      <para>OBEX 客户端用于向 OBEX 服务器推入或接出对象。
+	一个对像可以是(举个例子)商业卡片或约会。 OBEX 客户能通过
+	SDP 从远程设备取得 RFCOMM 通道号。这可以通过指定服务名代替
+	RFCOMM 通道号来完成。支持的服务名是有：IrMC、FTRN 和 OPUSH。
+	也可以用数字来指定 RFCOMM 通道号。下面是一个 OBEX
+	会话的例子，一个设备信息对像从手机中被拉出，
+	一个新的对像被推入手机的目录。</para>
+
+      <screen>&prompt.user; <userinput>obexapp -a 00:80:37:29:19:a4 -C IrMC</userinput>
+obex&gt; get
+get: remote file&gt; telecom/devinfo.txt
+get: local file&gt; devinfo-t39.txt
+Success, response: OK, Success (0x20)
+obex&gt; put
+put: local file&gt; new.vcf
+put: remote file&gt; new.vcf
+Success, response: OK, Success (0x20)
+obex&gt; di
+Success, response: OK, Success (0x20)</screen>
+
+      <para>为了提供 OBEX 推入服务，&man.sdpd.8;
+	必须处于运行状态。必须创建一个根目录用于存放所有进入的对象。
+	根文件夹的默认路径是 <filename>/var/spool/obex</filename>。
+	最后，在有效的 RFCOMM 通道号上开始 OBEX 服务。OBEX 服务会使用
+	SDP 进程自动注册 OBEX 对象推送 (OBEX Object Push) 服务。
+	下面的例子展示如何启动 OBEX 服务。</para>
+
+      <screen>&prompt.root; <userinput>obexapp -s -C 10</userinput></screen>
+    </sect2>
+
+    <sect2>
+      <title>串口(SP)层面</title>
+      <para>串口(SP)层面允许蓝牙设备完成 RS232 (或类似) 串口线的仿真。
+	这个层面所涉及到情形是，
+	通过虚拟串口使用蓝牙代替线缆来处理以前的程序。</para>
+
+      <para>工具 &man.rfcomm.sppd.1; 来实现串口层。
+	<quote>Pseudo tty</quote> 用来作为虚拟的串口。
+	下面的例子展示如何连接远程设备的串口服务。
+	注意您不必指定 RFCOMM 通道——&man.rfcomm.sppd.1;
+	能够通过 SDP 从远端设备那里获得。
+	如果您想代替它的话，可以在命令行里指定 RFCOMM
+	通道来实现：</para>
+
+      <screen>&prompt.root; <userinput>rfcomm_sppd -a 00:07:E0:00:0B:CA -t /dev/ttyp6</userinput>
+rfcomm_sppd[94692]: Starting on /dev/ttyp6...</screen>
+
+      <para>一旦连接上，<quote>pseudo tty</quote>就可以充当串口了：</para>
+
+      <screen>&prompt.root; <userinput>cu -l ttyp6</userinput></screen>
+
+    </sect2>
+
+    <sect2>
+      <title>问题解答</title>
+
+      <sect3>
+        <title>不能连接远端设备</title>
+        <para>一些较老的蓝牙设备并不支持角色转换
+	  (role switching)。默认情况下，&os; 接受一个新的连接时，
+	  它会尝试进行角色转换并成为主控端 (master)。
+	  不支持角色转换的设备将无法连接。
+	  注意角色转换是在新连接建立时运行的，
+	  因此如果远程设备不支持角色转换，就不可能向它发出请求。
+	  一个 HCI 选项用来在本地端禁用角色转换。</para>
+
+        <screen>&prompt.root; <userinput>hccontrol -n ubt0hci write_node_role_switch 0</userinput></screen>
+
+      </sect3>
+
+      <sect3>
+        <title>有些东西正发生错误，我能查看发生了什么吗？</title>
+        <para>是的，您能。使用第三方软件包
+	  <application>hcidump-1.5</application>，这个可以从<ulink
+	  url="http://www.geocities.com/m_evmenkin/"></ulink>下载到。
+	  工具<application>hcidump</application> 类似于 &man.tcpdump.1;。
+	  它可以用来显示蓝牙数据包的内容并将其存入文件中。</para>
+      </sect3>
+
+    </sect2>
+
+  </sect1>
+
+
+  <sect1 id="network-bridging">
+    <sect1info>
+      <authorgroup>
+	<author>
+	  <firstname>Steve</firstname>
+	  <surname>Peterson</surname>
+	  <contrib>作者：</contrib>
+	</author>
+      </authorgroup>
+      <authorgroup>
+	<author>
+	  <firstname>张</firstname>
+	  <surname>雪平</surname>
+	  <contrib>中文翻译：</contrib>
+	  <affiliation>
+	    <address><email>zxpmyth@yahoo.com.cn</email></address>
+	  </affiliation>
+	</author>
+	<author>
+	  <firstname>袁</firstname>
+	  <surname>苏义</surname>
+	</author>
+      </authorgroup>
+    </sect1info>
+    <title>桥接</title>
+
+    <sect2>
+      <title>简介</title>
+	<indexterm>
+	  <primary>IP 子网</primary>
+	</indexterm>
+	<indexterm>
+	  <primary>桥接</primary>
+	</indexterm>
+      <para>有时候需要将一个物理网络分成两个独立的网段，
+	而无需创建新的 IP 子网和连接两个网段的路由器。
+	以这种方式连接两个网络的设备称为<quote>网桥 (bridge)</quote>。
+	有两个网络接口的 FreeBSD 系统可以作为网桥。</para>
+
+      <para>网桥通过学习每个网络接口上的 MAC 层地址 (以太网地址) 工作。
+	只当数据包的源地址和目标地址处于不同网络时网桥才进行转发。</para>
+
+      <para>在很多方面，网桥就像一个带有很少端口的以太网交换机。</para>
+    </sect2>
+
+    <sect2>
+      <title>适合桥接的情况</title>
+
+      <para>目前，有两种常见的情况下使用网桥。</para>
+
+      <sect3>
+	<title>网段上存在高流量</title>
+
+	<para>一种情况是您的物理网段流量过载，
+	  但是您不希望划分子网以路由器连接两个子网。</para>
+
+	<para>让我们考虑一个关于报社的例子，
+	  它的编辑部和产品部处于同一子网中。
+	  所有的编辑用户都使用服务器 <hostid>A</hostid>
+	  的文件服务，而产品部使用服务器 <hostid>B</hostid>。
+	  一个以太网将所有的用户连接在一起，
+	  高的流量负载使得网络速度变慢。</para>
+
+	<para>如果编辑部的用户能被分隔到一个网段中，
+	  产品部用户被分隔到另一个网段中那么这两个网段可以通过网桥连接起来。
+	  只当数据包目标为网桥<quote>其它</quote>端接口时，
+	  它才会被传到其它的网络上——这样就减少了各个网络的拥塞。</para>
+      </sect3>
+
+      <sect3>
+	<title>过滤/数据传输防火墙</title>
+	<indexterm>
+	  <primary>防火墙</primary>
+	</indexterm>
+	<indexterm>
+	  <primary>网络地址转换 (NAT)</primary>
+	</indexterm>
+
+	<para>第二种常见的情况是需要防火墙的地方没有进行网络地址转换(NAT)。</para>
+
+	<para>一个例子是一个小公司，它通过 DSL 或 ISDN 连接到 ISP。
+	  它拥有 13 个 ISP 分配的全局 IP 地址和 10 台 PC。
+	  在这种情况下，由于划分子网的问题，
+	  使用基于路由的防火墙存在一定难度。</para>
+
+	<indexterm>
+	  <primary>路由器</primary>
+	</indexterm>
+	<indexterm>
+	  <primary>DSL</primary>
+	</indexterm>
+	<indexterm>
+	  <primary>ISDN</primary>
+	</indexterm>
+	<para>一个基于网桥的防火墙可以成接在 DSL/ISDN
+	  路由器的后面而免去了所有的 IP 号问题。</para>
+      </sect3>
+    </sect2>
+
+    <sect2>
+      <title>配置网桥</title>
+
+      <sect3>
+	<title>选择网络接口卡</title>
+
+	<para>一个网桥至少需要两块网卡才能运行。
+	  不幸的是，并不是所有的网卡都能被 FreeBSD 4.0
+	  支持用于桥接。阅读 &man.bridge.4;
+	  了解所支持网卡的细节。</para>
+
+	<para>在继续之前要先安装并测试这两块网卡。</para>
+      </sect3>
+
+      <sect3>
+	<title>改变内核配置</title>
+	<indexterm>
+	  <primary>内核 选项</primary>
+	  <secondary>BRIDGE 选项</secondary>
+	</indexterm>
+
+	<para>为了激活内核对桥接的支持，增加以下语句：</para>
+
+	<programlisting>options BRIDGE</programlisting>
+
+	<para>到您的内核配置文件里，然后重建内核。</para>
+      </sect3>
+
+      <sect3>
+	<title>防火墙支持</title>
+	<indexterm><primary>防火墙</primary></indexterm>
+	<para>如果您打算把网桥作为防火墙来使用，
+	  则还需要加入  <literal>IPFIREWALL</literal> 的设置。
+	  请参考 <xref linkend="firewalls">
+	  以了解关于将网桥配置为防火墙的其它信息。</para>
+
+	<para>如果允许非IP(non-IP)数据包 (比如 ARP) 穿过网桥，
+	  必须设置一个防火墙 (firewall) 选项。这个选项是
+	  <literal>IPFIREWALL_DEFAULT_TO_ACCEPT</literal>。
+	  注意：这个选项改变了默认的规则使得防火墙接受任何的数据包。
+	  在您设置这些规则前，请确认这些规则可能会产生什么后果。</para>
+      </sect3>
+
+      <sect3>
+	<title>数据传输支持</title>
+
+	<para>如果您希望将网桥作为一个数据传输器，
+	  您需要向内核文件中加入 <literal>DUMMYNET</literal>
+	  选项。阅读 &man.dummynet.4; 以做进一步了解。</para>
+      </sect3>
+    </sect2>
+
+    <sect2>
+      <title>激活网桥</title>
+
+      <para>增加下行：</para>
+
+      <programlisting>net.link.ether.bridge=1</programlisting>
+
+      <para>到 <filename>/etc/sysctl.conf</filename> 里，
+	以便在运行时激活网桥，然后加下行：</para>
+
+      <programlisting>net.link.ether.bridge_cfg=<replaceable>if1</replaceable>,<replaceable>if2</replaceable></programlisting>
+
+      <para>以便在指定的接口上激活网桥
+	(使用您的两个网络接口的名字替换 <replaceable>if1</replaceable>
+	和 <replaceable>if2</replaceable> )。如果您希望用 &man.ipfw.8;
+	来过滤桥接的数据包，您还应该加入：</para>
+
+      <programlisting>net.link.ether.bridge_ipfw=1</programlisting>
+
+      <para>这样一行。</para>
+
+      <para>对于&os; 5.2-RELEASE 及以后的版本，使用下面几行来代替：</para>
+
+      <programlisting>net.link.ether.bridge.enable=1
+net.link.ether.bridge.config=<replaceable>if1</replaceable>,<replaceable>if2</replaceable>
+net.link.ether.bridge.ipfw=1</programlisting>
+
+    </sect2>
+
+    <sect2>
+      <title>其它信息</title>
+
+      <para>如果您希望可以从网络上 &man.ssh.1; 进入网桥，
+	给一个网卡分配 IP 地址就可以了。
+	原则上给两张卡分配一个地址是很不好的。</para>
+
+      <para>如果网络中有多个网桥，
+	任何两个工作站之间的路径不能多于一条。
+	技术上说，它的意思是不支持生成连接树管理。</para>
+
+      <para>网桥会增加 &man.ping.8; 的延迟时间，
+	尤其是不同网段之间的传输。</para>
+
+    </sect2>
+  </sect1>
+
+  <sect1 id="network-diskless">
+    <sect1info>
+      <authorgroup>
+	<author>
+	  <firstname>Jean-Fran&ccedil;ois</firstname>
+	  <surname>Dock&egrave;s</surname>
+	  <contrib>更新： </contrib>
+	</author>
+      </authorgroup>
+      <authorgroup>
+	<author>
+	  <firstname>Alex</firstname>
+	  <surname>Dupre</surname>
+	  <contrib>重新组织及增强：</contrib>
+	</author>
+      </authorgroup>
+      <authorgroup>
+	<author>
+	  <firstname>张</firstname>
+	  <surname>雪平</surname>
+	  <contrib>中文翻译：</contrib>
+	  <affiliation>
+	    <address><email>zxpmyth@yahoo.com.cn</email></address>
+	  </affiliation>
+	</author>
+	<author>
+	  <firstname>袁</firstname>
+	  <surname>苏义</surname>
+	</author>
+      </authorgroup>
+    </sect1info>
+    <title>无盘操作</title>
+
+    <indexterm>
+      <primary>无盘工作站</primary>
+    </indexterm>
+    <indexterm>
+      <primary>无盘操作</primary>
+    </indexterm>
+
+    <para>FreeBSD 主机可以从网络启动而无需本地磁盘就可操作，
+      使用的是从 <acronym>NFS</acronym> 服务器装载的文件系统。
+      除了标准的配置文件，无需任何的系统修改。
+      很容易设置这样的系统因为所有必要的元素都很容易得到：</para>
+    <itemizedlist><listitem>
+	<para>至少有两种可能的方法从网络加载内核：</para>
+	<itemizedlist><listitem>
+	    <para><acronym>PXE</acronym>：&intel;
+	      的先启动执行环境 (Preboot Xecution Environment)
+	      系统是一种灵活的引导 ROM 模式，这个 ROM
+	      内建在一些网卡或主板的中。查看 &man.pxeboot.8;
+	      以获取更多细节。</para>
+	  </listitem> <listitem>
+	    <para><application>Etherboot</application> port (<filename
+	      role="package">net/etherboot</filename>)
+	      产生通过网络加载内核的可 ROM 代码。这些代码可以烧入网卡上的
+	      PROM 上，或从本地软盘 (或硬盘) 驱动器加载，或从运行着的
+	      &ms-dos; 系统加载。它支持多种网卡。</para>
+	  </listitem></itemizedlist></listitem>
+
+      <listitem>
+	<para>一个样板脚本
+	  (<filename>/usr/share/examples/diskless/clone_root</filename>)
+	  简化了对服务器上的工作站根文件系统的创建和维护。
+	  这个脚本需要少量的自定义，但您能很快的熟悉它。</para>
+      </listitem>
+
+      <listitem>
+	<para><filename>/etc</filename>
+	  存在标准的系统启动文件用于侦测和支持无盘的系统启动。</para>
+      </listitem>
+
+      <listitem>
+	<para>可以向 <acronym>NFS</acronym>
+	  文件或本地磁盘进行交换(如果需要的话)。</para>
+      </listitem></itemizedlist>
+
+    <para>设置无盘工作站有许多方法。
+      有很多相关的元素大部分可以自定义以适合本地情况。
+      以下将介绍一个完整系统的安装，强调的是简单性和与标准
+      FreeBSD 启动脚本的兼容。介绍的系统有以下特性：</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>无盘工作站使用一个共享的只读 <filename>/</filename>
+	  文件系统和一个共享的只读<filename>/usr</filename>。</para>
+	<para>root 文件系统是一份标准的 FreeBSD 根文件系统
+	  (一般是服务器的)，只是一些配置文件被特定于无盘操作的配置文件覆盖。</para>
+	<para>root 文件系统必须可写的部分被 &man.mfs.8;
+	  (&os; 4.X) 或 &man.md.4; (&os; 5.X) 文件系统覆盖。
+	  任何的改写在重启后都会丢失。</para>
+      </listitem>
+      <listitem>
+	<para>内核由 <application>etherboot</application> 或
+	  <acronym>PXE</acronym> 传送和加载，
+	  有些情况可能会指定使用其中之一。</para>
+      </listitem>
+    </itemizedlist>
+
+    <caution><para>如上所述，这个系统是不安全的。
+      它应该处于网络的受保护区域并不被其它主机信任。</para>
+    </caution>
+
+    <para>这部分所有的信息都已使用 &os;releases 4.9-RELEASE 和
+      5.2.1-RELEASE 测试过。文本主是使用 4.X 格式组织的。为适应
+      5.X 的改变，都有注释被加入。</para>
+
+    <sect2>
+      <title>背景信息</title>
+
+      <para>设置无盘工作站相对要简单而又易出错。
+	有时分析一些原因是很难的。例如：</para>
+
+      <itemizedlist>
+	<listitem>
+	  <para>编译时选项在运行时可能产生不同的行为。</para>
+	</listitem>
+
+	<listitem>
+	  <para>出错信息经常是加密了的或根本就没有。</para>
+	</listitem></itemizedlist>
+
+      <para>在这里，
+	涉及到的一些背景知识对于可能出现的问题的解决是很有帮助的。</para>
+
+      <para>要成功地引导系统还有些操作需要做。</para>
+
+      <itemizedlist><listitem>
+	  <para>机子需要获取初始的参数，如它的 IP
+	    地址、执行文件、服务器名、根路径。这个可以使用
+	    <acronym></acronym>或 BOOTP 协议来完成。
+	    <acronym>DHCP</acronym> 是 BOOTP 的兼容扩展，
+	    并使用相同的端口和基本包格式。</para>
+
+	  <para>只使用 BOOTP 来配置系统也是可行的。
+	    &man.bootpd.8; 服务程序被包含在基本的
+	    &os; 系统里。</para>
+
+	  <para>不过，<acronym>DHCP</acronym> 相比
+	    BOOTP 有几个好处 (更好的配置文件，使用 <acronym>PXE</acronym>
+	    的可能性，以及许多其它并不直接相关的无盘操作)，
+	    接着我们会要描述一个 <acronym>DHCP</acronym> 配置，
+	    可能的话会利用与使用 &man.bootpd.8;
+	    相同的例子。这个样板配置会使用<application>ISC DHCP</application>
+	    软件包 (3.0.1.r12 发行版安装在测试服务器上)。</para>
+	</listitem>
+
+	<listitem>
+	  <para>机子需要传送一个或多个程序到本地内存。
+	    <acronym>TFTP</acronym> 或 <acronym>NFS</acronym>
+	    会被使用。选择<acronym>TFTP</acronym> 还是 <acronym>NFS</acronym>
+	    需要在几个地方的<quote>编译时间</quote>选项里设置。
+	    通常的错误源是为文件名指定了错误的协议：<acronym>TFTP</acronym>
+	    通常从服务器里的一个单一目录传送所有文件，并需要相对这个目录的文件名。
+	    <acronym>NFS</acronym> 需要的是绝对文件路径。</para>
+	</listitem>
+
+	<listitem>
+	  <para>介于启动程序和内核之间的可能的部分需要被初始化并执行。
+	    在这部分有几个重要的变量：</para>
+
+	  <itemizedlist><listitem>
+	      <para><acronym>PXE</acronym> 会装入
+		&man.pxeboot.8;——它是 &os; 第三阶段装载器的修改版。
+		&man.loader.8; 会获得许多参数用于系统启动，
+		并在传送控制之前把它们留在内核环境里。
+		在这种情况下，使用 <filename>GENERIC</filename>
+		内核就可能了。</para>
+	    </listitem>
+
+	    <listitem>
+	      <para><application>Etherboot</application>
+		会做很少的准备直接装载内核。
+		您要使用指定的选项建立 (build) 内核。</para>
+	    </listitem>
+	  </itemizedlist>
+
+	  <para><acronym>PXE</acronym> 和
+	    <application>Etherboot</application> 在 4.X
+	    系统里工作得一样的好。因为 5.X 内核通常让 &man.loader.8;
+	    做了更多的事情，<acronym>PXE</acronym> 比较适合 5.X 系统。</para>
+
+	  <para>如果您的 <acronym>BIOS</acronym> 和网卡支持
+	    <acronym>PXE</acronym>，您应该使用它。当然，
+	    使用 <application>Etherboot</application> 依然可以启动
+	    5.X 系统。</para>
+	</listitem>
+
+	<listitem>
+	  <para>最后，机子需要访问它的文件系统。
+	    <acronym>NFS</acronym> 使用在所有的情况下。</para>
+	</listitem></itemizedlist>
+
+      <para>查看 &man.diskless.8; 手册页。</para>
+    </sect2>
+
+    <sect2>
+      <title>安装说明</title>
+
+      <sect3>
+	  <title>配置使用<application>ISC DHCP</application></title>
+	  <indexterm>
+	    <primary>DHCP</primary>
+	    <secondary>无盘操作</secondary>
+	  </indexterm>
+
+	  <para><application>ISC DHCP</application>
+	    服务器可以回应 BOOTP 和 <acronym>DHCP</acronym>
+	    的请求。</para>
+
+	  <para>对于4.9的发行版，<application>ISC DHCP 3.0</application>
+	    并不属于基本系统。首先您需要安装
+	    <filename role="package">net/isc-dhcp3-server</filename>
+	    port 或相应的<quote>包</quote>。</para>
+
+	  <para>一旦安装了 <application>ISC DHCP</application>，
+	    还需要一个配置文件才能运行 (通常名叫
+	    <filename>/usr/local/etc/dhcpd.conf</filename>)。
+	    这里有个注释过的例子，里边主机 <hostid>margaux</hostid>
+	    使用 <application>Etherboot</application>，
+	    而主机<hostid>corbieres</hostid> 使用 <acronym>PXE</acronym>：</para>
+
+          <programlisting>
+default-lease-time 600;
+max-lease-time 7200;
+authoritative;
+
+option domain-name "example.com";
+option domain-name-servers 192.168.4.1;
+option routers 192.168.4.1;
+
+subnet 192.168.4.0 netmask 255.255.255.0 {
+  use-host-decl-names on; <co id="co-dhcp-host-name">
+  option subnet-mask 255.255.255.0;
+  option broadcast-address 192.168.4.255;
+
+  host margaux {
+    hardware ethernet 01:23:45:67:89:ab;
+    fixed-address margaux.example.com;
+    next-server 192.168.4.4; <co id="co-dhcp-next-server">
+    filename "/data/misc/kernel.diskless"; <co id="co-dhcp-filename">
+    option root-path "192.168.4.4:/data/misc/diskless"; <co id="co-dhcp-root-path">
+  }
+  host corbieres {
+    hardware ethernet 00:02:b3:27:62:df;
+    fixed-address corbieres.example.com;
+    next-server 192.168.4.4;
+    filename "pxeboot";
+    option root-path "192.168.4.4:/data/misc/diskless";
+  }
+}
+          </programlisting>
+
+	  <calloutlist>
+	    <callout arearefs="co-dhcp-host-name">
+	      <para>这个选项告诉 <application>dhcpd</application>
+		发送<literal>host</literal> 里声明的用于无盘主机的主机名的值。
+		另外可能会增加一个
+		<literal>option host-name <replaceable>margaux</replaceable></literal>
+		到 <literal>host</literal> 声明里。</para>
+	    </callout>
+
+	    <callout arearefs="co-dhcp-next-server">
+	      <para><literal>next-server</literal> 正式指定
+		<acronym>TFTP</acronym> 或 <acronym>NFS</acronym>
+		服务用于载入装载器或内核文件
+		(默认使用的是相同的主机作为<acronym>DHCP</acronym>
+		服务器)。</para>
+	    </callout>
+
+	    <callout arearefs="co-dhcp-filename">
+	      <para><literal>filename</literal>
+		正式定义这样的文件——<application>etherboot</application>
+		或 <acronym>PXE</acronym> 为执行下一步将装载它。
+		根据使用的传输方式，它必须要指定。
+		<application>Etherboot</application> 可以被编译来使用
+		<acronym>NFS</acronym> 或 <acronym>TFTP</acronym>。
+		&os; port 默认配置了<acronym>NFS</acronym>。
+		<acronym>PXE</acronym> 使用 <acronym>TFTP</acronym>，
+		这就是为什么在这里使用相对文件名 (这可能依赖于
+		<acronym>TFTP</acronym> 服务器配置，不过会相当典型)。
+		同样，<acronym>PXE</acronym> 会装载 <filename>pxeboot</filename>，
+		而不是内核。另外有几个很有意思的可能，如从 &os; CD-ROM
+		的 <filename role="directory">/boot</filename> 目录装载
+		<filename>pxeboot</filename> (因为 &man.pxeboot.8; 能够装载
+		<filename>GENERIC</filename> 内核，这就使得可以使用
+		<acronym>PXE</acronym> 从远程的 CD-ROM 里启动)。</para>
+	    </callout>
+
+	    <callout arearefs="co-dhcp-root-path">
+	      <para><literal>root-path</literal> 选项定义到根
+		(root) 文件系统的路径，通常是 <acronym>NFS</acronym>
+		符号。当使用 <acronym>PXE</acronym> 时，只要您不启用内核里的
+		BOOTP 选项，可以不管主机的IP。<acronym>NFS</acronym>
+		服务器然后就如同 <acronym>TFTP</acronym> 一样。</para>
+	    </callout></calloutlist>
+
+      </sect3>
+      <sect3>
+	  <title>配置使用BOOTP</title>
+	  <indexterm>
+	    <primary>BOOTP</primary>
+	    <secondary>无盘操作</secondary>
+	  </indexterm>
+
+	  <para>这里紧跟的是一个等效的 <application>bootpd</application>
+	    配置 (减少到一个客户端)。这个可以在
+	    <filename>/etc/bootptab</filename> 里找到。</para>
+
+	  <para>请注意：为了使用BOOTP，<application>etherboot</application>
+	    必须使用非默认选项 <literal>NO_DHCP_SUPPORT</literal>
+	    来进行编译，而且 <acronym>PXE</acronym> <emphasis> 需要
+	    </emphasis> <acronym>DHCP</acronym>。<application>bootpd</application>
+	    的唯一可见的好处是它存在于基本系统中。</para>
+
+          <programlisting>
+.def100:\
+  :hn:ht=1:sa=192.168.4.4:vm=rfc1048:\
+  :sm=255.255.255.0:\
+  :ds=192.168.4.1:\
+  :gw=192.168.4.1:\
+  :hd="/tftpboot":\
+  :bf="/kernel.diskless":\
+  :rp="192.168.4.4:/data/misc/diskless":
+
+margaux:ha=0123456789ab:tc=.def100</programlisting>
+      </sect3>
+
+      <sect3>
+	<title>使用<application>Etherboot</application>准备启动程序</title>
+
+	<indexterm>
+	  <primary>Etherboot</primary>
+	</indexterm>
+
+	<para><ulink url="http://etherboot.sourceforge.net">Etherboot
+	  的网站</ulink> 包含有<ulink
+	  url="http://etherboot.sourceforge.net/doc/html/userman/t1.html">更多的文档
+	  </ulink>——主要瞄准的是 Linux 系统，但无疑包含有有用的信息。
+	  如下列出的是关于在 FreeBSD 系统里使用
+	  <application>Etherboot</application>。</para>
+
+	<para>首先您必须安装<filename
+	  role="package">net/etherboot</filename> 包或 port。</para>
+
+	<para>您可以改变 <application>Etherboot</application> 的配置
+	  (如使用 <acronym>TFTP</acronym> 来代替 <acronym>NFS</acronym>)，
+	  方法是修改 <filename>Config</filename> 文件——在
+	  <application>Etherboot</application> 源目录里。</para>
+
+	<para>对于我们的设置，我们要使用一张启动软盘。
+	  对于其它的方法(PROM，或 &ms-dos;程序)，
+	  请参考 <application>Etherboot</application> 文档。</para>
+
+	<para>想要使用启动软盘，先插入一张软盘到安装有
+	  <application>Etherboot</application> 的机器的驱动器里，
+	  然后把当前路径改到 <filename>src</filename>
+	  目录——在 <application>Etherboot</application> 树下，
+	  接着输入：</para>
+
+	<screen>
+&prompt.root; <userinput>gmake bin32/<replaceable>devicetype</replaceable>.fd0</userinput>
+	</screen>
+
+	<para><replaceable>devicetype</replaceable>
+	  依赖于无盘工作站上的以太网卡的类型。
+	  参考在同一个目录下的 <filename>NIC</filename>
+	  文件确认正确的 <replaceable>devicetype</replaceable>。</para>
+
+      </sect3>
+
+      <sect3>
+	<title>使用<acronym>PXE</acronym>启动</title>
+
+	<para>默认地，&man.pxeboot.8; 装载器通过 <acronym>NFS</acronym>
+	  装载内核。它可以编译来使用 <acronym>TFTP</acronym>——通过在文件
+	  <filename>/etc/make.conf</filename> 里指定
+	  <literal>LOADER_TFTP_SUPPORT</literal> 选项来代替。查看
+	  <filename>/etc/defaults/make.conf</filename> 里的注释
+	  (或5.X系统的 <filename>/usr/share/examples/etc/make.conf</filename>)
+	  可以获得指导。</para>
+
+	<para>其它有两个未说明的 <filename>make.conf</filename>
+	  选项——它可能对于设置一系列控制台无盘机器会有用：
+	  <literal>BOOT_PXELDR_PROBE_KEYBOARD</literal>和
+	  <literal>BOOT_PXELDR_ALWAYS_SERIAL</literal>
+	  (后者只存在于 &os; 5.X 里)。</para>
+
+	<para>当机器启动里，要使用 <acronym>PXE</acronym>，
+	  通常需要选择 <literal>Boot from network</literal>
+	  选项——在 <acronym>BIOS</acronym> 设置里，
+	  或者在 PC 初始化的时候输入一个功能键 (function key)。</para>
+      </sect3>
+
+      <sect3>
+	<title>配置 <acronym>TFTP</acronym> 和 <acronym>NFS</acronym> 服务器</title>
+
+	<indexterm>
+	  <primary>TFTP</primary>
+	  <secondary>无盘操作</secondary>
+	</indexterm>
+	<indexterm>
+	  <primary>NFS</primary>
+	  <secondary>无盘操作</secondary>
+	</indexterm>
+
+	<para>如果您正在使用 <acronym>PXE</acronym> 或
+	  <application>Etherboot</application>——配置使用了
+	  <acronym>TFTP</acronym>，那么您需要在文件服务器上启用
+	  <application>tftpd</application>：</para>
+        <procedure>
+          <step>
+	    <para>建立一个目录——从那里 <application>tftpd</application>
+	      可以提供文件服务，如 <filename>/tftpboot</filename>。</para>
+	  </step>
+
+          <step>
+            <para>把这一行加入到 <filename>/etc/inetd.conf</filename>里：</para>
+
+	    <programlisting>tftp	dgram	udp	wait	root	/usr/libexec/tftpd	tftpd -l -s /tftpboot</programlisting>
+
+	    <note><para>好像有一些版本的 <acronym>PXE</acronym>
+	      需要 <acronym>TCP</acronym> 版本的 <acronym>TFTP</acronym>。
+	      在这种情况下，加入第二行，使用 <literal>stream tcp</literal>
+	      来代替 <literal>dgram udp</literal>。</para>
+	    </note>
+	  </step>
+	  <step>
+	    <para>让 <application>inetd</application> 重读它的配置文件：</para>
+	    <screen>&prompt.root; <userinput>kill -HUP `cat /var/run/inetd.pid`</userinput></screen>
+	  </step>
+	</procedure>
+
+	<para>您可把 <filename>tftpboot</filename> 目录放到服务器上的什何地方。
+	  确定这个位置设置在 <filename>inetd.conf</filename> 和
+	  <filename>dhcpd.conf</filename> 里。</para>
+
+	<para>在所有的情况下，您都需要启用 <acronym>NFS</acronym>，
+	并且 <acronym>NFS</acronym> 服务器上导出相应的文件系统。</para>
+
+        <procedure><step>
+            <para>把这一行加入到<filename>/etc/rc.conf</filename>里：</para>
+	    <programlisting>nfs_server_enable="YES"</programlisting></step>
+
+          <step>
+            <para>通过往 <filename>/etc/exports</filename>
+	      里加入下面几行(调整<quote>载入点</quote>列，
+	      并且使用无盘工作站的名字替换
+	      <replaceable>margaux corbieres</replaceable>)，
+	      导出文件系统——无盘根目录存在于此：</para>
+
+	    <programlisting><replaceable>/data/misc</replaceable> -alldirs -ro <replaceable>margaux corbieres</replaceable></programlisting>
+	  </step>
+	  <step>
+	    <para>让 <application>mountd</application>
+	      重读它的配置文件。如果您真的需要启用第一步的
+	      <filename>/etc/rc.conf</filename> 里 <acronym>NFS</acronym>，
+	      您可能就要重启系统了。</para>
+	    <screen>&prompt.root; <userinput>kill -HUP `cat /var/run/mountd.pid`</userinput></screen>
+	  </step>
+	</procedure>
+
+      </sect3>
+
+      <sect3>
+	<title>建立无盘内核</title>
+
+	<indexterm>
+	  <primary>无盘操作</primary>
+	  <secondary>内核配置</secondary>
+	</indexterm>
+
+	<para>如果您在使用 <application>Etherboot</application>，
+	  您需要为无盘客户端建立内核配置文件，
+	  使用如下选项(除了常使用的外)：</para>
+
+	<programlisting>
+options     BOOTP          # Use BOOTP to obtain IP address/hostname
+options     BOOTP_NFSROOT  # NFS mount root filesystem using BOOTP info
+	</programlisting>
+
+	<para>您可能也想使用 <literal>BOOTP_NFSV3</literal>，
+	  <literal>BOOT_COMPAT</literal> 和 <literal>BOOTP_WIRED_TO</literal>
+	  (参考 4.X 里的 <filename>LINT</filename> 或5.X里的
+	  <filename>NOTES</filename>)。</para>
+
+	<para>这些名字具有历史性，并且有些有些误导，
+	  因为它们实际上启用了内核里 (它可能强制限制 BOOTP 或
+	  <acronym>DHCP</acronym> 的使用)，与 <acronym>DHCP</acronym>
+	  和 BOOTP 的无关的应用。</para>
+
+	<para>编译内核(参考<xref linkend="kernelconfig">)，
+	  然后将它复制到 <filename>dhcpd.conf</filename>
+	  里指定的地方。</para>
+
+	<note>
+	  <para>当使用 <acronym>PXE</acronym> 里，
+	    使用以上选项建立内核并不做严格要求(尽管建议这样做)。
+	    启用它们会在内核启动时引起更多的 <acronym>DHCP</acronym>
+	    提及过的请求，带来的小小的风险是在有些特殊情况下新值和由
+	    &man.pxeboot.8; 取回的值之间的不一致性。
+	    使用它们的好处是主机名会被附带设置。否则，
+	    您就需要使用其它的方法来设置主机名，如在客户端指定的
+	    <filename>rc.conf</filename> 文件里。</para>
+	</note>
+
+	<note>
+	  <para>为了使带有 <application>Etherboot</application>
+	    的 5.X 内核可引导，就需要把设备提示 (device hint)
+	    编译进去。通常要在配置文件(查看 <filename>NOTES</filename>
+	    配置注释文件) 里设置下列选项：</para>
+
+	  <programlisting>hints		"GENERIC.hints"</programlisting></note>
+
+      </sect3>
+
+      <sect3>
+	  <title>准备根(root)文件系统</title>
+
+	<indexterm>
+	  <primary>根文件系统</primary>
+	  <secondary>无盘操作</secondary>
+	</indexterm>
+
+	<para>您需要为无盘工作站建立根文件系统，位置列在
+	  <filename>dhcpd.conf</filename> 里的 <literal>root-path</literal>
+	  里边。下面部分描述了要这样做的两种方法：</para>
+
+	<sect4>
+	  <title>使用 <filename>clone_root</filename> 脚本</title>
+
+	<para>这是建立根文件系统最快的方法，只是目前只在 &os;4.X
+	  里支持。这个 shell 脚本位于
+	  <filename>/usr/share/examples/diskless/clone_root</filename>
+	  并且需要定制，至少需要调整将会被建立文件系统的地方
+	  (<literal>DEST</literal> 可变)。</para>
+
+	<para>参考用于指导的脚本的最前边的注释。
+	  它们说明了如何建立一个基本文件系统，
+	  并且如果根据特定版本的无盘工作站、子网或个人工作站选择性地忽略。
+	  它们也为无盘的 <filename>/etc/fstab</filename> 的
+	  <filename>/etc/rc.conf</filename> 文件给出了例子。</para>
+
+	  <para>在 <filename>/usr/share/examples/diskless</filename> 里的
+	    <filename>README</filename> 文件包含了许多有趣的背景信息，
+	    但是，他们同 <filename>diskless</filename> 目录里的其它例子一起，
+	    实际上说明了一种配置方法——与被 <filename>clone_root</filename>
+	    和 <filename role="directory">/etc</filename>
+	    里的系统启动脚本使用的完全不同，这个有点迷惑人。
+	    使用它们只用做参考，
+	    除非您使用它们所描述的方法——这种情况下您需要定制
+	    <filename>rc</filename> 脚本。</para>
+	</sect4>
+
+	<sect4>
+	  <title>使用标准的 <command>make world</command> 程序</title>
+
+	  <para>这种方法可以应用到 &os; 4.X 或 5.X，
+	    而且会安装一个彻底干净的系统(不仅仅是根文件系统)到
+	    <envar>DESTDIR</envar>。您需要做的就是简单地执行下面的脚本：</para>
+
+	  <programlisting>#!/bin/sh
+export DESTDIR=/data/misc/diskless
+mkdir -p ${DESTDIR}
+cd /usr/src; make world && make kernel
+cd /usr/src/etc; make distribution</programlisting>
+
+	  <para>一旦完成，您可能需要定制 <filename>/etc/rc.conf</filename>
+	    和 <filename>/etc/fstab</filename>——根据您的需要放到
+	    <envar>DESTDIR</envar>里。</para>
+	</sect4>
+      </sect3>
+
+      <sect3>
+	<title>配置 swap(交换)</title>
+
+	<para>如果需要，位于服务器上的交换文件可以通过
+	  <acronym>NFS</acronym> 来访问。完成它的一种普遍使用的方法在
+	  5.X 的发行版里已不再继续(使用)。</para>
+
+	<sect4>
+	  <title><acronym>NFS</acronym>与 &os; 4.X 之间的 Swap(交换)</title>
+
+	  <para>交换文件的位置和大小可以使用BOOTP/<acronym>DHCP</acronym>
+	    来指定，&os; 指定的选项是 128 和 129。用于
+	    <application>ISC DHCP 3.0</application> 或
+	    <application>bootpd</application>的配置文件例子如下：</para>
+
+	<procedure><step><para>把下边几行加到 <filename>dhcpd.conf</filename> 里：</para>
+	    <programlisting>
+# Global section
+option swap-path code 128 = string;
+option swap-size code 129 = integer 32;
+
+host margaux {
+  ... # Standard lines, see above
+  option swap-path <replaceable>"192.168.4.4:/netswapvolume/netswap"</replaceable>;
+  option swap-size <replaceable>64000</replaceable>;
+}
+	    </programlisting>
+
+	    <para><literal>swap-path</literal> 指的是存放交换文件存的路径。
+	      每个文件会命名为
+	      <filename>swap.<replaceable>client-ip</replaceable></filename>。</para>
+
+	    <para>旧版的 <application>dhcpd</application> 使用的风格是
+	      <literal>option option-128 "...</literal>，这个已不在支持。</para>
+	    <para><filename>/etc/bootptab</filename> 会使用下面的格式代替：</para>
+
+	    <programlisting>T128="192.168.4.4:/netswapvolume/netswap":T129=0000fa00</programlisting>
+
+	    <note><para>在 <filename>/etc/bootptab</filename> 里，
+	      交换大小必须以十六进制表示。</para>
+	    </note>
+	  </step>
+
+	  <step>
+	    <para>在 <acronym>NFS</acronym> 交换文件服务器上，建立交换文件：</para>
+            <screen>
+&prompt.root; <userinput>mkdir <replaceable>/netswapvolume/netswap</replaceable></userinput>
+&prompt.root; <userinput>cd <replaceable>/netswapvolume/netswap</replaceable></userinput>
+&prompt.root; <userinput>dd if=/dev/zero bs=1024 count=<replaceable>64000</replaceable> of=swap.<replaceable>192.168.4.6</replaceable></userinput>
+&prompt.root; <userinput>chmod 0600 swap.<replaceable>192.168.4.6</replaceable></userinput>
+            </screen>
+	    <para><replaceable>192.168.4.6</replaceable> 是无盘客户端的 IP 地址。</para>
+	  </step>
+
+	  <step>
+	    <para>在 <acronym>NFS</acronym> 交换文件服务器上，
+	      增加下面几行到 <filename>/etc/exports</filename>：</para>
+	    <programlisting>
+<replaceable>/netswapvolume</replaceable>  -maproot=0:10 -alldirs <replaceable>margaux corbieres</replaceable>
+	    </programlisting>
+	    <para>然后让 <application>mountd</application>
+	      重读 <filename>exports</filename>文件，同上。</para>
+	  </step>
+	</procedure>
+	</sect4>
+
+	<sect4>
+	  <title><acronym>NFS</acronym> 与 &os; &amp;os 5.X 之间的 Swap(交换)</title>
+
+	  <para>这个内核在启动时并不支持启用 <acronym>NFS</acronym>。
+	    Swap 必须在启动脚本里启用，方法是装入一个可写的文件系统，
+	    然后建立和启用交换文件。要建立一个适当大小的交换文件，
+	    您可以这样做：</para>
+
+	  <screen>&prompt.root; <userinput>dd if=/dev/zero of=<replaceable>/path/to/swapfile</replaceable> bs=1k count=1 oseek=<replaceable>100000</replaceable></userinput></screen>
+
+	  <para>要启用它，您须要把下面几行加到
+	    <filename>rc.conf</filename>里：</para>
+
+	  <programlisting>swapfile=<replaceable>/path/to/swapfile</replaceable></programlisting>
+        </sect4>
+      </sect3>
+
+      <sect3>
+	<title>杂项问题</title>
+
+
+	<sect4>
+	  <title>运行时 <filename>/usr</filename> 是只读在</title>
+
+	  <indexterm>
+	    <primary>无盘操作</primary>
+	    <secondary>只读的 /usr</secondary>
+	  </indexterm>
+
+	    <para>如果无盘工作站是配置来支持 X，
+	      那么您就必须调整 <application>XDM</application>
+	      配置文件，因为它默认把错误信息写到
+	      <filename>/usr</filename>。</para>
+	</sect4>
+	<sect4>
+	  <title>使用非 FreeBSD 服务器</title>
+
+	  <para>当用作根文件系统的服务器运行的是不
+	    FreeBSD，您须要在 FreeBSD 机器上建立根文件系统，
+	    然后把它复制到它的目的地，使用的命令可以是
+	    <command>tar</command> 或 <command>cpio</command>。</para>
+	  <para>在这种情况下，有时对于 <filename>/dev</filename>
+	    里的一些特殊的文件会有问题，原因就是不同的
+	    <quote>最大/最小</quote>整数大小。
+	    一种解决的方法就是从非 FreeBSD 服务里导出一个目录，
+	    并把它载入 FreeBSD 到机子上，然后在 FreeBSD 机子上执行
+	    <command>MAKEDEV</command> 来建立正确的设备条目
+	    (FreeBSD 5.0及新版使用 &man.devfs.5;
+	    来为用户透明地分派设备节点，在这些版本上执行
+	    <command>MAKEDEV</command> 是毫无意义的)。</para>
+
+	</sect4>
+
+      </sect3>
+
+    </sect2>
+  </sect1>
+
+
+  <sect1 id="network-isdn">
+    <title>ISDN</title>
+
+    <indexterm><primary>ISDN</primary></indexterm>
+
+    <para>关于 ISDN 技术和硬件的一个好的资源是<ulink
+      url="http://www.alumni.caltech.edu/~dank/isdn/">Dan Kegel
+      的 ISDN 主页</ulink>。</para>
+
+    <para>一个快速简单的到 ISDN 的路线图如下：</para>
+
+    <itemizedlist><listitem>
+        <para>如果您住在欧洲，您可能要查看一下 ISDN 卡部分。</para>
+      </listitem>
+
+      <listitem>
+	<para>如果您正计划首要地使用 ISDN
+	  基于拨号非专用线路连接到带有提供商的互联网，
+	  您可能要了解一下终端适配器。如果您更改提供商的话，
+	  这会给您带来最大的灵活性、最小的麻烦。</para>
+      </listitem>
+
+      <listitem>
+	<para>如果您连接了两个局域网 (LAN)，或使用了专用的
+	  ISDN 连线连接到互联网，您可能要考虑选择单独的路由器/网桥。</para>
+      </listitem></itemizedlist>
+
+    <para>在决定选择哪一种方案的时候，价格是个很关键的因素。
+      下面列有从不算贵到最贵的选择：</para>
+
+    <sect2 id="network-isdn-cards">
+      <sect2info>
+	<authorgroup>
+	  <author>
+	    <firstname>Hellmuth</firstname>
+	    <surname>Michaelis</surname>
+	    <contrib>贡献者：</contrib>
+	  </author>
+	</authorgroup>
+	<authorgroup>
+	  <author>
+	    <firstname>张</firstname>
+	    <surname>雪平</surname>
+	    <contrib>中文翻译：</contrib>
+	    <affiliation>
+	      <address><email>zxpmyth@yahoo.com.cn</email></address>
+	    </affiliation>
+	  </author>
+	</authorgroup>
+      </sect2info>
+      <title>ISDN 卡</title>
+
+      <indexterm>
+	<primary>ISDN</primary>
+	<secondary>卡</secondary>
+      </indexterm>
+
+      <para>FreeBSD 的 ISDN 工具通过被动卡
+	(passive card) 仅支持 DSS1/Q.931(或 Euro-ISDN) 标准。启动
+	FreeBSD 4.4，有些主动卡 (active card) 也被支持，
+	这时它也支持其它发信协议；包括有最先支持的
+	<quote>Primary Rate (PRI) ISDN</quote>卡。</para>
+
+      <para><application>isdn4bsd</application> 软件允许连接到其它
+	ISDN 路由器，使用的是原始的 HDLC 上的 IP 或利用同步 PPP：使用带有
+	<literal>isppp</literal> (一个修改过的 &man.sppp.4; 驱动程序)的
+	PPP 内核，或使用用户区 (userland) &man.ppp.8;。通过使用
+	userland &man.ppp.8;，两个或更多 ISDN 的 B 通道联结变得可能。
+	除了许多如 300 波特 (Baud) 的软 modem 一样的工具外，
+	还可以实现电话应答机应用。</para>
+
+      <para>在 FreeBSD 里，正有更多的 PC ISDN 卡被支持；
+	报告显示在整个欧洲及世界的其它许多地区可以成功使用。</para>
+
+      <para>被支持的主动型 ISDN 卡主要是带有 Infineon (以前的 Siemens)
+	ISAC/HSCX/IPAC ISDN 芯片组，另外还有带有 Cologne (只有 ISA 总线)
+	芯片的 ISDN 卡、带有 Winbond W6692 芯片的 PCI 卡、一部分带有
+	Tiger300/320/ISAC 芯片组的卡以及带有一些商家专有的芯片组的卡
+	(如 AVM Fritz&excl;Card PCI V.1.0 和 the AVM Fritz&excl;Card PnP)。</para>
+
+      <para>当前积极的支持的 ISDN 卡有 AVM B1 (ISA 和 PCI) BRI
+	卡和 AVM T1 PCI PRI 卡。</para>
+
+      <para>关于 <application>isdn4bsd</application> 的文档，请查看
+	FreeBSD 系统里的 <filename>/usr/share/examples/isdn/</filename>
+	目录或查看 <ulink
+	  url="http://www.freebsd-support.de/i4b/">isdn4bsd的主页</ulink>，
+	  那里也有提示、勘误表以及更多的文档 (如 <ulink
+	  url="http://people.FreeBSD.org/~hm/">isdn4bsd手册</ulink>)。</para>
+
+      <para>要是您有兴趣增加对不同 ISDN 协议的支持，对当前还不支持的
+	ISDN PC 卡的支持或想增强 <application>isdn4bsd</application>
+	的性能，请联系 &a.hm;。</para>
+
+      <para>对于安装、配置以及 <application>isdn4bsd</application>
+	故障排除的问题，可以利用 &a.isdn.name; 邮件列表。</para>
+    </sect2>
+
+    <sect2>
+      <title>ISDN 终端适配器</title>
+
+      <para>终端适配器 (TA) 对于 ISDN 就好比 modem 对于常规电话线。</para>
+      <indexterm><primary>modem</primary></indexterm>
+      <para>许多 TA 使用标准的 Hayes modem AT 命令集，并且可以降级来代替 modem。</para>
+
+      <para>TA 基本的运作同 modem 一样，不同之处是连接和整个速度更比老
+	modem 更快。同 modem 的安装一样，您也需要配置
+	<link linkend="ppp">PPP</link>。确认您的串口速度已足够高。</para>
+      <indexterm>
+	<primary>PPP</primary>
+      </indexterm>
+      <para>使用 TA 连接互联网提供商的主要好处是您可以做动态的 PPP。
+	由于 IP 地址空间变得越来越紧张，许多提供商都不愿再提供静态
+	IP。许多的独立的路由器是不支持动态 IP 分配的。</para>
+
+      <para>TA 完全依赖于您在运行的 PPP 进程，
+	以完成它们的功能和稳定的连接。这可以让您在 FreeBSD
+	机子里轻易地从使用 modem 升级到 ISDN，要是您已经安装了
+	PPP 的话。只是，在您使用 PPP 程序时所体验到任何问题同时也存在。</para>
+
+      <para>如果您想要最大的稳定性，请使用 <link
+	linkend="ppp">PPP</link> 内核选项，而不要使用 <link
+	linkend="userppp">userland PPP</link>。</para>
+
+      <para>下面的 TA 就可以同 FreeBSD 一起工作：</para>
+
+      <itemizedlist><listitem>
+	  <para>Motorola BitSurfer 和 Bitsurfer Pro</para>
+	</listitem>
+
+	<listitem>
+	  <para>Adtran</para>
+	</listitem></itemizedlist>
+
+      <para>大部分其它的 TA 也可能工作，TA
+	提供商试图让他们的产品可以接受大部分的标准 modem AT 命令集。</para>
+
+      <para>对于外置 TA 的实际问题是：象 modem
+	要一样，您机子需要有一个好的串行卡。</para>
+
+      <para>想要更深入地理解串行设备以及异步和同步串口这间的不同点，
+	您就要读读 <ulink
+	url="&url.articles.serial-uart;/index.html">FreeBSD
+	串行硬件</ulink>教程了。</para>
+
+      <para>TA 将标准的 PC 串口 (同步的) 限制到了 115.2 Kbs，即使您有
+	128 Kbs 的连接。 想要完全利用 ISDN 有能力达到的 128 Kbs，您就需要把
+	TA 移到同步串行卡上。</para>
+
+      <para>当心被骗去买一个内置的 TA 以及自认为可以避免同步/异步问题。内置的
+	TA 只是简单地将一张标准 PC 串口芯片内建在里边。
+	所做的这些只是让您省去买另一根串行线以及省去寻找另一个空的插孔。</para>
+
+      <para>带有 TA 的同步卡至少和一个独立的路由器同一样快地，
+	而且仅使用一个简单的 386 FreeBSD 盒驱动它。</para>
+
+      <para>选择同步卡/TA 还是独立的路由器，是个要高度谨慎的问题。
+	在邮件列表里有些相关的讨论。我们建议您去搜索一下关于完整讨论的<ulink
+	url="&url.base;/search/index.html">记录</ulink>。</para>
+    </sect2>
+
+    <sect2>
+      <title>单独的 ISDN 桥/路由器</title>
+      <indexterm>
+	<primary>ISDN</primary>
+	<secondary>单独的 桥/路由器</secondary>
+      </indexterm>
+      <para>ISDN 桥或路由器根本就没有指定要 FreeBSD
+	或其它任何的操作系统。更多完整的关于路由和桥接技术的描述，
+	请参考网络指南的书籍。</para>
+
+      <para>这部分的内容里，路由器和桥接这两个词汇将会交替地使用。</para>
+
+      <para>随着 ISDN 路由器/桥的价格下滑，对它们的选择也会变得越来越流行。
+	ISDN 路由器是一个小盒子，可以直接地接入您的本地以太网，
+	并且自我管理到其它桥/路由器的连接。它有个内建的软件用于与通信——通过
+	PPP 和其它流行的协议。</para>
+
+      <para>路由器有比标准 TA 更快的吞吐量，因为它会使用完全同步的 ISDN 连接。</para>
+
+      <para>使用 ISDN 路由器和桥的主要问题是两个生产商之间的协同性仍存在问题。
+	如果您计划连接到互联网提供商，您应该跟他们进行交涉。</para>
+
+      <para>如果您计划连接两个局域网网段，如您的家庭网和办公网，
+	这将是最简单最低维护的解决方案。因为您买的设备是用于连接两边的，
+	可以保证这种连接一定会成功。</para>
+
+      <para>例如连接到家里的计算机，或者是办公网里的一个分支连接到办公主网，
+	那么下面的设置就可能用到：</para>
+
+      <example><title>办公室局部或家庭网</title>
+
+	<indexterm><primary>10 base 2</primary></indexterm>
+	<para>网络使用基于总线拓扑的 10 base 2 以太网
+	  (<quote>瘦网(thinnet)</quote>)。如果有必要，用网线连接路由器和
+	  AUI/10BT 收发器。</para>
+
+        <mediaobject>
+          <imageobject>
+            <imagedata fileref="advanced-networking/isdn-bus">
+          </imageobject>
+
+	  <textobject>
+	    <literallayout class="monospaced">---Sun workstation
+|
+---FreeBSD box
+|
+---Windows 95
+|
+Stand-alone router
+   |
+ISDN BRI line</literallayout>
+          </textobject>
+
+	  <textobject>
+	    <phrase>10 Base 2 Ethernet</phrase>
+	  </textobject>
+	</mediaobject>
+
+	<para>如果您的家里或办公室支部里只有一台计算机，
+	  您可以使用一根交叉的双绞线直接连接那台独立路由器。</para>
+      </example>
+
+      <example><title>主办公室或其它网络</title>
+
+	<indexterm><primary>10 base T</primary></indexterm>
+	<para>网络使用的是星形拓扑的 10 base T 以太网(<quote>双绞线</quote>)。</para>
+
+        <mediaobject>
+          <imageobject>
+            <imagedata fileref="advanced-networking/isdn-twisted-pair">
+          </imageobject>
+
+	  <textobject>
+	    <literallayout class="monospaced">    -------Novell Server
+    | H |
+    |   ---Sun
+    |   |
+    | U ---FreeBSD
+    |   |
+    |   ---Windows 95
+    | B |
+    |___---Stand-alone router
+                |
+        ISDN BRI line</literallayout>
+	  </textobject>
+
+	  <textobject>
+	    <phrase>ISDN Network Diagram</phrase>
+	  </textobject>
+	</mediaobject>
+      </example>
+
+      <para>大部分路由器/网桥有一大好处就是，它们允许您在
+	<emphasis>同一</emphasis> 时间，有两个 <emphasis>分开独立的</emphasis>
+	PPP 连接到两个分开的点上。这点在许多的 TA 上是不支持的，
+	除非带有两个串口的特定模式(通常都很贵)。请不要把它与通道连接、MPP
+	等相混淆。</para>
+
+      <para>这是个非常有用的功能，例如，如果在您的办公室里您有个专有的
+	ISDN 连接，而且您想接入到里边，但休想让另一根 ISDN 线也能工作。
+	办公室里的路由器能够管理专有的B通道连接到互联网 (64 Kbps)
+	以及使用另一个通道 B 来完成单独的数据连接。 第二个 B
+	通道可以用于拨进、拨出或动态与第一个B通道进行连接
+	(MPP等)，以获取更大宽带。</para>
+
+      <indexterm><primary>IPX/SPX</primary></indexterm>
+      <para>以太网桥也允许您传输的不仅仅是 IP 通信。您也可以发送
+	IPX/SPX 或其它任何您所使用的协议。</para>
+    </sect2>
+  </sect1>
+
+  <sect1 id="network-natd">
+    <sect1info>
+      <authorgroup>
+	<author>
+	  <firstname>Chern</firstname>
+	  <surname>Lee</surname>
+	  <contrib>作者：</contrib>
+	</author>
+      </authorgroup>
+      <authorgroup>
+	<author>
+	  <firstname>李</firstname>
+	  <surname>鑫</surname>
+	  <contrib>译者：</contrib>
+	  <affiliation>
+	    <address><email>delphij@FreeBSD.org.cn</email></address>
+	  </affiliation>
+	</author>
+      </authorgroup>
+    </sect1info>
+
+    <title>网络地址转换</title>
+
+    <sect2 id="network-natoverview">
+      <title>概要</title>
+      <indexterm>
+        <primary><application>natd</application></primary>
+      </indexterm>
+      <para>FreeBSD 的网络地址转换服务， 通常也被称为
+        &man.natd.8; 是一个能够接收连入的未经处理的 IP 包，
+        将源地址修改为本级地址然后重新将这些包注入到发出
+        IP 包流中。 &man.natd.8; 同时修改源地址和端口，
+        当接收到响应数据时，它作逆向转换以便把数据发回原先的请求者。</para>
+      <indexterm><primary>Internet 连接共享</primary></indexterm>
+      <indexterm><primary>IP 伪装</primary></indexterm>
+      <para>NAT 最常见的用途是为人们所熟知的
+        Internet 连接共享。</para>
+    </sect2>
+
+    <sect2 id="network-natsetup">
+      <title>安装</title>
+      <para>随着 IPv4 的 IP 地址空间的日益枯竭，
+	以及使用如 DSL 和电缆等高速连接的用户的逐渐增多，
+	越来越多的人开始需要 Internet 连接共享这样的解决方案。
+	由于能够将许多计算机通过一个对外的 IP 地址进行接入，
+	&man.natd.8; 成为了一个理想的选择。</para>
+
+      <para>更为常见的情况， 一个用户通过电缆或者 DSL 线路
+	接入，并拥有一个 IP 地址，同时，希望通过这台接入
+	Internet 的计算机来为
+	LAN 上更多的计算机提供接入服务。</para>
+
+      <para>为了完成这一任务， 接入 Internet 的 FreeBSD
+	机器必须扮演网关的角色。
+	这台网关必须有两块网卡 &mdash; 一块用于连接
+	Internet 路由器， 另一块用来连接 LAN。 所有 LAN
+	上的机器通过 Hub 或交换机进行连接。</para>
+
+      <mediaobject>
+        <imageobject>
+          <imagedata fileref="advanced-networking/natd">
+        </imageobject>
+	<textobject>
+	  <literallayout class="monospaced">  _______       __________       ________
+ |       |     |          |     |        |
+ |  Hub  |-----| Client B |-----| Router |----- Internet
+ |_______|     |__________|     |________|
+     |
+ ____|_____
+|          |
+| Client A |
+|__________|</literallayout>
+        </textobject>
+
+	<textobject>
+	  <phrase>Network Layout</phrase>
+	</textobject>
+      </mediaobject>
+
+      <para>上述配置被广泛地用于共享 Internet 连接。
+        <acronym>LAN</acronym> 中的一台机器连接到 Internet 中。
+        其余的计算机则通过那台 <quote>网关</quote> 机来连接 Internet。</para>
+    </sect2>
+
+    <sect2 id="network-natdkernconfiguration">
+      <indexterm>
+        <primary>内核</primary>
+	<secondary>配置</secondary>
+      </indexterm>
+      <title>配置</title>
+      <para>下面这些选项必须放到内核配置文件中：</para>
+      <programlisting>options IPFIREWALL
+options IPDIVERT</programlisting>
+
+      <para>此外，下列是一些可选的选项：</para>
+      <programlisting>options IPFIREWALL_DEFAULT_TO_ACCEPT
+options IPFIREWALL_VERBOSE</programlisting>
+
+      <para>这些配置必须放到 <filename>/etc/rc.conf</filename> 中：</para>
+
+      <programlisting>gateway_enable="YES" <co id="co-natd-gateway-enable">
+firewall_enable="YES" <co id="co-natd-firewall-enable">
+firewall_type="OPEN" <co id="co-natd-firewall-type">
+natd_enable="YES"
+natd_interface="<replaceable>fxp0</replaceable>" <co id="co-natd-natd-interface">
+natd_flags="" <co id="co-natd-natd-flags"></programlisting>
+
+      <calloutlist>
+        <callout arearefs="co-natd-gateway-enable">
+          <para>将机器配置为网关。 执行
+            <command>sysctl net.inet.ip.forwarding=1</command> 效果相同。</para>
+        <callout arearefs="co-natd-firewall-enable">
+          <para>在启动时启用
+            <filename>/etc/rc.firewall</filename> 中的防火墙规则。</para>
+        <callout arearefs="co-natd-firewall-type">
+          <para>指定一个预定义的允许所有包进入的防火墙规则集。 参见
+            <filename>/etc/rc.firewall</filename> 以了解其他类型的规则集。</para>
+        <callout arearefs="co-natd-natd-interface">
+          <para>指定通过哪个网络接口转发包
+            (接入 Internet 的那一个)。</para>
+        <callout arearefs="co-natd-natd-flags">
+          <para>其他希望在启动时传递给
+            &man.natd.8; 的参数。</para>
+      </calloutlist>
+
+      <para>在 <filename>/etc/rc.conf</filename> 中加入上述选项将在系统启动时运行
+        <command>natd -interface fxp0</command>。 这一工作也可以手工完成。</para>
+
+      <note>
+	<para>当有太多选项要传递时，也可以使用一个 &man.natd.8;
+	  的配置文件来完成。这种情况下，这个配置文件必须通过在
+	  <filename>/etc/rc.conf</filename> 里增加下面内容来定义：</para>
+
+	<programlisting>natd_flags="-f /etc/natd.conf"</programlisting>
+
+	<para><filename>/etc/natd.conf</filename> 文件会包含一个配置选项列表，
+	  每行一个。在紧跟部分的例子里将使用下面的文件：</para>
+
+	<programlisting>redirect_port tcp 192.168.0.2:6667 6667
+redirect_port tcp 192.168.0.3:80 80</programlisting>
+
+	<para>关于配置文件的更多信息，参考 &man.natd.8; 手册页中关于
+	  <option>-f</option> 选项那一部分。</para>
+      </note>
+
+      <para>在LAN后面的每一台机子和接口应该被分配私有地址空间(由<ulink
+	url="ftp://ftp.isi.edu/in-notes/rfc1918.txt">RFC 1918</ulink>定义)
+	里的 IP 地址，并且默认网关设成 <application>natd</application>
+	机子的内连 IP 地址。</para>
+
+      <para>例如：客户端 <hostid>A</hostid> 和 <hostid>B</hostid> 在
+	LAN 后面，IP 地址是 <hostid
+	role="ipaddr">192.168.0.2</hostid> 和 <hostid
+	role="ipaddr">192.168.0.3</hostid>，同时 natd 机子的 LAN 接口上的 IP 地址是 <hostid
+	role="ipaddr">192.168.0.1</hostid>。客户端 <hostid>A</hostid> 和
+	<hostid>B</hostid> 的默认网关必须要设成 <application>natd</application>
+	机子的 IP——<hostid
+	role="ipaddr">192.168.0.1</hostid>。<application>natd</application>
+	机子外连，或互联网接口不需要为了 &man.natd.8;
+	而做任何特别的修改就可工作。</para>
+    </sect2>
+
+    <sect2 id="network-natdport-redirection">
+      <title>端口重定向</title>
+
+      <para>使用 &man.natd.8; 的缺点就是 LAN 客户不能从互联网访问。LAN
+	上的客户可以进行到外面的连接，而不能接收进来的连接。如果想在
+	LAN 的客户端机子上运行互联网服务，这就会有问题。
+	对此的一种简单方法是在 <application>natd</application>
+	机子上重定向选定的互联网端口到 LAN 客户端。
+      </para>
+
+      <para>例如：在客户端 <hostid>A</hostid> 上运行 IRC
+	服务，而在客户端 <hostid>B</hostid> 上运行 web 服务。
+	想要正确的工作，在端口 6667 (IRC) 和 80 (web)
+	上接收到的连接就必须重定向到相应的机子上。
+      </para>
+
+      <para><option>-redirect_port</option>
+	需要使用适当的选项传送给 &man.natd.8;。语法如下：</para>
+      <programlisting>     -redirect_port proto targetIP:targetPORT[-targetPORT]
+                 [aliasIP:]aliasPORT[-aliasPORT]
+                 [remoteIP[:remotePORT[-remotePORT]]]</programlisting>
+
+      <para>在上面的例子中，参数应该是：</para>
+
+        <programlisting>    -redirect_port tcp 192.168.0.2:6667 6667
+    -redirect_port tcp 192.168.0.3:80 80</programlisting>
+
+      <para>
+	这就会重定向适当的 <emphasis>tcp</emphasis> 端口到 LAN 上的客户端机子。
+      </para>
+
+      <para><option>-redirect_port</option>
+	参数可以用来指出端口范围来代替单个端口。例如，
+	<replaceable>tcp 192.168.0.2:2000-3000 2000-3000</replaceable>
+	就会把所有在端口 2000 到 3000 上接收到的连接重定向到主机
+	<hostid>A</hostid> 上的端口 2000 到 3000。</para>
+
+      <para>当直接运行 &man.natd.8; 时，就可以使用这些选项，
+	把它们放到 <filename>/etc/rc.conf</filename> 里的
+	<literal>natd_flags=""</literal> 选项上，
+	或通过一个配置文件进行传送。</para>
+
+      <para>想要更多配置选项，请参考 &man.natd.8;。</para>
+    </sect2>
+
+    <sect2 id="network-natdaddress-redirection">
+      <title>地址重定向</title>
+      <indexterm>
+	<primary>地址重定向</primary>
+      </indexterm>
+      <para>如果有几个 IP 地址提供，那么地址重定向就会很有用，
+	然而他们必须在一个机子上。使用它，&man.natd.8;
+	就可以分配给每一个 LAN 客户端它们自己的外部 IP 地址。&man.natd.8;
+	然后会使用适当的处部 IP 地址重写从 LAN 客户端外出的数据包，
+	以及重定向所有进来的数据包——一定的 IP 地址回到特定的
+	LAN 客户端。这也叫做静态 NAT。例如，IP 地址
+	<hostid role="ipaddr">128.1.1.1</hostid>、
+	<hostid role="ipaddr">128.1.1.2</hostid> 和
+	<hostid role="ipaddr">128.1.1.3</hostid> 属于
+	<application>natd</application> 网关机子。
+	<hostid role="ipaddr">128.1.1.1</hostid> 可以用来作
+	<application>natd</application> 网关机子的外连 IP 地址，而
+	<hostid role="ipaddr">128.1.1.2</hostid> 和
+	<hostid role="ipaddr">128.1.1.3</hostid> 用来转发回 LAN 客户端
+	<hostid>A</hostid> 和 <hostid>B</hostid>。</para>
+
+      <para><option>-redirect_address</option> 语法如下：</para>
+
+      <programlisting>-redirect_address localIP publicIP</programlisting>
+
+
+      <informaltable frame="none">
+	<tgroup cols="2">
+	  <tbody>
+	    <row>
+	      <entry>localIP</entry>
+	      <entry>LAN 客户端的内部 IP 地址。</entry>
+	    </row>
+	    <row>
+	      <entry>publicIP</entry>
+	      <entry>相应 LAN 客户端的外部 IP 地址。</entry>
+	    </row>
+	  </tbody>
+	</tgroup>
+      </informaltable>
+
+      <para>在这个例子里，参数是：</para>
+
+      <programlisting>-redirect_address 192.168.0.2 128.1.1.2 -redirect_address 192.168.0.3 128.1.1.3</programlisting>
+
+      <para>象 <option>-redirect_port</option> 一样，这些参数也是放在
+	<filename>/etc/rc.conf</filename> 里的
+	<literal>natd_flags=""</literal> 选项上，
+	或通过一个配置文件传送给它。使用地址重定向，
+	就没有必要用端口重定向了，因为所有在某个 IP
+	地址上收到的数据都被重定向了。</para>
+
+      <para>在 <application>natd</application> 机子上的外部 IP
+	地址必须激活并且别名到 (aliased) 外连接口。要这做就看看
+	&man.rc.conf.5;。</para>
+
+    </sect2>
+  </sect1>
+
+  <sect1 id="network-plip">
+    <title>平行线 IP(PLIP)</title>
+
+    <indexterm>
+      <primary>PLIP</primary>
+    </indexterm>
+    <indexterm>
+      <primary>平行线 IP</primary>
+    </indexterm>
+
+    <para>PLIP 允许我们在两个平行的端口间运行 TCP/IP。
+      这会在没有网卡的机子里有用，或安装在膝上电脑上。
+      这部分，我们将讨论：</para>
+
+    <itemizedlist><listitem>
+	<para>建立平行的 (laplink) 线缆。</para>
+      </listitem>
+
+      <listitem>
+	<para>使用 PLIP 连接两台机子。</para>
+      </listitem></itemizedlist>
+
+    <sect2 id="network-create-parallel-cable">
+      <title>建立平行的线缆。</title>
+
+      <para>您可以在许多计算机供应店里买到平行线缆。
+	如果不行或您想知道怎么做线，
+	下面的表格就显示了如何利用普通的打印机平行线做一根：</para>
+
+      <table frame="none">
+	<title>为网络配平行线</title>
+
+	<tgroup cols="5"><thead><row><entry>A-name</entry>
+
+	      <entry>A 端</entry>
+
+	      <entry>B 端</entry>
+
+	      <entry>描述</entry>
+
+	      <entry>Post/Bit</entry></row></thead>
+
+	  <tbody><row><entry><literallayout>DATA0 -ERROR</literallayout></entry>
+
+	      <entry><literallayout>2 15</literallayout></entry>
+
+	      <entry><literallayout>15 2</literallayout></entry>
+
+	      <entry>数据</entry>
+
+	      <entry><literallayout>0/0x01 1/0x08</literallayout></entry></row>
+
+	    <row><entry><literallayout>DATA1 +SLCT</literallayout></entry>
+
+	      <entry><literallayout>3 13</literallayout></entry>
+
+	      <entry><literallayout>13 3</literallayout></entry>
+
+	      <entry>数据</entry>
+
+	      <entry><literallayout>0/0x02 1/0x10</literallayout></entry></row>
+
+	    <row><entry><literallayout>DATA2 +PE</literallayout></entry>
+
+	      <entry><literallayout>4 12</literallayout></entry>
+
+	      <entry><literallayout>12 4</literallayout></entry>
+
+	      <entry>数据</entry>
+
+	      <entry><literallayout>0/0x04 1/0x20</literallayout></entry></row>
+
+	    <row><entry><literallayout>DATA3 -ACK</literallayout></entry>
+
+	      <entry><literallayout>5 10</literallayout></entry>
+
+	      <entry><literallayout>10 5</literallayout></entry>
+
+	      <entry>脉冲 (Strobe)</entry>
+
+	      <entry><literallayout>0/0x08 1/0x40</literallayout></entry></row>
+
+	    <row><entry><literallayout>DATA4 BUSY</literallayout></entry>
+
+	      <entry><literallayout>6 11</literallayout></entry>
+
+	      <entry><literallayout>11 6</literallayout></entry>
+
+	      <entry>数据</entry>
+
+	      <entry><literallayout>0/0x10 1/0x80</literallayout></entry></row>
+
+	    <row><entry>GND</entry>
+
+	      <entry>18-25</entry>
+
+	      <entry>18-25</entry>
+
+	      <entry>GND</entry>
+
+	      <entry>-</entry></row></tbody></tgroup></table>
+    </sect2>
+
+    <sect2 id="network-plip-setup">
+      <title>设置 PLIP</title>
+
+      <para>首先，您需要一根 laplink 线。然后，
+	确认两台计算机的内核都有对 &man.lpt.4;
+	驱动程序的支持：</para>
+
+      <screen>&prompt.root; <userinput>grep lp /var/run/dmesg.boot</userinput>
+lpt0: &lt;Printer&gt; on ppbus0
+lpt0: Interrupt-driven port</screen>
+
+      <para>平行端口必须是一个中断驱动的端口，在 &os; 4.X
+	里，您的内核配置文件应该有一行和下面的差不多：</para>
+
+      <programlisting>device ppc0 at isa? irq 7</programlisting>
+
+      <para>在 &os; 5.X 里，文件 <filename>/boot/device.hints</filename>
+	应该包括下面几行：</para>
+
+      <programlisting>hint.ppc.0.at="isa" hint.ppc.0.irq="7"</programlisting>
+
+      <para>然后，检查看内核配置文件里是否有 <literal>device plip</literal>
+	行或是否装载了 <filename>plip.ko</filename> 内核模块。两种情况下，
+	在您直接使用 &man.ifconfig.8; 命令时，应该有平行的网络接口显示。在
+	&os; 4.X 里，就象这样：</para>
+
+      <screen>&prompt.root; <userinput>ifconfig lp0</userinput>
+lp0: flags=8810&lt;POINTOPOINT,SIMPLEX,MULTICAST&gt; mtu 1500</screen>
+
+      <para>而对于 &os; 5.X: 应该是：</para>
+
+      <screen>&prompt.root; <userinput>ifconfig plip0</userinput>
+plip0: flags=8810&lt;POINTOPOINT,SIMPLEX,MULTICAST&gt; mtu 1500</screen>
+
+      <note><para>用于平行接口的设备名在 &os; 4.X
+	(<devicename>lp<replaceable>X</replaceable></devicename>)
+	和 &os; 5.X (<devicename>plip<replaceable>X</replaceable></devicename>)
+	是不相同的。</para></note>
+
+      <para>插入 laplink 线到两台计算机的平行接口里。</para>
+
+      <para>在两边以 <username>root</username> 身份配置网络接口参数。
+	例如，如果您想让运行着 &os; 4.X 的主机 <hostid>host1</hostid>
+	连接到运行着 &os; 5.X 的主机 <hostid>host2</hostid>：</para>
+
+      <programlisting>                 host1 &lt;-----&gt; host2
+IP Address    10.0.0.1      10.0.0.2</programlisting>
+
+      <para>配置 <hostid>host1</hostid> 上的网络接口，照此做：</para>
+
+      <screen>&prompt.root; <userinput>ifconfig lp0 10.0.0.1 10.0.0.2</userinput></screen>
+
+      <para>配置 <hostid>host2</hostid> 上的网络接口，照此做：</para>
+
+      <screen>&prompt.root; <userinput>ifconfig plip0 10.0.0.2 10.0.0.1</userinput></screen>
+
+
+      <para>您现在应该有个工作的连接了。想要更详细的信息，
+	请阅读 &man.lp.4; 和 &man.lpt.4; 手册页。</para>
+
+      <para>您还应该增加两个主机到 <filename>/etc/hosts</filename>：</para>
+
+      <programlisting>127.0.0.1               localhost.my.domain localhost
+10.0.0.1                host1.my.domain host1
+10.0.0.2                host2.my.domain</programlisting>
+
+      <para>要确认连接是否工作，可以到每一台机子上，然后
+	ping 另外一台。例如，在 <hostid>host1</hostid> 上：</para>
+
+          <screen>&prompt.root; <userinput>ifconfig lp0</userinput>
+lp0: flags=8851&lt;UP,POINTOPOINT,RUNNING,SIMPLEX,MULTICAST&gt; mtu 1500
+        inet 10.0.0.1 --&gt; 10.0.0.2 netmask 0xff000000
+&prompt.root; <userinput>netstat -r</userinput>
+Routing tables
+
+Internet:
+Destination        Gateway          Flags     Refs     Use      Netif Expire
+host2              host1              UH          0       0       lp0
+&prompt.root; <userinput>ping -c 4 host2</userinput>
+PING host2 (10.0.0.2): 56 data bytes
+64 bytes from 10.0.0.2: icmp_seq=0 ttl=255 time=2.774 ms
+64 bytes from 10.0.0.2: icmp_seq=1 ttl=255 time=2.530 ms
+64 bytes from 10.0.0.2: icmp_seq=2 ttl=255 time=2.556 ms
+64 bytes from 10.0.0.2: icmp_seq=3 ttl=255 time=2.714 ms
+
+--- host2 ping statistics ---
+4 packets transmitted, 4 packets received, 0% packet loss
+round-trip min/avg/max/stddev = 2.530/2.643/2.774/0.103 ms</screen>
+
+    </sect2>
+  </sect1>
+
+  <sect1 id="network-ipv6">
+    <sect1info>
+      <authorgroup>
+	<author>
+	  <firstname>Aaron</firstname>
+	  <surname>Kaplan</surname>
+	  <contrib>原始作者：</contrib>
+	</author>
+      </authorgroup>
+      <authorgroup>
+	<author>
+	  <firstname>Tom</firstname>
+	  <surname>Rhodes</surname>
+	  <contrib>重新组织和增加：</contrib>
+	</author>
+      </authorgroup>
+      <authorgroup>
+	<author>
+	  <firstname>张</firstname>
+	  <surname>雪平</surname>
+	  <contrib>中文翻译：</contrib>
+	  <affiliation>
+	    <address><email>zxpmyth@yahoo.com.cn</email></address>
+	  </affiliation>
+	</author>
+      </authorgroup>
+      <authorgroup>
+	<author>
+	  <firstname>Brad</firstname>
+	  <surname>Davis</surname>
+	  <contrib>Extended by </contrib>
+	</author>
+      </authorgroup>
+
+    </sect1info>
+
+    <title>IPv6</title>
+    <para>IPv6 (也叫 IPng <quote>IP下一代</quote>)
+      是著名的 IP 协议 (也叫 <acronym>IPv4</acronym>)
+      的新版。象其它当前的 *BSD 系统一样，FreeBSD 包括了
+      <literal>KAME</literal> IPv6 相关工具。因此您的 FreeBSD
+      系统事带有所有您在体验 IPv6 时所需要的。这部分主要集中在
+      IPv6 的配置和运行上。</para>
+
+    <para>在二十世纪 90 年代早期，人们开始当心迅速缩小的 IPv4
+      地址空间。根据互联网的膨胀率，有两点需要考虑：</para>
+
+    <itemizedlist><listitem>
+	<para>所有的 IP 地址用光。今天不再那么当心了，
+	  因为有私有地址空间 (<hostid role="ipaddr">10.0.0.0/8</hostid>、
+	  <hostid role="ipaddr">192.168.0.0/24</hostid> 等等)
+	  和网络地址转换 (<acronym>NAT</acronym>) 可以利用。</para>
+      </listitem>
+
+      <listitem>
+	<para>路由表条目变得太大。这点今天仍然是焦点。</para>
+      </listitem></itemizedlist>
+
+    <para>IPv6 解决这些和其它许多的问题：</para>
+
+    <itemizedlist><listitem>
+	<para>128 位地址空间。换句话，理论上有
+	  340,282,366,920,938,463,463,374,607,431,768,211,456
+	  个地址可以使用。这意味着在我们的星球上每平方米大约有
+	  6.67 * 10^27 个 IPv6 地址。</para>
+      </listitem>
+
+      <listitem>
+	<para>路由器仅在它们的路由表里存放网络地址集，
+	  这就减少路由表的平均空间到 8192 个条目。</para>
+      </listitem></itemizedlist>
+
+    <para>IPv6 还有其它许多有用的功能，如：</para>
+
+    <itemizedlist><listitem>
+	<para>地址自动配置 (<ulink
+	  url="http://www.ietf.org/rfc/rfc2462.txt">RFC2462</ulink>)</para>
+      </listitem>
+
+      <listitem>
+	<para>Anycast (任意播) 地址(<quote>一对多</quote>)</para>
+      </listitem>
+
+      <listitem>
+	<para>强制的多播地址</para>
+      </listitem>
+
+      <listitem>
+	<para>IPsec (IP 安全)</para>
+      </listitem>
+
+      <listitem>
+	<para>简单的头结构</para>
+      </listitem>
+
+      <listitem>
+	<para>移动的 (Mobile) <acronym>IP</acronym></para>
+      </listitem>
+
+      <listitem>
+	<para>IPv6 到 IPv4 的转换机制</para>
+      </listitem>
+    </itemizedlist>
+
+
+    <para>要更多信息，请查看：</para>
+
+    <itemizedlist><listitem>
+	<para>IPv6 概观，在<ulink
+	  url="http://playground.sun.com/pub/ipng/html/ipng-main.html">
+	  playground.sun.com</ulink></para>
+      </listitem>
+
+      <listitem>
+	<para><ulink url="http://www.kame.net">KAME.net</ulink></para>
+      </listitem>
+
+      <listitem>
+	<para><ulink url="http://www.6bone.net">6bone.net</ulink></para>
+      </listitem></itemizedlist>
+
+    <sect2>
+      <title>关于 IPv6 地址的背景知识</title>
+      <para>有几种不同类型的 IPv6 地址：Unicast，Anycast 和 Multicast。</para>
+
+      <para>Unicast 地址是为人们所熟知的地址。一个被发送到
+	unicast 地址的包实际上会到达属于这个地址的接口。</para>
+
+      <para>Anycast 地址语义上与 unicast 地址没有差别，
+	只是它们强调一组接口。指定为 anycast 地址的包会到达最近的
+	(以路由为单位) 接口。Anycast 地址可能只被路由器使用。</para>
+
+      <para>Multicast 地址标识一组接口。指定为 multicast
+	地址的包会到达属于 multicast 组的所有的接口。</para>
+
+	<note><para>IPv4 广播地址 (通常为
+	  <hostid role="ipaddr">xxx.xxx.xxx.255</hostid>) 由
+	  IPv6 的 multicast 地址来表示。</para></note>
+
+      <table frame="none">
+	<title>保留的 IPv6 地址</title>
+
+	<tgroup cols="4">
+	  <thead>
+	    <row>
+	      <entry>IPv6 地址</entry>
+	      <entry>预定长度 (bits)</entry>
+	      <entry>描述</entry>
+	      <entry>备注</entry>
+	    </row>
+	  </thead>
+
+	  <tbody>
+	    <row>
+	      <entry><hostid role="ip6addr">::</hostid></entry>
+	      <entry>128 bits</entry>
+	      <entry>未指定</entry>
+	      <entry>类似 IPv4 中的 <hostid role="ipaddr">0.0.0.0</hostid></entry>
+	    </row>
+
+	    <row>
+	      <entry><hostid role="ip6addr">::1</hostid></entry>
+	      <entry>128 bits</entry>
+	      <entry>环回地址</entry>
+	      <entry>类似 IPv4 中的 <hostid role="ipaddr">127.0.0.1</hostid></entry>
+	    </row>
+
+	    <row>
+	      <entry><hostid
+		role="ip6addr">::00:xx:xx:xx:xx</hostid></entry>
+	      <entry>96 bits</entry>
+	      <entry>嵌入的 IPv4</entry>
+	      <entry>低 32 bits 是 IPv4 地址。这也称作
+		<quote>IPv4 兼容 IPv6
+		地址</quote></entry>
+	    </row>
+
+	    <row>
+	      <entry><hostid
+		role="ip6addr">::ff:xx:xx:xx:xx</hostid></entry>
+	      <entry>96 bits</entry>
+	      <entry>IPv4 影射的 IPv6 地址</entry>
+	      <entry>低的 32 bits 是 IPv4 地址。 用于那些不支持 IPv6 的主机。</entry>
+	    </row>
+
+	    <row>
+	      <entry><hostid role="ip6addr">fe80::</hostid> - <hostid
+		role="ip6addr">feb::</hostid></entry>
+	      <entry>10 bits</entry>
+	      <entry>链路环回</entry>
+	      <entry>类似 IPv4 的环回地址。</entry>
+	    </row>
+
+	    <row>
+	      <entry><hostid role="ip6addr">fec0::</hostid> - <hostid
+		role="ip6addr">fef::</hostid></entry>
+	      <entry>10 bits</entry>
+	      <entry>站点环回</entry>
+	      <entry>&nbsp;</entry>
+	    </row>
+
+	    <row>
+	      <entry><hostid role="ip6addr">ff::</hostid></entry>
+	      <entry>8 bits</entry>
+	      <entry>多播</entry>
+	      <entry>&nbsp;</entry>
+	    </row>
+
+	    <row>
+	      <entry><hostid role="ip6addr">001</hostid> (base
+		2)</entry>
+	      <entry>3 bits</entry>
+	      <entry>全球多播</entry>
+	      <entry>所有的全球多播地址都指定到这个地址池中。前三个二进制位是
+		<quote>001</quote>。</entry>
+	    </row>
+	  </tbody>
+	</tgroup>
+      </table>
+    </sect2>
+
+    <sect2>
+      <title>IPv6 地址的读法</title>
+
+      <para>规范形式被描述为：<hostid role="ip6addr">x:x:x:x:x:x:x:x</hostid>，
+	每一个<quote>x</quote>就是一个 16 位的 16 进制值。当然，
+	每个十六进制块以三个<quote>0</quote>开始头的也可以省略。如
+	<hostid role="ip6addr">FEBC:A574:382B:23C1:AA49:4592:4EFE:9982</hostid></para>
+
+      <para>通常一个地址会有很长的子串全部为零，
+	因此每个地址的这种子串常被简写为<quote>::</quote>。
+	例如：<hostid role="ip6addr">fe80::1</hostid>
+	对应的规范形式是
+	<hostid role="ip6addr">fe80:0000:0000:0000:0000:0000:0000:0001</hostid>。</para>
+
+      <para>第三种形式是以众所周知的用点<quote>.</quote>作为分隔符的十进制
+	IPv4 形式，写出最后 32 Bit 的部分。例如
+	<hostid role="ip6addr">2002::10.0.0.1</hostid>
+	对应的十进制正规表达方式是
+	<hostid role="ip6addr">2002:0000:0000:0000:0000:0000:0a00:0001</hostid>
+	它也相当于写成
+	<hostid role="ip6addr">2002::a00:1</hostid>.</para>
+
+      <para>到现在，读者应该能理解下面的内容了：</para>
+
+      <screen>&prompt.root; <userinput>ifconfig</userinput></screen>
+
+      <programlisting>rl0: flags=8943&lt;UP,BROADCAST,RUNNING,PROMISC,SIMPLEX,MULTICAST&gt; mtu 1500
+         inet 10.0.0.10 netmask 0xffffff00 broadcast 10.0.0.255
+         inet6 fe80::200:21ff:fe03:8e1%rl0 prefixlen 64 scopeid 0x1
+         ether 00:00:21:03:08:e1
+         media: Ethernet autoselect (100baseTX )
+         status: active</programlisting>
+
+      <para><hostid role="ip6addr">fe80::200:21ff:fe03:8e1%rl0</hostid>
+	是一个自动配置的链路环回地址。它作为自动配置的一部分由 MAC 生成。</para>
+
+      <para>关于 IPv6 地址的结构的更多信息，请参看 <ulink
+	url="http://www.ietf.org/rfc/rfc3513.txt">RFC3513</ulink>。</para>
+    </sect2>
+
+    <sect2>
+      <title>进行连接</title>
+
+      <para>目前，有四种方式可以连接到其它 IPv6 主机和网络：</para>
+
+      <itemizedlist><listitem>
+	  <para>加入试验性的 6bone(骨干)</para>
+	</listitem>
+
+	<listitem>
+	  <para>从您的上一级提供商那里获得 IPv6 网络。与您的互联网提供商讨论以求指导。</para>
+	</listitem>
+
+	<listitem>
+	  <para>使用 6-to-4 通道 (<ulink
+	    url="http://www.ietf.org/rfc/rfc3068.txt">RFC3068</ulink>)</para>
+	</listitem>
+
+	<listitem>
+	  <para>如果您是括号连接 (dial-up connection)，请使用
+	    <filename role="package">net/freenet6</filename> port。</para>
+	</listitem></itemizedlist>
+
+      <para>这里我们就讨论如何连接到 6bone，因为它目前看来是最流行的一种方式。</para>
+
+      <para>首先看一下 <ulink url="http://www.6bone.net/">6bone</ulink>
+	网站，并找出离您最近的 6bone 连接。给某位值得信赖的人写信过去，
+	如果运气好，您就会得到关于如何设置您的连接的指导。通常这包括了设置
+	GRE (gif) 通道。</para>
+
+      <para>这里有一个典型的关于设置 &man.gif.4; 通道的例子。</para>
+
+      <screen>&prompt.root; <userinput>ifconfig gif0 create</userinput>
+&prompt.root; <userinput>ifconfig gif0</userinput>
+gif0: flags=8010&lt;POINTOPOINT,MULTICAST&gt; mtu 1280
+&prompt.root; <userinput>ifconfig gif0 tunnel <replaceable>MY_IPv4_ADDR</replaceable>  <replaceable>HIS_IPv4_ADDR</replaceable></userinput>
+&prompt.root; <userinput>ifconfig gif0 inet6 alias <replaceable>MY_ASSIGNED_IPv6_TUNNEL_ENDPOINT_ADDR</replaceable></userinput></screen>
+
+      <para>把大写字母换成您从上一级 6bone 节点收到的信息。</para>
+
+      <para>这样就建立了通道。通过 &man.ping6.8;
+	<hostid role="ip6addr">ff02::1%gif0</hostid>，
+	检查通道是否工作。您应该会收到两个 ping 回应。</para>
+
+	<note><para>或许您会对地址 <hostid role="ip6addr">ff02:1%gif0</hostid>
+	  感兴趣，它是一个 multicast 地址。<literal>%gif0</literal> 表明在网络接口
+	  <devicename>gif0</devicename> 上的 multicast 地址已经用上了。因为我们
+	  <command>ping</command> 一个 multicast 地址的时候，
+	  通道的另一端也应该会回应。</para></note>
+
+      <para>到现在，设置一个到 6bone 上级连接的路由应该是相当简单了。</para>
+
+      <screen>&prompt.root; <userinput>route add -inet6 default -interface gif0</userinput>
+&prompt.root; <userinput>ping6 -n <replaceable>MY_UPLINK</replaceable></userinput></screen>
+
+      <screen>&prompt.root; <userinput>traceroute6 www.jp.FreeBSD.org</userinput>
+(3ffe:505:2008:1:2a0:24ff:fe57:e561) from 3ffe:8060:100::40:2, 30 hops max, 12 byte packets
+     1  atnet-meta6  14.147 ms  15.499 ms  24.319 ms
+     2  6bone-gw2-ATNET-NT.ipv6.tilab.com  103.408 ms  95.072 ms *
+     3  3ffe:1831:0:ffff::4  138.645 ms  134.437 ms  144.257 ms
+     4  3ffe:1810:0:6:290:27ff:fe79:7677  282.975 ms  278.666 ms  292.811 ms
+     5  3ffe:1800:0:ff00::4  400.131 ms  396.324 ms  394.769 ms
+     6  3ffe:1800:0:3:290:27ff:fe14:cdee  394.712 ms  397.19 ms  394.102 ms</screen>
+
+      <para>这个输出可能随机器而不同。到现在，您应该可以到达 IPv6
+	站点<ulink url="http://www.kame.net">www.kame.net</ulink>，
+	并看到那只正跳舞的乌龟 &mdash; 如果您有一个支持 IPv6 的浏览器，如
+	<filename role="package">www/mozilla</filename>、
+	<application>Konqueror</application> (<filename
+	role="package">x11/kdebase3</filename>的一部分) 或
+	<filename role="package">www/epiphany</filename>。</para>
+
+    </sect2>
+
+    <sect2>
+      <title>IPv6 世界里的 DNS</title>
+      <para>对于 IPv6 有两种类型的 DNS 记录：IETF
+	已经宣布 A6 是过时标准；现行的标准是 AAAA 记录。</para>
+
+      <para>使用AAAA记录是很简单的。通过增加下面内容，
+	给您的主机分配置您刚才接收到的新的 IPv6 地址：</para>
+
+      <programlisting>MYHOSTNAME           AAAA    MYIPv6ADDR</programlisting>
+
+      <para>到您的主域 DNS 文件里，就可以完成。要是您自已没有
+	<acronym>DNS</acronym> 域服务，您可以询问您的 <acronym>DNS</acronym>
+	提供商。目前的 <application>bind</application> 版本 (version 8.3 与 9)
+	和 <filename role="package">dns/djbdns</filename>(含IPv6补丁) 支持 AAAA 记录。</para>
+    </sect2>
+
+    <sect2>
+      <title>在 <filename>/etc/rc.conf</filename> 中进行所需的修改</title>
+
+      <sect3>
+	<title>IPv6 客户机设置</title>
+
+	<para>这些设置将帮助您把一台您 LAN 上的机器配置为一台客户机， 而不是路由器。
+	  要让 &man.rtsol.8; 在启动时自动配置您的网卡， 只需添加：</para>
+
+	<programlisting>ipv6_enable="YES"</programlisting>
+
+	<para>要自动地静态指定 IP 地址， 例如 <hostid role="ip6addr">
+	  2001:471:1f11:251:290:27ff:fee0:2093</hostid>， 到
+	  <devicename>fxp0</devicename> 上， 则写上：</para>
+
+	<programlisting>ipv6_ifconfig_fxp0="2001:471:1f11:251:290:27ff:fee0:2093"</programlisting>
+
+	<para>要指定
+	  <hostid role="ip6addr">2001:471:1f11:251::1</hostid>
+	  作为默认路由， 需要在 <filename>/etc/rc.conf</filename> 中加入：</para>
+
+	<programlisting>ipv6_defaultrouter="2001:471:1f11:251::1"</programlisting>
+
+      </sect3>
+
+      <sect3>
+	<title>IPv6 路由器/网关配置</title>
+
+	<para>这将帮助您从隧道提供商， 例如
+	  <ulink url="http://www.6bone.net/">6bone</ulink> 那里取得必要的资料，
+	  并将这些资料转化为在重启时能够保持住的设置。 要在启动时恢复您的隧道，
+	  需要在 <filename>/etc/rc.conf</filename> 中增加：</para>
+
+	<para>列出要配置的通用隧道接口， 例如
+	  <devicename>gif0</devicename>：</para>
+
+	<programlisting>gif_interfaces="gif0"</programlisting>
+
+	<para>配置该接口使用本地端地址
+	  <replaceable>MY_IPv4_ADDR</replaceable> 和远程端地址
+	  <replaceable>REMOTE_IPv4_ADDR</replaceable>：</para>
+
+	<programlisting>gifconfig_gif0="<replaceable>MY_IPv4_ADDR REMOTE_IPv4_ADDR</replaceable>"</programlisting>
+
+	<para>应用分配给您用于 IPv6 隧道远端的 IPv6
+	  地址， 需要增加：</para>
+
+	<programlisting>ipv6_ifconfig_gif0="<replaceable>MY_ASSIGNED_IPv6_TUNNEL_ENDPOINT_ADDR</replaceable>"</programlisting>
+
+	<para>此后十设置 IPv6 的默认路由。 这是 IPv6 隧道的另一端：</para>
+
+	<programlisting>ipv6_defaultrouter="<replaceable>MY_IPv6_REMOTE_TUNNEL_ENDPOINT_ADDR</replaceable>"</programlisting>
+
+      </sect3>
+    </sect2>
+
+    <sect2>
+      <title>路由宣告和主机自动配置</title>
+
+      <para>这节将帮助您配置 &man.rtadvd.8; 来宣示默认的
+	IPv6 路由。</para>
+
+      <para>要启用 &man.rtadvd.8; 您需要在
+	<filename>/etc/rc.conf</filename> 中添加：</para>
+
+      <programlisting>rtadvd_enable="YES"</programlisting>
+
+      <para>指定由哪个网络接口来完成
+	IPv6 路由请求非常重要。 举例来说， 让 &man.rtadvd.8; 使用
+	<devicename>fxp0</devicename>：</para>
+
+      <programlisting>rtadvd_interfaces="fxp0"</programlisting>
+
+      <para>接下来我们需要创建配置文件，
+	<filename>/etc/rtadvd.conf</filename>。 示例如下：</para>
+
+      <programlisting>fxp0:\
+	:addrs#1:addr="2001:471:1f11:246::":prefixlen#64:tc=ether:</programlisting>
+
+      <para>将 <devicename>fxp0</devicename> 改为您打算使用的接口名。</para>
+
+      <para>接下来， 将 <hostid role="ip6addr">2001:471:1f11:246::</hostid>
+	改为分配给您的地址前缀。</para>
+
+      <para>如果您拥有专用的 <hostid role="netmask">/64</hostid> 子网，
+	则不需要修改其他设置。 反之， 您需要把
+	<literal>prefixlen#</literal> 改为正确的值。</para>
+
+   </sect2>
+  </sect1>
+<sect1 id="network-atm">
+    <sect1info>
+      <authorgroup>
+	<author>
+	  <firstname>Harti</firstname>
+	  <surname>Brandt</surname>
+	  <contrib>贡献者：</contrib>
+	</author>
+      </authorgroup>
+      <authorgroup>
+	<author>
+	  <firstname>张</firstname>
+	  <surname>雪平</surname>
+	  <contrib>中文翻译：</contrib>
+	  <affiliation>
+	    <address><email>zxpmyth@yahoo.com.cn</email></address>
+	  </affiliation>
+	</author>
+      </authorgroup>
+    </sect1info>
+
+    <title>&os; 5.X 上的 ATM</title>
+
+    <sect2>
+      <title>配置 classical IP over ATM (PVCs)</title>
+
+      <para>Classical IP over ATM (<acronym>CLIP</acronym>)
+	是一种最简单的使用带 IP 的 ATM 的方法。
+	这种方法可以用在交换式连接 (SVC) 和永久连接
+	(PVC) 上。这部分描述的就是配置基于 PVC 的网络。</para>
+
+      <sect3>
+	<title>完全互连的配置</title>
+
+	<para>第一种使用PVC来设置 <acronym>CLIP</acronym>
+	  的方式就是通过专用的 PVC 让网络里的每一台机子都互连在一起。
+	  尽管这样配置起来很简单，但对于数量更多一点的机子来说就有些不切实际了。
+	  例如我们有四台机子在网络里，每一台都使用一张 ATM 适配器卡连接到 ATM
+	  网络。第一步就是规划 IP 地址和机子间的 ATM 连接。我们使用下面的：</para>
+
+	<informaltable frame="none">
+	  <tgroup cols="2">
+	    <colspec colwidth="1*">
+	    <colspec colwidth="1*">
+	    <thead>
+	      <row>
+		<entry>主机</entry>
+		<entry>IP 地址</entry>
+	      </row>
+	    </thead>
+
+	    <tbody>
+	      <row>
+		<entry><hostid>hostA</hostid></entry>
+		<entry><hostid role="ipaddr">192.168.173.1</hostid></entry>
+	      </row>
+
+	      <row>
+		<entry><hostid>hostB</hostid></entry>
+		<entry><hostid role="ipaddr">192.168.173.2</hostid></entry>
+	      </row>
+
+	      <row>
+		<entry><hostid>hostC</hostid></entry>
+		<entry><hostid role="ipaddr">192.168.173.3</hostid></entry>
+	      </row>
+
+	      <row>
+		<entry><hostid>hostD</hostid></entry>
+		<entry><hostid role="ipaddr">192.168.173.4</hostid></entry>
+	      </row>
+	    </tbody>
+	  </tgroup>
+	</informaltable>
+
+	<para>为了建造完全交错的网络，我们需要在第一对机子间有一个 ATM 连接：</para>
+
+	<informaltable frame="none">
+	  <tgroup cols="2">
+	    <colspec colwidth="1*">
+	    <colspec colwidth="1*">
+	    <thead>
+	      <row>
+		<entry>机器</entry>
+		<entry>VPI.VCI 对</entry>
+	      </row>
+	    </thead>
+
+	    <tbody>
+	      <row>
+		<entry><hostid>hostA</hostid> - <hostid>hostB</hostid></entry>
+		<entry>0.100</entry>
+	      </row>
+
+	      <row>
+		<entry><hostid>hostA</hostid> - <hostid>hostC</hostid></entry>
+		<entry>0.101</entry>
+	      </row>
+
+	      <row>
+		<entry><hostid>hostA</hostid> - <hostid>hostD</hostid></entry>
+		<entry>0.102</entry>
+	      </row>
+
+	      <row>
+		<entry><hostid>hostB</hostid> - <hostid>hostC</hostid></entry>
+		<entry>0.103</entry>
+	      </row>
+
+	      <row>
+		<entry><hostid>hostB</hostid> - <hostid>hostD</hostid></entry>
+		<entry>0.104</entry>
+	      </row>
+
+	      <row>
+		<entry><hostid>hostC</hostid> - <hostid>hostD</hostid></entry>
+		<entry>0.105</entry>
+	      </row>
+	    </tbody>
+	  </tgroup>
+	</informaltable>
+
+
+	<para>在每一个连接端 VPI 和 VCI 的值都可能会不同，
+	  只是为了简单起见，我们假定它们是一样的。
+	  下一步我们需要配置每一个主机上的 ATM 接口：</para>
+
+	<screen>hostA&prompt.root; <userinput>ifconfig hatm0 192.168.173.1 up</userinput>
+hostB&prompt.root; <userinput>ifconfig hatm0 192.168.173.2 up</userinput>
+hostC&prompt.root; <userinput>ifconfig hatm0 192.168.173.3 up</userinput>
+hostD&prompt.root; <userinput>ifconfig hatm0 192.168.173.4 up</userinput></screen>
+
+	<para>假定所有主机上的 ATM 接口都是 <devicename>hatm0</devicename>。
+	  现在 PVC 需要配置到 <hostid>hostA</hostid> 上
+	  (我们假定它们都已经配置在了 ATM 交换机上，至于怎么做的，
+	  您就需要参考一下该交换机的手册了)。</para>
+
+	<screen>hostA&prompt.root; <userinput>atmconfig natm add 192.168.173.2 hatm0 0 100 llc/snap ubr</userinput>
+hostA&prompt.root; <userinput>atmconfig natm add 192.168.173.3 hatm0 0 101 llc/snap ubr</userinput>
+hostA&prompt.root; <userinput>atmconfig natm add 192.168.173.4 hatm0 0 102 llc/snap ubr</userinput>
+
+hostB&prompt.root; <userinput>atmconfig natm add 192.168.173.1 hatm0 0 100 llc/snap ubr</userinput>
+hostB&prompt.root; <userinput>atmconfig natm add 192.168.173.3 hatm0 0 103 llc/snap ubr</userinput>
+hostB&prompt.root; <userinput>atmconfig natm add 192.168.173.4 hatm0 0 104 llc/snap ubr</userinput>
+
+hostC&prompt.root; <userinput>atmconfig natm add 192.168.173.1 hatm0 0 101 llc/snap ubr</userinput>
+hostC&prompt.root; <userinput>atmconfig natm add 192.168.173.2 hatm0 0 103 llc/snap ubr</userinput>
+hostC&prompt.root; <userinput>atmconfig natm add 192.168.173.4 hatm0 0 105 llc/snap ubr</userinput>
+
+hostD&prompt.root; <userinput>atmconfig natm add 192.168.173.1 hatm0 0 102 llc/snap ubr</userinput>
+hostD&prompt.root; <userinput>atmconfig natm add 192.168.173.2 hatm0 0 104 llc/snap ubr</userinput>
+hostD&prompt.root; <userinput>atmconfig natm add 192.168.173.3 hatm0 0 105 llc/snap ubr</userinput></screen>
+
+	<para>当然，除 UBR 外其它的通信协定也可让 ATM 适配器支持这些。
+	  此种情况下，通信协定的名字要跟人通信参数后边。工具
+	  &man.atmconfig.8; 的帮助可以这样得到：</para>
+
+	<screen>&prompt.root; <userinput>atmconfig help natm add</userinput></screen>
+
+	<para>或者在 &man.atmconfig.8; 手册页里得到。</para>
+
+	<para>相同的配置也可以通过 <filename>/etc/rc.conf</filename>
+	  来完成。对于 <hostid>hostA</hostid>，看起来就象这样：</para>
+
+<programlisting>network_interfaces="lo0 hatm0"
+ifconfig_hatm0="inet 192.168.173.1 up"
+natm_static_routes="hostB hostC hostD"
+route_hostB="192.168.173.2 hatm0 0 100 llc/snap ubr"
+route_hostC="192.168.173.3 hatm0 0 101 llc/snap ubr"
+route_hostD="192.168.173.4 hatm0 0 102 llc/snap ubr"</programlisting>
+
+	<para>所有 <acronym>CLIP</acronym> 路由的当前状态可以使用如下命令获得：</para>
+
+	<screen>hostA&prompt.root; <userinput>atmconfig natm show</userinput></screen>
+      </sect3>
+    </sect2>
+  </sect1>
+
+<!--
+     Local Variables:
+     mode: sgml
+     sgml-declaration: "../chapter.decl"
+     sgml-indent-data: t
+     sgml-omittag: nil
+     sgml-always-quote-attributes: t
+     sgml-parent-document: ("../book.sgml" "part" "chapter")
+     End:
+-->
+<!--  LocalWords:  config mnt www -->

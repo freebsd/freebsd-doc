@@ -1,0 +1,694 @@
+<!--
+     The FreeBSD Documentation Project
+     The FreeBSD Chinese (Simplified) Project
+
+     Original Revision: 1.56
+     $FreeBSD$
+-->
+
+<chapter id="boot"> <title>FreeBSD 引导过程</title>
+
+  <sect1 id="boot-synopsis"> <title>概述</title>
+  <indexterm><primary>引导</primary></indexterm>
+
+    <para>启动电脑以及加载操作系统的过程被称为<quote>引导过程</quote>，
+      或者简称为<quote>引导</quote>。
+      FreeBSD 的引导过程给用户自定义启动提供了很大的伸缩性，
+      您可以选择启动不同的操作系统，或者是同一系统的不同版本及内核。</para>
+    <para>本章将详细介绍您能在 FreeBSD 引导过程中设置的配置选项。
+      这包括了引导内核、探测设备并启动 &man.init.8; 等等之前所发生的所有事情。
+      这些事项一般发生在文本由白变灰时。</para>
+
+    <para>读完这章您将会知道：</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>FreeBSD 引导系统里的各项组件，
+	  以及它们之间的交互方式.</para>
+      </listitem>
+
+      <listitem>
+	<para>在 FreeBSD 引导时给各组件配置选项以控制引导过程。</para>
+      </listitem>
+
+      <listitem>
+	<para> &man.device.hints.5;的基本知识。</para>
+      </listitem>
+    </itemizedlist>
+
+    <note>
+      <title>只适用于x86 </title>
+
+      <para>本章只描述了运行于 Intel x86 体系之上的 FreeBSD 的引导过程。</para>
+    </note>
+  </sect1>
+
+  <sect1 id="boot-introduction">
+    <title>引导问题</title>
+
+    <para>启动电脑及启动和引导操作系统构成了一个有趣的两难境地。
+      按照定义在操作系统被启动之前计算机是无法完成任何任务的，包括运行磁盘上的程序。
+      如果计算机在没有操作系统的情况下不能运行来自于磁盘上的程序而操作系统又是放在磁盘上的，
+      那操作系统是如何启动的呢？</para>
+
+    <para>这个问题在 <citetitle>The Adventures of
+      Baron Munchausen</citetitle> 这本书中有类似的描述。
+      一个字符从管道中掉下来，克服重重困难抓住了引导程序，
+      活了下来。在以前，计算机术语<firstterm>bootstrap</firstterm>
+      指加载操作系统的机制，简称<quote>booting</quote>。</para>
+
+    <para>在 x86 硬件体系中，基本输入/输出系统 (BIOS) 负责加载操作系统，
+      为了做到这一点，BIOS 在磁盘上寻找主引导记录 (MBR)，而 MBR
+      必须在放置的磁盘的特定位置。BIOS 有足够的能力来读入和运行 MBR，
+      且假使地认为 MBR 能完成加载操作系统的剩余任务。</para>
+
+    <indexterm>
+      <primary>BIOS</primary>
+      <secondary>基本输入/输出系统</secondary>
+    </indexterm>
+
+    <para>如果您只安装了一个操作系统，那么一个标准的 MBR 就足够了。
+      这个 MBR 先在磁盘上搜索可引导的分区，
+      然后运行分区上的代码以加载操作系统的其它部分。</para>
+
+    <para>如果您在磁盘上安装了多个操作系统那么您可以安装一个不同的
+      MBR，它能显示一张操作系统的列表，您能从中选择启动哪个。
+      FreeBSD 自带了一个这样的 MBR，其它的操作系统厂商亦提供可选的
+      MBR。</para>
+
+    <para>启动系统的剩余部分被分为三个阶段。第一阶段由
+      MBR 执行,它只是使计算机进入特定的状态然后执行第二阶段。
+      第二阶段稍微干得多一些。第三阶段完成加载操作系统的任务。
+      工作被分为三个阶段是因为 PC 标准对第一第二阶段执行的程序的大小有所限制。
+      把这些任务连在一起使得 FreeBSD 可以提供更大伸缩性的加载器 (loader)。</para>
+
+    <indexterm><primary>内核</primary></indexterm>
+    <indexterm><primary><command>init</command></primary></indexterm>
+
+    <para>然后内核启动，它开始探测设备并初始化它们。
+      一旦内核引导进程完成任务，内核将控制权交给用户进程 &man.init.8;，
+      它确认磁盘是否处于可用状态。&man.init.8; 然后开始用户级资源配置：
+      加载文件系统启动网卡，及粗略地启动所有 FreeBSD
+      系统加载时经常运行的进程。</para>
+  </sect1>
+
+  <sect1 id="boot-blocks">
+    <title>MBR 和引导阶段一、二、三</title>
+
+    <sect2 id="boot-boot0">
+      <title>MBR，<filename>/boot/boot0</filename></title>
+      <indexterm><primary>主引导记录 (MBR)</primary></indexterm>
+
+      <para> FreeBSD MBR 放置在 <filename>/boot/boot0</filename>。
+	这是真实 MBR 的一份 <emphasis>复制品</emphasis>，真正的 MBR
+	必须放在磁盘上 FreeBSD 分区以外的特定部分。</para>
+
+      <para><filename>boot0</filename> 是非常简单的，因为在
+	<abbrev>MBR</abbrev> 里的代码只有 512 字节。
+	如果您安装了 FreeBSD MBR 且装了多个操作系统，
+	在引导时您会看到如下的内容：</para>
+
+      <example id="boot-boot0-example">
+	<title><filename>boot0</filename> 截屏</title>
+
+	<screen>F1 DOS
+F2 FreeBSD
+F3 Linux
+F4 ??
+F5 Drive 1
+
+Default: F2</screen>
+      </example>
+
+      <para>其它操作系统，特别是 &windows;&nbsp;95，以用自己的
+	MBR 覆盖现有 MBR 而著称。如果发生了这种事情，或者您想用
+	FreeBSD 的 MBR 覆盖现有的 MBR，您可以使用以下的命令：</para>
+
+      <screen>&prompt.root; <userinput>fdisk -B -b /boot/boot0 <replaceable>device</replaceable></userinput></screen>
+
+      <para><replaceable>device</replaceable> 是要写入 MBR
+	的设备名，比如 <devicename>ad0</devicename>
+	代表第一个 IDE 磁盘，<devicename>ad2</devicename>
+	代表第二个 IDE 控制器上的第一个 IDE 磁盘，
+	<devicename>da0</devicename> 代表第一个 SCSI 磁盘，等等。</para>
+
+      <para>如果您是 linux 用户，您可能更喜欢使用
+	<application>LILO</application> 来控制引导过程，您可以编辑
+	<filename>/etc/lilo.conf</filename> 文件，或者在安装 FreeBSD 过程中选择
+	<option>Leave The Master Boot Record Untouched</option> 选项。
+	如果您安装了 FreeBSD 引导管理器，您可以启动 linux 然后更改
+	<application>LILO</application> 的配置文件
+	<filename>/etc/lilo.conf</filename>，加入以下的选项：</para>
+
+      <programlisting>other=/dev/hdXY
+table=/dev/hdb
+loader=/boot/chain.b
+label=FreeBSD</programlisting>
+
+      <para>这样就可以通过
+	<application>LILO</application> 来引导 FreeBSD 和 linux 了。
+	在我们的例子中，我们使用
+	<replaceable>XY</replaceable> 确定驱动器号和分区。
+	如果您使用的是 <acronym>SCSI</acronym> 驱动器，您需要将
+	<replaceable>/dev/hdXY</replaceable> 改成 <replaceable>/dev/sdXY</replaceable>，
+	这里再次使用了 <replaceable>XY</replaceable> 的语法。
+	如果您安装的两个系统在同一驱动器上，<option>loader=/boot/chain.b</option>
+	选项可以去掉。现在您可以执行 <command>/sbin/lilo -v</command>
+	使修改生效。</para>
+    </sect2>
+
+    <sect2 id="boot-boot1">
+      <title>第一阶段，<filename>/boot/boot1</filename>，和第二阶段，
+	<filename>/boot/boot2</filename></title>
+
+      <para>概念上，第一，第二阶段同属于一个程序，处于磁盘的相同区域。但由于空间限制，
+	它们被分为两部分。可是您总是会一起安装它们。</para>
+
+      <para>它们放置在引导分区的引导扇区里。在引导扇区里能找到 <link
+	linkend="boot-boot0">boot0</link>、<abbrev>MBR</abbrev>
+	以及其它用于引导系统的程序。<filename>/boot</filename>
+	目录下的文件是真实文件的拷贝，真实文件放置在 FreeBSD
+	文件系统之外。</para>
+
+      <para><filename>boot1</filename> 非常简单，因为它再多也只能有 512 字节，
+	只能识别储存着分区信息的 <firstterm>disklabel</firstterm>，
+	及寻找执行 <filename>boot2</filename>。</para>
+
+      <para><filename>boot2</filename> 稍微有点加强，能够理解 FreeBSD
+	的文件系统以便于寻找里面的文件，
+	能提供选择内核和加载器的简单界面。</para>
+
+      <para>因为 <link linkend="boot-loader">loader</link> 有着更强的功能，
+	提供了一套易于使用的引导配置，<filename>boot2</filename> 一般都执行 loader，
+	但以前它的任务是直接运行内核。</para>
+
+      <example id="boot-boot2-example">
+	<title><filename>boot2</filename> 的屏幕输出</title>
+
+	<screen>&gt;&gt; FreeBSD/i386 BOOT
+Default: 0:ad(0,a)/kernel
+boot:</screen>
+      </example>
+
+      <para>如果您要更改已安装的 <filename>boot1</filename> 和
+	<filename>boot2</filename>，请使用命令
+	&man.disklabel.8;。</para>
+      <screen>&prompt.root; <userinput>disklabel -B <replaceable>diskslice</replaceable></userinput></screen>
+
+      <para><replaceable>diskslice</replaceable> 是用于引导的磁盘和分区，
+	比如 <devicename>ad0s1</devicename>
+	代表第一个 IDE 磁盘上的第一个分区。</para>
+
+      <warning>
+	<title>dangerously dedicated</title>
+
+	<para>如果您在 &man.disklabel.8; 命令中只使用了磁盘名，比如
+	  <devicename>ad0</devicename>，就会破坏磁盘上的所有分区。
+	  这当然不是您所希望的，所以在按下 <keycap>回车</keycap> 之前
+	  一定要对命令进行多次确认。</para>
+      </warning>
+    </sect2>
+
+  <sect2 id="boot-loader">
+    <title>第三阶段，<filename>/boot/loader</filename></title>
+
+    <indexterm><primary>boot-loader</primary></indexterm>
+    <para>加载器 (loader) 是三个阶段中的最后阶段，
+      且是放置在文件系统之中的，一般是文件
+      <filename>/boot/loader</filename>。</para>
+
+    <para>loader 被作为一种友好的配置方式，使用了一组内建且易用的命令集。
+      这些命令由一个强大的多的解释器支持构建，其本身带有复杂得多的命令集。</para>
+
+    <sect3 id="boot-loader-flow">
+      <title>Loader 程序流程</title>
+
+      <para>初始时，loader 会探测控制台和磁盘，识别是从哪块盘引导的。
+	它会根据这些信息设置变量，
+	启动解释器以接受通过脚本或交互方式传来的用户命令。</para>
+      <indexterm><primary>loader</primary></indexterm>
+      <indexterm><primary>loader 配置</primary></indexterm>
+
+      <para>loader 然后会读取并运行 <filename>/boot/loader.rc</filename>，
+	默认地读取 <filename>/boot/defaults/loader.conf</filename>
+	以设置可靠的默认变量，读取 <filename>/boot/loader.conf</filename>
+	对这些变量作本地修改。<filename>loader.rc</filename>
+	依据这些变量进行动作，加载任何被选择的模块和内核。</para>
+
+      <para>最后，默认地，loader 会停留 10 秒等待按键，
+	若没有发生中断，就开始引导内核。如果被中断，用户会得到一个命令行提示符，
+	在这里用户得更改变量、卸载所有模块、加载模块、最后引导
+	或重新引导。</para>
+
+    </sect3>
+
+    <sect3 id="boot-loader-commands">
+      <title>Loader 内建的命令</title>
+
+      <para>这些是最常用的 loader 命令.对所有可用命令的解释请参见
+	&man.loader.8;。</para>
+
+      <variablelist>
+	<varlistentry>
+	  <term>autoboot<replaceable>seconds</replaceable></term>
+
+	  <listitem>
+	    <para>在给定的时间内如果没有中断发生就引导内核。它显示一个倒数计时，
+	      默认的时间范围是 10 秒。</para>
+	  </listitem>
+	</varlistentry>
+
+	<varlistentry>
+	  <term>boot
+	    <optional><replaceable>-options</replaceable></optional>
+	    <optional><replaceable>kernelname</replaceable></optional></term>
+
+	  <listitem>
+	    <para>立即按照给定的选项 (如果有的话) 和内核名
+	      (如果是内核的) 引导内核。</para>
+	  </listitem>
+	</varlistentry>
+
+	<varlistentry>
+	  <term>boot-conf</term>
+
+	  <listitem>
+	    <para>基于变量对各种模块进行自动配置 (和引导内核时发生的一样)。
+	      您只须记住要先使用 <command>unload</command> 命令，
+	      然后修改一些变量，比如 <envar>kernel</envar>。</para>
+	  </listitem>
+	</varlistentry>
+
+	<varlistentry>
+	  <term>help
+	    <optional><replaceable>topic</replaceable></optional></term>
+
+	  <listitem>
+	    <para>显示从文件 <filename>/boot/loader.help</filename>
+	      读取的帮助信息。如果给定的主题是 <literal>index</literal>，
+	      那么列出来的是所有可用的主题。</para>
+	  </listitem>
+	</varlistentry>
+
+	<varlistentry>
+	  <term>include <replaceable>filename</replaceable>
+	    &hellip;</term>
+
+	  <listitem>
+	    <para>通过给定的文件名处理文件。文件被读入，然后被一行一行地解释。
+	      任何错误都会立即中止 include 命令。</para>
+	  </listitem>
+	</varlistentry>
+	<varlistentry>
+	  <term>load <optional><option>-t</option>
+	    <replaceable>type</replaceable></optional>
+	    <replaceable>filename</replaceable></term>
+
+	  <listitem>
+	    <para>加载内核、内核模块，或者是给定类型的文件 (通过给定的文件名)。
+	      任何在文件名后面的参数都会被传给文件。</para>
+	  </listitem>
+	</varlistentry>
+	<varlistentry>
+	  <term>ls <optional><option>-l</option></optional>
+	    <optional><replaceable>path</replaceable></optional></term>
+
+	  <listitem>
+	    <para>显示给定路径或者是根目录 (如果路径没有指定) 下面的文件列表。
+	      如果指定了 <option>-l</option> 选项，文件大小也会显示。</para>
+	  </listitem>
+	</varlistentry>
+	<varlistentry>
+	  <term>lsdev <optional><option>-v</option></optional></term>
+
+	  <listitem>
+	    <para>列出所有可以加载模块的设备。
+	      如果指定了<option>-v</option> 选项，会显示出更多的细节。</para>
+	  </listitem>
+	</varlistentry>
+
+	<varlistentry>
+	  <term>lsmod <optional><option>-v</option></optional></term>
+
+	  <listitem>
+	    <para>显示已被加载的模块。如果指明了 <option>-v</option> 选项，
+	      会显示更多的细节。</para>
+	  </listitem>
+	</varlistentry>
+
+	<varlistentry>
+	  <term>more <replaceable>filename</replaceable></term>
+
+	  <listitem>
+	    <para>显示指定的文件，每隔 <varname>LINES</varname> 停顿一次。</para>
+	  </listitem>
+	</varlistentry>
+
+	<varlistentry>
+	  <term>reboot</term>
+
+	  <listitem>
+	    <para>立即重启系统。</para>
+	  </listitem>
+	</varlistentry>
+
+	<varlistentry>
+	  <term>set <replaceable>variable</replaceable></term>
+	  <term>set
+	    <replaceable>variable</replaceable>=<replaceable>value</replaceable></term>
+
+	  <listitem>
+	    <para>设置 loader 的环境变量。</para>
+	  </listitem>
+	</varlistentry>
+
+	<varlistentry>
+	  <term>unload</term>
+
+	  <listitem>
+	    <para>移除所有已被加载的模块。</para>
+	  </listitem>
+	</varlistentry>
+      </variablelist>
+    </sect3>
+
+    <sect3 id="boot-loader-examples">
+      <title>Loader 示例</title>
+
+      <para>这里有一些实际中 loader 用法的示例</para>
+
+      <itemizedlist>
+	<indexterm><primary>single-user mode</primary></indexterm>
+	<listitem>
+	  <para>只是简单的引导默认内核，不同的是进入单用户模式：</para>
+
+	  <screen><userinput>boot -s</userinput></screen>
+	</listitem>
+
+	<listitem>
+	  <para>卸载默认内核和模块，然后加载旧的 (或者其它) 的内核：</para>
+    <indexterm>
+      <primary><filename>kernel.old</filename></primary>
+    </indexterm>
+
+	  <screen><userinput>unload</userinput>
+<userinput>load <replaceable>kernel.old</replaceable></userinput></screen>
+
+	  <para>您可以使用被称为通用内核的 <filename>kernel.GENERIC</filename>，
+	    或者您以前安装的内核 <filename>kernel.old</filename>
+	    (当您升级或配置了您自己的内核等时候)。</para>
+
+	  <note>
+	    <para>使用以下命令加载常用的模块和另一个内核：</para>
+
+	    <screen><userinput>unload</userinput>
+<userinput>set kernel="<replaceable>kernel.old</replaceable>"</userinput>
+<userinput>boot-conf</userinput></screen></note>
+	</listitem>
+
+	<listitem>
+	  <para>加载内核配置脚本：</para>
+
+	  <screen><userinput>load -t userconfig_script <replaceable>/boot/kernel.conf</replaceable></userinput></screen>
+	</listitem>
+      </itemizedlist>
+  </sect3>
+    </sect2>
+  </sect1>
+
+  <sect1 id="boot-kernel">
+    <title>内核在引导时的交互</title>
+    <indexterm>
+      <primary>内核</primary>
+      <secondary>引导交互</secondary>
+    </indexterm>
+
+    <para>一旦内核被 <link
+      linkend="boot-loader">loader</link> (一般情况下) 或者 <link
+      linkend="boot-boot1">boot2</link> (越过 loader) 加载，
+      它将检查引导标志，如果有的话，就会进行必要的动作调整。</para>
+
+    <sect2 id="boot-kernel-bootflags">
+      <indexterm>
+        <primary>内核</primary>
+        <secondary>引导标志</secondary>
+      </indexterm>
+      <title>内核引导标志</title>
+
+      <para>这里是一些常用的引导标志：</para>
+
+      <variablelist id="boot-kernel-bootflags-list">
+	<varlistentry>
+	  <term><option>-a</option></term>
+
+	  <listitem>
+	    <para>在内核初始化时，询问作为根加载的设备。</para>
+	  </listitem>
+	</varlistentry>
+
+	<varlistentry>
+	  <term><option>-C</option></term>
+
+	  <listitem>
+	    <para>从 CDROM 引导。</para>
+	  </listitem>
+	</varlistentry>
+
+	<varlistentry>
+	  <term><option>-c</option></term>
+
+	  <listitem>
+	    <para>运行 UserConfig (引导时的内核配置器)</para>
+	  </listitem>
+	</varlistentry>
+
+	<varlistentry>
+	  <term><option>-s</option></term>
+
+	  <listitem>
+	    <para>引导进入单用户模式</para>
+	  </listitem>
+	</varlistentry>
+
+	<varlistentry>
+	  <term><option>-v</option></term>
+
+	  <listitem>
+	    <para>在内核引导过程中显示更有的信息</para>
+	  </listitem>
+	</varlistentry>
+      </variablelist>
+
+      <note>
+	<para>还有更多的引导标志，阅读 &man.boot.8;
+	  以获取有关它们的信息。</para></note>
+    </sect2>
+
+<!--    <sect2 id="boot-kernel-userconfig">
+      <title>UserConfig: 引导时的内核配置器</title>
+
+      <para> </para>
+    </sect2> -->
+  </sect1>
+
+  <sect1 id="device-hints">
+    <sect1info>
+      <authorgroup>
+	<author>
+	  <firstname>Tom</firstname>
+	  <surname>Rhodes</surname>
+	  <contrib>Contributed by </contrib>
+	</author>
+      </authorgroup>
+      <!-- 18 OCT 2002 -->
+    </sect1info>
+    <indexterm>
+      <primary>device.hints</primary>
+    </indexterm>
+    <title>Device Hints</title>
+
+    <note><para>这是 FreeBSD&nbsp;5.0 及其以后版本的组件，
+      不存在于早前的版本中。</para></note>
+
+    <para>在初始化系统启动时，&man.loader.8; 会读取
+      &man.device.hints.5; 文件。这个文件以变量的形式储存着内核引导信息，
+      有时被称为 <quote>device hints</quote>。
+      设备驱动程序用<quote>device hints</quote>
+      对设备进行配置。</para>
+
+    <para>Device hints 也可以在 <link linkend="boot-loader">
+      第三阶段的boot loader</link> 的命令行提示符中指定。变量可以用
+      <command>set</command> 命令添加，<command>unset</command> 命令删除，
+      <command>show</command> 命令查看。在文件 <filename>/boot/device.hints</filename>
+      设置的变量亦可以在这里被覆盖。键入 boot loader
+      中的变量不是永久性的，在下次启动时就会被忘记。</para>
+
+    <para>一旦系统引导成功，&man.kenv.1; 命令可以用来清楚所有的变量。</para>
+
+    <para>文件 <filename>/boot/device.hints</filename> 的语法是一行一个变量，
+      使用<quote>#</quote>作为注释标记。
+      每行是按照如下方式组织的：</para>
+
+    <screen><userinput>hint.driver.unit.keyword="<replaceable>value</replaceable>"</userinput></screen>
+
+    <para>第三阶段 boot loader 的语法是：</para>
+    <screen><userinput>set hint.driver.unit.keyword=<replaceable>value</replaceable></userinput></screen>
+
+    <para><literal>driver</literal> 是设备驱动程序名，<literal>unit</literal>
+      是设备驱动程序单位名，<literal>keyword</literal> 是 hint 关键字。
+      关键字可以由以下选项组成：</para>
+
+    <itemizedlist>
+      <listitem>
+	<para><literal>at</literal>：指明设备所绑定的总线</para>
+      </listitem>
+
+      <listitem>
+	<para><literal>port</literal>：指明所使用 <acronym>I/O</acronym>
+	  的起始地址。</para>
+      </listitem>
+
+      <listitem>
+	<para><literal>irq</literal>：指明所使用的中断请求号。</para>
+      </listitem>
+
+      <listitem>
+	<para><literal>drq</literal>：指明 DMA channel 号。</para>
+      </listitem>
+
+      <listitem>
+	<para><literal>maddr</literal>：指明设备占用的物理内存地址。</para>
+      </listitem>
+
+      <listitem>
+	<para><literal>flags</literal>：给设备设置各种标志位。</para>
+      </listitem>
+
+      <listitem>
+	<para><literal>disabled</literal>：如果设成 <literal>1</literal>，
+	  设备被禁用。</para>
+      </listitem>
+    </itemizedlist>
+
+    <para>设备驱动程序能够接受更多的 hints，推荐您参看它们的联机手册。参看
+      &man.device.hints.5;、&man.kenv.1;、&man.loader.conf.5; 和
+      &man.loader.8; 联机手册以获取更多的信息。</para>
+  </sect1>
+
+  <sect1 id="boot-init">
+    <indexterm>
+      <primary><command>init</command></primary>
+    </indexterm>
+    <title>Init：进程控制及初始化</title>
+
+    <para>一旦内核完成引导，它就把控制权交给了用户进程
+      &man.init.8;，它放置在 <filename>/sbin/init</filename>，
+      或者 <envar>init_path</envar> 变量指定的程序路径中。
+      这个变量是在 <command>loader</command> 里面设置的。</para>
+
+    <sect2 id="boot-autoreboot">
+      <title>自动重启队列</title>
+
+      <para>自动重启队列保证了可用的文件系统是稳定的。
+	如果不是，且 &man.fsck.8; 不能修复这些错误，
+	&man.init.8; 会进入<link linkend="boot-singleuser">单用户模式</link>
+	以便系统管理员直接解决问题。</para>
+    </sect2>
+
+    <sect2 id="boot-singleuser">
+      <title>单用户模式</title>
+      <indexterm><primary>单用户模式</primary></indexterm>
+      <indexterm><primary>控制台</primary></indexterm>
+
+      <para>此模式可以通过
+	<link linkend="boot-autoreboot"> 自动重启队列</link>或者通过带有
+	<option>-s</option> 选项的用户引导或通过在 <command>loader</command>
+	里设置 <envar>boot_single</envar> 变量等多种方式来达到。</para>
+
+      <para>也可以在多用户模式下调动无 reboot(<option>-r</option>)选项和
+	halt (<option>-h</option>) 选项的 &man.shutdown.8;
+	命令来进入单用户模式。</para>
+
+      <para>如果系统 <literal>控制台</literal> 在文件
+	<filename>/etc/ttys</filename> 中被设置为
+	<literal>不安全(insecure)</literal>，
+	在初始化单用户模式前会出现要求输入 <username>root</username>
+	密码的命令行提示符。</para>
+
+      <example id="boot-insecure-console">
+	<title>在 <filename>/etc/ttys</filename> 文件中的不安全控制台</title>
+
+	<programlisting># name  getty                           type    status          comments
+#
+# If console is marked "insecure", then init will ask for the root password # when going to single-user mode.
+console none                            unknown off insecure</programlisting>
+      </example>
+
+      <note>
+	<para>把控制台设置成 <literal>不安全 (insecure)</literal>
+	  使只知道 <username>root</username> 密码的人才能进入单用户模式，
+	  因为您认为控制台在物理上是不安全的。因此如果您考虑到安全性，
+	  请选择 <literal>不安全 (insecure)</literal>，而非
+	  <literal>安全 (secure)</literal>。</para>
+      </note>
+    </sect2>
+
+    <sect2 id="boot-multiuser">
+      <title>多用户模式</title>
+      <indexterm><primary>多用户模式</primary></indexterm>
+
+      <para>如果 &man.init.8; 发现您的文件系统一切正常，又或者用户在<link
+	linkend="boot-singleuser">单用户模式</link>完成了工作，
+	系统就会进入多用户模式，开始系统的资源配置。</para>
+
+      <sect3 id="boot-rc">
+      <indexterm><primary>rc 文件</primary></indexterm>
+	<title>资源配置 (rc)</title>
+
+	<para>资源配置分别从文件 <filename>/etc/defaults/rc.conf</filename>、
+	  <filename>/etc/rc.conf</filename> 中读取默认配置和细节配置，
+	  然后加载在文件 <filename>/etc/fstab</filename> 中提及的文件系统、
+	  启动网络服务、启动各种系统守护进程，最后启动本地安装包的启动脚本。</para>
+
+	<para>&man.rc.8; 联机手册是关于资源配置的很好的参考。</para>
+      </sect3>
+    </sect2>
+  </sect1>
+
+  <sect1 id="boot-shutdown">
+    <title>shutdown 队列</title>
+    <indexterm>
+      <primary><command>shutdown</command></primary>
+    </indexterm>
+
+    <para>由命令 &man.shutdown.8; 的控制，
+      &man.init.8; 会试着运行 <filename>/etc/rc.shutdown</filename> 脚本，
+      给所有进程发送 <literal>TERM</literal> 信号，然后给不按时停止的进程发送
+      <literal>KILL</literal>信号。</para>
+
+    <para>在支持电源管理的体系上关闭 FreeBSD 系统的电源，只要简单的使用命令
+      <command>shutdown -p now</command> 立即关闭电源。使用命令
+      <command>shutdown -r now</command> 重启 FreeBSD。要执行 &man.shutdown.8;
+      您必须是 <username>root</username> 用户或 <groupname>operator</groupname> 组的成员。
+      也可以使用 &man.halt.8; 和 &man.reboot.8; 命令来关闭系统，
+      请参看它们的联机手册以获得更多的信息。</para>
+
+    <note>
+      <para>电源管理需要支持，在 FreeBSD&nbsp;5.X 中要求内核支持
+	&man.acpi.4; 或以模块加载，在 FreeBSD&nbsp;4.X 中需要
+	&man.apm.4; 的支持。</para>
+    </note>
+
+  </sect1>
+</chapter>
+
+<!--
+     Local Variables:
+     mode: sgml
+     sgml-declaration: "../chapter.decl"
+     sgml-indent-data: t
+     sgml-omittag: nil
+     sgml-always-quote-attributes: t
+     sgml-parent-document: ("../book.sgml" "part" "chapter")
+     End:
+-->
