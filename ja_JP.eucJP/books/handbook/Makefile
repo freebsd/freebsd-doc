@@ -1,5 +1,5 @@
-# $Id: Makefile,v 1.24 1998-07-19 15:46:49 kuriyama Exp $
-# Original revision: 1.31
+# $Id: Makefile,v 1.25 1998-07-20 05:33:57 hanai Exp $
+# Original revision: 1.32
 # The FreeBSD Japanese Documentation Project
 
 DOC=	handbook
@@ -8,7 +8,7 @@ FORMATS?= html roff
 SGMLOPTS+=-e EUC-JP
 SGMLOPTS+=-links
 
-SRCS= authors.sgml backups.sgml basics.sgml bibliography.sgml boothelp.sgml
+SRCS= anoncvs.sgml authors.sgml backups.sgml basics.sgml bibliography.sgml boothelp.sgml
 SRCS+= booting.sgml contrib.sgml crypt.sgml ctm.sgml current.sgml cvsup.sgml
 SRCS+= cyclades.sgml development.sgml dialup.sgml dialout.sgml
 SRCS+= disks.sgml diskless.sgml dma.sgml eresources.sgml esdi.sgml 
