@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/news/Makefile,v 1.25 2001/08/02 04:26:30 chris Exp $
+# $FreeBSD: www/en/news/Makefile,v 1.26 2001/08/07 15:55:07 nik Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -31,7 +31,7 @@ SUBDIR+= 	1999
 SUBDIR+= 	2000
 SUBDIR+=	status
 
-DATA=		news.rdf
+DATA=		newsflash.html news.rdf
 
 newsflash.html: newsflash.xsl news.xml includes.xsl ../includes.xsl
 	xsltproc -nonet -o newsflash.html newsflash.xsl news.xml
