@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.28 1997-11-18 16:06:04 wosch Exp $
+# $Id: Makefile,v 1.29 1998-02-19 06:45:26 asami Exp $
 
 SGMLOPTS=-links
 SRCS= authors.sgml basics.sgml bibliography.sgml boothelp.sgml
@@ -12,7 +12,8 @@ SRCS+= lists.sgml mail.sgml memoryuse.sgml
 SRCS+= mirrors.sgml nfs.sgml nutshell.sgml pgpkeys.sgml policies.sgml
 SRCS+= porting.sgml ports.sgml ppp.sgml printing.sgml 
 SRCS+= quotas.sgml relnotes.sgml routing.sgml russian.sgml
-SRCS+= serial.sgml scsi.sgml sections.sgml sio.sgml skey.sgml slipc.sgml 
+SRCS+= serial.sgml scsi.sgml scsihd.sgml
+SRCS+= sections.sgml sio.sgml skey.sgml slipc.sgml 
 SRCS+= slips.sgml stable.sgml submitters.sgml synching.sgml 
 SRCS+= term.sgml userppp.sgml uart.sgml linuxemu.sgml
 
