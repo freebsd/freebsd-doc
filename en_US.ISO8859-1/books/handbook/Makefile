@@ -1,5 +1,5 @@
 # 
-# $Id: Makefile,v 1.10 1999-01-25 22:00:40 nik Exp $
+# $Id: Makefile,v 1.11 1999-01-27 23:39:47 nik Exp $
 #
 # Build the FreeBSD Handbook. Will eventually split in two, a generic .mk
 # file which can be used by many Makefiles, and a much smaller Makefile
@@ -203,7 +203,7 @@ CLEANFILES:= ${_clean}
 all: ${_docs}
 
 index.html HTML.manifest: ${SRCS}
-	${JADE} -ioutput.html ${JADEFLAGS} -d ${DSLHTML} -t sgml ${DOC}.sgml
+	${JADE} -V html-manifest -ioutput.html ${JADEFLAGS} -d ${DSLHTML} -t sgml ${DOC}.sgml
 	-tidy -i -m -f /dev/null *.html
 
 ${DOC}.html: ${SRCS}
@@ -225,13 +225,13 @@ ${DOC}.dvi: ${DOC}.tex
 	@echo "==> TeX pass 2/3"
 	-tex "&jadetex" ${DOC}.tex
 	@echo "==> Tex pass 3/3"
-	tex "&jadetex" ${DOC}.tex
+	-tex "&jadetex" ${DOC}.tex
 
 ${DOC}.pdf: ${DOC}.tex
 	@echo "==> PDFTeX pass 1/3"
-	pdftex "&pdfjadetex" ${DOC}.tex
+	-pdftex "&pdfjadetex" ${DOC}.tex
 	@echo "==> PDFTeX pass 2/3"
-	pdftex "&pdfjadetex" ${DOC}.tex
+	-pdftex "&pdfjadetex" ${DOC}.tex
 	@echo "==> PDFTeX pass 3/3"
 	pdftex "&pdfjadetex" ${DOC}.tex
 
@@ -335,7 +335,7 @@ install-${_cf}: index.html
 		exit 1;							\
 	fi
 	${INSTALL} ${COPY} -o ${DOCOWN} -g ${DOCGRP} -m ${DOCMODE} 	\
-		`xargs < HTML.manifest` ${DESTDIR}${DOCDIR}/${VOLUME};
+		`xargs < HTML.manifest` ${DESTDIR}${DOCDIR}/${VOLUME};	\
 	if [ -f ${.OBJDIR}/${DOC}.ln ]; then 				\
 		(cd ${DESTDIR}${DOCDIR}/${VOLUME}; 			\
 		sh ${.OBJDIR}/${DOC}.ln); 				\
