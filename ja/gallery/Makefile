@@ -1,6 +1,6 @@
-# $FreeBSD: www/ja/gallery/Makefile,v 1.14 2001/09/05 08:35:15 kuriyama Exp $
+# $FreeBSD: www/ja/gallery/Makefile,v 1.15 2001/09/17 03:07:39 kuriyama Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.13
+# Original revision: 1.14
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -9,31 +9,36 @@
 .include "../Makefile.inc"
 .endif
 
-XSLT=	env SGML_CATALOG_FILES=/usr/local/share/xml/dtd/xhtml/xhtml.soc \
-	xsltproc --catalogs
+XSLTPROCFLAGS=	--catalogs
+XSLT=	${SETENV} SGML_CATALOG_FILES=${PREFIX}/share/xml/dtd/xhtml/xhtml.soc \
+	${XSLTPROC} ${XSLTPROCFLAGS}
+
 SRC=	../../en/gallery/gallery.xml
 
 INDEXLINK= gallery.html
 
 DATA+=	gallery.html cgallery.html npgallery.html pgallery.html
 
-CLEANFILES+= cgallery.html npgallery.html pgallery.html gallery.html
+CLEANFILES+= ${DATA}
 
 gallery.html: ${SRC} gallery.xsl ../includes.xsl
-	${XSLT} gallery.xsl ${SRC} > gallery.html
-#	-tidy -i -m -f /dev/null gallery.html
+	${XSLT} ${.CURDIR}/gallery.xsl ${.CURDIR}/${SRC} > ${.TARGET}
+#	-${TIDY} ${TIDYFLAGS} ${.TARGET}
 
 cgallery.html: ${SRC} gallery-entry.xsl
-	${XSLT} --param type \'commercial\' gallery-entry.xsl ${SRC} > cgallery.html
-#	-tidy -i -m -f /dev/null cgallery.html
+	${XSLT} --param type \'commercial\' \
+		${.CURDIR}/gallery-entry.xsl ${.CURDIR}/${SRC} > ${.TARGET}
+#	-${TIDY} ${TIDYFLAGS} ${.TARGET}
 
 npgallery.html: ${SRC} gallery-entry.xsl
-	${XSLT} --param type \'nonprofit\' gallery-entry.xsl ${SRC} > npgallery.html
-#	-tidy -i -m -f /dev/null npgallery.html
+	${XSLT} --param type \'nonprofit\' \
+		${.CURDIR}/gallery-entry.xsl ${.CURDIR}/${SRC} > ${.TARGET}
+#	-${TIDY} ${TIDYFLAGS} ${.TARGET}
 
 pgallery.html: ${SRC} gallery-entry.xsl
-	${XSLT} --param type \'personal\' gallery-entry.xsl ${SRC} > pgallery.html
-#	-tidy -i -m -f /dev/null pgallery.html
+	${XSLT} --param type \'personal\' \
+		${.CURDIR}/gallery-entry.xsl ${.CURDIR}/${SRC} > ${.TARGET}
+#	-${TIDY} ${TIDYFLAGS} ${.TARGET}
 
 ### Revision checking
 REVCHECK=	yes
