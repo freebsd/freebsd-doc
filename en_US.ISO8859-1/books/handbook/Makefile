@@ -136,6 +136,7 @@ SRCS+= sound/chapter.sgml
 SRCS+= users/chapter.sgml
 SRCS+= x11/chapter.sgml
 SRCS+= ports/chapter.sgml
+SRCS+= preface/preface.sgml
 SRCS+= colophon.sgml
 
 # Entities
