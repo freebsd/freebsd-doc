@@ -1,4 +1,4 @@
-<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.23 2001/02/20 19:17:26 nik Exp $ -->
+<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.24 2001/02/20 19:38:25 nik Exp $ -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
 <!ENTITY % output.html		"IGNORE">
@@ -131,6 +131,13 @@
 
       <!-- Print only ................................................... --> 
       <![ %output.print; [
+        (define (toc-depth nd)
+          (if (string=? (gi nd) (normalize "book"))
+              3
+              1))
+ 
+        (define %body-start-indent% 
+          0pi)
 
         ;; Norm's stylesheets are smart about working out what sort of
         ;; object to display.  But this bites us.  Since we know that the
