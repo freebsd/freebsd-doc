@@ -182,6 +182,7 @@ MAN8 =	IPXrouted.8\
 	pac.8\
 	pam.8\
 	pam_radius.8\
+	pam_ssh.8\
 	pccardc.8\
 	pccardd.8\
 	pciconf.8\
