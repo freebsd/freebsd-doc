@@ -102,6 +102,9 @@ DOCBOOKSUFFIX?= sgml
 
 MASTERDOC?=	${.CURDIR}/${DOC}.${DOCBOOKSUFFIX}
 
+# Which stylesheet type to use.  'dsssl' or 'xsl'
+STYLESHEET_TYPE?=	dsssl
+
 .if ${MACHINE_ARCH} == "alpha"
 OPENJADE=	yes
 .endif
