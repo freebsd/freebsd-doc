@@ -1,5 +1,5 @@
 #!/usr/bin/perl -T
-# $FreeBSD: www/en/cgi/query-pr-summary.cgi,v 1.46 2004/08/19 12:43:25 ceri Exp $
+# $FreeBSD: www/en/cgi/query-pr-summary.cgi,v 1.47 2004/10/13 10:55:55 keramida Exp $
 
 sub escape($) { $_ = $_[0]; s/&/&amp;/g; s/</&lt;/g; s/>/&gt;/g; $_; }
 
@@ -523,23 +523,10 @@ sub gnats_summary_line_html {
     local($resp)     = shift;
     local($syn)      = shift;
 
-    print "${table}\n" .
-	"  <tr valign=\"center\">\n" .
-	"    <th>S</th>\n" .
-	"    <th>Submitted</th>\n" .
-	"    <th>Tracker</th>\n" .
-	"    <th>Resp.</th>\n" .
-	"    <th>Description</th>\n" .
-	"  </tr>\n"
+    print "${table}" .
+	"<tr><th>S</th><th>Submitted</th><th>Tracker</th><th>Resp.</th><th>Description</th></tr>\n"
         if ($counter == 0);
-
-    print "  <tr valign=\"center\">\n" .
-	"    <td>$state</td>\n" .
-	"    <td>$date</td>\n" .
-	"    <td>$title</td>\n" .
-	"    <td>$resp</td>\n" .
-	"    <td>$syn</td>\n" .
-	"  </tr>\n";
+    print "<tr><td>$state</td><td>$date</td><td>$title</td><td>$resp</td><td>$syn</td></tr>\n";
 }
 
 sub gnats_summary_line_text {
