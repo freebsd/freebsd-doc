@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
 
-<!-- $FreeBSD: www/ja/news/newsflash.xsl,v 1.3 2001/09/03 05:59:47 kuriyama Exp $ -->
+<!-- $FreeBSD: www/ja/news/newsflash.xsl,v 1.4 2001/11/19 15:35:42 hrs Exp $ -->
 <!-- Original revision: 1.3 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
@@ -98,9 +98,7 @@
 	  </xsl:attribute>
 	</a>
 
-	<b><xsl:value-of select="ancestor::day/name"/>
-	  <xsl:value-of select="ancestor::month/name"/> /
-	  <xsl:value-of select="ancestor::day/name"/> : </b><xsl:text> </xsl:text>
+	<b><xsl:value-of select="format-number(number(ancestor::year/name),'0000')"/>/<xsl:value-of select="format-number(number(ancestor::month/name),'00')"/>/<xsl:value-of select="format-number(number(ancestor::day/name),'00')"/>:</b><xsl:text> </xsl:text>
 	<xsl:apply-templates select="p"/>
 	</p>
 
