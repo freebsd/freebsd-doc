@@ -1,9 +1,10 @@
-# $Id: Makefile,v 1.4 1999-07-04 15:26:05 foxfair Exp $
+# $Id: Makefile,v 1.5 1999-08-17 22:20:45 nik Exp $
 
 .NOTPARALLEL: 
 
 DOC=	FAQ
-DOCDIR= ${SHAREDIR}/doc/zh
+VOLUME= faq
+DOCDIR= /usr/local/share/doc/fdp/zh_TW.Big5/books
 FORMATS?= html roff
 SGMLOPTS=-links -e big5
 
