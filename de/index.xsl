@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
 <!--
-     $FreeBSD: www/de/index.xsl,v 1.12 2004/01/11 00:35:07 mheinen Exp $
-     $FreeBSDde: de-www/index.xsl,v 1.28 2004/05/03 23:03:53 brueffer Exp $
-     basiert auf: 1.100
+     $FreeBSD$
+     $FreeBSDde: de-www/index.xsl,v 1.29 2004/07/04 13:45:23 brueffer Exp $
+     basiert auf: 1.105
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -11,12 +11,13 @@
   <xsl:import href="includes.xsl"/>
   <xsl:import href="news/includes.xsl"/>
 
-  <xsl:variable name="date" select="'$FreeBSD: www/de/index.xsl,v 1.12 2004/01/11 00:35:07 mheinen Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/de/index.xsl,v 1.4 2003/09/17 23:40:35 mheinen Exp $'"/>
   <xsl:variable name="title" select="'Das FreeBSD Projekt'"/>
 
   <!-- these params should be externally bound. The values
        here are not used actually -->
   <xsl:param name="advisories.xml" select="'none'"/>
+  <xsl:param name="notices.xml" select="'none'"/>
   <xsl:param name="mirrors.xml" select="'none'"/>
   <xsl:param name="news.press.xml" select="'none'"/>
   <xsl:param name="news.project.xml" select="'none'"/>
@@ -36,6 +37,12 @@
 	      CVS, CVSup, News, Commercial Vendors, homepage, CTM, Unix"/>
 	<link rel="shortcut icon" href="/favicon.ico" type="image/x-icon"/>
 	<link rel="icon" href="/favicon.ico" type="image/x-icon"/>
+
+	<!-- Formatted to be easy to spam harvest, please do not reformat. -->
+	<xsl:comment>
+	  Spamtrap, do not email:
+	  &lt;a href="mailto:bruscar@freebsd.org"&gt;bruscar@freebsd.org&lt;/a&gt;
+	</xsl:comment>
       </head>
 
       <body bgcolor="#FFFFFF" text="#000000" link="#0000FF" vlink="#840084"
@@ -248,12 +255,11 @@
 		    <table cellpadding="4" cellspacing="0" border="0"
 			   bgcolor="#ffcc66" width="100%">
 		      <tr>
-			<td valign="top"><p><a href="{$u.rel.early}">
+			<td valign="top"><p><a href="{$u.rel.announce}">
 			    <font size="+1" color="#990000"><b>Neue Technik:
 			    <xsl:value-of select="$rel.current"/>-RELEASE</b></font></a><br/>
 
-			    <small>&#183; <a href="{$u.rel.announce}">Ank&#252;ndigung</a><br/>
-			      &#183; <a href="{$enbase}/doc/en_US.ISO8859-1/books/handbook/install.html">Installation</a><br/>
+			    <small>&#183; <a href="{$enbase}/doc/en_US.ISO8859-1/books/handbook/install.html">Installation</a><br/>
 			      &#183; <a href="{$u.rel.notes}">Release Notes</a><br/>
 			      &#183; <a href="{$u.rel.hardware}">Hardware Notes</a><br/>
 			      &#183; <a href="{$u.rel.installation}">Installation Notes</a><br/>
@@ -264,14 +270,14 @@
 			    <font size="+1" color="#990000"><b>Produktionsreife:
 			    <xsl:value-of select="$rel2.current"/>-RELEASE</b></font></a><br/>
 
-			    <small>&#183; <a href="{$u.rel2.announce}">Ank&#252;ndigung</a><br/>
-			      &#183; <a href="{$enbase}/doc/en_US.ISO8859-1/books/handbook/install.html">Installation</a><br/>
+			    <small>&#183; <a href="{$enbase}/doc/en_US.ISO8859-1/books/handbook/install.html">Installation</a><br/>
 			      &#183; <a href="{$u.rel2.notes}">Release Notes</a><br/>
 			      &#183; <a href="{$u.rel2.hardware}">Hardware Notes</a><br/>
 			      &#183; <a href="{$u.rel2.installation}">Installation Notes</a><br/>
 			      &#183; <a href="{$u.rel2.errata}">Errata</a></small></p>
 
 			  <p><font size="+1" color="#990000"><b>Ank&#252;ndigungen</b></font>
+			    <xsl:text> </xsl:text>
 			    <font color="#990000">(<a href="news/news.rdf">RSS</a>)</font><br/>
 			    <font size="-1">
 			      aktualisiert am:
@@ -300,18 +306,38 @@
 			    </font>
 			  </p>
 
-			  <p><font size="+1" color="#990000"><b>Sicherheits-Hinweise</b></font><br/>
-
+			  <p><font size="+1" color="#990000"><b>Sicherheits-Hinweise</b></font>
+			    <xsl:text> </xsl:text>
+			    <font color="#990000">(<a href="security/advisories.rdf">RSS</a>)</font><br/>
 			    <font size="-1">
 			      aktualisiert am:
 			      <xsl:call-template name="html-index-advisories-items-lastmodified">
 			        <xsl:with-param name="advisories.xml" select="$advisories.xml" />
+				<xsl:with-param name="type" select="'advisory'" />
 			      </xsl:call-template>
 			      <br/>
 			      <xsl:call-template name="html-index-advisories-items">
 			        <xsl:with-param name="advisories.xml" select="$advisories.xml" />
+				<xsl:with-param name="type" select="'advisory'" />
 			      </xsl:call-template>
 			      <a href="security/">mehr ...</a>
+			    </font>
+			  </p>
+
+			  <p><font size="+1" color="#990000"><b>Fehler-Hinweise</b></font>
+        		    <xsl:text> </xsl:text>
+        		    <br/>
+        		    <font size="-1">
+			      aktualisiert am:
+			      <xsl:call-template name="html-index-advisories-items-lastmodified">
+				<xsl:with-param name="advisories.xml" select="$notices.xml" />
+				<xsl:with-param name="type" select="'notice'" />
+			      </xsl:call-template>
+			      <br/>
+			      <xsl:call-template name="html-index-advisories-items">
+				<xsl:with-param name="advisories.xml" select="$notices.xml" />
+				<xsl:with-param name="type" select="'notice'" />
+			      </xsl:call-template>
 			    </font>
 			  </p>
 			</td>

@@ -1,8 +1,8 @@
 # The FreeBSD Documentation Project
 # The FreeBSD German Documentation Project
-# $FreeBSD: www/de/Makefile,v 1.15 2004/04/06 11:41:17 phantom Exp $
-# $FreeBSDde: de-www/Makefile,v 1.23 2004/05/03 22:58:44 brueffer Exp $
-# basiert auf: 1.111
+# $FreeBSD$
+# $FreeBSDde: de-www/Makefile,v 1.24 2004/07/04 13:46:39 brueffer Exp $
+# basiert auf: 1.112
 
 .if exists(Makefile.conf)
 .include "Makefile.conf"
@@ -57,11 +57,14 @@ CLEANFILES+=	index.html
 
 index.html: index.xsl ${XML_INCLUDES}\
 		${XML_NEWS_INCLUDES} ${XML_NEWS_NEWS} ${XML_NEWS_PRESS}\
-		${XML_MIRRORS} ${XML_TRANSTABLE} ${XML_ADVISORIES} ${XML_NAVIGATION}
+		${XML_MIRRORS} ${XML_TRANSTABLE} \
+		${XML_ADVISORIES} ${XML_NOTICES} \
+		${XML_NAVIGATION}
 	${XSLTPROC} ${XSLTPROCOPTS} \
 		-o $@ \
 		--param mirrors.xml "'${XML_MIRRORS}'" \
 		--param advisories.xml "'${XML_ADVISORIES}'" \
+		--param notices.xml "'${XML_NOTICES}'" \
 		--param news.press.xml "'${XML_NEWS_PRESS}'" \
 		--param news.project.xml "'${XML_NEWS_NEWS}'" \
 		--param transtable.xml "'${XML_TRANSTABLE}'" \
