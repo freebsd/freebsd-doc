@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/alpha/Makefile,v 1.7 2000/11/07 04:05:08 kuriyama Exp $
+# $FreeBSD: www/en/platforms/Makefile,v 1.1 2000/11/22 10:26:10 murray Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -7,8 +7,10 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS=   ia64.sgml
-
-INDEXLINK=ia64.html
+DOCS=	alpha.sgml
+DOCS+=	ia64.sgml
+DOCS+=	index.sgml
+DOCS+=	ppc.sgml
+DOCS+=	sparc.sgml
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
