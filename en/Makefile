@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.12 1997-02-20 20:21:16 mbarkah Exp $
+# $Id: Makefile,v 1.13 1997-03-18 00:05:14 mbarkah Exp $
 
 # These are turned into validated, normalized HTML files.
 
@@ -18,11 +18,13 @@ DATA=	COPYING COPYING.LIB README.mirror robots.txt
 LOCAL=	stats.html stats-img.html
 
 stats.html: /home/www/server/logs/access_log
+	renice +10 $$$$; \
 	(cd /usr/local/www/server/logs;zcat access_log.*.gz;cat access_log) | \
 	egrep -iv '\.(gif|jpg|jpeg|au) ' | \
 	/usr/local/www/bin/analog +i0 +R500 -o > ${.TARGET}
 
 stats-img.html: /home/www/server/logs/access_log
+	renice +10 $$$$; \
 	(cd /usr/local/www/server/logs;zcat access_log.*.gz;cat access_log) | \
 	/usr/local/www/bin/analog +i0 +R500 -o > ${.TARGET}
 
