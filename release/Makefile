@@ -40,19 +40,22 @@ DATE!=		date +%Y%m%d
 BUILDNAME?=	${DATE}
 
 #
-# Set defaults for FORMATS and DOC_LANG.  To preserve POLA, these
-# should be reflect the defaults.
+# Set defaults for FORMATS, DOC_LANG, and INSTALL_COMPRESSED.
 #
-FORMATS?=	html
-DOC_LANG?=	en_US.ISO8859-1
+FORMATS?=	ps pdf html html-split html-split.tar txt pdb
+#DOC_LANG?=	en_US.ISO8859-1
+INSTALL_COMPRESSED?=	zip gz
 
 #
-# Miscellaneous but mandatory options for the build get set here.
+# Miscellaneous options for the build get set here.
+#
 # The Japanese translation team has a set of manual pages; we turn
 # these off (at least for now) because we have not worked their
 # install target into our scheme.
 #
-MISCOPTIONS+=	NO_JPMAN=yes
+# Turn on RLE encoding and indexing.
+#
+MISCOPTIONS+=	NO_JPMAN=yes RLE=yes GEN_INDEX=1
 
 DOCSTAGEDIR=	${DOCROOTDIR}/doc
 DOCBUILDFILE=	${DOCROOTDIR}/doc/BUILD.TXT
@@ -75,7 +78,7 @@ rerelease release:
 # We do this so as to avoid interference with any built documents that
 # happen to be sitting under ${DOC_PREFIX}, which might be built with
 # different options, etc.
-	cd ${DOC_PREFIX} && env MAKEOBJDIRPREFIX=${DOCROOTDIR}/obj ${MAKE} all install DOCDIR=${DOCSTAGEDIR} ${MISCOPTIONS}
+	cd ${DOC_PREFIX} && env MAKEOBJDIRPREFIX=${DOCROOTDIR}/obj ${MAKE} all install DOCDIR=${DOCSTAGEDIR} FORMATS="${FORMATS}" INSTALL_COMPRESSED="${INSTALL_COMPRESSED}" ${MISCOPTIONS}
 # Copy any files in our texts/ directory to the staging area.
 	${TAR} --exclude CVS -cf - -C ${.CURDIR}/texts . | \
 		${TAR} xf - -C ${DOCSTAGEDIR}
