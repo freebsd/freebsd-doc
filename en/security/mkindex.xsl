@@ -1,14 +1,17 @@
-<!-- $FreeBSD$ -->
+<?xml version="1.0"?>
+
+<!-- $FreeBSD: www/en/security/mkindex.xsl,v 1.1 2003/09/29 16:46:32 hrs Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   
   <xsl:import href="../includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD$'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/security/mkindex.xsl,v 1.1 2003/09/29 16:46:32 hrs Exp $'"/>
   <xsl:variable name="title" select="'untitled'"/>
 
   <xsl:variable name="ftpbase" select="'ftp://ftp.FreeBSD.org/pub/FreeBSD/CERT/advisories/'" />
+  <xsl:variable name="ftpbaseold" select="'ftp://ftp.FreeBSD.org/pub/FreeBSD/CERT/advisories/old/'" />
   <xsl:variable name="ulopen" select="'&lt;ul&gt;'" />
   <xsl:variable name="ulclose" select="'&lt;/ul&gt;'" />
 
@@ -26,7 +29,15 @@
           </xsl:when>
           
           <xsl:when test="self::advisory">
-            <li><a><xsl:attribute name="href"><xsl:value-of select="concat($ftpbase, name, '.asc')" /></xsl:attribute><xsl:value-of select="concat(name, '.asc')" /></a></li>
+            <li>
+            <xsl:choose>
+              <xsl:when test="./name/@role='old'">
+                <a><xsl:attribute name="href"><xsl:value-of select="concat($ftpbaseold, name, '.asc')" /></xsl:attribute><xsl:value-of select="concat(name, '.asc')" /></a>
+              </xsl:when>
+              <xsl:otherwise>
+                 <a><xsl:attribute name="href"><xsl:value-of select="concat($ftpbase, name, '.asc')" /></xsl:attribute><xsl:value-of select="concat(name, '.asc')" /></a>             </xsl:otherwise>
+            </xsl:choose>
+            </li>
           </xsl:when>
         </xsl:choose>
       </xsl:for-each>
