@@ -358,7 +358,13 @@ CLEANFILES+= ${DOC}.xml .sxerr
 CLEANFILES+= ${LOCAL_CSS_SHEET}
 .endif
 
-.endfor
+.if !defined(WITH_INLINE_LEGALNOTICE) || empty(WITH_INLINE_LEGALNOTICE) && \
+    (${_cf} == "html-split" || ${_cf} == "html-split.tar" || \
+     ${_cf} == "html" || ${_cf} == "html.tar" || ${_cf} == "txt")
+CLEANFILES+= LEGALNOTICE.html TRADEMARKS.html
+.endif
+
+.endfor		# _curformat in ${FORMATS} #
 
 
 #
