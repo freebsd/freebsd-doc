@@ -6,7 +6,7 @@
 # by John Fieber
 # February 26, 1998
 #
-# $Id: getmsg.cgi,v 1.3 1998-02-27 03:45:29 jfieber Exp $
+# $Id: getmsg.cgi,v 1.4 1998-03-08 17:38:00 wosch Exp $
 #
 
 require "./cgi-lib.pl";
@@ -81,26 +81,27 @@ sub MessageToHTML
 
     foreach $i (split(/\n/, $header)) {
     	($field, $data) = split(/ /, $i, 2);
+	$field =~ y/A-Z/a-z/;
     	$hdr{$field} = $data;
     }
 
     $message = "<pre>\n";
-    if (length($hdr{'Date:'}) > 0) {
+    if (length($hdr{'date:'}) > 0) {
     	$message .= "<strong>Date: </strong>     $hdr{'Date:'}\n";
     }
-    if (length($hdr{'From:'}) > 0) {
+    if (length($hdr{'from:'}) > 0) {
     	$message .= "<strong>From: </strong>     $hdr{'From:'}\n";
     }
-    if (length($hdr{'To:'}) > 0) {
+    if (length($hdr{'to:'}) > 0) {
     	$message .= "<strong>To: </strong>       $hdr{'To:'}\n";
     }
-    if (length($hdr{'Cc:'}) > 0) {
+    if (length($hdr{'cc:'}) > 0) {
     	$message .= "<strong>Cc: </strong>       $hdr{'Cc:'}\n";
     }
 #    if (length($hdr{'Sender:'}) > 0) {
 #    	$message .= "<strong>Sender: </strong>   $hdr{'Sender:'}\n";
 #    }
-    if (length($hdr{'Subject:'}) > 0) {
+    if (length($hdr{'subject:'}) > 0) {
     	$message .= "<strong>Subject: </strong>  $hdr{'Subject:'}\n";
     }
     $message .= "</pre>\n";
@@ -115,7 +116,7 @@ sub AddAnchors
 {
     my ($text) = @_;
 
-    $text =~ s/(http|https|ftp|gopher|mailto|news|file)(:[^\s]*?\/?)(\W?\s)/<a href="$1$2">$1$2<\/a>$3/g;
+    $text =~ s/(http|https|ftp|gopher|mailto|news|file)(:[^\s]*?\/?)(\W?\s)/<a href="$1$2">$1$2<\/a>$3/goi;
 
     return $text;
 }
