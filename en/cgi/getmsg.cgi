@@ -6,7 +6,7 @@
 # by John Fieber
 # February 26, 1998
 #
-# $FreeBSD: www/en/cgi/getmsg.cgi,v 1.23 1999/12/17 14:23:52 phantom Exp $
+# $FreeBSD: www/en/cgi/getmsg.cgi,v 1.24 2000/01/05 15:47:44 phantom Exp $
 #
 
 require "./cgi-lib.pl";
@@ -74,7 +74,7 @@ sub Fetch
 	    # Unknown length, guess the end of the E-Mail
 	    my($newline) = 0;
 	    while(<DATA>) {
-		last if ($newline && /^From /);
+		last if ($newline && /^From .* \d{4}/);
 		if (/^$/) { $newline = 1 } else { $newline = 0; }
 		$message .= $_;
 	    }
