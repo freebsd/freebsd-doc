@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/en/news/newsflash.xsl,v 1.3 2001/09/20 11:43:31 chris Exp $ -->
+<!-- $FreeBSD$ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -9,8 +9,12 @@
   <xsl:import href="includes.xsl"/>
 
 
-  <xsl:variable name="base" select="'..'"/>
-  <xsl:variable name="title" select="'FreeBSD News Flash'"/>
+  <xsl:variable name="year">
+    <xsl:value-of select="descendant::year/name"/>
+  </xsl:variable>
+  <xsl:variable name="base" select="'../..'"/>
+  <xsl:variable name="title" select="concat('FreeBSD News Flash (', $year, ')')"/>
+  <!-- <xsl:variable name="title" select="$year"/> -->
   <xsl:variable name="date">
     <xsl:value-of select="//cvs:keyword[@name='freebsd']"/>
   </xsl:variable>
@@ -40,36 +44,7 @@
 	<img src="{$base}/gifs/news.jpg" align="right" border="0" width="193"
 	     height="144" alt="FreeBSD News"/>
 
-	<p>FreeBSD is a rapidly developing operating system.  Keeping up on
-	  the latest developments can be a chore!  To keep on top of things,
-	  be sure and check this page periodically.  Also, you may wish to
-	  subscribe to the 
-	  <a href="{$base}/handbook/eresources.html#ERESOURCES-MAIL">freebsd-announce
-	    mailing list</a>.</p>
-
-	<p>For latest news of FreeBSD Java Project please visit 
-	  <a href="{$base}/java/newsflash.html">FreeBSD/Java NewsFlash</a>
-	  page.</p>
-	  
-	<p>For latest news of FreeBSD GNOME Project please visit 
-	  <a href="{$base}/gnome/newsflash.html">FreeBSD/GNOME NewsFlash</a>
-	  page.</p>
-	  
-	<p>For a detailed description of past, present, and future releases,
-	  see the <strong><a href="{$base}/releases/index.html">Release
-	      Information</a></strong> page.</p>
-	
-	<p>For FreeBSD Security Advisories, please refer to the 
-	  <a href="{$base}/security/#adv">Security Information</a> page.</p>
-	
 	<xsl:apply-templates select="descendant::month"/>
-	
-	<p>Older announcements:
-	  <a href="2000/index.html">2000</a>,
-	  <a href="1999/index.html">1999</a>,
-	  <a href="1998/index.html">1998</a>,
-	  <a href="1997/index.html">1997</a>,
-	  <a href="1996/index.html">1996</a></p>
 	
 	<xsl:copy-of select="$newshome"/>
 	<xsl:copy-of select="$footer"/>
