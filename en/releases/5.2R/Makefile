@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/releases/5.1R/Makefile,v 1.1 2003/03/21 05:59:50 scottl Exp $
+# $FreeBSD: www/en/releases/5.2R/Makefile,v 1.1 2003/04/26 03:24:36 rwatson Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -7,7 +7,7 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS=	todo.sgml
+DOCS=	todo.sgml schedule.sgml
 
 DATA=	docbook.css
 
