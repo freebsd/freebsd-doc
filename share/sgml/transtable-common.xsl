@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $FreeBSD$ -->
+<!-- $FreeBSD: www/share/sgml/transtable-common.xsl,v 1.1 2004/01/12 21:27:00 hrs Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -19,8 +19,8 @@
       <xsl:when test="document($transtable.xml)/transtable/group[@id = $word-group]">
 	<xsl:for-each select="document($transtable.xml)/transtable/group[@id = $word-group]">
 	  <xsl:choose>
-	    <xsl:when test="key('transtable-lookup-key', $word)">
-	      <xsl:for-each select="key('transtable-lookup-key', $word)">
+	    <xsl:when test="key('transtable-lookup-key', string($word))">
+	      <xsl:for-each select="key('transtable-lookup-key', string($word))">
 		<xsl:value-of select="tran" />
 	      </xsl:for-each>
 	    </xsl:when>
@@ -40,7 +40,7 @@
     <xsl:param name="word" select="''"/>
 
     <xsl:for-each select="document($transtable-sortkey.xml)/sortkeys">
-      <xsl:for-each select="key('transtable-sortkey-lookup-key', $word)">
+      <xsl:for-each select="key('transtable-sortkey-lookup-key', string($word))">
 	<xsl:attribute name="sortkey">
 	  <xsl:value-of select="@sortkey" />
 	</xsl:attribute>
