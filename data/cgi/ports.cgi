@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-#	$Id: ports.cgi,v 1.23 1998-07-23 12:36:11 wosch Exp $
+#	$Id: ports.cgi,v 1.24 1998-08-02 17:40:29 wosch Exp $
 #
 # ports.cgi - search engine for FreeBSD ports
 #             	o search for a port by name or description
@@ -45,7 +45,7 @@ sub init_variables {
 
     # URL of ports tree for browsing
     $remotePrefixFtp =
-	'http://ftp.freebsd.org/pub/FreeBSD/FreeBSD-current/ports';
+	'ftp://ftp.freebsd.org/pub/FreeBSD/FreeBSD-current/ports';
 
     # URL of ports tree for download 
     $remotePrefixFtpDownload =
