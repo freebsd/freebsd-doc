@@ -1,6 +1,7 @@
 # $FreeBSD$
 
-SUBDIR = books
+SUBDIR = articles
+SUBDIR+= books
 
 COMPAT_SYMLINK = es
 
