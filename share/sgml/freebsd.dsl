@@ -145,6 +145,13 @@
 					       "/pkg-descr")))
 		(create-link (list (list "HREF" href)) ($mono-seq$))))
 	     (else ($mono-seq$)))))
+
+	;; Ensure that we start with no preferred mediaobject notations,
+	;; so that in the text-only case we don't choose any of the
+	;; possible images, and fallback to the most appropriate
+	;; textobject
+        (define preferred-mediaobject-notations
+	  '())
       ]]>
 
       <!-- HTML with images  ............................................ -->
@@ -157,9 +164,8 @@
 ; displaying the image.
 
         (element mediaobject
-          (if (node-list-empty? (select-elements (children (current-node)) (normalize "imageobject")))
-            (process-children)
-            (process-node-list (select-elements (children (current-node)) (normalize "imageobject")))))
+          (make element gi: "P"
+            ($mediaobject$)))
 
         (define %graphic-default-extension%
           "png")
