@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.21 1996-12-23 12:20:00 joerg Exp $
+# $FreeBSD$
 
 SRCS= authors.sgml basics.sgml bibliography.sgml boothelp.sgml
 SRCS+= booting.sgml contrib.sgml crypt.sgml ctm.sgml current.sgml cvsup.sgml

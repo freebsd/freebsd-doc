@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.2 1996-09-28 22:20:17 jfieber Exp $
+# $FreeBSD$
 
 DOC=	FAQ
 SRCS=	FAQ.sgml
