@@ -1,5 +1,5 @@
 #
-# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.49 2001/09/11 02:32:32 murray Exp $
+# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.50 2001/09/17 09:45:01 murray Exp $
 #
 # This include file <doc.docbook.mk> handles building and installing of
 # DocBook documentation in the FreeBSD Documentation Project.
@@ -281,6 +281,7 @@ INDEX_SGML?=		index.sgml
 CLEANFILES+= 		${INDEX_SGML}
 
 .if defined(GEN_INDEX)
+JADEFLAGS+=		-i chap.index
 HTML_SPLIT_INDEX?=	html-split.index
 HTML_INDEX?=		html.index
 PRINT_INDEX?=		print.index
