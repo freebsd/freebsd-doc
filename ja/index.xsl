@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
 
-<!-- $FreeBSD: www/ja/index.xsl,v 1.30 2003/10/21 20:02:44 hrs Exp $ -->
-<!-- Original revision: 1.80 -->
+<!-- $FreeBSD: www/ja/index.xsl,v 1.31 2003/11/02 07:54:23 rushani Exp $ -->
+<!-- Original revision: 1.81 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   
@@ -10,7 +10,7 @@
 
   <xsl:variable name="base" select="'.'"/>
   <xsl:variable name="enbase" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/ja/index.xsl,v 1.30 2003/10/21 20:02:44 hrs Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/ja/index.xsl,v 1.31 2003/11/02 07:54:23 rushani Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <xsl:output type="html" encoding="EUC-JP"
@@ -54,109 +54,49 @@
 		        which are not mirrored should be listed in
 		        support.sgml.  -->
 
-		  <option value="http://www2.at.FreeBSD.org/">IPv6 オーストリア</option>
-		  <option value="http://www.dk.FreeBSD.org/">IPv6 デンマーク</option>
-		  <option value="http://www2.de.FreeBSD.org">IPv6 ドイツ</option>
-		  <option value="http://www.jp.FreeBSD.org/www.FreeBSD.org/">IPv6 (6Bone) 日本</option>
- 		  <option value="http://www2.no.FreeBSD.org/">IPv6 ノルウェー</option>
-		  <option value="http://www1.uk.FreeBSD.org/">IPv6 イギリス</option>
-		  <option value="http://www4.us.FreeBSD.org/">IPv6 アメリカ/1</option>
-		  <option value="http://www5.us.FreeBSD.org/">IPv6 アメリカ/2</option>
-		  <option value="http://www.ar.FreeBSD.org/">アルゼンチン</option>
-		  <option value="http://www.au.FreeBSD.org/">オーストラリア/1</option>
-		  <option value="http://www2.au.FreeBSD.org/">オーストラリア/2</option>
-		  <option value="http://www.at.FreeBSD.org/">オーストリア/1</option>
-		  <option value="http://www2.at.FreeBSD.org/">オーストリア/2</option>
-		  <option value="http://freebsd.unixtech.be/">ベルギー</option>
-		  <option value="http://www.br.FreeBSD.org/">ブラジル/1</option>
-		  <option value="http://www2.br.FreeBSD.org/www.freebsd.org/">ブラジル/2</option>
-		  <option value="http://www3.br.FreeBSD.org/">ブラジル/3</option>
-		  <option value="http://www.bg.FreeBSD.org/">ブルガリア</option>
-		  <option value="http://www.ca.FreeBSD.org/">カナダ/1</option>
-		  <option value="http://www2.ca.FreeBSD.org/">カナダ/2</option>
-		  <option value="http://www.cn.FreeBSD.org/">中国</option>
-		  <option value="http://www.cz.FreeBSD.org/">チェコ</option>
-		  <option value="http://www.dk.FreeBSD.org/">デンマーク/1</option>
-		  <option value="http://www3.dk.FreeBSD.org/">デンマーク/2</option>
-		  <option value="http://www.ee.FreeBSD.org/">エストニア</option>
-		  <option value="http://www.fi.FreeBSD.org/">フィンランド/1</option>
-		  <option value="http://www2.fi.FreeBSD.org/">フィンランド/2</option>
-		  <option value="http://www.fr.FreeBSD.org/">フランス</option>
-		  <option value="http://www.de.FreeBSD.org/">ドイツ/1</option>
-		  <option value="http://www1.de.FreeBSD.org/">ドイツ/2</option>
-		  <option value="http://www2.de.FreeBSD.org/">ドイツ/3</option>
-		  <option value="http://www.gr.FreeBSD.org/">ギリシア/1</option>
-		  <option value="http://www.FreeBSD.gr/">ギリシア/2</option>
-		  <option value="http://www.hk.FreeBSD.org/">香港</option>
-		  <option value="http://www.hu.FreeBSD.org/">ハンガリー/1</option>
-		  <option value="http://www2.hu.FreeBSD.org/">ハンガリー/2</option>
-		  <option value="http://www.is.FreeBSD.org/">アイスランド</option>
-		  <option value="http://www.ie.FreeBSD.org/">アイルランド/1</option>
-		  <option value="http://www2.ie.FreeBSD.org/">アイルランド/2</option>
-		  <option value="http://www.it.FreeBSD.org/">イタリア/1</option>
-		  <option value="http://www.gufi.org/mirrors/www.freebsd.org/data/">イタリア/2</option>
-		  <option value="http://www.jp.FreeBSD.org/www.FreeBSD.org/">日本</option>
-		  <option value="http://www.kr.FreeBSD.org/">韓国/1</option>
-		  <option value="http://www2.kr.FreeBSD.org/">韓国/2</option>
-+		  <option value="http://www.kw.FreeBSD.org/">クウェート</option>
-		  <option value="http://www.lv.FreeBSD.org/">ラトビア</option>
-		  <option value="http://www.lt.FreeBSD.org/">リトアニア</option>
-		  <option value="http://www.nl.FreeBSD.org/">オランダ/1</option>
-		  <option value="http://www2.nl.FreeBSD.org/">オランダ/2</option>
-		  <option value="http://www.nz.FreeBSD.org/">ニュージーランド</option>
-		  <option value="http://www.no.FreeBSD.org/">ノルウェー/1</option>
-		  <option value="http://www2.no.FreeBSD.org/">ノルウェー/2</option>
-		  <option value="http://www.FreeBSD.org.ph/">フィリピン</option>
-		  <option value="http://www2.no.FreeBSD.org/">ノルウェー</option>
-		  <option value="http://www.pl.FreeBSD.org/">ポーランド/1</option>
-		  <option value="http://www2.pl.FreeBSD.org/">ポーランド/2</option>
-		  <option value="http://www.pt.FreeBSD.org/">ポルトガル/1</option>
-		  <option value="http://www4.pt.FreeBSD.org/">ポルトガル/2</option>
-		  <option value="http://www5.pt.FreeBSD.org/">ポルトガル/3</option>
-		  <option value="http://www.ro.FreeBSD.org/">ルーマニア/1</option>
-		  <option value="http://www2.ro.FreeBSD.org/">ルーマニア/2</option>
-		  <option value="http://www3.ro.FreeBSD.org/">ルーマニア/3</option>
-		  <option value="http://www4.ro.FreeBSD.org/">ルーマニア/4</option>
-		  <option value="http://www.ru.FreeBSD.org/">ロシア/1</option>
-		  <option value="http://www2.ru.FreeBSD.org/">ロシア/2</option>
-		  <option value="http://www3.ru.FreeBSD.org/">ロシア/3</option>
-		  <option value="http://www4.ru.FreeBSD.org/">ロシア/4</option>
-		  <option value="http://www.sm.FreeBSD.org/">サンマリノ</option>
-		  <option value="http://www2.sg.FreeBSD.org/">シンガポール</option>
-		  <option value="http://www.sk.FreeBSD.org/">スロバキア/1</option>
-		  <option value="http://www2.sk.FreeBSD.org/">スロバキア/2</option>
-		  <option value="http://www.si.FreeBSD.org/">スロベニア/1</option>
-		  <option value="http://www2.si.FreeBSD.org/">スロベニア/2</option>
-		  <option value="http://www.es.FreeBSD.org/">スペイン/1</option>
-		  <option value="http://www2.es.FreeBSD.org/">スペイン/2</option>
-		  <option value="http://www3.es.FreeBSD.org/">スペイン/3</option>
-		  <option value="http://www.za.FreeBSD.org/">南アフリカ/1</option>
-		  <option value="http://www2.za.FreeBSD.org/">南アフリカ/2</option>
-		  <option value="http://www.se.FreeBSD.org/">スウェーデン/1</option>
-		  <option value="http://www2.se.FreeBSD.org/">スウェーデン/2</option>
-		  <option value="http://www.ch.FreeBSD.org/">スイス/1</option>
-		  <option value="http://www2.ch.FreeBSD.org/">スイス/2</option>
-		  <option value="http://www.tw.FreeBSD.org/">台湾/1</option>
-		  <option value="http://www2.tw.FreeBSD.org/">台湾/2</option>
-		  <option value="http://www3.tw.FreeBSD.org/">台湾/3</option>
-		  <option value="http://www4.tw.FreeBSD.org/">台湾/4</option>
-		  <option value="http://www.tr.FreeBSD.org/">トルコ/1</option>
-		  <option value="http://www2.tr.FreeBSD.org/">トルコ/2</option>
-		  <option value="http://www.enderunix.org/freebsd/">トルコ/3</option>
-		  <option value="http://www.ua.FreeBSD.org/">ウクライナ/1</option>
-		  <option value="http://www2.ua.FreeBSD.org/">ウクライナ/2</option> 
-		  <option value="http://www5.ua.FreeBSD.org/">ウクライナ/3</option> 
-		  <option value="http://www4.ua.FreeBSD.org/">ウクライナ/クリミア</option> 
-		  <option value="http://www.uk.FreeBSD.org/">イギリス/1</option>
-		  <option value="http://www2.uk.FreeBSD.org/">イギリス/2</option>
-		  <option value="http://www3.uk.FreeBSD.org/">イギリス/3</option>
-		  <option value="http://www4.uk.FreeBSD.org/">イギリス/4</option>
-		  <option value="http://www1.uk.FreeBSD.org/">イギリス/5</option>
-		  <option value="http://www2.us.FreeBSD.org/">アメリカ/1</option>
-		  <option value="http://www4.us.FreeBSD.org/">アメリカ/2</option>
-		  <option value="http://www5.us.FreeBSD.org/">アメリカ/3</option>
+		  <xsl:for-each select="document($mirrors)/mirrors/entry[url[contains(@proto, 'httpv6')]]">
+		    <xsl:for-each select="url[contains(@proto, 'httpv6') and contains(@type, 'www')]">
+		      <option><xsl:attribute name="value"><xsl:value-of select="." /></xsl:attribute>
+			<xsl:choose>
+			  <xsl:when test="last() = 1">
+			    <xsl:value-of select="'IPv6 '" />
+			    <xsl:call-template name="transtable">
+			      <xsl:with-param name="name" select="../country" />
+			    </xsl:call-template>
+			  </xsl:when>
+			  <xsl:otherwise>
+			    <xsl:value-of select="'IPv6 '" />
+			    <xsl:call-template name="transtable">
+			      <xsl:with-param name="name" select="../country" />
+			    </xsl:call-template>
+			    <xsl:value-of select="concat('/', position())" />
+			  </xsl:otherwise>
+			</xsl:choose>
+		      </option>
+		    </xsl:for-each>
+		  </xsl:for-each>
+
+		  <xsl:for-each select="document($mirrors)/mirrors/entry[url[contains(@proto, 'http')]]">
+		    <xsl:for-each select="url[contains(@proto, 'http') and contains(@type, 'www')]">
+		      <option><xsl:attribute name="value"><xsl:value-of select="." /></xsl:attribute>
+			<xsl:choose>
+			  <xsl:when test="last() = 1">
+			    <xsl:call-template name="transtable">
+			      <xsl:with-param name="name" select="../country" />
+			    </xsl:call-template>
+			  </xsl:when>
+			  <xsl:otherwise>
+			    <xsl:call-template name="transtable">
+			      <xsl:with-param name="name" select="../country" />
+			    </xsl:call-template>
+			    <xsl:value-of select="concat('/', position())" />
+			  </xsl:otherwise>
+			</xsl:choose>
+		      </option>
+		    </xsl:for-each>
+		  </xsl:for-each>
 		</select>
-		
+
 		<input type="submit" value=" Go "/>
 		
 		<br/>

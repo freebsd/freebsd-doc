@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/index.xsl,v 1.80 2003/10/28 16:15:52 simon Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.81 2003/11/16 18:56:24 hrs Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   
@@ -6,7 +6,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.80 2003/10/28 16:15:52 simon Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.81 2003/11/16 18:56:24 hrs Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -52,31 +52,43 @@
 
 		  <xsl:for-each select="document($mirrors)/mirrors/entry[url[contains(@proto, 'httpv6')]]">
 		    <xsl:for-each select="url[contains(@proto, 'httpv6') and contains(@type, 'www')]">
-		     <option><xsl:attribute name="value"><xsl:value-of select="." /></xsl:attribute>
-		       <xsl:choose>
-			 <xsl:when test="last() = 1">
-			   <xsl:value-of select="concat('IPv6 ', ../country)" />
-			 </xsl:when>
-			 <xsl:otherwise>
-			   <xsl:value-of select="concat('IPv6 ', ../country, '/', position())" />
-			 </xsl:otherwise>
-		       </xsl:choose>
+		      <option><xsl:attribute name="value"><xsl:value-of select="." /></xsl:attribute>
+			<xsl:choose>
+			  <xsl:when test="last() = 1">
+			    <xsl:value-of select="'IPv6 '" />
+			    <xsl:call-template name="transtable">
+			      <xsl:with-param name="name" select="../country" />
+			    </xsl:call-template>
+			  </xsl:when>
+			  <xsl:otherwise>
+			    <xsl:value-of select="'IPv6 '" />
+			    <xsl:call-template name="transtable">
+			      <xsl:with-param name="name" select="../country" />
+			    </xsl:call-template>
+			    <xsl:value-of select="concat('/', position())" />
+			  </xsl:otherwise>
+			</xsl:choose>
 		      </option>
 		    </xsl:for-each>
 		  </xsl:for-each>
 
 		  <xsl:for-each select="document($mirrors)/mirrors/entry[url[contains(@proto, 'http')]]">
 		    <xsl:for-each select="url[contains(@proto, 'http') and contains(@type, 'www')]">
-		     <option><xsl:attribute name="value"><xsl:value-of select="." /></xsl:attribute>
-		       <xsl:choose>
-			 <xsl:when test="last() = 1">
-			   <xsl:value-of select="../country" />
-			 </xsl:when>
-			 <xsl:otherwise>
-			   <xsl:value-of select="concat(../country, '/', position())" />
-			 </xsl:otherwise>
-		       </xsl:choose>
-		     </option>
+		      <option><xsl:attribute name="value"><xsl:value-of select="." /></xsl:attribute>
+			<xsl:choose>
+			  <xsl:when test="last() = 1">
+			    <xsl:call-template name="transtable">
+			      <xsl:with-param name="name" select="../country" />
+			    </xsl:call-template>
+			  </xsl:when>
+			  <xsl:otherwise>
+			    <xsl:call-template name="transtable">
+			      <xsl:with-param name="name" select="../country" />
+			    </xsl:call-template>
+			    <xsl:value-of select="concat('/', position())" />
+			  </xsl:otherwise>
+			</xsl:choose>
+		      </option>
 		    </xsl:for-each>
 		  </xsl:for-each>
 		</select>

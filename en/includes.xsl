@@ -1,8 +1,13 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/en/includes.xsl,v 1.17 2003/10/29 07:35:52 murray Exp $ -->
+<!-- $FreeBSD: www/en/includes.xsl,v 1.18 2003/11/16 18:56:24 hrs Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
+
+  <xsl:template name="transtable">
+    <xsl:param name="name" />
+    <xsl:value-of select="$name"/>
+  </xsl:template>
 
   <xsl:variable name="mirrors" select="'../../doc/share/sgml/mirrors.xml'" />
 
