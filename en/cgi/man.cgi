@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp 
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.71 2002-05-13 19:41:01 wosch Exp $
+# $Id: man.cgi,v 1.72 2002-05-13 19:44:09 wosch Exp $
 
 #use Data::Dumper;
 #use Carp;
@@ -322,6 +322,8 @@ $manstat = 'http://www.de.freebsd.org/de/stat/man';
 &do_man(&env('SCRIPT_NAME'), &env('PATH_INFO'), &env('QUERY_STRING'))
     unless defined($main'plexus_configured);
 
+$enable_include_links = 0;
+
 # Plexus Native Interface
 sub do_man {
     local($BASE, $path, $form) = @_;
@@ -336,7 +338,7 @@ sub do_man {
     return &get_the_sources if ($path =~ /source$/);
 
     return &include_output($path) 
-	if ($path =~ m%^/usr/include/% && -f $path);
+    	if ($enable_include_links && $path =~ m%^/usr/include/% && -f $path);
 
     return &indexpage if ($form eq "");
 
@@ -670,7 +672,8 @@ sub man {
 	}
 
 	$_ = &encode_data($_);
-	if(m,(<B>)?\#include(</B>)?\s+(<B>)?\&lt\;(.*\.h)\&gt\;(</B>)?,) {
+	if($enable_include_links &&
+	   m,(<B>)?\#include(</B>)?\s+(<B>)?\&lt\;(.*\.h)\&gt\;(</B>)?,) {
 	    $match = $4; ($regexp = $match) =~ s/\./\\\./;
 	    s,$regexp,\<A HREF=\"$BASE/usr/include/$match\"\>$match\</A\>,;
         }
@@ -935,7 +938,7 @@ ETX
 }
 
 sub copyright {
-    $id = '$Id: man.cgi,v 1.71 2002-05-13 19:41:01 wosch Exp $';
+    $id = '$Id: man.cgi,v 1.72 2002-05-13 19:44:09 wosch Exp $';
 
     return qq{\
 <PRE>
