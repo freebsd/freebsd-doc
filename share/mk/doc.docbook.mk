@@ -1,5 +1,5 @@
 #
-# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.44 2001/08/22 22:30:26 nik Exp $
+# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.45 2001/08/23 07:59:06 murray Exp $
 #
 # This include file <doc.docbook.mk> handles building and installing of
 # DocBook documentation in the FreeBSD Documentation Project.
@@ -66,6 +66,19 @@
 #                       "N.N.N.N Section title" into "Section Title" while
 #                       higher level sections are still printed with numbers.
 #
+#       TWO_SIDE        If defined, two sided output will be created.  This 
+#                       means that new chapters will only start on odd 
+#                       numbered (aka right side, aka recto) pages and the 
+#                       headers and footers will be aligned appropriately 
+#                       for double sided paper.  Blank pages may be added as
+#                       needed.
+#
+#       BOOK_OUTPUT     A collection of options are set suitable for printing
+#                       a book.  This option may be an order of magnitude more
+#                       CPU intensive than the default build.
+#
+
+#
 # Documents should use the += format to access these.
 #
 
@@ -107,6 +120,17 @@ CSS_SHEET?=	${DOC_PREFIX}/share/misc/docbook.css
 
 PRINTOPTS?=    -ioutput.print
 
+.if defined(BOOK_OUTPUT)
+NICE_HEADERS=1
+MIN_SECT_LABELS=1
+TWO_SIDE=1
+#WITH_FOOTNOTES=1
+#GEN_INDEX=1
+.endif
+.if defined(TWO_SIDE)
+PRINTOPTS+=	-V %two-side%
+TEXCMDS+=	\def\PageTwoSide{1}
+.endif
 .if defined(NICE_HEADERS)
 PRINTOPTS+=    -ioutput.print.niceheaders
 .endif
@@ -311,11 +335,11 @@ ${DOC}.tex-pdf: ${SRCS} ${IMAGES_PDF} ${INDEX_SGML} ${PRINT_INDEX}
 
 ${DOC}.dvi: ${DOC}.tex-ps
 	@echo "==> TeX pass 1/3"
-	-tex "&jadetex" '\nonstopmode\input{${.ALLSRC}}'
+	-tex "&jadetex" '${TEXCMDS} \nonstopmode\input{${.ALLSRC}}'
 	@echo "==> TeX pass 2/3"
-	-tex "&jadetex" '\nonstopmode\input{${.ALLSRC}}'
+	-tex "&jadetex" '${TEXCMDS} \nonstopmode\input{${.ALLSRC}}'
 	@echo "==> TeX pass 3/3"
-	-tex "&jadetex" '\nonstopmode\input{${.ALLSRC}}'
+	-tex "&jadetex" '${TEXCMDS} \nonstopmode\input{${.ALLSRC}}'
 
 ${DOC}.pdf: ${DOC}.tex-pdf
 	@echo "==> PDFTeX pass 1/3"
