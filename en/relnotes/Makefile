@@ -7,10 +7,11 @@
 # of relnotes should appear on the web site.  The second word is the
 # path to that relnotes set.
 #
-# $FreeBSD: www/en/relnotes/Makefile,v 1.4 2001/09/09 15:32:29 dd Exp $
+# $FreeBSD: www/en/relnotes/Makefile,v 1.5 2001/10/29 10:14:32 murray Exp $
 #
 
 RELNOTES?=	CURRENT ${.CURDIR}/../../../relnotes/doc \
+		5-STABLE ${.CURDIR}/../../../relnotes5/doc \
 		4-STABLE ${.CURDIR}/../../../relnotes4/doc
 
 all install clean obj:
