@@ -39,9 +39,10 @@ SGMLNORMFLAGS=	-d -n -c ${HTMLCATALOG}
 
 JADE?=		/usr/local/bin/jade
 DSL?=		/usr/local/share/sgml/docbook/dsssl/modular/html/docbook.dsl
+FREEBSDCATALOG?=../../sgml/catalog
 DOCBOOKCATALOG?=/usr/local/share/sgml/docbook/3.0/catalog
 JADECATALOG?=	/usr/local/share/sgml/jade/catalog
-JADEFLAGS?=	-c ${DOCBOOKCATALOG} -c ${JADECATALOG} -d ${DSL} -t sgml
+JADEFLAGS?=	-c ${FREEBSDCATALOG} -c ${DOCBOOKCATALOG} -c ${JADECATALOG} -d ${DSL} -t sgml
 
 .sgml.html:
 	@DTD=`head -n 1 ${.IMPSRC} | perl -ne '/DTD (\w+)/; print $$1;'`;  \
