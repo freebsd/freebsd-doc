@@ -1,4 +1,4 @@
-<!-- $FreeBSD: doc/en_US.ISO8859-1/share/sgml/freebsd.dsl,v 1.12 2001/07/28 03:00:03 murray Exp $ -->
+<!-- $FreeBSD: doc/en_US.ISO8859-1/share/sgml/freebsd.dsl,v 1.13 2001/08/03 19:11:16 murray Exp $ -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
 <!ENTITY freebsd.dsl PUBLIC "-//FreeBSD//DOCUMENT DocBook Language Neutral Stylesheet//EN" CDATA DSSSL>
@@ -61,6 +61,9 @@
       <!-- More aesthetically pleasing chapter headers for print output --> 
 
       <![ %output.print.niceheaders; [
+
+      (define niceheader-rule-spacebefore (* (HSIZE 5) %head-before-factor%))
+      (define niceheader-rule-spaceafter 0pt)
 
       (define ($component-title$)
 	(let* ((info (cond
@@ -157,9 +160,10 @@
       (if (equal? (gi) (normalize "index"))
 	(empty-sosofo)
 	(make rule
-	  length: 475pt
+	  length: %body-width%
 	  display-alignment: 'start
-	  space-before: (* (HSIZE 5) %head-before-factor%)
+	  space-before: niceheader-rule-spacebefore
+	  space-after: niceheader-rule-spaceafter
 	  line-thickness: 0.5pt)))))
 
       (element authorgroup
