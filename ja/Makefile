@@ -1,4 +1,4 @@
-# $FreeBSD: www/ja/Makefile,v 1.50 2001/09/05 08:35:15 kuriyama Exp $
+# $FreeBSD: www/ja/Makefile,v 1.51 2001/10/29 16:19:34 hrs Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.74
 
@@ -63,9 +63,9 @@ SUBDIR+= ports
 # # These *must* be listed after the "doc" subdir, as they create symlinks
 # # in to it.
 # .if !defined(WEB_ONLY) || empty(WEB_ONLY)
-# SUBDIR+= tutorials
-#
-# DOCSUBDIR=	FAQ handbook
+SUBDIR+= tutorials
+
+DOCSUBDIR=	FAQ handbook
 .endif
 
 # Non-SGML
