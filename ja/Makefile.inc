@@ -1,5 +1,5 @@
-# $Id: Makefile.inc,v 1.5 1998-01-20 04:17:35 hanai Exp $
+# $Id: Makefile.inc,v 1.6 1998-08-03 17:37:27 wosch Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.6
 
-WEBBASE?=	/data/ja_JP.EUC
+WEBBASE?=	/data/ja
