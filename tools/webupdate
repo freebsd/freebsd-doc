@@ -1,32 +1,99 @@
 #!/bin/sh
 # Copyright (c) 2001 Wolfram Schneider <wosch@FreeBSD.org>
+# Copyright (c) 2001 Dima Dorfman <dd@FreeBSD.org>
 #
-# update the FreeBSD Web-Server from the CVS repository
+# Update the FreeBSD web site from the CVS repository.
 #
-# $FreeBSD$
+#
+# Major variables:
+#
+#	PATH		- The search path as interpreted by the shell.
+#	CVSROOT		- Path to the FreeBSD CVS repository.
+#	BUILDDIR	- Where the checked out copies of the files are stored.
+#	DESTDIR		- Where the rendered copies should wind up.
+#	LOGFILE		- Name of the log file to use (in $BUILDDIR).
+#	BUILDARGS	- Arguments to pass to make(1) when building.
+#	INSTARGS	- Arguments to pass to make(1) when installing.
+#
+#	subtrees	- List of directores in $BUILDDIR which are from CVS.
+#
+# Variables which are in uppercase are derived from the environment
+# unless they don't exist, in which case a value suitable for
+# www.FreeBSD.org is used.  Variables in lowercase can't be safely
+# changed without editing other parts of the script; thus, their value
+# in the environment is ignored.
+#
+# Exit codes:
+#
+#	0	- success
+#	1	- unknown failure
+#	2	- failure in CVS operations
+#	3	- failure in make operations
+#
+# $FreeBSD: www/tools/webupdate,v 1.1 2001/06/06 22:45:43 dd Exp $
 #
 
-PATH=/bin:/usr/bin:/usr/local/bin; export PATH
-CVSROOT=/home/ncvs; export CVSROOT
+#
+# Default configuration.
+#
+DEFAULT_PATH=/bin:/usr/bin:/usr/local/bin;
+DEFAULT_CVSROOT=/home/ncvs;
+DEFAULT_BUILDDIR=/usr/local/www/build;
+DEFAULT_DESTDIR=/usr/local/www;
+DEFAULT_LOGFILE=log.webbuild.`date '+%d'`;
+DEFAULT_BUILDARGS='';
+DEFAULT_INSTARGS='';
 
-build_dir=/usr/local/www/build
-logfile=log.make.`date '+%d'`
+#
+# Variable setup.
+#
+PATH=${PATH:-${DEFAULT_PATH}}; export PATH;
+CVSROOT=${CVSROOT:-${DEFAULT_CVSROOT}}; export CVSROOT;
+BUILDDIR=${BUILDDIR:-${DEFAULT_BUILDDIR}};
+DESTDIR=${DESTDIR:-${DEFAULT_DESTDIR}};
+LOGFILE=${LOGFILE:-${BUILDDIR}/${DEFAULT_LOGFILE}};
+BUILDARGS=${BUILDARGS:-${DEFAULT_BUILDARGS}};
+INSTARGS=${INSTARGS:-${DEFAULT_INSTARGS}};
 
-cd $build_dir || exit 2
+subtrees='www doc';
 
-cvs -qR update -dP www doc > $logfile 2>&1 || exit 2
+#
+# Update the checked out copies.  Check out new copies every Sunday or
+# if they don't exist.
+#
 
-# fresh checkout
-# rm -rf www doc || exit 2
-# cvs -QR co www doc || exit 2
+# Only create $BUILDDIR if the directory right above it exists.
+cd `dirname $BUILDDIR` || exit 1;
+if [ ! -d $BUILDDIR ]; then
+	mkdir $BUILDDIR;
+fi
+cd $BUILDDIR || exit 1;
 
-cd www || exit 2
-cd en || exit 2
+rm -f $LOGFILE 2>/dev/null;
+touch $LOGFILE;
 
-# force a rebuild every week at sunday
-case `date '+%u'` in 7) make clean > /dev/null 2>&1 ;; esac
+cond="X`date '+%u'` = X7 `echo $subtrees | sed -E 's/([^ ]*)/-o ! -d \1/g'`";
+if [ $cond ]; then
+	# Remove the old copies.
+	rm -Rf $subtrees 2>/dev/null;
+	chflags -R noschg $modules 2>/dev/null;
+	rm -Rf $subtrees 2>/dev/null;
 
-time make all > $logfile 2>&1 && 
-    time make DESTDIR=/usr/local/www install >> $logfile 2>&1 || 
-	tail -50 $logfile
+	# Check out the new copies.  This creates all the $subtrees.
+	cvs -qR checkout -P www >> $LOGFILE 2>&1 || exit 2;
+	cvs -qR checkout -P doc >> $LOGFILE 2>&1 || exit 2;
+else
+	cvs -qR update -dP $subtrees >> $LOGFILE 2>&1 || exit 2;
+fi
 
+#
+# Build the web site.
+#
+cd $BUILDDIR/www/en || exit 1;
+
+time make ${BUILDARGS} all >> $LOGFILE 2>&1 &&
+    time make ${INSTARGS} DESTDIR=$DESTDIR install >> $LOGFILE 2>&1 ||
+	(tail -50 $LOGFILE && exit 3);
+
+
+exit 0;
