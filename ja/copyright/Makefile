@@ -1,6 +1,6 @@
-# $FreeBSD: www/ja/copyright/Makefile,v 1.13 2000/10/02 09:16:06 kuriyama Exp $
+# $FreeBSD: www/ja/copyright/Makefile,v 1.14 2000/11/07 11:37:53 kuriyama Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.10
+# Original revision: 1.11
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -33,7 +33,7 @@ CVS_OPT+=	-R
 #${LEGAL}: $${PORTSBASE}/${LEGAL_FILE}
 #	cp ${PORTSBASE}/${LEGAL_FILE} LEGAL
 #.else
-#${LEGAL}: $${CVSROOT}/${LEGAL_FILE},v
+#${LEGAL}:
 #       cvs ${CVS_OPT} co -p ${LEGAL_FILE} > ${.TARGET}
 #.endif
 
