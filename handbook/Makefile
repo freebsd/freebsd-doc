@@ -1,7 +1,7 @@
-# $Id: Makefile,v 1.17.2.2 1996-12-03 15:44:02 phk Exp $
+# $Id: Makefile,v 1.17.2.3 1996-12-23 02:01:03 jkh Exp $
 
 SRCS= authors.sgml basics.sgml bibliography.sgml boothelp.sgml
-SRCS+= booting.sgml contrib.sgml crypt.sgml ctm.sgml current.sgml 
+SRCS+= booting.sgml contrib.sgml crypt.sgml ctm.sgml current.sgml cvsup.sgml
 SRCS+= cyclades.sgml development.sgml dialup.sgml dialout.sgml
 SRCS+= diskless.sgml dma.sgml eresources.sgml esdi.sgml 
 SRCS+= firewalls.sgml glossary.sgml goals.sgml
