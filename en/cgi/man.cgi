@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp 
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.142 2005-01-21 13:01:02 hrs Exp $
+# $Id: man.cgi,v 1.143 2005-01-25 17:30:48 hrs Exp $
 
 #use Data::Dumper;
 #use Carp;
@@ -154,13 +154,14 @@ $manPathDefault = 'FreeBSD 5.3-RELEASE and Ports';
 
      'FreeBSD 6.0-current',     "$manLocalDir/FreeBSD-6-current",
      'FreeBSD 5.3-stable',   "$manLocalDir/FreeBSD-5.3-stable",
-     'FreeBSD 4.10-stable',   "$manLocalDir/FreeBSD-4.10-stable",
+     'FreeBSD 4.11-stable',   "$manLocalDir/FreeBSD-4.11-stable",
 
      'FreeBSD 5.3-RELEASE',   "$manLocalDir/FreeBSD-5.3-RELEASE/man:$manLocalDir/FreeBSD-5.3-RELEASE/openssl/man",
      'FreeBSD 5.2.1-RELEASE',   "$manLocalDir/FreeBSD-5.2-RELEASE/man:$manLocalDir/FreeBSD-5.2-RELEASE/openssl/man",
      'FreeBSD 5.2-RELEASE',   "$manLocalDir/FreeBSD-5.2-RELEASE/man:$manLocalDir/FreeBSD-5.2-RELEASE/openssl/man",
      'FreeBSD 5.1-RELEASE',   "$manLocalDir/FreeBSD-5.1-RELEASE/man:$manLocalDir/FreeBSD-5.1-RELEASE/openssl/man",
      'FreeBSD 5.0-RELEASE',   "$manLocalDir/FreeBSD-5.0-RELEASE",
+     'FreeBSD 4.11-RELEASE',  "$manLocalDir/FreeBSD-4.11-RELEASE/man:$manLocalDir/FreeBSD-4.11-RELEASE/openssl/man:$manLocalDir/FreeBSD-4.11-RELEASE/perl/man",
      'FreeBSD 4.10-RELEASE',  "$manLocalDir/FreeBSD-4.10-RELEASE/man:$manLocalDir/FreeBSD-4.10-RELEASE/openssl/man:$manLocalDir/FreeBSD-4.10-RELEASE/perl/man",
      'FreeBSD 4.9-RELEASE',   "$manLocalDir/FreeBSD-4.9-RELEASE",
      'FreeBSD 4.8-RELEASE',   "$manLocalDir/FreeBSD-4.8-RELEASE",
@@ -338,7 +339,7 @@ while (($key,$val) = each %manPath) {
 %manPathAliases = 
     (
      'freebsd', 'FreeBSD 5.3-RELEASE',
-     'freebsd-stable', 'FreeBSD 4.10-stable',
+     'freebsd-stable', 'FreeBSD 4.11-stable',
      'freebsd-stable5', 'FreeBSD 5.3-stable',
      'freebsd-current', 'FreeBSD 6-current',
      'slackware', 'Linux Slackware 3.1',
@@ -1032,7 +1033,7 @@ ETX
 }
 
 sub copyright {
-    $id = '$Id: man.cgi,v 1.142 2005-01-21 13:01:02 hrs Exp $';
+    $id = '$Id: man.cgi,v 1.143 2005-01-25 17:30:48 hrs Exp $';
 
     return qq{\
 <PRE>
