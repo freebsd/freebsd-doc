@@ -45,6 +45,7 @@ MAN5 =	a.out.5\
 	isdnd.acct.5\
 	isdnd.rates.5\
 	isdnd.rc.5\
+	kbdmap.5\
 	kernfs.5\
 	keycap.5\
 	link.5\
@@ -103,6 +104,7 @@ MAN5 =	a.out.5\
 	uuencode.format.5\
 	vgrindefs.5
 
+MLINKS+=kbdmap.5 keymap.5
 MLINKS+=utmp.5 lastlog.5 utmp.5 wtmp.5
 MLINKS+=hosts.equiv.5 rhosts.5
 MLINKS+=uuencode.format.5 uuencode.5
