@@ -1,5 +1,5 @@
 # bsd.web.mk
-# $FreeBSD: www/share/mk/web.site.mk,v 1.42 2002/03/13 13:09:45 murray Exp $
+# $FreeBSD: www/share/mk/web.site.mk,v 1.43 2002/08/07 03:17:10 trhodes Exp $
 
 #
 # Build and install a web site.
@@ -40,10 +40,10 @@ SED?=		/usr/bin/sed
 SH?=		/bin/sh
 SORT?=		/usr/bin/sort
 TOUCH?=		/usr/bin/touch
-HTML2TXT?=	${PREFIX}/bin/links
+HTML2TXT?=	${PREFIX}/bin/w3m
 HTML2TXTOPTS?=	-dump ${HTML2TXTFLAGS}
 ISPELL?=	ispell
-ISPELLOPTS?=	-l -p ${WEB_PREFIX}/en/share/dict/words ${ISPELLFLAGS}
+ISPELLOPTS?=	-l -p /usr/share/dict/freebsd ${ISPELLFLAGS}
 
 XSLTPROC?=	${PREFIX}/bin/xsltproc
 XSLTPROCOPTS?=	-nonet ${XSLTPROCFLAGS}
