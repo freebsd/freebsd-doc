@@ -1,26 +1,12 @@
-#	$Id: Makefile,v 1.23 1999-05-13 11:53:27 wosch Exp $
+#	$Id: Makefile,v 1.24 1999-05-15 10:16:06 wosch Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
 .endif
-
-PORTINDEX=	perl5 ${.CURDIR}/portindex
-INDEX=		INDEX
-PINDEX=		ports/${INDEX}
-Y2K=		YEAR2000
-PY2K=		ports/${Y2K}
-
-COOKIE=		${INDEX} Makefile.gen
-
-.if exists(Makefile.gen)
-.include "Makefile.gen"
+.if exists(Makefile.inc)
+.include "Makefile.inc"
 .endif
-CLEANFILES+=	${DOCS} Makefile.gen ${INDEX} ${Y2K} packages.exists
-CLEANFILES+=	packages.exists.temp
 
-cvsindex= $${CVSROOT}/${PINDEX},v
-cvsy2k= $${CVSROOT}/${PY2K},v
-_ALLINSTALL= packages.exists ${INDEX} ${Y2K}
 
 .if defined(NOPORTSCVS)
 ${INDEX}: $${PORTSBASE}/${PINDEX}
@@ -59,10 +45,15 @@ packages.exists: ${cvsindex} ${cvsy2k}
 
 Makefile.gen: index.sgml .NOTMAIN
 	echo DOCS= *.sgml > Makefile.gen
-	${MAKE} ${MAKEFLAGS} ${.IMPSRC}
 
 index.sgml: ${INDEX} ${Y2K} packages.exists portindex ports.inc .NOTMAIN
 	rm -f *.sgml
 	${PORTINDEX} ${INDEX} ${Y2K}
+
+install: all
+
+all install clean:
+	${MAKE}  ${MAKEFLAGS} -f Makefile.inc0 ${.TARGET}
+
 
 .include "../web.mk"
