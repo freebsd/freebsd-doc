@@ -1,7 +1,7 @@
 #!/usr/bin/perl -- -*- C -*-
 # Perl Routines to Manipulate CGI input
 # S.E.Brenner@bioc.cam.ac.uk
-# $Header: /home/ncvs/www/en/cgi/cgi-lib.pl,v 1.1.1.1 1996-09-24 17:45:57 jfieber Exp $
+# $Header: /home/ncvs/www/en/cgi/cgi-lib.pl,v 1.2 1996-10-06 20:16:38 jfieber Exp $
 #
 # Copyright 1994 Steven E. Brenner  
 # Unpublished work.
@@ -35,6 +35,10 @@
 # are given (i.e., ReadParse returns FALSE), then a form could be output.
 # If a variable-glob parameter (e.g., *cgi_input) is passed to ReadParse,
 # information is stored there, rather than in $in, @in, and %in.
+#
+# $Id: cgi-lib.pl,v 1.2 1996-10-06 20:16:38 jfieber Exp $
+#
+
 sub ReadParse {
   local (*in) = @_ if @_;
   local ($i, $key, $val);
@@ -77,7 +81,7 @@ sub MyURL  {
   return  'http://' . $ENV{'SERVER_NAME'} .  $ENV{'SCRIPT_NAME'};
 }
 # CgiError
-# Prints out an error message which which containes appropriate headers,
+# Prints out an error message which containes appropriate headers,
 # markup, etcetera.
 # Parameters:
 #  If no parameters, gives a generic error message
