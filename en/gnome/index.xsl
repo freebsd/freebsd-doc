@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.54 2004/06/07 02:37:19 adamw Exp $ -->
+<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.55 2004/06/16 05:52:13 marcus Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
 		xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -9,7 +9,7 @@
   <xsl:import href="includes.xsl"/>
 
   <xsl:variable name="base" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.54 2004/06/07 02:37:19 adamw Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.55 2004/06/16 05:52:13 marcus Exp $'"/>
   <xsl:variable name="title" select="'FreeBSD GNOME Project'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -98,40 +98,41 @@
             <!-- Main body column -->
 
             <td align="left" valign="top" rowspan="2">
-			  <h2><font color="#990000">GNOME 2.6 Released!</font></h2>
-
-			  <p>GNOME 2.6 has hit the ports tree!  Read the
-				<a href="docs/faq26.html">Upgrade FAQ</a> for upgrade
-				instructions, and be sure to use the
-				<a href="gnome_upgrade.sh">upgrade script</a>!</p>
-
               <h2><font color="#990000">What is GNOME?</font></h2>
               <img src="{$base}/gnome/images/gnome.png" align="right"
                    border="0" alt="GNOME Logo"/>
 
-	   		<p>GNOME is a free, attractive, powerful,
-			  fully integrated, and easy-to-use desktop
-			  environment, and an associated
-			  comprehensive suite of applications.
-			  The FreeBSD GNOME Project is a team of
-			  committers and users that brings GNOME to
-			  FreeBSD.</p>
+	   		<p>GNOME is a complete desktop experience.
+			  Altogether, the GNOME desktop environment and
+			  the associated comprehensive suite of applications
+			  provide an easy to use, attractive, powerful, and
+			  homogenized environment.
+			  The FreeBSD GNOME Project is a team of devoted
+			  committers and users that manage the integration
+			  of GNOME and FreeBSD.</p>
 
 			  <p>The major components of GNOME are:</p>
               <ul>
                 <li>The <a href="http://www.gnome.org">GNOME desktop</a>:  An easy
-                  to use window-based environment for users.</li>
+                  to use window-based desktop environment.</li>
+                <li>The <a href="http://www.gnome.org/gnome-office">GNOME
+                  Office</a>:  A set of office productivity applications.</li>
                 <li>The <a href="http://developer.gnome.org">GNOME development
                   platform</a>:  A rich collection of tools, libraries,
                   and components to develop powerful applications on Unix.</li>
-                <li>The <a href="http://www.gnome.org/gnome-office">GNOME
-                  Office</a>:  A set of office productivity applications.</li>
               </ul>
 
 			  <p>For more information about GNOME, check out
 			    the GNOME Project's
 			    "<a href="http://www.gnome.org/about/">What is GNOME?</a>"
 			    page.</p>
+
+		<h2><font color="#990000">Upgrading to GNOME 2.6?</font></h2>
+
+		<p>If you are upgrading from GNOME 2.4 to GNOME 2.6, read the
+		  <a href="docs/faq26.html">Upgrade FAQ</a> for upgrade
+		  instructions, and be sure to use the
+		  <a href="gnome_upgrade.sh">upgrade script</a>!</p>
 
               <h2><font color="#990000">State of the port</font></h2>
 
@@ -142,10 +143,10 @@
 
               <h2><font color="#990000">Simple solutions to build problems - quickly!</font></h2>
 
-	      <p>GNOME is simple and easy to build using FreeBSD ports, but
+	      <p>GNOME is simple and easy to build using the FreeBSD ports system, but
 	        there are caveats of which not everyone is aware.  If GNOME -- or
 		anything that uses GNOME libraries -- is not building the way it
-		should, simply give the new <a
+		should, simply give the <a
 		href="/gnome/gnomelogalyzer.sh">gnomelogalyzer.sh</a>
 		tool a log of the failed build, and let the gnomelogalyzer figure
 		out what's wrong and how to fix it.</p>
