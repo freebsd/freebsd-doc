@@ -34,13 +34,13 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $Id: gnome_upgrade.sh,v 1.16 2005-03-12 10:22:55 marcus Exp $
+# $Id: gnome_upgrade.sh,v 1.17 2005-03-12 19:26:03 adamw Exp $
 #
 
 # This script will aid in doing major upgrades to the GNOME Desktop (e.g.
 # an upgrade from 2.8 --> 2.10).
 
-GNOME_UPGRADE_SH_VER=2100;	# This should be nailed down before releasing
+GNOME_UPGRADE_SH_VER=2101;	# This should be nailed down before releasing
 
 ## BEGIN global variable declarations.
 VERBOSE=${VERBOSE:=0}
@@ -317,6 +317,15 @@ echo "DONE."
 echo
 echo ">>>>> STAGE 1 of 4: Cleaning the package database."
 
+echo
+echo "The nautilus-media port was removed, because its functionality"
+echo "was merged into another application. This next step might complain"
+echo "about the nautilus-media port no longer existing. When it asks what"
+echo "you want to do about it, you can either choose choose \"[no]\" to"
+echo "ignore the issue, or, if (and only if!) you are very familiar with"
+echo "pkgdb(1), you can hit CTRL-D to remove the dependency."
+echo
+
 # Now we need to run pkgdb to make sure our database is consistent.
 run_pkgdb "to start with a consistent package database" ${logfile}
 
@@ -345,6 +354,7 @@ run_pkgdb "after updating external dependencies" ${logfile}
 
 echo
 echo ">>>>> STAGE 3 of 4: Removing all ports that depend up ${UPGRADE_TARGET}" | /usr/bin/fmt 75 79
+if [ ${restart} = 0 ]; then
 # Remove any ports that depend upon ${UPGRADE_TARGET}.  This isn't as bad
 # as it seems since a portupgrade -f would have done this anyway.  We're
 # just taking care of it up front.
@@ -364,6 +374,9 @@ done
 # This hopefully isn't necessary, but if it is, this is the
 # place to run it.
 # run_pkgdb "after removing dead packages. Note: this will take a LONG time ..." ${logfile} "-fu"
+else
+    echo "This step is skipped on a restart."
+fi
 
 echo
 echo ">>>>> STAGE 4 of 4: Rebuilding all GNOME applications, and everything that relies upon them. (The Big Update)" | /usr/bin/fmt 75 79
