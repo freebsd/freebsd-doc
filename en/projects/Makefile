@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/projects/Makefile,v 1.13 2002/11/08 14:56:50 jmallett Exp $
+# $FreeBSD: www/en/projects/Makefile,v 1.14 2002/12/09 17:31:28 rwatson Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -15,6 +15,6 @@ DOCS+=	cvsweb.sgml
 
 INDEXLINK= projects.html
 
-SUBDIR=	 busdma c99 mips
+SUBDIR=	 busdma c99 gnats4 mips
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
