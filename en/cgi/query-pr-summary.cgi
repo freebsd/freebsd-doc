@@ -1,5 +1,5 @@
 #!/usr/bin/perl -T
-# $FreeBSD: www/en/cgi/query-pr-summary.cgi,v 1.43 2004/02/16 14:30:57 ceri Exp $
+# $FreeBSD: www/en/cgi/query-pr-summary.cgi,v 1.44 2004/04/06 11:22:37 ceri Exp $
 
 sub escape($) { $_ = $_[0]; s/&/&amp;/g; s/</&lt;/g; s/>/&gt;/g; $_; }
 
@@ -75,6 +75,10 @@ if ($html_mode) {
     $dd = "<dd>";     $dd_x = "";
     $hr = "<hr>";
 
+    $table   = "<table style=\"border-width: 0; background-color: #cccccc\" " .
+	" width=\"100%\" cellspacing=1 cellpadding=2>";
+    $table_e = "</table>";
+
 #    print "Content-type: text/html\n";
 
 } else {
@@ -92,6 +96,9 @@ if ($html_mode) {
     $dd = "     "; $dd_x = "     ";
     $hr = "\n----------------------------------------" .
 	  "---------------------------------------\n";
+
+    $table   = "";
+    $table_e = "";
 }
 
 sub cgiparam {
@@ -468,7 +475,6 @@ sub gnats_summary {
     local($report)   = @_[0];
     local($htmlmode) = @_[1];
     local($counter)  = 0;
-    local($iteration)= 0;
 
     foreach (@prs) {
 	$state = $status{$_};
@@ -480,30 +486,71 @@ sub gnats_summary {
 
 	next if (($report ne '') && (eval($report) == 0));
 
-	print "${pr}\nS  Submitted    Tracker         Resp.       Description${hr}"
-	    if ($iteration++ == 0);
-
-	$syn = &html_fixline($syn) if $htmlmode;
-
 	if ($htmlmode) {
-	    $title = '<a href="' . $query_pr_ref . '?pr='. $cat . '/' . $number . '">' .
-		     $_ . '</a> ';
+	    $title = '<a ' . 'style="text-decoration: none;" ' .
+		'href="' . $query_pr_ref .  '?pr=' . $cat . '/' . $number . '">' .
+		$_ . '</a> ';
+	    $syn = &html_fixline($syn);
+	    gnats_summary_line_html($counter, $state, $date, $title, $resp, $syn);
 	} else {
 	    $title = $_;
+	    gnats_summary_line_text($counter, $state, $date, $title, $resp, $syn);
 	}
-
-	print "$state [$date] $title" .
-	    (' ' x (16 - length($_))) .
-	    $resp . (' ' x (12 - length($resp))) .
-	    ($htmlmode ? $syn : substr($syn,0,41))
-	    . "\n";
 
 	++$counter;
     }
 
-    print "${pr_e}\n" if $iteration;
+    if ($htmlmode) {
+	print "${table_e}\n" if $counter;
+    } else {
+	print "${pr_e}\n" if $counter;
+    }
 
     $counter;
+}
+
+sub gnats_summary_line_html {
+    local($counter)  = shift;
+    local($state)    = shift;
+    local($date)     = shift;
+    local($title)    = shift;
+    local($resp)     = shift;
+    local($syn)      = shift;
+
+    print "${table}\n" .
+	"  <tr valign=\"center\">\n" .
+	"    <td style=\"text-align: left; background-color: #ffffcc\">S</td>\n" .
+	"    <td style=\"text-align: left; background-color: #ffffcc\">Submitted</td>\n" .
+	"    <td style=\"text-align: left; background-color: #ffffcc\">Tracker</td>\n" .
+	"    <td style=\"text-align: left; background-color: #ffffcc\">Resp.</td>\n" .
+	"    <td style=\"text-align: left; background-color: #ffffcc\">Description</td>\n" .
+	"  </tr>\n"
+        if ($counter == 0);
+
+    print "  <tr valign=\"center\">\n" .
+	"    <td style=\"background-color: #ffffff\">$state</td>\n" .
+	"    <td style=\"background-color: #ffffff\">$date</td>\n" .
+	"    <td style=\"background-color: #ffffff\">$title</td>\n" .
+	"    <td style=\"background-color: #ffffff\">$resp</td>\n" .
+	"    <td style=\"background-color: #ffffff\">$syn</td>\n" .
+	"  </tr>\n";
+}
+
+sub gnats_summary_line_text {
+    local($counter)  = shift;
+    local($state)    = shift;
+    local($date)     = shift;
+    local($title)    = shift;
+    local($resp)     = shift;
+    local($syn)      = shift;
+
+    # Print the banner line if this is the first iteration.
+    print "${pr}\nS  Submitted    Tracker         Resp.       Description${hr}"
+	if ($counter == 0);
+    print "$state [$date] $title" .
+	(' ' x (16 - length($_))) .
+	$resp . (' ' x (12 - length($resp))) .
+	substr($syn,0,41) . "\n";
 }
 
 sub displayform {
