@@ -1,9 +1,9 @@
 # 
-# $FreeBSD: doc/ja_JP.eucJP/books/handbook/Makefile,v 1.45 2000/07/13 12:40:49 kuriyama Exp $
+# $FreeBSD: doc/ja_JP.eucJP/books/handbook/Makefile,v 1.46 2000/08/08 07:27:21 hanai Exp $
 #
 # Build the FreeBSD Handbook (Japanese).
 #
-# Original revision: 1.29
+# Original revision: 1.30
 #
 
 MAINTAINER=kuriyama@FreeBSD.ORG
@@ -50,6 +50,7 @@ SRCS+= ppp-and-slip/chapter.sgml
 SRCS+= printing/chapter.sgml
 SRCS+= security/chapter.sgml
 SRCS+= serialcomms/chapter.sgml
+SRCS+= sound/chapter.sgml
 SRCS+= staff/chapter.sgml
 SRCS+= users/chapter.sgml
 SRCS+= x11/chapter.sgml
