@@ -109,7 +109,7 @@ INSTALL_DOCS?= \
 #
 # Work out the language and encoding used for this document.
 #
-# Liberal default of maximum of 5 directories below to find it.
+# Liberal default of maximum of 10 directories below to find it.
 #
 
 .if !defined(LANGCODE)
