@@ -6,7 +6,7 @@
 # by John Fieber
 # February 26, 1998
 #
-# $Id: getmsg.cgi,v 1.14 1998-04-13 00:16:43 wosch Exp $
+# $Id: getmsg.cgi,v 1.15 1998-04-13 18:54:32 wosch Exp $
 #
 
 require "./cgi-lib.pl";
@@ -17,6 +17,7 @@ use POSIX qw(strftime);
 # Files MUST be fully qualified and MUST start with this path.
 #
 $messagepath = "/usr/local/www/db/text/";
+$messagepathcurrent = "/usr/local/www/mid/archive/";
 $ftparchive = 'ftp://ftp.freebsd.org/pub/FreeBSD/mailing-lists/archive';
 
 &ReadParse(*formdata);
@@ -46,7 +47,9 @@ sub Fetch
 	return;
     }
 
-    if ($file =~ /^$messagepath/ && open(DATA, $file))
+    if (($file =~ /^$messagepath/ && open(DATA, $file)) ||
+	($file =~ m%^current/(cvs|freebsd)-[a-z]+$% &&
+	 open(DATA, "$messagepathcurrent$file")))
     {
 	@finfo = stat DATA;
     	seek DATA, $start, 0;
@@ -71,7 +74,7 @@ sub Fetch
             print $message;
 	    return;
         }	
-	$message = &MessageToHTML($message);
+	$message = &MessageToHTML($message, $file);
     }
     else
     {
@@ -95,7 +98,7 @@ sub EscapeHTML
 
 sub MessageToHTML
 {
-    my ($doc) = @_;
+    my ($doc, $file) = @_;
     my ($header, $body) = split(/\n\n/, $doc, 2);
     my ($i, %hdr, $field, $data, $message);
     my ($mid) = 'mid.cgi';
@@ -172,7 +175,7 @@ sub MessageToHTML
 	$message .= qq{| <a href="$mid?db=mid&id=$1">Previous in thread</a>\n};
     }
     $message .= qq{| <a href="$ENV{'REQUEST_URI'}+raw">Raw E-Mail</a>\n};
-    $message .= qq{| <a href="$ENV{'REQUEST_URI'}+archive">Current Archive</a>\n};
+    $message .= qq{| <a href="$ENV{'REQUEST_URI'}+archive">Current Archive</a>\n} if $file =~ m%^$messagepath%o;
     $message .= qq{| <a href="../searchhints.html">Help</a>\n};
 
     $message .= "<HR NOSHADE>\n";
