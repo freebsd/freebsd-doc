@@ -1,0 +1,335 @@
+<!--
+     The FreeBSD Documentation Project
+     The FreeBSD French Documentation Project    
+     The FreeBSD SMP Next Generation Project    
+     $Id: chapter.sgml,v 1.1 2002-02-14 14:25:02 gioria Exp $
+     Original revision: 1.2
+     $FreeBSD$
+-->
+     
+
+<chapter id="locking">
+  <title>Notes sur le verrouillage</title>
+
+  <para><emphasis>Ce chap&icirc;tre est maintenu par The FreeBSD SMP Next
+    Generation Project
+    <email>freebsd-smp@FreeBSD.org</email>.</emphasis></para>
+
+
+  <para>Ce document souligne le verrouillage utilis&eacute; dans le noyau FreeBSD
+    pour permettre d'utiliser du vrai multi-processeur &agrave; l'int&eacute;rieur du noyau. 
+    Le verrouillage peut &ecirc;tre r&eacute;alis&eacute; par diff&eacute;rents moyens. 
+    Les structures de donn&eacute;es puvent &ecirc;tre prot&eacute;g&eacute;es par des mutex ou &man.lockmgr.9; verrous.
+    Quelques variables sont prot&eacute;g&eacute;es simplement par l'utilisation continuelle d'op&eacute;rations
+    atomiques pour y acc&eacute;der.
+   </para>
+
+  <sect1>
+    <title>Les mutex</title>
+
+    <para>Un mutex est simplement un verrou utilis&eacute; pour garantir exclusion mutuelle.
+      Sp&eacute;cifiquement, un mutex ne peut appartenir qu'&agrave; une entit&eacute; &agrave; la fois.
+      Si une autre entit&eacute; d&eacute;sire obtenir un mutex d&eacute;j&agrave; pris
+      , elle doit attendre jusqu'&agrave; ce que le mutex soit relach&eacute;. Dans le noyau
+      FreeBSD, les mutex appartiennent aux processus.</para>
+
+    <para>Les mutex peuvent &ecirc;tre acquis r&eacute;cursivement, mais ils sont conçus
+      pour n'&ecirc;tre pris que pendant une courte p&eacute;riode. Sp&eacute;cifiquement, le d&eacute;tenteur
+      ne doit pas se suspendre pendant qu'il retient un mutex. Si vous avez besoin de
+      maintenir un verrouillage pendant une suspension, utilisez un &man.lockmgr.9; verrou ("lock").</para>
+    
+    <para>Chaque mutex a plusieurs int&eacute;r&ecirc;ts :</para>
+
+    <variablelist>
+	<varlistentry>
+	<term>Nom de la variable</term>
+	<listitem>
+	  <para>Nom de la variable <type>struct mtx</type> dans
+	    le code source du noyau.</para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<term>Nom logique</term>
+	<listitem>
+	  <para>Le nom du mutex lui est assign&eacute; par
+	    <function>mtx_init</function>. Ce nom est affich&eacute; dans
+	    les messages de trace KTR, t&eacute;moigne des erreurs et avertissements et est
+	    utilis&eacute; pour distinguer les mutex dans les traces.</para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<term>Type</term>
+	<listitem>
+	  <para>Le type du mutex en termes de constantes nomm&eacute;es
+	    <constant>MTX_*</constant>.  La signification de chaque
+	    constante nomm&eacute;e est document&eacute;e dans &man.mutex.9;.</para>
+
+	  <variablelist>
+	    <varlistentry>
+	      <term><constant>MTX_DEF</constant></term>
+	      <listitem>
+		<para>Un mutex endormi</para>
+	      </listitem>
+	    </varlistentry>
+
+	    <varlistentry>
+	      <term><constant>MTX_SPIN</constant></term>
+	      <listitem>
+		<para>Un mutex tournant</para>
+	      </listitem>
+	    </varlistentry>
+
+	    <varlistentry>
+	      <term><constant>MTX_COLD</constant></term>
+	      <listitem>
+		<para>Ce mutex est initialis&eacute; tr&egrave;s tard.  Toutefois, il
+		  doit &ecirc;tre d&eacute;clar&eacute; via
+		  <function>MUTEX_DECLARE</function>, et la constante nomm&eacute;e
+		  <constant>MTX_COLD</constant> doit &ecirc;tre pass&eacute;e &agrave;
+		  <function>mtx_init</function>.</para>
+	      </listitem>
+	    </varlistentry>
+
+	    <varlistentry>
+	      <term><constant>MTX_TOPHALF</constant></term>
+	      <listitem>
+		<para>Ce mutex tournant ne d&eacute;sactive pas les
+		  interruptions.</para>
+	      </listitem>
+	    </varlistentry>
+
+	    <varlistentry>
+	      <term><constant>MTX_NORECURSE</constant></term>
+	      <listitem>
+		<para>Ce mutex n'a pas la permission d'&ecirc;tre recursif.</para>
+	      </listitem>
+	    </varlistentry>
+	  </variablelist>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<term>Prot&eacute;g&eacute;s</term>
+	<listitem>
+	  <para>Une liste de structures de donn&eacute;es ou des membres de structure de donn&eacute;es
+	    que cette entr&eacute;e prot&egrave;ge.  Pour les membres de structures de donn&eacute;es, 
+	    le nom sera de la forme <structname/structure name/.<structfield/member name/.</para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<term>Fonctions d&eacute;pendantes</term>
+	<listitem>
+	  <para>Les fonctions qui peuvent seulement &ecirc;tre appel&eacute;es si ce mutex est
+	    pris.</para>
+	</listitem>
+      </varlistentry>
+    </variablelist>
+
+    <table frame="all" colsep="1" rowsep="1" pgwide="1">
+      <title>Liste du mutex</title>
+      
+      <tgroup cols="5">
+	<thead>
+	  <row>
+	    <entry>Nom de la variable</entry>
+	    <entry>Nom logique</entry>
+	    <entry>Type</entry>
+	    <entry>Prot&eacute;g&eacute;s</entry>
+	    <entry>Fonctions d&eacute;pendantes</entry>
+	  </row>
+	</thead>
+	
+	<!-- The scheduler lock -->
+	<tbody>
+	  <row>
+	    <entry>sched_lock</entry>
+	    <entry><quote>sched lock</quote></entry>
+	    <entry>
+	      <constant>MTX_SPIN</constant> |
+	      <constant>MTX_COLD</constant>
+	    </entry>
+	    <entry>
+	      <varname>_gmonparam</varname>,
+	      <varname>cnt.v_swtch</varname>,
+	      <varname>cp_time</varname>,
+	      <varname>curpriority</varname>,
+	      <structname/mtx/.<structfield/mtx_blocked/,
+	      <structname/mtx/.<structfield/mtx_contested/,
+	      <structname/proc/.<structfield/p_contested/,
+	      <structname/proc/.<structfield/p_blocked/,
+	      <structname/proc/.<structfield/p_flag/
+		(<constant>P_PROFIL</constant> XXX,
+		 <constant>P_INMEM</constant>,
+	         <constant>P_SINTR</constant>,
+	         <constant>P_TIMEOUT</constant>,
+	         <constant>P_SWAPINREQ</constant> XXX,
+	         <constant>P_INMEN</constant> XXX),
+	      <structname/proc/.<structfield/p_nice/,
+	      <structname/proc/.<structfield/p_procq/,
+	      <structname/proc/.<structfield/p_blocked/,
+	      <structname/proc/.<structfield/p_estcpu/,
+	      <structname/proc/.<structfield/p_nativepri/,
+	      <structname/proc/.<structfield/p_priority/,
+	      <structname/proc/.<structfield/p_usrpri/,
+	      <structname/proc/.<structfield/p_rtprio/,
+	      <structname/proc/.<structfield/p_rqindex/,
+	      <structname/proc/.<structfield/p_stats->p_prof/,
+	      <structname/proc/.<structfield/p_stats->p_ru/,
+	      <structname/proc/.<structfield/p_stat/,
+	      <structname/proc/.<structfield/p_cpticks/
+	      <structname/proc/.<structfield/p_iticks/,
+	      <structname/proc/.<structfield/p_uticks/,
+	      <structname/proc/.<structfield/p_sticks/,
+	      <structname/proc/.<structfield/p_swtime/,
+	      <structname/proc/.<structfield/p_slptime/,
+	      <structname/proc/.<structfield/p_runtime/,
+	      <structname/proc/.<structfield/p_pctcpu/,
+	      <structname/proc/.<structfield/p_oncpu/,
+	      <structname/proc/.<structfield/p_asleep/,
+	      <structname/proc/.<structfield/p_wchan/,
+	      <structname/proc/.<structfield/p_wmesg/,
+	      <structname/proc/.<structfield/p_slpq/,
+	      <structname/proc/.<structfield/p_vmspace/
+		(XXX - in <function>statclock</function>),
+	      <varname>pscnt</varname>,
+	      <varname>slpque</varname>,
+	      <varname>itqueuebits</varname>,
+	      <varname>itqueues</varname>,
+	      <varname>rtqueuebits</varname>,
+	      <varname>rtqueues</varname>,
+	      <varname>queuebits</varname>,
+	      <varname>queues</varname>,
+	      <varname>idqueuebits</varname>,
+	      <varname>idqueues</varname>,
+	      <varname>switchtime</varname>,
+	    </entry>
+	    <entry>
+	      <function>setrunqueue</function>,
+	      <function>remrunqueue</function>,
+	      <function>mi_switch</function>,
+	      <function>chooseproc</function>,
+	      <function>schedclock</function>,
+	      <function>resetpriority</function>,
+	      <function>updatepri</function>,
+	      <function>maybe_resched</function>,
+	      <function>cpu_switch</function>,
+	      <function>cpu_throw</function>
+	    </entry>
+	  </row>
+
+	  <!-- The vm86 pcb lock -->
+	  <row>
+	    <entry>vm86pcb_lock</entry>
+	    <entry><quote>vm86pcb lock</quote></entry>
+	    <entry>
+	      <constant>MTX_DEF</constant> |
+	      <constant>MTX_COLD</constant>
+	    </entry>
+	    <entry>
+	      <varname>vm86pcb</varname>
+	    </entry>
+	    <entry>
+	      <function>vm86_bioscall</function>
+	    </entry>
+	  </row>
+
+	  <!-- Giant -->
+	  <row>
+	    <entry>Giant</entry>
+	    <entry><quote>Giant</quote></entry>
+	    <entry>
+	      <constant>MTX_DEF</constant> |
+	      <constant>MTX_COLD</constant>
+	    </entry>
+	    <entry>nearly everything</entry>
+	    <entry>lots</entry>
+	  </row>
+
+	  <!-- The callout lock -->
+	  <row>
+	    <entry>callout_lock</entry>
+	    <entry><quote>callout lock</quote></entry>
+	    <entry>
+	      <constant>MTX_SPIN</constant>
+	    </entry>
+	    <entry>
+	      <varname>callfree</varname>,
+	      <varname>callwheel</varname>,
+	      <varname>nextsoftcheck</varname>,
+	      <structname/proc/.<structfield/p_itcallout/,
+	      <structname/proc/.<structfield/p_slpcallout/,
+	      <varname>softticks</varname>,
+	      <varname>ticks</varname>
+	    </entry>
+	    <entry>
+	    </entry>
+	  </row>
+	</tbody>
+      </tgroup>
+    </table>
+  </sect1>
+
+  <sect1>
+    <title>Les verrous du gestionnaire de verrous (Lock Manager)</title>
+
+    <para>Les verrous qui sont fournis par l'interface &man.lockmgr.9; 
+      sont les verrous du gestionnaire de verrous. Ces verrous sont des verrous
+       lecture-&eacute;criture et peuvent &ecirc;tre retenus par un process suspendu.
+    </para>
+
+    <table>
+      <title>&man.lockmgr.9; List de verrou</title>
+
+      <tgroup cols="2">
+	<thead>
+	  <row>
+	    <entry>Nom de la variable</entry>
+	    <entry>Prot&eacute;g&eacute;s</entry>
+	  </row>
+	</thead>
+	<tbody>
+	  <row>
+	    <entry><varname>allproc_lock</varname></entry>
+	    <entry>
+	      <varname>allproc</varname>
+	      <varname>zombproc</varname>
+	      <varname>pidhashtbl</varname>
+	      <structname/proc/.<structfield/p_list/
+	      <structname/proc/.<structfield/p_hash/
+	      <varname>nextpid</varname>
+	    </entry>
+	    <entry><varname>proctree_lock</varname></entry>
+	    <entry>
+	      <structname/proc/.<structfield/p_children/
+	      <structname/proc/.<structfield/p_sibling/
+	    </entry>
+	  </row>
+	</tbody>
+      </tgroup>
+    </table>
+  </sect1>
+
+  <sect1>
+    <title>Variables prot&#233;g&#233;es atomiquement</title>
+
+    <para>Une variable prot&eacute;g&eacute;e atomiquement est une variable sp&eacute;ciale qui
+      n'est pas prot&eacute;g&eacute; par un verrou explicite. Toutefois, tous les acc&egrave;s de 
+      donn&eacute;es aux variables utilisent des op&eacute;rations atomiques sp&eacute;ciales 
+      comme d&eacute;crit dans &man.atomic.9;. Tr&egrave;s peu de variables sont trait&eacute;es
+      de cette façon, bien que les autres primitives de synchronisation comme
+      les mutex soient impl&eacute;ment&eacute;es avec des variables prot&eacute;g&eacute;es atomiquement.</para>
+
+    <itemizedlist>
+      <listitem>
+	<para><varname>astpending</varname></para>
+      </listitem>
+
+      <listitem>
+	<para><structname/mtx/.<structfield/mtx_lock/</para>
+      </listitem>
+    </itemizedlist>
+  </sect1>
+</chapter>
