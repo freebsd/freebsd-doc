@@ -71,9 +71,6 @@ MAN9 =	BUS_PRINT_CHILD.9\
 	devclass_get_maxunit.9\
 	devclass_get_name.9\
 	devclass_get_softc.9\
-	devfs_add_devswf.9\
-	devfs_link.9\
-	devfs_remove_dev.9\
 	device.9\
 	device_add_child.9\
 	device_delete_child.9\
