@@ -1,5 +1,5 @@
 # bsd.web.mk
-# $FreeBSD: www/share/mk/web.site.mk,v 1.40 2001/11/12 19:17:39 phantom Exp $
+# $FreeBSD: www/share/mk/web.site.mk,v 1.41 2001/12/12 11:57:44 phantom Exp $
 
 #
 # Build and install a web site.
@@ -40,6 +40,10 @@ SED?=		/usr/bin/sed
 SH?=		/bin/sh
 SORT?=		/usr/bin/sort
 TOUCH?=		/usr/bin/touch
+HTML2TXT?=	${PREFIX}/bin/links
+HTML2TXTOPTS?=	-dump ${HTML2TXTFLAGS}
+ISPELL?=	ispell
+ISPELLOPTS?=	-l -p ${WEB_PREFIX}/en/share/dict/words ${ISPELLFLAGS}
 
 XSLTPROC?=	${PREFIX}/bin/xsltproc
 XSLTPROCOPTS?=	-nonet ${XSLTPROCFLAGS}
@@ -101,6 +105,12 @@ CATALOG?=	${PREFIX}/share/sgml/html/catalog
 SGMLNORMOPTS?=	-d ${SGMLNORMFLAGS} -c ${CATALOG} -D ${.CURDIR}
 GENDOCS+=	${DOCS:M*.sgml:S/.sgml$/.html/g}
 ORPHANS:=	${ORPHANS:N*.sgml}
+
+spellcheck:
+.for _entry in ${GENDOCS}
+	@echo "Spellcheck ${_entry}"
+	@${HTML2TXT} ${HTML2TXTOPTS} ${.CURDIR}/${_entry} | ${ISPELL} ${ISPELLOPTS}
+.endfor
 
 .sgml.html:
 	${PREHTML} ${PREHTMLOPTS} ${.IMPSRC} | \
