@@ -1,6 +1,6 @@
-# $FreeBSD: www/ja/Makefile,v 1.49 2001/09/03 06:25:39 kuriyama Exp $
+# $FreeBSD: www/ja/Makefile,v 1.50 2001/09/05 08:35:15 kuriyama Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.58
+# Original revision: 1.74
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -20,6 +20,7 @@ DOCS+= register.sgml
 DOCS+= internet.sgml 
 DOCS+= mailto.sgml 
 DOCS+= publish.sgml
+#DOCS+= relnotes.sgml
 DOCS+= send-pr.sgml
 DOCS+= support.sgml
 DOCS+= where.sgml 
@@ -39,7 +40,6 @@ SUBDIR=	 security
 SUBDIR+= commercial
 SUBDIR+= docproj
 SUBDIR+= news
-SUBDIR+= alpha
 
 SUBDIR+= internal
 SUBDIR+= java
@@ -47,6 +47,7 @@ SUBDIR+= copyright
 SUBDIR+= search
 SUBDIR+= gallery
 SUBDIR+= projects
+#SUBDIR+= prstats
 SUBDIR+= platforms
 SUBDIR+= releases
 SUBDIR+= smp
@@ -63,28 +64,26 @@ SUBDIR+= ports
 # # in to it.
 # .if !defined(WEB_ONLY) || empty(WEB_ONLY)
 # SUBDIR+= tutorials
+#
+# DOCSUBDIR=	FAQ handbook
 .endif
 
 # Non-SGML
 #SUBDIR+= gifs
 #SUBDIR+= cgi
 
-.if !defined(WEB_ONLY) || empty(WEB_ONLY)
-# Extern
-SUBDIR+= tutorials
-
-DOCSUBDIR=	FAQ handbook
-.endif
 SGMLOPTS=	-links -hdr ${.CURDIR}/doc.hdr -ftr ${.CURDIR}/doc.ftr -e EUC-JP
 
 WEBDIR=		data/ja
 
 # index.html is special, and generated from index.xsl and news/news.xml
 DATA+=		index.html
+CLEANFILES+=	index.html
 
 index.html: index.xsl news/news.xml news/press.xml includes.xsl news/includes.xsl
-	xsltproc -nonet -o index.html index.xsl news/news.xml
-#	-tidy -i -m -f /dev/null index.html
+	${XSLTPROC} ${XSLTPROCFLAGS} -o index.html \
+		${.CURDIR}/index.xsl ${.CURDIR}/news/news.xml
+#	-${TIDY} ${TIDYFLAGS} index.html
 
 ### Revision checking
 REVCHECK=	yes
