@@ -1,4 +1,4 @@
-<!-- $FreeBSD$ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.1 2001/08/06 07:04:31 nik Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   
@@ -6,7 +6,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD$'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.1 2001/08/06 07:04:31 nik Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"/>
@@ -108,7 +108,8 @@
 		<input type="submit" value=" Go "/>
 		
 		<br/>
-		<font color="#990000"><b>Language:</b></font> 
+		
+		<font color="#990000"><b>Language: </b></font> 
 		<a href="ja/">Japanese</a>, 
 		<a href="es/index.html">Spanish</a>, 
 		<a href="ru/index.html">Russian</a>, 
@@ -120,80 +121,126 @@
 	
 	<br/>
 	
-	<!-- Security alert -->
-	<table width="100%" bgcolor="#990000"
-	       cellpadding="4" cellspacing="0" border="0">
-	  <tr>
-	    <td>
-	      <h2 align="center">
-		<font color="#FFFFFF">IMPORTANT</font></h2>
-	      
-	      <p><font color="#FFFFFF">Please be aware that the telnet
-		  daemon shipping in FreeBSD prior to July 23, 2001
-		  contains a remotely exploitable security problem. See the
-		  <a href="ftp://ftp.FreeBSD.org/pub/FreeBSD/CERT/advisories/FreeBSD-SA-01:49.telnetd.v1.1.asc">
-		    security advisory</a> for more details.</font></p></td>
-	  </tr>
-	</table>
-
 	<hr size="1" noshade="noshade"/>
 
 	<!-- Main layout table -->
 	<table border="0" cellspacing="0" cellpadding="2">
 	  <tr>
 	    <!-- Red strip down left hand of sidebar -->
-	    <td bgcolor="#990000">&#xa0;</td>
-	    
-	    <td bgcolor="#ffcc66">&#xa0;</td>
-	    
-	    <td></td>
-	    
-	    <!-- Main body column -->
-
-	    <td rowspan="2" align="left" valign="top">
-	      <!-- News / release info table -->
-	      <table border="0" cellspacing="0" cellpadding="1"
+	    <td valign="top">
+	      <table border="0" cellspacing="1" cellpadding="1"
 		     bgcolor="#000000" width="100%">
 		<tr>
 		  <td>
 		    <table cellpadding="4" cellspacing="0" border="0"
 			   bgcolor="#ffcc66" width="100%">
 		      <tr>
-			<td valign="top"><b>Headlines</b><br/>
-			  <font size="-1">
-			    <!-- Code to pull in the most recent four news
-			         items -->
-			    <xsl:for-each select="descendant::event[position() &lt;= 4]">
-			      >> <a>
-				<xsl:attribute name="href">
-				  news/newsflash.html#<xsl:call-template name="generate-event-anchor"/>
-				</xsl:attribute>
-				<xsl:choose>
-				  <xsl:when test="count(child::title)">
-				    <xsl:value-of select="title"/><br/>
-				  </xsl:when>
-				  <xsl:otherwise>
-				    <xsl:value-of select="p"/><br/>
-				  </xsl:otherwise>
-				</xsl:choose>
-			      </a>
-			    </xsl:for-each>
-			  </font>
-			</td>
+			<td>
+			  <p><font size="+1" color="#990000"><b>News</b></font>
 
-			<td valign="top"><b>Current Release:
-			    <xsl:value-of select="$rel.current"/></b><br/>
-			
-			  <small>>> <a href="{$u.rel.announce}">Announcement</a><br/>
-			    >> <a href="{$base}/doc/en_US.ISO8859-1/books/handbook/install.html">Installation Guide</a><br/>
-			  >> <a href="{$u.rel.notes}">Release Notes</a><br/>
-			    >> <a href="{$u.rel.errata}">Errata</a></small></td>
+	      
+			    <small><br/>
+			      &#183; <a href="news/newsflash.html">Announcements</a><br/>
+			      &#183; <a href="news/press.html">In the Press</a><br/>
+			      &#183; <a href="news/index.html">More ...</a>
+			    </small></p>
+	    
+			  <p><font size="+1" color="#990000"><b>Software</b></font>
+			    <small><br/>
+			      &#183; <a href="{$base}/doc/en_US.ISO8859-1/books/handbook/mirrors.html">Getting FreeBSD</a><br/>
+			      &#183; <a href="releases/index.html">Release Information</a><br/>
+			      &#183; <a href="{$base}/ports/index.html">Ported Applications</a><br/>
+			    </small></p>
+	    
+			  <p><font size="+1" color="#990000"><b>Documentation</b></font>
+		
+			    <small><br/>
+			      &#183; <a href="projects/newbies.html">For Newbies</a><br/>
+			      &#183; <a href="{$base}/handbook/index.html">Handbook</a><br/>
+			      &#183; <a href="{$base}/FAQ/index.html">FAQ</a><br/>
+			      &#183; <a href="{$base}/docproj/index.html">Doc. Project</a><br/>
+			      &#183; <a href="docs.html">More...</a><br/>
+			    </small></p>
+			  
+			  <p><font size="+1" color="#990000"><b>Support</b></font>
+	      
+			    <small><br/>
+			      &#183; <a href="{$base}/support.html#mailing-list">Mailing lists</a><br/>
+			      &#183; <a href="{$base}/support.html#newsgroups">Newsgroups</a><br/>
+			      &#183; <a href="{$base}/support.html#user">User Groups</a><br/>
+			      &#183; <a href="{$base}/support.html#web">Web Resources</a><br/>
+			      &#183; <a href="security/index.html">Security</a><br/>
+			      &#183; <a href="{$base}/support.html">More...</a>
+			    </small></p>
+	      
+			  <p><font size="+1" color="#990000"><b>Development</b></font>
+		
+			    <small><br/>
+			      &#183; <a href="projects/index.html">Projects</a><br/>
+			      &#183; <a href="{$base}/support.html#gnats">Bug Reports</a><br/>
+			      &#183; <a href="{$base}/support.html#cvs">CVS Repository</a><br/>
+			    </small></p>
+	      
+			  <p><font size="+1" color="#990000"><b>Vendors</b></font>
+			    
+			    <small><br/>
+			      &#183; <a href="{$base}/commercial/software_bycat.html">Software</a><br/>
+			      &#183; <a href="{$base}/commercial/hardware.html">Hardware</a><br/>
+			      &#183; <a href="{$base}/commercial/consulting_bycat.html">Consulting</a><br/>
+			      &#183; <a href="{$base}/commercial/misc.html">Misc</a><br/>
+			    </small></p>
+	      
+			  <p><font size="+1" color="#990000"><b>This Site</b></font>
+		
+			    <small><br/>
+			      &#183; <a href="{$base}/search/index-site.html">Site Map</a><br/>
+			      &#183; <a href="{$base}/search/search.html">Search</a><br/>
+			      &#183; <a href="internal/index.html">More ...</a><br/>
+			    </small></p>
+	      
+			  <form action="http://www.FreeBSD.org/cgi/search.cgi" method="get">
+			    <small>Search for:<br/>
+			      <input type="text" name="words" size="10"/>
+			      <input type="hidden" name="max" value="25"/>
+			      <input type="hidden" name="source" value="www"/>
+			      <input type="submit" value="Go"/></small>
+			  </form></td>
 		      </tr>
 		    </table>
 		  </td>
 		</tr>
 	      </table>
+	    </td>
+	    
+	    <td></td>
+	    
+	    <!-- Main body column -->
 
+	    <td align="left" valign="top" rowspan="2">
+	      <!-- Security alert -->
+	      <table border="0" cellspacing="1" cellpadding="4"
+		     bgcolor="#990000" width="100%">
+		<tr>
+		  <td>
+		    <table bgcolor="#FFFFFF" width="100%"
+			   cellpadding="4" cellspacing="0" border="0">
+		      <tr>
+			<td>
+			  <h2 align="center">IMPORTANT</h2>
+			  
+			  <p>Please be aware that the telnet daemon shipping
+			    in FreeBSD prior to July 23, 2001 contains a
+			    remotely exploitable security problem. See 
+			    the
+			    <a href="ftp://ftp.FreeBSD.org/pub/FreeBSD/CERT/advisories/FreeBSD-SA-01:49.telnetd.v1.1.asc">
+			      security advisory</a> for more details.</p>
+			</td>
+		      </tr>
+		    </table>
+		  </td>
+		</tr>
+	      </table>
+	      
 	      <h2><font color="#990000">What is FreeBSD?</font></h2>
 	
 	      <p>FreeBSD is an advanced BSD UNIX operating system for the
@@ -249,14 +296,13 @@
 						   height="81" width="72" 
 						   align="right" 
 						   border="0"/></a>
-	    
+	      
 	      <p>While you might expect an operating system with these 
 		features to sell for a high price, FreeBSD is available 
 		<a href="{$base}/copyright/index.html">free of charge</a>
 		and comes with full source code. If you would like to try it
 		out, 
-		<a
-		   href="{$base}/doc/en_US.ISO8859-1/books/handbook/mirrors.html">more 
+		<a href="{$base}/doc/en_US.ISO8859-1/books/handbook/mirrors.html">more 
 		  information is available</a>.</p>
 	      
 	      <h2><font color="#990000">Contributing to FreeBSD</font></h2>
@@ -269,106 +315,80 @@
 		from documentation to artwork to source code. See the 
 		<a href="http://www.FreeBSD.org/handbook/contrib.html">Contributing
 		  to FreeBSD</a> section in the FreeBSD Handbook.</p>
-	      
-	      <br/>
-	      
-	      <table border="3" cellspacing="0" cellpadding="5">
+	    </td>
+
+	    <td></td>
+
+	    <!-- Right-most column -->
+	    <td valign="top">
+	      <!-- News / release info table -->
+	      <table border="0" cellspacing="0" cellpadding="1"
+		     bgcolor="#000000" width="100%">
 		<tr>
-		  <td>To learn more about FreeBSD, visit our gallery of 
-		    FreeBSD related 
-		    <a href="{$base}/publish.html">publications</a> or 
-		    <a href="news/press.html">FreeBSD in the press</a>, and
-		    browse through this website!</td>
+		  <td>
+		    <table cellpadding="4" cellspacing="0" border="0"
+			   bgcolor="#ffcc66" width="100%">
+		      <tr>
+			<td valign="top"><p><font size="+1" color="#990000"><b>Current Release:
+			    <xsl:value-of select="$rel.current"/></b></font><br/>
+			
+			    <small>&#183; <a href="{$u.rel.announce}">Announcement</a><br/>
+			      &#183; <a href="{$base}/doc/en_US.ISO8859-1/books/handbook/install.html">Installation Guide</a><br/>
+			      &#183; <a href="{$u.rel.notes}">Release Notes</a><br/>
+			      &#183; <a href="{$u.rel.errata}">Errata</a></small></p>
+
+			  <p><font size="+1" color="#990000"><b>Headlines</b></font><br/>
+			  <font size="-1">
+			    <!-- Code to pull in the most recent four news
+			         items -->
+			    <xsl:for-each select="descendant::event[position() &lt;= 20]">
+			      &#183;  <a>
+				<xsl:attribute name="href">
+				  news/newsflash.html#<xsl:call-template name="generate-event-anchor"/>
+				</xsl:attribute>
+				<xsl:choose>
+				  <xsl:when test="count(child::title)">
+				    <xsl:value-of select="title"/><br/>
+				  </xsl:when>
+				  <xsl:otherwise>
+				    <xsl:value-of select="p"/><br/>
+				  </xsl:otherwise>
+				</xsl:choose>
+			      </a>
+			    </xsl:for-each>
+			  </font></p>
+			</td>
+		      </tr>
+		    </table>
+		  </td>
+		</tr>
+	      </table>
+
+	      <p>&#xa0;</p>
+
+	      <table border="0" cellspacing="0" cellpadding="1"
+		     bgcolor="#000000" width="100%">
+		<tr>
+		  <td>
+		    <table cellpadding="4" cellspacing="0" border="0"
+			   bgcolor="#FFFFFF" width="100%"><tr>
+			<td>To learn more about FreeBSD, visit our gallery of 
+			  FreeBSD related 
+			  <a href="{$base}/publish.html">publications</a> or 
+			  <a href="news/press.html">FreeBSD in the press</a>,
+			  and browse through this website!</td>
+		      </tr>
+		    </table>
+		  </td>
 		</tr>
 	      </table>
 	    </td>
 	  </tr>
-	
-	  <!-- New row for the strip of links that normally runs down the
-	       left hand side.  This is set up this way so that if you are
-	       viewing the site in a browser that does not support tables
-	       the main body copy will appear first, with the list of links
-	       at the end.  It's not perfect, but it works. -->
-	  <tr>
-	    <td bgcolor="#990000">&#xa0;</td>
-	    
-	    <td align="left" valign="top" bgcolor="#ffcc66">
-	      <p><big><font color="#990000"><b>News</b></font></big>
-	      
-		<small><br/>
-		  &#xa0;&#xa0;<a href="news/newsflash.html">Announcements</a><br/>
-		  &#xa0;&#xa0;<a href="news/press.html">In the Press</a><br/>
-		  &#xa0;&#xa0;<a href="news/index.html">More ...</a>
-		</small></p>
-	    
-	      <p><big><font color="#990000"><b>Software</b></font></big>
-	      
-		<small><br/>
-		  &#xa0;&#xa0;<a href="{$base}/doc/en_US.ISO8859-1/books/handbook/mirrors.html">Getting FreeBSD</a><br/>
-		  &#xa0;&#xa0;<a href="releases/index.html">Release Information</a><br/>
-		  &#xa0;&#xa0;<a href="{$base}/ports/index.html">Ported Applications</a><br/>
-		</small></p>
-	    
-	      <p><big><font color="#990000"><b>Documentation</b></font></big>
-		
-		<small><br/>
-		  &#xa0;&#xa0;<a href="projects/newbies.html">For Newbies</a><br/>
-		  &#xa0;&#xa0;<a href="{$base}/handbook/index.html">Handbook</a><br/>
-		  &#xa0;&#xa0;<a href="{$base}/FAQ/index.html">FAQ</a><br/>
-		  &#xa0;&#xa0;<a href="{$base}/docproj/index.html">Doc. Project</a><br/>
-		  &#xa0;&#xa0;<a href="docs.html">More...</a><br/>
-		</small></p>
-	    
-	      <p><big><font color="#990000"><b>Support</b></font></big>
-	      
-		<small><br/>
-		  &#xa0;&#xa0;<a href="{$base}/support.html#mailing-list">Mailing lists</a><br/>
-		  &#xa0;&#xa0;<a href="{$base}/support.html#newsgroups">Newsgroups</a><br/>
-		  &#xa0;&#xa0;<a href="{$base}/support.html#user">User Groups</a><br/>
-		  &#xa0;&#xa0;<a href="{$base}/support.html#web">Web Resources</a><br/>
-		  &#xa0;&#xa0;<a href="security/index.html">Security</a><br/>
-		  &#xa0;&#xa0;<a href="{$base}/support.html">More...</a>
-		</small></p>
-	      
-	      <p><big><font color="#990000"><b>Development</b></font></big>
-		
-		<small><br/>
-		  &#xa0;&#xa0;<a href="projects/index.html">Projects</a><br/>
-		  &#xa0;&#xa0;<a href="{$base}/support.html#gnats">Bug Reports</a><br/>
-		  &#xa0;&#xa0;<a href="{$base}/support.html#cvs">CVS Repository</a><br/>
-		</small></p>
-	      
-	      <p><big><font color="#990000"><b>Vendors</b></font></big>
-		
-		<small><br/>
-		  &#xa0;&#xa0;<a href="{$base}/commercial/software_bycat.html">Software</a><br/>
-		  &#xa0;&#xa0;<a href="{$base}/commercial/hardware.html">Hardware</a><br/>
-		  &#xa0;&#xa0;<a href="{$base}/commercial/consulting_bycat.html">Consulting</a><br/>
-		  &#xa0;&#xa0;<a href="{$base}/commercial/misc.html">Misc</a><br/>
-		</small></p>
-	      
-	      <p><big><font color="#990000"><b>This Site</b></font></big>
-		
-		<small><br/>
-		  &#xa0;&#xa0;<a href="{$base}/search/index-site.html">Site Map</a><br/>
-		  &#xa0;&#xa0;<a href="{$base}/search/search.html">Search</a><br/>
-		  &#xa0;&#xa0;<a href="internal/index.html">More ...</a><br/>
-		</small></p>
-	      
-	      <form action="http://www.FreeBSD.org/cgi/search.cgi" method="get">
-		<small>&#xa0;&#xa0;Search for:<br/>
-		  <input type="text" name="words" size="10"/>
-		  <input type="hidden" name="max" value="25"/>
-		  <input type="hidden" name="source" value="www"/>
-		  <input type="submit" value="Go"/></small>
-	      </form>
-	    </td>
-	  </tr>
 	</table>
 
-	<hr/>
-	
-	<table border="0" cellspacing="0" cellpadding="3">
+	<hr noshade="noshade" size="1" />
+
+	<table width="100%" border="0" cellspacing="0" cellpadding="3">
 	  <tr>
 	    <td><a href="http://www.freebsdmall.com/"><img
 							   src="gifs/mall_title_medium.gif" alt="[FreeBSD Mall]"
@@ -395,8 +415,6 @@
 	<p><small>Changes to the web site go live at 0800 and 2000 UTC every
 	    day.</small></p>
     
-	<hr/>
-
 	<table width="100%" cellpadding="0" border="0" cellspacing="0">
 	  <tr>
 	    <td align="left" 
