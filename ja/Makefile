@@ -1,6 +1,6 @@
-# $FreeBSD: www/ja/Makefile,v 1.37 1999/12/23 01:14:38 kuriyama Exp $
+# $FreeBSD: www/ja/Makefile,v 1.38 2000/01/06 12:53:23 kuriyama Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.50
+# Original revision: 1.51
 
 .if exists(Makefile.conf)
 .include "Makefile.conf"
@@ -40,6 +40,7 @@ SUBDIR+= docproj
 SUBDIR+= news
 SUBDIR+= alpha
 SUBDIR+= internal
+SUBDIR+= java
 SUBDIR+= copyright
 SUBDIR+= search
 SUBDIR+= gallery
@@ -48,10 +49,6 @@ SUBDIR+= releases
 .if !defined(WEB_ONLY) || empty(WEB_ONLY)
 SUBDIR+= ports
 .endif
-
-
-# Japanese only.
-SUBDIR+= java
 
 # Non-SGML
 #SUBDIR+= gifs
