@@ -192,6 +192,18 @@ TEXCMDS+=	\tracingstats=${TRACE}
 PNMTOPSFLAGS+=	-rle
 .endif
 
+.if !defined(WITH_INLINE_LEGALNOTICE) || empty(WITH_INLINE_LEGALNOTICE)
+HTMLFLAGS+=	-V %generate-legalnotice-link%
+.endif
+.if defined(WITH_ARTICLE_TOC) && !empty(WITH_ARTICLE_TOC)
+HTMLFLAGS+=	-V %generate-article-toc%
+PRINTFLAGS+=	-V %generate-article-toc%
+.endif
+.if defined(WITH_BIBLIOXREF_TITLE) && !empty(WITH_BIBLIOXREF_TITLE)
+HTMLFLAGS+=	-V biblio-xref-title
+PRINTFLAGS+=	-V biblio-xref-title
+.endif
+
 PERL?=		/usr/bin/perl
 PKG_CREATE?=	/usr/sbin/pkg_create
 SORT?=		/usr/bin/sort
