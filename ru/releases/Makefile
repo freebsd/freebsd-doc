@@ -1,12 +1,15 @@
-# $FreeBSD$
+#
 # The FreeBSD Russian Documentation Project
-# $FreeBSDru: frdp/www/ru/releases/Makefile,v 1.3 2000/11/10 17:04:52 phantom Exp $
-# Original version: 1.25
+#
+# $FreeBSD$
+# $FreeBSDru: frdp/www/ru/releases/Makefile,v 1.4 2003/12/30 18:35:29 andy Exp $
+#
+# Original version: 1.39
+#
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
 .endif
-
 .if exists(../Makefile.inc)
 .include "../Makefile.inc"
 .endif
@@ -15,8 +18,9 @@ DOCS?=	index.sgml snapshots.sgml
 
 #SUBDIR=	1.1 1.1.5 2.0 2.0.5R 2.1R 2.1.5R 2.1.6R 2.1.7R 2.2R
 #SUBDIR+=	2.2.1R 2.2.2R 2.2.5R 2.2.6R 2.2.7R 2.2.8R 3.0R 3.1R 3.2R
-#SUBDIR+=	3.3R 3.4R 3.5R
-#SUBDIR+=	4.0R 4.1R 4.1.1R
+#SUBDIR+=	3.3R 3.4R 3.5R 4.0R 4.1R 4.1.1R 4.2R 4.3R 4.4R 4.5R 4.6R
+#SUBDIR+=	4.6.2R 4.7R 4.8R 4.9R
+#SUBDIR+=	5.0R 5.1R 5.2R
 
 .if defined $(NEW_BUILD)
 SUBDIR=
