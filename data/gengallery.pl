@@ -57,7 +57,13 @@ while (<DBFILE>)
 	m/([^\t]+)\t([^\t]+)\t([^\t]+)\t([^\t]*)\t([^\t]+)\t([^\t]+)\t([^\t]+)/;
 
 	# Dump it out to the file, in SGML <LI> format
-	print "<LI><A HREF=\"$url\"><STRONG>$name</STRONG></A> -- $description</LI>\n";
+	if ($description ne "")
+	{
+		print "<LI><A HREF=\"$url\"><STRONG>$name</STRONG></A> -- $description</LI>\n";
+	} else {
+		print "<LI><A HREF=\"$url\"><STRONG>$name</STRONG></A></LI>\n";
+	};
+
 };
 
 # Close the pipe like good little daemons.
