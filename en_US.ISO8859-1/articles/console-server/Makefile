@@ -11,7 +11,7 @@ INSTALL_ONLY_COMPRESSED?=
 
 SRCS= 		article.sgml
 CSS_SHEET=	itgastyle.css
-IMAGES=		tk0231-9-1.png
+IMAGES_EN=	tk0231-9-1.png
 
 DOC_PREFIX?= ${.CURDIR}/../../..
 

@@ -16,7 +16,7 @@ WITH_ARTICLE_TOC=YES
 SRCS=  article.sgml branches.ascii
 
 # IMAGES
-IMAGES= branches.pic
+IMAGES_EN= branches.pic
 
 CSS_SHEET_ADDITIONS= extra.css
 
