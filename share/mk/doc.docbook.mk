@@ -178,6 +178,7 @@ TOUCH?=		/usr/bin/touch
 XARGS?=		/usr/bin/xargs
 
 TEX?=		${PREFIX}/bin/tex
+LATEX?=		${PREFIX}/bin/latex
 PDFTEX?=	${PREFIX}/bin/pdftex
 TIDY?=		${PREFIX}/bin/tidy
 TIDYOPTS?=	-i -m -raw -preserve -f /dev/null ${TIDYFLAGS}
