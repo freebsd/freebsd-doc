@@ -1,5 +1,9 @@
-DOCS=	10.sgml 11.sgml 12.sgml 13.sgml index.sgml
+# $FreeBSD$
 
-WEBBASE=	/data/java
+DOCS =	10.sgml
+DOCS+=	11.sgml
+DOCS+=	12.sgml
+DOCS+=	13.sgml
+DOCS+=	index.sgml
 
 .include "../../web.mk"
