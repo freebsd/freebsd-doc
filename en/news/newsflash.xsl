@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/en/news/newsflash.xsl,v 1.1 2001/08/06 06:59:11 nik Exp $ -->
+<!-- $FreeBSD: www/en/news/newsflash.xsl,v 1.2 2001/08/16 11:41:21 nik Exp $ -->
 
-<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
+<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
+  xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
 
   <xsl:import href="../includes.xsl"/>
   <xsl:import href="includes.xsl"/>
@@ -10,7 +11,9 @@
 
   <xsl:variable name="base" select="'..'"/>
   <xsl:variable name="title" select="'FreeBSD News Flash'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/news/newsflash.xsl,v 1.1 2001/08/06 06:59:11 nik Exp $'"/>
+  <xsl:variable name="date">
+    <xsl:value-of select="//cvs:keyword[@name='freebsd']"/>
+  </xsl:variable>
   
   <xsl:output type="html" encoding="iso-8859-1"/>
 
