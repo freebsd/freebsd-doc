@@ -1,5 +1,5 @@
 #
-# $FreeBSD: doc/share/mk/doc.html.mk,v 1.2 2000/07/19 01:46:48 jhb Exp $
+# $FreeBSD: doc/share/mk/doc.html.mk,v 1.3 2000/07/23 16:27:58 nik Exp $
 #
 # This include file <doc.html.mk> handles building and installing of
 # HTML documentation in the FreeBSD Documentation Project.
@@ -46,6 +46,14 @@ MASTERDOC?=	${.CURDIR}/${DOC}.sgml
 KNOWN_FORMATS=	html txt tar pdb
 
 HTMLCATALOG=	${PREFIX}/share/sgml/html/catalog
+
+.if !defined(OPENJADE)
+NSGMLS?=	nsgmls
+SGMLNORM?=	sgmlnorm
+.else
+NSGMLS?=	onsgmls
+SGMLNORM?=	osgmlnorm
+.endif
 
 # ------------------------------------------------------------------------
 #
@@ -96,7 +104,7 @@ CLEANFILES+= ${DOC}.${_curformat}.${_curcomp}
 all: ${_docs}
 
 ${DOC}.html: ${SRCS}
-	sgmlnorm -c ${HTMLCATALOG} ${.ALLSRC} > ${.TARGET}
+	${SGMLNORM} -c ${HTMLCATALOG} ${.ALLSRC} > ${.TARGET}
 .if !defined(NO_TIDY)
 	-tidy -i -m -f /dev/null ${TIDYFLAGS} ${.TARGET}
 .endif
@@ -134,7 +142,7 @@ ${DOC}.${_curformat}:
 #
 
 lint validate:
-	nsgmls -s -c ${HTMLCATALOG} ${MASTERDOC}
+	${NSGMLS} -s -c ${HTMLCATALOG} ${MASTERDOC}
 
 # ------------------------------------------------------------------------
 #
