@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/docproj/Makefile,v 1.7 1999/09/06 07:02:43 peter Exp $
+# $FreeBSD: www/en/conspectus/stable/2000/Makefile,v 1.1 2000/05/31 20:35:47 nik Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -7,5 +7,6 @@
 DOCS=	index.sgml
 
 SUBDIR=	05
+SUBDIR+= 06
 
 .include "../../../web.mk"
