@@ -1,7 +1,7 @@
 # $FreeBSD$
 # The FreeBSD Russian Documentation Project
-# $FreeBSDru: frdp/www/ru/ports/Makefile,v 1.4 2000/11/10 17:04:52 phantom Exp $
-# Original revision: 1.30
+# $FreeBSDru: frdp/www/ru/ports/Makefile,v 1.5 2001/12/06 12:25:32 phantom Exp $
+# Original revision: 1.34
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -31,53 +31,53 @@ CVS_OPT+=	-d ${PORTSCVSROOT}
 
 .if defined(NOPORTSCVS)
 ${INDEX}: $${PORTSBASE}/${PINDEX}
-	cp ${PORTSBASE}/${PINDEX} ${INDEX}
-
-${Y2K}: $${PORTSBASE}/${PY2K}
-	cp ${PORTSBASE}/${PY2K} ${Y2K}
-
+	${CP} ${PORTSBASE}/${PINDEX} ${INDEX}
 .else
 ${INDEX}: ${cvsindex}
-	cvs ${CVS_OPT} co -p ${PINDEX} > ${INDEX}
-
-${Y2K}: ${cvsy2k}
-	cvs ${CVS_OPT} co -p ${PY2K} > ${Y2K}
-
+	${CVS} ${CVS_OPT} co -p ${PINDEX} > ${INDEX}
 .endif
 
 # build the list of available packages only on the 
 # main FreeBSD machines
 hostname!= hostname
 
-.if defined(NOPORTSCVS)
-packages.exists:
-.else
-packages.exists: ${cvsindex} ${cvsy2k}
+#
+# don't build the packages links if NO_PACKAGES_LINK
+# is set and not empty.
+#
+# XXX: you can set NO_PACKAGES_LINK to your hostname to
+#      test the packages link generation
+#
+.if defined(NO_PACKAGES_LINK) && !empty(NO_PACKAGES_LINK)
+hostname=      ${NO_PACKAGES_LINK}
 .endif
+
+packages.exists:
 .if ${hostname} == "hub.freebsd.org" || ${hostname} == "freefall.freebsd.org"
 .if  exists(${.CURDIR}/../../en/ports/packages.exists)
-	cp ${.CURDIR}/../../en/ports/${.TARGET} .
+	${CP} ${.CURDIR}/../../en/ports/${.TARGET} ${.CURDIR}
 .else
-	@if sh ${.CURDIR}/../../en/ports/packages > ${.TARGET}.temp; then \
-		mv ${.TARGET}.temp ${.TARGET}; \
+	@if ${SH} ${.CURDIR}/../../en/ports/packages > ${.TARGET}.temp; then \
+		${MV} ${.TARGET}.temp ${.TARGET}; \
 	else \
-		rm ${.TARGET}.temp; touch ${.TARGET}; \
+		${RM} ${.TARGET}.temp; touch ${.TARGET}; \
 	fi;
 .endif
 .else
-	touch ${.TARGET}
+	${TOUCH} ${.TARGET}
 .endif
 
 Makefile.gen: index.sgml .NOTMAIN
-	echo DOCS= *.sgml > Makefile.gen
+	${ECHO_CMD} DOCS= *.sgml > Makefile.gen
 
-index.sgml: ${INDEX} ${Y2K} categories packages.exists portindex ports.inc .NOTMAIN
-	rm -f *.sgml
-	${PORTINDEX} ${INDEX} ${Y2K} ${.CURDIR}
+index.sgml: ${INDEX} categories packages.exists portindex ports.inc .NOTMAIN
+	${RM} -f *.sgml
+	${PORTINDEX} ${INDEX} ${.CURDIR}
 
 install: all
 
 all install clean:
-	(cd ${.CURDIR} && ${MAKE}  ${MAKEFLAGS} -f Makefile.inc0 ${.TARGET})
+	(cd ${.CURDIR}; \
+		 ${MAKE} ${MAKEFLAGS} -f ${.CURDIR}/Makefile.inc0 ${.TARGET})
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
