@@ -33,7 +33,7 @@
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
 .\" $NetBSD: malloc.9,v 1.3 1996/11/11 00:05:11 lukem Exp $
-.\" %FreeBSD: src/share/man/man9/malloc.9,v 1.13.2.5 2001/12/17 11:30:18 ru Exp %
+.\" %FreeBSD: src/share/man/man9/malloc.9,v 1.13.2.6 2002/03/16 02:20:28 archie Exp %
 ,\" $FreeBSD$
 .\"
 .Dd June 16, 1996
@@ -54,11 +54,16 @@
 .Ft void
 .Fn free "void *addr" "struct malloc_type *type"
 .Fn FREE "void *addr" "struct malloc_type *type"
+.Ft void *
+.Fn realloc "void *addr" "unsigned long size" "struct malloc_type *type" "int flags"
+.Ft void *
+.Fn reallocf "void *addr" "unsigned long size" "struct malloc_type *type" "int flags"
 .Sh 解説
 .Fn malloc
 関数はカーネルアドレス空間の初期化されていないメモリを
 .Fa size
 で指定された大きさの 1 つのオブジェクトとして割り当てます。
+.Pp
 .Fn free
 は
 .Fn malloc
@@ -66,6 +71,42 @@
 .Fa addr
 のアドレスのメモリを再使用するために開放します。
 メモリは 0 にクリアされません。
+.Fa addr
+が
+.Dv NULL
+の場合、
+.Fn free
+は何もしません。
+.Pp
+.Fn realloc
+関数は、以前に割り当てられて
+.Fa addr
+で参照されるメモリの大きさを
+.Fa size
+バイトに変更します。
+メモリの内容は、新サイズと旧サイズの小さい方までは、無変更となります。
+戻り値は
+.Fa addr
+と違うかもしれないことに注意してください。
+要求されたメモリが割り当て不能の場合、
+.Dv NULL
+が返され、
+.Fa addr
+で参照されるメモリは正当で無変更のままとなります。
+.Fa addr
+が
+.Dv NULL
+の場合、
+.Fn realloc
+関数は指定された大きさの
+.Fn malloc
+と同等に振舞います。
+.Pp
+.Fn reallocf
+関数呼び出しは、realloc 関数呼び出しとまったく同じですが、
+要求されたメモリを割り当て不能の場合に
+渡されたポインタのメモリを解放する点が違います。
+.Pp
 マクロ版の
 .Fn MALLOC
 は機能的には
@@ -93,15 +134,14 @@ free((addr), type)
 .Bl -tag -width M_NOWAIT
 .It Dv M_NOWAIT
 リソースの不足のため直ちに要求を満たすことができない場合は、
-.Fn malloc
+.Fn malloc ,
+.Fn realloc ,
+.Fn reallocf
 が
 .Dv NULL
 を返すようにします。
 通常は、
-.Fn malloc
-は他のプロセスによるリソースの開放を待つために
-.Fn sleep
-を呼び出すでしょう。
+他のプロセスによるリソースの開放を待つためにスリープ状態にされます。
 このフラグがセットされていれば、
 .Fn malloc
 はブロックせずに
@@ -110,9 +150,14 @@ free((addr), type)
 .Dv M_WAITOK
 が 0 に定義されていることに注意してください。
 これはブロッキング操作がデフォルトだということです。
+割り込みコンテキストでの動作時には
+.Dv M_NOWAIT
+が必要であることにも注意してください。
 .It Dv M_ASLEEP
 リソースの不足のため直ちに要求を満たすことができない場合は、
-.Fn malloc
+.Fn malloc ,
+.Fn realloc ,
+.Fn reallocf
 が
 .Fn asleep
 を呼ぶようにします。
@@ -120,7 +165,7 @@ free((addr), type)
 の単独での使用は実用的ではなく、常に
 .Dv M_NOWAIT
 との論理和(OR)をとって
-.Fn malloc
+本関数
 に
 .Fn asleep
 を呼ばせ、直ちに
@@ -130,7 +175,7 @@ free((addr), type)
 .Fn await
 を呼び、割り当てのリトライをすることが期待されています。
 当のルーチンに依存して、呼び出し側で一時的な失敗を上位に連鎖的に伝搬し、実際に
-.Fn malloc
+本関数
 がキューに入れた非同期のウェイトをブロックする
 幾つかの別の高レベルルーチンをもつことを決めることも出来ます。
 .It Dv M_WAITOK
@@ -140,7 +185,9 @@ free((addr), type)
 デフォルトの操作はメモリの割り当てが成功するまでブロックします。
 .Dv M_NOWAIT
 が指定されると
-.Fn malloc
+.Fn malloc ,
+.Fn realloc ,
+.Fn reallocf
 は単に
 .Dv NULL
 を返すことが出来ます。
@@ -186,22 +233,30 @@ MALLOC_DEFINE(M_FOOBUF, "foobuffers",
 MALLOC(buf, struct foo_buf *, sizeof *buf, M_FOOBUF, M_NOWAIT);
 .Ed
 .Sh 戻り値
-.Fn malloc
+.Fn malloc ,
+.Fn realloc ,
+.Fn reallocf 
 はすべてのタイプのオブジェクトの格納に適切なように整列された
-カーネル仮想アドレスを、
-または要求が満足できずかつ
+カーネル仮想アドレスを返すか、
+または要求が満足できず (すなわち
 .Dv M_NOWAIT
-がセットされている場合に
+がセットされていることを意味します) に
 .Dv NULL
 を返します。
 .Dv M_ASLEEP
 がセットされていて
-.Fn malloc
+関数
 が
 .Dv NULL
 を返す場合、副作用として
 .Fn asleep
 が呼び出されます。
+.Sh 実装に関する注
+1 ページまでの要求に対し、
+メモリアロケータは、2 の累乗の大きさの量を割り当てます。
+より大きな要求に対しては、1 個以上のページが割り当てられます。
+この動作に依存してはなりませんが、
+この情報がメモリ使用効率の最適化に有用かもしれません。
 .Sh 関連項目
 .Xr vmstat 8
 .Sh 診断
