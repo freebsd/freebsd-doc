@@ -4,7 +4,7 @@
 # Build the FreeBSD Developers' Handbook.
 #
 
-MAINTAINER=murray@FreeBSD.org
+MAINTAINER=doc@FreeBSD.org
 
 DOC?= book
 
