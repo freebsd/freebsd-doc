@@ -1,5 +1,5 @@
 #
-# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.11 2000/04/29 07:46:15 kuriyama Exp $
+# $FreeBSD: doc/share/mk/doc.html.mk,v 1.1 2000/06/26 09:04:24 nik Exp $
 #
 # This include file <doc.html.mk> handles building and installing of
 # HTML documentation in the FreeBSD Documentation Project.
@@ -186,7 +186,7 @@ ${DOC}.${_cf}.${_curcompress}: ${DOC}.${_cf} _PROG_COMPRESS_${_curcompress}
 #
 
 .if !defined(INSTALL_ONLY_COMPRESSED) || empty(INSTALL_ONLY_COMPRESSED)
-_curinst+= ${FORMATS:S/^/install-/g}
+_curinst+= ${FORMATS:S/html-split//:S/^/install-/g}
 .endif
 
 realinstall: ${_curinst}
