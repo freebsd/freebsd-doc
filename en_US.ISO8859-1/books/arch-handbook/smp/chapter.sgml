@@ -257,11 +257,6 @@
     <sect2>
       <title>Kernel Preemption and Critical Sections</title>
 
-      <note><para>Please note that full kernel preemption as described below
-	is not currently implemented in the CVS tree.  An implementation
-	similar to that described below has been implemented before in a
-	prototype tree.</para></note>
-
       <sect3>
 	<title>Kernel Preemption in a Nutshell</title>
 
@@ -384,8 +379,8 @@
 	<para>Turning on full kernel preemption for all kernel threads
 	  has value as a debugging aid since it exposes more race
 	  conditions.  It is especially useful on UP systems were many
-	  races are hard to simulate otherwise.  Thus, there will be a
-	  kernel option to enable preemption for all kernel threads
+	  races are hard to simulate otherwise.  Thus, there is a
+	  kernel option <literal>FULL_PREEMPTION</literal> to enable preemption for all kernel threads
 	  that can be used for debugging purposes.</para>
       </sect3>
     </sect2>
@@ -396,13 +391,13 @@
       <para>Simply put, a thread migrates when it moves from one CPU
 	to another.  In a non-preemptive kernel this can only happen
 	at well-defined points such as when calling
-	<function>tsleep</function> or returning to userland.
+	<function>msleep</function> or returning to userland.
 	However, in the preemptive kernel, an interrupt can force a
 	preemption and possible migration at any time.  This can have
 	negative affects on per-CPU data since with the exception of
 	<varname>curthread</varname> and <varname>curpcb</varname> the
 	data can change whenever you migrate.  Since you can
-	potentially migrate at any time this renders per-CPU data
+	potentially migrate at any time this renders unprotected per-CPU data access
 	rather useless. Thus it is desirable to be able to disable
 	migration for sections of code that need per-CPU data to be
 	stable.</para>
@@ -415,42 +410,26 @@
 	provided to allow the current thread to indicate that if it
 	preempted it should not migrate to another CPU.</para>
 
-      <note>
-	<para>Need to describe the thread pinning API that Jeff
-	  implemented here instead.</para></note>
+      <para>This API is known as thread pinning and is provided by the scheduler.  The API consists of two functions: <function>sched_pin</function> and <function>sched_unpin</function>.  These functions manage a per-thread nesting count <varname>td_pinned</varname>.  A thread is pinned
 
-      <para>One possible implementation is to use a per-thread nesting
-	count <varname>td_pinnest</varname> along with a
-	<varname>td_pincpu</varname> which is updated to the current
-	CPU on each context switch.  Each CPU has its own run queue
-	that holds threads pinned to that CPU.  A thread is pinned
 	when its nesting count is greater than zero and a thread
-	starts off unpinned with a nesting count of zero.  When a
-	thread is put on a runqueue, we check to see if it is pinned.
-	If so, we put it on the per-CPU runqueue, otherwise we put it
-	on the global runqueue.  When
-	<function>choosethread</function> is called to retrieve the
-	next thread, it could either always prefer bound threads to
-	unbound threads or use some sort of bias when comparing
-	priorities.  If the nesting count is only ever written to by
+	starts off unpinned with a nesting count of zero.  Each
+	scheduler implementation is required to ensure that pinned
+	threads are only executed on the CPU that they were executing
+	on when the <function>sched_pin</function> was first called.
+	Since the nesting count is only written to by
 	the thread itself and is only read by other threads when the
-	owning thread is not executing but while holding the
-	<varname>sched_lock</varname>, then
-	<varname>td_pinnest</varname> will not need any other locks.
-	The <function>migrate_disable</function> function would
-	increment the nesting count and
-	<function>migrate_enable</function> would decrement the
+	pinned thread is not executing but while
+	<varname>sched_lock</varname> is held, then
+	<varname>td_pinned</varname> does not need any locking.
+	The <function>sched_pin</function> function
+	increments the nesting count and
+	<function>sched_unpin</function> decrements the
 	nesting count.  Due to the locking requirements specified
 	above, they will only operate on the current thread and thus
 	would not need to handle the case of making a thread
 	migrateable that currently resides on a per-CPU run
 	queue.</para>
-
-      <para>It is still debatable if this API is needed or if the
-	critical section API is sufficient by itself.  Many of the
-	places that need to prevent migration also need to prevent
-	preemption as well, and in those places a critical section
-	must be used regardless.</para>
     </sect2>
 
     <sect2>
