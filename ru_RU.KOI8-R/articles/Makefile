@@ -1,8 +1,11 @@
 #
-# $FreeBSD$
-# $FreeBSDru: frdp/doc/ru_RU.KOI8-R/articles/Makefile,v 1.7 2001/07/25 10:26:26 phantom Exp $
+# The FreeBSD Russian Documentation Project
 #
-# Original revision: 1.9
+# $FreeBSD$
+# $FreeBSDru: frdp/doc/ru_RU.KOI8-R/articles/Makefile,v 1.27 2004/07/10 10:06:24 marck Exp $
+#
+# Original revision: 1.42
+#
 
 SUBDIR =
 SUBDIR+= 5-roadmap
@@ -26,14 +29,17 @@ SUBDIR+= freebsd-questions
 SUBDIR+= hubs
 SUBDIR+= ipsec-must
 SUBDIR+= java-tomcat
+#SUBDIR+= laptop
+#SUBDIR+= mailing-list-faq
 SUBDIR+= mh
 #SUBDIR+= multi-os
 SUBDIR+= new-users
 SUBDIR+= pam
+SUBDIR+= portbuild
 SUBDIR+= pr-guidelines
 SUBDIR+= problem-reports
-#SUBDIR+= programming-tools
 SUBDIR+= pxe
+#SUBDIR+= relaydelay
 SUBDIR+= releng
 #SUBDIR+= releng-packages
 #SUBDIR+= serial-uart
