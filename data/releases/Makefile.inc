@@ -1,0 +1,2 @@
+WEBBASE=	/data/releases
+
