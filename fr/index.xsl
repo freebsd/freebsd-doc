@@ -1,8 +1,8 @@
-<!-- $FreeBSD: www/fr/index.xsl,v 1.1 2002/11/17 16:02:47 stephane Exp $ -->
+<!-- $FreeBSD: www/fr/index.xsl,v 1.2 2003/01/26 13:59:03 stephane Exp $ -->
 
 <!-- 
    The FreeBSD French Documentation Project
-   Original revision: 1.47
+   Original revision: 1.56
    
    Version francaise : Stephane Legrand <stephane@freebsd-fr.org>
 -->
@@ -13,7 +13,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/fr/index.xsl,v 1.1 2002/11/17 16:02:47 stephane Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/fr/index.xsl,v 1.2 2003/01/26 13:59:03 stephane Exp $'"/>
   <xsl:variable name="title" select="'Le Projet FreeBSD'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -34,13 +34,13 @@
       <body bgcolor="#FFFFFF" text="#000000" link="#0000FF" vlink="#840084"
 	    alink="#0000FF">
 
-	<table border="0" cellspacing="0" cellpadding="0">
+	<table border="0" cellspacing="0" cellpadding="0" width="100%">
 	  <tr>
 	    <td><a href="http://www.FreeBSD.org/index.html">
 		<img src="gifs/freebsd_1.gif" height="94" width="306"
 		     alt="FreeBSD : Le Pouvoir de Servir" border="0"/></a></td>
 
-	    <td align="right" valign="bottom" width="300">
+	    <td align="right" valign="bottom">
 	      <form action="http://www.FreeBSD.org/cgi/mirror.cgi"
 		    method="get">
 
@@ -56,10 +56,10 @@
 		        support.sgml.  -->
         <option value="http://www2.at.FreeBSD.org/">Autriche IPv6</option>
         <option value="http://www.dk.FreeBSD.org/">Danemark IPv6</option>
-        <option value="http://bsd.ipv6.uni-erlangen.de">Allemagne IPv6</option>
-		  <option value="http://www.jp.FreeBSD.org/www.FreeBSD.org/">6Bone (IPv6)</option>
+        <option value="http://www2.de.FreeBSD.org">Allemagne IPv6</option>
+		  <option value="http://www.jp.FreeBSD.org/www.FreeBSD.org/">Japon IPv6 (6Bone)</option>
         <option value="http://www2.no.FreeBSD.org/">Norv&#232;ge IPv6</option>
-        <option value="http://www.ar.FreeBSD.org/">Arm&#233;nie</option>
+        <option value="http://www.ar.FreeBSD.org/">Argentine</option>
 		  <option value="http://www.au.FreeBSD.org/">Australie/1</option>
         <option value="http://www2.au.FreeBSD.org/">Australie/2</option>
 		  <option value="http://www3.au.FreeBSD.org/">Australie/3</option>
@@ -117,7 +117,6 @@
 		  <option value="http://www.pt.FreeBSD.org/">Portugal/1</option>
         -->
 		  <option value="http://www2.pt.FreeBSD.org/">Portugal/2</option>
-        <option value="http://www3.pt.FreeBSD.org/">Portugal/3</option>
         <option value="http://www4.pt.FreeBSD.org/">Portugal/4</option>
 		  <option value="http://www.ro.FreeBSD.org/">Roumanie</option>
         <option value="http://www2.ro.FreeBSD.org/">Roumanie/2</option>
@@ -128,8 +127,7 @@
 		  <option value="http://www3.ru.FreeBSD.org/">Russie/3</option>
 		  <option value="http://www4.ru.FreeBSD.org/">Russie/4</option>
         <option value="http://www.sm.FreeBSD.org/">San Marin</option>
-		  <option value="http://www.sg.FreeBSD.org/">Singapoure/1</option>
-        <option value="http://www2.sg.FreeBSD.org/">Singapoure/2</option>
+        <option value="http://www2.sg.FreeBSD.org/">Singapoure</option>
 		  <option value="http://www.sk.FreeBSD.org/">R&#233;publique Slovaque/1</option>
         <option value="http://www2.sk.FreeBSD.org/">R&#233;publique Slovaque/2</option>
 		  <option value="http://www.si.FreeBSD.org/">Slov&#233;nie/1</option>
@@ -168,9 +166,10 @@
 		<br/>
 
 		<font color="#990000"><b>Langue : </b></font>
-		<a href="ja/">Japonais</a>,
+      <a href="it/index.html">Italien</a>,
+		<a href="ja/index.html">Japonais</a>,
+      <a href="ru/index.html">Russe</a>,
 		<a href="es/index.html">Espagnol</a>,
-		<a href="ru/index.html">Russe</a>,
 		<a href="support.html#web">Autres</a>
 	      </form>
 	    </td>
@@ -404,7 +403,7 @@
 			        &#183; <a href="{$base}/doc/en_US.ISO8859-1/books/handbook/install.html">Guide d'installation</a><br/>
 			        &#183; <a href="{$u.rel.notes}">Notes</a><br/>
 			        &#183; <a href="{$u.rel.hardware}">Compatibilit&#233; mat&#233;riel</a><br/>
-			        &#183; <a href="{$u.rel.errata}">Errata</a>
+			        &#183; <a href="{$u.rel.errata}">Errata</a><br/>
                  &#183; <a href="{$u.rel.early}">Guide pour les premiers utilisateurs</a></small></p>
            
                <p><font size="+1" color="#990000"><b>Version de production :
@@ -466,6 +465,30 @@
 				</a><br/>
 			      </xsl:for-each>
 			      <a href="news/press.html">Plus...</a>
+			    </font>
+			  </p>
+           
+           <p><font size="+1" color="#990000"><b>Avis de s&#233;curit&#233;</b></font><br/>
+
+			    <font size="-1">
+			      Derni&#232;re mise &#224; jour :
+			      <xsl:value-of
+				select="document('security/advisories.xml')/descendant::month[position() = 1]/name"/>
+			      <xsl:text> </xsl:text>
+			      <xsl:value-of
+				select="document('security/advisories.xml')/descendant::day[position() = 1]/name"/>
+			      <xsl:text>, </xsl:text>
+			      <xsl:value-of
+				select="document('security/advisories.xml')/descendant::year[position() = 1]/name"/>
+			      <br/>
+			      <!-- Pull in the 10 most recent security advisories -->
+			      <xsl:for-each select="document('security/advisories.xml')/descendant::advisory[position() &lt; 10]">
+				&#183; <a>
+				  <xsl:attribute name="href">ftp://ftp.freebsd.org/pub/FreeBSD/CERT/advisories/<xsl:value-of select="name"/>.asc</xsl:attribute>
+				  <xsl:value-of select="name"/>
+				</a><br/>
+			      </xsl:for-each>
+			      <a href="security/">Plus...</a>
 			    </font>
 			  </p>
 			</td>
