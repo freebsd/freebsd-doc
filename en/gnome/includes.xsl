@@ -23,10 +23,4 @@
     <xsl:value-of select="ancestor::day/name"/>:<xsl:value-of select="count(preceding-sibling::event)"/>
   </xsl:template>
 
-  <!-- Generate a unique anchor for this story -->
-  <xsl:template name="generate-story-anchor">
-    <xsl:value-of select="ancestor::year/name"/>
-    <xsl:value-of select="ancestor::month/name"/>:<xsl:text/>
-    <xsl:value-of select="count(following-sibling::story)"/>
-  </xsl:template>
 </xsl:stylesheet>
