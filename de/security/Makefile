@@ -1,6 +1,6 @@
-# $FreeBSD: www/de/security/Makefile,v 1.2 2004/01/11 00:32:03 mheinen Exp $
-# $FreeBSDde: de-www/security/Makefile,v 1.3 2004/01/25 03:50:13 brueffer Exp $
-# basiert auf: 1.11
+# $FreeBSD$
+# $FreeBSDde: de-www/security/Makefile,v 1.4 2004/05/16 17:44:55 mheinen Exp $
+# basiert auf: 1.12
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -9,7 +9,7 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS=
+DOCS=	charter.sgml
 DOCS+=	security.sgml
 
 INDEXLINK= security.html
