@@ -1,4 +1,4 @@
-<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.49 2001/08/14 05:22:57 dd Exp $ -->
+<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.50 2001/08/27 04:01:40 bmah Exp $ -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
 <!ENTITY % output.html		"IGNORE">
@@ -343,6 +343,9 @@
 
       (define %section-autolabel%
         #t)
+
+      (define %label-preface-sections%
+        #f)
 
       (define %may-format-variablelist-as-table%
         #f)
