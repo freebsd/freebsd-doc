@@ -1,6 +1,6 @@
 # ACPI project page
 #
-# $FreeBSD$
+# $FreeBSD: www/en/projects/acpi/Makefile,v 1.1 2004/04/18 20:34:26 marks Exp $
 
 MAINTAINER=	marks
 
@@ -12,6 +12,7 @@ MAINTAINER=	marks
 .endif
 
 DOCS=	index.sgml
+DOCS+=	completed.sgml
 DATA=	style.css
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
