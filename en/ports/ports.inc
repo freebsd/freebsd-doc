@@ -1,4 +1,4 @@
-<!-- $Id: ports.inc,v 1.26 1999-01-08 12:34:47 asami Exp $ -->
+<!-- $Id: ports.inc,v 1.27 1999-01-11 07:22:55 asami Exp $ -->
 <p>The FreeBSD Ports and Packages Collection offers a simple way for
 users and administrators to install applications.  Each ``port'' listed here
 contains any patches necessary to make the original application source
@@ -60,7 +60,7 @@ to 3.0-current upgrade kit</a>
 <dd>For users of 3.0-release or 3.0-current after 3.0-release
 </dl>
 
-These
+<p>These
 are FreeBSD packages; please use <strong>pkg_add</strong> to install them.  That
 should enable you to use all the ports listed here.  Note that it will
 only change just enough files to enable ports/packages to be used; for
