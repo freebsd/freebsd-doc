@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp 
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.138 2004-10-24 11:29:51 hrs Exp $
+# $Id: man.cgi,v 1.139 2004-11-07 19:12:53 hrs Exp $
 
 #use Data::Dumper;
 #use Carp;
@@ -148,10 +148,10 @@ $manPathDefault = 'FreeBSD 5.2.1-RELEASE and Ports';
 
 %manPath = 
     (
-     'FreeBSD 5.2.1-RELEASE and Ports',  "$manLocalDir/FreeBSD-5.2-RELEASE/man:$manLocalDir/FreeBSD-5.2-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-5.1-RELEASE",
+     'FreeBSD 5.3-RELEASE and Ports',  "$manLocalDir/FreeBSD-5.3-RELEASE/man:$manLocalDir/FreeBSD-5.3-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-5.3-RELEASE",
 
      'FreeBSD 6.0-current',     "$manLocalDir/FreeBSD-6-current",
-     'FreeBSD 5.2-stable',   "$manLocalDir/FreeBSD-5.2-stable",
+     'FreeBSD 5.3-stable',   "$manLocalDir/FreeBSD-5.3-stable",
      'FreeBSD 4.10-stable',   "$manLocalDir/FreeBSD-4.10-stable",
 
      'FreeBSD 5.3-RELEASE',   "$manLocalDir/FreeBSD-5.3-RELEASE/man:$manLocalDir/FreeBSD-5.3-RELEASE/openssl/man",
@@ -194,6 +194,7 @@ $manPathDefault = 'FreeBSD 5.2.1-RELEASE and Ports';
      'FreeBSD 1.1-RELEASE',   "$manLocalDir/FreeBSD-1.1-RELEASE",
      'FreeBSD 1.0-RELEASE',   "$manLocalDir/FreeBSD-1.0-RELEASE",
 
+     'FreeBSD Ports 5.3-RELEASE', "$manLocalDir/FreeBSD-ports-5.3-RELEASE",
      'FreeBSD Ports 5.1-RELEASE', "$manLocalDir/FreeBSD-ports-5.1-RELEASE",
      'FreeBSD Ports 5.0-RELEASE', "$manLocalDir/FreeBSD-ports-5.0-RELEASE",
      'FreeBSD Ports 4.7-RELEASE', "$manLocalDir/FreeBSD-ports-4.7-RELEASE",
@@ -213,6 +214,8 @@ $manPathDefault = 'FreeBSD 5.2.1-RELEASE and Ports';
      'OpenBSD 3.2',           "$manLocalDir/OpenBSD-3.2",
      'OpenBSD 3.3',           "$manLocalDir/OpenBSD-3.3",
      'OpenBSD 3.4',           "$manLocalDir/OpenBSD-3.4/share/man:$manLocalDir/OpenBSD-3.4/X11R6/man",
+     'OpenBSD 3.5',           "$manLocalDir/OpenBSD-3.5/share/man:$manLocalDir/OpenBSD-3.5/X11R6/man",
+     'OpenBSD 364',           "$manLocalDir/OpenBSD-3.6/share/man:$manLocalDir/OpenBSD-3.6/X11R6/man",
 
     #'NetBSD 0.9',            "$manLocalDir/NetBSD-0.9",
      'NetBSD 1.0',            "$manLocalDir/NetBSD-1.0",
@@ -233,6 +236,7 @@ $manPathDefault = 'FreeBSD 5.2.1-RELEASE and Ports';
      'NetBSD 1.5.3',          "$manLocalDir/NetBSD-1.5.3",
      'NetBSD 1.6',            "$manLocalDir/NetBSD-1.6",
      'NetBSD 1.6.1',          "$manLocalDir/NetBSD-1.6.1",
+     'NetBSD 1.6.2',          "$manLocalDir/NetBSD-1.6.2",
 
      '2.8 BSD',             "$manLocalDir/2.8BSD",
      '2.9.1 BSD',             "$manLocalDir/2.9.1BSD",
@@ -330,9 +334,9 @@ while (($key,$val) = each %manPath) {
 # keywords must be in lower cases.
 %manPathAliases = 
     (
-     'freebsd', 'FreeBSD 5.2.1-RELEASE',
+     'freebsd', 'FreeBSD 5.3-RELEASE',
      'freebsd-stable', 'FreeBSD 4.10-stable',
-     'freebsd-stable5', 'FreeBSD 5.2-stable',
+     'freebsd-stable5', 'FreeBSD 5.3-stable',
      'freebsd-current', 'FreeBSD 6-current',
      'slackware', 'Linux Slackware 3.1',
      'linux-de', 'deutsch - Linux/GNU',
@@ -342,8 +346,8 @@ while (($key,$val) = each %manPath) {
      'darwin', 'Darwin 7.0.1 PPC',
      'macosx', 'Darwin 7.0.1 PPC',
 
-     'netbsd', 'NetBSD 1.6.1',
-     'openbsd', 'OpenBSD 3.4',
+     'netbsd', 'NetBSD 1.6.2',
+     'openbsd', 'OpenBSD 3.6',
      'v7', 'Unix Seventh Edition', 
      'v7man', 'Unix Seventh Edition', 
      'x11', 'X11R6.7.0',
@@ -354,8 +358,8 @@ while (($key,$val) = each %manPath) {
      'sunos5', 'SunOS 5.9',
      'sunos4', 'SunOS 4.1.3',
      'sunos', 'SunOS 4.1.3',
-     'freebsd ports', 'FreeBSD Ports 5.1-RELEASE',
-     'ports', 'FreeBSD Ports 5.1-RELEASE',
+     'freebsd ports', 'FreeBSD Ports 5.3-RELEASE',
+     'ports', 'FreeBSD Ports 5.3-RELEASE',
      'plan9', 'Plan 9',
      'osf1', 'OSF1 V5.1/alpha',
      'true64', 'OSF1 V5.1/alpha',
@@ -1025,7 +1029,7 @@ ETX
 }
 
 sub copyright {
-    $id = '$Id: man.cgi,v 1.138 2004-10-24 11:29:51 hrs Exp $';
+    $id = '$Id: man.cgi,v 1.139 2004-11-07 19:12:53 hrs Exp $';
 
     return qq{\
 <PRE>
