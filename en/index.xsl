@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/index.xsl,v 1.105 2004/06/27 19:18:00 simon Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.106 2004/08/30 18:33:11 ceri Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   
@@ -6,7 +6,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.105 2004/06/27 19:18:00 simon Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.106 2004/08/30 18:33:11 ceri Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <!-- these params should be externally bound. The values
@@ -135,7 +135,8 @@
 	      <h2><font color="#990000">What is FreeBSD?</font></h2>
 	
 	      <p>FreeBSD is an advanced operating system for
-		x86 compatible, AMD64, Alpha, IA-64, PC-98 and UltraSPARC&#174; architectures.
+		x86 compatible, AMD64 and Intel EM64T, Alpha, IA-64, PC-98
+		and UltraSPARC&#174; architectures.
 		It is derived from BSD, the version of <xsl:value-of select="$unix"/>
 	        developed at 
 		the University of California, Berkeley.
