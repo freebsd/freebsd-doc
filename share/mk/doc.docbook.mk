@@ -90,6 +90,9 @@
 #                       a book.  This option may be an order of magnitude more
 #                       CPU intensive than the default build.
 #
+#       RLE             Use Run-Length Encoding for EPS files, this will
+#                       result in signficiantly smaller PostScript files, 
+#                       but may take longer for a printer to process.
 
 #
 # Documents should use the += format to access these.
@@ -168,6 +171,9 @@ PRINTOPTS+=    -V minimal-section-labels
 .endif
 .if defined(TRACE)
 TEXCMDS+=	\tracingstats=${TRACE}
+.endif
+.if defined(RLE)
+PNMTOPSFLAGS+=	-rle
 .endif
 
 PERL?=		/usr/bin/perl
