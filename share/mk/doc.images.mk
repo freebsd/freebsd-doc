@@ -1,5 +1,5 @@
 #
-# $FreeBSD: doc/share/mk/doc.images.mk,v 1.7 2001/02/20 19:08:58 nik Exp $
+# $FreeBSD: doc/share/mk/doc.images.mk,v 1.8 2001/05/09 19:31:47 nik Exp $
 #
 # This include file <doc.images.mk> handles image processing.
 #
@@ -53,13 +53,25 @@ IMAGES_GEN_PDF=${IMAGES:M*.eps:S/.eps$/.pdf/}
 
 CLEANFILES+= ${IMAGES_GEN_PNG} ${IMAGES_GEN_EPS} ${IMAGES_GEN_PDF}
 
-IMAGES_PNG=${IMAGES:M*.png} ${IMAGES_GEN_PNG}
+IMAGES_PNG=${IMAGES:M*.png} ${IMAGES_GEN_PNG} ${IMAGES:M*.scr:S/.scr$/.png/}
 IMAGES_EPS=${IMAGES:M*.eps} ${IMAGES_GEN_EPS}
+
+# The default resolution eps2png (82) assumes a 640x480 monitor, and is too
+# low for the typical monitor in use today. The resolution of 100 looks
+# much better on these monitors without making the image too large for
+# a 640x480 monitor.
+EPS2PNG_RES?= 100
 
 # We only need to list ${IMAGES_GEN_PDF} here.  If all the source files are
 # EPS then they'll be in this variable; if any of the source files are PNG
 # then we can use them directly, and don't need to list them.
 IMAGES_PDF=${IMAGES_GEN_PDF}
+
+# Use suffix rules to convert .scr files to .png files
+.SUFFIXES:	.scr .png
+
+.scr.png:
+	scr2png < ${.IMPSRC} > ${.TARGET}
 
 # We can't use suffix rules to generate the rules to convert EPS to PNG and
 # PNG to EPS.  This is because a .png file can depend on a .eps file, and
@@ -68,7 +80,7 @@ IMAGES_PDF=${IMAGES_GEN_PDF}
 
 .for _curimage in ${IMAGES_GEN_PNG}
 ${_curimage}: ${_curimage:S/.png$/.eps/}
-	eps2png -output ${.TARGET} ${.ALLSRC}
+	eps2png -res ${EPS2PNG_RES} -output ${.TARGET} ${.ALLSRC}
 .endfor
 
 .for _curimage in ${IMAGES_GEN_EPS}
