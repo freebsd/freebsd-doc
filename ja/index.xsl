@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
 
-<!-- $FreeBSD$ -->
+<!-- $FreeBSD: www/ja/index.xsl,v 1.2 2001/08/08 03:55:55 kuriyama Exp $ -->
 <!-- Original revision: 1.3 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -9,7 +9,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.3 2001/08/07 21:30:28 jim Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/ja/index.xsl,v 1.2 2001/08/08 03:55:55 kuriyama Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <xsl:output type="html" encoding="EUC-JP"/>
@@ -183,7 +183,7 @@
 			      ・<a href="{$base}/support.html#cvs">CVS リポジトリ</a><br/>
 			    </small></p>
 	      
-			  <p><font size="+1" color="#990000"><b>ベンダVendors</b></font>
+			  <p><font size="+1" color="#990000"><b>ベンダ</b></font>
 			    
 			    <small><br/>
 			      ・<a href="{$base}/commercial/software_bycat.html">ソフトウェア</a><br/>
