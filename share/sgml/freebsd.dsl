@@ -121,17 +121,11 @@
           #f)
 
         ; Empty function to quiet warnings
-        (define ($create-refentry-xref-link$ refentrytitle manvolnum)
+        (define ($create-refentry-xref-link$)
           (literal ""))
 
         (element citerefentry
-          (let* ((refentrytitle (select-elements (children (current-node))
-                                                 (normalize "refentrytitle")))
-		 (manvolnum     (select-elements (children (current-node))
-						 (normalize "manvolnum")))
-		 (href          ($create-refentry-xref-link$
-                                                 (data refentrytitle)
-                                                 (data manvolnum))))
+          (let ((href          ($create-refentry-xref-link$)))
             (if %refentry-xref-link%
               (create-link (list (list "HREF" href))
                 (if %refentry-xref-italic%
