@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/internal/Makefile,v 1.20 2000/01/26 21:16:21 wosch Exp $
+# $FreeBSD: www/en/internal/Makefile,v 1.21 2000/03/12 21:44:02 phantom Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -22,7 +22,7 @@ DOCS+=	homepage.sgml
 .PHONY: homepage.inc
 
 homepage.inc: homepage.pl
-	perl homepage.pl > ${.TARGET}
+	${PERL} homepage.pl > ${.TARGET}
 
 homepage.sgml:  homepage.inc
 CLEANFILES+=	homepage.inc
