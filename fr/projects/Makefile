@@ -1,7 +1,7 @@
-# $FreeBSD$
+# $FreeBSD: www/fr/projects/Makefile,v 1.1 2003/12/15 16:04:58 stephane Exp $
 
 # The FreeBSD French Documentation Project
-# Original revision: 1.14
+# Original revision: 1.16
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -11,7 +11,6 @@
 .endif
 
 DOCS=	projects.sgml
-DOCS+=	updater.sgml
 DOCS+=	newbies.sgml
 DOCS+=	libh.sgml
 DOCS+=	cvsweb.sgml
