@@ -67,6 +67,7 @@ MAN2 =	_exit.2\
 	kldsym.2\
 	kldunload.2\
 	kqueue.2\
+	kse.2\
 	ktrace.2\
 	link.2\
 	lio_listio.2\
@@ -191,6 +192,8 @@ MLINKS+=getuid.2 geteuid.2
 MLINKS+=intro.2 errno.2
 MLINKS+=jail.2 jail_attach.2
 MLINKS+=kqueue.2 kevent.2
+MLINKS+=kse.2 kse_create.2 kse.2 kse_exit.2 kse.2 kse_release.2 \
+	kse.2 kse_switchin.2 kse.2 kse_thr_interrupt.2 kse.2 kse_wakeup.2
 MLINKS+=madvise.2 posix_madvise.2
 MLINKS+=mlock.2 munlock.2
 MLINKS+=mlockall.2 munlockall.2
