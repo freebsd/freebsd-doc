@@ -24,6 +24,8 @@
 #
 # ------------------------------------------------------------------------
 
+.PATH: ${.CURDIR}/../../share/sgml/glossary
+
 MAINTAINER=	doc@FreeBSD.org
 
 DOC?= book
@@ -150,11 +152,12 @@ IMAGES_LIB+= callouts/10.png
 # SGML content
 SRCS+= book.sgml
 SRCS+= colophon.sgml
+SRCS+= freebsd-glossary.sgml
 SRCS+= advanced-networking/chapter.sgml
 SRCS+= basics/chapter.sgml
 SRCS+= bibliography/chapter.sgml
-SRCS+= config/chapter.sgml
 SRCS+= boot/chapter.sgml
+SRCS+= config/chapter.sgml
 SRCS+= cutting-edge/chapter.sgml
 SRCS+= desktop/chapter.sgml
 SRCS+= disks/chapter.sgml
@@ -188,7 +191,6 @@ SYMLINKS=	${DESTDIR} index.html handbook.html
 CHAPTERS?= ${SRCS:M*chapter.sgml}
 
 SGMLFLAGS+= ${CHAPTERS:S/\/chapter.sgml//:S/^/-i chap./}
-SGMLFLAGS+= -i chap.freebsd-glossary
 
 # XXX The Handbook build currently overflows some internal, hardcoded 
 # limits in pdftex.  Until we split the Handbook up, build the PDF 
