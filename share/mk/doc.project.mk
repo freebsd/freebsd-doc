@@ -93,6 +93,11 @@ REALPATH?=	/bin/realpath
 SETENV?=	/usr/bin/env
 XSLTPROC?=	${PREFIX}/bin/xsltproc
 TIDY?=		${PREFIX}/bin/tidy
+TEX_CMD?=	${PREFIX}/bin/tex
+LATEX_CMD?=	${PREFIX}/bin/latex
+PDFTEX_CMD?=	${PREFIX}/bin/pdftex
+JADETEX_CMD?=	${TEX_CMD} "&jadetex"
+PDFJADETEX_CMD?=${PDFTEX_CMD} "&pdfjadetex"
 
 # Image processing (contains code used by the doc.<format>.mk files, so must
 # be listed first).
@@ -114,6 +119,9 @@ DOC_LOCAL_MK=	${DOC_PREFIX}/${LANGCODE}/share/mk/doc.local.mk
 .if defined(DOC)
 .if ${DOCFORMAT} == "docbook"
 .include "doc.docbook.mk"
+.endif
+.if ${DOCFORMAT} == "slides"
+.include "doc.slides.mk"
 .endif
 .if ${DOCFORMAT} == "html"
 .include "doc.html.mk"
