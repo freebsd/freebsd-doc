@@ -1,21 +1,24 @@
+#	$Id: Makefile,v 1.2 1996-09-24 18:56:21 jfieber Exp $
+
 PORTINDEX=	./portindex
+INDEX=		ports/INDEX
+
+COOKIE=		index Makefile.gen
 
 .if exists(Makefile.gen)
 .include "Makefile.gen"
 CLEANFILES+=	${DOCS} Makefile.gen
-COOKIE=		Makefile.gen
-.include "../web.mk"
-.else
-foo .DEFAULT: 
-	${MAKE} ${MAKEFLAGS} Makefile.gen
-	${MAKE} ${MAKEFLAGS} ${.IMPSRC}
 .endif
 
 Makefile.gen: index.sgml .NOTMAIN
-	if [ -f Makefile.gen ]; then mv Makefile.gen Makefile.gen.bak; fi
 	echo DOCS= *.sgml > Makefile.gen
+	${MAKE} ${MAKEFLAGS} ${.IMPSRC}
 
-index.sgml: ports/INDEX .NOTMAIN
+index.sgml: ${INDEX} .NOTMAIN
 	rm -f *.sgml
-	${PORTINDEX} ports/INDEX
+	${PORTINDEX} ${INDEX}
 
+index: .NOTMAIN
+	cvs co ${INDEX}
+
+.include "../web.mk"

@@ -1,5 +1,5 @@
 # bsd.web.mk
-# $Id: web.mk,v 1.1.1.1 1996-09-24 17:45:45 jfieber Exp $
+# $Id: web.mk,v 1.2 1996-09-24 18:56:00 jfieber Exp $
 
 #
 # Build and install a web site.
@@ -119,7 +119,7 @@ ORPHANS:=	${ORPHANS:N*.m4}
 #
 # Build most everything
 #
-all: orphans cvsdirs ${GENDOCS} ${DATA} ${LOCAL} ${CGI} _PROGSUBDIR
+all: ${COOKIE} orphans cvsdirs ${GENDOCS} ${DATA} ${LOCAL} ${CGI} _PROGSUBDIR
 
 #
 # Warn about anything in DOCS that has no translation
