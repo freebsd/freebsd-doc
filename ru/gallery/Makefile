@@ -1,46 +1,52 @@
 # $FreeBSD$
 # The FreeBSD Russian Documentation Project
-# $FreeBSDru: frdp/www/ru/gallery/Makefile,v 1.3 2000/11/10 17:04:49 phantom Exp $
-# Original revision: 1.11
+# $FreeBSDru: frdp/www/ru/gallery/Makefile,v 1.5 2001/12/13 21:24:23 phantom Exp $
+# Original revision: 1.15
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
 .endif
-
 .if exists(../Makefile.inc)
 .include "../Makefile.inc"
 .endif
 
-DOCS = gallery.sgml
-DOCS+= cgallery.sgml
-DOCS+= npgallery.sgml 
-DOCS+= pgallery.sgml
+XSLTPROCFLAGS=	--catalogs
+XSLT=	${SETENV} SGML_CATALOG_FILES=${PREFIX}/share/xml/dtd/xhtml/xhtml.soc \
+	${XSLTPROC} ${XSLTPROCOPTS}
+
+DBXML=	../../en/gallery/gallery.xml
 
 INDEXLINK= gallery.html
 
-CLEANFILES+= cgallery.inc npgallery.inc pgallery.inc gallery.inc
+DATA+=	gallery.html cgallery.html npgallery.html pgallery.html
 
-SCRIPTSRCDIR = ${.CURDIR}/../../en/gallery
-GENSCRIPT = $(SCRIPTSRCDIR)/gengallery.pl
-DBFILE = $(SCRIPTSRCDIR)/gallery.db
+CLEANFILES+= ${DATA}
 
-cgallery.html: cgallery.sgml cgallery.inc
-cgallery.inc: $(GENSCRIPT) $(DBFILE)
-	${PERL} $(GENSCRIPT) commercial $(DBFILE) > cgallery.inc
+gallery.html: ${DBXML} gallery.xsl ../includes.xsl
+	${XSLT} ${.CURDIR}/gallery.xsl ${.CURDIR}/${DBXML} > ${.TARGET}
+.if !defined(NO_TIDY)
+	-${TIDY} ${TIDYOPTS} ${.TARGET}
+.endif
 
-npgallery.html: npgallery.sgml npgallery.inc
-npgallery.inc: $(GENSCRIPT) $(DBFILE)
-	${PERL} $(GENSCRIPT) nonprofit $(DBFILE) > npgallery.inc
+cgallery.html: ${DBXML} gallery-entry.xsl
+	${XSLT} --param type \'commercial\' \
+		${.CURDIR}/gallery-entry.xsl ${.CURDIR}/${DBXML} > ${.TARGET}
+.if !defined(NO_TIDY)
+	-${TIDY} ${TIDYOPTS} ${.TARGET}
+.endif
 
-pgallery.html: pgallery.sgml pgallery.inc
-pgallery.inc: $(GENSCRIPT) $(DBFILE)
-	${PERL} $(GENSCRIPT) personal $(DBFILE) > pgallery.inc
+npgallery.html: ${DBXML} gallery-entry.xsl
+	${XSLT} --param type \'nonprofit\' \
+		${.CURDIR}/gallery-entry.xsl ${.CURDIR}/${DBXML} > ${.TARGET}
+.if !defined(NO_TIDY)
+	-${TIDY} ${TIDYOPTS} ${.TARGET}
+.endif
 
-gallery.html: gallery.sgml gallery.inc
-gallery.inc: $(DBFILE) gallery.sgml
-	${PERL} $(SCRIPTSRCDIR)/prune.pl $(DBFILE) /dev/null | \
-	${PERL} -ne 'chomp; m/([-\w]+):\s+(\d+)/ and \
-	          print qq/<!ENTITY num./.lc($$1).qq/ CDATA "$$2">\n/' \
-	> gallery.inc
+pgallery.html: ${DBXML} gallery-entry.xsl
+	${XSLT} --param type \'personal\' \
+		${.CURDIR}/gallery-entry.xsl ${.CURDIR}/${DBXML} > ${.TARGET}
+.if !defined(NO_TIDY)
+	-${TIDY} ${TIDYOPTS} ${.TARGET}
+.endif
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
