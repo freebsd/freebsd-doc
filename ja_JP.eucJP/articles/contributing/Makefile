@@ -1,17 +1,21 @@
+#
 # $FreeBSD$
-# Original revision: 1.4
+#
+# Article: Contributing to FreeBSD
+#
+# Original revision: 1.6
 
 DOC?= article
+WITH_ARTICLE_TOC?= YES
 
 FORMATS?= html
 
 INSTALL_COMPRESSED?=gz
 INSTALL_ONLY_COMPRESSED?=
 
-WITH_ARTICLE_TOC?=YES
+SRCS=	article.sgml
 
-SRCS= article.sgml
-
-DOC_PREFIX?= ${.CURDIR}/../../..
+URL_RELPREFIX?=	../../../..
+DOC_PREFIX?=	${.CURDIR}/../../..
 
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"
