@@ -6,6 +6,7 @@ MAN7 =	ascii.7\
 	groff_mm.7\
 	groff_mmse.7\
 	groff_ms.7\
+	groff_msafer.7\
 	hier.7\
 	hostname.7\
 	intro.7\
@@ -23,6 +24,7 @@ MLINKS=	groff_me.7 me.7
 MLINKS+=groff_mm.7 mm.7
 MLINKS+=groff_mmse.7 mmse.7
 MLINKS+=groff_ms.7 ms.7
+MLINKS+=groff_msafer.7 msafer.7
 MLINKS+=intro.7 miscellaneous.7
 
 .include "bsd.prog.mk"

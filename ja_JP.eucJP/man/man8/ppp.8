@@ -1,4 +1,4 @@
-.\" %Id: ppp.8,v 1.142.2.8 1999/08/09 23:35:07 brian Exp %
+.\" %Id: ppp.8,v 1.142.2.9 1999/08/23 21:59:46 brian Exp %
 .\"
 .\" jpman %Id: ppp.8,v 1.4 1997/06/08 18:41:58 saeki Stab %
 .\" WORD: expect string	受信待ち文字列 (chat.8)
@@ -12,13 +12,9 @@
 .Nd PPP (Point to Point Protocol) (別名 user-ppp)
 .Sh 書式
 .Nm
-.Oo
-.Fl auto |
-.Fl background |
-.Fl ddial |
-.Fl direct |
-.Fl dedicated
-.Oc
+.Op Fl nat
+.Op Fl quiet
+.Op Fl Va mode
 .Op Fl alias
 .Op Ar system Ns
 .No ...
@@ -35,6 +31,120 @@
 ユーザプロセスで
 .Em PPP
 を実現しています。
+.Pp
+.Fl nat
+フラグ (または後方互換性のための
+.Fl alias
+フラグ) は、
+.Dq nat enable yes
+と等価であり、
+.Nm
+のネットワークアドレス変換機能を有効にします。
+これにより
+.Nm
+は、内部 LAN 上の全マシンに対する NAT、
+すなわちマスカレーディングエンジンとして動作します。
+詳細は
+.Xr libalias 3
+を参照してください。
+.Pp
+.Fl quiet
+フラグを指定すると、
+.Nm
+は起動時に静かになり、
+モードとインタフェースを標準出力へ表示しなくなります。
+.Pp
+.Nm
+は次の
+.Va mode
+を理解します:
+.Bl -tag -width XXX -offset XXX
+.It Fl auto
+.Nm
+は tun インタフェースをオープンし、
+これを設定した後バックグラウンドになります。
+出力データが tun インタフェース上で検出されるまでリンクはアップせず、
+出力データが tun インタフェース上で検出されると
+.Nm
+はリンクをアップしようとします。
+.Nm
+がリンクをアップしようとしている間に受信したパケット
+(最初のものを含みます) は、デフォルトで 2 分間キューにとどまります。
+後述の
+.Dq set choked
+コマンドを参照してください。
+.Pp
+.Fl auto
+モードでは、
+コマンドラインには少なくとも 1 つの
+.Dq system
+を指定する必要があり (後述)、
+インタフェース設定時に使用する相手の IP アドレスを指定する
+.Dq set ifaddr
+を、システムプロファイルで実行する必要があります。
+通常、
+.Dq 10.0.0.1/0
+のようなものが適切です。例としては、
+.Pa /usr/share/examples/ppp/ppp.conf.sample
+の
+.Dq pmdemand
+システムを参照してください。
+.It Fl background
+この場合、
+.Nm
+は相手との接続をすぐに確立しようとします。
+成功すると、
+.Nm
+はバックグラウンドになり、親プロセスは終了コード 0 を返します。
+失敗すると、
+.Nm
+は非 0 の結果で終了します。
+.It Fl foreground
+フォアグラウンドモードでは、
+.Nm
+は相手との接続をすぐに確立しようとしますが、デーモンにはなりません。
+リンクはバックグラウンドモードで作成されます。
+.Nm
+の起動を別のプロセスから制御したい場合に有用です。
+.It Fl direct
+これは入力接続を受け付けるために使用します。
+.Nm
+は
+.Dq set device
+行を無視し、リンクにデスクリプタ 0 を使用します。
+.Pp
+コールバックの設定を行うと、ダイヤルバック時に
+.Nm
+は
+.Dq set device
+情報を使用します。
+.It Fl dedicated
+このオプションは、専用線で接続されたマシンのためにデザインされています。
+.Nm
+はデバイスを常にオープンに保ち、設定チャットスクリプトは一切使用しません。
+.It Fl ddial
+.Fl auto
+モードと等価ですが、なんらかの理由でリンクが落ちた場合に
+.Nm
+が再度リンクをアップすることが違います。
+.It Fl interactive
+これは no-op であり、
+前述のフラグがどれも指定されなかった場合の動作を行います。
+.Nm
+はコマンドラインで指定されたセクションをロードし、対話プロンプトを提供します。
+.El
+.Pp
+.Po Pa /etc/ppp/ppp.conf
+に指定される
+.Pc
+設定エントリ、すなわち system を、コマンドラインで 1 つ以上指定可能です。
+起動時に
+.Nm
+は
+.Pa /etc/ppp/ppp.conf
+から
+.Dq default
+システムを読み込み、その後コマンドラインで指定した各 system を読み込みます。
 .Sh 主な特徴
 .Bl -diag
 .It 対話的なユーザインタフェースを提供
@@ -45,10 +155,10 @@
 オプションとして、セキュリティ確保のために
 すべての機能をパスワードで保護することができます。
 .It 手動と自動でのダイヤルをサポート
-対話モードでは、直接モデムと通信できるように
+対話モードでは、直接デバイスと通信できるように
 .Dq term
 コマンドが用意されています。
-モデムがリモートホストと接続されて、
+リモートホストと接続されて、
 .Em PPP
 での通信が始まったら、
 .Nm
@@ -158,13 +268,24 @@ LAN 上の各マシンでの設定を行わずに、
 リンクを流れるパケットを調べるために、
 .Xr tcpdump 1
 を使うことができます。
-.It PPP オーバ TCP をサポート
+.It PPP オーバ TCP および PPP オーバ UDP をサポート
 デバイス名が
-.Em host Ns No : Ns Em port
+.Em host Ns No : Ns Em port Ns
+.Op / Ns Em tcp Ns No | Ns Em udp
 形式で指定された場合、
 .Nm
-は通常のシリアルデバイスを使うのではなく、データ転送のための TCP 
+は通常のシリアルデバイスを使うのではなく、
+データ転送のための TCP または UDP の
 接続を開きます。
+UDP 接続は、
+.Nm
+を強制的に同期モードにします。
+.It PPP オーバ ISDN をサポート
+.Nm
+がオープンすべきリンクとして
+生の B チャネル i4b デバイスを指定すると、
+.Xr isdnd 8
+と対話して ISDN 接続を確立できます。
 .It "IETF ドラフトの Predictor-1 (rfc 1978) と DEFLATE (rfc 1979) 圧縮をサポート
 .Nm
 は VJ 圧縮の他に Predictor-1 と DEFLATE 圧縮もサポートしています。
@@ -181,7 +302,7 @@ VJ 圧縮とは異なり、Predictor-1 と DEFLATE 圧縮はリンクを通る
 .Em すべての
 ネットワークトラフィックをあらかじめ圧縮しておくことで、オーバヘッドを
 最小にします。
-.It Microsoft の IPCP 拡張をサポート
+.It Microsoft の IPCP 拡張をサポート (rfc 1877)
 Microsoft の
 .Em PPP
 スタックを使用するクライアント (つまり Win95, WinNT) との間で
@@ -221,119 +342,6 @@ ppp の設定ファイルの読み込みを行います。
 .Sq ID0
 を参照してください。
 .Sh 始める前に
-次のコマンドラインスイッチを
-.Nm ppp
-は理解します:
-.Bl -tag -width XXX -offset XXX
-.It Fl auto
-.Nm
-は tun インタフェースをオープンし、これを設定した後バックグラウンドになります。
-出力データが tun インタフェース上で検出されるまでリンクはアップせず、
-出力データが tun インタフェース上で検出されると
-.Nm
-はリンクをアップしようとします。
-.Nm
-がリンクをアップしようとしている間に受信したパケット
-(最初のものを含みます) は、デフォルトで 2 分間キューにとどまります。
-後述の
-.Dq set choked
-コマンドを参照してください。
-.Pp
-コマンドラインには少なくとも 1 つの
-.Dq system
-を指定する必要があり (後述)、
-インタフェース設定時に使用する相手の IP アドレスを指定する
-.Dq set ifaddr
-を、システムプロファイルで実行する必要があります。
-通常、
-.Dq 10.0.0.1/0
-のようなものが適切です。例としては、
-.Pa /usr/share/examples/ppp/ppp.conf.sample
-の
-.Dq pmdemand
-システムを参照してください。
-.It Fl background
-この場合、
-.Nm
-は相手との接続をすぐに確立しようとします。
-成功すると、
-.Nm
-はバックグラウンドになり、親プロセスは終了コード 0 を返します。
-失敗すると、
-.Nm
-は非 0 の結果で終了します。
-.It Fl direct
-これは入力接続を受け付けるために使用します。
-.Nm
-は
-.Dq set device
-行を無視し、リンクにデスクリプタ 0 を使用します。
-.Pp
-コールバックの設定を行うと、ダイヤルバック時に
-.Nm
-は
-.Dq set device
-情報を使用します。
-.It Fl dedicated
-このオプションは、専用線で接続されたマシンのためにデザインされています。
-.Nm
-はデバイスを常にオープンに保ち、設定チャットスクリプトは一切使用しません。
-.It Fl ddial
-.Fl auto
-モードと等価ですが、なんらかの理由でリンクが落ちた場合に
-.Nm
-が再度リンクをアップすることが違います。
-.It Fl interactive
-これは no-op であり、前述のフラグがどれも指定されなかった場合の動作を行います。
-.Nm
-はコマンドラインで指定されたセクションをロードし、対話プロンプトを提供します。
-.It Fl alias
-このフラグは
-.Nm
-のモードを制御しません。
-.Dq enable alias yes
-と等価です。さらに、
-.Fl auto
-もまた指定されている場合、暗黙的に
-.Dq enable iface-alias
-が実行されます。
-詳細については後述しているものを参照してください。
-.Pp
-IP エイリアシングを有効にすると、
-.Nm
-は、内部 LAN 上の全マシンに対する
-NAT もしくはマスカレーディングエンジンとして動作します。詳細は
-.Xr libalias 3
-を参照してください。
-.El
-.Pp
-さらに、1 つ以上の設定エントリ
-.Pq Pa /etc/ppp/ppp.conf で指定されます
-をコマンドライン上に指定可能です。
-起動時に
-.Nm
-は
-.Pa /etc/ppp/ppp.conf
-から
-.Dq default
-システムを読み込み、その後コマンドラインで指定した各 system を読み込みます。
-.Pp
-.Fl auto ,
-.Fl background ,
-.Fl ddial ,
-.Fl direct ,
-.Fl dedicated ,
-.Fl interactive
-のいずれか 1 つのスイッチのみ指定可能です。
-.Nm
-の
-.Sq モード
-は、
-.Dq set mode
-コマンド (後述) を使用することで後で変更可能です。
-.Pp
-以降、対話モードの使用方法について説明します。
-.Pp
 最初に
 .Nm
 を実行する時には、いくつかの初期設定を整える必要があります。
@@ -501,7 +509,9 @@ ppp ON awfulhak> set speed 38400
 (トラフィックが 12.5% 増加します)、
 .Dv PPP
 がオープンされると常に無効化
-.Pq set to Dq none
+.Po Dq none
+に設定
+.Pc
 されます。
 しかし、ISP (インターネットサービスプロバイダ) によっては、
 特定のパリティ設定を接続時 (
@@ -512,9 +522,9 @@ ppp ON awfulhak> set speed 38400
 ppp ON awfulhak> set parity even
 .Ed
 .Pp
-ここで、現在のモデム設定がどのようになっているか見られます:
+ここで、現在のデバイス設定がどのようになっているか見られます:
 .Bd -literal -offset indent
-ppp ON awfulhak> show modem
+ppp ON awfulhak> show physical
 Name: deflink
  State:           closed
  Device:          N/A
@@ -533,7 +543,7 @@ Overall 0 bytes/sec
 ppp ON awfulhak> 
 .Ed
 .Pp
-ここでは、直接モデムと通信するために term コマンドを使用可能です:
+ここでは、直接デバイスと通信するために term コマンドを使用可能です:
 .Bd -literal -offset indent
 ppp ON awfulhak> term
 at
@@ -614,7 +624,7 @@ ppp ON awfulhak> set log local phase lcp ipcp
 リンクが確立したら、show コマンドを使用することで、
 どのように事態が進行しているのかが分ります:
 .Bd -literal -offset indent
-PPP ON awfulhak> show modem
+PPP ON awfulhak> show physical
 * モデム関連の情報がここに表示されます *
 PPP ON awfulhak> show ccp
 * CCP (圧縮) 関連の情報がここに表示されます *
@@ -918,13 +928,13 @@ tcp (127.0.0.1:1028) *
 に戻るのは、接続が成功裏に確立した後だけです。
 .Ar inc
 のデフォルト値は 0 です。
-.It Ar maxinc
+.It Ar max
 は、
 .Nm
 が
 .Ar secs
 を増加させる最大回数です。
-.Ar maxinc
+.Ar max
 のデフォルト値は 10 です。
 .It Ar next
 は電話番号リストの中の次の番号をダイヤルする前に待つ秒数です。(
@@ -1255,14 +1265,14 @@ CBCP が使用される場合、
 この値は、
 .Nm
 で後続する CBCP フェーズで使用します。
-.Sh PPP オーバ TCP (別名: トンネリング)
+.Sh PPP オーバ TCP と PPP オーバ UDP (別名: トンネリング)
 シリアルリンク上以外の
 .Nm
 の使用方法として、
 device にホストとポートを指定することにより、
 TCP 接続を使用することが可能です:
 .Pp
-.Dl set device ui-gate:6669
+.Dl set device ui-gate:6669/tcp
 .Pp
 シリアルデバイスをオープンする代りに、
 .Nm
@@ -1330,7 +1340,7 @@ awfulhak (起動側) の
 .Bd -literal -offset indent
 ui-gate:
  set escape 0xff
- set device ui-gate:ppp-in
+ set device ui-gate:ppp-in/tcp
  set dial
  set timeout 30
  set log Phase Chat Connect hdlc LCP IPCP CCP tun
@@ -1361,6 +1371,7 @@ TCP 接続経由でそれぞれ作成されます。
 また 2 つのゲートウェイ間では ppp トラフィックは
 概念的に TCP ストリーム中でカプセル化されます
 (パケットがパケットに対応するわけではありません)。
+.Pp
 この機構の大きな欠点は、同時に 2 つの「配送保証」機構が存在することです -
 この 2 つとは、下位レベルの TCP ストリームと
 .Em PPP
@@ -1368,10 +1379,20 @@ TCP 接続経由でそれぞれ作成されます。
 パケット喪失が起ると、両者はそれぞれの方法で喪失した
 パケットを再送しようと
 するでしょう。
-.Sh パケットエイリアシング
-.Fl alias
+.Pp
+このオーバヘッドを避けるために、
+トランスポートとして TCP の代りに UDP を使用できます。
+これは単にプロトコルを "tcp" から "udp" に変えるだけで可能です。
+トランスポートとして UDP を使用するとき、
+.Nm
+は同期モードで動作します。
+入力データがパケットに再構成されないという、別の利点もあります。
+.Pp
+.Sh ネットワークアドレス変換 (パケットエイリアシング)
+.Fl nat
+.Pq または Fl alias
 コマンドラインオプションにより、
-パケットエイリアシングが有効になります。
+ネットワークアドレス変換 (別名、パケットエイリアシング) が有効になります。
 これにより、
 .Nm
 ホストがローカルエリアネットワークの他のコンピュータに対して
@@ -1388,9 +1409,9 @@ TCP 接続経由でそれぞれ作成されます。
 一般に、
 .Nm
 が正しく動作していることの確認は、
-まず最初にパケットエイリアシングを禁止して行います。
+まず最初にネットワークアドレス変換を禁止して行います。
 次に
-.Fl alias
+.Fl nat
 オプションを有効にして、
 .Nm
 ホストの上で (ウェブブラウザや
@@ -1431,7 +1452,9 @@ set filter
 .Ar name
 .Ar rule-no
 .Ar action
+.Op \&!
 .Oo
+.Op host
 .Ar src_addr Ns Op / Ns Ar width
 .Op Ar dst_addr Ns Op / Ns Ar width
 .Oc
@@ -1468,9 +1491,28 @@ set filter
 は
 .Sq permit ,
 .Sq deny
-のいずれかです。
-もし、あるパケットがルールに一致した場合、
+を指定可能であり、
+あるパケットがこれらのルールに一致した場合、
 結びつけられた action が直ちに実行されます。
+また
+.Ar action
+には
+.Sq clear
+も指定可能です。
+この場合、このルールに結びつけられた action をクリアします。
+また
+.Ar action
+には、現在のルール番号よりも大きなルール番号を指定可能です。
+この場合には、あるパケットが現在のルールに一致した場合、
+(次のルール番号の代りに)
+この新しいルールに対して次にパケットが一致するかを確認します。
+.Pp
+.Ar action
+にはエクスクラメーションマーク
+.Pq Dq !
+を続けることが可能です。この場合、
+.Nm
+は後続する一致の意味を反転させます。
 .It
 .Op Ar src_addr Ns Op / Ns Ar width
 と
@@ -1479,10 +1521,27 @@ set filter
 .Op / Ns Ar width
 が指定された場合には、それによって適切なネットマスクのビット値を与え、
 アドレスの範囲を指定することができます。
+.Pp
+.Ar src_addr
+と
+.Ar dst_addr
+には、
+.Dv MYADDR
+と
+.Dv HISADDR
+という値を使用可能です (これらの値の解説は
+.Dq bg
+を参照してください)。
+これらの値を使用した場合、これらの値が変化するたびにフィルタが更新されます。
+これは、後述の
+.Dq add
+コマンドの動作と似ています。
 .It
 .Ar proto
 は
 .Sq icmp ,
+.Sq igmp ,
+.Sq ospf ,
 .Sq udp ,
 .Sq tcp
 のうちのいずれか 1 つです。
@@ -1992,6 +2051,10 @@ LCP パケットトレースの生成。
 LQR レポートの生成。
 .It Li Phase
 フェーズ遷移ログの出力。
+.It Li Physical
+物理レベルパケットの 16 進ダンプ。
+.It Li Sync
+同期レベルパケットの 16 進ダンプ。
 .It Li TCP/IP
 全 TCP/IP パケットのダンプ。
 .It Li Timer
@@ -2401,6 +2464,15 @@ deflate 圧縮を使用するか否かを決定します。
 コマンドの使用によって上書きされていない場合には、応答は
 .Pa /etc/resolv.conf
 から採られます。
+.It enddisc
+デフォルト: enable かつ accept。
+このオプションは、終点選択値を交渉するか否かを制御します。
+.Dq set enddisc
+が使用され
+.Ar enddisc
+が enable の場合のみ、当方の選択値を送ります。
+.Ar enddisc
+が disable の場合、相手の選択値を拒否します。
 .It LANMan|chap80lm
 デフォルト: disable かつ accept。
 この認証プロトコルの使用は勧められません。
@@ -2551,6 +2623,40 @@ Predictor 1 圧縮を使用するかどうかを決定します。
 が disable になっている場合、
 .Nm
 は識別子フィールドを無視します。
+.It keep-session
+デフォルト: disable。
+.Nm
+がマルチリンクサーバとして動作するとき、別の
+.Nm
+インスタンスが最初に各接続を受け付けます。
+リンクが (別の
+.Nm
+によって制御されている) 既存のバンドルに属すと判定すると、
+.Nm
+はこのリンクを当該別プロセスへ移管します。
+.Pp
+リンクが tty デバイスである場合かこのオプションが enable されている場合、
+.Nm
+は終了せず、自己のプロセス名を
+.Dq session owner
+に変え、リンクを制御する方の
+.Nm
+が処理を完了してアイドルプロセスの方へシグナルを返すまで待ちます。
+リンク資源が再利用可能であると
+.Nm
+の親がみなす結果により生じる混乱を、これにより防ぎます。
+.Pp
+.Pa /etc/ttys
+にエントリがある tty デバイスの場合、別の
+.Xr getty 8
+の開始を防ぐために、これが必要です。
+.Xr sshd 8
+のようなプログラムリンクの場合、子供の死による
+.Xr sshd 8
+の終了を防ぐために、これが必要です。
+.Nm
+は親の要件を判断できませんので (tty の場合を除く)、
+状況に応じて手動で本オプションを設定する必要があります。
 .It loopback
 デフォルト: enable。
 .Ar loopback
@@ -2646,7 +2752,7 @@ tun インタフェースによってルーティングされる
 コマンドで表示することで得られます。スループット統計は
 .Dq IPCP
 と
-.Dq modem
+.Dq physical
 のレベルで利用可能です。
 .It utmp
 デフォルト: enable。
@@ -2663,28 +2769,28 @@ utmp ファイルおよび wtmp ファイルに作成されます。
 ユーザがログインしかつ認証することを要求する場合のみ必要です。
 .It iface-alias
 デフォルト:
-.Fl alias
+.Fl nat
 が指定された場合 enable。
 このオプションは、
 インタフェースのアドレスを交換するのではなく、
 インタフェースに新規アドレスを追加するように、
 .Nm
 に指示します。
-IP エイリアシングが有効な場合のみ
-.Pq Dq alias enable yes
+ネットワークアドレス変換が有効な場合のみ
+.Pq Dq nat enable yes
 、本オプションを enable にできます。
 .Pp
 本オプションを enable にすると、
 .Nm
-は古いインタフェースアドレスのトラフィックを IP エイリアスエンジン
+は古いインタフェースアドレスのトラフィックを NAT エンジン
 .Pq Xr libalias 5 参照
 を通すようになり、(
 .Fl auto
 モードでは)
 最初に PPP リンクを立ち上げたプロセスが正しく接続できるようにします。
 .Pp
-.Dq alias enable off
-として IP エイリアシングを disable すると、
+.Dq nat enable no
+として NAT を disable すると、
 .Sq iface-alias
 も disable します。
 .El
@@ -2836,21 +2942,31 @@ IP エイリアシングが有効な場合のみ
 現在存在する回線モードを許可するセクションをロード可能です。
 .El
 .Pp
-.It alias Ar command Op Ar args
+.It nat Ar command Op Ar args
 このコマンドは
 .Nm
-組込みのエイリアシング (マスカレーディング) 機能を
+組込みのネットワークアドレス変換機能
+(マスカレーディングや IP エイリアシングとしても知られています) を
 制御するために使用します。
-あなたのシステムでエイリアシングが有効になると (コンパイル時に削除できます)、
+NAT は、外部インタフェースでのみ動作し、
+.Fl direct
+フラグと共に使用してもおそらく意味がありません。
+.Pp
+後方互換性のために、語
+.Dq alias
+を
+.Dq nat
+の代りに使用可能です。
+あなたのシステムで nat を有効にすると (コンパイル時に削除できます)、
 次のコマンドが使用可能となります:
 .Bl -tag -width XX
-.It alias enable Op yes|no
-エイリアシングを有効もしくは無効にします。
-.Fl alias
+.It nat enable yes|no
+このコマンドは、ネットワークアドレス変換を有効もしくは無効にします。
+.Fl nat
 コマンドラインフラグは
-.Dq alias enable yes
+.Dq nat enable yes
 と同じ意味です。
-.It alias addr Op Ar addr_local addr_alias
+.It nat addr Op Ar addr_local addr_alias
 このコマンドには、
 .Ar addr_alias
 のデータを
@@ -2858,33 +2974,38 @@ IP エイリアシングが有効な場合のみ
 へリダイレクトします。
 少数の実 IP アドレスを持ち、
 それらをゲートウェイの後の特定のマシンにマップしたい場合に有用です。
-.It alias deny_incoming Op yes|no
+.It nat deny_incoming Op yes|no
 yes に設定すると、
 ファイアウォールとほぼ同様にパケットを落とすことにより、
 このコマンドは全入力接続を拒否します。
-.It alias help|?
-このコマンドは、使用可能な alias コマンドのまとめを表示します。
-.It alias log Op yes|no
-このオプションは、alias の様々な統計と情報がファイル
+.It nat help|?
+このコマンドは、使用可能な nat コマンドのまとめを表示します。
+.It nat log Op yes|no
+このオプションは、NAT の様々な統計と情報がファイル
 .Pa /var/log/alias.log
 に記録されるようにします。
-.It alias port Ar proto Ar targetIP Ns Xo
-.No : Ns Ar port Ns
+このファイル名は、近い将来変わるでしょう。
+.It nat port Ar proto Ar targetIP Ns Xo
+.No : Ns Ar targetPort Ns
 .Oo
-.No - Ns Ar port
-.Oc Ar aliasport Ns
+.No - Ns Ar targetPort
+.Oc Ar aliasPort Ns
 .Oo
-.No - Ns Ar aliasport Ns
-.Oc
+.No - Ns Ar aliasPort
+.Oc Oo Ar remoteIP : Ns
+.Ar remotePort Ns
+.Oo
+.No - Ns Ar remotePort
+.Oc Oc
 .Xc
-このコマンドは、ポート
-.Ar aliasport
+このコマンドは、
+.Ar aliasPort
 への入力の
 .Ar proto
 接続を、
 .Ar targetIP
-のポート
-.Ar port
+の
+.Ar targetPort
 へリダイレクトします。
 .Ar proto
 は、
@@ -2896,10 +3017,19 @@ yes に設定すると、
 ポート番号の範囲は、前述のように指定可能です。
 範囲は同じ大きさであることが必要です。
 .Pp
+.Ar remoteIP
+が指定された場合、この IP 番号から来たデータのみがリダイレクトされます。
+.Ar remotePort
+は、
+.Dq 0
+.Pq すべての送信元ポート
+か、もう一方の範囲と同じ大きさのポート範囲です。
+.Pp
 あなたのゲートウェイの後のマシンでインターネット電話等を実行したい場合に、
 このオプションは有用です。
-しかし、ポートあたり内部マシン 1 台のみに接続可能という制限があります。
-.It alias pptp Op Ar addr
+しかし、送信元ホストと宛先ポートにつき
+内部マシン 1 台のみに接続可能という制限があります。
+.It nat pptp Op Ar addr
 すべての
 .Em G Ns No eneral
 .Em R Ns No outing
@@ -2909,7 +3039,7 @@ yes に設定すると、
 .Ar addr
 を使用することにより、
 .Nm
-にエイリアスさせます。
+に変換させます。
 これは、マシンの内部ネットワーク上で
 .Em P Ns No oint
 to
@@ -2921,8 +3051,8 @@ to
 .Ar addr
 を指定しないと、
 .Dv PPTP
-エイリアスは無効になります。
-.It "alias proxy cmd" Ar arg Ns No ...
+アドレス変換は無効になります。
+.It "nat proxy cmd" Ar arg Ns No ...
 このコマンドは、
 .Nm
 に特定の接続に対する代理をさせ、
@@ -2932,18 +3062,19 @@ to
 の
 .Fn PacketAliasProxyRule
 の記述を参照してください。
-.It alias same_ports Op yes|no
+.It nat same_ports yes|no
 有効になると、
-エイリアスライブラリが出力パケットのポート番号を変更しようとすることを
+ネットワークアドレス変換エンジンが
+出力パケットのポート番号を変更しようとすることを、
 止めさせます。
 RPC や LPD といった、
 ウェルノウンポート (well known port) からの接続を要求する
 プロトコルをサポートするのに有用です。
-.It alias use_sockets Op yes|no
+.It nat use_sockets yes|no
 有効になると、
-エイリアスライブラリにソケットを作成させ、
+ネットワークアドレス変換エンジンにソケットを作成させ、
 正しい ftp データ入力や IRC 接続を保証できるようになります。
-.It alias unregistered_only Op yes|no
+.It nat unregistered_only yes|no
 登録されていない送信元アドレスの出力パケットのみを、変更します。
 RFC1918 によると、登録されていない送信元アドレスは
 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16 です。
@@ -3007,8 +3138,8 @@ RFC1918 によると、登録されていない送信元アドレスは
 を停止させたい場合は、
 .Dq shell
 コマンドを使用してください。
-.It clear modem|ipcp Op current|overall|peak...
-.Dq modem
+.It clear physical|ipcp Op current|overall|peak...
+.Dq physical
 もしくは
 .Dq ipcp
 階層で、指定されたスループット値をクリアします。
@@ -3107,7 +3238,7 @@ IP アドレスの経路を削除します。
 .Sq lcp
 が指定された場合、
 .Em LCP
-層は終了されますが、モデムはオフラインに移行せず、
+層は終了されますが、デバイスはオフラインに移行せず、
 リンクも閉じられません。
 .Sq ccp
 が指定された場合、
@@ -3244,11 +3375,14 @@ IPCP 交渉されたアドレス以外の全アドレスがインタフェースから削除されます。
 これは
 .Dq close
 の反対のコマンドです。
-閉じられている全リンクがすぐに立ち上がります
-(しかしながら auto リンクによっては立ち上がらないものがあります。
-これは、どのような
+閉じられているリンクのうち、2 番目以降の
+.Ar demand-dial
+リンク以外、全リンクがすぐに立ち上がります -
+2 番目以降の
+.Ar demand-dial
+リンクは、どのような
 .Dq set autoload
-コマンドが使用されたかに依存します)。
+コマンドが使用されたかに依存して立ち上ります。
 .Pp
 LCP 層がすでにオープンされているときに
 .Dq lcp
@@ -3417,10 +3551,10 @@ CHAP を enable にして
 .Ar id
 は初期認証チャレンジで用いられ、通常はローカルマシン名に設定されます。
 .It set autoload Xo
-.Ar max-duration max-load Op Ar min-duration min-load
+.Ar min-percent max-percent period
 .Xc
 これらの設定はマルチリンクモードでのみ適用され、
-デフォルト値はすべて 0 です。
+デフォルト値はそれぞれ 0, 0, 5 です。
 1 つ以上の
 .Ar demand-dial
 .Po
@@ -3433,28 +3567,37 @@ CHAP を enable にして
 有効になっています。
 次の
 .Ar demand-dial
-リンクは、
-.Ar max-duration
-秒の間、送出キューに
-.Ar max-load
-以上のパケットが存在した場合にのみ開かれます。
-両方のデフォルト値が 0 であるため、
+リンクが開かれるのは、現在のバンドルの
+.Ar period
+秒間のスループットがバンドルの総バンド幅の最低
+.Ar max-percent
+パーセントであるときに限られます。
+現在のバンドルの
+.Ar period
+秒間のスループットがバンドルの総バンド幅の
+.Ar min-percent
+パーセント以下に減少したとき、最後のアクティブな
 .Ar demand-dial
-リンクはデフォルトでは 1 つだけオープンされます。
+リンクでない場合、
+.Ar demand-dial
+リンクはダウンします。
 .Pp
-複数のリンクが開かれていて、少なくともその内の 1 つが
+デフォルト値では
 .Ar demand-dial
-リンクである場合、
-.Ar min-duration
-秒の間、送出キューに最大
-.Ar min-packets
-未満のパケットしか存在しなかったときに閉じられます。
-.Ar min-duration
-が 0 の場合には、タイマは無効になります。
-デフォルトでは両方の値が 0 であるため、
-.Ar demand-dial
-リンクはバンドルされたアイドルタイマが期限切れになるまで
-アクティブであり続けます。
+リンクは 1 つだけオープンされます。
+.Pp
+デバイスによっては物理バンド幅を判定できないものがありますので、
+.Dq set autoload
+が正しく動作するためには、(後述の)
+.Dq set bandwidth
+コマンドを使用する必要がある場合があります。
+.It set bandwidth Ar value
+本コマンドは、接続のバンド幅を、秒あたりのビット数で設定します。
+.Ar value
+は 0 より大きいことが必要です。
+現在、前述の
+.Dq set autoload
+コマンドのみが使用します。
 .It set callback Ar option Ns No ...
 引数が与えられない場合、コールバックは disable になります。
 そうでない場合には、
@@ -3465,7 +3608,7 @@ CHAP を enable にして
 (もしくは
 .Ar direct
 モードでは受け付けます)。
-クライアントモードで、
+クライアントモードでは、
 .Ar option
 の否定応答が返されると、
 .Nm
@@ -3500,6 +3643,16 @@ CHAP を enable にして
 Microsoft コールバック制御プロトコルが用いられます。後述の
 .Dq set cbcp
 を参照してください。
+.Pp
+クライアントモードで
+.Ar cbcp
+を交渉したい場合でありかつ、
+CBCP 交渉時にサーバがコールバック無しを要求することを許したい場合、
+コールバックオプションとして
+.Ar cbcp
+と
+.Ar none
+の両方を指定する必要があります。
 .It E.164 *| Ns Xo
 .Ar number Ns Op , Ns Ar number Ns
 .No ...
@@ -3528,7 +3681,8 @@ Microsoft コールバック制御プロトコルが用いられます。後述の
 .Nm
 はそのことを受け入れ、接続を終了するのではなく
 コールバックせずに処理を続けます。
-コールバックをオプションにしたいのであれば、これを指定する必要があります。
+コールバックをオプションにしたいのであれば、
+(1 個以上の他のコールバックオプションに加えて) これも指定する必要があります。
 .El
 .Pp
 .It set cbcp Oo Xo
@@ -3575,7 +3729,9 @@ Microsoft コールバック制御プロトコルが用いられます。後述の
 はキャリアの存在をチェックします。
 キャリアが設定されていないと、
 デバイスがキャリアをサポートしていない
-(ほとんどのヌルモデムケーブルの場合がそうです) と
+(ほとんどの
+.Dq laplink
+ヌルモデムケーブルの場合がそうです) と
 .Nm
 は仮定し、この事実を記録して、キャリアのチェックを止めます。
 しかし、モデムによってはキャリアのアサートに時間がかかるものがあるので、
@@ -3583,9 +3739,15 @@ Microsoft コールバック制御プロトコルが用いられます。後述の
 .Nm ppp
 は検知できなくなります。
 .Ar seconds
-は、ログインスクリプトが完了してから最初のキャリアチェックを行う前に、
+は、ダイヤルスクリプトが完了してからキャリアが利用可能か判断する前に、
 .Nm
 が待つべき秒数を指定します。
+.Pp
+キャリアが検出されるか
+.Ar seconds
+の秒数が経過するまで、
+.Nm
+はログインスクリプトへは進みません。
 .Pp
 .Ar seconds
 の直後にエクスクラメーションマーク
@@ -3595,9 +3757,18 @@ Microsoft コールバック制御プロトコルが用いられます。後述の
 はキャリアを
 .Em 要求
 します。
-最初のチェックでキャリアを検知しないと、リンクは切断されているとみなされます。
+.Ar seconds
+秒後にキャリアが検知されないと、リンクは切断されます。
 .Pp
-リンクが tty でない場合、キャリアの
+ISDN デバイスでは、
+.Nm
+は常にキャリアに固執します。
+呼が接続した後でのみ、
+i4brbchX デバイスドライバはキャリアを立ち上げます。それゆえ、
+.Ar 6
+秒などの適切な値に設定するべきです。
+.Pp
+リンクが他のデバイスの場合、キャリアの
 .Em 必要性
 は無視されます。
 .It set choked Op Ar timeout
@@ -3666,16 +3837,23 @@ DEFLATE アルゴリズムの、
 が使用するデバイスを、指定された
 .Dq value
 に設定します。
-全シリアルデバイス名は
+.Pp
+すべての ISDN デバイスとシリアルデバイスの名前は
 .Pa /dev/
 から始まることが仮定されています。
+ISDN デバイスは通常
+.Pa i4brbchX
+という名前であり、シリアルデバイスは通常
+.Pa cuaaX
+という名前です。
+.Pp
 .Dq value
 が
 .Pa /dev/
 から始まらない場合、エクスクラメーションマーク
 .Pq Dq \&!
 から始めるか、
-.Dq host:port
+.Dq host:port Ns Op Ns /proto
 の形式である必要があります。
 .Pp
 エクスクラメーションマークで始まる場合、
@@ -3685,16 +3863,17 @@ DEFLATE アルゴリズムの、
 .Nm
 にフィードバックされ、それらが通常デバイスであるかのように読み書きされます。
 .Pp
-.Dq host:port
-の組が与えられる場合、
+.Dq host:port Ns Op /tcp|/udp
+指定が与えられる場合、
 .Nm
 は、指定された
 .Dq host
 の指定された
 .Dq port
 と接続しようとします。
+tcp または udp の指定がない場合、デフォルトは tcp となります。
 詳細は上述の
-.Em PPP オーバ TCP
+.Em PPP オーバ TCP と PPP オーバ UDP
 の節を参照してください。
 .Pp
 複数の
@@ -3763,7 +3942,7 @@ set dial "... ATDT\\\\T CONNECT"
 受信待ち文字列または送信文字列の最初の文字をエクスクラメーションマーク
 .Pq Dq \&!
 にします。
-コマンドが実行されると、標準入力と標準出力がモデムデバイス (
+コマンドが実行されると、標準入力と標準出力がオープンデバイス (
 .Dq set device
 参照) に向けられ、標準エラー出力が
 .Nm
@@ -3838,7 +4017,9 @@ login OK!
 コマンドと同様に、特殊語の展開対象となります。
 .It set enddisc Op label|IP|MAC|magic|psn value
 このコマンドは、ローカル終点の選択値を設定します。
-LCP 交渉の前に設定されると、
+LCP 交渉の前に設定された場合であり、
+.Dq disable enddisc
+コマンドを使用していない場合、
 .Nm
 は LCP 終点選択値オプションを使用して、相手に情報を送ります。
 次の選択値を設定可能です。
@@ -3866,6 +4047,15 @@ IPCP 層が後からこの値を変更することが可能です。
 コマンドよりも先に実行します。
 .It Li magic
 20 桁の乱数が使用されます。
+マジックナンバを使用するときには注意が必要です。
+.Nm
+の再開や別の
+.Nm
+を使ったリンク作成においては、別のマジックナンバを使用するため、
+同じバンドルに属すとは相手に認識されないのです。
+このため、
+.Fl direct
+接続では使えません。
 .It Li psn Ar value
 指定された
 .Ar value
@@ -3884,10 +4074,12 @@ IPCP 層が後からこの値を変更することが可能です。
 .Sq エスケープ
 される文字を指定するために使用します。
 .It set filter dial|alive|in|out Ar rule-no Xo
-.No permit|deny
-.Oo Ar src_addr Ns Op / Ns Ar width
+.No permit|deny|clear| Ns Ar rule-no
+.Op \&!
+.Oo Op host
+.Ar src_addr Ns Op / Ns Ar width
 .Op Ar dst_addr Ns Op / Ns Ar width
-.Oc Oo tcp|udp|icmp Op src lt|eq|gt Ar port
+.Oc Oo tcp|udp|ospf|igmp|icmp Op src lt|eq|gt Ar port
 .Op dst lt|eq|gt Ar port
 .Op estab
 .Op syn
@@ -3910,12 +4102,15 @@ IPCP 層が後からこの値を変更することが可能です。
 .Em out
 フィルタは、マシンから出力可能なパケットを指定します。
 .Pp
-フィルタリングは、
-エイリアスエンジンが行う IP 変更の前に適用されます。
+フィルタリングが行われるのは、
+出力パケットでは NAT エンジンによる IP 変更前であり、
+入力パケットでは NAT エンジンによる IP 変更後です。
 デフォルトでは、全フィルタセットが全パケットの通過を許可します。
 ルールは
 .Ar rule-no
-に従って順番に処理されます。
+に従って順番に処理されます (ルール番号を
+.Ar action
+に指定してスキップする場合を除きます)。
 各セットに対し 40 までのルールを指定可能です。
 指定されるセットにおけるどのルールにもマッチしないパケットは破棄されます。
 .Em in
@@ -3932,7 +4127,7 @@ IPCP 層が後からこの値を変更することが可能です。
 .Sx パケットのフィルタリング
 の節を参照してください。
 .It set hangup Ar chat-script
-モデムを閉じる前にこれをリセットする時に使用する、
+デバイスを閉じる前にこれをリセットする時に使用する、
 チャットスクリプトを指定します。
 通常は不要であるべきですが、
 閉じる時に自己を正しくリセットできないデバイスに対して使用できます。
@@ -3965,6 +4160,7 @@ IPCP 層が後からこの値を変更することが可能です。
 .Dq /0
 です。
 .Pp
+相手に動的な IP 番号を割り当てたい場合、
 .Ar hisaddr
 に IP 番号の範囲として
 .Bd -literal -offset indent
@@ -3987,7 +4183,7 @@ IPCP 層が後からこの値を変更することが可能です。
 .Nm
 は相手の要求を認めます。
 相手がリンクを再確立して前回割り当てていた IP 番号を使用したい場合に有用です
-(既存の TCP 接続を保存します)。
+(既存の TCP と UDP の接続を保存します)。
 .Pp
 相手が要求した IP 番号が範囲外もしくは使用中の場合、
 .Nm
@@ -4115,7 +4311,7 @@ PAP や CHAP に対して指定することは不正です。
 .Pp
 注釈: コマンド
 .Dq set mode auto
-を発行し、IP エイリアシングが enable にされていた場合、後で
+を発行し、ネットワークアドレス変換が enable にされていた場合、後で
 .Dq enable iface-alias
 を行うと便利です。
 .Nm
@@ -4380,9 +4576,9 @@ RADIUS サーバから受信した値は、
 に加えられます。
 .Ar secs
 が増加されるのは、最大
-.Ar maxinc
+.Ar max
 回だけです。
-.Ar maxinc
+.Ar max
 のデフォルト値は 10 です。
 .Ar attempts
 が経過した後でも
@@ -4457,6 +4653,16 @@ umask の詳細については
 に依存しないようにしてください。
 .It set speed Ar value
 シリアルデバイスの速度を指定します。
+速度指定が
+.Dq sync
+の場合、
+.Nm
+はデバイスを同期デバイスとして扱います。
+.Pp
+デバイスタイプによっては、
+同期または非同期のいずれかであることが分るものがあります。
+これらのデバイスでは、不正な設定を上書きして、
+この結果に対する警告を記録します。
 .It set stopped Op Ar LCPseconds Op Ar CCPseconds
 このオプションが指定されると、
 指定した FSM (有限状態機械; Finite State Machine) が停止状態になってから
@@ -4483,11 +4689,17 @@ umask の詳細については
 この値は openmode の遅延 (上述の
 .Dq set openmode
 参照) より小さくなってはなりません。
-.It set timeout Ar idleseconds
+.It set timeout Ar idleseconds Op Ar mintimeout
 このコマンドはアイドルタイマの値を指定します。
 更なる詳細については
 .Sx アイドルタイマの設定
 というタイトルの節を参照してください。
+.Pp
+.Ar mintimeout
+が指定された場合、
+最短でも指定された秒数だけリンクがアップしていないと、
+.Nm
+はアイドルアウトしません。
 .It set vj slotcomp on|off
 このコマンドは
 .Nm
@@ -4558,6 +4770,8 @@ umask の詳細については
 .Pc を表示します。
 .It show ipcp
 現在の IPCP 統計を表示します。
+.It show layers
+現在使用中のプロトコル層を表示します。
 .It show lcp
 現在の LCP 統計を表示します。
 .It show Op data Ns Xo
@@ -4570,7 +4784,7 @@ umask の詳細については
 現在のログ値を表示します。
 .It show mem
 現在のメモリ統計を表示します。
-.It show modem
+.It show physical
 現在の下位レベルリンク情報を表示します。
 .It show mp
 マルチリンク情報を表示します。
@@ -4589,9 +4803,8 @@ umask の詳細については
 .Pp
 .It term
 端末モードに移行します。
-キーボードからタイプした文字はモデムに送られます。
-モデムから読んだ文字はスクリーンに表示されます。
-モデムの相手側に
+キーボードからタイプした文字はデバイスに送られます。
+デバイスから読んだ文字はスクリーンに表示されます。
 .Nm
 の相手が認識された時には、
 .Nm
@@ -4605,7 +4818,7 @@ umask の詳細については
 .It
 何が利用できるかについては、
 .Dq help ,
-.Dq alias ? ,
+.Dq nat ? ,
 .Dq enable ? ,
 .Dq set ? ,
 .Dq show ?
@@ -4691,6 +4904,7 @@ tunN デバイスに接続されている
 .Xr ftp 1 ,
 .Xr gzip 1 ,
 .Xr hostname 1 ,
+.Xr isdnd 8 ,
 .Xr login 1 ,
 .Xr tcpdump 1 ,
 .Xr telnet 1 ,
@@ -4713,6 +4927,7 @@ tunN デバイスに接続されている
 .Xr pppctl 8 ,
 .Xr pppd 8 ,
 .Xr route 8 ,
+.Xr sshd 8 ,
 .Xr syslogd 8 ,
 .Xr traceroute 8 ,
 .Xr vipw 8
