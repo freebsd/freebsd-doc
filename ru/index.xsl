@@ -4,9 +4,9 @@
      The FreeBSD Russian Documentation Project
 
      $FreeBSD$
-     $FreeBSDru: frdp/www/ru/index.xsl,v 1.17 2003/09/20 18:53:31 andy Exp $
+     $FreeBSDru: frdp/www/ru/index.xsl,v 1.19 2003/10/01 18:12:54 andy Exp $
 
-     Original revision: 1.70
+     Original revision: 1.77
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -14,7 +14,7 @@
   <xsl:import href="includes.xsl"/>
   <xsl:import href="news/includes.xsl"/>
 
-  <xsl:variable name="base" select="'.'"/>
+  <xsl:variable name="base" select="'..'"/>
   <xsl:variable name="date" select="'$FreeBSD$'"/>
   <xsl:variable name="title" select="'Проект FreeBSD'"/>
 
@@ -64,6 +64,7 @@
 
                   <option value="http://www.jp.FreeBSD.org/www.FreeBSD.org/">IPv6 (6Bone) Япония</option>
                   <option value="http://www2.at.FreeBSD.org/">IPv6 Австрия</option>
+                  <option value="http://www1.uk.FreeBSD.org/">IPv6 Великобритания</option>
                   <option value="http://www2.de.FreeBSD.org">IPv6 Германия</option>
                   <option value="http://www.dk.FreeBSD.org/">IPv6 Дания</option>
                   <option value="http://www2.no.FreeBSD.org/">IPv6 Норвегия</option>
@@ -76,13 +77,14 @@
                   <option value="http://www.ar.FreeBSD.org/">Аргентина</option>
 		  <option value="http://freebsd.unixtech.be/">Бельгия</option>
 		  <option value="http://www.bg.FreeBSD.org/">Болгария</option>
-		  <option value="http://www.br.FreeBSD.org/www.freebsd.org/">Бразилия/1</option>
+		  <option value="http://www.br.FreeBSD.org/">Бразилия/1</option>
 		  <option value="http://www2.br.FreeBSD.org/www.freebsd.org/">Бразилия/2</option>
 		  <option value="http://www3.br.FreeBSD.org/">Бразилия/3</option>
 		  <option value="http://www.uk.FreeBSD.org/">Великобритания/1</option>
 		  <option value="http://www2.uk.FreeBSD.org/">Великобритания/2</option>
 		  <option value="http://www3.uk.FreeBSD.org/">Великобритания/3</option>
                   <option value="http://www4.uk.FreeBSD.org/">Великобритания/4</option>
+                  <option value="http://www1.uk.FreeBSD.org/">Великобритания/5</option>
                   <option value="http://www.hu.FreeBSD.org/">Венгрия/1</option>
                   <option value="http://www2.hu.FreeBSD.org/">Венгрия/2</option>
 		  <option value="http://www.de.FreeBSD.org/">Германия/1</option>
@@ -93,9 +95,9 @@
                   <option value="http://www.FreeBSD.gr/">Греция/2</option>
                   <option value="http://www.dk.FreeBSD.org/">Дания/1</option>
                   <option value="http://www3.dk.FreeBSD.org/">Дания/2</option>
-                  <option value="http://www.ie.FreeBSD.org/">Ирландия/2</option>
-                  <option value="http://www2.ie.FreeBSD.org/">Ирландия</option>
-		  <option value="http://www.is.FreeBSD.org/">Исландия/1</option>
+                  <option value="http://www.ie.FreeBSD.org/">Ирландия/1</option>
+                  <option value="http://www2.ie.FreeBSD.org/">Ирландия/2</option>
+		  <option value="http://www.is.FreeBSD.org/">Исландия</option>
                   <option value="http://www.es.FreeBSD.org/">Испания/1</option>
                   <option value="http://www2.es.FreeBSD.org/">Испания/2</option>
                   <option value="http://www3.es.FreeBSD.org/">Испания/3</option>
@@ -106,7 +108,7 @@
 		  <option value="http://www.cn.FreeBSD.org/">Китай</option>
 		  <option value="http://www.kr.FreeBSD.org/">Корея/1</option>
 		  <option value="http://www2.kr.FreeBSD.org/">Корея/2</option>
-                  <option value="http://www3.kr.FreeBSD.org/">Корея/3</option>
+                  <option value="http://www.kw.FreeBSD.org/">Кувейт</option>
 		  <option value="http://www.lv.FreeBSD.org/">Латвия</option>
                   <option value="http://www.lt.FreeBSD.org/">Литва</option>
 		  <option value="http://www.nl.FreeBSD.org/">Нидерланды/1</option>
@@ -116,8 +118,9 @@
                   <option value="http://www2.no.FreeBSD.org/">Норвегия/2</option>
 		  <option value="http://www.pl.FreeBSD.org/">Польша/1</option>
 		  <option value="http://www2.pl.FreeBSD.org/">Польша/2</option>
-		  <option value="http://www2.pt.FreeBSD.org/">Португалия/1</option>
-                  <option value="http://www4.pt.FreeBSD.org/">Португалия/1</option>
+		  <option value="http://www.pt.FreeBSD.org/">Португалия/1</option>
+                  <option value="http://www4.pt.FreeBSD.org/">Португалия/2</option>
+                  <option value="http://www5.pt.FreeBSD.org/">Португалия/3</option>
 		  <option value="http://www.ru.FreeBSD.org/">Россия/1</option>
 		  <option value="http://www2.ru.FreeBSD.org/">Россия/2</option>
 		  <option value="http://www3.ru.FreeBSD.org/">Россия/3</option>
@@ -132,9 +135,9 @@
 		  <option value="http://www.si.FreeBSD.org/">Словения/1</option>
                   <option value="http://www2.si.FreeBSD.org/">Словения/2</option
 >
-		  <option value="http://www.FreeBSD.org/">США/1</option>
-                  <option value="http://www4.FreeBSD.org/">США/2</option>
-                  <option value="http://www5.FreeBSD.org/">США/3</option>
+                  <option value="http://www2.us.FreeBSD.org/">США/1</option>
+                  <option value="http://www4.us.FreeBSD.org/">США/2</option>
+                  <option value="http://www5.us.FreeBSD.org/">США/3</option>
 		  <option value="http://www.tw.FreeBSD.org/">Тайвань/1</option>
                   <option value="http://www2.tw.FreeBSD.org/">Тайвань/2</option>
                   <option value="http://www3.tw.FreeBSD.org/">Тайвань/3</option>
@@ -202,7 +205,7 @@
 
 			  <p><font size="+1" color="#990000"><b>Программы</b></font>
 			    <small><br/>
-			      &#183; <a href="../doc/en_US.ISO8859-1/books/handbook/mirrors.html">Где взять систему</a><br/>
+			      &#183; <a href="{$base}/doc/en_US.ISO8859-1/books/handbook/mirrors.html">Где взять систему</a><br/>
 			      &#183; <a href="releases/index.html">Релизы</a><br/>
 			      &#183; <a href="{$base}/ports/index.html">Приложения</a><br/>
 			    </small></p>
@@ -214,19 +217,19 @@
                               &#183; <a href="{$base}/doc/en_US.ISO8859-1/books/handbook/index.html">Руководство</a><br/>
                               &#183; <a href="{$base}/doc/en_US.ISO8859-1/books/faq/index.html">FAQ</a><br/>
                               &#183; <a href="http://www.FreeBSD.org/cgi/man.cgi">Страницы справочной системы</a><br/>
-			      &#183; <a href="{$base}/docproj/index.html">Проект Документирования</a><br/>
+			      &#183; <a href="docproj/index.html">Проект Документирования</a><br/>
 			      &#183; <a href="docs.html">Дополнительно..</a><br/>
 			    </small></p>
 			  
 			  <p><font size="+1" color="#990000"><b>Поддержка</b></font>
 	      
 			    <small><br/>
-			      &#183; <a href="{$base}/support.html#mailing-list">Списки рассылки</a><br/>
-			      &#183; <a href="{$base}/support.html#newsgroups">Телеконференции</a><br/>
-			      &#183; <a href="{$base}/support.html#user">Группы пользователей</a><br/>
-			      &#183; <a href="{$base}/support.html#web">Ресурсы Internet</a><br/>
+			      &#183; <a href="support.html#mailing-list">Списки рассылки</a><br/>
+			      &#183; <a href="support.html#newsgroups">Телеконференции</a><br/>
+			      &#183; <a href="support.html#user">Группы пользователей</a><br/>
+			      &#183; <a href="support.html#web">Ресурсы Internet</a><br/>
 			      &#183; <a href="security/index.html">Безопасность</a><br/>
-			      &#183; <a href="{$base}/support.html">Дополнительно..</a>
+			      &#183; <a href="support.html">Дополнительно..</a>
 			    </small></p>
 
                           <p><font size="+1" color="#990000"><b>Сообщения об ошибках</b></font>
@@ -234,30 +237,30 @@
                               &#183; <a href="send-pr.html">Посылка сообщений об ошибке</a><br/>
                               &#183; <a href="http://www.FreeBSD.org/cgi/query-pr-summary.cgi">Просмотр открытых проблем</a><br/>
                               &#183; <a href="http://www.FreeBSD.org/cgi/query-pr.cgi">Поиск по номеру ошибки</a><br/>
-                              &#183; <a href="{$base}/support.html#gnats">Дополнительно..</a><br/>
+                              &#183; <a href="support.html#gnats">Дополнительно..</a><br/>
                             </small></p>
 
 			  <p><font size="+1" color="#990000"><b>Разработка</b></font>
 			    <small><br/>
 			      &#183; <a href="projects/index.html">Проекты</a><br/>
-                              &#183; <a href="releng/index.html">Выпуск релизов</a><br/>
-			      &#183; <a href="{$base}/support.html#cvs">Дерево CVS</a><br/>
+                              &#183; <a href="{$base}/releng/index.html">Выпуск релизов</a><br/>
+			      &#183; <a href="support.html#cvs">Дерево CVS</a><br/>
 			    </small></p>
 	      
 			  <p><font size="+1" color="#990000"><b>Производители</b></font>
 			    
 			    <small><br/>
-			      &#183; <a href="../commercial/software_bycat.html">Программы</a><br/>
-			      &#183; <a href="../commercial/hardware.html">Аппаратура</a><br/>
-			      &#183; <a href="../commercial/consulting_bycat.html">Консалтинг</a><br/>
-			      &#183; <a href="../commercial/misc.html">Разное</a><br/>
+			      &#183; <a href="{$base}/commercial/software_bycat.html">Программы</a><br/>
+			      &#183; <a href="{$base}/commercial/hardware.html">Аппаратура</a><br/>
+			      &#183; <a href="{$base}/commercial/consulting_bycat.html">Консалтинг</a><br/>
+			      &#183; <a href="{$base}/commercial/misc.html">Разное</a><br/>
                             </small></p>
 
                           <p><font size="+1" color="#990000"><b>Пожертвования</b></font>
                             <small><br/>
-                              &#183; <a href="{$base}/donations/index.html">Контактная информация</a><br/>
-                              &#183; <a href="{$base}/donations/donors.html">Имеющиеся пожертвования</a><br/>
-                              &#183; <a href="{$base}/donations/wantlist.html">Список требуемого</a><br/>
+                              &#183; <a href="donations/index.html">Контактная информация</a><br/>
+                              &#183; <a href="donations/donors.html">Имеющиеся пожертвования</a><br/>
+                              &#183; <a href="donations/wantlist.html">Список требуемого</a><br/>
 			    </small></p>
 	      
 			  <p><font size="+1" color="#990000"><b>Этот сервер</b></font>
@@ -294,9 +297,9 @@
                 IA-64, PC-98 и UltraSPARC&#174;.  Она основана на BSD, версии
                 <xsl:value-of select="$unix"/>, разработанной в Университете
                 Калифорнии, Беркли.  Она разрабатывается и поддерживается <a
-		href="../doc/en_US.ISO8859-1/articles/contributors/index.html">
+		href="{$base}/doc/en_US.ISO8859-1/articles/contributors/index.html">
                 большой командой разработчиков</a>.  Поддержка <a
-		href="{$base}/platforms/index.html">других платформ</a>
+		href="platforms/index.html">других платформ</a>
 		находится на разных стадиях разработки.</p>
 
 	      <h2><font color="#990000">Выдающиеся возможности</font></h2>
@@ -304,14 +307,14 @@
 	      <p>Исключительный набор сетевых возможностей, высокая
 		производительность, средства обеспечения безопасности и
 		совместимости с другими ОС - вот те современные <a
-		href="{$base}/features.html">возможности</a> FreeBSD, которые
+		href="features.html">возможности</a> FreeBSD, которые
 		зачастую всё ещё отсутствуют в других, даже лучших коммерческих,
 		операционных системах.</p>
 
 	      <h2><font color="#990000">Мощное решение для Internet</font></h2>
 	      
 	      <p>FreeBSD является идеальной платформой для построения
-		<a href="{$base}/internet.html">Internet или Intranet</a>.
+		<a href="internet.html">Internet или Intranet</a>.
 		Эта система предоставляет надёжные даже при самой интенсивной
 		нагрузке сетевые службы, и эффективное управление памятью,
 		что позволяет обеспечивать приемлемое время отклика для
@@ -328,7 +331,7 @@
                 очень экономичной альтернативой коммерческим рабочим станциям
                 <xsl:value-of select="$unix"/>.  Она прекрасно подходит для
                 большого количества <a
-		href="{$base}/applications.html">приложений</a> как в качестве
+		href="applications.html">приложений</a> как в качестве
 		сервера, так и рабочей станции.</p>
 	    
 	      <h2><font color="#990000">Простота установки</font></h2>
@@ -338,14 +341,14 @@
                 либо, если у вас есть подключение к сети, можно установить
 		её <i>непосредственно</i> через FTP или NFS.  Всё, что вам
                 нужно иметь для этого - это пара чистых дискет объёмом 1.44МБ
-                и <a href="../doc/en_US.ISO8859-1/books/handbook/install.html">
+                и <a href="{$base}/doc/en_US.ISO8859-1/books/handbook/install.html">
                 эти указания</a>.</p>
 
 	      <h2><font color="#990000">FreeBSD распространяется
 		<i>свободно</i></font></h2>
 	    
 	      <a href="copyright/daemon.html"><img
-                                                   src="../../gifs/dae_up3.gif" 
+                                                   src="{$base}/gifs/dae_up3.gif" 
 						   alt=""
 						   height="81" width="72" 
 						   align="right" 
@@ -354,10 +357,10 @@
 	      <p>Хотя вы можете предположить, что операционная система с такими
 		возможностями продаётся по высокой цене, FreeBSD
 		распространяется <a
-		href="{$base}/copyright/index.html">бесплатно</a> и
+		href="copyright/index.html">бесплатно</a> и
 		поставляется со всеми исходными текстами. Если вам захочется
 		её попробовать, обратитесь к <a
-		href="../doc/en_US.ISO8859-1/books/handbook/mirrors.html">
+		href="{$base}/doc/en_US.ISO8859-1/books/handbook/mirrors.html">
 		следующей информации</a>.</p>
 
 	      <h2><font color="#990000">Как принять участие</font></h2>
@@ -370,7 +373,7 @@
 		вы его знаете. Эта работа может представлять собой что угодно,
 		от документации до исходных текстов. Подробнее об этом можно
 		прочитать <a
-		href="../doc/en_US.ISO8859-1/articles/contributing/index.html">
+		href="{$base}/doc/en_US.ISO8859-1/articles/contributing/index.html">
                 здесь.</a></p>
 
 	      <p>Даже если Вы не программист, есть другие способы помочь
@@ -405,7 +408,7 @@
 			    <xsl:value-of select="$rel.current"/></b></font><br/>
 
 			    <small>&#183; <a href="{$u.rel.announce}">Анонс</a><br/>
-			      &#183; <a href="../doc/en_US.ISO8859-1/books/handbook/install.html">Руководство по установке</a><br/>
+			      &#183; <a href="{$base}/doc/en_US.ISO8859-1/books/handbook/install.html">Руководство по установке</a><br/>
 			      &#183; <a href="{$u.rel.notes}">Информация о Релизе</a><br/>
 			      &#183; <a href="{$u.rel.hardware}">Поддерживаемое Оборудование</a><br/>
                               &#183; <a href="{$u.rel.errata}">Обнаруженные Проблемы</a><br/>
@@ -513,8 +516,8 @@
 		    <table cellpadding="4" cellspacing="0" border="0"
 			   bgcolor="#FFFFFF" width="100%"><tr>
 			<td>Чтобы узнать больше о FreeBSD посетите нашу
-			  галерею <a href="{$base}/publish.html">публикаций</a>
-			  посвященных FreeBSD или <a
+			  галерею <a href="publish.html">публикаций</a>,
+			  посвящённых FreeBSD или <a
 			  href="news/press.html">FreeBSD в Прессе</a>, а также
 			  побродите по этому сайту!</td>
 		      </tr>
@@ -543,8 +546,8 @@
 		alt="[Daemon News]" height="45" width="130"
 		border="0"/></a></td>
 	  
-	    <td><a href="{$base}/copyright/daemon.html"><img
-			     src="../gifs/powerlogo.gif" 
+	    <td><a href="copyright/daemon.html"><img
+			     src="{$base}/gifs/powerlogo.gif" 
 			     alt="[Powered by FreeBSD]"
 			     height="64" 
 			     width="160" 
@@ -552,13 +555,10 @@
 	  </tr>
 	</table>
 
-	<p><small>Обновления на веб-сервере происходят ежедневно
-	  в 08:00 и 20:00 UTC.</small></p>
-    
 	<table width="100%" cellpadding="0" border="0" cellspacing="0">
 	  <tr>
 	    <td align="left" 
-		valign="top"><small><a href="{$base}/mailto.html">Пишите 
+		valign="top"><small><a href="mailto.html">Пишите 
 		  нам</a><br/>
 		<xsl:value-of select="$date"/></small></td>
 
