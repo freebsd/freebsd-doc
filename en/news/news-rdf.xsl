@@ -1,14 +1,20 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/en/news/news-rdf.xsl,v 1.5 2003/08/15 17:35:42 simon Exp $ -->
+<!-- $FreeBSD: www/en/news/news-rdf.xsl,v 1.6 2004/05/25 01:18:44 hrs Exp $ -->
 
-<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
+<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
+  xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
   
+  <xsl:import href="../includes.xsl"/>
   <xsl:import href="includes.xsl"/>
 
   <xsl:output method="xml" indent="yes"/>
 
   <xsl:variable name="base" select="'..'"/>
+  <xsl:variable name="title" select="'FreeBSD News Flash RDF'"/>
+  <xsl:variable name="date">
+    <xsl:value-of select="//cvs:keyword[@name='freebsd']"/>
+  </xsl:variable>
 
   <!-- Generate the main body of the RDF file -->
   <xsl:template match="news">
@@ -29,6 +35,18 @@
 
   <!-- Generate the <item> elements and their content -->
   <xsl:template match="event" xmlns="http://my.netscape.com/rdf/simple/0.9/">
+    <xsl:param name="year" select="../../../name" />
+    <xsl:param name="month" select="../../name" />
+    <xsl:param name="day" select="../name" />
+    <xsl:param name="this" select="." />
+    <xsl:param name="pos">
+      <xsl:for-each select="../event">
+	<xsl:if test=". = $this">
+	  <xsl:value-of select="position()" />
+	</xsl:if>
+      </xsl:for-each>
+    </xsl:param>
+
     <item>
       <xsl:choose>
 	<xsl:when test="count(child::title)">
@@ -38,7 +56,16 @@
 	  <title><xsl:value-of select="normalize-space(p)"/></title>
 	</xsl:otherwise>
       </xsl:choose>
-      <link>http://www.FreeBSD.org/news/newsflash.html#<xsl:call-template name="generate-event-anchor"/></link>
+      <link>
+	<xsl:text>http://www.FreeBSD.org/news/newsflash.html#</xsl:text>
+	<xsl:call-template name="html-news-generate-anchor">
+	  <xsl:with-param name="label" select="'event'" />
+	  <xsl:with-param name="year" select="$year" />
+	  <xsl:with-param name="month" select="$month" />
+	  <xsl:with-param name="day" select="$day" />
+	  <xsl:with-param name="pos" select="$pos" />
+	</xsl:call-template>
+      </link>
     </item>
   </xsl:template>
   
