@@ -92,7 +92,6 @@ MAN8 =	IPXrouted.8\
 	isdntelctl.8\
 	isdntrace.8\
 	ispcvt.8\
-	ispppcontrol.8\
 	jail.8\
 	joy.8\
 	kernbb.8\
