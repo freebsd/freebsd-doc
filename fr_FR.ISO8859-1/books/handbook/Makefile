@@ -2,7 +2,7 @@
 # The FreeBSD French Documentation Project
 #
 # $FreeBSD$
-# Original revision: 1.79
+# Original revision: 1.90
 #
 # Build the FreeBSD Handbook.
 #
@@ -26,6 +26,7 @@
 #                       easily be imported into PGP/GPG.
 #
 # ------------------------------------------------------------------------
+.PATH: ${.CURDIR}/../../share/sgml/glossary
 
 MAINTAINER=blackend@FreeBSD.org
 
@@ -42,6 +43,7 @@ IMAGES = advanced-networking/isdn-bus.eps
 IMAGES+= advanced-networking/isdn-twisted-pair.eps
 IMAGES+= advanced-networking/natd.eps
 IMAGES+= advanced-networking/net-routing.pic
+IMAGES_EN+= advanced-networking/static-routes.pic
 IMAGES_EN+= install/userconfig.scr
 IMAGES_EN+= install/userconfig2.scr
 IMAGES_EN+= install/hdwrconf.scr
@@ -149,12 +151,15 @@ IMAGES_LIB+= callouts/10.png
 
 # SGML content
 SRCS+= book.sgml
+SRCS+= colophon.sgml
+SRCS+= freebsd-glossary.sgml
 SRCS+= advanced-networking/chapter.sgml
 SRCS+= basics/chapter.sgml
 SRCS+= bibliography/chapter.sgml
-SRCS+= config/chapter.sgml
 SRCS+= boot/chapter.sgml
+SRCS+= config/chapter.sgml
 SRCS+= cutting-edge/chapter.sgml
+SRCS+= desktop/chapter.sgml
 SRCS+= disks/chapter.sgml
 SRCS+= eresources/chapter.sgml
 SRCS+= install/chapter.sgml
@@ -162,21 +167,21 @@ SRCS+= introduction/chapter.sgml
 SRCS+= kernelconfig/chapter.sgml
 SRCS+= l10n/chapter.sgml
 SRCS+= linuxemu/chapter.sgml
+SRCS+= mac/chapter.sgml
 SRCS+= mail/chapter.sgml
 SRCS+= mirrors/chapter.sgml
 SRCS+= multimedia/chapter.sgml
-SRCS+= desktop/chapter.sgml
+SRCS+= network-servers/chapter.sgml
 SRCS+= pgpkeys/chapter.sgml
+SRCS+= ports/chapter.sgml
 SRCS+= ppp-and-slip/chapter.sgml
+SRCS+= preface/preface.sgml
 SRCS+= printing/chapter.sgml
 SRCS+= security/chapter.sgml
 SRCS+= serialcomms/chapter.sgml
 SRCS+= users/chapter.sgml
 SRCS+= vinum/chapter.sgml
 SRCS+= x11/chapter.sgml
-SRCS+= ports/chapter.sgml
-SRCS+= preface/preface.sgml
-SRCS+= colophon.sgml
 
 # Entities
 SRCS+= chapters.ent
@@ -187,9 +192,7 @@ SYMLINKS=	${DESTDIR} index.html handbook.html
 CHAPTERS?= ${SRCS:M*chapter.sgml}
 
 SGMLFLAGS+= ${CHAPTERS:S/\/chapter.sgml//:S/^/-i chap./}
-.if defined(WITH_GLOSSARY) && !empty(WITH_GLOSSARY)
 SGMLFLAGS+= -i chap.freebsd-glossary
-.endif
 
 # XXX The Handbook build currently overflows some internal, hardcoded
 # limits in pdftex.  Until we split the Handbook up, build the PDF
@@ -204,9 +207,7 @@ book.pdf: book.ps
 	${PS2PDF} book.ps book.pdf
 
 pgpkeyring: pgpkeys/chapter.sgml
-	@${JADE} -V nochunks ${JADEOPTS} -d ${DSLPGP} -t sgml ${MASTERDOC}
-
-DOC_PREFIX?= ${.CURDIR}/../../..
+	@${JADE} -V nochunks ${OTHERFLAGS} ${JADEOPTS} -d ${DSLPGP} -t sgml ${MASTERDOC}
 
 #
 # Handbook-specific variables
@@ -224,6 +225,9 @@ CLEANFILES+= mirrors.sgml.${p}.inc.tmp
 SRCS+= eresources.sgml.www.inc
 CLEANFILES+= eresources.sgml.www.inc
 CLEANFILES+= eresources.sgml.www.inc.tmp
+
+URL_RELPREFIX?=	../../../..
+DOC_PREFIX?= ${.CURDIR}/../../..
 
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"
 
