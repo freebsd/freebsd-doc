@@ -1,5 +1,5 @@
 # 
-# $Id: Makefile,v 1.2 1999-08-25 05:29:44 foxfair Exp $
+# $Id: Makefile,v 1.3 1999-09-03 17:45:42 nik Exp $
 #
 # Build the FreeBSD Chinese-Big5 FAQ
 #
@@ -23,6 +23,5 @@ INSTALL_ONLY_COMPRESSED?=
 # SGML content
 SRCS=  book.sgml 
 
-DOC_PREFIX?= ../../..
-
-.include "../../../share/mk/docproj.docbook.mk"
+DOC_PREFIX?= ${.CURDIR}/../../..
+.include "${DOC_PREFIX}/share/mk/doc.project.mk"
