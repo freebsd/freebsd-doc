@@ -1,4 +1,4 @@
-<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.16 2000/07/25 18:23:45 ben Exp $ -->
+<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.17 2000/10/08 19:15:06 nik Exp $ -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
 <!ENTITY % output.html		"IGNORE">
@@ -180,12 +180,6 @@
 
       ]]>
 
-      <![ %output.print.pdf [
-        (define %graphic-default-extension%
-          "png")
-      ]]>
-
-
       <!-- Both sets of stylesheets ..................................... -->
 
       (define %section-autolabel%
@@ -324,6 +318,18 @@
       (element (docinfo authorgroup) (process-children))
 
       (element (docinfo date) (process-children))
+
+      (element literallayout 
+	(if (equal? (attribute-string "class") (normalize "monospaced"))
+	  (make sequence
+	    ($verbatim-display$
+             %indent-literallayout-lines%
+             %number-literallayout-lines%))
+          (make sequence
+            ($linespecific-display$
+             %indent-literallayout-lines%
+             %number-literallayout-lines%))))
+
     </style-specification-body>
   </style-specification>
 
