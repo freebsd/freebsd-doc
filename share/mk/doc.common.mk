@@ -5,6 +5,9 @@
 # documents commonly used in doc/ and www/ tree.
 #
 
+AWK?=		/usr/bin/awk
+GREP?=		/usr/bin/grep
+
 .if defined(DOC_PREFIX) && !empty(DOC_PREFIX)
 WEB_PREFIX?=	${DOC_PREFIX}/../www
 .elif defined(WEB_PREFIX) && !empty(WEB_PREFIX)
@@ -100,13 +103,6 @@ WWW_LANGCODE?=	${_WWW_LANGCODE}
 
 # ------------------------------------------------------------------------
 #
-# advisories.xml dependency.
-#
-
-XML_ADVISORIES=		${WEB_PREFIX}/share/sgml/advisories.xml
-
-# ------------------------------------------------------------------------
-#
 # mirrors.xml dependency.
 #
 
@@ -122,6 +118,7 @@ XSL_MIRRORS=		${DOC_PREFIX}/share/sgml/mirrors-local.xsl
 .endif
 
 XSL_TRANSTABLE_MASTER=	${DOC_PREFIX}/share/sgml/transtable-master.xsl
+XSL_TRANSTABLE_COMMON=	${DOC_PREFIX}/share/sgml/transtable-common.xsl
 
 .if exists(${DOC_PREFIX}/${LANGCODE}/share/sgml/transtable-local.xsl)
 XSL_TRANSTABLE=		${DOC_PREFIX}/${LANGCODE}/share/sgml/transtable-local.xsl
@@ -135,13 +132,29 @@ XML_TRANSTABLE=		${DOC_PREFIX}/${LANGCODE}/share/sgml/transtable.xml
 XML_TRANSTABLE=		${DOC_PREFIX}/share/sgml/transtable.xml
 .endif
 
-${XSL_MIRRORS}: ${XSL_MIRRORS_MASTER}
+${XSL_MIRRORS}: ${XSL_MIRRORS_MASTER} ${XSL_TRANSTABLE_COMMON}
 
-${XML_MIRRORS}: ${XML_MIRRORS_MASTER} ${XSL_TRANSTABLE} ${XSL_TRANSTABLE_MASTER}
+${XML_MIRRORS}: ${XML_MIRRORS_MASTER} ${XSL_TRANSTABLE} ${XSL_TRANSTABLE_MASTER} ${XSL_TRANSTABLE_COMMON}
 	${MKDIR} -p ${@:H}
+	${XSLTPROC} ${XSLTPROCOPTS} \
+	    --param 'transtable.xml' "'${XML_TRANSTABLE}'" \
+	    --param 'transtable-target-element' "'country'" \
+	    --param 'transtable-word-group' "'country'" \
+	    --param 'transtable-mode' "'sortkey'" \
+	    ${XSL_TRANSTABLE} ${XML_MIRRORS_MASTER} \
+	  | env -i LANG="${LANGCODE}" ${SORT} -f > $@.sort.tmp
+	env -i ${GREP} "^<?xml" < $@.sort.tmp > $@.sort
+	${ECHO} "<sortkeys>" >> $@.sort
+	env -i ${AWK} '/^  / {sub(/@sortkey@/, ++line); print;}' < $@.sort.tmp >> $@.sort
+	${ECHO} '</sortkeys>' >> $@.sort
 	${XSLTPROC} ${XSLTPROCOPTS} -o $@ \
 	    --param 'transtable.xml' "'${XML_TRANSTABLE}'" \
-	    --param 'transtable-conv-element' "'country'" \
+	    --param 'transtable-target-element' "'country'" \
+	    --param 'transtable-word-group' "'country'" \
+	    --param 'transtable-sortkey.xml' "'$@.sort'" \
 	    ${XSL_TRANSTABLE} ${XML_MIRRORS_MASTER}
+	${RM} -f $@.sort $@.sort.tmp
 
 CLEANFILES+= ${XML_MIRRORS}
+CLEANFILES+= ${XML_MIRRORS}.sort
+CLEANFILES+= ${XML_MIRRORS}.sort.tmp
