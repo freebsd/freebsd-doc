@@ -1,9 +1,9 @@
 # 
-# $FreeBSD$
+# $FreeBSD: doc/ja_JP.eucJP/books/handbook/Makefile,v 1.41 1999/09/06 06:53:20 peter Exp $
 #
 # Build the FreeBSD Handbook (Japanese).
 #
-# Original revision: 1.24
+# Original revision: 1.26
 #
 
 MAINTAINER=kuriyama@FreeBSD.ORG
