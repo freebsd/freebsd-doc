@@ -1,5 +1,5 @@
 #!/usr/bin/perl -T
-# $FreeBSD: www/en/cgi/query-pr-summary.cgi,v 1.42 2003/12/27 14:44:57 ceri Exp $
+# $FreeBSD: www/en/cgi/query-pr-summary.cgi,v 1.43 2004/02/16 14:30:57 ceri Exp $
 
 sub escape($) { $_ = $_[0]; s/&/&amp;/g; s/</&lt;/g; s/>/&gt;/g; $_; }
 
@@ -480,7 +480,7 @@ sub gnats_summary {
 
 	next if (($report ne '') && (eval($report) == 0));
 
-	print "${pr}\nS  Submitted   Tracker     Resp.       Description${hr}"
+	print "${pr}\nS  Submitted    Tracker         Resp.       Description${hr}"
 	    if ($iteration++ == 0);
 
 	$syn = &html_fixline($syn) if $htmlmode;
