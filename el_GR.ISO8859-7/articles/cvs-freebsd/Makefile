@@ -9,8 +9,6 @@ DOC?= article
 
 FORMATS?= html
 
-TIDY_FLAGS+= -raw
-
 INSTALL_COMPRESSED?= gz
 INSTALL_ONLY_COMPRESSED?=
 

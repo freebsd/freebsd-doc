@@ -1,4 +1,4 @@
-# 
+#
 # $FreeBSD$
 #
 
@@ -7,12 +7,11 @@ MAINTAINER=keramida@FreeBSD.org
 DOC?= article
 
 FORMATS?= html
-TIDYFLAGS+= -raw
 
 INSTALL_COMPRESSED?= gz
 INSTALL_ONLY_COMPRESSED?=
 
-# 
+#
 # SRCS lists the individual SGML files that make up the document. Changes
 # to any of these files will force a rebuild
 #
