@@ -15,7 +15,7 @@
 # Disclaimer:
 #   This is pretty ugly in places.
 #
-# $FreeBSD$
+# $FreeBSD: www/en/cgi/search.cgi,v 1.16 2000/04/03 08:45:51 phantom Exp $
 
 
 $server_root = '/usr/local/www';
@@ -38,6 +38,11 @@ sub do_wais {
     @FORM_source = split(/\0/, $in{"source"});
     $FORM_max = $in{"max"};
     $FORM_docnum = $in{"docnum"};
+    $FORM_index = $in{"index"};
+
+    if ($FORM_index =~ /^re[sc]ent$/) {
+	$sourcepath = "$server_root/db/index-recent";
+    }
    
     if ($#FORM_words < 0) {
     	print &html_header("Mail Archive Search") .
@@ -252,10 +257,12 @@ sub docdone {
 	print "Archive: <em>$file</em>";
 	print "<p></p></li>\n";
     }
-#    $score = $headline = $lines = $bytes = $docid = $date = $file = '';
+    $score = $headline = $lines = $bytes = $docid = $date = $file = '';
+    $yr = $mo = $dy = '';
 }
 
 $| = 1;
 open (STDERR,"> /dev/null");
+#open (STDERR,">> /tmp/search");
 eval '&do_wais';
 
