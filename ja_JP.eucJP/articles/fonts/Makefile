@@ -1,5 +1,9 @@
+#
 # $FreeBSD$
-# Original revision: 1.10
+#
+# Article: Fonts and FreeBSD
+#
+# Original revision: 1.12
 
 DOC?= article
 
@@ -8,8 +12,9 @@ FORMATS?= html
 INSTALL_COMPRESSED?=gz
 INSTALL_ONLY_COMPRESSED?=
 
-SRCS= article.sgml
+SRCS=	article.sgml
 
+URL_RELPREFIX?=	../../../..
 DOC_PREFIX?= ${.CURDIR}/../../..
 
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"
