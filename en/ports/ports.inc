@@ -33,8 +33,8 @@ well as filenames.</p>
 <p>For more information about using ports, see <a
 href="../handbook/ports.html">The ports collection</a>.  For
 information about creating new ports, see <a
-href="../handbook/ports-advanced.html">Porting applications</a>.  Both
-are part of the <a href="../handbook/">FreeBSD Handbook</a>.</p>
+href="../handbook/porting.html">Porting applications</a>.  Both are
+part of the <a href="../handbook/">FreeBSD Handbook</a>.</p>
 
 <p>The ports listed on these web pages are continually being updated.
 The current ports tree officially supports only FreeBSD-current and
