@@ -26,7 +26,7 @@
 #
 # url.cgi - make plain text URLs clickable
 #
-# $Id: url.cgi,v 1.16 1999-02-27 01:59:48 fenner Exp $
+# $Id: url.cgi,v 1.17 1999-02-27 22:32:44 wosch Exp $
 
 
 $hsty_base = '';
@@ -56,7 +56,7 @@ if ($file =~ m%^ports/([\w-]+/\w[\w-+.]+)/pkg/DESCR%) {
     print &short_html_header($file);
 }
 
-if ($file =~ m%^ports/[\w-]+/\w[\w-+.]+/pkg/DESCR% && 
+if ($file =~ m%^ports/[\w-]+/\w[\w-+.]*/pkg/DESCR% && 
     -f "$cvsroot/$file,v") {
     open(CO, "-|") || exec ('/usr/bin/co', '-p', '-q', "$cvsroot/$file,v");
 } else {
