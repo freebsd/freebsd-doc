@@ -3,7 +3,7 @@
 <!--
      The FreeBSD Russian Documentation Project
 
-     $FreeBSD$
+     $FreeBSD: www/ru/index.xsl,v 1.2 2002/02/17 13:57:28 phantom Exp $
      $FreeBSDru: frdp/www/ru/index.xsl,v 1.5 2002/02/11 13:46:22 andy Exp $
 
      Original revision: 1.19
@@ -15,7 +15,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD$'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/ru/index.xsl,v 1.2 2002/02/17 13:57:28 phantom Exp $'"/>
   <xsl:variable name="title" select="'Проект FreeBSD'"/>
 
   <xsl:output type="html" encoding="koi8-r"
@@ -42,7 +42,7 @@
 	<table border="0" cellspacing="0" cellpadding="0">
 	  <tr>
 	    <td><a href="http://www.FreeBSD.org/index.html">
-		<img src="gifs/freebsd_1.gif" height="94" width="306"
+		<img src="../gifs/freebsd_1.gif" height="94" width="306"
 		     alt="FreeBSD: The Power to Serve" border="0"/></a></td>
 	    
 	    <td align="right" valign="bottom" width="300">
@@ -162,7 +162,7 @@
 	    
 			  <p><font size="+1" color="#990000"><b>Программы</b></font>
 			    <small><br/>
-			      &#183; <a href="{$base}/doc/en_US.ISO8859-1/books/handbook/mirrors.html">Где взять систему</a><br/>
+			      &#183; <a href="../doc/en_US.ISO8859-1/books/handbook/mirrors.html">Где взять систему</a><br/>
 			      &#183; <a href="releases/index.html">Релизы</a><br/>
 			      &#183; <a href="{$base}/ports/index.html">Приложения</a><br/>
 			    </small></p>
@@ -199,10 +199,10 @@
 			  <p><font size="+1" color="#990000"><b>Производители</b></font>
 			    
 			    <small><br/>
-			      &#183; <a href="{$base}/commercial/software_bycat.html">Программы</a><br/>
-			      &#183; <a href="{$base}/commercial/hardware.html">Аппаратура</a><br/>
-			      &#183; <a href="{$base}/commercial/consulting_bycat.html">Консалтинг</a><br/>
-			      &#183; <a href="{$base}/commercial/misc.html">Разное</a><br/>
+			      &#183; <a href="../commercial/software_bycat.html">Программы</a><br/>
+			      &#183; <a href="../commercial/hardware.html">Аппаратура</a><br/>
+			      &#183; <a href="../commercial/consulting_bycat.html">Консалтинг</a><br/>
+			      &#183; <a href="../commercial/misc.html">Разное</a><br/>
 			    </small></p>
 	      
 			  <p><font size="+1" color="#990000"><b>Этот сервер</b></font>
@@ -239,7 +239,7 @@
 		Alpha и PC-98. Корни ее идут из BSD UNIX, версии UNIX
 		разработанной в Университете Калифорнии, Беркли.
 		Она разрабатывается и поддерживается <a
-		href="{$base}/doc/en_US.ISO8859-1/articles/contributors/index.html">большой
+		href="../doc/en_US.ISO8859-1/articles/contributors/index.html">большой
 		командой разработчиков</a>. Поддержка <a
 		href="{$base}/platforms/index.html">других платформ</a>
 		находится на разных стадиях разработки.</p>
@@ -282,7 +282,7 @@
 		если у вас есть подключение к сети, то вы можете установить
 		её <i>непосредственно</i> через FTP или NFS. Всё, что вам нужно
 		иметь для этого - это пару чистых дискет объёмом 1.44МБ и <a
-		href="{$base}/handbook/install.html">эти указания</a>.</p>
+		href="../doc/en_US.ISO8859-1/books/handbook/install.html">эти указания</a>.</p>
 
 	      <h2><font color="#990000">FreeBSD распространяется
 		<i>свободно</i></font></h2>
@@ -299,7 +299,7 @@
 		href="{$base}/copyright/index.html">бесплатно</a> и
 		поставляется со всеми исходными текстами. Если вам захочется
 		её попробовать, обратитесь к <a
-		href="{$base}/doc/en_US.ISO8859-1/books/handbook/mirrors.html">
+		href="../doc/en_US.ISO8859-1/books/handbook/mirrors.html">
 		следующей информации</a>.</p>
 
 	      <h2><font color="#990000">Как принять участие</font></h2>
@@ -312,7 +312,7 @@
 		вы его знаете. Эта работа может представлять собой что угодно,
 		от документации до исходных текстов. Подробнее об этом можно
 		почитать <a
-		href="{$base}/doc/en_US.ISO8859-1/articles/contributing/index.html">здесь.</a></p>
+		href="../doc/en_US.ISO8859-1/articles/contributing/index.html">здесь.</a></p>
 
 		<p>Даже если Вы не программист, есть другие способы помочь
 		FreeBSD в развитии. The FreeBSD Foundation - это неприбыльная
@@ -340,7 +340,7 @@
 			    <xsl:value-of select="$rel.current"/></b></font><br/>
 			
 			    <small>&#183; <a href="{$u.rel.announce}">Анонс</a><br/>
-			      &#183; <a href="{$base}/doc/en_US.ISO8859-1/books/handbook/install.html">Руководство по Инсталляции</a><br/>
+			      &#183; <a href="../doc/en_US.ISO8859-1/books/handbook/install.html">Руководство по Инсталляции</a><br/>
 			      &#183; <a href="{$u.rel.notes}">Информация о Релизе</a><br/>
 			      &#183; <a href="{$u.rel.hardware}">Поддерживаемое Оборудование</a><br/>
 			      &#183; <a href="{$u.rel.errata}">Обнаруженные Проблемы</a></small></p>
@@ -432,20 +432,20 @@
 	<table width="100%" border="0" cellspacing="0" cellpadding="3">
 	  <tr>
 	    <td><a href="http://www.freebsdmall.com/"><img
-			   src="gifs/mall_title_medium.gif" alt="[FreeBSD Mall]"
+			   src="../gifs/mall_title_medium.gif" alt="[FreeBSD Mall]"
 			   height="65" width="165" border="0"/></a></td>
 	    
-	    <td><a href="http://www.ugu.com/"><img src="gifs/ugu_icon.gif"
+	    <td><a href="http://www.ugu.com/"><img src="../gifs/ugu_icon.gif"
 			   alt="[Мы спонсируем Unix Guru Universe]" 
 			   height="64" width="76"
 			   border="0"/></a></td>
 	  
-	    <td><a href="http://www.daemonnews.org/"><img src="gifs/darbylogo.gif"
+	    <td><a href="http://www.daemonnews.org/"><img src="../gifs/darbylogo.gif"
 		alt="[Daemon News]" height="45" width="130"
 		border="0"/></a></td>
 	  
 	    <td><a href="{$base}/copyright/daemon.html"><img
-			     src="gifs/powerlogo.gif" 
+			     src="../gifs/powerlogo.gif" 
 			     alt="[Powered by FreeBSD]"
 			     height="64" 
 			     width="160" 

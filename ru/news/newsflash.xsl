@@ -3,7 +3,7 @@
 <!--
      The FreeBSD Russian Documentation Project
 
-     $FreeBSD$
+     $FreeBSD: www/ru/news/newsflash.xsl,v 1.2 2002/02/17 13:51:48 phantom Exp $
      $FreeBSDru: frdp/www/ru/news/newsflash.xsl,v 1.3 2002/02/15 15:01:35 phantom Exp $
 
      Original revision: 1.5
@@ -51,16 +51,16 @@
 	  в курсе всех последних разработок бывает просто необходимо! Чтобы
 	  сделать это, периодически обращайтесь к этой страничке. Может быть, вы
 	  также захотите подписаться на <a
-	  href="{$base}/handbook/eresources.html#ERESOURCES-MAIL">список
+	  href="../../doc/en_US.ISO8859-1/books/handbook/eresources.html#ERESOURCES-MAIL">список
 	  рассылки freebsd-announce</a>.</p>
 
 	<p>Чтобы узнать самые последние новости о проекте FreeBSD Java,
           посетите, пожалуйста, страничку <a
-          href="{$base}/java/newsflash.html">Новостей FreeBSD/Java</a>.</p>
+          href="../../java/newsflash.html">Новостей FreeBSD/Java</a>.</p>
 
 	<p>Чтобы узнать самые последние новости о Проекте FreeBSD GNOME,
           посетите, пожалуйста, страничку <a
-          href="{$base}/gnome/newsflash.html">Новостей FreeBSD/GNOME</a>.</p>
+          href="../../gnome/newsflash.html">Новостей FreeBSD/GNOME</a>.</p>
 
 	<p>Подробное описание прошлых, настоящих и будущих релизов находится на
 	  странице <strong><a href="{$base}/releases/index.html">Информации
