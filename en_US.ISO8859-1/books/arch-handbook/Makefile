@@ -34,6 +34,7 @@ SRCS+= pci/chapter.sgml
 SRCS+= scsi/chapter.sgml
 SRCS+= smp/chapter.sgml
 SRCS+= sound/chapter.sgml
+SRCS+= pccard/chapter.sgml
 SRCS+= sysinit/chapter.sgml
 SRCS+= usb/chapter.sgml
 SRCS+= vm/chapter.sgml
