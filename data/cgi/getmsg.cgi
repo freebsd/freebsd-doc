@@ -6,7 +6,7 @@
 # by John Fieber
 # February 26, 1998
 #
-# $Id: getmsg.cgi,v 1.8 1998-03-19 11:01:54 wosch Exp $
+# $Id: getmsg.cgi,v 1.9 1998-03-19 13:32:38 wosch Exp $
 #
 
 require "./cgi-lib.pl";
@@ -73,7 +73,7 @@ sub MessageToHTML
     my ($doc) = @_;
     my ($header, $body) = split(/\n\n/, $doc, 2);
     my ($i, %hdr, $field, $data, $message);
-    my ($mid) = '/~wosch/test/mid/mid.cgi';
+    my ($mid) = 'mid.cgi';
     
     $body = &AddAnchors(&EscapeHTML($body));
 
