@@ -44,7 +44,7 @@ if ($#pages < 0) {
 foreach (sort @pages) {
 	($gcos, $login) = split(/:/);
 	($firstgecos, @gecos) = split(/,/, $gcos);
-	print qq{<LI><A HREF="http://www.freebsd.org/~$login/">},
+	print qq{<LI><A HREF="http://people.FreeBSD.org/~$login/">},
 	      $firstgecos, "</A> ", join(', ', @gecos), "</LI>\n";
 }
 
