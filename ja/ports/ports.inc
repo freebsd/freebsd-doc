@@ -1,16 +1,20 @@
-<!-- $Id: ports.inc,v 1.8 1999-03-10 18:38:51 motoyuki Exp $ -->
+<!-- $Id: ports.inc,v 1.9 1999-05-06 15:15:22 motoyuki Exp $ -->
 <!-- The FreeBSD Japanese Documentation Project -->
-<!-- Original revision: 1.33 -->
+<!-- Original revision: 1.35 -->
 <p>FreeBSD の Ports と Packages のコレクションは,
 ユーザや管理者が簡単にアプリケーショ
 ンのインストールを簡単に行う方法を提供します.
-ここに並べられている各 ``port'' には, FreeBSD でオリジナルのアプリケー
+ports コレクションは<a
+href="http://www.freebsd.org/%7Easami/papers/growth.gif">驚異的な速度で
+その数を増してきました</a>.
+
+<p>ここに並べられている各 ``port'' には, FreeBSD でオリジナルのアプリケー
 ションのソースコードをコンパイルし実行するために必要なパッチが全て含ま
 れています.
 アプリケーションのインストールは簡単で, port をダウンロードし, それを
 展開し, port ディレクトリで <tt>make</tt> と打つだけです.
 より便利にするためには, インストール時に
-<a href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/ports.tar.gz">
+<a href="ftp://ftp.freebsd.org/pub/FreeBSD/branches/-current/ports.tar.gz">
 ports 階層全体</a> をインストール (あるいは 
 <a href="../handbook/cvsup.html">CVSup</a> を使ってこれらを最新のものに
 更新) すれば, 何千ものアプリケーションがすぐに使えるようになります.
