@@ -1,6 +1,6 @@
-<!-- $Id: ports.inc,v 1.2 1997-11-24 22:26:04 max Exp $ -->
+<!-- $Id: ports.inc,v 1.3 1997-12-19 15:56:24 max Exp $ -->
 <!-- The FreeBSD Japanese Documentation Project -->
-<!-- Original revision: 1.17 -->
+<!-- Original revision: 1.18 -->
 <p>FreeBSD Ports コレクションは, ユーザや管理者が簡単にアプリケーショ
 ンのインストールを簡単に行う方法を提供します.
 ここに並べられている各 ``port'' には, FreeBSD でオリジナルのアプリケー
@@ -8,11 +8,12 @@
 れています.
 アプリケーションのインストールは簡単で, port をダウンロードし, それを
 展開し, port ディレクトリで <tt>make</tt> と打つだけです.
-<tt>Makefile</tt>は自動的に, ローカルディスクか ftp 経由でアプリケーショ
-ンのソースコードを取ってきて, あなたのシステム上で展開し, パッチをあて, 
+<tt>Makefile</tt>は自動的に, ローカルディスクや CDROM, ftp 経由で
+アプリケーションのソースコードを取ってきて,
+あなたのシステム上で展開し, パッチをあて, 
 コンパイルします. 
 問題がないようなら, あとは<tt>make install</tt>と打つだけでアプリケー
-ションをインストールできます. </p>
+ションをインストールして package システムへ登録できます. </p>
 
 <p>ports についてもう少し詳しく知りたい場合には, 
 <a href="../handbook/ports.html">ports コレクション</a> を参照してくだ
