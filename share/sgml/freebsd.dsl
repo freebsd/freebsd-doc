@@ -50,6 +50,23 @@
         (define html-manifest
           ;; Write a manifest?
           #f)
+
+        <!-- Understand <segmentedlist> and related elements.  Simpleminded,
+             and only works for the HTML output. -->
+
+        (element segmentedlist
+          (make element gi: "TABLE"
+            (process-children)))
+
+        (element seglistitem
+          (make element gi: "TR"
+            (process-children)))
+
+        (element seg
+          (make element gi: "TD"
+                attributes: '(("VALIGN" "TOP"))
+            (process-children)))
+
       ]]>
 
       <!-- Print only ................................................... --> 
