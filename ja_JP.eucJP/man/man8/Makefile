@@ -59,6 +59,7 @@ MAN8 =	IPXrouted.8\
 	ftpd.8\
 	getty.8\
 	hlfsd.8\
+	ibcs2.8\
 	ifconfig.8\
 	ilmid.8\
 	inetd.8\
@@ -69,6 +70,7 @@ MAN8 =	IPXrouted.8\
 	ipfw.8\
 	ipmon.8\
 	ispcvt.8\
+	joy.8\
 	kernbb.8\
 	keyadmin.8\
 	keyserv.8\
@@ -79,6 +81,7 @@ MAN8 =	IPXrouted.8\
 	kvm_mkdb.8\
 	kzip.8\
 	ldconfig.8\
+	linux.8\
 	locate.updatedb.8\
 	lpc.8\
 	lpd.8\
