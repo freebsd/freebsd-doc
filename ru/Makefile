@@ -4,7 +4,7 @@
 # $FreeBSD$
 # $FreeBSDru: frdp/www/ru/Makefile,v 1.38 2004/10/22 12:33:49 den Exp $
 #
-# Original revision: 1.110
+# Original revision: 1.114
 #
 
 .if exists(Makefile.conf)
@@ -49,7 +49,6 @@ SUBDIR+= internal
 SUBDIR+= java
 SUBDIR+= copyright
 SUBDIR+= search
-#SUBDIR+= gallery
 SUBDIR+= projects
 #SUBDIR+= prstats
 SUBDIR+= platforms
@@ -84,11 +83,14 @@ XML_NEWS_PRESS=		${XML_NEWS_PRESS_MASTER}
 
 index.html: index.xsl ${XML_INCLUDES}\
 		${XML_NEWS_INCLUDES} ${XML_NEWS_NEWS} ${XML_NEWS_PRESS}\
-		${XML_MIRRORS} ${XML_TRANSTABLE} ${XML_ADVISORIES} ${XML_NAVIGATION}
+		${XML_MIRRORS} ${XML_TRANSTABLE} \
+		${XML_ADVISORIES} ${XML_NOTICES} \
+		${XML_NAVIGATION}
 	${XSLTPROC} ${XSLTPROCOPTS} \
 		-o $@ \
 		--param mirrors.xml "'${XML_MIRRORS}'" \
 		--param advisories.xml "'${XML_ADVISORIES}'" \
+		--param notices.xml "'${XML_NOTICES}'" \
 		--param news.press.xml "'${XML_NEWS_PRESS}'" \
 		--param news.project.xml "'${XML_NEWS_NEWS}'" \
 		--param transtable.xml "'${XML_TRANSTABLE}'" \
