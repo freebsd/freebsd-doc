@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/Makefile,v 1.81 2002/03/25 04:23:42 murray Exp $
+# $FreeBSD: www/en/Makefile,v 1.82 2002/04/04 21:51:28 trhodes Exp $
 .if exists(Makefile.conf)
 .include "Makefile.conf"
 .endif
@@ -51,6 +51,7 @@ SUBDIR+= releng
 SUBDIR+= smp
 SUBDIR+= conspectus
 SUBDIR+= gnome
+SUBDIR+= donations
 .if !defined(WEB_ONLY) || empty(WEB_ONLY)
 SUBDIR+= ports
 SUBDIR+= doc
