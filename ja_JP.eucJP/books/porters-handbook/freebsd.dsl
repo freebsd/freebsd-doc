@@ -2,7 +2,7 @@
      The FreeBSD Documentation Project
      The FreeBSD Japanese Documentation Project
 
-     Original revision: 1.2
+     Original revision: 1.5
      $FreeBSD$
 -->
 
@@ -12,6 +12,7 @@
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
 <!ENTITY freebsd.dsl SYSTEM "../../share/sgml/freebsd.dsl" CDATA DSSSL>
+<!ENTITY % output.html  "IGNORE"> 
 ]>
 
 <style-sheet>
@@ -22,16 +23,14 @@
 	(define ($email-footer$)
           (make sequence
             (literal "FreeBSD ports システムに関する質問は、(英語で) <")
-            (make element gi: "a"
-                  attributes: (list (list "href" "mailto:ports@freebsd.org"))
-              (literal "ports@freebsd.org"))
+            (create-link (list (list "HREF" "mailto:ports@FreeBSD.org"))
+              (literal "ports@FreeBSD.org"))
             (literal "> へ、")
             (make empty-element gi: "br")
             (literal "この文書の原文に関するお問い合わせは、(英語で) <")
-              (make element gi: "a"
-                    attributes: (list (list "href" "mailto:doc@freebsd.org"))
-               (literal "doc@freebsd.org"))
-	    (literal "> までお願いします。")))
+             (create-link (list (list "HREF" "mailto:doc@FreeBSD.org"))
+               (literal "doc@FreeBSD.org"))
+	     (literal "> までお願いします。")))
 
 	<!-- Convert " ... " to `` ... '' in the HTML output. -->
 	(element quote
