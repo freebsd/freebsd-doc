@@ -1,27 +1,39 @@
 # $FreeBSD$
-# Original revision: 1.22
+# Original revision: 1.36
 
 SUBDIR =
+#SUBDIR+= 5-roadmap
+#SUBDIR+= checkpoint
 #SUBDIR+= committers-guide
 #SUBDIR+= console-server
 SUBDIR+= contributing
 SUBDIR+= contributors
+#SUBDIR+= cvs-freebsd
 #SUBDIR+= cvsup-advanced
 SUBDIR+= dialup-firewall
 SUBDIR+= diskless-x
+#SUBDIR+= euro
 #SUBDIR+= explaining-bsd
+#SUBDIR+= fbsd-from-scratch
 #SUBDIR+= filtering-bridges
 SUBDIR+= fonts
 #SUBDIR+= formatting-media
 #SUBDIR+= freebsd-questions
+#SUBDIR+= hats
+#SUBDIR+= hubs
 SUBDIR+= ipsec-must
 #SUBDIR+= laptop
+#SUBDIR+= java-tomcat
 #SUBDIR+= mh
 SUBDIR+= multi-os
 #SUBDIR+= new-users
+#SUBDIR+= pam
+#SUBDIR+= pr-guidelines
 SUBDIR+= problem-reports
 #SUBDIR+= programming-tools
 #SUBDIR+= pxe
+#SUBDIR+= releng
+#SUBDIR+= releng-packages
 #SUBDIR+= serial-uart
 #SUBDIR+= solid-state
 #SUBDIR+= storage-devices
