@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp 
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.36 2001-03-11 11:02:23 wosch Exp $
+# $Id: man.cgi,v 1.37 2001-03-11 11:04:12 wosch Exp $
 
 #use Data::Dumper;
 #use Carp;
@@ -844,6 +844,8 @@ ETX
 }
 
 sub copyright {
+    $id = '$Id: man.cgi,v 1.37 2001-03-11 11:04:12 wosch Exp $';
+
     return qq{\
 <PRE>
 Copyright (c) 1996-2001 Wolfram Schneider <A HREF="$mailtoURL">&lt;$mailto&gt;</A>. Berlin.
@@ -855,8 +857,7 @@ the University of California, Massachusetts Institute of
 Technology, Free Software Foundation, FreeBSD Inc., and others.
 
 </PRE>\n
-This script has the revsion: 
-\$Id: man.cgi,v 1.36 2001-03-11 11:02:23 wosch Exp $
+This script has the revsion: $id
 <p>
 
 Copyright (c) for man pages by OS vendors.
