@@ -2,7 +2,7 @@
      The FreeBSD Italian Documentation Project
 
      $FreeBSD$
-     Original revision: 1.17
+     Original revision: 1.20
 -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
