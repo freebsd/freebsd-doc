@@ -413,7 +413,8 @@ ${DOC}.tex-ps: ${DOC}.tex
 	${LN} -f ${.ALLSRC} ${.TARGET}
 
 ${DOC}.tex-pdf: ${SRCS} ${IMAGES_PDF} ${INDEX_SGML} ${PRINT_INDEX}
-	${CP} -p ${PDFTEX_DEF} ${.TARGET}
+	${RM} -f ${.TARGET}
+	${CAT} ${PDFTEX_DEF} > ${.TARGET}
 	${JADE} -V tex-backend ${PRINTOPTS} -ioutput.print.pdf \
 		${JADEOPTS} -t tex -o /dev/stdout ${MASTERDOC} >> ${.TARGET}
 
@@ -726,7 +727,8 @@ package-${_curformat}: ${PACKAGES}/${.CURDIR:T}.${LANGCODE}.${_curformat}.tgz
 
 .if ${LOCAL_CSS_SHEET} != ${CSS_SHEET}
 ${LOCAL_CSS_SHEET}: ${CSS_SHEET}
-	${CP} -p ${.ALLSRC} ${.TARGET}
+	${RM} -f ${.TARGET}
+	${CAT} ${.ALLSRC} > ${.TARGET}
 .if defined(CSS_SHEET_ADDITIONS)
 	${CAT} ${.CURDIR}/${CSS_SHEET_ADDITIONS} >> ${.TARGET}
 .endif
