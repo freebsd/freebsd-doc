@@ -1,6 +1,6 @@
-# $FreeBSD: www/ja/news/Makefile,v 1.18 2000/05/12 15:34:39 kuriyama Exp $
+# $FreeBSD: www/ja/news/Makefile,v 1.19 2000/06/15 01:40:22 kuriyama Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.18
+# Original revision: 1.20
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -21,7 +21,7 @@ DOCS+=	qnewsletter-2-2.sgml
 DOCS+= press.sgml
 DOCS+= newsflash.sgml
 DOCS+= news.sgml
-DOCS+= webchanges.sgml
+#DOCS+= webchanges.sgml
 
 # press releases
 DOCS+= pressreleases.sgml
