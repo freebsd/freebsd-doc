@@ -1,9 +1,10 @@
-# $FreeBSD: doc/en_US.ISO8859-1/articles/Makefile,v 1.18 2001/09/17 03:25:05 murray Exp $
+# $FreeBSD: doc/en_US.ISO8859-1/articles/Makefile,v 1.19 2001/10/08 06:19:13 murray Exp $
 
 SUBDIR = committers-guide
 SUBDIR+= console-server
 SUBDIR+= contributing
 SUBDIR+= contributors
+SUBDIR+= cvsup-advanced
 SUBDIR+= dialup-firewall
 SUBDIR+= diskless-x
 SUBDIR+= explaining-bsd
