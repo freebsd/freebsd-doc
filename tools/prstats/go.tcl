@@ -1,8 +1,10 @@
 #!/usr/local/bin/tclsh8.3
 #
-# $FreeBSD$
+# $FreeBSD: www/tools/prstats/go.tcl,v 1.1 2001/10/29 01:58:12 murray Exp $
 #
+# This script expects the directory of a GNATS database as its sole argument.
 
+set gnatsdir [lindex $argv 0]
 set fo [open _ w]
 proc PR {fn} {
 	global fo
@@ -38,6 +40,8 @@ proc PR {fn} {
 	close $fi
 }
 
-foreach pr [glob {/c/gnats/*/[1-9]*}] {
+
+append gnatsdir {/*/[1-9]*}
+foreach pr [glob $gnatsdir] {
 	PR $pr
 }
