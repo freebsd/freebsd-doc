@@ -144,12 +144,14 @@ MAN1 =	addftinfo.1\
 	kbdcontrol.1\
 	kbdmap.1\
 	kcon.1\
+	kdestroy.1\
 	kdump.1\
 	kenv.1\
 	keylogin.1\
 	keylogout.1\
 	kill.1\
 	killall.1\
+	kpasswd.1\
 	ktrace.1\
 	lam.1\
 	last.1\
