@@ -10,6 +10,8 @@ MAN8 =	IPXrouted.8\
 	apm.8\
 	apmconf.8\
 	arp.8\
+	atm.8\
+	atmarpd.8\
 	atrun.8\
 	bad144.8\
 	badsect.8\
@@ -18,6 +20,8 @@ MAN8 =	IPXrouted.8\
 	bootpd.8\
 	bootpef.8\
 	bootptest.8\
+	btxld.8\
+	camcontrol.8\
 	ccdconfig.8\
 	chat.8\
 	chkgrp.8\
@@ -45,6 +49,8 @@ MAN8 =	IPXrouted.8\
 	fdcontrol.8\
 	fdisk.8\
 	fingerd.8\
+	fixmount.8\
+	fore_dnld.8\
 	fsck.8\
 	fsdb.8\
 	fsinfo.8\
@@ -52,7 +58,9 @@ MAN8 =	IPXrouted.8\
 	ft.8\
 	ftpd.8\
 	getty.8\
+	hlfsd.8\
 	ifconfig.8\
+	ilmid.8\
 	inetd.8\
 	init.8\
 	intro.8\
@@ -176,6 +184,7 @@ MAN8 =	IPXrouted.8\
 	rwhod.8\
 	sa.8\
 	savecore.8\
+	scspd.8\
 	sendmail.8\
 	showmount.8\
 	shutdown.8\
@@ -209,10 +218,12 @@ MAN8 =	IPXrouted.8\
 	uucpd.8\
 	uusched.8\
 	uuxqt.8\
+	vinum.8\
 	vipw.8\
 	vmstat.8\
 	vnconfig.8\
 	watch.8\
+	wire-test.8\
 	wlconfig.8\
 	wormcontrol.8\
 	xntpd.8\

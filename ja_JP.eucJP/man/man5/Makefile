@@ -1,4 +1,5 @@
-MAN5 =	a.out.5 acct.5 aliases.5 ar.5 bootparams.5 bootptab.5 core.5\
+MAN5 =	a.out.5 acct.5 aliases.5 amd.conf.5 ar.5 auth.conf.5\
+	bootparams.5 bootptab.5 core.5\
 	crontab.5 ctm.5 cvs.5 devfs.5 dir.5 disklabel.5 disktab.5\
 	dm.conf.5 editrc.5 ethers.5 exports.5 fbtab.5 fdesc.5\
 	forward.5 fs.5 fstab.5 gettytab.5 groff_font.5 groff_out.5\
