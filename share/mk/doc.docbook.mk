@@ -213,6 +213,10 @@ HTMLFLAGS+=	-V %generate-docformat-navi-link%
 .elif (${FORMATS:Mhtml} == "html") && (${FORMATS:Mhtml-split} == "html-split")
 HTMLFLAGS+=	-V %generate-docformat-navi-link%
 .endif
+.if defined(WITH_ALL_TRADEMARK_SYMBOLS) && !empty(WITH_ALL_TRADEMARK_SYMBOLS)
+HTMLFLAGS+=	-V %show-all-trademark-symbols%
+PRINTFLAGS+=	-V %show-all-trademark-symbols%
+.endif
 
 PERL?=		/usr/bin/perl
 PKG_CREATE?=	/usr/sbin/pkg_create
