@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/ports.cgi,v 1.48 2000/11/07 21:43:02 wosch Exp $
+# $FreeBSD: www/en/cgi/ports.cgi,v 1.49 2000/12/28 12:33:00 wosch Exp $
 #
 # ports.cgi - search engine for FreeBSD ports
 #             	o search for a port by name or description
@@ -249,18 +249,35 @@ sub readindex {
 sub readcoll {
     local(@co) = ('co', '-p', 'ports/INDEX');
 
-    open(C, "-|") || exec (@cvscmd, @co);
-
     local(@a, @b, %key);
-    while(<C>) {
-	chop;
+    local($file) = '../ports/categories';
 
-	@a = split('\|');
-	@b = split(/\s+/, $a[6]);
+    if (-r $file && open(C, $file)) {
+	while(<C>) {
+	    chop;
 
-	foreach (@b) {
-	    if (!defined($key{$_})) {
-		$key{$_} = 1;
+	    if (/^\s*\"([^\"]+)\"\s*,/) { #"
+		@b = split(/\s+/, $1);
+		foreach (@b) {
+		    if (!defined($key{$_})) {
+			$key{$_} = 1;
+		    }
+		}
+	    }
+	}
+    } else {
+	open(C, "-|") || exec (@cvscmd, @co);
+
+	while(<C>) {
+	    chop;
+
+	    @a = split('\|');
+	    @b = split(/\s+/, $a[6]);
+
+	    foreach (@b) {
+		if (!defined($key{$_})) {
+		    $key{$_} = 1;
+		}
 	    }
 	}
     }
@@ -537,7 +554,7 @@ sub footer {
 <img ALIGN="RIGHT" src="/gifs/powerlogo.gif">
 &copy; 1996-2000 by Wolfram Schneider. All rights reserved.<br>
 };
-    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.48 2000/11/07 21:43:02 wosch Exp $} . "<br>\n";
+    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.49 2000/12/28 12:33:00 wosch Exp $} . "<br>\n";
     print qq{Please direct questions about this service to
 <I><A HREF="$mailtoURL">$mailto</A></I><br>\n};
     print qq{General questions about FreeBSD ports should be sent to } .
