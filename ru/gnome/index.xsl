@@ -3,9 +3,9 @@
 <!--
      The FreeBSD Russian Documentation Project
 
-     $FreeBSDru: frdp/www/ru/gnome/index.xsl,v 1.4 2004/01/03 08:49:51 andy Exp $
+     $FreeBSDru: frdp/www/ru/gnome/index.xsl,v 1.5 2004/01/13 12:07:39 andy Exp $
 
-     Original revision: 1.45
+     Original revision: 1.46
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
@@ -16,8 +16,8 @@
   <xsl:import href="../includes.xsl"/>
   <xsl:import href="includes.xsl"/>
 
-  <xsl:variable name="base" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.42 2003/09/20 18:53:02 marcus Exp $'"/>
+  <xsl:variable name="base" select="'../..'"/>
+  <xsl:variable name="date" select="'$FreeBSD$'"/>
   <xsl:variable name="title" select="'Проект FreeBSD GNOME'"/>
 
   <xsl:output type="html" encoding="koi8-r"
@@ -138,14 +138,14 @@
               <h2><font color="#990000">Состояние порта</font></h2>
 
               <p>GNOME для FreeBSD на данный момент поддерживается в версиях
-                4.8, 4.9, 5.1, -STABLE и -CURRENT.  Большинство из
+                4.8, 4.9, 5.2, -STABLE и -CURRENT.  Большинство из
                 GNOME было перенесено во FreeBSD; однако всё ещё <a
                 href="docs/volunteer.html">есть над чем поработать</a>!</p>
             </td>
 
             <td></td>
 
-            <!-- Right-most column -->
+            <!-- Правая крайняя колонка -->
             <td valign="top"> <!-- width="20%" -->
               <!-- News table -->
               <table border="0" cellspacing="0" cellpadding="1"
@@ -221,5 +221,5 @@
 
       </body>
     </html>
-  </xsl:template>    
+  </xsl:template>
 </xsl:stylesheet>
