@@ -1,5 +1,4 @@
- $FreeBSD$
-
+# $FreeBSD: doc/Makefile,v 1.15 1999/09/06 06:52:34 peter Exp $
 #
 # The user can override the default list of languages to build and install
 # with the DOC_LANG variable.
