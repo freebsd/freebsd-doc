@@ -289,7 +289,7 @@ install-${_curformat}: ${DOC}.${_curformat}
 			${DESTDIR}/${LOCAL_IMAGES_LIB_DIR}/${_curimage:H}
 .endfor
 # Install the images.  First, loop over all the image names that contain a
-# directory seperator, make the subdirectories, and install.  Then loop over
+# directory separator, make the subdirectories, and install.  Then loop over
 # the ones that don't contain a directory separator, and install them in the
 # top level.
 .for _curimage in ${IMAGES_PNG:M*/*}
