@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp 
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.134 2004-08-29 18:08:57 wosch Exp $
+# $Id: man.cgi,v 1.135 2004-08-29 18:23:39 www Exp $
 
 #use Data::Dumper;
 #use Carp;
@@ -1024,7 +1024,7 @@ ETX
 }
 
 sub copyright {
-    $id = '$Id: man.cgi,v 1.134 2004-08-29 18:08:57 wosch Exp $';
+    $id = '$Id: man.cgi,v 1.135 2004-08-29 18:23:39 www Exp $';
 
     return qq{\
 <PRE>
@@ -1054,7 +1054,8 @@ Copyright (c) for man pages by OS vendors.
 <a href="http://www.sun.com">SunOS</a>,
 <a href="http://www.digital.com">ULTRIX</a>,
 <a href="ftp://elib.zib.de/pub/netlib/att/cs/v7man">Unix Seventh Edition</a>,
-<a href="http://www.xfree86.org">XFree86</a>
+<a href="http://www.xfree86.org">XFree86</a>,
+<a href="http://www.x.org">X11R6</a>
 };
 }
 
