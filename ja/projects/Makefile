@@ -1,4 +1,4 @@
-# $FreeBSD: www/ja/projects/Makefile,v 1.12 2001/11/13 09:40:03 kuriyama Exp $
+# $FreeBSD: www/ja/projects/Makefile,v 1.13 2004/01/10 18:37:59 rushani Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.14
 
@@ -13,7 +13,7 @@ DOCS=	projects.sgml
 #DOCS+=	updater.sgml
 DOCS+=	newbies.sgml
 #DOCS+=	libh.sgml
-#DOCS+=	cvsweb.sgml
+DOCS+=	cvsweb.sgml
 
 INDEXLINK= projects.html
 
