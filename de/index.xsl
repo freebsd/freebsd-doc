@@ -2,8 +2,8 @@
 
 <!--
      $FreeBSD$
-     $FreeBSDde: de-www/index.xsl,v 1.20 2003/11/18 00:49:34 mheinen Exp $
-     basiert auf: 1.80
+     $FreeBSDde: de-www/index.xsl,v 1.21 2003/12/02 00:33:33 mheinen Exp $
+     basiert auf: 1.83
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -56,106 +56,9 @@
 		        which are not mirrored should be listed in
 		        support.sgml.  -->
 
-		  <option value="http://www.dk.FreeBSD.org/">IPv6 D&#228;nemark</option>
-		  <option value="http://www2.de.FreeBSD.org/">IPv6 Deutschland</option>
-		  <option value="http://www1.uk.FreeBSD.org/">IPv6 Gro&#223;britannien</option>
-		  <option value="http://www.jp.FreeBSD.org/www.FreeBSD.org/">IPv6 (6Bone), Japan</option>
-		  <option value="http://www2.no.FreeBSD.org/">IPv6 Norwegen</option>
-		  <option value="http://www2.at.FreeBSD.org/">IPv6 &#214;sterreich</option>
-		  <option value="http://www4.us.FreeBSD.org/">IPv6 USA/1</option>
-		  <option value="http://www5.us.FreeBSD.org/">IPv6 USA/2</option>
-		  <option value="http://www.ar.FreeBSD.org/">Argentinien</option>
-		  <option value="http://www.au.FreeBSD.org/">Australien/1</option>
-		  <option value="http://www2.au.FreeBSD.org/">Australien/2</option>
-		  <option value="http://freebsd.unixtech.be/">Belgien</option>
-		  <option value="http://www.br.FreeBSD.org/freebsd/">Brasilien/1</option>
-		  <option value="http://www2.br.FreeBSD.org/www.freebsd.org/">Brasilien/2</option>
-		  <option value="http://www3.br.FreeBSD.org/">Brasilien/3</option>
-		  <option value="http://www.bg.FreeBSD.org/">Bulgarien</option>
-		  <option value="http://www.cn.FreeBSD.org/">China</option>
-		  <option value="http://www.dk.FreeBSD.org/">D&#228;nemark/1</option>
-		  <option value="http://www3.dk.FreeBSD.org/">D&#228;nemark/2</option>
-		  <option value="http://www.de.FreeBSD.org/">Deutschland/1</option>
-		  <option value="http://www1.de.FreeBSD.org/">Deutschland/2</option>
-		  <option value="http://www2.de.FreeBSD.org/">Deutschland/3</option>
-		  <option value="http://www.ee.FreeBSD.org/">Estland</option>
-		  <option value="http://www.fi.FreeBSD.org/">Finnland/1</option>
-		  <option value="http://www2.fi.FreeBSD.org/">Finnland/2</option>
-		  <option value="http://www.fr.FreeBSD.org/">Frankreich</option>
-		  <option value="http://www.gr.FreeBSD.org/">Griechenland/1</option>
-		  <option value="http://www.FreeBSD.gr/">Griechenland/2</option>
-		  <option value="http://www.uk.FreeBSD.org/">Gro&#223;britannien/1</option>
-		  <option value="http://www2.uk.FreeBSD.org/">Gro&#223;britannien/2</option>
-		  <option value="http://www3.uk.FreeBSD.org/">Gro&#223;britannien/3</option>
-		  <option value="http://www4.uk.FreeBSD.org/">Gro&#223;britannien/4</option>
-		  <option value="http://www1.uk.FreeBSD.org/">Gro&#223;britannien/5</option>
-		  <option value="http://www.hk.FreeBSD.org/">Hong Kong</option>
-		  <option value="http://www.ie.FreeBSD.org/">Irland/1</option>
-		  <option value="http://www2.ie.FreeBSD.org/">Irland/2</option>
-		  <option value="http://www.is.FreeBSD.org/">Island</option>
-		  <option value="http://www.it.FreeBSD.org/">Italien/1</option>
-		  <option value="http://www.gufi.org/mirrors/www.freebsd.org/data/">Italien/2</option>
-		  <option value="http://www.jp.FreeBSD.org/www.FreeBSD.org/">Japan</option>
-		  <option value="http://www.ca.FreeBSD.org/">Kanada/1</option>
-		  <option value="http://www2.ca.FreeBSD.org/">Kanada/2</option>
-		  <option value="http://www.kr.FreeBSD.org/">Korea/1</option>
-		  <option value="http://www2.kr.FreeBSD.org/">Korea/2</option>
-		  <option value="http://www.kw.FreeBSD.org/">Kuwait</option>
-		  <option value="http://www.lv.FreeBSD.org/">Lettland</option>
-		  <option value="http://www.lt.FreeBSD.org/">Litauen</option>
-		  <option value="http://www.nz.FreeBSD.org/">Neuseeland</option>
-		  <option value="http://www.nl.FreeBSD.org/">Niederlande/1</option>
-		  <option value="http://www2.nl.FreeBSD.org/">Niederlande/2</option>
-		  <option value="http://www.no.FreeBSD.org/">Norwegen/1</option>
-		  <option value="http://www2.no.FreeBSD.org/">Norwegen/2</option>
-		  <option value="http://www.at.FreeBSD.org/">&#214;sterreich/1</option>
-		  <option value="http://www2.at.FreeBSD.org/">&#214;sterreich/2</option>
-		  <option value="http://www.FreeBSD.org.ph/">Philippinen</option>
-		  <option value="http://www.pl.FreeBSD.org/">Polen/1</option>
-		  <option value="http://www2.pl.FreeBSD.org/">Polen/2</option>
-		  <option value="http://www.pt.FreeBSD.org/">Portugal/1</option>
-		  <option value="http://www4.pt.FreeBSD.org/">Portugal/2</option>
-		  <option value="http://www5.pt.FreeBSD.org/">Portugal/3</option>
-		  <option value="http://www.ro.FreeBSD.org/">Rum&#228;nien/1</option>
-		  <option value="http://www2.ro.FreeBSD.org/">Rum&#228;nien/2</option>
-		  <option value="http://www3.ro.FreeBSD.org/">Rum&#228;nien/3</option>
-		  <option value="http://www4.ro.FreeBSD.org/">Rum&#228;nien/4</option>
-		  <option value="http://www.ru.FreeBSD.org/">Russland/1</option>
-		  <option value="http://www2.ru.FreeBSD.org/">Russland/2</option>
-		  <option value="http://www3.ru.FreeBSD.org/">Russland/3</option>
-		  <option value="http://www4.ru.FreeBSD.org/">Russland/4</option>
-		  <option value="http://www.sm.FreeBSD.org/">San Marino</option>
-		  <option value="http://www.se.FreeBSD.org/">Schweden/1</option>
-		  <option value="http://www2.se.FreeBSD.org/">Schweden/2</option>
-		  <option value="http://www.ch.FreeBSD.org/">Schweiz/1</option>
-		  <option value="http://www2.ch.FreeBSD.org/">Schweiz/2</option>
-		  <option value="http://www2.sg.FreeBSD.org/">Singapur</option>
-		  <option value="http://www.sk.FreeBSD.org/">Slowakische Republik/1</option>
-		  <option value="http://www2.sk.FreeBSD.org/">Slowakische Republik/2</option>
-		  <option value="http://www.si.FreeBSD.org/">Slowenien/1</option>
-		  <option value="http://www2.si.FreeBSD.org/">Slowenien/2</option>
-		  <option value="http://www.es.FreeBSD.org/">Spanien/1</option>
-		  <option value="http://www2.es.FreeBSD.org/">Spanien/2</option>
-		  <option value="http://www3.es.FreeBSD.org/">Spanien/3</option>
-		  <option value="http://www.za.FreeBSD.org/">S&#252;dafrika/1</option>
-		  <option value="http://www2.za.FreeBSD.org/">S&#252;dafrika/2</option>
-		  <option value="http://www.tw.FreeBSD.org/">Taiwan/1</option>
-		  <option value="http://www2.tw.FreeBSD.org/">Taiwan/2</option>
-		  <option value="http://www3.tw.FreeBSD.org/">Taiwan/3</option>
-		  <option value="http://www4.tw.FreeBSD.org/">Taiwan/4</option>
-		  <option value="http://www.cz.FreeBSD.org/">Tschechische Republik</option>
-		  <option value="http://www.tr.FreeBSD.org/">T&#252;rkei/1</option>
-		  <option value="http://www2.tr.FreeBSD.org/">T&#252;rkei/2</option>
-		  <option value="http://www.enderunix.org/freebsd/">T&#252;rkei/3</option>
-		  <option value="http://www.ua.FreeBSD.org/">Ukraine/1</option>
-		  <option value="http://www2.ua.FreeBSD.org/">Ukraine/2</option>
-		  <option value="http://www5.ua.FreeBSD.org/">Ukraine/3</option>
-		  <option value="http://www4.ua.FreeBSD.org/">Ukraine/Krim</option>
-		  <option value="http://www.hu.FreeBSD.org/">Ungarn/1</option>
-		  <option value="http://www2.hu.FreeBSD.org/">Ungarn/2</option>
-		  <option value="http://www2.us.FreeBSD.org/">USA/1</option>
-		  <option value="http://www4.us.FreeBSD.org/">USA/2</option>
-		  <option value="http://www5.us.FreeBSD.org/">USA/3</option>
+		<xsl:call-template name="html-index-mirrors-options-list">
+		  <xsl:with-param name="mirrors.xml" select="$mirrors.xml" />
+		</xsl:call-template>
 		</select>
 
 		<input type="submit" value=" Los "/>
@@ -493,18 +396,18 @@
 			    <font size="-1">
 			      aktualisiert am:
 			      <xsl:value-of
-				select="document('../en/security/advisories.xml')/descendant::day[position() = 1]/name"/>
+				select="document($advisories.xml)/descendant::day[position() = 1]/name"/>
 			      <xsl:text>. </xsl:text>
 			      <xsl:call-template name="translate-month">
 			        <xsl:with-param name="month"
-				  select="document('../en/security/advisories.xml')/descendant::month[position() = 1]/name"/>
+				  select="document($advisories.xml)/descendant::month[position() = 1]/name"/>
 			      </xsl:call-template>
 			      <xsl:text> </xsl:text>
 			      <xsl:value-of
-				select="document('../en/security/advisories.xml')/descendant::year[position() = 1]/name"/>
+				select="document($advisories.xml)/descendant::year[position() = 1]/name"/>
 			      <br/>
 			      <!-- Pull in the 10 most recent security advisories -->
-			      <xsl:for-each select="document('../en/security/advisories.xml')/descendant::advisory[position() &lt; 10]">
+			      <xsl:for-each select="document($advisories.xml)/descendant::advisory[position() &lt; 10]">
 				&#183; <a>
 				  <xsl:attribute name="href">ftp://ftp.freebsd.org/pub/FreeBSD/CERT/advisories/<xsl:value-of select="name"/>.asc</xsl:attribute>
 				  <xsl:value-of select="name"/>

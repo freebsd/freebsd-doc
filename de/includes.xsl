@@ -1,11 +1,14 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
 <!-- $FreeBSD$
-     $FreeBSDde: de-www/includes.xsl,v 1.7 2003/11/18 00:53:55 mheinen Exp $
-     basiert auf: 1.17
+     $FreeBSDde: de-www/includes.xsl,v 1.8 2003/12/02 00:33:33 mheinen Exp $
+     basiert auf: 1.20
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
+
+  <xsl:import href="../share/sgml/includes.xsl" />
+  <xsl:variable name="url.doc.langcode" select="'de_DE.ISO8859-1'" />
 
   <xsl:variable name="base" select="'.'"/>
   <xsl:variable name="enbase" select="'..'"/>
