@@ -1,10 +1,11 @@
-<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.50 2001/08/27 04:01:40 bmah Exp $ -->
+<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.51 2001/09/07 22:26:45 murray Exp $ -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
 <!ENTITY % output.html		"IGNORE">
 <!ENTITY % output.html.images 	"IGNORE">
 <!ENTITY % output.print 	"IGNORE">
 <!ENTITY % output.print.pdf 	"IGNORE">
+<!ENTITY % output.print.justify	"IGNORE">
 
 <![ %output.html; [
 <!ENTITY docbook.dsl PUBLIC "-//Norman Walsh//DOCUMENT DocBook HTML Stylesheet//EN" CDATA DSSSL>
@@ -199,6 +200,16 @@
 		          (literal "(" (format-number conumber "1") ")")))
 	        (make element gi: "B"
 	       (literal "(??)")))))
+      ]]>
+
+      <!-- Print with justification ..................................... --> 
+      <![ %output.print.justify; [
+
+        (define %default-quadding%
+          'justify)
+
+        (define %hyphenation%
+          #t)
       ]]>
 
       <!-- Print only ................................................... --> 
