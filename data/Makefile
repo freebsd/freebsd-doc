@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.26 1998-04-11 16:50:13 jkh Exp $
+# $Id: Makefile,v 1.27 1998-04-16 10:39:00 wosch Exp $
 
 .if exists(Makefile.conf)
 .include "Makefile.conf"
@@ -16,7 +16,7 @@ DOCS+= features.sgml gallery.sgml index-site.sgml mozilla.sgml register.sgml
 DOCS+= internet.sgml license.sgml mailto.sgml mirror.sgml newsflash.sgml
 DOCS+= npgallery.sgml pgallery.sgml publish.sgml search.sgml searchhints.sgml
 DOCS+= send-pr.sgml security.sgml support.sgml where.sgml resignation.sgml
-DOCS+= y2kbug.sgml search-mid.sgml
+DOCS+= y2kbug.sgml search-mid.sgml press.sgml
 
 CLEANFILES+=atoz.sgml
 
