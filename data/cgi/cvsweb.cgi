@@ -39,6 +39,13 @@ require 'cgi-style.pl';
 	    'mozilla', '/a/mozilla-cvs',
 	    );
 
+%CVSROOTdescr = (
+	    'freebsd', 'FreeBSD',
+	    'openbsd', 'OpenBSD',
+	    'learn', 'Learn',
+	    'mozilla', 'Mozilla FreeBSD',
+	    );
+
 $cvstreedefault = 'freebsd';
 $cvstree = $cvstreedefault;
 $cvsroot = $CVSROOT{"$cvstree"} || "/home/ncvs";
@@ -108,6 +115,26 @@ if (!-d $cvsroot) {
 }
 
 
+{
+    local(@foo, $i);
+    local($scriptname) = $ENV{'SCRIPT_NAME'};
+    foreach (keys %CVSROOT) {
+	if (-d $CVSROOT{$_}) {
+	    push(@foo, $_);
+	}
+    }
+    if ($#foo > 1) {
+	$intro .= "<p>\nThis script support the following CVS trees:\n";
+	for($i = 0; $i <= $#foo; $i++) {
+	    $intro .= qq{<a href="$scriptname?cvsroot=$foo[$i]">} .
+		($CVSROOTdescr{$foo[$i]} ? 
+		 $CVSROOTdescr{$foo[$i]} : $foo[$i]) . qq{</a>} .
+		     ($i == $#foo  ? ".\n" : ",\n");
+	}
+    }
+}
+
+
 if (-d $fullname) {
 	opendir(DIR, $fullname) || &fatal("404 Not Found","$where: $!");
 	@dir = readdir(DIR);
@@ -119,7 +146,10 @@ if (-d $fullname) {
 	    print &html_header("/$where");
 	    print $shortinstr;
 	}
-	print "<p>Current directory: <b>/$where</b>\n";
+	print "<p>";
+	print "Current CVS tree: <b>$cvstree</b><br>\n"
+	    if $cvstree ne $cvstreedefault;
+	print "Current directory: <b>/$where</b>\n";
 	print "<P><HR NOSHADE>\n";
 	# Using <MENU> in this manner violates the HTML2.0 spec but
 	# provides the results that I want in most browsers.  Another
