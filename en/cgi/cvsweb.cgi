@@ -43,8 +43,8 @@
 # SUCH DAMAGE.
 #
 # $zId: cvsweb.cgi,v 1.103 2000/09/20 17:02:29 jumager Exp $
-# $Id: cvsweb.cgi,v 1.53 2000-09-30 18:57:41 knu Exp $
-# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.52 2000/09/23 20:37:58 knu Exp $
+# $Id: cvsweb.cgi,v 1.54 2000-09-30 20:21:04 knu Exp $
+# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.53 2000/09/30 18:57:41 knu Exp $
 #
 ###
 
@@ -1148,11 +1148,6 @@ sub doAnnotate($$) {
     ($pathname = $where) =~ s/(Attic\/)?[^\/]*$//;
     ($filename = $where) =~ s/^.*\///;
 
-    http_header();
-
-    navigateHeader($scriptwhere,$pathname,$filename,$rev, "annotate");
-    print "<h3 align=center>Annotation of $pathname$filename, Revision $rev</h3>\n";
-
     # this seems to be necessary
     $| = 1; $| = 0; # Flush
 
@@ -1214,6 +1209,11 @@ sub doAnnotate($$) {
     # were nicer about buffering, then we could just leave it open, I think.
     close ($writer) || die "cannot close: $!";
 
+    http_header();
+
+    navigateHeader($scriptwhere,$pathname,$filename,$rev, "annotate");
+    print "<h3 align=center>Annotation of $pathname$filename, Revision $rev</h3>\n";
+
     # Ready to get the responses from the server.
     # For example:
     #     E Annotations for foo/xx
@@ -1246,33 +1246,41 @@ sub doAnnotate($$) {
 	}
 	elsif ($words[0] eq "M") {
 	    $lineNr++;
-	    my $lrev = substr ($_, 2, 13);
-	    my $lusr = substr ($_, 16,  9);
-	    my $line = substr ($_, 36);
+	    (my $lrev = substr($_, 2, 13)) =~ y/ //d;
+	    (my $lusr = substr($_, 16,  9)) =~ y/ //d;
+	    my $line = substr($_, 36);
+	    my $isCurrentRev = ($rev eq $lrev);
 	    # we should parse the date here ..
 	    if ($lrev eq $oldLrev) {
-		$revprint = "             ";
+		$revprint = sprintf('%-8s', '');
 	    }
 	    else {
-		$revprint = $lrev; $oldLusr = "";
-		$revprint =~ s`^(\S+)`<a href="${scriptwhere}${barequery}#rev$1">$1</A>`;	# `		
+		$revprint = sprintf('%-8s', $lrev);
+		$revprint =~ s`\S+`<a href="${scriptwhere}${barequery}#rev$1">$&</A>`;	# `		
+		$oldLusr = '';
 	    }
 	    if ($lusr eq $oldLusr) {
-		$usrprint = "         ";
+		$usrprint = '';
 	    }
 	    else {
 		$usrprint = $lusr;
 	    }
 	    $oldLrev = $lrev;
 	    $oldLusr = $lusr;
-	    # is there a less timeconsuming way to strip spaces ?
-	    ($lrev = $lrev) =~ s/\s+//g;
-	    my $isCurrentRev = ($rev eq $lrev);
 
-	    print "<b>" if ($isCurrentRev);
-	    printf ("%8s%s%8s %4d:", $revprint, ($isCurrentRev ? "|" : " "), $usrprint, $lineNr);
+	    # Set bold for text-based browsers only - graphical
+	    # browsers show bold fonts a bit wider than regular fonts,
+	    # so it looks irregular.
+	    print "<b>" if ($isCurrentRev && $is_textbased);
+
+	    printf ("%s%s %-8s %4d:",
+		    $revprint,
+		    $isCurrentRev ? '!' : ' ',
+		    $usrprint,
+		    $lineNr);
 	    print spacedHtmlText($line, $d{'tabstop'});
-	    print "</b>" if ($isCurrentRev);
+
+	    print "</b>" if ($isCurrentRev && $is_textbased);
 	}
 	elsif ($words[0] eq "ok") {
 	    # We could complain about any text received after this, like the
@@ -2485,7 +2493,7 @@ sub navigateHeader($$$$$) {
     $swhere = urlencode($filename) if ($swhere eq "");
     print "<\!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\">";
     print "<HTML>\n<HEAD>\n";
-    print '<!-- CVSweb $zRevision: 1.103 $  $Revision: 1.53 $ -->';
+    print '<!-- CVSweb $zRevision: 1.103 $  $Revision: 1.54 $ -->';
     print "\n<TITLE>$path$filename - $title - $rev</TITLE></HEAD>\n";
     print  "$body_tag_for_src\n";
     print "<table width=\"100%\" border=0 cellspacing=0 cellpadding=1 bgcolor=\"$navigationHeaderColor\">";
@@ -2840,7 +2848,7 @@ sub http_header(;$) {
 
 sub html_header($) {
     my ($title) = @_;
-    my $version = '$zRevision: 1.103 $  $Revision: 1.53 $'; #'
+    my $version = '$zRevision: 1.103 $  $Revision: 1.54 $'; #'
     http_header();
 
     (my $header = &cgi_style::html_header) =~ s/^.*\n\n//; # remove HTTP response header
