@@ -32,7 +32,7 @@ CSS_SHEET?=
 
 SLIDES_XSLDIR=	/usr/local/share/xsl/slides/xsl/
 SLIDES_XSLHTML= ${SLIDES_XSLDIR}xhtml/default.xsl
-SLIDES_XSLPRINT= ${SLIDES_XSLDIR}fo/plain.xsl
+SLIDES_XSLPRINT?= ${SLIDES_XSLDIR}fo/plain.xsl
 
 # Loop through formats we should build.
 .for _curformat in ${FORMATS}
@@ -45,11 +45,16 @@ _docs+= ${DOC}.${_curformat}
 CLEANFILES+= ${DOC}.${_curformat}
 
 .if ${_cf} == "pdf"
-CLEANFILES+= ${DOC}.fo ${DOC}.aux ${DOC}.log ${DOC}.out ${DOC}.pdf texput.log
+CLEANFILES+= ${DOC}.fo ${DOC}.pdf 
+.if ! defined (USE_FOP) && ! defined (USE_XEP)
+CLEANFILES+= ${DOC}.aux ${DOC}.log ${DOC}.out texput.log
+.endif
 .endif
 
 .endfor
 
+XSLTPROCFLAGS?=	--nonet
+XSLTPROCOPTS=	${XSLTPROCFLAGS}
 
 .MAIN: all
 
@@ -58,6 +63,14 @@ all: ${_docs}
 ${DOC}.html: ${SRCS}
 	${XSLTPROC} ${XSLTPROCOPTS} ${SLIDES_XSLHTML} ${.ALLSRC}
 
-${DOC}.pdf: ${SRCS}
+${DOC}.fo: ${SRCS}
 	${XSLTPROC} ${XSLTPROCOPTS} ${SLIDES_XSLPRINT} ${.ALLSRC} > ${.TARGET:S/.pdf$/.fo/}
+
+${DOC}.pdf: ${DOC}.fo
+.if defined(USE_FOP)
+	${FOP_CMD} ${.TARGET:S/.pdf$/.fo/} ${.TARGET}
+.elif defined(USE_XEP)
+	${XEP_CMD} ${.TARGET:S/.pdf$/.fo/} ${.TARGET}
+.else
 	${PDFTEX_CMD} --interaction nonstopmode "&pdfxmltex" ${.TARGET:S/.pdf$/.fo/}
+.endif
