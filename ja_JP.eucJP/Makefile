@@ -1,11 +1,13 @@
-# $FreeBSD: doc/ja_JP.eucJP/Makefile,v 1.12 1999/09/06 06:53:16 peter Exp $
+# $FreeBSD$
 #
 # Original revision: 1.5
 #
 
 SUBDIR = articles
 SUBDIR+= books
+.if !defined(NO_JPMAN)
 SUBDIR+= man
+.endif
 
 COMPAT_SYMLINK = ja_JP.eucJP
 
