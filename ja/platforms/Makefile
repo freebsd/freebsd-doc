@@ -1,4 +1,4 @@
-# $FreeBSD: www/ja/platforms/Makefile,v 1.4 2003/10/15 06:34:41 rushani Exp $
+# $FreeBSD: www/ja/platforms/Makefile,v 1.5 2003/10/17 22:53:05 rushani Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.7
 
@@ -19,7 +19,7 @@ DOCS+=	ppc.sgml
 DOCS+=	sparc.sgml
 DOCS+=	x86-64.sgml
 
-#SUBDIR=	ia64
+SUBDIR=	ia64
 
 ### Revision checking
 REVCHECK=	yes
