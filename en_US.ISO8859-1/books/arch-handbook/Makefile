@@ -1,5 +1,5 @@
 # 
-# $FreeBSD: doc/en_US.ISO8859-1/books/developers-handbook/Makefile,v 1.6 2001/06/23 04:57:31 murray Exp $
+# $FreeBSD: doc/en_US.ISO8859-1/books/developers-handbook/Makefile,v 1.7 2001/07/19 22:06:05 murray Exp $
 #
 # Build the FreeBSD Developers' Handbook.
 #
@@ -28,6 +28,7 @@ SRCS=  book.sgml
 SRCS+= introduction/chapter.sgml
 SRCS+= tools/chapter.sgml
 SRCS+= secure/chapter.sgml
+SRCS+= l10n/chapter.sgml
 SRCS+= locking/chapter.sgml
 SRCS+= sockets/chapter.sgml
 SRCS+= ipv6/chapter.sgml
