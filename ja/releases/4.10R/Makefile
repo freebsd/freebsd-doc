@@ -1,4 +1,4 @@
-# $FreeBSD: www/ja/releases/4.10R/Makefile,v 1.1 2004/05/27 01:35:33 hrs Exp $
+# $FreeBSD: www/ja/releases/4.10R/Makefile,v 1.2 2004/05/27 07:36:54 hrs Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -24,5 +24,8 @@ DATA=	docbook.css
 #DATA+=	readme.html
 #DATA+=	relnotes-alpha.html
 #DATA+=	relnotes-i386.html
+
+### Revision checking
+REVCHECK=	YES
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
