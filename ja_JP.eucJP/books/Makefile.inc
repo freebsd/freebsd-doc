@@ -2,4 +2,4 @@
 # $FreeBSD$
 #
 
-DESTDIR?=	${DOCDIR}/ja/books/${.CURDIR:T}
+DESTDIR?=	${DOCDIR}/ja_JP.eucJP/books/${.CURDIR:T}
