@@ -4,9 +4,9 @@
      The FreeBSD Russian Documentation Project
 
      $FreeBSD$
-     $FreeBSDru: frdp/www/ru/index.xsl,v 1.29 2004/01/18 06:17:41 andy Exp $
+     $FreeBSDru: frdp/www/ru/index.xsl,v 1.30 2004/02/11 12:17:39 den Exp $
 
-     Original revision: 1.92
+     Original revision: 1.93
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -115,105 +115,9 @@
 			   bgcolor="#ffcc66" width="100%">
 		      <tr>
 			<td>
-			  <p>
-			    <a href="platforms/index.html">
-			      <font size="+1" color="#990000"><b>Платформы</b></font>
-			    </a><small><br/>
-			      &#183; <a href="{$base}/smp/index.html">i386</a><br/>
-			      &#183; <a href="platforms/alpha.html">Alpha</a><br/>
-			      &#183; <a href="platforms/ia64/index.html">IA-64</a><br/>
-			      &#183; <a href="platforms/amd64.html">AMD64</a><br/>
-			      &#183; <a href="platforms/sparc.html">Sparc64</a><br/>
-			      &#183; <a href="platforms/index.html">Ещё?</a><br/>
-			    </small></p>
-
-			  <p><font size="+1" color="#990000"><b>Программы</b></font>
-			    <small><br/>
-			      &#183; <a href="{$base}/doc/en_US.ISO8859-1/books/handbook/mirrors.html">Получение FreeBSD</a><br/>
-			      &#183; <a href="releases/index.html">О релизах</a><br/>
-			      &#183; <a href="ports/index.html">Приложения</a><br/>
-			    </small></p>
-
-			  <p>
-			    <a href="docs.html">
-			      <font size="+1" color="#990000"><b>Документация</b></font>
-			    </a><small><br/>
-                              &#183; <a href="{$base}/doc/ru_RU.KOI8-R/books/faq/index.html">FAQ</a><br/>
-                              &#183; <a href="{$base}/doc/en_US.ISO8859-1/books/handbook/index.html">Руководство</a><br/>
-                              &#183; <a href="http://www.FreeBSD.org/cgi/man.cgi">Страницы справочной системы</a><br/>
-			      &#183; <a href="docproj/index.html">Проект Документирования</a><br/>
-			      &#183; <a href="projects/newbies.html">Для новичков</a><br/>
-			    </small></p>
-
-			  <p>
-			    <a href="support.html">
-			      <font size="+1" color="#990000"><b>Поддержка</b></font>
-			    </a><small><br/>
-			      &#183; <a href="support.html#mailing-list">Списки рассылки</a><br/>
-			      &#183; <a href="support.html#newsgroups">Телеконференции</a><br/>
-			      &#183; <a href="support.html#user">Группы пользователей</a><br/>
-			      &#183; <a href="support.html#web">Web-ресурсы</a><br/>
-			      &#183; <a href="security/index.html">Безопасность</a><br/>
-			    </small></p>
-
-			  <p>
-			    <a href="support.html#gnats">
-			      <font size="+1" color="#990000"><b>Сообщения об ошибках</b></font>
-			    </a><small><br/>
-			      &#183; <a href="http://www.FreeBSD.org/cgi/query-pr-summary.cgi?query">Поиск</a><br/>
-			      &#183; <a href="http://www.FreeBSD.org/cgi/query-pr.cgi">Просмотр одного</a><br/>
-			      &#183; <a href="http://www.FreeBSD.org/cgi/query-pr-summary.cgi">Просмотр всех</a><br/>
-                              &#183; <a href="send-pr.html">Отправка сообщения</a><br/>
-			      &#183; <a href="{$base}/doc/ru_RU.KOI8-R/articles/problem-reports/article.html">Составление сообщений об ошибке</a><br/>
-                            </small></p>
-
-			  <p>
-			    <a href="projects/index.html">
-			      <font size="+1" color="#990000"><b>Разработка</b></font>
-			    </a><small><br/>
-			      &#183; <a href="{$base}/doc/en_US.ISO8859-1/books/developers-handbook">Руководство разработчика</a><br/>
-			      &#183; <a href="{$base}/doc/ru_RU.KOI8-R/books/porters-handbook">Руководство по созданию портов</a><br/>
-			      &#183; <a href="support.html#cvs">Дерево CVS</a><br/>
-			      &#183; <a href="releng/index.html">Выпуск релизов</a><br/>
-			      &#183; <a href="{$base}/doc/en_US.ISO8859-1/articles/contributing/index.html">Помощь FreeBSD</a><br/>
-			    </small></p>
-
-			  <p><font size="+1" color="#990000"><b>Поставщики</b></font>
-
-			    <small><br/>
-			      &#183; <a href="{$base}/commercial/software_bycat.html">Программы</a><br/>
-			      &#183; <a href="{$base}/commercial/hardware.html">Оборудование</a><br/>
-			      &#183; <a href="{$base}/commercial/consulting_bycat.html">Консалтинг</a><br/>
-			      &#183; <a href="{$base}/commercial/misc.html">Разное</a><br/>
-                            </small></p>
-
-                          <p><font size="+1" color="#990000"><b>Пожертвования</b></font>
-                            <small><br/>
-                              &#183; <a href="donations/index.html">Контактная информация</a><br/>
-                              &#183; <a href="donations/donors.html">Имеющиеся пожертвования</a><br/>
-                              &#183; <a href="donations/wantlist.html">Список требуемого</a><br/>
-			    </small></p>
- 
-			  <p>
-			    <a href="search/index-site.html">
-			      <font size="+1" color="#990000"><b>Сайт</b></font>
-			    </a><small><br/>
-			      &#183; <a href="search/search.html#web">Поиск по сайту</a><br/>
-			      &#183; <a href="search/search.html#mailinglists">Поиск в рассылках</a><br/>
-			      &#183; <a href="search/search.html">Поиск</a><br/>
-			    </small></p>
-
-			  <p>
-			    <a href="mailto.html">
-			      <font size="+1" color="#990000"><b>Контактная информация</b></font>
-			    </a>
-			  </p>
-
-			  <p>
-			    <a href="copyright/index.html">
-			      <font size="+1" color="#990000"><b>Авторские права BSD</b></font>
-			    </a>
-			  </p>
+			  <xsl:call-template name="html-index-navigation-link-list">
+			    <xsl:with-param name="navigation.xml" select="$navigation.xml"/>
+			  </xsl:call-template>
 
 			  <form action="http://www.FreeBSD.org/cgi/search.cgi" method="get">
 			    <small>Поиск:<br/>
@@ -221,7 +125,8 @@
 			      <input type="hidden" name="max" value="25"/>
 			      <input type="hidden" name="source" value="www"/>
 			      <input type="submit" value="Искать"/></small>
-			  </form></td>
+			  </form>
+			</td>
 		      </tr>
 		    </table>
 		  </td>
