@@ -1,6 +1,6 @@
-# $FreeBSD: www/ja/internal/Makefile,v 1.19 2002/01/03 03:30:06 kuriyama Exp $
+# $FreeBSD: www/ja/internal/Makefile,v 1.20 2002/05/13 20:09:04 hrs Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.30
+# Original revision: 1.38
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -19,8 +19,11 @@ DOCS+=	statistic.sgml
 DOCS+=	developer.sgml
 #DOCS+=	bylaws.sgml
 #DOCS+=	releng.sgml
-#DOCS+=	releng45.sgml
 #DOCS+=	expire-bits.sgml
+#DOCS+=	core-vote.sgml
+#DOCS+=	trb-dispute.sgml
+#DOCS+=	doceng.sgml
+#DOCS+=	rtp.sgml
 
 INDEXLINK=	internal.html
 

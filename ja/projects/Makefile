@@ -1,6 +1,6 @@
-# $FreeBSD: www/ja/projects/Makefile,v 1.11 2000/11/07 11:37:57 kuriyama Exp $
+# $FreeBSD: www/ja/projects/Makefile,v 1.12 2001/11/13 09:40:03 kuriyama Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.7
+# Original revision: 1.14
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -10,9 +10,14 @@
 .endif
 
 DOCS=	projects.sgml
+#DOCS+=	updater.sgml
 DOCS+=	newbies.sgml
+#DOCS+=	libh.sgml
+#DOCS+=	cvsweb.sgml
 
 INDEXLINK= projects.html
+
+#SUBDIR=  busdma c99 mips
 
 ### Revision checking
 REVCHECK=	yes
