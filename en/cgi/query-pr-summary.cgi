@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $FreeBSD: www/en/cgi/query-pr-summary.cgi,v 1.27 2000/10/22 14:25:07 phantom Exp $
+# $FreeBSD: www/en/cgi/query-pr-summary.cgi,v 1.28 2000/10/29 22:16:41 steve Exp $
 
 $html_mode     = 1 if $ENV{'DOCUMENT_ROOT'};
 $self_ref      = $ENV{'SCRIPT_NAME'};
@@ -223,7 +223,7 @@ foreach ("category", "originator", "priority", "class", "responsible",
 		$d = $input{$_};
 		$d =~ s/^"(.*)"$/$&/;
 		$d =~ s/'/\\'/;
-		$query_args .= " --${_}='$input{$_}'";
+		$query_args .= " --${_}='$d'";
 	}
 }
 
