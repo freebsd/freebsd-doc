@@ -1,4 +1,4 @@
-<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.37 2001/07/17 02:22:29 murray Exp $ -->
+<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.38 2001/07/20 04:59:27 murray Exp $ -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
 <!ENTITY % output.html		"IGNORE">
@@ -376,11 +376,32 @@
 
       (element chapterinfo 
         (process-children))
+      (element sect1info 
+        (process-children))
+      (element sect2info 
+        (process-children))
       (element (chapterinfo authorgroup author)
         (make sequence
           (process-node-list (select-elements (descendants (current-node))
                                 (normalize "contrib")))
           (literal (author-list-string))))
+      (element (sect1info authorgroup author)
+        (make sequence
+          (process-node-list (select-elements (descendants (current-node))
+                                (normalize "contrib")))
+          (literal (author-list-string))))
+      (element (sect2info authorgroup author)
+        (make sequence
+          (process-node-list (select-elements (descendants (current-node))
+                                (normalize "contrib")))
+          (literal (author-list-string))))
+      (element (chapterinfo authorgroup)
+        (process-children))
+      (element (sect1info authorgroup)
+        (process-children))
+      (element (sect2info authorgroup)
+        (process-children))
+
       (element (author contrib)
         (make sequence
           (process-children)
