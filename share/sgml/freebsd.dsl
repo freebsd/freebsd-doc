@@ -1,4 +1,4 @@
-<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.41 2001/07/24 11:07:59 dd Exp $ -->
+<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.42 2001/07/24 23:09:25 chern Exp $ -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
 <!ENTITY % output.html		"IGNORE">
@@ -249,9 +249,7 @@
           (if (and (equal? (attribute-string (normalize "role")) "pgpkey")
 		   (not withpgpkeys))
               (empty-sosofo)
-	      ($verbatim-display$
-	       %indent-programlisting-lines%
-	       %number-programlisting-lines%)))
+              (next-match)))
 
         (define %body-start-indent% 
           0pi)
