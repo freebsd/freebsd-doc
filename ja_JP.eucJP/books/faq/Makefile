@@ -1,7 +1,9 @@
 # 
-# $Id: Makefile,v 1.4 1999-08-28 09:48:29 nik Exp $
+# $Id: Makefile,v 1.5 1999-08-31 15:00:03 kuriyama Exp $
 #
 # Build the FreeBSD FAQ
+#
+# Original revision: 1.3
 #
 
 MAINTAINER=kuriyama@FreeBSD.ORG
@@ -23,4 +25,4 @@ SRCS=  book.sgml
 
 DOC_PREFIX?= ../../..
 
-.include "../../../share/mk/docproj.docbook.mk"
+.include "${DOC_PREFIX}/share/mk/docproj.docbook.mk"
