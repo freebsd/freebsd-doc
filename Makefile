@@ -1,4 +1,6 @@
-# $FreeBSD: www/Makefile,v 1.13 2000/02/28 13:15:53 phantom Exp $
+# $FreeBSD: www/Makefile,v 1.14 2000/09/30 00:21:38 nbm Exp $
+
+WEB_PREFIX=	${.CURDIR}
 
 LINKS=	en/ja en/es en/ru en/zh
 LINKS+=	ja/web.mk es/web.mk ru/web.mk
