@@ -1,4 +1,4 @@
-<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.32 2001/06/16 21:30:11 nik Exp $ -->
+<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.33 2001/06/18 14:29:16 nik Exp $ -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
 <!ENTITY % output.html		"IGNORE">
@@ -137,6 +137,16 @@
       <!-- HTML with images  ............................................ -->
 
       <![ %output.html.images [
+
+; The new Cascading Style Sheets for the HTML output are very confused
+; by our images when used with div class="mediaobject".  We can
+; clear up the confusion by ignoring the whole mess and just
+; displaying the image.
+
+        (element mediaobject
+          (if (node-list-empty? (select-elements (children (current-node)) (normalize "imageobject")))
+            (process-children)
+            (process-node-list (select-elements (children (current-node)) (normalize "imageobject")))))
 
         (define %graphic-default-extension%
           "png")
