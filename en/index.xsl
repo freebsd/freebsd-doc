@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/index.xsl,v 1.15 2001/11/05 01:51:01 dd Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.16 2001/11/05 02:31:58 jkh Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   
@@ -6,7 +6,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.15 2001/11/05 01:51:01 dd Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.16 2001/11/05 02:31:58 jkh Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -244,10 +244,9 @@
 	      
 	      <p>FreeBSD makes an ideal 
 		<a href="{$base}/internet.html">Internet or Intranet</a> 
-		server. It provides robust network services,
-		even under the heaviest of loads, and uses memory efficiently 
-		to maintain good response times for hundreds, or even 
-		thousands, of simultaneous user processes.  Visit our 
+		server. It provides robust network services under the heaviest
+		loads and uses memory efficiently to maintain good response
+		times for thousands of simultaneous user processes. Visit our
 		<a href="gallery/gallery.html">gallery</a> for examples of
 		FreeBSD powered applications and services.</p>
 	    
@@ -305,7 +304,7 @@
 		for more information or write to: The FreeBSD Foundation,
 		7321 Brockway Dr.  Boulder, CO.  80303.  USA</p>
 
-		<p>Silicon Breeze have also sculpted and cast the BSD Daemon
+		<p>Silicon Breeze has also sculpted and cast the BSD Daemon
 		in metal and are now donating 15% of all proceeds from
 		these statuettes back to the FreeBSD Foundation. The complete
 		story and information on how to order their BSD Daemon is
