@@ -581,6 +581,12 @@
               (empty-sosofo)
               (next-match)))
 
+        (element legalnotice
+          (if (equal? (attribute-string (normalize "role")) "trademarks")
+	      (make sequence
+	          (process-children))
+              (next-match)))
+
         (define %body-start-indent% 
           0pi)
 
