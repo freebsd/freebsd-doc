@@ -6,7 +6,7 @@
 # by John Fieber
 # February 26, 1998
 #
-# $FreeBSD: www/en/cgi/getmsg.cgi,v 1.36 2003/11/18 21:41:10 wosch Exp $
+# $FreeBSD: www/en/cgi/getmsg.cgi,v 1.37 2004/04/04 21:49:38 phantom Exp $
 #
 
 require "./cgi-lib.pl";
@@ -241,7 +241,13 @@ sub AddAnchors
 	# ->
 	#  cvsweb.cgi/ports/audio/xmradio/Makefile.diff?r1=1.9&r2=r.10
 	#
-	$text =~ s#([\d.]+\.)(\d+)(\s+[+-]\d+\s+[+-]\d+\s+)([a-zA-Z\d_:.+/-]+)#sprintf("%s%s%s<a href=\"$cvsweb/%s.diff?r1=%s%s&r2=%s%s\">%s</a>", $1, $2, $3, $4, $1, $2 - 1, $1, $2, $4)#ge;
+	$text =~ s!([\d.]+\.)(\d+)              # revision
+		   (\s+[+-]\d+\s+[+-]\d+\s+)    # +- stuff
+	           ([a-zA-Z\d_:.+/-]+)          # filename
+		  !"$1$2" eq "1.1" ?
+		    sprintf("%s%s%s<a href=\"$cvsweb/%s\">%s</a>", $1, $2, $3, $4, $4) :
+		    sprintf("%s%s%s<a href=\"$cvsweb/%s.diff?r1=%s%s&r2=%s%s\">%s</a>",
+			    $1, $2, $3, $4, $1, $2 - 1, $1, $2, $4)!gex;
     }
 
 
