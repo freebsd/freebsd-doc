@@ -1,5 +1,5 @@
 # $FreeBSD$
-# $FreeBSDru: frdp/www/ru/platforms/Makefile,v 1.4 2003/10/14 17:41:10 andy Exp $
+# $FreeBSDru: frdp/www/ru/platforms/Makefile,v 1.5 2003/10/15 17:57:19 andy Exp $
 # Original revision: 1.2
 
 .if exists(../Makefile.conf)
@@ -14,6 +14,7 @@ DOCS+=	amd64.sgml
 DOCS+=	ia64.sgml
 DOCS=	index.sgml
 DOCS=	mips.sgml
+DOCS+=	pc98.sgml
 DOCS+=	ppc.sgml
 DOCS+=	sparc.sgml
 
