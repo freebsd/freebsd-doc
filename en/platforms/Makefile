@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/platforms/Makefile,v 1.2 2000/11/30 18:56:25 jim Exp $
+# $FreeBSD: www/en/platforms/Makefile,v 1.3 2001/05/04 22:31:57 obrien Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -10,6 +10,7 @@
 DOCS=	alpha.sgml
 DOCS+=	ia64.sgml
 DOCS+=	index.sgml
+DOCS+=	mips.sgml
 DOCS+=	ppc.sgml
 DOCS+=	sparc.sgml
 DOCS+=	x86-64.sgml
