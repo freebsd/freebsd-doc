@@ -1,53 +1,112 @@
-#!/bin/sh
-# Copyright (c) 1997 Wolfram Schneider <wosch@FreeBSD.ORG>, Berlin.
+#!/usr/bin/perl
+# Copyright (c) 1997-1998 Wolfram Schneider <wosch@FreeBSD.ORG>, Berlin.
 # All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+#
+# THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+# OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+# LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+# OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+# SUCH DAMAGE.
 #
 # pds.cgi - FreeBSD Ports download sources cgi script
 #	    print a list of source files for a port
 #
+# $Id: pds.cgi,v 1.2 1998-04-19 13:40:42 wosch Exp $
 
-file="$QUERY_STRING"
-file2="$file/Makefile"
-CVSROOT=/home/ncvs; export CVSROOT
+$hsty_base = '';
+
+require "./cgi-lib.pl";
+require "./cgi-style.pl";
+
+$file = $ENV{'QUERY_STRING'};
+$file2="$file/Makefile";
+
+$cvsroot = "/home/ncvs";
+$co = '/usr/bin/co';
+$make = '/usr/bin/make';
 
 # set DISTDIR to a dummy  directory.
-DISTDIR=/tmp/___pds.cgi___; export DISTDIR	
+$ENV{'DISTDIR'} = "/tmp/___pds.cgi___" . $<;
 
-cat <<EOF
-Content-type: text/html
+sub footer { 
+    return qq{<P>\n<A HREF="} .
+	($ENV{'PATH_INFO'} ? 'http://www.freebsd.org/ports/' : '../ports/') .
+     	qq{">Help</a>\n} . &html_footer; 
+}
 
-EOF
+print &short_html_header("FreeBSD Ports download script");
+print "<p>\n";
+if ($file !~ m%^ports/[^/]+/[^/]+$%) {
+    print qq{wrong module name: "$file"\n} . &footer; 
+    exit;
+}
 
-case "$file" in 
-    ports/*/*) ;;
-	    *) echo "usage: pds module"; exit;;
-esac
+if (! -f "$cvsroot/$file2,v") {
+    print qq{file "$file2" does no exists.\n} . &footer;
+    exit;
+}
 
-if [ -f "$CVSROOT/${file2},v" ]; then :
-else
-    echo "$file2 does not exist"
-    exit
-fi
+if ($file =~ /\.\./) {
+    print qq{$file2 does not exist\n} . &footer;
+    exit;
+}
 
-# security check for  ../foo/bar and foo/../../bar/
-case "$file2" in *..*) echo "$file2 does not exist"; exit;; esac
+print "<h2>Sources for $file</h2>\n\n";
 
-	cat <<EOF
-<html>
-<head>
-<title>Sources for $file</title>
-</head>
-<body BGCOLOR="#ffffff" TEXT="#000000"
-	vlink="c00000" link="#0000ff" alink="#eeee00">
+open(MAKE, "$co -q -p $cvsroot/$file2 | $make -I /home/fenner/mk -f - bill-fetch |") || do {
+    print "Sorry, cannot run make\n" . &footer; 
+    exit;
+};
 
-<h1>Sources for $file</h1>
+local(@sources);
+while(<MAKE>) {
+    push(@sources, $_);
+}
+close MAKE;
 
-EOF
-cvs -Q co -p $file2 | make -I /home/fenner/mk -f - bill-fetch | 
-	perl -ne 'print qq{<a href="$1">$1</a><br>\n}
-	    if m%((http|ftp)://\S+)%'
-cat <<EOF
+if ($#sources < 0) {
+    print "Sorry, did not found the sources for $file\n" . &footer;
+    exit;
+}
 
-</body>
-</html>
-EOF
+foreach (@sources) {
+    print qq{<a href="$1">$1</a><br>\n} if m%((http|ftp)://\S+)%;
+}
+
+local($md5file) = "$cvsroot/$file/files/md5,v";
+if (-f $md5file) {
+    open(CO, "-|") || exec ($co, '-q', '-p', $md5file) || do {
+	print "Cannot read MD5 checksum file for $file\n" . &footer;
+	exit;
+   };
+   local(@checksums);
+   while(<CO>) {
+	push(@checksums, $_) if $_;
+   } 
+   close CO;
+   if ($#checksums >= 0) {
+	print "<h3>MD5 Checksum for $file</h3>\n\n";
+        print "<PRE>\n";
+        print @checksums;
+        print "</PRE>\n";
+   }
+}
+
+
+print &footer;
+exit;
