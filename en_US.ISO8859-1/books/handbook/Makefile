@@ -1,5 +1,5 @@
 # 
-# $Id: Makefile,v 1.25 1999-09-03 17:40:54 nik Exp $
+# $FreeBSD$
 #
 # Build the FreeBSD Handbook.
 #

@@ -1,5 +1,5 @@
 #
-# $Id: docproj.docbook.mk,v 1.11 1999-08-28 09:50:49 nik Exp $
+# $FreeBSD$
 #
 # This include file <docproj.docbook.mk> handles installing documentation
 # from the FreeBSD Documentation Project.

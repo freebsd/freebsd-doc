@@ -1,5 +1,5 @@
 #
-# $Id: doc.project.mk,v 1.1 1999-09-03 17:07:18 nik Exp $
+# $FreeBSD$
 #
 # This include file <doc.project.mk> is the FreeBSD Documentation Project 
 # co-ordination make file.

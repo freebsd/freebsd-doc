@@ -1,4 +1,4 @@
-#       $Id: Makefile,v 1.4 1999-09-03 17:24:45 nik Exp $
+# $FreeBSD$
 
 SUBDIR = faq
 SUBDIR+= handbook

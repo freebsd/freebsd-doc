@@ -1,4 +1,4 @@
-#       $Id: Makefile,v 1.2 1999-09-03 17:24:47 nik Exp $
+# $FreeBSD$
 
 SUBDIR = faq
 
