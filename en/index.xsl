@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/index.xsl,v 1.21 2002/03/12 13:15:16 murray Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.22 2002/05/09 12:53:38 ceri Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   
@@ -6,7 +6,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.21 2002/03/12 13:15:16 murray Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.22 2002/05/09 12:53:38 ceri Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -307,14 +307,14 @@
 		are fully tax deductible.  Please contact
 		<a href="mailto:bod@FreeBSDFoundation.org">bod@FreeBSDFoundation.org</a>
 		for more information or write to: The FreeBSD Foundation,
-		7321 Brockway Dr.  Boulder, CO.  80303.  USA</p>
+		7321 Brockway Dr.  Boulder, CO 80303.  USA</p>
 
 		<p>Silicon Breeze has also sculpted and cast the BSD Daemon
-		in metal and are now donating 15% of all proceeds from
+		in metal and is now donating 15% of all proceeds from
 		these statuettes back to the FreeBSD Foundation. The complete
-		story and information on how to order their BSD Daemon is
+		story and information on how to order a BSD Daemon is
 		available from
- 		<a href="http://www.siliconbreeze.com/beastie/">this page.</a>
+ 		<a href="http://www.linuxjewellery.com/beastie/">this page.</a>
 		</p>
 
 	    </td>
