@@ -93,6 +93,8 @@ MAN5 =	a.out.5\
 	services.5\
 	shells.5\
 	skey.access.5\
+	ssh_config.5\
+	sshd_config.5\
 	stab.5\
 	sysctl.conf.5\
 	syslog.conf.5\
