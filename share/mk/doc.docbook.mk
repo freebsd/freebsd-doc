@@ -1,5 +1,5 @@
 #
-# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.43 2001/08/16 05:19:51 dd Exp $
+# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.44 2001/08/22 22:30:26 nik Exp $
 #
 # This include file <doc.docbook.mk> handles building and installing of
 # DocBook documentation in the FreeBSD Documentation Project.
@@ -90,6 +90,7 @@ NSGMLS?=	${PREFIX}/bin/nsgmls
 
 DSLHTML?=	${DOC_PREFIX}/share/sgml/default.dsl
 DSLPRINT?=	${DOC_PREFIX}/share/sgml/default.dsl
+DSLPGP?=	${DOC_PREFIX}/share/sgml/pgp.dsl
 FREEBSDCATALOG=	${DOC_PREFIX}/share/sgml/catalog
 LANGUAGECATALOG=${DOC_PREFIX}/${LANGCODE}/share/sgml/catalog
 
