@@ -93,6 +93,12 @@ REALPATH?=	/bin/realpath
 SETENV?=	/usr/bin/env
 XSLTPROC?=	${PREFIX}/bin/xsltproc
 TIDY?=		${PREFIX}/bin/tidy
+#
+# In teTeX 3.0 and later, pdfetex(1) is used as the default TeX
+# engine for JadeTeX and tex(1) cannot be used as ${TEX_CMD} anymore
+# due to incompatibility of the format file.  Since the teTeX 3.0
+# distribution has "${PREFIX}/share/texmf-dist/LICENSE.texmf,"
+# it is checked here to determine which TeX engine should be used.
 .if exists(${PREFIX}/share/texmf-dist/LICENSE.texmf)
 TEX_CMD?=	${PREFIX}/bin/etex
 PDFTEX_CMD?=	${PREFIX}/bin/pdfetex
