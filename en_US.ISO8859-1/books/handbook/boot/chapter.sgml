@@ -1,7 +1,7 @@
 <!--
      The FreeBSD Documentation Project
 
-     $FreeBSD: doc/en_US.ISO8859-1/books/handbook/boot/chapter.sgml,v 1.15 2001/07/19 01:11:46 chern Exp $
+     $FreeBSD: doc/en_US.ISO8859-1/books/handbook/boot/chapter.sgml,v 1.16 2001/07/24 22:37:20 chern Exp $
 -->
 
 <chapter id="boot">
@@ -12,13 +12,93 @@
     <indexterm><primary>booting</primary></indexterm>
     <indexterm><primary>bootstrap</primary></indexterm>
 
-    <para>FreeBSD uses a three-stage bootstrap by default, which
-      basically entails three programs which call each
-      other in order (two <link linkend="boot-blocks">boot
-	blocks</link>, and the <link
-	linkend="boot-loader">loader</link>).  Each of these three build on the
-      previous program's understanding and provide increasing amounts
-      of sophistication.</para>
+    <para>The process of starting a computer and loading the operating system
+      is referred to as <quote>the bootstrap process</quote>, or simply
+      <quote>booting</quote>.  FreeBSD's boot process provides a great deal of
+      flexibility in customising what happens when you start the system,
+      allowing you to select from different operating systems installed on the
+      same computer, or even different versions of the same operating system
+      or installed kernel.</para>
+
+    <para>This chapter details the configuration options you can set and how
+      to customise the FreeBSD boot process.  This includes everything that
+      happens until the FreeBSD kernel has started, probed for devices, and
+      started &man.init.8;.  If you are not quite sure when this happens, it
+      occurs when the text color changes from bright white to grey.</para>
+
+    <para>After reading this chapter you will know:</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>What the components of the FreeBSD bootstrap system are, and how
+	  they interact.</para>
+      </listitem>
+
+      <listitem>
+	<para>The options you can give to the components in the FreeBSD
+	  bootstrap to control the boot process.</para>
+      </listitem>
+    </itemizedlist>
+
+    <note>
+      <title>x86 only</title>
+
+      <para>This chapter only describes the boot process for FreeBSD running
+	on Intel x86 systems.</para>
+    </note>
+  </sect1>
+
+  <sect1 id="boot-introduction">
+    <title>The Booting Problem</title>
+
+    <para>Turning on a computer and starting the operating system poses an
+      interesting dilemma.  By definition, the computer does not know how to
+      do anything until the operating system is started.  This includes
+      running programs from the disk.  So if the computer can not run a
+      program from the disk without the operating system, and the operating
+      system programs are on the disk, how is the operating system
+      started?</para>
+
+    <para>This problem parallels one in the book <citetitle>The Adventures of
+	Baron Munchausen</citetitle>.  A character had fallen part way down a
+      manhole, and pulled himself out by grabbing his bootstraps, and
+      lifting.  In the early days of computing the term
+      <firstterm>bootstrap</firstterm> was applied to the mechanism used to
+      load the operating system, which has become shortened to
+      <quote>booting</quote>.</para>
+
+    <para>On x86 hardware the Basic Input/Output System (BIOS) is responsible
+      for loading the operating system.  To do this, the BIOS looks on the
+      hard disk for the Master Boot Record (MBR), which must be located on a
+      specific place on the disk.  The BIOS has enough knowledge to load and
+      run the MBR, and assumes that the MBR can then carry out the rest of the
+      tasks involved in loading the operating system.</para>
+
+    <indexterm>
+      <primary>BIOS</primary>
+      <secondary>Basic Input/Output System</secondary>
+    </indexterm>
+
+    <para>If you only have one operating system installed on your disks then
+      the standard MBR will suffice.  This MBR searches for the first bootable
+      slice on the disk, and then runs the code on that slice to load the
+      remainder of the operating system.</para>
+
+    <para>If you have installed multiple operating systems on your disks then
+      you can install a different MBR, one that can display a list of
+      different operating systems, and allows you to choose the one to boot
+      from.  FreeBSD comes with one such MBR which can be installed, and other
+      operating system vendors also provide alternative MBRs.</para>
+
+    <para>The remainder of the FreeBSD bootstrap system is divided in to three
+      stages.  The first stage is run by the MBR, which knows just enough to
+      get the computer in to a specific state and run the second stage.  The
+      second stage can do a little bit more, before running the third stage.
+      The third stage finishes the task of loading the operating system.  The
+      work is split in to these three stages because the PC standards put
+      limits on the size of the programs that can be run at stages one and
+      two.  Chaining the tasks together allows FreeBSD to provide a more
+      flexible loader.</para>
 
     <indexterm><primary>kernel</primary></indexterm>
     <indexterm><primary><command>init</command></primary></indexterm>
@@ -34,52 +114,22 @@
   </sect1>
 
   <sect1 id="boot-blocks">
-    <title>The Boot Blocks: Bootstrap Stages 1 and 2</title>
-
-    <para><firstterm>Bootstrapping</firstterm> is the process
-      whereby a computer probes and initializes its devices, and
-      works out what programs it is supposed to run.</para>
-
-    <para>This involves the use of special Read Only Memory chips,
-      which determine what further operations to do, and these
-      usually pass control to other chips that do consistency and
-      memory tests, configure devices, and provide a mechanism for
-      programs to determine what configuration details were
-      determined.</para>
-
-    <indexterm><primary>BIOS</primary></indexterm>
-    <indexterm><primary>CMOS</primary></indexterm>
-    <para>In standard personal computers, this involves the BIOS
-      (which oversees the bootstrap), and CMOS (which stores
-      configuration).  BIOS and CMOS understand disks, and also
-      understand where on the disk to find a program that will know
-      how to load up an operating system.</para>
-
-    <para>This chapter will not deal with this first part of the
-      bootstrap process.  Instead it will focus on what happens after control
-      is passed to the program on the disk.</para>
-
-    <para>The boot blocks are responsible for finding (usually) the
-      loader, and running it, and thus need to understand how to
-      find that program on the filesystem, how to run the program,
-      and also allow minor configuration of how they work.</para>
+    <title>The MBR, and Boot Stages One, Two, and Three</title>
 
     <sect2 id="boot-boot0">
-      <title><filename>boot0</filename></title>
+      <title>MBR, <filename>/boot/boot0</filename></title>
       <indexterm><primary>Master Boot Record (MBR)</primary></indexterm>
 
-      <para>There is actually a preceding bootblock, named 
-	<filename>boot0</filename>,
-	which lives on the <firstterm>Master Boot
-	  Record</firstterm>, the special part of the disk that the
-	system bootstrap looks for and runs, and it simply shows a
-	list of possible slices to boot from.</para>
+      <para>The FreeBSD MBR is located in <filename>/boot/boot0</filename>.
+	This is a <emphasis>copy</emphasis> of the MBR, as the real MBR must
+	be placed on a special part of the disk, outside the FreeBSD
+	area.</para>
 
       <para><filename>boot0</filename> is very simple, since the
 	program in the <abbrev>MBR</abbrev> can only be 512 bytes in
-	size.</para>
-
-      <para>It displays something like this:</para>
+	size.  If you have installed the FreeBSD MBR and have installed
+	multiple operating systems on your hard disks then you will see a
+	display similar to this one at boot time.</para>
 
       <example id="boot-boot0-example">
 	<title><filename>boot0</filename> screenshot</title>
@@ -92,16 +142,37 @@ F5 Drive 1
 
 Default: F2</screen>
       </example>
+
+      <para>Other operating systems, in particular Windows 95, have been known
+	to overwrite an existing MBR with their own.  If this happens to you,
+	or you want to replace your existing MBR with the FreeBSD MBR then use
+	the following command.</para>
+
+      <screen>&prompt.root; <userinput>fdisk -B -b /boot/boot0 <replaceable>device</replaceable></screen>
+
+      <para>Where <replaceable>device</replaceable> is the device that you
+	boot from, such as <devicename>ad0</devicename> for the first IDE
+	disk, <devicename>ad4</devicename> for the first IDE disk on a second
+	IDE controller, <devicename>da0</devicename> for the first SCSI disk,
+	and so on.</para>
     </sect2>
   
     <sect2 id="boot-boot1">
-      <title><filename>boot1</filename></title>
+      <title>Stage One, <filename>/boot/boot1</filename>, and Stage Two,
+	<filename>/boot/boot2</filename></title>
       
-      <para><filename>boot1</filename> is found on the boot sector of
+      <para>Conceptually the first and second stages a part of the same
+	program, on the same area of the disk.  Because of space constraints
+	they have been split in to two, but you would always install them
+	together.</para>
+
+      <para>They are found on the boot sector of
 	the boot slice, which is where <link
 	  linkend="boot-boot0">boot0</link>, or any other program on the
 	<abbrev>MBR</abbrev> expects to find the program to run to
-	continue the boot process.</para>
+	continue the boot process.  The files in the
+	<filename>/boot</filename> directory are copies of the real files,
+	which are stored outside of the FreeBSD filesystem.</para>
 
       <para><filename>boot1</filename> is very simple, since it too 
 	can only be 512 bytes
@@ -109,10 +180,6 @@ Default: F2</screen>
 	<firstterm>disklabel</firstterm>, which stores information
 	about the slice, to find and execute <link
 	  linkend="boot-boot2">boot2</link>.</para>
-    </sect2>
-  
-    <sect2 id="boot-boot2">
-      <title><filename>boot2</filename></title>
       
       <para>boot2 is slightly more sophisticated, and understands
 	the FreeBSD filesystem enough to find files on it, and can
@@ -132,25 +199,37 @@ Default: F2</screen>
 Default: 0:wd(0,a)/kernel
 boot:</screen>
       </example>
-    </sect2>
-  </sect1>
 
-  <sect1 id="boot-loader">
-    <title>Loader: Bootstrap Stage Three</title>
+      <para>If you ever need to replace the installed
+	<filename>boot1</filename> and <filename>boot2</filename> use
+	&man.disklabel.8;.</para>
+      
+      <screen>&prompt.root; <userinput>disklabel -B <replaceable>diskslice</replaceable></screen>
+
+      <para>Where <replaceable>diskslice</replaceable> is the disk and slice
+	you boot from, such as <devicename>ad0s1</devicename> for the first
+	slice on the first IDE disk.</para>
+
+      <warning>
+	<title>Dangerously Dedicated Mode</title>
+
+	<para>If you use just the disk name, such as
+	  <devicename>ad0</devicename>, in the &man.disklabel.8; command you
+	  will create a dangerously dedicated disk, without slices.  This is
+	  almost certainly not what you want to do, so make sure you double
+	  check the &man.disklabel.8; command before you press
+	  <keycap>RETURN</keycap>.</para>
+      </warning>
+    </sect2>
+
+  <sect2 id="boot-loader">
+    <title>Stage Three, <filename>/boot/loader</filename></title>
 
     <indexterm><primary>boot-loader</primary></indexterm>
     <para>The loader is the final stage of the three-stage
       bootstrap, and is located on the filesystem, usually as
       <filename>/boot/loader</filename>.</para>
       
-    <note>
-      <para>While <filename>/boot/boot0</filename>,
-	<filename>/boot/boot1</filename>, and
-	<filename>/boot/boot2</filename> are files there, they are
-	not the actual copies in the <abbrev>MBR</abbrev>, the boot
-	sector, or the disklabel respectively.</para>
-    </note>
-    
     <para>The loader is intended as a user-friendly method for
       configuration, using an easy-to-use built-in command set,
       backed up by a more powerful interpreter, with a more complex
@@ -376,7 +455,7 @@ boot:</screen>
 	    <replaceable>/boot/kernel.conf</replaceable></userinput></screen>
 	</listitem>
       </itemizedlist>
-    </sect2>
+  </sect2>
   </sect1>
 
   <sect1 id="boot-kernel">
