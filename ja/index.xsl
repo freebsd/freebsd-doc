@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
 
-<!-- $FreeBSD: www/ja/index.xsl,v 1.23 2003/01/22 04:11:07 hrs Exp $ -->
+<!-- $FreeBSD: www/ja/index.xsl,v 1.24 2003/03/22 23:35:31 hrs Exp $ -->
 <!-- Original revision: 1.56 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -10,7 +10,7 @@
 
   <xsl:variable name="base" select="'.'"/>
   <xsl:variable name="enbase" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/ja/index.xsl,v 1.23 2003/01/22 04:11:07 hrs Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/ja/index.xsl,v 1.24 2003/03/22 23:35:31 hrs Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <xsl:output type="html" encoding="EUC-JP"
@@ -418,7 +418,7 @@
 			    <xsl:value-of select="$rel2.current"/></b></font><br/>
 			
 			    <small>・<a href="{$u.rel2.announce}">アナウンス</a><br/>
-			      ・<a href="{$enbase}/doc/ja_JP.eucJP/handbook/install.html">インストールガイド</a><br/>
+			      ・<a href="{$enbase}/doc/ja_JP.eucJP/books/handbook/install.html">インストールガイド</a><br/>
 			      ・<a href="{$u.rel2.notes}">リリースノート</a><br/>
 			      ・<a href="{$u.rel2.hardware}">ハードウェアリスト (英語)</a><br/>
 			      ・<a href="{$u.rel2.errata}">Errata</a></small></p>
