@@ -274,6 +274,7 @@ MAN1 =	a2p.1\
 	sh.1\
 	shar.1\
 	size.1\
+	sockstat.1\
 	skey.1\
 	sleep.1\
 	soelim.1\
