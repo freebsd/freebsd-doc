@@ -43,8 +43,8 @@
 # SUCH DAMAGE.
 #
 # $zId: cvsweb.cgi,v 1.104 2000/11/01 22:05:12 hnordstrom Exp $
-# $Id: cvsweb.cgi,v 1.61 2000-12-28 18:42:21 knu Exp $
-# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.60 2000/12/18 04:43:56 knu Exp $
+# $Id: cvsweb.cgi,v 1.62 2000-12-29 09:22:50 knu Exp $
+# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.61 2000/12/28 18:42:21 knu Exp $
 #
 ###
 
@@ -123,6 +123,7 @@ sub toggleQuery($$);
 sub urlencode($);
 sub htmlquote($);
 sub htmlunquote($);
+sub hrefquote($);
 sub http_header(;$);
 sub html_header($);
 sub html_footer();
@@ -215,7 +216,7 @@ $LOG_REVSEPARATOR = q/^-{28}$/;
 ##### End of configuration variables #####
 
 $cgi_style::hsty_base = 'http://www.FreeBSD.org';
-$_ = q$FreeBSD: www/en/cgi/cvsweb.cgi,v 1.60 2000/12/18 04:43:56 knu Exp $;
+$_ = q$FreeBSD: www/en/cgi/cvsweb.cgi,v 1.61 2000/12/28 18:42:21 knu Exp $;
 @_ = split;
 $cgi_style::hsty_date = "@_[3,4]";
 
@@ -292,7 +293,7 @@ $maycompress = (((defined($ENV{HTTP_ACCEPT_ENCODING})
 @stickyvars = qw(cvsroot hideattic sortby logsort f only_with_tag);
 
 if (-f $config) {
-   do $config
+   require $config
      || &fatal("500 Internal Error",
 	       sprintf('Error in loading configuration file: %s<BR><BR>%s<BR>',
 		       $config, &htmlify($@)));
@@ -432,7 +433,7 @@ my $config_cvstree = "$config-$cvstree";
 
 # Do some special configuration for cvstrees
 if (-f $config_cvstree) {
-   do $config_cvstree
+   require $config_cvstree
      || &fatal("500 Internal Error",
 	       sprintf('Error in loading configuration file: %s<BR><BR>%s<BR>',
 		       $config_cvstree, &htmlify($@)));
@@ -2731,7 +2732,7 @@ sub navigateHeader($$$$$) {
     print qq`<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">`;
     print "<HTML>\n<HEAD>\n";
     print qq`<META name="robots" content="nofollow">\n`;
-    print '<!-- CVSweb $zRevision: 1.104 $  $Revision: 1.61 $ -->';
+    print '<!-- CVSweb $zRevision: 1.104 $  $Revision: 1.62 $ -->';
     print "\n<TITLE>$path$filename - $title - $rev</TITLE></HEAD>\n";
     print  "$body_tag_for_src\n";
     print "<table width=\"100%\" border=0 cellspacing=0 cellpadding=1 bgcolor=\"$navigationHeaderColor\">";
@@ -3121,7 +3122,7 @@ sub http_header(;$) {
 
 sub html_header($) {
     my ($title) = @_;
-    my $version = '$zRevision: 1.104 $  $Revision: 1.61 $'; #'
+    my $version = '$zRevision: 1.104 $  $Revision: 1.62 $'; #'
     http_header(defined($charset) ? "text/html; charset=$charset" : "text/html");
 
     (my $header = &cgi_style::html_header) =~ s/^.*\n\n//; # remove HTTP response header
