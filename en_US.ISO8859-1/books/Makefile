@@ -1,6 +1,7 @@
 # $FreeBSD$
 
-SUBDIR = corp-net-guide
+SUBDIR = arch-handbook
+SUBDIR+= corp-net-guide
 SUBDIR+= design-44bsd
 SUBDIR+= developers-handbook
 SUBDIR+= faq
