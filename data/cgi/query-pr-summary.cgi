@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: query-pr-summary.cgi,v 1.15 1998-05-23 09:05:39 phk Exp $
+# $Id: query-pr-summary.cgi,v 1.16 1998-05-23 09:22:32 phk Exp $
 
 $html_mode     = 1 if $ENV{'DOCUMENT_ROOT'};
 $self_ref      = $ENV{'SCRIPT_NAME'};
@@ -201,7 +201,7 @@ foreach ("category", "originator", "priority", "class", "responsible",
 &read_gnats($query_args);
 
 if ($input{'sort'} eq 'lastmod') {
-	@prs = sort {$lastmod{$b} <=> $lastmod{$a}} @prs;
+	@prs = sort {$lastmod{$b} cmp $lastmod{$a}} @prs;
 } elsif ($input{'sort'} eq 'category') {
 	@prs = sort {($ca,$na)=split(m|/|,$a); ($cb,$nb)=split(m|/|,$b); $ca eq $cb ? $na <=> $nb : $ca cmp $cb} @prs;
 } elsif ($input{'sort'} eq 'responsible') {
