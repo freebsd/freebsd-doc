@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
 
-<!-- $FreeBSD: www/ja/index.xsl,v 1.28 2003/07/19 08:45:42 hrs Exp $ -->
-<!-- Original revision: 1.77 -->
+<!-- $FreeBSD: www/ja/index.xsl,v 1.29 2003/09/21 17:18:13 hrs Exp $ -->
+<!-- Original revision: 1.79 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   
@@ -10,7 +10,7 @@
 
   <xsl:variable name="base" select="'.'"/>
   <xsl:variable name="enbase" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/ja/index.xsl,v 1.28 2003/07/19 08:45:42 hrs Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/ja/index.xsl,v 1.29 2003/09/21 17:18:13 hrs Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <xsl:output type="html" encoding="EUC-JP"
@@ -50,7 +50,7 @@
 		<br/>
 	      
 		<select name="goto">
-		  <!--  Only list TRUE mirrrors here! Native language pages 
+		  <!--  Only list TRUE mirrors here! Native language pages 
 		        which are not mirrored should be listed in
 		        support.sgml.  -->
 
@@ -223,6 +223,7 @@
 			      ・<a href="{$base}/support.html#user">ユーザグループ</a><br/>
 			      ・<a href="{$base}/support.html#web">Web 上の資料</a><br/>
 			      ・<a href="security/index.html">セキュリティ</a><br/>
+			      ・<a href="{$enbase}/events/events.html">イベント</a><br/>
 			      ・<a href="{$base}/support.html">さらに...</a>
 			    </small></p>
 
