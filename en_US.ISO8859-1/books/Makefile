@@ -1,4 +1,4 @@
-#       $Id: Makefile,v 1.1 1999-08-16 22:09:05 nik Exp $
+#       $Id: Makefile,v 1.2 1999-08-17 21:35:53 nik Exp $
 
 SUBDIR = fdp-primer
 SUBDIR+= handbook
