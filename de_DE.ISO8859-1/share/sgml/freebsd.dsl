@@ -1,7 +1,7 @@
 <!--
 	$FreeBSD$
-	$FreeBSDde: de-docproj/share/sgml/freebsd.dsl,v 1.9 2002/09/22 13:54:15 mheinen Exp $
-	basiert auf: 1.16
+	$FreeBSDde: de-docproj/share/sgml/freebsd.dsl,v 1.10 2002/10/26 18:35:02 mheinen Exp $
+	basiert auf: 1.17
 -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
@@ -51,6 +51,7 @@
                  (u (string-append "http://www.FreeBSD.org/cgi/man.cgi?query="
                          (data r) "&" "sektion=" (data m))))
             (case v
+              (("current") (string-append u "&" "manpath=FreeBSD+5.0-current"))
               (("xfree86") (string-append u "&" "manpath=XFree86+4.2.0"))
               (("netbsd")  (string-append u "&" "manpath=NetBSD+1.5"))
               (("ports")   (string-append u "&" "manpath=FreeBSD+Ports"))
