@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/index.xsl,v 1.110 2004/09/23 17:02:11 obrien Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.111 2004/09/24 17:05:59 imp Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   
@@ -6,7 +6,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.110 2004/09/23 17:02:11 obrien Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.111 2004/09/24 17:05:59 imp Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <!-- these params should be externally bound. The values
@@ -195,8 +195,8 @@
 	      <p>While you might expect an operating system with these 
 		features to sell for a high price, FreeBSD is available 
 		<a href="{$base}/copyright/index.html">free of charge</a>
-		and comes with full source code. If you would like to try it
-		out, 
+		and comes with full source code. If you would like to
+		purchase or download a copy to try out,
 		<a href="{$base}/doc/en_US.ISO8859-1/books/handbook/mirrors.html">more 
 		  information is available</a>.</p>
 	      
