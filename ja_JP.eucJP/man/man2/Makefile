@@ -153,6 +153,7 @@ MAN2 =	_exit.2\
 	undelete.2\
 	unlink.2\
 	utimes.2\
+	utrace.2\
 	uuidgen.2\
 	vfork.2\
 	wait.2\
