@@ -174,6 +174,8 @@ if (-d $fullname) {
 	    if ($_ eq '.') {
 		next;
 	    }
+	    next if $_ eq '#cvs.lock';
+
 	    if (s|^Attic/||) {
 		$attic = " (in the Attic)";
 	    } else {
