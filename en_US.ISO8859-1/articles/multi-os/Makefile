@@ -1,5 +1,5 @@
-DOC=		multios
-SRCS=		multios.sgml
+DOCS=	multios.docb
+INDEXLINK=	multios.html
 
-.include <bsd.sgml.mk>
+.include "../../web.mk"
 
