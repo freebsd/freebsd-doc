@@ -57,7 +57,10 @@
 
       ]]>
 
-      <!-- Both sets of stylesheets .................................... -->
+      <!-- Both sets of stylesheets ..................................... -->
+
+      (define %section-autolabel%
+        #t)
 
       (define %may-format-variablelist-as-table%
         #f)
@@ -121,9 +124,35 @@
       (element maketarget ($mono-seq$))
       (element makevar ($mono-seq$))
 
-      <!-- FAQList can wait. I've been drinking, and a brief glance at
-           /usr/local/share/sgml/docbook/dsssl/modular/html/dblist.dsl is
-           enough to bring me out in cold, Lisp induced sweats. . . -->
+      <!-- QAndASet ..................................................... -->
+
+      <!-- Default to labelling Q/A with Q: and A: -->
+
+      (define (qanda-defaultlabel)
+        (normalize "qanda"))
+
+      <!-- For the HTML version, display the questions in a bigger, bolder
+           font. -->
+
+      <![ %output.html [
+      (element question
+        (let* ((chlist   (children (current-node)))
+               (firstch  (node-list-first chlist))
+               (restch   (node-list-rest chlist)))
+               (make element gi: "DIV"
+                     attributes: (list (list "CLASS" (gi)))
+                     (make element gi: "P" 
+                           (make element gi: "BIG"
+                                 (make element gi: "A"
+                                       attributes: (list
+                                                   (list "NAME" (element-id)))
+                                       (empty-sosofo))
+                                 (make element gi: "B"
+                                       (literal (question-answer-label
+                                                (current-node)) " ")
+                                       (process-node-list (children firstch)))))
+                    (process-node-list restch))))
+      ]]>
 
     </style-specification-body>
   </style-specification>
