@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/index.xsl,v 1.78 2003/10/12 17:24:21 simon Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.79 2003/10/17 16:51:08 ceri Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   
@@ -6,7 +6,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.78 2003/10/12 17:24:21 simon Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.79 2003/10/17 16:51:08 ceri Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -157,11 +157,19 @@
 		<br/>
 		
 		<font color="#990000"><b>Language: </b></font> 
-		<a href="it/index.html">Italian</a>, 
-		<a href="ja/index.html">Japanese</a>, 
-		<a href="ru/index.html">Russian</a>, 
-		<a href="es/index.html">Spanish</a>, 
-		<a href="support.html#web">Other</a>
+		<a href="{$base}/de/index.html" title="German">[de]</a>
+		<xsl:text>&#160;</xsl:text>
+		<span title="English">[en]</span>
+		<xsl:text>&#160;</xsl:text>
+		<a href="{$base}/es/index.html" title="Spanish">[es]</a>
+		<xsl:text>&#160;</xsl:text>
+		<a href="http://www.freebsd-fr.org/index-trad.html" title="French">[fr]</a>
+		<xsl:text>&#160;</xsl:text>
+		<a href="{$base}/it/index.html" title="Italian">[it]</a>
+		<xsl:text>&#160;</xsl:text>
+		<a href="{$base}/ja/index.html" title="Japanese">[ja]</a>
+		<xsl:text>&#160;</xsl:text>
+		<a href="{$base}/ru/index.html" title="Russian">[ru]</a>
 	      </form>
 	    </td>
 	  </tr>
