@@ -3,7 +3,7 @@
 <!--
      The FreeBSD Russian Documentation Project
 
-     $FreeBSD: www/ru/index.xsl,v 1.2 2002/02/17 13:57:28 phantom Exp $
+     $FreeBSD: www/ru/index.xsl,v 1.3 2002/09/13 09:37:52 sobomax Exp $
      $FreeBSDru: frdp/www/ru/index.xsl,v 1.5 2002/02/11 13:46:22 andy Exp $
 
      Original revision: 1.19
@@ -15,7 +15,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/ru/index.xsl,v 1.2 2002/02/17 13:57:28 phantom Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/ru/index.xsl,v 1.3 2002/09/13 09:37:52 sobomax Exp $'"/>
   <xsl:variable name="title" select="'Проект FreeBSD'"/>
 
   <xsl:output type="html" encoding="koi8-r"
@@ -287,7 +287,7 @@
 	      <h2><font color="#990000">FreeBSD распространяется
 		<i>свободно</i></font></h2>
 	    
-	      <a href="copyright/daemon.html"><img src="gifs/dae_up3.gif" 
+	      <a href="copyright/daemon.html"><img src="../../gifs/dae_up3.gif" 
 						   alt=""
 						   height="81" width="72" 
 						   align="right" 

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="KOI8-R" ?>
 
-<!-- $FreeBSD: www/ru/includes.xsl,v 1.3 2002/02/17 13:57:28 phantom Exp $ -->
+<!-- $FreeBSD: www/ru/includes.xsl,v 1.4 2002/09/13 09:37:52 sobomax Exp $ -->
 <!-- The FreeBSD Russian Documentation Project -->
 <!-- $FreeBSDru: frdp/www/ru/includes.xsl,v 1.4 2002/02/17 12:39:59 phantom Exp $ -->
 <!-- Original revision: 1.6 -->
@@ -81,7 +81,7 @@
       <xsl:copy-of select="$date"/></address>
   </xsl:variable>
   
-  <xsl:variable name="rel.current" select='"4.6.2"'/>
+  <xsl:variable name="rel.current" select='"4.7"'/>
   <xsl:variable name="u.rel.notes">
     <xsl:value-of select="$base"/>/../releases/<xsl:value-of select="$rel.current"/>R/relnotes.html</xsl:variable>
 
