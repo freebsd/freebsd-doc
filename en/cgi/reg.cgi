@@ -35,7 +35,7 @@ if ($FORM{"emaila"} eq "") {
 }
 
 $recipient = $FORM{'recipient'};
-
+$sub_recipient = "majordomo@freebsd.org";
 #
 # format the mail file
 format MAIL =
@@ -64,6 +64,17 @@ print MAIL "</entry>\n";
 print MAIL "\n";
 close (MAIL);
 
+# Open the mail file and write to it
+# if user is subscribing to maillist 
+if ($FORM{"announce"} eq "yes") {
+open (MAIL, "|$mailprog $sub_recipient") || die "$mailprog not available.\n";
+print MAIL "From: $FORM{'emaila'}\n";
+print MAIL "Subject: subscribe freebsd-announce $FORM{'emaila'}\n\n";
+    
+print MAIL "subscribe freebsd-announce $FORM{'emaila'}\n";
+
+close (MAIL);
+}
 print "<HTML>\n";
 print "<HEAD>\n";
 print "<TITLE>Mail Sent</TITLE>\n";
@@ -85,6 +96,9 @@ print "<AREA SHAPE=\"RECT\" COORDS=\"0,0,564,32\" HREF=\"../index.html\">\n";
 print "</MAP>\n";
 print "<P>Thank you, $FORM{'First'} $FORM{'Last'}, for your registration.\n";
 print "<BR>It has been submitted.\n";
+if ($FORM{"announce"} eq "yes") {
+print "<BR>As you requested, you have also been subscribed to announce@freebsd.org.\n";
+}
 print "</CENTER>\n";
 print "</BODY>\n";
 
