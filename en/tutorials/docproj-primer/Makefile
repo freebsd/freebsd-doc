@@ -1,5 +1,5 @@
 # 
-# $Id: Makefile,v 1.1 1999-04-20 20:59:49 nik Exp $
+# $Id: Makefile,v 1.2 1999-04-26 21:45:04 nik Exp $
 #
 # Build the FreeBSD Documentation Project Primer.
 #
@@ -8,7 +8,7 @@ MAINTAINER=nik@FreeBSD.ORG
 
 DOC?= book
 
-FORMATS?= html-split
+FORMATS?= html-split html
 
 INSTALL_COMPRESSED?= gz
 INSTALL_ONLY_COMPRESSED?=
@@ -34,5 +34,7 @@ SRCS+= writing-style/chapter.sgml
 
 # Entities
 SRCS+= chapters.ent 
+
+DOC_PREFIX?= ../../..
 
 .include "../../../share/mk/docproj.docbook.mk"
