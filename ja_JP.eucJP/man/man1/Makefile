@@ -132,7 +132,6 @@ MAN1 =	a2p.1\
 	ipcrm.1\
 	ipcs.1\
 	ipftest.1\
-	ipnat.1\
 	ipresend.1\
 	ipsend.1\
 	iptest.1\
