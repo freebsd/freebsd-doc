@@ -6,7 +6,7 @@
 # by John Fieber
 # February 26, 1998
 #
-# $Id: getmsg.cgi,v 1.16 1998-08-03 15:37:47 wosch Exp $
+# $Id: getmsg.cgi,v 1.17 1998-12-26 18:17:44 wosch Exp $
 #
 
 require "./cgi-lib.pl";
@@ -40,11 +40,25 @@ sub Fetch
     $file =~ s/\.\.//g;
     $file =~ s|/+|/|;
 
-    # read the full archive from the FreeBSD ftp server
-    if ($type eq 'archive' && $file =~ s%^$messagepath%%o) {
-	print "Location: $ftparchive/$file.gz\n";
-	print "Content-type: text/plain\n\n";     
-	return;
+    # read the full archive 
+    if ($type eq 'archive') {
+	# from the FreeBSD ftp server
+	if ($file =~ s%^$messagepath%%o) {
+	    print "Location: $ftparchive/$file.gz\n";
+	    print "Content-type: text/plain\n\n";     
+	    exit(0);
+	}
+	
+	# from the local mail archive for current mails
+	elsif ($file =~ m%^current/(cvs|freebsd)-[a-z]+$% &&
+	       open(DATA, "$messagepathcurrent$file")) {
+	    print "Content-type: text/plain\n\n"; 
+	    while(<DATA>) {
+		print;
+	    }
+	    close(DATA);
+	    exit(0);
+	}
     }
 
     if (($file =~ /^$messagepath/ && open(DATA, $file)) ||
@@ -175,7 +189,7 @@ sub MessageToHTML
 	$message .= qq{| <a href="$mid?db=mid&id=$1">Previous in thread</a>\n};
     }
     $message .= qq{| <a href="$ENV{'REQUEST_URI'}+raw">Raw E-Mail</a>\n};
-    $message .= qq{| <a href="$ENV{'REQUEST_URI'}+archive">Current Archive</a>\n} if $file =~ m%^$messagepath%o;
+    $message .= qq{| <a href="$ENV{'REQUEST_URI'}+archive">Archive</a>\n};
     $message .= qq{| <a href="../search/searchhints.html">Help</a>\n};
 
     $message .= "<HR NOSHADE>\n";
