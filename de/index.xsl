@@ -2,7 +2,7 @@
 
 <!--
      $FreeBSD$
-     $FreeBSDde: de-www/index.xsl,v 1.36 2004/11/21 15:11:50 mheinen Exp $
+     $FreeBSDde: de-www/index.xsl,v 1.37 2004/12/03 21:24:32 jkois Exp $
      basiert auf: 1.117
 -->
 
@@ -11,7 +11,7 @@
   <xsl:import href="includes.xsl"/>
   <xsl:import href="news/includes.xsl"/>
 
-  <xsl:variable name="date" select="'$FreeBSD: www/de/index.xsl,v 1.4 2003/09/17 23:40:35 mheinen Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD$'"/>
   <xsl:variable name="title" select="'Das FreeBSD Projekt'"/>
 
   <!-- these params should be externally bound. The values
@@ -225,8 +225,8 @@
 		m&#246;glich:  beispielsweise Dokumentationen,
 		Grafiken oder Quellcode.  Einzelheiten entnehmen Sie
 		bitte dem Artikel
-		<a href="{$enbase}/doc/en_US.ISO8859-1/articles/contributing/index.html">Contributing
-		to FreeBSD</a>.</p>
+		<a href="{$enbase}/doc/de_DE.ISO8859-1/articles/contributing/index.html">
+		FreeBSD unterst&#252;tzen</a>.</p>
 
 	      <p>Auch wenn Sie kein Programmierer sind, k&#246;nnen
 		Sie zu FreeBSD beitragen.  Die
