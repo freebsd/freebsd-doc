@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.10 1999-02-02 16:52:54 motoyuki Exp $
+# $Id: Makefile,v 1.11 1999-02-11 17:49:33 motoyuki Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.12
 
@@ -14,7 +14,7 @@ DOCS+=	qnewsletter-1-3.sgml
 DOCS+=	qnewsletter-1-4.sgml 
 DOCS+=	qnewsletter-1-5.sgml
 DOCS+=	qnewsletter-1-6.sgml
-#DOCS+= qnewsletter-1-7.sgml
+DOCS+=	qnewsletter-1-7.sgml
 
 DOCS+=	press.sgml
 DOCS+=  newsflash.sgml
