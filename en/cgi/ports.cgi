@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/ports.cgi,v 1.49 2000/12/28 12:33:00 wosch Exp $
+# $FreeBSD: www/en/cgi/ports.cgi,v 1.50 2001/01/04 22:12:37 wosch Exp $
 #
 # ports.cgi - search engine for FreeBSD ports
 #             	o search for a port by name or description
@@ -55,11 +55,12 @@ sub init_variables {
     local($p) = 'ftp://ftp.FreeBSD.org/pub/FreeBSD/ports/i386';
     local($palpha) = 'ftp://ftp.FreeBSD.org/pub/FreeBSD/ports/alpha';
 
-    $remotePrefixFtpPackagesDefault = '4.1-STABLE/i386';
+    $remotePrefixFtpPackagesDefault = '4.2-STABLE/i386';
     %remotePrefixFtpPackages = 
 	(
 	 '5.0-CURRENT/i386', "$p/packages-current/All",
-	 '4.1-STABLE/i386', "$p/packages-4-stable/All",
+	 '4.2-RELEASE/i386', "$p/packages-4.2-release/All",
+	 '4.2-STABLE/i386', " $p/packages-4.2-stable/All",
 	 '4.1-RELEASE/i386', "$p/packages-4-release/All",
 	 '3.5-STABLE/i386',  "$p/packages-3-stable/All",
 	 '3.5-RELEASE/i386', "$p/packages-3.4-release/All",
@@ -67,14 +68,16 @@ sub init_variables {
 	 '2.2.8-RELEASE/i386', "$p/packages-2.2.8/All",
 
 	 '5.0-CURRENT/alpha', "$palpha/packages-current/All",
-	 '4.1-STABLE/alpha', "$palpha/packages-current/All",
-	 '4.1-RELEASE/alpha', "$palpha/packages-4.0-release/All",
+	 '4.2-RELEASE/alpha', "$palpha/packages-4.2-release/All",
+	 '4.2-STABLE/alpha',  "$palpha/packages-4-stable/All",
+	 '4.1-RELEASE/alpha', "$palpha/packages-4.1-release/All",
 	);
 
     %relDate = 
 	(
 	 '5.0-CURRENT/i386', 'today',
-	 '4.1-STABLE/i386', 'today',
+	 '4.2-STABLE/i386', 'today',
+	 '4.2-RELEASE/i386', '2000-11-17 12:19:22 UTC',
 	 '4.1-RELEASE/i386', '2000-07-21 18:15:35 UTC',
 
 	 '3.5-STABLE/i386', 'today',
@@ -554,7 +557,7 @@ sub footer {
 <img ALIGN="RIGHT" src="/gifs/powerlogo.gif">
 &copy; 1996-2000 by Wolfram Schneider. All rights reserved.<br>
 };
-    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.49 2000/12/28 12:33:00 wosch Exp $} . "<br>\n";
+    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.50 2001/01/04 22:12:37 wosch Exp $} . "<br>\n";
     print qq{Please direct questions about this service to
 <I><A HREF="$mailtoURL">$mailto</A></I><br>\n};
     print qq{General questions about FreeBSD ports should be sent to } .
