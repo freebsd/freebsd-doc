@@ -3,7 +3,9 @@
      The FreeBSD Russian Documentation Project
 
      $FreeBSD$
-     $FreeBSDru: frdp/doc/ru_RU.KOI8-R/share/sgml/mirrors-local.xsl,v 1.1 2003/11/27 14:01:07 den Exp $
+     $FreeBSDru: frdp/doc/ru_RU.KOI8-R/share/sgml/mirrors-local.xsl,v 1.2 2004/01/22 15:09:41 den Exp $
+
+     Original revision 1.3
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -14,11 +16,6 @@
   <xsl:output type="xml" encoding="koi8-r"
 	      omit-xml-declaration="yes"
 	      indent="yes"/>
-
-  <!-- these params should be externally bound. The values
-       here are not used actually -->
-  <xsl:param name="proto" select="''" />
-  <xsl:param name="target" select="''" />
 
   <!-- template: "mirrors-docbook-contact" -->
 
