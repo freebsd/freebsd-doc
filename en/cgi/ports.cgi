@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/ports.cgi,v 1.55 2001/05/13 17:33:37 wosch Exp $
+# $FreeBSD: www/en/cgi/ports.cgi,v 1.56 2001/08/26 18:25:08 wosch Exp $
 #
 # ports.cgi - search engine for FreeBSD ports
 #             	o search for a port by name or description
@@ -64,8 +64,6 @@ sub init_variables {
 	 '4.2-RELEASE/i386', "$p/packages-4.2-release/All",
 	 '3.5-STABLE/i386',  "$p/packages-3-stable/All",
 	 '3.5-RELEASE/i386', "$p/packages-3.4-release/All",
-	 '2.2.8-STABLE/i386',  "$p/packages-2.2-stable/All",
-	 '2.2.8-RELEASE/i386', "$p/packages-2.2.8/All",
 
 	 '5.0-CURRENT/alpha', "$palpha/packages-current/All",
 	 '4.3-RELEASE/alpha', "$palpha/packages-4.3-release/All",
@@ -85,9 +83,6 @@ sub init_variables {
 	 '5.0-CURRENT/alpha', 'today',
 	 '4.3-STABLE/alpha', 'today',
 	 '4.3-RELEASE/alpha', '2001-04-18 21:37:31 UTC',
-
-	 '2.2.8-RELEASE/i386', '1998-11-30 01:50:01 UTC',
-	 '2.2.8-STABLE/i386', '1999-01-15',
 	  );
 
     $remotePrefixHtml =
@@ -557,7 +552,7 @@ sub footer {
 <img ALIGN="RIGHT" src="/gifs/powerlogo.gif">
 &copy; 1996-2001 by Wolfram Schneider. All rights reserved.<br>
 };
-    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.55 2001/05/13 17:33:37 wosch Exp $} . "<br>\n";
+    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.56 2001/08/26 18:25:08 wosch Exp $} . "<br>\n";
     print qq{Please direct questions about this service to
 <I><A HREF="$mailtoURL">$mailto</A></I><br>\n};
     print qq{General questions about FreeBSD ports should be sent to } .
