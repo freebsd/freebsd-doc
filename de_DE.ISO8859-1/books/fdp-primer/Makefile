@@ -1,11 +1,11 @@
 #
 # $FreeBSD$
-# $FreeBSDde: de-docproj/books/fdp-primer/Makefile,v 1.2 2003/11/26 01:11:56 mheinen Exp $
-# basiert auf: 1.12
+# $FreeBSDde: de-docproj/books/fdp-primer/Makefile,v 1.3 2004/06/06 18:21:21 mheinen Exp $
+# basiert auf: 1.13
 #
 # Build the FreeBSD Documentation Project Primer.
 #
-MAINTAINER=doc@FreeBSD.org
+MAINTAINER=de-bsd-translators@de.FreeBSD.org
 
 DOC?= book
 
