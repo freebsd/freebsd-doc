@@ -174,7 +174,8 @@ if (-d $fullname) {
 	    if ($_ eq '.') {
 		next;
 	    }
-	    next if $_ eq '#cvs.lock';
+	    # ignore CVS lock and stale NFS files
+	    next if /^#cvs\.|^,|^\.nfs/;
 
 	    if (s|^Attic/||) {
 		$attic = " (in the Attic)";
