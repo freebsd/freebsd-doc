@@ -1,4 +1,4 @@
-<!-- $Id: ports.inc,v 1.31 1999-03-08 06:33:31 asami Exp $ -->
+<!-- $Id: ports.inc,v 1.32 1999-03-08 20:40:06 asami Exp $ -->
 <p>The FreeBSD Ports and Packages Collection offers a simple way for
 users and administrators to install applications.  Each ``port'' listed here
 contains any patches necessary to make the original application source
@@ -63,15 +63,19 @@ to 2.2-stable upgrade kit</a>
 2.2-stable after 2.2.6-release
 <dt><a
 href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-current/Latest/30upgrade.tgz">3.0
-to 3.0-stable upgrade kit</a>
+to 3.1-stable upgrade kit</a>
 <dd>For users of 3.0-release or 3.0-stable after 3.0-release
+<dt><a
+href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-current/Latest/31upgrade.tgz">3.1
+to 3.1-stable upgrade kit</a>
+<dd>For users of 3.1-release or 3.1-stable after 3.1-release
 </dl>
 
 <p>These
 are FreeBSD packages; please use <strong>pkg_add</strong> to install them.  That
 should enable you to use all the ports listed here.  Note that it will
 only change just enough files to enable ports/packages to be used; for
-a full upgrade to 2.2-stable or 3.0-stable, please refer to the <a
+a full upgrade to 2.2-stable or 3.1-stable, please refer to the <a
 href="../handbook/synching.html">synchronizing your source tree</a>
 section of the handbook.  A full upgrade is recommended, especially if
 you are still using anything earlier than 2.2.7-release.</p>
