@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: www/es/Makefile,v 1.7 1999/09/06 07:02:59 peter Exp $
 
 .if exists(Makefile.conf)
 .include "Makefile.conf"
@@ -40,10 +40,12 @@ SUBDIR+= internal
 SUBDIR+= copyright
 SUBDIR+= search
 #SUBDIR+= gallery
-SUBDIR+= ports
 SUBDIR+= projects
 SUBDIR+= releases 
 #SUBDIR+= doc-es
+.if !defined(WEB_ONLY) || empty(WEB_ONLY)
+SUBDIR+= ports
+.endif
 
 # Non-SGML
 #SUBDIR+= gifs
