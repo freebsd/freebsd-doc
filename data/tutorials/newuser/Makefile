@@ -1,5 +1,5 @@
-DOC=		newuser
-SRCS=	    	newuser.sgml
+DOCS=	newuser.docb
+INDEXLINK=	newuser.html
 
-.include <bsd.sgml.mk>
+.include "../../web.mk"
 
