@@ -276,6 +276,7 @@ MAN1 =	a2p.1\
 	s2p.1\
 	sasc.1\
 	scon.1\
+	scp.1\
 	script.1\
 	sdiff.1\
 	sed.1\
@@ -290,6 +291,10 @@ MAN1 =	a2p.1\
 	soelim.1\
 	sort.1\
 	split.1\
+	ssh-add.1\
+	ssh-agent.1\
+	ssh-keygen.1\
+	ssh.1\
 	startslip.1\
 	strings.1\
 	strip.1\
@@ -470,5 +475,6 @@ MLINKS+=opiekey.1 otp-md5.1
 MLINKS+=tcsh.1 csh.1
 MLINKS+=ee.1 edit.1
 MLINKS+=pkg_sign.1 pkg_check.1
+MLINKS+=ssh.1 slogin.1
 
 .include "bsd.prog.mk"
