@@ -105,7 +105,7 @@ MASTERDOC?=	${.CURDIR}/${DOC}.${DOCBOOKSUFFIX}
 # Which stylesheet type to use.  'dsssl' or 'xsl'
 STYLESHEET_TYPE?=	dsssl
 
-.if ${MACHINE_ARCH} == "alpha"
+.if ${MACHINE_ARCH} != "i386"
 OPENJADE=	yes
 .endif
 
