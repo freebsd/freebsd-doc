@@ -15,7 +15,6 @@ MAN9 =	BUS_PRINT_CHILD.9\
 	MD5.9\
 	MODULE_DEPEND.9\
 	MODULE_VERSION.9\
-	SPLASSERT.9\
 	SYSCALL_MODULE.9\
 	VFS.9\
 	VFS_CHECKEXP.9\
@@ -46,7 +45,6 @@ MAN9 =	BUS_PRINT_CHILD.9\
 	VOP_LINK.9\
 	VOP_LOCK.9\
 	VOP_LOOKUP.9\
-	VOP_MMAP.9\
 	VOP_OPENCLOSE.9\
 	VOP_PATHCONF.9\
 	VOP_PRINT.9\
@@ -67,7 +65,6 @@ MAN9 =	BUS_PRINT_CHILD.9\
 	bus_alloc_resource.9\
 	bus_generic_attach.9\
 	bus_generic_detach.9\
-	bus_generic_map_intr.9\
 	bus_generic_print_child.9\
 	bus_generic_read_ivar.9\
 	bus_generic_shutdown.9\
@@ -112,7 +109,6 @@ MAN9 =	BUS_PRINT_CHILD.9\
 	microtime.9\
 	microuptime.9\
 	module.9\
-	posix4.9\
 	panic.9\
 	physio.9\
 	psignal.9\
@@ -135,6 +131,10 @@ MAN9 =	BUS_PRINT_CHILD.9\
 	vrele.9\
 	vslock.9\
 	zone.9
+
+MLINKS+=BUS_SETUP_INTR.9 bus_setup_intr.9
+MLINKS+=BUS_SETUP_INTR.9 BUS_TEARDOWN_INTR.9
+MLINKS+=BUS_SETUP_INTR.9 bus_teardown_intr.9
 
 MLINKS+=DRIVER_MODULE.9 MULTI_DRIVER_MODULE.9
 MLINKS+=MD5.9 MD5Init.9 MD5.9 MD5Transform.9
@@ -164,15 +164,15 @@ MLINKS+=devstat.9 devstat_end_transaction.9
 MLINKS+=fetch.9 fubyte.9 fetch.9 fuswintr.9 fetch.9 fusword.9 fetch.9 fuword.9
 #MLINKS+=ifnet.9 if_data.9 ifnet.9 ifaddr.9 ifnet.9 ifqueue.9
 MLINKS+=kernacc.9 useracc.9
+MLINKS+=make_dev.9 dev_depends.9
 MLINKS+=make_dev.9 destroy_dev.9
+MLINKS+=make_dev.9 make_dev_alias.9
 MLINKS+=malloc.9 FREE.9 malloc.9 MALLOC.9 malloc.9 free.9
-#MLINKS+=mi_switch.9 cpu_switch.9
-MLINKS+=posix4.9 p1003_1b.9
+MLINKS+=mi_switch.9 cpu_switch.9 mi_switch.9 cpu_throw.9
 MLINKS+=psignal.9 gsignal.9
 MLINKS+=psignal.9 pgsignal.9
 #MLINKS+=rtalloc.9 rtalloc1.9 rtalloc.9 rtalloc_ign.9
 #MLINKS+=sleep.9 tsleep.9 sleep.9 wakeup.9 sleep.9 wakeup_one.9
-#MLINKS+=sleep.9 asleep.9 sleep.9 await.9
 #MLINKS+=buf.9 bp.9
 MLINKS+=spl.9 spl0.9
 MLINKS+=spl.9 splbio.9 spl.9 splclock.9 spl.9 splhigh.9 spl.9 splimp.9
@@ -208,6 +208,8 @@ MLINKS+=microuptime.9 getmicrouptime.9
 MLINKS+=microuptime.9 nanouptime.9
 MLINKS+=microuptime.9 getnanouptime.9
 
+MLINKS+=suser.9 suser_cred.9
+
 MLINKS+=sysctl_add_oid.9 sysctl_remove_oid.9
 MLINKS+=sysctl_add_oid.9 SYSCTL_ADD_OID.9
 MLINKS+=sysctl_add_oid.9 SYSCTL_ADD_NODE.9
@@ -239,12 +241,10 @@ MLINKS+=sbuf.9 sbuf_delete.9
 MLINKS+=sbuf.9 sbuf_trim.9
 MLINKS+=sbuf.9 sbuf_vprintf.9
 
-MLINKS+=zone.9 zalloc.9
-MLINKS+=zone.9 zfree.9
-MLINKS+=zone.9 zalloci.9
-MLINKS+=zone.9 zfreei.9
-MLINKS+=zone.9 zinit.9
-MLINKS+=zone.9 zinitna.9
-MLINKS+=zone.9 zbootinit.9
+MLINKS+=zone.9 uma.9
+MLINKS+=zone.9 uma_zalloc.9
+MLINKS+=zone.9 uma_zcreate.9
+MLINKS+=zone.9 uma_zfree.9
+MLINKS+=zone.9 uma_zdestroy.9
 
 .include "bsd.prog.mk"
