@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/events/Makefile,v 1.5 2003/10/15 15:10:47 simon Exp $
+# $FreeBSD: www/en/events/Makefile,v 1.6 2004/04/06 00:05:46 phantom Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -7,12 +7,14 @@
 .include "../Makefile.inc"
 .endif
 
-SUBDIR=	2002 2003
+SUBDIR=  2002
+SUBDIR+= 2003
 
-DATA=   events.css
-
+DATA=	events.css
 DATA+=	events.html
-CLEANFILES+= events.html curdate.xml
+
+CLEANFILES+= events.html
+CLEANFILES+= curdate.xml
 
 INDEXLINK= events.html
 
@@ -30,8 +32,10 @@ events.html: events.xsl events.xml ../includes.xsl curdate.xml
 lint:
 	${XMLLINT} --valid -o /dev/null ${.CURDIR}/events.xml
 
-# XXX TODO: Handle this better, so curdate.xml isn't rebuild on install.
-curdate.xml!
+.if !make(install)
+.PHONY:	curdate.xml
+.endif
+curdate.xml:
 	@${ECHO} "Generating ${.TARGET}"
 	@${ECHO_CMD} '<?xml version="1.0"?>'	 > ${.TARGET}
 	@${ECHO_CMD} '<curdate>'		>> ${.TARGET}
