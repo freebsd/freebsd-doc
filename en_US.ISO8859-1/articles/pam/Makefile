@@ -7,7 +7,8 @@ FORMATS?= html
 INSTALL_COMPRESSED?=gz
 INSTALL_ONLY_COMPRESSED?=
 
-JADEFLAGS+=	-V %generate-article-toc%
+WITH_ARTICLE_TOC=YES
+WITH_INLINE_LEGALNOTICE=YES
 
 SRCS= article.sgml pam_app.c pam_conv.c pam_module.c
 
