@@ -63,6 +63,7 @@ IMAGES_EN+= install/ed0-conf.scr
 IMAGES_EN+= install/ed0-conf2.scr
 IMAGES_EN+= install/edit-inetd-conf.scr
 IMAGES_EN+= install/fdisk-drive1.scr
+IMAGES_EN+= install/fdisk-drive2.scr
 IMAGES_EN+= install/fdisk-edit1.scr
 IMAGES_EN+= install/fdisk-edit2.scr
 IMAGES_EN+= install/ftp-anon1.scr
