@@ -13,6 +13,9 @@
   <!-- these params should be externally bound. The values
        here are not used actually -->
   <xsl:param name="proto" select="''" />
+  <xsl:param name="target" select="''" />
+
+  <!-- template: "mirrors-docbook-contact" -->
 
   <xsl:template name="mirrors-docbook-contact">
     <xsl:param name="email" value="'someone@somewhere'"/>
@@ -21,4 +24,12 @@
     <para>問題がある場合は、このドメインのホストマスタ
         <email><xsl:value-of select="$email" /></email> 宛にお問い合わせください。</para>
   </xsl:template>
+
+  <!-- template: "mirrors-lastmodified" -->
+
+  <xsl:template name="mirrors-lastmodified">
+    <xsl:call-template name="mirrors-lastmodified-utc" />
+    <xsl:text> 現在</xsl:text>
+  </xsl:template>
+
 </xsl:stylesheet>
