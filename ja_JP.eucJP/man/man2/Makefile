@@ -3,6 +3,7 @@ MAN2 =	_exit.2\
 	access.2\
 	acct.2\
 	adjtime.2\
+	aio_waitcomplete.2\
 	aio_cancel.2\
 	aio_error.2\
 	aio_read.2\
@@ -23,6 +24,7 @@ MAN2 =	_exit.2\
 	dup.2\
 	execve.2\
 	fcntl.2\
+	fhopen.2\
 	flock.2\
 	fork.2\
 	fsync.2\
@@ -51,6 +53,7 @@ MAN2 =	_exit.2\
 	intro.2\
 	ioctl.2\
 	issetugid.2\
+	jail.2\
 	kill.2\
 	killpg.2\
 	kldfind.2\
@@ -59,6 +62,7 @@ MAN2 =	_exit.2\
 	kldnext.2\
 	kldstat.2\
 	kldunload.2\
+	kqueue.2\
 	ktrace.2\
 	link.2\
 	listen.2\
@@ -71,6 +75,9 @@ MAN2 =	_exit.2\
 	mknod.2\
 	mlock.2\
 	mmap.2\
+	modfind.2\
+	modnext.2\
+	modstat.2\
 	mount.2\
 	mprotect.2\
 	msync.2\
@@ -106,6 +113,7 @@ MAN2 =	_exit.2\
 	setgroups.2\
 	setpgid.2\
 	setregid.2\
+	setresuid.2\
 	setreuid.2\
 	setsid.2\
 	setuid.2\
@@ -151,7 +159,7 @@ MLINKS+=chmod.2 fchmod.2 chmod.2 lchmod.2
 MLINKS+=chown.2 fchown.2 chown.2 lchown.2
 MLINKS+=clock_gettime.2 clock_getres.2 clock_gettime.2 clock_settime.2
 MLINKS+=dup.2 dup2.2
-#MLINKS+=fhopen.2 fhstat.2 fhopen.2 fhstatfs.2
+MLINKS+=fhopen.2 fhstat.2 fhopen.2 fhstatfs.2
 MLINKS+=getdirentries.2 getdents.2
 MLINKS+=getgid.2 getegid.2
 MLINKS+=getitimer.2 setitimer.2
@@ -165,17 +173,17 @@ MLINKS+=getsockopt.2 setsockopt.2
 MLINKS+=gettimeofday.2 settimeofday.2
 MLINKS+=getuid.2 geteuid.2
 MLINKS+=intro.2 errno.2
-#MLINKS+=kqueue.2 kevent.2
+MLINKS+=kqueue.2 kevent.2
 MLINKS+=lseek.2 seek.2
 MLINKS+=mlock.2 munlock.2
-#MLINKS+=modnext.2 modfnext.2
+MLINKS+=modnext.2 modfnext.2
 MLINKS+=mount.2 unmount.2
 MLINKS+=pathconf.2 fpathconf.2
 MLINKS+=read.2 pread.2 read.2 readv.2
 MLINKS+=recv.2 recvfrom.2 recv.2 recvmsg.2
 MLINKS+=send.2 sendmsg.2 send.2 sendto.2
 MLINKS+=setpgid.2 setpgrp.2
-#MLINKS+=setresuid.2 setresgid.2
+MLINKS+=setresuid.2 setresgid.2
 MLINKS+=setuid.2 setegid.2 setuid.2 seteuid.2 setuid.2 setgid.2
 MLINKS+=shmat.2 shmdt.2
 MLINKS+=stat.2 fstat.2 stat.2 lstat.2
