@@ -31,6 +31,7 @@ DOC?= book
 FORMATS?= html-split
 
 HAS_INDEX= true
+WITH_GLOSSARY?=
 
 INSTALL_COMPRESSED?= gz
 INSTALL_ONLY_COMPRESSED?=
@@ -172,6 +173,9 @@ SYMLINKS=	${DESTDIR} index.html handbook.html
 CHAPTERS?= ${SRCS:M*chapter.sgml}
 
 SGMLFLAGS+= ${CHAPTERS:S/\/chapter.sgml//:S/^/-i chap./}
+.if defined(WITH_GLOSSARY) && !empty(WITH_GLOSSARY)
+SGMLFLAGS+= -i chap.freebsd-glossary
+.endif
 
 # XXX The Handbook build currently overflows some internal, hardcoded 
 # limits in pdftex.  Until we split the Handbook up, build the PDF 
