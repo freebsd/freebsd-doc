@@ -1,6 +1,6 @@
 # 
-# $FreeBSD: doc/ru_RU.KOI8-R/books/porters-handbook/Makefile,v 1.4 2001/07/25 14:06:09 phantom Exp $
-# $FreeBSDru: frdp/doc/ru_RU.KOI8-R/books/porters-handbook/Makefile,v 1.5 2001/07/19 08:42:12 phantom Exp $
+# $FreeBSD$
+# $FreeBSDru: frdp/doc/ru_RU.KOI8-R/books/porters-handbook/Makefile,v 1.6 2001/12/18 14:12:23 phantom Exp $
 # Original reivision: 1.1
 #
 # Build the FreeBSD Porter's Handbook.
@@ -22,6 +22,9 @@ INSTALL_ONLY_COMPRESSED?=
 
 # SGML content
 SRCS=  book.sgml
+
+# Entities
+#SRCS+= ../../../en_US.ISO8859-1/books/handbook/authors.ent
 
 # Use the local DSSSL file
 DSLHTML?= 	${.CURDIR}/freebsd.dsl
