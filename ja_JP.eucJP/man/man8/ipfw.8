@@ -1,5 +1,5 @@
 .\"
-.\" %FreeBSD: src/sbin/ipfw/ipfw.8,v 1.63 2000/02/28 15:21:12 ru Exp %
+.\" %FreeBSD: src/sbin/ipfw/ipfw.8,v 1.63.2.2 2000/06/12 09:47:20 ru Exp %
 .\"
 .\" jpman %Id: ipfw.8,v 1.4 1997/05/19 17:19:51 horikawa Stab %
 .Dd February 16, 2000
@@ -50,6 +50,16 @@
 .Cm pipe
 .Es \&{ \&}
 .En Cm delete |list | show
+.Op Ar number ...
+.Nm ipfw
+.Cm queue
+.Ar number
+.Cm config
+.Ar queue-config-options
+.Nm ipfw
+.Cm queue
+.Es \&{ \&}
+.En Cm delete | list | show
 .Op Ar number ...
 .Sh 解説
 .Nm
@@ -393,8 +403,8 @@ IP が ローカルアドレスではない場合、ポート番号は (指定されていても) 無視され、
 .Dq パイプ
 へ渡します (バンド幅制限、遅延等のため)。
 更なる情報については
-.Xr dummynet 4
-マニュアルページを参照してください。
+.Sx トラフィックシェイパ設定
+の節を参照してください。
 検索は終了します。
 しかし、パイプから抜けたときに
 .Xr sysctl 8
@@ -402,6 +412,12 @@ IP が ローカルアドレスではない場合、ポート番号は (指定されていても) 無視され、
 .Em net.inet.ip.fw.one_pass
 がセットされていない場合、
 パケットはファイアウォールコードへ再度渡されて次のルールから開始します。
+.It Cm queue Ar queue_nr
+パケットを
+.Xr dummynet 4
+.Dq queue
+へ渡します
+(WF2Q を使ったバンド幅制限用)。
 .It Cm skipto Ar number
 .Ar number
 より小さな番号のルールを飛び越して、
@@ -420,14 +436,18 @@ IP が ローカルアドレスではない場合、ポート番号は (指定されていても) 無視され、
 オプション付きでコンパイルされている場合、
 デフォルトでは、
 一連のルールに対し指定されたパケット
-数を受信した後、メッセージの表示を中止します。
+数を受信した後、メッセージの表示を中止し、
+.Em net.inet.ip.fw.verbose_limit
+がその数に設定されます。
 しかし
 .Cm logamount Ar number
 が使用された場合、
-.Dv IPFIREWALL_VERBOSE_LIMIT
+.Em net.inet.ip.fw.verbose_limit
 の代りにこの
 .Ar number
-がデフォルトのログ制限になります。
+がデフォルトのログ制限になり、値
+.Dq 0
+を指定すると、ロギングの制限は取り除かれます。
 このエントリに対するロギングカウンタまたはパケットカウンタを
 クリアすれば、ロギングは再び有効になります。
 .Pp
@@ -715,29 +735,84 @@ IP ヘッダ異常
 ユーティリティは、
 .Xr dummynet 4
 トラフィックシェイパへのユーザインタフェースも提供します。
-シェイパは、パケットを
-.Em pipe
-(パイプ) と呼ばれるオブジェクトへ渡すことによって動作します。
-パイプは、与えられたバンド幅、遅延時間、キューの長さ、パケット喪失率を
+シェイパは、ユーザが指定したマスクを IP ヘッダの異なったフィールドに
+適用することにより、パケットを
+.Em フロー
+(flow) に分割します。
+同じフローに属するパケットは 2 つの異なったオブジェクトへ渡されます。
+それは
+.Em パイプ
+(pipe) または
+.Em キュー
+(queue) と呼ばれるものです。
+.Em パイプ
+は、与えられたバンド幅、遅延時間、キューの長さ、パケット喪失率を
 もつリンクをエミュレートします。
+このパラメータに従い、パケットはパイプ中を遷移します。
+.Pp
+.Em キュー
+は、WF2Q+ ポリシを実装するために使用する抽象化です。
+キューは、各フローに対し、重みと参照パイプを関連付けます。
+それから、同じパイプに結び付けられたすべてのフローは、
+WF2Q+ ポリシに従い、
+パイプによって固定されたレートでスケジュールされます。
+.Pp
 .Nm
 パイプ設定書式は次の通りです。
 .Pp
 .Cm pipe Ar number Cm config
+.Op Cm bw Ar bandwidth | device
+.Op Cm delay Ar ms-delay
+.Oo
 .Op Cm bw Ar bandwidth
 .Oo
 .Cm queue
 .Es \&{ \&}
 .En Ar slots | size
 .Oc
-.Op Cm delay Ar ms-delay
 .Op Cm plr Ar loss-probability
 .Op Cm mask Ar mask-specifier
 .Op Cm buckets Ar hash-table-size
+.Oo
+.Cm red | gred
+.Sm off
+.Ar w_q No / Xo
+.Ar min_th No /
+.Ar max_th No /
+.Ar max_p
+.Xc
+.Sm on
+.Oc
+.Ed
+.Pp
+.Nm
+キュー設定書式は次の通りです。
+.Bd -ragged
+.Cm queue Ar number Cm config
+.Op Cm pipe Ar pipe_nr
+.Op Cm weight Ar weight
+.Oo
+.Cm queue
+.Es \&{ \&}
+.En Ar slots | size
+.Oc
+.Op Cm plr Ar loss-probability
+.Op Cm mask Ar mask-specifier
+.Op Cm buckets Ar hash-table-size
+.Oo
+.Cm red | gred
+.Sm off
+.Ar w_q No / Xo
+.Ar min_th No /
+.Ar max_th No /
+.Ar max_p
+.Xc
+.Sm on
+.Oc
 .Pp
 次のパラメータをパイプに対して設定可能です:
 .Bl -tag -width indent
-.It Cm bw Ar bandwidth
+.It Cm bw Ar bandwidth | device
 バンド幅であり、単位は
 .Sm off
 .Oo
@@ -749,9 +824,17 @@ IP ヘッダ異常
 で測定します。
 .Pp
 値 0 (デフォルト) は無限のバンド幅を意味します。
-単位は数値の直後に続けて書く必要があり、
+単位は数値の直後に続けて書く必要があり、次のようにします。
+.Pp
 .Dl "ipfw pipe 1 config bw 300Kbit/s queue 50KBytes"
-のようにします。
+.Pp
+数値の代りにデバイス名が指定された場合、
+送信クロックは指定したデバイスから与えられます。
+現在のところ、
+.Xr tun 4
+デバイスのみが
+.Xr ppp 8
+と組み合わせて使用するために、この機能を提供しています。
 .It Cm delay Ar ms-delay
 遅延時間であり、ミリ秒単位で指定します。
 値は、クロックティックの倍数
@@ -783,7 +866,7 @@ IP ヘッダ異常
 喪失率は内部的には 31 ビットで表現されます。
 .It Cm mask Ar mask-specifier
 .Xr dummynet 4
-では、パイプ指定一つで、フローごとのキューを生成可能です。
+では、フローごとのキューを生成可能です。
 フロー識別子は、パイプ設定において指定される
 IP アドレス、ポート、プロトコルタイプでマスクすることで構築されます。
 マスク後に同じ識別子を持つパケットは、同じキューに落ちます。
@@ -797,6 +880,13 @@ IP アドレス、ポート、プロトコルタイプでマスクすることで構築されます。
 。
 最後の指定子は、
 すべてのフィールドのすべてのビットが重要であることを意味しています。
+.Ar pipe
+設定中で使用される場合、
+各フローにはパイプのレートに等しいレートが割り当てられます。
+.Ar queue
+設定中で使用される場合、
+各フローにはキューの重みに等しい重みが割り当てられ、
+同じパイプを構成するキューは重みに比例してバンド幅を共有します。
 .It Cm buckets Ar hash-table-size
 様々なキューを格納するために使用するハッシュ表の大きさを指定します。
 デフォルト値は 64 であり、
@@ -804,6 +894,49 @@ IP アドレス、ポート、プロトコルタイプでマスクすることで構築されます。
 変数
 .Em net.inet.ip.dummynet.hash_size
 で制御され、使用可能な範囲は 16 から 1024 です。
+.It Cm pipe Ar pipe_nr
+キューを指定したパイプに接続します。
+複数のキュー (通常は異なった重み) を同一のパイプに接続可能です。
+この場合、このキュー集合に対する集約レートを、このパイプが指定します。
+.It Cm weight Ar weight
+このキューに適合するフローに使用する重みを指定します。
+重みは 1..100 の範囲であることが必要であり、デフォルトは 1 です。
+.It Cm red | gred Xo
+.Sm off
+.Ar w_q No /
+.Ar min_th No /
+.Ar max_th No /
+.Ar max_p
+.Sm on
+.Xc
+RED キュー管理アルゴリズムを使用します。
+.Ar w_q
+と
+.Ar max_p
+は 0 から 1 (0 を含みません) の範囲の浮動小数点数であり、
+.Ar min_th
+と
+.Ar max_th
+はキュー管理用の閾値を指定する整数です
+(キューがバイト数で指定された場合は閾値はバイトで計算され、
+そうでない場合はスロット数で計算されます)。
+.Xr dummynet 4
+は、gentle RED という変型 (gred) もサポートします。
+RED の動作を制御するために、3 個の
+.Xr sysctl 8
+変数を使用可能です:
+.Bl -tag -width indent
+.It Em net.inet.ip.dummynet.red_lookup_depth
+リンクがアイドルの時の、平均キューの計算精度を指定します
+(デフォルトは 256 であり、0 より大きい必要があります)
+.It Em net.inet.ip.dummynet.red_avg_pkt_size
+パケットサイズの平均の期待値を指定します
+(デフォルトは 512 であり、0 より大きい必要があります)
+.It Em net.inet.ip.dummynet.red_max_pkt_size
+パケットサイズの最大値の期待値を指定します。
+キューの閾値がバイトの場合のみ使用されます
+(デフォルトは 1500 であり、0 より大きい必要があります)
+.El
 .El
 .Sh チェックリスト
 ルールを構成する際に考慮すべき重要な点を述べます。
@@ -1020,6 +1153,12 @@ SYN を両方とも見た後に増やされ、最後の FIN 交換の間、
 場合を除き、単一のパイプを両方の方向に使用すべきではありません。
 両方のパイプが同じ設定である必要はないので、
 非対称リンクをシミュレート可能です。
+.Pp
+RED キュー管理アルゴリズムを使用してネットワーク性能を検証するには、
+次のようにします:
+.Pp
+.Dl "ipfw add pipe 1 ip from any to any"
+.Dl "ipfw pipe 1 config bw 500Kbit/s queue 100 red 0.002/30/80/0.1"
 .Pp
 トラフィックシェイパの他の典型的な応用は、
 いくばくかの通信遅延を導入することです。
