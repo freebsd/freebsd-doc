@@ -1,5 +1,5 @@
 # 
-# $FreeBSD$
+# $FreeBSD: doc/es_ES.ISO8859-1/books/handbook/Makefile,v 1.2 2000/05/28 19:21:43 jesusr Exp $
 #
 # Build the FreeBSD Handbook.
 #
@@ -53,7 +53,6 @@ SRCS+= ports/chapter.sgml
 # Entities
 SRCS+= authors.ent 
 SRCS+= chapters.ent 
-SRCS+= mailing-lists.ent
 
 DOC_PREFIX?= ${.CURDIR}/../../..
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"
