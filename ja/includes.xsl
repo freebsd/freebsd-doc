@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
 
-<!-- $FreeBSD: www/ja/includes.xsl,v 1.3 2001/11/16 17:14:12 hrs Exp $ -->
-<!-- Original revision: 1.4 -->
+<!-- $FreeBSD: www/ja/includes.xsl,v 1.4 2002/01/01 19:17:15 hrs Exp $ -->
+<!-- Original revision: 1.5 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -15,7 +15,7 @@
     <img src="{$base}/gifs/new.gif" alt="[New!]" width="28" height="11"/>
   </xsl:variable>
 
-  <xsl:variable name="copyright" select="'Copyright (c) 1995-2001 the FreeBSD Project.  All rights reserved.'"/>
+  <xsl:variable name="copyright" select="'Copyright (c) 1995-2002 the FreeBSD Project.  All rights reserved.'"/>
 
   <xsl:variable name="email" select="'freebsd-questions'"/>
   <xsl:variable name="author">
