@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.16 1997-05-04 19:59:36 wosch Exp $
+# $Id: Makefile,v 1.17 1997-06-10 04:42:36 meganm Exp $
 
 .if exists(Makefile.conf)
 .include "Makefile.conf"
@@ -12,7 +12,7 @@ ANALOG?=/home/www/bin/analog
 
 DOCS=  about.sgml applications.sgml auditors.sgml availability.sgml branch.sgml
 DOCS+= cgallery.sgml commercial.sgml daemon.sgml docproj.sgml docs.sgml 
-DOCS+= features.sgml gallery.sgml index-site.sgml index.sgml
+DOCS+= features.sgml gallery.sgml index-site.sgml register.sgml 
 DOCS+= internet.sgml license.sgml mailto.sgml mirror.sgml newsflash.sgml
 DOCS+= npgallery.sgml pgallery.sgml search.sgml searchhints.sgml send-pr.sgml
 DOCS+= security.sgml support.sgml welcome.sgml where.sgml resignation.sgml
@@ -21,7 +21,7 @@ CLEANFILES+=atoz.sgml
 
 # These will be directly installed.
 
-DATA=	COPYING COPYING.LIB README.mirror robots.txt
+DATA=	COPYING COPYING.LIB README.mirror robots.txt index.html
 
 # Files or targets listed here are defined in this file.
 
