@@ -26,6 +26,7 @@ SUBDIR+= dialup-firewall
 SUBDIR+= laptop
 SUBDIR+= pxe
 SUBDIR+= pr-guidelines
+SUBDIR+= cvsup-advanced
 
 ROOT_SYMLINKS+= new-users
 
