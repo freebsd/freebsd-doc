@@ -1,5 +1,5 @@
 #
-# $FreeBSD$
+# $FreeBSD: www/en/handbook/Makefile,v 1.4 1999/09/06 07:02:45 peter Exp $
 #
 # Build the FreeBSD Handbook *outside* of the www tree, and install it
 # in to the right place as necessary.
@@ -15,4 +15,4 @@
 #
 
 all install clean:
-	(cd ../../../doc/en_US.ISO_8859-1/books/handbook && make FORMATS=html-split DESTDIR=${DESTDIR}/data/handbook ${.TARGET})
+	(cd ../../../doc/en_US.ISO_8859-1/books/handbook && ${MAKE} FORMATS=html-split DESTDIR=${DESTDIR}/data/handbook ${.TARGET})
