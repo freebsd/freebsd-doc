@@ -1,4 +1,4 @@
-# $FreeBSD: www/ja/news/Makefile,v 1.17 1999/12/23 01:15:51 kuriyama Exp $
+# $FreeBSD: www/ja/news/Makefile,v 1.18 2000/05/12 15:34:39 kuriyama Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.18
 
@@ -28,6 +28,7 @@ DOCS+= pressreleases.sgml
 DOCS+= press-rel-1.sgml
 DOCS+= press-rel-2.sgml
 DOCS+= press-rel-3.sgml
+DOCS+= press-rel-4.sgml
 
 # The yearly State of the Union address
 #DOCS+=	sou1999.sgml
