@@ -1,4 +1,4 @@
-<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.40 2001/07/21 09:09:59 murray Exp $ -->
+<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.41 2001/07/24 11:07:59 dd Exp $ -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
 <!ENTITY % output.html		"IGNORE">
@@ -447,6 +447,7 @@
            Configure the stylesheet to behave more like John's. -->
 
       (element command ($mono-seq$))
+      (element envar ($mono-seq$))
 
       (element application ($bold-seq$))
 
