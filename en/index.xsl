@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/index.xsl,v 1.5 2001/08/10 10:36:18 nik Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.6 2001/08/23 14:03:49 kuriyama Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   
@@ -6,7 +6,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.5 2001/08/10 10:36:18 nik Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.6 2001/08/23 14:03:49 kuriyama Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -340,6 +340,16 @@
 
 			  <p><font size="+1" color="#990000"><b>Project News</b></font><br/>
 			    <font size="-1">
+			      Latest update: 
+			      <xsl:value-of
+				select="descendant::month[position() = 1]/name"/>
+			      <xsl:text> </xsl:text>
+			      <xsl:value-of
+				select="descendant::day[position() = 1]/name"/>,
+			      <xsl:text> </xsl:text>
+			      <xsl:value-of
+				select="descendant::year[position() = 1]/name"/>
+			      <br/>
 			      <!-- Pull in the 10 most recent news items -->
 			      <xsl:for-each select="descendant::event[position() &lt;= 10]">
 				&#183;  <a>
@@ -362,6 +372,13 @@
 			  <p><font size="+1" color="#990000"><b>FreeBSD Press</b></font><br/>
 
 			    <font size="-1">
+			      Latest update: 
+			      <xsl:value-of
+				select="document('news/press.xml')/descendant::month[position() = 1]/name"/>
+			      <xsl:text> </xsl:text>
+			      <xsl:value-of
+				select="document('news/press.xml')/descendant::year[position() = 1]/name"/>
+			      <br/>
 			      <!-- Pull in the 10 most recent press items -->
 			      <xsl:for-each select="document('news/press.xml')/descendant::story[position() &lt; 10]">
 				&#183; <a>
