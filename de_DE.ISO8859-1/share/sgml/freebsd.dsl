@@ -1,6 +1,6 @@
 <!--
 	$FreeBSD$
-	$FreeBSDde: de-docproj/share/sgml/freebsd.dsl,v 1.10 2002/10/26 18:35:02 mheinen Exp $
+	$FreeBSDde: de-docproj/share/sgml/freebsd.dsl,v 1.11 2003/01/24 23:02:49 mheinen Exp $
 	basiert auf: 1.17
 -->
 
@@ -20,13 +20,13 @@
             (make element gi: "p"
                   attributes: (list (list "align" "center"))
               (make element gi: "small"
-                (literal "Wenn Sie Fragen zu FreeBSD haben, schicken Sie eine EMail an <")
+                (literal "Wenn Sie Fragen zu FreeBSD haben, schicken Sie eine E-Mail an <")
                 (make element gi: "a"
                       attributes: (list (list "href" "mailto:de-bsd-questions@de.FreeBSD.org"))
                   (literal "de-bsd-questions@de.FreeBSD.org"))
                 (literal ">.")
                 (make empty-element gi: "br")
-                (literal "Wenn Sie Fragen zu dieser Dokumentation haben, schicken Sie eine Email an <")
+                (literal "Wenn Sie Fragen zu dieser Dokumentation haben, schicken Sie eine E-Mail an <")
                 (make element gi: "a"
                       attributes: (list (list "href" "mailto:de-bsd-translators@de.FreeBSD.org"))
                   (literal "de-bsd-translators@de.FreeBSD.org"))
