@@ -1,5 +1,5 @@
 # 
-# $FreeBSD: doc/en_US.ISO8859-1/books/handbook/Makefile,v 1.33 2001/06/21 03:38:14 chris Exp $
+# $FreeBSD: doc/en_US.ISO8859-1/books/handbook/Makefile,v 1.34 2001/06/23 22:46:14 murray Exp $
 #
 # Build the FreeBSD Handbook.
 #
@@ -13,7 +13,7 @@ FORMATS?= html-split
 INSTALL_COMPRESSED?= gz
 INSTALL_ONLY_COMPRESSED?=
 
-# IMAGES= advanced-networking/natd.png advanced-networking/natd.eps
+#IMAGES= advanced-networking/natd.eps
 
 # 
 # SRCS lists the individual SGML files that make up the document. Changes
@@ -58,6 +58,11 @@ SRCS+= authors.ent
 SRCS+= chapters.ent 
 
 SYMLINKS=	${DESTDIR} index.html handbook.html
+
+# Turn on all the chapters.
+CHAPTERS?= ${SRCS:M*chapter.sgml}
+
+JADEFLAGS+= ${CHAPTERS:S/\/chapter.sgml//:S/^/-i chap./}
 
 # XXX The Handbook build currently overflows some internal, hardcoded 
 # limits in pdftex.  Until we split the Handbook up, build the PDF 
