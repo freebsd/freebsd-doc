@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
 <!-- $FreeBSD$
-     $FreeBSDde: de-www/news/oldnewsflash.xsl,v 1.4 2003/10/21 22:12:13 mheinen Exp $
-     basiert auf: 1.5 -->
+     $FreeBSDde: de-www/news/oldnewsflash.xsl,v 1.5 2004/05/02 00:49:58 brueffer Exp $
+     basiert auf: 1.6 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -57,7 +57,13 @@
   <!-- Everything that follows are templates for the rest of the content -->
 
   <xsl:template match="month">
-    <h1><xsl:value-of select="name"/>
+    <h1>
+      <xsl:call-template name="transtable-lookup">
+	<xsl:with-param name="word-group" select="'number-month'" />
+	<xsl:with-param name="word">
+	  <xsl:value-of select="name"/>
+	</xsl:with-param>
+      </xsl:call-template>
       <xsl:text> </xsl:text>
       <xsl:value-of select="ancestor::year/name"/></h1>
 
@@ -79,7 +85,12 @@
 
 	<b><xsl:value-of select="ancestor::day/name"/>.
 	  <xsl:text> </xsl:text>
-	  <xsl:value-of select="ancestor::month/name"/>
+	  <xsl:call-template name="transtable-lookup">
+	    <xsl:with-param name="word-group" select="'number-month'" />
+	    <xsl:with-param name="word">
+	      <xsl:value-of select="ancestor::month/name"/>
+	    </xsl:with-param>
+	  </xsl:call-template>
 	  <xsl:text> </xsl:text>
 	  <xsl:value-of select="ancestor::year/name"/>:</b><xsl:text> </xsl:text>
 	<xsl:apply-templates select="p"/>

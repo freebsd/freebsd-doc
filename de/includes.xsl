@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/de/includes.xsl,v 1.7 2004/01/03 14:21:32 mheinen Exp $
-     $FreeBSDde: de-www/includes.xsl,v 1.10 2004/01/01 14:49:56 mheinen Exp $
+<!-- $FreeBSD: www/de/includes.xsl,v 1.8 2004/01/16 08:00:24 brueffer Exp $
+     $FreeBSDde: de-www/includes.xsl,v 1.13 2004/05/04 00:08:20 brueffer Exp $
      basiert auf: 1.20
 -->
 
@@ -23,7 +23,7 @@
   </xsl:variable>
 
   <xsl:variable name="copyright">
-    <a href="{$enbase}/copyright/index.html">Copyright</a> &#169; 1995-2003
+    <a href="{$enbase}/copyright/index.html">Copyright</a> &#169; 1995-2004
     the FreeBSD Project.  All rights reserved.
   </xsl:variable>
 
@@ -91,18 +91,20 @@
       <xsl:copy-of select="$date"/></address>
   </xsl:variable>
 
-  <xsl:variable name="rel.current" select='"5.2"'/>
+  <xsl:variable name="rel.current" select='"5.2.1"'/>
   <xsl:variable name="u.rel.notes">
-    <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel.current"/>R/relnotes.html</xsl:variable>
+    <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel.current"/>R/relnotes.html</xsl:variable>
 
   <xsl:variable name="u.rel.announce">
-    <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel.current"/>R/announce.html</xsl:variable>
+    <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel.current"/>R/announce.html</xsl:variable>
   <xsl:variable name="u.rel.errata">
-    <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel.current"/>R/errata.html</xsl:variable>
+    <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel.current"/>R/errata.html</xsl:variable>
   <xsl:variable name="u.rel.hardware">
-    <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel.current"/>R/hardware.html</xsl:variable>
+    <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel.current"/>R/hardware.html</xsl:variable>
+  <xsl:variable name="u.rel.installation">
+    <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel.current"/>R/installation.html</xsl:variable>
   <xsl:variable name="u.rel.early">
-    <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel.current"/>R/early-adopter.html</xsl:variable>
+    <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel.current"/>R/early-adopter.html</xsl:variable>
 
   <xsl:variable name="rel2.current" select='"4.9"'/>
   <xsl:variable name="u.rel2.notes">
@@ -114,6 +116,8 @@
     <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel2.current"/>R/errata.html</xsl:variable>
   <xsl:variable name="u.rel2.hardware">
     <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel2.current"/>R/hardware.html</xsl:variable>
+  <xsl:variable name="u.rel2.installation">
+    <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel2.current"/>R/installation.html</xsl:variable>
 
   <!-- template: "html-index-advisories-items-lastmodified" -->
 

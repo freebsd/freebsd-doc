@@ -2,8 +2,8 @@
 
 <!--
      $FreeBSD$
-     $FreeBSDde: de-www/news/newsflash.xsl,v 1.8 2003/10/21 22:12:13 mheinen Exp $
-     basiert auf: 1.9
+     $FreeBSDde: de-www/news/newsflash.xsl,v 1.11 2004/05/04 00:06:08 brueffer Exp $
+     basiert auf: 1.11
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
@@ -49,7 +49,8 @@
 	  Sie diese Seite &#246;fter, um informiert zu bleiben.
 	  Weiterhin k&#246;nnen Sie die
 	  <a href="{$base}/../doc/de_DE.ISO8859-1/books/handbook/eresources.html#ERESOURCES-MAIL">Mailingliste
-	  freebsd-announce</a> abonnieren.</p>
+	  freebsd-announce</a> abonnieren oder den <a href="news.rdf">RSS
+	  Ticker</a> benutzen.</p>
 
 	<p>Die nachstehenden Projekte besitzen eigene Seiten,
 	  auf denen Sie projektbezogene Ank&#252;ndigungen finden:</p>
@@ -88,7 +89,13 @@
   <!-- Everything that follows are templates for the rest of the content -->
 
   <xsl:template match="month">
-    <h1><xsl:value-of select="name"/>
+    <h1>
+      <xsl:call-template name="transtable-lookup">
+	<xsl:with-param name="word-group" select="'number-month'" />
+	<xsl:with-param name="word">
+	  <xsl:value-of select="name"/>
+	</xsl:with-param>
+      </xsl:call-template>
       <xsl:text> </xsl:text>
       <xsl:value-of select="ancestor::year/name"/></h1>
 
@@ -110,7 +117,12 @@
 
 	<b><xsl:value-of select="ancestor::day/name"/>.
 	  <xsl:text> </xsl:text>
-	  <xsl:value-of select="ancestor::month/name"/>
+	  <xsl:call-template name="transtable-lookup">
+	    <xsl:with-param name="word-group" select="'number-month'" />
+	    <xsl:with-param name="word">
+	      <xsl:value-of select="ancestor::month/name"/>
+	    </xsl:with-param>
+	  </xsl:call-template>
 	  <xsl:text> </xsl:text>
 	  <xsl:value-of select="ancestor::year/name"/>:</b><xsl:text> </xsl:text>
 	<xsl:apply-templates select="p"/>
