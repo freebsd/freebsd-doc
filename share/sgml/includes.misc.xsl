@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/share/sgml/includes.misc.xsl,v 1.8 2004/02/01 22:56:56 ale Exp $ -->
+<!-- $FreeBSD: www/share/sgml/includes.misc.xsl,v 1.9 2004/02/03 22:25:23 ale Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -24,6 +24,10 @@
      html-list-advisories                        security/mkindex.xsl
      html-list-advisories-putitems               security/mkindex.xsl
      html-list-advisories-release-label          security/mkindex.xsl (for l10n)
+     rdf-security-advisories                     security/security-rdf.xsl
+     rdf-security-advisories-title               security/security-rdf.xsl (for l10n)
+     rdf-security-advisories-items               security/security-rdf.xsl
+
      html-index-advisories-items                 index.xsl
      html-index-advisories-items-lastmodified    index.xsl (for i10n)
      html-index-news-project-items               index.xsl
@@ -139,6 +143,57 @@
     <xsl:value-of select="document($advisories.xml)/descendant::day[position() = 1]/name"/>
     <xsl:text>, </xsl:text>
     <xsl:value-of select="document($advisories.xml)/descendant::year[position() = 1]/name"/>
+  </xsl:template>
+
+  <!-- template: "rdf-security-advisories"
+       generate a rdf of 10 most recent security advisories -->
+
+  <xsl:template name="rdf-security-advisories">
+    <xsl:param name="advisories.xml" select="''" />
+
+    <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+	     xmlns="http://my.netscape.com/rdf/simple/0.9/">
+
+      <xsl:call-template name="rdf-security-advisories-title" />
+
+      <xsl:call-template name="rdf-security-advisories-items">
+	<xsl:with-param name="advisories.xml" select="$advisories.xml" />
+      </xsl:call-template>
+    </rdf:RDF>
+  </xsl:template>
+
+  <!-- template: "rdf-security-advisories-title"
+       generate title for the security advisories rdf -->
+
+  <xsl:template name="rdf-security-advisories-title"
+                xmlns="http://my.netscape.com/rdf/simple/0.9/">
+    <channel>
+      <title>FreeBSD Security Advisories</title>
+      <link>http://www.FreeBSD.org/security/</link>
+      <description>Security advisories published from the FreeBSD Project</description>
+    </channel>
+  </xsl:template>
+
+  <!-- template: "rdf-security-advisories-items"
+       pulls in the 10 most recent security advisories -->
+
+  <xsl:template name="rdf-security-advisories-items"
+                xmlns="http://my.netscape.com/rdf/simple/0.9/">
+    <xsl:param name="advisories.xml" select="''" />
+
+    <xsl:for-each select="document($advisories.xml)/descendant::advisory[position() &lt;= 10]">
+      <item>
+	<title><xsl:value-of select="name"/></title>
+	<xsl:choose>
+	  <xsl:when test="@omithref = 'yes'">
+	    <xsl:value-of select="name"/>
+	  </xsl:when>
+	  <xsl:otherwise>
+	    <link><xsl:value-of select="concat($ftpbase, name, '.asc')" /></link>
+	  </xsl:otherwise>
+	</xsl:choose>
+      </item>
+    </xsl:for-each>
   </xsl:template>
 
   <!-- template: "html-index-news-project-items"
