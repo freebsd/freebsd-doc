@@ -1,12 +1,12 @@
-#	$Id: Makefile,v 1.11 1998-08-24 17:12:25 motoyuki Exp $
+#	$Id: Makefile,v 1.12 1998-08-26 15:01:05 motoyuki Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.15
+# Original revision: 1.16
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
 .endif
 
-PORTINDEX=	perl ./portindex
+PORTINDEX=	perl ${.CURDIR}/portindex
 INDEX=		INDEX
 PINDEX=		ports/${INDEX}
 
@@ -29,7 +29,7 @@ hostname!= hostname
 
 packages.exists: ${cvsindex}
 .if ${hostname} == "hub.freebsd.org" || ${hostname} == "freefall.freebsd.org"
-	../../en/ports/packages > ${.TARGET}
+	sh ${.CURDIR}/../../en/ports/packages > ${.TARGET}
 .else
 	touch ${.TARGET}
 .endif
