@@ -1,5 +1,5 @@
 #
-# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.16 2000/07/18 16:30:45 nik Exp $
+# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.17 2000/09/25 08:17:03 nik Exp $
 #
 # This include file <doc.docbook.mk> handles building and installing of
 # DocBook documentation in the FreeBSD Documentation Project.
@@ -49,9 +49,10 @@ MASTERDOC?=	${.CURDIR}/${DOC}.sgml
 
 JADE=		${PREFIX}/bin/jade
 
-DSLHTML?=	${DOC_PREFIX}/${LANGCODE}/share/sgml/freebsd.dsl
-DSLPRINT?=	${DOC_PREFIX}/${LANGCODE}/share/sgml/freebsd.dsl
+DSLHTML?=	${DOC_PREFIX}/share/sgml/default.dsl
+DSLPRINT?=	${DOC_PREFIX}/share/sgml/default.dsl
 FREEBSDCATALOG=	${DOC_PREFIX}/share/sgml/catalog
+LANGUAGECATALOG=${DOC_PREFIX}/${LANGCODE}/share/sgml/catalog
 
 DOCBOOKCATALOG=	${PREFIX}/share/sgml/docbook/catalog
 JADECATALOG=	${PREFIX}/share/sgml/jade/catalog
@@ -59,7 +60,7 @@ DSSSLCATALOG=	${PREFIX}/share/sgml/docbook/dsssl/modular/catalog
 
 LIB_IMAGES?=
 
-JADEOPTS=	${JADEFLAGS} -c ${FREEBSDCATALOG} -c ${DSSSLCATALOG} -c ${DOCBOOKCATALOG} -c ${JADECATALOG} ${EXTRA_CATALOGS:S/^/-c /g}
+JADEOPTS=	${JADEFLAGS} -c ${LANGUAGECATALOG} -c ${FREEBSDCATALOG} -c ${DSSSLCATALOG} -c ${DOCBOOKCATALOG} -c ${JADECATALOG} ${EXTRA_CATALOGS:S/^/-c /g}
 
 KNOWN_FORMATS=	html html.tar html-split html-split.tar txt rtf ps pdf tex dvi tar pdb
 
@@ -138,9 +139,6 @@ CLEANFILES+= ${DOC}.rtf
 .elif ${_cf} == "tar"
 _docs+= ${DOC}.tar
 CLEANFILES+= ${DOC}.tar
-.elif ${_cf} == "doc"
-_docs+= ${DOC}.doc
-CLEANFILES+= ${DOC}.doc
 .elif ${_cf} == "pdb"
 _docs+= ${DOC}.pdb ${.CURDIR:T}.pdb
 +CLEANFILES+= ${DOC}.pdb ${.CURDIR:T}.pdb
@@ -171,17 +169,21 @@ CLEANFILES+= ${DOC}.${_curformat}.${_curcomp}
 
 all: ${_docs}
 
-index.html HTML.manifest: ${SRCS} ${LIB_IMAGES}
+index.html HTML.manifest: ${SRCS}
 	${JADE} -V html-manifest -ioutput.html ${JADEOPTS} -d ${DSLHTML} -t sgml ${MASTERDOC}
 .if !defined(NO_TIDY)
 	-tidy -i -m -f /dev/null ${TIDYFLAGS} `xargs < HTML.manifest`
 .endif
 
-${DOC}.html: ${SRCS} ${LIB_IMAGES}
+${DOC}.html: ${SRCS}
 	${JADE} -ioutput.html -V nochunks ${JADEOPTS} -d ${DSLHTML} -t sgml ${MASTERDOC} > ${.TARGET}
 .if !defined(NO_TIDY)
 	-tidy -i -m -f /dev/null ${TIDYFLAGS} ${.TARGET}
 .endif
+
+.for _curimage in ${LIB_IMAGES}
+${_docs}: ${LOCAL_LIB_IMAGES_DIR}/${_curimage}
+.endfor
 
 ${DOC}.html-split.tar: HTML.manifest
 	tar cf ${.TARGET} `xargs < HTML.manifest`

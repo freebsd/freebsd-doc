@@ -1,5 +1,5 @@
 #
-# $FreeBSD: doc/share/mk/doc.project.mk,v 1.4 2000/07/16 16:29:18 nik Exp $
+# $FreeBSD: doc/share/mk/doc.project.mk,v 1.5 2000/07/23 16:27:58 nik Exp $
 #
 # This include file <doc.project.mk> is the FreeBSD Documentation Project 
 # co-ordination make file.
@@ -67,6 +67,8 @@ ALL_FORMATS=	html html.tar html-split html-split.tar txt rtf ps pdf tex dvi tar 
 PREFIX?=	/usr/local
 PRI_LANG?=	en_US.ISO_8859-1
 
+.include "doc.images.mk"
+
 # Format-specific configuration
 .if defined(DOC)
 .if ${DOCFORMAT} == "docbook"
@@ -80,5 +82,4 @@ PRI_LANG?=	en_US.ISO_8859-1
 # Subdirectory glue and ownership information.
 .include "doc.subdir.mk"
 .include "doc.install.mk"
-.include "doc.images.mk"
 
