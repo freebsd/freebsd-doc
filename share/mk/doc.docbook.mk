@@ -1,5 +1,5 @@
 #
-# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.42 2001/07/28 03:00:03 murray Exp $
+# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.43 2001/08/16 05:19:51 dd Exp $
 #
 # This include file <doc.docbook.mk> handles building and installing of
 # DocBook documentation in the FreeBSD Documentation Project.
@@ -543,28 +543,30 @@ packagelist:
 
 .for _curformat in ${KNOWN_FORMATS}
 _cf=${_curformat}
-package-${_curformat}: install-${_curformat}
 .if ${_cf} == "html-split"
+package-${_curformat}: index.html
 	@cp HTML.manifest PLIST
 	@for images_png in ${IMAGES_PNG}; do \
 		echo $$images_png >> PLIST; \
 		echo docbook.css >> PLIST; \
 	done
 .elif ${_cf} == "html"
+package-${curformat}: ${DOC}.html
 	@echo ${DOC}.${_curformat} > PLIST
 	@for images_png in ${IMAGES_PNG}; do \
 		echo $$images_png >> PLIST; \
 		echo docbook.css >> PLIST; \
 	done
 .else
+package-${_curformat}: ${DOC}.${_curformat}
 	@echo ${DOC}.${_curformat} > PLIST
-	@for lib_images in ${IMAGES_LIB5}; do \
+	@for lib_images in ${IMAGES_LIB}; do \
 		echo $$lib_images >> PLIST; \
 	done
 .endif
 	@pkg_create -v -c -"FDP ${.CURDIR:T} ${_curformat} package" \
 		-d -"FDP ${.CURDIR:T} ${_curformat} package" -f PLIST \
-		-p ${DESTDIR} ${PACKAGES}/${.CURDIR:T}.${LANGCODE}.${_curformat}.tgz
+		-p ${DESTDIR} -s . ${PACKAGES}/${.CURDIR:T}.${LANGCODE}.${_curformat}.tgz
 .endfor
 
 docbook.css: ${CSS_SHEET}
