@@ -1,10 +1,10 @@
 # 
 # $FreeBSD$
 #
-# Build the FreeBSD Developers' Handbook.
+# Build the FreeBSD Architecture Handbook.
 #
 
-MAINTAINER=murray@FreeBSD.org
+MAINTAINER=doc@FreeBSD.org
 
 DOC?= book
 
