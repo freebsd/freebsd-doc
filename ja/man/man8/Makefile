@@ -16,6 +16,7 @@ MAN8 =	IPXrouted.8\
 	bad144.8\
 	badsect.8\
 	boot_i386.8\
+	boot0cfg.8\
 	bootparamd.8\
 	bootpd.8\
 	bootpef.8\
@@ -36,6 +37,8 @@ MAN8 =	IPXrouted.8\
 	cron.8\
 	cvsbug.8\
 	dev_mkdb.8\
+	dhclient-script.8\
+	dhclient.8\
 	disklabel.8\
 	diskless.8\
 	diskpart.8\
@@ -80,6 +83,7 @@ MAN8 =	IPXrouted.8\
 	kernbb.8\
 	keyadmin.8\
 	keyserv.8\
+	kget.8\
 	kgmon.8\
 	kldload.8\
 	kldstat.8\
@@ -88,6 +92,8 @@ MAN8 =	IPXrouted.8\
 	kzip.8\
 	ldconfig.8\
 	linux.8\
+	loader.4th.8\
+	loader.8\
 	locate.updatedb.8\
 	lpc.8\
 	lpd.8\
@@ -111,6 +117,7 @@ MAN8 =	IPXrouted.8\
 	mount_ext2fs.8\
 	mount_msdos.8\
 	mount_nfs.8\
+	mount_ntfs.8\
 	mount_null.8\
 	mount_portal.8\
 	mount_std.8\
@@ -144,6 +151,7 @@ MAN8 =	IPXrouted.8\
 	ntptrace.8\
 	pac.8\
 	pam.8\
+	pccardc.8\
 	pccardd.8\
 	pciconf.8\
 	periodic.8\
@@ -216,6 +224,8 @@ MAN8 =	IPXrouted.8\
 	syslogd.8\
 	talkd.8\
 	telnetd.8\
+	tcpdchk.8\
+	tcpdmatch.8\
 	tftpd.8\
 	timed.8\
 	timedc.8\
