@@ -469,11 +469,14 @@ if (-d $fullname) {
         print &html_footer;
 	print "</BODY></HTML>\n";
 } else {
+	# Assume it's a module name with a potential path following it.
+	$where =~ s|/.*||;
+	$xtra = $&;
 	# Is there an indexed version of modules?
 	if (open(MODULES, "$cvsroot/CVSROOT/modules")) {
 		while (<MODULES>) {
 			if (/^${where}\s+(\S+)/o && -d "${cvsroot}/$1") {
-				&redirect($scriptname . '/' . $1);
+				&redirect($scriptname . '/' . $1 . $xtra);
 			}
 		}
 	}
@@ -502,7 +505,7 @@ sub revcmp {
 	local(@r2) = split(/\./, $rev2);
 	local($a,$b);
 
-	while (($a = pop(@r1)) && ($b = pop(@r2))) {
+	while (($a = shift(@r1)) && ($b = shift(@r2))) {
 	    if ($a != $b) {
 		return $a <=> $b;
 	    }
