@@ -1,6 +1,6 @@
-# $FreeBSD: www/ja/commercial/Makefile,v 1.10 2000/05/07 01:55:55 kuriyama Exp $
+# $FreeBSD: www/ja/commercial/Makefile,v 1.11 2000/10/02 09:16:05 kuriyama Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.12
+# Original revision: 1.13
 
 LOCALTOP= ..
 
