@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl
+#!/usr/bin/perl
 #
 # Copyright (c) Oct 1997-1999 Wolfram Schneider <wosch@FreeBSD.org>. Berlin.
 # All rights reserved.
@@ -26,7 +26,7 @@
 #
 # url.cgi - make plain text URLs clickable
 #
-# $FreeBSD: www/en/cgi/url.cgi,v 1.20 1999/10/19 12:24:26 wosch Exp $
+# $FreeBSD: www/en/cgi/url.cgi,v 1.21 1999/10/20 09:13:21 wosch Exp $
 
 
 $hsty_base = '';

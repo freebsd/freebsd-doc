@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl
+#!/usr/bin/perl
 
 #######################################################################
 # gencommercial.pl - 
@@ -27,7 +27,7 @@
 # This program is made available to the general public under
 # the "BSD-style copyright" terms of agreement.
 #
-# $FreeBSD$
+# $FreeBSD: www/en/commercial/gencommercial.pl,v 1.4 1999/09/06 07:02:41 peter Exp $
 
 #######################################################################
 ## Configuration Section

@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl -T
+#!/usr/bin/perl -T
 #
 # Given a filename, start offset and end offset of a mail message,
 # read the message and format it nicely using HTML.
@@ -6,7 +6,7 @@
 # by John Fieber
 # February 26, 1998
 #
-# $FreeBSD$
+# $FreeBSD: www/en/cgi/getmsg.cgi,v 1.22 1999/09/06 07:02:40 peter Exp $
 #
 
 require "./cgi-lib.pl";

@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl
+#!/usr/bin/perl
 #
 # gengallery.pl - script to convert tab-delimited gallery db file to
 # a section of an SGML list (not a full SGML file!) for inclusion
