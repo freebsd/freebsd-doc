@@ -206,14 +206,14 @@
                  (m (select-elements (children n) (normalize "manvolnum")))
                  (v (attribute-string (normalize "vendor") n))
                  (u (string-append "http://www.FreeBSD.org/cgi/man.cgi?query="
-                         (data r) "&" "sektion=" (data m))))
+                         (data r) "&" "amp;" "sektion=" (data m))))
             (case v
-              (("current") (string-append u "&" "manpath=FreeBSD+6-current"))
-              (("xfree86") (string-append u "&" "manpath=XFree86+4.4.0"))
-              (("xorg")    (string-append u "&" "manpath=X11R6.7.0"))
-              (("netbsd")  (string-append u "&" "manpath=NetBSD+1.6.1"))
-              (("openbsd") (string-append u "&" "manpath=OpenBSD+3.4"))
-              (("ports")   (string-append u "&" "manpath=FreeBSD+Ports"))
+              (("current") (string-append u "&" "amp;" "manpath=FreeBSD+6-current"))
+              (("xfree86") (string-append u "&" "amp;" "manpath=XFree86+4.4.0"))
+              (("xorg")    (string-append u "&" "amp;" "manpath=X11R6.7.0"))
+              (("netbsd")  (string-append u "&" "amp;" "manpath=NetBSD+1.6.1"))
+              (("openbsd") (string-append u "&" "amp;" "manpath=OpenBSD+3.4"))
+              (("ports")   (string-append u "&" "amp;" "manpath=FreeBSD+Ports"))
               (else u))))
 
         (element application ($bold-seq$))
