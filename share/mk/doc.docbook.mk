@@ -25,6 +25,9 @@
 #			them need to be generated.  Changing any file in
 #			SRCS causes the documents to be rebuilt.
 #
+#       HAS_INDEX       This document has index terms and so an index
+#                       can be created if specified with GEN_INDEX.
+#
 
 # ------------------------------------------------------------------------
 #
@@ -47,9 +50,10 @@
 #
 #	NO_TIDY		If you do not want to use tidy, set this to "YES".
 #
-#       GEN_INDEX       If defined, index.sgml will be added to the list
-#                       of dependencies for source files, and collateindex.pl
-#                       will be run to generate index.sgml.
+#       GEN_INDEX       If this document has an index (HAS_INDEX) and this
+#                       variable is defined, then index.sgml will be added 
+#                       to the list of dependencies for source files, and 
+#                       collateindex.pl will be run to generate index.sgml.
 #
 #	CSS_SHEET	Full path to a CSS stylesheet suitable for DocBook.
 #			Default is ${DOC_PREFIX}/share/misc/docbook.css
@@ -323,14 +327,14 @@ CLEANFILES+= ${.CURDIR:T}.${_curformat}.${_curcomp}
 #
 # Index generation
 #
-INDEX_SGML?=		index.sgml
 CLEANFILES+= 		${INDEX_SGML}
 
-.if defined(GEN_INDEX)
+.if defined(GEN_INDEX) && defined(HAS_INDEX)
 JADEFLAGS+=		-i chap.index
 HTML_SPLIT_INDEX?=	html-split.index
 HTML_INDEX?=		html.index
 PRINT_INDEX?=		print.index
+INDEX_SGML?=		index.sgml
 
 CLEANFILES+= 		${HTML_SPLIT_INDEX} ${HTML_INDEX} ${PRINT_INDEX}
 .endif
@@ -471,13 +475,8 @@ lint validate:
 # an empty index.sgml file so that we can reference index.sgml in book.sgml
 #
 
-.if defined(GEN_INDEX)
 ${INDEX_SGML}:
 	${PERL} ${COLLATEINDEX} -N -o ${.TARGET}
-.else
-${INDEX_SGML}:
-	${TOUCH} ${.TARGET}
-.endif
 
 ${HTML_INDEX}:
 	${JADE} -V html-index -V nochunks ${HTMLOPTS} -ioutput.html.images \
