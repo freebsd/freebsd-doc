@@ -1,3 +1,4 @@
+<!-- $Id: ports.inc,v 1.14 1997-08-25 13:54:07 max Exp $ -->
 <p>The FreeBSD Ports Collection offers a simple way for users and
 administrators to install applications.  Each ``port'' listed here
 contains any patches necessary to make the original application source
