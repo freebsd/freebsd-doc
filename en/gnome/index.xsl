@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.39 2003/09/18 16:13:25 bland Exp $ -->
+<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.40 2003/09/19 21:38:09 marcus Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
 		xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -9,7 +9,7 @@
   <xsl:import href="includes.xsl"/>
 
   <xsl:variable name="base" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.39 2003/09/18 16:13:25 bland Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.40 2003/09/19 21:38:09 marcus Exp $'"/>
   <xsl:variable name="title" select="'FreeBSD GNOME Project'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -102,8 +102,8 @@
 
               <p>As with most GNU programs, GNOME has been designed to run on all
                 modern Unix-like operating systems.  Through the efforts of the
-                FreeBSD GNOME Project and countless volunteers, those operating
-                systems include FreeBSD.</p>
+		FreeBSD GNOME Project and countless volunteers, that list of
+		operating systems includes FreeBSD.</p>
 
               <p>The GNOME project has expanded its objectives over the past few
                 months to include addressing a number of problems in the existing
