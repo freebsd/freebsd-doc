@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/ports.cgi,v 1.69 2003/10/19 17:01:24 wosch Exp $
+# $FreeBSD: www/en/cgi/ports.cgi,v 1.70 2003/10/23 10:44:34 wosch Exp $
 #
 # ports.cgi - search engine for FreeBSD ports
 #             	o search for a port by name or description
@@ -58,24 +58,24 @@ sub init_variables {
     local($pia64) = 'ftp://ftp.FreeBSD.org/pub/FreeBSD/ports/ia64';
     local($psparc64) = 'ftp://ftp.FreeBSD.org/pub/FreeBSD/ports/sparc64';
 
-    $remotePrefixFtpPackagesDefault = '4.8-STABLE/i386';
+    $remotePrefixFtpPackagesDefault = '4.9-STABLE/i386';
     %remotePrefixFtpPackages = 
 	(
 	 '5.1-CURRENT/i386', "$p/packages-current/All",
-	 '4.8-STABLE/i386', " $p/packages-4-stable/All",
+	 '4.9-STABLE/i386', " $p/packages-4-stable/All",
 
 	 '5.1-RELEASE/i386', "$p/packages-5.1-release/All",
 	 '5.0-RELEASE/i386', "$p/packages-5.0-release/All",
+	 '4.9-RELEASE/i386', "$p/packages-4.9-release/All",
 	 '4.8-RELEASE/i386', "$p/packages-4.8-release/All",
-	 '4.7-RELEASE/i386', "$p/packages-4.7-release/All",
 
 	 '5.1-CURRENT/alpha', "$palpha/packages-current/All",
-	 '4.8-STABLE/alpha',  "$palpha/packages-4-stable/All",
+	 '4.9-STABLE/alpha',  "$palpha/packages-4-stable/All",
 
 	 '5.1-RELEASE/alpha', "$palpha/packages-5.1-release/All",
 	 '5.0-RELEASE/alpha', "$palpha/packages-5.0-release/All",
+	 '4.9-RELEASE/alpha', "$palpha/packages-4.9-release/All",
 	 '4.8-RELEASE/alpha', "$palpha/packages-4.8-release/All",
-	 '4.7-RELEASE/alpha', "$palpha/packages-4.7-release/All",
 
 	 '5.1-CURRENT/ia64', "$pia64/packages-current/All",
 
@@ -601,7 +601,7 @@ sub footer {
 <img ALIGN="RIGHT" src="/gifs/powerlogo.gif">
 &copy; 1996-2002 by Wolfram Schneider. All rights reserved.<br>
 };
-    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.69 2003/10/19 17:01:24 wosch Exp $} . "<br>\n";
+    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.70 2003/10/23 10:44:34 wosch Exp $} . "<br>\n";
     print qq{Please direct questions about this service to
 <I><A HREF="$mailtoURL">$mailto</A></I><br>\n};
     print qq{General questions about FreeBSD ports should be sent to } .
