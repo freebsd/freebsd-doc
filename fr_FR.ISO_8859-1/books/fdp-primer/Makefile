@@ -4,7 +4,7 @@
 #
 #    Compilation de l'Introduction au Projet de Documentation de FreeBSD
 #
-#    $Id: Makefile,v 1.1 2000-06-12 15:46:26 gioria Exp $
+#    $FreeBSD$
 #    Original revision: 1.6
 # 
 
