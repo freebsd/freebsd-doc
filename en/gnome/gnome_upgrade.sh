@@ -2,7 +2,7 @@
 #
 # ##################################################################
 # ##################################################################
-# ## If you want to upgrade your GNOME desktop from 2.6 to 2.8,   ##
+# ## If you want to upgrade your GNOME desktop from 2.8 to 2.10,  ##
 # ## you're on the right track! Read our upgrade FAQ at           ##
 # ## http://www.freebsd.org/gnome/docs/faq28.html for complete    ##
 # ## instructions!                                                ##
@@ -10,7 +10,7 @@
 # ##################################################################
 #
 #-
-# Copyright (c) 2004 FreeBSD GNOME Team <freebsd-gnome@FreeBSD.org>
+# Copyright (c) 2004-2005 FreeBSD GNOME Team <freebsd-gnome@FreeBSD.org>
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -34,13 +34,13 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $Id: gnome_upgrade.sh,v 1.15 2005-03-03 03:00:57 marcus Exp $
+# $Id: gnome_upgrade.sh,v 1.16 2005-03-12 10:22:55 marcus Exp $
 #
 
 # This script will aid in doing major upgrades to the GNOME Desktop (e.g.
-# an upgrade from 2.6 --> 2.8).
+# an upgrade from 2.8 --> 2.10).
 
-GNOME_UPGRADE_SH_VER=281;	# This should be nailed down before releasing
+GNOME_UPGRADE_SH_VER=2100;	# This should be nailed down before releasing
 
 ## BEGIN global variable declarations.
 VERBOSE=${VERBOSE:=0}
@@ -53,38 +53,10 @@ PROJECT_URL="http://www.FreeBSD.org/gnome/"
 SUPPORT_EMAIL="freebsd-gnome@FreeBSD.org"
 
 SUPPORTED_FREEBSD_VERSIONS="4.10 4.11 5.3 5.4 6.0"
-	# Ports that must be up-to-date and installed for the Big Update to work
-EXTERNAL_DEPENDS="popt gettext* libiconv expat pkgconfig freetype2 XFree86-libraries* Xft libXft XFree86-fontScalable* XFree86-fontEncodings* xorg* png libaudiofile tiff jpeg libxml2 python libxslt gnomehier scrollkeeper intltool p5-XML-Parser docbook-sk xmlcatmgr docbook-xsl docbook-xml sdocbook-xml startup-notification gnome-icon-theme Hermes libmpeg2 guile libltdl aspell gle cdrtools mkisofs bitstream-vera openldap-client lcms libmng libtool ghostscript* gnomeuserdocs2 libIDL libbonobo libgda2 libgsf libgtop2 libxklavier shared-mime-info hicolor-icon-theme linc ORBit2 libart_lgpl2 libmad libid3tag fam esound libglut nspr shared-mime-data hicolor-icon-theme libsoup"
-EXTERNAL_4_DEPENDS="libgnugetopt"
-EXTERNAL_5_DEPENDS="perl-5*"
-EXTERNAL_6_DEPENDS="perl-5*"
-	# Ports that are obsoleted by the new GNOME version
-RM_PORTS=""
-	# Files that need to be removed for the Big Update to work (chicken-and-egg kludge)
-RM_FILES=""
 	# The Big Update updates UPGRADE_TARGET and everything that depends on it
-UPGRADE_TARGET="atk pango"
-	# Ports that should be left until after the Big Update
-EXCLUDE_PORTS="gdesklets gnomeapplets2 gnome2 gnomemeeting gconf-editor"
-	# Ports that should be installed from scratch after the Big Update
-	# (Needs to be in category/port form, like editors/AbiWord2)
-POSTINSTALL_PORTS=""
-	# Ports that need to be rebuilt after the Big Update
-	# (Make sure to include upstream dependencies!)
-REINSTALL_PORTS="gdesklets gnomeapplets2 gnome2 gnomevfs2 libgnome AbiWord2* gnome2-office gconf-editor"
+UPGRADE_TARGET="glib-2*"
 	# Variables to be set across every portupgrade run
-PORTUPGRADE_MAKE_ENV="-m GNOME_UPGRADE_SH_VER=${GNOME_UPGRADE_SH_VER}"
-
-# the following exists to resolve chicken-and-egg dependency problems.
-#
-# Y depends upon X, but X needs to be removed for the build:
-#
-#if [ -x ${X11BASE}/bin/PROGRAM_X ]; then
-#    if [ -x ${X11BASE}/bin/PROGRAM_Y ]; then
-#        RM_PORTS="${RM_PORTS} programY"
-#        POSTINSTALL_PORTS="${POSTINSTALL_PORTS} editors/programY"
-#    fi
-#fi
+PORTUPGRADE_MAKE_ENV="GNOME_UPGRADE_SH_VER=${GNOME_UPGRADE_SH_VER}"
 
 ## END global variable declarations.
 
@@ -114,6 +86,16 @@ get_tmpfile()
     return 0
 }
 
+cleanup()
+{
+    retval=$1
+    logfile=$2
+
+    echo "INFO: GNOME upgrade finished at `date`" >> ${logfile}
+
+    exit ${retval}
+}
+
 check_supported()
 {
     version=$1
@@ -137,27 +119,27 @@ run_pkgdb()
     pkgdb_args="$3"
     PKGDB="${LOCALBASE}/sbin/pkgdb"
 
-    if [ -z "$pkgdb_args" ]; then
+    if [ -z "${pkgdb_args}" ]; then
         pkgdb_args="-aF"
     fi
 
-    echo "===> Running ${PKGDB} ${msg} ..."
+    echo -n "===> Running ${PKGDB} ${msg} ..."
     echo "===> Running ${PKGDB} ${msg} ..." >> ${logfile}
     if [ ${VERBOSE} != 0 ]; then
-	echo "INFO: Running ${PKGDB} $pkgdb_args >> ${logfile}"
+	echo "INFO: Running ${PKGDB} ${pkgdb_args}"
     fi
-    echo "INFO: Running ${PKGDB} $pkgdb_args >> ${logfile}" >> ${logfile}
-    if [ "$pkgdb_args" = "-F" ]; then
-        ${PKGDB} $pkgdb_args 2>&1 | /usr/bin/tee ${logfile}
+    echo "INFO: Running ${PKGDB} ${pkgdb_args}" >> ${logfile}
+    if [ "${pkgdb_args}" = "-F" ]; then
+        ${PKGDB} ${pkgdb_args} 2>&1 | /usr/bin/tee -a ${logfile}
     else
-        ${PKGDB} $pkgdb_args 2>&1 >> ${logfile}
+        ${PKGDB} ${pkgdb_args} >> ${logfile} 2>&1
     fi
     # Unless a meteor hits pkgdb while it's running, this next part won't
     # even be executed ::/
     if [ $? != 0 ]; then
         echo "FAILED."
-        echo "===> ${PKGDB} repair has failed.  Please repair the package database by hand (run "pkgdb -F"), then re-run this script.  If you require additional help, compress ${logfile}, and send it to ${SUPPORT_EMAIL}." | /usr/bin/fmt 75 79
-        exit 1
+        echo "ERROR: ${PKGDB} repair has failed.  Please repair the package database by hand (run \"pkgdb -F\"), then re-run this script.  If you require additional help, compress ${logfile}, and send it to ${SUPPORT_EMAIL}." | /usr/bin/fmt 75 79
+        cleanup 1 ${logfile}
     fi
     echo "DONE."
     return 0
@@ -166,16 +148,17 @@ run_pkgdb()
 run_portupgrade()
 {
     logfile=$1
+    shift
     target="$*"
 
     # insert custom env variables here, if necessary.
     PORTUPGRADE_MAKE_ENV="${PORTUPGRADE_MAKE_ENV}"
 
-    echo "===> Running ${PORTUPGRADE} -O -m "BATCH=yes ${PORTUPGRADE_MAKE_ENV}" ${PORTUPGRADE_ARGS} ${target}" >> ${logfile}
+    echo "===> Running ${PORTUPGRADE} -O -m \"BATCH=yes ${PORTUPGRADE_MAKE_ENV}\" ${PORTUPGRADE_ARGS} ${target}" >> ${logfile}
     if [ ${VERBOSE} != 0 ]; then
-	echo; echo "INFO: Running ${PORTUPGRADE} -O -m "BATCH=yes ${PORTUPGRADE_MAKE_ENV}" ${PORTUPGRADE_ARGS} ${target}"
+        echo; echo "INFO: Running ${PORTUPGRADE} -O -m \"BATCH=yes ${PORTUPGRADE_MAKE_ENV}\" ${PORTUPGRADE_ARGS} ${target}"
     fi
-    echo "INFO: Running ${PORTUPGRADE} -O -m "BATCH=yes ${PORTUPGRADE_MAKE_ENV}" ${PORTUPGRADE_ARGS} ${target}" >> ${logfile}
+    echo "INFO: Running ${PORTUPGRADE} -O -m \"BATCH=yes ${PORTUPGRADE_MAKE_ENV}\" ${PORTUPGRADE_ARGS} ${target}" >> ${logfile}
     ${PORTUPGRADE} -O -m "BATCH=yes ${PORTUPGRADE_MAKE_ENV}" ${PORTUPGRADE_ARGS} ${target} >> ${logfile} 2>&1
 
     return $?
@@ -183,11 +166,11 @@ run_portupgrade()
 
 ## BEGIN main block.
 if [ `/usr/bin/id -u` != 0 ]; then
-    echo "You must be root to run this script."
+    echo "ERROR: You must be root to run this script."
     exit 1
 fi
 if [ ! -d ${PORTSDIR} ]; then
-    echo "${PORTSDIR} does not exist or is not a directory.  Please set PORTSDIR to the directory containing the full FreeBSD ports tree." | /usr/bin/fmt 75 79
+    echo "ERROR: ${PORTSDIR} does not exist or is not a directory.  Please set PORTSDIR to the directory containing the full FreeBSD ports tree." | /usr/bin/fmt 75 79
     exit 1
 fi
 
@@ -200,38 +183,55 @@ if [ ${VERBOSE} != 0 ]; then
 fi
 
 restart=0
+upgrade_list=
 if [ "$1" = "-restart" ]; then
+    upgrade_list=$2
+    if [ -z "${upgrade_list}" ]; then
+	echo "ERROR: -restart requires a path to the list of GNOME ports to upgrade as its argument." | /usr/bin/fmt 75 79
+	exit 1
+    fi
+    if [ ! -f ${upgrade_list} ]; then
+	echo "ERROR: ${upgrade_list} does not exist or is not a file." | /usr/bin/fmt 75 79
+	exit 1
+    fi
     restart=1
+else
+    upgrade_list=`get_tmpfile gnome_upgrade_lst`
+    if [ $? != 0 ]; then
+        echo "ERROR: Failed to create temporary upgrade list file."
+        exit 1
+    fi
 fi
 
 if [ ${supported} = 0 ]; then
-    echo "===> FreeBSD ${version} is not supported by the FreeBSD GNOME project.  Please refer to ${PROJECT_URL} for a list of supported versions." | /usr/bin/fmt 75 79
+    echo "ERROR: FreeBSD ${version} is not supported by the FreeBSD GNOME project.  Please refer to ${PROJECT_URL} for a list of supported versions." | /usr/bin/fmt 75 79
     exit 1
 fi
 
 # Seriously. We do this for your protection.
 echo
-echo "To prevent crashing your system, as well as to significantly speed up the upgrade, you are strongly advised to run this program from a console.  If any GNOME or Gtk+-2 application is running, you MUST abort now." | /usr/bin/fmt 75 79
+echo "WARNING: To prevent crashing your system, as well as to significantly speed up the upgrade, you are strongly advised to run this program from a console.  If any GNOME or GTK+-2 application is running, you MUST abort now." | /usr/bin/fmt 75 79
 echo
-echo "If necessary, hit Control-C now, drop to a terminal, and restart the upgrade." | /usr/bin/fmt 75 79
+echo "WARNING: If necessary, hit Control-C now, drop to a terminal, and restart the upgrade." | /usr/bin/fmt 75 79
 echo
 # $i is a good clobberable variable name
-#read -p "Hit <ENTER> to continue with the upgrade: " i
-#echo
+read -p "Hit <ENTER> to continue with the upgrade: " i
+echo
 
 logfile=`get_tmpfile gnome_upgrade_log`
 if [ $? != 0 ]; then
-    echo "===> Failed to create temporary logfile."
+    echo "ERROR: Failed to create temporary logfile."
     exit 1
 fi
-tmpbase=`dirname ${logfile}`
+tmpbase=`/usr/bin/dirname ${logfile}`
 available=`/bin/df -m ${tmpbase} | /usr/bin/sed -E -e '/^[^\/]/D' | /usr/bin/awk '{print $4;}'`
 if [ "${available}" -lt "200" ]; then
-    echo "Not enough space in ${tmpbase} to log the upgrade.  Please set the MC_TMPDIR variable to a location that has at least 200 MB of free space, then restart the upgrade." | /usr/bin/fmt 75 79
+    echo "ERROR: Not enough space in ${tmpbase} to log the upgrade.  Please set the MC_TMPDIR variable to a location that has at least 200 MB of free space, then restart the upgrade." | /usr/bin/fmt 75 79
     exit 1
 fi
+echo "INFO: GNOME upgrade started at `date`" >> ${logfile}
 if [ ${WATCH_BUILD} != 0 ]; then
-    tail -f ${logfile} &
+    /usr/bin/tail -f ${logfile} &
 fi
 
 if [ ${VERBOSE} != 0 ]; then
@@ -239,20 +239,14 @@ if [ ${VERBOSE} != 0 ]; then
 fi
 echo "INFO: PORTSDIR = ${PORTSDIR}" >> ${logfile}
 
-echo "You can watch the upgrade process in real-time by running:"
-echo "		tail -f ${logfile}"
-if [ ${VERBOSE} != 0 ]; then
-    echo "or by defining WATCH_BUILD in your environment."
+if [ ${WATCH_BUILD} = 0 ]; then
+    echo "You can watch the upgrade process in real-time by running:"
+    echo "		tail -f ${logfile}"
+    if [ ${VERBOSE} != 0 ]; then
+        echo "or by defining WATCH_BUILD in your environment."
+    fi
 fi
 echo "INFO: logfile = ${logfile}" >> ${logfile}
-
-major_version=`echo ${version} | /usr/bin/cut -d'.' -f1`
-eval "EXTERNAL_DEPENDS=\"${EXTERNAL_DEPENDS} \${EXTERNAL_${major_version}_DEPENDS}\""
-
-if [ ${VERBOSE} != 0 ]; then
-    echo "INFO: EXTERNAL_DEPENDS = ${EXTERNAL_DEPENDS}"
-fi
-echo "INFO: EXTERNAL_DEPENDS = ${EXTERNAL_DEPENDS}" >> ${logfile}
 
 # First, check to see that we have portupgrade installed.
 PORTUPGRADE="${LOCALBASE}/sbin/portupgrade"
@@ -262,8 +256,8 @@ if [ ! -x ${PORTUPGRADE} ]; then
     fi
     echo "INFO: Portupgrade is not installed; installing ..." >> ${logfile}
     if [ ! -d "${PORTSDIR}/sysutils/portupgrade" ]; then
-	echo "===> Failed to find ${PORTSDIR}/sysutils/portupgrade.  Please make sure you have the whole ports tree checked out in ${PORTSDIR}." | /usr/bin/fmt 75 79
-	exit 1
+	echo "ERROR: Failed to find ${PORTSDIR}/sysutils/portupgrade.  Please make sure you have the whole ports tree checked out in ${PORTSDIR}." | /usr/bin/fmt 75 79
+	cleanup 1 ${logfile}
     fi
     echo -n "===> Installing sysutils/portupgrade ..."
     echo "===> Installing sysutils/portupgrade ..." >> ${logfile}
@@ -271,14 +265,57 @@ if [ ! -x ${PORTUPGRADE} ]; then
     /usr/bin/make -DFORCE_PKG_REGISTER install clean >> ${logfile} 2>&1
     if [ $? != 0 ]; then
 	echo "FAILED."
-	echo "===> sysutils/portupgrade was NOT successfully installed.  Please install portupgrade manually, then re-run this script.  The output of the failed build is in ${logfile}." | /usr/bin/fmt 75 79
-	exit 1
+	echo "ERROR: sysutils/portupgrade was NOT successfully installed.  Please install portupgrade manually, then re-run this script.  The output of the failed build is in ${logfile}." | /usr/bin/fmt 75 79
+	cleanup 1 ${logfile}
     fi
     echo "DONE."
 fi
 
+exclude_ports=
+if [ -n "${PORTUPGRADE_EXCLUDE}" ]; then
+    for excl in ${PORTUPGRADE_EXCLUDE}; do
+	exclude_ports="${exclude_ports} -x ${excl}"
+    done
+fi
+
+# Obtain a list of ports that need upgrading.  We can skip this if the upgrade
+# is being restarted.
+if [ ${restart} = 0 ]; then
+    echo -n "===> Generating list of ports to upgrade in ${upgrade_list} ..."
+    echo "===> Generating list of ports to upgrade in ${upgrade_list} ..." >> ${logfile}
+    ${PORTUPGRADE} -rnf ${exclude_ports} ${UPGRADE_TARGET} | \
+    	/usr/bin/egrep '^[[:space:]]+\+' | /usr/bin/cut -d' ' -f2 > ${upgrade_list} 2> /dev/null
+    echo "DONE."
+else
+    echo "INFO: Using existing upgrade list in ${upgrade_list}." >> ${logfile}
+    if [ ${VERBOSE} != 0 ]; then
+	echo "INFO: Using existing upgrade list in ${upgrade_list}."
+    fi
+fi
+
+# Build a list of all ports not in ${upgrade_list} for our list of
+# external dependencies.  Everyone should run a portupgrade -a on their
+# system from time to time anyway.
+echo -n "===> Generating list of external dependencies ..."
+echo "===> Generating list of external dependencies ..." >> ${logfile}
+result=`${PORTUPGRADE} -an ${exclude_ports} | /usr/bin/egrep '^[[:space:]]+\+' | /usr/bin/cut -d' ' -f2`
+
+external_list=
+if [ -n "${result}" ]; then
+    for ext in ${result}; do
+	if ! /usr/bin/grep -qw "^${ext}" ${upgrade_list}; then
+	    external_list="${external_list} ${ext}"
+	    if [ ${VERBOSE} != 0 ]; then
+		echo "INFO: Adding ${ext} to the list of external dependencies." | /usr/bin/fmt 75 79
+	    fi
+	    echo "INFO: Adding ${ext} to the list of external dependencies." >> ${logfile}
+	fi
+    done
+fi
+echo "DONE."
+
 echo
-echo ">>>>> STAGE 1 of 5: Cleaning the package database."
+echo ">>>>> STAGE 1 of 4: Cleaning the package database."
 
 # Now we need to run pkgdb to make sure our database is consistent.
 run_pkgdb "to start with a consistent package database" ${logfile}
@@ -290,25 +327,29 @@ run_pkgdb "again, to resolve any inconsistencies that require manual interaction
 
 # Run portupgrade on all the external dependencies.
 echo
-echo ">>>>> STAGE 2 of 5: Updating any out-of-date GNOME dependencies."
+echo ">>>>> STAGE 2 of 4: Updating any out-of-date dependencies."
 echo "===> Running ${PORTUPGRADE} for external dependencies ..." >> ${logfile}
-run_portupgrade ${logfile} "${EXTERNAL_DEPENDS}"
-if [ $? != 0 ]; then
-    echo "FAILED."
-    echo "===> ${PORTUPGRADE} failed to run for the external GNOME dependencies.  Please make sure that ${EXTERNAL_DEPENDS} are up-to-date, then re-run this script.  The output of the failed portupgrade can be found in ${logfile}.  If you require additional help, please compress ${logfile}, and send it to ${SUPPORT_EMAIL}." | /usr/bin/fmt 75 79
-    exit 1
+if [ -n "${external_list}" ]; then
+    run_portupgrade ${logfile} ${external_list}
+    if [ $? != 0 ]; then
+        echo "FAILED."
+        echo "ERROR: ${PORTUPGRADE} failed to run for the external GNOME dependencies.  Please make sure that the following ports are up-to-date, then re-run this script.  The output of the failed portupgrade can be found in ${logfile}.  If you require additional help, please compress ${logfile}, and send it to ${SUPPORT_EMAIL}." | /usr/bin/fmt 75 79
+	echo ${external_list} | /usr/bin/sed -e 'y/ /\n/'
+        cleanup 1 ${logfile}
+    fi
 fi
 echo "DONE."
 
 # Run pkgdb again.
-run_pkgdb "after updating GNOME dependencies" ${logfile}
+run_pkgdb "after updating external dependencies" ${logfile}
 
 echo
-echo ">>>>> STAGE 3 of 5: Removing previously stand-alone applications that are now a part of another GNOME application." | /usr/bin/fmt 75 79
-# Remove any ports that are no longer in the tree.  Note: we can ignore errors
-# here since users may not have these ports installed.
+echo ">>>>> STAGE 3 of 4: Removing all ports that depend up ${UPGRADE_TARGET}" | /usr/bin/fmt 75 79
+# Remove any ports that depend upon ${UPGRADE_TARGET}.  This isn't as bad
+# as it seems since a portupgrade -f would have done this anyway.  We're
+# just taking care of it up front.
 PKGDEINSTALL="${LOCALBASE}/sbin/pkg_deinstall"
-for i in ${RM_PORTS}; do
+for i in `/bin/cat ${upgrade_list}`; do
     echo -n "===> Removing ${i} ..."
     echo "===> Removing ${i} ..." >> ${logfile}
     if [ ${VERBOSE} != 0 ]; then
@@ -324,110 +365,35 @@ done
 # place to run it.
 # run_pkgdb "after removing dead packages. Note: this will take a LONG time ..." ${logfile} "-fu"
 
-# Remove any specific files whose mere existence is known to cause build failures.
-if [ ${VERBOSE} != 0 ]; then
-	echo "INFO: Removing any files whose existence can cause build failures."
-fi
-echo "INFO: Removing any files whose existence can cause build failures." >> ${logfile}
-if [ ! -z "${RM_FILES}" ]; then
-	for file in ${RM_FILES}; do
-		if [ ${VERBOSE} != 0 ]; then
-			echo "INFO: Removing ${file}"
-		fi
-		echo "INFO: Removing ${file}" >> ${logfile}
-		/bin/rm -f ${file}
-	done
-fi
-
-# Anything in the gtk2 tree that wasn't installed as part of gtk2 carries the
-# chance of killing the build.
-for gtkfile in `find ${X11BASE}/lib/gtk-2.0 -type f`; do
-	if [ ! `pkg_info -L gtk-2\* | grep ${gtkfile}` ]; then
-		if [ ${VERBOSE} != 0 ]; then
-			echo "INFO: Removing ${gtkfile}"
-		fi
-		echo "INFO: Removing {$gtkfile}" >> ${logfile}
-		/bin/rm -f ${gtkfile}
-	fi
-done
-
-
 echo
-echo ">>>>> STAGE 4 of 5: Rebuilding all GNOME applications, and everything that relies upon them. (The Big Update)" | /usr/bin/fmt 75 79
+echo ">>>>> STAGE 4 of 4: Rebuilding all GNOME applications, and everything that relies upon them. (The Big Update)" | /usr/bin/fmt 75 79
 # Now comes the fun part.  We will do a recursive forced upgrade on a certain
 # target and all dependent ports.
 if [ ${VERBOSE} != 0 ]; then
-	echo "===> Running portupgrade on ${UPGRADE_TARGET} and all dependent ports.  Note: this will take a LONG time (a bit longer than it took to build it all the first time ...)" | /usr/bin/fmt 75 79
+	echo "===> Running portinstall for all previously installed dependencies of ${UPGRADE_TARGET}.  Note: this will take a LONG time" | /usr/bin/fmt 75 79
 else
-	echo "Note: this will take a LONG time (a bit longer than it took to build it all the first time ...).  If you've been planning a day trip, now would be a great time to take it." | /usr/bin/fmt 75 79
+	echo "Note: this will take a LONG time.  If you've been planning a day trip, now would be a great time to take it." | /usr/bin/fmt 75 79
 fi
-if [ ${restart} = 1 ]; then
-    echo "===> Restarting portupgrade on ${UPGRADE_TARGET} and all dependent ports ..." >> ${logfile}
-else
-    echo "===> Running portupgrade on ${UPGRADE_TARGET} and all dependent ports ..." >> ${logfile}
-fi
-SAVE_PORTUPGRADE_ARGS="${PORTUPGRADE_ARGS}"
-if [ ${restart} = 1 ]; then
-    PORTUPGRADE_ARGS="${PORTUPGRADE_ARGS} -r"
-else
-    PORTUPGRADE_ARGS="${PORTUPGRADE_ARGS} -r -f"
-fi
-if [ ! -z "${EXCLUDE_PORTS}" ]; then
-    for excl in ${EXCLUDE_PORTS}; do
-	    PORTUPGRADE_ARGS="${PORTUPGRADE_ARGS} -x ${excl}"
-    done
-fi
-run_portupgrade ${logfile} ${UPGRADE_TARGET}
-if [ $? != 0 ]; then
-    echo
-    echo "*** UPGRADE FAILED ***"
-    echo
-    echo "===> ${PORTUPGRADE} failed to run a recursive upgrade on ${UPGRADE_TARGET}.  The output of the failed build is in ${logfile}.  If you require additional help in figuring out why the upgrade failed, please compress ${logfile} and send it to ${SUPPORT_EMAIL}." | /usr/bin/fmt 75 79
-    exit 1
-fi
-PORTUPGRADE_ARGS="${SAVE_PORTUPGRADE_ARGS}"
-echo
-echo "${PORTUPGRADE} has finished.  That was the hard part!"
-
-echo
-echo ">>>>> STAGE 5 of 5: Rebuilding a few ports that had to wait until new GNOME libraries were in place. (Almost done!)" | /usr/bin/fmt 75 79
-# Now, install anything that needs to be installed after other
-# things have been updated. This includes things that had to
-# be removed for chicken-and-egg problems. This is done before
-# reinstallation in case anything in POSTINSTALL belongs to
-# anything in REINSTALL.
-if [ ! -z "${POSTINSTALL_PORTS}" ]; then
-    SAVE_PORTUPGRADE_ARGS="${PORTUPGRADE_ARGS}"
-    PORTUPGRADE_ARGS="${PORTUPGRADE_ARGS} -N"
-    for i in ${POSTINSTALL_PORTS}; do
-        echo -n "===> Installing ${i} ..."
-        echo "===> Installing ${i} ..." >> ${logfile}
-        run_portupgrade ${logfile} ${logfile}
-        if [ $? != 0 ]; then
-            echo "FAILED."
-            echo "===> Failed to install ${i}.  Please install this port by hand.  The output of the failed build is in ${logfile}.  If you require additional assistance reinstalling this port, please compress ${logfile} and send it to ${SUPPORT_EMAIL}." | /usr/bin/fmt 75 79
-            exit 1
-        fi
-        echo "DONE."
-    done
-    PORTUPGRADE_ARGS="${SAVE_PORTUPGRADE_ARGS}"
-fi
-
-# Now we need to reinstall any ports that have weird upgrade problems.
-SAVE_PORTUPGRADE_ARGS="${PORTUPGRADE_ARGS}"
-PORTUPGRADE_ARGS="${PORTUPGRADE_ARGS} -f"
-for i in ${REINSTALL_PORTS}; do
-    echo -n "===> Reinstalling ${i} ..."
-    echo "===> Reinstalling ${i} ..." >> ${logfile}
-    run_portupgrade ${logfile} ${i}
-    if [ $? != 0 ]; then
-	echo "FAILED."
-	echo "===> Failed to reinstall ${i}.  Please reinstall this port by hand.  The output of the failed build is in ${logfile}.  If you require additional assistance reinstalling this port, please compress ${logfile} and send it to ${SUPPORT_EMAIL}." | /usr/bin/fmt 75 79
-	exit 1
+PORTINSTALL=${LOCALBASE}/sbin/portinstall
+for port in `/bin/cat ${upgrade_list}`; do
+    echo "===> Running ${PORTINSTALL} -O -m \"BATCH=yes ${PORTUPGRADE_MAKE_ENV}\" ${PORTUPGRADE_ARGS} ${port}" >> ${logfile}
+    if [ ${VERBOSE} != 0 ]; then
+	echo; echo "INFO: Running ${PORTINSTALL} -O -m \"BATCH=yes ${PORTUPGRADE_MAKE_ENV}\" ${PORTUPGRADE_ARGS} ${port}"
     fi
-    echo "DONE."
+    echo "INFO: Running ${PORTINSTALL} -O -m \"BATCH=yes ${PORTUPGRADE_MAKE_ENV}\" ${PORTUPGRADE_ARGS} ${port}" >> ${logfile}
+    ${PORTINSTALL} -O -m "BATCH=yes ${PORTUPGRADE_MAKE_ENV}" ${PORTUPGRADE_ARGS} ${port} >> ${logfile} 2>&1
+    if [ $? != 0 ]; then
+        echo
+        echo "*** UPGRADE FAILED ***"
+        echo
+        echo "ERROR: ${PORTINSTALL} failed to install ${port}.  The output of the failed build is in ${logfile}.  If you require additional help in figuring out why the upgrade failed, please compress ${logfile} and send it to ${SUPPORT_EMAIL}." | /usr/bin/fmt 75 79
+	echo
+	echo "INFO: If you wish to resume this upgrade where it left off, re-run this script with the \"-restart ${upgrade_list}\" argument." | /usr/bin/fmt 75 79
+        cleanup 1 ${logfile}
+    fi
 done
-PORTUPGRADE_ARGS="${SAVE_PORTUPGRADE_ARGS}"
+echo
+echo "${PORTINSTALL} has finished.  That was the hard part!"
 
 # Now, run pkgdb one last time just as a housekeeping step.
 run_pkgdb "to clean up after ourselves" ${logfile}
@@ -435,4 +401,6 @@ run_pkgdb "to clean up after ourselves" ${logfile}
 echo
 echo "Congratulations!  GNOME has been successfully upgraded.  Please refer to ${PROJECT_URL} for a list of known issues, FAQ, and other useful resources for running GNOME on FreeBSD." | /usr/bin/fmt 75 79
 
-exit 0
+/bin/rm -f ${upgrade_list}
+
+cleanup 0 ${logfile}
