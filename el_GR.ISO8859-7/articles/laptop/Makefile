@@ -1,6 +1,6 @@
 #
 # $FreeBSD$
-# Original revision: 1.1
+# Original version: 1.1
 #
 # Article about using FreeBSD on laptops
 #

@@ -1,7 +1,7 @@
 #
 # FreeBSD Documentation Project
 # $FreeBSD$
-# Original revision: 1.1
+# Original version: 1.4
 #
 # Makefile for "Java and FreeBSD First Steps"
 # Author: Victoria Chan, Hiten Pandya
@@ -16,9 +16,7 @@ TIDYFLAGS+= -raw
 INSTALL_COMPRESSED?= gz
 INSTALL_ONLY_COMPRESSED?=
 
-# SGML content
-SRCS=  article.sgml
+SRCS=	article.sgml
 
 DOC_PREFIX?= ${.CURDIR}/../../..
-
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"
