@@ -27,7 +27,7 @@
 # This program is made available to the general public under
 # the "BSD-style copyright" terms of agreement.
 #
-# $FreeBSD: www/en/commercial/gencommercial.pl,v 1.4 1999/09/06 07:02:41 peter Exp $
+# $FreeBSD: www/en/commercial/gencommercial.pl,v 1.5 1999/12/17 14:24:14 phantom Exp $
 
 #######################################################################
 ## Configuration Section
@@ -347,7 +347,7 @@ if ($opt_cat)
          {
             $link = $entry;
             $link =~ tr/ /_/;
-            print OUTFILE "<LI><A HREF=\"${category}.html#$link\">$entry</A>\n";
+            print OUTFILE "<LI><A HREF=\"${category}.html#$link\">$entry</A></LI>\n";
          }
       }
 
