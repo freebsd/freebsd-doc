@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/share/sgml/includes.misc.xsl,v 1.7 2004/02/01 00:02:58 josef Exp $ -->
+<!-- $FreeBSD: www/share/sgml/includes.misc.xsl,v 1.8 2004/02/01 22:56:56 ale Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -219,18 +219,24 @@
     <xsl:param name="navigation.xml" select="''" />
     <xsl:for-each select="document($navigation.xml)/navigation/category">
       <p>
-	<xsl:if test="@src != ''">
-	<a>
+	<xsl:choose>
+	  <xsl:when test="boolean(@src)">
+	  <a>
 	    <xsl:attribute name="href">
+	      <xsl:choose>
+		<xsl:when test="@path = 'base'"><xsl:value-of select="$base"/>/</xsl:when>
+		<xsl:when test="@path = 'enbase'"><xsl:value-of select="$enbase"/>/</xsl:when>
+	      </xsl:choose>
 	      <xsl:value-of select="@src"/>
 	    </xsl:attribute>
 	    <font size="+1" color="#990000"><b><xsl:value-of select="@name"/></b></font>
-	</a>
-	</xsl:if>
+	  </a>
+	  </xsl:when>
 
-	<xsl:if test="not(@src != '')">
-	  <font size="+1" color="#990000"><b><xsl:value-of select="@name"/></b></font>
-	</xsl:if>
+	  <xsl:otherwise>
+	    <font size="+1" color="#990000"><b><xsl:value-of select="@name"/></b></font>
+	  </xsl:otherwise>
+	</xsl:choose>
 	<br/>
 	<small>
 	  <xsl:apply-templates select="link"/>
