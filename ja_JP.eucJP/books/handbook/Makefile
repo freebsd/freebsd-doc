@@ -1,5 +1,5 @@
 # 
-# $FreeBSD: doc/ja_JP.eucJP/books/handbook/Makefile,v 1.41 1999/09/06 06:53:20 peter Exp $
+# $FreeBSD: doc/ja_JP.eucJP/books/handbook/Makefile,v 1.42 1999/09/08 12:22:31 kuriyama Exp $
 #
 # Build the FreeBSD Handbook (Japanese).
 #
@@ -14,6 +14,8 @@ FORMATS?= html-split
 
 INSTALL_COMPRESSED?= gz
 INSTALL_ONLY_COMPRESSED?=
+
+NO_TIDY=	YES
 
 # 
 # SRCS lists the individual SGML files that make up the document. Changes
