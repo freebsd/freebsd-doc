@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/gifs/Makefile,v 1.39 2002/01/19 13:03:41 wosch Exp $
+# $FreeBSD: www/en/gifs/Makefile,v 1.40 2002/03/06 08:23:33 murray Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -57,5 +57,8 @@ DATA+=	branches.png
 DATA+=	wr-bsdtool-june2001.png wr-freebsd43.png wr-freebsd44.png
 DATA+=	wr-handbook-2nd.png
 DATA+=	bsdi-handbook.png fm-freebsd45.png
+DATA+=  done.png how_to_contribute.png in_progress.png news.png
+DATA+=  not_planned.png not_started.png project_goal.png project_plan.png
+DATA+=  resources_and_links.png status_board.png blocked.png 
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
