@@ -893,29 +893,22 @@ packagelist:
 # target depends on the corresponding install target running.
 #
 
-.for _curformat in ${KNOWN_FORMATS}
-_cf=${_curformat}
-.if ${_cf} == "html-split"
-PLIST.${_curformat}: index.html
-	@${SORT} HTML.manifest > PLIST.${_curformat}
-.else
-PLIST.${_curformat}: ${DOC}.${_curformat}
-	@${ECHO_CMD} ${DOC}.${_curformat} > PLIST.${_curformat}
-.endif
-.if (${_cf} == "html-split" || ${_cf} == "html") && \
-    (!empty(LOCAL_IMAGES_LIB) || !empty(IMAGES_PNG) || !empty(CSS_SHEET))
-	@${ECHO_CMD} ${LOCAL_IMAGES_LIB} ${IMAGES_PNG} ${LOCAL_CSS_SHEET} | \
-		${XARGS} -n1 >> PLIST.${_curformat}
-.elif (${_cf} == "tex" || ${_cf} == "dvi") && !empty(IMAGES_EPS)
-	@${ECHO_CMD} ${IMAGES_EPS} | ${XARGS} -n1 >> PLIST.${_curformat}
-.elif ${_cf} == "pdb"
-	@${ECHO_CMD} ${.CURDIR:T}.${_curformat} >> PLIST.${_curformat}
-.endif
+PKGDOCPFX!= realpath ${DOC_PREFIX}
 
-${PACKAGES}/${.CURDIR:T}.${LANGCODE}.${_curformat}.tgz: PLIST.${_cf}
-	@${PKG_CREATE} -v -f ${.ALLSRC} -p ${DESTDIR} -s ${.OBJDIR} \
+.for _curformat in ${KNOWN_FORMATS}
+
+${PACKAGES}/${.CURDIR:T}.${LANGCODE}.${_curformat}.tgz:
+	${MKDIR} -p ${.OBJDIR}/pkg; \
+	(cd ${.CURDIR} && \
+		${MAKE} FORMATS=${_curformat} DOCDIR=${.OBJDIR}/pkg install); \
+	PKGSRCDIR=${.OBJDIR}/pkg/${.CURDIR:S/${PKGDOCPFX}\///}; \
+	/bin/ls -1 $$PKGSRCDIR > ${.OBJDIR}/PLIST.${_curformat}; \
+	${PKG_CREATE} -v -f ${.OBJDIR}/PLIST.${_curformat} \
+		-p ${DESTDIR} -s $$PKGSRCDIR \
 		-c -"FDP ${.CURDIR:T} ${_curformat} package" \
-		-d -"FDP ${.CURDIR:T} ${_curformat} package" ${.TARGET}
+		-d -"FDP ${.CURDIR:T} ${_curformat} package" ${.TARGET} || \
+			(${RM} -fr ${.TARGET} PLIST.${_curformat} && false); \
+	${RM} -rf ${.OBJDIR}/pkg
 
 package-${_curformat}: ${PACKAGES}/${.CURDIR:T}.${LANGCODE}.${_curformat}.tgz
 .endfor
