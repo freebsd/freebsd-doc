@@ -1,11 +1,11 @@
 #!/usr/local/bin/tclsh8.3
 #
-# $FreeBSD$
+# $FreeBSD: www/tools/prstats/eval.tcl,v 1.1 2001/10/29 01:58:12 murray Exp $
 #
 
 set fi [open "|sort -n _"]
 set fo [open "__" w]
-set v {open feedback analyzed suspended closed }
+set v {open feedback analyzed suspended patched closed }
 
 foreach i $v {
 	set $i 0
