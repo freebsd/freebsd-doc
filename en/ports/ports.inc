@@ -1,10 +1,17 @@
-<!-- $Id: ports.inc,v 1.29 1999-01-21 01:49:14 jkh Exp $ -->
+<!-- $Id: ports.inc,v 1.30 1999-02-26 21:11:12 jkh Exp $ -->
 <p>The FreeBSD Ports and Packages Collection offers a simple way for
 users and administrators to install applications.  Each ``port'' listed here
 contains any patches necessary to make the original application source
 code compile and run on FreeBSD.  Installing an application is as
 simple as downloading the port, unpacking it and typing <tt>make</tt>
-in the port directory.  The <tt>Makefile</tt> automatically fetches the
+in the port directory.  For even greater covenience, you can simply
+install the <a href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/ports.tar.gz">
+entire ports hierarchy</a> at installation time (or use
+<a href="../handbook/cvsup.html">CVSup</a> to track it on
+an ongoing basis) and have thousands of applications right at your
+fingertips.
+
+Each port's <tt>Makefile</tt> automatically fetches the
 application source code, either from a local disk, CDROM or via ftp,
 unpacks it on your system, applies the patches, and compiles.  If
 all went well, a simple <tt>make install</tt> will install the
@@ -72,7 +79,7 @@ you are still using anything earlier than 2.2.7-release.</p>
 <p>Many of the ports require the X Window System to compile and run.
 We compile and test our ports on <a
 href="http://www.xfree86.org/">XFree86</a>. Their current release is
-3.3.3.  Some ports may not work with older releases.</p>
+3.3.3.1.  Some ports may not work with older releases.</p>
 
 <p>For more information about new, changed or removed ports/packages,
 or if you wish to search for a specific application to see if it's
