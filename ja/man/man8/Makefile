@@ -52,7 +52,6 @@ MAN8 =	IPXrouted.8\
 	ft.8\
 	ftpd.8\
 	getty.8\
-	ibcs2.8\
 	ifconfig.8\
 	inetd.8\
 	init.8\
@@ -62,7 +61,6 @@ MAN8 =	IPXrouted.8\
 	ipfw.8\
 	ipmon.8\
 	ispcvt.8\
-	joy.8\
 	kernbb.8\
 	keyadmin.8\
 	keyserv.8\
@@ -73,7 +71,6 @@ MAN8 =	IPXrouted.8\
 	kvm_mkdb.8\
 	kzip.8\
 	ldconfig.8\
-	linux.8\
 	locate.updatedb.8\
 	lpc.8\
 	lpd.8\
@@ -114,9 +111,7 @@ MAN8 =	IPXrouted.8\
 	named.reload.8\
 	named.restart.8\
 	natd.8\
-	ncrcontrol.8\
 	ndc.8\
-	netboot.8\
 	newfs.8\
 	newfs_msdos.8\
 	newkey.8\
@@ -181,8 +176,6 @@ MAN8 =	IPXrouted.8\
 	rwhod.8\
 	sa.8\
 	savecore.8\
-	scsi.8\
-	scsiformat.8\
 	sendmail.8\
 	showmount.8\
 	shutdown.8\
@@ -204,7 +197,6 @@ MAN8 =	IPXrouted.8\
 	talkd.8\
 	telnetd.8\
 	tftpd.8\
-	tickadj.8\
 	timed.8\
 	timedc.8\
 	traceroute.8\
