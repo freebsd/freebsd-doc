@@ -1,5 +1,5 @@
 .\" manual page [] for natd 1.4
-.\" %Id: natd.8,v 1.15 1998/07/15 03:32:45 jkoshy Exp $%
+.\"	%Id: natd.8,v 1.16.2.1 1999/03/24 17:12:59 brian Exp %
 .\" jpman %Id%
 .Dd 15 April 1997
 .Os FreeBSD
@@ -11,7 +11,6 @@
 .Sh 書式
 .Nm
 .Op Fl ldsmvu
-.Op Fl permanent_link
 .Op Fl dynamic
 .Op Fl i Ar inport
 .Op Fl o Ar outport
@@ -23,11 +22,12 @@
 .Nm
 .Op Fl log
 .Op Fl deny_incoming
+.Op Fl log_denied
 .Op Fl use_sockets
 .Op Fl same_ports
 .Op Fl verbose
+.Op Fl log_facility Ar facility_name
 .Op Fl unregistered_only
-.Op Fl permanent_link
 .Op Fl dynamic
 .Op Fl inport Ar inport
 .Op Fl outport Ar outport
@@ -37,6 +37,10 @@
 .Op Fl config Ar configfile
 .Op Fl redirect_port Ar linkspec
 .Op Fl redirect_address Ar localIP publicIP
+.Op Fl reverse
+.Op Fl proxy_only
+.Op Fl proxy_rule Ar proxyspec
+.Op Fl pptpalias Ar localIP
 
 .Sh 解説
 このプログラムは、FreeBSD における 
@@ -53,7 +57,7 @@
 は通常、デーモンとしてバックグラウンドで実行します。
 .Nm
 はマシンに入ってくるパケット、またはマシンから出て行くパケットを
-生(raw)のまま扱い、場合により IP パケットストリームに
+生 (raw) のまま扱い、場合により IP パケットストリームに
 再び送り出す前に手を加えます。
 
 .Pp
@@ -82,6 +86,16 @@
 現在の IP アドレスへ向かうパケットのうち、内部変換テーブルに
 エントリの無いものを拒否します。
 
+.It Fl log_denied
+拒否した入力パケットを syslog を介してログします
+(log_facility を参照してください)。
+
+.It Fl log_facility Ar facility_name
+syslog を介して情報をログするときに、指定したログファシリティを使用します。
+ファシリティ名は
+.Xr syslog.conf 5
+にある通りです。
+
 .It Fl use_sockets | s
 FTP data コネクションや IRC DCC send コネクションを確立するのに
 .Xr socket 2
@@ -108,16 +122,13 @@ FTP data コネクションや IRC DCC send コネクションを確立するのに
 rfc 1918 によれば、登録されていない発信元アドレスは 10.0.0.0/8 と
 172.16.0.0/12 と 192.168.0.0/16 となっています。
 
-.It Fl redirect_port Ar linkspec
+.It Fl redirect_port Ar proto targetIP:targetPORT [aliasIP:]aliasPORT [remoteIP[:remotePORT]]
 指定されたポートに入ってくるコネクションを別のホストとポートに
-リダイレクトします。linkspec の書式は
-
-  proto targetIP:targetPORT [aliasIP:]aliasPORT [remoteIP[:remotePORT]]
-
-のようになります。proto は tcp もしくは udp 、 targetIP は希望する
-( リダイレクト先 ) 対象 IP アドレス、targetPORT は希望する対象ポート番号、
-aliasPORT は ( クライアントが ) 要求するポート番号、aliasIP は alias を
-行うアドレスです。
+リダイレクトします。
+proto は tcp または udp、
+targetPORT は希望する対象ポート番号、
+aliasPORT は (クライアントが) 要求するポート番号、
+aliasIP は alias を行うアドレスです。
 remoteIP と remotePORT は、必要な場合により正確なコネクションを
 指定するのに利用できます。
 例えば、
@@ -149,25 +160,6 @@ remoteIP と remotePORT は、必要な場合により正確なコネクションを
 入ってくるパケットの流れは最後に変換されたローカルアドレス 
 (192.168.0.4) に向けられますが、最初の二つのアドレスの出て行く
 パケットの流れは指定された公式アドレスへの alias のままになります。
-
-.It Fl permanent_link Ar linkspec
-内部 alias テーブルに恒久的なエントリを作成します。linkspec の書式は
-
-  proto targetIP:targetPORT sourceIP:sourcePORT aliasPORT
-
-のようになります。proto は tcp もしくは udp 、 targetIP は希望する
-( リダイレクト先 ) 対象 IP アドレス、 targetPORT は希望する対象
-ポート番号、 sourceIP と sourcePORT は入ってくるパケットにマッチする
-もの、aliasPORT は ( クライアントが ) 要求するポート番号、となります。
-値 0 はワイルドカードとして扱われます。例えば、
-
-.Ar tcp inside1:telnet outside1:0 6666
-
-はマシン outside1 ( の任意のポート ) からこのマシンのポート 6666 に
-向けられた tcp パケットが、マシン inside1 の telnet ポートに送られる
-ことを示します。
-
-新規に導入する場合は、代わりに redirect_port を使うようにしてください。
 
 .It Fl dynamic
 .Fl n
@@ -292,6 +284,41 @@ alias アドレスを決めるのに、
 .Fl log
 と同じ意味になります。空行と '#' で始まる行は無視されます。
 
+.It Fl reverse
+natd の逆操作です。
+出力トラフィックがローカルマシンにリダイレクトされ、
+natd が入力インタフェースで走行している (通常は出力インタフェースで走行します) 
+といった、透過プロキシを実行している状況で有用な場合があります。
+
+.It Fl proxy_only
+natd が透過プロキシのみを実行するよう強制します。
+通常のアドレス変換は実行されません。
+
+.It Fl proxy_rule Ar [type encode_ip_hdr|encode_tcp_stream] port xxxx server a.b.c.d:yyyy
+透過プロキシを有効にします。
+指定したポートのパケットでこのホストから他のホストへ向かうものは、
+指定したサーバのポートへリダイレクトされます。
+オプションとして、元の宛先アドレスがパケットにエンコードされます。
+.Dq encode_ip_hdr
+は、この情報を IP オプションフィールドに置きます。
+.Dq encode_tcp_stream
+は、このデータを TCP ストリームの先頭に挿入します。
+
+.It Fl pptpalias Ar localIP
+PPTP パケットが指定した localIP アドレスに行くことを許可します。
+PPTP は、VPN または安全な IP トンネル技術であり、
+最初に Microsoft が開発しました。
+暗号化したトラフィック用に、
+GRE (47) と呼ばれる古い IP カプセル化プロトコルを使用します。
+この natd オプションは、
+このプロトコルのすべてのトラフィックを単一の指定した IP アドレスに変換します。
+これにより、
+単一のクライアントまたは単一のサーバに対するサービスを natd が許可します。
+サーバを設定する場合、
+PPTP 設定の TCP トラフィックを許すことを忘れないでください。
+ファイアウォールリストが有効ならば、
+クライアントまたはサーバのために GRE (protocol 47) を許可する必要があります。
+
 .El
 
 .Sh NATD の実行
@@ -361,7 +388,7 @@ alias アドレスを決めるのに、
 
   natd -interface ed0
 
-という行でほとんどの場合充分です(正しいインタフェース名に置き換えて
+という行でほとんどの場合充分です (正しいインタフェース名に置き換えて
 ください)。
 .Nm
 が起動されたら、パケットの流れの方向が natd の方に変わる 
@@ -429,5 +456,7 @@ alias アドレスを決めるのに、
 (IRC サポートとその他の追加)
 .An Ari Suutari Aq suutari@iki.fi
 (natd)
+.An Dru Nelson Aq dnelson@redwoodsoft.com
+(PPTP サポート)
 .An Brian Somers Aq brian@awfulhak.org
 (まとめ役)
