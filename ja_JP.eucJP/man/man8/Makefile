@@ -96,7 +96,6 @@ MAN8 =	IPXrouted.8\
 	kldload.8\
 	kldstat.8\
 	kldunload.8\
-	kzip.8\
 	lastlogin.8\
 	ldconfig.8\
 	loader.4th.8\
@@ -110,6 +109,7 @@ MAN8 =	IPXrouted.8\
 	mailwrapper.8\
 	makekey.8\
 	makemap.8\
+	makewhatis.local.8\
 	manctl.8\
 	map-mbone.8\
 	memcontrol.8\
@@ -276,7 +276,6 @@ MAN8 =	IPXrouted.8\
 	vinum.8\
 	vipw.8\
 	vmstat.8\
-	vnconfig.8\
 	watch.8\
 	wicontrol.8\
 	wire-test.8\
@@ -299,10 +298,10 @@ MLINKS+=apm.8 zzz.8
 MLINKS+=boot_i386.8 boot.8
 MLINKS+=bootpd.8 bootpgw.8
 MLINKS+=dump.8 rdump.8
-MLINKS+=ftpd.8 lukemftpd.8
 MLINKS+=inetd.8 inetd.conf.5
 MLINKS+=init.8 securelevel.8
 MLINKS+=locate.updatedb.8 updatedb.8
+MLINKS+=makewhatis.local.8 catman.local.8
 MLINKS+=mount_std.8 mount_devfs.8
 MLINKS+=mount_std.8 mount_fdescfs.8
 MLINKS+=mount_std.8 mount_procfs.8
