@@ -1,4 +1,4 @@
-<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.57 2001/09/11 08:56:52 murray Exp $ -->
+<!-- $FreeBSD$ -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
 <!ENTITY % output.html		"IGNORE">
@@ -430,7 +430,11 @@
         (element ulink 
           (make sequence
             (if (node-list-empty? (children (current-node)))
-   	      (literal (fix-url (attribute-string (normalize "url"))))
+              (make formatting-instruction data:
+		   (string-append "\\url{"
+			(fix-url (attribute-string
+			(normalize "url")))
+			"}"))
   	      (make sequence
 	        ($charseq$)
 	        (if %footnote-ulinks%
