@@ -246,6 +246,7 @@ MAN8 =	IPXrouted.8\
 	scspd.8\
 	sendmail.8\
 	setkey.8\
+	sftp-server.8\
 	showmount.8\
 	shutdown.8\
 	sicontrol.8\
