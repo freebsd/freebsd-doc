@@ -125,7 +125,6 @@ MAN2 =	_exit.2\
 	shutdown.2\
 	sigaction.2\
 	sigaltstack.2\
-	sigblock.2\
 	sigpause.2\
 	sigpending.2\
 	sigprocmask.2\
@@ -154,9 +153,10 @@ MAN2 =	_exit.2\
 
 MLINKS+=i386_get_ioperm.2 i386_set_ioperm.2
 MLINKS+=i386_get_ldt.2 i386_set_ldt.2
+MLINKS+=access.2 eaccess.2
 MLINKS+=brk.2 sbrk.2
 MLINKS+=chdir.2 fchdir.2
-MLINKS+=chflags.2 fchflags.2
+MLINKS+=chflags.2 fchflags.2 chflags.2 lchflags.2
 MLINKS+=chmod.2 fchmod.2 chmod.2 lchmod.2
 MLINKS+=chown.2 fchown.2 chown.2 lchown.2
 MLINKS+=clock_gettime.2 clock_getres.2 clock_gettime.2 clock_settime.2
@@ -176,7 +176,6 @@ MLINKS+=gettimeofday.2 settimeofday.2
 MLINKS+=getuid.2 geteuid.2
 MLINKS+=intro.2 errno.2
 MLINKS+=kqueue.2 kevent.2
-MLINKS+=lseek.2 seek.2
 MLINKS+=mlock.2 munlock.2
 MLINKS+=modnext.2 modfnext.2
 MLINKS+=mount.2 unmount.2
@@ -188,6 +187,8 @@ MLINKS+=setpgid.2 setpgrp.2
 MLINKS+=setresuid.2 setresgid.2
 MLINKS+=setuid.2 setegid.2 setuid.2 seteuid.2 setuid.2 setgid.2
 MLINKS+=shmat.2 shmdt.2
+MLINKS+=sigsetmask.2 sigblock.2
+MLINKS+=sigsetmask.2 sigmask.2
 MLINKS+=stat.2 fstat.2 stat.2 lstat.2
 MLINKS+=statfs.2 fstatfs.2
 MLINKS+=syscall.2 __syscall.2
