@@ -1,4 +1,4 @@
-# $FreeBSD: www/fr/Makefile,v 1.5 2004/04/05 14:17:52 phantom Exp $
+# $FreeBSD: www/fr/Makefile,v 1.6 2004/04/06 11:41:17 phantom Exp $
 
 # The FreeBSD French Documentation Project
 # Original revision: 1.107
@@ -13,6 +13,7 @@
 # These are turned into validated, normalized HTML files.
 
 DOCS=  applications.sgml
+DOCS+= art.sgml
 DOCS+= auditors.sgml
 DOCS+= availability.sgml
 DOCS+= docs.sgml 
