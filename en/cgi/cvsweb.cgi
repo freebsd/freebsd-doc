@@ -43,8 +43,8 @@
 # SUCH DAMAGE.
 #
 # $zId: cvsweb.cgi,v 1.104 2000/11/01 22:05:12 hnordstrom Exp $
-# $Id: cvsweb.cgi,v 1.59 2000-12-18 04:39:52 knu Exp $
-# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.58 2000/12/07 15:21:06 knu Exp $
+# $Id: cvsweb.cgi,v 1.60 2000-12-18 04:43:56 knu Exp $
+# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.59 2000/12/18 04:39:52 knu Exp $
 #
 ###
 
@@ -214,9 +214,15 @@ $LOG_REVSEPARATOR = q/^-{28}$/;
 
 ##### End of configuration variables #####
 
-package cgi_style;
-#$cgi_style::hsty_base = '';
 $cgi_style::hsty_base = 'http://www.FreeBSD.org';
+$_ = q$FreeBSD: www/en/cgi/cvsweb.cgi,v 1.59 2000/12/18 04:39:52 knu Exp $;
+@_ = split;
+$cgi_style::hsty_date = "@_[3,4]";
+
+# warningproof
+0 if $cgi_style::hsty_base ne $cgi_style::hsty_date;
+
+package cgi_style;
 require 'cgi-style.pl';
 package main;
 
@@ -2649,7 +2655,7 @@ sub navigateHeader($$$$$) {
     print qq`<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">`;
     print "<HTML>\n<HEAD>\n";
     print qq`<META name="robots" content="nofollow">\n`;
-    print '<!-- CVSweb $zRevision: 1.104 $  $Revision: 1.59 $ -->';
+    print '<!-- CVSweb $zRevision: 1.104 $  $Revision: 1.60 $ -->';
     print "\n<TITLE>$path$filename - $title - $rev</TITLE></HEAD>\n";
     print  "$body_tag_for_src\n";
     print "<table width=\"100%\" border=0 cellspacing=0 cellpadding=1 bgcolor=\"$navigationHeaderColor\">";
@@ -3032,7 +3038,7 @@ sub http_header(;$) {
 
 sub html_header($) {
     my ($title) = @_;
-    my $version = '$zRevision: 1.104 $  $Revision: 1.59 $'; #'
+    my $version = '$zRevision: 1.104 $  $Revision: 1.60 $'; #'
     http_header(defined($charset) ? "text/html; charset=$charset" : "text/html");
 
     (my $header = &cgi_style::html_header) =~ s/^.*\n\n//; # remove HTTP response header
