@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2002 Networks Associates Technologies, Inc.
+ * Copyright (c) 2002 Networks Associates Technology, Inc.
  * All rights reserved.
  *
  * This software was developed for the FreeBSD Project by ThinkSec AS and
@@ -31,6 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
+ * $P4: //depot/projects/openpam/bin/su/su.c#7 $
  * $FreeBSD$
  */
 
@@ -38,12 +39,17 @@
 #include <sys/wait.h>
 
 #include <err.h>
+#include <pwd.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <syslog.h>
 #include <unistd.h>
 
 #include <security/pam_appl.h>
-#include <security/pam_misc.h>
+#include <security/openpam.h>	/* for openpam_ttyconv() */
+
+extern char **environ;
 
 static pam_handle_t *pamh;
 static struct pam_conv pamc;
@@ -51,89 +57,124 @@ static struct pam_conv pamc;
 static void
 usage(void)
 {
-        fprintf(stderr, "Usage: su [login [args]]\n");
-        exit(1);
-}
 
-static int
-check(char *func, int pam_err)
-{
-        if (pam_err == PAM_SUCCESS || pam_err == PAM_NEW_AUTHTOK_REQD)
-                return pam_err;
-        openlog("su", LOG_CONS, LOG_AUTH);
-        syslog(LOG_ERR, "%s(): %s", func, pam_strerror(pamh, pam_err));
-        errx(1, "Sorry.");
+	fprintf(stderr, "Usage: su [login [args]]\n");
+	exit(1);
 }
 
 int
 main(int argc, char *argv[])
 {
-        char hostname[MAXHOSTNAMELEN];
-        const char *user, *tty;
-        int o, status;
-        pid_t pid;
+	char hostname[MAXHOSTNAMELEN];
+	const char *user, *tty;
+	char **args, **pam_envlist, **pam_env;
+	struct passwd *pwd;
+	int o, pam_err, status;
+	pid_t pid;
 
-        while ((o = getopt(argc, argv, "h")) != -1)
-                switch (o) {
-                case 'h':
-                default:
-                        usage();
-                }
+	while ((o = getopt(argc, argv, "h")) != -1)
+		switch (o) {
+		case 'h':
+		default:
+			usage();
+		}
 
-        argc -= optind;
-        argv += optind;
+	argc -= optind;
+	argv += optind;
 
-        if (argc > 0)
-                user = *argv;
-        else
-                user = "root";
+	/* initialize PAM */
+	pamc.conv = &openpam_ttyconv;
+	pam_start("su", argc ? *argv : "root", &pamc, &pamh);
 
-        /* initialize PAM */
-        pamc.conv = &misc_conv;
-        pam_start("su", user, &pamc, &pamh);
+	/* set some items */
+	gethostname(hostname, sizeof(hostname));
+	if ((pam_err = pam_set_item(pamh, PAM_RHOST, hostname)) != PAM_SUCCESS)
+		goto pamerr;
+	user = getlogin();
+	if ((pam_err = pam_set_item(pamh, PAM_RUSER, user)) != PAM_SUCCESS)
+		goto pamerr;
+	tty = ttyname(STDERR_FILENO);
+	if ((pam_err = pam_set_item(pamh, PAM_TTY, tty)) != PAM_SUCCESS)
+		goto pamerr;
 
-        /* set some items */
-        gethostname(hostname, sizeof hostname);
-        check("pam_set_item", pam_set_item(pamh, PAM_RHOST, hostname));
-        user = getlogin();
-        check("pam_set_item", pam_set_item(pamh, PAM_RUSER, user));
-        tty = ttyname(STDERR_FILENO);
-        check("pam_set_item", pam_set_item(pamh, PAM_TTY, tty));
+	/* authenticate the applicant */
+	if ((pam_err = pam_authenticate(pamh, 0)) != PAM_SUCCESS)
+		goto pamerr;
+	if ((pam_err = pam_acct_mgmt(pamh, 0)) == PAM_NEW_AUTHTOK_REQD)
+		pam_err = pam_chauthtok(pamh, PAM_CHANGE_EXPIRED_AUTHTOK);
+	if (pam_err != PAM_SUCCESS)
+		goto pamerr;
 
-        /* authenticate the applicant */
-        check("pam_authenticate", pam_authenticate(pamh, 0));
-        if (check("pam_acct_mgmt", pam_acct_mgmt(pamh, 0)) ==
-            PAM_NEW_AUTHTOK_REQD)
-                check("pam_chauthtok",
-                    pam_chauthtok(pamh, PAM_CHANGE_EXPIRED_AUTHTOK));
-        
-        /* establish the requested credentials */
-        check("pam_setcred", pam_setcred(pamh, PAM_ESTABLISH_CRED));
-        
-        /* authentication succeeded; open a session */
-        check("pam_open_session", pam_open_session(pamh, 0));
+	/* establish the requested credentials */
+	if ((pam_err = pam_setcred(pamh, PAM_ESTABLISH_CRED)) != PAM_SUCCESS)
+		goto pamerr;
 
-        switch ((pid = fork())) {
-        case -1:
-                err(1, "fork()");
-        case 0:
-                /* child: start a shell */
-                *argv = "/bin/sh";
-                execvp(*argv, argv);
-                err(1, "execvp()");
-        default:
-                /* parent: wait for child to exit */
-                waitpid(pid, &status, 0);
-                if (WIFEXITED(status))
-                        status = WEXITSTATUS(status);
-                else
-                        status = 1;
-        }
+	/* authentication succeeded; open a session */
+	if ((pam_err = pam_open_session(pamh, 0)) != PAM_SUCCESS)
+		goto pamerr;
 
-        /* close the session and release PAM resources */
-        check("pam_close_session", pam_close_session(pamh, 0));
-        check("pam_setcred", pam_setcred(pamh, PAM_DELETE_CRED));
-        check("pam_end", pam_end(pamh, 0));
+	/* get mapped user name; PAM may have changed it */
+	pam_err = pam_get_item(pamh, PAM_USER, (const void **)&user);
+	if (pam_err != PAM_SUCCESS || (pwd = getpwnam(user)) == NULL)
+		goto pamerr;
 
-        exit(status);
+	/* set uid and groups */
+	if (initgroups(pwd->pw_name, pwd->pw_gid) == -1) {
+		warn("initgroups()");
+		goto err;
+	}
+	if (setgid(pwd->pw_gid) == -1) {
+		warn("setgid()");
+		goto err;
+	}
+	if (setuid(pwd->pw_uid) == -1) {
+		warn("setuid()");
+		goto err;
+	}
+
+	/* export PAM environment */
+	if ((pam_envlist = pam_getenvlist(pamh)) != NULL) {
+		for (pam_env = pam_envlist; *pam_env != NULL; ++pam_env) {
+			putenv(*pam_env);
+			free(*pam_env);
+		}
+		free(pam_envlist);
+	}
+
+	/* build argument list */
+	if ((args = calloc(argc + 2, sizeof *args)) == NULL) {
+		warn("calloc()");
+		goto err;
+	}
+	*args = pwd->pw_shell;
+	memcpy(args + 1, argv, argc * sizeof *args);
+
+	/* fork and exec */
+	switch ((pid = fork())) {
+	case -1:
+		warn("fork()");
+		goto err;
+	case 0:
+		/* child: start a shell */
+		execve(*args, args, environ);
+		warn("execve()");
+		_exit(1);
+	default:
+		/* parent: wait for child to exit */
+		waitpid(pid, &status, 0);
+
+		/* close the session and release PAM resources */
+		pam_err = pam_close_session(pamh, 0);
+		pam_end(pamh, pam_err);
+
+		exit(WEXITSTATUS(status));
+	}
+
+pamerr:
+	pam_end(pamh, pam_err);
+	fprintf(stderr, "Sorry\n");
+	exit(1);
+err:
+	pam_end(pamh, pam_err);
+	exit(1);
 }
