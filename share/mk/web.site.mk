@@ -1,5 +1,5 @@
 # bsd.web.mk
-# $FreeBSD: www/en/web.mk,v 1.31 2000/09/30 00:21:38 nbm Exp $
+# $FreeBSD: www/en/web.mk,v 1.32 2000/10/02 07:52:48 kuriyama Exp $
 
 #
 # Build and install a web site.
@@ -74,6 +74,17 @@ GENDOCS+=	${REVFILES}
 # things to install.
 
 .SUFFIXES:	.html
+.if defined(REVCHECK)
+PREHTML=	${.CURDIR}/${BUILDTOP}/ja/prehtml
+PREHTMLFLAGS=	${PREHTMLOPTS}
+BUILDTOP=	${LOCALTOP}/..
+LOCALPREFIX!=	cd ${LOCALTOP}; echo $${PWD};
+DIR_IN_LOCAL=   ${PWD:S/^${LOCALPREFIX}//:S/^\///}
+PREHTMLFLAGS+=	-revcheck "${LOCALTOP}" "${DIR_IN_LOCAL}"
+.else
+DATESUBST=	's/<!ENTITY date[ \t]*"$$Free[B]SD. .* \(.* .*\) .* .* $$">/<!ENTITY date	"Last modified: \1">/'
+PREHTML=	sed -e ${DATESUBST}
+.endif
 .if !defined(OPENJADE)
 SGMLNORM=	sgmlnorm
 .else
@@ -84,10 +95,9 @@ CATALOG?=	${PREFIX}/share/sgml/html/catalog
 SGMLNORMFLAGS=	-d ${SGMLNORMOPTS} -c ${CATALOG} -D ${.CURDIR}
 GENDOCS+=	${DOCS:M*.sgml:S/.sgml$/.html/g}
 ORPHANS:=	${ORPHANS:N*.sgml}
-DATESUBST=	's/<!ENTITY date[ \t]*"$$Free[B]SD. .* \(.* .*\) .* .* $$">/<!ENTITY date	"Last modified: \1">/'
 
 .sgml.html:
-	sed -e ${DATESUBST} ${.IMPSRC} |\
+	${PREHTML} ${PREHTMLFLAGS} ${.IMPSRC} |\
 	SGML_CATALOG_FILES='' ${SGMLNORM} ${SGMLNORMFLAGS} > ${.TARGET}
 
 ###

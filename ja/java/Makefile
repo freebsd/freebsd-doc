@@ -1,10 +1,12 @@
-# $FreeBSD: www/ja/java/Makefile,v 1.5 2000/04/27 22:47:17 kuriyama Exp $
+# $FreeBSD: www/ja/java/Makefile,v 1.6 2000/09/28 11:58:22 hrs Exp $
 
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.2
 
-.if exists(../Makefile.conf)
-.include "../Makefile.conf"
+LOCALTOP= ..
+
+.if exists(${LOCALTOP}/Makefile.conf)
+.include "${LOCALTOP}/Makefile.conf"
 .endif
 
 SUBDIR =	dists
@@ -18,7 +20,9 @@ DOCS+=  install.sgml
 DOCS+=  newsflash.sgml
 #DOCS+=  press.sgml
 
-### Revision checking
+REVCHECK= YES
+
+.include "${LOCALTOP}/web.mk"
 REVFILES=	${DOCS:M*.sgml:S/.sgml$/.revinc/g}
 BUILDTOP=	../..
 DIR_IN_LOCAL=	java

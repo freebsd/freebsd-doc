@@ -1,9 +1,11 @@
-# $FreeBSD: www/ja/security/Makefile,v 1.10 1999/11/23 04:56:41 kuriyama Exp $
+# $FreeBSD: www/ja/security/Makefile,v 1.11 1999/12/23 01:16:13 kuriyama Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.6
 
-.if exists(../Makefile.conf)
-.include "../Makefile.conf"
+LOCALTOP= ..
+
+.if exists(${LOCALTOP}/Makefile.conf)
+.include "${LOCALTOP}/Makefile.conf"
 .endif
 
 DOCS=  
@@ -12,8 +14,6 @@ DOCS+=	security.sgml
 INDEXLINK= security.html
 
 ### Revision checking
-REVFILES=	${DOCS:M*.sgml:S/.sgml$/.revinc/g}
-BUILDTOP=	../..
-DIR_IN_LOCAL=	security
+REVCHECK=	YES
 
-.include "../../web.mk"
+.include "${LOCALTOP}/web.mk"

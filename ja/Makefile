@@ -1,9 +1,11 @@
-# $FreeBSD: www/ja/Makefile,v 1.40 2000/06/18 23:08:11 kuriyama Exp $
+# $FreeBSD: www/ja/Makefile,v 1.41 2000/10/02 07:54:39 kuriyama Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.53
 
-.if exists(Makefile.conf)
-.include "Makefile.conf"
+LOCALTOP= .
+
+.if exists(${LOCALTOP}/Makefile.conf)
+.include "${LOCALTOP}/Makefile.conf"
 .endif
 
 # These are turned into validated, normalized HTML files.
@@ -66,9 +68,6 @@ SGMLOPTS=	-links -hdr ${.CURDIR}/doc.hdr -ftr ${.CURDIR}/doc.ftr -e EUC-JP
 WEBDIR=		data/ja
 
 ### Revision checking
-REVFILES=	${DOCS:M*.sgml:S/.sgml$/.revinc/g}
-BUILDTOP=	..
-DIR_IN_LOCAL=	.
+REVCHECK=	yes
 
-.include "../web.mk"
-
+.include "${LOCALTOP}/web.mk"

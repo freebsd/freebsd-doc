@@ -1,12 +1,12 @@
-# $FreeBSD: www/ja/releases/2.2.7R/Makefile,v 1.4 1999/09/06 07:03:26 peter Exp $
+# $FreeBSD: www/ja/releases/2.2.7R/Makefile,v 1.5 1999/12/23 01:16:04 kuriyama Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.1
+
+LOCALTOP= ../..
 
 DOCS=	announce.sgml notes.sgml errata.sgml
 
 ### Revision checking
-REVFILES=	${DOCS:M*.sgml:S/.sgml$/.revinc/g}
-BUILDTOP=	../../..
-DIR_IN_LOCAL=	releases/2.2.7R
+REVCHECK=	YES
 
-.include "../../../web.mk"
+.include "${LOCALTOP}/web.mk"
