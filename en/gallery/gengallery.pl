@@ -26,7 +26,7 @@ $type	=	$ARGV[0];
 if ($type =~ m/commercial/i) {
 	$type = "commercial";
 } elsif ($type =~ m/nonprofit/i) {
-	$type = "nonprofit";
+	$type = "non profit";
 } elsif ($type =~ m/personal/i) {
 	$type = "personal";
 } else {
