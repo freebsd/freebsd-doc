@@ -3,6 +3,10 @@
 # $FreeBSD$
 #
 
+LANG=C; export LANG
+unset LC_ALL
+unset LC_MESSAGES
+
 me="$1"
 if [ -z "${me}" ]; then
     me=$(id -nu)
