@@ -29,7 +29,6 @@ SUBDIR+= new-users
 SUBDIR+= pam
 SUBDIR+= pr-guidelines
 SUBDIR+= problem-reports
-SUBDIR+= programming-tools
 SUBDIR+= pxe
 SUBDIR+= releng
 SUBDIR+= releng-packages
