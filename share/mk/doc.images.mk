@@ -50,6 +50,7 @@
 _IMAGES_PNG= ${IMAGES:M*.png}
 _IMAGES_EPS= ${IMAGES:M*.eps}
 _IMAGES_SCR= ${IMAGES:M*.scr}
+_IMAGES_TXT= ${IMAGES:M*.txt}
 _IMAGES_PIC= ${IMAGES:M*.pic}
 
 IMAGES_GEN_PNG= ${_IMAGES_EPS:S/.eps$/.png/}
@@ -58,17 +59,19 @@ IMAGES_GEN_PDF= ${_IMAGES_EPS:S/.eps$/.pdf/}
 IMAGES_SCR_PNG= ${_IMAGES_SCR:S/.scr$/.png/}
 IMAGES_SCR_EPS= ${_IMAGES_SCR:S/.scr$/.eps/}
 IMAGES_SCR_PDF= ${_IMAGES_SCR:S/.scr$/.pdf/}
+IMAGES_SCR_TXT= ${_IMAGES_SCR:S/.scr$/.txt/}
 IMAGES_PIC_PNG= ${_IMAGES_PIC:S/.pic$/.png/}
 IMAGES_PIC_EPS= ${_IMAGES_PIC:S/.pic$/.eps/}
 IMAGES_PIC_PDF= ${_IMAGES_PIC:S/.pic$/.pdf/}
 IMAGES_GEN_PDF+= ${IMAGES_PIC_PDF} ${IMAGES_SCR_PDF}
 
 CLEANFILES+= ${IMAGES_GEN_PNG} ${IMAGES_GEN_EPS} ${IMAGES_GEN_PDF}
-CLEANFILES+= ${IMAGES_SCR_PNG} ${IMAGES_SCR_EPS}
+CLEANFILES+= ${IMAGES_SCR_PNG} ${IMAGES_SCR_EPS} ${IMAGES_SCR_TXT}
 CLEANFILES+= ${IMAGES_PIC_PNG} ${IMAGES_PIC_EPS} ${_IMAGES_PIC:S/.pic$/.ps/}
 
 IMAGES_PNG= ${_IMAGES_PNG} ${IMAGES_GEN_PNG} ${IMAGES_SCR_PNG} ${IMAGES_PIC_PNG}
 IMAGES_EPS= ${_IMAGES_EPS} ${IMAGES_GEN_EPS} ${IMAGES_SCR_EPS} ${IMAGES_PIC_EPS}
+IMAGES_TXT= ${_IMAGES_TXT} ${IMAGES_SCR_TXT}
 
 .if ${.OBJDIR} != ${.CURDIR}
 LOCAL_IMAGES= ${IMAGES:S|^|${.OBJDIR}/|}
@@ -82,14 +85,20 @@ LOCAL_IMAGES_PNG= ${_IMAGES_PNG:S|^|${.OBJDIR}/|}
 LOCAL_IMAGES_EPS= ${_IMAGES_EPS:S|^|${.OBJDIR}/|}
 .endif
 
+.if !empty(_IMAGES_TXT)
+LOCAL_IMAGES_TXT= ${_IMAGES_TXT:S|^|${.OBJDIR}/|}
+.endif
+
 .else
 LOCAL_IMAGES= ${IMAGES}
 LOCAL_IMAGES_PNG= ${_IMAGES_PNG}
 LOCAL_IMAGES_EPS= ${_IMAGES_EPS}
+LOCAL_IMAGES_TXT= ${_IMAGES_TXT}
 .endif
 
 LOCAL_IMAGES_PNG+= ${IMAGES_GEN_PNG} ${IMAGES_SCR_PNG} ${IMAGES_PIC_PNG}
 LOCAL_IMAGES_EPS+= ${IMAGES_GEN_EPS} ${IMAGES_SCR_EPS} ${IMAGES_PIC_EPS}
+LOCAL_IMAGES_TXT+= ${IMAGES_SCR_TXT}
 
 # The default resolution eps2png (82) assumes a 640x480 monitor, and is too
 # low for the typical monitor in use today. The resolution of 100 looks
@@ -104,6 +113,9 @@ IMAGES_PDF=${IMAGES_GEN_PDF}
 
 SCR2PNG?=	${PREFIX}/bin/scr2png
 SCR2PNGOPTS?=	${SCR2PNGFLAGS}
+SCR2TXT?=	${PREFIX}/bin/scr2txt
+SCR2TXTOPTS?=	-l ${SCR2TXTFLAGS}
+SED?=		/usr/bin/sed
 EPS2PNG?=	${PREFIX}/bin/peps
 EPS2PNGOPTS?=	-p -r ${EPS2PNG_RES} ${EPS2PNGFLAGS}
 PNGTOPNM?=	${PREFIX}/bin/pngtopnm
@@ -116,8 +128,8 @@ PS2EPS?=	${PREFIX}/bin/ps2epsi
 PIC2PS?=	${GROFF} -p -S -Wall -mtty-char -man 
 REALPATH?=	/bin/realpath
 
-# Use suffix rules to convert .scr files to .png files
-.SUFFIXES:	.scr .pic .png .eps
+# Use suffix rules to convert .scr files to other formats
+.SUFFIXES:	.scr .pic .png .eps .txt
 
 .scr.png:
 	${SCR2PNG} ${SCR2PNGOPTS} < ${.IMPSRC} > ${.TARGET}
@@ -125,6 +137,12 @@ REALPATH?=	/bin/realpath
 	${SCR2PNG} ${SCR2PNGOPTS} < ${.ALLSRC} | \
 		${PNGTOPNM} ${PNGTOPNMOPTS} | \
 		${PNMTOPS} ${PNMTOPSOPTS} > ${.TARGET}
+
+# The .txt files need to have any trailing spaces trimmed from
+# each line, which is why the output from ${SCR2TXT} is run
+# through ${SED}
+.scr.txt:
+	${SCR2TXT} ${SCR2TXTOPTS} < ${.IMPSRC} | ${SED} -E -e 's/ +$$//' > ${.TARGET}
 
 # Some versions of ghostscript (7.04) have problems with the use of
 # relative path when the arguments are passed by peps; realpath will
