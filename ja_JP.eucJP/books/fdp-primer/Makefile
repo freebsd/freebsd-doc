@@ -3,10 +3,10 @@
 #
 # Build the FreeBSD Documentation Project Primer (Japanese).
 #
-# Original revision: 1.10
+# Original revision: 1.14
 #
 
-MAINTAINER=
+MAINTAINER=	doc-jp@jp.FreeBSD.org
 
 DOC?= book
 
@@ -48,6 +48,7 @@ SRCS+= examples/appendix.sgml
 # Entities
 SRCS+= chapters.ent 
 
-DOC_PREFIX?= ${.CURDIR}/../../..
+URL_RELPREFIX?=	../../../..
+DOC_PREFIX?=	${.CURDIR}/../../..
 
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"
