@@ -6,7 +6,7 @@
 # by John Fieber
 # February 26, 1998
 #
-# $FreeBSD: www/en/cgi/getmsg.cgi,v 1.29 2000/11/29 22:10:24 wosch Exp $
+# $FreeBSD$
 #
 
 require "./cgi-lib.pl";
@@ -208,7 +208,7 @@ sub MessageToHTML
 sub AddAnchors
 {
     my ($text) = @_;
-    my $cvsweb = 'http://www.freebsd.org/cgi/cvsweb.cgi';
+    my $cvsweb = 'http://cvsweb.FreeBSD.org/';
 
     $text =~ s/(http|https|ftp|gopher|mailto|news|file)(:[^\s]*?\/?)(\W?\s)/<a href="$1$2">$1$2<\/a>$3/goi;
 

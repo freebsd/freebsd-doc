@@ -1,5 +1,5 @@
 #!/usr/bin/perl -T
-# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.25 2000/12/29 12:43:12 wosch Exp $
+# $FreeBSD$
 
 $ENV{'PATH'} = "/bin:/usr/bin:/usr/sbin:/sbin:/usr/local/bin";
 
@@ -194,7 +194,7 @@ sub getline
 sub cvsweb {
     local($file) = shift;
     $file =~ s/[,.;]$//;
-    return 'http://www.FreeBSD.org/cgi/cvsweb.cgi/' . $file;
+    return 'http://cvsweb.FreeBSD.org/' . $file;
 }
     
 
