@@ -8,13 +8,14 @@
 #  GNU General Public License Version 2.  
 #     (http://www.gnu.ai.mit.edu/copyleft/gpl.html)
 #
-# $FreeBSD: www/en/cgi/dosendpr.cgi,v 1.19 2004/02/16 16:49:25 ceri Exp $
+# $FreeBSD: www/en/cgi/dosendpr.cgi,v 1.20 2004/02/16 16:54:06 ceri Exp $
 
 require "html.pl";
 
 use Socket;
 use DB_File;
 use Fcntl qw(:DEFAULT :flock);
+require "./Gnats.pm"; import Gnats;
 
 my $blackhole = "dnsbl.njabl.org";
 my $openproxyip = "127.0.0.9";
@@ -80,28 +81,9 @@ sub prerror {
 &www_content ("text","html");
 &cgi_form_in();
 
-$gndb = $cgi_data{'gndb'};
-if ($gndb =~ /^[a-z]+$/ && -e "$gndb.def")
-  { require "$gndb.def"; }
-else
-  { &prerror("gndb problem"); }
-
 &prerror("request method problem") if $ENV{'REQUEST_METHOD'} eq 'GET';
 
-# Configuration
-if ($gnhow eq "mail")
-  {
-    if (-e "/usr/lib/sendmail")
-      { $submitprog = "/usr/lib/sendmail -t" };
-    if (-e "/usr/sbin/sendmail")
-      { $submitprog = "/usr/sbin/sendmail -t" };
-  }
-else
-  { if (-e "$gnroot/queue-pr")
-      { $submitprog = "$gnroot/queue-pr -q" };
-  }
-
-if (!$submitprog) { &prerror("submit program problem"); }
+if (!$submission_program) { &prerror("submit program problem"); }
 
 &html_title ("Thank you for the problem report");
 &html_body ();
@@ -164,14 +146,14 @@ if (defined $openproxy) {
 }
 
 # Build the PR.
-$pr = "To: $gnemail\n" .
+$pr = "To: $submission_address\n" .
       "From: $cgi_data{'originator'} <$cgi_data{'email'}>\n" . 
       "Subject: $cgi_data{'synopsis'}\n" .
       env2hdr(@ENV_captures);
 if ($blackhole_err) {
       $pr .= "X-REMOTE_ADDR-Is-Open-Proxy: Maybe\n";
 }
-$pr .= "X-Send-Pr-Version: www-2.2\n\n" .
+$pr .= "X-Send-Pr-Version: www-2.3\n\n" .
       ">Submitter-Id:\t$cgi_data{'submitterid'}\n" .
       ">Originator:\t$cgi_data{'originator'}\n" .
       ">Organization:\t$cgi_data{'organization'}\n" .
@@ -190,7 +172,7 @@ $pr .= "X-Send-Pr-Version: www-2.2\n\n" .
 # remove any carrage returns that appear in the report.
 $pr =~ s/\r//g;
 
-if (open (SUBMIT, "|$submitprog")){
+if (open (SUBMIT, "|$submission_program")){
 
     print SUBMIT $pr;
     close (SUBMIT);
