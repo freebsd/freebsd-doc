@@ -1,4 +1,4 @@
-<!-- $FreeBSD$ -->
+<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.11 1999/11/15 19:44:15 nik Exp $ -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
 <!ENTITY % output.html  "IGNORE">
@@ -37,6 +37,9 @@
         (define %gentext-nav-use-tables%
           ;; Use tables to build the navigation headers and footers?
           #t)
+
+	(define %stylesheet%
+	  "docbook.css")
 
         (define %html-ext%
           ;; Default extension for HTML output files
@@ -100,6 +103,20 @@
  
       (define %indent-screen-lines%
         "    ")
+
+      (define (article-titlepage-recto-elements)
+        (list (normalize "title")
+              (normalize "subtitle")
+              (normalize "corpauthor")
+              (normalize "authorgroup")
+              (normalize "author")
+              (normalize "releaseinfo")
+              (normalize "copyright")
+              (normalize "pubdate")
+              (normalize "revhistory")
+              (normalize "legalnotice")
+              (normalize "abstract")))
+
       
       <!-- Slightly deeper customisations -->
 
