@@ -4,6 +4,7 @@ MAN7 =	ascii.7\
 	groff.7\
 	groff_char.7\
 	groff_man.7\
+	groff_mdoc.7\
 	groff_me.7\
 	groff_mm.7\
 	groff_mmse.7\
@@ -24,8 +25,8 @@ MAN7 =	ascii.7\
 	term.7
 
 MLINKS=groff_man.7 man.7
-#MLINKS+=groff_mdoc.7 mdoc.7
-#MLINKS+=groff_mdoc.7 mdoc.samples.7
+MLINKS+=groff_mdoc.7 mdoc.7
+MLINKS+=groff_mdoc.7 mdoc.samples.7
 MLINKS=	groff_me.7 me.7
 MLINKS+=groff_mm.7 mm.7
 MLINKS+=groff_mmse.7 mmse.7
