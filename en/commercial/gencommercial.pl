@@ -25,7 +25,7 @@
 # This program is made available to the general public under
 # the "BSD-style copyright" terms of agreement.
 #
-# $Id: gencommercial.pl,v 1.1 1999-01-22 11:23:45 mbarkah Exp $
+# $Id: gencommercial.pl,v 1.2 1999-01-27 09:05:05 mbarkah Exp $
 
 #######################################################################
 ## Configuration Section
@@ -259,7 +259,7 @@ if ($opt_alpha)
    {
       if ($first_letter ne substr($entry, 0, 1))
       {
-         $first_letter = substr($entry, 0, 1);
+         $first_letter = uc(substr($entry, 0, 1));      # Ignore case
          $list_string = "$list_string$first_letter";
       }
    }
@@ -280,11 +280,11 @@ if ($opt_alpha)
    }
    print OUTFILE "</CENTER>\n\n<HR WIDTH=\"75%\">\n\n";
 
-   # Output entries in key sort order
+   # Output entries in key sort order, fold case
 
    print OUTFILE "<UL>\n";
    $first_letter = "";
-   foreach $entry (sort keys %entries)
+   foreach $entry (sort { uc($a) cmp uc($b); } keys %entries)
    {
       print OUTFILE "<LI>";
       if ($first_letter ne substr($entry, 0, 1))
@@ -326,18 +326,14 @@ if ($opt_cat)
    print OUTFILE "<!-- WARNING! THIS FILE IS MACHINE GENERATED -->\n";
    print OUTFILE "<!-- DO NOT EDIT BY HAND!                    -->\n\n";
 
-   # XXX The sort is on the subcats KEY, not value (description)!!!
-
-   foreach $subcat (sort keys %subcats)
+   # The following sort is by description (VALUE), not KEY
+   foreach $subcat (sort {uc($subcats{$a}) cmp uc($subcats{$b});} keys %subcats)
    {
       print OUTFILE "<A NAME=\"CATEGORY_$subcat\"></A>\n";
       print OUTFILE "<H3>$subcats{$subcat}</H3>\n\n<UL>\n";
 
-      # XXX Here sorting by KEY is what we want anyway, to allow
-      # XXX override of the real entry's sort order (e.g., to fold
-      # XXX lowercase and uppercase together, ignore "The", etc.)
-
-      foreach $entry (sort keys %entries)
+      # Here sorting by KEY is what we want.
+      foreach $entry (sort { uc($a) cmp uc($b); } keys %entries)
       {
          $text = $entries {$entry};
          $text =~ /^\s*(.+)\s*\|(.*)/o;
