@@ -430,11 +430,7 @@
         (element ulink 
           (make sequence
             (if (node-list-empty? (children (current-node)))
-              (make formatting-instruction data:
-		   (string-append "\\url{"
-			(fix-url (attribute-string
-			(normalize "url")))
-			"}"))
+   	      (literal (fix-url (attribute-string (normalize "url"))))
   	      (make sequence
 	        ($charseq$)
 	        (if %footnote-ulinks%
