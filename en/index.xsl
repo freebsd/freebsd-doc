@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/index.xsl,v 1.100 2004/04/26 18:35:55 simon Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.101 2004/05/26 04:29:00 hrs Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   
@@ -6,7 +6,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.100 2004/04/26 18:35:55 simon Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.101 2004/05/26 04:29:00 hrs Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <!-- these params should be externally bound. The values
@@ -257,6 +257,7 @@
 			      &#183; <a href="{$u.rel2.errata}">Errata</a></small></p>
 
 			  <p><font size="+1" color="#990000"><b>Project News</b></font>
+			    <xsl:text> </xsl:text>
 			    <font color="#990000">(<a href="news/news.rdf">RSS</a>)</font><br/>
 			    <font size="-1">
 			      Latest update: 
@@ -292,6 +293,7 @@
 			  </p>
 
 			  <p><font size="+1" color="#990000"><b>Security Advisories</b></font>
+			    <xsl:text> </xsl:text>
 			    <font color="#990000">(<a href="security/advisories.rdf">RSS</a>)</font><br/>
 			    <font size="-1">
 			      Latest update: 
