@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: www/en/gnome/Makefile,v 1.8 2002/01/28 17:05:24 sobomax Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -37,7 +37,7 @@ newsflash.html: newsflash.xsl news.xml includes.xsl ../includes.xsl
 .endif
 
 gnotices.rdf::
-	fetch -qo - ${GNOTICES_RDF_URL} | ${SED} 's|rdf:RDF|rdf| ; \
+	/usr/bin/fetch -qo - ${GNOTICES_RDF_URL} | ${SED} 's|rdf:RDF|rdf| ; \
 		s|xmlns.*[^>]||' > ${.TARGET}
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
