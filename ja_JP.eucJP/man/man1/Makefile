@@ -238,7 +238,6 @@ MAN1 =	a2p.1\
 	printenv.1\
 	printf.1\
 	ps.1\
-	psbb.1\
 	psroff.1\
 	pwd.1\
 	quota.1\
