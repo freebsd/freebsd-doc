@@ -62,6 +62,7 @@ MAN9 =	BUS_PRINT_CHILD.9\
 	at_fork.9\
 	bios.9\
 	boot.9\
+	buf.9\
 	bus_alloc_resource.9\
 	bus_generic_attach.9\
 	bus_generic_detach.9\
@@ -106,6 +107,7 @@ MAN9 =	BUS_PRINT_CHILD.9\
 	make_dev.9\
 	malloc.9\
 	mi_switch.9\
+	microseq.9\
 	microtime.9\
 	microuptime.9\
 	module.9\
@@ -114,6 +116,7 @@ MAN9 =	BUS_PRINT_CHILD.9\
 	psignal.9\
 	resettodr.9\
 	sbuf.9\
+	sleep.9\
 	spl.9\
 	store.9\
 	style.9\
@@ -121,6 +124,7 @@ MAN9 =	BUS_PRINT_CHILD.9\
 	sysctl_add_oid.9\
 	sysctl_ctx_init.9\
 	time.9\
+	timeout.9\
 	tvtohz.9\
 	uio.9\
 	vfs_unmountall.9\
@@ -172,15 +176,18 @@ MLINKS+=mi_switch.9 cpu_switch.9 mi_switch.9 cpu_throw.9
 MLINKS+=psignal.9 gsignal.9
 MLINKS+=psignal.9 pgsignal.9
 #MLINKS+=rtalloc.9 rtalloc1.9 rtalloc.9 rtalloc_ign.9
-#MLINKS+=sleep.9 tsleep.9 sleep.9 wakeup.9 sleep.9 wakeup_one.9
-#MLINKS+=buf.9 bp.9
+MLINKS+=sleep.9 tsleep.9 sleep.9 wakeup.9 sleep.9 wakeup_one.9
+MLINKS+=sleep.9 msleep.9
+MLINKS+=buf.9 bp.9
 MLINKS+=spl.9 spl0.9
 MLINKS+=spl.9 splbio.9 spl.9 splclock.9 spl.9 splhigh.9 spl.9 splimp.9
 MLINKS+=spl.9 splnet.9 spl.9 splsoftclock.9 spl.9 splsofttty.9
 MLINKS+=spl.9 splstatclock.9 spl.9 spltty.9 spl.9 splvm.9 spl.9 splx.9
 MLINKS+=store.9 subyte.9 store.9 suswintr.9 store.9 susword.9 store.9 suword.9
 MLINKS+=time.9 boottime.9 time.9 mono_time.9 time.9 runtime.9
-#MLINKS+=timeout.9 untimeout.9
+MLINKS+=timeout.9 untimeout.9
+MLINKS+=timeout.9 callout_handle_init.9 timeout.9 callout_init.9
+MLINKS+=timeout.9 callout_stop.9 timeout.9 callout_reset.9
 MLINKS+=uio.9 uiomove.9
 MLINKS+=vref.9 VREF.9
 MLINKS+=vslock.9 vsunlock.9
