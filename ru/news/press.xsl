@@ -3,7 +3,7 @@
 <!--
      The FreeBSD Russian Documentation Project
 
-     $FreeBSD$
+     $FreeBSD: www/ru/news/press.xsl,v 1.6 2004/04/09 11:56:13 phantom Exp $
      $FreeBSDru: frdp/www/ru/news/press.xsl,v 1.6 2004/04/09 10:59:01 phantom Exp $
 
      Original revision: 1.8
@@ -20,7 +20,10 @@
   <xsl:variable name="date">
     <xsl:value-of select="//cvs:keyword[@name='freebsd']"/>
   </xsl:variable>
-  
+
+  <xsl:param name="news.press.xml-master" select="'none'" />
+  <xsl:param name="news.press.xml" select="'none'" />
+
   <xsl:output type="html" encoding="koi8-r"/>
 
   <xsl:template match="press">
@@ -40,14 +43,12 @@
           посетив страничку <a
           href="{$base}/java/press.html">FreeBSD/Java в Прессе</a>.</p>
 
-	<xsl:apply-templates select="//month"/>
+	<xsl:call-template name="html-news-list-press">
+	  <xsl:with-param name="news.press.xml-master" select="$news.press.xml-master" />
+	  <xsl:with-param name="news.press.xml" select="$news.press.xml" />
+	</xsl:call-template>
 
-	<p>Публикации прошлых лет:
-	  <a href="2002/press.html">2002</a>,
-	  <a href="2001/press.html">2001</a>,
-	  <a href="2000/press.html">2000</a>,
-	  <a href="1999/press.html">1999</a>,
-	  <a href="1998/press.html">1998-1996</a></p>
+	<xsl:call-template name="html-news-make-olditems-list" />
 
 	<xsl:copy-of select="$newshome"/>
 	<xsl:copy-of select="$footer"/>
@@ -55,43 +56,12 @@
     </html>
   </xsl:template>
 
-  <!-- Everything that follows are templates for the rest of the content -->
-  
-  <xsl:template match="month">
-    <h1>
-      <xsl:call-template name="transtable-lookup">
-	<xsl:with-param name="word-group" select="'number-month'" />
-	<xsl:with-param name="word">
-	  <xsl:value-of select="name"/>
-	</xsl:with-param>
-      </xsl:call-template>
-      <xsl:text> </xsl:text>
-      <xsl:value-of select="ancestor::year/name"/></h1>
-
-    <ul>
-      <xsl:apply-templates select="descendant::story"/>
-    </ul>
-  </xsl:template>
-
-  <xsl:template match="story">
-    <xsl:variable name="url"><xsl:value-of select="url"/></xsl:variable>
-    <xsl:variable name="site-url"><xsl:value-of
-    select="site-url"/></xsl:variable>
-
-    <li>
-      <a>
-	<xsl:attribute name="name">
-	  <xsl:call-template name="generate-story-anchor"/>
-	</xsl:attribute>
-      </a>
-
-      <p><a href="{$url}"><b><xsl:value-of
-      select="name"/></b></a><br/>
-	  
-	<a href="{$site-url}"><xsl:value-of
-	select="site-name"/></a>, <xsl:value-of select="author"/><br/>
-	<xsl:copy-of select="p/child::node()"/>
-      </p>
-    </li>
+  <xsl:template name="html-news-make-olditems-list">
+    <p>Публикации прошлых лет:
+      <a href="2002/press.html">2002</a>,
+      <a href="2001/press.html">2001</a>,
+      <a href="2000/press.html">2000</a>,
+      <a href="1999/press.html">1999</a>,
+      <a href="1998/press.html">1998-1996</a></p>
   </xsl:template>
 </xsl:stylesheet>

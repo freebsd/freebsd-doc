@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
 
-<!-- $FreeBSD: www/ja/includes.xsl,v 1.21 2004/08/09 15:43:15 hrs Exp $ -->
+<!-- $FreeBSD: www/ja/includes.xsl,v 1.22 2004/12/09 20:11:38 rushani Exp $ -->
 <!-- Original revision: 1.20 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -102,32 +102,32 @@
   <!-- template: "html-index-news-project-items-lastmodified" -->
 
   <xsl:template name="html-index-news-project-items-lastmodified">
-    <xsl:param name="news.project.xml" select="''" />
+    <xsl:param name="news.project.xml-master" select="''" />
 
-    <xsl:value-of select="document($news.project.xml)/descendant::year[position() = 1]/name"/>
+    <xsl:value-of select="document($news.project.xml-master)/descendant::year[position() = 1]/name"/>
     <xsl:text> 年 </xsl:text>
     <xsl:call-template name="transtable-lookup">
       <xsl:with-param name="word-group" select="'number-month'" />
       <xsl:with-param name="word">
-	<xsl:value-of select="document($news.project.xml)/descendant::month[position() = 1]/name"/>
+	<xsl:value-of select="document($news.project.xml-master)/descendant::month[position() = 1]/name"/>
       </xsl:with-param>
     </xsl:call-template>
     <xsl:text> </xsl:text>
-    <xsl:value-of select="document($news.project.xml)/descendant::day[position() = 1]/name"/>
+    <xsl:value-of select="document($news.project.xml-master)/descendant::day[position() = 1]/name"/>
     <xsl:text> 日 </xsl:text>
   </xsl:template>
 
   <!-- template: "html-index-news-press-items-lastmodified" -->
 
   <xsl:template name="html-index-news-press-items-lastmodified">
-    <xsl:param name="news.press.xml" select="''" />
+    <xsl:param name="news.press.xml-master" select="''" />
 
-    <xsl:value-of select="document($news.press.xml)/descendant::year[position() = 1]/name"/>
+    <xsl:value-of select="document($news.press.xml-master)/descendant::year[position() = 1]/name"/>
     <xsl:text> 年 </xsl:text>
     <xsl:call-template name="transtable-lookup">
       <xsl:with-param name="word-group" select="'number-month'" />
       <xsl:with-param name="word">
-	<xsl:value-of select="document($news.press.xml)/descendant::month[position() = 1]/name"/>
+	<xsl:value-of select="document($news.press.xml-master)/descendant::month[position() = 1]/name"/>
       </xsl:with-param>
     </xsl:call-template>
     <xsl:text> </xsl:text>

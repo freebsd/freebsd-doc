@@ -1,4 +1,4 @@
-# $FreeBSD: www/fr/news/Makefile,v 1.6 2003/12/15 16:12:32 stephane Exp $
+# $FreeBSD: www/fr/news/Makefile,v 1.7 2004/02/29 13:20:40 stephane Exp $
 
 # The FreeBSD French Documentation Project
 # Original revision: 1.39
@@ -40,28 +40,32 @@ SUBDIR+=	status
 DATA=		newsflash.html news.rdf press.html
 CLEANFILES+=	newsflash.html news.rdf press.html
 
+.include "${WEB_PREFIX}/share/mk/web.site.mk"
+
 newsflash.html: newsflash.xsl news.xml\
-		includes.xsl ../includes.xsl ${XML_TRANSTABLE}
+			includes.xsl ${XML_INCLUDES}
 	${XSLTPROC} ${XSLTPROCOPTS} -o ${.TARGET} \
-		--param transtable.xml "'${XML_TRANSTABLE}'" \
+		--param "news.project.xml-master" "'${XML_NEWS_NEWS_MASTER}'" \
+		--param "news.project.xml" "'${XML_NEWS_NEWS}'" \
+		--param "transtable.xml" "'${XML_TRANSTABLE}'" \
 		${.CURDIR}/newsflash.xsl ${.CURDIR}/news.xml
 .if !defined(NO_TIDY)
 	-${TIDY} ${TIDYOPTS} ${.TARGET}
 .endif
 
 news.rdf: news-rdf.xsl news.xml\
-		includes.xsl ../includes.xsl ${XML_TRANSTABLE}
+		includes.xsl ${XML_INCLUDES}
 	${XSLTPROC} ${XSLTPROCOPTS} -o ${.TARGET} \
 		--param transtable.xml "'${XML_TRANSTABLE}'" \
 		${.CURDIR}/news-rdf.xsl ${.CURDIR}/news.xml
 
 press.html: press.xsl press.xml\
-		includes.xsl ../includes.xsl ${XML_TRANSTABLE}
+		includes.xsl ${XML_INCLUDES}
 	${XSLTPROC} ${XSLTPROCOPTS} -o ${.TARGET} \
-		--param transtable.xml "'${XML_TRANSTABLE}'" \
+		--param "news.press.xml-master" "'${XML_NEWS_PRESS_MASTER}'" \
+		--param "news.press.xml" "'${XML_NEWS_PRESS}'" \
+		--param "transtable.xml" "'${XML_TRANSTABLE}'" \
 		${.CURDIR}/press.xsl ${.CURDIR}/press.xml
 .if !defined(NO_TIDY)
 	-${TIDY} ${TIDYOPTS} ${.TARGET}
 .endif
-
-.include "${WEB_PREFIX}/share/mk/web.site.mk"

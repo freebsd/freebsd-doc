@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
 
 <!--
-    $FreeBSD: www/ja/news/press.xsl,v 1.3 2002/07/30 12:43:21 hrs Exp $
+    $FreeBSD: www/ja/news/press.xsl,v 1.4 2003/11/03 11:41:05 rushani Exp $
     Original revision: 1.5
 -->
 
@@ -13,9 +13,20 @@
 
   <xsl:variable name="base" select="'..'"/>
   <xsl:variable name="title" select="'FreeBSD In The Press'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/ja/news/press.xsl,v 1.3 2002/07/30 12:43:21 hrs Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/ja/news/press.xsl,v 1.4 2003/11/03 11:41:05 rushani Exp $'"/>
+
+  <xsl:param name="news.press.xml-master" select="'none'" />
+  <xsl:param name="news.press.xml" select="'none'" />
   
   <xsl:output type="html" encoding="EUC-JP"/>
+
+  <!-- for l10n -->
+  <xsl:template name="html-news-month-headings">
+    <xsl:param name="year" />
+    <xsl:param name="month" />
+
+    <xsl:value-of select="concat($year, ' 年 ', $month)" />
+  </xsl:template>
 
   <xsl:template match="press">
     <html>
@@ -35,43 +46,14 @@
 	  <a href="{$base}/java/press.html">FreeBSD/Java Press</a>
 	  をご覧下さい。</p>
 	
-	<xsl:apply-templates select="//month"/>
-	
+	<xsl:call-template name="html-news-list-press">
+	  <xsl:with-param name="news.press.xml-master" select="$news.press.xml-master" />
+	  <xsl:with-param name="news.press.xml" select="$news.press.xml" />
+	</xsl:call-template>
+
 	<xsl:copy-of select="$newshome"/>
 	<xsl:copy-of select="$footer"/>
       </body>
     </html>
-  </xsl:template>
-
-  <!-- Everything that follows are templates for the rest of the content -->
-  
-  <xsl:template match="month">
-    <h1><xsl:value-of select="ancestor::year/name"/> 年 <xsl:value-of select="name"/> 月</h1>
-
-    <ul>
-      <xsl:apply-templates select="descendant::story"/>
-    </ul>
-  </xsl:template>
-
-  <xsl:template match="story">
-    <xsl:variable name="url"><xsl:value-of select="url"/></xsl:variable>
-    <xsl:variable name="site-url"><xsl:value-of
-    select="site-url"/></xsl:variable>
-
-    <li>
-      <a>
-	<xsl:attribute name="name">
-	  <xsl:call-template name="generate-story-anchor"/>
-	</xsl:attribute>
-      </a>
-
-      <p><a href="{$url}"><b><xsl:value-of
-      select="name"/></b></a><br/>
-	  
-	<a href="{$site-url}"><xsl:value-of
-	select="site-name"/></a>, <xsl:value-of select="author"/><br/>
-	<xsl:copy-of select="p/child::node()"/>
-      </p>
-    </li>
   </xsl:template>
 </xsl:stylesheet>

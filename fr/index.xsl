@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/fr/index.xsl,v 1.10 2004/02/29 13:20:40 stephane Exp $ -->
+<!-- $FreeBSD: www/fr/index.xsl,v 1.11 2004/11/24 21:29:06 stephane Exp $ -->
 
 <!-- 
    The FreeBSD French Documentation Project
@@ -13,7 +13,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/fr/index.xsl,v 1.10 2004/02/29 13:20:40 stephane Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/fr/index.xsl,v 1.11 2004/11/24 21:29:06 stephane Exp $'"/>
   <xsl:variable name="title" select="'Le Projet FreeBSD'"/>
 
   <!-- these params should be externally bound. The values
@@ -21,7 +21,9 @@
   <xsl:param name="advisories.xml" select="'none'"/>
   <xsl:param name="notices.xml" select="'none'"/>
   <xsl:param name="mirrors.xml" select="'none'"/>
+  <xsl:param name="news.press.xml-master" select="'none'"/>
   <xsl:param name="news.press.xml" select="'none'"/>
+  <xsl:param name="news.project.xml-master" select="'none'"/>
   <xsl:param name="news.project.xml" select="'none'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -281,12 +283,13 @@
              <font color="#990000">(<a href="news/news.rdf">RSS</a>)</font><br/>
 			    <font size="-1">Derni&#232;re mise &#224; jour :
 			      <xsl:call-template name="html-index-news-project-items-lastmodified">
-				     <xsl:with-param name="news.project.xml" select="$news.project.xml" />
+				     <xsl:with-param name="news.project.xml-master" select="$news.project.xml-master" />
 			      </xsl:call-template>
 
 			      <br/>
-			      
+
 			      <xsl:call-template name="html-index-news-project-items">
+				     <xsl:with-param name="news.project.xml-master" select="$news.project.xml-master" />
 				     <xsl:with-param name="news.project.xml" select="$news.project.xml" />
 			      </xsl:call-template>
 
@@ -298,12 +301,13 @@
 			    <font size="-1">
 			      Derni&#232;re mise &#224; jour :
 			      <xsl:call-template name="html-index-news-press-items-lastmodified">
-				<xsl:with-param name="news.press.xml" select="$news.press.xml" />
+				<xsl:with-param name="news.press.xml-master" select="$news.press.xml-master" />
 			      </xsl:call-template>
 
 			      <br/>
 
 			      <xsl:call-template name="html-index-news-press-items">
+				<xsl:with-param name="news.press.xml-master" select="$news.press.xml-master" />
 				<xsl:with-param name="news.press.xml" select="$news.press.xml" />
 			      </xsl:call-template>
 			      
