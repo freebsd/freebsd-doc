@@ -1,4 +1,4 @@
-<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.38 2001/07/20 04:59:27 murray Exp $ -->
+<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.39 2001/07/21 02:29:59 murray Exp $ -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
 <!ENTITY % output.html		"IGNORE">
@@ -206,7 +206,15 @@
 		   (string=? (substring url 0 16) "file://localhost"))
               (substring url 16 (string-length url))
               url))
-          
+
+
+        (element (primaryie ulink)
+          (indexentry-link (current-node)))
+        (element (secondaryie ulink)
+          (indexentry-link (current-node)))
+        (element (tertiaryie ulink)
+          (indexentry-link (current-node)))
+
         (element ulink 
           (make sequence
             (if (node-list-empty? (children (current-node)))
