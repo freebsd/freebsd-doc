@@ -33,7 +33,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)disklabel.5.5	8.1 (Berkeley) 6/5/93
-.\" %FreeBSD: src/sbin/disklabel/disklabel.5,v 1.5.2.1 1999/08/29 15:12:44 peter Exp %
+.\" %FreeBSD: src/sbin/disklabel/disklabel.5,v 1.7 2000/01/05 17:34:00 bde Exp %
 .\"
 .\" jpman %Id: disklabel.5,v 1.3 1998/06/12 15:48:23 kumano Stab %
 .\"
@@ -118,17 +118,40 @@
 .Pa <sys/disklabel.h>
 で指定されるようにディスクラベルのフォーマットは以下のようになります。
 .Bd -literal
-/*
-* ディスク記述テーブル, disktab(5) を参照
-*/
-#define	DISKTAB		"/etc/disktab"
+#ifndef _SYS_DISKLABEL_H_
+#define	_SYS_DISKLABEL_H_
+
+#ifndef _KERNEL
+#include <sys/types.h>
+#endif
+#include <sys/ioccom.h>
 
 /*
-* 各ディスクはハードウェアディスクジオメトリ、ファイルシステムパーティション、
-* ドライブ固有の情報についての情報を含むラベルを持っています。
-* ラベルはブロック 0 か 1 、つまりブートストラップ等のための場所を空けて
-* なるべく先頭のオフセットにあります。
-*/
+ * ディスク記述テーブル, disktab(5) を参照
+ */
+#define	_PATH_DISKTAB	"/etc/disktab"
+#define	DISKTAB		"/etc/disktab"		/* 非推奨 */
+
+/*
+ * 各ディスクはハードウェアディスクジオメトリ、ファイルシステムパーティション、
+ * ドライブ固有の情報についての情報を含むラベルを持っています。
+ * ラベルはブロック 0 か 1 、つまりブートストラップ等のための場所を空けて
+ * なるべく先頭のオフセットにあります。
+ */
+
+/*
+ * XXX これらの情報はコントローラ毎 (またはドライブ毎) にどこか別のところで
+ * XXX 定義されるべきであり、ここで定義すべきではありません!
+ */
+#ifdef __i386__
+#define LABELSECTOR	1			/* sector containing label */
+#define LABELOFFSET	0			/* offset of label in sector */
+#endif
+
+#ifdef __alpha__
+#define LABELSECTOR	0
+#define LABELOFFSET	64
+#endif
 
 #ifndef	LABELSECTOR
 #define LABELSECTOR	0			/* ラベルを含むセクタ */
@@ -138,63 +161,64 @@
 #define LABELOFFSET	64			/* セクタ内のラベルのオフセット */
 #endif
 
-#define DISKMAGIC	((u_long) 0x82564557)	/* ディスクのマジックナンバ */
+#define DISKMAGIC	((u_long32_t)0x82564557) /* ディスクのマジックナンバ */
 #ifndef MAXPARTITIONS
 #define	MAXPARTITIONS	8
 #endif
 
+#define	LABEL_PART	2		/* パーティションはラベルを含む */
+#define	RAW_PART	2		/* パーティションはディスク全体を含む */
+#define	SWAP_PART	1		/* パーティションは通常はスワップを含む */
+
 #ifndef LOCORE
 struct disklabel {
-	u_long	d_magic;	/* マジックナンバ */
-	short	d_type;		/* ドライブタイプ */
-	short	d_subtype;	/* コントローラ/d_type に固有 */
-	char	d_typename[16];	/* タイプ名、たとえば "eagle" */
+	u_int32_t d_magic;		/* マジックナンバ */
+	u_int16_t d_type;		/* ドライブタイプ */
+	u_int16_t d_subtype;		/* コントローラ/d_type に固有 */
+	char	  d_typename[16];	/* タイプ名、たとえば "eagle" */
+
 	/* 
-	* d_packname は、パック識別子を含み、ディスク上やメモリ内コピーの
-	* ディスクラベルを読んだときに返されます。
-	* d_boot0 と d_boot1 は、/boot にある一次 (block 0) または
-	* 二次 (block 1-15) ブートストラップの (省略可能な) 名前です。
-	* この名は、/etc/disktab から値を取り出すために getdiskbyname(3)
-	* を使う場合に返されます。
-	*/
-#if defined(KERNEL) || defined(STANDALONE)
-	char	d_packname[16];		/* パック識別子 */ 
-#else
+	 * d_packname は、パック識別子を含み、ディスク上やメモリ内コピーの
+	 * ディスクラベルを読んだときに返されます。
+	 * d_boot0 と d_boot1 は、/boot にある一次 (block 0) または
+	 * 二次 (block 1-15) ブートストラップの (省略可能な) 名前です。
+	 * この名は、/etc/disktab から値を取り出すために getdiskbyname(3)
+	 * を使う場合に返されます。
+	 */
 	union {
-		char	un_d_packname[16];	/* パック識別子 */ 
+		char	un_d_packname[16];	/* パック識別子 */
 		struct {
 			char *un_d_boot0;	/* 一次ブートストラップ名 */
 			char *un_d_boot1;	/* 二次ブートストラップ名 */
-		} un_b; 
-	} d_un; 
-
+		} un_b;
+	} d_un;
 #define d_packname	d_un.un_d_packname
 #define d_boot0		d_un.un_b.un_d_boot0
 #define d_boot1		d_un.un_b.un_d_boot1
-#endif	/* ! KERNEL or STANDALONE */
 
-	/* ディスクジオメトリ */
-	u_long	d_secsize;	/* セクタあたりのバイト数 */
-	u_long	d_nsectors;	/* トラックあたりのデータセクタ数 */
-	u_long	d_ntracks;	/* シリンダあたりのトラック数 */
-	u_long	d_ncylinders;	/* ユニットあたりのデータシリンダ数 */
-	u_long	d_secpercyl;	/* シリンダあたりのデータセクタ数 */
-	u_long	d_secperunit;	/* ユニットあたりのデータセクタ数 */
-	/*
-	* 以下の予備 (不良セクタ置換) は in d_nsectors や d_secpercyl
-	* には数えられません。
-	* 予備セクタは、各トラックまたはシリンダの末尾の場所を占める
-	* 物理セクタにあることにします。
-	*/
-	u_short	d_sparespertrack;	/* トラックあたりの予備セクタ */
-	u_short	d_sparespercyl;	/* シリンダあたりの予備セクタ */
-	/*
-	* メインテナンス、置換、コンフィギュレーション記述領域等を
-	* 含む交替シリンダ
-	*/
-	u_long	d_acylinders;	/* ユニットあたりの交替シリンダ */
+			/* ディスクジオメトリ */
+	u_int32_t d_secsize;	/* セクタあたりのバイト数 */
+	u_int32_t d_nsectors;	/* トラックあたりのデータセクタ数 */
+	u_int32_t d_ntracks;	/* シリンダあたりのトラック数 */
+	u_int32_t d_ncylinders;	/* ユニットあたりのデータシリンダ数 */
+	u_int32_t d_secpercyl;	/* シリンダあたりのデータセクタ数 */
+	u_int32_t d_secperunit;	/* ユニットあたりのデータセクタ数 */
 
-		/* ハードウェア特性 */
+	/*
+	 * 以下の予備 (不良セクタ置換) は in d_nsectors や d_secpercyl
+	 * には数えられません。
+	 * 予備セクタは、各トラックまたはシリンダの末尾の場所を占める
+	 * 物理セクタにあることにします。
+	 */
+	u_int16_t d_sparespertrack;	/* トラックあたりの予備セクタ */
+	u_int16_t d_sparespercyl;	/* シリンダあたりの予備セクタ */
+	/*
+	 * メインテナンス、置換、コンフィギュレーション記述領域等を
+	 * 含む交替シリンダ
+	 */
+	u_int32_t d_acylinders;		/* ユニットあたりの交替シリンダ */
+
+			/* ハードウェア特性 */
 	/*
 	* d_interleave, d_trackskew, d_cylskew は、遅いコントローラの
 	* 埋め合わせに使うための、メディアフォーマット中の
@@ -212,50 +236,68 @@ struct disklabel {
 	* 最後の d_cylskew は、シリンダ N-1 上のセクタ 0 からシリンダ N
 	* 上のセクタ 0 の相対的なオフセットです。
 	*/
-	u_short	d_rpm;	/* 回転スピード */
-	u_short	d_interleave;	/* ハードウェアセクタインタリーブ */
-	u_short	d_trackskew;	/* トラックあたりのセクタ 0 スキュー */
-	u_short	d_cylskew;	/* シリンダあたりのセクタ 0 スキュー */
-	u_long	d_headswitch;	/* ハードスイッチ時間 usec */
-	u_long	d_trkseek;	/* トラック間シーク usec */
-	u_long	d_flags;	/* 一般フラグ */
+	u_int16_t d_rpm;		/* 回転スピード */
+	u_int16_t d_interleave;		/* ハードウェアセクタインタリーブ */
+	u_int16_t d_trackskew;		/* トラックあたりのセクタ 0 スキュー */
+	u_int16_t d_cylskew;		/* シリンダあたりのセクタ 0 スキュー */
+	u_int32_t d_headswitch;		/* ハードスイッチ時間 usec */
+	u_int32_t d_trkseek;		/* トラック間シーク usec */
+	u_int32_t d_flags;		/* 一般フラグ */
 #define NDDATA 5
-	u_long	d_drivedata[NDDATA];	/* ドライブの型固有の情報 */
+	u_int32_t d_drivedata[NDDATA];	/* ドライブの型固有の情報 */
 #define NSPARE 5
-	u_long	d_spare[NSPARE];	/* 将来使うための予備 */
-	u_long	d_magic2;	/* マジックナンバ (再度) */
-	u_short	d_checksum;	/* データを含むパーティションの xor */
+	u_int32_t d_spare[NSPARE];	/* 将来使うための予備 */
+	u_int32_t d_magic2;		/* マジックナンバ (再度) */
+	u_int16_t d_checksum;		/* データを含むパーティションの xor */
 
-	/* ファイルシステムとパーティション情報 */
-	u_short	d_npartitions;	/* 後に続くパーティション数 */
-	u_long	d_bbsize;	/* sn0 のブート領域の大きさ(バイト単位) */
-	u_long	d_sbsize;	/* fs スーパブロックの最大サイズ(バイト単位) */
-	struct	partition {	/* パーティションテーブル */
-		u_long	p_size;	/* パーティション内のセクタ数 */
-		u_long	p_offset;	/* 開始セクタ */
-		u_long	p_fsize;	/* ファイルシステム規定フラグメントサイズ */
-		u_char	p_fstype;	/* ファイルシステムタイプ、下記参照 */
-		u_char	p_frag;	/* ブロックあたりのファイルシステムフラグメント */
+			/* ファイルシステムとパーティション情報 */
+	u_int16_t d_npartitions;	/* 後に続くパーティション数 */
+	u_int32_t d_bbsize;		/* sn0 のブート領域の大きさ(バイト単位) */
+	u_int32_t d_sbsize;		/* fs スーパブロックの最大サイズ(バイト単位) */
+	struct	partition {		/* パーティションテーブル */
+		u_int32_t p_size;	/* パーティション内のセクタ数 */
+		u_int32_t p_offset;	/* 開始セクタ */
+		u_int32_t p_fsize;	/* ファイルシステム規定フラグメントサイズ */
+		u_int8_t p_fstype;	/* ファイルシステムタイプ、下記参照 */
+		u_int8_t p_frag;	/* ブロックあたりのファイルシステムフラグメント */
 		union {
-			u_short	cpg;	/* UFS: FS グループあたりのシリンダ数 */
-			u_short	sgs;	/* LFS: FS セグメントシフト */
+			u_int16_t cpg;	/* UFS: FS グループあたりのシリンダ数 */
+			u_int16_t sgs;	/* LFS: FS セグメントシフト */
 		} __partition_u1;
 #define	p_cpg	__partition_u1.cpg
 #define	p_sgs	__partition_u1.sgs
-		u_short	p_cpg;	/* グループあたりのファイルシステムシリンダ数 */
 	} d_partitions[MAXPARTITIONS];	/* 実際にはもっとある */
 };
+#else /* LOCORE */
+	/*
+	 * asm ブートファイル用のオフセット
+	 */
+	.set	d_secsize,40
+	.set	d_nsectors,44
+	.set	d_ntracks,48
+	.set	d_ncylinders,52
+	.set	d_secpercyl,56
+	.set	d_secperunit,60
+	.set	d_end_,276		/* ディスクラベルの大きさ */
+#endif /* LOCORE */
 
 /* d_type values: */
-#define	DTYPE_SMD	1	/* SMD, XSMD; VAX hp/up */
-#define	DTYPE_MSCP	2	/* MSCP */
-#define	DTYPE_DEC	3	/* その他の DEC (rk, rl) */
-#define	DTYPE_SCSI	4	/* SCSI */
-#define	DTYPE_ESDI	5	/* ESDI インタフェース */
-#define	DTYPE_ST506	6	/* ST506 他 */
-#define	DTYPE_HPIB	7	/* CS/80 on HP-IB */
-#define	DTYPE_HPFL	8	/* HP ファイバリンク */
-#define	DTYPE_FLOPPY	10	/* フロッピー */
+#define	DTYPE_SMD		1		/* SMD, XSMD; VAX hp/up */
+#define	DTYPE_MSCP		2		/* MSCP */
+#define	DTYPE_DEC		3		/* その他の DEC (rk, rl) */
+#define	DTYPE_SCSI		4		/* SCSI */
+#define	DTYPE_ESDI		5		/* ESDI インタフェース */
+#define	DTYPE_ST506		6		/* ST506 他 */
+#define	DTYPE_HPIB		7		/* HP-IB 上の CS/80 */
+#define	DTYPE_HPFL		8		/* HP ファイバリンク */
+#define	DTYPE_FLOPPY		10		/* フロッピ */
+#define	DTYPE_CCD		11		/* コンカチネート化ディスク */
+#define	DTYPE_VINUM		12		/* vinum ボリューム */
+#define	DTYPE_DOC2K		13		/* Msys DiskOnChip */
+
+#if defined(PC98) && !defined(PC98_ATCOMPAT)
+#define	DSTYPE_SEC256		0x80		/* 物理セクタサイズは 256 */
+#endif
 
 #ifdef DKTYPENAMES
 static char *dktypenames[] = {
@@ -270,29 +312,33 @@ static char *dktypenames[] = {
 	"HP-FL",
 	"type 9",
 	"floppy",
-	0
+	"CCD",
+	"Vinum",
+	"DOC2K",
+	NULL
 };
 #define DKMAXTYPES	(sizeof(dktypenames) / sizeof(dktypenames[0]) - 1)
 #endif
 
 /*
-* ファイルシステムタイプとバージョン
-* パーティションあたりの他のファイルシステム固有情報に使われます。
-*/
-#define	FS_UNUSED	0	/* 未使用 */
-#define	FS_SWAP		1	/* スワップ */
-#define	FS_V6		2	/* 第 6 版 */
-#define	FS_V7		3	/* 第 7 版 */
-#define	FS_SYSV		4	/* System V */
-#define	FS_V71K		5	/* 7 版 1K ブロック (4.1, 2.9) */
-#define	FS_V8		6	/* 8 版 4K ブロック */
-#define	FS_BSDFFS	7	/* 4.2BSD fast ファイルシステム */
-#define	FS_MSDOS	8	/* MSDOS ファイルシステム */
-#define	FS_BSDLFS	9	/* 4.4BSD log-structured ファイルシステム */
-#define	FS_OTHER	10	/* 使用中だが未知/未サポート */
-#define	FS_HPFS		11	/* OS/2 high-performance ファイルシステム */
-#define	FS_ISO9660	12	/* ISO 9660, 通常は CD-ROM */
-#define	FS_BOOT		13	/* ブートストラップを含むパーティション */
+ * ファイルシステムタイプとバージョン
+ * パーティションあたりの他のファイルシステム固有情報に使われます。
+ */
+#define	FS_UNUSED	0		/* 未使用 */
+#define	FS_SWAP		1		/* スワップ */
+#define	FS_V6		2		/* 第 6 版 */
+#define	FS_V7		3		/* 第 7 版 */
+#define	FS_SYSV		4		/* System V */
+#define	FS_V71K		5		/* 7 版 1K ブロック (4.1, 2.9) */
+#define	FS_V8		6		/* 8 版 4K ブロック */
+#define	FS_BSDFFS	7		/* 4.2BSD 高速ファイルシステム */
+#define	FS_MSDOS	8		/* MSDOS ファイルシステム */
+#define	FS_BSDLFS	9		/* 4.4BSD ログ構造ファイルシステム */
+#define	FS_OTHER	10		/* 使用中だが未知/未サポート */
+#define	FS_HPFS		11		/* OS/2 高性能ファイルシステム */
+#define	FS_ISO9660	12		/* ISO 9660, 通常は CD-ROM */
+#define	FS_BOOT		13		/* ブートストラップを含むパーティション */
+#define	FS_VINUM	14		/* Vinum ドライブ */
 
 #ifdef	DKTYPENAMES
 static char *fstypenames[] = {
@@ -310,35 +356,36 @@ static char *fstypenames[] = {
 	"HPFS",
 	"ISO9660",
 	"boot",
-	0
+	"vinum",
+	NULL
 };
 #define FSMAXTYPES	(sizeof(fstypenames) / sizeof(fstypenames[0]) - 1)
 #endif
 
 /*
-* 多様なドライブが共有するフラグ
-*/
-#define	D_REMOVABLE	0x01	/* リムーバブルメディア */
-#define	D_ECC		0x02	/* ECC サポート */
-#define	D_BADSECT	0x04	/* バッドセクタフォワードのサポート */
-#define	D_RAMDISK	0x08	/* ディスクエミュレータ */
-#define	D_CHAIN		0x10	/* back-back 転送ができる */
+ * 多様なドライブが共有するフラグ
+ */
+#define		D_REMOVABLE	0x01		/* リムーバブルメディア */
+#define		D_ECC		0x02		/* ECC サポート */
+#define		D_BADSECT	0x04		/* バッドセクタフォワードのサポート */
+#define		D_RAMDISK	0x08		/* ディスクエミュレータ */
+#define		D_CHAIN		0x10		/* 連続転送可能 */
 
 /*
-* SMD のドライブデータ
-*/
+ * SMD のドライブデータ
+ */
 
 #define	d_smdflags	d_drivedata[0]
-#define	D_SSE		0x1	/* セクタスキップのサポート */
+#define		D_SSE		0x1		/* セクタスキップのサポート */
 #define	d_mindist	d_drivedata[1]
 #define	d_maxdist	d_drivedata[2]
 #define	d_sdist		d_drivedata[3]
 
 /*
-* ST506 のドライブデータ
-*/
+ * ST506 のドライブデータ
+ */
 #define d_precompcyl	d_drivedata[0]
-#define d_gap3		d_drivedata[1]	/* フォーマット時にのみ使われる */
+#define d_gap3		d_drivedata[1]		/* フォーマット時にのみ使用 */
 
 /*
  * SCSI のドライブデータ
@@ -354,40 +401,159 @@ static char *fstypenames[] = {
 */
 struct format_op {
 	char	*df_buf;
-	int	df_count;	/* 値-結果 */
-	daddr_t	df_startblk;
-	int	df_reg[8];	/* 結果 */
+	int	 df_count;		/* 値-結果 */
+	daddr_t	 df_startblk;
+	int	 df_reg[8];		/* 結果 */
 };
 
 /*
-* ディスク上のパーティションに関する情報を
-* 引き出すために内部で使われる構造体
-*/
+ * ディスク上のパーティションに関する情報を
+ * 引き出すために内部で使われる構造体
+ */
 struct partinfo {
-	struct	disklabel *disklab;
-	struct	partition *part;
+	struct disklabel *disklab;
+	struct partition *part;
 };
 
+/* DOS パーティションテーブル -- ブートブロックにあります */
+
+#if defined(PC98) && !defined(PC98_ATCOMPAT)
+#define	DOSBBSECTOR	0	/* DOS ブートブロックの相対セクタ番号 */
+#define DOSLABELSECTOR	1	/* 0: 256b/s, 1: 512b/s */
+#define	DOSPARTOFF	0
+#define NDOSPART	16
+#define	DOSPTYP_386BSD	0x94	/* 386BSD パーティションタイプ */
+#define	MBR_PTYPE_FreeBSD 0x94	/* FreeBSD パーティションタイプ */
+
+struct dos_partition {
+    	unsigned char	dp_mid;
+#define DOSMID_386BSD		(0x14|0x80) /* 386bsd|bootable */
+	unsigned char	dp_sid;
+#define DOSSID_386BSD		(0x44|0x80) /* 386bsd|active */	
+	unsigned char	dp_dum1;
+	unsigned char	dp_dum2;
+	unsigned char	dp_ipl_sct;
+	unsigned char	dp_ipl_head;
+	unsigned short	dp_ipl_cyl;
+	unsigned char	dp_ssect;	/* 先頭セクタ */
+	unsigned char	dp_shd;		/* 先頭ヘッド */
+	unsigned short	dp_scyl;	/* 先頭シリンダ */
+	unsigned char	dp_esect;	/* 終端セクタ */
+	unsigned char	dp_ehd;		/* 終端ヘッド */
+	unsigned short	dp_ecyl;	/* 終端シリンダ */
+	unsigned char	dp_name[16];
+};
+
+#else /* IBMPC */
+#define DOSBBSECTOR	0	/* DOS ブートブロックの相対セクタ番号 */
+#define DOSPARTOFF	446
+#define NDOSPART	4
+#define	DOSPTYP_386BSD	0xa5	/* 386BSD パーティションタイプ */
+
+struct dos_partition {
+	unsigned char	dp_flag;	/* ブートストラップフラグ */
+	unsigned char	dp_shd;		/* 先頭ヘッド */
+	unsigned char	dp_ssect;	/* 先頭セクタ */
+	unsigned char	dp_scyl;	/* 先頭シリンダ */
+	unsigned char	dp_typ;		/* パーティションタイプ */
+	unsigned char	dp_ehd;		/* 終端ヘッド */
+	unsigned char	dp_esect;	/* 終端セクタ */
+	unsigned char	dp_ecyl;	/* 終端シリンダ */
+	u_int32_t	dp_start;	/* 絶対的な先頭セクタ番号 */
+	u_int32_t	dp_size;	/* セクタ数でのパーティションサイズ */
+};
+#endif
+
+#define DPSECT(s) ((s) & 0x3f)		/* セクタ用のビットの分離 */
+#define DPCYL(c, s) ((c) + (((s) & 0xc0)<<2)) /* こちらはシリンダ用 */
+
 /*
-* ディスク固有の ioctl
-*/
-	/* ディスクラベルの取得と設定; 内部では DIOCGPART が使われる */
-#define DIOCGDINFO   _IOR('d', 101, struct disklabel) /* 取得 */
-#define DIOCSDINFO   _IOW('d', 102, struct disklabel) /* 設定 */
-#define DIOCWDINFO   _IOW('d', 103, struct disklabel) /* 設定、ディスク更新 */
-#define DIOCGPART    _IOW('d', 104, struct partinfo)  /* パーティション取得 */
+ * ディスク固有の ioctl
+ */
+		/* ディスクラベルの取得と設定; 内部では DIOCGPART が使われる */
+#define DIOCGDINFO	_IOR('d', 101, struct disklabel)/* 取得 */
+#define DIOCSDINFO	_IOW('d', 102, struct disklabel)/* 設定 */
+#define DIOCWDINFO	_IOW('d', 103, struct disklabel)/* 設定、ディスク更新 */
+#define DIOCGPART	_IOW('d', 104, struct partinfo) /* パーティション取得 */
 
-/* do format operation, read or write */
-#define DIOCRFORMAT	_IOWR('d', 105, struct format_op)
-#define DIOCWFORMAT	_IOWR('d', 106, struct format_op)
+#define DIOCWLABEL	_IOW('d', 109, int)	/* ラベルの書き込み可/不可 */
 
-#define DIOCSSTEP	_IOW('d', 107, int) /* ステップレート設定 */
-#define DIOCSRETRIES	_IOW('d', 108, int) /* リトライ回数の設定 */
-#define DIOCWLABEL	_IOW('d', 109, int) /* 書き込み可/不可のラベル */
+#ifdef _KERNEL
 
-#define DIOCSBAD	_IOW('d', 110, struct dkbad) /* カーネル dkbad の設定 */
+/*
+ * XXX ディスクマイナ番号のエンコーディングは別のところにあるべきです。
+ *
+ * より良い可能性のエンコーディングについては <sys/reboot.h> を参照ください。
+ *
+ * "cpio -H newc" で大きなマイナ番号のデバイスファイル (しかし 2^31 未満)
+ * をバックアップ可能です。古い cpio フォーマットと全 tar フォーマットでは
+ * ビット数が不十分であり、また cpio と tar はビット喪失を報告しません。
+ * また、符号拡張にバグがあります。
+ */
 
-#endif LOCORE
+/*
+       3                   2                   1                   0
+     1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0
+    _________________________________________________________________
+    | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | |
+    -----------------------------------------------------------------
+    |    TYPE     |UNIT_2 | SLICE   |  MAJOR?       |  UNIT   |PART |
+    -----------------------------------------------------------------
+ */
+#define	dkmakeminor(unit, slice, part) \
+				(((slice) << 16) | (((unit) & 0x1e0) << 16) | \
+				(((unit) & 0x1f) << 3) | (part))
+static __inline dev_t
+dkmodpart(dev_t dev, int part)
+{
+	return (makedev(major(dev), (minor(dev) & ~7) | part));
+}
+
+static __inline dev_t
+dkmodslice(dev_t dev, int slice)
+{
+	return (makedev(major(dev), (minor(dev) & ~0x1f0000) | (slice << 16)));
+}
+
+#define	dkpart(dev)		(minor(dev) & 7)
+#define	dkslice(dev)		((minor(dev) >> 16) & 0x1f)
+#define	dktype(dev)       	((minor(dev) >> 25) & 0x7f)
+
+static __inline u_int
+dkunit(dev_t dev)
+{
+	return (((minor(dev) >> 16) & 0x1e0) | ((minor(dev) >> 3) & 0x1f));
+}
+
+struct	buf;
+struct	buf_queue_head;
+
+int	bounds_check_with_label __P((struct buf *bp, struct disklabel *lp,
+				     int wlabel));
+void	diskerr __P((struct buf *bp, char *what, int pri, int blkdone,
+		     struct disklabel *lp));
+void	disksort __P((struct buf *ap, struct buf *bp));
+u_int	dkcksum __P((struct disklabel *lp));
+char	*readdisklabel __P((dev_t dev, struct disklabel *lp));
+void	bufqdisksort __P((struct buf_queue_head *ap, struct buf *bp));
+int	setdisklabel __P((struct disklabel *olp, struct disklabel *nlp,
+			  u_long openmask));
+int	writedisklabel __P((dev_t dev, struct disklabel *lp));
+#ifdef __alpha__
+void	alpha_fix_srm_checksum __P((struct buf *bp));
+#endif
+
+#endif /* _KERNEL */
+
+#endif /* LOCORE */
+
+#ifndef _KERNEL
+__BEGIN_DECLS
+struct disklabel *getdiskbyname __P((const char *));
+__END_DECLS
+#endif
+
+#endif /* !_SYS_DISKLABEL_H_ */
 .Ed
 .Sh 関連項目
 .Xr disktab 5 ,
