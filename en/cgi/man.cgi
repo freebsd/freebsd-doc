@@ -33,10 +33,11 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp 
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.29 2001-02-25 11:57:57 wosch Exp $
+# $Id: man.cgi,v 1.30 2001-03-11 10:32:58 wosch Exp $
 
 #use Data::Dumper;
 #use Carp;
+
 
 $www{'title'} = 'FreeBSD Hypertext Man Pages';
 $www{'home'} = 'http://www.FreeBSD.org';
@@ -613,6 +614,9 @@ sub man {
 
     print "</BODY>\n";
     print "</HTML>\n";
+
+    # Sleep 0.35 seconds to avoid DoS attacs
+    select undef, undef, undef, 0.35;
 }
 
 sub mlnk {
@@ -769,7 +773,7 @@ Please direct questions about this server to
 URL:  <A HREF="$BASE" target=_parent>$www{'home'}$BASE</a><br>
 ETX
 
-    print q{$Date: 2001-02-25 11:57:57 $ $Revision: 1.29 $};
+    print q{$Date: 2001-03-11 10:32:58 $ $Revision: 1.30 $};
     print "<br>\n";
     print "</BODY>\n</HTML>\n";
     0;
