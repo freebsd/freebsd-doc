@@ -2,9 +2,9 @@
      The FreeBSD Russian Documentation Project
 
      $FreeBSD$
-     $FreeBSDru: frdp/doc/ru_RU.KOI8-R/books/handbook/boot/chapter.sgml,v 1.5 2001/02/09 14:49:15 andy Exp $
+     $FreeBSDru: frdp/doc/ru_RU.KOI8-R/books/handbook/boot/chapter.sgml,v 1.16 2004/01/12 18:47:53 andy Exp $
 
-     Original revision: 1.10
+     Original revision: 1.55
 -->
 
 <chapter id="boot">
@@ -13,378 +13,509 @@
   <sect1 id="boot-synopsis">
     <title>Описание</title>
 
-    <para>Во FreeBSD по умолчанию используется трехэтапный процесс загрузки,
-      в котором задействованы три программы, последовательно вызывающие друг
-      друга (два <link linkend="boot-blocks">загрузочных блока</link> и <link
-      linkend="boot-loader">загрузчик</link>).	Каждая их этих трех программ
-      строится на функциях предыдущей программы и становится все более
-      сложной.</para>
+    <indexterm><primary>загрузка</primary></indexterm>
 
-    <para>Затем стартует ядро, которое детектирует устройства и выполняет
-      их инициализацию.  После завершения процесса своей загрузки, ядро
-      передает управление пользовательскому процессу с именем &man.init.8;,
-      который выполняет проверку дисков на возможность использования.  Затем
-      &man.init.8; запускает пользовательский процесс настройки ресурсов,
-      выполняющий монтирование файловых систем, настройку сетевых адаптеров
-      для работы в сети и вообще запуск всех процессов, обычно выполняемых
-      в системе FreeBSD при загрузке.</para>
+    <indexterm><primary>начальная загрузка</primary></indexterm>
+
+    <para>Процесс включения компьютера и загрузки операционной системы
+      называется <quote>процессом первоначальной загрузки</quote>, или просто
+      <quote>загрузкой</quote>.  Процесс загрузки FreeBSD предоставляет большие
+      возможности по гибкой настройке того, что происходит при запуске системы,
+      позволяя вам выбирать из различных операционных систем, установленных на
+      одном и том же компьютере, или даже из различных версий той же самой
+      операционной системы или установленного ядра.</para>
+
+    <para>Эта глава подробно описывает параметры, которые вы можете изменить
+      для настройки процесса загрузки FreeBSD.  Под этим подразумевается все,
+      что происходит до начала работы ядра FreeBSD, обнаружения устройств и
+      запуска &man.init.8;.  Если вы не совсем уверены, то это происходит,
+      когда выводимый текст меняет цвет с ярко-белого на серый.</para>
+
+    <para>После чтения этой главы вы будете знать:</para>
+
+    <itemizedlist>
+      <listitem>
+        <para>Из каких частей состоит система начальной загрузки FreeBSD, и
+          как эти части взаимодействуют.</para>
+      </listitem>
+
+      <listitem>
+        <para>Параметры, которые вы можете передать компонентам начальной
+          загрузки FreeBSD для управления этим процессом.</para>
+      </listitem>
+
+      <listitem>
+        <para>Основы работы &man.device.hints.5;</para>
+      </listitem>
+    </itemizedlist>
+
+    <note>
+      <title>Только для x86</title>
+
+      <para>Эта глава описывает процесс загрузки FreeBSD только для систем
+        на основе архитектуры Intel x86.</para>
+    </note>
+  </sect1>
+
+  <sect1 id="boot-introduction">
+    <title>Проблема загрузки</title>
+
+    <para>Включение компьютера и запуск операционной системы приводят к
+      интересной дилемме.  По определению до запуска операционной системы
+      компьютер умеет ничего.  В том числе и не знает, как запускать программы
+      с диска.  Так что компьютер не может запустить программу с диска без
+      операционной системы, но программы операционной системы находятся на
+      диске, но как запустить операционную систему?</para>
+
+    <para>Эта проблема имеет параллели с одной проблемой из книги
+      <citetitle>Приключения барона Мюнхаузена</citetitle>.  Герой провалился в
+      болото, и вытащил сам себя, ухватив за волосы и потянув.  В эпоху начала
+      компьютеризации термин <firstterm>начальная загрузка</firstterm>
+      применялся к механизму, используемому для загрузки операционной системы,
+      и затем был сокращен до просто <quote>загрузки</quote>.</para>
+
+    <para>На оборудовании архитектуры x86 за загрузку операционной системы
+      отвечает BIOS (Basic Input/Output System).  Для этого BIOS ищет на
+      жестком диске MBR (Master Boot Record), которая должна располагаться в
+      определенном месте на диске.  BIOS может загрузить и запустить MBR, и
+      предполагается, что MBR может взять на себя остальную работу, связанную с
+      загрузкой операционной системой.</para>
+
+    <indexterm>
+      <primary>BIOS</primary>
+      <secondary>Basic Input/Output System</secondary>
+    </indexterm>
+
+    <para>Если на вашем диске установлена только одна операционная система, то
+      стандортной MBR будет достаточно.  Такая MBR выполняет поиск на диске
+      первого загрузочного слайса, после чего запускает с этого слайса код
+      загрузки оставшейся части операционной системы.</para>
+
+    <para>Если на ваших дисках установлено несколько операционных систем, то
+      вы можете установить другую MBR, ту, что может выдать список различных
+      операционных систем и позволит вам выбрать одну из них для загрузки.
+      FreeBSD поставляется с одной из такой MBR, которую можно установить;
+      другие производители операционных систем также предоставляют свои
+      MBR.</para>
+
+    <para>Оставшаяся часть системы начальной загрузки FreeBSD разделяется на
+      три этапа.  Первый этап запускается из MBR, и он знает достаточно для
+      перевода компьютера в особое состояние и загрузки второго этапа.  Второй
+      этап может делать несколько больше до запуска третьего этапа.  Третий
+      этап заканчивает работу по загрузке операционной системы.  Работа
+      разделена на эти три этапа, потому что стандарты ПК ограничивают размеры
+      программ, которые могут быть запущены на первом и втором этапах.
+      Посдедовательное выполнение работ позволяет FreeBSD получить более гибкий
+      загрузчик.</para>
+
+    <indexterm><primary>ядро</primary></indexterm>
+    <indexterm><primary><command>init</command></primary></indexterm>
+
+    <para>Затем стартует ядро, которое начинает опознавать устройства и
+      выполняет их инициализацию.  После завершения процесса своей загрузки,
+      ядро передает управление пользовательскому процессу с именем
+      &man.init.8;, который выполняет проверку дисков на возможность
+      использования.  Затем &man.init.8; запускает пользовательский процесс
+      настройки ресурсов, который монтирует файловые системы, выполняет
+      настройку сетевых адаптеров для работы в сети и вообще осуществляет
+      запуск всех процессов, обычно выполняемых в системе FreeBSD при
+      загрузке.</para>
   </sect1>
 
   <sect1 id="boot-blocks">
-    <title>Загрузочные блоки: первый и второй этапы начальной загрузки</title>
-
-    <para><firstterm>Начальная загрузка</firstterm> представляет собой
-      процесс, в течение которого компьютер распознает и инициализирует свои
-      устройства и определяет, какие программы должны быть запущены.</para>
-
-    <para>В этом процессе задействованы специальные микросхемы Постоянных
-      Запоминающих Устройств (ПЗУ), которые определяют, что делать и в свою
-      очередь, передают управление другим микросхемам, которые выполняют
-      проверку памяти и целостности системы, конфигурируют устройства и
-      предоставляют другим программам способ выяснить подробную информацию о
-      настройках.</para>
-
-    <para>В случае обычных персональных компьютеров в этом процессе участвует
-      BIOS (который ответственен на начальную загрузку) и CMOS (которая
-      хранит конфигурацию).  BIOS и CMOS умеют работать с дисками и также
-      знают, где на диске находится программа, которая знает, как загрузить
-      операционную систему.</para>
-
-    <para>Эта глава не описывает первую часть процесса начальной загрузки.
-      Вместо этого она посвящена тому, что происходит после передачи
-      управления программе, находящейся на диске.</para>
-
-    <para>Загрузочные блоки (как правило) отвечают за поиск загрузчика, его
-      запуск и поэтому должны уметь находить программу в файловой системе,
-      уметь ее запустить, а также должны иметь возможность выполнять
-      некоторую настройку своей работы.</para>
+    <title>MBR и первый, второй и третий этапы загрузки</title>
 
     <sect2 id="boot-boot0">
-      <title>boot0</title>
+      <title>MBR, <filename>/boot/boot0</filename></title>
+      <indexterm><primary>Master Boot Record (MBR)</primary></indexterm>
 
-      <para>На самом деле это предшествующий всему загрузочный блок по имени
-	boot0, который находится в <firstterm>Главной Загрузочной
-	Записи</firstterm> (Master Boot Record), особой части диска, которая
-	используется при начальной загрузке системы для определения порядка
-	загрузки, и содержит список возможных слайсов для загрузки.</para>
+      <para>MBR для FreeBSD находится в <filename>/boot/boot0</filename>.  Это
+        <emphasis>копия</emphasis> MBR, так как настоящая MBR должна
+        располагаться в специальном месте диска, вне области FreeBSD.</para>
 
-      <para>boot0 очень прост, так как программа в <abbrev>MBR</abbrev> может
-	иметь размер, не превышающий 512 байт.</para>
-
-      <para>Эта программа выводит нечто вроде следующего:</para>
+      <para><filename>boot0</filename> очень прост, так как программа
+        в <abbrev>MBR</abbrev> может иметь размер, не превышающий 512
+        байт.  Если вы установили MBR FreeBSD и несколько операционных
+        систем на ваш жесткий диск, то во время загрузки вы увидите нечто
+        похожее на следующее:</para>
 
       <example id="boot-boot0-example">
-	<title>Образец экрана boot0</title>
+	<title>Образец экрана <filename>boot0</filename></title>
 
-	<screen>
-F1 DOS
+	<screen>F1 DOS
 F2 FreeBSD
 F3 Linux
 F4 ??
 F5 Drive 1
 
-Default: F2
-	</screen>
+Default: F2</screen>
       </example>
+
+      <para>Известно, что другие операционные системы, в частности,
+        &windows;&nbsp;95, записывают поверх существующей MBR свою собственную.
+        Если так случилось в вашем случае, или же вы хотите заменить
+        существующую MBR на MBR от FreeBSD, то воспользуйтесь следующей
+        командой:</para>
+
+      <screen>&prompt.root; <userinput>fdisk -B -b /boot/boot0 <replaceable>device</replaceable></userinput></screen>
+
+      <para>Здесь <replaceable>device</replaceable> является устройством, с
+        которого вы загружаетесь, таким, как <devicename>ad0</devicename> в
+        случае первого диска IDE, <devicename>ad2</devicename> в случае первого
+        диска IDE на втором контроллере IDE, <devicename>da0</devicename> для
+        первого диска SCSI и так далее.</para>
+
+      <para>Однако если вы используете Linux и предпочитаете, чтобы процесс
+        загрузки управлялся через <application>LILO</application>, вы можете
+        отредактировать файл <filename>/etc/lilo.conf</filename> для FreeBSD
+        или выбрать <option>Leave The Master Boot Record Untouched</option>
+        в процессе установки FreeBSD.  Если вы установили менеджер загрузки
+        FreeBSD, то вы можете снова загрузить Linux и изменить конфигурационный
+        файл <filename>/etc/lilo.conf</filename> для
+        <application>LILO</application>, добавив следующий параметр:</para>
+
+      <programlisting>other=/dev/hdXY
+table=/dev/hdb
+loader=/boot/chain.b
+label=FreeBSD</programlisting>
+
+      <para>который позволит загружать FreeBSD и Linux посредством
+	<application>LILO</application>.  В нашем примере мы используем
+	<replaceable>XY</replaceable> для обозначения номера диска и раздела.
+        Если вы используете диск <acronym>SCSI</acronym>, то вам может
+        потребоваться заменить <replaceable>/dev/hdXY</replaceable> на что-то
+        типа <replaceable>/dev/sdXY</replaceable>, где снова используется
+        обозначение <replaceable>XY</replaceable>.  Строка
+	<option>loader=/boot/chain.b</option> может быть опущена, если обе
+        операционные системы располагаются на одном и том же диске.  Вы можете
+        теперь запустить <command>/sbin/lilo -v</command> для того, чтобы ваши
+        изменения были восприняты системой, что должно быть подтверждено
+        сообщениями на экране.</para>
     </sect2>
 
     <sect2 id="boot-boot1">
-      <title>boot1</title>
+      <title>Этап первый, <filename>/boot/boot1</filename>, и этап второй,
+        <filename>/boot/boot2</filename></title>
 
-      <para>boot1 находится в загрузочном секторе загрузочного слайса,
+      <para>Концептуально первый и второй этапы загрузки являются частями одной
+        и той же программы, в той же самой области диск.  Из-за ограничений на
+        объем дискового пространства они были разделены на две, но вы всегда
+        должны устанавливать их вместе.</para>
+
+      <para>Они располагаются в загрузочном секторе загрузочного слайса,
 	то есть там, где <link linkend="boot-boot0">boot0</link> или
 	любая другая программа из <abbrev>MBR</abbrev> ожидает найти
-	программу, которую следует запустить для продолжения процесса
-	загрузки.</para>
+	программу, которую следует запустить для продолжение процесса загрузки.
+        Файлы в каталоге <filename>/boot</filename> являются копиями реальных
+        файлов, которые хранятся вне файловой системы FreeBSD.</para>
 
-      <para>boot1 очень прост, так как он тоже может иметь размер, не
-	превышающий 512 байт, и знает достаточно о <firstterm>метке
+      <para><filename>boot1</filename> очень прост, так как он тоже может иметь
+        размер, не превышающий 512 байт, и знает достаточно о <firstterm>метке
 	диска</firstterm> FreeBSD, хранящей информацию о слайсе, для того,
-	чтобы найти и запустить <link
-	linkend="boot-boot2">boot2</link>.</para>
-    </sect2>
+	чтобы найти и запустить <filename>boot2</filename>.</para>
 
-    <sect2 id="boot-boot2">
-      <title>boot2</title>
-
-      <para>boot2 устроен несколько более сложно, и умеет работать с файловой
-	системой FreeBSD в объеме, достаточном для нахождения в ней файлов и
-	может предоставлять простой интерфейс для выбора и передачи
-	управления ядру или загрузчику.</para>
+      <para><filename>boot2</filename> устроен несколько более сложно, и умеет
+        работать с файловой системой FreeBSD в объёме, достаточном для
+        нахождения в ней файлов, и может предоставлять простой интерфейс для
+        выбора и передачи управления ядру или загрузчику.</para>
 
       <para>Так как <link linkend="boot-loader">загрузчик</link> устроен
 	гораздо более сложно, и дает удобный и простой способ настройки
-	процесса загрузки, boot2 обычно запускает его, однако раньше его
-	задачей был запуск непосредственно самого ядра.</para>
+	процесса загрузки, <filename>boot2</filename> обычно запускает его,
+        однако раньше его задачей был запуск непосредственно самого
+        ядра.</para>
 
       <example id="boot-boot2-example">
-	<title>Образец экрана boot2</title>
+	<title>Образец экрана <filename>boot2</filename></title>
 
 	<screen>
 &gt;&gt; FreeBSD/i386 BOOT
-Default: 0:wd(0,a)/kernel
+Default: 0:ad(0,a)/kernel
 boot:
 	</screen>
       </example>
-    </sect2>
-  </sect1>
 
-  <sect1 id="boot-loader">
-    <title>Загрузчик: третий этап процесса начальной загрузки</title>
+      <para>Если вам когда-либо понадобится заменить установленные
+        <filename>boot1</filename> и <filename>boot2</filename>, то используйте
+        утилиту &man.disklabel.8;.</para>
 
-    <para>Передача управления загрузчику является последним, третьим этапом в
-      процессе начальной загрузки, а сам загрузчик находится в файловой
-      системе, обычно как <filename>/boot/loader</filename>.</para>
+      <screen>&prompt.root; <userinput>disklabel -B <replaceable>diskslice</replaceable></userinput></screen>
 
-    <note>
-      <para>Когда как файлы <filename>/boot/boot0</filename>,
-	<filename>/boot/boot1</filename> и
-	<filename>/boot/boot2</filename> здесь присутствуют, они не являются
-	реальными копиями <abbrev>MBR</abbrev>, загрузочного сектора или
-	метки диска соответственно.</para>
-    </note>
+      <para>Здесь <replaceable>diskslice</replaceable> являются диском и
+        слайсом, с которых вы загружаетесь, такие, как
+        <devicename>ad0s1</devicename> в случае первого слайса на первом диске
+        IDE.</para>
 
-    <para>Загрузчик являет собой удобный в использовании инструмент для
-      настройки при помощи простого набора команд, управляемого более мощным
-      интерпретатором с более сложным набором команд.</para>
+      <warning>
+        <title>Режим Dangerously Dedicated</title>
 
-    <sect2 id="boot-loader-flow">
-      <title>Процесс работы загрузчика</title>
-
-      <para>Во время инициализации загрузчик пытается произвести поиск
-	консоли, дисков и определить, с какого диска он был запущен.
-	Соответствующим образом он задает значения переменных и после этого
-	запускает интерпретатор, а простые команды передаются уже ему.</para>
-
-      <para>Затем загрузчик читает файл
-	<filename>/boot/loader.rc</filename>, который по умолчанию использует
-	файл <filename>/boot/defaults/loader.conf</filename>, устанавливающий
-	подходящие значения по умолчанию для переменных и читает файл
-	<filename>/boot/loader.conf</filename> для изменения в этих
-	переменных.  Затем с этими переменными работает
-	<filename>loader.rc</filename>, загружающий выбранные модули и
-	ядро.</para>
-
-      <para>И наконец, по умолчанию загрузчик выдерживает 10-секундную паузу,
-        ожидая нажатия клавиши, и загружает ядро, если этого не произошло.
-	Если ожидание было прервано, пользователю выдается
-	приглашение, которое воспринимает простой набор команд, в помощью
-	которых пользователь может изменить значения переменных, выгрузить
-	все модули, загрузить модули и окончательно продолжить процесс
-	загрузки или перезагрузить машину.</para>
-
-      <para>Более подробное техническое описание этого процесса дается на
-	странице Справочника &man.loader.8;</para>
+        <para>Если вы используете только имя диска, к примеру,
+          <devicename>ad0</devicename>, в команде &man.disklabel.8; вы
+          создадите диск в режиме эксклюзивного использования, без слайсов.
+          Это, скорее всего, вовсе н то, что вы хотите сделать, так что дважды
+          проверьте параметры команды &man.disklabel.8;, прежде, чем нажать
+          <keycap>Return</keycap>.</para>
+      </warning>
     </sect2>
 
-    <sect2 id="boot-loader-commands">
-      <title>Встроенные команды загрузчика</title>
+    <sect2 id="boot-loader">
+      <title>Третий этап, <filename>/boot/loader</filename></title>
 
-      <para>Простой набор команд состоит из:</para>
+      <indexterm><primary>загрузчик</primary></indexterm>
+      <para>Передача управления загрузчику является последним, третьим этапом в
+        процессе начальной загрузки, а сам загрузчик находится в файловой
+        системе, обычно как <filename>/boot/loader</filename>.</para>
 
-      <variablelist>
-	<varlistentry>
-	  <term>autoboot <replaceable>секунды</replaceable></term>
+      <para>Загрузчик являет собой удобный в использовании инструмент для
+        настройки при помощи простого набора команд, управляемого более мощным
+        интерпретатором с более сложным набором команд.</para>
+
+      <sect3 id="boot-loader-flow">
+        <title>Процесс работы загрузчика</title>
+
+        <para>Во время инициализации загрузчик пытается произвести поиск
+          консоли, дисков и определить, с какого диска он был запущен.
+          Соответствующим образом он задаёт значения переменных и запускает
+          интерпретатор, которому могут передаваться пользовательские команды
+          как из скрипта, так и в интерактивном режиме.</para>
+
+        <indexterm><primary>загрузчик</primary></indexterm>
+        <indexterm><primary>конфигурация загрузчика</primary></indexterm>
+        <para>Затем загрузчик читает файл
+          <filename>/boot/loader.rc</filename>, который по умолчанию использует
+          файл <filename>/boot/defaults/loader.conf</filename>, устанавливающий
+	  подходящие значения по умолчанию для переменных и читает файл
+	  <filename>/boot/loader.conf</filename> для изменения в этих
+	  переменных.  Затем с этими переменными работает
+	  <filename>loader.rc</filename>, загружающий выбранные модули и
+	  ядро.</para>
+
+        <para>И наконец, по умолчанию загрузчик выдерживает 10-секундную паузу,
+          ожидая нажатия клавиши, и загружает ядро, если этого не произошло.
+          Если ожидание было прервано, пользователю выдается
+	  приглашение, которое воспринимает простой набор команд, в помощью
+	  которых пользователь может изменить значения переменных, выгрузить
+	  все модули, загрузить модули и окончательно продолжить процесс
+	  загрузки или перезагрузить машину.</para>
+      </sect3>
+
+      <sect3 id="boot-loader-commands">
+        <title>Встроенные команды загрузчика</title>
+
+        <para>Далее следуют наиболее часто используемые команды загрузчика.
+          Полное описание всех имеющихся команд можно найти на странице
+          справки о команде &man.loader.8;.</para>
+
+        <variablelist>
+	  <varlistentry>
+	    <term>autoboot <replaceable>секунды</replaceable></term>
+
+	    <listitem>
+	      <para>Продолжает загрузку ядра, если не будет прерван в течение
+	        указанного в секундах промежутка времени.  Он выводит счетчик,
+	        и по умолчанию выдерживается интервал в 10 секунд.</para>
+	    </listitem>
+	  </varlistentry>
+
+	  <varlistentry>
+	    <term>boot
+	      <optional><replaceable>-параметры</replaceable></optional>
+	      <optional><replaceable>имя ядра</replaceable></optional></term>
+
+	    <listitem>
+	      <para>Продолжить процесс загрузки указанного ядра, если оно было
+	        указано, и с указанными параметрами, если они были
+	        указаны.</para>
+	    </listitem>
+	  </varlistentry>
+
+	  <varlistentry>
+	    <term>boot-conf</term>
+
+	    <listitem>
+	      <para>Повторно провести тот же самый процесс автоматической
+	        настройки модулей на основе переменных, что был произведен при
+	        загрузке.  Это имеет смысл, если до этого вы выполнили команду
+	        <command>unload</command>, изменили некоторые переменные,
+	        например, наиболее часто меняемую <envar>kernel</envar>.</para>
+	    </listitem>
+	  </varlistentry>
+
+	  <varlistentry>
+	    <term>help
+	      <optional><replaceable>тема</replaceable></optional></term>
+
+	    <listitem>
+	      <para>Вывод сообщений подсказки из файла
+	        <filename>/boot/loader.help</filename>.  Если в качестве темы
+	        указано слово <literal>index</literal>, то выводится список
+	        имеющихся тем.</para>
+	    </listitem>
+	  </varlistentry>
+
+	  <varlistentry>
+	    <term>include <replaceable>имя файла</replaceable>
+	      &hellip;</term>
+
+	    <listitem>
+	      <para>Выполнить файл с указанным именем.  Файл считывается и
+	        его содержимое интерпретируется строчка за строчкой.  Ошибка
+	        приводит к немедленному прекращению выполнения команды
+	        include.</para>
+	    </listitem>
+	  </varlistentry>
+
+	  <varlistentry>
+	    <term>load <optional><option>-t</option>
+	      <replaceable>тип</replaceable></optional>
+	      <replaceable>имя файла</replaceable></term>
+
+	    <listitem>
+	      <para>Загружает ядро, модуль ядра или файл указанного типа с
+	        указанным именем.  Все аргументы после имени файла передаются в
+	        файл.</para>
+	    </listitem>
+	  </varlistentry>
+
+	  <varlistentry>
+	    <term>ls <optional><option>-l</option></optional>
+	      <optional><replaceable>маршрут</replaceable></optional></term>
+
+	    <listitem>
+	      <para>Выводит список файлов по указанному маршруту или в корневом
+	        каталоге, если маршрут не был указан.  Если указан параметр
+	        <option>-l</option>, будут выводиться и размеры файлов.</para>
+	    </listitem>
+	  </varlistentry>
+
+	  <varlistentry>
+	    <term>lsdev <optional><option>-v</option></optional></term>
+
+	    <listitem>
+	      <para>Выводится список всех устройств, с которых могут быть
+	        загружены модули.  Если указан параметр <option>-v</option>,
+	        выводится дополнительная информация.</para>
+	    </listitem>
+	  </varlistentry>
+
+	  <varlistentry>
+	    <term>lsmod <optional><option>-v</option></optional></term>
+
+	    <listitem>
+	      <para>Выводит список загруженных модулей.  Если указан параметр
+	        <option>-v</option>, то выводится дополнительная
+	        информация.</para>
+	    </listitem>
+	  </varlistentry>
+
+	  <varlistentry>
+	    <term>more <replaceable>имя файла</replaceable></term>
+
+	    <listitem>
+	      <para>Вывод указанного файла с паузой при выводе каждой строки
+	        <varname>LINES</varname>.</para>
+	    </listitem>
+	  </varlistentry>
+
+	  <varlistentry>
+	    <term>reboot</term>
+
+	    <listitem>
+	      <para>Выполнить немедленную перезагрузку машины.</para>
+	    </listitem>
+	  </varlistentry>
+
+	  <varlistentry>
+	    <term>set <replaceable>переменная</replaceable></term>
+	    <term>set
+	      <replaceable>переменная</replaceable>=<replaceable>значение</replaceable></term>
+
+	    <listitem>
+	      <para>Задает значения переменных окружения загрузчика.</para>
+	    </listitem>
+	  </varlistentry>
+
+	  <varlistentry>
+	    <term>unload</term>
+
+	    <listitem>
+	      <para>Удаление из памяти всех загруженных модулей.</para>
+	    </listitem>
+	  </varlistentry>
+        </variablelist>
+      </sect3>
+
+      <sect3 id="boot-loader-examples">
+        <title>Примеры использования загрузчика</title>
+
+        <para>Вот несколько примеров практического использования
+          загрузчика:</para>
+
+        <itemizedlist>
+          <indexterm><primary>однопользовательский режим</primary></indexterm>
+	  <listitem>
+	    <para>Чтобы просто загрузить ваше ядро обычным образом, но в
+	      однопользовательском режиме:</para>
+
+	    <screen><userinput>boot -s</userinput></screen>
+	  </listitem>
 
 	  <listitem>
-	    <para>Продолжает загрузку ядра, если не будет прерван в течение
-	      указанного в секундах промежутка времени.  Он выводит счетчик,
-	      и по умолчанию выдерживается интервал в 10 секунд.</para>
-	  </listitem>
-	</varlistentry>
+	    <para>Для выгрузки обычных ядра и модулей, а потом просто загрузить
+	      ваше старое (или другое) ядро:</para>
+            <indexterm>
+              <primary><filename>kernel.old</filename></primary>
+            </indexterm>
 
-	<varlistentry>
-	  <term>boot
-	    <optional><replaceable>-параметры</replaceable></optional>
-	    <optional><replaceable>имя ядра</replaceable></optional></term>
+	    <screen><userinput>unload</userinput>
+<userinput>load <replaceable>kernel.old</replaceable></userinput></screen>
 
-	  <listitem>
-	    <para>Продолжить процесс загрузки указанного ядра, если оно было
-	      указано, и с указанными параметрами, если они были
-	      указаны.</para>
-	  </listitem>
-	</varlistentry>
+	    <para>Вы можете использовать <filename>kernel.GENERIC</filename>
+	      для обозначения стандартного ядра, поставляемого на установочном
+	      диске, или <filename>kernel.old</filename> для обращения к ранее
+	      установленному ядру (после того, как, например, вы обновили или
+	      отконфигурировали новое ядро).</para>
 
-	<varlistentry>
-	  <term>boot-conf</term>
+	    <note>
+	      <para>Для загрузки ваших обычных модулей с другим ядром
+	        используйте такие команды:</para>
 
-	  <listitem>
-	    <para>Повторно провести тот же самый процесс автоматической
-	      настройки модулей на основе переменных, что был произведен при
-	      загрузке.  Это имеет смысл, если до этого вы выполнили команду
-	      <command>unload</command>, изменили некоторые переменные,
-	      например, наиболее часто меняемую <envar>kernel</envar>.</para>
-	  </listitem>
-	</varlistentry>
-
-	<varlistentry>
-	  <term>help
-	    <optional><replaceable>тема</replaceable></optional></term>
-
-	  <listitem>
-	    <para>Вывод сообщений подсказки из файла
-	      <filename>/boot/loader.help</filename>.  Если в качестве темы
-	      указано слово <literal>index</literal>, то выводится список
-	      имеющихся тем.</para>
-	  </listitem>
-	</varlistentry>
-
-	<varlistentry>
-	  <term>include <replaceable>имя файла</replaceable>
-	    &hellip;</term>
-
-	  <listitem>
-	    <para>Выполнить файл с указанным именем.  Файл считывается и
-	      его содержимое интерпретируется строчка за строчкой.  Ошибка
-	      приводит к немедленному прекращению выполнения команды
-	      include.</para>
-	  </listitem>
-	</varlistentry>
-
-	<varlistentry>
-	  <term>load <optional><option>-t</option>
-	    <replaceable>тип</replaceable></optional>
-	    <replaceable>имя файла</replaceable></term>
-
-	  <listitem>
-	    <para>Загружает ядро, модуль ядра или файл указанного типа с
-	      указанным именем.  Все аргументы после имени файла передаются в
-	      файл.</para>
-	  </listitem>
-	</varlistentry>
-
-	<varlistentry>
-	  <term>ls <optional><option>-l</option></optional>
-	    <optional><replaceable>маршрут</replaceable></optional></term>
-
-	  <listitem>
-	    <para>Выводит список файлов по указанному маршруту или в корневом
-	      каталоге, если маршрут не был указан.  Если указан параметр
-	      <option>-l</option>, будут выводиться и размеры файлов.</para>
-	  </listitem>
-	</varlistentry>
-
-	<varlistentry>
-	  <term>lsdev <optional><option>-v</option></optional></term>
-
-	  <listitem>
-	    <para>Выводится список всех устройств, с которых могут быть
-	      загружены модули.  Если указан параметр <option>-v</option>,
-	      выводится дополнительная информация.</para>
-	  </listitem>
-	</varlistentry>
-
-	<varlistentry>
-	  <term>lsmod <optional><option>-v</option></optional></term>
-
-	  <listitem>
-	    <para>Выводит список загруженных модулей.  Если указан параметр
-	      <option>-v</option>, то выводится дополнительная
-	      информация.</para>
-	  </listitem>
-	</varlistentry>
-
-	<varlistentry>
-	  <term>more <replaceable>имя файла</replaceable></term>
-
-	  <listitem>
-	    <para>Вывод указанного файла с паузой при выводе каждой строки
-	      <varname>LINES</varname>.</para>
-	  </listitem>
-	</varlistentry>
-
-	<varlistentry>
-	  <term>reboot</term>
-
-	  <listitem>
-	    <para>Выполнить немедленную перезагрузку машины.</para>
-	  </listitem>
-	</varlistentry>
-
-	<varlistentry>
-	  <term>set <replaceable>переменная</replaceable></term>
-	  <term>set
-	    <replaceable>переменная</replaceable>=<replaceable>значение</replaceable></term>
-
-	  <listitem>
-	    <para>Задает значения переменных окружения загрузчика.</para>
-	  </listitem>
-	</varlistentry>
-
-	<varlistentry>
-	  <term>unload</term>
-
-	  <listitem>
-	    <para>Удаление из памяти всех загруженных модулей.</para>
-	  </listitem>
-	</varlistentry>
-      </variablelist>
-    </sect2>
-
-    <sect2 id="boot-loader-examples">
-      <title>Примеры использования загрузчика</title>
-
-      <para>Вот несколько практического использования загрузчика.</para>
-
-      <itemizedlist>
-	<listitem>
-	  <para>Чтобы просто загрузить ваше ядро обычным образом, но в
-	    однопользовательском режиме:</para>
-
-	  <screen><userinput>boot -s</userinput></screen>
-	</listitem>
-
-	<listitem>
-	  <para>Для выгрузки обычных ядра и модулей, а потом просто загрузить
-	    ваше старое (или другое) ядро:</para>
-
-	  <screen>
-<userinput>unload</userinput>
-<userinput>load <replaceable>kernel.old</replaceable></userinput>
-	  </screen>
-
-	  <para>Вы можете использовать <filename>kernel.GENERIC</filename>
-	    для обозначения стандартного ядра, поставляемого на установочном
-	    диске, или <filename>kernel.old</filename> для обращения к ранее
-	    установленному ядру (после того, как, например, вы обновили или
-	    отконфигурировали новое ядро).</para>
-
-	  <note>
-	    <para>Для загрузки ваших обычных модулей с другим ядром
-	      используйте такие команды:</para>
-
-	    <screen>
-<userinput>unload</userinput>
+	      <screen><userinput>unload</userinput>
 <userinput>set kernel="<replaceable>kernel.old</replaceable>"</userinput>
-<userinput>boot-conf</userinput>
-	    </screen>
-	  </note>
-	</listitem>
+<userinput>boot-conf</userinput></screen>
+	    </note>
+	  </listitem>
 
-	<listitem>
-	  <para>Для загрузки скрипта конфигурации ядра (автоматизированный
-	    скрипт, который выполняет то, что вы обычно делаете в
-	    конфигураторе ядра во время загрузки):</para>
+	  <listitem>
+	    <para>Для загрузки скрипта конфигурации ядра (автоматизированный
+	      скрипт, который выполняет то, что вы обычно делаете в
+	      конфигураторе ядра во время загрузки):</para>
 
-	  <screen>
-<userinput>load -t userconfig_script
-<replaceable>/boot/kernel.conf</replaceable></userinput>
-	  </screen>
-	</listitem>
-      </itemizedlist>
+            <screen><userinput>load -t userconfig_script <replaceable>/boot/kernel.conf</replaceable></userinput></screen>
+	  </listitem>
+        </itemizedlist>
+      </sect3>
     </sect2>
   </sect1>
 
   <sect1 id="boot-kernel">
     <title>Взаимодействие с ядром во время загрузки</title>
 
+    <indexterm>
+      <primary>ядро</primary>
+      <secondary>взаимодействия во время загрузки</secondary>
+    </indexterm>
     <para>Как только ядро окажется загруженным при помощи <link
       linkend="boot-loader">загрузчика</link> (обычный способ) или <link
-      linkend="boot-boot2">boot2</link> (минуя загрузчик), оно проверяет
+      linkend="boot-boot1">boot2</link> (минуя загрузчик), оно проверяет
       флаги загрузки, если они есть, и действует соответствующим
       образом.</para>
 
     <sect2 id="boot-kernel-bootflags">
+      <indexterm>
+        <primary>ядро</primary>
+        <secondary>флаги загрузки</secondary>
+      </indexterm>
       <title>Флаги загрузки ядра</title>
 
       <para>Вот наиболее часто используемые флаги загрузки:</para>
@@ -448,11 +579,120 @@ boot:
     </sect2> -->
   </sect1>
 
+  <sect1 id="device-hints">
+    <sect1info>
+      <authorgroup>
+	<author>
+	  <firstname>Tom</firstname>
+
+	  <surname>Rhodes</surname>
+
+	  <contrib>Текст предоставил</contrib>
+	</author>
+      </authorgroup>
+      <!-- 18 октября 2002 -->
+    </sect1info>
+
+    <indexterm>
+      <primary>device.hints</primary>
+    </indexterm>
+
+    <title>Хинты устройств</title>
+
+    <note>
+      <para>Эта функция присутствует только во FreeBSD&nbsp;5.0 и последующих
+        версиях, но не в более ранних.</para>
+    </note>
+
+    <para>Во время начального запуска системы загрузчик &man.loader.8;
+      производит чтение файла &man.device.hints.5;.  В этом файле
+      хранится необходимая для загрузки ядра информация, задаваемая в виде
+      переменных, которую иногда называют хинтами для устройств (<quote>device
+      hints</quote>).  Эти <quote>хинты устройств</quote> используются
+      драйверами устройств для их конфигурации.</para>
+
+    <para>Хинты для устройств могут быть также заданы в приглашении <link
+      linkend="boot-loader">начального загрузчика Стадии 3</link>.  Переменные
+      могут быть добавлены при помощи команды <command>set</command>, удалены
+      посредством <command>unset</command> и просмотрены командой
+      <command>show</command>.  В этот момент могут быть также переопределены
+      переменные, заданные в файле <filename>/boot/device.hints</filename>.
+      Хинты для устройств, введённые в начальном загрузчике, не сохраняются, и
+      при следующей перезагрузке будут утеряны.</para>
+
+    <para>После загрузки системы для выдачи значений всех переменных можно
+      воспользоваться командой &man.kenv.1;.</para>
+
+    <para>Синтаксически в файле <filename>/boot/device.hints</filename> в
+      каждой строке определяется по
+      одной переменной, в качестве метки начала комментария используется
+      стандарный символ <quote>#</quote>.  Строки строятся следующим
+      образом:</para>
+
+    <screen><userinput>hint.driver.unit.keyword="<replaceable>value</replaceable>"</userinput></screen>
+
+    <para>Синтаксис для начального загрузчика Стадии 3 таков:</para>
+
+    <screen><userinput>set hint.driver.unit.keyword=<replaceable>value</replaceable></userinput></screen>
+
+    <para><literal>driver</literal> определяет имя драйвера устройства,
+      <literal>unit</literal> соответствует порядковому номеру модуля
+      устройства, а <literal>keyword</literal> является ключевым словом хинта.
+      В качестве ключевых слов могут применяться следующие опции:</para>
+
+    <itemizedlist>
+      <listitem>
+	<para><literal>at</literal>: задаёт шину, к которой подключено
+          устройство.</para>
+      </listitem>
+
+      <listitem>
+	<para><literal>port</literal>: задаёт начальный адрес используемого
+          диапазона ввода/вывода (<acronym>I/O</acronym>).</para>
+      </listitem>
+
+      <listitem>
+	<para><literal>irq</literal>: задаёт используемый номер запроса на
+          прерывание.</para>
+      </listitem>
+
+      <listitem>
+	<para><literal>drq</literal>: задаёт номер канала DMA.</para>
+      </listitem>
+
+      <listitem>
+	<para><literal>maddr</literal>: задаёт физический адрес памяти,
+          занимаемый устройством.</para>
+      </listitem>
+
+      <listitem>
+	<para><literal>flags</literal>: устанавливает различные битовые флаги
+          для устройства.</para>
+      </listitem>
+
+      <listitem>
+	<para><literal>disabled</literal>: если установлено в значение
+          <quote>1</quote>, то устройство не используется.</para>
+      </listitem>
+    </itemizedlist>
+
+    <para>Драйверы устройств могут поддерживать (и даже требовать) другие
+      хинты, здесь не перечисленные, поэтому рекомендуется просматривать
+      справочные страницы по этим драйверам.  Для получения дополнительной
+      информации обратитесь к страницам справки по
+      &man.device.hints.5;, &man.kenv.1;, &man.loader.conf.5; и
+      &man.loader.8;.</para>
+  </sect1>
+
   <sect1 id="boot-init">
+    <indexterm>
+      <primary><command>init</command></primary>
+    </indexterm>
+
     <title>Init: инициализация управления процессами</title>
 
     <para>После того, как ядро завершит загрузку, оно передает управление
-      пользовательскому процессу <command>init</command>, который расположен
+      пользовательскому процессу &man.init.8;, который расположен
       в файле <filename>/sbin/init</filename> или в файле, маршрут к которому
       указан в переменной <envar>init_path</envar>
       <command>загрузчика</command>.</para>
@@ -462,8 +702,8 @@ boot:
 
       <para>Процесс автоматической перезагрузки проверяет целостность
 	имеющихся файловых систем.  Если это не так, и утилита
-	<command>fsck</command> не может исправить положение, то
-	<command>init</command> переводит систему в <link
+	&man.fsck.8; не может исправить положение, то
+	&man.init.8; переводит систему в <link
 	linkend="boot-singleuser">однопользовательский режим</link> для того,
 	чтобы системный администратор сам разобрался с возникающими
 	проблемами.</para>
@@ -471,15 +711,17 @@ boot:
 
     <sect2 id="boot-singleuser">
       <title>Однопользовательский режим</title>
+      <indexterm><primary>однопользовательский режим</primary></indexterm>
+      <indexterm><primary>консоль</primary></indexterm>
 
       <para>В этот режим можно перейти во время <link
-	linkend="boot-autoreboot">процесса автоматической
-	перезагрузки</link>, при ручной загрузке с флагом <option>-s</option>
-	или заданием переменной <envar>boot_single</envar> в
-	<command>загрузчике</command>.</para>
+	linkend="boot-autoreboot">процесса автоматической перезагрузки</link>,
+        при ручной загрузке с параметром <option>-s</option>
+	или заданием переменной <envar>boot_single</envar> для программы
+	<command>loader</command>.</para>
 
       <para>Этот режим может быть также вызван запуском программы
-	<command>shutdown</command> без параметров перезагрузки
+	&man.shutdown.8; без параметров перезагрузки
 	(<option>-r</option>) или останова (<option>-h</option>) из
 	<link linkend="boot-multiuser">многопользовательского
 	режима</link>.</para>
@@ -487,41 +729,43 @@ boot:
       <para>Если режим доступа к системной консоли <literal>console</literal>
 	установлен в файле <filename>/etc/ttys</filename> в
 	<literal>insecure</literal>, то система выведет запрос на ввод пароля
-	пользователя root перед входом в однопользовательский режим.</para>
+	пользователя <username>root</username> перед переходом в
+        однопользовательский режим.</para>
 
       <example id="boot-insecure-console">
-	<title>Незащищенная консоль в /etc/ttys</title>
+	<title>Незащищённая консоль в <filename>/etc/ttys</filename></title>
 
-	<programlisting>
-# name	getty				type	status		comments
+	<programlisting># name	getty				type	status		comments
 #
-# This entry needed for asking password when init goes to single-user mode
-# If you want to be asked for password, change "secure" to "insecure" here
-console none				unknown off insecure
-	</programlisting>
+# Если консоль помечена как "insecure", то init будет запрашивать пароль
+# пользователя root при переходе в однопользовательский режим.
+console none                            unknown off insecure</programlisting>
       </example>
 
       <note>
 	<para>Обозначение консоли как <literal>insecure</literal> означает,
-	  что вы считаете физический доступ к консоли незащищенным, и хотите,
-	  чтобы только тот, кто знает пароль пользователя root, мог
-	  воспользоваться однопользовательским режимом, но это не значит, что
-	  вы хотите работать с консолью небезопасным способом.	Таким
-	  образом, если вы хотите добиться защищенности, указывайте
-	  <literal>insecure</literal>, а не <literal>secure</literal>.</para>
+	  что вы считаете физический доступ к консоли незащищённым, и хотите,
+	  чтобы только тот, кто знает пароль пользователя
+          <username>root</username>, мог воспользоваться однопользовательским
+          режимом, но это не значит, что вы хотите работать с консолью
+          небезопасным способом.  Таким образом, если вы хотите добиться
+          защищённости, указывайте <literal>insecure</literal>, а
+          не <literal>secure</literal>.</para>
       </note>
     </sect2>
 
     <sect2 id="boot-multiuser">
       <title>Многопользовательский режим</title>
+      <indexterm><primary>многопользовательский режим</primary></indexterm>
 
-      <para>Если <command>init</command> определит, что ваши файловые системы
+      <para>Если &man.init.8; определит, что ваши файловые системы
 	находятся в полном порядке, или после того, как пользователь выйдет
 	из <link linkend="boot-singleuser">однопользовательского
 	режима</link>, система перейдет в многопользовательский режим, работа
 	в котором начинается с настройки ресурсов системы.</para>
 
       <sect3 id="boot-rc">
+        <indexterm><primary>файлы rc</primary></indexterm>
 	<title>Настройка ресурсов (rc)</title>
 
 	<para>Система настройки ресурсов считывает настройки, применяемые по
@@ -542,13 +786,35 @@ console none				unknown off insecure
 
   <sect1 id="boot-shutdown">
     <title>Процесс остановки системы</title>
+    <indexterm>
+      <primary><command>shutdown</command></primary>
+    </indexterm>
 
     <para>Во время контролируемого процесса остановки системы через утилиту
-      <command>shutdown</command>, программа <command>init</command> будет
+      &man.shutdown.8; программа &man.init.8; будет
       пытаться запустить скрипт <filename>/etc/rc.shutdown</filename>, после
-      чего будет посылать всем процессам сигнал прекращения работы, и затем
-      сигнал принудительного прекращения работы тем процессам, которые не
-      завершили работу вовремя.</para>
+      чего будет посылать всем процессам сигнал <literal>TERM</literal>, а
+      затем и <literal>KILL</literal> тем процессам, которые ещё не завершили
+      свою работу.</para>
+
+    <para>Для выключения машины с FreeBSD на аппаратных платформах и системах,
+      которые поддерживают управление электропитанием, просто воспользуйтесь
+      командой <command>shutdown -p now</command> для немедленного отключения
+      электропитания.  Чтобы просто перезагрузить систему FreeBSD,
+      воспользуйтесь командой <command>shutdown -r now</command>.  Для запуска
+      команды &man.shutdown.8; вам необходимо быть пользователем
+      <username>root</username> или членом группы
+      <groupname>operator</groupname>.  Кроме того, можно также
+      воспользоваться командами &man.halt.8; и &man.reboot.8;, пожалуйста,
+      обратитесь к соответствующим страницам справки и справочной странице по
+      команде &man.shutdown.8; для получения дополнительной информации.</para>
+
+    <note>
+      <para>Для управления электропитанием требуется наличие поддержки
+        &man.acpi.4; в ядре или в виде загруженного модуля при использовании
+        FreeBSD&nbsp;5.X, а для FreeBSD&nbsp;4.X необходима поддержка
+        &man.apm.4;.</para>
+    </note>
   </sect1>
 </chapter>
 
