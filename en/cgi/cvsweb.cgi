@@ -28,7 +28,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.41 2000/05/22 08:52:43 hoek Exp $
+# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.42 2000/07/12 05:23:33 jdp Exp $
 #
 
 
@@ -72,7 +72,7 @@ require 'cgi-style.pl';
 %mirrors = (
 	    'Germany', 'http://www.de.FreeBSD.org/cgi/cvsweb.cgi',
 	    'Portugal', 'http://cvsup.pt.freebsd.org/cgi-bin/cvsweb/cvsweb.cgi',
-	    'Russian', 'http://www.FreeBSD.org.ua/cgi/cvsweb.cgi?cvsroot=freebsd',
+	    'Russia', 'http://www.FreeBSD.org.ua/cgi/cvsweb.cgi?cvsroot=freebsd',
 	    'Spain', 'http://www.es.FreeBSD.org/cgi/cvsweb.cgi',
 	    'USA, California', 'http://www.FreeBSD.org/cgi/cvsweb.cgi',
 	    'Japan', 'http://www.jp.FreeBSD.org/cgi/cvsweb.cgi',
