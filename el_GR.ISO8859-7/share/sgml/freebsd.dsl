@@ -5,14 +5,25 @@
 <!ENTITY % output.html  "IGNORE"> 
 <!ENTITY % output.print "IGNORE">
 <!ENTITY % output.print.niceheaders "IGNORE">
+<!ENTITY % lang.el.dsssl "IGNORE">
 ]>
 
 <style-sheet>
   <style-specification use="docbook">
     <style-specification-body>
+      <![ %lang.el.dsssl; [
+        (define %gentext-language% "el")
+      ]]>
+
       <!-- HTML only .................................................... -->
- 
-      <![ %output.html; [ 
+
+      <![ %output.html; [
+
+        <!-- Add a header with the correct character-set/encoding -->
+        (define %html-header-tags%
+	  '(("META" ("HTTP-EQUIV" "Content-Type")
+		    ("CONTENT" "text/html; charset=ISO-8859-7"))))
+
 
         <!-- Generate links to HTML man pages -->
         (define %refentry-xref-link% #t)
