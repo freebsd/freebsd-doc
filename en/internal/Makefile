@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/internal/Makefile,v 1.38 2003/11/24 23:30:29 trhodes Exp $
+# $FreeBSD: www/en/internal/Makefile,v 1.39 2004/03/10 09:09:18 linimon Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -31,8 +31,10 @@ INDEXLINK=	internal.html
 hostname!= hostname
 .if ${hostname} == "hub.freebsd.org" || ${hostname} == "freefall.freebsd.org" || ${hostname} == "www.freebsd.org"
 DOCS+=	homepage.sgml
-.PHONY: homepage.inc
 
+.if !make(install)
+.PHONY: homepage.inc
+.endif
 homepage.inc: homepage.pl
 	${PERL} ${.CURDIR}/homepage.pl > ${.TARGET}
 
