@@ -8,7 +8,7 @@
 #  GNU General Public License Version 2.  
 #     (http://www.gnu.ai.mit.edu/copyleft/gpl.html)
 #
-# $FreeBSD: www/en/cgi/dosendpr.cgi,v 1.15 2004/01/03 21:24:51 ceri Exp $
+# $FreeBSD: www/en/cgi/dosendpr.cgi,v 1.16 2004/02/16 14:34:23 ceri Exp $
 
 require "html.pl";
 
@@ -146,6 +146,11 @@ if (defined($codeentered) && $codeentered && $db_hash{$codeentered} &&
 }
 
 delete $db_hash{"$codeentered"};
+foreach $randomcode (keys %db_hash) {
+	if ( ($currenttime - $expiretime) <= $db_hash{$randomcode}) {
+		delete $db_hash{"$randomcode"};
+	}
+}
 $db_obj->sync();                   # to flush
 flock(DB_FH, LOCK_UN);
 undef $db_obj;                     # removing the last reference to the DB
