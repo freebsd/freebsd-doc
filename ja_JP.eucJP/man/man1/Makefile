@@ -10,6 +10,7 @@ MAN1 =	a2p.1\
 	awk.1\
 	basename.1\
 	bc.1\
+	bdes.1\
 	biff.1\
 	bison.1\
 	brandelf.1\
