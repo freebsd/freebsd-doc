@@ -7,11 +7,6 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS=	hardware.sgml relnotes.sgml schedule.sgml qa.sgml
-
-DATA=	docbook.css
-DATA+=	errata.html
-DATA+=	hardware-alpha.html hardware-i386.html
-DATA+=	relnotes-alpha.html relnotes-i386.html
+DOCS=	schedule.sgml qa.sgml
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
