@@ -5,7 +5,6 @@ MAN6 =	adventure.6\
 	banner.6\
 	battlestar.6\
 	bcd.6\
-	boggle.6\
 	bs.6\
 	caesar.6\
 	canfield.6\
