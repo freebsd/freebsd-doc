@@ -1,5 +1,5 @@
 # 
-# $FreeBSD$
+# $FreeBSD: doc/ru_RU.KOI8-R/books/porters-handbook/Makefile,v 1.1 2000/10/17 17:25:01 phantom Exp $
 # $FreeBSDru: frdp/doc/ru_RU.KOI8-R/books/porters-handbook/Makefile,v 1.2 2000/09/17 15:15:41 phantom Exp $
 #
 # Build the FreeBSD Porter's Handbook.
@@ -13,8 +13,6 @@ FORMATS?= html-split
 
 INSTALL_COMPRESSED?= gz
 INSTALL_ONLY_COMPRESSED?=
-
-NO_TIDY= YES
 
 # 
 # SRCS lists the individual SGML files that make up the document. Changes
