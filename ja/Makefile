@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.30 1999-04-09 14:17:59 kuriyama Exp $
+# $Id: Makefile,v 1.31 1999-04-12 13:18:47 wosch Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.48
 
@@ -61,7 +61,8 @@ SUBDIR+= java
 # Extern
 #SUBDIR+= tutorials
 
-DOCSUBDIR=     FAQ handbook
+DOCSUBDIR=     FAQ 
+#DOCSUBDIR=     FAQ handbook
 .endif
 
 # Subdirectories that have linuxdoc docs and makefiles that use
