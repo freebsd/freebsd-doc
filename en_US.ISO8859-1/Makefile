@@ -1,4 +1,4 @@
-#       $Id: Makefile,v 1.6 1999-09-03 17:24:38 nik Exp $
+# $FreeBSD$
 
 SUBDIR = articles
 SUBDIR+= books

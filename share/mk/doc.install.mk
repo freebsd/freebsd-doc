@@ -1,5 +1,5 @@
 #
-# $Id: doc.install.mk,v 1.1 1999-09-03 17:07:18 nik Exp $
+# $FreeBSD$
 #
 #
 # This include file <doc.install.mk> provides variables defining the default

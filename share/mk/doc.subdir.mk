@@ -1,7 +1,7 @@
 # Taken from:
 #	Id: bsd.subdir.mk,v 1.27 1999/03/21 06:43:40 bde
 #
-# $Id: doc.subdir.mk,v 1.1 1999-09-03 17:07:19 nik Exp $
+# $FreeBSD$
 #
 # This include file <doc.subdir.mk> contains the default targets
 # for building subdirectories in the FreeBSD Documentation Project.
