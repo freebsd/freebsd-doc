@@ -439,6 +439,7 @@ MLINKS+=nawk.1 awk.1
 MLINKS+=passwd.1 yppasswd.1
 MLINKS+=printenv.1 env.1
 MLINKS+=rtld.1 ld-elf.so.1.1
+MLINKS+=rtld.1 ld.so.1
 MLINKS+=tip.1 cu.1
 MLINKS+=tput.1 clear.1
 MLINKS+=tset.1 reset.1
