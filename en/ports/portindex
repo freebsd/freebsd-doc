@@ -1,0 +1,163 @@
+#!/usr/bin/perl
+
+# convert a ports INDEX file to HTML
+#
+# by John Fieber <jfieber@freebsd.org>
+# Mon May 13 10:31:58 EST 1996
+
+############################################################
+
+# This is the base of where we ftp stuff from
+$base = "ftp://ftp.freebsd.org/pub/FreeBSD/FreeBSD-current";
+
+$today = &getdate;
+
+&main;
+
+sub getdate {
+    @months = ("January", "February", "March", "April", "May","June",
+	       "July", "August", "September", "October", "November", "December");
+    ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
+    $year += 1900;
+    return "Updated $months[$mon] $mday, $year";
+}
+
+sub header {
+    local ($fh, $htext) = @_;
+    print $fh "<!DOCTYPE html PUBLIC \"-//W3C//DTD HTML 3.2//EN\" [\n";
+    print $fh "<!ENTITY base CDATA '..'>";
+    print $fh "<!ENTITY date  \"<em>$today</em>\">\n";
+    print $fh "<!ENTITY title '$htext'>";
+    print $fh "<!ENTITY blurb  SYSTEM \"ports.inc\">\n";
+    print $fh "<!ENTITY % includes SYSTEM \"../includes.sgml\">\n";
+    print $fh "%includes;\n";
+    print $fh "]>\n";
+    print $fh "<html>&header;\n";
+}
+
+sub footer {
+    local ($fh, $ftext) = @_;
+    print $fh "\n$ftext\n";
+    print $fh "&footer;\n";
+    print $fh "</BODY>\n</HTML>\n";
+}
+
+sub main {
+
+    while (<>) {
+	chop;
+    	s/</&lt;/g;
+    	s/>/&gt;/g;
+
+	($name, $loc, $prefix, $desc, $ldesc, $owner, $cats, 
+	    $keys, $bdep, $rdep) = split('\|');
+
+	@cat = split(" ", $cats);
+
+    	$catkey{$name} = $cat[0];
+
+	$sep = "<B>:</B>";
+
+	foreach $i (@cat) {
+
+	    $stats{$i}++;
+
+    	    # figure out the FTP url
+	    $loc =~ s/\/usr/$base/;
+#	    $loc =~ s/\/$name$//;
+	    $ldesc =~ s/\/usr/$base/;
+
+    	    # The name description and maintainer
+	    $data{$i} .= "<DT><B><A NAME=\"$name\">$name</A></B> <DD>$desc<BR>";
+    	    $ownerurl = $owner;
+    	    $ownerurl =~ s/&lt;/</g;
+    	    $owenrurl =~ s/&gt;/>/g;
+	    $data{$i} .= 
+		"<I>Maintained by:</I> <A HREF=\"mailto:$ownerurl\">$owner</A><BR>";
+
+    	    # If there are any dependencies, list them
+    	    if ($bdep ne "" || $rdep ne "") {
+    	    	$data{$i} .= "<I>Requires:</I> ";
+    	    	@dep = split(/ /, "$bdep $rdep");
+    	    	foreach $j (@dep) {
+    	    	    $data{$i} .= " <A HREF=\"##$j##.html#$j\">$j</A>,";
+    	    	}
+    	    	# remove the trailing comma
+    	    	chop $data{$i};
+    	    	$data{$i} .= "<BR>";
+    	    }
+
+    	    # Links for browsing and downloading
+	    $data{$i} .= "<A HREF=\"$ldesc\">Description</A> $sep ";
+	    $data{$i} .= "<A HREF=\"$loc\">Browse</A> $sep ";
+	    $data{$i} .= "<A HREF=\"$loc.tar.gz\">Download</A>";
+
+    	    # If the port is listed in more than one category, throw
+    	    # in some cross references
+    	    if ($#cat > 1) {
+    	    	$data{$i} .= "<BR><EM>Also listed in:</EM> ";
+    	    	foreach $j (@cat) {
+    	    	    if ($j ne $i) {
+    	    	    	$data{$i} .= " <A HREF=\"$j.html\">\u$j</A>,";
+    	    	    }
+    	    	}
+    	    	# remove the trailing comma
+    	    	chop($data{$i});
+    	    }
+    	    $data{$i} .= "<P></P></DD>\n"
+	}
+
+    	# Add an entry to the master index
+    	$master[$portnumber] = 
+    	    "<!-- $name --><STRONG><A HREF=\"$cat[0].html#$name\">$name</A></STRONG> " .
+    	    " -- <EM>$desc</EM><BR>\n";
+	$portnumber++;
+    }
+
+    open(MOUTF, ">index.sgml");
+
+    &header(MOUTF, "FreeBSD Ports");
+#    print MOUTF "<!--#include virtual=\"./ports.inc\" -->\n";
+    print MOUTF "&blurb;";
+    print MOUTF "<hr><P>There are currently $portnumber ports is the
+FreeBSD Ports Collection.<br> <A HREF=\"$base/ports.tar.gz\">Download
+a gzip'd tar file of all $portnumber ports</A> (about 2 megabytes) or
+browse the following categories:\n";
+
+    print MOUTF "<UL>\n";
+
+    @foos = sort(keys %stats);
+    foreach $key  (@foos) {
+	# For the master file...
+	print MOUTF 
+	    "<LI><A HREF=\"$key.html\">\u$key</A> <em>($stats{$key})</em></LI>";
+
+	# Create the category file
+	open(OUTF, ">$key.sgml");
+	&header(OUTF, "FreeBSD Ports: \u$key");
+	print OUTF "<DL>\n";
+	$d = join("\n", sort(split(/\n/, $data{$key})));
+    	$d =~ s/##([^#]*)##/$catkey{$1}/g;
+	print OUTF $d;
+	print OUTF "</DL>\n";
+	&footer(OUTF, "<HR><A HREF=\"index.html\">Port Categories</A>" .
+	    " -- <A HREF=\"master-index.html\">Index</A>");
+	close(OUTF);
+
+    }
+    print MOUTF "</UL>\n";
+    print MOUTF 
+    	"<UL><LI><A HREF=\"master-index.html\">Alphabetical list of all $portnumber ports</A></LI></UL>\n";
+    &footer(MOUTF, "");
+    close(MOUTF);
+
+    # Create the master index file
+    open(MINDEX, ">master-index.sgml");
+    &header(MINDEX, "FreeBSD Ports Collection Index");
+    print MINDEX "<P>\n";
+    print MINDEX sort @master;
+    print MINDEX "</P>";
+    &footer(MINDEX, "<HR><A HREF=\"index.html\">Port Categories</A>");
+    close(MINDEX);
+
+}
