@@ -1,0 +1,178 @@
+# This file: stage_1.conf.default, sourced by stage_1.sh.
+#
+# $Id: stage_1.conf.default,v 1.1 2004-01-03 15:46:31 schweikh Exp $
+# $FreeBSD$
+
+# Root mount point where you create the new system. Because it is only
+# used as a mount point, no space will be used on that file system as all
+# files are of course written to the mounted file system(s).
+DESTDIR="/newroot"
+
+# Where your src tree is.
+SRC="/usr/src"
+
+# Your kernel config name as from make buildkernel KERNCONF=...
+KERNCONF="HAL9000"
+
+# Available time zones are those under /usr/share/zoneinfo.
+TIMEZONE="Europe/Berlin"
+
+#
+# The create_file_systems function must create the mountpoints under
+# DESTDIR, create the file systems, and then mount them under DESTDIR.
+#
+create_file_systems () {
+  # The new root file system. Mandatory.
+  # Change DEVICE names or risk foot shooting.
+  # You must use newfs -O 1 for the root fs if you want to boot it from grub.
+  DEVICE=/dev/da0s1a
+  mkdir -p ${DESTDIR}
+  chown root:wheel ${DESTDIR}
+  newfs -O 1 ${DEVICE}
+  tunefs -n enable ${DEVICE}
+  mount -o noatime ${DEVICE} ${DESTDIR}
+
+  # Additional file systems and initial mount points. Optional.
+  DEVICE=/dev/da0s1e
+  newfs ${DEVICE}
+  tunefs -n enable ${DEVICE}
+  mkdir -m 755 ${DESTDIR}/var
+  chown root:wheel ${DESTDIR}/var
+  mount -o noatime ${DEVICE} ${DESTDIR}/var
+
+  DEVICE=/dev/da2s1e
+  newfs ${DEVICE}
+  tunefs -n enable ${DEVICE}
+  mkdir -m 755 ${DESTDIR}/usr
+  chown root:wheel ${DESTDIR}/usr
+  mount -o noatime ${DEVICE} ${DESTDIR}/usr
+}
+
+#
+# The create_etc_fstab function must create an fstab matching the
+# file systems created in create_file_systems.
+#
+create_etc_fstab () {
+  cat <<EOF >${DESTDIR}/etc/fstab
+# Device         Mountpoint          FStype    Options              Dump Pass#
+/dev/da0s1b      none                swap      sw                   0    0
+/dev/da1s2b      none                swap      sw                   0    0
+/dev/da2s2b      none                swap      sw                   0    0
+/dev/da3s2b      none                swap      sw                   0    0
+/dev/da0s1a      /                   ufs       rw,noatime           1    1
+/dev/da0s1e      /var                ufs       rw,noatime           1    1
+/dev/da2s1e      /usr                ufs       rw,noatime           1    1
+/dev/vinum/Share /share              ufs       rw,noatime           0    2
+/dev/vinum/home  /home               ufs       rw,noatime           0    2
+/dev/vinum/ncvs  /home/ncvs          ufs       rw,noatime           0    2
+/dev/vinum/ports /usr/ports          ufs       rw,noatime           0    2
+/dev/ad0s1       /2k                 ntfs      ro,noauto            0    0
+/dev/ad0s6       /linux              ext2fs    ro                   0    0
+#
+/dev/cd0         /cdrom              cd9660    ro,noauto            0    0
+/dev/cd1         /dvd                cd9660    ro,noauto            0    0
+proc             /proc               procfs    rw                   0    0
+linproc          /compat/linux/proc  linprocfs rw                   0    0
+EOF
+  chmod 644 ${DESTDIR}/etc/fstab
+  chown root:wheel ${DESTDIR}/etc/fstab
+}
+
+#
+# The copy_files function is used to copy files before mergemaster is run.
+#
+copy_files () {
+  # Add or remove from this list at your discretion. Mostly mandatory.
+  for f in \
+    /.profile \
+    /etc/group \
+    /etc/hosts \
+    /etc/inetd.conf \
+    /etc/ipfw.conf \
+    /etc/make.conf \
+    /etc/master.passwd \
+    /etc/nsswitch.conf \
+    /etc/ntp.conf \
+    /etc/printcap \
+    /etc/profile \
+    /etc/rc.conf \
+    /etc/resolv.conf \
+    /etc/start_if.xl0 \
+    /etc/ttys \
+    /etc/ppp/* \
+    /etc/mail/aliases \
+    /etc/mail/aliases.db \
+    /etc/mail/hal9000.mc \
+    /etc/mail/service.switch \
+    /etc/ssh/*key* \
+    /etc/ssh/*_config \
+    /etc/X11/XF86Config-4 \
+    /var/cron/tabs/root \
+    /var/files \
+    /root/.profile \
+    /boot/splash.bmp \
+    /boot/loader.conf \
+    /boot/device.hints ; do
+    cp -p ${f} ${DESTDIR}${f}
+  done
+}
+
+#
+# Everything else you want to tune in the new system.
+# NOTE: Do not install too many binaries here. With the old system running and
+# the new binaries and headers installed you are likely to run into bootstrap
+# problems. Ports should be compiled after you have booted in the new system.
+#
+all_remaining_customization () {
+  # Without the compat symlink the linux_base files end up on the root fs:
+  cd ${DESTDIR}
+  mkdir -m 755 usr/compat; chown root:wheel usr/compat; ln -s usr/compat
+  mkdir -m 755 usr/compat/linux;      chown root:wheel usr/compat/linux
+  mkdir -m 555 usr/compat/linux/proc; chown root:wheel usr/compat/linux/proc
+  mkdir -m 755 boot/grub;             chown root:wheel boot/grub
+  mkdir -m 755 linux 2k;              chown root:wheel linux 2k
+  mkdir -m 755 src;                   chown root:wheel src
+  mkdir -m 755 share;                 chown root:wheel share
+  mkdir -m 755 dvd cdrom;             chown root:wheel dvd cdrom
+  mkdir -m 755 home;                  chown root:wheel home
+  mkdir -m 755 usr/ports;             chown root:wheel usr/ports
+
+  # My personal preference is to symlink tmp -> var/tmp. Optional.
+  cd ${DESTDIR}; rmdir tmp; ln -s var/tmp
+
+  # Make spooldirs for the printers in my /etc/printcap.
+  cd ${DESTDIR}/var/spool/output/lpd; mkdir -p as od ev te lp da
+  touch ${DESTDIR}/var/log/lpd-errs
+
+  # If you do not have /home on a shared partition, you may want to copy it:
+  # mkdir -p ${DESTDIR}/home
+  # cd /home; tar cf - . | (cd ${DESTDIR}/home; tar xpvf -)
+
+  case ${REVISION} in
+  4.*)
+    # 4.x without devfs: create non-standard devices to match your hardware.
+    cd ${DESTDIR}/dev
+    ./MAKEDEV all
+    ./MAKEDEV da0 da0s1h da0s2h da0s3h da0s4h
+    ./MAKEDEV da1 da1s1h da1s2h da1s3h da1s4h
+    ./MAKEDEV da2 da2s1h da2s2h da2s3h da2s4h
+    ./MAKEDEV da3 da3s1h da3s2h da3s3h da3s4h
+    ./MAKEDEV bktr0 cd1
+    if test -d /dev/vinum; then
+      # 'vinum makedev' can only create devices in /dev, thus use cpio.
+      cd /dev; find vinum -print | cpio -pv ${DESTDIR}/dev
+    fi
+    ;;
+
+  5.*)
+    # Starting with FreeBSD 5.x, perl lives in /usr/local/bin but many scripts
+    # use a hardcoded #!/usr/bin/perl; use a symlink to make them work.
+    # Effectively mandatory.
+    cd ${DESTDIR}/usr/bin; ln -s ../local/bin/perl
+    ;;
+
+  esac
+}
+
+# vim: tabstop=2:expandtab:shiftwidth=2:syntax=sh:
+# EOF $RCSfile: stage_1.conf.default,v $

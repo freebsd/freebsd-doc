@@ -5,6 +5,7 @@
 # It is a good idea to make sure any target can be made more than
 # once without ill effect.
 #
+# $Id: stage_3.mk,v 1.2 2004-01-03 15:46:31 schweikh Exp $
 # $FreeBSD$
 
 .POSIX:
@@ -12,10 +13,11 @@
 message:
 	@echo "Please use one of the following targets:"
 	@echo "config_apache"
+	@echo "config_firebird"
 	@echo "config_inn"
 	@echo "config_javaplugin"
+	@echo "config_nullplugin"
 	@echo "config_privoxy"
-	@echo "config_setiathome"
 	@echo "config_sgml"
 	@echo "config_sudo"
 	@echo "config_TeX"
@@ -23,11 +25,14 @@ message:
 	@echo "config_uucp"
 	@echo "all -- all of the above"
 
-all: config_apache \
+
+all: \
+	config_apache \
+	config_firebird \
 	config_inn \
 	config_javaplugin \
+	config_nullplugin \
 	config_privoxy \
-	config_setiathome \
 	config_sgml \
 	config_sudo \
 	config_TeX \
@@ -39,6 +44,7 @@ config_apache:
 	perl -pi \
 	-e 's/#ServerName new.host.name/ServerName hal9000.s.shuttle.de/;' \
 	-e 's/^ServerAdmin.*/ServerAdmin schweikh\@schweikhardt.net/;' \
+	-e 's/^Listen.*/Listen 127.0.0.1:80/;' \
 	-e 's,/usr/local/www/cgi-bin/,/home/opt/www/cgi-bin/,;' \
 	  /usr/local/etc/apache2/httpd.conf
 	# 2. Restore symlinks to web pages.
@@ -46,11 +52,29 @@ config_apache:
 	ln -fs /home/schweikh/prj/homepage schweikhardt.net; \
 	ln -fs /home/opt/www/test .
 
+config_firebird:
+	# Make this group wheel writable to allow extensions being installed.
+	chmod -R g+w /usr/X11R6/lib/firebird/lib/mozilla-1.5/chrome
+
 config_inn:
 	pw usermod -n news -d /usr/local/news -s /bin/sh
+	mkdir -p /share/news/spool/outgoing \
+	         /share/news/spool/incoming \
+	         /share/news/spool/articles \
+	         /share/news/spool/overview \
+	         /share/news/spool/tmp      \
+	         /share/news/db
+	chown -R news:news /share/news
 	# Give the news system its initial configuration.
 	cd /home/root/setup; \
-	install -C -o news -g news -m 664 active newsgroups /usr/local/news/db
+	if test ! -f /share/news/db/active; then \
+		echo "installing /share/news/db/active"; \
+		install -C -o news -g news -m 664 active /share/news/db; \
+	fi; \
+	if test ! -f /share/news/db/newsgroups; then \
+		echo "installing /share/news/db/newsgroups"; \
+		install -C -o news -g news -m 664 newsgroups /share/news/db; \
+	fi
 	# The innd.sh that comes with the port is broken, it
 	# checks for history.pag which does not exist.
 	cd /home/root/setup; \
@@ -71,29 +95,56 @@ config_inn:
 	>/usr/local/news/etc/newsfeeds
 	# Configure inn.conf.
 	perl -pi                                                   \
-	-e 's/^(organization:\s*).*/$$1 An Open Pod Bay Door/;'    \
+	-e 's/^(organization:\s*).*/$$1 "An Open Pod Bay Door"/;'  \
 	-e 's/^(pathhost:\s*).*/$$1 hal9000.schweikhardt.net/;'    \
 	-e 's/^(server:).*/$$1 localhost/;'                        \
 	-e 's/^(domain:).*/$$1 schweikhardt.net/;'                 \
 	-e 's/^(fromhost:).*/$$1 schweikhardt.net/;'               \
 	-e 's,^(moderatormailer:).*,$$1 \%s\@moderators.isc.org,;' \
+	-e 's,^(pathdb:\s*).*,$$1/share/news/db,;'                 \
 	-e 's,/usr/local/news/spool,/share/news/spool,;'           \
 	/usr/local/news/etc/inn.conf
+	# Create empty history, if none there.
+	# See post-install in /usr/ports/news/inn-stable/Makefile.
+	cd /share/news/db; \
+	if test ! -f history; then \
+		touch history; \
+		chmod 644 history; \
+		chown news:news history; \
+		su -fm news -c "/usr/local/news/bin/makedbz -i"; \
+		for s in dir hash index; do \
+			mv history.n.$${s} history.$${s}; \
+		done; \
+	fi
+	# Satisfy inncheck:
+	cd /usr/local/news/etc; \
+	chown news:news *; \
+	chmod 640 control.ctl expire.ctl nntpsend.ctl readers.conf
+	/usr/local/news/bin/inncheck
 
 config_javaplugin:
-	cd /usr/local/lib/netscape-linux/plugins; \
-	if ! test -h javaplugin.so; then \
-		ln -s ../../../linux-sun-jdk1.3.1/jre/plugin/i386/ns4/javaplugin.so; \
-	fi; \
-	ls -l javaplugin.so
+	# Mozilla Firebird:
+	cd /usr/X11R6/lib/firebird/lib/mozilla-1.5/plugins; \
+	ln -fs /usr/local/jdk1.4.2/jre/plugin/i386/ns610/libjavaplugin_oji.so
+	# Plain Mozilla:
+	cd /usr/X11R6/lib/mozilla/plugins; \
+	ln -fs /usr/local/jdk1.4.2/jre/plugin/i386/ns610/libjavaplugin_oji.so
+
+# Move the nullplugin out of the way. With a .mozilla/*/*/prefs.js entry of
+# user_pref("plugin.display_plugin_downloader_dialog", false);
+# this suppresses popup dialogs for unavailable plugins (flash, shockwave, ...)
+NULLPLUGINS = /usr/X11R6/lib/mozilla/libnullplugin.so \
+              /usr/X11R6/lib/mozilla/plugins/libnullplugin.so
+config_nullplugin:
+	for p in $(NULLPLUGINS); do \
+	    if test -r $$p; then    \
+	        mv $$p $$p.orig;    \
+	    fi;                     \
+	done
 
 config_privoxy:
 	install -C -o root -g wheel -m 644 config /usr/local/etc/privoxy
-
-config_setiathome:
-	perl -pi \
-	-e 's,^.*seti_wrkdir.*#,seti_wrkdir=/home/nobody/setiathome #,;' \
-	/usr/local/etc/rc.setiathome.conf
+	install -C -o root -g wheel -m 755 privoxy.sh /usr/local/etc/rc.d
 
 config_sgml:
 	cp -p /usr/local/share/gmat/sgml/ISO_8879-1986/entities/* \
@@ -117,13 +168,14 @@ config_TeX:
 
 config_tin:
 	# Point tin to our files.
-	printf "%s\n%s\n%s\n"                              \
-		"activefile=/usr/local/news/db/active"         \
-		"newsgroupsfile=/usr/local/news/db/newsgroups" \
-		"spooldir=/share/news/spool/articles"          \
+	printf "%s\n%s\n%s\n"                          \
+		"activefile=/share/news/db/active"         \
+		"newsgroupsfile=/share/news/db/newsgroups" \
+		"spooldir=/share/news/spool/articles"      \
 	>/usr/local/etc/tin.defaults
 
 config_uucp:
+	cd /etc/mail; make install SENDMAIL_MC=/etc/mail/hal9000.mc
 	# UUCP expects to find /usr/bin/rnews.
 	cd /usr/bin; ln -fs ../local/news/bin/rnews .
 	# Actual UUCP configuration.
@@ -143,4 +195,5 @@ config_uucp:
 	# Trigger uucico after booting.
 	mkdir -p /usr/local/etc/rc.d; cp uucp.sh /usr/local/etc/rc.d
 
-# EOF $RCSfile: stage_3.mk,v $    vim: tabstop=4:
+# vim: tabstop=4:
+# EOF $RCSfile: stage_3.mk,v $
