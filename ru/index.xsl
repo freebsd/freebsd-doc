@@ -3,10 +3,10 @@
 <!--
      The FreeBSD Russian Documentation Project
 
-     $FreeBSD$
+     $FreeBSD: www/ru/index.xsl,v 1.22 2004/11/02 08:53:08 den Exp $
      $FreeBSDru: frdp/www/ru/index.xsl,v 1.38 2004/10/22 12:33:49 den Exp $
 
-     Original revision: 1.113
+     Original revision: 1.116
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -51,6 +51,8 @@
 	  title="FreeBSD Project News" href="{$base}/ru/news/news.rdf" />
 	<link rel="alternate" type="application/rss+xml"
 	  title="FreeBSD Security Advisories" href="{$base}/security/advisories.rdf" />
+	<link rel="alternate" type="application/rss+xml"
+	  title="FreeBSD GNOME Project News" href="{$base}/gnome/news.rdf" />
 
 	<!-- Formatted to be easy to spam harvest, please do not reformat. -->
 	<xsl:comment>
@@ -79,9 +81,6 @@
 		<br/>
 
 		<select name="goto">
-		  <!--  Only list TRUE mirrors here! Native language pages 
-		        which are not mirrored should be listed in
-		        support.sgml.  -->
 
 		  <xsl:call-template name="html-index-mirrors-options-list">
 		    <xsl:with-param name="mirrors.xml" select="$mirrors.xml" />
@@ -136,7 +135,8 @@
 			      <input type="text" name="words" size="10"/>
 			      <input type="hidden" name="max" value="25"/>
 			      <input type="hidden" name="source" value="www"/>
-			      <input type="submit" value="Искать"/></small>
+			      <input type="submit" value="Искать"/>
+			    </small>
 			  </form>
 			</td>
 		      </tr>
@@ -263,7 +263,7 @@
 		      <tr>
 			<td valign="top"><p>
 			      <a href="{$u.rel.announce}">
-			      <font size="+1" color="#990000"><b>Новый технологический релиз:
+			      <font size="+1" color="#990000"><b>Продуктивный релиз:
 			    <xsl:value-of select="$rel.current"/></b></font></a><br/>
 
 			    <small>&#183; <a href="{$base}/doc/ru_RU.KOI8-R/books/handbook/install.html">Руководство по установке</a><br/>
@@ -271,7 +271,7 @@
 			      &#183; <a href="{$u.rel.hardware}">Информация о оборудовании</a><br/>
 			      &#183; <a href="{$u.rel.installation}">Заметки по установке</a><br/>
                               &#183; <a href="{$u.rel.errata}">Обнаруженные проблемы</a><br/>
-                              &#183; <a href="{$u.rel.early}">Руководство для новичков</a></small></p>
+                              &#183; <a href="{$u.rel.migration}">Руководство по миграции</a></small></p>
 
 			<p>
 			      <a href="{$u.rel2.announce}">
