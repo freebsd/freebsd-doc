@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/it/index.xsl,v 1.1 2003/03/20 00:10:51 trhodes Exp $ -->
+<!-- $FreeBSD: www/it/index.xsl,v 1.2 2003/03/25 18:22:59 trhodes Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -9,7 +9,7 @@
 
   <xsl:variable name="base" select="'.'"/>
   <xsl:variable name="enbase" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/it/index.xsl,v 1.1 2003/03/20 00:10:51 trhodes Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/it/index.xsl,v 1.2 2003/03/25 18:22:59 trhodes Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -357,7 +357,7 @@
 		statuette alla FreeBSD Foundation.  La storia completa e le
 		informazioni su come ordinare il Demone BSD sono disponibili a
  		<a href="http://www.linuxjewellery.com/beastie/">questa
- 		  pagina.</a></p>
+ 		  pagina</a>.</p>
 	    </td>
 
 	    <td></td>
