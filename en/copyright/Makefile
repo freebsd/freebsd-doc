@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/copyright/Makefile,v 1.9 1999/09/19 11:10:34 wosch Exp $
+# $FreeBSD: www/en/copyright/Makefile,v 1.10 2000/11/07 04:05:13 kuriyama Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -31,7 +31,7 @@ CLEANFILES+= ${LEGAL}
 ${LEGAL}: $${PORTSBASE}/${LEGAL_FILE}
 	cp ${PORTSBASE}/${LEGAL_FILE} ${LEGAL}
 .else
-${LEGAL}: $${CVSROOT}/${LEGAL_FILE},v
+${LEGAL}:
 	cvs ${CVS_OPT} co -p ${LEGAL_FILE} > ${.TARGET}
 .endif
 
