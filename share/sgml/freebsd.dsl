@@ -1,4 +1,4 @@
-<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.36 2001/07/16 05:00:20 murray Exp $ -->
+<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.37 2001/07/17 02:22:29 murray Exp $ -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
 <!ENTITY % output.html		"IGNORE">
@@ -197,6 +197,33 @@
       <![ %output.print; [
         (define withpgpkeys
           #f)
+
+        ;; If a link is entered as "file://localhost/usr/ports" in the docs
+        ;; then we only want to display "/usr/ports" in printed form.
+
+        (define (fix-url url)
+          (if (and (> (string-length url) 15)
+		   (string=? (substring url 0 16) "file://localhost"))
+              (substring url 16 (string-length url))
+              url))
+          
+        (element ulink 
+          (make sequence
+            (if (node-list-empty? (children (current-node)))
+   	      (literal (fix-url (attribute-string (normalize "url"))))
+  	      (make sequence
+	        ($charseq$)
+	        (if %footnote-ulinks%
+	            ($ss-seq$ + (literal (footnote-number (current-node))))
+	            (if (and %show-ulinks% 
+		             (not (equal? (fix-url (attribute-string (normalize "url")))
+				          (data-of (current-node)))))
+  	   	        (make sequence
+		          (literal " (")
+		          (literal (fix-url (attribute-string (normalize "url"))))
+		          (literal ")"))
+		        (empty-sosofo)))))))
+
 
         (define (toc-depth nd)
           (if (string=? (gi nd) (normalize "book"))
