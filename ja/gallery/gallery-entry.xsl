@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
-<!-- Original revision: 1.2 -->
+<!-- Original revision: 1.3 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -12,7 +12,7 @@
 
   <xsl:variable name="base" select="'..'"/>
   
-  <xsl:variable name="date" select="'$FreeBSD: www/ja/gallery/gallery-entry.xsl,v 1.2 2002/02/28 11:22:53 kuriyama Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/ja/gallery/gallery-entry.xsl,v 1.3 2002/05/13 20:09:03 hrs Exp $'"/>
 
   <xsl:output type="html" encoding="EUC-JP"/>
 
