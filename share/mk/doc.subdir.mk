@@ -121,7 +121,6 @@ _SUBDIRUSE: .USE
 .if !defined(NOINCLUDEMK)
 
 .include <bsd.obj.mk>
-.include <bsd.subdir.mk>
 
 .else
 

@@ -512,12 +512,14 @@ ${DOC}.tex: ${SRCS} ${LOCAL_IMAGES_EPS} ${INDEX_SGML} ${PRINT_INDEX} \
 ${DOC}.tex-ps: ${DOC}.tex
 	${LN} -f ${.ALLSRC} ${.TARGET}
 
+.if !target(${DOC}.tex-pdf)
 ${DOC}.tex-pdf: ${SRCS} ${IMAGES_PDF} ${INDEX_SGML} ${PRINT_INDEX} \
 		${LOCAL_IMAGES_TXT}
 	${RM} -f ${.TARGET}
 	${CAT} ${PDFTEX_DEF} > ${.TARGET}
 	${JADE} -V tex-backend ${PRINTOPTS} -ioutput.print.pdf \
 		${JADEOPTS} -t tex -o /dev/stdout ${MASTERDOC} >> ${.TARGET}
+.endif
 
 ${DOC}.dvi: ${DOC}.tex ${LOCAL_IMAGES_EPS}
 .for _curimage in ${LOCAL_IMAGES_EPS:M*share*}
@@ -530,6 +532,7 @@ ${DOC}.dvi: ${DOC}.tex ${LOCAL_IMAGES_EPS}
 	@${ECHO} "==> TeX pass 3/3"
 	-${TEX} "&jadetex" '${TEXCMDS} \nonstopmode\input{${DOC}.tex}'
 
+.if !target(${DOC}.pdf)
 ${DOC}.pdf: ${DOC}.tex-pdf ${IMAGES_PDF}
 .for _curimage in ${IMAGES_PDF:M*share*}
 	${CP} -p ${_curimage} ${.CURDIR:H:H}/${_curimage:H:S|${IMAGES_EN_DIR}/||:S|${.CURDIR}||}
@@ -540,6 +543,7 @@ ${DOC}.pdf: ${DOC}.tex-pdf ${IMAGES_PDF}
 	-${PDFTEX} "&pdfjadetex" '${TEXCMDS} \nonstopmode\input{${DOC}.tex-pdf}'
 	@${ECHO} "==> PDFTeX pass 3/3"
 	${PDFTEX} "&pdfjadetex" '${TEXCMDS} \nonstopmode\input{${DOC}.tex-pdf}'
+.endif
 
 ${DOC}.ps: ${DOC}.dvi
 	${DVIPS} ${DVIPSOPTS} -o ${.TARGET} ${.ALLSRC}
@@ -794,12 +798,14 @@ install-${_curformat}.tar.${_compressext}: ${DOC}.${_curformat}.tar.${_compresse
 .endfor
 .else
 .for _compressext in ${KNOWN_COMPRESS}
+.if !target(install-${_curformat}.${_compressext})
 install-${_curformat}.${_compressext}: ${DOC}.${_curformat}.${_compressext}
 	@[ -d ${DESTDIR} ] || ${MKDIR} -p ${DESTDIR}
 	${INSTALL_DOCS} ${.ALLSRC} ${DESTDIR}
 .if ${_cf} == "pdb"
 	${LN} -f ${DESTDIR}/${.ALLSRC} \
 		 ${DESTDIR}/${.CURDIR:T}.${_curformat}.${_compressext}
+.endif
 .endif
 .endfor
 .endif
