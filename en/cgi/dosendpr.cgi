@@ -8,7 +8,7 @@
 #  GNU General Public License Version 2.  
 #     (http://www.gnu.ai.mit.edu/copyleft/gpl.html)
 #
-# $FreeBSD: www/en/cgi/dosendpr.cgi,v 1.4 2000/11/29 13:48:17 wosch Exp $
+# $FreeBSD: www/en/cgi/dosendpr.cgi,v 1.5 2001/05/07 19:28:09 wosch Exp $
 
 require "html.pl";
 
@@ -69,7 +69,7 @@ if (!$cgi_data{'email'} || !$cgi_data{'originator'} ||
 
 # Build the PR.
 $pr = "To: $gnemail\n" .
-      "From: $cgi_data{'email'}\n" . 
+      "From: $cgi_data{'synopsis'} <$cgi_data{'email'}>\n" . 
       "Subject: $cgi_data{'synopsis'}\n" .
       "X-Send-Pr-Version: www-1.0\n\n" .
       ">Submitter-Id:\t$cgi_data{'submitterid'}\n" .
