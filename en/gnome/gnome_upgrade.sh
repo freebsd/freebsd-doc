@@ -34,7 +34,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $Id: gnome_upgrade.sh,v 1.7 2004-08-23 03:44:46 marcus Exp $
+# $Id: gnome_upgrade.sh,v 1.8 2004-08-23 22:04:37 adamw Exp $
 #
 
 # This script will aid in doing major upgrades to the GNOME Desktop (e.g.
@@ -44,6 +44,7 @@ GNOME_UPGRADE_SH_VER=42;	# This should be nailed down before releasing
 
 ## BEGIN global variable declarations.
 VERBOSE=${VERBOSE:=0}
+WATCH_BUILD=${WATCH_BUILD:=0}
 PORTSDIR=${PORTSDIR:=/usr/ports}
 LOCALBASE=${LOCALBASE:=/usr/local}
 X11BASE=${X11BASE:=/usr/X11R6}
@@ -53,7 +54,7 @@ SUPPORT_EMAIL="freebsd-gnome@FreeBSD.org"
 
 SUPPORTED_FREEBSD_VERSIONS="4.9 4.10 5.2 5.2.1 5.3 6.0"
 	# Ports that must be up-to-date and installed for the Big Update to work
-EXTERNAL_DEPENDS="popt gettext* libiconv expat pkgconfig freetype2 XFree86-libraries* Xft libXft XFree86-fontScalable* XFree86-fontEncodings* png libaudiofile tiff jpeg libxml2 python libxslt gnomehier scrollkeeper intltool p5-XML-Parser docbook-sk xmlcatmgr docbook-xsl docbook-xml sdocbook-xml startup-notification gnome-icon-theme Hermes sox libmpeg2 guile libltdl aspell gle cdrtools mkisofs bitstream-vera openldap-client lcms libmng libtool ghostscript* gnomeuserdocs2"
+EXTERNAL_DEPENDS="popt gettext* libiconv expat pkgconfig freetype2 XFree86-libraries* Xft libXft XFree86-fontScalable* XFree86-fontEncodings* xorg* png libaudiofile tiff jpeg libxml2 python libxslt gnomehier scrollkeeper intltool p5-XML-Parser docbook-sk xmlcatmgr docbook-xsl docbook-xml sdocbook-xml startup-notification gnome-icon-theme Hermes sox libmpeg2 guile libltdl aspell gle cdrtools mkisofs bitstream-vera openldap-client lcms libmng libtool ghostscript* gnomeuserdocs2"
 EXTERNAL_4_DEPENDS="libgnugetopt"
 EXTERNAL_5_DEPENDS="perl-5*"
 EXTERNAL_6_DEPENDS="perl-5*"
@@ -71,6 +72,8 @@ POSTINSTALL_PORTS=""
 	# Ports that need to be rebuilt after the Big Update
 	# (Make sure to include upstream dependencies!)
 REINSTALL_PORTS="libgtop2 gnomesystemmonitor gdesklets gnomeapplets2 gnome2 gnomevfs2 libgnome AbiWord2* gnome2-office"
+	# Variables to be set across every portupgrade run
+PORTUPGRADE_MAKE_ENV="GNOME_UPGRADE_SH_VER=${GNOME_UPGRADE_SH_VER}"
 
 # the following exists to resolve chicken-and-egg dependency problems.
 #
@@ -172,7 +175,8 @@ run_portupgrade()
     target="$1"
     logfile=$2
 
-    PORTUPGRADE_MAKE_ENV="${PORTUPGRADE_MAKE_ENV} GNOME_UPGRADE_SH_VER=${GNOME_UPGRADE_SH_VER}"
+    # insert custom env variables here, if necessary
+    PORTUPGRADE_MAKE_ENV="${PORTUPGRADE_MAKE_ENV}"
 
     echo "===> Running ${PORTUPGRADE} -O -m "BATCH=yes ${PORTUPGRADE_MAKE_ENV}" ${PORTUPGRADE_ARGS} ${target}" >> ${logfile}
     if [ ${VERBOSE} != 0 ]; then
@@ -222,6 +226,9 @@ if [ $? != 0 ]; then
     echo "===> Failed to create temporary logfile."
     exit 1
 fi
+if [ ${WATCH_BUILD} != 0 ]; then
+    tail -f ${logfile} &
+fi
 
 if [ ${VERBOSE} != 0 ]; then
     echo "INFO: PORTSDIR = ${PORTSDIR}"
@@ -231,6 +238,9 @@ echo "INFO: PORTSDIR = ${PORTSDIR}" >> ${logfile}
 echo "You can watch the upgrade process in real-time by running:"
 echo "		tail -f ${logfile}"
 echo "INFO: logfile = ${logfile}" >> ${logfile}
+if [ ${VERBOSE} != 0 ]; then
+    echo "or by defining WATCH_BUILD in your environment."
+fi
 
 major_version=`echo ${version} | /usr/bin/cut -d'.' -f1`
 eval "EXTERNAL_DEPENDS=\"${EXTERNAL_DEPENDS} \${EXTERNAL_${major_version}_DEPENDS}\""
