@@ -2,7 +2,7 @@
 # The FreeBSD French Documentation Project
 #
 # $FreeBSD$
-# $Id: Makefile,v 1.9 2002-10-12 21:47:11 blackend Exp $
+# $Id: Makefile,v 1.10 2002-10-24 16:57:25 blackend Exp $
 # Original revision: 1.61
 #
 # Build the FreeBSD Handbook.
@@ -107,13 +107,13 @@ IMAGES+= ../../../en_US.ISO8859-1/books/handbook/install/example-dir2.eps
 IMAGES+= ../../../en_US.ISO8859-1/books/handbook/install/example-dir3.eps
 IMAGES+= ../../../en_US.ISO8859-1/books/handbook/install/example-dir4.eps
 IMAGES+= ../../../en_US.ISO8859-1/books/handbook/install/example-dir5.eps
-#IMAGES+= vinum/vinum-concat.pic
-#IMAGES+= vinum/vinum-mirrored-vol.pic
-#IMAGES+= vinum/vinum-raid10-vol.pic
-#IMAGES+= vinum/vinum-raid5-org.pic
-#IMAGES+= vinum/vinum-simple-vol.pic
-#IMAGES+= vinum/vinum-striped-vol.pic
-#IMAGES+= vinum/vinum-striped.pic
+IMAGES+= ../../../en_US.ISO8859-1/books/handbook/vinum/vinum-concat.pic
+IMAGES+= ../../../en_US.ISO8859-1/books/handbook/vinum/vinum-mirrored-vol.pic
+IMAGES+= ../../../en_US.ISO8859-1/books/handbook/vinum/vinum-raid10-vol.pic
+IMAGES+= ../../../en_US.ISO8859-1/books/handbook/vinum/vinum-raid5-org.pic
+IMAGES+= ../../../en_US.ISO8859-1/books/handbook/vinum/vinum-simple-vol.pic
+IMAGES+= ../../../en_US.ISO8859-1/books/handbook/vinum/vinum-striped-vol.pic
+IMAGES+= ../../../en_US.ISO8859-1/books/handbook/vinum/vinum-striped.pic
 
 # Images from the cross-document image library
 IMAGES_LIB=  callouts/1.png
