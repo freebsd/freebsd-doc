@@ -13,7 +13,7 @@ INSTALL_COMPRESSED?= gz
 INSTALL_ONLY_COMPRESSED?=
 
 # 
-#WITH_ARTICLE_TOC?=YES
+WITH_ARTICLE_TOC?=YES
 
 # SGML content
 SRCS= article.sgml fase_1.sh fase_2.sh fase_3.mk
