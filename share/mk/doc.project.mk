@@ -1,5 +1,5 @@
 #
-# $FreeBSD$
+# $FreeBSD: doc/share/mk/doc.project.mk,v 1.2 1999/09/06 06:53:39 peter Exp $
 #
 # This include file <doc.project.mk> is the FreeBSD Documentation Project 
 # co-ordination make file.
@@ -66,6 +66,9 @@ PRI_LANG?=	en_US.ISO_8859-1
 .if defined(DOC)
 .if ${DOCFORMAT} == "docbook"
 .include "doc.docbook.mk"
+.endif
+.if ${DOCFORMAT} == "html"
+.include "doc.html.mk"
 .endif
 .endif
 
