@@ -2,7 +2,7 @@
      The FreeBSD Documentation Project
      The FreeBSD French Documentation Project
 
-     $Id: freebsd.dsl,v 1.6 2002-06-19 19:05:23 blackend Exp $
+     $Id: freebsd.dsl,v 1.7 2002-06-29 13:26:59 blackend Exp $
      $FreeBSD$
      Original revision: 1.3
 
@@ -29,7 +29,7 @@
             (make element gi: "p"
                   attributes: (list (list "align" "center"))
               (make element gi: "small"
-                (literal "Ce document, ainsi que d'autres peut etre téléchargé a ")
+                (literal "Ce document, ainsi que d'autres peut être téléchargé sur ")
                 (make element gi: "a"
                       attributes: (list (list "href" "ftp://ftp.FreeBSD.org/pub/FreeBSD/doc"))
                   (literal "ftp.FreeBSD.org/pub/FreeBSD/doc/"))
@@ -37,7 +37,7 @@
             (make element gi: "p"
                   attributes: (list (list "align" "center"))
               (make element gi: "small"  
-                (literal "Pour toutes questions a propos de FreeBSD, lisez la ")
+                (literal "Pour toutes questions à propos de FreeBSD, lisez la ")
                 (make element gi: "a"
                       attributes: (list (list "href" "http://www.freebsd.org/docs.html"))
                   (literal "documentation"))
