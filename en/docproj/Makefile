@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/docproj/Makefile,v 1.8 2000/11/07 04:05:14 kuriyama Exp $
+# $FreeBSD: www/en/docproj/Makefile,v 1.9 2001/07/31 00:24:23 murray Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -10,6 +10,7 @@
 DOCS=   current.sgml 
 DOCS+=	doc-set.sgml
 DOCS+=	handbook.sgml
+DOCS+=	handbook3.sgml
 DOCS+=  sgml.sgml
 DOCS+=  submitting.sgml
 DOCS+=  who.sgml 
