@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.56 2004/08/25 03:26:37 adamw Exp $ -->
+<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.57 2004/09/17 01:32:51 marcus Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
 		xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -9,7 +9,7 @@
   <xsl:import href="includes.xsl"/>
 
   <xsl:variable name="base" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.56 2004/08/25 03:26:37 adamw Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.57 2004/09/17 01:32:51 marcus Exp $'"/>
   <xsl:variable name="title" select="'FreeBSD GNOME Project'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -61,6 +61,7 @@
                             <small><br/>
                               &#183; <a href="http://www.gnome.org/">GNOME Project</a><br/>
 			      &#183; <a href="http://gnomedesktop.org">FootNotes</a><br/>
+			      &#183; <a href="http://www.gnomejournal.org">GNOME Journal</a><br/>
 			      &#183; <a
 				href="http://www.gnomefiles.org">GNOME
 				Files</a><br/>
@@ -128,17 +129,27 @@
 			    "<a href="http://www.gnome.org/about/">What is GNOME?</a>"
 			    page.</p>
 
+		<!--
 		<h2><font color="#990000">Upgrading to GNOME 2.6?</font></h2>
 
 		<p>If you are upgrading from GNOME 2.4 to GNOME 2.6, read the
 		  <a href="docs/faq26.html">Upgrade FAQ</a> for upgrade
 		  instructions, and be sure to use the
 		  <a href="gnome_upgrade.sh">upgrade script</a>!</p>
+		  -->
 
               <h2><font color="#990000">State of the port</font></h2>
 
+	      <p>Ports of GNOME 2.8 are ready, but unfortunately we're in the middle
+	        of <a href="/releases/5.3R/schedule.html">FreeBSD 5.3-RELEASE</a>
+		<a href="/doc/en_US.ISO8859-1/articles/committers-guide/ports.html#Q12.3.1">ports freeze</a>,
+		preventing us from updating GNOME in the FreeBSD ports tree until after
+		5.3 is released.  In the meantime you can get 2.8 ports from our
+		<a href="docs/develfaq.html">development server</a> and packages
+		from <a href="docs/faq2.html#q21">Tinderbox</a>.</p>
+
 	      <p>GNOME for FreeBSD is currently supported on 4.9,
-		4.10, 5.2.1, -STABLE, and -CURRENT.  Most of GNOME has been
+		4.10, 5.2.1, 5.3, 4-STABLE, 5-STABLE and 6-CURRENT.  Most of GNOME has been
 		ported to FreeBSD, but there is still
 		<a href="docs/volunteer.html">plenty left to be done</a>!</p>
 
