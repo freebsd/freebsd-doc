@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/it/index.xsl,v 1.2 2003/03/25 18:22:59 trhodes Exp $ -->
+<!-- $FreeBSD: www/it/index.xsl,v 1.3 2003/04/05 14:53:54 trhodes Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -9,7 +9,7 @@
 
   <xsl:variable name="base" select="'.'"/>
   <xsl:variable name="enbase" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/it/index.xsl,v 1.2 2003/03/25 18:22:59 trhodes Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/it/index.xsl,v 1.3 2003/04/05 14:53:54 trhodes Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -67,7 +67,8 @@
 		  <option value="http://www2.br.FreeBSD.org/www.freebsd.org/">Brasile/2</option>
 		  <option value="http://www3.br.FreeBSD.org/">Brasile/3</option>
 		  <option value="http://www.bg.FreeBSD.org/">Bulgaria</option>
-		  <option value="http://www.ca.FreeBSD.org/">Canada</option>
+		  <option value="http://www.ca.FreeBSD.org/">Canada/1</option>
+		  <option value="http://www2.ca.FreeBSD.org/">Canada/2</option>
 		  <option value="http://www.cn.FreeBSD.org/">Cina</option>
 		  <option value="http://www.kr.FreeBSD.org/">Corea</option>
 		  <option value="http://www2.kr.FreeBSD.org/">Corea/2</option>
@@ -197,6 +198,7 @@
 			      &#183; <a href="{$enbase}/projects/newbies.html">Per i Niubbi</a><br/>
 			      &#183; <a href="{$enbase}/doc/it_IT.ISO8859-15/books/handbook/index.html">Manuale</a><br/>
 			      &#183; <a href="{$enbase}/doc/en_US.ISO8859-1/books/faq/index.html">FAQ</a><br/>
+			      &#183; <a href="http://www.FreeBSD.org/cgi/man.cgi">Pagine man</a><br/>
 			      &#183; <a href="{$enbase}/docproj/index.html">Doc. Project</a><br/>
 			      &#183; <a href="docs.html">Altro...</a><br/>
 			    </small></p>
@@ -270,7 +272,8 @@
 
 	      <p>FreeBSD è un sistema operativo avanzato per architetture
 		compatibili x86, DEC Alpha, IA-64, PC-98 e UltraSPARC.
-		È derivato da BSD UNIX, la versione di UNIX sviluppata
+		È derivato da BSD, la versione di
+		<xsl:value-of select="$unix"/> sviluppata
 		all'Università della California, Berkeley.
 		È sviluppato e mantenuto da <a
 		  href="{$enbase}/doc/en_US.ISO8859-1/articles/contributors/index.html">un
@@ -300,8 +303,8 @@
 
 	      <p>La qualità di FreeBSD combinata con l'attuale hardware per PC a
 	        basso prezzo e ad alta velocità rende FreeBSD un'alternativa
-	        molto economica alle workstation UNIX commerciali.  Si adatta
-	        molto bene a un gran numero di <a
+	        molto economica alle workstation <xsl:value-of select="$unix"/>
+	        commerciali.  Si adatta molto bene a un gran numero di <a
 	          href="{$enbase}/applications.html">applicazioni</a> sia
 	        desktop che server.</p>
 
@@ -309,7 +312,7 @@
 
 	      <p>FreeBSD può essere installato da una varietà di supporti,
 	        inclusi CD-ROM, DVD-ROM, floppy disk, nastri magnetici,
-	        partizioni MS-DOS, o, se hai una connessione di rete, puoi
+	        partizioni MS-DOS&#174;, o, se hai una connessione di rete, puoi
 	        installarlo <i>direttamente</i> tramite FTP anonimo o NFS.
 	        Tutto quello di cui hai bisogno è un paio di dischetti vuoti da
 	        1.44MB e <a
@@ -539,7 +542,7 @@
 		<xsl:value-of select="$date"/></small></td>
 
 	    <td align="right"
-		valign="top"><small><a href="{$enbase}/copyright/index.html">Copyright</a> (c) 1995-2003
+		valign="top"><small><a href="{$enbase}/copyright/index.html">Note legali</a> &#169; 1995-2003
 		The FreeBSD Project.<br/>
 		Tutti i diritti riservati.</small></td>
 	  </tr>
