@@ -33,6 +33,7 @@ SRCS+= l10n/chapter.sgml
 SRCS+= policies/chapter.sgml
 SRCS+= secure/chapter.sgml
 SRCS+= sockets/chapter.sgml
+SRCS+= testing/chapter.sgml
 SRCS+= tools/chapter.sgml
 SRCS+= x86/chapter.sgml
 
