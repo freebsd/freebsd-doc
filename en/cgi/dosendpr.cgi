@@ -8,7 +8,7 @@
 #  GNU General Public License Version 2.  
 #     (http://www.gnu.ai.mit.edu/copyleft/gpl.html)
 #
-# $FreeBSD: www/en/cgi/dosendpr.cgi,v 1.3 2000/11/29 13:39:37 wosch Exp $
+# $FreeBSD: www/en/cgi/dosendpr.cgi,v 1.4 2000/11/29 13:48:17 wosch Exp $
 
 require "html.pl";
 
@@ -31,6 +31,7 @@ if ($gndb =~ /^[a-z]+$/ && -e "$gndb.def")
 else
   { &prerror("gndb problem"); }
 
+&prerror("request method problem") if $ENV{'REQUEST_METHOD'} eq 'GET';
 
 # Configuration
 if ($gnhow eq "mail")
