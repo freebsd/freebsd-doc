@@ -42,8 +42,8 @@
 # SUCH DAMAGE.
 #
 # $zId: cvsweb.cgi,v 1.94 2000/08/24 06:41:22 hnordstrom Exp $
-# $Id: cvsweb.cgi,v 1.48 2000-08-25 09:21:00 knu Exp $
-# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.47 2000/08/15 08:47:40 knu Exp $
+# $Id: cvsweb.cgi,v 1.49 2000-09-03 18:45:10 knu Exp $
+# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.48 2000/08/25 09:21:00 knu Exp $
 #
 ###
 
@@ -54,8 +54,8 @@ use vars qw (
     %CVSROOT %CVSROOTdescr %MIRRORS %DEFAULTVALUE %ICONS %MTYPES
     %alltags @tabcolors %fileinfo %tags @branchnames %nameprinted
     %symrev %revsym @allrevisions %date %author @revdisplayorder
-    @revisions %state %difflines %log %branchpoint @revorder $prcgi
-    @prcategories $prcategories
+    @revisions %state %difflines %log %branchpoint @revorder
+    $prcgi @prcategories $prcategories $mancgi
     $checkoutMagic $doCheckout $scriptname $scriptwhere
     $where $pathinfo $Browser $nofilelinks $maycompress @stickyvars
     %funcline_regexp $is_mod_perl
@@ -354,6 +354,7 @@ foreach my $k (keys %ICONS) {
 do "$config-$cvstree" if (-f "$config-$cvstree");
 
 $prcategories = '(?:' . join('|', @prcategories) . ')';
+$prcgi .= '%s' if defined($prcgi) && $prcgi !~ /%s/;
 
 $fullname = $cvsroot . '/' . $where;
 $mimetype = &getMimeTypeFromSuffix ($fullname);
@@ -893,7 +894,7 @@ sub findLastModifiedSubdirs(@) {
 }
 
 sub htmlify($;$) {
-	my($string, $pr) = @_;
+	my($string, $extra) = @_;
 
 	# Special Characters; RFC 1866
 	$string =~ s/&/&amp;/g;
@@ -902,14 +903,21 @@ sub htmlify($;$) {
 	$string =~ s/>/&gt;/g;
 
 	# get URL's as link ..
-	$string =~ s`(http|ftp|https)(://[-a-zA-Z0-9%.~:_/]+)([?&]([-a-zA-Z0-9%.~:_]+)=([-a-zA-Z0-9%.~:_])+)*`<A HREF="$1$2$3">$1$2$3</A>`;
+	$string =~ s`(http|ftp|https)(://[-a-zA-Z0-9%.~:_/]+)([?&]([-a-zA-Z0-9%.~:_]+)=([-a-zA-Z0-9%.~:_])+)*`<A HREF="$1$2$3">$1$2$3</A>`g;
 	# get e-mails as link
-	$string =~ s`([-a-zA-Z0-9_.]+@([-a-zA-Z0-9]+\.)+[A-Za-z]{2,4})`<A HREF="mailto:$1">$1</A>`;
+	$string =~ s`([-a-zA-Z0-9_.]+@([-a-zA-Z0-9]+\.)+[A-Za-z]{2,4})`<A HREF="mailto:$1">$1</A>`g;
 
-	# get #PR as link ..
-	if ($pr && defined($prcgi)) {
-	    1 while $string =~ s`\b(pr[:#]?\s*(?:#?\d+[,\s]\s*)*#?)(\d+)\b`$1<A HREF="$prcgi$2">$2</A>`i;
-	    $string =~ s`\b${prcategories}/(\d+)\b`<A HREF="$prcgi$1">$&</A>`igo;
+	if ($extra) {
+	    # get PR #'s as link ..
+	    if (defined($prcgi)) {
+		1 while $string =~ s`\b(pr[:#]?\s*(?:#?\d+[,\s]\s*)*#?)(\d+)\b`sprintf('%s<A HREF="%s">%s</A>', $1, sprintf($prcgi, $2), $2)`ie;
+		$string =~ s`\b${prcategories}/(\d+)\b`sprintf('<A HREF="%s">%s</A>', sprintf($prcgi, $1), $&)`igeo;
+	    }
+
+	    # get manpage specs as link ..
+	    if (defined($mancgi)) {
+		$string =~ s`\b([a-zA-Z]\w+)\(([0-9n])\)\B`sprintf('<A HREF="%s">%s</A>', sprintf($mancgi, $2, $1), $&)`ge;
+	    }
 	}
 
 	return $string;
@@ -2389,7 +2397,7 @@ sub navigateHeader($$$$$) {
     $swhere = urlencode($filename) if ($swhere eq "");
     print "<\!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\">";
     print "<HTML>\n<HEAD>\n";
-    print '<!-- CVSweb $zRevision: 1.94 $  $Revision: 1.48 $ -->';
+    print '<!-- CVSweb $zRevision: 1.94 $  $Revision: 1.49 $ -->';
     print "\n<TITLE>$path$filename - $title - $rev</TITLE></HEAD>\n";
     print  "<BODY BGCOLOR=\"$backcolor\">\n";
     print "<table width=\"100%\" border=0 cellspacing=0 cellpadding=1 bgcolor=\"$navigationHeaderColor\">";
@@ -2741,7 +2749,7 @@ sub http_header(;$) {
 
 sub html_header($) {
     my ($title) = @_;
-    my $version = '$zRevision: 1.94 $  $Revision: 1.48 $'; #'
+    my $version = '$zRevision: 1.94 $  $Revision: 1.49 $'; #'
     http_header();
 
     (my $header = &cgi_style::html_header) =~ s/^.*\n\n//; # remove HTTP response header
