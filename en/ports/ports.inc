@@ -1,9 +1,20 @@
-<!-- $FreeBSD: www/en/ports/ports.inc,v 1.64 2002/07/11 14:51:43 bmah Exp $ -->
+<!-- $FreeBSD: www/en/ports/ports.inc,v 1.65 2003/02/22 22:00:07 brueffer Exp $ -->
 <p>The FreeBSD Ports and Packages Collection offers a simple way for
 users and administrators to install applications.  The ports
 collection has been <a
 href="growth/status.png">growing at a
 tremendous rate</a>.
+</p>
+
+<p>The Ports Collection supports the latest release on the
+FreeBSD-CURRENT and FreeBSD-STABLE branches.  Older releases are not
+supported and may or may not work correctly with an up-to-date ports
+collection.  Over time, changes to the ports collection may rely on
+features that are not present in older releases.  Wherever convenient,
+we try not to gratuitously break support for recent releases, but it
+is sometimes unavoidable.  When this occurs, patches contributed by
+the user community to maintain support for older releases will usually
+be committed.
 </p>
 
 <p>Each ``port'' listed here
