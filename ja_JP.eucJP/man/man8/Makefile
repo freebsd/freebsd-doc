@@ -39,6 +39,7 @@ MAN8 =	IPXrouted.8\
 	crash.8\
 	cron.8\
 	cvsbug.8\
+	daemon.8\
 	dev_mkdb.8\
 	dhclient-script.8\
 	dhclient.8\
@@ -182,8 +183,11 @@ MAN8 =	IPXrouted.8\
 	ntptrace.8\
 	pac.8\
 	pam.8\
+	pam_opie.8\
+	pam_opieaccess.8\
 	pam_radius.8\
 	pam_ssh.8\
+	pam_tacplus.8\
 	pccardc.8\
 	pccardd.8\
 	pciconf.8\
