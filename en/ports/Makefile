@@ -1,4 +1,4 @@
-#	$Id: Makefile,v 1.17 1999-03-11 19:42:24 scrappy Exp $
+#	$Id: Makefile,v 1.18 1999-03-11 20:16:05 scrappy Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -50,6 +50,6 @@ Makefile.gen: index.sgml .NOTMAIN
 
 index.sgml: ${INDEX} ${Y2K} ${WWW} packages.exists portindex ports.inc .NOTMAIN
 	rm -f *.sgml
-	${PORTINDEX} ${INDEX}
+	${PORTINDEX} ${INDEX} {$Y2K} ${WWW}
 
 .include "../web.mk"
