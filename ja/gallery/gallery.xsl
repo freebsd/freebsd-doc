@@ -7,7 +7,7 @@
 
   <xsl:variable name="base" select="'..'"/>
   <xsl:variable name="title" select="'The FreeBSD Gallery'"/>  
-  <xsl:variable name="date" select="'$FreeBSD$'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/ja/gallery/gallery.xsl,v 1.1 2001/09/05 08:35:15 kuriyama Exp $'"/>
 
   <xsl:output type="html" encoding="EUC-JP"/>
 
@@ -17,9 +17,9 @@
       <body xsl:use-attribute-sets="att.body">
 	<xsl:copy-of select="$header2"/>
 
-	<p>世界中で, 革新的なインターネットアプリケーションやサービスが
-	  FreeBSD で動作しています. このギャラリーは FreeBSD を利用している
-	  <xsl:value-of select="count(//entry)"/> の組織や個人の一覧です.
+	<p>世界中で、革新的なインターネットアプリケーションやサービスが
+	  FreeBSD で動作しています。このギャラリーは FreeBSD を利用している
+	  <xsl:value-of select="count(//entry)"/> の組織や個人の一覧です。
 	  ぜひ FreeBSD が <b>あなたのために</b>何ができるのかを
 	  もっと調べてみて下さい!</p>
 
@@ -35,9 +35,9 @@
 	      </a></li>
 	</ul>
 
-	<p>あなたのサイトをこのリストに追加するには, 単に
+	<p>あなたのサイトをこのリストに追加するには、単に
 	  <a href="http://www.FreeBSD.org/cgi/gallery.cgi">このフォーム</a>
-	  を埋めるだけです.</p>
+	  を埋めるだけです。</p>
 
 	<table width="100%" border="0">
 	  <tr>
@@ -74,12 +74,12 @@
 
 	<p>上の "Powered by FreeBSD" のロゴは
 	  <a href="../../gifs/powerlogo.gif">ダウンロードして</a> FreeBSD
-	  を利用している個人や商用のホームページで表示させても構いません.
+	  を利用している個人や商用のホームページで表示させても構いません。
 	  このロゴまたは <a href="../copyright/daemon.html">BSD デーモン</a>
 	  およびその類似物を営利目的で使用する場合は
 	  <a href="mailto:taob@risc.org">Brian Tao</a> ("power"ロゴの作者) や
 	  <a href="mailto:mckusick@mckusick.com">Marshall Kirk McKusick</a>
-	  (BSD デーモンの肖像の登録商標保持者) への承諾が必要です.</p>
+	  (BSD デーモンの肖像の登録商標保持者) への承諾が必要です。</p>
 
 	<xsl:copy-of select="$footer"/>
       </body>

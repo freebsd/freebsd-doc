@@ -12,7 +12,7 @@
 
   <xsl:variable name="base" select="'..'"/>
   
-  <xsl:variable name="date" select="'$FreeBSD$'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/ja/gallery/gallery-entry.xsl,v 1.1 2001/09/05 08:35:15 kuriyama Exp $'"/>
 
   <xsl:output type="html" encoding="EUC-JP"/>
 
@@ -29,28 +29,28 @@
 
   <xsl:variable name="commercial-intro">
     <p>FreeBSD は革新的な Internet アプリケーションやサービスを
-      世界中に提供しています.
+      世界中に提供しています。
       このギャラリーは FreeBSD を利用している商業団体のショーケース
-      となっています.
-      FreeBSD が <b>あなたに</b> 何をしてくれるのかを見つけてください.
+      となっています。
+      FreeBSD が <b>あなたに</b> 何をしてくれるのかを見つけてください。
     </p>
   </xsl:variable>
 
   <xsl:variable name="nonprofit-intro">
     <p>FreeBSD は革新的な Internet アプリケーションやサービスを
-      世界中に提供しています.
+      世界中に提供しています。
       このギャラリーは FreeBSD を利用している非営利団体のショーケース
-      となっています.
-      FreeBSD が <b>あなたに</b> 何をしてくれるのかを見つけてください.
+      となっています。
+      FreeBSD が <b>あなたに</b> 何をしてくれるのかを見つけてください。
     </p>
   </xsl:variable>
 
   <xsl:variable name="personal-intro">
     <p>FreeBSD は革新的な Internet アプリケーションやサービスを
-      世界中に提供しています.
+      世界中に提供しています。
       このギャラリーは FreeBSD を利用している個人のショーケース
-      となっています.
-      FreeBSD が <b>あなたに</b> 何をしてくれるのかを見つけてください.
+      となっています。
+      FreeBSD が <b>あなたに</b> 何をしてくれるのかを見つけてください。
     </p>
   </xsl:variable>
 
