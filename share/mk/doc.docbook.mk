@@ -681,11 +681,34 @@ ${DOC}.${_curformat}.${_curcompress}:
 # Redefine them to do things before and after the files are installed,
 # respectively.
 
-spellcheck:
+populate_html_docs:
+.if exists(HTML.manifest)
+_html_docs!=${CAT} HTML.manifest
+.endif
+
+spellcheck-html-split: populate_html_docs
+.for _html_file in ${_html_docs}
+	@echo "Spellcheck ${_html_file}"
+	@${HTML2TXT} ${HTML2TXTOPTS} ${.CURDIR}/${_html_file} | ${ISPELL} ${ISPELLOPTS}
+.endfor
+spellcheck-html:
 .for _entry in ${_docs}
 	@echo "Spellcheck ${_entry}"
 	@${HTML2TXT} ${HTML2TXTOPTS} ${.CURDIR}/${_entry} | ${ISPELL} ${ISPELLOPTS}
 .endfor
+spellcheck-txt:
+.for _entry in ${_docs:M*.txt}
+	@echo "Spellcheck ${_entry}"
+	@ < ${.CURDIR}/${_entry} ${ISPELL} ${ISPELLOPTS}
+.endfor
+.for _curformat in ${FORMATS}
+.if !target(spellcheck-${_curformat})
+spellcheck-${_curformat}:
+	@echo "Spellcheck is not currently supported for the ${_curformat} format."
+.endif
+.endfor
+
+spellcheck: ${FORMATS:C/^/spellcheck-/}
 
 indexreport:
 .for _entry in ${SRCS:M*.sgml}
