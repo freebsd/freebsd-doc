@@ -8,7 +8,7 @@ DOC?= article
 FORMATS?= html
 
 INSTALL_COMPRESSED?= gz
-INSTALL_ONLY_COMPRESSED?= true
+INSTALL_ONLY_COMPRESSED?=
 
 # SGML content
 SRCS=  article.sgml branches.ascii
