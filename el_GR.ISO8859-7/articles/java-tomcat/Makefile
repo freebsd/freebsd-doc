@@ -6,7 +6,7 @@
 # Makefile for "Java and FreeBSD First Steps"
 # Author: Victoria Chan, Hiten Pandya
 
-MAINTAINER=vkchan@kendryl.net hiten@uk.FreeBSD.org
+MAINTAINER=keramida@FreeBSD.org
 
 DOC?= article
 
@@ -17,5 +17,6 @@ INSTALL_ONLY_COMPRESSED?=
 
 SRCS=	article.sgml
 
+URL_RELPREFIX?=		../../../..
 DOC_PREFIX?= ${.CURDIR}/../../..
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"
