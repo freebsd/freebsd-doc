@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/it/includes.xsl,v 1.5 2003/12/13 10:56:11 blackend Exp $ -->
+<!-- $FreeBSD: www/it/includes.xsl,v 1.6 2004/01/08 11:46:08 ale Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -61,8 +61,11 @@
 
     <xsl:value-of select="document($advisories.xml)/descendant::day[position() = 1]/name"/>
     <xsl:text> </xsl:text>
-    <xsl:call-template name="translate-month">
-      <xsl:with-param name="month" select="document($advisories.xml)/descendant::month[position() = 1]/name"/>
+    <xsl:call-template name="transtable-lookup">
+      <xsl:with-param name="word-group" select="'number-month'" />
+      <xsl:with-param name="word">
+	<xsl:value-of select="document($advisories.xml)/descendant::month[position() = 1]/name"/>
+      </xsl:with-param>
     </xsl:call-template>
     <xsl:text> </xsl:text>
     <xsl:value-of select="document($advisories.xml)/descendant::year[position() = 1]/name"/>
@@ -114,43 +117,14 @@
 
     <xsl:value-of select="document($news.project.xml)/descendant::day[position() = 1]/name"/>
     <xsl:text> </xsl:text>
-    <xsl:call-template name="translate-month">
-      <xsl:with-param name="month" select="document($news.project.xml)/descendant::month[position() = 1]/name"/>
+    <xsl:call-template name="transtable-lookup">
+      <xsl:with-param name="word-group" select="'number-month'" />
+      <xsl:with-param name="word">
+	<xsl:value-of select="document($news.project.xml)/descendant::month[position() = 1]/name"/>
+      </xsl:with-param>
     </xsl:call-template>
     <xsl:text> </xsl:text>
     <xsl:value-of select="document($news.project.xml)/descendant::year[position() = 1]/name"/>
-  </xsl:template>
-
-  <!-- template: "html-index-news-press-items-lastmodified" -->
-
-  <xsl:template name="html-index-news-press-items-lastmodified">
-    <xsl:param name="news.press.xml" select="''" />
-
-    <xsl:call-template name="translate-month">
-      <xsl:with-param name="month" select="document($news.press.xml)/descendant::month[position() = 1]/name"/>
-    </xsl:call-template>
-    <xsl:text> </xsl:text>
-    <xsl:value-of select="document($news.press.xml)/descendant::year[position() = 1]/name"/>
-  </xsl:template>
-
-  <!-- Translate month name -->
-
-  <xsl:template name="translate-month">
-    <xsl:param name="month"/>
-    <xsl:choose>
-      <xsl:when test="$month = 'January'">Gennaio</xsl:when>
-      <xsl:when test="$month = 'February'">Febbraio</xsl:when>
-      <xsl:when test="$month = 'March'">Marzo</xsl:when>
-      <xsl:when test="$month = 'April'">Aprile</xsl:when>
-      <xsl:when test="$month = 'May'">Maggio</xsl:when>
-      <xsl:when test="$month = 'June'">Giugno</xsl:when>
-      <xsl:when test="$month = 'July'">Luglio</xsl:when>
-      <xsl:when test="$month = 'August'">Agosto</xsl:when>
-      <xsl:when test="$month = 'September'">Settembre</xsl:when>
-      <xsl:when test="$month = 'October'">Ottobre</xsl:when>
-      <xsl:when test="$month = 'November'">Novembre</xsl:when>
-      <xsl:when test="$month = 'December'">Dicembre</xsl:when>
-    </xsl:choose>
   </xsl:template>
 
   <xsl:variable name="u.rel.notes">
