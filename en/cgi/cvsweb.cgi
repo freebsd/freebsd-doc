@@ -42,9 +42,9 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $Id: cvsweb.cgi,v 1.73 2001-06-05 10:59:20 knu Exp $
-# $Idaemons: /home/cvs/cvsweb/cvsweb.cgi,v 1.74 2001/06/05 04:46:21 knu Exp $
-# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.72 2001/05/10 17:46:04 knu Exp $
+# $Id: cvsweb.cgi,v 1.74 2001-07-06 09:58:17 knu Exp $
+# $Idaemons: /home/cvs/cvsweb/cvsweb.cgi,v 1.78 2001/07/06 09:49:01 knu Exp $
+# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.73 2001/06/05 10:59:20 knu Exp $
 #
 ###
 
@@ -86,7 +86,7 @@ use vars qw (
     $tabstop $state $annTable $sel $curbranch @HideModules
     $module $use_descriptions %descriptions @mytz $dwhere $moddate
     $use_moddate $has_zlib $gzip_open
-    $allow_tar @tar_options @gzip_options @cvs_options
+    $allow_tar @tar_options @gzip_options @zip_options @cvs_options
     $LOG_FILESEPARATOR $LOG_REVSEPARATOR
 );
 
@@ -140,8 +140,8 @@ sub forbidden_module($);
 ##### Start of Configuration Area ########
 delete $ENV{PATH};
 
-$cvsweb_revision = '1.106' . '.' . (split(/ /,
- q$Idaemons: /home/cvs/cvsweb/cvsweb.cgi,v 1.74 2001/06/05 04:46:21 knu Exp $
+$cvsweb_revision = '1.110' . '.' . (split(/ /,
+ q$Idaemons: /home/cvs/cvsweb/cvsweb.cgi,v 1.78 2001/07/06 09:49:01 knu Exp $
 ))[2];
 
 use File::Basename;
@@ -171,7 +171,7 @@ $allow_version_select = 1;
 # These are defined to allow checking with perl -cw
 @CVSrepositories = @CVSROOT = %CVSROOT =
 %MIRRORS = %DEFAULTVALUE = %ICONS = %MTYPES =
-%tags = %alltags = @tabcolors = ();
+%tags = %alltags = @tabcolors = %fileinfo = ();
 $cvstreedefault = $body_tag = $body_tag_for_src =
 $logo = $defaulttitle = $address =
 $long_intro = $short_instruction = $shortLogLen =
@@ -234,7 +234,7 @@ $LOG_REVSEPARATOR = q/^-{28}$/;
 ##### End of configuration variables #####
 
 $cgi_style::hsty_base = 'http://www.FreeBSD.org';
-$_ = q$FreeBSD: www/en/cgi/cvsweb.cgi,v 1.72 2001/05/10 17:46:04 knu Exp $;
+$_ = q$FreeBSD: www/en/cgi/cvsweb.cgi,v 1.73 2001/06/05 10:59:20 knu Exp $;
 @_ = split;
 $cgi_style::hsty_date = "@_[3,4]";
 
@@ -532,7 +532,8 @@ if ($input{tarball}) {
     &fatal("403 Forbidden", "Downloading tarballs is prohibited.")
       unless $allow_tar;
     my($module) = ($where =~ m,^/?(.*),);	# untaint
-    $module =~ s,/[^/]*$,,;
+    $module =~ s,/([^/]*)$,,;
+    my($ext) = ($1 =~ /(\.tar\.gz|\.zip)$/);
     my($basedir) = ($module =~ m,([^/]+)$,);
 
     if ($basedir eq '' || $module eq '') {
@@ -544,30 +545,34 @@ if ($input{tarball}) {
     mkdir($tmpdir, 0700)
       or &fatal("500 Internal Error", "Unable to make temporary directory: $!");
 
-    my $fatal = '';
+    my @fatal;
 
-    while (1) {
-	my $tag = (exists $input{only_with_tag} && length $input{only_with_tag})
-	  ? $input{only_with_tag} : "HEAD";
+    my $tag = (exists $input{only_with_tag} && length $input{only_with_tag})
+      ? $input{only_with_tag} : "HEAD";
 
-	system $CMD{cvs}, @cvs_options, '-Qd', $cvsroot, 'export', '-r', $tag, '-d', "$tmpdir/$basedir", $module
-	  and $fatal = "500 Internal Error","cvs co failure: $!: $module"
-	    && last;
-
+    if (system $CMD{cvs}, @cvs_options, '-Qd', $cvsroot, 'export', '-r', $tag, '-d', "$tmpdir/$basedir", $module) {
+	@fatal = ("500 Internal Error", "cvs co failure: $!: $module");
+    } else {
 	$| = 1; # Essential to get the buffering right.
 
-	print "Content-type: application/x-gzip\r\n\r\n";
+	if ($ext eq '.tar.gz') {
+	    print "Content-type: application/x-gzip\r\n\r\n";
 
-	system "$CMD{tar} @tar_options -cf - -C $tmpdir $basedir | $CMD{gzip} @gzip_options -c"
-	  and $fatal = "500 Internal Error","tar zc failure: $!: $basedir"
-	    && last;
+	    system "$CMD{tar} @tar_options -cf - -C $tmpdir $basedir | $CMD{gzip} @gzip_options -c"
+	      and @fatal = ("500 Internal Error", "tar zc failure: $!: $basedir");
+	} elsif ($ext eq '.zip' && $CMD{zip}) {
+	    print "Content-type: application/zip\r\n\r\n";
 
-	last;
+	    system "cd $tmpdir && $CMD{zip} @zip_options -r - $basedir"
+	      and @fatal = ("500 Internal Error", "zip failure: $!: $basedir");
+	} else {
+	    @fatal = ("500 Internal Error", "unsupported file type");
+	}
     }
 
     system $CMD{rm}, '-rf', $tmpdir if -d $tmpdir;
 
-    &fatal($fatal) if $fatal;
+    &fatal(@fatal) if @fatal;
 
     exit;
 }
@@ -922,13 +927,19 @@ if (-d $fullname) {
 
 	    if (defined($basefile) && $basefile ne '') {
 		print "<HR NOSHADE>\n",
-		  "<DIV align=center>",
-		    &link("Download this directory in tarball",
-			  # Mangle the filename so browsers show a reasonable
-			  # filename to download.
-			  "./$basefile.tar.gz$query".
-			  ($query ? "&" : "?")."tarball=1"),
-			    "</DIV>";
+		  "<DIV align=center>Download this directory in ";
+		# Mangle the filename so browsers show a reasonable
+		# filename to download.
+		print &link("tarball",
+			    "./$basefile.tar.gz$query".
+			    ($query ? "&" : "?")."tarball=1");
+		if ($CMD{zip}) {
+		    print " or ",
+		      &link("zip archive",
+			    "./$basefile.zip$query".
+			    ($query ? "&" : "?")."tarball=1");
+		}
+		print "</DIV>";
 	    }
 	}
 
@@ -1333,7 +1344,7 @@ sub search_path($) {
 	return "$d/$command" if -x "$d/$command";
     }
 
-    $command;
+    '';
 }
 
 sub getMimeTypeFromSuffix($) {
@@ -1636,6 +1647,7 @@ sub doCheckout($$) {
 
     # Parse CVS header
     my ($revision, $filename, $cvsheader);
+    $filename = "";
     while(<$fh>) {
 	last if (/^\*\*\*\*/);
 	$revision = $1 if (/^VERS: (.*)$/);
