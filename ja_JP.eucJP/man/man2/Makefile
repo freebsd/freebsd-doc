@@ -140,6 +140,7 @@ MAN2 =	_exit.2\
 	sigstack.2\
 	sigsuspend.2\
 	sigvec.2\
+	sigwait.2\
 	socket.2\
 	socketpair.2\
 	stat.2\
