@@ -12,15 +12,19 @@ MAINTAINER= schweikh@FreeBSD.org
 INSTALL_COMPRESSED?= gz
 INSTALL_ONLY_COMPRESSED?=
 
-# SGML content
-SRCS= article.sgml stage_1.conf.default stage_1.sh stage_2.conf.default \
-	 stage_2.sh stage_3.mk
+EXTRAS=		stage_1.conf.default
+EXTRAS+=	stage_1.sh
+EXTRAS+=	stage_2.conf.default
+EXTRAS+=	stage_2.sh
+EXTRAS+=	stage_3.mk
 
-DOC_PREFIX?= ${.CURDIR}/../../..
+SRCS=		article.sgml
+SRCS+=		${EXTRAS}
 
 afterinstall:
-	${INSTALL_DOCS} ${.CURDIR}/stage_1.sh ${.CURDIR}/stage_1.conf.default \
-	    ${.CURDIR}/stage_2.sh ${.CURDIR}/stage_2.conf.default \
-	    ${.CURDIR}/stage_3.mk ${DESTDIR}
+.for entry in ${EXTRAS}
+	${INSTALL_DOCS} ${.CURDIR}/${entry} ${DESTDIR}
+.endfor
 
+DOC_PREFIX?= ${.CURDIR}/../../..
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"

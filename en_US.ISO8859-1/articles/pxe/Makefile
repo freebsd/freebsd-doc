@@ -1,4 +1,7 @@
+#
 # $FreeBSD$
+#
+# Article: FreeBSD PXE Jumpstart Guide
 
 DOC?= article
 
@@ -7,13 +10,19 @@ FORMATS?= html
 INSTALL_COMPRESSED?=gz
 INSTALL_ONLY_COMPRESSED?=
 
-SRCS= article.sgml
+EXTRAS=		dhcpd.conf
+EXTRAS+=	install.cfg
+EXTRAS+=	loader.rc
+EXTRAS+=	pkgmaker.sh
+EXTRAS+=	post
+EXTRAS+=	pre
 
-DOC_PREFIX?= ${.CURDIR}/../../..
+SRCS=	article.sgml
 
 afterinstall:
-	${INSTALL_DOCS} ${.CURDIR}/dhcpd.conf ${.CURDIR}/install.cfg \
-	    ${.CURDIR}/loader.rc ${.CURDIR}/pkgmaker.sh \
-	    ${.CURDIR}/post ${.CURDIR}/pre ${DESTDIR}
+.for entry in ${EXTRAS}
+	${INSTALL_DOCS} ${.CURDIR}/${entry} ${DESTDIR}
+.endfor
 
+DOC_PREFIX?= ${.CURDIR}/../../..
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"

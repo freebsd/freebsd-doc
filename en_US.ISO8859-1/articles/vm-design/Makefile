@@ -1,18 +1,21 @@
+#
 # $FreeBSD$
+#
+# Article: Design elements of the FreeBSD VM system
 
 DOC?= article
 
 FORMATS?= html
-
-IMAGES_EN=	fig1.eps fig2.eps fig3.eps fig4.eps
+WITH_ARTICLE_TOC?= YES
 
 INSTALL_COMPRESSED?=gz
 INSTALL_ONLY_COMPRESSED?=
 
-WITH_ARTICLE_TOC?=YES
-
-SRCS= article.sgml
+SRCS=		article.sgml
+IMAGES_EN=	fig1.eps
+IMAGES_EN+=	fig2.eps
+IMAGES_EN+=	fig3.eps
+IMAGES_EN+=	fig4.eps
 
 DOC_PREFIX?= ${.CURDIR}/../../..
-
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"
