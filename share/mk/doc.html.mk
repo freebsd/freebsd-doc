@@ -13,7 +13,7 @@
 # Document-specific variables
 #
 #	DOC		This should be set to the name of the HTML
-#			marked-up file, without the .sgml or .docb suffix.
+#			marked-up file, without the .sgml suffix.
 #			
 #			It also determins the name of the output files -
 #			${DOC}.html.
