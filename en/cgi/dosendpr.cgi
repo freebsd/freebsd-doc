@@ -8,13 +8,13 @@
 #  GNU General Public License Version 2.  
 #     (http://www.gnu.ai.mit.edu/copyleft/gpl.html)
 #
-# $FreeBSD: www/en/cgi/dosendpr.cgi,v 1.11 2002/11/02 01:22:44 ceri Exp $
+# $FreeBSD: www/en/cgi/dosendpr.cgi,v 1.12 2003/05/15 12:08:05 ceri Exp $
 
 require "html.pl";
 
 use Socket;
 
-my $blackhole = "relays.osirusoft.com";
+my $blackhole = "dnsbl.njabl.org";
 my $openproxyip = "127.0.0.9";
 my $blackhole_err = 0;
 my $openproxy;
