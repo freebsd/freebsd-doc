@@ -1,5 +1,5 @@
 #!/usr/bin/perl -T
-# $FreeBSD: www/en/cgi/query-pr-summary.cgi,v 1.37 2002/04/23 17:15:40 kuriyama Exp $
+# $FreeBSD: www/en/cgi/query-pr-summary.cgi,v 1.38 2003/01/16 02:02:40 keramida Exp $
 
 sub escape($) { $_ = $_[0]; s/&/&amp;/g; s/</&lt;/g; s/>/&gt;/g; $_; }
 
@@ -353,7 +353,7 @@ sub severity_summary {
 sub get_categories {
     @categories = ();
 
-    open(Q, "query-pr --list-categories 2>/dev/null |") ||
+    open(Q, "query-pr.web --list-categories 2>/dev/null |") ||
 	die "Cannot get categories\n";
 
     while(<Q>) {
@@ -367,7 +367,7 @@ sub get_categories {
 sub get_states {
     @states = ();
 
-    open(Q, "query-pr --list-states 2>/dev/null |") ||
+    open(Q, "query-pr.web --list-states 2>/dev/null |") ||
 	die "Cannot get states\n";
 
     while(<Q>) {
@@ -381,7 +381,7 @@ sub get_states {
 sub get_classes {
     @classes = ();
 
-    open(Q, "query-pr --list-classes 2>/dev/null |") ||
+    open(Q, "query-pr.web --list-classes 2>/dev/null |") ||
 	die "Cannot get classes\n";
 
     while(<Q>) {
@@ -395,7 +395,7 @@ sub get_classes {
 sub read_gnats {
     local($report)   = @_[0];
 
-    open(Q, "query-pr $report 2>/dev/null |") || die "Cannot query the PR's\n";
+    open(Q, "query-pr.web $report 2>/dev/null |") || die "Cannot query the PR's\n";
 
     while(<Q>) {
 	chop;
