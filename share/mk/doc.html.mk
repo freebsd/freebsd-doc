@@ -1,5 +1,5 @@
 #
-# $FreeBSD: doc/share/mk/doc.html.mk,v 1.5 2001/03/13 03:03:46 jim Exp $
+# $FreeBSD: doc/share/mk/doc.html.mk,v 1.6 2001/03/13 18:29:06 nik Exp $
 #
 # This include file <doc.html.mk> handles building and installing of
 # HTML documentation in the FreeBSD Documentation Project.
@@ -47,12 +47,16 @@ KNOWN_FORMATS=	html txt tar pdb
 
 HTMLCATALOG=	${PREFIX}/share/sgml/html/catalog
 
-.if !defined(OPENJADE)
-NSGMLS?=	nsgmls
-SGMLNORM?=	sgmlnorm
-.else
+.if ${MACHINE_ARCH} == "alpha"
+OPENJADE=	yes
+.endif
+
+.if defined(OPENJADE)
 NSGMLS?=	onsgmls
 SGMLNORM?=	osgmlnorm
+.else
+NSGMLS?=	nsgmls
+SGMLNORM?=	sgmlnorm
 .endif
 
 # ------------------------------------------------------------------------
