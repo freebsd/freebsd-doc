@@ -1,5 +1,5 @@
 # bsd.web.mk
-# $FreeBSD: www/en/web.mk,v 1.32 2000/10/02 07:52:48 kuriyama Exp $
+# $FreeBSD: www/en/web.mk,v 1.33 2000/10/02 09:16:03 kuriyama Exp $
 
 #
 # Build and install a web site.
@@ -97,8 +97,9 @@ GENDOCS+=	${DOCS:M*.sgml:S/.sgml$/.html/g}
 ORPHANS:=	${ORPHANS:N*.sgml}
 
 .sgml.html:
-	${PREHTML} ${PREHTMLFLAGS} ${.IMPSRC} |\
-	SGML_CATALOG_FILES='' ${SGMLNORM} ${SGMLNORMFLAGS} > ${.TARGET}
+	(${PREHTML} ${PREHTMLFLAGS} ${.IMPSRC} |\
+	SGML_CATALOG_FILES='' ${SGMLNORM} ${SGMLNORMFLAGS} > ${.TARGET})\
+	|| (rm -f ${.TARGET} && false)
 
 ###
 # file.docb --> file.html
