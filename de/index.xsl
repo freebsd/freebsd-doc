@@ -2,8 +2,8 @@
 
 <!--
      $FreeBSD$
-     $FreeBSDde: de-www/index.xsl,v 1.19 2003/10/21 22:40:03 mheinen Exp $
-     basiert auf: 1.79
+     $FreeBSDde: de-www/index.xsl,v 1.20 2003/11/18 00:49:34 mheinen Exp $
+     basiert auf: 1.80
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -163,12 +163,19 @@
 		<br/>
 
 		<font color="#990000"><b>Sprache: </b></font>
-		<a href="{$enbase}/index.html">Englisch</a>,
-		<a href="{$enbase}/it/index.html">Italienisch</a>,
-		<a href="{$enbase}/ja/index.html">Japanisch</a>,
-		<a href="{$enbase}/ru/index.html">Russisch</a>,
-		<a href="{$enbase}/es/index.html">Spanisch</a>,
-		<a href="{$enbase}/support.html#web">andere</a>
+		<span title="Deutsch">[de]</span>
+		<xsl:text>&#160;</xsl:text>
+		<a href="{$enbase}/index.html" title="Englisch">[en]</a>
+		<xsl:text>&#160;</xsl:text>
+		<a href="{$enbase}/es/index.html" title="Spanisch">[es]</a>
+		<xsl:text>&#160;</xsl:text>
+		<a href="http://www.freebsd-fr.org/index-trad.html" title="Franz&#246;sisch">[fr]</a>
+		<xsl:text>&#160;</xsl:text>
+		<a href="{$enbase}/it/index.html" title="Italienisch">[it]</a>
+		<xsl:text>&#160;</xsl:text>
+		<a href="{$enbase}/ja/index.html" title="Japanisch">[ja]</a>
+		<xsl:text>&#160;</xsl:text>
+		<a href="{$enbase}/ru/index.html" title="Russisch">[ru]</a>
 	      </form>
 	    </td>
 	  </tr>
