@@ -77,8 +77,8 @@ release.1:
 .if make(release)
 	${RM} -rf ${DOCROOTDIR}
 	${MKDIR} ${DOCROOTDIR}
-	${MKDIR} ${DOCOBJDIR}/obj
-	find ${DOC_PREFIX} -type d -a \! -name CVS | sed -e s,^,${DOCOBJDIR}/obj, | xargs ${MKDIR}
+	${MKDIR} ${DOCOBJDIR}
+	find ${DOC_PREFIX} -type d -a \! -name CVS | sed -e s,^,${DOCOBJDIR}, | xargs ${MKDIR}
 	${MKDIR} ${DOCSTAGEDIR}
 .endif
 # Build documents in the obj area.
