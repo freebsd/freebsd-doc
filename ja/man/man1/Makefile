@@ -64,7 +64,6 @@ MAN1 =	a2p.1\
 	dig.1\
 	dnsquery.1\
 	domainname.1\
-	doscmd.1\
 	du.1\
 	echo.1\
 	ed.1\
@@ -254,7 +253,6 @@ MAN1 =	a2p.1\
 	rpcgen.1\
 	rs.1\
 	rsh.1\
-	rtld.1\
 	rtprio.1\
 	rup.1\
 	ruptime.1\
@@ -289,7 +287,6 @@ MAN1 =	a2p.1\
 	talk.1\
 	tar.1\
 	tbl.1\
-	tclsh.1\
 	tconv.1\
 	tcopy.1\
 	tcpdump.1\
@@ -371,13 +368,10 @@ MLINKS+=	test.1 '[.1'
 MLINKS+= gcc.1 cc.1 gcc.1 c++.1 gcc.1 g++.1
 MLINKS+=	cccp.1 cpp.1
 MLINKS+= grep.1 egrep.1 grep.1 fgrep.1
+MLINKS+= grep.1 zgrep.1 grep.1 zegrep.1 grep.1 zfgrep.1
 MLINKS+= gzip.1 gunzip.1  gzip.1 zcat.1  gzip.1 gzcat.1
 MLINKS+= zdiff.1 zcmp.1
-MLINKS+= rtld.1 ld.so.1
 MLINKS+=	apropos.1 whatis.1
-MLINKS+= perl.1 suidperl.1
-MLINKS+= perl.1 tperl.1
-MLINKS+= perl.1 taintperl.1
 MLINKS+=	send-pr.1 sendbug.1
 MLINKS+=	at.1 batch.1 \
         at.1 atq.1 \
