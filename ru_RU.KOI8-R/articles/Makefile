@@ -6,7 +6,10 @@
 
 # SUBDIR+= 5-roadmap
 # SUBDIR+= checkpoint
-# SUBDIR = committers-guide
+#SUBDIR+= committers-guide
+#SUBDIR+= console-server
+#SUBDIR+= contributing
+#SUBDIR+= contributors
 SUBDIR+= dialup-firewall
 SUBDIR+= diskless-x
 SUBDIR+= explaining-bsd
@@ -19,7 +22,7 @@ SUBDIR+= mh
 # SUBDIR+= new-users
 SUBDIR+= pam
 # SUBDIR+= pr-guidelines
-# SUBDIR+= problem-reports
+SUBDIR+= problem-reports
 # SUBDIR+= programming-tools
 SUBDIR+= pxe
 # SUBDIR+= releng
