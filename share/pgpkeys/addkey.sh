@@ -55,7 +55,7 @@ echo "Generating ${keyfile}..."
     echo '<!--'
     echo "sh $0 ${me} ${id};"
     echo '-->'
-    echo '<programlisting><![CDATA['
+    echo '<programlisting role="pgpfingerprint"><![CDATA['
     echo "${fp}"
     echo ']]></programlisting>'
     echo '<programlisting role="pgpkey"><![CDATA['
