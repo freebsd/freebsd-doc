@@ -1,5 +1,5 @@
 # 
-# $Id: Makefile,v 1.11 1999-01-27 23:39:47 nik Exp $
+# $Id: Makefile,v 1.12 1999-01-30 00:10:35 nik Exp $
 #
 # Build the FreeBSD Handbook. Will eventually split in two, a generic .mk
 # file which can be used by many Makefiles, and a much smaller Makefile
@@ -28,7 +28,7 @@ DOC?= handbook
 # FORMATS lists the output formats that should be generated. Valid values
 # are 
 #
-#    txt html html-split ps pdf rtf
+#    txt html html-split ps pdf rtf tar
 #
 # html-split is the file split into (probably) many individual HTML files,
 # linked from one index.html file. 
@@ -116,7 +116,7 @@ DSSSLCATALOG=   /usr/local/share/sgml/docbook/dsssl/modular/catalog
 
 JADEFLAGS=	${JADEOPTS} -c ${FREEBSDCATALOG} -c ${DSSSLCATALOG} -c ${DOCBOOKCATALOG} -c ${JADECATALOG}
 
-KNOWN_FORMATS= html html-split txt rtf ps pdf tex dvi
+KNOWN_FORMATS= html html-split txt rtf ps pdf tex dvi tar
 
 # ------------------------------------------------------------------------
 #
@@ -181,12 +181,30 @@ CLEANFILES+= ${DOC}.aux ${DOC}.dvi ${DOC}.log ${DOC}.tex ${DOC}.pdf
 .elif ${_cf} == "rtf"
 _docs+= ${DOC}.rtf
 CLEANFILES+= ${DOC}.rtf
-.endif
-.if !empty(INSTALL_COMPRESSED) && ${_cf} != "html-split"
-_clean:= ${CLEANFILES} ${INSTALL_COMPRESSED:S/^/${DOC}.${_cf}.&/}
-CLEANFILES:= ${_clean}
+.elif ${_cf} == "tar"
+_docs+= ${DOC}.tar
+CLEANFILES+= ${DOC}.tar
 .endif
 .endfor
+
+#
+# Build a list of install-${format}.${compress_format} targets to be
+# by "make install". Also, add ${DOC}.${format}.${compress_format} to
+# ${_docs} and ${CLEANFILES} so they get built/cleaned by "all" and
+# "clean".
+#
+.if !empty(INSTALL_COMPRESSED)
+.for _curformat in ${FORMATS}
+_cf=${_curformat}
+.if ${_cf} != "html-split"
+.for _curcomp in ${INSTALL_COMPRESSED}
+_curinst+= install-${_curformat}.${_curcomp}
+_docs+= ${DOC}.${_curformat}.${_curcomp}
+CLEANFILES+= ${DOC}.${_curformat}.${_curcomp}
+.endfor
+.endif
+.endfor
+.endif
 
 # ------------------------------------------------------------------------
 #
@@ -237,6 +255,9 @@ ${DOC}.pdf: ${DOC}.tex
 
 ${DOC}.ps: ${DOC}.dvi
 	dvips -o ${DOC}.ps ${DOC}.dvi
+
+${DOC}.tar:
+	tar cf ${.TARGET} ${SRCS}
 
 # ------------------------------------------------------------------------
 #
@@ -299,21 +320,6 @@ ${DOC}.${_cf}.${_curcompress}: ${DOC}.${_cf} _PROG_COMPRESS_${_curcompress}
 # respectively.
 #
 install: beforeinstall realinstall afterinstall
-
-#
-# Build a list of install-format-compress_format targets to be installed.
-# These will be dependecies for the "realinstall" target.
-#
-.if !empty(INSTALL_COMPRESSED)
-.for _curformat in ${FORMATS}
-_cf=${_curformat}
-.if ${_cf} != "html-split"
-.for _curcomp in ${INSTALL_COMPRESSED}
-_curinst+= install-${_curformat}.${_curcomp}
-.endfor
-.endif
-.endfor
-.endif
 
 #
 # Build a list of install-format targets to be installed. These will be
