@@ -1,6 +1,6 @@
 # 
 #  Id: Makefile,v 1.17 1999/03/27 16:03:49 nik Exp
-# $Id: Makefile,v 1.30 1999-04-11 01:15:14 kuriyama Exp $
+# $Id: Makefile,v 1.31 1999-04-14 22:02:28 kuriyama Exp $
 #
 # Required ports (common):
 #	textproc/jade
@@ -121,7 +121,7 @@ SRCS+= mailing-lists.ent
 #
 # You shouldn't need to change definitions below here
 
-VOLUME?=	ja/${.CURDIR:T}
+VOLUME?=	${.CURDIR:T}
 DOC?=		${.CURDIR:T}
 DISTRIBUTION?=	doc
 
