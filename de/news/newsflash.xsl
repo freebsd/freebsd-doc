@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
 <!--
-     $FreeBSD: www/de/news/newsflash.xsl,v 1.4 2004/05/15 12:39:08 brueffer Exp $
+     $FreeBSD: www/de/news/newsflash.xsl,v 1.5 2004/12/30 17:53:43 hrs Exp $
      $FreeBSDde: de-www/news/newsflash.xsl,v 1.11 2004/05/04 00:06:08 brueffer Exp $
      basiert auf: 1.11
 -->
@@ -83,15 +83,6 @@
 	<xsl:copy-of select="$footer"/>
       </body>
     </html>
-  </xsl:template>
-
-  <!-- for l10n -->
-  <xsl:template name="html-news-datelabel">
-    <xsl:param name="year" />
-    <xsl:param name="month" />
-    <xsl:param name="day" />
-
-    <xsl:value-of select="concat($day, '. ', $month, ' ', $year, ':')" />
   </xsl:template>
 
   <xsl:template name="html-news-make-olditems-list">

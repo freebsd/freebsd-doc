@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
 
-<!-- $FreeBSD: www/ja/news/newsflash.xsl,v 1.9 2003/11/03 11:41:05 rushani Exp $ -->
+<!-- $FreeBSD: www/ja/news/newsflash.xsl,v 1.10 2004/12/30 17:53:44 hrs Exp $ -->
 <!-- Original revision: 1.9 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
@@ -78,22 +78,6 @@
 	<xsl:copy-of select="$footer"/>
       </body>
     </html>
-  </xsl:template>
-
-  <!-- for l10n -->
-  <xsl:template name="html-news-datelabel">
-    <xsl:param name="year" />
-    <xsl:param name="month" />
-    <xsl:param name="day" />
-    <xsl:value-of select="concat($month, ' ', $day, ' 日:')" />
-  </xsl:template>
-
-  <!-- for l10n -->
-  <xsl:template name="html-news-month-headings">
-    <xsl:param name="year" />
-    <xsl:param name="month" />
-
-    <xsl:value-of select="concat($year, ' 年 ', $month)" />
   </xsl:template>
 
   <xsl:template name="html-news-make-olditems-list">
