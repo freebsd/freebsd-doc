@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/index.xsl,v 1.40 2002/12/10 18:19:03 keramida Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.41 2002/12/15 17:31:31 jesper Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   
@@ -6,7 +6,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.40 2002/12/10 18:19:03 keramida Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.41 2002/12/15 17:31:31 jesper Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -94,7 +94,6 @@
 		  <option value="http://www.is.FreeBSD.org/">Iceland</option>
 		  <option value="http://www.ie.FreeBSD.org/">Ireland/1</option>
 		  <option value="http://www2.ie.FreeBSD.org/">Ireland/2</option>
-		  <option value="http://www.il.FreeBSD.org/">Israel</option>
 		  <option value="http://www.it.FreeBSD.org/">Italy/1</option>
 		  <option value="http://www.gufi.org/mirrors/www.freebsd.org/data/">Italy/2</option>
 		  <option value="http://www.jp.FreeBSD.org/www.FreeBSD.org/">Japan</option>
@@ -157,7 +156,6 @@
 		  <option value="http://www3.uk.FreeBSD.org/">United Kingdom/3</option>
 		  <option value="http://www4.uk.FreeBSD.org/">United Kingdom/4</option>
 		  <option value="http://www.FreeBSD.org/">USA/California</option>
-		  <option value="http://www2.FreeBSD.org/">USA/Texas</option>
 		  <option value="http://www3.FreeBSD.org/">USA/3</option>
 		  <option value="http://www7.FreeBSD.org/">USA/7</option>
 		</select>
