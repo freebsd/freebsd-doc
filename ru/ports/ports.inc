@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/ru/ports/ports.inc,v 1.1 2000/01/05 15:34:16 phantom Exp $ -->
+<!-- $FreeBSD: www/ru/ports/ports.inc,v 1.2 2000/03/18 15:45:31 andy Exp $ -->
 <!-- The FreeBSD Russian Documentation Project -->
 
 <p>Коллекция Портов и Пакаджей FreeBSD даёт пользователям и администраторам
@@ -100,7 +100,7 @@ href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-3-stable/Latest/32up
 
 <p>Многим портам для компиляции и запуска требуется X Window System.  Мы
   компилируем и тестируем наши порты с <a
-  href="http://www.xfree86.org/">XFree86</a>. Их текущий релиз 3.3.5.
+  href="http://www.xfree86.org/">XFree86</a>.  Их текущий релиз 3.3.6.
   Некоторые порты могут не работать с более ранними релизами.</p>
 
 <p>Для получения более подробной информации о новых, изменённых или
