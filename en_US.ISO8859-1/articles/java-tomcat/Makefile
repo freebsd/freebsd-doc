@@ -4,7 +4,7 @@
 # Author: Victoria Chan, Hiten Pandya
 # Article: Java and Jakarta Tomcat on FreeBSD
 
-MAINTAINER=vkchan@kendryl.net hiten@uk.FreeBSD.org
+MAINTAINER=hmp@FreeBSD.org vkchan@kendryl.net
 
 DOC?= article
 
