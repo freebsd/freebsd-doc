@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.33 1998-07-11 11:26:24 wosch Exp $
+# $Id: Makefile,v 1.34 1998-07-14 18:55:33 wosch Exp $
 
 .if exists(Makefile.conf)
 .include "Makefile.conf"
@@ -64,7 +64,7 @@ pgallery.inc: gallery.db gengallery.pl
 # Subdirectories
 
 SUBDIR=		security cgi commercial docproj gifs ports releases tutorials 
-SUBDIR+=	news
+SUBDIR+=	news alpha
 
 .if !defined(ENGLISH_ONLY) || empty(ENGLISH_ONLY)
 SUBDIR+=	ja_JP.EUC
