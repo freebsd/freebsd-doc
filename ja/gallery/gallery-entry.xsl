@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
-<!-- Original revision: 1.1 -->
+<!-- Original revision: 1.2 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -12,7 +12,7 @@
 
   <xsl:variable name="base" select="'..'"/>
   
-  <xsl:variable name="date" select="'$FreeBSD: www/ja/gallery/gallery-entry.xsl,v 1.1 2001/09/05 08:35:15 kuriyama Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/ja/gallery/gallery-entry.xsl,v 1.2 2002/02/28 11:22:53 kuriyama Exp $'"/>
 
   <xsl:output type="html" encoding="EUC-JP"/>
 
@@ -68,7 +68,7 @@
 	    <xsl:copy-of select="$nonprofit-intro"/>
 	  </xsl:when>
 	  <xsl:when test="$type = 'personal'">
-	    <xsl:copy-of select="personal-intro"/>
+	    <xsl:copy-of select="$personal-intro"/>
 	  </xsl:when>
 	  <xsl:otherwise>
 	    <p>No clue what to put here for $type = 

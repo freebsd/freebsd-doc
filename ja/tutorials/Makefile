@@ -1,7 +1,7 @@
 #
-# $FreeBSD: www/ja/tutorials/Makefile,v 1.8 2000/11/07 11:38:10 kuriyama Exp $
+# $FreeBSD: www/ja/tutorials/Makefile,v 1.9 2001/07/30 13:31:59 kuriyama Exp $
 #
-# Original revision: 1.11
+# Original revision: 1.12
 #
 # Build the FreeBSD tutorials/articles outside of the www tree, and then
 # install them in to the right place.
@@ -14,17 +14,6 @@
 .endif
 
 DOCS = index.sgml
-
-DIRS_TO_CLEAN =	../../../doc/ja_JP.eucJP/articles \
-		../../../doc/ja_JP.eucJP/books/porters-handbook \
-		../../../doc/ja_JP.eucJP/books/ppp-primer
-#		../../../doc/ja_JP.eucJP/books/fdp-primer \
-
-all afterinstall:
-	(cd ${.CURDIR}/../../../doc/ja_JP.eucJP/articles && ${MAKE} 'FORMATS=html html-split' 'DESTDIR=${DESTDIR}/data/ja/tutorials/$${.CURDIR:T}' ${.TARGET:S/afterinstall/install/})
-#	(cd ${.CURDIR}/../../../doc/ja_JP.eucJP/books/fdp-primer && ${MAKE} 'FORMATS=html html-split' DESTDIR=${DESTDIR}/data/ja/tutorials/docproj-primer ${.TARGET:S/afterinstall/install/})
-	(cd ${.CURDIR}/../../../doc/ja_JP.eucJP/books/porters-handbook && ${MAKE} 'FORMATS=html html-split' DESTDIR=${DESTDIR}/data/ja/porters-handbook ${.TARGET:S/afterinstall/install/})
-	(cd ${.CURDIR}/../../../doc/ja_JP.eucJP/books/ppp-primer && ${MAKE} 'FORMATS=html html-split' DESTDIR=${DESTDIR}/data/ja/tutorials/ppp ${.TARGET:S/afterinstall/install/})
 
 ### Revision checking
 REVCHECK=	YES

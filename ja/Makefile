@@ -1,6 +1,6 @@
-# $FreeBSD: www/ja/Makefile,v 1.57 2002/01/04 04:59:20 kuriyama Exp $
+# $FreeBSD: www/ja/Makefile,v 1.58 2002/02/11 09:53:56 kuriyama Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.77
+# Original revision: 1.83
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -33,6 +33,7 @@ DOCS+= jabout.sgml
 
 #DATA=	favicon.ico
 #DATA+=	robots.txt
+#DATA+=	freebsd.css
 
 # Subdirectories
 # SGML
@@ -40,6 +41,7 @@ SUBDIR=	 security
 SUBDIR+= commercial
 SUBDIR+= docproj
 SUBDIR+= news
+#SUBDIR+= advocacy
 
 SUBDIR+= internal
 SUBDIR+= java
@@ -47,25 +49,28 @@ SUBDIR+= copyright
 SUBDIR+= search
 SUBDIR+= gallery
 SUBDIR+= projects
-#SUBDIR+= prstats
+SUBDIR+= prstats
 SUBDIR+= platforms
 SUBDIR+= releases
+#SUBDIR+= releng
 SUBDIR+= smp
 SUBDIR+= conspectus
+#SUBDIR+= gnome
+#SUBDIR+= donations
 .if !defined(WEB_ONLY) || empty(WEB_ONLY)
 SUBDIR+= ports
 SUBDIR+= doc
 # .endif
 # .if defined(BUILD_RELNOTES)
 # SUBDIR+= relnotes
-# .endif
-#
-# # These *must* be listed after the "doc" subdir, as they create symlinks
-# # in to it.
-# .if !defined(WEB_ONLY) || empty(WEB_ONLY)
+.endif
+
+# These *must* be listed after the "doc" subdir, as they create symlinks
+# in to it.
+.if !defined(WEB_ONLY) || empty(WEB_ONLY)
 SUBDIR+= tutorials
 
-DOCSUBDIR=	FAQ handbook
+#DOCSUBDIR=	FAQ handbook
 .endif
 
 # Non-SGML
