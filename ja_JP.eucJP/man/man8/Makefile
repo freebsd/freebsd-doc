@@ -9,6 +9,7 @@ MAN8 =	IPXrouted.8\
 	amq.8\
 	apm.8\
 	apmconf.8\
+	apmd.8\
 	arp.8\
 	atm.8\
 	atmarpd.8\
@@ -152,6 +153,7 @@ MAN8 =	IPXrouted.8\
 	ntptrace.8\
 	pac.8\
 	pam.8\
+	pam_radius.8\
 	pccardc.8\
 	pccardd.8\
 	pciconf.8\
