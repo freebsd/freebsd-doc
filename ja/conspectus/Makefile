@@ -1,11 +1,12 @@
-# $FreeBSD: www/ja/conspectus/Makefile,v 1.1 2000/06/18 23:06:42 kuriyama Exp $
+# $FreeBSD: www/ja/conspectus/Makefile,v 1.2 2000/10/02 09:16:05 kuriyama Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.1
+# Original revision: 1.2
 
-LOCALTOP= ..
-
-.if exists(${LOCALTOP}/Makefile.conf)
-.include "${LOCALTOP}/Makefile.conf"
+.if exists(../Makefile.conf)
+.include "../Makefile.conf"
+.endif
+.if exists(../Makefile.inc)
+.include "../Makefile.inc"
 .endif
 
 DOCS=   index.sgml 
@@ -16,4 +17,4 @@ DOCS=   index.sgml
 ### Revision checking
 REVCHECK=	yes
 
-.include "${LOCALTOP}/web.mk"
+.include "${WEB_PREFIX}/share/mk/web.site.mk"

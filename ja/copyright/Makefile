@@ -1,11 +1,12 @@
-# $FreeBSD: www/ja/copyright/Makefile,v 1.12 1999/12/23 01:15:47 kuriyama Exp $
+# $FreeBSD: www/ja/copyright/Makefile,v 1.13 2000/10/02 09:16:06 kuriyama Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.9
+# Original revision: 1.10
 
-LOCALTOP= ..
-
-.if exists(${LOCALTOP}/Makefile.conf)
-.include "${LOCALTOP}/Makefile.conf"
+.if exists(../Makefile.conf)
+.include "../Makefile.conf"
+.endif
+.if exists(../Makefile.inc)
+.include "../Makefile.inc"
 .endif
 
 DOCS=	license.sgml
@@ -39,4 +40,4 @@ CVS_OPT+=	-R
 ### Revision checking
 REVCHECK=	yes
 
-.include "${LOCALTOP}/web.mk"
+.include "${WEB_PREFIX}/share/mk/web.site.mk"
