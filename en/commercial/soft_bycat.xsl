@@ -25,7 +25,7 @@
      OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
      SUCH DAMAGE.
 
-     $FreeBSD: www/en/commercial/soft_bycat.xsl,v 1.1 2004/05/02 21:53:07 josef Exp $
+     $FreeBSD: www/en/commercial/soft_bycat.xsl,v 1.2 2004/05/16 16:10:27 josef Exp $
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
@@ -60,9 +60,9 @@
 	<p>For your convenience, we have divided our growing
 	  commercial listing into several sections. If your company
 	  supports a FreeBSD-compatible product or service that should
-	  be added to this page, please send email to <a
-	    href="mailto:www@FreeBSD.org">www@FreeBSD.org</a> and let us
-	  know!	 Submissions should be in HTML and a medium-sized
+	  be added to this page, please fill out a
+	  <a href="http://www.FreeBSD.org/send-pr.html">problem report</a> for
+	  category www.  Submissions should be in HTML and a medium-sized
 	  paragraph in length.</p>
 
 	<h2>Software Vendors</h2>
