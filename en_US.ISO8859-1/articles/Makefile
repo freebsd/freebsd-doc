@@ -1,4 +1,4 @@
-# $FreeBSD: doc/en_US.ISO_8859-1/articles/Makefile,v 1.4 1999/09/06 06:52:35 peter Exp $
+# $FreeBSD: doc/en_US.ISO_8859-1/articles/Makefile,v 1.5 1999/10/18 09:48:57 wosch Exp $
 
 SUBDIR = committers-guide
 SUBDIR+= diskless-x
@@ -8,6 +8,7 @@ SUBDIR+= mh
 SUBDIR+= multi-os
 SUBDIR+= new-users
 SUBDIR+= programming-tools
+SUBDIR+= zip-drive
 
 # ROOT_SYMLINKS+= new-users
 
