@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/en/news/newsflash.xsl,v 1.11 2004/04/08 19:11:49 ceri Exp $ -->
+<!-- $FreeBSD: www/en/news/newsflash.xsl,v 1.12 2004/12/30 17:53:43 hrs Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -79,15 +79,18 @@
     </html>
   </xsl:template>
 
-  <!-- When the href attribute contains a '$base', expand it to the current
-       value of the $base variable. -->
+  <!-- When the href attribute contains a '$base' or '$enbase', expand it
+       to the current value of the $base or $enbase variable. -->
 
-  <!-- All your $base are belong to us.  Ho ho ho -->
+  <!-- All your $base or $enbase are belong to us.  Ho ho ho -->
   <xsl:template match="a">
     <a><xsl:attribute name="href">
 	<xsl:choose>
 	  <xsl:when test="contains(@href, '$base')">
 	    <xsl:value-of select="concat(substring-before(@href, '$base'), $base, substring-after(@href, '$base'))"/>
+	  </xsl:when>
+	  <xsl:when test="contains(@href, '$enbase')">
+	    <xsl:value-of select="concat(substring-before(@href, '$enbase'), $enbase, substring-after(@href, '$enbase'))"/>
 	  </xsl:when>
 	  <xsl:otherwise>
 	    <xsl:value-of select="@href"/>
