@@ -1,4 +1,4 @@
-# $FreeBSD: doc/en_US.ISO8859-1/articles/Makefile,v 1.16 2001/09/09 02:21:57 rpratt Exp $
+# $FreeBSD: doc/en_US.ISO8859-1/articles/Makefile,v 1.17 2001/09/13 07:46:02 murray Exp $
 
 SUBDIR = committers-guide
 SUBDIR+= console-server
@@ -11,6 +11,7 @@ SUBDIR+= freebsd-questions
 SUBDIR+= fonts
 SUBDIR+= formatting-media
 SUBDIR+= ipsec-must
+SUBDIR+= laptop
 SUBDIR+= mh
 SUBDIR+= multi-os
 SUBDIR+= new-users
