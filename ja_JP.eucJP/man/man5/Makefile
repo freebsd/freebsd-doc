@@ -13,6 +13,7 @@ MAN5 =	a.out.5\
 	cvs.5\
 	dhclient.conf.5\
 	dhclient.leases.5\
+	dhcp-eval.5\
 	dhcp-options.5\
 	dir.5\
 	disklabel.5\
