@@ -1,5 +1,5 @@
 #
-# $FreeBSD: doc/share/mk/doc.html.mk,v 1.4 2000/09/28 23:34:49 nbm Exp $
+# $FreeBSD: doc/share/mk/doc.html.mk,v 1.5 2001/03/13 03:03:46 jim Exp $
 #
 # This include file <doc.html.mk> handles building and installing of
 # HTML documentation in the FreeBSD Documentation Project.
@@ -110,7 +110,7 @@ ${DOC}.html: ${SRCS}
 .endif
 
 ${DOC}.txt: ${DOC}.html
-	links -S -dump ${.ALLSRC} > ${.TARGET}
+	links -dump ${.ALLSRC} > ${.TARGET}
 
 ${DOC}.pdb: ${DOC}.html
 	iSiloBSD -y -d0 -Idef ${DOC}.html ${DOC}.pdb
