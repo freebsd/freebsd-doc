@@ -1,4 +1,4 @@
-# $FreeBSD: www/ja/Makefile,v 1.47 2001/08/08 02:08:09 kuriyama Exp $
+# $FreeBSD: www/ja/Makefile,v 1.48 2001/08/08 03:55:55 kuriyama Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.58
 
@@ -79,7 +79,10 @@ SGMLOPTS=	-links -hdr ${.CURDIR}/doc.hdr -ftr ${.CURDIR}/doc.ftr -e EUC-JP
 
 WEBDIR=		data/ja
 
-index.html: index.xsl news/news.xml includes.xsl news/includes.xsl
+# index.html is special, and generated from index.xsl and news/news.xml
+DATA+=		index.html
+
+index.html: index.xsl news/news.xml news/press.xml includes.xsl news/includes.xsl
 	xsltproc -nonet -o index.html index.xsl news/news.xml
 #	-tidy -i -m -f /dev/null index.html
 
