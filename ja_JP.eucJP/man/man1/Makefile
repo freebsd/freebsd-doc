@@ -72,6 +72,7 @@ MAN1 =	addftinfo.1\
 	echo.1\
 	ed.1\
 	ee.1\
+	elfdump.1\
 	enigma.1\
 	env.1\
 	eqn.1\
@@ -298,6 +299,7 @@ MAN1 =	addftinfo.1\
 	ssh-keyscan.1\
 	ssh.1\
 	startslip.1\
+	stat.1\
 	strings.1\
 	strip.1\
 	stty.1\
@@ -342,6 +344,7 @@ MAN1 =	addftinfo.1\
 	usbhidctl.1\
 	users.1\
 	uuencode.1\
+	uuidgen.1\
 	vacation.1\
 	vgrind.1\
 	vi.1\
@@ -448,6 +451,7 @@ MLINKS+=nawk.1 awk.1
 MLINKS+=passwd.1 yppasswd.1
 MLINKS+=rtld.1 ld-elf.so.1.1
 MLINKS+=rtld.1 ld.so.1
+MLINKS+=stat.1 readlink.1
 MLINKS+=tip.1 cu.1
 MLINKS+=tput.1 clear.1
 MLINKS+=tset.1 reset.1
