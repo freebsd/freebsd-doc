@@ -1,6 +1,6 @@
 #
 # $FreeBSD$
-# $FreeBSDde: de-docproj/books/handbook/Makefile,v 1.36 2004/06/06 18:21:21 mheinen Exp $
+# $FreeBSDde: de-docproj/books/handbook/Makefile,v 1.37 2004/07/24 15:17:14 jkois Exp $
 # basiert auf: 1.81
 #
 # Build the FreeBSD Handbook in its German translation.
@@ -22,6 +22,7 @@ IMAGES_EN = advanced-networking/isdn-bus.eps
 IMAGES_EN+= advanced-networking/isdn-twisted-pair.eps
 IMAGES_EN+= advanced-networking/natd.eps
 IMAGES_EN+= advanced-networking/net-routing.pic
+IMAGES_EN+= advanced-networking/static-routes.pic
 IMAGES_EN+= install/disk-layout.eps
 IMAGES_EN+= install/example-dir1.eps
 IMAGES_EN+= install/example-dir2.eps
@@ -78,6 +79,7 @@ SRCS+= linuxemu/chapter.sgml
 SRCS+= mail/chapter.sgml
 SRCS+= mirrors/chapter.sgml
 SRCS+= multimedia/chapter.sgml
+SRCS+= network-servers/chapter.sgml
 SRCS+= pgpkeys/chapter.sgml
 SRCS+= ppp-and-slip/chapter.sgml
 SRCS+= ports/chapter.sgml
