@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/index.xsl,v 1.6 2001/08/23 14:03:49 kuriyama Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.7 2001/09/20 22:32:33 chris Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   
@@ -6,7 +6,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.6 2001/08/23 14:03:49 kuriyama Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.7 2001/09/20 22:32:33 chris Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -314,8 +314,8 @@
 		and submit that back to the Project by means of send-pr
 		or a committer, if you know one.  This could be anything
 		from documentation to artwork to source code. See the 
-		<a href="http://www.FreeBSD.org/handbook/contrib.html">Contributing
-		  to FreeBSD</a> section in the FreeBSD Handbook.</p>
+		<a href="{$base}/doc/en_US.ISO8859-1/articles/contributing/index.html">Contributing
+		to FreeBSD</a> article for more information.</p>
 	    </td>
 
 	    <td></td>
