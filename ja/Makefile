@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.27 1998-08-20 04:12:11 hanai Exp $
+# $Id: Makefile,v 1.28 1999-03-01 18:37:59 motoyuki Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.44
 
@@ -47,6 +47,10 @@ SUBDIR+= gallery
 SUBDIR+= ports
 SUBDIR+= projects
 SUBDIR+= releases 
+
+# Japanese only.
+
+SUBDIR+= java
 
 # Non-SGML
 #SUBDIR+= gifs
