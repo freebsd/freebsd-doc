@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
 
-<!-- $FreeBSD: www/ja/index.xsl,v 1.36 2004/01/17 04:24:24 rushani Exp $ -->
-<!-- Original revision: 1.92 -->
+<!-- $FreeBSD: www/ja/index.xsl,v 1.37 2004/08/09 15:43:15 hrs Exp $ -->
+<!-- Original revision: 1.100 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -10,12 +10,13 @@
 
   <xsl:variable name="base" select="'.'"/>
   <xsl:variable name="enbase" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/ja/index.xsl,v 1.36 2004/01/17 04:24:24 rushani Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/ja/index.xsl,v 1.37 2004/08/09 15:43:15 hrs Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <!-- these params should be externally bound. The values
        here are not used actually -->
   <xsl:param name="advisories.xml" select="'none'"/>
+  <xsl:param name="notices.xml" select="'none'"/>
   <xsl:param name="mirrors.xml" select="'none'"/>
   <xsl:param name="news.press.xml" select="'none'"/>
   <xsl:param name="news.project.xml" select="'none'"/>
@@ -35,6 +36,11 @@
 	      CVS, CVSup, News, Commercial Vendors, homepage, CTM, Unix"/>
 	<link rel="shortcut icon" href="/favicon.ico" type="image/x-icon"/>
 	<link rel="icon" href="/favicon.ico" type="image/x-icon"/>
+	<!-- Formatted to be easy to spam harvest, please do not reformat. -->
+	<xsl:comment>
+	  Spamtrap, do not email:
+	  &lt;a href="mailto:bruscar@freebsd.org"&gt;bruscar@freebsd.org&lt;/a&gt;
+	</xsl:comment>
       </head>
 
       <body bgcolor="#FFFFFF" text="#000000" link="#0000FF" vlink="#840084"
@@ -105,98 +111,9 @@
 			   bgcolor="#ffcc66" width="100%">
 		      <tr>
 			<td>
-			  <p>
-			    <a href="platforms/index.html">
-			      <font size="+1" color="#990000"><b>対応プラットフォーム:</b></font>
-			    </a><small><br/>
-			      ・ <a href="smp/index.html">i386</a><br/>
-			      ・ <a href="platforms/alpha.html">Alpha</a><br/>
-			      ・ <a href="platforms/ia64.html">IA64</a><br/>
-			      ・ <a href="platforms/amd64.html">AMD64</a><br/>
-			      ・ <a href="platforms/sparc.html">Sparc</a><br/>
-			      ・ <a href="platforms/index.html">その他</a><br/>
- 			    </small></p>
-
-			  <p>
-			    <a href="docs.html">
-			      <font size="+1" color="#990000"><b>ドキュメント</b></font>
-			    </a><small><br/>
-			      ・<a href="{$enbase}/doc/ja_JP.eucJP/books/faq/index.html">FAQ</a><br/>
-			      ・<a href="{$enbase}/doc/ja_JP.eucJP/books/handbook/index.html">ハンドブック</a><br/>
-			      ・<a href="http://www.FreeBSD.org/cgi/man.cgi">マニュアルページ</a><br/>
-			      ・<a href="projects/newbies.html">初心者のために</a><br/>
-			      ・<a href="{$base}/docproj/index.html">Doc. Project</a><br/>
-			    </small></p>
-
-			  <p>
-			    <a href="support.html">
-			      <font size="+1" color="#990000"><b>サポート</b></font>
-			    </a><small><br/>
-			      ・<a href="{$base}/support.html#mailing-list">メーリングリスト</a><br/>
-			      ・<a href="{$base}/support.html#newsgroups">ニュースグループ</a><br/>
-			      ・<a href="{$base}/support.html#user">ユーザグループ</a><br/>
-			      ・<a href="{$base}/support.html#web">Web 上の資料</a><br/>
-			      ・<a href="security/index.html">セキュリティ</a><br/>
-			    </small></p>
-
-			  <p>
-			    <a href="{$base}/support.html#gnats">
-			      <font size="+1" color="#990000"><b>バグ報告</b></font>
-			    </a><small><br/>
-			      ・ <a href="http://www.FreeBSD.org/cgi/query-pr-summary.cgi?query">検索</a><br/>
-			      ・ <a href="http://www.FreeBSD.org/cgi/query-pr.cgi">個別のバグ報告の表示</a><br/>
-			      ・ <a href="http://www.FreeBSD.org/cgi/query-pr-summary.cgi">全バグ報告の表示</a><br/>
-			      ・ <a href="send-pr.html">バグ報告の送付</a><br/>
-			      ・ <a href="http://www.FreeBSD.org/cgi/query-pr.cgi">バグ ID で検索</a><br/>
-			      ・ <a href="{$enbase}/doc/ja_JP.eucJP/articles/problem-reports/article.html">バグ報告の書き方</a><br/>
-			    </small></p>
-
-			  <p>
-			    <a href="projects/index.html">
-			      <font size="+1" color="#990000"><b>開発</b></font>
-			    </a><small><br/>
-			      ・ <a href="{$enbase}/doc/en_US.ISO8859-1/books/developers-handbook">Developer's Handbook</a><br/>
-			      ・ <a href="{$enbase}/doc/ja_JP.eucJP/books/porters-handbook">Porter's Handbook</a><br/>
- 			      ・ <a href="{$base}/support.html#cvs">CVS リポジトリ</a><br/>
-			      ・ <a href="releng/index.html">リリースエンジニアリング</a><br/>
-			      ・ <a href="{$enbase}/doc/ja_JP.eucJP/articles/contributing/index.html">FreeBSD への貢献</a><br/>
-			    </small></p>
-
-			  <p><font size="+1" color="#990000"><b>ベンダ</b></font>
-			    <small><br/>
-			      ・<a href="{$enbase}/commercial/software_bycat.html">ソフトウェア</a><br/>
-			      ・<a href="{$enbase}/commercial/hardware.html">ハードウェア</a><br/>
-			      ・<a href="{$enbase}/commercial/consulting_bycat.html">コンサルティング</a><br/>
-			      ・<a href="{$enbase}/commercial/misc.html">その他</a><br/>
-			    </small></p>
-
-			  <p><font size="+1" color="#990000"><b>寄付・寄贈</b></font>
-			    <small><br/>
-			      ・<a href="{$enbase}/donations/index.html">寄付・寄贈品の受付</a><br/>
-			      ・<a href="{$enbase}/donations/donors.html">現在の寄贈品</a><br/>
-			      ・<a href="{$enbase}/donations/wantlist.html">寄付募集リスト</a><br/>
-			    </small></p>
-
-			  <p>
-			    <a href="{$base}/search/index-site.html">
-			      <font size="+1" color="#990000"><b>このサイトについて</b></font>
-			    </a><small><br/>
-			      ・ <a href="{$base}/search/search.html#web">ウェブサイトの検索</a><br/>
-			      ・ <a href="{$base}/search/search.html#mailinglists">メーリングリストの検索</a><br/>
-			      ・ <a href="{$base}/search/search.html">すべての検索</a><br/>
-			    </small></p>
-
-			  <p>
-			    <a href="mailto.html">
-			      <font size="+1" color="#990000"><b>FreeBSD の問い合わせ先</b></font>
-			    </a>
-			  </p>
-
-			  <p>
-			    <a href="copyright/index.html">
-			      <font size="+1" color="#990000"><b>BSD の著作権</b></font>
-			    </a>
-			  </p>
+			  <xsl:call-template name="html-index-navigation-link-list">
+			    <xsl:with-param name="navigation.xml" select="$navigation.xml"/>
+			  </xsl:call-template>
 
 			  <form action="http://www.FreeBSD.org/cgi/search.cgi" method="get">
 			    <small>検索:<br/>
@@ -204,7 +121,8 @@
 			      <input type="hidden" name="max" value="25"/>
 			      <input type="hidden" name="source" value="www"/>
 			      <input type="submit" value="実行"/></small>
-			  </form></td>
+			  </form>
+			</td>
 		      </tr>
 		    </table>
 		  </td>
@@ -219,7 +137,8 @@
 	    <td align="left" valign="top" rowspan="2">
 	      <h2><font color="#990000">FreeBSD とは?</font></h2>
 
-	      <p>FreeBSD は x86 互換機、AMD64, DEC Alpha, IA-64, PC-98, UltraSPARC&#174;
+	      <p>FreeBSD は x86 互換機、x86-64 互換機、Alpha/AXP,
+		IA-64, PC-98, UltraSPARC&#174;
 		アーキテクチャ用の先進的なオペレーティングシステムです。
 		カリフォルニア大学バークレイ校で開発された <xsl:value-of select="$unix"/>
 		である BSD UNIX に由来し、
@@ -241,11 +160,7 @@
 		  インターネットやイントラネット</a> サーバになります。負荷が
 		極めて高くなった状態でさえ強固なネットワークサービスを提供し、
 		ユーザプロセスが同時に何千になっても良好な反応時間を
-		維持するようにメモリを効率的に利用します。
-		FreeBSD を利用したアプリケーションやサービスの例を
-		載せていますので、ぜひわたしたちの
-		<a href="gallery/gallery.html">ギャラリー</a>
-		をご覧になってみてください。</p>
+		維持するようにメモリを効率的に利用します。</p>
 
 	      <h2><font color="#990000">数多くの対応アプリケーション</font></h2>
 
@@ -270,7 +185,7 @@
 	      <h2><font color="#990000"><i>無料</i>で使える FreeBSD</font></h2>
 
 	      <a href="copyright/daemon.html"><img src="../gifs/dae_up3.gif"
-						   alt=""
+						   alt="The BSD Daemon"
 						   height="81" width="72"
 						   align="right"
 						   border="0"/></a>
@@ -301,7 +216,7 @@
 		というセクションをご覧ください。</p>
 
 	      <p>もしあなたがプログラマでないとしても、いくつもの FreeBSD
-		に貢献する方法があります。FreeBSD Foundation は非営利団体
+		に貢献する方法があります。<a href="http://www.FreeBSDFoundation.org">FreeBSD Foundation</a> は非営利団体
 		であり、直接の寄付は税金の控除対象となります。
 		詳細に関しては <a href="mailto:bod@FreeBSDFoundation.org">
 		  bod@FreeBSDFoundation.org</a> にメールを送るか、
@@ -329,28 +244,30 @@
 			   bgcolor="#ffcc66" width="100%">
 		      <tr>
 			<td valign="top"><p>
-			      <a href="{$u.rel.early}">
-			      <font size="+1" color="#990000"><b>テクノロジリリース:
+			      <a href="{$u.rel.announce}">
+			      <font size="+1" color="#990000"><b>プロダクションリリース:
 			    <xsl:value-of select="$rel.current"/></b></font></a><br/>
-			    <small>・<a href="{$u.rel.announce}">アナウンス</a><br/>
-			      ・<a href="{$enbase}/doc/ja_JP.eucJP/books/handbook/install.html">インストールガイド</a><br/>
+			    <small>・<a href="{$enbase}/doc/ja_JP.eucJP/books/handbook/install.html">インストールガイド</a><br/>
 			      ・<a href="{$u.rel.notes}">リリースノート</a><br/>
 			      ・<a href="{$u.rel.hardware}">ハードウェアノート</a><br/>
+			      ・<a href="{$u.rel.installation}">インストールノート</a><br/>
 			      ・<a href="{$u.rel.errata}">Errata</a><br/>
-			      ・<a href="{$u.rel.early}">初期利用者のための手引き</a></small></p>
+			      ・<a href="{$u.rel.early}">Migration Guide</a></small></p>
 
 			<p>
 			      <a href="{$u.rel2.announce}">
-			      <font size="+1" color="#990000"><b>プロダクションリリース:
+			      <font size="+1" color="#990000"><b>プロダクションリリース (Legacy):
 			    <xsl:value-of select="$rel2.current"/></b></font></a><br/>
 
-			    <small>・<a href="{$u.rel2.announce}">アナウンス</a><br/>
-			      ・<a href="{$enbase}/doc/ja_JP.eucJP/books/handbook/install.html">インストールガイド</a><br/>
+			    <small>・<a href="{$enbase}/doc/ja_JP.eucJP/books/handbook/install.html">インストールガイド</a><br/>
 			      ・<a href="{$u.rel2.notes}">リリースノート</a><br/>
 			      ・<a href="{$u.rel2.hardware}">ハードウェアリスト (英語)</a><br/>
+			      ・<a href="{$u.rel2.installation}">インストールノート</a><br/>
 			      ・<a href="{$u.rel2.errata}">Errata (英語)</a></small></p>
 
-			  <p><font size="+1" color="#990000"><b>Project News</b></font><br/>
+			  <p><font size="+1" color="#990000"><b>Project News</b></font>
+			    <xsl:text> </xsl:text>
+			    <font color="#990000">(<a href="{$enbase}/news/news.rdf">RSS</a>)</font><br/>
 			    <font size="-1">
 			      最終更新: 
 			      <xsl:call-template name="html-index-news-project-items-lastmodified">
@@ -384,21 +301,44 @@
 			    </font>
 			  </p>
 
-			  <p><font size="+1" color="#990000"><b>セキュリティ勧告</b></font><br/>
+			  <p><font size="+1" color="#990000"><b>セキュリティ勧告</b></font>
+			    <xsl:text> </xsl:text>
+			    <font color="#990000">(<a href="{$enbase}/security/advisories.rdf">RSS</a>)</font><br/>
 
 			    <font size="-1">
 			      最終更新: 
 			      <xsl:call-template name="html-index-advisories-items-lastmodified">
 				<xsl:with-param name="advisories.xml" select="$advisories.xml" />
+				<xsl:with-param name="type" select="'advisory'" />
 			      </xsl:call-template>
 
 			      <br/>
 
 			      <xsl:call-template name="html-index-advisories-items">
 				<xsl:with-param name="advisories.xml" select="$advisories.xml" />
+				<xsl:with-param name="type" select="'advisory'" />
 			      </xsl:call-template>
 
 			      <a href="security/">さらに...</a>
+			    </font>
+			  </p>
+
+			  <p><font size="+1" color="#990000"><b>Errata Notices</b></font>
+			    <xsl:text> </xsl:text>
+			    <br/>
+			    <font size="-1">
+			      最終更新:
+			      <xsl:call-template name="html-index-advisories-items-lastmodified">
+				<xsl:with-param name="advisories.xml" select="$notices.xml" />
+				<xsl:with-param name="type" select="'notice'" />
+			      </xsl:call-template>
+
+			      <br/>
+
+			      <xsl:call-template name="html-index-advisories-items">
+				<xsl:with-param name="advisories.xml" select="$notices.xml" />
+				<xsl:with-param name="type" select="'notice'" />
+			      </xsl:call-template>
 			    </font>
 			  </p>
 			</td>
@@ -448,7 +388,7 @@
 		alt="[Daemon News]" height="45" width="130"
 		border="0"/></a></td>
 
-	    <td><a href="{$base}/copyright/daemon.html"><img
+	    <td><a href="{$enbase}/art.html"><img
 							     src="../gifs/powerlogo.gif"
 							     alt="[Powered by FreeBSD]"
 							     height="64"

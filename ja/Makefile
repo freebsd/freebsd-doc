@@ -1,6 +1,6 @@
-# $FreeBSD: www/ja/Makefile,v 1.65 2004/03/23 23:27:57 phantom Exp $
+# $FreeBSD: www/ja/Makefile,v 1.66 2004/04/26 21:05:53 simon Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.106
+# Original revision: 1.114
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -12,6 +12,7 @@
 # These are turned into validated, normalized HTML files.
 
 DOCS=  applications.sgml
+#DOCS+= art.sgml
 DOCS+= auditors.sgml
 DOCS+= availability.sgml
 DOCS+= docs.sgml 
@@ -23,6 +24,7 @@ DOCS+= publish.sgml
 DOCS+= relnotes.sgml
 DOCS+= send-pr.sgml
 DOCS+= support.sgml
+#DOCS+= usergroups.sgml
 DOCS+= where.sgml 
 DOCS+= y2kbug.sgml 
 
@@ -47,11 +49,11 @@ SUBDIR+= news
 #SUBDIR+= events
 SUBDIR+= FAQ
 SUBDIR+= handbook
+SUBDIR+= tutorials
 SUBDIR+= internal
 SUBDIR+= java
 SUBDIR+= copyright
 SUBDIR+= search
-#SUBDIR+= gallery
 SUBDIR+= projects
 SUBDIR+= prstats
 SUBDIR+= platforms
@@ -67,12 +69,6 @@ SUBDIR+= doc
 # .endif
 # .if defined(BUILD_RELNOTES)
 # SUBDIR+= relnotes
-.endif
-
-# These *must* be listed after the "doc" subdir, as they create symlinks
-# in to it.
-.if !defined(WEB_ONLY) || empty(WEB_ONLY)
-SUBDIR+= tutorials
 .endif
 
 # Non-SGML
@@ -92,14 +88,17 @@ REVCHECK=	yes
 
 index.html: index.xsl ${XML_INCLUDES}\
 		${XML_NEWS_INCLUDES} ${XML_NEWS_NEWS} ${XML_NEWS_PRESS}\
-		${XML_MIRRORS} ${XML_ADVISORIES}
+		${XML_MIRRORS} ${XML_ADVISORIES} \
+		${XML_NOTICES} ${XML_NAVIGATION}
 	${XSLTPROC} ${XSLTPROCOPTS} \
 		-o $@ \
 		--param mirrors.xml "'${XML_MIRRORS}'" \
 		--param advisories.xml "'${XML_ADVISORIES}'" \
+		--param notices.xml "'${XML_NOTICES}'" \
 		--param news.press.xml "'${XML_NEWS_PRESS}'" \
 		--param news.project.xml "'${XML_NEWS_NEWS}'" \
 		--param transtable.xml "'${XML_TRANSTABLE}'" \
+		--param navigation.xml "'${XML_NAVIGATION}'" \
 		${.CURDIR}/index.xsl ${XML_NEWS_NEWS}
 .if !defined(NO_TIDY)
 	-${TIDY} ${TIDYOPTS} ${.TARGET}
