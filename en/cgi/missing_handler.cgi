@@ -52,7 +52,7 @@
 #
 #     _________________________________________________________________
 #                                      
-# $FreeBSD: www/en/cgi/missing_handler.cgi,v 1.8 2000/10/03 19:50:16 wosch Exp $
+# $FreeBSD: www/en/cgi/missing_handler.cgi,v 1.9 2000/12/28 13:32:15 wosch Exp $
 # ----------------------------------------------------------------------
 
 # output title
@@ -101,6 +101,13 @@ The closest match to your request is
 
 Please contact the server administrator
 <a href="mailto:$server_admin?subject=Document%20not%20found%20-%20http://$http_host$redirect_url_save">$server_admin</a>.<p>
+
+<center>
+Please try our 
+<a href="http://www.freebsd.org/search/index-site.html">Site Map</a> or
+<a href="http://www.freebsd.org/search/search.html">Search Page</a> 
+</center>
+<p>
 
 Thank you very much!<p>
 ];
