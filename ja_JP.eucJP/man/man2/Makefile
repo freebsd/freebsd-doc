@@ -69,6 +69,7 @@ MAN2 =	_exit.2\
 	kqueue.2\
 	ktrace.2\
 	link.2\
+	lio_listio.2\
 	listen.2\
 	lseek.2\
 	madvise.2\
@@ -88,6 +89,8 @@ MAN2 =	_exit.2\
 	munmap.2\
 	nanosleep.2\
 	nfssvc.2\
+	ntp_adjtime.2\
+	ntp_gettime.2\
 	open.2\
 	pathconf.2\
 	pipe.2\
