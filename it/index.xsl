@@ -4,7 +4,7 @@
      The FreeBSD Italian Documentation Project
 
      $FreeBSD$
-     Original revision: 1.125
+     Original revision: 1.127
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -126,8 +126,8 @@
 	      <h2>Cos'è FreeBSD?</h2>
 
 	      <p>FreeBSD è un sistema operativo avanzato per architetture
-		compatibili x86 (inclusi Pentium e Athlon), amd64 (inclusi
-		Opteron, Athlon 64, e EM64T), Alpha/AXP, IA-64, PC-98 e
+		compatibili x86 (inclusi Pentium&#174; eAthlon&#8482;), amd64 (inclusi
+		Opteron&#8482;, Athlon 64, e EM64T), Alpha/AXP, IA-64, PC-98 e
 		UltraSPARC&#174;.
 		È derivato da BSD, la versione di
 		<xsl:value-of select="$unix"/> sviluppata
@@ -220,7 +220,7 @@
 		      <tr>
 			<td valign="top">
 			  <p><a href="{$u.rel.announce}">
-			      <font size="+1" color="#990000"><b>Release con Nuove Tecnologie:
+			      <font size="+1" color="#990000"><b>Release di Produzione:
 				  <xsl:value-of select="$rel.current"/></b></font></a><br/>
 			    <small>&#183; <a href="{$enbase}/doc/en_US.ISO8859-1/books/handbook/install.html">Guida di Installazione</a><br/>
 			      &#183; <a href="{$u.rel.notes}">Note sulla Release</a><br/>
@@ -240,6 +240,10 @@
 			      &#183; <a href="{$u.rel2.installation}">Note sull'Installazione</a><br/>
 			      &#183; <a href="{$u.rel2.errata}">Errata Corrige</a></small>
 			  </p>
+
+                          <p><a href="{$enbase}/snapshots/index.html">
+                             <font size="+1" color="#990000"><b>Snapshot delle Release</b></font></a>
+                          </p>
 
 			  <p><font size="+1" color="#990000"><b>Novità sul Progetto</b></font>
 			    <xsl:text> </xsl:text>
