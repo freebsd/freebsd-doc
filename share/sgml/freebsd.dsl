@@ -1,4 +1,4 @@
-<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.44 2001/08/02 03:24:04 murray Exp $ -->
+<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.45 2001/08/09 00:14:42 chern Exp $ -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
 <!ENTITY % output.html		"IGNORE">
@@ -404,23 +404,29 @@
         (make sequence
           (process-node-list (select-elements (descendants (current-node))
                                 (normalize "contrib")))
-          (literal (author-list-string))))
+          (literal (author-string))
+          (literal ".  ")))
       (element (sect1info authorgroup author)
         (make sequence
           (process-node-list (select-elements (descendants (current-node))
                                 (normalize "contrib")))
-          (literal (author-list-string))))
+          (literal (author-string))
+          (literal ".  ")))
       (element (sect2info authorgroup author)
         (make sequence
           (process-node-list (select-elements (descendants (current-node))
                                 (normalize "contrib")))
-          (literal (author-list-string))))
+          (literal (author-string))
+          (literal ".  ")))
       (element (chapterinfo authorgroup)
-        (process-children))
+        ($italic-seq$
+          (process-children)))
       (element (sect1info authorgroup)
-        (process-children))
+        ($italic-seq$
+          (process-children)))
       (element (sect2info authorgroup)
-        (process-children))
+        ($italic-seq$
+          (process-children)))
 
       (element (author contrib)
         (make sequence
