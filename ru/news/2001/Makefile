@@ -1,6 +1,6 @@
 # $FreeBSD$
-# $FreeBSDru: frdp/www/ru/news/2001/Makefile,v 1.2 2004/01/22 15:09:52 den Exp $
-# Original revision: 1.2
+# $FreeBSDru: frdp/www/ru/news/2001/Makefile,v 1.4 2004/04/09 11:16:51 phantom Exp $
+# Original revision: 1.3
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -9,8 +9,8 @@
 .include "../Makefile.inc"
 .endif
 
-DATA=		index.html
-CLEANFILES+=	index.html
+DATA=		index.html press.html
+CLEANFILES+=	index.html press.html
 
 index.html: ../oldnewsflash.xsl news.xml\
 			../includes.xsl ../../includes.xsl ${XML_TRANSTABLE}
@@ -20,5 +20,15 @@ index.html: ../oldnewsflash.xsl news.xml\
 .if !defined(NO_TIDY)
 	-${TIDY} ${TIDYOPTS} ${.TARGET}
 .endif
+
+press.html: ../oldpress.xsl press.xml \
+		../includes.xsl ../../includes.xsl ${XML_TRANSTABLE}
+	${XSLTPROC} ${XSLTPROCOPTS} -o ${.TARGET} \
+		--param transtable.xml "'${XML_TRANSTABLE}'" \
+		${.CURDIR}/../oldpress.xsl ${.CURDIR}/press.xml
+.if !defined(NO_TIDY)
+	-${TIDY} ${TIDYOPTS} ${.TARGET}
+.endif
+
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
