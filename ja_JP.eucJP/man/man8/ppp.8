@@ -1,4 +1,4 @@
-.\" %FreeBSD: src/usr.sbin/ppp/ppp.8,v 1.209.2.16 2000/12/12 10:14:49 ru Exp %
+.\" %FreeBSD: src/usr.sbin/ppp/ppp.8,v 1.209.2.18 2000/12/27 16:23:25 ru Exp %
 .Dd September 20, 1995
 .\"
 .\" jpman %Id: ppp.8,v 1.4 1997/06/08 18:41:58 saeki Stab %
@@ -238,7 +238,7 @@ auto モードと異なります。
 は標準入力/標準出力からの
 .Em PPP
 接続を受け入れるサーバとして動作させることができます。
-.It PAP と CHAP (rfc 1994) による認証をサポート
+.It "PAP と CHAP (rfc 1994, 2433 および 2759) による認証をサポート"
 PAP もしくは CHAP を用いることにより、Unix スタイルの
 .Xr login 1
 手続きをスキップし、
@@ -347,6 +347,16 @@ Microsoft の
 .It マルチリンク PPP をサポート (rfc 1990)
 接続先への複数の物理的な回線をオープンし、すべてのリンクの
 帯域幅を合わせてより高いスループットを得ることができます。
+.It MPPE (draft-ietf-pppext-mppe) のサポート
+MPPE は、Microsoft 社の Point to Point 暗号化機構です。
+.Nm
+を設定して、Microsoft Windows の仮想プライベートネットワーク
+(VPN) に参加できるようになります。現在のところ、
+.Nm
+は、CHAP 81 認証機構からしか暗号鍵を取得することができません。
+MPPE を動作させるためには、DES つきで
+.Nm
+をコンパイルしなくてはなりません。
 .El
 .Sh パーミッション
 .Nm
@@ -1351,8 +1361,23 @@ ui-gate (受信側) の
 ppp-in:
  set timeout 0
  set ifaddr 10.0.4.1 10.0.4.2
- add 10.0.1.0/24 10.0.4.2
 .Ed
+.Pp
+また、
+.Pa /etc/ppp/ppp.linkup
+中のエントリには、次のようなものを含まなくてはなりません。
+.Bd -literal -offset indent
+ppp-in:
+ add 10.0.1.0/24 HISADDR
+.Ed
+.Pp
+.Nm
+がネゴシエーションを行い、インタフェースにアドレスを割り当てて
+からだけしか経路を追加しないように、
+.Pa ppp.linkup
+ファイル中には
+.Dq add
+コマンドを置く必要があります。
 .Pp
 セキュリティのために PAP もしくは CHAP の設定をしたいかもしれません。
 PAP を有効にするには次の行を追加します:
@@ -1369,7 +1394,7 @@ MyAuthName MyAuthPasswd
 .Pp
 .Ar MyAuthPasswd
 が
-.Pq Dq *
+.Dq *
 の場合には、パスワードは
 .Xr passwd 5
 データベースから検索されます。
@@ -1385,10 +1410,19 @@ ui-gate:
  set timeout 30
  set log Phase Chat Connect hdlc LCP IPCP CCP tun
  set ifaddr 10.0.4.2 10.0.4.1
- add 10.0.2.0/24 10.0.4.1
 .Ed
 .Pp
-PAP を有効にしようとしている場合、次の設定も必要です:
+そして、
+.Pa /etc/ppp/ppp.linkup
+ファイル中に経路の設定もつけます。
+.Bd -literal -offset indent 
+ui-gate:
+ add 10.0.2.0/24 HISADDR
+.Ed
+.Pp
+PAP を有効にするのなら、
+.Pa /etc/ppp/ppp.conf
+プロファイル中に、次のような設定も必要です。
 .Bd -literal -offset indent
  set authname MyAuthName
  set authkey MyAuthKey
@@ -1427,6 +1461,59 @@ TCP 接続経由でそれぞれ作成されます。
 .Nm
 は同期モードで動作します。
 入力データがパケットに再構成されないという、別の利点もあります。
+.Pp
+このように、トンネルされた設定を通してデフォルトの経路を追加する
+ときには注意してください。
+デフォルトの経路
+.Pq Pa /etc/ppp/ppp.linkup に追加されます
+が、最終的にはリンクのトンネル経由の TCP 接続を
+ルーティングすることになるのは良く起こることであり、
+結果的に接続を狭めてしまうことになります。
+これを避けるため、トンネル経由の接続の助けになるように、静的経路を
+追加することを忘れないでください。
+.Bd -literal -offset indent
+ui-gate:
+ set escape 0xff
+ set device ui-gate:ppp-in/tcp
+ add ui-gate x.x.x.x
+ .....
+.Ed
+.Pp
+ここで、
+.Dq x.x.x.x
+は、
+.Dq ui-gate
+への経路が通常使用する IP アドレスです。
+.Pp
+インターネットのような、公共のネットワークを通して接続を
+ルーティングさせる場合、データを暗号化する方が望ましいです。
+MPPE プロトコルの助けを借りれば、それが可能になります。
+しかし、現在のところ、MPPE が圧縮層として実装している
+(この点に関しては Microsoft 社に感謝します) ように、
+トラフィックを圧縮することもできるというわけではありません。
+MPPE 暗号化を有効にするには、次のような行をサーバ側の
+.Pa /etc/ppp/ppp.conf
+に追加してください。
+.Bd -literal -offset indent
+  enable MSCHAPv2
+  disable deflate pred1
+  deny deflate pred1
+.Ed
+.Pp
+その際、
+.Pa /etc/ppp/ppp.secret
+に必要なエントリを置いたことを確認してください
+(MSCHAPv2 はチャレンジコードベースです。そのため、
+.Xr passwd 5
+は使用しません)。
+.Pp
+MSCHAPv2 および MPPE はデフォルトで受け取ることができます。
+ですので、クライアント側では、何も変更を加えなくても動くはずです
+(ですが、プロファイル中に
+.Dq set authname
+と
+.Dq set authkey
+があることは確認してください)。
 .Pp
 .Sh ネットワークアドレス変換 (パケットエイリアシング)
 .Fl nat
@@ -1492,7 +1579,7 @@ set filter
 .Ar name
 .Ar rule-no
 .Ar action
-.Op \&!
+.Op !\&
 .Oo
 .Op host
 .Ar src_addr Ns Op / Ns Ar width
@@ -2091,6 +2178,14 @@ enable dns
 経由で、もしくはスクリーンに出力することができます:
 .Pp
 .Bl -tag -width XXXXXXXXX -offset XXX -compact
+.It Li All
+ロギング用ファシリティをすべて有効にします。
+この場合、ログがたくさんできます。
+`all' の最も一般的な使い方は、共通部分として使うことです。
+この場合、すべてのファシリティを有効にしたあとで一部の
+ファシリティを削ったりします
+(`debug' や `timer' が通常は無効にするのに最適な
+ファシリティです)。
 .It Li Async
 非同期レベルパケットの 16 進ダンプ。
 .It Li CBCP
@@ -2592,6 +2687,18 @@ LQR, ECHO LQR のいずれを用いるにせよ、
 レベルで記録し、回線切断の原因が接続相手にあるものとして、適当な
 .Dq reconnect
 値を使用します。
+.It mppe
+デフォルト: enable かつ accept。
+これは、Microsoft 社の Point to Point 暗号化機構です。
+MPPE の鍵のサイズは、40, 56, 128 ビットです。
+.Dq set mppe
+コマンドを参照してください。
+.It MSChapV2|chap81
+デフォルト: disable かつ accept。
+標準 CHAP (タイプ 0x05) と非常に似ていますが、長さ 16 バイト固定の
+チャレンジコードを送ることと、チャレンジコードを暗号化するのに、
+標準の MD5 機構ではなく MD4, SHA-1 そして DES を混合して使用する
+点が異なります。
 .It MSChap|chap80nt
 デフォルト: disable かつ accept。
 この認証プロトコルの使用は勧められません。
@@ -2843,6 +2950,15 @@ tun インタフェースによってルーティングされる
 スティッキー経路が適用されなくなります。
 .Sq スティック経路
 リストは依然として保守されます。
+.It Op tcp Ns Xo
+.No mssfixup
+.Xc
+デフォルト: enable。
+このオプションは、
+.Nm
+に、出力 TCP SYN パケットを調整するように指令し、
+インタフェース MTU が許可しているサイズを受信セグメントサイズの
+最大値が超えないようにします。
 .It throughput
 デフォルト: enable。
 このオプションを有効にすると、
@@ -2901,7 +3017,7 @@ utmp ファイルおよび wtmp ファイルに作成されます。
 .El
 .Pp
 .It add Ns Xo
-.Op \&!
+.Op !\&
 .Ar dest Ns Op / Ns Ar nn
 .Op Ar mask
 .Op Ar gateway
@@ -2943,10 +3059,10 @@ utmp ファイルおよび wtmp ファイルに作成されます。
 .Sq HISADDR
 はインタフェースの宛先 (相手の) アドレスに置き換えられます。
 .Pp
-.Ar add!
+.Ar add!\&
 コマンド
 .Po
-.Dq \&!
+.Dq !\&
 に注意
 .Pc
 使用時には、経路が存在する場合には
@@ -3217,7 +3333,7 @@ RFC1918 によると、登録されていない送信元アドレスは
 これは、
 .Nm
 がコンパイルされた日付と置き換えられます。
-.It Li DNS0 No " & " Li DNS1
+.It Li DNS0 & DNS1
 これは、それぞれプライマリ DNS サーバ、セカンダリ DNS サーバの
 IP アドレスに置き換えられます。IPCP によりネームサーバが
 ネゴシエーションされた場合、このマクロの値は変わります。
@@ -3294,7 +3410,7 @@ IP アドレスに置き換えられます。IPCP によりネームサーバが
 デフォルトのリンク名は
 .Dq deflink
 です。
-.It close Op lcp|ccp Ns Op \&!
+.It close Op lcp|ccp Ns Op \&!\&
 引数が与えられないと、適切なプロトコル層がダウンし、リンクが閉じられます。
 .Dq lcp
 が指定されると LCP 層がダウンしますが、
@@ -3307,7 +3423,7 @@ IP アドレスに置き換えられます。IPCP によりネームサーバが
 を使用して相手のマシンと会話できます。
 .Dq ccp
 が指定されると適切な圧縮層が閉じられます。
-.Dq \&!
+.Dq !\&
 が使用されると、圧縮層はクローズ状態のままとなります。
 使用されない場合には、STOPPED 状態へ再度入り、
 相手が更なる CCP ネゴシエーションを開始するのを待ちます。
@@ -3320,7 +3436,7 @@ IP アドレスに置き換えられます。IPCP によりネームサーバが
 .Dq quit
 を参照してください。
 .It delete Ns Xo
-.Op \&!
+.Op !\&
 .Ar dest
 .Xc
 このコマンドは指定した
@@ -3338,11 +3454,11 @@ IP アドレスの経路を削除します。
 .Sq default
 が指定された場合、デフォルト経路が削除されます。
 .Pp
-.Ar delete!
+.Ar delete!\&
 コマンドが使用された場合
 .Po
 最後の
-.Dq \&!
+.Dq !\&
 に注意
 .Pc
 、存在しない経路について
@@ -3376,12 +3492,12 @@ IP アドレスの経路を削除します。
 .Ar command
 を指定した場合、このコマンドの使用方法を表示します。
 .It iface add Ns Xo
-.Op \&!
+.Op !\&
 .Ar addr Ns Op / Ns Ar bits
 .Op Ar peer
 .Xc
 .It iface add Ns Xo
-.Op \&!
+.Op !\&
 .Ar addr
 .Ar mask
 .Ar peer
@@ -3393,7 +3509,7 @@ IP アドレスの経路を削除します。
 は次のいずれかです:
 .Bl -tag -width 2h
 .It iface add Ns Xo
-.Op \&!
+.Op !\&
 .Ar addr Ns Op / Ns Ar bits
 .Op Ar peer
 .Xc
@@ -3406,7 +3522,7 @@ IP アドレスの経路を削除します。
 を使用可能です
 .Pq addr との間に空白を入れてはなりません
 。指定したアドレスが既に存在する場合、
-.Dq \&!
+.Dq !\&
 を使用していない限りコマンドは失敗します - この場合、
 以前のインタフェースアドレスエントリは新しいもので置き換えられ、
 ネットマスクと相手のアドレスの変更を許します。
@@ -3438,14 +3554,14 @@ IPCP ネゴシエートされたアドレス以外の全アドレスが
 モードでもない場合、全インタフェースアドレスが削除されます。
 .Pp
 .It iface delete Ns Xo
-.Op \&! Ns
-.No |rm Ns Op \&!
+.Op !\& Ns
+.No |rm Ns Op !\&
 .Ar addr
 .Xc
 このコマンドは、指定した
 .Ar addr
 をインタフェースから削除します。
-.Dq \&!
+.Dq !\&
 が指定されると、現在そのアドレスがインタフェースに割り当てられていなくても、
 エラーは報告されません (削除も行われません)。
 .It iface show
@@ -3708,7 +3824,7 @@ XON/XOFF については
 クライアントモードでの PAP または CHAP のネゴシエーションで使用される
 認証キー (もしくはパスワード) を、指定した値に設定します。
 ダイヤルまたはログインスクリプトの
-.Sq \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\P
+.Sq \eP
 シーケンスで使用するパスワードもまた指定します。
 これにより実際のパスワードは記録されません。
 .Ar command
@@ -3734,13 +3850,13 @@ XON/XOFF については
 実行するプログラムを得るために
 .Ar value
 をパーズする際には、
-.Dq \&!
+.Dq !\&
 が二重
-.Pq Dq \&!!
+.Pq Dq !!\&
 である場合、単一のリテラル
-.Dq \&!
+.Dq !\&
 として扱います、そうでない場合、
-.Dq \&!
+.Dq !\&
 を無視します。また、前述の
 .Dq !bg
 コマンドと同様に特殊な名前を置換します。
@@ -3962,7 +4078,7 @@ CBCP ネゴシエーション時にサーバがコールバック無しを要求することを許したい場合、
 .Nm
 接続相手が番号を指定するものと想定します。
 .It set cd Oo
-.No off| Ns Ar seconds Ns Op \&!
+.No off| Ns Ar seconds Ns Op !\&
 .Oc
 通常、オープンしたデバイスのタイプにより、
 .Nm
@@ -4028,7 +4144,7 @@ PPPoE デバイスの場合、キャリアが常に要求されます。
 .Pp
 .Ar seconds
 の直後にエクスクラメーションマーク
-.Pq Dq \&!
+.Pq Dq !\&
 がある場合、
 .Nm
 はキャリアを
@@ -4116,15 +4232,15 @@ ISDN デバイスは通常
 が
 .Pa /dev/
 から始まらない場合、エクスクラメーションマーク
-.Pq Dq \&!
+.Pq Dq !\&
 から始めるか、
 .No PPPoE: Ns Ar iface Ns Xo
 .Op \&: Ns Ar provider Ns
 .Xc
 の形式であるか、
-.Ar host Ns No : Ns Ar port Ns Oo
-.No /tcp|udp
-.Oc
+.Sm off
+.Ar host : port /tcp|udp
+.Sm on
 の形式である必要があります。
 .Pp
 エクスクラメーションマークで始まる場合、
@@ -4204,33 +4320,33 @@ provider が与えられないと、空の値が使用されます。
 .Sq value
 をチャットスクリプトに指定可能です:
 .Bd -unfilled -offset indent
-.It \\\\\\\\\\\\\\\\c
+.It \ec
 .Sq 送信
 文字列の最後の文字として使用した場合、
 改行を追加してはならないことを意味します。
-.It \\\\\\\\\\\\\\\\d
+.It \ed
 チャットスクリプトがこのシーケンスに出会うと、2 秒待ちます。
-.It \\\\\\\\\\\\\\\\p
+.It \ep
 チャットスクリプトがこのシーケンスに出会うと、1/4 秒待ちます。
-.It \\\\\\\\\\\\\\\\n
+.It \en
 改行文字と置き換えられます。
-.It \\\\\\\\\\\\\\\\r
+.It \er
 復改文字と置き換えられます。
-.It \\\\\\\\\\\\\\\\s
+.It \es
 空白文字と置き換えられます。
-.It \\\\\\\\\\\\\\\\t
+.It \et
 タブ文字と置き換えられます。
-.It \\\\\\\\\\\\\\\\T
+.It \eT
 現在の電話番号と置き換えられます (後述の
 .Dq set phone
 参照)。
-.It \\\\\\\\\\\\\\\\P
+.It \eP
 現在の
 .Ar authkey
 値と置き換えられます (前述の
 .Dq set authkey
 参照)。
-.It \\\\\\\\\\\\\\\\U
+.It \eU
 現在の
 .Ar authname
 値と置き換えられます (前述の
@@ -4251,12 +4367,12 @@ set dial "... ATDT\\\\T CONNECT"
 チャットスクリプトから外部コマンドを実行することもできます。
 そうするためには、
 受信待ち文字列または送信文字列の最初の文字をエクスクラメーションマーク
-.Pq Dq \&!
+.Pq Dq !\&
 にします。
 リテラルのエクスクラメーションマークが必要な場合には、二重
-.Dq \&!!
+.Dq !!\&
 にすれば、単一のリテラル
-.Dq \&!
+.Dq !\&
 として扱われます。
 コマンドが実行されると、標準入力と標準出力がオープンデバイス (
 .Dq set device
@@ -4309,7 +4425,7 @@ login OK!
 記号がエスケープされていることが重要です。
 そうでなければパーザは、
 受信待ち-送信-受信待ちのシーケンスとして見てしまいます。
-.Dq \&!
+.Dq !\&
 文字を見付けると、実行パーザは最初のコマンドを 3 つの引数として読み、
 .Xr sh 1
 自身が
@@ -4391,7 +4507,7 @@ IPCP 層が後からこの値を変更することが可能です。
 される文字を指定するために使用します。
 .It set filter dial|alive|in|out Ar rule-no Xo
 .No permit|deny|clear| Ns Ar rule-no
-.Op \&!
+.Op !\&
 .Oo Op host
 .Ar src_addr Ns Op / Ns Ar width
 .Op Ar dst_addr Ns Op / Ns Ar width
@@ -4665,6 +4781,8 @@ PAP や CHAP に対して指定することは不正です。
 が必要なアドレス変換を行うようにすることにより、
 相手が当方に新しい (動的な) IP アドレスを割り当てたとしても、
 リンクがアップすると接続のトリガとなるプロセスが接続できるようにします。
+.It set mppe {40|56|128}
+このオプションは、鍵の長さを選択します。デフォルトは 128 です。
 .It set mrru Op Ar value
 このオプションを設定すると、
 マルチリンクプロトコルまたは MP としても知られる、
@@ -4935,7 +5053,7 @@ RADIUS サーバから受信した値は、
 の遅延は効果があるので、
 すぐに手動でダイヤルしても何も起ってないように見えるかもしれません。
 すぐにダイヤルする必要がある場合、
-.Dq \&!
+.Dq !\&
 を
 .Dq open
 キーワードの直後に付けます。
@@ -5213,10 +5331,10 @@ umask の詳細については
 .It
 何が利用できるかについては、
 .Dq help ,
-.Dq nat ? ,
-.Dq enable ? ,
-.Dq set ? ,
-.Dq show ?
+.Dq nat \&? ,
+.Dq enable \&? ,
+.Dq set \&? ,
+.Dq show \&?
 コマンドを使って、オンライン情報を取得してください。
 .It
 次の URL に有用な情報があります:
