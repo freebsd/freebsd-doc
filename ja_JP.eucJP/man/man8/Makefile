@@ -63,6 +63,8 @@ MAN8 =	IPXrouted.8\
 	fsinfo.8\
 	fsirand.8\
 	ftpd.8\
+	getfmac.8\
+	getpmac.8\
 	getty.8\
 	growfs.8\
 	hlfsd.8\
@@ -209,6 +211,7 @@ MAN8 =	IPXrouted.8\
 	rip6query.8\
 	rlogind.8\
 	rmail.8\
+	rmextattr.8\
 	rmt.8\
 	rmuser.8\
 	route.8\
@@ -235,7 +238,9 @@ MAN8 =	IPXrouted.8\
 	savecore.8\
 	scspd.8\
 	sendmail.8\
+	setfmac.8\
 	setkey.8\
+	setpmac.8\
 	sftp-server.8\
 	showmount.8\
 	shutdown.8\
@@ -320,6 +325,9 @@ MLINKS+=reboot.8 halt.8
 MLINKS+=reboot.8 fastboot.8
 MLINKS+=reboot.8 fasthalt.8
 MLINKS+=restore.8 rrestore.8
+MLINKS+=rmextattr.8 setextattr.8
+MLINKS+=rmextattr.8 getextattr.8
+MLINKS+=rmextattr.8 lsextattr.8
 MLINKS+=rpc.lockd.8 lockd.8
 MLINKS+=rtsold.8 rtsol.8
 MLINKS+=slattach.8 slip.8
