@@ -1,5 +1,5 @@
 # 
-# $FreeBSD: doc/en_US.ISO8859-1/books/handbook/Makefile,v 1.47 2001/08/23 07:59:06 murray Exp $
+# $FreeBSD: doc/en_US.ISO8859-1/books/handbook/Makefile,v 1.48 2001/08/25 21:52:33 dd Exp $
 #
 # Build the FreeBSD Handbook.
 #
@@ -104,7 +104,6 @@ IMAGES+= install/edit-inetd-conf.scr
 # SGML content
 SRCS=  book.sgml
 SRCS+= advanced-networking/chapter.sgml
-SRCS+= backups/chapter.sgml
 SRCS+= basics/chapter.sgml
 SRCS+= bibliography/chapter.sgml
 SRCS+= config/chapter.sgml
