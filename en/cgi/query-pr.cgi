@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $FreeBSD$
+# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.17 1999/09/06 07:02:40 peter Exp $
 
 $ENV{'PATH'} = "/bin:/usr/bin:/usr/sbin:/sbin:/usr/local/bin";
 
@@ -98,7 +98,7 @@ while(<Q>) {
     if ($inhdr && /^$/) {
 	$from = $replyto if ($replyto);
 	$email = $from;
-	$email .= '@freebsd.org' unless ($email =~ /@/);
+	$email .= '@FreeBSD.org' unless ($email =~ /@/);
 	$inhdr = 0;
     }
 
@@ -106,7 +106,7 @@ while(<Q>) {
 	$_ = &getline($_);
 	s/\(.*\)//;			# remove personal name
 	s/\s+//g;
-	$_ = $_ . '@freebsd.org' if !/@/;
+	$_ = $_ . '@FreeBSD.org' if !/@/;
 	$_ = '>Responsible:<a href="mailto:' . $_ . '">' . $_ . '</a>';
 	$html_fixup = 0;
     }
@@ -160,7 +160,7 @@ print "</dl>";
 $origsyn =~ s/[^a-zA-Z+.@-]/"%" . sprintf("%02X", unpack("C", $&))/eg;
 $email =~ s/[^a-zA-Z+.@-]/"%" . sprintf("%02X", unpack("C", $&))/eg;
 
-print "<A HREF=\"mailto:freebsd-gnats-submit\@freebsd.org,${email}?subject=Re:%20${cat}/${number}:%20$origsyn\">Submit Followup</A>\n";
+print "<A HREF=\"mailto:FreeBSD-gnats-submit\@FreeBSD.org,${email}?subject=Re:%20${cat}/${number}:%20$origsyn\">Submit Followup</A>\n";
 
 print &html_footer;
 
@@ -179,7 +179,7 @@ sub getline
 sub cvsweb {
     local($file) = shift;
     $file =~ s/[,.;]$//;
-    return 'http://www.freebsd.org/cgi/cvsweb.cgi/' . $file;
+    return 'http://www.FreeBSD.org/cgi/cvsweb.cgi/' . $file;
 }
     
 
