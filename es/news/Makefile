@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.2 1999-02-26 14:36:05 jesusr Exp $
+# $Id: Makefile,v 1.3 1999-03-03 15:44:39 jesusr Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -18,6 +18,7 @@ DOCS+=	qnewsletter-1-5.sgml
 DOCS+=	qnewsletter-1-6.sgml
 DOCS+=	qnewsletter-1-7.sgml
 DOCS+=	qnewsletter-2-1.sgml
+DOCS+=	qnewsletter-2-2.sgml
 
 DOCS+= press.sgml
 DOCS+= newsflash.sgml
