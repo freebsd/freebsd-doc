@@ -10,8 +10,6 @@ IMAGES= fig1.eps fig2.eps
 INSTALL_COMPRESSED?=gz
 INSTALL_ONLY_COMPRESSED?=
 
-WITH_DOCFORMAT_NAVI_LINK?=YES
-
 SRCS= book.sgml
 
 # Use the local DSSSL file
