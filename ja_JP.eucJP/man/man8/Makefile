@@ -97,6 +97,7 @@ MAN8 =	IPXrouted.8\
 	kldstat.8\
 	kldunload.8\
 	kzip.8\
+	lastlogin.8\
 	ldconfig.8\
 	linux.8\
 	loader.4th.8\
@@ -197,6 +198,7 @@ MAN8 =	IPXrouted.8\
 	quotacheck.8\
 	quotaon.8\
 	rarpd.8\
+	raycontrol.8\
 	rbootd.8\
 	rc.8\
 	reboot.8\
