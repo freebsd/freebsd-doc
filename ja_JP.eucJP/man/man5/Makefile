@@ -30,6 +30,7 @@ MAN5 =	a.out.5\
 	forward.5\
 	fs.5\
 	fstab.5\
+	ftpchroot.5\
 	gettytab.5\
 	groff_font.5\
 	groff_out.5\
