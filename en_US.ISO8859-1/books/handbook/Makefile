@@ -1,5 +1,5 @@
 # 
-# $FreeBSD: doc/en_US.ISO8859-1/books/handbook/Makefile,v 1.42 2001/08/10 00:30:43 murray Exp $
+# $FreeBSD: doc/en_US.ISO8859-1/books/handbook/Makefile,v 1.43 2001/08/14 07:37:03 rpratt Exp $
 #
 # Build the FreeBSD Handbook.
 #
@@ -129,7 +129,7 @@ SYMLINKS=	${DESTDIR} index.html handbook.html
 # Turn on all the chapters.
 CHAPTERS?= ${SRCS:M*chapter.sgml}
 
-JADEFLAGS+= ${CHAPTERS:S/\/chapter.sgml//:S/^/-i chap./}
+SGMLFLAGS+= ${CHAPTERS:S/\/chapter.sgml//:S/^/-i chap./}
 
 # XXX The Handbook build currently overflows some internal, hardcoded 
 # limits in pdftex.  Until we split the Handbook up, build the PDF 
