@@ -2,8 +2,8 @@
 
 <!-- $FreeBSD$ -->
 <!-- The FreeBSD Russian Documentation Project -->
-<!-- $FreeBSDru: frdp/www/ru/news/news-rdf.xsl,v 1.2 2001/12/12 12:21:33 phantom Exp $ -->
-<!-- Original revision: 1.4 -->
+<!-- $FreeBSDru: frdp/www/ru/news/news-rdf.xsl,v 1.3 2003/09/29 12:03:20 den Exp $ -->
+<!-- Original revision: 1.5 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   
@@ -15,8 +15,8 @@
 
   <!-- Generate the main body of the RDF file -->
   <xsl:template match="news">
-    <rdf:rdf xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
-	     xmlns="http://my.netscape.com/rdf/simple/0.9">
+    <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+	     xmlns="http://my.netscape.com/rdf/simple/0.9/">
 
       <channel>
 	<title>Новости FreeBSD</title>
@@ -27,7 +27,7 @@
       <!-- Only include the last 10 events -->
       <xsl:apply-templates select="descendant::event[position() &lt;= 10]"/>
 
-      </rdf:rdf>
+      </rdf:RDF>
   </xsl:template>
 
   <!-- Generate the <item> elements and their content -->
