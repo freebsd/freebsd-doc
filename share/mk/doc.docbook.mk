@@ -461,7 +461,7 @@ ${.CURDIR:T}.pdb.${_curcomp}: ${DOC}.pdb.${_curcomp}
 
 # RTF --------------------------------------------------------------------
 
-${DOC}.rtf: ${SRCS} ${LOCAL_IMAGES_EPS}
+${DOC}.rtf: ${SRCS} ${LOCAL_IMAGES_EPS} ${LOCAL_IMAGES_TXT}
 	${JADE} -V rtf-backend ${PRINTOPTS} \
 		${JADEOPTS} -t rtf -o ${.TARGET} ${MASTERDOC}
 
@@ -472,14 +472,16 @@ ${DOC}.rtf: ${SRCS} ${LOCAL_IMAGES_EPS}
 # format, which will then lead on to a different .dvi file as well.
 #
 
-${DOC}.tex: ${SRCS} ${LOCAL_IMAGES_EPS} ${INDEX_SGML} ${PRINT_INDEX}
+${DOC}.tex: ${SRCS} ${LOCAL_IMAGES_EPS} ${INDEX_SGML} ${PRINT_INDEX} \
+		${LOCAL_IMAGES_TXT}
 	${JADE} -V tex-backend ${PRINTOPTS} \
 		${JADEOPTS} -t tex -o ${.TARGET} ${MASTERDOC}
 
 ${DOC}.tex-ps: ${DOC}.tex
 	${LN} -f ${.ALLSRC} ${.TARGET}
 
-${DOC}.tex-pdf: ${SRCS} ${IMAGES_PDF} ${INDEX_SGML} ${PRINT_INDEX}
+${DOC}.tex-pdf: ${SRCS} ${IMAGES_PDF} ${INDEX_SGML} ${PRINT_INDEX} \
+		${LOCAL_IMAGES_TXT}
 	${RM} -f ${.TARGET}
 	${CAT} ${PDFTEX_DEF} > ${.TARGET}
 	${JADE} -V tex-backend ${PRINTOPTS} -ioutput.print.pdf \
