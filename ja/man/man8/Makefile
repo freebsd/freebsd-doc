@@ -31,6 +31,7 @@ MAN8 =	IPXrouted.8\
 	cvsbug.8\
 	dev_mkdb.8\
 	disklabel.8\
+	diskless.8\
 	diskpart.8\
 	dm.8\
 	dmesg.8\
@@ -185,6 +186,8 @@ MAN8 =	IPXrouted.8\
 	spkrtest.8\
 	spray.8\
 	sticky.8\
+	stlload.8\
+	stlstats.8\
 	strfile.8\
 	swapon.8\
 	sync.8\
@@ -201,8 +204,10 @@ MAN8 =	IPXrouted.8\
 	tunefs.8\
 	tzsetup.8\
 	umount.8\
+	uuchk.8\
 	uucico.8\
 	uucpd.8\
+	uusched.8\
 	uuxqt.8\
 	vipw.8\
 	vmstat.8\
