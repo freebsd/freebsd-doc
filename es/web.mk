@@ -1,5 +1,5 @@
 # bsd.web.mk
-# $Id: web.mk,v 1.1.1.1 1999-02-08 19:26:11 wosch Exp $
+# $Id: web.mk,v 1.2 1999-04-10 20:21:50 jesusr Exp $
 
 #
 # Build and install a web site.
@@ -42,6 +42,11 @@ CGIINSTALLDIR=	${DESTDIR}${WEBBASE}/${CGIDIR}
 ORPHANS:=	${DOCS}
 
 COPY=	-C
+
+#
+# Where the ports live, if CVS isn't used (ie. NOPORTSCVS is defined)
+#
+PORTSBASE?=	/usr
 
 ##################################################################
 # Transformation rules
@@ -156,9 +161,11 @@ realinstall: ${COOKIE} ${GENDOCS} ${DATA} ${LOCAL} ${CGI} _PROGSUBDIR
 realinstall2:
 .if defined(DOCSUBDIR) && !empty(DOCSUBDIR)
 	for entry in ${DOCSUBDIR}; do \
-		(cd ${DOCINSTALLDIR}/$$entry; \
-		if test -f $$entry.html; then tar czf $$entry-html.tar.gz *.html; fi; \
-		if test -f $$entry.html; then ln -fs $${entry}.html index.html;fi ) \
+		if [ $$entry != "handbook" ]; then \
+			(cd ${DOCINSTALLDIR}/$$entry; \
+			if test -f $$entry.html; then tar czf $$entry-html.tar.gz *.html; fi; \
+			if test -f $$entry.html; then ln -fs $${entry}.html index.html;fi ) \
+		fi; \
 	done
 .endif
 
@@ -185,7 +192,11 @@ _PROGSUBDIR: .USE
 	@for entry in ${DOCSUBDIR}; do \
 		(${ECHODIR} "===> ${DIRPRFX}$$entry"; \
 		cd ${.CURDIR}/$${entry}; \
-		${MAKE} ${.TARGET:S/realinstall/install/:S/.depend/depend/} DIRPRFX=${DIRPRFX}$$entry/ ${PARAMS}); \
+		if [ $$entry = "handbook" -a ${WEBDIR} = "data" ]; then \
+			${MAKE} ${.TARGET:S/realinstall/install/:S/.depend/depend/} DIRPRFX=${DIRPRFX}$$entry/ ${PARAMS} FORMATS="txt html html-split"; \
+		else \
+			${MAKE} ${.TARGET:S/realinstall/install/:S/.depend/depend/} DIRPRFX=${DIRPRFX}$$entry/ ${PARAMS}; \
+		fi); \
 	done
 .endif
 
