@@ -262,6 +262,7 @@ MAN8 =	IPXrouted.8\
 	spppcontrol.8\
 	spray.8\
 	sshd.8\
+	ssh-keysign.8\
 	sticky.8\
 	stlload.8\
 	stlstats.8\
