@@ -1,9 +1,9 @@
-# $Id: Makefile,v 1.31 1998-04-30 10:31:00 obrien Exp $
+# $Id: Makefile,v 1.32 1998-04-30 12:51:11 jkh Exp $
 
 SGMLOPTS=-links
-SRCS= authors.sgml backups.sgml basics.sgml bibliography.sgml boothelp.sgml
-SRCS+= booting.sgml contrib.sgml crypt.sgml ctm.sgml current.sgml cvsup.sgml
-SRCS+= cyclades.sgml development.sgml dialup.sgml dialout.sgml
+SRCS= anoncvs.sgml authors.sgml backups.sgml basics.sgml bibliography.sgml
+SRCS+= boothelp.sgml booting.sgml contrib.sgml crypt.sgml ctm.sgml current.sgml
+SRCS+= cvsup.sgml cyclades.sgml development.sgml dialup.sgml dialout.sgml
 SRCS+= disks.sgml diskless.sgml dma.sgml eresources.sgml esdi.sgml 
 SRCS+= firewalls.sgml german.sgml glossary.sgml goals.sgml
 SRCS+= handbook.sgml history.sgml hw.sgml install.sgml isdn.sgml 
