@@ -609,6 +609,32 @@ lib/X11/oneko/mouse.xpm
           one patch fix the same file (e.g., <filename>patch-aa</filename> and
           <filename>patch-ab</filename> both changing
           <filename><makevar>WRKSRC</makevar>/foobar.c</filename>).</para>
+
+        <para>Do not put RCS strings in patches.  CVS will mangle them when we
+          put the files into the ports tree, and when we check them out again,
+          they will come out different and the patch will fail.  RCS strings
+          are surrounded by dollar (<literal>&dollar;</literal>) signs, and
+          typically start with <literal>&dollar;Id</literal> or
+          <literal>&dollar;RCS</literal>.</para>
+
+        <para>Using the recurse (<option>-r</option>) option to
+          <command>diff</command> to generate patches is fine, but please take
+          a look at the resulting patches to make sure you do not have any
+          unnecessary junk in there.  In particular, diffs between two backup
+          files, <filename>Makefiles</filename> when the port uses
+          <command>Imake</command> or GNU <command>configure</command>, etc.,
+          are unnecessary and should be deleted.  If you had to edit
+          <filename>configure.in</filename> and run
+          <command>autoconf</command> to regenerate
+          <command>configure</command>, do not take the diffs of
+          <command>configure</command> (it often grows to a few thousand
+          lines!); define <literal>USE_AUTOCONF=yes</literal> and take the
+          diffs of <filename>configure.in</filename>.</para>
+
+        <para>Also, if you had to delete a file, then you can do it in the
+          <maketarget>post-extract</maketarget> target rather than as part of
+          the patch.  Once you are happy with the resulting diff, please split
+          it up into one source file per patch file.</para>
       </sect1>
 
       <sect1>
@@ -1037,6 +1063,30 @@ MASTER_SITE_SUBDIR=   applications</programlisting>
       </sect2>
 
       <sect2>
+	<title><makevar>EXTRACT_SUFX</makevar></title>
+
+	<para>If you have one distribution file, and it uses an odd suffix to
+	  indicate the compression mechanism, set
+	  <makevar>EXTRACT_SUFX</makevar>.</para>
+	
+	<para>For example, if the distribution file was named
+	  <filename>foo.tgz</filename> instead of the more normal
+	  <filename>foo.tar.gz</filename>, you would write:</para>
+
+	<programlisting>DISTNAME=      foo
+EXTRACT_SUFX=  .tgz</programlisting>
+
+	<para>The <makevar>USE_BZIP2</makevar> and <makevar>USE_ZIP</makevar>
+	  variables automatically set <makevar>EXTRACT_SUFX</makevar> to
+	  <literal>.bz2</literal> or <literal>.zip</literal> as necessary.  If
+	  neither of these are set then <makevar>EXTRACT_SUFX</makevar>
+	  defaults to <literal>.tar.gz</literal>.</para>
+
+	<para>You never need to set both <makevar>EXTRACT_SUFX</makevar> and
+	  <makevar>DISTFILES</makevar>.</para>
+      </sect2>
+
+      <sect2>
 	<title><makevar>DISTFILES</makevar></title>
 
 	<para>Sometimes the names of the files to be downloaded have no
@@ -1050,6 +1100,9 @@ MASTER_SITE_SUBDIR=   applications</programlisting>
 	  downloaded.</para>
 
 	<programlisting>DISTFILES=     source1.tar.gz source2.tar.gz</programlisting>
+
+	<para>If not explicitly set, <makevar>DISTFILES</makevar> defaults to
+	  <literal>${DISTNAME}${EXTRACT_SUFX}</literal>.</para>
       </sect2>
 
       <sect2>
@@ -1153,6 +1206,35 @@ DISTFILES=    source1.tar.gz:source1 \
 DISTFILES=    source1.tar.gz:source1 \
               source2.tar.gz:source2 \
               source3.tar.gz:source2</programlisting>
+      </sect2>
+
+      <sect2>
+        <title><makevar>DIST_SUBDIR</makevar></title>
+
+        <para>Do not let your port clutter
+          <filename>/usr/ports/distfiles</filename>.  If your port requires a
+          lot of files to be fetched, or contains a file that has a name that
+          might conflict with other ports (e.g.,
+          <filename>Makefile</filename>), set <makevar>DIST_SUBDIR</makevar>
+          to the name of the port (<literal>${PORTNAME}</literal> or
+          <literal>${PKGNAMEPREFIX}${PORTNAME}</literal>
+          should work fine).  This will change
+          <makevar>DISTDIR</makevar> from the default
+          <filename>/usr/ports/distfiles</filename> to
+          <filename>/usr/ports/distfiles/<makevar>DIST_SUBDIR</makevar></filename>,
+          and in effect puts everything that is required for your port into
+          that subdirectory.</para>
+
+        <para>It will also look at the subdirectory with the same name on the
+          backup master site at <filename>ftp.FreeBSD.org</filename>.
+          (Setting <makevar>DISTDIR</makevar> explicitly in your
+          <makevar>Makefile</makevar> will not accomplish this, so please use
+          <makevar>DIST_SUBDIR</makevar>.)</para>
+
+        <note>
+          <para>This does not affect the <makevar>MASTER_SITES</makevar> you
+            define in your Makefile.</para>
+        </note>
       </sect2>
     </sect1>
 
@@ -1364,9 +1446,8 @@ DISTFILES=    source1.tar.gz:source1 \
             <literal>RUN_DEPENDS</literal> instead&mdash;at least the
             intention will be clear.</para>
         </sect2>
-      </sect1>
 
-     <sect1>
+     <sect2>
       <title>Optional dependencies</title>
       
       <para>Some large applications can be built in a number of
@@ -1400,7 +1481,53 @@ DISTFILES=    source1.tar.gz:source1 \
 	<makevar>WANT_GTK</makevar>, <makevar>WANT_ESOUND</makevar>,
 	<makevar>WANT_IMLIB</makevar>, and
 	<makevar>WANT_GNOME</makevar>.</para>
-      </sect1>
+      </sect2>
+    </sect1>
+
+    <sect1>
+      <title>Specifying the working directory</title>
+
+      <para>Each port is extracted in to a working directory, which must be
+	writeable.  The ports system assumes that the
+	<makevar>DISTFILES</makevar> unpack in to a directory called
+	<literal>${DISTNAME}</literal>.  In other words, if you have
+	set:</para>
+
+      <programlisting>PORTNAME=      foo
+PORTVERSION=   1.0</programlisting>
+
+      <para>then the port's distribution files contain a top-level directory,
+	<filename>foo-1.0</filename>, and the rest of the files are located
+	under that directory.</para>
+
+      <para>There are a number of variables you can set if that is not the
+	case.</para>
+
+      <sect2>
+	<title><makevar>WRKSRC</makevar></title>
+
+	<para>The variable lists the name of the directoy that is created when
+	  the application's distfiles are extracted.  If our previous example
+	  extracted into a directory called <filename>foo</filename> (and not
+	  <filename>foo-1.0</filename>) you would write:</para>
+
+	<programlisting>WRKSRC=      foo</programlisting>
+
+	<para>or possibly</para>
+
+	<programlisting>WRKSRC=      ${PORTNAME}</programlisting>
+      </sect2>
+
+      <sect2>
+	<title><makevar>NO_WRKSUBDIR</makevar></title>
+
+	<para>If the port does not extract in to a subdirectory at all then
+	  you should set <makevar>NO_WRKSUBDIR</makevar> to indicate
+	  that.</para>
+
+	<programlisting>NO_WRKSUBDIR= yes</programlisting>
+      </sect2>
+    </sect1>
 
       <sect1>
         <title>Building mechanisms</title>
@@ -1845,7 +1972,7 @@ ${PREFIX}/man/ja/man4/baz.4.gz</programlisting>
         the port) or statically (for people who distribute packages).</para>
 
       <sect1>
-        <title><makevar>REQUIRES_MOTIF</makevar></title>
+        <title><makevar>USE_MOTIF</makevar></title>
 
         <para>If your port requires Motif, define this variable in the
           Makefile.  This will prevent people who do not own a copy of Motif
@@ -3550,83 +3677,6 @@ post-install:
         </note>
       </sect1>
 
-      <sect1>
-        <title><makevar>DIST_SUBDIR</makevar></title>
-
-        <para>Do not let your port clutter
-          <filename>/usr/ports/distfiles</filename>.  If your port requires a
-          lot of files to be fetched, or contains a file that has a name that
-          might conflict with other ports (e.g.,
-          <filename>Makefile</filename>), set <makevar>DIST_SUBDIR</makevar>
-          to the name of the port (<literal>${PORTNAME}</literal> or
-          <literal>${PKGNAMEPREFIX}${PORTNAME}</literal>
-          should work fine).  This will change
-          <makevar>DISTDIR</makevar> from the default
-          <filename>/usr/ports/distfiles</filename> to
-          <filename>/usr/ports/distfiles/<makevar>DIST_SUBDIR</makevar></filename>,
-          and in effect puts everything that is required for your port into
-          that subdirectory.</para>
-
-        <para>It will also look at the subdirectory with the same name on the
-          backup master site at <filename>ftp.FreeBSD.org</filename>.
-          (Setting <makevar>DISTDIR</makevar> explicitly in your
-          <makevar>Makefile</makevar> will not accomplish this, so please use
-          <makevar>DIST_SUBDIR</makevar>.)</para>
-
-        <note>
-          <para>This does not affect the <makevar>MASTER_SITES</makevar> you
-            define in your Makefile.</para>
-        </note>
-      </sect1>
-
-      <sect1>
-        <title>Package information</title>
-
-        <para>Do include package information, i.e.
-          <filename>pkg-comment</filename>, <filename>pkg-descr</filename>, and
-          <filename>pkg-plist</filename>.</para>
-
-        <note>
-          <para>Note that these files are not used only for packaging anymore,
-            and are <emphasis>mandatory</emphasis> now, even if
-            <makevar>NO_PACKAGE</makevar> is set.</para>
-        </note>
-      </sect1>
-
-      <sect1>
-        <title>RCS strings</title>
-
-        <para>Do not put RCS strings in patches.  CVS will mangle them when we
-          put the files into the ports tree, and when we check them out again,
-          they will come out different and the patch will fail.  RCS strings
-          are surrounded by dollar (<literal>&dollar;</literal>) signs, and
-          typically start with <literal>&dollar;Id</literal> or
-          <literal>&dollar;RCS</literal>.</para>
-      </sect1>
-
-      <sect1>
-        <title>Recursive diff</title>
-
-        <para>Using the recurse (<option>-r</option>) option to
-          <command>diff</command> to generate patches is fine, but please take
-          a look at the resulting patches to make sure you do not have any
-          unnecessary junk in there.  In particular, diffs between two backup
-          files, <filename>Makefiles</filename> when the port uses
-          <command>Imake</command> or GNU <command>configure</command>, etc.,
-          are unnecessary and should be deleted.  If you had to edit
-          <filename>configure.in</filename> and run
-          <command>autoconf</command> to regenerate
-          <command>configure</command>, do not take the diffs of
-          <command>configure</command> (it often grows to a few thousand
-          lines!); define <literal>USE_AUTOCONF=yes</literal> and take the
-          diffs of <filename>configure.in</filename>.</para>
-
-        <para>Also, if you had to delete a file, then you can do it in the
-          <maketarget>post-extract</maketarget> target rather than as part of
-          the patch.  Once you are happy with the resulting diff, please split
-          it up into one source file per patch file.</para>
-      </sect1>
-
       <sect1 id="porting-prefix">
         <title><makevar>PREFIX</makevar></title>
 
@@ -4795,16 +4845,6 @@ pre-install:
 	errors </ulink> and the <ulink
 	  url="http://people.FreeBSD.org/~fenner/portsurvey/">FreeBSD
 	  Ports distfiles survey</ulink>.</para>
-    </chapter>
-
-    <chapter>
-      <title>That is It, Folks!</title>
-
-      <para>Boy, this sure was a long tutorial, wasn't it?  Thanks for
-        following us to here, really.  Now that you know how to do a port,
-        have at it and convert everything in the world into ports! That
-        is the easiest way to start contributing to the FreeBSD Project!
-        <!-- smiley --><emphasis>:-)</emphasis></para>
     </chapter>
 </book>
 
