@@ -1,6 +1,6 @@
-<!-- $FreeBSD: www/ja/ports/ports.inc,v 1.13 1999/12/07 14:03:27 kuriyama Exp $ -->
+<!-- $FreeBSD: www/ja/ports/ports.inc,v 1.14 2000/01/10 11:08:48 motoyuki Exp $ -->
 <!-- The FreeBSD Japanese Documentation Project -->
-<!-- Original revision: 1.45 -->
+<!-- Original revision: 1.48 -->
 <p>FreeBSD の Ports と Packages のコレクションは,
 ユーザや管理者が簡単にアプリケーショ
 ンのインストールを簡単に行う方法を提供します.
@@ -33,6 +33,23 @@ ports 階層全体</a> をインストール (あるいは
 実行することもできますし, また <strong>pkg_add</strong> ではファイル名
 と同じく FTP URL を使うこともできるのでリンク先を <strong>pkg_add</strong>
 することもできます.</p>
+
+<p>ports/packages の追加, 更新, 削除についての情報や, アプリケーションが
+ports/packages となっているかの検索は
+<a href="http://www.freebsd.org/cgi/ports.cgi">
+FreeBSD Ports 更新</a> ページを参照してください. </p>
+
+<FORM METHOD="GET" ACTION="http://www.freebsd.org/cgi/ports.cgi">
+検索:
+<INPUT NAME="query" VALUE="">
+<SELECT NAME="stype">
+<OPTION VALUE="all">全て</OPTION>
+<OPTION VALUE="name">パッケージ名</OPTION>
+<OPTION VALUE="text">詳細</OPTION>
+</SELECT>
+<INPUT TYPE="submit" VALUE="Submit">
+</FORM>
+
 
 <p>ports についてもう少し詳しく知りたい場合には, 
 <a href="../handbook/ports.html">ports コレクション</a> を参照してくだ
@@ -107,21 +124,5 @@ href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-3-stable/Latest/34up
 
 <p>多くの ports はコンパイルと実行に X Window System を必要とします. 
 ports は <a href="http://www.xfree86.org/">XFree86</a> 上でテ
-ストされています. 最新のリリースは 3.3.5 です. いくつかの ports は古い
+ストされています. 最新のリリースは 3.3.6 です. いくつかの ports は古い
 リリースでは動作しないかも知れません. </p>
-
-<p>ports/packages の追加, 更新, 削除についての情報や, アプリケーションが
-ports/packages となっているかの検索は
-<a href="http://www.freebsd.org/cgi/ports.cgi">
-FreeBSD Ports 更新</a> ページを参照してください. </p>
-
-<FORM METHOD="GET" ACTION="http://www.freebsd.org/cgi/ports.cgi">
-検索:
-<INPUT NAME="query" VALUE="">
-<SELECT NAME="stype">
-<OPTION VALUE="all">全て</OPTION>
-<OPTION VALUE="name">パッケージ名</OPTION>
-<OPTION VALUE="text">詳細</OPTION>
-</SELECT>
-<INPUT TYPE="submit" VALUE="Submit">
-</FORM>
