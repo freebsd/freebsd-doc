@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: query-pr-summary.cgi,v 1.16 1998-05-23 09:22:32 phk Exp $
+# $Id: query-pr-summary.cgi,v 1.17 1998-08-07 15:05:55 fenner Exp $
 
 $html_mode     = 1 if $ENV{'DOCUMENT_ROOT'};
 $self_ref      = $ENV{'SCRIPT_NAME'};
@@ -167,7 +167,22 @@ print 'You may also sort by ';
 print '<A HREF="', $self_ref2, '&sort=lastmod">Last-Modified</A>, ';
 print '<A HREF="', $self_ref2, '&sort=category">Category</A>, or ';
 print '<A HREF="', $self_ref2, '&sort=responsible">Responsible Party</A>.', "\n";
-print 'Or <A HREF="', $self_ref, '?query">formulate a specific query</A>.';
+print 'Or <A HREF="', $self_ref, '?query">formulate a specific query</A>.', "\n";
+
+$self_ref3 = $self_ref . '?';
+foreach ("category", "originator", "priority", "class", "responsible",
+	"severity", "state", "submitter", "text", "multitext", "sort") {
+	if ($input{$_}) {
+		$self_ref3 .= '&' if ($self_ref2 !~/\?$/);
+		$self_ref3 .= $_ . '=' . $input{$_};
+	}
+}
+if ($input{"closedtoo"}) {
+	print '<A HREF="', $self_ref3, '">Don',"'",'t show closed reports</A>.';
+} else {
+	print '<A HREF="', $self_ref3, '&closedtoo=on">Include closed reports too</A>.';
+}
+
 	}
 }
 
