@@ -11,7 +11,6 @@ MAN1 =	a2p.1\
 	bc.1\
 	bdes.1\
 	biff.1\
-	bison.1\
 	brandelf.1\
 	btreeop.1\
 	builtin.1\
@@ -74,10 +73,8 @@ MAN1 =	a2p.1\
 	ee.1\
 	enigma.1\
 	eqn.1\
-	error.1\
 	expand.1\
 	expr.1\
-	f2c.1\
 	f77.1\
 	false.1\
 	fdformat.1\
@@ -90,19 +87,17 @@ MAN1 =	a2p.1\
 	fmt.1\
 	fold.1\
 	fontedit.1\
-	fpr.1\
 	from.1\
-	fsplit.1\
 	fstat.1\
 	ftp.1\
 	g711conv.1\
+	gasp.1\
 	gcc.1\
 	gcore.1\
 	gctags.1\
 	gdb.1\
 	gdbserver.1\
 	gencat.1\
-	genclass.1\
 	getNAME.1\
 	getopt.1\
 	global.1\
@@ -136,7 +131,6 @@ MAN1 =	a2p.1\
 	intro.1\
 	ipcrm.1\
 	ipcs.1\
-	ipf.1\
 	ipftest.1\
 	ipnat.1\
 	ipresend.1\
@@ -206,11 +200,13 @@ MAN1 =	a2p.1\
 	mktemp.1\
 	more.1\
 	mptable.1\
-	mset.1\
 	msgs.1\
 	mt.1\
 	mv.1\
 	ncal.1\
+	ncplist.1\
+	ncplogin.1\
+	ncplogout.1\
 	neqn.1\
 	netstat.1\
 	newaliases.1\
@@ -300,7 +296,6 @@ MAN1 =	a2p.1\
 	talk.1\
 	tar.1\
 	tbl.1\
-	tconv.1\
 	tcopy.1\
 	tcpdump.1\
 	tcpslice.1\
@@ -312,7 +307,6 @@ MAN1 =	a2p.1\
 	tftp.1\
 	time.1\
 	tip.1\
-	tn3270.1\
 	top.1\
 	touch.1\
 	tput.1\
@@ -387,7 +381,8 @@ MLINKS=	builtin.1 alias.1 builtin.1 alloc.1 builtin.1 bg.1 \
 	builtin.1 history.1 builtin.1 if.1 builtin.1 jobid.1 \
 	builtin.1 jobs.1 builtin.1 limit.1 builtin.1 logout.1 \
 	builtin.1 notify.1 builtin.1 onintr.1 builtin.1 popd.1 \
-	builtin.1 pushd.1 builtin.1 readonly.1 builtin.1 rehash.1 \
+	builtin.1 pushd.1 builtin.1 read.1 builtin.1 readonly.1 \
+	builtin.1 rehash.1 \
 	builtin.1 repeat.1 builtin.1 set.1 builtin.1 setenv.1 \
 	builtin.1 setvar.1 builtin.1 shift.1 builtin.1 source.1 \
 	builtin.1 stop.1 builtin.1 suspend.1 builtin.1 switch.1 \
@@ -397,63 +392,49 @@ MLINKS=	builtin.1 alias.1 builtin.1 alloc.1 builtin.1 bg.1 \
 	builtin.1 unsetenv.1 builtin.1 until.1 builtin.1 wait.1 \
 	builtin.1 while.1
 
-MLINKS+=ed.1 red.1
-MLINKS+=test.1 '[.1'
-MLINKS+=gcc.1 cc.1
-MLINKS+=gcc.1 c++.1
-MLINKS+= gcc.1 g++.1
-MLINKS+=cccp.1 cpp.1
-MLINKS+=grep.1 egrep.1
-MLINKS+=grep.1 fgrep.1
-MLINKS+=grep.1 zgrep.1
-MLINKS+=grep.1 zegrep.1
-MLINKS+=grep.1 zfgrep.1
-MLINKS+=gzip.1 gunzip.1
-MLINKS+=gzip.1 zcat.1
-MLINKS+=gzip.1 gzcat.1
-MLINKS+=zdiff.1 zcmp.1
-MLINKS+=apropos.1 whatis.1
-MLINKS+=send-pr.1 sendbug.1
-MLINKS+=at.1 batch.1
-MLINKS+=at.1 atq.1
-MLINKS+=at.1 atrm.1
-MLINKS+=basename.1 dirname.1
-MLINKS+=chpass.1 chfn.1
-MLINKS+=chpass.1 chsh.1
-MLINKS+=chpass.1 ypchpass.1
-MLINKS+=chpass.1 ypchfn.1
-MLINKS+=chpass.1 ypchsh.1
-MLINKS+=compress.1 uncompress.1
-MLINKS+=ee.1 ree.1
-MLINKS+=expand.1 unexpand.1
-MLINKS+=ftp.1 pftp.1
-MLINKS+=ftp.1 gate-ftp.1
-MLINKS+=hexdump.1 hd.1
-MLINKS+=intro.1 introduction.1
-MLINKS+=lex.1 flex.1
-MLINKS+=lex.1 flex++.1
-MLINKS+=lex.1 lex++.1
-MLINKS+=mail.1 Mail.1
+MLINKS+= ed.1 red.1
+MLINKS+=	test.1 '[.1'
+MLINKS+= gcc.1 cc.1 gcc.1 c++.1 gcc.1 g++.1 gcc.1 CC.1
+MLINKS+=	cccp.1 cpp.1
+MLINKS+= grep.1 egrep.1 grep.1 fgrep.1
+MLINKS+= grep.1 zgrep.1 grep.1 zegrep.1 grep.1 zfgrep.1
+MLINKS+= gzip.1 gunzip.1  gzip.1 zcat.1  gzip.1 gzcat.1
+MLINKS+= zdiff.1 zcmp.1
+MLINKS+=	apropos.1 whatis.1
+MLINKS+=	send-pr.1 sendbug.1
+MLINKS+=	at.1 batch.1 \
+        at.1 atq.1 \
+        at.1 atrm.1
+MLINKS+=	basename.1 dirname.1
+MLINKS+=	chpass.1 chfn.1 chpass.1 chsh.1
+MLINKS+= chpass.1 ypchpass.1 chpass.1 ypchfn.1 chpass.1 ypchsh.1
+MLINKS+=	compress.1 uncompress.1
+MLINKS+=        ee.1 ree.1
+MLINKS+=	expand.1 unexpand.1
+MLINKS+= ftp.1 pftp.1 ftp.1 gate-ftp.1
+MLINKS+=	hexdump.1 hd.1
+MLINKS+=	intro.1 introduction.1
+MLINKS+=	lex.1 flex.1
+MLINKS+=	lex.1 flex++.1
+MLINKS+=	lex.1 lex++.1
+MLINKS+=	mail.1 Mail.1
 MLINKS+=passwd.1 yppasswd.1
-MLINKS+=printenv.1 env.1
-MLINKS+=tconv.1 tic.1
-MLINKS+=tconv.1 captoinfo.1
-MLINKS+=tput.1 clear.1
-MLINKS+=tset.1 reset.1
-MLINKS+=vi.1 ex.1
-MLINKS+=vi.1 view.1
-MLINKS+=vi.1 nex.1
-MLINKS+=vi.1 nview.1
-MLINKS+=vi.1 nvi.1
+MLINKS+=	printenv.1 env.1
+MLINKS+=	tput.1 clear.1
+MLINKS+=	tset.1 reset.1
+MLINKS+=vi.1 ex.1 vi.1 view.1
+MLINKS+=vi.1 nex.1 vi.1 nview.1 vi.1 nvi.1
 MLINKS+=yacc.1 byacc.1
-MLINKS+=ctm_rmail.1 ctm_smail.1
-MLINKS+=ctm_rmail.1 ctm_dequeue.1
-MLINKS+=kbdmap.1 vidfont.1
-MLINKS+=rtprio.1 idprio.1
-MLINKS+=cksum.1 sum.1
-MLINKS+=ktrace.1 trace.1
-MLINKS+=uuencode.1 uudecode.1
-MLINKS+=ncal.1 cal.1
+MLINKS+=	ctm_rmail.1 ctm_smail.1
+MLINKS+=	ctm_rmail.1 ctm_dequeue.1
+MLINKS+= kbdmap.1 vidfont.1
+MLINKS+= rtprio.1 idprio.1
+MLINKS+= cksum.1 sum.1
+MLINKS+= ktrace.1 trace.1
+MLINKS+= uuencode.1 uudecode.1
+MLINKS+= ncal.1 cal.1
 MLINKS+=enigma.1 crypt.1
+MLINKS+=ln.1 link.1
+MLINKS+=rm.1 unlink.1
 
 .include "bsd.prog.mk"

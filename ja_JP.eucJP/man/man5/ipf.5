@@ -1,3 +1,4 @@
+.\" %FreeBSD: src/contrib/ipfilter/man/ipf.5,v 1.4 2000/02/10 03:17:49 peter Exp %
 .\" WORD: filtering rule	フィルタルール
 .\" WORD: semantics		セマンティクス
 .\" WORD: inbound		内向き
@@ -39,16 +40,18 @@ proto	= "proto" protocol .
 ip	= srcdst [ flags ] [ with withopt ] [ icmp ] [ keep ] .
 group	= [ "head" decnumber ] [ "group" decnumber ] .
 
-block	= "block" [ "return-icmp"[return-code] | "return-rst" ] .
+block	= "block" [ icmp[return-code] | "return-rst" ] .
 auth    = "auth" | "preauth" .
-log	= "log" [ "body" ] [ "first" ] [ "or-block" ] .
+log	= "log" [ "body" ] [ "first" ] [ "or-block" ] [ "level" loglevel ] .
 call	= "call" [ "now" ] function-name .
 skip	= "skip" decnumber .
 dup	= "dup-to" interface-name[":"ipaddr] .
 froute	= "fastroute" | "to" interface-name .
 protocol = "tcp/udp" | "udp" | "tcp" | "icmp" | decnumber .
 srcdst	= "all" | fromto .
-fromto	= "from" object "to" object .
+fromto	= "from" [ "!" ] object "to" [ "!" ] object .
+ 
+icmp	= "return-icmp" | "return-icmp-as-dest" .
 
 object	= addr [ port-comp | port-range ] .
 addr	= "any" | nummask | host-name [ "mask" ipaddr | "mask" hexnumber ] .
@@ -59,6 +62,7 @@ with	= "with" | "and" .
 icmp	= "icmp-type" icmp-type [ "code" decnumber ] .
 return-code = "("icmp-code")" .
 keep	= "keep" "state" | "keep" "frags" .
+loglevel = facility"."priority | priority .
 
 nummask	= host-name [ "/" decnumber ] .
 host-name = ipaddr | hostname | "any" .
@@ -78,10 +82,17 @@ icmp-type = "unreach" | "echo" | "echorep" | "squench" | "redir" |
 	    "inforep" | "maskreq" | "maskrep"  | decnumber .
 icmp-code = decumber | "net-unr" | "host-unr" | "proto-unr" | "port-unr" |
 	    "needfrag" | "srcfail" | "net-unk" | "host-unk" | "isolate" |
-	    "net-prohib" | "host-prohib" | "net-tos" | "host-tos" .
+	    "net-prohib" | "host-prohib" | "net-tos" | "host-tos" |
+	    "filter-prohib" | "host-preced" | "cutoff-preced" .
 optlist	= "nop" | "rr" | "zsu" | "mtup" | "mtur" | "encode" | "ts" |
 	  "tr" | "sec" | "lsrr" | "e-sec" | "cipso" | "satid" | "ssrr" |
 	  "addext" | "visa" | "imitd" | "eip" | "finn" .
+facility = "kern" | "user" | "mail" | "daemon" | "auth" | "syslog" |
+	   "lpr" | "news" | "uucp" | "cron" | "ftp" | "authpriv" |
+	   "audit" | "logalert" | "local0" | "local1" | "local2" |
+	   "local3" | "local4" | "local5" | "local6" | "local7" .
+priority = "emerg" | "alert" | "crit" | "err" | "warn" | "notice" |
+	   "info" | "debug" . 
 
 hexnumber = "0" "x" hexstring .
 hexstring = hexdigit [ hexstring ] .
@@ -130,12 +141,26 @@ flag	= "F" | "S" | "R" | "P" | "A" | "U" .
 .B block
 このパケットを、ドロップするように印を付けることを示します。
 パケットをブロックすることに対し、
-ICMP パケット (\fBreturn-icmp\fP) または
-TCP 「リセット」 (\fBreturn-rst\fP) のいずれかの返答パケットを返すよう、
+ICMP パケット (\fBreturn-icmp\fP) か、
+元のパケット送信宛先起源を装う ICMP パケット (\fBreturn-icmp-as-dest\fP) か、
+TCP 「リセット」 (\fBreturn-rst\fP) の、いずれかの返答パケットを返すよう、
 フィルタに指示できます。
 ICMP パケットは、任意の IP パケットの応答として生成でき、
 そのタイプを指定することもできます。
 TCP リセットは、TCP パケットに対して適用されるルールにおいてのみ使用できます。
+\fBreturn-icmp\fP または \fBreturn-icmp-as-dest\fP を使うとき、
+到達不可の 'タイプ' を指定可能です。
+このタイプとは、
+ネットワーク到達不可、ポート到達不可、権限による禁止のいずれかです。
+指定方法は、
+\fBreturn-icmp\fP または \fBreturn-icmp-as-dest\fP の直後に、
+タイプに関連する ICMP コードを括弧で括るというものです。
+例えば
+.nf
+        block return-icmp(11) ...
+.fi
+.PP
+とすると、Type-Of-Service (TOS) ICMP 到達不可エラーを返します。
 .TP
 .B pass
 このパケットを、そのままフィルタを通過させるように印を付けます。
@@ -157,10 +182,32 @@ TCP リセットは、TCP パケットに対して適用されるルールにおいてのみ使用できます。
 知識があるハッカーが使用する機能であり、現在のところ文書化されていません。
 .TP
 .B "skip <n>"
+フィルタに、次の \fIn\fP フィルタルールをスキップさせます。
+スキップされる範囲のルールに挿入または除去があった場合、
+\fIn\fP の値は適切に調整されます。
 .TP
 .B auth
+これにより、
+ユーザ空間プログラムを実行して正当性を確認するパケット情報を待つことにより、
+認証できます。
+プログラムがカーネルに対してパケット通過を許すか否かの
+\fI実際の\fP フラグを返すまでの間、パケットは内部バッファに保持されます。
+パケット通過を許す前または
+認識されない送信元からのパケットをカーネルに落すよう指示する前に、
+このようなプログラムは、
+送信元アドレスを見るかもしれませんし、
+ユーザからの (パスワード等の) ある種の認証を求めるかもしれません。
 .TP
 .B preauth
+このクラスのパケットに対しては、
+更なる明確化のために既に認証されたリストを見るべきであると、
+フィルタに指示します。
+更にマッチするルールが見付からないと、パケットは落とされます
+(FR_PREAUTH は FR_PASS と同じではありません)。
+更にマッチするルールが見付かると、その結果が使用されます。
+これが使用される状況は、
+ユーザがファイアウォールに\fIログイン\fPし、
+このユーザに関する一時的なルールを設定するような場合です。
 .PP
 次の語は \fBin\fP か \fBout\fP のいずれかである必要があります。
 カーネル内部を通過するパケットは、内向き (インタフェースにて受信された
@@ -426,13 +473,22 @@ TCP, UDP, ICMP の各パケットに関して状態が保存されます。
 パケットの内容の最初の 128 バイトを、ヘッダの後でログすることを示します。
 .TP
 .B first
-??
+ログが "keep" オプションと共に使用される場合、
+本オプションも指定することを勧めます。
+これにより、トリガとなるパケットのみをログして、
+この後に状態情報にマッチする全パケットをログしないようになります。
 .TP
 .B or-block
 なんらかの理由でフィルタがログを取れない場合
 (ログ読み取りが非常に遅い場合など)、
 このパケットに対するこのルールのアクションが \fBblock\fP であったと解釈
 させます。
+.TP
+.B "level <loglevel>"
+このパケットの情報ログに、
+どのログファシリティと優先度を使用するか、
+またはデフォルトファシリティでどの優先度を使用するかを指定します。
+情報ログには、ipmon の -s オプションを使用します。
 .PP
 このデバイスに書き込まれるレコードのフォーマットについては
 ipl(4) を参照してください。
@@ -455,7 +511,7 @@ block in quick from any to any with ipopts
 .nf
         block in from any to any port < 6000
         pass in from any to any port >= 6000
-        block in from any to port > 6003
+        block in from any to any port > 6003
 .fi
 .PP
 範囲 6000-6003 が許され、他は許さないように設定できます。
@@ -484,9 +540,9 @@ le0/le1/lo0 からのすべての内向きパケットを処理し、
 .LP
 .nf
        block in all
-       block in on le0 quick all head 100
-       block in on le1 quick all head 200
-       block in on lo0 quick all head 300
+       block in quick on le0 all head 100
+       block in quick on le1 all head 200
+       block in quick on lo0 all head 300
 .fi
 .PP
 
@@ -527,4 +583,4 @@ le0 からの内向きパケットのみがグループ 100 で処理されますので、
 .br
 /etc/services
 .SH 関連項目
-ipftest(1), iptest(1), ipf(4), ipnat(5), ipf(8), ipfstat(8)
+ipftest(1), iptest(1), mkfilters(1), ipf(4), ipnat(5), ipf(8), ipfstat(8)
