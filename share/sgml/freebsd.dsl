@@ -1,4 +1,4 @@
-<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.11 1999/11/15 19:44:15 nik Exp $ -->
+<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.12 2000/02/14 01:29:17 nik Exp $ -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
 <!ENTITY % output.html  "IGNORE">
@@ -37,9 +37,6 @@
         (define %gentext-nav-use-tables%
           ;; Use tables to build the navigation headers and footers?
           #t)
-
-	(define %stylesheet%
-	  "docbook.css")
 
         (define %html-ext%
           ;; Default extension for HTML output files
