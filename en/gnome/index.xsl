@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.50 2004/04/08 04:09:48 marcus Exp $ -->
+<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.51 2004/05/02 21:37:12 adamw Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
 		xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -9,7 +9,7 @@
   <xsl:import href="includes.xsl"/>
 
   <xsl:variable name="base" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.50 2004/04/08 04:09:48 marcus Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.51 2004/05/02 21:37:12 adamw Exp $'"/>
   <xsl:variable name="title" select="'FreeBSD GNOME Project'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -51,7 +51,8 @@
                           <p><font size="+1" color="#990000"><b>Documentation</b></font>
                             <small><br/>
                               &#183; <a href="docs/faq2.html">FAQ</a><br/>
-							  &#183; <a href="docs/faq26.html">2.4 to 2.6 Upgrade FAQ</a><br/>
+                              &#183; <a href="docs/faq26.html">2.4 to 2.6 Upgrade FAQ</a><br/>
+                              &#183; <a href="docs/develfaq.html">Development Branch FAQ</a><br/>
                               &#183; <a href="docs/porting.html">Creating Ports</a><br/>
 			      &#183; <a href="docs/faq26.html#q5">Known Issues</a><br/>
                             </small></p>
