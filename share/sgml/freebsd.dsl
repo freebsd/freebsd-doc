@@ -190,7 +190,7 @@
                  (u (string-append "http://www.FreeBSD.org/cgi/man.cgi?query="
                          (data r) "&" "sektion=" (data m))))
             (case v
-              (("current") (string-append u "&" "manpath=FreeBSD+5.0-current"))
+              (("current") (string-append u "&" "manpath=FreeBSD+5.1-current"))
               (("xfree86") (string-append u "&" "manpath=XFree86+4.3.0"))
               (("netbsd")  (string-append u "&" "manpath=NetBSD+1.6.1"))
               (("ports")   (string-append u "&" "manpath=FreeBSD+Ports"))
