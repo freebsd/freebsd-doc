@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/perl -T
 #
 # Copyright (c) Oct 1997-1999 Wolfram Schneider <wosch@FreeBSD.org>. Berlin.
 # All rights reserved.
@@ -26,18 +26,25 @@
 #
 # url.cgi - make plain text URLs clickable
 #
-# $FreeBSD: www/en/cgi/url.cgi,v 1.21 1999/10/20 09:13:21 wosch Exp $
+# $FreeBSD: www/en/cgi/url.cgi,v 1.22 1999/12/17 14:23:53 phantom Exp $
 
+use strict;
 
-$hsty_base = '';
-$hsty_email = 'ports@freebsd.org';
+$main::hsty_base = '..';
+$main::hsty_email = 'ports@freebsd.org';
+
+# shutup perl -w
+my $dummy = $main::hsty_base . $main::hsty_email; undef $dummy;
 
 require "./cgi-lib.pl";
 require "./cgi-style.pl";
 
-$file = $ENV{'QUERY_STRING'};
-$uri = "$file";
+my $file = $ENV{'QUERY_STRING'};
+my $uri = "$file";
+my $portcategory;
 
+
+# security checks
 if ($file !~ m%^(http|ftp)://[a-z_\-0-9]+\.freebsd\.(com|org)%i) {
     &CgiError(("Invalid url: $file", "Only http://*.freebsd.* is allowed.\n"));
     exit(0);
@@ -48,23 +55,32 @@ if ($file !~ m%^(http|ftp)://[a-z_\-0-9]+\.freebsd\.(com|org)%i) {
 #	-> ports/net/ppxp/pkg/DESCR
 1 while $file =~ s%/[^/]+/\.\./%/%;
 
-my($cvsroot) = '/home/ncvs';
+# print HTML header
 $file =~ s%(http|ftp)://ftp.freebsd.org/pub/FreeBSD/(branches/|FreeBSD)-current/%%;
-if ($file =~ m%^ports/([\w-]+/\w[\w-+.]+)/pkg/DESCR%) {
-    print &html_header("Port description for $1");
+if ($file =~ m%^ports/([\w-]+)/(\w[\w-+.]+)/pkg/DESCR%) {
+    print &html_header(
+       "Port description for $1/$2");
+    $portcategory = $1;
 } else {
     print &short_html_header($file);
 }
 
-if ($file =~ m%^ports/[\w-]+/\w[\w-+.]*/pkg/DESCR% && 
-    -f "$cvsroot/$file,v") {
-    open(CO, "-|") || exec ('/usr/bin/co', '-p', '-q', "$cvsroot/$file,v");
-} else {
-    print "<p>The port specified does not exist, or has an invalid name: $file\n";
+# do cvs checkout 
+my($cvsroot) = '/home/ncvs';
+if ($file =~ m%^ports/[\w-]+/\w[\w-+.]*/pkg/DESCR% && -f "$cvsroot/$file,v") {
+    open(CO, "-|") || 
+	exec ('/usr/bin/co', '-p', '-q', "$cvsroot/$file,v") ||
+	die "exec co -pq $cvsroot/$file,v: $!\n";
+} 
+
+else {
+    print "<p>The port specified does not exist, or has an invalid name:",
+	  "$file\n";
     print "<p>Please contact the webmaster!\n";
 }
 print "\n<HR>\n<pre>\n";
 
+# read the DESCR file and make URLs clickable
 my($content);
 $content .= $_ while(<CO>);
 $content =~ s/</&lt;/g;
@@ -74,11 +90,16 @@ print $content;
 print "</pre>\n";
 
 # Add 'source' link for freebsd ports
-if ($file =~ m%pub/FreeBSD/(branches/|FreeBSD)-current/(ports/[^/]+/[^/]+)/pkg/DESCR$%) {
-    print qq{<HR><a href=\"pds.cgi?$1">Sources</a>\n};
+if ($file =~ m%^(ports/[\w-]+/\w[\w-+.]+)/pkg/DESCR%) {
+    print qq{<HR><a href=\"pds.cgi?$1">Sources</a> |\n};
+    print qq{<a href=\"../ports/$portcategory.html">};
+    print qq{Category $portcategory</a>\n};
     print qq{| <a href="../ports/">Help</a>\n};
     print qq{<BR>\n};
 }
 
+# print standard footer line
 print &html_footer; 
+
 exit;
+
