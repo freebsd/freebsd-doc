@@ -4,9 +4,9 @@
      The FreeBSD Russian Documentation Project
 
      $FreeBSD$
-     $FreeBSDru: frdp/www/ru/index.xsl,v 1.21 2003/10/20 17:08:34 andy Exp $
+     $FreeBSDru: frdp/www/ru/index.xsl,v 1.22 2003/10/29 13:52:54 den Exp $
 
-     Original revision: 1.78
+     Original revision: 1.80
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -58,7 +58,7 @@
 		<br/>
 
 		<select name="goto">
-		  <!--  Only list TRUE mirrrors here! Native language pages 
+		  <!--  Only list TRUE mirrors here! Native language pages 
 		        which are not mirrored should be listed in
 		        support.sgml.  -->
 
@@ -168,11 +168,19 @@
 		<br/>
 		
 		<font color="#990000"><b>Язык: </b></font> 
-		<a href="../index.html">Английский</a>, 
-		<a href="../es/index.html">Испанский</a>, 
-                <a href="../it/index.html">Итальянский</a>,
-                <a href="../ja/index.html">Японский</a>,
-		<a href="support.html#web">другие</a>
+		<a href="{$base}/de/index.html" title="Немецкий">[de]</a>
+		<xsl:text>&#160;</xsl:text>
+		<a href="{$base}/en/index.html" title="Английский">[en]</a>
+		<xsl:text>&#160;</xsl:text>
+		<a href="{$base}/es/index.html" title="Испанский">[es]</a>
+		<xsl:text>&#160;</xsl:text>
+		<a href="http://www.freebsd-fr.org/index-trad.html" title="Французский">[fr]</a>
+		<xsl:text>&#160;</xsl:text>
+		<a href="{$base}/it/index.html" title="Итальянский">[it]</a>
+		<xsl:text>&#160;</xsl:text>
+		<a href="{$base}/ja/index.html" title="Японский">[ja]</a>
+		<xsl:text>&#160;</xsl:text>
+		<span title="Русский">[ru]</span>
 	      </form>
 	    </td>
 	  </tr>

@@ -4,9 +4,9 @@
      The FreeBSD Russian Documentation Project
 
      $FreeBSD$
-     $FreeBSDru: frdp/www/ru/includes.xsl,v 1.9 2003/10/06 11:32:16 den Exp $
+     $FreeBSDru: frdp/www/ru/includes.xsl,v 1.10 2003/10/29 13:52:54 den Exp $
 
-     Original revision: 1.16
+     Original revision: 1.17
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -106,7 +106,7 @@
   <xsl:variable name="u.rel.early">
     <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel.current"/>R/early-adopter.html</xsl:variable>
 
-  <xsl:variable name="rel2.current" select='"4.8"'/>
+  <xsl:variable name="rel2.current" select='"4.9"'/>
 
   <xsl:variable name="u.rel2.notes">
     <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel2.current"/>R/relnotes.html</xsl:variable>
