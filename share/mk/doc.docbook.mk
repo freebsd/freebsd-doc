@@ -119,6 +119,9 @@ DOCBOOKSUFFIX?= sgml
 
 MASTERDOC?=	${.CURDIR}/${DOC}.${DOCBOOKSUFFIX}
 
+# List of supported SP_ENCODINGs
+SP_ENCODING_LIST?=	KOI8-R
+
 # Which stylesheet type to use.  'dsssl' or 'xsl'
 STYLESHEET_TYPE?=	dsssl
 
@@ -143,6 +146,8 @@ NSGMLS?=	${PREFIX}/bin/nsgmls
 NSGMLSWARNINGS=	-wempty -wunclosed
 SX?=		${PREFIX}/bin/sx
 .endif
+
+JADE_CMD=	${JADE}
 
 DSLHTML?=	${DOC_PREFIX}/share/sgml/default.dsl
 DSLPRINT?=	${DOC_PREFIX}/share/sgml/default.dsl
@@ -447,6 +452,16 @@ CLEANFILES+= 		${HTML_SPLIT_INDEX} ${HTML_INDEX} ${PRINT_INDEX}
 
 all: ${_docs}
 
+#
+# SP_ENCODING support
+#
+CUR_ENCODING!= 	${ECHO} ${LANGCODE} | ${SED} 's/^.*\.//'
+.for _sp_encoding in ${SP_ENCODING_LIST}
+.if ${CUR_ENCODING} == ${_sp_encoding}
+JADE_CMD=	SP_ENCODING=${CUR_ENCODING} ${JADE}
+.endif
+.endfor
+
 # XML --------------------------------------------------------------------
 
 # sx generates a lot of (spurious) errors of the form "reference to
@@ -465,7 +480,7 @@ ${DOC}.xml: ${SRCS}
 .if ${STYLESHEET_TYPE} == "dsssl"
 index.html HTML.manifest: ${SRCS} ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} \
 			  ${LOCAL_IMAGES_TXT} ${INDEX_SGML} ${HTML_SPLIT_INDEX} ${LOCAL_CSS_SHEET}
-	${JADE} -V html-manifest ${HTMLOPTS} -ioutput.html.images \
+	${JADE_CMD} -V html-manifest ${HTMLOPTS} -ioutput.html.images \
 		${JADEOPTS} -t sgml ${MASTERDOC}
 .elif ${STYLESHEET_TYPE} == "xsl"
 index.html: ${DOC}.xml ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} \
@@ -482,7 +497,7 @@ index.html: ${DOC}.xml ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} \
 .if ${STYLESHEET_TYPE} == "dsssl"
 ${DOC}.html: ${SRCS} ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} \
 	     ${LOCAL_IMAGES_TXT} ${INDEX_SGML} ${HTML_INDEX} ${LOCAL_CSS_SHEET}
-	${JADE} -V nochunks ${HTMLOPTS} -ioutput.html.images \
+	${JADE_CMD} -V nochunks ${HTMLOPTS} -ioutput.html.images \
 		${JADEOPTS} -t sgml ${MASTERDOC} > ${.TARGET} || \
 		(${RM} -f ${.TARGET} && false)
 .elif ${STYLESHEET_TYPE} == "xsl"
@@ -500,7 +515,7 @@ ${DOC}.html: ${DOC}.xml ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} \
 # Special target to produce HTML with no images in it.
 .if ${STYLESHEET_TYPE} == "dsssl"
 ${DOC}.html-text: ${SRCS} ${INDEX_SGML} ${HTML_INDEX} ${LOCAL_IMAGES_TXT}
-	${JADE} -V nochunks ${HTMLTXTOPTS} \
+	${JADE_CMD} -V nochunks ${HTMLTXTOPTS} \
 		${JADEOPTS} -t sgml ${MASTERDOC} > ${.TARGET} || \
 		(${RM} -f ${.TARGET} && false)
 .elif ${STYLESHEET_TYPE} == "xsl"
@@ -548,7 +563,7 @@ ${.CURDIR:T}.pdb.${_curcomp}: ${DOC}.pdb.${_curcomp}
 # RTF --------------------------------------------------------------------
 
 ${DOC}.rtf: ${SRCS} ${LOCAL_IMAGES_EPS} ${LOCAL_IMAGES_TXT}
-	${JADE} -V rtf-backend ${PRINTOPTS} \
+	${JADE_CMD} -V rtf-backend ${PRINTOPTS} \
 		${JADEOPTS} -t rtf -o ${.TARGET} ${MASTERDOC}
 
 #
@@ -560,7 +575,7 @@ ${DOC}.rtf: ${SRCS} ${LOCAL_IMAGES_EPS} ${LOCAL_IMAGES_TXT}
 
 ${DOC}.tex: ${SRCS} ${LOCAL_IMAGES_EPS} ${INDEX_SGML} ${PRINT_INDEX} \
 		${LOCAL_IMAGES_TXT} ${LOCAL_IMAGES_EN}
-	${JADE} -V tex-backend ${PRINTOPTS} \
+	${JADE_CMD} -V tex-backend ${PRINTOPTS} \
 		${JADEOPTS} -t tex -o ${.TARGET} ${MASTERDOC}
 
 ${DOC}.tex-ps: ${DOC}.tex
@@ -571,7 +586,7 @@ ${DOC}.tex-pdf: ${SRCS} ${IMAGES_PDF} ${INDEX_SGML} ${PRINT_INDEX} \
 		${LOCAL_IMAGES_TXT}
 	${RM} -f ${.TARGET}
 	${CAT} ${PDFTEX_DEF} > ${.TARGET}
-	${JADE} -V tex-backend ${PRINTOPTS} -ioutput.print.pdf \
+	${JADE_CMD} -V tex-backend ${PRINTOPTS} -ioutput.print.pdf \
 		${JADEOPTS} -t tex -o /dev/stdout ${MASTERDOC} >> ${.TARGET}
 .endif
 
@@ -647,12 +662,12 @@ ${INDEX_SGML}:
 	${PERL} ${COLLATEINDEX} -N -o ${.TARGET}
 
 ${HTML_INDEX}:
-	${JADE} -V html-index -V nochunks ${HTMLOPTS} -ioutput.html.images \
+	${JADE_CMD} -V html-index -V nochunks ${HTMLOPTS} -ioutput.html.images \
 		${JADEOPTS} -t sgml ${MASTERDOC} > /dev/null
 	${PERL} ${COLLATEINDEX} -g -o ${INDEX_SGML} ${.TARGET}
 
 ${HTML_SPLIT_INDEX}:
-	${JADE} -V html-index ${HTMLOPTS} -ioutput.html.images \
+	${JADE_CMD} -V html-index ${HTMLOPTS} -ioutput.html.images \
 		${JADEOPTS} -t sgml ${MASTERDOC} > /dev/null
 	${PERL} ${COLLATEINDEX} -g -o ${INDEX_SGML} ${.TARGET}
 
