@@ -28,7 +28,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.42 2000/07/12 05:23:33 jdp Exp $
+# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.43 2000/07/12 05:25:50 jdp Exp $
 #
 
 
@@ -416,8 +416,10 @@ sub safeglob {
 sub checkout {
 	local($fullname, $rev) = @_;
 
-	open(RCS, "co -p$rev '$fullname' 2>&1 |") ||
-	    &fail("500 Internal Error", "Couldn't co: $!");
+	if (! open(RCS, "-|")) { # child
+	    open(STDERR, ">&STDOUT"); # Redirect stderr to stdout
+	    exec("co", "-p$rev", $fullname);
+	} 
 # /home/ncvs/src/sys/netinet/igmp.c,v  -->  standard output
 # or
 # /home/ncvs/src/sys/netinet/igmp.c,v  -->  stdout
@@ -478,20 +480,22 @@ sub dodiff {
 #
 #	XXX Putting '-p' here is a personal preference
 	if ($f eq 'c') {
-	    $difftype = '-p -c';
+	    @difftype = qw{-p -c};
 	    $diffname = "Context diff";
 	} elsif ($f eq 's') {
-	    $difftype = '--side-by-side --width=164';
+	    @difftype = qw{--side-by-side --width=164};
 	    $diffname = "Side by Side";
 	} else {
-	    $difftype = '-p -u';
+	    @difftype = qw{-p -u};
 	    $diffname = "Unidiff";
 	}
 # XXX should this just be text/plain
 # or should it have an HTML header and then a <pre>
 	print "Content-type: text/plain\n\n";
-	open(RCSDIFF, "rcsdiff $difftype -r$rev1 -r$rev2 '$fullname' 2>&1 |") ||
-	    &fail("500 Internal Error", "Couldn't rcsdiff: $!");
+	if (! open(RCSDIFF, "-|")) { # child
+	    open(STDERR, ">&STDOUT"); # Redirect stderr to stdout
+	    exec("rcsdiff", @difftype, "-r$rev1", "-r$rev2", $fullname);
+	}
 #
 #===================================================================
 #RCS file: /home/ncvs/src/sys/netinet/tcp_output.c,v
@@ -509,7 +513,7 @@ sub dodiff {
 #--- src/sys/netinet/tcp_output.c     1995/12/05 17:46:35     1.17 RELENG_2_1_0
 # (bogus example, but...)
 #
-	if ($difftype eq '-u') {
+	if (grep { $_ eq '-u' } @difftype) {
 	    $f1 = '---';
 	    $f2 = '\+\+\+';
 	} else {
@@ -540,8 +544,10 @@ sub dolog {
 	local($curbranch,$symnames);	#...
 
 	print("Going to rlog '$fullname'\n") if ($verbose);
-	open(RCS, "rlog '$fullname'|") || &fatal("500 Internal Error",
-						"Failed to spawn rlog");
+	if (! open(RCS, "-|")) {
+	    close(STDERR); # rlog may complain; ignore.
+	    exec("rlog", $fullname);
+	}
 	while (<RCS>) {
 	    print if ($verbose);
 	    if (/^branch:\s+([\d\.]+)/) {
