@@ -943,6 +943,177 @@ kern.maxfiles: 2088 -> 5000</screen>
 	z.B. w&auml;hrend eines <command>make installworld</command>,
 	kann das Dateisystem vollaufen lassen.  Dadurch w&uuml;rde
 	die Aktualisierung fehlschlagen.</para>
+      
+      <sect3>
+	<title>Details &uuml;ber Soft Updates</title>
+
+	<indexterm><primary>Soft Updates (Details)</primary></indexterm>
+
+	<para>Es gibt zwei klassische Herangehensweisen, wie
+	  man die Metadaten des Dateisystems (also Daten
+	  &uuml;ber Dateien, wie i-node Bereiche oder Verzeichniseintr&auml;ge)
+	  aktualisiert auf die Platte zur&uuml;ckschreibt:</para>
+
+	<para>Das historisch &uuml;bliche Verfahren waren synchrone
+	  Updates der Metadaten, d. h. wenn eine &Auml;nderung an
+	  einem Verzeichnis n&ouml;tig war, wurde anschlie&szlig;end
+	  gewartet, bis diese &Auml;nderung tats&auml;chlich auf die
+	  Platte zur&uuml;ckgeschrieben worden war.  Der
+	  <emphasis>Inhalt</emphasis> der Dateien wurde im
+	  <quote>Buffer Cache</quote> zwischengespeichert und
+	  asynchron irgendwann sp&auml;ter auf die Platte geschrieben.
+	  Der Vorteil dieser Implementierung ist, da&szlig; sie sehr
+	  sicher funktioniert.  Wenn w&auml;hrend eines Updates ein
+	  Ausfall erfolgt, haben die Metadaten immer einen
+	  konsistenten Zustand.  Eine Datei ist entweder komplett
+	  angelegt oder gar nicht.  Wenn die Datenbl&ouml;cke der
+	  Datei den Weg aus dem <quote>Buffer Cache</quote> noch nicht
+	  auf die Platte gefunden haben, dann kann &man.fsck.8; dies
+	  feststellen und das Dateisystem reparieren (die
+	  Dateil&auml;nge wird dann auf 0 gesetzt).  Au&szlig;erdem
+	  ist die Implementierung einfach und &uuml;berschaubar.  Der
+	  Nachteil ist, da&szlig; &Auml;nderungen der Metadaten sehr
+	  langsam vor sich gehen.  Ein <command>rm -r</command>
+	  beispielsweise fa&szlig;t alle Dateien eines Verzeichnisses
+	  der Reihe nach an, aber jede dieser &Auml;nderungen am
+	  Verzeichnis (L&ouml;schen einer Datei) wird einzeln synchron
+	  auf die Platte geschrieben.  Gleiches beim Auspacken
+	  gro&szlig;er Hierarchien (<command>tar -x</command>).</para>
+	  
+	<para>Der zweite Fall sind asynchrone Metadaten-Updates.  Das
+	  ist z. B. der Standard bei Linux/ext2fs oder die Variante
+	  <command>mount -o async</command> f&uuml;r *BSD UFS.  Man
+	  schickt die Updates der Metadaten einfach auch noch
+	  &uuml;ber den <quote>Buffer Cache</quote>, sie werden also
+	  zwischen die Updates der normalen Daten eingeschoben.
+	  Vorteil ist, da&szlig; man nun nicht mehr auf jeden Update
+	  warten mu&szlig;, Operationen mit vielen
+	  Metadaten&auml;nderungen werden also viel schneller.  Auch
+	  hier ist die Implementierung sehr einfach und wenig
+	  anf&auml;llig f&uuml;r Fehler.  Nachteil ist, da&szlig;
+	  keinerlei Konsistenz des Dateisystems mehr gesichert ist.
+	  Wenn mitten in einer Operation, die viele Metadaten
+	  &auml;ndert, ein Ausfall erfolgt (Stromausfall, dr&uuml;cken
+	  des Reset-Tasters), dann ist das Dateisystem
+	  anschlie&szlig;end in einem unbestimmten Zustand.  Niemand
+	  kann genau sagen, was noch geschrieben worden ist und was
+	  nicht mehr; die Datenbl&ouml;cke einer Datei k&ouml;nnen
+	  schon auf der Platte stehen, w&auml;hrend die i-node Tabelle
+	  oder das zugeh&ouml;rige Verzeichnis nicht mehr aktualisiert
+	  worden ist.  Man kann praktisch kein <command>fsck</command>
+	  mehr implementieren, das diesen Zustand
+	  wieder reparieren kann, da die dazu n&ouml;tigen
+	  Informationen einfach auf der Platte fehlen.  Wenn ein
+	  Dateisystem derart besch&auml;digt worden ist, kann man es
+	  nur neu erzeugen (<command>newfs</command>) und die Daten
+	  vom Backup zur&uuml;ckspielen.
+	  </para>
+
+	<para>Der historische Ausweg aus diesem Dilemma war ein
+  	  <emphasis>dirty region logging</emphasis> (auch als
+  	  <emphasis>Journalling</emphasis> bezeichnet, wenngleich
+  	  dieser Begriff nicht immer gleich benutzt und manchmal auch
+  	  f&uuml;r andere Formen von Transaktionsprotokollen gebraucht
+  	  wird).  Man schreibt die Metadaten-Updates zwar synchron,
+  	  aber nur in einen kleinen Plattenbereich, die
+  	  <emphasis>logging area</emphasis>.  Von da aus werden sie
+  	  dann asynchron auf ihre eigentlichen Bereiche verteilt.  Da
+  	  die <emphasis>logging area</emphasis> ein kleines
+  	  zusammenh&auml;ngendes St&uuml;ckchen ist, haben die
+  	  Schreibk&ouml;pfe der Platte bei massiven Operationen auf
+  	  Metadaten keine allzu gro&szlig;en Wege zur&uuml;ckzulegen,
+  	  so da&szlig; alles ein ganzes St&uuml;ck schneller geht als
+  	  bei klassischen synchronen Updates.  Die Komplexit&auml;t
+  	  der Implementierung h&auml;lt sich ebenfalls in Grenzen,
+  	  somit auch die Anf&auml;lligkeit f&uuml;r Fehler.  Als
+  	  Nachteil ergibt sich, da&szlig; Metadaten zweimal auf die
+  	  Platte geschrieben werden m&uuml;ssen (einmal in die
+  	  <emphasis>logging area</emphasis>, einmal an die richtige
+  	  Stelle), so da&szlig; das im Falle regul&auml;rer
+  	  Arbeit (also keine geh&auml;uften Metadatenoperationen) eine
+  	  <quote>Pessimisierung</quote> des Falls der synchronen
+  	  Updates eintritt, es wird alles langsamer.  Daf&uuml;r hat man
+  	  als Vorteil, da&szlig; im Falle eines Crashes der
+  	  konsistente Zustand dadurch erzielbar ist, da&szlig; die
+  	  angefangenen Operationen aus dem <emphasis>dirty region
+  	  log</emphasis> entweder zu Ende ausgef&uuml;hrt oder
+  	  komplett verworfen werden, wodurch das Dateisystem schnell
+  	  wieder zur Verf&uuml;gung steht.
+	  </para>
+	  
+	<para>Die L&ouml;sung von Kirk McKusick (dem Sch&ouml;pfer von
+  	  Berkeley FFS) waren <emphasis>Soft Updates</emphasis>: die
+  	  notwendigen Updates der Metadaten werden im Speicher
+  	  gehalten und dann sortiert auf die Platte geschrieben
+  	  (<quote>ordered metadata updates</quote>).  Dadurch hat man
+  	  den Effekt, da&szlig; im Falle massiver
+  	  Metadaten-&Auml;nderungen sp&auml;tere Operationen die
+  	  vorhergehenden, noch nicht auf die Platte geschriebenen
+  	  Updates desselben Elements im Speicher
+  	  <quote>einholen</quote>.  Alle Operationen, auf ein
+  	  Verzeichnis beispielsweise, werden also in der Regel noch im
+  	  Speicher abgewickelt, bevor der Update &uuml;berhaupt auf
+  	  die Platte geschrieben wird (die dazugeh&ouml;rigen
+  	  Datenbl&ouml;cke werden nat&uuml;rlich auch so sortiert,
+  	  da&szlig; sie nicht vor ihren Metadaten auf der Platte
+  	  sind).  Im Crashfall hat man ein implizites <quote>log
+  	  rewind</quote>: alle Operationen, die noch nicht den Weg auf
+  	  die Platte gefunden haben, sehen danach so aus, als
+  	  h&auml;tten sie nie stattgefunden.  Man hat so also den
+  	  konsistenten Zustand von ca. 30 -- 60 Sekunden fr&uuml;her
+  	  sichergestellt.  Der verwendete Algorithmus garantiert
+  	  dabei, da&szlig; alle tats&auml;chlich benutzten Ressourcen
+  	  auch in den entsprechenden Bitmaps (Block- und i-node
+  	  Tabellen) als belegt markiert sind.  Der einzige Fehler, der
+  	  auftreten kann, ist, da&szlig; Ressourcen noch als
+  	  <quote>belegt</quote> markiert sind, die tats&auml;chlich
+  	  <quote>frei</quote> sind.  &man.fsck.8; erkennt dies und
+  	  korrigiert diese nicht mehr belegten Resourcen.  Die
+  	  Notwendigkeit eines Dateisystem-Checks darf aus diesem
+  	  Grunde auch ignoriert und das Dateisystem mittels
+  	  <command>mount -f</command> zwangsweise eingebunden werden.
+  	  Um noch allozierte Ressourcen freizugeben mu&szlig;
+  	  sp&auml;ter ein &man.fsck.8; nachgeholt werden.  Das ist
+  	  dann auch die Idee des <emphasis>background fsck</emphasis>:
+  	  beim Starten des Systems wird lediglich ein
+  	  <emphasis>Schnappschu&szlig;</emphasis> des Filesystems
+  	  gemacht, mit dem &man.fsck.8; dann sp&auml;ter arbeiten
+  	  kann.  Alle Dateisysteme d&uuml;rfen <quote>unsauber</quote>
+  	  eingebunden werden und das System kann sofort in den
+  	  Multiuser-Modus gehen.  Danach wird ein
+  	  Hintergrund-<command>fsck</command> f&uuml;r die
+  	  Dateisysteme gestartet, die dies ben&ouml;tigen, um
+  	  m&ouml;glicherweise irrt&uuml;mlich belegte Resourcen
+  	  freizugeben. (Dateisysteme ohne <emphasis>Soft
+  	  Updates</emphasis> ben&ouml;tigen nat&uuml;rlich immer noch
+  	  den &uuml;blichen (Vordergrund-)<command>fsck</command>,
+  	  bevor sie eingebunden werden k&ouml;nnen.)</para>
+
+	<para>Der Vorteil ist, da&szlig; die Metadaten-Operationen
+  	  beinahe so schnell ablaufen wie im asynchronen Fall (also
+  	  durchaus auch schneller als beim <quote>logging</quote>, das
+  	  ja die Metadaten immer zweimal schreiben mu&szlig;).  Als
+  	  Nachteil stehen dem die Komplexit&auml;t des Codes (mit
+  	  einer erh&ouml;hten Fehlerwahrscheinlichkeit in einem
+  	  bez&uuml;glich Datenverlust hoch sensiblen Bereich) und ein
+  	  erh&ouml;hter Speicherverbrauch entgegen.  Au&szlig;erdem
+  	  mu&szlig; man sich an einige <quote>Eigenheiten</quote>
+  	  gew&ouml;hnen: Nach einem Absturz ist ein etwas &auml;lterer
+  	  Stand auf der Platte - statt einer leeren, aber bereits
+  	  angelegten Datei (wie nach einem herk&ouml;mmlichen
+  	  <command>fsck</command> Lauf) ist auf einem Dateisystem mit
+  	  <emphasis>Soft Updates</emphasis> keine Spur der
+  	  entsprechenden Datei mehr zu sehen, da weder die Metadaten
+  	  noch der Dateiinhalt je auf die Platte geschrieben wurden.
+  	  Weiterhin kann der Platz nach einem <command>rm -r</command>
+  	  nicht sofort wieder als verf&uuml;gbar markiert werden,
+  	  sondern erst dann, wenn der Update auch auf die Platte
+  	  vermittelt worden ist.  Dies kann besonders dann Probleme
+  	  bereiten, wenn gro&szlig;e Datenmengen in einem Dateisystem
+  	  ersetzt werden, das nicht gen&uuml;gend Platz hat, um alle
+  	  Dateien zweimal unterzubringen.</para>
+
+      </sect3>
     </sect2>
   </sect1>
 
