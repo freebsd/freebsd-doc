@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/en/news/press.xsl,v 1.6 2004/01/12 21:26:59 hrs Exp $ -->
+<!-- $FreeBSD: www/en/news/press.xsl,v 1.7 2004/04/04 21:46:13 phantom Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -36,6 +36,13 @@
 	    News.</p>
 	
 	<xsl:apply-templates select="//month"/>
+
+	<p>Older press publications:
+	  <a href="2002/press.html">2002</a>,
+	  <a href="2001/press.html">2001</a>,
+	  <a href="2000/press.html">2000</a>,
+	  <a href="1999/press.html">1999</a>,
+	  <a href="1998/press.html">1998-1996</a></p>
 	
 	<xsl:copy-of select="$newshome"/>
 	<xsl:copy-of select="$footer"/>
