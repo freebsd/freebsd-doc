@@ -1,7 +1,7 @@
 #
 # The FreeBSD Russian Documentation Project
 #
-# $FreeBSD$
+# $FreeBSD: www/ru/doc/Makefile,v 1.1 2004/01/03 04:37:43 andy Exp $
 # $FreeBSDru: frdp/www/ru/doc/Makefile,v 1.2 2004/01/03 04:36:26 andy Exp $
 #
 # Original revision: 1.8
@@ -16,7 +16,8 @@
 # requirements here.
 #
 
-all: all-all all-install all-pgpkeyring
+#all: all-all all-install all-pgpkeyring
+all: all-all all-install
 
 all-all:
 	@unset DESTDIR || true; \
