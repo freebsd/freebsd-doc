@@ -6,7 +6,7 @@
 # by John Fieber
 # February 26, 1998
 #
-# $Id: getmsg.cgi,v 1.10 1998-03-28 15:11:37 wosch Exp $
+# $Id: getmsg.cgi,v 1.11 1998-03-28 15:29:25 wosch Exp $
 #
 
 require "./cgi-lib.pl";
@@ -25,7 +25,7 @@ exit 0;
 sub Fetch
 {
     my ($docid) = @_;
-    my ($start, $end, $file) = split(/ /, $docid);
+    my ($start, $end, $file, $type) = split(/ /, $docid);
     my ($message, @finfo);
 
     #
@@ -44,9 +44,16 @@ sub Fetch
     	seek DATA, $start, 0;
     	read DATA, $message, $end - $start;
     	close(DATA);
-	$message = &MessageToHTML($message);
 	print "last-modified: " .
 	    POSIX::strftime("%a, %d %b %Y %T GMT", gmtime($finfo[9])) . "\n";
+
+	# print E-Mail as plain ascii text
+	if ($type eq 'raw') {
+            print "Content-type: text/plain\n\n";
+            print $message;
+	    return;
+        }	
+	$message = &MessageToHTML($message);
     }
     else
     {
