@@ -158,3 +158,18 @@ ${XML_MIRRORS}: ${XML_MIRRORS_MASTER} ${XSL_TRANSTABLE} ${XSL_TRANSTABLE_MASTER}
 CLEANFILES+= ${XML_MIRRORS}
 CLEANFILES+= ${XML_MIRRORS}.sort
 CLEANFILES+= ${XML_MIRRORS}.sort.tmp
+
+#
+# urls.ent dependency.
+#
+
+URLS_ENT=	${.OBJDIR}/${DOC_PREFIX:S,^${.CURDIR}/,,}/share/sgml/urls.ent
+
+${URLS_ENT}:
+.if !defined(URLS_ABSOLUTE)
+	echo '<!ENTITY url.main "../../../..">' > $@
+.else
+	echo '<!ENTITY url.main "http://www.FreeBSD.org">' > $@
+.endif
+
+CLEANFILES+=	${URLS_ENT}
