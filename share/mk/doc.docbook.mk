@@ -384,7 +384,7 @@ ${DOC}.xml: ${SRCS}
 
 .if ${STYLESHEET_TYPE} == "dsssl"
 index.html HTML.manifest: ${SRCS} ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} \
-			  ${INDEX_SGML} ${HTML_SPLIT_INDEX} ${LOCAL_CSS_SHEET}
+			  ${LOCAL_IMAGES_TXT} ${INDEX_SGML} ${HTML_SPLIT_INDEX} ${LOCAL_CSS_SHEET}
 	${JADE} -V html-manifest ${HTMLOPTS} -ioutput.html.images \
 		${JADEOPTS} -t sgml ${MASTERDOC}
 .elif ${STYLESHEET_TYPE} == "xsl"
@@ -401,7 +401,7 @@ index.html: ${DOC}.xml ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} \
 
 .if ${STYLESHEET_TYPE} == "dsssl"
 ${DOC}.html: ${SRCS} ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} \
-	     ${INDEX_SGML} ${HTML_INDEX} ${LOCAL_CSS_SHEET}
+	     ${LOCAL_IMAGES_TXT} ${INDEX_SGML} ${HTML_INDEX} ${LOCAL_CSS_SHEET}
 	${JADE} -V nochunks ${HTMLOPTS} -ioutput.html.images \
 		${JADEOPTS} -t sgml ${MASTERDOC} > ${.TARGET} || \
 		(${RM} -f ${.TARGET} && false)
