@@ -1,7 +1,7 @@
 #
 # The FreeBSD Russian Documentation Project
 #
-# $FreeBSD$
+# $FreeBSD: www/ru/Makefile,v 1.23 2003/09/30 18:51:40 andy Exp $
 # $FreeBSDru: frdp/www/ru/Makefile,v 1.23 2003/09/30 18:58:55 andy Exp $
 #
 # Original revision: 1.98
@@ -62,7 +62,8 @@ SUBDIR+= ports
 #SUBDIR+= doc
 .endif
 .if defined(BUILD_RELNOTES)
-SUBDIR+= relnotes
+# This doesn't exist yet.
+#SUBDIR+= relnotes
 .endif
 
 # These *must* be listed after the "doc" subdir, as they create symlinks
