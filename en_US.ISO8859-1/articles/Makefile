@@ -22,6 +22,7 @@ SUBDIR+= java-tomcat
 SUBDIR+= mh
 SUBDIR+= multi-os
 SUBDIR+= new-users
+SUBDIR+= pr-guidelines
 SUBDIR+= problem-reports
 SUBDIR+= programming-tools
 SUBDIR+= pxe
