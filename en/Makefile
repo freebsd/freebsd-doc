@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.29 1998-05-14 17:30:12 nik Exp $
+# $Id: Makefile,v 1.30 1998-06-02 17:12:33 wosch Exp $
 
 .if exists(Makefile.conf)
 .include "Makefile.conf"
@@ -13,7 +13,8 @@ ANALOG?=/home/www/bin/analog
 DOCS=  about.sgml applications.sgml auditors.sgml availability.sgml branch.sgml
 DOCS+= cgallery.sgml commercial.sgml daemon.sgml docproj.sgml docs.sgml 
 DOCS+= features.sgml gallery.sgml index-site.sgml mozilla.sgml register.sgml 
-DOCS+= internet.sgml license.sgml mailto.sgml mirror.sgml newbies.sgml
+DOCS+= internet.sgml license.sgml 
+DOCS+= machines.sgml mailto.sgml mirror.sgml newbies.sgml
 DOCS+= newsflash.sgml npgallery.sgml pgallery.sgml publish.sgml search.sgml 
 DOCS+= searchhints.sgml send-pr.sgml security.sgml support.sgml where.sgml 
 DOCS+= resignation.sgml y2kbug.sgml search-mid.sgml press.sgml
