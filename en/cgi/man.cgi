@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp 
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.67 2002-05-04 15:56:24 wosch Exp $
+# $Id: man.cgi,v 1.68 2002-05-04 15:58:29 wosch Exp $
 
 #use Data::Dumper;
 #use Carp;
@@ -349,6 +349,10 @@ sub do_man {
     } elsif ($fform =~ m%^([a-zA-Z_\-]+)\(([0-9a-zA-Z]+)\)$%) {
 	return &man($1, $2);
     }
+
+    # remove trailing spaces for dumb users
+    $form{'query'} =~ s/\s+$//;
+    $form{'query'} =~ s/^\s+//;
 
     $name = $query = $form{'query'};
     $section = $form{'sektion'};
@@ -926,7 +930,7 @@ ETX
 }
 
 sub copyright {
-    $id = '$Id: man.cgi,v 1.67 2002-05-04 15:56:24 wosch Exp $';
+    $id = '$Id: man.cgi,v 1.68 2002-05-04 15:58:29 wosch Exp $';
 
     return qq{\
 <PRE>
