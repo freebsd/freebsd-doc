@@ -4,7 +4,7 @@
 # gconf.pl - a script to add proper gconf schema handling to port PLISTs
 # usage: gconf.pl [plist] [plist] [...]
 #
-# $Id: gconf.pl,v 1.1 2004-06-27 21:41:07 marcus Exp $
+# $Id: gconf.pl,v 1.2 2004-07-17 15:48:45 marcus Exp $
 #
 
 use strict;
@@ -28,7 +28,7 @@ foreach (@ARGV) {
 
         for (my $i = 0 ; $i < scalar(@file) ; $i++) {
                 my ($install, $uninstall);
-                next unless $file[$i] =~ /\.schemas?\n$/;
+                next unless $file[$i] =~ m|^etc/gconf/schemas/.*\.schemas?\n$|;
                 my $schema = $file[$i];
                 chomp $schema;
                 $uninstall =
