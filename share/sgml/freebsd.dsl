@@ -12,6 +12,11 @@
 <style-sheet>
   <style-specification use="docbook">
     <style-specification-body>
+      <!-- Locatization -->
+      <![ %lang.ja; [
+	(define %gentext-language% "ja")
+	(define %html-header-tags% '(("META" ("HTTP-EQUIV" "Content-Type") ("CONTENT" "text/html; charset=EUC-JP"))))
+      ]]>
 
       <!-- HTML only .................................................... -->
       
