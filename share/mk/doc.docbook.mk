@@ -180,6 +180,7 @@ XARGS?=		/usr/bin/xargs
 TEX?=		${PREFIX}/bin/tex
 LATEX?=		${PREFIX}/bin/latex
 PDFTEX?=	${PREFIX}/bin/pdftex
+GROFF?=		groff
 TIDY?=		${PREFIX}/bin/tidy
 TIDYOPTS?=	-i -m -raw -preserve -f /dev/null ${TIDYFLAGS}
 HTML2TXT?=	${PREFIX}/bin/links

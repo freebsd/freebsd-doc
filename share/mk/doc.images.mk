@@ -105,6 +105,8 @@ PNMTOPS?=	${PREFIX}/bin/pnmtops
 PNMTOPSOPTS?=	-noturn ${PNMTOPSFLAGS}
 EPSTOPDF?=	${PREFIX}/bin/epstopdf
 EPSTOPDFOPTS?=	${EPSTOPDFFLAGS}
+PS2EPS?=	${PREFIX}/bin/ps2epsi
+PIC2PS?=	${GROFF} -p -S -Wall -mtty-char -man 
 
 # Use suffix rules to convert .scr files to .png files
 .SUFFIXES:	.scr .png .eps
