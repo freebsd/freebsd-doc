@@ -146,6 +146,7 @@ SRCS+= linuxemu/chapter.sgml
 SRCS+= mail/chapter.sgml
 SRCS+= mirrors/chapter.sgml
 SRCS+= multimedia/chapter.sgml
+SRCS+= desktop/chapter.sgml
 SRCS+= pgpkeys/chapter.sgml
 SRCS+= ppp-and-slip/chapter.sgml
 SRCS+= printing/chapter.sgml
