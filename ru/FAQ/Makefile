@@ -2,14 +2,18 @@
 # The FreeBSD Russian Documentation Project
 #
 # $FreeBSD$
-# $FreeBSDru: frdp/www/ru/FAQ/Makefile,v 1.2 2000/10/06 15:53:51 phantom Exp $
-# Original revision: 1.4
+# $FreeBSDru: frdp/www/ru/FAQ/Makefile,v 1.3 2003/12/13 11:16:34 andy Exp $
 #
-# Build the FreeBSD FAQ *outside* of the www tree, and install it
-# in to the right place as necessary.
+# Original revision: 1.8
+#
 
-all install clean:
-	(cd ../../../doc/ru_RU.KOI8-R/books/faq; ${MAKE} 'FORMATS=html-split html' DESTDIR=${DESTDIR}/data/ru/FAQ ${.TARGET})
-.if make(install)
-	(cd ${DESTDIR}/data/ru/FAQ; ln -sf index.html FAQ.html)
+.if exists(../Makefile.conf)
+.include "../Makefile.conf"
 .endif
+.if exists(../Makefile.inc)
+.include "../Makefile.inc"
+.endif
+
+DATA=   index.html
+
+.include "${WEB_PREFIX}/share/mk/web.site.mk"
