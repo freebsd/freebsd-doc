@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
 
-<!-- $FreeBSD: www/ja/index.xsl,v 1.17 2002/06/25 20:12:36 hrs Exp $ -->
-<!-- Original revision: 1.25 -->
+<!-- $FreeBSD: www/ja/index.xsl,v 1.18 2002/07/13 14:29:17 hrs Exp $ -->
+<!-- Original revision: 1.29 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   
@@ -10,7 +10,7 @@
 
   <xsl:variable name="base" select="'.'"/>
   <xsl:variable name="enbase" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/ja/index.xsl,v 1.17 2002/06/25 20:12:36 hrs Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/ja/index.xsl,v 1.18 2002/07/13 14:29:17 hrs Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <xsl:output type="html" encoding="EUC-JP"
@@ -166,8 +166,8 @@
 		
 			    <small><br/>
 			      ・<a href="projects/newbies.html">初心者のために</a><br/>
-			      ・<a href="{$base}/handbook/index.html">ハンドブック</a><br/>
-			      ・<a href="{$base}/FAQ/index.html">FAQ</a><br/>
+			      ・<a href="{$base}/doc/ja_JP.eucJP/books/handbook/index.html">ハンドブック</a><br/>
+			      ・<a href="{$base}/doc/ja_JP.eucJP/books/faq/index.html">FAQ</a><br/>
 			      ・<a href="{$base}/docproj/index.html">Doc. Project</a><br/>
 			      ・<a href="docs.html">さらに...</a><br/>
 			    </small></p>
@@ -284,7 +284,7 @@
 		できます。ネットワークに接続しているなら、anonymous FTP や NFS
 		を用いて <i>直接</i> インストールすることもできます。
 		必要なのは 1.44MB の起動フロッピー 2 枚と、
-		<a href="{$base}/handbook/install.html">これらの方法</a>
+		<a href="{$base}/doc/ja_JP.eucJP/books/handbook/install.html">これらの方法</a>
 		だけです。</p>
 
 	      <h2><font color="#990000">FreeBSD は<i>無料</i>です</font></h2>
