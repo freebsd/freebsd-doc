@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/gnome/images/Makefile,v 1.21 2004/03/31 22:35:14 adamw Exp $
+# $FreeBSD: www/en/gnome/images/Makefile,v 1.22 2004/04/01 05:58:33 adamw Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -14,15 +14,21 @@
 # included with ImageMagick to do this:
 #
 # convert -geometry x240 <imagename>.png <imagename>-tn.png
+#
+# Screenshots should be named according to the GNOME release they show.
+# E.g. the fourth screenshot for GNOME 2.6 is ss26-4.png, and the thumbnail
+# is ss26-4-tn.png
 
-DATA+=	ss14.png
-DATA+=	ss14-tn.png
-DATA+=	ss16.png
-DATA+=	ss16-tn.png
-DATA+=	ss17.png
-DATA+=	ss17-tn.png
-DATA+=	ss18.png
-DATA+=	ss18-tn.png
+DATA+=	ss26-1.png
+DATA+=	ss26-1-tn.png
+DATA+=	ss26-2.png
+DATA+=	ss26-2-tn.png
+DATA+=	ss26-3.png
+DATA+=	ss26-3-tn.png
+DATA+=	ss26-4.png
+DATA+=	ss26-4-tn.png
+DATA+=	ss26-5.png
+DATA+=	ss26-5-tn.png
 DATA+=	gnome.png
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
