@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/ports/ports.inc,v 1.49 2000/06/15 10:24:53 kevlo Exp $ -->
+<!-- $FreeBSD: www/en/ports/ports.inc,v 1.50 2000/07/11 22:58:04 asami Exp $ -->
 <p>The FreeBSD Ports and Packages Collection offers a simple way for
 users and administrators to install applications.  The ports
 collection has been <a
@@ -49,10 +49,10 @@ Search for:
 
 
 <p>For more information about using ports, see <a
-href="../handbook/ports.html">The ports collection</a>.  For
+href="../handbook/ports.html">The ports collection</a>, a
+section of the <a href="../handbook/">FreeBSD Handbook</a>.  For
 information about creating new ports, see <a
-href="../handbook/porting.html">Porting applications</a>.  Both are
-part of the <a href="../handbook/">FreeBSD Handbook</a>.</p>
+href="../porters-handbook/">Porting applications</a>.</p> 
 
 <hr>
 
