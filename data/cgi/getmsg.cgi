@@ -1,20 +1,32 @@
 #!/usr/local/bin/perl -T
-# $Id: getmsg.cgi,v 1.1 1998-02-26 23:49:52 jfieber Exp $
+#
+# Given a filename, start offset and end offset of a mail message,
+# read the message and format it nicely using HTML.
+#
+# by John Fieber
+# February 26, 1998
+#
+# $Id: getmsg.cgi,v 1.2 1998-02-27 02:56:26 jfieber Exp $
+#
 
 require "./cgi-lib.pl";
 require "./cgi-style.pl";
+use POSIX qw(strftime);
 
-my $messageroot = "/usr/local/www/db/text/";
+#
+# Files MUST be fully qualified and MUST start with this path.
+#
+$messagepath = "/usr/local/www/db/text/";
+
 &ReadParse(*formdata);
 &Fetch($formdata{'fetch'});
-
 exit 0;
 
 sub Fetch
 {
-    local ($docid) = @_;
-    local ($start, $end, $file) = split(/ /, $docid);
-    print &short_html_header("FreeBSD Mail Archives");
+    my ($docid) = @_;
+    my ($start, $end, $file) = split(/ /, $docid);
+    my ($message, @finfo);
 
     #
     # Check to ensure that (a) the specified file starts
@@ -26,33 +38,41 @@ sub Fetch
     $file =~ s/\.\.//g;
     $file =~ s|/+|/|;
 
-    if ($file =~ /^$messageroot/ && open(DATA, $file)) {
+    if ($file =~ /^$messagepath/ && open(DATA, $file))
+    {
+	@finfo = stat DATA;
     	seek DATA, $start, 0;
     	read DATA, $message, $end - $start;
     	close(DATA);
-    	print &MessageToHTML($message);
-    } else {
-    	print "<p>The specified message cannot be accessed.</p>\n";
+	$message = &MessageToHTML($message);
+	print "last-modified: " .
+	    POSIX::strftime("%a, %d %b %Y %T GMT", gmtime($finfo[9])) . "\n";
+    }
+    else
+    {
+    	$message = "<p>The specified message cannot be accessed.</p>\n";
     }
 
+    print &short_html_header("FreeBSD Mail Archives");
+    print $message;
     print &html_footer;
     print "</BODY></HTML>\n";
 }
 
 sub EscapeHTML
 {
-    local ($_) = @_;
-    s/&/&amp;/g;
-    s/</&lt;/g;
-    s/>/&gt;/g;
-    return $_;
+    my ($text) = @_;
+    $text =~ s/&/&amp;/g;
+    $text =~ s/</&lt;/g;
+    $text =~ s/>/&gt;/g;
+    return $text;
 }
 
 sub MessageToHTML
 {
     my ($doc) = @_;
-    my ($i, %hdr);
     my ($header, $body) = split(/\n\n/, $doc, 2);
+    my ($i, %hdr, $field, $data, $message);
     
     $body = &EscapeHTML($body);
 
@@ -89,4 +109,3 @@ sub MessageToHTML
     
     return $message;
 }
-
