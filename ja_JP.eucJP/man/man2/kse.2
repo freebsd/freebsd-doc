@@ -1,0 +1,675 @@
+.\" Copyright (c) 2002 Packet Design, LLC.
+.\" All rights reserved.
+.\"
+.\" Subject to the following obligations and disclaimer of warranty,
+.\" use and redistribution of this software, in source or object code
+.\" forms, with or without modifications are expressly permitted by
+.\" Packet Design; provided, however, that:
+.\"
+.\"    (i)  Any and all reproductions of the source or object code
+.\"         must include the copyright notice above and the following
+.\"         disclaimer of warranties; and
+.\"    (ii) No rights are granted, in any manner or form, to use
+.\"         Packet Design trademarks, including the mark "PACKET DESIGN"
+.\"         on advertising, endorsements, or otherwise except as such
+.\"         appears in the above copyright notice or in the software.
+.\"
+.\" THIS SOFTWARE IS BEING PROVIDED BY PACKET DESIGN "AS IS", AND
+.\" TO THE MAXIMUM EXTENT PERMITTED BY LAW, PACKET DESIGN MAKES NO
+.\" REPRESENTATIONS OR WARRANTIES, EXPRESS OR IMPLIED, REGARDING
+.\" THIS SOFTWARE, INCLUDING WITHOUT LIMITATION, ANY AND ALL IMPLIED
+.\" WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE,
+.\" OR NON-INFRINGEMENT.  PACKET DESIGN DOES NOT WARRANT, GUARANTEE,
+.\" OR MAKE ANY REPRESENTATIONS REGARDING THE USE OF, OR THE RESULTS
+.\" OF THE USE OF THIS SOFTWARE IN TERMS OF ITS CORRECTNESS, ACCURACY,
+.\" RELIABILITY OR OTHERWISE.  IN NO EVENT SHALL PACKET DESIGN BE
+.\" LIABLE FOR ANY DAMAGES RESULTING FROM OR ARISING OUT OF ANY USE
+.\" OF THIS SOFTWARE, INCLUDING WITHOUT LIMITATION, ANY DIRECT,
+.\" INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, PUNITIVE, OR CONSEQUENTIAL
+.\" DAMAGES, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES, LOSS OF
+.\" USE, DATA OR PROFITS, HOWEVER CAUSED AND UNDER ANY THEORY OF
+.\" LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+.\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
+.\" THE USE OF THIS SOFTWARE, EVEN IF PACKET DESIGN IS ADVISED OF
+.\" THE POSSIBILITY OF SUCH DAMAGE.
+.\"
+.\" %FreeBSD: src/lib/libc/sys/kse.2,v 1.13 2003/12/10 02:38:51 marcel Exp %
+.\"
+.\" $FreeBSD$
+.\"
+.Dd September 10, 2002
+.Dt KSE 2
+.Os
+.Sh 名称
+.Nm kse
+.Nd ユーザスレッドのためのカーネルサポート
+.Sh ライブラリ
+.Lb libc
+.Sh 書式
+.In sys/types.h
+.In sys/kse.h
+.Ft int
+.Fn kse_create "struct kse_mailbox *mbx" "int newgroup"
+.Ft int
+.Fn kse_exit void
+.Ft int
+.Fn kse_release "struct timespec *timeout"
+.Ft int
+.Fn kse_switchin "mcontext_t *mcp" "long val" "long *loc"
+.Ft int
+.Fn kse_thr_interrupt "struct kse_thr_mailbox *tmbx"
+.Ft int
+.Fn kse_wakeup "struct kse_mailbox *mbx"
+.Sh 解説
+これらのシステムコールはマルチスレッド化されたプロセスのための
+カーネルサポートを実装しています。
+.\"
+.Ss 概要
+.\"
+伝統的にユーザスレッディングは、次の 2 つの方法の 1 つで実装されてきました。
+全てのスレッドはユーザ空間で管理され、カーネルは全てのスレッディングを
+認識しない方法
+.Dq ( "N 対 1"
+としても知られています)。
+または、個々のスレッドのために共通のメモリ空間を分け合う
+分離したプロセスを作成する方法
+.Dq ( "N 対 N"
+としても知られています)。
+これらのアプローチは長所と短所を持っています:
+.Bl -column "- システムコールのラッピング必須" "+ システムコールのラッピング不要"
+.It Sy "ユーザスレッディング	カーネルスレッディング"
+.It "+ 軽量	- 重量"
+.It "+ ユーザ制御スケジューリング	- カーネル制御スケジューリング"
+.It "- システムコールのラッピング必須	+ システムコールのラッピング不要"
+.It "- マルチ CPU の有効活用不可	+ マルチ CPU の有効活用可能"
+.El
+.Pp
+KSE システムはユーザスレッディングおよびカーネルスレッディングの両方の
+長所を成し遂げる混成のアプローチです。
+KSE システムの根本的な哲学は、スケジューリングを決定するための
+ユーザスレッディングライブラリの能力を全く取り除くことなく、
+ユーザスレッディングのためのカーネルサポートを与えることです。
+カーネルからユーザスレッドへの upcall 機構は、スケジューリングの決定が
+必要とされるときにはいつでも、ユーザスレッディングライブラリに制御を
+移すために使用されます。
+任意の数のユーザスレッドは、カーネルによって供給される固定数の仮想 CPU 上に
+多重化されます。
+これは
+.Dq "N 対 M"
+スレッディング機構と考えることができます。
+.Pp
+このアプローチのいくつかの一般的な裏の意味は以下を含みます:
+.Bl -bullet
+.It
+ユーザプロセスはマルチプロセッサマシン上で複数のスレッドを
+同時に実行することが可能です。
+カーネルは、プロセス仮想 CPU がそれが望むようにスケジュールすることを
+承諾します。これらは、実際の複数の CPU 上で同時に実行されることができます。
+.It
+スレッドがブロックされたときにユーザプロセスが他のスレッドをスケジュール
+できるように、カーネル内でブロックする全ての操作は非同期になります。
+.It
+同じプロセス内の複数のスレッドスケジューラが可能で、それらは互いに独立して
+操作することができます。
+.El
+.\"
+.Ss 定義
+.\"
+KSE はユーザプロセスが実際に同時の複数の
+.Sy スレッド
+の実行を可能にします。
+これらの幾つかは、その他のスレッドが実行中またはユーザ空間で
+ブッロクされている間に、カーネルの中でブロックされることが可能です。
+.Sy カーネルスケジューリングの実体
+(kernel scheduling entity, KSE) はスレッドの実行のためにプロセスに承諾された
+.Dq "仮想 CPU"
+です。
+現在実行されているスレッドは常に、厳密に 1 つのユーザ空間または
+カーネルの中で動作しているどちらかの KSE に関連付けられています。
+その KSE はそのスレッドに
+.Sy 割り当てられている
+と言われます。
+.Pp
+その KSE が関連付けられた
+.Sy メールボックス
+(下記参照) を持っていて、そのスレッドが関連付けられた
+.Sy スレッドメールボックス
+(これも下記参照) を持っていて、さらに以下のどれかが発生したときに、その KSE が
+.Sy 割り当てられていない
+状態になり、関連付けられたスレッドは停止されます:
+.Bl -bullet
+.It
+そのスレッドがブロックを伴うシステムコールを実行する。
+.It
+スレッドが、カーネルがすぐには満たすことが可能ではない他の全ての要求を行う。
+例えばディスクからデータを読み出すために必要なメモリページに
+アクセスすることでページフォルト発生させることです。
+.It
+カーネル内で先にブロックされていた他のスレッドが、カーネル内のその作業を
+完了し (または
+.Sy 割り込まれ )
+、ユーザ空間へ戻る準備ができ、さらに現在のスレッドがユーザ空間に
+戻ろうとしている。
+.It
+シグナルがプロセスに配信され、この KSE がそのシグナルを配信するために
+選択される。
+.El
+.Pp
+言い換えると、スケジューリングの決定が行われなければならなくなるとすぐに、
+その KSE は割り当てられていない状態になります。
+なぜならば、カーネルはそのプロセスの他のどの実行可能なスレッドを
+スケジュールするべきかを推定しないからです。
+割り当てられていない KSE は常に可能な限り早く、
+ユーザプロセスが次に利用するべき KSE をどのように決定するかを可能にする
+.Sy upcall
+機構 (下記に記述されています) を介してユーザ空間に戻ります。
+KSE は常に、割り当てが解除される前に、カーネル内で可能な限り多くの作業を
+完了させます。
+.Pp
+.Sy "KSE グループ"
+は均等にスケジュールされ、その KSE グループに関連付けられた同一のスレッドの
+プールへのアクセスを共有する KSE の集合です。
+KSE グループはカーネルスケジューリングの優先度が割り当てられることができる
+最小の実体です。
+プロセスのスケジューリングとアカウンティングのため、それぞれの KSE グループは
+伝統的なスレッド化されていないプロセスと同様にカウントします。
+KSE グループの中の個々の KSE は実際上、見分けがつきません。
+また、KSE グループの中のあらゆる KSE は、その KSE グループに
+関連付けられた (カーネル内の) あらゆる実行可能なスレッドに、
+カーネルによって割り当てられることができます。
+実際問題として、カーネルはキャッシュの動作を最適化するために、スレッドと
+実際の CPU との密接な関係を保存しようと試みますが、
+これはユーザプロセスには不可視です。
+(密接な関係はまだ実装されていません)
+.Pp
+それぞれの KSE はユーザプロセスによって供給された唯一の
+.Sy "KSE メールボックス"
+を持っています。
+メールボックスは
+.Sy "upcall 関数"
+へのポインタを含む制御構造体とユーザスタックで構成されています。
+KSE は割り当てを解除されると必ずこの関数を実行します。
+カーネルはこの構造体を、実行可能になっているスレッド、およびそれぞれの
+upcall の前に配信されたシグナルについての情報を更新します。
+upcall はクリティカルセクションの間は、ユーザスレッドの
+スケジューリングコードによって一時的にブロックされることがあります。
+.Pp
+同様にそれぞれのユーザスレッドは唯一の
+.Sy "スレッドメールボックス"
+を持っています。
+カーネルとユーザスレッドスケジューラが通信するときに、
+スレッドはこれらのメールボックスへのポインタを使用して参照されます。
+それぞれの KSE のメールボックスは、その KSE が現在実行している
+ユーザスレッドのメールボックスへのポインタを含んでいます。
+このポインタはカーネル内でスレッドがブロックするときに、保存されます。
+.Pp
+カーネル内でブロックされていたスレッドがユーザ空間に戻る準備ができたときには
+必ず、そのスレッドは KSE グループの
+.Sy 完了した
+スレッドのリストに追加されます。
+このリストはスレッドメールボックスのリンクされたリストとして、
+次の upcall でユーザコードに公開されます。
+.Pp
+カーネルの中で同時にブロックされることができる KSE グループの中の
+スレッド数には、カーネルに起因する制限があります (現在、この数はユーザには
+不可視です)。
+この制限に達したときには、スレッドの 1 つが完了するまでの間 (または
+シグナルが配信されるまでの間)、upcall はブロックされ、
+その KSE グループのための作業は何も実行されません。
+.\"
+.Ss KSE の管理
+.\"
+マルチスレッド化するためには、プロセスは初めに
+.Fn kse_create
+を実行しなければなりません。
+.Fn kse_create
+システムコールは新しい KSE を
+作成します (本当に最初の実行を除く、下記を参照してください)。
+その KSE は
+.Fa mbx
+によって指されるメールボックスと関連付けられます。
+.Fa newgroup
+が 0 ではない場合には、その KSE を含む新しい KSE グループも作成されます。
+そうでない場合には、その新しい KSE は現在の KSE グループに追加されます。
+新しく作成される KSE は最初は割り当てられていません。
+そのため、それらの KSE は直ちに upcall します。
+.Pp
+それぞれのプロセスは初めは 1 つのユーザスレッドを
+実行する 1 つの KSE グループの中の 1 つの KSE を持っています。
+その KSE は関連付けられたメールボックスを持っていないため、そのスレッドに
+割り当てられたままでなければならず、upcall を全く実行しません。
+この結果は伝統的で、スレッド化されていない様式の操作です。
+そのため、特別な場合として、
+.Fa newgroup
+を 0 にしたこの最初のスレッドによる
+.Fn kse_create
+の最初の呼び出しは、新しい KSE を作成しません。
+代わりに、単に現在の KSE を与えられた KSE メールボックスに関連付け、
+直ちに upcall しない結果となります。
+しかしながら、次にそのスレッドがブロックし、要求された条件になったときに、
+upcall がトリガされます。
+.Pp
+カーネルは 1 つの KSE グループの中にシステムの物理的な CPU の数 (この数は
+.Xr sysctl 3
+変数の
+.Va hw.ncpu
+として利用可能です) より多い KSE の存在を許可しません。
+CPU より多い KSE を持つことは、その追加の KSE が単に
+その他の KSE と実 CPU へのアクセスを競合するだけであるため、
+ユーザプロセスにとって全く価値を増やさないでしょう。
+そのため、余分な KSE は常に脇に追いやられ、その結果アプリケーションは
+まさにより少ない KSE を持っていることと同じになるでしょう。
+どんなに多くの任意のユーザスレッドが存在することになっても、
+利用可能な KSE へのアプリケーションのユーザスレッドの割り当てを取り扱う
+ためのユーザスレッドスケジューラに渡ります。
+.Pp
+.Fn kse_exit
+システムコールは、現在実行しているスレッドに割り当てられている KSE を
+破壊させます。
+この KSE がこの KSE グループの中の最後の 1 つの場合には、その KSE グループに
+関連付けられているスレッドがカーネル内でブロックされたまま残ってはなりません。
+このシステムコールはエラーが無い場合には、戻りません。
+.Pp
+特別な場合として、最後に残っている KSE グループの中の最後に残っている KSE が
+このシステムコールを実行する場合には、その KSE は破壊されません。
+代わりに、その KSE はそのメールボックスとの関連付けを失うだけで、
+.Fn kse_exit
+は正常に戻ります。
+これはそのプロセスを元に、つまりスレッド化されていない状態に戻します。
+(これはまだ実装されていません)
+.Pp
+.Fn kse_release
+システムコールは、必要でなくなったときに、現在実行しているスレッドに
+関連付けられている KSE を
+.Dq 一時保管
+するために使用されます。
+例えば、実行可能なユーザスレッドよりも利用可能な KSE の方が多いときです。
+そのスレッドは upcall に変化しますが、そのようにするための新しい理由が
+発生するまでの間スケジュールされることはありません。
+例えば、以前にブロックされていたスレッドが実行可能になる、または
+タイムアウトが発生するなどです。
+成功の場合には、
+.Fn kse_release
+は呼び出し側に戻りません。
+.Pp
+.Fn kse_switchin
+システムコールは、新しいスレッドがそのスレッドのコンテキストに
+切り替わるために、UTS によって使用されることが可能です。
+.Fn kse_switchin
+の使用はマシンに依存します。
+あるプラットフォームでは新しいコンテキストに切り替わるためのシステムコールを
+必要としません。
+一方、他のプラットフォームでは同様の場合に要求されます。
+.Pp
+.Fn kse_wakeup
+システムコールは
+.Fn kse_release
+の反対です。
+.Fa mbx
+によって指されているメールボックスに関連付けられた (一時保管された) KSE を
+upcall にすることで起こします。
+その KSE がすでに他の理由で起こされていた場合には、このシステムコールは
+何も起こりません。
+.Fa mbx
+引数は
+.Dq "現在の KSE グループの中の全ての KSE"
+を指定するために
+.Dv NULL
+にすることができます。
+.Pp
+.Fn kse_thr_interrupt
+システムコールは、現在ブロックされているスレッドに
+割り込むために使用されます。
+そのスレッドはカーネルの中でブロックされているか、
+KSE に割り当てられて (例えば、実行中) いなければなりません。
+そのスレッドはその後、割り込まれたという印を付けられます。
+スレッドが割り込みを発生させるシステムコールを実行するとできるだけ
+早く (または、スレッドがカーネルの中ですでにブロックされてると直ちに)、
+カーネル操作が完了していないかもしれないのにもかかわらず、
+そのスレッドは再度実行可能にされます。
+割り込まれたシステムコール上のこの効果は、すでにシグナルによって
+割り込まれていた場合と同様です。
+通常、これは
+.Va errno
+に
+.Er EINTR
+が設定されてエラーが返されたことを意味します。
+.\"
+.Ss シグナル
+.\"
+プロセスがメールボックスに関連付けられた少なくとも 1 つの KSE を
+持っているときには、シグナルはもはやそのプロセスのスタックには配信されない
+かもしれません。
+代わりに、シグナルは upcall を介して配信されることができます。
+複数のシグナルは 1 つの upcall で配信されることができます。
+(この機能はまだコード化されていません)
+.Pp
+そのプロセスの中に複数の KSE グループが存在する場合には、そのシグナルを
+配信するためにどの KSE グループが選ばれるのかは、明確ではありません。
+.\"
+.Ss KSE メールボックス
+.\"
+それぞれの KSE はユーザとカーネルの通信のための唯一のメールボックスを
+持っています:
+.Bd -literal
+/* upcall 関数型 */
+typedef void   kse_func_t(struct kse_mailbox *);
+
+/* KSE メールボックス */
+struct kse_mailbox {
+   int         km_version; /* バージョン */
+   struct kse_thr_mailbox  *km_curthread;  /* 現在のスレッド */
+   struct kse_thr_mailbox  *km_completed;  /* 完了したスレッド */
+   sigset_t        km_sigscaught;  /* 捕ったシグナル */
+   unsigned int        km_flags;   /* KSE フラグ */
+   kse_func_t      *km_func;   /* UTS 関数 */
+   stack_t         km_stack;   /* UTS 環境 */
+   void            *km_udata;  /* UTS によって使用 */
+   struct timespec     km_timeofday;   /* upcall の時間 */
+};
+.Ed
+.Pp
+.Va km_version
+はこの構造体のバージョンを表し、
+.Dv KSE_VER_0
+でなければなりません。
+.Va km_udata
+はカーネルによって無視される不透明なポインタです。
+.Pp
+.Va km_func
+はその KSE の upcall 関数を指します。
+これは、その KSE が存在している間は有効であり続けなければならない
+.Va km_stack
+を使用して実行されます。
+.Pp
+.Va km_curthread
+は常に、もしあれば現在この KSE に割り当てられているスレッドを、または
+そうでなければ
+.Dv NULL
+を指しています。
+このフィールドは、カーネルとユーザプロセスの両方によって以下のように
+更新されます。
+.Pp
+.Va km_curthread
+が
+.Dv NULL
+ではないときには、
+それは現在実行中のスレッドのメールボックスを指しているものとみなされ、
+割り当て解除されることができます。
+例えば、スレッドがカーネル内でブロックする場合です。
+それから、カーネルはブロックされたスレッドの
+.Va km_curthread
+の内容を保存して
+.Va km_curthread
+を
+.Dv NULL
+に設定し、
+.Fn km_func
+を実行するために upcall します。
+.Pp
+.Va km_curthread
+が
+.Dv NULL
+のときには、カーネルはこの KSE の upcall を決して実行しません。
+言い換えると、KSE はたとえブロックしたとしても、そのスレッドに
+割り当てられたままとなります。
+その KSE が間に入り込む upcall によって混乱するであろうクリティカルな
+ユーザスレッドスケジューラのコードを実行している間、特に
+.Fn km_func
+それ自身を実行している間は、
+.Va km_curthread
+は
+.Dv NULL
+でなければなりません。
+.Pp
+全ての upcall の中で
+.Fn km_func
+を実行する前に、カーネルは常に
+.Va km_curthread
+を
+.Dv NULL
+に設定します。
+一度、ユーザスレッドスケジューラが実行するべき新しいスレッドを選んだら、
+そのスレッドのメールボックスの
+.Va km_curthread
+を指すようにし、upcall を再度有効化し、それからそのスレッドを再開するべきです。
+.Em 注意 :
+ユーザスレッドスケジューラによる
+.Va km_curthread
+の変更は、
+新しいスレッドのコンテキストのロードについて不可分でなければなりません。
+依然として有効な情報がそこから読み出されるべき時に、
+ブロッキング非同期操作によってスレッドのコンテキスト領域が
+変更されるかもしれない状況を避けるためです。
+.Pp
+.Va km_completed
+は最近の upcall 以降にカーネル内での処理を終えたユーザスレッドの
+リンクされたリストを指しています。
+そのユーザスレッドスケジューラは、これらのスレッドを
+スケジューラが所有する実行可能キューに戻すべきです。
+upcall に帰着する (同期または非同期に) カーネル操作を
+完了した KSE グループ内の各々のスレッドは、確実に 1 つの KSE の
+.Va km_completed
+にリンクされることが保証されます。
+しかしながら、そのグループの中のどの KSE かは不定です。
+その上、その完了はたった 1 つの upcall でしか報告されません。
+.Pp
+.Va km_sigscaught
+はその前のプロセス内の全ての KSE への upcall 以降に、
+このプロセスによって捕まえられたシグナルのリストが含まれています。
+そのユーザプロセスの中に、
+メールボックスに関連付けられた KSE が 1 つ以上存在する限りは、
+シグナルは伝統的な方法ではなくこの方法で配信されます。
+(これはまだ実装されておらず、変更されるかもしれません)
+.Pp
+.Va km_timeofday
+は、それぞれの upcall の前にカーネルによって現在のシステム時刻に設定されます。
+.Pp
+.Va km_flags
+は以下の全てのビット毎の OR を含むことができます:
+.Bl -tag -width indent
+.It \&
+(まだフラグは全く定義されていません)
+.El
+.\"
+.Ss スレッドメールボックス
+.\"
+それぞれのユーザスレッドはそれに関連付けられた唯一の
+.Vt "struct kse_thr_mailbox"
+を持たなければなりません:
+.Bd -literal
+/* スレッドメールボックス */
+struct kse_thr_mailbox {
+   ucontext_t      tm_context; /* ユーザスレッド環境 */
+   unsigned int        tm_flags;   /* スレッドフラグ */
+   struct kse_thr_mailbox  *tm_next;   /* リスト中の次スレッド */
+   void            *tm_udata;  /* UTS によって使用 */
+   unsigned int        tm_uticks;  /* ユーザ時間カウンタ */
+   unsigned int        tm_sticks;  /* カーネル時間カウンタ */
+};
+.Ed
+.Pp
+.Va tm_udata
+はカーネルによって無視された不明瞭なポインタです。
+.Pp
+.Va tm_context
+はユーザ空間内でスレッドがブロックされた時に、そのスレッドのための
+コンテキストを保存します。
+このフィールドは完了したスレッドが
+.Va km_completed
+を介してユーザスレッドスケジューラに戻る前に、カーネルによっても更新されます。
+.Pp
+.Va tm_next
+はカーネルの upcall により戻った時に、
+.Va km_completed
+スレッドにリンクします。
+このリストの最後は
+.Dv NULL
+でマークされます。
+.Pp
+.Va tm_uticks
+および
+.Va tm_sticks
+はそれぞれ、ユーザモードおよびカーネルモードの実行のための時間カウンタです。
+これらのカウンタは統計クロック
+.Xr ( clocks 7
+を参照してください) の刻みをカウントします。
+カーネル内でいずれかのスレッドがアクティブに実行中の間は、対応する
+.Va tm_sticks
+カウンタがインクリメントされます。
+ユーザ空間でいずれかの KSE 実行中で、その KSE の
+.Va km_curthread
+ポインタが
+.Dv NULL
+と等しくない間は、対応する
+.Va tm_uticks
+カウンタがインクリメントされます。
+.Pp
+.Va tm_flags
+は以下の全てのビット毎の OR を含むことができます:
+.Bl -tag -width indent
+.It \&
+(まだフラグは全く定義されていません)
+.El
+.Sh 戻り値
+成功の場合には
+.Fn kse_create ,
+.Fn kse_wakeup
+および
+.Fn kse_thr_interrupt
+システムコールは 0 を返します。
+成功の場合には
+.Fn kse_exit
+および
+.Fn kse_release
+システムコールは戻りません。
+.Pp
+エラーの場合には、これら全てのシステムコールは 0 ではない
+エラーコードを返します。
+.Sh エラー
+.Fn kse_create
+システムコールは次の場合に失敗します:
+.Bl -tag -width Er
+.It Bq Er ENXIO
+既に KSE グループの中にハードウェアプロセッサと同じ数の KSE が存在しています。
+.It Bq Er EAGAIN
+実行下の KSE グループのトータル数についてのシステムに課せられた制限を
+超過します。
+この制限は
+.Xr sysctl 3
+MIB 変数
+.Dv KERN_MAXPROC
+によって与えられます。
+(この制限はスーパユーザのためを除き、実際にはこれより 10 小さい値です)
+.It Bq Er EAGAIN
+ユーザがスーパユーザではなく、1 ユーザによる実行下の KSE グループの
+トータル数についてのシステムに課せられた制限を超過します。
+この制限は
+.Xr sysctl 3
+MIB 変数
+.Dv KERN_MAXPROCPERUID
+によって与えられます。
+.It Bq Er EAGAIN
+ユーザがスーパユーザではなく、
+.Fa resource
+引数
+.Dv RLIMIT_NPROC
+に対応するソフトリソース制限を超過します
+.Xr ( getrlimit 2
+を参照してください)。
+.It Bq Er EFAULT
+.Fa mbx
+引数がプロセスのアドレス空間の有効ではない部分のアドレスを指しています。
+.El
+.Pp
+.Fn kse_exit
+システムコールは次の場合に失敗します:
+.Bl -tag -width Er
+.It Bq Er EDEADLK
+現在の KSE はその KSE グループ内の最後であり、
+カーネル内でブロックされたその KSE グループに関連付けられたスレッドが
+依然として 1 つ以上存在しています。
+.It Bq Er ESRCH
+現在の KSE は関連付けられたメールボックスを持っていません。
+例えば、そのプロセスが伝統的なスレッド化されていないモードで、
+実行しています (この場合はプロセスを終了するために
+.Xr _exit 2
+を使用します)。
+.El
+.Pp
+.Fn kse_release
+システムコールは次の場合に失敗します:
+.Bl -tag -width Er
+.It Bq Er ESRCH
+現在の KSE は関連付けられたメールボックスを持っていません。
+例えば、そのプロセスが伝統的なスレッド化されていないモードで、
+実行しています。
+.El
+.Pp
+.Fn kse_wakeup
+システムコールは次の場合に失敗します:
+.Bl -tag -width Er
+.It Bq Er ESRCH
+.Fa mbx
+引数が
+.Dv NULL
+ではなく、
+.Fa mbx
+によって指されるメールボックスそのメールボックスが、そのプロセス内の
+いずれの KSE にも関連付けられていません。
+.It Bq Er ESRCH
+.Fa mbx
+引数が
+.Dv NULL
+で、現在の KSE が関連付けられたメールボックスを持っていません。
+例えば、そのプロセスが伝統的なスレッド化されていないモードで、
+実行しています。
+.El
+.Pp
+.Fn kse_thr_interrupt
+システムコールは次の場合に失敗します:
+.Bl -tag -width Er
+.It Bq Er ESRCH
+.Fa tmbx
+に対応するスレッドが、現在プロセス内のいずれの KSE にも割り当てられていないか、
+カーネル内でブロックされています。
+.El
+.Sh 関連項目
+.Xr rfork 2 ,
+.Xr pthread 3 ,
+.Xr ucontext 3
+.Rs
+.%A "Thomas E. Anderson"
+.%A "Brian N. Bershad"
+.%A "Edward D. Lazowska"
+.%A "Henry M. Levy"
+.%J "ACM Transactions on Computer Systems"
+.%N Issue 1
+.%V Volume 10
+.%D February 1992
+.%I ACM Press
+.%P pp. 53-79
+.%T "Scheduler activations: effective kernel support for the user-level management of parallelism"
+.Re
+.Sh 歴史
+KSE システムコール群は
+.Fx 5.0
+ではじめて登場しました。
+.Sh 作者
+KSE は初めに
+.An -nosplit
+.An "Julian Elischer" Aq julian@FreeBSD.org ,
+が実装し、
+.An "Jonathan Mini" Aq mini@FreeBSD.org ,
+.An "Daniel Eischen" Aq deischen@FreeBSD.org ,
+および
+.An "David Xu" Aq davidxu@FreeBSD.org
+が追加の貢献をしました。
+.Pp
+このマニュアルページは
+.An "Archie Cobbs" Aq archie@FreeBSD.org
+が書きました。
+.Sh バグ
+KSE のコードは開発中です。
+.\" .Ud .
+.\" .Ud マクロは日本語では実装されていません。(池内)
