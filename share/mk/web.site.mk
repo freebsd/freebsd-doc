@@ -1,5 +1,5 @@
 # bsd.web.mk
-# $FreeBSD: www/share/mk/web.site.mk,v 1.46 2003/06/24 10:24:59 phantom Exp $
+# $FreeBSD: www/share/mk/web.site.mk,v 1.47 2003/11/16 18:56:24 hrs Exp $
 
 #
 # Build and install a web site.
@@ -77,6 +77,32 @@ PORTSBASE?=	/usr
 #
 NO_SUBDIR=	YES
 
+#
+# for dependency
+#
+DOC_PREFIX?=	${WEB_PREFIX}/../doc
+.include "${DOC_PREFIX}/share/mk/doc.common.mk"
+
+XML_NEWS_NEWS_MASTER=		${WEB_PREFIX}/en/news/news.xml
+XML_NEWS_NEWS=			${WEB_PREFIX}/${WWW_LANGCODE}/news/news.xml
+XML_NEWS_PRESS_MASTER=		${WEB_PREFIX}/en/news/press.xml
+XML_NEWS_PRESS=			${WEB_PREFIX}/${WWW_LANGCODE}/news/press.xml
+XML_NEWS_INCLUDES_MASTER=	${WEB_PREFIX}/en/news/includes.xsl
+XML_NEWS_INCLUDES=		${WEB_PREFIX}/${WWW_LANGCODE}/news/includes.xsl
+
+XML_INCLUDES=	${WEB_PREFIX}/${WWW_LANGCODE}/includes.xsl
+XML_INCLUDES+=	${WEB_PREFIX}/share/sgml/includes.header.xsl
+XML_INCLUDES+=	${WEB_PREFIX}/share/sgml/includes.misc.xsl
+XML_INCLUDES+=	${WEB_PREFIX}/share/sgml/includes.release.xsl
+XML_INCLUDES+=	${WEB_PREFIX}/share/sgml/includes.xsl
+
+SGML_INCLUDES=	${WEB_PREFIX}/${WWW_LANGCODE}/includes.sgml
+SGML_INCLUDES+=	${WEB_PREFIX}/share/sgml/includes.header.sgml
+SGML_INCLUDES+=	${WEB_PREFIX}/share/sgml/includes.misc.sgml
+SGML_INCLUDES+=	${WEB_PREFIX}/share/sgml/includes.release.sgml
+SGML_INCLUDES+=	${WEB_PREFIX}/share/sgml/includes.sgml
+
+
 ##################################################################
 # Transformation rules
 
@@ -118,7 +144,7 @@ spellcheck:
 	@${HTML2TXT} ${HTML2TXTOPTS} ${.CURDIR}/${_entry} | ${ISPELL} ${ISPELLOPTS}
 .endfor
 
-.sgml.html:
+.sgml.html: ${SGML_INCLUDES}
 	${PREHTML} ${PREHTMLOPTS} ${.IMPSRC} | \
 	${SETENV} SGML_CATALOG_FILES= \
 		${SGMLNORM} ${SGMLNORMOPTS} > ${.TARGET} || \

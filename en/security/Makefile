@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/security/Makefile,v 1.7 2000/11/07 04:05:36 kuriyama Exp $
+# $FreeBSD: www/en/security/Makefile,v 1.8 2003/09/29 16:46:32 hrs Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -18,6 +18,6 @@ CLEANFILES+= advisories.html.inc
 
 security.html: advisories.html.inc
 
-advisories.html.inc: mkindex.xsl advisories.xml
+advisories.html.inc: mkindex.xsl ${XML_ADVISORIES}
 	${XSLTPROC} ${XSLTPROCOPTS} -o ${.TARGET} \
-		${.CURDIR}/mkindex.xsl ${.CURDIR}/advisories.xml
+		${.CURDIR}/mkindex.xsl ${XML_ADVISORIES}

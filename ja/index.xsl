@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
 
-<!-- $FreeBSD: www/ja/index.xsl,v 1.31 2003/11/02 07:54:23 rushani Exp $ -->
+<!-- $FreeBSD: www/ja/index.xsl,v 1.32 2003/11/17 06:28:19 hrs Exp $ -->
 <!-- Original revision: 1.81 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
-  
+
   <xsl:import href="includes.xsl"/>
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
   <xsl:variable name="enbase" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/ja/index.xsl,v 1.31 2003/11/02 07:54:23 rushani Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/ja/index.xsl,v 1.32 2003/11/17 06:28:19 hrs Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <xsl:output type="html" encoding="EUC-JP"
@@ -20,88 +20,50 @@
     <html>
       <head>
 	<title><xsl:value-of select="$title"/></title>
-    
+
 	<meta name="description" content="The FreeBSD Project"/>
-    
+
 	<meta name="keywords" content="FreeBSD, BSD, UNIX, Support, Gallery,
 	      Release, Application, Software, Handbook, FAQ, Tutorials, Bugs, 
 	      CVS, CVSup, News, Commercial Vendors, homepage, CTM, Unix"/>
 	<link rel="shortcut icon" href="/favicon.ico" type="image/x-icon"/>
 	<link rel="icon" href="/favicon.ico" type="image/x-icon"/>
       </head>
-  
+
       <body bgcolor="#FFFFFF" text="#000000" link="#0000FF" vlink="#840084"
 	    alink="#0000FF">
-    
+
 	<table border="0" cellspacing="0" cellpadding="0" width="100%">
 	  <tr>
 	    <td><a href="http://www.FreeBSD.org/index.html">
 		<img src="../gifs/freebsd_1.gif" height="94" width="306"
 		     alt="FreeBSD: このパワーをあなたのために" border="0"/></a></td>
-	    
+
 	    <td align="right" valign="bottom">
 	      <form action="http://www.FreeBSD.org/cgi/mirror.cgi" 
 		    method="get">
-		
+
 		<br/>
-		
+
 		<font color="#990000"><b>お近くのサーバをお選びください:</b></font>
-		
+
 		<br/>
-	      
+
 		<select name="goto">
 		  <!--  Only list TRUE mirrors here! Native language pages 
 		        which are not mirrored should be listed in
 		        support.sgml.  -->
 
-		  <xsl:for-each select="document($mirrors)/mirrors/entry[url[contains(@proto, 'httpv6')]]">
-		    <xsl:for-each select="url[contains(@proto, 'httpv6') and contains(@type, 'www')]">
-		      <option><xsl:attribute name="value"><xsl:value-of select="." /></xsl:attribute>
-			<xsl:choose>
-			  <xsl:when test="last() = 1">
-			    <xsl:value-of select="'IPv6 '" />
-			    <xsl:call-template name="transtable">
-			      <xsl:with-param name="name" select="../country" />
-			    </xsl:call-template>
-			  </xsl:when>
-			  <xsl:otherwise>
-			    <xsl:value-of select="'IPv6 '" />
-			    <xsl:call-template name="transtable">
-			      <xsl:with-param name="name" select="../country" />
-			    </xsl:call-template>
-			    <xsl:value-of select="concat('/', position())" />
-			  </xsl:otherwise>
-			</xsl:choose>
-		      </option>
-		    </xsl:for-each>
-		  </xsl:for-each>
-
-		  <xsl:for-each select="document($mirrors)/mirrors/entry[url[contains(@proto, 'http')]]">
-		    <xsl:for-each select="url[contains(@proto, 'http') and contains(@type, 'www')]">
-		      <option><xsl:attribute name="value"><xsl:value-of select="." /></xsl:attribute>
-			<xsl:choose>
-			  <xsl:when test="last() = 1">
-			    <xsl:call-template name="transtable">
-			      <xsl:with-param name="name" select="../country" />
-			    </xsl:call-template>
-			  </xsl:when>
-			  <xsl:otherwise>
-			    <xsl:call-template name="transtable">
-			      <xsl:with-param name="name" select="../country" />
-			    </xsl:call-template>
-			    <xsl:value-of select="concat('/', position())" />
-			  </xsl:otherwise>
-			</xsl:choose>
-		      </option>
-		    </xsl:for-each>
-		  </xsl:for-each>
+		  <xsl:call-template name="html-index-mirrors-options-list">
+		    <xsl:with-param name="mirrors.xml" select="$mirrors.xml" />
+		  </xsl:call-template>
 		</select>
 
 		<input type="submit" value=" Go "/>
-		
+
 		<br/>
-		
-		<font color="#990000"><b>言語: </b></font> 
+
+		<font color="#990000"><b>言語: </b></font>
 		<a href="{$enbase}/de/index.html" title="ドイツ語">[de]</a>
 		<xsl:text>&#160;</xsl:text>
 		<a href="{$enbase}/index.html" title="英語">[en]</a>
@@ -119,9 +81,9 @@
 	    </td>
 	  </tr>
 	</table>
-	
+
 	<br/>
-	
+
 	<hr size="1" noshade="noshade"/>
 
 	<!-- Main layout table -->
@@ -138,22 +100,20 @@
 			<td>
 			  <p><font size="+1" color="#990000"><b>ニュース</b></font>
 
-	      
 			    <small><br/>
 			      ・<a href="news/newsflash.html">アナウンス</a><br/>
 			      ・<a href="news/press.html">報道</a><br/>
 			      ・<a href="news/index.html">さらに ...</a>
 			    </small></p>
-	    
+
 			  <p><font size="+1" color="#990000"><b>ソフトウェア</b></font>
 			    <small><br/>
 			      ・<a href="{$enbase}/doc/ja_JP.eucJP/books/handbook/mirrors.html">FreeBSD を手に入れる</a><br/>
 			      ・<a href="releases/index.html">リリース情報</a><br/>
 			      ・<a href="{$base}/ports/index.html">Ports Collection</a><br/>
 			    </small></p>
-	    
+
 			  <p><font size="+1" color="#990000"><b>ドキュメント</b></font>
-		
 			    <small><br/>
 			      ・<a href="projects/newbies.html">初心者のために</a><br/>
 			      ・<a href="{$enbase}/doc/ja_JP.eucJP/books/handbook/index.html">ハンドブック</a><br/>
@@ -162,9 +122,8 @@
 			      ・<a href="{$base}/docproj/index.html">Doc. Project</a><br/>
 			      ・<a href="docs.html">さらに...</a><br/>
 			    </small></p>
-			  
+
 			  <p><font size="+1" color="#990000"><b>サポート</b></font>
-	      
 			    <small><br/>
 			      ・<a href="{$base}/support.html#mailing-list">メーリングリスト</a><br/>
 			      ・<a href="{$base}/support.html#newsgroups">ニュースグループ</a><br/>
@@ -183,17 +142,14 @@
 			      ・<a href="{$base}/support.html#gnats">さらに...</a><br/>
 			    </small></p>
 
-	      
 			  <p><font size="+1" color="#990000"><b>開発</b></font>
-		
 			    <small><br/>
 			      ・<a href="projects/index.html">プロジェクト</a><br/>
 			      ・<a href="../releng/index.html">Release Engineering</a><br/>
 			      ・<a href="{$base}/support.html#cvs">CVS リポジトリ</a><br/>
 			    </small></p>
-	      
+
 			  <p><font size="+1" color="#990000"><b>ベンダ</b></font>
-			    
 			    <small><br/>
 			      ・<a href="{$base}/../commercial/software_bycat.html">ソフトウェア</a><br/>
 			      ・<a href="{$base}/../commercial/hardware.html">ハードウェア</a><br/>
@@ -207,15 +163,14 @@
 			      ・<a href="{$enbase}/donations/donors.html">現在の寄贈品</a><br/>
 			      ・<a href="{$enbase}/donations/wantlist.html">寄付募集リスト</a><br/>
 			    </small></p>
-	      
+
 			  <p><font size="+1" color="#990000"><b>このサイトについて</b></font>
-		
 			    <small><br/>
 			      ・<a href="{$base}/search/index-site.html">サイトマップ</a><br/>
 			      ・<a href="{$base}/search/search.html">検索</a><br/>
 			      ・<a href="internal/index.html">さらに...</a><br/>
 			    </small></p>
-	      
+
 			  <form action="http://www.FreeBSD.org/cgi/search.cgi" method="get">
 			    <small>検索:<br/>
 			      <input type="text" name="words" size="10"/>
@@ -229,15 +184,14 @@
 		</tr>
 	      </table>
 	    </td>
-	    
+
 	    <td></td>
-	    
+
 	    <!-- Main body column -->
 
 	    <td align="left" valign="top" rowspan="2">
-	      
 	      <h2><font color="#990000">FreeBSD とは?</font></h2>
-	
+
 	      <p>FreeBSD は x86 互換機、DEC Alpha、IA-64、PC-98、UltraSPARC&#174;
 		アーキテクチャ用の先進的なオペレーティングシステムです。
 		カリフォルニア大学バークレイ校で開発された <xsl:value-of select="$unix"/>
@@ -246,14 +200,14 @@
 		によって保守・開発されています。
 		その他の<a href="{$base}/platforms/index.html">プラットフォーム
 		</a> は現在開発中です。</p>
-	      
+
 	      <h2><font color="#990000">最先端の機能</font></h2>
 
 	      <p>FreeBSD は (市販の最良のものも含めて) 他のオペレーティング
 		システムに未だに欠けている最先端のネットワーク、パフォーマンス、
 		セキュリティ、互換性といった <a href="{$base}/features.html">
 		  機能</a> を今、提供しています。</p>
-	      
+
 	      <h2><font color="#990000">強力なインターネットサポート</font></h2>
 
 	      <p>FreeBSD は理想的な <a href="{$base}/internet.html">
@@ -265,7 +219,7 @@
 		載せていますので、ぜひわたしたちの
 		<a href="gallery/gallery.html">ギャラリー</a>
 		をご覧になってみてください。</p>
-	    
+
 	      <h2><font color="#990000">数多くの対応アプリケーション</font></h2>
 
 	      <p>高い品質を持つ FreeBSD と、今日の低価格で高速な
@@ -275,7 +229,7 @@
                 デスクトップ用、サーバ用の両方について、膨大な数の
 		<a href="{$base}/applications.html">アプリケーション</a>
 		も用意されています。</p>
-	    
+
 	      <h2><font color="#990000">簡単インストール</font></h2>
 
 	      <p>FreeBSD は CD-ROM や DVD-ROM、フロッピーディスク、磁気テープ、MS-DOS&#174;
@@ -287,11 +241,11 @@
 		だけです。</p>
 
 	      <h2><font color="#990000"><i>無料</i>で使える FreeBSD</font></h2>
-	    
-	      <a href="copyright/daemon.html"><img src="../gifs/dae_up3.gif" 
+
+	      <a href="copyright/daemon.html"><img src="../gifs/dae_up3.gif"
 						   alt=""
-						   height="81" width="72" 
-						   align="right" 
+						   height="81" width="72"
+						   align="right"
 						   border="0"/></a>
 
 	      <p>このような特色を持ったオペレーティングシステムは高い値段で
@@ -349,7 +303,7 @@
 		      <tr>
 			<td valign="top"><p><font size="+1" color="#990000"><b>テクノロジリリース:
 			    <xsl:value-of select="$rel.current"/></b></font><br/>
-			
+
 			    <small>・<a href="{$u.rel.announce}">アナウンス</a><br/>
 			      ・<a href="{$enbase}/doc/ja_JP.eucJP/books/handbook/install.html">インストールガイド</a><br/>
 			      ・<a href="{$u.rel.notes}">リリースノート</a><br/>
@@ -359,7 +313,7 @@
 
 			<p><font size="+1" color="#990000"><b>プロダクションリリース:
 			    <xsl:value-of select="$rel2.current"/></b></font><br/>
-			
+
 			    <small>・<a href="{$u.rel2.announce}">アナウンス</a><br/>
 			      ・<a href="{$enbase}/doc/ja_JP.eucJP/books/handbook/install.html">インストールガイド</a><br/>
 			      ・<a href="{$u.rel2.notes}">リリースノート</a><br/>
@@ -368,7 +322,7 @@
 
 			  <p><font size="+1" color="#990000"><b>Project News</b></font><br/>
 			    <font size="-1">
-			      最終更新: 
+			      最終更新:
 			      <xsl:value-of
 				select="format-number(number(descendant::year[position() = 1]/name),'0000')"/>
 			      <xsl:text>/</xsl:text>
@@ -396,11 +350,11 @@
 			      </xsl:for-each>
 			      <a href="news/newsflash.html">More...</a>
 			    </font></p>
-			  
+
 			  <p><font size="+1" color="#990000"><b>FreeBSD Press</b></font><br/>
 
 			    <font size="-1">
-			      最終更新: 
+			      最終更新:
 			      <xsl:value-of
 				select="format-number(number(document('news/press.xml')/descendant::year[position() = 1]/name),'0000')"/>
 			      <xsl:text>/</xsl:text>
@@ -425,16 +379,16 @@
 			    <font size="-1">
 			      最終更新:
 			      <xsl:value-of
-				select="document('../en/security/advisories.xml')/descendant::month[position() = 1]/name"/>
+				select="document($advisories.xml)/descendant::month[position() = 1]/name"/>
 			      <xsl:text> </xsl:text>
 			      <xsl:value-of
-				select="document('../en/security/advisories.xml')/descendant::day[position() = 1]/name"/>
+				select="document($advisories.xml)/descendant::day[position() = 1]/name"/>
 			      <xsl:text>, </xsl:text>
 			      <xsl:value-of
-				select="document('../en/security/advisories.xml')/descendant::year[position() = 1]/name"/>
+				select="document($advisories.xml)/descendant::year[position() = 1]/name"/>
 			      <br/>
 			      <!-- Pull in the 10 most recent security advisories -->
-			      <xsl:for-each select="document('../en/security/advisories.xml')/descendant::advisory[position() &lt; 10]">
+			      <xsl:for-each select="document($advisories.xml)/descendant::advisory[position() &lt; 10]">
 				・ <a>
 				  <xsl:attribute name="href">ftp://ftp.freebsd.org/pub/FreeBSD/CERT/advisories/<xsl:value-of select="name"/>.asc</xsl:attribute>
 				  <xsl:value-of select="name"/>
@@ -480,28 +434,28 @@
 	    <td><a href="http://www.freebsdmall.com/"><img
 							   src="../gifs/mall_title_medium.gif" alt="[FreeBSD Mall]"
 							   height="65" width="165" border="0"/></a></td>
-	    
+
 	    <td><a href="http://www.ugu.com/"><img src="../gifs/ugu_icon.gif"
-						   alt="[Sponsor of Unix Guru Universe]" 
+						   alt="[Sponsor of Unix Guru Universe]"
 						   height="64" width="76"
 						   border="0"/></a></td>
-	  
+
 	    <td><a href="http://www.daemonnews.org/"><img src="../gifs/darbylogo.gif"
 		alt="[Daemon News]" height="45" width="130"
 		border="0"/></a></td>
-	  
+
 	    <td><a href="{$base}/copyright/daemon.html"><img
-							     src="../gifs/powerlogo.gif" 
+							     src="../gifs/powerlogo.gif"
 							     alt="[Powered by FreeBSD]"
-							     height="64" 
-							     width="160" 
+							     height="64"
+							     width="160"
 							     border="0"/></a></td>
 	  </tr>
 	</table>
 
 	<table width="100%" cellpadding="0" border="0" cellspacing="0">
 	  <tr>
-	    <td align="left" 
+	    <td align="left"
 		valign="top"><small><a href="{$base}/mailto.html">お問い合わせ先</a> : <a href="jabout.html">日本語化について</a><br/>
 		<xsl:value-of select="$date"/></small></td>
 
@@ -510,13 +464,13 @@
 		The FreeBSD Project.<br/>
 		All rights reserved.</small></td>
 	  </tr>
-	</table>	    
+	</table>
       </body>
-    </html>  
-  </xsl:template>    
+    </html>
+  </xsl:template>
 </xsl:stylesheet>
 
-<!-- 
+<!--
      Local Variables:
      mode: xml
      sgml-indent-data: t

@@ -1,4 +1,4 @@
-# $FreeBSD: www/ja/security/Makefile,v 1.13 2000/11/07 11:38:09 kuriyama Exp $
+# $FreeBSD: www/ja/security/Makefile,v 1.14 2003/10/11 07:12:37 hrs Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.8
 
@@ -23,6 +23,6 @@ CLEANFILES+= advisories.html.inc
 
 security.html: advisories.html.inc
 
-advisories.html.inc: mkindex.xsl ../../en/security/advisories.xml
+advisories.html.inc: mkindex.xsl ${XML_ADVISORIES}
 	${XSLTPROC} ${XSLTPROCOPTS} -o ${.TARGET} \
-		${.CURDIR}/mkindex.xsl ${.CURDIR}/../../en/security/advisories.xml
+		${.CURDIR}/mkindex.xsl ${XML_ADVISORIES}

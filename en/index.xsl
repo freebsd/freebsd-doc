@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/index.xsl,v 1.81 2003/11/16 18:56:24 hrs Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.82 2003/11/17 06:28:19 hrs Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   
@@ -6,7 +6,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.81 2003/11/16 18:56:24 hrs Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.82 2003/11/17 06:28:19 hrs Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -50,47 +50,9 @@
 		        which are not mirrored should be listed in
 		        support.sgml.  -->
 
-		  <xsl:for-each select="document($mirrors)/mirrors/entry[url[contains(@proto, 'httpv6')]]">
-		    <xsl:for-each select="url[contains(@proto, 'httpv6') and contains(@type, 'www')]">
-		      <option><xsl:attribute name="value"><xsl:value-of select="." /></xsl:attribute>
-			<xsl:choose>
-			  <xsl:when test="last() = 1">
-			    <xsl:value-of select="'IPv6 '" />
-			    <xsl:call-template name="transtable">
-			      <xsl:with-param name="name" select="../country" />
-			    </xsl:call-template>
-			  </xsl:when>
-			  <xsl:otherwise>
-			    <xsl:value-of select="'IPv6 '" />
-			    <xsl:call-template name="transtable">
-			      <xsl:with-param name="name" select="../country" />
-			    </xsl:call-template>
-			    <xsl:value-of select="concat('/', position())" />
-			  </xsl:otherwise>
-			</xsl:choose>
-		      </option>
-		    </xsl:for-each>
-		  </xsl:for-each>
-
-		  <xsl:for-each select="document($mirrors)/mirrors/entry[url[contains(@proto, 'http')]]">
-		    <xsl:for-each select="url[contains(@proto, 'http') and contains(@type, 'www')]">
-		      <option><xsl:attribute name="value"><xsl:value-of select="." /></xsl:attribute>
-			<xsl:choose>
-			  <xsl:when test="last() = 1">
-			    <xsl:call-template name="transtable">
-			      <xsl:with-param name="name" select="../country" />
-			    </xsl:call-template>
-			  </xsl:when>
-			  <xsl:otherwise>
-			    <xsl:call-template name="transtable">
-			      <xsl:with-param name="name" select="../country" />
-			    </xsl:call-template>
-			    <xsl:value-of select="concat('/', position())" />
-			  </xsl:otherwise>
-			</xsl:choose>
-		      </option>
-		    </xsl:for-each>
-		  </xsl:for-each>
+		  <xsl:call-template name="html-index-mirrors-options-list">
+		    <xsl:with-param name="mirrors.xml" select="$mirrors.xml" />
+		  </xsl:call-template>
 		</select>
 		
 		<input type="submit" value=" Go "/>
@@ -418,16 +380,16 @@
 			    <font size="-1">
 			      Latest update: 
 			      <xsl:value-of
-				select="document('security/advisories.xml')/descendant::month[position() = 1]/name"/>
+				select="document($advisories.xml)/descendant::month[position() = 1]/name"/>
 			      <xsl:text> </xsl:text>
 			      <xsl:value-of
-				select="document('security/advisories.xml')/descendant::day[position() = 1]/name"/>
+				select="document($advisories.xml)/descendant::day[position() = 1]/name"/>
 			      <xsl:text>, </xsl:text>
 			      <xsl:value-of
-				select="document('security/advisories.xml')/descendant::year[position() = 1]/name"/>
+				select="document($advisories.xml)/descendant::year[position() = 1]/name"/>
 			      <br/>
 			      <!-- Pull in the 10 most recent security advisories -->
-			      <xsl:for-each select="document('security/advisories.xml')/descendant::advisory[position() &lt; 10]">
+			      <xsl:for-each select="document($advisories.xml)/descendant::advisory[position() &lt; 10]">
 				&#183; <a>
 				  <xsl:attribute name="href">ftp://ftp.freebsd.org/pub/FreeBSD/CERT/advisories/<xsl:value-of select="name"/>.asc</xsl:attribute>
 				  <xsl:value-of select="name"/>
