@@ -43,6 +43,7 @@ MAN8 =	IPXrouted.8\
 	cvsbug.8\
 	daemon.8\
 	devd.8\
+	devfs.8\
 	devinfo.8\
 	dhclient-script.8\
 	dhclient.8\
