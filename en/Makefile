@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/Makefile,v 1.106 2004/01/12 21:26:59 hrs Exp $
+# $FreeBSD: www/en/Makefile,v 1.107 2004/02/01 00:02:58 josef Exp $
 .if exists(Makefile.conf)
 .include "Makefile.conf"
 .endif
@@ -90,16 +90,6 @@ WEBDIR?=	data
 # index.html is special, and generated from index.xsl and news/news.xml
 DATA+=		index.html
 CLEANFILES+=	index.html
-
-WEBCHECK?=	${PREFIX}/bin/webcheck
-WEBCHECKOPTS?=	-ab ${WEBCHECKFLAGS}
-WEBCHECKDIR?=	/webcheck
-WEBCHECKINSTALLDIR?= ${DESTDIR}${WEBCHECKDIR}
-WEBCHECKURL?=	http://www.FreeBSD.org/
-
-webcheck:
-	@[ -d ${WEBCHECKINSTALLDIR} ] || ${MKDIR} ${WEBCHECKINSTALLDIR}
-	${WEBCHECK} ${WEBCHECKOPTS} -o ${WEBCHECKINSTALLDIR} ${WEBCHECKURL}
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
 
