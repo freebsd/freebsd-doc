@@ -2,9 +2,9 @@
 # The FreeBSD Russian Documentation Project
 #
 # $FreeBSD$
-# $FreeBSDru: frdp/doc/ru_RU.KOI8-R/books/handbook/Makefile,v 1.35 2004/04/09 07:51:22 phantom Exp $
+# $FreeBSDru: frdp/doc/ru_RU.KOI8-R/books/handbook/Makefile,v 1.37 2004/07/08 12:12:43 den Exp $
 #
-# Original revision: 1.79
+# Original revision: 1.84
 # 
 # Build the FreeBSD Handbook.
 #
@@ -168,6 +168,7 @@ SRCS+=	introduction/chapter.sgml
 SRCS+=	kernelconfig/chapter.sgml
 SRCS+=	l10n/chapter.sgml
 SRCS+=	linuxemu/chapter.sgml
+#SRCS+=	mac/chapter.sgml
 SRCS+=	mail/chapter.sgml
 SRCS+=	mirrors/chapter.sgml
 SRCS+=	multimedia/chapter.sgml
@@ -212,7 +213,7 @@ book.pdf: book.ps
 	${PS2PDF} book.ps book.pdf
 
 pgpkeyring: pgpkeys/chapter.sgml
-	@${JADE} -V nochunks ${JADEOPTS} -d ${DSLPGP} -t sgml ${MASTERDOC}
+	@${JADE} -V nochunks ${OTHERFLAGS} ${JADEOPTS} -d ${DSLPGP} -t sgml ${MASTERDOC}
 
 DOC_PREFIX?= ${.CURDIR}/../../..
 
@@ -223,8 +224,6 @@ DOC_PREFIX?= ${.CURDIR}/../../..
 JADEFLAGS+=    -V withpgpkeys
 .endif
 
-DOC_PREFIX?= ${.CURDIR}/../../..
-
 .for p in ftp cvsup
 SRCS+= mirrors.sgml.${p}.inc
 CLEANFILES+= mirrors.sgml.${p}.inc
@@ -234,6 +233,9 @@ CLEANFILES+= mirrors.sgml.${p}.inc.tmp
 SRCS+= eresources.sgml.www.inc
 CLEANFILES+= eresources.sgml.www.inc
 CLEANFILES+= eresources.sgml.www.inc.tmp
+
+URL_RELPREFIX?=	../../../..
+DOC_PREFIX?=	${.CURDIR}/../../..
 
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"
 
