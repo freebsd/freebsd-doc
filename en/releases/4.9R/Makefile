@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/releases/4.9R/Makefile,v 1.5 2004/04/05 23:52:12 phantom Exp $
+# $FreeBSD: www/en/releases/4.9R/Makefile,v 1.6 2004/04/05 23:57:55 phantom Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -7,15 +7,22 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS=	hardware.sgml relnotes.sgml schedule.sgml todo.sgml qa.sgml
-DOCS+=	announce.sgml installation.sgml
-
+DOCS=	announce.sgml
+DOCS+=	hardware.sgml
+DOCS+=	installation.sgml
+DOCS+=	relnotes.sgml
+DOCS+=	qa.sgml
+DOCS+=	schedule.sgml
+DOCS+=	todo.sgml
 
 DATA=	docbook.css
 DATA+=	errata.html
-DATA+=	installation-alpha.html installation-i386.html
-DATA+=	hardware-alpha.html hardware-i386.html
-DATA+=	relnotes-alpha.html relnotes-i386.html
+DATA+=	hardware-alpha.html
+DATA+=	hardware-i386.html
+DATA+=	installation-alpha.html
+DATA+=	installation-i386.html
 DATA+=	readme.html
+DATA+=	relnotes-alpha.html
+DATA+=	relnotes-i386.html
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
