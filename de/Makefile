@@ -1,6 +1,6 @@
 # The FreeBSD Documentation Project
 # The FreeBSD German Documentation Project
-# $FreeBSD$
+# $FreeBSD: www/de/Makefile,v 1.13 2004/01/11 00:32:03 mheinen Exp $
 # $FreeBSDde: de-www/Makefile,v 1.21 2004/01/05 11:08:11 mheinen Exp $
 # basiert auf: 1.105
 
@@ -60,16 +60,6 @@ WEBDIR?=	data/de
 # index.html is special, and generated from index.xsl and news/news.xml
 DATA+=		index.html
 CLEANFILES+=	index.html
-
-WEBCHECK?=	${PREFIX}/bin/webcheck
-WEBCHECKOPTS?=	-ab ${WEBCHECKFLAGS}
-WEBCHECKDIR?=	/webcheck
-WEBCHECKINSTALLDIR?= ${DESTDIR}${WEBCHECKDIR}
-WEBCHECKURL?=	http://www.FreeBSD.org/
-
-webcheck:
-	@[ -d ${WEBCHECKINSTALLDIR} ] || ${MKDIR} ${WEBCHECKINSTALLDIR}
-	${WEBCHECK} ${WEBCHECKOPTS} -o ${WEBCHECKINSTALLDIR} ${WEBCHECKURL}
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
 
