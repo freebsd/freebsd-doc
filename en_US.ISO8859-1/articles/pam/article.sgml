@@ -1,0 +1,419 @@
+<!DOCTYPE article PUBLIC "-//FreeBSD//DTD DocBook V4.1-Based Extension//EN" [
+<!ENTITY % man PUBLIC "-//FreeBSD//ENTITIES DocBook Manual Page Entities//EN">
+%man;
+<!ENTITY % freebsd PUBLIC "-//FreeBSD//ENTITIES DocBook Miscellaneous
+FreeBSD Entities//EN"> %freebsd;
+<!ENTITY % newsgroups PUBLIC "-//FreeBSD//ENTITIES DocBook Newsgroup Entities//EN"> %newsgroups;
+<!ENTITY % authors PUBLIC "-//FreeBSD//ENTITIES DocBook Author Entities//EN">
+%authors;
+<!ENTITY % mailing-lists PUBLIC "-//FreeBSD//ENTITIES DocBook Mailing List Entities//EN"> %mailing-lists;
+<!ENTITY % not.published "IGNORE">
+]>
+
+<article>
+  <articleinfo>
+    <title>Pluggable Authentication Modules</title>
+
+    <pubdate>$FreeBSD$</pubdate>
+
+    <abstract>
+      <para>This article describes the underlying principles and
+        mechanisms of the Pluggable Authentication Modules (PAM)
+        library, and explains how to configure PAM, how to integrate
+        PAM into applications, and how to write PAM modules.</para>
+    </abstract>
+
+    <authorgroup>
+      <author>
+	<firstname>Dag-Erling</firstname>
+	<surname>Sm&oslash;rgrav</surname>
+	<contrib>Contributed by </contrib>
+      </author>
+    </authorgroup>
+  </articleinfo>
+
+  <sect1 id="pam-intro">
+    <title>Introduction</title>
+
+    <para>The Pluggable Authentication Modules (PAM) library is a
+      generalized API for authentication-related services which allows
+      a system administrator to add new authentication methods simply
+      by installing new PAM modules, and to modify authentication
+      policies by editing configuration files.</para>
+
+    <para>PAM was defined and developed in 1995 by Vipin Samar and
+      Charlie Lai of Sun Microsystems, and has not changed much since.
+      In 1997, the Open Group published the X/Open Single Sign-on
+      (XSSO) preliminary specification, which standardized the PAM API
+      and added extensions for single (or rather integrated) sign-on.
+      At the time of writing, this specification has not yet been
+      adopted as a standard.</para>
+
+    <para>Although this article focuses on FreeBSD's implementation of
+      PAM (which is based on Linux-PAM), most of it should be
+      applicable to most other operating systems which implement PAM,
+      including Solaris.</para>
+      
+    <sect2>
+      <title>Trademarks</title>
+      
+      <para>Sun, Sun Microsystems and Solaris are trademarks or
+        registered trademarks of Sun Microsystems, Inc.</para>
+	
+      <para>UNIX and The Open Group are trademarks or registered
+        trademarks of The Open Group.</para>
+    </sect2>
+  </sect1>
+
+  <sect1 id="pam-terms">
+    <title>Terms and conventions</title>
+
+    <sect2>
+      <title>Definitions</title>
+      
+      <para>The terminology surrounding PAM is rather confused.
+        Neither Samar and Lai's original paper nor the XSSO
+        specification made any attempt at formally defining terms for
+        the various actors and entities involved in PAM, and the terms
+        that they do use (but do not define) are sometimes misleading
+        and ambiguous.  The first attempt at establishing a consistent
+        and unambiguous terminology was a whitepaper written by Andrew
+        G. Morgan (author of Linux-PAM) in 1999.  While Morgan's
+        choice of terminology was a huge leap forward, it is in this
+        author's opinion by no means perfect.  What follows is an
+        attempt, heavily inspired by Morgan, to define precise and
+        unambiguous terms for all actors and entities involved in
+        PAM.</para>
+
+      <glosslist>
+        <glossentry>
+          <glossterm>applicant</glossterm>
+	  <glossdef>
+	    <para>The user or entity requesting authentication.</para>
+          </glossdef>
+        </glossentry>
+
+        <glossentry>
+          <glossterm>arbitrator</glossterm>
+	  <glossdef>
+	    <para>The user or entity who has the privileges necessary
+	      to verify the applicant's credentials and the authority
+	      to grant or deny the request.</para>
+	  </glossdef>
+        </glossentry>
+
+	<glossentry>
+	  <glossterm>chain</glossterm>
+	  <glossdef>
+	    <para>A sequence of modules that will be invoked in
+	      response to a PAM request.  The chain includes
+	      information about the order in which to invoke the
+	      modules, what arguments to pass to them, and how to
+	      interpret the results.</para>
+	  </glossdef>
+	</glossentry>
+
+        <glossentry>
+          <glossterm>client</glossterm>
+	  <glossdef>
+	    <para>The application responsible for initiating an
+	      authentication request on behalf of the applicant and
+	      for obtaining the necessary authentication information
+	      from him.</para>
+	  </glossdef>
+        </glossentry>
+
+	<glossentry>
+	  <glossterm>facility</glossterm>
+	  <glossdef>
+	    <para>One of the four basic groups of functionality
+	      provided by PAM: authentication, account management,
+	      session management and authentication token
+	      update.</para>
+	  </glossdef>
+	</glossentry>
+
+	<glossentry>
+	  <glossterm>module</glossterm>
+	  <glossdef>
+	    <para>A collection of one or more related functions
+	      implementing a particular authentication facility,
+	      gathered into a single (normally dynamically loadable)
+	      binary file and identified by a single name.</para>
+	  </glossdef>
+	</glossentry>
+
+	<glossentry>
+	  <glossterm>policy</glossterm>
+	  <glossdef>
+	    <para>The complete set of configuration statements
+	      describing how to handle PAM requests for a particular
+	      service.  A policy normally consists of four chains, one
+	      for each facility, though some services do not use all
+	      four facilities.</para>
+	  </glossdef>
+	</glossentry>
+
+        <glossentry>
+          <glossterm>server</glossterm>
+	  <glossdef>
+	    <para>The application acting on behalf of the arbitrator
+	      to converse with the client, retrieve authentication
+	      information, verify the applicant's credentials and
+	      grant or deny requests.</para>
+	  </glossdef>
+        </glossentry>
+
+	<glossentry>
+	  <glossterm>service</glossterm>
+	  <glossdef>
+	    <para>A class of servers providing similar or related
+	      functionality and requiring similar authentication.  PAM
+	      policies are defined on a per-service basis, so all
+	      servers that claim the same service name will be subject
+	      to the same policy.</para>
+	  </glossdef>
+	</glossentry>
+
+	<glossentry>
+	  <glossterm>session</glossterm>
+	  <glossdef>
+	    <para>The context within which service is rendered to the
+	      applicant by the server.  One of PAM's four facilities,
+	      session management, is concerned exclusively with
+	      setting up and tearing down this context.</para>
+	  </glossdef>
+	</glossentry>
+
+        <glossentry>
+          <glossterm>target</glossterm>
+	  <glossdef>
+	    <para>The user or entity whose credentials the applicant
+	      is requesting.</para>
+	  </glossdef>
+        </glossentry>
+
+	<glossentry>
+	  <glossterm>token</glossterm>
+	  <glossdef>
+	    <para>A chunk of information associated with the target,
+	      such as a password or passphrase, which the applicant
+	      must provide to prove his identity.</para>
+	  </glossdef>
+	</glossentry>
+
+	<glossentry>
+	  <glossterm>transaction</glossterm>
+	  <glossdef>
+	    <para>A sequence of requests from the same applicant to
+	      the same instance of the same server, beginning with
+	      authentication and session set-up and ending with
+	      session tear-down.</para>
+	  </glossdef>
+	</glossentry>
+      </glosslist>
+    </sect2>
+
+    <sect2>
+      <title>Usage examples</title>
+
+      <para>This section aims to illustrate the meanings of some of
+        the terms defined above by way of a handful of simple
+        examples.</para>
+            
+      <sect3>
+        <title>Client and server are one</title>
+
+	<para>This simple example shows <literal>alice</literal>
+	  &man.su.1;'ing to <literal>root</literal>.</para>
+	
+<screen>&prompt.user; <userinput>whoami</userinput>
+alice
+&prompt.user; <userinput>ls -l `which su`</userinput>
+-r-sr-xr-x  1 root  wheel  10744 Dec  6 19:06 /usr/bin/su
+&prompt.user; <userinput>su -</userinput>
+Password: <userinput>xi3kiune</userinput>
+&prompt.root;
+</screen>
+
+	<itemizedlist>
+	  <listitem>
+	    <para>The applicant is <literal>alice</literal>.</para>
+	  </listitem>
+	  <listitem>
+	    <para>The target is <literal>root</literal>.</para>
+	  </listitem>
+	  <listitem>
+	    <para>The &man.su.1; process is both client and
+	      server.</para>
+	  </listitem>
+	  <listitem>
+	    <para>The authentication token is
+	    <literal>xi3kiune</literal>.</para>
+	  </listitem>
+	  <listitem>
+	    <para>The arbitrator is <literal>root</literal>, which is
+	      why &man.su.1; is setuid <literal>root</literal>.</para>
+	  </listitem>
+	</itemizedlist>
+      </sect3>
+
+      <sect3>
+        <title>Client and server are separate</title>
+
+	<para>The example below shows <literal>alice</literal> try to
+	  initiate an &man.ssh.1; connection to
+	  <literal>login.example.com</literal>, ask to log in as
+	  <literal>bob</literal>, and succeed.  Bob should have chosen
+	  a better password!</para>
+	
+<screen>&prompt.user; <userinput>whoami</userinput>
+eve
+&prompt.user; <userinput>ssh bob@login.example.com</userinput>
+bob@login.example.com's password: <userinput>god</userinput>
+Last login: Thu Oct 11 09:52:57 2001 from 192.168.0.1
+Copyright (c) 1980, 1983, 1986, 1988, 1990, 1991, 1993, 1994
+        The Regents of the University of California.  All rights reserved.
+FreeBSD 4.4-STABLE (LOGIN) #4: Tue Nov 27 18:10:34 PST 2001
+
+Welcome to FreeBSD!
+&prompt.user;</screen>
+
+	<itemizedlist>
+	  <listitem>
+	    <para>The applicant is <literal>eve</literal>.</para>
+	  </listitem>
+	  <listitem>
+	    <para>The client is Eve's &man.ssh.1; process.</para>
+	  </listitem>
+	  <listitem>
+	    <para>The server is the &man.sshd.8; process on
+	      <literal>login.example.com</literal></para>
+	  </listitem>
+	  <listitem>
+	    <para>The target is <literal>bob</literal>.</para>
+	  </listitem>
+	  <listitem>
+	    <para>The authentication token is
+	    <literal>god</literal>.</para>
+	  </listitem>
+	  <listitem>
+	    <para>Although this is not shown in this example, the
+	      arbitrator is <literal>root</literal>.</para>
+	  </listitem>
+	</itemizedlist>
+      </sect3>
+      
+      <sect3>
+        <title>Sample policy</title>
+
+	<para>The following is FreeBSD's default policy for
+	  <literal>sshd</literal>:</para>
+	
+<screen>sshd    auth    required        pam_nologin.so  no_warn
+sshd    auth    required        pam_unix.so     no_warn try_first_pass
+sshd    account required        pam_unix.so
+sshd    session required        pam_permit.so
+sshd    password required       pam_permit.so</screen>
+
+
+	<itemizedlist>
+	  <listitem>
+            <para>This policy applies to the <literal>sshd</literal>
+              service (which is not necessarily restricted to the
+              &man.sshd.8; server).</para>
+	  </listitem>
+	  <listitem>
+	    <para><literal>auth</literal>, <literal>account</literal>,
+	      <literal>session</literal> and
+	      <literal>password</literal> are facilities.</para>
+	  </listitem>
+	  <listitem>
+	    <para><filename>pam_nologin.so</filename>,
+	      <filename>pam_unix.so</filename> and
+	      <filename>pam_permit.so</filename> are modules.  It is
+	      clear from this example that
+	      <filename>pam_unix.so</filename> and
+	      <filename>pam_permit.so</filename> provide at least two
+	      facilities each.</para>
+	  </listitem>
+	</itemizedlist>
+      </sect3>	
+    </sect2>
+
+    <sect2>
+      <title>Conventions</title>
+
+      <para>This section is intentionally left blank.</para>
+    </sect2>
+  </sect1>
+
+  <sect1 id="pam-essentials">
+    <title>PAM Essentials</title>
+
+    <para>This section describes the central concepts of PAM.</para>    
+  </sect1>
+
+  <sect1 id="pam-config">
+    <title>PAM Configuration</title>
+
+    <para>This section describes how to configure PAM on
+      FreeBSD.</para>
+  </sect1>
+
+  <sect1 id="pam-modules">
+    <title>PAM Modules</title>
+
+    <para>This section briefly documents the various PAM modules that
+      exist in FreeBSD.</para>
+  </sect1>
+
+  <sect1 id="pam-appl-prog">
+    <title>PAM Application Programming</title>
+
+    <para>This section describes how to integrate PAM into your
+      application.</para>
+  </sect1>
+
+  <sect1 id="pam-module-prog">
+    <title>PAM Module Programming</title>
+
+    <para>This section describes how to write PAM modules.</para>
+  </sect1>
+  
+  <sect1 id="pam-further">
+    <title>Further Reading</title>
+
+    <para>This is a list of documents relevant to PAM and related
+      issues.  It is by no means complete.</para>
+
+    <itemizedlist>
+      <listitem>
+        <para><ulink
+	url="http://www.sun.com/software/solaris/pam/pam.external.pdf">
+	Making Login Services Independent of Authentication
+	Technologies</ulink>&mdash;the original PAM whitepaper from
+	Sun.</para>
+      </listitem>
+      <listitem>
+        <para><ulink
+	  url="http://www.sun.com/software/solaris/pam/pam.admin.pdf">
+	  PAM Administration</ulink>&mdash;an introduction to
+	  configuring and using PAM, from Sun.</para>
+      </listitem>
+      <listitem>
+        <para><ulink
+	  url="http://www.opengroup.org/pubs/catalog/p702.htm"> X/Open
+	  Single Sign-on Preliminary Specification</ulink> (OpenGroup
+	  members can get the PDF; others will have to register to
+	  download the text version, or buy the paper version).</para>
+      </listitem>
+      <listitem>
+        <para><ulink
+	  url="http://www.kernel.org/pub/linux/libs/pam/pre/doc/current-draft.txt">
+	  Pluggable Authentication Modules</ulink>&mdash;a whitepaper
+	  by Andrew G. Morgan, author of Linux-PAM.</para>
+      </listitem>
+    </itemizedlist>
+  </sect1>
+</article>
