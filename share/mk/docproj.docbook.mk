@@ -1,5 +1,5 @@
 #
-# $Id: docproj.docbook.mk,v 1.10 1999-08-26 19:37:13 nik Exp $
+# $Id: docproj.docbook.mk,v 1.11 1999-08-28 09:50:49 nik Exp $
 #
 # This include file <docproj.docbook.mk> handles installing documentation
 # from the FreeBSD Documentation Project.
@@ -89,6 +89,26 @@ DSSSLCATALOG=   /usr/local/share/sgml/docbook/dsssl/modular/catalog
 JADEOPTS=	${JADEFLAGS} -c ${FREEBSDCATALOG} -c ${DSSSLCATALOG} -c ${DOCBOOKCATALOG} -c ${JADECATALOG} ${EXTRA_CATALOGS:S/^/-c /g}
 
 KNOWN_FORMATS= html html-split html-split.tar txt rtf ps pdf tex dvi tar
+
+# ------------------------------------------------------------------------
+# Work out the language and encoding used for this document.  Normally,
+# this will be the directory name two levels up from us, but the user
+# might want to override this from the command line.
+#
+# If the directory name is further up the tree, (say, three directories)
+# change the '.for' line to
+#
+#    .for _ in 1 2 3
+#
+# I haven't had to use tricks like this since writing MS-DOS batch files.
+# Of course, you could just send ${.CURDIR} out through sed(1) or perl(1),
+# but this saves that overhead.
+#
+LANGCODE:= ${.CURDIR}
+.for _ in 1 2
+LANGCODE:= ${LANGCODE:H}
+.endfor
+LANGCODE:= ${LANGCODE:T}
 
 # ------------------------------------------------------------------------
 # If DOC_PREFIX is not set then try and generate a sensible value for it.
@@ -292,14 +312,15 @@ validate:
 .for _curformat in ${KNOWN_FORMATS}
 _cf=${_curformat}
 package-${_curformat}: install-${_curformat}
-	rm PLIST
+	[ ! -e COMMENT ] || touch COMMENT
+	[ ! -e DESCR   ] || touch DESCR
 .if ${_cf} == "html-split"
 	cp HTML.manifest PLIST
 .else
 	echo ${DOC}.${_curformat} > PLIST
 .endif
 	pkg_create -v -c COMMENT -d DESCR -f PLIST -p ${DESTDIR} \
-		${DOC}.${_curformat}.tgz
+		${.CURDIR:T}.${LANGCODE}.${_curformat}.tgz
 .endfor
 
 #
