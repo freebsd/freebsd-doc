@@ -1,5 +1,9 @@
 #
-# $FreeBSD: www/ru/FAQ/Makefile,v 1.3 1999/09/06 07:03:31 peter Exp $
+# The FreeBSD Russian Documentation Project
+#
+# $FreeBSD$
+# $FreeBSDru: frdp/www/ru/FAQ/Makefile,v 1.2 2000/10/06 15:53:51 phantom Exp $
+# Original revision: 1.4
 #
 # Build the FreeBSD FAQ *outside* of the www tree, and install it
 # in to the right place as necessary.

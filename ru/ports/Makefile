@@ -1,12 +1,13 @@
 # $FreeBSD$
 # The FreeBSD Russian Documentation Project
-# Original revision: 1.26
+# $FreeBSDru: frdp/www/ru/ports/Makefile,v 1.3 2000/10/11 16:25:56 phantom Exp $
+# Original revision: 1.29
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
 .endif
-.if exists(Makefile.inc)
-.include "Makefile.inc"
+.if exists(../../en/ports/Makefile.inc)
+.include "../../en/ports/Makefile.inc"
 .endif
 
 CVS_READONLY?=	YES
@@ -15,6 +16,13 @@ CVS_OPT+=	-Q
 CVS_OPT+=	-R
 .endif
 
+#
+# This hack is allows to build www/ tree for case when ports/ located
+# in other repository, for example Repository of Translation Project
+#
+.if defined(PORTSCVSROOT) && !empty(PORTSCVSROOT)
+CVS_OPT+=	-d ${PORTSCVSROOT}
+.endif
 
 .if defined(NOPORTSCVS)
 ${INDEX}: $${PORTSBASE}/${PINDEX}
@@ -45,7 +53,11 @@ packages.exists: ${cvsindex} ${cvsy2k}
 .if  exists(${.CURDIR}/../../en/ports/packages.exists)
 	cp ${.CURDIR}/../../en/ports/${.TARGET} .
 .else
-	sh ${.CURDIR}/packages > ${.TARGET}
+	@if sh ${.CURDIR}/../../en/ports/packages > ${.TARGET}.temp; then \
+		mv ${.TARGET}.temp ${.TARGET}; \
+	else \
+		rm ${.TARGET}.temp; touch ${.TARGET}; \
+	fi;
 .endif
 .else
 	touch ${.TARGET}
@@ -54,13 +66,13 @@ packages.exists: ${cvsindex} ${cvsy2k}
 Makefile.gen: index.sgml .NOTMAIN
 	echo DOCS= *.sgml > Makefile.gen
 
-index.sgml: ${INDEX} ${Y2K} packages.exists portindex ports.inc .NOTMAIN
+index.sgml: ${INDEX} ${Y2K} categories packages.exists portindex ports.inc .NOTMAIN
 	rm -f *.sgml
-	${PORTINDEX} ${INDEX} ${Y2K}
+	${PORTINDEX} ${INDEX} ${Y2K} ${.CURDIR}
 
 install: all
 
 all install clean:
-	${MAKE}  ${MAKEFLAGS} -f Makefile.inc0 ${.TARGET}
+	(cd ${.CURDIR} && ${MAKE}  ${MAKEFLAGS} -f Makefile.inc0 ${.TARGET})
 
 .include "../web.mk"

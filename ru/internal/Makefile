@@ -1,4 +1,5 @@
-# $FreeBSD: www/ru/internal/Makefile,v 1.2 2000/03/02 15:00:30 phantom Exp $
+# $FreeBSD$
+# $FreeBSDru: frdp/www/ru/internal/Makefile,v 1.2 2000/10/27 11:26:10 phantom Exp $
 # Original version: 1.20
 
 .if exists(../Makefile.conf)
