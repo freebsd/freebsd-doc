@@ -1,6 +1,6 @@
-<!-- $FreeBSD: www/ja/ports/ports.inc,v 1.16 2000/12/30 14:25:14 hrs Exp $ -->
+<!-- $FreeBSD: www/ja/ports/ports.inc,v 1.17 2001/04/03 17:18:36 hrs Exp $ -->
 <!-- The FreeBSD Japanese Documentation Project -->
-<!-- Original revision: 1.55 -->
+<!-- Original revision: 1.56 -->
 <p>FreeBSD Ports/Packages Collection は,
 ユーザや管理者がアプリケーションのインストールを簡単に行なえる方法を提供します.
 Ports Collection は<a
@@ -14,7 +14,7 @@ FreeBSD 上でオリジナルのアプリケーションのソースコードをコンパイルし,
 アプリケーションのインストールは簡単で, port をダウンロードし,
 それを展開し, その port のディレクトリで <tt>make</tt> と打つだけです.
 より便利にするためには, インストール時に
-<a href="ftp://ftp.freebsd.org/pub/FreeBSD/branches/-current/ports.tar.gz">
+<a href="ftp://ftp5.freebsd.org/pub/FreeBSD/branches/-current/ports.tar.gz">
 ports 階層全体</a> をインストール
 (あるいは 
 <a href="../handbook/synching.html#CVSUP">CVSup</a>
@@ -93,12 +93,12 @@ FreeBSD ports の更新情報</a> ページを参照してください. </p>
 
 <dl>
 <dt><a
-href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-4-stable/Latest/41upgrade.tgz">4.1
+href="ftp://ftp5.freebsd.org/pub/FreeBSD/ports/i386/packages-4-stable/Latest/41upgrade.tgz">4.1
 から 4-STABLE へのアップグレードキット</a>
 <dd>4.1-RELEASE ユーザもしくは 2000 年 7 月 27 日から 2000 年 10 月 31 日
 の間の 4.1-STABLE ユーザ用
 <dt><a
-href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-4-stable/Latest/42upgrade.tgz">4.2
+href="ftp://ftp5.freebsd.org/pub/FreeBSD/ports/i386/packages-4-stable/Latest/42upgrade.tgz">4.2
 から 4-STABLE へのアップグレードキット</a>
 <dd>4.2-RELEASE ユーザもしくは 2000 年 10 月 31 日から 2001 年 1 月 8 日
 の間の 4.x-STABLE もしくは 4.2-BETA もしくは 4.2-RC ユーザ用
