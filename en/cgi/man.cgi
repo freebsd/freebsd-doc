@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp 
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.103 2003-05-07 10:21:07 www Exp $
+# $Id: man.cgi,v 1.104 2003-05-07 10:23:44 www Exp $
 
 #use Data::Dumper;
 #use Carp;
@@ -502,6 +502,7 @@ sub apropos {
     local($mpath) = ($manpath ? &dec($manpath) : $manPathDefault);
 
     open(APROPOS, "$manPath{$mpath}/whatis") || do {
+	warn "$0: Cannot open whatis database for `$mpath'\n";
 	print "Cannot open whatis database for `$mpath'\n";
 	print "</DL>\n</BODY>\n</HTML>\n";
 	return;
@@ -979,7 +980,7 @@ ETX
 }
 
 sub copyright {
-    $id = '$Id: man.cgi,v 1.103 2003-05-07 10:21:07 www Exp $';
+    $id = '$Id: man.cgi,v 1.104 2003-05-07 10:23:44 www Exp $';
 
     return qq{\
 <PRE>
