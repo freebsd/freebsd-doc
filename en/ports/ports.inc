@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/ports/ports.inc,v 1.61 2002/02/28 22:50:58 tom Exp $ -->
+<!-- $FreeBSD: www/en/ports/ports.inc,v 1.62 2002/05/20 13:49:27 phantom Exp $ -->
 <p>The FreeBSD Ports and Packages Collection offers a simple way for
 users and administrators to install applications.  The ports
 collection has been <a
@@ -13,7 +13,7 @@ simple as downloading the port, unpacking it and typing <tt>make</tt>
 in the port directory.  For even greater convenience, you can simply
 install the <a href="ftp://ftp.FreeBSD.org/pub/FreeBSD/branches/-current/ports.tar.gz">
 entire ports hierarchy</a> at installation time (or use
-<a href="../handbook/synching.html#CVSUP">CVSup</a> to track it on
+<a href="../doc/en_US.ISO8859-1/books/handbook/synching.html#CVSUP">CVSup</a> to track it on
 an ongoing basis) and have thousands of applications right at your
 fingertips.
 
@@ -50,8 +50,8 @@ Search for:
 
 
 <p>For more information about using ports, see <a
-href="../handbook/ports.html">Installing Applications: Packages and Ports</a>, a
-section of the <a href="../handbook/">FreeBSD Handbook</a>.  For
+href="../doc/en_US.ISO8859-1/books/handbook/ports.html">Installing Applications: Packages and Ports</a>, a
+section of the <a href="../doc/en_US.ISO8859-1/books/handbook/index.html">FreeBSD Handbook</a>.  For
 information about creating new ports, see the <a
 href="../doc/en_US.ISO8859-1/books/porters-handbook/index.html">Porter's Handbook</a>.</p> 
 
@@ -99,7 +99,7 @@ These are FreeBSD packages; please use <strong>pkg_add</strong> to install
 them.  That should enable you to use all the ports listed here. Note
 that it will only change just enough files to enable ports/packages to be used;
 for a full upgrade to -STABLE, please refer to the <a
-href="../handbook/synching.html">synchronizing your source tree</a>
+href="../doc/en_US.ISO8859-1/books/handbook/synching.html">synchronizing your source tree</a>
 section of the handbook.
 
 The 2.2.x and 3.x branches are officially unsupported by ports-current.  While
