@@ -779,6 +779,12 @@ install-${_curformat}: ${DOC}.${_curformat}
 	@if [ -f ln*.html ]; then \
 		${INSTALL_DOCS} ln*.html ${DESTDIR}; \
 	fi
+	@if [ -f LEGALNOTICE.html ]; then \
+		${INSTALL_DOCS} LEGALNOTICE.html ${DESTDIR}; \
+	fi
+	@if [ -f TRADEMARKS.html ]; then \
+		${INSTALL_DOCS} TRADEMARKS.html ${DESTDIR}; \
+	fi
 	@if [ -f ${.OBJDIR}/${DOC}.ln ]; then \
 		cd ${DESTDIR}; sh ${.OBJDIR}/${DOC}.ln; \
 	fi
