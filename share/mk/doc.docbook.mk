@@ -1,5 +1,5 @@
 #
-# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.10 2000/03/24 19:31:34 nbm Exp $
+# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.11 2000/04/29 07:46:15 kuriyama Exp $
 #
 # This include file <doc.docbook.mk> handles building and installing of
 # DocBook documentation in the FreeBSD Documentation Project.
@@ -49,8 +49,8 @@ MASTERDOC?=	${.CURDIR}/${DOC}.sgml
 
 JADE=		${PREFIX}/bin/jade
 
-DSLHTML?=	${.CURDIR}/../../share/sgml/freebsd.dsl
-DSLPRINT?=	${.CURDIR}/../../share/sgml/freebsd.dsl
+DSLHTML?=	${DOC_PREFIX}/${LANG_CODE}/share/sgml/freebsd.dsl
+DSLPRINT?=	${DOC_PREFIX}/${LANG_CODE}/share/sgml/freebsd.dsl
 FREEBSDCATALOG=	${DOC_PREFIX}/share/sgml/catalog
 
 DOCBOOKCATALOG=	${PREFIX}/share/sgml/docbook/catalog
