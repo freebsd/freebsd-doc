@@ -28,7 +28,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $Id: cvsweb.cgi,v 1.21 1998-07-23 09:42:40 wosch Exp $
+# $Id: cvsweb.cgi,v 1.22 1998-08-13 10:35:26 wosch Exp $
 #
 
 
@@ -173,8 +173,9 @@ if (-d $fullname) {
 	    print $shortinstr;
 	}
 	print "<p>";
-	print "Current CVS tree: <b>$cvstree</b><br>\n"
-	    if $cvstree ne $cvstreedefault;
+	print "Current CVS tree: <b>",
+		($CVSROOTdescr{"$cvstree"} ? $CVSROOTdescr{"$cvstree"} :
+			$cvstree), "</b><br>\n";
 	print "Current directory: <b>/$where</b>\n";
 	print "<P><HR NOSHADE>\n";
 	# Using <MENU> in this manner violates the HTML2.0 spec but
