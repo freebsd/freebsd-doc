@@ -1,5 +1,5 @@
 #!/usr/bin/perl -T
-# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.30 2003/03/06 23:51:58 wosch Exp $
+# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.31 2003/04/10 09:29:21 des Exp $
 
 $ENV{'PATH'} = "/bin:/usr/bin:/usr/sbin:/sbin:/usr/local/bin";
 
@@ -80,9 +80,9 @@ while(<Q>) {
 
     $html_fixup = 1;
 
-    if (/^query-pr: /) {
+    if (/^query-pr.real: /) {
 	print &html_header("FreeBSD problem report");
-	if ($_ ne "query-pr: no PRs matched") {
+	if ($_ ne "query-pr.real: no PRs matched") {
 	    print "<P>query-pr said:\n";
 	    print "<PRE>$_\n";
 	    print <Q>;
