@@ -1,14 +1,13 @@
-# $FreeBSD: www/ja/releases/4.0R/Makefile,v 1.1 2000/04/01 15:04:20 kuriyama Exp $
+# $FreeBSD$
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.1
 
-DOCS=	announce.sgml
-DOCS+=	notes.sgml
-DOCS+=	errata.sgml
+#DOCS=	announce.sgml notes.sgml errata.sgml
+DOCS=	notes.sgml
 
 ### Revision checking
 REVFILES=	${DOCS:M*.sgml:S/.sgml$/.revinc/g}
 BUILDTOP=	../../..
-DIR_IN_LOCAL=	releases/4.0R
+DIR_IN_LOCAL=	releases/3.5R
 
 .include "../../../web.mk"
