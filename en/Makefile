@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/Makefile,v 1.118 2005/02/13 19:51:22 hrs Exp $
+# $FreeBSD: www/en/Makefile,v 1.119 2005/03/03 22:42:57 ceri Exp $
 
 .if exists(Makefile.conf)
 .include "Makefile.conf"
@@ -49,6 +49,7 @@ SUBDIR+= java
 SUBDIR+= kse
 SUBDIR+= news
 SUBDIR+= platforms
+SUBDIR+= portmgr
 SUBDIR+= projects
 SUBDIR+= prstats
 SUBDIR+= releases
