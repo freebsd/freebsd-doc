@@ -6,7 +6,7 @@
 #              and write ./stage_1.log.profile
 #
 # Author:      Jens Schweikhardt
-# $Id: stage_1.sh,v 1.4 2004-01-21 19:39:26 schweikh Exp $
+# $Id: stage_1.sh,v 1.5 2004-07-19 21:02:26 schweikh Exp $
 # $FreeBSD$
 
 PATH=/bin:/usr/bin:/sbin:/usr/sbin
@@ -104,7 +104,7 @@ step_five () {
   # Setup time zone info; pretty much mandatory.
   cp ${DESTDIR}/usr/share/zoneinfo/${TIMEZONE} ${DESTDIR}/etc/localtime
   if test -r /etc/wall_cmos_clock; then
-     cp -p /etc/wall_cmos_clock ${DESTDIR}/etc/wall_cmos_clock
+    cp -p /etc/wall_cmos_clock ${DESTDIR}/etc/wall_cmos_clock
   fi
 }
 
