@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/events/Makefile,v 1.2 2002/03/26 08:11:53 murray Exp $
+# $FreeBSD: www/en/events/Makefile,v 1.3 2003/09/22 07:44:39 murray Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -10,5 +10,38 @@
 SUBDIR=	2002 2003
 
 DATA=   events.css
+
+DATA=	events.html
+CLEANFILES+= events.html curdate.xml
+
+DATE?=	/bin/date
+TR?=	/usr/bin/tr
+XMLLINT?= /usr/local/bin/xmllint # Part of textproc/libxml2.
+
+events.html: events.xsl events.xml ../includes.xsl curdate.xml
+	${XSLTPROC} ${XSLTPROCOPTS} -o ${.TARGET} \
+		${.CURDIR}/events.xsl ${.CURDIR}/events.xml
+.if !defined(NO_TIDY)
+	-${TIDY} ${TIDYOPTS} ${.TARGET}
+.endif
+
+lint:
+	${XMLLINT} --valid -o /dev/null ${.CURDIR}/events.xml
+
+# XXX TODO: Handle this better, so curdate.xml isn't rebuild on install.
+curdate.xml!
+	@${ECHO} "Generating ${.TARGET}"
+	@${ECHO_CMD} '<?xml version="1.0"?>'	 > ${.TARGET}
+	@${ECHO_CMD} '<curdate>'		>> ${.TARGET}
+	@${ECHO_CMD} -n '  <year>'		>> ${.TARGET}
+	@${DATE} +%Y | ${TR} -d "\n"		>> ${.TARGET}
+	@${ECHO_CMD} '</year>'			>> ${.TARGET}
+	@${ECHO_CMD} -n '  <month>'		>> ${.TARGET}
+	@${DATE} +%m | ${TR} -d "\n"		>> ${.TARGET}
+	@${ECHO_CMD} '</month>'			>> ${.TARGET}
+	@${ECHO_CMD} -n '  <day>'		>> ${.TARGET}
+	@${DATE} +%d | ${TR} -d "\n"		>> ${.TARGET}
+	@${ECHO_CMD} '</day>'			>> ${.TARGET}
+	@${ECHO_CMD} '</curdate>'		>> ${.TARGET}
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
