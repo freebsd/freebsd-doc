@@ -51,7 +51,7 @@ HTMLCATALOG=	${PREFIX}/share/sgml/html/catalog
 
 IMAGES_LIB?=
 
-.if ${MACHINE_ARCH} == "alpha"
+.if ${MACHINE_ARCH} != "i386"
 OPENJADE=	yes
 .endif
 
