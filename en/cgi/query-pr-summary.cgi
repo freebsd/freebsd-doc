@@ -1,5 +1,5 @@
 #!/usr/bin/perl -T
-# $FreeBSD: www/en/cgi/query-pr-summary.cgi,v 1.31 2001/01/04 22:22:38 peter Exp $
+# $FreeBSD: www/en/cgi/query-pr-summary.cgi,v 1.32 2001/01/12 00:19:09 peter Exp $
 
 $html_mode     = 1 if $ENV{'DOCUMENT_ROOT'};
 $self_ref      = $ENV{'SCRIPT_NAME'};
@@ -52,7 +52,7 @@ if ($html_mode) {
 
 	$input{"responsible"}	= "summary" if $opt_R;
 	if ($opt_r) {
-		($input{"responsible"})	= ($opt_r =~ m/^([-a-zA-Z0-9@.]*)$/);
+		($input{"responsible"})	= ($opt_r =~ m/^([-_a-zA-Z0-9@.]*)$/);
 		die "Insecure args" if ($input{"responsible"} ne $opt_r)
 	}
 	if ($opt_s) {
