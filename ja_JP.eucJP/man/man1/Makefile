@@ -97,6 +97,7 @@ MAN1 =	addftinfo.1\
 	gdbserver.1\
 	gencat.1\
 	getNAME.1\
+	getfacl.1\
 	getopt.1\
 	gperf.1\
 	gprof.1\
@@ -272,6 +273,7 @@ MAN1 =	addftinfo.1\
 	sdiff.1\
 	sed.1\
 	send-pr.1\
+	setfacl.1\
 	sftp.1\
 	sgsc.1\
 	sh.1\
