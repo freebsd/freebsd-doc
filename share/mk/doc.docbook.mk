@@ -618,7 +618,7 @@ ${DOC}.${_curformat}:
 #
 
 lint validate:
-	${NSGMLS} ${NSGMLSWARNINGS} -s ${SGMLFLAGS} ${CATALOGS} ${MASTERDOC}
+	${NSGMLS} ${NSGMLSWARNINGS} -s ${NSGMLSFLAGS} ${SGMLFLAGS} ${CATALOGS} ${MASTERDOC}
 
 
 # ------------------------------------------------------------------------
