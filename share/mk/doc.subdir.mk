@@ -41,10 +41,15 @@
 #			here.
 #
 #	clean:
-#			Remove files created by the build process.
+#			Remove files created by the build process (using
+#			defaults specified by environment)
 #
 #	cleandir:
 #			Remove the object directory, if any.
+#
+#	cleanall:
+#			Remove all possible generated files (all predictable
+#			combinations of ${FORMAT} values)
 #
 
 .if !target(__initialized__)
@@ -209,3 +214,6 @@ _IMAGESUBDIR: .USE
 
 obj: _IMAGESUBDIR
 .endif
+
+cleanall:
+	${MAKE} FORMATS="${ALL_FORMATS}" clean
