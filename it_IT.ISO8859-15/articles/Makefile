@@ -1,6 +1,7 @@
 # $FreeBSD$
 
 SUBDIR =
+SUBDIR+= filtering-bridges
 SUBDIR+= new-users
 
 # ROOT_SYMLINKS+= new-users
