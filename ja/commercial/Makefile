@@ -1,4 +1,4 @@
-# $FreeBSD: www/ja/commercial/Makefile,v 1.7 1999/09/06 07:03:17 peter Exp $
+# $FreeBSD: www/ja/commercial/Makefile,v 1.8 1999/09/07 14:22:58 kuriyama Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.9
 
@@ -17,5 +17,10 @@ DOCS = 	commercial.sgml
 # DOCS+=  software_bycat.sgml
 
 INDEXLINK=commercial.html
+
+### Revision checking
+REVFILES=	${DOCS:M*.sgml:S/.sgml$/.revinc/g}
+BUILDTOP=	../..
+DIR_IN_LOCAL=	commercial
 
 .include "../../web.mk"
