@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
 <!-- $FreeBSD$
-     $FreeBSDde: de-www/includes.xsl,v 1.17 2004/11/21 15:11:50 mheinen Exp $
+     $FreeBSDde: de-www/includes.xsl,v 1.19 2005/01/26 01:58:53 mheinen Exp $
      basiert auf: 1.20
 -->
 
@@ -108,20 +108,20 @@
   <xsl:variable name="u.rel.migration">
     <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel.current"/>R/migration-guide.html</xsl:variable>
 
-  <xsl:variable name="rel2.current" select='"4.10"'/>
+  <xsl:variable name="rel2.current" select='"4.11"'/>
   <xsl:variable name="u.rel2.notes">
-    <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel2.current"/>R/relnotes.html</xsl:variable>
+    <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel2.current"/>R/relnotes.html</xsl:variable>
 
   <xsl:variable name="u.rel2.announce">
-    <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel2.current"/>R/announce.html</xsl:variable>
+    <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel2.current"/>R/announce.html</xsl:variable>
   <xsl:variable name="u.rel2.errata">
-    <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel2.current"/>R/errata.html</xsl:variable>
+    <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel2.current"/>R/errata.html</xsl:variable>
   <xsl:variable name="u.rel2.hardware">
-    <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel2.current"/>R/hardware.html</xsl:variable>
+    <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel2.current"/>R/hardware.html</xsl:variable>
   <xsl:variable name="u.rel2.installation">
-    <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel2.current"/>R/installation.html</xsl:variable>
+    <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel2.current"/>R/installation.html</xsl:variable>
   <xsl:variable name="u.rel2.readme">
-    <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel2.current"/>R/readme.html</xsl:variable>
+    <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel2.current"/>R/readme.html</xsl:variable>
 
   <!-- template: "html-index-advisories-items-lastmodified" -->
 
