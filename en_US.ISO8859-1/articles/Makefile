@@ -23,7 +23,6 @@ SUBDIR+= hubs
 SUBDIR+= ipsec-must
 SUBDIR+= java-tomcat
 SUBDIR+= laptop
-SUBDIR+= mailing-list-faq
 SUBDIR+= mh
 SUBDIR+= multi-os
 SUBDIR+= new-users
