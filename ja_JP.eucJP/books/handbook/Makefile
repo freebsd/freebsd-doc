@@ -1,5 +1,5 @@
 # 
-# $Id: Makefile,v 1.38 1999-08-31 15:00:04 kuriyama Exp $
+# $Id: Makefile,v 1.39 1999-09-03 18:23:12 nik Exp $
 #
 # Build the FreeBSD Handbook (Japanese).
 #
@@ -61,5 +61,5 @@ SRCS+= mailing-lists.ent
 SRCS+=	jcontrib/chapter.sgml
 SRCS+=	jauthors.ent
 
-DOC_PREFIX?= ../../..
-.include "${DOC_PREFIX}/share/mk/docproj.docbook.mk"
+DOC_PREFIX?= ${.CURDIR}../../..
+.include "${DOC_PREFIX}/share/mk/doc.project.mk"
