@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/share/sgml/includes.release.xsl,v 1.5 2004/05/27 05:43:42 hrs Exp $ -->
+<!-- $FreeBSD: www/share/sgml/includes.release.xsl,v 1.6 2004/11/06 21:57:41 simon Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
+
+  <xsl:variable name="rel.head" select='"6.0"'/>
 
   <xsl:variable name="rel.current" select='"5.3"'/>
 
