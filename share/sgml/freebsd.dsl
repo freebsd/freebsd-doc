@@ -197,6 +197,8 @@
               (("ports")   (string-append u "&" "manpath=FreeBSD+Ports"))
               (else u))))
 
+        (element application ($bold-seq$))
+
         (element citerefentry
           (let ((href          ($create-refentry-xref-link$)))
             (if %refentry-xref-link%
@@ -690,6 +692,18 @@
               display?: display
               display-alignment: graphic-align)))
 
+	;; Display TeX and LaTeX properly by sending direct formatting
+	;; commands to the TeX backend.
+
+	(element application
+	  (if (equal? "TeX" (data (current-node)))
+	    (make formatting-instruction data:
+		"\\TeX{}")
+	      (if (equal? "LaTeX" (data (current-node)))
+		  (make formatting-instruction data:
+		      "\\LaTeX{}")
+			($bold-seq$))))
+
 	;; The special FreeBSD version of the trademark tag handling.
 	;; This function was more or less taken from the DocBook DSSSL
 	;; stylesheets by Norman Walsh.
@@ -872,8 +886,6 @@
 
       (element command ($mono-seq$))
       (element envar ($mono-seq$))
-
-      (element application ($bold-seq$))
 
       <!-- Warnings and cautions are put in boxed tables to make them stand
            out. The same effect can be better achieved using CSS or similar,
