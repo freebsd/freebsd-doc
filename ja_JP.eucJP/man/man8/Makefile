@@ -12,6 +12,7 @@ MAN8 =	IPXrouted.8\
 	apm.8\
 	apmd.8\
 	arp.8\
+	asf.8\
 	atacontrol.8\
 	atm.8\
 	atmarpd.8\
