@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.4 1997-11-24 15:02:16 jfieber Exp $
+# $Id: Makefile,v 1.5 1997-11-24 16:08:52 jfieber Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.19
 
@@ -45,7 +45,7 @@ FORMATS=	"html roff"
 
 #CVSDIR=		FAQ handbook
 
-WEBDIR=		data/ja_JP.EUC
+WEBDIR=		ja_JP.EUC
 
 .include "../web.mk"
 
