@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp 
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.133 2004-08-29 18:04:37 wosch Exp $
+# $Id: man.cgi,v 1.134 2004-08-29 18:08:57 wosch Exp $
 
 #use Data::Dumper;
 #use Carp;
@@ -143,12 +143,12 @@ foreach my $os (keys %$sectionpath) {
      );
 
 $manLocalDir = '/usr/local/www/bsddoc/man';
-$manPathDefault = 'FreeBSD 5.2-RELEASE and Ports';
+$manPathDefault = 'FreeBSD 5.2.1-RELEASE and Ports';
 #$manPathDefault = 'FreeBSD 5.1-RELEASE';
 
 %manPath = 
     (
-     'FreeBSD 5.2-RELEASE and Ports',  "$manLocalDir/FreeBSD-5.2-RELEASE/man:$manLocalDir/FreeBSD-5.2-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-5.1-RELEASE",
+     'FreeBSD 5.2.1-RELEASE and Ports',  "$manLocalDir/FreeBSD-5.2.1-RELEASE/man:$manLocalDir/FreeBSD-5.2.1-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-5.1-RELEASE",
 
      'FreeBSD 6-current',     "$manLocalDir/FreeBSD-6-current",
      'FreeBSD 5.2-stable',   "$manLocalDir/FreeBSD-5.2-stable",
@@ -329,8 +329,9 @@ while (($key,$val) = each %manPath) {
 # keywords must be in lower cases.
 %manPathAliases = 
     (
-     'freebsd', 'FreeBSD 5.2-RELEASE',
+     'freebsd', 'FreeBSD 5.2.1-RELEASE',
      'freebsd-stable', 'FreeBSD 4.10-stable',
+     'freebsd-stable5', 'FreeBSD 5.2-stable',
      'freebsd-current', 'FreeBSD 6-current',
      'slackware', 'Linux Slackware 3.1',
      'linux-de', 'deutsch - Linux/GNU',
@@ -1023,7 +1024,7 @@ ETX
 }
 
 sub copyright {
-    $id = '$Id: man.cgi,v 1.133 2004-08-29 18:04:37 wosch Exp $';
+    $id = '$Id: man.cgi,v 1.134 2004-08-29 18:08:57 wosch Exp $';
 
     return qq{\
 <PRE>
