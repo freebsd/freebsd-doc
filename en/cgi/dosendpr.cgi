@@ -8,7 +8,7 @@
 #  GNU General Public License Version 2.  
 #     (http://www.gnu.ai.mit.edu/copyleft/gpl.html)
 #
-# $FreeBSD: www/en/cgi/dosendpr.cgi,v 1.16 2004/02/16 14:34:23 ceri Exp $
+# $FreeBSD: www/en/cgi/dosendpr.cgi,v 1.17 2004/02/16 14:38:05 ceri Exp $
 
 require "html.pl";
 
@@ -175,7 +175,7 @@ $pr = "To: $gnemail\n" .
 if ($blackhole_err) {
       $pr .= "X-REMOTE_ADDR-Is-Open-Proxy: Maybe\n";
 }
-$pr .= "X-Send-Pr-Version: www-2.0\n\n" .
+$pr .= "X-Send-Pr-Version: www-2.1\n\n" .
       ">Submitter-Id:\t$cgi_data{'submitterid'}\n" .
       ">Originator:\t$cgi_data{'originator'}\n" .
       ">Organization:\t$cgi_data{'organization'}\n" .
