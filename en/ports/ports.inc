@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/ports/ports.inc,v 1.54 2001/02/15 15:57:03 will Exp $ -->
+<!-- $FreeBSD: www/en/ports/ports.inc,v 1.55 2001/03/14 19:44:44 will Exp $ -->
 <p>The FreeBSD Ports and Packages Collection offers a simple way for
 users and administrators to install applications.  The ports
 collection has been <a
@@ -11,7 +11,7 @@ contains any patches necessary to make the original application source
 code compile and run on FreeBSD.  Installing an application is as
 simple as downloading the port, unpacking it and typing <tt>make</tt>
 in the port directory.  For even greater covenience, you can simply
-install the <a href="ftp://ftp.freebsd.org/pub/FreeBSD/branches/-current/ports.tar.gz">
+install the <a href="ftp://ftp5.freebsd.org/pub/FreeBSD/branches/-current/ports.tar.gz">
 entire ports hierarchy</a> at installation time (or use
 <a href="../handbook/synching.html#CVSUP">CVSup</a> to track it on
 an ongoing basis) and have thousands of applications right at your
@@ -85,11 +85,11 @@ ports-current is to upgrade to some point along the 4.x branch.
 
 <dl>
 <dt><a
-href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-4-stable/Latest/41upgrade.tgz">4.1
+href="ftp://ftp5.freebsd.org/pub/FreeBSD/ports/i386/packages-4-stable/Latest/41upgrade.tgz">4.1
 to 4-STABLE upgrade kit</a>
 <dd>For users of 4.1-RELEASE or 4.1-STABLE before October 31, 2000 and after July 27, 2000
 <dt><a
-href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-4-stable/Latest/42upgrade.tgz">4.2
+href="ftp://ftp5.freebsd.org/pub/FreeBSD/ports/i386/packages-4-stable/Latest/42upgrade.tgz">4.2
 to 4-STABLE upgrade kit</a>
 <dd>For users of 4.2-RELEASE or 4.x-STABLE or 4.2-BETA or 4.2-RC before January 8, 2001 and after October 31, 2000
 </dl>
