@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.21 2000/07/28 21:21:20 knu Exp $
+# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.22 2000/12/05 16:22:14 knu Exp $
 
 $ENV{'PATH'} = "/bin:/usr/bin:/usr/sbin:/sbin:/usr/local/bin";
 
@@ -40,7 +40,7 @@ if (!($pr = $input{'pr'}) && &MethGet) {
 }
 
 # be tolerant to <category>/<PR id> queries
-$pr =~ s%^.+/%;	# remove <category>/ part
+$pr =~ s%^.+/%%;	# remove <category>/ part
 
 $pr += 0;	# numeralize: "0123" -> 123, "123;evil evil evil" -> 123, etc.
 
