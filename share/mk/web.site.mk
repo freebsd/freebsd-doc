@@ -1,5 +1,5 @@
 # bsd.web.mk
-# $Id: web.site.mk,v 1.10 1997-03-11 15:12:30 jfieber Exp $
+# $Id: web.site.mk,v 1.11 1997-09-19 21:35:54 jfieber Exp $
 
 #
 # Build and install a web site.
@@ -61,7 +61,7 @@ COPY=	-c
 
 .SUFFIXES:	.sgml .html
 SGMLNORM=	sgmlnorm
-CATALOG?=	/usr/local/share/sgml/HTML/catalog
+CATALOG?=	/usr/local/share/sgml/html/catalog
 SGMLNORMFLAGS=	-d ${SGMLNORMOPTS} -c ${CATALOG}
 GENDOCS+=	${DOCS:M*.sgml:S/.sgml$/.html/g}
 ORPHANS:=	${ORPHANS:N*.sgml}
