@@ -1,4 +1,4 @@
-# $FreeBSD: doc/en_US.ISO8859-1/articles/Makefile,v 1.19 2001/10/08 06:19:13 murray Exp $
+# $FreeBSD$
 
 SUBDIR = committers-guide
 SUBDIR+= console-server
@@ -22,6 +22,7 @@ SUBDIR+= pxe
 SUBDIR+= serial-uart
 SUBDIR+= solid-state
 SUBDIR+= storage-devices
+SUBDIR+= vinum
 SUBDIR+= vm-design
 SUBDIR+= zip-drive
 
