@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/Makefile,v 1.94 2003/03/23 08:22:26 trhodes Exp $
+# $FreeBSD: www/en/Makefile,v 1.95 2003/04/09 23:45:58 seanc Exp $
 .if exists(Makefile.conf)
 .include "Makefile.conf"
 .endif
@@ -85,7 +85,7 @@ SUBDIR+=	../${DIR}
 .endfor
 .endif
 
-WEBDIR=		data
+WEBDIR?=	data
 
 # index.html is special, and generated from index.xsl and news/news.xml
 DATA+=		index.html
