@@ -26,7 +26,7 @@
 #
 # url.cgi - make plain text URLs clickable
 #
-# $Id: url.cgi,v 1.4 1998-04-01 18:24:19 wosch Exp $
+# $Id: url.cgi,v 1.5 1998-04-01 18:48:32 wosch Exp $
 
 
 require LWP::UserAgent;
@@ -59,7 +59,7 @@ if ($response -> is_success) {
 	my($content) = $response -> content;
 	$content =~ s/</&lt;/g;
 	$content =~ 
-	    s%(http://[^\s"\)\>,;]+)%<A HREF="$1">$1</A>%g;
+	    s%((http|ftp)://[^\s"\)\>,;]+)%<A HREF="$1">$1</A>%gi;
 	print $content;
 	print "</pre>\n";
 
@@ -67,7 +67,7 @@ if ($response -> is_success) {
 	if ($file =~ 
 	    m%pub/FreeBSD/FreeBSD-current/(ports/[^/]+/[^/]+)/pkg/DESCR$%) {
 	    print qq{<HR><a href=\"pds.cgi?$1">Sources</a>\n};
-	    print qq{| <a href="../ports">Help</a>\n};
+	    print qq{| <a href="../ports/">Help</a>\n};
 	    print qq{<BR>\n};
         }
 	print &html_footer; 
