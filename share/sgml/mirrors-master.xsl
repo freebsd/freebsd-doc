@@ -12,25 +12,34 @@
   <xsl:param name="proto" select="''" />
   <xsl:param name="target" select="''" />
 
+
   <xsl:param name="mirrors-docbook-country-anchor-id" select="translate($target, '/.', '--')" />
+
+  <xsl:variable name="date">
+    <xsl:value-of xmlns:cvs="http://www.FreeBSD.org/XML/CVS"
+                  select="normalize-space(//cvs:keyword[@name='freebsd'])"/>
+  </xsl:variable>
 
   <!--
      templates available:
 
+        * "mirrors-lastmodified"
         * "mirrors-docbook-contact"
         * "mirrors-docbook-country-index-all"
         * "mirrors-docbook-variablelist"
         * "mirrors-docbook-itemizedlist"
   -->
 
-  <xsl:template match="/mirrors">
+  <xsl:template match="/">
     <xsl:choose>
       <xsl:when test="$target = 'handbook/mirrors/chapter.sgml'">
 	<xsl:call-template name="mirrors-docbook-country-index-all" />
+	<para>(<xsl:call-template name="mirrors-lastmodified" />)</para>
 	<xsl:call-template name="mirrors-docbook-variablelist" />
       </xsl:when>
       <xsl:when test="$target = 'handbook/eresources/chapter.sgml'">
 	<xsl:call-template name="mirrors-docbook-country-index-all" />
+	<para>(<xsl:call-template name="mirrors-lastmodified" />)</para>
 	<xsl:call-template name="mirrors-docbook-itemizedlist" />
       </xsl:when>
       <xsl:otherwise>
@@ -48,16 +57,23 @@
       <email><xsl:value-of select="$email" /></email> for this domain.</para>
   </xsl:template>
 
+  <!-- template: "mirrors-lastmodified" -->
+
+  <xsl:template name="mirrors-lastmodified">
+    <xsl:text>as of </xsl:text>
+    <xsl:call-template name="mirrors-lastmodified-utc" />
+  </xsl:template>
+
   <!-- template: "mirrors-docbook-country-index-all" -->
 
   <xsl:template name="mirrors-docbook-country-index-all">
     <para>
-      <xsl:for-each select="entry[country/@role = 'primary' and
+      <xsl:for-each select="mirrors/entry[country/@role = 'primary' and
 	                    (url[contains(@proto, $proto)] or host[contains(@proto, $proto)])]">
 	<xsl:call-template name="mirrors-docbook-country-index" />
       </xsl:for-each>
 
-      <xsl:for-each select="entry[country/@role != 'primary' and
+      <xsl:for-each select="mirrors/entry[country/@role != 'primary' and
 	                    (url[contains(@proto, $proto)] or host[contains(@proto, $proto)])]">
 	<xsl:sort select="country" />
 
@@ -83,12 +99,12 @@
 
   <xsl:template name="mirrors-docbook-variablelist">
     <variablelist>
-      <xsl:for-each select="entry[country/@role = 'primary' and
+      <xsl:for-each select="mirrors/entry[country/@role = 'primary' and
 	                    (url[contains(@proto, $proto)] or host[contains(@proto, $proto)])]">
 	<xsl:call-template name="mirrors-docbook-variablelist-entry" />
       </xsl:for-each>
 
-      <xsl:for-each select="entry[country/@role != 'primary' and
+      <xsl:for-each select="mirrors/entry[country/@role != 'primary' and
 	                    (url[contains(@proto, $proto)] or host[contains(@proto, $proto)])]">
 	<xsl:sort select="country" />
 
@@ -141,12 +157,12 @@
 
   <xsl:template name="mirrors-docbook-itemizedlist">
     <itemizedlist>
-      <xsl:for-each select="entry[country/@role = 'primary' and
+      <xsl:for-each select="mirrors/entry[country/@role = 'primary' and
 	                    (url[contains(@proto, $proto)] or host[contains(@proto, $proto)])]">
 	<xsl:call-template name="mirrors-docbook-itemizedlist-listitem" />
       </xsl:for-each>
 
-      <xsl:for-each select="entry[country/@role != 'primary' and
+      <xsl:for-each select="mirrors/entry[country/@role != 'primary' and
 	                    (url[contains(@proto, $proto)] or host[contains(@proto, $proto)])]">
         <xsl:sort select="country" />
 
@@ -180,5 +196,15 @@
 	</xsl:for-each>
       </itemizedlist>
     </listitem>
+  </xsl:template>
+
+  <!-- template: "mirrors-lastmodified-utc" -->
+
+  <xsl:template name="mirrors-lastmodified-utc">
+    <xsl:param name="basestr" select="substring-after(substring-after($date, ',v '), ' ')" />
+    <xsl:param name="datestr" select="substring-before($basestr, ' ')" />
+    <xsl:param name="timestr" select="substring-before(substring-after($basestr, ' '), ' ')" />
+
+    <xsl:value-of select="concat($datestr, ' ', $timestr, ' UTC')" />
   </xsl:template>
 </xsl:stylesheet>
