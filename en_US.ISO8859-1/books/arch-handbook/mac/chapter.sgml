@@ -247,7 +247,7 @@
     </sect2>
 
     <sect2 id="mac-framework-kernel-arch-synchronization">
-      <title>Concurrency and Synchronization</title>
+      <title>Policy List Concurrency and Synchronization</title>
 
       <para>As the set of active policies may change at run-time,
 	and the invocation of entry points is non-atomic,
@@ -262,7 +262,10 @@
 	threads attempting to modify the policy list will sleep
 	until the list is not busy.  The busy count is protected
 	by a mutex, and a condition variable is used to wake up
-	sleepers waiting on policy list modifications.</para>
+	sleepers waiting on policy list modifications.  One
+	side effect of this synchronization model is that
+	recursion into the MAC Framework from within a policy
+	module is permitted, although not generally used.</para>
 
       <para>Various optimizations are used to reduce the overhead
 	of the busy count, including avoiding the full cost of
@@ -274,12 +277,62 @@
 	eliminates the mutex locking costs associated with
 	supporting dynamically loaded and unloaded policies.</para>
 
-      <para>As the MAC Framework is not premitted to block in all
+      <para>As the MAC Framework is not permitted to block in all
 	entry points, a normal sleep lock cannot be used; as a
 	result, it is possible for the load or unload attempt to
 	block for a substantial period of time waiting for the
 	framework to become idle.</para>
     </sect2>
+
+    <sect2 id="mac-framework-kernel-arch-label-synchronization">
+      <title>Label Synchronization</title>
+
+      <para>As many kernel objects of interest may be accessed from
+	more than one thread at a time, and parallel entry into
+	the MAC Framework is permitted, security attribute storage
+	maintained by the MAC Framework is carefully synchronized.
+	In general, existing kernel synchronization on kernel
+	object data is used to protect MAC Framework security labels
+	on the object: for example, MAC labels on sockets are
+	protected using the existing socket mutex.  Likewise,
+	semantics for concurrent access are generally identical to
+	those of the container objects: for credentials, copy-on-write
+	semantics are maintained for label contents as with the
+	remainder of the credential structure.  The MAC Framework
+	asserts necessary locks on objects when invoked with an
+	object reference.  Policy authors must be aware of these
+	synchronization semantics, as they will sometimes limit the
+	types of accesses permitted on labels: for example, when
+	a read-only reference to a credential is passed to a policy
+	via an entry point, only read operations are permitted on
+	the label state attached to the credential.</para>
+    </sect2>
+
+    <sect2 id="mac-framework-kernel-arch-policy-synchronization">
+      <title>Policy Synchronization and Concurrency</title>
+
+      <para>Policy modules must be written to assume that many
+	kernel threads may simultaneously enter one more more
+	policy entry points due to the parallel and preemption
+	nature of the FreeBSD kernel.  If the policy module makes
+	use of mutable state, this may require the use of
+	synchronization primitives within the policy to prevent
+	inconsistent views on that state resulting in incorrect
+	operation of the policy.  Policies will generally be
+	able to make use of existing FreeBSD synchronization
+	primitives for this purpose, including mutexes, sleep
+	locks, condition variables, and counting semaphores.
+	However, policies should be written to employ these
+	primitives carefully, respecting existing kernel lock
+	orders, and recognizing that some entry points are not
+	permitted to sleep, limiting the use of primitives in
+	those entry points to mutexes and wakeup operations.</para>
+
+      <para>When policy modules call out to other kernel subsytems,
+	they will generally need to release any in-policy locks in
+	order to avoid violating the kernel lock order or risking
+	lock recursion.  This will maintain policy locks as leaf
+	locks in the global lock order.</para>
 
     <sect2 id="mac-framework-kernel-arch-registration">
       <title>Policy Registration</title>
@@ -419,7 +472,9 @@
 	as needed.</para>
 
       <note><para>Currently, if a labeled policy permits dynamic
-	unloading, its state slot cannot be reclaimed.</para></note>
+	unloading, its state slot cannot be reclaimed, which places
+	a strict (and relatively low) bound on the number of
+	unload-reload operations for labeled policies.</para></note>
     </sect2>
 
     <sect2 id="mac-framework-kernel-arch-syscalls">
@@ -629,10 +684,7 @@
 	policies to be unaware of the internals of the object yet
 	still make decisions based on the label. The exception to this
 	is the process credential, which is assumed to be understood
-	by policies as a first class security object in the kernel.
-	Policies that do not implement labels on kernel objects will
-	be passed NULL pointers for label arguments to entry
-	points.</para>
+	by policies as a first class security object in the kernel.</para>
     </sect2>
   </sect1>
 
