@@ -21,7 +21,8 @@
 #           (c) 1998-1999 Henner Zeller
 #           (c) 1999      Henrik Nordstrom
 #           (c) 2000-2002 Akinori MUSHA
-#           (c) 2002      Ville Skyttä‹# All rights reserved.
+#           (c) 2002      Ville Skyttä
+# All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -45,9 +46,9 @@
 # SUCH DAMAGE.
 #
 #  FreeBSD: projects/cvsweb/cvsweb.cgi,v 1.119 2002/07/23 13:58:32 scop Exp
-# $Id: cvsweb.cgi,v 1.85 2002-07-23 16:27:04 scop Exp $
+# $Id: cvsweb.cgi,v 1.86 2002-09-26 22:18:25 scop Exp $
 # $Idaemons: /home/cvs/cvsweb/cvsweb.cgi,v 1.84 2001/10/07 20:50:10 knu Exp $
-# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.84 2002/07/07 04:46:06 knu Exp $
+# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.1.1.34 2002/09/26 22:09:02 scop Exp $
 #
 ###
 
@@ -236,7 +237,7 @@ $LOG_REVSEPARATOR  = q/^-{28}$/;
 );
 
 $cgi_style::hsty_base = 'http://www.FreeBSD.org';
-$_ = q$FreeBSD: www/en/cgi/cvsweb.cgi,v 1.84 2002/07/07 04:46:06 knu Exp $;
+$_ = q$FreeBSD: www/en/cgi/cvsweb.cgi,v 1.1.1.34 2002/09/26 22:09:02 scop Exp $;
 @_ = split;
 $cgi_style::hsty_date = "@_[3,4]";
 
