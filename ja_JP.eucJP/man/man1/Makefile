@@ -278,7 +278,6 @@ MAN1 =	a2p.1\
 	soelim.1\
 	sort.1\
 	split.1\
-	spppcontrol.1\
 	startslip.1\
 	strings.1\
 	strip.1\
