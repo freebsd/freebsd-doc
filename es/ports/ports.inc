@@ -1,7 +1,12 @@
-<!-- $Id: ports.inc,v 1.3 1999-03-17 19:20:50 jesusr Exp $ -->
+<!-- $Id: ports.inc,v 1.4 1999-03-28 18:19:05 jesusr Exp $ -->
 <p>La colecci&oacute;n de Ports y Packages de FreeBSD ofrece una manera
 sencilla de instalci&oacute;n de aplicaciones para los usuarios y
-administradores. Cada "port" listado aqu&iacute; contiene los parches
+administradores. La colecci&oacute;n de ports ha estado creciendo en los
+&uacute;ltimos tiempos a un <a
+href="http://www.freebsd.org/%7Easami/papers/growth.gif"> ritmo
+increible</a>.
+
+<p>Cada "port" listado aqu&iacute; contiene los parches
 necesarios para hacer que la aplicaci&oacute;n original compile y
 se ejecute en FreeBSD. Instalar una aplicaci&oacute;n es t&aacute;n
 sencillo como obtener el ports, descomprimirlo y teclear <tt>make</tt>
