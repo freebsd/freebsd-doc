@@ -23,27 +23,30 @@ DOC_PREFIX?=	${WEB_PREFIX}/../doc
 DOC_PREFIX_NAME?=	doc
 WWW_PREFIX_NAME?=	www
 
-.if !defined(LANGCODE) || empty(LANGCODE)
-# Calculate LANGCODE.  Are we in doc/?
+.if !defined(LANGCODE) || empty(LANGCODE) || !defined(WWW_LANGCODE) || empty(WWW_LANGCODE)
+# Calculate LANGCODE.
 LANGCODE:=	${.CURDIR}
 .for _ in 1 2 3 4 5 6 7 8 9 10
-.if !(${LANGCODE:H:T} == ${DOC_PREFIX_NAME})
+.if !(${LANGCODE:H:T} == ${DOC_PREFIX_NAME}) && !(${LANGCODE:H:T} == ${WWW_PREFIX_NAME})
 LANGCODE:=	${LANGCODE:H}
 .endif
 .endfor
+.if (${LANGCODE:H:T} == ${DOC_PREFIX_NAME})
+# We are in doc/.
 LANGCODE:=	${LANGCODE:T}
-.if (${LANGCODE} == .)
-# Recalculate LANGCODE.  We are in www/.
-LANGCODE:=	${.CURDIR}
-.for _ in 1 2 3 4 5 6 7 8 9 10
-.if !(${LANGCODE:H:T} == ${WWW_PREFIX_NAME})
-LANGCODE:=	${LANGCODE:H}
-.endif
-.endfor
-# We have a short name such as `en' now.
-# Recalculate from doc/.
+WWW_LANGCODE:=	.
+.else
+# We are in www/.
 WWW_LANGCODE:=	${LANGCODE:T}
-LANGCODE:=	${LANGCODE:T}
+LANGCODE:=	.
+.endif
+.endif
+
+# fixup LANGCODE
+.if (${LANGCODE} == .)
+# We have a short name such as `en' in ${WWW_LANGCODE} now.
+# Guess LANGCODE using WWW_LANGCODE.
+LANGCODE:=	${WWW_LANGCODE}
 .if (${LANGCODE} != .)
 LANGCODE!=	${ECHO} ${DOC_PREFIX}/${WWW_LANGCODE}*
 .for _ in 1 2 3 4 5 6 7 8 9 10
@@ -54,10 +57,11 @@ LANGCODE:=	${LANGCODE:H}
 LANGCODE:=	${LANGCODE:T}
 .endif
 .endif
-.endif
 
-# If we are in doc/, guess WWW_LANGCODE using LANGCODE.
-.if !defined(WWW_LANGCODE) || empty(WWW_LANGCODE)
+# fixup WWW_LANGCODE
+.if (${WWW_LANGCODE} == .)
+# We have a long name such as `en_US.ISO8859-1' in ${LANGCODE} now.
+# Guess WWW_LANGCODE using LANGCODE.
 WWW_LANGCODE!=	${ECHO} ${WEB_PREFIX}/*
 WWW2_LANGCODE!=	${ECHO} ${WWW_LANGCODE:T} |\
 		${SED} -e 's,.*\(${LANGCODE:R:C,(..)_.*,\1,}[^. ]*\).*,\1,'
@@ -74,9 +78,7 @@ WWW_LANGCODE:= ${WWW2_LANGCODE}
 # advisories.xml dependency.
 #
 
-#XML_ADVISORIES=		${WEB_PREFIX}/share/sgml/advisories.xml
-# use www/en version temporarily
-XML_ADVISORIES=		${WEB_PREFIX}/en/security/advisories.xml
+XML_ADVISORIES=		${WEB_PREFIX}/share/sgml/advisories.xml
 
 # ------------------------------------------------------------------------
 #
