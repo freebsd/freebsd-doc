@@ -25,6 +25,7 @@ IMAGES= sockets/layers.eps sockets/sain.eps sockets/sainfill.eps sockets/sainlsb
 
 # SGML content
 SRCS=  book.sgml
+SRCS+= boot/chapter.sgml
 SRCS+= dma/chapter.sgml
 SRCS+= driverbasics/chapter.sgml
 SRCS+= introduction/chapter.sgml
