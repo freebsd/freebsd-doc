@@ -1,5 +1,5 @@
 # 
-# $FreeBSD: doc/en_US.ISO8859-1/books/handbook/Makefile,v 1.43 2001/08/14 07:37:03 rpratt Exp $
+# $FreeBSD: doc/en_US.ISO8859-1/books/handbook/Makefile,v 1.44 2001/08/16 05:19:51 dd Exp $
 #
 # Build the FreeBSD Handbook.
 #
@@ -84,6 +84,7 @@ IMAGES+= install/adduser1.scr
 IMAGES+= install/adduser2.scr
 IMAGES+= install/adduser3.scr
 IMAGES+= install/mainexit.scr
+IMAGES+= install/disk-layout.eps
 
 # 
 # SRCS lists the individual SGML files that make up the document. Changes
