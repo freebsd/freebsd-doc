@@ -4,13 +4,14 @@ MAN5 =	a.out.5 acct.5 aliases.5 amd.conf.5 ar.5 auth.conf.5\
 	dm.conf.5 editrc.5 ethers.5 exports.5 fbtab.5 fdesc.5\
 	forward.5 fs.5 fstab.5 gettytab.5 groff_font.5 groff_out.5\
 	group.5 hosts.5 hosts.equiv.5 hosts.lpd.5 ipf.5 ipnat.5 ipsend.5\
-	intro.5 kernfs.5\
+	intro.5 isdnd.acct.5 isdnd.rates.5 isdnd.rc.5 kernfs.5\
 	keycap.5 link.5 login.access.5 login.conf.5 magic.5 map3270.5\
 	modems.5 motd.5 netgroup.5 networks.5 nologin.5 opieaccess.5\
 	opiekeys.5 passwd.5 pbm.5 pccard.conf.5 phones.5 printcap.5\
-	procfs.5 protocols.5 publickey.5 pw.conf.5 ranlib.5 rc.conf.5 rcsfile.5\
+	procfs.5 protocols.5 publickey.5 pw.conf.5\
+	radius.conf.5 ranlib.5 rc.conf.5 rcsfile.5\
 	remote.5 resolver.5 rpc.5 services.5 shells.5 skey.access.5\
-	stab.5 syslog.conf.5 term.5 termcap.5 ttys.5\
+	stab.5 syslog.conf.5 tacplus.conf.5 term.5 termcap.5 ttys.5\
 	types.5 tzfile.5 utmp.5 uuencode.format.5 vgrindefs.5\
 
 MLINKS+=utmp.5 lastlog.5 utmp.5 wtmp.5

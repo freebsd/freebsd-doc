@@ -1,6 +1,7 @@
 MAN1 =	a2p.1\
 	addftinfo.1\
 	addr2line.1\
+	alaw2ulaw.1\
 	apply.1\
 	apropos.1\
 	ar.1\
@@ -68,6 +69,7 @@ MAN1 =	a2p.1\
 	echo.1\
 	ed.1\
 	ee.1\
+	enigma.1\
 	eqn.1\
 	error.1\
 	expand.1\
@@ -210,6 +212,7 @@ MAN1 =	a2p.1\
 	nroff.1\
 	objcopy.1\
 	objdump.1\
+	objformat.1\
 	od.1\
 	opieinfo.1\
 	opiekey.1\
@@ -310,6 +313,7 @@ MAN1 =	a2p.1\
 	tsort.1\
 	tty.1\
 	ul.1\
+	ulaw2alaw.1\
 	uname.1\
 	unifdef.1\
 	uniq.1\
