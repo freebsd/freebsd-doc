@@ -1,8 +1,8 @@
-# $FreeBSD: doc/ja_JP.eucJP/articles/Makefile,v 1.3 2000/08/28 21:35:36 hrs Exp $
+# $FreeBSD: doc/ja_JP.eucJP/articles/Makefile,v 1.4 2001/03/07 19:38:40 hrs Exp $
 # Original revision: 1.9
 
 #SUBDIR = committers-guide
-#SUBDIR+= dialup-firewall
+SUBDIR = dialup-firewall
 SUBDIR+= diskless-x
 #SUBDIR+= freebsd-questions
 #SUBDIR+= fonts
