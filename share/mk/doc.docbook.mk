@@ -686,17 +686,19 @@ install-${_curformat}: ${DOC}.${_curformat}
 # directory seperator, make the subdirectories, and install.  Then loop over
 # the ones that don't contain a directory separator, and install them in the
 # top level.
+# en_US.ISO8859-1 is replaced with the LANGCODE to allow installation of
+# images built in en_US.ISO8859-1/ directory
 .for _curimage in ${IMAGES_PNG:M*/*}
-	${MKDIR} -p ${DESTDIR}/${_curimage:H}
-	${INSTALL_DOCS} ${_curimage} ${DESTDIR}/${_curimage:H}
+	${MKDIR} -p ${DESTDIR}/${_curimage:H:S|${CURDIR}||:S|en_US.ISO8859-1|${LANGCODE}|}
+	${INSTALL_DOCS} ${_curimage} ${DESTDIR}/${_curimage:H:S|${CURDIR}||:S|en_US.ISO8859-1|${LANGCODE}|}
 .endfor
 .for _curimage in ${IMAGES_PNG:N*/*}
 	${INSTALL_DOCS} ${_curimage} ${DESTDIR}
 .endfor
 .elif ${_cf} == "tex" || ${_cf} == "dvi"
 .for _curimage in ${IMAGES_EPS:M*/*}
-	${MKDIR} -p ${DESTDIR}/${_curimage:H}
-	${INSTALL_DOCS} ${_curimage} ${DESTDIR}/${_curimage:H}
+	${MKDIR} -p ${DESTDIR}/${_curimage:H:S|${CURDIR}||:S|en_US.ISO8859-1|${LANGCODE}|}
+	${INSTALL_DOCS} ${_curimage} ${DESTDIR}/${_curimage:H:S|${CURDIR}||:S|en_US.ISO8859-1|${LANGCODE}|}
 .endfor
 .for _curimage in ${IMAGES_EPS:N*/*}
 	${INSTALL_DOCS} ${_curimage} ${DESTDIR}
