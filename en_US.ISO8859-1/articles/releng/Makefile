@@ -16,6 +16,8 @@ SRCS=  article.sgml branches.ascii
 # IMAGES
 IMAGES= branches.pic
 
+CSS_SHEET_ADDITIONS= extra.css
+
 DOC_PREFIX?= ${.CURDIR}/../../..
 
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"
