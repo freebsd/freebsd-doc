@@ -237,7 +237,11 @@ sub docdone {
     } else {
         $headline = &htmlescape($headline);
         $headline =~ s/\\"/\"/g;
-        print "<li><A HREF=\"${myurl}?$ENV{'QUERY_STRING'}&docnum=$hits\">$headline</A>\n";
+        if ($file eq "www") {
+            print "<li><a href=\"$headline\">$headline</a>\n";
+        } else {
+            print "<li><A HREF=\"${myurl}?$ENV{'QUERY_STRING'}&docnum=$hits\">$headline</A>\n";
+        }
         print "<br>";
 #	print "<input type=\"checkbox\" name=\"rf\" value=\"$docnum\">";
 	print "Score: <em>$score</em>; ";
