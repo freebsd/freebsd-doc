@@ -1,5 +1,5 @@
 # bsd.web.mk
-# $FreeBSD: www/share/mk/web.site.mk,v 1.50 2004/01/12 21:27:00 hrs Exp $
+# $FreeBSD: www/share/mk/web.site.mk,v 1.51 2004/02/01 00:02:58 josef Exp $
 
 #
 # Build and install a web site.
@@ -111,7 +111,7 @@ XML_NEWS_PRESS=			${WEB_PREFIX}/${WWW_LANGCODE}/news/press.xml
 XML_NEWS_INCLUDES_MASTER=	${WEB_PREFIX}/en/news/includes.xsl
 XML_NEWS_INCLUDES=		${WEB_PREFIX}/${WWW_LANGCODE}/news/includes.xsl
 
-XML_NAVIGATION=			${WEB_PREFIX}/en/navigation.xml
+XML_NAVIGATION=			${WEB_PREFIX}/${WWW_LANGCODE}/navigation.xml
 
 XML_INCLUDES=	${WEB_PREFIX}/${WWW_LANGCODE}/includes.xsl
 XML_INCLUDES+=	${WEB_PREFIX}/share/sgml/includes.header.xsl
