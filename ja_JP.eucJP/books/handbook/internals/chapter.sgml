@@ -2,20 +2,638 @@
      The FreeBSD Documentation Project
      The FreeBSD Japanese Documentation Project
 
-     Original revision: 1.15
-     $FreeBSD: doc/ja_JP.eucJP/books/handbook/internals/chapter.sgml,v 1.6 1999/11/13 15:34:55 kuriyama Exp $
+     Original revision: 1.16
+     $FreeBSD: doc/ja_JP.eucJP/books/handbook/internals/chapter.sgml,v 1.7 2000/01/11 08:41:59 motoyuki Exp $
 -->
 
 <chapter id="internals">
   <title>FreeBSD の内部</title>
-
+  
   <sect1 id="booting">
     <title>FreeBSDのブート処理の流れ</title>
 
-    <para>FreeBSD のブート処理の流れはマニュアルページの
-       &man.boot.8; と &man.loader.8; に記述されています.</para>
-  </sect1>
+    <sect2 id="boot-intro">
+      <title>はじめに</title>
+  
+      <para>
+        <firstterm>ブートストラップ(bootstrap)</firstterm> とは,
+        コンピュータがデバイスのプローブと初期化および,
+        どのプログラムを実行させるべきであるかを判断する一連の処理のことです.
+      </para>
 
+      <para>
+        これはシステムの動作を決定する特殊な ROM チップを利用して実現され,
+        通常, システムの一慣性とメモリの検査, デバイスの設定,
+        どのような設定がなされたかをプログラムに伝える機構の提供などをを行なう
+        他のチップに処理が渡されます.
+      </para>
+
+      <para>
+        通常のパーソナルコンピュータの場合,
+        ブートストラップの監視をする
+        BIOS と, 設定を保持する CMOS が利用されます.
+        これらはディスクを扱う事ができ,
+        オペレーティングシステムを起動するプログラムが,
+        ディスクのどこにあるかを認識しています.
+      </para>
+
+      <para>
+        この章はブートストラップの第一段階については触れず,
+        ディスク上のプログラムへ制御が移された後に何が起こるのかについて注目します.
+      </para>
+    </sect2>
+
+    <sect2 id="boot-overview">
+      <title>ブートプロセスの概要</title>
+
+      <para>
+        FreeBSD はデフォルトで三段階のブートストラップを行ないます. 
+        基本的に順に互いを呼び出す三つのプログラム(二つの
+        <link linkend="boot-blocks">ブートブロック</link>と
+        <link linkend="boot-loader">ローダ</link>)を必要とします.
+        これらは前のプログラムを土台にしており,
+        より高い洗練性を提供します.
+      </para>
+
+      <para>
+        そして, 利用するデバイスの検出され,
+        初期化の間にカーネルが起動されます.
+        カーネルのブートプロセスが終ると,
+        制御はユーザープロセスの init へ移されます.
+        ディスクが利用可能であることを確かめると,
+        ファイルシステムのマウント,
+        ネットワークで利用するネットワークカードのセットアップ,
+        そして一般的な FreeBSD
+        システムで初期時に起動される,
+        すべてのプロセスの起動といったユーザーレベルでのリソース設定を行ないます.
+      </para>
+    </sect2>
+
+    <sect2 id="boot-blocks">
+      <title>ブートブロック: ブートストラップステージ 1 と 2</title>
+
+      <para>
+        ブートブロックは(通常)ローダを見つけ,
+        実行する役割を持っています.
+        したがって, ファイルシステム上のプログラムを見つけ, 実行し, 
+        その動作に関して多少の設定が可能である必要があります.
+      </para>
+
+      <sect3 id="boot-boot0">
+	<title>boot0</title>
+	
+	<para>
+          実際には boot0 と呼ばれるブートブロックが先行しており,
+          <firstterm>マスターブートレコード(MBR; Master Boot
+            Record)</firstterm>にあります. これは, 
+          システムのブートストラップが起動時に探して実行するディスクの特殊な部分で,
+          単にブートできる可能性のあるスライスのリストを表示します.
+        </para>
+
+	<para>
+          <abbrev>MBR</abbrev>
+          に置くプログラムは 512 バイト以上にできないことから
+          boot0 はとても単純です.
+        </para>
+
+	<para>
+          こんな感じの出力をします.
+        </para>
+
+	<example id="boot-boot0-example">
+	  <title>boot0のスクリーンショット</title>
+          
+	  <screen>
+F1 DOS
+F2 FreeBSD
+F3 Linux
+F4 ??
+F5 Drive 1
+
+Default: F2</screen>
+	</example>
+      </sect3>
+
+      <sect3 id="boot-boot1">
+	<title>boot1</title>
+
+	<para>
+          boot1 はブートスライスのブートセクタにあります.
+          ブートセクタには <link linkend="boot-boot0">boot0</link> があり,
+          <abbrev>MBR</abbrev> にある他のすべてのプログラムが,
+          ブートプロセスを続けるために必要なプログラムを探し,
+          実行するための部分となっています.
+        </para>
+
+	<para>
+          boot1 も同様に 512 バイト以上にできないことから,
+          とても単純で,
+          <link linkend="boot-boot2">boot2</link> を見つけ,
+          実行するための情報を保持する FreeBSD の
+          <firstterm>disklabel</firstterm>
+          について最低限のことを認識しているに過ぎません.
+        </para>
+      </sect3>
+    
+      <sect3 id="boot-boot2">
+	<title>boot2</title>
+
+	<para>
+          boot2 はもう少し精巧で,
+          FreeBSDのファイルシステム上でファイルを見つけるのに十分な能力を持ち,
+          カーネルかローダを指定するための簡単なインターフェイスを提供する事ができます.
+        </para>
+
+	<para>
+          <link linkend="boot-loader">ローダ</link>ははるかに高機能あり,
+          簡易的なブート設定の手段を提供するため,
+          boot2 は通常それを起動します.
+          しかし, 以前はカーネルを直接起動することを要求されていました.
+        </para>
+
+	<example id="boot-boot2-example">
+	  <title>boot2のスクリーンショット</title>
+
+	  <screen>>> FreeBSD/i386 BOOT
+Default: 0:wd(0,a)/kernel
+boot:</screen>
+	</example>
+      </sect3>
+    </sect2>
+ 
+    <sect2 id="boot-loader">
+      <title>ローダ: ブートストラップステージ 3</title>
+
+      <para>
+        ローダは三段階ブートストラップの最終段階で,
+        通常, ファイルシステム上に <filename>/boot/loader</filename>
+        として存在します.
+      </para>
+	
+      <note>
+	<para>
+          <filename>/boot/boot0</filename>,
+	  <filename>/boot/boot1</filename>, 
+	  <filename>/boot/boot2</filename> とがありますが,
+          これらは実際に <abbrev>MBR</abbrev>,
+          ブートセクタ,
+          あるいはディスクラベルにあるものとは異なります.
+        </para>
+      </note>
+
+      <para>
+        ローダは,
+        より複雑なコマンド群を持つ強力なインタープリタを使った
+        簡易組み込みコマンド群を利用することで,
+        ユーザフレンドリな設定の手段となるように設計されています.
+      </para>
+
+      <sect3 id="boot-loader-flow">
+	<title>ローダプログラムの流れ</title>
+	
+	<para>
+          初期化の際,
+          ローダはコンソールとディスクの検出を行ない,
+          どのディスクからブートしているかを調べます.
+          そしてしかるべき変数を設定してからインタープリタを起動し,
+          簡易コマンドを解釈します.
+        </para>
+
+	<para>
+          ローダは次に
+          <filename>/boot/loader.rc</filename>
+          を読み込みます. デフォルトで
+          <filename>/boot/defaults/loader.conf</filename>
+          を読み込むことで適当な初期値を変数に与え,
+          ローカルな変数値設定のために
+          <filename>/boot/loader.conf</filename>
+          を読み込みます.
+          <filename>loader.rc</filename>
+          はそれらの変数に従い適当なモジュールをロードしカーネルを選択します.
+        </para>
+
+	<para>
+          最後に, デフォルトではローダは 10 秒のキー入力待ち時間を用意し,
+          入力がなければカーネルを起動します.
+          入力があった場合,
+          ユーザには先に述べた簡易コマンドが使えるプロンプトが出されます.
+          そこでユーザは変数を調整したり,
+          すべてのモジュールをアンロードしたり,
+          モジュールをロードしたりすることができ,
+          それから最終的にブートやリブートへ移ります.
+        </para>
+
+	<para>
+          この処理に関するより技術的な説明は
+          &man.loader.8; にあります.
+        </para>
+      </sect3>
+
+      <sect3 id="boot-loader-commands">
+	<title>ローダの組み込みコマンド</title>
+	
+	<para>簡易コマンドセットの構成は, 次のようになっています.</para>
+
+	<variablelist>
+	  <varlistentry>
+	    <term>autoboot <replaceable>seconds</replaceable></term>
+
+	    <listitem>
+	      <para>
+                <replaceable>seconds</replaceable>
+                で与えられた時間内に入力がなければ,
+                カーネルのブートへと進みます.
+                カウントダウンを表示し, デフォルトは 10 秒間です.
+              </para>
+	    </listitem>
+	  </varlistentry>
+
+	  <varlistentry>
+	    <term>boot
+	      <optional><replaceable>-options</replaceable></optional>
+	      <optional><replaceable>kernelname</replaceable></optional></term>
+
+	    <listitem>
+	      <para>
+                即座にカーネルのブートへと進みます.
+                もし指定されていれば,
+                与えられたオプションとカーネルの名前を使います.
+              </para>
+	    </listitem>
+	  </varlistentry>
+
+	  <varlistentry>
+	    <term>help
+	      <optional><replaceable>topic</replaceable></optional></term>
+
+	    <listitem>
+	      <para>
+                <filename>/boot/loader.help</filename>
+                から読み込まれたヘルプメセッジを表示します.
+                与えられた <replaceable>topic</replaceable> が
+                <literal>index</literal> ならば,
+                有効な
+                <replaceable>topic</replaceable>
+                を表示します.
+              </para>
+	    </listitem>
+	  </varlistentry>
+
+	  <varlistentry>
+	    <term>include <replaceable>filename</replaceable>
+	      &hellip;</term>
+
+	    <listitem>
+	      <para>
+                与えられたファイル名のファイルを処理します.
+                ファイルは読み込まれ, 行単位で解釈されます.
+                エラーは即座に include コマンドの実行を停止します.
+              </para>
+	    </listitem>
+	  </varlistentry>
+
+	  <varlistentry>
+	    <term>load <optional><option>-t</option>
+	      <replaceable>type</replaceable></optional>
+	      <replaceable>filename</replaceable></term>
+
+	    <listitem>
+	      <para>
+                与えられたファイル名のカーネル, カーネルモジュール, 
+                あるいは指定されたtypeのファイルをロードします.
+                ファイル名以降の引数はファイルへと渡されます.
+              </para>
+	    </listitem>
+	  </varlistentry>
+	  <varlistentry>
+	    <term>ls <optional><option>-l</option></optional>
+	      <optional><replaceable>path</replaceable></optional></term>
+
+	    <listitem>
+	      <para>
+                与えられた <replaceable>path</replaceable> にあるファイル,
+                あるいは <replaceable>path</replaceable>
+                が指定されていなければルートディレクトリを表示します.
+                <option>-l</option>
+                が指定されていればファイルサイズも表示されます.
+              </para>
+	    </listitem>
+	  </varlistentry>
+	  <varlistentry>
+	    <term>lsdev <optional><option>-v</option></optional></term>
+
+	    <listitem>
+	      <para>
+                モジュールをロード可能なデバイスをすべて表示します.
+                もし <option>-v</option> が指定されていれば,
+                より詳細な出力がされます.
+              </para>
+	    </listitem>
+	  </varlistentry>
+
+	  <varlistentry>
+	    <term>lsmod <optional><option>-v</option></optional></term>
+
+	    <listitem>
+	      <para>
+                ロードされたモジュールを表示します. もし
+                <option>-v</option> が指定されていれば,
+                より詳細な内容が出力されます.
+              </para>
+	    </listitem>
+	  </varlistentry>
+
+	  <varlistentry>
+	    <term>more <replaceable>filename</replaceable></term>
+
+	    <listitem>
+	      <para>
+                <varname>LINES</varname>
+                毎に停止しながら指定されたファイルを表示します.
+              </para>
+	    </listitem>
+	  </varlistentry>
+
+	  <varlistentry>
+	    <term>reboot</term>
+
+	    <listitem>
+	      <para>即座にシステムをリブートします. </para>
+	    </listitem>
+	  </varlistentry>
+
+	  <varlistentry>
+	    <term>set <replaceable>variable</replaceable></term>
+	    <term>set
+	      <replaceable>variable</replaceable>=<replaceable>value</replaceable></term>
+
+	    <listitem>
+	      <para>ローダの環境変数を設定します. </para>
+	    </listitem>
+	  </varlistentry>
+	</variablelist>
+      </sect3>
+
+      <sect3 id="boot-loader-examples">
+	<title>ローダの例</title>
+        
+	<para>
+          ローダのいくつかの実践的な使用例です.
+        </para>
+        
+	<itemizedlist>
+	  <listitem>
+	    <para>
+              通常のカーネルをシングルユーザモードでブートします.
+            </para>
+
+	    <screen><userinput>boot -s</userinput></screen>
+	  </listitem>
+
+	  <listitem>
+	    <para>
+              通常のカーネルとモジュールをアンロードし,
+              古い(もしくは別の)カーネルをロードします.
+            </para>
+
+	    <screen><userinput>unload</userinput>
+<userinput>load kernel.old</userinput></screen>
+            
+	    <para>
+              インストールディスクに入っていた
+              generic カーネルを参照するためには
+              <filename>kernel.GENERIC</filename>,
+              あるいは直前にインストールされていたカーネル(例えば,
+              カーネルを自分で設定したり,
+              アップグレードしたりして)を参照するには
+              <filename>kernel.old</filename>
+              が使えます.
+            </para>
+	  </listitem>
+
+	  <listitem>
+	    <para>
+              カーネルの設定スクリプト(通常,
+              カーネルブート時に設定される内容を自動化するスクリプト)をロードします.
+	    </para>
+
+	    <screen><userinput>load -t userconfig_script
+                <replaceable>/boot/kernel.conf</replaceable></userinput></screen>
+	  </listitem>
+	</itemizedlist>
+      </sect3>
+    </sect2>
+
+    <sect2 id="boot-kernel">
+      <title>ブート時のカーネルとの応答</title>
+      
+      <para>
+        カーネルは<link linkend="boot-loader">ローダ</link>(通常は)
+        か<link linkend="boot-boot2">boot2</link>
+        (ローダを迂回して)によってロードされるとブートフラグを調べ,
+        もしあればそれに応じて動作を調整します.
+      </para>
+
+      <sect3 id="boot-kernel-bootflags">
+	<title>カーネルブートフラグ</title>
+
+	<para>良く使われるブートフラグです.</para>
+
+	<variablelist id="boot-kernel-bootflags-list">
+	  <varlistentry>
+	    <term><option>-a</option></term>
+
+	    <listitem>
+	      <para>
+                カーネル初期化中,
+                ルートファイルシステムとしてマウントするデバイスを尋ねます.
+              </para>
+	    </listitem>
+	  </varlistentry>
+
+	  <varlistentry>
+	    <term><option>-C</option></term>
+
+	    <listitem>
+	      <para>CDROM からブートします. </para>
+	    </listitem>
+	  </varlistentry>
+
+	  <varlistentry>
+	    <term><option>-c</option></term>
+
+	    <listitem>
+	      <para>
+                ブート時のカーネルコンフィグレーションを行なう
+                UserConfig を実行します.
+              </para>
+	    </listitem>
+	  </varlistentry>
+
+	  <varlistentry>
+	    <term><option>-s</option></term>
+
+	    <listitem>
+	      <para>シングルユーザモードでブートします. </para>
+	    </listitem>
+	  </varlistentry>
+
+	  <varlistentry>
+	    <term><option>-v</option></term>
+
+	    <listitem>
+	      <para>カーネル起動時に, より詳細な情報を表示します.</para>
+	    </listitem>
+	  </varlistentry>
+	</variablelist>
+
+	<note>
+	  <para>ブートフラグはこの他にもあり, それらについては 
+            &man.boot.8;をお読みください.
+          </para>
+	</note>
+      </sect3>
+
+  <!--    <sect3 id="boot-kernel-userconfig">
+	<title>UserConfig: ブート時のカーネルコンフィギュレータ</title>
+	
+	<para> </para>
+      </sect3> -->
+    </sect2>
+  
+    <sect2 id="boot-init">
+      <title>Init: プロセスコントロールの初期化</title>
+	  
+      <para>
+        カーネルがブートされると, 制御はユーザプロセスである
+        <command>init</command>へ移されます. これは,
+        <filename>/sbin/init</filename>, もしくは
+        <command>loader</command> の
+        <envar>init_path</envar> 変数で指定される場所にあります.
+      </para>
+
+      <sect3 id="boot-autoreboot">
+	<title>自動リブート動作の流れ</title>
+	
+	<para>
+          自動リブート動作では,
+          システム上で利用できるファイルシステムの一慣性を確認します.
+          もし問題があり,
+          <command>fsck</command> がその不一致を修復できなければ,
+          <command>init</command>
+          は管理者に直接に処置させるため,
+          システムを<link linkend="boot-singleuser">シングルユーザモード</link>へと移行させます.
+        </para>
+      </sect3>
+      
+      <sect3 id="boot-singleuser">
+	<title>シングルユーザモード</title>
+	
+	<para>
+          このモードには<link linkend="boot-autoreboot">一連の自動リブート動作</link>,
+          もしくはユーザが
+          <option>-s</option>
+          を指定してブートするか
+          <command>loader</command> で
+          <envar>boot_single</envar> 変数を設定することによって移行できます.
+        </para>
+
+	<para>
+          <link linkend="boot-multiuser">マルチユーザモード</link>から
+          <command>shutdown</command>をリブートオプション
+          (<option>-r</option>) や halt
+          オプション(<option>-h</option>)なしで呼び出すことでも移行できます.
+        </para>
+
+	<para>
+          <filename>/etc/ttys</filename>
+          でシステムコンソール
+          <literal>console</literal>
+          が
+          <literal>insecure</literal>
+          に設定されていれば,
+          システムはシングルユーザモードを始める前に
+          root
+          パスワードの入力を求めます.
+        </para>
+
+	<example id="boot-insecure-console">
+	  <title>/etc/ttys の insecure コンソール</title>
+
+	  <programlisting># name  getty                           type    status          comments
+#
+# This entry needed for asking password when init goes to single-user mode
+# If you want to be asked for password, change "secure" to "insecure" here
+#
+# 訳)
+# このエントリはinitがシングルユーザモードへ移行する際にパスワードを要
+# 求させるために必要です. もし, パスワードの要求を望むならば"secure"を
+# "insecure"へとここで変更してください. 
+console none                            unknown off insecure</programlisting>
+	</example>
+
+	<note>
+	  <para>
+            <literal>insecure</literal> コンソールとは,
+            コンソールが物理的に安全でないと見なされ,
+            root パスワードを知る人だけがシングルユーザモードを使えるようにするという意味であり, 
+            コンソールを安全でない状態で使いたいという意味ではありません. 
+            よって, 安全性を求めるならば
+            <literal>secure</literal> でなく
+            <literal>insecure</literal> を選んでください.
+          </para>
+	</note>
+      </sect3>
+      
+      <sect3 id="boot-multiuser">
+	<title>マルチユーザモード</title>
+	
+	<para>
+          <command>init</command>
+          がファイルシステムが正常であると判断するか,
+          ユーザが<link linkend="boot-singleuser">シングルユーザモード</link>を終了したならば,
+          システムはマルチユーザモードへ移行し,
+          リソースの設定を始めます.
+        </para>
+
+	<sect4 id="boot-rc">
+	  <title>リソース設定(rc)</title>
+          
+	  <para>
+            リソース設定システムはデフォルト設定を
+            <filename>/etc/defaults/rc.conf</filename> から,
+            システム独自の詳細を
+            <filename>/etc/rc.conf</filename> から読み込み,
+            <filename>/etc/fstab</filename>
+            に記述されるシステムファイルシステムのマウント,
+            ネットワークサービスの開始,
+            さまざまなシステムデーモンの開始,
+            そして最後にローカルにインストールされたパッケージの起動スクリプトの実行へと進みます.
+          </para>
+
+	  <para>
+            &man.rc.8; は,
+            スクリプトそのものについて調べることと同様に,
+            リソース設定システムの優れた参考資料です.
+          </para>
+	</sect4>
+      </sect3>
+    </sect2>
+
+    <sect2 id="boot-shutdown">
+      <title>シャットダウン動作の流れ</title>
+
+      <para>
+        <command>shutdown</command> からのシャットダウンでは,
+        <command>init</command> がスクリプト
+        <filename>/etc/rc.shutdown</filename> の実行を試みます.
+        そして, 全てのプロセスへ terminate シグナルを送り,
+        続いてうまく終了できなかったプロセスへ
+        kill シグナルを送ります.
+      </para>
+    </sect2>
+  </sect1>
+  
   <sect1 id="memoryuse">
     <title>PC におけるメモリの利用</title>
 
