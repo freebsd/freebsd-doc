@@ -68,15 +68,16 @@
 
   <xsl:template name="mirrors-docbook-country-index-all">
     <para>
-      <xsl:for-each select="mirrors/entry[country/@role = 'primary' and
-	                    host[@type = $type]]">
+      <xsl:for-each select="mirrors/entry[country/@role = 'primary'
+	                    and host[@type = $type]]">
 	<xsl:call-template name="mirrors-docbook-country-index">
 	  <xsl:with-param name="mirrors-docbook-country-index-without-period" select="'true'" />
 	</xsl:call-template>
       </xsl:for-each>
 
-      <xsl:for-each select="mirrors/entry[country/@role != 'primary' and
+      <xsl:for-each select="mirrors/entry[(not(country/@role) or country/@role != 'primary') and
 	                    host[@type = $type]]">
+	<xsl:sort select="country/@sortkey" data-type="number"/>
 	<xsl:sort select="country" />
 
 	<xsl:call-template name="mirrors-docbook-country-index">
@@ -109,8 +110,9 @@
 	<xsl:call-template name="mirrors-docbook-variablelist-entry" />
       </xsl:for-each>
 
-      <xsl:for-each select="mirrors/entry[country/@role != 'primary' and
+      <xsl:for-each select="mirrors/entry[(not(country/@role) or country/@role != 'primary') and
 	                    host[@type = $type]]">
+	<xsl:sort select="country/@sortkey" data-type="number"/>
 	<xsl:sort select="country" />
 
 	<xsl:call-template name="mirrors-docbook-variablelist-entry" />
@@ -194,9 +196,10 @@
 	<xsl:call-template name="mirrors-docbook-itemizedlist-listitem" />
       </xsl:for-each>
 
-      <xsl:for-each select="mirrors/entry[country/@role != 'primary' and
+      <xsl:for-each select="mirrors/entry[(not(country/@role) or country/@role != 'primary') and
 	                    host[@type = $type]]">
-        <xsl:sort select="country" />
+	<xsl:sort select="country/@sortkey" data-type="number"/>
+	<xsl:sort select="country" />
 
 	<xsl:call-template name="mirrors-docbook-itemizedlist-listitem" />
       </xsl:for-each>
