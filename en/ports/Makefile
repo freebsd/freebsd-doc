@@ -1,4 +1,4 @@
-#	$Id: Makefile,v 1.21 1999-04-08 21:50:03 nik Exp $
+#	$Id: Makefile,v 1.22 1999-04-21 11:44:37 asami Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -9,20 +9,17 @@ INDEX=		INDEX
 PINDEX=		ports/${INDEX}
 Y2K=		YEAR2000
 PY2K=		ports/${Y2K}
-WWW=		WWW_SITE
-PWWW=		ports/${WWW}
 
 COOKIE=		${INDEX} Makefile.gen
 
 .if exists(Makefile.gen)
 .include "Makefile.gen"
 .endif
-CLEANFILES+=	${DOCS} Makefile.gen ${INDEX} ${Y2K} ${WWW} packages.exists
+CLEANFILES+=	${DOCS} Makefile.gen ${INDEX} ${Y2K} packages.exists
 
 cvsindex= $${CVSROOT}/${PINDEX},v
 cvsy2k= $${CVSROOT}/${PY2K},v
-cvswww= $${CVSROOT}/${PWWW},v
-_ALLINSTALL= packages.exists ${INDEX} ${Y2K} ${WWW}
+_ALLINSTALL= packages.exists ${INDEX} ${Y2K}
 
 .if defined(NOPORTSCVS)
 ${INDEX}: $${PORTSBASE}/${PINDEX}
@@ -31,8 +28,6 @@ ${INDEX}: $${PORTSBASE}/${PINDEX}
 ${Y2K}: $${PORTSBASE}/${PY2K}
 	cp ${PORTSBASE}/${PY2K} ${Y2K}
 
-${WWW}: $${PORTSBASE}/${PWWW}
-	cp ${PORTSBASE}/${PWWW} ${WWW}
 .else
 ${INDEX}: ${cvsindex}
 	cvs -QR co -p ${PINDEX} > ${INDEX}
@@ -40,8 +35,6 @@ ${INDEX}: ${cvsindex}
 ${Y2K}: ${cvsy2k}
 	cvs -QR co -p ${PY2K} > ${Y2K}
 
-${WWW}: ${cvswww}
-	cvs -QR co -p ${PWWW} > ${WWW}
 .endif
 
 # build the list of available packages only on the 
@@ -51,7 +44,7 @@ hostname!= hostname
 .if defined(NOPORTSCVS)
 packages.exists:
 .else
-packages.exists: ${cvsindex} ${cvsy2k} ${cvswww}
+packages.exists: ${cvsindex} ${cvsy2k}
 .endif
 .if ${hostname} == "hub.freebsd.org" || ${hostname} == "freefall.freebsd.org"
 	sh ${.CURDIR}/packages > ${.TARGET}
@@ -63,8 +56,8 @@ Makefile.gen: index.sgml .NOTMAIN
 	echo DOCS= *.sgml > Makefile.gen
 	${MAKE} ${MAKEFLAGS} ${.IMPSRC}
 
-index.sgml: ${INDEX} ${Y2K} ${WWW} packages.exists portindex ports.inc .NOTMAIN
+index.sgml: ${INDEX} ${Y2K} packages.exists portindex ports.inc .NOTMAIN
 	rm -f *.sgml
-	${PORTINDEX} ${INDEX} ${Y2K} ${WWW}
+	${PORTINDEX} ${INDEX} ${Y2K}
 
 .include "../web.mk"
