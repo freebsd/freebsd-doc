@@ -5,6 +5,7 @@ MAN1 =	addftinfo.1\
 	apply.1\
 	apropos.1\
 	ar.1\
+	as.1\
 	asa.1\
 	at.1\
 	basename.1\
