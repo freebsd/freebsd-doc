@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/news/1996/Makefile,v 1.2 2000/03/22 16:22:43 phantom Exp $
+# $FreeBSD: www/ja/news/1996/Makefile,v 1.1 2000/05/12 15:34:40 kuriyama Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.2
 
@@ -7,5 +7,10 @@
 .endif
 
 DOCS=	index.sgml
+
+### Revision checking
+REVFILES=	${DOCS:M*.sgml:S/.sgml$/.revinc/g}
+BUILDTOP=	../../..
+DIR_IN_LOCAL=	news/1996
 
 .include "../../web.mk"
