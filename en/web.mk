@@ -1,5 +1,5 @@
 # bsd.web.mk
-# $Id: web.mk,v 1.7 1996-10-24 23:33:43 jfieber Exp $
+# $Id: web.mk,v 1.8 1997-01-18 02:25:01 jfieber Exp $
 
 #
 # Build and install a web site.
@@ -68,6 +68,18 @@ ORPHANS:=	${ORPHANS:N*.sgml}
 
 .sgml.html:
 	${SGMLNORM} ${SGMLNORMFLAGS} ${.IMPSRC} > ${.TARGET}
+
+###
+# file.docb --> file.html
+#
+# Generate HTML from docbook
+
+.SUFFIXES:	.docb
+GENDOCS+=	${DOCS:M*.docb:S/.docb$/.html/g}
+ORPHANS:=	${ORPHANS:N*.docb}
+
+.docb.html:
+	sgmlfmt -d docbook -f html ${.IMPSRC}
 
 ###
 # file.java --> file.class
@@ -180,6 +192,9 @@ realinstall: ${COOKIE} ${GENDOCS} ${DATA} ${LOCAL} ${CGI} _PROGSUBDIR
 		${INSTALL} ${COPY} -o ${WEBOWN} -g ${WEBGRP} -m ${WEBMODE} \
 			${INSTALLFLAGS} $${entry} ${DOCINSTALLDIR}; \
 	done
+.if defined(INDEXLINK) && !empty(INDEXLINK)
+	(cd ${DOCINSTALLDIR}; ln -s -f ${INDEXLINK} index.html)
+.endif
 .endif
 .if defined(CGI) && !empty(CGI)
 	@mkdir -p ${CGIINSTALLDIR}
