@@ -26,7 +26,7 @@
 #
 # url.cgi - make plain text URLs clickable
 #
-# $FreeBSD: www/en/cgi/url.cgi,v 1.26 2000/01/08 10:37:37 wosch Exp $
+# $FreeBSD: www/en/cgi/url.cgi,v 1.27 2000/10/09 12:27:01 phantom Exp $
 
 use strict;
 
@@ -50,6 +50,9 @@ if ($file !~ m%^(http|ftp)://[a-z_\-0-9]+\.freebsd\.(com|org)%i &&
     &CgiError(("Invalid url: $file", "Only http://*.freebsd.* is allowed.\n"));
     exit(0);
 }
+
+# backward compatible with old ports layout
+$file =~ s%/pkg/DESCR$%/pkg-descr%;
 
 # catch '..', multiple times
 # ports/japanese/ppxp/../../net/ppxp/pkg-descr 
