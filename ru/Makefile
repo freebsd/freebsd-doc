@@ -1,8 +1,8 @@
 #
 # The FreeBSD Russian Documentation Project
 #
-# $FreeBSD: www/ru/Makefile,v 1.24 2003/10/01 10:04:08 ceri Exp $
-# $FreeBSDru: frdp/www/ru/Makefile,v 1.23 2003/09/30 18:58:55 andy Exp $
+# $FreeBSD$
+# $FreeBSDru: frdp/www/ru/Makefile,v 1.26 2003/10/20 17:08:34 andy Exp $
 #
 # Original revision: 1.98
 #
@@ -62,7 +62,6 @@ SUBDIR+= ports
 #SUBDIR+= doc
 .endif
 .if defined(BUILD_RELNOTES)
-# This doesn't exist yet.
 #SUBDIR+= relnotes
 .endif
 
@@ -87,7 +86,7 @@ WEBDIR?=	data/ru
 DATA+=		index.html
 CLEANFILES+=	index.html
 
-index.html: index.xsl news/news.xml news/press.xml includes.xsl news/includes.xsl security/advisories.xml
+index.html: index.xsl news/news.xml news/press.xml includes.xsl news/includes.xsl ../en/security/advisories.xml
 	${XSLTPROC} ${XSLTPROCOPTS} -o ${.TARGET} \
 		${.CURDIR}/index.xsl ${.CURDIR}/news/news.xml
 .if !defined(NO_TIDY)

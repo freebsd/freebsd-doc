@@ -4,7 +4,7 @@
      The FreeBSD Russian Documentation Project
 
      $FreeBSD$
-     $FreeBSDru: frdp/www/ru/index.xsl,v 1.20 2003/10/13 12:36:47 den Exp $
+     $FreeBSDru: frdp/www/ru/index.xsl,v 1.21 2003/10/20 17:08:34 andy Exp $
 
      Original revision: 1.78
 -->
@@ -483,16 +483,16 @@
                            <font size="-1">
                              Последнее обновление:
                              <xsl:value-of
-                               select="document('security/advisories.xml')/descendant::month[position() = 1]/name"/>
+                               select="document('../en/security/advisories.xml')/descendant::month[position() = 1]/name"/>
                              <xsl:text> </xsl:text>
                              <xsl:value-of
-                               select="document('security/advisories.xml')/descendant::day[position() = 1]/name"/>
+                               select="document('../en/security/advisories.xml')/descendant::day[position() = 1]/name"/>
                              <xsl:text>, </xsl:text>
                              <xsl:value-of
-                               select="document('security/advisories.xml')/descendant::year[position() = 1]/name"/>
+                               select="document('../en/security/advisories.xml')/descendant::year[position() = 1]/name"/>
                              <br/>
                              <!-- Pull in the 10 most recent security advisories -->
-                             <xsl:for-each select="document('security/advisories.xml')/descendant::advisory[position() &lt; 10]">
+                             <xsl:for-each select="document('../en/security/advisories.xml')/descendant::advisory[position() &lt; 10]">
                                &#183; <a>
                                  <xsl:attribute name="href">ftp://ftp.freebsd.org/pub/FreeBSD/CERT/advisories/<xsl:value-of select="name"/>.asc</xsl:attribute>
                                  <xsl:value-of select="name"/>
