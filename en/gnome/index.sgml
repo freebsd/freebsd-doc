@@ -70,7 +70,7 @@ applications and an easy-to-use desktop.  The FreeBSD GNOME Project
 strives to bring GNOME to the FreeBSD user.</P>
 <P>
 As with most GNU programs, GNOME has been designed to run on all modern
-Unix-like operating systems.  Through the efforts for the FreeBSD
+Unix-like operating systems.  Through the efforts of the FreeBSD
 GNOME Project, those operating systems include FreeBSD.</P>
 <P>
 The GNOME project has expanded its objectives over the past few months
