@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/en/news/status/report.xsl,v 1.5 2001/12/22 00:14:46 chris Exp $ -->
+<!-- $FreeBSD: www/en/news/status/report.xsl,v 1.6 2004/02/01 00:46:18 ale Exp $ -->
 
 <!-- Standard header material -->
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
@@ -41,15 +41,33 @@
 	<!-- Process all the <sections>, in order -->
 	<xsl:apply-templates select="section"/>
 
+	<hr/>
+
 	<!-- Generate a table of contents, sorted -->
+	<xsl:for-each select="category">
+	  <h3><xsl:value-of select="description"/></h3>
+	  <xsl:variable name="cat-short" select="name"/>
+	  <ul>
+	    <xsl:for-each select="//project[@cat=$cat-short]">
+  	      <xsl:sort select="translate(title, $lcletters, $ucletters)"/>
+	      <li><a><xsl:attribute name="href">#<xsl:value-of
+	      select="translate(title, ' ',
+	      '-')"/></xsl:attribute><xsl:value-of select="title"/></a>
+	      </li>
+	    </xsl:for-each>
+	  </ul>
+	</xsl:for-each>
 	<ul>
-	  <xsl:for-each select="project">
-	    <xsl:sort select="translate(title, $lcletters, $ucletters)"/>
+	  <xsl:for-each select="//project[not(@cat)]">
+  	    <xsl:sort select="translate(title, $lcletters, $ucletters)"/>
 	    <li><a><xsl:attribute name="href">#<xsl:value-of
-	    select="translate(title, ' ', '-')"/></xsl:attribute><xsl:value-of
-	    select="title"/></a></li>
+	    select="translate(title, ' ',
+	    '-')"/></xsl:attribute><xsl:value-of select="title"/></a>
+	    </li>
 	  </xsl:for-each>
 	</ul>
+
+	<hr/>
 
 	<!-- Process each project, sorted -->
 	<xsl:apply-templates select="project">
@@ -88,6 +106,8 @@
 
     <xsl:apply-templates select="body"/>
 
+    <xsl:apply-templates select="help"/>
+
     <hr/>
   </xsl:template>
 
@@ -123,5 +143,14 @@
        child elements. -->
   <xsl:template match="body">
     <xsl:copy-of select="child::node()"/>
+  </xsl:template>
+
+  <xsl:template match="help">
+    <h3>Open tasks:</h3>
+    <ol>
+      <xsl:for-each select="task">
+	<li><xsl:copy-of select="child::node()"/></li>
+      </xsl:for-each>
+    </ol>    
   </xsl:template>
 </xsl:stylesheet>
