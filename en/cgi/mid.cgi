@@ -26,7 +26,7 @@
 #
 # Search a mail by Message-ID, References or In-Reply-To field
 #
-# $Id: mid.cgi,v 1.6 1998-08-03 15:37:47 wosch Exp $
+# $Id: mid.cgi,v 1.7 1999-04-03 12:32:38 wosch Exp $
 
 $hsty_base = '';
 
@@ -75,6 +75,7 @@ sub get_id {
 	$location =~ s%/[^/]+$%%;
 	local($host) = $ENV{'HTTP_HOST'};
 	$location = 'http://' . $host . $location;
+	$start =~ s/\s+$//;
 
 	print "Location: $location/getmsg.cgi?fetch=$start+0+" .
 		($file =~ /^current/ ?  '' :  "$prefix/") . "$file\n";
