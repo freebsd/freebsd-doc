@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD$ -->
+<!-- $FreeBSD: www/es/index.xsl,v 1.1 2004/03/05 22:42:32 jesusr Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -9,7 +9,7 @@
 
   <xsl:variable name="base" select="'.'"/>
   <xsl:variable name="enbase" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD$'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/es/index.xsl,v 1.1 2004/03/05 22:42:32 jesusr Exp $'"/>
   <xsl:variable name="title" select="'El Proyecto FreeBSD'"/>
 
   <!-- these params should be externally bound. The values
@@ -125,7 +125,7 @@
 			      <font size="+1" color="#990000"><b>Documentaci&#243;n</b></font>
 			    </a><small><br/>
 			      &#183; <a href="{$enbase}/doc/es_ES.ISO8859-1/books/faq/index.html">FAQ</a><br/>
-			      &#183; <a href="{$enbase}/doc/es_ES.ISO8859-15/books/handbook/index.html">Handbook</a><br/>
+			      &#183; <a href="{$enbase}/doc/es_ES.ISO8859-1/books/handbook/index.html">Handbook</a><br/>
 			      &#183; <a href="http://www.FreeBSD.org/cgi/man.cgi">Manuales</a><br/>
 			      &#183; <a href="{$base}/projects/newbies.html">Para principiantes</a><br/>
 			      &#183; <a href="{$base}/docproj/index.html">Doc. Project</a><br/>
