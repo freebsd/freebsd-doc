@@ -3,7 +3,7 @@
 <!--
      The FreeBSD Russian Documentation Project
 
-     $FreeBSD: www/ru/index.xsl,v 1.23 2004/11/09 14:41:00 den Exp $
+     $FreeBSD: www/ru/index.xsl,v 1.24 2004/12/30 17:53:44 hrs Exp $
      $FreeBSDru: frdp/www/ru/index.xsl,v 1.38 2004/10/22 12:33:49 den Exp $
 
      Original revision: 1.116
@@ -15,7 +15,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/ru/index.xsl,v 1.23 2004/11/09 14:41:00 den Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/ru/index.xsl,v 1.24 2004/12/30 17:53:44 hrs Exp $'"/>
   <xsl:variable name="title" select="'Проект FreeBSD'"/>
 
   <!-- these params should be externally bound. The values
@@ -319,7 +319,7 @@
 				<xsl:with-param name="news.press.xml" select="$news.press.xml" />
 			      </xsl:call-template>
 
-			      <a href="{$base}/news/press.html">Далее...</a>
+			      <a href="news/press.html">Далее...</a>
                             </font>
                           </p>
 
