@@ -40,7 +40,7 @@
                   (literal "questions@FreeBSD.org"))
                 (literal ">.")
                 (make empty-element gi: "br")
-                (literal "For spørgsmå angående denne dokumentation, e-mail <")
+                (literal "For spørgsmål angående denne dokumentation, e-mail <")
 		(create-link (list (list "HREF" "mailto:doc@FreeBSD.org"))
                   (literal "doc@FreeBSD.org"))
 	        (literal ">.")))))
