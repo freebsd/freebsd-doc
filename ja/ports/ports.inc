@@ -1,4 +1,4 @@
-<!-- $Id: ports.inc,v 1.9 1999-05-06 15:15:22 motoyuki Exp $ -->
+<!-- $Id: ports.inc,v 1.10 1999-06-21 14:44:46 kuriyama Exp $ -->
 <!-- The FreeBSD Japanese Documentation Project -->
 <!-- Original revision: 1.35 -->
 <p>FreeBSD の Ports と Packages のコレクションは,
@@ -16,7 +16,7 @@ href="http://www.freebsd.org/%7Easami/papers/growth.gif">驚異的な速度で
 より便利にするためには, インストール時に
 <a href="ftp://ftp.freebsd.org/pub/FreeBSD/branches/-current/ports.tar.gz">
 ports 階層全体</a> をインストール (あるいは 
-<a href="../handbook/cvsup.html">CVSup</a> を使ってこれらを最新のものに
+<a href="../handbook/synching.html#CVSUP">CVSup</a> を使ってこれらを最新のものに
 更新) すれば, 何千ものアプリケーションがすぐに使えるようになります.
 
 各 ports の <tt>Makefile</tt>は自動的に, ローカルディスクや CDROM, ftp 経由で
