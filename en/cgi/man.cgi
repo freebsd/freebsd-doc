@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp 
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.140 2004-11-08 13:48:05 simon Exp $
+# $Id: man.cgi,v 1.141 2004-11-09 12:30:05 hrs Exp $
 
 #use Data::Dumper;
 #use Carp;
@@ -116,6 +116,8 @@ $sectionpath = {
     'OpenBSD 3.2' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
     'OpenBSD 3.3' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
     'OpenBSD 3.4' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
+    'OpenBSD 3.5' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
+    'OpenBSD 3.6' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
 };
 
 foreach my $os (keys %$sectionpath) {
@@ -215,7 +217,7 @@ $manPathDefault = 'FreeBSD 5.3-RELEASE and Ports';
      'OpenBSD 3.3',           "$manLocalDir/OpenBSD-3.3",
      'OpenBSD 3.4',           "$manLocalDir/OpenBSD-3.4/share/man:$manLocalDir/OpenBSD-3.4/X11R6/man",
      'OpenBSD 3.5',           "$manLocalDir/OpenBSD-3.5/share/man:$manLocalDir/OpenBSD-3.5/X11R6/man",
-     'OpenBSD 364',           "$manLocalDir/OpenBSD-3.6/share/man:$manLocalDir/OpenBSD-3.6/X11R6/man",
+     'OpenBSD 3.6',           "$manLocalDir/OpenBSD-3.6/share/man:$manLocalDir/OpenBSD-3.6/X11R6/man",
 
     #'NetBSD 0.9',            "$manLocalDir/NetBSD-0.9",
      'NetBSD 1.0',            "$manLocalDir/NetBSD-1.0",
@@ -1029,7 +1031,7 @@ ETX
 }
 
 sub copyright {
-    $id = '$Id: man.cgi,v 1.140 2004-11-08 13:48:05 simon Exp $';
+    $id = '$Id: man.cgi,v 1.141 2004-11-09 12:30:05 hrs Exp $';
 
     return qq{\
 <PRE>
