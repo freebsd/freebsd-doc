@@ -203,6 +203,9 @@ PRINTFLAGS+=	-V %generate-article-toc%
 HTMLFLAGS+=	-V biblio-xref-title
 PRINTFLAGS+=	-V biblio-xref-title
 .endif
+.if defined(WITH_DOCFORMAT_NAVI_LINK) && !empty(WITH_DOCFORMAT_NAVI_LINK)
+HTMLFLAGS+=	-V %generate-docformat-navi-link%
+.endif
 
 PERL?=		/usr/bin/perl
 PKG_CREATE?=	/usr/sbin/pkg_create

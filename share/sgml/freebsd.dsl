@@ -8,6 +8,11 @@
 <!ENTITY % output.print.justify	"IGNORE">
 <!ENTITY % output.print.twoside	"IGNORE">
 
+<!ENTITY % freebsd.l10n PUBLIC "-//FreeBSD//ENTITIES DocBook Language Specific Entities//EN">
+%freebsd.l10n;
+<!ENTITY % freebsd.l10n-common PUBLIC "-//FreeBSD//ENTITIES DocBook Language Neutral Entities//EN">
+%freebsd.l10n-common;
+
 <![ %output.html; [
 <!ENTITY docbook.dsl PUBLIC "-//Norman Walsh//DOCUMENT DocBook HTML Stylesheet//EN" CDATA DSSSL>
 ]]>
@@ -62,6 +67,10 @@
           ;; HTML file.
           #f)
 
+        (define %generate-docformat-navi-link%
+          ;; Create docformat navi link for HTML output?
+          #f)
+
         (define (book-titlepage-recto-elements)
           (list (normalize "title")
                 (normalize "subtitle")
@@ -75,6 +84,59 @@
                 (normalize "abstract")
                 (normalize "legalnotice")
                 (normalize "isbn")))
+
+        ;; Create a simple navigation link
+        ;; if %generate-docformat-navi-link% defined.
+        (define (make-docformat-navi tlist)
+          (let ((rootgi (gi (sgml-root-element))))
+            (make element gi: "DIV"
+                  attributes: '(("CLASS" "DOCFORAMTNAVI"))
+                  (literal "[ ")
+                  (make-docformat-navi-link rootgi tlist)
+                  (literal " ]"))))
+
+        (define (make-docformat-navi-link rootgi tlist)
+          (make sequence
+            (cond
+             ((null? tlist)               (empty-sosofo))
+             ((null? (car tlist))         (empty-sosofo))
+             ((not (symbol? (car tlist))) (empty-sosofo))
+             ((equal? (car tlist) 'html-split)
+              (make sequence
+                (create-link (list (list "href" "./index.html"))
+                             (literal "&docnavi.split-html;"))
+                (if (not (null? (cdr tlist)))
+                    (make sequence
+                      (literal " / ")
+                      (make-docformat-navi-link rootgi (cdr tlist)))
+                    (empty-sosofo))))
+             ((equal? (car tlist) 'html-single)
+              (make sequence
+                (create-link (list (list "href"
+                                         (string-append "./" (case-fold-down rootgi) ".html")))
+                             (literal "&docnavi.single-html;"))
+                (if (not (null? (cdr tlist)))
+                    (make sequence
+                      (literal " / ")
+                      (make-docformat-navi-link rootgi (cdr tlist)))
+                    (empty-sosofo))))
+             (else (empty-sosofo)))))
+
+        (define (article-titlepage-separator side)
+          (make sequence
+            (if %generate-docformat-navi-link%
+                (make-docformat-navi '(html-split html-single))
+                (empty-sosofo))
+            (make empty-element gi: "HR")))
+
+        (define (book-titlepage-separator side)
+          (if (equal? side 'recto)
+              (make sequence
+                (if %generate-docformat-navi-link%
+                    (make-docformat-navi '(html-split html-single))
+                    (empty-sosofo)) 
+                (make empty-element gi: "HR"))
+              (empty-sosofo)))
 
         <!-- This is the text to display at the bottom of each page.
              Defaults to nothing.  The individual stylesheets should
@@ -601,10 +663,10 @@
         #f)
       
       (define %indent-programlisting-lines%
-        "    ")
+        #f)
  
       (define %indent-screen-lines%
-        "    ")
+        #f)
 
       (define (article-titlepage-recto-elements)
         (list (normalize "title")

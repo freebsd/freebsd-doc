@@ -13,7 +13,8 @@ FORMATS?= html
 INSTALL_COMPRESSED?= gz
 INSTALL_ONLY_COMPRESSED?=
 
-WITH_ARTICLE_TOC=YES
+WITH_ARTICLE_TOC?=YES
+WITH_DOCFORMAT_NAVI_LINK?=YES
 
 # 
 # SRCS lists the individual SGML files that make up the document. Changes
