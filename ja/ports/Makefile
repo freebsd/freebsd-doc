@@ -1,6 +1,6 @@
-#	$Id: Makefile,v 1.3 1998-01-18 22:27:40 jfieber Exp $
+#	$Id: Makefile,v 1.4 1998-01-20 04:17:38 hanai Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.4
+# Original revision: 1.5
 
 PORTINDEX=	./portindex
 INDEX=		ports/INDEX
