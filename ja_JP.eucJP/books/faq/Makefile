@@ -1,10 +1,13 @@
 # 
-# $Id: Makefile,v 1.1.1.1 1999-08-18 22:18:16 kuriyama Exp $
+# $Id: Makefile,v 1.2 1999-08-23 15:33:55 kuriyama Exp $
 #
 # Build the FreeBSD FAQ
 #
 
 MAINTAINER=kuriyama@FreeBSD.ORG
+
+JADEOPTS=	-ilang.ja
+TIDYFLAGS=	-raw
 
 DOC?= book
 
