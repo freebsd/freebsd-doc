@@ -1,0 +1,1035 @@
+<!--
+     The FreeBSD Italian Documentation Project
+
+     $FreeBSD$
+     Original revision: 1.8
+-->
+
+<chapter id="vinum-vinum">
+  <title>Il Gestore di Volumi Vinum</title>
+
+  <sect1 id="vinum-synopsis">
+    <title>Sinossi</title>
+
+    <para>Qualunque siano i dischi che hai, ci saranno sempre delle
+      limitazioni:</para>
+
+    <itemizedlist>
+      <listitem>
+        <para>Potrebbero essere troppo piccoli.</para>
+      </listitem>
+
+      <listitem>
+        <para>Potrebbero essere troppo lenti.</para>
+      </listitem>
+
+      <listitem>
+        <para>Potrebbero essere troppo inaffidabili.</para>
+      </listitem>
+    </itemizedlist>
+  </sect1>
+
+  <sect1 id="vinum-intro">
+    <sect1info>
+      <authorgroup>
+        <author>
+          <firstname>Greg</firstname>
+
+          <surname>Lehey</surname>
+
+          <contrib>Originariamente scritto da </contrib>
+        </author>
+      </authorgroup>
+    </sect1info>
+
+    <title>Dischi troppo piccoli</title>
+
+    <indexterm><primary>Vinum</primary></indexterm>
+    <indexterm>
+      <primary>Volumi</primary>
+      <secondary>Gestore</secondary>
+    </indexterm>
+
+    <para><emphasis>Vinum</emphasis> &egrave; un <emphasis>Volume
+        Manager</emphasis>, ovvero un driver virtuale di disco che si occupa dei
+      tre problemi indicati nella sinossi.  Diamo un'occhiata in dettaglio a
+      questi problemi, per cui sono state proposte e implementate varie
+      soluzioni.</para>
+
+    <para>I dischi stanno diventando sempre pi&ugrave; grandi, ma questo
+      &egrave; vero anche le necessit&agrave; di spazio per i dati.  Spesso
+      sentirai il bisogno di avere un file system pi&ugrave; grande dei dischi
+      che possiedi.  Effettivamente questo problema non &egrave; cos&igrave;
+      grave come lo era dieci anni fa, ma &egrave; sempre presente.  Alcuni
+      sistemi risolvono la questione creando un dispositivo astratto che
+      ripartisce i suoi dati su vari dischi.</para>
+  </sect1>
+
+  <sect1>
+    <title>Colli di bottiglia nell'accesso</title>
+
+    <para>I moderni sistemi hanno frequentemente la necessit&agrave; di
+      accedere ai dati in modo concorrente.  Ad esempio, un grande server FTP o
+      HTTP pu&ograve; avere migliaia di sessioni concorrenti e molteplici
+      connessioni da 100 Mbit/s verso il mondo esterno, ben oltre il transfer
+      rate (velocit&agrave; di trasferimento) che la maggior parte dei dischi
+      pu&ograve; sostenere.</para>
+
+    <para>I dischi odierni possono trasferire sequenzialmente dati fino a
+      70 MB/s, ma questo valore ha poca importanza in un ambiente dove molti
+      processi indipendenti accedono al disco, in quanto raggiungerebbero
+      solo una frazione di quella velocit&agrave;.  In questi casi &egrave;
+      pi&ugrave; interessante vedere il problema dal punto di vista del
+      sottosistema dischi: il parametro importante &egrave; il carico che il
+      trasferimento pone sul sottosistema, in altre parole il tempo per cui il
+      trasferimento occupa i dischi necessari per lo stesso.</para>
+
+    <para>In ogni trasferimento da disco il drive deve prima posizionare le
+      testine, poi aspettare che il primo settore passi sotto la testina di
+      lettura e solo dopo pu&ograve; effettuare il trasferimento.  Queste azioni
+      possono essere considerate atomiche: non ha alcun senso
+      interromperle.</para>
+
+    <para><anchor id="vinum-latency">Considera un tipico trasferimento di circa
+      10 kB: l'attuale generazione di dischi ad alte prestazioni pu&ograve;
+      posizionare le testine in circa 3,5 ms.  I dischi pi&ugrave; veloci
+      ruotano a 15.000 rpm, quindi la latenza media rotazionale (mezzo giro)
+      &egrave; di 2 ms.  A 70 MB/s, il trasferimento in s&eacute; occupa circa
+      150 &mu;s, quasi nulla in confronto al tempo di posizionamento.
+      In questo caso il transfer rate effettivo pu&ograve; scendere fino a poco
+      oltre 1 MB/s e questo &egrave; charamente molto dipendente dalla
+      dimensione del trasferimento.</para>
+
+    <para>La tradizionale e ovvia soluzione a questo collo di bottiglia &egrave;
+      <quote>pi&ugrave; assi</quote>: invece di usare un grande disco si usano
+      molti piccoli dischi con la stessa dimensione totale.  Ogni disco &egrave;
+      capace di posizionarsi e trasferire dati indipendentemente quindi la
+      velocit&agrave; effettiva aumenta di un fattore vicino al numero di dischi
+      usati.</para>
+
+    <para>L'esatto fattore di miglioramento &egrave;, ovviamente, pi&ugrave;
+      piccolo del numero di dischi: bench&eacute; ogni disco sia capace di
+      trasferire in parallelo non c'&egrave; modo di assicurare che le richieste
+      siano distribuite uniformemente tra tutti i dischi.  Inevitabilmente il
+      carico su uno dei dischi &egrave; pi&ugrave; alto che sugli altri.</para>
+
+    <indexterm>
+      <primary>concatenazione</primary>
+      <secondary>Vinum</secondary>
+    </indexterm>
+    <indexterm>
+      <primary>Vinum</primary>
+      <secondary>concatenazione</secondary>
+    </indexterm>
+
+    <para>L'uniformit&agrave; della distribuzione del carico sui dischi &egrave;
+      fortemente dipendente dal modo in cui i dati sono condivisi tra i dischi
+      stessi.  Nella seguente discussione &egrave; conveniente pensare allo
+      spazio di immagazzinamento come se fosse diviso in un gran numero di
+      settori identificati da un indirizzo numerico, come pagine in un libro.
+      Il metodo pi&ugrave; ovvio &egrave; di dividere il disco virtuale in
+      gruppi di settori consecutivi della dimensione dei dischi fisici e
+      immagazzinarli in questa maniera, come strappare un grosso libro in
+      piccole sezioni.  Questo metodo &egrave; chiamato
+      <emphasis>concatenazione</emphasis> e ha il vantaggio di non avere
+      particolari richieste sulla dimensione degli specifici dischi.
+      Funziona bene quando l'accesso al
+      disco virtuale &egrave; ben ripartito tra tutto il suo spazio di
+      indirizzamento.  Quando l'accesso &egrave; concentrato in una piccola area
+      il miglioramento &egrave; meno marcato.  La <xref linkend="vinum-concat">
+      illustra la sequenza in cui le unit&agrave; di immagazzinamento sono
+      allocate nell'organizzazione concatenata.</para>
+
+    <para>
+      <figure id="vinum-concat">
+        <title>Organizzazione concatenata</title>
+
+        <graphic fileref="vinum/vinum-concat">
+      </figure>
+    </para>
+
+    <indexterm>
+      <primary>striping</primary>
+      <secondary>Vinum</secondary>
+    </indexterm>
+    <indexterm>
+      <primary>Vinum</primary>
+      <secondary>striping</secondary>
+    </indexterm>
+    <indexterm>
+      <primary>RAID</primary>
+      <secondary>livello 0</secondary>
+    </indexterm>
+    <indexterm><primary>RAID-0</primary></indexterm>
+
+    <para>Un metodo alternativo &egrave; dividere lo spazio in pi&ugrave;
+      piccole componenti di egual dimensione e immagazzinarle sequenzialente su
+      differenti dispositivi.  Per esempio i primi 256 settori potrebbero essere
+      immagazzinati sul primo disco, i seguenti 256 settori sul disco seguente e
+      cos&igrave; via.  Dopo aver immagazzinato i dati sull'ultimo disco il
+      processo si ripete finch&eacute; i dischi non sono pieni.  Questo
+      mappamento &egrave; chiamato <emphasis>striping</emphasis> (letteralmente
+      "a bande") o <acronym>RAID-0</acronym>
+      <footnote>
+        <indexterm><primary>RAID</primary></indexterm>
+        <indexterm>
+          <primary>Redundant Array of Inexpensive Disks</primary>
+        </indexterm>
+
+        <para><acronym>RAID</acronym> significa <emphasis>Redundant Array of
+            Inexpensive Disks</emphasis> (insieme ridondante di dischi non
+          costosi) e offre varie forme di tolleranza ai problemi.  Nel caso del
+          <acronym>RAID-0</acronym> il termine è leggermente fuorviante: in
+          effetti non d&agrave; alcuna ridondanza.</para>
+      </footnote>.
+      Lo striping richiede qualche sforzo aggiuntivo per localizzare i dati e
+      pu&ograve; causare carico di I/O aggiuntivo quando il trasferimento
+      &egrave; distribuito tra vari dischi, ma aiuta il carico a essere ben
+      distribuito tra i vari dischi.  La <xref linkend="vinum-striped"> illustra
+      la sequenza in cui i blocchi di dati sono allocati nell'organizzazione in
+      striping.</para>
+
+    <para>
+      <figure id="vinum-striped">
+        <title>Organizzazione in striping</title>
+
+        <graphic fileref="vinum/vinum-striped">
+      </figure>
+    </para>
+  </sect1>
+
+  <sect1>
+    <title>Integrit&agrave; dei dati</title>
+
+    <para>L'ultimo problema dei dischi attuali &egrave; che sono inaffidabili.
+      Bench&eacute; la loro affidabilit&agrave; sia aumentata tremendamente
+      durante gli ultimi anni sono tuttora il componente di un server che ha
+      la maggior probabilit&agrave; di rompersi.  Quando succede i risultati
+      possono essere catastrofici: rimpiazzare un disco rotto e riempirlo dei
+      dati originari pu&ograve; richiedere giorni.</para>
+
+    <indexterm>
+      <primary>mirroring</primary>
+      <secondary>Vinum</secondary>
+    </indexterm>
+    <indexterm>
+      <primary>Vinum</primary>
+      <secondary>mirroring</secondary>
+    </indexterm>
+    <indexterm>
+      <primary>RAID</primary>
+      <secondary>livello 1</secondary>
+    </indexterm>
+    <indexterm><primary>RAID-1</primary></indexterm>
+
+    <para>Il metodo tradizionale per affrontare questo problema si chiama
+      <emphasis>mirroring</emphasis> (letteralmente "specchiatura") e consiste
+      nel tenere due copie dei dati su hardware fisici differenti.  Con
+      l'avvento dei livelli <acronym>RAID</acronym> questa tecnica &egrave;
+      stata chiamata <acronym>RAID</acronym> di livello 1 o
+      <acronym>RAID-1</acronym>.  Ogni scrittura su disco scrive in entrambe le
+      locazioni; una lettura pu&ograve; essere soddisfatta da entrambi quindi se
+      un disco si rompe i dati sono sempre disponibili sull'altro disco.</para>
+
+    <para>Il mirroring ha due problemi:</para>
+
+    <itemizedlist>
+      <listitem>
+        <para>Il prezzo.  Richiede il doppio dello spazio di
+          immagazzinamento delle soluzioni non ridondanti.</para>
+      </listitem>
+
+      <listitem>
+        <para>L'impatto sulle prestazioni.  La scrittura deve essere
+          compiuta su entrambi i dischi quindi la banda occupata raddoppia.
+          Le letture non soffrono di problemi sulle prestazioni: possono
+          perfino essere pi&ugrave; veloci.</para>
+      </listitem>
+    </itemizedlist>
+
+    <indexterm>
+      <primary>Vinum</primary>
+      <secondary>striping con parit&agrave;</secondary>
+    </indexterm>
+    <indexterm>
+      <primary>RAID</primary>
+      <secondary>livello 5</secondary>
+    </indexterm>
+    <indexterm><primary>RAID-5</primary></indexterm>
+
+    <para>Una soluzione alternativa &egrave; la
+      <emphasis>parit&agrave;</emphasis>, implementata nel
+      <acronym>RAID</acronym> di livello 2, 3, 4 e 5.  Di questi, il
+      <acronym>RAID-5</acronym> &egrave; il pi&ugrave; interessante.  La sua
+      implementazione in Vinum &egrave; una variante dell'organizzazione in
+      striping che dedica un blocco di ogni banda alla parit&agrave; degli
+      altri blocchi: per come &egrave; implementato in Vinum, ogni blocco
+      <acronym>RAID-5</acronym> &egrave; simile a un blocco in striping, con
+      la differenza che implementa il <acronym>RAID-5</acronym> includendo un
+      blocco di parit&agrave; per ogni banda.  Come richiesto dal
+      <acronym>RAID-5</acronym> la locazione di questi blocchi di parit&agrave;
+      cambia da ogni banda alla successiva.  I numeri nei blocchi dati indicano
+      il numero dei blocchi relativi.</para>
+
+    <para>
+      <figure id="vinum-raid5-org">
+        <title>Organizzazione RAID-5</title>
+
+        <graphic fileref="vinum/vinum-raid5-org">
+      </figure>
+    </para>
+
+    <para>Comparandolo al mirroring, il <acronym>RAID-5</acronym> ha il
+      vantaggio di richiedere molto meno spazio di immagazzinamento.  La
+      velocit&agrave; di lettura &egrave; simile all'organizzazione in
+      striping, ma in scrittura l'accesso &egrave; significativamente pi&ugrave;
+      lento, circa il 25% della performance di lettura.  Se uno dei dischi si
+      rompe l'aggregato continua a lavorare con performance peggiorate: la
+      lettura da uno dei dischi rimanenti continua normalmente, ma la lettura
+      dal disco rotto &egrave; ricalcolata dai corrispondenti blocchi dei
+      dischi rimanenti.</para>
+  </sect1>
+
+  <sect1 id="vinum-objects">
+    <title>Oggetti Vinum</title>
+
+    <para>Per risolvere questi problemi Vinum implementa una categoria di
+      oggetti a quattro livelli:</para>
+
+    <itemizedlist>
+      <listitem>
+        <para>L'oggetto pi&ugrave; visibile &egrave; il disco virtuale,
+          chiamato <emphasis>volume</emphasis>.  I volumi hanno essenzialmente
+          le stesse propriet&agrave; di un disco UNIX&trade;, bench&eacute; ci
+          sia qualche differenza minore.  Non hanno limiti di dimensione.</para>
+      </listitem>
+
+      <listitem>
+        <para>I volumi sono composti da <emphasis>plex</emphasis>, ognuno dei
+          quali rappresenta il completo spazio di indirizzamento del volume.
+          &Egrave; quindi questo il livello della gerarchia che gestisce la
+          ridondanza dei dati.  Pensa ai plex come a singoli dischi collegati
+          tra loro in mirroring, ognuno contenete gli stessi dati.</para>
+      </listitem>
+
+      <listitem>
+        <para>Dato che Vinum vive all'interno del framework UNIX&trade; di
+          immagazzinamento dei dati sarebbe possibile utilizzare le partizioni
+          UNIX&trade; come blocchi basilari per costruire i plex multidisco,
+          ma questo approccio sarebbe in effetti troppo poco flessibile: i
+          dischi UNIX&trade; possono avere solo un limitato numero di
+          partizioni; al contrario Vinum suddivide le singole partizioni
+          UNIX&trade; (<emphasis>drive</emphasis>, ovvero dischi) in aree
+          contigue chiamate <emphasis>subdisks</emphasis> (sottodischi), che
+          solo a loro volta utilizzati come elementi per costruire i
+          plex.</para>
+      </listitem>
+
+      <listitem>
+        <para>I sottodischi risiedono su <emphasis>drive</emphasis> Vinum, che
+          attualmente sono partizioni UNIX&trade;.  I drive Vinum possono
+          contenere qualsiasi quantit&agrave; di sottodischi.  Con l'eccezione
+          di una piccola area all'inizio del drive, che &egrave; usata per
+          immagazzinare informazioni sulla configurazione e sullo stato,
+          l'intero drive &egrave; disponibile per l'&igrave;immagazzinamento
+          dei dati.</para>
+      </listitem>
+    </itemizedlist>
+
+    <para>La sezione seguente descrive come gli oggetti sopra discussi possano
+      dare le funzionalit&agrave; richieste.</para>
+
+    <sect2>
+      <title>Considerazioni sulle dimensioni dei volumi</title>
+
+      <para>I plex possono contenere molteplici sottodischi distribuiti tra
+        tutti i drive presenti nella configurazione di Vinum, questo permette
+        alla dimensione dei plex, e quindi anche dei volumi, di non essere
+        limitata dalla dimensione dei singoli dischi.</para>
+    </sect2>
+
+    <sect2>
+      <title>Immagazzinamento ridondante dei dati</title>
+
+      <para>Vinum implementa il mirroring collegando pi&ugrave; plex allo stesso
+        volume, ogni plex contiene la rappresentazione di tutti i dati del
+        volume.  Un volume pu&ograve; contenere da uno ad otto plex.</para>
+
+      <para>Nonostante un plex rappresenti i dati di un volume per intero,
+        &egrave; possibile che parti di questa rappresentazione vengano a
+        mancare o per scelta (non definendo dei sottodischi per alcune parti del
+        plex) o per accidente (come risultato della rottura del disco che le
+        conteneva).  Finch&eacute; almeno un plex contiene i dati di tutto lo
+        spazio d'indirizzamento del volume, il volume stesso &egrave;
+        completamente funzionale.</para>
+    </sect2>
+
+    <sect2>
+      <title>Considerazioni sulle prestazioni</title>
+
+      <para>Vinum implementa sia la concatenazione che lo striping al livello di
+        plex:</para>
+
+      <itemizedlist>
+        <listitem>
+          <para>Un <emphasis>plex concatenato</emphasis> usea lo spazio di
+            indirizzamento di ogni sottodisco a turno.</para>
+        </listitem>
+
+        <listitem>
+          <para>Un <emphasis>plex in striping</emphasis> suddivide i dati tra
+            ogni sottodisco.  I sottodischi devono tutti avere la stessa
+            dimensione e devono essere presenti almeno due sottodischi
+            perch&eacute; esista differenza da un plex concatenato.</para>
+        </listitem>
+      </itemizedlist>
+    </sect2>
+
+    <sect2>
+      <title>Quale organizzazione per i plex?</title>
+
+      <para>La versione di Vinum distribuita con FreeBSD &rel.current;
+        implementa due tipi di plex:</para>
+
+      <itemizedlist>
+        <listitem>
+          <para>I plex concatenati, che sono i pi&ugrave; flessibili: possono
+            contenere qualsiasi numero di sottodischi e questi possono avere
+            qualsiasi dimensione.  Il plex pu&ograve; essere esteso aggiungendo
+            sottodischi.  Richiede meno tempo di <acronym>CPU</acronym> di un
+            plex in striping, bench&eacute; la differenza in carico di
+            <acronym>CPU</acronym> non sia misurabile.  D'altro canto sono
+            pi&ugrave; suscettibili agli hot spot (letteralmente <quote>zona
+              calda</quote>): casi in cui un disco &egrave; molto attivo mentre
+            gli altri sono fermi.</para>
+        </listitem>
+
+        <listitem>
+          <para>Il pi&ugrave; grande vantaggio dei plex in striping
+            (<acronym>RAID-0</acronym>) &egrave; la loro capacit&agrave; di
+            ridurre gli hot spot: scegliendo una dimensione di striping ottimale
+            (circa 256 kB) si pu&ograve; ridistribuire il carico sui drive.  Gli
+            svantaggi di questo approccio sono codice pi&ugrave; complesso e
+            restrizioni sui sottodischi: devono essere tutti della stessa
+            dimensione, inoltre estendere il plex aggiungendo sottodischi
+            &egrave; cos&igrave; complicato che attualmente Vinum non lo
+            implementa.  Vinum aggiunge anche un'ulteriore restrizione
+            elementare: un plex in striping deve contenere almeno due
+            sottodischi, dato che sarebbe altrimenti indistinguibile da un plex
+            concatenato.</para>
+        </listitem>
+      </itemizedlist>
+
+      <para>La <xref linkend="vinum-comparison"> riassume vantaggi e svantaggi
+        di ogni tipo di organizzazione dei plex.</para>
+
+      <table id="vinum-comparison">
+        <title>Organizzazione dei Plex Vinum</title>
+
+        <tgroup cols="5">
+          <thead>
+            <row>
+              <entry>Tipo di plex</entry>
+
+              <entry>Sottodischi minimi</entry>
+
+              <entry>Sottodischi aggiungibili</entry>
+
+              <entry>Dimensioni forzatamente uguali</entry>
+
+              <entry>Applicazione</entry>
+            </row>
+          </thead>
+
+          <tbody>
+            <row>
+              <entry>concatenato</entry>
+
+              <entry>1</entry>
+
+              <entry>s&igrave;</entry>
+
+              <entry>no</entry>
+
+              <entry>Immagazzinamento di grandi moli di dati con la massima
+                flessibilit&agrave; e prestazioni moderate</entry>
+            </row>
+
+            <row>
+              <entry>striping</entry>
+
+              <entry>2</entry>
+
+              <entry>no</entry>
+
+              <entry>s&igrave;</entry>
+
+              <entry>Alte prestazioni in casi di accessi altamente
+                concorrenti</entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </sect2>
+  </sect1>
+
+  <sect1 id="vinum-examples">
+    <title>Alcuni esempi</title>
+
+    <para>Vinum mantiene un <emphasis>database della configurazione</emphasis>
+      che descrive gli oggetti del sistema conosciuti.  Inizialmente l'utente
+      crea il database della configurazione da uno o pi&ugrave; file di
+      configurazione, con l'aiuto del programma &man.vinum.8;.  Vinum
+      immagazzina una copia del database di configurazione in ogni slice del
+      disco (che Vinum chiama <emphasis>device</emphasis>, ovvero
+      <quote>dispositivo</quote>) sotto il suo controllo.
+      Questo database &egrave; aggiornato a ogni cambi
+      di stato in modo che un riavvio possa recuperare accuratamente lo stato di
+      ogni oggetto Vinum.</para>
+
+    <sect2>
+      <title>Il file di configurazione</title>
+
+      <para>Il file di configurazione descrive singoli oggetti Vinum.  La
+        definizione di un semplice volume potrebbe essere:</para>
+
+      <programlisting>    drive a device /dev/da3h
+    volume myvol
+      plex org concat
+        sd length 512m drive a</programlisting>
+
+      <para>Questo file descrive quattro oggetti Vinum:</para>
+
+      <itemizedlist>
+        <listitem>
+          <para>La linea <emphasis>drive</emphasis> descrive la partizione del
+            disco (<emphasis>drive</emphasis>) e la sua locazione relativa
+            all'hardware sottostante.  Gli viene assegnato il nome simbolico
+            <emphasis>a</emphasis>.  Questa separazione dei nomi simbolici dai
+            nomi di dispositivo permette di muovere i dischi da una locazione ad
+            un'altra senza confusione.</para>
+        </listitem>
+
+        <listitem>
+          <para>La linea <emphasis>volume</emphasis> descrive un volume.
+           L'unico attributo richiesto &egrave; il nome, in questo caso
+           <emphasis>myvol</emphasis>.</para>
+        </listitem>
+
+        <listitem>
+          <para>La linea <emphasis>plex</emphasis> definisce un plex.
+            L'unico parametro richiesto &egrave; il tipo di organizzazione, in
+            questo caso <emphasis>concat</emphasis>.  Non &egrave; necessario
+            un nome: il sistema genera un nome automaticamente a partire dal
+            nome del volume, aggiungendo un suffisso
+            <emphasis>.p</emphasis><emphasis>x</emphasis>, dove
+            <emphasis>x</emphasis> indica il numero del plex nel volume.  Il
+            plex verr&agrave; quindi chiamato
+            <emphasis>myvol.p0</emphasis>.</para>
+        </listitem>
+
+        <listitem>
+          <para>La linea <emphasis>sd</emphasis> descrive un sottodisco.
+            Le spefiche minime sono il nome del drive su cui immagazzinarlo e
+            la lunghezza del sottodisco.  Come per i plex non &egrave;
+            necessario un nome: il sistema assegna automaticamente nomi
+            derivati dal nome del plex, agigungendo il suffisso
+            <emphasis>.s</emphasis><emphasis>x</emphasis>, dove
+            <emphasis>x</emphasis> indica il numero del sottdisco nel plex,
+            quindi Vinum dar&agrave; a questo sottodisco il nome di
+            <emphasis>myvol.p0.s0</emphasis>.</para>
+        </listitem>
+      </itemizedlist>
+
+      <para>Dopo aver elaborato questo file, &man.vinum.8; produce il seguente
+        output:</para>
+
+      <programlisting>      &prompt.root; vinum -&gt; <command>create config1</command>
+      Configuration summary
+      Drives:         1 (4 configured)
+      Volumes:        1 (4 configured)
+      Plexes:         1 (8 configured)
+      Subdisks:       1 (16 configured)
+
+    D a                     State: up       Device /dev/da3h        Avail: 2061/2573 MB (80%)
+
+    V myvol                 State: up       Plexes:       1 Size:        512 MB
+
+    P myvol.p0            C State: up       Subdisks:     1 Size:        512 MB
+
+    S myvol.p0.s0           State: up       PO:        0  B Size:        512 MB</programlisting>
+
+      <para>Questo output mostra il formato di elenco breve di &man.vinum.8;,
+        che &egrave; rappresentato graficamente nella
+        <xref linkend="vinum-simple-vol">.</para>
+
+      <para>
+        <figure id="vinum-simple-vol">
+          <title>Un semplice volume Vinum</title>
+
+          <graphic fileref="vinum/vinum-simple-vol">
+        </figure>
+      </para>
+
+      <para>Questa figura e quelle che seguono rappresentano un volume
+        contenente dei plex che a loro volta contengono dei sottodischi.
+        In questo semplice esempio il volume contiene un plex e il plex
+        contiene un sottodisco.</para>
+
+      <para>Questo particolare volume non ha specifici vantaggi su una
+        convenzionale partizione di disco.  Contiene un singolo plex, quindi non
+        &egrave; ridondante.  Il plex contiene un solo sottodisco, quindi non
+        c'&egrave; differenza nell'immagazzinamento dei dati.  Le sezioni
+        seguenti mostrano vari metodi di configurazione pi&ugrave;
+        interessanti.</para>
+    </sect2>
+
+    <sect2>
+      <title>Aumentare la resistenza alle rotture: il mirroring</title>
+
+      <para>Il mirroring pu&ograve; aumentare, in un volume, la resistenza alle
+        rotture.  Quando si definisce un volume in mirroring &egrave; importante
+        assicurarsi che i sottodischi di ogni plex siano su dischi differenti,
+        in modo che la rottura di un drive non blocchi entrambi i plex.  La
+        seguente configurazione mostra un volume in mirroring:</para>
+
+      <programlisting>    drive b device /dev/da4h
+    volume mirror
+      plex org concat
+        sd length 512m drive a
+          plex org concat
+            sd length 512m drive b</programlisting>
+
+      <para>In questo esempio non &egrave; necessario specificare nuovamente la
+        definizione del drive<emphasis>a</emphasis>, dato che Vinum mantiene
+        traccia di tutti gli oggetti nel suo database di configurazione.  Dopo
+        aver elaborato questa definizione, la configurazione appare
+        cos&igrave;:</para>
+
+
+      <programlisting>    Drives:         2 (4 configured)
+    Volumes:        2 (4 configured)
+    Plexes:         3 (8 configured)
+    Subdisks:       3 (16 configured)
+
+    D a                     State: up       Device /dev/da3h        Avail: 1549/2573 MB (60%)
+    D b                     State: up       Device /dev/da4h        Avail: 2061/2573 MB (80%)
+
+    V myvol                 State: up       Plexes:       1 Size:        512 MB
+    V mirror                State: up       Plexes:       2 Size:        512 MB
+
+    P myvol.p0            C State: up       Subdisks:     1 Size:        512 MB
+    P mirror.p0           C State: up       Subdisks:     1 Size:        512 MB
+    P mirror.p1           C State: initializing     Subdisks:     1 Size:        512 MB
+
+    S myvol.p0.s0           State: up       PO:        0  B Size:        512 MB
+    S mirror.p0.s0          State: up       PO:        0  B Size:        512 MB
+    S mirror.p1.s0          State: empty    PO:        0  B Size:        512 MB</programlisting>
+
+      <para><xref linkend="vinum-mirrored-vol"> mostra la struttura
+        graficamente.</para>
+
+      <para>
+        <figure id="vinum-mirrored-vol">
+          <title>Un volume Vinum in mirroring</title>
+
+          <graphic fileref="vinum/vinum-mirrored-vol">
+        </figure>
+      </para>
+
+      <para>In questo esempio ogni plex contiene l'intero spazio di
+        indirizzamento di 512 MB.  Come nel precedente esempio ogni plex
+        contiene un solo sottodisco.</para>
+    </sect2>
+
+    <sect2>
+      <title>Ottimizzazione delle prestazioni</title>
+
+      <para>Il volume in mirroring dell'esempio precedente &egrave; pi&ugrave;
+        resistente alle rotture di un volume non in mirroring, ma le sue
+        prestazioni sono inferiori: ogni scrittura sul volume richiede una
+        scrittura su ognuno dei drive, utilizzando quindi una maggior frazione
+        della banda passante totale dei dischi.  Considerazioni sulle
+        prestazioni portano ad un differente approccio: al posto del mirroring,
+        i dati vengono posti su pi&ugrave; dischi possibile utilizzando lo
+        striping.  La seguente configruazione mostra un volume con un plex in
+        striping su quattro dischi:</para>
+
+        <programlisting>        drive c device /dev/da5h
+        drive d device /dev/da6h
+        volume stripe
+        plex org striped 512k
+          sd length 128m drive a
+          sd length 128m drive b
+          sd length 128m drive c
+          sd length 128m drive d</programlisting>
+
+      <para>Come prima non &egrave; necessario definire i drive che Vinum
+        gi&agrave; conosce.  Dopo aver elaborato queste definizioni la
+        configurazione appare cos&igrave;:</para>
+
+      <programlisting>    Drives:         4 (4 configured)
+    Volumes:        3 (4 configured)
+    Plexes:         4 (8 configured)
+    Subdisks:       7 (16 configured)
+
+    D a                     State: up       Device /dev/da3h        Avail: 1421/2573 MB (55%)
+    D b                     State: up       Device /dev/da4h        Avail: 1933/2573 MB (75%)
+    D c                     State: up       Device /dev/da5h        Avail: 2445/2573 MB (95%)
+    D d                     State: up       Device /dev/da6h        Avail: 2445/2573 MB (95%)
+
+    V myvol                 State: up       Plexes:       1 Size:        512 MB
+    V mirror                State: up       Plexes:       2 Size:        512 MB
+    V striped               State: up       Plexes:       1 Size:        512 MB
+
+    P myvol.p0            C State: up       Subdisks:     1 Size:        512 MB
+    P mirror.p0           C State: up       Subdisks:     1 Size:        512 MB
+    P mirror.p1           C State: initializing     Subdisks:     1 Size:        512 MB
+    P striped.p1            State: up       Subdisks:     1 Size:        512 MB
+
+    S myvol.p0.s0           State: up       PO:        0  B Size:        512 MB
+    S mirror.p0.s0          State: up       PO:        0  B Size:        512 MB
+    S mirror.p1.s0          State: empty    PO:        0  B Size:        512 MB
+    S striped.p0.s0         State: up       PO:        0  B Size:        128 MB
+    S striped.p0.s1         State: up       PO:      512 kB Size:        128 MB
+    S striped.p0.s2         State: up       PO:     1024 kB Size:        128 MB
+    S striped.p0.s3         State: up       PO:     1536 kB Size:        128 MB</programlisting>
+
+      <para>
+        <figure id="vinum-striped-vol">
+          <title>Un volume Vinum in striping</title>
+
+          <graphic fileref="vinum/vinum-striped-vol">
+        </figure>
+      </para>
+
+      <para>Questo volume &egrave; rappresentato nella
+        <xref linkend="vinum-striped-vol">.  L'intensit&agrave; delle strisce
+        indica la posizione all'interno dello spazio di inidirizzamento del
+        plex: le pi&ugrave; chiare all'inizio, le pi&ugrave; scure alla
+        fine.</para>
+    </sect2>
+
+    <sect2>
+      <title>Resistenza alle rotture e prestazioni</title>
+
+      <para><anchor id="vinum-resilience">Con hardware a sufficenza &egrave;
+        possibile creare volumi con miglioramenti sia nella resistenza alle
+        rotture che nelle prestazioni, comparati alle normali partizioni
+        UNIX&trade;.  Una tipica configurazione potrebbe essere:</para>
+
+      <programlisting>    volume raid10
+      plex org striped 512k
+        sd length 102480k drive a
+        sd length 102480k drive b
+        sd length 102480k drive c
+        sd length 102480k drive d
+        sd length 102480k drive e
+      plex org striped 512k
+        sd length 102480k drive c
+        sd length 102480k drive d
+        sd length 102480k drive e
+        sd length 102480k drive a
+        sd length 102480k drive b</programlisting>
+
+      <para>I sottodischi del secondo plex sono spostati di due posti rispetto a
+        quelli del primo plex: questo aumenta le probabilit&agrave; che le
+        scritture non utilizzino lo stesso sottodisco anche in caso che un
+        trasferimento utilizzi entrambi i drive.</para>
+
+      <para>La <xref linkend="vinum-raid10-vol"> rappresenta la struttura di
+        questo volume.</para>
+
+      <para>
+        <figure id="vinum-raid10-vol">
+          <title>Un volume Vinum in mirroring e striping</title>
+
+          <graphic fileref="vinum/vinum-raid10-vol">
+        </figure>
+      </para>
+    </sect2>
+  </sect1>
+
+  <sect1>
+    <title>Nomenclatura degli oggetti</title>
+
+    <para>Come descritto sopra, Vinum assegna nomi di default a plex e
+      sottodischi, bench&eacute; questi possano essere cambiati.  Cambiare il
+      nome di default non &egrave; raccomandato: l'esperienza con il VERITAS
+      volume manager, che permette la nomenclatura arbitraria degli oggetti, ha
+      mostrato che questa flessibilit&agrave; non porta vantaggi significativi e
+      pu&ograve; causare confusione.</para>
+
+    <para>I nomi possono contenere ogni carattere non blank (i caratteri di
+      spazio, tabulazione, cambio riga) ma &egrave; consigliato limitarsi a
+      lettere, cifre e il carattere di underscore (il carattere di
+      sottolineatura).  I nomi di volumi, plex e sottodischi possono essere
+      lunghi fino a 64 caratteri, i nomi di drive invece hanno un massimo di 32
+      caratteri.</para>
+
+    <indexterm><primary>/dev/vinum</primary></indexterm>
+
+    <para>I nomi assegnati agli oggetti Vinum sono nella gerarchia
+      <filename>/dev/vinum</filename>.
+      La configurazione di Vinum mostrata sopra creerebbe i seguenti
+      dispositivi:</para>
+
+    <itemizedlist>
+      <listitem>
+        <para>I dispositivi di controllo
+          <devicename>/dev/vinum/control</devicename> e
+          <devicename>/dev/vinum/controld</devicename>, utilizzati
+          rispettivamente da &man.vinum.8; e dal demone Vinum.</para>
+      </listitem>
+
+      <listitem>
+        <para>Voci di dispositivi a blocchi e a caratteri per ogni volume.
+          Questi sono i principali dispositivi utilizzati da Vinum.  I
+          dispositivi a blocchi hanno il nome dei relativi volumi, quelli a
+          caratteri, seguendo la tradizione BSD, hanno una lettera
+          <emphasis>r</emphasis> all'inizio del nome.  Quindi la configurazione
+          vista sopra genererebbe i dispositivi a blocchi
+          <devicename>/dev/vinum/myvol</devicename>,
+          <devicename>/dev/vinum/mirror</devicename>,
+          <devicename>/dev/vinum/striped</devicename>,
+          <devicename>/dev/vinum/raid5</devicename> e
+          <devicename>/dev/vinum/raid10</devicename>, e i dispositivi a
+          caratteri <devicename>/dev/vinum/rmyvol</devicename>,
+          <devicename>/dev/vinum/rmirror</devicename>,
+          <devicename>/dev/vinum/rstriped</devicename>,
+          <devicename>/dev/vinum/rraid5</devicename> e
+          <devicename>/dev/vinum/rraid10</devicename>.
+          In questo c'&egrave; un ovvio problema: &egrave; possibile avere due
+          volumi chiamati <emphasis>r</emphasis> e <emphasis>rr</emphasis> che
+          avrebbero un conflitto nel creare il nodo
+          <devicename>/dev/vinum/rr</devicename>: sarebbe il dispositivo a
+          caratteri per il volume <emphasis>r</emphasis> o il dispositivo a
+          blocchi per il volume <emphasis>rr</emphasis>?  Attualmente Vinum non
+          si interessa di questo conflitto: il volume definito per primo prende
+          il nome.</para>
+      </listitem>
+
+      <listitem>
+        <para>Una directory <devicename>/dev/vinum/drive</devicename> con voci
+        per ogni disco.  Queste voci sono in effetti dei collegamenti simbolici
+        ai rispettivi nodi di disco.</para>
+      </listitem>
+
+      <listitem>
+        <para>Una directory <filename>/dev/vinum/volume</filename> con voci per
+          ogni volume.  Contiene sottodirectory per ogni plex, che a loro volta
+          contengono sottodirectory per ogni sottodisco.</para>
+      </listitem>
+
+      <listitem>
+        <para>Le directory <devicename>/dev/vinum/plex</devicename>,
+          <devicename>/dev/vinum/sd</devicename> e
+          <devicename>/dev/vinum/rsd</devicename> contengono i dispositivi a
+          blocchi per ogni plex, dispositivo a blocchi e dispositivo a caratteri
+          per ogni sottodisco rispettivamente.</para>
+      </listitem>
+    </itemizedlist>
+
+    <para>Ad esempio, considera il seguente file di configurazione:</para>
+
+    <programlisting>    drive drive1 device /dev/sd1h
+    drive drive2 device /dev/sd2h
+    drive drive3 device /dev/sd3h
+    drive drive4 device /dev/sd4h
+    volume s64 setupstate
+      plex org striped 64k
+        sd length 100m drive drive1
+        sd length 100m drive drive2
+        sd length 100m drive drive3
+        sd length 100m drive drive4</programlisting>
+
+    <para>Dopo aver elaborato questo file, &man.vinum.8; crea la seguente
+      struttura in <filename>/dev/vinum</filename>:</para>
+
+    <programlisting>    brwx------  1 root  wheel   25, 0x40000001 Apr 13 16:46 Control
+    brwx------  1 root  wheel   25, 0x40000002 Apr 13 16:46 control
+    brwx------  1 root  wheel   25, 0x40000000 Apr 13 16:46 controld
+    drwxr-xr-x  2 root  wheel       512 Apr 13 16:46 drive
+    drwxr-xr-x  2 root  wheel       512 Apr 13 16:46 plex
+    crwxr-xr--  1 root  wheel   91,   2 Apr 13 16:46 rs64
+    drwxr-xr-x  2 root  wheel       512 Apr 13 16:46 rsd
+    drwxr-xr-x  2 root  wheel       512 Apr 13 16:46 rvol
+    brwxr-xr--  1 root  wheel   25,   2 Apr 13 16:46 s64
+    drwxr-xr-x  2 root  wheel       512 Apr 13 16:46 sd
+    drwxr-xr-x  3 root  wheel       512 Apr 13 16:46 vol
+
+        /dev/vinum/drive:
+    total 0
+    lrwxr-xr-x  1 root  wheel  9 Apr 13 16:46 drive1 -&gt; /dev/sd1h
+    lrwxr-xr-x  1 root  wheel  9 Apr 13 16:46 drive2 -&gt; /dev/sd2h
+    lrwxr-xr-x  1 root  wheel  9 Apr 13 16:46 drive3 -&gt; /dev/sd3h
+    lrwxr-xr-x  1 root  wheel  9 Apr 13 16:46 drive4 -&gt; /dev/sd4h
+
+    /dev/vinum/plex:
+    total 0
+    brwxr-xr--  1 root  wheel   25, 0x10000002 Apr 13 16:46 s64.p0
+
+    /dev/vinum/rsd:
+    total 0
+    crwxr-xr--  1 root  wheel   91, 0x20000002 Apr 13 16:46 s64.p0.s0
+    crwxr-xr--  1 root  wheel   91, 0x20100002 Apr 13 16:46 s64.p0.s1
+    crwxr-xr--  1 root  wheel   91, 0x20200002 Apr 13 16:46 s64.p0.s2
+    crwxr-xr--  1 root  wheel   91, 0x20300002 Apr 13 16:46 s64.p0.s3
+
+    /dev/vinum/rvol:
+    total 0
+    crwxr-xr--  1 root  wheel   91,   2 Apr 13 16:46 s64
+
+    /dev/vinum/sd:
+    total 0
+    brwxr-xr--  1 root  wheel   25, 0x20000002 Apr 13 16:46 s64.p0.s0
+    brwxr-xr--  1 root  wheel   25, 0x20100002 Apr 13 16:46 s64.p0.s1
+    brwxr-xr--  1 root  wheel   25, 0x20200002 Apr 13 16:46 s64.p0.s2
+    brwxr-xr--  1 root  wheel   25, 0x20300002 Apr 13 16:46 s64.p0.s3
+
+    /dev/vinum/vol:
+    total 1
+    brwxr-xr--  1 root  wheel   25,   2 Apr 13 16:46 s64
+    drwxr-xr-x  3 root  wheel       512 Apr 13 16:46 s64.plex
+
+    /dev/vinum/vol/s64.plex:
+    total 1
+    brwxr-xr--  1 root  wheel   25, 0x10000002 Apr 13 16:46 s64.p0
+    drwxr-xr-x  2 root  wheel       512 Apr 13 16:46 s64.p0.sd
+
+    /dev/vinum/vol/s64.plex/s64.p0.sd:
+    total 0
+    brwxr-xr--  1 root  wheel   25, 0x20000002 Apr 13 16:46 s64.p0.s0
+    brwxr-xr--  1 root  wheel   25, 0x20100002 Apr 13 16:46 s64.p0.s1
+    brwxr-xr--  1 root  wheel   25, 0x20200002 Apr 13 16:46 s64.p0.s2
+    brwxr-xr--  1 root  wheel   25, 0x20300002 Apr 13 16:46 s64.p0.s3</programlisting>
+
+    <para>Bench&eacute; sia raccomandato non allocare nomi specifici a plex e
+      sottodischi, i drive di Vinum devono avere un nome.  Questo permette di
+      spostare un disco in una differente locazione e continuare a riconoscerlo
+      automaticamente.  I nomi di drive possono essere lunghi fino a 32
+      caratteri.</para>
+
+    <sect2>
+      <title>Creare i filesystem</title>
+
+      <para>I volumi appaiono al sistema identici ai dischi, con un'eccezione.
+        Differentemente dai dischi UNIX&trade;, Vinum non partiziona i volumi,
+        che quindi non contengono una tabella delle partizioni.  Questo ha reso
+        necessario modificare alcuni programmi di utilit&agrave; del disco, tra
+        cui <command>newfs</command>, che prcedentemente cercava di interpretare
+        l'ultima lettera di un volume Vinum come un identificatore di
+        partizione.  Ad esempio un disco potrebbe avere un nome come
+        <devicename>/dev/wd0a</devicename> o <devicename>/dev/da2h</devicename>.
+        Questi nomi rappresentano la prima partizione
+        (<devicename>a</devicename>) del primo (0) disco IDE
+        (<devicename>wd</devicename>) e l'ottava partizione
+        (<devicename>h</devicename>) del terzo (2) disco SCSI
+        (<devicename>da</devicename>), rispettivamente.  Al contrario un volume
+        Vinum potrebbe essere chiamato
+        <devicename>/dev/vinum/concat</devicename>, un nome che non ha alcuna
+        relazione con nomi di partizione.</para>
+
+      <para>Normalmente &man.newfs.8; interpreta il nome del disco e si lamenta
+        se non riesce a comprenderlo.  Per esempio:</para>
+
+      <screen>&prompt.root; <userinput>newfs /dev/vinum/concat</userinput>
+newfs: /dev/vinum/concat: can't figure out file system partition</screen>
+
+      <para>Per poter creare un filesystem su questo volume usa &man.newfs.8;
+        con l'opzione <command>-v</command>:</para>
+
+      <screen>&prompt.root; <userinput>newfs -v /dev/vinum/concat</userinput></screen>
+    </sect2>
+  </sect1>
+
+  <sect1 id="vinum-config">
+    <title>Configurare Vinum</title>
+
+    <para>Il kernel <filename>GENERIC</filename> non contiene Vinum.
+      &Egrave; possibile creare un kernel speciale che lo contenga, ma questo
+      non &egrave; raccomandato: il metodo standard per lanciare Vinum &egrave;
+      come modulo del kernel (<acronym>kld</acronym>).  Non &egrave; neanche
+      necessario usare &man.kldload.8; per Vinum: quando lanci &man.vinum.8; il
+      programma controlla se il modulo &egrave; stato caricato e, in caso non
+      sia caricato, lo carica automaticamente.</para>
+
+    <sect2>
+      <title>Avvio</title>
+
+      <para>Vinum immagazzina le informazioni sulla configurazione dei dischi
+        essenzialmente nella stessa forma dei file di configurazione.  Quando
+        legge il database di configurazione Vinum riconosce un numero di
+        parole chiave che non sono permesse nei file di configurazione, ad
+        esempio un file di configurazione del disco potrebbe contenere il
+        seguente testo:</para>
+
+      <programlisting>volume myvol state up
+volume bigraid state down
+plex name myvol.p0 state up org concat vol myvol
+plex name myvol.p1 state up org concat vol myvol
+plex name myvol.p2 state init org striped 512b vol myvol
+plex name bigraid.p0 state initializing org raid5 512b vol bigraid
+sd name myvol.p0.s0 drive a plex myvol.p0 state up len 1048576b driveoffset 265b plexoffset 0b
+sd name myvol.p0.s1 drive b plex myvol.p0 state up len 1048576b driveoffset 265b plexoffset 1048576b
+sd name myvol.p1.s0 drive c plex myvol.p1 state up len 1048576b driveoffset 265b plexoffset 0b
+sd name myvol.p1.s1 drive d plex myvol.p1 state up len 1048576b driveoffset 265b plexoffset 1048576b
+sd name myvol.p2.s0 drive a plex myvol.p2 state init len 524288b driveoffset 1048841b plexoffset 0b
+sd name myvol.p2.s1 drive b plex myvol.p2 state init len 524288b driveoffset 1048841b plexoffset 524288b
+sd name myvol.p2.s2 drive c plex myvol.p2 state init len 524288b driveoffset 1048841b plexoffset 1048576b
+sd name myvol.p2.s3 drive d plex myvol.p2 state init len 524288b driveoffset 1048841b plexoffset 1572864b
+sd name bigraid.p0.s0 drive a plex bigraid.p0 state initializing len 4194304b driveoff set 1573129b plexoffset 0b
+sd name bigraid.p0.s1 drive b plex bigraid.p0 state initializing len 4194304b driveoff set 1573129b plexoffset 4194304b
+sd name bigraid.p0.s2 drive c plex bigraid.p0 state initializing len 4194304b driveoff set 1573129b plexoffset 8388608b
+sd name bigraid.p0.s3 drive d plex bigraid.p0 state initializing len 4194304b driveoff set 1573129b plexoffset 12582912b
+sd name bigraid.p0.s4 drive e plex bigraid.p0 state initializing len 4194304b driveoff set 1573129b plexoffset 16777216b</programlisting>
+
+      <para>Le ovvie differenze sono qua la presenza di informazioni esplicite
+        sulle locazioni e sulla nomenclatura (entrambe permesse, ma scoraggiate,
+        all'utente) e le informazioni sugli stati (che non sono disponibili
+        all'utente).  Vinum non immagazzina informazioni sui drive tra le
+        informazioni della configurazione: trova i drive scandendo le partizioni
+        dei dischi configurati alla ricerca di un'etichetta Vinum.  Questo
+        permette a Vinum di identificare i drive correttamente anche se gli
+        &egrave; stato assegnato un differente codice identificativo di drive
+        UNIX&trade;.</para>
+
+      <sect3>
+        <title>Avvio automatico</title>
+
+        <para>Per poter lanciare Vinum automaticamente all'avvio del sistema
+          assicuratevi che le seguenti linee siano nel vostro
+          <filename>/etc/rc.conf</filename>:</para>
+
+        <programlisting>start_vinum="YES"               # set to YES to start vinum</programlisting>
+
+        <para>Se non hai un file <filename>/etc/rc.conf</filename>, creane uno
+          con questo contenuto.  Questo ordiner&agrave; al sistema di caricare
+          il Vinum <acronym>kld</acronym> all'avvio, inizializzando ogni oggetto
+          menzionato nella configurazione.  Questo viene fatto prima del mount
+          dei filesystem quindi &egrave; possibile fare automaticamente
+          &man.fsck.8; e mount dei filesystem su volumi Vinum.</para>
+
+        <para>Quando esegui Vinum con il comando <command>vinum start</command>
+          Vinum legge il database di configurazione da uno dei drive Vinum.  In
+          circostanze normali ogni drive contiene una copia identica del
+          database di configurazione quindi non conta da quale disco viene
+          letto.  Dopo un crash, tuttavia, Vinum deve determinare quale drive
+          &egrave; stato aggiornato pi&ugrave; recentemente e leggere la
+          configurazione da questo drive.  Quindi aggiorna la configurazione, se
+          necessario, sui drive progressivamente pi&ugrave; vecchi.</para>
+      </sect3>
+    </sect2>
+  </sect1>
+</chapter>
+
+<!--
+     Local Variables:
+     mode: sgml
+     sgml-declaration: "../chapter.decl"
+     sgml-indent-data: t
+     sgml-omittag: nil
+     sgml-always-quote-attributes: t
+     sgml-parent-document: ("../book.sgml" "part" "chapter")
+     End:
+-->
