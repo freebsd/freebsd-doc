@@ -1,6 +1,6 @@
-# $FreeBSD: www/ja/Makefile,v 1.41 2000/10/02 07:54:39 kuriyama Exp $
+# $FreeBSD: www/ja/Makefile,v 1.42 2000/10/02 09:16:04 kuriyama Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.53
+# Original revision: 1.54
 
 LOCALTOP= .
 
@@ -47,7 +47,8 @@ SUBDIR+= copyright
 SUBDIR+= search
 SUBDIR+= gallery
 SUBDIR+= projects
-SUBDIR+= releases 
+SUBDIR+= releases
+#SUBDIR+= smp
 SUBDIR+= conspectus
 .if !defined(WEB_ONLY) || empty(WEB_ONLY)
 SUBDIR+= ports
