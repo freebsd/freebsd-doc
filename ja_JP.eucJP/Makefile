@@ -1,4 +1,4 @@
-#       $Id: Makefile,v 1.10 1999-08-31 15:00:01 kuriyama Exp $
+#       $Id: Makefile,v 1.11 1999-09-03 17:24:40 nik Exp $
 #
 # Original revision: 1.5
 #
@@ -8,18 +8,5 @@ SUBDIR+= man
 
 COMPAT_SYMLINK = ja_JP.eucJP
 
-#
-# Put the compatability symlink in place.
-#
-afterinstall:
-.if !defined(IGNORE_COMPAT_SYMLINK)
-	if [ ! -e ${DOCDIR}/${COMPAT_SYMLINK} ]; then			\
-		rm -rf ${DOCDIR}/${COMPAT_SYMLINK};			\
-		(cd ${DOCDIR} && ln -s ja ${COMPAT_SYMLINK});		\
-	fi
-.endif
-
-.include <bsd.subdir.mk>
-
-DOC_PREFIX?= ..
-.include "${DOC_PREFIX}/share/mk/docproj.docbook.mk"
+DOC_PREFIX?= ${.CURDIR}/..
+.include "${DOC_PREFIX}/share/mk/doc.project.mk"

@@ -1,5 +1,8 @@
-#       $Id: Makefile,v 1.1 1999-08-19 00:07:57 nik Exp $
+#       $Id: Makefile,v 1.2 1999-09-03 17:24:44 nik Exp $
 
 SUBDIR = faq
 
-.include <bsd.subdir.mk>
+ROOT_SYMLINKS = faq
+
+DOC_PREFIX?= ${.CURDIR}/../..
+.include "${DOC_PREFIX}/share/mk/doc.project.mk"
