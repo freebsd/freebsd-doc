@@ -252,27 +252,28 @@ sub printdoc {
 
     foreach $i (split(/\n/, $header)) {
     	($field, $data) = split(/ /, $i, 2);
+	$field =~ y/A-Z/a-z/;
     	$hdr{$field} = $data;
     }
 
     print "<BODY>\n<pre>\n";
-    if (length($hdr{'Date:'}) > 0) {
-    	print "<strong>Date: </strong>     $hdr{'Date:'}\n";
+    if (length($hdr{'date:'}) > 0) {
+    	print "<strong>Date: </strong>     $hdr{'date:'}\n";
     }
-    if (length($hdr{'From:'}) > 0) {
-    	print "<strong>From: </strong>     $hdr{'From:'}\n";
+    if (length($hdr{'from:'}) > 0) {
+    	print "<strong>From: </strong>     $hdr{'from:'}\n";
     }
-    if (length($hdr{'To:'}) > 0) {
-    	print "<strong>To: </strong>       $hdr{'To:'}\n";
+    if (length($hdr{'to:'}) > 0) {
+    	print "<strong>To: </strong>       $hdr{'to:'}\n";
     }
-    if (length($hdr{'Cc:'}) > 0) {
-    	print "<strong>Cc: </strong>       $hdr{'Cc:'}\n";
+    if (length($hdr{'cc:'}) > 0) {
+    	print "<strong>Cc: </strong>       $hdr{'cc:'}\n";
     }
-    if (length($hdr{'Sender:'}) > 0) {
-    	print "<strong>Sender: </strong>   $hdr{'Sender:'}\n";
+    if (length($hdr{'sender:'}) > 0) {
+    	print "<strong>Sender: </strong>   $hdr{'sender:'}\n";
     }
-    if (length($hdr{'Subject:'}) > 0) {
-    	print "<strong>Subject: </strong>  $hdr{'Subject:'}\n";
+    if (length($hdr{'subject:'}) > 0) {
+    	print "<strong>Subject: </strong>  $hdr{'subject:'}\n";
     }
     print "</pre>\n";
 
