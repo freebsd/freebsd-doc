@@ -1,6 +1,7 @@
 # $FreeBSD$
 
 SUBDIR =
+SUBDIR+= checkpoint
 SUBDIR+= committers-guide
 SUBDIR+= console-server
 SUBDIR+= contributing
