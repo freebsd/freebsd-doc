@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-#	$Id: ports.cgi,v 1.4 1997-10-03 16:04:25 wosch Exp $
+#	$Id: ports.cgi,v 1.5 1997-10-06 11:38:27 wosch Exp $
 #
 # ports.cgi - search engine for FreeBSD ports
 #             	o search for a port by name or description
@@ -221,8 +221,8 @@ sub readcoll {
 # basic function for HTML output
 sub out {
     local($line, $old) = @_;
-    local($version, $path, $local, $comment, $descfile,
-	  $email, $sections, $depends, @rest) = split(/\|/, $line);
+    local($version, $path, $local, $comment, $descfile, $email, 
+	  $sections, $bdepends, $rdepends, @rest) =  split(/\|/, $line);
 
     if ($path =~ m%^$localPrefix/([^/]+)%o) {
 	if (!$out_sec || $1 ne $out_sec) {
@@ -277,10 +277,15 @@ sub out {
 	    print "<BR>\n";
 	}
 	
-	if ($depends) {
-	    local($flag) = 0;
+	if ($bdepends || $rdepends) {
+	    local($flag) = 0; 
+	    local($last) = '';
 	    print qq{<I>Requires:</I> };
-	    foreach (split(/\s+/, $depends)) {
+	    foreach (sort split(/\s+/, "$bdepends $rdepends")) {
+		# delete double entries
+		next if $_ eq $last;
+		$last = $_;
+
 		print ", " if $flag; 
 		$flag++;
 		print qq{<A HREF="$script_name?query=^$_&stype=name">$_</A>};
