@@ -408,7 +408,7 @@ MLINKS=	builtin.1 alias.1 builtin.1 alloc.1 builtin.1 bg.1 builtin.1 bindkey.1 \
 	builtin.1 where.1 \
 	builtin.1 while.1
 MLINKS+=ed.1 red.1
-MLINKS+=test.1 '[.1'
+MLINKS+=test.1 [.1
 MLINKS+=gcc.1 cc.1 
 MLINKS+=gcc.1 c++.1
 MLINKS+=gcc.1 g++.1
