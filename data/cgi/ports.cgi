@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-#	$Id: ports.cgi,v 1.20 1998-06-01 16:15:03 wosch Exp $
+#	$Id: ports.cgi,v 1.21 1998-06-16 18:07:52 wosch Exp $
 #
 # ports.cgi - search engine for FreeBSD ports
 #             	o search for a port by name or description
@@ -593,7 +593,10 @@ if (!$query && !$type && $query_string =~ /^([^=&]+)$/) {
 @sec = &readcoll;
 &forms;
 
-if ($query_string eq "") {
+$query =~ s/^\s+//;
+$query =~ s/\s+$//;
+
+if ($query_string eq "" || (!$query && !$type)) {
     &footer; &footer2; &exit(0);
 }
 
