@@ -1,4 +1,4 @@
-<!-- $FreeBSD: doc/en_US.ISO_8859-1/share/sgml/freebsd.dsl,v 1.4 2000/09/28 23:29:45 nbm Exp $ -->
+<!-- $FreeBSD: doc/en_US.ISO_8859-1/share/sgml/freebsd.dsl,v 1.5 2001/02/20 19:41:41 nik Exp $ -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
 <!ENTITY freebsd.dsl PUBLIC "-//FreeBSD//DOCUMENT DocBook Language Neutral Stylesheet//EN" CDATA DSSSL>
@@ -47,6 +47,17 @@
 	    (literal "``")
 	    (process-children)
 	    (literal "''")))
+
+        <!-- Generate links to HTML man pages -->
+        (define %refentry-xref-link% #t)
+
+        <!-- Specify how to generate the man page link HREF -->
+        (define ($create-refentry-xref-link$ refentrytitle manvolnum)
+          (string-append "http://www.FreeBSD.org/cgi/man.cgi?"
+                          refentrytitle
+                         "("
+                         manvolnum
+                         ")"))
       ]]>
     </style-specification-body>
   </style-specification>
