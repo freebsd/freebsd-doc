@@ -4,12 +4,18 @@
      The FreeBSD Russian Documentation Project
 
      $FreeBSD$
-     $FreeBSDru: frdp/www/ru/includes.xsl,v 1.10 2003/10/29 13:52:54 den Exp $
+     $FreeBSDru: frdp/www/ru/includes.xsl,v 1.12 2003/11/27 14:01:07 den Exp $
 
-     Original revision: 1.17
+     Original revision: 1.20
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
+
+  <xsl:import href="../share/sgml/includes.xsl" />
+
+  <xsl:variable name="url.doc.langcode" select="'ru_RU.KOI8-R'" />
+
+  <!-- Language-specific definitions should be put below this line -->
 
   <xsl:variable name="i.daemon">
     <img src="{$base}/../gifs/daemon.gif" alt="" align="left" width="80" height="76"/>
@@ -17,25 +23,6 @@
 
   <xsl:variable name="i.new">
     <img src="{$base}/../gifs/new.gif" alt="[New!]" width="28" height="11"/>
-  </xsl:variable>
-
-  <xsl:variable name="copyright">
-    <a href="{$base}/copyright/index.html">Copyright</a> &#169; 1995-2003 the FreeBSD Project.  All rights reserved.
-  </xsl:variable>
-
-  <!-- Often used trademarks -->
-  <xsl:variable name="unix" select="'UNIX&#174;'"/>
-  <xsl:variable name="java" select="'Java&#8482;'"/>
-  <xsl:variable name="jdk" select="'JDK&#8482;'"/>
-  <xsl:variable name="posix" select="'POSIX&#174;'"/>
-
-  <xsl:variable name="email" select="'freebsd-questions'"/>
-  <xsl:variable name="author">
-    <a>
-      <xsl:attribute name="href">
-	<xsl:value-of select="concat($base, '/mailto.html')"/>
-      </xsl:attribute>
-      <xsl:value-of select="$email"/>@FreeBSD.org</a><br/><xsl:copy-of select="$copyright"/>
   </xsl:variable>
 
   <xsl:variable name="home">
@@ -50,12 +37,6 @@
       <meta name="MSSmartTagsPreventParsing" content="TRUE"/>
     </head>
   </xsl:variable>
-
-  <xsl:attribute-set name="att.body">
-    <xsl:attribute name="text">#000000</xsl:attribute>
-    <xsl:attribute name="bgcolor">#FFFFFF</xsl:attribute>
-    <xsl:attribute name="alink">#FFCC33</xsl:attribute>
-  </xsl:attribute-set>
 
   <xsl:variable name="header2">
     <img src="{$base}/../gifs/bar.gif" alt="Navigation Bar" width="565" 
@@ -87,13 +68,6 @@
     </map>
   </xsl:variable>
 
-  <xsl:variable name="footer">
-    <hr noshade="noshade"/>
-    <address><xsl:copy-of select="$author"/><br/>
-      <xsl:copy-of select="$date"/></address>
-  </xsl:variable>
-  
-  <xsl:variable name="rel.current" select='"5.1"'/>
   <xsl:variable name="u.rel.notes">
     <xsl:value-of select="$base"/>/../releases/<xsl:value-of select="$rel.current"/>R/relnotes.html</xsl:variable>
 
@@ -105,8 +79,6 @@
     <xsl:value-of select="$base"/>/../releases/<xsl:value-of select="$rel.current"/>R/hardware.html</xsl:variable>
   <xsl:variable name="u.rel.early">
     <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel.current"/>R/early-adopter.html</xsl:variable>
-
-  <xsl:variable name="rel2.current" select='"4.9"'/>
 
   <xsl:variable name="u.rel2.notes">
     <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel2.current"/>R/relnotes.html</xsl:variable>

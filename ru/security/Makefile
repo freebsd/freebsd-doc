@@ -1,9 +1,9 @@
 # The FreeBSD Russian Documentation Project
 #
 # $FreeBSD$
-# $FreeBSDru: frdp/www/ru/security/Makefile,v 1.5 2003/10/20 07:18:47 andy Exp $
+# $FreeBSDru: frdp/www/ru/security/Makefile,v 1.6 2003/11/27 14:01:08 den Exp $
 #
-# Original revision: 1.8
+# Original revision: 1.9
  
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -23,6 +23,6 @@ CLEANFILES+= advisories.html.inc
 
 security.html: advisories.html.inc
 
-advisories.html.inc: mkindex.xsl ../../en/security/advisories.xml
+advisories.html.inc: mkindex.xsl ${XML_ADVISORIES}
 	${XSLTPROC} ${XSLTPROCOPTS} -o ${.TARGET} \
-		${.CURDIR}/mkindex.xsl ${.CURDIR}/../../en/security/advisories.xml
+		${.CURDIR}/mkindex.xsl ${XML_ADVISORIES}
