@@ -1,4 +1,4 @@
-# $FreeBSD: www/ru/internal/Makefile,v 1.1 2000/02/28 12:56:52 phantom Exp $
+# $FreeBSD: www/ru/internal/Makefile,v 1.2 2000/03/02 15:00:30 phantom Exp $
 # Original version: 1.20
 
 .if exists(../Makefile.conf)
@@ -17,18 +17,21 @@ INDEXLINK=	internal.html
 
 # build the list of personal homepages of FreeBSD developers only 
 # on the main FreeBSD machines
-#hostname!= hostname
-#.if ${hostname} == "hub.freebsd.org" || ${hostname} == "freefall.freebsd.org"
-#DOCS+=	homepage.sgml
-#.PHONY: homepage.inc
+hostname!= hostname
+.if ${hostname} == "hub.freebsd.org" || ${hostname} == "freefall.freebsd.org"
+DOCS+=	homepage.sgml
+.PHONY: homepage.inc
 
-#homepage.inc:
-#	perl homepage.pl > ${.TARGET}
+SCRIPTDIR= ../../en/internal
+GENHOMEPAGE= $(SCRIPTDIR)/homepage.pl
 
-#homepage.sgml:  homepage.inc
-#CLEANFILES+=	homepage.inc
-#.endif
+homepage.inc:
+	perl $(GENHOMEPAGE) > ${.TARGET}
 
-#DATA+=	README.mirror
+homepage.sgml:  $(GENHOMEPAGE) homepage.inc
+CLEANFILES+=	homepage.inc
+.endif
+
+DATA+=	README.mirror
 
 .include "../web.mk"
