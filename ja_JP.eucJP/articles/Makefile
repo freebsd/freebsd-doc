@@ -1,4 +1,4 @@
-# $FreeBSD: doc/ja_JP.eucJP/articles/Makefile,v 1.7 2001/09/30 10:33:19 hrs Exp $
+# $FreeBSD$
 # Original revision: 1.18
 
 #SUBDIR = committers-guide
@@ -9,7 +9,7 @@ SUBDIR+= diskless-x
 #SUBDIR+= explaining-bsd
 #SUBDIR+= filtering-bridges
 #SUBDIR+= freebsd-questions
-#SUBDIR+= fonts
+SUBDIR+= fonts
 #SUBDIR+= formatting-media
 SUBDIR+= ipsec-must
 #SUBDIR+= laptop
