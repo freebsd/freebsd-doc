@@ -234,6 +234,8 @@ XARGS?=		/usr/bin/xargs
 TEX?=		${PREFIX}/bin/tex
 LATEX?=		${PREFIX}/bin/latex
 PDFTEX?=	${PREFIX}/bin/pdftex
+JADETEX?=	${TEX} "&jadetex"
+PDFJADETEX?=	${PDFTEX} "&pdfjadetex"
 GROFF?=		groff
 TIDY?=		${PREFIX}/bin/tidy
 TIDYOPTS?=	-wrap 90 -m -raw -preserve -f /dev/null -asxml ${TIDYFLAGS}
@@ -552,11 +554,11 @@ ${DOC}.dvi: ${DOC}.tex ${LOCAL_IMAGES_EPS}
 	${CP} -p ${_curimage} ${.CURDIR:H:H}/${_curimage:H:S|${IMAGES_EN_DIR}/||:S|${.CURDIR}||}
 .endfor
 	@${ECHO} "==> TeX pass 1/3"
-	-${TEX} "&jadetex" '${TEXCMDS} \nonstopmode\input{${DOC}.tex}'
+	-${JADETEX} '${TEXCMDS} \nonstopmode\input{${DOC}.tex}'
 	@${ECHO} "==> TeX pass 2/3"
-	-${TEX} "&jadetex" '${TEXCMDS} \nonstopmode\input{${DOC}.tex}'
+	-${JADETEX} '${TEXCMDS} \nonstopmode\input{${DOC}.tex}'
 	@${ECHO} "==> TeX pass 3/3"
-	-${TEX} "&jadetex" '${TEXCMDS} \nonstopmode\input{${DOC}.tex}'
+	-${JADETEX} '${TEXCMDS} \nonstopmode\input{${DOC}.tex}'
 
 .if !target(${DOC}.pdf)
 ${DOC}.pdf: ${DOC}.tex-pdf ${IMAGES_PDF}
@@ -564,11 +566,11 @@ ${DOC}.pdf: ${DOC}.tex-pdf ${IMAGES_PDF}
 	${CP} -p ${_curimage} ${.CURDIR:H:H}/${_curimage:H:S|${IMAGES_EN_DIR}/||:S|${.CURDIR}||}
 .endfor
 	@${ECHO} "==> PDFTeX pass 1/3"
-	-${PDFTEX} "&pdfjadetex" '${TEXCMDS} \nonstopmode\input{${DOC}.tex-pdf}'
+	-${PDFJADETEX} '${TEXCMDS} \nonstopmode\input{${DOC}.tex-pdf}'
 	@${ECHO} "==> PDFTeX pass 2/3"
-	-${PDFTEX} "&pdfjadetex" '${TEXCMDS} \nonstopmode\input{${DOC}.tex-pdf}'
+	-${PDFJADETEX} '${TEXCMDS} \nonstopmode\input{${DOC}.tex-pdf}'
 	@${ECHO} "==> PDFTeX pass 3/3"
-	${PDFTEX} "&pdfjadetex" '${TEXCMDS} \nonstopmode\input{${DOC}.tex-pdf}'
+	${PDFJADETEX} '${TEXCMDS} \nonstopmode\input{${DOC}.tex-pdf}'
 .endif
 
 ${DOC}.ps: ${DOC}.dvi
