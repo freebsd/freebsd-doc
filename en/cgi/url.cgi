@@ -26,7 +26,7 @@
 #
 # url.cgi - make plain text URLs clickable
 #
-# $Id: url.cgi,v 1.10 1998-11-03 11:47:27 wosch Exp $
+# $Id: url.cgi,v 1.11 1998-12-06 11:47:43 wosch Exp $
 
 
 #require LWP::UserAgent;
@@ -52,7 +52,7 @@ if (1) {
 	my($cvsroot) = '/home/ncvs';
 	$file =~ s%(http|ftp)://ftp.freebsd.org/pub/FreeBSD/FreeBSD-current/%%;
 	print &short_html_header($file);
-	if ($file =~ m%^ports/[\w-]+/[\w-+]+/pkg/DESCR% && 
+	if ($file =~ m%^ports/[\w-]+/\w[\w-+.]+/pkg/DESCR% && 
 		-f "$cvsroot/$file,v") {
 		 open(CO, "-|") || exec ('/usr/bin/co', '-p', '-q', "$cvsroot/$file,v");
 	} else {
