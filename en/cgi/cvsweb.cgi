@@ -43,8 +43,8 @@
 # SUCH DAMAGE.
 #
 # $zId: cvsweb.cgi,v 1.103 2000/09/20 17:02:29 jumager Exp $
-# $Id: cvsweb.cgi,v 1.54 2000-09-30 20:21:04 knu Exp $
-# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.53 2000/09/30 18:57:41 knu Exp $
+# $Id: cvsweb.cgi,v 1.55 2000-10-07 07:57:33 knu Exp $
+# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.54 2000/09/30 20:21:04 knu Exp $
 #
 ###
 
@@ -80,6 +80,7 @@ use vars qw (
     $tabstop $state $annTable $sel $curbranch @HideModules
     $module $use_descriptions %descriptions @mytz $dwhere $moddate
     $use_moddate $has_zlib $gzip_open
+    $LOG_FILESEPARATOR $LOG_REVSEPARATOR
 );
 
 sub printDiffSelect($);
@@ -159,6 +160,9 @@ $extern_window_width = $extern_window_height = $edit_option_form =
 $checkout_magic = $show_subdir_lastmod = $show_log_in_markup = $v =
 $navigationHeaderColor = $tableBorderColor = $markupLogColor =
 $tabstop = $use_moddate = $moddate = $gzip_open = undef;
+
+$LOG_FILESEPARATOR = q/^={77}$/;
+$LOG_REVSEPARATOR = q/^-{28}$/;
 
 ##### End of configuration variables #####
 
@@ -286,25 +290,24 @@ foreach (keys %DEFAULTVALUE)
 }
 
 $barequery = "";
+my @barequery;
 foreach (@stickyvars) {
     # construct a query string with the sticky non default parameters set
     if (defined($input{$_}) && $input{$_} ne '' &&
 	!(defined($DEFAULTVALUE{$_}) && $input{$_} eq $DEFAULTVALUE{$_})) {
-        if ($barequery) {
-	    $barequery = $barequery . "&amp;";
-	}
-	my $thisval = urlencode($_) . "=" . urlencode($input{$_});
-	$barequery .= $thisval;
+	push @barequery, join('=', urlencode($_), urlencode($input{$_}));
     }
 }
 # is there any query ?
-if ($barequery) {
+if (@barequery) {
+    $barequery = join('&amp;', @barequery);
     $query = "?$barequery";
-    $barequery = "&amp;" . $barequery;
+    $barequery = "&amp;$barequery";
 }
 else {
     $query = "";
 }
+undef @barequery;
 
 # get actual parameters
 $sortby = $input{"sortby"};
@@ -352,7 +355,8 @@ if ($input{'cvsroot'} && $CVSROOT{$input{'cvsroot'}}) {
 $cvsroot = $CVSROOT{$cvstree};
 
 # create icons out of description
-foreach my $k (keys %ICONS) {
+my $k;
+foreach $k (keys %ICONS) {
     no strict 'refs';
     my ($itxt,$ipath,$iwidth,$iheight) = @{$ICONS{$k}};
     if ($ipath) {
@@ -362,6 +366,7 @@ foreach my $k (keys %ICONS) {
 	${"${k}icon"} = $itxt;
     }
 }
+undef $k;
 
 my $config_cvstree = "$config-$cvstree";
 
@@ -372,6 +377,7 @@ if (-f $config_cvstree) {
 	       sprintf('Error in loading configuration file: %s<BR><BR>%s<BR>',
 		       $config_cvstree, &htmlify($@)));
 }
+undef $config_cvstree;
 
 $prcategories = '(?:' . join('|', @prcategories) . ')';
 $prcgi .= '%s' if defined($prcgi) && $prcgi !~ /%s/;
@@ -937,13 +943,13 @@ sub htmlify($;$) {
 	if ($extra) {
 	    # get PR #'s as link ..
 	    if (defined($prcgi)) {
-		1 while $string =~ s`\b(pr[:#]?\s*(?:#?\d+[,\s]\s*)*#?)(\d+)\b`$1 . &link($2, sprintf($prcgi, $2))`ie; # `
-		$string =~ s`\b${prcategories}/(\d+)\b`&link($&, sprintf($prcgi, $1))`igeo;	# `
+		1 while $string =~ s`\b(pr[:#]?\s*(?:#?\d+[,\s]\s*)*#?)(\d+)\b`$1 . &link($2, sprintf($prcgi, $2))`ie; # `;
+		$string =~ s`\b${prcategories}/(\d+)\b`&link($&, sprintf($prcgi, $1))`igeo;	# `;
 	    }
 
 	    # get manpage specs as link ..
 	    if (defined($mancgi)) {
-		$string =~ s`\b([a-zA-Z]\w+)\(([0-9n])\)\B`&link($&, sprintf($mancgi, $2, $1))`ge; # `
+		$string =~ s`\b([a-zA-Z]\w+)(?:\(([0-9n])\)\B|\.([0-9n])\b)`&link($&, sprintf($mancgi, $2 ne '' ? $2 : $3, $1))`ge; # `x;
 	    }
 	}
 
@@ -983,7 +989,7 @@ sub spacedHtmlText($;$) {
 sub link($$) {
 	my($name, $where) = @_;
 
-	return "<A HREF=\"$where\">$name</A>\n";
+	return "<A HREF=\"$where\">$name</A>";
 }
 
 sub revcmp($$) {
@@ -1273,11 +1279,11 @@ sub doAnnotate($$) {
 	    # so it looks irregular.
 	    print "<b>" if ($isCurrentRev && $is_textbased);
 
-	    printf ("%s%s %-8s %4d:",
+	    printf "%s%s %-8s %4d:",
 		    $revprint,
 		    $isCurrentRev ? '!' : ' ',
 		    $usrprint,
-		    $lineNr);
+		    $lineNr;
 	    print spacedHtmlText($line, $d{'tabstop'});
 
 	    print "</b>" if ($isCurrentRev && $is_textbased);
@@ -1699,7 +1705,7 @@ again:
 	    $state = "head";
 	    goto again;
 	}
-	if ($state eq "head" && /^----------------------------$/) {
+	if ($state eq "head" && /$LOG_REVSEPARATOR/o) {
 	    $state = "log";
 	    $rev = undef;
 	    $date = undef;
@@ -1709,8 +1715,7 @@ again:
 	    next;
 	}
 	if ($state eq "log") {
-	    if (/^----------------------------$/
-		|| /^=============================/) {
+	    if (/$LOG_REVSEPARATOR/o || /$LOG_FILESEPARATOR/o) {
 		# End of a log entry.
 		my $revbranch;
 		($revbranch = $rev) =~ s/\.\d+$//;
@@ -1757,7 +1762,7 @@ again:
 		$log = $log . $_;
 	    }
 	}
-	if (/^===============/) {
+	if (/$LOG_FILESEPARATOR/o) {
 	    $state = "start";
 	    next;
 	}
@@ -1831,7 +1836,7 @@ sub readLog($;$) {
 # log info
 # ----------------------------
 	logentry:
-	while (!/^=========/) {
+	while (!/$LOG_FILESEPARATOR/o) {
 	    $_ = <$fh>;
 	    last logentry if (!defined($_));	# EOF
 	    print "R:", $_ if ($verbose);
@@ -1839,7 +1844,7 @@ sub readLog($;$) {
 		$rev = $1;
 		unshift(@allrevisions,$rev);
 	    }
-	    elsif (/^========/ || /^----------------------------$/) {
+	    elsif (/$LOG_FILESEPARATOR/o || /$LOG_REVSEPARATOR/o) {
 		next logentry;
 	    }
 	    else {
@@ -1873,7 +1878,7 @@ sub readLog($;$) {
 	    while (<$fh>) {
 		print "L:", $_ if ($verbose);
 		next line if (/^branches:\s/);
-		last line if (/^----------------------------$/ || /^=========/);
+		last line if (/$LOG_FILESEPARATOR/o || /$LOG_REVSEPARATOR/o);
 		$log{$rev} .= $_;
 	    }
 	    print "E:", $_ if ($verbose);
@@ -2493,7 +2498,7 @@ sub navigateHeader($$$$$) {
     $swhere = urlencode($filename) if ($swhere eq "");
     print "<\!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\">";
     print "<HTML>\n<HEAD>\n";
-    print '<!-- CVSweb $zRevision: 1.103 $  $Revision: 1.54 $ -->';
+    print '<!-- CVSweb $zRevision: 1.103 $  $Revision: 1.55 $ -->';
     print "\n<TITLE>$path$filename - $title - $rev</TITLE></HEAD>\n";
     print  "$body_tag_for_src\n";
     print "<table width=\"100%\" border=0 cellspacing=0 cellpadding=1 bgcolor=\"$navigationHeaderColor\">";
@@ -2848,7 +2853,7 @@ sub http_header(;$) {
 
 sub html_header($) {
     my ($title) = @_;
-    my $version = '$zRevision: 1.103 $  $Revision: 1.54 $'; #'
+    my $version = '$zRevision: 1.103 $  $Revision: 1.55 $'; #'
     http_header();
 
     (my $header = &cgi_style::html_header) =~ s/^.*\n\n//; # remove HTTP response header
