@@ -6,7 +6,6 @@ MAN1 =	a2p.1\
 	ar.1\
 	as.1\
 	at.1\
-	awk.1\
 	basename.1\
 	bc.1\
 	bdes.1\
@@ -91,6 +90,7 @@ MAN1 =	a2p.1\
 	ftp.1\
 	g711conv.1\
 	gasp.1\
+	gawk.1\
 	gcc.1\
 	gcore.1\
 	gdb.1\
@@ -366,7 +366,7 @@ MAN1 =	a2p.1\
 	zmore.1\
 	znew.1
 
-MLINKS=	builtin.1 alias.1 builtin.1 alloc.1 builtin.1 bg.1 builtin.1 bindkey.1 \
+MLINKS= builtin.1 alias.1 builtin.1 alloc.1 builtin.1 bg.1 builtin.1 bindkey.1 \
 	builtin.1 break.1 builtin.1 breaksw.1 builtin.1 builtins.1 \
 	builtin.1 case.1 builtin.1 cd.1 builtin.1 chdir.1 builtin.1 command.1 \
 	builtin.1 complete.1 \
@@ -398,6 +398,7 @@ MLINKS=	builtin.1 alias.1 builtin.1 alloc.1 builtin.1 bg.1 builtin.1 bindkey.1 \
 	builtin.1 while.1
 MLINKS+=ed.1 red.1
 MLINKS+=test.1 '[.1'
+MLINKS+=gawk.1 awk.1
 MLINKS+=gcc.1 cc.1 
 MLINKS+=gcc.1 c++.1
 MLINKS+=gcc.1 g++.1

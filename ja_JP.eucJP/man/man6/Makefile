@@ -37,7 +37,7 @@ MAN6 =	adventure.6\
 	wump.6
 
 MLINKS=	canfield.6 cfscores.6
-MLINKS+=bcd.6 morse.6 bcd.6 ppt.6 
+MLINKS+=bcd.6 ppt.6 
 MLINKS+=factor.6 primes.6
 MLINKS+=caesar.6 rot13.6
 MLINKS+=snake.6 snscore.6
