@@ -28,7 +28,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $Id: cvsweb.cgi,v 1.28 1999-01-01 02:42:36 hoek Exp $
+# $Id: cvsweb.cgi,v 1.29 1999-01-13 03:59:04 fenner Exp $
 #
 
 
@@ -427,7 +427,9 @@ sub checkout {
 		"Unexpected output from co: $_");
 	}
 	$_ = <RCS>;
-	if (/^revision\s+$rev\s*$/) {
+	if ($rev eq ".") {
+	    # latest rev requested, don't check
+	} elsif (/^revision\s+$rev\s*$/) {
 	    # As expected
 	} else {
 	    &fatal("500 Internal Error",
