@@ -52,7 +52,7 @@
 #
 #     _________________________________________________________________
 #                                      
-# $FreeBSD: www/en/cgi/missing_handler.cgi,v 1.13 2002/05/04 18:48:05 wosch Exp $
+# $FreeBSD: www/en/cgi/missing_handler.cgi,v 1.14 2003/05/18 17:45:20 ceri Exp $
 # ----------------------------------------------------------------------
 
 sub escape($) { $_ = $_[0]; s/&/&amp;/g; s/</&lt;/g; s/>/&gt;/g; $_; }
@@ -80,7 +80,7 @@ $redirect_url_save = escape2($ENV{'REDIRECT_URL'});
 $redirect_url_save =~ s/([^a-zA-Z0-9;\/?:&=])/sprintf("%%%02x",ord($1))/eg;
 
 
-$hsty_base = 'http://www.freebsd.org';
+$hsty_base = 'http://www.FreeBSD.org';
 require './cgi-style.pl';
 print &html_header($title);
 
@@ -109,8 +109,8 @@ or the server administrator
 
 <center>
 Please try our 
-<a href="http://www.freebsd.org/search/index-site.html">Site Map</a> or
-<a href="http://www.freebsd.org/search/search.html">Search Page</a> 
+<a href="http://www.FreeBSD.org/search/index-site.html">Site Map</a> or
+<a href="http://www.FreeBSD.org/search/search.html">Search Page</a> 
 </center>
 <p>
 

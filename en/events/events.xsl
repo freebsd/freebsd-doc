@@ -24,7 +24,7 @@
      OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
      SUCH DAMAGE.
 
-     $FreeBSD: www/en/events/events.xsl,v 1.1 2003/10/12 17:24:21 simon Exp $
+     $FreeBSD: www/en/events/events.xsl,v 1.2 2003/10/16 20:54:00 simon Exp $
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
@@ -73,7 +73,7 @@
 	<p>If you know of any FreeBSD related events, or events that
 	  are of interest for FreeBSD users, which are not listed
 	  here, please send details to <a
-	  href="mailto:www@freebsd.org">www@FreeBSD.org</a>, so they
+	  href="mailto:www@FreeBSD.org">www@FreeBSD.org</a>, so they
 	  can be included.</p>
 
 	<h2 id="upcoming">

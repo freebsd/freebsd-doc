@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/en/news/press.xsl,v 1.5 2003/10/30 23:36:02 simon Exp $ -->
+<!-- $FreeBSD: www/en/news/press.xsl,v 1.6 2004/01/12 21:26:59 hrs Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -28,7 +28,7 @@
 
 	<p>If you know of any news stories featuring FreeBSD that we have not
 	  listed here, please send details to 
-	  <a href="mailto:www@freebsd.org">www@FreeBSD.org</a> so that we can
+	  <a href="mailto:www@FreeBSD.org">www@FreeBSD.org</a> so that we can
 	  include them.</p>
 
 	<p>You also can visit <a href="{$base}/java/press.html">FreeBSD/Java
