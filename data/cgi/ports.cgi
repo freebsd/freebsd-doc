@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-#	$Id: ports.cgi,v 1.8 1997-10-13 22:30:18 wosch Exp $
+#	$Id: ports.cgi,v 1.9 1997-10-24 13:50:01 wosch Exp $
 #
 # ports.cgi - search engine for FreeBSD ports
 #             	o search for a port by name or description
@@ -305,7 +305,7 @@ sub out {
 
 	print qq[<A HREF="$url?$descfile">Description</A> <B>:</B>
 <A HREF="$path/">Browse</A> <B>:</B>
-<A HREF="$pathDownload.tar.gz">Download</A> <B>:</B>
+<A HREF="$pathDownload.tar">Download</A> <B>:</B>
 <A HREF="$remotePrefixFtpPackages{$release}/$version.tgz">Package</A> <B>:</B>
 <A HREF="$l">Changes</A> <B>:</B>
 <A HREF="$pds?$pathB">Sources</A>
