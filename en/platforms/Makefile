@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/platforms/Makefile,v 1.3 2001/05/04 22:31:57 obrien Exp $
+# $FreeBSD: www/en/platforms/Makefile,v 1.4 2002/11/08 14:56:49 jmallett Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -14,5 +14,7 @@ DOCS+=	mips.sgml
 DOCS+=	ppc.sgml
 DOCS+=	sparc.sgml
 DOCS+=	x86-64.sgml
+
+SUBDIR=	ia64
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
