@@ -8,6 +8,9 @@
 
       <!-- Configure the stylesheet using documented variables -->
 
+      (define %stylesheet%
+        "handbook.css")
+
       (define %gentext-nav-use-tables%
         ;; Use tables to build the navigation headers and footers?
         #t)
@@ -56,6 +59,22 @@
       (element command ($mono-seq$))
 
       (element application ($bold-seq$))
+
+      <!-- Warnings and cautions are put in boxed tables to make them stand
+           out. The same effect can be better achieved using CSS or similar,
+           so have them treated the same as <important>, <note>, and <tip>
+      -->
+      (element warning ($admonition$))
+      (element (warning title) (empty-sosofo))
+      (element (warning para) ($admonpara$))
+      (element (warning simpara) ($admonpara$))
+      (element caution ($admonition$))
+      (element (caution title) (empty-sosofo))
+      (element (caution para) ($admonpara$))
+      (element (caution simpara) ($admonpara$))
+
+      (define usen-warning-label-title-sep ": ")
+      (define usen-caution-label-title-sep ": ")
 
       <!-- Tell the stylesheet about our local customisations -->
       
