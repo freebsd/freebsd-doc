@@ -7,12 +7,7 @@
 .include "../Makefile.inc"
 .endif
 
-SUBDIR=		docs
-SUBDIR+=	images
-SUBDIR+=	patches
-
-DOCS=	index.sgml
-DOCS+=	screenshots.sgml
-DOCS+=	contact.sgml
+DATA=	ss1.jpg
+DATA+=	ss2.png
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
