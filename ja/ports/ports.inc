@@ -1,6 +1,6 @@
-<!-- $FreeBSD: www/ja/ports/ports.inc,v 1.12 1999/10/02 01:19:39 kuriyama Exp $ -->
+<!-- $FreeBSD: www/ja/ports/ports.inc,v 1.13 1999/12/07 14:03:27 kuriyama Exp $ -->
 <!-- The FreeBSD Japanese Documentation Project -->
-<!-- Original revision: 1.42 -->
+<!-- Original revision: 1.45 -->
 <p>FreeBSD の Ports と Packages のコレクションは,
 ユーザや管理者が簡単にアプリケーショ
 ンのインストールを簡単に行う方法を提供します.
@@ -86,6 +86,10 @@ href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-3-stable/Latest/31up
 href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-3-stable/Latest/32upgrade.tgz">3.2
 から 3-stable へのアップグレードキット</a>
 <dd>3.2-release もしくは 3.2-release 以降の 3.2-stable ユーザ用
+<dt><a
+href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-3-stable/Latest/34upgrade.tgz">3.3 もしくは 3.4
+から 3-stable へのアップグレードキット</a>
+<dd>3.3/3.4-release もしくは 3.4-release 以降の 3.4-stable ユーザ用
 </dl>
 
 <p>これらは FreeBSD のパッケージになっています. インストールには
