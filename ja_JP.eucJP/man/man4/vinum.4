@@ -1,0 +1,998 @@
+.\"  Hey, Emacs, edit this file in -*- nroff-fill -*- mode
+.\"-
+.\" Copyright (c) 1997, 1998
+.\"	Nan Yang Computer Services Limited.  All rights reserved.
+.\"
+.\"  This software is distributed under the so-called ``Berkeley
+.\"  License'':
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\" 3. All advertising materials mentioning features or use of this software
+.\"    must display the following acknowledgement:
+.\"	This product includes software developed by Nan Yang Computer
+.\"      Services Limited.
+.\" 4. Neither the name of the Company nor the names of its contributors
+.\"    may be used to endorse or promote products derived from this software
+.\"    without specific prior written permission.
+.\"  
+.\" This software is provided ``as is'', and any express or implied
+.\" warranties, including, but not limited to, the implied warranties of
+.\" merchantability and fitness for a particular purpose are disclaimed.
+.\" In no event shall the company or contributors be liable for any
+.\" direct, indirect, incidental, special, exemplary, or consequential
+.\" damages (including, but not limited to, procurement of substitute
+.\" goods or services; loss of use, data, or profits; or business
+.\" interruption) however caused and on any theory of liability, whether
+.\" in contract, strict liability, or tort (including negligence or
+.\" otherwise) arising in any way out of the use of this software, even if
+.\" advised of the possibility of such damage.
+.\"
+.\" %Id: vinum.4,v 1.6.2.3 1999/02/05 00:59:31 grog Exp %
+.\"
+.\" jpman %Id: vinum.4,v 1.3 1999/09/26 12:24:52 horikawa Stab %
+.\" WORD: attach	結合 (する) [vinum.8]
+.\" WORD: detach	分離 (する)
+.\"
+.Dd 22 July 1998
+.Dt vinum 4
+.Os FreeBSD
+.Sh 名称
+.Nm vinum
+.Nd 論理ボリュームマネージャ
+.Sh 書式
+.Cd "kldload vinum"
+.Cd "kldload Vinum"
+.Sh 解説
+.Nm
+は論理ボリュームマネージャです。Veritas Volume Manager に喚起されていますが
+直接由来するものではありません。これは次のような機能を提供します。
+.Bl -bullet
+.It
+デバイスに依存しない論理ディスクを提供します。
+これを\fIボリューム\fPと呼びます。
+ボリュームはシステム内のディスクの大きさに制限されません。
+.It
+ボリュームは 1 つ以上の\fIプレックス\fPから構成されます。各プレックスは
+ボリュームの全アドレス空間を持ちます。これは RAID-1 (ミラー) の実装を表します。
+複数のプレックスを使うことにより以下のような効果があります。
+.\" XXX What about sparse plexes?  Do we want them?
+.if t .sp
+.Bl -bullet
+.It
+読み出しスループットの向上。
+.Nm
+は最もアクセスの少ないディスクからデータを読み出すので、
+複数のディスクからなるプレックスを持つボリュームなら
+より多くのデータを並列に読み出すことが可能です。
+.Nm
+は 1 プレックスからのみデータを読み出しますが、
+すべてのプレックスに対してデータを書き込みます。
+.It
+信頼性の向上。異なるディスク上の複数のプレックスに格納することにより、
+プレックスのうちの 1 つが利用不能になったとしてもデータを取り出せるでしょう。
+RAID-5 プレックス (下記参照) と比べて、複数のプレックスはより多くのストレージ
+領域を必要としますが、パフォーマンスが優れています。特にドライブ故障の際の
+差は顕著でしょう。
+.It
+冗長なプレックスを利用して、オンラインのままデータ再構成ができます。
+あるプレックスを結合し、
+続いて古いプレックスの 1 つを分離することにより、アクセスを妨げることなく
+オンラインでデータを移動できます。
+.It
+冗長なプレックスにより、一貫性を持ったファイルシステムダンプを
+得ることができます。
+プレックスを結合し、ある時点で分離することにより、分離されたプレックスは
+分離した時点におけるファイルシステムの正確なスナップショットになります。
+.\" Make sure to flush!
+.El
+.It
+各プレックスは、\fIサブディスク\fPと呼ばれる、
+1 つ以上の論理ディスクスライスから構成されます。
+サブディスクは物理ディスクの連続したブロックとして定義されます。
+プレックスはあらゆる適切な数のサブディスクで構成できます。(言い替えれば、
+本当の制限はサブディスクの数ではなく別の要因、多くのサブディスクの管理に
+関するメモリやパフォーマンスといったものです)
+.It
+サブディスクとプレックスの間の編成にはいくつかの種類があります:
+.Bl -bullet
+.It
+\fIコンカチネート化プレックス\fP\|は 1 つ以上のサブディスクからなり、
+各サブディスク
+はプレックスのアドレス空間の中で連続した部分として編成されます。
+.It
+\fIストライプ化プレックス\fP\|は 2 つ以上の、
+大きさの等しいサブディスクからなります。
+ファイルのアドレス空間は\fIストライプ\fPに、
+すなわちサブディスクの大きさの整数分の 1 に、対応付けられます。
+連続したプレックスアドレス空間には、
+各サブディスクのストライプが順番に対応付けられます。
+.if t \{\
+.PS
+move right 2i
+down
+SD0: box
+SD1: box
+SD2: box
+
+"plex 0" at SD0.n+(0,.2)
+"subdisk 0" rjust at SD0.w-(.2,0)
+"subdisk 1" rjust at SD1.w-(.2,0)
+"subdisk 2" rjust at SD2.w-(.2,0)
+.PE
+.\}
+ストライプ化プレックスのサブディスクはすべて同じ大きさである必要があります。
+.It
+\fIRAID-5 プレックス\fP\|には大きさの等しいサブディスクが、
+少なくとも 3 つは必要です。
+これはストライプ化プレックスに似ていますが、
+各ストライプの中で 1 つのサブディスク
+がパリティ情報を持っている点が異なります。パリティ情報を持つサブディスクは
+ストライプによって異なります。1 番目のストライプでは 1 番目のサブディスク、
+2 番目のストライプでは 2 番目のサブディスクといったようになります。
+単一ディスク故障の場合、
+.Nm
+は残りのサブディスクに格納されている情報からデータを復元します。
+この編成は読み出しが集中するアクセスに特に向いています。RAID-5 プレックスの
+サブディスクはすべて同じ大きさである必要があります。
+.\" Make sure to flush!
+.El
+.It
+.Nm ドライブ
+はストレージ階層の中で最も低レベルなものです。これはディスク特殊デバイスを
+表します。
+.It
+.Nm
+は自動起動機能を提供します。通常の UNIX ファイルシステムと異なり、
+.Nm
+ボリューム内にすべての設定情報を持っているため、サブシステムが利用可能に
+なった時に正しく起動することを保証できます。
+この点が Veritas\(tm File System に対する重要な利点でもあります。
+この機能はボリュームの存在を検出します。
+これは、ボリュームを自動的にマウントするという意味ではありません。
+マウントを実行するのは、通常の
+.Pa /etc/fstab
+による起動手順です。
+.El
+.Sh カーネルの設定
+.Nm
+は現在カーネルロード可能モジュール (kld) として提供されており、
+カーネルの設定は不要です。
+他の kld と同様、kld は OS のバージョンと
+絶対に適合する必要があります。そうでなければ
+.Nm
+はエラーメッセージを出力して終了するでしょう。
+.Pp
+.Nm
+には現在 2 つのバージョンがあります。
+それは、RAID-5 機能を持たない自由に入手可能なバージョンと、
+RAID-5 の機能を持つ完全なバージョンです。完全なバージョンは
+Cybernet Systems Inc. (http://www.cybernet.com\fR) から入手可能です。
+.Sh VINUM の起動
+通常、設定されたバージョンの
+.Nm
+をブート時に起動させます。
+.Ar /etc/rc.conf
+内の変数
+.Ar vinum_drives
+に
+.Nm
+ドライブが置かれているスライスを設定します。例えば、
+.Nm
+ドライブが
+.Ar /dev/da1h ,
+.Ar /dev/da2h ,
+.Ar /dev/da3h ,
+.Ar /dev/da4h ,
+.Ar /dev/da5h
+にあるとすると、この変数を次のように設定します。
+.Bd -literal
+vinum_drives="/dev/da1 /dev/da2 /dev/da3 /dev/da4 /dev/da5"
+.Ed
+.Pp
+.Sh VINUM のインストール
+自由に入手可能なバージョンの
+.Nm
+kld は
+.Pa /modules/vinum.ko
+であり、RAID-5 バージョンの kld は
+.Pa /modules/Vinum.o
+です。
+モジュールをロードするには次のコマンドを実行します:
+.Pp
+.Bd -unfilled -offset indent
+# kldload vinum
+.Ed
+.Pp
+また
+.Nm vinum(8)
+はロードされていなければ kld モジュールを自動的にロードします。
+.Pp
+.Nm vinum
+をロードした後、設定を実行する必要があります。すでにインストールが
+終わっていれば、次のコマンドにより、
+存在するディスク集合から設定を読み出します。
+.Bd -unfilled -offset indent
+# vinum read /dev/da1 /dev/da2 /dev/da3 /dev/da4 /dev/da5 /dev/da6
+.Ed
+.sp
+このコマンドでは
+.Nm vinum
+により使われるすべてのデバイスを指定する必要があります。
+.Nm vinum(8) 
+は、最新の設定ファイルを使用して、
+設定をデバイスより読み出します。
+引き続いて、より古い設定から得られた追加情報があれば、設定を更新します。
+このようなコマンドは通常、起動ファイル
+.Pa /etc/rc
+に埋めこまれています。
+.Pp
+.Nm
+設定を作成する方法については
+.Xr vinum 8
+を参照してください。
+.Pp
+kld をアンロードするには、まず
+.Pa kldstat
+で
+.Ar Id
+フィールドを探します。
+.Bd -unfilled -offset indent
+# kldstat
+Id Refs Address    Size     Name
+ 1    2 0xf0100000 1c7de8   kernel
+ 2    1 0xf0f5b000 b0000    Vinum.ko
+.Ed
+.Pp
+モジュールをアンロードするには
+.Pa kldunload
+を使います:
+.Bd -unfilled -offset indent
+# kldunload -n Vinum
+.Ed
+.Pp
+kld をアンロードできるのはアイドル中、言い替えると
+ボリュームがマウントされておらず、他の
+.Nm
+プログラムのインスタンスがアクティブでない時のみです。
+kld のアンロードはボリューム内のデータを破壊しません。
+.Ss オブジェクトの設定と起動
+.Nm 
+オブジェクトの設定と起動には、
+.Xr vinum 8
+ユーティリティを使ってください。
+.Sh IOCTL 呼び出し
+.Pa ioctl
+呼び出しは
+.Nm
+設定プログラムだけが使うように設計されています。
+ヘッダファイル
+.Pa /sys/sys/vinumio.h
+に説明があります。
+.Ss ディスクラベル
+伝統的なディスク特殊デバイスは
+.Em ディスクラベル
+をデバイスの第 2 セクタに持っています。
+詳細については
+.Xr disklabel 5
+を参照してください。
+このディスクラベルにはデバイス内のパーティション情報が記述されています。
+.Nm
+はボリュームをさらに分割することはないので、ボリュームには物理ディスクラベル
+がありません。
+利便のため、
+.Nm
+には ioctl 呼び出し DIOCGDINFO (ディスクラベルの取得), 
+DIOCGPART (パーティション情報の取得), 
+DIOCWDINFO (パーティション情報の書き込み), DIOCSDINFO
+(パーティション情報の設定) が実装されています。DIOCGDINFO と DIOCGPART は
+内部的なディスクラベル情報を参照しますが、これはボリューム内には存在しません。
+従って、
+.Xr disklabel 8
+の
+.Fl r
+オプションは、生のディスク情報を読むので、失敗するでしょう。
+.Pp
+一般に、
+.Xr disklabel 8
+は vinum ボリュームにとって有用な効果はありません。もし動作させると、
+disklabel は 3 つのパーティション a, b, c を表示し、fstype を除いて
+これらは同じになるでしょう。例えば以下のように表示されます:
+.Bd -unfilled -offset
+3 partitions:
+#        size   offset    fstype   [fsize bsize bps/cpg]
+  a:     2048        0    4.2BSD     1024  8192     0   # (Cyl.    0 - 0)
+  b:     2048        0      swap                        # (Cyl.    0 - 0)
+  c:     2048        0    unused        0     0         # (Cyl.    0 - 0)
+.Ed
+.Pp
+.Nm
+は DIOCWDINFO と DIOCSDINFO の ioctl を無視します。すなわち何も変更しません。
+従って、ディスクラベルを変更しようとすると何の表示もなく無視されるでしょう。
+.Sh ファイルシステムの作成
+.Nm
+ボリュームはパーティションを持たないので、ボリュームの名前に関してディスク
+パーティションの名前付けの通常のルールに従う必要はありません。
+物理ディスクパーティションにおいては、デバイス名の最後の文字は
+パーティション識別子 (a から h) を指定します。
+.Nm
+ボリュームはこの規則に従う必要はありません。しかし従わなかった場合、
+.Nm newfs
+がパーティションの識別が出来ないと文句を言うでしょう。この問題を解決するには
+.Nm newfs
+に対して
+.Fl v
+フラグを指定してください。
+.Sh オブジェクトの名前付け
+.Nm
+はデフォルトの名前をプレックスとサブディスクに割り当てます。この名前を
+上書きすることも可能です。しかしデフォルトの名前を上書きすることは推奨
+しません。オブジェクトに任意の名前を付けられる
+.if t Veritas\(tm
+.if n Veritas(tm)
+volume manager の使用経験からすると、このような自由度に大きな利点はなく、
+混乱を引き起こすでしょう。
+.sp
+名前には空白でない任意の文字を使えますが、英数字とアンダスコアのみに
+制限することを勧めます。ボリューム、プレックス、サブディスクの名前には
+64 文字まで、またドライブの名前には 32 文字まで使えます。
+ボリュームとプレックスの名前を選ぶ時には、
+自動的に生成されるプレックス名とサブボリューム名が、
+これらの元となる名前よりも長くなることに注意してください。
+.Bl -bullet 
+.It
+.Nm vinum(8)
+がオブジェクトを生成または削除すると、ディレクトリ
+.Ar /dev/vinum
+を作成し、その中に vinum が検出した各ボリュームに対応する
+デバイスエントリを作成します。また、vinum はサブディレクトリ
+.Ar /dev/vinum/plex
+と
+.Ar /dev/vinum/sd
+を作成し、その中にプレックスとサブディスクに対応するデバイスエントリを
+格納します。更に、vinum は2つのディレクトリ
+.Ar /dev/vinum/vol
+と
+.Ar /dev/vinum/drive
+を作成し、その中にボリュームとドライブに対する階層的な情報を格納します。
+.It
+.Nm UNIX
+ドライブと異なり、
+.Nm
+ボリュームをパーティションへとさらに分割しません。
+従ってディスクラベルを持ちません。
+不幸な事に、このことによっていくつかのユーティリティ、特に
+.Nm newfs
+は混乱します。
+.Nm newfs
+は通常
+.Nm
+ボリューム名の最後の文字をパーティション識別子として解釈しようとするからです。
+.Ar a
+から
+.Ar c
+の文字で終わらない文字列をボリューム名に使った場合には、
+.Nm newfs
+に対して
+.Fl v 
+フラグを指定してこの規則を無視するよう
+.Nm newfs
+に指示することが必要です。
+.\"
+.It 
+プレックスには明示的に名前を割り当てる必要はありません。デフォルトのプレックス
+名はボリューム名に文字列 \f(CW.p\fR とプレックスの番号を続けたものです。
+例えば、ボリューム
+.Ar vol3
+のプレックスは
+.Ar vol3.p0 ,
+.Ar vol3.p1
+といった風に名付けられます。
+この名前を上書きすることは可能ですがお勧めしません。
+.br
+.It
+プレックスと同様、サブディスクについても自動的に名前が割り当てられ、
+明示的な名前付けはお勧めしません。
+サブディスク名はプレックス名に文字列 \f(CW.s\fR とサブディスク
+を識別する番号を続けたものです。例えば、プレックス
+.Ar vol3.p0
+のサブディスクは
+.Ar vol3.p0.s0 ,
+.Ar vol3.p0.s1
+といった風に名付けられます。
+.br
+.It
+一方、
+.Nm ドライブ
+は必ず名前を付ける必要があります。これにより、ドライブを異なる場所に移動した
+としても自動的に認識することが可能になります。
+ドライブ名の長さは 32 文字までです。
+.El
+.Pp
+使用例
+.Pp
+.Nm
+オブジェクトが
+.Xr vinum 8
+の設定ファイル例の節に説明されているものであるとします。
+ディレクトリ
+.Ar /dev/vinum
+は次のように見えるでしょう:
+.Bd -unfilled -offset indent
+# ls -lR /dev/vinum/ /dev/rvinum
+total 5
+brwxr-xr--  1 root  wheel   25,   2 Mar 30 16:08 concat
+brwx------  1 root  wheel   25, 0x40000000 Mar 30 16:08 control
+drwxrwxrwx  2 root  wheel       512 Mar 30 16:08 drive
+drwxrwxrwx  2 root  wheel       512 Mar 30 16:08 plex
+drwxrwxrwx  2 root  wheel       512 Mar 30 16:08 rvol
+drwxrwxrwx  2 root  wheel       512 Mar 30 16:08 sd
+brwxr-xr--  1 root  wheel   25,   3 Mar 30 16:08 strcon
+brwxr-xr--  1 root  wheel   25,   1 Mar 30 16:08 stripe
+brwxr-xr--  1 root  wheel   25,   0 Mar 30 16:08 tinyvol
+drwxrwxrwx  7 root  wheel       512 Mar 30 16:08 vol
+brwxr-xr--  1 root  wheel   25,   4 Mar 30 16:08 vol5
+
+/dev/vinum/drive:
+total 0
+brw-r-----  1 root  operator    4,  15 Oct 21 16:51 drive2
+brw-r-----  1 root  operator    4,  31 Oct 21 16:51 drive4
+
+/dev/vinum/plex:
+total 0
+brwxr-xr--  1 root  wheel   25, 0x10000002 Mar 30 16:08 concat.p0
+brwxr-xr--  1 root  wheel   25, 0x10010002 Mar 30 16:08 concat.p1
+brwxr-xr--  1 root  wheel   25, 0x10000003 Mar 30 16:08 strcon.p0
+brwxr-xr--  1 root  wheel   25, 0x10010003 Mar 30 16:08 strcon.p1
+brwxr-xr--  1 root  wheel   25, 0x10000001 Mar 30 16:08 stripe.p0
+brwxr-xr--  1 root  wheel   25, 0x10000000 Mar 30 16:08 tinyvol.p0
+brwxr-xr--  1 root  wheel   25, 0x10000004 Mar 30 16:08 vol5.p0
+brwxr-xr--  1 root  wheel   25, 0x10010004 Mar 30 16:08 vol5.p1
+
+/dev/vinum/rvol:
+total 0
+crwxr-xr--  1 root  wheel   91,   2 Mar 30 16:08 concat
+crwxr-xr--  1 root  wheel   91,   3 Mar 30 16:08 strcon
+crwxr-xr--  1 root  wheel   91,   1 Mar 30 16:08 stripe
+crwxr-xr--  1 root  wheel   91,   0 Mar 30 16:08 tinyvol
+crwxr-xr--  1 root  wheel   91,   4 Mar 30 16:08 vol5
+
+/dev/vinum/sd:
+total 0
+brwxr-xr--  1 root  wheel   25, 0x20000002 Mar 30 16:08 concat.p0.s0
+brwxr-xr--  1 root  wheel   25, 0x20100002 Mar 30 16:08 concat.p0.s1
+brwxr-xr--  1 root  wheel   25, 0x20010002 Mar 30 16:08 concat.p1.s0
+brwxr-xr--  1 root  wheel   25, 0x20000003 Mar 30 16:08 strcon.p0.s0
+brwxr-xr--  1 root  wheel   25, 0x20100003 Mar 30 16:08 strcon.p0.s1
+brwxr-xr--  1 root  wheel   25, 0x20010003 Mar 30 16:08 strcon.p1.s0
+brwxr-xr--  1 root  wheel   25, 0x20110003 Mar 30 16:08 strcon.p1.s1
+brwxr-xr--  1 root  wheel   25, 0x20000001 Mar 30 16:08 stripe.p0.s0
+brwxr-xr--  1 root  wheel   25, 0x20100001 Mar 30 16:08 stripe.p0.s1
+brwxr-xr--  1 root  wheel   25, 0x20000000 Mar 30 16:08 tinyvol.p0.s0
+brwxr-xr--  1 root  wheel   25, 0x20100000 Mar 30 16:08 tinyvol.p0.s1
+brwxr-xr--  1 root  wheel   25, 0x20000004 Mar 30 16:08 vol5.p0.s0
+brwxr-xr--  1 root  wheel   25, 0x20100004 Mar 30 16:08 vol5.p0.s1
+brwxr-xr--  1 root  wheel   25, 0x20010004 Mar 30 16:08 vol5.p1.s0
+brwxr-xr--  1 root  wheel   25, 0x20110004 Mar 30 16:08 vol5.p1.s1
+
+/dev/vinum/vol:
+total 5
+brwxr-xr--  1 root  wheel   25,   2 Mar 30 16:08 concat
+drwxr-xr-x  4 root  wheel       512 Mar 30 16:08 concat.plex
+brwxr-xr--  1 root  wheel   25,   3 Mar 30 16:08 strcon
+drwxr-xr-x  4 root  wheel       512 Mar 30 16:08 strcon.plex
+brwxr-xr--  1 root  wheel   25,   1 Mar 30 16:08 stripe
+drwxr-xr-x  3 root  wheel       512 Mar 30 16:08 stripe.plex
+brwxr-xr--  1 root  wheel   25,   0 Mar 30 16:08 tinyvol
+drwxr-xr-x  3 root  wheel       512 Mar 30 16:08 tinyvol.plex
+brwxr-xr--  1 root  wheel   25,   4 Mar 30 16:08 vol5
+drwxr-xr-x  4 root  wheel       512 Mar 30 16:08 vol5.plex
+
+/dev/vinum/vol/concat.plex:
+total 2
+brwxr-xr--  1 root  wheel   25, 0x10000002 Mar 30 16:08 concat.p0
+drwxr-xr-x  2 root  wheel       512 Mar 30 16:08 concat.p0.sd
+brwxr-xr--  1 root  wheel   25, 0x10010002 Mar 30 16:08 concat.p1
+drwxr-xr-x  2 root  wheel       512 Mar 30 16:08 concat.p1.sd
+
+/dev/vinum/vol/concat.plex/concat.p0.sd:
+total 0
+brwxr-xr--  1 root  wheel   25, 0x20000002 Mar 30 16:08 concat.p0.s0
+brwxr-xr--  1 root  wheel   25, 0x20100002 Mar 30 16:08 concat.p0.s1
+
+/dev/vinum/vol/concat.plex/concat.p1.sd:
+total 0
+brwxr-xr--  1 root  wheel   25, 0x20010002 Mar 30 16:08 concat.p1.s0
+
+/dev/vinum/vol/strcon.plex:
+total 2
+brwxr-xr--  1 root  wheel   25, 0x10000003 Mar 30 16:08 strcon.p0
+drwxr-xr-x  2 root  wheel       512 Mar 30 16:08 strcon.p0.sd
+brwxr-xr--  1 root  wheel   25, 0x10010003 Mar 30 16:08 strcon.p1
+drwxr-xr-x  2 root  wheel       512 Mar 30 16:08 strcon.p1.sd
+
+/dev/vinum/vol/strcon.plex/strcon.p0.sd:
+total 0
+brwxr-xr--  1 root  wheel   25, 0x20000003 Mar 30 16:08 strcon.p0.s0
+brwxr-xr--  1 root  wheel   25, 0x20100003 Mar 30 16:08 strcon.p0.s1
+
+/dev/vinum/vol/strcon.plex/strcon.p1.sd:
+total 0
+brwxr-xr--  1 root  wheel   25, 0x20010003 Mar 30 16:08 strcon.p1.s0
+brwxr-xr--  1 root  wheel   25, 0x20110003 Mar 30 16:08 strcon.p1.s1
+
+/dev/vinum/vol/stripe.plex:
+total 1
+brwxr-xr--  1 root  wheel   25, 0x10000001 Mar 30 16:08 stripe.p0
+drwxr-xr-x  2 root  wheel       512 Mar 30 16:08 stripe.p0.sd
+
+/dev/vinum/vol/stripe.plex/stripe.p0.sd:
+total 0
+brwxr-xr--  1 root  wheel   25, 0x20000001 Mar 30 16:08 stripe.p0.s0
+brwxr-xr--  1 root  wheel   25, 0x20100001 Mar 30 16:08 stripe.p0.s1
+
+/dev/vinum/vol/tinyvol.plex:
+total 1
+brwxr-xr--  1 root  wheel   25, 0x10000000 Mar 30 16:08 tinyvol.p0
+drwxr-xr-x  2 root  wheel       512 Mar 30 16:08 tinyvol.p0.sd
+
+/dev/vinum/vol/tinyvol.plex/tinyvol.p0.sd:
+total 0
+brwxr-xr--  1 root  wheel   25, 0x20000000 Mar 30 16:08 tinyvol.p0.s0
+brwxr-xr--  1 root  wheel   25, 0x20100000 Mar 30 16:08 tinyvol.p0.s1
+
+/dev/vinum/vol/vol5.plex:
+total 2
+brwxr-xr--  1 root  wheel   25, 0x10000004 Mar 30 16:08 vol5.p0
+drwxr-xr-x  2 root  wheel       512 Mar 30 16:08 vol5.p0.sd
+brwxr-xr--  1 root  wheel   25, 0x10010004 Mar 30 16:08 vol5.p1
+drwxr-xr-x  2 root  wheel       512 Mar 30 16:08 vol5.p1.sd
+
+/dev/vinum/vol/vol5.plex/vol5.p0.sd:
+total 0
+brwxr-xr--  1 root  wheel   25, 0x20000004 Mar 30 16:08 vol5.p0.s0
+brwxr-xr--  1 root  wheel   25, 0x20100004 Mar 30 16:08 vol5.p0.s1
+
+/dev/vinum/vol/vol5.plex/vol5.p1.sd:
+total 0
+brwxr-xr--  1 root  wheel   25, 0x20010004 Mar 30 16:08 vol5.p1.s0
+brwxr-xr--  1 root  wheel   25, 0x20110004 Mar 30 16:08 vol5.p1.s1
+
+/dev/rvinum:
+crwxr-xr--  1 root  wheel   91,   2 Mar 30 16:08 rconcat
+crwxr-xr--  1 root  wheel   91,   3 Mar 30 16:08 rstrcon
+crwxr-xr--  1 root  wheel   91,   1 Mar 30 16:08 rstripe
+crwxr-xr--  1 root  wheel   91,   0 Mar 30 16:08 rtinyvol
+crwxr-xr--  1 root  wheel   91,   4 Mar 30 16:08 rvol5
+.Ed
+.Pp
+プレックスやサブディスクを分離した場合には、
+この名前は予約されたままになります。
+サブディスクはそれが配置されているディスクの名を元に名付けられ、
+プレックスはサブディスクの名を元に名付けられています。
+.\" XXX
+.Nm この対応付けにはまだ考慮の余地があります。
+.Ss オブジェクトの状態
+.Pp
+各
+.Nm
+オブジェクトには、オブジェクトに関連づけられた\fI状態\fRがあります。
+.Nm
+はオブジェクトに対する操作を決定するためにこの状態を利用します。
+.Pp
+.Ss ボリュームの状態
+ボリュームには次の状態がありえます。
+.sp
+.Bl -hang -width 14n
+.It volume_down
+ボリュームが全くアクセス不能です。
+.It volume_up
+ボリュームは起動しており、少なくとも一部は機能しています。すべてのプレックス
+が利用可能とは限りません。
+.El
+.Ss プレックスの状態
+プレックスには次の状態がありえます。
+.sp
+.ne 1i
+.Bl -hang -width 14n
+.It faulty
+プレックスは I/O エラーにより完全に停止しています。
+.It down
+プレックスは管理者により停止させられています。
+.It initializing
+プレックスは初期化中です。
+.sp
+以下の状態は、プレックスの少なくとも一部は起動していることを表します。
+.It corrupt
+プレックスエントリは少なくとも一部は起動しています。すべてのサブディスクが
+利用可能ではなく、一貫性の欠如が起こっています。
+もし壊れていない他のプレックスが
+なければ、ボリュームにはもはや一貫性がありません。
+.It degraded
+RAID-5 プレックスエントリはアクセス可能ですが、
+1 つのサブディスクが停止しており、
+多くの I/O 要求のためには修復が必要です。
+.It flaky
+プレックスは本当に起動していますが、復旧されたサブディスクを持っています。
+このサブディスクは、完全に信じることのできない状態であり、
+もし避けることが可能であれば読みたくない状態です。
+.It up
+プレックスエントリは完全に起動しています。
+すべてのサブディスクが起動しています。
+.El
+.sp 2v
+.Ss サブディスクの状態
+サブディスクには次の状態がありえます。
+.sp
+.ne 1i
+.Bl -hang -width 14n
+.It empty
+サブディスクエントリは完全に作成されました。すべてのフィールドは正常で、
+ディスクは更新されていますが、ディスク上にデータはありません。
+.It initializing
+サブディスクエントリは完全に作成され、現在初期化中です。
+.sp
+以下の状態は、無効なデータを表します。
+.It obsolete
+サブディスクエントリは完全に作成されました。すべてのフィールドは正常で、
+ディスク上の設定は更新され、データは有効ですが、ドライブが停止させられており、
+その結果更新に失敗しています。
+.It stale
+サブディスクエントリは完全に作成されました。すべてのフィールドは正常で、
+ディスクは更新され、データは有効ですが、ドライブが故障しており、
+更新が失われています。
+.sp
+以下の状態は、有効だがアクセスできないデータを表します。
+.It crashed
+サブディスクエントリは完全に作成されました。すべてのフィールドは正常で、
+ディスクは更新され、データは有効ですが、ドライブが停止しています。
+故障の後サブディスクへの書き込みは行われておらず、そのためデータは有効です。
+.It down
+サブディスクエントリは起動しており、有効なデータを持ち、管理者により
+停止させられています。データは有効です。
+.It reviving
+サブディスクは現在復活作業中です。書き込みは可能ですが、読み出しはできません。
+.sp
+以下の状態は、有効なデータを持つアクセス可能なサブディスクを表します。
+.It reborn
+サブディスクエントリは完全に作成されました。すべてのフィールドは正常で、
+ディスクは更新され、データは有効ですが、
+ドライブが停止した後再び起動した状態です。
+更新は全く失われていませんが、サブディスクが損傷している可能性があります。
+選択の余地があればこのサブディスクからの読み出しは行わないでしょう。
+もしこのサブディスクがプレックス内で該当するアドレス空間をカバーする唯一の
+サブディスクだった場合、そのような状況下ではサブディスクの状態を up に設定
+します。従ってこの状態は、読み出し要求を満たす他のサブディスクが存在することを
+意味します。
+.It up
+サブディスクエントリは完全に作成されました。すべてのフィールドは正常で、
+ディスクは更新され、データは有効です。
+.El
+.sp 2v
+.Ss ドライブの状態
+ドライブには次の状態がありえます。
+.sp
+.ne 1i
+.Bl -hang -width 14n
+.It down
+ドライブはアクセス不能です。
+.It up
+ドライブは起動しており動作中です。
+.El
+.sp 2v
+.Sh バグと手抜かり
+.Bl -enum
+.It
+.Nm
+は新しいプロダクトです。多くのバグがあるでしょう。
+設定のメカニズムは必ずしも完全には動作していません。
+もし困ったら、問題を報告する前に次の URL を参照してください。
+http://www.lemis.com/vinum_beta.html および
+http://www.lemis.com/vinum_debugging.html
+.It
+.Nm
+モジュールを
+.Nm kldunload
+コマンドを使ってアンロードすることが可能です。しかしこの操作にはバグが多く、
+この操作が存在する理由は単にシステムをテストする人がやりやすいようにするため
+です。代わりの方法はリブートです。
+動作確率は約 80% です。
+すなわちアンロードの 5 回に 1 回はパニックになると思われます。
+.It
+.Nm
+を静的にリンクしたカーネルを構築することもできますが、この方法は
+全くテストされていません。もし、
+.Nm
+擬似デバイスを静的リンクした状態で問題が起きた場合でも kld モジュール
+で問題が再現されない限り、わざわざ問題を報告しないで下さい。
+.It
+RAID-5 プレックスは初期化する必要があります。
+初期化をしなくても、通常の運用の妨げにはなりませんが、
+ディスクのうちの 1 つが故障した際に
+全体の破壊を引き起こすでしょう。この初期化を強制するためのよい方法
+(または低速だとしても、パリティブロックを再構築する代替方法)
+が思いつきません。
+何かいいアイデアがあれば提供を歓迎します。
+.It
+カーネルと kld のバージョンの相違を検出する仕組みは実装されていません。
+.El
+.Sh VINUM に関する問題のデバッグ
+.Pp
+.Nm
+に関する問題の解決は難しい事かもしれません。この節ではいくつかのアプローチ
+を紹介します。
+.Ss 設定に関する問題
+.Pp
+.Nm
+の設定は、比較的 (非常に) 問題にぶつかりやすいと言えます。
+問題が起きたら、まず行うべきことは設定情報の
+更新を次のようにして止めることです。
+.if t .ps -3
+.if t .vs -3
+.Bd -literal
+# vinum setdaemon 4
+.Ed
+.if t .vs
+.if t .ps
+.Pp
+これにより更新とディスク上の設定の更なる破壊を止めるでしょう。
+.Pp
+次に、ディスク上の設定を確認します。Bourne タイプのシェルで次のようにします。
+.if t .ps -3
+.if t .vs -3
+.Bd -literal
+# rm -f log
+# for i in /dev/da0s1h /dev/da1s1h /dev/da2s1h /dev/da3s1h; do
+>    (dd if=/dev/da1h skip=8 count=6|tr -d '\e000-\e011\e200-\e377'; echo) >> log
+>  done
+.Ed
+.if t .vs
+.if t .ps
+.Pp
+デバイスの名前は、すべての
+.Nm
+スライスの名前です。
+そうすると、
+.Pa log
+ファイルには次のような内容が入っているはずです。
+.if t .ps -3
+.if t .vs -3
+.Bd -literal
+IN VINOpanic.lemis.comdrive1}6E7~^K6T^Yfoovolume obj state up
+volume src state up
+volume raid state down
+volume r state down
+volume foo state up
+plex name obj.p0 state corrupt org concat vol obj
+plex name obj.p1 state corrupt org striped 128b vol obj
+plex name src.p0 state corrupt org striped 128b vol src
+plex name src.p1 state up org concat vol src
+plex name raid.p0 state faulty org disorg vol raid
+plex name r.p0 state faulty org disorg vol r
+plex name foo.p0 state up org concat vol foo
+plex name foo.p1 state faulty org concat vol foo
+sd name obj.p0.s0 drive drive2 plex obj.p0 state reborn len 409600b driveoffset 265b plexoffset 0b
+sd name obj.p0.s1 drive drive4 plex obj.p0 state up len 409600b driveoffset 265b plexoffset 409600b
+sd name obj.p1.s0 drive drive1 plex obj.p1 state up len 204800b driveoffset 265b plexoffset 0b
+sd name obj.p1.s1 drive drive2 plex obj.p1 state reborn len 204800b driveoffset 409865b plexoffset 128b
+sd name obj.p1.s2 drive drive3 plex obj.p1 state up len 204800b driveoffset 265b plexoffset 256b
+sd name obj.p1.s3 drive drive4 plex obj.p1 state up len 204800b driveoffset 409865b plexoffset 384b
+.Ed
+.if t .vs
+.if t .ps
+.Pp
+最初の行は
+.Nm 
+ラベルを含んでおり、
+.Li IN VINO
+というテキストで始まっている必要があります。
+この行にはシステムの名前も含まれています。正確な定義は
+.Pa /usr/src/sys/dev/vinum/vinumvar.h
+に記載されています。
+保存された設定はこの行の途中から
+.Li volume obj state up
+というテキストで始まっています。これはディスクのセクタ 9 から始まっています。
+それ以降の出力はディスク上の設定の残りの部分を示しています。もしかすると
+すべての設定を見るためには、
+.Cm dd
+コマンドの
+.Ar count
+の引数を増やす必要があるかもしれません。
+.Pp
+すべてのディスク上の設定は同じであることが必要です。そうでない場合には、
+.Pa log
+ファイルの正確な中身とともに問題を報告して下さい。
+ディスク上の設定を回復するためにできることはおそらくほとんどないでしょうが、
+もしオブジェクトを生成した時に使ったファイルのコピーを保存してあれば、
+オブジェクトを再生成できるでしょう。
+.Cm create
+コマンドはサブディスクのデータを変更しないので、このコマンドはデータの破壊を
+引き起こしません。この種の問題に出会った場合には、
+.Cm resetconfig
+コマンドを使う必要があるかもしれません。
+.Ss カーネルパニック
+.Pp
+.Nm
+に由来すると思われるパニックを解析するには、
+デバッグ用カーネルを構築する必要
+があります。デバッグ用カーネルの構築の詳細については、オンラインハンドブック
+を参照してください。
+.P
+.Nm
+カーネルロード可能モジュールのシンボル情報を得るには、更に作業が必要です。
+.Bl -enum
+.It
+可能であれば、デバッグカーネルのコピーまたはリンクを
+.Pa /var/crash/kernel.gdb
+に作成します。これは
+.Cm gdb
+の初期化ファイルがこの位置を検索するからです。
+.It
+.Nm 
+モジュールをデバッグ情報とともに構築していることを確認しましょう。
+通常の
+.Pa Makefile
+であれば、これはデフォルトの設定です。
+.It
+.Nm
+開始後、次のコマンドを実行しましょう: 
+.if t .ps -3
+.if t .vs -3
+.Bd -literal
+echo add-symbol-file /modules/vinum.ko \e
+  0x`objdump --section-headers /modules/vinum.ko \e
+  | grep ' .text' \e
+  | awk '{print $4}'`\+`kldstat \e
+  | grep vinum | awk '{print $3}'`
+.Ed
+.if t .vs
+.if t .ps
+.Pp
+これをファイルに格納し、実行可能にし、実行するのが最も簡単です。
+出力は次のようになるでしょう:
+.if t .ps -3
+.if t .vs -3
+.Bd -literal
+add-symbol-file /modules/vinum.ko 0x00005e24+0xf0f4e000
+.Ed
+.if t .vs
+.if t .ps
+.It
+.Pa /usr/src/sys/modules/vinum/.gdbinit.crash
+ファイルをあなたが解析を実行したいディレクトリ (例えば
+.Pa /var/crash
+) にコピーし、
+.Pa .gdbinit
+に名前を変えます。
+.It
+.Pa /modules
+に置いてあるバージョンの
+.Nm
+がシンボルを含んでいないと、エラーメッセージは表示されませんが、
+スタックトレースはシンボルを表示しません。
+.Nm gdb
+を始める前にモジュールをチェックしましょう。
+.Bd -literal
+$ file /modules/vinum.ko 
+/modules/vinum.ko: ELF 32-bit LSB shared object, Intel 80386, 
+  version 1 (FreeBSD), not stripped
+.Ed
+.Pp
+その出力が
+.Pa /modules/vinum.ko
+is stripped だった場合、strip されていないバージョンを見つける必要が
+あります。通常、
+.Pa /usr/obj/sys/modules/vinum/vinum.ko
+の中 (
+.Ar make world
+を用いて
+.Nm
+を構築した場合)
+か
+.Pa /usr/src/sys/modules/vinum/vinum.ko
+の中 (このディレクトリで
+.Nm
+を構築した場合) にあります。
+.It
+もしデバッグカーネルを
+.Pa /var/crash/kernel.gdb
+という名前にしていない場合には、
+.Pa .gdbinit
+を編集して、正しい場所を指し示すようにしてください。
+.P
+シリアル接続を通してリモートデバッグをしている場合には、
+.Pa /usr/src/sys/modules/vinum/.gdbinit.crash
+ファイルを
+.Pa .gdbinit
+という名前でデバッグを実行しているディレクトリにコピーして、
+次のコマンドで起動してください。
+.Bd -literal -indent
+gdb -k
+.Ed
+.Pp
+.Cd gdb
+は自動的に接続を確立します。リモートマシンはその時点で
+.Nm gdb
+が動作中でなければなりません。この
+.Pa .gdbinit
+ファイルはシリアル接続が 38400 bps で動作するものと期待しています。
+別のスピードで動作させたい場合には、このファイルを適切に編集してください (
+.Ar remotebaud
+に関する記述を探してください)。
+.It
+ダンプを取ったり
+.Cm gdb
+を使うことにより問題を分析してください。あるいは上記のシェルスクリプトの出力
+を利用してください。次にリモートデバッグのセッションで
+.Nm vinum(8)
+における
+.Ar debug
+コマンドの利用例を示します。
+.if t .ps -3
+.if t .vs -3
+.Bd -literal
+(kgdb) add-symbol-file /usr/src/sys/modules/vinum/vinum.ko 0x00005e24+0xf0f4e000
+add symbol table from file "/usr/src/sys/modules/vinum/vinum.ko" at text_addr = 0xf0f53e24?
+(y or n) y
+(kgdb) bt
+#0  Debugger (msg=0xf0f661ac "vinum debug") at ../../i386/i386/db_interface.c:318
+#1  0xf0f60a7c in vinumioctl (dev=0x40001900, cmd=0xc008464b, data=0xf6923ed0 "", 
+      flag=0x3, p=0xf688e6c0) at 
+      /usr/src/sys/modules/vinum/../../dev/vinum/vinumioctl.c:109
+#2  0xf01833b7 in spec_ioctl (ap=0xf6923e0c) at ../../miscfs/specfs/spec_vnops.c:424
+#3  0xf0182cc9 in spec_vnoperate (ap=0xf6923e0c) at ../../miscfs/specfs/spec_vnops.c:129
+#4  0xf01eb3c1 in ufs_vnoperatespec (ap=0xf6923e0c) at ../../ufs/ufs/ufs_vnops.c:2312
+#5  0xf017dbb1 in vn_ioctl (fp=0xf1007ec0, com=0xc008464b, data=0xf6923ed0 "", 
+      p=0xf688e6c0) at vnode_if.h:395
+#6  0xf015dce0 in ioctl (p=0xf688e6c0, uap=0xf6923f84) at ../../kern/sys_generic.c:473
+#7  0xf0214c0b in syscall (frame={tf_es = 0x27, tf_ds = 0x27, tf_edi = 0xefbfcff8, 
+      tf_esi = 0x1, tf_ebp = 0xefbfcf90, tf_isp = 0xf6923fd4, tf_ebx = 0x2, 
+      tf_edx = 0x804b614, tf_ecx = 0x8085d10, tf_eax = 0x36, tf_trapno = 0x7,
+      tf_err = 0x2, tf_eip = 0x8060a34, tf_cs = 0x1f, tf_eflags = 0x286, 
+      tf_esp = 0xefbfcf78, tf_ss = 0x27}) at ../../i386/i386/trap.c:1100
+#8  0xf020a1fc in Xint0x80_syscall ()
+#9  0x804832d in ?? ()
+#10 0x80482ad in ?? ()
+#11 0x80480e9 in ?? ()
+(kgdb) f 1
+#1  0xf0f60a7c in vinumioctl (dev=0x40001900, cmd=0xc008464b, data=0xf6923ed0 "",
+    flag=0x3, p=0xf688e6c0) at
+    /usr/src/sys/modules/vinum/../../dev/vinum/vinumioctl.c:109
+Source file is more recent than executable.
+109             Debugger ("vinum debug");
+.Ed
+.if t .vs
+.if t .ps
+.Pp
+デバッガから実行開始する時、フレーム 1 のソース (上の例では最後の部分) に次の
+文字列が含まれていることは重要です。
+.if t .ps -3
+.if t .vs -3
+.Bd -literal
+Debugger ("vinum debug");
+.Ed
+.if t .vs
+.if t .ps
+.Pp
+これはアドレス定義が正しいことを示しています。
+.El
+.Pp
+最初の調査で最も重要な情報は、上に示されているように
+.Nm bt
+(バックトレース) コマンドの出力です。
+.Sh 作者
+Greg Lehey
+.Pa <grog@lemis.com>
+.Sh 歴史
+.Nm vinum
+は FreeBSD 3.0 から登場しました。
+.Sh 関連項目
+.Xr vinum 8 ,
+.Xr disklabel 5 ,
+.Xr disklabel 8

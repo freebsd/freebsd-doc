@@ -1,0 +1,250 @@
+.\" Copyright 1994, 1995 Massachusetts Institute of Technology
+.\"
+.\" Permission to use, copy, modify, and distribute this software and
+.\" its documentation for any purpose and without fee is hereby
+.\" granted, provided that both the above copyright notice and this
+.\" permission notice appear in all copies, that both the above
+.\" copyright notice and this permission notice appear in all
+.\" supporting documentation, and that the name of M.I.T. not be used
+.\" in advertising or publicity pertaining to distribution of the
+.\" software without specific, written prior permission.  M.I.T. makes
+.\" no representations about the suitability of this software for any
+.\" purpose.  It is provided "as is" without express or implied
+.\" warranty.
+.\" 
+.\" THIS SOFTWARE IS PROVIDED BY M.I.T. ``AS IS''.  M.I.T. DISCLAIMS
+.\" ALL EXPRESS OR IMPLIED WARRANTIES WITH REGARD TO THIS SOFTWARE,
+.\" INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+.\" MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE. IN NO EVENT
+.\" SHALL M.I.T. BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+.\" SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+.\" LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF
+.\" USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+.\" ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+.\" OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
+.\" OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+.\" SUCH DAMAGE.
+.\"
+.\" %Id: ttcp.4,v 1.6 1997/03/19 19:47:42 bde Exp %
+.\" jpman %Id: ttcp.4,v 1.4 2000/08/08 11:22:39 isaki Stab %
+.\"
+.Dd January 18, 1995
+.Dt TTCP 4
+.Os FreeBSD 2.1
+.Sh 名称
+.Nm ttcp
+.Nd トランスミッションコントロールプロトコルのトランザクション拡張機能
+.Sh
+.Fd #include <sys/types.h>
+.Fd #include <sys/socket.h>
+.Fd #include <netinet/in.h>
+.Fd #include <netinet/tcp.h>
+.Ft int
+.Fn setsockopt sock IPPROTO_TCP TCP_NOPUSH &One "sizeof One"
+.br
+.Ft ssize_t
+.Fn sendto sock msg len MSG_EOF &sin "sizeof sin"
+.br
+.Ft ssize_t
+.Fn sendto sock msg len MSG_EOF 0 0
+.Sh 解説
+.Tn T/TCP
+は
+.Tn TCP
+プロトコル
+(
+.Xr tcp 4
+を参照)
+への拡張機能の集合です。
+本機能により少量のデータを 2 つのパケットの交換でやりとりすることができ、
+従って標準の
+.Tn TCP
+コネクションで本来発生する余分な往復による遅延を無くすことができます。
+ソケットインタフェースは
+.Tn T/TCP
+をサポートするように修正されており、
+またここでは明確なケースについて詳述しています。
+プロトコルに依存しない部分のサポートについては
+.Xr socket 2
+及び
+.Xr send 2
+のマニュアルページで述べられています。
+.Tn T/TCP
+は RFC 1644 で定義されています。
+.Pp
+.Tn T/TCP
+特定のコネクションの全セグメントにおいて、あるオプションを
+いくつか含めることにより、T/TCP 拡張は機能します。
+これにより一組のホスト間での最初の接続を除く全ての
+3 ウェイハンドシェークを無くすことができます。
+さらに同じオプションを用いて、
+古い重複したパケットをより確実に判別することが可能であり、
+従って
+.Tn TCP
+プロトコルが接続を閉じた後、状態を保たなければならない
+時間を減らすことができます。
+.Dq Li net.inet.tcp.rfc1644
+の MIB の変数は実行時に
+.Tn T/TCP
+ネゴシエーションを無効化するために使用することができます。
+しかしながら、本プロトコルは、T/TCP ではないシステムが
+T/TCP 拡張されたシステムと通信しようとしたときに、
+自動的に標準の
+.Tn TCP
+に戻して通信することを保証するために設計されたものです。
+.Sh トランザクションモデル
+.Tn T/TCP
+で用いられる
+.Dq トランザクション
+のモデルはかなり単純なものです:
+.Bl -enum
+.It
+クライアントプログラムはサーバに送信する要求を作成します。
+それは単一の
+.Tn TCP
+セグメントに収まるくらい十分小さなものです。
+そしてオプションとデータと共に
+SYN PUSH FIN セグメントをサーバに送ります。
+.It
+サーバプログラムは標準の
+.Tn TCP
+接続と同様に、要求を受け取り解読し、
+単一のセグメントに収まる大きさの応答を作成します。
+その要求が T/TCP の場合、
+応答は、(異なった) オプションとデータと共に
+単一の SYN PUSH FIN ACK セグメントでクライアントに返されます。
+T/TCP ではない場合は、
+(ほぼ) 通常の
+.Tn TCP
+に戻された接続になります。
+サーバはこの時 T/TCP ソケットをクローズします。
+.It
+クライアントは応答を読み込み、ソケットをクローズします。
+.El
+.Sh クライアントサポート
+クライアント側のサポートは、
+.Dq 暗黙の接続
+及び
+.Dq 送信とシャットダウン
+の概念を理解する様に
+.Xr sendto 2
+及び
+.Xr sendmsg 2
+システムコールの意味を拡張することにより提供されます。
+トランザクションによる要求を送信するには
+.Xr sendto 2
+システムコールを通常使用し、次の例の様にします:
+.Bd -literal -offset indent
+char request[REQ_LEN];
+struct sockaddr_in sin;
+int sock, req_len;
+
+sock = socket(PF_INET, SOCK_STREAM, 0);
+
+/* request[] と sin の準備 */
+
+err = sendto(sock, request, req_len, MSG_EOF, 
+	(struct sockaddr *)&sin, sin.sin_len);
+
+/* エラー処理 */
+
+req_len = read(sock, request, sizeof request);
+close(sock);
+
+/* 応答処理 */
+
+.Ed
+.Pp
+.Fn sendto
+を呼び出すと、その時のソケットの状態は
+.Xr connect 2
+及び
+.Xr shutdown 2
+システムコールが使われた時と
+同じ状態になることに注意して下さい。
+つまり、このソケット上で実行するのに適した操作は、
+.Xr read 2
+および
+.Xr close 2
+だけです
+(クライアントの
+.Tn TCP
+送信部はすでにシャットダウンされているので、
+このソケットを他の送り先へ
+.Xr connect 2
+することはできません)。
+.Sh サーバサポート
+.Tn T/TCP
+を使用する際にサーバで利用可能なオプションが
+2 つあります:
+.Bl -enum
+.It
+.Dv TCP_NOPUSH
+ソケットオプションをセットし、
+標準の
+.Xr write 2
+コールを使って応答を行って下さい。
+.It
+クライアントの場合と同様に、
+.Xr sendto 2
+を
+.Dv MSG_EOF
+フラグと共に使用して下さい。
+ただし、送り先は指定しません。
+.El
+.Pp
+既存のサーバが
+.Tn T/TCP
+拡張機能を使用するように変更を行う際には、
+最初のオプションを用いるのは一般的に妥当な選択です。
+単純に
+.Fn setsockopt sock IPPROTO_TCP TCP_NOPUSH &One "sizeof One"
+(ここで
+.Va One
+は 0 以外の値の整数の変数です) へのコールを追加するだけだからです。
+何かデータが送信される前に
+(ソケットのバッファが飽和していない限り)
+サーバ側のソケットは閉じていなければなりません。
+.Pp
+2 番目のオプションは、新しいサーバにはより望ましいものです。
+場合によっては、古いサーバにも適用できるくらい簡単です。
+この場合、応答段階で通常
+.Fn write
+の呼び出しを含んでいますが、
+それを次のように置き換えます :
+.Pp
+.Dl "sendto(sock, buf, len, MSG_EOF, (struct sockaddr *)0, 0)"
+.Pp
+この場合、応答は直ちに送信されますが、クライアントの場合と同様に、
+ソケットはこの時点で何にも使用することは出来ません。
+直ちにクローズすべきです。
+.Sh MIB の変数
+.Tn T/TCP
+拡張機能を利用するには、
+適切な
+.Tn TCP
+オプションを送信するように MIB 変数
+.Dq Li net.inet.tcp.rfc1644
+が真であることを必要とします。
+詳細は
+.Xr tcp 4
+を参照して下さい。
+.Sh 関連項目
+.Xr send 2 ,
+.Xr setsockopt 2 ,
+.Xr inet 4 ,
+.Xr tcp 4
+.Rs
+.%A R. Braden
+.%T "T/TCP \- TCP Extensions for Transactions"
+.%O RFC 1644
+.Re
+.Sh 歴史
+.Tn T/TCP
+のサポートは
+.Fx 2.1
+で初めて行われました。
+それは The University of Southern California の
+Information Sciences Institute の Bob Braden と Liming Wei
+が書いたコードを基にしており、
+The University of Twente の Andras Olah が移植しました。

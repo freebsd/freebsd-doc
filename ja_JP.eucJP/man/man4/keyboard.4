@@ -1,0 +1,164 @@
+.\"
+.\"	%Id: keyboard.4,v 1.16 1998/06/29 07:04:08 hoek Exp %
+.\" jpman %Id: keyboard.4,v 1.3 2000/08/03 06:58:14 horikawa Stab %
+.\" WORD: function key		ファンクションキー
+.\" WORD: history		履歴 [keyboard.4] (スクロールされた表示内容を戻す機能)
+.\" WORD: modifier key		修飾キー
+.\" WORD: normal key		通常キー
+.\" WORD: numerical keypad	数字キーパッド
+.\" WORD: scancode		スキャンコード [keyboard.4]
+.\" WORD: substructure		サブ構造体 (構造体中の構造体メンバ)
+.\" "
+.Dd January 8, 1995
+.Dt KEYBOARD 4 i386
+.Os FreeBSD
+.Sh 名称
+.Nm keyboard
+.Nd PC キーボードのインタフェース
+.Sh 解説
+
+PC キーボードはコンソールの文字入力デバイスとして使用されます。
+キーボードは現在の仮想コンソールが専有します。
+仮想コンソールを切り替えるには、シーケンス
+.Ar ALT+Fn
+を使ってください。これは、ALT を押しながらファンクションキーの
+ひとつを押すという意味です。そうすると、そのファンクションキーの
+番号と同じ仮想コンソールが現在の仮想コンソールとして選択され、
+キーボードやディスプレイの専有的な使用権が与えられます。
+
+コンソールでは、特別なキーシーケンスを用いることにより、キーボード上に物理的に
+存在しない値を入力できます。この機能を使うには、ALT を押したままにして、
+数字キーパッドで 0 から 255 の 10 進数字を入力し、ALT を離してください。
+そうすると、入力された値がひとつの文字を表す ASCII 値として使われます。
+このようにして、キーボード上に無い任意の ASCII 値を入力することができます。
+また、コンソールドライバは履歴機能も備えています。
+履歴機能は scroll-lock キーを押すことで有効になります。
+これは表示を固定し、最近スクロールされた行に渡って矢印キーで
+スクロールアップ・ダウンできるようにします。
+
+キーボードは、個々のユーザや国の違いによる配置に合わせて設定できます。
+
+キーボード上のキーは次の機能のどれでも持つことができます:
+
+	通常キー		- そのキーに関連付けられた ASCII 値を入力。
+
+	ファンクションキー	- ASCII 数値列を入力。
+
+	スイッチキー		- 仮想コンソールを切り替える。
+
+	修飾キー		- 別のキーの意味を変更する。
+
+
+キーボードとは、1 から n の番号を付けられたキーの集合と見なせます。
+この番号はよく、あるキーに対する「スキャンコード (scancode)」と呼ばれます。
+あるキーが押されたとき、そのキーの番号はビット 7 が 0 の 8 ビット文字に
+変換され、離されたときはビット 7 が 1 の数値に変換されます。
+これにより、キーのマッピングが完全に設定可能となります。
+
+それぞれのキーの持つ意味は PIO_KEYMAP ioctl の呼び出しによって
+プログラムできます。これは keymap_t 構造体を引数に取ります。
+この構造体の構成は次のようになります:
+.Pp
+.Bd -literal -offset indent
+		struct keymap {
+			u_short	n_keys;
+			struct key_t {
+				u_char map[NUM_STATES];
+				u_char spcl;
+				u_char flgs;
+			} key[NUM_KEYS];
+		};
+.Ed
+.Pp
+フィールド n_keys はいくつのキー定義 (スキャンコード) が続くかをシステムに
+示します。各スキャンコードはサブ構造体の key_t で指定されます。
+
+各スキャンコードは、shift, control, alt の状態により
+8 つの異なる値に変換され得ます。
+これら 8 通りの状態は次のような配列 map で表現されます:
+
+                                                            alt
+ scan                          cntrl          alt    alt   cntrl
+ code     base   shift  cntrl  shift   alt   shift  cntrl  shift
+ map[n]      0       1      2      3     4       5      6      7
+ ----     ------------------------------------------------------
+ 0x1E      'a'     'A'   0x01   0x01    'a'    'A'   0x01   0x01
+
+これは、通常 0x1E のスキャンコードを持つ「A」と記されたキーの
+デフォルトのマッピングです。8 通りの状態が示されているように、
+「A」キーの通常の動作を与えます。
+フィールド spcl は、キーに「特殊な (special)」扱いを与えるために使われ、
+次のように解釈されます。
+各ビットは上記の状態のひとつに対応します。
+そのビットが 0 なら、そのキーは map[] の対応するエントリに示された数値を
+送出します。ビットが 1 なら、そのキーは「特殊」です。
+すなわち、そのキーは何も送出しません。
+代わりに、「状態 (state)」の変更を施します。
+つまり、そのキーは shift, control, alt, lock, switch-screen,
+ファンクションキー, あるいは no-op キーであるということです。
+map のビットは逆向きになります。
+つまり、ビット 7 が base に、ビット 6 が shift に、などと対応します。
+
+フィールド flgs は、そのキーが caps-lock (1)、num-lock (2)、または
+その両方 (3) に反応すべきか、あるいは両方とも無視 (0) するべきかを決めます。
+
+.Xr kbdcontrol 1
+ユーティリティは、こういった記述をカーネルに/カーネルから
+実行時にロードするために使われます。これにより実行時にキー割り当てを
+変更することができます。あるいは、より重要なことですが、
+キーの正確な意味を (GIO_KEYMAP ioctl で) カーネルから取得します
+(例えば、X サーバが利用します)。
+
+ファンクションキーは SETFKEY ioctl 呼び出しを用いてプログラムできます。
+
+この ioctl は fkeyarg_t 型の引数を取ります:
+.Bd -literal -offset indent
+		struct fkeyarg {
+			u_short	keynum;
+			char	keydef[MAXFK];
+			char	flen;
+		};
+.Ed
+.Pp
+フィールド keynum はどのファンクションキーをプログラムするかを決めます。
+配列 keydef は使用する新しい文字列 (長さは MAXFK まで) を含み、
+その長さを flen に入れなければなりません。
+
+GETFKEY ioctl 呼び出しは似たように働きますが、
+これは keynum の現在の設定を返します。
+
+ファンクションキーは次のように番号付けされます:
+.Bd -literal -offset indent
+	F1-F12 			key 1 - 12
+	Shift F1-F12		key 13 - 24
+	Ctrl F1-F12		key 25 - 36
+	Ctrl+shift F1-F12	key 37 - 48
+	
+	Home			key 49
+	Up arrow		key 50
+	Page Up			key 51
+	(keypad) -		key 52
+	Left arrow		key 53
+	(keypad) 5              key 54
+	Right arrow		key 55
+	(keypad) +		key 56
+	End			key 57
+	Down arrow		key 58
+	Page down		key 59
+	Insert 			key 60
+	Delete			key 61
+
+	Right window		key 62
+	Left window		key 63
+	Menu			key 64
+.Ed
+
+.Xr kbdcontrol 1
+ユーティリティで実行時にこれらの値を変更することもできます。
+.Pp
+.Sh 作者
+.ie t .An S\(/oren Schmidt Aq sos@FreeBSD.org
+.el .An So/ren Schmidt Aq sos@FreeBSD.org
+.\" ISO-8859 集合の文字(0xe4)に対処     金ん田 1999.02.23
+.\" .An Soren Schmidt Aq sos@FreeBSD.org
+.\"      ^0xe4
