@@ -1,11 +1,11 @@
-# $FreeBSD: www/Makefile,v 1.15 2000/11/08 01:15:39 kuriyama Exp $
+# $FreeBSD: www/Makefile,v 1.16 2000/11/30 00:03:37 kuriyama Exp $
 
 WEB_PREFIX=	${.CURDIR}
 
 SUBDIR= en
 
 .if make(obj)
-SUBDIR+= ja es ru zh
+SUBDIR+= ja es ru zh de
 .endif
 
 links:
