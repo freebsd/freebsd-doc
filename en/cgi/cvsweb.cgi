@@ -28,7 +28,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $Id: cvsweb.cgi,v 1.30 1999-04-17 16:57:56 wosch Exp $
+# $Id: cvsweb.cgi,v 1.31 1999-06-01 15:23:51 billf Exp $
 #
 
 
@@ -725,7 +725,7 @@ sub dolog {
 		print " <i>(vendor branch)</i>";
 	    }
 	    print " <i>" . &ctime($date{$_}) . " UTC</i> by ";
-	    print "<i>" . $author{$_} . "</i>\n";
+	    print "<i><a href=\"mailto:" . $author{$_} . "\@FreeBSD.org\">" . $author{$_} . "</a></i>\n";
 	    if ($revsym{$_}) {
 		print "<BR>CVS Tags: <b>$revsym{$_}</b>";
 	    }
