@@ -1,3 +1,4 @@
+# $FreeBSD$
 MAN1 =	a2p.1\
 	addftinfo.1\
 	addr2line.1\
@@ -13,6 +14,7 @@ MAN1 =	a2p.1\
 	biff.1\
 	brandelf.1\
 	builtin.1\
+	bzip2.1\
 	c89.1\
 	calendar.1\
 	cap_mkdb.1\
@@ -254,6 +256,7 @@ MAN1 =	a2p.1\
 	rcsintro.1\
 	rcsmerge.1\
 	rdist.1\
+	readelf.1\
 	realpath.1\
 	refer.1\
 	rev.1\

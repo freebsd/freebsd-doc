@@ -1,3 +1,4 @@
+# $FreeBSD$
 MAN5 =	a.out.5\
 	acct.5\
 	aliases.5\
@@ -60,6 +61,7 @@ MAN5 =	a.out.5\
 	motd.5\
 	named.conf.5\
 	netgroup.5\
+	netid.5\
 	networks.5\
 	nologin.5\
 	ntp.conf.5\
