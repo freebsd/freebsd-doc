@@ -1,4 +1,4 @@
-<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.54 2001/09/11 02:06:03 murray Exp $ -->
+<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.55 2001/09/11 02:31:50 murray Exp $ -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
 <!ENTITY % output.html		"IGNORE">
@@ -348,32 +348,44 @@
         (define %hyphenation%
           #t)
 
-        ;; This could be done better.  However, I was not able to come
-        ;; up with a more elegant solution that still builds the entire
-        ;; Handbook.  If you can come up with a better way to do this,
-        ;; please do!
 
-        (element filename
+        ;; The url.sty package is making all of the links purple/pink.
+        ;; Someone please fix this!
+
+        (define (urlwrap)
           (let ((%factor% (if %verbatim-size-factor% 
 			      %verbatim-size-factor% 
 			      1.0)))
-            (make sequence
-	      font-family-name: %mono-font-family%
-	      font-size: (* (inherited-font-size) %factor%)
-	      (make formatting-instruction data:
-		    "\\url{")
-	      (with-mode ignore-mode
-		(process-children))
-	      (make formatting-instruction data:
-		    "}"))))
+          (make sequence
+	    font-family-name: %mono-font-family%
+	    font-size: (* (inherited-font-size) %factor%)
+	    (make formatting-instruction data:
+		  (string-append
+		   "\\url|"
+		   (data (current-node))
+		   "|")))))
 
-         ;; If we wrap something in \url{..} in the TeX mode, then we
-         ;; can't get too funky with putting other stuff inside of it
-         ;; or TeX will get confused.
+        (define (pathwrap)
+          (let ((%factor% (if %verbatim-size-factor% 
+			      %verbatim-size-factor% 
+			      1.0)))
+          (make sequence
+	    font-family-name: %mono-font-family%
+	    font-size: (* (inherited-font-size) %factor%)
+	    (make formatting-instruction data:
+		  (string-append
+		   "\\path|"
+		   (data (current-node))
+		   "|")))))
 
-         (mode ignore-mode
-            (element replaceable
-               (process-children)))
+        (element port
+	    (pathwrap))
+          
+        (element filename
+	    (pathwrap))
+
+        (element varname
+	    (pathwrap))
 
       ]]>
 
