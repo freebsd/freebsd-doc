@@ -23,6 +23,7 @@ SUBDIR+= ddwg
 SUBDIR+= euro
 SUBDIR+= java-tomcat
 SUBDIR+= dialup-firewall
+SUBDIR+= laptop
 
 ROOT_SYMLINKS+= new-users
 
