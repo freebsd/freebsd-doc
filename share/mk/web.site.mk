@@ -1,5 +1,5 @@
 # bsd.web.mk
-# $FreeBSD: www/share/mk/web.site.mk,v 1.43 2002/08/07 03:17:10 trhodes Exp $
+# $FreeBSD: www/share/mk/web.site.mk,v 1.44 2003/04/20 21:03:24 murray Exp $
 
 #
 # Build and install a web site.
@@ -70,6 +70,12 @@ COPY=	-C
 # Where the ports live, if CVS isn't used (ie. NOPORTSCVS is defined)
 #
 PORTSBASE?=	/usr
+
+#
+# Instruction for bsd.subdir.mk to not to process SUBDIR directive.
+# It is not neccessary since web.site.mk do it too.
+#
+#NO_SUBDIR=	YES
 
 ##################################################################
 # Transformation rules
