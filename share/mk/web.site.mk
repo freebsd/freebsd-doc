@@ -1,5 +1,5 @@
 # bsd.web.mk
-# $Id: web.site.mk,v 1.11 1997-09-19 21:35:54 jfieber Exp $
+# $Id: web.site.mk,v 1.12 1997-11-11 15:09:24 brian Exp $
 
 #
 # Build and install a web site.
@@ -213,8 +213,7 @@ realinstall2:
 .if defined(DOCSUBDIR) && !empty(DOCSUBDIR)
 	for entry in ${DOCSUBDIR}; do \
 		(cd ${DOCINSTALLDIR}/$$entry; \
-		tar czf $$entry-html.tar.gz $${entry}.html $${entry}_toc.html \
-			$$entry[0-9]*.html; \
+		tar czf $$entry-html.tar.gz *.html; \
 		ln -fs $${entry}.html index.html ) \
 	done
 .endif
