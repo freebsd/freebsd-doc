@@ -120,7 +120,7 @@ DOCBOOKSUFFIX?= sgml
 MASTERDOC?=	${.CURDIR}/${DOC}.${DOCBOOKSUFFIX}
 
 # List of supported SP_ENCODINGs
-SP_ENCODING_LIST?=	KOI8-R
+SP_ENCODING_LIST?=	ISO-8859-2 KOI8-R
 
 # Which stylesheet type to use.  'dsssl' or 'xsl'
 STYLESHEET_TYPE?=	dsssl
@@ -455,7 +455,8 @@ all: ${_docs}
 #
 # SP_ENCODING support
 #
-CUR_ENCODING!= 	${ECHO} ${LANGCODE} | ${SED} 's/^.*\.//'
+CUR_ENCODING!= 	${ECHO} ${LANGCODE} | ${SED} 's/^.*\.//' | \
+	${SED} 's/^ISO/ISO\-/'
 .for _sp_encoding in ${SP_ENCODING_LIST}
 .if ${CUR_ENCODING} == ${_sp_encoding}
 JADE_CMD=	SP_ENCODING=${CUR_ENCODING} ${JADE}
