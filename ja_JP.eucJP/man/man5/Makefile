@@ -7,6 +7,7 @@ MAN5 =	a.out.5\
 	bootparams.5\
 	bootptab.5\
 	core.5\
+	config.5\
 	crontab.5\
 	ctm.5\
 	cvs.5\
