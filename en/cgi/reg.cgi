@@ -1,7 +1,8 @@
 #!/usr/bin/perl
-
+#
 # Perl program to send mail.
-
+#
+# $FreeBSD$
 
 $mailprog = '/usr/sbin/sendmail';
 

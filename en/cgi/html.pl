@@ -12,6 +12,7 @@
 #  GNU General Public License Version 2.  
 #     (http://www.gnu.ai.mit.edu/copyleft/gpl.html)
 #
+# $FreeBSD$
 
 #
 # typical use is &www_content ("text","html");
