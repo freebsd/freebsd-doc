@@ -2,7 +2,7 @@
      The FreeBSD Russian Documentation Project
 
      $FreeBSD$
-     $FreeBSDru: frdp/www/ru/ports/ports.inc,v 1.11 2003/12/18 10:39:30 den Exp $
+     $FreeBSDru: frdp/www/ru/ports/ports.inc,v 1.12 2004/01/06 07:54:18 den Exp $
 
      Original revision: 1.67
 -->
@@ -67,5 +67,5 @@
     Приложений: пакеты и порты</a> <a
     href="../../doc/en_US.ISO8859-1/books/handbook/index.html">Руководства
     FreeBSD</a>. Информация о создании новых портов находится в книге <a
-    href="../../doc/en_US.ISO8859-1/books/porters-handbook/index.html">
+    href="../../doc/ru_RU.KOI8-R/books/porters-handbook/index.html">
     Руководство по созданию портов</a>.</p>
