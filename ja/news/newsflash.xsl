@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
 
-<!-- $FreeBSD: www/en/news/newsflash.xsl,v 1.1 2001/08/06 06:59:11 nik Exp $ -->
+<!-- $FreeBSD: www/ja/news/newsflash.xsl,v 1.1 2001/08/07 03:58:32 kuriyama Exp $ -->
 <!-- Original revision: 1.1 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -11,9 +11,9 @@
 
   <xsl:variable name="base" select="'..'"/>
   <xsl:variable name="title" select="'FreeBSD News Flash'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/news/newsflash.xsl,v 1.1 2001/08/06 06:59:11 nik Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/ja/news/newsflash.xsl,v 1.1 2001/08/07 03:58:32 kuriyama Exp $'"/>
   
-  <xsl:output type="html" encoding="iso-8859-1"/>
+  <xsl:output type="html" encoding="EUC-JP"/>
 
   <xsl:template match="news">
     <html>
