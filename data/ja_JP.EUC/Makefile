@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.20 1998-07-30 02:35:20 hanai Exp $
+# $Id: Makefile,v 1.21 1998-07-30 12:54:01 hanai Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.36
 
@@ -12,16 +12,13 @@ DOCS=  about.sgml applications.sgml auditors.sgml availability.sgml branch.sgml
 DOCS+= commercial.sgml daemon.sgml docproj.sgml docs.sgml 
 DOCS+= features.sgml gallery.sgml index-site.sgml register.sgml 
 DOCS+= internet.sgml license.sgml 
-DOCS+= machines.sgml mailto.sgml mirror.sgml
-DOCS+= newbies.sgml newsflash.sgml publish.sgml search.sgml 
+DOCS+= machines.sgml mailto.sgml mirror.sgml mozilla.sgml
+DOCS+= newbies.sgml newsflash.sgml press.sgml publish.sgml search.sgml 
 DOCS+= searchhints.sgml send-pr.sgml support.sgml where.sgml 
 DOCS+= resignation.sgml y2kbug.sgml search-mid.sgml
 
 # Japanese-only file
 DOCS+= jabout.sgml
-
-# Not translated into Japanese yet.
-#DOCS+= mozilla.sgml press.sgml
 
 # Not available in Japanese version.
 #DOCS+= cgallery.sgml npgallery.sgml pgallery.sgml
