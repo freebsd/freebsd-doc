@@ -1,0 +1,1394 @@
+<!--
+	The FreeBSD Russian Documentation Project
+
+	$FreeBSD$
+	$FreeBSDru: frdp/doc/ru_RU.KOI8-R/books/handbook/vinum/chapter.sgml,v 1.4 2004/03/24 13:48:37 den Exp $
+
+	Original revision: 1.25
+-->
+<!--
+	The Vinum Volume Manager
+	By Greg Lehey (grog at lemis dot com)
+
+	Added to the Handbook by Hiten Pandya <hiten@uk.FreeBSD.org>
+	and Tom Rhodes <trhodes@FreeBSD.org>
+-->
+
+<chapter id="vinum-vinum">
+  <title>Менеджер дискового пространства Vinum</title>
+
+  <sect1 id="vinum-synopsis">
+    <title>Краткая аннотация</title>
+
+    <para>Какие бы диски у вас ни были, они всегда будут подвержены
+      ограничениям:</para>
+
+      <itemizedlist>
+	<listitem>
+	  <para>Слишком маленькие</para>
+	</listitem>
+
+	<listitem>
+	  <para>Слишком медленные</para>
+	</listitem>
+
+	<listitem>
+	  <para>Недостаточно надежные</para>
+	</listitem>
+      </itemizedlist>
+  </sect1>
+
+  <sect1 id="vinum-intro">
+    <sect1info>
+      <authorgroup>
+	<author>
+	  <firstname>Greg</firstname>
+	  <surname>Lehey</surname>
+	  <contrib>Изначально написано </contrib>
+	</author>
+      </authorgroup>
+    </sect1info>
+
+    <title>Диски слишком малы</title>
+
+    <indexterm><primary>Vinum</primary></indexterm>
+    <indexterm><primary>RAID</primary>
+    <secondary>Software</secondary></indexterm>
+
+    <para><emphasis>Vinum</emphasis> (произносится <emphasis>Винум</emphasis>,
+      с ударением на первом слоге)&nbsp;&mdash; так называемый
+      <emphasis>Менеджер дисковых томов</emphasis>&nbsp;&mdash; представляет
+      собой виртуальный дисковый драйвер, призванный решить три вышеописанные
+      проблемы.  Взглянем на них более подробно.  Предлагаются
+      (и реализованы) следующие пути:</para>
+
+    <para>Объемы дисков растут, тем не менее, растут и требования к объемам
+      систем хранения данных.  Вы запросто можете оказаться в ситуации, когда
+      требуемый объем файловой системы превышает размеры доступных
+      дисков.  Надо признать, что в настоящее время данная проблема стоит не
+      так остро, как 10 лет назад, но тем не менее она существует.  Некоторые
+      системы выходят из этого тупика посредством создания мета-устройств,
+      распределяющих хранящиеся данные по нескольким дискам.</para>
+  </sect1>
+
+  <sect1 id="vinum-access-bottlenecks">
+    <title>Ограниченная пропускная способность</title>
+
+    <para>Современным системам часто необходим одновременный доступ ко многим
+      данным.  В частности, крупный FTP или HTTP-сервер может обслуживать
+      тысячи одновременных соединений, поступающих по нескольким
+      100&nbsp;Mbit/s каналам во внешний мир, что ощутимо превышает скорость
+      передачи данных большинства дисков.</para>
+
+    <para>Современные диски могут передавать данные со скоростями до
+      70&nbsp;MB/s; однако, эти цифры труднодостижимы в случае, когда к диску
+      обращается большое число независимых процессов, каждый из которых
+      может получить лишь часть этого значения.  Интересным будет
+      взглянуть на проблему с точки зрения дисковой подсистемы: важным
+      параметром в нашем случае будет загрузка подсистемы фактом передачи
+      фрагмента данных, а именно время, в течение которого диски, участвующие в
+      передаче, будут заняты.</para>
+
+    <para>При любом запросе диск сначала должен спозиционировать головки,
+      дождаться подхода к головкам первого сектора из необходимых, и лишь затем
+      выполнить обращение.  Данная операция может рассматриваться как
+      атомарная: нет никакого смысла ее прерывать.</para>
+
+    <para><anchor id="vinum-latency">
+      Рассмотрим типичный запрос на передачу 10&nbsp;kB информации.  Современные
+      высокопроизводительные диски подводят головки в нужную позицию в среднем
+      за 3.5&nbsp;миллисекунды.  Самые быстрые диски вращаются со скоростью
+      15000&nbsp;об/мин, так что среднее время на подход первого сектора к
+      головке (rotational latency, половина времени одного оборота) составит
+      еще 2&nbsp;миллисекунды.  При линейной скорости передачи данных в
+      70&nbsp;MB/s собственно чтение/запись займет около
+      150&nbsp;микросекунд&nbsp;&mdash; исчезающе мало по сравнению с временем
+      позиционирования.  В нашем случае, эффективная скорость передачи данных
+      падает почти до 1&nbsp;MB/s и, очевидно, сильно зависит от размера
+      передаваемого блока.</para>
+
+    <para>Традиционным и очевидным решением этой проблемы является принцип
+      <quote>больше шпинделей</quote>: вместо использования одного большого
+      диска можно применить несколько дисков меньшего размера.  Диски
+      позиционируют головки и передают данные независимо, так что эффективная
+      пропускная способность возрастает примерно во столько раз, сколько дисков
+      мы применяем.</para>
+
+    <para>Точная цифра, разумеется, будет несколько ниже: диски могут передавать
+      данные параллельно, но у нас нет средства обеспечить строго равномерное
+      распределение нагрузки по всем дискам.  Нагрузка на один диск неизбежно
+      будет больше чем на другой.</para>
+
+    <indexterm>
+      <primary>disk concatenation</primary>
+    </indexterm>
+    <indexterm>
+      <primary>Vinum</primary>
+      <secondary>сцепленные диски (concatenation)</secondary>
+    </indexterm>
+
+    <para>Равномерность распределения нагрузки на диски серьезно зависит от
+      способа распределения по ним данных.  В терминах дальнейшего обсуждения,
+      будет удобно представить пространство хранения набором большого
+      количества секторов с данными, которые адресуются по номеру, подобно
+      страницам в книге.  Наиболее очевидным методом будет поделить виртуальный
+      диск на группы расположенных последовательно секторов размером с
+      физический диск (которые будут подобны разделам книги).  Этот метод
+      называется <emphasis>конкатенацией или сцеплением
+      (concatenation)</emphasis>; его преимуществом является то, что он не
+      налагает никаких ограничений на размеры применяемых дисков.  Конкатенация
+      эффективна, если нагрузка на дисковое пространство распределена
+      равномерно.  В случае концентрации нагрузки в малой области диска
+      увеличение производительности не будет заметно.  Организация секторов на
+      сцепленных единицах хранения показана на <xref
+      linkend="vinum-concat">.</para>
+
+    <para>
+      <figure id="vinum-concat">
+	<title>Организация сцепленных дисков</title>
+	<graphic fileref="vinum/vinum-concat">
+      </figure>
+    </para>
+
+    <indexterm>
+      <primary>disk striping</primary>
+    </indexterm>
+    <indexterm>
+      <primary>Vinum</primary>
+      <secondary>striping (перемежение)</secondary>
+    </indexterm>
+
+    <para>Альтернативным подходом будет разделение адресного пространства на
+      компоненты одного, сравнительно небольшого размера, и расположение их
+      последовательно на разных устройствах.  Например, первая группа из 256
+      секторов будет расположены на первом физическом диске,
+      вторая&nbsp;&mdash; на следующем и т.д.  n+1-я группа попадает на первый
+      диск вслед за первой.  Такое расположение называется
+      <emphasis>перемежающимся (striping)</emphasis> или
+      <acronym>RAID-0</acronym>.
+
+    <footnote>
+      <indexterm><primary>RAID</primary></indexterm>
+
+      <para><acronym>RAID</acronym>&nbsp;&mdash; сокращение от термина
+      <emphasis>Redundant Array of Inexpensive Disks (массив недорогих дисков с
+      резервированием)</emphasis>; различные виды <acronym>RAID</acronym>
+      предоставляют разные формы защиты от сбоев.  <acronym>RAID-0</acronym>,
+      вообще говоря, не является <emphasis>RAID</emphasis>, поскольку не
+      обеспечивает резервирования.</para></footnote>.
+
+      Перемежение требует дополнительных усилий для нахождения нужного блока
+      данных и может приводить к дополнительным нагрузкам на подсистемы
+      ввода-вывода, если передаваемый блок пересекает границу stripe (тем самым
+      попадая на разные диски), зато обеспечивает более равномерное
+      распределение нагрузки по физическим дискам.  Распределение блоков по
+      физическим дискам в случае striping иллюстрируется
+      <xref linkend="vinum-striped">.</para>
+
+    <para>
+      <figure id="vinum-striped">
+	<title>Организация с перемежением</title>
+	<graphic fileref="vinum/vinum-striped">
+      </figure>
+    </para>
+  </sect1>
+
+  <sect1 id="vinum-data-integrity">
+    <title>Целостность данных</title>
+
+      <para>Наконец, слабым местом современных дисков является их ограниченная
+	надежность.  Несмотря на то, что за последние несколько лет она ощутимо
+	выросла, из всех компонентов сервера отказ дисков наиболее вероятен.
+	Отказ может привести к катастрофическим
+	результатам: замена отказавшего диска и восстановление данных может
+	занять несколько дней.</para>
+
+      <indexterm>
+	<primary>disk mirroring</primary>
+      </indexterm>
+      <indexterm>
+	<primary>Vinum</primary>
+	<secondary>зеркалирование (mirroring)</secondary>
+      </indexterm>
+      <indexterm>
+	<primary>RAID-1</primary>
+      </indexterm>
+
+      <para>Традиционным путем решения проблемы надежности является
+	<emphasis>зеркалирование (mirroring)</emphasis>, обеспечивающее
+	хранение всей информации в двух копиях на различных физических
+	носителях.  С момента изобретения аббревиатуры <acronym>RAID</acronym>
+	эту технику также называют <acronym>RAID уровня 1</acronym> или просто
+	<acronym>RAID-1</acronym>.  Любой запрос на запись в таком томе
+	приводит к записи в оба подтома, чтение может производиться из любой
+	половины, так что данные остаются доступны в случае отказа одного из
+	дисков.</para>
+
+      <para>Зеркалирование имеет два слабых места:</para>
+
+	<itemizedlist>
+	  <listitem>
+	    <para>Цена: требуется вдвое больше дисков.</para>
+	  </listitem>
+
+	  <listitem>
+	    <para>Проблемы с производительностью: запись производится на оба
+	      диска, требуя вдвое большей пропускной способности шины.
+	      Производительность чтения не уменьшается, более того, часто
+	      увеличивается.</para>
+	  </listitem>
+	</itemizedlist>
+
+      <indexterm><primary>RAID-5</primary></indexterm>
+
+      <!-- следующий абзац проблемный.  suggestions welcome -->
+      <para>Альтернативным решением является хранение <emphasis>контрольных сумм
+	(четности)</emphasis>, реализованное в <acronym>RAID</acronym> уровней
+	2, 3, 4 и 5.  Наиболее интересен <acronym>RAID-5</acronym>.  В
+	реализации Vinum, это вариант организации тома с перемежением, при
+	котором один из блоков в страйпе выделяется для хранения четности
+	остальных n-1 блоков.  Как требует спецификация
+	<acronym>RAID-5</acronym>, положение блока четности меняется от страйпа
+	к страйпу.</para>
+
+      <para>
+	<figure id="vinum-raid5-org">
+	  <title>Организация RAID-5</title>
+	  <graphic fileref="vinum/vinum-raid5-org">
+	</figure>
+      </para>
+
+      <para>По сравнению с зеркалированием преимуществом <acronym>RAID-5</acronym>
+	является гораздо меньшее требование к объему дисков.  Скорость чтения
+	сравнима с чтением в случае томов с перемежением, а вот запись
+	происходит ощутимо медленнее (примерно вчетверо медленнее чтения).  При
+	отказе одного из дисков массив продолжает работать в "деградировавшем"
+	режиме: запросы на чтение с оставшихся дисков производятся обычным
+	образом, а блоки с отказавшего диска перевычисляются из данных
+	остальных блоков страйпа.
+      </para>
+  </sect1>
+
+  <sect1 id="vinum-objects">
+    <title>Объекты Vinum</title>
+      <para>Для обеспечения необходимой функциональности Vinum использует
+	четырехуровневую иерархию объектов:</para>
+
+      <itemizedlist>
+	<listitem>
+	  <para>"Видимая снаружи" сущность&nbsp;&mdash; виртуальный диск,
+	    называемый <emphasis>томом (volume)</emphasis>.  Тома в основном
+	    аналогичны дискам &unix;, хотя имеются и мелкие различия.  На тома
+	    нет ограничений по размеру.</para>
+	</listitem>
+
+	<listitem>
+	  <para>Тома образуются из <emphasis>наборов (plex)</emphasis>, каждый
+	    из которых представляет полное адресное пространство тома.  Данный
+	    уровень иерархии, таким образом, реализует избыточность.  Наборы
+	    являются аналогами отдельных дисков в зеркалированном массиве;
+	    содержимое наборов идентично.</para>
+	</listitem>
+
+	<listitem>
+	  <para>Поскольку Vinum работает в среде подсистемы хранения данных
+	    &unix;, многодисковые наборы можно было бы реализовать на базе
+	    дисковых разделов &unix;.  На практике, подобная реализация
+	    недостаточно гибка (диски &unix; могут иметь весьма ограниченное
+	    число разделов).  Вместо этого Vinum вводит еще один
+	    уровень абстракции: единый дисковый раздел &unix;
+	    (<emphasis>drive</emphasis> в терминах Vinum) делится на
+	    непрерывные области, называемые <emphasis>поддисками
+	    (subdisk)</emphasis>, которые и будут "строительным материалом" для
+	    наборов.</para>
+	</listitem>
+
+	<listitem>
+	  <para>Поддиски, как уже упоминалось, располагаются внутри
+	    <emphasis>приводов (drive)</emphasis> Vinum, существующих
+	    дисковых разделов &unix;.  Привод может содержать неограниченное
+	    количество поддисков.  Небольшая область в начале привода
+	    зарезервирована под хранение информации о конфигурации и состоянии
+	    Vinum; все остальное пространство пригодно для хранения
+	    данных.</para> </listitem> </itemizedlist>
+
+      <para>Сейчас мы опишем, как эта иерархия обеспечивает необходимую
+	функциональность для Vinum.</para>
+
+    <sect2>
+      <title>Размер тома</title>
+
+      <para>Наборы могут состоять из большого количества поддисков,
+	распределенных по разным приводам Vinum.  Стало быть, размеры отдельных
+	дисков не ограничивают размер набора, а следовательно, и тома.</para>
+    </sect2>
+
+    <sect2>
+      <title>Избыточность</title>
+
+      <para>Vinum реализует избыточность посредством связывания с томом
+	нескольких наборов.  Содержимое каждого набора является полной копией
+	содержимого тома.  Количество наборов в томе может быть от одного до
+	восьми.</para>
+
+      <para>Хотя набор представляет данные тома целиком, отдельные части
+	содержимого тома могут быть представлены не всеми наборами.
+	Во-первых, для некоторых частей набора поддиски могут быть не
+	определены; во-вторых, часть набора может быть потеряна из-за отказа
+	диска.  До тех пор, пока хотя бы один набор может обеспечить данные для
+	полного адресного пространства тома, том полностью функционален.</para>
+    </sect2>
+
+    <sect2>
+      <title>Производительность</title>
+
+      <para>Vinum поддерживает как конкатенацию, так и перемежение на уровне
+	наборов:</para>
+
+      <itemizedlist>
+	<listitem>
+	  <para><emphasis>Сцепленный набор</emphasis> использует пространство
+	    поддисков последовательно, склеивая их "встык".</para>
+	</listitem>
+
+	<listitem>
+	  <para><emphasis>Набор с перемежением</emphasis> разбивает данные по
+	    поддискам в соответствии с размером страйпа.  Поддисков должно быть
+	    по меньшей мере два (чтобы отличить набор от сцепленного), и все
+	    они должны быть одинакового размера.</para>
+	</listitem>
+      </itemizedlist>
+    </sect2>
+
+    <sect2>
+      <title>Организация наборов: что выбрать?</title>
+
+      <!-- XXX: raid5: вставить в оригинальный текст, затем сюда -->
+      <para>Vinum, распространяемый с FreeBSD версии &rel.current; поддерживает
+	два вида организации наборов:</para>
+
+      <itemizedlist>
+	<listitem>
+	  <para>Сцепленные наборы наиболее гибки в использовании: они могут
+	    содержать любое количество поддисков произвольного размера.  Такой
+	    набор может быть расширен "на лету" путем добавления дополнительных
+	    поддисков.  Поддержка сцепленных наборов требует меньших затрат
+	    процессорного времени, чем поддержка наборов с перемежением (хотя
+	    различие вряд ли поддается измерению).
+	    С другой стороны, они наиболее чувствительны к концентрации
+	    нагрузки в одной области тома, при которой один из дисков принимает
+	    на себя всю нагрузку, а остальные бездействуют.</para>
+	</listitem>
+
+	<listitem>
+	  <para>Основным преимуществом наборов с перемежением
+	    (<acronym>RAID-0</acronym>) является распределение "горячих точек"
+	    нагрузки; вы можете даже полностью уравнять ее, выбрав оптимальный
+	    размер страйпа (около 256&nbsp;kB).  Недостатки такой
+	    организации&nbsp;&mdash; более сложный код и ограничения на поддиски:
+	    все они должны быть строго одного размера.  Кроме того, процесс
+	    добавления поддиска в набор с перемежением "на ходу" является
+	    настолько нетривиальной задачей, что в настоящее время Vinum не
+	    поддерживает эту операцию.  Дополнительное (тривиальное)
+	    ограничение состоит в том, что набор с перемежением должен
+	    содержать как минимум два поддиска, иначе он будет неотличим от
+	    сцепленного.</para>
+	</listitem>
+      </itemizedlist>
+
+      <para>Преимущества и недостатки различных методов организации наборов
+	описаны в <xref linkend="vinum-comparison">.</para>
+
+      <table id="vinum-comparison">
+	<title>Методы организации наборов Vinum</title>
+	<tgroup cols="5">
+	  <thead>
+	    <row>
+	      <entry>Тип набора</entry>
+	      <entry>Поддисков, мин.</entry>
+	      <entry>Расширяется "на лету"</entry>
+	      <entry>Поддиски строго одного размера</entry>
+	      <entry>Применение</entry>
+	    </row>
+	  </thead>
+
+	  <tbody>
+	    <row>
+	      <entry>сцепленный (concatenated)</entry>
+	      <entry>1</entry>
+	      <entry>да</entry>
+	      <entry>нет</entry>
+	      <entry>Крупные системы хранения, требующие максимальной
+		гибкости и умеренной производительности</entry>
+	    </row>
+
+	    <row>
+	      <entry>с перемежением (striped)</entry>
+	      <entry>2</entry>
+	      <entry>нет</entry>
+	      <entry>да</entry>
+	      <entry>Высокая производительность, в том числе в случае
+		параллельного доступа к данным</entry>
+	    </row>
+	  </tbody>
+	</tgroup>
+      </table>
+    </sect2>
+  </sect1>
+
+  <sect1 id="vinum-examples">
+    <title>Несколько примеров</title>
+
+    <para>Vinum ведет <emphasis>базу данных конфигурации</emphasis>, в которой
+      описаны все объекты Vinum в отдельной системе.  Начальная конфигурация
+      создается пользователем при помощи системной утилиты &man.vinum.8; из
+      одного или нескольких конфигурационных файлов.  Копия конфигурации
+      хранится в начале каждого дискового раздела (привода) Vinum.  Все копии
+      обновляются при изменении состояния томов, поэтому после перезапуска
+      состояние объектов Vinum восстанавливается.</para>
+
+    <sect2>
+      <title>Конфигурационный файл</title>
+      <para>Конфигурационный файл описывает объекты Vinum.  Описание простого
+	тома может быть таким:</para>
+
+      <programlisting>
+    drive a device /dev/da3h
+    volume myvol
+      plex org concat
+        sd length 512m drive a</programlisting>
+
+      <para>Здесь описываются четыре объекта Vinum:</para>
+
+      <itemizedlist>
+	<listitem>
+	  <para>Строка <emphasis>drive</emphasis> объявляет дисковый раздел
+	    (<emphasis>привод</emphasis>) и его местоположение на физическом
+	    диске.  Приводу дано символьное имя <emphasis>a</emphasis>.
+	    Разделение символьных имен и имен устройств дает возможность
+	    перемещать физические диски (например, по разным контроллерам, или
+	    менять их местами) без изменения конфигурации.</para>
+	</listitem>
+
+	<listitem>
+	  <para>Строка <emphasis>volume</emphasis> описывает том.
+	    Единственным требуемым параметром является имя тома
+	    <emphasis>myvol</emphasis>.</para>
+	</listitem>
+
+	<listitem>
+	  <para>Строка <emphasis>plex</emphasis> определяет набор.
+	    Единственный обязательный параметр&nbsp;&mdash; метод организации
+	    набора, в нашем случае <emphasis>concat</emphasis> (сцепленный).
+	    Давать набору имя в явном виде не обязательно: Vinum автоматически
+	    сгенерирует имя набора из имени тома и суффикса
+	    <emphasis>.p</emphasis><emphasis>x</emphasis>, где
+	    <emphasis>x</emphasis>&nbsp;&mdash; номер набора в томе.  В нашем
+	    случае набор будет называться <emphasis>myvol.p0</emphasis>.</para>
+	</listitem>
+
+	<listitem>
+	  <para>Наконец, строка <emphasis>sd</emphasis> описывает поддиск.
+	    Минимальными требованиями к его описанию являются имя
+	    <emphasis>привода</emphasis>, на котором он будет располагаться, и
+	    его размер.  Как и в случае набора, имя указывать не обязательно:
+	    имя поддиска будет построено добавлением
+	    <emphasis>.s</emphasis><emphasis>x</emphasis> к имени набора, где
+	    <emphasis>x</emphasis> будет номером поддиска в наборе.  Наш
+	    поддиск получит имя <emphasis>myvol.p0.s0</emphasis>.</para>
+	</listitem>
+      </itemizedlist>
+
+      <para>В результате обработки такого конфигурационного файла &man.vinum.8;
+	выдаст нам следующее:</para>
+
+      <programlisting>
+      &prompt.root; vinum -&gt; <command>create config1</command>
+      Configuration summary
+      Drives:         1 (4 configured)
+      Volumes:        1 (4 configured)
+      Plexes:         1 (8 configured)
+      Subdisks:       1 (16 configured)
+
+	D a                     State: up       Device /dev/da3h        Avail: 2061/2573 MB (80%)
+
+	V myvol                 State: up       Plexes:       1 Size:        512 MB
+
+	P myvol.p0            C State: up       Subdisks:     1 Size:        512 MB
+
+	S myvol.p0.s0           State: up       PO:        0  B Size:        512 MB</programlisting>
+
+      <para>На этом кратком листинге показан формат вывода &man.vinum.8;.
+        Графически созданный нами том представлен на
+	<xref linkend="vinum-simple-vol">.</para>
+
+      <para>
+	<figure id="vinum-simple-vol">
+	  <title>Простой том Vinum</title>
+	  <graphic fileref="vinum/vinum-simple-vol">
+	</figure>
+      </para>
+
+      <para>Этот и последующие рисунки изображают том, содержащий один или
+	несколько наборов, каждый из которых, в свою очередь, состоит из одного
+	или нескольких поддисков.  В первом тривиальном примере том состоит из
+	одного набора, представленного одним поддиском.</para>
+
+      <para>Построенный нами только что том не имеет никаких преимуществ перед
+	обычным дисковым разделом.  Он содержит единственный набор, так что не
+	обеспечивает избыточность; набор состоит из одного поддиска, поэтому
+	методика распределения дисковых блоков ничем не отличается от дискового
+	раздела.  В последующих параграфах мы рассмотрим более интересные
+	конфигурации.</para>
+    </sect2>
+
+    <sect2>
+      <title>Повышаем надежность: зеркалирование</title>
+
+      <para>Надежность тома может быть повышена при помощи зеркалирования.
+	Планируя зеркалированный том, важно не забыть о том, чтобы поддиски
+	каждого набора располагались на разных физических дисках, чтобы отказ
+	одного из них не привел к выходу из строя более чем одного набора.  Вот
+	конфигурация, определяющая зеркалированный том:</para>
+
+      <programlisting>
+	drive b device /dev/da4h
+	volume mirror
+      plex org concat
+        sd length 512m drive a
+	  plex org concat
+	    sd length 512m drive b</programlisting>
+
+      <para>Как мы видим, нет необходимости вновь описывать привод
+	<emphasis>a</emphasis>, поскольку Vinum сохраняет состояние уже
+	сконфигурированных объектов.  После обработки этих определений
+	конфигурация будет выглядеть так:</para>
+
+      <programlisting>
+	Drives:         2 (4 configured)
+	Volumes:        2 (4 configured)
+	Plexes:         3 (8 configured)
+	Subdisks:       3 (16 configured)
+
+	D a                     State: up       Device /dev/da3h        Avail: 1549/2573 MB (60%)
+	D b                     State: up       Device /dev/da4h        Avail: 2061/2573 MB (80%)
+
+    V myvol                 State: up       Plexes:       1 Size:        512 MB
+    V mirror                State: up       Plexes:       2 Size:        512 MB
+
+    P myvol.p0            C State: up       Subdisks:     1 Size:        512 MB
+    P mirror.p0           C State: up       Subdisks:     1 Size:        512 MB
+    P mirror.p1           C State: initializing     Subdisks:     1 Size:        512 MB
+
+    S myvol.p0.s0           State: up       PO:        0  B Size:        512 MB
+	S mirror.p0.s0          State: up       PO:        0  B Size:        512 MB
+	S mirror.p1.s0          State: empty    PO:        0  B Size:        512 MB</programlisting>
+
+      <para><xref linkend="vinum-mirrored-vol"> иллюстрирует структуру
+	полученного тома.</para>
+
+      <para>
+	<figure id="vinum-mirrored-vol">
+	  <title>Зеркалированный том Vinum</title>
+	  <graphic fileref="vinum/vinum-mirrored-vol">
+	</figure>
+      </para>
+
+      <para>В данном примере каждый набор содержит все 512&nbsp;MB адресного
+	пространства тома.  Как и в предыдущем случае, каждый набор состоит
+	из одного поддиска.</para>
+    </sect2>
+
+    <sect2>
+      <title>Оптимизируем производительность</title>
+
+      <para>Зеркалированный том из предыдущего примера гораздо более
+	отказоустойчив, чем обычный том, но его производительность ниже:
+	каждый запрос на запись выливается в две операции физической записи,
+	что вдвое увеличивает необходимую пропускную способность шины дисковой
+	подсистемы.  Увеличение производительности требует иного подхода:
+	вместо зеркалирования данные распределяются (перемежением) по
+	максимальному количеству физических дисков.  Следующий пример
+	конфигурации создает том с перемежением на четырех дисках:</para>
+
+	<programlisting>
+	drive c device /dev/da5h
+	drive d device /dev/da6h
+	volume stripe
+	plex org striped 512k
+	  sd length 128m drive a
+	  sd length 128m drive b
+	  sd length 128m drive c
+	  sd length 128m drive d</programlisting>
+
+      <para>Как и ранее, нет необходимости переопределять уже
+	сконфигурированные приводы.  Общий вид базы конфигурации Vinum после
+	создания нового тома будет таким:</para>
+
+      <programlisting>
+	Drives:         4 (4 configured)
+	Volumes:        3 (4 configured)
+	Plexes:         4 (8 configured)
+	Subdisks:       7 (16 configured)
+
+    D a                     State: up       Device /dev/da3h        Avail: 1421/2573 MB (55%)
+    D b                     State: up       Device /dev/da4h        Avail: 1933/2573 MB (75%)
+    D c                     State: up       Device /dev/da5h        Avail: 2445/2573 MB (95%)
+    D d                     State: up       Device /dev/da6h        Avail: 2445/2573 MB (95%)
+
+    V myvol                 State: up       Plexes:       1 Size:        512 MB
+    V mirror                State: up       Plexes:       2 Size:        512 MB
+    V striped               State: up       Plexes:       1 Size:        512 MB
+
+    P myvol.p0            C State: up       Subdisks:     1 Size:        512 MB
+    P mirror.p0           C State: up       Subdisks:     1 Size:        512 MB
+    P mirror.p1           C State: initializing     Subdisks:     1 Size:        512 MB
+    P striped.p1            State: up       Subdisks:     1 Size:        512 MB
+
+    S myvol.p0.s0           State: up       PO:        0  B Size:        512 MB
+    S mirror.p0.s0          State: up       PO:        0  B Size:        512 MB
+    S mirror.p1.s0          State: empty    PO:        0  B Size:        512 MB
+    S striped.p0.s0         State: up       PO:        0  B Size:        128 MB
+    S striped.p0.s1         State: up       PO:      512 kB Size:        128 MB
+    S striped.p0.s2         State: up       PO:     1024 kB Size:        128 MB
+    S striped.p0.s3         State: up       PO:     1536 kB Size:        128 MB</programlisting>
+
+      <para>
+	<figure id="vinum-striped-vol">
+	  <title>Том с перемежением</title>
+	  <graphic fileref="vinum/vinum-striped-vol">
+	</figure>
+      </para>
+
+      <para>Новосозданный том представлен на
+	<xref linkend="vinum-striped-vol">.  Плотность заштрихованных участков
+	показывает расположение страйпов в адресном пространстве набора (от
+	светлых к темным).</para>
+    </sect2>
+
+    <sect2>
+      <title>Отказоустойчивость и производительность одновременно</title>
+
+      <para><anchor id="vinum-resilience">
+	При наличии достаточного количества дисков можно создать том,
+	сочетающий повышенную отказоустойчивость и высокую производительность
+	по сравнению со стандартными дисковыми разделами &unix;.  Типичная
+	конфигурация может быть такой:</para>
+
+      <programlisting>
+	volume raid10
+      plex org striped 512k
+        sd length 102480k drive a
+        sd length 102480k drive b
+        sd length 102480k drive c
+        sd length 102480k drive d
+        sd length 102480k drive e
+      plex org striped 512k
+        sd length 102480k drive c
+        sd length 102480k drive d
+        sd length 102480k drive e
+        sd length 102480k drive a
+        sd length 102480k drive b</programlisting>
+
+      <para>Как вы можете заметить, поддиски второго набора смещены на два
+	привода относительно поддисков первого.  В результате даже при запросе
+	на запись, пересекающем границы страйпа, не возникнет двух обращений к
+	одному физическому диску.</para>
+
+      <para><xref linkend="vinum-raid10-vol"> отражает структуру нового
+	тома.</para>
+
+      <para>
+	<figure id="vinum-raid10-vol">
+	  <title>Зеркалированный том с перемежением</title>
+	  <graphic fileref="vinum/vinum-raid10-vol">
+	</figure>
+      </para>
+    </sect2>
+  </sect1>
+
+  <sect1 id="vinum-object-naming">
+    <title>Правила именования объектов</title>
+
+    <para>Как уже было описано, Vinum автоматически именует создаваемые
+      наборы и поддиски, хотя эти имена и могут быть переопределены.  На самом
+      деле, мы не рекомендовали бы переопределять стандартные имена: опыт с
+      дисковым менеджером VERITAS показал, что гибкость в именовании объектов
+      не дает ощутимого преимущества, а запутать пользователя может.</para>
+
+    <para>Имена объектов могут состоять из любых непробельных символов.
+      Впрочем, рекомендуем ограничиться буквами, цифрами и подчеркиваниями.
+      Имена томов, наборов и поддисков могут быть до 64 символов длиной;
+      максимальная длина имени привода&nbsp;&mdash; 32 символа.</para>
+
+    <para>Для объектов Vinum в иерархии <filename>/dev/vinum</filename>
+      создаются файлы устройств.  Приведенный выше пример конфигурации создаст
+      следующий набор устройств:</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>Управляющие устройства
+	  <devicename>/dev/vinum/control</devicename> и
+	  <devicename>/dev/vinum/controld</devicename>, используемые системной
+	  утилитой &man.vinum.8; и даемоном Vinum соответственно.</para>
+      </listitem>
+
+      <listitem>
+	<para>Блоковые и символьные устройства для каждого из томов.
+	  Основные устройства, используемые Vinum'ом.  Блоковые устройства
+	  именуются в соответствии с именами томов; символьные, в соответствии
+	  с традицией именования устройств BSD, имеют префикс
+	  <emphasis>r</emphasis>.  Таким образом, вышеописанная конфигурация
+	  будет включать блоковые устройства
+
+	  <devicename>/dev/vinum/myvol</devicename>,
+	  <devicename>/dev/vinum/mirror</devicename>,
+	  <devicename>/dev/vinum/striped</devicename>,
+	  <devicename>/dev/vinum/raid5</devicename> и
+	  <devicename>/dev/vinum/raid10</devicename>,
+	  и символьные устройства
+	  <devicename>/dev/vinum/rmyvol</devicename>,
+	  <devicename>/dev/vinum/rmirror</devicename>,
+	  <devicename>/dev/vinum/rstriped</devicename>,
+	  <devicename>/dev/vinum/rraid5</devicename> и
+	  <devicename>/dev/vinum/rraid10</devicename>.</para>
+
+	  <!-- абзац о коллизии символьных и блочных устройств
+		intentionally опущен -->
+      </listitem>
+
+      <listitem>
+	<para>Каталог <devicename>/dev/vinum/drive</devicename>
+	  с записями для каждого привода.  В реальности, каждая запись является
+	  символьной ссылкой на соответствующий файл дискового
+	  устройства.</para>
+      </listitem>
+
+      <listitem>
+	<para>Каталог <filename>/dev/vinum/volume</filename>
+	  с записями для томов.  В нем содержатся поддиректории для каждого
+	  набора, внутри которых, в свою очередь, имеются поддиректории для
+	  каждого из поддисков.</para>
+      </listitem>
+
+      <listitem>
+	<para>Каталоги
+	  <devicename>/dev/vinum/plex</devicename>,
+	  <devicename>/dev/vinum/sd</devicename> и
+	  <devicename>/dev/vinum/rsd</devicename>,
+	  содержащие блочные устройства для наборов, блочные и символьные
+	  устройства для каждого из поддисков.</para>
+      </listitem>
+    </itemizedlist>
+
+    <para>Например, для конфигурации, описываемой как</para>
+	<programlisting>
+	drive drive1 device /dev/sd1h
+	drive drive2 device /dev/sd2h
+	drive drive3 device /dev/sd3h
+	drive drive4 device /dev/sd4h
+    volume s64 setupstate
+      plex org striped 64k
+        sd length 100m drive drive1
+        sd length 100m drive drive2
+        sd length 100m drive drive3
+        sd length 100m drive drive4</programlisting>
+
+    <para>после обработки &man.vinum.8;, созданный набор устройств в каталоге
+      <filename>/dev/vinum</filename> будет таким:</para>
+
+    <programlisting>
+	brwx------  1 root  wheel   25, 0x40000001 Apr 13 16:46 Control
+	brwx------  1 root  wheel   25, 0x40000002 Apr 13 16:46 control
+	brwx------  1 root  wheel   25, 0x40000000 Apr 13 16:46 controld
+	drwxr-xr-x  2 root  wheel       512 Apr 13 16:46 drive
+	drwxr-xr-x  2 root  wheel       512 Apr 13 16:46 plex
+	crwxr-xr--  1 root  wheel   91,   2 Apr 13 16:46 rs64
+	drwxr-xr-x  2 root  wheel       512 Apr 13 16:46 rsd
+	drwxr-xr-x  2 root  wheel       512 Apr 13 16:46 rvol
+	brwxr-xr--  1 root  wheel   25,   2 Apr 13 16:46 s64
+	drwxr-xr-x  2 root  wheel       512 Apr 13 16:46 sd
+	drwxr-xr-x  3 root  wheel       512 Apr 13 16:46 vol
+
+	/dev/vinum/drive:
+    total 0
+    lrwxr-xr-x  1 root  wheel  9 Apr 13 16:46 drive1 -&gt; /dev/sd1h
+    lrwxr-xr-x  1 root  wheel  9 Apr 13 16:46 drive2 -&gt; /dev/sd2h
+    lrwxr-xr-x  1 root  wheel  9 Apr 13 16:46 drive3 -&gt; /dev/sd3h
+    lrwxr-xr-x  1 root  wheel  9 Apr 13 16:46 drive4 -&gt; /dev/sd4h
+
+    /dev/vinum/plex:
+    total 0
+    brwxr-xr--  1 root  wheel   25, 0x10000002 Apr 13 16:46 s64.p0
+
+    /dev/vinum/rsd:
+    total 0
+    crwxr-xr--  1 root  wheel   91, 0x20000002 Apr 13 16:46 s64.p0.s0
+    crwxr-xr--  1 root  wheel   91, 0x20100002 Apr 13 16:46 s64.p0.s1
+    crwxr-xr--  1 root  wheel   91, 0x20200002 Apr 13 16:46 s64.p0.s2
+    crwxr-xr--  1 root  wheel   91, 0x20300002 Apr 13 16:46 s64.p0.s3
+
+    /dev/vinum/rvol:
+    total 0
+    crwxr-xr--  1 root  wheel   91,   2 Apr 13 16:46 s64
+
+    /dev/vinum/sd:
+    total 0
+    brwxr-xr--  1 root  wheel   25, 0x20000002 Apr 13 16:46 s64.p0.s0
+    brwxr-xr--  1 root  wheel   25, 0x20100002 Apr 13 16:46 s64.p0.s1
+    brwxr-xr--  1 root  wheel   25, 0x20200002 Apr 13 16:46 s64.p0.s2
+    brwxr-xr--  1 root  wheel   25, 0x20300002 Apr 13 16:46 s64.p0.s3
+
+    /dev/vinum/vol:
+    total 1
+    brwxr-xr--  1 root  wheel   25,   2 Apr 13 16:46 s64
+    drwxr-xr-x  3 root  wheel       512 Apr 13 16:46 s64.plex
+
+    /dev/vinum/vol/s64.plex:
+    total 1
+    brwxr-xr--  1 root  wheel   25, 0x10000002 Apr 13 16:46 s64.p0
+    drwxr-xr-x  2 root  wheel       512 Apr 13 16:46 s64.p0.sd
+
+    /dev/vinum/vol/s64.plex/s64.p0.sd:
+    total 0
+    brwxr-xr--  1 root  wheel   25, 0x20000002 Apr 13 16:46 s64.p0.s0
+    brwxr-xr--  1 root  wheel   25, 0x20100002 Apr 13 16:46 s64.p0.s1
+    brwxr-xr--  1 root  wheel   25, 0x20200002 Apr 13 16:46 s64.p0.s2
+    brwxr-xr--  1 root  wheel   25, 0x20300002 Apr 13 16:46 s64.p0.s3</programlisting>
+
+    <para>Заметим, что, несмотря на то что наборы и поддиски не рекомендуется
+      называть каким-либо специальным образом, приводы Vinum должны быть
+      поименованы.  Именование позволяет отвязать приводы от физических
+      устройств, и при этом обеспечить их автоматическое распознавание.  Имена
+      приводов могут достигать длины в 32 символа.</para>
+
+    <sect2>
+      <title>Создание файловых систем</title>
+
+	<para>Тома с точки зрения системы аналогичны дискам, за одним малым
+	  исключением: в отличие от дисков &unix;, тома Vinum не содержат таблиц
+	  разделов.  В результате
+	  потребовалось модифицировать некоторые утилиты работы с дисками, в
+	  первую очередь &man.newfs.8;, которая ранее использовала последний
+	  символ имени тома для определения идентификатора раздела.  Например,
+	  дисковое устройство может именоваться
+	  <devicename>/dev/ad0a</devicename>&nbsp;&mdash; первый раздел
+	  (<devicename>a</devicename>) первого (0) IDE-диска
+	  (<devicename>ad</devicename>)&nbsp;&mdash; или
+	  <devicename>/dev/da2h</devicename>&nbsp;&mdash; восьмой раздел
+	  (<devicename>h</devicename>) третьего (2) диска SCSI
+	  (<devicename>da</devicename>).  Том Vinum может называться, например,
+	  <devicename>/dev/vinum/concat</devicename>&nbsp;&mdash; как легко
+	  видеть, имя тома никак не связано с именем раздела.</para>
+
+	<para>Обычно &man.newfs.8; пытается интерпретировать имя раздела и
+	  сообщает об ошибке при невозможности такой интерпретации:</para>
+
+	<screen>&prompt.root; <userinput>newfs /dev/vinum/concat</userinput>
+newfs: /dev/vinum/concat: can't figure out file system partition</screen>
+
+	<note><para>Дальнейшее относится к версиям FreeBSD до 5.0:</para></note>
+
+	<para>Для создания файловых систем на томе Vinum следует использовать
+	  опцию &man.newfs.8; <option>-v</option>:</para>
+
+	<screen>&prompt.root; <userinput>newfs -v /dev/vinum/concat</userinput></screen>
+
+    </sect2>
+  </sect1>
+
+  <sect1 id="vinum-config">
+    <title>Создание конфигурации Vinum</title>
+
+    <para>Стандартное (<filename>GENERIC</filename>) ядро FreeBSD не включает
+      Vinum.  Хотя и можно собрать специальное ядро с включенной поддержкой
+      Vinum, этот вариант не рекомендуется.  Обычный способ активизации
+      Vinum&nbsp;&mdash; загрузка модуля для ядра (<acronym>kld</acronym>).  При
+      этом, явно использовать команду &man.kldload.8; нет необходимости: при
+      старте утилита &man.vinum.8; проверит наличие поддержки Vinum в ядре и
+      при необходимости загрузит модуль автоматически.</para>
+
+    <sect2>
+      <title>Активация</title>
+
+      <para>Vinum хранит конфигурационную информацию на дисковых разделах
+	в той же форме, что используется в файлах конфигурации при создании
+	объектов.  Впрочем, в них применяются некоторые ключевые слова, не
+	разрешенные в файлах конфигурации.  Например, хранимая на диске база
+	может выглядеть так:</para>
+
+	<programlisting>volume myvol state up
+volume bigraid state down
+plex name myvol.p0 state up org concat vol myvol
+plex name myvol.p1 state up org concat vol myvol
+plex name myvol.p2 state init org striped 512b vol myvol
+plex name bigraid.p0 state initializing org raid5 512b vol bigraid
+sd name myvol.p0.s0 drive a plex myvol.p0 state up len 1048576b driveoffset 265b plexoffset 0b
+sd name myvol.p0.s1 drive b plex myvol.p0 state up len 1048576b driveoffset 265b plexoffset 1048576b
+sd name myvol.p1.s0 drive c plex myvol.p1 state up len 1048576b driveoffset 265b plexoffset 0b
+sd name myvol.p1.s1 drive d plex myvol.p1 state up len 1048576b driveoffset 265b plexoffset 1048576b
+sd name myvol.p2.s0 drive a plex myvol.p2 state init len 524288b driveoffset 1048841b plexoffset 0b
+sd name myvol.p2.s1 drive b plex myvol.p2 state init len 524288b driveoffset 1048841b plexoffset 524288b
+sd name myvol.p2.s2 drive c plex myvol.p2 state init len 524288b driveoffset 1048841b plexoffset 1048576b
+sd name myvol.p2.s3 drive d plex myvol.p2 state init len 524288b driveoffset 1048841b plexoffset 1572864b
+sd name bigraid.p0.s0 drive a plex bigraid.p0 state initializing len 4194304b driveoff set 1573129b plexoffset 0b
+sd name bigraid.p0.s1 drive b plex bigraid.p0 state initializing len 4194304b driveoff set 1573129b plexoffset 4194304b
+sd name bigraid.p0.s2 drive c plex bigraid.p0 state initializing len 4194304b driveoff set 1573129b plexoffset 8388608b
+sd name bigraid.p0.s3 drive d plex bigraid.p0 state initializing len 4194304b driveoff set 1573129b plexoffset 12582912b
+sd name bigraid.p0.s4 drive e plex bigraid.p0 state initializing len 4194304b driveoff set 1573129b plexoffset 16777216b</programlisting>
+
+	<para>Видно, что каждый объект имеет явно описанное имя, а поддиски
+	  еще и явное положение на приводе (и то и другое может, хотя это и не
+	  рекомендуется, устанавливаться пользователем).  Помимо этого, для
+	  каждого объекта хранится его состояние (и установка состояния
+	  напрямую пользователю недоступна).  Vinum не хранит в
+	  конфигурационных базах информацию о приводах: она создается при
+	  сканировании дисковых разделов, помеченных как Vinum.  Это дает
+	  возможность Vinum правильно идентифицировать диски при смене имени
+	  устройства.</para>
+
+      <sect3 id="vinum-rc-startup">
+	<title>Автоматическая активация</title>
+
+	<para>Для автоматического старта Vinum при загрузке системы добавьте
+	  следующую строку в файл конфигурации системы
+	  <filename>/etc/rc.conf</filename>:</para>
+
+	<programlisting>start_vinum="YES"		# set to YES to start vinum</programlisting>
+
+	<para>Если в вашей системе нет файла
+	  <filename>/etc/rc.conf</filename>, создайте его с таким содержимым.
+	  Данная строка вызовет активацию <acronym>kld</acronym> модуля Vinum
+	  при загрузке, а также старт всех объектов, упомянутых в конфигурации
+	  Vinum.  Активация Vinum происходит до монтирования файловых систем,
+	  так что возможны автоматическая проверка (&man.fsck.8;) и
+	  монтирование файловых систем на томах Vinum.</para>
+
+	<para>При старте с помощью команды <command>vinum start</command>,
+	  Vinum читает базы конфигурации с одного из приводов.  В нормальной
+	  ситуации все приводы содержат идентичную информацию о конфигурации,
+	  так что не имеет значения, какой именно диск будет читаться.  В
+	  случае краха Vinum определяет, какая копия является наиболее свежей,
+	  в дальнейшем использует ее, а также обновляет ее на оставшихся
+	  приводах.</para>
+      </sect3>
+    </sect2>
+  </sect1>
+
+  <sect1 id="vinum-root">
+    <title>Vinum для корневой файловой системы</title>
+
+    <para>Сервер, все информационные файловые системы которого дублированы,
+      хотелось бы оснастить и зеркалированной корневой файловой системой.
+      Создание такой конфигурации не вполне тривиально по сравнению с
+      зеркалированием прочих файловых систем:</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>Корневая файловая система должна быть доступна для чтения
+	  в самом начале процесса загрузки, так что инфраструктура Vinum
+	  должна к этому моменту уже работать.</para>
+      </listitem>
+      <listitem>
+	<para>Том с корневой файловой системой содержит, помимо прочего,
+	  системный загрузчик и ядро, которые должны читаться "родными"
+	  (native) утилитами компьютера (BIOS для машин архитектуры PC);
+	  обеспечить поддержку ими тонкостей Vinum зачастую невозможно.
+	  </para>
+      </listitem>
+    </itemizedlist>
+
+    <para>В данном разделе термин <quote>корневой том</quote> означает
+      том Vinum, содержащий корневую файловую систему.  Неплохой идеей является
+      назвать такой том <literal>"root"</literal>, хотя это, разумеется, и
+      необязательно.  Все наши примеры, впрочем, будут использовать именно это
+      имя.  </para>
+
+    <sect2>
+      <title>Активизация Vinum на ранней стадии процесса загрузки</title>
+
+      <para>Для обеспечения этого необходимо следующее:</para>
+
+      <itemizedlist>
+	<listitem>
+	  <para>Vinum должен быть доступен ядру еще на этапе загрузки.
+	    Метод, описанный в разделе <xref linkend="vinum-rc-startup">,
+	    неприменим; на самом деле, параметр <literal>start_vinum</literal>
+	    <emphasis>не</emphasis> должен быть установлен.  Одним из вариантов
+	    является сборка ядра с поддержкой Vinum, что возможно, но, как
+	    правило, нежелательно.  Более удобный вариант&nbsp;&mdash; загрузка
+	    модуля ядра Vinum при помощи <filename>/boot/loader</filename>
+	    (<xref linkend="boot-loader">), для чего в файл
+	    <filename>/boot/loader.conf</filename> следует добавить
+	    строку</para>
+
+	  <para><literal>vinum_load="YES"</literal></para>
+	</listitem>
+
+	<listitem>
+	  <para>Vinum должен быть активирован достаточно рано, поскольку
+	    требуется предоставить том для корневой файловой системы.  По
+	    умолчанию Vinum в ядре не начинает поиск приводов, содержащих
+	    информацию о томах Vinum, до команды администратора (или одного из
+	    стартовых скриптов) <command>vinum start</command>.</para>
+
+	  <note><para>Данный раздел описывает необходимые действия для FreeBSD
+	    версии 5.x и старше.  Шаги, необходимые в случае FreeBSD версии 4.x,
+	    описаны ниже: <xref linkend="vinum-root-4x">.</para></note>
+
+	  <para>Строка</para>
+
+	  <para><literal>vinum.autostart="YES"</literal></para>
+
+	  <para>в файле <filename>/boot/loader.conf</filename>, указывает
+	    Vinum автоматически просканировать все диски
+	    для сбора информации о томах в процессе загрузки ядра.</para>
+
+	  <!--major/minor device number?-->
+	  <para>Обращаем ваше внимание, что нет необходимости как-либо
+	    специально сообщать ядру, где находится корневая файловая система.
+	    Загрузчик (<filename>/boot/loader</filename>) найдет необходимое
+	    имя устройства в
+	    <filename>/etc/fstab</filename> и передаст его ядру.  В момент
+	    монтирования корневой файловой системы ядро передаст имя устройства
+	    соответствующему драйверу для декодирования (трансляции в пару
+	    идентификаторов устройств&nbsp;&mdash; major/minor device
+	    number).</para>
+	</listitem>
+      </itemizedlist>
+    </sect2>
+
+    <sect2>
+      <title>Загрузчик должен прочесть корневой том Vinum</title>
+
+      <para>В настоящее время начальный загрузчик FreeBSD ограничен размером
+	всего в 7.5 KB, и этот размер фактически исчерпан (загрузчик должен
+	уметь прочесть файл <filename>/boot/loader</filename> с файловой
+	системы формата UFS и передать ему управление).  Невозможно разместить
+	в загрузчике внутренние структуры Vinum, чтобы он мог считать настройку
+	Vinum и самостоятельно определить элементы загрузочного тома.
+	Поэтому, для создания у
+	загрузчика иллюзии, что загрузка происходит со стандартного раздела
+	<literal>"a"</literal> требуются некоторые дополнительные
+	ухищрения.</para>
+
+      <para>Для того, чтобы такая загрузка вообще была возможной, корневой том
+	должен отвечать следующим требованиям:</para>
+
+      <itemizedlist>
+	<listitem>
+	  <para>быть только зеркалированным (ни перемежение, ни RAID5
+	    невозможны);</para>
+	</listitem>
+
+	<listitem>
+	  <para>содержать ровно один поддиск на каждом из наборов.</para>
+	</listitem>
+      </itemizedlist>
+
+      <para>Заметим, что возможно (и является, вообще говоря, основной целью),
+	чтобы корневой том содержал несколько наборов, каждый с копией корневой
+	файловой системы.  В процессе загрузки, впрочем, используется только
+	одна из копий (на этапе поиска начального загрузчика и его
+	конфигурационных файлов, ядра, модулей и т.п. до момента монтирования
+	корневой файловой системы).  Для обеспечения возможности загрузки
+	поддиск каждого из наборов должен быть отображен в псевдо-раздел
+	<literal>"a"</literal>.  Вообще говоря, эти псевдо-разделы не обязаны
+	находиться на одних и тех же местах дисков; тем не менее, во избежание
+	излишней путаницы, рекомендуется создавать тома с одинаково устроенными
+	дисками для зеркалирования.</para>
+
+      <para>Для создания псевдо-разделов <literal>"a"</literal> необходимо
+	для каждого из дисков, содержащих копию корневого тома, проделать
+	следующее:</para>
+
+      <procedure>
+	<step>
+	  <para>Определить положение (смещение от начала устройства) и размер
+	    поддиска, являющегося частью корневого тома:</para>
+
+	  <para><command>vinum l -rv root</command></para>
+
+	  <para>Отметим, что все размеры и смещения в терминах Vinum указаны
+	    в байтах.  Для получения номеров блоков, используемых в утилите
+	    <command>disklabel</command>, все числа надо поделить
+	    на 512.</para>
+	</step>
+
+	<step>
+	  <para>Выполнить команду</para>
+
+	  <para><command>disklabel -e
+	    </command><replaceable>devname</replaceable></para>
+
+	  <para>для каждого из дисков, на котором будет расположен корневой
+	    том.  <replaceable>devname</replaceable> будет или именем диска
+	    (например, <devicename>da0</devicename>) для дисков без таблицы
+	    слайсов, или именем слайса (<devicename>ad0s1</devicename>).</para>
+
+	  <para>Если на устройстве уже есть раздел <literal>"a"</literal>
+	    (скорее всего, это предыдущая инкарнация корневой файловой
+	    системы), он должен быть переименован (чтобы быть доступным в
+	    будущем, на всякий случай; при этом стартовый загрузчик больше не
+	    должен выбирать его по умолчанию).  Не забудьте, что активный
+	    (например, смонтированный) раздел не может быть переименован, так
+	    что переименование нужно производить или загрузившись с диска
+	    <quote>Fixit</quote>, или в два шага (для конфигурации с
+	    зеркалированием сначала переименовать раздел на втором диске,
+	    затем, после перезагрузки, на первом).</para>
+
+	  <para>Затем, адрес начала нового раздела <literal>"a"</literal>
+	    вычисляется как сумма начального смещения раздела Vinum и
+	    подсчитанного выше адреса поддиска внутри привода.  Совместно с
+	    вычисленным размером эти значения вносятся в поля
+	    <literal>"offset"</literal> и <literal>"size"</literal> строки
+	    <literal>"a"</literal> &man.disklabel.8;; Поле
+	    <literal>"fstype"</literal> должно быть <literal>4.2BSD</literal>.
+	    Значения полей <literal>"fsize"</literal>,
+	    <literal>"bsize"</literal> и <literal>"cpg"</literal> желательно
+	    заполнить в соответствии с имеющейся файловой системой, хотя
+	    в обсуждаемом контексте это и не строго обязательно.</para>
+
+	  <para>Как можно заметить, новосозданный раздел
+	    <literal>"a"</literal> располагается внутри раздела Vinum.  Утилита
+	    <command>disklabel</command> разрешает разделам пересекаться только
+	    в случае, если один из них корректно описан как имеющий тип
+	    <literal>"vinum"</literal>.</para>
+	</step>
+
+	<step>
+	  <para>Готово!  Сконструированный псевдо-раздел
+	    <literal>"a"</literal> создан на каждом из устройств, содержащих
+	    реплики корневого тома.  Крайне важно проверить результат
+	    еще раз, выполнив команду</para>
+
+	  <para><command>fsck -n
+	    </command><devicename>/dev/<replaceable>devname</replaceable>a</devicename></para>
+	</step>
+      </procedure>
+
+      <para>Следует помнить, что все файлы, содержащие загрузочную
+	конфигурацию, должны быть построены в соответствии с новой корневой
+	файловой системой; скорее всего, эта информация не будет соответствовать текущему
+	положению вещей.  В особенности, следует обратить внимание на
+	содержимое файлов <filename>/etc/fstab</filename> и
+	<filename>/boot/loader.conf</filename>.</para>
+
+      <para>После перезагрузки начальный загрузчик должен определить данные
+	новой корневой файловой системы на основе Vinum и действовать в
+	соответствии с ними.  В завершение процесса инициализации ядра, после
+	упоминания всех определившихся устройств, должно появиться сообщение
+	вида:</para>
+
+      <para><screen>Mounting root from ufs:/dev/vinum/root</screen></para>
+    </sect2>
+
+    <sect2>
+      <title>Пример конфигурации корневой файловой системы на базе Vinum</title>
+
+      <para>После создания корневого тома, вывод команды
+	<command>vinum l -rv root</command> будет примерно таким:</para>
+
+      <para>
+	<screen>
+...
+Subdisk root.p0.s0:
+		Size:        125829120 bytes (120 MB)
+		State: up
+		Plex root.p0 at offset 0 (0  B)
+		Drive disk0 (/dev/da0h) at offset 135680 (132 kB)
+
+Subdisk root.p1.s0:
+		Size:        125829120 bytes (120 MB)
+		State: up
+		Plex root.p1 at offset 0 (0  B)
+		Drive disk1 (/dev/da1h) at offset 135680 (132 kB)
+	</screen>
+      </para>
+
+      <para>Из этой информации нас более всего интересует смещение в
+	<literal>135680</literal> байт относительно раздела
+	<devicename>/dev/da0h</devicename>.  После деления на 512 получим 265
+	дисковых блоков для утилиты <command>disklabel</command>.  Аналогичным
+	образом, размер тома составит 245760 512-байтных блоков.  Так же
+	устроена реплика тома на диске
+	<devicename>/dev/da1h</devicename>.</para>
+
+      <para>Разметка разделов (disklabel) будет выглядеть примерно так:</para>
+
+      <para>
+	<screen>
+...
+8 partitions:
+#        size   offset    fstype   [fsize bsize bps/cpg]
+  a:   245760      281    4.2BSD     2048 16384     0   # (Cyl.    0*- 15*)
+  c: 71771688        0    unused        0     0         # (Cyl.    0 - 4467*)
+  h: 71771672       16     vinum                        # (Cyl.    0*- 4467*)
+	</screen>
+      </para>
+
+      <para>Как уже отмечалось, размер (<literal>"size"</literal>)
+	псевдо-раздела <literal>"a"</literal> соответствует значению,
+	вычисленному ранее; смещение (<literal>"offset"</literal>) равно сумме
+	смещения поддиска внутри раздела Vinum (<literal>"h"</literal>) и
+	смещения самого этого раздела относительно начала диска (слайса).  Так
+	мы избегаем проблем, описанных ниже (<xref
+	linkend="vinum-root-panic">).  Заметим также, что раздел
+	<literal>"a"</literal> целиком размещен внутри раздела
+	<literal>"h"</literal>, описывающего все данные Vinum на этом
+	диске.</para>
+
+      <para>Заметим, что в описанном примере все дисковое пространство отдано
+	Vinum.  Корневого раздела, существовавшего до настройки Vinum, нет,
+	поскольку это вновь установленный диск, предназначенный для
+	использования исключительно в Vinum.</para>
+
+      <!-- XXX
+      <note><para>Такая конструкция (Vinum раздел в <emphasis>самом</emphasis>
+	начале диска, со смещением 0) не будет работать для загрузочных дисков
+	FreeBSD 4.*&nbsp;&mdash; прим.пер.</para></note>
+	-->
+    </sect2>
+
+    <sect2>
+      <title>Проблемы и их устранение</title>
+
+      <para>Если что-то пошло не так, должен быть путь для восстановления
+	доступа к информации.  Далее описаны некоторые известные проблемные
+	ситуации и способы их устранения.</para>
+
+      <sect3>
+	<title>Загрузчик работает, но система не грузится</title>
+
+	<para>Если по каким-то причинам система не может завершить загрузку,
+	  загрузчик может быть прерван нажатием пробела в течение первых 10 (по
+	  умолчанию) секунд.  Вы можете посмотреть переменные загрузчика (такие
+	  как <literal>vinum.autostart</literal>) при помощи команды
+	  <command>show</command> и изменить их содержимое командами
+	  <command>set</command> и <command>unset</command>.</para>
+
+	<para>Если единственной проблемой было отсутствие загруженного
+	  модуля ядра Vinum, поможет просто команда
+	  <command>load vinum</command>.</para>
+
+	<para>Процесс загрузки должен быть продолжен командой
+	  <command>boot -as</command>.	Параметры <option>-as</option> заставят
+	  ядро спросить о корневой файловой системе (параметр
+	  <option>-a</option>) и остановить процесс загрузки в
+	  однопользовательском (параметр <option>-s</option>) режиме.  При этом
+	  корневая файловая система будет смонтирована в режиме "только для
+	  чтения" (read-only).  В результате, даже если будет смонтирован лишь
+	  один набор из многонаборного тома, риска рассинхронизации наборов
+	  нет.</para>
+
+	<para>Ответом на приглашение ввести адрес корневой файловой системы
+	  может быть имя любого устройства, указывающего на файловую систему,
+	  пригодную для загрузки.  При корректно построенной карте файловых
+	  систем (<filename>/etc/fstab</filename>) значением по умолчанию
+	  должно быть что-то вроде <literal>ufs:/dev/vinum/root</literal>.
+	  Распространенной альтернативой будет, например,
+	  <userinput>ufs:da0d</userinput> (раздел, содержащий корневую файловую
+	  систему в эпоху "до Vinum").  Будьте осторожны, монтируя в качестве
+	  корневой файловой системы раздел <literal>"a"</literal>, ссылающийся
+	  внутрь привода Vinum.  В зеркалированном томе смонтируется только
+	  часть файловой системы.  Если вам потребуется изменить ее
+	  содержимое, необходимо будет также удалить и создать заново остальные
+	  наборы тома в конфигурации Vinum, иначе они будут содержать
+	  несинхронизированные данные.</para>
+      </sect3>
+
+      <sect3>
+	<title>Работает только основной загрузчик</title>
+
+	<para>Если <filename>/boot/loader</filename> не загружается,
+	  а основной загрузчик все еще пригоден к работе (в
+	  начале процесса загрузки появляется одиночный минус в первой колонке экрана),
+	  можно попытаться прервать основной загрузчик нажатием пробела в этот
+	  момент.  При этом загрузка будет остановлена на второй стадии
+	  (см. <xref linkend="boot-boot1">).  Можно
+	  попробовать загрузиться с другого раздела, например, содержащего
+	  предыдущую копию корневой файловой системы (бывший раздел
+	  <literal>"a"</literal>, см. выше).</para>
+      </sect3>
+
+      <sect3 id="vinum-root-panic">
+	<title>Ничего не грузится, загрузчик падает</title>
+
+	<para>Это происходит, когда загрузчик на диске затерт Vinum'ом.
+	  К сожалению, Vinum оставляет лишь 4&nbsp;KB в начале своего раздела
+	  до записи своих управляющих блоков.  Две стадии первоначального
+	  загрузчика в совокупности с меткой диска BSD (disklabel) требуют
+	  8&nbsp;KB.  Так что попытка создать раздел Vinum по смещению 0 диска
+	  или слайса, который должен быть загруженным, затрет загрузчик.</para>
+
+	<para>Что хуже, попытка разрешить описанную ситуацию посредством
+	  загрузки с диска <quote>Fixit</quote> и перезаписи начального
+	  загрузчика при помощи команды <command>disklabel -B</command> (как
+	  описано в <xref linkend="boot-boot1">) приведет к тому, что
+	  загрузчик затрет управляющий заголовок Vinum, и тот не сможет найти
+	  свой диск.  Хотя собственно конфигурация Vinum при этом не
+	  потеряется, и все данные могут быть восстановлены посредством
+	  создания объектов на их предыдущих местах, очень сложно окончательно
+	  исправить ситуацию.  Весь раздел Vinum должен быть смещен по
+	  крайней мере на 4&nbsp;KB, так чтобы загрузчики и заголовок Vinum
+	  более не пересекались.</para>
+
+	<!-- XXX <note> FreeBSD 4.* - не хватает и этого!</note> -->
+      </sect3>
+    </sect2>
+
+    <sect2 id="vinum-root-4x">
+      <title>Отличия для FreeBSD версий 4.x</title>
+
+      <para>В системах под управлением FreeBSD 4.x отсутствуют некоторые
+	функции ядра, необходимые для автоматического сканирования дисков
+	Vinum'ом; кроме того, код, определяющий номера устройств корневой
+	файловой системы, недостаточно продвинут для того, чтобы понимать
+	конструкции вида <devicename>/dev/vinum/root</devicename>.  Требуется
+	приложение дополнительных усилий.</para>
+
+      <para>Во-первых, в файле <filename>/boot/loader.conf</filename> должен
+	быть явно указан список дисков, которые Vinum будет сканировать:</para>
+
+      <para><literal>vinum.drives="/dev/<replaceable>da0</replaceable>
+	/dev/<replaceable>da1</replaceable>"</literal></para>
+
+      <para>Важно, чтобы были описаны все приводы, на которых могут встретиться
+	данные Vinum.  Не произойдет ничего плохого, если будет описано
+	<emphasis>больше</emphasis> дисков, чем необходимо.  Также, нет нужды
+	описывать все слайсы и/или разделы (Vinum сканирует их
+	автоматически).</para>
+
+      <para>Поскольку подпрограммы разбора имени корневой файловой системы
+	и определения номеров устройств воспринимают только
+	<quote>классические</quote> имена, такие как
+	<devicename>/dev/ad0s1a</devicename>, для них не подходят имена типа
+	<devicename>/dev/vinum/root</devicename>.  Имя корневого тома должно
+	быть сообщено Vinum отдельно.  Для этого служит переменная загрузчика
+	<literal>vinum.root</literal>.  Соответствующая строка в файле
+	<filename>/boot/loader.conf</filename> будет выглядеть так:</para>
+
+      <para><literal>vinum.root="root"</literal></para>
+
+      <!-- XXX Катастрофа! Переформулировать (и оригинальный текст тоже)! -->
+      <para>Процедура инициализации ядра выглядит так: перед определением
+	корневого устройства для загрузки проверяется, не установил ли
+	какой-либо модуль соответствующий параметр ядра.  В случае
+	положительного ответа <emphasis>и</emphasis> при совпадении основного
+	(major) номера устройства драйвера и установленной файловой системы
+	автоопределение прекращается, что дает возможность передать продолжение
+	процесса загрузки и монтирование корневого тома Vinum.</para>
+
+      <para>Следует отметить, впрочем, что обработчик ответа на запрос имени
+	корневой файловой системы (<command>boot -a</command>) не может
+	разобрать имя тома Vinum.  Можно ввести имя устройства, отличное от
+	устройства Vinum (в этом случае произойдет стандартная процедура
+	разбора, так что можно указать, например,
+	<userinput>ufs:da0d</userinput>).  Имена же, подобные
+	<userinput>ufs:vinum/root</userinput> не могут быть распознаны.
+	Единственным выходом из этой ситуации будет перезагрузка и введение
+	имени устройства заново (префикс <devicename>/dev/</devicename> в
+	ответе на запрос <quote>askroot</quote> всегда можно опустить).</para>
+    </sect2>
+  </sect1>
+</chapter>
