@@ -1,4 +1,4 @@
-<!-- $Id: ports.inc,v 1.16 1997-09-02 09:29:36 max Exp $ -->
+<!-- $Id: ports.inc,v 1.17 1997-09-20 08:16:03 wosch Exp $ -->
 <p>The FreeBSD Ports Collection offers a simple way for users and
 administrators to install applications.  Each ``port'' listed here
 contains any patches necessary to make the original application source
@@ -37,10 +37,10 @@ href="http://www.xfree86.org/">XFree86</a>. Their current release is
 
 <p>For more information about new ports, changed ports,
 removed ports, or searching for an application see the 
-<a href="http://www.freebsd.org/~wosch/test/de/cgi/ports.cgi">
+<a href="http://www.freebsd.org/cgi/ports.cgi">
 FreeBSD Ports Changes</a> script.</p>
 
-<FORM METHOD="GET" ACTION="http://www.freebsd.org/~wosch/test/de/cgi/ports.cgi">
+<FORM METHOD="GET" ACTION="http://www.freebsd.org/cgi/ports.cgi">
 Search for:
 <INPUT NAME="query" VALUE="">
 <SELECT NAME="stype">
