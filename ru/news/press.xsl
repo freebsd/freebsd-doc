@@ -4,9 +4,9 @@
      The FreeBSD Russian Documentation Project
 
      $FreeBSD$
-     $FreeBSDru: frdp/www/ru/news/press.xsl,v 1.3 2003/10/01 12:01:24 den Exp $
+     $FreeBSDru: frdp/www/ru/news/press.xsl,v 1.4 2003/11/04 09:02:58 den Exp $
 
-     Original revision: 1.4
+     Original revision: 1.5
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
@@ -34,7 +34,7 @@
 
 	<p>Если вы не нашли здесь определённой публикации, пожалуйста,
 	  пошлите её URL на адрес <a
-	  href="mailto:doc@FreeBSD.ORG">doc@FreeBSD.ORG</a></p>
+	  href="mailto:www@FreeBSD.org">www@FreeBSD.org</a></p>
 
 	<p>Кроме того, новости прессы о проекте FreeBSD Java вы можете найти,
           посетив страничку <a
