@@ -42,9 +42,9 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $zId: cvsweb.cgi,v 1.101 2000/09/13 22:44:05 jumager Exp $
-# $Id: cvsweb.cgi,v 1.51 2000-09-19 20:20:06 knu Exp $
-# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.50 2000/09/04 16:05:40 knu Exp $
+# $zId: cvsweb.cgi,v 1.103 2000/09/20 17:02:29 jumager Exp $
+# $Id: cvsweb.cgi,v 1.52 2000-09-23 20:37:58 knu Exp $
+# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.51 2000/09/19 20:20:06 knu Exp $
 #
 ###
 
@@ -65,8 +65,9 @@ use vars qw (
     $bylog $byfile $hr_default $logsort $cvstree $cvsroot
     $mimetype $defaultTextPlain $defaultViewable $allow_compress
     $GZIPBIN $backicon $diricon $fileicon $fullname $newname
-    $cvstreedefault $body_tag $logo $defaulttitle $address
-    $backcolor $long_intro $short_instruction $shortLogLen
+    $cvstreedefault $body_tag $body_tag_for_src
+    $logo $defaulttitle $address
+    $long_intro $short_instruction $shortLogLen
     $show_author $dirtable $tablepadding $columnHeaderColorDefault
     $columnHeaderColorSorted $hr_breakable $showfunc $hr_ignwhite
     $hr_ignkeysubst $diffcolorHeading $diffcolorEmpty $diffcolorRemove
@@ -146,8 +147,9 @@ $allow_version_select = 1;
 # These are defined to allow checking with perl -cw
 %CVSROOT = %MIRRORS = %DEFAULTVALUE = %ICONS = %MTYPES =
 %tags = %alltags = @tabcolors = ();
-$cvstreedefault = $body_tag = $logo = $defaulttitle = $address =
-$backcolor = $long_intro = $short_instruction = $shortLogLen =
+$cvstreedefault = $body_tag = $body_tag_for_src = 
+$logo = $defaulttitle = $address =
+$long_intro = $short_instruction = $shortLogLen =
 $show_author = $dirtable = $tablepadding = $columnHeaderColorDefault =
 $columnHeaderColorSorted = $hr_breakable = $showfunc = $hr_ignwhite =
 $hr_ignkeysubst = $diffcolorHeading = $diffcolorEmpty = $diffcolorRemove =
@@ -157,7 +159,7 @@ $allow_markup = $use_java_script = $open_extern_window =
 $extern_window_width = $extern_window_height = $edit_option_form =
 $checkout_magic = $show_subdir_lastmod = $show_log_in_markup = $v =
 $navigationHeaderColor = $tableBorderColor = $markupLogColor =
-$tabstop = $use_moddate = $moddate = undef;
+$tabstop = $use_moddate = $moddate = $gzip_open = undef;
 
 ##### End of configuration variables #####
 
@@ -216,7 +218,8 @@ $nofilelinks = $is_textbased;
 # display garbage then :-/
 # Turn off gzip if running under mod_perl and no zlib is available,
 # piping does not work as expected inside the server.
-$maycompress = (($ENV{HTTP_ACCEPT_ENCODING} =~ m`gzip`
+$maycompress = (((defined($ENV{HTTP_ACCEPT_ENCODING})
+		 && $ENV{HTTP_ACCEPT_ENCODING} =~ m`gzip`)
 		 || $is_mozilla3)
 		&& !$is_msie
 		&& !($is_mod_perl && !$has_zlib));
@@ -789,18 +792,18 @@ elsif (-d $fullname) {
     elsif (-f $fullname . ',v') {
 	if (defined($input{'rev'}) || $doCheckout) {
 	    &doCheckout($fullname, $input{'rev'});
-	    close(GZIP) if ($gzip_open);
+	    gzipclose();
 	    exit;
 	}
 	if (defined($input{'annotate'}) && $allow_annotate) {
 	    &doAnnotate($input{'annotate'});
-	    close(GZIP) if ($gzip_open);
+	    gzipclose();
 	    exit;
 	}
 	if (defined($input{'r1'}) && defined($input{'r2'})) {
 	    &doDiff($fullname, $input{'r1'}, $input{'tr1'},
 		    $input{'r2'}, $input{'tr2'}, $input{'f'});
-	    close(GZIP) if ($gzip_open);
+	    gzipclose();
 	    exit;
 	}
 	print("going to dolog($fullname)\n") if ($verbose);
@@ -823,7 +826,7 @@ elsif (-d $fullname) {
 	# e.g. foo.c
 	&doDiff($fullname, $input{'r1'}, $input{'tr1'},
 		$input{'r2'}, $input{'tr2'}, $input{'f'});
-	close(GZIP) if ($gzip_open);
+	gzipclose();
 	exit;
     }
     elsif (($newname = $fullname) =~ s|/([^/]+)$|/Attic/$1| &&
@@ -858,7 +861,7 @@ elsif (-d $fullname) {
 	&fatal("404 Not Found","$where: no such file or directory");
     }
 
-close(GZIP) if ($gzip_open);
+gzipclose();
 ## End MAIN
 
 sub printDiffSelect($) {
@@ -1529,7 +1532,7 @@ sub doDiff($$$$$$) {
 	if ($human_readable) {
 	    http_header();
 	    &human_readable_diff($fh, $rev2);
-	    close(GZIP) if ($gzip_open);
+	    gzipclose();
 	    exit;
 	}
 	else {
@@ -2474,9 +2477,9 @@ sub navigateHeader($$$$$) {
     $swhere = urlencode($filename) if ($swhere eq "");
     print "<\!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\">";
     print "<HTML>\n<HEAD>\n";
-    print '<!-- CVSweb $zRevision: 1.101 $  $Revision: 1.51 $ -->';
+    print '<!-- CVSweb $zRevision: 1.103 $  $Revision: 1.52 $ -->';
     print "\n<TITLE>$path$filename - $title - $rev</TITLE></HEAD>\n";
-    print  "<BODY BGCOLOR=\"$backcolor\">\n";
+    print  "$body_tag_for_src\n";
     print "<table width=\"100%\" border=0 cellspacing=0 cellpadding=1 bgcolor=\"$navigationHeaderColor\">";
     print "<tr valign=bottom><td>";
     print  "<a href=\"$swhere$query#rev$rev\">$backicon";
@@ -2829,7 +2832,7 @@ sub http_header(;$) {
 
 sub html_header($) {
     my ($title) = @_;
-    my $version = '$zRevision: 1.101 $  $Revision: 1.51 $'; #'
+    my $version = '$zRevision: 1.103 $  $Revision: 1.52 $'; #'
     http_header();
 
     (my $header = &cgi_style::html_header) =~ s/^.*\n\n//; # remove HTTP response header
@@ -2873,6 +2876,17 @@ sub forbidden_module($) {
     }
 
     return 0;
+}
+
+# Close the GZIP handle remove the tie.
+
+sub gzipclose {
+	if ($gzip_open) {
+	    select(STDOUT);
+	    close(GZIP);
+	    untie *GZIP;
+	    $gzip_open = 0;
+	}
 }
 
 # implement a gzipped file handle via the Compress:Zlib compression
