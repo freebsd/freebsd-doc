@@ -43,8 +43,8 @@
 # SUCH DAMAGE.
 #
 # $zId: cvsweb.cgi,v 1.104 2000/11/01 22:05:12 hnordstrom Exp $
-# $Id: cvsweb.cgi,v 1.57 2000-11-04 19:23:25 knu Exp $
-# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.56 2000/10/20 16:00:29 knu Exp $
+# $Id: cvsweb.cgi,v 1.58 2000-12-07 15:21:06 knu Exp $
+# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.57 2000/11/04 19:23:25 knu Exp $
 #
 ###
 
@@ -64,10 +64,10 @@ use vars qw (
     $is_links $is_lynx $is_w3m $is_msie $is_mozilla3 $is_textbased
     %input $query $barequery $sortby $bydate $byrev $byauthor
     $bylog $byfile $defaultDiffType $logsort $cvstree $cvsroot
-    $mimetype $defaultTextPlain $defaultViewable $allow_compress
-    $GZIPBIN $backicon $diricon $fileicon $fullname $newname
-    $cvstreedefault $body_tag $body_tag_for_src
-    $logo $defaulttitle $address
+    $mimetype $charset $defaultTextPlain $defaultViewable
+    $allow_compress $GZIPBIN $backicon $diricon $fileicon
+    $fullname $newname $cvstreedefault
+    $body_tag $body_tag_for_src $logo $defaulttitle $address
     $long_intro $short_instruction $shortLogLen
     $show_author $dirtable $tablepadding $columnHeaderColorDefault
     $columnHeaderColorSorted $hr_breakable $showfunc $hr_ignwhite
@@ -1060,7 +1060,7 @@ sub htmlify($;$) {
 		       \#?)
 		      (\d+)\b
 		     }{
-			 $1 . &link($2, sprintf($prcgi, $2)) . $3
+			 $1 . &link($2, sprintf($prcgi, $2))
 		     }egix;
 		} $_;
 	    } while ($_ ne $prev);
@@ -1069,7 +1069,7 @@ sub htmlify($;$) {
 		s{
 		  (\b$prcategories/(\d+)\b)
 		 }{
-		     &link($1, sprintf($prcgi, $2)) . $3
+		     &link($1, sprintf($prcgi, $2))
 		 }egox;
 	    } $_;
 	}
@@ -1086,7 +1086,7 @@ sub htmlify($;$) {
 		   )
 		  )
 		 }{
-		     &link($1, sprintf($mancgi, $3 ne '' ? $3 : $4, $2)) . $5
+		     &link($1, sprintf($mancgi, $3 ne '' ? $3 : $4, $2))
 		 }egx;
 	    } $_;
 	}
@@ -1497,6 +1497,11 @@ sub doCheckout($$) {
       open(STDERR, ">&STDOUT"); # Redirect stderr to stdout
       exec("cvs", "-Rld", $cvsroot, "co", "-p", $revopt, $where);
     }
+
+    if (eof($fh)) {
+	&fatal("404 Not Found",
+	       "$where is not (any longer) pertinent");
+    }
 #===================================================================
 #Checking out squid/src/ftp.c
 #RCS:  /usr/src/CVS/squid/src/ftp.c,v
@@ -1516,12 +1521,7 @@ sub doCheckout($$) {
     }
     if ($filename ne $where) {
 	&fatal("500 Internal Error",
-	       "Unexpected output from cvs co: $cvsheader"
-	       . "<p><b>Check whether the directory $cvsroot/CVSROOT exists "
-	       . "and the script has write-access to the CVSROOT/history "
-	       . "file if it exists."
-	       . "<br>The script needs to place lock files in the "
-	       . "directory the file is in as well.</b>");
+	       "Unexpected output from cvs co: $cvsheader");
     }
     $| = 1;
 
@@ -1788,54 +1788,57 @@ sub getDirLogs($$@) {
 again:
 	if ($state eq "head") {
 	    #$rcsfile = $1 if (/^RCS file: (.+)$/); #not used (yet)
-	    $filename = $1 if (/^Working file: (.+)$/);
-	    $head = $1 if (/^head: (.+)$/);
-	    $branch = $1 if (/^branch: (.+)$/);
-	}
-	if ($state eq "head" && /^symbolic names/) {
-	    $state = "tags";
-	    ($branch = $head) =~ s/\.\d+$// if (!defined($branch));
-	    $branch =~ s/(\.?)(\d+)$/${1}0.$2/;
-	    $symrev{MAIN} = $branch;
-	    $symrev{HEAD} = $branch;
-	    $alltags{MAIN} = 1;
-	    $alltags{HEAD} = 1;
-	    push (@filetags, "MAIN", "HEAD");
-	    next;
-	}
-	if ($state eq "tags" &&
-			    /^\s+(.+):\s+([\d\.]+)\s+$/) {
-	    push (@filetags, $1);
-	    $symrev{$1} = $2;
-	    $alltags{$1} = 1;
-	    next;
-	}
-	if ($state eq "tags" && /^\S/) {
-	    if (defined($tag) && (defined($symrev{$tag}) || $tag eq "HEAD")) {
-		$revwanted = $tag eq "HEAD" ? $symrev{"MAIN"} : $symrev{$tag};
-		($branch = $revwanted) =~ s/\.0\././;
-		($branchpoint = $branch) =~ s/\.?\d+$//;
-		$revwanted = undef if ($revwanted ne $branch);
+
+	    if (/^Working file: (.+)$/) {
+		$filename = $1;
+	    } elsif (/^head: (.+)$/) {
+		$head = $1;
+	    } elsif (/^branch: (.+)$/) {
+		$branch = $1 
+	    } elsif (/^symbolic names:/) {
+		$state = "tags";
+		($branch = $head) =~ s/\.\d+$// if (!defined($branch));
+		$branch =~ s/(\.?)(\d+)$/${1}0.$2/;
+		$symrev{MAIN} = $branch;
+		$symrev{HEAD} = $branch;
+		$alltags{MAIN} = 1;
+		$alltags{HEAD} = 1;
+		push (@filetags, "MAIN", "HEAD");
+	    } elsif (/$LOG_REVSEPARATOR/o) {
+		$state = "log";
+		$rev = undef;
+		$date = undef;
+		$log = "";
+		# Try to reconstruct the relative filename if RCS spits out a full path
+		$filename =~ s%^\Q$DirName\E/%%;
 	    }
-	    elsif (defined($tag) && $tag ne "HEAD") {
-		print "Tag not found, skip this file" if ($verbose);
-		$state = "skip";
+	    next;
+	}
+	if ($state eq "tags") {
+	    if (/^\s+(.+):\s+([\d\.]+)\s+$/) {
+		push (@filetags, $1);
+		$symrev{$1} = $2;
+		$alltags{$1} = 1;
 		next;
+	    } elsif (/^\S/) {
+		if (defined($tag)) {
+		    if(defined($symrev{$tag}) || $tag eq "HEAD") {
+			$revwanted = $symrev{$tag eq "HEAD" ? "MAIN" : $tag};
+			($branch = $revwanted) =~ s/\.0\././;
+			($branchpoint = $branch) =~ s/\.?\d+$//;
+			$revwanted = undef if ($revwanted ne $branch);
+		    } elsif ($tag ne "HEAD") {
+			print "Tag not found, skip this file" if ($verbose);
+			$state = "skip";
+			next;
+		    }
+		}
+		foreach my $tagfound (@filetags) {
+		    $tags{$tagfound} = 1;
+		}
+		$state = "head";
+		goto again;
 	    }
-	    foreach my $tagfound (@filetags) {
-		$tags{$tagfound} = 1;
-	    }
-	    $state = "head";
-	    goto again;
-	}
-	if ($state eq "head" && /$LOG_REVSEPARATOR/o) {
-	    $state = "log";
-	    $rev = undef;
-	    $date = undef;
-	    $log = "";
-	    # Try to reconstruct the relative filename if RCS spits out a full path
-	    $filename =~ s%^\Q$DirName\E/%%;
-	    next;
 	}
 	if ($state eq "log") {
 	    if (/$LOG_REVSEPARATOR/o || /$LOG_FILESEPARATOR/o) {
@@ -2020,11 +2023,10 @@ sub readLog($;$) {
 # This is not neccesary the same revision as marked as head in the RCS file.
 	my $headrev = $curbranch || "1";
 	($symrev{"MAIN"} = $headrev) =~ s/(\.?)(\d+)$/${1}0.$2/;
-	revision:
 	foreach $rev (@revorder) {
 	    if ($rev =~ /^(\S*)\.\d+$/ && $headrev eq $1) {
 		$symrev{"HEAD"} = $rev;
-		last revision;
+		last;
 	    }
 	}
 	($symrev{"HEAD"} = $headrev) =~ s/\.\d+$//
@@ -2064,14 +2066,13 @@ sub readLog($;$) {
 		$branch = $3;
 		$branchrev = $head . ($head ne "" ? "." : "") . $branch;
 		my $regex;
-		($regex = $branchrev) =~ s/\./\\./g;
+		$regex = quotemeta $branchrev;
 		$rev = $head;
 
-		revision:
 		foreach my $r (@revorder) {
 		    if ($r =~ /^${regex}\b/) {
 			$rev = $branchrev;
-			last revision;
+			last;
 		    }
 		}
 		next if ($rev eq "");
@@ -2648,7 +2649,7 @@ sub navigateHeader($$$$$) {
     $swhere = urlencode($filename) if ($swhere eq "");
     print "<\!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\">";
     print "<HTML>\n<HEAD>\n";
-    print '<!-- CVSweb $zRevision: 1.104 $  $Revision: 1.57 $ -->';
+    print '<!-- CVSweb $zRevision: 1.104 $  $Revision: 1.58 $ -->';
     print "\n<TITLE>$path$filename - $title - $rev</TITLE></HEAD>\n";
     print  "$body_tag_for_src\n";
     print "<table width=\"100%\" border=0 cellspacing=0 cellpadding=1 bgcolor=\"$navigationHeaderColor\">";
@@ -3007,7 +3008,7 @@ sub http_header(;$) {
 	    }
 	    select(GZIP);
 	    $gzip_open = 1;
-#	    print "<!-- gzipped -->" if ($content_type eq "text/html");
+#	    print "<!-- gzipped -->" if ($content_type =~ m|^text/html\b|);
 	}
 	else {
 	    if ($is_mod_perl) {
@@ -3031,8 +3032,8 @@ sub http_header(;$) {
 
 sub html_header($) {
     my ($title) = @_;
-    my $version = '$zRevision: 1.104 $  $Revision: 1.57 $'; #'
-    http_header();
+    my $version = '$zRevision: 1.104 $  $Revision: 1.58 $'; #'
+    http_header(defined($charset) ? "text/html; charset=$charset" : "text/html");
 
     (my $header = &cgi_style::html_header) =~ s/^.*\n\n//; # remove HTTP response header
 
