@@ -32,7 +32,6 @@ DATA=	robots.txt
 SUBDIR=	 security
 SUBDIR+= commercial
 SUBDIR+= docproj
-SUBDIR+= docs
 SUBDIR+= news
 SUBDIR+= alpha
 SUBDIR+= internal
