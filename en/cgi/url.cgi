@@ -26,7 +26,7 @@
 #
 # url.cgi - make plain text URLs clickable
 #
-# $FreeBSD: www/en/cgi/url.cgi,v 1.30 2001/12/11 21:37:30 wosch Exp $
+# $FreeBSD: www/en/cgi/url.cgi,v 1.31 2002/05/02 14:21:40 wosch Exp $
 
 use strict;
 
@@ -69,15 +69,30 @@ if ($file =~ m%^ports/([\w-]+)/(\w[\w-+.]+)/pkg-descr%) {
     print &short_html_header($file);
 }
 
-# do cvs checkout 
-my($cvsroot) = '/usr/local/www/cvsroot/FreeBSD';
-if ($file =~ m%^ports/[\w-]+/\w[\w-+.]*/pkg-descr% && -f "$cvsroot/$file,v") {
-    open(CO, "-|") || 
-	exec ('/usr/bin/co', '-p', '-q', "$cvsroot/$file,v") ||
-	die "exec co -pq $cvsroot/$file,v: $!\n";
-} 
+my $isvalidfilename = ($file =~ m%^ports/[\w-]+/\w[\w-+.]*/pkg-descr%);
+my $atticfile = $file;
+$atticfile =~ s%^(.*)/([^/]+)$%$1/Attic/$2%;
 
-else {
+my($cvsroot) = '/usr/local/www/cvsroot/FreeBSD';
+my $realfile;
+
+# since CVS moves deleted files into the Attic subdirectory we also
+# want to look there, so we can find CVS deleted files (which might
+# still be referenced from other places).
+if ($isvalidfilename && -f "$cvsroot/$file,v") {
+    $realfile = $file;
+} elsif ($isvalidfilename && -f "$cvsroot/$atticfile,v") {
+    $realfile = $atticfile;
+} else {
+    $isvalidfilename = 0;
+}
+
+# do cvs checkout
+if($isvalidfilename) {
+    open(CO, "-|") ||
+	exec ('/usr/bin/co', '-p', '-q', "$cvsroot/$realfile,v") ||
+	die "exec co -pq $cvsroot/$realfile,v: $!\n";
+} else {
     print "<p>The port specified does not exist, or has an invalid name: <p>",
 	  "<blockquote>$file</blockquote>\n";
 
