@@ -366,7 +366,18 @@ if (-d $fullname) {
 
 	for ($i = 0; $i <= $#revorder; $i++) {
 	    $_ = $revorder[$i];
-            print "<a NAME=\"rev$_\"></a>\n";
+	    print "<a NAME=\"rev$_\"></a>";
+	    foreach $sym (split(", ", $revsym{$_})) {
+		print "<a NAME=\"$sym\"></a>";
+	    }
+	    ($br = $_) =~ s/\.\d+$//;
+	    if ($revsym{$br} && !$nameprinted{$br}) {
+		foreach $sym (split(", ", $revsym{$br})) {
+		    print "<a NAME=\"$sym\"></a>";
+		}
+		$nameprinted{$br}++;
+	    }
+	    print "\n";
 #	    print "RCS revision <b>$_</b>\n";
 	    print "<A HREF=\"$scriptwhere?rev=$_\"><b>$_</b></A>";
 	    if (/^1\.1\.1\.\d+$/) {
@@ -381,7 +392,7 @@ if (-d $fullname) {
 #		print "CVS Tags: <b>$revsym{$_}</b><BR>\n";
 		print "<BR>CVS Tags: <b>$revsym{$_}</b>";
 	    }
-	    if (($br = $_) =~ s/\.\d+$// && $revsym{$br})  {
+	    if ($revsym{$br})  {
 #		print "Branch: <b>$revsym{$br}</b><BR>\n";
 		if ($revsym{$_}) {
 		    print "; ";
@@ -458,6 +469,14 @@ if (-d $fullname) {
         print &html_footer;
 	print "</BODY></HTML>\n";
 } else {
+	# Is there an indexed version of modules?
+	if (open(MODULES, "$cvsroot/CVSROOT/modules")) {
+		while (<MODULES>) {
+			if (/^${where}\s+(\S+)/o && -d "${cvsroot}/$1") {
+				&redirect($scriptname . '/' . $1);
+			}
+		}
+	}
 	&fatal("404 Not Found","$where: no such file or directory");
 }
 
@@ -500,5 +519,15 @@ sub fatal {
 	print "\n";
 	print "<HTML><HEAD><TITLE>Error</TITLE></HEAD>\n";
 	print "<BODY>Error: $errmsg</BODY></HTML>\n";
+	exit(1);
+}
+
+sub redirect {
+	local($url) = @_;
+	print "Status: 301 Moved\n";
+	print "Location: $url\n";
+	print "\n";
+	print "<HTML><HEAD><TITLE>Moved</TITLE></HEAD>\n";
+	print "<BODY>This document is located <A HREF=$url>here</A>.</BODY></HTML>\n";
 	exit(1);
 }
