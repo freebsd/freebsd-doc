@@ -1,4 +1,4 @@
-# $FreeBSD: doc/Makefile,v 1.18 2000/04/30 21:58:43 nik Exp $
+# $FreeBSD: doc/Makefile,v 1.19 2000/08/06 17:04:17 alex Exp $
 #
 # The user can override the default list of languages to build and install
 # with the DOC_LANG variable.
@@ -17,6 +17,9 @@ SUBDIR+=	zh_TW.Big5
 
 DOC_PREFIX?=   ${.CURDIR}
 
+.if defined(SUPHOST)
+SUPFLAGS+=	-h ${SUPHOST}
+.endif
 update:
 .if defined(SUP_UPDATE)
 .if !defined(DOCSUPFILE)
