@@ -1,0 +1,1095 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN" [
+<!ENTITY base CDATA "../..">
+<!ENTITY date "$FreeBSD$">
+<!ENTITY title "Projet de conversion busdma et SMPng">
+<!ENTITY email 'mux'>
+<!ENTITY % includes SYSTEM "../../includes.sgml"> %includes;
+
+<!-- Status levels -->
+<!ENTITY status.done "<font color=green>Fait</font>">
+<!ENTITY status.wip "<font color=blue>En progr&egrave;s</font>">
+<!ENTITY status.new "<font color=red>Pas fait</font>">
+<!ENTITY status.resolved "<font color=green>R&eacute;solu</font>">
+<!ENTITY status.unresolved "<font color=red>Non r&eacute;solu</font>">
+
+<!-- The list of contributors was moved to a seperate file so that it can
+  be used by other documents in the FreeBSD web site. -->
+
+<!ENTITY % developers SYSTEM "../../developers.sgml"> %developers;
+
+]>
+
+<!-- 
+   The FreeBSD French Documentation Project
+   Original revision: 1.66
+
+   Version francaise : Francis Bacque <opl@opltech.net>
+   Version francaise (mise a jour) : Stephane Legrand <stephane@freebsd-fr.org>
+-->
+
+<html>
+  &header;
+
+    <h2>Contenus</h2>
+    <ul>
+      <li><a href="#goal">But du projet</a></li>
+      <li><a href="#platform-status">Etat du support des plates-formes</a></li>
+      <li><a href="#ifnet-status">Etat des pilotes interfaces r&eacute;seaux</a></li>
+      <li><a href="#storage-status">Etat des pilotes p&eacute;riph&eacute;riques de stockage</a></li>
+      <li><a href="#misc-status">Etat des pilotes divers p&eacute;riph&eacute;riques</a></li>
+      <li><a href="#doc-status">Etat de la documentation</a></li>
+    </ul>
+
+    <a name="goal"></a>
+    <h2>But du projet</h2>
+
+    <p><b>busdma</b></p>
+    <p>Les interfaces busdma permettent aux pilotes de p&eacute;riph&eacute;riques mat&eacute;riels
+	  d'op&eacute;rer sur une vari&eacute;t&eacute; de plateformes, &eacute;vitant le codage de m&eacute;thodes
+	  sp&eacute;cifiques &agrave; la plateforme dans ces pilotes. Ceci fait baisser le co&ucirc;t de
+	  la maintenance des pilotes sur ces plateformes et accro&icirc;t les chances qu'un
+	  pilote fonctionne "tel que" pour une nouvelle plateforme. Modifier un pilote
+	  pour qu'il utilise busdma est relativement simple, mais requiert d'&ecirc;tre familiaris&eacute; &agrave;
+	  la fois avec le pilote de p&eacute;riph&eacute;rique et les primitives busdma.
+     Pour utiliser busdma dans FreeBSD, deux types de changements sont g&eacute;n&eacute;ralement requis :
+	  l'adaptation de busdma pour fonctionner sur toutes les plateformes et
+	  l'adaptation des pilotes pour utiliser cet environnement de travail. En tant que telle, 
+	  l'information actuelle de ce projet de d&eacute;compose en support de la plateforme
+	  et en support des pilotes (tri&eacute;s par cat&eacute;gorie). L'ach&egrave;vement de ce travail
+	  requiert l'audit complet du syst&egrave;me de pilotes de p&eacute;riph&eacute;riques, puis la
+	  conversion des pilotes par priorit&eacute;s.</p>
+
+    <p><b>INTR_MPSAFE</b></p>
+    <p>Les pilotes du mat&eacute;riel enregistrent leur traitement d'interruptions
+	  avec la fonction <code>bus_setup_intr()</code>. Positionner le flag
+	  <code>INTR_MPSAFE</code> informe le code d'interruption syst&egrave;me d'appeler
+	  la routine d'interruption sans d&eacute;tenir le mutex "G&eacute;ant". Ceci permet d'obtenir
+	  un gain significatif de performances sur les syst&egrave;mes multi-processeurs.</p>
+    <p>Les pilotes peuvent positionner ce flag m&ecirc;me s'ils ne sont pas compl&egrave;tement
+	  verrouill&eacute;s tant que leur routine d'interruption prend soin de ne pas toucher
+	  aux autres structures de donn&eacute;es du pilote. Un moyen simple de r&eacute;aliser cela est 
+	  de v&eacute;rifier et de vider les registres d'interruptions mat&eacute;rielles et ensuite
+	  ordonnancer le traitement des interruptions par une file d'attente de t&acirc;ches ou 
+     un thread noyau.</p>
+
+    <p><b>verrou SMPng</b></p>
+    <p>Les pilotes doivent utiliser des mutex et des verrous sx pour prot&eacute;ger
+	  leurs structures de donn&eacute;es et registres mat&eacute;riels des threads concurrents.
+	  Les op&eacute;rations mutex sont assez co&ucirc;teuses, aussi une bonne strat&eacute;gie
+	  devrait combiner autant d'op&eacute;rations atomiques que possible durant l'acquisition
+	  d'un seul mutex.</p>
+
+    <p><b>s&eacute;curit&eacute; p!=a</b></p>
+    <p>Le support du PAE Intel requiert que les pointeurs et les repr&eacute;sentations
+	  physiques des adresses soient de tailles diff&eacute;rentes. Cela signifie que les
+	  pilotes doivent &ecirc;tre &eacute;crits en utilisant vm_paddr_t ou bus_addr_t plut&ocirc;t
+	  qu'en supposant que les adresses physiques puissent &ecirc;tre repr&eacute;sent&eacute;es par un
+	  void *. De plus, le format des cha&icirc;nes de caract&egrave;res et les casts doivent
+	  &ecirc;tre manipul&eacute;s avec soin.</p>
+
+    <p>La liste des t&acirc;ches ci-dessous ne pr&eacute;tend pas &ecirc;tre exhaustive, mais
+	  repr&eacute;sente une s&eacute;rie de composants appropri&eacute;s et/ou importants du 
+	  travail global. Le champ "Responsable" identifie un d&eacute;veloppeur qui a
+	  exprim&eacute; le d&eacute;sir d'&ecirc;tre responsable pour mener &agrave; bien la t&acirc;che identifi&eacute;e; 
+	  ce qui n'emp&ecirc;che pas les autres d'y travailler, mais sugg&egrave;re que la
+	  coordination avec le responsable de cette partie est recommand&eacute;e pour &eacute;viter 
+	  la duplication des travaux et optimiser l'avancement du travail. Si des
+	  travaux d&eacute;butent sur une nouvelle partie importante, ou non assign&eacute;e, 
+	  il est conseill&eacute; d'envoyer un courrier &eacute;lectronique &agrave; &a.mux; pour v&eacute;rifier 
+     si des progr&egrave;s n'ont pas d&eacute;j&agrave; &eacute;t&eacute; faits.</p>
+
+	<p>La d&eacute;finition du champ date varie en fonction de l'&eacute;tat de la t&acirc;che.
+	  Pour les t&acirc;ches achev&eacute;es, elle se r&eacute;f&egrave;re &agrave; la date d'ach&egrave;vement ou du
+	  rapport d'ach&egrave;vement. Pour les t&acirc;ches en cours, elle se r&eacute;f&egrave;re &agrave; la 
+	  date de la derni&egrave;re mise &agrave; jour de l'entr&eacute;e. Pour les t&acirc;ches bloqu&eacute;es,
+	  elle se r&eacute;f&egrave;re &agrave; la date &agrave; laquelle elle a &eacute;t&eacute; d&eacute;clar&eacute;e bloqu&eacute;e. Pour les nouvelles 
+	  t&acirc;ches, elle se r&eacute;f&egrave;re &agrave; la date &agrave; laquelle elle a &eacute;t&eacute; ajout&eacute;e &agrave; la liste.</p>
+
+	<p>Les t&acirc;ches sont tri&eacute;es par &eacute;tat, puis par date.</p>
+
+    <a name="platform-status"></a>
+    <h2>Etat du support des plates-formes</h2>
+
+    <table border=3>
+      <tr>
+	<th> T&acirc;che </th>
+	<th> Responsable </th>
+	<th> Derni&egrave;re mise &agrave; jour </th>
+	<th> Etat </th>
+	<th> D&eacute;tails </th>
+      </tr>
+
+      <tr>
+	<td>alpha</td>
+	<td>&a.gallatin;</td>
+	<td>10 D&eacute;cembre 2002</td>
+	<td>&status.done;</td>
+	<td>Probl&egrave;mes &eacute;ventuels avec les syst&egrave;mes disposant d'une
+	  grande quantit&eacute; de m&eacute;moire</td>
+      </tr>
+
+      <tr>
+	<td>amd64</td>
+	<td>&a.peter;</td>
+	<td>1er Juillet 2003</td>
+	<td>&status.done;</td>
+	<td>Pleinement support&eacute;.</td>
+      </tr>
+
+      <tr>
+	<td>ia64</td>
+	<td>&a.marcel;</td>
+	<td>10 D&eacute;cembre 2002<td>
+	<td>&status.done;</td>
+	<td>Probl&egrave;mes &eacute;ventuels avec les syst&egrave;mes disposant d'une 
+	  grande quantit&eacute; de m&eacute;moire</td>
+      </tr>
+
+      <tr>
+	<td>i386</td>
+	<td>&a.sam;</td>
+	<td>9 D&eacute;cembre 2002</td>
+	<td>&status.done;</td>
+	<td>Pleinement support&eacute;.</td>
+      </tr>
+
+      <tr>
+	<td>powerpc</td>
+	<td>&a.hmp;</td>
+	<td>15 Janvier 2003</td>
+	<td>&status.done;</td>
+	<td>Pleinement support&eacute;.</td>
+      </tr>
+
+      <tr>
+	<td>sparc64</td>
+	<td>&a.tmm;</td>
+	<td>6 Janvier 2003</td>
+	<td>&status.done;</td>
+	<td>Pleinement support&eacute;.</td>
+      </tr>
+
+    </table>
+
+    <a name="ifnet-status"></a>
+    <h2>Etat des pilotes interfaces r&eacute;seaux</h2>
+
+    <table border=3>
+      <tr>
+	<th> Pilote </th>
+	<th> Responsable </th>
+	<th> Derni&egrave;re mise &agrave; jour </th>
+	<th> busdma </th>
+	<th> INTR_MPSAFE </th>
+	<th> SMPng locked </th>
+	<th> a!=p </th>
+	<th> Notes </th>
+      </tr>
+
+      <tr>
+	<td> if_ar </td>
+	<td>  &nbsp; </td>
+	<td>  &nbsp; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> kvtop() </td>
+      </tr>
+
+      <tr>
+	<td> if_bge </td>
+	<td> &a.will; </td>
+	<td> 2 Juillet 2003 </td>
+	<td> &status.wip; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.done; </td>
+	<td> vtophys() </td>
+      </tr>
+
+      <tr>
+	<td> if_cs </td>
+	<td> &nbsp; </td>
+	<td> &nbsp; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &nbsp; </td>
+      </tr>
+
+      <tr>
+	<td> if_dc </td>
+	<td> &a.mux; </td>
+	<td> 17 Avril 2003 </td>
+	<td> &status.done; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &nbsp; </td>
+      </tr>
+
+      <tr>
+	<td> if_de </td>
+	<td> &a.mux; </td>
+	<td> &nbsp; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> vtophys() </td>
+      </tr>
+
+      <tr>
+	<td> if_ed </td>
+	<td> &nbsp; </td>
+	<td> &nbsp; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> kvtop() </td>
+      </tr>
+
+      <tr>
+	<td> if_em </td>
+	<td> &a.pdeuskar; </td>
+	<td> 19 D&eacute;cembre 2002 </td>
+	<td> &status.done; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.done; </td>
+	<td> &nbsp; </td>
+      </tr>
+
+      <tr>
+	<td> if_en </td>
+	<td> &a.harti; </td>
+	<td> 4 Mars 2003 </td>
+	<td> &status.done; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &nbsp; <td>
+      </tr>
+
+      <tr>
+	<td> if_fxp </td>
+	<td> &a.mux; </td>
+	<td> 9 D&eacute;cembre 2002 </td>
+	<td> &status.done; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.done; </td>
+	<td> &nbsp; </td>
+      </tr>
+
+      <tr>
+	<td> if_fwe </td>
+	<td> &nbsp; </td>
+	<td> &nbsp; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td>  &nbsp; </td>
+      </tr>
+
+      <tr>
+	<td> if_gem </td>
+	<td> &a.tmm; </td>
+	<td> 6 Janvier 2003 </td>
+	<td> &status.done; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &nbsp; </td>
+      </tr>
+
+      <tr>
+	<td> if_gx </td>
+	<td> &nbsp; </td>
+	<td> &nbsp; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> vtophys() </td>
+      </tr>
+
+      <tr>
+	<td> if_hme </td>
+	<td> &a.tmm; </td>
+	<td> 6 Janvier 2003 </td>
+	<td> &status.done; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &nbsp; </td>
+      </tr>
+
+      <tr>
+	<td> if_idt </td>
+	<td> &nbsp; </td>
+	<td> &nbsp; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> vtophys() </td>
+      </tr>
+
+      <tr>
+	<td> if_lge </td>
+	<td> &nbsp; </td>
+	<td> &nbsp; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> vtophys() </td>
+      </tr>
+
+      <tr>
+	<td> if_lmc </td>
+	<td> &nbsp; </td>
+	<td> &nbsp; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> vtophys() </td>
+      </tr>
+
+      <tr>
+	<td> if_lnc </td>
+	<td> &a.obrien; </td>
+	<td> &nbsp; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> vtophys(). Contactez &a.phk; pour info/mat&eacute;riel svp. </td>
+      </tr>
+
+      <tr>
+	<td> if_mn </td>
+	<td> &nbsp; </td>
+	<td> &nbsp; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> vtophys(). Contactez &a.phk; pour info/mat&eacute;riel svp. </td>
+      </tr>
+
+      <tr>
+	<td> if_my </td>
+	<td> &nbsp; </td>
+	<td> &nbsp; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> vtophys() </td>
+      </tr>
+
+      <tr>
+	<td> if_nge </td>
+	<td> &nbsp; </td>
+	<td> &nbsp; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> vtophys() </td>
+      </tr>
+
+      <tr>
+	<td> if_pcn </td>
+	<td> &a.obrien; </td>
+	<td> &nbsp; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> vtophys() </td>
+      </tr>
+
+      <tr>
+	<td> if_pdq </td>
+	<td> &nbsp; </td>
+	<td> &nbsp; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> la plupart du busdma sauf vtophys() </td>
+      </tr>
+
+      <tr>
+	<td> if_rl </td>
+	<td> &a.wpaul; </td>
+	<td> 9 D&eacute;cembre 2002 </td>
+	<td> &status.done; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &nbsp; </td>
+      </tr>
+
+      <tr>
+	<td> if_sf </td>
+	<td> &nbsp; </td>
+	<td> &nbsp; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> vtophys() </td>
+      </tr>
+
+      <tr>
+	<td> if_sis </td>
+	<td> &a.wpaul; </td>
+	<td> 9 D&eacute;cembre 2002 </td>
+	<td> &status.done; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &nbsp; </td>
+      </tr>
+
+      <tr>
+	<td> if_sk </td>
+	<td> &nbsp; </td>
+	<td> &nbsp; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> vtophys() </td>
+      </tr>
+
+      <tr>
+	<td> if_sr </td>
+	<td> &nbsp; </td>
+	<td> &nbsp; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> vtophys() </td>
+      </tr>
+
+      <tr>
+	<td> if_ste </td>
+	<td> &nbsp; </td>
+	<td> &nbsp; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> vtophys() </td>
+      </tr>
+
+      <tr>
+	<td> if_ti </td>
+	<td> &nbsp; </td>
+	<td> &nbsp; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &nbsp; </td>
+      </tr>
+
+      <tr>
+	<td> if_tl </td>
+	<td> &nbsp; </td>
+	<td> &nbsp; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &nbsp; </td>
+      </tr>
+
+      <tr>
+	<td> if_tx </td>
+	<td> &a.mux; </td>
+	<td> 19 Avril 2003 </td>
+	<td> &status.done; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.done; </td>
+	<td> vtophys() </td>
+      </tr>
+
+      <tr>
+	<td> if_txp </td>
+	<td> &nbsp; </td>
+	<td> &nbsp; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &nbsp; </td>
+      </tr>
+
+      <tr>
+	<td> if_vr </td>
+	<td> Christian S.J. Peron &lt;maneo@bsdpro.com&gt; </td>
+	<td> 20 Janvier 2003 </td>
+	<td> &status.wip; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &nbsp; </td>
+      </tr>
+
+      <tr>
+	<td> if_wb </td>
+	<td> &nbsp; </td>
+	<td> &nbsp; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &nbsp; </td>
+      </tr>
+
+      <tr>
+	<td> if_xl </td>
+	<td> &a.mux; </td>
+	<td> 17 D&eacute;cembre 2002 </td>
+	<td> &status.done; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.done; </td>
+	<td> &nbsp; </td>
+      </tr>
+
+    </table>
+
+    <a name="storage-status"></a>
+    <h2>Etat des pilotes p&eacute;riph&eacute;riques de stockage</h2>
+
+    <table border=3>
+      <tr>
+	<th> Pilote </th>
+	<th> Responsable </th>
+	<th> Derni&egrave;re mise &agrave; jour </th>
+	<th> busdma </th>
+	<th> INTR_MPSAFE </th>
+	<th> SMPng locked </th>
+	<th> a!=p </th>
+	<th> Notes </th>
+      </tr>
+
+      <tr>
+	<td> aac </td>
+	<td> &a.scottl; </td>
+	<td> 8 F&eacute;vrier 2003 </td>
+	<td> &status.done; </td>
+	<td> &status.done; </td>
+	<td> &status.done; </td>
+	<td> &status.done; </td>
+	<td> compatible PCI-64, probl&egrave;me avec architecture endian </td>
+      </tr>
+
+      <tr>
+	<td> adv </td>
+	<td> &nbsp; </td>
+	<td> 9 D&eacute;cembre 2002 </td>
+	<td> &status.done; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &nbsp; </td>
+      </tr>
+
+      <tr>
+	<td> aha </td>
+	<td> &nbsp; </td>
+	<td> 9 D&eacute;cembre 2002 </td>
+	<td> &status.done; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &nbsp; </td>
+      </tr>
+
+      <tr>
+	<td> ahb </td>
+	<td> &nbsp; </td>
+	<td> 9 D&eacute;cembre 2002 </td>
+	<td> &status.done; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &nbsp; </td>
+      </tr>
+
+      <tr>
+	<td> aic7xxx </td>
+	<td> &nbsp; </td>
+	<td> 9 D&eacute;cembre 2002 </td>
+	<td> &status.done; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &nbsp; </td>
+      </tr>
+
+      <tr>
+	<td> amd </td>
+	<td> &nbsp; </td>
+	<td> 14 D&eacute;cembre 2002 </td>
+	<td> &status.done; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &nbsp; </td>
+      </tr>
+
+      <tr>
+	<td> amr </td>
+	<td> &nbsp; </td>
+	<td> 9 D&eacute;cembre 2002 </td>
+	<td> &status.done; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &nbsp; </td>
+      </tr>
+
+      <tr>
+	<td> asr </td>
+	<td> &a.obrien; </td>
+	<td> 4 Janvier 2003 </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> vtophys() </td>
+      </tr>
+
+      <tr>
+	<td> ata </td>
+	<td> &nbsp; </td>
+	<td> 9 D&eacute;cembre 2002 </td>
+	<td> &status.done; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.done; </td>
+	<td> &nbsp; </td>
+      </tr>
+
+      <tr>
+	<td> buslogic </td>
+	<td> &nbsp; </td>
+	<td> &nbsp; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> vtophys() </td>
+      </tr>
+
+      <tr>
+	<td> ciss </td>
+	<td> &nbsp; </td>
+	<td> 9 D&eacute;cembre 2002 </td>
+	<td> &status.done; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &nbsp; </td>
+      </tr>
+
+      <tr>
+	<td> ct </td>
+	<td> &nbsp; </td>
+	<td> &nbsp; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &nbsp; </td>
+      </tr>
+
+      <tr>
+	<td> dpt </td>
+	<td> &nbsp; </td>
+	<td> &nbsp; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> vtophys() </td>
+      </tr>
+
+      <tr>
+	<td> ida </td>
+	<td> &nbsp; </td>
+	<td> 9 D&eacute;cembre 2002 </td>
+	<td> &status.done; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &nbsp; </td>
+      </tr>
+
+      <tr>
+	<td> iir </td>
+	<td> &nbsp; </td>
+	<td> &nbsp; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> vtophys() </td>
+      </tr>
+
+      <tr>
+	<td> isp </td>
+	<td> &nbsp; </td>
+	<td> 8 F&eacute;vrier 2003 </td>
+	<td> &status.done; </td>
+	<td> &status.done; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &nbsp; </td>
+      </tr>
+
+      <tr>
+	<td> mlx </td>
+	<td> &a.scottl; </td>
+	<td> 8 F&eacute;vrier 2003 </td>
+	<td> &status.done; </td>
+	<td> &status.wip; </td>
+	<td> &status.wip; </td>
+	<td> &status.new; </td>
+	<td> &nbsp; </td>
+      </tr>
+
+      <tr>
+	<td> mly </td>
+	<td> &a.scottl; </td>
+	<td> 8 F&eacute;vrier 2003 </td>
+	<td> &status.done; </td>
+	<td> &status.wip; </td>
+	<td> &status.wip; </td>
+	<td> &status.new; </td>
+	<td> &nbsp; </td>
+      </tr>
+
+      <tr>
+	<td> mpt </td>
+	<td> &nbsp; </td>
+	<td> 9 D&eacute;cembre 2002 </td>
+	<td> &status.done; </td>
+	<td> &status.done; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &nbsp; </td>
+      </tr>
+
+      <tr>
+	<td> ncr </td>
+	<td> &nbsp; </td>
+	<td> &nbsp; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> vtophys(). Contactez &a.phk; svp, pour une &eacute;ventuelle source
+	  de mat&eacute;riel. </td>
+      </tr>
+
+      <tr>
+	<td> pst </td>
+	<td> &nbsp; </td>
+	<td> &nbsp; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> vtophys() </td>
+      </tr>
+
+      <tr>
+	<td> stg </td>
+	<td> &nbsp; </td>
+	<td> 9 D&eacute;cembre 2002 </td>
+	<td> &status.done; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> Au moins, il semble &ecirc;tre ce qu'il devrait &ecirc;tre. </td>
+      </tr>
+
+      <tr>
+	<td> sym </td>
+	<td> &nbsp; </td>
+	<td> 19 D&eacute;cembre 2002 </td>
+	<td> &status.done; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &nbsp; </td>
+      </tr>
+
+      <tr>
+	<td> trm </td>
+	<td> &a.cognet; </td>
+	<td> 9 D&eacute;cembre 2002 </td>
+	<td> &status.done; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &nbsp; </td>
+      </tr>
+
+      <tr>
+	<td> twe </td>
+	<td> &nbsp; </td>
+	<td> 9 D&eacute;cembre 2002 </td>
+	<td> &status.done; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &nbsp; </td>
+      </tr>
+
+    </table>
+    <a name="misc-status"></a>
+    <h2>Etat des pilotes divers p&eacute;riph&eacute;riques</h2>
+
+    <table border=3>
+      <tr>
+	<th> Pilote </th>
+	<th> Responsable </th>
+	<th> Derni&egrave;re mise &agrave; jour </th>
+	<th> busdma </th>
+	<th> INTR_MPSAFE </th>
+	<th> SMPng locked </th>
+	<th> a!=p </th>
+	<th> Notes </th>
+      </tr>
+
+      <tr>
+	<td> agp </td>
+	<td> &a.cognet; </td>
+	<td> 23 Janvier 2003 </td>
+	<td> &status.wip; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> vtophys() </td>
+      </tr>
+
+      <tr>
+	<td> bktr </td>
+	<td> &a.cognet; </td>
+	<td> 15 Janvier 2003 </td>
+	<td> &status.wip; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> vtophys() </td>
+      </tr>
+
+      <tr>
+	<td> cs </td>
+	<td> &nbsp; </td>
+	<td> &nbsp; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &nbsp; </td>
+      </tr>
+
+      <tr>
+	<td> digi </td>
+	<td> &nbsp; </td>
+	<td> &nbsp; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> vtophys() </td>
+      </tr>
+
+      <tr>
+	<td> drm </td>
+	<td> &a.anholt; </td>
+	<td> 17 F&eacute;vrier 2003 </td>
+	<td> &status.wip; </td>
+	<td> &status.wip; </td>
+	<td> &status.wip; </td>
+	<td> &status.new; </td>
+	<td> vtophys() </td>
+      </tr>
+
+      <tr>
+	<td> exca </td>
+	<td> &a.imp; </td>
+	<td> 9 D&eacute;cembre 2002 </td>
+	<td> &status.done; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &nbsp; </td>
+      </tr>
+
+      <tr>
+	<td> fb </td>
+	<td> &nbsp; </td>
+	<td> &nbsp; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> vtophys() </td>
+      </tr>
+
+      <tr>
+	<td> firewire </td>
+	<td> &a.simokawa; </td>
+	<td> 17 Avril 2003 </td>
+	<td> &status.done; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.done; </td>
+	<td> vtophys() </td>
+      </tr>
+
+      <tr>
+	<td> hea </td>
+	<td> &nbsp; </td>
+	<td> &nbsp; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> vtophys() </td>
+      </tr>
+
+      <tr>
+	<td> hfa </td>
+	<td> &nbsp; </td>
+	<td> &nbsp; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> vtophys() </td>
+      </tr>
+
+      <tr>
+	<td> hifn </td>
+	<td> &a.sam; </td>
+	<td> 9 D&eacute;cembre 2002 </td>
+	<td> &status.done; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &nbsp; </td>
+      </tr>
+
+      <tr>
+	<td> meteor </td>
+	<td> &nbsp; </td>
+	<td> &nbsp; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> vtophys() </td>
+      </tr>
+
+      <tr>
+	<td> musycc </td>
+	<td> &nbsp; </td>
+	<td> &nbsp; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> vtophys(). Contactez &a.phk; pour info/mat&eacute;riel svp. </td>
+      </tr>
+
+      <tr>
+	<td> pcm </td>
+	<td> &a.cognet; </td>
+	<td> 20 F&eacute;vrier 2003 </td>
+	<td> &status.done; </td>
+	<td> &status.done; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &nbsp; </td>
+      </tr>
+
+      <tr>
+	<td> ubsec </td>
+	<td> &a.sam; </td>
+	<td> 9 D&eacute;cembre 2002</td>
+	<td> &status.done; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> vtophys() est utilis&eacute; par printf en d&eacute;buggage </td>
+      </tr>
+
+      <tr>
+	<td> usb </td>
+	<td> &a.dwhite; </td>
+	<td> 1er Juillet 2003 </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> vtophys() </td>
+      </tr>
+
+      <tr>
+	<td> wds </td>
+	<td> &nbsp; </td>
+	<td> 9 D&eacute;cembre 2002 </td>
+	<td> &status.done; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &status.new; </td>
+	<td> &nbsp; </td>
+      </tr>
+
+    </table>
+
+    <a name="doc-status"></a>
+    <h2>Etat de la documentation</h2>
+
+    <table border=3>
+      <tr>
+	<th> T&acirc;che </th>
+	<th> Responsable </th>
+	<th> Derni&egrave;re mise &agrave; jour </th>
+	<th> Etat </th>
+	<th> Notes </th>
+      </tr>
+
+      <tr>
+	<td> Pages de manuel pour l'API busdma </td>
+	<td> &a.hmp; </td>
+	<td> 15 Janvier 2003 </td>
+	<td> &status.done; </td>
+	<td> &nbsp; </td>
+      </tr>
+    </table>
+
+  &footer;
+  </body>
+</html>
