@@ -97,43 +97,43 @@
               <img src="../../en/gnome/images/gnome.png" align="right"
                    border="0" width="66" height="83" alt="GNOME Logo"/>
 
-              <p>El proyecto GNOME, nace como un esfuerzo de crear un entorno de
+              <p>El proyecto GNOME  nace como un esfuerzo de crear un entorno de
                 escritorio para sistemas abiertos, que fuera completamente gratis.
-                Desde un principio, el objetivo principal de GNOME ha sido proveer
+                Desde un principio  el objetivo principal de GNOME ha sido proveer
                 de un conjunto de aplicaciones y un entorno de escritorio de 
-                f&#225;cil uso.  El proyecto FreeBSD GNOME busca el llevar a 
-                GNOME, al usuario de FreeBSD.</p>
+                f&#225;cil uso.  El proyecto FreeBSD GNOME tiene como objetivo 
+                acercar GNOME al usuario de FreeBSD.</p>
 
               <p>Como la mayor parte de los programas GNU, GNOME ha sido 
                 dise&#241;ado para ser ejecutado en todos los sistemas 
-                operativos modernos, basados en UNIX.  Por medio del esfuerzo del
-                Proyecto FreeBSD GNOME e incontables voluntarios, esos sistemas
+                operativos modernos basados en UNIX.  Por medio del esfuerzo del
+                Proyecto FreeBSD GNOME e incontables voluntarios esos sistemas
                 operativos incluyen a FreeBSD.</p>
 
-              <p>En los pasados meses, el proyecto GNOME ha expandido sus 
+              <p>En los pasados meses el proyecto GNOME ha expandido sus 
                 objetivos, para se&#241;alar cierto n&#250;mero de problemas que
                 existen en la infraestructura Unix.</p>
 
-              <p>El Proyecto GNOME, actua como sombrilla.  Los componentes 
-                m&#225;s importantes de GNOME, son:</p>
+              <p>El Proyecto GNOME  act&#250;a como sombrilla.  Los componentes 
+                m&#225;s importantes de GNOME  son:</p>
               <ul>
                 <li>El <a href="http://www.gnome.org">escritorio GNOME</a>:  Un 
                   entorno gr&#225;fico, basado en un ambiente de ventanas, para
-                  el ususario.</li>
+                  el usuario.</li>
                 <li>La <a href="http://developer.gnome.org">plataforma de
                   desarrollo GNOME</a>:  Una rica colecci&#243;n de herramientas,
-                  librer&#237;as y componentes, para desarrollar poderosas
+                  bibliotecas y componentes, para desarrollar poderosas
                   aplicaciones en Unix.</li>
                 <li>La suite de <a href="http://www.gnome.org/gnome-office">Oficina
                   de GNOME</a>:  Un conjunto de aplicaciones de oficina.</li>
               </ul>
 
-              <h2><font color="#990000">Estatus de la migraci&#243;n</font></h2>
+              <h2><font color="#990000">Est&#225;atus de la migraci&#243;n</font></h2>
 
-              <p>Actualmente se cuenta con soporte para GNOME 1.4 y 2.0, para 
+              <p>Actualmente se cuenta con soporte para GNOME 1.4 y 2.0 para 
                 sistemas FreeBSD 4.x y 5-CURRENT.  Cualquier versi&#243;n
-                anterior a FreeBSD 4.5, no est&#225; soportada.  La mayor parte de 
-                GNOME ha sido portado a FreeBSD; aunque aun <a 
+                anterior a FreeBSD 4.5  no est&#225; soportada.  La mayor parte de 
+                GNOME ha sido portado a FreeBSD aunque a&#250;n <a 
                 href="docs/volunteer.html">hay mucho por hacer</a>!.</p>
 
             </td>
