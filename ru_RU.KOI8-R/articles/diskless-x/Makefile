@@ -1,26 +1,21 @@
 # 
+# The FreeBSD Russian Documentation Project
+# 
 # $FreeBSD$
-# $FreeBSDru: frdp/doc/ru_RU.KOI8-R/articles/diskless-x/Makefile,v 1.2 2001/07/25 10:26:32 phantom Exp $
+# $FreeBSDru: frdp/doc/ru_RU.KOI8-R/articles/diskless-x/Makefile,v 1.3 2003/11/08 14:35:25 phantom Exp $
 #
-# Original revision: 1.1
+# Original revision: 1.7
 #
-
-MAINTAINER=andy@FreeBSD.org.ua
 
 DOC?= article
 
 FORMATS?= html
 
-INSTALL_COMPRESSED?= gz
+INSTALL_COMPRESSED?=gz
 INSTALL_ONLY_COMPRESSED?=
 
-# 
-# SRCS lists the individual SGML files that make up the document. Changes
-# to any of these files will force a rebuild
-#
-
-# SGML content
-SRCS=  article.sgml
+SRCS= article.sgml
 
 DOC_PREFIX?= ${.CURDIR}/../../..
+
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"
