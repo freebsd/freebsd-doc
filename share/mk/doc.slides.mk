@@ -53,7 +53,7 @@ CLEANFILES+= ${DOC}.aux ${DOC}.log ${DOC}.out texput.log
 
 .endfor
 
-XSLTPROCFLAGS?=	--nonet
+XSLTPROCFLAGS?=	--nonet --stringparam draft.mode no
 XSLTPROCOPTS=	${XSLTPROCFLAGS}
 
 .MAIN: all
@@ -64,7 +64,11 @@ ${DOC}.html: ${SRCS}
 	${XSLTPROC} ${XSLTPROCOPTS} ${SLIDES_XSLHTML} ${.ALLSRC}
 
 ${DOC}.fo: ${SRCS}
-	${XSLTPROC} ${XSLTPROCOPTS} ${SLIDES_XSLPRINT} ${.ALLSRC} > ${.TARGET:S/.pdf$/.fo/}
+.if defined(USE_SAXON)
+	${SAXON_CMD} ${DOC}.xml ${SLIDES_XSLPRINT} > ${.TARGET:S/.pdf$/.fo/}
+.else
+	${XSLTPROC} ${XSLTPROCOPTS} ${SLIDES_XSLPRINT} ${DOC}.xml > ${.TARGET:S/.pdf$/.fo/}
+.endif
 
 ${DOC}.pdf: ${DOC}.fo
 .if defined(USE_FOP)
