@@ -1,4 +1,4 @@
-# $FreeBSD: www/ja/Makefile,v 1.54 2001/12/12 11:57:38 phantom Exp $
+# $FreeBSD: www/ja/Makefile,v 1.55 2001/12/13 19:30:09 phantom Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.75
 
@@ -54,7 +54,7 @@ SUBDIR+= smp
 SUBDIR+= conspectus
 .if !defined(WEB_ONLY) || empty(WEB_ONLY)
 SUBDIR+= ports
-# SUBDIR+= doc
+SUBDIR+= doc
 # .endif
 # .if defined(BUILD_RELNOTES)
 # SUBDIR+= relnotes
