@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/index.xsl,v 1.35 2002/09/20 16:08:40 keramida Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.36 2002/09/21 01:56:29 keramida Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   
@@ -6,7 +6,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.35 2002/09/20 16:08:40 keramida Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.36 2002/09/21 01:56:29 keramida Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -48,6 +48,7 @@
 		        which are not mirrored should be listed in
 		        support.sgml.  -->
 
+		  <option value="http://bsd.ipv6.uni-erlangen.de">IPv6 Germany</option>
 		  <option value="http://www.jp.FreeBSD.org/www.FreeBSD.org/">6Bone(IPv6), Japan</option>
 		  <option value="http://www2.no.FreeBSD.org/">IPv6 Norway</option>
 		  <option value="http://www.au.FreeBSD.org/">Australia/1</option>
