@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/commercial/Makefile,v 1.11 2000/03/12 21:41:52 phantom Exp $
+# $FreeBSD: www/en/commercial/Makefile,v 1.12 2000/04/04 09:21:21 kuriyama Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -31,21 +31,21 @@ software.html: software.sgml software.inc
 software_bycat.html: software_bycat.sgml software_bycat.inc
 
 consulting.inc: gencommercial.pl commercial.desc consulting.raw
-	${PERL} ./gencommercial.pl consulting
+	${PERL} ${.CURDIR}/gencommercial.pl -s ${.CURDIR} consulting
 
 consulting_bycat.inc: gencommercial.pl commercial.desc consulting.raw
-	${PERL} ./gencommercial.pl -c consulting
+	${PERL} ${.CURDIR}/gencommercial.pl -s ${.CURDIR} -c consulting
 
 hardware.inc: gencommercial.pl commercial.desc hardware.raw
-	${PERL} ./gencommercial.pl hardware
+	${PERL} ${.CURDIR}/gencommercial.pl -s ${.CURDIR} hardware
 
 misc.inc: gencommercial.pl commercial.desc misc.raw
-	${PERL} ./gencommercial.pl misc
+	${PERL} ${.CURDIR}/gencommercial.pl -s ${.CURDIR} misc
 
 software.inc: gencommercial.pl commercial.desc software.raw
-	${PERL} ./gencommercial.pl software
+	${PERL} ${.CURDIR}/gencommercial.pl -s ${.CURDIR} software
 
 software_bycat.inc: gencommercial.pl commercial.desc software.raw
-	${PERL} ./gencommercial.pl -c software
+	${PERL} ${.CURDIR}/gencommercial.pl -s ${.CURDIR} -c software
 
 .include <../web.mk>
