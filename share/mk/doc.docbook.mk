@@ -1,5 +1,5 @@
 #
-# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.33 2001/06/18 14:24:08 nik Exp $
+# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.34 2001/06/21 02:55:59 chris Exp $
 #
 # This include file <doc.docbook.mk> handles building and installing of
 # DocBook documentation in the FreeBSD Documentation Project.
