@@ -36,7 +36,7 @@
 	  <P><BIG><FONT COLOR="#990000"><B>Documentation</B></FONT></BIG>
 	  
 	  <SMALL><BR>
-	    <A HREF="faq/faq.html">FAQ</A><BR>
+	    <A HREF="docs/faq.html">FAQ</A><BR>
 	    <A HREF="docs/porting.html">Creating Ports</A><BR>
 	  </SMALL></P>
 
