@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
 
-<!-- $FreeBSD: www/ja/includes.xsl,v 1.11 2003/01/22 04:11:07 hrs Exp $ -->
-<!-- Original revision: 1.13 -->
+<!-- $FreeBSD: www/ja/includes.xsl,v 1.12 2003/04/06 04:54:26 rushani Exp $ -->
+<!-- Original revision: 1.14 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -85,7 +85,7 @@
     </address>
   </xsl:variable>
   
-  <xsl:variable name="rel.current" select='"5.0"'/>
+  <xsl:variable name="rel.current" select='"5.1"'/>
   <xsl:variable name="u.rel.notes">
     <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel.current"/>R/relnotes.html</xsl:variable>
 
