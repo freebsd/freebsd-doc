@@ -1,5 +1,5 @@
 # 
-# $Id: Makefile,v 1.14 1999-03-12 22:24:07 nik Exp $
+# $Id: Makefile,v 1.15 1999-03-18 20:37:12 nik Exp $
 #
 # Build the FreeBSD Handbook. Will eventually split in two, a generic .mk
 # file which can be used by many Makefiles, and a much smaller Makefile
@@ -50,9 +50,7 @@ INSTALL_COMPRESSED?= gz
 
 #
 # INSTALL_ONLY_COMPRESSED is non-empty if you only want to install the
-# compressed versions of built files. As a side effect, setting this option
-# means the html-split format *will not* be installed, even if it's listed
-# in ${FORMATS}, because it can not be compressed.
+# compressed versions of built files. 
 #
 INSTALL_ONLY_COMPRESSED?=
 
@@ -197,13 +195,11 @@ CLEANFILES+= ${DOC}.tar
 .if !empty(INSTALL_COMPRESSED)
 .for _curformat in ${FORMATS}
 _cf=${_curformat}
-.if ${_cf} != "html-split"
 .for _curcomp in ${INSTALL_COMPRESSED}
 _curinst+= install-${_curformat}.${_curcomp}
 _docs+= ${DOC}.${_curformat}.${_curcomp}
 CLEANFILES+= ${DOC}.${_curformat}.${_curcomp}
 .endfor
-.endif
 .endfor
 .endif
 
@@ -229,6 +225,9 @@ ${DOC}.html: ${SRCS}
 	${JADE} -ioutput.html -V nochunks ${JADEFLAGS} -d ${DSLHTML} -t sgml ${DOC}.sgml > ${DOC}.html
 	-tidy -i -m -f /dev/null ${DOC}.html
 
+${DOC}.html-split.tar: HTML.manifest
+	tar cf ${.TARGET} `xargs < HTML.manifest`
+
 ${DOC}.txt: ${DOC}.html
 	lynx -nolist -dump ${DOC}.html > ${DOC}.txt
 
@@ -243,7 +242,7 @@ ${DOC}.dvi: ${DOC}.tex
 	-tex "&jadetex" ${DOC}.tex
 	@echo "==> TeX pass 2/3"
 	-tex "&jadetex" ${DOC}.tex
-	@echo "==> Tex pass 3/3"
+	@echo "==> TeX pass 3/3"
 	-tex "&jadetex" ${DOC}.tex
 
 ${DOC}.pdf: ${DOC}.tex
@@ -294,11 +293,13 @@ _PROG_COMPRESS_zip: .USE
 #
 .for _curformat in ${KNOWN_FORMATS}
 _cf=${_curformat}
-.if ${_cf} != "html-split"
 .for _curcompress in ${KNOWN_COMPRESS}
+.if ${_cf} == "html-split"
+${DOC}.${_cf}.tar.${_curcompress}: ${DOC}.${_cf}.tar _PROG_COMPRESS_${_curcompress}
+.else
 ${DOC}.${_cf}.${_curcompress}: ${DOC}.${_cf} _PROG_COMPRESS_${_curcompress}
-.endfor
 .endif
+.endfor
 .endfor
 
 #
@@ -347,6 +348,11 @@ install-${_cf}: index.html
 		(cd ${DESTDIR}${DOCDIR}/${VOLUME}; 			\
 		sh ${.OBJDIR}/${DOC}.ln); 				\
 	fi
+.for _compressext in ${KNOWN_COMPRESS}
+install-${_cf}.${_compressext}: ${DOC}.${_cf}.tar.${_compressext}
+	${INSTALL} ${COPY} -o ${DOCOWN} -g ${DOCGRP} -m ${DOCMODE}	\
+		${.ALLSRC} ${DESTDIR}${DOCDIR}/${VOLUME}
+.endfor
 .else
 install-${_cf}: ${DOC}.${_cf}
 	${INSTALL} ${COPY} -o ${DOCOWN} -g ${DOCGRP} -m ${DOCMODE}	\
