@@ -71,6 +71,11 @@
           ;; Create docformat navi link for HTML output?
           #f)
 
+        (define %show-all-trademark-symbols%
+          ;; Show all the trademark symbols, not just the required
+          ;; symbols.
+          #f)
+
         (define (book-titlepage-recto-elements)
           (list (normalize "title")
                 (normalize "subtitle")
@@ -1015,10 +1020,12 @@
 			(loop (node-list-rest nl) num)))))))
 
       ;; Determine if we should show a trademark symbol.  Either in
-      ;; first occurrence in the proper context, or if the role
-      ;; attribute is set to force.
+      ;; first occurrence in the proper context, if the role
+      ;; attribute is set to force, or if %show-all-trademark-symbols%
+      ;; is set to true.
       (define (show-tm-symbol? trademark)
-	(or (= ($chunk-trademark-number$ trademark) 1)
+	(or %show-all-trademark-symbols%
+	    (= ($chunk-trademark-number$ trademark) 1)
 	    (equal? (attribute-string (normalize "role") trademark) "force")))
 
     </style-specification-body>
