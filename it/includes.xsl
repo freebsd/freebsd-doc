@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD$ -->
+<!-- $FreeBSD: www/it/includes.xsl,v 1.1 2003/03/20 00:10:51 trhodes Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -91,7 +91,7 @@
   <xsl:variable name="u.rel.early">
     <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel.current"/>R/early-adopter.html</xsl:variable>
   
-  <xsl:variable name="rel2.current" select='"4.7"'/>
+  <xsl:variable name="rel2.current" select='"4.8"'/>
   <xsl:variable name="u.rel2.notes">
     <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel2.current"/>R/relnotes.html</xsl:variable>
 
