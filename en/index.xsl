@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/index.xsl,v 1.124 2005/01/01 21:15:08 ceri Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.125 2005/01/02 12:37:49 ceri Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -6,7 +6,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.124 2005/01/01 21:15:08 ceri Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.125 2005/01/02 12:37:49 ceri Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <!-- these params should be externally bound. The values
@@ -249,6 +249,9 @@
 			      &#183; <a href="{$u.rel2.installation}">Installation Notes</a><br/>
 			      &#183; <a href="{$u.rel2.errata}">Errata</a></small>
 			  </p>
+
+			  <p><a href="snapshots/index.html">
+			      <font size="+1" color="#990000"><b>Snapshot Releases</b></font></a></p>
 
 			  <p><font size="+1" color="#990000"><b>Project News</b></font>
 			    <xsl:text> </xsl:text>
