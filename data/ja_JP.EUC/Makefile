@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.12 1998-06-23 15:15:00 kuriyama Exp $
+# $Id: Makefile,v 1.13 1998-07-07 03:14:10 hanai Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.24
 
@@ -34,7 +34,7 @@ atoz.sgml: web.atoz
 # Subdirectories
 
 #SUBDIR=		cgi commercial gifs ports releases tutorials
-SUBDIR=			ports releases
+SUBDIR=			docproj ports releases
 
 # Subdirectories that have linuxdoc docs and makefiles that use
 # <bsd.sgml.mk>.
