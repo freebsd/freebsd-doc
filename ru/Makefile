@@ -1,7 +1,7 @@
 #
 # The FreeBSD Russian Documentation Project
 #
-# $FreeBSD$
+# $FreeBSD: www/ru/Makefile,v 1.37 2004/04/22 12:04:19 den Exp $
 # $FreeBSDru: frdp/www/ru/Makefile,v 1.36 2004/04/22 12:00:22 den Exp $
 #
 # Original revision: 1.110
@@ -49,7 +49,7 @@ SUBDIR+= internal
 SUBDIR+= java
 SUBDIR+= copyright
 SUBDIR+= search
-SUBDIR+= gallery
+#SUBDIR+= gallery
 SUBDIR+= projects
 #SUBDIR+= prstats
 SUBDIR+= platforms
