@@ -10,6 +10,12 @@ INSTALL_ONLY_COMPRESSED?=
 WITH_ARTICLE_TOC?=YES
 
 SRCS= article.sgml
+SRCS+=contrib.386bsd.sgml
+SRCS+=contrib.additional.sgml
+SRCS+=contrib.committers.sgml
+SRCS+=contrib.core.sgml
+SRCS+=contrib.corealumni.sgml
+SRCS+=contrib.develalumni.sgml
 
 DOC_PREFIX?= ${.CURDIR}/../../..
 
