@@ -3,7 +3,7 @@
 #
 # Based on: 1.105
 #
-# $FreeBSD: www/pt_BR/Makefile,v 1.1 2002/10/05 16:05:33 lioux Exp $
+# $FreeBSD: www/pt_BR/Makefile,v 1.2 2004/01/05 03:02:25 lioux Exp $
 
 .if exists(Makefile.conf)
 .include "Makefile.conf"
@@ -19,8 +19,6 @@ SUBDIR+= FAQ
 .if !defined(WEB_ONLY) || empty(WEB_ONLY)
 SUBDIR+=	doc
 .endif
-
-COOKIE=	FAQ
 
 WEBDIR?=	data/pt_BR
 
