@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
 
-<!-- $FreeBSD: www/ja/index.xsl,v 1.21 2002/11/03 19:29:23 hrs Exp $ -->
-<!-- Original revision: 1.43 -->
+<!-- $FreeBSD: www/ja/index.xsl,v 1.22 2003/01/05 18:27:51 hrs Exp $ -->
+<!-- Original revision: 1.46 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   
@@ -10,7 +10,7 @@
 
   <xsl:variable name="base" select="'.'"/>
   <xsl:variable name="enbase" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/ja/index.xsl,v 1.21 2002/11/03 19:29:23 hrs Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/ja/index.xsl,v 1.22 2003/01/05 18:27:51 hrs Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <xsl:output type="html" encoding="EUC-JP"
@@ -39,7 +39,7 @@
 	    
 	    <td align="right" valign="bottom" width="300">
 	      <form action="http://www.FreeBSD.org/cgi/mirror.cgi" 
-		    method="GET">
+		    method="get">
 		
 		<br/>
 		
@@ -258,6 +258,13 @@
 			      ・<a href="{$base}/../commercial/consulting_bycat.html">コンサルティング</a><br/>
 			      ・<a href="{$base}/../commercial/misc.html">その他</a><br/>
 			    </small></p>
+
+			  <p><font size="+1" color="#990000"><b>寄付・寄贈</b></font>
+			    <small><br/>
+			      ・<a href="{$enbase}/donations/index.html">寄付・寄贈品の受付</a><br/>
+			      ・<a href="{$enbase}/donations/donors.html">現在の寄贈品</a><br/>
+			      ・<a href="{$enbase}/donations/wantlist.html">寄付募集リスト</a><br/>
+			    </small></p>
 	      
 			  <p><font size="+1" color="#990000"><b>このサイトについて</b></font>
 		
@@ -398,14 +405,24 @@
 		    <table cellpadding="4" cellspacing="0" border="0"
 			   bgcolor="#ffcc66" width="100%">
 		      <tr>
-			<td valign="top"><p><font size="+1" color="#990000"><b>最新リリース:
+			<td valign="top"><p><font size="+1" color="#990000"><b>テクノロジリリース:
 			    <xsl:value-of select="$rel.current"/></b></font><br/>
 			
 			    <small>・<a href="{$u.rel.announce}">アナウンス</a><br/>
-			      ・<a href="{$base}/handbook/install.html">インストールガイド</a><br/>
+			      ・<a href="{$enbase}/doc/ja_JP.eucJP/books/handbook/install.html">インストールガイド</a><br/>
 			      ・<a href="{$u.rel.notes}">リリースノート</a><br/>
-			      ・<a href="{$u.rel.hardware}">ハードウェアリスト (英語)</a><br/>
-			      ・<a href="{$u.rel.errata}">Errata</a></small></p>
+			      ・<a href="{$u.rel.hardware}">ハードウェアノート</a><br/>
+			      ・<a href="{$u.rel.errata}">Errata</a><br/>
+			      ・<a href="{$u.rel.early}">初期利用者のための手引き</a></small></p>
+
+			<p><font size="+1" color="#990000"><b>プロダクションリリース:
+			    <xsl:value-of select="$rel2.current"/></b></font><br/>
+			
+			    <small>・<a href="{$u.rel2.announce}">アナウンス</a><br/>
+			      ・<a href="{$enbase}/doc/ja_JP.eucJP/handbook/install.html">インストールガイド</a><br/>
+			      ・<a href="{$u.rel2.notes}">リリースノート</a><br/>
+			      ・<a href="{$u.rel2.hardware}">ハードウェアリスト (英語)</a><br/>
+			      ・<a href="{$u.rel2.errata}">Errata</a></small></p>
 
 			  <p><font size="+1" color="#990000"><b>Project News</b></font><br/>
 			    <font size="-1">
