@@ -1,4 +1,4 @@
-<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.31 2001/06/02 23:02:13 dd Exp $ -->
+<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.32 2001/06/16 21:30:11 nik Exp $ -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
 <!ENTITY % output.html		"IGNORE">
@@ -79,6 +79,9 @@
 	    "html.index"
 	    "html-split.index"))
 
+	(define %stylesheet%
+	  "docbook.css")
+
         <!-- This code handles displaying $email-footer$ at the bottom
              of each page.
 
@@ -114,15 +117,15 @@
           (literal ""))
 
         (element citerefentry
-          (let* ((refentrytitle	(select-elements (children (current-node))
+          (let* ((refentrytitle (select-elements (children (current-node))
                                                  (normalize "refentrytitle")))
-                 (manvolnum	(select-elements (children (current-node))
+		 (manvolnum     (select-elements (children (current-node))
 						 (normalize "manvolnum")))
-                 (href		($create-refentry-xref-link$   
+		 (href          ($create-refentry-xref-link$
                                                  (data refentrytitle)
                                                  (data manvolnum))))
-	    (if %refentry-xref-link%
-	      (create-link (list (list "HREF" href))
+            (if %refentry-xref-link%
+              (create-link (list (list "HREF" href))
                 (if %refentry-xref-italic%
                   ($italic-seq$)
                   ($charseq$)))
@@ -378,28 +381,6 @@
       (element devicename ($mono-seq$))
       (element maketarget ($mono-seq$))
       (element makevar ($mono-seq$))
-
-      <!-- For the HTML version, display the questions in a bigger, bolder
-           font. -->
-
-      <![ %output.html; [
-      (element question
-        (let* ((chlist   (children (current-node)))
-               (firstch  (node-list-first chlist))
-               (restch   (node-list-rest chlist)))
-          (make element gi: "DIV"
-                attributes: (list (list "CLASS" (gi)))
-                (make element gi: "P" 
-                      (make element gi: "BIG"
-                            (make element gi: "A"
-                                  attributes: (list (list "NAME" (element-id)))
-                                 (empty-sosofo))
-                             (make element gi: "B"
-                                   (literal (question-answer-label
-                                            (current-node)) " ")
-                                    (process-node-list (children firstch)))))
-                (process-node-list restch))))
-      ]]>
 
       <!-- Override generate-anchor.  This is used to generate a unique ID for
            each element that can be linked to.  The element-id function calls
