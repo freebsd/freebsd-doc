@@ -1,5 +1,7 @@
 # $FreeBSD$
 
+SUBDIR = books
+
 COMPAT_SYMLINK = nl
 
 DOC_PREFIX?= ${.CURDIR}/..
