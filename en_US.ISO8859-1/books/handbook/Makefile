@@ -111,7 +111,7 @@ IMAGES_LIB+= callouts/5.png
 #
 
 # SGML content
-SRCS=  book.sgml
+SRCS+=  book.sgml
 SRCS+= advanced-networking/chapter.sgml
 SRCS+= basics/chapter.sgml
 SRCS+= bibliography/chapter.sgml
