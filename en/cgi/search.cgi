@@ -15,7 +15,7 @@
 # Disclaimer:
 #   This is pretty ugly in places.
 #
-# $FreeBSD: www/en/cgi/search.cgi,v 1.17 2000/10/10 19:40:43 wosch Exp $
+# $FreeBSD: www/en/cgi/search.cgi,v 1.18 2000/10/28 18:20:39 wosch Exp $
 
 
 $server_root = '/usr/local/www';
@@ -242,7 +242,7 @@ sub docdone {
     } else {
         $headline = &htmlescape($headline);
         $headline =~ s/\\"/\"/g;
-        if ($file eq "www") {
+        if ($file eq "www" || $file eq 'pkgdescr') {
             print "<li><a href=\"$headline\">$headline</a>\n";
         } else {
             print "<li><A HREF=\"getmsg.cgi?fetch=${docid}\">$headline</A>\n";
