@@ -1,5 +1,5 @@
 #!/usr/bin/perl -T
-# $FreeBSD: www/en/cgi/query-pr-summary.cgi,v 1.34 2001/10/23 04:28:48 murray Exp $
+# $FreeBSD: www/en/cgi/query-pr-summary.cgi,v 1.35 2001/11/07 19:38:16 fenner Exp $
 
 $html_mode     = 1 if $ENV{'DOCUMENT_ROOT'};
 $self_ref      = $ENV{'SCRIPT_NAME'};
@@ -11,26 +11,6 @@ $project       = "FreeBSD";
 $mail_prefix   = "freebsd-";
 $mail_unass    = "freebsd-bugs";
 $closed_too    = 0;
-
-%statemap = (
-	"open",		"o",
-	"analyzed",	"a",
-	"feedback",	"f",
-	"suspended",	"s",
-	"closed",	"c"
-);
-
-%severitymap = (
-	"critical",	"c",
-	"serious",	"s",
-	"non-critical",	"n"
-);
-
-%prioritymap = (
-	"high",		"h",
-	"medium",	"m",
-	"low",		"l"
-);
 
 require "./cgi-lib.pl";
 require "./cgi-style.pl";
@@ -138,22 +118,27 @@ ${dt}${st}o - open${st_e}
 ${dd}A problem report has been submitted, no sanity checking performed.
 
 ${dt}${st}a - analyzed${st_e}
-${dd}The report has been examined by a team member and evaluated.
+${dd}The problem is understood and a solution is being sought.
 
 ${dt}${st}f - feedback${st_e}
-${dd}The problem has been solved, and the originator has been given a
-${dd_x}patch or a fix has been committed.  The PR remains in this state
-${dd_x}pending a response from the originator.
+${dd}Further work requires additional information from the
+${dd_x}originator or the community - possibly confirmation of
+${dd_x}the effectiveness of a proposed solution.
+
+${dt}${st}p - patched${st_e}
+${dd}A patch has been committed, but some issues (MFC and / or
+${dd_x}confirmation from originator) are still open.
 
 ${dt}${st}s - suspended${st_e}
-${dd}The problem is not being worked on.  This is a prime candidate
+${dd}The problem is not being worked on, due to lack of information
+${dd_x}or resources.  This is a prime candidate
 ${dd_x}for somebody who is looking for a project to do.
 ${dd_x}If the problem cannot be solved at all,
 ${dd_x}it will be closed, rather than suspended.
 
 ${dt}${st}c - closed${st_e}
 ${dd}A problem report is closed when any changes have been integrated,
-${dd_x}documented, and tested.
+${dd_x}documented, and tested -- or when fixing the problem is abandoned.
 ${dl_e}
 EOM
 
@@ -302,19 +287,20 @@ sub printcnt {
     }
 }
 
-sub cat_query {
-    local($cat) = $_[0];
-
-    &printcnt(&gnats_summary("\$cat eq \"$cat\"", $html_mode));
-}
-
 sub cat_summary {
+    &get_categories;
     foreach (keys %status) {
 	s|/\d+||;
 	$cat{$_}++;
     }
-    foreach (sort keys %cat) {
-	&cat_query($_);
+    foreach (@categories) {
+	next unless $cat{$_};	# skip categories with no bugs.
+	print "${h3}Problems in category: $_ ($catdesc{$_})${h3_e}\n";
+	if (/^(\w+)/) {
+	    &printcnt(&gnats_summary("\$cat eq \"$1\"", $html_mode));
+	} else {
+	    print "\n??? weird category $_\n";
+	}
     }
 }
 
@@ -338,18 +324,16 @@ sub resp_summary {
     }
 }
 
-sub state_query {
-    local($state) = @_[0];
-
-    print "${h3}Problems in state: $state${h3_e}\n";
-    $state = $statemap{$state} if ($statemap{$state} ne '');
-    &printcnt(&gnats_summary("\$state eq \"$state\" ", $html_mode));
-}
-
 sub state_summary {
-    foreach (sort keys %statemap) {
+    &get_states;
+    foreach (@states) {
 	next if ($_ eq "closed" && !$input{"closedtoo"});
-	&state_query($_);
+	print "${h3}Problems in state: $_${h3_e}\n";
+	if (/^(\w)/) {
+	    &printcnt(&gnats_summary("\$state eq \"$1\" ", $html_mode));
+	} else {
+	    print "\n??? bad state $state\n";
+	}
     }
 }
 
@@ -365,6 +349,8 @@ sub severity_summary {
 }
 
 sub get_categories {
+    @categories = ();
+
     open(Q, "query-pr --list-categories 2>/dev/null |") ||
 	die "Cannot get categories\n";
 
@@ -372,6 +358,35 @@ sub get_categories {
 	chop;
 	local ($cat, $desc, $responsible, $notify) = split(/:/);
 	push(@categories, $cat);
+	$catdesc{$cat} = $desc;
+    }
+}
+
+sub get_states {
+    @states = ();
+
+    open(Q, "query-pr --list-states 2>/dev/null |") ||
+	die "Cannot get states\n";
+
+    while(<Q>) {
+	chop;
+	local ($state, $type, $desc) = split(/:/);
+	push(@states, $state);
+	$statedesc{$state} = $desc;
+    }
+}
+
+sub get_classes {
+    @classes = ();
+
+    open(Q, "query-pr --list-classes 2>/dev/null |") ||
+	die "Cannot get classes\n";
+
+    while(<Q>) {
+	chop;
+	local ($class, $type, $desc) = split(/:/);
+	push(@classes, $class);
+	$classdesc{$class} = $desc;
     }
 }
 
@@ -498,6 +513,7 @@ together.
 
 &get_categories;
 foreach (sort @categories) {
+    #print "<OPTION VALUE=\"$_\">$_ ($catdesc{$_})</OPTION>\n";
     print "<OPTION>$_</OPTION>\n";
 }
 
@@ -521,23 +537,30 @@ print qq`
 <TD><B>Class</B>:</TD>
 <TD><SELECT NAME="class">
 <OPTION SELECTED VALUE="">Any</OPTION>
-<OPTION>sw-bug</OPTION>
-<OPTION>doc-bug</OPTION>
-<OPTION>change-request</OPTION>
-<OPTION>update</OPTION>
-<OPTION>maintainer-update</OPTION>
-<OPTION>wish</OPTION>
-</SELECT></TD>
+`;
+
+&get_classes;
+foreach (@classes) {
+	#print "<OPTION VALUE=\"$_\">$_ ($classdesc{$_})</OPTION>\n";
+	print "<OPTION>$_</OPTION>\n";
+}
+
+print qq`</SELECT></TD>
 </TR><TR>
 <TD><B>State</B>:</TD>
 <TD><SELECT NAME="state">
 <OPTION SELECTED VALUE="">Any</OPTION>
-<OPTION VALUE="open">Open</OPTION>
-<OPTION VALUE="analyzed">Analyzed</OPTION>
-<OPTION VALUE="feedback">Feedback</OPTION>
-<OPTION VALUE="suspended">Suspended</OPTION>
-<OPTION VALUE="closed">Closed</OPTION>
-</SELECT></TD>
+`;
+
+&get_states;
+foreach (@states) {
+	($us = $_) =~ s/^./\U$&/;
+	print "<OPTION VALUE=\"$_\">";
+	#print "$us ($statedesc{$_})</OPTION>\n";
+	print "$us</OPTION>\n";
+}
+
+print qq`</SELECT></TD>
 <TD><B>Sort by</B>:</TD>
 <TD><SELECT NAME="sort">
 <OPTION SELECTED VALUE="none">No Sort</OPTION>
