@@ -1,5 +1,5 @@
 #!/usr/bin/perl -T
-# $FreeBSD: www/en/cgi/query-pr-summary.cgi,v 1.33 2001/02/19 19:23:19 peter Exp $
+# $FreeBSD: www/en/cgi/query-pr-summary.cgi,v 1.34 2001/10/23 04:28:48 murray Exp $
 
 $html_mode     = 1 if $ENV{'DOCUMENT_ROOT'};
 $self_ref      = $ENV{'SCRIPT_NAME'};
@@ -209,22 +209,30 @@ sub trailer_info {
 
 &header_info;
 
-#Usage: query-pr [-FhiPqVx] [-C confidential] [-c category] [-d directory]
+#Usage: query-pr [-FGhiPRqVx] [-C confidential] [-c category] [-d directory]
 #       [-e severity] [-m mtext] [-O originator] [-o outfile] [-p priority]
 #       [-L class] [-r responsible] [-S submitter] [-s state] [-t text]
-#       [--full] [--help] [--sql] [--print-path] [--summary] [--version]
-#       [--skip-closed] [--category=category] [--confidential=yes|no]
-#       [--directory=directory] [--output=outfile] [--originator=name]
-#       [--priority=level] [--class=class] [--responsible=person]
+#       [-b date] [-a date] [-B date] [-M date] [-z date] [-Z date]
+#       [-y synopsis] [-A release] [--full] [--help] [--print-path] [--version]
+#       [--summary] [--sql] [--skip-closed] [--category=category]
+#       [--confidential=yes|no] [--directory=directory] [--output=outfile]
+#       [--originator=name] [--priority=level] [--class=class]
+#       [--responsible=person] [--release=release] [--restricted]
+#       [--quarter=quarter] [--keywords=regexp]
+#       [--required-before=date] [--required-after=date]
+#       [--arrived-before=date] [--arrived-after=date]
+#       [--modified-before=date] [--modified-after=date]
+#       [--closed-before=date] [--closed-after=date]
 #       [--severity=severity] [--state=state] [--submitter=submitter]
-#       [--list-categories] [--list-responsible] [--list-submitters]
-#       [--text=text] [--multitext=mtext] [PR] [PR]...
+#       [--list-categories] [--list-classes] [--list-responsible]
+#       [--list-states] [--list-submitters] [--list-config]
+#       [--synopsis=synopsis] [--text=text] [--multitext=mtext] [PR] [PR]...
 
 $query_args .= " --skip-closed" unless $closed_too;
 
 # Only read the appropriate PR's.
 foreach ("category", "originator", "priority", "class", "responsible",
-	"severity", "state", "submitter", "text", "multitext") {
+	"release", "severity", "state", "submitter", "text", "multitext") {
 	if ($input{$_} && $input{$_} ne "summary") {
 		$d = $input{$_};
 		$d =~ s/^"(.*)"$/$&/;
@@ -455,7 +463,7 @@ sub gnats_summary {
 	$syn = &html_fixline($syn) if $htmlmode;
 
 	if ($htmlmode) {
-	    $title = '<a href="' . $query_pr_ref . '?pr='. $number . '">' .
+	    $title = '<a href="' . $query_pr_ref . '?pr='. $cat . '/' . $number . '">' .
 		     $_ . '</a> ';
 	} else {
 	    $title = $_;
@@ -551,6 +559,15 @@ print qq`
 </TR><TR>
 <TD><B>Closed reports too</B>:</TD>
 <TD><INPUT NAME="closedtoo" TYPE=CHECKBOX></TD>
+<TD><B>Release</B>:</TD>
+<TD><SELECT NAME="release">
+<OPTION SELECTED VALUE="">Any</OPTION>
+<OPTION VALUE="^FreeBSD [234]">Pre-5.x</OPTION>
+<OPTION VALUE="^FreeBSD 4">4.x only</OPTION>
+<OPTION VALUE="^FreeBSD 5">5.x only</OPTION>
+<OPTION VALUE="^FreeBSD 3">3.x only</OPTION>
+<OPTION VALUE="^FreeBSD 2">2.x only</OPTION>
+</SELECT>
 </TR>
 </TABLE>
 <INPUT TYPE="SUBMIT" VALUE=" Query PR's ">
