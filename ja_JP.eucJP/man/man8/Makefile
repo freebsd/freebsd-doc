@@ -152,25 +152,6 @@ MAN8 =	IPXrouted.8\
 	nextboot.8\
 	nfsd.8\
 	nfsiod.8\
-	ng_UI.8\
-	ng_async.8\
-	ng_bpf.8\
-	ng_cisco.8\
-	ng_echo.8\
-	ng_ether.8\
-	ng_frame_relay.8\
-	ng_hole.8\
-	ng_iface.8\
-	ng_ksocket.8\
-	ng_lmi.8\
-	ng_ppp.8\
-	ng_pppoe.8\
-	ng_pptpgre.8\
-	ng_rfc1490.8\
-	ng_socket.8\
-	ng_tee.8\
-	ng_tty.8\
-	ng_vjc.8\
 	ngctl.8\
 	nghook.8\
 	nologin.8\
@@ -307,25 +288,41 @@ MAN8 =	IPXrouted.8\
 	zdump.8\
 	zic.8
 
-MLINKS+= strfile.8 unstr.8
-MLINKS+=	makewhatis.local.8 catman.local.8
-MLINKS+=	bootpd.8 bootpgw.8
+MLINKS+=strfile.8 unstr.8
+MLINKS+=makewhatis.local.8 catman.local.8
+MLINKS+=bootpd.8 bootpgw.8
 MLINKS+=dump.8 rdump.8
-MLINKS+=	mount_std.8 mount_devfs.8 mount_std.8 mount_fdesc.8 \
-        mount_std.8 mount_kernfs.8 mount_std.8 mount_procfs.8
-MLINKS+=	newfs.8 mount_mfs.8 newfs.8 mfs.8 newfs.8 tmpfs.8
-MLINKS+=	reboot.8 halt.8 reboot.8 fastboot.8 reboot.8 fasthalt.8
-MLINKS+= boot_i386.8 boot.8
+MLINKS+=mount_std.8 mount_devfs.8
+MLINKS+=mount_std.8 mount_fdesc.8
+MLINKS+=mount_std.8 mount_kernfs.8
+MLINKS+=mount_std.8 mount_procfs.8
+MLINKS+=mount_std.8 mount_linprocfs.8
+MLINKS+=newfs.8 mount_mfs.8
+MLINKS+=newfs.8 mfs.8
+MLINKS+=newfs.8 tmpfs.8
+MLINKS+=reboot.8 halt.8
+MLINKS+=reboot.8 fastboot.8
+MLINKS+=reboot.8 fasthalt.8
+MLINKS+=boot_i386.8 boot.8
 MLINKS+=restore.8 rrestore.8
-MLINKS+=	slattach.8 slip.8
-MLINKS+= locate.updatedb.8 updatedb.8
-MLINKS+=		apm.8 zzz.8
-MLINKS+= apm.8 apmconf.8
-MLINKS+=	pstat.8 swapinfo.8
-MLINKS+=	quotaon.8 quotaoff.8
-MLINKS+=	vnconfig.8 swapfile.8
-MLINKS+= inetd.8 inetd.conf.5
-MLINKS+= pam.8 pam.conf.5 pam.8 pam.d.5
-MLINKS+= rtsold.8 rtsol.8
+MLINKS+=slattach.8 slip.8
+MLINKS+=locate.updatedb.8 updatedb.8
+MLINKS+=apm.8 zzz.8
+MLINKS+=apm.8 apmconf.8
+MLINKS+=pstat.8 swapinfo.8
+MLINKS+=quotaon.8 quotaoff.8
+MLINKS+=vnconfig.8 swapfile.8
+MLINKS+=inetd.8 inetd.conf.5
+MLINKS+=pam.8 pam.conf.5
+MLINKS+=pam.8 pam.d.5
+MLINKS+=rtsold.8 rtsol.8
+MLINKS+=rc.8 rc.atm.8
+MLINKS+=rc.8 rc.firewall.8
+MLINKS+=rc.8 rc.i386.8
+MLINKS+=rc.8 rc.local.8
+MLINKS+=rc.8 rc.network.8
+MLINKS+=rc.8 rc.pccard.8
+MLINKS+=rc.8 rc.serial.8
+MLINKS+=rc.8 rc.shutdown.8
 
 .include "bsd.prog.mk"
