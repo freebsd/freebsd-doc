@@ -1,4 +1,4 @@
-<!-- $Id: ports.inc,v 1.36 1999-04-17 20:28:54 wosch Exp $ -->
+<!-- $Id: ports.inc,v 1.37 1999-04-25 16:56:53 wosch Exp $ -->
 <p>The FreeBSD Ports and Packages Collection offers a simple way for
 users and administrators to install applications.  The ports
 collection has been <a
@@ -34,7 +34,7 @@ well as filenames.</p>
 href="../handbook/ports.html">The ports collection</a>.  For
 information about creating new ports, see <a
 href="../handbook/porting.html">Porting applications</a>.  Both are
-part of the <a href="../handbook">FreeBSD Handbook</a>.</p>
+part of the <a href="../handbook/">FreeBSD Handbook</a>.</p>
 
 <p>The ports listed on these web pages are continually being updated.
 Consequently, you may need to update a few files on your FreeBSD system 
