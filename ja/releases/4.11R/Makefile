@@ -1,4 +1,4 @@
-# $FreeBSD: www/ja/releases/4.11R/Makefile,v 1.2 2005/02/03 04:21:33 rushani Exp $
+# $FreeBSD: www/ja/releases/4.11R/Makefile,v 1.3 2005/02/03 06:37:33 hrs Exp $
 # Original revision: 1.3
 
 .if exists(../Makefile.conf)
@@ -22,8 +22,8 @@ DATA+=	errata.html
 #DATA+=	installation-alpha.html
 #DATA+=	installation-i386.html
 #DATA+=	readme.html
-#DATA+=	relnotes-alpha.html
-#DATA+=	relnotes-i386.html
+DATA+=	relnotes-alpha.html
+DATA+=	relnotes-i386.html
 
 ### Revision checking
 REVCHECK=	YES
