@@ -1,5 +1,5 @@
 # bsd.web.mk
-# $Id: web.site.mk,v 1.15 1998-09-13 21:43:20 wosch Exp $
+# $Id: web.site.mk,v 1.16 1999-03-27 15:46:31 nik Exp $
 
 #
 # Build and install a web site.
@@ -156,9 +156,11 @@ realinstall: ${COOKIE} ${GENDOCS} ${DATA} ${LOCAL} ${CGI} _PROGSUBDIR
 realinstall2:
 .if defined(DOCSUBDIR) && !empty(DOCSUBDIR)
 	for entry in ${DOCSUBDIR}; do \
-		(cd ${DOCINSTALLDIR}/$$entry; \
-		if test -f $$entry.html; then tar czf $$entry-html.tar.gz *.html; fi; \
-		if test -f $$entry.html; then ln -fs $${entry}.html index.html;fi ) \
+		if [ $$entry != "handbook" ]; then \
+			(cd ${DOCINSTALLDIR}/$$entry; \
+			if test -f $$entry.html; then tar czf $$entry-html.tar.gz *.html; fi; \
+			if test -f $$entry.html; then ln -fs $${entry}.html index.html;fi ) \
+		fi; \
 	done
 .endif
 
@@ -185,7 +187,11 @@ _PROGSUBDIR: .USE
 	@for entry in ${DOCSUBDIR}; do \
 		(${ECHODIR} "===> ${DIRPRFX}$$entry"; \
 		cd ${.CURDIR}/$${entry}; \
-		${MAKE} ${.TARGET:S/realinstall/install/:S/.depend/depend/} DIRPRFX=${DIRPRFX}$$entry/ ${PARAMS}); \
+		if [ $$entry = "handbook" ]; then \
+			${MAKE} ${.TARGET:S/realinstall/install/:S/.depend/depend/} DIRPRFX=${DIRPRFX}$$entry/ ${PARAMS} FORMATS="txt html html-split ps"; \
+		else \
+			${MAKE} ${.TARGET:S/realinstall/install/:S/.depend/depend/} DIRPRFX=${DIRPRFX}$$entry/ ${PARAMS}; \
+		fi); \
 	done
 .endif
 
