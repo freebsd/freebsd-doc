@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/news/status/Makefile,v 1.6 2001/09/18 18:46:30 chris Exp $
+# $FreeBSD: www/en/news/status/Makefile,v 1.7 2001/10/17 02:33:25 chris Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -18,7 +18,7 @@ DATA+=	report-august-2001.html
 # Install a sample <project> entry.
 DATA+=	report-sample.xml
 
-CLEANFILES+=	${DATA}
+CLEANFILES+=	${DATA:M*.html}
 
 .xml.html:	report.xsl includes.xsl
 	xsltproc -nonet -o ${.TARGET} report.xsl ${.IMPSRC}
