@@ -9,6 +9,7 @@
 
 DATA=	ss1.jpg
 DATA+=	ss2.png
+DATA+=	ss3.png
 DATA+=	gnome.jpg
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
