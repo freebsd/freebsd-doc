@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.5 1998-08-03 12:03:41 wosch Exp $
+# $Id: Makefile,v 1.6 1998-08-03 16:03:32 wosch Exp $
 
 DOCS=	photos.sgml	
 DOCS+=	internal.sgml	
@@ -6,7 +6,6 @@ DOCS+=	homepage.sgml
 DOCS+= 	about.sgml
 DOCS+= 	machines.sgml
 DOCS+= 	mirror.sgml
-DOCS+= 	machines.sgml
 DOCS+=	resignation.sgml
 
 homepage.inc:
