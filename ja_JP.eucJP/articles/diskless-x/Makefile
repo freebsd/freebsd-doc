@@ -1,5 +1,5 @@
 # $FreeBSD$
-# Original revision: 1.5
+# Original revision: 1.7
 
 DOC?= article
 
