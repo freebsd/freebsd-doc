@@ -10,7 +10,7 @@ FORMATS?= html
 INSTALL_COMPRESSED?= gz
 INSTALL_ONLY_COMPRESSED?=
 
-JADEFLAGS+=	-V %generate-article-toc%
+WITH_ARTICLE_TOC=YES
 
 # SGML content
 SRCS=  article.sgml branches.ascii
