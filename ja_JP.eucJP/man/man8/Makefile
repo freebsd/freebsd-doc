@@ -358,5 +358,7 @@ MLINKS+=swapon.8 swapctl.8
 MLINKS+=yp.8 NIS.8
 MLINKS+=yp.8 YP.8
 MLINKS+=yp.8 nis.8
+MLINKS+=fsck_ffs.8 fsck_ufs.8
+MLINKS+=fsck_ffs.8 fsck_4.2bsd.8
 
 .include "bsd.prog.mk"

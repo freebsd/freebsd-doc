@@ -218,5 +218,7 @@ MLINKS+=sched_get_priority_max.2 sched_get_priority_min.2 \
         sched_get_priority_max.2 sched_rr_get_interval.2
 MLINKS+=sched_setparam.2 sched_getparam.2
 MLINKS+=sched_setscheduler.2 sched_getscheduler.2
+MLINKS+=getfh.2 lgetfh.2
+MLINKS+=mount.2 nmount.2
 
 .include "bsd.prog.mk"

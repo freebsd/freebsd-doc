@@ -484,5 +484,7 @@ MLINKS+=ssh.1 slogin.1
 MLINKS+=bzip2.1 bunzip2.1
 MLINKS+=bzip2.1 bzcat.1
 MLINKS+=unifdef.1 unifdefall.1
+MLINKS+=tar.1 gtar.1
+MLINKS+=pkill.1 pgrep.1
 
 .include "bsd.prog.mk"
