@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
 
-<!-- $FreeBSD: www/ja/index.xsl,v 1.24 2003/03/22 23:35:31 hrs Exp $ -->
-<!-- Original revision: 1.56 -->
+<!-- $FreeBSD: www/ja/index.xsl,v 1.25 2003/04/02 06:26:38 hrs Exp $ -->
+<!-- Original revision: 1.60 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   
@@ -10,7 +10,7 @@
 
   <xsl:variable name="base" select="'.'"/>
   <xsl:variable name="enbase" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/ja/index.xsl,v 1.24 2003/03/22 23:35:31 hrs Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/ja/index.xsl,v 1.25 2003/04/02 06:26:38 hrs Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <xsl:output type="html" encoding="EUC-JP"
@@ -73,8 +73,8 @@
 		  <option value="http://www3.br.FreeBSD.org/">ブラジル/3</option>
 		  <option value="http://www.bg.FreeBSD.org/">ブルガリア</option>
 		  <option value="http://www.ca.FreeBSD.org/">カナダ</option>
-		  <!--
 		  <option value="http://www2.ca.FreeBSD.org/">カナダ/2</option>
+		  <!--
 		  <option value="http://www3.ca.FreeBSD.org/">カナダ/3</option>
 		  -->
 		  <option value="http://www.cn.FreeBSD.org/">中国</option>
