@@ -66,6 +66,7 @@ MAN1 =	a2p.1\
 	dnsquery.1\
 	domainname.1\
 	doscmd.1\
+	dtmfdecode.1\
 	du.1\
 	echo.1\
 	ed.1\
@@ -93,6 +94,7 @@ MAN1 =	a2p.1\
 	fsplit.1\
 	fstat.1\
 	ftp.1\
+	g711conv.1\
 	gcc.1\
 	gcore.1\
 	gctags.1\
@@ -231,6 +233,7 @@ MAN1 =	a2p.1\
 	pkg_create.1\
 	pkg_delete.1\
 	pkg_info.1\
+	pkg_version.1\
 	pr.1\
 	printenv.1\
 	printf.1\
