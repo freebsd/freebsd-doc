@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/gnome/Makefile,v 1.9 2002/02/11 16:54:52 sobomax Exp $
+# $FreeBSD: www/en/gnome/Makefile,v 1.10 2002/05/21 09:15:41 sobomax Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -9,7 +9,6 @@
 
 SUBDIR=		docs
 SUBDIR+=	images
-SUBDIR+=	patches
 
 DOCS=	screenshots.sgml
 DOCS+=	contact.sgml
