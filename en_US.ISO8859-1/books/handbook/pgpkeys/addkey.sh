@@ -76,7 +76,7 @@ echo "following text to chapter.sgml in the appropriate position in"
 echo "the developer section (unless this is a role key or you are a"
 echo "core member.)  Remember to keep the list sorted by last name!"
 echo
-echo "    <sect2>"
+echo "    <sect2 id=\"pgpkey-${me}\">"
 echo "      <title>&a.${me};</title>"
 echo "      &pgpkey.${me};"
 echo "    </sect2>"
