@@ -26,7 +26,7 @@
 # pds.cgi - FreeBSD Ports download sources cgi script
 #	    print a list of source files for a port
 #
-# $Id: pds.cgi,v 1.3 1998-05-15 09:24:20 wosch Exp $
+# $Id: pds.cgi,v 1.4 1999-01-13 04:00:26 fenner Exp $
 
 $hsty_base = '';
 $hsty_email = 'ports@freebsd.org';
@@ -53,23 +53,18 @@ sub footer {
 print &short_html_header("FreeBSD Ports download script");
 print "<p>\n";
 if ($file !~ m%^ports/[^/]+/[^/]+$%) {
-    print qq{wrong module name: "$file"\n} . &footer; 
+    print qq{Invalid module name: "$file"\n} . &footer; 
     exit;
 }
 
-if (! -f "$cvsroot/$file2,v") {
-    print qq{file "$file2" does no exists.\n} . &footer;
-    exit;
-}
-
-if ($file =~ /\.\./) {
-    print qq{$file2 does not exist\n} . &footer;
+if (! -f "$cvsroot/$file2,v" || $file =~ /\.\./) {
+    print qq{File "$file2" does not exist.\n} . &footer;
     exit;
 }
 
 print "<h2>Sources for $file</h2>\n\n";
 
-open(MAKE, "$co -q -p $cvsroot/$file2 | $make -I /home/fenner/mk -f - bill-fetch |") || do {
+open(MAKE, "$co -q -p $cvsroot/$file2 | $make -m /home/fenner/mk -f - bill-fetch |") || do {
     print "Sorry, cannot run make\n" . &footer; 
     exit;
 };
@@ -81,7 +76,7 @@ while(<MAKE>) {
 close MAKE;
 
 if ($#sources < 0) {
-    print "Sorry, did not found the sources for $file\n" . &footer;
+    print "Sorry, did not find the sources for $file\n" . &footer;
     exit;
 }
 
