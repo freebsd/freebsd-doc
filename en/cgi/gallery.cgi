@@ -4,7 +4,7 @@
 # 
 # John Fieber <jfieber@indiana.edu>
 # Modified for new gallery.db format by Nate Johnson <nsj@FreeBSD.org>
-# $FreeBSD: www/en/cgi/gallery.cgi,v 1.19 2001/10/24 17:29:39 phantom Exp $
+# $FreeBSD: www/en/cgi/gallery.cgi,v 1.20 2002/01/08 13:29:12 phantom Exp $
 ##################################################################
 
 $curator = "gallery\@FreeBSD.org";
@@ -13,7 +13,7 @@ $subject = "Another gallery submission...";
 require 'cgi-lib.pl';
 &ReadParse;
 
-$hsty_date = '$FreeBSD: www/en/cgi/gallery.cgi,v 1.19 2001/10/24 17:29:39 phantom Exp $';
+$hsty_date = '$FreeBSD: www/en/cgi/gallery.cgi,v 1.20 2002/01/08 13:29:12 phantom Exp $';
 # Replace Id string with commit date and time.
 $hsty_date =~ s%\$FreeBSD. .* (.* .*) .* .* \$%Last modified: $1%;
 
@@ -40,43 +40,20 @@ if ($in{'return'} ne "") {
 
 # This is the form where the user enters the information.
 $forma = &html_header("Gallery Submission") .
-"<form action=\"gallery.cgi\" method=\"POST\">
-<input type=hidden name=action value=\"preview\">
-<input type=hidden name=return value=\"$in{'return'}\">
-<table>
+"<table>
 <tr>
-<td right>Organization:</td>
-<td><input type=text name=organization size=\"50\"></td>
-</tr>
-<tr>
-<td right>Description:</td>
-<td><input type=text name=description size=\"50\"></td>
-</tr>
-<tr>
-<td right>URL:</td>
-<td><input type=text name=url size=\"50\"></td>
-</tr>
-<tr>
-<td right>Category:</td>
-<td>
-<input type=radio name=category value=\"Commercial\" checked> Commercial<br>
-<input type=radio name=category value=\"NonProfit\"> Non-Profit<br>
-<input type=radio name=category value=\"Personal\"> Personal
+<td right><b>Because of the hard maintaince and low benefit the gallery
+  pages bring to both the Project and the listed websites, it has been
+  decided to spend the time working on other stuff related to FreeBSD
+  than these pages. The gallery will be removed in two weeks, no
+  further submissions will be processed.</b>
 </td>
 </tr>
 <tr>
-<td right>Email Contact:</td>
-<td><input type=text name=\"contact\" size=\"50\"></td>
-</tr>
-<tr><td></td>
-<td right><b>NOTE: all non-english submissions are going to be rejected.
-Please use english language only<b/>.</td>
-</tr>
-<tr>
-<td colspan=\"2\" right><input type=submit value=\" Preview Entry \"></td>
+<td right><b>Note:</b> This has no influence on the commercial gallery!
+</td>
 </tr>
 </table>
-</form>
 <p>$return</p>
 " . &html_footer();
 

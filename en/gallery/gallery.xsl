@@ -6,7 +6,7 @@
 
   <xsl:variable name="base" select="'..'"/>
   <xsl:variable name="title" select="'The FreeBSD Gallery'"/>  
-  <xsl:variable name="date" select="'$FreeBSD: www/en/gallery/gallery.xsl,v 1.1 2001/08/06 07:01:38 nik Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/gallery/gallery.xsl,v 1.2 2003/10/23 17:13:43 kensmith Exp $'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"/>
 
@@ -16,11 +16,15 @@
       <body xsl:use-attribute-sets="att.body">
 	<xsl:copy-of select="$header2"/>
 
-	<p>FreeBSD is powering innovative Internet applications all over the
-	  world.  This gallery is a showcase of <xsl:value-of
-	  select="count(//entry)"/> organizations and individuals who have 
-	  put FreeBSD to work for them.  Browse and find out more about 
-	  what FreeBSD can do for <b>you</b>.</p>
+	<p><b>Because of the hard maintaince and low benefit the gallery pages
+	  bring to both the Project and the listed websites, it has been
+	  decided to spend the time working on other stuff related to FreeBSD than
+	  these pages.  The gallery will be removed in two weeks, no further
+	  submissions will be processed.</b></p>
+
+	<p><b>Note:</b> This has no influence on the <a
+	  href="../commercial/">Commercial Gallery</a>!
+	</p>
 
 	<ul>
 	  <li><a href="cgallery.html"><xsl:value-of 
@@ -33,9 +37,6 @@
               select="count(//entry[@type='personal'])"/> personal 
 	      sites</a></li>
 	</ul>
-
-	<p>To have your site added to these lists, simply fill out
-	  <a href="http://www.FreeBSD.org/cgi/gallery.cgi">this form</a>.</p>
 
 	<table width="100%" border="0">
 	  <tr>
