@@ -1,5 +1,5 @@
 #
-# $FreeBSD: doc/share/mk/doc.project.mk,v 1.8 2001/03/13 09:54:34 nik Exp $
+# $FreeBSD$
 #
 # This include file <doc.project.mk> is the FreeBSD Documentation Project 
 # co-ordination make file.
@@ -68,9 +68,18 @@ LOCALBASE?=	/usr/local
 PREFIX?=	${LOCALBASE}
 PRI_LANG?=	en_US.ISO8859-1
 
+CP?=		/bin/cp
+LN?=		/bin/ln
+MKDIR?=		/bin/mkdir -p
+RM?=		/bin/rm
+MV?=		/bin/mv
+
 # Image processing (contains code used by the doc.<format>.mk files, so must
 # be listed first).
 .include "doc.images.mk"
+
+# Ownership information.
+.include "doc.install.mk"
 
 # Format-specific configuration
 .if defined(DOC)
@@ -82,7 +91,5 @@ PRI_LANG?=	en_US.ISO8859-1
 .endif
 .endif
 
-# Subdirectory glue and ownership information.
+# Subdirectory glue.
 .include "doc.subdir.mk"
-.include "doc.install.mk"
-

@@ -1,4 +1,4 @@
-# $FreeBSD: doc/Makefile,v 1.20 2000/09/21 20:48:16 ben Exp $
+# $FreeBSD$
 #
 # The user can override the default list of languages to build and install
 # with the DOC_LANG variable.
@@ -17,26 +17,32 @@ SUBDIR+=	zh_TW.Big5
 
 DOC_PREFIX?=   ${.CURDIR}
 
+SUP?=		${PREFIX}/bin/cvsup
+SUPFLAGS?=	-g -L 2 -P -
 .if defined(SUPHOST)
 SUPFLAGS+=	-h ${SUPHOST}
 .endif
+
+CVS?=		/usr/bin/cvs
+CVSFLAGS?=	-q
+
 update:
 .if defined(SUP_UPDATE)
 .if !defined(DOCSUPFILE)
-	@echo "Error: Please define DOCSUPFILE before doing make update."
+	@${ECHO_CMD} "Error: Please define DOCSUPFILE before doing make update."
 	@exit 1
 .endif
-	@echo "--------------------------------------------------------------"
-	@echo ">>> Running ${SUP}"
-	@echo "--------------------------------------------------------------"
+	@${ECHODIR} "--------------------------------------------------------------"
+	@${ECHODIR} ">>> Running ${SUP}"
+	@${ECHODIR} "--------------------------------------------------------------"
 	@${SUP} ${SUPFLAGS} ${DOCSUPFILE}
 .elif defined(CVS_UPDATE)
-	@echo "--------------------------------------------------------------"
-	@echo ">>> Updating ${.CURDIR} from cvs repository" ${CVSROOT}
-	@echo "--------------------------------------------------------------"
-	cd ${.CURDIR}; cvs -q update -P -d
+	@${ECHODIR} "--------------------------------------------------------------"
+	@${ECHODIR} ">>> Updating ${.CURDIR} from cvs repository" ${CVSROOT}
+	@${ECHODIR} "--------------------------------------------------------------"
+	cd ${.CURDIR}; ${CVS} ${CVSFLAGS} update -P -d
 .else
-	@echo "Error: Please define either SUP_UPDATE or CVS_UPDATE first."
+	@${ECHO_CMD} "Error: Please define either SUP_UPDATE or CVS_UPDATE first."
 .endif
 
-.include "${DOC_PREFIX}/share/mk/doc.subdir.mk"
+.include "${DOC_PREFIX}/share/mk/doc.project.mk"
