@@ -8,7 +8,7 @@
 #  GNU General Public License Version 2.  
 #     (http://www.gnu.ai.mit.edu/copyleft/gpl.html)
 #
-# $FreeBSD: www/en/cgi/dosendpr.cgi,v 1.18 2004/02/16 14:41:30 ceri Exp $
+# $FreeBSD: www/en/cgi/dosendpr.cgi,v 1.19 2004/02/16 16:49:25 ceri Exp $
 
 require "html.pl";
 
@@ -190,7 +190,6 @@ $pr .= "X-Send-Pr-Version: www-2.2\n\n" .
 # remove any carrage returns that appear in the report.
 $pr =~ s/\r//g;
 
-#print "<PRE>$submitprog\n\n$pr\n</PRE>";
 if (open (SUBMIT, "|$submitprog")){
 
     print SUBMIT $pr;
