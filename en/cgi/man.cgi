@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp 
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.41 2001-04-25 18:32:24 wosch Exp $
+# $Id: man.cgi,v 1.42 2001-07-31 20:19:14 wosch Exp $
 
 #use Data::Dumper;
 #use Carp;
@@ -199,7 +199,8 @@ $manPathDefault = 'FreeBSD 4.3-RELEASE';
      'Red Hat Linux/i386 6.2', "$manLocalDir/RedHat-6.2-i386",
      'Red Hat Linux/i386 7.0', "$manLocalDir/RedHat-7.0-i386",
 
-     'SuSE Linux/i386 7.1',   "$manLocalDir/Suse-7.1-i386",
+     'SuSE Linux/i386 4.3',   "$manLocalDir/SuSE-4.3-i386",
+     'SuSE Linux/i386 7.1',   "$manLocalDir/SuSE-7.1-i386",
 
      'SunOS 5.8',	      "$manLocalDir/SunOS-5.8",
      'SunOS 5.7',	      "$manLocalDir/SunOS-5.7",
@@ -211,7 +212,9 @@ $manPathDefault = 'FreeBSD 4.3-RELEASE';
      'XFree86 3.3',	      "$manLocalDir/XFree86-3.3",
      'XFree86 3.3.6',	      "$manLocalDir/XFree86-3.3.6",
      'XFree86 4.0',	      "$manLocalDir/XFree86-4.0",
+     'XFree86 4.0.1',	      "$manLocalDir/XFree86-4.0.1",
      'XFree86 4.0.2',	      "$manLocalDir/XFree86-4.0.2",
+     'XFree86 4.1.0',	      "$manLocalDir/XFree86-4.1.0",
 
      'ULTRIX 4.2',	      "$manLocalDir/ULTRIX-4.2",
      'Plan 9',		      "$manLocalDir/plan9",
@@ -245,8 +248,8 @@ while (($key,$val) = each %manPath) {
      'openbsd', 'OpenBSD 2.8',
      'v7', 'Unix Seventh Edition', 
      'v7man', 'Unix Seventh Edition', 
-     'x11', 'XFree86 4.0.2',
-     'xfree86', 'XFree86 4.0.2',
+     'x11', 'XFree86 4.1.0',
+     'xfree86', 'XFree86 4.1.0',
      'ultrix', 'ULTRIX 4.2',
      'solaris', 'SunOS 5.7',
      'sunos5', 'SunOS 5.8',
@@ -848,7 +851,7 @@ ETX
 }
 
 sub copyright {
-    $id = '$Id: man.cgi,v 1.41 2001-04-25 18:32:24 wosch Exp $';
+    $id = '$Id: man.cgi,v 1.42 2001-07-31 20:19:14 wosch Exp $';
 
     return qq{\
 <PRE>
