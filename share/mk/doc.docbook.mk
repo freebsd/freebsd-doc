@@ -1,5 +1,5 @@
 #
-# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.31 2001/03/27 16:15:07 nik Exp $
+# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.32 2001/06/16 14:11:52 nik Exp $
 #
 # This include file <doc.docbook.mk> handles building and installing of
 # DocBook documentation in the FreeBSD Documentation Project.
@@ -46,6 +46,9 @@
 #                       of dependencies for source files, and collateindex.pl
 #                       will be run to generate index.sgml.
 #
+#	CSS_SHEET	Full path to a CSS stylesheet suitable for DocBook.
+#			Default is ${DOC_PREFIX}/share/misc/docbook.css
+#
 # Documents should use the += format to access these.
 #
 
@@ -81,6 +84,8 @@ IMAGES_LIB?=
 JADEOPTS=	${JADEFLAGS} -c ${LANGUAGECATALOG} -c ${FREEBSDCATALOG} -c ${DSSSLCATALOG} -c ${DOCBOOKCATALOG} -c ${JADECATALOG} ${EXTRA_CATALOGS:S/^/-c /g}
 
 KNOWN_FORMATS=	html html.tar html-split html-split.tar txt rtf ps pdf tex dvi tar pdb
+
+CSS_SHEET?=	${DOC_PREFIX}/share/misc/docbook.css
 
 # ------------------------------------------------------------------------
 #
@@ -218,13 +223,13 @@ LOCAL_IMAGES_LIB += ${LOCAL_IMAGES_LIB_DIR}/${_curimage}
 
 all: ${_docs}
 
-index.html HTML.manifest: ${SRCS} ${LOCAL_IMAGES_LIB} ${IMAGES_PNG} ${INDEX_SGML} ${HTML_SPLIT_INDEX}
+index.html HTML.manifest: ${SRCS} ${LOCAL_IMAGES_LIB} ${IMAGES_PNG} ${INDEX_SGML} ${HTML_SPLIT_INDEX} docbook.css
 	${JADE} -V html-manifest -ioutput.html -ioutput.html.images ${JADEOPTS} -d ${DSLHTML} -t sgml ${MASTERDOC}
 .if !defined(NO_TIDY)
 	-tidy -i -m -f /dev/null ${TIDYFLAGS} `xargs < HTML.manifest`
 .endif
 
-${DOC}.html: ${SRCS} ${LOCAL_IMAGES_LIB} ${IMAGES_PNG} ${INDEX_SGML} ${HTML_INDEX}
+${DOC}.html: ${SRCS} ${LOCAL_IMAGES_LIB} ${IMAGES_PNG} ${INDEX_SGML} ${HTML_INDEX} docbook.css
 	${JADE} -ioutput.html -ioutput.html.images -V nochunks ${JADEOPTS} -d ${DSLHTML} -t sgml ${MASTERDOC} > ${.TARGET} || (rm -f ${.TARGET} && false)
 .if !defined(NO_TIDY)
 	-tidy -i -m -f /dev/null ${TIDYFLAGS} ${.TARGET}
@@ -238,11 +243,13 @@ ${DOC}.html-split.tar: HTML.manifest
 	tar cf ${.TARGET} `xargs < HTML.manifest`
 	tar uf ${.TARGET} ${IMAGES_LIB}
 	tar uf ${.TARGET} ${IMAGES_PNG}
+	tar uf ${.TARGET} docbook.css
 
 ${DOC}.html.tar: ${DOC}.html
 	tar cf ${.TARGET} ${DOC}.html
 	tar uf ${.TARGET} ${LOCAL_IMAGES_LIB}
 	tar uf ${.TARGET} ${IMAGES_PNG}
+	tar uf ${.TARGET} docbook.css
 
 ${DOC}.txt: ${DOC}.html-text
 	links -dump ${.ALLSRC} > ${.TARGET}
@@ -410,6 +417,7 @@ _cf=${_curformat}
 install-${_cf}: index.html
 	@[ -d ${DESTDIR} ] || mkdir -p ${DESTDIR}
 	${INSTALL_DOCS} `xargs < HTML.manifest` ${DESTDIR}
+	${INSTALL_DOCS} docbook.css ${DESTDIR}
 	@if [ -f ln*.html ]; then \
 		${INSTALL_DOCS} ln*.html ${DESTDIR}; \
 	fi
@@ -440,6 +448,7 @@ install-${_cf}.tar.${_compressext}: ${DOC}.${_cf}.tar.${_compressext}
 install-${_cf}: ${DOC}.${_cf}
 	@[ -d ${DESTDIR} ] || mkdir -p ${DESTDIR}
 	${INSTALL_DOCS} ${.ALLSRC} ${DESTDIR}
+	${INSTALL_DOCS} docbook.css ${DESTDIR}
 .for _curimage in ${IMAGES_LIB}
 	@[ -d ${DESTDIR}/${LOCAL_IMAGES_LIB_DIR}/${_curimage:H} ] || mkdir -p ${DESTDIR}/${LOCAL_IMAGES_LIB_DIR}/${_curimage:H}
 	${INSTALL_DOCS} ${LOCAL_IMAGES_LIB_DIR}/${_curimage} ${DESTDIR}/${LOCAL_IMAGES_LIB_DIR}/${_curimage:H}
@@ -499,11 +508,13 @@ package-${_curformat}: install-${_curformat}
 	@cp HTML.manifest PLIST
 	@for images_png in ${IMAGES_PNG}; do \
 		echo $$images_png >> PLIST; \
+		echo docbook.css >> PLIST; \
 	done
 .elif ${_cf} == "html"
 	@echo ${DOC}.${_curformat} > PLIST
 	@for images_png in ${IMAGES_PNG}; do \
 		echo $$images_png >> PLIST; \
+		echo docbook.css >> PLIST; \
 	done
 .else
 	@echo ${DOC}.${_curformat} > PLIST
@@ -515,3 +526,6 @@ package-${_curformat}: install-${_curformat}
 		-d -"FDP ${.CURDIR:T} ${_curformat} package" -f PLIST \
 		-p ${DESTDIR} ${PACKAGES}/${.CURDIR:T}.${LANGCODE}.${_curformat}.tgz
 .endfor
+
+docbook.css:
+	cp ${CSS_SHEET} ${.CURDIR}/docbook.css
