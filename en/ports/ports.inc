@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/ports/ports.inc,v 1.47 2000/03/30 01:25:41 asami Exp $ -->
+<!-- $FreeBSD: www/en/ports/ports.inc,v 1.48 2000/04/02 11:11:28 wosch Exp $ -->
 <p>The FreeBSD Ports and Packages Collection offers a simple way for
 users and administrators to install applications.  The ports
 collection has been <a
@@ -55,6 +55,8 @@ href="../handbook/porting.html">Porting applications</a>.  Both are
 part of the <a href="../handbook/">FreeBSD Handbook</a>.</p>
 
 <hr>
+
+<H1 ALIGN="LEFT"><FONT COLOR="#660000">Upgrade kits</FONT></H1>
 
 <p>The ports listed on these web pages are continually being updated.
 It is recommended that you refresh the entire collection together, as
