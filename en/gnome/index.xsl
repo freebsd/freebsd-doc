@@ -1,15 +1,15 @@
-<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.36 2003/07/15 21:26:05 marcus Exp $ -->
+<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.37 2003/07/20 17:54:30 marcus Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
 		xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
 		xmlns:rdf1="http://my.netscape.com/rdf/simple/0.9/"
-		version="1.0">
+		exclude-result-prefixes="rdf rdf1" version="1.0">
   
   <xsl:import href="../includes.xsl"/>
   <xsl:import href="includes.xsl"/>
 
   <xsl:variable name="base" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.36 2003/07/15 21:26:05 marcus Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.37 2003/07/20 17:54:30 marcus Exp $'"/>
   <xsl:variable name="title" select="'FreeBSD GNOME Project'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
