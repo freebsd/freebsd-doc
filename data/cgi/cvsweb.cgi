@@ -76,7 +76,6 @@ $scriptname =~ s|/$||;
 $scriptwhere = $scriptname . '/' . $where;
 $scriptwhere =~ s|/$||;
 
-
 if ($query = $ENV{'QUERY_STRING'}) {
     foreach (split(/&/, $query)) {
 	s/%(..)/sprintf("%c", hex($1))/ge;	# unquote %-quoted
@@ -102,8 +101,9 @@ if ($input{'cvsroot'}) {
 do "$config-$cvstree" if -f "$config-$cvstree";
 
 $fullname = $cvsroot . '/' . $where;
+
 if (!-d $cvsroot) {
-	&fatal("500 Internal Error",'$CVSROOT not found!');
+	&fatal("500 Internal Error",'$CVSROOT not found!<P>The server on which the CVS tree lives is probably down.  Please try again in a few minutes.');
 }
 
 
@@ -130,6 +130,7 @@ if (-d $fullname) {
 			last lookingforattic;
 		}
 	}
+	$haveattic = 1 if ($i <= $#dir);
 	if (!$input{"showattic"} && ($i <= $#dir) &&
 				opendir(DIR, $fullname . "/Attic")) {
 		splice(@dir, $i, 1,
@@ -155,13 +156,14 @@ if (-d $fullname) {
 #		    &link("Directory-wide diffs", $scriptwhere . '/*'), "<BR>";
 	    } elsif (-d $fullname . "/" . $_) {
 		print "<IMG SRC=\"/icons/dir.gif\"> ",
-		    &link($_ . "/", $scriptwhere . '/' . $_ . '/' . $query), $attic, "<BR>";
+		    &link($_ . "/", $scriptwhere . '/' . $_ . '/' . $query),
+			    $attic, "<BR>";
 	    } elsif (s/,v$//) {
 # TODO: add date/time?  How about sorting?
 		print "<IMG SRC=\"/icons/text.gif\"> ",
 		    &link($_, $scriptwhere . '/' .
 			    ($attic ? "Attic/" : "") . $_ . $query),
-		    $attic, "<BR>";
+			    $attic, "<BR>";
 	    }
 	}
 	print "</MENU>\n";
@@ -177,15 +179,17 @@ if (-d $fullname) {
 	}
 	$formwhere = $scriptwhere;
 	$formwhere =~ s|Attic/?$|| if ($input{"showattic"});
-	print "<HR><FORM METHOD=\"GET\" ACTION=\"${formwhere}\">\n";
-	$input{"showattic"}=!$input{"showattic"};
-	foreach $k (keys %input) {
-	    print "<INPUT TYPE=hidden NAME=$k VALUE=$input{$k}>\n" if $input{$k};
+	if ($haveattic) {
+		print "<HR><FORM METHOD=\"GET\" ACTION=\"${formwhere}\">\n";
+		$input{"showattic"}=!$input{"showattic"};
+		foreach $k (keys %input) {
+		    print "<INPUT TYPE=hidden NAME=$k VALUE=$input{$k}>\n" if $input{$k};
+		}
+		print "<INPUT TYPE=SUBMIT VALUE=\"";
+		print ($input{"showattic"} ? "Show" : "Hide");
+		print " attic directories\">\n";
+		print "</FORM>\n";
 	}
-	print "<INPUT TYPE=SUBMIT VALUE=\"";
-	print ($input{"showattic"} ? "Show" : "Hide");
-	print " attic directories\">\n";
-	print "</FORM>\n";
 	print &html_footer;
 	print "</BODY></HTML>\n";
 } elsif (-f $fullname . ',v') {
@@ -198,297 +202,8 @@ if (-d $fullname) {
 			$input{'r2'}, $input{'tr2'}, $input{'f'});
 		exit;
 	}
-	open(RCS, "rlog '$fullname'|") || &fatal("500 Internal Error",
-						"Failed to spawn rlog");
-	while (<RCS>) {
-	    print if ($verbose);
-	    if (/^branch:\s+([\d\.]+)/) {
-		$curbranch = $1;
-	    }
-	    if ($symnames) {
-		if (/^\s+([^:]+):\s+([\d\.]+)/) {
-		    $symrev{$1} = $2;
-		    if ($revsym{$2}) {
-			$revsym{$2} .= ", ";
-		    }
-		    $revsym{$2} .= $1;
-		} else {
-		    $symnames = 0;
-		}
-	    } elsif (/^symbolic names/) {
-		$symnames = 1;
-	    } elsif (/^-----/) {
-		last;
-	    }
-	}
-
-	if ($onlyonbranch = $input{'only_on_branch'}) {
-	    ($onlyonbranch = $symrev{$onlyonbranch}) =~ s/\.0\././;
-	    ($onlybranchpoint = $onlyonbranch) =~ s/\.\d+$//;
-	}
-
-# each log entry is of the form:
-# ----------------------------
-# revision 3.7.1.1
-# date: 1995/11/29 22:15:52;  author: fenner;  state: Exp;  lines: +5 -3
-# log info
-# ----------------------------
-	logentry:
-	while (!/^=========/) {
-	    $_ = <RCS>;
-	    print "R:", $_ if ($verbose);
-	    if (/^revision ([\d\.]+)/) {
-		$rev = $1;
-	    } elsif (/^========/ || /^----------------------------$/) {
-		next logentry;
-	    } else {
-		&fatal("500 Internal Error","Error parsing RCS output: $_");
-	    }
-	    $_ = <RCS>;
-	    print "D:", $_ if ($verbose);
-	    if (m|^date:\s+(\d+)/(\d+)/(\d+)\s+(\d+):(\d+):(\d+);\s+author:\s+(\S+);\s+state:\s+(\S+);|) {
-		$yr = $1;
-		# damn 2-digit year routines
-		if ($yr > 100) {
-		    $yr -= 1900;
-		}
-		$date{$rev} = &timelocal($6,$5,$4,$3,$2 - 1,$yr);
-		$author{$rev} = $7;
-		$state{$rev} = $8;
-	    } else {
-		&fatal("500 Internal Error", "Error parsing RCS output: $_");
-	    }
-	    line:
-	    while (<RCS>) {
-		print "L:", $_ if ($verbose);
-		next line if (/^branches:\s/);
-		last line if (/^----------------------------$/ || /^=========/);
-		$log{$rev} .= $_;
-	    }
-	    print "E:", $_ if ($verbose);
-	}
-	close(RCS);
-	print "Done reading RCS file\n" if ($verbose);
-#
-# Sort the revisions into commit-date order.
-	@revorder = sort {$date{$b} <=> $date{$a}} keys %date;
-	print "Done sorting revisions\n" if ($verbose);
-#
-# HEAD is an artificial tag which is simply the highest tag number on the main
-# branch, unless there is a branch tag in the RCS file in which case it's the
-# highest revision on that branch.  Find it by looking through @revorder; it
-# is the first commit listed on the appropriate branch.
-	$headrev = $curbranch || "1";
-	revision:
-	for ($i = 0; $i <= $#revorder; $i++) {
-	    if ($revorder[$i] =~ /^(\S*)\.\d+$/ && $headrev eq $1) {
-		if ($revsym{$revorder[$i]}) {
-		    $revsym{$revorder[$i]} .= ", ";
-		}
-		$revsym{$revorder[$i]} .= "HEAD";
-		$symrev{"HEAD"} = $revorder[$i];
-		last revision;
-	    }
-	}
-	print "Done finding HEAD\n" if ($verbose);
-#
-# Now that we know all of the revision numbers, we can associate
-# absolute revision numbers with all of the symbolic names, and
-# pass them to the form so that the same association doesn't have
-# to be built then.
-#
-# should make this a case-insensitive sort
-	foreach (sort keys %symrev) {
-	    $rev = $symrev{$_};
-	    if ($rev =~ /^(\d+(\.\d+)+)\.0\.(\d+)$/) {
-		push(@branchnames, $_);
-		#
-		# A revision number of A.B.0.D really translates into
-		# "the highest current revision on branch A.B.D".
-		#
-		# If there is no branch A.B.D, then it translates into
-		# the head A.B .
-		#
-		$head = $1;
-		$branch = $3;
-		$regex = $head . "." . $branch;
-		$regex =~ s/\./\./g;
-		#             <
-		#           \____/
-		$rev = $head;
-
-		revision:
-		foreach $r (@revorder) {
-		    if ($r =~ /^${regex}/) {
-			$rev = $head . "." . $branch;
-			last revision;
-		    }
-		}
-		$revsym{$rev} .= ", " if ($revsym{$rev});
-		$revsym{$rev} .= $_;
-		if ($rev ne $head) {
-		    $branchpoint{$head} .= ", " if ($branchpoint{$head});
-		    $branchpoint{$head} .= $_;
-		}
-	    }
-	    $sel .= "<OPTION VALUE=\"${rev}:${_}\">$_\n";
-	}
-	print "Done associating revisions with branches\n" if ($verbose);
-        print &html_header("CVS log for $where");
-	($upwhere = $where) =~ s|(Attic/)?[^/]+$||;
-	print "Up to ", &link($upwhere,$scriptname . "/" . $upwhere . $query);
-	print "<BR>\n";
-	print "<A HREF=\"#diff\">Request diff between arbitrary revisions</A>\n";
-	print "<HR NOSHADE>\n";
-	if ($curbranch) {
-	    print "Default branch is ";
-	    print ($revsym{$curbranch} || $curbranch);
-	} else {
-	    print "No default branch";
-	}
-	print "<BR><HR NOSHADE>\n";
-# The other possible U.I. I can see is to have each revision be hot
-# and have the first one you click do ?r1=foo
-# and since there's no r2 it keeps going & the next one you click
-# adds ?r2=foo and performs the query.
-# I suppose there's no reason we can't try both and see which one
-# people prefer...
-
-	for ($i = 0; $i <= $#revorder; $i++) {
-	    $_ = $revorder[$i];
-	    ($br = $_) =~ s/\.\d+$//;
-	    next if ($onlyonbranch && $br ne $onlyonbranch &&
-					    $_ ne $onlybranchpoint);
-	    print "<a NAME=\"rev$_\"></a>";
-	    foreach $sym (split(", ", $revsym{$_})) {
-		print "<a NAME=\"$sym\"></a>";
-	    }
-	    if ($revsym{$br} && !$nameprinted{$br}) {
-		foreach $sym (split(", ", $revsym{$br})) {
-		    print "<a NAME=\"$sym\"></a>";
-		}
-		$nameprinted{$br}++;
-	    }
-	    print "\n";
-	    print "<A HREF=\"$scriptwhere?rev=$_" . 
-		&cvsroot . qq{"><b>$_</b></A>};
-	    if (/^1\.1\.1\.\d+$/) {
-		print " <i>(vendor branch)</i>";
-	    }
-	    print " <i>" . &ctime($date{$_}) . "</i> by ";
-	    print "<i>" . $author{$_} . "</i>\n";
-	    if ($revsym{$_}) {
-		print "<BR>CVS Tags: <b>$revsym{$_}</b>";
-	    }
-	    if ($revsym{$br})  {
-		if ($revsym{$_}) {
-		    print "; ";
-		} else {
-		    print "<BR>";
-		}
-		print "Branch: <b>$revsym{$br}</b>\n";
-	    }
-	    if ($branchpoint{$_}) {
-		if ($revsym{$br} || $revsym{$_}) {
-		    print "; ";
-		} else {
-		    print "<BR>";
-		}
-		print "Branch point for: <b>$branchpoint{$_}</b>\n";
-	    }
-	    # Find the previous revision on this branch.
-	    @prevrev = split(/\./, $_);
-	    if (--$prevrev[$#prevrev] == 0) {
-		# If it was X.Y.Z.1, just make it X.Y
-		if ($#prevrev > 1) {
-		    pop(@prevrev);
-		    pop(@prevrev);
-		} else {
-		    # It was rev 1.1 (XXX does CVS use revisions
-		    # greater than 1.x?)
-		    if ($prevrev[0] != 1) {
-			print "<i>* I can't figure out the previous revision! *</i>\n";
-		    }
-		}
-	    }
-	    if ($prevrev[$#prevrev] != 0) {
-		$prev = join(".", @prevrev);
-		print "<BR><A HREF=\"${scriptwhere}.diff?r1=$prev";
-		print "&r2=$_" . &cvsroot . qq{">Diffs to $prev</A>\n};
-		#
-		# Plus, if it's on a branch, and it's not a vendor branch,
-		# offer to diff with the immediately-preceding commit if it
-		# is not the previous revision as calculated above
-		# and if it is on the HEAD (or at least on a higher branch)
-		# (e.g. change gets committed and then brought
-		# over to -stable)
-		if (!/^1\.1\.1\.\d+$/ && ($i != $#revorder) &&
-					($prev ne $revorder[$i+1])) {
-		    @tmp1 = split(/\./, $revorder[$i+1]);
-		    @tmp2 = split(/\./, $_);
-		    if ($#tmp1 < $#tmp2) {
-			print "; <A HREF=\"${scriptwhere}.diff?r1=$revorder[$i+1]";
-			print "&r2=$_" . &cvsroot .
-                            qq{">Diffs to $revorder[$i+1]</A>\n};
-		    }
-		}
-	    }
-	    if ($state{$_} eq "dead") {
-		print "<BR><B><I>FILE REMOVED</I></B>\n";
-	    }
-	    print "<PRE>\n";
-	    print &htmlify($log{$_}, 1);
-	    print "</PRE><HR NOSHADE>\n";
-	}
-	print "<A NAME=diff>\n";
-	print "This form allows you to request diff's between any two\n";
-	print "revisions of a file.  You may select a symbolic revision\n";
-	print "name using the selection box or you may type in a numeric\n";
-	print "name using the type-in text box.\n";
-	print "</A><P>\n";
-	print "<FORM METHOD=\"GET\" ACTION=\"${scriptwhere}.diff\">\n";
-        print qq{<input type=hidden name=cvsroot value=$cvstree>\n}
-             if &cvsroot;
-	print "Diffs between \n";
-	print "<SELECT NAME=\"r1\">\n";
-	print "<OPTION VALUE=\"text\" SELECTED>Use Text Field\n";
-	print $sel;
-	print "</SELECT>\n";
-	print "<INPUT TYPE=\"TEXT\" NAME=\"tr1\" VALUE=\"$revorder[$#revorder]\">\n";
-	print " and \n";
-	print "<SELECT NAME=\"r2\">\n";
-	print "<OPTION VALUE=\"text\" SELECTED>Use Text Field\n";
-	print $sel;
-	print "</SELECT>\n";
-	print "<INPUT TYPE=\"TEXT\" NAME=\"tr2\" VALUE=\"$revorder[0]\">\n";
-	print "<BR><INPUT TYPE=RADIO NAME=\"f\" VALUE=u CHECKED>Unidiff<br>\n";
-	print "<INPUT TYPE=RADIO NAME=\"f\" VALUE=c>Context diff<br>\n";
-	print "<INPUT TYPE=RADIO NAME=\"f\" VALUE=s>Side-by-Side<br>\n";
-	print "<INPUT TYPE=SUBMIT VALUE=\"Get Diffs\">\n";
-	print "</FORM>\n";
-	print "<HR noshade>\n";
-	print "<A name=branch>\n";
-	print "You may select to see revision information from only\n";
-	print "a single branch.\n";
-	print "</A><P>\n";
-	print "<FORM METHOD=\"GET\" ACTION=\"$scriptwhere\">\n";
-        print qq{<input type=hidden name=cvsroot value=$cvstree>\n}
-             if &cvsroot;
-	print "Branch: \n";
-	print "<SELECT NAME=\"only_on_branch\">\n";
-	print "<OPTION VALUE=\"\"";
-	print " SELECTED" if ($input{"only_on_branch"} eq "");
-	print ">Show all branches\n";
-	foreach (sort @branchnames) {
-		print "<OPTION";
-		print " SELECTED" if ($input{"only_on_branch"} eq $_);
-		print ">${_}\n";
-	}
-	print "</SELECT>\n";
-	print "<INPUT TYPE=SUBMIT VALUE=\"View Branch\">\n";
-	print "</FORM>\n";
-        print &html_footer;
-	print "</BODY></HTML>\n";
+print("going to dolog($fullname)\n") if ($verbose);
+	&dolog($fullname);
 } elsif ($fullname =~ s/\.diff$// && -f $fullname . ",v" &&
 				$input{'r1'} && $input{'r2'}) {
 	# Allow diffs using the ".diff" extension
@@ -735,6 +450,313 @@ sub dodiff {
 	    print $_;
 	}
 	close(RCSDIFF);
+}
+
+sub dolog {
+	local($fullname) = @_;
+	local($curbranch,$symnames);	#...
+
+	print("Going to rlog '$fullname'\n") if ($verbose);
+	open(RCS, "rlog '$fullname'|") || &fatal("500 Internal Error",
+						"Failed to spawn rlog");
+	while (<RCS>) {
+	    print if ($verbose);
+	    if (/^branch:\s+([\d\.]+)/) {
+		$curbranch = $1;
+	    }
+	    if ($symnames) {
+		if (/^\s+([^:]+):\s+([\d\.]+)/) {
+		    $symrev{$1} = $2;
+		    if ($revsym{$2}) {
+			$revsym{$2} .= ", ";
+		    }
+		    $revsym{$2} .= $1;
+		} else {
+		    $symnames = 0;
+		}
+	    } elsif (/^symbolic names/) {
+		$symnames = 1;
+	    } elsif (/^-----/) {
+		last;
+	    }
+	}
+
+	if ($onlyonbranch = $input{'only_on_branch'}) {
+	    ($onlyonbranch = $symrev{$onlyonbranch}) =~ s/\.0\././;
+	    ($onlybranchpoint = $onlyonbranch) =~ s/\.\d+$//;
+	}
+
+# each log entry is of the form:
+# ----------------------------
+# revision 3.7.1.1
+# date: 1995/11/29 22:15:52;  author: fenner;  state: Exp;  lines: +5 -3
+# log info
+# ----------------------------
+	logentry:
+	while (!/^=========/) {
+	    $_ = <RCS>;
+	    last logentry if (!defined($_));	# EOF
+	    print "R:", $_ if ($verbose);
+	    if (/^revision ([\d\.]+)/) {
+		$rev = $1;
+	    } elsif (/^========/ || /^----------------------------$/) {
+		next logentry;
+	    } else {
+		# The rlog output is syntactically ambiguous.  We must
+		# have guessed wrong about where the end of the last log
+		# message was.
+		# Since this is likely to happen when people put rlog output
+		# in their commit messages, don't even bother keeping
+		# these lines since we don't know what revision they go with
+		# any more.
+		next logentry;
+#		&fatal("500 Internal Error","Error parsing RCS output: $_");
+	    }
+	    $_ = <RCS>;
+	    print "D:", $_ if ($verbose);
+	    if (m|^date:\s+(\d+)/(\d+)/(\d+)\s+(\d+):(\d+):(\d+);\s+author:\s+(\S+);\s+state:\s+(\S+);|) {
+		$yr = $1;
+		# damn 2-digit year routines
+		if ($yr > 100) {
+		    $yr -= 1900;
+		}
+		$date{$rev} = &timelocal($6,$5,$4,$3,$2 - 1,$yr);
+		$author{$rev} = $7;
+		$state{$rev} = $8;
+	    } else {
+		&fatal("500 Internal Error", "Error parsing RCS output: $_");
+	    }
+	    line:
+	    while (<RCS>) {
+		print "L:", $_ if ($verbose);
+		next line if (/^branches:\s/);
+		last line if (/^----------------------------$/ || /^=========/);
+		$log{$rev} .= $_;
+	    }
+	    print "E:", $_ if ($verbose);
+	}
+	close(RCS);
+	print "Done reading RCS file\n" if ($verbose);
+#
+# Sort the revisions into commit-date order.
+	@revorder = sort {$date{$b} <=> $date{$a}} keys %date;
+	print "Done sorting revisions\n" if ($verbose);
+#
+# HEAD is an artificial tag which is simply the highest tag number on the main
+# branch, unless there is a branch tag in the RCS file in which case it's the
+# highest revision on that branch.  Find it by looking through @revorder; it
+# is the first commit listed on the appropriate branch.
+	$headrev = $curbranch || "1";
+	revision:
+	for ($i = 0; $i <= $#revorder; $i++) {
+	    if ($revorder[$i] =~ /^(\S*)\.\d+$/ && $headrev eq $1) {
+		if ($revsym{$revorder[$i]}) {
+		    $revsym{$revorder[$i]} .= ", ";
+		}
+		$revsym{$revorder[$i]} .= "HEAD";
+		$symrev{"HEAD"} = $revorder[$i];
+		last revision;
+	    }
+	}
+	print "Done finding HEAD\n" if ($verbose);
+#
+# Now that we know all of the revision numbers, we can associate
+# absolute revision numbers with all of the symbolic names, and
+# pass them to the form so that the same association doesn't have
+# to be built then.
+#
+# should make this a case-insensitive sort
+	foreach (sort keys %symrev) {
+	    $rev = $symrev{$_};
+	    if ($rev =~ /^(\d+(\.\d+)+)\.0\.(\d+)$/) {
+		push(@branchnames, $_);
+		#
+		# A revision number of A.B.0.D really translates into
+		# "the highest current revision on branch A.B.D".
+		#
+		# If there is no branch A.B.D, then it translates into
+		# the head A.B .
+		#
+		$head = $1;
+		$branch = $3;
+		$regex = $head . "." . $branch;
+		$regex =~ s/\./\./g;
+		#             <
+		#           \____/
+		$rev = $head;
+
+		revision:
+		foreach $r (@revorder) {
+		    if ($r =~ /^${regex}/) {
+			$rev = $head . "." . $branch;
+			last revision;
+		    }
+		}
+		$revsym{$rev} .= ", " if ($revsym{$rev});
+		$revsym{$rev} .= $_;
+		if ($rev ne $head) {
+		    $branchpoint{$head} .= ", " if ($branchpoint{$head});
+		    $branchpoint{$head} .= $_;
+		}
+	    }
+	    $sel .= "<OPTION VALUE=\"${rev}:${_}\">$_\n";
+	}
+	print "Done associating revisions with branches\n" if ($verbose);
+        print &html_header("CVS log for $where");
+	($upwhere = $where) =~ s|(Attic/)?[^/]+$||;
+	print "Up to ", &link($upwhere,$scriptname . "/" . $upwhere . $query);
+	print "<BR>\n";
+	print "<A HREF=\"#diff\">Request diff between arbitrary revisions</A>\n";
+	print "<HR NOSHADE>\n";
+	if ($curbranch) {
+	    print "Default branch is ";
+	    print ($revsym{$curbranch} || $curbranch);
+	} else {
+	    print "No default branch";
+	}
+	print "<BR><HR NOSHADE>\n";
+# The other possible U.I. I can see is to have each revision be hot
+# and have the first one you click do ?r1=foo
+# and since there's no r2 it keeps going & the next one you click
+# adds ?r2=foo and performs the query.
+# I suppose there's no reason we can't try both and see which one
+# people prefer...
+
+	for ($i = 0; $i <= $#revorder; $i++) {
+	    $_ = $revorder[$i];
+	    ($br = $_) =~ s/\.\d+$//;
+	    next if ($onlyonbranch && $br ne $onlyonbranch &&
+					    $_ ne $onlybranchpoint);
+	    print "<a NAME=\"rev$_\"></a>";
+	    foreach $sym (split(", ", $revsym{$_})) {
+		print "<a NAME=\"$sym\"></a>";
+	    }
+	    if ($revsym{$br} && !$nameprinted{$br}) {
+		foreach $sym (split(", ", $revsym{$br})) {
+		    print "<a NAME=\"$sym\"></a>";
+		}
+		$nameprinted{$br}++;
+	    }
+	    print "\n";
+	    print "<A HREF=\"$scriptwhere?rev=$_" . 
+		&cvsroot . "\"><b>$_</b></A>";
+	    if (/^1\.1\.1\.\d+$/) {
+		print " <i>(vendor branch)</i>";
+	    }
+	    print " <i>" . &ctime($date{$_}) . "</i> by ";
+	    print "<i>" . $author{$_} . "</i>\n";
+	    if ($revsym{$_}) {
+		print "<BR>CVS Tags: <b>$revsym{$_}</b>";
+	    }
+	    if ($revsym{$br})  {
+		if ($revsym{$_}) {
+		    print "; ";
+		} else {
+		    print "<BR>";
+		}
+		print "Branch: <b>$revsym{$br}</b>\n";
+	    }
+	    if ($branchpoint{$_}) {
+		if ($revsym{$br} || $revsym{$_}) {
+		    print "; ";
+		} else {
+		    print "<BR>";
+		}
+		print "Branch point for: <b>$branchpoint{$_}</b>\n";
+	    }
+	    # Find the previous revision on this branch.
+	    @prevrev = split(/\./, $_);
+	    if (--$prevrev[$#prevrev] == 0) {
+		# If it was X.Y.Z.1, just make it X.Y
+		if ($#prevrev > 1) {
+		    pop(@prevrev);
+		    pop(@prevrev);
+		} else {
+		    # It was rev 1.1 (XXX does CVS use revisions
+		    # greater than 1.x?)
+		    if ($prevrev[0] != 1) {
+			print "<i>* I can't figure out the previous revision! *</i>\n";
+		    }
+		}
+	    }
+	    if ($prevrev[$#prevrev] != 0) {
+		$prev = join(".", @prevrev);
+		print "<BR><A HREF=\"${scriptwhere}.diff?r1=$prev";
+		print "&r2=$_" . &cvsroot . "\">Diffs to $prev</A>\n";
+		#
+		# Plus, if it's on a branch, and it's not a vendor branch,
+		# offer to diff with the immediately-preceding commit if it
+		# is not the previous revision as calculated above
+		# and if it is on the HEAD (or at least on a higher branch)
+		# (e.g. change gets committed and then brought
+		# over to -stable)
+		if (!/^1\.1\.1\.\d+$/ && ($i != $#revorder) &&
+					($prev ne $revorder[$i+1])) {
+		    @tmp1 = split(/\./, $revorder[$i+1]);
+		    @tmp2 = split(/\./, $_);
+		    if ($#tmp1 < $#tmp2) {
+			print "; <A HREF=\"${scriptwhere}.diff?r1=$revorder[$i+1]";
+			print "&r2=$_" . &cvsroot .
+                            "\">Diffs to $revorder[$i+1]</A>\n";
+		    }
+		}
+	    }
+	    if ($state{$_} eq "dead") {
+		print "<BR><B><I>FILE REMOVED</I></B>\n";
+	    }
+	    print "<PRE>\n";
+	    print &htmlify($log{$_}, 1);
+	    print "</PRE><HR NOSHADE>\n";
+	}
+	print "<A NAME=diff>\n";
+	print "This form allows you to request diff's between any two\n";
+	print "revisions of a file.  You may select a symbolic revision\n";
+	print "name using the selection box or you may type in a numeric\n";
+	print "name using the type-in text box.\n";
+	print "</A><P>\n";
+	print "<FORM METHOD=\"GET\" ACTION=\"${scriptwhere}.diff\">\n";
+        print "<INPUT TYPE=HIDDEN NAME=\"cvsroot\" VALUE=\"$cvstree\">\n"
+             if &cvsroot;
+	print "Diffs between \n";
+	print "<SELECT NAME=\"r1\">\n";
+	print "<OPTION VALUE=\"text\" SELECTED>Use Text Field\n";
+	print $sel;
+	print "</SELECT>\n";
+	print "<INPUT TYPE=\"TEXT\" NAME=\"tr1\" VALUE=\"$revorder[$#revorder]\">\n";
+	print " and \n";
+	print "<SELECT NAME=\"r2\">\n";
+	print "<OPTION VALUE=\"text\" SELECTED>Use Text Field\n";
+	print $sel;
+	print "</SELECT>\n";
+	print "<INPUT TYPE=\"TEXT\" NAME=\"tr2\" VALUE=\"$revorder[0]\">\n";
+	print "<BR><INPUT TYPE=RADIO NAME=\"f\" VALUE=u CHECKED>Unidiff<br>\n";
+	print "<INPUT TYPE=RADIO NAME=\"f\" VALUE=c>Context diff<br>\n";
+	print "<INPUT TYPE=RADIO NAME=\"f\" VALUE=s>Side-by-Side<br>\n";
+	print "<INPUT TYPE=SUBMIT VALUE=\"Get Diffs\">\n";
+	print "</FORM>\n";
+	print "<HR noshade>\n";
+	print "<A name=branch>\n";
+	print "You may select to see revision information from only\n";
+	print "a single branch.\n";
+	print "</A><P>\n";
+	print "<FORM METHOD=\"GET\" ACTION=\"$scriptwhere\">\n";
+        print qq{<input type=hidden name=cvsroot value=$cvstree>\n}
+             if &cvsroot;
+	print "Branch: \n";
+	print "<SELECT NAME=\"only_on_branch\">\n";
+	print "<OPTION VALUE=\"\"";
+	print " SELECTED" if ($input{"only_on_branch"} eq "");
+	print ">Show all branches\n";
+	foreach (sort @branchnames) {
+		print "<OPTION";
+		print " SELECTED" if ($input{"only_on_branch"} eq $_);
+		print ">${_}\n";
+	}
+	print "</SELECT>\n";
+	print "<INPUT TYPE=SUBMIT VALUE=\"View Branch\">\n";
+	print "</FORM>\n";
+        print &html_footer;
+	print "</BODY></HTML>\n";
 }
 
 sub cvsroot {
