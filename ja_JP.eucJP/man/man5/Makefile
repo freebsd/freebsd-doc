@@ -10,6 +10,7 @@ MAN5 =	a.out.5\
 	crontab.5\
 	ctm.5\
 	cvs.5\
+	devfs.5\
 	dhclient.conf.5\
 	dhclient.leases.5\
 	dhcp-eval.5\
