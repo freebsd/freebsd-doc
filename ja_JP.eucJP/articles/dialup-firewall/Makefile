@@ -1,9 +1,7 @@
-# $FreeBSD: doc/ja_JP.eucJP/articles/ipsec-must/Makefile,v 1.1 2001/03/07 19:38:40 hrs Exp $
+# $FreeBSD$
 # Original revision: 1.1
 
 DOC?= article
-
-DOCFORMAT= html
 
 FORMATS?= html
 
