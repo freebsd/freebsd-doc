@@ -1,0 +1,205 @@
+.\"
+.\"     %Id: ipfirewall.4,v 1.12 1997/09/29 10:10:15 wosch Exp %
+.\" jpman %Id: ipfirewall.4,v 1.3 2000/07/13 04:28:14 horikawa Stab %
+.\"
+.Dd June 22, 1997
+.Dt IPFIREWALL 4
+.Os
+.Sh 名称
+.Nm ipfirewall
+.Nd IP パケットフィルタおよびトラフィック測定
+.Sh 書式
+.Fd #include <sys/types.h>
+.Fd #include <sys/queue.h>
+.Fd #include <netinet/in.h>
+.Fd #include <netinet/ip_fw.h>
+.Ft int
+.Fn setsockopt raw_socket IPPROTO_IP "ipfw option" "struct ipfw" size
+.Sh 解説
+ipfirewall (別名 ipfw) は、システムのインタフェースを通過する IP パケットに
+対してフィルタリングやリダイレクトなどの処理を行うシステムの機能です。
+パケットは適合するものが見つかるまでパターンルールの順リストと照らし合わされ
+ます。適合するルールが見つかった時点でそれに対応する動作を実行します。
+ルールは 1 から 65534 までの番号を振られ、
+複数のルールが同じ番号を共有することも可能です。
+.Pp
+唯一必ず存在するルールとしてルール番号 65535 があります。
+このルールは通常はすべてのパケットを破棄します。
+したがって、これより小さな番号のルールに適合しなかったパケットはすべて
+破棄されます。
+しかし、カーネルをコンパイルする時のオプション
+.Dq IPFIREWALL_DEFAULT_TO_ACCEPT
+を指定すると、管理者はすべて (のパケットの通過を) 許可するように
+この固定ルールを変更することができます。
+.Pp
+.Fn setsockopt
+へ渡される値は、ルールを記述している ip_fw 構造体 (下記参照) です。
+(IP_FW_DEL のような) いくつかのケースではルール番号のみが重要になります。
+.Sh コマンド
+ルールリストを扱うために次のソケットオプションを使います:
+.Pp
+IP_FW_ADD は、ルールリストにルールを挿入します。
+.Pp
+IP_FW_DEL は、適合するルール番号を持つルールをすべて削除します。
+.Pp
+IP_FW_GET は、適合するルール番号の (最初の) ルールを返します。
+.Pp
+IP_FW_ZERO は、
+適合するルール番号を持つすべてのルールに関する統計を 0 にします。
+ルール番号が 0 の場合にはすべてのルールを 0 にします。
+.Pp
+IP_FW_FLUSH (65535 を除く) すべてのルールを消去します。
+.Pp
+カーネルのセキュリティレベルが 2 より大きい場合は
+IP_FW_GET のみが許可されます。
+.Sh ルール構造体
+ルールは次の構造体で記述されています:
+.Bd -literal
+/* 1 個のインタフェースを指定 */
+union ip_fw_if {
+    struct in_addr fu_via_ip;   /* IP アドレスで指定 */
+    struct {                    /* インタフェース名で指定 */
+#define FW_IFNLEN       6       /* 構造体を 2^x 境界に置く */
+            char  name[FW_IFNLEN];
+            short unit;         /* -1 は任意のユニットに適合 */
+    } fu_via_if;
+};
+
+/* 1 個の ipfw ルール */
+struct ip_fw {
+    u_long fw_pcnt,fw_bcnt;         /* パケットとバイト数のカウンタ */
+    struct in_addr fw_src, fw_dst;  /* 始点と終点の IP アドレス */
+    struct in_addr fw_smsk, fw_dmsk;/* 始点と終点の IP アドレスのマスク */
+    u_short fw_number;              /* ルール番号 */
+    u_short fw_flg;                 /* フラグ語 */
+#define IP_FW_MAX_PORTS 10          /* 程良い最大値 */
+    u_short fw_pts[IP_FW_MAX_PORTS];/* 適合するポート番号の配列 */
+    u_char fw_ipopt,fw_ipnopt;      /* IP オプションのセット/アンセット */
+    u_char fw_tcpf,fw_tcpnf;        /* TCP フラグのセット/アンセット */
+#define IP_FW_ICMPTYPES_DIM (256 / (sizeof(unsigned) * 8))
+    unsigned fw_icmptypes[IP_FW_ICMPTYPES_DIM]; /* ICMP タイプのビットマップ */
+    long timestamp;                 /* 最終適合のタイムスタンプ (tv_sec) */
+    union ip_fw_if fw_in_if, fw_out_if;/* 入力/出力のインタフェース */
+    union {
+        u_short fu_divert_port;     /* Divert/tee ポート */
+        u_short fu_skipto_rule;     /* SKIPTO コマンドルール番号 */
+        u_short fu_reject_code;     /* REJECT 応答コード */
+    } fw_un;
+    u_char fw_prot;                 /* IP プロトコル */
+    u_char fw_nports;               /* ポート配列中の、始点ポート数と   */
+                                    /* 終点ポート数 (終点ポートが始点   */
+                                    /* ポートに後続。最大で計 10 ポート */
+                                    /* 0 は全ポートマッチの意味)        */
+};
+
+/* 始点/終点のポート数を "fw_nports" にエンコード */
+
+#define IP_FW_GETNSRCP(rule)            ((rule)->fw_nports & 0x0f)
+#define IP_FW_SETNSRCP(rule, n)         do {                            \\
+                                          (rule)->fw_nports &= ~0x0f;   \\
+                                          (rule)->fw_nports |= (n);     \\
+                                        } while (0)
+#define IP_FW_GETNDSTP(rule)            ((rule)->fw_nports >> 4)
+#define IP_FW_SETNDSTP(rule, n)         do {                            \\
+                                          (rule)->fw_nports &= ~0xf0;   \\
+                                          (rule)->fw_nports |= (n) << 4;\\
+                                        } while (0)
+
+/* flags" フィールド用フラグ値 */
+
+#define IP_FW_F_IN      0x0001  /* 入力パケットをチェック               */
+#define IP_FW_F_OUT     0x0002  /* 出力パケットをチェック               */
+#define IP_FW_F_IIFACE  0x0004  /* 入力インタフェーステストを適用       */
+#define IP_FW_F_OIFACE  0x0008  /* 出力インタフェーステストを適用       */
+
+#define IP_FW_F_COMMAND 0x0070  /* 連鎖型エントリ用のマスク             */
+#define IP_FW_F_DENY    0x0000  /* これは拒否ルール                     */
+#define IP_FW_F_REJECT  0x0010  /* 拒否して応答パケットを送信           */
+#define IP_FW_F_ACCEPT  0x0020  /* これは受理ルール                     */
+#define IP_FW_F_COUNT   0x0030  /* これは計数ルール                     */
+#define IP_FW_F_DIVERT  0x0040  /* これは divert ルール                 */
+#define IP_FW_F_TEE     0x0050  /* これは分岐ルール                     */
+#define IP_FW_F_SKIPTO  0x0060  /* これはスキップルール                 */
+
+#define IP_FW_F_PRN     0x0080  /* このルールが適合した場合に表示       */
+
+#define IP_FW_F_SRNG    0x0100  /* 最初の 2 つの始点ポートは、最小と    *
+                                 * 最大の範囲 (ホストのバイト順で格納)  */
+
+#define IP_FW_F_DRNG    0x0200  /* 最初の 2 つの終点ポートは、最小と    *
+                                 * 最大の範囲 (ホストのバイト順で格納)  */
+
+#define IP_FW_F_IIFNAME 0x0400  /* 入力インタフェースは名前/ユニット    *
+                                 * (IP ではない)                        */
+#define IP_FW_F_OIFNAME 0x0800  /* 出力インタフェースは名前/ユニット    *
+                                 * (IP ではない)                        */
+
+#define IP_FW_F_INVSRC  0x1000  /* 始点チェックの意味を反転             */
+#define IP_FW_F_INVDST  0x2000  /* 終点チェックの意味を反転             */
+
+#define IP_FW_F_FRAG    0x4000  /* 断片                                 */
+
+#define IP_FW_F_ICMPBIT 0x8000  /* ICMP タイプビットマップは有効        */
+
+#define IP_FW_F_MASK    0xFFFF  /* ありうるすべてのフラグビットのマスク */
+.Ed
+
+.Sh ルールの動作
+各ルールは、フラグ語中の IP_FW_F_COMMAND ビットで示される、次の動作を持ちます。
+
+  IP_FW_F_DENY          - パケットを破棄します
+  IP_FW_F_REJECT        - パケットを破棄し、ICMP または TCP を経由して拒否を通知します
+  IP_FW_F_ACCEPT        - パケットを受け入れます
+  IP_FW_F_COUNT         - カウンタを増加させ、マッチングを続けます
+  IP_FW_F_DIVERT        - パケットを divert(4) ソケットにそらします
+  IP_FW_F_TEE           - パケットを divert(4) ソケットにコピーし、継続します
+  IP_FW_F_SKIPTO        - ルール番号 fu_skipto_rule へスキップします
+.Pp
+IP_FW_F_REJECT の場合、fu_reject_code の番号が 0 から 255 ならば
+対応するコードとともに受信したパケットの始点の IP アドレスへ
+ICMP unreachable パケットを送り返します。
+そうではない場合には、値は 256 でプロトコルが IPPROTO_TCP である必要があり、
+この場合 TCP reset パケットが送られます。
+.Pp
+IP_FW_F_SKIPTO を使用すると、fu_skipto_rule より小さいルール番号を持つ
+すべての連続するルールがスキップされます。
+.Sh カーネルオプション
+カーネル設定ファイルでのオプション:
+  IPFIREWALL               - ipfirewall を有効にします
+  IPFIREWALL_VERBOSE       - firewall の出力を有効にします
+  IPFIREWALL_VERBOSE_LIMIT - firewall の出力を抑制します
+  DIVERT                   - divert(4) ソケットを有効にします
+.Pp
+パケットが IP_FW_F_PRN ビットがセットされているルールに適合し、
+IPFIREWALL_VERBOSE が有効にされている場合にはメッセージがコンソールに
+出力されます。
+IPFIREWALL_VERBOSE_LIMIT はそれぞれのルールがログメッセージを出力できる
+回数の最大値を制限します。
+これらの変数も
+.Xr sysctl 3
+インタフェースを経由して利用できます。
+.Sh 診断
+
+[EINVAL]  IP オプションの欄が最小値より短いか、提供されたオプション
+          バッファより長く不適切な形式でした。ip_fw 構造体で構造的
+          なエラーが発生しました (n_src_p+n_dst_p 過大、ALL/ICMP
+          プロトコルのためのポートセットなど)。不正なルール番号が
+          使われました。
+.Sh 関連項目
+.Xr setsockopt 2 ,
+.Xr divert 4 ,
+.Xr ip 4 ,
+.Xr ipfw 8 ,
+.Xr sysctl 8
+.Sh バグ
+``tee'' ルールはまだ実装されていません (現在は効果がありません)。
+.Pp
+この man ページはまだ作業が必要です。
+.Sh 歴史
+ipfw 機能は最初に BSDI へのパッケージとして
+Daniel Boulet <danny@BouletFermat.ab.ca>
+によって書かれました。
+Ugen J.S.Antsilevich <ugen@NetVision.net.il>
+が大幅に変更し、FreeBSD へ移植しました。
+.Pp
+Archie Cobbs <archie@whistle.com> によっていくつかの拡張が加えられました。

@@ -1,0 +1,125 @@
+.\" jpman %Id: natm.4,v 1.3 1999/09/19 11:41:32 vanitas Stab %
+.Dd December 29, 1997
+.Dt NATM 4
+.Os BSD
+.Sh 名称
+.Nm natm
+.Nd ネイティブモード ATM プロトコル層
+.Sh 解説
+BSD ATM ソフトウエアはネイティブモード ATM プロトコル層を含み、
+AAL0 と AAL5 の仮想回線 (バーチャルサーキット)
+へのソケットレベルのアクセスを提供します。
+本プロトコル層を有効にするには、カーネル設定ファイルに
+.Dl options NATM
+を加え、カーネルの再構築を行ってください
+(その際
+.Dq make clean
+を忘れずに行ってください)。
+.Sh NATM API
+NATM 層では仮想回線を指定するために
+.Dv struct sockaddr_natm
+を使用します:
+.Bd -literal -offset indent
+struct sockaddr_natm {
+  u_int8_t      snatm_len;              /* 長さ */
+  u_int8_t      snatm_family;           /* AF_NATM */
+  char          snatm_if[IFNAMSIZ];     /* インタフェース名 */
+  u_int16_t     snatm_vci;              /* vci */
+  u_int8_t      snatm_vpi;              /* vpi */
+};
+.Ed
+.Pp
+VPI 0, VCI 201 の仮想回線に AAL5
+コネクションを作成するには次の様にします:
+.Bd -literal -offset indent
+  struct sockaddr_natm snatm;
+  int s, r;
+  s = socket(AF_NATM, SOCK_STREAM, PROTO_NATMAAL5);
+                       /* 注: PROTO_NATMAAL0 は AAL0 です */
+  if (s < 0) { perror("socket"); exit(1); }
+  bzero(&snatm, sizeof(snatm));
+  snatm.snatm_len = sizeof(snatm);
+  snatm.snatm_family = AF_NATM;
+  sprintf(snatm.snatm_if, "en0");
+  snatm.snatm_vci = 201;
+  snatm.snatm_vpi = 0;
+  r = connect(s, (struct sockaddr *)&snatm, sizeof(snatm));
+  if (r < 0) { perror("connect"); exit(1); }
+  /* 以上で s が ATM に接続されました! */
+.Ed
+.Pp
+.Fn socket
+コールは単純に未接続の NATM ソケットを作成します。
+.Fn connect
+コールは未接続の NATM ソケットを仮想回線に結び付け、
+データの受信のためにその仮想回線を有効にするようドライバに通知します。
+.Fn connect
+コールの実行後、そのソケットに対し
+.Fn read
+または
+.Fn write
+を使用して ATM 入出力を行います。
+.Sh 内部の NATM 操作
+内部的に、NATM プロトコル層は
+そのシステム上の全てのアクティブな仮想回線のリストを
+.Dv natm_pcbs
+に保持しています。
+これは、NATM と IP が仮想回線上で衝突することを防ぐために、
+その時 IP で使用中の回線を含みます。
+.Pp
+仮想回線のデータ受信が有効化されると、
+NATM プロトコル層はプロトコル制御ブロックのアドレスを
+受信
+.Dq ハンドル
+としてドライバへ渡します。
+入力データが到着すると、
+ドライバは適切な受信ハンドルと共にデータを返します。
+NATM 層は、
+プロトコル制御ブロックの検索のオーバヘッドを避けるために、
+この情報を使用します。
+これにより、ATM が既にデータをデマルチプレクスしてある結果を
+利用することができます。
+.Sh その他の NATM の問題
+我々は現在ビデオサーバプロジェクトに取り組んでおり、
+その構成の一部としてこのドライバを使用しています。
+我々の手元には我々の作成した MMX と呼ばれるデバイスがあります。
+ビデオカメラを MMX に接続して、ビデオ出力を AAL0 の
+セルストリームとして送信させることができます。
+もちろんこのストリームはかなり速く (実際に大容量です!)、
+本ドライバの通常の AAL0 への処理では対処できません
+(皆さんは、小さい mbuf ごとのセルをアプリケーションに
+作成させようと試みるでしょう。しかし、ソケット層がその種の
+データストリームの処理についていけない事がわかります)。
+この問題を解決するため、我々は
+.Dq raw
+モードを実装しました。
+これは、カードから得た未処理の AAL0 の情報を、大きなデータの
+かたまりへと処理します。
+ソケット層がおかしな振る舞いをすること無く、このデータをリアルタイムに
+ディスクへ保存することができます。
+あいにく、そのデータ内には RBD (receive buffer descriptors: 
+受信バッファ記述子) 及びセルヘッダが含まれていますが、
+これは取り込み後に除去しなければなりません。
+.Dq raw
+モードを有効化するには次の様に ioctl を使用します:
+.Bd -literal -offset indent
+  int size = 4000; /* bytes */
+  ret = ioctl(s, SIOCRAWATM, (caddr_t)&size);
+.Ed
+.Pp
+この例では、通常の 48 バイトのかたまりではなく、4000 バイトの
+かたまりで AAL0 のデータを処理するようドライバに伝えます。
+明らかにこれは少々粗雑な方法ではありますが、
+我々の現在のアプリケーションには必要なものです。
+将来、適した大きな AAL5 のフレームでビデオ情報源からの
+データ送信が行われることを期待しています。
+.Sh 警告
+NATM プロトコルのサポートは ATM プロトコルの開発により
+変更されやすいです。
+ユーザは現在の実装の詳細に依存するべきではなく、
+むしろエクスポートされたサービスに依存すべきです。
+.Sh 関連項目
+.Xr en 4
+.Sh 作者
+1996 年、NetBSD において、Washington University の Chuck Cranor が
+NATM プロトコル層を EN ATM ドライバと共に実装しました。

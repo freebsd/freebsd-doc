@@ -1,0 +1,175 @@
+.\"
+.\" random.c -- A strong random number generator
+.\"
+.\" Version 0.92, last modified 21-Sep-95
+.\" 
+.\" Copyright Theodore Ts'o, 1994, 1995.  All rights reserved.
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, and the entire permission notice in its entirety,
+.\"    including the disclaimer of warranties.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\" 3. The name of the author may not be used to endorse or promote
+.\"    products derived from this software without specific prior
+.\"    written permission.
+.\" 
+.\" ALTERNATIVELY, this product may be distributed under the terms of
+.\" the GNU Public License, in which case the provisions of the GPL are
+.\" required INSTEAD OF the above restrictions.  (This clause is
+.\" necessary due to a potential bad interaction between the GPL and
+.\" the restrictions contained in a BSD-style copyright.)
+.\" 
+.\" THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED
+.\" WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+.\" OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+.\" DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT,
+.\" INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+.\" (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+.\" SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+.\" HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+.\" STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+.\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+.\" OF THE POSSIBILITY OF SUCH DAMAGE.
+.\"
+.\" %Id: random.4,v 1.6 1997/10/13 11:08:40 charnier Exp %
+.\" jpman %Id: random.4,v 1.3 2000/01/03 03:15:50 horikawa Stab %
+.\"
+.Dd October 21, 1995
+.Dt RANDOM 4 i386
+.Os
+.Sh 名称
+.Nm random ,
+.Nm urandom
+.Nd 乱数デバイス
+.Sh 解説
+このデバイスはデバイスドライバなどから環境ノイズを集め、暗号での利用に適当な
+良い乱数を返します。暗号での利用はもちろん、この数は TCP シーケンス番号のための
+乱数の種や、ランダムなだけでなく攻撃者の予想が難しい数が望ましいその他の
+ところでも良いものです。
+.Ss 操作の理論
+コンピュータはとても予測しやすい装置です。従ってコンピュータで本当に乱数を
+作ることは \(em アルゴリズムを使って簡単に作れる疑似乱数とは
+対照的に \(em 非常に難しいです。
+不幸にも、攻撃者が疑似乱数生成器の乱数の列を推量することはとても簡単です。
+そしてあるアプリケーションにとっては、これは受け入れられません。
+そこでその代わりに、コンピュータの環境から「環境ノイズ」を集めて、それを使って
+乱数を作る必要があります。「環境ノイズ」は外部の攻撃者には見るのが難しいもので
+なければなりません。Unix 環境では、これはカーネル中で行うのが最善です。
+.Pp
+環境からの乱数源には、キーを押す間のタイミングやいくつかの割り込みの
+間のタイミング、そして (a) 非決定論的で (b) 外部の観察者から
+測定するのが難しいその他の事象が含まれます。
+この源からの乱数は「エントロピーのたまり場」に加えられます。
+「エントロピーのたまり場」は周期的に CBC モードの MD5 圧縮関数を使って
+かき混ぜられます。
+乱数がエントロピーのたまり場でかき混ぜられるときに、ルーチンは
+何ビットの乱数が乱数生成器の内部状態に蓄えられたかを
+.Em 見積り
+ます。
+.Pp
+乱数が要求されると、カウンタと「エントロピーのたまり場」の
+内容の和の MD5 ハッシュをとることにより、乱数が得られます。
+MD5 ハッシュを使う理由は乱数生成器の内部状態を外にさらすのを防げるからです。
+MD5 ハッシュはたまり場を保護しますが、たまり場から作られる乱数はそれぞれ
+内部状態から得られる情報をいくらか漏らします。そのため情報量が増えると
+外の攻撃者は乱数生成器の内部状態についていくらか推測してみることが
+できるようになります。
+この理由からルーチンは乱数を出力するとき、エントロピーのたまり場に含まれている
+「真の乱数」のビット数の内部での見積りを減らします。
+.Pp
+もしこの見積りが 0 になっても、ルーチンは乱数を作り続けることができます。
+しかしながら、攻撃者が乱数生成器の出力や MD5 アルゴリズムを解析して
+ルーチンの出力の推測に成功するかも知れません。
+最悪の場合、カウンタとばれていない秘密に対して MD5 ハッシングしたもの
+と同じになるので、
+Phil Karn (エントロピーのたまり場から乱数を取り出すのに、カウンタを加えた
+MD5 を使う機構を考えた人物) はこれを「実用的な乱雑さ」と呼んでいます。
+もし MD5 が強力な暗号ハッシュであれば、これはかなり攻撃に耐えられるはずです。
+.Ss エクスポートされたインタフェース \(em 出力
+エクスポートされたインタフェースは 3 つあります。第 1 はカーネルの内部から
+使うことを意図したものです。
+.Pp
+.Bl -tag -width Pa -compact
+.It Pa void get_random_bytes(void *buf, int nbytes);
+.El
+.Pp
+このインタフェースは要求されたバイト数の乱数を返し、それを要求されたバッファに
+置きます。
+.Pp
+他の 2 つのインタフェースは
+.Pa /dev/random
+と
+.Pa /dev/urandom
+の 2 つのキャラクタ型デバイスです。
+最大でもエントロピーのたまり場に含まれる (乱数生成器により見積もられた)
+ビット数の乱数しか返さないので
+.Pa /dev/random
+デバイスは非常に高品質の乱数が必要なとき (例えば、鍵の生成) の使用に
+ふさわしいです。
+.Pp
+.Pa /dev/urandom
+デバイスはこの制限がなく、要求されただけのバイトを返します。
+エントロピーのたまり場が再蓄積する時間を与えずに多くの乱数を要求すると、
+乱数の質が低くなります。
+しかしながら、多くのアプリケーションにとってはこれは受け入れられるでしょう。
+.Ss エクスポートされたインタフェース \(em 入力
+デバイスから環境ノイズを集める現在のエクスポートされたインタフェースは
+次の 2 つです。
+.Pp
+.Bl -tag -width Pa -compact
+.It Pa void add_keyboard_randomness(unsigned char scancode);
+.It Pa void add_interrupt_randomness(int irq);
+.El
+.Pp
+1 番目の関数は「エントロピーのたまり場」へのランダムな入力として、scancode は
+もちろん、キーを押す間のタイミングも使います。
+.Pp
+2 番目の関数はエントロピーのたまり場へのランダムな入力として割り込みの間の
+タイミングを使います。すべての割り込みが良い乱数源という訳ではないことに
+注意して下さい！例えば、タイマ割り込みは良い選択ではありません。なぜなら
+割り込みの周期性が非常に規則的なため攻撃者が予測できるからです。
+ディスク割り込みのタイミングはより予測できないので、ディスク割り込みの方が
+より良いです。ルーチンは割り込みのタイミングの 1 次と 2 次のデルタを取ることで
+特定の割り込みチャンネルが提供するランダムさが何ビットかを見積もろうとします。
+.Sh 謝辞
+元の中心となるコードは
+.An Theodore Ts'o
+が Linux プラットフォーム向けに書きました。
+.Bx Free
+に移植したのは
+.Xr rndcontrol 8
+ユーティリティ
+も書いた
+.An Mark Murray
+です。
+.Pp
+この乱数生成器を構成する考えは Pretty Good Privacy の乱数生成器と
+Phil Karn との個人的な議論から得たものです。この設計はさらに私一人で
+修正したので、いかなる欠陥も私だけの責任であり、PGP の著作者や Phil に
+帰するべきではありません。
+.Pp
+MD5 変換のコードはパブリックドメインである Colin Plumb の実装から
+取りました。MD5 暗号チェックサムは Ronald Rivest により発明され、
+RFC 1321、 "The MD5 Message Digest Algorithm" で解説されています。
+.Pp
+この話題に関するこれ以上の予備知識は Donald Eastlake, Steve Crocker,
+Jeff Schiller による RFC 1750、"Randomness Recommendations for Security" から
+得られるでしょう。
+.Sh 関連項目
+.Xr rndcontrol 8
+.Sh 関連ファイル
+.Bl -tag -width Pa -compact
+.It Pa /dev/random
+.It Pa /dev/urandom
+.El
+.Sh 歴史
+.Pa random ,
+.Pa urandom
+ファイルは
+.Fx 2.1.5 
+で登場しました。
