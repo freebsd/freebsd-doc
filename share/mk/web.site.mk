@@ -1,5 +1,5 @@
 # bsd.web.mk
-# $FreeBSD: www/share/mk/web.site.mk,v 1.38 2001/10/30 15:09:13 hrs Exp $
+# $FreeBSD: www/share/mk/web.site.mk,v 1.39 2001/10/30 16:51:34 hrs Exp $
 
 #
 # Build and install a web site.
@@ -14,6 +14,9 @@
 .if exists(${.CURDIR}/../Makefile.inc)
 .include "${.CURDIR}/../Makefile.inc"
 .endif
+
+# XXX: translations are not ready!
+NO_TIDY=	YES
 
 WEBDIR?=	${.CURDIR:T}
 CGIDIR?=	${.CURDIR:T}
