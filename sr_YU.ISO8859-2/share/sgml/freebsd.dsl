@@ -1,4 +1,4 @@
-<!-- $FreeBSD: doc/en_US.ISO_8859-1/share/sgml/freebsd.dsl,v 1.5 2001/02/20 19:41:41 nik Exp $ -->
+<!-- $FreeBSD$ -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
 <!ENTITY freebsd.dsl PUBLIC "-//FreeBSD//DOCUMENT DocBook Language Neutral Stylesheet//EN" CDATA DSSSL>
@@ -44,14 +44,6 @@
                       attributes: (list (list "href" "mailto:doc@FreeBSD.org"))
                   (literal "doc@FreeBSD.org"))
 	        (literal ">.")))))
-
-
-	<!-- Convert " ... " to `` ... '' in the HTML output. -->
-	(element quote
-	  (make sequence
-	    (literal "``")
-	    (process-children)
-	    (literal "''")))
       ]]>
 
        (define %html-header-tags% '(("META" ("HTTP-EQUIV" "Content-Type") ("CONTENT" "text/html; charset=iso-8859-2")))) 

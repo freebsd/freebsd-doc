@@ -182,9 +182,19 @@
           ;; /REFENTRY
           #f)
 
-        ; Empty function to quiet warnings
-        (define ($create-refentry-xref-link$)
-          (literal ""))
+        <!-- Specify how to generate the man page link HREF -->
+        (define ($create-refentry-xref-link$ #!optional (n (current-node)))
+          (let* ((r (select-elements (children n) (normalize "refentrytitle")))
+                 (m (select-elements (children n) (normalize "manvolnum")))
+                 (v (attribute-string (normalize "vendor") n))
+                 (u (string-append "http://www.FreeBSD.org/cgi/man.cgi?query="
+                         (data r) "&" "sektion=" (data m))))
+            (case v
+              (("current") (string-append u "&" "manpath=FreeBSD+5.0-current"))
+              (("xfree86") (string-append u "&" "manpath=XFree86+4.3.0"))
+              (("netbsd")  (string-append u "&" "manpath=NetBSD+1.6.1"))
+              (("ports")   (string-append u "&" "manpath=FreeBSD+Ports"))
+              (else u))))
 
         (element citerefentry
           (let ((href          ($create-refentry-xref-link$)))
@@ -214,6 +224,13 @@
 	;; textobject
         (define preferred-mediaobject-notations
 	  '())
+
+	<!-- Convert " ... " to `` ... '' in the HTML output. -->
+	(element quote
+	  (make sequence
+	    (literal "``")
+	    (process-children)
+	    (literal "''")))
       ]]>
 
       <!-- HTML with images  ............................................ -->
