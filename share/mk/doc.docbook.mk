@@ -1,5 +1,5 @@
 #
-# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.47 2001/09/08 01:59:22 murray Exp $
+# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.48 2001/09/11 00:38:32 murray Exp $
 #
 # This include file <doc.docbook.mk> handles building and installing of
 # DocBook documentation in the FreeBSD Documentation Project.
@@ -137,7 +137,7 @@ TEXCMDS+=	\RequirePackage{url}
 PRINTOPTS+=	-ioutput.print.justify
 .endif
 .if defined(TWO_SIDE)
-PRINTOPTS+=	-V %two-side%
+PRINTOPTS+=	-V %two-side% -ioutput.print.twoside
 TEXCMDS+=	\def\PageTwoSide{1}
 .endif
 .if defined(NICE_HEADERS)
