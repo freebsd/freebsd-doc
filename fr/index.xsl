@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/fr/index.xsl,v 1.3 2003/04/06 16:35:25 stephane Exp $ -->
+<!-- $FreeBSD: www/fr/index.xsl,v 1.4 2003/07/14 16:52:49 stephane Exp $ -->
 
 <!-- 
    The FreeBSD French Documentation Project
@@ -13,7 +13,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/fr/index.xsl,v 1.3 2003/04/06 16:35:25 stephane Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/fr/index.xsl,v 1.4 2003/07/14 16:52:49 stephane Exp $'"/>
   <xsl:variable name="title" select="'Le Projet FreeBSD'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -76,7 +76,7 @@
 		  <option value="http://www.bg.FreeBSD.org/">Bulgarie</option>
 		  <option value="http://www.ca.FreeBSD.org/">Canada</option>
 		  <option value="http://www2.ca.FreeBSD.org/">Canada/2</option>
-		  <--
+		  <!--
 		  <option value="http://www3.ca.FreeBSD.org/">Canada/3</option>
 		  -->
 		  <option value="http://www.cn.FreeBSD.org/">Chine</option>
