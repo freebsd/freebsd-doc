@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: query-pr-summary.cgi,v 1.18 1998-12-15 00:35:52 fenner Exp $
+# $Id: query-pr-summary.cgi,v 1.19 1999-02-01 21:07:42 wosch Exp $
 
 $html_mode     = 1 if $ENV{'DOCUMENT_ROOT'};
 $self_ref      = $ENV{'SCRIPT_NAME'};
@@ -514,7 +514,7 @@ print qq`
 <TD><B>Sort by</B>:</TD>
 <TD><SELECT NAME="sort">
 <OPTION SELECTED VALUE="none">No Sort</OPTION>
-<OPTION VALUE="lastmod">Last-Modiified</OPTION>
+<OPTION VALUE="lastmod">Last-Modified</OPTION>
 <OPTION VALUE="category">Category</OPTION>
 <OPTION VALUE="responsible">Responsible Party</OPTION>
 </SELECT></TD>
