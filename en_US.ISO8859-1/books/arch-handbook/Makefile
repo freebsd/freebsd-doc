@@ -25,23 +25,27 @@ IMAGES= sockets/layers.eps sockets/sain.eps sockets/sainfill.eps sockets/sainlsb
 
 # SGML content
 SRCS=  book.sgml
+SRCS+= dma/chapter.sgml
+SRCS+= driverbasics/chapter.sgml
 SRCS+= introduction/chapter.sgml
-SRCS+= tools/chapter.sgml
-SRCS+= secure/chapter.sgml
-SRCS+= l10n/chapter.sgml
-SRCS+= policies/chapter.sgml
-SRCS+= locking/chapter.sgml
-SRCS+= sockets/chapter.sgml
 SRCS+= ipv6/chapter.sgml
 SRCS+= isa/chapter.sgml
-SRCS+= pci/chapter.sgml
-SRCS+= usb/chapter.sgml
-SRCS+= scsi/chapter.sgml
-SRCS+= x86/chapter.sgml
-SRCS+= vm/chapter.sgml
-SRCS+= dma/chapter.sgml
+SRCS+= jail/chapter.sgml
 SRCS+= kerneldebug/chapter.sgml
+SRCS+= kobj/chapter.sgml
+SRCS+= l10n/chapter.sgml
+SRCS+= locking/chapter.sgml
+SRCS+= pci/chapter.sgml
+SRCS+= policies/chapter.sgml
+SRCS+= scsi/chapter.sgml
+SRCS+= secure/chapter.sgml
+SRCS+= sockets/chapter.sgml
 SRCS+= sound/chapter.sgml
+SRCS+= sysinit/chapter.sgml
+SRCS+= tools/chapter.sgml
+SRCS+= usb/chapter.sgml
+SRCS+= vm/chapter.sgml
+SRCS+= x86/chapter.sgml
 
 # Entities
 
