@@ -1,4 +1,4 @@
-# $FreeBSD: www/fr/news/Makefile,v 1.4 2003/11/04 21:04:44 stephane Exp $
+# $FreeBSD: www/fr/news/Makefile,v 1.5 2003/11/17 17:22:21 stephane Exp $
 
 # The FreeBSD French Documentation Project
 # Original revision: 1.38
@@ -10,9 +10,7 @@
 .include "../Makefile.inc"
 .endif
 
-#DOCS+= press.sgml
 DOCS+= news.sgml
-#DOCS+= webchanges.sgml
 
 # press releases
 DOCS+= pressreleases.sgml
