@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/Makefile,v 1.74 2001/10/29 10:14:30 murray Exp $
+# $FreeBSD: www/en/Makefile,v 1.75 2001/11/14 18:31:14 phantom Exp $
 .if exists(Makefile.conf)
 .include "Makefile.conf"
 .endif
@@ -83,9 +83,9 @@ DATA+=		index.html
 CLEANFILES+=	index.html
 
 index.html: index.xsl news/news.xml news/press.xml includes.xsl news/includes.xsl
-	${XSLTPROC} ${XSLTPROCFLAGS} -o index.html \
+	${XSLTPROC} ${XSLTPROCOPTS} -o index.html \
 		${.CURDIR}/index.xsl ${.CURDIR}/news/news.xml
-	-${TIDY} ${TIDYFLAGS} index.html
+	-${TIDY} ${TIDYOPTS} index.html
 
 # Handle the FAQ/ and handbook/ directories specially.
 FAQ:
@@ -108,13 +108,13 @@ afterinstall:
 		${LN} -fs doc/en_US.ISO8859-1/books/handbook ${DOCINSTALLDIR}/handbook
 
 LINBOT?=	${PREFIX}/bin/linbot
-LINBOTFLAGS?=	-ab
+LINBOTOPTS?=	-ab
 LINBOTDIR?=	/linbot
 LINBOTINSTALLDIR?= ${DESTDIR}${LINBOTDIR}
 LINBOTURL?=	http://www.FreeBSD.org/
 
 linbot:
 	@[ -d ${LINBOTINSTALLDIR} ] || ${MKDIR} ${LINBOTINSTALLDIR}
-	${LINBOT} ${LINBOTFLAGS} -o ${LINBOTINSTALLDIR} ${LINBOTURL}
+	${LINBOT} ${LINBOTOPTS} -o ${LINBOTINSTALLDIR} ${LINBOTURL}
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"

@@ -1,5 +1,5 @@
 # bsd.web.mk
-# $FreeBSD: www/share/mk/web.site.mk,v 1.39 2001/10/30 16:51:34 hrs Exp $
+# $FreeBSD: www/share/mk/web.site.mk,v 1.40 2001/11/12 19:17:39 phantom Exp $
 
 #
 # Build and install a web site.
@@ -14,9 +14,6 @@
 .if exists(${.CURDIR}/../Makefile.inc)
 .include "${.CURDIR}/../Makefile.inc"
 .endif
-
-# XXX: translations are not ready!
-NO_TIDY=	YES
 
 WEBDIR?=	${.CURDIR:T}
 CGIDIR?=	${.CURDIR:T}
@@ -45,9 +42,9 @@ SORT?=		/usr/bin/sort
 TOUCH?=		/usr/bin/touch
 
 XSLTPROC?=	${PREFIX}/bin/xsltproc
-XSLTPROCFLAGS?=	-nonet
+XSLTPROCOPTS?=	-nonet ${XSLTPROCFLAGS}
 TIDY?=		${PREFIX}/bin/tidy
-TIDYFLAGS?=	-i -m -f /dev/null
+TIDYOPTS?=	-i -m -raw -preserve -f /dev/null ${TIDYFLAGS}
 
 #
 # Install dirs derived from the above.
@@ -82,37 +79,36 @@ PORTSBASE?=	/usr
 
 .SUFFIXES:	.sgml .html
 .if defined(REVCHECK)
-PREHTML=	${WEB_PREFIX}/ja/prehtml
-PREHTMLFLAGS=	${PREHTMLOPTS}
+PREHTML?=	${WEB_PREFIX}/ja/prehtml
 CANONPREFIX0!=	cd ${WEB_PREFIX}; ${ECHO_CMD} $${PWD};
 CANONPREFIX=	${PWD:S/^${CANONPREFIX0}//:S/^\///}
 LOCALTOP!=	${ECHO_CMD} ${CANONPREFIX} | \
 	${PERL} -pe 's@[^/]+@..@g; $$_.="/." if($$_ eq".."); s@^\.\./@@;'
 DIR_IN_LOCAL!=	${ECHO_CMD} ${CANONPREFIX} | ${PERL} -pe 's@^[^/]+/?@@;'
-PREHTMLFLAGS+=	-revcheck "${LOCALTOP}" "${DIR_IN_LOCAL}"
+PREHTMLOPTS?=	-revcheck "${LOCALTOP}" "${DIR_IN_LOCAL}" ${PREHTMLFLAGS}
 .else
-DATESUBST=	's/<!ENTITY date[ \t]*"$$Free[B]SD. .* \(.* .*\) .* .* $$">/<!ENTITY date	"Last modified: \1">/'
-PREHTML=	${SED} -e ${DATESUBST}
+DATESUBST?=	's/<!ENTITY date[ \t]*"$$Free[B]SD. .* \(.* .*\) .* .* $$">/<!ENTITY date	"Last modified: \1">/'
+PREHTML?=	${SED} -e ${DATESUBST}
 .endif
 .if !defined(OPENJADE)
-SGMLNORM=	${PREFIX}/bin/sgmlnorm
+SGMLNORM?=	${PREFIX}/bin/sgmlnorm
 .else
-SGMLNORM=	${PREFIX}/bin/osgmlnorm
+SGMLNORM?=	${PREFIX}/bin/osgmlnorm
 .endif
 LOCALBASE?=	/usr/local
 PREFIX?=	${LOCALBASE}
 CATALOG?=	${PREFIX}/share/sgml/html/catalog
-SGMLNORMFLAGS=	-d ${SGMLNORMOPTS} -c ${CATALOG} -D ${.CURDIR}
+SGMLNORMOPTS?=	-d ${SGMLNORMFLAGS} -c ${CATALOG} -D ${.CURDIR}
 GENDOCS+=	${DOCS:M*.sgml:S/.sgml$/.html/g}
 ORPHANS:=	${ORPHANS:N*.sgml}
 
 .sgml.html:
-	${PREHTML} ${PREHTMLFLAGS} ${.IMPSRC} | \
+	${PREHTML} ${PREHTMLOPTS} ${.IMPSRC} | \
 	${SETENV} SGML_CATALOG_FILES= \
-		${SGMLNORM} ${SGMLNORMFLAGS} > ${.TARGET} || \
+		${SGMLNORM} ${SGMLNORMOPTS} > ${.TARGET} || \
 			(${RM} -f ${.TARGET} && false)
 .if !defined(NO_TIDY)
-	-${TIDY} ${TIDYFLAGS} ${.TARGET}
+	-${TIDY} ${TIDYOPTS} ${.TARGET}
 .endif
 
 ###
@@ -121,15 +117,15 @@ ORPHANS:=	${ORPHANS:N*.sgml}
 # Generate HTML from docbook
 
 SGMLFMT?=	${PREFIX}/bin/sgmlfmt
-SGMLFMTFLAGS?=	-d docbook -f html ${SGMLOPTS}
+SGMLFMTOPTS?=	-d docbook -f html ${SGMLFMTFLAGS} ${SGMLFLAGS}
 .SUFFIXES:	.docb
 GENDOCS+=	${DOCS:M*.docb:S/.docb$/.html/g}
 ORPHANS:=	${ORPHANS:N*.docb}
 
 .docb.html:
-	${SGMLFMT} ${SGMLFMTFLAGS} ${.IMPSRC}
+	${SGMLFMT} ${SGMLFMTOPTS} ${.IMPSRC}
 .if !defined(NO_TIDY)
-	-${TIDY} ${TIDYFLAGS} ${.TARGET}
+	-${TIDY} ${TIDYOPTS} ${.TARGET}
 .endif
 
 

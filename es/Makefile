@@ -1,4 +1,4 @@
-# $FreeBSD: www/es/Makefile,v 1.10 2001/06/30 20:27:52 jesusr Exp $
+# $FreeBSD: www/es/Makefile,v 1.11 2001/06/30 20:31:48 jesusr Exp $
 
 .if exists(Makefile.conf)
 .include "Makefile.conf"
@@ -67,7 +67,7 @@ SUBDIR+= ports
 #DOCSUBDIR=	FAQ handbook
 DOCSUBDIR=	FAQ
 .endif
-SGMLOPTS+=      -links -hdr ${.CURDIR}/doc.hdr -ftr ${.CURDIR}/doc.ftr
+SGMLFLAGS+=	-links -hdr ${.CURDIR}/doc.hdr -ftr ${.CURDIR}/doc.ftr
 
 WEBDIR=		data/es
 

@@ -1,4 +1,4 @@
-# $FreeBSD: www/ja/gallery/Makefile,v 1.15 2001/09/17 03:07:39 kuriyama Exp $
+# $FreeBSD: www/ja/gallery/Makefile,v 1.16 2001/11/18 22:33:58 hrs Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.14
 
@@ -23,22 +23,22 @@ CLEANFILES+= ${DATA}
 
 gallery.html: ${SRC} gallery.xsl ../includes.xsl
 	${XSLT} ${.CURDIR}/gallery.xsl ${.CURDIR}/${SRC} > ${.TARGET}
-#	-${TIDY} ${TIDYFLAGS} ${.TARGET}
+	-${TIDY} ${TIDYOPTS} ${.TARGET}
 
 cgallery.html: ${SRC} gallery-entry.xsl
 	${XSLT} --param type \'commercial\' \
 		${.CURDIR}/gallery-entry.xsl ${.CURDIR}/${SRC} > ${.TARGET}
-#	-${TIDY} ${TIDYFLAGS} ${.TARGET}
+	-${TIDY} ${TIDYOPTS} ${.TARGET}
 
 npgallery.html: ${SRC} gallery-entry.xsl
 	${XSLT} --param type \'nonprofit\' \
 		${.CURDIR}/gallery-entry.xsl ${.CURDIR}/${SRC} > ${.TARGET}
-#	-${TIDY} ${TIDYFLAGS} ${.TARGET}
+	-${TIDY} ${TIDYOPTS} ${.TARGET}
 
 pgallery.html: ${SRC} gallery-entry.xsl
 	${XSLT} --param type \'personal\' \
 		${.CURDIR}/gallery-entry.xsl ${.CURDIR}/${SRC} > ${.TARGET}
-#	-${TIDY} ${TIDYFLAGS} ${.TARGET}
+	-${TIDY} ${TIDYOPTS} ${.TARGET}
 
 ### Revision checking
 REVCHECK=	yes

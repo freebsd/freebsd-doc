@@ -1,4 +1,4 @@
-# $FreeBSD: www/zh/Makefile,v 1.4 2000/02/28 12:51:21 phantom Exp $
+# $FreeBSD: www/zh/Makefile,v 1.5 2000/11/07 05:20:40 kuriyama Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -11,9 +11,9 @@
 DOCSUBDIR=	FAQ
 .endif
 
-SGMLOPTS=	-links -hdr ${.CURDIR}/doc.hdr -ftr ${.CURDIR}/doc.ftr 
-SGMLOPTS+=-e big5
-FORMATS= "html ps"
+SGMLFLAGS+=	-links -hdr ${.CURDIR}/doc.hdr -ftr ${.CURDIR}/doc.ftr
+SGMLFLAGS+=	-e big5
+FORMATS=	"html ps"
 
 WEBBASE=	/data/zh
 

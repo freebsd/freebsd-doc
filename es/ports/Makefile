@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/ports/Makefile,v 1.33 2001/06/14 03:09:56 dd Exp $
+# $FreeBSD: www/es/ports/Makefile,v 1.10 2001/12/06 12:28:23 phantom Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -43,6 +43,6 @@ index.sgml: ${INDEX} packages.exists portindex ports.inc .NOTMAIN
 install: all
 
 all install clean:
-	(cd ${.CURDIR} &&${MAKE}  ${MAKEFLAGS} -f ${.CURDIR}/Makefile.inc0 ${.TARGET})
+	(cd ${.CURDIR} && ${MAKE}  ${MAKEFLAGS} -f ${.CURDIR}/Makefile.inc0 ${.TARGET})
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"

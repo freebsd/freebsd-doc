@@ -1,4 +1,4 @@
-# $FreeBSD: www/ru/Makefile,v 1.16 2000/12/29 13:37:57 phantom Exp $
+# $FreeBSD: www/ru/Makefile,v 1.17 2001/08/08 02:08:09 kuriyama Exp $
 # The FreeBSD Russian Documentation Project
 # $FreeBSDru: frdp/www/ru/Makefile,v 1.9 2000/12/29 13:17:32 phantom Exp $
 # Original revision: 1.55
@@ -69,8 +69,8 @@ SUBDIR+= handbook
 DOCSUBDIR=	FAQ
 .endif
 
-SGMLOPTS+=	-links -hdr ${.CURDIR}/doc.hdr -ftr ${.CURDIR}/doc.ftr
-SGMLOPTS+=	-e KOI8-R
+SGMLFLAGS+=	-links -hdr ${.CURDIR}/doc.hdr -ftr ${.CURDIR}/doc.ftr
+SGMLFLAGS+=	-e KOI8-R
 FORMATS=	"html ps koi8-r"
 
 WEBDIR?=	data/ru

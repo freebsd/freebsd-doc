@@ -1,4 +1,4 @@
-# $FreeBSD: www/ja/Makefile,v 1.52 2001/10/30 15:09:52 hrs Exp $
+# $FreeBSD: www/ja/Makefile,v 1.53 2001/11/17 17:21:09 hrs Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.75
 
@@ -72,7 +72,7 @@ DOCSUBDIR=	FAQ handbook
 #SUBDIR+= gifs
 #SUBDIR+= cgi
 
-SGMLOPTS=	-links -hdr ${.CURDIR}/doc.hdr -ftr ${.CURDIR}/doc.ftr -e EUC-JP
+SGMLFLAGS=	-links -hdr ${.CURDIR}/doc.hdr -ftr ${.CURDIR}/doc.ftr -e EUC-JP
 
 WEBDIR=		data/ja
 
@@ -81,9 +81,9 @@ DATA+=		index.html
 CLEANFILES+=	index.html
 
 index.html: index.xsl news/news.xml news/press.xml includes.xsl news/includes.xsl
-	${XSLTPROC} ${XSLTPROCFLAGS} -o index.html \
+	${XSLTPROC} ${XSLTPROCOPTS} -o index.html \
 		${.CURDIR}/index.xsl ${.CURDIR}/news/news.xml
-#	-${TIDY} ${TIDYFLAGS} index.html
+	-${TIDY} ${TIDYOPTS} index.html
 
 ### Revision checking
 REVCHECK=	yes

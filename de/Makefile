@@ -1,6 +1,6 @@
 # The FreeBSD Documentation Project
 # The FreeBSD German Documentation Project
-# $FreeBSD$
+# $FreeBSD: www/de/Makefile,v 1.1 2001/02/25 11:54:42 alex Exp $
 # $FreeBSDde: de-www/Makefile,v 1.6 2001/02/25 11:48:33 alex Exp $
 
 .if exists(Makefile.conf)
@@ -34,7 +34,7 @@ CLEANFILES+=atoz.sgml site.sgml
 
 DOCSUBDIR=	FAQ handbook
 .endif
-SGMLOPTS+=      -links -hdr ${.CURDIR}/doc.hdr -ftr ${.CURDIR}/doc.ftr
+SGMLFLAGS+=	-links -hdr ${.CURDIR}/doc.hdr -ftr ${.CURDIR}/doc.ftr
 
 WEBDIR=		data/de
 
