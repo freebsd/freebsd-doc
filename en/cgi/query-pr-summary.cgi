@@ -1,5 +1,5 @@
 #!/usr/bin/perl -T
-# $FreeBSD: www/en/cgi/query-pr-summary.cgi,v 1.41 2003/12/27 14:32:15 ceri Exp $
+# $FreeBSD: www/en/cgi/query-pr-summary.cgi,v 1.42 2003/12/27 14:44:57 ceri Exp $
 
 sub escape($) { $_ = $_[0]; s/&/&amp;/g; s/</&lt;/g; s/>/&gt;/g; $_; }
 
@@ -131,6 +131,11 @@ ${dd_x}the effectiveness of a proposed solution.
 ${dt}${st}p - patched${st_e}
 ${dd}A patch has been committed, but some issues (MFC and / or
 ${dd_x}confirmation from originator) are still open.
+
+${dt}${st}r - repocopy${st_e}
+${dd}The resolution of the problem report is dependent on
+${dd_x}a repocopy operation within the CVS repository which
+${dd_x}is awaiting completion.
 
 ${dt}${st}s - suspended${st_e}
 ${dd}The problem is not being worked on, due to lack of information
