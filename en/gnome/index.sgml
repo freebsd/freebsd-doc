@@ -20,33 +20,33 @@
 		  <td>
 
 		    <p><font size="+1" color="#990000"><b>News</b></font>
-		    <small><br>
-		      <a href="newsflash.html">Announcements</a><br>
-		    </small>
+		      <small><br>
+		        <a href="newsflash.html">Announcements</a><br>
+		      </small></p>
 
 		    <p><font size="+1" color="#990000"><b>GNOME on FreeBSD</b></font>
-		    <small><br>
-		      <a href="http://www.FreeBSD.org/gnome/">GNOME on FreeBSD Home</a><br>
-		      <a href="docs/install-gnome.html">Installation Instructions</a><br>
-		      <a href="../ports/gnome.html">Available Applications</a><br>
-		      <a href="docs/volunteer.html">How to Help</a><br>
-		      <a href="docs/bugging.html">Reporting a Bug</a><br>
-		      <a href="screenshots.html">Screenshots</a><br>
-		      <a href="docs/contact.html">Contact Us</a><br>
-		    </small>
+		      <small><br>
+		        <a href="http://www.FreeBSD.org/gnome/">GNOME on FreeBSD Home</a><br>
+		        <a href="docs/install-gnome.html">Installation Instructions</a><br>
+		        <a href="../ports/gnome.html">Available Applications</a><br>
+		        <a href="docs/volunteer.html">How to Help</a><br>
+		        <a href="docs/bugging.html">Reporting a Bug</a><br>
+		        <a href="screenshots.html">Screenshots</a><br>
+		        <a href="docs/contact.html">Contact Us</a><br>
+		      </small></p>
 
 		    <p><font size="+1" color="#990000"><b>Documentation</b></font>
-		    <small><br>
-		      <a href="docs/faq.html">FAQ</a><br>
-		      <a href="docs/porting.html">Creating Ports</a><br>
-		    </small></P>
+		      <small><br>
+		        <a href="docs/faq.html">FAQ</a><br>
+		        <a href="docs/porting.html">Creating Ports</a><br>
+		      </small></p>
 
 		    <p><font size="+1" color="#990000"><b>Resources</b></font>
-		    <small><br>
-		      <a href="http://www.gnome.org/">GNOME Project</a><br>
-		      <a href="http://www.kde.org/">KDE Project</a><br>
-		      <a href="http://freebsd.kde.org/">KDE on FreeBSD</a><br>
-		    </small></P>
+		      <small><br>
+		        <a href="http://www.gnome.org/">GNOME Project</a><br>
+		        <a href="http://www.kde.org/">KDE Project</a><br>
+		        <a href="http://freebsd.kde.org/">KDE on FreeBSD</a><br>
+		      </small></p>
 
 		    <form action="http://www.FreeBSD.org/cgi/search.cgi" method="get">
 		      <small>Search for:<br>
@@ -64,9 +64,9 @@
 	  </tr>
 	</table>
       </td>
-      
+
       <td></td>
-      
+
       <!-- Main body column -->
 
       <td align="left" valign="top" rowspan="2">
