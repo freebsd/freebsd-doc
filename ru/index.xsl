@@ -4,9 +4,9 @@
      The FreeBSD Russian Documentation Project
 
      $FreeBSD$
-     $FreeBSDru: frdp/www/ru/index.xsl,v 1.19 2003/10/01 18:12:54 andy Exp $
+     $FreeBSDru: frdp/www/ru/index.xsl,v 1.20 2003/10/13 12:36:47 den Exp $
 
-     Original revision: 1.77
+     Original revision: 1.78
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -229,6 +229,7 @@
 			      &#183; <a href="support.html#user">Группы пользователей</a><br/>
 			      &#183; <a href="support.html#web">Ресурсы Internet</a><br/>
 			      &#183; <a href="security/index.html">Безопасность</a><br/>
+			      &#183; <a href="{$base}/events/events.html">События</a><br/>
 			      &#183; <a href="support.html">Дополнительно..</a>
 			    </small></p>
 
