@@ -1,4 +1,4 @@
-# $FreeBSD: www/es/Makefile,v 1.9 2000/11/29 23:56:55 kuriyama Exp $
+# $FreeBSD: www/es/Makefile,v 1.10 2001/06/30 20:27:52 jesusr Exp $
 
 .if exists(Makefile.conf)
 .include "Makefile.conf"
@@ -71,5 +71,4 @@ SGMLOPTS+=      -links -hdr ${.CURDIR}/doc.hdr -ftr ${.CURDIR}/doc.ftr
 
 WEBDIR=		data/es
 
-.include "/home/jesusr/cvs/www/share/mk/web.site.mk"
-
+.include "${WEB_PREFIX}/share/mk/web.site.mk"
