@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
 
-<!-- $FreeBSD: www/ja/news/newsflash.xsl,v 1.6 2002/03/04 12:12:40 hanai Exp $ -->
-<!-- Original revision: 1.5 -->
+<!-- $FreeBSD: www/ja/news/newsflash.xsl,v 1.7 2002/05/19 18:10:49 hrs Exp $ -->
+<!-- Original revision: 1.8 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -45,18 +45,17 @@
 	<p>FreeBSD は急速に発展を続けるオペレーティングシステムなので、
 	  最新の進歩について行くのが面倒になる時がありますよね。
 	  情報通になるために、このページを定期的にチェックするようにしましょう。
-	  <a href="{$base}/handbook/eresources.html#ERESOURCES-MAIL">
-	    freebsd-announce メーリングリスト</a>を購読したい
-	  という方もいるかもしれませんね。</p>
+	  <a href="{$base}/doc/en_US.ISO8859-1/books/handbook/eresources.html#ERESOURCES-MAIL">
+	    freebsd-announce メーリングリスト</a>を購読するとよいかも知れません。</p>
 
-	<p>FreeBSD Java プロジェクトの最新情報については
-	  <a href="{$base}/java/newsflash.html">
-	    FreeBSD/Java ニュースフラッシュ</a>のページをご覧ください。</p>
+        <p>それぞれのプロジェクトの最新情報は、次の各ウェブページをご覧ください。</p>
 
-	<p>FreeBSD GNOME プロジェクトの最新情報については
-	  <a href="{$enbase}/gnome/newsflash.html">FreeBSD/GNOME ニュースフラッシュ</a>
-	  のページをご覧ください。</p>
-	  
+        <ul>
+          <li><a href="{$base}/ja/java/newsflash.html"><xsl:value-of select="$java"/> on FreeBSD</a></li>
+          <li><a href="http://freebsd.kde.org/">KDE on FreeBSD</a></li>
+          <li><a href="{$base}/ja/gnome/newsflash.html">GNOME on FreeBSD</a></li>
+        </ul>
+
 	<p>過去、現在、そして将来のリリースの詳細については、
 	  <strong><a href="{$base}/releases/index.html">リリース情報</a>
 	  </strong>
