@@ -119,6 +119,7 @@ SX?=		${PREFIX}/bin/osx
 JADE?=		${PREFIX}/bin/jade
 JADECATALOG?=	${PREFIX}/share/sgml/jade/catalog
 NSGMLS?=	${PREFIX}/bin/nsgmls
+NSGMLSWARNINGS=	-wempty -wunclosed
 SX?=		${PREFIX}/bin/sx
 .endif
 
@@ -583,7 +584,7 @@ ${DOC}.${_curformat}:
 #
 
 lint validate:
-	${NSGMLS} -s ${SGMLFLAGS} ${CATALOGS} ${MASTERDOC}
+	${NSGMLS} ${NSGMLSWARNINGS} -s ${SGMLFLAGS} ${CATALOGS} ${MASTERDOC}
 
 
 # ------------------------------------------------------------------------
