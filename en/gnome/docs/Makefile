@@ -10,5 +10,6 @@
 DOCS=	faq.sgml
 DOCS+=	porting.sgml
 DOCS+=	bugging.sgml
+DOCS+=  volunteer.sgml
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
