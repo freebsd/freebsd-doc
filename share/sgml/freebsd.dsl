@@ -1,4 +1,4 @@
-<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.18 2000/10/23 14:41:46 nik Exp $ -->
+<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.19 2000/10/28 21:14:44 nik Exp $ -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
 <!ENTITY % output.html		"IGNORE">
@@ -177,6 +177,17 @@
                  filename
                  (string-append filename "." %graphic-default-extension%))))
 
+      ]]>
+
+      <![ %output.print.pdf; [
+        ;; If the heading-level is set to 2 then the PDF output will have 
+        ;; bookmarks inserted.  If the PDF reader supports them (as 
+        ;; Adobe's does) it makes navigation easier.
+        ;;
+        ;; Currently, this only seems to work if OpenJade is being used,
+        ;; but it doesn't seem to prevent Jade from processing the doc.
+        (declare-characteristic heading-level
+          "UNREGISTERED::James Clark//Characteristic::heading-level" 2)
 
       ]]>
 
