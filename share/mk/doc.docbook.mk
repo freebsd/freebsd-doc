@@ -1,5 +1,5 @@
 #
-# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.6 2000/01/24 20:02:50 nik Exp $
+# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.7 2000/02/03 03:10:43 kuriyama Exp $
 #
 # This include file <doc.docbook.mk> handles building and installing of
 # DocBook documentation in the FreeBSD Documentation Project.
@@ -229,7 +229,7 @@ ${DOC}.tar: ${SRCS}
 #
 
 lint validate:
-	nsgmls -s -c ${FREEBSDCATALOG} -c ${DOCBOOKCATALOG} ${EXTRA_CATALOGS:S/^/-c /g} ${DOC}.sgml
+	nsgmls -s -c ${FREEBSDCATALOG} -c ${DOCBOOKCATALOG} ${EXTRA_CATALOGS:S/^/-c /g} ${MASTERDOC}
 
 # ------------------------------------------------------------------------
 #
