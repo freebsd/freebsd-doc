@@ -1,4 +1,4 @@
-# $FreeBSD: www/ru/Makefile,v 1.5 1999/12/16 16:27:54 phantom Exp $
+# $FreeBSD: www/ru/Makefile,v 1.6 2000/01/05 15:36:58 phantom Exp $
 
 .if exists(Makefile.conf)
 .include "Makefile.conf"
@@ -50,7 +50,7 @@ SUBDIR+= projects
 
 .if !defined(WEB_ONLY) || empty(WEB_ONLY)
 # Extern
-#SUBDIR+= tutorials
+SUBDIR+= tutorials
 
 #DOCSUBDIR=	FAQ handbook
 DOCSUBDIR=	FAQ
