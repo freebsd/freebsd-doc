@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.4 1998-07-27 04:47:05 hanai Exp $
+# $Id: Makefile,v 1.5 1998-07-27 08:39:09 hanai Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.1
 
@@ -11,4 +11,4 @@ DOCS+=	programmers.sgml
 DOCS+=	security.sgml
 DOCS+=  secure.sgml
 
-.include ".././/web.mk"
+.include "../../web.mk"
