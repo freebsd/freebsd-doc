@@ -1,5 +1,5 @@
 #
-# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.7 2000/02/03 03:10:43 kuriyama Exp $
+# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.8 2000/03/08 11:21:37 nbm Exp $
 #
 # This include file <doc.docbook.mk> handles building and installing of
 # DocBook documentation in the FreeBSD Documentation Project.
@@ -49,8 +49,8 @@ MASTERDOC?=	${.CURDIR}/${DOC}.sgml
 
 JADE=		${PREFIX}/bin/jade
 
-DSLHTML?=	${DOC_PREFIX}/share/sgml/freebsd.dsl
-DSLPRINT?=	${DOC_PREFIX}/share/sgml/freebsd.dsl
+DSLHTML?=	../../share/sgml/freebsd.dsl
+DSLPRINT?=	../../share/sgml/freebsd.dsl
 FREEBSDCATALOG=	${DOC_PREFIX}/share/sgml/catalog
 
 DOCBOOKCATALOG=	${PREFIX}/share/sgml/docbook/catalog
@@ -137,8 +137,8 @@ CLEANFILES+= ${DOC}.tar
 _docs+= ${DOC}.doc
 CLEANFILES+= ${DOC}.doc
 .elif ${_cf} == "pdb"
-_docs+= ${DOC}.pdb
-+CLEANFILES+= ${DOC}.pdb
+_docs+= ${DOC}.pdb ${.CURDIR:T}.pdb
++CLEANFILES+= ${DOC}.pdb ${.CURDIR:T}.pdb
 .endif
 .endfor
 
@@ -185,7 +185,10 @@ ${DOC}.txt: ${DOC}.html
 	w3m -S -dump ${.ALLSRC} > ${.TARGET}
 
 ${DOC}.pdb: ${DOC}.html
-	iSilo386 -y -d0 -Idef ${DOC}.html ${DOC}.pdb
+	iSiloBSD -y -d0 -Idef ${DOC}.html ${DOC}.pdb
+
+${.CURDIR:T}.pdb: ${DOC}.pdb
+	ln -f ${DOC}.pdb ${.CURDIR}.pdb
 
 ${DOC}.rtf: ${SRCS}
 	${JADE} -Vrtf-backend -ioutput.print ${JADEOPTS} -d ${DSLPRINT} -t rtf -o ${.TARGET} ${MASTERDOC}
