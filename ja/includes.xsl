@@ -1,9 +1,13 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
 
-<!-- $FreeBSD: www/ja/includes.xsl,v 1.15 2003/10/11 15:47:45 hrs Exp $ -->
-<!-- Original revision: 1.17 -->
+<!-- $FreeBSD: www/ja/includes.xsl,v 1.16 2003/11/02 07:54:23 rushani Exp $ -->
+<!-- Original revision: 1.19 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
+
+  <xsl:import href="../../doc/ja_JP.eucJP/share/sgml/transtable.xsl"/>
+
+  <xsl:variable name="mirrors" select="'../../doc/share/sgml/mirrors.xml'" />
 
   <xsl:variable name="enbase" select='concat ($base, "/..")'/>
 

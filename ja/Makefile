@@ -1,4 +1,4 @@
-# $FreeBSD: www/ja/Makefile,v 1.58 2002/02/11 09:53:56 kuriyama Exp $
+# $FreeBSD: www/ja/Makefile,v 1.59 2002/05/13 20:09:03 hrs Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.83
 
@@ -85,7 +85,7 @@ WEBDIR=		data/ja
 DATA+=		index.html
 CLEANFILES+=	index.html
 
-index.html: index.xsl news/news.xml news/press.xml includes.xsl news/includes.xsl
+index.html: index.xsl news/news.xml news/press.xml includes.xsl news/includes.xsl ../en/security/advisories.xml  ../../doc/share/sgml/mirrors.xml ../../doc/ja_JP.eucJP/share/sgml/transtable.xsl ../../doc/ja_JP.eucJP/share/sgml/transtable.xml
 	${XSLTPROC} ${XSLTPROCOPTS} -o index.html \
 		${.CURDIR}/index.xsl ${.CURDIR}/news/news.xml
 .if !defined(NO_TIDY)
