@@ -1,10 +1,12 @@
-# $Id: Makefile,v 1.1 1998-07-30 02:35:20 hanai Exp $
+# $Id: Makefile,v 1.2 1998-08-09 16:22:16 kuriyama Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.1
+# Original revision: 1.2
  
 DOCS=   alpha.sgml
 
 # DOCS+=  current.sgml
 # DOCS+=  bootstrapping.sgml
- 
+
+INDEXLINK=alpha.html
+
 .include "../../web.mk"

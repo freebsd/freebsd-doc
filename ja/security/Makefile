@@ -1,6 +1,6 @@
-# $Id: Makefile,v 1.5 1998-07-27 08:39:09 hanai Exp $
+# $Id: Makefile,v 1.6 1998-08-09 16:22:19 kuriyama Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.1
+# Original revision: 1.2
 
 .if exists(Makefile.conf)
 .include "Makefile.conf"
@@ -10,5 +10,7 @@ DOCS=
 DOCS+=	programmers.sgml
 DOCS+=	security.sgml
 DOCS+=  secure.sgml
+
+INDEXLINK= security.html
 
 .include "../../web.mk"
