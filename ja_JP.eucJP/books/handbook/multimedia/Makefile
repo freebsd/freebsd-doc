@@ -3,9 +3,9 @@
 #
 # $FreeBSD$
 #
-# Original revision: 1.1
+# Original revision: 1.2
 
-CHAPTERS= 	sound/chapter.sgml
+CHAPTERS= 	multimedia/chapter.sgml
 
 VPATH=		..
 
