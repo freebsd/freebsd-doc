@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/index.xsl,v 1.98 2004/04/08 19:11:49 ceri Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.99 2004/04/15 21:26:43 simon Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   
@@ -6,7 +6,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.98 2004/04/08 19:11:49 ceri Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.99 2004/04/15 21:26:43 simon Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <!-- these params should be externally bound. The values
@@ -153,9 +153,7 @@
 		<a href="{$base}/internet.html">Internet or Intranet</a> 
 		server. It provides robust network services under the heaviest
 		loads and uses memory efficiently to maintain good response
-		times for thousands of simultaneous user processes. Visit our
-		<a href="gallery/gallery.html">gallery</a> for examples of
-		FreeBSD powered applications and services.</p>
+		times for thousands of simultaneous user processes.</p>
 	    
 	      <h2><font color="#990000">Run a huge number of
 		  applications</font></h2>
