@@ -15,9 +15,4 @@
   <xsl:output type="xml" encoding="iso-8859-1"
 	      indent="yes"/>
 
-  <!-- these params should be externally bound. The values
-       here are not used actually -->
-  <xsl:param name="transtable.xml" select="'./transtable.xml'" />
-  <xsl:param name="transtable-conv-element" select="''" />
-
 </xsl:stylesheet>

@@ -40,6 +40,7 @@ INSTALL_ONLY_COMPRESSED?=
 IMAGES_EN = advanced-networking/isdn-bus.eps
 IMAGES_EN+= advanced-networking/isdn-twisted-pair.eps
 IMAGES_EN+= advanced-networking/natd.eps
+IMAGES_EN+= advanced-networking/net-routing.pic
 IMAGES_EN+= install/adduser1.scr
 IMAGES_EN+= install/adduser2.scr
 IMAGES_EN+= install/adduser3.scr
@@ -222,7 +223,6 @@ CLEANFILES+= eresources.sgml.www.inc.tmp
 mirrors.sgml.${p}.inc: ${XML_MIRRORS} ${XSL_MIRRORS}
 	${XSLTPROC} ${XSLTPROCOPTS} \
 	    -o $@.tmp \
-	    --param 'transtable.xml' "'${XML_TRANSTABLE}'" \
 	    --param 'type' "'$p'" \
 	    --param 'proto' "'$p'" \
 	    --param 'target' "'handbook/mirrors/chapter.sgml'" \
@@ -235,7 +235,6 @@ mirrors.sgml.${p}.inc: ${XML_MIRRORS} ${XSL_MIRRORS}
 eresources.sgml.www.inc: ${XML_MIRRORS} ${XSL_MIRRORS}
 	${XSLTPROC} ${XSLTPROCOPTS} \
 	    -o $@.tmp \
-	    --param 'transtable.xml' "'${XML_TRANSTABLE}'" \
 	    --param 'type' "'www'" \
 	    --param 'proto' "'http'" \
 	    --param 'target' "'handbook/eresources/chapter.sgml'" \
