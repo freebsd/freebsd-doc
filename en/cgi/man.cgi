@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp 
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.13 2000-08-24 16:57:22 wosch Exp $
+# $Id: man.cgi,v 1.14 2000-08-28 06:36:03 wosch Exp $
 
 #use Data::Dumper;
 
@@ -126,6 +126,7 @@ $manPathDefault = 'FreeBSD 4.0-RELEASE/Ports';
      'FreeBSD 4.1-RELEASE',   "$manLocalDir/FreeBSD-4.1-RELEASE",
      'FreeBSD 4.0-RELEASE',   "$manLocalDir/FreeBSD-4.0-RELEASE",
      'FreeBSD 4.0-RELEASE/Ports',   "$manLocalDir/FreeBSD-4.0-RELEASE-and-PORTS",
+     'FreeBSD 3.5.1-RELEASE',   "$manLocalDir/FreeBSD-3.5.1-RELEASE",
      'FreeBSD 3.4-RELEASE',   "$manLocalDir/FreeBSD-3.4-RELEASE",
      'FreeBSD 3.3-RELEASE',   "$manLocalDir/FreeBSD-3.3-RELEASE",
      'FreeBSD 3.2-RELEASE',   "$manLocalDir/FreeBSD-3.2-RELEASE",
@@ -750,7 +751,7 @@ Please direct questions about this server to
 URL:  <A HREF="$BASE" target=_parent>$www{'home'}$BASE</a><br>
 ETX
 
-    print q{$Date: 2000-08-24 16:57:22 $ $Revision: 1.13 $};
+    print q{$Date: 2000-08-28 06:36:03 $ $Revision: 1.14 $};
     print "<br>\n";
     print "</BODY>\n</HTML>\n";
     0;
