@@ -6,7 +6,7 @@
 # by John Fieber
 # February 26, 1998
 #
-# $Id: getmsg.cgi,v 1.11 1998-03-28 15:29:25 wosch Exp $
+# $Id: getmsg.cgi,v 1.12 1998-03-28 16:51:15 wosch Exp $
 #
 
 require "./cgi-lib.pl";
@@ -17,6 +17,7 @@ use POSIX qw(strftime);
 # Files MUST be fully qualified and MUST start with this path.
 #
 $messagepath = "/usr/local/www/db/text/";
+$ftparchive = 'ftp://ftp.freebsd.org/pub/FreeBSD/mailing-lists/archive';
 
 &ReadParse(*formdata);
 &Fetch($formdata{'fetch'});
@@ -37,6 +38,13 @@ sub Fetch
 
     $file =~ s/\.\.//g;
     $file =~ s|/+|/|;
+
+    # read the full archive from the FreeBSD ftp server
+    if ($type eq 'archive' && $file =~ s%^$messagepath%%o) {
+	print "Location: $ftparchive/$file.gz\n";
+	print "Content-type: text/plain\n\n";     
+	return;
+    }
 
     if ($file =~ /^$messagepath/ && open(DATA, $file))
     {
