@@ -26,7 +26,7 @@
 #
 # Search a mail by Message-ID, References or In-Reply-To field
 #
-# $FreeBSD: www/en/cgi/mid.cgi,v 1.8 1999/09/06 07:02:40 peter Exp $
+# $FreeBSD: www/en/cgi/mid.cgi,v 1.9 2000/06/18 16:15:33 wosch Exp $
 
 $hsty_base = '';
 
@@ -76,7 +76,7 @@ sub get_id {
     if ($#idlist < 0) {           # nothing found
 	print &midheader;
 	if ($db eq 'mid') {
-	    print qq{Message-ID: "$query" not fond\n};
+	    print qq{Message-ID: "$query" not found\n};
 	} else {
 	    print qq{No answers found for: "$query"\n};
 	}
