@@ -1,12 +1,12 @@
-# $FreeBSD$
+# $FreeBSD: www/ru/internal/Makefile,v 1.1 2000/02/28 12:56:52 phantom Exp $
 # Original version: 1.20
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
 .endif
 
-DOCS=	photos.sgml	
-#DOCS+=	internal.sgml	
+DOCS=	photos.sgml
+DOCS+=	internal.sgml
 DOCS+= 	about.sgml
 DOCS+= 	machines.sgml
 DOCS+= 	mirror.sgml
