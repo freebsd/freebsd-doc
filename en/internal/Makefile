@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: www/en/internal/Makefile,v 1.15 1999/09/06 07:02:45 peter Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -12,7 +12,9 @@ DOCS+= 	mirror.sgml
 DOCS+=	statistic.sgml
 DOCS+= 	developer.sgml
 
+.if !defined(WEB_ONLY) || empty(WEB_ONLY)
 LOCAL=  committers-guide.html
+.endif
 
 committers-guide.html: ../../../doc/en_US.ISO_8859-1/articles/committers-guide/article.sgml
 	(cd ../../../doc/en_US.ISO_8859-1/articles/committers-guide && make FORMATS=html INSTALL_COMPRESSED='')
