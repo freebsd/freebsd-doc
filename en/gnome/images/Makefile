@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/gnome/images/Makefile,v 1.10 2003/05/17 07:07:37 adamw Exp $
+# $FreeBSD: www/en/gnome/images/Makefile,v 1.11 2003/05/18 17:29:01 marcus Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -13,13 +13,7 @@
 #
 # convert -geometry 320x240\! <imagename>.png <imagename>-tn.png
 
-DATA=	ss1.png
-DATA+=	ss1-tn.png
-DATA+=	ss2.png
-DATA+=	ss2-tn.png
-DATA+=	ss3.png
-DATA+=	ss3-tn.png
-DATA+=	ss7.png
+DATA=	ss7.png
 DATA+=	ss7-tn.png
 DATA+=	ss8.png
 DATA+=	ss8-tn.png
