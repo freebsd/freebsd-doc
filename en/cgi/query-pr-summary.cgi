@@ -1,5 +1,5 @@
 #!/usr/bin/perl -T
-# $FreeBSD: www/en/cgi/query-pr-summary.cgi,v 1.45 2004/07/25 00:30:35 keramida Exp $
+# $FreeBSD: www/en/cgi/query-pr-summary.cgi,v 1.46 2004/08/19 12:43:25 ceri Exp $
 
 sub escape($) { $_ = $_[0]; s/&/&amp;/g; s/</&lt;/g; s/>/&gt;/g; $_; }
 
@@ -75,11 +75,18 @@ if ($html_mode) {
     $dd = "<dd>";     $dd_x = "";
     $hr = "<hr>";
 
-    $table   = "<table style=\"border-width: 0; background-color: #cccccc\" " .
-	" width=\"100%\" cellspacing=1 cellpadding=2>";
+    $table   = "<table width=\"100%\" border=0 cellspacing=1 cellpadding=0>";
     $table_e = "</table>";
 
-#    print "Content-type: text/html\n";
+    # Customizations for the look and feel of the summary tables.
+    $t_style = "<style type=\"text/css\"><!--\n" .
+	"table { background: #ccc; color: #000; }\n" .
+	"tr { padding: 0; }\n" .
+	"th { background: #ffc; color: #000; padding: 2px;\n" .
+	"     text-align: left; font-weight: normal; font-style: italic; }\n" .
+	"td { background: #fff; color: #000; padding: 2px; }\n" .
+	"td a { text-decoration: none; }\n" .
+	"--></style>";
 
 } else {
 
@@ -487,9 +494,8 @@ sub gnats_summary {
 	next if (($report ne '') && (eval($report) == 0));
 
 	if ($htmlmode) {
-	    $title = '<a ' . 'style="text-decoration: none;" ' .
-		'href="' . $query_pr_ref .  '?pr=' . $cat . '/' . $number . '">' .
-		$_ . '</a> ';
+	    $title = '<a href="' . $query_pr_ref .
+		'?pr=' . $cat . '/' . $number . '">' . $_ . '</a> ';
 	    $syn = &html_fixline($syn);
 	    gnats_summary_line_html($counter, $state, $date, $title, $resp, $syn);
 	} else {
@@ -519,20 +525,20 @@ sub gnats_summary_line_html {
 
     print "${table}\n" .
 	"  <tr valign=\"center\">\n" .
-	"    <td style=\"text-align: left; background-color: #ffffcc\">S</td>\n" .
-	"    <td style=\"text-align: left; background-color: #ffffcc\">Submitted</td>\n" .
-	"    <td style=\"text-align: left; background-color: #ffffcc\">Tracker</td>\n" .
-	"    <td style=\"text-align: left; background-color: #ffffcc\">Resp.</td>\n" .
-	"    <td style=\"text-align: left; background-color: #ffffcc\">Description</td>\n" .
+	"    <th>S</th>\n" .
+	"    <th>Submitted</th>\n" .
+	"    <th>Tracker</th>\n" .
+	"    <th>Resp.</th>\n" .
+	"    <th>Description</th>\n" .
 	"  </tr>\n"
         if ($counter == 0);
 
     print "  <tr valign=\"center\">\n" .
-	"    <td style=\"background-color: #ffffff\">$state</td>\n" .
-	"    <td style=\"background-color: #ffffff\">$date</td>\n" .
-	"    <td style=\"background-color: #ffffff\">$title</td>\n" .
-	"    <td style=\"background-color: #ffffff\">$resp</td>\n" .
-	"    <td style=\"background-color: #ffffff\">$syn</td>\n" .
+	"    <td>$state</td>\n" .
+	"    <td>$date</td>\n" .
+	"    <td>$title</td>\n" .
+	"    <td>$resp</td>\n" .
+	"    <td>$syn</td>\n" .
 	"  </tr>\n";
 }
 
