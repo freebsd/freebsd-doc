@@ -13,7 +13,7 @@
 #
 # Based on:
 # * Bill Fenners cvsweb.cgi revision 1.28 available from:
-#   http://cvsweb.FreeBSD.org/www/en/cgi/cvsweb.cgi
+#   http://www.FreeBSD.org/cgi/cvsweb.cgi/www/en/cgi/cvsweb.cgi
 #
 # Copyright (c) 1996-1998 Bill Fenner
 #           (c) 1998-1999 Henner Zeller
@@ -42,9 +42,10 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $Id: cvsweb.cgi,v 1.77 2001-11-07 16:32:11 sobomax Exp $
-# $Idaemons: /home/cvs/cvsweb/cvsweb.cgi,v 1.82 2001/08/01 09:54:52 knu Exp $
-# $FreeBSD$
+#  FreeBSD: projects/cvsweb/cvsweb.cgi,v 1.87 2001/11/07 21:08:33 knu Exp
+# $Id: cvsweb.cgi,v 1.78 2001-11-07 21:25:15 knu Exp $
+# $Idaemons: /home/cvs/cvsweb/cvsweb.cgi,v 1.84 2001/10/07 20:50:10 knu Exp $
+# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.77 2001/11/07 16:32:11 sobomax Exp $
 #
 ###
 
@@ -68,7 +69,7 @@ use vars qw (
     $is_links $is_lynx $is_w3m $is_msie $is_mozilla3 $is_textbased
     %input $query $barequery $sortby $bydate $byrev $byauthor
     $bylog $byfile $defaultDiffType $logsort $cvstree $cvsroot
-    $mimetype $charset $defaultTextPlain $defaultViewable
+    $mimetype $charset $output_filter $defaultTextPlain $defaultViewable
     $command_path %CMD $allow_compress
     $backicon $diricon $fileicon
     $fullname $newname $cvstreedefault
@@ -107,6 +108,7 @@ sub search_path($);
 sub getMimeTypeFromSuffix($);
 sub head($;$);
 sub scan_directives(@);
+sub openOutputFilter();
 sub doAnnotate($$);
 sub doCheckout($$);
 sub cvswebMarkup($$$);
@@ -142,11 +144,7 @@ sub forbidden_module($);
 ##### Start of Configuration Area ########
 delete $ENV{PATH};
 
-$cvsweb_revision =
-    '1.112' . '.' . (
-    split (/ /,
-    q$Idaemons: /home/cvs/cvsweb/cvsweb.cgi,v 1.82 2001/08/01 09:54:52 knu Exp $
-))[2];
+$cvsweb_revision = '2.0.0';
 
 use File::Basename;
 
@@ -231,10 +229,8 @@ $LOG_REVSEPARATOR  = q/^-{28}$/;
 	},
 );
 
-##### End of configuration variables #####
-
 $cgi_style::hsty_base = 'http://www.FreeBSD.org';
-$_ = q$FreeBSD$;
+$_ = q$FreeBSD: www/en/cgi/cvsweb.cgi,v 1.77 2001/11/07 16:32:11 sobomax Exp $;
 @_ = split;
 $cgi_style::hsty_date = "@_[3,4]";
 
@@ -1533,6 +1529,18 @@ sub scan_directives(@) {
 	('tabstop' => $ts);
 }
 
+sub openOutputFilter() {
+	return if !defined($output_filter) || $output_filter eq '';
+
+	open(STDOUT, "|-") && return;
+
+	# child of child
+	open(STDERR, '>/dev/null');
+	exec($output_filter);
+
+	exit -1;
+}
+
 ###############################
 # show Annotation
 ###############################
@@ -1978,6 +1986,7 @@ sub doDiff($$$$$$) {
 
 	if (!open($fh, "-|")) {    # child
 		open(STDERR, ">&STDOUT");    # Redirect stderr to stdout
+		openOutputFilter();
 		exec($CMD{rcsdiff}, @difftype, "-r$rev1", "-r$rev2", $fullname);
 	}
 	if ($human_readable) {
@@ -2064,14 +2073,16 @@ sub getDirLogs($$@) {
 	if (defined($tag)) {
 
 		#can't use -r<tag> as - is allowed in tagnames, but misinterpreated by rlog..
-		if (!open($fh, "-|")) {
+		if (!open($fh, "-|")) {    # child
 			open(STDERR, '>/dev/null'); # rlog may complain; ignore.
+			openOutputFilter();
 			exec($CMD{rlog}, @files);
 		}
 	} else {
 
-		if (!open($fh, "-|")) {
+		if (!open($fh, "-|")) {    # child
 			open(STDERR, '>/dev/null'); # rlog may complain; ignore.
+			openOutputFilter();
 			exec($CMD{rlog}, '-r', @files);
 		}
 	}
@@ -2268,8 +2279,10 @@ sub readLog($;$) {
 	print("Going to rlog '$fullname'\n") if ($verbose);
 	if (!open($fh, "-|")) {    # child
 		if ($revision ne '') {
+			openOutputFilter();
 			exec($CMD{rlog}, $revision, $fullname);
 		} else {
+			openOutputFilter();
 			exec($CMD{rlog}, $fullname);
 		}
 	}
@@ -3069,7 +3082,7 @@ sub navigateHeader($$$$$) {
 <HTML>
 <HEAD>
 <META name="robots" content="nofollow">
-<!-- knu-cvsweb $cvsweb_revision -->
+<!-- FreeBSD-cvsweb $cvsweb_revision -->
 <TITLE>$path$filename - $title - $rev</TITLE></HEAD>
 $body_tag_for_src
 <table width="100%" border=0 cellspacing=0 cellpadding=1 bgcolor="$navigationHeaderColor">
@@ -3295,7 +3308,7 @@ sub download_url($$;$) {
 	    && (!defined($mimetype) || $mimetype ne "text/x-cvsweb-markup"))
 	{
 		my $path = $where;
-		$path =~ s|/[^/]*$|/|;
+		$path =~ s|[^/]+$||;
 		$url = "$scriptname/$checkoutMagic/${path}$url";
 	}
 	$url .= "?rev=$revision";
@@ -3508,7 +3521,7 @@ sub html_header($) {
 <!doctype html public "-//W3C//DTD HTML 4.0 Transitional//EN"
  "http://www.w3.org/TR/REC-html40/loose.dtd">
 $header
-<!-- knu-cvsweb $cvsweb_revision -->
+<!-- FreeBSD-cvsweb $cvsweb_revision -->
 EOH
 }
 
