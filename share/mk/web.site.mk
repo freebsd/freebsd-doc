@@ -1,5 +1,5 @@
 # bsd.web.mk
-# $FreeBSD: www/share/mk/web.site.mk,v 1.36 2000/11/22 02:35:42 kuriyama Exp $
+# $FreeBSD: www/share/mk/web.site.mk,v 1.37 2001/10/29 10:14:33 murray Exp $
 
 #
 # Build and install a web site.
@@ -241,12 +241,12 @@ _PROGSUBDIR: .USE
 .if defined(DOCSUBDIR) && !empty(DOCSUBDIR)
 .for entry in ${DOCSUBDIR}
 	@${ECHODIR} "===> ${DIRPRFX}${entry}"
-.if (${WEBDIR} = "data" && ${entry} = "handbook") || ${entry} = "docproj-primer"
+.if ("${WEBDIR}"="data" && "${entry}"="handbook") || "${entry}"="docproj-primer"
 	@cd ${.CURDIR}/${entry}; \
 		${MAKE} ${.TARGET:S/realinstall/install/:S/.depend/depend/} \
 			DIRPRFX=${DIRPRFX}${entry}/ ${PARAMS} \
 			FORMATS="txt html html-split"
-.elif ${WEBDIR} = "data/ja" && ${entry} = "handbook"
+.elif "${WEBDIR}"="data/ja" && "${entry}"="handbook"
 	@cd ${.CURDIR}/${entry}; \
 		${MAKE} ${.TARGET:S/realinstall/install/:S/.depend/depend/} \
 			DIRPRFX=${DIRPRFX}${entry}/ ${PARAMS} \
