@@ -1,6 +1,6 @@
-# $Id: Makefile,v 1.1 1998-08-03 16:44:13 wosch Exp $
+# $Id: Makefile,v 1.2 1998-08-09 16:22:18 kuriyama Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.36
+# Original revision: 1.2
 
 # These are turned into validated, normalized HTML files.
 
@@ -9,7 +9,7 @@ DOCS+= search.sgml
 DOCS+= searchhints.sgml
 DOCS+= search-mid.sgml
 
-
+INDEXLINK=      search.html
 CLEANFILES+=atoz.sgml site.sgml
 
 index-site.sgml: atoz.sgml site.sgml
@@ -19,4 +19,3 @@ site.sgml: ../../en/search/site.map
 	perl ../../en/search/site.pl < ${.ALLSRC} > ${.TARGET}
 
 .include "../../web.mk"
-

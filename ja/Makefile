@@ -1,6 +1,6 @@
-# $Id: Makefile,v 1.25 1998-08-04 13:57:19 wosch Exp $
+# $Id: Makefile,v 1.26 1998-08-09 16:22:14 kuriyama Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.36
+# Original revision: 1.42
 
 .if exists(Makefile.conf)
 .include "Makefile.conf"
@@ -8,20 +8,23 @@
 
 # These are turned into validated, normalized HTML files.
 
-DOCS=  applications.sgml auditors.sgml availability.sgml branch.sgml
+DOCS=  applications.sgml
+DOCS+= auditors.sgml
+DOCS+= availability.sgml
+DOCS+= branch.sgml
 DOCS+= docs.sgml 
-DOCS+= features.sgml register.sgml 
+DOCS+= features.sgml
+DOCS+= register.sgml 
 DOCS+= internet.sgml 
 DOCS+= mailto.sgml 
 DOCS+= publish.sgml
-DOCS+= send-pr.sgml support.sgml where.sgml 
-DOCS+= y2kbug.sgml
-
+DOCS+= send-pr.sgml
+DOCS+= support.sgml
+DOCS+= where.sgml 
+DOCS+= y2kbug.sgml 
+ 
 # Japanese-only file
 DOCS+= jabout.sgml
-
-# Not available in Japanese version.
-#DOCS+= cgallery.sgml npgallery.sgml pgallery.sgml
 
 CLEANFILES+=atoz.sgml site.sgml
 
@@ -29,23 +32,29 @@ CLEANFILES+=atoz.sgml site.sgml
 
 DATA=	index.html
 
-
 # Subdirectories
 
-#SUBDIR=	security cgi commercial docproj gifs ports releases tutorials 
-#SUBDIR+=	news alpha projects
-SUBDIR=		security
-SUBDIR+=	docproj
-SUBDIR+=        ports
-SUBDIR+=        releases
-SUBDIR+=	news
-SUBDIR+=        alpha
-SUBDIR+=        copyright
-SUBDIR+=        internal
-SUBDIR+=        search
-SUBDIR+=        projects
-SUBDIR+=	commercial
-SUBDIR+=	gallery
+# SGML
+
+SUBDIR=  security
+SUBDIR+= commercial
+SUBDIR+= docproj
+SUBDIR+= news
+SUBDIR+= alpha
+SUBDIR+= internal
+SUBDIR+= copyright
+SUBDIR+= search
+SUBDIR+= gallery
+SUBDIR+= ports
+SUBDIR+= projects
+SUBDIR+= releases 
+
+# Non-SGML
+#SUBDIR+= gifs
+#SUBDIR+= cgi
+
+# Extern
+#SUBDIR+= tutorials
 
 # Subdirectories that have linuxdoc docs and makefiles that use
 # <bsd.sgml.mk>.

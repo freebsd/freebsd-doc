@@ -1,6 +1,9 @@
-# $Id: Makefile,v 1.2 1998-08-04 12:32:37 wosch Exp $
+# $Id: Makefile,v 1.3 1998-08-09 16:22:17 kuriyama Exp $
+# The FreeBSD Japanese Documentation Project
+# Original revision: 1.3
 
 DOCS = gallery.sgml
 
-.include "../../web.mk"
+INDEXLINK= gallery.html
 
+.include "../../web.mk"

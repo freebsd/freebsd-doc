@@ -1,6 +1,6 @@
-# $Id: Makefile,v 1.2 1998-08-03 16:40:15 wosch Exp $
+# $Id: Makefile,v 1.3 1998-08-09 16:22:17 kuriyama Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.2
+# Original revision: 1.3
 
 DOCS=	qnewsletter.sgml
 DOCS+=	press.sgml
