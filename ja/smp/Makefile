@@ -1,6 +1,6 @@
-# $FreeBSD: www/ja/conspectus/Makefile,v 1.3 2000/11/07 11:37:53 kuriyama Exp $
+# $FreeBSD$
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.3
+# Original revision: 1.2
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -9,13 +9,6 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS=   index.sgml 
-
-# not translated yet
-#SUBDIR=	stable
-#SUBDIR+= advocacy
-
-### Revision checking
-REVCHECK=	yes
+DOCS=   index.sgml
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"

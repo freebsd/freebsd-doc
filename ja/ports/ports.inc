@@ -1,62 +1,66 @@
-<!-- $FreeBSD: www/ja/ports/ports.inc,v 1.14 2000/01/10 11:08:48 motoyuki Exp $ -->
+<!-- $FreeBSD: www/ja/ports/ports.inc,v 1.15 2000/04/24 02:13:38 kuriyama Exp $ -->
 <!-- The FreeBSD Japanese Documentation Project -->
-<!-- Original revision: 1.48 -->
-<p>FreeBSD の Ports と Packages のコレクションは,
-ユーザや管理者が簡単にアプリケーショ
-ンのインストールを簡単に行う方法を提供します.
-ports コレクションは<a
+<!-- Original revision: 1.51 -->
+<p>FreeBSD Ports/Packages Collection は,
+ユーザや管理者がアプリケーションのインストールを簡単に行なえる方法を提供します.
+Ports Collection は<a
 href="http://www.freebsd.org/%7Easami/papers/growth.gif">驚異的な速度で
 その数を増してきました</a>.
 
-<p>ここに並べられている各 ``port'' には, FreeBSD でオリジナルのアプリケー
-ションのソースコードをコンパイルし実行するために必要なパッチが全て含ま
-れています.
-アプリケーションのインストールは簡単で, port をダウンロードし, それを
-展開し, port ディレクトリで <tt>make</tt> と打つだけです.
+<p>ここに並べられている各 ``port'' には,
+FreeBSD 上でオリジナルのアプリケーションのソースコードをコンパイルし,
+実行するために必要なパッチがすべて含まれています.
+アプリケーションのインストールは簡単で, port をダウンロードし,
+それを展開し, その port のディレクトリで <tt>make</tt> と打つだけです.
 より便利にするためには, インストール時に
 <a href="ftp://ftp.freebsd.org/pub/FreeBSD/branches/-current/ports.tar.gz">
-ports 階層全体</a> をインストール (あるいは 
-<a href="../handbook/synching.html#CVSUP">CVSup</a> を使ってこれらを最新のものに
-更新) すれば, 何千ものアプリケーションがすぐに使えるようになります.
+ports 階層全体</a> をインストール
+(あるいは 
+<a href="../handbook/synching.html#CVSUP">CVSup</a>
+を使ってこれらを最新のものに更新)
+してください. 何千ものアプリケーションが, すぐに使えるようになります.
 
 各 ports の <tt>Makefile</tt>は自動的に, ローカルディスクや CDROM, ftp 経由で
 アプリケーションのソースコードを取ってきて,
 あなたのシステム上で展開し, パッチをあて, 
 コンパイルします. 
-問題がないようなら, あとは<tt>make install</tt>とするだけでアプリケー
-ションをインストールして package システムへ登録できます. </p>
+問題がないようなら, あとは <tt>make install</tt>
+とするだけでアプリケーションをインストールして
+パッケージシステムへ登録できます. </p>
 
-<p>ほとんどの ports には, あらかじめコンパイルされた <tt>package</tt>
-もあるので, すべてをコンパイルする時間を節約することができます.
-それぞれの port には対応する package へのリンクがあるので,
+<p>ほとんどの ports には, すべてをコンパイルする時間を節約できる,
+あらかじめコンパイルされた <tt>package</tt> もあります.
+それぞれの port には対応する package へのリンクがありますので,
 そのファイルをダウンロードして <strong>pkg_add</strong> コマンドを
 実行することもできますし, また <strong>pkg_add</strong> ではファイル名
 と同じく FTP URL を使うこともできるのでリンク先を <strong>pkg_add</strong>
 することもできます.</p>
 
-<p>ports/packages の追加, 更新, 削除についての情報や, アプリケーションが
+<p>ports/packages の追加, 更新, 削除についての情報や,
+どのアプリケーションが
 ports/packages となっているかの検索は
 <a href="http://www.freebsd.org/cgi/ports.cgi">
-FreeBSD Ports 更新</a> ページを参照してください. </p>
+FreeBSD ports の更新情報</a> ページを参照してください. </p>
 
 <FORM METHOD="GET" ACTION="http://www.freebsd.org/cgi/ports.cgi">
 検索:
 <INPUT NAME="query" VALUE="">
 <SELECT NAME="stype">
-<OPTION VALUE="all">全て</OPTION>
+<OPTION VALUE="all">すべて</OPTION>
 <OPTION VALUE="name">パッケージ名</OPTION>
 <OPTION VALUE="text">詳細</OPTION>
 </SELECT>
-<INPUT TYPE="submit" VALUE="Submit">
+<INPUT TYPE="submit" VALUE="検索">
 </FORM>
 
-
 <p>ports についてもう少し詳しく知りたい場合には, 
-<a href="../handbook/ports.html">ports コレクション</a> を参照してくだ
-さい. 新しい ports を作るには, 
-<a href="../handbook/porting.html">フリーソフトウェアの移植</a> を参照
-してください. どちらも <a href="../handbook/">FreeBSD ハンドブック</a> 
-の一部です.</p>
+<a href="../handbook/">FreeBSD ハンドブック</a> にある
+<a href="../handbook/ports.html">Ports Collection</a>
+を, また, 新しい ports を作るための情報は
+<a href="../porters-handbook/">アプリケーションの移植</a> を参照
+してください. </p>
+
+<H1 ALIGN="LEFT"><FONT COLOR="#660000">アップグレードキット</FONT></H1>
 
 <p>これらの web ページにリストされている ports は常に更新され続けています.
 最新の ports ツリーは FreeBSD-current と FreeBSD-stable だけを
@@ -107,6 +111,10 @@ href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-3-stable/Latest/32up
 href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-3-stable/Latest/34upgrade.tgz">3.3 もしくは 3.4
 から 3-stable へのアップグレードキット</a>
 <dd>3.3/3.4-release もしくは 3.4-release 以降の 3.4-stable ユーザ用
+<dt><a
+href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-4-stable/Latest/40upgrade.tgz">4.0
+から 4-stable へのアップグレードキット</a>
+<dd>4.0-release のユーザおよび, 4.0-release 以降の 4.0-stable ユーザ用
 </dl>
 
 <p>これらは FreeBSD のパッケージになっています. インストールには
@@ -116,7 +124,7 @@ href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-3-stable/Latest/34up
 だけを更新します. 3-stable への完全なアップグレードについては,
 ハンドブックの<a href="../handbook/synching.html">
 インターネットを通じたソースツリーの同期</a>を参照してください. 
-完全なアップグレードが (まだ 2.2.7-release より前のバージョンを使っている
+完全なアップグレードが (まだ 3.5-release より前のバージョンを使っている
 場合は特に)推奨されています.
 さらに, 2.2.X 系列は現在 ports-current では公式にはサポートされていません.
 ここにリストされている ports を使う場合は, たとえあなたの 2.2.X システムの
