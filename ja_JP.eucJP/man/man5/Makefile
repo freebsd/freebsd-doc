@@ -56,7 +56,9 @@ MAN5 =	a.out.5\
 	mailer.conf.5\
 	make.conf.5\
 	motd.5\
+	msdosfs.5\
 	named.conf.5\
+	netconfig.5\
 	netgroup.5\
 	netid.5\
 	networks.5\
@@ -112,5 +114,6 @@ MLINKS+=dir.5 dirent.5
 MLINKS+=groff_tmac.5 tmac.5
 MLINKS+=ipnat.5 ipnat.conf.5
 MLINKS+=passwd.5 master.passwd.5
+MLINKS+=msdosfs.5 msdos.5
 
 .include "bsd.prog.mk"
