@@ -1,8 +1,8 @@
 #
 # The FreeBSD Russian Documentation Project
 #
-# $FreeBSD: www/ru/Makefile,v 1.38 2004/04/26 21:05:53 simon Exp $
-# $FreeBSDru: frdp/www/ru/Makefile,v 1.36 2004/04/22 12:00:22 den Exp $
+# $FreeBSD$
+# $FreeBSDru: frdp/www/ru/Makefile,v 1.38 2004/10/22 12:33:49 den Exp $
 #
 # Original revision: 1.110
 #
@@ -78,6 +78,9 @@ DATA+=		index.html
 CLEANFILES+=	index.html
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
+
+# Use English versions for index.html (see also index.xsl and includes.xsl)
+XML_NEWS_PRESS=		${XML_NEWS_PRESS_MASTER}
 
 index.html: index.xsl ${XML_INCLUDES}\
 		${XML_NEWS_INCLUDES} ${XML_NEWS_NEWS} ${XML_NEWS_PRESS}\

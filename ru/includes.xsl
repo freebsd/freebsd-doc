@@ -4,7 +4,7 @@
      The FreeBSD Russian Documentation Project
 
      $FreeBSD$
-     $FreeBSDru: frdp/www/ru/includes.xsl,v 1.12 2003/11/27 14:01:07 den Exp $
+     $FreeBSDru: frdp/www/ru/includes.xsl,v 1.13 2004/10/22 12:33:49 den Exp $
 
      Original revision: 1.20
 -->
@@ -91,5 +91,21 @@
 
   <xsl:variable name="u.rel2.hardware">
     <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel2.current"/>R/hardware.html</xsl:variable>
+
+  <!-- template: "html-index-news-press-items"
+       pulls in the 5 most recent press items -->
+
+  <xsl:template name="html-index-news-press-items">
+    <xsl:param name="news.press.xml" select="''" />
+
+    <xsl:for-each select="document($news.press.xml)/descendant::story[position() &lt;= 5]">
+      <xsl:value-of select="$leadingmark" /><a>
+	<xsl:attribute name="href">
+	  ../news/press.html#<xsl:call-template name="generate-story-anchor"/>
+	</xsl:attribute>
+	<xsl:value-of select="name"/>
+      </a><br/>
+    </xsl:for-each>
+  </xsl:template>
 
 </xsl:stylesheet>
