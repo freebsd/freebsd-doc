@@ -11,8 +11,11 @@ SUBDIR+= checkpoint
 #SUBDIR+= console-server
 #SUBDIR+= contributing
 #SUBDIR+= contributors
+#SUBDIR+= cvs-freebsd
+#SUBDIR+= cvsup-advanced
 SUBDIR+= dialup-firewall
 SUBDIR+= diskless-x
+#SUBDIR+= euro
 SUBDIR+= explaining-bsd
 #SUBDIR+= fbsd-from-scratch
 SUBDIR+= fonts
@@ -24,7 +27,7 @@ SUBDIR+= ipsec-must
 #SUBDIR+= java-tomcat
 SUBDIR+= mh
 #SUBDIR+= multi-os
-#SUBDIR+= new-users
+SUBDIR+= new-users
 SUBDIR+= pam
 #SUBDIR+= pr-guidelines
 SUBDIR+= problem-reports
@@ -39,7 +42,7 @@ SUBDIR+= solid-state
 SUBDIR+= vm-design
 SUBDIR+= zip-drive
 
-ROOT_SYMLINKS+= new-users
+# ROOT_SYMLINKS+= new-users
 
 DOC_PREFIX?= ${.CURDIR}/../..
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"
