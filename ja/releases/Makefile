@@ -1,6 +1,6 @@
-# $Id: Makefile,v 1.8 1999-03-01 16:37:13 motoyuki Exp $
+# $Id: Makefile,v 1.9 1999-03-01 16:38:29 motoyuki Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.16
+# Original revision: 1.17
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
