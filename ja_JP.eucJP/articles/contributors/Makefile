@@ -1,5 +1,5 @@
 # $FreeBSD$
-# Original revision: 1.4
+# Original revision: 1.6
 
 DOC?= article
 
@@ -13,6 +13,7 @@ WITH_ARTICLE_TOC?=YES
 ORGDIR=${DOC_PREFIX}/en_US.ISO8859-1/articles/contributors
 
 SRCS= article.sgml
+SRCS+=${ORGDIR}/contrib.ent
 SRCS+=${ORGDIR}/contrib.386bsd.sgml
 SRCS+=${ORGDIR}/contrib.additional.sgml
 SRCS+=${ORGDIR}/contrib.committers.sgml
