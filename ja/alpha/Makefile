@@ -1,6 +1,6 @@
-# $FreeBSD: www/ja/alpha/Makefile,v 1.11 2000/10/02 09:16:05 kuriyama Exp $
+# $FreeBSD: www/ja/alpha/Makefile,v 1.12 2000/11/07 11:37:52 kuriyama Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.7
+# Original revision: 1.8
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -10,8 +10,7 @@
 .endif
 
 DOCS=   alpha.sgml
-
-INDEXLINK=alpha.html
+DOCS+=	index.sgml
 
 ### Revision checking
 REVCHECK=	yes
