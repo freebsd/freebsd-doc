@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD$ -->
+<!-- $FreeBSD: www/en/news/status/report.xsl,v 1.1 2001/09/16 22:36:46 chris Exp $ -->
 
 <!-- Standard header material -->
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -9,9 +9,9 @@
   <xsl:import href="../includes.xsl"/>
   <xsl:import href="includes.xsl"/>
 
-  <xsl:variable name="base" select="'..'"/>
+  <xsl:variable name="base" select="'../..'"/>
   <xsl:variable name="title" select="'FreeBSD Status Reports'"/>
-  <xsl:variable name="date" select="'$FreeBSD$'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/news/status/report.xsl,v 1.1 2001/09/16 22:36:46 chris Exp $'"/>
 
   <xsl:variable name="ucletters"
     select="ABCDEFGHIJKLMNOPQRSTUVWXYZ"/>
