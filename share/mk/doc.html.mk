@@ -68,7 +68,7 @@ TAR?=		/usr/bin/tar
 XARGS?=		/usr/bin/xargs
 
 TIDY?=		${PREFIX}/bin/tidy
-TIDYOPTS?=	-i -m -raw -preserve -f /dev/null ${TIDYFLAGS}
+TIDYOPTS?=	-i -m -raw -preserve -f /dev/null -asxml ${TIDYFLAGS}
 HTML2TXT?=	${PREFIX}/bin/links
 HTML2TXTOPTS?=	-dump ${HTML2TXTFLAGS}
 HTML2PDB?=	${PREFIX}/bin/iSiloBSD
