@@ -1,11 +1,26 @@
 #
-# $FreeBSD: www/es/FAQ/Makefile,v 1.3 1999/09/15 20:37:11 wosch Exp $
+# $FreeBSD: www/es/FAQ/Makefile,v 1.4 2001/06/11 02:39:05 ache Exp $
 #
 # Build the FreeBSD FAQ *outside* of the www tree, and install it
 # in to the right place as necessary.
 
-all install clean:
-	(cd ../../../doc/es_ES.ISO8859-1/books/faq; ${MAKE} 'FORMATS=html-split html' DESTDIR=${DESTDIR}/data/es/FAQ ${.TARGET})
-.if make(install)
-	(cd ${DESTDIR}/data/es/FAQ; ln -sf index.html FAQ.html)
+.if exists(../Makefile.conf)
+.include "../Makefile.conf"
 .endif
+.if exists(../Makefile.inc)
+.include "../Makefile.inc"
+.endif
+
+# At build time, we have to link to the doc/ directory at the same level
+# as the www/ tree.
+all:
+        ${LN} -fs ${.OBJDIR}/../../../doc/es_ES.ISO8859-1/books/faq/* .
+
+# At install time the www/en/doc/ directory has been populated, so we can
+# link in to there instead.
+install:
+        [ -d ${DOCINSTALLDIR} ] || ${MKDIR} ${DOCINSTALLDIR}
+        cd ${DOCINSTALLDIR}; \
+                ${LN} -fs ../doc/es_ES.ISO8859-1/books/faq/* ${DOCINSTALLDIR}
+
+.include "${WEB_PREFIX}/share/mk/web.site.mk"
