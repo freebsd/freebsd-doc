@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/index.xsl,v 1.24 2002/06/07 17:46:40 schweikh Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.25 2002/06/12 18:12:57 nik Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   
@@ -6,7 +6,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.24 2002/06/07 17:46:40 schweikh Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.25 2002/06/12 18:12:57 nik Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -162,8 +162,8 @@
 		
 			    <small><br/>
 			      &#183; <a href="projects/newbies.html">For Newbies</a><br/>
-			      &#183; <a href="{$base}/handbook/index.html">Handbook</a><br/>
-			      &#183; <a href="{$base}/FAQ/index.html">FAQ</a><br/>
+			      &#183; <a href="{$base}/doc/en_US.ISO8859-1/books/handbook/index.html">Handbook</a><br/>
+			      &#183; <a href="{$base}/doc/en_US.ISO8859-1/books/faq/index.html">FAQ</a><br/>
 			      &#183; <a href="{$base}/docproj/index.html">Doc. Project</a><br/>
 			      &#183; <a href="docs.html">More...</a><br/>
 			    </small></p>
