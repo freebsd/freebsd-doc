@@ -5,5 +5,4 @@
 # Original revision: 1.3
 #
 
-TIDYFLAGS=	-latin1
 DESTDIR?=	${DOCDIR}/ru_RU.KOI8-R/articles/${.CURDIR:T}
