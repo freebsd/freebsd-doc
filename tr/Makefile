@@ -1,6 +1,6 @@
 # The FreeBSD Documentation Project
 # The FreeBSD Turkish Documentation Project
-# $FreeBSD$
+# $FreeBSD: www/tr/Makefile,v 1.1 2003/12/01 21:26:21 blackend Exp $
 # Original revision: 1.98
 .if exists(Makefile.conf)
 .include "Makefile.conf"
@@ -72,7 +72,7 @@ WEBDIR=	data/tr
 DATA+=		index.html
 CLEANFILES+=	index.html
 
-index.html: index.xsl ../en/news/news.xml ../en/news/press.xml includes.xsl ../en/news/includes.xsl ../en/security/advisories.xml
+index.html: index.xsl ../en/news/news.xml ../en/news/press.xml includes.xsl ../en/news/includes.xsl ../share/sgml/advisories.xml
 	${XSLTPROC} ${XSLTPROCOPTS} -o ${.TARGET} \
 		${.CURDIR}/index.xsl ${.CURDIR}/../en/news/news.xml
 .if !defined(NO_TIDY)
