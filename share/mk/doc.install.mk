@@ -1,5 +1,5 @@
 #
-# $FreeBSD$
+# $FreeBSD: doc/share/mk/doc.install.mk,v 1.2 1999/09/06 06:53:39 peter Exp $
 #
 #
 # This include file <doc.install.mk> provides variables defining the default
@@ -104,5 +104,5 @@ DOCGRP:=	${GROUPNAME}
 
 # installation "script"
 INSTALL_DOCS?= \
-	${INSTALL} -c ${INSTALL_FLAGS} -o ${DOCOWN} -g ${DOCGRP} -m ${DOCMODE}
+	${INSTALL} -C ${INSTALL_FLAGS} -o ${DOCOWN} -g ${DOCGRP} -m ${DOCMODE}
 
