@@ -419,11 +419,11 @@ ${DOC}.dvi: ${DOC}.tex ${LOCAL_IMAGES_EPS}
 
 ${DOC}.pdf: ${DOC}.tex-pdf ${IMAGES_PDF}
 	@${ECHO} "==> PDFTeX pass 1/3"
-	-${PDFTEX} "&pdfjadetex" '\nonstopmode\input{${DOC}.dvi}'
+	-${PDFTEX} "&pdfjadetex" '\nonstopmode\input{${DOC}.tex-pdf}'
 	@${ECHO} "==> PDFTeX pass 2/3"
-	-${PDFTEX} "&pdfjadetex" '\nonstopmode\input{${DOC}.dvi}'
+	-${PDFTEX} "&pdfjadetex" '\nonstopmode\input{${DOC}.tex-pdf}'
 	@${ECHO} "==> PDFTeX pass 3/3"
-	${PDFTEX} "&pdfjadetex" '\nonstopmode\input{${DOC}.dvi}'
+	${PDFTEX} "&pdfjadetex" '\nonstopmode\input{${DOC}.tex-pdf}'
 
 ${DOC}.ps: ${DOC}.dvi
 	${DVIPS} -o ${.TARGET} ${.ALLSRC}
