@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: query-pr-summary.cgi,v 1.2 1996-09-29 03:14:13 jfieber Exp $
+# $Id: query-pr-summary.cgi,v 1.3 1996-10-04 00:36:59 alex Exp $
 
 ($query_pr_ref = $ENV{'SCRIPT_NAME'}) =~ s/-summary//;
 $query_args   = '--restricted -s "open|analyzed|feedback|suspended"';
@@ -85,10 +85,10 @@ ${p}
 Bugs can be in one of several states:
 ${dl}
 ${dt}${st}o - open${st_e}
-${dd}A problem report has been submitted, no sanity checking performed
+${dd}A problem report has been submitted, no sanity checking performed.
 
 ${dt}${st}a - analyzed${st_e}
-${dd}The report has been examined by a team member and evaluated
+${dd}The report has been examined by a team member and evaluated.
 
 ${dt}${st}f - feedback${st_e}
 ${dd}The problem has been solved, and the originator has been given a
@@ -96,7 +96,7 @@ ${dd_x}patch or a fix has been committed.  The PR remains in this state
 ${dd_x}pending a response from the originator.
 
 ${dt}${st}s - suspended${st_e}
-${dd}Work on the problem has been postponsed.  This happens if a
+${dd}Work on the problem has been postponed.  This happens if a
 ${dd_x}timely solution is not possible or is not cost-effective at
 ${dd_x}the present time.  The PR continues to exist, though a solution
 ${dd_x}is not being actively sought.  If the problem cannot be solved at all,
