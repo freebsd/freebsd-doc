@@ -68,11 +68,11 @@ TAR?=		/usr/bin/tar
 XARGS?=		/usr/bin/xargs
 
 TIDY?=		${PREFIX}/bin/tidy
-TIDYFLAGS?=	-i -m -f /dev/null
+TIDYOPTS?=	-i -m -f /dev/null ${TIDYFLAGS}
 HTML2TXT?=	${PREFIX}/bin/links
-HTML2TXTFLAGS?=	-dump
+HTML2TXTOPTS?=	-dump ${HTML2TXTFLAGS}
 HTML2PDB?=	${PREFIX}/bin/iSiloBSD
-HTML2PDBFLAGS?=	-y -d0 -Idef
+HTML2PDBOPTS?=	-y -d0 -Idef ${HTML2PDBFLAGS}
 
 GZIP?=	-9
 GZIP_CMD?=	gzip -qf ${GZIP}
@@ -150,14 +150,14 @@ all: ${_docs}
 ${DOC}.html: ${SRCS} ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} ${LOCAL_CSS_SHEET}
 	${SGMLNORM} -c ${HTMLCATALOG} ${SRCS:S|^|${.CURDIR}/|} > ${.TARGET}
 .if !defined(NO_TIDY)
-	-${TIDY} ${TIDYFLAGS} ${.TARGET}
+	-${TIDY} ${TIDYOPTS} ${.TARGET}
 .endif
 
 ${DOC}.txt: ${DOC}.html
-	${HTML2TXT} ${HTML2TXTFLAGS} ${.ALLSRC} > ${.TARGET}
+	${HTML2TXT} ${HTML2TXTOPTS} ${.ALLSRC} > ${.TARGET}
 
 ${DOC}.pdb: ${DOC}.html ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG}
-	${HTML2PDB} ${HTML2PDBFLAGS} ${DOC}.html ${.TARGET}
+	${HTML2PDB} ${HTML2PDBOPTS} ${DOC}.html ${.TARGET}
 
 ${.CURDIR:T}.pdb: ${DOC}.pdb
 	${LN} -f ${.ALLSRC} ${.TARGET}
