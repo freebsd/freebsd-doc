@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/ports.cgi,v 1.40 2000/01/08 10:36:28 wosch Exp $
+# $FreeBSD: www/en/cgi/ports.cgi,v 1.41 2000/01/22 22:24:23 wosch Exp $
 #
 # ports.cgi - search engine for FreeBSD ports
 #             	o search for a port by name or description
@@ -53,22 +53,25 @@ sub init_variables {
 
     # where to get -current packages
     local($p) = 'ftp://ftp.FreeBSD.org/pub/FreeBSD/ports/i386';
+    local($palpha) = 'ftp://ftp.FreeBSD.org/pub/FreeBSD/ports/alpha';
 
-    $remotePrefixFtpPackagesDefault = '3.4-STABLE';
+    $remotePrefixFtpPackagesDefault = '3.4-STABLE/i386';
     %remotePrefixFtpPackages = 
 	(
-	 '4.0-CURRENT', "$p/packages-current/All",
-	 '3.4-STABLE',  "$p/packages-stable/All",
-	 '3.3-RELEASE', "$p/packages-3.3-release/All",
-	 '3.4-RELEASE', "$p/packages-3.4-release/All",
+	 '4.0-CURRENT/i386', "$p/packages-current/All",
+	 '3.4-STABLE/i386',  "$p/packages-stable/All",
+	 '3.3-RELEASE/i386', "$p/packages-3.3-release/All",
+	 '3.4-RELEASE/i386', "$p/packages-3.4-release/All",
+	 '4.0-CURRENT/alpha', "$palpha/packages-current/All",
 	);
 
     %relDate = 
 	(
-	 '4.0-CURRENT', 'today',
-	 '3.4-STABLE', 'today',
-	 '3.3-release', '1999-09-14 22:58:50 UTC',
-	 '3.4-release', '1999-12-11 22:56:16 UTC',
+	 '4.0-CURRENT/i386', 'today',
+	 '3.4-STABLE/i386', 'today',
+	 '3.3-release/i386', '1999-09-14 22:58:50 UTC',
+	 '3.4-release/i386', '1999-12-11 22:56:16 UTC',
+	 '4.0-CURRENT/alpha', 'today',
 	  );
 
     $remotePrefixHtml =
@@ -521,7 +524,7 @@ sub footer {
 <img ALIGN="RIGHT" src="/gifs/powerlogo.gif">
 &copy; 1996-2000 by Wolfram Schneider. All rights reserved.<br>
 };
-    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.40 2000/01/08 10:36:28 wosch Exp $} . "<br>\n";
+    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.41 2000/01/22 22:24:23 wosch Exp $} . "<br>\n";
     print qq{Please direct questions about this service to
 <I><A HREF="$mailtoURL">$mailto</A></I><br>\n};
     print qq{General questions about FreeBSD ports should be sent to } .
