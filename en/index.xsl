@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/index.xsl,v 1.42 2002/12/16 21:10:22 keramida Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.43 2003/01/01 19:23:22 ceri Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   
@@ -6,7 +6,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.42 2002/12/16 21:10:22 keramida Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.43 2003/01/01 19:23:22 ceri Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -198,7 +198,7 @@
 			      &#183; <a href="news/press.html">In the Press</a><br/>
 			      &#183; <a href="news/index.html">More ...</a>
 			    </small></p>
-	    
+
 			  <p><font size="+1" color="#990000"><b>Software</b></font>
 			    <small><br/>
 			      &#183; <a href="{$base}/doc/en_US.ISO8859-1/books/handbook/mirrors.html">Getting FreeBSD</a><br/>
@@ -251,6 +251,13 @@
 			      &#183; <a href="{$base}/commercial/hardware.html">Hardware</a><br/>
 			      &#183; <a href="{$base}/commercial/consulting_bycat.html">Consulting</a><br/>
 			      &#183; <a href="{$base}/commercial/misc.html">Misc</a><br/>
+			    </small></p>
+
+			  <p><font size="+1" color="#990000"><b>Donations</b></font>
+			    <small><br/>
+			      &#183; <a href="{$base}/donations/index.html">Donations Liason</a><br/>
+			      &#183; <a href="{$base}/donations/donors.html">Current Donations</a><br/>
+			      &#183; <a href="{$base}/donations/wantlist.html">List of needs</a><br/>
 			    </small></p>
 	      
 			  <p><font size="+1" color="#990000"><b>This Site</b></font>
