@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.64 2005/03/12 10:22:04 marcus Exp $ -->
+<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.65 2005/03/12 20:22:59 adamw Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
 		xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -9,7 +9,7 @@
   <xsl:import href="includes.xsl"/>
 
   <xsl:variable name="base" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.64 2005/03/12 10:22:04 marcus Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.65 2005/03/12 20:22:59 adamw Exp $'"/>
   <xsl:variable name="title" select="'FreeBSD GNOME Project'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -29,8 +29,7 @@
             <td valign="top"> <!-- width="10%" -->
               <table border="0" cellspacing="0" cellpadding="1"
                      bgcolor="#000000" width="100%">
-                <tr>
-                  <td>
+                <tr> <td>
                     <table cellpadding="4" cellspacing="0" border="0"
                            bgcolor="#ffcc66" width="100%">
                       <tr>
@@ -146,12 +145,11 @@
               <h2><font color="#990000">Simple solutions to build problems - quickly!</font></h2>
 
 	      <p>GNOME is simple and easy to build using the FreeBSD ports system, but
-	        there are caveats of which not everyone is aware.  If GNOME -- or
-		anything that uses GNOME libraries -- is not building the way it
-		should, simply give the <a
-		href="/gnome/gnomelogalyzer.sh">gnomelogalyzer.sh</a>
-		tool a log of the failed build, and let the gnomelogalyzer figure
-		out what's wrong and how to fix it.</p>
+	        sometimes things simply go wrong. If GNOME -- or anything that uses
+		GNOME libraries -- is not building the way it should, simply run the
+		<a href="/gnome/gnomelogalyzer.sh">gnomelogalyzer.sh</a>
+		tool from the directory of the failed port, and let the gnomelogalyzer
+		figure out what's wrong and how to fix it!</p>
 
             </td>
 

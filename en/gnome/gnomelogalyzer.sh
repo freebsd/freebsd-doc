@@ -26,21 +26,28 @@
 #
 # Heh. "Tort."
 #
-# $Id: gnomelogalyzer.sh,v 1.3 2005-03-20 07:43:36 marcus Exp $
+# $Id: gnomelogalyzer.sh,v 1.4 2005-03-29 22:12:33 adamw Exp $
 #
 
+# This script uses some simple yet effective heuristics to analyse
+# the output of a port's build failure, and spit out what is most
+# likely the problem and the solution. (Hint: the solution is invariably
+# to run portupgrade -a, except for when it isn't.)
 
 # You can set the environment variable VERBOSE to something non-null
 # to see debugging messages.  They're probably not all that exciting.
 
 
 help(){
-	echo "Usage: `basename $0` BUILDLOG"
+	echo "Usage: `basename $0` [BUILDLOG]"
 	echo
-	echo "Where BUILDLOG is a log of stdout and stderr from a"
-	echo "failed GNOME ports build."
-	echo "For example, \"make 2>&1 | tee /path/to/BUILDLOG\" for sh or"
-	echo "\"make |& tee /path/to/BUILDLOG\" for csh."
+	echo "Where BUILDLOG is an optional log of stdout and stderr"
+	echo "from a failed GNOME ports build. For example,"
+	echo "\"make 2>&1 | tee /path/to/BUILDLOG\" (for sh/ksh/bash/zsh) or"
+	echo "\"make |& tee /path/to/BUILDLOG\" (for csh/tcsh)."
+	echo
+	echo "You can also just run `basename $0` and it will take care"
+	echo "of the buildlog-generating business."
 }
 
 
@@ -69,18 +76,64 @@ soln_portupgrade(){
 	fi
 }
 
+
+get_tmpfile()
+{
+    template=$1
+    tmpfile=""
+
+    if [ -n "${MC_TMPDIR}" -a -d "${MC_TMPDIR}" ]; then
+	tmpfile="${MC_TMPDIR}/${template}.XXXXXX"
+    elif [ -n "${TMPDIR}" -a -d "${TMPDIR}" ]; then
+	tmpfile="${TMPDIR}/${template}.XXXXXX"
+    elif [ -d "/var/tmp" ]; then
+	tmpfile="/var/tmp/${template}.XXXXXX"
+    elif [ -d "/tmp" ]; then
+	tmpfile="/tmp/${template}.XXXXXX"
+    elif [ -d "/usr/tmp" ]; then
+	tmpfile="/usr/tmp/${template}.XXXXXX"
+    else
+	return 1
+    fi
+
+    tmpfile=`mktemp -q ${tmpfile}`
+
+    echo ${tmpfile}
+
+    return 0
+}
+
 ###########
 #
 # main()
 
 echo; # for good measure.
 # check to make sure that the build log has been specified
-if [ -z "$1" -o ! -f "$1" ]; then
-	echo "Error: Please supply a valid build log."
-	help
-	exit 1
+if [ ! -z "$1" ]; then
+	if [ ! -f "$1" ]; then
+		echo "Error: Please supply a valid build log."
+		help
+		exit 1
+	fi
+	buildlog="$1"
+else
+	if [ ! -f ./Makefile ]; then
+		echo "Error: You must run `basename $0` from within the"
+		echo "directory of the failed port, or you must supply a"
+		echo "valid build log."
+		help
+		exit 1
+	fi
+	buildlog=`get_tmpfile logalyze`
+	echo -n "Generating build log. Please wait... "
+	if [ -n "${VERBOSE}" ]; then
+		/bin/sh -c "/usr/bin/make 2>&1" | tee ${buildlog}
+	else
+		/bin/sh -c "/usr/bin/make 2>&1" >> ${buildlog}
+	fi
+	echo "done."
+	echo ""
 fi
-buildlog="$1"
 
 
 ######
@@ -105,7 +158,7 @@ fi
 # SOLUTION: portupgrade
 
 debug -n "Checking for out-of-date libraries... "
-if grep -qE 'error: Library requirements (.*) not met;' ${buildlog} ; then
+if grep -qE 'error: Library requirements' ${buildlog} && grep -qE ' not met;' ${buildlog} ; then
 	echo "One or more GNOME libraries are too out-of-date."
 	soln_portupgrade
 	exit
@@ -168,9 +221,10 @@ fi
 debug "Giving up..."
 echo "The cause of your build failure is not known to `basename $0`.  Before e-mailing the build log to the FreeBSD GNOME team at freebsd-gnome@FreeBSD.org, TRY EACH OF THE FOLLOWING:" | fmt 75 79
 echo
-echo "	* Make sure that you are generating the logfile with something similar"
-echo "	  to \"make 2>&1 | tee /path/to/logfile\" (sh) or"
-echo "	  \"make |& tee /path/to/logfile\" (csh)"
+echo "  * If you are generating your own logfile, make sure to generate it with"
+echo "    something similar to:"
+echo "	  \"make 2>&1 | tee /path/to/logfile\" (sh/bash/ksh/zsh) or"
+echo "	  \"make |& tee /path/to/logfile\" (csh/tcsh)"
 echo "	* Make sure your cvsup(1) configuration file specifies the 'ports-all'"
 echo "	  collection"
 echo "	* Run cvsup(1) and attempt the build again"
