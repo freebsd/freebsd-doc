@@ -6,7 +6,7 @@
 # by John Fieber
 # February 26, 1998
 #
-# $FreeBSD: www/en/cgi/getmsg.cgi,v 1.34 2002/03/19 00:53:52 peter Exp $
+# $FreeBSD: www/en/cgi/getmsg.cgi,v 1.35 2003/03/11 15:22:52 wosch Exp $
 #
 
 require "./cgi-lib.pl";
@@ -117,6 +117,7 @@ sub MessageToHTML
     my ($header, $body) = split(/\n\n/, $doc, 2);
     my ($i, %hdr, $field, $data, $message);
     my ($mid) = 'mid.cgi';
+    my ($mid_full_url) = 'http://docs.freebsd.org/cgi/mid.cgi';
     my ($tmid,$tirt,$tref);
     
     $body = &AddAnchors(&EscapeHTML($body));
@@ -198,9 +199,18 @@ sub MessageToHTML
     $message .= qq{| <a href="$ENV{'REQUEST_URI'}+archive">Archive</a>\n};
     $message .= qq{| <a href="../search/searchhints.html">Help</a>\n};
 
-    $message .= "<HR NOSHADE>\n";
+    my $tid = $tmid;
+    $tid =~ s/^&lt;//;
+    $tid =~ s/\@.*//;
 
+    $message .= "<HR NOSHADE>\n";
+    #$message .= qq{<div onclick="document.location='$mid_full_url?db=irt&id=$tid'">\n};
     $message .= "<p><pre>\n$body\n</pre>\n";
+    #$message .= qq{</div>\n};
+
+    $message .= qq{<hr>\nWant to link to this message? Use this URL: &lt;};
+    $message .= qq{<a href="} . $mid_full_url . '?' . $tid;
+    $message .= qq{">$mid_full_url} . '?' . $tid . qq{</a>&gt;};
     
     return $message;
 }
