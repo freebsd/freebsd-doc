@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp 
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.75 2002-06-07 14:14:10 wosch Exp $
+# $Id: man.cgi,v 1.76 2002-06-23 15:15:18 wosch Exp $
 
 #use Data::Dumper;
 #use Carp;
@@ -944,7 +944,7 @@ ETX
 }
 
 sub copyright {
-    $id = '$Id: man.cgi,v 1.75 2002-06-07 14:14:10 wosch Exp $';
+    $id = '$Id: man.cgi,v 1.76 2002-06-23 15:15:18 wosch Exp $';
 
     return qq{\
 <PRE>
@@ -1087,6 +1087,7 @@ sub html_header {
 <TITLE>$_[0]</TITLE>
 <link rev="made" href="mailto:wosch\@FreeBSD.ORG">
 <META name="robots" content="nofollow">
+<meta content="text/html; charset=iso-8859-1" http-equiv="Content-Type">
 </HEAD> 
 <BODY BGCOLOR="#FFFFFF" TEXT="#000000">\n\n};
 }
