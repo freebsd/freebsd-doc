@@ -53,6 +53,7 @@ MAN8 =	IPXrouted.8\
 	faithd.8\
 	fdcontrol.8\
 	fdisk.8\
+	ffsinfo.8\
 	fingerd.8\
 	fixmount.8\
 	fore_dnld.8\
