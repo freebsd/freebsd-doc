@@ -42,9 +42,9 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $zId: cvsweb.cgi,v 1.103 2000/09/20 17:02:29 jumager Exp $
-# $Id: cvsweb.cgi,v 1.56 2000-10-20 16:00:29 knu Exp $
-# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.55 2000/10/07 07:57:33 knu Exp $
+# $zId: cvsweb.cgi,v 1.104 2000/11/01 22:05:12 hnordstrom Exp $
+# $Id: cvsweb.cgi,v 1.57 2000-11-04 19:23:25 knu Exp $
+# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.56 2000/10/20 16:00:29 knu Exp $
 #
 ###
 
@@ -1009,12 +1009,13 @@ sub findLastModifiedSubdirs(@) {
 sub htmlify_sub(&$) {
     (my $proc, local $_) = @_;
     local @_ = split(m`(<a [^>]+>[^<]*</a>)`i);
-    my ($linked, $result);
+    my $linked;
+    my $result = '';
 
     while (($_, $linked) = splice(@_, 0, 2)) {
 	&$proc();
-	$result .= $_;
-	$result .= $linked;
+	$result .= $_ if defined($_);
+	$result .= $linked if defined($linked);
     }
 
     $result;
@@ -1812,7 +1813,7 @@ again:
 	if ($state eq "tags" && /^\S/) {
 	    if (defined($tag) && (defined($symrev{$tag}) || $tag eq "HEAD")) {
 		$revwanted = $tag eq "HEAD" ? $symrev{"MAIN"} : $symrev{$tag};
-		($branch = $revwanted) =~ s/\b0\.//;
+		($branch = $revwanted) =~ s/\.0\././;
 		($branchpoint = $branch) =~ s/\.?\d+$//;
 		$revwanted = undef if ($revwanted ne $branch);
 	    }
@@ -2041,7 +2042,7 @@ sub readLog($;$) {
 
 	foreach (reverse sort keys %symrev) {
 	    $rev = $symrev{$_};
-	    if ($rev =~ /^((.*)\.)?\b0\.(\d+)$/) {
+	    if ($rev =~ /^((.*)\.)0\.(\d+)$/) {
 		push(@branchnames, $_);
 		#
 		# A revision number of A.B.0.D really translates into
@@ -2054,8 +2055,10 @@ sub readLog($;$) {
 		# with the branch number 0.A, with the exception that
 		# it has no head to translate to if there is nothing on
 		# the branch, but I guess this can never happen?
-		# (the code below gracefully forgets about the branch
-		# if it should happen)
+		#
+		# Since some stupid people actually import/check in
+		# files with version 0.X we assume that the above cannot
+		# happen, and regard 0.X(.*) as a revision and not a branch.
 		#
 		$head = defined($2) ? $2 : "";
 		$branch = $3;
@@ -2086,7 +2089,7 @@ sub readLog($;$) {
 	my ($onlyonbranch, $onlybranchpoint);
 	if ($onlyonbranch = $input{'only_with_tag'}) {
 	    $onlyonbranch = $symrev{$onlyonbranch};
-	    if ($onlyonbranch =~ s/\b0\.//) {
+	    if ($onlyonbranch =~ s/\.0\././) {
 		($onlybranchpoint = $onlyonbranch) =~ s/\.\d+$//;
 	    }
             else {
@@ -2645,7 +2648,7 @@ sub navigateHeader($$$$$) {
     $swhere = urlencode($filename) if ($swhere eq "");
     print "<\!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\">";
     print "<HTML>\n<HEAD>\n";
-    print '<!-- CVSweb $zRevision: 1.103 $  $Revision: 1.56 $ -->';
+    print '<!-- CVSweb $zRevision: 1.104 $  $Revision: 1.57 $ -->';
     print "\n<TITLE>$path$filename - $title - $rev</TITLE></HEAD>\n";
     print  "$body_tag_for_src\n";
     print "<table width=\"100%\" border=0 cellspacing=0 cellpadding=1 bgcolor=\"$navigationHeaderColor\">";
@@ -2848,7 +2851,7 @@ sub fileSortCmp() {
 sub download_url($$;$) {
     my ($url,$revision,$mimetype) = @_;
 
-    $revision =~ s/\b0\.//;
+    $revision =~ s/\.0\././;
 
     if (defined($checkoutMagic)
 	&& (!defined($mimetype) || $mimetype ne "text/x-cvsweb-markup")) {
@@ -3028,7 +3031,7 @@ sub http_header(;$) {
 
 sub html_header($) {
     my ($title) = @_;
-    my $version = '$zRevision: 1.103 $  $Revision: 1.56 $'; #'
+    my $version = '$zRevision: 1.104 $  $Revision: 1.57 $'; #'
     http_header();
 
     (my $header = &cgi_style::html_header) =~ s/^.*\n\n//; # remove HTTP response header
