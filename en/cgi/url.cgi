@@ -26,7 +26,7 @@
 #
 # url.cgi - make plain text URLs clickable
 #
-# $FreeBSD: www/en/cgi/url.cgi,v 1.24 2000/01/05 15:47:46 phantom Exp $
+# $FreeBSD: www/en/cgi/url.cgi,v 1.25 2000/01/08 10:20:08 wosch Exp $
 
 use strict;
 
@@ -45,7 +45,8 @@ my $portcategory;
 
 
 # security checks
-if ($file !~ m%^(http|ftp)://[a-z_\-0-9]+\.freebsd\.(com|org)%i) {
+if ($file !~ m%^(http|ftp)://[a-z_\-0-9]+\.freebsd\.(com|org)%i &&
+    $file !~ m%^ports/%) {
     &CgiError(("Invalid url: $file", "Only http://*.freebsd.* is allowed.\n"));
     exit(0);
 }
@@ -74,9 +75,10 @@ if ($file =~ m%^ports/[\w-]+/\w[\w-+.]*/pkg/DESCR% && -f "$cvsroot/$file,v") {
 } 
 
 else {
-    print "<p>The port specified does not exist, or has an invalid name:",
+    print "<p>The port specified does not exist, or has an invalid name: ",
 	  "$file\n";
-    print "<p>Please contact the webmaster!\n";
+    print "<p>Please contact www\@freebsd.org\n";
+    warn "$0: invalid port name: `$file'\n";
 }
 print "\n<HR>\n<pre>\n";
 
