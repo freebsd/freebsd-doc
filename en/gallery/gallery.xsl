@@ -6,7 +6,7 @@
 
   <xsl:variable name="base" select="'..'"/>
   <xsl:variable name="title" select="'The FreeBSD Gallery'"/>  
-  <xsl:variable name="date" select="'$FreeBSD$'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/gallery/gallery.xsl,v 1.1 2001/08/06 07:01:38 nik Exp $'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"/>
 
@@ -18,17 +18,17 @@
 
 	<p>FreeBSD is powering innovative Internet applications all over the
 	  world.  This gallery is a showcase of <xsl:value-of
-	  select="count(//entry)"/> organisations and individuals who have 
+	  select="count(//entry)"/> organizations and individuals who have 
 	  put FreeBSD to work for them.  Browse and find out more about 
-	  FreeBSD can do for <b>you</b>.</p>
+	  what FreeBSD can do for <b>you</b>.</p>
 
 	<ul>
 	  <li><a href="cgallery.html"><xsl:value-of 
               select="count(//entry[@type='commercial'])"/> commercial
-	      organisations</a></li>
+	      organizations</a></li>
 	  <li><a href="npgallery.html"><xsl:value-of
               select="count(//entry[@type='nonprofit'])"/> non-profit
-              organisations</a></li>
+              organizations</a></li>
           <li><a href="pgallery.html"><xsl:value-of
               select="count(//entry[@type='personal'])"/> personal 
 	      sites</a></li>
