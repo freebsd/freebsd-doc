@@ -1,5 +1,5 @@
-# $FreeBSD$
-# Original revision: 1.3
+# $FreeBSD: www/ja/releases/4.9R/Makefile,v 1.1 2003/10/26 23:58:58 rushani Exp $
+# Original revision: 1.4
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -10,6 +10,7 @@
 
 DOCS=	hardware.sgml relnotes.sgml
 #DOCS=	hardware.sgml relnotes.sgml schedule.sgml todo.sgml qa.sgml
+DOCS+=	announce.sgml
 
 DATA=	docbook.css
 DATA+=	errata.html
