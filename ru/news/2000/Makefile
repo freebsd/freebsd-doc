@@ -1,7 +1,7 @@
 # $FreeBSD$
 # The FreeBSD Russian Documentation Project
-# $FreeBSDru: frdp/www/ru/projects/Makefile,v 1.4 2001/11/14 17:44:56 phantom Exp $
-# Original revision: 1.7
+# $FreeBSDru: frdp/www/ru/news/2000/Makefile,v 1.1 2001/12/05 19:30:41 phantom Exp $
+# Original revision: 1.2
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -10,10 +10,7 @@
 .if exists(../Makefile.inc)
 .include "../Makefile.inc"
 .endif
-
-DOCS=	projects.sgml
-DOCS+=	newbies.sgml
-
-INDEXLINK= projects.html
+ 
+DOCS=	index.sgml
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"

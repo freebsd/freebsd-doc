@@ -10,5 +10,9 @@
 .endif
 
 DOCS=	index.sgml
+DOCS+=	alpha.sgml
+DOCS+=	ia64.sgml
+DOCS+=	ppc.sgml
+DOCS+=	sparc.sgml
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"

@@ -1,0 +1,479 @@
+<?xml version="1.0" encoding="KOI8-R" ?>
+
+<!-- $FreeBSD$ -->
+<!-- The FreeBSD Russian Documentation Project -->
+<!-- $FreeBSDru: frdp/www/ru/index.xsl,v 1.3 2001/12/17 17:02:47 phantom Exp $ -->
+<!-- Original revision: 1.16 -->
+
+<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
+  
+  <xsl:import href="includes.xsl"/>
+  <xsl:import href="news/includes.xsl"/>
+
+  <xsl:variable name="base" select="'.'"/>
+  <xsl:variable name="date" select="'$FreeBSD$'"/>
+  <xsl:variable name="title" select="'Проект FreeBSD'"/>
+
+  <xsl:output type="html" encoding="koi8-r"
+              doctype-public="-//W3C//DTD HTML 4.01 Transitional//EN"/>
+
+  <xsl:template match="/">
+    <html>
+      <head>
+	<title><xsl:value-of select="$title"/></title>
+    
+	<meta name="description" content="Проект FreeBSD"/>
+    
+	<meta name="keywords" content="FreeBSD, BSD, UNIX, Support, Gallery,
+	      Release, Application, Software, Handbook, FAQ, Tutorials, Bugs, 
+	      CVS, CVSup, News, Commercial Vendors, homepage, CTM, Unix,
+	      Поддержка, Галерея, Релиз, Приложение, Программы, Руководство,
+	      Учебники, Ошибки, Новости, Коммерческие Поставщики,
+	      домашняя страница"/>
+      </head>
+  
+      <body bgcolor="#FFFFFF" text="#000000" link="#0000FF" vlink="#840084"
+	    alink="#0000FF">
+    
+	<table border="0" cellspacing="0" cellpadding="0">
+	  <tr>
+	    <td><a href="http://www.FreeBSD.org/index.html">
+		<img src="gifs/freebsd_1.gif" height="94" width="306"
+		     alt="FreeBSD: The Power to Serve" border="0"/></a></td>
+	    
+	    <td align="right" valign="bottom" width="300">
+	      <form action="http://www.FreeBSD.org/cgi/mirror.cgi" 
+		    method="GET">
+		
+		<br/>
+		
+		<font color="#990000"><b>Выберите ближайший к вам сервер:</b></font>
+		
+		<br/>
+	      
+		<select name="goto">
+		  <!--  Only list TRUE mirrrors here! Native language pages 
+		        which are not mirrored should be listed in
+		        support.sgml.  -->
+
+		  <option value="http://www.jp.FreeBSD.org/www.FreeBSD.org/">6Bone(IPv6)</option>
+		  <option value="http://www.au.FreeBSD.org/">Австралия/1</option>
+		  <option value="http://freebsd.unixtech.be/">Бельгия</option>
+		  <option value="http://www.br.FreeBSD.org/www.freebsd.org/">Бразилия/1</option>
+		  <option value="http://www2.br.FreeBSD.org/www.freebsd.org/">Бразилия/2</option>
+		  <option value="http://www3.br.FreeBSD.org/">Бразилия/3</option>
+		  <option value="http://www.bg.FreeBSD.org/">Болгария</option>
+		  <option value="http://www.ca.FreeBSD.org/">Канада/1</option>
+		  <option value="http://www.cn.FreeBSD.org/">Китай</option>
+		  <option value="http://www.cz.FreeBSD.org/">Чешская Республика</option>
+		  <option value="http://www.dk.FreeBSD.org/">Дания</option>
+		  <option value="http://www.ee.FreeBSD.org/">Эстония</option>
+		  <option value="http://www.fi.FreeBSD.org/">Финляндия</option>
+		  <option value="http://www.fr.FreeBSD.org/">Франция</option>
+		  <option value="http://www.de.FreeBSD.org/">Германия/1</option>
+		  <option value="http://www1.de.FreeBSD.org/">Германия/2</option>
+		  <option value="http://www2.de.FreeBSD.org/">Германия/3</option>
+		  <option value="http://www.gr.FreeBSD.org/">Греция</option>
+		  <option value="http://www.hu.FreeBSD.org/">Венгрия</option>
+		  <option value="http://www.ie.FreeBSD.org/">Ирландия</option>
+		  <option value="http://www.is.FreeBSD.org/">Исландия</option>
+		  <option value="http://www.it.FreeBSD.org/">Италия/1</option>
+		  <option value="http://www.gufi.org/mirrors/www.freebsd.org/data/">Италия/2</option>
+		  <option value="http://www.jp.FreeBSD.org/www.FreeBSD.org/">Япония</option>
+		  <option value="http://www.kr.FreeBSD.org/">Корея</option>
+		  <option value="http://www2.kr.FreeBSD.org/">Корея/2</option>
+		  <option value="http://www.lv.FreeBSD.org/">Латвия</option>
+		  <option value="http://www.nl.FreeBSD.org/">Нидерланды</option>
+		  <option value="http://www2.nl.FreeBSD.org/">Нидерланды/2</option>
+		  <option value="http://www.nz.FreeBSD.org/">Новая Зеландия</option>
+		  <option value="http://www.no.FreeBSD.org/">Норвегия</option>
+		  <option value="http://www.pl.FreeBSD.org/">Польша/1</option>
+		  <option value="http://www2.pl.FreeBSD.org/">Польша/2</option>
+		  <option value="http://www.pt.FreeBSD.org/">Португалия/1</option>
+		  <option value="http://www2.pt.FreeBSD.org/">Португалия/2</option>
+		  <option value="http://www.ro.FreeBSD.org/">Румыния</option>
+		  <option value="http://www.ru.FreeBSD.org/">Россия/1</option>
+		  <option value="http://www2.ru.FreeBSD.org/">Россия/2</option>
+		  <option value="http://www3.ru.FreeBSD.org/">Россия/3</option>
+		  <option value="http://www4.ru.FreeBSD.org/">Россия/4</option>
+		  <option value="http://www.sg.FreeBSD.org/">Сингапур</option>
+		  <option value="http://www.sk.FreeBSD.org/">Словакия</option>
+		  <option value="http://www.si.FreeBSD.org/">Словения</option>
+		  <option value="http://www.es.FreeBSD.org/">Испания</option>
+		  <option value="http://www.za.FreeBSD.org/">Южная Африка/1</option>
+		  <option value="http://www2.za.FreeBSD.org/">Южная Африка/2</option>
+		  <option value="http://www.se.FreeBSD.org/">Швеция</option>
+		  <option value="http://www.ch.FreeBSD.org/">Швейцария</option>
+		  <option value="http://www.tw.FreeBSD.org/www.freebsd.org/data/">Тайвань</option>
+		  <option value="http://www.tr.FreeBSD.org/">Турция</option>
+		  <option value="http://www.enderunix.org/freebsd/">Турция/2</option>
+		  <option value="http://www.ua.FreeBSD.org/">Украина/1</option>
+		  <option value="http://www2.ua.FreeBSD.org/">Украина/2</option> 
+		  <option value="http://www4.ua.FreeBSD.org/">Украина/Крым</option> 
+		  <option value="http://www.uk.FreeBSD.org/">Великобритания/1</option>
+		  <option value="http://www2.uk.FreeBSD.org/">Великобритания/2</option>
+		  <option value="http://www3.uk.FreeBSD.org/">Великобритания/3</option>
+		  <option value="http://www.FreeBSD.org/">США/Калифорния</option>
+		</select>
+		
+		<input type="submit" value=" Перейти "/>
+		
+		<br/>
+		
+		<font color="#990000"><b>Язык: </b></font> 
+		<a href="../">английский</a>, 
+		<a href="../es/index.html">испанский</a>, 
+		<a href="../ja/index.html">японский</a>, 
+		<a href="support.html#web">другие</a>
+	      </form>
+	    </td>
+	  </tr>
+	</table>
+	
+	<br/>
+	
+	<hr size="1" noshade="noshade"/>
+
+	<!-- Main layout table -->
+	<table border="0" cellspacing="0" cellpadding="2">
+	  <tr>
+	    <td valign="top">
+	      <table border="0" cellspacing="0" cellpadding="1"
+		     bgcolor="#000000" width="100%">
+		<tr>
+		  <td>
+		    <table cellpadding="4" cellspacing="0" border="0"
+			   bgcolor="#ffcc66" width="100%">
+		      <tr>
+			<td>
+			  <p><font size="+1" color="#990000"><b>Новости</b></font>
+
+
+			    <small><br/>
+			      &#183; <a href="news/newsflash.html">Анонсы</a><br/>
+			      &#183; <a href="news/press.html">Пресса</a><br/>
+			      &#183; <a href="news/index.html">Дополнительно ...</a>
+			    </small></p>
+	    
+			  <p><font size="+1" color="#990000"><b>Программы</b></font>
+			    <small><br/>
+			      &#183; <a href="{$base}/doc/en_US.ISO8859-1/books/handbook/mirrors.html">Где взять систему</a><br/>
+			      &#183; <a href="releases/index.html">Релизы</a><br/>
+			      &#183; <a href="{$base}/ports/index.html">Приложения</a><br/>
+			    </small></p>
+	    
+			  <p><font size="+1" color="#990000"><b>Документация</b></font>
+		
+			    <small><br/>
+			      &#183; <a href="projects/newbies.html">Для новичков</a><br/>
+			      &#183; <a href="{$base}/handbook/index.html">Руководство</a><br/>
+			      &#183; <a href="{$base}/FAQ/index.html">FAQ</a><br/>
+			      &#183; <a href="{$base}/docproj/index.html">Проект Документации</a><br/>
+			      &#183; <a href="docs.html">Дополнительно ...</a><br/>
+			    </small></p>
+			  
+			  <p><font size="+1" color="#990000"><b>Поддержка</b></font>
+	      
+			    <small><br/>
+			      &#183; <a href="{$base}/support.html#mailing-list">Списки рассылки</a><br/>
+			      &#183; <a href="{$base}/support.html#newsgroups">Телеконференции</a><br/>
+			      &#183; <a href="{$base}/support.html#user">Группы пользователей</a><br/>
+			      &#183; <a href="{$base}/support.html#web">Ресурсы Internet</a><br/>
+			      &#183; <a href="security/index.html">Безопасность</a><br/>
+			      &#183; <a href="{$base}/support.html">Дополнительно ...</a>
+			    </small></p>
+	      
+			  <p><font size="+1" color="#990000"><b>Разработка</b></font>
+		
+			    <small><br/>
+			      &#183; <a href="projects/index.html">Проекты</a><br/>
+			      &#183; <a href="{$base}/support.html#gnats">Сообщения об ошибках</a><br/>
+			      &#183; <a href="{$base}/support.html#cvs">Дерево CVS</a><br/>
+			    </small></p>
+	      
+			  <p><font size="+1" color="#990000"><b>Производители</b></font>
+			    
+			    <small><br/>
+			      &#183; <a href="{$base}/commercial/software_bycat.html">Программы</a><br/>
+			      &#183; <a href="{$base}/commercial/hardware.html">Аппаратура</a><br/>
+			      &#183; <a href="{$base}/commercial/consulting_bycat.html">Консалтинг</a><br/>
+			      &#183; <a href="{$base}/commercial/misc.html">Разное</a><br/>
+			    </small></p>
+	      
+			  <p><font size="+1" color="#990000"><b>Этот сервер</b></font>
+		
+			    <small><br/>
+			      &#183; <a href="{$base}/search/index-site.html">Карта сервера</a><br/>
+			      &#183; <a href="{$base}/search/search.html">Поиск</a><br/>
+			      &#183; <a href="internal/index.html">Дополнительно ...</a><br/>
+			    </small></p>
+	      
+			  <form action="http://www.FreeBSD.org/cgi/search.cgi" method="get">
+			    <small>Поиск:<br/>
+			      <input type="text" name="words" size="10"/>
+			      <input type="hidden" name="max" value="25"/>
+			      <input type="hidden" name="source" value="www"/>
+			      <input type="submit" value="Go"/></small>
+			  </form></td>
+		      </tr>
+		    </table>
+		  </td>
+		</tr>
+	      </table>
+	    </td>
+	    
+	    <td></td>
+	    
+	    <!-- Main body column -->
+
+	    <td align="left" valign="top" rowspan="2">
+	      <h2><font color="#990000">Что такое FreeBSD?</font></h2>
+
+	      <p>FreeBSD - это мощная операционная система семейства BSD UNIX
+		для компьютеров архитектур, совместимых с Intel ia32, DEC
+		Alpha и PC-98. Корни ее идут из BSD UNIX, версии UNIX
+		разработанной в Университете Калифорнии, Беркли.
+		Она разрабатывается и поддерживается <a
+		href="{$base}/doc/en_US.ISO8859-1/articles/contributors/index.html">большой
+		командой разработчиков</a>. Поддержка <a
+		href="{$base}/platforms/index.html">других платформ</a>
+		находится на разных стадиях разработки.</p>
+	
+	      <h2><font color="#990000">Выдающиеся возможности</font></h2>
+
+	      <p>Исключительный набор сетевых возможностей, высокая
+		производительность, средства обеспечения безопасности и
+		совместимости с другими ОС - вот те современные <a
+		href="{$base}/features.html">возможности</a> FreeBSD, которые
+		зачастую всё ещё отсутствуют в других, даже лучших коммерческих,
+		операционных системах.</p>
+
+	      <h2><font color="#990000">Мощное решение для Internet</font></h2>
+	      
+	      <p>FreeBSD является идеальной платформой для построения
+		<a href="{$base}/internet.html">Internet или Intranet</a>.
+		Эта система предоставляет надёжные даже при самой интенсивной
+		нагрузке сетевые службы, и эффективное управление памятью,
+		что позволяет обеспечивать приемлемое время отклика для
+		сотен и даже тысяч одновременно работающих пользовательских
+		задач. Посетите нашу
+		<a href="gallery/gallery.html">галерею</a>, чтобы увидеть
+		примеры использования FreeBSD.</p>
+	    
+	      <h2><font color="#990000">Огромное число разнообразных
+		приложений</font></h2>
+
+	      <p>Качество FreeBSD вкупе с современным дешёвым и производительным
+		аппаратным обеспечением ПК делают эту систему очень экономичной
+		альтернативой коммерческим рабочим станциям UNIX. Она прекрасно
+		подходит для большого количества <a
+		href="{$base}/applications.html">приложений</a> как в качестве
+		сервера, так и рабочей станции.</p>
+	    
+	      <h2><font color="#990000">Простота установки</font></h2>
+
+	      <p>FreeBSD может быть установлена с различных носителей,
+		включая CD-ROM, дискеты, магнитную ленту, раздел MS-DOS, или
+		если у вас есть подключение к сети, то вы можете установить
+		её <i>непосредственно</i> через FTP или NFS. Всё, что вам нужно
+		иметь для этого - это пару чистых дискет объёмом 1.44МБ и <a
+		href="{$base}/handbook/install.html">эти указания</a>.</p>
+
+	      <h2><font color="#990000">FreeBSD распространяется
+		<i>свободно</i></font></h2>
+	    
+	      <a href="copyright/daemon.html"><img src="gifs/dae_up3.gif" 
+						   alt=""
+						   height="81" width="72" 
+						   align="right" 
+						   border="0"/></a>
+
+	      <p>Хотя вы можете предположить, что операционная система с такими
+		возможностями продаётся по высокой цене, FreeBSD
+		распространяется <a
+		href="{$base}/copyright/index.html">бесплатно</a> и
+		поставляется со всеми исходными текстами. Если вам захочется
+		её попробовать, обратитесь к <a
+		href="{$base}/doc/en_US.ISO8859-1/books/handbook/mirrors.html">
+		следующей информации</a>.</p>
+
+	      <h2><font color="#990000">Как принять участие</font></h2>
+
+	      <p>Принять участие в проекте очень просто. Всё, что вам нужно
+		сделать - это найти часть FreeBSD, которую, по вашему мнению,
+		можно усовершенствовать, сделать (внимательно и аккуратно)
+		соответствующие изменения и отправить их в адрес проекта либо с
+		помощью утилиты send-pr, либо непосредственно коммиттеру, если
+		вы его знаете. Эта работа может представлять собой что угодно,
+		от документации до исходных текстов. Подробнее об этом можно
+		почитать <a
+		href="{$base}/doc/en_US.ISO8859-1/articles/contributing/index.html">здесь.</a></p>
+
+		<p>Даже если Вы не программист, есть другие способы помочь
+		FreeBSD в развитии. The FreeBSD Foundation - это неприбыльная
+		организация для которой все пожертвования и денежная помощь
+		не облагаются налогами. Для более подробной информации
+		пишите <a href="mailto:bod@FreeBSDFoundation.org">bod@FreeBSDFoundation.org</a>
+		или: The FreeBSD Foundation,
+		7321 Brockway Dr.  Boulder, CO.  80303.  USA</p>
+
+	    </td>
+
+	    <td></td>
+
+	    <!-- Right-most column -->
+	    <td valign="top">
+	      <!-- News / release info table -->
+	      <table border="0" cellspacing="0" cellpadding="1"
+		     bgcolor="#000000" width="100%">
+		<tr>
+		  <td>
+		    <table cellpadding="4" cellspacing="0" border="0"
+			   bgcolor="#ffcc66" width="100%">
+		      <tr>
+			<td valign="top"><p><font size="+1" color="#990000"><b>Последний Релиз:
+			    <xsl:value-of select="$rel.current"/></b></font><br/>
+			
+			    <small>&#183; <a href="{$u.rel.announce}">Анонс</a><br/>
+			      &#183; <a href="{$base}/doc/en_US.ISO8859-1/books/handbook/install.html">Руководство по Инсталляции</a><br/>
+			      &#183; <a href="{$u.rel.notes}">Информация о Релизе</a><br/>
+			      &#183; <a href="{$u.rel.hardware}">Поддерживаемое Оборудование</a><br/>
+			      &#183; <a href="{$u.rel.errata}">Обнаруженные Проблемы</a></small></p>
+
+			  <p><font size="+1" color="#990000"><b>Новости Проекта</b></font><br/>
+			    <font size="-1">
+			      Последние изменения: 
+			      <xsl:value-of
+				select="descendant::month[position() = 1]/name"/>
+			      <xsl:text> </xsl:text>
+			      <xsl:value-of
+				select="descendant::day[position() = 1]/name"/>,
+			      <xsl:text> </xsl:text>
+			      <xsl:value-of
+				select="descendant::year[position() = 1]/name"/>
+			      <br/>
+			      <!-- Pull in the 10 most recent news items -->
+			      <xsl:for-each select="descendant::event[position() &lt;= 10]">
+				&#183;  <a>
+				  <xsl:attribute name="href">
+				    news/newsflash.html#<xsl:call-template name="generate-event-anchor"/>
+				  </xsl:attribute>
+				  <xsl:choose>
+				    <xsl:when test="count(child::title)">
+				      <xsl:value-of select="title"/><br/>
+				    </xsl:when>
+				    <xsl:otherwise>
+				      <xsl:value-of select="p"/><br/>
+				    </xsl:otherwise>
+				  </xsl:choose>
+				</a>
+			      </xsl:for-each>
+			      <a href="news/newsflash.html">Далее...</a>
+			    </font></p>
+			  
+			  <p><font size="+1" color="#990000"><b>FreeBSD в Прессе</b></font><br/>
+
+			    <font size="-1">
+			      Последние изменения: 
+			      <xsl:value-of
+				select="document('news/press.xml')/descendant::month[position() = 1]/name"/>
+			      <xsl:text> </xsl:text>
+			      <xsl:value-of
+				select="document('news/press.xml')/descendant::year[position() = 1]/name"/>
+			      <br/>
+			      <!-- Pull in the 10 most recent press items -->
+			      <xsl:for-each select="document('news/press.xml')/descendant::story[position() &lt; 10]">
+				&#183; <a>
+				  <xsl:attribute name="href">
+				    news/press.html#<xsl:call-template name="generate-story-anchor"/>
+				  </xsl:attribute>
+				  <xsl:value-of select="name"/>
+				</a><br/>
+			      </xsl:for-each>
+			      <a href="news/press.html">Далее...</a>
+			    </font>
+			  </p>
+			</td>
+		      </tr>
+		    </table>
+		  </td>
+		</tr>
+	      </table>
+
+	      <p>&#xa0;</p>
+
+	      <table border="0" cellspacing="0" cellpadding="1"
+		     bgcolor="#000000" width="100%">
+		<tr>
+		  <td>
+		    <table cellpadding="4" cellspacing="0" border="0"
+			   bgcolor="#FFFFFF" width="100%"><tr>
+			<td>Чтобы узнать больше о FreeBSD посетите нашу
+			  галерею <a href="{$base}/publish.html">публикаций</a>
+			  посвященных FreeBSD или <a
+			  href="news/press.html">FreeBSD в Прессе</a>, а также
+			  побродите по этому сайту!</td>
+		      </tr>
+		    </table>
+		  </td>
+		</tr>
+	      </table>
+	    </td>
+	  </tr>
+	</table>
+
+	<hr noshade="noshade" size="1" />
+
+	<table width="100%" border="0" cellspacing="0" cellpadding="3">
+	  <tr>
+	    <td><a href="http://www.freebsdmall.com/"><img
+			   src="gifs/mall_title_medium.gif" alt="[FreeBSD Mall]"
+			   height="65" width="165" border="0"/></a></td>
+	    
+	    <td><a href="http://www.ugu.com/"><img src="gifs/ugu_icon.gif"
+			   alt="[Мы спонсируем Unix Guru Universe]" 
+			   height="64" width="76"
+			   border="0"/></a></td>
+	  
+	    <td><a href="http://www.daemonnews.org/"><img src="gifs/darbylogo.gif"
+		alt="[Daemon News]" height="45" width="130"
+		border="0"/></a></td>
+	  
+	    <td><a href="{$base}/copyright/daemon.html"><img
+			     src="gifs/powerlogo.gif" 
+			     alt="[Powered by FreeBSD]"
+			     height="64" 
+			     width="160" 
+			     border="0"/></a></td>
+	  </tr>
+	</table>
+
+	<p><small>Обновления на веб-сервере происходят ежедневно
+	  в 08:00 и 20:00 UTC.</small></p>
+    
+	<table width="100%" cellpadding="0" border="0" cellspacing="0">
+	  <tr>
+	    <td align="left" 
+		valign="top"><small><a href="{$base}/mailto.html">Пишите 
+		  нам</a><br/>
+		<xsl:value-of select="$date"/></small></td>
+
+	    <td align="right" 
+		valign="top"><small><a href="copyright/index.html">Copyright</a> (c) 1995-2001
+		The FreeBSD Project.<br/>
+		Все права защищены.</small></td>
+	  </tr>
+	</table>	    
+      </body>
+    </html>  
+  </xsl:template>    
+</xsl:stylesheet>
+
+<!-- 
+     Local Variables:
+     mode: xml
+     sgml-indent-data: t
+     sgml-omittag: nil
+     sgml-always-quote-attributes: t
+     End:
+-->
