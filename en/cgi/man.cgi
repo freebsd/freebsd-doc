@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp 
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.114 2003-11-04 14:29:52 www Exp $
+# $Id: man.cgi,v 1.115 2003-11-04 14:30:57 www Exp $
 
 #use Data::Dumper;
 #use Carp;
@@ -257,6 +257,9 @@ $manPathDefault = 'FreeBSD 5.1-RELEASE';
      'SuSE Linux/i386 7.1',   "$manLocalDir/SuSE-7.1-i386",
      'SuSE Linux/i386 7.2',   "$manLocalDir/SuSE-7.2-i386",
      'SuSE Linux/i386 7.3',   "$manLocalDir/SuSE-7.3-i386",
+     'SuSE Linux/i386 8.0',   "$manLocalDir/SuSE-8.0-i386",
+     'SuSE Linux/i386 8.1',   "$manLocalDir/SuSE-8.1-i386",
+     'SuSE Linux/i386 8.2',   "$manLocalDir/SuSE-8.2-i386",
 
      'HP-UX 11.22',	      "$manLocalDir/HP-UX-11.22",
      'HP-UX 11.20',	      "$manLocalDir/HP-UX-11.20",
@@ -312,7 +315,7 @@ while (($key,$val) = each %manPath) {
      'slackware', 'Linux Slackware 3.1',
      'linux-de', 'deutsch - Linux/GNU',
      'redhat', 'Red Hat Linux/i386 9',
-     'suse', 'SuSE Linux/i386 7.3',
+     'suse', 'SuSE Linux/i386 8.2',
      'linux', 'Red Hat Linux/i386 9',
      'darwin', 'Darwin 1.3 PPC',
      'macosx', 'Darwin 1.3 PPC',
@@ -987,7 +990,7 @@ ETX
 }
 
 sub copyright {
-    $id = '$Id: man.cgi,v 1.114 2003-11-04 14:29:52 www Exp $';
+    $id = '$Id: man.cgi,v 1.115 2003-11-04 14:30:57 www Exp $';
 
     return qq{\
 <PRE>
