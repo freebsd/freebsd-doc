@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD$ -->
+<!-- $FreeBSD: www/fr/news/oldnewsflash.xsl,v 1.1 2002/12/22 22:06:04 stephane Exp $ -->
 
 <!-- 
    The FreeBSD French Documentation Project
@@ -48,7 +48,7 @@
 	<!-- Also notice that because this is now XML and not SGML, empty
              elements, like IMG, must have a trailing "/" just inside the 
    	     closing angle bracket, like this " ... />" -->
-	<img src="{$base}/gifs/news.jpg" align="right" border="0" width="193"
+	<img src="{$enbase}/gifs/news.jpg" align="right" border="0" width="193"
 	     height="144" alt="FreeBSD News"/>
 
 	<xsl:apply-templates select="descendant::month"/>

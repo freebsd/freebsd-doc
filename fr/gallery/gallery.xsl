@@ -13,7 +13,7 @@
 
   <xsl:variable name="base" select="'..'"/>
   <xsl:variable name="title" select="'La Galerie FreeBSD'"/>
-  <xsl:variable name="date" select="'$FreeBSD$'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/fr/gallery/gallery.xsl,v 1.1 2003/08/17 12:22:28 stephane Exp $'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"/>
 
@@ -46,39 +46,39 @@
 
 	<table width="100%" border="0">
 	  <tr>
-	    <td align="left"><img src="../gifs/powerlogo.gif" alt=""
+	    <td align="left"><img src="{$enbase}/gifs/powerlogo.gif" alt=""
 				  align="left" border="0"/></td>
 
-	    <td align="left"><img src="../gifs/power-button.gif" alt="" 
+	    <td align="left"><img src="{$enbase}/gifs/power-button.gif" alt="" 
 				  align="left" border="0"/></td>
 	  </tr>
 
 	  <tr>
-	    <td align="right"><img src="../gifs/pbfbsd2.gif" width="171" 
+	    <td align="right"><img src="{$enbase}/gifs/pbfbsd2.gif" width="171" 
 				   height="64" border="0"/></td>
 
-	    <td align="right"><img src="../gifs/powerani.gif" width="171"
+	    <td align="right"><img src="{$enbase}/gifs/powerani.gif" width="171"
 				   height="64"/></td>
 
-	    <td align="right"><img src="../gifs/fhp_mini.jpg" width="171"
+	    <td align="right"><img src="{$enbase}/gifs/fhp_mini.jpg" width="171"
 				   height="64"/></td>
 	  </tr>
 	</table>
 	
-	<p align="center"><img src="../gifs/banner1.gif" alt="" 
+	<p align="center"><img src="{$enbase}/gifs/banner1.gif" alt="" 
 			       width="446" height="63" border="0"/></p>
 
-	<p align="center"><img src="../gifs/banner2.gif" alt="" width="310" 
+	<p align="center"><img src="{$enbase}/gifs/banner2.gif" alt="" width="310" 
 			       height="63" border="0"/></p>
 
-	<p align="center"><img src="../gifs/banner3.gif" alt="" width="250" 
+	<p align="center"><img src="{$enbase}/gifs/banner3.gif" alt="" width="250" 
 			       height="35" border="0"/></p>
 
-	<p align="center"><img src="../gifs/banner4.gif" alt="" width="225" 
+	<p align="center"><img src="{$enbase}/gifs/banner4.gif" alt="" width="225" 
 			       height="46" border="0"/></p>
 
 	<p>Les logos "Fonctionne gr&#226;ce &#224; FreeBSD" ("Powered by FreeBSD") visibles ci-dessus peuvent &#234;tre
-	  <a href="../gifs/powerlogo.gif">t&#233;l&#233;charg&#233;s</a> et affich&#233;s sur les pages
+	  <a href="{$enbase}/gifs/powerlogo.gif">t&#233;l&#233;charg&#233;s</a> et affich&#233;s sur les pages
 	  d'accueils de sites personnels ou commerciaux fonctionnant sous FreeBSD. L'utilisation de
 	  ce logo ou des <a
 	  href="../copyright/daemon.html">D&#233;mons BSD</a> dans un but lucratif
