@@ -4,9 +4,9 @@
      The FreeBSD Russian Documentation Project
 
      $FreeBSD$
-     $FreeBSDru: frdp/www/ru/index.xsl,v 1.34 2004/04/22 11:40:49 den Exp $
+     $FreeBSDru: frdp/www/ru/index.xsl,v 1.37 2004/06/25 07:28:25 den Exp $
 
-     Original revision: 1.99
+     Original revision: 1.103
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -44,7 +44,13 @@
 
         <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon"/>
 
-        <link rel="icon" href="/favicon.ico" type="image/x-icon"/>
+	<link rel="icon" href="/favicon.ico" type="image/x-icon"/>
+
+	<!-- Formatted to be easy to spam harvest, please do not reformat. -->
+	<xsl:comment>
+	Ловушка для спамеров, не пишите по адресу:
+        &lt;a href="mailto:bruscar@freebsd.org"&gt;bruscar@freebsd.org&lt;/a&gt;
+	</xsl:comment>
       </head>
 
       <body bgcolor="#FFFFFF" text="#000000" link="#0000FF" vlink="#840084"
@@ -168,9 +174,7 @@
 		нагрузке сетевые службы, и эффективное управление памятью,
 		что позволяет обеспечивать приемлемое время отклика для
 		сотен и даже тысяч одновременно работающих пользовательских
-		задач.  Посетите нашу
-		<a href="gallery/gallery.html">галерею</a>, чтобы увидеть
-		примеры использования FreeBSD.</p>
+		задач.</p>
 	    
 	      <h2><font color="#990000">Огромное количество
                 приложений</font></h2>
@@ -189,7 +193,7 @@
                 CD-ROM, DVD-ROM, дискеты, магнитную ленту, раздел MS-DOS&#174;,
                 либо, если у вас есть подключение к сети, можно установить её
                 <i>непосредственно</i> через FTP или NFS.  Всё, что вам нужно
-                для этого - несколько чистых дискет ёмкостью 1.44 Мбайта и <a
+                для этого - несколько чистых дискет ёмкостью 1.44 Мбайт и <a
                 href="{$base}/doc/ru_RU.KOI8-R/books/handbook/install.html">
                 эти указания</a>.</p>
 
@@ -258,10 +262,10 @@
 
 			    <small>&#183; <a href="{$u.rel.announce}">Анонс</a><br/>
 			      &#183; <a href="{$base}/doc/ru_RU.KOI8-R/books/handbook/install.html">Руководство по установке</a><br/>
-			      &#183; <a href="{$u.rel.notes}">Информация о Релизе</a><br/>
-			      &#183; <a href="{$u.rel.hardware}">Поддерживаемое Оборудование</a><br/>
+			      &#183; <a href="{$u.rel.notes}">Информация о релизе</a><br/>
+			      &#183; <a href="{$u.rel.hardware}">Информация о оборудовании</a><br/>
 			      &#183; <a href="{$u.rel.installation}">Заметки по установке</a><br/>
-                              &#183; <a href="{$u.rel.errata}">Обнаруженные Проблемы</a><br/>
+                              &#183; <a href="{$u.rel.errata}">Обнаруженные проблемы</a><br/>
                               &#183; <a href="{$u.rel.early}">Руководство для новичков</a></small></p>
 
 			<p>
@@ -272,11 +276,12 @@
                             <small>&#183; <a href="{$u.rel2.announce}">Анонс</a><br/>
                               &#183; <a href="{$base}/doc/ru_RU.KOI8-R/books/handbook/install.html">Руководство по установке</a><br/>
                               &#183; <a href="{$u.rel2.notes}">Информация о релизе</a><br/>
-                              &#183; <a href="{$u.rel2.hardware}">Информация об оборудовании</a><br/>
+                              &#183; <a href="{$u.rel2.hardware}">Информация о оборудовании</a><br/>
 			      &#183; <a href="{$u.rel2.installation}">Заметки по установке</a><br/>
                               &#183; <a href="{$u.rel2.errata}">Известные проблемы</a></small></p>
 
 			  <p><font size="+1" color="#990000"><b>Новости Проекта</b></font>
+			    <xsl:text> </xsl:text>
 			    <font color="#990000">(<a href="news/news.rdf">RSS</a>)</font><br/>
 			    <font size="-1">
 			      Последние изменения: 
@@ -310,7 +315,9 @@
                             </font>
                           </p>
 
-                         <p><font size="+1" color="#990000"><b>Бюллетени безопасности</b></font><br/>
+                         <p><font size="+1" color="#990000"><b>Бюллетени безопасности</b></font>
+			    <xsl:text> </xsl:text>
+			    <font color="#990000">(<a href="{$base}/security/advisories.rdf">RSS</a>)</font><br/>
 
                            <font size="-1">
                              Последнее обновление:
