@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/ports.cgi,v 1.57 2001/08/26 18:27:45 wosch Exp $
+# $FreeBSD$
 #
 # ports.cgi - search engine for FreeBSD ports
 #             	o search for a port by name or description
@@ -91,7 +91,7 @@ sub init_variables {
 
     # CVS Web interface
     $remotePrefixCvs =
-	'http://www.FreeBSD.org/cgi/cvsweb.cgi/ports';
+	'http://cvsweb.FreeBSD.org/ports';
 
     # Ports documentation
     $portsDesc = '../ports/';
@@ -553,7 +553,7 @@ sub footer {
 <img ALIGN="RIGHT" src="/gifs/powerlogo.gif">
 &copy; 1996-2001 by Wolfram Schneider. All rights reserved.<br>
 };
-    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.57 2001/08/26 18:27:45 wosch Exp $} . "<br>\n";
+    #print q{$FreeBSD$} . "<br>\n";
     print qq{Please direct questions about this service to
 <I><A HREF="$mailtoURL">$mailto</A></I><br>\n};
     print qq{General questions about FreeBSD ports should be sent to } .

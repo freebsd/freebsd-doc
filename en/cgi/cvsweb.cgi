@@ -13,7 +13,7 @@
 #
 # Based on:
 # * Bill Fenners cvsweb.cgi revision 1.28 available from:
-#   http://www.FreeBSD.org/cgi/cvsweb.cgi/www/en/cgi/cvsweb.cgi
+#   http://cvsweb.FreeBSD.org/www/en/cgi/cvsweb.cgi
 #
 # Copyright (c) 1996-1998 Bill Fenner
 #           (c) 1998-1999 Henner Zeller
@@ -42,9 +42,9 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $Id: cvsweb.cgi,v 1.76 2001-09-19 15:18:41 fenner Exp $
+# $Id: cvsweb.cgi,v 1.77 2001-11-07 16:32:11 sobomax Exp $
 # $Idaemons: /home/cvs/cvsweb/cvsweb.cgi,v 1.82 2001/08/01 09:54:52 knu Exp $
-# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.75 2001/08/01 10:41:47 knu Exp $
+# $FreeBSD$
 #
 ###
 
@@ -234,7 +234,7 @@ $LOG_REVSEPARATOR  = q/^-{28}$/;
 ##### End of configuration variables #####
 
 $cgi_style::hsty_base = 'http://www.FreeBSD.org';
-$_ = q$FreeBSD: www/en/cgi/cvsweb.cgi,v 1.75 2001/08/01 10:41:47 knu Exp $;
+$_ = q$FreeBSD$;
 @_ = split;
 $cgi_style::hsty_date = "@_[3,4]";
 
