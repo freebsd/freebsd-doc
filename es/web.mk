@@ -1,5 +1,5 @@
 # bsd.web.mk
-# $Id: web.mk,v 1.2 1999-04-10 20:21:50 jesusr Exp $
+# $Id: web.mk,v 1.3 1999-09-05 13:20:48 wosch Exp $
 
 #
 # Build and install a web site.
@@ -163,8 +163,7 @@ realinstall2:
 	for entry in ${DOCSUBDIR}; do \
 		if [ $$entry != "handbook" ]; then \
 			(cd ${DOCINSTALLDIR}/$$entry; \
-			if test -f $$entry.html; then tar czf $$entry-html.tar.gz *.html; fi; \
-			if test -f $$entry.html; then ln -fs $${entry}.html index.html;fi ) \
+			if test -f $$entry.html; then tar czf $$entry-html.tar.gz *.html; fi; ) \
 		fi; \
 	done
 .endif
