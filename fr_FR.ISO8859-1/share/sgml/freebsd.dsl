@@ -2,7 +2,7 @@
      The FreeBSD Documentation Project
      The FreeBSD French Documentation Project
 
-     $Id: freebsd.dsl,v 1.4 2002-02-19 15:53:58 gioria Exp $
+     $Id: freebsd.dsl,v 1.5 2002-05-26 18:34:15 gioria Exp $
      $FreeBSD$
      Original revision: 1.3
 
@@ -54,6 +54,13 @@
                 (literal ">.")))))
 
       ]]>
+	<!-- Fix a problem with the French localisation. The bug was
+	submitted to authors of docbook project -->
+	(define (local-fr-label-title-sep)
+        (list
+          (list (normalize "warning")           "\U-00A0;: ")
+	))
+
     </style-specification-body>
   </style-specification>
 
