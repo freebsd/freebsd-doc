@@ -90,8 +90,8 @@ print "<AREA SHAPE=\"RECT\" COORDS=\"112,11,196,31\" HREF=\"../ports/index.html\
 print "<AREA SHAPE=\"RECT\" COORDS=\"196,12,257,33\" HREF=\"../support.html\">\n";
 print "<AREA SHAPE=\"RECT\" COORDS=\"256,12,365,33\" HREF=\"../docs.html\">\n";
 print "<AREA SHAPE=\"RECT\" COORDS=\"366,13,424,32\" HREF=\"../commercial.html\">\n";
-print "<AREA SHAPE=\"RECT\" COORDS=\"425,16,475,32\" HREF=\"../search.html\">\n";
-print "<AREA SHAPE=\"RECT\" COORDS=\"477,16,516,33\" HREF=\"../index-site.html\">\n";
+print "<AREA SHAPE=\"RECT\" COORDS=\"425,16,475,32\" HREF=\"../search/search.html\">\n";
+print "<AREA SHAPE=\"RECT\" COORDS=\"477,16,516,33\" HREF=\"../search/index-site.html\">\n";
 print "<AREA SHAPE=\"RECT\" COORDS=\"516,15,562,33\" HREF=\"../index.html\">\n";
 print "<AREA SHAPE=\"RECT\" COORDS=\"0,0,564,32\" HREF=\"../index.html\">\n";
 print "</MAP>\n";

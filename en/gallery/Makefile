@@ -1,8 +1,7 @@
-# $Id: Makefile,v 1.1 1998-08-03 09:34:03 wosch Exp $
+# $Id: Makefile,v 1.2 1998-08-03 15:37:48 wosch Exp $
 
-
+DOCS = gallery.sgml
 DOCS+= cgallery.sgml
-DOCS+= gallery.sgml
 DOCS+= npgallery.sgml 
 DOCS+= pgallery.sgml
 

@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-#	$Id: ports.cgi,v 1.24 1998-08-02 17:40:29 wosch Exp $
+#	$Id: ports.cgi,v 1.25 1998-08-03 15:37:47 wosch Exp $
 #
 # ports.cgi - search engine for FreeBSD ports
 #             	o search for a port by name or description
@@ -649,7 +649,7 @@ else {
 if (!$counter) {
     print "Sorry, nothing found.\n";
     print qq{You may look for other } . 
-	qq{<a href="/search.html">FreeBSD Search Services</a>.\n};
+	qq{<a href="/search/search.html">FreeBSD Search Services</a>.\n};
 } else {
     print "</dl>\n";
 }

@@ -19,8 +19,8 @@
 $server_root = '/usr/local/www';
 $waisq = "/usr/local/www/bin/waisq";
 $sourcepath = "$server_root/db/index";
-$hints = "/searchhints.html"; 
-$searchpage = '/search.html';   
+$hints = "/search/searchhints.html"; 
+$searchpage = '/search/search.html';   
 $myurl = $ENV{'SCRIPT_NAME'};
 
 require "open2.pl";

@@ -1,4 +1,4 @@
-# $Id: cgi-style.pl,v 1.10 1998-04-15 13:47:24 wosch Exp $
+# $Id: cgi-style.pl,v 1.11 1998-08-03 15:37:47 wosch Exp $
 #
 # Perl routines to encapsulate various elements of HTML page style.
 
@@ -27,9 +27,9 @@ $i_topbar = "<IMG SRC=\"$hsty_base/gifs/bar.gif\" ALT=\"\" WIDTH=\"565\" HEIGHT=
 <area shape=\"rect\" coords=\"112,11,196,31\" href=\"$hsty_base/ports/index.html\" ALT=\"\">
 <area shape=\"rect\" coords=\"196,12,257,33\" href=\"$hsty_base/support.html\" ALT=\"\">
 <area shape=\"rect\" coords=\"256,12,365,33\" href=\"$hsty_base/docs.html\" ALT=\"\"> 
-<area shape=\"rect\" coords=\"366,13,424,32\" href=\"$hsty_base/commercial.html\" ALT=\"\">
-<area shape=\"rect\" coords=\"425,16,475,32\" href=\"$hsty_base/search.html\" ALT=\"\">
-<area shape=\"rect\" coords=\"477,16,516,33\" href=\"$hsty_base/index-site.html\" ALT=\"\">
+<area shape=\"rect\" coords=\"366,13,424,32\" href=\"$hsty_base/commercial/commercial.html\" ALT=\"\">
+<area shape=\"rect\" coords=\"425,16,475,32\" href=\"$hsty_base/search/search.html\" ALT=\"\">
+<area shape=\"rect\" coords=\"477,16,516,33\" href=\"$hsty_base/search/index-site.html\" ALT=\"\">
 <area shape=\"rect\" coords=\"516,15,562,33\" href=\"$hsty_base/index.html\" ALT=\"\">
 <area shape=\"rect\" href=\"$hsty_base/index.html\" coords=\"0,0,564,32\" ALT=\"\">
 </map>";
