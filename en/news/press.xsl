@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/en/news/press.xsl,v 1.1 2001/08/10 10:31:44 nik Exp $ -->
+<!-- $FreeBSD: www/en/news/press.xsl,v 1.2 2001/09/20 11:43:31 chris Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -10,7 +10,7 @@
 
 
   <xsl:variable name="base" select="'..'"/>
-  <xsl:variable name="title" select="'FreeBSD In The Press'"/>
+  <xsl:variable name="title" select="'FreeBSD in the Press'"/>
   <xsl:variable name="date">
     <xsl:value-of select="//cvs:keyword[@name='freebsd']"/>
   </xsl:variable>
