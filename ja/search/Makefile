@@ -1,6 +1,6 @@
-# $FreeBSD: www/ja/search/Makefile,v 1.6 1999/09/07 15:15:59 kuriyama Exp $
+# $FreeBSD: www/ja/search/Makefile,v 1.7 1999/12/23 01:16:11 kuriyama Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.5
+# Original revision: 1.6
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -18,9 +18,9 @@ CLEANFILES+=atoz.sgml site.sgml
 
 index-site.sgml: atoz.sgml site.sgml
 atoz.sgml: web.atoz 
-	sort -fu web.atoz | perl ../../en/search/atoz.pl > ${.TARGET}
+	sort -fu web.atoz | ${PERL} ../../en/search/atoz.pl > ${.TARGET}
 site.sgml: ../../en/search/site.map
-	perl ../../en/search/site.pl < ${.ALLSRC} > ${.TARGET}
+	${PERL} ../../en/search/site.pl < ${.ALLSRC} > ${.TARGET}
 
 ### Revision checking
 REVFILES=	${DOCS:M*.sgml:S/.sgml$/.revinc/g}
