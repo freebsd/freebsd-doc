@@ -3,7 +3,7 @@
 #
 # The FreeBSD Russian Documentation Project
 # $FreeBSD$
-# $FreeBSDru: frdp/doc/ru_RU.KOI8-R/books/handbook/Makefile,v 1.12 2000/10/11 15:57:22 phantom Exp $
+# $FreeBSDru: frdp/doc/ru_RU.KOI8-R/books/handbook/Makefile,v 1.16 2000/11/15 17:21:30 phantom Exp $
 # Original version: 1.28
 #
 
@@ -15,8 +15,6 @@ FORMATS?= html-split
 
 INSTALL_COMPRESSED?= gz
 INSTALL_ONLY_COMPRESSED?=
-
-NO_TIDY= YES
 
 # 
 # SRCS lists the individual SGML files that make up the document. Changes
@@ -32,24 +30,24 @@ SRCS+= bibliography/chapter.sgml
 SRCS+= boot/chapter.sgml
 #SRCS+= contrib/chapter.sgml
 #SRCS+= cutting-edge/chapter.sgml
-#SRCS+= disks/chapter.sgml
+SRCS+= disks/chapter.sgml
 #SRCS+= eresources/chapter.sgml
 #SRCS+= hw/chapter.sgml
 SRCS+= install/chapter.sgml
 #SRCS+= internals/chapter.sgml
 SRCS+= introduction/chapter.sgml
 #SRCS+= kernelconfig/chapter.sgml
-#SRCS+= kerneldebug/chapter.sgml
-#SRCS+= kernelopts/chapter.sgml
+SRCS+= kerneldebug/chapter.sgml
+SRCS+= kernelopts/chapter.sgml
 #SRCS+= l10n/chapter.sgml
 SRCS+= linuxemu/chapter.sgml
-#SRCS+= mail/chapter.sgml
+SRCS+= mail/chapter.sgml
 SRCS+= mirrors/chapter.sgml
 SRCS+= pgpkeys/chapter.sgml
 #SRCS+= policies/chapter.sgml
 #SRCS+= ppp-and-slip/chapter.sgml
 #SRCS+= printing/chapter.sgml
-#SRCS+= security/chapter.sgml
+SRCS+= security/chapter.sgml
 #SRCS+= serialcomms/chapter.sgml
 SRCS+= staff/chapter.sgml
 #SRCS+= users/chapter.sgml
