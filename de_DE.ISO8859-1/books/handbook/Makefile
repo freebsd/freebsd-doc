@@ -1,12 +1,12 @@
 #
 # $FreeBSD$
-# $FreeBSDde: de-docproj/books/handbook/Makefile,v 1.34 2004/05/09 19:49:44 mheinen Exp $
-# basiert auf: 1.79
+# $FreeBSDde: de-docproj/books/handbook/Makefile,v 1.36 2004/06/06 18:21:21 mheinen Exp $
+# basiert auf: 1.81
 #
 # Build the FreeBSD Handbook in its German translation.
 #
 
-MAINTAINER=alex@FreeBSD.org
+MAINTAINER=de-bsd-translators@de.FreeBSD.org
 
 DOC?= book
 
