@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/index.xsl,v 1.25 2002/06/12 18:12:57 nik Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.26 2002/06/28 21:08:07 nik Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   
@@ -6,7 +6,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.25 2002/06/12 18:12:57 nik Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.26 2002/06/28 21:08:07 nik Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -279,7 +279,7 @@
 		you have a network connection, you can install it
 		<i>directly</i> over anonymous FTP or NFS. All you need is a 
 		pair of blank, 1.44MB floppies and 
-		<a href="{$base}/handbook/install.html">these 
+		<a href="{$base}/doc/en_US.ISO8859-1/books/handbook/install.html">these 
 		  directions</a>.</p>
 
 	      <h2><font color="#990000">FreeBSD is <i>free</i></font></h2>
