@@ -23,22 +23,25 @@
     <indexterm><primary>Mandatory Access Control</primary></indexterm>
 
     <para>&os;&nbsp;5.X introduced new security extensions from the
-      TrustedBSD project based on the &posix;.1e draft.  The most
-      important new security mechanisms are file system Access Control
+      TrustedBSD project based on the &posix;.1e draft.  Two of the most
+      significant new security mechanisms are file system Access Control
       Lists (<acronym>ACLs</acronym>) and Mandatory Access Control
-      (<acronym>MAC</acronym>).  Mandatory Access Control allows an
-      administrator to enforce additional security for all subjects
-      (e.g. processes or sockets) and objects (e.g. sockets, file
-      system objects, sysctl nodes) in the system.  The mandatory part
+      (<acronym>MAC</acronym>).  Mandatory Access Control allows 
+      new access control modules to be loaded, implementing new security
+      policies.  Some provide protections of a narrow subset of the
+      system, hardening a particular service, while others provide
+      comprehensive labeled security across all subjects and objects.
+      The mandatory part
       of the definition comes from the fact that the enforcement of
       the controls is done by administrators and the system, and is
       not left up to the discretion of users as is done with
-      discretionary access control (<acronym>DAC</acronym>, the normal
-      access method).</para>
+      discretionary access control (<acronym>DAC</acronym>, the standard
+      file and System V IPC permissions on &os;.</para>
 
     <para>This chapter will focus on the
-      Mandatory Access Control framework, hereon referred to simply as
-      <acronym>MAC</acronym>.</para>
+      Mandatory Access Control Framework (MAC Framework), and a set
+      of pluggable policy modules implementing various security
+      policies.</para>
 
     <para>After reading this chapter, you will know:</para>
 
@@ -65,14 +68,14 @@
       </listitem>
 
       <listitem>
-        <para>How to implement a secure environment using the
+        <para>How to implement a more secure environment using the
 	  <acronym>MAC</acronym> framework and the examples
 	  shown.</para>
       </listitem>
 
       <listitem>
 	<para>How to test the <acronym>MAC</acronym> configuration
-	  to ensure the system is properly accepting it.</para>
+	  to ensure the framework has been properly implemented.</para>
       </listitem>
     </itemizedlist>
 
@@ -101,7 +104,7 @@
 	information in this chapter may cause loss of access to the system,
 	aggravation of users, or inability to access the features
 	provided by &xfree86;.  More importantly, <acronym>MAC</acronym> should not
-	be relied upon to completely secure a system.  The
+	be relied upon to secure a system.  The
 	<acronym>MAC</acronym> framework only augments
 	existing security policy; without sound security practices and
 	regular security checks, the system will never be completely
@@ -139,42 +142,56 @@
     <para>Before reading this chapter, a few key terms must be
       explained.  This will hopefully clear up any confusion that
       may occur and avoid the abrupt introduction of new terms
-      and information.  The following terms will be used throughout
-      this chapter:</para>
+      and information.</para>
 
     <itemizedlist>
       <listitem>
 	<para><emphasis>compartment</emphasis>: A compartment is a
 	  a set of programs and data to be partitioned or separated,
-	  where users are given certain access to specific components
+	  where users are given explicit access to specific components
 	  of a system.  Also, a compartment represents a grouping,
-	  such as a work group, department, project, or topic.  Access
-	  to compartments is granted on a need-to-know basis.</para>
+	  such as a work group, department, project, or topic.  Using
+	  compartments, it is possible to implement a need-to-know
+	  policy.</para>
+      </listitem>
+
+      <listitem>
+	<para><emphasis>integrity</emphasis>: Integrity, as a key
+	  concept, is the level of trust which can be placed on data.
+	  As the integrity of the data is elevated, so does the ability
+	  to trust that data.</para>
       </listitem>
 
       <listitem>
 	<para><emphasis>label</emphasis>: A label is a security
-	  feature which can be applied to files, directories, and
+	  attribute which can be applied to files, directories, or
 	  other items in the system.  It could be considered
 	  to be a confidentiality stamp; when a label is placed on
-	  a file it describes the level of security for that specific
+	  a file it describes the security properties for that specific
 	  file and will only permit access by files, users, resources,
-	  etc. with a similar or lesser security setting.  Some of
-	  the policies can handle labels in different ways; this will
-	  be discussed in the policy sections later.</para>
+	  etc. with a similar security setting.  The meaning and
+	  interpretation of label values depends on the policy: while
+	  some policies might treat a label as representing the
+	  integrity or secrecy of an object, other policies might use
+	  labels to hold rules for access.</para>
+      </listitem>
+
+      <listitem>
+	<para><emphasis>level</emphasis>: The increased or decreased
+	  setting of a security attribute.  As the level increases,
+	  its security is considered to elevate as well.</para>
       </listitem>
 
       <listitem>
 	<para><emphasis>multilabel</emphasis>: The
-	  <option>multilabel</option> is a file system option
+	  <option>multilabel</option> property is a file system option
 	  which can be set in single user mode using the
 	  &man.tunefs.8; utility; set during the boot operation
 	  using the &man.fstab.5; file; or during the creation of
-	  a new file system.  This option will permit multiple
-	  <acronym>MAC</acronym> labels to be placed on files
-	  and directories in the file system.  This option
-	  only applies to policies which use label operations
-	  for enhanced security.</para>
+	  a new file system.  This option will permit an administrator
+	  to apply different <acronym>MAC</acronym> labels on different
+	  objects.  This option
+	  only applies to policies labeled policies.</para>
       </listitem>
 
       <listitem>
@@ -194,7 +211,18 @@
 	  <emphasis>policy</emphasis> usually documents how certain
 	  items are to be handled.  This chapter will
 	  consider the term <emphasis>policy</emphasis> in this
-	  context as a <emphasis>security policy</emphasis>.</para>
+	  context as a <emphasis>security policy</emphasis>; i.e.
+	  a collection of rules which will control the flow of data
+	  and information and define whom will have access to that
+	  data and information.</para>
+      </listitem>
+
+      <listitem>
+	<para><emphasis>sensitivity</emphasis>: Usually used when
+	  discussing <acronym>MLS</acronym>.  A sensitivity level is
+	  a term used to describe how important or secret the data
+	  should be.  As the sensitivity level increases, so does the
+	  importance of the data.</para>
       </listitem>
 
       <listitem>
@@ -203,14 +231,15 @@
 	  enforce access control over the flow of data.  When a file
 	  system has this set, which is any time when the
 	  <option>multilabel</option> option is not set, all
-	  files must conform to the same label setting.</para>
+	  files will conform to the same label setting.</para>
       </listitem>
 
       <listitem>
 	<para><emphasis>subject</emphasis>: a subject is any
 	  active entity that causes information to flow between
 	  <emphasis>objects</emphasis>; e.g. a user, user processor,
-	  system process, etc.</para>
+	  system process, etc.  On &os;, this is almost always a thread
+	  acting in a process on behalf of a user.</para>
       </listitem>
     </itemizedlist>
   </sect1>
@@ -224,17 +253,23 @@
       the <acronym>MAC</acronym> framework could be used to
       protect the network and file systems, block users from
       accessing certain ports and sockets, and more.  Perhaps
-      the best use of the policies is to blend them together for
-      a multi-layered security environment.  The only downside is
+      the best use of the policies is to blend them together, by loading several policy modules at a time, for
+      a multi-layered security environment.  In a multi-layered security environment,
+      multiple policies are in effect to keep security in check.  This is different
+      then a hardening policy, which typically hardens elements of a system that is
+      used only for specific purposes.  The only downside is
       administrative overhead in cases of multiple file system
       labels, setting network access control user by user,
       etc.</para>
 
     <para>These downsides are minimal when compared to the lasting
-      effect of the framework.  A good implementation would hand
-      total control over to the system administrator, who then
-      could control various aspects of these policies using the
-      &man.sysctl.8; utility.</para>
+      effect of the framework; for instance, the ability to pick choose
+      which policies are required for a specific configuration keeps
+      performance overhead down.  The reduction of support for unneeded
+      policies can increase the overall performance of the system as well as
+      offer flexibility of choice.  A good implementation would
+      consider the overall security requirements and effectively implement
+      the various policies offered by the framework..</para>
 
     <para>Thus a system utilizing <acronym>MAC</acronym> features
       should at least guarantee that a user will not be permitted
@@ -277,102 +312,106 @@
       leakage.</para>
 
     <para>Thus, each policy has a unique way of dealing with
-      information flow.  Policy selection should be based
+      the overall security of a system.  Policy selection should be based
       on a well thought out security policy.  In many cases, the
-      overall policy may need to be revised and reimplemented across
-      the network.  Understanding the different policies offered by
+      overall policy may need to be revised and reimplemented on
+      the system.  Understanding the different policies offered by
       the <acronym>MAC</acronym> framework will help administrators
       choose the best policies for their situations.</para>
 
     <para>The default &os; kernel does not include the option for
       the <acronym>MAC</acronym> framework; thus the following
       kernel option must be added before trying any of the examples or
-      applying the information in this chapter to any &os; environment:</para>
+      information in this chapter:</para>
 
     <programlisting>options	MAC</programlisting>
 
     <para>And the kernel will require a rebuild and a reinstall.</para>
 
-    <note>
+    <caution>
       <para>While the various manual pages for <acronym>MAC</acronym>
 	modules state that they may be built into the kernel,
 	it is possible to lock the system out of
-	the network and more.  Therefore, this is not recommended
-	to those who are new the framework.</para>
-    </note>
+	the network and more.  Implementing <acronym>MAC</acronym>
+	is much like implementing a firewall, but care must be taken
+	to prevent being completely locked out of the system.  The
+	ability to revert back to a previous configuration should be
+	considered while the implementation of <acronym>MAC</acronym>
+	remotely should be done with extreme caution.</para>
+    </caution>
   </sect1>
 
   <sect1 id="mac-understandlabel">
     <title>Understanding MAC Labels</title>
 
-    <para>A <acronym>MAC</acronym> label is a virtual security
-      stamp which may be applied to subjects and objects throughout
+    <para>A <acronym>MAC</acronym> label is a security attribute
+      which may be applied to subjects and objects throughout
       the system.</para>
 
     <para>When setting a label, the user must be able to comprehend
-      what it is, exactly, that is being done.  Setting the label
-      too high or too low may jeopardize the entire security
-      structure of their directory or file system.</para>
+      what it is, exactly, that is being done.  The attributes
+      available on an object depend on the policy loaded, and that
+      policies interpret their attributes in pretty different
+      ways.  If improperly configured due to lack of comprehension, or
+      the inability to understand the implications, the result will
+      be the unexpected and perhaps, undesired, behavior of the
+      system.</para>
 
-    <para>The label specifies exactly what type of access control
-      should be enforced on the object or subject.  Formatting of
-      the label is simple, taking the policy name and a qualifier,
-      or setting, for that object or subject.</para>
+    <para>The security label on an object is used as a part of a
+      security access control decision by a policy.  With some
+      policies, the label by itself contains all information necessary
+      to make a decision; in other models, the labels may be processed
+      as part of a larger rule set, etc.</para>
 
     <para>For instance, setting the label of <literal>biba/low</literal>
-      on a file will give that file a basic low access control
-      policy.</para>
+      on a file will represent a label maintained by the Biba policy,
+      with a value of <quote>low</quote>.</para>
 
-    <para>These labels are what helps to partition, or divide into
-      groups, several objects from each other based on their security
-      profile.</para>
-
-    <para>With every policy which supports the labeling feature in
-      &os;, three specific predefined labels are offered, they
+    <para>A few policies which support the labeling feature in
+      &os; offers three specific predefined labels.  These
       are the low, high, and equal labels.  Although they enforce
       access control in a different manner with each policy, you
       can be sure that the low label will be the lowest setting,
       the equal label will set the subject or object to be disabled
       or unaffected, and the high label will enforce the highest
-      setting available.</para>
+      setting available in the Biba and <acronym>MLS</acronym>
+      policies.</para>
 
-    <para>Within single label environments, only one label may be
-      used on objects and subjects.  This will enforce one set of
+    <para>Within single label file system environments, only one label may be
+      used on objects.  This will enforce one set of
       access permissions across the entire system and in many
       environments may be all that is required.  There are a few
       cases; however, where multiple labels may be set on objects
-      or subjects in the system.  For those cases, the
+      or subjects in the file system.  For those cases, the
       <option>multilabel</option> option may be passed to
       &man.tunefs.8;.</para>
 
-    <para>In other cases still, a numeric label may be set to
+    <para>In the case of Biba and <acronym>MLS</acronym>, a numeric label may be set to
       indicate the precise level of hierarchical control.  This
-      numeric compartment is used to partition or sort information
+      numeric level is used to partition or sort information
       into different groups of say, classification only permitting
       access to that group or a higher group level.</para>
 
     <para>In most cases the administrator will only be setting up a
-      single label to use throughout the file system; indeed this
-      limits the need for the soon to be discussed
-      <option>multilabel</option> option.  That option should only
-      be enabled if the situation requires it.</para>
+      single label to use throughout the file system.</para>
 
     <para><emphasis>Hey wait, this is similar to <acronym>DAC</acronym>!
       I thought <acronym>MAC</acronym> gave control strictly to the
-      administrator.</emphasis>  That statement still holds true,
-      <username>root</username> is the one in control and who
+      administrator.</emphasis>  That statement still holds true, to some
+      extent <username>root</username> is the one in control and who
       configures the policy so that users are placed in the
-      appropriate categories/access levels.  Basic control over
+      appropriate categories/access levels.  Alas, many policies can
+      restrict the <username>root</username> user as well.  Basic control over
       objects will then be released to the group but
       <username>root</username> may revoke or modify the settings
-      at any time.  This is the hierarchal/clearance model discussed
-      earlier in this chapter.</para>
+      at any time.  This is the hierarchal/clearance model covered
+      by policies such as Biba and <acronym>MLS</acronym>.</para>
 
     <sect2>
       <title>Label Configuration</title>
 
       <para>Virtually all aspects of label policy configuration
-	will be performed using a set of four commands.  These
+	will be performed using the base system utilities.  These
 	commands provide a simple interface for object or subject
 	configuration or the manipulation and verification of
 	the configuration.</para>
@@ -388,10 +427,20 @@
 
       <para>If no errors occurred with the command above, a prompt
 	will be returned.  The only time these commands are not
-	quiescent is when an error occurred.  In some cases this
+	quiescent is when an error occurred; similarly to the
+	&man.chmod.1; and &man.chown.8; commands.  In some cases this
 	error may be a <errorname>Permission denied</errorname> and
 	is usually obtained when the label is being set or modified
-	on an object which is restricted.  The system administrator
+	on an object which is restricted.<footnote><para>Other conditions may produce
+	different failures.  For instance, the file may not be owned by the
+	user attempting to relabel the object, the object may not exist or
+	may be read only.  A mandatory policy will not allow the process to
+	relabel the file, maybe because of a property of the file, a property
+	of the process, or a property of the proposed new label value.
+	For example: a user running at low integrity tries to change
+	the label of a high integrity file.  Or perhaps a user running
+	at low integrity tries to change the label of a low integrity
+	file to a high integrity label.i</para></footnote>  The system administrator
 	may use the following commands to overcome this:</para>
 
       <screen>&prompt.root; <userinput>setfmac biba/high test</userinput>
@@ -406,10 +455,9 @@ test: biba/high</screen>
 	<command>getpmac</command> utility is usually used with currently
 	running processes, such as <application>sendmail</application>:
 	although it takes a process ID in place of
-	a command the logic is extremely similar.  It should be pointed
-	out that users will only be able to override policy labels if
-	they themselves own the object or subject.  If users
-	attempt to manipulate a file not in their access levels, the
+	a command the logic is extremely similar.  If users
+	attempt to manipulate a file not in their access,subject to the
+	rules of the loaded policies, the
 	<errorname>Operation not permitted</errorname> error
 	will be displayed by the <function>mac_set_link</function>
 	function.</para>
@@ -418,10 +466,11 @@ test: biba/high</screen>
 	<title>Users and Label Settings</title>
 
 	<para>Users themselves are required to have labels so that
-	  their files and processes may properly.  This is
+	  their files and processes may properly interact with the
+	  security policy defined on the system.  This is
 	  configured through the <filename>login.conf</filename> file
 	  by use of login classes.  Every policy that uses labels
-	  will enforce the user class setting.</para>
+	  will implement the user class setting.</para>
 
 	<para>An example entry containing every policy is listed
 	  below:</para>
@@ -448,7 +497,7 @@ test: biba/high</screen>
 	:passwordtime=91d:\
 	:umask=022:\
 	:ignoretime@:\
-	:label=partition/13,mls/5,biba/low,lomac10[2]:</programlisting>
+	:label=partition/13,mls/5,biba/10(5-15),lomac10[2]:</programlisting>
 
 	<para>The <literal>label</literal> option is used to set the
 	  user class default label which will be enforced by
@@ -458,6 +507,17 @@ test: biba/high</screen>
 	  administrator will never wish to enable every policy.
 	  It is recommended that the rest of this chapter be reviewed
 	  before any of this configuration is implemented.</para>
+
+	<note>
+	  <para>Users may change their label after the initial login;
+	    however, this change is subject constraints of the policy.
+	    The example above tells the Biba policy that a process's
+	    minimum integrity is 5, its maximum is 15, but the default
+	    effective label is 10.  The process will run at 10 until
+	    it chooses to change label, perhaps due to the user using
+	    the setpmac command, which will be constrained by Biba to
+	    the range set at login.</para>
+	</note>
 
 	<para>In all cases, after a change to
 	  <filename>login.conf</filename>, the login class capability
@@ -469,6 +529,10 @@ test: biba/high</screen>
 	  particularly large number of users requiring several
 	  different user classes.  In depth planning is required
 	  as this may get extremely difficult to manage.</para>
+
+	<para>Future versions of &os; will include a new way to
+	  deal with mapping users to labels; however, this will
+	  not be available until some time after &os;&nbsp;5.3.</para>
       </sect3>
 
       <sect3>
