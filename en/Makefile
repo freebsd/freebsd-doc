@@ -1,12 +1,13 @@
-# $Id: Makefile,v 1.7 1996-12-13 00:46:57 jfieber Exp $
+# $Id: Makefile,v 1.8 1997-01-21 02:44:35 mbarkah Exp $
 
 # These are turned into validated, normalized HTML files.
 
-DOCS=	about.sgml branch.sgml commercial.sgml daemon.sgml docproj.sgml
-DOCS+=	docs.sgml gallery.sgml index-site.sgml index.sgml license.sgml
-DOCS+=	mailto.sgml mirror.sgml newsflash.sgml searchhints.sgml support.sgml
-DOCS+=	welcome.sgml where.sgml search.sgml send-pr.sgml
-DOCS+=	internet.sgml features.sgml applications.sgml availability.sgml
+DOCS=  about.sgml applications.sgml availability.sgml branch.sgml
+DOCS+= cgallery.sgml commercial.sgml daemon.sgml docproj.sgml docs.sgml 
+DOCS+= features.sgml gallery.sgml includes.sgml index-site.sgml index.sgml
+DOCS+= internet.sgml license.sgml mailto.sgml mirror.sgml newsflash.sgml
+DOCS+= npgallery.sgml pgallery.sgml search.sgml searchhints.sgml send-pr.sgml
+DOCS+= support.sgml welcome.sgml where.sgml
 
 # These will be directly installed.
 
