@@ -319,6 +319,7 @@ MLINKS+=apm.8 zzz.8
 MLINKS+=boot_i386.8 boot.8
 MLINKS+=bootpd.8 bootpgw.8
 MLINKS+=dump.8 rdump.8
+MLINKS+=ftpd.8 lukemftpd.8
 MLINKS+=inetd.8 inetd.conf.5
 MLINKS+=init.8 securelevel.8
 MLINKS+=locate.updatedb.8 updatedb.8
