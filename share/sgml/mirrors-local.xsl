@@ -13,4 +13,5 @@
   <!-- these params should be externally bound. The values
        here are not used actually -->
   <xsl:param name="proto" select="''" />
+  <xsl:param name="target" select="''" />
 </xsl:stylesheet>
