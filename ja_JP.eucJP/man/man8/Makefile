@@ -65,7 +65,6 @@ MAN8 =	IPXrouted.8\
 	getty.8\
 	gifconfig.8\
 	hlfsd.8\
-	ibcs2.8\
 	ifconfig.8\
 	ifmcstat.8\
 	ilmid.8\
@@ -86,7 +85,6 @@ MAN8 =	IPXrouted.8\
 	isdntrace.8\
 	ispcvt.8\
 	jail.8\
-	joy.8\
 	kernbb.8\
 	keyserv.8\
 	kget.8\
@@ -97,7 +95,6 @@ MAN8 =	IPXrouted.8\
 	kldunload.8\
 	kzip.8\
 	ldconfig.8\
-	linux.8\
 	loader.4th.8\
 	loader.8\
 	locate.updatedb.8\
@@ -243,7 +240,6 @@ MAN8 =	IPXrouted.8\
 	stlload.8\
 	stlstats.8\
 	strfile.8\
-	svr4.8\
 	swapon.8\
 	sync.8\
 	sysctl.8\
