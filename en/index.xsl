@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/index.xsl,v 1.119 2004/12/18 12:36:30 ceri Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.120 2004/12/23 22:29:28 murray Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -6,7 +6,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.119 2004/12/18 12:36:30 ceri Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.120 2004/12/23 22:29:28 murray Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <!-- these params should be externally bound. The values
@@ -213,8 +213,8 @@
  		contact <a
 		  href="mailto:bod@FreeBSDFoundation.org">bod@FreeBSDFoundation.org</a>
  		for more information or write to: The FreeBSD
- 		Foundation, 7321 Brockway Dr.  Boulder, CO 80303.
- 		USA</p>
+ 		Foundation, 7321 Brockway Dr., Boulder, CO 80303,
+ 		USA.</p>
 
 	    </td>
 
