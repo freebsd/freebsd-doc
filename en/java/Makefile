@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/java/Makefile,v 1.2 2000/03/02 15:55:14 phantom Exp $
+# $FreeBSD: www/en/java/Makefile,v 1.3 2000/11/07 04:05:16 kuriyama Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -16,7 +16,6 @@ DOCS+=  howhelp.sgml
 DOCS+=  index.sgml
 DOCS+=  install.sgml
 DOCS+=  newsflash.sgml
-DOCS+=  press.sgml
 
 DATA=	j2j.gif
 
