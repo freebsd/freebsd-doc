@@ -22,7 +22,8 @@ MAN7 =	ascii.7\
 	security.7\
 	style.perl.7\
 	symlink.7\
-	term.7
+	term.7\
+	tuning.7
 
 MLINKS=groff_man.7 man.7
 MLINKS+=groff_mdoc.7 mdoc.7
