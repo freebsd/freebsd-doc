@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/index.xsl,v 1.73 2003/08/06 22:05:56 simon Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.74 2003/08/16 13:31:49 kensmith Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   
@@ -6,7 +6,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.73 2003/08/06 22:05:56 simon Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.74 2003/08/16 13:31:49 kensmith Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -94,7 +94,7 @@
 		  <option value="http://www.jp.FreeBSD.org/www.FreeBSD.org/">Japan</option>
 		  <option value="http://www.kr.FreeBSD.org/">Korea/1</option>
 		  <option value="http://www2.kr.FreeBSD.org/">Korea/2</option>
-		  <option value="http://www3.kr.FreeBSD.org/">Korea/3</option>
+		  <option value="http://www.kw.FreeBSD.org/">Kuwait</option>
 		  <option value="http://www.lv.FreeBSD.org/">Latvia</option>
 		  <option value="http://www.lt.FreeBSD.org/">Lithuania</option>
 		  <option value="http://www.nl.FreeBSD.org/">Netherlands/1</option>
@@ -359,7 +359,7 @@
 		<a href="{$base}/doc/en_US.ISO8859-1/articles/contributing/index.html">Contributing
 		to FreeBSD</a> article for more information.</p>
 
-		<p>Even if you're not a programmer, there are other ways to
+		<p>Even if you are not a programmer, there are other ways to
  		contribute to FreeBSD. The FreeBSD Foundation is a
 		non-profit organization for which direct contributions
 		are fully tax deductible.  Please contact
