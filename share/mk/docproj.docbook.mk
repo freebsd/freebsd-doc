@@ -1,5 +1,5 @@
 #
-# $Id: docproj.docbook.mk,v 1.4 1999-05-18 17:51:40 nik Exp $
+# $Id: docproj.docbook.mk,v 1.5 1999-06-03 19:39:29 nik Exp $
 #
 # This include file <docproj.docbook.mk> handles installing documentation
 # from the FreeBSD Documentation Project.
@@ -72,7 +72,7 @@ DSLHTML=	${DOC_PREFIX}/share/sgml/freebsd.dsl
 DSLPRINT=	${DOC_PREFIX}/share/sgml/freebsd.dsl
 
 FREEBSDCATALOG= ${DOC_PREFIX}/share/sgml/catalog
-DOCBOOKCATALOG= /usr/local/share/sgml/docbook/3.0/catalog
+DOCBOOKCATALOG= /usr/local/share/sgml/docbook/catalog
 JADECATALOG=	/usr/local/share/sgml/jade/catalog
 DSSSLCATALOG=   /usr/local/share/sgml/docbook/dsssl/modular/catalog
 
