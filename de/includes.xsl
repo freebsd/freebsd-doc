@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
 <!-- $FreeBSD$
-     $FreeBSDde: de-www/includes.xsl,v 1.8 2003/12/02 00:33:33 mheinen Exp $
+     $FreeBSDde: de-www/includes.xsl,v 1.10 2004/01/01 14:49:56 mheinen Exp $
      basiert auf: 1.20
 -->
 
@@ -26,12 +26,6 @@
     <a href="{$enbase}/copyright/index.html">Copyright</a> &#169; 1995-2003
     the FreeBSD Project.  All rights reserved.
   </xsl:variable>
-
-  <!-- Often used trademarks -->
-  <xsl:variable name="unix" select="'UNIX&#174;'"/>
-  <xsl:variable name="java" select="'Java&#8482;'"/>
-  <xsl:variable name="jdk" select="'JDK&#8482;'"/>
-  <xsl:variable name="posix" select="'POSIX&#174;'"/>
 
   <xsl:variable name="email" select="'freebsd-questions'"/>
   <xsl:variable name="author">
@@ -112,14 +106,48 @@
 
   <xsl:variable name="rel2.current" select='"4.9"'/>
   <xsl:variable name="u.rel2.notes">
-    <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel2.current"/>R/relnotes.html</xsl:variable>
+    <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel2.current"/>R/relnotes.html</xsl:variable>
 
   <xsl:variable name="u.rel2.announce">
-    <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel2.current"/>R/announce.html</xsl:variable>
+    <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel2.current"/>R/announce.html</xsl:variable>
   <xsl:variable name="u.rel2.errata">
-    <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel2.current"/>R/errata.html</xsl:variable>
+    <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel2.current"/>R/errata.html</xsl:variable>
   <xsl:variable name="u.rel2.hardware">
-    <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel2.current"/>R/hardware.html</xsl:variable>
+    <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel2.current"/>R/hardware.html</xsl:variable>
+
+  <!-- template: "html-index-advisories-items-lastmodified" -->
+
+  <xsl:template name="html-index-advisories-items-lastmodified">
+    <xsl:param name="advisories.xml" select="''" />
+
+    <xsl:value-of select="document($advisories.xml)/descendant::day[position() = 1]/name"/>
+    <xsl:text>. </xsl:text>
+    <xsl:value-of select="document($advisories.xml)/descendant::month[position() = 1]/name"/>
+    <xsl:text> </xsl:text>
+    <xsl:value-of select="document($advisories.xml)/descendant::year[position() = 1]/name"/>
+  </xsl:template>
+
+  <!-- template: "html-index-news-project-items-lastmodified" -->
+
+  <xsl:template name="html-index-news-project-items-lastmodified">
+    <xsl:param name="advisories.xml" select="''" />
+
+    <xsl:value-of select="document($news.project.xml)/descendant::day[position() = 1]/name"/>
+    <xsl:text>. </xsl:text>
+    <xsl:value-of select="document($news.project.xml)/descendant::month[position() = 1]/name"/>
+    <xsl:text> </xsl:text>
+    <xsl:value-of select="document($news.project.xml)/descendant::year[position() = 1]/name"/>
+  </xsl:template>
+
+  <!-- template: "html-index-news-press-items-lastmodified" -->
+
+  <xsl:template name="html-index-news-press-items-lastmodified">
+    <xsl:param name="advisories.xml" select="''" />
+
+    <xsl:value-of select="document($news.press.xml)/descendant::month[position() = 1]/name"/>
+    <xsl:text> </xsl:text>
+    <xsl:value-of select="document($news.press.xml)/descendant::year[position() = 1]/name"/>
+  </xsl:template>
 
   <!-- Translate month name -->
   <xsl:template name="translate-month">
