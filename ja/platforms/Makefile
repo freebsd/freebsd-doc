@@ -1,6 +1,6 @@
-# $FreeBSD: www/ja/platforms/Makefile,v 1.6 2003/10/29 20:18:31 hrs Exp $
+# $FreeBSD: www/ja/platforms/Makefile,v 1.7 2004/01/23 03:18:44 hrs Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.7
+# Original revision: 1.9
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -11,6 +11,8 @@
 
 DOCS=	alpha.sgml
 DOCS+=	amd64.sgml
+DOCS+=	arm.sgml
+#DOCS+=	i386.sgml
 DOCS+=	ia64.sgml
 DOCS+=	index.sgml
 DOCS+=	mips.sgml
