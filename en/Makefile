@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.39 1998-08-03 12:34:12 wosch Exp $
+# $Id: Makefile,v 1.40 1998-08-03 14:09:47 wosch Exp $
 
 .if exists(Makefile.conf)
 .include "Makefile.conf"
@@ -39,6 +39,7 @@ SUBDIR+= alpha
 SUBDIR+= internal
 SUBDIR+= copyright
 SUBDIR+= search
+SUBDIR+= gallery
 SUBDIR+= ports
 SUBDIR+= projects
 SUBDIR+= releases 
