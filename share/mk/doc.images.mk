@@ -138,6 +138,8 @@ EPS2PNG?=	${PREFIX}/bin/peps
 EPS2PNGOPTS?=	-p -r ${EPS2PNG_RES} ${EPS2PNGFLAGS}
 PNGTOPNM?=	${PREFIX}/bin/pngtopnm
 PNGTOPNMOPTS?=	${PNGTOPNMFLAGS}
+PPMTOPGM?=	${PREFIX}/bin/ppmtopgm
+PPMTOPGMOPTS?=	${PPMTOPGMFLAGS}
 PNMTOPS?=	${PREFIX}/bin/pnmtops
 PNMTOPSOPTS?=	-noturn ${PNMTOPSFLAGS}
 EPSTOPDF?=	${PREFIX}/bin/epstopdf
@@ -155,10 +157,19 @@ REALPATH?=	/bin/realpath
 .scr.png:
 	${SCR2PNG} ${SCR2PNGOPTS} < ${.IMPSRC} > ${.TARGET}
 
+## If we want grayscale, convert with ppmtopgm before running through pnmtops
+.if defined(GREYSCALE_IMAGES)
+.scr.eps:
+	${SCR2PNG} ${SCR2PNGOPTS} < ${.ALLSRC} | \
+		${PNGTOPNM} ${PNGTOPNMOPTS} | \
+		${PPMTOPGM} ${PPMTOPGMOPTS} | \
+		${PNMTOPS} ${PNMTOPSOPTS} > ${.TARGET}
+.else
 .scr.eps:
 	${SCR2PNG} ${SCR2PNGOPTS} < ${.ALLSRC} | \
 		${PNGTOPNM} ${PNGTOPNMOPTS} | \
 		${PNMTOPS} ${PNMTOPSOPTS} > ${.TARGET}
+.endif
 
 # The .txt files need to have any trailing spaces trimmed from
 # each line, which is why the output from ${SCR2TXT} is run

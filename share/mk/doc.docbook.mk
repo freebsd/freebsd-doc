@@ -93,6 +93,10 @@
 #       RLE             Use Run-Length Encoding for EPS files, this will
 #                       result in signficiantly smaller PostScript files, 
 #                       but may take longer for a printer to process.
+#
+#       GREYSCALE_IMAGES Convert the screenshots to greyscale before
+#                        embedding them into the PostScript output.
+#
 
 #
 # Documents should use the += format to access these.
