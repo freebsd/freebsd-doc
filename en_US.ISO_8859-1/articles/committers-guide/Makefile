@@ -1,5 +1,5 @@
 # 
-# $FreeBSD$
+# $FreeBSD: doc/en_US.ISO_8859-1/articles/committers-guide/Makefile,v 1.3 1999/09/06 06:52:35 peter Exp $
 #
 # Build the FreeBSD New Committers Guide
 #
@@ -12,6 +12,8 @@ FORMATS?= html
 
 INSTALL_COMPRESSED?= gz
 INSTALL_ONLY_COMPRESSED?=
+
+JADEFLAGS+=	-V %generate-article-toc%
 
 # 
 # SRCS lists the individual SGML files that make up the document. Changes
