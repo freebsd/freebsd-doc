@@ -12,7 +12,7 @@ MAN1 =	a2p.1\
 	bison.1\
 	brandelf.1\
 	btreeop.1\
-	cal.1\
+	c89.1\
 	calendar.1\
 	cap_mkdb.1\
 	cat.1\
@@ -175,6 +175,7 @@ MAN1 =	a2p.1\
 	md5.1\
 	merge.1\
 	mesg.1\
+	minigzip.1\
 	mkdep.1\
 	mkdir.1\
 	mkdosfs.1\
@@ -186,6 +187,7 @@ MAN1 =	a2p.1\
 	msgs.1\
 	mt.1\
 	mv.1\
+	ncal.1\
 	netstat.1\
 	newaliases.1\
 	nfsstat.1\
@@ -325,6 +327,7 @@ MAN1 =	a2p.1\
 	yes.1\
 	ypcat.1\
 	ypmatch.1\
+	ypwhich.1\
 	yyfix.1\
 	zdiff.1\
 	zforce.1\
@@ -359,7 +362,7 @@ MLINKS+= chpass.1 ypchpass.1 chpass.1 ypchfn.1 chpass.1 ypchsh.1
 MLINKS+=	compress.1 uncompress.1
 MLINKS+=        ee.1 ree.1
 MLINKS+=	expand.1 unexpand.1
-MLINKS+= ftp.1 pftp.1
+MLINKS+= ftp.1 pftp.1 ftp.1 gate-ftp.1
 MLINKS+=	hexdump.1 hd.1
 MLINKS+=	lex.1 flex.1
 MLINKS+=	lex.1 flex++.1
@@ -380,5 +383,6 @@ MLINKS+= rtprio.1 idprio.1
 MLINKS+= cksum.1 sum.1
 MLINKS+= ktrace.1 trace.1 ktrace.1 truss.1
 MLINKS+= uuencode.1 uudecode.1
+MLINKS+= ncal.1 cal.1
 
 .include "bsd.prog.mk"
