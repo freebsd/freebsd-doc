@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/share/sgml/includes.misc.xsl,v 1.12 2004/06/27 08:28:21 hrs Exp $ -->
+<!-- $FreeBSD: www/share/sgml/includes.misc.xsl,v 1.13 2004/06/27 19:18:00 simon Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -25,6 +25,13 @@
   <!--
      template name                               used in
 
+     html-news-list-newsflash                    news/newsflash.xsl
+     html-news-list-press                        news/press.xsl
+     html-news-list-datelabel                    news/newsflash.xsl (for l10n)
+     html-news-generate-anchor                   news/newsflash.xsl
+     html-news-make-olditems-list                news/newsflash.xsl (for l10n)
+     html-news-month-headings                    news/newsflash.xsl (for l10n)
+
      html-list-advisories                        security/mkindex.xsl
      html-list-advisories-putitems               security/mkindex.xsl
      html-list-advisories-release-label          security/mkindex.xsl (for l10n)
@@ -40,6 +47,248 @@
      html-index-news-press-items-lastmodified    index.xsl (for i10n)
      html-index-mirrors-options-list             index.xsl
   -->
+
+  <!-- template: "html-news-make-olditems-list" -->
+  <xsl:template name="html-news-make-olditems-list">
+    <p>Old announcement:
+      <a href="2002/index.html">2002</a>,
+      <a href="2001/index.html">2001</a>,
+      <a href="2000/index.html">2000</a>,
+      <a href="1999/index.html">1999</a>,
+      <a href="1998/index.html">1998</a>,
+      <a href="1997/index.html">1997</a>,
+      <a href="1996/index.html">1996</a></p>
+  </xsl:template>
+
+  <!-- template: "html-news-list-newsflash" -->
+  <xsl:template name="html-news-list-newsflash">
+    <xsl:param name="news.project.xml-master" select="'none'" />
+    <xsl:param name="news.project.xml" select="'none'" />
+
+    <xsl:for-each select="document($news.project.xml-master)//descendant::year">
+      <xsl:param name="year" select="name" />
+
+      <xsl:for-each select="month">
+	<xsl:param name="month" select="name" />
+
+	<h1>
+	  <!-- generate month headings -->
+	  <xsl:call-template name="html-news-month-headings">
+	    <xsl:with-param name="year" select="$year" />
+	    <xsl:with-param name="month">
+	      <xsl:call-template name="transtable-lookup">
+		<xsl:with-param name="word-group" select="'number-month'" />
+		<xsl:with-param name="word" select="$month" />
+	      </xsl:call-template>
+	    </xsl:with-param>
+	  </xsl:call-template>
+	</h1>
+
+	<ul>
+	  <xsl:for-each select="day">
+	    <xsl:param name="day" select="name" />
+	    <xsl:param name="index" select="position()" />
+
+	    <!-- search localized items per day basis -->
+	    <xsl:param name="localizeditems"
+	      select="document($news.project.xml)
+	              //descendant::year[name = $year]
+	              /month[name = $month]
+	              /day[name = $day and position() = $index]" />
+
+	    <xsl:choose>
+	      <xsl:when test="$localizeditems">
+		<!-- when localized item exists -->
+		<xsl:for-each select="$localizeditems/event">
+		  <xsl:param name="anchor-position" select="position()" />
+
+		  <li><p class="localized">
+		      <a><xsl:attribute name="name">
+			  <xsl:call-template name="html-news-generate-anchor">
+			    <xsl:with-param name="label" select="local-name()" />
+			    <xsl:with-param name="year" select="$year" />
+			    <xsl:with-param name="month" select="$month" />
+			    <xsl:with-param name="day" select="$day" />
+			    <xsl:with-param name="pos" select="$anchor-position" />
+			  </xsl:call-template>
+			</xsl:attribute></a>
+		      <b><xsl:call-template name="html-news-datelabel">
+			  <xsl:with-param name="year" select="$year" />
+			  <xsl:with-param name="month">
+			    <xsl:call-template name="transtable-lookup">
+			      <xsl:with-param name="word-group" select="'number-month'" />
+			      <xsl:with-param name="word" select="$month" />
+			    </xsl:call-template>
+			  </xsl:with-param>
+			  <xsl:with-param name="day" select="$day" />
+			</xsl:call-template></b>
+		      <!-- put localized text -->
+		      <xsl:text> </xsl:text>
+		      <xsl:apply-templates select="p" />
+		    </p>
+		  </li>
+		</xsl:for-each>
+	      </xsl:when>
+
+	      <xsl:otherwise>
+		<!-- when localized item does not exist -->
+		<xsl:for-each select="event">
+		  <xsl:param name="anchor-position" select="position()" />
+
+		  <li><p class="original">
+		      <a><xsl:attribute name="name">
+			  <xsl:call-template name="html-news-generate-anchor">
+			    <xsl:with-param name="label" select="local-name()" />
+			    <xsl:with-param name="year" select="$year" />
+			    <xsl:with-param name="month" select="$month" />
+			    <xsl:with-param name="day" select="$day" />
+			    <xsl:with-param name="pos" select="$anchor-position" />
+			  </xsl:call-template>
+			</xsl:attribute></a>
+		      <b><xsl:call-template name="html-news-datelabel">
+			  <xsl:with-param name="year" select="$year" />
+			  <xsl:with-param name="month">
+			    <xsl:call-template name="transtable-lookup">
+			      <xsl:with-param name="word-group" select="'number-month'" />
+			      <xsl:with-param name="word" select="$month" />
+			    </xsl:call-template>
+			  </xsl:with-param>
+			  <xsl:with-param name="day" select="$day" />
+			</xsl:call-template></b>
+		      <!-- put English text -->
+		      <xsl:text> </xsl:text>
+		      <xsl:apply-templates select="p" />
+		    </p>
+		  </li>
+		</xsl:for-each>
+	      </xsl:otherwise>
+	    </xsl:choose>
+	  </xsl:for-each>
+	</ul>
+      </xsl:for-each>
+    </xsl:for-each>
+  </xsl:template>
+
+  <!-- template: "html-news-list-press" -->
+  <xsl:template name="html-news-list-press">
+    <xsl:param name="news.press.xml-master" select="'none'" />
+    <xsl:param name="news.press.xml" select="'none'" />
+
+    <xsl:for-each select="document($news.press.xml-master)//descendant::year">
+      <xsl:param name="year" select="name" />
+
+      <xsl:for-each select="month">
+	<xsl:param name="month" select="name" />
+
+	<h1>
+	  <!-- generate month headings -->
+	  <xsl:call-template name="html-news-month-headings">
+	    <xsl:with-param name="year" select="$year" />
+	    <xsl:with-param name="month">
+	      <xsl:call-template name="transtable-lookup">
+		<xsl:with-param name="word-group" select="'number-month'" />
+		<xsl:with-param name="word" select="$month" />
+	      </xsl:call-template>
+	    </xsl:with-param>
+	  </xsl:call-template>
+	</h1>
+
+	<ul>
+	  <xsl:for-each select="story">
+	    <xsl:variable name="url"><xsl:value-of select="url"/></xsl:variable>
+	    <xsl:variable name="site-url"><xsl:value-of select="site-url"/></xsl:variable>
+
+	    <!-- search localized items per story(URL) basis -->
+	    <xsl:param name="localizeditems"
+	      select="document($news.press.xml)
+	              //descendant::year[name = $year]
+	              /month[name = $month]
+	              /story[url = $url]" />
+
+	    <xsl:param name="anchor-position" select="position()" />
+
+	    <xsl:choose>
+	      <xsl:when test="$localizeditems">
+		<xsl:for-each select="$localizeditems">
+		  <li><p>
+		      <a><xsl:attribute name="name">
+			  <xsl:call-template name="html-news-generate-anchor">
+			    <xsl:with-param name="label" select="local-name()" />
+			    <xsl:with-param name="year" select="$year" />
+			    <xsl:with-param name="month" select="$month" />
+			    <xsl:with-param name="pos" select="$anchor-position" />
+			  </xsl:call-template>
+			</xsl:attribute></a>
+		      <a href="{$url}"><b><xsl:value-of select="name"/></b></a><br/>
+		      <a href="{$site-url}"><xsl:value-of select="site-name"/></a>,
+		      <xsl:value-of select="author"/><br/>
+		      <xsl:copy-of select="p/child::node()"/>
+		    </p>
+		  </li>
+		</xsl:for-each>
+	      </xsl:when>
+
+	      <xsl:otherwise>
+		<xsl:for-each select=".">
+		  <li><p>
+		      <a><xsl:attribute name="name">
+			  <xsl:call-template name="html-news-generate-anchor">
+			    <xsl:with-param name="label" select="local-name()" />
+			    <xsl:with-param name="year" select="$year" />
+			    <xsl:with-param name="month" select="$month" />
+			    <xsl:with-param name="pos" select="$anchor-position" />
+			  </xsl:call-template>
+			</xsl:attribute></a>
+
+		      <a href="{$url}"><b><xsl:value-of select="name"/></b></a><br/>
+		      <a href="{$site-url}"><xsl:value-of select="site-name"/></a>,
+		      <xsl:value-of select="author"/><br/>
+		      <xsl:copy-of select="p/child::node()"/>
+		    </p>
+		  </li>
+		</xsl:for-each>
+	      </xsl:otherwise>
+	    </xsl:choose>
+	  </xsl:for-each>
+	</ul>
+      </xsl:for-each>
+    </xsl:for-each>
+  </xsl:template>
+
+  <!-- template: "html-news-datelabel" (for l10n) -->
+  <xsl:template name="html-news-datelabel">
+    <xsl:param name="year" />
+    <xsl:param name="month" />
+    <xsl:param name="day" />
+
+    <xsl:value-of select="concat($day, ' ', $month, ', ', $year, ':')" />
+  </xsl:template>
+
+  <!-- template: "html-news-generate-anchor" (for l10n) -->
+  <xsl:template name="html-news-generate-anchor">
+    <xsl:param name="label" />
+    <xsl:param name="year" />
+    <xsl:param name="month" />
+    <xsl:param name="day" />
+    <xsl:param name="pos" />
+
+    <xsl:value-of select="concat(
+      $label,
+      format-number($year, '0000'),
+      format-number($month, '00'))" />
+    <xsl:if test="$label = 'event'" >
+      <xsl:value-of select="format-number($day, '00')" />
+    </xsl:if>
+    <xsl:value-of select="format-number($pos, ':00')" />
+  </xsl:template>
+
+  <!-- template: "html-news-month-headings" (for l10n) -->
+  <xsl:template name="html-news-month-headings">
+    <xsl:param name="year" />
+    <xsl:param name="month" />
+
+    <xsl:value-of select="concat($month, ' ', $year)" />
+  </xsl:template>
 
   <!-- template: "html-list-advisories"
        generate a list of all security advisories -->
@@ -282,71 +531,135 @@
        pulls in the 5 most recent project items -->
 
   <xsl:template name="html-index-news-project-items">
-    <xsl:param name="news.project.xml" select="''" />
+    <xsl:param name="news.project.xml-master" select="'none'" />
+    <xsl:param name="news.project.xml" select="'none'" />
 
-    <xsl:for-each select="document($news.project.xml)/descendant::event[position() &lt;= 5]">
-      <xsl:value-of select="$leadingmark" /><a>
-	<xsl:attribute name="href">
-	  news/newsflash.html#<xsl:call-template name="generate-event-anchor"/>
-	</xsl:attribute>
-	<xsl:choose>
-	  <xsl:when test="count(child::title)">
-	    <xsl:value-of select="title"/><br/>
-	  </xsl:when>
-	  <xsl:otherwise>
-	    <xsl:value-of select="p"/><br/>
-	  </xsl:otherwise>
-	</xsl:choose>
-      </a>
+    <xsl:for-each select="document($news.project.xml-master)/descendant::day[position() &lt;= 5]">
+      <xsl:param name="year" select="ancestor::year/name" />
+      <xsl:param name="month" select="ancestor::month/name" />
+      <xsl:param name="day" select="name" />
+
+      <!-- search localized items per day basis -->
+      <xsl:param name="localizeditems"
+	select="document($news.project.xml)
+	//descendant::year[name = $year]
+	/month[name = $month]
+	/day[name = $day]" />
+
+      <xsl:choose>
+	<xsl:when test="$localizeditems/event">
+	  <xsl:for-each select="$localizeditems/event">
+	    <xsl:value-of select="$leadingmark" /><a>
+	      <xsl:attribute name="href">
+		news/newsflash.html#<xsl:call-template name="generate-event-anchor"/>
+	      </xsl:attribute>
+
+	      <xsl:choose>
+		<xsl:when test="count(child::title)">
+		  <xsl:value-of select="title"/><br/>
+		</xsl:when>
+		<xsl:otherwise>
+		  <xsl:value-of select="p"/><br/>
+		</xsl:otherwise>
+	      </xsl:choose>
+	    </a>
+	  </xsl:for-each>
+	</xsl:when>
+
+	<xsl:otherwise>
+	  <xsl:for-each select="event">
+	    <xsl:value-of select="$leadingmark" /><a>
+	      <xsl:attribute name="href">
+		news/newsflash.html#<xsl:call-template name="generate-event-anchor"/>
+	      </xsl:attribute>
+
+	      <xsl:choose>
+		<xsl:when test="count(child::title)">
+		  <xsl:value-of select="title"/><br/>
+		</xsl:when>
+		<xsl:otherwise>
+		  <xsl:value-of select="p"/><br/>
+		</xsl:otherwise>
+	      </xsl:choose>
+	    </a>
+	  </xsl:for-each>
+	</xsl:otherwise>
+      </xsl:choose>
     </xsl:for-each>
   </xsl:template>
 
   <!-- template: "html-index-news-project-items-lastmodified" -->
 
   <xsl:template name="html-index-news-project-items-lastmodified">
-    <xsl:param name="news.project.xml" select="''" />
+    <xsl:param name="news.project.xml-master" select="''" />
 
     <xsl:call-template name="transtable-lookup">
       <xsl:with-param name="word-group" select="'number-month'" />
       <xsl:with-param name="word">
-	<xsl:value-of select="document($news.project.xml)/descendant::month[position() = 1]/name"/>
+	<xsl:value-of select="document($news.project.xml-master)/descendant::month[position() = 1]/name"/>
       </xsl:with-param>
     </xsl:call-template>
     <xsl:text> </xsl:text>
-    <xsl:value-of select="document($news.project.xml)/descendant::day[position() = 1]/name"/>
+    <xsl:value-of select="document($news.project.xml-master)/descendant::day[position() = 1]/name"/>
     <xsl:text>, </xsl:text>
-    <xsl:value-of select="document($news.project.xml)/descendant::year[position() = 1]/name"/>
+    <xsl:value-of select="document($news.project.xml-master)/descendant::year[position() = 1]/name"/>
   </xsl:template>
 
   <!-- template: "html-index-news-press-items"
        pulls in the 5 most recent press items -->
 
   <xsl:template name="html-index-news-press-items">
+    <xsl:param name="news.press.xml-master" select="'none'" />
     <xsl:param name="news.press.xml" select="''" />
 
-    <xsl:for-each select="document($news.press.xml)/descendant::story[position() &lt;= 5]">
-      <xsl:value-of select="$leadingmark" /><a>
+    <xsl:for-each select="document($news.press.xml-master)/descendant::story[position() &lt;= 5]">
+      <xsl:param name="year" select="../../year/name" />
+      <xsl:param name="month" select="../month/name" />
+      <xsl:param name="pos" select="position()" />
+      <xsl:param name="url" select="url" />
+      <xsl:param name="site-url" select="site-url" />
+
+      <!-- search localized items per story(URL) basis -->
+      <xsl:param name="localizeditems"
+	select="document($news.press.xml)
+	//descendant::year[name = $year]
+	/month[name = $month]
+	/story[url = $url]" />
+
+      <xsl:value-of select="$leadingmark" />
+      <a>
 	<xsl:attribute name="href">
 	  news/press.html#<xsl:call-template name="generate-story-anchor"/>
 	</xsl:attribute>
-	<xsl:value-of select="name"/>
-      </a><br/>
+
+	<xsl:choose>
+	  <xsl:when test="$localizeditems">
+	    <xsl:value-of select="$localizeditems/name"/>
+	  </xsl:when>
+
+	  <xsl:otherwise>
+	    <xsl:value-of select="name"/>
+	  </xsl:otherwise>
+	</xsl:choose>
+      </a>
+
+      <br/>
     </xsl:for-each>
   </xsl:template>
 
   <!-- template: "html-index-news-press-items-lastmodified" -->
 
   <xsl:template name="html-index-news-press-items-lastmodified">
-    <xsl:param name="news.press.xml" select="''" />
+    <xsl:param name="news.press.xml-master" select="''" />
 
     <xsl:call-template name="transtable-lookup">
       <xsl:with-param name="word-group" select="'number-month'" />
       <xsl:with-param name="word">
-	<xsl:value-of select="document($news.press.xml)/descendant::month[position() = 1]/name"/>
+	<xsl:value-of select="document($news.press.xml-master)/descendant::month[position() = 1]/name"/>
       </xsl:with-param>
     </xsl:call-template>
     <xsl:text> </xsl:text>
-    <xsl:value-of select="document($news.press.xml)/descendant::year[position() = 1]/name"/>
+    <xsl:value-of select="document($news.press.xml-master)/descendant::year[position() = 1]/name"/>
   </xsl:template>
 
   <!-- template: "html-index-navigation-link-list"

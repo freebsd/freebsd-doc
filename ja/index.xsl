@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
 
-<!-- $FreeBSD: www/ja/index.xsl,v 1.37 2004/08/09 15:43:15 hrs Exp $ -->
+<!-- $FreeBSD: www/ja/index.xsl,v 1.38 2004/12/09 19:48:57 rushani Exp $ -->
 <!-- Original revision: 1.100 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -10,7 +10,7 @@
 
   <xsl:variable name="base" select="'.'"/>
   <xsl:variable name="enbase" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/ja/index.xsl,v 1.37 2004/08/09 15:43:15 hrs Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/ja/index.xsl,v 1.38 2004/12/09 19:48:57 rushani Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <!-- these params should be externally bound. The values
@@ -18,7 +18,9 @@
   <xsl:param name="advisories.xml" select="'none'"/>
   <xsl:param name="notices.xml" select="'none'"/>
   <xsl:param name="mirrors.xml" select="'none'"/>
+  <xsl:param name="news.press.xml-master" select="'none'"/>
   <xsl:param name="news.press.xml" select="'none'"/>
+  <xsl:param name="news.project.xml-master" select="'none'"/>
   <xsl:param name="news.project.xml" select="'none'"/>
 
   <xsl:output type="html" encoding="EUC-JP"
@@ -32,7 +34,7 @@
 	<meta name="description" content="The FreeBSD Project"/>
 
 	<meta name="keywords" content="FreeBSD, BSD, UNIX, Support, Gallery,
-	      Release, Application, Software, Handbook, FAQ, Tutorials, Bugs, 
+	      Release, Application, Software, Handbook, FAQ, Tutorials, Bugs,
 	      CVS, CVSup, News, Commercial Vendors, homepage, CTM, Unix"/>
 	<link rel="shortcut icon" href="/favicon.ico" type="image/x-icon"/>
 	<link rel="icon" href="/favicon.ico" type="image/x-icon"/>
@@ -53,7 +55,7 @@
 		     alt="FreeBSD: このパワーをあなたのために" border="0"/></a></td>
 
 	    <td align="right" valign="bottom">
-	      <form action="http://www.FreeBSD.org/cgi/mirror.cgi" 
+	      <form action="http://www.FreeBSD.org/cgi/mirror.cgi"
 		    method="get">
 
 		<br/>
@@ -63,7 +65,7 @@
 		<br/>
 
 		<select name="goto">
-		  <!--  Only list TRUE mirrors here! Native language pages 
+		  <!--  Only list TRUE mirrors here! Native language pages
 		        which are not mirrored should be listed in
 		        support.sgml.  -->
 
@@ -269,14 +271,15 @@
 			    <xsl:text> </xsl:text>
 			    <font color="#990000">(<a href="{$enbase}/news/news.rdf">RSS</a>)</font><br/>
 			    <font size="-1">
-			      最終更新: 
+			      最終更新:
 			      <xsl:call-template name="html-index-news-project-items-lastmodified">
-				<xsl:with-param name="news.project.xml" select="$news.project.xml" />
+				<xsl:with-param name="news.project.xml-master" select="$news.project.xml-master" />
 			      </xsl:call-template>
 
 			      <br/>
 
 			      <xsl:call-template name="html-index-news-project-items">
+				<xsl:with-param name="news.project.xml-master" select="$news.project.xml-master" />
 				<xsl:with-param name="news.project.xml" select="$news.project.xml" />
 			      </xsl:call-template>
 
@@ -286,14 +289,15 @@
 			  <p><font size="+1" color="#990000"><b>FreeBSD Press</b></font><br/>
 
 			    <font size="-1">
-			      最終更新: 
+			      最終更新:
 			      <xsl:call-template name="html-index-news-press-items-lastmodified">
-				<xsl:with-param name="news.press.xml" select="$news.press.xml" />
+				<xsl:with-param name="news.press.xml-master" select="$news.press.xml-master" />
 			      </xsl:call-template>
 
 			      <br/>
 
 			      <xsl:call-template name="html-index-news-press-items">
+				<xsl:with-param name="news.press.xml-master" select="$news.press.xml-master" />
 				<xsl:with-param name="news.press.xml" select="$news.press.xml" />
 			      </xsl:call-template>
 
@@ -306,7 +310,7 @@
 			    <font color="#990000">(<a href="{$enbase}/security/advisories.rdf">RSS</a>)</font><br/>
 
 			    <font size="-1">
-			      最終更新: 
+			      最終更新:
 			      <xsl:call-template name="html-index-advisories-items-lastmodified">
 				<xsl:with-param name="advisories.xml" select="$advisories.xml" />
 				<xsl:with-param name="type" select="'advisory'" />
@@ -403,7 +407,7 @@
 		valign="top"><small><a href="{$base}/mailto.html">お問い合わせ先</a> : <a href="jabout.html">日本語化について</a><br/>
 		<xsl:value-of select="$date"/></small></td>
 
-	    <td align="right" 
+	    <td align="right"
 		valign="top"><small><a href="copyright/index.html">知的財産権について</a><br/> &#169; 1995-2004
 		The FreeBSD Project.<br/>
 		All rights reserved.</small></td>

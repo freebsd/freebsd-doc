@@ -1,4 +1,4 @@
-# $FreeBSD: www/ja/Makefile,v 1.66 2004/04/26 21:05:53 simon Exp $
+# $FreeBSD: www/ja/Makefile,v 1.67 2004/12/09 19:48:57 rushani Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.114
 
@@ -87,15 +87,20 @@ REVCHECK=	yes
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
 
 index.html: index.xsl ${XML_INCLUDES}\
-		${XML_NEWS_INCLUDES} ${XML_NEWS_NEWS} ${XML_NEWS_PRESS}\
-		${XML_MIRRORS} ${XML_ADVISORIES} \
-		${XML_NOTICES} ${XML_NAVIGATION}
+		${XML_NEWS_INCLUDES} \
+		${XML_NEWS_NEWS} ${XML_NEWS_NEWS_MASTER} \
+		${XML_NEWS_PRESS} ${XML_NEWS_PRESS_MASTER} \
+		${XML_MIRRORS} ${XML_TRANSTABLE} \
+		${XML_ADVISORIES} ${XML_NOTICES} \
+		${XML_NAVIGATION}
 	${XSLTPROC} ${XSLTPROCOPTS} \
 		-o $@ \
 		--param mirrors.xml "'${XML_MIRRORS}'" \
 		--param advisories.xml "'${XML_ADVISORIES}'" \
 		--param notices.xml "'${XML_NOTICES}'" \
+		--param news.press.xml-master "'${XML_NEWS_PRESS_MASTER}'" \
 		--param news.press.xml "'${XML_NEWS_PRESS}'" \
+		--param news.project.xml-master "'${XML_NEWS_NEWS_MASTER}'" \
 		--param news.project.xml "'${XML_NEWS_NEWS}'" \
 		--param transtable.xml "'${XML_TRANSTABLE}'" \
 		--param navigation.xml "'${XML_NAVIGATION}'" \

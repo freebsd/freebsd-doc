@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/Makefile,v 1.115 2004/12/16 23:09:42 ceri Exp $
+# $FreeBSD: www/en/Makefile,v 1.116 2004/12/18 12:35:25 ceri Exp $
 
 .if exists(Makefile.conf)
 .include "Makefile.conf"
@@ -89,7 +89,9 @@ CLEANFILES+=	index.html
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
 
 index.html: index.xsl ${XML_INCLUDES}\
-		${XML_NEWS_INCLUDES} ${XML_NEWS_NEWS} ${XML_NEWS_PRESS}\
+		${XML_NEWS_INCLUDES} \
+		${XML_NEWS_NEWS} ${XML_NEWS_NEWS_MASTER} \
+		${XML_NEWS_PRESS} ${XML_NEWS_PRESS_MASTER} \
 		${XML_MIRRORS} ${XML_TRANSTABLE} \
 		${XML_ADVISORIES} ${XML_NOTICES} \
 		${XML_NAVIGATION}
@@ -98,7 +100,9 @@ index.html: index.xsl ${XML_INCLUDES}\
 		--param advisories.xml "'${XML_ADVISORIES}'" \
 		--param mirrors.xml "'${XML_MIRRORS}'" \
 		--param navigation.xml "'${XML_NAVIGATION}'" \
+		--param news.press.xml-master "'${XML_NEWS_PRESS_MASTER}'" \
 		--param news.press.xml "'${XML_NEWS_PRESS}'" \
+		--param news.project.xml-master "'${XML_NEWS_NEWS_MASTER}'" \
 		--param news.project.xml "'${XML_NEWS_NEWS}'" \
 		--param notices.xml "'${XML_NOTICES}'" \
 		--param transtable.xml "'${XML_TRANSTABLE}'" \

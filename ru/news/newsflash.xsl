@@ -3,7 +3,7 @@
 <!--
      The FreeBSD Russian Documentation Project
 
-     $FreeBSD$
+     $FreeBSD: www/ru/news/newsflash.xsl,v 1.7 2004/04/09 11:57:33 phantom Exp $
      $FreeBSDru: frdp/www/ru/news/newsflash.xsl,v 1.12 2004/04/09 11:18:50 phantom Exp $
 
      Original revision: 1.11
@@ -74,16 +74,12 @@
 	<p>Бюллетени по безопасности FreeBSD находятся на странице <a
 	  href="{$base}/security/#adv">Информации о Безопасности</a>.</p>
 
-	<xsl:apply-templates select="descendant::month"/>
+	<xsl:call-template name="html-news-list-newsflash">
+          <xsl:with-param name="news.project.xml-master" select="$news.project.xml-master" />
+          <xsl:with-param name="news.project.xml" select="$news.project.xml" />
+	</xsl:call-template>
 
-	<p>Анонсы прошлых лет:
-          <a href="2002/index.html">2002</a>,
-          <a href="2001/index.html">2001</a>,
-	  <a href="2000/index.html">2000</a>,
-	  <a href="1999/index.html">1999</a>,
-	  <a href="1998/index.html">1998</a>,
-	  <a href="1997/index.html">1997</a>,
-	  <a href="1996/index.html">1996</a></p>
+	<xsl:call-template name="html-news-make-olditems-list" />
 
 	<xsl:copy-of select="$newshome"/>
 	<xsl:copy-of select="$footer"/>
@@ -91,52 +87,16 @@
     </html>
   </xsl:template>
 
-  <!-- Everything that follows are templates for the rest of the content -->
-  
-  <xsl:template match="month">
-    <h1>
-      <xsl:call-template name="transtable-lookup">
-	<xsl:with-param name="word-group" select="'number-month'" />
-	<xsl:with-param name="word">
-	  <xsl:value-of select="name"/>
-	</xsl:with-param>
-      </xsl:call-template>
-      <xsl:text> </xsl:text>
-      <xsl:value-of select="ancestor::year/name"/></h1>
-
-    <ul>
-      <xsl:apply-templates select="descendant::day"/>
-    </ul>
+  <xsl:template name="html-news-make-olditems-list">
+    <p>Анонсы прошлых лет:
+      <a href="2002/index.html">2002</a>,
+      <a href="2001/index.html">2001</a>,
+      <a href="2000/index.html">2000</a>,
+      <a href="1999/index.html">1999</a>,
+      <a href="1998/index.html">1998</a>,
+      <a href="1997/index.html">1997</a>,
+      <a href="1996/index.html">1996</a></p>
   </xsl:template>
-
-  <xsl:template match="day">
-    <xsl:apply-templates select="event"/>
-  </xsl:template>
-
-  <xsl:template match="event">
-    <li><p><a>
-	  <xsl:attribute name="name">
-	    <xsl:call-template name="generate-event-anchor"/>
-	  </xsl:attribute>
-	</a>
-
-	<b><xsl:value-of select="ancestor::day/name"/>
-	  <xsl:text> </xsl:text>
-	  <xsl:call-template name="transtable-lookup">
-	    <xsl:with-param name="word-group" select="'number-month'" />
-	    <xsl:with-param name="word">
-	      <xsl:value-of select="ancestor::month/name"/>
-	    </xsl:with-param>
-	  </xsl:call-template>
-	  <xsl:text>, </xsl:text>
-	  <xsl:value-of select="ancestor::year/name"/>:</b><xsl:text> </xsl:text>
-	<xsl:apply-templates select="p"/>
-	</p>
-
-    </li>
-  </xsl:template>
-
-  <xsl:template match="date"/>    <!-- Deliberately left blank -->
 
   <!-- When the href attribute contains a '$base', expand it to the current
        value of the $base variable. -->

@@ -1,6 +1,6 @@
 # The FreeBSD Documentation Project
 # The FreeBSD German Documentation Project
-# $FreeBSD$
+# $FreeBSD: www/de/Makefile,v 1.18 2004/12/18 13:10:22 jkois Exp $
 # $FreeBSDde: de-www/Makefile,v 1.25 2004/11/22 19:29:20 jkois Exp $
 # basiert auf: 1.112
 
@@ -57,7 +57,9 @@ CLEANFILES+=	index.html
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
 
 index.html: index.xsl ${XML_INCLUDES}\
-		${XML_NEWS_INCLUDES} ${XML_NEWS_NEWS} ${XML_NEWS_PRESS}\
+		${XML_NEWS_INCLUDES} \
+		${XML_NEWS_NEWS} ${XML_NEWS_NEWS_MASTER} \
+		${XML_NEWS_PRESS} ${XML_NEWS_PRESS_MASTER} \
 		${XML_MIRRORS} ${XML_TRANSTABLE} \
 		${XML_ADVISORIES} ${XML_NOTICES} \
 		${XML_NAVIGATION}
@@ -66,7 +68,9 @@ index.html: index.xsl ${XML_INCLUDES}\
 		--param mirrors.xml "'${XML_MIRRORS}'" \
 		--param advisories.xml "'${XML_ADVISORIES}'" \
 		--param notices.xml "'${XML_NOTICES}'" \
+		--param news.press.xml-master "'${XML_NEWS_PRESS_MASTER}'" \
 		--param news.press.xml "'${XML_NEWS_PRESS}'" \
+		--param news.project.xml-master "'${XML_NEWS_NEWS_MASTER}'" \
 		--param news.project.xml "'${XML_NEWS_NEWS}'" \
 		--param transtable.xml "'${XML_TRANSTABLE}'" \
 		--param navigation.xml "'${XML_NAVIGATION}'" \
