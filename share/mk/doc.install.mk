@@ -112,10 +112,12 @@ INSTALL_DOCS?= \
 # Liberal default of maximum of 10 directories below to find it.
 #
 
+DOC_PREFIX_NAME?=	doc
+
 .if !defined(LANGCODE)
 LANGCODE:=	${.CURDIR}
 .for _ in 1 2 3 4 5 6 7 8 9 10
-.if !(${LANGCODE:H:T} == "doc")
+.if !(${LANGCODE:H:T} == ${DOC_PREFIX_NAME})
 LANGCODE:=	${LANGCODE:H}
 .endif
 .endfor
