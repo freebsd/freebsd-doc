@@ -1,5 +1,6 @@
 MAN1 =	a2p.1\
 	addftinfo.1\
+	addr2line.1\
 	apply.1\
 	apropos.1\
 	ar.1\
@@ -22,11 +23,13 @@ MAN1 =	a2p.1\
 	cdcontrol.1\
 	checknr.1\
 	chflags.1\
+	chkey.1\
 	chgrp.1\
 	chio.1\
 	chmod.1\
 	chpass.1\
 	ci.1\
+	ckdist.1\
 	cksum.1\
 	cmp.1\
 	co.1\
@@ -61,6 +64,7 @@ MAN1 =	a2p.1\
 	dig.1\
 	dnsquery.1\
 	domainname.1\
+	doscmd.1\
 	du.1\
 	echo.1\
 	ed.1\
@@ -125,6 +129,12 @@ MAN1 =	a2p.1\
 	intro.1\
 	ipcrm.1\
 	ipcs.1\
+	ipf.1\
+	ipftest.1\
+	ipnat.1\
+	ipresend.1\
+	ipsend.1\
+	iptest.1\
 	join.1\
 	jot.1\
 	kbdcontrol.1\
@@ -134,6 +144,8 @@ MAN1 =	a2p.1\
 	key.1\
 	keyinfo.1\
 	keyinit.1\
+	keylogin.1\
+	keylogout.1\
 	kill.1\
 	killall.1\
 	ktrace.1\
@@ -179,12 +191,12 @@ MAN1 =	a2p.1\
 	minigzip.1\
 	mkdep.1\
 	mkdir.1\
-	mkdosfs.1\
 	mkfifo.1\
 	mklocale.1\
 	mkstr.1\
 	mktemp.1\
 	more.1\
+	mptable.1\
 	mset.1\
 	msgs.1\
 	mt.1\
@@ -198,6 +210,8 @@ MAN1 =	a2p.1\
 	nm.1\
 	nohup.1\
 	nroff.1\
+	objcopy.1\
+	objdump.1\
 	od.1\
 	opieinfo.1\
 	opiekey.1\
@@ -221,7 +235,6 @@ MAN1 =	a2p.1\
 	psbb.1\
 	psroff.1\
 	pwd.1\
-	qcamcontrol.1\
 	quota.1\
 	ranlib.1\
 	rcp.1\
@@ -264,6 +277,7 @@ MAN1 =	a2p.1\
 	soelim.1\
 	sort.1\
 	split.1\
+	spppcontrol.1\
 	startslip.1\
 	strings.1\
 	strip.1\
@@ -275,6 +289,7 @@ MAN1 =	a2p.1\
 	talk.1\
 	tar.1\
 	tbl.1\
+	tclsh.1\
 	tconv.1\
 	tcopy.1\
 	tcpdump.1\
@@ -293,6 +308,7 @@ MAN1 =	a2p.1\
 	tr.1\
 	troff.1\
 	true.1\
+	truss.1\
 	tset.1\
 	tsort.1\
 	tty.1\
@@ -343,7 +359,6 @@ MAN1 =	a2p.1\
 	yyfix.1\
 	zdiff.1\
 	zforce.1\
-	zgrep.1\
 	zmore.1\
 	znew.1
 
@@ -357,7 +372,6 @@ MLINKS+= gcc.1 cc.1 gcc.1 c++.1 gcc.1 g++.1
 MLINKS+=	cccp.1 cpp.1
 MLINKS+= grep.1 egrep.1 grep.1 fgrep.1
 MLINKS+= gzip.1 gunzip.1  gzip.1 zcat.1  gzip.1 gzcat.1
-MLINKS+= zgrep.1 zfgrep.1 zgrep.1 zegrep.1
 MLINKS+= zdiff.1 zcmp.1
 MLINKS+= rtld.1 ld.so.1
 MLINKS+=	apropos.1 whatis.1
@@ -394,7 +408,7 @@ MLINKS+=	ctm_rmail.1 ctm_dequeue.1
 MLINKS+= kbdmap.1 vidfont.1
 MLINKS+= rtprio.1 idprio.1
 MLINKS+= cksum.1 sum.1
-MLINKS+= ktrace.1 trace.1 ktrace.1 truss.1
+MLINKS+= ktrace.1 trace.1
 MLINKS+= uuencode.1 uudecode.1
 MLINKS+= ncal.1 cal.1
 
