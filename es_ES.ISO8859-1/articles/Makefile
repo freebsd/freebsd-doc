@@ -4,6 +4,7 @@ SUBDIR =
 SUBDIR+= contributing
 SUBDIR+= dialup-firewall
 SUBDIR+= explaining-bsd
+SUBDIR+= fbsd-from-scratch
 SUBDIR+= laptop
 SUBDIR+= zip-drive
 
