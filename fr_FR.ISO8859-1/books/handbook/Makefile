@@ -4,7 +4,7 @@
 #
 #    Compilation du Manuel de Reference de FreeBSD
 #
-#    $FreeBSD: doc/fr_FR.ISO8859-1/books/handbook/Makefile,v 1.3 2001/06/21 03:38:28 chris Exp $
+#    $FreeBSD$
 #    Original revision: 1.25
 #
 
@@ -60,6 +60,18 @@ SRCS+= ports/chapter.sgml
 
 # Entities
 SRCS+= chapters.ent 
+
+# XXX The Handbook build currently overflows some internal, hardcoded 
+# limits in pdftex.  Until we split the Handbook up, build the PDF 
+# version using ps2pdf instead of pdftex.
+
+PS2PDF?=        ${PREFIX}/bin/ps2pdf
+
+book.tex-pdf:
+	${TOUCH} book.tex-pdf
+
+book.pdf: book.ps
+	${PS2PDF} book.ps book.pdf
 
 DOC_PREFIX?= ${.CURDIR}/../../..
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"
