@@ -29,8 +29,6 @@ MAN5 =	a.out.5\
 	forward.5\
 	fs.5\
 	fstab.5\
-	ftpd.conf.5\
-	ftpusers.5\
 	gettytab.5\
 	groff_font.5\
 	groff_out.5\
@@ -106,7 +104,6 @@ MAN5 =	a.out.5\
 	uuencode.format.5\
 	vgrindefs.5
 
-MLINKS+=ftpusers.5 ftpchroot.5
 MLINKS+=kbdmap.5 keymap.5
 MLINKS+=utmp.5 lastlog.5 utmp.5 wtmp.5
 MLINKS+=hosts.equiv.5 rhosts.5
