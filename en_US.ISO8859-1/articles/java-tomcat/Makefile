@@ -1,9 +1,8 @@
 #
-# FreeBSD Documentation Project
 # $FreeBSD$
 #
-# Makefile for "Java and FreeBSD First Steps"
 # Author: Victoria Chan, Hiten Pandya
+# Article: Java and Jakarta Tomcat on FreeBSD
 
 MAINTAINER=vkchan@kendryl.net hiten@uk.FreeBSD.org
 
@@ -14,9 +13,7 @@ FORMATS?= html
 INSTALL_COMPRESSED?= gz
 INSTALL_ONLY_COMPRESSED?=
 
-# SGML content
-SRCS=  article.sgml
+SRCS=	article.sgml
 
 DOC_PREFIX?= ${.CURDIR}/../../..
-
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"
