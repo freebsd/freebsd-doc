@@ -1,4 +1,4 @@
-#       $Id: Makefile,v 1.3 1999-08-19 20:36:00 nik Exp $
+#       $Id: Makefile,v 1.4 1999-08-26 19:42:12 nik Exp $
 
 SUBDIR = FAQ
 
@@ -18,8 +18,7 @@ afterinstall:
 .if !defined(IGNORE_COMPAT_SYMLINK)
 	if [ ! -e ${DOCDIR}/${COMPAT_SYMLINK} ]; then			\
 		rm -rf ${DOCDIR}/${COMPAT_SYMLINK};			\
-		ln -s ${DOCDIR}/ru_SU.KOI8-R				\
-		      ${DOCDIR}/${COMPAT_SYMLINK};			\
+		(cd ${DOCDIR} && ln -s ru_RU.KOI8-R ${COMPAT_SYMLINK});	\
 	fi
 .endif
 

@@ -1,4 +1,4 @@
-#       $Id: Makefile,v 1.7 1999-08-19 20:35:58 nik Exp $
+#       $Id: Makefile,v 1.8 1999-08-26 19:42:11 nik Exp $
 
 SUBDIR = books
 SUBDIR+= man
@@ -13,8 +13,7 @@ afterinstall:
 .if !defined(IGNORE_COMPAT_SYMLINK)
 	if [ ! -e ${DOCDIR}/${COMPAT_SYMLINK} ]; then			\
 		rm -rf ${DOCDIR}/${COMPAT_SYMLINK};			\
-		ln -s ${DOCDIR}/ja					\
-		      ${DOCDIR}/${COMPAT_SYMLINK};			\
+		(cd ${DOCDIR} && ln -s ja ${COMPAT_SYMLINK});		\
 	fi
 .endif
 
