@@ -1,7 +1,11 @@
+###|
 ###| The FreeBSD Russian Documentation Project
+###|
+###| $FreeBSD$
+###| $FreeBSDru: frdp/www/ru/ports/comments.ru,v 1.8 2004/02/18 16:48:53 andy Exp $
+###|
 ###| Original Revision: ports/INDEX 1.272
-###| $FreeBSD: www/ru/ports/comments.ru,v 1.3 2002/02/17 13:57:30 phantom Exp $
-###| 
+###|
 ###| Файл русских комментариев для www/ru/ports/
 ###|
 ###| Сгенерирован с помощью команды:
