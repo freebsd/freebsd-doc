@@ -1,5 +1,5 @@
 # bsd.web.mk
-# $FreeBSD$
+# $FreeBSD: www/en/web.mk,v 1.23 1999/09/06 07:02:37 peter Exp $
 
 #
 # Build and install a web site.
@@ -60,7 +60,8 @@ PORTSBASE?=	/usr
 
 .SUFFIXES:	.sgml .html
 SGMLNORM=	sgmlnorm
-CATALOG?=	/usr/local/share/sgml/html/catalog
+PREFIX?=	/usr/local
+CATALOG?=	${PREFIX}/share/sgml/html/catalog
 SGMLNORMFLAGS=	-d ${SGMLNORMOPTS} -c ${CATALOG}
 GENDOCS+=	${DOCS:M*.sgml:S/.sgml$/.html/g}
 ORPHANS:=	${ORPHANS:N*.sgml}
