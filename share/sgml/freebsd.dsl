@@ -71,11 +71,6 @@
           ;; Create docformat navi link for HTML output?
           #f)
 
-        (define %show-all-trademark-symbols%
-          ;; Show all the trademark symbols, not just the required
-          ;; symbols.
-          #f)
-
         (define (book-titlepage-recto-elements)
           (list (normalize "title")
                 (normalize "subtitle")
@@ -764,6 +759,11 @@
       (define ($admon-graphic$ #!optional (nd (current-node)))
         ;; Admonition graphic file
         (string-append %admon-graphics-path% (case-fold-down (gi nd)) ".png"))
+
+      (define %show-all-trademark-symbols%
+        ;; Show all the trademark symbols, not just the required
+        ;; symbols.
+        #f)
 
       <!-- Slightly deeper customisations -->
 
