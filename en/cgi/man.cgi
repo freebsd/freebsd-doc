@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp 
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.96 2003-02-06 22:03:32 wosch Exp $
+# $Id: man.cgi,v 1.97 2003-02-06 22:04:39 wosch Exp $
 
 #use Data::Dumper;
 #use Carp;
@@ -974,7 +974,7 @@ ETX
 }
 
 sub copyright {
-    $id = '$Id: man.cgi,v 1.96 2003-02-06 22:03:32 wosch Exp $';
+    $id = '$Id: man.cgi,v 1.97 2003-02-06 22:04:39 wosch Exp $';
 
     return qq{\
 <PRE>
@@ -1033,8 +1033,6 @@ Copyright (c) 1996-2003 Wolfram Schneider <a href="$mailtoURL">&lt;$mailto&gt;</
 <h2>FAQ</h2>
 <UL>
 <li>Get the <a href="$BASE/source">source</a> of the man.cgi script
-<li>Links to /usr/include works only for the OS version
-which run on this server (FreeBSD-4.2)
 <li>Troff macros works only if defined in FreeBSD/groff. OS specific
 macros like `appeared in NetBSD version 1.2' are not supported.
 <li>Netscape is buggy, you may press twice the link 'Index Page and Help'
