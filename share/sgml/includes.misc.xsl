@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/share/sgml/includes.misc.xsl,v 1.4 2004/01/12 21:27:00 hrs Exp $ -->
+<!-- $FreeBSD: www/share/sgml/includes.misc.xsl,v 1.5 2004/01/17 18:58:07 hrs Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -72,6 +72,9 @@
 	<xsl:for-each select="$items">
 	  <li>
 	    <xsl:choose>
+	      <xsl:when test="@omithref='yes'">
+		<xsl:value-of select="name" />
+	      </xsl:when>
 	      <xsl:when test="name/@role='old'">
 		<a><xsl:attribute name="href">
 		    <xsl:value-of select="concat($ftpbaseold, name, '.asc')" />
@@ -107,10 +110,17 @@
     <xsl:param name="advisories.xml" select="''" />
 
     <xsl:for-each select="document($advisories.xml)/descendant::advisory[position() &lt;= 10]">
-      <xsl:value-of select="$leadingmark" /><a>
-	<xsl:attribute name="href">ftp://ftp.freebsd.org/pub/FreeBSD/CERT/advisories/<xsl:value-of select="name"/>.asc</xsl:attribute>
-	<xsl:value-of select="name"/>
-      </a><br/>
+      <xsl:value-of select="$leadingmark" />
+      <xsl:choose>
+	<xsl:when test="@omithref = 'yes'">
+	  <xsl:value-of select="name"/>
+	</xsl:when>
+	<xsl:otherwise>
+	  <a><xsl:attribute name="href"><xsl:value-of select="concat($ftpbase, name, '.asc')"/></xsl:attribute>
+	    <xsl:value-of select="name"/></a>
+	</xsl:otherwise>
+      </xsl:choose>
+      <br/>
     </xsl:for-each>
   </xsl:template>
 
