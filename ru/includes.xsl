@@ -4,9 +4,9 @@
      The FreeBSD Russian Documentation Project
 
      $FreeBSD$
-     $FreeBSDru: frdp/www/ru/includes.xsl,v 1.8 2003/09/16 08:36:34 andy Exp $
+     $FreeBSDru: frdp/www/ru/includes.xsl,v 1.9 2003/10/06 11:32:16 den Exp $
 
-     Original revision: 1.15
+     Original revision: 1.16
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -27,6 +27,7 @@
   <xsl:variable name="unix" select="'UNIX&#174;'"/>
   <xsl:variable name="java" select="'Java&#8482;'"/>
   <xsl:variable name="jdk" select="'JDK&#8482;'"/>
+  <xsl:variable name="posix" select="'POSIX&#174;'"/>
 
   <xsl:variable name="email" select="'freebsd-questions'"/>
   <xsl:variable name="author">
