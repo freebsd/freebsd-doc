@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: query-pr.cgi,v 1.7 1998-04-21 14:55:39 wosch Exp $
+# $Id: query-pr.cgi,v 1.8 1998-06-02 13:07:10 wosch Exp $
 
 $ENV{'PATH'} = "/bin:/usr/bin:/usr/sbin:/sbin:/usr/local/bin";
 
@@ -34,7 +34,11 @@ if ($opt_p) {
     }
 }
 
-$pr = $input{'pr'};
+# allow query-pr.cgi?<pr> queries
+if (!($pr = $input{'pr'}) && &MethGet) {
+    $pr = $ENV{'QUERY_STRING'};
+}
+
 # be tolerant to <category>/<PR id> queries
 $pr =~ s%^[a-z]+/([0-9]+)$%$1%; 
 
