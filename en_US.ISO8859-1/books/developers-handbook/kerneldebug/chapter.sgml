@@ -9,94 +9,128 @@
 
   <para><emphasis>Contributed by &a.paul; and &a.joerg;</emphasis></para>
 
-  <sect1 id="kerneldebug-gdb">
-    <title>Debugging a Kernel Crash Dump with <command>gdb</command></title>
+  <sect1 id="kerneldebug-obtain">
+    <title>Obtaining a Kernel Crash Dump</title>
 
-    <para>Here are some instructions for getting kernel debugging
-      working on a crash dump.  They assume that you have enough swap
-      space for a crash dump.  Typically you want to
-      specify one of the swap devices specified in
-      <filename>/etc/fstab</filename>. Dumps to non-swap devices,
-      tapes for example, are currently not supported.</para>
+    <para>When running a development kernel (eg: &os.current;), a
+      kernel under extreme conditions (eg: very high load averages,
+      tens of thousands of connections, exceedingly high number of
+      concurrent users, hundreds of &man.jail.8;s, etc.), or using a
+      new feature or device driver on &os.stable; (eg:
+      <acronym>PAE</acronym>), sometimes a kernel will panic.  In the
+      event that it does, this chapter includes basic instructions for
+      extracting useful information out of a crash.</para>
 
-    <note>
-      <para>Use the &man.dumpon.8; command to tell the kernel where to
-	save crash dumps.  The <command>dumpon</command> program must
-	be called after the swap partition has been configured with
-	&man.swapon.8;.  This is normally arranged by setting the
-	<varname>dumpdev</varname> variable in &man.rc.conf.5;.  If
-	this variable is set, then the &man.savecore.8; program will
-	automatically be called on the first multi-user boot after the
-	crash.  This program will save the kernel crash dump to the
-	directory specified in the <filename>rc.conf</filename>
-	<varname>dumpdir</varname> variable.  The default directory
-	for crash dumps is <filename>/var/crash</filename>.</para>
+    <para>A system reboot is inevitable once a kernel panics.  Once a
+      system is rebooted, the contents of a system's physical memory
+      (<acronym>RAM</acronym>) is lost, as well as any bits that are
+      on the swap device before the panic.  To preserve the bits in
+      physical memory, the kernel makes use of the swap device as a
+      place to store the bits that are in physical memory that way
+      when the system reboots, a kernel image can be extracted and
+      debugging can take place.</para>
+
+    <note><para>A swap device that has been configured as a dump
+      device still acts as a swap device.  Dumps to non-swap devices,
+      tapes for example, are not supported at this time.  A
+      <quote>swap device</quote> is synonymous with a <quote>swap
+      partition.</quote></para></note>
+
+    <para>To be able to extract a usable core, it is required that at
+      least one swap partition be large enough to hold all of the bits
+      in physical memory.  When a kernel panics, before the system
+      reboots, the kernel is smart enough to check to see if a swap
+      device has been configured as a dump device.  If there is a
+      valid dump device, the kernel dumps the contents of what is in
+      physical memory to the swap device (assuming the swap device is
+      configured as a dump device).</para>
+
+    <sect2 id="config-dumpdev">
+      <title>Configuring the Dump Device</title>
+
+      <para>Before the kernel will dump the contents of its physical
+	memory to a dump device, a dump device must be configured.  A
+	dump device is specified by using the &man.dumpon.8; command
+	to tell the kernel where to save kernel crash dumps.  The
+	&man.dumpon.8; program must be called after the swap partition
+	has been configured with &man.swapon.8;.  This is normally
+	handled by setting the <varname>dumpdev</varname> variable in
+	&man.rc.conf.5; to the path of the swap device.</para>
 
       <para>Alternatively, you can hard-code the dump device via the
 	<literal>dump</literal> clause in the <literal>config</literal> line of
 	your kernel configuration file.  This approach is deprecated and should
 	be used only if you want a crash dump from a kernel that crashes during
 	booting.</para>
-    </note>
 
-    <note>
-      <para>In the following, the term <command>gdb</command> refers to
-        the debugger <command>gdb</command> run in <quote>kernel debug
-        mode</quote>.  This can be accomplished by starting the
-        <command>gdb</command> with the option <option>-k</option>.  In
-        kernel debug mode, <command>gdb</command> changes its prompt to
-        <prompt>(kgdb)</prompt>.</para>
-    </note>
+      <tip><para>Check <filename>/etc/fstab</filename> or
+	&man.swapinfo.8; for a list of swap devices.</para></tip>
+
+      <important><para>Make sure the <varname>dumpdir</varname>
+        specified in &man.rc.conf.5; exists before a kernel
+        crash!</para>
+
+        <screen>&prompt.root; <userinput>mkdir /var/crash</userinput></screen>
+      </important>
+    </sect2>
+
+    <sect2 id="extract-dump">
+      <title>Extracting a Kernel Dump</title>
+
+        <para>Once a dump has been written to a dump device, the dump
+	  must be extracted before the swap device is mounted,
+	  otherwise the dump will be corrupted.  To extract a dump
+	  from a dump device, use the &man.savecore.8; program.  If
+	  <varname>dumpdev</varname> has been set in &man.rc.conf.5;,
+	  &man.savecore.8; will be called automatically on the first
+	  multi-user boot after the crash and before the swap device
+	  is mounted.  The location of the extracted core is placed in
+	  the &man.rc.conf.5; value <varname>dumpdir</varname>, by
+	  default <filename>/var/crash</filename>.</para>
 
     <tip>
-      <para>If you are using FreeBSD 3 or earlier, you should make a stripped
-        copy of the debug kernel, rather than installing the large debug
-        kernel itself:</para>
-
-      <screen>&prompt.root; <userinput>cp kernel kernel.debug</userinput>
-&prompt.root; <userinput>strip -g kernel</userinput></screen>
-
-      <para>This stage is not necessary, but it is recommended.  (In
-        FreeBSD 4 and later releases this step is performed automatically
-        at the end of the kernel <command>make</command> process.)
-        When the kernel has been stripped, either automatically or by
-        using the commands above, you may install it as usual by typing
-        <command>make install</command>.</para>
-
-      <para>Note that older releases of FreeBSD (up to but not including
-        3.1) used a.out kernels by default, which must have their symbol
-        tables permanently resident in physical memory.  With the larger
-        symbol table in an unstripped debug kernel, this is wasteful.
-        Recent FreeBSD releases use ELF kernels where this is no longer a
-        problem.</para>
-    </tip>
-
-    <para>If you are testing a new kernel, for example by typing the new
-      kernel's name at the boot prompt, but need to boot a different one in
+      <para>If you are testing a new kernel but need to boot a different one in
       order to get your system up and running again, boot it only into single
-      user state using the <option>-s</option> flag at the boot prompt, and
+      user mode using the <option>-s</option> flag at the boot prompt, and
       then perform the following steps:</para>
 
     <screen>&prompt.root; <userinput>fsck -p</userinput>
-&prompt.root; <userinput>mount -a -t ufs</userinput>       # so your filesystem for /var/crash is writable
-&prompt.root; <userinput>savecore -N /kernel.panicked /var/crash</userinput>
-&prompt.root; <userinput>exit</userinput>                  # ...to multi-user</screen>
+&prompt.root; <userinput>mount -a -t ufs</userinput>       # make sure /var/crash is writable
+&prompt.root; <userinput>savecore /var/crash /dev/ad0s1b</userinput>
+&prompt.root; <userinput>exit</userinput>                  # exit to multi-user</screen>
 
-    <para>This instructs &man.savecore.8; to use another kernel for symbol
-      name extraction.  It would otherwise default to the currently running
-      kernel and most likely not do anything at all since the crash dump and
-      the kernel symbols differ.</para>
+    <para>This instructs &man.savecore.8; to extract a kernel dump
+      from <filename>/dev/ad0s1b</filename> and place the contents in
+      <filename>/var/crash</filename>.  Don't forget to make sure the
+      destination directory <filename>/var/crash</filename> has enough
+      space for the dump or to specify the correct path to your swap
+      device as it is likely different than
+      <filename>/dev/ad0s1b</filename>!</para></tip>
 
-    <para>Now, after a crash dump, go to
-      <filename>/sys/compile/WHATEVER</filename> and run
-      <command>gdb <option>-k</option></command>.  From <command>gdb</command> do:
+      <para>The recommended and certainly easiest way to automate
+        obtaining crash dumps is to use the <varname>dumpdev</varname>
+        variable in &man.rc.conf.5;.</para>
 
-      <screen><userinput>symbol-file kernel.debug</userinput>
-<userinput>exec-file /var/crash/kernel.0</userinput>
-<userinput>core-file /var/crash/vmcore.0</userinput></screen>
+    </sect2>
+  </sect1>
 
-      and voila, you can debug the crash dump using the kernel sources just
-      like you can for any other program.</para>
+  <sect1 id="kerneldebug-gdb">
+    <title>Debugging a Kernel Crash Dump with <command>gdb</command></title>
+
+    <para>Once a dump has been obtained, getting useful information
+      out of the dump is relatively easy for simple problems.  Before
+      launching into the internals of <command>gdb</command> to debug
+      the crash dump, locate the debug version of your kernel
+      (normally called <filename>kernel.debug</filename>) and the path
+      to the source files used to build your kernel (normally
+      <filename>/usr/obj/usr/src/sys/KERNCONF</filename>).  With those
+      two pieces of info, let the debugging commence!
+
+      <screen>&prompt.root; <userinput>cd /usr/obj/usr/src/sys/KERNCONF</userinput>
+&prompt.root; <userinput>gdb -k /boot/kernel/kernel.debug /var/crash/vmcore.0</userinput></screen>
+
+      and voila!  You can debug the crash dump using the kernel
+      sources just like you can for any other program.</para>
 
     <para>Here is a script log of a <command>gdb</command> session
       illustrating the procedure.  Long lines have been folded to improve
