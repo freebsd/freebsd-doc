@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: doc/ja_JP.eucJP/man/man1/Makefile,v 1.36 2001/09/23 03:41:52 horikawa Exp $
 MAN1 =	a2p.1\
 	addftinfo.1\
 	addr2line.1\
@@ -477,5 +477,7 @@ MLINKS+=tcsh.1 csh.1
 MLINKS+=ee.1 edit.1
 MLINKS+=pkg_sign.1 pkg_check.1
 MLINKS+=ssh.1 slogin.1
+MLINKS+=bzip2.1 bunzip2.1
+MLINKS+=bzip2.1 bzcat.1
 
 .include "bsd.prog.mk"
