@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $FreeBSD: www/en/cgi/query-pr-summary.cgi,v 1.25 1999/10/26 21:49:29 peter Exp $
+# $FreeBSD: www/en/cgi/query-pr-summary.cgi,v 1.26 2000/04/17 16:09:37 steve Exp $
 
 $html_mode     = 1 if $ENV{'DOCUMENT_ROOT'};
 $self_ref      = $ENV{'SCRIPT_NAME'};
@@ -105,6 +105,13 @@ if ($html_mode) {
 	  "---------------------------------------\n";
 }
 
+sub cgiparam {
+    local ($result) = @_;
+
+    $result =~ s/[^A-Za-z0-9+.@-]/"%".sprintf("%02X", unpack("C", $&))/ge;
+    $result;
+}
+
 sub header_info {
     if ($html_mode) {
 	print &html_header("Current $project problem reports");
@@ -162,7 +169,7 @@ foreach ("category", "originator", "priority", "class", "responsible",
 	"severity", "state", "submitter", "text", "multitext", "closedtoo") {
 	if ($input{$_}) {
 		$self_ref2 .= '&' if ($self_ref2 !~/\?$/);
-		$self_ref2 .= $_ . '=' . $input{$_};
+		$self_ref2 .= $_ . '=' . cgiparam($input{$_});
 	}
 }
 
@@ -177,9 +184,10 @@ foreach ("category", "originator", "priority", "class", "responsible",
 	"severity", "state", "submitter", "text", "multitext", "sort") {
 	if ($input{$_}) {
 		$self_ref3 .= '&' if ($self_ref2 !~/\?$/);
-		$self_ref3 .= $_ . '=' . $input{$_};
+		$self_ref3 .= $_ . '=' . cgiparam($input{$_});
 	}
 }
+
 if ($input{"closedtoo"}) {
 	print '<A HREF="', $self_ref3, '">Don',"'",'t show closed reports</A>.';
 } else {
