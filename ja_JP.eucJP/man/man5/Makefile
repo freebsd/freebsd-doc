@@ -95,6 +95,7 @@ MAN5 =	a.out.5\
 	ssh_config.5\
 	sshd_config.5\
 	stab.5\
+	style.Makefile.5\
 	sysctl.conf.5\
 	syslog.conf.5\
 	tacplus.conf.5\
