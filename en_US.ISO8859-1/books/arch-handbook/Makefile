@@ -36,6 +36,7 @@ SRCS+= kerneldebug/chapter.sgml
 SRCS+= kobj/chapter.sgml
 SRCS+= l10n/chapter.sgml
 SRCS+= locking/chapter.sgml
+SRCS+= mac/chapter.sgml
 SRCS+= pci/chapter.sgml
 SRCS+= policies/chapter.sgml
 SRCS+= scsi/chapter.sgml
