@@ -23,7 +23,7 @@
 
         <table border="0" cellspacing="0" cellpadding="2">
           <tr>
-            <td valign="top" width="15%">
+            <td valign="top"> <!-- width="10%" -->
               <table border="0" cellspacing="0" cellpadding="1"
                      bgcolor="#000000" width="100%">
                 <tr>
@@ -130,7 +130,7 @@
             <td></td>
 
             <!-- Right-most column -->
-            <td valign="top" width="20%">
+            <td valign="top"> <!-- width="20%" -->
               <!-- News table -->
               <table border="0" cellspacing="0" cellpadding="1"
                      bgcolor="#000000" width="100%">
