@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: www/en/commercial/Makefile,v 1.15 2004/05/02 21:53:07 josef Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -12,6 +12,7 @@ DOCS=   commercial.sgml
 DATA=	consult.html
 DATA+=	consult_bycat.html
 DATA+=  hardware.html
+DATA+=  isp.html
 DATA+=  misc.html
 DATA+=  software.html
 DATA+=  software_bycat.html
@@ -20,6 +21,7 @@ CLEANFILES=  commercial.html
 CLEANFILES+= consult.html
 CLEANFILES+= consult_bycat.html
 CLEANFILES+= hardware.html
+CLEANFILES+= isp.html
 CLEANFILES+= misc.html
 CLEANFILES+= software.html
 CLEANFILES+= software_bycat.html
@@ -51,6 +53,14 @@ hardware.html: entries.xsl hardware.xml ../includes.xsl
 	-${TIDY} ${TIDYOPTS} ${.TARGET}
 .endif
 
+isp.html: entries.xsl isp.xml ../includes.xsl
+	${XSLTPROC} ${XSLTPROCOPTS} -o ${.TARGET} \
+		--param pagename "'Internet Service Providers'" \
+		${.CURDIR}/entries.xsl ${.CURDIR}/isp.xml
+.if !defined(NO_TIDY)
+	-${TIDY} ${TIDYOPTS} ${.TARGET}
+.endif
+
 misc.html: entries.xsl misc.xml ../includes.xsl
 	${XSLTPROC} ${XSLTPROCOPTS} -o ${.TARGET} \
 		--param pagename "'Miscellaneous Vendors'" \
@@ -77,6 +87,7 @@ software_bycat.html: soft_bycat.xsl software.xml ../includes.xsl
 lint:
 	${XMLLINT} --valid -o /dev/null ${.CURDIR}/consult.xml
 	${XMLLINT} --valid -o /dev/null ${.CURDIR}/hardware.xml
+	${XMLLINT} --valid -o /dev/null ${.CURDIR}/isp.xml
 	${XMLLINT} --valid -o /dev/null ${.CURDIR}/misc.xml
 	${XMLLINT} --valid -o /dev/null ${.CURDIR}/software.xml
 
