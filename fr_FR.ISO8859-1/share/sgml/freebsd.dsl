@@ -2,7 +2,7 @@
      The FreeBSD Documentation Project
      The FreeBSD French Documentation Project
 
-     $Id: freebsd.dsl,v 1.7 2002-06-29 13:26:59 blackend Exp $
+     $Id: freebsd.dsl,v 1.8 2002-08-27 14:11:19 blackend Exp $
      $FreeBSD$
      Original revision: 1.3
 
@@ -57,10 +57,17 @@
         (define %refentry-xref-link% #t)                                 
                                                                          
         <!-- Specify how to generate the man page link HREF -->          
-        (define ($create-refentry-xref-link$ refentrytitle manvolnum)    
-	  (string-append "http://www.FreeBSD.org/cgi/man.cgi?query="
-		 refentrytitle "&" "sektion=" manvolnum))
-
+        (define ($create-refentry-xref-link$ #!optional (n (current-node)))
+          (let* ((r (select-elements (children n) (normalize "refentrytitle")))
+                 (m (select-elements (children n) (normalize "manvolnum")))
+                 (v (attribute-string (normalize "vendor") n))
+                 (u (string-append "http://www.FreeBSD.org/cgi/man.cgi?query="
+                         (data r) "&" "sektion=" (data m))))
+            (case v
+              (("xfree86") (string-append u "&" "manpath=XFree86+4.0.2"))
+              (("netbsd")  (string-append u "&" "manpath=NetBSD+1.5"))
+              (("ports")   (string-append u "&" "manpath=FreeBSD+Ports"))
+              (else u))))
       ]]>
 	<!-- Fix a problem with the French localisation. The bug was
 	submitted to authors of docbook project -->
