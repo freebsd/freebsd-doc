@@ -1,0 +1,714 @@
+<!DOCTYPE article PUBLIC "-//FreeBSD//DTD DocBook V4.1-Based Extension//EN" [
+<!ENTITY % man PUBLIC "-//FreeBSD//ENTITIES DocBook Manual Page Entities//EN">
+%man;
+<!ENTITY % freebsd PUBLIC "-//FreeBSD//ENTITIES DocBook Miscellaneous FreeBSD Entities//EN">
+%freebsd;
+<!ENTITY % authors PUBLIC "-//FreeBSD//ENTITIES DocBook Author Entities//EN">
+%authors;
+<!ENTITY % teams PUBLIC "-//FreeBSD//ENTITIES DocBook Team Entities//EN">
+%teams;
+<!ENTITY % mailing-lists PUBLIC "-//FreeBSD//ENTITIES DocBook Mailing List Entities//EN">
+%mailing-lists;
+<!ENTITY % trademarks PUBLIC "-//FreeBSD//ENTITIES DocBook Trademark Entities//EN">
+%trademarks;
+]>
+
+<article>
+  <articleinfo>
+    <title>Package Building Procedures</title>
+
+    <authorgroup>
+      <corpauthor>The &os; Ports Management Team</corpauthor>
+    </authorgroup>
+
+    <pubdate>$FreeBSD$</pubdate>
+
+    <copyright>
+      <year>2003</year>
+      <holder role="mailto:portmgr@FreeBSD.org">The &os; Ports
+	Management Team</holder>
+    </copyright>
+
+    <legalnotice id="trademarks" role="trademarks">
+      &tm-attrib.freebsd;
+      &tm-attrib.intel;
+      &tm-attrib.sparc;
+      &tm-attrib.general;
+    </legalnotice>
+  </articleinfo>
+
+  <sect1 id="intro">
+    <title>Introduction and Conventions</title>
+
+    <para>In order to provide pre-compiled binaries of third-party
+      applications for &os;, the ports collection is regularly
+      built on one of the <quote>Package Building Clusters.</quote>
+      Currently, there are two such clusters:
+      <hostid role="fqdn">pointyhat.FreeBSD.org</hostid> and
+      <hostid role="fqdn">dosirak.kr.FreeBSD.org</hostid>.</para>
+
+    <para>Most of the package building magic occurs under the
+      <filename>/var/portbuild</filename> directory.  Unless
+      otherwise specified, all paths will be relative to
+      this location.  <replaceable>${arch}</replaceable> will
+      be used to specify one of the package architectures
+      (&i386;, alpha, &sparc64;, ia64, and amd64), and
+      <replaceable>${branch}</replaceable> will be used
+      to specify the build branch (4, 5, 4-exp).
+    </para>
+  </sect1>
+
+  <sect1 id="management">
+    <title>Build Client Management</title>
+
+    <para>The &i386;, alpha, amd64, and two sparc64 clients currently
+      netboot from <hostid>pointyhat</hostid>; the other sparc64 client
+      and ia64 clients are self-hosted.  In all cases they set themselves
+      up at boot-time to prepare to build packages.</para>
+
+    <para>The
+      <username>ports-<replaceable>${arch}</replaceable></username>
+      user can &man.ssh.1; as <username>root</username> onto
+      each of the <replaceable>${arch}</replaceable> nodes.</para>
+
+    <para>The <command>scripts/allgohans</command> script can
+      be used to run a command on all of the
+      <replaceable>${arch}</replaceable> clients.</para>
+
+    <para>The <command>scripts/checkmachines</command> script
+      is used to monitor the load on all the nodes of the
+      build cluster, and schedule which nodes build which ports.
+      This script is not very robust, and has a tendency to die.
+      It is best to start up this script on the build master
+      (either <hostid>pointyhat</hostid> or <hostid>dosirak</hostid>)
+      after boot time using a &man.while.1; loop.
+    </para>
+  </sect1>
+
+  <sect1 id="setup">
+    <title>Chroot Build Environment Setup</title>
+
+    <para>Package builds are performed in a
+      <literal>chroot</literal> populated by the
+      <filename>portbuild</filename> script using the
+      <filename><replaceable>${arch}</replaceable>/<replaceable>${branch}</replaceable>/tarballs/bindist.tar</filename>
+      file.  This tarball is created by the
+      <command>mkbindist</command> script which reads the
+      <filename><replaceable>${arch}</replaceable>/<replaceable>${branch}</replaceable>/mkbindist.conf</filename>
+      file to decide how to create the tarball.</para>
+
+    <para>The script should be run as <username>root</username>
+      with the following command:</para>
+
+    <screen>/var/portbuild&prompt.root; <userinput>scripts/mkbindist <replaceable>${arch}</replaceable> <replaceable>${branch}</replaceable></userinput></screen>
+
+    <para>If <literal>ftp=1</literal> in
+      <filename>mkbindist.conf</filename> then a prebuilt release
+      will be downloaded via FTP from the location specified by
+      ftp://<replaceable>${ftpserver}</replaceable>/<replaceable>${ftpurl}</replaceable>/<replaceable>${rel}</replaceable>.
+      If <literal>ftp=0</literal> and
+      <literal>buildworld=1</literal> then
+      <command>mkbindist</command> will call
+      <command>makeworld</command> to build a new world
+      [<literal>XXX</literal> This is currently broken].</para>
+
+    <para>If both <literal>ftp=0</literal> and
+      <literal>buildworld=0</literal> then
+      <command>mkbindist</command> will use the pre-existing
+      contents of <replaceable>${worlddir}</replaceable> to
+      create <filename>bindist.tar</filename>.  In practice
+      this means that you must have already installed a world
+      in ${worlddir}, which is typically installed with the
+      <command>makeworld</command> script:</para>
+
+    <screen>/var/portbuild&prompt.root; <userinput>scripts/makeworld <replaceable>${arch}</replaceable> <replaceable>${branch}</replaceable> [-nocvs]</userinput></screen>
+
+    <para>This command builds a world from the
+      <filename><replaceable>${arch}</replaceable>/<replaceable>${branch}</replaceable>/src</filename>
+      tree and installs it into
+      <replaceable>${worlddir}</replaceable>.  The tree will
+      be updated first unless <literal>-nocvs</literal> is
+      specified.</para>
+
+    <para>The <filename>bindist.tar</filename> file is extracted
+      onto each client at client boot time, and at the start of
+      each pass of the <command>dopackages</command>
+      script.
+    </para>
+  </sect1>
+
+  <sect1 id="starting">
+    <title>Starting the Build</title>
+
+    <para>The <filename>scripts/dopackages*</filename> scripts
+      are used to perform the builds.  Most useful are:</para>
+
+    <itemizedlist>
+      <listitem>
+	<para><command>dopackages.5</command> - Perform a
+	  5.X build
+	</para>
+      </listitem>
+
+      <listitem>
+	<para><command>dopackages.4</command> - Perform a
+	  4.X build
+	</para>
+      </listitem>
+
+      <listitem>
+	<para><command>dopackages.4-exp</command> - Perform
+	  a 4.X build with experimental patches
+	  (4-exp branch)
+	</para>
+      </listitem>
+    </itemizedlist>
+
+    <para>These are wrappers around <command>dopackages</command>,
+      and are all symlinked to <command>dopackages.wrapper</command>.
+      New branch wrapper scripts can be created by symlinking
+      <command>dopackages.${branch}</command> to
+      <command>dopackages.wrapper</command>.  These scripts
+      take a number of arguments.  For example:</para>
+
+    <screen><command>dopackages.5 <replaceable>${arch}</replaceable> <literal>[-options]</literal></command></screen>
+
+    <para><literal>[-options]</literal> may be zero or more of the
+      following:</para>
+
+    <itemizedlist>
+      <listitem>
+	<para><literal>-nofinish</literal> - Do not perform
+	  post-processing once the build is complete.  Useful
+	  if you expect that the build will need to be restarted
+	  once it finishes.  This option should always be used
+	  for normal build operations.
+	</para>
+      </listitem>
+
+      <listitem>
+	<para><literal>-finish</literal> - Perform
+	  post-processing only.
+	</para>
+      </listitem>
+
+      <listitem>
+	<para><literal>-restart</literal> - Restart an interrupted
+	  (or non-<literal>finish</literal>ed) build from the
+	  beginning.  Ports that failed on the previous build will
+	  be rebuilt.
+	</para>
+      </listitem>
+
+      <listitem>
+	<para><literal>-continue</literal> - Restart an interrupted
+	  (or non-<literal>finish</literal>ed) build.  Will not
+	  rebuild ports that failed on the previous build.
+	</para>
+      </listitem>
+
+      <listitem>
+	<para><literal>-cdrom</literal> - This package build is
+	  intended to end up on a CD-ROM, so
+	  <literal>NO_CDROM</literal> packages and distfiles
+	  should be deleted in post-processing.
+	</para>
+      </listitem>
+
+      <listitem>
+	<para><literal>-nobuild</literal> - Perform all
+	  the preprocessing steps, but do not actually do
+	  the package build.
+	</para>
+      </listitem>
+
+      <listitem>
+	<para><literal>-noindex</literal> - Do not rebuild
+	  <filename>INDEX</filename> during preprocessing.
+	</para>
+      </listitem>
+
+      <listitem>
+	<para><literal>-noduds</literal> - Do not rebuild the
+	  <filename>duds</filename> file (ports that are never
+	  built, e.g.  those marked <literal>IGNORE</literal>,
+	  <literal>NO_PACKAGE</literal>, etc.) during
+	  preprocessing.
+	</para>
+      </listitem>
+
+      <listitem>
+	<para><literal>-nocvs</literal> - Do not
+	  <command>cvs update</command> the
+	  <literal>src</literal> tree during preprocessing.
+	</para>
+      </listitem>
+
+      <listitem>
+	<para><literal>-noportscvs</literal> - Do not
+	  <command>cvs update</command> the
+	  <literal>ports</literal> tree during preprocessing.
+	</para>
+      </listitem>
+
+      <listitem>
+	<para><literal>-norestr</literal> - Do not attempt to build
+	  <literal>RESTRICTED</literal> ports.
+	</para>
+      </listitem>
+
+      <listitem>
+	<para><literal>-plistcheck</literal> - Make it fatal for
+	  ports to leave behind files after deinstallation.
+	</para>
+      </listitem>
+
+      <listitem>
+	<para><literal>-distfiles</literal> - Collect distfiles
+	  that pass <command>make checksum</command> for later
+	  uploading to <hostid>ftp-master</hostid>.  Use this
+	  sparingly because it takes up a lot of disk space.
+	  You should remove the distfiles once they have been
+	  transfered to <hostid>ftp-master</hostid>.
+	</para>
+      </listitem>
+
+      <listitem>
+	<para><literal>-fetch-original</literal> - Fetch the
+	  distfile from the original <literal>MASTER_SITES</literal>
+	  rather than <hostid>ftp-master</hostid>.
+	</para>
+      </listitem>
+    </itemizedlist>
+
+    <para>Make sure the <replaceable>${arch}</replaceable> build
+      is run as the ports-<replaceable>${arch}</replaceable> user
+      or it will complain loudly.</para>
+
+    <note><para>The actual package build itself occurs in two
+      identical phases.  The reason for this is that sometimes
+      transient propblems (e.g. NFS failures, FTP sites being
+      unreachable, etc.) may halt the build.  Doing things
+      in two phases is a workaround for these types of
+      problems.</para></note>
+
+    <para>Be careful that <filename>ports/Makefile</filename>
+      does not specify any empty subdirectories.  This is especially
+      important if you are doing a 4-exp build.  If the build
+      process encounters an empty subdirectory, both package build
+      phases will stop short, and an error similar to the following
+      will be written to
+      <filename><replaceable>${arch}</replaceable>/<replaceable>${branch}</replaceable>/make.[0|1]</filename>:
+    </para>
+
+    <screen><literal>don't know how to make dns-all(continuing)</literal></screen>
+
+    <para>To correct this problem, simply comment out or remove
+      the <literal>SUBDIR</literal> entries that point to empty
+      subdirectories.  After doing this, you can restart the build
+      by running the proper <command>dopackages</command> command
+      with the <literal>-restart</literal> option.
+    </para>
+  </sect1>
+
+  <sect1 id="anatomy">
+    <title>Anatomy of a Build</title>
+
+    <para>A full build without any <literal>-no</literal>
+      options performs the following operations in the
+      specified order:</para>
+
+    <orderedlist>
+      <listitem>
+	<para>A CVS checkout of the current <literal>ports</literal>
+	  tree [*]
+	</para>
+      </listitem>
+
+      <listitem>
+	<para>A CVS checkout of the running branch's
+	  <literal>doc</literal> tree [*]
+	</para>
+      </listitem>
+
+      <listitem>
+	<para>A CVS checkout of the running branch's
+	  <literal>src</literal> tree [*]
+	</para>
+      </listitem>
+
+      <listitem>
+	<para>Checks which ports do not have a
+	  <literal>SUBDIR</literal> entry in their respective
+	  category's <filename>Makefile</filename> [*]
+	</para>
+      </listitem>
+
+      <listitem>
+	<para>Creates the <filename>duds</filename> file, which
+	  is a list of ports not to build [*] [+]
+	</para>
+      </listitem>
+
+      <listitem>
+	<para>Generates a fresh <filename>INDEX</filename>
+	  file [*] [+]
+	</para>
+      </listitem>
+
+      <listitem>
+	<para>Sets up the nodes that will be used in the
+	  build [*] [+]
+	</para>
+      </listitem>
+
+      <listitem>
+	<para>Builds a list of restricted ports [*] [+]</para>
+      </listitem>
+
+      <listitem>
+	<para>Builds packages (phase 1) [++]</para>
+      </listitem>
+
+      <listitem>
+	<para>Performs another node setup [+]</para>
+      </listitem>
+
+      <listitem>
+	<para>Builds packages (phase 2) [++]</para>
+      </listitem>
+    </orderedlist>
+
+    <para>[*] Status of these steps can be found in
+      <filename><replaceable>${arch}</replaceable>/<replaceable>${branch}</replaceable>/build.log</filename>
+      as well as on stderr of the tty running the
+      <command>dopackages</command> command.</para>
+
+    <para>[+] If any of these steps fail, the build will stop
+      cold in its tracks.</para>
+
+    <para>[++] Status of these steps can be found in
+      <filename><replaceable>${arch}</replaceable>/<replaceable>${branch}</replaceable>/make.[0|1]</filename>,
+      where <filename>make.0</filename> is the log file used by
+      phase 1 of the package build and <filename>make.1</filename>
+      is the log file used by phase 2.  Individual ports will write
+      their build logs to
+      <filename><replaceable>${arch}</replaceable>/<replaceable>${branch}</replaceable>/logs</filename>
+      and their error logs to
+      <filename><replaceable>${arch}</replaceable>/<replaceable>${branch}</replaceable>/errors</filename>.
+    </para>
+  </sect1>
+
+  <sect1 id="interrupting">
+    <title>Interrupting a Build</title>
+
+    <para>Sending a <literal>HUP</literal> signal to the
+      <command>dopackages*</command> shell processes or to any
+      <command>make</command> process invoked by those scripts
+      is usually sufficient to interrupt the build.  The
+      package builds dispatched by <command>make</command> to
+      the client machines will clean themselves up after a
+      few minutes (check with <command>ps x</command> until they
+      all go away).  The following command usually does the trick:</para>
+
+    <screen>&prompt.user; <userinput>killall -HUP sh ssh make</userinput></screen>
+
+    <para>Remove the
+      <filename><replaceable>${arch}</replaceable>/lock</filename>
+      file before trying to restart the build.
+    </para>
+  </sect1>
+
+  <sect1 id="monitoring">
+    <title>Monitoring the Build</title>
+
+    <para>The
+      <command>scripts/stats <replaceable>${branch}</replaceable></command>
+      command counts the number of packages currently built.</para>
+
+    <para>Running <command>cat /var/portbuild/*/loads/*</command>
+      shows the client loads and number of concurrent builds in
+      progress.</para>
+
+    <para>Running <command>tail -f <replaceable>${arch}</replaceable>/<replaceable>${branch}</replaceable>/build.log</command>
+      shows the overall build progress.</para>
+
+    <para>If a build is failing, and it is not immediately obvious
+      from the port build log as to why, you can preserve the
+      <literal>WRKDIR</literal> for further analysis.  To do this,
+      touch a file called <filename>.keep</filename> in the port's
+      directory.  The next time the cluster tries to build this port,
+      it will tar, compress, and copy the <literal>WRKDIR</literal>
+      to
+      <filename><replaceable>${arch}</replaceable>/<replaceable>${branch}</replaceable>/wrkdirs</filename>.
+    </para>
+
+    <para>Keep an eye on &man.df.1; output.  If the
+      <filename>/var/portbuild</filename> file system becomes full
+      then <trademark>Bad Things</trademark> happen.
+    </para>
+  </sect1>
+
+  <sect1 id="release">
+    <title>Release Builds</title>
+
+    <para>When building packages for a release, it may be
+      necessary to manually update the <literal>ports</literal>
+      and <literal>src</literal> trees to the release tag and use
+      <literal>-nocvs</literal> and
+      <literal>-noportscvs</literal>.</para>
+
+    <para>To build package sets intended for use on a CD-ROM,
+      use the <literal>-cdrom</literal> option to
+      <command>dopackages</command>.</para>
+
+    <para>Assuming disk space is available on the cluster, use
+      <literal>-distfiles</literal> to collect distfiles.</para>
+
+    <note><para>You must run the initial build with
+      <literal>-distfiles</literal> to collect
+      all the fetched distfiles.</para></note>
+
+    <para>After the initial build completes, restart the build
+      with
+      <literal>-restart -distfiles -fetch-original</literal>
+      to collect updated distfiles as well.  Then, once the
+      build is post-processed, take an inventory of the list
+      of files fetched:</para>
+
+    <screen>&prompt.user; <userinput>cd <replaceable>${arch}</replaceable>/<replaceable>${branch}</replaceable></userinput>
+&prompt.user; <userinput>find distfiles > distfiles-<replaceable>${release}</replaceable></userinput></screen>
+
+    <para>This inventory file typically lives in
+      <filename>i386/<replaceable>${branch}</replaceable></filename>
+      on the cluster master.</para>
+
+    <para>This is useful to aid in periodically cleaning out
+      the distfiles from <hostid>ftp-master</hostid>.  When space
+      gets tight, distfiles from recent releases can be kept while
+      others can be thrown away.</para>
+
+    <para>Once the distfiles have been uploaded (see below),
+      the final release package set must be created.  Just to be
+      on the safe side, run the
+      <filename><replaceable>${arch}</replaceable>/<replaceable>${branch}</replaceable>/cdrom.sh</filename>
+      script by hand to make sure all the CD-ROM restricted packages
+      and distfiles have been pruned.  Then, copy the
+      <filename><replaceable>${arch}</replaceable>/<replaceable>${branch}</replaceable>/packages</filename>
+      directory to
+      <filename><replaceable>${arch}</replaceable>/<replaceable>${branch}</replaceable>/packages-<replaceable>${release}</replaceable></filename>.
+      Once the packages are safely moved off, contact the &a.re;
+      and inform them of the release package location.</para>
+
+    <para>Remember to coordinate with the &a.re; about the timing
+      and status of the release builds.
+    </para>
+  </sect1>
+
+  <sect1 id="uploading">
+    <title>Uploading Packages</title>
+
+    <para>Once a build has completed, packages and/or distfiles
+      can be transferred to <hostid>ftp-master</hostid> for
+      propagation to the FTP mirror network.  If the build was
+      run with <literal>-nofinish</literal>, then make sure to
+      follow up with
+      <command>dopackages -finish</command> to post-process the
+      packages (removes <literal>RESTRICTED</literal> and
+      <literal>NO_CDROM</literal> packages where appropriate,
+      prunes packages not listed in <filename>INDEX</filename>,
+      removes from <filename>INDEX</filename>
+      references to packages not built, and generates a
+      <filename>CHECKSUM.MD5</filename>
+      summary); and distfiles (moves them from the temporary
+      <filename>distfiles/.pbtmp</filename> directory into
+      <filename>distfiles/</filename> and removes
+      <literal>RESTRICTED</literal> and <literal>NO_CDROM</literal>
+      distfiles).</para>
+
+    <para>It is usually a good idea to run the
+      <command>restricted.sh</command> and/or
+      <command>cdrom.sh</command> scripts by hand after
+      <command>dopackages</command> finishes just to be safe.
+      Run the <command>restricted.sh</command> script before
+      uploading to <hostid>ftp-master</hostid>, then run
+      <command>cdrom.sh</command> before preparing
+      the final package set for a release.</para>
+
+    <para>Packages can be copied to the staging area on
+      <hostid>ftp-master</hostid> with something like the following:</para>
+
+    <screen>&prompt.root; <userinput>cd /var/portbuild/<replaceable>${arch}</replaceable>/<replaceable>${branch}</replaceable></userinput>
+&prompt.root; <userinput>tar cfv - packages/ | ssh portmgr@ftp-master tar xfC - w/ports/<replaceable>${arch}</replaceable>/tmp/<replaceable>${branch}</replaceable></userinput></screen>
+
+    <para>Then log into <hostid>ftp-master</hostid>, verify that
+      the package set was transferred successfully, remove the
+      package set that the new package set is to replace (in
+      <filename>~/w/ports/<replaceable>${arch}</replaceable></filename>),
+      and move the new set into place.</para>
+
+    <note><para>Some of the directories on
+      <hostid>ftp-master</hostid> are, in fact, symlinks.  Be sure
+      you move the new packages directory over the
+      <emphasis>real</emphasis> destination directory, and not
+      one of the symlinks that points to it.</para></note>
+
+    <para>Distfiles can be transferred via
+      <command>rsync</command>:</para>
+
+    <screen>&prompt.root; <userinput>cd /var/portbuild/<replaceable>${arch}</replaceable>/<replaceable>${branch}</replaceable></userinput>
+&prompt.root; <userinput>rsync -r -v -l -p -c -n distfiles/ portmgr@ftp-master:w/ports/distfiles/ | tee log</userinput></screen>
+
+    <para><emphasis>ALWAYS</emphasis> use <literal>-n</literal>
+      first with <command>rsync</command> and check the output
+      to make sure it is sane.  If it looks good, re-run the
+      <command>rsync</command> without the <literal>-n</literal>
+      option.
+    </para>
+  </sect1>
+
+  <sect1 id="expbuilds">
+    <title>Experimental Patches Builds</title>
+
+    <para>Experimental patches builds are run from time to time to
+      new features or bugfixes to the ports infrastruction (i.e.
+      <literal>bsd.port.mk</literal>), or to test large sweeping
+      upgrades.  The current experimental patches branch is
+      <literal>4-exp</literal> on the <literal>i386</literal>
+      architecture.</para>
+
+    <para>In general, an experimental patches build is run the same
+      way as any other build.  However, before running the
+      <literal>dopackages</literal> script, you must apply the required
+      patches to the ports tree.  It is always a good idea to save
+      original copies of all changed files, as well as a list of what
+      you are changing.  You can then look back on this list when doing
+      the final commit.</para>
+
+    <para>In order to have a good control case with which to compare
+      failures, you should first do a package build of the branch on
+      which the experimental patches branch is based for the i386
+      architecture (currently this is <literal>4</literal>).  Then, when
+      preparing for the experimental patches build, checkout a ports
+      tree and a src tree with the same date as was used for the control
+      build.  This will ensure an apples-to-apples comparison
+      later.</para>
+
+    <note><para>One build cluster can do the control build while the other
+      does the experimental patches build.  This can be a great
+      time-saver.</para></note>
+
+    <para>Once the build finishes, compare the control build failures
+      to those of the experimental patches build.  Use the following
+      commands to facilitate this (this assumes the <literal>4</literal>
+      branch is the control branch, and the <literal>4-exp</literal>
+      branch is the experimental patches branch):</para>
+
+    <screen>&prompt.user; <userinput>cd /var/portbuild/i386/4-exp/errors</userinput>
+&prompt.user; <userinput>find . -name \*.log | sort > /tmp/4-exp-errs</userinput>
+&prompt.user; <userinput>cd /var/portbuild/i386/4/errors</userinput>
+&prompt.user; <userinput>find . -name \*.log | sort > /tmp/4-errs</userinput></screen>
+
+    <note><para>If it has been a long time since one of the builds
+      finished, the logs may have been automatically compressed with
+      bzip2.  In that case, you must use <literal>sort | sed
+      s,\.bz2,,g'</literal> instead.</para></note>
+
+    <screen>&prompt.user; <userinput>comm -3 /tmp/4-errs /tmp/4-exp-errs | less</userinput></screen>
+
+    <para>This last command will produce a two-column report.  The
+      first column is ports that failed on the control build but not in
+      the experimental patches build; the second column is vice versa.
+      Reasons that the port might be in the first column
+      include:</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>Port was fixed since the control build was run, or was
+	  upgraded to a newer version that is also broken (thus the
+	  newer version should appear in the second column)
+	</para>
+      </listitem>
+
+      <listitem>
+	<para>Port is fixed by the patches in the experimental patches
+	  build
+	</para>
+      </listitem>
+
+      <listitem>
+	<para>Port did not build under the experimental patches build
+	  due to a dependency failure
+	</para>
+      </listitem>
+    </itemizedlist>
+
+    <para>Reasons for a port appearing in the second column
+      include:</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>Port was broken by the experimental patches [1]</para>
+      </listitem>
+
+      <listitem>
+	<para>Port was upgraded since the control build and has become
+	  broken [2]
+	</para>
+      </listitem>
+
+      <listitem>
+	<para>Port was broken due to a transient error (e.g. FTP site
+	  down, package client error, etc.)
+	</para>
+      </listitem>
+    </itemizedlist>
+
+    <para>Both columns should be investigated and the reason for the
+      errors understood before committing the experimental patches set.
+      To differentiate between [1] and [2] above, you can do a rebuild
+      of the affected packages under the control branch:</para>
+
+    <screen>&prompt.user; <userinput>cd /var/portbuild/i386/4/ports</userinput></screen>
+
+    <note><para>Be sure to cvs update this tree to the same date as
+      the experimental patches tree.</para></note>
+
+    <para>The following command will set up the control branch for
+      the partial build:</para>
+
+    <screen>&prompt.user; <userinput>/var/portbuild/scripts/dopackages.4 -noportscvs -nobuild -nocvs -nofinish</userinput></screen>
+
+    <para>The builds must be performed from the
+      <literal>packages/All</literal> directory.  This directory should
+      initially be empty except for the Makefile symlink.  If this
+      symlink does not exist, it must be created:</para>
+
+    <screen>&prompt.user; <userinput>cd /var/portbuild/i386/4/packages/All</userinput>
+&prompt.user; <userinput>ln -sf ../../Makefile .</userinput>
+&prompt.user; <userinput>make -k -j&lt;#&gt; &lt;list of packages to build&gt;</userinput></screen>
+
+    <note><para>&lt;#&gt; is the concurrency of the build to
+      attempt.  It is usually the sum of the weights listed in
+      <filename>/var/portbuild/i386/mlist</filename> unless you have a
+      reason to run a heavier or lighter build.</para>
+
+    <para>The list of packages to build should be a list of package
+      names (including versions) as they appear in
+      <filename>INDEX</filename>.  The <literal>PKGSUFFIX</literal>
+      (i.e. .tgz or .tbz) is optional.</para></note>
+
+    <para>This will build only those packages listed as well as all
+      of their dependencies.  You can check the progress of this
+      partial build the same way you would a regular build.  Once all
+      the errors have been resolved, you can commit the package set.
+      After committing, it is customary to send a <literal>HEADS
+      UP</literal> email to <ulink
+      url="mailto:ports@FreeBSD.org">ports@FreeBSD.org</ulink> and
+      copy <ulink
+      url="mailto:ports-developers@FreeBSD.org">ports-developers@FreeBSD.org</ulink>
+      informing people of the changes.  A summary of all changes
+      should also be committed  to
+      <filename>/usr/ports/CHANGES</filename>.</para>
+  </sect1>
+</article>

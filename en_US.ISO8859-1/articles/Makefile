@@ -28,6 +28,7 @@ SUBDIR+= mh
 SUBDIR+= multi-os
 SUBDIR+= new-users
 SUBDIR+= pam
+SUBDIR+= portbuild
 SUBDIR+= pr-guidelines
 SUBDIR+= problem-reports
 SUBDIR+= pxe
