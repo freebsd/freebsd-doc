@@ -26,7 +26,7 @@
 #
 # url.cgi - make plain text URLs clickable
 #
-# $FreeBSD: www/en/cgi/url.cgi,v 1.28 2000/12/29 10:49:45 wosch Exp $
+# $FreeBSD: www/en/cgi/url.cgi,v 1.29 2001/03/11 20:45:45 wosch Exp $
 
 use strict;
 
@@ -78,10 +78,24 @@ if ($file =~ m%^ports/[\w-]+/\w[\w-+.]*/pkg-descr% && -f "$cvsroot/$file,v") {
 } 
 
 else {
-    print "<p>The port specified does not exist, or has an invalid name: ",
-	  "$file\n";
+    print "<p>The port specified does not exist, or has an invalid name: <p>",
+	  "<blockquote>$file</blockquote>\n";
+
+    # Server environment variables
+    my $http_referer = $ENV{'HTTP_REFERER'};
+
+    # rfc1738 says that ";"|"/"|"?"|":"|"@"|"&"|"=" may be reserved.
+    $http_referer =~ s/([^a-zA-Z0-9;\/?:&=])/sprintf("%%%02x",ord($1))/eg;
+
+    if ($http_referer) {
+	print qq{<p>You are coming from 
+	<blockquote>
+	<a href="$http_referer">$http_referer</a>.
+	</blockquote>
+	<p>\n};
+    }
     print "<p>Please contact www\@freebsd.org\n";
-    warn "$0: invalid port name: `$file'\n";
+    warn "$0: invalid port name: `$file', $http_referer\n";
 }
 print "\n<HR>\n<pre>\n";
 
