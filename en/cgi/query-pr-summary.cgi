@@ -1,5 +1,5 @@
 #!/usr/bin/perl -T
-# $FreeBSD: www/en/cgi/query-pr-summary.cgi,v 1.38 2003/01/16 02:02:40 keramida Exp $
+# $FreeBSD: www/en/cgi/query-pr-summary.cgi,v 1.39 2003/03/06 23:51:58 wosch Exp $
 
 sub escape($) { $_ = $_[0]; s/&/&amp;/g; s/</&lt;/g; s/>/&gt;/g; $_; }
 
@@ -12,6 +12,7 @@ $ENV{'PATH'}   = '/bin:/usr/bin:/usr/sbin:/sbin:/usr/local/bin';
 $project       = "FreeBSD";
 $mail_prefix   = "freebsd-";
 $mail_unass    = "freebsd-bugs";
+$ports_unass   = "ports-bugs";
 $closed_too    = 0;
 
 require "./cgi-lib.pl";
@@ -432,7 +433,7 @@ sub read_gnats {
 	    $resp = &getline($_);
 	    $resp =~ s/@.*//;
 	    $resp =~ tr/A-Z/a-z/;
-	    $resp = "" if ($resp =~ /$mail_unass/);
+	    $resp = "" if (($resp =~ /$mail_unass/o) or ($resp =~ /$ports_unass/o));
 	    $resp =~ s/^$mail_prefix//;
 
 	} elsif (/>State:/) {
