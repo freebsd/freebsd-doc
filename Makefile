@@ -1,6 +1,7 @@
-# $FreeBSD: www/Makefile,v 1.10 1999/11/03 10:59:24 phantom Exp $
+# $FreeBSD: www/Makefile,v 1.11 1999/12/17 14:16:52 phantom Exp $
 
-LINKS= 	en/ja en/es en/ru en/zh ja/web.mk ru/web.mk
+LINKS=	en/ja en/es en/ru en/zh
+LINKS+=	ja/web.mk es/web.mk ru/web.mk
 LINKS+=	web.mk
 
 .if !defined(WEB_ONLY) || empty(WEB_ONLY)
@@ -33,6 +34,9 @@ en/zh:
 
 ja/web.mk:
 	cd ja; ln -sf ../en/web.mk
+
+es/web.mk:
+	cd es; ln -sf ../es/web.mk
 
 ru/web.mk:
 	cd ru; ln -sf ../en/web.mk
