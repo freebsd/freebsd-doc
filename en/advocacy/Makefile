@@ -1,3 +1,5 @@
+# $FreeBSD$
+#
 # Makefile for the advocacy site
 
 .if exists(../Makefile.conf)
@@ -10,8 +12,5 @@
 DOCS=   index.sgml
 DOCS+=	myths.sgml
 DOCS+=	letter.sgml
-
-
-INDEXLINK= index.html
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
