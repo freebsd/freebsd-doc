@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp 
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.70 2002-05-13 07:40:24 wosch Exp $
+# $Id: man.cgi,v 1.71 2002-05-13 19:41:01 wosch Exp $
 
 #use Data::Dumper;
 #use Carp;
@@ -335,7 +335,9 @@ sub do_man {
     return &copyright_output($u) if ($path =~ /copyright.html$/);
     return &get_the_sources if ($path =~ /source$/);
 
-    return &include_output($path) if ($path =~ m%/usr/include/%);
+    return &include_output($path) 
+	if ($path =~ m%^/usr/include/% && -f $path);
+
     return &indexpage if ($form eq "");
 
     &decode_form($form, *form, 0);
@@ -933,7 +935,7 @@ ETX
 }
 
 sub copyright {
-    $id = '$Id: man.cgi,v 1.70 2002-05-13 07:40:24 wosch Exp $';
+    $id = '$Id: man.cgi,v 1.71 2002-05-13 19:41:01 wosch Exp $';
 
     return qq{\
 <PRE>
