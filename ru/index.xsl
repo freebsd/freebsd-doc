@@ -6,7 +6,7 @@
      $FreeBSD$
      $FreeBSDru: frdp/www/ru/index.xsl,v 1.38 2004/10/22 12:33:49 den Exp $
 
-     Original revision: 1.103
+     Original revision: 1.113
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -21,6 +21,7 @@
   <!-- these params should be externally bound. The values
        here are not used actually -->
   <xsl:param name="advisories.xml" select="'none'"/>
+  <xsl:param name="notices.xml" select="'none'"/>
   <xsl:param name="mirrors.xml" select="'none'"/>
   <xsl:param name="news.press.xml" select="'none'"/>
   <xsl:param name="news.project.xml" select="'none'"/>
@@ -45,6 +46,11 @@
         <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon"/>
 
 	<link rel="icon" href="/favicon.ico" type="image/x-icon"/>
+
+	<link rel="alternate" type="application/rss+xml"
+	  title="FreeBSD Project News" href="{$base}/ru/news/news.rdf" />
+	<link rel="alternate" type="application/rss+xml"
+	  title="FreeBSD Security Advisories" href="{$base}/security/advisories.rdf" />
 
 	<!-- Formatted to be easy to spam harvest, please do not reformat. -->
 	<xsl:comment>
@@ -201,14 +207,14 @@
 		<i>свободно</i></font></h2>
 	    
 	      <a href="copyright/daemon.html"><img
-                src="{$base}/gifs/dae_up3.gif" alt="" height="81" width="72" 
-		align="right" border="0"/></a>
+                src="{$base}/gifs/dae_up3.gif" alt="BSD даемон" height="81"
+		width="72" align="right" border="0"/></a>
 
 	      <p>Хотя вы можете подумать, что операционная система с такими
 		возможностями продаётся по высокой цене, FreeBSD
 		распространяется <a href="copyright/index.html">бесплатно</a>
                 и поставляется со всеми исходными текстами. Если вам захочется
-		её попробовать, обратитесь к <a
+		купить или загрузить её копию, обратитесь к <a
 		href="{$base}/doc/ru_RU.KOI8-R/books/handbook/mirrors.html">
 		следующей информации</a>.</p>
 
@@ -256,12 +262,11 @@
 			   bgcolor="#ffcc66" width="100%">
 		      <tr>
 			<td valign="top"><p>
-			      <a href="{$u.rel.early}">
+			      <a href="{$u.rel.announce}">
 			      <font size="+1" color="#990000"><b>Новый технологический релиз:
 			    <xsl:value-of select="$rel.current"/></b></font></a><br/>
 
-			    <small>&#183; <a href="{$u.rel.announce}">Анонс</a><br/>
-			      &#183; <a href="{$base}/doc/ru_RU.KOI8-R/books/handbook/install.html">Руководство по установке</a><br/>
+			    <small>&#183; <a href="{$base}/doc/ru_RU.KOI8-R/books/handbook/install.html">Руководство по установке</a><br/>
 			      &#183; <a href="{$u.rel.notes}">Информация о релизе</a><br/>
 			      &#183; <a href="{$u.rel.hardware}">Информация о оборудовании</a><br/>
 			      &#183; <a href="{$u.rel.installation}">Заметки по установке</a><br/>
@@ -273,8 +278,7 @@
 			      <font size="+1" color="#990000"><b>Продуктивный релиз:
 			    <xsl:value-of select="$rel2.current"/></b></font></a><br/>
 
-                            <small>&#183; <a href="{$u.rel2.announce}">Анонс</a><br/>
-                              &#183; <a href="{$base}/doc/ru_RU.KOI8-R/books/handbook/install.html">Руководство по установке</a><br/>
+                            <small>&#183; <a href="{$base}/doc/ru_RU.KOI8-R/books/handbook/install.html">Руководство по установке</a><br/>
                               &#183; <a href="{$u.rel2.notes}">Информация о релизе</a><br/>
                               &#183; <a href="{$u.rel2.hardware}">Информация о оборудовании</a><br/>
 			      &#183; <a href="{$u.rel2.installation}">Заметки по установке</a><br/>
@@ -323,15 +327,36 @@
                              Последнее обновление:
 			      <xsl:call-template name="html-index-advisories-items-lastmodified">
 				<xsl:with-param name="advisories.xml" select="$advisories.xml" />
+				<xsl:with-param name="type" select="'advisory'" />
 			      </xsl:call-template>
 
 			      <br/>
 
 			      <xsl:call-template name="html-index-advisories-items">
 				<xsl:with-param name="advisories.xml" select="$advisories.xml" />
+				<xsl:with-param name="type" select="'advisory'" />
 			      </xsl:call-template>
 
                              <a href="security/">Дополнительно...</a>
+			    </font>
+			  </p>
+
+			  <p><font size="+1" color="#990000"><b>Сообщения о проблемах</b></font>
+			    <xsl:text> </xsl:text>
+			    <br/>
+			    <font size="-1">
+			      Последнее обновление: 
+			      <xsl:call-template name="html-index-advisories-items-lastmodified">
+				<xsl:with-param name="advisories.xml" select="$notices.xml" />
+				<xsl:with-param name="type" select="'notice'" />
+			      </xsl:call-template>
+
+			      <br/>
+
+			      <xsl:call-template name="html-index-advisories-items">
+				<xsl:with-param name="advisories.xml" select="$notices.xml" />
+				<xsl:with-param name="type" select="'notice'" />
+			      </xsl:call-template>
 			    </font>
 			  </p>
 			</td>
