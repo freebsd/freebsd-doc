@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/fr/index.xsl,v 1.7 2003/12/29 18:07:00 stephane Exp $ -->
+<!-- $FreeBSD: www/fr/index.xsl,v 1.8 2004/01/08 00:26:43 stephane Exp $ -->
 
 <!-- 
    The FreeBSD French Documentation Project
@@ -13,7 +13,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/fr/index.xsl,v 1.7 2003/12/29 18:07:00 stephane Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/fr/index.xsl,v 1.8 2004/01/08 00:26:43 stephane Exp $'"/>
   <xsl:variable name="title" select="'Le Projet FreeBSD'"/>
 
   <!-- these params should be externally bound. The values
@@ -157,14 +157,14 @@
 			      &#183; <a href="http://www.FreeBSD.org/cgi/query-pr.cgi">Voir un rapport</a><br/>
 			      &#183; <a href="http://www.FreeBSD.org/cgi/query-pr-summary.cgi">Consulter les rapports ouverts</a><br/>
 			      &#183; <a href="send-pr.html">Envoyer un rapport de bug</a><br/>
-			      &#183; <a href="{$enbase}doc/en_US.ISO8859-1/articles/problem-reports/article.html">Comment &#233;crire un rapport</a><br/>
+			      &#183; <a href="{$enbase}doc/{$url.doc.langcode}/articles/problem-reports/article.html">Comment &#233;crire un rapport</a><br/>
 			    </small></p>
 
 			  <p>
 			    <a href="projects/index.html">
 			      <font size="+1" color="#990000"><b>D&#233;veloppement</b></font>
 			    </a><small><br/>
-			      &#183; <a href="{$enbase}/doc/en_US.ISO8859-1/books/developers-handbook">Manuel du d&#233;veloppeur</a><br/>
+			      &#183; <a href="{$enbase}/doc/{$url.doc.langcode}/books/developers-handbook">Manuel du d&#233;veloppeur</a><br/>
 			      &#183; <a href="{$enbase}/doc/en_US.ISO8859-1/books/porters-handbook">Manuel du porteur d'application</a><br/>
 			      &#183; <a href="{$base}/support.html#cvs">D&#233;p&#244;t CVS</a><br/>
 			      &#183; <a href="releng/index.html">Production des versions</a><br/>
