@@ -475,12 +475,12 @@ if (-d $fullname) {
 	# Is there an indexed version of modules?
 	if (open(MODULES, "$cvsroot/CVSROOT/modules")) {
 		while (<MODULES>) {
-			if (/^${where}\s+(\S+)/o && -d "${cvsroot}/$1") {
+			if (/^${where}\s+(\S+)/o && -d "${cvsroot}/$1" && ($1 ne $where)) {
 				&redirect($scriptname . '/' . $1 . $xtra);
 			}
 		}
 	}
-	&fatal("404 Not Found","$where: no such file or directory");
+	&fatal("404 Not Found","$where$xtra: no such file or directory");
 }
 
 sub htmlify {
