@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
 <!-- $FreeBSD$
-     $FreeBSDde: de-www/news/press.xsl,v 1.1 2003/09/27 12:05:17 mheinen Exp $
-     basiert auf: 1.3
+     $FreeBSDde: de-www/news/press.xsl,v 1.2 2003/10/04 15:53:04 mheinen Exp $
+     basiert auf: 1.4
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
