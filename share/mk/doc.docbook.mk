@@ -136,6 +136,8 @@ DOCBOOKCATALOG=	${PREFIX}/share/sgml/docbook/catalog
 DOCBOOKCATALOG= ${PREFIX}/share/xml/docbook/catalog
 .endif
 
+CATALOG_PORTS_SGML=	${PREFIX}/share/sgml/catalog.ports
+
 DSSSLCATALOG=	${PREFIX}/share/sgml/docbook/dsssl/modular/catalog
 COLLATEINDEX=	${PREFIX}/share/sgml/docbook/dsssl/modular/bin/collateindex.pl
 
@@ -147,7 +149,7 @@ INDEXREPORTSCRIPT= ${DOC_PREFIX}/share/misc/indexreport.pl
 
 IMAGES_LIB?=
 
-.for c in ${LANGUAGECATALOG} ${FREEBSDCATALOG} ${DSSSLCATALOG} ${ISO8879CATALOG} ${DOCBOOKCATALOG} ${JADECATALOG} ${EXTRA_CATALOGS}
+.for c in ${LANGUAGECATALOG} ${FREEBSDCATALOG} ${DSSSLCATALOG} ${ISO8879CATALOG} ${DOCBOOKCATALOG} ${JADECATALOG} ${EXTRA_CATALOGS} ${CATALOG_PORTS_SGML}
 .if exists(${c})
 CATALOGS+=	-c ${c}
 .endif
