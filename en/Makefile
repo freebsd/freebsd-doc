@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.13 1997-03-18 00:05:14 mbarkah Exp $
+# $Id: Makefile,v 1.14 1997-04-23 19:52:40 jfieber Exp $
 
 # These are turned into validated, normalized HTML files.
 
@@ -19,14 +19,14 @@ LOCAL=	stats.html stats-img.html
 
 stats.html: /home/www/server/logs/access_log
 	renice +10 $$$$; \
-	(cd /usr/local/www/server/logs;zcat access_log.*.gz;cat access_log) | \
+	(cd /home/www/server/logs;zcat access_log.*.gz;cat access_log) | \
 	egrep -iv '\.(gif|jpg|jpeg|au) ' | \
-	/usr/local/www/bin/analog +i0 +R500 -o > ${.TARGET}
+	/home/www/bin/analog +i0 +R500 -o > ${.TARGET}
 
 stats-img.html: /home/www/server/logs/access_log
 	renice +10 $$$$; \
-	(cd /usr/local/www/server/logs;zcat access_log.*.gz;cat access_log) | \
-	/usr/local/www/bin/analog +i0 +R500 -o > ${.TARGET}
+	(cd /home/www/server/logs;zcat access_log.*.gz;cat access_log) | \
+	/home/www/bin/analog +i0 +R500 -o > ${.TARGET}
 
 # Subdirectories
 
