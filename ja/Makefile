@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.24 1998-08-03 17:37:27 wosch Exp $
+# $Id: Makefile,v 1.25 1998-08-04 13:57:19 wosch Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.36
 
@@ -34,8 +34,18 @@ DATA=	index.html
 
 #SUBDIR=	security cgi commercial docproj gifs ports releases tutorials 
 #SUBDIR+=	news alpha projects
-SUBDIR=		security docproj ports releases
-SUBDIR+=	news alpha copyright internal search projects
+SUBDIR=		security
+SUBDIR+=	docproj
+SUBDIR+=        ports
+SUBDIR+=        releases
+SUBDIR+=	news
+SUBDIR+=        alpha
+SUBDIR+=        copyright
+SUBDIR+=        internal
+SUBDIR+=        search
+SUBDIR+=        projects
+SUBDIR+=	commercial
+SUBDIR+=	gallery
 
 # Subdirectories that have linuxdoc docs and makefiles that use
 # <bsd.sgml.mk>.
