@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/Makefile,v 1.108 2004/04/05 14:21:26 phantom Exp $
+# $FreeBSD: www/en/Makefile,v 1.109 2004/04/06 11:41:17 phantom Exp $
 
 .if exists(Makefile.conf)
 .include "Makefile.conf"
@@ -10,6 +10,7 @@
 # These are turned into validated, normalized HTML files.
 
 DOCS=  applications.sgml
+DOCS+= art.sgml
 DOCS+= auditors.sgml
 DOCS+= availability.sgml
 DOCS+= docs.sgml 
