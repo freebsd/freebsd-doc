@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/ports.cgi,v 1.72 2004/04/24 22:32:09 simon Exp $
+# $FreeBSD: www/en/cgi/ports.cgi,v 1.73 2004/05/22 15:09:12 simon Exp $
 #
 # ports.cgi - search engine for FreeBSD ports
 #             	o search for a port by name or description
@@ -47,7 +47,7 @@ sub init_variables {
     $remotePrefixFtp = 'ports';
 	# 'ftp://ftp.FreeBSD.org/pub/FreeBSD/branches/-current/ports';
 
-    # URL of ports tree for download 
+    # URL of ports tree for download
     $remotePrefixFtpDownload =
 	'http://cvsweb.FreeBSD.org/ports';
     $remoteSuffixFtpDownload = '%s.tar.gz?tarball=1';
@@ -60,7 +60,7 @@ sub init_variables {
     local($psparc64) = 'ftp://ftp.FreeBSD.org/pub/FreeBSD/ports/sparc64';
 
     $remotePrefixFtpPackagesDefault = '4.9-STABLE/i386';
-    %remotePrefixFtpPackages = 
+    %remotePrefixFtpPackages =
 	(
 	 '5.2-CURRENT/i386', "$p/packages-current/All",
 	 '4.9-STABLE/i386', " $p/packages-4-stable/All",
@@ -266,7 +266,7 @@ sub readindex {
 	# diff by date
 	push(@co, ('-D', $date));
     }
-    
+
     push(@co, $ports_database);
 
 
@@ -335,7 +335,7 @@ sub readcoll {
 # basic function for HTML output
 sub out {
     local($line, $old) = @_;
-    local($version, $path, $local, $comment, $descfile, $email, 
+    local($version, $path, $local, $comment, $descfile, $email,
 	  $sections, $bdepends, $rdepends, @rest) =  split(/\|/, $line);
 
     if ($path =~ m%^$localPrefix/([^/]+)%o) {
@@ -376,7 +376,7 @@ sub out {
 	$l =~ s%/([^/]+)$%/Attic/$1%;
 
 	print  qq{<I>Was Maintained by:</I> <A HREF="mailto:$email} .
-           ($mailtoAdvanced ? 
+           ($mailtoAdvanced ?
               qq{?cc=$mailtoList&subject=FreeBSD%20Port:%20} .
               &encode_url($version) : '') .  qq{">$email</A><BR>} .
 	   qq{<A HREF="$l">Removed why</A></DD>};
@@ -387,7 +387,7 @@ sub out {
 	#$l .= '/Makefile';
 
 	print  qq{<I>Maintained by:</I> <A HREF="mailto:$email} .
-           ($mailtoAdvanced ? 
+           ($mailtoAdvanced ?
               qq{?cc=$mailtoList&subject=FreeBSD%20Port:%20} .
               &encode_url($version) : '') . qq{">$email</A><BR>};
 
@@ -400,9 +400,9 @@ sub out {
 	    }
 	    print "<BR>\n";
 	}
-	
+
 	if ($bdepends || $rdepends) {
-	    local($flag) = 0; 
+	    local($flag) = 0;
 	    local($last) = '';
 	    print qq{<I>Requires:</I> };
 	    foreach (sort split(/\s+/, "$bdepends $rdepends")) {
@@ -410,7 +410,7 @@ sub out {
 		next if $_ eq $last;
 		$last = $_;
 
-		print ", " if $flag; 
+		print ", " if $flag;
 		$flag++;
 		print qq{<A HREF="$script_name?query=^$_&stype=name">$_</A>};
 	    }
@@ -491,7 +491,7 @@ sub search_ports {
 	    &out($today{$key}, 0);
 	} elsif ($stype eq 'maintainer' && $a[5] =~ /$query/io) {
 	    &out($today{$key}, 0);
-	} elsif ($stype eq 'requires' && 
+	} elsif ($stype eq 'requires' &&
 		 ($a[7] =~ /$query/io || $a[8] =~ /$query/io)) {
 	    &out($today{$key}, 0);
 	}
@@ -518,7 +518,7 @@ FreeBSD Ports [short description <a href="$portsDesc">followed</a> ...]
     print qq{
 "Package Name" search for the name of port or distribution.
 "Description" search case-insensitive in a short comment about the port.
-"All" search case-insensitive for the package name and in the 
+"All" search case-insensitive for the package name and in the
 description about the port.
 <p>
 
@@ -527,7 +527,7 @@ Search for:
 <INPUT NAME="query" VALUE="$query">
 <SELECT NAME="stype">
 };
-    
+
     local(%d);
     %d = ('name', 'Package Name',
 	  'all', 'All',
@@ -545,8 +545,8 @@ Search for:
 
     print qq{</SELECT><SELECT NAME="release">\n};
     foreach (sort keys %remotePrefixFtpPackages) {
-	print qq{<OPTION} . 
-	    (($_ eq $release) ? ' SELECTED ' : ' ') . 
+	print qq{<OPTION} .
+	    (($_ eq $release) ? ' SELECTED ' : ' ') .
 		qq{VALUE=$_>$_</OPTION>\n};
     }
     print qq{</SELECT>
@@ -573,7 +573,7 @@ or moved to an other ports section.
     print qq{</SELECT>\n\n<SELECT NAME="time">\n};
     foreach ("1 week ago", "2 week ago", "3 week ago", "4 week ago",
 	     "6 week ago", "8 week ago", "3 month ago", "4 month ago",
-	     "6 month ago", "9 month ago", "12 month ago", "24 month ago") 
+	     "6 month ago", "9 month ago", "12 month ago", "24 month ago")
     {
 	print "<OPTION" .
 	    (($_ eq $time) ? ' SELECTED ' : ' ') .
@@ -606,11 +606,11 @@ sub footer {
 <img ALIGN="RIGHT" src="/gifs/powerlogo.gif">
 &copy; 1996-2002 by Wolfram Schneider. All rights reserved.<br>
 };
-    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.72 2004/04/24 22:32:09 simon Exp $} . "<br>\n";
+    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.73 2004/05/22 15:09:12 simon Exp $} . "<br>\n";
     print qq{Please direct questions about this service to
 <I><A HREF="$mailtoURL">$mailto</A></I><br>\n};
     print qq{General questions about FreeBSD ports should be sent to } .
-	qq{<a href="mailto:$mailtoList">} . 
+	qq{<a href="mailto:$mailtoList">} .
 	    qq{<i>$mailtoList</i></a><br>\n};
     print &last_update_message;
     print "<hr noshade>\n<P>\n";
@@ -644,7 +644,7 @@ sub check_input {
     if ($time !~ /^[1-9][0-9]*\s+(month|week)\s+ago$/ &&
 	# support diff by revision too
 	$time !~ /^rev[1-9]+\.[0-9]+$/
-	) 
+	)
     {
 	&warn("unknown date: `$time'\n");
 	&exit(0);
@@ -669,13 +669,13 @@ sub faq {
 All links point to the FreeBSD-stable
 version and <b>not</b> to the latest releases.<p>
 
-The script ports.cgi use the file 
+The script ports.cgi use the file
 <a href="$remotePrefixCvs/INDEX">
 FreeBSD-CVS/ports/INDEX,v</a>
 as database for all operation. INDEX,v will be updated by hand
 by the portsmeister.<p>
 
-You may also search the 
+You may also search the
 <a href="http://www.FreeBSD.org/cgi/man.cgi?manpath=FreeBSD+Ports">ports manual pages</a>.<p>
 
 Get the <a href ="source">Source</a> of this script.<p>
@@ -716,7 +716,7 @@ if ($path_info eq "/source") {
 
 # Full text search in ports/<category>/port>/pkg-descr
 if ($stype eq 'pkgdescr') {
-    local($url) = 
+    local($url) =
       'http://www.FreeBSD.org/cgi/search.cgi?source=pkgdescr&max=25';
     $query =~ s/\s+/+/g;
     print "Location:  $url&words=$query\n";
@@ -728,7 +728,7 @@ if ($stype eq 'pkgdescr') {
 if ($path_info eq "/faq.html") {
     &faq;
     &footer; &footer2; &exit(0);
-} 
+}
 
 # allow `/ports.cgi?netscape' where 'netscape' is the query port to search
 # this make links to this script shorter
@@ -767,7 +767,7 @@ else {
 
 if (!$counter) {
     print "Sorry, nothing found.\n";
-    print qq{You may look for other } . 
+    print qq{You may look for other } .
 	qq{<a href="/search/search.html">FreeBSD Search Services</a>.\n};
 } else {
     print "</dl>\n";
