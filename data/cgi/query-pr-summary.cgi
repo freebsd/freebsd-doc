@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: query-pr-summary.cgi,v 1.12 1997-02-03 18:20:27 peter Exp $
+# $Id: query-pr-summary.cgi,v 1.13 1997-10-27 05:10:43 fenner Exp $
 
 $html_mode     = 1 if $ENV{'DOCUMENT_ROOT'};
 $self_ref      = $ENV{'SCRIPT_NAME'};
@@ -17,6 +17,18 @@ $mail_unass    = "freebsd-bugs";
 	"feedback",	"f",
 	"suspended",	"s",
 	"closed",	"c"
+);
+
+%severitymap = (
+	"critical",	"c",
+	"serious",	"s",
+	"non-critical",	"n"
+);
+
+%prioritymap = (
+	"high",		"h",
+	"medium",	"m",
+	"low",		"l"
 );
 
 require "cgi-lib.pl";
