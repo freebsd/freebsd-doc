@@ -4,7 +4,7 @@
 #
 #    Compilation du Manuel de Reference de FreeBSD
 #
-#    $FreeBSD: doc/fr_FR.ISO8859-1/books/handbook/Makefile,v 1.2 2001/06/11 01:19:05 ache Exp $
+#    $FreeBSD: doc/fr_FR.ISO8859-1/books/handbook/Makefile,v 1.3 2001/06/21 03:38:28 chris Exp $
 #    Original revision: 1.25
 #
 
@@ -59,7 +59,6 @@ SRCS+= x11/chapter.sgml
 SRCS+= ports/chapter.sgml
 
 # Entities
-SRCS+= ../../../en_US.ISO8859-1/books/handbook/authors.ent 
 SRCS+= chapters.ent 
 
 DOC_PREFIX?= ${.CURDIR}/../../..
