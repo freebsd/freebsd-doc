@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/fr/includes.xsl,v 1.4 2003/07/12 22:02:27 stephane Exp $ -->
+<!-- $FreeBSD: www/fr/includes.xsl,v 1.5 2003/12/29 16:41:05 stephane Exp $ -->
 
 <!-- 
    The FreeBSD French Documentation Project
@@ -16,6 +16,31 @@
   <xsl:variable name="url.doc.langcode" select="'fr_FR.ISO8859-1'" />
 
   <!-- Language-specific definitions should be put below this line -->
+  
+  <!-- Les "notes de version" ne sont pas forcement traduites => utilisation des versions anglaises -->
+  <!-- voir le fichier share/sgml/includes.release.xsl -->
+  <!-- on remplace $base par $enbase -->
+  <xsl:variable name="u.rel.notes">
+    <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel.current"/>R/relnotes.html</xsl:variable>
+  <xsl:variable name="u.rel.announce">
+    <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel.current"/>R/announce.html</xsl:variable>
+  <xsl:variable name="u.rel.errata">
+    <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel.current"/>R/errata.html</xsl:variable>
+  <xsl:variable name="u.rel.hardware">
+    <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel.current"/>R/hardware.html</xsl:variable>
+  <xsl:variable name="u.rel.early">
+    <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel.current"/>R/early-adopter.html</xsl:variable>
+
+  <xsl:variable name="u.rel2.notes">
+    <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel2.current"/>R/relnotes.html</xsl:variable>
+  <xsl:variable name="u.rel2.announce">
+    <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel2.current"/>R/announce.html</xsl:variable>
+  <xsl:variable name="u.rel2.errata">
+    <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel2.current"/>R/errata.html</xsl:variable>
+  <xsl:variable name="u.rel2.hardware">
+    <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel2.current"/>R/hardware.html</xsl:variable>
+
+  <!-- -->
 
   <xsl:variable name="i.daemon">
     <img src="{$enbase}/gifs/daemon.gif" alt="Demon" align="left" width="80" height="76"/>
