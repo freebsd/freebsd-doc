@@ -1,0 +1,20 @@
+#
+# Build the Handbook with just the content from this chapter.
+#
+# Original Revision: 1.3
+# $FreeBSD$
+#
+
+CHAPTERS= 	pgpkeys/chapter.sgml
+
+PGPKEYS!=	perl -ne 'm/\"([\w-]+.key)\"/ && print "$$1\n"' \
+		    ${DOC_PREFIX}/share/pgpkeys/pgpkeys.ent
+SRCS+=		${PGPKEYS}
+
+VPATH=		..
+
+MASTERDOC=	${.CURDIR}/../${DOC}.${DOCBOOKSUFFIX}
+
+DOC_PREFIX?= 	${.CURDIR}/../../../..
+
+.include "../Makefile"
