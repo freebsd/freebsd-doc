@@ -104,6 +104,11 @@ IMAGES_LIB+= callouts/2.png
 IMAGES_LIB+= callouts/3.png
 IMAGES_LIB+= callouts/4.png
 IMAGES_LIB+= callouts/5.png
+IMAGES_LIB+= callouts/6.png
+IMAGES_LIB+= callouts/7.png
+IMAGES_LIB+= callouts/8.png
+IMAGES_LIB+= callouts/9.png
+IMAGES_LIB+= callouts/10.png
 
 # 
 # SRCS lists the individual SGML files that make up the document. Changes
