@@ -1,5 +1,5 @@
 # 
-# $FreeBSD: doc/en_US.ISO8859-1/books/handbook/Makefile,v 1.49 2001/09/12 23:52:14 chern Exp $
+# $FreeBSD$
 #
 # Build the FreeBSD Handbook.
 #
@@ -96,6 +96,13 @@ IMAGES+= install/mainexit.scr
 IMAGES+= install/disk-layout.eps
 IMAGES+= install/edit-inetd-conf.scr
 
+# Images from the cross-document image library
+IMAGES_LIB=  callouts/1.png
+IMAGES_LIB+= callouts/2.png
+IMAGES_LIB+= callouts/3.png
+IMAGES_LIB+= callouts/4.png
+IMAGES_LIB+= callouts/5.png
+
 # 
 # SRCS lists the individual SGML files that make up the document. Changes
 # to any of these files will force a rebuild
@@ -143,11 +150,13 @@ SGMLFLAGS+= ${CHAPTERS:S/\/chapter.sgml//:S/^/-i chap./}
 # limits in pdftex.  Until we split the Handbook up, build the PDF 
 # version using ps2pdf instead of pdftex.
 
+PS2PDF?=	${PREFIX}/bin/ps2pdf
+
 book.tex-pdf:
-	touch book.tex-pdf
+	${TOUCH} book.tex-pdf
 
 book.pdf: book.ps
-	ps2pdf book.ps book.pdf
+	${PS2PDF} book.ps book.pdf
 
 pgpkeyring: pgpkeys/chapter.sgml
 	@${JADE} -V nochunks ${JADEOPTS} -d ${DSLPGP} -t sgml ${MASTERDOC}
