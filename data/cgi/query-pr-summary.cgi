@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: query-pr-summary.cgi,v 1.8 1996-12-17 04:07:33 peter Exp $
+# $Id: query-pr-summary.cgi,v 1.9 1997-02-02 17:50:04 fenner Exp $
 
 $self_ref = $ENV{'SCRIPT_NAME'};
 ($query_pr_ref = $ENV{'SCRIPT_NAME'}) =~ s/-summary//;
@@ -135,7 +135,7 @@ print '<A HREF="', $self_ref1, 'category=summary">Category</A>, or ';
 print '<A HREF="', $self_ref1, 'responsible=summary">Responsible Party</A>.';
 $self_ref2 = $self_ref . '?';
 foreach ("category", "originator", "priority", "class", "responsible",
-	"severity", "state", "submitter", "text", "closedtoo") {
+	"severity", "state", "submitter", "text", "multitext", "closedtoo") {
 	if ($input{$_}) {
 		$self_ref2 .= '&' if ($self_ref2 !~/\?$/);
 		$self_ref2 .= $_ . '=' . $input{$_};
@@ -175,7 +175,7 @@ if (!$input{"closedtoo"}) {
 
 # Only read the appropriate PR's.
 foreach ("category", "originator", "priority", "class", "responsible",
-	"severity", "state", "submitter", "text") {
+	"severity", "state", "submitter", "text", "multitext") {
 	if ($input{$_} && $input{$_} ne "summary") {
 		$query_args .= " --${_}=$input{$_}";
 	}
@@ -416,9 +416,11 @@ together.
 <P>
 <FORM METHOD=GET ACTION="`, $self_ref, qq`">
 
-<BR><B>Category</B>:
-<SELECT NAME="category">
-<OPTION VALUE="">Any</OPTION>
+<TABLE>
+<TR>
+<TD><B>Category</B>:</TD>
+<TD><SELECT NAME="category">
+<OPTION SELECTED VALUE="">Any</OPTION>
 <OPTION>bin</OPTION>
 <OPTION>conf</OPTION>
 <OPTION>docs</OPTION>
@@ -427,55 +429,63 @@ together.
 <OPTION>kern</OPTION>
 <OPTION>misc</OPTION>
 <OPTION>ports</OPTION>
-</SELECT>
-<BR><B>Originator</B>:
-<INPUT TYPE=TEXT NAME="originator">
-<BR><B>Priority</B>:
-<SELECT NAME="priority">
-<OPTION VALUE="">Any</OPTION>
+</SELECT></TD>
+<TD><B>Severity</B>:</TD>
+<TD><SELECT NAME="severity">
+<OPTION SELECTED VALUE="">Any</OPTION>
+<OPTION>non-critical</OPTION>
+<OPTION>serious</OPTION>
+<OPTION>critical</OPTION>
+</SELECT></TD>
+</TR><TR>
+<TD><B>Priority</B>:</TD>
+<TD><SELECT NAME="priority">
+<OPTION SELECTED VALUE="">Any</OPTION>
 <OPTION>low</OPTION>
 <OPTION>medium</OPTION>
 <OPTION>high</OPTION>
-</SELECT>
-<BR><B>Class</B>:
-<SELECT NAME="class">
-<OPTION VALUE="">Any</OPTION>
+</SELECT></TD>
+<TD><B>Class</B>:</TD>
+<TD><SELECT NAME="class">
+<OPTION SELECTED VALUE="">Any</OPTION>
 <OPTION>sw-bug</OPTION>
 <OPTION>doc-bug</OPTION>
 <OPTION>change-request</OPTION>
 <OPTION>support</OPTION>
-</SELECT>
-<BR><B>Responsible</B>:
-<INPUT TYPE=TEXT NAME="responsible">
-<BR><B>Severity</B>:
-<SELECT NAME="severity">
-<OPTION VALUE="">Any</OPTION>
-<OPTION>non-critical</OPTION>
-<OPTION>serious</OPTION>
-<OPTION>critical</OPTION>
-</SELECT>
-<BR><B>State</B>:
-<SELECT NAME="state">
-<OPTION VALUE="">Any</OPTION>
+</SELECT></TD>
+</TR><TR>
+<TD><B>State</B>:</TD>
+<TD><SELECT NAME="state">
+<OPTION SELECTED VALUE="">Any</OPTION>
 <OPTION VALUE="open">Open</OPTION>
 <OPTION VALUE="analyzed">Analyzed</OPTION>
 <OPTION VALUE="feedback">Feedback</OPTION>
 <OPTION VALUE="suspended">Suspended</OPTION>
 <OPTION VALUE="closed">Closed</OPTION>
-</SELECT>
-<!-- We don't use submitter Submitter: -->
-<BR><B>Text</B>:
-<INPUT TYPE=TEXT NAME="text">
-<BR><B>Closed reports too</B>:
-<INPUT NAME="closedtoo" TYPE=CHECKBOX>
-<BR><B>Sort by</B>:
-<SELECT NAME="sort">
-<OPTION VALUE="none">No Sort</OPTION>
+</SELECT></TD>
+<TD><B>Sort by</B>:</TD>
+<TD><SELECT NAME="sort">
+<OPTION SELECTED VALUE="none">No Sort</OPTION>
 <OPTION VALUE="lastmod">Last-Modiified</OPTION>
 <OPTION VALUE="category">Category</OPTION>
 <OPTION VALUE="responsible">Responsible Party</OPTION>
-</SELECT>
-<BR>
+</SELECT></TD>
+</TR><TR>
+<!-- We don't use submitter Submitter: -->
+<TD><B>Text in single-line fields</B>:</TD>
+<TD><INPUT TYPE=TEXT NAME="text"></TD>
+<TD><B>Responsible</B>:</TD>
+<TD><INPUT TYPE=TEXT NAME="responsible"></TD>
+</TR><TR>
+<TD><B>Text in multi-line fields</B>:</TD>
+<TD><INPUT TYPE=TEXT NAME="multitext"></TD>
+<TD><B>Originator</B>:</TD>
+<TD><INPUT TYPE=TEXT NAME="originator"></TD>
+</TR><TR>
+<TD><B>Closed reports too</B>:</TD>
+<TD><INPUT NAME="closedtoo" TYPE=CHECKBOX></TD>
+</TR>
+</TABLE>
 <INPUT TYPE="SUBMIT" VALUE=" Query PR's ">
 <INPUT TYPE="RESET" VALUE=" Reset Form ">
 </FORM>
