@@ -12,8 +12,9 @@ INSTALL_COMPRESSED?= gz
 INSTALL_ONLY_COMPRESSED?=
 
 SRCS=		article.sgml
-SRCS+=		branches.ascii
-IMAGES_EN=	branches.pic
+IMAGES_EN=	branches-head.pic
+IMAGES_EN+=	branches-releng3.pic
+IMAGES_EN+=	branches-releng4.pic
 
 CSS_SHEET_ADDITIONS= extra.css
 
