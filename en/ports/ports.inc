@@ -1,8 +1,8 @@
-<!-- $FreeBSD: www/en/ports/ports.inc,v 1.60 2001/10/24 17:35:41 phantom Exp $ -->
+<!-- $FreeBSD: www/en/ports/ports.inc,v 1.61 2002/02/28 22:50:58 tom Exp $ -->
 <p>The FreeBSD Ports and Packages Collection offers a simple way for
 users and administrators to install applications.  The ports
 collection has been <a
-href="http://www.FreeBSD.org/%7Easami/papers/growth.gif">growing at a
+href="growth/status.png">growing at a
 tremendous rate</a>.
 </p>
 
