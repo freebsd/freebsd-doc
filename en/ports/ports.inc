@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/ports/ports.inc,v 1.53 2001/01/20 23:03:36 will Exp $ -->
+<!-- $FreeBSD: www/en/ports/ports.inc,v 1.54 2001/02/15 15:57:03 will Exp $ -->
 <p>The FreeBSD Ports and Packages Collection offers a simple way for
 users and administrators to install applications.  The ports
 collection has been <a
@@ -78,39 +78,32 @@ Consequently, you may need to update a few files on your FreeBSD system
 to make use of ports developed after your version of FreeBSD was released.
 Please install one of the following depending on the release you are
 running.  If your system is newer than any of the packages listed below,
-you do not need an upgrade package.  If your system is older than 4.0-RELEASE,
-or is running any branch before 4.0, your only reasonable choice for using
+you do not need an upgrade package.  If your system is older than 4.1-RELEASE,
+or is running any branch before 4.1, your only reasonable choice for using
 ports-current is to upgrade to some point along the 4.x branch.
 </p>
 
 <dl>
 <dt><a
-href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-4-stable/Latest/40upgrade.tgz">4.0
-to 4-STABLE upgrade kit</a>
-<dd>For users of 4.0-RELEASE or 4.x-STABLE before June 4, 2000
-<dt><a
 href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-4-stable/Latest/41upgrade.tgz">4.1
 to 4-STABLE upgrade kit</a>
-<dd>For users of 4.1-RELEASE or 4.x-STABLE before January 8, 2001
+<dd>For users of 4.1-RELEASE or 4.1-STABLE before October 31, 2000 and after July 27, 2000
+<dt><a
+href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-4-stable/Latest/42upgrade.tgz">4.2
+to 4-STABLE upgrade kit</a>
+<dd>For users of 4.2-RELEASE or 4.x-STABLE or 4.2-BETA or 4.2-RC before January 8, 2001 and after October 31, 2000
 </dl>
 
 <p>
 These are FreeBSD packages; please use <strong>pkg_add</strong> to install
-them.  That should enable you to use all the ports listed here.  It is important
-to note that 4.0-RELEASE counts as "4.x-STABLE before January 8, 2001", i.e.
-if you are running 4.0-RELEASE or 4.x-STABLE before June 4, 2000, you will need
-both the "4.0 to 4-STABLE upgrade kit" and the "4.1 to 4-STABLE upgrade kit".  Note
+them.  That should enable you to use all the ports listed here. Note
 that it will only change just enough files to enable ports/packages to be used;
 for a full upgrade to -STABLE, please refer to the <a
 href="../handbook/synching.html">synchronizing your source tree</a>
 section of the handbook.
 
-The 3.x branch is fast approaching obsolescence as far as ports-current is
-concerned, and support for the branch will probably be dropped entirely as
-soon as 4.3-RELEASE is rolled.
-
-The 2.2.x branch is officially unsupported by ports-current.  While the
-ports tree as distributed with previous releases will probably work well
+The 2.2.x and 3.x branches are officially unsupported by ports-current.  While
+the ports tree as distributed with previous releases will probably work well
 these are also unsupported by the ports team, because time is already
 stretched thin enough supporting ports-current.
 </p>
@@ -118,5 +111,5 @@ stretched thin enough supporting ports-current.
 <p>Many of the ports require the X Window System to compile and run.
 We compile and test our ports on <a
 href="http://www.xfree86.org/">XFree86</a>. Their current release is
-3.3.6.  Some ports may not work with older releases.</p>
+3.3.6.  Some ports may not work with older or newer releases.</p>
 
