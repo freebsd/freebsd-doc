@@ -1,9 +1,9 @@
 <!-- $FreeBSD$ -->
 <!-- FreeBSD Japanese Documentation Project -->
-<!-- Original revision: 1.2 -->
+<!-- Original revision: 1.3 -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
-<!ENTITY freebsd.dsl SYSTEM "../../share/sgml/freebsd.dsl" CDATA DSSSL>
+<!ENTITY freebsd.dsl PUBLIC "-//FreeBSD//DOCUMENT DocBook Stylesheet//EN" CDATA DSSSL>
 ]>
 
 <style-sheet>
