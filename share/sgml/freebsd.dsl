@@ -1,4 +1,4 @@
-<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.20 2001/01/08 12:40:52 nik Exp $ -->
+<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.21 2001/02/13 19:21:31 nik Exp $ -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
 <!ENTITY % output.html		"IGNORE">
@@ -184,6 +184,39 @@
                  filename
                  (string-append filename "." %graphic-default-extension%))))
 
+        ;; Including bitmaps in the PS and PDF output tends to scale them
+        ;; horribly.  The solution is to scale them down by 50%.
+        ;;
+        ;; You could do this with 'imagedata scale="50"'  in the source,
+        ;; but that will affect all the output formats that we use (because
+        ;; there is only one 'imagedata' per image).
+        ;;
+        ;; Solution is to have the authors include the "FORMAT" attribute,
+        ;; set to PNG or EPS as appropriate, but to omit the extension.
+	;; If we're using the tex-backend, and the FORMAT is PNG, and the
+        ;; author hasn't already set a scale, then set scale to 0.5.
+        ;; Otherwise, use the supplied scale, or 1, as appropriate.
+        (define ($graphic$ fileref
+                           #!optional (display #f) (format #f)
+                                      (scale #f)   (align #f))
+          (let* ((graphic-format (if format format ""))
+                 (graphic-scale  (if scale
+                                     (/  (string->number scale) 100)
+                                     (if (and tex-backend
+                                              (equal? graphic-format "PNG"))
+                                          0.5 1)))
+                 (graphic-align  (cond ((equal? align (normalize "center"))
+                                        'center)
+                                       ((equal? align (normalize "right"))
+                                        'end)
+                                       (else
+                                        'start))))
+           (make external-graphic
+              entity-system-id: (graphic-file fileref)
+              notation-system-id: graphic-format
+              scale: graphic-scale
+              display?: display
+              display-alignment: graphic-align)))
       ]]>
 
       <![ %output.print.pdf; [
