@@ -44,6 +44,10 @@ diffs between that revision and the previous one, and
 a form at the bottom of the page that allows you to
 display diffs between arbitrary revisions.
 <p>
+If you would like to use this CGI script on your own web server and
+CVS tree, see <A HREF=\"http://www.freebsd.org/~fenner/cvsweb/\">
+the CVSWeb distribution site</A>.
+<p>
 Please send any suggestions, comments, etc. to
 <A HREF=\"mailto:fenner@freebsd.org\">Bill Fenner &lt;fenner@freebsd.org&gt;</A>
 ";
@@ -65,13 +69,18 @@ $scriptwhere =~ s|/$||;
 if (!-d $cvsroot) {
 	&fatal("500 Internal Error",'$CVSROOT not found!');
 }
+
+if ($q = $ENV{'QUERY_STRING'}) {
+    foreach (split(/&/, $q)) {
+	s/%(..)/sprintf("%c", hex($1))/ge;	# unquote %-quoted
+	if (/(\S+)=(.*)/) {
+	    $input{$1} = $2;
+	} else {
+	    $input{$_}++;
+	}
+    }
+}
 if (-d $fullname) {
-# Something that would be nice to support, although I have no real
-# good idea of how, would be to get full directory diff's, using
-# symbolic names (revision numbers would be meaningless).
-# The problem is finding a list of symbolic names that is common
-# to all the files in the directory.
-#
 	opendir(DIR, $fullname) || &fatal("404 Not Found","$where: $!");
 	@dir = readdir(DIR);
 	closedir(DIR);
@@ -97,10 +106,13 @@ if (-d $fullname) {
 		($updir = $scriptwhere) =~ s|[^/]+$||;
 		print "<IMG SRC=\"/icons/back.gif\"> ",
 		    &link("Previous Directory",$updir), "<BR>";
+#		print "<IMG SRC=???> ",
+#		    &link("Directory-wide diffs", $scriptwhere . '/*'), "<BR>";
 	    } elsif (-d $fullname . "/" . $_) {
 		print "<IMG SRC=\"/icons/dir.gif\"> ",
 		    &link($_ . "/", $scriptwhere . '/' . $_ . '/'), "<BR>";
 	    } elsif (s/,v$//) {
+# TODO: add date/time?  How about sorting?
 		print "<IMG SRC=\"/icons/text.gif\"> ",
 		    &link($_, $scriptwhere . '/' . $_), "<BR>";
 	    }
@@ -109,125 +121,14 @@ if (-d $fullname) {
 	print &html_footer;
 	print "</BODY></HTML>\n";
 } elsif (-f $fullname . ',v') {
-	if ($_ = $ENV{'QUERY_STRING'}) {
-	    s/%(..)/sprintf("%c", hex($1))/ge;	# unquote %-quoted
-	    if (/rev=([\d\.]+)/) {
-		$rev = $1;
-		open(RCS, "co -p$rev '$fullname' 2>&1 |") ||
-		    &fail("500 Internal Error", "Couldn't co: $!");
-# /home/ncvs/src/sys/netinet/igmp.c,v  -->  standard output
-# revision 1.1.1.2
-# /*
-		$_ = <RCS>;
-		if (/^$fullname,v\s+-->\s+standard output\s*$/o) {
-		    # As expected
-		} else {
-		    &fatal("500 Internal Error",
-			"Unexpected output from co: $_");
-		}
-		$_ = <RCS>;
-		if (/^revision\s+$rev\s*$/) {
-		    # As expected
-		} else {
-		    &fatal("500 Internal Error",
-			"Unexpected output from co: $_");
-		}
-		$| = 1;
-		print "Content-type: text/plain\n";
-		print "Content-encoding: x-gzip\n\n";
-		open(GZIP, "|gzip -1 -c");	# need lightweight compression
-		print GZIP <RCS>;
-		close(GZIP);
-		close(RCS);
+	if ($input{'rev'} =~ /^[\d\.]+$/) {
+		&checkout($fullname, $input{'rev'});
 		exit;
-	    }
-	    if (/r1=([^&:]+)(:([^&]+))?/) {
-		$rev1 = $1;
-		$sym1 = $3;
-	    }
-	    if ($rev1 eq 'text') {
-		if (/tr1=([^&]+)/) {
-		    $rev1 = $1;
-		}
-	    }
-	    if (/r2=([^&:]+)(:([^&]+))?/) {
-		$rev2 = $1;
-		$sym2 = $3;
-	    }
-	    if ($rev2 eq 'text') {
-		if (/tr2=([^&]+)/) {
-		    $rev2 = $1;
-		}
-	    }
-	    if (!($rev1 =~ /^[\d\.]+$/) || !($rev2 =~ /^[\d\.]+$/)) {
-		&fatal("404 Not Found",
-			"Malformed query \"$ENV{'QUERY_STRING'}\"");
-	    }
-#
-# rev1 and rev2 are now both numeric revisions.
-# Thus we do a DWIM here and swap them if rev1 is after rev2.
-# XXX should we warn about the fact that we do this?
-	    if (&revcmp($rev1,$rev2) > 0) {
-		($tmp1, $tmp2) = ($rev1, $sym1);
-		($rev1, $sym1) = ($rev2, $sym2);
-		($rev2, $sym2) = ($tmp1, $tmp2);
-	    }
-#
-	    $difftype = "-u";
-	    $diffname = "Unidiff";
-	    if (/f=([^&]+)/) {
-		if ($1 eq 'c') {
-		    $difftype = '-c';
-		    $diffname = "Context diff";
-		}
-	    }
-# XXX should this just be text/plain
-# or should it have an HTML header and then a <pre>
-	    print "Content-type: text/plain\n\n";
-	    open(RCSDIFF, "rcsdiff $difftype -r$rev1 -r$rev2 '$fullname' 2>&1 |") ||
-		&fail("500 Internal Error", "Couldn't rcsdiff: $!");
-#
-#===================================================================
-#RCS file: /home/ncvs/src/sys/netinet/tcp_output.c,v
-#retrieving revision 1.16
-#retrieving revision 1.17
-#diff -c -r1.16 -r1.17
-#*** /home/ncvs/src/sys/netinet/tcp_output.c     1995/11/03 22:08:08     1.16
-#--- /home/ncvs/src/sys/netinet/tcp_output.c     1995/12/05 17:46:35     1.17
-#
-# Ideas:
-# - nuke the stderr output if it's what we expect it to be
-# - Add "no differences found" if the diff command supplied no output.
-#
-#*** src/sys/netinet/tcp_output.c     1995/11/03 22:08:08     1.16
-#--- src/sys/netinet/tcp_output.c     1995/12/05 17:46:35     1.17 RELENG_2_1_0
-# (bogus example, but...)
-#
-	    if ($difftype eq '-u') {
-		$f1 = '---';
-		$f2 = '\+\+\+';
-	    } else {
-		$f1 = '\*\*\*';
-		$f2 = '---';
-	    }
-	    while (<RCSDIFF>) {
-		if (m|^$f1 $cvsroot|o) {
-		    s|$cvsroot/||o;
-		    if ($sym1) {
-			chop;
-			$_ .= " " . $sym1 . "\n";
-		    }
-		} elsif (m|^$f2 $cvsroot|o) {
-		    s|$cvsroot/||o;
-		    if ($sym2) {
-			chop;
-			$_ .= " " . $sym2 . "\n";
-		    }
-		}
-		print $_;
-	    }
-	    close(RCSDIFF);
-	    exit;
+	}
+	if ($input{'r1'} && $input{'r2'}) {
+		&dodiff($fullname, $input{'r1'}, $input{'tr1'},
+			$input{'r2'}, $input{'tr2'}, $input{'f'});
+		exit;
 	}
 	open(RCS, "rlog '$fullname'|") || &fatal("500 Internal Error",
 						"Failed to spawn rlog");
@@ -249,6 +150,12 @@ if (-d $fullname) {
 		last;
 	    }
 	}
+
+	if ($onlyonbranch = $input{'only_on_branch'}) {
+	    ($onlyonbranch = $symrev{$onlyonbranch}) =~ s/\.0\././;
+	    ($onlybranchpoint = $onlyonbranch) =~ s/\.\d+$//;
+	}
+
 # each log entry is of the form:
 # ----------------------------
 # revision 3.7.1.1
@@ -321,6 +228,7 @@ if (-d $fullname) {
 	foreach (sort keys %symrev) {
 	    $rev = $symrev{$_};
 	    if ($rev =~ /^(\d+(\.\d+)+)\.0\.(\d+)$/) {
+		push(@branchnames, $_);
 		#
 		# A revision number of A.B.0.D really translates into
 		# "the highest current revision on branch A.B.D".
@@ -366,11 +274,13 @@ if (-d $fullname) {
 
 	for ($i = 0; $i <= $#revorder; $i++) {
 	    $_ = $revorder[$i];
+	    ($br = $_) =~ s/\.\d+$//;
+	    next if ($onlyonbranch && $br ne $onlyonbranch &&
+					    $_ ne $onlybranchpoint);
 	    print "<a NAME=\"rev$_\"></a>";
 	    foreach $sym (split(", ", $revsym{$_})) {
 		print "<a NAME=\"$sym\"></a>";
 	    }
-	    ($br = $_) =~ s/\.\d+$//;
 	    if ($revsym{$br} && !$nameprinted{$br}) {
 		foreach $sym (split(", ", $revsym{$br})) {
 		    print "<a NAME=\"$sym\"></a>";
@@ -419,7 +329,7 @@ if (-d $fullname) {
 	    }
 	    if ($prevrev[$#prevrev] != 0) {
 		$prev = join(".", @prevrev);
-		print "<BR><A HREF=\"$scriptwhere?r1=$prev";
+		print "<BR><A HREF=\"${scriptwhere}.diff?r1=$prev";
 		print "&r2=$_\">Diffs to $prev</A>\n";
 		#
 		# Plus, if it's on a branch, and it's not a vendor branch,
@@ -433,14 +343,14 @@ if (-d $fullname) {
 		    @tmp1 = split(/\./, $revorder[$i+1]);
 		    @tmp2 = split(/\./, $_);
 		    if ($#tmp1 < $#tmp2) {
-			print "; <A HREF=\"$scriptwhere?r1=$revorder[$i+1]";
+			print "; <A HREF=\"${scriptwhere}.diff?r1=$revorder[$i+1]";
 			print "&r2=$_\">Diffs to $revorder[$i+1]</A>\n";
 		    }
 		}
 	    }
 #	    print "Log message:<BR>\n";
 	    print "<PRE>\n";
-	    print &htmlify($log{$_});
+	    print &htmlify($log{$_}, 1);
 	    print "</PRE><HR NOSHADE>\n";
 	}
 	print "<A NAME=diff>\n";
@@ -449,7 +359,7 @@ if (-d $fullname) {
 	print "name using the selection box or you may type in a numeric\n";
 	print "name using the type-in text box.\n";
 	print "</A><P>\n";
-	print "<FORM METHOD=\"GET\" ACTION=\"$scriptwhere\">\n";
+	print "<FORM METHOD=\"GET\" ACTION=\"${scriptwhere}.diff\">\n";
 	print "Diffs between \n";
 	print "<SELECT NAME=\"r1\">\n";
 	print "<OPTION VALUE=\"text\" SELECTED>Use Text Field\n";
@@ -464,31 +374,62 @@ if (-d $fullname) {
 	print "<INPUT TYPE=\"TEXT\" NAME=\"tr2\" VALUE=\"$revorder[0]\">\n";
 	print "<BR><INPUT TYPE=RADIO NAME=\"f\" VALUE=u CHECKED>Unidiff<br>\n";
 	print "<INPUT TYPE=RADIO NAME=\"f\" VALUE=c>Context diff<br>\n";
+	print "<INPUT TYPE=RADIO NAME=\"f\" VALUE=s>Side-by-Side<br>\n";
 	print "<INPUT TYPE=SUBMIT VALUE=\"Get Diffs\">\n";
+	print "</FORM>\n";
+	print "<HR noshade>\n";
+	print "<A name=branch>\n";
+	print "You may select to see revision information from only\n";
+	print "a single branch.\n";
+	print "</A><P>\n";
+	print "<FORM METHOD=\"GET\" ACTION=\"$scriptwhere\">\n";
+	print "Branch: \n";
+	print "<SELECT NAME=\"only_on_branch\">\n";
+	foreach (sort @branchnames) {
+		print "<OPTION>${_}\n";
+	}
+	print "</SELECT>\n";
+	print "<INPUT TYPE=SUBMIT VALUE=\"View Branch\">\n";
 	print "</FORM>\n";
         print &html_footer;
 	print "</BODY></HTML>\n";
+} elsif ($fullname =~ s/\.diff$// && -f $fullname . ",v" &&
+				$input{'r1'} && $input{'r2'}) {
+	&dodiff($fullname, $input{'r1'}, $input{'tr1'},
+		$input{'r2'}, $input{'tr2'}, $input{'f'});
+	exit;
+} elsif (0 && (@files = &safeglob($fullname . ",v"))) {
+	print "Content-type: text/plain\n\n";
+	print "You matched the following files:\n";
+	print join("\n", @files);
+	# Find the tags from each file
+	# Display a form offering diffs between said tags
 } else {
 	# Assume it's a module name with a potential path following it.
-	$where =~ s|/.*||;
+	($module = $where) =~ s|/.*||;
 	$xtra = $&;
 	# Is there an indexed version of modules?
 	if (open(MODULES, "$cvsroot/CVSROOT/modules")) {
 		while (<MODULES>) {
-			if (/^${where}\s+(\S+)/o && -d "${cvsroot}/$1" && ($1 ne $where)) {
+			if (/^${module}\s+(\S+)/o && -d "${cvsroot}/$1" &&
+					$module ne $1) {
 				&redirect($scriptname . '/' . $1 . $xtra);
 			}
 		}
 	}
-	&fatal("404 Not Found","$where$xtra: no such file or directory");
+	&fatal("404 Not Found","$where: no such file or directory");
 }
 
 sub htmlify {
-	local($string) = @_;
+	local($string, $pr) = @_;
 
 	$string =~ s/&/&amp;/g;
 	$string =~ s/</&lt;/g;
 	$string =~ s/>/&gt;/g;
+
+	if ($pr) {
+		$string =~ s|\bpr(\W+[a-z]+/\W*)(\d+)|<A HREF=/cgi/query-pr.cgi?pr=$2>$&</A>|ig;
+	}
 
 	$string;
 }
@@ -518,10 +459,13 @@ sub revcmp {
 sub fatal {
 	local($errcode, $errmsg) = @_;
 	print "Status: $errcode\n";
-	print "Content-type: text/html\n";
-	print "\n";
-	print "<HTML><HEAD><TITLE>Error</TITLE></HEAD>\n";
-	print "<BODY>Error: $errmsg</BODY></HTML>\n";
+	print &html_header("Error");
+#	print "Content-type: text/html\n";
+#	print "\n";
+#	print "<HTML><HEAD><TITLE>Error</TITLE></HEAD>\n";
+#	print "<BODY>Error: $errmsg</BODY></HTML>\n";
+	print "Error: $errmsg\n";
+	print &html_footer;
 	exit(1);
 }
 
@@ -529,8 +473,155 @@ sub redirect {
 	local($url) = @_;
 	print "Status: 301 Moved\n";
 	print "Location: $url\n";
-	print "\n";
-	print "<HTML><HEAD><TITLE>Moved</TITLE></HEAD>\n";
-	print "<BODY>This document is located <A HREF=$url>here</A>.</BODY></HTML>\n";
+	print &html_header("Moved");
+#	print "Content-type: text/html\n";
+#	print "\n";
+#	print "<HTML><HEAD><TITLE>Moved</TITLE></HEAD>\n";
+#	print "<BODY>This document is located <A HREF=$url>here</A>.</BODY></HTML>\n";
+	print "This document is located <A HREF=$url>here</A>.\n";
+	print &html_footer;
 	exit(1);
+}
+
+sub safeglob {
+	local($filename) = @_;
+	local($dirname);
+	local(@results);
+
+	($dirname = $filename) =~ s|/[^/]+$||;
+	$filename =~ s|.*/||;
+
+	if (opendir(DIR, $dirname)) {
+		$glob = $filename;
+	#	transform filename from glob to regex.  Deal with:
+	#	[, {, ?, * as glob chars
+	#	make sure to escape all other regex chars
+		$glob =~ s/\./\./g;
+		$glob =~ s/\*/.*/g;
+		$glob =~ s/\?/./g;
+		foreach (readdir(DIR)) {
+			if (/^${glob}$/) {
+				push(@results, $dirname . "/" .$_);
+			}
+		}
+	}
+
+	@results;
+}
+sub checkout {
+	local($fullname, $rev) = @_;
+
+	open(RCS, "co -p$rev '$fullname' 2>&1 |") ||
+	    &fail("500 Internal Error", "Couldn't co: $!");
+# /home/ncvs/src/sys/netinet/igmp.c,v  -->  standard output
+# revision 1.1.1.2
+# /*
+	$_ = <RCS>;
+	if (/^$fullname,v\s+-->\s+standard output\s*$/o) {
+	    # As expected
+	} else {
+	    &fatal("500 Internal Error",
+		"Unexpected output from co: $_");
+	}
+	$_ = <RCS>;
+	if (/^revision\s+$rev\s*$/) {
+	    # As expected
+	} else {
+	    &fatal("500 Internal Error",
+		"Unexpected output from co: $_");
+	}
+	$| = 1;
+	print "Content-type: text/plain\n\n";
+	print <RCS>;
+	close(RCS);
+}
+
+sub dodiff {
+	local($fullname, $r1, $tr1, $r2, $tr2, $f) = @_;
+
+	if ($r1 =~ /([^:]+)(:(.+))?/) {
+	    $rev1 = $1;
+	    $sym1 = $3;
+	}
+	if ($rev1 eq 'text') {
+	    $rev1 = $tr1;
+	}
+	if ($r2 =~ /([^:]+)(:(.+))?/) {
+	    $rev2 = $1;
+	    $sym2 = $3;
+	}
+	if ($rev2 eq 'text') {
+	    $rev2 = $tr2;
+	}
+	if (!($rev1 =~ /^[\d\.]+$/) || !($rev2 =~ /^[\d\.]+$/)) {
+	    &fatal("404 Not Found",
+		    "Malformed query \"$ENV{'QUERY_STRING'}\"");
+	}
+#
+# rev1 and rev2 are now both numeric revisions.
+# Thus we do a DWIM here and swap them if rev1 is after rev2.
+# XXX should we warn about the fact that we do this?
+	if (&revcmp($rev1,$rev2) > 0) {
+	    ($tmp1, $tmp2) = ($rev1, $sym1);
+	    ($rev1, $sym1) = ($rev2, $sym2);
+	    ($rev2, $sym2) = ($tmp1, $tmp2);
+	}
+#
+#	XXX Putting '-p' here is a personal preference
+	if ($f eq 'c') {
+	    $difftype = '-p -c';
+	    $diffname = "Context diff";
+	} elsif ($f eq 's') {
+	    $difftype = '--side-by-side --width=164';
+	    $diffname = "Side by Side";
+	} else {
+	    $difftype = '-p -u';
+	    $diffname = "Unidiff";
+	}
+# XXX should this just be text/plain
+# or should it have an HTML header and then a <pre>
+	print "Content-type: text/plain\n\n";
+	open(RCSDIFF, "rcsdiff $difftype -r$rev1 -r$rev2 '$fullname' 2>&1 |") ||
+	    &fail("500 Internal Error", "Couldn't rcsdiff: $!");
+#
+#===================================================================
+#RCS file: /home/ncvs/src/sys/netinet/tcp_output.c,v
+#retrieving revision 1.16
+#retrieving revision 1.17
+#diff -c -r1.16 -r1.17
+#*** /home/ncvs/src/sys/netinet/tcp_output.c     1995/11/03 22:08:08     1.16
+#--- /home/ncvs/src/sys/netinet/tcp_output.c     1995/12/05 17:46:35     1.17
+#
+# Ideas:
+# - nuke the stderr output if it's what we expect it to be
+# - Add "no differences found" if the diff command supplied no output.
+#
+#*** src/sys/netinet/tcp_output.c     1995/11/03 22:08:08     1.16
+#--- src/sys/netinet/tcp_output.c     1995/12/05 17:46:35     1.17 RELENG_2_1_0
+# (bogus example, but...)
+#
+	if ($difftype eq '-u') {
+	    $f1 = '---';
+	    $f2 = '\+\+\+';
+	} else {
+	    $f1 = '\*\*\*';
+	    $f2 = '---';
+	}
+	while (<RCSDIFF>) {
+	    if (m|^$f1 $cvsroot|o) {
+		s|$cvsroot/||o;
+		if ($sym1) {
+		    chop;
+		    $_ .= " " . $sym1 . "\n";
+		}
+	    } elsif (m|^$f2 $cvsroot|o) {
+		s|$cvsroot/||o;
+		if ($sym2) {
+		    chop;
+		    $_ .= " " . $sym2 . "\n";
+		}
+	    }
+	    print $_;
+	}
+	close(RCSDIFF);
 }
