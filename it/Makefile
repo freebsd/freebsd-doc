@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: www/it/Makefile,v 1.1 2003/03/20 00:10:51 trhodes Exp $
 .if exists(Makefile.conf)
 .include "Makefile.conf"
 .endif
@@ -17,7 +17,7 @@ DOCS+= mailto.sgml
 SUBDIR=  doc
 .endif
 
-WEBDIR=		data/it
+WEBDIR?=	data/it
 
 # index.html is special, and generated from index.xsl and news/news.xml
 DATA+=		index.html

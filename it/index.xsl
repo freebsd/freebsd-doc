@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/it/index.xsl,v 1.3 2003/04/05 14:53:54 trhodes Exp $ -->
+<!-- $FreeBSD: www/it/index.xsl,v 1.4 2003/07/07 15:59:26 blackend Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -9,7 +9,7 @@
 
   <xsl:variable name="base" select="'.'"/>
   <xsl:variable name="enbase" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/it/index.xsl,v 1.3 2003/04/05 14:53:54 trhodes Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/it/index.xsl,v 1.4 2003/07/07 15:59:26 blackend Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -25,6 +25,8 @@
 	<meta name="keywords" content="FreeBSD, BSD, UNIX, Support, Gallery,
 	      Release, Application, Software, Handbook, FAQ, Tutorials, Bugs,
 	      CVS, CVSup, News, Commercial Vendors, homepage, CTM, Unix"/>
+	<link rel="shortcut icon" href="/favicon.ico" type="image/x-icon"/>
+	<link rel="icon" href="/favicon.ico" type="image/x-icon"/>
       </head>
 
       <body bgcolor="#FFFFFF" text="#000000" link="#0000FF" vlink="#840084"
@@ -52,29 +54,27 @@
 		  <option value="http://www2.de.FreeBSD.org">IPv6 Germania</option>
 		  <option value="http://www.jp.FreeBSD.org/www.FreeBSD.org/">IPv6 (6Bone) Giappone</option>
 		  <option value="http://www2.no.FreeBSD.org/">IPv6 Norvegia</option>
+		  <option value="http://www1.uk.FreeBSD.org/">IPv6 Regno Unito</option>
+		  <option value="http://www4.us.FreeBSD.org/">IPv6 USA/1</option>
+		  <option value="http://www5.us.FreeBSD.org/">IPv6 USA/2</option>
 		  <option value="http://www.ar.FreeBSD.org/">Argentina</option>
 		  <option value="http://www.au.FreeBSD.org/">Australia/1</option>
 		  <option value="http://www2.au.FreeBSD.org/">Australia/2</option>
-		  <option value="http://www3.au.FreeBSD.org/">Australia/3</option>
-		  <option value="http://www4.au.FreeBSD.org/">Australia/4</option>
-		  <option value="http://www5.au.FreeBSD.org/">Australia/5</option>
-		  <option value="http://www6.au.FreeBSD.org/">Australia/6</option>
 		  <option value="http://freebsd.itworks.com.au/">Australia/8</option>
 		  <option value="http://www.at.FreeBSD.org/">Austria/1</option>
 		  <option value="http://www2.at.FreeBSD.org/">Austria/2</option>
 		  <option value="http://freebsd.unixtech.be/">Belgio</option>
-		  <option value="http://www.br.FreeBSD.org/www.freebsd.org/">Brasile/1</option>
+		  <option value="http://www.br.FreeBSD.org/">Brasile/1</option>
 		  <option value="http://www2.br.FreeBSD.org/www.freebsd.org/">Brasile/2</option>
 		  <option value="http://www3.br.FreeBSD.org/">Brasile/3</option>
 		  <option value="http://www.bg.FreeBSD.org/">Bulgaria</option>
 		  <option value="http://www.ca.FreeBSD.org/">Canada/1</option>
 		  <option value="http://www2.ca.FreeBSD.org/">Canada/2</option>
 		  <option value="http://www.cn.FreeBSD.org/">Cina</option>
-		  <option value="http://www.kr.FreeBSD.org/">Corea</option>
+		  <option value="http://www.kr.FreeBSD.org/">Corea/1</option>
 		  <option value="http://www2.kr.FreeBSD.org/">Corea/2</option>
-		  <option value="http://www3.kr.FreeBSD.org/">Corea/3</option>
 		  <option value="http://www.dk.FreeBSD.org/">Danimarca/1</option>
-		  <option value="http://www3.dk.FreeBSD.org/">Danimarca/3</option>
+		  <option value="http://www3.dk.FreeBSD.org/">Danimarca/2</option>
 		  <option value="http://www.ee.FreeBSD.org/">Estonia</option>
 		  <option value="http://www.FreeBSD.org.ph/">Filippine</option>
 		  <option value="http://www.fi.FreeBSD.org/">Finlandia/1</option>
@@ -84,13 +84,15 @@
 		  <option value="http://www1.de.FreeBSD.org/">Germania/2</option>
 		  <option value="http://www2.de.FreeBSD.org/">Germania/3</option>
 		  <option value="http://www.jp.FreeBSD.org/www.FreeBSD.org/">Giappone</option>
-		  <option value="http://www.gr.FreeBSD.org/">Grecia</option>
+		  <option value="http://www.gr.FreeBSD.org/">Grecia/1</option>
+		  <option value="http://www.FreeBSD.gr/">Grecia/2</option>
 		  <option value="http://www.hk.FreeBSD.org/">Hong Kong</option>
 		  <option value="http://www.ie.FreeBSD.org/">Irlanda/1</option>
 		  <option value="http://www2.ie.FreeBSD.org/">Irlanda/2</option>
 		  <option value="http://www.is.FreeBSD.org/">Islanda</option>
 		  <option value="http://www.it.FreeBSD.org/">Italia/1</option>
 		  <option value="http://www.gufi.org/mirrors/www.freebsd.org/data/">Italia/2</option>
+		  <option value="http://www.kw.FreeBSD.org/">Kuwait</option>
 		  <option value="http://www.lv.FreeBSD.org/">Lettonia</option>
 		  <option value="http://www.lt.FreeBSD.org/">Lituania</option>
 		  <option value="http://www.no.FreeBSD.org/">Norvegia/1</option>
@@ -100,16 +102,18 @@
 		  <option value="http://www2.nl.FreeBSD.org/">Olanda/2</option>
 		  <option value="http://www.pl.FreeBSD.org/">Polonia/1</option>
 		  <option value="http://www2.pl.FreeBSD.org/">Polonia/2</option>
-		  <option value="http://www2.pt.FreeBSD.org/">Portogallo/2</option>
-		  <option value="http://www4.pt.FreeBSD.org/">Portogallo/4</option>
+		  <option value="http://www.pt.FreeBSD.org/">Portogallo/1</option>
+		  <option value="http://www4.pt.FreeBSD.org/">Portogallo/2</option>
+		  <option value="http://www4.pt.FreeBSD.org/">Portogallo/3</option>
 		  <option value="http://www.uk.FreeBSD.org/">Regno Unito/1</option>
 		  <option value="http://www2.uk.FreeBSD.org/">Regno Unito/2</option>
 		  <option value="http://www3.uk.FreeBSD.org/">Regno Unito/3</option>
 		  <option value="http://www4.uk.FreeBSD.org/">Regno Unito/4</option>
+		  <option value="http://www1.uk.FreeBSD.org/">Regno Unito/5</option>
 		  <option value="http://www.cz.FreeBSD.org/">Repubblica Ceca</option>
 		  <option value="http://www.sk.FreeBSD.org/">Repubblica Slovacca/1</option>
 		  <option value="http://www2.sk.FreeBSD.org/">Repubblica Slovacca/2</option>
-		  <option value="http://www.ro.FreeBSD.org/">Romania</option>
+		  <option value="http://www.ro.FreeBSD.org/">Romania/1</option>
 		  <option value="http://www2.ro.FreeBSD.org/">Romania/2</option>
 		  <option value="http://www3.ro.FreeBSD.org/">Romania/3</option>
 		  <option value="http://www4.ro.FreeBSD.org/">Romania/4</option>
@@ -139,13 +143,13 @@
 		  <option value="http://www.enderunix.org/freebsd/">Turchia/3</option>
 		  <option value="http://www.ua.FreeBSD.org/">Ucraina/1</option>
 		  <option value="http://www2.ua.FreeBSD.org/">Ucraina/2</option>
+		  <option value="http://www5.ua.FreeBSD.org/">Ucraina/3</option>
 		  <option value="http://www4.ua.FreeBSD.org/">Ucraina/Crimea</option>
-		  <option value="http://www5.ua.FreeBSD.org/">Ucraina/5</option>
 		  <option value="http://www.hu.FreeBSD.org/">Ungheria/1</option>
 		  <option value="http://www2.hu.FreeBSD.org/">Ungheria/2</option>
-		  <option value="http://www.FreeBSD.org/">USA/California</option>
-		  <option value="http://www3.FreeBSD.org/">USA/3</option>
-		  <option value="http://www7.FreeBSD.org/">USA/7</option>
+		  <option value="http://www2.us.FreeBSD.org/">USA/1</option>
+		  <option value="http://www4.us.FreeBSD.org/">USA/2</option>
+		  <option value="http://www5.us.FreeBSD.org/">USA/3</option>
 		</select>
 
 		<input type="submit" value=" Vai "/>
@@ -153,11 +157,19 @@
 		<br/>
 
 		<font color="#990000"><b>Lingua: </b></font>
-		<a href="{$enbase}/index.html">Inglese</a>,
-		<a href="{$enbase}/ja/index.html">Giapponese</a>,
-		<a href="{$enbase}/ru/index.html">Russo</a>,
-		<a href="{$enbase}/es/index.html">Spagnolo</a>,
-		<a href="{$enbase}/support.html#web">Altro</a>
+		<a href="{$enbase}/de/index.html" title="Tedesco">[de]</a>
+		<xsl:text>&#160;</xsl:text>
+		<a href="{$enbase}/index.html" title="Inglese">[en]</a>
+		<xsl:text>&#160;</xsl:text>
+		<a href="{$enbase}/es/index.html" title="Spagnolo">[es]</a>
+		<xsl:text>&#160;</xsl:text>
+		<a href="http://www.freebsd-fr.org/index-trad.html" title="Francese">[fr]</a>
+		<xsl:text>&#160;</xsl:text>
+		<span title="Italiano">[it]</span>
+		<xsl:text>&#160;</xsl:text>
+		<a href="{$enbase}/ja/index.html" title="Giapponese">[ja]</a>
+		<xsl:text>&#160;</xsl:text>
+		<a href="{$enbase}/ru/index.html" title="Russo">[ru]</a>
 	      </form>
 	    </td>
 	  </tr>
@@ -210,6 +222,7 @@
 			      &#183; <a href="{$enbase}/support.html#user">Gruppi Utenti</a><br/>
 			      &#183; <a href="{$enbase}/support.html#web">Risorse Web</a><br/>
 			      &#183; <a href="{$enbase}/security/index.html">Sicurezza</a><br/>
+			      &#183; <a href="{$enbase}/events/events.html">Eventi</a><br/>
 			      &#183; <a href="{$enbase}/support.html">Altro...</a>
 			    </small></p>
 
@@ -271,7 +284,7 @@
 	      <h2><font color="#990000">Cos'è FreeBSD?</font></h2>
 
 	      <p>FreeBSD è un sistema operativo avanzato per architetture
-		compatibili x86, DEC Alpha, IA-64, PC-98 e UltraSPARC.
+		compatibili x86, DEC Alpha, IA-64, PC-98 e UltraSPARC&#174;.
 		È derivato da BSD, la versione di
 		<xsl:value-of select="$unix"/> sviluppata
 		all'Università della California, Berkeley.
@@ -531,9 +544,6 @@
 							     border="0"/></a></td>
 	  </tr>
 	</table>
-
-	<p><small>I cambiamenti a questo sito web vanno on-line alle 8:00 e alle
-	    20:00 UTC di ogni giorno.</small></p>
 
 	<table width="100%" cellpadding="0" border="0" cellspacing="0">
 	  <tr>

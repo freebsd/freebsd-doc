@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/it/includes.xsl,v 1.2 2003/04/05 14:53:54 trhodes Exp $ -->
+<!-- $FreeBSD: www/it/includes.xsl,v 1.3 2003/07/07 15:59:26 blackend Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -20,6 +20,7 @@
   <xsl:variable name="unix" select="'UNIX&#174;'"/>
   <xsl:variable name="java" select="'Java&#8482;'"/>
   <xsl:variable name="jdk" select="'JDK&#8482;'"/>
+  <xsl:variable name="posix" select="'POSIX&#174;'"/>
 
   <xsl:variable name="email" select="'freebsd-questions'"/>
   <xsl:variable name="author">
@@ -98,7 +99,7 @@
   <xsl:variable name="u.rel.early">
     <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel.current"/>R/early-adopter.html</xsl:variable>
   
-  <xsl:variable name="rel2.current" select='"4.8"'/>
+  <xsl:variable name="rel2.current" select='"4.9"'/>
   <xsl:variable name="u.rel2.notes">
     <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel2.current"/>R/relnotes.html</xsl:variable>
 
