@@ -1,5 +1,5 @@
 # bsd.web.mk
-# $FreeBSD: www/share/mk/web.site.mk,v 1.57 2004/04/07 13:04:55 phantom Exp $
+# $FreeBSD: www/share/mk/web.site.mk,v 1.58 2004/04/08 09:43:04 phantom Exp $
 
 #
 # Build and install a web site.
@@ -201,7 +201,7 @@ ORPHANS:=	${ORPHANS:N*.sgml}
 spellcheck:
 .for _entry in ${GENDOCS}
 	@echo "Spellcheck ${_entry}"
-	@${HTML2TXT} ${HTML2TXTOPTS} ${.CURDIR}/${_entry} | ${ISPELL} ${ISPELLOPTS}
+	@${HTML2TXT} ${HTML2TXTOPTS} ${.OBJDIR}/${_entry} | ${ISPELL} ${ISPELLOPTS}
 .endfor
 
 #
@@ -283,18 +283,6 @@ clean: _PROGSUBDIR
 .endif
 
 #
-# Really clean things up.
-#
-.if !target(cleandir)
-cleandir: clean _PROGSUBDIR
-	${RM} -f ${.CURDIR}/tags .depend
-.if ${.OBJDIR} != ${.CURDIR} && exists(${.OBJDIR}/)
-	${RM} -rf ${.OBJDIR}
-.endif
-	@if [ -L ${.CURDIR}/obj ]; then ${RM} -f ${.CURDIR}/obj; fi
-.endif
-
-#
 # Install targets: before, real, and after.
 #
 .if !target(install)
@@ -355,5 +343,11 @@ _PROGSUBDIR: .USE
 .endif
 
 .include <bsd.obj.mk>
+
+#
+# Process 'make obj' recursively (should be declared *after* inclusion
+# of bsd.obj.mk)
+#
+obj:	_PROGSUBDIR
 
 # THE END
