@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/ports/Makefile,v 1.33 2001/06/14 03:09:56 dd Exp $
+# $FreeBSD: www/en/ports/Makefile,v 1.34 2001/10/29 10:14:32 murray Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -65,10 +65,18 @@ index.sgml: ${INDEX} categories packages.exists portindex ports.inc .NOTMAIN
 	${RM} -f *.sgml
 	${PORTINDEX} ${INDEX} ${.CURDIR}
 
-install: all
+install: all beforeinstall
 
 all install clean:
 	cd ${.CURDIR}; \
 		${MAKE} ${MAKEFLAGS} -f ${.CURDIR}/Makefile.inc0 ${.TARGET}
+.if defined(WITH_PORTS_GROWTH)
+	cd growth; \
+		${MAKE} ${MAKEFLAGS} ${.TARGET}
+beforeinstall:
+.else
+beforeinstall:
+	${PERL} -pi -e 's/href=\"growth/href=\"http:\/\/www.FreeBSD.org\/ports\/growth/' index.html
+.endif
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
