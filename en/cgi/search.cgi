@@ -15,7 +15,7 @@
 # Disclaimer:
 #   This is pretty ugly in places.
 #
-# $FreeBSD: www/en/cgi/search.cgi,v 1.19 2000/11/05 19:05:43 wosch Exp $
+# $FreeBSD: www/en/cgi/search.cgi,v 1.20 2000/12/28 13:37:51 wosch Exp $
 
 
 $server_root = '/usr/local/www';
@@ -135,7 +135,7 @@ sub do_wais {
 	/:number-of-bytes\s+(\d+)/ && ($bytes = $1);
 	/:headline "(.*)"/ && ($headline = $1, 
 			       $headline =~ s/[Rr]e://);  # XXX
-	/:date "(\d+)"/ && ($date = $1, $hits++, 
+	/:date "(\d+)"/ && $docid !~ /\.src$/ && ($date = $1, $hits++, 
 			    push(@mylist, join("\t", $date, $headline, $docid, 
 					       $bytes, $lines, $file, $score, $hits)));
     }
