@@ -6,7 +6,7 @@
 # by John Fieber
 # February 26, 1998
 #
-# $Id: getmsg.cgi,v 1.9 1998-03-19 13:32:38 wosch Exp $
+# $Id: getmsg.cgi,v 1.10 1998-03-28 15:11:37 wosch Exp $
 #
 
 require "./cgi-lib.pl";
@@ -74,6 +74,7 @@ sub MessageToHTML
     my ($header, $body) = split(/\n\n/, $doc, 2);
     my ($i, %hdr, $field, $data, $message);
     my ($mid) = 'mid.cgi';
+    my ($tmid,$tirt,$tref);
     
     $body = &AddAnchors(&EscapeHTML($body));
 
@@ -107,6 +108,7 @@ sub MessageToHTML
     }
 
     if ($hdr{'message-id:'}) {
+	$tmid = $hdr{'message-id:'}; 
 	$hdr{'message-id:'} =~ 
 	    s%;([^&]+)&%;<a href="$mid?db=irt&id=$1">$1</a>&%oi;
 	$message .= "<strong>Message-ID: </strong> $hdr{'message-id:'}\n";
@@ -119,12 +121,14 @@ sub MessageToHTML
     }
 
     if ($hdr{'in-reply-to:'}) {
+	$tirt = $hdr{'in-reply-to:'};
 	$hdr{'in-reply-to:'} =~
 	    s%;([^&]+)&%;<a href="$mid?db=mid&id=$1">$1</a>&%oi;
 	$message .= "<strong>In-Reply-To: </strong>$hdr{'in-reply-to:'}\n";
     }
 
     if ($hdr{'references:'}) {
+	$tref = $hdr{'references:'};
 	$hdr{'references:'} =~
 	    s%;([^&\s]+)&%;<a href="$mid?db=mid&id=$1">$1</a>&%goi;
 	$message .= "<strong>References: </strong> $hdr{'references:'}\n";
@@ -132,8 +136,19 @@ sub MessageToHTML
 
 
     $message .= "</pre>\n";
+    $message .= "<HR NOSHADE>\n";
 
-    $message .= "<pre>\n$body\n</pre>\n";
+    if ($tmid =~ m%;([^&]+)&%) {
+	$message .= qq{<a href="$mid?db=irt&id=$1">Next in thread</a>\n};
+    }
+
+    if ($tirt  =~ m%;([^&]+)&% ||
+	$tref  =~ m%;([^&]+)&%) {
+	$message .= qq{| <a href="$mid?db=mid&id=$1">Previous in thread</a>\n};
+    }
+    $message .= "<HR NOSHADE>\n";
+
+    $message .= "<p><pre>\n$body\n</pre>\n";
     
     return $message;
 }
