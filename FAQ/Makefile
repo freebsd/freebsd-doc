@@ -1,6 +1,6 @@
-# $Id: Makefile,v 1.1 1995-09-08 19:40:04 jfieber Exp $
+# $Id: Makefile,v 1.2 1996-09-28 22:20:17 jfieber Exp $
 
-DOC=	freebsd-faq
-SRCS=	freebsd-faq.sgml
+DOC=	FAQ
+SRCS=	FAQ.sgml
 
 .include <bsd.sgml.mk>
