@@ -1,5 +1,5 @@
 #
-# $FreeBSD$
+# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.2 1999/09/06 06:53:39 peter Exp $
 #
 # This include file <doc.docbook.mk> handles building and installing of
 # DocBook documentation in the FreeBSD Documentation Project.
@@ -163,7 +163,7 @@ all: ${_docs}
 
 index.html HTML.manifest: ${SRCS}
 	${JADE} -V html-manifest -ioutput.html ${JADEOPTS} -d ${DSLHTML} -t sgml ${MASTERDOC}
-	-tidy -i -m -f /dev/null ${TIDYFLAGS} *.html
+	-tidy -i -m -f /dev/null ${TIDYFLAGS} `xargs < HTML.manifest`
 
 ${DOC}.html: ${SRCS}
 	${JADE} -ioutput.html -V nochunks ${JADEOPTS} -d ${DSLHTML} -t sgml ${MASTERDOC} > ${.TARGET}
