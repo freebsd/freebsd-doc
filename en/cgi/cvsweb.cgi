@@ -28,7 +28,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.43 2000/07/12 05:25:50 jdp Exp $
+# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.44 2000/07/13 09:01:10 knu Exp $
 #
 
 
@@ -480,13 +480,13 @@ sub dodiff {
 #
 #	XXX Putting '-p' here is a personal preference
 	if ($f eq 'c') {
-	    @difftype = qw{-p -c};
+	    @difftype = ('-p', '-c');
 	    $diffname = "Context diff";
 	} elsif ($f eq 's') {
-	    @difftype = qw{--side-by-side --width=164};
+	    @difftype = ('--side-by-side', '--width=164');
 	    $diffname = "Side by Side";
 	} else {
-	    @difftype = qw{-p -u};
+	    @difftype = ('-p', '-u');
 	    $diffname = "Unidiff";
 	}
 # XXX should this just be text/plain
@@ -513,7 +513,7 @@ sub dodiff {
 #--- src/sys/netinet/tcp_output.c     1995/12/05 17:46:35     1.17 RELENG_2_1_0
 # (bogus example, but...)
 #
-	if (grep { $_ eq '-u' } @difftype) {
+	if (grep($_ eq '-u', @difftype)) {
 	    $f1 = '---';
 	    $f2 = '\+\+\+';
 	} else {
