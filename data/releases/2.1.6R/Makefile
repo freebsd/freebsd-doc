@@ -1,3 +1,3 @@
-DOCS=	announce.sgml notes.sgml
+DOCS=	announce.sgml notes.sgml security.sgml
 
 .include "../../web.mk"
