@@ -3,9 +3,9 @@
 # The FreeBSD Russian Documentation Project
 # 
 # $FreeBSD$
-# $FreeBSDru: frdp/doc/ru_RU.KOI8-R/articles/releng/Makefile,v 1.1 2004/02/21 05:38:41 andy Exp $
+# $FreeBSDru: frdp/doc/ru_RU.KOI8-R/articles/releng/Makefile,v 1.3 2004/08/10 09:02:08 den Exp $
 #
-# Original revision: 1.13
+# Original revision: 1.14
 #
 
 DOC?= article
@@ -23,5 +23,7 @@ IMAGES_EN+=	branches-releng4.pic
 
 CSS_SHEET_ADDITIONS= extra.css
 
+URL_RELPREFIX?=	../../../..
 DOC_PREFIX?= ${.CURDIR}/../../..
+
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"
