@@ -1,4 +1,4 @@
-# $FreeBSD: doc/ja_JP.eucJP/man/man1/Makefile,v 1.36 2001/09/23 03:41:52 horikawa Exp $
+# $FreeBSD$
 MAN1 =	a2p.1\
 	addftinfo.1\
 	addr2line.1\
@@ -214,6 +214,7 @@ MAN1 =	a2p.1\
 	newaliases.1\
 	nfsstat.1\
 	nice.1\
+	nl.1\
 	nm.1\
 	nohup.1\
 	nroff.1\
@@ -288,6 +289,7 @@ MAN1 =	a2p.1\
 	size.1\
 	skey.1\
 	sleep.1\
+	smbutil.1\
 	sockstat.1\
 	soelim.1\
 	sort.1\
