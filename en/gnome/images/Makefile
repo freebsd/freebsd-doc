@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/gnome/images/Makefile,v 1.23 2004/04/06 03:58:07 adamw Exp $
+# $FreeBSD: www/en/gnome/images/Makefile,v 1.24 2004/05/13 05:01:33 marcus Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -31,6 +31,8 @@ DATA+=	ss26-5.png
 DATA+=	ss26-5-tn.png
 DATA+=	ss26-6.png
 DATA+=	ss26-6-tn.png
+DATA+=	ss28-1.png
+DATA+=	ss28-1-tn.png
 DATA+=	gnome.png
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
