@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/internal/Makefile,v 1.16 1999/09/15 20:34:35 wosch Exp $
+# $FreeBSD: www/en/internal/Makefile,v 1.17 1999/09/15 20:37:10 wosch Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -25,7 +25,7 @@ INDEXLINK=	internal.html
 # build the list of personal homepages of FreeBSD developers only 
 # on the main FreeBSD machines
 hostname!= hostname
-.if ${hostname} == "hub.freebsd.org" || ${hostname} == "freefall.freebsd.org"
+.if ${hostname} == "hub.freebsd.org" || ${hostname} == "2freefall.freebsd.org"
 DOCS+=	homepage.sgml
 .PHONY: homepage.inc
 
