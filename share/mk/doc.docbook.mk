@@ -1,5 +1,5 @@
 #
-# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.22 2000/10/10 06:16:56 kuriyama Exp $
+# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.23 2000/10/29 02:39:10 nik Exp $
 #
 # This include file <doc.docbook.mk> handles building and installing of
 # DocBook documentation in the FreeBSD Documentation Project.
@@ -356,7 +356,15 @@ install-${_cf}: index.html
 	@[ -d ${DESTDIR}/${LOCAL_IMAGES_LIB_DIR}/${_curimage:H} ] || mkdir -p ${DESTDIR}/${LOCAL_IMAGES_LIB_DIR}/${_curimage:H}
 	${INSTALL_DOCS} ${LOCAL_IMAGES_LIB_DIR}/${_curimage} ${DESTDIR}/${LOCAL_IMAGES_LIB_DIR}/${_curimage:H}
 .endfor
-.for _curimage in ${IMAGES_PNG}
+# Install the images.  First, loop over all the image names that contain a
+# directory seperator, make the subdirectories, and install.  Then loop over
+# the ones that don't contain a directory separator, and install them in the
+# top level.
+.for _curimage in ${IMAGES_PNG:M*/*}
+	mkdir -p ${DESTDIR}/${_curimage:H}
+	${INSTALL_DOCS} ${_curimage} ${DESTDIR}/${_curimage:H}
+.endfor
+.for _curimage in ${IMAGES_PNG:N*/*}
 	${INSTALL_DOCS} ${_curimage} ${DESTDIR}
 .endfor
 .for _compressext in ${KNOWN_COMPRESS}
@@ -372,7 +380,15 @@ install-${_cf}: ${DOC}.${_cf}
 	@[ -d ${DESTDIR}/${LOCAL_IMAGES_LIB_DIR}/${_curimage:H} ] || mkdir -p ${DESTDIR}/${LOCAL_IMAGES_LIB_DIR}/${_curimage:H}
 	${INSTALL_DOCS} ${LOCAL_IMAGES_LIB_DIR}/${_curimage} ${DESTDIR}/${LOCAL_IMAGES_LIB_DIR}/${_curimage:H}
 .endfor
-.for _curimage in ${IMAGES_PNG}
+# Install the images.  First, loop over all the image names that contain a
+# directory seperator, make the subdirectories, and install.  Then loop over
+# the ones that don't contain a directory separator, and install them in the
+# top level.
+.for _curimage in ${IMAGES_PNG:M*/*}
+	mkdir -p ${DESTDIR}/${_curimage:H}
+	${INSTALL_DOCS} ${_curimage} ${DESTDIR}/${_curimage:H}
+.endfor
+.for _curimage in ${IMAGES_PNG:N*/*}
 	${INSTALL_DOCS} ${_curimage} ${DESTDIR}
 .endfor
 .else
