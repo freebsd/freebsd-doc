@@ -7,6 +7,7 @@
 
 AWK?=		/usr/bin/awk
 GREP?=		/usr/bin/grep
+REALPATH?=	/bin/realpath
 
 .if defined(DOC_PREFIX) && !empty(DOC_PREFIX)
 WEB_PREFIX?=	${DOC_PREFIX}/../www
@@ -24,14 +25,14 @@ DOC_PREFIX?=	${WEB_PREFIX}/../doc
 #
 
 .if defined(DOC_PREFIX) && !empty(DOC_PREFIX)
-DOC_PREFIX_NAME!=	realpath ${DOC_PREFIX}
+DOC_PREFIX_NAME!=	${REALPATH} ${DOC_PREFIX}
 DOC_PREFIX_NAME:=	${DOC_PREFIX_NAME:T}
 .else
 DOC_PREFIX_NAME?=	doc
 .endif
 
 .if defined(WEB_PREFIX) && !empty(WEB_PREFIX)
-WWW_PREFIX_NAME!=	realpath ${WEB_PREFIX}
+WWW_PREFIX_NAME!=	${REALPATH} ${WEB_PREFIX}
 WWW_PREFIX_NAME:=	${WWW_PREFIX_NAME:T}
 .else
 WWW_PREFIX_NAME?=	www
@@ -101,6 +102,10 @@ _WWW_LANGCODE:= ${_WWW2_LANGCODE}
 .endif
 WWW_LANGCODE?=	${_WWW_LANGCODE}
 
+# normalize DOC_PREFIX and WEB_PREFIX
+DOC_PREFIX!=	${REALPATH} ${DOC_PREFIX}
+WEB_PREFIX!=	${REALPATH} ${WEB_PREFIX}
+
 # ------------------------------------------------------------------------
 #
 # mirrors.xml dependency.
@@ -163,7 +168,9 @@ CLEANFILES+= ${XML_MIRRORS}.sort.tmp
 # urls.ent dependency.
 #
 
-URLS_ENT=	${.OBJDIR}/${DOC_PREFIX:S,^${.CURDIR}/,,}/share/sgml/urls.ent
+# XXX: .OBJDIR does not work.
+#URLS_ENT=	${.OBJDIR}/${DOC_PREFIX:S,^${.CURDIR}/,,}/share/sgml/urls.ent
+URLS_ENT=	${DOC_PREFIX}/share/sgml/urls.ent
 
 ${URLS_ENT}:
 .if !defined(URLS_ABSOLUTE)
