@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/news/status/Makefile,v 1.14 2002/02/25 22:33:22 chris Exp $
+# $FreeBSD: www/en/news/status/Makefile,v 1.15 2002/05/18 16:15:32 rwatson Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -18,6 +18,7 @@ DATA+=	report-september-2001.html
 DATA+=	report-november-2001.html
 DATA+=	report-dec-2001-jan-2002.html
 DATA+=	report-feb-2002-apr-2002.html
+DATA+=	report-may-2002-june-2002.html
 
 # Install a sample <project> entry.
 DATA+=	report-sample.xml
