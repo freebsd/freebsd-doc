@@ -483,5 +483,6 @@ MLINKS+=pkg_sign.1 pkg_check.1
 MLINKS+=ssh.1 slogin.1
 MLINKS+=bzip2.1 bunzip2.1
 MLINKS+=bzip2.1 bzcat.1
+MLINKS+=unifdef.1 unifdefall.1
 
 .include "bsd.prog.mk"
