@@ -1,5 +1,5 @@
-DOC=		devel
-SRCS=		devel.sgml
+DOCS=	devel.docb
+INDEXLINK=	devel.html
 
-.include <bsd.sgml.mk>
+.include "../../web.mk"
 
