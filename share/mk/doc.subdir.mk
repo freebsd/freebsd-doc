@@ -1,7 +1,7 @@
 # Taken from:
 #	Id: bsd.subdir.mk,v 1.27 1999/03/21 06:43:40 bde
 #
-# $FreeBSD: doc/share/mk/doc.subdir.mk,v 1.3 1999/10/06 14:00:17 jesusr Exp $
+# $FreeBSD: doc/share/mk/doc.subdir.mk,v 1.4 2000/07/16 16:34:08 nik Exp $
 #
 # This include file <doc.subdir.mk> contains the default targets
 # for building subdirectories in the FreeBSD Documentation Project.
@@ -188,8 +188,8 @@ clean: _SUBDIRUSE
 .if defined(CLEANDIRS) && !empty(CLEANDIRS)
 	rm -rf ${CLEANDIRS}
 .endif
-.if defined(LIB_IMAGES) && !empty(LOCAL_LIB_IMAGES_DIR)
-	rm -rf ${LOCAL_LIB_IMAGES_DIR}
+.if defined(IMAGES_LIB) && !empty(LOCAL_IMAGES_LIB_DIR)
+	rm -rf ${LOCAL_IMAGES_LIB_DIR}
 .endif
 .endif
 
