@@ -14,7 +14,6 @@ MAN9 =	BUS_PRINT_CHILD.9\
 	bus_generic_shutdown.9\
 	copy.9\
 	fetch.9\
-	free.9\
 	inittodr.9\
 	intro.9\
 	malloc.9\
@@ -30,6 +29,7 @@ MAN9 =	BUS_PRINT_CHILD.9\
 MLINKS+=BUS_READ_IVAR.9 BUSWRITE_IVAR.9
 MLINKS+=malloc.9 FREE.9
 MLINKS+=malloc.9 MALLOC.9
+MLINKS+=malloc.9 free.9
 MLINKS+=MD5.9 MD5Init.9
 MLINKS+=MD5.9 MD5Transform.9
 MLINKS+=bus_generic_read_ivar.9 bus_generic_write_ivar.9
