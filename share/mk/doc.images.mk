@@ -144,15 +144,19 @@ PNMTOPS?=	${PREFIX}/bin/pnmtops
 PNMTOPSOPTS?=	-noturn ${PNMTOPSFLAGS}
 EPSTOPDF?=	${PREFIX}/bin/epstopdf
 EPSTOPDFOPTS?=	${EPSTOPDFFLAGS}
-PS2EPS?=	${PREFIX}/bin/ps2epsi
 #
-# ps2epsi in ghostscript built with A4=yes fails to convert
-# grops outputs without -p option.
-PIC2PS?=	${GROFF} -P -p -P a4 -p -S -Wall -mtty-char -man 
+PIC2PS?=	${GROFF} -p -S -Wall -mtty-char -man 
+#
+PS2EPS?=	${PREFIX}/bin/gs
+PS2EPSOPTS?=	-q -dNOPAUSE -dSAFER -dDELAYSAFER \
+		-sPAPERSIZE=letter -r72 -sDEVICE=bit \
+		-sOutputFile=/dev/null ${PS2EPSFLAGS} ps2epsi.ps
+#
+SETENV?=	/usr/bin/env
 REALPATH?=	/bin/realpath
 
 # Use suffix rules to convert .scr files to other formats
-.SUFFIXES:	.scr .pic .png .eps .txt
+.SUFFIXES:	.scr .pic .png .ps .eps .txt
 
 .scr.png:
 	${SCR2PNG} ${SCR2PNGOPTS} < ${.IMPSRC} > ${.TARGET}
@@ -184,9 +188,29 @@ REALPATH?=	/bin/realpath
 	${EPS2PNG} ${EPS2PNGOPTS} -o ${.TARGET} \
 	`${REALPATH} ${.TARGET:S/.png$/.eps/}`
 
-.pic.eps:
-	${PIC2PS} ${.ALLSRC} > ${.TARGET:S/.eps$/.ps/}
-	${PS2EPS} ${.TARGET:S/.eps$/.ps/} ${.TARGET}
+.pic.ps:
+	${PIC2PS} ${.ALLSRC} > ${.TARGET}
+
+# When ghostscript built with A4=yes is used, ps2epsi's paper size also
+# becomes the A4 size.  However, the ps2epsi fails to convert grops(1)
+# outputs, which is the letter size, and we cannot change ps2epsi's paper size
+# from the command line.  So ps->eps suffix rule is defined.  In the rule,
+# gs(1) is used to generate the bitmap preview and the size of the
+# bounding box.
+.ps.eps:
+	${SETENV} outfile=${.TARGET} ${PS2EPS} ${PS2EPSOPTS} < ${.ALLSRC} 1>&2
+	echo "save countdictstack mark newpath /showpage {} def /setpagedevice {pop} def" >> ${.TARGET}
+	echo "%%EndProlog" >> ${.TARGET}
+	echo "%%Page: 1 1" >> ${.TARGET}
+	echo "%%BeginDocument: ${.ALLSRC}" >> ${.TARGET}
+	${SED}	-e '/^%%BeginPreview:/,/^%%EndPreview[^!-~]*$$/d' \
+		-e '/^%!PS-Adobe/d' \
+		-e '/^%%[A-Za-z][A-Za-z]*[^!-~]*$$/d'\
+		-e '/^%%[A-Za-z][A-Za-z]*: /d' < ${.ALLSRC} >> ${.TARGET}
+	echo "%%EndDocument" >> ${.TARGET}
+	echo "%%Trailer" >> ${.TARGET}
+	echo "cleartomark countdictstack exch sub { end } repeat restore" >> ${.TARGET}
+	echo "%%EOF" >> ${.TARGET}
 
 # We can't use suffix rules to generate the rules to convert EPS to PNG and
 # PNG to EPS.  This is because a .png file can depend on a .eps file, and
