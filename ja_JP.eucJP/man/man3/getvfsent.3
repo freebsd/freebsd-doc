@@ -1,0 +1,236 @@
+.\"	$Id: getvfsent.3,v 1.1.1.1 1999-12-09 16:26:03 kuriyama Exp $
+.\"	Written by Garrett A. Wollman, September 1994.
+.\"	This manual page is in the public domain.
+.\"
+.Dd September 24, 1994
+.Dt GETVFSENT 3
+.Os
+.Sh 名称
+.Nm getvfsent ,
+.Nm setvfsent ,
+.Nm endvfsent ,
+.Nm vfsisloadable ,
+.Nm vfsload
+.Nd 仮想ファイルシステムモジュールを管理
+.Sh 書式
+.Fd #include <sys/param.h>
+.Fd #include <sys/mount.h>
+.Ft struct ovfsconf *
+.Fn getvfsent "void"
+.Ft void
+.Fn setvfsent "int cachelist"
+.Ft void
+.Fn endvfsent "void"
+.Ft int
+.Fn vfsisloadable "const char *name"
+.Ft int
+.Fn vfsload "const char *name"
+.Sh 解説
+.Fn getvfsent
+関数によって、カーネルが管理する仮想ファイルシステムモジュール
+の実装リストに、簡単にアクセスできます。リストのファイルシステムを
+1 回に
+1 つづつ段階的に処理します。利用できるデータがそれ以上なくなると、
+null
+ポインタが返ります。構造体
+.Dq Li struct ovfsconf
+のフィールドは次のとおりです。
+.Pp
+.Bl -tag -compact -width vfc_refcount
+.It vfc_name
+ファイルシステムの名前。
+.It vfc_index
+カーネルによって割り当てられ
+.Xr mount 2
+の呼び出しに使用された、ファイルシステムのタイプ番号。
+.It vfc_refcount
+このファイルシステムの参照数
+(通常は実装数ですが、
+アンロードできないファイルシステム、または静的にこのカーネルにリンク
+されているファイルシステムなどがあると、実装数を上回ります)
+。
+.It vfc_flags
+現在なにも定義されていないフラグビット。
+.El
+.Pp
+.Fn setvfsent
+および
+.Fn endvfsent
+関数は、
+.Xr sysctl 3
+のよってカーネル
+からまとめて取得されるファイルシステムリストの、キャッシング制御に
+使用されます。
+.Fn setvfsent
+の
+.Fa cachelist
+パラメータがゼロでなければ、これら
+検索関数のどれかを最初に呼び出した時点でリストはただ
+1 回だけ取り出され、
+キャッシュをクリアするために
+.Fn endvfsent
+が呼び出されるまで保持されます。
+一般に
+.Fn setvfsent 1
+は、
+.Fn getvfsent
+を使用するプログラムによって呼び出される必要があり、
+.Fn setvfsent 0
+は
+(これもデフォルトの状態で)
+、
+.Fn vfsload
+関数を使用するプログラムによって呼び出される必要があります。
+.Pp
+.Fn vfsisloadable
+関数は、後で
+.Fn vfsload name
+の呼び出しが続きそうだと非ゼロ値を返します。ここで
+「そう」と言うのは、
+.Fn vfsisloadable
+によってチェックされる条件だけが、
+.Fn vfsload
+が後続するために必要な条件の小さな
+サブセットだからです。詳しく説明すれば、
+.Fn vfsisloadable
+は
+.Pa /dev/lkm
+が
+存在するか、書き込みのためにオープンできるか、また
+LKM
+(ロード可能カーネルモジュール)
+用に指定したディレクトリの
+1 つで、
+.Pa Ns Fa name Ns _mod.o
+が
+見付かるかなどをチェックします。
+.Pp
+.Fn vfsload
+関数は、ファイルシステム
+.Fa name
+の実装カーネルモジュールをロード
+しようと試みます。ファイルシステムモジュールを無事に突き止めてロードした
+場合はゼロが、その他の場合は非ゼロが返ります。この関数を呼び出せるのは次に
+示す状況だけです。
+.Bl -enum
+.It
+.Fn getvfsbyname
+を呼び出して非ゼロ値が返った場合。
+.It
+.Fn vfsisloadable
+を呼び出して非ゼロ値が返った場合。
+.It
+十分な一時ファイル空間が利用でき、
+.No Ns \&${ Ns Ev TMPDIR Ns \&}
+の
+.Pa /var/tmp
+または
+.Pa /tmp
+の
+1 つに
+書き込みもできる場合。
+.El
+.Pp
+.Xr mount_cd9660 8
+のソースから取った使用例を次に示します。
+.Bd -literal -offset indent
+struct vfsconf *vfc;
+int error;
+
+/* ここにセットアップコードが入る */
+
+error = getvfsbyname("cd9660", &vfc);
+if (error && vfsisloadable("cd9660")) {
+	if (vfsload("cd9660"))
+		err(EX_OSERR, "vfsload(cd9660)");
+	endvfsent();	/* flush cache */
+	error = getvfsbyname("cd9660", &vfc);
+}
+if (error)
+	errx(1, "cd9660 filesystem is not available");
+
+if (mount(vfc.vfc_name, dir, mntflags, &args) < 0)
+	err(1, NULL);
+
+.Ed
+.Sh 戻り値
+.Fn getvfsent
+ルーチンは、成功すると静的データ構造体のポインタを、失敗すると
+null
+ポインタを返します。原因が
+.Xr sysctl 3
+または
+.Xr malloc 3
+で失敗した場合は、
+.Va errno
+がそれら関数用にドキュメントされた値の
+1 つに
+設定されることがあります。その他の場合
+.Va errno
+は改変されません。
+.Pp
+.Fn vfsload
+関数は失敗すると非ゼロ値を、成功するとゼロを返します。
+.Fn vfsload
+が失敗した場合、
+.Va errno
+がフォーク
+.Xr fork 2
+、
+.Xr waitpid 2
+、
+.Xr chdir 2
+、
+または
+.Xr execlp 3
+用としてドキュメントされた値の
+1 つに設定されるか、または、
+現在特に有用ではないにしても結局は便利な
+.Xr modload 8
+プログラムの、
+ステータスを返す可能性があります。さらに、もし
+.Xr modload 8
+が信号上に存在する場合、
+.Fn vfsload
+は失敗し
+.Va errno
+を
+.Er EINVAL
+に設定します。
+.Sh 環境変数
+.Bl -tag -compact -width TMPDIRx
+.It Ev TMPDIR
+.Fn vfsload
+に代わって
+.Xr modload 8
+によって作成された一時ファイルの位置。
+.It Ev LKMDIR
+ロード可能モジュールを検索する
+.Fn vfsisloadable
+および
+.Fn vfsload
+用の代替ディレクトリ。
+.Sh 関連項目
+.Xr mount 2
+、
+.Xr modload 8
+、
+.Xr mount 8
+.Sh バグ
+.Xr modload 8
+コマンドの戻り値は、
+.Va errno
+値として解釈する場合
+(もっと言えば、ほかのどんなものとして解釈する場合も)、
+特に有用ではありません。
+.Sh 作者
+このロード可能ファイルシステムサポートは、
+.An Terry Lambert
+による汎用のロード可能カーネルモジュールサポートをベースに、
+.An Garrett A. Wollman
+によって書かれました。
+.Sh 歴史
+.Fn getvfsent
+関数ファミリは
+.Fx 2.0
+で最初に取り入れられました。
