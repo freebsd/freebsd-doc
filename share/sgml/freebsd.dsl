@@ -45,6 +45,47 @@
           ;; Write a manifest?
           #f)
 
+        (define %callout-graphics%
+          ;; Use graphics in callouts?
+          #t)
+
+        (define %callout-graphics-ext%
+          ;; The extension to use for callout images.  This is an extension
+          ;; to the stylesheets, they do not support this functionality
+          ;; natively.
+          ".png")
+
+        (define %callout-graphics-path%
+          ;; Path to callout graphics
+          "./imagelib/callouts/")
+
+        ;; Redefine $callout-bug$ to support the %callout-graphic-ext%
+        ;; variable.
+        (define ($callout-bug$ conumber)
+	  (let ((number (if conumber (format-number conumber "1") "0")))
+	    (if conumber
+		(if %callout-graphics%
+	            (if (<= conumber %callout-graphics-number-limit%)
+		        (make empty-element gi: "IMG"
+			      attributes: (list (list "SRC"
+				                      (root-rel-path
+					               (string-append
+						        %callout-graphics-path%
+							number
+	                                                %callout-graphics-ext%)))
+		                                (list "HSPACE" "0")
+			                        (list "VSPACE" "0")
+				                (list "BORDER" "0")
+					        (list "ALT"
+						      (string-append
+	                                               "(" number ")"))))
+		        (make element gi: "B"
+			      (literal "(" (format-number conumber "1") ")")))
+	            (make element gi: "B"
+		          (literal "(" (format-number conumber "1") ")")))
+	        (make element gi: "B"
+	       (literal "(??)")))))
+
         <!-- Understand <segmentedlist> and related elements.  Simpleminded,
              and only works for the HTML output. -->
 
@@ -90,6 +131,7 @@
                       attributes: (list (list "align" "center"))
                   (make element gi: "small"
                     ($email-footer$))))))
+
       ]]>
 
       <!-- Print only ................................................... --> 
@@ -124,7 +166,6 @@
               (normalize "legalnotice")
               (normalize "abstract")))
 
-      
       <!-- Slightly deeper customisations -->
 
       <!-- I want things marked up with 'sgmltag' eg., 
@@ -188,7 +229,7 @@
       <!-- For the HTML version, display the questions in a bigger, bolder
            font. -->
 
-      <![ %output.html [
+      <![ %output.html; [
       (element question
         (let* ((chlist   (children (current-node)))
                (firstch  (node-list-first chlist))
