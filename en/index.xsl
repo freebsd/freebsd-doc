@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/index.xsl,v 1.47 2003/01/21 17:33:57 ceri Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.48 2003/02/07 21:48:38 keramida Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   
@@ -6,7 +6,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.47 2003/01/21 17:33:57 ceri Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.48 2003/02/07 21:48:38 keramida Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -254,7 +254,7 @@
 
 			  <p><font size="+1" color="#990000"><b>Donations</b></font>
 			    <small><br/>
-			      &#183; <a href="{$base}/donations/index.html">Donations Liason</a><br/>
+			      &#183; <a href="{$base}/donations/index.html">Donations Liaison</a><br/>
 			      &#183; <a href="{$base}/donations/donors.html">Current Donations</a><br/>
 			      &#183; <a href="{$base}/donations/wantlist.html">List of needs</a><br/>
 			    </small></p>
