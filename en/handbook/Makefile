@@ -1,5 +1,5 @@
 # 
-# $Id: Makefile,v 1.15 1999-03-18 20:37:12 nik Exp $
+# $Id: Makefile,v 1.16 1999-03-22 22:16:23 nik Exp $
 #
 # Build the FreeBSD Handbook. Will eventually split in two, a generic .mk
 # file which can be used by many Makefiles, and a much smaller Makefile
@@ -196,9 +196,14 @@ CLEANFILES+= ${DOC}.tar
 .for _curformat in ${FORMATS}
 _cf=${_curformat}
 .for _curcomp in ${INSTALL_COMPRESSED}
+.if ${_cf} == "html-split" 
+_curinst+= install-html-split.tar.${_curcomp}
+_docs+= ${DOC}.html-split.tar.${_curcomp}
+.else 
 _curinst+= install-${_curformat}.${_curcomp}
 _docs+= ${DOC}.${_curformat}.${_curcomp}
 CLEANFILES+= ${DOC}.${_curformat}.${_curcomp}
+.endif
 .endfor
 .endfor
 .endif
@@ -349,7 +354,7 @@ install-${_cf}: index.html
 		sh ${.OBJDIR}/${DOC}.ln); 				\
 	fi
 .for _compressext in ${KNOWN_COMPRESS}
-install-${_cf}.${_compressext}: ${DOC}.${_cf}.tar.${_compressext}
+install-${_cf}.tar.${_compressext}: ${DOC}.${_cf}.tar.${_compressext}
 	${INSTALL} ${COPY} -o ${DOCOWN} -g ${DOCGRP} -m ${DOCMODE}	\
 		${.ALLSRC} ${DESTDIR}${DOCDIR}/${VOLUME}
 .endfor
@@ -378,11 +383,15 @@ ${__target}:
 #
 # Like "install", but places the files into the correct distribution
 #
+#.if !target(distribute)
+#distribute:
+#.for dist in ${DISTRIBUTION}
+#	cd ${.CURDIR}; $(MAKE) install DESTDIR=${DISTDIR}/${dist}
+#.endfor
+#.endif
 .if !target(distribute)
 distribute:
-.for dist in ${DISTRIBUTION}
-	cd ${.CURDIR}; $(MAKE) install DESTDIR=${DISTDIR}/${dist}
-.endfor
+	@echo "'distribute' not yet enabled for DocBook Handbook"
 .endif
 
 .include <bsd.dep.mk>
