@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: query-pr-summary.cgi,v 1.10 1997-02-02 22:03:29 pst Exp $
+# $Id: query-pr-summary.cgi,v 1.11 1997-02-02 22:07:01 pst Exp $
 
 $html_mode     = 1 if $ENV{'DOCUMENT_ROOT'};
 $self_ref      = $ENV{'SCRIPT_NAME'};
@@ -435,15 +435,14 @@ together.
 <TR>
 <TD><B>Category</B>:</TD>
 <TD><SELECT NAME="category">
-<OPTION SELECTED VALUE="">Any</OPTION>
-<OPTION>bin</OPTION>
-<OPTION>conf</OPTION>
-<OPTION>docs</OPTION>
-<OPTION>gnu</OPTION>
-<OPTION>i386</OPTION>
-<OPTION>kern</OPTION>
-<OPTION>misc</OPTION>
-<OPTION>ports</OPTION>
+<OPTION SELECTED VALUE="">Any</OPTION>`;
+
+&get_categories;
+foreach (sort @categories) {
+    print "<OPTION>$_</OPTION>\n";
+}
+
+print qq`
 </SELECT></TD>
 <TD><B>Severity</B>:</TD>
 <TD><SELECT NAME="severity">
