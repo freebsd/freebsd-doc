@@ -4,7 +4,7 @@
 #              Usage: ./stage_2.sh [-hnp] configname
 #
 # Author:      Jens Schweikhardt
-# $Id: stage_2.sh,v 1.3 2004-01-21 19:39:26 schweikh Exp $
+# $Id: stage_2.sh,v 1.4 2004-01-23 22:11:41 schweikh Exp $
 # $FreeBSD$
 
 DBDIR="/var/db/pkg"
@@ -100,7 +100,7 @@ while read CATEGORY NAME CMD; do
 	fi
 	LOG="${LOGDIR}/${CATEGORY}+${NAME}"
 	echo "===> Installing ${CATEGORY}/${NAME}; logging to ${LOG}"
-	test -n "${CMD}" || CMD="make package-recursive < /dev/null"
+	test -n "${CMD}" || CMD="make install < /dev/null"
 	if test -n "${DRYRUN}"; then
 		if test -n "${PKG}"; then
 			echo pkg_add -v ${PKG}
