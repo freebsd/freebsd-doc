@@ -2,8 +2,8 @@
 
 <!--
      $FreeBSD$
-     $FreeBSDde: de-www/index.xsl,v 1.30 2004/08/03 11:28:49 mheinen Exp $
-     basiert auf: 1.105
+     $FreeBSDde: de-www/index.xsl,v 1.34 2004/11/09 13:48:55 brueffer Exp $
+     basiert auf: 1.116
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -37,6 +37,13 @@
 	      CVS, CVSup, News, Commercial Vendors, homepage, CTM, Unix"/>
 	<link rel="shortcut icon" href="/favicon.ico" type="image/x-icon"/>
 	<link rel="icon" href="/favicon.ico" type="image/x-icon"/>
+	<link rel="alternate" type="application/rss+xml"
+	  title="FreeBSD Ank&#252;ndigungen" href="{$base}/news/news.rdf" />
+	<link rel="alternate" type="application/rss+xml"
+	  title="FreeBSD Sicherheits-Hinweise" href="{$base}/security/advisories.rdf" />
+	<link rel="alternate" type="application/rss+xml"
+	  title="Ank&#252;ndigungen des FreeBSD GNOME Projects"
+	  href="{$base}/gnome/news.rdf" />
 
 	<!-- Formatted to be easy to spam harvest, please do not reformat. -->
 	<xsl:comment>
@@ -66,13 +73,9 @@
 		<br/>
 
 		<select name="goto">
-		  <!--  Only list TRUE mirrors here! Native language pages
-		        which are not mirrored should be listed in
-		        support.sgml.  -->
-
-		<xsl:call-template name="html-index-mirrors-options-list">
-		  <xsl:with-param name="mirrors.xml" select="$mirrors.xml" />
-		</xsl:call-template>
+		  <xsl:call-template name="html-index-mirrors-options-list">
+		    <xsl:with-param name="mirrors.xml" select="$mirrors.xml" />
+		  </xsl:call-template>
 		</select>
 
 		<input type="submit" value=" Los "/>
@@ -123,7 +126,8 @@
 			      <input type="text" name="words" size="10"/>
 			      <input type="hidden" name="max" value="25"/>
 			      <input type="hidden" name="source" value="www"/>
-			      <input type="submit" value="Los"/></small>
+			      <input type="submit" value="Los"/>
+			    </small>
 			  </form>
 			</td>
 		      </tr>
@@ -141,8 +145,10 @@
 	      <h2><font color="#990000">Was ist FreeBSD?</font></h2>
 
 	      <p>FreeBSD ist ein modernes Betriebssystem f&#252;r
-		Intel kompatible (x86), AMD64, Alpha, IA-64, PC-98 und
-		UltraSPARC&#174;-Architekturen.  An der Unterst&#252;tzung weiterer
+		x86 kompatible (einschlie&#223;lich Pentium und Athlon),
+		amd64 kompatible (einschlie&#223;lich Opteron, Athlon 64 und EM64T),
+		Alpha/AXP, IA-64, PC-98 und UltraSPARC&#174;-Architekturen.
+		An der Unterst&#252;tzung weiterer
 		<a href="{$base}/platforms/index.html">Plattformen</a>
 		wird gearbeitet.  FreeBSD ist eine Weiterentwicklung von
 		BSD, dem <xsl:value-of select="$unix"/>-Betriebssystem der
@@ -194,7 +200,7 @@
 	      <h2><font color="#990000">FreeBSD ist <i>frei</i></font></h2>
 
 	      <a href="{$enbase}/copyright/daemon.html"><img src="{$enbase}/gifs/dae_up3.gif"
-						   alt=""
+						   alt="Der BSD Daemon"
 						   height="81" width="72"
 						   align="right"
 						   border="0"/></a>
@@ -204,7 +210,7 @@
 		wird, ist FreeBSD
 		<a href="{$enbase}/copyright/index.html">kostenlos</a> und
 		bringt den kompletten Quellcode gleich mit.  Wenn
-		Sie FreeBSD ausprobieren wollen, finden Sie in
+		Sie FreeBSD herunterladen oder k&#228;uflich erwerben wollen, finden Sie in
 		<a href="{$enbase}/doc/de_DE.ISO8859-1/books/handbook/mirrors.html">Bezugsquellen
 		f&#252;r FreeBSD</a> weitere Informationen.</p>
 
@@ -256,7 +262,7 @@
 			   bgcolor="#ffcc66" width="100%">
 		      <tr>
 			<td valign="top"><p><a href="{$u.rel.announce}">
-			    <font size="+1" color="#990000"><b>Neue Technik:
+			    <font size="+1" color="#990000"><b>Produktionsreife:
 			    <xsl:value-of select="$rel.current"/>-RELEASE</b></font></a><br/>
 
 			    <small>&#183; <a href="{$enbase}/doc/de_DE.ISO8859-1/books/handbook/install.html">Installation</a><br/>
@@ -264,7 +270,7 @@
 			      &#183; <a href="{$u.rel.hardware}">Hardware Notes</a><br/>
 			      &#183; <a href="{$u.rel.installation}">Installation Notes</a><br/>
 			      &#183; <a href="{$u.rel.errata}">Errata</a><br/>
-			      &#183; <a href="{$u.rel.early}">Early Adopter's Guide</a></small></p>
+			      &#183; <a href="{$u.rel.migration}">Migration Guide</a></small></p>
 
 			  <p><a href="{$u.rel2.announce}">
 			    <font size="+1" color="#990000"><b>Produktionsreife:

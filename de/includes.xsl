@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
 <!-- $FreeBSD$
-     $FreeBSDde: de-www/includes.xsl,v 1.15 2004/05/27 21:08:31 mheinen Exp $
+     $FreeBSDde: de-www/includes.xsl,v 1.16 2004/11/09 12:35:24 brueffer Exp $
      basiert auf: 1.20
 -->
 
@@ -91,7 +91,7 @@
       <xsl:copy-of select="$date"/></address>
   </xsl:variable>
 
-  <xsl:variable name="rel.current" select='"5.2.1"'/>
+  <xsl:variable name="rel.current" select='"5.3"'/>
   <xsl:variable name="u.rel.notes">
     <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel.current"/>R/relnotes.html</xsl:variable>
 
@@ -105,8 +105,8 @@
     <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel.current"/>R/installation.html</xsl:variable>
   <xsl:variable name="u.rel.readme">
     <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel.current"/>R/readme.html</xsl:variable>
-  <xsl:variable name="u.rel.early">
-    <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel.current"/>R/early-adopter.html</xsl:variable>
+  <xsl:variable name="u.rel.migration">
+    <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel.current"/>R/migration-guide.html</xsl:variable>
 
   <xsl:variable name="rel2.current" select='"4.10"'/>
   <xsl:variable name="u.rel2.notes">
