@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/en/gnome/includes.xsl,v 1.7 2004/01/24 07:58:44 marcus Exp $ -->
+<!-- $FreeBSD: www/en/gnome/includes.xsl,v 1.8 2004/05/22 02:28:28 marcus Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -9,11 +9,11 @@
   </xsl:variable>
 
   <xsl:variable name="gnomever">
-    2.4
+    2.8
   </xsl:variable>
 
   <xsl:variable name="gnomedevelver">
-	2.7
+	2.9
   </xsl:variable>
 
   <xsl:variable name="author">
