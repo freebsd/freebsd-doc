@@ -1,7 +1,7 @@
-# $Id: Makefile,v 1.1 1998-08-04 15:13:17 wosch Exp $
+# $Id: Makefile,v 1.2 1998-12-30 17:53:56 wosch Exp $
 
-LINKS= 	en/ja en/es en/tutorials ja/web.mk ja/FAQ en/FAQ en/handbook
-LINKS+=	ja/handbook web.mk es/FAQ ../doc/en/web.mk
+LINKS= 	en/ja en/es en/ru en/tutorials ja/web.mk ja/FAQ en/FAQ en/handbook
+LINKS+=	ja/handbook web.mk es/FAQ ru/FAQ ../doc/en/web.mk
 LINKS+= ../doc/en/includes.sgml
 
 SUBDIR= en
@@ -20,6 +20,9 @@ en/ja:
 
 en/es:
 	cd en; ln -sf ../es
+
+en/ru:
+	cd en; ln -sf ../ru
 
 en/tutorials:
 	cd en; ln -sf ../../doc/en/tutorials
@@ -44,6 +47,9 @@ web.mk:
 
 es/FAQ:
 	cd es; ln -sf ../../doc/es/FAQ
+
+ru/FAQ:
+	cd ru; ln -sf ../../doc/ru/FAQ
 
 ../doc/en/web.mk:
 	cd ../doc/en; ln -sf ../../www/en/web.mk
