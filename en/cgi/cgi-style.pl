@@ -1,4 +1,4 @@
-# $Id: cgi-style.pl,v 1.9 1997-11-17 00:29:53 wosch Exp $
+# $Id: cgi-style.pl,v 1.10 1998-04-15 13:47:24 wosch Exp $
 #
 # Perl routines to encapsulate various elements of HTML page style.
 
@@ -14,8 +14,11 @@ $t_body = "<body text=\"#000000\" bgcolor=\"#ffffff\">";
 if (!defined($hsty_base)) { 
     $hsty_base = "..";
 }
+if (!defined($hsty_email)) {
+    $hsty_email = "www\@freebsd.org";
+}
 if (!defined($hsty_author)) {
-    $hsty_author = "<a href=\"$hsty_base/mailto.html\">www\@freebsd.org</a>";
+    $hsty_author = "<a href=\"$hsty_base/mailto.html\">$hsty_email</a>";
 }
 
 $i_topbar = "<IMG SRC=\"$hsty_base/gifs/bar.gif\" ALT=\"\" WIDTH=\"565\" HEIGHT=\"33\" BORDER=0 usemap=\"#bar\">
