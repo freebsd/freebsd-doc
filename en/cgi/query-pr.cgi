@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.18 1999/12/21 17:34:21 phantom Exp $
+# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.19 2000/01/05 15:47:45 phantom Exp $
 
 $ENV{'PATH'} = "/bin:/usr/bin:/usr/sbin:/sbin:/usr/local/bin";
 
@@ -136,7 +136,7 @@ while(<Q>) {
 		$trailer .= $2;
 	    }
 	    if ($1 eq "Originator" && $from ne "") {	# add email address
-		$trailer .= " <A HREF=\"mailto:$email\">" . &fixline($from) . "</A>";
+		$trailer .= " &lt;<A HREF=\"mailto:$email\">" . &fixline($from) . "</A>&gt;";
 	    }
 	    $blank = !($2);
 	    $multiline = 0;
