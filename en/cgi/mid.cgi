@@ -26,7 +26,7 @@
 #
 # Search a mail by Message-ID, References or In-Reply-To field
 #
-# $FreeBSD: www/en/cgi/mid.cgi,v 1.10 2000/08/08 06:04:10 mharo Exp $
+# $FreeBSD: www/en/cgi/mid.cgi,v 1.11 2000/12/28 13:16:39 wosch Exp $
 
 $hsty_base = '';
 
@@ -41,6 +41,8 @@ $bindir = "$home/bin"; # where search scripts located
 $script = $ENV{'SCRIPT_NAME'};
 $shortid = 1;
 $lookCommand = "/usr/bin/look";
+
+sub escape($) { $_ = $_[0]; s/&/&amp;/g; s/</&lt;/g; s/>/&gt;/g; $_; }
 
 sub get_id {
     local($query, $db) = @_;
@@ -76,9 +78,9 @@ sub get_id {
     if ($#idlist < 0) {           # nothing found
 	print &midheader;
 	if ($db eq 'mid') {
-	    print qq{Message-ID: "$query" not found\n};
+	    printf "Message-ID: \"%s\" not found\n", escape($query);
 	} else {
-	    print qq{No answers found for: "$query"\n};
+	    printf "No answers found for: \"%s\"\n", escape($query);
 	}
 	print &foot;
 
