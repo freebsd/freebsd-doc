@@ -43,8 +43,8 @@
 # SUCH DAMAGE.
 #
 # $zId: cvsweb.cgi,v 1.104 2000/11/01 22:05:12 hnordstrom Exp $
-# $Id: cvsweb.cgi,v 1.62 2000-12-29 09:22:50 knu Exp $
-# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.61 2000/12/28 18:42:21 knu Exp $
+# $Id: cvsweb.cgi,v 1.63 2001-01-02 00:03:51 knu Exp $
+# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.62 2000/12/29 09:22:50 knu Exp $
 #
 ###
 
@@ -57,7 +57,7 @@ use vars qw (
     %alltags @tabcolors %fileinfo %tags @branchnames %nameprinted
     %symrev %revsym @allrevisions %date %author @revdisplayorder
     @revisions %state %difflines %log %branchpoint @revorder
-    $prcgi @prcategories $prcategories $mancgi
+    $prcgi @prcategories $re_prcategories $prkeyword $re_prkeyword $mancgi
     $checkoutMagic $doCheckout $scriptname $scriptwhere
     $where $pathinfo $Browser $nofilelinks $maycompress @stickyvars
     %funcline_regexp $is_mod_perl
@@ -76,11 +76,11 @@ use vars qw (
     $difffontsize $inputTextSize $mime_types $allow_annotate
     $allow_markup $use_java_script $open_extern_window
     $extern_window_width $extern_window_height $edit_option_form
-    $show_subdir_lastmod $show_log_in_markup $v
+    $show_subdir_lastmod $show_log_in_markup $preformat_in_markup $v
     $navigationHeaderColor $tableBorderColor $markupLogColor
     $tabstop $state $annTable $sel $curbranch @HideModules
     $module $use_descriptions %descriptions @mytz $dwhere $moddate
-    $use_moddate $has_zlib $gzip_open $allow_tar
+    $use_moddate $has_zlib $gzip_open $allow_tar @tar_options @cvs_options
     $LOG_FILESEPARATOR $LOG_REVSEPARATOR
 );
 
@@ -216,7 +216,7 @@ $LOG_REVSEPARATOR = q/^-{28}$/;
 ##### End of configuration variables #####
 
 $cgi_style::hsty_base = 'http://www.FreeBSD.org';
-$_ = q$FreeBSD: www/en/cgi/cvsweb.cgi,v 1.61 2000/12/28 18:42:21 knu Exp $;
+$_ = q$FreeBSD: www/en/cgi/cvsweb.cgi,v 1.62 2000/12/29 09:22:50 knu Exp $;
 @_ = split;
 $cgi_style::hsty_date = "@_[3,4]";
 
@@ -440,10 +440,11 @@ if (-f $config_cvstree) {
 }
 undef $config_cvstree;
 
-$prcategories = '(?:' . join('|', @prcategories) . ')';
+$re_prcategories = '(?:' . join('|', @prcategories) . ')' if @prcategories;
+$re_prkeyword = quotemeta($prkeyword) if defined($prkeyword);
 $prcgi .= '%s' if defined($prcgi) && $prcgi !~ /%s/;
 
-$fullname = $cvsroot . '/' . $where;
+$fullname = "$cvsroot/$where";
 $mimetype = &getMimeTypeFromSuffix ($fullname);
 $defaultTextPlain = ($mimetype eq "text/plain");
 $defaultViewable = $allow_markup && viewable($mimetype);
@@ -515,10 +516,10 @@ if ($input{tarball}) {
 	  or $fatal = "500 Internal Error", "Unable to cd to temporary directory: $!"
 	    && last;
 
-	my @params = (exists $input{only_with_tag} && length $input{only_with_tag})
-	  ? ("-r", $input{only_with_tag}) : ();
+	my $tag = (exists $input{only_with_tag} && length $input{only_with_tag})
+	  ? $input{only_with_tag} : "HEAD";
 
-	system "cvs", "-RlQd", $cvsroot, "co", @params, $where
+	system "cvs", @cvs_options, "-Qd", $cvsroot, "export", "-r", $tag, $where
 	  and $fatal = "500 Internal Error","cvs co failure: $!: $where"
 	    && last;
 
@@ -530,7 +531,7 @@ if ($input{tarball}) {
 
 	print "Content-type: application/x-gzip\r\n\r\n";
 
-	system "tar", "--ignore-failed-read", "--exclude", "CVS", "-zcf", "-", $basedir
+	system "tar", "-zcf", "-", $basedir, @tar_options
 	  and $fatal = "500 Internal Error","tar zc failure: $!: $basedir"
 	    && last;
 
@@ -1127,7 +1128,7 @@ sub htmlify($;$) {
 
     if ($extra) {
 	# get PR #'s as link: "PR#nnnn" "PR: nnnn, ..." "PR nnnn, ..." "bin/nnnn"
-	if (defined($prcgi)) {
+	if (defined($prcgi) && defined($re_prcategories) && defined($re_prkeyword)) {
 	    my $prev;
 
 	    do {
@@ -1135,7 +1136,7 @@ sub htmlify($;$) {
 
 		$_ = htmlify_sub {
 		    s{
-		      (\bPR[:\#]?\s*
+		      (\b$re_prkeyword[:\#]?\s*
 		       (?:
 			\#?
 			\d+[,\s]\s*
@@ -1150,7 +1151,7 @@ sub htmlify($;$) {
 
 	    $_ = htmlify_sub {
 		s{
-		  (\b$prcategories/(\d+)\b)
+		  (\b$re_prcategories/(\d+)\b)
 		 }{
 		     &link($1, sprintf($prcgi, $2))
 		 }egox;
@@ -1161,7 +1162,7 @@ sub htmlify($;$) {
 	if (defined($mancgi)) {
 	    $_ = htmlify_sub {
 		s{
-		  (\b([a-zA-Z][\w_.]+)
+		  (\b([a-zA-Z][\w.]+)
 		   (?:
 		    \( ([0-9n]) \)\B
 		    |
@@ -1169,7 +1170,7 @@ sub htmlify($;$) {
 		   )
 		  )
 		 }{
-		     &link($1, sprintf($mancgi, $3 ne '' ? $3 : $4, $2))
+		     &link($1, sprintf($mancgi, defined($3) ? $3 : $4, $2))
 		 }egx;
 	    } $_;
 	}
@@ -1385,7 +1386,7 @@ sub doAnnotate($$) {
     # the public domain.
     # we could abandon the use of rlog, rcsdiff and co using
     # the cvsserver in a similiar way one day (..after rewrite)
-    $pid = open2($reader, $writer, "cvs -Rl server") || fatal ("500 Internal Error",
+    $pid = open2($reader, $writer, "cvs @cvs_options -l server") || fatal ("500 Internal Error",
 							       "Fatal Error - unable to open cvs for annotation");
 
     # OK, first send the request to the server.  A simplified example is:
@@ -1578,7 +1579,7 @@ sub doCheckout($$) {
     # Safely for a child process to read from.
     if (! open($fh, "-|")) { # child
       open(STDERR, ">&STDOUT"); # Redirect stderr to stdout
-      exec("cvs", "-Rld", $cvsroot, "co", "-p", $revopt, $where);
+      exec("cvs", @cvs_options, "-d", $cvsroot, "co", "-p", $revopt, $where);
     }
 
     if (eof($fh)) {
@@ -1660,7 +1661,7 @@ sub cvswebMarkup($$$) {
     elsif ($mimetype =~ m%^application/pdf%) {
 	printf '<EMBED SRC="%s" WIDTH="100%"><BR>', hrefquote("$url$barequery");
     }
-    else {
+    elsif ($preformat_in_markup) {
 	print "<PRE>";
 
 	# prefetch several lines
@@ -1674,6 +1675,9 @@ sub cvswebMarkup($$$) {
 	    print spacedHtmlText($_, $d{'tabstop'});
 	}
 	print "</PRE>";
+    }
+    else {
+	print "<PLAINTEXT>\n", <$filehandle>;
     }
 }
 
@@ -1836,7 +1840,7 @@ sub getDirLogs($$@) {
 	return;
     }
 
-    if ($tag) {
+    if (defined($tag)) {
 	#can't use -r<tag> as - is allowed in tagnames, but misinterpreated by rlog..
 	if (! open($fh, "-|")) {
 		open(STDERR, '>/dev/null'); # rlog may complain; ignore.
@@ -1854,14 +1858,13 @@ sub getDirLogs($$@) {
     while (<$fh>) {
 	if ($state eq "start") {
 	    #Next file. Initialize file variables
-	    $rev = undef;
-	    $revwanted = undef;
-	    $branch = undef;
-	    $branchpoint = undef;
-	    $filename = undef;
-	    $log = undef;
-	    $revision = undef;
-	    $branch = undef;
+	    $rev = '';
+	    $revwanted = '';
+	    $branch = '';
+	    $branchpoint = '';
+	    $filename = '';
+	    $log = '';
+	    $revision = '';
 	    %symrev = ();
 	    @filetags = ();
 	    #jump to head state
@@ -1880,7 +1883,7 @@ again:
 		$branch = $1 
 	    } elsif (/^symbolic names:/) {
 		$state = "tags";
-		($branch = $head) =~ s/\.\d+$// if (!defined($branch));
+		($branch = $head) =~ s/\.\d+$// if $branch eq '';
 		$branch =~ s/(\d+)$/0.$1/;
 		$symrev{MAIN} = $branch;
 		$symrev{HEAD} = $branch;
@@ -1889,9 +1892,9 @@ again:
 		push (@filetags, "MAIN", "HEAD");
 	    } elsif (/$LOG_REVSEPARATOR/o) {
 		$state = "log";
-		$rev = undef;
-		$date = undef;
-		$log = "";
+		$rev = '';
+		$date = '';
+		$log = '';
 		# Try to reconstruct the relative filename if RCS spits out a full path
 		$filename =~ s%^\Q$DirName\E/%%;
 	    }
@@ -1909,7 +1912,7 @@ again:
 			$revwanted = $symrev{$tag eq "HEAD" ? "MAIN" : $tag};
 			($branch = $revwanted) =~ s/\b0\.//;
 			($branchpoint = $branch) =~ s/\.?\d+$//;
-			$revwanted = undef if ($revwanted ne $branch);
+			$revwanted = '' if ($revwanted ne $branch);
 		    } elsif ($tag ne "HEAD") {
 			print "Tag not found, skip this file" if ($verbose);
 			$state = "skip";
@@ -1926,19 +1929,19 @@ again:
 	if ($state eq "log") {
 	    if (/$LOG_REVSEPARATOR/o || /$LOG_FILESEPARATOR/o) {
 		# End of a log entry.
-		my $revbranch;
-		($revbranch = $rev) =~ s/\.\d+$//;
+		my $revbranch = $rev;
+		$revbranch =~ s/\.\d+$//;
 		print "$filename $rev Wanted: $revwanted ",
 		  "Revbranch: $revbranch Branch: $branch ",
 		    "Branchpoint: $branchpoint\n" if ($verbose);
-		if (!defined($revwanted) && defined($branch)
+		if ($revwanted eq '' && $branch ne ''
 		    && $branch eq $revbranch || !defined($tag)) {
 		    print "File revision $rev found for branch $branch\n"
 			if ($verbose);
 		    $revwanted = $rev;
 		}
-		if (defined($revwanted) ? $rev eq $revwanted :
-		    defined($branchpoint) ? $rev eq $branchpoint :
+		if ($revwanted ne '' ? $rev eq $revwanted :
+		    $branchpoint ne '' ? $rev eq $branchpoint :
 		    0 && ($rev eq $head)) { # Don't think head is needed here..
 		    print "File info $rev found for $filename\n" if ($verbose);
 		    my @finfo = ($rev,$date,$log,$author,$filename);
@@ -1947,11 +1950,11 @@ again:
 		    $fileinfo{$name} = [ @finfo ];
 		    $state = "done" if ($rev eq $revwanted);
 		}
-		$rev = undef;
-		$date = undef;
-		$log = "";
+		$rev = '';
+		$date = '';
+		$log = '';
 	    }
-	    elsif (!defined($date) && m|^date:\s+(\d+)/(\d+)/(\d+)\s+(\d+):(\d+):(\d+);|) {
+	    elsif ($date eq '' && m|^date:\s+(\d+)/(\d+)/(\d+)\s+(\d+):(\d+):(\d+);|) {
 		my $yr = $1;
 		# damn 2-digit year routines :-)
 		if ($yr > 100) {
@@ -1963,7 +1966,7 @@ again:
 		$log = '';
 		next;
 	    }
-	    elsif (!defined($rev) && m/^revision (.*)$/) {
+	    elsif ($rev eq '' && /^revision (.*)$/) {
 		$rev = $1;
 		next;
 	    }
@@ -2371,18 +2374,18 @@ sub printLog($;$) {
 	    if (/^\d+\.\d+\.\d+/ && !/^1\.1\.1\.\d+$/) {
 		my ($i,$nextmain);
 		for ($i = 0; $i < $#revorder && $revorder[$i] ne $_; $i++){}
-		my (@tmp2) = split(/\./, $_);
+		my @tmp2 = split(/\./, $_);
 		for ($nextmain = ""; $i > 0; $i--) {
-		    my ($next) = $revorder[$i-1];
-		    my (@tmp1) = split(/\./, $next);
-		    if ($#tmp1 < $#tmp2) {
+		    my $next = $revorder[$i-1];
+		    my @tmp1 = split(/\./, $next);
+		    if (@tmp1 < @tmp2) {
 			$nextmain = $next;
 			last;
 		    }
 		    # Only the highest version on a branch should have
 		    # a diff for the "next main".
-		    last if (join(".",@tmp1[0..$#tmp1-1])
-			     eq join(".",@tmp2[0..$#tmp1-1]));
+		    last if (@tmp1 - 1 <= @tmp2 &&
+			     join(".",@tmp1[0..$#tmp1-1]) eq join(".",@tmp2[0..$#tmp1-1]));
 		}
 		if (!defined($diffrev{$nextmain})) {
 		    $diffrev{$nextmain} = 1;
@@ -2732,7 +2735,7 @@ sub navigateHeader($$$$$) {
     print qq`<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">`;
     print "<HTML>\n<HEAD>\n";
     print qq`<META name="robots" content="nofollow">\n`;
-    print '<!-- CVSweb $zRevision: 1.104 $  $Revision: 1.62 $ -->';
+    print '<!-- CVSweb $zRevision: 1.104 $  $Revision: 1.63 $ -->';
     print "\n<TITLE>$path$filename - $title - $rev</TITLE></HEAD>\n";
     print  "$body_tag_for_src\n";
     print "<table width=\"100%\" border=0 cellspacing=0 cellpadding=1 bgcolor=\"$navigationHeaderColor\">";
@@ -3066,6 +3069,10 @@ sub hrefquote($) {
 
 sub http_header(;$) {
     my $content_type = shift || "text/html";
+
+    $content_type .= "; charset=$charset"
+      if $content_type =~ m,^text/, && defined($charset) && $charset;
+
     if (defined($moddate)) {
 	if ($is_mod_perl) {
 	    Apache->request->header_out("Last-Modified" => scalar gmtime($moddate) . " GMT");
@@ -3122,7 +3129,7 @@ sub http_header(;$) {
 
 sub html_header($) {
     my ($title) = @_;
-    my $version = '$zRevision: 1.104 $  $Revision: 1.62 $'; #'
+    my $version = '$zRevision: 1.104 $  $Revision: 1.63 $'; #'
     http_header(defined($charset) ? "text/html; charset=$charset" : "text/html");
 
     (my $header = &cgi_style::html_header) =~ s/^.*\n\n//; # remove HTTP response header
