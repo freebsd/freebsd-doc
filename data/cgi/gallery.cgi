@@ -4,7 +4,7 @@
 # 
 # John Fieber <jfieber@indiana.edu>
 # Modified for new gallery.db format by Nate Johnson <nsj@freebsd.org>
-# $Id: gallery.cgi,v 1.10 1998-05-27 12:40:19 nsj Exp $
+# $Id: gallery.cgi,v 1.11 1998-05-27 12:48:05 nsj Exp $
 ##################################################################
 
 $curator = "gallery@freebsd.org";
@@ -13,7 +13,7 @@ $subject = "Another gallery submission...";
 require 'cgi-lib.pl';
 &ReadParse;
 
-$hsty_date = "\$Date: 1998-05-27 12:40:19 $";
+$hsty_date = "\$Date: 1998-05-27 12:48:05 $";
 #$h_base = "..";
 #$d_author = "
 require 'cgi-style.pl';
@@ -124,6 +124,7 @@ elsif ($in{'action'} eq "submit") {
 
     $category = $in{'category'};
     $category =~ tr/A-Z/a-z/;
+    $categort =~ tr/ //;
 
     ($mo,$da,$year) = $timestamp =~ m/(\d\d?)-(\d\d?)-(\d\d\d\d)/;
     $year -= 1900;
