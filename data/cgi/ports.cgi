@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-#	$Id: ports.cgi,v 1.16 1998-04-27 09:44:06 wosch Exp $
+#	$Id: ports.cgi,v 1.17 1998-04-27 09:52:39 wosch Exp $
 #
 # ports.cgi - search engine for FreeBSD ports
 #             	o search for a port by name or description
@@ -76,14 +76,14 @@ sub init_variables {
 
     #
     $remotePrefixHtml =
-	'http://www.freebsd.org/ports';
+	'../ports';
 
     # CVS Web interface
     $remotePrefixCvs =
 	'http://www.freebsd.org/cgi/cvsweb.cgi/ports';
 
     # Ports documentation
-    $portsDesc = 'http://www.freebsd.org/ports/';
+    $portsDesc = '../ports/';
 
     # location of the tiny BSD daemon
     $daemonGif = '<IMG SRC="/gifs/littlelogo.gif">';
