@@ -1,5 +1,4 @@
-DOC=		fonts
-SRCS=		fonts.sgml
+DOCS=	fonts.docb
+INDEXLINK=	fonts.html
 
-.include <bsd.sgml.mk>
-
+.include "../../web.mk"
