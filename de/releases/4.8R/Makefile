@@ -1,7 +1,7 @@
 # The FreeBSD German Documentation Project
 # The FreeBSD Documentation Project
 # $FreeBSD$
-# $FreeBSDde: de-www/releases/4.8R/Makefile,v 1.1 2003/08/02 09:31:50 mheinen Exp $
+# $FreeBSDde: de-www/releases/4.8R/Makefile,v 1.2 2003/08/11 23:13:05 mheinen Exp $
 # basiert auf: 1.4
 
 .if exists(../Makefile.conf)
@@ -11,7 +11,7 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS=	hardware.sgml relnotes.sgml
+DOCS=	announce.sgml hardware.sgml relnotes.sgml
 
 DATA=	docbook.css
 DATA+=	errata.html
