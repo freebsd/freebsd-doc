@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.21 1998-02-08 23:16:39 steve Exp $
+# $Id: Makefile,v 1.22 1998-03-12 21:41:57 jfieber Exp $
 
 .if exists(Makefile.conf)
 .include "Makefile.conf"
@@ -44,6 +44,18 @@ stats-img.html: ${ACCESS_LOG_DIR}/${ACCESS_LOG_FILE}
 index-site.sgml: atoz.sgml
 atoz.sgml: web.atoz 
 	sort -fu web.atoz | perl atoz.pl > ${.TARGET}
+
+cgallery.html: cgallery.sgml cgallery.inc
+cgallery.inc: gallery.db gengallery.pl
+	./gengallery.pl commercial gallery.db > cgallery.inc
+
+npgallery.html: npgallery.sgml npgallery.inc
+npgallery.inc: gallery.db gengallery.pl
+	./gengallery.pl nonprofit < gallery.db > npgallery.inc
+
+pgallery.html: pgallery.sgml pgallery.inc
+pgallery.inc: gallery.db gengallery.pl
+	./gengallery.pl personal < gallery.db > pgallery.inc
 
 # Subdirectories
 
