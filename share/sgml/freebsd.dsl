@@ -1,4 +1,4 @@
-<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.51 2001/09/07 22:26:45 murray Exp $ -->
+<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.52 2001/09/08 01:59:22 murray Exp $ -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
 <!ENTITY % output.html		"IGNORE">
@@ -19,6 +19,10 @@
 <style-sheet>
   <style-specification use="docbook">
     <style-specification-body>
+
+      (declare-flow-object-class formatting-instruction
+        "UNREGISTERED::James Clark//Flow Object Class::formatting-instruction")
+
       <!-- HTML only .................................................... -->
       
       <![ %output.html; [
@@ -247,7 +251,13 @@
 				          (data-of (current-node)))))
   	   	        (make sequence
 		          (literal " (")
-		          (literal (fix-url (attribute-string (normalize "url"))))
+			  (if %hyphenation%
+			      (make formatting-instruction data:
+				    (string-append "\\url{"
+						   (fix-url (attribute-string
+							     (normalize "url")))
+						   "}"))
+			      (literal (fix-url (attribute-string (normalize "url")))))
 		          (literal ")"))
 		        (empty-sosofo)))))))
 
