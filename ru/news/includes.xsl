@@ -2,13 +2,17 @@
 
 <!-- $FreeBSD$ -->
 <!-- The FreeBSD Russian Documentation Project -->
-<!-- $FreeBSDru: frdp/www/ru/news/includes.xsl,v 1.2 2003/09/29 12:03:20 den Exp $ -->
-<!-- Original revision: 1.5 -->
+<!-- $FreeBSDru: frdp/www/ru/news/includes.xsl,v 1.3 2004/04/09 11:00:57 phantom Exp $ -->
+<!-- Original revision: 1.6 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
   <xsl:variable name="newshome">
-    <a href="{$base}/news/news.html">News Home</a>
+    <a href="{$base}/news/news.html">К Новостям</a>
+  </xsl:variable>
+
+  <xsl:variable name="presshome">
+    <a href="{$base}/news/news.html">К Информации в Прессе</a>
   </xsl:variable>
 
   <!-- Generate a unique anchor for this event -->
