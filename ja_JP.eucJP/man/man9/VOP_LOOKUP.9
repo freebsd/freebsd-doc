@@ -26,7 +26,7 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" %FreeBSD: src/share/man/man9/VOP_LOOKUP.9,v 1.19 2003/05/31 14:07:25 hmp Exp %
+.\" %FreeBSD: src/share/man/man9/VOP_LOOKUP.9,v 1.21 2004/07/08 00:36:58 alfred Exp %
 .\"
 .\" $FreeBSD$
 .Dd November 24, 1997
@@ -63,7 +63,7 @@ struct componentname {
 	 */
 	u_long	cn_nameiop;	/* namei 操作 */
 	u_long	cn_flags;	/* namei へのフラグ */
-	struct	proc *cn_proc;	/* lookup を要求しているプロセス */
+	struct	thread *cn_proc;	/* lookup を要求しているスレッド */
 	struct	ucred *cn_cred;	/* 証明 */
 	/*
 	 * 検索ルーチンおよびコミットルーチンで共有されます。
@@ -107,7 +107,8 @@ notfound:
 .Bd -ragged -offset indent
 作成または名前変更でパス名の最後の場合には、
 .Er EJUSTRETURN
-を返し、利用可能な位置に情報を残します。そうでなければ
+を返し、利用可能な位置に情報を残します。
+そうでなければ
 .Er ENOENT
 を返します。
 .Ed
@@ -174,7 +175,7 @@ vop_lookup(struct vnode *dvp,
     if (dvp->v_type != VDIR)
 	return ENOTDIR;
 
-    error = VOP_ACCESS(dvp, VEXEC, cred, cnp->cn_proc);
+    error = VOP_ACCESS(dvp, VEXEC, cred, cnp->cn_thread);
     if (error)
 	return (error);
 
@@ -225,7 +226,7 @@ vop_lookup(struct vnode *dvp,
 	    if (vpid == vp->v_id) {
 		/*
 		 * lockparent && islastcn の場合には dvp がロック
-		 * されます。vp がロックされます。
+		 * されます。 vp がロックされます。
 		 */
 		return (0);
 	    }
@@ -261,7 +262,7 @@ vop_lookup(struct vnode *dvp,
 
 	    /*
 	     * できる限り、ディレクトリの中の新しい要素の名前のために
-	     * 十分に大きい場所の位置を記録します。これは dvp のための
+	     * 十分に大きい場所の位置を記録します。 これは dvp のための
 	     * vnode の私的データの中に記録されることが可能です。
 	     * VOP_CREATE または VOP_RENAME で後で使用するために、
 	     * パス名に保持するために SAVENAME フラグを設定します。
@@ -287,7 +288,7 @@ vop_lookup(struct vnode *dvp,
     } else {
 	/*
 	 * 削除でパス名の最後の場合には、ファイルの削除に使用できる
-	 * パラメータを返します。wantparent フラグが設定されていない
+	 * パラメータを返します。 wantparent フラグが設定されていない
 	 * 場合にはそのディレクトリのみを返し、そうでない場合には
 	 * 続けてその inode をロックし、"." に注意します。
 	 */
@@ -295,7 +296,7 @@ vop_lookup(struct vnode *dvp,
 	    /*
 	     * ディレクトリの書込み権をチェックします。
 	     */
-	    error = VOP_ACCESS(dvp, VWRITE, cred, cnp->cn_proc);
+	    error = VOP_ACCESS(dvp, VWRITE, cred, cnp->cn_thread);
 	    if (error)
 		return (error);
 
@@ -330,7 +331,7 @@ vop_lookup(struct vnode *dvp,
 	 * ディレクトリエントリの inode を取得しなければなりません。
 	 */
 	if (nameiop == RENAME && wantparent && islastcn) {
-	    error = VOP_ACCESS(dvp, VWRITE, cred, cnp->cn_proc);
+	    error = VOP_ACCESS(dvp, VWRITE, cred, cnp->cn_thread);
 	    if (error)
 		return (error);
 
@@ -355,21 +356,21 @@ vop_lookup(struct vnode *dvp,
 	}
 
 	/*
-	 * 名前の変換のステップの全容です。シンボリックリンクが現在の
+	 * 名前の変換のステップの全容です。 シンボリックリンクが現在の
 	 * ディレクトリからの相対である場合には、再度必要になるので、
-	 * ディレクトリを 'vput' しません。代わりに "pdp" として
-	 * アンロックされたディレクトリを保存します。取得する前にその
+	 * ディレクトリを 'vput' しません。 代わりに "pdp" として
+	 * アンロックされたディレクトリを保存します。 取得する前にその
 	 * inode が削除されないことを保証するために、そのディレクトリを
 	 * アンロックする前に目的の inode を取得しなければなりません。
 	 * ルートからディレクトリツリーを下る方向で inode を取得する
-	 * ことで、デッドロックを常に予防します。従がって、逆向きの
+	 * ことで、デッドロックを常に予防します。 従がって、逆向きの
 	 * ポインタ ".." を辿るときには、要求されたディレクトリを取得する
-	 * 前に親ディレクトリをアンロックしなければなりません。".." に
+	 * 前に親ディレクトリをアンロックしなければなりません。 ".." に
 	 * 関連付けられた inode のための VFS_VGET が戻る前に、現在の
 	 * および親ディレクトリの両方が削除された場合には、ここに潜在的な
-	 * 競合状態があります。きわめて複雑なデッドロック検出アルゴリズム
+	 * 競合状態があります。 きわめて複雑なデッドロック検出アルゴリズム
 	 * の実装なしにこの競合状態を避けることができないので、この
-	 * 競合状態の発生が稀であることを期待しています。ファイルシステムが、
+	 * 競合状態の発生が稀であることを期待しています。 ファイルシステムが、
 	 *  ".." 以外に、ディレクトリ構造の中に遡りを指すハードリンクを
 	 * 持つ場合、この簡単なデッドロック検出機構が働かないことにも注意
 	 * してください。
