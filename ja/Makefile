@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.23 1998-08-03 16:43:39 wosch Exp $
+# $Id: Makefile,v 1.24 1998-08-03 17:37:27 wosch Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.36
 
@@ -45,7 +45,7 @@ FORMATS?=	"html roff"
 SGMLOPTS=	-links -hdr ${.CURDIR}/doc.hdr -ftr ${.CURDIR}/doc.ftr -e EUC-JP
 
 
-WEBDIR=		ja
+WEBDIR=		data/ja
 
 .include "../web.mk"
 
