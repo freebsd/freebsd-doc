@@ -1,4 +1,4 @@
-<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.39 2001/07/21 02:29:59 murray Exp $ -->
+<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.40 2001/07/21 09:09:59 murray Exp $ -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
 <!ENTITY % output.html		"IGNORE">
@@ -132,6 +132,13 @@
               (if %refentry-xref-italic%
                 ($italic-seq$)
                 ($charseq$)))))
+
+	(element port
+	  (let* ((urlurl	"http://www.FreeBSD.org/cgi/url.cgi")
+		 (href		(string-append urlurl "?ports/"
+					       (data (current-node)))))
+	    (create-link (list (list "HREF" href))
+			 ($mono-seq$))))
       ]]>
 
       <!-- HTML with images  ............................................ -->
