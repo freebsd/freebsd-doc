@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.41 1998-08-03 17:38:13 wosch Exp $
+# $Id: Makefile,v 1.42 1998-08-04 14:18:21 wosch Exp $
 
 .if exists(Makefile.conf)
 .include "Makefile.conf"
@@ -53,6 +53,7 @@ SUBDIR+= tutorials
 
 # Non-English
 SUBDIR+= ja
+SUBDIR+= es
 
 DOCSUBDIR=	FAQ handbook
 SGMLOPTS+=      -links -hdr ${.CURDIR}/doc.hdr -ftr ${.CURDIR}/doc.ftr
