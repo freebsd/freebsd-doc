@@ -58,8 +58,6 @@ MAN9 =	BUS_PRINT_CHILD.9\
 	VOP_SETEXTATTR.9\
 	VOP_STRATEGY.9\
 	acl.9\
-	at_exit.9\
-	at_fork.9\
 	bios.9\
 	boot.9\
 	buf.9\
@@ -157,8 +155,6 @@ MLINKS+=VOP_OPENCLOSE.9 VOP_OPEN.9
 MLINKS+=VOP_RDWR.9 VOP_READ.9
 MLINKS+=VOP_RDWR.9 VOP_WRITE.9
 MLINKS+=VOP_REMOVE.9 VOP_RMDIR.9
-MLINKS+=at_exit.9 rm_at_exit.9
-MLINKS+=at_fork.9 rm_at_fork.9
 MLINKS+=copy.9 copyin.9 copy.9 copyinstr.9 copy.9 copyout.9 copy.9 copystr.9
 MLINKS+=devstat.9 devicestat.9
 MLINKS+=devstat.9 devstat_add_entry.9
