@@ -1,6 +1,6 @@
-# $FreeBSD$
+# $FreeBSD: www/Makefile,v 1.9 1999/09/06 07:02:30 peter Exp $
 
-LINKS= 	en/ja en/es en/ru en/zh ja/web.mk 
+LINKS= 	en/ja en/es en/ru en/zh ja/web.mk ru/web.mk
 LINKS+=	web.mk ../doc/en_US.ISO_8859-1/web.mk
 LINKS+= ../doc/en_US.ISO_8859-1/includes.sgml
 
@@ -29,6 +29,9 @@ en/zh:
 
 ja/web.mk:
 	cd ja; ln -sf ../en/web.mk
+
+ru/web.mk:
+	cd ru; ln -sf ../en/web.mk
 
 web.mk:
 	cd .;  ln -sf en/web.mk
