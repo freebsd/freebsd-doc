@@ -1,4 +1,4 @@
-# $FreeBSD: www/ja/releases/Makefile,v 1.29 2002/08/19 22:01:44 hrs Exp $
+# $FreeBSD: www/ja/releases/Makefile,v 1.30 2002/11/02 08:24:18 hrs Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.35
 
@@ -17,7 +17,7 @@ SUBDIR+=	2.2.1R 2.2.2R 2.2.5R 2.2.6R 2.2.7R 2.2.8R 3.0R 3.1R 3.2R
 SUBDIR+=	3.3R 3.4R 3.5R
 SUBDIR+=	4.0R 4.1R 4.1.1R 4.2R 4.3R 4.4R 4.5R 4.6R
 SUBDIR+=	4.6.2R 4.7R
-#SUBDIR+=	5.0R
+SUBDIR+=	5.0R
 
 .if defined $(NEW_BUILD)
 SUBDIR=

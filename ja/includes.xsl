@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
 
-<!-- $FreeBSD: www/ja/includes.xsl,v 1.9 2002/11/03 19:29:23 hrs Exp $ -->
-<!-- Original revision: 1.11 -->
+<!-- $FreeBSD: www/ja/includes.xsl,v 1.10 2003/01/05 18:27:51 hrs Exp $ -->
+<!-- Original revision: 1.12 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -85,7 +85,7 @@
     </address>
   </xsl:variable>
   
-  <xsl:variable name="rel.current" select='"4.7"'/>
+  <xsl:variable name="rel.current" select='"5.0"'/>
   <xsl:variable name="u.rel.notes">
     <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel.current"/>R/relnotes.html</xsl:variable>
 
@@ -93,8 +93,23 @@
     <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel.current"/>R/announce.html</xsl:variable>
   <xsl:variable name="u.rel.errata">
     <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel.current"/>R/errata.html</xsl:variable>
-  <!-- 2002/01/02:hrs - when the translation is finished, $enbase should be "$base" -->
+
   <xsl:variable name="u.rel.hardware">
-    <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel.current"/>R/hardware.html</xsl:variable>
+    <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel.current"/>R/hardware.html</xsl:variable>
+
+  <xsl:variable name="u.rel.early">
+    <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel.current"/>R/early-adopter.html</xsl:variable>
   
+  <xsl:variable name="rel2.current" select='"4.7"'/>
+  <xsl:variable name="u.rel2.notes">
+    <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel2.current"/>R/relnotes.html</xsl:variable>
+
+  <xsl:variable name="u.rel2.announce">
+    <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel2.current"/>R/announce.html</xsl:variable>
+  <xsl:variable name="u.rel2.errata">
+    <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel2.current"/>R/errata.html</xsl:variable>
+  <xsl:variable name="u.rel2.hardware">
+    <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel2.current"/>R/hardware.html</xsl:variable>
+  <!-- 2002/01/02:hrs - when the translation is finished, $enbase should be "$base" -->
+
 </xsl:stylesheet>
