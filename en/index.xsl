@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/index.xsl,v 1.70 2003/07/27 16:19:17 ceri Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.71 2003/07/28 17:48:01 ceri Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   
@@ -6,7 +6,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.70 2003/07/27 16:19:17 ceri Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.71 2003/07/28 17:48:01 ceri Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -55,6 +55,7 @@
 		  <option value="http://www2.de.FreeBSD.org">IPv6 Germany</option>
 		  <option value="http://www.jp.FreeBSD.org/www.FreeBSD.org/">IPv6 (6Bone) Japan</option>
 		  <option value="http://www2.no.FreeBSD.org/">IPv6 Norway</option>
+		  <option value="http://www1.uk.FreeBSD.org/">IPv6 UK</option>
 		  <option value="http://www4.us.FreeBSD.org/">IPv6 USA/1</option>
 		  <option value="http://www5.us.FreeBSD.org/">IPv6 USA/2</option>
 		  <option value="http://www.ar.FreeBSD.org/">Argentina</option>
@@ -63,7 +64,7 @@
 		  <option value="http://www.at.FreeBSD.org/">Austria/1</option>
 		  <option value="http://www2.at.FreeBSD.org/">Austria/2</option>
 		  <option value="http://freebsd.unixtech.be/">Belgium</option>
-		  <option value="http://www.br.FreeBSD.org/www.freebsd.org/">Brazil/1</option>
+		  <option value="http://www.br.FreeBSD.org/">Brazil/1</option>
 		  <option value="http://www2.br.FreeBSD.org/www.freebsd.org/">Brazil/2</option>
 		  <option value="http://www3.br.FreeBSD.org/">Brazil/3</option>
 		  <option value="http://www.bg.FreeBSD.org/">Bulgaria</option>
@@ -86,7 +87,7 @@
 		  <option value="http://www.hu.FreeBSD.org/">Hungary/1</option>
 		  <option value="http://www2.hu.FreeBSD.org/">Hungary/2</option>
 		  <option value="http://www.is.FreeBSD.org/">Iceland</option>
-		  <option value="http://www.ie.FreeBSD.org/">Ireland</option>
+		  <option value="http://www.ie.FreeBSD.org/">Ireland/1</option>
 		  <option value="http://www2.ie.FreeBSD.org/">Ireland/2</option>
 		  <option value="http://www.it.FreeBSD.org/">Italy/1</option>
 		  <option value="http://www.gufi.org/mirrors/www.freebsd.org/data/">Italy/2</option>
@@ -144,6 +145,7 @@
 		  <option value="http://www2.uk.FreeBSD.org/">United Kingdom/2</option>
 		  <option value="http://www3.uk.FreeBSD.org/">United Kingdom/3</option>
 		  <option value="http://www4.uk.FreeBSD.org/">United Kingdom/4</option>
+		  <option value="http://www1.uk.FreeBSD.org/">United Kingdom/5</option>
 		  <option value="http://www.FreeBSD.org/">USA/1</option>
 		  <option value="http://www4.us.FreeBSD.org/">USA/2</option>
 		  <option value="http://www5.us.FreeBSD.org/">USA/3</option>
