@@ -1,4 +1,4 @@
-# $FreeBSD: www/ja/projects/Makefile,v 1.10 2000/10/02 09:16:11 kuriyama Exp $
+# $FreeBSD: www/ja/projects/Makefile,v 1.11 2000/11/07 11:37:57 kuriyama Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.7
 
@@ -10,7 +10,6 @@
 .endif
 
 DOCS=	projects.sgml
-DOCS+=	mozilla.sgml
 DOCS+=	newbies.sgml
 
 INDEXLINK= projects.html

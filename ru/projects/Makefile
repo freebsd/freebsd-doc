@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: www/ru/projects/Makefile,v 1.3 2000/11/10 17:27:40 phantom Exp $
 # The FreeBSD Russian Documentation Project
 # $FreeBSDru: frdp/www/ru/projects/Makefile,v 1.3 2000/11/10 17:04:52 phantom Exp $
 # Original revision: 1.7
@@ -12,7 +12,6 @@
 .endif
 
 DOCS=	projects.sgml
-DOCS+=	mozilla.sgml
 DOCS+=	newbies.sgml
 
 INDEXLINK= projects.html
