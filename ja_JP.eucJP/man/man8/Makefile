@@ -12,6 +12,7 @@ MAN8 =	IPXrouted.8\
 	apm.8\
 	apmd.8\
 	arp.8\
+	atacontrol.8\
 	atm.8\
 	atmarpd.8\
 	atrun.8\
@@ -49,6 +50,7 @@ MAN8 =	IPXrouted.8\
 	dump.8\
 	dumpfs.8\
 	dumpon.8\
+	editmap.8\
 	edquota.8\
 	faithd.8\
 	fdcontrol.8\
