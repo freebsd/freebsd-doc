@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
 
-<!-- $FreeBSD: www/ja/news/newsflash.xsl,v 1.7 2002/05/19 18:10:49 hrs Exp $ -->
-<!-- Original revision: 1.8 -->
+<!-- $FreeBSD: www/ja/news/newsflash.xsl,v 1.8 2003/07/08 18:19:54 hrs Exp $ -->
+<!-- Original revision: 1.9 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -67,7 +67,8 @@
 	<xsl:apply-templates select="descendant::month"/>
 	
 	<p>Older announcements:
-	  <a href="../../2001/index.html">2001</a>,
+	  <a href="{$enbase}/news/2002/index.html">2002</a>,
+	  <a href="{$enbase}/news/2001/index.html">2001</a>,
 	  <a href="2000/index.html">2000</a>,
 	  <a href="1999/index.html">1999</a>,
 	  <a href="1998/index.html">1998</a>,

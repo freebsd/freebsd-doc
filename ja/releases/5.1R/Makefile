@@ -1,5 +1,5 @@
-# $FreeBSD: www/ja/releases/5.1R/Makefile,v 1.2 2003/06/09 23:12:42 rushani Exp $
-# Original revision: 1.2
+# $FreeBSD: www/ja/releases/5.1R/Makefile,v 1.3 2003/06/10 20:45:06 hrs Exp $
+# Original revision: 1.3
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
