@@ -1,6 +1,6 @@
 #!/usr/bin/perl -T
 #
-# Copyright (c) 1996-2001 Wolfram Schneider <wosch@FreeBSD.org>. Berlin.
+# Copyright (c) 1996-2003 Wolfram Schneider <wosch@FreeBSD.org>. Berlin.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp 
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.84 2003-01-10 11:25:48 wosch Exp $
+# $Id: man.cgi,v 1.85 2003-01-18 11:38:06 wosch Exp $
 
 #use Data::Dumper;
 #use Carp;
@@ -103,6 +103,7 @@ $sectionpath = {
     'OpenBSD 3.1' => {
 	'path' => '1:2:3:3p:4:5:6:7:8:9',
     },
+    'OpenBSD 3.2' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
 };
 
 foreach my $os (keys %$sectionpath) {
@@ -182,6 +183,7 @@ $manPathDefault = 'FreeBSD 4.7-RELEASE';
      'OpenBSD 2.9',           "$manLocalDir/OpenBSD-2.9",
      'OpenBSD 3.0',           "$manLocalDir/OpenBSD-3.0",
      'OpenBSD 3.1',           "$manLocalDir/OpenBSD-3.1",
+     'OpenBSD 3.2',           "$manLocalDir/OpenBSD-3.2",
 
     #'NetBSD 0.9',            "$manLocalDir/NetBSD-0.9",
      'NetBSD 1.0',            "$manLocalDir/NetBSD-1.0",
@@ -284,7 +286,7 @@ while (($key,$val) = each %manPath) {
      'macosx', 'Darwin 1.3 PPC',
 
      'netbsd', 'NetBSD 1.6',
-     'openbsd', 'OpenBSD 3.1',
+     'openbsd', 'OpenBSD 3.2',
      'v7', 'Unix Seventh Edition', 
      'v7man', 'Unix Seventh Edition', 
      'x11', 'XFree86 4.2.0',
@@ -950,7 +952,7 @@ ETX
 }
 
 sub copyright {
-    $id = '$Id: man.cgi,v 1.84 2003-01-10 11:25:48 wosch Exp $';
+    $id = '$Id: man.cgi,v 1.85 2003-01-18 11:38:06 wosch Exp $';
 
     return qq{\
 <PRE>
