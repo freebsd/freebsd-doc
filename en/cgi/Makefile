@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/cgi/Makefile,v 1.21 2004/02/16 15:18:02 ceri Exp $
+# $FreeBSD: www/en/cgi/Makefile,v 1.22 2004/02/16 16:57:10 ceri Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -7,7 +7,7 @@
 .include "../Makefile.inc"
 .endif
 
-DATA=	ftp.mirrors freebsd.def html.pl cgi-lib.pl cgi-style.pl Gnats.pm
+DATA=	ftp.mirrors html.pl cgi-lib.pl cgi-style.pl Gnats.pm
 DATA+=	cvsweb.conf cvsweb.conf-freebsd cvsweb.conf-netbsd cvsweb.conf-openbsd
 CGI=	ftp.cgi gallery.cgi mirror.cgi
 CGI+=	search.cgi cvsweb.cgi query-pr.cgi query-pr-summary.cgi
