@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-#	$Id: ports.cgi,v 1.1 1997-09-19 16:47:40 wosch Exp $
+#	$Id: ports.cgi,v 1.2 1997-09-28 09:24:39 wosch Exp $
 #
 # ports.cgi - search engine for FreeBSD ports
 #             	o search for a port by name or description
@@ -526,7 +526,7 @@ as database for all operation. INDEX,v will be updated by hand
 by the portsmeister.<p>
 
 You may also search the 
-<a href="http://www.de.freebsd.org/de/cgi/man.cgi?manpath=FreeBSD+Ports">ports manual pages</a>.<p>
+<a href="http://www.freebsd.org/cgi/man.cgi?manpath=FreeBSD+Ports">ports manual pages</a>.<p>
 
 Get the <a href ="source">Source</a> of this script.<p>
 
