@@ -34,7 +34,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $Id: gnome_upgrade.sh,v 1.14 2005-02-06 03:11:05 adamw Exp $
+# $Id: gnome_upgrade.sh,v 1.15 2005-03-03 03:00:57 marcus Exp $
 #
 
 # This script will aid in doing major upgrades to the GNOME Desktop (e.g.
@@ -52,7 +52,7 @@ X11BASE=${X11BASE:=/usr/X11R6}
 PROJECT_URL="http://www.FreeBSD.org/gnome/"
 SUPPORT_EMAIL="freebsd-gnome@FreeBSD.org"
 
-SUPPORTED_FREEBSD_VERSIONS="4.10 4.11 5.3 6.0"
+SUPPORTED_FREEBSD_VERSIONS="4.10 4.11 5.3 5.4 6.0"
 	# Ports that must be up-to-date and installed for the Big Update to work
 EXTERNAL_DEPENDS="popt gettext* libiconv expat pkgconfig freetype2 XFree86-libraries* Xft libXft XFree86-fontScalable* XFree86-fontEncodings* xorg* png libaudiofile tiff jpeg libxml2 python libxslt gnomehier scrollkeeper intltool p5-XML-Parser docbook-sk xmlcatmgr docbook-xsl docbook-xml sdocbook-xml startup-notification gnome-icon-theme Hermes libmpeg2 guile libltdl aspell gle cdrtools mkisofs bitstream-vera openldap-client lcms libmng libtool ghostscript* gnomeuserdocs2 libIDL libbonobo libgda2 libgsf libgtop2 libxklavier shared-mime-info hicolor-icon-theme linc ORBit2 libart_lgpl2 libmad libid3tag fam esound libglut nspr shared-mime-data hicolor-icon-theme libsoup"
 EXTERNAL_4_DEPENDS="libgnugetopt"
