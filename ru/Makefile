@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: www/ru/Makefile,v 1.16 2000/12/29 13:37:57 phantom Exp $
 # The FreeBSD Russian Documentation Project
 # $FreeBSDru: frdp/www/ru/Makefile,v 1.9 2000/12/29 13:17:32 phantom Exp $
 # Original revision: 1.55
@@ -47,7 +47,7 @@ SUBDIR+= internal
 SUBDIR+= java
 SUBDIR+= copyright
 SUBDIR+= search
-SUBDIR+= gallery
+#SUBDIR+= gallery
 SUBDIR+= projects
 SUBDIR+= releases
 SUBDIR+= smp
