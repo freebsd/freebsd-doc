@@ -1,6 +1,6 @@
-<!-- $Id: hackers.sgml,v 1.8 1999-03-01 17:18:52 motoyuki Exp $ -->
+<!-- $Id: hackers.sgml,v 1.9 1999-05-06 02:11:14 motoyuki Exp $ -->
 <!-- The FreeBSD Japanese Documentation Project -->
-<!-- Original revision: 1.12 --> 
+<!-- Original revision: 1.15 --> 
 
   <sect>
     <heading>まじめな FreeBSD ハッカーだけの話題<label id="hackers"></heading>
@@ -52,7 +52,7 @@
 
       <p>次に, CVS リポジトリ全体を手元においておく必要があります. 
       これを入手するには
-      <url url="../handbook/cvsup.html" name="CVSUP">
+      <url url="../handbook/synching.html#CVSUP" name="CVSUP">
       が使用できますが, supfile で release の名称を cvs にして
       他のタグや date フィールドを削除する必要があります:
 
@@ -138,10 +138,12 @@
 
     <sect1>
       <heading>
-        インターネットアクセスに制限があっても current を追いかけられますか? <label id="ctm">
+        インターネットアクセスに制限があっても current を追いかけられますか?
+<label id="ctm">
       </heading>
 
-      <p>はい, <url url="../handbook/ctm.html" name="CTM システム ">を使って
+      <p>はい, <url url="../handbook/synching.html#CTM" name="CTM システム ">を
+      使って
       ソースツリー全体のダウンロードを<tt/おこなわず/に追いかけることができます. 
 
     <sect1>
@@ -502,4 +504,81 @@ Cc: current@FreeBSD.ORG
       name="ELF リンカ"> に <tt>-export-dynamic</tt> オプションを
       付けて実行形式をリンクする必要があります.
 
+    </sect1>
+
+    <sect1>
+      <heading>カーネルアドレス空間を大きくしたり、小さくするにはどうしたら良いのですか?</heading>
+
+      <p>
+      カーネルアドレス空間は, FreeBSD 3.x 上で
+      256MB, FreeBSD 4.x 上で 1GB がデフォルトになっています.
+      負荷の高いネットワークサーバ(例えば大きな FTP, HTTP サーバ)を運用する場合は,
+      256MB では足りないことに気付くかも知れません.
+
+      <p>
+      では, アドレス空間を大きくするにはどうしたら良いのでしょうか?
+      それには, 二つの段階を踏みます. まず,
+      より大きいアドレス空間を割り当てることをカーネルに知らせる必要があります.
+      次に, カーネルはアドレス空間の先頭にロードされるため,
+      アドレスの先頭が天井(訳注:カーネルアドレス空間の最下端アドレスのこと)と
+      ぶつかることのないように, ロードアドレスを今までより低位に設定する必要があります.
+
+      <p>
+      最初の段階は, <tt>src/sys/i386/include/pmap.h</tt> にある
+      <tt/NKPDE/ の値を増加させることで行ないます.
+      ここに 1GB のアドレス空間にするために, どのようにすれば良いかを示します.
+
+      <verb>
+#ifndef NKPDE
+#ifdef SMP
+#define NKPDE                   254     /* addressable number of page tables/pde's */
+#else
+#define NKPDE                   255     /* addressable number of page tables/pde's */
+#endif  /* SMP */
+#endif
+      </verb>
+
+      <p>
+      正確な <tt/NKPDE/ の値を計算するには,
+      望みのアドレス空間の大きさ(メガバイト単位)を 4 で割って,
+      それから UP のために 1, SMP のために 2 を引き算して下さい.
+
+      <p>
+      次の段階を行なうには, ロードアドレスを正確に計算することが必要です.
+      単純に, アドレス空間の大きさ(バイト単位)を 0x100100000 から引き算して下さい.
+      1GB アドレス空間の場合, その結果は 0xc0100000 になります.
+      そして, <tt>src/sys/i386/conf/Makefile.i386</tt> にある <tt/LOAD_ADDRESS/ 
+      に, 今計算した値を入れます. また, 次のように
+      <tt>src/sys/i386/conf/kernel.script</tt> のセクションの始めの方にある
+      ロケーションカウンタにも同じ値を入れて下さい.
+      
+      <verb>
+OUTPUT_FORMAT("elf32-i386", "elf32-i386", "elf32-i386")
+OUTPUT_ARCH(i386)
+ENTRY(btext)
+SEARCH_DIR(/usr/lib); SEARCH_DIR(/usr/obj/elf/home/src/tmp/usr/i386-unknown-freebsdelf/lib);
+SECTIONS
+{
+  /* Read-only sections, merged into text segment: */
+  . = 0xc0100000 + SIZEOF_HEADERS;
+  .interp     : { *(.interp)    }
+      </verb>
+
+      <p>
+      それが完了したら, config し直してカーネルを再構築して下さい.
+      おそらく, <tt/ps(1)/, <tt/top(1)/ などに不具合が出るでしょう.
+      それらを正常にするために, <tt/make world/ (もしくは,
+      変更した <tt/pmap.h/ を <tt>/usr/include/vm/</tt>
+      にコピーした後に, <tt/libkvm/, <tt/ps/ および <tt/top/ を
+      手動で再構築すること)を行なうべきです.
+      
+      <p>
+      注意: カーネルアドレス空間の大きさは, 4 メガバイトの倍数である必要があります.
+
+      <p>
+      [<url url="mailto:dg@freebsd.org" name="David Greenman">
+      による補足: <em> カーネルアドレス空間は 2 の乗数である必要があると思いますが,
+      それが確かなことかどうかははっきりしていません.
+      昔の起動コードには, 良く高位アドレスビットのトリックが使われていたため,
+      少なくとも 256MB の粒度であることが想定されていたと思います.]</em>
     </sect>
