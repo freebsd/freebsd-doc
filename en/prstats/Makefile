@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/prstats/Makefile,v 1.2 2001/11/18 16:13:07 murray Exp $
+# $FreeBSD: www/en/prstats/Makefile,v 1.3 2001/11/19 04:47:58 murray Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -9,7 +9,7 @@
 
 DOCS=	index.sgml
 
-.if !defined(NO_PRSTATS)
+.if defined(WITH_PRSTATS)
 SUBDIR+= ../../tools/prstats
 .else
 beforeinstall:
