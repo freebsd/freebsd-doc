@@ -1,12 +1,17 @@
 #
-# $FreeBSD: www/ja/tutorials/Makefile,v 1.6 2000/10/02 07:54:41 kuriyama Exp $
+# $FreeBSD: www/ja/tutorials/Makefile,v 1.7 2000/10/02 09:16:24 kuriyama Exp $
 #
-# Original revision: 1.9
+# Original revision: 1.10
 #
 # Build the FreeBSD tutorials/articles outside of the www tree, and then
 # install them in to the right place.
 
-LOCALTOP= ..
+.if exists(../Makefile.conf)
+.include "../Makefile.conf"
+.endif
+.if exists(../Makefile.inc)
+.include "../Makefile.inc"
+.endif
 
 DOCS = index.sgml
 
@@ -24,4 +29,4 @@ all afterinstall:
 ### Revision checking
 REVCHECK=	YES
 
-.include "${LOCALTOP}/web.mk"
+.include "${WEB_PREFIX}/share/mk/web.site.mk"

@@ -1,11 +1,12 @@
-# $FreeBSD: www/ja/news/Makefile,v 1.21 2000/10/02 09:16:10 kuriyama Exp $
+# $FreeBSD: www/ja/news/Makefile,v 1.22 2000/11/07 07:58:03 kuriyama Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.22
+# Original revision: 1.23
 
-LOCALTOP= ..
-
-.if exists(${LOCALTOP}/Makefile.conf)
-.include "${LOCALTOP}/Makefile.conf"
+.if exists(../Makefile.conf)
+.include "../Makefile.conf"
+.endif
+.if exists(../Makefile.inc)
+.include "../Makefile.inc"
 .endif
 
 # quick news letter
@@ -44,4 +45,4 @@ SUBDIR+= 	1997
 ### Revision checking
 REVCHECK=	YES
 
-.include "${LOCALTOP}/web.mk"
+.include "${WEB_PREFIX}/share/mk/web.site.mk"

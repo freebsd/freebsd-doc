@@ -1,11 +1,12 @@
-# $FreeBSD: www/ja/gallery/Makefile,v 1.11 2000/10/02 07:54:40 kuriyama Exp $
+# $FreeBSD: www/ja/gallery/Makefile,v 1.12 2000/10/02 09:16:06 kuriyama Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.10
+# Original revision: 1.11
 
-LOCALTOP= ..
-
-.if exists(${LOCALTOP}/Makefile.conf)
-.include "${LOCALTOP}/Makefile.conf"
+.if exists(../Makefile.conf)
+.include "../Makefile.conf"
+.endif
+.if exists(../Makefile.inc)
+.include "../Makefile.inc"
 .endif
 
 DOCS = gallery.sgml
@@ -23,4 +24,4 @@ gallery.inc: ../../en/gallery/gallery.db gallery.sgml
 ### Revision checking
 REVCHECK=	yes
 
-.include "${LOCALTOP}/web.mk"
+.include "${WEB_PREFIX}/share/mk/web.site.mk"

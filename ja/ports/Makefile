@@ -1,9 +1,12 @@
-# $FreeBSD: www/ja/ports/Makefile,v 1.19 2000/10/02 07:54:40 kuriyama Exp $
+# $FreeBSD: www/ja/ports/Makefile,v 1.20 2000/11/07 08:01:02 kuriyama Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.29
+# Original revision: 1.30
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
+.endif
+.if exists(../Makefile.inc)
+.include "../Makefile.inc"
 .endif
 .if exists(../../en/ports/Makefile.inc)
 .include "../../en/ports/Makefile.inc"
@@ -74,4 +77,4 @@ all install clean:
 	(cd ${.CURDIR} && ${MAKE}  ${MAKEFLAGS} -f Makefile.inc0 ${.TARGET})
 
 
-.include "../../web.mk"
+.include "${WEB_PREFIX}/share/mk/web.site.mk"

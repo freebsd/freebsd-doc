@@ -1,11 +1,12 @@
-# $FreeBSD: www/ja/search/Makefile,v 1.9 2000/09/30 12:30:40 hrs Exp $
+# $FreeBSD: www/ja/search/Makefile,v 1.10 2000/10/02 09:16:21 kuriyama Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.7
+# Original revision: 1.8
 
-LOCALTOP= ..
-
-.if exists(${LOCALTOP}/Makefile.conf)
-.include "${LOCALTOP}/Makefile.conf"
+.if exists(../Makefile.conf)
+.include "../Makefile.conf"
+.endif
+.if exists(../Makefile.inc)
+.include "../Makefile.inc"
 .endif
 
 # These are turned into validated, normalized HTML files.
@@ -28,4 +29,4 @@ site.sgml: ${.CURDIR}/../../en/search/site.map
 ### Revision checking
 REVCHECK=	YES
 
-.include "${LOCALTOP}/web.mk"
+.include "${WEB_PREFIX}/share/mk/web.site.mk"
