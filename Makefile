@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.3 1999-02-03 13:25:29 wosch Exp $
+# $Id: Makefile,v 1.4 1999-03-27 15:45:03 nik Exp $
 
 LINKS= 	en/ja en/es en/ru en/zh en/tutorials ja/web.mk ja/FAQ en/FAQ en/handbook
 LINKS+=	ja/handbook web.mk es/FAQ ru/FAQ zh/FAQ ../doc/en/web.mk
@@ -34,7 +34,7 @@ en/FAQ:
 	cd en; ln -sf ../../doc/FAQ
 
 en/handbook:
-	cd en; ln -sf ../../doc/handbook
+	cd en; ln -sf ../../doc/en/handbook
 
 ja/web.mk:
 	cd ja; ln -sf ../en/web.mk
