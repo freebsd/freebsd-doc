@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.20 1998-10-13 21:15:57 jkh Exp $
+# $Id: Makefile,v 1.21 1998-10-31 11:54:53 wosch Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -33,5 +33,6 @@ DATA+=  smart-reseller-small.jpg smart-reseller.jpg
 DATA+=	bsdm.jpg
 DATA+=	bsdmb.jpg
 DATA+=	fhp_mini.jpg
+DATA+=  mall_title_tiny.gif
 
 .include "../web.mk"
