@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/ports.cgi,v 1.45 2000/04/23 09:54:35 wosch Exp $
+# $FreeBSD: www/en/cgi/ports.cgi,v 1.46 2000/09/03 16:30:26 wosch Exp $
 #
 # ports.cgi - search engine for FreeBSD ports
 #             	o search for a port by name or description
@@ -464,10 +464,11 @@ Search for:
 	  'all', 'All',
 	  'maintainer', 'Maintainer',
 	  'text', 'Description',
+	  'pkgdescr', 'Long Description',
 	  'requires', 'Requires',
 	  );
 
-    foreach ('all', 'name', 'text', 'maintainer', 'requires') {
+    foreach ('all', 'name', 'text', 'pkgdescr', 'maintainer', 'requires') {
 	print "<OPTION" . (($_ eq $stype) ? ' SELECTED ' : ' ') .
 	    qq{VALUE="$_">} . ($d{$_} ? $d{$_} : $_) . qq{</OPTION>\n};
     }
@@ -536,7 +537,7 @@ sub footer {
 <img ALIGN="RIGHT" src="/gifs/powerlogo.gif">
 &copy; 1996-2000 by Wolfram Schneider. All rights reserved.<br>
 };
-    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.45 2000/04/23 09:54:35 wosch Exp $} . "<br>\n";
+    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.46 2000/09/03 16:30:26 wosch Exp $} . "<br>\n";
     print qq{Please direct questions about this service to
 <I><A HREF="$mailtoURL">$mailto</A></I><br>\n};
     print qq{General questions about FreeBSD ports should be sent to } .
@@ -639,6 +640,15 @@ if ($path_info eq "/source") {
     open(R, $0) || do { print "ick!\n"; &exit; };
     while(<R>) { print }
     close R;
+    &exit;
+}
+
+# Full text search in ports/<category>/port>/pkg-descr
+if ($stype eq 'pkgdescr') {
+    local($url) = 
+      'http://www.FreeBSD.org/cgi/search.cgi?source=pkgdescr&max=25';
+    print "Location:  $url&words=$query\n";
+    print "Content-type: text/plain\n\n";
     &exit;
 }
 
