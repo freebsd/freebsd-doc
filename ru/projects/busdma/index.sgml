@@ -1,0 +1,1209 @@
+<!--
+     The FreeBSD Russian Documentation Project
+
+     $FreeBSDru: frdp/www/ru/projects/busdma/index.sgml,v 1.1 2004/01/21 18:02:23 andy Exp $
+
+     Original revision: 1.77
+-->
+
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN" [
+<!ENTITY base CDATA "../../..">
+<!ENTITY date "$FreeBSD$">
+<!ENTITY title "Проект адаптации драйверов FreeBSD к busdma и SMPng">
+<!ENTITY email 'mux'>
+<!ENTITY % includes SYSTEM "../../includes.sgml"> %includes;
+
+<!-- Status levels -->
+<!ENTITY status.na "<font color=green>Нет данных</font>">
+<!ENTITY status.done "<font color=green>Выполнено</font>">
+<!ENTITY status.wip "<font color=blue>Выполняется</font>">
+<!ENTITY status.untested "<font color=yellow>Требует тестирования</font>">
+<!ENTITY status.new "<font color=red>Не сделано</font>">
+<!ENTITY status.unknown "<font color=red>Неизвестно</font>">
+
+<!-- The list of contributors was moved to a separate file so that it can
+  be used by other documents in the FreeBSD web site. -->
+
+<!ENTITY % developers SYSTEM "../../developers.sgml"> %developers;
+
+]>
+
+<html>
+  &header;
+
+  <h2>Содержание</h2>
+
+  <ul>
+    <li><a href="#goal">Цель проекта</a></li>
+    <li><a href="#platform-status">Состояние по поддержке платформ</a></li>
+    <li><a href="#ifnet-status">Состояние по драйверам сетевых интерфейсов</a></li>
+    <li><a href="#storage-status">Состояние по драйверам устройств хранения</a></li>
+    <li><a href="#misc-status">Состояние по драйверам разных устройств</a></li>
+    <li><a href="#doc-status">Состояние по документированию</a></li>
+  </ul>
+
+  <a name="goal"></a>
+  <h2>Цель проекта</h2>
+
+  <p><b>busdma</b></p>
+
+  <p>Интерфейсы busdma позволяют драйверам аппаратных устройств работать на
+    различных платформах без необходимости кодирования специфичных для
+    аппаратных платформ методов доступа непосредственно в драйверах.  Это
+    снижает затраты на поддержку драйверов для разных платформ, и увеличивает
+    вероятность того, что драйвер будет "просто работать" на новой платформе.
+    Модификация драйвера для использования busdma является достаточно
+    определённым процессом, и не требует глубоких знаний ни драйвера
+    устройства, ни функций busdma.  Для busdma, используемого во FreeBSD, как
+    правило, требуется внесение изменений двух типов: адаптация реализации
+    busdma к работе на всех платформах, и преобразование драйверов к
+    использованию этой технологии.  Таким же образом информация о состоянии
+    этого проекта разбита на поддержку платформ и поддержку драйверов
+    (отсортированных по категориям).  Для завершения этой работы необходим
+    тщательный аудит системных драйверов устройств, а затем приложение усилий
+    к преобразованию драйверов.</p>
+
+  <p><b>INTR_MPSAFE</b></p>
+
+  <p>Драйверы оборудования регистрируют свои обработчики прерываний при помощи
+    функции <code>bus_setup_intr()</code>.  Установка флага
+    <code>INTR_MPSAFE</code> указывает коду обработки прерываний системы на
+    вызов её процедуры без включения семафора Giant.  Это даёт значительный
+    прирост производительности в SMP-системах.</p>
+
+  <p>Драйверы могут устанавливать этот флаг, даже если они не являются
+    полностью изолированными, если только их обработчик прерываний не
+    обращается к другим структурам данных в драйвере.  Простым способом
+    обеспечить это является проверка и сброс регистров состояния аппаратных
+    прерываний, а затем планирование обработки прерывания в очереди задач
+    (taskqueue) или потоке выполнения ядра (kernel thread).</p>
+
+  <p><b>Отделение SMPng</b></p>
+
+  <p>Драйверы должны использовать семафоры и sx-блокировки для защиты
+    собственных структур данных и аппаратных регистров от параллельно
+    выполняющихся потоков.  Операции с семафорами несколько ресурсоёмки, так
+    что хорошей стратегией является комбинирование максимально возможного
+    количества атомарных операций в одну операцию захвата семафора.</p>
+
+  <p><b>поддержка p!=a</b></p>
+
+  <p>Поддержка Intel PAE требует, чтобы указатели и физические адреса имели
+    разный размер.  Это значит, что драйверы должны быть писаться с
+    использованием vm_paddr_t или bus_addr_t, без предположений о том, что
+    физические адреса могут быть представлены при помощи void *.  Кроме того,
+    строки форматов и операции приведения типов должны применяться с
+    осторожностью.</p>
+
+  <p>Перечень задач ниже не является полным, но представляет собой набор
+    имеющих отношение к делу и/или важных компонентов общей работы.  Поле
+    "Ответственный" определяет разработчика, который изъявил желание отвечать
+    за выполнение конкретной задачи; это не исключает участия других, но
+    предполагает координацию с ответственным для избежания ненужного
+    дублирования работы и максимально быстрого продвижения вперёд.  Если
+    начата новая работа приличного объёма, или заявленная оказалась
+    невостребованной, то стоит оповестить по электронной почте &a.mux;, чтобы
+    выяснить, имелось ли движение вперёд.</p>
+
+  <p>Смысл поля даты меняется в зависимости от состояния работы.  Для
+    выполненных работ она означает дату окончания или сообщения об окончании.
+    Для задач, находящихся в процессе выполнения, оно обозначает дату
+    последнего обновления информации по задаче.  Для остановившихся задач она
+    означает дату, когда эта задача была объявлена заброшенной.  Для новых
+    задач это поле означает дату добавления задачи к списку.</p>
+
+  <p>Задачи отсортированы по состоянию, а затем по дате.</p>
+
+  <a name="platform-status"></a>
+  <h2>Состояние по поддержке платформ</h2>
+
+  <table border=3>
+    <tr>
+      <th>Задача</th>
+      <th>Ответственный</th>
+      <th>Последнее обновление</th>
+      <th>Состояние</th>
+      <th>Примечания</th>
+    </tr>
+
+    <tr>
+      <td>alpha</td>
+      <td>&a.gallatin;</td>
+      <td>10 декабря 2002</td>
+      <td>&status.done;</td>
+      <td>В системах с большим объёмом оперативной памяти могут быть
+        проблемы.</td>
+    </tr>
+
+    <tr>
+      <td>amd64</td>
+      <td>&a.peter;</td>
+      <td>1 июля 2003</td>
+      <td>&status.done;</td>
+      <td>Поддерживается полностью.</td>
+    </tr>
+
+    <tr>
+      <td>ia64</td>
+      <td>&a.marcel;</td>
+      <td>10 декабря 2002</td>
+      <td>&status.done;</td>
+      <td>В системах с большим объёмом оперативной памяти могут быть
+        проблемы.</td>
+    </tr>
+
+    <tr>
+      <td>i386</td>
+      <td>&a.sam;</td>
+      <td>9 декабря 2002</td>
+      <td>&status.done;</td>
+      <td>Поддерживается полностью.</td>
+    </tr>
+
+    <tr>
+      <td>powerpc</td>
+      <td>&a.hmp;</td>
+      <td>15 января 2003</td>
+      <td>&status.done;</td>
+      <td>Поддерживается полностью.</td>
+    </tr>
+
+    <tr>
+      <td>sparc64</td>
+      <td>&a.tmm;</td>
+      <td>6 января 2003</td>
+      <td>&status.done;</td>
+      <td>Поддерживается полностью.</td>
+    </tr>
+  </table>
+
+  <a name="ifnet-status"></a>
+  <h2>Состояние по драйверам сетевых интерфейсов</h2>
+
+  <table border=3>
+    <tr>
+      <th>Драйвер</th>
+      <th>Ответственный</th>
+      <th>Последнее обновление</th>
+      <th>busdma</th>
+      <th>INTR_MPSAFE</th>
+      <th>Отделение SMPng</th>
+      <th>a!=p</th>
+      <th>Состояние 4.x</th>
+      <th>Замечания</th>
+    </tr>
+
+    <tr>
+      <td>if_ar</td>
+      <td>&nbsp;</td>
+      <td>&nbsp;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>kvtop()</td>
+    </tr>
+
+    <tr>
+      <td>if_bge</td>
+      <td>&a.wpaul;</td>
+      <td>26 июля 2003</td>
+      <td>&status.untested;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.done;</td>
+      <td>&status.new;</td>
+      <td>&nbsp;</td>
+    </tr>
+
+    <tr>
+      <td>if_cs</td>
+      <td>&nbsp;</td>
+      <td>&nbsp;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&nbsp;</td>
+    </tr>
+
+    <tr>
+      <td>if_dc</td>
+      <td>&a.mux;</td>
+      <td>17 апреля 2003</td>
+      <td>&status.done;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.untested;</td>
+      <td>&status.new;</td>
+      <td>&nbsp;</td>
+    </tr>
+
+    <tr>
+      <td>if_de</td>
+      <td>&a.mux;</td>
+      <td>&nbsp;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>vtophys()</td>
+    </tr>
+
+    <tr>
+      <td>if_ed</td>
+      <td>&nbsp;</td>
+      <td>&nbsp;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>kvtop()</td>
+    </tr>
+
+    <tr>
+      <td>if_em</td>
+      <td>&a.pdeuskar;</td>
+      <td>19 декабря 2002</td>
+      <td>&status.done;</td>
+      <td>&status.done;</td>
+      <td>&status.new;</td>
+      <td>&status.done;</td>
+      <td>&status.new;</td>
+      <td>&nbsp;</td>
+    </tr>
+
+    <tr>
+      <td>if_en</td>
+      <td>&a.harti;</td>
+      <td>4 марта 2003</td>
+      <td>&status.done;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.untested;</td>
+      <td>&status.new;</td>
+      <td>&nbsp;</td>
+    </tr>
+
+    <tr>  
+      <td>if_ep</td>
+      <td>&a.imp;</td>
+      <td>4 ноября 2003</td>
+      <td>&status.na;</td>
+      <td>&status.done;</td>
+      <td>&status.new;</td>
+      <td>&status.done;</td>
+      <td>&status.na;</td>
+      <td>&nbsp;</td>
+    </tr>
+
+    <tr>
+      <td>if_fxp</td>
+      <td>&a.mux;</td>
+      <td>9 декабря 2002</td>
+      <td>&status.done;</td>
+      <td>&status.done;</td>
+      <td>&status.new;</td>
+      <td>&status.done;</td>
+      <td>&status.new;</td>
+      <td>&nbsp;</td>
+    </tr>
+
+    <tr>
+      <td>if_fwe</td>
+      <td>&nbsp;</td>
+      <td>&nbsp;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&nbsp;</td>
+    </tr>
+
+    <tr>
+      <td>if_gem</td>
+      <td>&a.tmm;</td>
+      <td>6 января 2003</td>
+      <td>&status.done;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>Нет данных</td>
+      <td>&nbsp;</td>
+    </tr>
+
+    <tr>
+      <td>if_gx</td>
+      <td>&nbsp;</td>
+      <td>&nbsp;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>vtophys()</td>
+    </tr>
+
+    <tr>
+      <td>if_hme</td>
+      <td>&a.tmm;</td>
+      <td>6 января 2003</td>
+      <td>&status.done;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>Нет данных</td>
+      <td>&nbsp;</td>
+    </tr>
+
+    <tr>
+      <td>if_idt</td>
+      <td>&nbsp;</td>
+      <td>&nbsp;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>vtophys()</td>
+    </tr>
+
+    <tr>
+      <td>if_lge</td>
+      <td>&nbsp;</td>
+      <td>&nbsp;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>vtophys()</td>
+    </tr>
+
+    <tr>
+      <td>if_lmc</td>
+      <td>&nbsp;</td>
+      <td>&nbsp;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>vtophys()</td>
+    </tr>
+
+    <tr>
+      <td>if_lnc</td>
+      <td>&a.obrien;</td>
+      <td>&nbsp;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>vtophys().  Пожалуйста, для получения информации/оборудования
+        обратитесь к &a.phk;.</td>
+    </tr>
+
+    <tr>
+      <td>if_mn</td>
+      <td>&nbsp;</td>
+      <td>&nbsp;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>vtophys().  Пожалуйста, для получения информации/оборудования
+        обратитесь к &a.phk;.</td>
+    </tr>
+
+    <tr>
+      <td>if_my</td>
+      <td>&nbsp;</td>
+      <td>&nbsp;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>vtophys()</td>
+    </tr>
+
+    <tr>
+      <td>if_nge</td>
+      <td>&nbsp;</td>
+      <td>&nbsp;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>vtophys()</td>
+    </tr>
+
+    <tr>
+      <td>if_pcn</td>
+      <td>&a.obrien;</td>
+      <td>&nbsp;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>vtophys()</td>
+    </tr>
+
+    <tr>
+      <td>if_pdq</td>
+      <td>&nbsp;</td>
+      <td>&nbsp;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>по большей части поддерживает busdma, кроме vtophys()</td>
+    </tr>
+
+    <tr>
+      <td>if_rl</td>
+      <td>&a.wpaul;</td>
+      <td>9 декабря 2002</td>
+      <td>&status.done;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&nbsp;</td>
+    </tr>
+
+    <tr>
+      <td>if_sf</td>
+      <td>&nbsp;</td>
+      <td>&nbsp;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>vtophys()</td>
+    </tr>
+
+    <tr>
+      <td>if_sis</td>
+      <td>&a.wpaul;</td>
+      <td>9 декабря 2002</td>
+      <td>&status.done;</td>
+      <td>&status.done;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&nbsp;</td>
+    </tr>
+
+    <tr>
+      <td>if_sk</td>
+      <td>&nbsp;</td>
+      <td>&nbsp;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>vtophys()</td>
+    </tr>
+
+    <tr>
+      <td>if_sr</td>
+      <td>&nbsp;</td>
+      <td>&nbsp;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>vtophys()</td>
+    </tr>
+
+    <tr>
+      <td>if_ste</td>
+      <td>&nbsp;</td>
+      <td>&nbsp;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>vtophys()</td>
+    </tr>
+
+    <tr>
+      <td>if_ti</td>
+      <td>&nbsp;</td>
+      <td>&nbsp;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&nbsp;</td>
+    </tr>
+
+    <tr>
+      <td>if_tl</td>
+      <td>&nbsp;</td>
+      <td>&nbsp;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&nbsp;</td>
+    </tr>
+
+    <tr>
+      <td>if_tx</td>
+      <td>&a.mux;</td>
+      <td>19 апреля 2003</td>
+      <td>&status.done;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.untested;</td>
+      <td>&status.new;</td>
+      <td>vtophys()</td>
+    </tr>
+
+    <tr>
+      <td>if_txp</td>
+      <td>&a.will;</td>
+      <td>18 июля 2003</td>
+      <td>&status.wip;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&nbsp;</td>
+    </tr>
+
+    <tr>
+      <td>if_vr</td>
+      <td>Christian S.J. Peron &lt;maneo@bsdpro.com&gt;</td>
+      <td>20 января 2003</td>
+      <td>&status.wip;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&nbsp;</td>
+    </tr>
+
+    <tr>
+      <td>if_wb</td>
+      <td>&nbsp;</td>
+      <td>&nbsp;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&nbsp;</td>
+    </tr>
+
+    <tr>
+      <td>if_wi</td>
+      <td>&a.sam;, &a.imp;</td>
+      <td>4 ноября 2003</td>
+      <td>&status.unknown;</td>
+      <td>&status.done;</td>
+      <td>&status.unknown;</td>
+      <td>&status.unknown;</td>
+      <td>&status.unknown;</td>
+      <td>&nbsp;</td>
+    </tr>
+
+    <tr>
+      <td>if_xl</td>
+      <td>&a.mux;</td>
+      <td>17 декабря 2002</td>
+      <td>&status.done;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.done;</td>
+      <td>&status.new;</td>
+      <td>&nbsp;</td>
+    </tr>
+  </table>
+
+  <a name="storage-status"></a>
+  <h2>Состояние по драйверам устройств хранения</h2>
+
+  <table border=3>
+    <tr>
+      <th>Драйвер</th>
+      <th>Ответственный</th>
+      <th>Последнее обновление</th>
+      <th>busdma</th>
+      <th>INTR_MPSAFE</th>
+      <th>Отделение SMPng</th>
+      <th>a!=p</th>
+      <th>Состояние 4.x</th>
+      <th>Примечания</th>
+    </tr>
+
+    <tr>
+      <td>aac</td>
+      <td>&a.scottl;</td>
+      <td>8 февраля 2003</td>
+      <td>&status.done;</td>
+      <td>&status.done;</td>
+      <td>&status.done;</td>
+      <td>&status.done;</td>
+      <td>&status.new;</td>
+      <td>Возможности PCI-64, но не полностью поддерживает порядок следования
+        байтов endian</td>
+    </tr>
+
+    <tr>
+      <td>adv</td>
+      <td>&nbsp;</td>
+      <td>9 декабря 2002</td>
+      <td>&status.done;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&nbsp;</td>
+    </tr>
+
+    <tr>
+      <td>aha</td>
+      <td>&nbsp;</td>
+      <td>9 декабря 2002</td>
+      <td>&status.done;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&nbsp;</td>
+    </tr>
+
+    <tr>
+      <td>ahb</td>
+      <td>&nbsp;</td>
+      <td>9 декабря 2002</td>
+      <td>&status.done;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&nbsp;</td>
+    </tr>
+
+    <tr>
+      <td>aic7xxx</td>
+      <td>&nbsp;</td>
+      <td>9 декабря 2002</td>
+      <td>&status.done;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&nbsp;</td>
+    </tr>
+
+    <tr>
+      <td>amd</td>
+      <td>&nbsp;</td>
+      <td>14 декабря 2002</td>
+      <td>&status.done;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&nbsp;</td>
+    </tr>
+
+    <tr>
+      <td>amr</td>
+      <td>&nbsp;</td>
+      <td>9 декабря 2002</td>
+      <td>&status.done;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&nbsp;</td>
+    </tr>
+
+    <tr>
+      <td>asr</td>
+      <td>&a.obrien;</td>
+      <td>4 января 2003</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>vtophys()</td>
+    </tr>
+
+    <tr>
+      <td>ata</td>
+      <td>&a.sos;</td>
+      <td>9 декабря 2002</td>
+      <td>&status.done;</td>
+      <td>&status.done;</td>
+      <td>&status.done;</td>
+      <td>&status.done;</td>
+      <td>&status.new;</td>
+      <td>&nbsp;</td>
+    </tr>
+
+    <tr>
+      <td>buslogic</td>
+      <td>&nbsp;</td>
+      <td>&nbsp;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>vtophys()</td>
+    </tr>
+
+    <tr>
+      <td>ciss</td>
+      <td>&nbsp;</td>
+      <td>9 декабря 2002</td>
+      <td>&status.done;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&nbsp;</td>
+    </tr>
+
+    <tr>
+      <td>ct</td>
+      <td>&nbsp;</td>
+      <td>&nbsp;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&nbsp;</td>
+    </tr>
+
+    <tr>
+      <td>dpt</td>
+      <td>&nbsp;</td>
+      <td>&nbsp;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>vtophys()</td>
+    </tr>
+
+    <tr>
+      <td>ida</td>
+      <td>&nbsp;</td>
+      <td>9 декабря 2002</td>
+      <td>&status.done;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&nbsp;</td>
+    </tr>
+
+    <tr>
+      <td>iir</td>
+      <td>&nbsp;</td>
+      <td>&nbsp;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>vtophys()</td>
+    </tr>
+
+    <tr>
+      <td>isp</td>
+      <td>&nbsp;</td>
+      <td>8 февраля 2003</td>
+      <td>&status.done;</td>
+      <td>&status.done;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&nbsp;</td>
+    </tr>
+
+    <tr>
+      <td>mlx</td>
+      <td>&a.scottl;</td>
+      <td>8 февраля 2003</td>
+      <td>&status.done;</td>
+      <td>&status.wip;</td>
+      <td>&status.wip;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&nbsp;</td>
+    </tr>
+
+    <tr>
+      <td>mly</td>
+      <td>&a.scottl;</td>
+      <td>8 февраля 2003</td>
+      <td>&status.done;</td>
+      <td>&status.wip;</td>
+      <td>&status.wip;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&nbsp;</td>
+    </tr>
+
+    <tr>
+      <td>mpt</td>
+      <td>&nbsp;</td>
+      <td>9 декабря 2002</td>
+      <td>&status.done;</td>
+      <td>&status.done;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&nbsp;</td>
+    </tr>
+
+    <tr>
+      <td>ncr</td>
+      <td>&nbsp;</td>
+      <td>&nbsp;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>vtophys(). Пожалуйста, обратитесь к &a.phk; для выяснения
+        возможности получить оборудование.</td>
+    </tr>
+
+    <tr>
+      <td>pst</td>
+      <td>&nbsp;</td>
+      <td>&nbsp;</td>
+      <td>&status.new;</td>
+      <td>&status.done;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>vtophys()</td>
+    </tr>
+
+    <tr>
+      <td>stg</td>
+      <td>&nbsp;</td>
+      <td>9 декабря 2002</td>
+      <td>&status.done;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>По крайней мере выглядит как хорошо работающий.</td>
+    </tr>
+
+    <tr>
+      <td>sym</td>
+      <td>&nbsp;</td>
+      <td>19 декабря 2002</td>
+      <td>&status.done;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&nbsp;</td>
+    </tr>
+
+    <tr>
+      <td>trm</td>
+      <td>&a.cognet;</td>
+      <td>9 декабря 2002</td>
+      <td>&status.done;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&nbsp;</td>
+    </tr>
+
+    <tr>
+      <td>twe</td>
+      <td>&nbsp;</td>
+      <td>9 декабря 2002</td>
+      <td>&status.done;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&nbsp;</td>
+    </tr>
+  </table>
+
+  <a name="misc-status"></a>
+  <h2>Состояние по драйверам разных устройств</h2>
+
+  <table border=3>
+    <tr>
+      <th>Драйвер</th>
+      <th>Ответственный</th>
+      <th>Последнее обновление</th>
+      <th>busdma</th>
+      <th>INTR_MPSAFE</th>
+      <th>отделение SMPng</th>
+      <th>a!=p</th>
+      <th>состояние 4.x</th>
+      <th>Примечания</th>
+    </tr>
+
+    <tr>
+      <td>agp</td>
+      <td>&a.cognet;</td>
+      <td>23 января 2003</td>
+      <td>&status.wip;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>vtophys()</td>
+    </tr>
+
+    <tr>
+      <td>bktr</td>
+      <td>&a.cognet;</td>
+      <td>15 января 2003</td>
+      <td>&status.wip;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>vtophys()</td>
+    </tr>
+
+    <tr>
+      <td>cs</td>
+      <td>&nbsp;</td>
+      <td>&nbsp;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&nbsp;</td>
+    </tr>
+
+    <tr>
+      <td>digi</td>
+      <td>&nbsp;</td>
+      <td>&nbsp;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>vtophys()</td>
+    </tr>
+
+    <tr>
+      <td>drm</td>
+      <td>&a.anholt;</td>
+      <td>27 октября 2003</td>
+      <td>&status.wip;</td>
+      <td>&status.done;</td>
+      <td>&status.done;</td>
+      <td>&status.wip;</td>
+      <td>&status.wip;</td>
+      <td>vtophys(). Блокировку нужно немного пересмотреть.</td>
+    </tr>
+
+    <tr>
+      <td>exca</td>
+      <td>&a.imp;</td>
+      <td>9 декабря 2002</td>
+      <td>&status.done;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&nbsp;</td>
+    </tr>
+
+    <tr>
+      <td>fb</td>
+      <td>&nbsp;</td>
+      <td>&nbsp;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>vtophys()</td>
+    </tr>
+
+    <tr>
+      <td>firewire</td>
+      <td>&a.simokawa;</td>
+      <td>17 апреля 2003</td>
+      <td>&status.done;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.done;</td>
+      <td>&status.new;</td>
+      <td>vtophys()</td>
+    </tr>
+
+    <tr>
+      <td>hea</td>
+      <td>&nbsp;</td>
+      <td>&nbsp;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>vtophys()</td>
+    </tr>
+
+    <tr>
+      <td>hfa</td>
+      <td>&nbsp;</td>
+      <td>&nbsp;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>vtophys()</td>
+    </tr>
+
+    <tr>
+      <td>hifn</td>
+      <td>&a.sam;</td>
+      <td>9 декабря 2002</td>
+      <td>&status.done;</td>
+      <td>&status.done;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&nbsp;</td>
+    </tr>
+
+    <tr>
+      <td>meteor</td>
+      <td>&nbsp;</td>
+      <td>&nbsp;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>vtophys()</td>
+    </tr>
+
+    <tr>
+      <td>musycc</td>
+      <td>&nbsp;</td>
+      <td>&nbsp;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>vtophys(). Пожалуйста, за информацией/оборудованием обратитесь
+        к &a.phk;.</td>
+    </tr>
+
+    <tr>
+      <td>pcm</td>
+      <td>&a.cognet;</td>
+      <td>20 февраля 2003</td>
+      <td>&status.done;</td>
+      <td>&status.done;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&nbsp;</td>
+    </tr>
+
+    <tr>
+      <td>ubsec</td>
+      <td>&a.sam;</td>
+      <td>9 декабря 2002</td>
+      <td>&status.done;</td>
+      <td>&status.done;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>vtophys() использует для отладки printf</td>
+    </tr>
+
+    <tr>
+      <td>usb</td>
+      <td>&a.jmg;</td>
+      <td>24 июля 2003</td>
+      <td>&status.done;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>a!=p должно работать, однако требуется дополнительное
+        тестирование</td>
+    </tr>
+
+    <tr>
+      <td>wds</td>
+      <td>&nbsp;</td>
+      <td>9 декабря 2002</td>
+      <td>&status.done;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&status.new;</td>
+      <td>&nbsp;</td>
+    </tr>
+  </table>
+
+  <a name="doc-status"></a>
+  <h2>Состояние по документированию</h2>
+
+  <table border=3>
+    <tr>
+      <th>Задача</th>
+      <th>Ответственный</th>
+      <th>Последнее обновление</th>
+      <th>Состояние</th>
+      <th>Примечания</th>
+    </tr>
+
+    <tr>
+      <td>справочные страницы по busdma API</td>
+      <td>&a.hmp;</td>
+      <td>15 января 2003</td>
+      <td>&status.done;</td>
+      <td>&nbsp;</td>
+    </tr>
+  </table>
+
+  &footer;
+
+  </body>
+</html>
