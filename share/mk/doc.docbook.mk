@@ -1,5 +1,5 @@
 #
-# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.26 2001/02/22 15:42:41 nik Exp $
+# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.27 2001/02/26 22:56:59 nik Exp $
 #
 # This include file <doc.docbook.mk> handles building and installing of
 # DocBook documentation in the FreeBSD Documentation Project.
@@ -53,7 +53,7 @@ DOCBOOKSUFFIX?= sgml
 
 MASTERDOC?=	${.CURDIR}/${DOC}.${DOCBOOKSUFFIX}
 
-.if !defined(OPENJADE)
+.if !defined(OPENJADE) || ${MACHINE_ARCH} == "alpha"
 JADE?=		${PREFIX}/bin/jade
 JADECATALOG?=	${PREFIX}/share/sgml/jade/catalog
 NSGMLS?=	${PREFIX}/bin/nsgmls
@@ -226,7 +226,7 @@ ${DOC}.html.tar: ${DOC}.html
 	tar uf ${.TARGET} ${IMAGES_PNG}
 
 ${DOC}.txt: ${DOC}.html-text
-	w3m -T text/html -S -dump ${.ALLSRC} > ${.TARGET}
+	links -dump ${.ALLSRC} > ${.TARGET}
 
 ${DOC}.pdb: ${DOC}.html
 	iSiloBSD -y -d0 -Idef ${DOC}.html ${DOC}.pdb
