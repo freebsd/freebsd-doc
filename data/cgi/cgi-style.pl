@@ -1,4 +1,4 @@
-# $Id: cgi-style.pl,v 1.5 1996-09-29 02:34:13 jfieber Exp $
+# $Id: cgi-style.pl,v 1.6 1996-10-06 03:49:03 jfieber Exp $
 #
 # Perl routines to encapsulate various elements of HTML page style.
 
@@ -29,7 +29,7 @@ sub html_header {
 
     return "Content-type: text/html\n\n" . 
 	"<html>\n<title>$title</title>\n</head>\n$t_body\n" .
-	"<img src=\"$hsty_base/gifs/topbar.gif\" alt=\"\">" .
+	"<center><img src=\"$hsty_base/gifs/topbar.gif\" alt=\"\"></center>" .
 	"$i_daemon <h1 align=right>$title</h1><br clear=all><hr noshade>\n";
 }
 
