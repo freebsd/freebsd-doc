@@ -1,7 +1,7 @@
-# $Id: Makefile,v 1.1 1996-11-19 14:18:36 jfieber Exp $
+# $Id: Makefile,v 1.2 1997-11-21 18:32:52 jfieber Exp $
 
 #CVSDIR=		jp-handbook
-DOCSUBDIR=	handbook
+DOCSUBDIR=	handbook FAQ
 
 .include "../web.mk"
 
