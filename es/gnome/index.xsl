@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
 
-<!-- $FreeBSD$ -->
+<!-- $FreeBSD: www/es/gnome/index.xsl,v 1.1 2003/05/11 19:49:25 jesusr Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
 		xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -11,7 +11,7 @@
   <xsl:import href="includes.xsl"/>
 
   <xsl:variable name="base" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD$'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/es/gnome/index.xsl,v 1.1 2003/05/11 19:49:25 jesusr Exp $'"/>
   <xsl:variable name="title" select="'Proyecto FreeBSD GNOME'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -97,9 +97,9 @@
               <img src="../../en/gnome/images/gnome.png" align="right"
                    border="0" width="66" height="83" alt="GNOME Logo"/>
 
-              <p>El proyecto GNOME  nace como un esfuerzo de crear un entorno de
-                escritorio para sistemas abiertos, que fuera completamente gratis.
-                Desde un principio  el objetivo principal de GNOME ha sido proveer
+              <p>El proyecto GNOME  nace para crear un entorno de
+                escritorio para sistemas abiertos  que sea completamente libre.
+                Desde un principio  el objetivo principal de GNOME ha sido disponer  
                 de un conjunto de aplicaciones y un entorno de escritorio de 
                 f&#225;cil uso.  El proyecto FreeBSD GNOME tiene como objetivo 
                 acercar GNOME al usuario de FreeBSD.</p>
@@ -118,11 +118,11 @@
                 m&#225;s importantes de GNOME  son:</p>
               <ul>
                 <li>El <a href="http://www.gnome.org">escritorio GNOME</a>:  Un 
-                  entorno gr&#225;fico, basado en un ambiente de ventanas, para
+                  entorno gr&#225;fico, basado en un entorno de ventanas, para
                   el usuario.</li>
                 <li>La <a href="http://developer.gnome.org">plataforma de
                   desarrollo GNOME</a>:  Una rica colecci&#243;n de herramientas,
-                  bibliotecas y componentes, para desarrollar poderosas
+                  librer&#237;as y componentes  para desarrollar poderosas
                   aplicaciones en Unix.</li>
                 <li>La suite de <a href="http://www.gnome.org/gnome-office">Oficina
                   de GNOME</a>:  Un conjunto de aplicaciones de oficina.</li>
@@ -131,7 +131,7 @@
               <h2><font color="#990000">Est&#225;atus de la migraci&#243;n</font></h2>
 
               <p>Actualmente se cuenta con soporte para GNOME 1.4 y 2.0 para 
-                sistemas FreeBSD 4.x y 5-CURRENT.  Cualquier versi&#243;n
+                sistemas FreeBSD 4.x y 5 -CURRENT.  Cualquier versi&#243;n
                 anterior a FreeBSD 4.5  no est&#225; soportada.  La mayor parte de 
                 GNOME ha sido portado a FreeBSD aunque a&#250;n <a 
                 href="docs/volunteer.html">hay mucho por hacer</a>!.</p>
