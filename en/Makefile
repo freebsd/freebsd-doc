@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/Makefile,v 1.83 2002/05/09 13:07:12 mwlucas Exp $
+# $FreeBSD: www/en/Makefile,v 1.84 2002/06/27 19:55:40 nik Exp $
 .if exists(Makefile.conf)
 .include "Makefile.conf"
 .endif
@@ -91,20 +91,20 @@ DATA+=		index.html
 CLEANFILES+=	index.html
 
 index.html: index.xsl news/news.xml news/press.xml includes.xsl news/includes.xsl
-	${XSLTPROC} ${XSLTPROCOPTS} -o index.html \
+	${XSLTPROC} ${XSLTPROCOPTS} -o ${.TARGET} \
 		${.CURDIR}/index.xsl ${.CURDIR}/news/news.xml
 .if !defined(NO_TIDY)
-	-${TIDY} ${TIDYOPTS} index.html
+	-${TIDY} ${TIDYOPTS} ${.TARGET}
 .endif
 
-LINBOT?=	${PREFIX}/bin/linbot
-LINBOTOPTS?=	-ab
-LINBOTDIR?=	/linbot
-LINBOTINSTALLDIR?= ${DESTDIR}${LINBOTDIR}
-LINBOTURL?=	http://www.FreeBSD.org/
+WEBCHECK?=	${PREFIX}/bin/webcheck
+WEBCHECKOPTS?=	-ab ${WEBCHECKFLAGS}
+WEBCHECKDIR?=	/webcheck
+WEBCHECKINSTALLDIR?= ${DESTDIR}${WEBCHECKDIR}
+WEBCHECKURL?=	http://www.FreeBSD.org/
 
-linbot:
-	@[ -d ${LINBOTINSTALLDIR} ] || ${MKDIR} ${LINBOTINSTALLDIR}
-	${LINBOT} ${LINBOTOPTS} -o ${LINBOTINSTALLDIR} ${LINBOTURL}
+webcheck:
+	@[ -d ${WEBCHECKINSTALLDIR} ] || ${MKDIR} ${WEBCHECKINSTALLDIR}
+	${WEBCHECK} ${WEBCHECKOPTS} -o ${WEBCHECKINSTALLDIR} ${WEBCHECKURL}
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
