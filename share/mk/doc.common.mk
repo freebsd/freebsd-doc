@@ -115,6 +115,6 @@ ${XML_MIRRORS}: ${XML_MIRRORS_MASTER} ${XSL_TRANSTABLE} ${XSL_TRANSTABLE_MASTER}
 	${XSLTPROC} ${XSLTPROCOPTS} -o $@ \
 	    --param 'transtable.xml' "'${XML_TRANSTABLE}'" \
 	    --param 'transtable-conv-element' "'country'" \
-	    ${XSL_TRANSTABLE} ${XML_MIRRORS_MASTER} || (${RM} -f $@ && exit 1)
+	    ${XSL_TRANSTABLE} ${XML_MIRRORS_MASTER}
 
 CLEANFILES+= ${XML_MIRRORS}
