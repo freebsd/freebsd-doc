@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
 <!-- $FreeBSD$
-     $FreeBSDde: de-www/news/oldnewsflash.xsl,v 1.2 2003/08/09 11:56:31 mheinen Exp $
+     $FreeBSDde: de-www/news/oldnewsflash.xsl,v 1.3 2003/09/23 22:38:11 mheinen Exp $
      basiert auf: 1.5 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
@@ -14,6 +14,7 @@
     <xsl:value-of select="descendant::year/name"/>
   </xsl:variable>
   <xsl:variable name="base" select="'../..'"/>
+  <xsl:variable name="enbase" select="'../../..'"/>
   <xsl:variable name="title" select="concat('FreeBSD Ank&#252;ndigungen (', $year, ')')"/>
   <!-- <xsl:variable name="title" select="$year"/> -->
   <xsl:variable name="date">
