@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/index.xsl,v 1.46 2003/01/19 16:11:24 bmah Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.47 2003/01/21 17:33:57 ceri Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   
@@ -6,7 +6,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.46 2003/01/19 16:11:24 bmah Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.47 2003/01/21 17:33:57 ceri Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -125,8 +125,7 @@
 		  <option value="http://www3.ru.FreeBSD.org/">Russia/3</option>
 		  <option value="http://www4.ru.FreeBSD.org/">Russia/4</option>
 		  <option value="http://www.sm.FreeBSD.org/">San Marino</option>
-		  <option value="http://www.sg.FreeBSD.org/">Singapore/1</option>
-		  <option value="http://www2.sg.FreeBSD.org/">Singapore/2</option>
+		  <option value="http://www2.sg.FreeBSD.org/">Singapore</option>
 		  <option value="http://www.sk.FreeBSD.org/">Slovak Republic/1</option>
 		  <option value="http://www2.sk.FreeBSD.org/">Slovak Republic/2</option>
 		  <option value="http://www.si.FreeBSD.org/">Slovenia/1</option>
