@@ -1,4 +1,4 @@
-#	$Id: Makefile,v 1.22 1999-04-21 11:44:37 asami Exp $
+#	$Id: Makefile,v 1.23 1999-05-13 11:53:27 wosch Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -16,6 +16,7 @@ COOKIE=		${INDEX} Makefile.gen
 .include "Makefile.gen"
 .endif
 CLEANFILES+=	${DOCS} Makefile.gen ${INDEX} ${Y2K} packages.exists
+CLEANFILES+=	packages.exists.temp
 
 cvsindex= $${CVSROOT}/${PINDEX},v
 cvsy2k= $${CVSROOT}/${PY2K},v
@@ -47,7 +48,11 @@ packages.exists:
 packages.exists: ${cvsindex} ${cvsy2k}
 .endif
 .if ${hostname} == "hub.freebsd.org" || ${hostname} == "freefall.freebsd.org"
-	sh ${.CURDIR}/packages > ${.TARGET}
+	@if sh ${.CURDIR}/packages > ${.TARGET}.temp; then \
+		mv ${.TARGET}.temp ${.TARGET}; \
+	else \
+		rm ${.TARGET}.temp; touch ${.TARGET}; \
+	fi;
 .else
 	touch ${.TARGET}
 .endif
