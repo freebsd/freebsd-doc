@@ -42,9 +42,9 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $Id: cvsweb.cgi,v 1.69 2001-03-22 19:55:43 knu Exp $
-# $Idaemons: /home/cvs/cvsweb/cvsweb.cgi,v 1.68 2001/03/22 19:46:59 knu Exp $
-# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.68 2001/01/14 08:59:59 knu Exp $
+# $Id: cvsweb.cgi,v 1.70 2001-03-27 17:26:31 knu Exp $
+# $Idaemons: /home/cvs/cvsweb/cvsweb.cgi,v 1.70 2001/03/27 17:20:46 knu Exp $
+# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.69 2001/03/22 19:55:43 knu Exp $
 #
 ###
 
@@ -141,7 +141,7 @@ sub forbidden_module($);
 delete $ENV{PATH};
 
 $cvsweb_revision = '1.106' . '.' . (split(/ /,
- q$Idaemons: /home/cvs/cvsweb/cvsweb.cgi,v 1.68 2001/03/22 19:46:59 knu Exp $
+ q$Idaemons: /home/cvs/cvsweb/cvsweb.cgi,v 1.70 2001/03/27 17:20:46 knu Exp $
 ))[2];
 
 use File::Basename;
@@ -234,7 +234,7 @@ $LOG_REVSEPARATOR = q/^-{28}$/;
 ##### End of configuration variables #####
 
 $cgi_style::hsty_base = 'http://www.FreeBSD.org';
-$_ = q$FreeBSD: www/en/cgi/cvsweb.cgi,v 1.68 2001/01/14 08:59:59 knu Exp $;
+$_ = q$FreeBSD: www/en/cgi/cvsweb.cgi,v 1.69 2001/03/22 19:55:43 knu Exp $;
 @_ = split;
 $cgi_style::hsty_date = "@_[3,4]";
 
@@ -765,7 +765,7 @@ if (-d $fullname) {
 		    print " ", &link("Previous Directory", $url);
 		}
 		else {
-		    $url = urlencode($_) . "/$query";
+		    $url = './' . urlencode($_) . "/$query";
 		    print "<A NAME=\"$_\"></A>";
 		    if ($nofilelinks) {
 			print $diricon;
@@ -828,7 +828,7 @@ if (-d $fullname) {
 	    }
 	    elsif (s/,v$//) {
 		$fileurl = ($attic ? "Attic/" : "") . urlencode($_);
-		$url = $fileurl . $query;
+		$url = './' . $fileurl . $query;
 		my $rev = '';
 		my $date = '';
 		my $log = '';
@@ -926,7 +926,7 @@ if (-d $fullname) {
 		    &link("Download this directory in tarball",
 			  # Mangle the filename so browsers show a reasonable
 			  # filename to download.
-			  "$basefile.tar.gz$query".
+			  "./$basefile.tar.gz$query".
 			  ($query ? "&" : "?")."tarball=1"),
 			    "</DIV>";
 	    }
@@ -1240,7 +1240,7 @@ sub spacedHtmlText($;$) {
 sub link($$) {
 	my($name, $url) = @_;
 
-	$url =~ s/:/sprintf("%%%02x", ord($&))/eg;
+	$url =~ s/:/sprintf("%%%02x", ord($&))/eg if $url =~ /^[^a-z]/;	# relative
 
 	sprintf '<A HREF="%s">%s</A>', hrefquote($url), $name;
 }
@@ -1719,7 +1719,11 @@ sub cvswebMarkup($$$) {
 	print "</PRE>";
     }
     else {
-	print "<PLAINTEXT>\n", <$filehandle>;
+	print "<PRE>";
+	while (<$filehandle>) {
+	    print htmlquote($_);
+	}
+	print "</PRE>";
     }
 }
 
@@ -2772,7 +2776,7 @@ sub human_readable_diff($){
 sub navigateHeader($$$$$) {
     my ($swhere,$path,$filename,$rev,$title) = @_;
     $swhere = "" if ($swhere eq $scriptwhere);
-    $swhere = urlencode($filename) if ($swhere eq "");
+    $swhere = './', urlencode($filename) if ($swhere eq "");
 
     print <<EOF;
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
@@ -2787,7 +2791,7 @@ $body_tag_for_src
 EOF
 
     print &link($backicon, "$swhere$query#rev$rev");
-    print "</a> <b>Return to ", &link("$filename","$swhere$query#rev$rev")," CVS log";
+    print "<b>Return to ", &link($filename,"$swhere$query#rev$rev")," CVS log";
     print "</b> $fileicon</td>";
 
     print "<td align=right>$diricon <b>Up to ", &clickablePath($path, 1), "</b></td>";
@@ -2996,8 +3000,6 @@ sub download_url($$;$) {
     $url .= "?rev=$revision";
     $url .= '&content-type=' . urlencode($mimetype) if (defined($mimetype));
 
-    $url =~ s/:/sprintf("%%%02x", ord($&))/eg;
-
     $url;
 }
 
@@ -3006,6 +3008,8 @@ sub download_url($$;$) {
 sub download_link($$$;$) {
     my ($url, $revision, $textlink, $mimetype) = @_;
     my ($fullurl) = download_url($url, $revision, $mimetype);
+
+    $fullurl =~ s/:/sprintf("%%%02x", ord($&))/eg;
 
     printf '<A HREF="%s"', hrefquote("$fullurl$barequery");
 
@@ -3200,7 +3204,7 @@ sub link_tags($) {
     my ($fileurl,$filename);
 
     ($filename = $where) =~ s/^.*\///;
-    $fileurl = urlencode($filename);
+    $fileurl = './' . urlencode($filename);
 
     foreach my $sym (split(", ", $tags)) {
 	$ret .= ",\n" if ($ret ne "");
