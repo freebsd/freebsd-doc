@@ -2,7 +2,7 @@
      The FreeBSD Russian Documentation Project
 
      $FreeBSD$
-     $FreeBSDru: frdp/doc/ru_RU.KOI8-R/share/sgml/freebsd.dsl,v 1.9 2004/04/09 07:06:07 den Exp $
+     $FreeBSDru: frdp/doc/ru_RU.KOI8-R/share/sgml/freebsd.dsl,v 1.10 2004/07/19 06:48:12 den Exp $
 
      Original revision: 1.20
 -->
@@ -268,6 +268,12 @@
           (list (normalize "sect4")             "  ")
           (list (normalize "sect5")             "  ")
           ))
+
+	<!-- Fix a problem with the Russian localization (dbl1ru.dsl). -->
+	(define (local-ru-label-title-sep)
+	(list
+	  (list (normalize "warning")           ": ")
+	))
 
     </style-specification-body>
   </style-specification>
