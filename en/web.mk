@@ -1,5 +1,5 @@
 # bsd.web.mk
-# $FreeBSD: www/en/web.mk,v 1.28 2000/04/20 16:39:10 phantom Exp $
+# $FreeBSD: www/en/web.mk,v 1.29 2000/04/23 14:31:21 phantom Exp $
 
 #
 # Build and install a web site.
@@ -84,7 +84,7 @@ DATESUBST=	's/<!ENTITY date[ \t]*"$$Free[B]SD. .* \(.* .*\) .* .* $$">/<!ENTITY 
 
 .sgml.html:
 	sed -e ${DATESUBST} ${.IMPSRC} |\
-	${SGMLNORM} ${SGMLNORMFLAGS} > ${.TARGET}
+	SGML_CATALOG_FILES='' ${SGMLNORM} ${SGMLNORMFLAGS} > ${.TARGET}
 
 ###
 # file.docb --> file.html
