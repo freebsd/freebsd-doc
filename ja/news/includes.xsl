@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
 
-<!-- $FreeBSD: www/ja/news/includes.xsl,v 1.2 2001/08/08 03:55:55 kuriyama Exp $ -->
-<!-- Original revision: 1.3 -->
+<!-- $FreeBSD: www/ja/news/includes.xsl,v 1.3 2001/09/03 05:59:47 kuriyama Exp $ -->
+<!-- Original revision: 1.4 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
   <xsl:variable name="newshome">
-    <a href="news.html">News ホーム</a>
+    <a href="{$base}/news/news.html">News ホーム</a>
   </xsl:variable>
 
   <!-- Generate a unique anchor for this event -->
