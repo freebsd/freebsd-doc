@@ -1,5 +1,5 @@
 # 
-# $FreeBSD: doc/en_US.ISO8859-1/books/handbook/Makefile,v 1.32 2001/05/14 03:07:50 murray Exp $
+# $FreeBSD: doc/en_US.ISO8859-1/books/handbook/Makefile,v 1.33 2001/06/21 03:38:14 chris Exp $
 #
 # Build the FreeBSD Handbook.
 #
@@ -12,6 +12,8 @@ FORMATS?= html-split
 
 INSTALL_COMPRESSED?= gz
 INSTALL_ONLY_COMPRESSED?=
+
+# IMAGES= advanced-networking/natd.png advanced-networking/natd.eps
 
 # 
 # SRCS lists the individual SGML files that make up the document. Changes
