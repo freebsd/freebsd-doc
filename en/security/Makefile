@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/security/Makefile,v 1.9 2003/11/24 18:26:33 hrs Exp $
+# $FreeBSD: www/en/security/Makefile,v 1.10 2004/01/13 22:44:07 hrs Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -20,6 +20,5 @@ security.html: advisories.html.inc
 
 advisories.html.inc: mkindex.xsl ${XML_ADVISORIES} ${XML_INCLUDES}
 	${XSLTPROC} ${XSLTPROCOPTS} -o ${.TARGET} \
-		--param "ftpbase" "'ftp://ftp.FreeBSD.org/pub/FreeBSD/CERT/advisories/'" \
-		--param "ftpbaseold" "'ftp://ftp.FreeBSD.org/pub/FreeBSD/CERT/advisories/old/'" \
+		--param "advisories.xml" "'${XML_ADVISORIES}'" \
 		${.CURDIR}/mkindex.xsl ${XML_ADVISORIES}

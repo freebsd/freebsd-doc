@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/share/sgml/includes.misc.xsl,v 1.3 2004/01/06 23:47:08 hrs Exp $ -->
+<!-- $FreeBSD: www/share/sgml/includes.misc.xsl,v 1.4 2004/01/12 21:27:00 hrs Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -11,6 +11,94 @@
   <xsl:variable name="java" select="'Java&#8482;'"/>
   <xsl:variable name="jdk" select="'JDK&#8482;'"/>
   <xsl:variable name="posix" select="'POSIX&#174;'"/>
+
+  <!-- for security advisories -->
+  <xsl:variable name="ftpbase"
+                select="'ftp://ftp.FreeBSD.org/pub/FreeBSD/CERT/advisories/'"/>
+  <xsl:variable name="ftpbaseold"
+                select="'ftp://ftp.FreeBSD.org/pub/FreeBSD/CERT/advisories/old/'"/>
+
+  <!--
+     template name                               used in
+
+     html-list-advisories                        security/mkindex.xsl
+     html-list-advisories-putitems               security/mkindex.xsl
+     html-list-advisories-release-label          security/mkindex.xsl (for l10n)
+     html-index-advisories-items                 index.xsl
+     html-index-advisories-items-lastmodified    index.xsl (for i10n)
+     html-index-news-project-items               index.xsl
+     html-index-news-project-items-lastmodified  index.xsl (for i10n)
+     html-index-news-press-items                 index.xsl
+     html-index-news-press-items-lastmodified    index.xsl (for i10n)
+     html-index-mirrors-options-list             index.xsl
+  -->
+
+  <!-- template: "html-list-advisories"
+       generate a list of all security advisories -->
+
+  <xsl:template name="html-list-advisories">
+    <xsl:param name="advisories.xml" select="'none'" />
+
+    <xsl:for-each select="document($advisories.xml)
+                          /descendant::release">
+
+      <xsl:param name="relname" select="string(name)" />
+      <xsl:param name="items" select="document($advisories.xml)
+                                      //advisory[$relname = string(following::release/name[1])]" />
+
+      <xsl:call-template name="html-list-advisories-putitems">
+	<xsl:with-param name="items" select="$items" />
+      </xsl:call-template>
+
+      <xsl:call-template name="html-list-advisories-release-label">
+	<xsl:with-param name="relname" select="name" />
+      </xsl:call-template>
+    </xsl:for-each>
+
+    <xsl:call-template name="html-list-advisories-putitems">
+      <xsl:with-param name="items" select="document($advisories.xml)
+                                           //advisory[not(following::release/name[1])]" />
+    </xsl:call-template>
+  </xsl:template>
+
+  <!-- template: "html-list-advisories-putitems"
+       sub-routine to generate a list -->
+
+  <xsl:template name="html-list-advisories-putitems">
+    <xsl:param name="items" select="''" />
+
+    <xsl:if test="$items">
+      <ul>
+	<xsl:for-each select="$items">
+	  <li>
+	    <xsl:choose>
+	      <xsl:when test="name/@role='old'">
+		<a><xsl:attribute name="href">
+		    <xsl:value-of select="concat($ftpbaseold, name, '.asc')" />
+		  </xsl:attribute>
+		  <xsl:value-of select="concat(name, '.asc')" /></a>
+	      </xsl:when>
+	      <xsl:otherwise>
+		<a><xsl:attribute name="href">
+		    <xsl:value-of select="concat($ftpbase, name, '.asc')" />
+		  </xsl:attribute>
+		  <xsl:value-of select="concat(name, '.asc')" /></a>
+	      </xsl:otherwise>
+	    </xsl:choose>
+	  </li>
+	</xsl:for-each>
+      </ul>
+    </xsl:if>
+  </xsl:template>
+
+  <!-- template: "html-list-advisories-release-label"
+       put label for release -->
+
+  <xsl:template name="html-list-advisories-release-label">
+    <xsl:param name="relname" select="'none'" />
+
+    <p><xsl:value-of select="$relname" /> released.</p>
+  </xsl:template>
 
   <!-- template: "html-index-advisories-items"
        pulls in the 10 most recent security advisories -->
