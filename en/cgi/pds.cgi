@@ -1,5 +1,5 @@
-#!/usr/bin/perl
-# Copyright (c) 1997-1998 Wolfram Schneider <wosch@FreeBSD.ORG>, Berlin.
+#!/usr/bin/perl -T
+# Copyright (c) 1997-2000 Wolfram Schneider <wosch@FreeBSD.ORG>, Berlin.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -26,7 +26,7 @@
 # pds.cgi - FreeBSD Ports download sources cgi script
 #	    print a list of source files for a port
 #
-# $FreeBSD: www/en/cgi/pds.cgi,v 1.5 1999/09/06 07:02:40 peter Exp $
+# $FreeBSD: www/en/cgi/pds.cgi,v 1.6 2000/01/05 15:47:45 phantom Exp $
 
 $hsty_base = '';
 $hsty_email = 'ports@FreeBSD.org';
@@ -35,14 +35,22 @@ require "./cgi-lib.pl";
 require "./cgi-style.pl";
 
 $file = $ENV{'QUERY_STRING'};
-$file2="$file/Makefile";
+$file_rcs = "$file/Makefile,v";
 
 $cvsroot = "/home/ncvs";
 $co = '/usr/bin/co';
 $make = '/usr/bin/make';
+$pds = '/usr/local/www/bin/pds';
+
+# security
+$ENV{'PATH'} = '/bin:/usr/bin';
 
 # set DISTDIR to a dummy  directory.
 $ENV{'DISTDIR'} = "/tmp/___pds.cgi___" . $<;
+
+# security
+$ENV{'PATH'} = '/bin:/usr/bin';
+
 
 sub footer { 
     return qq{<P>\n<A HREF="} .
@@ -57,14 +65,14 @@ if ($file !~ m%^ports/[^/]+/[^/]+$%) {
     exit;
 }
 
-if (! -f "$cvsroot/$file2,v" || $file =~ /\.\./) {
-    print qq{File "$file2" does not exist.\n} . &footer;
+if (! -f "$cvsroot/$file_rcs" || $file_rcs =~ /\.\./) {
+    print qq{Port "$file" does not exist.\n} . &footer;
     exit;
 }
 
 print "<h2>Sources for $file</h2>\n\n";
 
-open(MAKE, "$co -q -p $cvsroot/$file2 | $make -m /home/fenner/mk -f - bill-fetch |") || do {
+open(MAKE, "-|") || exec($pds, "$cvsroot/$file_rcs") || do {
     print "Sorry, cannot run make\n" . &footer; 
     exit;
 };
@@ -84,7 +92,7 @@ foreach (@sources) {
     print qq{<a href="$1">$1</a><br>\n} if m%((http|ftp)://\S+)%;
 }
 
-local($md5file) = "$cvsroot/$file/files/md5,v";
+local($md5file) = "$cvsroot/$file/distinfo,v";
 if (-f $md5file) {
     open(CO, "-|") || exec ($co, '-q', '-p', $md5file) || do {
 	print "Cannot read MD5 checksum file for $file\n" . &footer;
