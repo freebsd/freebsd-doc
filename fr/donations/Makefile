@@ -1,7 +1,7 @@
-# $FreeBSD$
+# $FreeBSD: www/fr/donations/Makefile,v 1.1 2003/03/23 15:08:25 stephane Exp $
 
 # The FreeBSD French Documentation Project
-# Original revision: 1.1
+# Original revision: 1.5
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -10,8 +10,6 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS=   index.sgml
-DOCS+=	donors.sgml
-DOCS+=	wantlist.sgml
+DOCS=   index.sgml wantlist.sgml donors.sgml
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"

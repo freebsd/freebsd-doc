@@ -1,7 +1,7 @@
-# $FreeBSD$
+# $FreeBSD: www/fr/news/1997/Makefile,v 1.1 2002/12/22 22:02:23 stephane Exp $
 
 # The FreeBSD French Documentation Project
-# Original revision: 1.3
+# Original revision: 1.4
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"

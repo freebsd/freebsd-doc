@@ -1,7 +1,7 @@
-# $FreeBSD: www/fr/copyright/Makefile,v 1.1 2003/01/26 15:08:08 stephane Exp $
+# $FreeBSD: www/fr/copyright/Makefile,v 1.2 2003/08/16 20:43:40 stephane Exp $
 
 # The FreeBSD French Documentation Project
-# Original revision: 1.12
+# Original revision: 1.13
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -14,6 +14,7 @@ DOCS=	license.sgml
 DOCS+=	freebsd-license.sgml
 DOCS+=	daemon.sgml
 DOCS+=	copyright.sgml
+# DOCS+=	trademarks.sgml
 
 INDEXLINK= copyright.html
 
