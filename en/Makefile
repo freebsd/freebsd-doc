@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/Makefile,v 1.114 2004/09/27 12:00:03 josef Exp $
+# $FreeBSD: www/en/Makefile,v 1.115 2004/12/16 23:09:42 ceri Exp $
 
 .if exists(Makefile.conf)
 .include "Makefile.conf"
@@ -30,6 +30,7 @@ DOCS+= y2kbug.sgml
 
 DATA=	favicon.ico
 DATA+=	freebsd.css
+DATA+=	index.css
 DATA+=	robots.txt
 DATA+=  vendors.html
 

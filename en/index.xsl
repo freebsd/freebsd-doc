@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/index.xsl,v 1.116 2004/11/06 21:59:50 simon Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.117 2004/11/10 04:55:46 hrs Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -6,7 +6,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.116 2004/11/06 21:59:50 simon Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.117 2004/11/10 04:55:46 hrs Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <!-- these params should be externally bound. The values
@@ -31,6 +31,7 @@
 	      Release, Application, Software, Handbook, FAQ, Tutorials, Bugs,
 	      CVS, CVSup, News, Commercial Vendors, homepage, CTM, Unix"/>
 	<link rel="shortcut icon" href="/favicon.ico" type="image/x-icon"/>
+	<link rel="stylesheet" type="text/css" href="{$base}/index.css" />
 	<link rel="icon" href="/favicon.ico" type="image/x-icon"/>
 	<link rel="alternate" type="application/rss+xml"
 	  title="FreeBSD Project News" href="{$base}/news/news.rdf" />
@@ -46,8 +47,7 @@
 	</xsl:comment>
       </head>
 
-      <body bgcolor="#FFFFFF" text="#000000" link="#0000FF" vlink="#840084"
-	alink="#0000FF">
+      <body>
 
 	<table border="0" cellspacing="0" cellpadding="0" width="100%">
 	  <tr>
@@ -102,12 +102,7 @@
 	<table border="0" cellspacing="0" cellpadding="2">
 	  <tr>
 	    <td valign="top">
-	      <table border="0" cellspacing="0" cellpadding="1"
-		bgcolor="#000000" width="100%">
-		<tr>
-		  <td>
-		    <table cellpadding="4" cellspacing="0" border="0"
-			   bgcolor="#ffcc66" width="100%">
+		    <table class="panel" cellpadding="4" cellspacing="0">
 		      <tr>
 			<td>
 			  <xsl:call-template name="html-index-navigation-link-list">
@@ -125,9 +120,6 @@
 			</td>
 		      </tr>
 		    </table>
-		  </td>
-		</tr>
-	      </table>
 	    </td>
 
 	    <td></td>
@@ -135,7 +127,7 @@
 	    <!-- Main body column -->
 
 	    <td align="left" valign="top" rowspan="2">
-	      <h2><font color="#990000">What is FreeBSD?</font></h2>
+	      <h2>What is FreeBSD?</h2>
 
 	      <p>FreeBSD is an advanced operating system for x86
 		compatible (including Pentium and Athlon), amd64
@@ -150,7 +142,7 @@
 		  href="{$base}/platforms/index.html">platforms</a> are
 		in various stages of development.</p>
 
-	      <h2><font color="#990000">Cutting edge features</font></h2>
+	      <h2>Cutting edge features</h2>
 
 	      <p>FreeBSD offers advanced networking, performance, security
 		and compatibility
@@ -158,7 +150,7 @@
 		today which are still missing in other operating systems,
 		even some of the best commercial ones.</p>
 
-	      <h2><font color="#990000">Powerful Internet solutions</font></h2>
+	      <h2>Powerful Internet solutions</h2>
 
 	      <p>FreeBSD makes an ideal
 		<a href="{$base}/internet.html">Internet or Intranet</a>
@@ -166,8 +158,8 @@
 		loads and uses memory efficiently to maintain good response
 		times for thousands of simultaneous user processes.</p>
 
-	      <h2><font color="#990000">Run a huge number of
-		  applications</font></h2>
+	      <h2>Run a huge number of
+		  applications</h2>
 
 	      <p>The quality of FreeBSD combined with today's low-cost,
 		high-speed PC hardware makes FreeBSD a very economical
@@ -176,7 +168,7 @@
 		for a great number of both desktop and server
 		<a href="{$base}/applications.html">applications</a>.</p>
 
-	      <h2><font color="#990000">Easy to install</font></h2>
+	      <h2>Easy to install</h2>
 
 	      <p>FreeBSD can be installed from a variety of media
 		including CD-ROM, DVD-ROM, floppy disk, magnetic tape,
@@ -187,7 +179,7 @@
 		  href="{$base}/doc/en_US.ISO8859-1/books/handbook/install.html">these
 		directions</a>.</p>
 
-	      <h2><font color="#990000">FreeBSD is <i>free</i></font></h2>
+	      <h2>FreeBSD is <i>free</i></h2>
 
 	      <a href="copyright/daemon.html"><img
 		  src="gifs/dae_up3.gif" alt="The BSD Daemon"
@@ -202,7 +194,7 @@
 		<a href="{$base}/doc/en_US.ISO8859-1/books/handbook/mirrors.html">more
 		  information is available</a>.</p>
 
-	      <h2><font color="#990000">Contributing to FreeBSD</font></h2>
+	      <h2>Contributing to FreeBSD</h2>
 
 	      <p>It is easy to contribute to FreeBSD. All you need to do
 		is find a part of FreeBSD which you think could be
@@ -238,12 +230,7 @@
 	    <!-- Right-most column -->
 	    <td valign="top">
 	      <!-- News / release info table -->
-	      <table border="0" cellspacing="0" cellpadding="1"
-		     bgcolor="#000000" width="100%">
-		<tr>
-		  <td>
-		    <table cellpadding="4" cellspacing="0" border="0"
-		      bgcolor="#ffcc66" width="100%">
+		    <table class="panel" cellpadding="4" cellspacing="0">
 		      <tr>
 			<td valign="top">
 			  <p><a href="{$u.rel.announce}">
@@ -344,9 +331,6 @@
 			</td>
 		      </tr>
 		    </table>
-		  </td>
-		</tr>
-	      </table>
 
 	      <p>&#xa0;</p>
 
