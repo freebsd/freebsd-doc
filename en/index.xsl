@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/index.xsl,v 1.102 2004/05/28 12:41:16 simon Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.103 2004/06/12 23:29:40 dwmalone Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   
@@ -6,12 +6,13 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.102 2004/05/28 12:41:16 simon Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.103 2004/06/12 23:29:40 dwmalone Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <!-- these params should be externally bound. The values
        here are not used actually -->
   <xsl:param name="advisories.xml" select="'none'"/>
+  <xsl:param name="notices.xml" select="'none'"/>
   <xsl:param name="mirrors.xml" select="'none'"/>
   <xsl:param name="news.press.xml" select="'none'"/>
   <xsl:param name="news.project.xml" select="'none'"/>
@@ -305,15 +306,36 @@
 			      Latest update: 
 			      <xsl:call-template name="html-index-advisories-items-lastmodified">
 				<xsl:with-param name="advisories.xml" select="$advisories.xml" />
+				<xsl:with-param name="type" select="'advisory'" />
 			      </xsl:call-template>
 
 			      <br/>
 
 			      <xsl:call-template name="html-index-advisories-items">
 				<xsl:with-param name="advisories.xml" select="$advisories.xml" />
+				<xsl:with-param name="type" select="'advisory'" />
 			      </xsl:call-template>
 
 			      <a href="security/">More...</a>
+			    </font>
+			  </p>
+
+			  <p><font size="+1" color="#990000"><b>Errata Notices</b></font>
+			    <xsl:text> </xsl:text>
+			    <br/>
+			    <font size="-1">
+			      Latest update: 
+			      <xsl:call-template name="html-index-advisories-items-lastmodified">
+				<xsl:with-param name="advisories.xml" select="$notices.xml" />
+				<xsl:with-param name="type" select="'notice'" />
+			      </xsl:call-template>
+
+			      <br/>
+
+			      <xsl:call-template name="html-index-advisories-items">
+				<xsl:with-param name="advisories.xml" select="$notices.xml" />
+				<xsl:with-param name="type" select="'notice'" />
+			      </xsl:call-template>
 			    </font>
 			  </p>
 			</td>

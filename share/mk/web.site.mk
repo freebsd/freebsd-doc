@@ -1,5 +1,5 @@
 # bsd.web.mk
-# $FreeBSD$
+# $FreeBSD: www/share/mk/web.site.mk,v 1.60 2004/04/12 11:52:38 phantom Exp $
 
 #
 # Build and install a web site.
@@ -136,6 +136,7 @@ WWW_LANGCODE:=			${.CURDIR:S,^${_WEB_PREFIX}/,,:C,^([^/]+)/.*,\1,}
 .endif # !defined(WITHOUT_DOC)
 
 XML_ADVISORIES?=		${WEB_PREFIX}/share/sgml/advisories.xml
+XML_NOTICES?=			${WEB_PREFIX}/share/sgml/notices.xml
 
 XML_NEWS_NEWS_MASTER=		${WEB_PREFIX}/en/news/news.xml
 XML_NEWS_NEWS=			${WEB_PREFIX}/${WWW_LANGCODE}/news/news.xml

@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/Makefile,v 1.110 2004/04/12 22:28:33 simon Exp $
+# $FreeBSD: www/en/Makefile,v 1.111 2004/04/26 16:46:32 josef Exp $
 
 .if exists(Makefile.conf)
 .include "Makefile.conf"
@@ -89,11 +89,14 @@ CLEANFILES+=	index.html
 
 index.html: index.xsl ${XML_INCLUDES}\
 		${XML_NEWS_INCLUDES} ${XML_NEWS_NEWS} ${XML_NEWS_PRESS}\
-		${XML_MIRRORS} ${XML_TRANSTABLE} ${XML_ADVISORIES} ${XML_NAVIGATION}
+		${XML_MIRRORS} ${XML_TRANSTABLE} \
+		${XML_ADVISORIES} ${XML_NOTICES} \
+		${XML_NAVIGATION}
 	${XSLTPROC} ${XSLTPROCOPTS} \
 		-o $@ \
 		--param mirrors.xml "'${XML_MIRRORS}'" \
 		--param advisories.xml "'${XML_ADVISORIES}'" \
+		--param notices.xml "'${XML_NOTICES}'" \
 		--param news.press.xml "'${XML_NEWS_PRESS}'" \
 		--param news.project.xml "'${XML_NEWS_NEWS}'" \
 		--param transtable.xml "'${XML_TRANSTABLE}'" \

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/share/sgml/includes.misc.xsl,v 1.9 2004/02/03 22:25:23 ale Exp $ -->
+<!-- $FreeBSD: www/share/sgml/includes.misc.xsl,v 1.10 2004/05/25 01:19:50 hrs Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -17,6 +17,10 @@
                 select="'ftp://ftp.FreeBSD.org/pub/FreeBSD/CERT/advisories/'"/>
   <xsl:variable name="ftpbaseold"
                 select="'ftp://ftp.FreeBSD.org/pub/FreeBSD/CERT/advisories/old/'"/>
+
+  <!-- for errata notices -->
+  <xsl:variable name="ftpbaseerrata"
+                select="'ftp://ftp.FreeBSD.org/pub/FreeBSD/ERRATA/notices/'"/>
 
   <!--
      template name                               used in
@@ -42,27 +46,61 @@
 
   <xsl:template name="html-list-advisories">
     <xsl:param name="advisories.xml" select="'none'" />
+    <xsl:param name="type" select="'advisory'" />
 
-    <xsl:for-each select="document($advisories.xml)
-                          /descendant::release">
+    <xsl:choose>
+      <xsl:when test="$type = 'advisory'">
+	<xsl:for-each select="document($advisories.xml)
+	  /descendant::release">
 
-      <xsl:param name="relname" select="string(name)" />
-      <xsl:param name="items" select="document($advisories.xml)
-                                      //advisory[$relname = string(following::release/name[1])]" />
+	  <xsl:param name="relname" select="string(name)" />
 
-      <xsl:call-template name="html-list-advisories-putitems">
-	<xsl:with-param name="items" select="$items" />
-      </xsl:call-template>
+	  <xsl:call-template name="html-list-advisories-putitems">
+	    <xsl:with-param name="items" select="document($advisories.xml)
+	      //advisory[$relname = string(following::release/name[1])]" />
+	    <xsl:with-param name="prefix" select="$ftpbase" />
+	    <xsl:with-param name="prefixold" select="$ftpbaseold" />
+	  </xsl:call-template>
 
-      <xsl:call-template name="html-list-advisories-release-label">
-	<xsl:with-param name="relname" select="name" />
-      </xsl:call-template>
-    </xsl:for-each>
+	  <xsl:call-template name="html-list-advisories-release-label">
+	    <xsl:with-param name="relname" select="name" />
+	  </xsl:call-template>
+	</xsl:for-each>
 
-    <xsl:call-template name="html-list-advisories-putitems">
-      <xsl:with-param name="items" select="document($advisories.xml)
-                                           //advisory[not(following::release/name[1])]" />
-    </xsl:call-template>
+	<xsl:call-template name="html-list-advisories-putitems">
+	  <xsl:with-param name="items" select="document($advisories.xml)
+	    //advisory[not(following::release/name[1])]" />
+	  <xsl:with-param name="prefix" select="$ftpbase" />
+	  <xsl:with-param name="prefixold" select="$ftpbaseold" />
+	</xsl:call-template>
+      </xsl:when>
+
+      <xsl:when test="$type = 'notice'">
+	<xsl:for-each select="document($advisories.xml)
+	  /descendant::release">
+
+	  <xsl:param name="relname" select="string(name)" />
+
+	  <xsl:call-template name="html-list-advisories-putitems">
+	    <xsl:with-param name="items" select="document($advisories.xml)
+	      //advisory[$relname = string(following::release/name[1])]" />
+	    <xsl:with-param name="prefix" select="$ftpbaseerrata" />
+	    <xsl:with-param name="prefixold" select="$ftpbaseerrata" />
+	  </xsl:call-template>
+
+	  <xsl:call-template name="html-list-advisories-release-label">
+	    <xsl:with-param name="relname" select="name" />
+	  </xsl:call-template>
+	</xsl:for-each>
+
+	<xsl:call-template name="html-list-advisories-putitems">
+	  <xsl:with-param name="items" select="document($advisories.xml)
+	    //advisory[not(following::release/name[1])]" />
+	  <xsl:with-param name="prefix" select="$ftpbaseerrata" />
+	  <xsl:with-param name="prefixold" select="$ftpbaseerrata" />
+	</xsl:call-template>
+      </xsl:when>
+    </xsl:choose>
   </xsl:template>
 
   <!-- template: "html-list-advisories-putitems"
@@ -70,6 +108,8 @@
 
   <xsl:template name="html-list-advisories-putitems">
     <xsl:param name="items" select="''" />
+    <xsl:param name="prefix" select="''" />
+    <xsl:param name="prefixold" select="''" />
 
     <xsl:if test="$items">
       <ul>
@@ -81,13 +121,13 @@
 	      </xsl:when>
 	      <xsl:when test="name/@role='old'">
 		<a><xsl:attribute name="href">
-		    <xsl:value-of select="concat($ftpbaseold, name, '.asc')" />
+		    <xsl:value-of select="concat($prefixold, name, '.asc')" />
 		  </xsl:attribute>
 		  <xsl:value-of select="concat(name, '.asc')" /></a>
 	      </xsl:when>
 	      <xsl:otherwise>
 		<a><xsl:attribute name="href">
-		    <xsl:value-of select="concat($ftpbase, name, '.asc')" />
+		    <xsl:value-of select="concat($prefix, name, '.asc')" />
 		  </xsl:attribute>
 		  <xsl:value-of select="concat(name, '.asc')" /></a>
 	      </xsl:otherwise>
@@ -112,37 +152,79 @@
 
   <xsl:template name="html-index-advisories-items">
     <xsl:param name="advisories.xml" select="''" />
+    <xsl:param name="type" select="'advisory'" />
 
-    <xsl:for-each select="document($advisories.xml)/descendant::advisory[position() &lt;= 10]">
-      <xsl:value-of select="$leadingmark" />
-      <xsl:choose>
-	<xsl:when test="@omithref = 'yes'">
-	  <xsl:value-of select="name"/>
-	</xsl:when>
-	<xsl:otherwise>
-	  <a><xsl:attribute name="href"><xsl:value-of select="concat($ftpbase, name, '.asc')"/></xsl:attribute>
-	    <xsl:value-of select="name"/></a>
-	</xsl:otherwise>
-      </xsl:choose>
-      <br/>
-    </xsl:for-each>
+    <xsl:choose>
+      <xsl:when test="$type = 'advisory'">
+	<xsl:for-each select="document($advisories.xml)/descendant::advisory[position() &lt;= 10]">
+	  <xsl:value-of select="$leadingmark" />
+	  <xsl:choose>
+	    <xsl:when test="@omithref = 'yes'">
+	      <xsl:value-of select="name"/>
+	    </xsl:when>
+	    <xsl:otherwise>
+	      <a><xsl:attribute name="href">
+		  <xsl:value-of select="concat($ftpbase, name, '.asc')"/>
+		</xsl:attribute>
+		<xsl:value-of select="name"/></a>
+	    </xsl:otherwise>
+	  </xsl:choose>
+	  <br/>
+	</xsl:for-each>
+      </xsl:when>
+      <xsl:when test="$type = 'notice'">
+	<xsl:for-each select="document($advisories.xml)/descendant::notice[position() &lt;= 10]">
+	  <xsl:value-of select="$leadingmark" />
+	  <xsl:choose>
+	    <xsl:when test="@omithref = 'yes'">
+	      <xsl:value-of select="name"/>
+	    </xsl:when>
+	    <xsl:otherwise>
+	      <a><xsl:attribute name="href">
+		  <xsl:value-of select="concat($ftpbaseerrata, name, '.asc')"/>
+		</xsl:attribute>
+		<xsl:value-of select="name"/></a>
+	    </xsl:otherwise>
+	  </xsl:choose>
+	  <br/>
+	</xsl:for-each>
+      </xsl:when>
+    </xsl:choose>
   </xsl:template>
 
   <!-- template: "html-index-advisories-items-lastmodified" -->
 
   <xsl:template name="html-index-advisories-items-lastmodified">
     <xsl:param name="advisories.xml" select="''" />
+    <xsl:param name="type" select="'advisory'" />
 
-    <xsl:call-template name="transtable-lookup">
-      <xsl:with-param name="word-group" select="'number-month'" />
-      <xsl:with-param name="word">
-	<xsl:value-of select="document($advisories.xml)/descendant::month[position() = 1]/name"/>
-      </xsl:with-param>
-    </xsl:call-template>
-    <xsl:text> </xsl:text>
-    <xsl:value-of select="document($advisories.xml)/descendant::day[position() = 1]/name"/>
-    <xsl:text>, </xsl:text>
-    <xsl:value-of select="document($advisories.xml)/descendant::year[position() = 1]/name"/>
+    <xsl:choose>
+      <xsl:when test="$type = 'advisory'">
+	<xsl:call-template name="transtable-lookup">
+	  <xsl:with-param name="word-group" select="'number-month'" />
+	  <xsl:with-param name="word">
+	    <xsl:value-of select="document($advisories.xml)/descendant::month[day/advisory[position() = 1]]/name"/>
+	  </xsl:with-param>
+	</xsl:call-template>
+	<xsl:text> </xsl:text>
+	<xsl:value-of select="document($advisories.xml)/descendant::day[advisory[position() = 1]]/name"/>
+	<xsl:text>, </xsl:text>
+	<xsl:value-of select="document($advisories.xml)/descendant::year[month/day/advisory[position() = 1]]/name"/>
+      </xsl:when>
+
+      <xsl:when test="$type = 'notice'">
+	<xsl:call-template name="transtable-lookup">
+	  <xsl:with-param name="word-group" select="'number-month'" />
+	  <xsl:with-param name="word">
+	    <xsl:value-of select="document($advisories.xml)/descendant::month[day/notice[position() = 1]]/name"/>
+	  </xsl:with-param>
+	</xsl:call-template>
+	<xsl:text> </xsl:text>
+	<xsl:value-of select="document($advisories.xml)/descendant::day[notice[position() = 1]]/name"/>
+	<xsl:text>, </xsl:text>
+	<xsl:value-of select="document($advisories.xml)/descendant::year[month/day/notice[position() = 1]]/name"/>
+      </xsl:when>
+    </xsl:choose>
   </xsl:template>
 
   <!-- template: "rdf-security-advisories"
