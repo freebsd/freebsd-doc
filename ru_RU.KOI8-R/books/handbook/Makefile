@@ -2,7 +2,7 @@
 # Build the FreeBSD Handbook.
 #
 # The FreeBSD Russian Documentation Project
-# $FreeBSD: doc/ru_RU.KOI8-R/books/handbook/Makefile,v 1.4 2001/03/11 16:44:41 phantom Exp $
+# $FreeBSD: doc/ru_RU.KOI8-R/books/handbook/Makefile,v 1.5 2001/06/11 01:20:25 ache Exp $
 # $FreeBSDru: frdp/doc/ru_RU.KOI8-R/books/handbook/Makefile,v 1.18 2001/03/11 12:04:50 phantom Exp $
 # Original version: 1.28
 #
@@ -57,7 +57,6 @@ SRCS+= x11/chapter.sgml
 # Entities
 SRCS+= ../../../en_US.ISO8859-1/books/handbook/authors.ent 
 SRCS+= chapters.ent 
-SRCS+= mailing-lists.ent
 SRCS+= newsgroups.ent
 SRCS+= ruauthors.ent
 
