@@ -1,7 +1,7 @@
 # The FreeBSD Documentation Project
 # The FreeBSD German Documentation Project
 # $FreeBSD$
-# $FreeBSDde: de-www/Makefile,v 1.17 2003/09/27 12:05:17 mheinen Exp $
+# $FreeBSDde: de-www/Makefile,v 1.18 2003/10/10 22:47:09 mheinen Exp $
 # basiert auf: 1.98
 
 .if exists(Makefile.conf)
@@ -33,6 +33,7 @@ DOCS+= where.sgml
 SUBDIR= news
 SUBDIR+= FAQ
 SUBDIR+= handbook
+SUBDIR+= platforms
 SUBDIR+= releases
 .if !defined(WEB_ONLY) || empty(WEB_ONLY)
 #SUBDIR+= ports
