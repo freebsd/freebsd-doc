@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp 
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.143 2005-01-25 17:30:48 hrs Exp $
+# $Id: man.cgi,v 1.144 2005-03-10 18:52:03 www Exp $
 
 #use Data::Dumper;
 #use Carp;
@@ -1015,7 +1015,7 @@ ETX
 
     foreach ('html', 'ps', 'pdf',
 	     # 'dvi', # you need a 8 bit clean man, e.g. jp-man
-	     'ascii', 'latin1', 'troff') {
+	     'ascii', 'latin1') {
 	print qq{<OPTION VALUE="$_">$_</OPTION>\n};
     };
 
@@ -1033,7 +1033,7 @@ ETX
 }
 
 sub copyright {
-    $id = '$Id: man.cgi,v 1.143 2005-01-25 17:30:48 hrs Exp $';
+    $id = '$Id: man.cgi,v 1.144 2005-03-10 18:52:03 www Exp $';
 
     return qq{\
 <PRE>
