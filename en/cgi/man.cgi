@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp 
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.25 2001-01-11 19:58:04 wosch Exp $
+# $Id: man.cgi,v 1.26 2001-01-21 15:46:08 wosch Exp $
 
 #use Data::Dumper;
 #use Carp;
@@ -708,9 +708,11 @@ sub encode_data {
     s/\>/\&gt\;/g;
 
     s,((_\010.)+),($str = $1) =~ s/.\010//g; "<I>$str</I>";,ge;
+    s,(.\010)+,$1,g;
 
-    s,((.\010.)+\s+(.\010.)+),($str = $1) =~ s/.\010//g; "<B>$str</B>";,ge;
+    if (!s,((.\010.)+\s+(.\010.)+),($str = $1) =~ s/.\010//g; "<B>$str</B>";,ge) {
     s,((.\010.)+),($str = $1) =~ s/.\010//g; "<B>$str</B>";,ge;
+    }
 
 
     # Escape binary data except for ^H which we process below
@@ -762,7 +764,7 @@ Please direct questions about this server to
 URL:  <A HREF="$BASE" target=_parent>$www{'home'}$BASE</a><br>
 ETX
 
-    print q{$Date: 2001-01-11 19:58:04 $ $Revision: 1.25 $};
+    print q{$Date: 2001-01-21 15:46:08 $ $Revision: 1.26 $};
     print "<br>\n";
     print "</BODY>\n</HTML>\n";
     0;
