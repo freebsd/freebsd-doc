@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp 
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.33 2001-03-11 10:53:08 wosch Exp $
+# $Id: man.cgi,v 1.34 2001-03-11 10:57:57 wosch Exp $
 
 #use Data::Dumper;
 #use Carp;
@@ -855,6 +855,8 @@ the University of California, Massachusetts Institute of
 Technology, Free Software Foundation, FreeBSD Inc., and others.
 
 </PRE>\n
+This script has the revsion: $Date: 2001-03-11 10:57:57 $ <p>
+
 Copyright (c) for man pages by OS vendors.
 <p>
 <a href="ftp://ftp.2bsd.com">2.11 BSD</a>,
@@ -898,7 +900,7 @@ Copyright (c) 1996-2001 Wolfram Schneider <a href="$mailtoURL">&lt;$mailto&gt;</
 <UL>
 <li>Get the <a href="$BASE/source">source</a> of the man.cgi script
 <li>Links to /usr/include works only for the OS version
-which run on this server (FreeBSD-2.2.5)
+which run on this server (FreeBSD-4.2)
 <li>Troff macros works only if defined in FreeBSD/groff. OS specific
 macros like `appeared in NetBSD version 1.2' are not supported.
 <li>Netscape is buggy, you may press twice the link 'Index Page and Help'
@@ -909,8 +911,7 @@ at <a href="http://www.yahoo.com/Computers_and_Internet/Information_and_Document
 <li>Some OSs provide only formated manual pages (catpages), e.g. NetBSD
 and OpenBSD. In this case it is not possible to create Postscript
 and troff output.
-<li>Man page usage <a href="$manstat">statistic</a> of this script.
-<li>The <a href="http://www.de.freebsd.org/de/ftp/unix-stammbaum">
+<li>The <a href="ftp://ftp.FreeBSD.org/pub/FreeBSD/FreeBSD-current/src/share/misc/bsd-family-tree">
 Unix family tree, BSD part</a>.
 <li>The <a href="http://www.freebsd.org/cgi/ports.cgi">
 FreeBSD Ports Changes</a> script.
