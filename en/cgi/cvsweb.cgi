@@ -28,7 +28,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.37 2000/01/05 15:47:43 phantom Exp $
+# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.38 2000/02/01 14:52:38 wosch Exp $
 #
 
 
@@ -96,7 +96,7 @@ display diffs between arbitrary revisions.
 If you would like to use this CGI script on your own web server and
 CVS tree, see <A HREF=\"http://www.FreeBSD.org/~fenner/cvsweb/\">
 the CVSWeb distribution site</A> or the <a 
-href=\"http://www.FreeBSD.org/cgi/cvsweb.cgi/www/data/cgi/cvsweb.cgi\">current</a> FreeBSD version.
+href=\"http://www.FreeBSD.org/cgi/cvsweb.cgi/www/en/cgi/cvsweb.cgi\">current</a> FreeBSD version.
 <p>
 Please send any suggestions, comments, etc. to
 <A HREF=\"mailto:fenner\@FreeBSD.org\">Bill Fenner &lt;fenner\@FreeBSD.org&gt;</A>
