@@ -1,5 +1,5 @@
 # 
-# $FreeBSD: doc/ja_JP.eucJP/books/faq/Makefile,v 1.8 2000/02/03 03:11:04 kuriyama Exp $
+# $FreeBSD$
 #
 # Build the FreeBSD FAQ
 #
@@ -14,8 +14,6 @@ FORMATS?= html-split html
 
 INSTALL_COMPRESSED?= gz
 INSTALL_ONLY_COMPRESSED?=
-
-NO_TIDY=	YES
 
 # 
 # SRCS lists the individual SGML files that make up the document. Changes
