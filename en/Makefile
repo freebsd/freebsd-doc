@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/Makefile,v 1.61 2001/02/25 12:00:49 alex Exp $
+# $FreeBSD: www/en/Makefile,v 1.62 2001/04/17 09:05:42 nik Exp $
 .if exists(Makefile.conf)
 .include "Makefile.conf"
 .endif
@@ -51,8 +51,6 @@ SUBDIR+= ports
 
 # These *must* be listed after the "doc" subdir, as they create symlinks
 # in to it.
-SUBDIR+= FAQ 
-SUBDIR+= handbook
 SUBDIR+= tutorials
 
 # Non-SGML
@@ -60,6 +58,8 @@ SUBDIR+= gifs
 SUBDIR+= cgi
 
 WEB_LANG?=	ja es ru zh de
+
+COOKIE=	FAQ handbook
 
 # Non-English
 
@@ -72,5 +72,17 @@ WEB_LANG?=	ja es ru zh de
 SGMLOPTS+=      -links -hdr ${.CURDIR}/doc.hdr -ftr ${.CURDIR}/doc.ftr
 
 WEBDIR=		data
+
+# Handle the FAQ/ and handbook/ directories specially.
+
+FAQ:
+	ln -fs ${.CURDIR}/../../doc/en_US.ISO_8859-1/books/faq FAQ
+
+handbook:
+	ln -fs ${.CURDIR}/../../doc/en_US.ISO_8859-1/books/handbook handbook
+
+afterinstall:
+	ln -fs ${.CURDIR}/doc/en_US.ISO_8859-1/books/faq ${DOCINSTALLDIR}/FAQ
+	ln -fs ${.CURDIR}/doc/en_US.ISO_8859-1/books/handbook ${DOCINSTALLDIR}/handbook
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
