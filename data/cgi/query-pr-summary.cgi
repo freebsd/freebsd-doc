@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: query-pr-summary.cgi,v 1.6 1996-12-17 03:58:53 peter Exp $
+# $Id: query-pr-summary.cgi,v 1.7 1996-12-17 04:03:41 peter Exp $
 
 $self_ref = $ENV{'SCRIPT_NAME'};
 ($query_pr_ref = $ENV{'SCRIPT_NAME'}) =~ s/-summary//;
@@ -82,7 +82,7 @@ sub header_info {
 	print &html_header("Current FreeBSD problem reports");
     }
     else {
-	print "Current FreeBSD problem reports";
+	print "Current FreeBSD problem reports\n";
     }
 
 print "
