@@ -52,8 +52,11 @@
 #
 #     _________________________________________________________________
 #                                      
-# $FreeBSD: www/en/cgi/missing_handler.cgi,v 1.9 2000/12/28 13:32:15 wosch Exp $
+# $FreeBSD: www/en/cgi/missing_handler.cgi,v 1.10 2001/01/01 19:46:55 wosch Exp $
 # ----------------------------------------------------------------------
+
+sub escape($) { s/&/&amp;/g; s/</&lt;/g; s/>/&gt;/g; $_; }
+sub escape2($) { s/</&lt;/g; s/>/&gt;/g; $_; }
 
 # output title
 $title = $ENV{'MISSING_HANDLER_TITLE'} || 
@@ -64,16 +67,16 @@ $footer = $ENV{'MISSING_HANDLER_FOOT'} || '';
 
 
 # Server environment variables
-$http_referer=$ENV{'HTTP_REFERER'};
-$redirect_url=$ENV{'REDIRECT_URL'};
-$server_admin=$ENV{'SERVER_ADMIN'};
-$http_host=$ENV{'HTTP_HOST'};
-$server_name=$ENV{'SERVER_NAME'};
+$http_referer=escape($ENV{'HTTP_REFERER'});
+$redirect_url=escape($ENV{'REDIRECT_URL'});
+$server_admin=escape($ENV{'SERVER_ADMIN'});
+$http_host=escape($ENV{'HTTP_HOST'});
+$server_name=escape($ENV{'SERVER_NAME'});
 
 # rfc1738 says that ";"|"/"|"?"|":"|"@"|"&"|"=" may be reserved.
-$http_referer_url = $http_referer;
+$http_referer_url = escape2($ENV{'HTTP_REFERER'});
 $http_referer_url =~ s/([^a-zA-Z0-9;\/?:&=])/sprintf("%%%02x",ord($1))/eg;
-$redirect_url_save = $redirect_url;
+$redirect_url_save = escape2($ENV{'REDIRECT_URL'});
 $redirect_url_save =~ s/([^a-zA-Z0-9;\/?:&=])/sprintf("%%%02x",ord($1))/eg;
 
 
