@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/ports/ports.inc,v 1.51 2000/07/30 20:28:56 billf Exp $ -->
+<!-- $FreeBSD: www/en/ports/ports.inc,v 1.52 2001/01/20 23:02:39 will Exp $ -->
 <p>The FreeBSD Ports and Packages Collection offers a simple way for
 users and administrators to install applications.  The ports
 collection has been <a
