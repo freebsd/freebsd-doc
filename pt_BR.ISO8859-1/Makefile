@@ -5,6 +5,7 @@
 #
 # $FreeBSD$
 
+SUBDIR = articles
 SUBDIR+= books
 
 COMPAT_SYMLINK = pt_BR
