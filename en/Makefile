@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/Makefile,v 1.112 2004/06/27 06:22:31 hrs Exp $
+# $FreeBSD: www/en/Makefile,v 1.113 2004/07/09 23:27:27 linimon Exp $
 
 .if exists(Makefile.conf)
 .include "Makefile.conf"
@@ -70,7 +70,7 @@ SUBDIR+= relnotes
 SUBDIR+= gifs
 SUBDIR+= cgi
 
-WEB_LANG?=	da de es fr it ja pt_BR ru tr zh
+WEB_LANG?=	da de es fr it ja nl pt_BR ru tr zh
 
 # Non-English
 
