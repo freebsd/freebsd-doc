@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/Makefile,v 1.85 2002/07/01 19:50:55 trhodes Exp $
+# $FreeBSD: www/en/Makefile,v 1.86 2002/10/05 16:07:45 lioux Exp $
 .if exists(Makefile.conf)
 .include "Makefile.conf"
 .endif
@@ -18,7 +18,7 @@ DOCS+= internet.sgml
 DOCS+= mailto.sgml 
 DOCS+= publish.sgml
 DOCS+= relnotes.sgml
-DOCS+= send-pr.sgml
+#DOCS+= send-pr.sgml
 DOCS+= support.sgml
 DOCS+= where.sgml 
 DOCS+= y2kbug.sgml 
