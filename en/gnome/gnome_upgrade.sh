@@ -34,7 +34,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $Id: gnome_upgrade.sh,v 1.1 2004-04-04 22:07:06 adamw Exp $
+# $Id: gnome_upgrade.sh,v 1.2 2004-04-08 18:21:17 marcus Exp $
 #
 
 # This script will aid in doing major upgrades to the GNOME Desktop (e.g.
@@ -63,7 +63,7 @@ RM_FILES=""
 	# The Big Update updates UPGRADE_TARGET and everything that depends on it
 UPGRADE_TARGET="glib-2*"
 	# Ports that should be left until after the Big Update
-EXCLUDE_PORTS="libgtop2 gnomesystemmonitor gdesklets gnomeapplets2 gnome2 regexxer gnomemeeting jamboree"
+EXCLUDE_PORTS="libgtop2 gnomesystemmonitor gdesklets gnomeapplets2 gnome2 regexxer gnomemeeting"
 	# Ports that should be installed from scratch after the Big Update
 	# (Needs to be in category/port form, like editors/AbiWord2)
 POSTINSTALL_PORTS=""
