@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/Makefile,v 1.57 2000/11/30 00:03:37 kuriyama Exp $
+# $FreeBSD: www/en/Makefile,v 1.58 2000/12/06 19:00:21 phantom Exp $
 .if exists(Makefile.conf)
 .include "Makefile.conf"
 .endif
@@ -32,6 +32,7 @@ DATA=	robots.txt
 SUBDIR=	 security
 SUBDIR+= commercial
 SUBDIR+= docproj
+SUBDIR+= docs
 SUBDIR+= news
 SUBDIR+= alpha
 SUBDIR+= internal
