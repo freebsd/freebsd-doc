@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.45 2003/12/28 01:46:10 marcus Exp $ -->
+<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.46 2004/01/13 04:13:08 marcus Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
 		xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -9,7 +9,7 @@
   <xsl:import href="includes.xsl"/>
 
   <xsl:variable name="base" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.45 2003/12/28 01:46:10 marcus Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.46 2004/01/13 04:13:08 marcus Exp $'"/>
   <xsl:variable name="title" select="'FreeBSD GNOME Project'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -95,19 +95,19 @@
               <img src="{$base}/gnome/images/gnome.png" align="right"
                    border="0" alt="GNOME Logo"/>
 
-              <p>The GNOME project was born as an effort to create an entirely free
+              <p>The GNOME project was born to create an entirely free
                 desktop environment for free systems.  From the start, the main
                 objective of GNOME has been to provide a user-friendly suite of
-                applications and an easy-to-use desktop.  The FreeBSD GNOME Project
-                strives to bring GNOME to the FreeBSD user.</p>
+		applications and an easy-to-use desktop environment.  The FreeBSD GNOME
+		Project brings GNOME to the FreeBSD user.</p>
 
               <p>As with most GNU programs, GNOME has been designed to run on all
                 modern Unix-like operating systems.  Through the efforts of the
-		FreeBSD GNOME Project and countless volunteers, that list of
-		operating systems includes FreeBSD.</p>
+		FreeBSD GNOME Project and countless volunteers, GNOME is fully
+		supported on FreeBSD.</p>
 
               <p>The GNOME project has expanded its objectives over the past few
-                months to include addressing a number of problems in the existing
+                months to address a number of problems in the existing
                 <xsl:value-of select="$unix"/> infrastructure.</p>
 
               <p>The GNOME project acts as an umbrella.  The major components of
@@ -124,7 +124,7 @@
 
               <h2><font color="#990000">State of the port</font></h2>
 
-	      <p>GNOME for FreeBSD is currently support on 4.8, 4.9, 5.2,
+	      <p>GNOME for FreeBSD is currently supported on 4.8, 4.9, 5.2,
 		-STABLE, and -CURRENT.  Most of GNOME has been ported to
 		FreeBSD; however, there is
 		<a href="docs/volunteer.html">plenty left to do</a>!</p>
