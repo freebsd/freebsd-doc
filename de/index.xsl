@@ -2,7 +2,7 @@
 
 <!--
      $FreeBSD$
-     $FreeBSDde: de-www/index.xsl,v 1.29 2004/07/04 13:45:23 brueffer Exp $
+     $FreeBSDde: de-www/index.xsl,v 1.30 2004/08/03 11:28:49 mheinen Exp $
      basiert auf: 1.105
 -->
 
@@ -188,7 +188,7 @@
 		auch <i>direkt</i> mit FTP oder NFS installieren, wenn
 		Sie eine Netzwerkverbindung haben.  Dazu brauchen Sie
 		einige 1.44&#160;MB Disketten und
-		<a href="{$enbase}/doc/en_US.ISO8859-1/books/handbook/install.html">die
+		<a href="{$enbase}/doc/de_DE.ISO8859-1/books/handbook/install.html">die
 		Installations-Anleitung</a>.</p>
 
 	      <h2><font color="#990000">FreeBSD ist <i>frei</i></font></h2>
@@ -259,7 +259,7 @@
 			    <font size="+1" color="#990000"><b>Neue Technik:
 			    <xsl:value-of select="$rel.current"/>-RELEASE</b></font></a><br/>
 
-			    <small>&#183; <a href="{$enbase}/doc/en_US.ISO8859-1/books/handbook/install.html">Installation</a><br/>
+			    <small>&#183; <a href="{$enbase}/doc/de_DE.ISO8859-1/books/handbook/install.html">Installation</a><br/>
 			      &#183; <a href="{$u.rel.notes}">Release Notes</a><br/>
 			      &#183; <a href="{$u.rel.hardware}">Hardware Notes</a><br/>
 			      &#183; <a href="{$u.rel.installation}">Installation Notes</a><br/>
@@ -270,7 +270,7 @@
 			    <font size="+1" color="#990000"><b>Produktionsreife:
 			    <xsl:value-of select="$rel2.current"/>-RELEASE</b></font></a><br/>
 
-			    <small>&#183; <a href="{$enbase}/doc/en_US.ISO8859-1/books/handbook/install.html">Installation</a><br/>
+			    <small>&#183; <a href="{$enbase}/doc/de_DE.ISO8859-1/books/handbook/install.html">Installation</a><br/>
 			      &#183; <a href="{$u.rel2.notes}">Release Notes</a><br/>
 			      &#183; <a href="{$u.rel2.hardware}">Hardware Notes</a><br/>
 			      &#183; <a href="{$u.rel2.installation}">Installation Notes</a><br/>
