@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/it/index.xsl,v 1.7 2004/01/08 11:46:08 ale Exp $ -->
+<!-- $FreeBSD: www/it/index.xsl,v 1.8 2004/01/14 14:29:03 ale Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -9,7 +9,7 @@
 
   <xsl:variable name="base" select="'.'"/>
   <xsl:variable name="enbase" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/it/index.xsl,v 1.7 2004/01/08 11:46:08 ale Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/it/index.xsl,v 1.8 2004/01/14 14:29:03 ale Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <!-- these params should be externally bound. The values
@@ -243,10 +243,10 @@
 	      <p>FreeBSD è ideale per un server
 		<a href="{$enbase}/internet.html">Internet o Intranet</a>.
 		Fornisce servizi di rete robusti sotto i carichi più pesanti e
-		usa la memoria in maniera efficente per mantenere buoni tempi di
-		risposta per migliaia di processi utente simultanei.  Visita la
-		nostra <a href="{$enbase}/gallery/gallery.html">galleria</a> per
-		esempi di applicazioni e servizi potenziati da FreeBSD.</p>
+		usa la memoria in maniera efficiente per mantenere buoni tempi
+		di risposta per migliaia di processi utente simultanei.  Visita
+		la nostra <a href="{$enbase}/gallery/gallery.html">galleria</a>
+		per esempi di applicazioni e servizi potenziati da FreeBSD.</p>
 
 	      <h2><font color="#990000">Esegue un numero enorme di
 		  applicazioni</font></h2>
