@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.3 1997-11-23 22:55:06 max Exp $
+# $Id: Makefile,v 1.4 1997-11-24 15:02:16 jfieber Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.19
 
@@ -38,6 +38,7 @@ SUBDIR=			ports releases
 # <bsd.sgml.mk>.
 
 DOCSUBDIR=	FAQ handbook
+FORMATS=	"html roff"
 
 # Directories that need to be checked out from the 
 # CVS repository.
