@@ -1,6 +1,6 @@
-# $FreeBSD$
+# $FreeBSD: www/en/ports/Makefile.inc,v 1.2 2000/02/28 12:46:07 phantom Exp $
 
-PORTINDEX=	perl5 ${.CURDIR}/portindex
+PORTINDEX=	${PERL} ${.CURDIR}/portindex
 INDEX=		INDEX
 PINDEX=		ports/${INDEX}
 Y2K=		YEAR2000
