@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.13 1999-08-26 19:40:04 nik Exp $
+# $Id: Makefile,v 1.14 1999-09-03 17:24:37 nik Exp $
 
 #
 # The user can override the default list of languages to build and install
@@ -14,4 +14,5 @@ SUBDIR+=	ru_RU.KOI8-R
 SUBDIR+=	zh_TW.Big5
 .endif
 
-.include <bsd.subdir.mk>
+DOC_PREFIX?=   ${.CURDIR}
+.include "${DOC_PREFIX}/share/mk/doc.subdir.mk"
