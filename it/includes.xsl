@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/it/includes.xsl,v 1.6 2004/01/08 11:46:08 ale Exp $ -->
+<!-- $FreeBSD: www/it/includes.xsl,v 1.7 2004/01/14 11:11:14 ale Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -131,7 +131,7 @@
     <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel.current"/>R/relnotes.html</xsl:variable>
 
   <xsl:variable name="u.rel.announce">
-    <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel.current"/>R/announce.html</xsl:variable>
+    <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel.current"/>R/announce.html</xsl:variable>
   <xsl:variable name="u.rel.errata">
     <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel.current"/>R/errata.html</xsl:variable>
   <xsl:variable name="u.rel.hardware">

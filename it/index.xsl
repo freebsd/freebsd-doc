@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/it/index.xsl,v 1.6 2003/12/13 10:56:11 blackend Exp $ -->
+<!-- $FreeBSD: www/it/index.xsl,v 1.7 2004/01/08 11:46:08 ale Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -9,7 +9,7 @@
 
   <xsl:variable name="base" select="'.'"/>
   <xsl:variable name="enbase" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/it/index.xsl,v 1.6 2003/12/13 10:56:11 blackend Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/it/index.xsl,v 1.7 2004/01/08 11:46:08 ale Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <!-- these params should be externally bound. The values
@@ -115,7 +115,7 @@
 			  <p><font size="+1" color="#990000"><b>Software</b></font>
 			    <small><br/>
 			      &#183; <a href="{$enbase}/doc/it_IT.ISO8859-15/books/handbook/mirrors.html">Ottenere FreeBSD</a><br/>
-			      &#183; <a href="{$enbase}/releases/index.html">Info sulle Release</a><br/>
+			      &#183; <a href="{$base}/releases/index.html">Info sulle Release</a><br/>
 			      &#183; <a href="{$enbase}/ports/index.html">Applicazioni Portate</a><br/>
 			    </small></p>
 
