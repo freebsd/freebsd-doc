@@ -5,11 +5,11 @@
 #    Build the FreeBSD FAQ in the German translation
 #
 #    $FreeBSD$
-#    $FreeBSDde: de-docproj/books/faq/Makefile,v 1.9 2003/04/23 22:36:36 mheinen Exp $
-#    basiert auf: 1.10
+#    $FreeBSDde: de-docproj/books/faq/Makefile,v 1.10 2004/06/06 18:21:21 mheinen Exp $
+#    basiert auf: 1.11
 #
 
-MAINTAINER=de-bsd-translators@DE.FreeBSD.org
+MAINTAINER=de-bsd-translators@de.FreeBSD.org
 
 DOC?= book
 
