@@ -1,3 +1,4 @@
+# $FreeBSD$
 MAN3 =	_secure_path.3\
 	abort.3\
 	abs.3\
@@ -17,7 +18,7 @@ MAN3 =	_secure_path.3\
 	atof.3\
 	atoi.3\
 	atol.3\
-	auth_getval.3\
+	auth.3\
 	bcmp.3\
 	bcopy.3\
 	bindresvport.3\
@@ -36,6 +37,7 @@ MAN3 =	_secure_path.3\
 	ceil.3\
 	cfree.3\
 	cftime.3\
+	cipher.3\
 	clock.3\
 	com_err.3\
 	confstr.3\
@@ -358,7 +360,7 @@ MAN3 =	_secure_path.3\
 	time2posix.3\
 	times.3\
 	timezone.3\
-	tmpfile.3\
+	tmpnam.3\
 	toascii.3\
 	tolower.3\
 	toupper.3\
@@ -389,7 +391,7 @@ MLINKS+= asinh.3 asinhf.3
 MLINKS+= atan.3 atanf.3
 MLINKS+= atan2.3 atan2f.3
 MLINKS+= atanh.3 atanhf.3
-MLINKS+= auth_getval.3 auth.3
+MLINKS+= auth.3 auth_getval.3
 MLINKS+= bitstring.3 bit_alloc.3
 MLINKS+= bitstring.3 bit_clear.3
 MLINKS+= bitstring.3 bit_decl.3
@@ -436,6 +438,10 @@ MLINKS+= cam_cdbparse.3 csio_encode.3
 MLINKS+= cam_cdbparse.3 csio_encode_visit.3
 MLINKS+= ceil.3 ceilf.3
 MLINKS+= cftime.3 ascftime.3
+MLINKS+= cipher.3 encrypt.3
+MLINKS+= cipher.3 setkey.3
+MLINKS+= cipher.3 des_cipher.3
+MLINKS+= cipher.3 des_setkey.3
 MLINKS+= cos.3 cosf.3
 MLINKS+= cosh.3 coshf.3
 MLINKS+= crypt.3 des_cipher.3
@@ -1191,8 +1197,8 @@ MLINKS+= termcap.3 tgoto.3
 MLINKS+= termcap.3 tparm.3
 MLINKS+= termcap.3 tputs.3
 MLINKS+= time2posix.3 posix2time.3
-MLINKS+= tmpfile.3 tempnam.3
-MLINKS+= tmpfile.3 tmpnam.3
+MLINKS+= tmpnam.3 tempnam.3
+MLINKS+= tmpnam.3 tmpfile.3
 MLINKS+= ttyname.3 isatty.3
 MLINKS+= ttyname.3 ttyslot.3
 MLINKS+= tzset.3 tzsetwall.3
