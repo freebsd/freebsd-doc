@@ -85,6 +85,7 @@ MAN8 =	IPXrouted.8\
 	ipfstat.8\
 	ipfw.8\
 	ipmon.8\
+	ipnat.8\
 	isdnd.8\
 	isdndebug.8\
 	isdndecode.8\
@@ -334,6 +335,7 @@ MLINKS+=pam.8 pam.d.5
 MLINKS+=pstat.8 swapinfo.8
 MLINKS+=quotaon.8 quotaoff.8
 MLINKS+=rc.8 rc.atm.8
+MLINKS+=rc.8 rc.early.8
 MLINKS+=rc.8 rc.firewall.8
 MLINKS+=rc.8 rc.i386.8
 MLINKS+=rc.8 rc.local.8
@@ -349,5 +351,8 @@ MLINKS+=rtsold.8 rtsol.8
 MLINKS+=slattach.8 slip.8
 MLINKS+=strfile.8 unstr.8
 MLINKS+=vnconfig.8 swapfile.8
+MLINKS+=yp.8 NIS.8
+MLINKS+=yp.8 YP.8
+MLINKS+=yp.8 nis.8
 
 .include "bsd.prog.mk"
