@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp 
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.98 2003-02-06 22:07:04 wosch Exp $
+# $Id: man.cgi,v 1.99 2003-03-28 23:12:35 bmah Exp $
 
 #use Data::Dumper;
 #use Carp;
@@ -148,6 +148,7 @@ $manPathDefault = 'FreeBSD 4.7-RELEASE';
      'FreeBSD 5.0-current',   "$manLocalDir/FreeBSD-5.0-current",
      'FreeBSD 4.7-stable',    "$manLocalDir/FreeBSD-4.7-stable",
      'FreeBSD 5.0-RELEASE',   "$manLocalDir/FreeBSD-5.0-RELEASE",
+     'FreeBSD 4.8-RELEASE',   "$manLocalDir/FreeBSD-4.8-RELEASE",
      'FreeBSD 4.7-RELEASE',   "$manLocalDir/FreeBSD-4.7-RELEASE",
      'FreeBSD 4.6.2-RELEASE', "$manLocalDir/FreeBSD-4.6.2-RELEASE",
      'FreeBSD 4.6-RELEASE',   "$manLocalDir/FreeBSD-4.6-RELEASE",
@@ -287,7 +288,7 @@ $manPathDefault = 'FreeBSD 4.7-RELEASE';
 
 # delete not existing releases
 while (($key,$val) = each %manPath) {
-    if (! -d $val) {
+    if ((! -d $val) && (! -l $val)) {
 	delete $manPath{"$key"} if $key ne $manPathDefault;
     }
 }
@@ -974,7 +975,7 @@ ETX
 }
 
 sub copyright {
-    $id = '$Id: man.cgi,v 1.98 2003-02-06 22:07:04 wosch Exp $';
+    $id = '$Id: man.cgi,v 1.99 2003-03-28 23:12:35 bmah Exp $';
 
     return qq{\
 <PRE>
