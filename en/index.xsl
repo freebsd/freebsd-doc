@@ -103,7 +103,7 @@
 			<td>
 			  <p>
 			    <a href="platforms/index.html">
-			      <font size="+1" color="#990000"><b>Platform</b></font>
+			      <font size="+1" color="#990000"><b>Platforms</b></font>
 			    </a><small><br/>
 			      &#183; <a href="smp/index.html">i386</a><br/>
 			      &#183; <a href="platforms/alpha.html">Alpha</a><br/>
@@ -135,19 +135,11 @@
 			    <a href="support.html">
 			      <font size="+1" color="#990000"><b>Support</b></font>
 			    </a><small><br/>
-			      &#183; <a href="http://lists.freebsd.org/mailman/listinfo">FreeBSD Mailing Lists</a><br/>
-			      &#183; <a href="{$base}/commercial/consulting.html">Commercial Support</a><br/>
+			      &#183; <a href="{$base}/support.html#mailing-list">Mailing lists</a><br/>
 			      &#183; <a href="{$base}/support.html#newsgroups">Newsgroups</a><br/>
-			    </small></p>
-
-			  <p>
-			    <a href="support.html">
-			      <font size="+1" color="#990000"><b>Multi-language Support</b></font>
-			    </a><small><br/>
-			      &#183; <a href="{$base}/docproj/translations.html">Translated Documentation</a><br/>
-			      &#183; <a href="{$base}/support.html#mailing-list">Country Specific Mailing lists</a><br/>
 			      &#183; <a href="{$base}/support.html#user">User Groups</a><br/>
 			      &#183; <a href="{$base}/support.html#web">Web Resources</a><br/>
+			      &#183; <a href="security/index.html">Security</a><br/>
 			    </small></p>
 
 			  <p>
@@ -186,12 +178,6 @@
 			      &#183; <a href="{$base}/donations/index.html">Donations Liaison</a><br/>
 			      &#183; <a href="{$base}/donations/donors.html">Current Donations</a><br/>
 			      &#183; <a href="{$base}/donations/wantlist.html">List of needs</a><br/>
-			    </small></p>
-
-			  <p><font size="+1" color="#990000"><b>Community</b></font>
-			    <small><br/>
-			      &#183; <a href="{$base}/events/index.html">Upcoming Events</a><br/>
-			      &#183; <a href="{$base}/internal/homepage.html">Developer Home Pages</a><br/>
 			    </small></p>
 
 			  <p>
