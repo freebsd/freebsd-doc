@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/commercial/Makefile,v 1.13 2000/09/30 00:21:38 nbm Exp $
+# $FreeBSD$
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -7,48 +7,77 @@
 .include "../Makefile.inc"
 .endif
 
-PERL=	perl5
+DOCS=   commercial.sgml
 
-DOCS =  commercial.sgml
-DOCS+=  consulting.sgml
-DOCS+=  consulting_bycat.sgml
-DOCS+=  hardware.sgml
-DOCS+=  misc.sgml
-DOCS+=  software.sgml
-DOCS+=  software_bycat.sgml
+DATA=	consult.html
+DATA+=	consult_bycat.html
+DATA+=  hardware.html
+DATA+=  misc.html
+DATA+=  software.html
+DATA+=  software_bycat.html
 
-INDEXLINK=commercial.html
-CLEANFILES+= consulting.inc consulting_bycat.inc hardware.inc
-CLEANFILES+= misc.inc software.inc software_bycat.inc
+CLEANFILES=  commercial.html
+CLEANFILES+= consult.html
+CLEANFILES+= consult_bycat.html
+CLEANFILES+= hardware.html
+CLEANFILES+= misc.html
+CLEANFILES+= software.html
+CLEANFILES+= software_bycat.html
 
-consulting.html: consulting.sgml consulting.inc
+INDEXLINK= commercial.html
 
-consulting_bycat.html: consulting_bycat.sgml consulting_bycat.inc
+XMLLINT?= /usr/local/bin/xmllint # Part of textproc/libxml2.
 
-hardware.html: hardware.sgml hardware.inc
+consult.html: entries.xsl consult.xml ../includes.xsl
+	${XSLTPROC} ${XSLTPROCOPTS} -o ${.TARGET} \
+		--param pagename "'Consulting Services'" \
+		${.CURDIR}/entries.xsl ${.CURDIR}/consult.xml
+.if !defined(NO_TIDY)
+	-${TIDY} ${TIDYOPTS} ${.TARGET}
+.endif
 
-misc.html: misc.sgml misc.inc
+consult_bycat.html: consult_bycat.xsl consult.xml ../includes.xsl
+	${XSLTPROC} ${XSLTPROCOPTS} -o ${.TARGET} \
+		${.CURDIR}/consult_bycat.xsl ${.CURDIR}/consult.xml
+.if !defined(NO_TIDY)
+	-${TIDY} ${TIDYOPTS} ${.TARGET}
+.endif
 
-software.html: software.sgml software.inc
+hardware.html: entries.xsl hardware.xml ../includes.xsl
+	${XSLTPROC} ${XSLTPROCOPTS} -o ${.TARGET} \
+		--param pagename "'Hardware Vendors'" \
+		${.CURDIR}/entries.xsl ${.CURDIR}/hardware.xml
+.if !defined(NO_TIDY)
+	-${TIDY} ${TIDYOPTS} ${.TARGET}
+.endif
 
-software_bycat.html: software_bycat.sgml software_bycat.inc
+misc.html: entries.xsl misc.xml ../includes.xsl
+	${XSLTPROC} ${XSLTPROCOPTS} -o ${.TARGET} \
+		--param pagename "'Miscellaneous Vendors'" \
+		${.CURDIR}/entries.xsl ${.CURDIR}/misc.xml
+.if !defined(NO_TIDY)
+	-${TIDY} ${TIDYOPTS} ${.TARGET}
+.endif
 
-consulting.inc: gencommercial.pl commercial.desc consulting.raw
-	${PERL} ${.CURDIR}/gencommercial.pl -s ${.CURDIR} consulting
+software.html: entries.xsl software.xml ../includes.xsl
+	${XSLTPROC} ${XSLTPROCOPTS} -o ${.TARGET} \
+		--param pagename "'Software Vendors'" \
+		${.CURDIR}/entries.xsl ${.CURDIR}/software.xml
+.if !defined(NO_TIDY)
+	-${TIDY} ${TIDYOPTS} ${.TARGET}
+.endif
 
-consulting_bycat.inc: gencommercial.pl commercial.desc consulting.raw
-	${PERL} ${.CURDIR}/gencommercial.pl -s ${.CURDIR} -c consulting
+software_bycat.html: soft_bycat.xsl software.xml ../includes.xsl
+	${XSLTPROC} ${XSLTPROCOPTS} -o ${.TARGET} \
+		${.CURDIR}/soft_bycat.xsl ${.CURDIR}/software.xml
+.if !defined(NO_TIDY)
+	-${TIDY} ${TIDYOPTS} ${.TARGET}
+.endif
 
-hardware.inc: gencommercial.pl commercial.desc hardware.raw
-	${PERL} ${.CURDIR}/gencommercial.pl -s ${.CURDIR} hardware
-
-misc.inc: gencommercial.pl commercial.desc misc.raw
-	${PERL} ${.CURDIR}/gencommercial.pl -s ${.CURDIR} misc
-
-software.inc: gencommercial.pl commercial.desc software.raw
-	${PERL} ${.CURDIR}/gencommercial.pl -s ${.CURDIR} software
-
-software_bycat.inc: gencommercial.pl commercial.desc software.raw
-	${PERL} ${.CURDIR}/gencommercial.pl -s ${.CURDIR} -c software
+lint:
+	${XMLLINT} --valid -o /dev/null ${.CURDIR}/consult.xml
+	${XMLLINT} --valid -o /dev/null ${.CURDIR}/hardware.xml
+	${XMLLINT} --valid -o /dev/null ${.CURDIR}/misc.xml
+	${XMLLINT} --valid -o /dev/null ${.CURDIR}/software.xml
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
