@@ -1,4 +1,4 @@
-#	$Id: Makefile,v 1.10 1998-07-16 17:03:54 wosch Exp $
+#	$Id: Makefile,v 1.11 1998-07-23 10:59:39 wosch Exp $
 
 PORTINDEX=	perl ./portindex
 INDEX=		INDEX
@@ -10,6 +10,8 @@ COOKIE=		${INDEX} Makefile.gen
 .include "Makefile.gen"
 CLEANFILES+=	${DOCS} Makefile.gen ${INDEX} packages.exists
 .endif
+
+_ALLINSTALL= packages.exists
 
 ${INDEX}: $${CVSROOT}/${PINDEX},v
 	cvs -QR co -p ${PINDEX} > ${INDEX}
