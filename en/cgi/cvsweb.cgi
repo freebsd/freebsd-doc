@@ -42,9 +42,9 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $Id: cvsweb.cgi,v 1.68 2001-01-14 08:59:59 knu Exp $
-# $Idaemons: /home/cvs/cvsweb/cvsweb.cgi,v 1.64 2001/01/13 07:48:09 knu Exp $
-# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.67 2001/01/12 04:26:10 knu Exp $
+# $Id: cvsweb.cgi,v 1.69 2001-03-22 19:55:43 knu Exp $
+# $Idaemons: /home/cvs/cvsweb/cvsweb.cgi,v 1.68 2001/03/22 19:46:59 knu Exp $
+# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.68 2001/01/14 08:59:59 knu Exp $
 #
 ###
 
@@ -140,9 +140,9 @@ sub forbidden_module($);
 ##### Start of Configuration Area ########
 delete $ENV{PATH};
 
-$cvsweb_revision = join('.', '1.105', (split(/ /,
- q$Idaemons: /home/cvs/cvsweb/cvsweb.cgi,v 1.64 2001/01/13 07:48:09 knu Exp $
-))[2]);
+$cvsweb_revision = '1.106' . '.' . (split(/ /,
+ q$Idaemons: /home/cvs/cvsweb/cvsweb.cgi,v 1.68 2001/03/22 19:46:59 knu Exp $
+))[2];
 
 use File::Basename;
 
@@ -234,7 +234,7 @@ $LOG_REVSEPARATOR = q/^-{28}$/;
 ##### End of configuration variables #####
 
 $cgi_style::hsty_base = 'http://www.FreeBSD.org';
-$_ = q$FreeBSD: www/en/cgi/cvsweb.cgi,v 1.67 2001/01/12 04:26:10 knu Exp $;
+$_ = q$FreeBSD: www/en/cgi/cvsweb.cgi,v 1.68 2001/01/14 08:59:59 knu Exp $;
 @_ = split;
 $cgi_style::hsty_date = "@_[3,4]";
 
@@ -323,9 +323,7 @@ if (-f $config) {
 } else {
    &fatal("500 Internal Error",
 	  'Configuration not found.  Set the variable <code>$config</code> '
-          . 'in cvsweb.cgi, or the environment variable '
-          . '<code>CVSWEB_CONFIG</code>, to your <b>cvsweb.conf</b> '
-          . 'configuration file first.');
+          . 'in cvsweb.cgi to your <b>cvsweb.conf</b> configuration file first.');
 }
 
 undef %input;
@@ -1242,6 +1240,8 @@ sub spacedHtmlText($;$) {
 sub link($$) {
 	my($name, $url) = @_;
 
+	$url =~ s/:/sprintf("%%%02x", ord($&))/eg;
+
 	sprintf '<A HREF="%s">%s</A>', hrefquote($url), $name;
 }
 
@@ -1319,6 +1319,7 @@ sub safeglob($) {
 				push(@results, "$dirname/" .$_);
 			}
 		}
+ 		closedir($dh);
 	}
 
 	@results;
@@ -1427,7 +1428,7 @@ sub doAnnotate($$) {
     # the public domain.
     # we could abandon the use of rlog, rcsdiff and co using
     # the cvsserver in a similiar way one day (..after rewrite)
-    $pid = open2($reader, $writer, "cvs", @cvs_options, "server")
+    $pid = open2($reader, $writer, $CMD{cvs}, @cvs_options, "server")
       || fatal ("500 Internal Error", "Fatal Error - unable to open cvs for annotation");
 
     # OK, first send the request to the server.  A simplified example is:
@@ -2654,8 +2655,8 @@ sub human_readable_diff($){
   print "<br>Tag: $sym2\n" if ($sym1);
   print "</th>\n";
 
-  my $fs = "<font face=\"$difffontface\" size=\"$difffontsize\">";
-  my $fe = "</font>";
+  my $fs = "<font face=\"$difffontface\" size=\"$difffontsize\"><tt>";
+  my $fe = "</tt></font>";
 
   my $leftRow = 0;
   my $rightRow = 0;
@@ -2994,6 +2995,8 @@ sub download_url($$;$) {
     }
     $url .= "?rev=$revision";
     $url .= '&content-type=' . urlencode($mimetype) if (defined($mimetype));
+
+    $url =~ s/:/sprintf("%%%02x", ord($&))/eg;
 
     $url;
 }
