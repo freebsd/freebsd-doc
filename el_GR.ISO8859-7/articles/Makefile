@@ -9,6 +9,7 @@ SUBDIR+= freebsd-questions
 SUBDIR+= java-tomcat
 SUBDIR+= laptop
 SUBDIR+= new-users
+SUBDIR+= problem-reports
 SUBDIR+= releng
 SUBDIR+= releng-packages
 
