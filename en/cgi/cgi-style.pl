@@ -1,4 +1,4 @@
-# $Id: cgi-style.pl,v 1.8 1997-06-10 12:47:11 jfieber Exp $
+# $Id: cgi-style.pl,v 1.9 1997-11-17 00:29:53 wosch Exp $
 #
 # Perl routines to encapsulate various elements of HTML page style.
 
@@ -55,3 +55,18 @@ sub short_html_header {
 sub html_footer {
     return "<hr><address>$hsty_author<br>$hsty_date</address>\n";
 }
+
+sub get_the_source {
+    return if $ENV{'PATH_INFO'} ne '/get_the_source';
+
+    open(R, $0) || do { 
+	print "Oops! open $0: $!\n";  # should not reached
+	exit;
+    };
+
+    print "Content-type: text/plain\n\n";
+    while(<R>) { print }
+    close R;
+    exit;
+}            
+
