@@ -1,5 +1,5 @@
 #
-# $Id: docproj.docbook.mk,v 1.8 1999-08-18 18:46:58 nik Exp $
+# $Id: docproj.docbook.mk,v 1.9 1999-08-19 00:07:09 nik Exp $
 #
 # This include file <docproj.docbook.mk> handles installing documentation
 # from the FreeBSD Documentation Project.
@@ -77,7 +77,7 @@
 
 DOC?=		${.CURDIR:T}
 
-DOC_INSTALL_PREFIX= /usr/local/share/doc/fdp
+DOC_INSTALL_PREFIX?= /usr/local/share/doc/fdp
 
 JADE=		/usr/local/bin/jade
 DSLHTML=	${DOC_PREFIX}/share/sgml/freebsd.dsl
