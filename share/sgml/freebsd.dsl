@@ -1,4 +1,4 @@
-<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.17 2000/10/08 19:15:06 nik Exp $ -->
+<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.18 2000/10/23 14:41:46 nik Exp $ -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
 <!ENTITY % output.html		"IGNORE">
@@ -88,8 +88,8 @@
               (if nochunks
                   (make empty-element gi: "hr")
                   (empty-sosofo))
-                (make element gi: "p"
-                      attributes: (list (list "align" "center"))
+              (make element gi: "p"
+                    attributes: (list (list "align" "center"))
                   (make element gi: "small"
                     ($email-footer$))))))
 
@@ -285,11 +285,6 @@
 
       <!-- QAndASet ..................................................... -->
 
-      <!-- Default to labelling Q/A with Q: and A: -->
-
-      (define (qanda-defaultlabel)
-        (normalize "qanda"))
-
       <!-- For the HTML version, display the questions in a bigger, bolder
            font. -->
 
@@ -298,19 +293,18 @@
         (let* ((chlist   (children (current-node)))
                (firstch  (node-list-first chlist))
                (restch   (node-list-rest chlist)))
-               (make element gi: "DIV"
-                     attributes: (list (list "CLASS" (gi)))
-                     (make element gi: "P" 
-                           (make element gi: "BIG"
-                                 (make element gi: "A"
-                                       attributes: (list
-                                                   (list "NAME" (element-id)))
-                                       (empty-sosofo))
-                                 (make element gi: "B"
-                                       (literal (question-answer-label
-                                                (current-node)) " ")
-                                       (process-node-list (children firstch)))))
-                    (process-node-list restch))))
+          (make element gi: "DIV"
+                attributes: (list (list "CLASS" (gi)))
+                (make element gi: "P" 
+                      (make element gi: "BIG"
+                            (make element gi: "A"
+                                  attributes: (list (list "NAME" (element-id)))
+                                 (empty-sosofo))
+                             (make element gi: "B"
+                                   (literal (question-answer-label
+                                            (current-node)) " ")
+                                    (process-node-list (children firstch)))))
+                (process-node-list restch))))
       ]]>
 
       (element docinfo (process-children))
@@ -319,6 +313,7 @@
 
       (element (docinfo date) (process-children))
 
+      <!-- Override literallayout to handle 'class="monospaced"' properly -->
       (element literallayout 
 	(if (equal? (attribute-string "class") (normalize "monospaced"))
 	  (make sequence
@@ -330,6 +325,24 @@
              %indent-literallayout-lines%
              %number-literallayout-lines%))))
 
+      <!-- Override generate-anchor.  This is used to generate a unique ID for
+           each element that can be linked to.  The element-id function calls
+           this one if there's no ID attribute that it can use.  Normally, we
+           would just use the current element number.  However, if it's a
+           a question then use the question's number, as determined by the
+           question-answer-label function.
+
+           This generates anchors of the form "Qx.y.", where x.y is the
+           question label.  This will probably break if question-answer-label
+           is changed to generate something that might be the same for two
+           different questions (for example, if question numbering restarts
+           for each qandaset. -->
+      (define (generate-anchor #!optional (nd (current-node)))
+        (cond
+          ((equal? (gi nd) (normalize "question"))
+            (string-append "Q" (question-answer-label)))
+          (else
+            (string-append "AEN" (number->string (all-element-number nd))))))
     </style-specification-body>
   </style-specification>
 
