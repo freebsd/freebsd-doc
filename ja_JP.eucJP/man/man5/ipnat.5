@@ -13,16 +13,16 @@ map ::= mapit ifname fromto "->" dstipmask [ mapport ] mapoptions.
 mapblock ::= "map-block" ifname ipmask "->" ipmask [ ports ] mapoptions.
 redir ::= "rdr" ifname ipmask dport "->" ip [ "," ip ] rdrport rdroptions .
 
-dport ::= "port" portnum [ "-" portnum ] .
-ports ::= "ports" numports | "auto" .
-rdrport ::= "port" portnum .
+dport ::= "port" number [ "-" number ] .
+ports ::= "ports" number | "auto" .
+rdrport ::= "port" number .
 mapit ::= "map" | "bimap" .
 fromto ::= "from" object "to" object .
 ipmask ::= ip "/" bits | ip "/" mask | ip "netmask" mask .
 dstipmask ::= ipmask | "range" ip "-" ip .
-mapport ::= "portmap" tcpudp portnumber ":" portnumber .
+mapport ::= "portmap" tcpudp portspec .
 mapoptions ::= [ tcpudp ] [ "frag" ] [ age ] [ clamp ] .
-rdroptions ::= [ tcpudp ] [ rr ] [ "frag" ] [ age ] [ clamp ] .
+rdroptions ::= [ tcpudp | protocol ] [ rr ] [ "frag" ] [ age ] [ clamp ] .
 
 object  = addr [ port-comp | port-range ] .
 addr    = "any" | nummask | host-name [ "mask" ipaddr | "mask" hexnumber ] .
@@ -32,13 +32,14 @@ port-range = "port" port-num range port-num .
 rr ::= "round-robin" .
 age ::= "age" decnumber [ "/" decnumber ] .
 clamp ::= "mssclamp" decnumber .
-tcpudp ::= "tcp/udp" | protocol .
+tcpudp ::= "tcp/udp" | "tcp" | "udp" .
 
 protocol ::= protocol-name | decnumber .
-nummask ::= host-name [ "/" decnumber ] .
-portnumber ::= number { numbers } | "auto" .
+nummask ::= host-name [ "/" number ] .
+portspec ::= "auto" | number ":" number .
 ifname ::= 'A' - 'Z' { 'A' - 'Z' } numbers .
 
+number ::= numbers [ number ] .
 numbers ::= '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' .
 .fi
 .PP
@@ -66,9 +67,6 @@ TCP パケットと UDP パケットの再マップの際には、ソースポート番号の変更
 これらは、規則のうしろに再マップ先のポート番号の範囲を、
 \fBport-number:port-number\fP の形式で指定します。
 .SH コマンド
-.\" There are found commands recognised by IP Filter's NAT code:
-.\" この部分、There are four commands ... の間違いではないかと send-pr 済み
-.\" (2000-1-19, by kuma)
 IP フィルタの NAT コードが認識するコマンドが 4 個あります:
 .TP
 .B map
@@ -109,6 +107,15 @@ map de0 10.1.0.0/16 -> 201.2.3.4/32
 map de0 from 10.1.0.0/16 to any -> 201.2.3.4/32
 .fi
 .LP
+"from" 節または "to" 節の前に感嘆符 ("!") を付けることで、
+その節の否定を表すことができます。但し、\fBmap\fP ルール中の "from" 
+の否定や、\fBrdr\fP ルール中の "to" の否定は使えない可能性があることに
+注意して下さい。このようなルールは次のようになります:
+.LP
+.nf
++map de0 from 10.1.0.0/16 ! to 10.1.0.0/16 -> 201.2.3.4/32
+.fi
+.PP
 IP アドレスとポート番号のみ、比較対象にできます。
 これは、すべての NAT ルールで使用可能です。
 .SH コマンド修飾語
@@ -209,16 +216,47 @@ map ppp0 10.0.0.0/8 -> 209.1.2.0/24 portmap tcp/udp 1025:65000
 .fi
 .PP
 これで、ネットワーク 10 で利用可能な空間のうち、不足分は ``アドレス''
-527,566 個分だけになります。これらの規則を結合させるとすると、以下のよ
-うな指定が必要となります。
+527,566 個分だけになります。これらの規則を結合させるとすると、次の
+ような指定が必要となります。
 .LP
 .nf
 map ppp0 10.0.0.0/8 -> 209.1.2.0/24 portmap tcp/udp 1025:65000
 map ppp0 10.0.0.0/8 -> 209.1.2.0/24
 .fi
 .PP
-これで、TCP/UDP パケットのすべてはポートマップが行なわれ、IP アドレス
-のみが変更されるのは ICMP など他のプロトコルだけとなります。
+その結果、TCP/UDP パケットの全てはポート変換され、ICMPなど、
+それ以外のプロトコルだけ、IP 番号だけが変換されます。
+場合によっては、与えられた範囲内の全てへの同時アクセスを保証したい
+ことがあり、その場合には、実際のポート番号範囲の代わりに
+キーワード \fBauto\fP を使用したほうが適切なこともあります。
+しかし、この場合は 24 ビットのアドレス空間を 8 個に絞り込むので、
+IP アドレスごとにポート 1 つがデフォルトです。
+どのようにこれを使用するかについての良い例は次のようになります。
+.LP
+.nf
+map ppp0 172.192.0.0/16 -> 209.1.2.0/24 portmap tcp/udp auto
+.fi
+.PP
+この例では、IP アドレスのそれぞれにつき、わずかな範囲 (252 個) のポートが
+与えられる結果になります。ここでの問題は、\fBmap\fP ディレクティブは
+外向きのコネクションに対し利用可能な次のアドレス/ポートの組を
+使用することを NAT コードに指示するので、
+その結果、外部アドレス/ポートの組と内部アドレス/ポートの組の間の
+関係の識別が容易でなくなることです。
+この問題は次のように、\fBmap-block\fP を使用することで克服できます。
+.LP
+.nf
+map-block ppp0 172.192.0.0/16 -> 209.1.2.0/24 ports auto
+.fi
+.PP
+例えば、この結果、172.192.0.0/24 は、209.1.2.0/32 に変換され、
+172.192.0.0 から 172.192.0.255 の範囲の各アドレスは、
+それぞれ自分用の 252 ポートを持つことになります。
+先の \fBmap\fP の用法と逆に、
+何らかの理由により (例えば) 172.192.0.2 のユーザが 260 個の連続した
+外向きコネクションを必要とする場合、\fBmap-block\fP ならば 252 の範囲に
+限定されますが、\fBmap\fP コマンドの場合、次の IP アドレスに\fI移行\fP
+することになります。
 .SH 関連ファイル
 /dev/ipnat
 .br
