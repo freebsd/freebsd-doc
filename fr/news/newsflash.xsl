@@ -1,12 +1,13 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/fr/news/newsflash.xsl,v 1.4 2004/01/08 00:26:44 stephane Exp $ -->
+<!-- $FreeBSD: www/fr/news/newsflash.xsl,v 1.5 2004/01/12 20:21:22 stephane Exp $ -->
 
 <!-- 
    The FreeBSD French Documentation Project
-   Original revision: 1.9
+   Original revision: 1.11
    
    Version francaise : Stephane Legrand <stephane@freebsd-fr.org>
+   Version francaise (mise a jour) : Mathieu Arnold <mat@FreeBSD.org>
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
@@ -52,7 +53,8 @@
 	  des derniers d&#233;veloppements peut devenir une corv&#233;e ! Pour rester &#224; jour,
 	  consultez cette page r&#233;guli&#232;rement. Vous pouvez &#233;galement
 	  vous inscrire &#224; la liste de diffusion
-	  <a href="{$enbase}/doc/{$url.doc.langcode}/books/handbook/eresources.html#ERESOURCES-MAIL">freebsd-announce</a>.</p>
+	  <a href="{$enbase}/doc/{$url.doc.langcode}/books/handbook/eresources.html#ERESOURCES-MAIL">freebsd-announce</a>
+	  ou au <a href="news.rdf">flux RDF</a>.</p>
 
 	     <p>Les projets suivants ont leurs propres pages de nouvelles, vous pouvez les consulter
           pour les mises &#224; jour sp&#233;cifiques &#224; ces projets.</p>
@@ -90,7 +92,13 @@
   <!-- Everything that follows are templates for the rest of the content -->
   
   <xsl:template match="month">
-    <h1><xsl:value-of select="name"/>
+    <h1>
+      <xsl:call-template name="transtable-lookup">
+	<xsl:with-param name="word-group" select="'number-month'" />
+	<xsl:with-param name="word">
+	  <xsl:value-of select="name"/>
+	</xsl:with-param>
+      </xsl:call-template>
       <xsl:text> </xsl:text>
       <xsl:value-of select="ancestor::year/name"/></h1>
 
@@ -112,7 +120,13 @@
 
 	<b><xsl:value-of select="ancestor::day/name"/>
 	  <xsl:text> </xsl:text>
-	  <xsl:value-of select="ancestor::month/name"/>, 
+	  <xsl:call-template name="transtable-lookup">
+	    <xsl:with-param name="word-group" select="'number-month'" />
+	    <xsl:with-param name="word">
+	      <xsl:value-of select="ancestor::month/name"/>
+	    </xsl:with-param>
+	  </xsl:call-template>
+	  <xsl:text>, </xsl:text>
 	  <xsl:value-of select="ancestor::year/name"/>:</b><xsl:text> </xsl:text>
 	<xsl:apply-templates select="p"/>
 	</p>
