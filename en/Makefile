@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/Makefile,v 1.64 2001/04/22 17:34:53 wosch Exp $
+# $FreeBSD: www/en/Makefile,v 1.65 2001/04/25 22:51:43 wosch Exp $
 .if exists(Makefile.conf)
 .include "Makefile.conf"
 .endif
@@ -47,6 +47,9 @@ SUBDIR+= conspectus
 .if !defined(WEB_ONLY) || empty(WEB_ONLY)
 SUBDIR+= ports
 SUBDIR+= doc
+.endif
+.if defined(BUILD_RELNOTES)
+SUBDIR+= relnotes
 .endif
 
 # These *must* be listed after the "doc" subdir, as they create symlinks
