@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/ports.cgi,v 1.52 2001/03/25 20:22:02 wosch Exp $
+# $FreeBSD: www/en/cgi/ports.cgi,v 1.53 2001/05/07 22:12:44 wosch Exp $
 #
 # ports.cgi - search engine for FreeBSD ports
 #             	o search for a port by name or description
@@ -379,7 +379,7 @@ sub out {
 	    print qq[<A HREF="$remotePrefixFtpPackages{$release}/$version.tgz">Package</A> <B>:</B>\n];
 	}
 print qq[<A HREF="$l">Changes</A> <B>:</B>
-<A HREF="$pathDownload.tar">Download</A>
+<A HREF="$pathDownload">Download</A>
 <p>
 ];
 
@@ -557,7 +557,7 @@ sub footer {
 <img ALIGN="RIGHT" src="/gifs/powerlogo.gif">
 &copy; 1996-2001 by Wolfram Schneider. All rights reserved.<br>
 };
-    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.52 2001/03/25 20:22:02 wosch Exp $} . "<br>\n";
+    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.53 2001/05/07 22:12:44 wosch Exp $} . "<br>\n";
     print qq{Please direct questions about this service to
 <I><A HREF="$mailtoURL">$mailto</A></I><br>\n};
     print qq{General questions about FreeBSD ports should be sent to } .
