@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/internal/Makefile,v 1.37 2003/07/03 08:56:24 maxim Exp $
+# $FreeBSD: www/en/internal/Makefile,v 1.38 2003/11/24 23:30:29 trhodes Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -22,6 +22,7 @@ DOCS+=	core-vote.sgml
 DOCS+=	trb-dispute.sgml
 DOCS+=	doceng.sgml
 DOCS+=	rtp.sgml
+DOCS+=	policies.sgml
 
 INDEXLINK=	internal.html
 
