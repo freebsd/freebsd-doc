@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
 
-<!-- $FreeBSD: www/ja/index.xsl,v 1.38 2004/12/09 19:48:57 rushani Exp $ -->
+<!-- $FreeBSD: www/ja/index.xsl,v 1.39 2004/12/30 17:53:44 hrs Exp $ -->
 <!-- Original revision: 1.100 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -10,7 +10,7 @@
 
   <xsl:variable name="base" select="'.'"/>
   <xsl:variable name="enbase" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/ja/index.xsl,v 1.38 2004/12/09 19:48:57 rushani Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/ja/index.xsl,v 1.39 2004/12/30 17:53:44 hrs Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <!-- these params should be externally bound. The values
@@ -254,7 +254,7 @@
 			      ・<a href="{$u.rel.hardware}">ハードウェアノート</a><br/>
 			      ・<a href="{$u.rel.installation}">インストールノート</a><br/>
 			      ・<a href="{$u.rel.errata}">Errata</a><br/>
-			      ・<a href="{$u.rel.early}">Migration Guide</a></small></p>
+			      ・<a href="{$u.rel.migration}">Migration Guide</a></small></p>
 
 			<p>
 			      <a href="{$u.rel2.announce}">
