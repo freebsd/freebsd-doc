@@ -1,5 +1,5 @@
 # 
-# $FreeBSD: doc/en_US.ISO_8859-1/articles/committers-guide/Makefile,v 1.3 1999/09/06 06:52:35 peter Exp $
+# $FreeBSD$
 #
 
 MAINTAINER=grog@FreeBSD.org
@@ -10,6 +10,8 @@ FORMATS?= html
 
 INSTALL_COMPRESSED?= gz
 INSTALL_ONLY_COMPRESSED?=
+
+WITH_DOCFORMAT_NAVI_LINK?=YES
 
 # 
 # SRCS lists the individual SGML files that make up the document. Changes

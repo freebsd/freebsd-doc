@@ -1,3 +1,4 @@
+# $FreeBSD$
 
 DOC?= article
 
@@ -5,6 +6,8 @@ FORMATS?= html
 
 INSTALL_COMPRESSED?=gz
 INSTALL_ONLY_COMPRESSED?=
+
+WITH_DOCFORMAT_NAVI_LINK?=YES
 
 SRCS= article.sgml
 
