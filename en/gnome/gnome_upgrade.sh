@@ -34,7 +34,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $Id: gnome_upgrade.sh,v 1.9 2004-11-07 22:36:57 marcus Exp $
+# $Id: gnome_upgrade.sh,v 1.10 2004-11-07 22:38:53 adamw Exp $
 #
 
 # This script will aid in doing major upgrades to the GNOME Desktop (e.g.
@@ -216,8 +216,8 @@ echo
 echo "If necessary, hit Control-C now, drop to a terminal, and restart the upgrade." | /usr/bin/fmt 75 79
 echo
 # $i is a good clobberable variable name
-#read -p "Hit <ENTER> to continue with the upgrade: " i
-#echo
+read -p "Hit <ENTER> to continue with the upgrade: " i
+echo
 
 logfile=`get_tmpfile gnome_upgrade_log`
 if [ $? != 0 ]; then
