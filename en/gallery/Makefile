@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.5 1998-08-11 11:43:51 wosch Exp $
+# $Id: Makefile,v 1.6 1999-04-03 07:21:04 wosch Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -15,15 +15,15 @@ CLEANFILES+= cgallery.inc npgallery.inc pgallery.inc
 
 cgallery.html: cgallery.sgml cgallery.inc
 cgallery.inc: gallery.db gengallery.pl
-	./gengallery.pl commercial gallery.db > cgallery.inc
+	perl ./gengallery.pl commercial gallery.db > cgallery.inc
 
 npgallery.html: npgallery.sgml npgallery.inc
 npgallery.inc: gallery.db gengallery.pl
-	./gengallery.pl nonprofit gallery.db > npgallery.inc
+	perl ./gengallery.pl nonprofit gallery.db > npgallery.inc
 
 pgallery.html: pgallery.sgml pgallery.inc
 pgallery.inc: gallery.db gengallery.pl
-	./gengallery.pl personal gallery.db > pgallery.inc
+	perl ./gengallery.pl personal gallery.db > pgallery.inc
 
 .include "../web.mk"
 
