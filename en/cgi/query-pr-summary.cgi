@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $FreeBSD$
+# $FreeBSD: www/en/cgi/query-pr-summary.cgi,v 1.24 1999/09/06 07:02:40 peter Exp $
 
 $html_mode     = 1 if $ENV{'DOCUMENT_ROOT'};
 $self_ref      = $ENV{'SCRIPT_NAME'};
@@ -448,7 +448,7 @@ sub gnats_summary {
 	}
 
 	print "$state [$date] $title" .
-	    (' ' x (11 - length($_))) .
+	    (' ' x (12 - length($_))) .
 	    $resp . (' ' x (9 - length($resp))) .
 	    ($htmlmode ? $syn : substr($syn,0,41))
 	    . "\n";
