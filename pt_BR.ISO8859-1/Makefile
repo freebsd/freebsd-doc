@@ -8,7 +8,6 @@
 SUBDIR+= books
 
 COMPAT_SYMLINK = pt_BR
-COMPAT_SYMLINK += br
 
 DOC_PREFIX?= ${.CURDIR}/..
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"
