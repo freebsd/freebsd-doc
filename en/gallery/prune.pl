@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl
+#!/usr/bin/perl
 #
 # prune.pl - Script to prune gallery.db file of malformed
 # and otherwise worthless entries.  And while we're at it,
