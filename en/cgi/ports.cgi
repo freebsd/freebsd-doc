@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/ports.cgi,v 1.41 2000/01/22 22:24:23 wosch Exp $
+# $FreeBSD: www/en/cgi/ports.cgi,v 1.42 2000/01/23 15:18:47 wosch Exp $
 #
 # ports.cgi - search engine for FreeBSD ports
 #             	o search for a port by name or description
@@ -346,7 +346,6 @@ sub out {
 	    print qq[<A HREF="$remotePrefixFtpPackages{$release}/$version.tgz">Package</A> <B>:</B>\n];
 	}
 print qq[<A HREF="$l">Changes</A> <B>:</B>
-<A HREF="$path/">Browse</A> <B>:</B>
 <A HREF="$pathDownload.tar">Download</A>
 <p>
 ];
@@ -524,7 +523,7 @@ sub footer {
 <img ALIGN="RIGHT" src="/gifs/powerlogo.gif">
 &copy; 1996-2000 by Wolfram Schneider. All rights reserved.<br>
 };
-    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.41 2000/01/22 22:24:23 wosch Exp $} . "<br>\n";
+    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.42 2000/01/23 15:18:47 wosch Exp $} . "<br>\n";
     print qq{Please direct questions about this service to
 <I><A HREF="$mailtoURL">$mailto</A></I><br>\n};
     print qq{General questions about FreeBSD ports should be sent to } .
@@ -577,7 +576,6 @@ sub faq {
 <h2>Keywords</h2>
 <dl>
 <dt><b>Description</b><dd>A more detailed description.
-<dt><b>Browse</b><dd>Traverse the ports directory.
 <dt><b>Download</b><dd>Download the ports directory.
 <dt><b>Package</b><dd>Download the pre-compiled software package.
 <dt><b>Changes</b><dd>Read the latest changes.
