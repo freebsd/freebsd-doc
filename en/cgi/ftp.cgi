@@ -1,4 +1,6 @@
 #!/usr/bin/perl
+#
+# $FreeBSD$
 
 require 'cgi-lib.pl';
 require 'cgi-style.pl';

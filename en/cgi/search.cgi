@@ -14,6 +14,8 @@
 #
 # Disclaimer:
 #   This is pretty ugly in places.
+#
+# $FreeBSD$
 
 
 $server_root = '/usr/local/www';
