@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: query-pr-summary.cgi,v 1.21 1999-02-25 20:08:04 billf Exp $
+# $Id: query-pr-summary.cgi,v 1.22 1999-02-26 22:05:58 billf Exp $
 
 $html_mode     = 1 if $ENV{'DOCUMENT_ROOT'};
 $self_ref      = $ENV{'SCRIPT_NAME'};
@@ -439,7 +439,7 @@ sub gnats_summary {
 
 	if ($htmlmode) {
 	    $title = '<a href="' . $query_pr_ref . '?pr='. $number . '">' .
-		     $_ . ' </a>';
+		     $_ . '</a> ';
 	} else {
 	    $title = $_;
 	}
