@@ -37,5 +37,7 @@ IMAGES_LIB+=	callouts/8.png
 IMAGES_LIB+=	callouts/9.png
 IMAGES_LIB+=	callouts/10.png
 
+URL_RELPREFIX?=	../../../..
 DOC_PREFIX?= ${.CURDIR}/../../..
+
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"
