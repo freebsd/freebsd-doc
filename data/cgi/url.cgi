@@ -26,7 +26,7 @@
 #
 # url.cgi - make plain text URLs clickable
 #
-# $Id: url.cgi,v 1.6 1998-05-15 09:24:21 wosch Exp $
+# $Id: url.cgi,v 1.7 1998-08-02 18:15:32 wosch Exp $
 
 
 require LWP::UserAgent;
@@ -43,12 +43,43 @@ $ua -> max_size(20*1024);
 $file = $ENV{'QUERY_STRING'};
 $uri = "$file";
 
-if ($file !~ m%^http://[a-z_\-0-9]+\.freebsd\.(com|org)%i) {
-    &CgiError(("Wrong url", "Only http://*.freebsd.* is allowed.\n"));
+if ($file !~ m%^(http|ftp)://[a-z_\-0-9]+\.freebsd\.(com|org)%i) {
+    &CgiError(("Wrong url: $file", "Only http://*.freebsd.* is allowed.\n"));
     exit(0);
 }
 
+if (1) {
+	my($cvsroot) = '/home/ncvs';
+	$file =~ s%(http|ftp)://ftp.freebsd.org/pub/FreeBSD/FreeBSD-current/%%;
+	print &short_html_header($file);
+	if ($file =~ m%^ports/\w+/\w+/pkg/DESCR% && 
+		-f "$cvsroot/$file,v") {
+		 open(CO, "-|") || exec ('/usr/bin/co', '-p', '-q', "$cvsroot/$file,v");
+	} else {
+		print "bla\n";
+		}
+	#print "$cvsroot/$file,v";
+	
+	print "\n<HR>\n<pre>\n";
+	
+	my($content);
+	$content .= $_ while(<CO>);
+	$content =~ s/</&lt;/g;
+	$content =~ 
+	    s%((http|ftp)://[^\s"\)\>,;]+)%<A HREF="$1">$1</A>%gi;
+	print $content;
+	print "</pre>\n";
 
+	# Add 'source' link for freebsd ports
+	if ($file =~ 
+	    m%pub/FreeBSD/FreeBSD-current/(ports/[^/]+/[^/]+)/pkg/DESCR$%) {
+	    print qq{<HR><a href=\"pds.cgi?$1">Sources</a>\n};
+	    print qq{| <a href="../ports/">Help</a>\n};
+	    print qq{<BR>\n};
+        }
+	print &html_footer; 
+	exit;
+}
 $request = new HTTP::Request('GET', "$uri");
 $response = $ua->request($request);
 
