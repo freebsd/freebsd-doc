@@ -1,0 +1,354 @@
+#
+# $Id: docproj.docbook.mk,v 1.1 1999-04-14 22:13:59 nik Exp $
+#
+# This include file <docproj.docbook.mk> handles installing documentation
+# from the FreeBSD Documentation Project.
+#
+# Your documentation is expected to be marked up according to the DocBook
+# DTD. 
+#
+
+#
+# The Makefile that includes this *must* set the following variables
+#
+#  MAINTAINER		The e-mail address of the person with overall
+#			responsibilty for the documentation
+#
+#  FORMATS		The output formats that should be generated.
+#			Valid values are in ${KNOWN_FORMATS}
+#
+#  SRCS			One or more files that comprise your documentation.
+
+#
+# Optional variable definitions
+#
+#  DOC			Controls several things
+#
+#			1. ${DOC}.sgml is assumed to be the name of the
+#			   master source file (which will use entities
+#			   to include any other .sgml files.
+#
+#			2. ${DOC}.<foo> will be the name of the output
+#			   files (${DOC}.html, ${DOC}.tex, ${DOC}.ps, and
+#			   so on.  Ignored for the "html-split" format,
+#			   where the output file(s) start with index.html.
+#
+#			If not set, defaults to the name of the current
+#			directory.
+#
+#  JADEOPTS		Additional options to pass to Jade.  Typically
+#			used to define "IGNORE" entities to "INCLUDE"
+#			with "-i<entity-name>"
+#
+#  INSTALL_COMPRESSED	List of compressed versions that will also be
+#			built (and installed).  See ${KNOWN_COMPRESS}
+#			for list of valid values.
+#
+#  INSTALL_ONLY_COMPRESSED
+#			If non-empty then the "install" target will only
+#			install the compressed versions of the output.
+#
+#  DOC_PREFIX		Path to the root of doc/ tree.  Support files
+#			(such as share/sgml/catalog) are expected to
+#			be under this path.  Defaults to /usr/doc.
+#
+
+# ------------------------------------------------------------------------
+#
+# You shouldn't need to change definitions below here
+
+DOC_PREFIX?=	/usr/doc
+
+VOLUME?=	${.CURDIR:T}
+DOC?=		${.CURDIR:T}
+DISTRIBUTION?=	doc
+
+JADE=		/usr/local/bin/jade
+DSLHTML=	${DOC_PREFIX}/share/sgml/freebsd.dsl
+DSLPRINT=	${DOC_PREFIX}/share/sgml/freebsd.dsl
+
+FREEBSDCATALOG= ${DOC_PREFIX}/share/sgml/catalog
+DOCBOOKCATALOG= /usr/local/share/sgml/docbook/3.0/catalog
+JADECATALOG=	/usr/local/share/sgml/jade/catalog
+DSSSLCATALOG=   /usr/local/share/sgml/docbook/dsssl/modular/catalog
+
+JADEFLAGS=	${JADEOPTS} -c ${FREEBSDCATALOG} -c ${DSSSLCATALOG} -c ${DOCBOOKCATALOG} -c ${JADECATALOG}
+
+KNOWN_FORMATS= html html-split html-split.tar txt rtf ps pdf tex dvi tar
+
+# ------------------------------------------------------------------------
+#
+# Look at ${FORMATS} and work out which documents need to be generated.
+# It is assumed that the HTML transformation will always create a file
+# called index.html, and that for every other transformation the name
+# of the generated file is ${DOC}.format.
+#
+# ${_docs} will be set to a list of all documents that must be made
+# up to date.
+#
+# ${CLEANFILES} is a list of files that should be removed by the "clean"
+# target. ${COMPRESS_EXT:S/^/${DOC}.${_cf}.&/ takes the COMPRESS_EXT var,
+# and prepends the filename to each listed extension, building a second
+# list of files with the compressed extensions added.
+#
+
+# Note: ".for _curformat in ${KNOWN_FORMATS}" is used several times in this
+# file. I know they could have been rolled together in to one, much larger,
+# loop. However, that would have made things more complicated for a newcomer
+# to this file to unravel and understand, and a syntax error in the loop
+# would have affected the entire build/compress/install process, instead
+# of just one of them, making it more difficult to debug.
+
+# Note: It is the aim of this file that *all* the targets be available,
+# not just those appropriate to the current ${FORMATS} and
+# ${INSTALL_COMPRESSED} values.
+#
+# For example, if FORMATS=html and INSTALL_COMPRESSED=gz you could still
+# type
+#
+#     make book.rtf.bz2
+#
+# and it will do the right thing. Or
+#
+#     make install-rtf.bz2
+#
+# for that matter. But don't expect "make clean" to work if the FORMATS
+# and INSTALL_COMPRESSED variables are wrong.
+#
+
+.for _curformat in ${FORMATS}
+_cf=${_curformat}
+.if ${_cf} == "html-split"
+_docs+= index.html HTML.manifest
+CLEANFILES+= `xargs < HTML.manifest` HTML.manifest
+.elif ${_cf} == "html-split.tar"
+_docs+= ${DOC}.html-split.tar
+CLEANFILES+= `xargs < HTML.manifest` HTML.manifest
+CLEANFILES+= ${DOC}.html-split.tar
+.elif ${_cf} == "html"
+_docs+= ${DOC}.html
+CLEANFILES+= ${DOC}.html
+.elif ${_cf} == "txt"
+_docs+= ${DOC}.txt
+CLEANFILES+= ${DOC}.html ${DOC}.txt
+.elif ${_cf} == "dvi"
+_docs+= ${DOC}.dvi
+CLEANFILES+= ${DOC}.aux ${DOC}.dvi ${DOC}.log ${DOC}.tex
+.elif ${_cf} == "ps"
+_docs+= ${DOC}.ps
+CLEANFILES+= ${DOC}.aux ${DOC}.dvi ${DOC}.log ${DOC}.tex ${DOC}.ps
+.elif ${_cf} == "pdf"
+_docs+= ${DOC}.pdf
+CLEANFILES+= ${DOC}.aux ${DOC}.dvi ${DOC}.log ${DOC}.tex ${DOC}.pdf
+.elif ${_cf} == "rtf"
+_docs+= ${DOC}.rtf
+CLEANFILES+= ${DOC}.rtf
+.elif ${_cf} == "tar"
+_docs+= ${DOC}.tar
+CLEANFILES+= ${DOC}.tar
+.endif
+.endfor
+
+#
+# Build a list of install-${format}.${compress_format} targets to be
+# by "make install". Also, add ${DOC}.${format}.${compress_format} to
+# ${_docs} and ${CLEANFILES} so they get built/cleaned by "all" and
+# "clean".
+#
+.if !empty(INSTALL_COMPRESSED)
+.for _curformat in ${FORMATS}
+_cf=${_curformat}
+.for _curcomp in ${INSTALL_COMPRESSED}
+.if ${_cf} != "html-split" 
+_curinst+= install-${_curformat}.${_curcomp}
+_docs+= ${DOC}.${_curformat}.${_curcomp}
+CLEANFILES+= ${DOC}.${_curformat}.${_curcomp}
+.endif
+.endfor
+.endfor
+.endif
+
+# ------------------------------------------------------------------------
+#
+# Targets
+#
+
+#
+# Build Targets
+#
+
+# If no target is specifed then .MAIN is made
+.MAIN: all
+
+all: ${_docs}
+
+index.html HTML.manifest: ${SRCS}
+	${JADE} -V html-manifest -ioutput.html ${JADEFLAGS} -d ${DSLHTML} -t sgml ${DOC}.sgml
+	-tidy -i -m -f /dev/null *.html
+
+${DOC}.html: ${SRCS}
+	${JADE} -ioutput.html -V nochunks ${JADEFLAGS} -d ${DSLHTML} -t sgml ${DOC}.sgml > ${DOC}.html
+	-tidy -i -m -f /dev/null ${DOC}.html
+
+${DOC}.html-split.tar: HTML.manifest
+	tar cf ${.TARGET} `xargs < HTML.manifest`
+
+${DOC}.txt: ${DOC}.html
+	lynx -nolist -dump ${DOC}.html > ${DOC}.txt
+
+${DOC}.rtf: ${SRCS}
+	${JADE} -Vrtf-backend -ioutput.print ${JADEFLAGS} -d ${DSLPRINT} -t rtf ${DOC}.sgml
+
+${DOC}.tex: ${SRCS}
+	${JADE} -Vtex-backend -ioutput.print ${JADEFLAGS} -d ${DSLPRINT} -t tex ${DOC}.sgml
+
+${DOC}.dvi: ${DOC}.tex
+	@echo "==> TeX pass 1/3"
+	-tex "&jadetex" ${DOC}.tex
+	@echo "==> TeX pass 2/3"
+	-tex "&jadetex" ${DOC}.tex
+	@echo "==> TeX pass 3/3"
+	-tex "&jadetex" ${DOC}.tex
+
+${DOC}.pdf: ${DOC}.tex
+	@echo "==> PDFTeX pass 1/3"
+	-pdftex "&pdfjadetex" ${DOC}.tex
+	@echo "==> PDFTeX pass 2/3"
+	-pdftex "&pdfjadetex" ${DOC}.tex
+	@echo "==> PDFTeX pass 3/3"
+	pdftex "&pdfjadetex" ${DOC}.tex
+
+${DOC}.ps: ${DOC}.dvi
+	dvips -o ${DOC}.ps ${DOC}.dvi
+
+${DOC}.tar:
+	tar cf ${.TARGET} ${SRCS}
+
+# ------------------------------------------------------------------------
+#
+# Compress targets
+#
+
+#
+# The list of compression extensions this Makefile knows about. If you
+# add new compression schemes, add to this list (which is a list of
+# extensions, hence bz2, *not* bzip2) and extend the _PROG_COMPRESS_*
+# targets.
+#
+KNOWN_COMPRESS=	gz bz2 zip
+
+#
+# You can't build suffix rules to do compression, since you can't wildcard
+# the source suffix. So these are defined .USE, to be tacked on as
+# dependencies of the compress-* targets.
+#
+
+_PROG_COMPRESS_gz: .USE
+	gzip -9 -c ${.ALLSRC} > ${.TARGET}
+
+_PROG_COMPRESS_bz2: .USE
+	bzip2 -9 -c ${.ALLSRC} > ${.TARGET}
+
+_PROG_COMPRESS_zip: .USE
+	zip -j -9 ${.TARGET} ${.ALLSRC}
+
+#
+# Build a list of targets for each compression scheme and output format.
+# Don't compress the html-split output format.
+#
+.for _curformat in ${KNOWN_FORMATS}
+_cf=${_curformat}
+.for _curcompress in ${KNOWN_COMPRESS}
+.if ${_cf} == "html-split"
+${DOC}.${_cf}.tar.${_curcompress}: ${DOC}.${_cf}.tar _PROG_COMPRESS_${_curcompress}
+.else
+${DOC}.${_cf}.${_curcompress}: ${DOC}.${_cf} _PROG_COMPRESS_${_curcompress}
+.endif
+.endfor
+.endfor
+
+#
+# Install targets
+#
+# Build install-* targets, one per allowed value in FORMATS. Need to build
+# two specific targets;
+#
+#    install-html-split - Handles multiple .html files being generated
+#                         from one source. Uses the HTML.manifest file
+#                         created by the stylesheets, which should list
+#                         each .html file that's been created.
+#
+#    install-*          - Every other format. The wildcard expands to
+#                         the other allowed formats, all of which should
+#                         generate just one file.
+#
+# "beforeinstall" and "afterinstall" are hooks in to this process.
+# Redefine them to do things before and after the files are installed,
+# respectively.
+#
+install: beforeinstall realinstall afterinstall
+
+#
+# Build a list of install-format targets to be installed. These will be
+# dependencies for the "realinstall" target.
+#
+.if empty(INSTALL_ONLY_COMPRESSED)
+_curinst+= ${FORMATS:S/^/install-/g}
+.endif
+
+realinstall: ${_curinst}
+
+.for _curformat in ${KNOWN_FORMATS}
+_cf=${_curformat}
+.if !target(install-${_cf})
+.if ${_cf} == "html-split"
+install-${_cf}: index.html
+	@if [ ! -f HTML.manifest ]; then				\
+		echo "HTML.manifest file does not exist, can't install";\
+		exit 1;							\
+	fi
+	${INSTALL} ${COPY} -o ${DOCOWN} -g ${DOCGRP} -m ${DOCMODE} 	\
+		`xargs < HTML.manifest` ${DESTDIR}${DOCDIR}/${VOLUME};	\
+	if [ -f ${.OBJDIR}/${DOC}.ln ]; then 				\
+		(cd ${DESTDIR}${DOCDIR}/${VOLUME}; 			\
+		sh ${.OBJDIR}/${DOC}.ln); 				\
+	fi
+.for _compressext in ${KNOWN_COMPRESS}
+install-${_cf}.tar.${_compressext}: ${DOC}.${_cf}.tar.${_compressext}
+	${INSTALL} ${COPY} -o ${DOCOWN} -g ${DOCGRP} -m ${DOCMODE}	\
+		${.ALLSRC} ${DESTDIR}${DOCDIR}/${VOLUME}
+.endfor
+.else
+install-${_cf}: ${DOC}.${_cf}
+	${INSTALL} ${COPY} -o ${DOCOWN} -g ${DOCGRP} -m ${DOCMODE}	\
+		${.ALLSRC} ${DESTDIR}${DOCDIR}/${VOLUME}
+
+.for _compressext in ${KNOWN_COMPRESS}
+install-${_cf}.${_compressext}: ${DOC}.${_cf}.${_compressext}
+	${INSTALL} ${COPY} -o ${DOCOWN} -g ${DOCGRP} -m ${DOCMODE}	\
+		${.ALLSRC} ${DESTDIR}${DOCDIR}/${VOLUME}
+.endfor
+.endif
+.endif
+.endfor
+
+.for __target in beforeinstall afterinstall depend _SUBDIR
+.if !target(${__target})
+${__target}:
+.endif
+.endfor
+
+#
+# Distribution target
+#
+# Like "install", but places the files into the correct distribution
+#
+.if !target(distribute)
+distribute:
+.for dist in ${DISTRIBUTION}
+	cd ${.CURDIR}; $(MAKE) install DESTDIR=${DISTDIR}/${dist}
+.endfor
+.endif
+
+.include <bsd.dep.mk>
+.include <bsd.obj.mk>
