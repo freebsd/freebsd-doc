@@ -1,6 +1,6 @@
 #
-# $FreeBSD: www/ja/handbook/Makefile,v 1.6 1999/09/07 15:15:48 kuriyama Exp $
-# Original revision:	1.4
+# $FreeBSD: www/ja/handbook/Makefile,v 1.7 1999/09/15 20:37:11 wosch Exp $
+# Original revision:	1.5
 #
 # Build the FreeBSD Handbook *outside* of the www tree, and install it
 # in to the right place as necessary.

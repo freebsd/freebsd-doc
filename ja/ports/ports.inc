@@ -1,6 +1,6 @@
-<!-- $FreeBSD: www/ja/ports/ports.inc,v 1.11 1999/09/06 07:03:22 peter Exp $ -->
+<!-- $FreeBSD: www/ja/ports/ports.inc,v 1.12 1999/10/02 01:19:39 kuriyama Exp $ -->
 <!-- The FreeBSD Japanese Documentation Project -->
-<!-- Original revision: 1.41 -->
+<!-- Original revision: 1.42 -->
 <p>FreeBSD の Ports と Packages のコレクションは,
 ユーザや管理者が簡単にアプリケーショ
 ンのインストールを簡単に行う方法を提供します.
@@ -76,15 +76,15 @@ href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-2.2-stable/Latest/22
 2.2.6-release 以降の 2.2-stable ユーザ用
 <dt><a
 href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-3-stable/Latest/30upgrade.tgz">3.0
-から 3.2-stable へのアップグレードキット</a>
+から 3-stable へのアップグレードキット</a>
 <dd>3.0-release もしくは 3.0-release 以降の 3.0-stable ユーザ用
 <dt><a
 href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-3-stable/Latest/31upgrade.tgz">3.1
-から 3.2-stable へのアップグレードキット</a>
+から 3-stable へのアップグレードキット</a>
 <dd>3.1-release もしくは 3.1-release 以降の 3.1-stable ユーザ用
 <dt><a
 href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-3-stable/Latest/32upgrade.tgz">3.2
-から 3.2-stable へのアップグレードキット</a>
+から 3-stable へのアップグレードキット</a>
 <dd>3.2-release もしくは 3.2-release 以降の 3.2-stable ユーザ用
 </dl>
 
@@ -92,7 +92,7 @@ href="ftp://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-3-stable/Latest/32up
 <strong>pkg_add</strong> を使ってください.
 これでここに載っている全ての ports を使うことができるようになります. 
 このアップグレードキットは ports やパッケージを使うのに必要なファイル
-だけを更新します. 3.2-stable への完全なアップグレードについては,
+だけを更新します. 3-stable への完全なアップグレードについては,
 ハンドブックの<a href="../handbook/synching.html">
 インターネットを通じたソースツリーの同期</a>を参照してください. 
 完全なアップグレードが (まだ 2.2.7-release より前のバージョンを使っている
