@@ -6,7 +6,7 @@
 # A utility to help create FreeBSD's commercial gallery SGML files.
 # Processes "raw" data kept as raw files, one ".raw" file for each
 # commercial category (currently consulting, hardware, misc, and
-# software.) A description file (by default, ./commercial.desc)
+# software). A description file (by default, ./commercial.desc)
 # contains the definitions for each of the categories and its
 # sub-categories. 
 #
@@ -15,6 +15,8 @@
 # sorted alphabetically (-a or default) or by (sub-)category (-c.) 
 # There is also a verbose option good for debugging (-v). The out-
 # put is suitable for inclusion into the gallery SMGL files.
+#
+# XXX The -v (verbose) option currently does not exist.
 #
 # This utility outputs to a file called either (category).inc
 # or (category)_bycat.inc respective to the -a or -c option.
@@ -25,7 +27,7 @@
 # This program is made available to the general public under
 # the "BSD-style copyright" terms of agreement.
 #
-# $Id: gencommercial.pl,v 1.2 1999-01-27 09:05:05 mbarkah Exp $
+# $Id: gencommercial.pl,v 1.3 1999-05-25 16:20:57 hoek Exp $
 
 #######################################################################
 ## Configuration Section
@@ -58,7 +60,7 @@ require 5.001;
 # Parse the command line 
 
 sub usage_exit {
-   print STDERR "Usage: gencommercial.pl [-acv] category\n";
+   print STDERR "Usage: gencommercial.pl [-ac] category\n";
    exit (1);
 }
 
@@ -227,6 +229,10 @@ while (<RAW>)
    {
       $entry_text = "${entry_text}$_" if (not $first_time);
    }
+}
+if ($first_time == 0)
+{
+   $entries {"$entry_name"} = "$entry_subcat|$entry_text";
 }
 
 close (RAW);
