@@ -5,7 +5,6 @@ MAN1 =	addftinfo.1\
 	apply.1\
 	apropos.1\
 	ar.1\
-	as.1\
 	at.1\
 	basename.1\
 	bc.1\
@@ -354,7 +353,6 @@ MAN1 =	addftinfo.1\
 	write.1\
 	xargs.1\
 	xstr.1\
-	xten.1\
 	yacc.1\
 	yes.1\
 	ypcat.1\

@@ -3,7 +3,6 @@ MAN5 =	a.out.5\
 	acct.5\
 	aliases.5\
 	amd.conf.5\
-	ar.5\
 	auth.conf.5\
 	bootparams.5\
 	bootptab.5\
@@ -16,7 +15,6 @@ MAN5 =	a.out.5\
 	dhcp-eval.5\
 	dhcp-options.5\
 	dir.5\
-	disklabel.5\
 	disktab.5\
 	drivers.conf.5\
 	editrc.5\
