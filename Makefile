@@ -1,20 +1,20 @@
-# $Id: Makefile,v 1.1 1997-05-23 16:23:43 peter Exp $
+# $Id: Makefile,v 1.2 1998-02-15 17:03:38 max Exp $
 
 SUBDIR=	FAQ handbook
 
 # List of all language-specific subdirs.
-LANGSUBDIR=	ja_JP.EUC
+LANGSUBDIR=	ja
 
 # If ALLLANG is defined, descend to all language-specific subdirs too.
-# If ALLLANG is not defined, but LANG is defined and a subdirectory with
+# If ALLLANG is not defined, but DOC_LANG is defined and a subdirectory with
 # that name exists, descend to that directory too.
 # In either case, the default subdirectories are always traversed.
 
 .if defined(ALLLANG)
 SUBDIR+=	${LANGSUBDIR}
-.elif defined(LANG)
-.if exists(${.CURDIR}/${LANG})
-SUBDIR+=	${LANG}
+.elif defined(DOC_LANG)
+.if exists(${.CURDIR}/${DOC_LANG})
+SUBDIR+=	${DOC_LANG}
 .endif
 .endif
 
