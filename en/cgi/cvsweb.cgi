@@ -42,8 +42,8 @@
 # SUCH DAMAGE.
 #
 # $zId: cvsweb.cgi,v 1.94 2000/08/24 06:41:22 hnordstrom Exp $
-# $Id: cvsweb.cgi,v 1.49 2000-09-03 18:45:10 knu Exp $
-# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.48 2000/08/25 09:21:00 knu Exp $
+# $Id: cvsweb.cgi,v 1.50 2000-09-04 16:05:40 knu Exp $
+# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.49 2000/09/03 18:45:10 knu Exp $
 #
 ###
 
@@ -903,20 +903,20 @@ sub htmlify($;$) {
 	$string =~ s/>/&gt;/g;
 
 	# get URL's as link ..
-	$string =~ s`(http|ftp|https)(://[-a-zA-Z0-9%.~:_/]+)([?&]([-a-zA-Z0-9%.~:_]+)=([-a-zA-Z0-9%.~:_])+)*`<A HREF="$1$2$3">$1$2$3</A>`g;
+	$string =~ s`(http|ftp|https)(://[-a-zA-Z0-9%.~:_/]+)([?&]([-a-zA-Z0-9%.~:_]+)=([-a-zA-Z0-9%.~:_])+)*`<A HREF="$1$2$3">$1$2$3</A>`g;	# `
 	# get e-mails as link
-	$string =~ s`([-a-zA-Z0-9_.]+@([-a-zA-Z0-9]+\.)+[A-Za-z]{2,4})`<A HREF="mailto:$1">$1</A>`g;
+	$string =~ s`([-a-zA-Z0-9_.]+@([-a-zA-Z0-9]+\.)+[A-Za-z]{2,4})`<A HREF="mailto:$1">$1</A>`g;	# `
 
 	if ($extra) {
 	    # get PR #'s as link ..
 	    if (defined($prcgi)) {
-		1 while $string =~ s`\b(pr[:#]?\s*(?:#?\d+[,\s]\s*)*#?)(\d+)\b`sprintf('%s<A HREF="%s">%s</A>', $1, sprintf($prcgi, $2), $2)`ie;
-		$string =~ s`\b${prcategories}/(\d+)\b`sprintf('<A HREF="%s">%s</A>', sprintf($prcgi, $1), $&)`igeo;
+		1 while $string =~ s`\b(pr[:#]?\s*(?:#?\d+[,\s]\s*)*#?)(\d+)\b`$1 . &link($2, sprintf($prcgi, $2))`ie; # `
+		$string =~ s`\b${prcategories}/(\d+)\b`&link($&, sprintf($prcgi, $1))`igeo;	# `
 	    }
 
 	    # get manpage specs as link ..
 	    if (defined($mancgi)) {
-		$string =~ s`\b([a-zA-Z]\w+)\(([0-9n])\)\B`sprintf('<A HREF="%s">%s</A>', sprintf($mancgi, $2, $1), $&)`ge;
+		$string =~ s`\b([a-zA-Z]\w+)\(([0-9n])\)\B`&link($&, sprintf($mancgi, $2, $1))`ge; # `
 	    }
 	}
 
@@ -927,7 +927,7 @@ sub spacedHtmlText($) {
 	local $_ = $_[0];
 
 	# Cut trailing spaces
-	s/\s+\n$//;
+	s/\s+$/\n/;
 
 	# Expand tabs
 	s/\t+/' ' x (length($&) * $tabstop - length($`) % $tabstop)/e
@@ -1189,6 +1189,7 @@ sub doAnnotate($$) {
 	    }
 	    else {
 		$revprint = $lrev; $oldLusr = "";
+		$revprint =~ s`^(\S+)`<a href="${scriptwhere}${barequery}#rev$1">$1</A>`;	# `		
 	    }
 	    if ($lusr eq $oldLusr) {
 		$usrprint = "         ";
@@ -2397,7 +2398,7 @@ sub navigateHeader($$$$$) {
     $swhere = urlencode($filename) if ($swhere eq "");
     print "<\!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\">";
     print "<HTML>\n<HEAD>\n";
-    print '<!-- CVSweb $zRevision: 1.94 $  $Revision: 1.49 $ -->';
+    print '<!-- CVSweb $zRevision: 1.94 $  $Revision: 1.50 $ -->';
     print "\n<TITLE>$path$filename - $title - $rev</TITLE></HEAD>\n";
     print  "<BODY BGCOLOR=\"$backcolor\">\n";
     print "<table width=\"100%\" border=0 cellspacing=0 cellpadding=1 bgcolor=\"$navigationHeaderColor\">";
@@ -2749,7 +2750,7 @@ sub http_header(;$) {
 
 sub html_header($) {
     my ($title) = @_;
-    my $version = '$zRevision: 1.94 $  $Revision: 1.49 $'; #'
+    my $version = '$zRevision: 1.94 $  $Revision: 1.50 $'; #'
     http_header();
 
     (my $header = &cgi_style::html_header) =~ s/^.*\n\n//; # remove HTTP response header
