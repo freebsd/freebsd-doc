@@ -1,0 +1,199 @@
+.\"
+.\" Copyright (c) 1996 Joerg Wunsch
+.\"
+.\" All rights reserved.
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE DEVELOPERS ``AS IS'' AND ANY EXPRESS OR
+.\" IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+.\" OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+.\" IN NO EVENT SHALL THE DEVELOPERS BE LIABLE FOR ANY DIRECT, INDIRECT,
+.\" INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+.\" NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+.\" DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+.\" THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+.\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+.\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+.\"
+.\" $FreeBSD: src/share/man/man9/spl.9,v 1.8 1999/08/28 00:21:32 peter Exp $
+.\" "
+.Dd July 21, 1996
+.Os
+.Dt SPL 9
+.Sh 名称
+.Nm splbio,
+.Nm splclock,
+.Nm splhigh,
+.Nm splimp,
+.Nm splnet,
+.Nm splsoftclock,
+.Nm splsofttty,
+.Nm splstatclock,
+.Nm spltty,
+.Nm splvm,
+.Nm spl0,
+.Nm splx
+.Nd 割り込み優先度の操作
+.Sh 書式
+.Fd #include <sys/types.h>
+.Fd #include <sys/systm.h>
+.Ft intrmask_t
+.Fn splbio "void"
+.Ft intrmask_t
+.Fn splclock "void"
+.Ft intrmask_t
+.Fn splhigh "void"
+.Ft intrmask_t
+.Fn splimp "void"
+.Ft intrmask_t
+.Fn splnet "void"
+.Ft intrmask_t
+.Fn splsoftclock "void"
+.Ft intrmask_t
+.Fn splsofttty "void"
+.Ft intrmask_t
+.Fn splstatclock "void"
+.Ft intrmask_t
+.Fn spltty "void"
+.Ft void
+.Fn spl0 "void"
+.Ft void
+.Fn splx "intrmask_t ipl"
+.Sh 解説
+.Fn spl
+関数ファミリは CPU の割り込み優先度の
+.Dq レベル
+を設定します。
+これはブロックされた優先度レベルの割り込みハンドラの実行を抑制します。
+割り込みハンドラによって調査あるいは修正されたであろうデータ領域を
+調査あるいは修正するドライバの
+.Dq synchronous
+部分(ユーザープロセスを代表して実行される部分)で使用されます。
+.Pp
+通常それぞれの割り込みを使用するドライバは、
+config ファイルのキーワードによって 1 つの
+割り込み優先度グループに割り当てられます。
+例えば、
+.Bd -literal -offset indent
+device foo0 at isa? port 0x0815 irq 12 tty
+.Ed
+.Pp
+は、割り込み 12 を
+.Dq tty
+優先度グループに割り当てます。
+システムは自動的に
+.Em xxx
+グループの割り込みを優先度が
+.Ns spl Ns Em xxx
+\&()
+以上の時に呼ばれるように準備します。
+.Pp
+.Fn splx
+関数は割り込み優先度レベルを絶対的な数値に設定します。
+これは別の割り込みレベル関数が返した値をローカルの変数に保存して、
+後で元の優先度レベルに戻すために
+.Fn splx
+を使用する事を意図しています。
+.Pp
+.Fn spl0
+関数は全ての割り込みハンドラをブロックしない値に優先度を減少させます。
+ただし、AST(非同期システムトラップ)はシステムが
+ユーザーモードに戻るまでの間はブロックされます。
+.Pp
+いろいろなデバイスドライバの割り込み優先度グループの伝統的な割り当ては、
+おおよそ次のように分類できます。
+.Bl -tag -width Fn splnet
+.It Fn splnet
+全てのネットワークインターフェイスドライバ。
+.It Fn splbio
+全ての
+.Em バッファ入出力
+(つまりディスクなど)のドライバ。
+.It Fn spltty
+基本的にはネットワーク以外の通信デバイスですが、
+事実上はネットワークとディスク以外の全てのドライバ。
+.El
+.Sh 戻り値
+.Fn splx
+および
+.Fn spl0
+以外の全ての関数は、操作前の優先度の値を返します。
+.Sh 使用例
+以下は、標準的な使用例です。
+.Bd -literal
+struct foo_softc {
+	...
+	int flags;
+#define	FOO_ASLEEP	1
+#define	FOO_READY	2
+
+} foo_softc[NFOO];
+
+int
+foowrite(...)
+{
+	struct foo_softc *sc;
+	int s, error;
+
+	...
+	s = spltty();
+	if (!(sc->flags & FOO_READY)) {
+		/* 準備ができていません、待機しなければなりません */
+		sc->flags |= FOO_ASLEEP;
+		error = tsleep(sc, PZERO, "foordy", 0);
+		sc->flags &= ~FOO_ASLEEP;
+	}
+	sc->flags &= ~FOO_READY;
+	splx(s);
+
+	...
+}
+
+void
+foointr(...)
+{
+	struct foo_softc *sc;
+
+	...
+	sc->flags |= FOO_READY;
+	if (sc->flags & FOO_ASLEEP)
+		/* 誰かが我々を待っています、起こしてください */
+		wakeup(sc);
+	...
+}
+	
+.Ed
+割り込みハンドラは
+.Em 絶対に
+優先度レベルを減少させるべきではない、ということに注意してください。
+自動的に、自分のレベルの割り込み優先度に増加させられます。
+すなわち、同じグループの全ての割り込みはブロックされます。
+.Sh 歴史
+割り込み優先度レベルは早期のバージョンの Unix で登場しました。
+伝統的には名前ではなく数字が使われていて、そのレベルまでの全てを含んで
+(優先度 5 はレベル 5 までの全てをブロックします)いた事が知られています。
+これは
+.Tn FreeBSD
+にはあてはまりません。
+伝統的な名前
+.Ql level
+はいまだに文字
+.Ql l
+としてそれぞれの関数や変数の名前に反映されています。
+しかし、実際にはもはやレベルではなく、
+むしろ異なった(部分的に含まれた)関数群がシステムのある期間ブロックされます。
+歴史的な番号による方法は単純で順番通りの
+割り込み優先度レベルグループであるとみなす事ができます。
+.Sh 作者
+このマニュアルページは
+.ie t J\(:org Wunsch
+.el Joerg Wunsch
+が書きました。
