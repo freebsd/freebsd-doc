@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp 
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.57 2001-12-30 11:01:57 wosch Exp $
+# $Id: man.cgi,v 1.58 2001-12-30 14:13:07 wosch Exp $
 
 #use Data::Dumper;
 #use Carp;
@@ -208,6 +208,7 @@ $manPathDefault = 'FreeBSD 4.4-RELEASE';
      'Red Hat Linux/i386 6.2', "$manLocalDir/RedHat-6.2-i386",
      'Red Hat Linux/i386 7.0', "$manLocalDir/RedHat-7.0-i386",
      'Red Hat Linux/i386 7.1', "$manLocalDir/RedHat-7.1-i386",
+     'Red Hat Linux/i386 7.2', "$manLocalDir/RedHat-7.2-i386",
 
      'SuSE Linux/i386 4.3',   "$manLocalDir/SuSE-4.3-i386",
      'SuSE Linux/i386 5.0',   "$manLocalDir/SuSE-5.0-i386",
@@ -257,7 +258,7 @@ while (($key,$val) = each %manPath) {
      'freebsd-current', 'FreeBSD 5.0-current',
      'slackware', 'Linux Slackware 3.1',
      'linux-de', 'deutsch - Linux/GNU',
-     'redhat', 'Red Hat Linux/i386 7.1',
+     'redhat', 'Red Hat Linux/i386 7.2',
      'suse', 'SuSE Linux/i386 7.2',
      'linux', 'Red Hat Linux/i386 7.1',
      'darwin', 'Darwin 1.3 PPC',
@@ -916,7 +917,7 @@ ETX
 }
 
 sub copyright {
-    $id = '$Id: man.cgi,v 1.57 2001-12-30 11:01:57 wosch Exp $';
+    $id = '$Id: man.cgi,v 1.58 2001-12-30 14:13:07 wosch Exp $';
 
     return qq{\
 <PRE>
