@@ -1,5 +1,5 @@
 #
-# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.11 2000/04/29 07:46:15 kuriyama Exp $
+# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.12 2000/07/14 08:42:49 nbm Exp $
 #
 # This include file <doc.docbook.mk> handles building and installing of
 # DocBook documentation in the FreeBSD Documentation Project.
@@ -57,9 +57,11 @@ DOCBOOKCATALOG=	${PREFIX}/share/sgml/docbook/catalog
 JADECATALOG=	${PREFIX}/share/sgml/jade/catalog
 DSSSLCATALOG=	${PREFIX}/share/sgml/docbook/dsssl/modular/catalog
 
+LIB_IMAGES?=
+
 JADEOPTS=	${JADEFLAGS} -c ${FREEBSDCATALOG} -c ${DSSSLCATALOG} -c ${DOCBOOKCATALOG} -c ${JADECATALOG} ${EXTRA_CATALOGS:S/^/-c /g}
 
-KNOWN_FORMATS=	html html-split html-split.tar txt rtf ps pdf tex dvi tar pdb
+KNOWN_FORMATS=	html html.tar html-split html-split.tar txt rtf ps pdf tex dvi tar pdb
 
 # ------------------------------------------------------------------------
 #
@@ -115,6 +117,9 @@ CLEANFILES+= ${DOC}.html-split.tar
 .elif ${_cf} == "html"
 _docs+= ${DOC}.html
 CLEANFILES+= ${DOC}.html
+.elif ${_cf} == "html.tar"
+_docs+= ${DOC}.html.tar
+CLEANFILES+= ${DOC}.html ${DOC}.html.tar
 .elif ${_cf} == "txt"
 _docs+= ${DOC}.txt
 CLEANFILES+= ${DOC}.html ${DOC}.txt
@@ -166,13 +171,13 @@ CLEANFILES+= ${DOC}.${_curformat}.${_curcomp}
 
 all: ${_docs}
 
-index.html HTML.manifest: ${SRCS}
+index.html HTML.manifest: ${SRCS} ${LIB_IMAGES}
 	${JADE} -V html-manifest -ioutput.html ${JADEOPTS} -d ${DSLHTML} -t sgml ${MASTERDOC}
 .if !defined(NO_TIDY)
 	-tidy -i -m -f /dev/null ${TIDYFLAGS} `xargs < HTML.manifest`
 .endif
 
-${DOC}.html: ${SRCS}
+${DOC}.html: ${SRCS} ${LIB_IMAGES}
 	${JADE} -ioutput.html -V nochunks ${JADEOPTS} -d ${DSLHTML} -t sgml ${MASTERDOC} > ${.TARGET}
 .if !defined(NO_TIDY)
 	-tidy -i -m -f /dev/null ${TIDYFLAGS} ${.TARGET}
@@ -180,6 +185,11 @@ ${DOC}.html: ${SRCS}
 
 ${DOC}.html-split.tar: HTML.manifest
 	tar cf ${.TARGET} `xargs < HTML.manifest`
+	tar uf ${.TARGET} ${LIB_IMAGES}
+
+${DOC}.html.tar: ${DOC}.html
+	tar cf ${.TARGET} ${DOC}.html
+	tar uf ${.TARGET} ${LIB_IMAGES}
 
 ${DOC}.txt: ${DOC}.html
 	w3m -S -dump ${.ALLSRC} > ${.TARGET}
@@ -192,9 +202,6 @@ ${.CURDIR:T}.pdb: ${DOC}.pdb
 
 ${DOC}.rtf: ${SRCS}
 	${JADE} -Vrtf-backend -ioutput.print ${JADEOPTS} -d ${DSLPRINT} -t rtf -o ${.TARGET} ${MASTERDOC}
-
-${DOC}.doc: ${SRCS}
-	${JADE} -ioutput.print ${JADEOPTS} -d ${DSLPRINT} -t doc -o ${.TARGET} ${MASTERDOC}
 
 ${DOC}.tex: ${SRCS}
 	${JADE} -Vtex-backend -ioutput.print ${JADEOPTS} -d ${DSLPRINT} -t tex -o ${.TARGET} ${MASTERDOC}
@@ -270,7 +277,7 @@ _PROG_COMPRESS_zip: .USE
 .for _curformat in ${KNOWN_FORMATS}
 _cf=${_curformat}
 .for _curcompress in ${KNOWN_COMPRESS}
-.if ${_cf} == "html-split"
+.if ${_cf} == "html-split" || ${_cf} == "html"
 ${DOC}.${_cf}.tar.${_curcompress}: ${DOC}.${_cf}.tar _PROG_COMPRESS_${_curcompress}
 .else
 ${DOC}.${_cf}.${_curcompress}: ${DOC}.${_cf} _PROG_COMPRESS_${_curcompress}
@@ -283,8 +290,7 @@ ${DOC}.${_cf}.${_curcompress}: ${DOC}.${_cf} _PROG_COMPRESS_${_curcompress}
 # Install targets
 #
 # Build install-* targets, one per allowed value in FORMATS. Need to
-# build
-# two specific targets;
+# build two specific targets;
 #
 #    install-html-split - Handles multiple .html files being generated
 #                         from one source. Uses the HTML.manifest file
@@ -320,11 +326,20 @@ install-${_cf}: index.html
 	@if [ -f ${.OBJDIR}/${DOC}.ln ]; then \
 		(cd ${DESTDIR}; sh ${.OBJDIR}/${DOC}.ln); \
 	fi
-
+.for _curimage in ${LIB_IMAGES}
+	${INSTALL_DOCS} ${_curimage} ${DESTDIR}/${_curimage:H}
+.endfor
 .for _compressext in ${KNOWN_COMPRESS}
 install-${_cf}.tar.${_compressext}: ${DOC}.${_cf}.tar.${_compressext}
 	@[ -d ${DESTDIR} ] || mkdir -p ${DESTDIR}
 	${INSTALL_DOCS} ${.ALLSRC} ${DESTDIR}
+.endfor
+.elif ${_cf} == "html"
+install-${_cf}: ${DOC}.${_cf}
+	@[ -d ${DESTDIR} ] || mkdir -p ${DESTDIR}
+	${INSTALL_DOCS} ${.ALLSRC} ${DESTDIR}
+.for _curimage in ${LIB_IMAGES}
+	${INSTALL_DOCS} ${_curimage} ${DESTDIR}/${_curimage:H}
 .endfor
 .else
 install-${_cf}: ${DOC}.${_cf}
@@ -370,6 +385,9 @@ package-${_curformat}: install-${_curformat}
 	@cp HTML.manifest PLIST
 .else
 	@echo ${DOC}.${_curformat} > PLIST
+	@for lib_images in ${LIB_IMAGES}; do \
+		echo $$lib_images >> PLIST; \
+	done
 .endif
 	@pkg_create -v -c -"FDP ${.CURDIR:T} ${_curformat} package" \
 		-d -"FDP ${.CURDIR:T} ${_curformat} package" -f PLIST \
