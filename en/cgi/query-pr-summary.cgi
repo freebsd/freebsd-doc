@@ -1,6 +1,7 @@
 #!/usr/bin/perl
-# $Id: query-pr-summary.cgi,v 1.3 1996-10-04 00:36:59 alex Exp $
+# $Id: query-pr-summary.cgi,v 1.4 1996-10-22 23:12:08 fenner Exp $
 
+$self_ref = $ENV{'SCRIPT_NAME'};
 ($query_pr_ref = $ENV{'SCRIPT_NAME'}) =~ s/-summary//;
 $query_args   = '--restricted -s "open|analyzed|feedback|suspended"';
 $state_args   = '--restricted ';
@@ -107,6 +108,28 @@ ${dd}A problem report is closed when any changes have been integrated,
 ${dd_x}documented, and tested.
 ${dl_e}
 " if (!$input{"quiet"});
+
+	if ($html_mode) {
+$self_ref1 = $self_ref . '?';
+if ($input{'sort'}) {
+	$self_ref1 .= 'sort=' . $input{'sort'};
+}
+print '<P>You may view summaries by <A HREF="', $self_ref1, '">Severity</A>, ';
+print '<A HREF="', $self_ref1, '&state=summary">State</A>, ';
+print '<A HREF="', $self_ref1, '&category=summary">Category</A>, or ';
+print '<A HREF="', $self_ref1, '&responsible=summary">Responsible Party</A>.';
+$self_ref2 = $self_ref . '?';
+foreach ('responsible','state','category') {
+	if ($input{$_}) {
+		$self_ref2 .= $_ . '=' . $input{$_};
+		last;
+	}
+}
+print 'You may also sort by ';
+print '<A HREF="', $self_ref2, '&sort=lastmod">Last-Modified</A>, ';
+print '<A HREF="', $self_ref2, '&sort=category">Category</A>, or ';
+print '<A HREF="', $self_ref2, '&sort=responsible">Responsible Party</A>.', "\n";
+	}
 }
 
 sub trailer_info {
@@ -118,6 +141,17 @@ print &html_footer if $html_mode;
 # backwards compatibility
 $input{'responsible'} = $input{'engineer'} if $input{'engineer'};
 
+&read_gnats($query_args);
+
+if ($input{'sort'} eq 'lastmod') {
+	@prs = sort {$lastmod{$b} <=> $lastmod{$a}} @prs;
+} elsif ($input{'sort'} eq 'category') {
+	@prs = sort {($ca,$na)=split(m|/|,$a); ($cb,$nb)=split(m|/|,$b); $ca eq $cb ? $na <=> $nb : $ca cmp $cb} @prs;
+} elsif ($input{'sort'} eq 'responsible') {
+	@prs = sort {$resp{$a} cmp $resp{$b}} @prs;
+} else {
+	$input{'sort'} = 'none';
+}
 
 if ($input{'responsible'} eq 'summary') {
 	&resp_summary;
@@ -125,8 +159,17 @@ if ($input{'responsible'} eq 'summary') {
 } elsif ($input{'responsible'} ne '') {
 	&resp_query($input{'responsible'});
 
+} elsif ($input{'state'} eq 'summary') {
+	&state_summary;
+
 } elsif ($input{'state'} ne '') {
-	&state_summary($input{'state'});
+	&state_query($input{'state'});
+
+} elsif ($input{'category'} eq 'summary') {
+	&cat_summary;
+
+} elsif ($input{'category'} ne '') {
+	&cat_query($input{'category'});
 
 } else {
 	&severity_summary;
@@ -153,68 +196,83 @@ sub html_fixline {
     $line;
 }
 
+sub printcnt {
+    local($cnt) = $_[0];
+
+    if ($cnt) {
+	printf("%d problem%s total.\n\n", $cnt, $cnt == 1 ? "" : "s");
+    }
+}
+
+sub cat_query {
+    local($cat) = $_[0];
+
+    &printcnt(&gnats_summary("\$cat eq \"$cat\"", $html_mode));
+}
+
+sub cat_summary {
+    foreach (keys %status) {
+	s|/\d+||;
+	$cat{$_}++;
+    }
+    foreach (sort keys %cat) {
+	&cat_query($_);
+    }
+}
+
 sub resp_query {
     local($resp) = @_[0];
     local($cnt);
 
-    $cnt = &gnats_summary("-r $resp ". $query_args, $html_mode);
+    $cnt = &gnats_summary("\$resp eq \"$resp\"", $html_mode);
     print "${hr}${b}No problem reports assigned to $resp${b_e}\n"
 	if (!$input{"quiet"} && $cnt == 0);
 }
 
 sub resp_summary {
-    local($master, $who);
+    local($who, %who);
 
-    open (AVAIL, "<$avail_file");
-    while (<AVAIL>) {
-	if (/^avail\|(.*)/) { 
-	    $master = $1;
-	    foreach $who (split(/,/, $master)) {
-		$cnt = &gnats_summary("-r $who " . $query_args, $html_mode);
-	    }
-	}
+    foreach (keys %resp) {
+	$who{$resp{$_}}++;
     }
-    close AVAIL;
+    foreach $who (sort keys %who) {
+	$cnt = &gnats_summary("\$resp eq \"$who\"", $html_mode);
+    }
+}
+
+sub state_query {
+    local($state) = @_[0];
+    local(%statemap) = ("open", "o", "analyzed", "a", "feedback", "f", "suspended", "s", "closed", "c");
+
+    print "${h3}Problems in state: $state${h3_e}\n";
+    $state = $statemap{$state} if ($statemap{$state} ne '');
+    &printcnt(&gnats_summary("\$state eq \"$state\" ", $html_mode));
 }
 
 sub state_summary {
-    local($state) = @_[0];
-    local($cnt);
-
-    print "${h3}Problems in state: $state${h3_e}\n";
-    $cnt = &gnats_summary("-s \"$state\" " . $state_args, $html_mode);
-    print "$cnt problems total.\n\n";
+    foreach ("open", "analyzed", "feedback", "suspended") {
+	&state_query($_);
+    }
 }
 
 sub severity_summary {
-    local($cnt);
-
     print "${h3}Critical problems${h3_e}\n";
-    $cnt = &gnats_summary('-e critical ' . $query_args, $html_mode);
-    print "$cnt problems total.\n\n";
+    &printcnt(&gnats_summary('$severity eq "critical"', $html_mode));
 
     print "${h3}Serious problems${h3_e}\n";
-    $cnt = &gnats_summary('-e serious ' . $query_args, $html_mode);
-    print "$cnt problems total.\n\n";
+    &printcnt(&gnats_summary('$severity eq "serious"', $html_mode));
 
     print "${h3}Non-critical problems${h3_e}\n";
-    $cnt = &gnats_summary('-e non-critical ' . $query_args, $html_mode);
-    print "$cnt problems total.\n\n";
+    &printcnt(&gnats_summary('$severity eq "non-critical"', $html_mode));
 }
 
-sub gnats_summary {
+sub read_gnats {
     local($report)   = @_[0];
-    local($htmlmode) = @_[1];
-    local($counter)  = 0;
-    local($iteration)= 0;
 
     open(Q, "query-pr " . $report . " 2>/dev/null |") || 
 	die "Cannot query the PR's\n";
 
     while(<Q>) {
-	print "${pr}\nS  Submitted   Tracker    Engr.    Description${hr}"
-	    if ($iteration++ == 0);
-
 	chop;
 	if(/^>Number:/) {
 	    $number = &getline($_);
@@ -227,6 +285,13 @@ sub gnats_summary {
 	    $day = "0$day" if $day =~ /^[0-9]$/;
 	    $date = "$year/$mons{$mon}/$day";
 
+	} elsif (/>Last-Modified:/) {
+	    $lastmod = &getline($_);
+	    $lastmod =~ s/(\d\d:\d\d:\d\d)\D+(\d{4})$/\1 \2/;
+	    ($dow,$mon,$day,$time,$year,$xtra) = split(/[ \t]+/, $lastmod);
+	    $day = "0$day" if $day =~ /^[0-9]$/;
+	    $lastmod = "$year$mons{$mon}$day";
+
 	} elsif (/>Category:/) {
 	    $cat = &getline($_);
 
@@ -238,6 +303,7 @@ sub gnats_summary {
 	    $resp =~ s/@.*//;
 	    $resp =~ tr/A-Z/a-z/;
 	    $resp = "" if ($resp =~ /freebsd-bugs/);
+	    $resp =~ s/^freebsd-//;
 	    $resp = substr($resp, 0, 8);
 
 	} elsif (/>State:/) {
@@ -247,27 +313,58 @@ sub gnats_summary {
 	} elsif (/>Synopsis:/) {
 	    $syn = &getline($_);
 	    $syn =~ s/[\t]+/ /g;
-	    $syn = &html_fixline($syn) if $htmlmode;
 
 	} elsif (/^$/) {
-	    $vistitle = sprintf("%s/%s", $cat, $number);
-	    if ($htmlmode) {
-		$title = '<a href="' . $query_pr_ref . '?pr='. $number . '">' .
-			 $vistitle . '</a>';
-	    } else {
-		$title = $vistitle;
-	    }
+	    $_ = sprintf("%s/%s", $cat, $number);
 
-	    print "$status [$date] $title" .
-		(' ' x (11 - length($vistitle))) .
-		$resp . (' ' x (9 - length($resp))) .
-		substr($syn,0,41)
-		. "\n";
-
-	    ++$counter;
+	    $status{$_} = $status;
+	    $date{$_} = $date;
+	    $resp{$_} = $resp;
+	    $syn{$_} = $syn;
+	    $sev{$_} = $sev;
+	    $lastmod{$_} = $lastmod;
+	    push(@prs,$_);
 	}
     }
     close(Q);
+}
+
+sub gnats_summary {
+    local($report)   = @_[0];
+    local($htmlmode) = @_[1];
+    local($counter)  = 0;
+    local($iteration)= 0;
+
+    foreach (@prs) {
+	$state = $status{$_};
+	$date = $date{$_};
+	$resp = $resp{$_};
+	$syn = $syn{$_};
+	$severity = $sev{$_};
+	($cat, $number) = m|^([^/]+)/(\d+)$|;
+
+	next if (($report ne '') && (eval($report) == 0));
+
+	print "${pr}\nS  Submitted   Tracker    Engr.    Description${hr}"
+	    if ($iteration++ == 0);
+
+	$syn = &html_fixline($syn) if $htmlmode;
+
+	if ($htmlmode) {
+	    $title = '<a href="' . $query_pr_ref . '?pr='. $number . '">' .
+		     $_ . '</a>';
+	} else {
+	    $title = $_;
+	}
+
+	print "$state [$date] $title" .
+	    (' ' x (11 - length($_))) .
+	    $resp . (' ' x (9 - length($resp))) .
+	    substr($syn,0,41)
+	    . "\n";
+
+	++$counter;
+    }
 
     print "${pr_e}\n" if $iteration;
 
