@@ -1,2 +1,2 @@
 WEBBASE=	/data
-SGMLOPTS+=	-links -white -hdr ${.CURDIR}/../doc.hdr -ftr ${.CURDIR}/../doc.ftr
+SGMLOPTS+=	-links -hdr ${.CURDIR}/../doc.hdr -ftr ${.CURDIR}/../doc.ftr
