@@ -1,9 +1,9 @@
 # 
-# $FreeBSD: doc/ja_JP.eucJP/books/handbook/Makefile,v 1.42 1999/09/08 12:22:31 kuriyama Exp $
+# $FreeBSD: doc/ja_JP.eucJP/books/handbook/Makefile,v 1.43 2000/02/03 03:11:06 kuriyama Exp $
 #
 # Build the FreeBSD Handbook (Japanese).
 #
-# Original revision: 1.26
+# Original revision: 1.28
 #
 
 MAINTAINER=kuriyama@FreeBSD.ORG
@@ -28,6 +28,7 @@ SRCS+= advanced-networking/chapter.sgml
 SRCS+= backups/chapter.sgml
 SRCS+= basics/chapter.sgml
 SRCS+= bibliography/chapter.sgml
+SRCS+= boot/chapter.sgml
 SRCS+= contrib/chapter.sgml
 SRCS+= cutting-edge/chapter.sgml
 SRCS+= disks/chapter.sgml
@@ -51,6 +52,7 @@ SRCS+= quotas/chapter.sgml
 SRCS+= security/chapter.sgml
 SRCS+= serialcomms/chapter.sgml
 SRCS+= staff/chapter.sgml
+SRCS+= users/chapter.sgml
 SRCS+= x11/chapter.sgml
 SRCS+= ports/chapter.sgml
 
