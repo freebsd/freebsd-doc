@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/gallery/Makefile,v 1.14 2001/10/29 10:14:31 murray Exp $
+# $FreeBSD: www/en/gallery/Makefile,v 1.15 2001/12/12 11:57:36 phantom Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -19,21 +19,29 @@ CLEANFILES+= ${DATA}
 
 gallery.html: gallery.xml gallery.xsl ../includes.xsl
 	${XSLT} ${.CURDIR}/gallery.xsl ${.CURDIR}/gallery.xml > ${.TARGET}
+.if !defined(NO_TIDY)
 	-${TIDY} ${TIDYOPTS} ${.TARGET}
+.endif
 
 cgallery.html: gallery.xml gallery-entry.xsl
 	${XSLT} --param type \'commercial\' \
 		${.CURDIR}/gallery-entry.xsl ${.CURDIR}/gallery.xml > ${.TARGET}
+.if !defined(NO_TIDY)
 	-${TIDY} ${TIDYOPTS} ${.TARGET}
+.endif
 
 npgallery.html: gallery.xml gallery-entry.xsl
 	${XSLT} --param type \'nonprofit\' \
 		${.CURDIR}/gallery-entry.xsl ${.CURDIR}/gallery.xml > ${.TARGET}
+.if !defined(NO_TIDY)
 	-${TIDY} ${TIDYOPTS} ${.TARGET}
+.endif
 
 pgallery.html: gallery.xml gallery-entry.xsl
 	${XSLT} --param type \'personal\' \
 		${.CURDIR}/gallery-entry.xsl ${.CURDIR}/gallery.xml > ${.TARGET}
+.if !defined(NO_TIDY)
 	-${TIDY} ${TIDYOPTS} ${.TARGET}
+.endif
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"

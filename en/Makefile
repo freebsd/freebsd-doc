@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/Makefile,v 1.75 2001/11/14 18:31:14 phantom Exp $
+# $FreeBSD: www/en/Makefile,v 1.76 2001/12/12 11:57:36 phantom Exp $
 .if exists(Makefile.conf)
 .include "Makefile.conf"
 .endif
@@ -85,7 +85,9 @@ CLEANFILES+=	index.html
 index.html: index.xsl news/news.xml news/press.xml includes.xsl news/includes.xsl
 	${XSLTPROC} ${XSLTPROCOPTS} -o index.html \
 		${.CURDIR}/index.xsl ${.CURDIR}/news/news.xml
+.if !defined(NO_TIDY)
 	-${TIDY} ${TIDYOPTS} index.html
+.endif
 
 # Handle the FAQ/ and handbook/ directories specially.
 FAQ:

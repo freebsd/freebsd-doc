@@ -1,4 +1,4 @@
-# $FreeBSD: www/ja/Makefile,v 1.53 2001/11/17 17:21:09 hrs Exp $
+# $FreeBSD: www/ja/Makefile,v 1.54 2001/12/12 11:57:38 phantom Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.75
 
@@ -83,7 +83,9 @@ CLEANFILES+=	index.html
 index.html: index.xsl news/news.xml news/press.xml includes.xsl news/includes.xsl
 	${XSLTPROC} ${XSLTPROCOPTS} -o index.html \
 		${.CURDIR}/index.xsl ${.CURDIR}/news/news.xml
-	-${TIDY} ${TIDYOPTS} index.html
+.if !defined(NO_TIDY)
+	-${TIDY} ${TIDYOPTS} ${.TARGET}
+.endif
 
 ### Revision checking
 REVCHECK=	yes

@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/news/status/Makefile,v 1.10 2001/11/12 22:25:12 chris Exp $
+# $FreeBSD: www/en/news/status/Makefile,v 1.11 2001/12/12 11:57:37 phantom Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -24,7 +24,9 @@ CLEANFILES+=	${DATA:M*.html}
 .xml.html:	report.xsl includes.xsl
 	${XSLTPROC} ${XSLTPROCOPTS} -o ${.TARGET} \
 		${.CURDIR}/report.xsl ${.IMPSRC}
+.if !defined(NO_TIDY)
 	-${TIDY} ${TIDYOPTS} ${.TARGET}
+.endif
 
 INDEXLINK=	status.html
 
