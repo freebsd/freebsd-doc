@@ -6,7 +6,7 @@
 # by John Fieber
 # February 26, 1998
 #
-# $Id: getmsg.cgi,v 1.17 1998-12-26 18:17:44 wosch Exp $
+# $Id: getmsg.cgi,v 1.18 1998-12-28 00:16:31 wosch Exp $
 #
 
 require "./cgi-lib.pl";
@@ -39,6 +39,7 @@ sub Fetch
 
     $file =~ s/\.\.//g;
     $file =~ s|/+|/|;
+    $file =~ s|^archive/|$messagepath/|;
 
     # read the full archive 
     if ($type eq 'archive') {
