@@ -2,7 +2,7 @@
 # The FreeBSD French Documentation Project
 #
 # $FreeBSD$
-# $Id: Makefile,v 1.13 2003-08-10 14:41:10 blackend Exp $
+# $Id: Makefile,v 1.14 2003-11-20 08:59:54 blackend Exp $
 # Original revision: 1.64
 #
 # Build the FreeBSD Handbook.
@@ -41,8 +41,8 @@ INSTALL_ONLY_COMPRESSED?=
 
 #IMAGES_EN = advanced-networking/isdn-bus.eps
 #IMAGES_EN+= advanced-networking/isdn-twisted-pair.eps
-#IMAGES_EN+= advanced-networking/natd.eps
-IMAGES_EN = install/userconfig.scr
+IMAGES_EN = advanced-networking/natd.eps
+IMAGES_EN+= install/userconfig.scr
 IMAGES_EN+= install/userconfig2.scr
 IMAGES_EN+= install/hdwrconf.scr
 IMAGES_EN+= install/probstart.scr
