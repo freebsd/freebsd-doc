@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: query-pr.cgi,v 1.13 1998-06-16 06:46:15 fenner Exp $
+# $Id: query-pr.cgi,v 1.14 1998-06-24 05:48:30 fenner Exp $
 
 $ENV{'PATH'} = "/bin:/usr/bin:/usr/sbin:/sbin:/usr/local/bin";
 
@@ -120,6 +120,7 @@ while(<Q>) {
     } elsif (/^>Synopsis:/) {
 	$syn = &getline($_);
 	$syn =~ s/[\t]+/ /g;
+	$origsyn = $syn;
 	$syn = &fixline($syn);
 	print &html_header("Problem Report $cat/$number");
 	print "<strong>$syn</strong><p>\n<dl>\n";
@@ -156,10 +157,10 @@ close(Q);
 print "$trailer\n" unless ($blank);
 print "</dl>";
 
-$syn =~ s/[\?&%"]/"%" . sprintf("%02X", unpack(C, $&))/eg;
+$origsyn =~ s/[\?&%"]/"%" . sprintf("%02X", unpack(C, $&))/eg;
 $email =~ s/[\?&%]/"%" . sprintf("%02X", unpack(C, $&))/eg;
 
-print "<A HREF=\"mailto:freebsd-gnats-submit\@freebsd.org,${email}?subject=Re: ${cat}/${number}: $syn\">Submit Followup</A>\n";
+print "<A HREF=\"mailto:freebsd-gnats-submit\@freebsd.org,${email}?subject=Re: ${cat}/${number}: $origsyn\">Submit Followup</A>\n";
 
 print &html_footer;
 
@@ -188,7 +189,7 @@ sub srcref {
     local($rev) = '(rev\.?|revision):?\s+[0-9]\.[0-9.]+(\s+of)?';
     local($src) = '((src|www|doc|ports)/[^\s]+)';
 
-    if (m%$rev\s*$src%oi || m%$src\s*$ref%) {
+    if (m%$rev\s*$src%oi || m%$src\s*$rev%) {
 	s#$src#sprintf("<a href=%c%s%c>%s</a>", 34, &cvsweb($1), 34, $1)#ge;
     }
 
