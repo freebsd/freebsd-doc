@@ -1,4 +1,4 @@
-<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.26 2001/03/24 09:40:24 nik Exp $ -->
+<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.27 2001/04/05 13:19:59 nik Exp $ -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
 <!ENTITY % output.html		"IGNORE">
@@ -54,6 +54,20 @@
           ;; HTML file.
           #t)
 
+        (define (book-titlepage-recto-elements)
+          (list (normalize "title")
+                (normalize "subtitle")
+                (normalize "graphic")
+                (normalize "mediaobject")
+                (normalize "corpauthor")
+                (normalize "authorgroup")
+                (normalize "author")
+                (normalize "editor")
+                (normalize "copyright")
+                (normalize "abstract")
+                (normalize "legalnotice")
+                (normalize "isbn")))
+
         <!-- This is the text to display at the bottom of each page.
              Defaults to nothing.  The individual stylesheets should
              redefine this as necessary. -->
@@ -63,7 +77,7 @@
         <!-- This code handles displaying $email-footer$ at the bottom
              of each page.
 
-             If "nuchunks" is turned on then we make sure that an <hr>
+             If "nochunks" is turned on then we make sure that an <hr>
              is shown first.
 
              Then create a centered paragraph ("<p>"), and reduce the font
@@ -171,6 +185,21 @@
  
         (define %body-start-indent% 
           0pi)
+
+        (define (book-titlepage-verso-elements)
+          (list (normalize "title")
+                (normalize "subtitle")
+                (normalize "corpauthor")
+                (normalize "authorgroup")
+                (normalize "author")
+                (normalize "editor")
+                (normalize "edition")
+                (normalize "pubdate")
+                (normalize "copyright")
+                (normalize "abstract")
+                (normalize "legalnotice")
+                (normalize "revhistory")
+                (normalize "isbn")))
 
         ;; Norm's stylesheets are smart about working out what sort of
         ;; object to display.  But this bites us.  Since we know that the
@@ -300,10 +329,8 @@
 
       (element errorname
         (make sequence
-          <![ %output.print; [ (make entity-ref name: "ldquo") ]]>
           <![ %output.html;  [ (literal "``") ]]>
           ($mono-seq$ (process-children))
-          <![ %output.print; [ (make entity-ref name: "rdquo") ]]>
           <![ %output.html;  [ (literal "''") ]]>
           ))
 
