@@ -1,8 +1,10 @@
 <!--	$FreeBSDde: de-docproj/share/sgml/freebsd.dsl,v 1.4 2001/01/06 18:15:53 alex Exp $
-	$FreeBSD: doc/de_DE.ISO_8859-1/share/sgml/freebsd.dsl,v 1.4 2001/02/20 19:41:39 nik Exp $ -->
+	$FreeBSD: doc/de_DE.ISO_8859-1/share/sgml/freebsd.dsl,v 1.5 2001/04/01 13:59:08 alex Exp $ -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
 <!ENTITY freebsd.dsl PUBLIC "-//FreeBSD//DOCUMENT DocBook Language Neutral Stylesheet//EN" CDATA DSSSL>
+<!ENTITY % output.html  "IGNORE"> 
+<!ENTITY % output.print "IGNORE">
 ]>
 
 <style-sheet>
@@ -27,9 +29,17 @@
                   (literal "de-bsd-translators@de.FreeBSD.org"))
 	        (literal ">.")))))
 
+
+	<!-- Convert " ... " to `` ... '' in the HTML output. -->
+	(element quote
+	  (make sequence
+	    (literal "``")
+	    (process-children)
+	    (literal "''")))
+
         <!-- Generate links to HTML man pages -->
         (define %refentry-xref-link% #t)
-                
+
         <!-- Specify how to generate the man page link HREF -->
         (define ($create-refentry-xref-link$ refentrytitle manvolnum)
           (string-append "http://www.de.FreeBSD.org/cgi/man.cgi?"
