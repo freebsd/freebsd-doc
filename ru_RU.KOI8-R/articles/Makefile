@@ -4,8 +4,9 @@
 #
 # Original revision: 1.9
 
-# SUBDIR+= 5-roadmap
-# SUBDIR+= checkpoint
+SUBDIR =
+SUBDIR+= 5-roadmap
+#SUBDIR+= checkpoint
 #SUBDIR+= committers-guide
 #SUBDIR+= console-server
 #SUBDIR+= contributing
@@ -16,6 +17,8 @@ SUBDIR+= explaining-bsd
 SUBDIR+= fonts
 SUBDIR+= formatting-media
 SUBDIR+= freebsd-questions
+#SUBDIR+= hats
+#SUBDIR+= hubs
 SUBDIR+= ipsec-must
 SUBDIR+= mh
 # SUBDIR+= multi-os
