@@ -205,6 +205,8 @@ PRINTFLAGS+=	-V biblio-xref-title
 .endif
 .if defined(WITH_DOCFORMAT_NAVI_LINK) && !empty(WITH_DOCFORMAT_NAVI_LINK)
 HTMLFLAGS+=	-V %generate-docformat-navi-link%
+.elif (${FORMATS:Mhtml} == "html") && (${FORMATS:Mhtml-split} == "html-split")
+HTMLFLAGS+=	-V %generate-docformat-navi-link%
 .endif
 
 PERL?=		/usr/bin/perl
