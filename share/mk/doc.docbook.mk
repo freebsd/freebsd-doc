@@ -419,7 +419,7 @@ ${DOC}.html: ${DOC}.xml ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} \
 
 # Special target to produce HTML with no images in it.
 .if ${STYLESHEET_TYPE} == "dsssl"
-${DOC}.html-text: ${SRCS} ${INDEX_SGML} ${HTML_INDEX}
+${DOC}.html-text: ${SRCS} ${INDEX_SGML} ${HTML_INDEX} ${LOCAL_IMAGES_TXT}
 	${JADE} -V nochunks ${HTMLOPTS} \
 		${JADEOPTS} -t sgml ${MASTERDOC} > ${.TARGET} || \
 		(${RM} -f ${.TARGET} && false)
