@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
 
-<!-- $FreeBSD: www/ja/index.xsl,v 1.32 2003/11/17 06:28:19 hrs Exp $ -->
+<!-- $FreeBSD: www/ja/index.xsl,v 1.33 2003/11/24 18:26:33 hrs Exp $ -->
 <!-- Original revision: 1.81 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -10,7 +10,7 @@
 
   <xsl:variable name="base" select="'.'"/>
   <xsl:variable name="enbase" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/ja/index.xsl,v 1.32 2003/11/17 06:28:19 hrs Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/ja/index.xsl,v 1.33 2003/11/24 18:26:33 hrs Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <xsl:output type="html" encoding="EUC-JP"
@@ -98,55 +98,61 @@
 			   bgcolor="#ffcc66" width="100%">
 		      <tr>
 			<td>
-			  <p><font size="+1" color="#990000"><b>ニュース</b></font>
+			  <p>
+			    <a href="platforms/index.html">
+			      <font size="+1" color="#990000"><b>対応プラットフォーム:</b></font>
+			    </a><small><br/>
+			      ・ <a href="smp/index.html">i386</a><br/>
+			      ・ <a href="platforms/alpha.html">Alpha</a><br/>
+			      ・ <a href="platforms/ia64.html">IA64</a><br/>
+			      ・ <a href="platforms/amd64.html">AMD64</a><br/>
+			      ・ <a href="platforms/sparc.html">Sparc</a><br/>
+			      ・ <a href="platforms/index.html">その他</a><br/>
+ 			    </small></p>
 
-			    <small><br/>
-			      ・<a href="news/newsflash.html">アナウンス</a><br/>
-			      ・<a href="news/press.html">報道</a><br/>
-			      ・<a href="news/index.html">さらに ...</a>
-			    </small></p>
-
-			  <p><font size="+1" color="#990000"><b>ソフトウェア</b></font>
-			    <small><br/>
-			      ・<a href="{$enbase}/doc/ja_JP.eucJP/books/handbook/mirrors.html">FreeBSD を手に入れる</a><br/>
-			      ・<a href="releases/index.html">リリース情報</a><br/>
-			      ・<a href="{$base}/ports/index.html">Ports Collection</a><br/>
-			    </small></p>
-
-			  <p><font size="+1" color="#990000"><b>ドキュメント</b></font>
-			    <small><br/>
-			      ・<a href="projects/newbies.html">初心者のために</a><br/>
-			      ・<a href="{$enbase}/doc/ja_JP.eucJP/books/handbook/index.html">ハンドブック</a><br/>
+			  <p>
+			    <a href="docs.html">
+			      <font size="+1" color="#990000"><b>ドキュメント</b></font>
+			    </a><small><br/>
 			      ・<a href="{$enbase}/doc/ja_JP.eucJP/books/faq/index.html">FAQ</a><br/>
+			      ・<a href="{$enbase}/doc/ja_JP.eucJP/books/handbook/index.html">ハンドブック</a><br/>
 			      ・<a href="http://www.FreeBSD.org/cgi/man.cgi">マニュアルページ</a><br/>
+			      ・<a href="projects/newbies.html">初心者のために</a><br/>
 			      ・<a href="{$base}/docproj/index.html">Doc. Project</a><br/>
-			      ・<a href="docs.html">さらに...</a><br/>
 			    </small></p>
 
-			  <p><font size="+1" color="#990000"><b>サポート</b></font>
-			    <small><br/>
+			  <p>
+			    <a href="support.html">
+			      <font size="+1" color="#990000"><b>サポート</b></font>
+			    </a><small><br/>
 			      ・<a href="{$base}/support.html#mailing-list">メーリングリスト</a><br/>
 			      ・<a href="{$base}/support.html#newsgroups">ニュースグループ</a><br/>
 			      ・<a href="{$base}/support.html#user">ユーザグループ</a><br/>
 			      ・<a href="{$base}/support.html#web">Web 上の資料</a><br/>
 			      ・<a href="security/index.html">セキュリティ</a><br/>
-			      ・<a href="{$enbase}/events/events.html">イベント</a><br/>
-			      ・<a href="{$base}/support.html">さらに...</a>
 			    </small></p>
 
-			  <p><font size="+1" color="#990000"><b>障害報告</b></font>
-			    <small><br/>
-			      ・<a href="send-pr.html">障害報告の送付</a><br/>
-			      ・<a href="http://www.FreeBSD.org/cgi/query-pr-summary.cgi">未解決の報告の閲覧</a><br/>
-			      ・<a href="http://www.FreeBSD.org/cgi/query-pr.cgi">障害 ID で検索する</a><br/>
-			      ・<a href="{$base}/support.html#gnats">さらに...</a><br/>
+			  <p>
+			    <a href="{$base}/support.html#gnats">
+			      <font size="+1" color="#990000"><b>バグ報告</b></font>
+			    </a><small><br/>
+			      ・ <a href="http://www.FreeBSD.org/cgi/query-pr-summary.cgi?query">検索</a><br/>
+			      ・ <a href="http://www.FreeBSD.org/cgi/query-pr.cgi">個別のバグ報告の表示</a><br/>
+			      ・ <a href="http://www.FreeBSD.org/cgi/query-pr-summary.cgi">全バグ報告の表示</a><br/>
+			      ・ <a href="send-pr.html">バグ報告の送付</a><br/>
+			      ・ <a href="http://www.FreeBSD.org/cgi/query-pr.cgi">バグ ID で検索</a><br/>
++			      ・ <a href="{$enbase}/doc/en_US.ISO8859-1/articles/problem-reports/article.html">バグ報告の書き方</a><br/>
 			    </small></p>
 
-			  <p><font size="+1" color="#990000"><b>開発</b></font>
-			    <small><br/>
-			      ・<a href="projects/index.html">プロジェクト</a><br/>
-			      ・<a href="../releng/index.html">Release Engineering</a><br/>
-			      ・<a href="{$base}/support.html#cvs">CVS リポジトリ</a><br/>
+			  <p>
+			    <a href="projects/index.html">
+			      <font size="+1" color="#990000"><b>開発</b></font>
+			    </a><small><br/>
+			      ・ <a href="{$enbase}/doc/en_US.ISO8859-1/books/developers-handbook">Developer's Handbook</a><br/>
+			      ・ <a href="{$enbase}/doc/ja_JP.eucJP/books/porters-handbook">Porter's Handbook</a><br/>
+ 			      ・ <a href="{$base}/support.html#cvs">CVS リポジトリ</a><br/>
+			      ・ <a href="releng/index.html">リリースエンジニアリング</a><br/>
+			      ・ <a href="{$enbase}/doc/ja_JP.eucJP/articles/contributing/index.html">FreeBSD への貢献</a><br/>
 			    </small></p>
 
 			  <p><font size="+1" color="#990000"><b>ベンダ</b></font>
@@ -164,12 +170,26 @@
 			      ・<a href="{$enbase}/donations/wantlist.html">寄付募集リスト</a><br/>
 			    </small></p>
 
-			  <p><font size="+1" color="#990000"><b>このサイトについて</b></font>
-			    <small><br/>
-			      ・<a href="{$base}/search/index-site.html">サイトマップ</a><br/>
-			      ・<a href="{$base}/search/search.html">検索</a><br/>
-			      ・<a href="internal/index.html">さらに...</a><br/>
+			  <p>
+			    <a href="{$base}/search/index-site.html">
+			      <font size="+1" color="#990000"><b>このサイトについて</b></font>
+			    </a><small><br/>
+			      ・ <a href="{$base}/search/search.html#web">ウェブサイトの検索</a><br/>
+			      ・ <a href="{$base}/search/search.html#mailinglists">メーリングリストの検索</a><br/>
+			      ・ <a href="{$base}/search/search.html">すべての検索</a><br/>
 			    </small></p>
+
+			  <p>
+			    <a href="mailto.html">
+			      <font size="+1" color="#990000"><b>FreeBSD の問い合わせ</b></font>
+			    </a>
+			  </p>
+
+			  <p>
+			    <a href="copyright/index.html">
+			      <font size="+1" color="#990000"><b>BSD の著作権</b></font>
+			    </a>
+			  </p>
 
 			  <form action="http://www.FreeBSD.org/cgi/search.cgi" method="get">
 			    <small>検索:<br/>
@@ -301,9 +321,10 @@
 		    <table cellpadding="4" cellspacing="0" border="0"
 			   bgcolor="#ffcc66" width="100%">
 		      <tr>
-			<td valign="top"><p><font size="+1" color="#990000"><b>テクノロジリリース:
-			    <xsl:value-of select="$rel.current"/></b></font><br/>
-
+			<td valign="top"><p>
+			      <a href="{$u.rel.early}">
+			      <font size="+1" color="#990000"><b>テクノロジリリース:
+			    <xsl:value-of select="$rel.current"/></b></font></a><br/>
 			    <small>・<a href="{$u.rel.announce}">アナウンス</a><br/>
 			      ・<a href="{$enbase}/doc/ja_JP.eucJP/books/handbook/install.html">インストールガイド</a><br/>
 			      ・<a href="{$u.rel.notes}">リリースノート</a><br/>
@@ -311,8 +332,10 @@
 			      ・<a href="{$u.rel.errata}">Errata</a><br/>
 			      ・<a href="{$u.rel.early}">初期利用者のための手引き</a></small></p>
 
-			<p><font size="+1" color="#990000"><b>プロダクションリリース:
-			    <xsl:value-of select="$rel2.current"/></b></font><br/>
+			<p>
+			      <a href="{$u.rel2.announce}">
+			      <font size="+1" color="#990000"><b>プロダクションリリース:
+			    <xsl:value-of select="$rel2.current"/></b></font></a><br/>
 
 			    <small>・<a href="{$u.rel2.announce}">アナウンス</a><br/>
 			      ・<a href="{$enbase}/doc/ja_JP.eucJP/books/handbook/install.html">インストールガイド</a><br/>
@@ -322,80 +345,54 @@
 
 			  <p><font size="+1" color="#990000"><b>Project News</b></font><br/>
 			    <font size="-1">
-			      最終更新:
-			      <xsl:value-of
-				select="format-number(number(descendant::year[position() = 1]/name),'0000')"/>
-			      <xsl:text>/</xsl:text>
-			      <xsl:value-of
-				select="format-number(number(descendant::month[position() = 1]/name),'00')"/>
-			      <xsl:text>/</xsl:text>
-			      <xsl:value-of
-				select="format-number(number(descendant::day[position() = 1]/name),'00')"/>:
+			      最終更新: 
+			      <xsl:call-template name="html-index-news-project-items-lastmodified">
+				<xsl:with-param name="news.project.xml" select="$news.project.xml" />
+			      </xsl:call-template>
+
 			      <br/>
-			      <!-- Pull in the 10 most recent news items -->
-			      <xsl:for-each select="descendant::event[position() &lt;= 10]">
-				・ <a>
-				  <xsl:attribute name="href">
-				    news/newsflash.html#<xsl:call-template name="generate-event-anchor"/>
-				  </xsl:attribute>
-				  <xsl:choose>
-				    <xsl:when test="count(child::title)">
-				      <xsl:value-of select="title"/><br/>
-				    </xsl:when>
-				    <xsl:otherwise>
-				      <xsl:value-of select="p"/><br/>
-				    </xsl:otherwise>
-				  </xsl:choose>
-				</a>
-			      </xsl:for-each>
-			      <a href="news/newsflash.html">More...</a>
+
+			      <xsl:call-template name="html-index-news-project-items">
+				<xsl:with-param name="news.project.xml" select="$news.project.xml" />
+			      </xsl:call-template>
+
+			      <a href="news/newsflash.html">さらに...</a>
 			    </font></p>
 
 			  <p><font size="+1" color="#990000"><b>FreeBSD Press</b></font><br/>
 
 			    <font size="-1">
-			      最終更新:
-			      <xsl:value-of
-				select="format-number(number(document('news/press.xml')/descendant::year[position() = 1]/name),'0000')"/>
-			      <xsl:text>/</xsl:text>
-			      <xsl:value-of
-				select="format-number(number(document('news/press.xml')/descendant::month[position() = 1]/name),'00')"/>:
-			      <br/>
-			      <!-- Pull in the 10 most recent press items -->
-			      <xsl:for-each select="document('news/press.xml')/descendant::story[position() &lt; 10]">
-				・ <a>
-				  <xsl:attribute name="href">
-				    news/press.html#<xsl:call-template name="generate-story-anchor"/>
-				  </xsl:attribute>
-				  <xsl:value-of select="name"/>
-				</a><br/>
-			      </xsl:for-each>
-			      <a href="news/press.html">More...</a>
-			    </font>
-                          </p>
+			      最終更新: 
+			      <xsl:call-template name="html-index-news-press-items-lastmodified">
+				<xsl:with-param name="news.press.xml" select="$news.press.xml" />
+			      </xsl:call-template>
 
-                          <p><font size="+1" color="#990000"><b>セキュリティ勧告</b></font><br/>
+			      <br/>
+
+			      <xsl:call-template name="html-index-news-press-items">
+				<xsl:with-param name="news.press.xml" select="$news.press.xml" />
+			      </xsl:call-template>
+
+			      <a href="news/press.html">さらに...</a>
+			    </font>
+			  </p>
+
+			  <p><font size="+1" color="#990000"><b>セキュリティ勧告</b></font><br/>
 
 			    <font size="-1">
-			      最終更新:
-			      <xsl:value-of
-				select="document($advisories.xml)/descendant::month[position() = 1]/name"/>
-			      <xsl:text> </xsl:text>
-			      <xsl:value-of
-				select="document($advisories.xml)/descendant::day[position() = 1]/name"/>
-			      <xsl:text>, </xsl:text>
-			      <xsl:value-of
-				select="document($advisories.xml)/descendant::year[position() = 1]/name"/>
+			      最終更新: 
+			      <xsl:call-template name="html-index-advisories-items-lastmodified">
+				<xsl:with-param name="advisories.xml" select="$advisories.xml" />
+			      </xsl:call-template>
+
 			      <br/>
-			      <!-- Pull in the 10 most recent security advisories -->
-			      <xsl:for-each select="document($advisories.xml)/descendant::advisory[position() &lt; 10]">
-				・ <a>
-				  <xsl:attribute name="href">ftp://ftp.freebsd.org/pub/FreeBSD/CERT/advisories/<xsl:value-of select="name"/>.asc</xsl:attribute>
-				  <xsl:value-of select="name"/>
-				</a><br/>
-			      </xsl:for-each>
-			      <a href="security/">More...</a>
-                           </font>
+
+			      <xsl:call-template name="html-index-advisories-items">
+				<xsl:with-param name="advisories.xml" select="$advisories.xml" />
+			      </xsl:call-template>
+
+			      <a href="security/">さらに...</a>
+			    </font>
 			  </p>
 			</td>
 		      </tr>

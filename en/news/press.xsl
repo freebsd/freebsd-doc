@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/en/news/press.xsl,v 1.4 2003/09/28 15:23:37 mheinen Exp $ -->
+<!-- $FreeBSD: www/en/news/press.xsl,v 1.5 2003/10/30 23:36:02 simon Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -46,7 +46,13 @@
   <!-- Everything that follows are templates for the rest of the content -->
   
   <xsl:template match="month">
-    <h1><xsl:value-of select="name"/>
+    <h1>
+      <xsl:call-template name="transtable-lookup">
+	<xsl:with-param name="word-group" select="'number-month'" />
+	<xsl:with-param name="word">
+	  <xsl:value-of select="name"/>
+	</xsl:with-param>
+      </xsl:call-template>
       <xsl:text> </xsl:text>
       <xsl:value-of select="ancestor::year/name"/></h1>
 

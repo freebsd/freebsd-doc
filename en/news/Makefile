@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/news/Makefile,v 1.37 2003/07/11 19:51:56 ceri Exp $
+# $FreeBSD: www/en/news/Makefile,v 1.38 2003/07/11 19:57:06 ceri Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -37,19 +37,25 @@ SUBDIR+=	status
 DATA=		newsflash.html news.rdf press.html
 CLEANFILES+=	newsflash.html news.rdf press.html
 
-newsflash.html: newsflash.xsl news.xml includes.xsl ../includes.xsl
+newsflash.html: newsflash.xsl news.xml\
+			includes.xsl ../includes.xsl ${XML_TRANSTABLE}
 	${XSLTPROC} ${XSLTPROCOPTS} -o ${.TARGET} \
+		--param transtable.xml "'${XML_TRANSTABLE}'" \
 		${.CURDIR}/newsflash.xsl ${.CURDIR}/news.xml
 .if !defined(NO_TIDY)
 	-${TIDY} ${TIDYOPTS} ${.TARGET}
 .endif
 
-news.rdf: news-rdf.xsl news.xml includes.xsl ../includes.xsl
+news.rdf: news-rdf.xsl news.xml\
+		includes.xsl ../includes.xsl ${XML_TRANSTABLE}
 	${XSLTPROC} ${XSLTPROCOPTS} -o ${.TARGET} \
+		--param transtable.xml "'${XML_TRANSTABLE}'" \
 		${.CURDIR}/news-rdf.xsl ${.CURDIR}/news.xml
 
-press.html: press.xsl press.xml includes.xsl ../includes.xsl
+press.html: press.xsl press.xml\
+		includes.xsl ../includes.xsl ${XML_TRANSTABLE}
 	${XSLTPROC} ${XSLTPROCOPTS} -o ${.TARGET} \
+		--param transtable.xml "'${XML_TRANSTABLE}'" \
 		${.CURDIR}/press.xsl ${.CURDIR}/press.xml
 .if !defined(NO_TIDY)
 	-${TIDY} ${TIDYOPTS} ${.TARGET}

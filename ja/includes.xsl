@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
 
-<!-- $FreeBSD: www/ja/includes.xsl,v 1.18 2003/11/24 18:26:33 hrs Exp $ -->
+<!-- $FreeBSD: www/ja/includes.xsl,v 1.19 2003/12/06 08:13:02 hrs Exp $ -->
 <!-- Original revision: 1.20 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -90,5 +90,58 @@
 
   <xsl:variable name="u.rel2.hardware">
     <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel2.current"/>R/hardware.html</xsl:variable>
+
+
+  <!-- template: "html-index-advisories-items-lastmodified" -->
+
+  <xsl:template name="html-index-advisories-items-lastmodified">
+    <xsl:param name="advisories.xml" select="''" />
+
+    <xsl:value-of select="document($advisories.xml)/descendant::year[position() = 1]/name"/>
+    <xsl:text> 年 </xsl:text>
+    <xsl:call-template name="transtable-lookup">
+      <xsl:with-param name="word-group" select="'number-month'" />
+      <xsl:with-param name="word">
+	<xsl:value-of select="document($advisories.xml)/descendant::month[position() = 1]/name"/>
+      </xsl:with-param>
+    </xsl:call-template>
+    <xsl:text> </xsl:text>
+    <xsl:value-of select="document($advisories.xml)/descendant::day[position() = 1]/name"/>
+    <xsl:text> 日</xsl:text>
+  </xsl:template>
+
+  <!-- template: "html-index-news-project-items-lastmodified" -->
+
+  <xsl:template name="html-index-news-project-items-lastmodified">
+    <xsl:param name="news.project.xml" select="''" />
+
+    <xsl:value-of select="document($news.project.xml)/descendant::year[position() = 1]/name"/>
+    <xsl:text> 年 </xsl:text>
+    <xsl:call-template name="transtable-lookup">
+      <xsl:with-param name="word-group" select="'number-month'" />
+      <xsl:with-param name="word">
+	<xsl:value-of select="document($news.project.xml)/descendant::month[position() = 1]/name"/>
+      </xsl:with-param>
+    </xsl:call-template>
+    <xsl:text> </xsl:text>
+    <xsl:value-of select="document($news.project.xml)/descendant::day[position() = 1]/name"/>
+    <xsl:text> 日 </xsl:text>
+  </xsl:template>
+
+  <!-- template: "html-index-news-press-items-lastmodified" -->
+
+  <xsl:template name="html-index-news-press-items-lastmodified">
+    <xsl:param name="news.press.xml" select="''" />
+
+    <xsl:value-of select="document($news.press.xml)/descendant::year[position() = 1]/name"/>
+    <xsl:text> 年 </xsl:text>
+    <xsl:call-template name="transtable-lookup">
+      <xsl:with-param name="word-group" select="'number-month'" />
+      <xsl:with-param name="word">
+	<xsl:value-of select="document($news.press.xml)/descendant::month[position() = 1]/name"/>
+      </xsl:with-param>
+    </xsl:call-template>
+    <xsl:text> </xsl:text>
+  </xsl:template>
 
 </xsl:stylesheet>
