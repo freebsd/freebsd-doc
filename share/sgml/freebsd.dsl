@@ -1,4 +1,4 @@
-<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.56 2001/09/11 08:47:53 murray Exp $ -->
+<!-- $FreeBSD: doc/share/sgml/freebsd.dsl,v 1.57 2001/09/11 08:56:52 murray Exp $ -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
 <!ENTITY % output.html		"IGNORE">
@@ -28,6 +28,8 @@
       
       <![ %output.html; [
         <!-- Configure the stylesheet using documented variables -->
+
+        (define %hyphenation% #f)        <!-- Silence a warning -->
 
         (define %gentext-nav-use-tables%
           ;; Use tables to build the navigation headers and footers?
@@ -212,6 +214,30 @@
 
       ;; From an email by Ian Castle to the DocBook-apps list
 
+      (define ($component$)
+        (make simple-page-sequence
+          page-n-columns: %page-n-columns%
+          page-number-restart?: (or %page-number-restart% 
+;			      (book-start?) 
+				    (first-chapter?))
+          page-number-format: ($page-number-format$)
+          use: default-text-style
+          left-header:   ($left-header$)
+          center-header: ($center-header$)
+          right-header:  ($right-header$)
+          left-footer:   ($left-footer$)
+          center-footer: ($center-footer$)
+          right-footer:  ($right-footer$)
+          start-indent: %body-start-indent%
+          input-whitespace-treatment: 'collapse
+          quadding: %default-quadding%
+          (make sequence
+	    ($component-title$)
+	    (process-children))
+          (make-endnotes)))
+
+      ;; From an email by Ian Castle to the DocBook-apps list
+
       (define (first-part?)
         (let* ((book (ancestor (normalize "book")))
 	       (nd   (ancestor-member (current-node)
@@ -358,6 +384,15 @@
 		   "\\path|"
 		   (data (current-node))
 		   "|")))))
+
+        ;; Some others may check the value of %hyphenation% and be
+        ;; specified below
+
+;        (element email
+;          (make sequence
+;            (literal "<")
+;            (urlwrap)
+;            (literal ">")))
 
         (element port
 	    (pathwrap))
@@ -680,8 +715,11 @@
       (element (caution simpara) ($admonpara$))
 
       <!-- Tell the stylesheet about our local customisations -->
-      
-      (element hostid ($mono-seq$))
+
+      (element hostid 
+        (if %hyphenation%
+          (urlwrap)
+          ($mono-seq$)))
       (element username ($mono-seq$))
       (element groupname ($mono-seq$))
       (element devicename ($mono-seq$))
