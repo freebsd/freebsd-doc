@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.32 2002/11/24 08:48:32 marcus Exp $ -->
+<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.33 2002/12/07 06:39:31 marcus Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
 		xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -9,7 +9,7 @@
   <xsl:import href="includes.xsl"/>
 
   <xsl:variable name="base" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.32 2002/11/24 08:48:32 marcus Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.33 2002/12/07 06:39:31 marcus Exp $'"/>
   <xsl:variable name="title" select="'FreeBSD GNOME Project'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -40,7 +40,7 @@
                             <small><br/>
                               &#183; <a href="http://www.FreeBSD.org/gnome/">GNOME on FreeBSD Home</a><br/>
                               &#183; <a href="docs/faq.html#q1">Installation Instructions for GNOME 1.4</a><br/>
-                              &#183; <a href="docs/faq2.html#q1">Installation Instructions for GNOME 2.0</a><br/>
+                              &#183; <a href="docs/faq2.html#q1">Installation Instructions for GNOME 2.2</a><br/>
                               &#183; <a href="../ports/gnome.html">Available Applications</a><br/>
                               &#183; <a href="docs/volunteer.html">How to Help</a><br/>
                               &#183; <a href="docs/bugging.html">Reporting a Bug</a><br/>
@@ -51,8 +51,9 @@
                           <p><font size="+1" color="#990000"><b>Documentation</b></font>
                             <small><br/>
                               &#183; <a href="docs/faq.html">GNOME 1.4 FAQ</a><br/>
-                              &#183; <a href="docs/faq2.html">GNOME 2.0 FAQ</a><br/>
+                              &#183; <a href="docs/faq2.html">GNOME 2.2 FAQ</a><br/>
                               &#183; <a href="docs/porting.html">Creating Ports</a><br/>
+                              &#183; <a href="docs/22knownissues.html">Known Issues with GNOME 2.2 on FreeBSD</a><br/>
                             </small></p>
 
                           <p><font size="+1" color="#990000"><b>Resources</b></font>
@@ -125,7 +126,7 @@
               <h2><font color="#990000">State of the port</font></h2>
 
               <p>We currently support 4.x and 5-CURRENT FreeBSD systems
-                for GNOME 1.4 and 2.0.  Anything prior to FreeBSD 4.5 is 
+                for GNOME 1.4 and 2.2.  Anything prior to FreeBSD 4.6 is 
 		not supported.  Most of GNOME has been ported to FreeBSD;
                 however, there is <a href="docs/volunteer.html">plenty left to 
 		do</a>!</p>
