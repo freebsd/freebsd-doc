@@ -34,7 +34,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $Id: gnome_upgrade.sh,v 1.5 2004-05-30 02:38:08 marcus Exp $
+# $Id: gnome_upgrade.sh,v 1.6 2004-08-23 03:32:28 marcus Exp $
 #
 
 # This script will aid in doing major upgrades to the GNOME Desktop (e.g.
@@ -51,7 +51,7 @@ X11BASE=${X11BASE:=/usr/X11R6}
 PROJECT_URL="http://www.FreeBSD.org/gnome/"
 SUPPORT_EMAIL="freebsd-gnome@FreeBSD.org"
 
-SUPPORTED_FREEBSD_VERSIONS="4.9 4.10 5.2 5.2.1"
+SUPPORTED_FREEBSD_VERSIONS="4.9 4.10 5.2 5.2.1 5.3 6.0"
 	# Ports that must be up-to-date and installed for the Big Update to work
 EXTERNAL_DEPENDS="popt gettext* libiconv expat pkgconfig freetype2 XFree86-libraries* Xft libXft XFree86-fontScalable* XFree86-fontEncodings* png libaudiofile tiff jpeg libxml2 python libxslt gnomehier scrollkeeper intltool p5-XML-Parser docbook-sk xmlcatmgr docbook-xsl docbook-xml sdocbook-xml startup-notification gnome-icon-theme Hermes sox libmpeg2 guile libltdl aspell gle cdrtools mkisofs bitstream-vera openldap-client lcms libmng libtool ghostscript* gnomeuserdocs2"
 EXTERNAL_4_DEPENDS="libgnugetopt"
