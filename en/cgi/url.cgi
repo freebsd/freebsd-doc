@@ -26,7 +26,7 @@
 #
 # url.cgi - make plain text URLs clickable
 #
-# $FreeBSD: www/en/cgi/url.cgi,v 1.25 2000/01/08 10:20:08 wosch Exp $
+# $FreeBSD: www/en/cgi/url.cgi,v 1.26 2000/01/08 10:37:37 wosch Exp $
 
 use strict;
 
@@ -52,13 +52,13 @@ if ($file !~ m%^(http|ftp)://[a-z_\-0-9]+\.freebsd\.(com|org)%i &&
 }
 
 # catch '..', multiple times
-# ports/japanese/ppxp/../../net/ppxp/pkg/DESCR 
-#	-> ports/net/ppxp/pkg/DESCR
+# ports/japanese/ppxp/../../net/ppxp/pkg-descr 
+#	-> ports/net/ppxp/pkg-descr
 1 while $file =~ s%/[^/]+/\.\./%/%;
 
 # print HTML header
 $file =~ s%(http|ftp)://ftp.freebsd.org/pub/FreeBSD/(branches/|FreeBSD)-current/%%i;
-if ($file =~ m%^ports/([\w-]+)/(\w[\w-+.]+)/pkg/DESCR%) {
+if ($file =~ m%^ports/([\w-]+)/(\w[\w-+.]+)/pkg-descr%) {
     print &html_header(
        "Port description for $1/$2");
     $portcategory = $1;
@@ -68,7 +68,7 @@ if ($file =~ m%^ports/([\w-]+)/(\w[\w-+.]+)/pkg/DESCR%) {
 
 # do cvs checkout 
 my($cvsroot) = '/home/ncvs';
-if ($file =~ m%^ports/[\w-]+/\w[\w-+.]*/pkg/DESCR% && -f "$cvsroot/$file,v") {
+if ($file =~ m%^ports/[\w-]+/\w[\w-+.]*/pkg-descr% && -f "$cvsroot/$file,v") {
     open(CO, "-|") || 
 	exec ('/usr/bin/co', '-p', '-q', "$cvsroot/$file,v") ||
 	die "exec co -pq $cvsroot/$file,v: $!\n";
@@ -82,7 +82,7 @@ else {
 }
 print "\n<HR>\n<pre>\n";
 
-# read the DESCR file and make URLs clickable
+# read the pkg-descr file and make URLs clickable
 my($content);
 $content .= $_ while(<CO>);
 $content =~ s/</&lt;/g;
@@ -92,7 +92,7 @@ print $content;
 print "</pre>\n";
 
 # Add 'source' link for freebsd ports
-if ($file =~ m%^(ports/[\w-]+/\w[\w-+.]+)/pkg/DESCR%) {
+if ($file =~ m%^(ports/[\w-]+/\w[\w-+.]+)/pkg-descr%) {
     print qq{<HR><a href=\"pds.cgi?$1">Sources</a> |\n};
     print qq{<a href=\"../ports/$portcategory.html">};
     print qq{Category $portcategory</a>\n};
