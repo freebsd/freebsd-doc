@@ -1,5 +1,5 @@
 #
-# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.30 2001/03/22 22:47:32 obrien Exp $
+# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.31 2001/03/27 16:15:07 nik Exp $
 #
 # This include file <doc.docbook.mk> handles building and installing of
 # DocBook documentation in the FreeBSD Documentation Project.
@@ -126,46 +126,55 @@ KNOWN_FORMATS=	html html.tar html-split html-split.tar txt rtf ps pdf tex dvi ta
 
 .for _curformat in ${FORMATS}
 _cf=${_curformat}
+
 .if ${_cf} == "html-split"
 _docs+= index.html HTML.manifest ln*.html
 CLEANFILES+= `[ -f HTML.manifest ] && xargs < HTML.manifest` HTML.manifest ln*.html
+
 .elif ${_cf} == "html-split.tar"
 _docs+= ${DOC}.html-split.tar
 CLEANFILES+= `[ -f HTML.manifest ] && xargs < HTML.manifest` HTML.manifest ln*.html
 CLEANFILES+= ${DOC}.html-split.tar
+
 .elif ${_cf} == "html"
 _docs+= ${DOC}.html
 CLEANFILES+= ${DOC}.html
+
 .elif ${_cf} == "html.tar"
 _docs+= ${DOC}.html.tar
 CLEANFILES+= ${DOC}.html ${DOC}.html.tar
+
 .elif ${_cf} == "txt"
 _docs+= ${DOC}.txt
 CLEANFILES+= ${DOC}.html ${DOC}.txt ${DOC}.html-text
+
 .elif ${_cf} == "dvi"
 _docs+= ${DOC}.dvi
 CLEANFILES+= ${DOC}.aux ${DOC}.dvi ${DOC}.log ${DOC}.tex
+
 .elif ${_cf} == "ps"
 _docs+= ${DOC}.ps
 CLEANFILES+= ${DOC}.aux ${DOC}.dvi ${DOC}.log ${DOC}.tex-ps ${DOC}.ps
+
 .elif ${_cf} == "pdf"
 _docs+= ${DOC}.pdf
 CLEANFILES+= ${DOC}.aux ${DOC}.dvi ${DOC}.log ${DOC}.out ${DOC}.tex-pdf ${DOC}.pdf
+
 .elif ${_cf} == "rtf"
 _docs+= ${DOC}.rtf
 CLEANFILES+= ${DOC}.rtf
+
 .elif ${_cf} == "tar"
 _docs+= ${DOC}.tar
 CLEANFILES+= ${DOC}.tar
+
 .elif ${_cf} == "pdb"
 _docs+= ${DOC}.pdb ${.CURDIR:T}.pdb
 CLEANFILES+= ${DOC}.pdb ${.CURDIR:T}.pdb
+
 .endif
 .endfor
 
-.if defined(GEN_INDEX)
-CLEANFILES+=HTML.index
-.endif
 
 #
 # Build a list of install-${format}.${compress_format} targets to be
@@ -187,6 +196,20 @@ CLEANFILES+= ${DOC}.${_curformat}.${_curcomp}
 .endfor
 .endif
 
+#
+# Index generation
+#
+.if defined(GEN_INDEX)
+INDEX_SGML?=		index.sgml
+
+HTML_SPLIT_INDEX?=	html-split.index
+HTML_INDEX?=		html.index
+PRINT_INDEX?=		print.index
+
+CLEANFILES+= 		${INDEX_SGML}
+CLEANFILES+= 		${HTML_SPLIT_INDEX} ${HTML_INDEX} ${PRINT_INDEX}
+.endif
+
 .for _curimage in ${IMAGES_LIB} 
 LOCAL_IMAGES_LIB += ${LOCAL_IMAGES_LIB_DIR}/${_curimage} 
 .endfor 
@@ -195,28 +218,20 @@ LOCAL_IMAGES_LIB += ${LOCAL_IMAGES_LIB_DIR}/${_curimage}
 
 all: ${_docs}
 
-index.html HTML.manifest: ${SRCS} ${LOCAL_IMAGES_LIB} ${IMAGES_PNG}
-.if defined(GEN_INDEX)
-	${JADE} -V html-index -ioutput.html -ioutput.html.images ${JADEOPTS} -d ${DSLHTML} -t sgml ${MASTERDOC}
-	perl ${PREFIX}/share/sgml/docbook/dsssl/modular/bin/collateindex.pl -o index.sgml HTML.index
-.endif
+index.html HTML.manifest: ${SRCS} ${LOCAL_IMAGES_LIB} ${IMAGES_PNG} ${INDEX_SGML} ${HTML_SPLIT_INDEX}
 	${JADE} -V html-manifest -ioutput.html -ioutput.html.images ${JADEOPTS} -d ${DSLHTML} -t sgml ${MASTERDOC}
 .if !defined(NO_TIDY)
 	-tidy -i -m -f /dev/null ${TIDYFLAGS} `xargs < HTML.manifest`
 .endif
 
-${DOC}.html: ${SRCS} ${LOCAL_IMAGES_LIB} ${IMAGES_PNG}
-.if defined(GEN_INDEX)
-	${JADE} -V html-index -ioutput.html -ioutput.html.images -V nochunks ${JADEOPTS} -d ${DSLHTML} -t sgml ${MASTERDOC}
-	perl ${PREFIX}/share/sgml/docbook/dsssl/modular/bin/collateindex.pl -o index.sgml HTML.index
-.endif
+${DOC}.html: ${SRCS} ${LOCAL_IMAGES_LIB} ${IMAGES_PNG} ${INDEX_SGML} ${HTML_INDEX}
 	${JADE} -ioutput.html -ioutput.html.images -V nochunks ${JADEOPTS} -d ${DSLHTML} -t sgml ${MASTERDOC} > ${.TARGET} || (rm -f ${.TARGET} && false)
 .if !defined(NO_TIDY)
 	-tidy -i -m -f /dev/null ${TIDYFLAGS} ${.TARGET}
 .endif
 
 # Special target to produce HTML with no images in it.
-${DOC}.html-text: ${SRCS}
+${DOC}.html-text: ${SRCS} ${INDEX_SGML} ${HTML_INDEX}
 	${JADE} -ioutput.html -V nochunks ${JADEOPTS} -d ${DSLHTML} -t sgml ${MASTERDOC} > ${.TARGET} || (rm -f ${.TARGET} && false)
 
 ${DOC}.html-split.tar: HTML.manifest
@@ -247,10 +262,10 @@ ${DOC}.rtf: ${SRCS}
 # we need to create a different .tex file depending on our eventual output
 # format, which will then lead on to a different .dvi file as well.
 #
-${DOC}.tex-ps: ${SRCS} ${IMAGES_EPS}
+${DOC}.tex-ps: ${SRCS} ${IMAGES_EPS} ${INDEX_SGML} ${PRINT_INDEX}
 	${JADE} -Vtex-backend -ioutput.print ${JADEOPTS} -d ${DSLPRINT} -t tex -o ${.TARGET} ${MASTERDOC}
 
-${DOC}.tex-pdf: ${SRCS} ${IMAGES_PDF}
+${DOC}.tex-pdf: ${SRCS} ${IMAGES_PDF} ${INDEX_SGML} ${PRINT_INDEX}
 	cp ${DOC_PREFIX}/share/web2c/pdftex.def ${.TARGET}
 	${JADE} -Vtex-backend -ioutput.print -ioutput.print.pdf ${JADEOPTS} -d ${DSLPRINT} -t tex -o /dev/stdout ${MASTERDOC} >> ${.TARGET}
 
@@ -288,6 +303,29 @@ ${DOC}.tar: ${SRCS}
 
 lint validate:
 	${NSGMLS} -s -c ${FREEBSDCATALOG} -c ${DSSSLCATALOG} -c ${DOCBOOKCATALOG} -c ${JADECATALOG} ${EXTRA_CATALOGS:S/^/-c /g} ${MASTERDOC}
+
+# ------------------------------------------------------------------------
+#
+# Index targets
+#
+
+#
+# Generate a different .index file based on the format name
+#
+
+${INDEX_SGML}:
+	perl ${PREFIX}/share/sgml/docbook/dsssl/modular/bin/collateindex.pl -N -o ${.TARGET}
+
+${HTML_INDEX}:
+	${JADE} -V html-index -ioutput.html -ioutput.html.images -V nochunks ${JADEOPTS} -d ${DSLHTML} -t sgml ${MASTERDOC} > /dev/null
+	perl ${PREFIX}/share/sgml/docbook/dsssl/modular/bin/collateindex.pl -g -o ${INDEX_SGML} ${.TARGET}
+
+${HTML_SPLIT_INDEX}:
+	${JADE} -V html-index -ioutput.html -ioutput.html.images ${JADEOPTS} -d ${DSLHTML} -t sgml ${MASTERDOC} > /dev/null
+	perl ${PREFIX}/share/sgml/docbook/dsssl/modular/bin/collateindex.pl -g -o ${INDEX_SGML} ${.TARGET}
+
+${PRINT_INDEX}: ${HTML_INDEX}
+	mv ${HTML_INDEX} ${.TARGET}
 
 # ------------------------------------------------------------------------
 #
