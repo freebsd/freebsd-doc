@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.6 1998-08-03 16:03:32 wosch Exp $
+# $Id: Makefile,v 1.7 1998-08-07 16:57:08 wosch Exp $
 
 DOCS=	photos.sgml	
 DOCS+=	internal.sgml	
@@ -7,6 +7,8 @@ DOCS+= 	about.sgml
 DOCS+= 	machines.sgml
 DOCS+= 	mirror.sgml
 DOCS+=	resignation.sgml
+
+INDEXLINK=	internal.html
 
 homepage.inc:
 	perl homepage.pl > ${.TARGET}

@@ -1,10 +1,11 @@
-# $Id: Makefile,v 1.1 1998-08-03 15:39:17 wosch Exp $
+# $Id: Makefile,v 1.2 1998-08-07 16:57:08 wosch Exp $
 
 DOCS+= index-site.sgml
 DOCS+= search.sgml 
 DOCS+= searchhints.sgml
 DOCS+=	search-mid.sgml
 
+INDEXLINK=	search.html
 CLEANFILES+=atoz.sgml site.sgml
 
 

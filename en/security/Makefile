@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.1 1998-06-19 09:46:48 wosch Exp $
+# $Id: Makefile,v 1.2 1998-08-07 16:57:09 wosch Exp $
 
 .if exists(Makefile.conf)
 .include "Makefile.conf"
@@ -8,5 +8,7 @@ DOCS=
 DOCS+=	programmers.sgml
 DOCS+=	security.sgml
 DOCS+=  secure.sgml
+
+INDEXLINK= security.html
 
 .include "../web.mk"
