@@ -3,7 +3,7 @@
 #
 # Build the FreeBSD Porter's Handbook.
 #
-# Original revision: 1.1
+# Original revision: 1.3
 
 MAINTAINER=kuriyama@FreeBSD.org
 
