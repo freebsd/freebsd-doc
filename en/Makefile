@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/Makefile,v 1.66 2001/05/25 05:08:02 dd Exp $
+# $FreeBSD: www/en/Makefile,v 1.67 2001/06/09 23:09:21 nik Exp $
 .if exists(Makefile.conf)
 .include "Makefile.conf"
 .endif
@@ -82,13 +82,13 @@ WEBDIR=		data
 # Handle the FAQ/ and handbook/ directories specially.
 
 FAQ:
-	ln -fs ${.CURDIR}/../../doc/en_US.ISO_8859-1/books/faq FAQ
+	ln -fs ${.CURDIR}/../../doc/en_US.ISO8859-1/books/faq FAQ
 
 handbook:
-	ln -fs ${.CURDIR}/../../doc/en_US.ISO_8859-1/books/handbook handbook
+	ln -fs ${.CURDIR}/../../doc/en_US.ISO8859-1/books/handbook handbook
 
 afterinstall:
-	ln -fs ${.CURDIR}/doc/en_US.ISO_8859-1/books/faq ${DOCINSTALLDIR}/FAQ
-	ln -fs ${.CURDIR}/doc/en_US.ISO_8859-1/books/handbook ${DOCINSTALLDIR}/handbook
+	ln -fs ${.CURDIR}/doc/en_US.ISO8859-1/books/faq ${DOCINSTALLDIR}/FAQ
+	ln -fs ${.CURDIR}/doc/en_US.ISO8859-1/books/handbook ${DOCINSTALLDIR}/handbook
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
