@@ -1,5 +1,5 @@
-# $Id: Makefile,v 1.27 1999-03-01 16:14:14 motoyuki Exp $
-# Original revision: 1.33
+# $Id: Makefile,v 1.28 1999-03-02 18:08:34 motoyuki Exp $
+# Original revision: 1.34
 # The FreeBSD Japanese Documentation Project
 
 .NOTPARALLEL:
