@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/index.xsl,v 1.30 2002/08/23 08:27:18 blackend Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.31 2002/08/26 22:45:20 trhodes Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   
@@ -6,7 +6,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.30 2002/08/23 08:27:18 blackend Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.31 2002/08/26 22:45:20 trhodes Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -264,7 +264,7 @@
 		<a href="gallery/gallery.html">gallery</a> for examples of
 		FreeBSD powered applications and services.</p>
 	    
-	      <h2><font color="#990000">Run a huge variety of
+	      <h2><font color="#990000">Run a huge number of
 		  applications</font></h2>
 	    
 	      <p>The quality of FreeBSD combined with today's low-cost,
