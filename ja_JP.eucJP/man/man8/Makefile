@@ -246,6 +246,7 @@ MAN8 =	IPXrouted.8\
 	vmstat.8\
 	vnconfig.8\
 	watch.8\
+	wicontrol.8\
 	wire-test.8\
 	wlconfig.8\
 	wormcontrol.8\
