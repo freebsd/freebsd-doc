@@ -1,6 +1,6 @@
-# $Id: Makefile,v 1.10 1998-02-12 02:21:58 hanai Exp $
+# $Id: Makefile,v 1.11 1998-03-27 07:31:23 hanai Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.21
+# Original revision: 1.24
 
 .if exists(Makefile.conf)
 .include "Makefile.conf"
@@ -16,7 +16,7 @@ DOCS+= publish.sgml search.sgml searchhints.sgml
 DOCS+= send-pr.sgml security.sgml support.sgml where.sgml resignation.sgml
 DOCS+= jabout.sgml
 #DOCS+= cgallery.sgml npgallery.sgml pgallery.sgml
-DOCS+= y2kbug.sgml
+DOCS+= y2kbug.sgml search-mid.sgml
 
 CLEANFILES+=atoz.sgml
 
