@@ -1,0 +1,16 @@
+# $FreeBSD$
+
+DOC?= article
+
+FORMATS?= html
+
+IMAGES=	ad0b4aft.eps ad2b4aft.eps arch.eps
+
+INSTALL_COMPRESSED?=gz
+INSTALL_ONLY_COMPRESSED?=
+
+SRCS= article.sgml
+
+DOC_PREFIX?= ${.CURDIR}/../../..
+
+.include "${DOC_PREFIX}/share/mk/doc.project.mk"
