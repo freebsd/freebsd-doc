@@ -28,6 +28,9 @@
 require 'timelocal.pl';
 require 'ctime.pl';
 
+$hsty_base = "";
+require 'cgi-style.pl';
+
 $cvsroot = '/home/ncvs';
 $intro = "
 This is a WWW interface to the FreeBSD CVS tree.
@@ -72,23 +75,15 @@ if (-d $fullname) {
 	opendir(DIR, $fullname) || &fatal("404 Not Found","$where: $!");
 	@dir = readdir(DIR);
 	closedir(DIR);
-	print "Content-type: text/html\n\n";
-	print "<HTML><HEAD><TITLE>FreeBSD CVS Tree: /$where</TITLE></HEAD>\n";
-	print "<BODY>\n";
-	print "<h1><img src=\"/gifs/biglogo.gif\" alt=\"\"> ";
-        print "FreeBSD CVS Tree</h1>\n<hr>\n";
-#	print "<!-- I wish there was a \"halign=center\" for IMG... -->\n";
-#	print "<center>\n";
-#	print "<IMG SRC=\"/gifs/daemonbar.gif\" alt=\"\">\n";
-#	print "</center>\n";
-#	print "<H1 align=center>FreeBSD CVS Tree</H1>\n";
 	if ($where eq '') {
+	    print &html_header("FreeBSD CVS Repository");
 	    print $intro;
 	} else {
+	    print &html_header("/$where");
 	    print $shortinstr;
 	}
 	print "<p>Current directory: <b>/$where</b>\n";
-	print "<P><HR>\n";
+	print "<P><HR NOSHADE>\n";
 	# Using <MENU> in this manner violates the HTML2.0 spec but
 	# provides the results that I want in most browsers.  Another
 	# case of layout spooging up HTML.
@@ -111,15 +106,7 @@ if (-d $fullname) {
 	    }
 	}
 	print "</MENU>\n";
-print "<hr>
-<a href=\"/\"><img src=\"/gifs/home.gif\" alt=\"FreeBSD Home
-  Page\" border=\"0\" align=\"right\"></a>
-<address>
-  <a href=\"/mailto.html\">www@freebsd.org</a>
-</address>\n";
-#	print "<HR>\n";
-#	print "<A HREF=\"/\"><IMG SRC=\"/gifs/home.gif\" ALT=\"FreeBSD Home Page\">\n";
-#	print "</A>\n";
+	print &html_footer;
 	print "</BODY></HTML>\n";
 } elsif (-f $fullname . ',v') {
 	if ($_ = $ENV{'QUERY_STRING'}) {
@@ -364,15 +351,12 @@ print "<hr>
 	    $sel .= "<OPTION VALUE=\"${rev}:${_}\">$_\n";
 	}
 	print "Done associating revisions with branches\n" if ($verbose);
-	print "Content-type: text/html\n\n";
-	print "<HTML><HEAD><TITLE>CVS log for $where</TITLE></HEAD>\n";
-	print "<BODY>\n";
-	print "<H1 align=center>CVS log for $where</H1>\n";
+        print &html_header("CVS log for $where");
 	($upwhere = $where) =~ s|[^/]+$||;
 	print "Up to ", &link($upwhere,$scriptname . "/" . $upwhere);
 	print "<BR>\n";
 	print "<A HREF=\"#diff\">Request diff between arbitrary revisions</A>\n";
-	print "<HR>\n";
+	print "<HR NOSHADE>\n";
 # The other possible U.I. I can see is to have each revision be hot
 # and have the first one you click do ?r1=foo
 # and since there's no r2 it keeps going & the next one you click
@@ -445,7 +429,7 @@ print "<hr>
 #	    print "Log message:<BR>\n";
 	    print "<PRE>\n";
 	    print &htmlify($log{$_});
-	    print "</PRE><HR>\n";
+	    print "</PRE><HR NOSHADE>\n";
 	}
 	print "<A NAME=diff>\n";
 	print "This form allows you to request diff's between any two\n";
@@ -470,15 +454,7 @@ print "<hr>
 	print "<INPUT TYPE=RADIO NAME=\"f\" VALUE=c>Context diff<br>\n";
 	print "<INPUT TYPE=SUBMIT VALUE=\"Get Diffs\">\n";
 	print "</FORM>\n";
-print "<hr>
-<a href=\"/\"><img src=\"/gifs/home.gif\" alt=\"FreeBSD Home
-  Page\" border=\"0\" align=\"right\"></a>
-<address>
-  <a href=\"/mailto.html\">www@freebsd.org</a>
-</address>\n";
-#	print "<HR>\n";
-#	print "<A HREF=\"/\"><IMG SRC=\"/gifs/home.gif\" ALT=\"FreeBSD Home Page\">\n";
-#	print "</A>\n";
+        print &html_footer;
 	print "</BODY></HTML>\n";
 } else {
 	&fatal("404 Not Found","$where: no such file or directory");
@@ -487,6 +463,7 @@ print "<hr>
 sub htmlify {
 	local($string) = @_;
 
+	$string =~ s/&/&amp;/g;
 	$string =~ s/</&lt;/g;
 	$string =~ s/>/&gt;/g;
 
