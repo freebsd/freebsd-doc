@@ -1,5 +1,5 @@
 #
-# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.29 2001/03/18 15:48:10 alex Exp $
+# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.30 2001/03/22 22:47:32 obrien Exp $
 #
 # This include file <doc.docbook.mk> handles building and installing of
 # DocBook documentation in the FreeBSD Documentation Project.
@@ -226,7 +226,7 @@ ${DOC}.html-split.tar: HTML.manifest
 
 ${DOC}.html.tar: ${DOC}.html
 	tar cf ${.TARGET} ${DOC}.html
-	tar uf ${.TARGET} ${IMAGES_LIB}
+	tar uf ${.TARGET} ${LOCAL_IMAGES_LIB}
 	tar uf ${.TARGET} ${IMAGES_PNG}
 
 ${DOC}.txt: ${DOC}.html-text
