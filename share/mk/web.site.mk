@@ -1,5 +1,5 @@
 # bsd.web.mk
-# $Id: web.site.mk,v 1.5 1996-10-01 23:41:29 jfieber Exp $
+# $Id: web.site.mk,v 1.6 1996-10-06 00:08:08 jfieber Exp $
 
 #
 # Build and install a web site.
@@ -239,7 +239,7 @@ _PROGSUBDIR: .USE
 FORMATS?=	"html ps latin1 ascii"
 PARAMS=		DESTDIR=${DESTDIR} DOCDIR=${WEBBASE}/${WEBDIR}
 PARAMS+=	DOCOWN=${WEBOWN} DOCGRP=${WEBGRP}
-PARAMS+=	SGMLOPTS="-links" FORMATS=${FORMATS} COPY="${COPY}"
+PARAMS+=	FORMATS=${FORMATS} COPY="${COPY}"
 
 .endif
 
