@@ -20,7 +20,7 @@ $server_root = '/usr/local/www';
 $waisq = "/usr/local/www/bin/waisq";
 $sourcepath = "/f/jfieber/index";
 $hints = "/searchhints.html";    
-$myurl = "/cgi/search.cgi";
+$myurl = $ENV{'SCRIPT_NAME'};
 
 require "open2.pl";
 require "cgi-lib.pl";
@@ -118,8 +118,8 @@ sub do_wais {
         }
         print "</OL>\n";
 
-	print "<hr><p>Didn't get what you expected? ";
-	print "<a href=\"$hints\">Look here for searching hints</a>.";
+	print "<p>Didn't get what you expected? ";
+	print "<a href=\"$hints\">Look here for searching hints</a>.</p>";
 
         if ($hits == 0) {
             print "Nothing found.\n";
@@ -136,7 +136,7 @@ sub do_wais {
 #
 
     else {
-        print &html_header("Search Results: Document");
+        print &short_html_header("Search Results");
 	&open2(WAISOUT, WAISIN, $waisq, "-g");
 	print WAISIN $w_question;
 
@@ -220,7 +220,7 @@ sub printdoc {
     }
     print "</pre>\n";
 
-    print "<hr>\n<pre>\n$body\n</pre>\n";
+    print "<pre>\n$body\n</pre>\n";
 }
 
 sub htmlescape {
