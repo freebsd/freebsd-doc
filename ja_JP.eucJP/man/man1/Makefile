@@ -14,6 +14,7 @@ MAN1 =	addftinfo.1\
 	builtin.1\
 	bzip2.1\
 	c89.1\
+	c99.1\
 	calendar.1\
 	cap_mkdb.1\
 	cat.1\
@@ -45,6 +46,7 @@ MAN1 =	addftinfo.1\
 	crontab.1\
 	crunchgen.1\
 	crunchide.1\
+	csplit.1\
 	ctags.1\
 	ctm.1\
 	ctm_rmail.1\
@@ -75,6 +77,7 @@ MAN1 =	addftinfo.1\
 	f77.1\
 	false.1\
 	fdformat.1\
+	fdread.1\
 	fdwrite.1\
 	fetch.1\
 	file.1\
@@ -95,6 +98,7 @@ MAN1 =	addftinfo.1\
 	gdb.1\
 	gencat.1\
 	getNAME.1\
+	getconf.1\
 	getfacl.1\
 	getopt.1\
 	gperf.1\
@@ -204,6 +208,7 @@ MAN1 =	addftinfo.1\
 	neqn.1\
 	netstat.1\
 	newaliases.1\
+	newgrp.1\
 	nfsstat.1\
 	nice.1\
 	nl.1\
@@ -221,6 +226,7 @@ MAN1 =	addftinfo.1\
 	passwd.1\
 	paste.1\
 	patch.1\
+	pathchk.1\
 	pawd.1\
 	pax.1\
 	pfbtops.1\
@@ -295,6 +301,7 @@ MAN1 =	addftinfo.1\
 	su.1\
 	symorder.1\
 	systat.1\
+	tabs.1\
 	tail.1\
 	talk.1\
 	tar.1\
