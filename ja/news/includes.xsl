@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
 
-<!-- $FreeBSD$ -->
-<!-- Original revision: 1.1 -->
+<!-- $FreeBSD: www/ja/news/includes.xsl,v 1.1 2001/08/07 03:58:32 kuriyama Exp $ -->
+<!-- Original revision: 1.2 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
 
 <!-- $FreeBSD$ -->
-<!-- Original revision: 1.1 -->
+<!-- Original revision: 1.3 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   
@@ -9,7 +9,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD$'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.3 2001/08/07 21:30:28 jim Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <xsl:output type="html" encoding="EUC-JP"/>
@@ -111,7 +111,8 @@
 		<input type="submit" value=" Go "/>
 		
 		<br/>
-		<font color="#990000"><b>言語:</b></font> 
+		
+		<font color="#990000"><b>言語: </b></font> 
 		<a href="../">英語</a>, 
 		<a href="../es/index.html">スペイン語</a>, 
 		<a href="../ru/index.html">ロシア語</a>, 
@@ -123,40 +124,12 @@
 	
 	<br/>
 	
-	<!-- Security alert -->
-	<table width="100%" bgcolor="#990000"
-	       cellpadding="4" cellspacing="0" border="0">
-	  <tr>
-	    <td>
-	      <h2 align="center">
-		<font color="#FFFFFF">重要</font></h2>
-	      <p><font color="#FFFFFF">
-		2001 年 7 月 23 日以前の FreeBSD には,
-		リモートからの影響を受けるセキュリティ上の問題を
-		含む telnet デーモンが含まれています.
-		詳細は
-		<a href="ftp://ftp.FreeBSD.org/pub/FreeBSD/CERT/advisories/FreeBSD-SA-01:49.telnetd.v1.1.asc">セキュリティ勧告</a>
-		をご覧下さい.</font></p>
-	    </td>
-	  </tr>
-	</table>
-
 	<hr size="1" noshade="noshade"/>
 
 	<!-- Main layout table -->
 	<table border="0" cellspacing="0" cellpadding="2">
 	  <tr>
-	    <!-- Red strip down left hand of sidebar -->
-	    <td bgcolor="#990000">&#xa0;</td>
-	    
-	    <td bgcolor="#ffcc66">&#xa0;</td>
-	    
-	    <td></td>
-	    
-	    <!-- Main body column -->
-
-	    <td rowspan="2" align="left" valign="top">
-	      <!-- News / release info table -->
+	    <td valign="top">
 	      <table border="0" cellspacing="0" cellpadding="1"
 		     bgcolor="#000000" width="100%">
 		<tr>
@@ -164,41 +137,113 @@
 		    <table cellpadding="4" cellspacing="0" border="0"
 			   bgcolor="#ffcc66" width="100%">
 		      <tr>
-			<td valign="top"><b>最新ニュース</b><br/>
-			  <font size="-1">
-			    <!-- Code to pull in the most recent four news
-			         items -->
-			    <xsl:for-each select="descendant::event[position() &lt;= 4]">
-			      >> <a>
-				<xsl:attribute name="href">
-				  news/newsflash.html#<xsl:call-template name="generate-event-anchor"/>
-				</xsl:attribute>
-				<xsl:choose>
-				  <xsl:when test="count(child::title)">
-				    <xsl:value-of select="title"/><br/>
-				  </xsl:when>
-				  <xsl:otherwise>
-				    <xsl:value-of select="p"/><br/>
-				  </xsl:otherwise>
-				</xsl:choose>
-			      </a>
-			    </xsl:for-each>
-			  </font>
-			</td>
+			<td>
+			  <p><font size="+1" color="#990000"><b>ニュース</b></font>
 
-			<td valign="top"><b>最新リリース:
-			    <xsl:value-of select="$rel.current"/></b><br/>
-			
-			  <small>>> <a href="{$u.rel.announce}">アナウンス</a><br/>
-			    >> <a href="{$base}/doc/ja_JP.eucJP/books/handbook/install.html">インストールガイド</a><br/>
-			  >> <a href="{$u.rel.notes}">リリースノート</a><br/>
-			    >> <a href="{$u.rel.errata}">Errata</a></small></td>
+	      
+			    <small><br/>
+			      ・<a href="news/newsflash.html">アナウンス</a><br/>
+			      ・<a href="news/press.html">報道</a><br/>
+			      ・<a href="news/index.html">さらに ...</a>
+			    </small></p>
+	    
+			  <p><font size="+1" color="#990000"><b>ソフトウェア</b></font>
+			    <small><br/>
+			      ・<a href="{$base}/handbook/mirrors.html">FreeBSD を手に入れる</a><br/>
+			      ・<a href="releases/index.html">リリース情報</a><br/>
+			      ・<a href="{$base}/ports/index.html">Ports Collection</a><br/>
+			    </small></p>
+	    
+			  <p><font size="+1" color="#990000"><b>ドキュメント</b></font>
+		
+			    <small><br/>
+			      ・<a href="projects/newbies.html">初心者のために</a><br/>
+			      ・<a href="{$base}/handbook/index.html">ハンドブック</a><br/>
+			      ・<a href="{$base}/FAQ/index.html">FAQ</a><br/>
+			      ・<a href="{$base}/docproj/index.html">Doc. Project</a><br/>
+			      ・<a href="docs.html">さらに...</a><br/>
+			    </small></p>
+			  
+			  <p><font size="+1" color="#990000"><b>サポート</b></font>
+	      
+			    <small><br/>
+			      ・<a href="{$base}/support.html#mailing-list">メーリングリスト</a><br/>
+			      ・<a href="{$base}/support.html#newsgroups">ニュースグループ</a><br/>
+			      ・<a href="{$base}/support.html#user">ユーザグループ</a><br/>
+			      ・<a href="{$base}/support.html#web">Web 上の資料</a><br/>
+			      ・<a href="security/index.html">セキュリティ</a><br/>
+			      ・<a href="{$base}/support.html">さらに...</a>
+			    </small></p>
+	      
+			  <p><font size="+1" color="#990000"><b>開発</b></font>
+		
+			    <small><br/>
+			      ・<a href="projects/index.html">プロジェクト</a><br/>
+			      ・<a href="{$base}/support.html#gnats">バグレポート</a><br/>
+			      ・<a href="{$base}/support.html#cvs">CVS リポジトリ</a><br/>
+			    </small></p>
+	      
+			  <p><font size="+1" color="#990000"><b>ベンダVendors</b></font>
+			    
+			    <small><br/>
+			      ・<a href="{$base}/commercial/software_bycat.html">ソフトウェア</a><br/>
+			      ・<a href="{$base}/commercial/hardware.html">ハードウェア</a><br/>
+			      ・<a href="{$base}/commercial/consulting_bycat.html">コンサルティング</a><br/>
+			      ・<a href="{$base}/commercial/misc.html">その他</a><br/>
+			    </small></p>
+	      
+			  <p><font size="+1" color="#990000"><b>このサイトについて</b></font>
+		
+			    <small><br/>
+			      ・<a href="{$base}/search/index-site.html">サイトマップ</a><br/>
+			      ・<a href="{$base}/search/search.html">検索</a><br/>
+			      ・<a href="internal/index.html">さらに...</a><br/>
+			    </small></p>
+	      
+			  <form action="http://www.FreeBSD.org/cgi/search.cgi" method="get">
+			    <small>検索:<br/>
+			      <input type="text" name="words" size="10"/>
+			      <input type="hidden" name="max" value="25"/>
+			      <input type="hidden" name="source" value="www"/>
+			      <input type="submit" value="実行"/></small>
+			  </form></td>
 		      </tr>
 		    </table>
 		  </td>
 		</tr>
 	      </table>
+	    </td>
+	    
+	    <td></td>
+	    
+	    <!-- Main body column -->
 
+	    <td align="left" valign="top" rowspan="2">
+	      <!-- Security alert -->
+	      <table border="0" cellspacing="1" cellpadding="4"
+		     bgcolor="#990000" width="100%">
+		<tr>
+		  <td>
+		    <table bgcolor="#FFFFFF" width="100%"
+			   cellpadding="4" cellspacing="0" border="0">
+		      <tr>
+			<td>
+			  <h2 align="center">重要</h2>
+			  
+			  <p>
+			    2001 年 7 月 23 日以前の FreeBSD には,
+			    リモートからの影響を受けるセキュリティ上の問題を
+			    含む telnet デーモンが含まれています.
+			    詳細は
+			    <a href="ftp://ftp.FreeBSD.org/pub/FreeBSD/CERT/advisories/FreeBSD-SA-01:49.telnetd.v1.1.asc">セキュリティ勧告</a>
+			    をご覧下さい.</p>
+			</td>
+		      </tr>
+		    </table>
+		  </td>
+		</tr>
+	      </table>
+	      
 	      <h2><font color="#990000">FreeBSD とは?</font></h2>
 	
 	      <p>FreeBSD は Intel 互換機 (x86), DEC Alpha, PC-98
@@ -261,10 +306,10 @@
 		は <a href="{$base}/copyright/index.html">無料</a> で入手でき,
 		すべてのソースコードが付属しています.
 		試してみようかな, という方は
-		<a href="{$base}/doc/ja_JP.eucJP/books/handbook/mirrors.html">
+		<a href="{$base}/handbook/mirrors.html">
 		  より詳しい情報</a> を
 		ご覧ください.</p>
-	      
+
 	      <h2><font color="#990000">FreeBSD への貢献</font></h2>
 
 	      <p>FreeBSD に貢献するのは簡単です.
@@ -280,107 +325,81 @@
 		  FreeBSD への貢献</a>
 		(<a href="http://www.FreeBSD.org/handbook/contrib.html">原文</a>)
 		というセクションをご覧ください.</p>
-	      
-	      <br/>
-	      
-	      <table border="3" cellspacing="0" cellpadding="5">
+	    </td>
+
+	    <td></td>
+
+	    <!-- Right-most column -->
+	    <td valign="top">
+	      <!-- News / release info table -->
+	      <table border="0" cellspacing="0" cellpadding="1"
+		     bgcolor="#000000" width="100%">
 		<tr>
-		  <td>FreeBSD についてもっとよく知りたくなったら,
-		    FreeBSD に関連する
-		    <a href="{$base}/publish.html">出版物</a> や
-		    <a href="news/press.html">FreeBSD 関係の報道</a> の
-		    ギャラリーを訪ねたり, このウェブサイトを
-		    見てみてください!</td>
+		  <td>
+		    <table cellpadding="4" cellspacing="0" border="0"
+			   bgcolor="#ffcc66" width="100%">
+		      <tr>
+			<td valign="top"><p><font size="+1" color="#990000"><b>最新リリース:
+			    <xsl:value-of select="$rel.current"/></b></font><br/>
+			
+			    <small>・<a href="{$u.rel.announce}">アナウンス</a><br/>
+			      ・<a href="{$base}/handbook/install.html">インストールガイド</a><br/>
+			      ・<a href="{$u.rel.notes}">リリースノート</a><br/>
+			      ・<a href="{$u.rel.errata}">Errata</a></small></p>
+
+			  <p><font size="+1" color="#990000"><b>最新ニュース</b></font><br/>
+			  <font size="-1">
+			    <!-- Code to pull in the most recent four news
+			         items -->
+			    <xsl:for-each select="descendant::event[position() &lt;= 20]">
+			      ・ <a>
+				<xsl:attribute name="href">
+				  news/newsflash.html#<xsl:call-template name="generate-event-anchor"/>
+				</xsl:attribute>
+				<xsl:choose>
+				  <xsl:when test="count(child::title)">
+				    <xsl:value-of select="title"/><br/>
+				  </xsl:when>
+				  <xsl:otherwise>
+				    <xsl:value-of select="p"/><br/>
+				  </xsl:otherwise>
+				</xsl:choose>
+			      </a>
+			    </xsl:for-each>
+			  </font></p>
+			</td>
+		      </tr>
+		    </table>
+		  </td>
+		</tr>
+	      </table>
+
+	      <p>&#xa0;</p>
+
+	      <table border="0" cellspacing="0" cellpadding="1"
+		     bgcolor="#000000" width="100%">
+		<tr>
+		  <td>
+		    <table cellpadding="4" cellspacing="0" border="0"
+			   bgcolor="#FFFFFF" width="100%"><tr>
+			<td>FreeBSD についてもっとよく知りたくなったら,
+			  FreeBSD に関連する
+			  <a href="{$base}/publish.html">出版物</a> や
+			  <a href="news/press.html">FreeBSD 関係の報道</a> の
+			  ギャラリーを訪ねたり, このウェブサイトを
+			  見てみてください!</td>
+		      </tr>
+		    </table>
+		  </td>
 		</tr>
 	      </table>
 	    </td>
 	  </tr>
-	
-	  <!-- New row for the strip of links that normally runs down the
-	       left hand side.  This is set up this way so that if you are
-	       viewing the site in a browser that does not support tables
-	       the main body copy will appear first, with the list of links
-	       at the end.  It's not perfect, but it works. -->
-	  <tr>
-	    <td bgcolor="#990000">&#xa0;</td>
-	    
-	    <td align="left" valign="top" bgcolor="#ffcc66">
-	      <p><big><font color="#990000"><b>ニュース</b></font></big>
-	      
-		<small><br/>
-		  &#xa0;&#xa0;<a href="news/newsflash.html">アナウンス</a><br/>
-		  &#xa0;&#xa0;<a href="news/press.html">報道</a><br/>
-		  &#xa0;&#xa0;<a href="news/index.html">さらに ...</a>
-		</small></p>
-	    
-	      <p><big><font color="#990000"><b>ソフトウェア</b></font></big>
-	      
-		<small><br/>
-		  &#xa0;&#xa0;<a href="{$base}/doc/ja_JP.eucjP/books/handbook/mirrors.html">FreeBSD を手に入れる</a><br/>
-		  &#xa0;&#xa0;<a href="releases/index.html">リリース情報</a><br/>
-		  &#xa0;&#xa0;<a href="{$base}/ports/index.html">Ports Collection</a><br/>
-		</small></p>
-	    
-	      <p><big><font color="#990000"><b>ドキュメント</b></font></big>
-		
-		<small><br/>
-		  &#xa0;&#xa0;<a href="projects/newbies.html">初心者のために</a><br/>
-		  &#xa0;&#xa0;<a href="{$base}/handbook/index.html">ハンドブック</a><br/>
-		  &#xa0;&#xa0;<a href="{$base}/FAQ/index.html">FAQ</a><br/>
-		  &#xa0;&#xa0;<a href="{$base}/docproj/index.html">Doc. Project</a><br/>
-		  &#xa0;&#xa0;<a href="docs.html">さらに...</a><br/>
-		</small></p>
-	    
-	      <p><big><font color="#990000"><b>サポート</b></font></big>
-	      
-		<small><br/>
-		  &#xa0;&#xa0;<a href="{$base}/support.html#mailing-list">メーリングリスト</a><br/>
-		  &#xa0;&#xa0;<a href="{$base}/support.html#newsgroups">ニュースグループ</a><br/>
-		  &#xa0;&#xa0;<a href="{$base}/support.html#user">ユーザグループ</a><br/>
-		  &#xa0;&#xa0;<a href="{$base}/support.html#web">Web 上の資料</a><br/>
-		  &#xa0;&#xa0;<a href="security/index.html">セキュリティ</a><br/>
-		  &#xa0;&#xa0;<a href="{$base}/support.html">さらに...</a>
-		</small></p>
-	      
-	      <p><big><font color="#990000"><b>開発</b></font></big>
-		
-		<small><br/>
-		  &#xa0;&#xa0;<a href="projects/index.html">プロジェクト</a><br/>
-		  &#xa0;&#xa0;<a href="{$base}/support.html#gnats">バグレポート</a><br/>
-		  &#xa0;&#xa0;<a href="{$base}/support.html#cvs">CVS リポジトリ</a><br/>
-		</small></p>
-	      
-	      <p><big><font color="#990000"><b>ベンダ</b></font></big>
-		
-		<small><br/>
-		  &#xa0;&#xa0;<a href="{$base}/commercial/software_bycat.html">ソフトウェア</a><br/>
-		  &#xa0;&#xa0;<a href="{$base}/commercial/hardware.html">ハードウェア</a><br/>
-		  &#xa0;&#xa0;<a href="{$base}/commercial/consulting_bycat.html">コンサルティング</a><br/>
-		  &#xa0;&#xa0;<a href="{$base}/commercial/misc.html">その他</a><br/>
-		</small></p>
-	      
-	      <p><big><font color="#990000"><b>このサイトについて</b></font></big>
-		
-		<small><br/>
-		  &#xa0;&#xa0;<a href="{$base}/search/index-site.html">サイトマップ</a><br/>
-		  &#xa0;&#xa0;<a href="{$base}/search/search.html">検索</a><br/>
-		  &#xa0;&#xa0;<a href="internal/index.html">さらに...</a><br/>
-		</small></p>
-	      
-	      <form action="http://www.FreeBSD.org/cgi/search.cgi" method="get">
-		<small>&#xa0;&#xa0;検索:<br/>
-		  <input type="text" name="words" size="10"/>
-		  <input type="hidden" name="max" value="25"/>
-		  <input type="hidden" name="source" value="www"/>
-		  <input type="submit" value="実行"/></small>
-	      </form>
-	    </td>
-	  </tr>
 	</table>
 
-	<hr/>
-	
-	<table border="0" cellspacing="0" cellpadding="3">
+	<hr noshade="noshade" size="1" />
+
+	<table width="100%" border="0" cellspacing="0" cellpadding="3">
 	  <tr>
 	    <td><a href="http://www.freebsdmall.com/"><img
 							   src="../gifs/mall_title_medium.gif" alt="[FreeBSD Mall]"
@@ -407,13 +426,10 @@
 	<p><small>このウェブサイトは毎日 8:00 UTC と 20:00 UTC に更新しています.
 	  </small></p>
     
-	<hr/>
-
 	<table width="100%" cellpadding="0" border="0" cellspacing="0">
 	  <tr>
 	    <td align="left" 
-		valign="top"><small><a href="{$base}/mailto.html">お問い合わせ先
-		</a> : <a href="jabout.html">日本語化について</a><br/>
+		valign="top"><small><a href="{$base}/mailto.html">お問い合わせ先</a> : <a href="jabout.html">日本語化について</a><br/>
 		<xsl:value-of select="$date"/></small></td>
 
 	    <td align="right" 

@@ -1,4 +1,4 @@
-# $FreeBSD: www/ja/Makefile,v 1.46 2000/12/30 14:25:12 hrs Exp $
+# $FreeBSD: www/ja/Makefile,v 1.47 2001/08/08 02:08:09 kuriyama Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.58
 
@@ -17,7 +17,6 @@ DOCS+= availability.sgml
 DOCS+= docs.sgml 
 DOCS+= features.sgml
 DOCS+= register.sgml
-DOCS+= index.sgml
 DOCS+= internet.sgml 
 DOCS+= mailto.sgml 
 DOCS+= publish.sgml
@@ -31,7 +30,8 @@ DOCS+= jabout.sgml
 
 # These will be directly installed.
 
-#DATA=	robots.txt
+#DATA=	favicon.ico
+#DATA+=	robots.txt
 
 # Subdirectories
 # SGML
@@ -40,6 +40,7 @@ SUBDIR+= commercial
 SUBDIR+= docproj
 SUBDIR+= news
 SUBDIR+= alpha
+
 SUBDIR+= internal
 SUBDIR+= java
 SUBDIR+= copyright
@@ -52,6 +53,16 @@ SUBDIR+= smp
 SUBDIR+= conspectus
 .if !defined(WEB_ONLY) || empty(WEB_ONLY)
 SUBDIR+= ports
+# SUBDIR+= doc
+# .endif
+# .if defined(BUILD_RELNOTES)
+# SUBDIR+= relnotes
+# .endif
+#
+# # These *must* be listed after the "doc" subdir, as they create symlinks
+# # in to it.
+# .if !defined(WEB_ONLY) || empty(WEB_ONLY)
+# SUBDIR+= tutorials
 .endif
 
 # Non-SGML
@@ -67,6 +78,10 @@ DOCSUBDIR=	FAQ handbook
 SGMLOPTS=	-links -hdr ${.CURDIR}/doc.hdr -ftr ${.CURDIR}/doc.ftr -e EUC-JP
 
 WEBDIR=		data/ja
+
+index.html: index.xsl news/news.xml includes.xsl news/includes.xsl
+	xsltproc -nonet -o index.html index.xsl news/news.xml
+#	-tidy -i -m -f /dev/null index.html
 
 ### Revision checking
 REVCHECK=	yes

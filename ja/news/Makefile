@@ -1,4 +1,4 @@
-# $FreeBSD: www/ja/news/Makefile,v 1.25 2001/08/01 14:36:54 hrs Exp $
+# $FreeBSD: www/ja/news/Makefile,v 1.26 2001/08/08 02:11:16 kuriyama Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.23
 
@@ -10,7 +10,6 @@
 .endif
 
 DOCS= press.sgml
-DOCS+= newsflash.sgml
 DOCS+= news.sgml
 #DOCS+= webchanges.sgml
 
@@ -29,6 +28,20 @@ INDEXLINK= news.html
 
 SUBDIR= 	1996
 SUBDIR+= 	1997
+#SUBDIR+= 	1998
+#SUBDIR+= 	1999
+#SUBDIR+= 	2000
+#SUBDIR+=	status
+
+DATA=		newsflash.html
+#+= news.rdf
+
+newsflash.html: newsflash.xsl news.xml includes.xsl ../includes.xsl
+	xsltproc -nonet -o newsflash.html newsflash.xsl news.xml
+#	-tidy -i -m -f /dev/null newsflash.html
+
+news.rdf: news-rdf.xsl news.xml includes.xsl ../includes.xsl
+	xsltproc -nonet -o news.rdf news-rdf.xsl news.xml
 
 ### Revision checking
 REVCHECK=	YES
