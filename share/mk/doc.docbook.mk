@@ -1,5 +1,5 @@
 #
-# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.25 2000/10/31 14:39:13 kuriyama Exp $
+# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.26 2001/02/22 15:42:41 nik Exp $
 #
 # This include file <doc.docbook.mk> handles building and installing of
 # DocBook documentation in the FreeBSD Documentation Project.
@@ -252,19 +252,19 @@ ${DOC}.tex-pdf: ${SRCS} ${IMAGES_PDF}
 
 ${DOC}.dvi: ${DOC}.tex-ps
 	@echo "==> TeX pass 1/3"
-	-tex "&jadetex" ${.ALLSRC}
+	-tex "&jadetex" '\nonstopmode\input{${.ALLSRC}}'
 	@echo "==> TeX pass 2/3"
-	-tex "&jadetex" ${.ALLSRC}
+	-tex "&jadetex" '\nonstopmode\input{${.ALLSRC}}'
 	@echo "==> TeX pass 3/3"
-	-tex "&jadetex" ${.ALLSRC}
+	-tex "&jadetex" '\nonstopmode\input{${.ALLSRC}}'
 
 ${DOC}.pdf: ${DOC}.tex-pdf
 	@echo "==> PDFTeX pass 1/3"
-	-pdftex "&pdfjadetex" ${.ALLSRC}
+	-pdftex "&pdfjadetex" '\nonstopmode\input{${.ALLSRC}}'
 	@echo "==> PDFTeX pass 2/3"
-	-pdftex "&pdfjadetex" ${.ALLSRC}
+	-pdftex "&pdfjadetex" '\nonstopmode\input{${.ALLSRC}}'
 	@echo "==> PDFTeX pass 3/3"
-	pdftex "&pdfjadetex" ${.ALLSRC}
+	pdftex "&pdfjadetex" '\nonstopmode\input{${.ALLSRC}}'
 
 ${DOC}.ps: ${DOC}.dvi
 	dvips -o ${.TARGET} ${.ALLSRC}
