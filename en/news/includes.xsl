@@ -1,11 +1,15 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/en/news/includes.xsl,v 1.4 2001/09/18 10:04:32 chris Exp $ -->
+<!-- $FreeBSD: www/en/news/includes.xsl,v 1.5 2003/08/25 11:36:15 simon Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
   <xsl:variable name="newshome">
     <a href="{$base}/news/news.html">News Home</a>
+  </xsl:variable>
+
+  <xsl:variable name="presshome">
+    <a href="{$base}/news/press.html">Press Home</a>
   </xsl:variable>
 
   <!-- Generate a unique anchor for this event -->
