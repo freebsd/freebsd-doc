@@ -1,4 +1,6 @@
-# $Id: Makefile,v 1.6 1997-11-03 08:53:35 max Exp $
+# $Id: Makefile,v 1.7 1998-07-23 10:25:12 wosch Exp $
+
+.NOTPARALLEL: 
 
 SGMLOPTS=-links
 DOC=	FAQ

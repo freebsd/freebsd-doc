@@ -1,4 +1,6 @@
-# $Id: Makefile,v 1.32 1998-04-30 12:51:11 jkh Exp $
+# $Id: Makefile,v 1.33 1998-07-23 10:27:04 wosch Exp $
+
+.NOTPARALLEL:
 
 SGMLOPTS=-links
 SRCS= anoncvs.sgml authors.sgml backups.sgml basics.sgml bibliography.sgml
