@@ -1,5 +1,5 @@
 #!/usr/bin/perl -T
-# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.31 2003/04/10 09:29:21 des Exp $
+# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.32 2003/05/21 18:48:51 ceri Exp $
 
 $ENV{'PATH'} = "/bin:/usr/bin:/usr/sbin:/sbin:/usr/local/bin";
 
@@ -219,7 +219,7 @@ sub fixline {
     $line =~ s/</&lt;/g;
     $line =~ s/>/&gt;/g;
     $line =~ s%((http|ftp)://[^\s"\)\>,;]+)%<A HREF="$1">$1</A>%gi;
-    $line =~ s%(\WPR[:s# \t]+)([a-z386]+\/)?([0-9]+)%$1<A HREF="query-pr.cgi?pr=$3">$2$3</A>%ig; 
+    $line =~ s%(\WPR[:s# \t]+)([a-z3486]+\/)?([0-9]+)%$1<A HREF="query-pr.cgi?pr=$3">$2$3</A>%ig; 
     
     return &srcref($line);
 }
