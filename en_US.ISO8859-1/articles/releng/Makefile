@@ -18,5 +18,7 @@ IMAGES_EN+=	branches-releng4.pic
 
 CSS_SHEET_ADDITIONS= extra.css
 
+URL_RELPREFIX?=	../../../..
 DOC_PREFIX?= ${.CURDIR}/../../..
+
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"
