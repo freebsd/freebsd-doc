@@ -2,8 +2,8 @@
 # The FreeBSD French Documentation Project
 #
 # $FreeBSD$
-# $Id: Makefile,v 1.11 2003-04-11 09:21:15 blackend Exp $
-# Original revision: 1.61
+# $Id: Makefile,v 1.12 2003-07-07 13:29:49 blackend Exp $
+# Original revision: 1.64
 #
 # Build the FreeBSD Handbook.
 #
