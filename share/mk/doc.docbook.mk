@@ -1,5 +1,5 @@
 #
-# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.23 2000/10/29 02:39:10 nik Exp $
+# $FreeBSD: doc/share/mk/doc.docbook.mk,v 1.24 2000/10/29 18:01:54 nik Exp $
 #
 # This include file <doc.docbook.mk> handles building and installing of
 # DocBook documentation in the FreeBSD Documentation Project.
@@ -187,14 +187,14 @@ index.html HTML.manifest: ${SRCS} ${LOCAL_IMAGES_LIB} ${IMAGES_PNG}
 .endif
 
 ${DOC}.html: ${SRCS} ${LOCAL_IMAGES_LIB} ${IMAGES_PNG}
-	${JADE} -ioutput.html -ioutput.html.images -V nochunks ${JADEOPTS} -d ${DSLHTML} -t sgml ${MASTERDOC} > ${.TARGET}
+	${JADE} -ioutput.html -ioutput.html.images -V nochunks ${JADEOPTS} -d ${DSLHTML} -t sgml ${MASTERDOC} > ${.TARGET} || (rm -f ${.TARGET} && false)
 .if !defined(NO_TIDY)
 	-tidy -i -m -f /dev/null ${TIDYFLAGS} ${.TARGET}
 .endif
 
 # Special target to produce HTML with no images in it.
 ${DOC}.html-text: ${SRCS}
-	${JADE} -ioutput.html -V nochunks ${JADEOPTS} -d ${DSLHTML} -t sgml ${MASTERDOC} > ${.TARGET}
+	${JADE} -ioutput.html -V nochunks ${JADEOPTS} -d ${DSLHTML} -t sgml ${MASTERDOC} > ${.TARGET} || (rm -f ${.TARGET} && false)
 
 ${DOC}.html-split.tar: HTML.manifest
 	tar cf ${.TARGET} `xargs < HTML.manifest`
