@@ -1,4 +1,5 @@
-# $FreeBSD: www/en/Makefile,v 1.107 2004/02/01 00:02:58 josef Exp $
+# $FreeBSD: www/en/Makefile,v 1.108 2004/04/05 14:21:26 phantom Exp $
+
 .if exists(Makefile.conf)
 .include "Makefile.conf"
 .endif
@@ -41,6 +42,7 @@ SUBDIR+= advocacy
 SUBDIR+= events
 SUBDIR+= FAQ
 SUBDIR+= handbook
+SUBDIR+= tutorials
 SUBDIR+= internal
 SUBDIR+= java
 SUBDIR+= copyright
@@ -63,19 +65,11 @@ SUBDIR+= doc
 SUBDIR+= relnotes
 .endif
 
-# These *must* be listed after the "doc" subdir, as they create symlinks
-# in to it.
-.if !defined(WEB_ONLY) || empty(WEB_ONLY)
-SUBDIR+= tutorials
-.endif
-
 # Non-SGML
 SUBDIR+= gifs
 SUBDIR+= cgi
 
 WEB_LANG?=	da de es fr it ja pt_BR ru tr zh
-
-COOKIE=	FAQ handbook
 
 # Non-English
 

@@ -1,6 +1,6 @@
 # The FreeBSD Documentation Project
 # The FreeBSD German Documentation Project
-# $FreeBSD: www/de/Makefile,v 1.13 2004/01/11 00:32:03 mheinen Exp $
+# $FreeBSD: www/de/Makefile,v 1.14 2004/04/05 14:17:52 phantom Exp $
 # $FreeBSDde: de-www/Makefile,v 1.21 2004/01/05 11:08:11 mheinen Exp $
 # basiert auf: 1.105
 
@@ -44,16 +44,10 @@ SUBDIR+= doc
 SUBDIR+= relnotes
 .endif
 
-# These *must* be listed after the "doc" subdir, as they create symlinks
-# in to it.
-#.if !defined(WEB_ONLY) || empty(WEB_ONLY)
 #SUBDIR+= tutorials
-#.endif
 
 # Non-SGML
 SUBDIR+= gifs
-
-COOKIE=	FAQ handbook
 
 WEBDIR?=	data/de
 

@@ -1,7 +1,7 @@
 #
 # The FreeBSD Russian Documentation Project
 #
-# $FreeBSD: www/ru/Makefile,v 1.34 2004/03/23 23:27:57 phantom Exp $
+# $FreeBSD: www/ru/Makefile,v 1.35 2004/04/05 14:17:52 phantom Exp $
 # $FreeBSDru: frdp/www/ru/Makefile,v 1.34 2004/02/11 12:17:39 den Exp $
 #
 # Original revision: 1.107
@@ -43,6 +43,7 @@ SUBDIR+= news
 #SUBDIR+= events
 SUBDIR+= FAQ
 SUBDIR+= handbook
+SUBDIR+= tutorials
 SUBDIR+= internal
 SUBDIR+= java
 SUBDIR+= copyright
@@ -65,17 +66,9 @@ SUBDIR+= doc
 #SUBDIR+= relnotes
 .endif
 
-# These *must* be listed after the "doc" subdir, as they create symlinks
-# in to it.
-.if !defined(WEB_ONLY) || empty(WEB_ONLY)
-SUBDIR+= tutorials
-.endif
-
 # Non-SGML
 #SUBDIR+= gifs
 #SUBDIR+= cgi
-
-COOKIE=		FAQ handbook
 
 WEBDIR?=	data/ru
 
