@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/projects/Makefile,v 1.10 2001/11/13 09:40:02 kuriyama Exp $
+# $FreeBSD: www/en/projects/Makefile,v 1.11 2002/04/12 05:55:20 murray Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -11,6 +11,7 @@ DOCS=	projects.sgml
 DOCS+=	updater.sgml
 DOCS+=	newbies.sgml
 DOCS+=	libh.sgml
+DOCS+=	cvsweb.sgml
 
 INDEXLINK= projects.html
 
