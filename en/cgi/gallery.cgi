@@ -3,7 +3,7 @@
 # A CGI form processor for FreeBSD Gallery submissions
 # 
 # John Fieber <jfieber@indiana.edu>
-# $Id: gallery.cgi,v 1.4 1996-12-12 23:10:52 jfieber Exp $
+# $Id: gallery.cgi,v 1.5 1996-12-12 23:13:50 jfieber Exp $
 ##################################################################
 
 #$curator = "jfieber@indiana.edu";
@@ -14,14 +14,14 @@ $subject = "Another gallery submission...";
 require 'cgi-lib.pl';
 &ReadParse;
 
-$hsty_date = "\$Date: 1996-12-12 23:10:52 $";
+$hsty_date = "\$Date: 1996-12-12 23:13:50 $";
 #$h_base = "..";
 #$d_author = "
 require 'cgi-style.pl';
 
 # Construct the gallery entry in HTML form
 $entry = "<li><a href=\"$in{'url'}\"><strong>$in{'organization'}</strong> " .
-    "-- $in{'description'}</a> &i.new;</li>";
+    "-- $in{'description'}</a></li>";
 
 # Try and figure out where the person came from so we can provide
 # links back to the correct place.
