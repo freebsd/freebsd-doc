@@ -15,7 +15,7 @@
 # Disclaimer:
 #   This is pretty ugly in places.
 #
-# $FreeBSD: www/en/cgi/search.cgi,v 1.20 2000/12/28 13:37:51 wosch Exp $
+# $FreeBSD: www/en/cgi/search.cgi,v 1.21 2001/02/22 11:51:39 wosch Exp $
 
 
 $server_root = '/usr/local/www';
@@ -116,6 +116,7 @@ sub do_wais {
     else {
 	print "The archive <em>@AVAIL_source</em> contains ";
     }
+    @FORM_words = map { s/&/&amp;/g; s/</&lt;/g; s/>/&gt;/g; $_; } @FORM_words;
     print " the following items relevant to \`@FORM_words\':\n";
     print "<OL>\n";
 
