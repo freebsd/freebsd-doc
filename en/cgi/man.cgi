@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp 
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.44 2001-07-31 21:22:48 wosch Exp $
+# $Id: man.cgi,v 1.45 2001-08-03 18:07:43 wosch Exp $
 
 #use Data::Dumper;
 #use Carp;
@@ -603,11 +603,11 @@ sub man {
 	    close TMP;
 	    local($ENV{'PATH'}) = '/bin:/usr/bin:/usr/local/bin';
 	    open(PDF, "-|") or 
-		exec('ps2pdf', $tempfile, '/dev/stdout') or
+		exec('/usr/local/bin/ps2pdf', $tempfile, '/dev/stdout') or
 		die "open ps2pdf: $!\n";
 
             # sleep and delete the temp file
-            select(undef, undef, undef, 0.5);
+            select(undef, undef, undef, 0.8);
 	    unlink($tempfile);
 
 	    while(<PDF>) {
@@ -895,7 +895,7 @@ ETX
 }
 
 sub copyright {
-    $id = '$Id: man.cgi,v 1.44 2001-07-31 21:22:48 wosch Exp $';
+    $id = '$Id: man.cgi,v 1.45 2001-08-03 18:07:43 wosch Exp $';
 
     return qq{\
 <PRE>
