@@ -3,14 +3,15 @@
 # cvsweb - a CGI interface to CVS trees.
 #
 # Written in their spare time by
-#             Bill Fenner      <fenner@FreeBSD.org>   (original work)
-# extended by Henner Zeller    <zeller@think.de>,
-#             Henrik Nordstrom <hno@hem.passagen.se>
-#             Ken Coar         <coar@Apache.Org>
-#             Dick Balaska     <dick@buckosoft.com>
-#             Akinori MUSHA    <knu@FreeBSD.org>
-#             Jens-Uwe Mager   <jum@helios.de>
-#             Ville Skyttä     <scop@FreeBSD.org>
+#             Bill Fenner          <fenner@FreeBSD.org>   (original work)
+# extended by Henner Zeller        <zeller@think.de>,
+#             Henrik Nordstrom     <hno@hem.passagen.se>
+#             Ken Coar             <coar@Apache.Org>
+#             Dick Balaska         <dick@buckosoft.com>
+#             Akinori MUSHA        <knu@FreeBSD.org>
+#             Jens-Uwe Mager       <jum@helios.de>
+#             Ville Skyttä         <scop@FreeBSD.org>
+#             Vassilii Khachaturov <vassilii@tarunz.org>
 #
 # Based on:
 # * Bill Fenners cvsweb.cgi revision 1.28 available from:
@@ -43,10 +44,10 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-#  FreeBSD: projects/cvsweb/cvsweb.cgi,v 1.112 2002/07/06 18:15:19 scop Exp
-# $Id: cvsweb.cgi,v 1.84 2002-07-07 04:46:06 knu Exp $
+#  FreeBSD: projects/cvsweb/cvsweb.cgi,v 1.119 2002/07/23 13:58:32 scop Exp
+# $Id: cvsweb.cgi,v 1.85 2002-07-23 16:27:04 scop Exp $
 # $Idaemons: /home/cvs/cvsweb/cvsweb.cgi,v 1.84 2001/10/07 20:50:10 knu Exp $
-# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.83 2002/05/22 08:33:27 knu Exp $
+# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.84 2002/07/07 04:46:06 knu Exp $
 #
 ###
 
@@ -148,7 +149,7 @@ sub forbidden_module($);
 ##### Start of Configuration Area ########
 delete $ENV{PATH};
 
-$cvsweb_revision = '2.0.4';
+$cvsweb_revision = '2.0.5';
 
 use File::Basename ();
 
@@ -235,7 +236,7 @@ $LOG_REVSEPARATOR  = q/^-{28}$/;
 );
 
 $cgi_style::hsty_base = 'http://www.FreeBSD.org';
-$_ = q$FreeBSD: www/en/cgi/cvsweb.cgi,v 1.83 2002/05/22 08:33:27 knu Exp $;
+$_ = q$FreeBSD: www/en/cgi/cvsweb.cgi,v 1.84 2002/07/07 04:46:06 knu Exp $;
 @_ = split;
 $cgi_style::hsty_date = "@_[3,4]";
 
@@ -355,7 +356,8 @@ $input{only_with_tag} = $input{only_on_branch}
 
 # Prevent cross-site scripting
 foreach (@unsafevars) {
-	if (defined($input{$_}) && $input{$_} =~ /[^\w\-.]/) {
+	# Colons are needed in diffs between tags.
+	if (defined($input{$_}) && $input{$_} =~ /[^\w\-.:]/) {
 		fatal("500 Internal Error",
 		      'Malformed query (%s=%s)',
 		      $_, $input{$_});
@@ -944,6 +946,12 @@ if (-d $fullname) {
 			}
 			$dirrow++;
 		} elsif (s/,v$//) {
+
+			# Skip forbidden files now so we'll give no hint
+			# about their existence.  This should probably have
+			# been done earlier, but it's straightforward here.
+			next if forbidden_file("$fullname/$_");
+
 			$fileurl = ($attic ? "Attic/" : "") . urlencode($_);
 			$url = './' . $fileurl . $query;
 			my $rev    = '';
@@ -1116,6 +1124,13 @@ if (-d $fullname) {
 # View Files
 ###############################
 elsif (-f $fullname . ',v') {
+
+	if (forbidden_file($fullname)) {
+		fatal('403 Forbidden',
+		      'Access forbidden.  This file is mentioned in @ForbiddenFiles');
+		return;
+	}
+
 	if (defined($input{'rev'}) || $doCheckout) {
 		&doCheckout($fullname, $input{'rev'});
 		gzipclose();
@@ -1263,6 +1278,11 @@ sub findLastModifiedSubdirs(@) {
 			$filename = "$dirname/$filename";
 			my ($file) = "$fullname/$filename";
 			next if ($filename !~ /,v$/ || !-f $file);
+
+			# Skip forbidden files.
+			(my $f = $file) =~ s/,v$//;
+			next if forbidden_file($f);
+
 			$filename =~ s/,v$//;
 			my $modtime = -M $file;
 
@@ -1599,12 +1619,6 @@ sub doAnnotate($$) {
 		      $ENV{QUERY_STRING});
 	}
 
-	if (&forbidden_file($fullname)) {
-		fatal("403 Forbidden",
-		      'Access forbidden.  This file is mentioned in @ForbiddenFiles');
-		return;
-	}
-
 	($pathname = $where) =~ s/(Attic\/)?[^\/]*$//;
 	($filename = $where) =~ s/^.*\///;
 
@@ -1787,12 +1801,6 @@ sub doCheckout($$) {
 		fatal("404 Not Found",
 		      'Malformed query "%s"',
 		      $ENV{QUERY_STRING});
-	}
-
-	if (&forbidden_file($fullname)) {
-		fatal("403 Forbidden",
-		      'Access forbidden.  This file is mentioned in @ForbiddenFiles');
-		return;
 	}
 
 	# get mimetype
@@ -3329,10 +3337,10 @@ sub chooseCVSRoot() {
 		print "CVS Root: <b>[$cvstree]</b>";
 	}
 
-	print " <label for=\"path\" accesskey=\"P\">Module path or alias:";
+	print " <label for=\"mpath\" accesskey=\"M\">Module path or alias:";
 	print "</label>\n";
-	print "<input type=\"text\" id=\"path\" name=\"path\" value=\"\" size=\"15\">\n";
-	print "<input type=\"submit\" value=\"Go\" accesskey=\"G\">";
+	print "<input type=\"text\" id=\"mpath\" name=\"path\" value=\"\" size=\"15\">\n";
+	print "<input type=\"submit\" value=\"Go\" accesskey=\"O\">";
 
 	if (2 <= @CVSROOT) {
 		print "</td>\n</tr>\n</table>";
@@ -3343,24 +3351,24 @@ sub chooseCVSRoot() {
 }
 
 sub chooseMirror() {
-	my ($mirror, $moremirrors);
-	$moremirrors = 0;
 
 	# This code comes from the original BSD-cvsweb
 	# and may not be useful for your site; If you don't
-	# set %MIRRORS this won't show up, anyway
-	#
-	# Should perhaps exlude the current site somehow..
-	if (keys %MIRRORS) {
-		print "\nThis CVSweb is mirrored in:\n";
+	# set %MIRRORS this won't show up, anyway.
+	scalar(%MIRRORS) or return;
 
-		foreach $mirror (keys %MIRRORS) {
-			print ", " if ($moremirrors);
-			print &link(htmlquote($mirror), $MIRRORS{$mirror});
-			$moremirrors = 1;
-		}
-		print "<p>\n";
+	# Should perhaps exclude the current site somehow...
+	print "\n<p>\nThis CVSweb is mirrored in\n";
+
+	my @tmp = map(&link(htmlquote($_), $MIRRORS{$_}),
+		      sort keys %MIRRORS);
+	my $tmp = pop(@tmp);
+
+	if (scalar(@tmp)) {
+	    print join(', ', @tmp), ' and ';
 	}
+
+	print "$tmp.\n</p>\n";
 }
 
 sub fileSortCmp() {
@@ -3388,10 +3396,14 @@ sub fileSortCmp() {
 
 	if ($comp == 0) {
 
-		# Directories first, then sorted on name if no other sort critera
-		# available.
-		my $ad = ((-d "$fullname/$a") ? "D" : "F");
-		my $bd = ((-d "$fullname/$b") ? "D" : "F");
+		# Directories first, then files under version control,
+		# then other, "rogue" files.
+		# Sort by filename if no other criteria available.
+
+		my $ad = ((-d "$fullname/$a") ? 'D'
+		    : (defined($fileinfo{$af}) ? 'F' : 'R'));
+		my $bd = ((-d "$fullname/$b") ? 'D'
+		    : (defined($fileinfo{$bf}) ? 'F' : 'R'));
 		($c = $a) =~ s|.*/||;
 		($d = $b) =~ s|.*/||;
 		$comp = ("$ad$c" cmp "$bd$d");
@@ -3451,7 +3463,7 @@ sub download_link($$$;$) {
 		# currently, the best way is to comment out the size parameters
 		# ($extern_window...) in cvsweb.conf.
 		if ($use_java_script) {
-			my @attr = qw(resizeable scrollbars);
+			my @attr = qw(resizable scrollbars);
 
 			push @attr, qw(status toolbar)
 			    if (defined($mimetype) && $mimetype eq "text/html");
@@ -3468,7 +3480,7 @@ sub download_link($$$;$) {
 			# the same window *twice*.
 			printf
 			    q` onclick="window.open('%s','cvs_checkout','%s');return false"`,
-			    hrefquote($fullurl), join (',', @attr);
+			    hrefquote("$fullurl$barequery"), join (',', @attr);
 		}
 	}
 	print "><b>$textlink</b></a>";
