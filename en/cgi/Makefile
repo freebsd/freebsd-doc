@@ -1,4 +1,8 @@
-# $Id: Makefile,v 1.11 1998-03-15 22:00:07 wosch Exp $
+# $Id: Makefile,v 1.12 1998-08-11 01:18:35 wosch Exp $
+
+.if exists("../Makefile.conf")
+.include "../Makefile.conf"
+.endif
 
 DATA=	ftp.mirrors
 CGI=	ftp.cgi gallery.cgi mirror.cgi cgi-lib.pl cgi-style.pl

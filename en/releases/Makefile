@@ -1,4 +1,8 @@
-# $Id: Makefile,v 1.11 1998-07-24 20:09:53 jkh Exp $
+# $Id: Makefile,v 1.12 1998-08-11 01:18:40 wosch Exp $
+
+.if exists("../Makefile.conf")
+.include "../Makefile.conf"
+.endif
 
 DOCS?=	index.sgml snapshots.sgml
 

@@ -1,4 +1,8 @@
-# $Id: Makefile,v 1.13 1998-06-24 16:58:28 wosch Exp $
+# $Id: Makefile,v 1.14 1998-08-11 01:18:37 wosch Exp $
+
+.if exists("../Makefile.conf")
+.include "../Makefile.conf"
+.endif
 
 DATA=   apache.gif apachepower.gif daemon.gif dir.gif doc.gif
 DATA+=  home.gif littlelogo.gif new.gif power-button.gif
