@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/index.xsl,v 1.54 2003/03/11 14:36:29 wosch Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.55 2003/03/11 14:41:54 wosch Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   
@@ -6,7 +6,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.54 2003/03/11 14:36:29 wosch Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.55 2003/03/11 14:41:54 wosch Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -27,13 +27,13 @@
       <body bgcolor="#FFFFFF" text="#000000" link="#0000FF" vlink="#840084"
 	    alink="#0000FF">
     
-	<table border="0" cellspacing="0" cellpadding="0">
+	<table border="0" cellspacing="0" cellpadding="0" width="100%">
 	  <tr>
 	    <td><a href="http://www.FreeBSD.org/index.html">
 		<img src="gifs/freebsd_1.gif" height="94" width="306"
 		     alt="FreeBSD: The Power to Serve" border="0"/></a></td>
 	    
-	    <td align="right" valign="bottom" width="300">
+	    <td align="right" valign="bottom">
 	      <form action="http://www.FreeBSD.org/cgi/mirror.cgi" 
 		    method="get">
 		
@@ -163,9 +163,10 @@
 		<br/>
 		
 		<font color="#990000"><b>Language: </b></font> 
-		<a href="ja/">Japanese</a>, 
-		<a href="es/index.html">Spanish</a>, 
+		<a href="it/index.html">Italian</a>, 
+		<a href="ja/index.html">Japanese</a>, 
 		<a href="ru/index.html">Russian</a>, 
+		<a href="es/index.html">Spanish</a>, 
 		<a href="support.html#web">Other</a>
 	      </form>
 	    </td>
