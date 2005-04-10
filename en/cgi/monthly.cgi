@@ -5,7 +5,6 @@ require "./cgi-style.pl";
 use CGI qw(:all);
 use strict;
 
-
 my $Submit = param("Submit");
 my $debug  = param("debug") || "";
 
@@ -191,22 +190,18 @@ print
   (html_header("Submitting a FreeBSD Project Status Report"),
    hr,
    join("<BR>\n", @messages, ""),
-   p,
-   "To submit status information about a FreeBSD project, fill out the following:",
-   br,
+   p("To submit status information about a FreeBSD project, fill out the",
+       " following:"),
    start_form(),
-   
+
    h3("Project:"),
    textfield(-name => "Project", -size => "32"),
 
    h3("Category:"),
-   scrolling_list(-name => "Category", -values => ['proj', 'docs', 'kern',
-       'arch', 'ports', 'vendor', 'misc'], -default => ['proj'], -size => 7,
-       -multiple => 'false', -lables => {'proj'=> 'Projects (non-specific)',
-       'docs' => 'Documentation', 'kern' => 'Kernel', 'arch' => 'Architectures',
-       'ports' => 'Ports', 'vendor' => 'Vendor / 3rd party software',
-       'misc' => 'Miscellaneous' }),
-   
+   popup_menu(-name => "Category",
+       -values => ['proj', 'docs', 'kern', 'bin', 'arch', 'ports', 'vendor',
+        'misc'], -default => 'proj'),
+
    h3("Developers:"),
    blockquote(table({"BORDER" => 0,
 					 "COLS"   => 3,
@@ -215,7 +210,7 @@ print
 					   td("Family Name"),
 					   td("Email address")),
 					@DeveloperTable)),
-   
+
    h3("Links:"),
    blockquote(table({"BORDER" => 0,
 					 "COLS"   => 2,
@@ -223,8 +218,10 @@ print
 					TR(td("Url"),
 					   td("Description (optional)")),
 					@LinksTable)),
-   
+
    h3("Present status:"),
+   p("You can use &quot;simple&quot; HTML tags (e.g. &lt;p&gt;, ",
+       "&lt;em&gt;, &lt;strong&gt; and &lt;a href=... &gt;) to format."),
    blockquote(textarea(-name => "SubmittedInfo",
 					   -rows => 7,
 					   -cols => 60)),
