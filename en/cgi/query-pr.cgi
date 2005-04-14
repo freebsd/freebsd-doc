@@ -1,5 +1,5 @@
 #!/usr/bin/perl -T
-# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.37 2004/02/16 16:57:10 ceri Exp $
+# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.38 2004/11/26 21:57:23 ceri Exp $
 
 $ENV{'PATH'} = "/bin:/usr/bin:/usr/sbin:/sbin:/usr/local/bin";
 
@@ -180,7 +180,7 @@ print "</dl>";
 $origsyn =~ s/[^a-zA-Z+.@-]/"%" . sprintf("%02X", unpack("C", $&))/eg;
 $email =~ s/[^a-zA-Z+.@-]/"%" . sprintf("%02X", unpack("C", $&))/eg;
 
-print qq`<A HREF="mailto:freebsd-gnats-submit\@FreeBSD.org,${email}?subject=Re:%20${cat}/${number}:%20$origsyn">Submit Followup</A> | <A HREF="./query-pr.cgi?pr=$pr&amp;f=raw">Raw PR</A>\n`;
+print qq`<A HREF="mailto:bug-followup\@FreeBSD.org,${email}?subject=Re:%20${cat}/${number}:%20$origsyn">Submit Followup</A> | <A HREF="./query-pr.cgi?pr=$pr&amp;f=raw">Raw PR</A>\n`;
 
 print &html_footer;
 
