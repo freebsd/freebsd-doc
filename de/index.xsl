@@ -2,8 +2,8 @@
 
 <!--
      $FreeBSD$
-     $FreeBSDde: de-www/index.xsl,v 1.43 2005/01/22 13:38:02 mheinen Exp $
-     basiert auf: 1.125
+     $FreeBSDde: de-www/index.xsl,v 1.45 2005/03/15 20:17:23 jkois Exp $
+     basiert auf: 1.127
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -139,8 +139,8 @@
 	      <h2>Was ist FreeBSD?</h2>
 
 	      <p>FreeBSD ist ein modernes Betriebssystem f&#252;r
-		x86 kompatible (einschlie&#223;lich Pentium und Athlon),
-		amd64 kompatible (einschlie&#223;lich Opteron, Athlon 64 und EM64T),
+		x86 kompatible (einschlie&#223;lich Pentium&#174; und Athlon&#8482;),
+		amd64 kompatible (einschlie&#223;lich Opteron&#8482;, Athlon 64 und EM64T),
 		Alpha/AXP, IA-64, PC-98 und UltraSPARC&#174;-Architekturen.
 		An der Unterst&#252;tzung weiterer
 		<a href="{$base}/platforms/index.html">Plattformen</a>
@@ -260,6 +260,9 @@
 			      &#183; <a href="{$u.rel2.hardware}">Hardware Notes</a><br/>
 			      &#183; <a href="{$u.rel2.installation}">Installation Notes</a><br/>
 			      &#183; <a href="{$u.rel2.errata}">Errata</a></small></p>
+
+			  <p><a href="{$enbase}/snapshots/index.html"><font size="+1" color="#990000"><b>Snapshot
+			    Releases</b></font></a></p>
 
 			  <p><font size="+1" color="#990000"><b>Ank&#252;ndigungen</b></font>
 			    <xsl:text> </xsl:text>

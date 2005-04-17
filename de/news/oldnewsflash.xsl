@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
 <!-- $FreeBSD$
-     $FreeBSDde: de-www/news/oldnewsflash.xsl,v 1.5 2004/05/02 00:49:58 brueffer Exp $
-     basiert auf: 1.6 -->
+     $FreeBSDde: de-www/news/oldnewsflash.xsl,v 1.6 2005/04/07 21:25:38 jkois Exp $
+     basiert auf: 1.7 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -101,15 +101,18 @@
 
   <xsl:template match="date"/>    <!-- Deliberately left blank -->
 
-  <!-- When the href attribute contains a '$base', expand it to the current
-       value of the $base variable. -->
+  <!-- When the href attribute contains a '$base' or '$enbase' , expand it to the current
+       value of the $base or '$enbase' variable. -->
 
-  <!-- All your $base are belong to us.  Ho ho ho -->
+  <!-- All your $base or $enbase are belong to us.  Ho ho ho -->
   <xsl:template match="a">
     <a><xsl:attribute name="href">
 	<xsl:choose>
 	  <xsl:when test="contains(@href, '$base')">
 	    <xsl:value-of select="concat(substring-before(@href, '$base'), $base, substring-after(@href, '$base'))"/>
+	  </xsl:when>
+	    <xsl:when test="contains(@href, '$enbase')">
+	      <xsl:value-of select="concat(substring-before(@href, '$enbase'), $enbase, substring-after(@href, '$enbase'))"/>
 	  </xsl:when>
 	  <xsl:otherwise>
 	    <xsl:value-of select="@href"/>
