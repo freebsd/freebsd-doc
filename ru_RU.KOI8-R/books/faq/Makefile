@@ -2,9 +2,9 @@
 # The FreeBSD Russian Documentation Project
 #
 # $FreeBSD$
-# $FreeBSDru: frdp/doc/ru_RU.KOI8-R/books/faq/Makefile,v 1.10 2003/12/20 17:53:19 andy Exp $
+# $FreeBSDru: frdp/doc/ru_RU.KOI8-R/books/faq/Makefile,v 1.11 2005/04/12 17:25:03 andy Exp $
 #
-# Original revision: 1.10
+# Original revision: 1.12
 #
 # Build the FreeBSD FAQ
 #
@@ -28,6 +28,7 @@ WITH_BIBLIOXREF_TITLE?=YES
 # SGML content
 SRCS=  book.sgml 
 
-DOC_PREFIX?= ${.CURDIR}/../../..
+URL_RELPREFIX?=	../../../..
+DOC_PREFIX?=	${.CURDIR}/../../..
 
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"
