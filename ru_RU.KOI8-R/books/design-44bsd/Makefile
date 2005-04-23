@@ -1,14 +1,15 @@
+# The FreeBSD Russian Documentation Project
 #
 # $FreeBSD$
-# $FreeBSDru: frdp/doc/ru_RU.KOI8-R/books/design-44bsd/Makefile,v 1.2 2001/07/25 10:37:21 phantom Exp $
+# $FreeBSDru: frdp/doc/ru_RU.KOI8-R/books/design-44bsd/Makefile,v 1.4 2003/12/18 07:09:48 phantom Exp $
 #
-# Original revision: 1.2
+# Original revision: 1.5
 
 DOC?= book
 
 FORMATS?= html
 
-IMAGES= fig1.eps fig2.eps
+IMAGES_EN= fig1.eps fig2.eps
 
 INSTALL_COMPRESSED?=gz
 INSTALL_ONLY_COMPRESSED?=
