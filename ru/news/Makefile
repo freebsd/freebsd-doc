@@ -1,7 +1,11 @@
-# $FreeBSD: www/ru/news/Makefile,v 1.10 2004/04/09 12:08:13 phantom Exp $
+#
 # The FreeBSD Russian Documentation Project
-# $FreeBSDru: frdp/www/ru/news/Makefile,v 1.10 2004/04/09 11:17:51 phantom Exp $
-# Original revision: 1.39
+#
+# $FreeBSD$
+# $FreeBSDru: frdp/www/ru/news/Makefile,v 1.11 2005/04/27 18:31:11 andy Exp $
+#
+# Original revision: 1.41
+#
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -32,6 +36,7 @@ SUBDIR+=	1999
 SUBDIR+=	2000
 SUBDIR+=	2001
 SUBDIR+=	2002
+SUBDIR+=	2003
 SUBDIR+=	status
 
 DATA=		newsflash.html news.rdf press.html
@@ -40,11 +45,11 @@ CLEANFILES+=	newsflash.html news.rdf press.html
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
 
 newsflash.html: newsflash.xsl news.xml\
-		includes.xsl ${XML_INCLUDES}
+			includes.xsl ${XML_INCLUDES}
 	${XSLTPROC} ${XSLTPROCOPTS} -o ${.TARGET} \
 		--param "news.project.xml-master" "'${XML_NEWS_NEWS_MASTER}'" \
 		--param "news.project.xml" "'${XML_NEWS_NEWS}'" \
-		--param "transtable.xml" "'${XML_TRANSTABLE}'" \
+		--param transtable.xml "'${XML_TRANSTABLE}'" \
 		${.CURDIR}/newsflash.xsl ${.CURDIR}/news.xml
 .if !defined(NO_TIDY)
 	-${TIDY} ${TIDYOPTS} ${.TARGET}
@@ -66,5 +71,3 @@ press.html: press.xsl press.xml\
 .if !defined(NO_TIDY)
 	-${TIDY} ${TIDYOPTS} ${.TARGET}
 .endif
-
-.include "${WEB_PREFIX}/share/mk/web.site.mk"
