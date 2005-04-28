@@ -4,7 +4,7 @@
 # ##################################################################
 # ## If you want to upgrade your GNOME desktop from 2.8 to 2.10,  ##
 # ## you're on the right track! Read our upgrade FAQ at           ##
-# ## http://www.freebsd.org/gnome/docs/faq28.html for complete    ##
+# ## http://www.freebsd.org/gnome/docs/faq210.html for complete   ##
 # ## instructions!                                                ##
 # ##################################################################
 # ##################################################################
@@ -34,14 +34,14 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $Id: gnome_upgrade.sh,v 1.20 2005-03-15 22:28:11 adamw Exp $
+# $Id: gnome_upgrade.sh,v 1.21 2005-04-28 21:48:17 adamw Exp $
 # $FreeBSD$
 #
 
 # This script will aid in doing major upgrades to the GNOME Desktop (e.g.
 # an upgrade from 2.8 --> 2.10).
 
-GNOME_UPGRADE_SH_VER=2.10-3;	# Increment this with every functional change
+GNOME_UPGRADE_SH_VER=2.10-4;	# Increment this with every functional change
 
 ## BEGIN global variable declarations.
 VERBOSE=${VERBOSE:=0}
@@ -171,7 +171,7 @@ if [ "$1" = "-v" ]; then
     echo "FreeBSD GNOME Upgrade tool: gnome_upgrade.sh"
     echo "--"
     echo "Script version: ${GNOME_UPGRADE_SH_VER}"
-    echo 'MarcusCom revision: $Id: gnome_upgrade.sh,v 1.20 2005-03-15 22:28:11 adamw Exp $'
+    echo 'MarcusCom revision: $Id: gnome_upgrade.sh,v 1.21 2005-04-28 21:48:17 adamw Exp $'
     echo 'FreeBSD revision: $FreeBSD$'
     echo "--"
     echo "Visit http://www.freebsd.org/gnome for more information"
