@@ -275,9 +275,9 @@
 	<!-- Convert " ... " to `` ... '' in the HTML output. -->
 	(element quote
 	  (make sequence
-	    (literal "``")
+	    (literal "&#8220;")
 	    (process-children)
-	    (literal "''")))
+	    (literal "&#8221;")))
 
 	;; The special FreeBSD version of the trademark tag handling.
 	;; This function was more or less taken from the DocBook DSSSL
@@ -926,9 +926,9 @@
 
       (element errorname
         (make sequence
-          <![ %output.html;  [ (literal "``") ]]>
+          <![ %output.html;  [ (literal "&#8220;") ]]>
           ($mono-seq$ (process-children))
-          <![ %output.html;  [ (literal "''") ]]>
+          <![ %output.html;  [ (literal "&#8221;") ]]>
           ))
 
       <!-- John Fieber's 'instant' translation specification had 
