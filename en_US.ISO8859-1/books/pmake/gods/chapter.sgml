@@ -1,0 +1,953 @@
+<!--
+    $FreeBSD$
+-->
+
+<chapter id="gods">
+  <title>PMake for Gods</title>
+
+  <para>This chapter is devoted to those facilities in
+    <application>PMake</application> that allow you to do a great deal
+    in a makefile with very little work, as well as do some things you
+    could not do in <application>Make</application> without a great
+    deal of work (and perhaps the use of other programs).  The problem
+    with these features, is they must be handled with care, or you
+    will end up with a mess.</para>
+
+  <para>Once more, I assume a greater familiarity with &unix; or Sprite
+    than I did in the previous two chapters.</para>
+
+  <section id="searchpaths">
+    <title>Search Paths</title>
+
+    <para><application>PMake</application> supports the dispersal of
+      files into multiple directories by allowing you to specify
+      places to look for sources with <maketarget>.PATH</maketarget>
+      targets in the makefile.  The directories you give as sources
+      for these targets make up a <quote>search path</quote>.  Only
+      those files used exclusively as sources are actually sought on a
+      search path, the assumption being that anything listed as a
+      target in the makefile can be created by the makefile and thus
+      should be in the current directory.</para>
+
+    <para>There are two types of search paths in
+      <application>PMake</application>: one is used for all types of
+      files (including included makefiles) and is specified with a
+      plain <maketarget>.PATH</maketarget> target (e.g. <literal>.PATH
+      : RCS</literal>), while the other is specific to a certain
+      type of file, as indicated by the file's suffix.  A specific
+      search path is indicated by immediately following the
+      <maketarget>.PATH</maketarget> with the suffix of the file.  For
+      instance:</para>
+
+    <programlisting>.PATH.h         : /sprite/lib/include /sprite/att/lib/include</programlisting>
+
+    <para>would tell <application>PMake</application> to look in the
+      directories <filename role="directory">/sprite/lib/include</filename> and
+      <filename role="directory">/sprite/att/lib/include</filename> for any
+      files whose suffix is <filename>.h</filename>.</para>
+
+    <para>The current directory is always consulted first to see if a
+      file exists.  Only if it cannot be found there are the
+      directories in the specific search path, followed by those in
+      the general search path, consulted.</para>
+
+    <para>A search path is also used when expanding wildcard
+      characters.  If the pattern has a recognizable suffix on it,
+      the path for that suffix will be used for the expansion.
+      Otherwise the default search path is employed.</para>
+
+    <para>When a file is found in some directory other than the
+      current one, all local variables that would have contained the
+      target's name (<makevar>.ALLSRC</makevar>, and
+      <makevar>.IMPSRC</makevar>) will instead contain
+      the path to the file, as found by
+      <application>PMake</application>.
+      Thus if you have a file <filename>../lib/mumble.c</filename>
+      and a makefile like this:</para>
+
+    <programlisting>.PATH.c         : ../lib
+mumble          : mumble.c
+	$(CC) -o $(.TARGET) $(.ALLSRC)</programlisting>
+
+    <para>the command executed to create mumble would be
+      <command>cc -o mumble ../lib/mumble.c.</command>
+      (as an aside, the command in this case is not strictly
+      necessary, since it will be found using transformation rules
+      if it is not given.  This is because <filename>.out</filename>
+      is the null suffix by default and a transformation exists
+      from <filename>.c</filename> to
+      <filename>.out</filename>.  Just thought I would throw that in).
+      If a file exists in two directories on the same search path,
+      the file in the first directory on the path will be the one
+      <application>PMake</application> uses.  So if you have
+      a large system spread over many directories, it would
+      behoove you to follow a naming convention that avoids such
+      conflicts.</para>
+
+    <para>Something you should know about the way search paths are
+      implemented is that each directory is read, and its contents
+      cached, exactly once &ndash; when it is first encountered
+      &ndash; so any changes to the directories while
+      <application>PMake</application> is running will not be noted
+      when searching for implicit sources, nor will they be found when
+      <application>PMake</application> attempts to discover when the
+      file was last modified, unless the file was created in the
+      current directory.  While people have suggested that
+      <application>PMake</application> should read the directories
+      each time, my experience suggests that the caching seldom causes
+      problems.  In addition, not caching the directories slows things
+      down enormously because of <application>PMake</application>'s attempts
+      to apply transformation rules through non-existent files &ndash; the
+      number of extra file-system searches is truly staggering,
+      especially if many files without suffixes are used and the null
+      suffix is not changed from <filename>.out</filename>.</para>
+  </section>
+
+  <section id="archivesandlibraries">
+    <title>Archives and Libraries</title>
+
+    <para>&unix; and Sprite allow you to merge files into an archive
+      using the <command>ar</command> command.  Further, if the files
+      are relocatable object files, you can run
+      <application>ranlib</application> on the archive and get
+      yourself a library that you can link into any program you want.
+      The main problem with archives is they double the space you need
+      to store the archived files, since there is one copy in the
+      archive and one copy out by itself.  The problem with libraries
+      is you usually think of them as <option>-lm</option> rather
+      than <filename>/usr/lib/libm.a</filename> and the linker thinks
+      they are out-of-date if you so much as look at them.</para>
+
+    <para><application>PMake</application> solves the problem with
+      archives by allowing you to tell it to examine the files in the
+      archives (so you can remove the individual files without having
+      to regenerate them later).  To handle the problem with
+      libraries, <application>PMake</application> adds an additional
+      way of deciding if a library is out-of-date: if the table of
+      contents is older than the library, or is missing, the library
+      is out-of-date.</para>
+
+    <para>A library is any target that looks like <option>-lname</option>
+      or that ends in a suffix that was marked as a library using the
+      <maketarget>.LIBS</maketarget> target.  <filename>.a</filename>
+      is so marked in the system makefile.  Members of an archive are
+      specified as <literal>archive(member[member...])</literal>.
+      Thus <literal>libdix.a(window.o)</literal> specifies the
+      file <filename>window.o</filename> in the archive
+      <filename>libdix.a</filename>.  You may also use
+      wildcards to specify the members of the archive.  Just
+      remember that most the wildcard characters will only find
+      existing files.  A file that is a member of an archive is
+      treated specially.  If the file does not exist, but it is
+      in the archive, the modification time recorded in the
+      archive is used for the file when determining if the file
+      is out-of-date.  When figuring out how to make an archived
+      member target (not the file itself, but the file in the
+      archive &ndash; the archive(member) target), special care
+      is taken with the transformation rules, as follows:</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>archive(member) is made to depend on member.</para>
+      </listitem>
+
+      <listitem>
+	<para>The transformation from the member's suffix to the
+	  archive's suffix is applied to the archive(member) target.</para>
+      </listitem>
+
+      <listitem>
+	<para>The archive(member)'s <makevar>.TARGET</makevar>
+	  variable is set to the name of the member if member is
+	  actually a target, or the path to the member file if
+	  member is only a source.</para>
+      </listitem>
+
+      <listitem>
+	<para>The <makevar>.ARCHIVE</makevar> variable for the
+	  archive(member) target is set to the name of the
+	  archive.</para>
+      </listitem>
+
+      <listitem>
+	<para>The <makevar>.MEMBER</makevar> variable is set to the
+	  actual string inside the parentheses.  In most cases,
+	  this will be the same as the <makevar>.TARGET</makevar>
+	  variable.</para>
+      </listitem>
+
+      <listitem>
+	<para>The archive(member)'s place in the local variables of
+	  the targets that depend on it is taken by the value of its
+	  <makevar>.TARGET</makevar> variable.</para>
+      </listitem>
+    </itemizedlist>
+
+    <para>Thus, a program library could be created with the following
+      makefile:</para>
+
+    <programlisting>.o.a            :
+	...
+	rm -f $(.TARGET:T)
+OBJS            = obj1.o obj2.o obj3.o
+libprog.a       : libprog.a($(OBJS))
+	ar cru $(.TARGET) $(.OODATE)
+	ranlib $(.TARGET)</programlisting>
+
+    <para>This will cause the three object files to be compiled (if
+      the corresponding source files were modified after the object
+      file or, if that does not exist, the archived object file), the
+      out-of-date ones archived in <filename>libprog.a</filename>, a
+      table of contents placed in the archive and the newly-archived
+      object files to be removed.</para>
+
+    <para>All this is used in the <filename>makelib.mk</filename> system
+      makefile to create a single library with ease.  This makefile looks
+      like this:</para>
+
+    <programlisting>#
+# Rules for making libraries. The object files that make up the library
+# are removed once they are archived.
+#
+# To make several libraries in parallel, you should define the variable
+# "many_libraries". This will serialize the invocations of ranlib.
+#
+# To use, do something like this:
+#
+# OBJECTS = &lt;files in the library&gt;
+#
+# fish.a: fish.a($(OBJECTS)) MAKELIB
+#
+#
+
+#ifndef _MAKELIB_MK
+_MAKELIB_MK    =
+
+#include  &lt;po.mk&gt;
+
+.po.a .o.a     :
+	...
+	rm -f $(.MEMBER)
+
+ARFLAGS        ?= crl
+
+#
+# Re-archive the out-of-date members and recreate the library's table of
+# contents using ranlib. If many_libraries is defined, put the ranlib
+# off til the end so many libraries can be made at once.
+#
+MAKELIB        : .USE .PRECIOUS
+	ar $(ARFLAGS) $(.TARGET) $(.OODATE)
+#ifndef no_ranlib
+# ifdef many_libraries
+	...
+# endif many_libraries
+	ranlib $(.TARGET)
+#endif no_ranlib
+
+#endif _MAKELIB_MK</programlisting>
+  </section>
+
+  <section id="condition">
+    <title>On the Condition...</title>
+
+    <para>Like the C compiler before it, <application>PMake</application>
+      allows you to configure the makefile, based on the current
+      environment, using conditional statements.  A conditional looks like
+      this:</para>
+
+      <programlisting>#if boolean expression
+lines
+#elif another boolean expression
+more lines
+#else
+still more lines
+#endif</programlisting>
+
+    <para>They may be nested to a maximum depth of 30 and may occur
+      anywhere (except in a comment, of course).  The
+      <literal>#</literal> must the very first character on the
+      line.</para>
+
+    <para>Each boolean expression is made up of terms that look
+      like function calls, the standard C boolean operators
+      <literal>&&</literal>, <literal>||</literal>, and
+      <literal>!</literal>, and the standard relational operators
+      <literal>==</literal>, <literal>!=</literal>, <literal>&gt;</literal>,
+      <literal>&gt;=</literal>, <literal>&lt;</literal>, and
+      <literal>&lt;=</literal>, with <literal>==</literal> and
+      <literal>!=</literal> being overloaded to allow string
+      comparisons as well.  <literal>&&</literal> represents logical
+      AND; <literal>||</literal> is logical OR and <literal>!</literal>
+      is logical NOT.  The arithmetic and string operators take
+      precedence over all three of these operators, while NOT
+      takes precedence over AND, which takes  precedence over OR.
+      This precedence may be overridden with parentheses, and an
+      expression may be parenthesized to your heart's content.
+      Each term looks like a call on one of four functions:</para>
+
+    <informaltable frame="none">
+      <tgroup cols="2">
+	<colspec colwidth="1*">
+	<colspec colwidth="10*">
+
+	<tbody>
+	  <row valign="top">
+	    <entry><literal>make</literal></entry>
+
+	    <entry>The syntax is make(target) where target is
+	      a target in the  makefile.  This is true if the
+	      given target was specified on the command line, or
+	      as the source for a <maketarget>.MAIN</maketarget>
+	      target (note that the sources for
+	      <maketarget>.MAIN</maketarget> are only used if no
+	      targets were given on the command
+	      line).</entry>
+	  </row>
+
+	  <row valign="top">
+	    <entry><literal>defined</literal></entry>
+
+	    <entry>The syntax is
+	      <literal>defined(variable)</literal> and is true
+	      if variable is defined.  Certain variables are
+	      defined in the system makefile that identify the
+	      system on which <application>PMake</application>
+	      is being run.</entry>
+	  </row>
+
+	  <row valign="top">
+	    <entry><literal>exists</literal></entry>
+
+	    <entry>The syntax is
+	      <literal>exists(file)</literal> and is true if the
+	      file can be found on the global search path (i.e.
+	      that defined by <makevar>.PATH</makevar> targets, not by
+	      <maketarget>.PATH<replaceable>suffix</replaceable></maketarget>
+	      targets).</entry>
+	  </row>
+
+	  <row valign="top">
+	    <entry><literal>empty</literal></entry>
+
+	    <entry>This syntax is much like the others, except
+	      the string inside the parentheses is of the same
+	      form as you would put between parentheses when
+	      expanding a variable, complete with modifiers and
+	      everything.  The function returns true if the
+	      resulting string is empty.  An undefined
+	      variable in this context will cause at the very
+	      least a warning message about a malformed
+	      conditional, and at the worst will cause the process
+	      to stop once it has read the makefile.  If you want
+	      to check for a variable being defined or empty,
+	      use the expression:
+	      <literal>!defined(var) || empty(var)</literal>
+	      as the definition of <literal>||</literal> will
+	      prevent the <literal>empty()</literal> from being
+	      evaluated and causing an error, if the variable
+	      is undefined.  This can be used to see if a
+	      variable contains a given word, for example:
+	      <literal>#if !empty(var:Mword)</literal></entry>
+	  </row>
+	</tbody>
+      </tgroup>
+    </informaltable>
+
+    <para>The arithmetic and string operators may only be used to test
+      the value of a variable.  The lefthand side must contain the
+      variable expansion, while the righthand side contains either
+      a string, enclosed in double-quotes, or a number.  The
+      standard C numeric conventions (except for specifying an octal
+      number) apply to both sides.  E.g.:</para>
+
+    <programlisting>#if $(OS) == 4.3
+
+#if $(MACHINE) == "sun3"
+
+#if $(LOAD_ADDR) &gt; 0xc000</programlisting>
+
+    <para>are all valid conditionals.  In addition, the numeric value
+      of a variable can be tested as a boolean as follows:</para>
+
+    <programlisting>#if $(LOAD)</programlisting>
+
+    <para>would see if <literal>LOAD</literal> contains a
+      non-zero value and:</para>
+
+    <programlisting>#if !$(LOAD)</programlisting>
+
+    <para>would test if <literal>LOAD</literal> contains a
+      zero value.</para>
+
+    <para>In addition to the bare <literal>#if</literal>, there are other
+      forms that apply one of the first two functions to each term.
+      They are as follows:</para>
+
+    <informaltable frame="none">
+      <tgroup cols="3">
+	<tbody>
+	  <row>
+	    <entry><literal>ifdef</literal></entry>
+
+	    <entry><literal>defined</literal></entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>ifndef</literal></entry>
+
+	    <entry><literal>!defined</literal></entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>ifmake</literal></entry>
+
+	    <entry><literal>make</literal></entry>
+	  </row>
+
+	  <row>
+	    <entry><literal>ifnmake</literal></entry>
+
+	    <entry><literal>!make</literal></entry>
+	  </row>
+	</tbody>
+      </tgroup>
+    </informaltable>
+
+    <para>There are also the <quote><literal>else
+      if</literal></quote> forms: <literal>elif</literal>,
+      <literal>elifdef</literal>, <literal>elifndef</literal>,
+      <literal>elifmake</literal>, and <literal>elifnmake</literal>.
+
+    <para>For instance, if you wish to create two versions of a
+      program, one of which is optimized (the production version) and
+      the other of which is for debugging (has symbols for dbx),
+      you have two choices: you can create two makefiles, one of
+      which uses the <option>-g</option> flag for the compilation,
+      while the other uses the <option>-O</option> flag, or you
+      can use another target (call it debug) to create the debug
+      version.  The construct below will take care of this for you.
+      I have also made it  so  defining the variable
+      <envar>DEBUG</envar> (say with <command>pmake -D DEBUG</command>)
+      will also cause the debug version to be made.</para>
+
+    <programlisting>#if defined(DEBUG) || make(debug)
+CFLAGS         += -g
+#else
+CFLAGS         += -O
+#endif</programlisting>
+
+    <para>There are, of course, problems with this approach.  The most
+      glaring annoyance is that if you want to go from making a
+      debug version to making a production version, you have to
+      remove all the object files, or you will get some optimized
+      and some debug versions in the same program.  Another
+      annoyance is you have to be careful not to make two targets that
+      <quote>conflict</quote> because of some conditionals in the makefile.
+      For instance:</para>
+
+    <programlisting>#if make(print)
+FORMATTER = ditroff -Plaser_printer
+#endif
+#if make(draft)
+FORMATTER = nroff -Pdot_matrix_printer
+#endif</programlisting>
+
+    <para>would wreak havoc if you tried <command>pmake draft print</command>
+      since you would use the same formatter for each target.  As I said,
+      this all gets somewhat complicated.</para>
+  </section>
+
+  <section id="ashell">
+    <title id="ashelltitle">A Shell is a Shell is a Shell</title>
+
+    <para>In normal operation, the Bourne Shell (better known
+      as <application>sh</application>) is used to execute the
+      commands to re-create  targets.  <application>PMake</application>
+      also allows you to specify a different shell for it to use when
+      executing these commands.  There are several things
+      <application>PMake</application> must know about
+      the shell you wish to use.  These things are specified as the
+      sources for the <maketarget>.SHELL</maketarget> target by
+      keyword, as follows:</para>
+
+    <variablelist>
+      <varlistentry>
+	<term><literal>path=path</literal></term>
+
+	<listitem>
+	  <para><application>PMake</application> needs to know where
+	    the shell actually resides, so it can execute it.  If
+	    you specify this and nothing else,
+	    <application>PMake</application> will use the last
+	    component of the path and look in its table of the
+	    shells it knows and use the specification it finds, if
+	    any.  Use this if you just want to use a different
+	    version of the <application>Bourne</application> or
+	    <application>C Shell</application> (yes,
+	    <application>PMake</application> knows how to use the
+	    <application>C Shell</application> too).</para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<term><literal>name=name</literal></term>
+
+	<listitem>
+	  <para>This is the name by which the shell is to be
+	    known.  It is a single word and, if no other keywords
+	    are specified (other than path), it is the name by
+	    which <application>PMake</application> attempts to find
+	    a specification for it (as  mentioned above).  You
+	    can use this if you would just rather use the C Shell
+	    than the <application>Bourne Shell</application>
+	    (<literal>.SHELL: name=csh</literal> will do it).</para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<term><literal>quiet=echo-off</literal> command</term>
+
+	<listitem>
+	  <para>As mentioned before, <application>PMake</application>
+	    actually controls whether commands are printed by
+	    introducing commands into the shell's input stream.
+	    This keyword, and the next two, control what those commands
+	    are.  The <literal>quiet</literal> keyword is the command
+	    used to turn echoing off.  Once it is turned off, echoing is
+	    expected to remain off until the <literal>echo-on</literal>
+	    command is given.</para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<term><literal>echo=echo-on</literal> command</term>
+
+	<listitem>
+	  <para>The command <application>PMake</application>
+	    should give to turn echoing back on again.</para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<term><literal>filter=printed echo-off</literal> command</term>
+
+	<listitem>
+	  <para>Many shells will echo the
+	    <literal>echo-off</literal> command when it is given.
+	    This keyword tells <application>PMake</application> in what
+	    format the shell actually prints the <literal>echo-off</literal>
+	    command.  Wherever <application>PMake</application>
+	    sees this string in the shell's output, it will
+	    delete it and  any  following whitespace, up to and
+	    including the next newline.  See the example at the
+	    end of this section for more details.</para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<term><literal>echoFlag=flag</literal> to turn echoing on</term>
+
+	<listitem>
+	  <para>Unless a target has been marked
+	    <literal>.SILENT</literal>, <application>PMake</application>
+	    wants to start the shell running with echoing on.  To do
+	    this, it passes this flag to the shell as one of its
+	    arguments. If either this or the next flag begins with a
+	    <literal>-</literal>, the flags will be passed to the
+	    shell as separate arguments.  Otherwise, the two will
+	    be concatenated (if they are used at the same time, of
+	    course).</para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<term><literal>errFlag=flag</literal> to turn error checking on</term>
+
+	<listitem>
+	  <para>Likewise, unless a  target  is  marked
+	    <literal>.IGNORE</literal>,
+	    <application>PMake</application> wishes error-checking
+	    to be on from the very start. To this end, it will pass
+	    this flag to the shell as an argument.  The same
+	    rules for an initial <literal>-</literal> apply as for
+	    the <literal>echoFlag</literal>.</para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<term><literal>check=command</literal> to turn error checking on</term>
+
+	<listitem>
+	  <para>Just as for echo-control, error-control is achieved
+	    by inserting  commands into the shell's input stream.
+	    This is the command to make the shell check for errors.
+	    It also serves another purpose if the shell does not
+	    have error-control as commands, but I will get into that
+	    in a minute.  Again, once error checking has been turned
+	    on, it is expected to remain on until it is turned off
+	    again.</para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<term><literal>ignore=command</literal>to turn error checking off</term>
+
+	<listitem>
+	  <para>This is the command <application>PMake</application>
+	    uses to turn error checking off.  It has another use if
+	    the shell does not do errorcontrol, but I will tell you
+	    about that...now.</para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<term><literal>hasErrCtl=yes</literal> or <literal>no</literal></term>
+
+	<listitem>
+	  <para>This takes a value that is either
+	    <literal>yes</literal> or <literal>no</literal>.  Now
+	    you might think that the existence of the check and
+	    ignore keywords would be enough to tell
+	    <application>PMake</application> if the shell can do
+	    error-control, but you would be wrong.  If
+	    <literal>hasErrCtl</literal> is <literal>yes</literal>,
+	    <application>PMake</application> uses the check and
+	    ignore commands in a straight-forward manner.  If this
+	    is no, however, their use is rather different.  In this
+	    case, the check command is used as a template, in which
+	    the string <literal>%s</literal> is replaced by the
+	    command that is about to be executed, to produce a
+	    command for the shell that will echo the command to be
+	    executed.  The ignore command is also used as a template,
+	    again with <literal>%s</literal> replaced by the command
+	    to be executed, to produce a command that will
+	    execute the command to be executed and ignore any error
+	    it returns.  When these strings are used as templates,
+	    you must provide newline(s) (<literal>\n</literal>) in
+	    the appropriate place(s).</para>
+	</listitem>
+      </varlistentry>
+    </variablelist>
+
+    <para>The strings that follow these keywords may be enclosed in
+      single or double quotes (the quotes will be stripped off) and
+      may contain the usual C backslash-characters
+      (<literal>\n</literal> is newline, <literal>\r</literal> is
+      return, <literal>\b</literal> is backspace,
+      <literal>\'</literal> escapes a single-quote inside
+      single-quotes, <literal>\"</literal> escapes a double-quote
+      inside double-quotes).  Now for an example.</para>
+
+    <para>This is actually the contents of the &lt;shx.mk> system
+      makefile, and causes <application>PMake</application>
+      to use the <application>Bourne Shell</application> in such a way
+      that  each command is printed as it is executed. That is, if
+      more than one command is given on a line, each will be
+      printed separately.  Similarly, each time the body of a loop
+      is executed, the commands within that loop will be printed,
+      etc.  The specification runs like this:</para>
+
+    <programlisting>#
+# This is a shell specification to have the Bourne shell echo
+# the commands just before executing them, rather than when it reads
+# them. Useful if you want to see how variables are being expanded, etc.
+#
+.SHELL    : path=/bin/sh \
+     quiet="set -" \
+     echo="set -x" \
+     filter="+ set - " \
+     echoFlag=x \
+     errFlag=e \
+     hasErrCtl=yes \
+     check="set -e" \
+     ignore="set +e"</programlisting>
+
+    <para>It tells <application>PMake</application> the following:</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>The shell is located in the file
+	  <filename>/bin/sh</filename>.  It need not tell
+	  <application>PMake</application> that the name of the
+	  shell is sh as <application>PMake</application> can
+	  figure that out for itself (it is the last component of the
+	  path).</para>
+      </listitem>
+
+      <listitem>
+	<para>The command to stop echoing is set <literal>-</literal>.</para>
+      </listitem>
+
+      <listitem>
+	<para>The command to start echoing is set <option>-x</option>.</para>
+      </listitem>
+
+      <listitem>
+	<para>When the echo off command is executed, the shell
+	  will print <literal>+</literal> set <literal>-</literal>
+	  (The <literal>+</literal> comes from using the
+	  <option>-x</option> flag (rather than the
+	  <option>-v</option> flag <application>PMake</application>
+	  usually uses)).  <application>PMake</application> will
+	  remove all occurrences of this string from the output, so
+	  you do not notice extra commands you did not put
+	  there.</para>
+      </listitem>
+
+      <listitem>
+	<para>The flag the <application>Bourne Shell</application>
+	  will take to start echoing in this way is the
+	  <option>-x</option> flag.  The <application>Bourne
+	  Shell</application> will only take its flag arguments
+	  concatenated as its first argument, so neither this nor
+	  the errFlag specification begins with a
+	  <literal>-</literal>.</para>
+      </listitem>
+
+      <listitem>
+	<para>The flag to use to turn error-checking on from the
+	  start is <option>-e</option>.</para>
+      </listitem>
+
+      <listitem>
+	<para>The shell can turn error-checking on and off, and
+	  the commands to do so are <literal>set +e</literal> and
+	  <literal>set -e</literal>, respectively.</para>
+      </listitem>
+    </itemizedlist>
+
+    <para>I should note that this specification is for
+      <application>Bourne  Shells</application>
+      that are not part of Berkeley &unix;, as shells from Berkeley
+      do not do error control.  You can get a similar effect,
+      however, by changing the last three lines to be:</para>
+
+    <programlisting>hasErrCtl=no \
+check="echo \"+ %s\"\n" \
+ignore="sh -c '%s || exit 0\n"</programlisting>
+
+    <para>This will cause <application>PMake</application> to execute
+      the two commands:</para>
+
+    <programlisting>echo "+ cmd"
+sh -c 'cmd || true'</programlisting>
+
+    <para>for each command for which errors are to be ignored.  (In
+      case you are wondering, the thing for ignore tells the shell
+      to execute another shell without error checking on and
+      always exit 0, since the ||<literal></literal> causes the
+      exit 0 to be executed only  if the first command exited
+      non-zero, and if the first command exited zero, the shell
+      will also exit zero, since that is the last command it
+      executed).</para>
+  </section>
+
+  <section id="compatibility">
+    <title>Compatibility</title>
+
+    <para>There are three (well, 3 1/2) levels of
+      backwards-compatibility built into
+      <application>PMake</application>.  Most makefiles will need none
+      at all.  Some may need a little bit of work to operate correctly
+      when run in parallel.  Each level encompasses the previous
+      levels (e.g. <option>-B</option> (one shell per command) implies
+      <option>-V</option>).  The three levels are described in the
+      following three sections.</para>
+  </section>
+
+  <section id="defcon3">
+    <title>DEFCON 3 &ndash; Variable Expansion</title>
+
+    <para>As noted before, <application>PMake</application> will not
+      expand a variable unless it knows of a value for it.  This can
+      cause problems for makefiles that expect to leave variables
+      undefined except in special circumstances (e.g. if more flags
+      need to be passed to the C compiler or the output from a text
+      processor should be sent to a different printer).  If the
+      variables are enclosed in curly braces
+      (<literal>${PRINTER}</literal>), the shell will let them pass.
+      If they are enclosed in parentheses, however, the shell will
+      declare a syntax error and the make will come to a grinding
+      halt.</para>
+
+    <para>You have two choices: change the makefile to define the
+      variables (their values can be overridden on the command line,
+      since that is where they would have been set if you used
+      <application>Make</application>, anyway) or always give the
+      <option>-V</option> flag (this can be done with the
+      <maketarget>.MAKEFLAGS</maketarget> target, if you want).</para>
+  </section>
+
+  <section id="defcon2">
+    <title>DEFCON 2 &ndash; The Number of the Beast</title>
+
+    <para>Then there are the makefiles that expect certain commands,
+      such as changing to a different directory, to not affect
+      other commands in a target's creation script.  You can solve
+      this is either by going back to executing one shell per
+      command (which is what the <option>-B</option> flag forces
+      <application>PMake</application> to do), which
+      slows the process down a good bit and requires you to use
+      semicolons and escaped newlines for shell constructs, or by
+      changing the makefile to execute the offending command(s) in
+      a subshell (by placing the line inside parentheses), like
+      so:</para>
+
+    <programlisting>install :: .MAKE
+      (cd src; $(.PMAKE) install)
+      (cd lib; $(.PMAKE) install)
+      (cd man; $(.PMAKE) install)</programlisting>
+
+    <para>This will always execute the three makes (even if the
+      <option>-n</option>
+      flag was given) because of the combination of the
+      <literal>::</literal>
+      operator and the <literal>.MAKE</literal> attribute.
+      Each command will change to the proper directory to perform
+      the install, leaving the main shell in the directory in
+      which it started.</para>
+  </section>
+
+  <section id="defcon1">
+    <title>DEFCON 1 &ndash; Imitation is the Not the Highest Form of
+      Flattery</title>
+
+    <para>The final category of makefile is the one where every command
+      requires input, the dependencies are incompletely specified, or
+      you simply cannot create more than one target at a time, as
+      mentioned earlier.  In addition, you may not have the time or
+      desire to upgrade the makefile to run smoothly with
+      <application>PMake</application>.  If you are the conservative
+      sort, this is the compatibility mode for you.  It is entered
+      either by giving <application>PMake</application> the
+      <option>-M</option> flag (for <application>Make</application>),
+      or by executing <application>PMake</application> as
+      <command>make.</command>  In either case,
+      <application>PMake</application> performs things exactly like
+      <application>Make</application> (while still supporting most
+      of the nice new features <application>PMake</application>
+      provides).  This includes:</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>No parallel execution.</para>
+      </listitem>
+
+      <listitem>
+	<para>Targets are made in the exact order specified by the
+	  makefile.  The sources for each target are made in strict
+	  left-to-right order, etc.</para>
+      </listitem>
+
+      <listitem>
+	<para>A single Bourne shell is used to execute each command,
+	  thus the shell's <varname>$$</varname> variable is
+	  useless, changing directories does not work across command
+	  lines, etc.</para>
+      </listitem>
+
+      <listitem>
+	<para>If no special characters exist in a command line,
+	  <application>PMake</application> will break the command
+	  into words itself and execute the command directly,
+	  without executing a shell first.  The characters that
+	  cause <application>PMake</application> to execute a shell
+	  are: <literal>#</literal>, <literal>=</literal>,
+	  <literal>|</literal>, <literal>^</literal>,
+	  <literal>(</literal>, <literal>)</literal>,
+	  <literal>{</literal>, <literal>}</literal>,
+	  <literal>;</literal>, <literal>&amp;</literal>,
+	  <literal>&gt;</literal>, <literal>&lt;</literal>,
+	  <literal>*</literal>, <literal>?</literal>,
+	  <literal>[</literal>, <literal>]</literal>,
+	  <literal>:</literal>, <literal>$</literal>,
+	  <literal>`</literal>, and <literal>\</literal>.  You should
+	  notice that these are all the characters that are given
+	  special meaning by the shell (except <literal>'</literal>
+	  and <literal>,</literal> which
+	  <application>PMake</application> deals with all by its
+	  lonesome).</para>
+      </listitem>
+
+      <listitem>
+	<para>The use of the null suffix is turned off.</para>
+      </listitem>
+    </itemizedlist>
+  </section>
+
+  <section id="theway">
+    <title>The Way Things Work</title>
+
+    <para>When <application>PMake</application> reads the makefile, it
+      parses sources and targets into nodes in a graph.  The graph is
+      directed only in the sense that <application>PMake</application>
+      knows which way is up.  Each node contains not only links to all
+      its parents and children (the nodes that depend on it and those
+      on which it depends, respectively), but also a count of the
+      number of its children that have already been processed.</para>
+
+    <para>The most important thing to know about how
+      <application>PMake</application> uses this graph is that the
+      traversal is breadth-first and occurs in two passes.</para>
+
+    <para>After <application>PMake</application> has parsed the
+      makefile, it begins with the nodes the user has told it to make
+      (either on the command line, or via a
+      <maketarget>.MAIN</maketarget> target, or by the target being
+      the first in the file not labeled with the
+      <literal>.NOTMAIN</literal> attribute) placed in a queue.  It
+      continues to take the node off the front of the queue, mark it
+      as something that needs to be made, pass the node to
+      <literal>Suff_FindDeps</literal> (mentioned earlier) to find any
+      implicit sources for the node, and place all the node's children
+      that have yet to be marked at the end of the queue.  If any of
+      the children is a <maketarget>.USE</maketarget> rule, its
+      attributes are applied to the parent, then its commands are
+      appended to the parent's list of commands and its children are
+      linked to its parent.  The parent's unmade children counter is
+      then decremented (since the <maketarget>.USE</maketarget> node
+      has been processed).  You will note that this allows a
+      <maketarget>.USE</maketarget> node to have children that are
+      <maketarget>.USE</maketarget> nodes and the rules will be
+      applied in sequence.  If the node has no children, it is placed
+      at the end of another queue to be examined in the  second pass.
+      This process continues until the first queue is empty.</para>
+
+    <para>At this point, all the leaves of the graph are in the
+      examination queue.  <application>PMake</application> removes the
+      node at the head of the queue and sees if it is out-of-date.  If
+      it is, it is passed to a function that will execute the commands
+      for the node asynchronously.  When the commands have completed,
+      all the node's parents have their unmade children counter
+      decremented and, if the counter is then 0, they are placed on
+      the examination queue.  Likewise, if the node is up-to-date.
+      Only those parents that were marked on the downward pass are
+      processed in this way.  Thus <application>PMake</application>
+      traverses the graph back up to the nodes the user instructed it
+      to create.  When the examination queue is empty and no shells
+      are running to create a target, <application>PMake</application>
+      is finished.</para>
+
+    <para>Once all targets have been processed,
+      <application>PMake</application> executes the commands attached
+      to the <maketarget>.END</maketarget> target, either explicitly
+      or through the use of an ellipsis in a shell script.  If there
+      were no errors during the entire process but there are still
+      some targets unmade (<application>PMake</application> keeps a
+      running count of how many targets are left to be made), there is
+      a cycle in the graph.  <application>PMake</application> does a
+      depth-first traversal of the graph to find all the targets that
+      were not made and prints them out one by one.</para>
+  </section>
+</chapter>
+
+<!--
+     Local Variables:
+     mode: sgml
+     sgml-indent-data: t
+     sgml-omittag: nil
+     sgml-always-quote-attributes: t
+     sgml-parent-document: ("../book.sgml" "chapter")
+     End:
+-->
