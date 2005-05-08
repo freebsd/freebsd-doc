@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/gifs/Makefile,v 1.51 2004/07/24 17:54:23 blackend Exp $
+# $FreeBSD: www/en/gifs/Makefile,v 1.52 2004/08/04 18:16:08 ceri Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -71,5 +71,6 @@ DATA+=  K.pnm L.pnm M.pnm N.pnm P.pnm Q.pnm R.pnm S.pnm T.pnm U.pnm
 DATA+=  V.pnm W.pnm X.pnm Y.pnm Z.pnm
 
 DATA+=	freebsd-advert.gif freebsd_3.gif
+DATA+=  plain.png smiley.png frowny.png
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
