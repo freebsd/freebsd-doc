@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/share/sgml/includes.release.xsl,v 1.8 2005/01/06 19:47:21 keramida Exp $ -->
+<!-- $FreeBSD: www/share/sgml/includes.release.xsl,v 1.9 2005/01/25 17:14:20 hrs Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
   <xsl:variable name="rel.head" select='"6.0"'/>
   <xsl:variable name="rel.head.major" select='"6"'/>
 
-  <xsl:variable name="rel.current" select='"5.3"'/>
+  <xsl:variable name="rel.current" select='"5.4"'/>
   <xsl:variable name="rel.current.major" select='"5"'/>
 
   <xsl:variable name="u.rel.notes">
