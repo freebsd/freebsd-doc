@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/es/index.xsl,v 1.5 2004/09/20 18:10:24 jesusr Exp $ -->
+<!-- $FreeBSD: www/es/index.xsl,v 1.6 2005/03/30 22:04:11 jcamou Exp $ -->
 <!-- $FreeBSDes: www/es/index.xsl,v 1.4 2004/09/07 21:46:11 jcamou Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -10,7 +10,7 @@
 
   <xsl:variable name="base" select="'.'"/>
   <xsl:variable name="enbase" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/es/index.xsl,v 1.5 2004/09/20 18:10:24 jesusr Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/es/index.xsl,v 1.6 2005/03/30 22:04:11 jcamou Exp $'"/>
   <xsl:variable name="title" select="'El Proyecto FreeBSD'"/>
 
   <!-- these params should be externally bound. The values
@@ -243,7 +243,7 @@
 			      &#183; <a href="{$u.rel.hardware}">Notas de Hardware</a><br/>
 			      &#183; <a href="{$u.rel.installation}">Notas de Instalaci&#243;n</a><br/>
 			      &#183; <a href="{$u.rel.errata}">Errata</a><br/>
-			      &#183; <a href="{$u.rel.early}">Early Adopter's Guide</a></small></p>
+			      &#183; <a href="{$u.rel.migration}">Gu&#237;a de Migraci&#243;n</a></small></p>
 
 			<p>
 			      <a href="{$u.rel2.announce}">
