@@ -2,7 +2,7 @@
 # The FreeBSD Russian Documentation Project
 #
 # $FreeBSD$
-# $FreeBSDru: frdp/www/ru/releases/Makefile,v 1.6 2004/11/09 12:55:01 den Exp $
+# $FreeBSDru: frdp/www/ru/releases/Makefile,v 1.7 2005/05/11 10:07:35 den Exp $
 #
 # Original revision: 1.44
 #
@@ -16,7 +16,7 @@
 
 DOCS?=	index.sgml snapshots.sgml
 
-SUBDIR=	5.3R
+SUBDIR=	5.3R 5.4R
 
 .if defined $(NEW_BUILD)
 SUBDIR=
