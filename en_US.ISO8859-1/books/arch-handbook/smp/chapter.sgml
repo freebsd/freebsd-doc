@@ -794,13 +794,154 @@
     <sect2>
       <title>Sleep Queues</title>
 
-      <para>- Lookup/release</para>
+      <para>A sleep queue is a structure that holds the list of
+	threads asleep on a wait channel.  Each thread that is not
+	asleep on a wait channel carries a sleep queue structure
+	around with it.  When a thread blocks on a wait channel, it
+	donates its sleep queue structure to that wait channel.  Sleep
+	queues associated with a wait channel are stored in a hash
+	table.</para>
 
-      <para>- Adding & waiting.</para>
+      <para>The sleep queue hash table holds sleep queues for wait
+	channels that have at least one blocked thread.  Each entry in
+	the hash table is called a sleepqueue chain.  The chain
+	contains a linked list of sleep queues and a spin mutex.  The
+	spin mutex protects the list of sleep queues as well as the
+	contents of the sleep queue structures on the list.  Only one
+	sleep queue is associated with a given wait channel.  If
+	multiple threads block on a wait channel than the sleep queues
+	associated with all but the first thread are stored on a list
+	of free sleep queues in the master sleep queue.  When a thread
+	is removed from the sleep queue it is given one of the sleep
+	queue structures from the master queue's free list if it is
+	not the only thread asleep on the queue.  The last thread is
+	given the master sleep queue when it is resumed.  Since
+	threads may be removed from the sleep queue in a different
+	order than they are added, a thread may depart from a sleep
+	queue with a different sleep queue structure than the one it
+	arrived with.</para>
 
-      <para>- Timeout and signal catching.</para>
+      <para>The <function>sleepq_lock</function> function locks the
+	spin mutex of the sleep queue chain that maps to a specific
+	wait channel.  The <function>sleepq_lookup</function> function
+	looks in the hash table for the master sleep queue associated
+	with a given wait channel.  If no master sleep queue is found,
+	it returns NULL.  The <function>sleepq_release</function>
+	function unlocks the spin mutex associated with a given wait
+	channel.</para>
 
-      <para>- Aborting a sleep.</para>
+      <para>A thread is added to a sleep queue via the
+	<function>sleepq_add</function>.  This function accepts the
+	wait channel, a pointer to the mutex that protects the wait
+	channel, a wait message description string, and a mask of
+	flags.  The sleep queue chain should be locked via
+	<function>sleepq_lock</function> before this function is
+	called.  If no mutex protects the wait channel (or it is
+	protected by Giant), then the mutex pointer argument should be
+	NULL.  The flags argument contains a type field that indicates
+	the kind of sleep queue that the thread is being added to and
+	a flag to indicate if the sleep is interruptible
+	(SLEEPQ_INTERRUPTIBLE).  Currently there are only two types of
+	sleep queues: traditional sleep queues managed via the
+	<function>msleep</function> and <function>wakeup</function>
+	functions (SLEEPQ_MSLEEP) and condition variable sleep queues
+	(SLEEPQ_CONDVAR).  The sleep queue type and lock pointer
+	argument are used solely for internal assertion checking.  Code
+	that calls <function>sleepq_add</function> should explicitly
+	unlock any interlock protecting the wait channel after the
+	associated sleepqueue chain has been locked via
+	<function>sleepq_lock</function> and before blocking on the
+	sleep queue via one of the waiting functions.</para>
+
+      <para>A timeout for a sleep is set by invoking
+	<function>sleepq_set_timeout</function>.  The function accepts
+	the wait channel and the timeout time as a relative tick count
+	as its arguments.  If a sleep should be interrupted by
+	arriving signals, the
+	<function>sleepq_catch_signals</function> function should be
+	called as well.  This function accepts the wait channel as its
+	only parameter.  If there is already a signal pending for this
+	thread, then <function>sleepq_catch_signals</function> will
+	return a signal number; otherwise, it will return 0.</para>
+
+      <para>Once a thread has been added to a sleep queue, it blocks
+	using one of the <function>sleepq_wait</function> functions.
+	There are four wait functions depending on whether or not the
+	caller wishes to use a timeout or have the sleep aborted by
+	caught signals or an interrupt from the userland thread
+	scheduler.  The <function>sleepq_wait</function> function
+	simply waits until the current thread is explicitly resumed by
+	one of the wakeup functions.  The
+	<function>sleepq_timedwait</function> function waits until
+	either the thread is explicitly resumed or the timeout set by
+	an earlier call to <function>sleepq_set_timeout</function>
+	expires.  The <function>sleepq_wait_sig</function> function
+	waits until either the thread is explicitly resumed or its
+	sleep is aborted.  The
+	<function>sleepq_timedwait_sig</function> function waits until
+	either the thread is explicitly resumed, the timeout set by an
+	earlier call to <function>sleepq_set_timeout</function>
+	expires, or the thread's sleep is aborted.  All of the wait
+	functions accept the wait channel as their first parameter.
+	In addition, the <function>sleepq_timedwait_sig</function>
+	function accepts a second boolean parameter to indicate if the
+	earlier call to <function>sleepq_catch_signals</function>
+	found a pending signal.</para>
+
+      <para>If the thread is explicitly resumed or is aborted by a
+	signal, then a value of zero is returned by the wait function
+	to indicate a successful sleep.  If the thread is resumed by
+	either a timeout or an interrupt from the userland thread
+	scheduler then an appropriate errno value is returned instead.
+	Note that since <function>sleepq_wait</function> can only
+	return 0 it does not return anything and the caller should
+	assume a successful sleep.  Also, if a thread's sleep times
+	out and is aborted simultaneously then
+	<function>sleepq_timedwait_sig</function> will return an error
+	indicating that a timeout occurred.  If an error value of
+	0 is returned and either <function>sleepq_wait_sig</function>
+	or <function>sleepq_timedwait_sig</function> was used to
+	block, then the function
+	<function>sleepq_calc_signal_retval</function> should be
+	called to check for any pending signals and calculate an
+	appropriate return value if any are found.  The signal number
+	returned by the earlier call to
+	<function>sleepq_catch_signals</function> should be passed as
+	the sole argument to
+	<function>sleepq_calc_signal_retval</function>.</para>
+
+      <para>Threads asleep on a wait channel are explicitly resumed by
+	the <function>sleepq_broadcast</function> and
+	<function>sleepq_signal</function> functions.  Both functions
+	accept the wait channel from which to resume threads, a
+	priority to raise resumed threads to, and a flags argument to
+	indicate which type of sleep queue is being resumed.  The
+	priority argument is treated as a minimum priority.  If a
+	thread being resumed already has a higher priority
+	(numerically lower) than the priority argument then its
+	priority is not adjusted.  The flags argument is used for
+	internal assertions to ensure that sleep queues are not being
+	treated as the wrong type.  For example, the condition
+	variable functions should not resume threads on a traditional
+	sleep queue.  The <function>sleepq_broadcast</function>
+	function resumes all threads that are blocked on the specified
+	wait channel while <function>sleepq_signal</function> only
+	resumes the highest priority thread blocked on the wait
+	channel.  The sleep queue chain should first be locked via the
+	<function>sleepq_lock</function> function before calling these
+	functions.</para>
+
+      <para>A sleeping thread may have its sleep interrupted by
+	calling the <function>sleepq_abort</function> function.  This
+	function must be called with <varname>sched_lock</varname>
+	held and the thread must be queued on a sleep queue.  A thread
+	may also be removed from a specific sleep queue via the
+	<function>sleepq_remove</function> function.  This function
+	accepts both a thread and a wait channel as an argument and
+	only awakens the thread if it is on the sleep queue for the
+	specified wait channel.  If the thread is not on a sleep queue
+	or it is on a sleep queue for a different wait channel, then
+	this function does nothing.</para>
     </sect2>
 
     <sect2>
@@ -996,6 +1137,13 @@
       <glossdef>
 	<para>A kernel thread represented by a struct thread.  Threads own
 	  locks and hold a single execution context.</para>
+      </glossdef>
+    </glossentry>
+
+    <glossentry id="smp-glossary-wait-channel">
+      <glossterm>wait channel</glossterm>
+      <glossdef>
+	<para>A kernel virtual address that threads may sleep on.</para>
       </glossdef>
     </glossentry>
   </glossary>
