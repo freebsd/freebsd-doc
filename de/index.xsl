@@ -2,7 +2,7 @@
 
 <!--
      $FreeBSD$
-     $FreeBSDde: de-www/index.xsl,v 1.45 2005/03/15 20:17:23 jkois Exp $
+     $FreeBSDde: de-www/index.xsl,v 1.46 2005/04/18 15:45:01 jkois Exp $
      basiert auf: 1.127
 -->
 
@@ -344,7 +344,7 @@
 			   bgcolor="#FFFFFF" width="100%"><tr>
 			<td>Mehr &#252;ber FreeBSD erfahren Sie aus
 			  <a href="{$enbase}/publish.html">Ver&#246;ffentlichungen</a>
-			  oder <a href="{$enbase}/news/press.html">aus der
+			  oder <a href="{$enbase}/de/news/press.html">aus der
 			  Presse</a> und nat&#252;rlich auf dieser
 			  Webseite!</td>
 		      </tr>
