@@ -1,7 +1,7 @@
 <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
   <xsl:import href="../../includes.xsl"/>
   <xsl:import href="includes.xsl"/>
-  <xsl:variable name="date" select="'$FreeBSD$'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/platforms/ia64/todo.xsl,v 1.1 2004/10/19 04:14:05 marcel Exp $'"/>
   <xsl:output doctype-public="-//W3C//DTD HTML 4.01 Transitional//EN"
     encoding="iso-8859-1" method="html"/>
   <xsl:template match="/">
@@ -15,7 +15,7 @@
               <xsl:copy-of select="$header2"/>
             </td>
             <td>
-              <img align="right" alt="Merced die" src="merced-die.png"/>
+              <img align="right" alt="Montecito die" src="montecito-die.png"/>
             </td>
           </tr>
         </table>
