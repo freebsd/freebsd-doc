@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/platforms/ia64/Makefile,v 1.3 2004/09/25 17:36:31 marcel Exp $
+# $FreeBSD: www/en/platforms/ia64/Makefile,v 1.4 2004/10/19 04:14:05 marcel Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -8,7 +8,7 @@
 .endif
 
 DOCS=	machines.sgml refs.sgml
-DATA=	mckinley-die.png merced-die.png
+DATA=	i2inside.png mckinley-die.png merced-die.png montecito-die.png
 
 _GEN=	index.html todo.html
 
