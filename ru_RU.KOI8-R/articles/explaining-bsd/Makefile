@@ -1,20 +1,27 @@
 #
+# The FreeBSD Russian Documentation Project
+#
 # $FreeBSD$
-# $FreeBSDru: frdp/doc/ru_RU.KOI8-R/articles/explaining-bsd/Makefile,v 1.3 2001/07/06 07:46:47 kappa Exp $
+# $FreeBSDru: frdp/doc/ru_RU.KOI8-R/articles/explaining-bsd/Makefile,v 1.6 2005/05/28 13:32:41 andy Exp $
 #
-# Original revision: 1.1
+# Article: Explaining BSD
+#
+# Original revision: 1.6
 #
 
-MAINTAINER=	kappa@FreeBSD.org.ua
+MAINTAINER=kappa@FreeBSD.org.ua
 
-DOC?=	article
+DOC?= article
 
-FORMATS?=	html
+FORMATS?= html
+WITH_ARTICLE_TOC?= YES
 
-INSTALL_COMPRESSED?=	gz
+INSTALL_COMPRESSED?= gz
 INSTALL_ONLY_COMPRESSED?=
 
 SRCS=	article.sgml
 
+URL_RELPREFIX?=	../../../..
 DOC_PREFIX?=	${.CURDIR}/../../..
-.include	"${DOC_PREFIX}/share/mk/doc.project.mk"
+
+.include "${DOC_PREFIX}/share/mk/doc.project.mk"
