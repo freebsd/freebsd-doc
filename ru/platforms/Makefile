@@ -2,9 +2,9 @@
 # The FreeBSD Russian Documentation Project
 #
 # $FreeBSD$
-# $FreeBSDru: frdp/www/ru/platforms/Makefile,v 1.8 2004/01/01 21:20:07 andy Exp $
+# $FreeBSDru: frdp/www/ru/platforms/Makefile,v 1.10 2005/05/19 14:10:28 andy Exp $
 #
-# Original revision: 1.7
+# Original revision: 1.10
 #
 
 .if exists(../Makefile.conf)
@@ -16,6 +16,8 @@
 
 DOCS=	alpha.sgml
 DOCS+=	amd64.sgml
+DOCS+=	arm.sgml
+DOCS+=	i386.sgml
 DOCS+=	ia64.sgml
 DOCS+=	index.sgml
 DOCS+=	mips.sgml
@@ -24,6 +26,7 @@ DOCS+=	ppc.sgml
 DOCS+=	sparc.sgml
 DOCS+=	x86-64.sgml
 
-SUBDIR=	ia64
+SUBDIR=	amd64
+SUBDIR+=ia64
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
