@@ -1,0 +1,346 @@
+<!--
+     The FreeBSD Russian Documentation Project
+
+     The FreeBSD SMP Next Generation Project
+
+     $FreeBSD$
+     $FreeBSDru: frdp/doc/ru_RU.KOI8-R/books/arch-handbook/locking/chapter.sgml,v 1.4 2005/06/04 10:17:39 gad Exp $
+
+     Original revision: 1.9
+-->
+
+<chapter id="locking">
+  <title>Замечания по блокировке</title>
+
+  <indexterm><primary>SMP Next Generation Project</primary></indexterm>
+  <para><emphasis>Эта глава поддерживается проектом FreeBSD SMP Next
+    Generation Project.  Комментарии и пожелания направляйте
+    в &a.smp;.</emphasis></para>
+
+  <indexterm><primary>блокировка</primary></indexterm>
+  <indexterm><primary>multi-processing</primary></indexterm>
+  <indexterm><primary>мьютексы</primary></indexterm>
+  <indexterm><primary>lockmgr</primary></indexterm>
+  <indexterm><primary>атомарные операции</primary></indexterm>
+  <para>Этот документ описывает механизм блокировки, используемый в ядре
+    FreeBSD для обеспечения эффективной поддержки нескольких процессоров в
+    ядре.  Блокировку можно рассматривать с нескольких точек зрения.
+    Структуры данных могут быть защищены с помощью блокировок mutex или
+    &man.lockmgr.9;.  Несколько переменных защищены просто в силу атомарности
+    используемых для доступа к ним операций.</para>
+
+  <sect1 id="locking-mutexes">
+    <title>Мьютексы</title>
+
+    <para>Мьютекс (mutex) - это просто блокировка, используемая для
+      реализации гарантированной исключительности.  В частности, в каждый
+      момент времени мьютексом может владеть только один объект.  Если
+      какой-то объект хочет получить мьютекс, который уже кто-то занял, он
+      должен дождаться момента его освобождения.  В ядре FreeBSD владельцами
+      мьютексов являются процессы.</para>
+
+    <para>Мьютексы могут быть затребованы рекурсивно, но предполагается, что
+      они занимаются на короткое время.  В частности, владельцу мьютекса
+      нельзя выдерживать паузу.  Если вам нужно выполнить блокировку на время
+      паузы, используйте блокировку через &man.lockmgr.9;.</para>
+
+    <para>Каждый мьютекс имеет несколько представляющих интерес
+      характеристик:</para>
+
+    <variablelist>
+      <varlistentry>
+        <term>Имя переменной</term>
+        <listitem>
+          <para>Имя переменной <type>struct mtx</type> в исходных текстах
+            ядра.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>Логическое имя</term>
+        <listitem>
+          <para>Имя мьютекса, назначенное ему через
+            <function>mtx_init</function>.  Это имя выводится в сообщениях
+            трассировки KTR и диагностических предупреждающих и ошибочных
+            сообщениях и используется для идентификации мьютексов в
+            отладочном коде.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>Тип</term>
+        <listitem>
+          <para>Тип мьютекса в терминах флагов <constant>MTX_*</constant>.
+            Значение каждого флага связано с его смыслом так, как это описано
+            в &man.mutex.9;.</para>
+
+          <variablelist>
+            <varlistentry>
+              <term><constant>MTX_DEF</constant></term>
+              <listitem>
+                <para>Sleep-мьютекс</para>
+              </listitem>
+            </varlistentry>
+
+            <varlistentry>
+              <term><constant>MTX_SPIN</constant></term>
+              <listitem>
+                <para>Spin-мьютекс</para>
+              </listitem>
+            </varlistentry>
+
+            <varlistentry>
+              <term><constant>MTX_RECURSE</constant></term>
+              <listitem>
+                <para>Этому мьютексу разрешается блокировать
+                  рекурсивно.</para>
+              </listitem>
+            </varlistentry>
+          </variablelist>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>Защиты</term>
+        <listitem>
+          <para>Список структур данных или членов структур данных, которые
+            защищает этот мьютекс.  Для членов структур данных имя будет в
+            форме
+            <structname/имя структуры/.<structfield/имя члена
+            структуры/.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>Зависимые функции</term>
+        <listitem>
+          <para>Функции, которые можно вызвать, если этот мьютекс
+            занят.</para>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+
+    <table frame="all" colsep="1" rowsep="1" pgwide="1">
+      <title>Список мьютексов</title>
+  
+      <indexterm><primary>блокировки</primary>
+        <secondary>sched_lock</secondary></indexterm>
+      
+      <indexterm><primary>блокировки</primary>
+        <secondary>vm86pcb_lock</secondary></indexterm>
+          
+      <indexterm><primary>блокировки</primary>
+        <secondary>Giant</secondary></indexterm>      
+            
+      <indexterm><primary>блокировки</primary>
+        <secondary>callout_lock</secondary></indexterm>
+
+      <tgroup cols="5">
+        <thead>
+          <row>
+            <entry>Имя переменной</entry>
+            <entry>Логическое имя</entry>
+            <entry>Тип</entry>
+            <entry>Защиты</entry>
+            <entry>Зависимые функции</entry>
+          </row>
+        </thead>
+
+        <!-- Блокировка планировщика задач -->
+        <tbody>
+          <row>
+            <entry>sched_lock</entry>
+            <entry><quote>sched lock</quote></entry>
+            <entry>
+              <constant>MTX_SPIN</constant> |
+              <constant>MTX_RECURSE</constant>
+            </entry>
+            <entry>
+              <varname>_gmonparam</varname>,
+              <varname>cnt.v_swtch</varname>,
+              <varname>cp_time</varname>,
+              <varname>curpriority</varname>,
+              <structname/mtx/.<structfield/mtx_blocked/,
+              <structname/mtx/.<structfield/mtx_contested/,
+              <structname/proc/.<structfield/p_procq/,
+              <structname/proc/.<structfield/p_slpq/,
+              <structname/proc/.<structfield/p_sflag/,
+              <structname/proc/.<structfield/p_stat/,
+              <structname/proc/.<structfield/p_estcpu/,
+              <structname/proc/.<structfield/p_cpticks/
+              <structname/proc/.<structfield/p_pctcpu/,
+              <structname/proc/.<structfield/p_wchan/,
+              <structname/proc/.<structfield/p_wmesg/,
+              <structname/proc/.<structfield/p_swtime/,
+              <structname/proc/.<structfield/p_slptime/,
+              <structname/proc/.<structfield/p_runtime/,
+              <structname/proc/.<structfield/p_uu/,
+              <structname/proc/.<structfield/p_su/,
+              <structname/proc/.<structfield/p_iu/,
+              <structname/proc/.<structfield/p_uticks/,
+              <structname/proc/.<structfield/p_sticks/,
+              <structname/proc/.<structfield/p_iticks/,
+              <structname/proc/.<structfield/p_oncpu/,
+              <structname/proc/.<structfield/p_lastcpu/,
+              <structname/proc/.<structfield/p_rqindex/,
+              <structname/proc/.<structfield/p_heldmtx/,
+              <structname/proc/.<structfield/p_blocked/,
+              <structname/proc/.<structfield/p_mtxname/,
+              <structname/proc/.<structfield/p_contested/,
+              <structname/proc/.<structfield/p_priority/,
+              <structname/proc/.<structfield/p_usrpri/,
+              <structname/proc/.<structfield/p_nativepri/,
+              <structname/proc/.<structfield/p_nice/,
+              <structname/proc/.<structfield/p_rtprio/,
+              <varname>pscnt</varname>,
+              <varname>slpque</varname>,
+              <varname>itqueuebits</varname>,
+              <varname>itqueues</varname>,
+              <varname>rtqueuebits</varname>,
+              <varname>rtqueues</varname>,
+              <varname>queuebits</varname>,
+              <varname>queues</varname>,
+              <varname>idqueuebits</varname>,
+              <varname>idqueues</varname>,
+              <varname>switchticks</varname>,
+            </entry>
+            <entry>
+              <function>setrunqueue</function>,
+              <function>remrunqueue</function>,
+              <function>mi_switch</function>,
+              <function>chooseproc</function>,
+              <function>schedclock</function>,
+              <function>resetpriority</function>,
+              <function>updatepri</function>,
+              <function>maybe_resched</function>,
+              <function>cpu_switch</function>,
+              <function>cpu_throw</function>,
+              <function>need_resched</function>,
+              <function>resched_wanted</function>,
+              <function>clear_resched</function>,
+              <function>aston</function>,
+              <function>astoff</function>,
+              <function>astpending</function>,
+              <function>calcru</function>,
+              <function>proc_compare</function>
+            </entry>
+          </row>
+
+          <!-- The vm86 pcb lock -->
+          <row>
+            <entry>vm86pcb_lock</entry>
+            <entry><quote>vm86pcb lock</quote></entry>
+            <entry>
+              <constant>MTX_DEF</constant> 
+            </entry>
+            <entry>
+              <varname>vm86pcb</varname>
+            </entry>
+            <entry>
+              <function>vm86_bioscall</function>
+            </entry>
+          </row>
+
+          <!-- Giant -->
+          <row>
+            <entry>Giant</entry>
+            <entry><quote>Giant</quote></entry>
+            <entry>
+              <constant>MTX_DEF</constant> |
+              <constant>MTX_RECURSE</constant>
+            </entry>
+            <entry>nearly everything</entry>
+            <entry>lots</entry>
+          </row>
+
+          <!-- The callout lock -->
+          <row>
+            <entry>callout_lock</entry>
+            <entry><quote>callout lock</quote></entry>
+            <entry>
+              <constant>MTX_SPIN</constant> |
+              <constant>MTX_RECURSE</constant>
+ 
+            </entry>
+            <entry>
+              <varname>callfree</varname>,
+              <varname>callwheel</varname>,
+              <varname>nextsoftcheck</varname>,
+              <structname/proc/.<structfield/p_itcallout/,
+              <structname/proc/.<structfield/p_slpcallout/,
+              <varname>softticks</varname>,
+              <varname>ticks</varname>
+            </entry>
+            <entry>
+            </entry>
+          </row>
+        </tbody>
+      </tgroup>
+    </table>
+  </sect1>
+
+  <sect1 id="locking-sx">
+    <title>Разделяемые эксклюзивные блокировки</title>
+
+    <para>Эти блокировки обеспечивают базовый тип
+      функциональности - на чтение/запись и могут
+      поддерживаться процессами, находящимся в состоянии
+      ожидания.  На текущий момент они реализованы в  &man.lockmgr.9;.</para>
+
+    <table>
+      <title>Список разделяемых эксклюзивных блокировок</title>
+      <indexterm><primary>блокировки</primary>
+        <secondary>allproc_lock</secondary></indexterm>      
+      <indexterm><primary>блокировки</primary>
+        <secondary>proctree_lock</secondary></indexterm>     
+
+      <tgroup cols="2">
+        <thead>
+          <row>
+            <entry>Имя переменной</entry>
+            <entry>Защиты</entry>
+          </row>
+        </thead>
+        <tbody>
+          <row>
+            <entry><varname>allproc_lock</varname></entry>
+            <entry>
+              <varname>allproc</varname>
+              <varname>zombproc</varname>
+              <varname>pidhashtbl</varname>
+              <structname/proc/.<structfield/p_list/
+              <structname/proc/.<structfield/p_hash/
+              <varname>nextpid</varname>
+            </entry>
+	 </row>
+	 <row>
+            <entry><varname>proctree_lock</varname></entry>
+            <entry>
+              <structname/proc/.<structfield/p_children/
+              <structname/proc/.<structfield/p_sibling/
+            </entry>
+          </row>
+        </tbody>
+      </tgroup>
+    </table>
+  </sect1>
+
+  <sect1 id="locking-atomic">
+    <title>Атомарно защищенные переменные</title>
+
+    <indexterm><primary>атомарно защищённые переменные</primary></indexterm>
+
+    <para>Переменной, защищенной атомарно, является особая переменная,
+      которая не защищается явной блокировкой.  Вместо этого для доступа к
+      данным переменных используются специальные атомарные операции, как
+      описано в &man.atomic.9;.  Лишь несколько переменных используются таким
+      образом, хотя другие примитивы синхронизации, такие как мьютексы,
+      реализованы с атомарно защищенными переменными.</para>
+
+    <itemizedlist>
+      <listitem>
+        <para><structname/mtx/.<structfield/mtx_lock/</para>
+      </listitem>
+    </itemizedlist>
+  </sect1>
+</chapter>
