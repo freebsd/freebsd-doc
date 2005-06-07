@@ -2,7 +2,7 @@
 # The FreeBSD Russian Documentation Project
 #
 # $FreeBSD$
-# $FreeBSDru: frdp/www/ru/projects/Makefile,v 1.7 2004/01/25 13:00:52 andy Exp $
+# $FreeBSDru: frdp/www/ru/projects/Makefile,v 1.8 2005/06/06 17:10:33 andy Exp $
 #
 # Original revision: 1.7
 #
@@ -17,6 +17,7 @@
 DOCS=	projects.sgml
 DOCS+=	newbies.sgml
 DOCS+=	cvsweb.sgml
+DOCS+=	summerofcode.sgml
 
 INDEXLINK= projects.html
 
