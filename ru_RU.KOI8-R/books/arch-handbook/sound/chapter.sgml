@@ -1,0 +1,708 @@
+<!--
+     The FreeBSD Russian Documentation Project
+
+     $FreeBSD$
+     $FreeBSDru: frdp/doc/ru_RU.KOI8-R/books/arch-handbook/sound/chapter.sgml,v 1.8 2005/06/08 05:57:29 gad Exp $
+    
+     Original revision: 1.9
+-->
+
+<chapter id="oss">
+  <chapterinfo>
+    <authorgroup>
+      <author>
+        <firstname>Jean-Francois</firstname>
+	<surname>Dockes</surname>
+	<contrib>Автор: </contrib>
+      </author>
+    </authorgroup>
+    <!-- 23 November 2001 -->
+  </chapterinfo>
+
+  <title>Подсистема звука</title>
+  
+  <sect1 id="oss-intro">
+    <title>Введение</title>
+
+    <para>Перевод на русский язык: Виталий
+      Богданов (<email>gad@gad.glazov.net</email>)</para>
+
+    <indexterm><primary>подсистема звука</primary></indexterm>
+    
+    <para>В подсистеме звука FreeBSD существует чёткое разделение
+      между частью, поддерживающей общие звуковые возможности и
+      аппаратно зависимой частью.  Данная особенность делает
+      более простым добавление поддержки новых устройств.</para>
+
+    <para>&man.pcm.4; занимает центральное  место в подсистеме
+      звука.  Его основными элементами являются:</para>
+
+    <indexterm><primary>интерфейс системных вызовов</primary></indexterm>
+
+    <itemizedlist>
+      <listitem>
+        <para>Интерфейс системных вызовов (read, write, ioctls) к
+          функциям оцифрованного звука и микшера.  Командный набор
+	  ioctl совместим с интерфейсом <emphasis>OSS</emphasis>
+	  или <emphasis>Voxware</emphasis>, позволяя тем самым
+	  портирование мультимедиа приложений без дополнительной
+	  модификации.</para>
+      </listitem>
+      <listitem>
+        <para>Общий код обработки звуковых данных (преобразования
+          форматов, виртуальные каналы).</para>
+      </listitem>
+      <listitem>
+        <para>Единый программный интерфейс к аппаратно-зависимым
+	  модулям звукового интерфейса.</para>
+      </listitem>
+      <listitem>
+        <para>Дополнительная поддержка нескольких общих аппаратных
+	  интерфейсов (ac97) или разделяемого аппаратно-специфичного
+	  кода (например: функции ISA DMA).</para>
+      </listitem>
+    </itemizedlist>
+
+    <para>Поддержка отдельных звуковых карт осуществляется с помощью
+      аппаратно-специфичных драйверов, обеспечивающих канальные и
+      микшерные интерфейсы, включаемые в
+      общий <devicename>pcm</devicename> код.</para>
+
+    <para>В этой главе термином <devicename>pcm</devicename> мы
+      будем называть центральную, общую часть звукового драйвера, как
+      противопоставление аппаратно-специфичным модулям.</para>
+
+    <para>Человек, решающий написать драйвер наверняка захочет использовать
+      в качестве шаблона уже существующий код.  Но, если звуковой код хорош и
+      чист, он также в основном лишён комментариев.  Этот документ - попытка
+      рассмотрения базового интерфейса  и попытка ответить на вопросы, возникшие
+      при адаптировании существующего кода.</para>
+
+    <para>Для старта с рабочего примера, вы можете найти шаблон
+      драйвера, оснащенного комментариями на <ulink
+      url="http://people.FreeBSD.org/~cg/template.c">
+      http://people.FreeBSD.org/~cg/template.c</ulink></para>
+
+  </sect1>
+
+  <sect1 id="oss-files">
+    <title>Файлы</title>
+
+    <para>Весь исходный код, на сегодняшний момент (FreeBSD 4.4), содержится
+      в каталоге <filename>/usr/src/sys/dev/sound/</filename>, за исключением
+      публичных определений интерфейса ioctl, находящихся в 
+      <filename>/usr/src/sys/sys/soundcard.h</filename></para>
+
+    <para>В подкаталоге <filename>pcm/</filename> родительского
+      каталога <filename>/usr/src/sys/dev/sound/</filename> находится
+      главный код, а
+      в каталогах <filename>isa/</filename> и <filename>pci/</filename>
+      содержатся драйвера для ISA и PCI карт.</para>
+
+  </sect1>
+
+  <sect1 id="pcm-probe-and-attach">
+    <title>Обнаружение, подключение, и т.д.</title>
+
+    <para>Обнаружение и подключение звуковых драйверов во многом схоже с
+      драйвером любого другого устройства.  За дополнительной информацией
+      вы можете обратиться к главам <link
+      linkend="isa-driver"> ISA</link> или <link
+      linkend="pci">PCI</link> данного руководства.</para>
+      
+    <para>Но всё же, звуковые драйвера немного отличаются:</para>
+
+    <itemizedlist>
+
+      <listitem>
+        <para>Они объявляют сами себя, как устройства класса <devicename>pcm</devicename>,
+          с частной структурой устройства <structname>struct
+          snddev_info</structname> :</para>
+
+          <programlisting>          static driver_t xxx_driver = {
+              "pcm",
+              xxx_methods,
+              sizeof(struct snddev_info)
+          };
+
+          DRIVER_MODULE(snd_xxxpci, pci, xxx_driver, pcm_devclass, 0, 0);
+          MODULE_DEPEND(snd_xxxpci, snd_pcm, PCM_MINVER, PCM_PREFVER,PCM_MAXVER);</programlisting>
+
+       <indexterm><primary>драйвера устройств</primary><secondary>звук</secondary></indexterm>
+        <para>Большинство звуковых драйверов нуждаются в сохранении личной
+	  информации, касающейся их устройства.  Структура с личными
+          данными обычно выделяется при вызове функции attach.  Её адрес
+          передаётся <devicename>pcm</devicename> посредством вызовов
+          <function>pcm_register()</function>
+          и <function>mixer_init()</function>.  Позже
+          <devicename>pcm</devicename> передаёт назад этот адрес, в
+          качестве параметра в вызовах к интерфейсам звукового
+          драйвера.</para>
+      </listitem>
+
+      <listitem>
+        <para>Функция подключения звукового драйвера должна объявлять
+          её микшерный или AC97 интерфейс
+          <devicename>pcm</devicename> посредством
+          вызова <function>mixer_init()</function>.  Для микшерного
+	  интерфейса это взамен вернёт вызов <link linkend="xxxmixer-init">
+          <function>xxxmixer_init()</function></link>.</para>
+      </listitem>
+
+      <listitem>
+        <para>Функция подключения звукового драйвера передаёт
+          общие настройки каналов <devicename>pcm</devicename> посредством
+          вызова <function>pcm_register(dev, sc, nplay,
+          nrec)</function>, где <varname>sc</varname> - адрес
+          структуры данных устройства, используемой в дальнейших
+          вызовах от <devicename>pcm</devicename>, а <varname>nplay</varname>
+          и <varname>nrec</varname> - количество каналов проигрывания и
+          записи.</para>
+      </listitem>
+
+      <listitem>
+        <para>Функция подключения звукового драйвера объявляет каждый
+          из её каналов с помощью вызовов
+          <function>pcm_addchan()</function>.  Это установит занятость
+          канала в <devicename>pcm</devicename> и вызовет
+          взамен вызов
+            <link linkend="xxxchannel-init">
+            <function>xxxchannel_init()</function></link>.</para>
+      </listitem>
+
+      <listitem>
+        <para>Функция отключения должна вызывать
+        <function>pcm_unregister()</function> перед объявлением её ресурсов
+        свободными.</para>
+      </listitem>
+    </itemizedlist>
+      
+    <para>Существует два метода работы с не PnP устройствами:</para>
+    <itemizedlist>
+      <listitem>
+        <para>Использование метода <function>device_identify()</function>
+          (пример смотрите в: <filename>sound/isa/es1888.c</filename>).
+          <function>device_identify()</function> пытается обнаружить
+          оборудование, использующее известные адреса, и если найдёт
+	  поддерживаемое устройство, то создаст новое pcm
+          устройство,  которое затем будет передано процессу
+	  обнаружения/подключения.</para>
+      </listitem>
+      <listitem>
+        <para>Использование выборочной конфигурации ядра с соответствующими
+	  хинтами для pcm устройств (пример:
+          <filename>sound/isa/mss.c</filename>).</para>
+      </listitem>
+    </itemizedlist>
+
+    <para><devicename>pcm</devicename> драйверы должны поддерживать
+    <function>device_suspend</function>,
+    <function>device_resume</function> и
+    <function>device_shutdown</function> функции, для корректного
+    функционирования управления питанием и процесса выгрузки модуля.</para>
+
+  </sect1>
+
+  <sect1 id="oss-interfaces">
+    <title>Интерфейсы</title>
+
+    <para>Интерфейс между <devicename>pcm</devicename>
+      и звуковыми драйверами определён в терминах <link
+      linkend="kernel-objects">объектов ядра</link>.</para>
+
+    <para>Есть 2 основных интерфейса, которые обычно обеспечивает
+      звуковой драйвер: <emphasis>канальный</emphasis> и, либо
+      <emphasis>микшерный</emphasis> либо <emphasis>AC97</emphasis>.</para>
+      
+    <para>Интерфейс <emphasis>AC97</emphasis> довольно мало использует
+      доступ к ресурсам оборудования (чтение/запись регистров).  Данный
+      интерфейс реализован в драйверах для карт с кодеком AC97.  В
+      этом случае фактический микшерный интерфейс обеспечивается разделяемым
+      кодом AC97 в <devicename>pcm</devicename>.</para>
+
+    <sect2>
+      <title>Канальный интерфейс</title>
+
+      <sect3>
+        <title>Общие заметки о параметрах функций</title>
+
+        <para>Звуковые драйверы обычно имеют структуру с личными
+	  данными для описания их устройства и по одной структуре на
+	  каждый поддерживаемый канал проигрывания или записи данных.</para>
+
+        <para>Для всех функций канального интерфейса первый параметр -
+	  непрозрачный указатель.</para>
+
+        <para>Второй параметр это указатель на структуру с
+	  данными канала.  Исключение:
+	  У <function>channel_init()</function> это указатель на
+	  частную структуру устройства (данная функция возвращает
+	  указатель на канал для дальнейшего использования
+	  в <devicename>pcm</devicename>).</para>
+
+      </sect3>
+
+      <sect3>
+        <title>Обзор операций передачи данных</title>
+
+        <para>Для передачи данных,
+          <devicename>pcm</devicename> и звуковые драйвера
+	  используют разделяемую область памяти, описанную
+          в <structname>struct snd_dbuf</structname>.</para>
+
+        <para><structname>struct snd_dbuf</structname> принадлежит
+          <devicename>pcm</devicename>, и звуковые драйверы
+	  получают нужные значения с помощью вызовов функций
+          (<function>sndbuf_getxxx()</function>).</para>
+
+        <para>Область разделяемой памяти имеет размер, определяемый с помощью
+          <function>sndbuf_getsize()</function> и разделён на блоки
+	  фиксированного размера, определённого в 
+          <function>sndbuf_getblksz()</function> количества байт.</para>
+          
+        <para>При проигрывании, общий механизм передачи данных примерно
+	  следующий (обратный механизму, используемому при записи):</para>
+
+        <itemizedlist>
+          <listitem>
+            <para> В начале, <devicename>pcm</devicename> заполняет
+              буфер, затем вызывает функцию звукового драйвера <link
+              linkend="channel-trigger">
+              <function>xxxchannel_trigger()</function></link>
+              с параметром PCMTRIG_START.</para>
+          </listitem>
+
+          <listitem>
+            <para>Затем звуковой драйвер многократно передаёт всю
+	      область памяти
+              (<function>sndbuf_getbuf()</function>,
+              <function>sndbuf_getsize()</function>) устройству, с
+              количеством байт, определённым в <function>sndbuf_getblksz()</function> .
+              Взамен это вызовет <function>chn_intr()</function>
+              <devicename>pcm</devicename>  функцию для каждого
+              переданного блока (это обычно происходит во время
+              прерывания).</para>
+          </listitem>
+
+          <listitem>
+            <para><function>chn_intr()</function> копирует новые
+              данные в область, которая была передана устройству (сейчас
+              свободная) и вносит соответствующие изменения в
+              структуру <structname>snd_dbuf</structname> .</para>
+          </listitem>
+
+        </itemizedlist>
+
+      </sect3>
+
+      <sect3 id="xxxchannel-init">
+        <title>channel_init</title>
+
+        <para><function>xxxchannel_init()</function> вызывается для
+          инициализации каждого из каналов проигрывания или
+	  записи.  Вызовы инициируются функцией подключения
+	  звукового драйвера.  (Подробнее 
+          в главе <link linkend="pcm-probe-and-attach">
+	  Обнаружение и подключение</link>).</para>
+          
+          <programlisting>          static void *
+          xxxchannel_init(kobj_t obj, void *data, 
+             struct snd_dbuf *b, struct pcm_channel *c, int dir)<co id="co-chinit-params">
+          {
+              struct xxx_info *sc = data;
+              struct xxx_chinfo *ch;
+               ...
+              return ch;<co id="co-chinit-return">
+           }</programlisting>
+
+        <calloutlist>
+
+          <callout arearefs="co-chinit-params">
+            <para><varname>b</varname> - это адрес канальной
+              <structname>struct snd_dbuf</structname>.  Она должна
+	      быть инициализирована в функции посредством
+	      вызова <function>sndbuf_alloc()</function>.  Нормальный
+	      размер буфера для использования - наименьшее кратное
+	      размера передаваемого блока данных для вашего устройства.</para>
+
+            <para><varname>c</varname> - это
+              указатель на структуру
+	      контроля <devicename>pcm</devicename> канала.  Это не прозрачный
+	      объект.  Функция должна хранить его в локальной структуре
+	      канала, для дальнейшего использования в вызовах к 
+              <devicename>pcm</devicename> (например в:
+              <function>chn_intr(c)</function>).</para>
+
+            <para><varname>dir</varname> определяет для каких целей
+	      используется канал
+	      (<literal>PCMDIR_PLAY</literal> или
+              <literal>PCMDIR_REC</literal>).</para>
+          </callout>
+
+          <callout arearefs="co-chinit-return">
+            <para>Функция должна возвращать указатель на личную,
+	      область, используемую для контроля этого
+	      канала. Он будет передаваться в качестве параметра в
+	      других вызовах канального интерфейса.</para>
+          </callout>
+
+        </calloutlist>
+
+      </sect3>
+
+      <sect3>
+        <title>channel_setformat</title>
+
+        <para><function>xxxchannel_setformat()</function> настраивает
+	  устройство на конкретный канал определённого формата звука.</para>
+          
+          <programlisting>          static int
+          xxxchannel_setformat(kobj_t obj, void *data, u_int32_t format)<co id="co-chsetformat-params">
+          {
+              struct xxx_chinfo *ch = data;
+               ...
+              return 0;
+           }</programlisting>
+
+        <calloutlist>
+          <callout arearefs="co-chsetformat-params">
+            <para><varname>format</varname> используется, как
+              <literal>AFMT_XXX значение</literal>
+              (<filename>soundcard.h</filename>).</para>
+          </callout>
+
+        </calloutlist>
+      </sect3>
+
+      <sect3>
+        <title>channel_setspeed</title>
+
+        <para><function>xxxchannel_setspeed()</function> устанавливает
+	  оборудование канала на определённую шаблонную скорость и возвращает
+	  возможную корректирующую скорость.</para>
+
+        <programlisting>          static int
+          xxxchannel_setspeed(kobj_t obj, void *data, u_int32_t speed)
+          {
+              struct xxx_chinfo *ch = data;
+               ...
+              return speed;
+           }</programlisting>
+
+      </sect3>
+
+      <sect3>
+        <title>channel_setblocksize</title>
+
+        <para><function>xxxchannel_setblocksize()</function> устанавливает
+          размер передаваемого блока между
+          <devicename>pcm</devicename> и звуковым драйвером, и между
+          звуковым драйвером и устройством.  Обычно это будет количество
+	  переданных байт перед прерыванием. Во время трансфера звуковой
+	  драйвер должен должен вызывать 
+	  <devicename>pcm</devicename> функцию <function>chn_intr()</function> каждый
+	  раз при передаче блока данных такого размера.</para>
+
+        <para>Большинство звуковых драйверов только берут на заметку
+	  размер блока для использования во время передачи данных.</para>
+          
+        <programlisting>          static int
+          xxxchannel_setblocksize(kobj_t obj, void *data, u_int32_t blocksize)
+          {
+              struct xxx_chinfo *ch = data;
+                ...
+              return blocksize;<co id="co-chsetblocksize-return">
+           }</programlisting>
+
+        <calloutlist>
+          <callout arearefs="co-chsetblocksize-return">
+            <para>Функция возвращает возможно согласованный  размер
+	      блока.  В случае, если размер блока действительно
+	      изменился должен быть произведён вызов
+              <function>sndbuf_resize()</function> для корректирования
+	      буфера.</para>
+
+          </callout>
+        </calloutlist>
+
+      </sect3>
+
+      <sect3 id="channel-trigger">
+        <title>channel_trigger</title>
+
+        <para><function>xxxchannel_trigger()</function> вызывается
+          <devicename>pcm</devicename> для контроля над трансферными
+	  операциями в драйвере.</para>
+          
+        <programlisting>          static int
+          xxxchannel_trigger(kobj_t obj, void *data, int go)<co id="co-chtrigger-params">
+          {
+              struct xxx_chinfo *ch = data;
+               ...
+              return 0;
+           }</programlisting>
+
+        <calloutlist>
+          <callout arearefs="co-chtrigger-params">
+            <para><varname>go</varname> определяет действие для
+	      текущего вызова.  Возможные значения:</para>
+              <itemizedlist>
+
+              <listitem>
+                <para><literal>PCMTRIG_START</literal>: драйвер
+                  должен начать передачу данных из или в канальный
+	     	  буфер.  Буфер и его размер могут быть получены через
+                  вызов <function>sndbuf_getbuf()</function> и
+                  <function>sndbuf_getsize()</function>.</para>
+              </listitem>
+
+              <listitem>
+                <para><literal>PCMTRIG_EMLDMAWR</literal> /
+                  <literal>PCMTRIG_EMLDMARD</literal>: говорит
+		  драйверу, что входной или выходной буфер возможно
+		  был обновлён.  Большинство драйверов игнорируют
+		  эти вызовы.</para>
+              </listitem>
+
+              <listitem>
+                <para><literal>PCMTRIG_STOP</literal> /
+                  <literal>PCMTRIG_ABORT</literal>: драйвер должен
+                  остановить текущую передачу данных.</para>
+              </listitem>
+            </itemizedlist>
+
+          </callout> 
+        </calloutlist>
+
+        <note><para>Если драйвер использует ISA DMA,
+          <function>sndbuf_isadma()</function> должна вызываться
+	  перед выполнением действий над устройством, она также
+	  позаботится о вещах со стороны DMA чипа.</para>
+          </note>
+
+      </sect3>
+
+      <sect3>
+        <title>channel_getptr</title>
+
+        <para><function>xxxchannel_getptr()</function> возвращает
+          текущее смещение в передаваемом буфере.  Обычно вызывается
+	  в <function>chn_intr()</function>, и так 
+          <devicename>pcm</devicename> узнаёт, где брать данные для
+	  новой передачи.</para>
+          
+      </sect3>
+
+      <sect3>
+        <title>channel_free</title>
+
+        <para><function>xxxchannel_free()</function> вызывается для
+	  освобождения ресурсов канала.  Например: должна вызываться,
+          при выгрузке драйвера, если структуры данных канала
+	  распределялись динамично или, если
+	  <function>sndbuf_alloc()</function> не использовалась
+	  для выделения памяти под буфер.</para>
+
+      </sect3>
+
+      <sect3>
+        <title>channel_getcaps</title>
+
+        <programlisting>          struct pcmchan_caps *
+          xxxchannel_getcaps(kobj_t obj, void *data)
+          {
+              return &amp;xxx_caps;<co id="co-chgetcaps-return">
+           }</programlisting>
+
+        <calloutlist>
+
+          <callout arearefs="co-chgetcaps-return">
+            <para>Подпрограмма возвращает указатель на (обычно
+	      статически-определяемую) структуру
+              <structname>pcmchan_caps</structname> (описанную в
+              <filename>sound/pcm/channel.h</filename>.  Структура содержит
+	      данные о минимуме и максимуме шаблонных частот и
+	      воспринимаемых звуковых форматах.  Для примера смотрите
+	      исходный код любого звукового драйвера.</para>
+          </callout>
+
+        </calloutlist>
+
+      </sect3>
+
+      <sect3>
+        <title>Другие функции</title>
+
+        <para><function>channel_reset()</function>,
+          <function>channel_resetdone()</function>, и
+          <function>channel_notify()</function> предназначены для
+	  специальных целей и не должны употребляться в драйвере
+	  без обсуждения с авторами (&a.cg;).</para>
+
+        <para><function>channel_setdir()</function> is deprecated.</para>
+      </sect3>
+
+    </sect2>
+
+    <sect2>
+      <title>Микшерный интерфейс</title>
+        
+      <sect3 id="xxxmixer-init">
+        <title>mixer_init</title>
+
+        <para><function>xxxmixer_init()</function> инициализирует
+          оборудование и говорит <devicename>pcm</devicename> какие микшерные
+          устройства доступны для проигрывания и записи</para>
+
+        <programlisting>          static int
+          xxxmixer_init(struct snd_mixer *m)
+          {
+              struct xxx_info   *sc = mix_getdevinfo(m);
+              u_int32_t v;
+
+              [Initialize hardware]
+
+              [Set appropriate bits in v for play mixers]<co id="co-mxini-sd">
+              mix_setdevs(m, v);
+              [Set appropriate bits in v for record mixers]
+              mix_setrecdevs(m, v)
+
+              return 0;              
+          }</programlisting>
+
+        <calloutlist>
+          <callout arearefs="co-mxini-sd">
+            <para>Устанавливает биты в целом значении и вызывает 
+              <function>mix_setdevs()</function> и
+              <function>mix_setrecdevs()</function> чтобы сообщить
+              <devicename>pcm</devicename> какие устройства существуют.</para>
+          </callout>
+        </calloutlist>
+
+        <para>Определения битов микшера могут быть найдены в
+          <filename>soundcard.h</filename>
+          (<literal>SOUND_MASK_XXX</literal> значения и
+          <literal>SOUND_MIXER_XXX</literal> битовые сдвиги).</para>
+
+      </sect3>
+
+      <sect3>
+        <title>mixer_set</title>
+
+        <para><function>xxxmixer_set()</function> устанавливает уровень
+          громкости для одного микшерного устройства.</para>
+
+        <programlisting>          static int
+          xxxmixer_set(struct snd_mixer *m, unsigned dev, 
+                           unsigned left, unsigned right)<co id="co-mxset-params">
+          {
+              struct sc_info *sc = mix_getdevinfo(m);
+              [set volume level]
+              return left | (right << 8);<co id="co-mxset-return">
+          }</programlisting>
+
+        <calloutlist>
+          <callout arearefs="co-mxset-params">
+            <para>Устройство определяется, как <literal>SOUND_MIXER_XXX</literal>
+              значение</para> <para>Допустимые значения уровней громкости лежат
+              в пределах [0-100].  Равное нулю значение должно выключать звук
+              устройства.</para>
+          </callout>
+
+          <callout arearefs="co-mxset-return">
+            <para>Вероятно уровни оборудования не будут совпадать с
+              входной шкалой, и будет происходить некоторое округление, подпрограмма
+              будет возвращает точные значения (в промежутке 0-100), как уже
+              было сказано.</para>
+          </callout>
+        </calloutlist>
+
+      </sect3>
+
+      <sect3>
+        <title>mixer_setrecsrc</title>
+
+        <para><function>xxxmixer_setrecsrc()</function> устанавливает
+          исходное записывающее устройство.</para>
+          
+        <programlisting>          static int
+          xxxmixer_setrecsrc(struct snd_mixer *m, u_int32_t src)<co id="co-mxsr-params">
+          {
+              struct xxx_info *sc = mix_getdevinfo(m);
+
+              [look for non zero bit(s) in src, set up hardware]
+
+              [update src to reflect actual action]
+              return src;<co id="co-mxsr-return">
+           }</programlisting>
+
+        <calloutlist>
+          <callout arearefs="co-mxsr-params">
+            <para>Желаемые записывающие устройства указываются в битовом поле</para>
+          </callout>
+
+          <callout arearefs="co-mxsr-return">
+            <para>Возвращается фактический набор устройств для записи.
+              Некоторые драйверы могут устанавливать только одно устройство для
+	      записи.  Функция должна возвращать -1, в случае возникновения
+	      ошибки.</para>
+          </callout>
+        </calloutlist>
+      </sect3>
+
+      <sect3>
+        <title>mixer_uninit, mixer_reinit</title>
+
+        <para><function>xxxmixer_uninit()</function> должна проверить,
+          что все звуки выключены (mute), и, если возможно выключить
+	  оборудование микшера </para>
+
+        <para><function>xxxmixer_reinit()</function> должна удостовериться,
+          что оборудование микшера включено и все установки, неконтролируемые
+          <function>mixer_set()</function> или
+          <function>mixer_setrecsrc()</function> восстановлены.</para> 
+
+      </sect3>
+    </sect2>
+
+    <sect2>
+      <title>Интерфейс AC97</title>
+
+       <indexterm><primary>AC97</primary></indexterm>
+
+      <para>Поддержка интерфейса <emphasis>AC97</emphasis> осуществляется
+	драйверами с кодеком AC97.  Он поддерживает только три метода:</para>
+
+      <itemizedlist>
+
+        <listitem><para><function>xxxac97_init()</function> возвращает
+          количество найденных ac97 кодеков.</para>
+        </listitem>
+
+        <listitem><para><function>ac97_read()</function> и
+          <function>ac97_write()</function> читают или записывают
+	  данные определенного регистра.</para>
+        </listitem>
+
+      </itemizedlist>
+
+      <para>Интерфейс <emphasis>AC97</emphasis> используется кодом 
+        AC97 в <devicename>pcm</devicename> для выполнения операций
+	более высокого уровня.  За примером обращайтесь к 
+        <filename>sound/pci/maestro3.c</filename> или к другим
+	файлам из каталога <filename>sound/pci/</filename>.</para>
+
+    </sect2>
+  </sect1>
+</chapter>
+
+<!-- 
+     Local Variables:
+     mode: sgml
+     sgml-declaration: "../chapter.decl"
+     sgml-indent-data: t
+     sgml-omittag: nil
+     sgml-always-quote-attributes: t
+     sgml-parent-document: ("../book.sgml" "part" "chapter")
+     End:
+-->
