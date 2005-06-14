@@ -2,11 +2,11 @@
 # The FreeBSD Russian Documentation Project
 #
 # $FreeBSD$
-# $FreeBSDru: frdp/doc/ru_RU.KOI8-R/articles/fbsd-from-scratch/Makefile,v 1.2 2004/02/20 17:57:24 phantom Exp $
+# $FreeBSDru: frdp/doc/ru_RU.KOI8-R/articles/fbsd-from-scratch/Makefile,v 1.3 2005/06/12 13:51:45 gad Exp $
 #
 # Article: FreeBSD From Scratch
 #
-# Original revision: 1.5
+# Original revision: 1.6
 #
 
 DOC?= article
@@ -18,20 +18,24 @@ MAINTAINER= schweikh@FreeBSD.org
 INSTALL_COMPRESSED?= gz
 INSTALL_ONLY_COMPRESSED?=
 
-# SGML content
-EXTRA_SRCS= stage_1.sh stage_1.conf.default \
-	stage_2.sh stage_2.conf.default stage_3.mk
+EXTRAS= 	stage_1.sh
+EXTRAS+=	stage_1.conf.default
+EXTRAS+=	stage_2.sh
+EXTRAS+=	stage_2.conf.default
+EXTRAS+=	stage_3.mk
 
-CLEANFILES+= ${EXTRA_SRCS}
+CLEANFILES+= ${EXTRAS}
 
-SRCS= article.sgml ${EXTRA_SRCS}
+SRCS=	article.sgml
+SRCS+= 	${EXTRAS}
 
-${EXTRA_SRCS}:
+${EXTRAS}:
 	${CP} ${DOC_PREFIX}/en_US.ISO8859-1/articles/fbsd-from-scratch/${.TARGET} ${.OBJDIR}/
 
-DOC_PREFIX?= ${.CURDIR}/../../..
-
 afterinstall:
-	${INSTALL_DOCS} ${EXTRA_SRCS} ${DESTDIR}
+.for entry in ${EXTRAS}
+	${INSTALL_DOCS} ${.CURDIR}/${entry} ${DESTDIR}
+.endfor
 
+DOC_PREFIX?= ${.CURDIR}/../../..
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"
