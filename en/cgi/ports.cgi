@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/ports.cgi,v 1.81 2004/11/28 11:46:01 simon Exp $
+# $FreeBSD: www/en/cgi/ports.cgi,v 1.82 2005/02/16 16:32:17 wosch Exp $
 #
 # ports.cgi - search engine for FreeBSD ports
 #             	o search for a port by name or description
@@ -77,7 +77,6 @@ sub init_variables {
 	 '5.3-RELEASE/i386', "$p/packages-5.3-release/All",
 	 '5.2.1-RELEASE/i386', "$p/packages-5.2.1-release/All",
 	 '4.10-RELEASE/i386',"$p/packages-4.10-release/All",
-	 '4.11-RELEASE/i386',"$p/packages-4.11-release/All",
 
 	 '6-CURRENT/alpha', "$palpha/packages-6-current/All",
 	 '5-STABLE/alpha', "$palpha/packages-5-stable/All",
@@ -86,7 +85,6 @@ sub init_variables {
 	 '5.3-RELEASE/alpha', "$palpha/packages-5.3-release/All",
  	 '5.2.1-RELEASE/alpha', "$palpha/packages-5.2.1-release/All",
 	 '4.10-RELEASE/alpha',"$palpha/packages-4.10-release/All",
-	 '4.11-RELEASE/alpha',"$palpha/packages-4.11-release/All",
 
 	 '6-CURRENT/amd64', "$pamd64/packages-6-current/All",
 	 '5-STABLE/amd64', "$pamd64/packages-5-stable/All",
@@ -670,7 +668,7 @@ sub footer {
 <img ALIGN="RIGHT" src="/gifs/powerlogo.gif" alt="Powered by FreeBSD">
 &copy; 1996-2005 by Wolfram Schneider. All rights reserved.<br>
 };
-    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.81 2004/11/28 11:46:01 simon Exp $} . "<br>\n";
+    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.82 2005/02/16 16:32:17 wosch Exp $} . "<br>\n";
     print qq{Please direct questions about this service to
 <I><A HREF="$mailtoURL">$mailto</A></I><br>\n};
     print qq{General questions about FreeBSD ports should be sent to } .
