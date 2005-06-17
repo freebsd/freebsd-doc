@@ -26,7 +26,7 @@
 #
 # Heh. "Tort."
 #
-# $Id: gnomelogalyzer.sh,v 1.4 2005-03-29 22:12:33 adamw Exp $
+# $Id: gnomelogalyzer.sh,v 1.5 2005-06-17 22:30:06 adamw Exp $
 #
 
 # This script uses some simple yet effective heuristics to analyse
@@ -77,24 +77,33 @@ soln_portupgrade(){
 }
 
 
+get_tmpdir()
+{
+	if [ -n "${MC_TMPDIR}" -a -d "${MC_TMPDIR}" ]; then
+		tmpdir="${MC_TMPDIR}"
+	elif [ -n "${TMPDIR}" -a -d "${TMPDIR}" ]; then
+		tmpdir="${TMPDIR}"
+	elif [ -d "/var/tmp" ]; then
+		tmpdir="/var/tmp"
+	elif [ -d "/tmp" ]; then
+		tmpdir="/tmp"
+	elif [ -d "/usr/tmp" ]; then
+		tmpdir="/usr/tmp"
+	else
+		return 1
+	fi
+
+	echo ${tmpdir}
+
+	return 0
+}
+
 get_tmpfile()
 {
     template=$1
     tmpfile=""
 
-    if [ -n "${MC_TMPDIR}" -a -d "${MC_TMPDIR}" ]; then
-	tmpfile="${MC_TMPDIR}/${template}.XXXXXX"
-    elif [ -n "${TMPDIR}" -a -d "${TMPDIR}" ]; then
-	tmpfile="${TMPDIR}/${template}.XXXXXX"
-    elif [ -d "/var/tmp" ]; then
-	tmpfile="/var/tmp/${template}.XXXXXX"
-    elif [ -d "/tmp" ]; then
-	tmpfile="/tmp/${template}.XXXXXX"
-    elif [ -d "/usr/tmp" ]; then
-	tmpfile="/usr/tmp/${template}.XXXXXX"
-    else
-	return 1
-    fi
+    tmpfile="`get_tmpdir`/${template}.XXXXXX"
 
     tmpfile=`mktemp -q ${tmpfile}`
 
@@ -106,6 +115,9 @@ get_tmpfile()
 ###########
 #
 # main()
+
+debug -n "gnomelogalyzer ($0), ver. "
+debug `echo "$Id: gnomelogalyzer.sh,v 1.5 2005-06-17 22:30:06 adamw Exp $" | cut -f3 -d' '`
 
 echo; # for good measure.
 # check to make sure that the build log has been specified
@@ -208,6 +220,22 @@ debug -n "Checking for an out-of-date libtool15... "
 if grep -q 'libtool15: link: `1000:0' ${buildlog} ; then
     echo "Your libtool15 is out-of-date."
     soln_portupgrade "libtool-1.5\*"
+    exit
+else
+    debug "OK"
+fi
+
+#####
+#
+# TEST:FreeType2 out-of-date
+#
+# SOLUTION: portupgrade freetype2
+
+debug -n "Checking for an out-of-date freetype2... "
+if grep -q "struct FTC_ImageTypeRec_' has no member named" ${buildlog} || \
+    grep -q '\#error "`ft2build.h' ${buildlog} ; then
+    echo "Your freetype2 is out-of-date."
+    soln_portupgrade "-f freetype2"
     exit
 else
     debug "OK"
