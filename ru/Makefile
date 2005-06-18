@@ -2,9 +2,9 @@
 # The FreeBSD Russian Documentation Project
 #
 # $FreeBSD$
-# $FreeBSDru: frdp/www/ru/Makefile,v 1.44 2005/06/14 06:30:15 andy Exp $
+# $FreeBSDru: frdp/www/ru/Makefile,v 1.46 2005/06/17 07:03:44 andy Exp $
 #
-# Original revision: 1.117
+# Original revision: 1.122
 #
 
 .if exists(Makefile.conf)
@@ -19,7 +19,6 @@
 
 DOCS=  applications.sgml
 DOCS+= art.sgml
-DOCS+= auditors.sgml
 DOCS+= availability.sgml
 DOCS+= docs.sgml
 DOCS+= features.sgml
@@ -48,12 +47,13 @@ SUBDIR+= commercial
 SUBDIR+= copyright
 SUBDIR+= docproj
 SUBDIR+= donations
-#SUBDIR+= events
+SUBDIR+= events
 #SUBDIR+= gnome
 SUBDIR+= handbook
 SUBDIR+= internal
 SUBDIR+= java
 SUBDIR+= kse
+SUBDIR+= marketing
 SUBDIR+= news
 SUBDIR+= platforms
 SUBDIR+= portmgr
