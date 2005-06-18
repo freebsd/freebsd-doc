@@ -13,21 +13,21 @@ INSTALL_ONLY_COMPRESSED?=
 
 SRCS= book.sgml
 
-IMAGES_EN= figures/branches.png
-IMAGES_EN+= figures/freebsd-code-model.png
-IMAGES_EN+= figures/hats-overview.png
-IMAGES_EN+= figures/maintenance.png
-IMAGES_EN+= figures/orghierarchy.png
-IMAGES_EN+= figures/orghierarchy2.png
-IMAGES_EN+= figures/portsstatus.png
-IMAGES_EN+= figures/proc-add-committer.png
-IMAGES_EN+= figures/proc-add-cvsup.png
-IMAGES_EN+= figures/proc-commit.png
-IMAGES_EN+= figures/proc-contrib.png
-IMAGES_EN+= figures/proc-elections.png
-IMAGES_EN+= figures/proc-pr.png
-IMAGES_EN+= figures/proc-releng.png
-IMAGES_EN+= figures/proc-rm-committer.png
+IMAGES_EN= branches.png
+IMAGES_EN+= freebsd-code-model.png
+IMAGES_EN+= hats-overview.png
+IMAGES_EN+= maintenance.png
+IMAGES_EN+= orghierarchy.png
+IMAGES_EN+= orghierarchy2.png
+IMAGES_EN+= portsstatus.png
+IMAGES_EN+= proc-add-committer.png
+IMAGES_EN+= proc-add-cvsup.png
+IMAGES_EN+= proc-commit.png
+IMAGES_EN+= proc-contrib.png
+IMAGES_EN+= proc-elections.png
+IMAGES_EN+= proc-pr.png
+IMAGES_EN+= proc-releng.png
+IMAGES_EN+= proc-rm-committer.png
 
 DOC_PREFIX?= ${.CURDIR}/../../..
 
