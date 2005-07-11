@@ -450,6 +450,8 @@ MLINKS+=lex.1 flex++.1
 MLINKS+=lex.1 lex++.1
 MLINKS+=mail.1 Mail.1
 MLINKS+=mail.1 mailx.1
+MLINKS+=md5.1 rmd160.1
+MLINKS+=md5.1 sha1.1
 MLINKS+=nawk.1 awk.1
 MLINKS+=passwd.1 yppasswd.1
 MLINKS+=rtld.1 ld-elf.so.1.1
@@ -472,7 +474,7 @@ MLINKS+=cksum.1 sum.1
 MLINKS+=ktrace.1 trace.1
 MLINKS+=uuencode.1 uudecode.1 \
 	uuencode.1 b64encode.1 \
-	b64encode.1 b64decode.1
+	uuencode.1 b64decode.1
 MLINKS+=ncal.1 cal.1
 MLINKS+=enigma.1 crypt.1
 MLINKS+=ln.1 link.1
