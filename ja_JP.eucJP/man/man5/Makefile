@@ -20,7 +20,6 @@ MAN5 =	a.out.5\
 	dhcp-options.5\
 	dir.5\
 	disktab.5\
-	drivers.conf.5\
 	editrc.5\
 	elf.5\
 	ethers.5\
