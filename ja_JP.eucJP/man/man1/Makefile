@@ -173,6 +173,7 @@ MAN1 =	addftinfo.1\
 	lockf.1\
 	logger.1\
 	login.1\
+	logins.1\
 	logname.1\
 	look.1\
 	lookbib.1\
