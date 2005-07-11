@@ -34,10 +34,10 @@
 .\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" %FreeBSD: src/share/man/man9/timeout.9,v 1.23 2004/06/16 08:33:57 ru Exp %
+.\" %FreeBSD: src/share/man/man9/timeout.9,v 1.23.2.2 2005/03/21 23:01:30 iedowse Exp %
 .\" $FreeBSD$
 .\"
-.Dd September 10, 1996
+.Dd February 6, 2005
 .Dt TIMEOUT 9
 .Os
 .Sh 名称
@@ -47,7 +47,10 @@
 .Nm callout_init ,
 .Nm callout_stop ,
 .Nm callout_drain ,
-.Nm callout_reset
+.Nm callout_reset ,
+.Nm callout_pending ,
+.Nm callout_active ,
+.Nm callout_deactivate
 .Nd 明示された時間長の後の関数の実行
 .Sh 書式
 .In sys/types.h
@@ -74,6 +77,11 @@ struct callout_handle handle = CALLOUT_HANDLE_INITIALIZER(&handle)
 .Fn callout_drain "struct callout *c"
 .Ft void
 .Fn callout_reset "struct callout *c" "int ticks" "timeout_t *func" "void *arg"
+.Ft int
+.Fn callout_pending "struct callout *c"
+.Ft int
+.Fn callout_active "struct callout *c"
+.Fn callout_deactivate "struct callout *c"
 .Sh 解説
 関数
 .Fn timeout
@@ -162,8 +170,8 @@ timeout の設備は
 .Fn untimeout
 のための O(1) 実行時間を提供します。
 timeout (訳注: および untimeout) は
-.Fn splsoftclock
-の状態で
+.Va Giant
+ロックが保持されている状態で、
 .Fn softclock
 から実行されます。
 従って、再入から保護されます。
@@ -189,8 +197,8 @@ timeout (訳注: および untimeout) は
 引数が 0 の場合には、callout 構造体は
 .Dq マルチプロセッサセーフ
 であるとはみなされません。
-すなわち、ジャイアントロックが callout 関数の呼出し前に
-獲得され、callout 関数が戻るときに解放されるようにします。
+すなわち、ジャイアントロックがコールアウト関数の呼出し前に
+獲得され、コールアウト関数が戻るときに解放されるようにします。
 .Pp
 関数
 .Fn callout_stop
@@ -198,7 +206,13 @@ timeout (訳注: および untimeout) は
 コールアウトが保留中の場合には、
 .Fn callout_stop
 は 0 でない値を返します。
-コールアウトが既に実行されたか現在実行中の場合には、0 が返されます。
+コールアウトが設定されていないか既に実行されているか現在実行中の場合には、
+0 が返されます。
+この関数が呼び出されるとき、コールアウトが
+.Va Giant
+ミューテックス (mutex) によって保護されている場合には、
+.Va Giant
+を保持していなければなりません。
 .Pp
 関数
 .Fn callout_drain
@@ -208,14 +222,254 @@ timeout (訳注: および untimeout) は
 この関数は、そのコールアウトがブロックするかもしれないあらゆるロックを
 保持している間は、決して呼び出されてはなりません。
 さもないと結果としてデッドロックします。
+コールアウトサブシステムが既にこのコールアウトを処理し始めたなら
+コールアウト関数が
+.Fn callout_drain
+の実行の間に呼び出されるかもしれないことに注意してください。
+しかしながら、コールアウトサブシステムは、
+.Fn callout_drain
+が返る前にコールアウトが完全に停止されることを保証します。
 .Pp
 関数
 .Fn callout_reset
 は最初にそのコールアウトを廃止するために
 .Fn callout_stop
-を呼び出し、それから新しいコールアウトを
+と同様のことを実行し、それから新しいコールアウトを
 .Fn timeout
 と同じ流儀で確立します。
+この関数が呼び出されるとき、コールアウトが
+.Va Giant
+ミューテックスによって保護される場合には、
+.Va Giant
+は保持されなければなりません。
+.Pp
+マクロ
+.Fn callout_pending ,
+.Fn callout_active
+および
+.Fn callout_deactivate
+はコールアウトの現在の状態へのアクセスを提供します。
+これらのマクロを慎重に使用すれば、非同期タイマ機構に
+特有の多くの競合条件を避けることができます。
+さらなる詳細については下記の
+.Sx "競合条件を回避する"
+を参照してださい。
+.Fn callout_pending
+マクロは、コールアウトが
+.Em 保留中
+であるかどうかチェックします。
+コールアウトはタイムアウトが設定されているが時間がまだ到着していない時、
+.Em 保留中
+であると見なされます。
+いったんタイムアウト時間が来て、コールアウトサブシステムがこのコールアウト
+を処理し始めれば、
+.Fn callout_pending
+はたとえコールアウト関数が実行を終了して (または、始めて) いなくても
+.Dv FALSE
+を返すことに注意してください。
+.\" even though = 〜にもかかわらず、たとえ〜としても、たとえ〜でも
+.Fn callout_active
+マクロはコールアウトが
+.Em アクティブ
+としてマークされているかどうかチェックし、
+.Fn callout_deactivate
+マクロはコールアウトの
+.Em アクティブ
+フラグをクリアします。
+コールアウトサブシステムは、タイムアウトが設定されているコールアウトを
+.Em アクティブ
+に設定し、
+.Fn callout_stop
+と
+.Fn callout_drain
+では
+.Em アクティブ
+をクリアしますが、
+コールアウト関数の実行を通して
+通常どおりコールアウトの期限が切れた場合には、クリア
+.Em しません
+。
+.Ss "競合条件を回避する"
+コールアウトサブシステムはそれ自体のタイマコンテキストから
+コールアウト関数を呼び出します。
+ある種の同期なしでは、コールアウト関数は他のスレッドからコールアウトの
+停止やリセットを試みながら並行して起動される可能性があります。
+特に、コールアウト関数は典型的には最初の動作として
+ミューテックスを獲得するので、
+コールアウト関数は既に呼び出されたとしても、
+別のスレッドがコールアウトをリセットするかまたは停止しようとするまで
+そのミューテックスを待ってブロックされてしまいます。
+.Pp
+コールアウトサブシステムはこれらの同期関係に対処するために
+多くのメカニズムを提供します。
+.Bl -enum -offset indent
+.It
+.Fa mpsafe
+を
+.Dv FALSE
+に設定して
+.Fn callout_init
+を使用することで指定される)
+.Va Giant
+ミューテックスによってコールアウトが保護される場合は、
+このミューテックスは競合条件を避けるために使用できます。
+.Fn callout_stop
+か
+.Fn callout_reset
+を呼び出す前に、
+.Va Giant
+ミューテックスは呼び出し側によって獲得されなければなりませんが、
+コールアウトが想定したとおりに正しく停止されるかまたはリセットされる
+ことが保証されます。
+.\" as expected = 案の定、予想どおり(に)、想定したとおり
+コールアウトかその関連のミューテックスを破壊する前に
+.Fn callout_drain
+を使用する必要がまだあることに注意してください。
+.It
+.Fn callout_stop
+からのリターン値は、コールアウトが削除されたかどうかを示します。
+コールアウトが設定され、
+コールアウト関数がまだ実行されていないことがわかっている場合は、
+.Dv FALSE
+の値はコールアウト関数がまさに呼び出されようとしていることを示します。
+.\" about to = 《be 〜》まさに〜しようとしている
+例えば:
+.Bd -literal -offset indent
+if (sc->sc_flags & SCFLG_CALLOUT_RUNNING) {
+	if (callout_stop(&sc->sc_callout)) {
+		sc->sc_flags &= ~SCFLG_CALLOUT_RUNNING;
+		/* successfully stopped */
+	} else {
+		/*
+		 * callout has expired and callout
+		 * function is about to be executed
+		 */
+	}
+}
+.Ed
+.Pp
+.Fn callout_reset
+がコールアウトを停止したかどうか決定するための
+同等なメカニズムがなにもないことに注意してください。
+.It
+.Fn callout_pending ,
+.Fn callout_active
+および
+.Fn callout_deactivate
+マクロは競合条件を回避するために連携して使用できます。
+.\" work around = 問題に取り掛かる、対処する、
+コールアウトのタイムアウトが設定されるとき、コールアウトサブシステムは
+ともに
+.Em アクティブ
+と
+.Em 保留中
+の両方でコールアウトをマークします。
+タイムアウト時間に達するとき、コールアウトサブシステムは
+.Em 保留中
+のフラグを最初にクリアすることによってコールアウトを処理し始めます。
+次に、
+.Em アクティブ
+フラグを変えないでコールアウト関数を呼び出して、
+コールアウト関数が戻った後でさえ
+.Em アクティブ
+フラグをクリアしません。
+ここで説明されたメカニズムでは、
+コールアウト関数自体が
+.Fn callout_deactivate
+マクロを使用して
+.Em アクティブ
+フラグをクリアすることを要求します。
+.Fn callout_stop
+と
+.Fn callout_drain
+関数は戻る前に、
+常に
+.Em アクティブ
+と
+.Em 保留中
+フラグの両方をクリアします。
+.Pp
+.Fn callout_pending
+が
+.Dv TRUE
+を返す場合、
+コールアウト関数は、最初に
+.Em 保留中
+フラグをチェックして動作なしで戻るべきです。
+これは、コールアウトがコールアウト関数が呼び出される直前に
+.Fn callout_reset
+を使用して再スケジュールされたことを示します。
+.Fn callout_active
+が
+.Dv FALSE
+を返す場合、コールアウト関数は同様に動作なしで返るべきです。
+これは、コールアウトが停止されたことを示します。
+最後に、コールアウト関数は、
+.Em アクティブ
+フラグをクリアするために
+.Fn callout_deactivate
+を呼び出すべきです。
+例えば:
+.Bd -literal -offset indent
+mtx_lock(&sc->sc_mtx);
+if (callout_pending(&sc->sc_callout)) {
+	/* callout was reset */
+	mtx_unlock(&sc->sc_mtx);
+	return;
+}
+if (!callout_active(&sc->sc_callout)) {
+	/* callout was stopped */
+	mtx_unlock(&sc->sc_mtx);
+	return;
+}
+callout_deactivate(&sc->sc_callout);
+/* rest of callout function */
+.Ed
+.Pp
+上記で使用したミューテックスのような適切な同期をともに使うことにより、
+このアプローチは
+.Fn callout_stop
+と
+.Fn callout_reset
+関数がいつも競合なしで使用できます。
+.\" together with = 〜とともに、〜に加えて
+例えば:
+.Bd -literal -offset indent
+mtx_lock(&sc->sc_mtx);
+callout_stop(&sc->sc_callout);
+/* The callout is effectively stopped now. */
+.Ed
+.Pp
+コールアウトがまだ保留中である場合、これらの関数は通常どおり動作しますが、
+コールアウトの処理が既に始まっている場合、
+コールアウト関数におけるテストにおいて、これらの関数はさらなる
+動作なしで戻ることになります。
+コールアウト関数と他のコードの間の同期は、コールアウト関数が
+.Fn callout_deactivate
+呼び出しを終えるまでコールアウトの停止やリセットが行われないことを
+確実にします。
+.Pp
+さらに、上記のテクニックは、
+.Em アクティブ
+フラグが実際にコールアウトが有効か無効かを反映することを確実にします。
+.Fn callout_active
+が FALSE を返した場合、たとえコールアウトサブシステムが
+実際にコールアウト関数を開始しようとしていたとしても、
+コールアウト関数は動作なしに終了してしまうので、
+実質的に無効化されています。
+.\" since even if = たとえ〜でも〜なので、
+.\" even if = たとえ〜でも
+.El
+.Pp
+最後に、コールアウトを停止しようとしているときに
+考慮しなければならない最後の競合条件が 1 つあります。
+この場合、既に破壊されるかまたは再利用されたデータオブジェクトに
+アクセスする必要があるかもしれないので、
+コールアウト関数自体に
+停止されたコールアウトを検出するさせるために安全でないかもしれません。
+コールアウトが完全に終了したことを保証するためには、
+.Fn callout_drain
+呼び出しを使用しなければなりません。
 .Sh 戻り値
 .Fn timeout
 関数は
@@ -226,7 +480,7 @@ timeout (訳注: および untimeout) は
 .Fn callout_stop
 および
 .Fn callout_drain
-関数は呼び出された時にコールアウトが未だ保留の場合には 0 以外を、
+関数は呼び出された時にコールアウトが未だ保留中の場合には 0 以外を、
 そうでない場合には 0 を返します。
 .Sh 歴史
 現在の timeout および untimeout ルーチンは
