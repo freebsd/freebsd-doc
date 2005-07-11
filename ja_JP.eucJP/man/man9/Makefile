@@ -28,7 +28,6 @@ MAN9 =	BUF_LOCK.9\
 	VFS.9\
 	VFS_CHECKEXP.9\
 	VFS_FHTOVP.9\
-	VFS_INIT.9\
 	VFS_MOUNT.9\
 	VFS_QUOTACTL.9\
 	VFS_ROOT.9\
@@ -88,8 +87,6 @@ MAN9 =	BUF_LOCK.9\
 	bus_set_resource.9\
 	byteorder.9\
 	cd.9\
-	cdevsw_add.9\
-	cdevsw_remove.9\
 	condvar.9\
 	copy.9\
 	devclass.9\
