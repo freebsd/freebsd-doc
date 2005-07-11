@@ -63,8 +63,6 @@ MAN1 =	addftinfo.1\
 	diff.1\
 	diff3.1\
 	dig.1\
-	dnskeygen.1\
-	dnsquery.1\
 	domainname.1\
 	dtmfdecode.1\
 	du.1\
@@ -95,7 +93,6 @@ MAN1 =	addftinfo.1\
 	fsync.1\
 	ftp.1\
 	g711conv.1\
-	gasp.1\
 	gcc.1\
 	gcore.1\
 	gcov.1\
