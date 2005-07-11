@@ -102,7 +102,6 @@ MAN8 =	IPXrouted.8\
 	jexec.8\
 	jls.8\
 	kerberos.8\
-	kernbb.8\
 	keyserv.8\
 	kgmon.8\
 	kgzip.8\
@@ -159,13 +158,9 @@ MAN8 =	IPXrouted.8\
 	mtest.8\
 	mtrace.8\
 	mtree.8\
-	named-bootconf.8\
-	named-xfer.8\
 	named.8\
 	named.reload.8\
-	named.restart.8\
 	natd.8\
-	ndc.8\
 	ndp.8\
 	newfs.8\
 	newfs_msdos.8\
@@ -178,9 +173,7 @@ MAN8 =	IPXrouted.8\
 	nghook.8\
 	nologin.8\
 	nos-tun.8\
-	nslookup.8\
 	nsupdate.8\
-	ntp-genkeys.8\
 	ntpd.8\
 	ntpdate.8\
 	ntpdc.8\
