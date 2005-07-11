@@ -33,7 +33,7 @@
 .\" THE USE OF THIS SOFTWARE, EVEN IF PACKET DESIGN IS ADVISED OF
 .\" THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" %FreeBSD: src/lib/libc/sys/kse.2,v 1.13 2003/12/10 02:38:51 marcel Exp %
+.\" %FreeBSD: src/lib/libc/sys/kse.2,v 1.13.2.2 2005/02/28 03:32:34 brueffer Exp %
 .\"
 .\" $FreeBSD$
 .\"
@@ -276,7 +276,6 @@ CPU より多い KSE を持つことは、その追加の KSE が単に
 .Fn kse_exit
 は正常に戻ります。
 これはそのプロセスを元に、つまりスレッド化されていない状態に戻します。
-(これはまだ実装されていません)
 .Pp
 .Fn kse_release
 システムコールは、必要でなくなったときに、現在実行しているスレッドに
@@ -337,37 +336,65 @@ KSE に割り当てられて (例えば、実行中) いなければなりません。
 .\"
 .Ss シグナル
 .\"
-プロセスがメールボックスに関連付けられた少なくとも 1 つの KSE を
-持っているときには、シグナルはもはやそのプロセスのスタックには配信されない
-かもしれません。
-代わりに、シグナルは upcall を介して配信されることができます。
-複数のシグナルは 1 つの upcall で配信されることができます。
-(この機能はまだコード化されていません)
 .Pp
-そのプロセスの中に複数の KSE グループが存在する場合には、そのシグナルを
-配信するためにどの KSE グループが選ばれるのかは、明確ではありません。
+現在の実装は特別のシグナルスレッドを作成します。
+プロセス内のカーネルスレッド (KSE) はすべてのシグナルをマスクし、
+シグナルスレッドだけがプロセスへ配信されるシグナルを待ちます。
+シグナルスレッドはユーザスレッドへのシグナルの
+ディスパッチに対して責任があります。
+.\" responsible for = 《be 〜》〜に対して責任がある、〜に関与する
+.Pp
+この弱点は、多重スレッドが
+.Fn execve
+システムコールを呼び出すなら、そのシグナルマスクとペンディングシグナルは
+カーネルで利用可能でないかもしれないことです。
+それらはユーザランドで格納され、カーネルはどこでそれらが得られるか知りません。
+しかしながら、
+.Tn POSIX
+ではそれらは復元され、新しいプロセスに渡す必要があります。
+.Fn execve
+呼び出しの前のスレッドのマスク設定は、
+古いプロセスがブロックされている状態かもしれない任意のペンディングシグナルを
+カーネルに再配信されないとき、問題に近似しています。
+そして、新しいシグナルがマスクの設定と
+.Fn execve
+の間のプロセスに配信されるかもしれないウィンドウを許可します。
+.\" is only a close approximation to the problem の訳はあやしい
+.Pp
+当分、この問題は特別の組み合わせ
+.Fn kse_thr_interrupt Ns / Ns Fn execve
+モードを
+.Fn kse_thr_interrupt
+システムコールに追加することによって解決されています。
+.\" For now = 差し当たり、当分は
+.Fn kse_thr_interrupt
+システムコールはサブコマンド
+.Dv KSE_INTR_EXECVE
+があり、それは
+.Vt kse_execv_args
+構造体を受け付けることができ、シグナルを調整して、次に不可分に
+.Fn execve()
+呼び出しに変換できます。
+.\" 原文: .Fn execve() は .Fn execve の誤り。
+追加のペンディングシグナルと正しいシグナルマスクは
+このようにしてカーネルに渡すことができます。
+.\" in this way = かくのごとく、こういう調子に、このような方法で、このように(して)、
+スレッドライブラリは、
+.Fn execve
+スステムコールをくつがえして、それを
+.Fn kse_intr_interrupt
+呼び出しに変換し、多重スレッドを
+.Fn exec
+を行なう前にペンディングシグナルと正しいシグナルマスクに
+復元できるようにします。
+この問題の解決法は変更するかもしれません。
 .\"
 .Ss KSE メールボックス
 .\"
-それぞれの KSE はユーザとカーネルの通信のための唯一のメールボックスを
-持っています:
-.Bd -literal
-/* upcall 関数型 */
-typedef void   kse_func_t(struct kse_mailbox *);
-
-/* KSE メールボックス */
-struct kse_mailbox {
-   int         km_version; /* バージョン */
-   struct kse_thr_mailbox  *km_curthread;  /* 現在のスレッド */
-   struct kse_thr_mailbox  *km_completed;  /* 完了したスレッド */
-   sigset_t        km_sigscaught;  /* 捕ったシグナル */
-   unsigned int        km_flags;   /* KSE フラグ */
-   kse_func_t      *km_func;   /* UTS 関数 */
-   stack_t         km_stack;   /* UTS 環境 */
-   void            *km_udata;  /* UTS によって使用 */
-   struct timespec     km_timeofday;   /* upcall の時間 */
-};
-.Ed
+それぞれの KSE は
+.In sys/kse.h
+で定義されたユーザとカーネルの通信のための唯一のメールボックスがあります。
+そのフィールドのいくつかは次の通りです:
 .Pp
 .Va km_version
 はこの構造体のバージョンを表し、
@@ -468,26 +495,34 @@ upcall に帰着する (同期または非同期に) カーネル操作を
 .Va km_flags
 は以下の全てのビット毎の OR を含むことができます:
 .Bl -tag -width indent
-.It \&
-(まだフラグは全く定義されていません)
+.It Dv KMF_NOUPCALL
+upcalls が起きないようにブロックします。
+スレッドは何らかのクリティカルセクション (危険域) にあります。
+.It Dv KMF_NOCOMPLETED , KMF_DONE , KMF_BOUND
+このスレッドは、永久に KSE に結びつけられると考えられるべきで、
+スレッド化されていないプロセスとそっくりに扱われます。
+.\" 原文: considerred は considered の誤り。
+.\"  considered to be = 《be 〜》〜であると考えられている［目されている］
+.\" much like = そっくりの、酷似の
+それはある意味では
+.Dv KMF_NOUPCALL
+の
+.Dq 長期
+バージョンです。
+.\" in some ways = ある点[意味]で(は)、いろいろな意味で、いくつかの点で
+.It Dv KMF_WAITSIGEVENT
+シグナル配信スレッドに必要な特性を実装します。
+.\" 原文: charactersitics は #  characteristics の誤り。
 .El
 .\"
 .Ss スレッドメールボックス
 .\"
-それぞれのユーザスレッドはそれに関連付けられた唯一の
+それぞれのユーザスレッドはそれに関連付けられた
+.In sys/kse.h
+で定義された唯一の
 .Vt "struct kse_thr_mailbox"
-を持たなければなりません:
-.Bd -literal
-/* スレッドメールボックス */
-struct kse_thr_mailbox {
-   ucontext_t      tm_context; /* ユーザスレッド環境 */
-   unsigned int        tm_flags;   /* スレッドフラグ */
-   struct kse_thr_mailbox  *tm_next;   /* リスト中の次スレッド */
-   void            *tm_udata;  /* UTS によって使用 */
-   unsigned int        tm_uticks;  /* ユーザ時間カウンタ */
-   unsigned int        tm_sticks;  /* カーネル時間カウンタ */
-};
-.Ed
+がなければなりません。
+それは次のフィールドを含んでいます:
 .Pp
 .Va tm_udata
 はカーネルによって無視された不明瞭なポインタです。
@@ -528,8 +563,12 @@ struct kse_thr_mailbox {
 .Va tm_flags
 は以下の全てのビット毎の OR を含むことができます:
 .Bl -tag -width indent
-.It \&
-(まだフラグは全く定義されていません)
+.It Dv TMF_NOUPCALL
+.Dv KMF_NOUPCALL
+と同様です。
+このフラグはクリティカルセクション (危険域) への upcall を禁止します。
+いくつかのアーキテクチャは、ある場所ともう片方でいくつかにあることを
+必要とします。
 .El
 .Sh 戻り値
 成功の場合には
@@ -658,17 +697,17 @@ KSE システムコール群は
 .Sh 作者
 KSE は初めに
 .An -nosplit
-.An "Julian Elischer" Aq julian@FreeBSD.org ,
+.An "Julian Elischer" Aq julian@FreeBSD.org
 が実装し、
 .An "Jonathan Mini" Aq mini@FreeBSD.org ,
-.An "Daniel Eischen" Aq deischen@FreeBSD.org ,
+.An "Daniel Eischen" Aq deischen@FreeBSD.org
 および
 .An "David Xu" Aq davidxu@FreeBSD.org
 が追加の貢献をしました。
 .Pp
 このマニュアルページは
 .An "Archie Cobbs" Aq archie@FreeBSD.org
-が書きました。
+によって書かれました。
 .Sh バグ
 KSE のコードは開発中です。
 .\" .Ud .
