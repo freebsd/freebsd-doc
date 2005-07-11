@@ -333,6 +333,7 @@ MLINKS+=mount_std.8 mount_devfs.8
 MLINKS+=mount_std.8 mount_fdescfs.8
 MLINKS+=mount_std.8 mount_procfs.8
 MLINKS+=mount_std.8 mount_linprocfs.8
+MLINKS+=named.reload.8 named.reconfig.8
 MLINKS+=pstat.8 swapinfo.8
 MLINKS+=quotaon.8 quotaoff.8
 MLINKS+=rc.8 rc.atm.8
