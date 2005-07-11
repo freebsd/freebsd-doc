@@ -68,6 +68,7 @@ MAN5 =	a.out.5\
 	netid.5\
 	networks.5\
 	nologin.5\
+	nsswitch.conf.5\
 	ntp.conf.5\
 	ntp.keys.5\
 	opieaccess.5\
