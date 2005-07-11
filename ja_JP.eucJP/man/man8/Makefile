@@ -220,6 +220,7 @@ MAN8 =	IPXrouted.8\
 	rbootd.8\
 	rc.8\
 	rc.sendmail.8\
+	rc.subr.8\
 	rcorder.8\
 	reboot.8\
 	renice.8\
