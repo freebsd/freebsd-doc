@@ -223,6 +223,7 @@ MAN1 =	addftinfo.1\
 	nm.1\
 	nohup.1\
 	nroff.1\
+	nslookup.1\
 	objcopy.1\
 	objdump.1\
 	objformat.1\
