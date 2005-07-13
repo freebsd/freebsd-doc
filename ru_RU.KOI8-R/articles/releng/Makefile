@@ -3,9 +3,9 @@
 # The FreeBSD Russian Documentation Project
 # 
 # $FreeBSD$
-# $FreeBSDru: frdp/doc/ru_RU.KOI8-R/articles/releng/Makefile,v 1.3 2004/08/10 09:02:08 den Exp $
+# $FreeBSDru: frdp/doc/ru_RU.KOI8-R/articles/releng/Makefile,v 1.4 2005/07/01 06:51:22 gad Exp $
 #
-# Original revision: 1.14
+# Original revision: 1.15
 #
 
 DOC?= article
@@ -20,6 +20,7 @@ SRCS=		article.sgml
 IMAGES_EN=	branches-head.pic
 IMAGES_EN+=	branches-releng3.pic
 IMAGES_EN+=	branches-releng4.pic
+IMAGES_EN+=	branches-releng5.pic
 
 CSS_SHEET_ADDITIONS= extra.css
 
