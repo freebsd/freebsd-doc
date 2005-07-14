@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/cgi/cgi-style.pl,v 1.18 2004/10/13 10:55:55 keramida Exp $
+# $FreeBSD: www/en/cgi/cgi-style.pl,v 1.19 2005/02/12 13:13:14 ceri Exp $
 #
 # Perl routines to encapsulate various elements of HTML page style.
 
@@ -7,14 +7,6 @@
 $yr += 1900;
 $mo += 1;
 $timestamp = "$mo-$md-$yr";
-
-# Colors for the body
-$t_body = "<body text=\"#000000\" bgcolor=\"#ffffff\">";
-
-# This can be set to either a string containing an inline CSS stylesheet
-# or to a <link> element that references an external CSS stylesheet, to
-# make local modifications to the style of a CGI script's output.
-$t_style = "";
 
 if (!defined($hsty_base)) { 
     $hsty_base = "..";
@@ -29,6 +21,11 @@ if (!defined($hsty_author)) {
 if (!defined($hsty_date)) {
     $hsty_date = "";
 }
+
+# This can be set to either a string containing an inline CSS stylesheet
+# or to a <link> element that references an external CSS stylesheet, to
+# make local modifications to the style of a CGI script's output.
+$t_style = "<link rel=\"stylesheet\" type=\"text/css\" href=\"$hsty_base/freebsd.css\">";
 
 $i_topbar = "<IMG SRC=\"$hsty_base/gifs/bar.gif\" ALT=\"Navigation Bar\" WIDTH=\"565\" HEIGHT=\"33\" BORDER=0 usemap=\"#bar\">
 <map name=\"bar\">
@@ -53,8 +50,8 @@ sub html_header {
 
     return "Content-type: text/html\n\n" . 
 	"<html>\n<head><title>$title</title>\n" .
-	    "<meta name=\"robots\" content=\"nofollow\">\n$t_style\n</head>\n$t_body\n" .
-	"$i_topbar <h1><font color=\"#660000\">$title</font></h1>\n";
+	    "<meta name=\"robots\" content=\"nofollow\">\n$t_style\n</head>\n<body>\n" .
+	"$i_topbar <h1>$title</h1>\n";
 }
 
 sub short_html_header {
@@ -62,7 +59,7 @@ sub short_html_header {
 
     return "Content-type: text/html\n\n" .
 	"<html>\n<head><title>$title</title>\n" . 
-	    "<meta name=\"robots\" content=\"nofollow\">\n</head>\n$t_body\n" .
+	    "<meta name=\"robots\" content=\"nofollow\">\n</head>\n<body>\n" .
         "$i_topbar";
 }
 
