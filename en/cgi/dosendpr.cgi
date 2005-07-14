@@ -8,7 +8,7 @@
 #  GNU General Public License Version 2.  
 #     (http://www.gnu.ai.mit.edu/copyleft/gpl.html)
 #
-# $FreeBSD: www/en/cgi/dosendpr.cgi,v 1.20 2004/02/16 16:54:06 ceri Exp $
+# $FreeBSD: www/en/cgi/dosendpr.cgi,v 1.21 2004/02/16 16:57:10 ceri Exp $
 
 require "html.pl";
 
@@ -71,9 +71,10 @@ sub isopenproxy ($$$) {
 sub prerror {
     &html_title ("Problem Report Error");
     &html_body();
-    print "There is an error in the configuration of the problem\n",
+    print "<p>There is an error in the configuration of the problem\n",
           "report form generator.  Please back up one page and report\n",
-          "the problem to the owner of that page.  Report $_[0].";
+          "the problem to the owner of that page.<br />",
+	  "Report <span class=\"prerror\">$_[0]</span>.</p>";
     &html_end();
     exit (1);
 }
@@ -105,25 +106,28 @@ if (defined($codeentered) && $codeentered && $db_hash{$codeentered} &&
   (($currenttime - $expiretime) <= $db_hash{$codeentered})) {
     if (!$cgi_data{'email'} || !$cgi_data{'originator'} ||
         !$cgi_data{'synopsis'}) {
-	  print "<h1>Bad Data</h1>\nYou need to specify at least your ",
+	  print "<h1>Bad Data</h1><p>You need to specify at least your ",
               "electronic mail address, your name and a synopsis ",
-              "of the problem.\n  Please return to the form and add the ",
-              "missing information.  Thank you.\n";
+              "of the problem.<br />  Please return to the form and add the ",
+              "missing information.  Thank you.</p>";
           &html_end();
 
           exit(1);
     }
 } else {
-	print "<h1>Incorrect safety code</h1>\nYou need to enter the correct ",
+	print "<h1>Incorrect safety code</h1><p>You need to enter the correct ",
           "code from the image displayed.  Please return to the form and enter the ",
-          "code exactly as shown. Thank you.\n";
+          "code exactly as shown. Thank you.</p>";
 
         &html_end();
 
         exit(1);
 }
 
+# This code has now been used, so remove it.
 delete $db_hash{"$codeentered"};
+
+# Sweep for and remove expired codes.
 foreach $randomcode (keys %db_hash) {
 	if ( ($currenttime - $expiretime) <= $db_hash{$randomcode}) {
 		delete $db_hash{"$randomcode"};
@@ -177,9 +181,9 @@ if (open (SUBMIT, "|$submission_program")){
     print SUBMIT $pr;
     close (SUBMIT);
     print "<h1>Thank You</h1>",
-	  "Thank you for the problem report.  You should receive confirmation",
-	  " of your report by electronic mail within a day.";
+	  "<p>Thank you for the problem report.  You should receive confirmation",
+	  " of your report by electronic mail within a day.</p>";
 } else {
-    print "<h1>Error</h1>An error occured processing your problem report.";
+    print "<h1>Error</h1><p>An error occured processing your problem report.</p>";
 }
 &html_end();
