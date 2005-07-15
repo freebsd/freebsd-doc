@@ -34,7 +34,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $Id: gnome_upgrade.sh,v 1.21 2005-04-28 21:48:17 adamw Exp $
+# $Id: gnome_upgrade.sh,v 1.22 2005-07-15 06:08:02 marcus Exp $
 # $FreeBSD$
 #
 
@@ -53,7 +53,7 @@ X11BASE=${X11BASE:=/usr/X11R6}
 PROJECT_URL="http://www.FreeBSD.org/gnome/"
 SUPPORT_EMAIL="freebsd-gnome@FreeBSD.org"
 
-SUPPORTED_FREEBSD_VERSIONS="4.10 4.11 5.3 5.4 6.0"
+SUPPORTED_FREEBSD_VERSIONS="4.10 4.11 5.3 5.4 6.0 7.0"
 	# The Big Update updates UPGRADE_TARGET and everything that depends on it
 UPGRADE_TARGET="glib-2*"
 	# Variables to be set across every portupgrade run
@@ -61,24 +61,33 @@ PORTUPGRADE_MAKE_ENV="GNOME_UPGRADE_SH_VER=${GNOME_UPGRADE_SH_VER} DISABLE_VULNE
 
 ## END global variable declarations.
 
+get_tmpdir()
+{
+	if [ -n "${MC_TMPDIR}" -a -d "${MC_TMPDIR}" ]; then
+		tmpdir="${MC_TMPDIR}"
+	elif [ -n "${TMPDIR}" -a -d "${TMPDIR}" ]; then
+		tmpdir="${TMPDIR}"
+	elif [ -d "/var/tmp" ]; then
+		tmpdir="/var/tmp"
+	elif [ -d "/tmp" ]; then
+		tmpdir="/tmp"
+	elif [ -d "/usr/tmp" ]; then
+		tmpdir="/usr/tmp"
+	else
+		return 1
+	fi
+
+	echo ${tmpdir}
+
+	return 0
+}
+
 get_tmpfile()
 {
     template=$1
     tmpfile=""
 
-    if [ -n "${MC_TMPDIR}" -a -d "${MC_TMPDIR}" ]; then
-	tmpfile="${MC_TMPDIR}/${template}.XXXXXX"
-    elif [ -n "${TMPDIR}" -a -d "${TMPDIR}" ]; then
-	tmpfile="${TMPDIR}/${template}.XXXXXX"
-    elif [ -d "/var/tmp" ]; then
-	tmpfile="/var/tmp/${template}.XXXXXX"
-    elif [ -d "/tmp" ]; then
-	tmpfile="/tmp/${template}.XXXXXX"
-    elif [ -d "/usr/tmp" ]; then
-	tmpfile="/usr/tmp/${template}.XXXXXX"
-    else
-	return 1
-    fi
+    tmpfile="`get_tmpdir`/${template}.XXXXXX"
 
     tmpfile=`mktemp -q ${tmpfile}`
 
@@ -171,7 +180,7 @@ if [ "$1" = "-v" ]; then
     echo "FreeBSD GNOME Upgrade tool: gnome_upgrade.sh"
     echo "--"
     echo "Script version: ${GNOME_UPGRADE_SH_VER}"
-    echo 'MarcusCom revision: $Id: gnome_upgrade.sh,v 1.21 2005-04-28 21:48:17 adamw Exp $'
+    echo 'MarcusCom revision: $Id: gnome_upgrade.sh,v 1.22 2005-07-15 06:08:02 marcus Exp $'
     echo 'FreeBSD revision: $FreeBSD$'
     echo "--"
     echo "Visit http://www.freebsd.org/gnome for more information"
