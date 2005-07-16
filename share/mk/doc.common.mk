@@ -171,6 +171,9 @@ CLEANFILES+= ${XML_MIRRORS}
 CLEANFILES+= ${XML_MIRRORS}.sort
 CLEANFILES+= ${XML_MIRRORS}.sort.tmp
 
+XML_USERGROUPS=	${WEB_PREFIX}/share/sgml/usergroups.xml
+XSL_USERGROUPS=	${WEB_PREFIX}/share/sgml/templates.usergroups.xsl
+
 #
 # when URLS_ABSOLUTE is specified, make
 # %freebsd.urls.absolute; "INCLUDE".
