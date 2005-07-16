@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/share/sgml/includes.misc.xsl,v 1.20 2005/03/10 14:40:34 hrs Exp $ -->
+<!-- $FreeBSD: www/share/sgml/includes.misc.xsl,v 1.21 2005/04/19 21:20:55 brueffer Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -33,6 +33,10 @@
   <!--
      template name                               used in
 
+     html-usergroups-list-regions                templates.usergroups.xsl
+     html-usergroups-list-entries                templates.usergroups.xsl
+     html-usergroups-list-header                 templates.usergroups.xsl (for l10n)
+
      html-news-list-newsflash                    news/newsflash.xsl
      html-news-list-press                        news/press.xsl
      html-news-list-datelabel                    news/newsflash.xsl
@@ -56,6 +60,87 @@
 
      misc-format-date-string                     generic
   -->
+
+  <!-- template: "html-usergroups-list-regions"
+       list all regions in a usergroup database -->
+
+  <xsl:key name="html-usergroups-regions-key" match="entry" use="@continent" />
+
+  <xsl:template name="html-usergroups-list-regions">
+    <xsl:param name="usergroups.xml" select="'usergroups.xml'" />
+
+    <ul>
+      <xsl:for-each select="document($usergroups.xml)//entry[
+	generate-id() =
+	generate-id(key('html-usergroups-regions-key', @continent)[1])]">
+
+	<xsl:param name="id" select="
+	  translate(@continent,
+	  ' ,ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+	  '--abcdefghijklmnopqrstuvwxyz')" />
+
+	<li>
+	  <p><xsl:element name="a">
+	      <xsl:attribute name="href">
+		<xsl:value-of select="concat('#', $id)" />
+	      </xsl:attribute>
+
+	      <xsl:call-template name="transtable-lookup">
+		<xsl:with-param name="word-group" select="'continents'" />
+		<xsl:with-param name="word" select="@continent" />
+	      </xsl:call-template>
+	    </xsl:element></p>
+	</li>
+      </xsl:for-each>
+    </ul>
+  </xsl:template>
+
+  <!-- template: "html-usergroups-list-entries"
+       list all entries in a usergroup database -->
+
+  <xsl:template name="html-usergroups-list-entries">
+    <xsl:param name="usergroups.xml" select="'usergroups.xml'" />
+
+    <xsl:for-each select="document($usergroups.xml)//entry[
+      generate-id() =
+      generate-id(key('html-usergroups-regions-key', @continent)[1])]">
+
+      <xsl:param name="id" select="
+	translate(@continent,
+	' ,ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+	'--abcdefghijklmnopqrstuvwxyz')" />
+
+      <h3><a name="{$id}" id="{$id}"><xsl:call-template name="transtable-lookup">
+	    <xsl:with-param name="word-group" select="'continents'" />
+	    <xsl:with-param name="word" select="@continent" />
+	  </xsl:call-template></a></h3>
+
+      <dl>
+	<xsl:for-each select="key('html-usergroups-regions-key', @continent)">
+	  <xsl:sort select="name" order="ascending"/>
+
+	  <dt><a name="{$id}-{@id}" href="{url}"><xsl:value-of select="name" /></a></dt>
+
+	  <dd><p><xsl:value-of select="description" /></p></dd>
+	</xsl:for-each>
+      </dl>
+    </xsl:for-each>
+  </xsl:template>
+
+  <!-- template: "html-usergroups-list-header"
+       print header part of usergroup listing (l10n) -->
+
+  <xsl:template name="html-usergroups-list-header">
+    <p>FreeBSD's widespread popularity has spawned a number of user groups
+      around the world.  If you know of a FreeBSD user group not listed here,
+      please fill out a <a href="http://www.freebsd.org/send-pr.html">
+	problem report</a> for category www.  Submissions should be in HTML
+      and must offer a short description.</p>
+
+    <h3>Regions:</h3>
+
+    <xsl:call-template name="html-usergroups-list-regions" />
+  </xsl:template>
 
   <!-- template: "misc-format-date-string"
        format date string with localization if needed -->
