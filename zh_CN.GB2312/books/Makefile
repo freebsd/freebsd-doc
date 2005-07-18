@@ -2,6 +2,7 @@
 # $FreeBSD$
 
 SUBDIR = handbook
+SUBDIR+= porters-handbook
 
 ROOT_SYMLINKS= handbook
 
