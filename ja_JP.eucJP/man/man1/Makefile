@@ -13,6 +13,7 @@ MAN1 =	addftinfo.1\
 	bdes.1\
 	biff.1\
 	brandelf.1\
+	bsdtar.1\
 	builtin.1\
 	bzip2.1\
 	c89.1\
@@ -114,6 +115,7 @@ MAN1 =	addftinfo.1\
 	grops.1\
 	grotty.1\
 	groups.1\
+	gtar.1\
 	gzexe.1\
 	gzip.1\
 	head.1\
@@ -310,7 +312,6 @@ MAN1 =	addftinfo.1\
 	tabs.1\
 	tail.1\
 	talk.1\
-	tar.1\
 	tbl.1\
 	tcopy.1\
 	tcpdump.1\
@@ -488,7 +489,7 @@ MLINKS+=ssh.1 slogin.1
 MLINKS+=bzip2.1 bunzip2.1
 MLINKS+=bzip2.1 bzcat.1
 MLINKS+=unifdef.1 unifdefall.1
-MLINKS+=tar.1 gtar.1
+MLINKS+=bsdtar.1 tar.1
 MLINKS+=pkill.1 pgrep.1
 
 .include "bsd.prog.mk"
