@@ -150,6 +150,7 @@ IMAGES_LIB+= callouts/10.png
 #
 
 # SGML content
+SRCS+= audit/chapter.sgml
 SRCS+= book.sgml
 SRCS+= colophon.sgml
 SRCS+= freebsd-glossary.sgml
