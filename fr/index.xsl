@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/fr/index.xsl,v 1.11 2004/11/24 21:29:06 stephane Exp $ -->
+<!-- $FreeBSD: www/fr/index.xsl,v 1.12 2004/12/30 17:53:43 hrs Exp $ -->
 
 <!-- 
    The FreeBSD French Documentation Project
@@ -13,7 +13,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/fr/index.xsl,v 1.11 2004/11/24 21:29:06 stephane Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/fr/index.xsl,v 1.12 2004/12/30 17:53:43 hrs Exp $'"/>
   <xsl:variable name="title" select="'Le Projet FreeBSD'"/>
 
   <!-- these params should be externally bound. The values
@@ -223,7 +223,7 @@
 		ou d'une personne y participant d&#233;j&#224;, si vous en connaissez une. Cela peut &#234;tre
 		de la documentation, du graphisme ou du code. Consultez l'article
 		<a href="{$enbase}/doc/{$url.doc.langcode}/articles/contributing/index.html">Contribuer
-		&#224; FreeBSD</a>pour plus d'informations.</p>
+		&#224; FreeBSD</a> pour plus d'informations.</p>
 
 		<p>M&#234;me si vous n'&#234;tes pas un programmeur, il existe d'autres fa&#231;ons de
  		contribuer &#224; FreeBSD. La <a href="http://www.FreeBSDFoundation.org">Fondation FreeBSD</a> est une
