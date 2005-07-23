@@ -2,9 +2,9 @@
 # The FreeBSD Russian Documentation Project
 #
 # $FreeBSD$
-# $FreeBSDru: frdp/www/ru/internal/Makefile,v 1.8 2004/04/14 07:10:16 den Exp $
+# $FreeBSDru: frdp/www/ru/internal/Makefile,v 1.9 2005/07/23 11:54:17 marck Exp $
 #
-# Original revision: 1.40
+# Original revision: 1.42
 #
 
 .if exists(../Makefile.conf)
