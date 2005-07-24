@@ -2,10 +2,10 @@
 # The FreeBSD Russian Documentation Project
 #
 # $FreeBSD$
-# $FreeBSDru: frdp/doc/ru_RU.KOI8-R/books/handbook/Makefile,v 1.37 2004/07/08 12:12:43 den Exp $
+# $FreeBSDru: frdp/doc/ru_RU.KOI8-R/books/handbook/Makefile,v 1.41 2005/07/24 10:34:29 marck Exp $
 #
-# Original revision: 1.90
-# 
+# Original revision: 1.93
+#
 # Build the FreeBSD Handbook.
 #
 
@@ -37,7 +37,7 @@ DOC?= book
 
 FORMATS?= html-split
 
-#HAS_INDEX= true
+HAS_INDEX= true
 
 INSTALL_COMPRESSED?= gz
 INSTALL_ONLY_COMPRESSED?=
@@ -150,7 +150,7 @@ IMAGES_LIB+= callouts/8.png
 IMAGES_LIB+= callouts/9.png
 IMAGES_LIB+= callouts/10.png
 
-# 
+#
 # SRCS lists the individual SGML files that make up the document. Changes
 # to any of these files will force a rebuild
 #
@@ -191,7 +191,7 @@ SRCS+=	vinum/chapter.sgml
 SRCS+=	x11/chapter.sgml
 
 # Entities
-SRCS+=	chapters.ent 
+SRCS+=	chapters.ent
 
 SYMLINKS=	${DESTDIR} index.html handbook.html
 
@@ -201,8 +201,8 @@ CHAPTERS?=	${SRCS:M*chapter.sgml}
 SGMLFLAGS+=	${CHAPTERS:S/\/chapter.sgml//:S/^/-i chap./}
 SGMLFLAGS+=	-i chap.freebsd-glossary
 
-# XXX The Handbook build currently overflows some internal, hardcoded 
-# limits in pdftex.  Until we split the Handbook up, build the PDF 
+# XXX The Handbook build currently overflows some internal, hardcoded
+# limits in pdftex.  Until we split the Handbook up, build the PDF
 # version using ps2pdf instead of pdftex.
 
 PS2PDF?=	${PREFIX}/bin/ps2pdf
