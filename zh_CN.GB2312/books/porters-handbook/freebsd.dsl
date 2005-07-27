@@ -26,7 +26,7 @@
               (literal "ports@FreeBSD.org"))
             (literal ">。")
             (make empty-element gi: "br")
-            (literal "关于此文档的人和问题， 请致函 <")
+            (literal "关于此文档的任何问题， 请致函 <")
             (create-link (list (list "HREF" "mailto:doc@FreeBSD.org"))
               (literal "doc@FreeBSD.org"))
             (literal ">。")))
@@ -34,9 +34,9 @@
 	<!-- Convert " ... " to `` ... '' in the HTML output. -->
 	(element quote
 	  (make sequence
-	    (literal "``")
+	    (literal "“")
 	    (process-children)
-	    (literal "''")))
+	    (literal "”")))
       ]]>
     </style-specification-body>
   </style-specification>
