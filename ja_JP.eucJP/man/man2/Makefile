@@ -1,4 +1,5 @@
 # $FreeBSD$
+
 MAN2 =	_exit.2\
 	accept.2\
 	access.2\

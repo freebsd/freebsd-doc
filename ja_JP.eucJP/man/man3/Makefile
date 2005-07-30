@@ -1,4 +1,5 @@
 # $FreeBSD$
+
 MAN3 =	_secure_path.3\
 	abort.3\
 	abs.3\

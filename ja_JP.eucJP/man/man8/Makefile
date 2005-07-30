@@ -1,4 +1,5 @@
 # $FreeBSD$
+
 MAN8 =	IPXrouted.8\
 	MAKEDEV.8\
 	ac.8\
@@ -357,5 +358,7 @@ MLINKS+=yp.8 YP.8
 MLINKS+=yp.8 nis.8
 MLINKS+=fsck_ffs.8 fsck_ufs.8
 MLINKS+=fsck_ffs.8 fsck_4.2bsd.8
+
+SUBDIR=	man8.i386
 
 .include "bsd.prog.mk"
