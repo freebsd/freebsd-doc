@@ -1,4 +1,5 @@
 # $FreeBSD$
+
 MAN1 =	addftinfo.1\
 	addr2line.1\
 	afmtodit.1\

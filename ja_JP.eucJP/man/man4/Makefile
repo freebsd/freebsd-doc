@@ -1,3 +1,5 @@
+# $FreeBSD$
+
 MAN4=	adv.4\
 	adw.4\
 	aha.4\
@@ -176,5 +178,7 @@ MLINKS+=stl.4 stli.4
 MLINKS+=yp.4 NIS.4
 MLINKS+=yp.4 YP.4
 MLINKS+=yp.4 nis.4
+
+SUBDIR=	man4.i386
 
 .include "bsd.prog.mk"

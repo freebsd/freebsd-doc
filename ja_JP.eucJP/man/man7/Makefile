@@ -1,4 +1,5 @@
 # $FreeBSD$
+
 MAN7 =	ascii.7\
 	build.7\
 	clocks.7\

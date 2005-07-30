@@ -1,4 +1,5 @@
 # $FreeBSD$
+
 MAN5 =	a.out.5\
 	acct.5\
 	aliases.5\
