@@ -5,7 +5,8 @@
 
 SUBDIR = articles
 SUBDIR+= books
-.if !defined(NO_JPMAN)
+
+.if defined(WITH_JPMAN)
 SUBDIR+= man
 .endif
 
