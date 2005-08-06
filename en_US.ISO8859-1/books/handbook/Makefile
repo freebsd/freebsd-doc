@@ -150,6 +150,7 @@ IMAGES_LIB+= callouts/10.png
 #
 
 # SGML content
+SRCS+= audit/chapter.sgml
 SRCS+= book.sgml
 SRCS+= colophon.sgml
 SRCS+= freebsd-glossary.sgml
@@ -163,6 +164,7 @@ SRCS+= desktop/chapter.sgml
 SRCS+= disks/chapter.sgml
 SRCS+= eresources/chapter.sgml
 SRCS+= firewalls/chapter.sgml
+SRCS+= geom/chapter.sgml
 SRCS+= install/chapter.sgml
 SRCS+= introduction/chapter.sgml
 SRCS+= kernelconfig/chapter.sgml
