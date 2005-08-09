@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.68 2005/07/15 06:08:02 marcus Exp $ -->
+<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.69 2005/07/16 02:33:44 marcus Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
 		xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -9,7 +9,7 @@
   <xsl:import href="includes.xsl"/>
 
   <xsl:variable name="base" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.68 2005/07/15 06:08:02 marcus Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.69 2005/07/16 02:33:44 marcus Exp $'"/>
   <xsl:variable name="title" select="'FreeBSD GNOME Project'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -105,14 +105,10 @@
               <img src="{$base}/gnome/images/gnome.png" align="right"
                    border="0" alt="GNOME Logo"/>
 
-	   		<p>GNOME is a complete desktop experience.
-			  Altogether, the GNOME desktop environment and
-			  the associated comprehensive suite of applications
-			  provide an easy to use, attractive, powerful, and
-			  homogenized environment.
-			  The FreeBSD GNOME Project is a team of devoted
-			  committers and users that manage the integration
-			  of GNOME and FreeBSD.</p>
+	       		<p>GNOME is a complete desktop environment, and a
+			   comprehensive suite of applications. In GNOME,
+			   everything is easy-to-use, attractive, powerful,
+			   and works the way you expect it to.</p>
 
 			  <p>The major components of GNOME are:</p>
               <ul>
@@ -122,6 +118,10 @@
                   platform</a>:  A rich collection of tools, libraries,
                   and components to develop powerful applications on Unix.</li>
               </ul>
+
+		          <p>The FreeBSD GNOME Project is a team of devoted
+			    committers and users that manage the integration
+			    of GNOME and FreeBSD.</p>
 
 			  <p>For more information about GNOME, check out
 			    the GNOME Project's
