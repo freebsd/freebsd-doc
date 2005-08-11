@@ -1,5 +1,5 @@
 #!/usr/bin/perl -T
-# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.40 2005/07/14 11:08:54 ceri Exp $
+# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.41 2005/07/14 15:02:38 remko Exp $
 
 $ENV{'PATH'} = "/bin:/usr/bin:/usr/sbin:/sbin:/usr/local/bin";
 
@@ -27,9 +27,10 @@ if ($opt_p) {
 	($scriptname = $ENV{'SCRIPT_NAME'}) =~ s|^/?|/|;
 	$scriptname =~ s|/$||;
 	($summary = $scriptname) =~ s/query-pr/query-pr-summary/;
-	print "<FORM METHOD=GET ACTION=\"$scriptname\">\n";
-	print "<INPUT TYPE=TEXT NAME=pr></FORM>\n";
-	print "<p>See also the <A HREF=\"$summary\">PR summary</A></p>\n";
+	print "<form method='get' action='$scriptname'>\n";
+	print "<input type='text' name='pr' />\n";
+	print "<input type='submit' value='Query' />\n</form>\n";
+	print "<p>See also the <a href='$summary'>PR summary</a></p>\n";
 	print &html_footer;
 	exit 0;
     }
@@ -85,9 +86,9 @@ while(<Q>) {
 	print &html_header("FreeBSD problem report");
 	if ($_ !~ /^query-pr(:?\.(:?real|web))?: no PRs matched$/) {
 	    print "<P>query-pr said:\n";
-	    print "<PRE>$_\n";
+	    print "<pre>$_\n";
 	    print <Q>;
-	    print "</PRE>\n";
+	    print "</pre>\n";
 	} else {
 	    print "<p>No PR found matching $pr\n";
 	}
@@ -96,7 +97,7 @@ while(<Q>) {
     } elsif (/^lockf: /) {
 	print &html_header("FreeBSD problem report");
 	print "<p>The PR database is currently busy; please try ",
-	    "<A HREF=\"./query-pr.cgi?pr=$pr\">your query</A> again.";
+	    "<a href='./query-pr.cgi?pr=$pr'>your query</a> again.";
 	print &html_footer;
 	exit;
     }
@@ -141,7 +142,8 @@ while(<Q>) {
 	$syn =~ s/[\t]+/ /g;
 	$origsyn = $syn;
 	$syn = &fixline($syn);
-	print &html_header("Problem Report $cat/$number : $syn");
+	print &short_html_header("Problem Report $cat/$number : $syn");
+	print "<h1><font color='#660000'>Problem Report $cat/$number</font></h1>\n";
 	print "<strong>$syn</strong><p>\n<dl>\n";
     } else {
 	next if $inhdr;
@@ -155,7 +157,7 @@ while(<Q>) {
 		$trailer .= $2;
 	    }
 	    if ($1 eq "Originator" && $from ne "") {	# add email address
-		$trailer .= " &lt;<A HREF=\"mailto:$email\">" . &fixline($from) . "</A>&gt;";
+		$trailer .= " &lt;<a href='mailto:$email'>" . &fixline($from) . "</a>&gt;";
 	    }
 	    $blank = !($2);
 	    $multiline = 0;
@@ -179,7 +181,7 @@ print "</dl>";
 $origsyn =~ s/[^a-zA-Z+.@-]/"%" . sprintf("%02X", unpack("C", $&))/eg;
 $email =~ s/[^a-zA-Z+.@-]/"%" . sprintf("%02X", unpack("C", $&))/eg;
 
-print qq`<A HREF="mailto:bug-followup\@FreeBSD.org,${email}?subject=Re:%20${cat}/${number}:%20$origsyn">Submit Followup</A> | <A HREF="./query-pr.cgi?pr=$pr&amp;f=raw">Raw PR</A>\n`;
+print qq`<a href="mailto:bug-followup\@FreeBSD.org,${email}?subject=Re:%20${cat}/${number}:%20$origsyn">Submit Followup</a> | <a href="./query-pr.cgi?pr=$pr&amp;f=raw">Raw PR</a>\n`;
 
 print &html_footer;
 
@@ -227,12 +229,12 @@ sub fixline {
 	    local($href) = local($html) = $_;
 	    $href =~ s/&/%26/g;
 	    $html =~ s/&/&amp;/g;
-	    $_ = "<A HREF=\"$href\">$html</A>";
+	    $_ = "<a href='$href'>$html</a>";
 	} else {
 	    s/&/&amp;/g;
 	    s/</&lt;/g;
 	    s/>/&gt;/g;
-	    s%(\WPR[:s# \t]+)([a-z3486]+\/)?([0-9]+)%$1<A HREF="query-pr.cgi?pr=$3">$2$3</A>%ig;
+	    s%(\WPR[:s# \t]+)([a-z3486]+\/)?([0-9]+)%$1<a href="query-pr.cgi?pr=$3">$2$3</a>%ig;
 	}
 	$isurl = ! $isurl;
     }
