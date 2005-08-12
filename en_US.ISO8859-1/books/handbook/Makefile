@@ -42,6 +42,7 @@ IMAGES_EN+= advanced-networking/isdn-twisted-pair.eps
 IMAGES_EN+= advanced-networking/natd.eps
 IMAGES_EN+= advanced-networking/net-routing.pic
 IMAGES_EN+= advanced-networking/static-routes.pic
+IMAGES_EN+= geom/striping.pic
 IMAGES_EN+= install/adduser1.scr
 IMAGES_EN+= install/adduser2.scr
 IMAGES_EN+= install/adduser3.scr
