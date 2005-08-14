@@ -26,7 +26,8 @@
 #
 # Heh. "Tort."
 #
-# $Id: gnomelogalyzer.sh,v 1.5 2005-06-17 22:30:06 adamw Exp $
+# $MCom: portstools/gnomelogalyzer.sh.in,v 1.12 2005/06/28 05:47:54 adamw Exp $
+#   $FreeBSD$
 #
 
 # This script uses some simple yet effective heuristics to analyse
@@ -117,7 +118,7 @@ get_tmpfile()
 # main()
 
 debug -n "gnomelogalyzer ($0), ver. "
-debug `echo "$Id: gnomelogalyzer.sh,v 1.5 2005-06-17 22:30:06 adamw Exp $" | cut -f3 -d' '`
+debug `echo "$MCom: portstools/gnomelogalyzer.sh.in,v 1.12 2005/06/28 05:47:54 adamw Exp $" | cut -f3 -d' '`
 
 echo; # for good measure.
 # check to make sure that the build log has been specified
