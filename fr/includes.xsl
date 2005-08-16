@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/fr/includes.xsl,v 1.6 2004/05/30 19:20:18 stephane Exp $ -->
+<!-- $FreeBSD: www/fr/includes.xsl,v 1.7 2004/11/24 21:29:06 stephane Exp $ -->
 
 <!-- 
    The FreeBSD French Documentation Project
@@ -80,7 +80,7 @@
       <area shape="rect" coords="1,1,111,31"
 	    href="{$base}/index.html" alt="Accueil"/>
       <area shape="rect" coords="112,11,196,31"
-	    href="{$base}/ports/index.html" alt="Applications"/>
+	    href="{$enbase}/ports/index.html" alt="Applications"/>
       <area shape="rect" coords="196,12,257,33"
 	      href="{$base}/support.html" alt="Support"/>
       <area shape="rect" coords="256,12,365,33"
