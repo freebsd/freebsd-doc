@@ -39,6 +39,7 @@ SUBDIR+= releng-packages
 SUBDIR+= serial-uart
 SUBDIR+= solid-state
 SUBDIR+= storage-devices
+SUBDIR+= version-guide
 SUBDIR+= vinum
 SUBDIR+= vm-design
 SUBDIR+= zip-drive
