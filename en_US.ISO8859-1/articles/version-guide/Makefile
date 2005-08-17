@@ -13,7 +13,7 @@ INSTALL_ONLY_COMPRESSED?=
 
 SRCS=		article.sgml
 
-CSS_SHEET_ADDITIONS= extra.css
+#CSS_SHEET_ADDITIONS= extra.css
 
 URL_RELPREFIX?=	../../../..
 DOC_PREFIX?= ${.CURDIR}/../../..
