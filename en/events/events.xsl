@@ -24,7 +24,7 @@
      OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
      SUCH DAMAGE.
 
-     $FreeBSD: www/en/events/events.xsl,v 1.2 2003/10/16 20:54:00 simon Exp $
+     $FreeBSD: www/en/events/events.xsl,v 1.3 2004/04/04 21:49:39 phantom Exp $
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
@@ -75,6 +75,13 @@
 	  here, please send details to <a
 	  href="mailto:www@FreeBSD.org">www@FreeBSD.org</a>, so they
 	  can be included.</p>
+
+	<p>Users with organisational software that understands the
+	  iCalendar format can subscribe to the
+	  <a>
+	    <xsl:attribute name="href"><xsl:value-of select="$base"/>/events/events.ics</xsl:attribute>
+	    FreeBSD events calendar</a>
+	  which contains all of the events listed here.</p>
 
 	<h2 id="upcoming">
 	  <xsl:text>Current/Upcoming Events:</xsl:text>
