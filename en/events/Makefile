@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/events/Makefile,v 1.6 2004/04/06 00:05:46 phantom Exp $
+# $FreeBSD: www/en/events/Makefile,v 1.7 2004/04/06 11:36:12 phantom Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -12,8 +12,10 @@ SUBDIR+= 2003
 
 DATA=	events.css
 DATA+=	events.html
+DATA+=	events.ics
 
 CLEANFILES+= events.html
+CLEANFILES+= events.ics
 CLEANFILES+= curdate.xml
 
 INDEXLINK= events.html
@@ -28,6 +30,10 @@ events.html: events.xsl events.xml ../includes.xsl curdate.xml
 .if !defined(NO_TIDY)
 	-${TIDY} ${TIDYOPTS} ${.TARGET}
 .endif
+
+events.ics: events.xml
+	${XSLTPROC} ${XSLTPROCOPTS} -o ${.TARGET} \
+		${WEB_PREFIX}/share/sgml/events2ics.xsl ${.CURDIR}/events.xml
 
 lint:
 	${XMLLINT} --valid -o /dev/null ${.CURDIR}/events.xml
