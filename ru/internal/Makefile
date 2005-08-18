@@ -2,9 +2,9 @@
 # The FreeBSD Russian Documentation Project
 #
 # $FreeBSD$
-# $FreeBSDru: frdp/www/ru/internal/Makefile,v 1.9 2005/07/23 11:54:17 marck Exp $
+# $FreeBSDru: frdp/www/ru/internal/Makefile,v 1.10 2005/08/18 11:37:17 marck Exp $
 #
-# Original revision: 1.42
+# Original revision: 1.43
 #
 
 .if exists(../Makefile.conf)
@@ -26,7 +26,6 @@ DOCS+=	bylaws.sgml
 DOCS+=  releng.sgml
 DOCS+=	expire-bits.sgml
 DOCS+=	core-vote.sgml
-DOCS+=	trb-dispute.sgml
 DOCS+=	doceng.sgml
 DOCS+=	rtp.sgml
 DOCS+=	policies.sgml
