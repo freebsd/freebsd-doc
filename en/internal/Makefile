@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/internal/Makefile,v 1.42 2005/03/12 07:37:56 linimon Exp $
+# $FreeBSD: www/en/internal/Makefile,v 1.43 2005/08/16 18:53:16 jhb Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -22,6 +22,7 @@ DOCS+=	core-vote.sgml
 DOCS+=	doceng.sgml
 DOCS+=	rtp.sgml
 DOCS+=	policies.sgml
+DOCS+=	fortunes.sgml
 
 INDEXLINK=	internal.html
 
