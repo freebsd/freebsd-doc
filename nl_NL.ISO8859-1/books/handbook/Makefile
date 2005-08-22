@@ -1,7 +1,7 @@
 #
 # $FreeBSD$
-# $FreeBSDnl: nl_NL.ISO8859-1/books/handbook/Makefile,v 1.11 2004/12/15 00:15:19 siebrand Exp $
-# Gebaseerd op: 1.91 (sortof)
+# $FreeBSDnl: nl_NL.ISO8859-1/books/handbook/Makefile,v 1.14 2005/08/15 20:54:56 siebrand Exp $
+# Gebaseerd op: 1.95 (sortof)
 #
 # Build the FreeBSD Dutch Handbook.
 #
@@ -46,6 +46,7 @@ IMAGES_EN+= advanced-networking/isdn-twisted-pair.eps
 IMAGES_EN+= advanced-networking/natd.eps
 IMAGES_EN+= advanced-networking/net-routing.pic
 IMAGES_EN+= advanced-networking/static-routes.pic
+IMAGES_EN+= geom/striping.pic
 IMAGES_EN+= install/adduser1.scr
 IMAGES_EN+= install/adduser2.scr
 IMAGES_EN+= install/adduser3.scr
@@ -154,7 +155,8 @@ IMAGES_LIB+= callouts/10.png
 #
 
 # SGML content
-SRCS=  book.sgml
+SRCS=  audit/chapter.sgml
+SRCS+= book.sgml
 SRCS+= colophon.sgml
 SRCS+= freebsd-glossary.sgml
 SRCS+= advanced-networking/chapter.sgml
@@ -167,6 +169,7 @@ SRCS+= desktop/chapter.sgml
 SRCS+= disks/chapter.sgml
 SRCS+= eresources/chapter.sgml
 SRCS+= firewalls/chapter.sgml
+SRCS+= geom/chapter.sgml
 SRCS+= install/chapter.sgml
 SRCS+= introduction/chapter.sgml
 SRCS+= kernelconfig/chapter.sgml
