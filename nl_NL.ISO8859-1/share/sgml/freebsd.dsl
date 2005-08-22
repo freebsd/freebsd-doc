@@ -1,6 +1,7 @@
 <!--
       The FreeBSD Documentation Project
       $FreeBSD$
+      $FreeBSDnl: doc/nl_NL.ISO8859-1/share/sgml/freebsd.dsl,v 1.4 2003/05/22 15:03:49 hrs Exp $
       Gebaseerd op: 1.20
 -->
 
@@ -44,7 +45,7 @@
                   (literal "questions@FreeBSD.org"))
                 (literal ">.")
                 (make empty-element gi: "br")
-                (literal "Vragen over deze documentatie kunnen per e-mail naar<")
+                (literal "Vragen over deze documentatie kunnen per e-mail naar <")
 		(create-link (list (list "HREF" "mailto:doc@FreeBSD.org"))
                   (literal "doc@FreeBSD.org"))
 	        (literal ">.")))))
