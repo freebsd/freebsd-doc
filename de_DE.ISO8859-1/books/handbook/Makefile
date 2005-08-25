@@ -1,7 +1,7 @@
 #
 # $FreeBSD$
-# $FreeBSDde: de-docproj/books/handbook/Makefile,v 1.43 2004/12/30 20:42:21 jkois Exp $
-# basiert auf: 1.91
+# $FreeBSDde: de-docproj/books/handbook/Makefile,v 1.44 2005/08/15 19:07:04 jkois Exp $
+# basiert auf: 1.94
 #
 # Build the FreeBSD Handbook in its German translation.
 #
@@ -24,6 +24,7 @@ IMAGES_EN+= advanced-networking/isdn-twisted-pair.eps
 IMAGES_EN+= advanced-networking/natd.eps
 IMAGES_EN+= advanced-networking/net-routing.pic
 IMAGES_EN+= advanced-networking/static-routes.pic
+IMAGES_EN+= geom/striping.pic
 IMAGES_EN+= install/adduser1.scr
 IMAGES_EN+= install/adduser2.scr
 IMAGES_EN+= install/adduser3.scr
@@ -124,6 +125,7 @@ IMAGES_LIB+= callouts/10.png
 #
 
 # SGML content
+SRCS+= audit/chapter.sgml
 SRCS+= book.sgml
 SRCS+= colophon.sgml
 SRCS+= freebsd-glossary.sgml
@@ -137,6 +139,7 @@ SRCS+= desktop/chapter.sgml
 SRCS+= disks/chapter.sgml
 SRCS+= eresources/chapter.sgml
 SRCS+= firewalls/chapter.sgml
+SRCS+= geom/chapter.sgml
 SRCS+= install/chapter.sgml
 SRCS+= introduction/chapter.sgml
 SRCS+= kernelconfig/chapter.sgml
