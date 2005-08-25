@@ -1,8 +1,8 @@
 <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 
 <!--
-  $FreeBSDde: de-www/platforms/ia64/todo.xsl,v 1.1 2004/11/07 16:27:33 mheinen Exp $
-  basiert auf: 1.1
+  $FreeBSDde: de-www/platforms/ia64/todo.xsl,v 1.2 2005/07/18 20:34:11 jkois Exp $
+  basiert auf: 1.2
 -->
 
   <xsl:import href="../../includes.xsl"/>
@@ -21,8 +21,8 @@
               <xsl:copy-of select="$header2"/>
             </td>
             <td>
-              <img align="right" alt="Merced die"
-		src="{$enbase}/../../platforms/ia64/merced-die.png"/>
+              <img align="right" alt="Montecito die"
+		src="{$enbase}/../../platforms/ia64/montecito-die.png"/>
             </td>
           </tr>
         </table>
