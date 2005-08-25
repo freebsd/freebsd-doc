@@ -1,7 +1,7 @@
 <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 
 <!--
-  $FreeBSDde: de-www/platforms/ia64/index.xsl,v 1.1 2004/11/07 16:27:33 mheinen Exp $
+  $FreeBSDde: de-www/platforms/ia64/index.xsl,v 1.2 2005/07/18 20:28:26 jkois Exp $
   basiert auf: 1.1
 -->
 
@@ -81,7 +81,7 @@
 	  Betreuern des Bausystems unterst&#252;tzt.  In der Praxis
 	  ist die Unterscheidung zwischen einer Tier&#160;1
 	  Plattform (welche komplett unterst&#252;tzt wird) und einer
-	  Tier&#160;2 Plattform nicht ganz so streng wie es scheint.
+	  Tier&#160;2 Plattform nicht ganz so streng, wie es scheint.
 	  In den meisten Aspekten entspricht die ia64-Portierung
 	  eher einer Tier&#160;1 Plattform.
 	  <br />
@@ -89,7 +89,7 @@
 	  noch etwas l&#228;nger als Tier&#160;2 Plattform gilt.  Es
 	  sind noch ein paar ABI-&#196;nderungen vorgesehen und in
 	  diesem fr&#252;hen Entwicklungsstadium ist es nicht sehr
-	  zweckdienlich, auf R&#252;;ckw&#228;rtskompatibilit&#228;t
+	  zweckdienlich, auf R&#252;ckw&#228;rtskompatibilit&#228;t
 	  achten zu m&#252;ssen.</p>
 
         <xsl:copy-of select="$footer"/>
