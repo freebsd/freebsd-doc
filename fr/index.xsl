@@ -1,10 +1,11 @@
-<!-- $FreeBSD: www/fr/index.xsl,v 1.12 2004/12/30 17:53:43 hrs Exp $ -->
+<!-- $FreeBSD: www/fr/index.xsl,v 1.13 2005/07/22 12:00:55 blackend Exp $ -->
 
 <!-- 
    The FreeBSD French Documentation Project
    Original revision: 1.117
    
    Version francaise : Stephane Legrand <stephane@freebsd-fr.org>
+   Mise a jour:	Marc Fonvieille <blackend@FreeBSD.org>
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -13,7 +14,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/fr/index.xsl,v 1.12 2004/12/30 17:53:43 hrs Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/fr/index.xsl,v 1.13 2005/07/22 12:00:55 blackend Exp $'"/>
   <xsl:variable name="title" select="'Le Projet FreeBSD'"/>
 
   <!-- these params should be externally bound. The values
@@ -424,7 +425,7 @@
 		<xsl:value-of select="$date"/></small></td>
 
 	    <td align="right"
-		valign="top"><small><a href="copyright/index.html">Infos l&#233;gales</a><br/> &#169; 1995-2004
+		valign="top"><small><a href="copyright/index.html">Infos l&#233;gales</a><br/> &#169; 1995-2005
 		Le Projet FreeBSD.<br/>
 		Tous droits r&#233;serv&#233;s.</small></td>
 	  </tr>
