@@ -2,3 +2,4 @@
 
 SP_ENCODING?=	${LANGCODE:C,^.*\.,,}
 
+SGMLFLAGS+= -D ${IMAGES_EN_DIR}/${DOC}s/${.CURDIR:T}
