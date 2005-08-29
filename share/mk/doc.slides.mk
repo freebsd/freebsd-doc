@@ -71,9 +71,9 @@ ${DOC}.html: ${SRCS}
 	${XSLTPROC} ${XSLTPROCOPTS} ${SLIDES_XSLHTML} ${DOC}.xml
 
 ${DOC}.sxi: ${SRCS}
-	cp -Rp ${DOC_PREFIX}/share/openoffice/${TEMPLATE} sxi
-	${XSLTPROC} ${XSLTPROCOPTS} ${DOC_PREFIX}/share/openoffice/${TEMPLATE}.xsl slides.xml > sxi/content.xml
-	(cd sxi; zip -r ../${DOC}.sxi .)
+	${XSLTPROC} ${XSLTPROCOPTS} ${DOC_PREFIX}/share/openoffice/${TEMPLATE}.xsl ${.CURDIR}/slides.xml > ${.OBJDIR}/content.xml
+	(cd ${DOC_PREFIX}/share/openoffice/${TEMPLATE}; zip -r ${.OBJDIR}/${DOC}.sxi .)
+	(cd ${.OBJDIR}; zip -g ${DOC}.sxi content.xml)
 
 ${DOC}.fo: ${SRCS}
 .if defined(USE_SAXON)
