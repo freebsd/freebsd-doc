@@ -222,7 +222,7 @@
 			  <p><a href="{$u.rel.announce}">
 			      <font size="+1" color="#990000"><b>Release di Produzione:
 				  <xsl:value-of select="$rel.current"/></b></font></a><br/>
-			    <small>&#183; <a href="{$enbase}/doc/en_US.ISO8859-1/books/handbook/install.html">Guida di Installazione</a><br/>
+			    <small>&#183; <a href="{$enbase}/doc/it_IT.ISO8859-15/books/handbook/install.html">Guida di Installazione</a><br/>
 			      &#183; <a href="{$u.rel.notes}">Note sulla Release</a><br/>
 			      &#183; <a href="{$u.rel.hardware}">Note sull'Hardware</a><br/>
 			      &#183; <a href="{$u.rel.installation}">Note sull'Installazione</a><br/>
@@ -234,7 +234,7 @@
 			      <font size="+1" color="#990000"><b>Release di Produzione (Legacy):
 			    <xsl:value-of select="$rel2.current"/></b></font></a><br/>
 
-			    <small>&#183; <a href="{$enbase}/doc/en_US.ISO8859-1/books/handbook/install.html">Guida di Installazione</a><br/>
+			    <small>&#183; <a href="{$enbase}/doc/it_IT.ISO8859-15/books/handbook/install.html">Guida di Installazione</a><br/>
 			      &#183; <a href="{$u.rel2.notes}">Note sulla Release</a><br/>
 			      &#183; <a href="{$u.rel2.hardware}">Note sull'Hardware</a><br/>
 			      &#183; <a href="{$u.rel2.installation}">Note sull'Installazione</a><br/>
