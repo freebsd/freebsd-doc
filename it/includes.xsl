@@ -46,7 +46,7 @@
       <area shape="rect" coords="425,16,475,32"
 	    href="{$enbase}/search/search.html" alt="Cerca"/>
       <area shape="rect" coords="477,16,516,33"
-	    href="{$enbase}/search/index-site.html" alt="Indice"/>
+	    href="{$enbase}/search/index-site.html" alt="Indice del Sito"/>
       <area shape="rect" coords="516,15,562,33"
 	    href="{$base}/index.html" alt="Home"/>
       <area shape="rect" coords="0,0,564,32"
