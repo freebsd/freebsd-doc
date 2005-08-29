@@ -72,7 +72,7 @@ ${DOC}.html: ${SRCS}
 
 ${DOC}.sxi: ${SRCS}
 	${XSLTPROC} ${XSLTPROCOPTS} ${DOC_PREFIX}/share/openoffice/${TEMPLATE}.xsl ${.CURDIR}/slides.xml > ${.OBJDIR}/content.xml
-	(cd ${DOC_PREFIX}/share/openoffice/${TEMPLATE}; zip -r ${.OBJDIR}/${DOC}.sxi .)
+	(cd ${DOC_PREFIX}/share/openoffice/${TEMPLATE}; zip -r ${.OBJDIR}/${DOC}.sxi . -x \*/CVS/\* -x CVS/\*)
 	(cd ${.OBJDIR}; zip -g ${DOC}.sxi content.xml)
 
 ${DOC}.fo: ${SRCS}
