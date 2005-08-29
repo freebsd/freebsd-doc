@@ -1,0 +1,696 @@
+<!--
+     The FreeBSD Documentation Project
+-->
+
+<!DOCTYPE article PUBLIC "-//FreeBSD//DTD DocBook V4.1-Based Extension//EN" [
+<!ENTITY % articles.ent PUBLIC "-//FreeBSD//ENTITIES DocBook FreeBSD Articles Entity Set//EN">
+%articles.ent;
+]>
+
+<article>
+  <title>Writing a GEOM Class</title>
+  <articleinfo>
+
+    <authorgroup>
+      <author>
+        <firstname>Ivan</firstname>
+        <surname>Voras</surname>
+        <affiliation>
+          <address><email>ivoras@yahoo.com</email>
+          </address>
+        </affiliation>
+      </author>
+    </authorgroup>
+
+    <pubdate>$FreeBSD$</pubdate>
+
+    <legalnotice id="trademarks" role="trademarks">
+      &tm-attrib.freebsd;
+      &tm-attrib.cvsup;
+      &tm-attrib.intel;
+      &tm-attrib.xfree86;
+      &tm-attrib.general;
+    </legalnotice>
+
+    <abstract>
+
+      <para>This text documents the way I created the gjournal
+	facility, starting with learning how to do kernel
+	programming. It's assumed the reader is familiar with C
+	userland programming.</para>
+
+    </abstract>
+
+  </articleinfo>
+
+<!-- Introduction -->
+<sect1 id="intro">
+  <title>Introduction</title>
+
+  <sect2 id="intro-docs">
+    <title>Documentation</title>
+
+    <para>Documentation on kernel programming is scarce - it's one of
+      few areas where there's nearly nothing in the way of friendly
+      tutorials, and the phrase <quote>use the source!</quote> really
+      holds true. However, there are some bits and pieces (some of
+      them seriously outdated) floating around that should be studied
+      before beginning to code:</para>
+
+    <itemizedlist>
+
+      <listitem><para><ulink
+        url="&url.books.developers-handbook;/index.html">FreeBSD
+        Developer's Handbook</ulink> - part of the documentation
+        project, it doesn't contain anything specific to kernel-land
+        programming, but rather some general
+        information.</para></listitem>
+
+      <listitem><para><ulink
+	url="&url.books.arch-handbook;/index.html">FreeBSD
+	Architecture Handbook</ulink> - also from the documentation
+	project, contains descriptions of several low-level facilities
+	and procedures.  The most important chapter is 13, <ulink
+	url="&url.books.arch-handbook;/driverbasics.html">Writing
+	FreeBSD device drivers</ulink>.</para></listitem>
+
+      <listitem><para>The Blueprints section of <ulink
+	url="http://www.freebsddiary.org">FreeBSD Diary</ulink> web
+	site - contains several interesting articles on kernel
+	facilities.</para></listitem>
+
+      <listitem><para>The man pages in section 9 - most important
+	kernel-land calls are documented here.</para></listitem>
+
+      <listitem><para>The &man.geom.4; man page and PHK's GEOM slides
+	- for general introduction of the GEOM
+	subsystem.</para></listitem>
+
+      <listitem><para>&man.style.9; man page, if the code should go to
+        FreeBSD CVS tree</para></listitem>
+
+    </itemizedlist>
+
+    </sect2>
+  </sect1>
+
+  <sect1 id="prelim">
+    <title>Preliminaries</title>
+
+    <para>The best way to do kernel developing is to have (at least)
+      two separate computers. One of these would contain the
+      development environment and sources, and the other would be used
+      to test the newly written code by network-booting and
+      network-mounting filesystems from the first one.  This way if
+      the new code contains bugs and crashes the machine, it won't
+      mess up the sources (and other <quote>live</quote> data). The
+      second system doesn't event have to have a proper display - it
+      could be connected with a serial cable or KVM to the first
+      one.</para>
+
+    <para>But, since not everybody has two+ computers handy, there are
+      a few things that can be done to prepare an otherwise "live"
+      system for developing kernel code.</para>
+
+    <sect2 id="prelim-system">
+      <title>Converting a system for development</title>
+
+      <para>For any kernel programming a kernel with
+	<option>INVARIANTS</option> enabled is a must have. So enter
+	these in your kernel configuration file:</para>
+
+       <programlisting>  options INVARIANT_SUPPORT
+  options INVARIANTS</programlisting>
+
+      <para>For debugging crash dumps, a kernel with debug symbols is
+      needed:</para>
+
+      <programlisting>  makeoptions    DEBUG=-g</programlisting>
+
+      <para>With the usual way of installing the kernel (<command>make
+	installkernel</command>) the debug kernel will not be
+	automatically installed. It's called
+	<filename>kernel.debug</filename> and located in
+	<filename>/usr/obj/usr/src/sys/KERNELNAME/</filename>.  For
+	convenience it should be copied to
+	<filename>/boot/kernel/</filename>.</para>
+
+      <para>Another convenience is enabling the kernel debugger so you
+	can examine a kernel panic when it happens. For this, enter
+	the following lines in your kernel configuration file:</para>
+
+      <programlisting>  options     KDB
+  options     DDB
+  options     KDB_TRACE</programlisting>
+
+      <para>For this to work you might need to set a sysctl (if it's
+	not on by default):</para>
+
+      <programlisting>  debug.debugger_on_panic=1</programlisting>
+
+      <para>Kernel panics will happen, so care should be taken with
+	the filesystem cache. In particular, having softupdates might
+	mean a latest file version could be lost if a panic occurs
+	before it's committed to storage.  Disabling softupdates
+	yields a great performance hit (and it still doesn't guarantee
+	data consistency - mounting filesystem with the "sync" option
+	is needed for that) so for a compromise, the cache delays can
+	be shortened. There are three sysctl's that are useful for
+	this (best to be set in
+	<filename>/etc/sysctl.conf</filename>):</para>
+
+      <programlisting>  kern.filedelay=5
+  kern.dirdelay=4
+  kern.metadelay=3</programlisting>
+  
+      <para>The numbers represent seconds.</para>
+
+      <para>For debugging kernel panics, kernel core dumps are
+	required. Since a kernel panic might make filesystems
+	unusable, this crash dump is first written to a raw
+	partition. Usually, this is the swap partition (it must be at
+	least as large as the physical RAM in the machine). On the
+	next boot (after filesystems are checked and mounted and
+	before swap is enabled), the dump is copied to a regular
+	file. This is controlled with two
+	<filename>/etc/rc.conf</filename> variables:</para>
+
+      <programlisting>  dumpdev="/dev/ad0s4b"
+  dumpdir="/usr/core"</programlisting>
+  
+      <para>The <varname>dumpdev</varname> variable specifies the swap
+	partition and <varname>dumpdir</varname> tells the system
+	where in the filesystem to relocate the core dump on reboot.</para>
+
+      <para>Writing kernel core dumps is slow and takes a long time so
+	if you have lots of memory (>256M) and lots of panics it could
+	be frustrating to sit and wait while it's done (twice - first
+	to write it to swap, then to relocate it to filesystem). It's
+	convenient then to limit the amount of RAM the system will use
+	via a <filename>/boot/loader.conf</filename> tunable:</para>
+
+      <programlisting>  hw.physmem="256M"</programlisting>
+
+      <para>If the panics are frequent and filesystems large (or you
+	simply don't trust softupdates+background fsck) it's advisable
+	to turn background fsck off via
+	<filename>/etc/rc.conf</filename> variable:</para>
+
+      <programlisting>  background_fsck="NO"</programlisting>
+
+      <para>This way, the filesystems will always get checked when
+        needed (with background fsck, a new panic could happen while
+        it's checking the disks). Again, the safest way is not to have
+        many local filesystems by using another computer as NFS
+        server.</para>
+    </sect2>
+
+    <sect2 id="prelim-starting">
+      <title>Starting the project</title>
+
+      <para>For the purpose of making gjournal, a new empty
+	subdirectory was created under an arbitrary user-accessible
+	directory. You don't have to create the module directory under
+	<filename>/usr/src</filename>.</para>
+    </sect2>
+
+    <sect2 id="prelim-makefile">
+      <title>The Makefile</title>
+
+      <para>It's good practice to create
+	<filename>Makefile</filename>s for every nontrivial coding
+	project, which of course includes kernel modules.</para>
+
+      <para>Creating the <filename>Makefile</filename> is simple
+	thanks to extensive set of helper routines provided by the
+	system. In short, here's how it looks:</para>
+
+      <programlisting>  SRCS=g_journal.c
+  KMOD=geom_journal
+
+  .include &lt;bsd.kmod.mk&gt;</programlisting>
+
+      <para>This Makefile (with changed filenames) will do for any
+	kernel module.  If more than one file is required, list it in
+	<envar>SRCS</envar> variable separated with whitespace from
+	other filenames.</para>
+    </sect2>
+  </sect1>
+
+  <sect1 id="kernelprog">
+    <title>On FreeBSD kernel programming</title>
+
+    <sect2 id="kernelprog-memalloc">
+      <title>Memory allocation</title>
+
+      <para>See &man.malloc.9;. Basic memory allocation is only
+	slightly different than its user-land equivalent. Most
+	notably, <function>malloc</function>() and
+	<function>free</function>() accept additional parameters as is
+	described in the man page.</para>
+
+      <para>A <quote>malloc type</quote> must be declared in the
+	declaration section of a source file, like this:</para>
+
+      <programlisting>  static MALLOC_DEFINE(M_GJOURNAL, "gjournal data", "GEOM_JOURNAL Data");</programlisting>
+
+      <para>To use the macro, <filename>sys/param.h</filename>,
+        <filename>sys/kernel.h</filename> and
+        <filename>sys/malloc.h</filename> headers must be
+        included.</para>
+
+      <para>There's another mechanism for allocating memory, the UMA
+	(Universal Memory Allocator). See &man.uma.9; for details, but
+	it's a special type of allocator mainly used for speedy
+	allocation of lists comprised of same-sized items (for
+	example, dynamic arrays of structs).</para>
+    </sect2>
+
+    <sect2 id="kernelprog-lists">
+      <title>Lists and queues</title>
+
+      <para>See &man.queue.3;. There are a LOT of cases when a list of
+	things needs to be maintained. Fortunately, this data
+	structure is implemented (in several ways) by the C macros
+	included in the system. The most used list type is TAILQ
+	because it's the most flexible. It's also the one with largest
+	memory requirements (its elements are doubly-linked) and
+	theoretically the slowest (though the speed variation is on
+	the order of several CPU instructions more, so it shouldn't be
+	taken seriously).</para>
+
+      <para>If data retrieval speed is very important, see
+        &man.tree.3;.</para>
+    </sect2>
+
+    <sect2 id="kernelprog-bios">
+      <title>BIOs</title>
+
+      <para>Structure <structname>bio</structname> is used for any and
+	all Input/Output operations concerning GEOM. It basically
+	contains information about what device ('provider') should
+	satisfy the request, request type, offset, length, pointer to
+	a buffer, and a bunch of <quote>user-specific</quote> flags
+	and fields that can help implement various hacks.</para>
+
+      <para>The important thing here is that bios are dealt with
+	asynchronously.  That means that, in most parts of the code,
+	there's no analogue to userland's &man.read.2; and
+	&man.write.2; calls that don't return until a request is
+	done. Rather, a developer-supplied function is called as a
+	notification when the request gets completed (or results in
+	error).</para>
+
+      <para>Unfortunately, the asynchronous programming model (also
+	called "event-driven") imposed this way is somewhat harder
+	than the much more used imperative one (at least it takes a
+	while to get used to it). In some cases helper routines
+	<function>g_write_data</function>() and
+	<function>g_read_data</function>() can be used (NOT
+	ALWAYS!).</para>
+
+    </sect2>
+  </sect1>
+
+  <sect1 id="geom">
+    <title>On GEOM programming</title>
+
+    <sect2 id="geom-ggate">
+      <title>Ggate</title>
+
+      <para>If maximum performance is not needed, a much simpler way
+	of making a data transformation is to implement it in userland
+	via the ggate (GEOM gate) facility. Unfortunately, there's no
+	easy way to convert between, or even share code between the
+	two approaches.</para>
+    </sect2>
+
+    <sect2 id="geom-class">
+      <title>GEOM class</title>
+
+      <para>GEOM class has several "class methods" that get called
+	when there's no geom instance available (or they're simply not
+	bound to a single instance):</para>
+
+      <itemizedlist>
+
+        <listitem><para><function>.init</function> is called when GEOM
+	  becomes aware of a GEOM class (e.g. when the kernel module
+	  gets loaded.)</para></listitem>
+
+	<listitem><para><function>.fini</function> gets called when GEOM
+	  abandons the class (e.g. when the module gets
+	  unloaded)</para></listitem>
+
+	<listitem><para><function>.taste</function> is called next, once for
+	  each provider the system has available.  If applicable, this
+	  function will usually create and start a geom
+	  instance.</para></listitem>
+
+	<listitem><para><function>.destroy_geom</function> is called when
+  	  the geom should be disbanded</para></listitem>
+
+	<listitem><para><function>.ctlconf</function> is called when user
+	  requests reconfiguration of existing geom</para></listitem>
+
+      </itemizedlist>
+
+      <para>Also defined are the GEOM event functions, which will get
+	copied to the geom instance.</para>
+
+      <para>Field <function>.geom</function> in the
+	<structname>g_class</structname> structure is a LIST of geoms
+	instantiated from the class.</para>
+
+      <para>These functions are called from g_event? kernel
+        thread.</para>
+
+    </sect2>
+
+    <sect2 id="geom-softc">
+      <title>Softc</title>
+
+      <para>The name <quote>softc</quote> is a legacy term for
+	<quote>driver private data</quote>. The name most probably
+	comes from archaic term <quote>software control block</quote>.
+	In GEOM, it's a structure (more precise: pointer to a
+	structure) that can be attached to a geom instance to hold
+	whatever data is private to the geom instance. In gjournal
+	(and most of the other GEOM classes), some of it's members
+	are:</para>
+
+      <itemizedlist>
+	<listitem><para><varname>struct g_provider *provider</varname> : The
+  	  <quote>provider</quote> this geom instantiates</para></listitem>
+
+	<listitem><para><varname>uint16_t n_disks</varname> : Number of
+	  consumer this geom consumes</para></listitem>
+
+	<listitem><para><varname>struct g_consumer **disks</varname> : Array
+	  of <varname>struct g_consumer*</varname>. (It's not possible
+	  to use just single indirection because struct g_consumer*
+	  are created on our behalf by GEOM).</para></listitem>
+      </itemizedlist>
+
+      <para>The <structname>softc</structname> structure contains all
+	the state of geom instance. Every geom instance has its own
+	softc.</para>
+    </sect2>
+
+    <sect2 id="geom-metadata">
+      <title>Metadata</title>
+
+      <para>Format of metadata is more-or-less class-dependent, but
+        MUST start with:</para>
+
+      <itemizedlist>
+
+	<listitem><para>16 byte buffer for null-terminated signature
+	  (usually the class name)</para></listitem>
+
+	<listitem><para>uint32 version ID</para></listitem>
+
+      </itemizedlist>
+
+      <para>It's assumed that geom classes know how to handle metadata
+	with version ID's lower than theirs.</para>
+
+      <para>Metadata is located in the last sector of the provider
+        (and thus must fit in it).</para>
+
+      <para>(All this is implementation-dependent but all existing
+        code works like that, and it's supported by libraries.)</para>
+    </sect2>
+
+    <sect2 id="geom-creating">
+      <title>Labeling/creating a geom</title>
+
+      <para>The sequence of events is:</para>
+
+      <itemizedlist>
+
+        <listitem><para>user calls &man.geom.8; utility (or one of it's
+          hardlinked friends)</para></listitem>
+
+	<listitem><para>the utility figures out which geom class it's
+	  supposed to handle and searches for
+	  <filename>geom_<replaceable>CLASSNAME</replaceable>.so</filename>
+	  library (usually in
+	  <filename>/lib/geom</filename>).</para></listitem>
+
+	<listitem><para>it &man.dlopen.3;-es the library, extracts the
+	  definitions of command-line parameters and helper
+	  functions.</para></listitem>
+
+      </itemizedlist>
+
+      <para>In the case of creating/labeling a new geom, this is what
+      happens:</para>
+
+      <itemizedlist>
+
+        <listitem><para>&man.geom.8; looks in the command-line definition
+	  for the command (usually "label"), calls a helper
+	  function.</para></listitem>
+
+	<listitem><para>helper function checks parameters & gathers
+	  metadata, which it proceeds to write to all concerned
+	  providers.</para></listitem>
+
+	<listitem><para>this "spoils" existing geoms (if any) and
+	  initializes a new round of "tasting" of the providers. The
+	  intended geom class recognizes the metadata and brings the
+	  geom up.</para></listitem>
+
+      </itemizedlist>
+
+      <para>(The above sequence of events is implementation-dependent
+	but all existing code works like that, and it's supported by
+	libraries.)</para>
+
+    </sect2>
+
+    <sect2 id="geom-command">
+      <title>Geom command structure</title>
+
+      <para>The helper <filename>geom_CLASSNAME.so</filename> library
+	exports <structname>class_commands</structname> structure,
+	which is an array of <structname>struct g_command</structname>
+	elements. Commands are of uniform format and look like:</para>
+
+      <programlisting>  verb [-options] geomname [other]</programlisting>
+
+      <para>Common verbs are:</para>
+
+      <itemizedlist>
+
+        <listitem><para>label - to write metadata to devices so they can be
+  recognized at tasting and brought up in geoms</para></listitem>
+
+	<listitem><para>destroy - to destroy metadata, so the geoms get
+	destroyed</para></listitem>
+
+      </itemizedlist>
+
+      <para>Common options are:</para>
+
+      <itemizedlist>
+        <listitem><para><literal>-v</literal> : be verbose</para></listitem>
+	<listitem><para><literal>-f</literal> : force</para></listitem>
+      </itemizedlist>
+
+      <para>Many actions, such as labeling and destroying metadata can
+	be performed in userland. For this, <structname>struct
+	g_command</structname> provides field
+	<varname>gc_func</varname> that can be set to a function (in
+	the same <filename>.so</filename>) that will be called to
+	process a verb. If <varname>gc_func</varname> is NULL, the
+	command will be passed to kernel module, to
+	<function>.ctlreq</function> function of the geom
+	class.</para>
+    </sect2>
+
+    <sect2 id="geom-geoms">
+      <title>Geoms</title>
+
+      <para>Geoms are instances of geom classes. They have internal
+	data (a softc structure) and some functions with which they
+	respond to external events.</para>
+
+      <para>The event functions are:</para>
+
+      <itemizedlist>
+        <listitem><para><function>.access</function> : calculates
+        permissions (read/write/exclusive)</para></listitem>
+
+        <listitem><para><function>.dumpconf</function> : returns
+        XML-formatted information about the geom</para></listitem>
+
+	<listitem><para><function>.orphan</function> : called when some
+	underlying provider gets disconnected</para></listitem>
+
+	<listitem><para><function>.spoiled</function> : called when some
+	underlying provider gets written to</para></listitem>
+
+	<listitem><para><function>.start</function> : handles IO</para></listitem>
+      </itemizedlist>
+
+      <para>These functions are called from g_down? kernel thread and
+	there can be no sleeping in this context (no blocking on a
+	mutex or any kind of locks) which limits what can be done
+	quite a bit, but forces the handling to be fast.</para>
+
+      <para>Of these, the most important function for doing actual
+	usefull work is the <function>.start</function>() function,
+	which is called when a BIO requests arrives for a provider
+	managed by a instance of geom class.</para>
+    </sect2>
+
+    <sect2 id="geom-threads">
+      <title>Geom threads</title>
+
+      <para>There are three kernel threads created and run by the GEOM
+      framework:</para>
+
+      <itemizedlist>
+	<listitem><para><literal>g_down</literal> : Handles requests coming
+	  from high-level entities (such as a userland request) on the
+	  way to physical devices</para></listitem>
+
+	<listitem><para><literal>g_up</literal> : Handles responses from
+	  device drivers to requests made by higher-level
+	  entities</para></listitem>
+
+	<listitem><para><literal>g_event</literal> : Handles all other
+	  cases: creation of geom instances, access counting, "spoil"
+	  events, etc.</para></listitem>
+      </itemizedlist>
+
+      <para>When a user process issues <quote>read data X at offset Y
+	of a file</quote> request, this is what happenes:</para>
+
+      <itemizedlist>
+
+        <listitem><para>The filesystem converts the request into struct bio
+	  instance and passes it to GEOM subsystem. It knows what geom
+	  instance should handle it because filesystems are hosted
+	  directly on a geom instance.</para></listitem>
+
+	<listitem><para>The request ends up as a call to
+	  <function>.start</function>() function made on the g_down
+	  thread and reaches the top-level geom instance.</para></listitem>
+
+	<listitem><para>This top-level geom instance (for example the
+	  partition slicer) determines that the request should be
+	  routed to a lower-level instance (for example the disk
+	  driver). It makes a copy of the bio request (bio requests
+	  <emphasis>ALWAYS</emphasis> need to be copied between
+	  instances, with <function>g_clone_bio</function>()!),
+	  modifies the data offset and target provider fields and
+	  executes the copy with
+	  <function>g_io_request</function>()</para></listitem>
+
+	<listitem><para>The disk driver gets the bio request also as a call
+	  to <function>.start</function>() on the
+	  <literal>g_down</literal> thread. It talks to hardware,
+	  gets the data back, and calls
+	  <function>g_io_deliver</function>() on the bio.</para></listitem>
+
+	<listitem><para>Now, the notification of bio completion
+	  <quote>bubbles up</quote> in the <literal>g_up</literal>
+	  thread. First the partition slicer gets
+	  <function>.done</function>() called in the
+	  <literal>g_up</literal> thread, it uses information stored
+	  in the bio to free the cloned <structname>bio</structname>
+	  structure (with <function>g_destroy_bio</function>()) and
+	  calls <function>g_io_deliver</function>() on the original
+	  request.</para></listitem>
+
+	<listitem><para>The filesystem gets the data and transfers it to
+	  userland.</para></listitem>
+      </itemizedlist>
+
+      <para>See &man.g.bio.9; man page for information how the data is
+	passed back and forth in the <structname>bio</structname>
+	structure (note particular the <varname>bio_parent</varname>
+	and <varname>bio_children</varname> fields and how they are
+	handled).</para>
+
+      <para>One important feature is: THERE CAN BE NO SLEEPING IN G_UP
+	AND G_DOWN THREADS. This means that none of the following
+	things can be done in those threads (the list is of course not
+	complete, but only informative):</para>
+
+      <itemizedlist>
+	<listitem><para>Calls to <function>msleep</function>() and
+	  <function>tsleep</function>(), obviously.</para></listitem>
+
+	<listitem><para>Calls to <function>g_write_data</function>() and
+	  <function>g_read_data</function>(), because these sleep
+	  between passing the data to consumers and
+	  returning.</para></listitem>
+
+	<listitem><para>Calls to &man.malloc.9; and
+	  <function>uma_zalloc</function>() with
+	  <varname>M_WAITOK</varname> flag set</para></listitem>
+
+	<listitem><para>sx locks</para></listitem>
+      </itemizedlist>
+
+      <para>This restriction is here to stop geom code clogging the IO
+	request path, because sleeping in the code is usually not
+	time-bound and there can be no guarantiees on how long will it
+	take (there are some other, more technical reasons also). It
+	also means that there's not much that can be done in those
+	threads; for example, almost any complex thing requires memory
+	allocation. Fortunately, there is a way out: creating
+	additional kernel threads.</para>
+    </sect2>
+
+    <sect2 id="geom-kernelthreads">
+      <title>Kernel threads for use in geom code</title>
+
+      <para>Kernel threads are created with &man.kthread.create.9;
+	function, and they are sort of similar to userland threads in
+	behaviour, only they can't return to caller to signify
+	termination, but must call &man.kthread.exit.9;.</para>
+
+      <para>In geom code, the usual use of threads is to offload
+	processing of requests from <literal>g_down</literal> thread
+	(the <function>.start</function>() function). These threads
+	look like <quote>event handlers</quote>: they have a linked
+	list of event associated with them (on which events can posted
+	by various functions in various threads so it must be
+	protected by a mutex), take the events from the list one by
+	one and process them in a big <literal>switch</literal>()
+	statement.</para>
+
+      <para>The main benefit of using a thread to handle IO requests
+	is that it can sleep when needed. Now, this sounds good, but
+	should be carefully thought out. Sleeping is well and very
+	convenient but can very effectively destroy performance of the
+	geom transformation. Extremely performance-sensitive classes
+	probably should do all the work in
+	<function>.start</function>() function call, taking great care
+	to handle out-of-memory and similar errors.</para>
+
+      <para>The other benefit of having a event-handler thread like
+	that is to serialize all the requests and responses coming
+	from different geom threads into one thread. This is also very
+	convenient but can be slow. In most cases, handling of
+	<function>.done</function>() requests can be left to the
+	<literal>g_up</literal> thread.</para>
+
+      <para>Mutexes in FreeBSD kernel (see &man.mutex.9; man page) have
+	one distinction from their more common userland cousins - they
+	disallow sleeping (meaning: the code can't sleep while holding
+	a mutex). If the code needs to sleep a lot, &man.sx.9; locks
+	may be more appropriate.  (On the other hand, if you do almost
+	everything in a single thread, you may get away with no
+	mutexes at all).</para>
+
+    </sect2>
+
+  </sect1>
+
+</article>
