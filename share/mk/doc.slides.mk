@@ -68,7 +68,7 @@ XSLTPROCOPTS=	${XSLTPROCFLAGS}
 all: ${_docs}
 
 ${DOC}.html: ${SRCS}
-	${XSLTPROC} ${XSLTPROCOPTS} ${SLIDES_XSLHTML} ${DOC}.xml
+	${XSLTPROC} ${XSLTPROCOPTS} ${SLIDES_XSLHTML} ${.CURDIR}/${DOC}.xml
 
 ${DOC}.sxi: ${SRCS}
 	${XSLTPROC} ${XSLTPROCOPTS} ${DOC_PREFIX}/share/openoffice/${TEMPLATE}.xsl ${.CURDIR}/slides.xml > ${.OBJDIR}/content.xml
@@ -79,14 +79,14 @@ ${DOC}.fo: ${SRCS}
 .if defined(USE_SAXON)
 	${SAXON_CMD} ${DOC}.xml ${SLIDES_XSLPRINT} > ${.TARGET:S/.pdf$/.fo/}
 .else
-	${XSLTPROC} ${XSLTPROCOPTS} ${SLIDES_XSLPRINT} ${DOC}.xml > ${.TARGET:S/.pdf$/.fo/}
+	${XSLTPROC} ${XSLTPROCOPTS} ${SLIDES_XSLPRINT} ${.CURDIR}/${DOC}.xml > ${.OBJDIR}/${.TARGET:S/.pdf$/.fo/}
 .endif
 
 ${DOC}.pdf: ${DOC}.fo
 .if defined(USE_FOP)
-	${FOP_CMD} ${.TARGET:S/.pdf$/.fo/} ${.TARGET}
+	${FOP_CMD} ${.OBJDIR}/${.TARGET:S/.pdf$/.fo/} ${.OBJDIR}/${.TARGET}
 .elif defined(USE_XEP)
-	${XEP_CMD} ${.TARGET:S/.pdf$/.fo/} ${.TARGET}
+	${XEP_CMD} ${.OBJDIR}/${.TARGET:S/.pdf$/.fo/} ${.OBJDIR}/${.TARGET}
 .else
-	${PDFTEX_CMD} --interaction nonstopmode "&pdfxmltex" ${.TARGET:S/.pdf$/.fo/}
+	${PDFTEX_CMD} --interaction nonstopmode "&pdfxmltex" ${.OBJDIR}/${.TARGET:S/.pdf$/.fo/}
 .endif
