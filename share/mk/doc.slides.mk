@@ -26,13 +26,16 @@
 DOCBOOKSUFFIX?=	xml
 MASTERDOC?=	${.CURDIR}/${DOC}.${DOCBOOKSUFFIX}
 
-KNOWN_FORMATS=	html pdf
+KNOWN_FORMATS=	html pdf sxi
 
 CSS_SHEET?=
 
 SLIDES_XSLDIR=	/usr/local/share/xsl/slides/xsl/
 SLIDES_XSLHTML= ${SLIDES_XSLDIR}xhtml/default.xsl
 SLIDES_XSLPRINT?= ${SLIDES_XSLDIR}fo/plain.xsl
+
+# Default OpenOffice.Org Template
+TEMPLATE?= BSDi
 
 # Loop through formats we should build.
 .for _curformat in ${FORMATS}
@@ -51,6 +54,10 @@ CLEANFILES+= ${DOC}.aux ${DOC}.log ${DOC}.out texput.log
 .endif
 .endif
 
+.if ${_cf} == "sxi"
+CLEANDIRS+= sxi
+.endif
+
 .endfor
 
 XSLTPROCFLAGS?=	--nonet --stringparam draft.mode no
@@ -62,6 +69,11 @@ all: ${_docs}
 
 ${DOC}.html: ${SRCS}
 	${XSLTPROC} ${XSLTPROCOPTS} ${SLIDES_XSLHTML} ${DOC}.xml
+
+${DOC}.sxi: ${SRCS}
+	cp -Rp ${DOC_PREFIX}/share/openoffice/${TEMPLATE} sxi
+	${XSLTPROC} ${XSLTPROCOPTS} ${DOC_PREFIX}/share/openoffice/${TEMPLATE}.xsl slides.xml > sxi/content.xml
+	(cd sxi; zip -r ../${DOC}.sxi .)
 
 ${DOC}.fo: ${SRCS}
 .if defined(USE_SAXON)
