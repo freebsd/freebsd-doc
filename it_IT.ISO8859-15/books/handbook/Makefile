@@ -1,6 +1,6 @@
 #
 # $FreeBSD$
-# Original revision: 1.90
+# Original revision: 1.95
 #
 # Crea il Manuale di FreeBSD.
 #
@@ -44,6 +44,7 @@ IMAGES_EN+= advanced-networking/isdn-twisted-pair.eps
 IMAGES_EN+= advanced-networking/natd.eps
 IMAGES_EN+= advanced-networking/net-routing.pic
 IMAGES_EN+= advanced-networking/static-routes.pic
+IMAGES_EN+= geom/striping.pic
 IMAGES_EN+= install/adduser1.scr
 IMAGES_EN+= install/adduser2.scr
 IMAGES_EN+= install/adduser3.scr
@@ -155,6 +156,7 @@ SRCS = book.sgml
 SRCS+= colophon.sgml
 SRCS+= freebsd-glossary.sgml
 SRCS+= advanced-networking/chapter.sgml
+SRCS+= audit/chapter.sgml
 SRCS+= basics/chapter.sgml
 SRCS+= bibliography/chapter.sgml
 SRCS+= boot/chapter.sgml
@@ -163,6 +165,8 @@ SRCS+= cutting-edge/chapter.sgml
 SRCS+= desktop/chapter.sgml
 SRCS+= disks/chapter.sgml
 SRCS+= eresources/chapter.sgml
+SRCS+= firewalls/chapter.sgml
+SRCS+= geom/chapter.sgml
 SRCS+= install/chapter.sgml
 SRCS+= introduction/chapter.sgml
 SRCS+= kernelconfig/chapter.sgml
