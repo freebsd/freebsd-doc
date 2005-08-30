@@ -125,26 +125,22 @@ SP_ENCODING_LIST?=	ISO-8859-2 KOI8-R
 # Which stylesheet type to use.  'dsssl' or 'xsl'
 STYLESHEET_TYPE?=	dsssl
 
-.if ${MACHINE_ARCH} != "i386"
-OPENJADE=	yes
-.endif
-
 .if defined(SPELLCHECK)
 DSLHTML?= ${DOC_PREFIX}/share/sgml/spellcheck.dsl
 .endif
 
-.if defined(OPENJADE)
-JADE?=		${PREFIX}/bin/openjade
-JADECATALOG?=	${PREFIX}/share/sgml/openjade/catalog
-NSGMLS?=	${PREFIX}/bin/onsgmls
-JADEFLAGS+=	-V openjade
-SX?=		${PREFIX}/bin/osx
-.else
+.if exists(${PREFIX}/bin/jade) && !defined(OPENJADE)
 JADE?=		${PREFIX}/bin/jade
 JADECATALOG?=	${PREFIX}/share/sgml/jade/catalog
 NSGMLS?=	${PREFIX}/bin/nsgmls
 NSGMLSWARNINGS=	-wempty -wunclosed
 SX?=		${PREFIX}/bin/sx
+.else
+JADE?=		${PREFIX}/bin/openjade
+JADECATALOG?=	${PREFIX}/share/sgml/openjade/catalog
+NSGMLS?=	${PREFIX}/bin/onsgmls
+JADEFLAGS+=	-V openjade
+SX?=		${PREFIX}/bin/osx
 .endif
 
 .if defined(SP_ENCODING)
