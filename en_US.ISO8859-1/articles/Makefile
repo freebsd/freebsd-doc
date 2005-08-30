@@ -2,6 +2,7 @@
 
 SUBDIR =
 SUBDIR+= 5-roadmap
+SUBDIR+= casestudy-argentina.com
 SUBDIR+= checkpoint
 SUBDIR+= committers-guide
 SUBDIR+= console-server
@@ -18,6 +19,7 @@ SUBDIR+= filtering-bridges
 SUBDIR+= fonts
 SUBDIR+= formatting-media
 SUBDIR+= freebsd-questions
+SUBDIR+= geom-class
 SUBDIR+= hats
 SUBDIR+= hubs
 SUBDIR+= ipsec-must
