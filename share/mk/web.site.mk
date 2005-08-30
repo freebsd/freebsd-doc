@@ -1,5 +1,5 @@
 # bsd.web.mk
-# $FreeBSD: www/share/mk/web.site.mk,v 1.65 2005/03/01 23:04:59 simon Exp $
+# $FreeBSD: www/share/mk/web.site.mk,v 1.66 2005/08/23 11:12:21 pav Exp $
 
 #
 # Build and install a web site.
@@ -50,10 +50,10 @@ TRUE?=		/usr/bin/true
 LOCALBASE?=	/usr/local
 PREFIX?=	${LOCALBASE}
 
-.if exists(${PREFIX}/bin/osgmlnorm)
-SGMLNORM?=	${PREFIX}/bin/osgmlnorm
-.else
+.if exists(${PREFIX}/bin/sgmlnorm) && !defined(OPENJADE)
 SGMLNORM?=	${PREFIX}/bin/sgmlnorm
+.else
+SGMLNORM?=	${PREFIX}/bin/osgmlnorm
 .endif
 CATALOG?=	${PREFIX}/share/sgml/html/catalog
 SGMLNORMOPTS?=	-d ${SGMLNORMFLAGS} -c ${CATALOG} -D ${.CURDIR}
