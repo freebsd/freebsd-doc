@@ -51,16 +51,12 @@ HTMLCATALOG=	${PREFIX}/share/sgml/html/catalog
 
 IMAGES_LIB?=
 
-.if ${MACHINE_ARCH} != "i386"
-OPENJADE=	yes
-.endif
-
-.if defined(OPENJADE)
-NSGMLS?=	${PREFIX}/bin/onsgmls
-SGMLNORM?=	${PREFIX}/bin/osgmlnorm
-.else
+if exists(${PREFIX}/bin/sgmlnorm) && !defined(OPENJADE)
 NSGMLS?=	${PREFIX}/bin/nsgmls
 SGMLNORM?=	${PREFIX}/bin/sgmlnorm
+.else
+NSGMLS?=	${PREFIX}/bin/onsgmls
+SGMLNORM?=	${PREFIX}/bin/osgmlnorm
 .endif
  
 PKG_CREATE?=	/usr/sbin/pkg_create
