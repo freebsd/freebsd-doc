@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/es/index.xsl,v 1.6 2005/03/30 22:04:11 jcamou Exp $ -->
+<!-- $FreeBSD: www/es/index.xsl,v 1.7 2005/05/10 12:24:21 jcamou Exp $ -->
 <!-- $FreeBSDes: www/es/index.xsl,v 1.4 2004/09/07 21:46:11 jcamou Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -10,7 +10,7 @@
 
   <xsl:variable name="base" select="'.'"/>
   <xsl:variable name="enbase" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/es/index.xsl,v 1.6 2005/03/30 22:04:11 jcamou Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/es/index.xsl,v 1.7 2005/05/10 12:24:21 jcamou Exp $'"/>
   <xsl:variable name="title" select="'El Proyecto FreeBSD'"/>
 
   <!-- these params should be externally bound. The values
@@ -192,7 +192,7 @@
 
 	      <p>Si esperabas que un sistema operativo con estas 
 	        caracter&#237;sticas tuviese un alto coste, FreeBSD 
-		est&#225; disponible disponibile 
+		est&#225; disponible  
 		<a href="{$base}/copyright/index.html">completamente gratis</a> 
 		incluyendo el c&#243;digo fuente.  Si quieres probarlo,
 		<a  href="{$enbase}/doc/es_ES.ISO8859-1/books/handbook/mirrors.html">
@@ -212,7 +212,7 @@
 	      <p>A&#250;n no siendo programador, existen otros m&#233;todos 
 	        de colaborar y contribuir a FreeBSD. La Fundaci&#243;n 
 		FreeBSD es una organizaci&#243;n no lucrativa para la que 
-		todas las contribuciones directas directas son deducibles de 
+		todas las contribuciones directas son deducibles de 
 		impuestos en su totalidad.  Por favor, contactar con 
 		<a href="mailto:bod@FreeBSDFoundation.org">
 		bod@FreeBSDFoundation.org</a> para obtener m&#225;s 
