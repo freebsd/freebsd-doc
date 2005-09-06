@@ -26,56 +26,63 @@
   </xsl:template>
 
   <xsl:template match="*">
-    <xsl:copy>
-      <xsl:copy-of select="@*" />
-      <xsl:apply-templates />
-    </xsl:copy>
-  </xsl:template>
+    <xsl:choose>
+      <xsl:when test="local-name() = $transtable-target-element">
+	<xsl:element name="{local-name(.)}" namespace="{namespace-uri(.)}">
+	  <xsl:copy-of select="@*" />
 
-  <xsl:template match="*[local-name() = $transtable-target-element]">
-    <xsl:element name="{local-name(.)}" namespace="{namespace-uri(.)}">
-      <xsl:copy-of select="@*" />
+	  <xsl:call-template name="transtable-sortkey-lookup">
+	    <xsl:with-param name="word" select="." />
+	    <xsl:with-param name="word-group" select="$transtable-word-group" />
+	  </xsl:call-template>
 
-      <xsl:call-template name="transtable-sortkey-lookup">
-	<xsl:with-param name="word" select="." />
-	<xsl:with-param name="word-group" select="$transtable-word-group" />
-      </xsl:call-template>
+	  <xsl:call-template name="transtable-lookup">
+	    <xsl:with-param name="word" select="." />
+	    <xsl:with-param name="word-group" select="$transtable-word-group" />
+	  </xsl:call-template>
+	</xsl:element>
+      </xsl:when>
 
-      <xsl:call-template name="transtable-lookup">
-        <xsl:with-param name="word" select="." />
-        <xsl:with-param name="word-group" select="$transtable-word-group" />
-      </xsl:call-template>
-    </xsl:element>
+      <xsl:otherwise>
+	<xsl:copy>
+	  <xsl:copy-of select="@*" />
+	  <xsl:apply-templates />
+	</xsl:copy>
+      </xsl:otherwise>
+    </xsl:choose>
   </xsl:template>
 
  <!-- mode for generating sortkeytable -->
 
   <xsl:template match="*" mode="sortkey">
-    <xsl:apply-templates mode="sortkey"/>
+    <xsl:choose>
+      <xsl:when test="local-name() = $transtable-target-element">
+	<xsl:element name="word">
+	  <xsl:attribute name="name">
+	    <xsl:call-template name="transtable-lookup">
+	      <xsl:with-param name="word" select="." />
+	      <xsl:with-param name="word-group" select="$transtable-word-group" />
+	    </xsl:call-template>
+	  </xsl:attribute>
+
+	  <xsl:attribute name="orig">
+	    <xsl:value-of select="." />
+	  </xsl:attribute>
+
+	  <xsl:attribute name="sortkey">
+	    <xsl:value-of select="'@sortkey@'" />
+	  </xsl:attribute>
+	</xsl:element>
+
+	<xsl:text disable-output-escaping="yes">&#10;</xsl:text>
+      </xsl:when>
+
+      <xsl:otherwise>
+	<xsl:apply-templates mode="sortkey"/>
+      </xsl:otherwise>
+    </xsl:choose>
   </xsl:template>
 
   <xsl:template match="text()" mode="sortkey">
-  </xsl:template>
-
-  <xsl:template match="*[local-name() = $transtable-target-element]" mode="sortkey">
-    <xsl:element name="word">
-      <xsl:attribute name="name">
-	<xsl:call-template name="transtable-lookup">
-	  <xsl:with-param name="word" select="." />
-	<xsl:with-param name="word-group" select="$transtable-word-group" />
-	</xsl:call-template>
-      </xsl:attribute>
-
-      <xsl:attribute name="orig">
-	<xsl:value-of select="." />
-      </xsl:attribute>
-
-      <xsl:attribute name="sortkey">
-	<xsl:value-of select="'@sortkey@'" />
-      </xsl:attribute>
-    </xsl:element>
-
-    <xsl:text disable-output-escaping="yes">&#10;</xsl:text>
-
   </xsl:template>
 </xsl:stylesheet>
