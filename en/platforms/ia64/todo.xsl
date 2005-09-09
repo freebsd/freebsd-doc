@@ -1,7 +1,7 @@
 <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
   <xsl:import href="../../includes.xsl"/>
   <xsl:import href="includes.xsl"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/platforms/ia64/todo.xsl,v 1.1 2004/10/19 04:14:05 marcel Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/platforms/ia64/todo.xsl,v 1.2 2005/05/25 04:16:28 marcel Exp $'"/>
   <xsl:output doctype-public="-//W3C//DTD HTML 4.01 Transitional//EN"
     encoding="iso-8859-1" method="html"/>
   <xsl:template match="/">
@@ -79,7 +79,7 @@
 	  collection has been targeting ia32 for the most part, so it is not
 	  surprising that there are a lot of ports that do not build or do not
 	  work on ia64. Look
-	  <a href="http://pointyhat.FreeBSD.org/errorlogs/ia64-5-latest/">
+	  <a href="http://pointyhat.FreeBSD.org/errorlogs/ia64-6-latest/">
 	    here
 	  </a>
 	  for the most up-to-date list of ports that fail to build for some
