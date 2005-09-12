@@ -1,8 +1,8 @@
 <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 
 <!--
-  $FreeBSDde: de-www/platforms/ia64/todo.xsl,v 1.2 2005/07/18 20:34:11 jkois Exp $
-  basiert auf: 1.2
+  $FreeBSDde: de-www/platforms/ia64/todo.xsl,v 1.5 2005/09/09 18:40:06 jkois Exp $
+  basiert auf: 1.3
 -->
 
   <xsl:import href="../../includes.xsl"/>
@@ -57,7 +57,7 @@
 	  Auf dem Weg zur Tier 1 Plattform
 	</h4>
 
-	<p>Nach zwei Ver&#246;ffentlichungen als Tier&#160;2 Palttform,
+	<p>Nach zwei Ver&#246;ffentlichungen als Tier&#160;2 Plattform,
 	  wird es Zeit, eine Tier&#160;1 Plattform zu werden.  Dies
 	  umfasst verschiedene Aufgaben wie:</p>
 
@@ -91,8 +91,8 @@
 	  Ports-Sammlung ist vor allem auf auf ia32 ausgerichtet,
 	  kein Wunder also, dass viele Ports nicht unter ia64
 	  bauen oder laufen.  Es gibt eine aktuelle <a
-	    href="http://bento.FreeBSD.org/errorlogs/ia64-5-latest/">Liste
-	    der Ports</a>, die sich aus dem ein oder anderen Grund
+	    href="http://pointyhat.FreeBSD.org/errorlogs/ia64-6-latest/">Liste
+	    der Ports</a>, die sich aus dem einen oder anderen Grund
 	    nicht bauen lassen.  Ein Port wird nicht gebaut und nicht
 	  gez&#228;hlt, wenn er von einem Port abh&#228;ngt, der sich
 	  nicht bauen l&#228;sst.  Es w&#228;re eine gro&#223;e
