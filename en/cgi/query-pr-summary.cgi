@@ -1,5 +1,5 @@
 #!/usr/bin/perl -T
-# $FreeBSD: www/en/cgi/query-pr-summary.cgi,v 1.48 2004/10/25 11:27:08 keramida Exp $
+# $FreeBSD: www/en/cgi/query-pr-summary.cgi,v 1.49 2005/01/18 17:31:12 keramida Exp $
 
 sub escape($) { $_ = $_[0]; s/&/&amp;/g; s/</&lt;/g; s/>/&gt;/g; $_; }
 
@@ -9,20 +9,21 @@ $self_ref      = $ENV{'SCRIPT_NAME'};
 
 $ENV{'PATH'}   = '/bin:/usr/bin:/usr/sbin:/sbin:/usr/local/bin';
 
-$project       = "FreeBSD";
-$mail_prefix   = "freebsd-";
-$mail_unass    = "freebsd-bugs";
-$ports_unass   = "ports-bugs";
+$project       = 'FreeBSD';
+$mail_prefix   = 'freebsd-';
+$mail_unass    = 'freebsd-bugs';
+$ports_unass   = 'ports-bugs';
 $closed_too    = 0;
 
-require "./cgi-lib.pl";
-require "./cgi-style.pl";
-require "getopts.pl";
+require './cgi-lib.pl';
+require './cgi-style.pl';
+require 'getopts.pl';
 
 if ($ENV{'QUERY_STRING'} eq 'query') {
 	print &html_header("Query $project problem reports");
 	&displayform;
 	print &html_footer;
+	print "</body>\n</html>";
 	exit(0);
 }
 
@@ -33,16 +34,16 @@ if ($html_mode) {
 } else {
 	&Getopts('CcqRr:s:');
 
-	$input{"responsible"}	= "summary" if $opt_R;
+	$input{'responsible'}	= 'summary' if $opt_R;
 	if ($opt_r) {
-		($input{"responsible"})	= ($opt_r =~ m/^(\^?[-_a-zA-Z0-9@.]*\$?)$/);
-		die "Insecure args" if ($input{"responsible"} ne $opt_r)
+		($input{'responsible'})	= ($opt_r =~ m/^(\^?[-_a-zA-Z0-9@.]*\$?)$/);
+		die 'Insecure args' if ($input{'responsible'} ne $opt_r)
 	}
 	if ($opt_s) {
-		($input{"state"})	= ($opt_s =~ m/^([a-zA-Z]*)$/);
-		die "Insecure args" if ($input{"state"} ne $opt_s)
+		($input{'state'})	= ($opt_s =~ m/^([a-zA-Z]*)$/);
+		die 'Insecure args' if ($input{'state'} ne $opt_s)
 	}
-	$input{"quiet"}		= "yes" if $opt_q;
+	$input{'quiet'}		= 'yes' if $opt_q;
 	if ($opt_C) {
 		$query_args   = '--confidential=yes ';
 	} elsif (!$opt_c) {
@@ -61,51 +62,39 @@ $closed_too = 1 if $input{'state'} eq 'closed' || $input{'closedtoo'};
 
 
 if ($html_mode) {
-    $h1 = "<h1>"; $h1_e = "</h1>";
-    $h2 = "<h2>"; $h2_e = "</h2>";
-    $h3 = "<h3>"; $h3_e = "</h3>";
-    $h4 = "<h4>"; $h4_e = "</h4>";
-    $p  = "<p>" ; $p_e  = "</p>";
-    $br = "<br>";
 
-    $st = "<strong>"; $st_e = "</strong>";
-    $pr = "<pre>";    $pr_e = "</pre>";
-    $dl = "<dl>";     $dl_e = "</dl>";
-    $dt = "<dt>";
-    $dd = "<dd>";     $dd_x = "";
-    $hr = "<hr>";
+    $pr = '<pre>';    $pr_e = '</pre>';
+    $h1 = '<h1>';     $h1_e = '</h1>';
+    $h3 = '<h3>';     $h3_e = '</h3>';
 
-    $table   = "<table width=\"100%\" border=0 cellspacing=1 cellpadding=0>";
-    $table_e = "</table>";
+    $table   = "<table width='100%' border='0' cellspacing='1' cellpadding='0'>";
+    $table_e = '</table>';
 
     # Customizations for the look and feel of the summary tables.
-    $t_style = "<style type=\"text/css\"><!--\n" .
-	"table { background: #ccc; color: #000; }\n" .
+    $t_style = "<style type='text/css'><!--\n" .
+	"table { background-color: #ccc; color: #000; }\n" .
 	"tr { padding: 0; }\n" .
-	"th { background: #ffc; color: #000; padding: 2px;\n" .
+	"th { background-color: #cbd2ec; color: #000; padding: 2px;\n" .
 	"     text-align: left; font-weight: normal; font-style: italic; }\n" .
-	"td { background: #fff; color: #000; padding: 2px; }\n" .
+	"td { color: #000; padding: 2px; }\n" .
 	"td a { text-decoration: none; }\n" .
+	".o { background-color: #fff; }\n" .
+	".a { background-color: #cffafd; }\n" .
+	".f { background-color: #ffc; }\n" .
+	".p { background-color: #d1fbd6; }\n" .
+	".r { background-color: #d6cfc4; }\n" .
+	".s { background-color: #fcccd9; }\n" .
+	".c { background-color: #c1d5db; }\n" .
 	"--></style>";
 
 } else {
 
-    $h1 = ""; $h1_e = "";
-    $h2 = ""; $h2_e = "";
-    $h3 = ""; $h3_e = "";
-    $h4 = ""; $h4_e = "";
-    $p  = ""; $p_e  = "";
-    $br = "";
-    $st = ""; $st_e = "";
-    $pr = ""; $pr_e = "";
-    $dl = ""; $dl_e = "";
-    $dt = "";
-    $dd = "     "; $dd_x = "     ";
-    $hr = "\n----------------------------------------" .
-	  "---------------------------------------\n";
+    $pr = ''; $pr_e = '';
+    $h1 = ''; $h1_e = '';
+    $h3 = ''; $h3_e = '';
 
-    $table   = "";
-    $table_e = "";
+    $table   = '';
+    $table_e = '';
 }
 
 sub cgiparam {
@@ -122,47 +111,87 @@ sub header_info {
     else {
 	print "Current $project problem reports\n";
     }
+    if (!$input{'quiet'}) {
+       print "The following is a listing of current problems submitted by $project users. " .
+	  'These represent problem reports covering all versions including ' .
+	  'experimental development code and obsolete releases. ';
+       if ($html_mode) {
+	  print <<EOM;
 
-print <<EOM unless $input{"quiet"};
-
-The following is a listing of current problems submitted by $project users.
-These represent problem reports covering all versions including
-experimental development code and obsolete releases.
-${p}
+<p>
 Bugs can be in one of several states:
-${dl}
-${dt}${st}o - open${st_e}
-${dd}A problem report has been submitted, no sanity checking performed.
+<dl>
+<dt class='o'><strong>o - open</strong></dt>
+<dd>A problem report has been submitted, no sanity checking
+performed.</dd>
 
-${dt}${st}a - analyzed${st_e}
-${dd}The problem is understood and a solution is being sought.
+<dt class='a'><strong>a - analyzed</strong></dt>
+<dd>The problem is understood and a solution is being sought.</dd>
 
-${dt}${st}f - feedback${st_e}
-${dd}Further work requires additional information from the
-${dd_x}originator or the community - possibly confirmation of
-${dd_x}the effectiveness of a proposed solution.
+<dt class='f'><strong>f - feedback</strong></dt>
+<dd>Further work requires additional information from the originator
+or the community - possibly confirmation of the effectiveness of a
+proposed solution.</dd>
 
-${dt}${st}p - patched${st_e}
-${dd}A patch has been committed, but some issues (MFC and / or
-${dd_x}confirmation from originator) are still open.
+<dt class='p'><strong>p - patched</strong></dt>
+<dd>A patch has been committed, but some issues (MFC and / or
+confirmation from originator) are still open.</dd>
 
-${dt}${st}r - repocopy${st_e}
-${dd}The resolution of the problem report is dependent on
-${dd_x}a repocopy operation within the CVS repository which
-${dd_x}is awaiting completion.
+<dt class='r'><strong>r - repocopy</strong></dt>
+<dd>The resolution of the problem report is dependent on a repocopy
+operation within the CVS repository which is awaiting completion.</dd>
 
-${dt}${st}s - suspended${st_e}
-${dd}The problem is not being worked on, due to lack of information
-${dd_x}or resources.  This is a prime candidate
-${dd_x}for somebody who is looking for a project to do.
-${dd_x}If the problem cannot be solved at all,
-${dd_x}it will be closed, rather than suspended.
+<dt class='s'><strong>s - suspended</strong></dt>
+<dd>The problem is not being worked on, due to lack of information or
+resources.  This is a prime candidate for somebody who is looking for a
+project to do. If the problem cannot be solved at all, it will be
+closed, rather than suspended.</dd>
 
-${dt}${st}c - closed${st_e}
-${dd}A problem report is closed when any changes have been integrated,
-${dd_x}documented, and tested -- or when fixing the problem is abandoned.
-${dl_e}
+<dt class='c'><strong>c - closed</strong></dt>
+<dd>A problem report is closed when any changes have been integrated,
+documented, and tested -- or when fixing the problem is abandoned.</dd>
+</dl>
 EOM
+
+       } else {
+
+print <<EOM;
+
+Bugs can be in one of several states:
+
+o - open
+A problem report has been submitted, no sanity checking performed.
+
+a - analyzed
+The problem is understood and a solution is being sought.
+
+f - feedback
+Further work requires additional information from the
+     originator or the community - possibly confirmation of
+     the effectiveness of a proposed solution.
+
+p - patched
+A patch has been committed, but some issues (MFC and / or
+     confirmation from originator) are still open.
+
+r - repocopy
+The resolution of the problem report is dependent on
+     a repocopy operation within the CVS repository which
+     is awaiting completion.
+
+s - suspended
+The problem is not being worked on, due to lack of information
+     or resources.  This is a prime candidate
+     for somebody who is looking for a project to do.
+     If the problem cannot be solved at all,
+     it will be closed, rather than suspended.
+
+c - closed
+A problem report is closed when any changes have been integrated,
+     documented, and tested -- or when fixing the problem is abandoned.
+EOM
+       }
+    }
 
 	if ($html_mode) {
 
@@ -171,47 +200,43 @@ EOM
 
 $self_ref1 = $self_ref . '?';
 $self_ref1 .= 'sort=' . escape($input{'sort'}) if $input{'sort'};
-print '<P>You may view summaries by <A HREF="', $self_ref1, '">Severity</A>, ';
-$self_ref1 .= '&' if ($self_ref1 !~/\?$/);
-print '<A HREF="', $self_ref1, 'state=summary">State</A>, ';
-print '<A HREF="', $self_ref1, 'category=summary">Category</A>, or ';
-print '<A HREF="', $self_ref1, 'responsible=summary">Responsible Party</A>.';
+print "<p>You may view summaries by <a href='$self_ref1'>Severity</a>, ";
+$self_ref1 .= '&amp;' if ($self_ref1 !~/\?$/);
+print "<a href='${self_ref1}state=summary'>State</a>, ";
+print "<a href='${self_ref1}category=summary'>Category</a>, or ";
+print "<a href='${self_ref1}responsible=summary'>Responsible Party</a>.";
 
 $self_ref2 = $self_ref . '?';
-foreach ("category", "originator", "priority", "class", "responsible",
-	"severity", "state", "submitter", "text", "multitext", "closedtoo") {
+foreach ('category', 'originator', 'priority', 'class', 'responsible',
+	'severity', 'state', 'submitter', 'text', 'multitext', 'closedtoo') {
 	if ($input{$_}) {
-		$self_ref2 .= '&' if ($self_ref2 !~/\?$/);
+		$self_ref2 .= '&amp;' if ($self_ref2 !~/\?$/);
 		$self_ref2 .= $_ . '=' . cgiparam($input{$_});
 	}
 }
 
 print 'You may also sort by ';
-print '<A HREF="', $self_ref2, '&sort=lastmod">Last-Modified</A>, ';
-print '<A HREF="', $self_ref2, '&sort=category">Category</A>, or ';
-print '<A HREF="', $self_ref2, '&sort=responsible">Responsible Party</A>.', "\n";
-print 'Or <A HREF="', $self_ref, '?query">formulate a specific query</A>.', "\n";
+print "<a href='$self_ref2&amp;sort=lastmod'>Last-Modified</a>, ";
+print "<a href='$self_ref2&amp;sort=category'>Category</a>, or ";
+print "<a href='$self_ref2&amp;sort=responsible'>Responsible Party</a>.\n";
+print "Or <a href='$self_ref?query'>formulate a specific query</a>.\n";
 
 $self_ref3 = $self_ref . '?';
-foreach ("category", "originator", "priority", "class", "responsible",
-	"severity", "state", "submitter", "text", "multitext", "sort") {
+foreach ('category', 'originator', 'priority', 'class', 'responsible',
+	'severity', 'state', 'submitter', 'text', 'multitext', 'sort') {
 	if ($input{$_}) {
-		$self_ref3 .= '&' if ($self_ref2 !~/\?$/);
+		$self_ref3 .= '&amp;' if ($self_ref2 !~/\?$/);
 		$self_ref3 .= $_ . '=' . cgiparam($input{$_});
 	}
 }
 
-if ($input{"closedtoo"}) {
-	print '<A HREF="', $self_ref3, '">Don',"'",'t show closed reports</A>.';
+if ($input{'closedtoo'}) {
+	print "<a href='$self_ref3'>Do not show closed reports</a>.";
 } else {
-	print '<A HREF="', $self_ref3, '&closedtoo=on">Include closed reports too</A>.';
+	print "<a href='$self_ref3&amp;closedtoo=on'>Include closed reports too</a>.";
 }
 
 	}
-}
-
-sub trailer_info {
-    print &html_footer if $html_mode;
 }
 
 &header_info;
@@ -235,12 +260,12 @@ sub trailer_info {
 #       [--list-states] [--list-submitters] [--list-config]
 #       [--synopsis=synopsis] [--text=text] [--multitext=mtext] [PR] [PR]...
 
-$query_args .= " --skip-closed" unless $closed_too;
+$query_args .= ' --skip-closed' unless $closed_too;
 
 # Only read the appropriate PR's.
-foreach ("category", "originator", "priority", "class", "responsible",
-	"release", "severity", "state", "submitter", "text", "multitext") {
-	if ($input{$_} && $input{$_} ne "summary") {
+foreach ('category', 'originator', 'priority', 'class', 'responsible',
+	'release', 'severity', 'state', 'submitter', 'text', 'multitext') {
+	if ($input{$_} && $input{$_} ne 'summary') {
 		$d = $input{$_};
 		$d =~ s/^"(.*)"$/$&/;
 		$d =~ s/'/\\'/;
@@ -280,7 +305,9 @@ if ($#prs < $[) {
 
 }
 
-&trailer_info;
+print &html_footer if $html_mode;
+print "\n</body>\n</html>" if $html_mode;
+
 exit(0);
 
 #------------------------------------------------------------------------
@@ -305,7 +332,7 @@ sub printcnt {
     local($cnt) = $_[0];
 
     if ($cnt) {
-	printf("%d problem%s total.\n\n", $cnt, $cnt == 1 ? "" : "s");
+	printf("%d problem%s total.\n\n", $cnt, $cnt == 1 ? '' : 's');
     }
 }
 
@@ -373,7 +400,7 @@ sub severity_summary {
 sub get_categories {
     @categories = ();
 
-    open(Q, "query-pr.web --list-categories 2>/dev/null |") ||
+    open(Q, 'query-pr.web --list-categories 2>/dev/null |') ||
 	die "Cannot get categories\n";
 
     while(<Q>) {
@@ -387,7 +414,7 @@ sub get_categories {
 sub get_states {
     @states = ();
 
-    open(Q, "query-pr.web --list-states 2>/dev/null |") ||
+    open(Q, 'query-pr.web --list-states 2>/dev/null |') ||
 	die "Cannot get states\n";
 
     while(<Q>) {
@@ -401,7 +428,7 @@ sub get_states {
 sub get_classes {
     @classes = ();
 
-    open(Q, "query-pr.web --list-classes 2>/dev/null |") ||
+    open(Q, 'query-pr.web --list-classes 2>/dev/null |') ||
 	die "Cannot get classes\n";
 
     while(<Q>) {
@@ -494,8 +521,7 @@ sub gnats_summary {
 	next if (($report ne '') && (eval($report) == 0));
 
 	if ($htmlmode) {
-	    $title = '<a href="' . $query_pr_ref .
-		'?pr=' . $cat . '/' . $number . '">' . $_ . '</a> ';
+	    $title = "<a href='$query_pr_ref?pr=$cat/$number'>$_</a>";
 	    $syn = &html_fixline($syn);
 	    gnats_summary_line_html($counter, $state, $date, $title, $resp, $syn);
 	} else {
@@ -503,7 +529,7 @@ sub gnats_summary {
 	    gnats_summary_line_text($counter, $state, $date, $title, $resp, $syn);
 	}
 
-	++$counter;
+	$counter++;
     }
 
     if ($htmlmode) {
@@ -523,10 +549,11 @@ sub gnats_summary_line_html {
     local($resp)     = shift;
     local($syn)      = shift;
 
-    print "${table}" .
-	"<tr><th>S</th><th>Submitted</th><th>Tracker</th><th>Resp.</th><th>Description</th></tr>\n"
-        if ($counter == 0);
-    print "<tr><td>$state</td><td>$date</td><td>$title</td><td>$resp</td><td>$syn</td></tr>\n";
+    if ($counter == 0) {
+       print "$table<tr><th>S</th><th>Submitted</th><th>Tracker</th><th>Resp.</th><th>Description</th></tr>\n"
+    }
+
+    print "<tr class='$state'><td>$state</td><td>$date</td><td>$title</td><td>$resp</td><td>$syn</td></tr>\n";
 }
 
 sub gnats_summary_line_text {
@@ -550,100 +577,100 @@ sub displayform {
 print qq`
 Please select the items you wish to search for.  Multiple items are AND'ed
 together.
-<P>
-<FORM METHOD=GET ACTION="`, $self_ref, qq`">
+<p>
+<form method='get' action='$self_ref'>
 
-<TABLE>
-<TR>
-<TD><B>Category</B>:</TD>
-<TD><SELECT NAME="category">
-<OPTION SELECTED VALUE="">Any</OPTION>`;
+<table>
+<tr>
+<td><b>Category</b>:</td>
+<td><select name='category'>
+<option selected='selected' value=''>Any</option>`;
 
 &get_categories;
 foreach (sort @categories) {
-    #print "<OPTION VALUE=\"$_\">$_ ($catdesc{$_})</OPTION>\n";
-    print "<OPTION>$_</OPTION>\n";
+    #print "<option value='$_'>$_ ($catdesc{$_})</option>\n";
+    print "<option>$_</option>\n";
 }
 
 print qq`
-</SELECT></TD>
-<TD><B>Severity</B>:</TD>
-<TD><SELECT NAME="severity">
-<OPTION SELECTED VALUE="">Any</OPTION>
-<OPTION>non-critical</OPTION>
-<OPTION>serious</OPTION>
-<OPTION>critical</OPTION>
-</SELECT></TD>
-</TR><TR>
-<TD><B>Priority</B>:</TD>
-<TD><SELECT NAME="priority">
-<OPTION SELECTED VALUE="">Any</OPTION>
-<OPTION>low</OPTION>
-<OPTION>medium</OPTION>
-<OPTION>high</OPTION>
-</SELECT></TD>
-<TD><B>Class</B>:</TD>
-<TD><SELECT NAME="class">
-<OPTION SELECTED VALUE="">Any</OPTION>
+</select></td>
+<td><b>Severity</b>:</td>
+<td><select name='severity'>
+<option selected='selected' value=''>Any</option>
+<option>non-critical</option>
+<option>serious</option>
+<option>critical</option>
+</select></td>
+</tr><tr>
+<td><b>Priority</b>:</td>
+<td><select name='priority'>
+<option selected='selected' value=''>Any</option>
+<option>low</option>
+<option>medium</option>
+<option>high</option>
+</select></td>
+<td><b>Class</b>:</td>
+<td><select name='class'>
+<option selected='selected' value=''>Any</option>
 `;
 
 &get_classes;
 foreach (@classes) {
-	#print "<OPTION VALUE=\"$_\">$_ ($classdesc{$_})</OPTION>\n";
-	print "<OPTION>$_</OPTION>\n";
+	#print "<option value='$_'>$_ ($classdesc{$_})</option>\n";
+	print "<option>$_</option>\n";
 }
 
-print qq`</SELECT></TD>
-</TR><TR>
-<TD><B>State</B>:</TD>
-<TD><SELECT NAME="state">
-<OPTION SELECTED VALUE="">Any</OPTION>
+print qq`</select></td>
+</tr><tr>
+<td><b>State</b>:</td>
+<td><select name='state'>
+<option selected='selected' value=''>Any</option>
 `;
 
 &get_states;
 foreach (@states) {
 	($us = $_) =~ s/^./\U$&/;
-	print "<OPTION VALUE=\"$_\">";
-	#print "$us ($statedesc{$_})</OPTION>\n";
-	print "$us</OPTION>\n";
+	print "<option value='$_'>";
+	#print "$us ($statedesc{$_})</option>\n";
+	print "$us</option>\n";
 }
 
-print qq`</SELECT></TD>
-<TD><B>Sort by</B>:</TD>
-<TD><SELECT NAME="sort">
-<OPTION SELECTED VALUE="none">No Sort</OPTION>
-<OPTION VALUE="lastmod">Last-Modified</OPTION>
-<OPTION VALUE="category">Category</OPTION>
-<OPTION VALUE="responsible">Responsible Party</OPTION>
-</SELECT></TD>
-</TR><TR>
+print qq`</select></td>
+<td><b>Sort by</b>:</td>
+<td><select name='sort'>
+<option value='none'>No Sort</option>
+<option value='lastmod'>Last-Modified</option>
+<option value='category'>Category</option>
+<option value='responsible'>Responsible Party</option>
+</select></td>
+</tr><tr>
 <!-- We don't use submitter Submitter: -->
-<TD><B>Text in single-line fields</B>:</TD>
-<TD><INPUT TYPE=TEXT NAME="text"></TD>
-<TD><B>Responsible</B>:</TD>
-<TD><INPUT TYPE=TEXT NAME="responsible"></TD>
-</TR><TR>
-<TD><B>Text in multi-line fields</B>:</TD>
-<TD><INPUT TYPE=TEXT NAME="multitext"></TD>
-<TD><B>Originator</B>:</TD>
-<TD><INPUT TYPE=TEXT NAME="originator"></TD>
-</TR><TR>
-<TD><B>Closed reports too</B>:</TD>
-<TD><INPUT NAME="closedtoo" TYPE=CHECKBOX></TD>
-<TD><B>Release</B>:</TD>
-<TD><SELECT NAME="release">
-<OPTION SELECTED VALUE="">Any</OPTION>
-<OPTION VALUE="^FreeBSD [2345]">Pre-6.x</OPTION>
-<OPTION VALUE="^FreeBSD 6">6.x only</OPTION>
-<OPTION VALUE="^FreeBSD 5">5.x only</OPTION>
-<OPTION VALUE="^FreeBSD 4">4.x only</OPTION>
-<OPTION VALUE="^FreeBSD 3">3.x only</OPTION>
-<OPTION VALUE="^FreeBSD 2">2.x only</OPTION>
-</SELECT>
-</TR>
-</TABLE>
-<INPUT TYPE="SUBMIT" VALUE=" Query PR's ">
-<INPUT TYPE="RESET" VALUE=" Reset Form ">
-</FORM>
+<td><b>Text in single-line fields</b>:</td>
+<td><input type='text' name='text' /></td>
+<td><b>Responsible</b>:</td>
+<td><input type='text' name='responsible' /></td>
+</tr><tr>
+<td><b>Text in multi-line fields</b>:</td>
+<td><input type='text' name='multitext' /></td>
+<td><b>Originator</b>:</td>
+<td><input type='text' name='originator' /></td>
+</tr><tr>
+<td><b>Closed reports too</b>:</td>
+<td><input name='closedtoo' value='on' type='checkbox' /></td>
+<td><b>Release</b>:</td>
+<td><select name='release'>
+<option selected='selected' value=''>Any</option>
+<option value='^FreeBSD [2345]'>Pre-6.x</option>
+<option value='^FreeBSD 6'>6.x only</option>
+<option value='^FreeBSD 5'>5.x only</option>
+<option value='^FreeBSD 4'>4.x only</option>
+<option value='^FreeBSD 3'>3.x only</option>
+<option value='^FreeBSD 2'>2.x only</option>
+</select></td>
+</tr>
+</table>
+<input type='submit' value='Query PRs' />
+<input type='reset' value='Reset Form' />
+</form>
 `;
 }
