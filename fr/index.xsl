@@ -1,8 +1,8 @@
-<!-- $FreeBSD: www/fr/index.xsl,v 1.13 2005/07/22 12:00:55 blackend Exp $ -->
+<!-- $FreeBSD: www/fr/index.xsl,v 1.14 2005/08/26 08:49:42 blackend Exp $ -->
 
 <!-- 
    The FreeBSD French Documentation Project
-   Original revision: 1.117
+   Original revision: 1.127
    
    Version francaise : Stephane Legrand <stephane@freebsd-fr.org>
    Mise a jour:	Marc Fonvieille <blackend@FreeBSD.org>
@@ -14,7 +14,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/fr/index.xsl,v 1.13 2005/07/22 12:00:55 blackend Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/fr/index.xsl,v 1.14 2005/08/26 08:49:42 blackend Exp $'"/>
   <xsl:variable name="title" select="'Le Projet FreeBSD'"/>
 
   <!-- these params should be externally bound. The values
@@ -40,8 +40,9 @@
 	<meta name="keywords" content="FreeBSD, BSD, UNIX, Support, Galerie,
 	      Version, Application, Logiciel, Manuel de R&#233;f&#233;rence, FAQ, Guides, Bugs,
 	      CVS, CVSup, Nouvelles, Revendeurs, homepage, CTM, Unix"/>
-	<link rel="shortcut icon" href="/favicon.ico" type="image/x-icon"/>
-	<link rel="icon" href="/favicon.ico" type="image/x-icon"/>
+	<link rel="shortcut icon" href="{$base}/favicon.ico" type="image/x-icon"/>
+	<link rel="stylesheet" type="text/css" href="{$enbase}/index.css" />
+	<link rel="icon" href="{$base}/favicon.ico" type="image/x-icon"/>
    <link rel="alternate" type="application/rss+xml"
          title="Nouvelles du projet FreeBSD" href="{$base}/news/news.rdf" />
    <!-- le RDF des avis de securite n'est pas traduit => enbase -->
@@ -58,8 +59,7 @@
 
       </head>
 
-      <body bgcolor="#FFFFFF" text="#000000" link="#0000FF" vlink="#840084"
-	    alink="#0000FF">
+      <body>
 
 	<table border="0" cellspacing="0" cellpadding="0" width="100%">
 	  <tr>
@@ -114,12 +114,7 @@
 	<table border="0" cellspacing="0" cellpadding="2">
 	  <tr>
 	    <td valign="top">
-	      <table border="0" cellspacing="0" cellpadding="1"
-		     bgcolor="#000000" width="100%">
-		<tr>
-		  <td>
-		    <table cellpadding="4" cellspacing="0" border="0"
-			   bgcolor="#ffcc66" width="100%">
+		    <table class="panel" cellpadding="4" cellspacing="0">
 		      <tr>
 			<td>
                           <xsl:call-template name="html-index-navigation-link-list">
@@ -137,9 +132,6 @@
                         </td>
 		      </tr>
 		    </table>
-		  </td>
-		</tr>
-	      </table>
 	    </td>
 	    
 	    <td></td>
@@ -147,11 +139,11 @@
 	    <!-- Main body column -->
 
 	    <td align="left" valign="top" rowspan="2">
-	      <h2><font color="#990000">Qu'est-ce que FreeBSD ?</font></h2>
+	      <h2>Qu'est-ce que FreeBSD ?</h2>
 	
 	      <p>FreeBSD est un syst&#232;me d'exploitation avanc&#233; pour
-		les architectures compatibles x86 (y compris Pentium et Athlon), compatibles 
-      amd64 (y compris Opteron, Athlon 64 et EM64T), 
+		les architectures compatibles x86 (y compris Pentium&#174; et Athlon&#8482;), compatibles
+      amd64 (y compris Opteron&#8482;, Athlon 64 et EM64T),
       Alpha/AXP, IA-64, PC-98 et UltraSPARC&#174;.
 		Il est d&#233;riv&#233; de UNIX BSD, la version d'<xsl:value-of select="$unix"/> 
 		d&#233;velopp&#233; &#224;
@@ -163,7 +155,7 @@
 		<a href="{$base}/platforms/index.html">plates-formes</a> sont &#224;
 		divers stades de d&#233;veloppement.</p>
 	      
-	      <h2><font color="#990000">Des fonctions avanc&#233;es</font></h2>
+	      <h2>Des fonctions avanc&#233;es</h2>
 
 	      <p>FreeBSD offre aujourd'hui des <a href="{$base}/features.html">fonctions avanc&#233;es</a>
 		pour le r&#233;seau, les performances, la s&#233;curit&#233; et
@@ -171,7 +163,7 @@
 		qui sont encore absentes d'autres syst&#232;mes d'exploitation,
 		y compris certains des meilleurs syst&#232;mes commerciaux.</p>
 	      
-	      <h2><font color="#990000">Des solutions performantes pour Internet</font></h2>
+	      <h2>Des solutions performantes pour Internet</h2>
 
 	      <p>FreeBSD est id&#233;al dans le cadre d'un serveur
 		<a href="{$base}/internet.html">Internet ou Intranet</a>.
@@ -180,8 +172,7 @@
 		temps de r&#233;ponses corrects pour des milliers de processus utilisateurs
 		simultan&#233;s.</p>
 
-	      <h2><font color="#990000">Une grande vari&#233;t&#233;
-		  d'applications</font></h2>
+	      <h2>Une grande vari&#233;t&#233; d'applications</h2>
 
 	      <p>La qualit&#233; de FreeBSD combin&#233;e avec le co&#251;t tr&#232;s bas et
 		les hautes performances des PC actuels font de FreeBSD une alternative
@@ -190,7 +181,7 @@
 		adapt&#233; &#224; un grand nombre <a href="{$base}/applications.html">d'applications</a>
 		aussi bien pour les serveurs que pour les postes individuels.</p>
 
-	      <h2><font color="#990000">Facile &#224; installer</font></h2>
+	      <h2>Facile &#224; installer</h2>
 
 	      <p>FreeBSD peut s'installer depuis divers supports comme des
 		CD-ROM, des DVD-ROM, des disquettes, des bandes magn&#233;tiques, une partition MS-DOS&#174; ou, si
@@ -200,7 +191,7 @@
 		<a href="{$enbase}/doc/{$url.doc.langcode}/books/handbook/install.html">ces
 		  instructions</a>.</p>
 
-	      <h2><font color="#990000">FreeBSD est <i>libre et gratuit</i></font></h2>
+	      <h2>FreeBSD est <i>libre et gratuit</i></h2>
 
 	      <a href="copyright/daemon.html"><img 
             src="{$enbase}/gifs/dae_up3.gif" alt="The BSD Daemon"
@@ -215,7 +206,7 @@
 		<a href="{$enbase}/doc/{$url.doc.langcode}/books/handbook/mirrors.html">de plus
 		  amples informations sont disponibles</a>.</p>
 
-	      <h2><font color="#990000">Contribuer &#224; FreeBSD</font></h2>
+	      <h2>Contribuer &#224; FreeBSD</h2>
 
 	      <p>Il est facile de contribuer &#224; FreeBSD. Tout ce que vous avez &#224; faire
 		est de trouver une partie de FreeBSD dont vous pensez qu'elle pourrait
@@ -232,16 +223,7 @@
 		sont enti&#232;rement d&#233;ductibles. Veuillez contacter
 		<a href="mailto:bod@FreeBSDFoundation.org">bod@FreeBSDFoundation.org</a>
 		pour plus d'informations ou &#233;crivez &#224; : The FreeBSD Foundation,
-		7321 Brockway Dr.  Boulder, CO.  80303.  USA</p>
-
-		<p>Silicon Breeze a &#233;galement sculpt&#233; et moul&#233; le D&#233;mon BSD
-		en m&#233;tal et fait don de 15% du produit des ventes de
-		ces statuettes &#224; la Fondation FreeBSD. Le r&#233;cit
-		complet et de plus amples informations pour commander cette statuette
-		sont disponibles sur
- 		<a href="http://www.linuxjewellery.com/beastie/">cette page.</a>
-		</p>
-
+		7321 Brockway Dr., Boulder, CO.  80303.  USA.</p>
 	    </td>
 
 	    <td></td>
@@ -249,12 +231,7 @@
 	    <!-- Right-most column -->
 	    <td valign="top">
 	      <!-- News / release info table -->
-	      <table border="0" cellspacing="0" cellpadding="1"
-		     bgcolor="#000000" width="100%">
-		<tr>
-		  <td>
-		    <table cellpadding="4" cellspacing="0" border="0"
-			   bgcolor="#ffcc66" width="100%">
+		    <table class="panel" cellpadding="4" cellspacing="0">
 		      <tr>
 			<td valign="top">
            <p><a href="{$u.rel.announce}">
@@ -278,6 +255,9 @@
 			      &#183; <a href="{$u.rel2.installation}">Notes d'installation</a><br/>
                &#183; <a href="{$u.rel2.errata}">Errata</a></small>
            </p>
+
+			  <p><a href="snapshots/index.html">
+			      <font size="+1" color="#990000"><b>Instantan&#233;s</b></font></a></p>
 
 			  <p><font size="+1" color="#990000"><b>Nouvelles du Projet</b></font>
            <xsl:text> </xsl:text>
@@ -363,9 +343,6 @@
 			</td>
 		      </tr>
 		    </table>
-		  </td>
-		</tr>
-	      </table>
 
 	      <p>&#xa0;</p>
 
