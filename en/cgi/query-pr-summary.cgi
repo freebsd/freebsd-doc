@@ -1,5 +1,5 @@
 #!/usr/bin/perl -T
-# $FreeBSD: www/en/cgi/query-pr-summary.cgi,v 1.49 2005/01/18 17:31:12 keramida Exp $
+# $FreeBSD: www/en/cgi/query-pr-summary.cgi,v 1.50 2005/09/12 20:30:25 remko Exp $
 
 sub escape($) { $_ = $_[0]; s/&/&amp;/g; s/</&lt;/g; s/>/&gt;/g; $_; }
 
@@ -23,7 +23,6 @@ if ($ENV{'QUERY_STRING'} eq 'query') {
 	print &html_header("Query $project problem reports");
 	&displayform;
 	print &html_footer;
-	print "</body>\n</html>";
 	exit(0);
 }
 
