@@ -1,5 +1,5 @@
 #!/usr/bin/perl -T
-# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.42 2005/08/11 01:34:53 jcamou Exp $
+# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.43 2005/08/11 11:47:01 ceri Exp $
 
 $ENV{'PATH'} = "/bin:/usr/bin:/usr/sbin:/sbin:/usr/local/bin";
 
@@ -90,14 +90,14 @@ while(<Q>) {
 	    print <Q>;
 	    print "</pre>\n";
 	} else {
-	    print "<p>No PR found matching $pr\n";
+	    print "<p>No PR found matching $pr</p>\n";
 	}
 	print &html_footer;
 	exit;
     } elsif (/^lockf: /) {
 	print &html_header("FreeBSD problem report");
 	print "<p>The PR database is currently busy; please try ",
-	    "<a href='./query-pr.cgi?pr=$pr'>your query</a> again.";
+	    "<a href='./query-pr.cgi?pr=$pr'>your query</a> again.</p>";
 	print &html_footer;
 	exit;
     }
@@ -127,7 +127,7 @@ while(<Q>) {
 	s/\(.*\)//;			# remove personal name
 	s/\s+//g;
 	$_ = $_ . '@FreeBSD.org' if !/@/;
-	$_ = '>Responsible:<a href="mailto:' . $_ . '">' . $_ . '</a>';
+	$_ = ">Responsible:<a href='mailto:$_'>$_</a>";
 	$html_fixup = 0;
     }
 
@@ -143,17 +143,17 @@ while(<Q>) {
 	$origsyn = $syn;
 	$syn = &fixline($syn);
 	print &html_header("Problem Report $cat/$number : $syn");
-	print "<strong>$syn</strong><p>\n<dl>\n";
+	print "<p><strong>$syn</strong></p>\n<dl>\n";
     } else {
 	next if $inhdr;
 
 	if (/^>(\S+):\s*(.*)/) {
 	    print $trailer . "\n" unless ($blank);
-	    $trailer = "<dt><strong>$1</strong><dd>\n";
+	    $trailer = "<dt><strong>$1</strong></dt><dd>\n";
 	    if ($html_fixup) {
-		$trailer .= &fixline($2);
+		$trailer .= &fixline($2) . "</dd>";
 	    } else {
-		$trailer .= $2;
+		$trailer .= $2 . "</dd>";
 	    }
 	    if ($1 eq "Originator" && $from ne "") {	# add email address
 		$trailer .= " &lt;<a href='mailto:$email'>" . &fixline($from) . "</a>&gt;";
