@@ -8,11 +8,13 @@ XML_CATALOG_FILES=	file://${DOC_PREFIX}/${LANGCODE}/share/sgml/catalog.xml \
 			file://${WEB_PREFIX}/share/sgml/catalog-common.xml \
 			file://${LOCALBASE}/share/xml/catalog
 
+.if exists(${WEB_PREFIX}/share/sgml/includes.xsl)
 XML_INCLUDES=	${WEB_PREFIX}/${WWW_LANGCODE}/includes.xsl \
 		${WEB_PREFIX}/share/sgml/includes.header.xsl \
 		${WEB_PREFIX}/share/sgml/includes.misc.xsl \
 		${WEB_PREFIX}/share/sgml/includes.release.xsl \
 		${WEB_PREFIX}/share/sgml/includes.xsl
+.endif
 
 # Variables used in DEPENDSET
 
