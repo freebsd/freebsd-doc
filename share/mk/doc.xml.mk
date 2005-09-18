@@ -1,5 +1,5 @@
 # doc.xml.mk
-# $FreeBSD$
+# $FreeBSD: www/share/mk/doc.xml.mk,v 1.1 2005/09/18 04:33:46 hrs Exp $
 
 XML_CATALOG_FILES=	file://${DOC_PREFIX}/${LANGCODE}/share/sgml/catalog.xml \
 			file://${DOC_PREFIX}/share/sgml/catalog.xml \
@@ -42,7 +42,7 @@ XML_TRANSTABLE=		${DOC_PREFIX}/share/sgml/transtable.xml
 _DEPENDSET.mirrors=	${XSL_MIRRORS} ${XML_MIRRORS}
 _PARAMS.mirrors=	--param mirrors.xml "'${XML_MIRRORS}'"
 XML_MIRRORS_MASTER=	${DOC_PREFIX}/share/sgml/mirrors.xml
-XML_MIRRORS=		${.OBJDIR}/${DOC_PREFIX:S,^${.CURDIR}/,,}/${LANGCODE}/share/sgml/mirrors.xml
+XML_MIRRORS=		${DOC_PREFIX}/${LANGCODE}/share/sgml/mirrors.xml
 XSL_MIRRORS_MASTER=	${DOC_PREFIX}/share/sgml/mirrors-master.xsl
 .if exists(${DOC_PREFIX}/${LANGCODE}/share/sgml/mirrors-local.xsl)
 XSL_MIRRORS=		${DOC_PREFIX}/${LANGCODE}/share/sgml/mirrors-local.xsl
@@ -78,9 +78,22 @@ CLEANFILES+=	${XML_MIRRORS}.sort
 CLEANFILES+=	${XML_MIRRORS}.sort.tmp
 
 # DEPENDSET: usergroups ......................................................
-_DEPENDSET.usergroups=	${XML_USERGROUPS} ${XSL_USERGROUPS}
-XML_USERGROUPS=	${WEB_PREFIX}/share/sgml/usergroups.xml
+_DEPENDSET.usergroups=	${XML_USERGROUPS} ${XML_USERGROUPS_LOCAL} \
+			${XSL_USERGROUPS_MASTER} ${XSL_USERGROUPS}
+_PARAMS.usergroups=	--param usergroups.xml "'${XML_USERGROUPS}'" \
+			--param usergroups-local.xml "'${XML_USERGROUPS_LOCAL}'"
+XML_USERGROUPS=		${WEB_PREFIX}/share/sgml/usergroups.xml
+.if exists(${WEB_PREFIX}/${WWW_LANGCODE}/share/sgml/usergroups.xml)
+XML_USERGROUPS_LOCAL=	${WEB_PREFIX}/${WWW_LANGCODE}/share/sgml/usergroups.xml
+.else
+XML_USERGROUPS_LOCAL=	${WEB_PREFIX}/share/sgml/usergroups.xml
+.endif
+XSL_USERGROUPS_MASTER=	${WEB_PREFIX}/share/sgml/templates.usergroups.xsl
+.if exists(${WEB_PREFIX}/${WWW_LANGCODE}/share/sgml/templates.usergroups.xsl)
+XSL_USERGROUPS=	${WEB_PREFIX}/${WWW_LANGCODE}/share/sgml/templates.usergroups.xsl
+.else
 XSL_USERGROUPS=	${WEB_PREFIX}/share/sgml/templates.usergroups.xsl
+.endif
 
 # DEPENDSET: news ............................................................
 _DEPENDSET.news=	${XML_NEWS_NEWS_MASTER} ${XML_NEWS_NEWS} \

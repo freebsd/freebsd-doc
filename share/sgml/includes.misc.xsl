@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/share/sgml/includes.misc.xsl,v 1.21 2005/04/19 21:20:55 brueffer Exp $ -->
+<!-- $FreeBSD: www/share/sgml/includes.misc.xsl,v 1.22 2005/07/16 09:58:17 hrs Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -100,6 +100,7 @@
 
   <xsl:template name="html-usergroups-list-entries">
     <xsl:param name="usergroups.xml" select="'usergroups.xml'" />
+    <xsl:param name="usergroups-local.xml" select="'usergroups-local.xml'" />
 
     <xsl:for-each select="document($usergroups.xml)//entry[
       generate-id() =
@@ -119,9 +120,29 @@
 	<xsl:for-each select="key('html-usergroups-regions-key', @continent)">
 	  <xsl:sort select="name" order="ascending"/>
 
-	  <dt><a name="{$id}-{@id}" href="{url}"><xsl:value-of select="name" /></a></dt>
+	  <xsl:param name="origid"><xsl:value-of select="@id" /></xsl:param>
 
-	  <dd><p><xsl:value-of select="description" /></p></dd>
+	  <!-- XXX: need optimization -->
+	  <xsl:param name="lname">
+	    <xsl:copy-of select="document($usergroups-local.xml)//*[@id=$origid]/name" />
+	  </xsl:param>
+
+	  <xsl:param name="ldesc">
+	    <xsl:copy-of select="document($usergroups-local.xml)//*[@id=$origid]/description" />
+	  </xsl:param>
+
+	  <xsl:choose>
+	    <xsl:when test="$lname">
+	      <dt><a name="{$id}-{@id}" href="{url}"><xsl:value-of select="$lname" /></a></dt>
+
+	      <dd><p><xsl:value-of select="$ldesc" /></p></dd>
+	    </xsl:when>
+	    <xsl:otherwise>
+	      <dt><a name="{$id}-{@id}" href="{url}"><xsl:value-of select="name" /></a></dt>
+
+	      <dd><p><xsl:value-of select="description" /></p></dd>
+	    </xsl:otherwise>
+	  </xsl:choose>
 	</xsl:for-each>
       </dl>
     </xsl:for-each>
@@ -138,8 +159,6 @@
       and must offer a short description.</p>
 
     <h3>Regions:</h3>
-
-    <xsl:call-template name="html-usergroups-list-regions" />
   </xsl:template>
 
   <!-- template: "misc-format-date-string"
