@@ -19,8 +19,8 @@
       <xsl:when test="document($transtable.xml)/transtable/group[@id = $word-group]">
 	<xsl:for-each select="document($transtable.xml)/transtable/group[@id = $word-group]">
 	  <xsl:choose>
-	    <xsl:when test="key('transtable-lookup-key', $word)">
-	      <xsl:for-each select="key('transtable-lookup-key', $word)">
+	    <xsl:when test="key('transtable-lookup-key', string($word))[../@id = $word-group]">
+	      <xsl:for-each select="key('transtable-lookup-key', string($word))[../@id = $word-group]">
 		<xsl:value-of select="tran" />
 	      </xsl:for-each>
 	    </xsl:when>
@@ -40,7 +40,7 @@
     <xsl:param name="word" select="''"/>
 
     <xsl:for-each select="document($transtable-sortkey.xml)/sortkeys">
-      <xsl:for-each select="key('transtable-sortkey-lookup-key', $word)">
+      <xsl:for-each select="key('transtable-sortkey-lookup-key', string($word))">
 	<xsl:attribute name="sortkey">
 	  <xsl:value-of select="@sortkey" />
 	</xsl:attribute>
