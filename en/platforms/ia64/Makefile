@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/platforms/ia64/Makefile,v 1.4 2004/10/19 04:14:05 marcel Exp $
+# $FreeBSD: www/en/platforms/ia64/Makefile,v 1.5 2005/05/25 03:33:45 marcel Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -10,16 +10,7 @@
 DOCS=	machines.sgml refs.sgml
 DATA=	i2inside.png mckinley-die.png merced-die.png montecito-die.png
 
-_GEN=	index.html todo.html
-
-DATA+=	${_GEN}
-CLEANFILES+= ${_GEN}
-
-.SUFFIXES: .xsl .html
-.xsl.html: news.xml
-	${XSLTPROC} ${XSLTPROCOPTS:N-nonet} -o ${.TARGET} ${.ALLSRC}
-.if !defined(NO_TIDY)
-	-${TIDY} ${TIDYOPTS} ${.TARGET}
-.endif
+XMLDOCS=	index::news.xml:
+XMLDOCS+=	todo::news.xml:
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"

@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/news/status/Makefile,v 1.27 2005/04/21 17:55:46 scottl Exp $
+# $FreeBSD: www/en/news/status/Makefile,v 1.28 2005/07/23 13:16:32 mlaier Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -7,42 +7,34 @@
 .include "../Makefile.inc"
 .endif
 
-.SUFFIXES:	.xml .html
-
 DOCS=	status.sgml
 
-DATA=	report-june-2001.html
-DATA+=	report-july-2001.html
-DATA+=	report-august-2001.html
-DATA+=	report-september-2001.html
-DATA+=	report-november-2001.html
-DATA+=	report-dec-2001-jan-2002.html
-DATA+=	report-feb-2002-apr-2002.html
-DATA+=	report-may-2002-june-2002.html
-DATA+=	report-july-2002-aug-2002.html
-DATA+=	report-sept-2002-oct-2002.html
-DATA+=	report-nov-2002-dec-2002.html
-DATA+=  report-jan-2003-feb-2003.html
-DATA+=	report-mar-2003-sep-2003.html
-DATA+=  report-oct-2003-dec-2003.html
-DATA+=  report-jan-2004-feb-2004.html
-DATA+=	report-mar-2004-apr-2004.html
-DATA+=	report-may-2004-june-2004.html
-DATA+=	report-july-2004-dec-2004.html
-DATA+=	report-jan-2005-mar-2005.html
-DATA+=	report-mar-2005-june-2005.html
+XMLDOCS=	report-june-2001
+XMLDOCS+=	report-july-2001
+XMLDOCS+=	report-august-2001
+XMLDOCS+=	report-september-2001
+XMLDOCS+=	report-november-2001
+XMLDOCS+=	report-dec-2001-jan-2002
+XMLDOCS+=	report-feb-2002-apr-2002
+XMLDOCS+=	report-may-2002-june-2002
+XMLDOCS+=	report-july-2002-aug-2002
+XMLDOCS+=	report-sept-2002-oct-2002
+XMLDOCS+=	report-nov-2002-dec-2002
+XMLDOCS+=	report-jan-2003-feb-2003
+XMLDOCS+=	report-mar-2003-sep-2003
+XMLDOCS+=	report-oct-2003-dec-2003
+XMLDOCS+=	report-jan-2004-feb-2004
+XMLDOCS+=	report-mar-2004-apr-2004
+XMLDOCS+=	report-may-2004-june-2004
+XMLDOCS+=	report-july-2004-dec-2004
+XMLDOCS+=	report-jan-2005-mar-2005
+XMLDOCS+=	report-mar-2005-june-2005
+
+XSLT.DEFAULT=	report.xsl
+SRCS.DEFAULT=	includes.xsl
 
 # Install a sample <project> entry.
-DATA+=	report-sample.xml
-
-CLEANFILES+=	${DATA:M*.html}
-
-.xml.html:	report.xsl includes.xsl
-	${XSLTPROC} ${XSLTPROCOPTS} -o ${.TARGET} \
-		${.CURDIR}/report.xsl ${.IMPSRC}
-.if !defined(NO_TIDY)
-	-${TIDY} ${TIDYOPTS} ${.TARGET}
-.endif
+DATA=		report-sample.xml
 
 INDEXLINK=	status.html
 

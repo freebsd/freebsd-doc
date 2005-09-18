@@ -1,5 +1,5 @@
 # bsd.web.mk
-# $FreeBSD: www/share/mk/web.site.mk,v 1.66 2005/08/23 11:12:21 pav Exp $
+# $FreeBSD: www/share/mk/web.site.mk,v 1.67 2005/08/30 11:50:05 pav Exp $
 
 #
 # Build and install a web site.
@@ -60,6 +60,9 @@ SGMLNORMOPTS?=	-d ${SGMLNORMFLAGS} -c ${CATALOG} -D ${.CURDIR}
 
 XSLTPROC?=	${PREFIX}/bin/xsltproc
 XSLTPROCOPTS?=	${XSLTPROCFLAGS}
+
+XMLLINT?=	${PREFIX}/bin/xmllint
+XMLLINTOPTS?=	${XMLLINTFLAGS}
 
 TIDY?=		${PREFIX}/bin/tidy
 .if defined(TIDY_VERBOSE)
@@ -129,6 +132,7 @@ NO_SUBDIR=	YES
 DOC_PREFIX?=	${WEB_PREFIX}/../doc
 .if exists(${DOC_PREFIX}/share/mk/doc.common.mk)
 .include "${DOC_PREFIX}/share/mk/doc.common.mk"
+.include "${DOC_PREFIX}/share/mk/doc.xml.mk"
 .else
 .error	${DOC_PREFIX}/share/mk/doc.common.mk not found.\
 	Define $$WITHOUT_DOC and $$WEB_ONLY for performing a partial\
@@ -142,27 +146,9 @@ DOC_PREFIX?=	${WEB_PREFIX}/../doc
 _WEB_PREFIX!=			realpath ${WEB_PREFIX}
 WWW_LANGCODE:=			${.CURDIR:S,^${_WEB_PREFIX}/,,:C,^([^/]+)/.*,\1,}
 .undef _WEB_PREFIX
+.include "${WEB_PREFIX}/share/mk/doc.xml.mk"
 .endif
 .endif # !defined(WITHOUT_DOC)
-
-XML_ADVISORIES?=		${WEB_PREFIX}/share/sgml/advisories.xml
-XML_NOTICES?=			${WEB_PREFIX}/share/sgml/notices.xml
-
-XML_NEWS_NEWS_MASTER=		${WEB_PREFIX}/en/news/news.xml
-XML_NEWS_NEWS=			${WEB_PREFIX}/${WWW_LANGCODE}/news/news.xml
-XML_NEWS_PRESS_MASTER=		${WEB_PREFIX}/en/news/press.xml
-XML_NEWS_PRESS=			${WEB_PREFIX}/${WWW_LANGCODE}/news/press.xml
-XML_NEWS_INCLUDES_MASTER=	${WEB_PREFIX}/en/news/includes.xsl
-XML_NEWS_INCLUDES=		${WEB_PREFIX}/${WWW_LANGCODE}/news/includes.xsl
-
-XML_NAVIGATION=			${WEB_PREFIX}/${WWW_LANGCODE}/navigation.xml
-
-XML_INCLUDES=	${WEB_PREFIX}/${WWW_LANGCODE}/includes.xsl
-XML_INCLUDES+=	${WEB_PREFIX}/share/sgml/includes.header.xsl
-XML_INCLUDES+=	${WEB_PREFIX}/share/sgml/includes.misc.xsl
-XML_INCLUDES+=	${WEB_PREFIX}/share/sgml/includes.release.xsl
-XML_INCLUDES+=	${WEB_PREFIX}/share/sgml/transtable-common.xsl
-XML_INCLUDES+=	${WEB_PREFIX}/share/sgml/includes.xsl
 
 SGML_INCLUDES=	${WEB_PREFIX}/${WWW_LANGCODE}/includes.sgml
 SGML_INCLUDES+=	${WEB_PREFIX}/share/sgml/includes.header.sgml

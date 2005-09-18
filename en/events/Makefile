@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/events/Makefile,v 1.7 2004/04/06 11:36:12 phantom Exp $
+# $FreeBSD: www/en/events/Makefile,v 1.8 2005/08/17 14:50:45 ceri Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -11,11 +11,7 @@ SUBDIR=  2002
 SUBDIR+= 2003
 
 DATA=	events.css
-DATA+=	events.html
-DATA+=	events.ics
 
-CLEANFILES+= events.html
-CLEANFILES+= events.ics
 CLEANFILES+= curdate.xml
 
 INDEXLINK= events.html
@@ -24,19 +20,13 @@ DATE?=	/bin/date
 TR?=	/usr/bin/tr
 XMLLINT?= /usr/local/bin/xmllint # Part of textproc/libxml2.
 
-events.html: events.xsl events.xml ../includes.xsl curdate.xml
-	${XSLTPROC} ${XSLTPROCOPTS} -o ${.TARGET} \
-		${.CURDIR}/events.xsl ${.CURDIR}/events.xml
-.if !defined(NO_TIDY)
-	-${TIDY} ${TIDYOPTS} ${.TARGET}
-.endif
+XMLDOCS=	events
+SRCS.events=	../includes.xsl curdate.xml
 
-events.ics: events.xml
-	${XSLTPROC} ${XSLTPROCOPTS} -o ${.TARGET} \
-		${WEB_PREFIX}/share/sgml/events2ics.xsl ${.CURDIR}/events.xml
+XMLDOCS=	events_ics:${WEB_PREFIX}/share/sgml/events2ics.xsl:events.xml:events.ics
 
 lint:
-	${XMLLINT} --valid -o /dev/null ${.CURDIR}/events.xml
+	${XMLLINT} ${XMLLINTOPTS} --valid -o /dev/null ${.CURDIR}/events.xml
 
 .if !make(install)
 .PHONY:	curdate.xml

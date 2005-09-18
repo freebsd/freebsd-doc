@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/gnome/Makefile,v 1.19 2004/11/10 13:57:24 ceri Exp $
+# $FreeBSD: www/en/gnome/Makefile,v 1.20 2004/11/25 04:29:18 marcus Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -13,31 +13,16 @@ SUBDIR+=	images
 DOCS=	screenshots.sgml
 DOCS+=	contact.sgml
 
-DATA=	index.html newsflash.html news.rdf gnome_upgrade.sh gnomelogalyzer.sh
+DATA=	gnome_upgrade.sh
+DATA+=	gnomelogalyzer.sh
 
-CLEANFILES=	index.html
-CLEANFILES+=	newsflash.html
-CLEANFILES+=	news.rdf
+SRCS.DEFAULT=	includes.xsl
+XML.DEFAULT=	news.xml
 
-index.html! index.xsl news.xml includes.xsl ../includes.xsl
-	${XSLTPROC} ${XSLTPROCOPTS:N-nonet} -o index.html \
-		${.CURDIR}/index.xsl ${.CURDIR}/news.xml
-.if !defined(NO_TIDY)
-	-${TIDY} ${TIDYOPTS} index.html
-.endif
+XMLDOCS=	index
+XSLTPROCOPTS.index=	${XSLTPROCOPTS:N--nonet}
 
-news.rdf: rss.xsl news.xml includes.xsl ../includes.xsl
-	${XSLTPROC} ${XSLTPROCOPTS} -o news.rdf \
-		${.CURDIR}/rss.xsl ${.CURDIR}/news.xml
-.if !defined(NO_TIDY)
-	-${TIDY} -xml -wrap 0 ${TIDYOPTS} news.rdf
-.endif
-
-newsflash.html: newsflash.xsl news.xml includes.xsl ../includes.xsl
-	${XSLTPROC} ${XSLTPROCOPTS} -o ${.TARGET} \
-		${.CURDIR}/newsflash.xsl ${.CURDIR}/news.xml
-.if !defined(NO_TIDY)
-	-${TIDY} ${TIDYOPTS} ${.TARGET}
-.endif
+XMLDOCS+=	newsflash
+XMLDOCS+=	news:rss.xsl::news.rdf
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
