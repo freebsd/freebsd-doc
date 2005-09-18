@@ -1,4 +1,4 @@
-# $FreeBSD: www/ja/Makefile,v 1.67 2004/12/09 19:48:57 rushani Exp $
+# $FreeBSD: www/ja/Makefile,v 1.68 2004/12/30 17:53:44 hrs Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.114
 
@@ -30,6 +30,10 @@ DOCS+= y2kbug.sgml
 
 # Japanese-only file
 DOCS+= jabout.sgml
+
+XMLDOCS+=       usergroups:${XSL_USERGROUPS}:${XML_USERGROUPS}:
+DEPENDSET.usergroups=transtable usergroups
+PARAMS.usergroups=      --param pagename "'FreeBSD User Groups'"
 
 # These will be directly installed.
 
