@@ -113,67 +113,6 @@ _URL_RELPREFIX_LEVEL!=	set -- ${URL_RELPREFIX:S,/$,,:S,/, ,g}; echo "$$\#"
 URL_RELPREFIX_ENT=	freebsd.urls.relprefix.${_URL_RELPREFIX_LEVEL}
 .endif
 
-# ------------------------------------------------------------------------
-#
-# mirrors.xml dependency.
-#
-
-XML_MIRRORS_MASTER=	${DOC_PREFIX}/share/sgml/mirrors.xml
-XML_MIRRORS=		${.OBJDIR}/${DOC_PREFIX:S,^${.CURDIR}/,,}/${LANGCODE}/share/sgml/mirrors.xml
-
-XSL_MIRRORS_MASTER=	${DOC_PREFIX}/share/sgml/mirrors-master.xsl
-
-.if exists(${DOC_PREFIX}/${LANGCODE}/share/sgml/mirrors-local.xsl)
-XSL_MIRRORS=		${DOC_PREFIX}/${LANGCODE}/share/sgml/mirrors-local.xsl
-.else
-XSL_MIRRORS=		${DOC_PREFIX}/share/sgml/mirrors-local.xsl
-.endif
-
-XSL_TRANSTABLE_MASTER=	${DOC_PREFIX}/share/sgml/transtable-master.xsl
-XSL_TRANSTABLE_COMMON=	${DOC_PREFIX}/share/sgml/transtable-common.xsl
-
-.if exists(${DOC_PREFIX}/${LANGCODE}/share/sgml/transtable-local.xsl)
-XSL_TRANSTABLE=		${DOC_PREFIX}/${LANGCODE}/share/sgml/transtable-local.xsl
-.else
-XSL_TRANSTABLE=		${DOC_PREFIX}/share/sgml/transtable-local.xsl
-.endif
-
-.if exists(${DOC_PREFIX}/${LANGCODE}/share/sgml/transtable.xml)
-XML_TRANSTABLE=		${DOC_PREFIX}/${LANGCODE}/share/sgml/transtable.xml
-.else
-XML_TRANSTABLE=		${DOC_PREFIX}/share/sgml/transtable.xml
-.endif
-
-${XSL_MIRRORS}: ${XSL_MIRRORS_MASTER} ${XSL_TRANSTABLE_COMMON}
-
-${XML_MIRRORS}: ${XML_MIRRORS_MASTER} ${XSL_TRANSTABLE} ${XSL_TRANSTABLE_MASTER} ${XSL_TRANSTABLE_COMMON}
-	${MKDIR} -p ${@:H}
-	${XSLTPROC} ${XSLTPROCOPTS} \
-	    --param 'transtable.xml' "'${XML_TRANSTABLE}'" \
-	    --param 'transtable-target-element' "'country'" \
-	    --param 'transtable-word-group' "'country'" \
-	    --param 'transtable-mode' "'sortkey'" \
-	    ${XSL_TRANSTABLE} ${XML_MIRRORS_MASTER} \
-	  | env -i LANG="${LANGCODE}" ${SORT} -f > $@.sort.tmp
-	env -i ${GREP} "^<?xml" < $@.sort.tmp > $@.sort
-	${ECHO} "<sortkeys>" >> $@.sort
-	env -i ${AWK} '/@sortkey@/ {sub(/@sortkey@/, ++line); print;}' < $@.sort.tmp >> $@.sort
-	${ECHO} '</sortkeys>' >> $@.sort
-	${XSLTPROC} ${XSLTPROCOPTS} -o $@ \
-	    --param 'transtable.xml' "'${XML_TRANSTABLE}'" \
-	    --param 'transtable-target-element' "'country'" \
-	    --param 'transtable-word-group' "'country'" \
-	    --param 'transtable-sortkey.xml' "'$@.sort'" \
-	    ${XSL_TRANSTABLE} ${XML_MIRRORS_MASTER}
-	${RM} -f $@.sort $@.sort.tmp
-
-CLEANFILES+= ${XML_MIRRORS}
-CLEANFILES+= ${XML_MIRRORS}.sort
-CLEANFILES+= ${XML_MIRRORS}.sort.tmp
-
-XML_USERGROUPS=	${WEB_PREFIX}/share/sgml/usergroups.xml
-XSL_USERGROUPS=	${WEB_PREFIX}/share/sgml/templates.usergroups.xsl
-
 #
 # when URLS_ABSOLUTE is specified, make
 # %freebsd.urls.absolute; "INCLUDE".

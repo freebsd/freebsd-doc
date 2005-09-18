@@ -130,6 +130,9 @@ DOC_LOCAL_MK=	${DOC_PREFIX}/${LANGCODE}/share/mk/doc.local.mk
 # Ownership information.
 .include "doc.install.mk"
 
+# XML specific configuration
+.include "doc.xml.mk"
+
 # Format-specific configuration
 .if defined(DOC)
 .if ${DOCFORMAT} == "docbook"
