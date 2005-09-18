@@ -93,7 +93,9 @@ LANGCODE?=	${_LANGCODE}
 _WWW_LANGCODE!=	${ECHO} ${WEB_PREFIX}/*
 _WWW2_LANGCODE!=	${ECHO} ${_WWW_LANGCODE:T} |\
 		${SED} -e 's,.*\(${LANGCODE:R:C,(..)_.*,\1,}[^. ]*\).*,\1,'
-.if ${_WWW_LANGCODE:T} == ${_WWW2_LANGCODE}
+.if ${_WWW_LANGCODE:T} == "*"
+_WWW_LANGCODE:= .
+.elif ${_WWW_LANGCODE:T} == ${_WWW2_LANGCODE}
 _WWW_LANGCODE:= .
 .else
 _WWW_LANGCODE:= ${_WWW2_LANGCODE}
