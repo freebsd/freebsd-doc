@@ -1,5 +1,5 @@
 #!/usr/bin/perl -T
-# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.43 2005/08/11 11:47:01 ceri Exp $
+# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.44 2005/09/17 15:48:23 remko Exp $
 
 $ENV{'PATH'} = "/bin:/usr/bin:/usr/sbin:/sbin:/usr/local/bin";
 
@@ -151,24 +151,25 @@ while(<Q>) {
 	    print $trailer . "\n" unless ($blank);
 	    $trailer = "<dt><strong>$1</strong></dt><dd>\n";
 	    if ($html_fixup) {
-		$trailer .= &fixline($2) . "</dd>";
+		$trailer .= &fixline($2);
 	    } else {
-		$trailer .= $2 . "</dd>";
+		$trailer .= $2;
 	    }
 	    if ($1 eq "Originator" && $from ne "") {	# add email address
 		$trailer .= " &lt;<a href='mailto:$email'>" . &fixline($from) . "</a>&gt;";
 	    }
+	    $trailer .= '</dd>';
 	    $blank = !($2);
 	    $multiline = 0;
 	} else {
 	    unless ($multiline) {
 		next if /^\s*$/;
-		print $trailer . "\n<pre>\n";
+		print $trailer . "\n<dd><pre>\n";
 	    }
 	    $multiline = 1;
 	    $blank = 0;
 	    print $html_fixup ? &fixline($_) : $_ , "\n";
-	    $trailer = "</pre>";
+	    $trailer = "</pre></dd>";
 	}
     }
 }
@@ -192,7 +193,7 @@ exit 0;
 sub getline
 {
     local($_) = @_;
-    ($tag,$remainder) = split(/[ \t]+/, $_, 2);
+    ($tag,$remainder) = split(/\s+/, $_, 2);
     return $remainder;
 }
 
