@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: www/en/news/2003/Makefile,v 1.1 2005/04/19 21:19:03 brueffer Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -7,25 +7,12 @@
 .include "../Makefile.inc"
 .endif
 
-DATA=		index.html press.html
-CLEANFILES+=	index.html press.html
+XMLDOCS=	index:../oldpress.xsl:news.xml:
+SRCS.index=	../includes.xsl
+DEPENDSET.index=	transtable
 
-index.html: ../oldnewsflash.xsl news.xml \
-		${XML_INCLUDES} ${XML_TRANSTABLE}
-	${XSLTPROC} ${XSLTPROCOPTS} -o ${.TARGET} \
-		--param transtable.xml "'${XML_TRANSTABLE}'" \
-		${.CURDIR}/../oldnewsflash.xsl ${.CURDIR}/news.xml
-.if !defined(NO_TIDY)
-	-${TIDY} ${TIDYOPTS} ${.TARGET}
-.endif
-
-press.html: ../oldpress.xsl press.xml \
-		${XML_INCLUDES} ${XML_TRANSTABLE}
-	${XSLTPROC} ${XSLTPROCOPTS} -o ${.TARGET} \
-		--param transtable.xml "'${XML_TRANSTABLE}'" \
-		${.CURDIR}/../oldpress.xsl ${.CURDIR}/press.xml
-.if !defined(NO_TIDY)
-	-${TIDY} ${TIDYOPTS} ${.TARGET}
-.endif
+XMLDOCS+=	press:../oldpress.xsl::
+SRCS.press=	../includes.xsl
+DEPENDSET.press=	transtable
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
