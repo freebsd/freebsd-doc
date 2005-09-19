@@ -1,6 +1,6 @@
 # $FreeBSD$
-# $FreeBSDde: de-www/platforms/ia64/Makefile,v 1.3 2004/11/07 16:27:33 mheinen Exp $
-# basiert auf: 1.4
+# $FreeBSDde: de-www/platforms/ia64/Makefile,v 1.4 2005/09/18 10:33:54 jkois Exp $
+# basiert auf: 1.6
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -10,18 +10,11 @@
 .endif
 
 DOCS=	machines.sgml refs.sgml
-#DATA=	mckinley-die.png merced-die.png
+#DATA=	i2inside.png mckinley-die.png merced-die.png montecito-die.png
 
 _GEN=	index.html todo.html
 
-DATA+=	${_GEN}
-CLEANFILES+= ${_GEN}
-
-.SUFFIXES: .xsl .html
-.xsl.html: news.xml
-	${XSLTPROC} ${XSLTPROCOPTS:N-nonet} -o ${.TARGET} ${.ALLSRC}
-.if !defined(NO_TIDY)
-	-${TIDY} ${TIDYOPTS} ${.TARGET}
-.endif
+XMLDOCS=        index::news.xml:
+XMLDOCS+=       todo::news.xml:
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
