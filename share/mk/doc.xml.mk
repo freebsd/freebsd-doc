@@ -1,5 +1,5 @@
 # doc.xml.mk
-# $FreeBSD: www/share/mk/doc.xml.mk,v 1.1 2005/09/18 04:33:46 hrs Exp $
+# $FreeBSD: www/share/mk/doc.xml.mk,v 1.2 2005/09/18 06:25:01 hrs Exp $
 
 XML_CATALOG_FILES=	file://${DOC_PREFIX}/${LANGCODE}/share/sgml/catalog.xml \
 			file://${DOC_PREFIX}/share/sgml/catalog.xml \
@@ -8,16 +8,18 @@ XML_CATALOG_FILES=	file://${DOC_PREFIX}/${LANGCODE}/share/sgml/catalog.xml \
 			file://${WEB_PREFIX}/share/sgml/catalog-common.xml \
 			file://${LOCALBASE}/share/xml/catalog
 
+# Variables used in DEPENDSET
+
+_DEPENDSET.all=	wwwstd transtable mirrors usergroups \
+		news press navigation advisories notices
+
+# DEPENDSET: wwwstd  .........................................................
+_DEPENDSET.wwwstd=	${XML_INCLUDES}
 XML_INCLUDES=	${WEB_PREFIX}/${WWW_LANGCODE}/includes.xsl \
 		${WEB_PREFIX}/share/sgml/includes.header.xsl \
 		${WEB_PREFIX}/share/sgml/includes.misc.xsl \
 		${WEB_PREFIX}/share/sgml/includes.release.xsl \
 		${WEB_PREFIX}/share/sgml/includes.xsl
-
-# Variables used in DEPENDSET
-
-_DEPENDSET.all=	transtable mirrors usergroups \
-		news press navigation advisories notices
 
 # DEPENDSET: transtable  ......................................................
 _DEPENDSET.transtable=	${XML_TRANSTABLE} ${XSL_TRANSTABLE} \
@@ -79,7 +81,8 @@ CLEANFILES+=	${XML_MIRRORS}.sort.tmp
 
 # DEPENDSET: usergroups ......................................................
 _DEPENDSET.usergroups=	${XML_USERGROUPS} ${XML_USERGROUPS_LOCAL} \
-			${XSL_USERGROUPS_MASTER} ${XSL_USERGROUPS}
+			${XSL_USERGROUPS_MASTER} ${XSL_USERGROUPS} \
+			${XML_INCLUDES}
 _PARAMS.usergroups=	--param usergroups.xml "'${XML_USERGROUPS}'" \
 			--param usergroups-local.xml "'${XML_USERGROUPS_LOCAL}'"
 XML_USERGROUPS=		${WEB_PREFIX}/share/sgml/usergroups.xml
@@ -97,7 +100,8 @@ XSL_USERGROUPS=	${WEB_PREFIX}/share/sgml/templates.usergroups.xsl
 
 # DEPENDSET: news ............................................................
 _DEPENDSET.news=	${XML_NEWS_NEWS_MASTER} ${XML_NEWS_NEWS} \
-			${XML_NEWS_INCLUDES_MASTER} ${XML_NEWS_INCLUDES}
+			${XML_NEWS_INCLUDES_MASTER} ${XML_NEWS_INCLUDES} \
+			${XML_INCLUDES}
 _PARAMS.news=		--param news.project.xml-master "'${XML_NEWS_NEWS_MASTER}'" \
 			--param news.project.xml "'${XML_NEWS_NEWS}'"
 XML_NEWS_INCLUDES_MASTER=${WEB_PREFIX}/en/news/includes.xsl
@@ -107,7 +111,8 @@ XML_NEWS_NEWS=		${WEB_PREFIX}/${WWW_LANGCODE}/news/news.xml
 
 # DEPENDSET: press  ..........................................................
 _DEPENDSET.press=	${XML_NEWS_PRESS_MASTER} ${XML_NEWS_PRESS} \
-			${XML_NEWS_INCLUDES_MASTER} ${XML_NEWS_INCLUDES}
+			${XML_NEWS_INCLUDES_MASTER} ${XML_NEWS_INCLUDES} \
+			${XML_INCLUDES}
 _PARAMS.press=		--param news.press.xml-master "'${XML_NEWS_PRESS_MASTER}'" \
 			--param news.press.xml "'${XML_NEWS_PRESS}'"
 XML_NEWS_INCLUDES_MASTER=${WEB_PREFIX}/en/news/includes.xsl
@@ -116,17 +121,17 @@ XML_NEWS_PRESS_MASTER=	${WEB_PREFIX}/en/news/press.xml
 XML_NEWS_PRESS=		${WEB_PREFIX}/${WWW_LANGCODE}/news/press.xml
 
 # DEPENDSET: navigation  .....................................................
-_DEPENDSET.navigation=	${XML_NAVIGATION}
+_DEPENDSET.navigation=	${XML_NAVIGATION} ${XML_INCLUDES}
 _PARAMS.navigation=	--param navigation.xml "'${XML_NAVIGATION}'"
 XML_NAVIGATION=		${WEB_PREFIX}/${WWW_LANGCODE}/navigation.xml
 
 # DEPENDSET: advisories  .....................................................
-_DEPENDSET.advisories=	${XML_ADVISORIES}
+_DEPENDSET.advisories=	${XML_ADVISORIES} ${XML_INCLUDES}
 _PARAMS.advisories=	--param advisories.xml "'${XML_ADVISORIES}'"
 XML_ADVISORIES=		${WEB_PREFIX}/share/sgml/advisories.xml
 
 # DEPENDSET: notices  ........................................................
-_DEPENDSET.notices=	${XML_NOTICES}
+_DEPENDSET.notices=	${XML_NOTICES} ${XML_INCLUDES}
 _PARAMS.notices=	--param notices.xml "'${XML_NOTICES}'"
 XML_NOTICES=		${WEB_PREFIX}/share/sgml/notices.xml
 
@@ -184,7 +189,7 @@ XML_NOTICES=		${WEB_PREFIX}/share/sgml/notices.xml
 XSLTPROC_ENV+=	SGML_CATALOG_FILES=
 XSLTPROC_ENV+=	XML_CATALOG_FILES="${XML_CATALOG_FILES}"
 
-XSLTPROCOPTS=	${XSLTPROC_ARGS}
+XSLTPROCOPTS=	${XSLTPROCFLAGS}
 XSLTPROCOPTS+=	--xinclude
 XSLTPROCOPTS+=	--stringparam LOCALBASE ${LOCALBASE}
 XSLTPROCOPTS+=	--stringparam WEB_PREFIX ${WEB_PREFIX}
@@ -274,7 +279,7 @@ PARAMS.${_ID}+=	${_PARAMS.${S}}
 .for S in ${SRCS.DEFAULT} ${SRCS.${_ID}}
 DEPENDS.${_ID}+=	${S}
 .endfor
-${TARGET.${_ID}}: ${XML_INCLUDES} ${XML.${_ID}} ${DEPENDS.${_ID}}
+${TARGET.${_ID}}: ${XML.${_ID}} ${DEPENDS.${_ID}}
 	${XSLTPROC} ${XSLTPROCOPTS.${_ID}} \
 		-o ${.TARGET} ${PARAMS.${_ID}} \
 		${XSLT.${_ID}} ${XML.${_ID}}
