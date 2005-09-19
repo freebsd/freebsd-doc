@@ -247,9 +247,10 @@ PARAMS.eresources+=	--param 'type' "'www'" \
 SRCS+=		mirrors.sgml.ftp.inc \
 		mirrors.sgml.cvsup.inc \
 		eresources.sgml.www.inc
-CLEANFILES+=	mirrors.sgml.ftp.inc \
-		mirrors.sgml.cvsup.inc \
-		eresources.sgml.www.inc
+
+CLEANFILES+=	mirrors.sgml.ftp.inc mirrors.sgml.ftp.inc.tmp \
+		mirrors.sgml.cvsup.inc mirrors.sgml.cvsup.inc.tmp \
+		eresources.sgml.www.inc eresources.sgml.www.inc.tmp
 
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"
 
@@ -257,10 +258,8 @@ CLEANFILES+=	mirrors.sgml.ftp.inc \
 mirrors.sgml.${p}.inc: mirrors.sgml.${p}.inc.tmp
 	${SED} -e 's,<\([^ >]*\)\([^>]*\)/>,<\1\2></\1>,;s,</anchor>,,'\
 	    < $@.tmp > $@ || (${RM} -f $@ && false)
-	${RM} -f $@.tmp
 .endfor
 
 eresources.sgml.www.inc: eresources.sgml.www.inc.tmp
 	${SED} -e 's,<\([^ >]*\)\([^>]*\)/>,<\1\2></\1>,;s,</anchor>,,'\
 	    < $@.tmp > $@ || (${RM} -f $@ && false)
-	${RM} -f $@.tmp
