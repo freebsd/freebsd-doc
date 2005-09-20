@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/news/2003/Makefile,v 1.1 2005/04/19 21:19:03 brueffer Exp $
+# $FreeBSD: www/en/news/2003/Makefile,v 1.2 2005/09/18 04:33:46 hrs Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -7,7 +7,7 @@
 .include "../Makefile.inc"
 .endif
 
-XMLDOCS=	index:../oldpress.xsl:news.xml:
+XMLDOCS=	index:../oldnewsflash.xsl:news.xml:
 SRCS.index=	../includes.xsl
 DEPENDSET.index=	transtable
 
