@@ -1,6 +1,6 @@
 # $FreeBSD$
-# $FreeBSDde: de-www/news/Makefile,v 1.9 2005/09/18 10:33:54 jkois Exp $
-# basiert auf: 1.42
+# $FreeBSDde: de-www/news/Makefile,v 1.10 2005/09/20 04:16:39 jkois Exp $
+# basiert auf: 1.43
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -14,8 +14,8 @@ DOCS+= news.sgml
 INDEXLINK= news.html
 
 SRCS.DEFAULT=           includes.xsl
-DEPENDSET.DEFAULT=      transtable news
- 
+DEPENDSET.DEFAULT=      transtable news press
+
 XMLDOCS=        newsflash::news.xml:
 XMLDOCS+=       news-rdf::news.xml:news.rdf
 XMLDOCS+=       press
