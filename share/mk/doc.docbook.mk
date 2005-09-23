@@ -543,8 +543,19 @@ ${.CURDIR:T}.pdb.${_curcomp}: ${DOC}.pdb.${_curcomp}
 .endfor
 .endif
 
+# put languages which have a problem on rendering printable formats
+# by using TeX to NO_TEX_LANG.
+NO_TEX_LANG?=	ja_JP.eucJP ru_RU.KOI8-R zh_TW.Big5
+
+.for _L in ${LANGCODE}
+.if ${NO_TEX_LANG:M${_L}} != ""
+NO_TEX=	yes
+.endif
+.endfor
+
 # RTF --------------------------------------------------------------------
 
+.if !defined(NO_TEX)
 ${DOC}.rtf: ${SRCS} ${LOCAL_IMAGES_EPS} ${LOCAL_IMAGES_TXT}
 	${JADE_CMD} -V rtf-backend ${PRINTOPTS} -ioutput.rtf.images \
 		${JADEOPTS} -t rtf -o ${.TARGET} ${MASTERDOC}
@@ -606,6 +617,19 @@ ${DOC}.pdf: ${DOC}.tex-pdf ${IMAGES_PDF}
 
 ${DOC}.ps: ${DOC}.dvi
 	${DVIPS} ${DVIPSOPTS} -o ${.TARGET} ${.ALLSRC}
+.else
+${DOC}.rtf ${DOC}.rtf.tar ${DOC}.tex \
+	${DOC}.tex-ps ${DOC}.dvi ${DOC}.ps:
+	${TOUCH} ${.TARGET}
+.if !target(${DOC}.pdf)
+${DOC}.pdf:
+	${TOUCH} ${.TARGET}
+.endif
+.if !target(${DOC}.tex-pdf)
+${DOC}.tex-pdf:
+	${TOUCH} ${.TARGET}
+.endif
+.endif
 
 ${DOC}.tar: ${SRCS} ${LOCAL_IMAGES} ${LOCAL_CSS_SHEET}
 	${TAR} cf ${.TARGET} -C ${.CURDIR} ${SRCS} \
