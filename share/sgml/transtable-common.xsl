@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $FreeBSD: www/share/sgml/transtable-common.xsl,v 1.2 2004/12/31 05:35:20 hrs Exp $ -->
+<!-- $FreeBSD: www/share/sgml/transtable-common.xsl,v 1.3 2005/09/18 05:40:09 hrs Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -9,31 +9,31 @@
   <xsl:param name="transtable-sortkey.xml" select="'./transtable-sortkey.xml'" />
 
   <xsl:key name="transtable-lookup-key" match="word" use="orig" />
+  <xsl:key name="transtable-lookup-group" match="group/word" use="../@id" />
   <xsl:key name="transtable-sortkey-lookup-key" match="word" use="@orig" />
 
   <xsl:template name="transtable-lookup">
     <xsl:param name="word" select="''"/>
     <xsl:param name="word-group" select="''"/>
 
-    <xsl:choose>
-      <xsl:when test="document($transtable.xml)/transtable/group[@id = $word-group]">
-	<xsl:for-each select="document($transtable.xml)/transtable/group[@id = $word-group]">
-	  <xsl:choose>
-	    <xsl:when test="key('transtable-lookup-key', string($word))[../@id = $word-group]">
-	      <xsl:for-each select="key('transtable-lookup-key', string($word))[../@id = $word-group]">
-		<xsl:value-of select="tran" />
-	      </xsl:for-each>
-	    </xsl:when>
-	    <xsl:otherwise>
-	      <xsl:value-of select="$word" />
-	    </xsl:otherwise>
-	  </xsl:choose>
-	</xsl:for-each>
-      </xsl:when>
-      <xsl:otherwise>
-	<xsl:value-of select="$word" />
-      </xsl:otherwise>
-    </xsl:choose>
+    <xsl:for-each select="document($transtable.xml)">
+      <xsl:choose>
+	<!-- $p[count(.|$q) = count($q)] means product set of $p and $q-->
+	<xsl:when test="
+	  key('transtable-lookup-group', string($word-group))
+	  [count(.|key('transtable-lookup-key', string($word)))
+	  = count(key('transtable-lookup-key', string($word)))]
+	  ">
+	  <xsl:value-of select="
+	    key('transtable-lookup-group', string($word-group))
+	    [count(.|key('transtable-lookup-key', string($word)))
+	    = count(key('transtable-lookup-key', string($word)))]/tran" />
+	</xsl:when>
+	<xsl:otherwise>
+	  <xsl:value-of select="$word" />
+	</xsl:otherwise>
+      </xsl:choose>
+    </xsl:for-each>
   </xsl:template>
 
   <xsl:template name="transtable-sortkey-lookup">
