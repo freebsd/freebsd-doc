@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/share/sgml/includes.misc.xsl,v 1.22 2005/07/16 09:58:17 hrs Exp $ -->
+<!-- $FreeBSD: www/share/sgml/includes.misc.xsl,v 1.23 2005/09/18 06:25:01 hrs Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -65,6 +65,7 @@
        list all regions in a usergroup database -->
 
   <xsl:key name="html-usergroups-regions-key" match="entry" use="@continent" />
+  <xsl:key name="html-usergroups-id-key" match="entry" use="@id" />
 
   <xsl:template name="html-usergroups-list-regions">
     <xsl:param name="usergroups.xml" select="'usergroups.xml'" />
@@ -106,43 +107,75 @@
       generate-id() =
       generate-id(key('html-usergroups-regions-key', @continent)[1])]">
 
-      <xsl:param name="id" select="
+      <xsl:param name="continent" select="@continent" />
+      <xsl:param name="continent-lc" select="
 	translate(@continent,
 	' ,ABCDEFGHIJKLMNOPQRSTUVWXYZ',
 	'--abcdefghijklmnopqrstuvwxyz')" />
 
-      <h3><a name="{$id}" id="{$id}"><xsl:call-template name="transtable-lookup">
+      <h3><a name="{$continent-lc}" id="{$continent-lc}">
+	  <xsl:call-template name="transtable-lookup">
 	    <xsl:with-param name="word-group" select="'continents'" />
-	    <xsl:with-param name="word" select="@continent" />
+	    <xsl:with-param name="word" select="$continent" />
 	  </xsl:call-template></a></h3>
 
       <dl>
-	<xsl:for-each select="key('html-usergroups-regions-key', @continent)">
+	<xsl:for-each select="key('html-usergroups-regions-key', $continent)">
 	  <xsl:sort select="name" order="ascending"/>
 
-	  <xsl:param name="origid"><xsl:value-of select="@id" /></xsl:param>
+	  <xsl:param name="id"><xsl:value-of select="@id" /></xsl:param>
 
-	  <!-- XXX: need optimization -->
-	  <xsl:param name="lname">
-	    <xsl:copy-of select="document($usergroups-local.xml)//*[@id=$origid]/name" />
+	  <xsl:param name="name">
+	    <xsl:for-each select="document($usergroups-local.xml)">
+	      <xsl:choose>
+		<!-- $p[count(.|$q) = count($q)] means product set of $p and $q-->
+		<xsl:when test="
+		  key('html-usergroups-regions-key', string($continent))
+		  [count(.|key('html-usergroups-id-key', string($id)))
+		  = count(key('html-usergroups-id-key', string($id)))]
+		  ">
+		  <xsl:copy-of select="
+		    key('html-usergroups-regions-key', string($continent))
+		    [count(.|key('html-usergroups-id-key', string($id)))
+		    = count(key('html-usergroups-id-key', string($id)))]/name/node()
+		    " />
+		</xsl:when>
+		<xsl:otherwise>
+		  <xsl:for-each select="document($usergroups.xml)">
+		    <xsl:copy-of select="key('html-usergroups-id-key', string($id))/name/node()" />
+		  </xsl:for-each>
+		</xsl:otherwise>
+	      </xsl:choose>
+	    </xsl:for-each>
 	  </xsl:param>
 
-	  <xsl:param name="ldesc">
-	    <xsl:copy-of select="document($usergroups-local.xml)//*[@id=$origid]/description" />
+	  <xsl:param name="desc">
+	    <xsl:for-each select="document($usergroups-local.xml)">
+	      <xsl:choose>
+		<!-- $p[count(.|$q) = count($q)] means product set of $p and $q-->
+		<xsl:when test="
+		  key('html-usergroups-regions-key', string($continent))
+		  [count(.|key('html-usergroups-id-key', string($id)))
+		  = count(key('html-usergroups-id-key', string($id)))]
+		  ">
+		  <xsl:copy-of select="
+		    key('html-usergroups-regions-key', string($continent))
+		    [count(.|key('html-usergroups-id-key', string($id)))
+		    = count(key('html-usergroups-id-key', string($id)))]/description/node()
+		    " />
+		</xsl:when>
+		<xsl:otherwise>
+		  <xsl:for-each select="document($usergroups.xml)">
+		    <xsl:copy-of select="key('html-usergroups-id-key', string($id))/description/node()" />
+		  </xsl:for-each>
+		</xsl:otherwise>
+	      </xsl:choose>
+	    </xsl:for-each>
 	  </xsl:param>
 
-	  <xsl:choose>
-	    <xsl:when test="$lname">
-	      <dt><a name="{$id}-{@id}" href="{url}"><xsl:value-of select="$lname" /></a></dt>
+	  <dt><a name="{$continent-lc}-{$id}" href="{url}"><xsl:copy-of select="$name" /></a></dt>
 
-	      <dd><p><xsl:value-of select="$ldesc" /></p></dd>
-	    </xsl:when>
-	    <xsl:otherwise>
-	      <dt><a name="{$id}-{@id}" href="{url}"><xsl:value-of select="name" /></a></dt>
-
-	      <dd><p><xsl:value-of select="description" /></p></dd>
-	    </xsl:otherwise>
-	  </xsl:choose>
+	  <dd><p><xsl:copy-of select="$desc" /></p></dd>
 	</xsl:for-each>
       </dl>
     </xsl:for-each>
