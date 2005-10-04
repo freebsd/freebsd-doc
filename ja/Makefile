@@ -1,4 +1,4 @@
-# $FreeBSD: www/ja/Makefile,v 1.69 2005/09/18 06:25:00 hrs Exp $
+# $FreeBSD: www/ja/Makefile,v 1.70 2005/10/04 16:21:45 hrs Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.114
 
@@ -14,7 +14,6 @@
 DOCS=	about.sgml
 DOCS+=	applications.sgml
 #DOCS+= art.sgml
-DOCS+= auditors.sgml
 DOCS+= availability.sgml
 DOCS+=	community.sgml
 DOCS+= docs.sgml 
@@ -32,6 +31,10 @@ DOCS+= y2kbug.sgml
 
 # Japanese-only file
 DOCS+= jabout.sgml
+
+XMLDOCS=	index:xsl:${XML_NEWS_NEWS}:
+DEPENDSET.index=transtable mirrors news press events \
+		navigation advisories notices
 
 XMLDOCS+=       usergroups:${XSL_USERGROUPS}:${XML_USERGROUPS}:
 DEPENDSET.usergroups=transtable usergroups
@@ -83,37 +86,7 @@ SUBDIR+= doc
 
 WEBDIR?=	data/ja
 
-# index.html is special, and generated from index.xsl and news/news.xml
-DATA+=		index.html
-CLEANFILES+=	index.html
-
 ### Revision checking
 REVCHECK=	yes
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
-
-index.html: index.xsl ${XML_INCLUDES}\
-		${XML_NEWS_INCLUDES} \
-		${XML_NEWS_NEWS} ${XML_NEWS_NEWS_MASTER} \
-		${XML_NEWS_PRESS} ${XML_NEWS_PRESS_MASTER} \
-		${XML_EVENTS_EVENTS_MASTER} ${XML_EVENTS_CURDATE} \
-		${XML_MIRRORS} ${XML_TRANSTABLE} \
-		${XML_ADVISORIES} ${XML_NOTICES} \
-		${XML_NAVIGATION}
-	${XSLTPROC} ${XSLTPROCOPTS} \
-		-o $@ \
-		--param mirrors.xml "'${XML_MIRRORS}'" \
-		--param advisories.xml "'${XML_ADVISORIES}'" \
-		--param notices.xml "'${XML_NOTICES}'" \
-		--param news.press.xml-master "'${XML_NEWS_PRESS_MASTER}'" \
-		--param news.press.xml "'${XML_NEWS_PRESS}'" \
-		--param news.project.xml-master "'${XML_NEWS_NEWS_MASTER}'" \
-		--param news.project.xml "'${XML_NEWS_NEWS}'" \
-		--param events.xml-master "'${XML_EVENTS_EVENTS_MASTER}'" \
-		--param curdate.xml "'${XML_EVENTS_CURDATE}'" \
-		--param transtable.xml "'${XML_TRANSTABLE}'" \
-		--param navigation.xml "'${XML_NAVIGATION}'" \
-		${.CURDIR}/index.xsl ${XML_NEWS_NEWS} ${XML_EVENTS_EVENTS_MASTER} ${XML_EVENTS_CURDATE}
-.if !defined(NO_TIDY)
-	-${TIDY} ${TIDYOPTS} ${.TARGET}
-.endif
