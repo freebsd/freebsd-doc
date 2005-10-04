@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
 
 <!--
-    $FreeBSD: www/ja/news/press.xsl,v 1.4 2003/11/03 11:41:05 rushani Exp $
+    $FreeBSD: www/ja/news/press.xsl,v 1.5 2004/12/30 17:53:44 hrs Exp $
     Original revision: 1.5
 -->
 
@@ -9,11 +9,11 @@
 
   <xsl:import href="../includes.xsl"/>
   <xsl:import href="includes.xsl"/>
-
+  <xsl:variable name="section" select="'about'"/>
 
   <xsl:variable name="base" select="'..'"/>
   <xsl:variable name="title" select="'FreeBSD In The Press'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/ja/news/press.xsl,v 1.4 2003/11/03 11:41:05 rushani Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/ja/news/press.xsl,v 1.5 2004/12/30 17:53:44 hrs Exp $'"/>
 
   <xsl:param name="news.press.xml-master" select="'none'" />
   <xsl:param name="news.press.xml" select="'none'" />
@@ -32,10 +32,21 @@
     <html>
       
       <xsl:copy-of select="$header1"/>
-
-      <body xsl:use-attribute-sets="att.body">
-
-	<xsl:copy-of select="$header2"/>
+      
+            <body xsl:use-attribute-sets="att.body">
+      
+        <div id="containerwrap">
+          <div id="container">
+      
+      	<xsl:copy-of select="$header2"/>
+      
+      	<div id="content">
+      
+      	      <xsl:copy-of select="$sidenav"/>
+      
+      	      <div id="contentwrap">
+      	      
+	      <xsl:copy-of select="$header3"/>
 
 	<p>ここに載っていない FreeBSD に関連したニュース記事をご存じなら、
 	  我々がここに載せられるように詳細を
@@ -52,7 +63,17 @@
 	</xsl:call-template>
 
 	<xsl:copy-of select="$newshome"/>
+
+	  	</div> <!-- contentwrap -->
+		<br class="clearboth" />
+	
+	</div> <!-- content -->
+	
 	<xsl:copy-of select="$footer"/>
+	
+        </div> <!-- container -->
+   </div> <!-- containerwrap -->
+
       </body>
     </html>
   </xsl:template>
