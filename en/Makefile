@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/Makefile,v 1.124 2005/09/18 04:33:45 hrs Exp $
+# $FreeBSD: www/en/Makefile,v 1.125 2005/10/04 15:48:54 simon Exp $
 
 .if exists(Makefile.conf)
 .include "Makefile.conf"
@@ -25,7 +25,7 @@ DOCS+= support.sgml
 DOCS+= where.sgml 
 DOCS+= y2kbug.sgml 
 
-XMLDOCS=	index:xsl:${XML_NEWS_NEWS}:${XML_EVENTS_EVENTS}:
+XMLDOCS=	index:xsl:${XML_NEWS_NEWS}:
 DEPENDSET.index=transtable mirrors news press events \
 		navigation advisories notices
 
@@ -84,6 +84,7 @@ SUBDIR+= relnotes
 # Non-SGML
 SUBDIR+= cgi
 SUBDIR+= gifs
+SUBDIR+= layout
 
 WEB_LANG?=	da de es fr it ja nl pt_BR ru tr zh
 
