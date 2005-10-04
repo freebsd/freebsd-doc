@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/share/sgml/includes.misc.xsl,v 1.23 2005/09/18 06:25:01 hrs Exp $ -->
+<!-- $FreeBSD: www/share/sgml/includes.misc.xsl,v 1.24 2005/09/30 18:12:58 hrs Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -24,7 +24,7 @@
 
   <!-- default format for date string -->
   <xsl:param name="param-l10n-date-format-YMD"
-             select="'%D %M, %Y'" />
+             select="'%Y-%M-%D'" />
   <xsl:param name="param-l10n-date-format-YM"
              select="'%M %Y'" />
   <xsl:param name="param-l10n-date-format-MD"
@@ -50,13 +50,14 @@
      rdf-security-advisories-title               security/security-rdf.xsl (for l10n)
      rdf-security-advisories-items               security/security-rdf.xsl
 
-     html-index-advisories-items                 index.xsl
-     html-index-advisories-items-lastmodified    index.xsl (for i10n)
-     html-index-news-project-items               index.xsl
-     html-index-news-project-items-lastmodified  index.xsl (for i10n)
-     html-index-news-press-items                 index.xsl
-     html-index-news-press-items-lastmodified    index.xsl (for i10n)
-     html-index-mirrors-options-list             index.xsl
+     html-index-advisories-items                   index.xsl
+     html-index-advisories-items-lastmodified      index.xsl (for i10n)
+     html-index-news-project-items                 index.xsl
+     html-index-news-project-items-lastmodified    index.xsl (for i10n)
+     html-index-news-press-items                   index.xsl
+     html-index-news-press-items-lastmodified      index.xsl (for i10n)
+     html-index-events-items                       index.xsl
+     html-index-mirrors-options-list               index.xsl
 
      misc-format-date-string                     generic
   -->
@@ -600,8 +601,14 @@
 
     <xsl:choose>
       <xsl:when test="$type = 'advisory'">
-	<xsl:for-each select="document($advisories.xml)/descendant::advisory[position() &lt;= 10]">
-	  <xsl:value-of select="$leadingmark" />
+	<xsl:for-each select="document($advisories.xml)/descendant::advisory[position() &lt;= 3]">
+	  <xsl:param name="year" select="../../../name" />
+          <xsl:param name="month" select="../../name" />
+          <xsl:param name="day" select="../name" />
+	<p>
+	  <span class="txtdate">
+	  	<xsl:value-of select='format-number($year, "####")' />-<xsl:value-of select='format-number($month, "00")' />-<xsl:value-of select='format-number($day, "00")' />
+	  </span><br />
 	  <xsl:choose>
 	    <xsl:when test="@omithref = 'yes'">
 	      <xsl:value-of select="name"/>
@@ -613,12 +620,18 @@
 		<xsl:value-of select="name"/></a>
 	    </xsl:otherwise>
 	  </xsl:choose>
-	  <br/>
+	  </p>
 	</xsl:for-each>
       </xsl:when>
       <xsl:when test="$type = 'notice'">
-	<xsl:for-each select="document($advisories.xml)/descendant::notice[position() &lt;= 10]">
-	  <xsl:value-of select="$leadingmark" />
+	<xsl:for-each select="document($advisories.xml)/descendant::notice[position() &lt;= 3]">
+	<xsl:param name="year" select="../../../name" />
+	<xsl:param name="month" select="../../name" />
+	<xsl:param name="day" select="../name" />
+	<p>
+	  <span class="txtdate">
+		<xsl:value-of select='format-number($year, "####")' />-<xsl:value-of select='format-number($month, "00")' />-<xsl:value-of select='format-number($day, "00")' />
+	  </span><br />
 	  <xsl:choose>
 	    <xsl:when test="@omithref = 'yes'">
 	      <xsl:value-of select="name"/>
@@ -630,7 +643,7 @@
 		<xsl:value-of select="name"/></a>
 	    </xsl:otherwise>
 	  </xsl:choose>
-	  <br/>
+	  </p>
 	</xsl:for-each>
       </xsl:when>
     </xsl:choose>
@@ -742,7 +755,11 @@
 	  <xsl:for-each select="$localizeditems/event">
 	    <xsl:param name="anchor-position" select="position()" />
 
-	    <xsl:value-of select="$leadingmark" /><a>
+	    <p>
+	    <span class="txtdate">
+	      <xsl:value-of select='format-number($year, "####")' />-<xsl:value-of select='format-number($month, "00")' />-<xsl:value-of select='format-number($day, "00")' />
+	    </span><br />
+	    <a>
 	      <xsl:attribute name="href">
 		<xsl:text>news/newsflash.html#</xsl:text>
 		<xsl:call-template name="html-news-generate-anchor">
@@ -763,6 +780,7 @@
 		</xsl:otherwise>
 	      </xsl:choose>
 	    </a>
+	    </p>
 	  </xsl:for-each>
 	</xsl:when>
 
@@ -770,7 +788,11 @@
 	  <xsl:for-each select="event">
 	    <xsl:param name="anchor-position" select="position()" />
 
-	    <xsl:value-of select="$leadingmark" /><a>
+	    <p>
+	    <span class="txtdate">
+	      <xsl:value-of select='format-number($year, "####")' />-<xsl:value-of select='format-number($month, "00")' />-<xsl:value-of select='format-number($day, "00")' />
+	    </span><br />
+	    <a>
 	      <xsl:attribute name="href">
 		<xsl:text>news/newsflash.html#</xsl:text>
 		<xsl:call-template name="html-news-generate-anchor">
@@ -791,6 +813,7 @@
 		</xsl:otherwise>
 	      </xsl:choose>
 	    </a>
+	    </p>
 	  </xsl:for-each>
 	</xsl:otherwise>
       </xsl:choose>
@@ -822,6 +845,7 @@
     <xsl:for-each select="document($news.press.xml-master)/descendant::story[position() &lt;= 5]">
       <xsl:param name="year" select="../../name" />
       <xsl:param name="month" select="../name" />
+      <xsl:param name="day" select="../name" />
       <xsl:param name="url" select="url" />
       <xsl:param name="site-url" select="site-url" />
 
@@ -839,8 +863,11 @@
 	//descendant::year[name = $year]
 	/month[name = $month]
 	/story[url = $url]" />
-
-      <xsl:value-of select="$leadingmark" />
+      
+      <p>
+      <span class="txtdate">
+	<xsl:value-of select='format-number($year, "####")' />-<xsl:value-of select='format-number($month, "00")' />-<xsl:value-of select='format-number($day, "00")' />
+      </span><br />
       <a>
 	<xsl:attribute name="href">
 	  <xsl:text>news/press.html#</xsl:text>
@@ -861,9 +888,8 @@
 	    <xsl:value-of select="name"/>
 	  </xsl:otherwise>
 	</xsl:choose>
-      </a>
-
-      <br/>
+      </a></p>
+      
     </xsl:for-each>
   </xsl:template>
 
@@ -927,6 +953,47 @@
 	<xsl:value-of select="@src"/>
       </xsl:attribute>
       <xsl:value-of select="@name"/></a><br/>
+  </xsl:template>
+  
+ <!-- template: "html-index-events-items"
+       pulls in the 5 most recent events items -->
+
+  <xsl:template name="html-index-events-items">
+    <xsl:param name="events.xml-master" select="'none'" />
+    <xsl:param name="events.xml" select="''" />
+    <xsl:param name="curdate.xml" select="''" />
+    <xsl:variable name="curdate" select="document($curdate.xml)//curdate"/>
+
+    <xsl:for-each select="document($events.xml-master)/descendant::event[position() &lt; 5
+							        	and ((number(enddate/year) &gt; number($curdate/year)) or
+								            (number(enddate/year) = number($curdate/year) and
+								             number(enddate/month) &gt; number($curdate/month)) or
+						          		    (number(enddate/year) = number($curdate/year) and
+								             number(enddate/month) = number($curdate/month) and
+						   	            	     enddate/day &gt;= $curdate/day))]">
+      <xsl:sort select="startdate/year" order="ascending"/>
+      <xsl:sort select="format-number(startdate/month, '00')" order="ascending"/>
+      <xsl:sort select="format-number(startdate/day, '00')" order="ascending"/>
+
+      <p>
+      <span class="txtdate">
+         <xsl:value-of select='format-number(startdate/year, "####")' />-<xsl:value-of select='format-number(startdate/month, "00")' />-<xsl:value-of select='format-number(startdate/day, "00")' /> -  <xsl:value-of select='format-number(enddate/year, "####")' />-<xsl:value-of select='format-number(enddate/month, "00")' />-<xsl:value-of select='format-number(enddate/day, "00")' />
+      </span><br />
+      <a>
+        <xsl:attribute name="href">
+	  <xsl:choose>
+	    <xsl:when test="$events.xml = 'none'"><xsl:value-of select="$enbase"/>/</xsl:when>
+	    <xsl:otherwise><xsl:value-of select="$base"/>/</xsl:otherwise>
+	  </xsl:choose>
+          <xsl:text>events/#event:</xsl:text><xsl:value-of select='@id' />
+        </xsl:attribute>
+
+        <xsl:value-of select="name"/>
+
+	<br />
+	(<xsl:value-of select='location/city' />, <xsl:value-of select='location/country' />)
+      </a></p>
+    </xsl:for-each>
   </xsl:template>
 
   <!-- template: "html-index-mirrors-options-list"
