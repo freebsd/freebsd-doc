@@ -1,5 +1,5 @@
 # bsd.web.mk
-# $FreeBSD: www/share/mk/web.site.mk,v 1.67 2005/08/30 11:50:05 pav Exp $
+# $FreeBSD: www/share/mk/web.site.mk,v 1.68 2005/09/18 04:33:46 hrs Exp $
 
 #
 # Build and install a web site.
@@ -151,7 +151,19 @@ WWW_LANGCODE:=			${.CURDIR:S,^${_WEB_PREFIX}/,,:C,^([^/]+)/.*,\1,}
 .endif # !defined(WITHOUT_DOC)
 
 SGML_INCLUDES=	${WEB_PREFIX}/${WWW_LANGCODE}/includes.sgml
+SGML_INCLUDES+=	${WEB_PREFIX}/${WWW_LANGCODE}/includes.navabout.sgml
+SGML_INCLUDES+=	${WEB_PREFIX}/${WWW_LANGCODE}/includes.navcommunity.sgml
+SGML_INCLUDES+=	${WEB_PREFIX}/${WWW_LANGCODE}/includes.navdevelopers.sgml
+SGML_INCLUDES+=	${WEB_PREFIX}/${WWW_LANGCODE}/includes.navdocs.sgml
+SGML_INCLUDES+=	${WEB_PREFIX}/${WWW_LANGCODE}/includes.navdownload.sgml
+SGML_INCLUDES+=	${WEB_PREFIX}/${WWW_LANGCODE}/includes.navsupport.sgml
 SGML_INCLUDES+=	${WEB_PREFIX}/share/sgml/includes.header.sgml
+SGML_INCLUDES+=	${WEB_PREFIX}/share/sgml/includes.navabout.sgml
+SGML_INCLUDES+=	${WEB_PREFIX}/share/sgml/includes.navcommunity.sgml
+SGML_INCLUDES+=	${WEB_PREFIX}/share/sgml/includes.navdevelopers.sgml
+SGML_INCLUDES+=	${WEB_PREFIX}/share/sgml/includes.navdocs.sgml
+SGML_INCLUDES+=	${WEB_PREFIX}/share/sgml/includes.navdownload.sgml
+SGML_INCLUDES+=	${WEB_PREFIX}/share/sgml/includes.navsupport.sgml
 SGML_INCLUDES+=	${WEB_PREFIX}/share/sgml/includes.misc.sgml
 SGML_INCLUDES+=	${WEB_PREFIX}/share/sgml/includes.release.sgml
 SGML_INCLUDES+=	${WEB_PREFIX}/share/sgml/includes.sgml
