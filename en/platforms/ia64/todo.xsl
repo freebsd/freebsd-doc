@@ -1,37 +1,36 @@
 <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
   <xsl:import href="../../includes.xsl"/>
   <xsl:import href="includes.xsl"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/platforms/ia64/todo.xsl,v 1.2 2005/05/25 04:16:28 marcel Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/platforms/ia64/todo.xsl,v 1.3 2005/09/09 01:14:06 marcel Exp $'"/>
+  <xsl:variable name="section" select="'developers'"/>
   <xsl:output doctype-public="-//W3C//DTD HTML 4.01 Transitional//EN"
     encoding="iso-8859-1" method="html"/>
   <xsl:template match="/">
     <html>
       <xsl:copy-of select="$header1"/>
-      <body alink="#0000FF" bgcolor="#FFFFFF" link="#0000FF" text="#000000"
-        vlink="#840084">
-        <table cellpadding="0" cellspacing="0" width="100%">
-          <tr>
-            <td border="0">
-              <xsl:copy-of select="$header2"/>
-            </td>
-            <td>
-              <img align="right" alt="Montecito die" src="montecito-die.png"/>
-            </td>
-          </tr>
-        </table>
 
-	<hr/>
+      <body xsl:use-attribute-sets="att.body">
+
+	<div id="containerwrap">
+	  <div id="container">
+	    <xsl:copy-of select="$header2"/>
+
+	    <div id="content">
+	      <xsl:copy-of select="$sidenav"/>
+
+	      <div id="contentwrap">
+		<xsl:copy-of select="$header3"/>
+		<img align="right" alt="Montecito die" src="montecito-die.png"/>
+
+		<p>Search the FreeBSD/ia64 PR database:</p>
+
 	<form action="http://www.FreeBSD.org/cgi/query-pr-summary.cgi"
 	      method="get">
-	  <center>
-	    Search the FreeBSD/ia64 PR database:
 	    <input type="hidden" name="category" value="ia64"/>
 	    <input type="hidden" name="sort" value="none"/>
 	    <input type="text" name="text"/>
 	    <input type="submit" value="Go"/>
-	  </center>
-	</form>
-	<hr/>
+		</form>
 
 	<h3>
 	  What needs to be done.
@@ -132,7 +131,13 @@
 	  </li>
 	</ul>
 
+	      </div> <!-- contentwrap -->
+
+	      <br class="clearboth" />
+	    </div> <!-- content -->
 	<xsl:copy-of select="$footer"/>
+	  </div> <!-- container -->
+	</div> <!-- containerwrap -->
       </body>
     </html>
   </xsl:template>

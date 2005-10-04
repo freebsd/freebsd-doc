@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/en/news/status/report.xsl,v 1.6 2004/02/01 00:46:18 ale Exp $ -->
+<!-- $FreeBSD: www/en/news/status/report.xsl,v 1.7 2005/01/05 23:43:20 mlaier Exp $ -->
 
 <!-- Standard header material -->
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
@@ -9,6 +9,8 @@
   <xsl:import href="../../includes.xsl"/>
   <xsl:import href="../includes.xsl"/>
   <xsl:import href="includes.xsl"/>
+
+  <xsl:variable name="section" select="'about'"/>
 
   <xsl:variable name="base" select="'../..'"/>
 
@@ -36,7 +38,19 @@
 
       <body xsl:use-attribute-sets="att.body">
 
+	<div id="containerwrap">
+	  <div id="container">
+
 	<xsl:copy-of select="$header2"/>
+
+
+	<div id="content">
+
+	      <xsl:copy-of select="$sidenav"/>
+
+	      <div id="contentwrap">
+
+	      <xsl:copy-of select="$header3"/>
 
 	<!-- Process all the <sections>, in order -->
 	<xsl:apply-templates select="section"/>
@@ -77,7 +91,13 @@
 	<!-- Standard footer -->
 	<xsl:copy-of select="$newshome"/> |
 	<xsl:copy-of select="$statushome"/>
+	      </div> <!-- contentwrap -->
+
+	      <br class="clearboth" />
+	    </div> <!-- content -->
 	<xsl:copy-of select="$footer"/>
+	  </div> <!-- container -->
+	</div> <!-- containerwrap -->
       </body>
     </html>
   </xsl:template>
