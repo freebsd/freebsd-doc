@@ -24,7 +24,7 @@
      OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
      SUCH DAMAGE.
 
-     $FreeBSD: www/en/commercial/entries.xsl,v 1.3 2004/07/18 22:23:07 josef Exp $
+     $FreeBSD: www/en/commercial/entries.xsl,v 1.4 2004/09/04 16:25:24 josef Exp $
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
@@ -32,6 +32,7 @@
   exclude-result-prefixes="cvs">
 
   <xsl:import href="../includes.xsl"/>
+  <xsl:variable name="section" select="'support'"/>
 
   <xsl:variable name="base" select="'..'"/>
   <xsl:variable name="date">
@@ -47,10 +48,23 @@
 
   <xsl:template match="entries">
     <html>
+
       <xsl:copy-of select="$header1"/>
 
       <body xsl:use-attribute-sets="att.body">
-	<xsl:copy-of select="$header2"/>
+
+        <div id="containerwrap">
+          <div id="container">
+
+            <xsl:copy-of select="$header2"/>
+
+            <div id="content">
+
+              <xsl:copy-of select="$sidenav"/>
+
+              <div id="contentwrap">
+
+                <xsl:copy-of select="$header3"/>
 
 	<p>The power, flexibility, and reliability of FreeBSD attract
 	  a wide variety of users and vendors. Here you will find
@@ -74,7 +88,17 @@
 	  </a><br/>
 	  <xsl:copy-of select="description/child::node()"/><br/><br/>
 	</xsl:for-each>
+
+	</div> <!-- contentwrap -->
+	<br class="clearboth" />
+
+	</div> <!-- content -->
+
 	<xsl:copy-of select="$footer"/>
+
+	</div> <!-- container -->
+      </div> <!-- containerwrap -->
+
       </body>
     </html>
   </xsl:template>
