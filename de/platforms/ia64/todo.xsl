@@ -7,38 +7,41 @@
 
   <xsl:import href="../../includes.xsl"/>
   <xsl:import href="includes.xsl"/>
-  <xsl:variable name="date" select="'$FreeBSD$'"/>
+  <xsl:variable name="section" select="'developers'"/>  
+  <xsl:variable name="base" select="'../..'"/>
+  <xsl:variable name="enbase" select="'../../..'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/de/platforms/ia64/todo.xsl,v 1.2 2005/08/25 15:37:32 jkois Exp $'"/>
   <xsl:output doctype-public="-//W3C//DTD HTML 4.01 Transitional//EN"
     encoding="iso-8859-1" method="html"/>
   <xsl:template match="/">
     <html>
       <xsl:copy-of select="$header1"/>
-      <body alink="#0000FF" bgcolor="#FFFFFF" link="#0000FF" text="#000000"
-        vlink="#840084">
-        <table cellpadding="0" cellspacing="0" width="100%">
-          <tr>
-            <td border="0">
-              <xsl:copy-of select="$header2"/>
-            </td>
-            <td>
-              <img align="right" alt="Montecito die"
-		src="{$enbase}/../../platforms/ia64/montecito-die.png"/>
-            </td>
-          </tr>
-        </table>
+      
+            <body xsl:use-attribute-sets="att.body">
+      
+        <div id="containerwrap">
+          <div id="container">
+      
+      	<xsl:copy-of select="$header2"/>
+      
+      	<div id="content">
+      
+      	      <xsl:copy-of select="$sidenav"/>
+      
+      	      <div id="contentwrap">
+      	      
+	      <xsl:copy-of select="$header3"/>
+	      
+              <img align="right" alt="Montecito die" src="{$enbase}/platforms/ia64/montecito-die.png"/>
 
-	<hr/>
 	<form action="http://www.FreeBSD.org/cgi/query-pr-summary.cgi"
 	      method="get">
-	  <center>
-	    Search the FreeBSD/ia64 PR database:
+	    <p>Search the FreeBSD/ia64 PR database:</p>
 	    <input type="hidden" name="category" value="ia64"/>
 	    <input type="hidden" name="sort" value="none"/>
 	    <input type="text" name="text"/>
 	    <input type="submit" value="Los"/>
-	  </center>
 	</form>
-	<hr/>
 
 	<h3>
 	  Was noch getan werden muss
@@ -149,7 +152,16 @@
 	  </li>
 	</ul>
 
+		</div> <!-- contentwrap -->
+		<br class="clearboth" />
+
+	</div> <!-- content -->
+
 	<xsl:copy-of select="$footer"/>
+
+	</div> <!-- container -->
+   </div> <!-- containerwrap -->
+	
       </body>
     </html>
   </xsl:template>
