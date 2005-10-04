@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
 
-<!-- $FreeBSD: www/ja/includes.xsl,v 1.27 2005/03/06 15:09:03 rushani Exp $ -->
+<!-- $FreeBSD: www/ja/includes.xsl,v 1.28 2005/10/04 16:21:45 hrs Exp $ -->
 <!-- Original revision: 1.20 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -28,14 +28,14 @@
     <link rel="stylesheet" media="screen" href="{$enbase}/layout/css/fixed.css" type="text/css" title="Normal Text" />
     <link rel="alternate stylesheet" media="screen" href="{$enbase}/layout/css/fixed_large.css" type="text/css" title="Large Text" />
     <script type="text/javascript" src="{$enbase}/layout/js/styleswitcher.js"></script>
-    </head>    
+    </head>
   </xsl:variable>
-  
+
   <xsl:variable name="header2">
             <span class="txtoffscreen"><a href="#content" title="Skip site navigation" accesskey="1">Skip site navigation</a> (1)</span>
             <span class="txtoffscreen"><a href="#contentwrap" title="Skip section navigation" accesskey="2">Skip section navigation</a> (2)</span>
             <div id="headercontainer">
-      
+
               <div id="header">
       	      <h2 class="blockhide">Header And Logo</h2>
                 <div id="headerlogoleft">
@@ -65,9 +65,9 @@
       			  </form>
       			</div> <!-- search -->
                 </div> <!-- headerlogoright -->
-      
+
               </div> <!-- header -->
-      
+
         	<h2 class="blockhide">Site Navigation</h2>
               <div id="topnav">
                 <ul id="topnavlist">
@@ -96,17 +96,17 @@
               </div> <!-- topnav -->
             </div> <!-- headercontainer -->
   </xsl:variable>
-  
+
   <xsl:variable name="header3">
   	<h1><xsl:value-of select="$title"/></h1>
   </xsl:variable>
-  
+
   <xsl:variable name="sidenav">
 	<div id="sidewrap">
-	
+
 	<div id="sidenav">
 	<h2 class="blockhide">Section Navigation</h2>
-	
+
 	<xsl:if test="$section = 'about'" >
 		<ul>
 		<li><a href="{$base}/about.html">About</a></li>
@@ -209,12 +209,12 @@
 		<li><a href="{$base}/support.html#general">Web Resources</a></li>
 		</ul>
 	</xsl:if>
-	
+
 	</div> <!-- sidenav -->
-	
+
 	</div> <!-- sidewrap -->
   </xsl:variable>
-  
+
   <xsl:variable name="footer">
 	<div id="footer">
 	<xsl:copy-of select="$copyright"/><br />
