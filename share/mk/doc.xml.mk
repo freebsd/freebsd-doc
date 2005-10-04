@@ -11,7 +11,7 @@ XML_CATALOG_FILES=	file://${DOC_PREFIX}/${LANGCODE}/share/sgml/catalog.xml \
 # Variables used in DEPENDSET
 
 _DEPENDSET.all=	wwwstd transtable mirrors usergroups \
-		news press navigation advisories notices
+		news press events navigation advisories notices
 
 # DEPENDSET: wwwstd  .........................................................
 _DEPENDSET.wwwstd=	${XML_INCLUDES}
@@ -119,6 +119,40 @@ XML_NEWS_INCLUDES_MASTER=${WEB_PREFIX}/en/news/includes.xsl
 XML_NEWS_INCLUDES=	${WEB_PREFIX}/${WWW_LANGCODE}/news/includes.xsl
 XML_NEWS_PRESS_MASTER=	${WEB_PREFIX}/en/news/press.xml
 XML_NEWS_PRESS=		${WEB_PREFIX}/${WWW_LANGCODE}/news/press.xml
+
+# DEPENDSET: events  ..........................................................
+_DEPENDSET.events=	${XML_EVENTS_EVENTS_MASTER} ${XML_EVENTS_EVENTS} \
+			${XML_EVENTS_CURDATE} ${XML_INCLUDES}
+_PARAMS.events=		--param events.xml-master "'${XML_EVENTS_EVENTS_MASTER}'" \
+			--param events.xml "'${XML_EVENTS_EVENTS}'" \
+			--param curdate.xml "'${XML_EVENTS_CURDATE}'"
+XML_EVENTS_EVENTS_MASTER=${WEB_PREFIX}/en/events/events.xml
+.if exists(${WEB_PREFIX}/${WWW_LANGCODE}/events/events.xml)
+XML_EVENTS_EVENTS=	${WEB_PREFIX}/${WWW_LANGCODE}/events/events.xml
+.else
+XML_EVENTS_EVENTS=	${XML_EVENTS_EVENTS_MASTER}
+.endif
+XML_EVENTS_CURDATE=	${WEB_PREFIX}/en/events/curdate.xml
+
+DATE?=	/bin/date
+TR?=	/usr/bin/tr
+
+${XML_EVENTS_CURDATE}:
+	@${ECHO} "Generating ${.TARGET}"
+	@${ECHO_CMD} '<?xml version="1.0"?>'     > ${.TARGET}
+	@${ECHO_CMD} '<curdate>'                >> ${.TARGET}
+	@${ECHO_CMD} -n '  <year>'              >> ${.TARGET}
+	@${DATE} +%Y | ${TR} -d "\n"            >> ${.TARGET}
+	@${ECHO_CMD} '</year>'                  >> ${.TARGET}
+	@${ECHO_CMD} -n '  <month>'             >> ${.TARGET}
+	@${DATE} +%m | ${TR} -d "\n"            >> ${.TARGET}
+	@${ECHO_CMD} '</month>'                 >> ${.TARGET}
+	@${ECHO_CMD} -n '  <day>'               >> ${.TARGET}
+	@${DATE} +%d | ${TR} -d "\n"            >> ${.TARGET}
+	@${ECHO_CMD} '</day>'                   >> ${.TARGET}
+	@${ECHO_CMD} '</curdate>'               >> ${.TARGET}
+
+CLEANFILES+=	${XML_EVENTS_CURDATE}
 
 # DEPENDSET: navigation  .....................................................
 _DEPENDSET.navigation=	${XML_NAVIGATION} ${XML_INCLUDES}
