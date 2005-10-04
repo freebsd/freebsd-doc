@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/en/news/press.xsl,v 1.9 2004/05/13 20:52:49 simon Exp $ -->
+<!-- $FreeBSD: www/en/news/press.xsl,v 1.10 2004/12/30 17:53:43 hrs Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
 
   <xsl:import href="../includes.xsl"/>
   <xsl:import href="includes.xsl"/>
-
+  <xsl:variable name="section" select="'about'"/>
 
   <xsl:variable name="base" select="'..'"/>
   <xsl:variable name="title" select="'FreeBSD in the Press'"/>
@@ -27,7 +27,18 @@
 
       <body xsl:use-attribute-sets="att.body">
 
+  <div id="containerwrap">
+    <div id="container">
+
 	<xsl:copy-of select="$header2"/>
+
+	<div id="content">
+
+	      <xsl:copy-of select="$sidenav"/>
+
+	      <div id="contentwrap">
+	      
+	      <xsl:copy-of select="$header3"/>
 
 	<p>If you know of any news stories featuring FreeBSD that we have not
 	  listed here, please send details to 
@@ -40,7 +51,17 @@
 	</xsl:call-template>
 
 	<xsl:copy-of select="$newshome"/>
+
+	  	</div> <!-- contentwrap -->
+		<br class="clearboth" />
+	
+	</div> <!-- content -->
+	
 	<xsl:copy-of select="$footer"/>
+	
+        </div> <!-- container -->
+   </div> <!-- containerwrap -->
+
       </body>
     </html>
   </xsl:template>
