@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/share/sgml/includes.header.xsl,v 1.3 2005/01/01 12:01:53 simon Exp $ -->
+<!-- $FreeBSD: www/share/sgml/includes.header.xsl,v 1.4 2005/02/12 13:06:38 ceri Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -13,7 +13,7 @@
   </xsl:variable>
 
   <xsl:variable name="copyright">
-    <a href="{$base}/copyright/index.html">Copyright</a> &#169; 1995-2005 the FreeBSD Project.  All rights reserved.
+    <a href="{$base}/copyright/">Legal Notices</a> | &#169; 1995-2005 The FreeBSD Project.  All rights reserved.
   </xsl:variable>
 
   <xsl:variable name="email" select="'freebsd-questions'"/>
@@ -30,54 +30,209 @@
     <a href="{$base}/index.html"><img src="{$base}/gifs/home.gif" alt="FreeBSD Home Page" border="0" align="right" width="101" height="33"/></a>
   </xsl:variable>
 
+  <xsl:variable name="section" select="''"/>
+
   <xsl:variable name="header1">
-    <head>
-      <title><xsl:value-of select="$title"/></title>
-
-      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1"/>
-      <meta name="MSSmartTagsPreventParsing" content="TRUE"/>
-    </head>
+    <head><title><xsl:value-of select="$title"/></title>
+    <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1" />
+    <meta name="MSSmartTagsPreventParsing" content="TRUE" />
+    <link rel="shortcut icon" href="{$base}/favicon.ico" type="image/x-icon" />
+    <link rel="icon" href="{$base}/favicon.ico" type="image/x-icon" />
+    <link rel="stylesheet" media="screen" href="{$base}/layout/css/fixed.css" type="text/css" title="Normal Text" />
+    <link rel="alternate stylesheet" media="screen" href="{$base}/layout/css/fixed_large.css" type="text/css" title="Large Text" />
+    <script type="text/javascript" src="{$base}/layout/js/styleswitcher.js"></script>
+    </head>    
   </xsl:variable>
-
-  <xsl:attribute-set name="att.body">
-    <xsl:attribute name="text">#000000</xsl:attribute>
-    <xsl:attribute name="bgcolor">#FFFFFF</xsl:attribute>
-    <xsl:attribute name="alink">#FFCC33</xsl:attribute>
-  </xsl:attribute-set>
-
+  
   <xsl:variable name="header2">
-    <img src="{$base}/gifs/bar.gif" alt="Navigation Bar" width="565"
-	 height="33" border="0" usemap="#bar"/>
-
-    <h1 align="left"><font color="#660000"><xsl:value-of select="$title"/></font></h1>
-
-    <br clear="all"/>
-
-    <map name="bar">
-      <area shape="rect" coords="1,1,111,31"
-	    href="{$base}/index.html" alt="Site Root"/>
-      <area shape="rect" coords="112,11,196,31"
-	    href="{$base}/ports/index.html" alt="Applications"/>
-      <area shape="rect" coords="196,12,257,33"
-	      href="{$base}/support.html" alt="Support"/>
-      <area shape="rect" coords="256,12,365,33"
-	    href="{$base}/docs.html" alt="Documentation"/>
-      <area shape="rect" coords="366,13,424,32"
-	    href="{$base}/commercial/commercial.html" alt="Vendors"/>
-      <area shape="rect" coords="425,16,475,32"
-	      href="{$base}/search/search.html" alt="Search"/>
-      <area shape="rect" coords="477,16,516,33"
-	    href="{$base}/search/index-site.html" alt="Site Index"/>
-      <area shape="rect" coords="516,15,562,33"
-	    href="{$base}/index.html" alt="Site Root"/>
-	<area shape="rect" coords="0,0,564,32"
-	      href="{$base}/index.html" alt="Site Root"/>
-    </map>
+            <span class="txtoffscreen"><a href="#content" title="Skip site navigation" accesskey="1">Skip site navigation</a> (1)</span>
+            <span class="txtoffscreen"><a href="#contentwrap" title="Skip section navigation" accesskey="2">Skip section navigation</a> (2)</span>
+            <div id="headercontainer">
+      
+              <div id="header">
+      	      <h2 class="blockhide">Header And Logo</h2>
+                <div id="headerlogoleft">
+                  <a href="{$base}" title="FreeBSD"><img src="{$base}/layout/images/logo.png" width="360" height="40" alt="FreeBSD" /></a>
+                </div> <!-- headerlogoleft -->
+                <div id="headerlogoright">
+      			<h2 class="blockhide">Peripheral Links</h2>
+      			  <div id="searchnav">
+      				<ul id="searchnavlist">
+      				  <li>
+      					Text Size: <a href="#" onkeypress="return false;" onclick="setActiveStyleSheet('Normal Text'); return false;" title="Normal Text Size">Normal</a> / <a href="#" onkeypress="return false;" onclick="setActiveStyleSheet('Large Text'); return false;" title="Large Text Size">Large</a>
+      				  </li>
+      				  <li>
+      					<a href="{$base}/donations/" title="Donate">Donate</a>
+      				  </li>
+      				  <li class="last-child">
+      					<a href="{$base}/mailto.html" title="Contact">Contact</a>
+      				  </li>
+      				</ul>
+      			  </div> <!-- searchnav -->
+      			<div id="search">
+      			  <form action="{$base}/cgi/search.cgi" method="get">
+      				<div>
+      			      <h2 class="blockhide"><label for="words">Search</label></h2>
+      				  <input type="hidden" name="max" value="25" /> <input type="hidden" name="source" value="www" /><input id="words" name="words" type="text" size="20" maxlength="255" onfocus="if( this.value==this.defaultValue ) this.value='';" value="Search" />&#160;<input id="submit" name="submit" type="submit" value="Search" />
+      				</div>
+      			  </form>
+      			</div> <!-- search -->
+                </div> <!-- headerlogoright -->
+      
+              </div> <!-- header -->
+      
+        	<h2 class="blockhide">Site Navigation</h2>
+              <div id="topnav">
+                <ul id="topnavlist">
+		  <li>
+			<a href="{$base}/" title="Home">Home</a>
+		  </li>
+		  <li>
+			<a href="{$base}/about.html" title="About">About</a>
+		  </li>
+		  <li>
+			<a href="{$base}/where.html" title="Get FreeBSD">Get FreeBSD</a>
+		  </li>
+		  <li>
+			<a href="{$base}/docs.html" title="Documentation">Documentation</a>
+		  </li>
+		  <li>
+			<a href="{$base}/community.html" title="Community">Community</a>
+		  </li>
+		  <li>
+			<a href="{$base}/projects/index.html" title="Developers">Developers</a>
+		  </li>
+		  <li>
+			<a href="{$base}/support.html" title="Support">Support</a>
+		  </li>
+		</ul>
+              </div> <!-- topnav -->
+            </div> <!-- headercontainer -->
   </xsl:variable>
+  
+  <xsl:variable name="header3">
+  	<h1><xsl:value-of select="$title"/></h1>
+  </xsl:variable>
+  
+  <xsl:variable name="sidenav">
+	<div id="sidewrap">
+	
+	<div id="sidenav">
+	<h2 class="blockhide">Section Navigation</h2>
+	
+	<xsl:if test="$section = 'about'" >
+		<ul>
+		<li><a href="{$base}/about.html">About</a></li>
+		<li><a href="{$base}/features.html">Features</a></li>
+		<li><a href="{$base}/applications.html">Applications</a></li>
+		<li><a href="{$base}/internet.html">Internetworking</a></li>
+		<li><a href="{$base}/advocacy/">Advocacy</a></li>
+		<li><a href="{$base}/marketing/">Marketing</a></li>
+		<li><a href="{$base}/news/newsflash.html">News</a></li>
+		<li><a href="{$base}/events/events.html">Events</a></li>
+		<li><a href="{$base}/news/press.html">Press</a></li>
+		<li><a href="{$base}/art.html">Artwork</a></li>
+		<li><a href="{$base}/donations/">Donations</a></li>
+		<li><a href="{$base}/copyright/">Legal Notices</a></li>
+		</ul>
+    	</xsl:if>
+    	
+    	<xsl:if test="$section = 'community'" >
+		<ul>
+		<li><a href="{$base}/community.html">Community</a></li>
+		<li><a href="{$base}/community/mailinglists.html">Mailing Lists</a></li>
+		<li><a href="{$base}/community/irc.html">IRC</a></li>
+		<li><a href="{$base}/community/newsgroups.html">Newsgroups</a></li>
+		<li><a href="{$base}/usergroups.html">User Groups</a></li>
+		<li><a href="{$base}/community/webresources.html">Web Resources</a></li>
+		</ul>
+	</xsl:if>
 
+	<xsl:if test="$section = 'developers'" >
+		<ul>
+		<li><a href="{$base}/projects/index.html">Developers</a></li>
+		<li><a href="{$base}/doc/en_US.ISO8859-1/books/developers-handbook">Developer&#39;s Handbook</a></li>
+		<li><a href="{$base}/doc/en_US.ISO8859-1/books/porters-handbook">Porter&#39;s Handbook</a></li>
+		<li><a href="{$base}/developers/cvs.html">CVS Repository</a></li>
+		<li><a href="{$base}/releng/index.html">Release Engineering</a></li>
+		<li><a href="{$base}/platforms/">Platforms</a>
+			<ul>
+				<li><a href="{$base}/platforms/alpha.html">alpha</a></li>
+				<li><a href="{$base}/platforms/amd64.html">amd64</a></li>
+				<li><a href="{$base}/platforms/i386.html">i386</a></li>
+				<li><a href="{$base}/platforms/ia64.html">ia64</a></li>
+				<li><a href="{$base}/platforms/pc98.html">pc98</a></li>
+				<li><a href="{$base}/platforms/sparc.html">sparc64</a></li>
+			</ul>
+		</li>
+		<li><a href="{$base}/doc/en_US.ISO8859-1/articles/contributing/index.html">Contributing</a></li>
+		</ul>
+    	</xsl:if>
+
+	<xsl:if test="$section = 'docs'" >
+		<ul>
+		<li><a href="{$base}/docs.html">Documentation</a></li>
+		<li><a href="{$base}/doc/en_US.ISO8859-1/books/faq/">FAQ</a></li>
+		<li><a href="{$base}/doc/en_US.ISO8859-1/books/handbook/">Handbook</a></li>
+		<li><a href="{$base}/docs/man.html">Manual Pages</a>
+			<ul>
+				<li><a href="{$base}/cgi/man.cgi">Man Online</a></li>
+			</ul>
+		</li>
+		<li><a href="{$base}/docs/books.html">Books and Articles Online</a></li>
+		<li><a href="{$base}/publish.html">Publications</a></li>
+		<li><a href="{$base}/docs/webresources.html">Web Resources</a></li>
+		<li><a href="{$base}/projects/newbies.html">For Newbies</a></li>
+		<li><a href="{$base}/docproj/">Documentation Project</a></li>
+		</ul>
+	</xsl:if>
+
+	<xsl:if test="$section = 'download'" >
+		<ul>
+		<li><a href="{$base}/where.html">Get FreeBSD</a></li>
+		<li><a href="{$base}/releases/">Release Information</a>
+			<ul>
+				<li><a href="{$u.rel.announce}">Production Release: <xsl:value-of select="$rel.current"/></a></li>
+				<li><a href="{$u.rel2.announce}">Production (Legacy) Release: <xsl:value-of select="$rel2.current"/></a></li>
+				<li><a href="{$base}/snapshots/">Snapshot Releases</a></li>
+			</ul>
+		</li>
+		<li><a href="{$base}/ports/">Ported Applications</a></li>
+		</ul>
+	</xsl:if>
+    	
+    	<xsl:if test="$section = 'support'" >
+		<ul>
+		<li><a href="{$base}/support.html">Support</a></li>
+		<li><a href="{$base}/commercial/">Vendors</a>
+			<ul>
+				<li><a href="{$base}/commercial/software_bycat.html">Software</a></li>
+				<li><a href="{$base}/commercial/hardware.html">Hardware</a></li>
+				<li><a href="{$base}/commercial/consult_bycat.html">Consulting</a></li>
+				<li><a href="{$base}/commercial/isp.html">Internet Service Providers</a></li>
+				<li><a href="{$base}/commercial/misc.html">Miscellaneous</a></li>
+			</ul>
+		</li>
+		<li><a href="{$base}/security/">Security Information</a></li>
+		<li><a href="{$base}/support/bugreports.html">Bug Reports</a>
+			<ul>
+				<li><a href="{$base}/send-pr.html">Submit a Problem Report</a></li>
+			</ul>
+		</li>
+		<li><a href="{$base}/support/webresources.html">Web Resources</a></li>
+		</ul>
+    	</xsl:if>
+	
+	</div> <!-- sidenav -->
+	
+	</div> <!-- sidewrap -->
+  </xsl:variable>
+  
   <xsl:variable name="footer">
-    <hr noshade="noshade"/>
-    <address><xsl:copy-of select="$author"/><br/>
-      <xsl:copy-of select="$date"/></address>
+	<div id="footer">
+	<xsl:copy-of select="$copyright"/><br />
+	<xsl:copy-of select="$date"/>
+	</div> <!-- footer -->
   </xsl:variable>
+   
 </xsl:stylesheet>
