@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/Makefile,v 1.123 2005/07/16 09:58:16 hrs Exp $
+# $FreeBSD: www/en/Makefile,v 1.124 2005/09/18 04:33:45 hrs Exp $
 
 .if exists(Makefile.conf)
 .include "Makefile.conf"
@@ -10,8 +10,10 @@
 # These are turned into validated, normalized HTML files.
 
 DOCS=  applications.sgml
+DOCS+= about.sgml
 DOCS+= art.sgml
 DOCS+= availability.sgml
+DOCS+= community.sgml
 DOCS+= docs.sgml 
 DOCS+= features.sgml
 DOCS+= internet.sgml 
@@ -23,8 +25,8 @@ DOCS+= support.sgml
 DOCS+= where.sgml 
 DOCS+= y2kbug.sgml 
 
-XMLDOCS=	index:xsl:${XML_NEWS_NEWS}:
-DEPENDSET.index=transtable mirrors news press \
+XMLDOCS=	index:xsl:${XML_NEWS_NEWS}:${XML_EVENTS_EVENTS}:
+DEPENDSET.index=transtable mirrors news press events \
 		navigation advisories notices
 
 XMLDOCS+=	usergroups:${XSL_USERGROUPS}:${XML_USERGROUPS}:
@@ -44,8 +46,11 @@ DATA+=  vendors.html
 SUBDIR= FAQ
 SUBDIR+= advocacy
 SUBDIR+= commercial
+SUBDIR+= community
 SUBDIR+= copyright
+SUBDIR+= developers
 SUBDIR+= docproj
+SUBDIR+= docs
 SUBDIR+= donations
 SUBDIR+= events
 SUBDIR+= gnome
@@ -53,6 +58,7 @@ SUBDIR+= handbook
 SUBDIR+= internal
 SUBDIR+= java
 SUBDIR+= kse
+SUBDIR+= layout
 SUBDIR+= marketing
 SUBDIR+= news
 SUBDIR+= platforms
@@ -65,6 +71,7 @@ SUBDIR+= search
 SUBDIR+= security
 SUBDIR+= smp
 SUBDIR+= snapshots
+SUBDIR+= support
 SUBDIR+= tutorials
 .if !defined(WEB_ONLY) || empty(WEB_ONLY)
 SUBDIR+= doc
