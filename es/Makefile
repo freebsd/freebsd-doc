@@ -1,4 +1,4 @@
-# $FreeBSD: www/es/Makefile,v 1.17 2004/09/20 18:10:24 jesusr Exp $
+# $FreeBSD: www/es/Makefile,v 1.18 2005/03/03 23:51:36 jcamou Exp $
 # $FreeBSDes: www/es/Makefile,v 1.3 2004/09/07 21:43:32 jcamou Exp $
 
 .if exists(Makefile.conf)
@@ -10,7 +10,8 @@
 
 # These are turned into validated, normalized HTML files.
 
-DOCS=  applications.sgml
+DOCS=  about.sgml
+DOCS+=  applications.sgml
 DOCS+= auditors.sgml
 DOCS+= availability.sgml
 DOCS+= docs.sgml
@@ -57,17 +58,20 @@ CLEANFILES+=	index.html
 
 index.html: index.xsl ${XML_INCLUDES} \
 		${XML_NEWS_INCLUDES_MASTER} ${XML_NEWS_NEWS_MASTER} ${XML_NEWS_PRESS_MASTER} \
+		${XML_EVENTS_EVENTS_MASTER} ${XML_EVENTS_CURDATE} \
 		${XML_MIRRORS} ${XML_TRANSTABLE} ${XML_ADVISORIES} ${XML_NAVIGATION} ${XML_NOTICES}
 	${XSLTPROC} ${XSLTPROCOPTS} \
 		-o $@ \
 		--param mirrors.xml "'${XML_MIRRORS}'" \
 		--param advisories.xml "'${XML_ADVISORIES}'" \
 		--param notices.xml "'${XML_NOTICES}'" \
-		--param news.press.xml "'${XML_NEWS_PRESS_MASTER}'" \
-		--param news.project.xml "'${XML_NEWS_NEWS_MASTER}'" \
+		--param news.press.xml-master "'${XML_NEWS_PRESS_MASTER}'" \
+		--param news.project.xml-master "'${XML_NEWS_NEWS_MASTER}'" \
+		--param events.xml-master "'${XML_EVENTS_EVENTS_MASTER}'" \
+		--param curdate.xml "'${XML_EVENTS_CURDATE}'" \
 		--param transtable.xml "'${XML_TRANSTABLE}'" \
                 --param navigation.xml "'${XML_NAVIGATION}'" \
-		${.CURDIR}/index.xsl ${XML_NEWS_NEWS_MASTER}
+		${.CURDIR}/index.xsl ${XML_NEWS_NEWS_MASTER} ${XML_EVENTS_EVENTS_MASTER} ${XML_EVENTS_CURDATE}
 .if !defined(NO_TIDY)
 	-${TIDY} ${TIDYOPTS} ${.TARGET}
 .endif

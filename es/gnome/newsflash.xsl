@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/es/gnome/newsflash.xsl,v 1.3 2003/08/26 07:44:05 marcus Exp $ -->
+<!-- $FreeBSD: www/es/gnome/newsflash.xsl,v 1.2 2004/03/04 16:36:12 jesusr Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS" exclude-result-prefixes="cvs">
 
   <xsl:import href="../includes.xsl"/>
   <xsl:import href="includes.xsl"/>
-
+  <xsl:variable name="section" select="'developers'"/>
 
   <xsl:variable name="base" select="'..'"/>
   <xsl:variable name="title" select="'Flash de Noticias FreeBSD GNOME'"/>
@@ -21,11 +21,21 @@
     <html>
 
       <xsl:copy-of select="$header1"/>
-
-      <body bgcolor="#FFFFFF" text="#000000" link="#0000FF" vlink="#840084"
-            alink="#0000FF">
-
-        <xsl:copy-of select="$header2"/>
+      
+            <body xsl:use-attribute-sets="att.body">
+      
+        <div id="containerwrap">
+          <div id="container">
+      
+      	<xsl:copy-of select="$header2"/>
+      
+      	<div id="content">
+      
+      	      <xsl:copy-of select="$sidenav"/>
+      
+      	      <div id="contentwrap">
+      	      
+	      <xsl:copy-of select="$header3"/>
 
         <!-- Notice how entity references in SGML become variable references
              in the stylesheet, and that the syntax for referring to variables
@@ -38,13 +48,23 @@
         <!-- Also notice that because this is now XML and not SGML, empty
              elements, like IMG, must have a trailing "/" just inside the
              closing angle bracket, like this " ... />" -->
-        <img src="{$base}/gifs/news.jpg" align="right" border="0" width="193"
+        <img src="{$enbase}/gifs/news.jpg" align="right" border="0" width="193"
              height="144" alt="Noticias FreeBSD GNOME"/>
 
         <xsl:apply-templates select="descendant::month"/>
 
         <xsl:copy-of select="$newshome"/>
-        <xsl:copy-of select="$footer"/>
+
+	  	</div> <!-- contentwrap -->
+		<br class="clearboth" />
+	
+	</div> <!-- content -->
+	
+	<xsl:copy-of select="$footer"/>
+	
+        </div> <!-- container -->
+   </div> <!-- containerwrap -->
+
       </body>
     </html>
   </xsl:template>
