@@ -3,7 +3,7 @@
 <!--
      The FreeBSD Russian Documentation Project
 
-     $FreeBSD$
+     $FreeBSD: www/ru/gnome/newsflash.xsl,v 1.1 2004/01/04 09:42:56 andy Exp $
      $FreeBSDru: frdp/www/ru/gnome/newsflash.xsl,v 1.1 2003/10/26 18:32:48 andy Exp $
 
      Original revision: 1.3
@@ -14,7 +14,7 @@
 
   <xsl:import href="../includes.xsl"/>
   <xsl:import href="includes.xsl"/>
-
+  <xsl:variable name="section" select="'developers'"/>
 
   <xsl:variable name="base" select="'../..'"/>
   <xsl:variable name="title" select="'Последние новости FreeBSD GNOME'"/>
@@ -28,11 +28,21 @@
     <html>
       
       <xsl:copy-of select="$header1"/>
-
-      <body bgcolor="#FFFFFF" text="#000000" link="#0000FF" vlink="#840084"
-	    alink="#0000FF">
-
-	<xsl:copy-of select="$header2"/>
+      
+            <body xsl:use-attribute-sets="att.body">
+      
+        <div id="containerwrap">
+          <div id="container">
+      
+      	<xsl:copy-of select="$header2"/>
+      
+      	<div id="content">
+      
+      	      <xsl:copy-of select="$sidenav"/>
+      
+      	      <div id="contentwrap">
+      	      
+	      <xsl:copy-of select="$header3"/>
 
 	<!-- Notice how entity references in SGML become variable references
 	     in the stylesheet, and that the syntax for referring to variables
@@ -51,7 +61,17 @@
 	<xsl:apply-templates select="descendant::month"/>
 	
 	<xsl:copy-of select="$newshome"/>
+
+	  	</div> <!-- contentwrap -->
+		<br class="clearboth" />
+	
+	</div> <!-- content -->
+	
 	<xsl:copy-of select="$footer"/>
+	
+        </div> <!-- container -->
+   </div> <!-- containerwrap -->
+
       </body>
     </html>
   </xsl:template>
