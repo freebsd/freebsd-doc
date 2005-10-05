@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/index.xsl,v 1.127 2005/02/19 15:36:43 simon Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.128 2005/10/04 05:57:25 murray Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -6,7 +6,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.127 2005/02/19 15:36:43 simon Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.128 2005/10/04 05:57:25 murray Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <!-- these params should be externally bound. The values
@@ -270,7 +270,7 @@
 					<a href="{$base}/send-pr.html" title="Submit a Problem Report">Submit Bug</a>
 				  </li>
 				  <li class="last-child">
-					<a href="{$base}/security/advisories.rdf" title="Security Advisories RSS Feed"><img class="rssimage" src="{$base}/layout/images/ico_rss.png" width="27" height="12" alt="News RSS Feed" /></a>
+					<a href="{$base}/security/advisories.rdf" title="Security Advisories RSS Feed"><img class="rssimage" src="{$base}/layout/images/ico_rss.png" width="27" height="12" alt="Security Advisories RSS Feed" /></a>
 				  </li>
 				</ul>
 			  </div> <!-- unnamed -->
