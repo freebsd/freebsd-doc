@@ -15,9 +15,10 @@
   
   <xsl:import href="../includes.xsl"/>
   <xsl:import href="includes.xsl"/>
+  <xsl:variable name="section" select="'developers'"/>
 
   <xsl:variable name="base" select="'../..'"/>
-  <xsl:variable name="date" select="'$FreeBSD$'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/ru/gnome/index.xsl,v 1.3 2004/01/13 12:09:33 andy Exp $'"/>
   <xsl:variable name="title" select="'Проект FreeBSD GNOME'"/>
 
   <xsl:output type="html" encoding="koi8-r"
@@ -26,11 +27,21 @@
   <xsl:template match="/">
     <html>
       <xsl:copy-of select="$header1"/>
-
-      <body bgcolor="#FFFFFF" text="#000000" link="#0000FF" vlink="#840084"
-            alink="#0000FF">
-
-        <xsl:copy-of select="$header2"/>
+      
+            <body xsl:use-attribute-sets="att.body">
+      
+        <div id="containerwrap">
+          <div id="container">
+      
+      	<xsl:copy-of select="$header2"/>
+      
+      	<div id="content">
+      
+      	      <xsl:copy-of select="$sidenav"/>
+      
+      	      <div id="contentwrap">
+      	      
+	      <xsl:copy-of select="$header3"/>
 
         <table border="0" cellspacing="0" cellpadding="2">
           <tr>
@@ -217,7 +228,15 @@
           </tr>
         </table>
 
-        <xsl:copy-of select="$footer"/>
+	  	</div> <!-- contentwrap -->
+		<br class="clearboth" />
+	
+	</div> <!-- content -->
+	
+	<xsl:copy-of select="$footer"/>
+	
+        </div> <!-- container -->
+   </div> <!-- containerwrap -->
 
       </body>
     </html>
