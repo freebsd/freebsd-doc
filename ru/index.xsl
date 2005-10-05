@@ -3,7 +3,7 @@
 <!--
      The FreeBSD Russian Documentation Project
 
-     $FreeBSD$
+     $FreeBSD: www/ru/index.xsl,v 1.26 2005/06/19 12:08:30 andy Exp $
      $FreeBSDru: frdp/www/ru/index.xsl,v 1.45 2005/06/18 09:37:23 andy Exp $
 
      Original revision: 1.127
@@ -13,8 +13,9 @@
   <xsl:import href="includes.xsl"/>
   <xsl:import href="news/includes.xsl"/>
 
-  <xsl:variable name="base" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD$'"/>
+  <xsl:variable name="base" select="'.'"/>
+  <xsl:variable name="enbase" select="'..'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/ru/index.xsl,v 1.26 2005/06/19 12:08:30 andy Exp $'"/>
   <xsl:variable name="title" select="'Проект FreeBSD'"/>
 
   <!-- these params should be externally bound. The values
@@ -26,399 +27,303 @@
   <xsl:param name="news.press.xml" select="'none'"/>
   <xsl:param name="news.project.xml-master" select="'none'"/>
   <xsl:param name="news.project.xml" select="'none'"/>
+  <xsl:param name="events.xml-master" select="'none'"/>
+  <xsl:param name="events.xml" select="'none'"/>
+  <xsl:param name="curdate.xml" select="'none'"/>
 
   <xsl:output type="html" encoding="koi8-r"
     doctype-public="-//W3C//DTD HTML 4.01 Transitional//EN"/>
 
-  <xsl:template match="/">
+<xsl:template match="/">
     <html>
       <head>
 	<title><xsl:value-of select="$title"/></title>
-  
 	<meta name="description" content="Проект FreeBSD"/>
-
 	<meta name="keywords" content="FreeBSD, BSD, UNIX, Support, Gallery,
-          Release, Application, Software, Handbook, FAQ, Tutorials, Bugs, 
+	  Release, Application, Software, Handbook, FAQ, Tutorials, Bugs, 
 	  CVS, CVSup, News, Commercial Vendors, homepage, CTM, Unix,
 	  Поддержка, Галерея, Релиз, Приложение, Программы, Руководство,
 	  Учебники, Ошибки, Новости, Коммерческие Поставщики,
 	  домашняя страница"/>
-
-        <link rel="shortcut icon" href="{$base}/favicon.ico" type="image/x-icon"/>
-
-        <link rel="stylesheet" type="text/css" href="{$base}/index.css" />
-
-	<link rel="icon" href="{$base}/favicon.ico" type="image/x-icon"/>
-
+	<link rel="shortcut icon" href="{$enbase}/favicon.ico" type="image/x-icon"/>
+	<link rel="icon" href="{$enbase}/favicon.ico" type="image/x-icon"/>
+    <link rel="stylesheet" media="screen" href="{$enbase}/layout/css/fixed.css" type="text/css" title="Normal Text" />
+    <link rel="alternate stylesheet" media="screen" href="{$enbase}/layout/css/fixed_large.css" type="text/css" title="Large Text" />
+    <script type="text/javascript" src="{$enbase}/layout/js/styleswitcher.js"></script>
 	<link rel="alternate" type="application/rss+xml"
-	  title="Новости проекта FreeBSD" href="{$base}/ru/news/news.rdf" />
-
+	  title="Новости проекта FreeBSD" href="{$base}/news/news.rdf" />
 	<link rel="alternate" type="application/rss+xml"
-	  title="FreeBSD Security Advisories"
-          href="{$base}/security/advisories.rdf" />
-
+	  title="FreeBSD Security Advisories" href="{$base}/security/advisories.rdf" />
 	<link rel="alternate" type="application/rss+xml"
 	  title="Новости проекта FreeBSD GNOME" href="{$base}/gnome/news.rdf" />
-
+	
 	<!-- Formatted to be easy to spam harvest, please do not reformat. -->
 	<xsl:comment>
-	  Ловушка для спамеров, не пишите по адресу: &lt;a
-          href="mailto:bruscar@freebsd.org"&gt;bruscar@freebsd.org&lt;/a&gt;
+        Spamtrap, do not email:
+        &lt;a href="mailto:bruscar@freebsd.org"&gt;bruscar@freebsd.org&lt;/a&gt;
 	</xsl:comment>
       </head>
 
       <body>
-	<table border="0" cellspacing="0" cellpadding="0" width="100%">
-	  <tr>
-	    <td><a href="http://www.FreeBSD.org/ru/index.html">
-              <img src="../gifs/freebsd_1.gif" height="94" width="306"
-              alt="FreeBSD: The Power to Serve" border="0"/></a></td>
 
-	    <td align="right" valign="bottom">
-	      <form action="http://www.FreeBSD.org/cgi/mirror.cgi"
-                method="get">
+   <div id="containerwrap">
+    <div id="container">
+      <xsl:copy-of select="$header2"/>
+      <div id="content">
 
-	        <br/>
+        <div id="frontcontainer">
+          <div id="frontmain">
+            <div id="frontfeaturecontainer">
 
-		<font color="#990000"><b>Выберите ближайший к вам сервер:</b></font>
+		<div id="frontfeatureleft">
+			<div id="frontfeaturecontent">
+				<h1>
+				  Based on BSD UNIX&#174;
+				</h1>				
+				<p>FreeBSD - это современная операционная система для
+				компьютеров, совместимых с архитектурами x86 (в том числе
+				Pentium&#174; и Athlon&#8482;), amd64 (включая Opteron&#8482;,
+				Athlon 64 и EM64T), Alpha/AXP, IA-64, PC-98 и
+				UltraSPARC&#174;.  Она основана на BSD, версии
+				<xsl:value-of select="$unix"/>, созданной в Калифорнийском
+				Университете в Беркли.  Она разрабатывается и поддерживается <a
+				href="{$base}/doc/en_US.ISO8859-1/articles/contributors/index.html">
+				большой командой разработчиков</a>.  Поддержка <a
+				href="platforms/index.html">других платформ</a>
+				находится на разных стадиях разработки.</p>
+				<div id="txtfrontfeaturelink">
+				&#187;<a href="{$base}/about.html" title="Learn More">Learn More</a>
+				</div> <!-- txtfrontfeaturelink -->
+			</div> <!-- frontfeaturecontent -->
+		</div> <!-- frontfeatureleft -->
 
-		<br/>
+		<div id="frontfeaturemiddle">
+			<div class="frontgetroundbox">
+			  <div class="frontgettop"><div>&#160;</div>&#160;</div>
+				<div class="frontgetcontent">
+				  <a href="{$base}/where.html">Get FreeBSD Now</a>
+				</div> <!-- frontgetcontent -->
+			  <div class="frontgetbot"><div>&#160;</div>&#160;</div>
+			</div> <!-- frontgetroundbox -->
+			
+			<div id="frontreleases">
+			  <div id="frontreleasescontent" class="txtshortcuts">
+				  <h2>LATEST RELEASES</h2>
+				  <ul id="frontreleaseslist">
+					<li>
+					  <a href="{$u.rel.announce}">Продуктивный релиз <xsl:value-of select="$rel.current"/></a>
+					</li>
+					<li>
+					  <a href="{$u.rel2.announce}">(Старый) Продуктивный релиз <xsl:value-of select="$rel2.current"/></a>
+					</li>
+				  </ul>
+			  </div> <!-- frontreleasescontent -->
+			</div> <!-- frontreleases -->
+		</div> <!-- frontfeaturemiddle -->
 
-		<select name="goto">
-		  <xsl:call-template name="html-index-mirrors-options-list">
-		    <xsl:with-param name="mirrors.xml" select="$mirrors.xml" />
-		  </xsl:call-template>
-		</select>
+		<div id="frontfeatureright">
+			<h2 class="blockhide">Language Links</h2>
+			<div id="languagenav">
+				<ul id="languagenavlist">
+				  <li>
+					<a href="{$enbase}/de/" title="Немецкий">de</a>
+				  </li>
+				  <li>
+					<a href="{$enbase}/" title="Английский">en</a>
+				  </li>
+				  <li>
+					<a href="{$enbase}/es/" title="Испанский">es</a>
+				  </li>
+				  <li>
+					<a href="{$enbase}/fr/" title="Французский">fr</a>
+				  </li>
+				  <li>
+					<a href="{$enbase}/it/" title="Итальянский">it</a>
+				  </li>
+				  <li>
+					<a href="{$enbase}/ja/" title="Японский">ja</a>
+				  </li>
+				  <li class="last-child">
+					<a href="{$enbase}/ru/" title="Русский">ru</a>
+				  </li>
+				</ul>
+			</div> <!-- languagenav -->
 
-		<input type="submit" value=" Перейти "/>
+			<div id="mirror">
+			  <form action="{$enbase}/cgi/mirror.cgi" method="get">
+				<div>
+				  <h2 class="blockhide"><label for="mirrorsel">Mirror</label></h2>
+				  <select id="mirrorsel" name="goto">
+					  <xsl:call-template name="html-index-mirrors-options-list">
+					    <xsl:with-param name="mirrors.xml" select="$mirrors.xml" />
+					  </xsl:call-template>
+				  </select>
+				</div> <!-- unnamed -->
+			  </form>
+			</div> <!-- mirror -->
 
-		<br/>
+			<div id="frontshortcuts">
+			  <div id="frontshortcutscontent" class="txtshortcuts">
+				  <h2>SHORTCUTS</h2>
+				  <ul id="frontshortcutslist">
+					<li>
+					  <a href="{$base}/support.html#mailing-list" title="Списки рассылки">Списки рассылки</a>
+					</li>
+					<li>
+					  <a href="{$base}/platforms/" title="Платформы">Платформы</a>
+					</li>
+					<li>
+					  <a href="{$base}/send-pr.html" title="Отправка сообщения">Отправка сообщения</a>
+					</li>
+					<li>
+					  <a href="{$enbase}/doc/{$url.doc.langcode}/books/faq/index.html" title="FAQ">FAQ</a>
+					</li>
+					<li>
+					  <a href="http://www.freebsdfoundation.org/" title="Foundation">Foundation</a>
+					</li>
+				  </ul>
+			  </div> <!-- frontshortcutscontent -->
+			</div> <!-- frontshortcuts -->
 
-		<font color="#990000"><b>Язык: </b></font> 
-		<a href="{$base}/de/index.html" title="Немецкий">[de]</a>
-		<xsl:text>&#160;</xsl:text>
-		<a href="{$base}/index.html" title="Английский">[en]</a>
-		<xsl:text>&#160;</xsl:text>
-		<a href="{$base}/es/index.html" title="Испанский">[es]</a>
-		<xsl:text>&#160;</xsl:text>
-		<a href="{$base}/fr/index.html" title="Французский">[fr]</a>
-		<xsl:text>&#160;</xsl:text>
-		<a href="{$base}/it/index.html" title="Итальянский">[it]</a>
-		<xsl:text>&#160;</xsl:text>
-		<a href="{$base}/ja/index.html" title="Японский">[ja]</a>
-		<xsl:text>&#160;</xsl:text>
-		<span title="Русский">[ru]</span>
-	      </form>
-	    </td>
-	  </tr>
-	</table>
+			<div class="frontnewroundbox">
+			  <div class="frontnewtop"><div>&#160;</div>&#160;</div>
+			    <div class="frontnewcontent">
+			      <a href="{$base}/projects/newbies.html">New to FreeBSD?</a>
+			    </div> <!-- frontnewcontent -->
+			  <div class="frontnewbot"><div>&#160;</div>&#160;</div>
+			</div> <!-- frontnewroundbox -->
+		</div> <!-- featureright -->
+				
+            </div> <!-- frontfeaturecontainer -->
 
-	<br/>
+	    <br class="clearboth" />
+            <div id="frontnemscontainer">
+            	<div id="frontnews">
+            	   <div id="frontnewscontent" class="txtnewsevent">
+			<h2>LATEST NEWS</h2>
+			<div class="newseventswrap">
 
-	<hr size="1" noshade="noshade"/>
+			<xsl:call-template name="html-index-news-project-items">
+				<xsl:with-param name="news.project.xml-master" select="$news.project.xml-master" />
+				<xsl:with-param name="news.project.xml" select="$news.project.xml" />
+			</xsl:call-template>
 
-	<!-- Main layout table -->
-	<table border="0" cellspacing="0" cellpadding="2">
-	  <tr>
-	    <td valign="top">
-	      <table class="panel" cellpadding="4" cellspacing="0">
-	        <tr>
-		  <td>
-		    <xsl:call-template name="html-index-navigation-link-list">
-		      <xsl:with-param name="navigation.xml"
-                        select="$navigation.xml"/>
-		    </xsl:call-template>
+			  <div>
+				<ul class="newseventslist">
+				  <li class="first-child">
+					<a href="{$base}/news/newsflash.html" title="More News">More News</a>
+				  </li>
+				  <li class="last-child">
+					<a href="{$base}/news/news.rdf" title="News RSS Feed"><img class="rssimage" src="{$enbase}/layout/images/ico_rss.png" width="27" height="12" alt="News RSS Feed" /></a>
+				  </li>
+				</ul>
+			  </div> <!-- unnamed -->
+			</div> <!-- newseventswrap -->
 
-		    <form action="http://www.FreeBSD.org/cgi/search.cgi"
-                      method="get">
-		      <small>Поиск:<br/>
-		        <input type="text" name="words" size="10"/>
-		        <input type="hidden" name="max" value="25"/>
-		        <input type="hidden" name="source" value="www"/>
-		        <input type="submit" value="Искать"/>
-		      </small>
-		    </form>
-		  </td>
-	        </tr>
-	      </table>
-	    </td>
+            	   </div> <!-- frontnewscontent -->
+            	</div> <!-- frontnews -->
+            	<div class="frontseparator"><b style="display: none">.</b></div>
+            	<div id="frontevents">
+		   <div id="fronteventscontent" class="txtnewsevent">
 
-	    <td></td>
+			<h2>UPCOMING EVENTS</h2>
+			<div class="newseventswrap">
 
-	    <!-- Колонка основного текста -->
+			<xsl:call-template name="html-index-events-items">
+				<xsl:with-param name="events.xml-master" select="$events.xml-master" />
+				<xsl:with-param name="events.xml" select="$events.xml" />
+				<xsl:with-param name="curdate.xml" select="$curdate.xml" />
+			</xsl:call-template>
 
-	    <td align="left" valign="top" rowspan="2">
-	      <h2>Что такое FreeBSD?</h2>
+			  <div>
+				<ul class="newseventslist">
+				  <li class="only-child">
+					<a href="{$base}/events/" title="More Events">More Events</a>
+				  </li>
+				</ul>
+			  </div> <!-- unnamed -->
+			</div> <!-- newseventswrap -->
 
-	      <p>FreeBSD - это современная операционная система для
-                компьютеров, совместимых с архитектурами x86 (в том числе
-                Pentium&#174; и Athlon&#8482;), amd64 (включая Opteron&#8482;,
-                Athlon 64 и EM64T), Alpha/AXP, IA-64, PC-98 и
-                UltraSPARC&#174;.  Она основана на BSD, версии
-                <xsl:value-of select="$unix"/>, созданной в Калифорнийском
-                Университете в Беркли.  Она разрабатывается и поддерживается <a
-		href="{$base}/doc/en_US.ISO8859-1/articles/contributors/index.html">
-                большой командой разработчиков</a>.  Поддержка <a
-		href="platforms/index.html">других платформ</a>
-		находится на разных стадиях разработки.</p>
+		   </div> <!-- frontnewsevents -->
+            	</div> <!-- frontevents -->
+            	<div class="frontseparator"><b style="display: none">.</b></div>
+            	<div id="frontmedia">
+		   <div id="frontmediacontent" class="txtnewsevent">
 
-	      <h2>Самые современные технологии</h2>
+			<h2>IN THE MEDIA</h2>
+			<div class="newseventswrap">
 
-	      <p>Исключительный набор сетевых функций, высокая
-		производительность, средства обеспечения информационной
-                безопасности и совместимости с другими ОС - вот те
-                современные <a href="features.html">возможности</a> FreeBSD,
-                которые зачастую всё ещё отсутствуют в других, даже лучших
-                коммерческих, операционных системах.</p>
+			<xsl:call-template name="html-index-news-press-items">
+				<xsl:with-param name="news.press.xml-master" select="$news.press.xml-master" />
+				<xsl:with-param name="news.press.xml" select="$news.press.xml" />
+			</xsl:call-template>
 
-	      <h2>Мощное решение для Internet</h2>
-	      
-	      <p>FreeBSD является идеальной платформой для построения
-		<a href="internet.html">Internet или Intranet</a>.
-		Эта система предоставляет надёжные даже при самой интенсивной
-		нагрузке сетевые службы, и эффективное управление памятью,
-		что позволяет обеспечивать приемлемое время отклика для
-		сотен и даже тысяч одновременно работающих пользовательских
-		задач.</p>
-	    
-	      <h2>Огромное количество приложений</h2>
+			  <div>
+				<ul class="newseventslist">
+				  <li class="only-child">
+					<a href="{$base}/news/press.html" title="More Media">More Media</a>
+				  </li>
+				</ul>
+			  </div> <!-- unnamed -->
+			</div> <!-- newseventswrap -->
 
-	      <p>Качество FreeBSD вкупе с современным дешёвым и
-                производительным аппаратным обеспечением ПК делают эту систему
-                очень экономичной альтернативой коммерческим рабочим станциям
-                <xsl:value-of select="$unix"/>.  Она прекрасно подходит для
-                большого количества <a
-		href="applications.html">приложений</a> как в качестве
-		сервера, так и рабочей станции.</p>
-	    
-	      <h2>Простота установки</h2>
+		   </div> <!-- frontmediacontent -->
+            	</div> <!-- frontmedia -->
+		<div class="frontseparator"><b style="display: none">.</b></div>
+		<div id="frontsecurity">
+		   <div id="frontsecuritycontent" class="txtnewsevent">
 
-	      <p>FreeBSD может быть установлена с различных носителей, включая
-                CD-ROM, DVD-ROM, дискеты, магнитную ленту, раздел MS-DOS&#174;,
-                либо, если у вас есть подключение к сети, можно установить её
-                <i>непосредственно</i> через FTP или NFS.  Всё, что вам нужно
-                для этого - несколько чистых дискет ёмкостью 1.44 Мбайт и <a
-                href="{$base}/doc/ru_RU.KOI8-R/books/handbook/install.html">
-                эти указания</a>.</p>
+			<h2>Бюллетени безопасности</h2>
+			<div class="newseventswrap">
 
-	      <h2>FreeBSD распространяется <i>свободно</i></h2>
+			<xsl:call-template name="html-index-advisories-items">
+				<xsl:with-param name="advisories.xml" select="$advisories.xml" />
+				<xsl:with-param name="type" select="'advisory'" />
+			</xsl:call-template>
 
-	      <a href="copyright/daemon.html"><img
-                src="{$base}/gifs/dae_up3.gif" alt="Даемон BSD" height="81"
-		width="72" align="right" border="0"/></a>
+			  <div>
+				<ul class="newseventslist">
+				  <li class="first-child">
+					<a href="{$base}/security/" title="More Security Advisories">More</a>
+				  </li>
+				  <li>
+					<a href="{$base}/send-pr.html" title="Submit a Problem Report">Submit Bug</a>
+				  </li>
+				  <li class="last-child">
+					<a href="{$base}/security/advisories.rdf" title="Security Advisories RSS Feed"><img class="rssimage" src="{$enbase}/layout/images/ico_rss.png" width="27" height="12" alt="News RSS Feed" /></a>
+				  </li>
+				</ul>
+			  </div> <!-- unnamed -->
+			</div> <!-- newseventswrap -->
 
-	      <p>Хотя вы можете подумать, что операционная система с такими
-		возможностями продаётся по высокой цене, FreeBSD
-		распространяется <a href="copyright/index.html">бесплатно</a>
-                и поставляется со всеми исходными текстами. Если вам захочется
-		купить или загрузить её копию, обратитесь к <a
-		href="{$base}/doc/ru_RU.KOI8-R/books/handbook/mirrors.html">
-		следующей информации</a>.</p>
+			<br />
+			<h2>Сообщения о проблемах</h2>
+			<div class="newseventswrap">
 
-	      <h2>Как принять участие в проекте</h2>
+			<xsl:call-template name="html-index-advisories-items">
+				<xsl:with-param name="advisories.xml" select="$notices.xml" />
+				<xsl:with-param name="type" select="'notice'" />
+			</xsl:call-template>
 
-	      <p>Принять участие в проекте очень просто.  Всё, что вам нужно
-		сделать - это найти часть FreeBSD, которую, по вашему мнению,
-		можно усовершенствовать, сделать (внимательно и аккуратно)
-		соответствующие изменения и отправить их в адрес проекта либо с
-		помощью утилиты send-pr, либо непосредственно коммиттеру, если
-		вы его знаете. Эта работа может представлять собой что угодно,
-		от документации до исходных текстов. Подробнее об этом можно
-		прочитать <a
-		href="{$base}/doc/en_US.ISO8859-1/articles/contributing/index.html">
-                здесь.</a></p>
+			</div> <!-- newseventswrap -->
 
-	      <p>Даже если Вы не программист, есть другие способы помочь
-		FreeBSD в развитии. The <a
-		href="http://www.FreeBSDFoundation.org">FreeBSD Foundation</a>
-		- это неприбыльная
-		организация, для которой все пожертвования и денежная помощь
-		не облагаются налогами.  Для получения более полной информации
-		пишите на адрес <a href="mailto:bod@FreeBSDFoundation.org">
-                bod@FreeBSDFoundation.org</a> или: The FreeBSD Foundation,
-		7321 Brockway Dr., Boulder, CO 80303, USA.</p>
-	    </td>
+		   </div> <!-- frontsecuritycontent -->
+            	</div> <!-- frontsecurity -->
 
-	    <td></td>
+		<br class="clearboth" />
 
-	    <!-- Right-most column -->
-	    <td valign="top">
-	      <!-- News / release info table -->
-	      <table class="panel" cellpadding="4" cellspacing="0">
-	        <tr>
-		  <td valign="top">
-                    <p><a href="{$u.rel.announce}">
-		      <font size="+1" color="#990000"><b>Продуктивный релиз:
-		      <xsl:value-of select="$rel.current"/></b></font></a><br/>
+            </div> <!-- frontnemscontainer -->
+          </div> <!-- frontmain -->
+        </div> <!-- frontcontainer -->
 
-		    <small>&#183; <a href="{$base}/doc/ru_RU.KOI8-R/books/handbook/install.html">Руководство по установке</a><br/>
-		      &#183; <a href="{$u.rel.notes}">Информация о релизе</a><br/>
-		      &#183; <a href="{$u.rel.hardware}">Информация об оборудовании</a><br/>
-		      &#183; <a href="{$u.rel.installation}">Заметки по установке</a><br/>
-                      &#183; <a href="{$u.rel.errata}">Обнаруженные проблемы</a><br/>
-                      &#183; <a href="{$u.rel.migration}">Руководство по миграции</a></small></p>
+      </div> <!-- content -->
+      <div id="footer">
+        <xsl:copy-of select="$copyright"/><br />
+        <xsl:copy-of select="$date"/>
+      </div> <!-- footer -->
+    </div> <!-- container -->
+   </div> <!-- containerwrap -->
 
-		    <p> <a href="{$u.rel2.announce}">
-		    <font size="+1" color="#990000"><b>(Старый) Продуктивный релиз:
-		    <xsl:value-of select="$rel2.current"/></b></font></a><br/>
-
-                    <small>&#183; <a href="{$base}/doc/ru_RU.KOI8-R/books/handbook/install.html">Руководство по установке</a><br/>
-                    &#183; <a href="{$u.rel2.notes}">Информация о релизе</a><br/>
-                    &#183; <a href="{$u.rel2.hardware}">Информация об оборудовании</a><br/>
-		    &#183; <a href="{$u.rel2.installation}">Заметки по установке</a><br/>
-                    &#183; <a href="{$u.rel2.errata}">Известные проблемы</a></small></p>
-
-                    <p><a href="snapshots/index.html"><font
-                      size="+1" color="#990000"><b>Снэпшоты
-                      релизов</b></font></a></p>
-
-		    <p><font size="+1" color="#990000"><b>Новости
-                      проекта</b></font>
-
-		    <xsl:text> </xsl:text>
-		    <font color="#990000">(<a href="news/news.rdf">RSS</a>)</font><br/>
-		    <font size="-1">
-		      Последние изменения: 
-		      <xsl:call-template
-                        name="html-index-news-project-items-lastmodified">
-                        <xsl:with-param name="news.project.xml-master"
-                          select="$news.project.xml-master" />
-		      </xsl:call-template>
-		      <br/>
-
-		      <xsl:call-template name="html-index-news-project-items">
-                        <xsl:with-param name="news.project.xml-master"
-                          select="$news.project.xml-master" />
-		      </xsl:call-template>
-
-		      <a href="news/newsflash.html">Далее...</a>
-		    </font></p>
-			  
-		  <p><font size="+1" color="#990000"><b>FreeBSD в прессе</b></font><br/>
-
-		    <font size="-1">
-		      Последние изменения: 
-		      <xsl:call-template name="html-index-news-press-items-lastmodified">
-                        <xsl:with-param name="news.press.xml-master"
-                          select="$news.press.xml-master" />
-		      </xsl:call-template>
-
-		      <br/>
-
-		      <xsl:call-template name="html-index-news-press-items">
-                        <xsl:with-param name="news.press.xml-master"
-                          select="$news.press.xml-master" />
-		      </xsl:call-template>
-
-		      <a href="news/press.html">Далее...</a>
-                          </font>
-                      </p>
-
-                      <p><font size="+1" color="#990000"><b>Бюллетени безопасности</b></font>
-		    <xsl:text> </xsl:text>
-		    <font color="#990000">(<a href="{$base}/security/advisories.rdf">RSS</a>)</font><br/>
-
-                    <font size="-1">
-                      Последнее обновление:
-		      <xsl:call-template name="html-index-advisories-items-lastmodified">
-			<xsl:with-param name="advisories.xml" select="$advisories.xml" />
-			<xsl:with-param name="type" select="'advisory'" />
-		      </xsl:call-template>
-
-		      <br/>
-
-		      <xsl:call-template name="html-index-advisories-items">
-			<xsl:with-param name="advisories.xml" select="$advisories.xml" />
-			<xsl:with-param name="type" select="'advisory'" />
-		      </xsl:call-template>
-
-                      <a href="security/">Дополнительно...</a>
-		    </font>
-		  </p>
-
-		  <p><font size="+1" color="#990000"><b>Сообщения о проблемах</b></font>
-		    <xsl:text> </xsl:text>
-		    <br/>
-		    <font size="-1">
-		      Последнее обновление: 
-		      <xsl:call-template name="html-index-advisories-items-lastmodified">
-			<xsl:with-param name="advisories.xml" select="$notices.xml" />
-			<xsl:with-param name="type" select="'notice'" />
-		      </xsl:call-template>
-
-		      <br/>
-
-		      <xsl:call-template name="html-index-advisories-items">
-			<xsl:with-param name="advisories.xml" select="$notices.xml" />
-			<xsl:with-param name="type" select="'notice'" />
-		      </xsl:call-template>
-		    </font>
-		  </p>
-		  </td>
-		</tr>
-	      </table>
-
-	      <p>&#xa0;</p>
-
-	      <table border="0" cellspacing="0" cellpadding="1"
-		     bgcolor="#000000" width="100%">
-		<tr>
-		  <td>
-		    <table cellpadding="4" cellspacing="0" border="0"
-			   bgcolor="#FFFFFF" width="100%"><tr>
-			<td>Чтобы узнать больше о FreeBSD, посетите нашу
-			  галерею <a href="publish.html">публикаций</a>,
-			  посвящённых FreeBSD или <a
-			  href="news/press.html">FreeBSD в Прессе</a>, а также
-			  побродите по этому сайту!</td>
-		      </tr>
-		    </table>
-		  </td>
-		</tr>
-	      </table>
-	    </td>
-	  </tr>
-	</table>
-
-	<hr noshade="noshade" size="1" />
-
-	<table width="100%" border="0" cellspacing="0" cellpadding="3">
-	  <tr>
-	    <td><a href="http://www.freebsdmall.com/"><img
-			   src="../gifs/mall_title_medium.gif" alt="[FreeBSD Mall]"
-			   height="65" width="165" border="0"/></a></td>
-	    
-	    <td><a href="http://www.ugu.com/"><img src="../gifs/ugu_icon.gif"
-			   alt="[Мы спонсируем Unix Guru Universe]" 
-			   height="64" width="76"
-			   border="0"/></a></td>
-	  
-	    <td><a href="http://www.daemonnews.org/"><img src="../gifs/darbylogo.gif"
-		alt="[Daemon News]" height="45" width="130"
-		border="0"/></a></td>
-	  
-	    <td><a href="art.html"><img
-			     src="{$base}/gifs/powerlogo.gif" 
-			     alt="[Powered by FreeBSD]"
-			     height="64" 
-			     width="160" 
-			     border="0"/></a></td>
-	  </tr>
-	</table>
-
-	<table width="100%" cellpadding="0" border="0" cellspacing="0">
-	  <tr>
-	    <td align="left" 
-		valign="top"><small><a href="mailto.html">Пишите 
-		  нам</a><br/>
-		<xsl:value-of select="$date"/></small></td>
-
-	    <td align="right" valign="top"><small><a
-              href="copyright/index.html">Legal</a> &#169; 1995-2005
-	      The FreeBSD Project.<br/>
-	      Все права защищены.</small></td>
-	  </tr>
-	</table>
       </body>
     </html>
   </xsl:template>
