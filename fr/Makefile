@@ -1,4 +1,4 @@
-# $FreeBSD: www/fr/Makefile,v 1.7 2004/10/06 12:55:04 stephane Exp $
+# $FreeBSD: www/fr/Makefile,v 1.8 2004/12/30 17:53:43 hrs Exp $
 
 # The FreeBSD French Documentation Project
 # Original revision: 1.107
@@ -12,7 +12,8 @@
 
 # These are turned into validated, normalized HTML files.
 
-DOCS=  applications.sgml
+DOCS=  about.sgml
+DOCS+=  applications.sgml
 DOCS+= art.sgml
 DOCS+= auditors.sgml
 DOCS+= availability.sgml
@@ -95,6 +96,7 @@ index.html: index.xsl ${XML_INCLUDES}\
 		${XML_NEWS_INCLUDES} \
 		${XML_NEWS_NEWS} ${XML_NEWS_NEWS_MASTER} \
 		${XML_NEWS_PRESS} ${XML_NEWS_PRESS_MASTER} \
+		${XML_EVENTS_EVENTS} ${XML_EVENTS_EVENTS_MASTER} ${XML_EVENTS_CURDATE} \
 		${XML_MIRRORS} ${XML_TRANSTABLE} \
 		${XML_ADVISORIES} ${XML_NOTICES} \
 		${XML_NAVIGATION}
@@ -107,9 +109,12 @@ index.html: index.xsl ${XML_INCLUDES}\
 		--param news.project.xml-master "'${XML_NEWS_NEWS_MASTER}'" \
 		--param news.project.xml "'${XML_NEWS_NEWS}'" \
 		--param transtable.xml "'${XML_TRANSTABLE}'" \
+		--param events.xml-master "'${XML_EVENTS_EVENTS_MASTER}'" \
+		--param events.xml "'${XML_EVENTS_EVENTS}'" \
+		--param curdate.xml "'${XML_EVENTS_CURDATE}'" \
 		--param notices.xml "'${XML_NOTICES}'" \
 		--param navigation.xml "'${XML_NAVIGATION}'" \
-		${.CURDIR}/index.xsl ${XML_NEWS_NEWS}
+		${.CURDIR}/index.xsl ${XML_NEWS_NEWS} ${XML_EVENTS_EVENTS} ${XML_EVENTS_CURDATE}
 .if !defined(NO_TIDY)
 	-${TIDY} ${TIDYOPTS} ${.TARGET}
 .endif
