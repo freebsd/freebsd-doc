@@ -69,14 +69,13 @@ package: realpackage symlinks
 realpackage: _SUBDIRUSE
 
 .if !defined(IGNORE_COMPAT_SYMLINK) && defined(COMPAT_SYMLINK)
-SYMLINKS+= ${DOCDIR} ${.CURDIR:T:ja_JP.eucJP=ja} \
-	   ${COMPAT_SYMLINK:ja=ja_JP.eucJP}
+SYMLINKS+= ${DOCDIR} ${.CURDIR:T} ${COMPAT_SYMLINK}
 .endif
 
 .if defined(PRI_LANG) && defined(ROOT_SYMLINKS) && !empty(ROOT_SYMLINKS)
 .if ${PRI_LANG} == ${LANGCODE}
 .for _tmp in ${ROOT_SYMLINKS}
-SYMLINKS+= ${DOCDIR} ${LANGCODE:ja_JP.eucJP=ja}/${.CURDIR:T}/${_tmp} ${_tmp}
+SYMLINKS+= ${DOCDIR} ${LANGCODE}/${.CURDIR:T}/${_tmp} ${_tmp}
 .endfor
 .endif
 .endif
