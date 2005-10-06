@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/index.xsl,v 1.129 2005/10/05 21:46:34 delphij Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.130 2005/10/06 19:27:36 ceri Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -6,7 +6,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.129 2005/10/05 21:46:34 delphij Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.130 2005/10/06 19:27:36 ceri Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <!-- these params should be externally bound. The values
@@ -139,6 +139,7 @@
 					  </xsl:call-template>
 				  </select>
 				</div> <!-- unnamed -->
+				<input type="submit" value="Go" />
 			  </form>
 			</div> <!-- mirror -->
 
