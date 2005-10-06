@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD$ -->
+<!-- $FreeBSD: www/fr/news/status/report.xsl,v 1.1 2002/12/22 22:05:07 stephane Exp $ -->
 
 <!-- 
    The FreeBSD French Documentation Project
@@ -16,6 +16,7 @@
   <xsl:import href="../../includes.xsl"/>
   <xsl:import href="../includes.xsl"/>
   <xsl:import href="includes.xsl"/>
+  <xsl:variable name="section" select="'about'"/>
 
   <xsl:variable name="base" select="'../..'"/>
 
@@ -40,10 +41,21 @@
     <html>
       
       <xsl:copy-of select="$header1"/>
-
-      <body xsl:use-attribute-sets="att.body">
-
-	<xsl:copy-of select="$header2"/>
+      
+            <body xsl:use-attribute-sets="att.body">
+      
+        <div id="containerwrap">
+          <div id="container">
+      
+      	<xsl:copy-of select="$header2"/>
+      
+      	<div id="content">
+      
+      	      <xsl:copy-of select="$sidenav"/>
+      
+      	      <div id="contentwrap">
+      	      
+	      <xsl:copy-of select="$header3"/>
 
 	<!-- Process all the <sections>, in order -->
 	<xsl:apply-templates select="section"/>
@@ -66,7 +78,17 @@
 	<!-- Standard footer -->
 	<xsl:copy-of select="$newshome"/> |
 	<xsl:copy-of select="$statushome"/>
+
+	  	</div> <!-- contentwrap -->
+		<br class="clearboth" />
+	
+	</div> <!-- content -->
+	
 	<xsl:copy-of select="$footer"/>
+	
+        </div> <!-- container -->
+   </div> <!-- containerwrap -->
+
       </body>
     </html>
   </xsl:template>
