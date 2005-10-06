@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/fr/includes.xsl,v 1.8 2005/08/16 10:46:29 blackend Exp $ -->
+<!-- $FreeBSD: www/fr/includes.xsl,v 1.10 2005/10/06 12:56:02 blackend Exp $ -->
 
 <!-- 
    The FreeBSD French Documentation Project
@@ -63,7 +63,7 @@
       					Text Size: <a href="#" onkeypress="return false;" onclick="setActiveStyleSheet('Normal Text'); return false;" title="Normal Text Size">Normal</a> / <a href="#" onkeypress="return false;" onclick="setActiveStyleSheet('Large Text'); return false;" title="Large Text Size">Large</a>
       				  </li>
       				  <li>
-      					<a href="{$base}/donations/" title="Donate">Donate</a>
+      					<a href="{$base}/donations/" title="Donate">Donations</a>
       				  </li>
       				  <li class="last-child">
       					<a href="{$base}/mailto.html" title="Contact">Contact</a>
@@ -86,10 +86,10 @@
               <div id="topnav">
                 <ul id="topnavlist">
 		  <li>
-			<a href="{$base}/" title="Home">Home</a>
+			<a href="{$base}/" title="Home">Accueil</a>
 		  </li>
 		  <li>
-			<a href="{$base}/about.html" title="About">About</a>
+			<a href="{$base}/about.html" title="About">A propos</a>
 		  </li>
 		  <li>
 			<a href="{$base}/where.html" title="Obtenir FreeBSD">Obtenir FreeBSD</a>
@@ -98,7 +98,7 @@
 			<a href="{$base}/docs.html" title="Documentation">Documentation</a>
 		  </li>
 		  <li>
-			<a href="{$enbase}/community.html" title="Community">Community</a>
+			<a href="{$enbase}/community.html" title="Community">Communaut&eacute;</a>
 		  </li>
 		  <li>
 			<a href="{$base}/projects/index.html" title="D&#233;veloppement">D&#233;veloppement</a>
@@ -123,24 +123,24 @@
 	
 	<xsl:if test="$section = 'about'" >
 		<ul>
-		<li><a href="{$base}/about.html">About</a></li>
-		<li><a href="{$base}/features.html">Features</a></li>
+		<li><a href="{$base}/about.html">A propos</a></li>
+		<li><a href="{$base}/features.html">Fonctionnalit&eacute;s</a></li>
 		<li><a href="{$base}/applications.html">Applications</a></li>
-		<li><a href="{$base}/internet.html">Internetworking</a></li>
-		<li><a href="{$base}/advocacy/">Advocacy</a></li>
+		<li><a href="{$base}/internet.html">Internet</a></li>
+		<li><a href="{$base}/advocacy/">Pros&eacute;lytisme</a></li>
 		<li><a href="{$enbase}/marketing/">Marketing</a></li>
-		<li><a href="{$base}/news/newsflash.html">News</a></li>
+		<li><a href="{$base}/news/newsflash.html">Nouvelles du projet</a></li>
 		<li><a href="{$base}/events/events.html">Ev&#233;nements</a></li>
-		<li><a href="{$base}/news/press.html">Press</a></li>
-		<li><a href="{$base}/art.html">Artwork</a></li>
+		<li><a href="{$base}/news/press.html">Dans la presse</a></li>
+		<li><a href="{$base}/art.html">Ressources artistiques</a></li>
 		<li><a href="{$base}/donations/">Donations</a></li>
-		<li><a href="{$base}/copyright/">Legal Notices</a></li>
+		<li><a href="{$base}/copyright/">Informations l&eacute;gales</a></li>
 		</ul>
 	</xsl:if>
 
 	<xsl:if test="$section = 'community'" >
 		<ul>
-		<li><a href="{$enbase}/community.html">Community</a></li>
+		<li><a href="{$enbase}/community.html">Communauté</a></li>
 		<!--li><a href="{$base}/community/mailinglists.html">Listes de diffusion</a></li>
 		<li><a href="{$base}/community/irc.html">IRC</a></li>
 		<li><a href="{$base}/community/newsgroups.html">Forums de discussion</a></li>
@@ -177,10 +177,10 @@
 		<li><a href="{$enbase}/doc/{$url.doc.langcode}/books/handbook/">Manuel de R&#233;f&#233;rence</a></li>
 		<li><a href="{$base}/docs.html#man">Pages de manuel</a>
 			<ul>
-				<li><a href="{$enbase}/cgi/man.cgi">Man Online</a></li>
+				<li><a href="{$enbase}/cgi/man.cgi">Pages de manuel en ligne</a></li>
 			</ul>
 		</li>
-		<li><a href="{$base}/docs.html#books">Books and Articles Online</a></li>
+		<li><a href="{$base}/docs.html#books">Livres et articles en ligne</a></li>
 		<li><a href="{$base}/publish.html">Publications</a></li>
 		<li><a href="{$base}/docs.html#links">Ressources Web</a></li>
 		<li><a href="{$base}/projects/newbies.html">Pour les d&#233;butants</a></li>
@@ -195,7 +195,7 @@
 			<ul>
 				<li><a href="{$u.rel.announce}">Version de production: <xsl:value-of select="$rel.current"/></a></li>
 				<li><a href="{$u.rel2.announce}">Version (ancienne) de production: <xsl:value-of select="$rel2.current"/></a></li>
-				<li><a href="{$enbase}/snapshots/">Snapshot Releases</a></li>
+				<li><a href="{$enbase}/snapshots/">Instantannés</a></li>
 			</ul>
 		</li>
 		<li><a href="{$enbase}/ports/">Applications disponibles</a></li>
