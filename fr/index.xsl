@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/fr/index.xsl,v 1.14 2005/08/26 08:49:42 blackend Exp $ -->
+<!-- $FreeBSD: www/fr/index.xsl,v 1.17 2005/10/06 12:56:02 blackend Exp $ -->
 
 <!-- 
    The FreeBSD French Documentation Project
@@ -14,7 +14,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/fr/index.xsl,v 1.14 2005/08/26 08:49:42 blackend Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/fr/index.xsl,v 1.17 2005/10/06 12:56:02 blackend Exp $'"/>
   <xsl:variable name="title" select="'Le Projet FreeBSD'"/>
 
   <!-- these params should be externally bound. The values
@@ -74,7 +74,7 @@
 		<div id="frontfeatureleft">
 			<div id="frontfeaturecontent">
 				<h1>
-				  Based on BSD UNIX&#174;
+				  Basé sur UNIX&#174; BSD
 				</h1>				
 				<p>FreeBSD est un syst&#232;me d'exploitation avanc&#233; pour
 				les architectures compatibles x86 (y compris Pentium et Athlon), compatibles 
@@ -89,7 +89,7 @@
 				<a href="{$base}/platforms/index.html">plates-formes</a> sont &#224;
 				divers stades de d&#233;veloppement.</p>
 				<div id="txtfrontfeaturelink">
-				&#187;<a href="{$base}/about.html" title="Learn More">Learn More</a>
+				&#187;<a href="{$base}/about.html" title="Learn More">En savoir plus</a>
 				</div> <!-- txtfrontfeaturelink -->
 			</div> <!-- frontfeaturecontent -->
 		</div> <!-- frontfeatureleft -->
@@ -98,14 +98,14 @@
 			<div class="frontgetroundbox">
 			  <div class="frontgettop"><div>&#160;</div>&#160;</div>
 				<div class="frontgetcontent">
-				  <a href="{$base}/where.html">Get FreeBSD Now</a>
+				  <a href="{$base}/where.html">Obtenir FreeBSD maintenant</a>
 				</div> <!-- frontgetcontent -->
 			  <div class="frontgetbot"><div>&#160;</div>&#160;</div>
 			</div> <!-- frontgetroundbox -->
 			
 			<div id="frontreleases">
 			  <div id="frontreleasescontent" class="txtshortcuts">
-				  <h2>LATEST RELEASES</h2>
+				  <h2>DERNIERES VERSIONS</h2>
 				  <ul id="frontreleaseslist">
 					<li>
 					  <a href="{$u.rel.announce}">Version de production <xsl:value-of select="$rel.current"/></a>
@@ -161,7 +161,7 @@
 
 			<div id="frontshortcuts">
 			  <div id="frontshortcutscontent" class="txtshortcuts">
-				  <h2>SHORTCUTS</h2>
+				  <h2>LIENS</h2>
 				  <ul id="frontshortcutslist">
 					<li>
 					  <a href="{$base}/support.html#mailing-list" title="Listes de diffusion">Listes de diffusion</a>
@@ -176,7 +176,7 @@
 					  <a href="{$enbase}/doc/{$url.doc.langcode}/books/faq/index.html" title="FAQ">FAQ</a>
 					</li>
 					<li>
-					  <a href="http://www.freebsdfoundation.org/" title="Foundation">Foundation</a>
+					  <a href="http://www.freebsdfoundation.org/" title="Foundation">Fondation</a>
 					</li>
 				  </ul>
 			  </div> <!-- frontshortcutscontent -->
@@ -185,7 +185,7 @@
 			<div class="frontnewroundbox">
 			  <div class="frontnewtop"><div>&#160;</div>&#160;</div>
 			    <div class="frontnewcontent">
-			      <a href="{$base}/projects/newbies.html">New to FreeBSD?</a>
+			      <a href="{$base}/projects/newbies.html">Débutant sous FreeBSD?</a>
 			    </div> <!-- frontnewcontent -->
 			  <div class="frontnewbot"><div>&#160;</div>&#160;</div>
 			</div> <!-- frontnewroundbox -->
@@ -197,7 +197,7 @@
             <div id="frontnemscontainer">
             	<div id="frontnews">
             	   <div id="frontnewscontent" class="txtnewsevent">
-			<h2>LATEST NEWS</h2>
+			<h2>NOUVELLES DU PROJET</h2>
 			<div class="newseventswrap">
 
 			<xsl:call-template name="html-index-news-project-items">
@@ -208,7 +208,7 @@
 			  <div>
 				<ul class="newseventslist">
 				  <li class="first-child">
-					<a href="{$base}/news/newsflash.html" title="More News">More News</a>
+					<a href="{$base}/news/newsflash.html" title="More News">Plus...</a>
 				  </li>
 				  <li class="last-child">
 					<a href="{$base}/news/news.rdf" title="News RSS Feed"><img class="rssimage" src="{$enbase}/layout/images/ico_rss.png" width="27" height="12" alt="News RSS Feed" /></a>
@@ -223,7 +223,7 @@
             	<div id="frontevents">
 		   <div id="fronteventscontent" class="txtnewsevent">
 
-			<h2>UPCOMING EVENTS</h2>
+			<h2>EVENEMENTS A VENIR</h2>
 			<div class="newseventswrap">
 
 			<xsl:call-template name="html-index-events-items">
@@ -235,7 +235,7 @@
 			  <div>
 				<ul class="newseventslist">
 				  <li class="only-child">
-					<a href="{$base}/events/" title="More Events">More Events</a>
+					<a href="{$base}/events/" title="More Events">Plus...</a>
 				  </li>
 				</ul>
 			  </div> <!-- unnamed -->
@@ -247,7 +247,7 @@
             	<div id="frontmedia">
 		   <div id="frontmediacontent" class="txtnewsevent">
 
-			<h2>IN THE MEDIA</h2>
+			<h2>DANS LA PRESSE</h2>
 			<div class="newseventswrap">
 
 			<xsl:call-template name="html-index-news-press-items">
@@ -258,7 +258,7 @@
 			  <div>
 				<ul class="newseventslist">
 				  <li class="only-child">
-					<a href="{$base}/news/press.html" title="More Media">More Media</a>
+					<a href="{$base}/news/press.html" title="More Media">Plus...</a>
 				  </li>
 				</ul>
 			  </div> <!-- unnamed -->
@@ -270,7 +270,7 @@
 		<div id="frontsecurity">
 		   <div id="frontsecuritycontent" class="txtnewsevent">
 
-			<h2>AVIS DE S&#233;CURIT&#233;</h2>
+			<h2>AVIS DE SECURITE</h2>
 			<div class="newseventswrap">
 
 			<xsl:call-template name="html-index-advisories-items">
@@ -281,10 +281,10 @@
 			  <div>
 				<ul class="newseventslist">
 				  <li class="first-child">
-					<a href="{$base}/security/" title="More Security Advisories">More</a>
+					<a href="{$base}/security/" title="More Security Advisories">Plus...</a>
 				  </li>
 				  <li>
-					<a href="{$base}/send-pr.html" title="Submit a Problem Report">Submit Bug</a>
+					<a href="{$base}/send-pr.html" title="Submit a Problem Report">Envoyer un rapport de bogue</a>
 				  </li>
 				  <li class="last-child">
 					<a href="{$enbase}/security/advisories.rdf" title="Security Advisories RSS Feed"><img class="rssimage" src="{$enbase}/layout/images/ico_rss.png" width="27" height="12" alt="News RSS Feed" /></a>
@@ -294,7 +294,7 @@
 			</div> <!-- newseventswrap -->
 
 			<br />
-			<h2>ERRATA NOTICES</h2>
+			<h2>ERRATA</h2>
 			<div class="newseventswrap">
 
 			<xsl:call-template name="html-index-advisories-items">
