@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/index.xsl,v 1.130 2005/10/06 19:27:36 ceri Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.131 2005/10/06 19:37:11 blackend Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -6,7 +6,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.130 2005/10/06 19:27:36 ceri Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.131 2005/10/06 19:37:11 blackend Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <!-- these params should be externally bound. The values
@@ -30,7 +30,7 @@
       <head>
 	<title><xsl:value-of select="$title"/></title>
 	<meta name="description" content="The FreeBSD Project"/>
-	<meta name="keywords" content="FreeBSD, BSD, UNIX, Support, Gallery,
+	<meta name="keywords" content="FreeBSD, BSD, UNIX, Support, Ports,
 	      Release, Application, Software, Handbook, FAQ, Tutorials, Bugs,
 	      CVS, CVSup, News, Commercial Vendors, homepage, CTM, Unix"/>
 	<link rel="shortcut icon" href="{$base}/favicon.ico" type="image/x-icon"/>
