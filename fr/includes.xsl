@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/fr/includes.xsl,v 1.10 2005/10/06 12:56:02 blackend Exp $ -->
+<!-- $FreeBSD: www/fr/includes.xsl,v 1.11 2005/10/06 14:20:31 blackend Exp $ -->
 
 <!-- 
    The FreeBSD French Documentation Project
@@ -124,17 +124,17 @@
 	<xsl:if test="$section = 'about'" >
 		<ul>
 		<li><a href="{$base}/about.html">A propos</a></li>
-		<li><a href="{$base}/features.html">Fonctionnalit&eacute;s</a></li>
+		<li><a href="{$base}/features.html">Fonctionnalit&#233;s</a></li>
 		<li><a href="{$base}/applications.html">Applications</a></li>
 		<li><a href="{$base}/internet.html">Internet</a></li>
-		<li><a href="{$base}/advocacy/">Pros&eacute;lytisme</a></li>
+		<li><a href="{$base}/advocacy/">Pros&#233;lytisme</a></li>
 		<li><a href="{$enbase}/marketing/">Marketing</a></li>
 		<li><a href="{$base}/news/newsflash.html">Nouvelles du projet</a></li>
 		<li><a href="{$base}/events/events.html">Ev&#233;nements</a></li>
 		<li><a href="{$base}/news/press.html">Dans la presse</a></li>
 		<li><a href="{$base}/art.html">Ressources artistiques</a></li>
 		<li><a href="{$base}/donations/">Donations</a></li>
-		<li><a href="{$base}/copyright/">Informations l&eacute;gales</a></li>
+		<li><a href="{$base}/copyright/">Informations l&#233;gales</a></li>
 		</ul>
 	</xsl:if>
 
