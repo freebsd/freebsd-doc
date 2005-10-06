@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/fr/index.xsl,v 1.17 2005/10/06 12:56:02 blackend Exp $ -->
+<!-- $FreeBSD: www/fr/index.xsl,v 1.18 2005/10/06 14:32:35 blackend Exp $ -->
 
 <!-- 
    The FreeBSD French Documentation Project
@@ -14,7 +14,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/fr/index.xsl,v 1.17 2005/10/06 12:56:02 blackend Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/fr/index.xsl,v 1.18 2005/10/06 14:32:35 blackend Exp $'"/>
   <xsl:variable name="title" select="'Le Projet FreeBSD'"/>
 
   <!-- these params should be externally bound. The values
@@ -74,7 +74,7 @@
 		<div id="frontfeatureleft">
 			<div id="frontfeaturecontent">
 				<h1>
-				  Basé sur UNIX&#174; BSD
+				  Bas&#233; sur UNIX&#174; BSD
 				</h1>				
 				<p>FreeBSD est un syst&#232;me d'exploitation avanc&#233; pour
 				les architectures compatibles x86 (y compris Pentium et Athlon), compatibles 
@@ -185,7 +185,7 @@
 			<div class="frontnewroundbox">
 			  <div class="frontnewtop"><div>&#160;</div>&#160;</div>
 			    <div class="frontnewcontent">
-			      <a href="{$base}/projects/newbies.html">Débutant sous FreeBSD?</a>
+			      <a href="{$base}/projects/newbies.html">D&#233;butant sous FreeBSD?</a>
 			    </div> <!-- frontnewcontent -->
 			  <div class="frontnewbot"><div>&#160;</div>&#160;</div>
 			</div> <!-- frontnewroundbox -->
