@@ -1,4 +1,4 @@
-# $FreeBSD: www/fr/Makefile,v 1.8 2004/12/30 17:53:43 hrs Exp $
+# $FreeBSD: www/fr/Makefile,v 1.9 2005/10/05 18:47:07 blackend Exp $
 
 # The FreeBSD French Documentation Project
 # Original revision: 1.107
@@ -19,7 +19,6 @@ DOCS+= auditors.sgml
 DOCS+= availability.sgml
 DOCS+= docs.sgml 
 DOCS+= features.sgml
-DOCS+= register.sgml
 DOCS+= internet.sgml 
 DOCS+= mailto.sgml 
 DOCS+= publish.sgml
