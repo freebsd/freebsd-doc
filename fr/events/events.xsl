@@ -24,7 +24,7 @@
      OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
      SUCH DAMAGE.
 
-     $FreeBSD$
+     $FreeBSD: www/fr/events/events.xsl,v 1.1 2004/03/06 17:33:18 stephane Exp $
 -->
 
 <!-- 
@@ -40,6 +40,7 @@
 
   <xsl:import href="../includes.xsl"/>
   <xsl:import href="includes.xsl"/>
+  <xsl:variable name="section" select="'about'"/>
 
   <xsl:variable name="curdate" select="document('curdate.xml')//curdate"/>
 
@@ -61,10 +62,21 @@
   <xsl:template match="events">
     <html>
       <xsl:copy-of select="$header1"/>
-
-      <body xsl:use-attribute-sets="att.body">
-
-	<xsl:copy-of select="$header2"/>
+      
+            <body xsl:use-attribute-sets="att.body">
+      
+        <div id="containerwrap">
+          <div id="container">
+      
+      	<xsl:copy-of select="$header2"/>
+      
+      	<div id="content">
+      
+      	      <xsl:copy-of select="$sidenav"/>
+      
+      	      <div id="contentwrap">
+      	      
+	      <xsl:copy-of select="$header3"/>
 
 	<!--
 	     Note the current date to have a reference, if the
@@ -164,7 +176,17 @@
 	    </xsl:for-each>
 	  </ul>
 	</xsl:for-each>
+
+	  	</div> <!-- contentwrap -->
+		<br class="clearboth" />
+	
+	</div> <!-- content -->
+	
 	<xsl:copy-of select="$footer"/>
+	
+        </div> <!-- container -->
+   </div> <!-- containerwrap -->
+
       </body>
     </html>
   </xsl:template>

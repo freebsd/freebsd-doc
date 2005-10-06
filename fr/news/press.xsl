@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/fr/news/press.xsl,v 1.2 2004/01/08 00:26:44 stephane Exp $ -->
+<!-- $FreeBSD: www/fr/news/press.xsl,v 1.3 2004/12/30 17:53:44 hrs Exp $ -->
 
 <!-- 
    The FreeBSD French Documentation Project
@@ -14,7 +14,7 @@
 
   <xsl:import href="../includes.xsl"/>
   <xsl:import href="includes.xsl"/>
-
+  <xsl:variable name="section" select="'about'"/>
 
   <xsl:variable name="base" select="'..'"/>
   <xsl:variable name="enbase" select="'../..'"/>
@@ -32,10 +32,21 @@
     <html>
 
       <xsl:copy-of select="$header1"/>
-
-      <body xsl:use-attribute-sets="att.body">
-
-	<xsl:copy-of select="$header2"/>
+      
+            <body xsl:use-attribute-sets="att.body">
+      
+        <div id="containerwrap">
+          <div id="container">
+      
+      	<xsl:copy-of select="$header2"/>
+      
+      	<div id="content">
+      
+      	      <xsl:copy-of select="$sidenav"/>
+      
+      	      <div id="contentwrap">
+      	      
+	      <xsl:copy-of select="$header3"/>
 
 	<p>Si vous connaissez d'autres articles &#224; propos de FreeBSD que nous n'avons pas
 	  indiqu&#233;s ici, veuillez envoyer tous les d&#233;tails &#224; l'adresse
@@ -51,7 +62,17 @@
 	</xsl:call-template>
 
 	<xsl:copy-of select="$newshome"/>
+
+	  	</div> <!-- contentwrap -->
+		<br class="clearboth" />
+	
+	</div> <!-- content -->
+	
 	<xsl:copy-of select="$footer"/>
+	
+        </div> <!-- container -->
+   </div> <!-- containerwrap -->
+
       </body>
     </html>
   </xsl:template>

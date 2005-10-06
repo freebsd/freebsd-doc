@@ -1,4 +1,4 @@
-<!-- $FreeBSD$ -->
+<!-- $FreeBSD: www/fr/gnome/index.xsl,v 1.1 2003/05/04 12:28:49 stephane Exp $ -->
 
 <!-- 
    The FreeBSD French Documentation Project 
@@ -14,9 +14,10 @@
   
   <xsl:import href="../includes.xsl"/>
   <xsl:import href="includes.xsl"/>
+  <xsl:variable name="section" select="'developers'"/>
 
   <xsl:variable name="base" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD$'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/fr/gnome/index.xsl,v 1.1 2003/05/04 12:28:49 stephane Exp $'"/>
   <xsl:variable name="title" select="'Projet GNOME pour FreeBSD'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -25,83 +26,88 @@
   <xsl:template match="/">
     <html>
       <xsl:copy-of select="$header1"/>
+      
+            <body xsl:use-attribute-sets="att.body">
+      
+        <div id="containerwrap">
+          <div id="container">
+      
+      	<xsl:copy-of select="$header2"/>
+      
+      	<div id="content">
+      
+      	      <xsl:copy-of select="$sidenav"/>
+      
+      	      <div id="contentwrap">
+      	      
+      	      <div id="rightwrap">
+		<div class="rightnav">
 
-      <body bgcolor="#FFFFFF" text="#000000" link="#0000FF" vlink="#840084"
-            alink="#0000FF">
+		<h2>Nouvelles de GNOME pour FreeBSD</h2>
+		<p>
+		    Derni&#232;res mises &#224; jour:
+		    <xsl:value-of
+		      select="descendant::month[position() = 1]/name"/>
+		    <xsl:text> </xsl:text>
+		    <xsl:value-of
+		      select="descendant::day[position() = 1]/name"/>,
+		    <xsl:text> </xsl:text>
+		    <xsl:value-of
+		      select="descendant::year[position() = 1]/name"/>
+		    </p>
+		    <ul>
+		    <!-- Pull in the 10 most recent news items -->
+		    <xsl:for-each select="descendant::event[position() &lt;= 10]">
+		      <li><a>
+			<xsl:attribute name="href">
+			  newsflash.html#<xsl:call-template name="generate-event-anchor"/>
+			</xsl:attribute>
+			<xsl:choose>
+			  <xsl:when test="count(child::title)">
+			    <xsl:value-of select="title"/><br/>
+			  </xsl:when>
+			  <xsl:otherwise>
+			    <xsl:value-of select="p"/><br/>
+			  </xsl:otherwise>
+			</xsl:choose>
+		      </a></li>
+		    </xsl:for-each>
+		    <li><a href="newsflash.html">Plus...</a></li>
+		    </ul>
 
-        <xsl:copy-of select="$header2"/>
+		  </div> <!-- rightnav -->
 
-        <table border="0" cellspacing="0" cellpadding="2">
-          <tr>
-            <td valign="top"> <!-- width="10%" -->
-              <table border="0" cellspacing="0" cellpadding="1"
-                     bgcolor="#000000" width="100%">
-                <tr>
-                  <td>
-                    <table cellpadding="4" cellspacing="0" border="0"
-                           bgcolor="#ffcc66" width="100%">
-                      <tr>
-                        <td>
+		  <br />
 
-                          <p><font size="+1" color="#990000"><b>GNOME sous FreeBSD</b></font>
-                            <small><br/>
-                              &#183; <a href="http://www.FreeBSD.org/gnome/">GNOME sous FreeBSD - Accueil</a><br/>
-                              &#183; <a href="docs/faq.html#q1">Instructions d'installation pour GNOME 1.4</a><br/>
-                              &#183; <a href="docs/faq2.html#q1">Instructions d'installation pour GNOME 2.2</a><br/>
-                              &#183; <a href="../ports/gnome.html">Applications disponibles</a><br/>
-                              &#183; <a href="docs/volunteer.html">Comment participer</a><br/>
-                              &#183; <a href="docs/bugging.html">Rapporter un bug</a><br/>
-                              &#183; <a href="screenshots.html">Captures d'&#233;crans</a><br/>
-                              &#183; <a href="contact.html">Nous contacter</a><br/>
-                            </small></p>
+		  <div class="rightnav">
 
-                          <p><font size="+1" color="#990000"><b>Documentation</b></font>
-                            <small><br/>
-                              &#183; <a href="docs/faq.html">FAQ GNOME 1.4</a><br/>
-                              &#183; <a href="docs/faq2.html">FAQ GNOME 2.2</a><br/>
-                              &#183; <a href="docs/porting.html">Cr&#233;ation des ports</a><br/>
-                              &#183; <a href="docs/22knownissues.html">Probl&#232;mes connus avec GNOME 2.2 sous FreeBSD</a><br/>
-                            </small></p>
+		  <h2>Nouvelles du Projet GNOME</h2>
+		      <ul>
+		      <xsl:for-each select="document('http://gnomedesktop.org/backend.php')/rss/channel/*[name() = 'item'][position() &lt; 10]">
+			<li><a>
+			  <xsl:attribute name="href">
+			    <xsl:value-of select="link"/>
+			  </xsl:attribute>
+			  <xsl:value-of select="title"/><br/>
+			</a></li>
+		      </xsl:for-each>
+		    <li><a>
+		      <xsl:for-each select="document('http://gnomedesktop.org/backend.php')/rss/*[name() = 'channel'][position() = 1]">
+			<xsl:attribute name="href">
+			  <xsl:value-of select="link"/>
+			</xsl:attribute>Plus...
+		      </xsl:for-each>
+		    </a></li>
+		    </ul>
 
-                          <p><font size="+1" color="#990000"><b>Ressources</b></font>
-                            <small><br/>
-                              &#183; <a href="http://www.gnome.org/">Projet GNOME</a><br/>
-                              &#183; <a href="http://www.gnome.org/gnome-office/">Suite bureautique GNOME</a><br/>
-                              &#183; <a href="http://gnu-darwin.sourceforge.net/GNOME/">GNOME sous GNU/Darwin</a><br/>
-                            </small></p>
+		  </div> <!-- rightnav -->
+                </div> <!-- rightwrap -->
+      	      
+	      <xsl:copy-of select="$header3"/>
 
-                          <p><font size="+1" color="#990000"><b>Autres projets</b></font>
-                            <small><br/>
-                              &#183; <a href="http://www.kde.org/">Projet KDE</a><br/>
-                              &#183; <a href="http://freebsd.kde.org/">KDE sous FreeBSD</a><br/>
-                              &#183; <a href="http://www.opengroup.org/desktop/">CDE (commercial)</a><br/>
-                            </small></p>
-
-                          <form action="http://www.FreeBSD.org/cgi/search.cgi" method="get">
-                            <small>Recherche dans les archives de la liste de diffusion freebsd-gnome :<br/>
-                              <input type="text" name="words" size="10"/>
-                              <input type="hidden" name="max" value="25"/>
-                              <input type="hidden" name="source" value="freebsd-gnome"/>
-                              <input type="submit" value="Go"/>
-                            </small>
-                          </form>
-
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>
-            </td>
-
-            <td></td>
-
-            <!-- Main body column -->
-
-            <td align="left" valign="top" rowspan="2">
-              <h2><font color="#990000">Qu'est-ce que GNOME ?</font></h2>
-              <img src="{$base}/gnome/images/gnome.png" align="right"
-                   border="0" width="66" height="83" alt="GNOME Logo"/>
+              <h2>Qu'est-ce que GNOME ?</h2>
+              <img src="{$enbase}/gnome/images/gnome.png" align="right"
+                   border="0" alt="GNOME Logo"/>
 
               <p>Le projet GNOME est n&#233; d'un effort pour cr&#233;er un environnement de travail 
 	        enti&#232;rement libre pour les syst&#232;mes libres. Depuis le d&#233;but, l'objectif principal
@@ -130,7 +136,7 @@
 		  GNOME</a> : Un ensemble d'applications &#224; vocation bureautique.</li>
               </ul>
 
-              <h2><font color="#990000">Statut du port</font></h2>
+              <h2>Statut du port</h2>
 
               <p>Nous supportons actuellement les syst&#232;mes FreeBSD 4.x et 5-CURRENT 
                 pour GNOME 1.4 et 2.2. Les versions ant&#233;rieures &#224; FreeBSD 4.6 ne 
@@ -138,83 +144,58 @@
                 toutefois, il reste <a href="docs/volunteer.html">encore beaucoup &#224;  
 		faire</a> !</p>
 
-            </td>
-            
-            <td></td>
+	  <h2>GNOME sous FreeBSD</h2>
+	    <ul>
+	      <li><a href="http://www.FreeBSD.org/gnome/">GNOME sous FreeBSD - Accueil</a></li>
+	      <li><a href="docs/faq.html#q1">Instructions d'installation pour GNOME 1.4</a></li>
+	      <li><a href="docs/faq2.html#q1">Instructions d'installation pour GNOME 2.2</a></li>
+	      <li><a href="../ports/gnome.html">Applications disponibles</a></li>
+	      <li><a href="docs/volunteer.html">Comment participer</a></li>
+	      <li><a href="docs/bugging.html">Rapporter un bug</a></li>
+	      <li><a href="screenshots.html">Captures d'&#233;crans</a></li>
+	      <li><a href="contact.html">Nous contacter</a></li>
+	    </ul>
 
-            <!-- Right-most column -->
-            <td valign="top"> <!-- width="20%" -->
-              <!-- News table -->
-              <table border="0" cellspacing="0" cellpadding="1"
-                     bgcolor="#000000" width="100%">
-                <tr>
-                  <td>
-                    <table cellpadding="4" cellspacing="0" border="0"
-                           bgcolor="#ffcc66" width="100%">
-                      <tr>
-                        <td valign="top">
-                        
-                        <p><font size="+1" color="#990000"><b>Nouvelles de GNOME pour FreeBSD</b></font><br/>
-                          <font size="-1">
-                            Derni&#232;res mises &#224; jour : 
-                            <xsl:value-of
-                              select="descendant::month[position() = 1]/name"/>
-                            <xsl:text> </xsl:text>
-                            <xsl:value-of
-                              select="descendant::day[position() = 1]/name"/>,
-                            <xsl:text> </xsl:text>
-                            <xsl:value-of
-                              select="descendant::year[position() = 1]/name"/>
-                            <br/>
-                            <!-- Pull in the 10 most recent news items -->
-                            <xsl:for-each select="descendant::event[position() &lt;= 10]">
-                              &#183;  <a>
-                                <xsl:attribute name="href">
-                                  newsflash.html#<xsl:call-template name="generate-event-anchor"/>
-                                </xsl:attribute>
-                                <xsl:choose>
-                                  <xsl:when test="count(child::title)">
-                                    <xsl:value-of select="title"/><br/>
-                                  </xsl:when>
-                                  <xsl:otherwise>
-                                    <xsl:value-of select="p"/><br/>
-                                  </xsl:otherwise>
-                                </xsl:choose>
-                              </a>
-                            </xsl:for-each>
-                            <a href="newsflash.html">Plus...</a>
-                          </font></p>
-                          
-                          <p><font size="+1" color="#990000"><b>Nouvelles du Projet GNOME</b></font><br/>
-                            <font size="-1">
-                              <xsl:for-each select="document('http://gnomedesktop.org/backend.php')/rss/channel/*[name() = 'item'][position() &lt; 10]">
-                                &#183; <a>
-                                  <xsl:attribute name="href">
-                                    <xsl:value-of select="link"/>
-                                  </xsl:attribute>
-                                  <xsl:value-of select="title"/><br/>
-                                </a>
-                              </xsl:for-each>
-                            <a>
-                              <xsl:for-each select="document('http://gnomedesktop.org/backend.php')/rss/*[name() = 'channel'][position() = 1]">
-                                <xsl:attribute name="href">
-                                  <xsl:value-of select="link"/>
-                                </xsl:attribute>Plus...
-                              </xsl:for-each>
-                            </a>
-                          </font></p>
+	  <h2>Documentation</h2>
+	    <ul>
+	      <li><a href="docs/faq.html">FAQ GNOME 1.4</a></li>
+	      <li><a href="docs/faq2.html">FAQ GNOME 2.2</a></li>
+	      <li><a href="docs/porting.html">Cr&#233;ation des ports</a></li>
+	      <li><a href="docs/22knownissues.html">Probl&#232;mes connus avec GNOME 2.2 sous FreeBSD</a></li>
+	    </ul>
 
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>
-            </td>
-            
-          </tr>
-        </table>
-        <xsl:copy-of select="$footer"/>
+	  <h2>Ressources</h2>
+	    <ul>
+	      <li><a href="http://www.gnome.org/">Projet GNOME</a></li>
+	      <li><a href="http://www.gnome.org/gnome-office/">Suite bureautique GNOME</a></li>
+	      <li><a href="http://gnu-darwin.sourceforge.net/GNOME/">GNOME sous GNU/Darwin</a></li>
+	    </ul>
+
+	  <h2>Autres projets</h2>
+	    <ul>
+	      <li><a href="http://www.kde.org/">Projet KDE</a></li>
+	      <li><a href="http://freebsd.kde.org/">KDE sous FreeBSD</a></li>
+	      <li><a href="http://www.opengroup.org/desktop/">CDE (commercial)</a></li>
+	    </ul>
+
+	  <form action="http://www.FreeBSD.org/cgi/search.cgi" method="get">
+	    <p>Recherche dans les archives de la liste de diffusion freebsd-gnome:</p>
+	      <input type="text" name="words" size="20"/>
+	      <input type="hidden" name="max" value="25"/>
+	      <input type="hidden" name="source" value="freebsd-gnome"/>
+	      <input type="submit" value="Go"/>
+	  </form>
+
+	  	</div> <!-- contentwrap -->
+		<br class="clearboth" />
+	
+	</div> <!-- content -->
+	
+	<xsl:copy-of select="$footer"/>
+	
+        </div> <!-- container -->
+   </div> <!-- containerwrap -->
+
       </body>
     </html>
   </xsl:template>    

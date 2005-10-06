@@ -10,6 +10,7 @@
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
   <xsl:import href="../includes.xsl"/>
+  <xsl:variable name="section" select="'about'"/>
 
   <!-- Should be set on the command line, specifies the type of entries to
        include in the output.  One of "commercial", "nonprofit", or 
@@ -18,7 +19,7 @@
 
   <xsl:variable name="base" select="'..'"/>
   
-  <xsl:variable name="date" select="'$FreeBSD$'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/fr/gallery/gallery-entry.xsl,v 1.1 2003/08/17 12:22:28 stephane Exp $'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"/>
 
@@ -57,8 +58,21 @@
   <xsl:template match="gallery">
     <html>
       <xsl:copy-of select="$header1"/>
-      <body xsl:use-attribute-sets="att.body">
-	<xsl:copy-of select="$header2"/>
+      
+            <body xsl:use-attribute-sets="att.body">
+      
+        <div id="containerwrap">
+          <div id="container">
+      
+      	<xsl:copy-of select="$header2"/>
+      
+      	<div id="content">
+      
+      	      <xsl:copy-of select="$sidenav"/>
+      
+      	      <div id="contentwrap">
+      	      
+	      <xsl:copy-of select="$header3"/>
 
 	<xsl:choose>
 	  <xsl:when test="$type = 'commercial'">
@@ -86,7 +100,16 @@
 	  </xsl:apply-templates>
 	</ul>
 
+	  	</div> <!-- contentwrap -->
+		<br class="clearboth" />
+	
+	</div> <!-- content -->
+	
 	<xsl:copy-of select="$footer"/>
+	
+        </div> <!-- container -->
+   </div> <!-- containerwrap -->
+
       </body>
     </html>
   </xsl:template>
