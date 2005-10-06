@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: www/it/Makefile,v 1.8 2005/01/08 11:53:23 ale Exp $
 .if exists(Makefile.conf)
 .include "Makefile.conf"
 .endif
@@ -8,12 +8,14 @@
 
 # These are turned into validated, normalized HTML files.
 
-DOCS=  docs.sgml
+DOCS=  about.sgml
+DOCS+= docs.sgml
 DOCS+= mailto.sgml
 
 # Subdirectories
 # SGML
-SUBDIR=  releases
+SUBDIR=  docs
+SUBDIR+= releases
 .if !defined(WEB_ONLY) || empty(WEB_ONLY)
 SUBDIR+= doc
 .endif
@@ -29,12 +31,15 @@ CLEANFILES+=	index.html
 index.html: index.xsl ${XML_INCLUDES} \
 		${XML_NEWS_INCLUDES_MASTER} \
 		${XML_NEWS_NEWS_MASTER} ${XML_NEWS_PRESS_MASTER} \
+		${XML_EVENTS_EVENTS_MASTER} ${XML_EVENTS_CURDATE} \
 		${XML_MIRRORS} ${XML_TRANSTABLE} \
 		${XML_ADVISORIES} ${XML_NOTICES} \
 		${XML_NAVIGATION}
 	${XSLTPROC} ${XSLTPROCOPTS} \
 		-o $@ \
 		--param advisories.xml "'${XML_ADVISORIES}'" \
+		--param curdate.xml "'${XML_EVENTS_CURDATE}'" \
+		--param events.xml "'${XML_EVENTS_EVENTS_MASTER}'" \
 		--param mirrors.xml "'${XML_MIRRORS}'" \
 		--param navigation.xml "'${XML_NAVIGATION}'" \
 		--param news.press.xml "'${XML_NEWS_PRESS_MASTER}'" \
