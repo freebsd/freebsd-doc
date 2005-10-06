@@ -1,4 +1,4 @@
-# $FreeBSD: www/ja/Makefile,v 1.70 2005/10/04 16:21:45 hrs Exp $
+# $FreeBSD: www/ja/Makefile,v 1.71 2005/10/04 17:13:17 hrs Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.114
 
@@ -18,7 +18,6 @@ DOCS+= availability.sgml
 DOCS+=	community.sgml
 DOCS+= docs.sgml 
 DOCS+= features.sgml
-DOCS+= register.sgml
 DOCS+= internet.sgml 
 DOCS+= mailto.sgml 
 DOCS+= publish.sgml
