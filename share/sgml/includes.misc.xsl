@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/share/sgml/includes.misc.xsl,v 1.24 2005/09/30 18:12:58 hrs Exp $ -->
+<!-- $FreeBSD: www/share/sgml/includes.misc.xsl,v 1.25 2005/10/04 06:13:33 murray Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -607,7 +607,10 @@
           <xsl:param name="day" select="../name" />
 	<p>
 	  <span class="txtdate">
-	  	<xsl:value-of select='format-number($year, "####")' />-<xsl:value-of select='format-number($month, "00")' />-<xsl:value-of select='format-number($day, "00")' />
+	      <xsl:value-of select='
+		concat(format-number($year, "####"), "-",
+		format-number($month, "00"), "-",
+		format-number($day, "00"))' />
 	  </span><br />
 	  <xsl:choose>
 	    <xsl:when test="@omithref = 'yes'">
@@ -630,7 +633,10 @@
 	<xsl:param name="day" select="../name" />
 	<p>
 	  <span class="txtdate">
-		<xsl:value-of select='format-number($year, "####")' />-<xsl:value-of select='format-number($month, "00")' />-<xsl:value-of select='format-number($day, "00")' />
+	      <xsl:value-of select='
+		concat(format-number($year, "####"), "-",
+		format-number($month, "00"), "-",
+		format-number($day, "00"))' />
 	  </span><br />
 	  <xsl:choose>
 	    <xsl:when test="@omithref = 'yes'">
@@ -757,7 +763,10 @@
 
 	    <p>
 	    <span class="txtdate">
-	      <xsl:value-of select='format-number($year, "####")' />-<xsl:value-of select='format-number($month, "00")' />-<xsl:value-of select='format-number($day, "00")' />
+		<xsl:value-of select='
+		  concat(format-number($year, "####"), "-",
+		  format-number($month, "00"), "-",
+		  format-number($day, "00"))' />
 	    </span><br />
 	    <a>
 	      <xsl:attribute name="href">
@@ -790,7 +799,10 @@
 
 	    <p>
 	    <span class="txtdate">
-	      <xsl:value-of select='format-number($year, "####")' />-<xsl:value-of select='format-number($month, "00")' />-<xsl:value-of select='format-number($day, "00")' />
+	      <xsl:value-of select='
+		  concat(format-number($year, "####"), "-",
+		  format-number($month, "00"), "-",
+		  format-number($day, "00"))' />
 	    </span><br />
 	    <a>
 	      <xsl:attribute name="href">
@@ -866,7 +878,9 @@
       
       <p>
       <span class="txtdate">
-	<xsl:value-of select='format-number($year, "####")' />-<xsl:value-of select='format-number($month, "00")' />-<xsl:value-of select='format-number($day, "00")' />
+	<xsl:value-of select='
+	    concat(format-number($year, "####"), "-",
+	    format-number($month, "00"))' />
       </span><br />
       <a>
 	<xsl:attribute name="href">
@@ -977,7 +991,13 @@
 
       <p>
       <span class="txtdate">
-         <xsl:value-of select='format-number(startdate/year, "####")' />-<xsl:value-of select='format-number(startdate/month, "00")' />-<xsl:value-of select='format-number(startdate/day, "00")' /> -  <xsl:value-of select='format-number(enddate/year, "####")' />-<xsl:value-of select='format-number(enddate/month, "00")' />-<xsl:value-of select='format-number(enddate/day, "00")' />
+         <xsl:value-of select='
+	    concat(format-number(startdate/year, "####"), "-",
+	    format-number(startdate/month, "00"), "-",
+	    format-number(startdate/day, "00"), " -  ",
+	    format-number(enddate/year, "####"), "-",
+	    format-number(enddate/month, "00"), "-",
+	    format-number(enddate/day, "00"))' />
       </span><br />
       <a>
         <xsl:attribute name="href">
