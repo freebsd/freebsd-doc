@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
 
-<!-- $FreeBSD: www/ja/index.xsl,v 1.42 2005/10/04 16:21:45 hrs Exp $ -->
+<!-- $FreeBSD: www/ja/index.xsl,v 1.43 2005/10/04 17:15:06 hrs Exp $ -->
 <!-- Original revision: 1.100 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -10,7 +10,7 @@
 
   <xsl:variable name="base" select="'.'"/>
   <xsl:variable name="enbase" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/ja/index.xsl,v 1.42 2005/10/04 16:21:45 hrs Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/ja/index.xsl,v 1.43 2005/10/04 17:15:06 hrs Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <!-- these params should be externally bound. The values
@@ -66,14 +66,14 @@
 		  <div id="frontfeaturecontainer">
 		    <div id="frontfeatureleft">
 		      <div id="frontfeaturecontent">
-			<h1>ベースは BSD UNIX&#174;</h1>
+			<h1>ベースは BSD UNIX<!-- &#174; -->(R)</h1>
 
-			<p>FreeBSD は x86 互換機 (Pentium&#174; や Athlon &#8482; など),
-			  amd64 互換機 (Opteron &#8482;, Athlon 64, EM64T など),
-			  Alpha/AXP, IA-64, PC-98, UltraSPARC&#174;
+			<p>FreeBSD は x86 互換機 (Pentium<!-- &#174; -->(R) や Athlon<!-- &#8482; -->(TM) など),
+			  amd64 互換機 (Opteron<!-- &#8482; -->(TM), Athlon 64, EM64T など),
+			  Alpha/AXP, IA-64, PC-98, UltraSPARC<!-- &#174; -->(R)
 			  の各アーキテクチャに対応した高性能なオペレーティングシステムです。
 			  FreeBSD は BSD と呼ばれる、カリフォルニア大学バークレー校で開発された
-			  UNIX&#174; に由来しており、
+			  UNIX<!-- &#174; -->(R) に由来しており、
 			  <a href="{$base}/doc/ja_JP.eucJP/articles/contributors/index.html"
 			    >多くの人々が参加する開発者チーム</a>によって開発・保守がおこなわれています。
 			  また、未対応の<a href="{$base}/platforms/">プラットフォーム</a
