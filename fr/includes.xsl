@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/fr/includes.xsl,v 1.11 2005/10/06 14:20:31 blackend Exp $ -->
+<!-- $FreeBSD: www/fr/includes.xsl,v 1.12 2005/10/06 15:18:22 blackend Exp $ -->
 
 <!-- 
    The FreeBSD French Documentation Project
@@ -98,7 +98,7 @@
 			<a href="{$base}/docs.html" title="Documentation">Documentation</a>
 		  </li>
 		  <li>
-			<a href="{$enbase}/community.html" title="Community">Communaut&eacute;</a>
+			<a href="{$enbase}/community.html" title="Community">Communaut&#233;</a>
 		  </li>
 		  <li>
 			<a href="{$base}/projects/index.html" title="D&#233;veloppement">D&#233;veloppement</a>
