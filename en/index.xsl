@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/index.xsl,v 1.131 2005/10/06 19:37:11 blackend Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.132 2005/10/06 20:48:11 ceri Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -6,7 +6,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.131 2005/10/06 19:37:11 blackend Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.132 2005/10/06 20:48:11 ceri Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <!-- these params should be externally bound. The values
@@ -151,13 +151,13 @@
 					  <a href="{$base}/community/mailinglists.html" title="Mailing Lists">Mailing Lists</a>
 					</li>
 					<li>
-					  <a href="{$base}/platforms/" title="Platforms">Platforms</a>
-					</li>
-					<li>
 					  <a href="{$base}/send-pr.html" title="Report a Bug">Report a Bug</a>
 					</li>
 					<li>
 					  <a href="{$base}/doc/en_US.ISO8859-1/books/faq/index.html" title="FAQ">FAQ</a>
+					</li>
+					<li>
+					  <a href="{$base}/doc/en_US.ISO8859-1/books/handbook/index.html" title="Handbook">Handbook</a>
 					</li>
 					<li>
 					  <a href="http://www.freebsdfoundation.org/" title="Foundation">Foundation</a>
