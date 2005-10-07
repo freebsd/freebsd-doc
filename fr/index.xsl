@@ -1,8 +1,8 @@
-<!-- $FreeBSD: www/fr/index.xsl,v 1.20 2005/10/06 16:07:22 blackend Exp $ -->
+<!-- $FreeBSD: www/fr/index.xsl,v 1.21 2005/10/07 08:21:10 blackend Exp $ -->
 
-<!-- 
+<!--
    The FreeBSD French Documentation Project
-   Original revision: 1.127
+   Original revision: 1.133
 
    Version francaise : Stephane Legrand <stephane@freebsd-fr.org>
    Mise a jour:	Marc Fonvieille <blackend@FreeBSD.org>
@@ -14,7 +14,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/fr/index.xsl,v 1.20 2005/10/06 16:07:22 blackend Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/fr/index.xsl,v 1.21 2005/10/07 08:21:10 blackend Exp $'"/>
   <xsl:variable name="title" select="'Le Projet FreeBSD'"/>
 
   <!-- these params should be externally bound. The values
@@ -38,7 +38,7 @@
       <head>
 	<title><xsl:value-of select="$title"/></title>
 	<meta name="description" content="The FreeBSD Project"/>
-	<meta name="keywords" content="FreeBSD, BSD, UNIX, Support, Gallerie,
+	<meta name="keywords" content="FreeBSD, BSD, UNIX, Support, Ports,
 	      Version, Application, Logiciel, Manuel de
 	      R&#233;f&#233;rence, FAQ, Guides, Bugs, CVS, CVSup,
 	      Nouvelles, Revendeurs, homepage, CTM, Unix"/>
@@ -148,7 +148,7 @@
 			</div> <!-- languagenav -->
 
 			<div id="mirror">
-			  <form action="{$enbase}/cgi/mirror.cgi" method="get">
+			  <form action="{$cgibase}/mirror.cgi" method="get">
 				<div>
 				  <h2 class="blockhide"><label for="mirrorsel">Mirror</label></h2>
 				  <select id="mirrorsel" name="goto">
@@ -157,6 +157,7 @@
 					  </xsl:call-template>
 				  </select>
 				</div> <!-- unnamed -->
+				<input type="submit" value="Go" />
 			  </form>
 			</div> <!-- mirror -->
 
@@ -168,13 +169,13 @@
 					  <a href="{$base}/support.html#mailing-list" title="Listes de diffusion">Listes de diffusion</a>
 					</li>
 					<li>
-					  <a href="{$base}/platforms/" title="Plates-formes">Plates-formes</a>
-					</li>
-					<li>
 					  <a href="{$base}/send-pr.html" title="Envoyer un rapport de bug">Envoyer un rapport de bug</a>
 					</li>
 					<li>
 					  <a href="{$enbase}/doc/{$url.doc.langcode}/books/faq/index.html" title="FAQ">FAQ</a>
+					</li>
+					<li>
+					  <a href="{$enbase}/doc/{$url.doc.langcode}/books/handbook/index.html" title="Manuel de r&#233;f&#233;rence">Manuel de r&#233;f&#233;rence</a>
 					</li>
 					<li>
 					  <a href="http://www.freebsdfoundation.org/" title="Foundation">Fondation</a>
@@ -288,7 +289,7 @@
 					<a href="{$base}/send-pr.html" title="Submit a Problem Report">Envoyer un rapport de bogue</a>
 				  </li>
 				  <li class="last-child">
-					<a href="{$enbase}/security/advisories.rdf" title="Security Advisories RSS Feed"><img class="rssimage" src="{$enbase}/layout/images/ico_rss.png" width="27" height="12" alt="News RSS Feed" /></a>
+					<a href="{$enbase}/security/advisories.rdf" title="Security Advisories RSS Feed"><img class="rssimage" src="{$enbase}/layout/images/ico_rss.png" width="27" height="12" alt="Security Advisories RSS Feed" /></a>
 				  </li>
 				</ul>
 			  </div> <!-- unnamed -->
