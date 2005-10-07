@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/it/includes.xsl,v 1.12 2005/08/29 15:04:36 ale Exp $ -->
+<!-- $FreeBSD$ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -64,7 +64,7 @@
       				</ul>
       			  </div> <!-- searchnav -->
       			<div id="search">
-      			  <form action="{$enbase}/cgi/search.cgi" method="get">
+      			  <form action="{$cgibase}/cgi/search.cgi" method="get">
       				<div>
       			      <h2 class="blockhide"><label for="words">Cerca</label></h2>
       				  <input type="hidden" name="max" value="25" /> <input type="hidden" name="source" value="www" /><input id="words" name="words" type="text" size="20" maxlength="255" onfocus="if( this.value==this.defaultValue ) this.value='';" value="Cerca" />&#160;<input id="submit" name="submit" type="submit" value="Cerca" />
@@ -170,7 +170,7 @@
 		<li><a href="{$enbase}/doc/{$url.doc.langcode}/books/handbook/index.html">Manuale</a></li>
 		<li><a href="{$enbase}/docs/man.html">Pagine man</a>
 			<ul>
-				<li><a href="{$enbase}/cgi/man.cgi">Man Online</a></li>
+				<li><a href="{$cgibase}/cgi/man.cgi">Man Online</a></li>
 			</ul>
 		</li>
 		<li><a href="{$base}/docs/books.html">Libri e Articoli Tradotti Online</a></li>

@@ -1,8 +1,8 @@
 <!--
      The FreeBSD Italian Documentation Project
 
-     $FreeBSD: www/it/index.xsl,v 1.16 2005/08/29 15:04:36 ale Exp $
-     Original revision: 1.127
+     $FreeBSD$
+     Original revision: 1.133
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -21,7 +21,7 @@
       <head>
 	<title><xsl:value-of select="$title"/></title>
 	<meta name="description" content="The FreeBSD Project"/>
-	<meta name="keywords" content="FreeBSD, BSD, UNIX, Support, Gallery,
+	<meta name="keywords" content="FreeBSD, BSD, UNIX, Support, Ports,
 	      Release, Application, Software, Handbook, FAQ, Tutorials, Bugs,
 	      CVS, CVSup, News, Commercial Vendors, homepage, CTM, Unix"/>
 	<link rel="shortcut icon" href="{$enbase}/favicon.ico" type="image/x-icon"/>
@@ -124,7 +124,7 @@
 			</div> <!-- languagenav -->
 
 			<div id="mirror">
-			  <form action="{$enbase}/cgi/mirror.cgi" method="get">
+			  <form action="{$cgibase}/cgi/mirror.cgi" method="get">
 				<div>
 				  <h2 class="blockhide"><label for="mirrorsel">Mirror</label></h2>
 				  <select id="mirrorsel" name="goto">
@@ -133,6 +133,7 @@
 					  </xsl:call-template>
 				  </select>
 				</div> <!-- unnamed -->
+				<input type="submit" value="Vai" />
 			  </form>
 			</div> <!-- mirror -->
 
@@ -144,13 +145,13 @@
 					  <a href="{$enbase}/community/mailinglists.html" title="Mailing Lists">Mailing Lists</a>
 					</li>
 					<li>
-					  <a href="{$enbase}/platforms/" title="Piattaforme">Piattaforme</a>
-					</li>
-					<li>
 					  <a href="{$enbase}/send-pr.html" title="Report di Bug">Report di Bug</a>
 					</li>
 					<li>
 					  <a href="{$enbase}/doc/en_US.ISO8859-1/books/faq/index.html" title="FAQ">FAQ</a>
+					</li>
+					<li>
+					  <a href="{$enbase}/doc/it_IT.ISO8859-15/books/handbook/index.html" title="Manuale">Manuale</a>
 					</li>
 					<li>
 					  <a href="http://www.freebsdfoundation.org/" title="Fondazione">Fondazione</a>
