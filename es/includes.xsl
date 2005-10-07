@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/es/includes.xsl,v 1.7 2005/09/30 17:07:09 jesusr Exp $ -->
+<!-- $FreeBSD: www/es/includes.xsl,v 1.8 2005/10/04 07:56:16 murray Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -53,16 +53,16 @@
             <div id="headercontainer">
       
               <div id="header">
-      	      <h2 class="blockhide">Header And Logo</h2>
+      	      <h2 class="blockhide">Cabecera y Logo</h2>
                 <div id="headerlogoleft">
                   <a href="{$base}" title="FreeBSD"><img src="{$enbase}/layout/images/logo.png" width="360" height="40" alt="FreeBSD" /></a>
                 </div> <!-- headerlogoleft -->
                 <div id="headerlogoright">
-      			<h2 class="blockhide">Peripheral Links</h2>
+      			<h2 class="blockhide">Enlaces perifericos</h2>
       			  <div id="searchnav">
       				<ul id="searchnavlist">
       				  <li>
-      					Text Size: <a href="#" onkeypress="return false;" onclick="setActiveStyleSheet('Normal Text'); return false;" title="Normal Text Size">Normal</a> / <a href="#" onkeypress="return false;" onclick="setActiveStyleSheet('Large Text'); return false;" title="Large Text Size">Large</a>
+      					Tama&#241;o de Texto: <a href="#" onkeypress="return false;" onclick="setActiveStyleSheet('Normal Text'); return false;" title="Normal Text Size">Normal</a> / <a href="#" onkeypress="return false;" onclick="setActiveStyleSheet('Large Text'); return false;" title="Large Text Size">Large</a>
       				  </li>
       				  <li>
       					<a href="{$enbase}/donations/" title="Donaciones">Donaciones</a>
@@ -84,14 +84,14 @@
       
               </div> <!-- header -->
       
-        	<h2 class="blockhide">Site Navigation</h2>
+        	<h2 class="blockhide">Navegacion</h2>
               <div id="topnav">
                 <ul id="topnavlist">
 		  <li>
-			<a href="{$base}/" title="Home">Home</a>
+			<a href="{$base}/" title="Inicio">Inicio</a>
 		  </li>
 		  <li>
-			<a href="{$base}/about.html" title="About">About</a>
+			<a href="{$base}/about.html" title="Acerca de">Acerca de</a>
 		  </li>
 		  <li>
 			<a href="{$base}/where.html" title="Obtener FreeBSD">Obtener FreeBSD</a>
@@ -100,7 +100,7 @@
 			<a href="{$base}/docs.html" title="Documentaci&#243;n">Documentaci&#243;n</a>
 		  </li>
 		  <li>
-			<a href="{$enbase}/community.html" title="Community">Community</a>
+			<a href="{$enbase}/community.html" title="Community">Comunidad</a>
 		  </li>
 		  <li>
 			<a href="{$base}/projects/index.html" title="Desarrollo">Desarrollo</a>
@@ -125,24 +125,24 @@
 	
 	<xsl:if test="$section = 'about'" >
 		<ul>
-		<li><a href="{$base}/about.html">About</a></li>
-		<li><a href="{$base}/features.html">Features</a></li>
-		<li><a href="{$base}/applications.html">Applications</a></li>
-		<li><a href="{$base}/internet.html">Internetworking</a></li>
-		<li><a href="{$enbase}/advocacy/">Advocacy</a></li>
+		<li><a href="{$base}/about.html">Acerca de</a></li>
+		<li><a href="{$base}/features.html">Caracter&#237;sticas</a></li>
+		<li><a href="{$base}/applications.html">Aplicaciones</a></li>
+		<li><a href="{$base}/internet.html">Redes</a></li>
+		<li><a href="{$enbase}/advocacy/">Promoci&#243;n</a></li>
 		<li><a href="{$enbase}/marketing/">Marketing</a></li>
-		<li><a href="{$base}/news/newsflash.html">News</a></li>
+		<li><a href="{$base}/news/newsflash.html">Noticias</a></li>
 		<li><a href="{$enbase}/events/events.html">Eventos</a></li>
-		<li><a href="{$base}/news/press.html">Press</a></li>
+		<li><a href="{$base}/news/press.html">Prensa</a></li>
 		<li><a href="{$enbase}/art.html">Artwork</a></li>
 		<li><a href="{$enbase}/donations/">Donaciones</a></li>
-		<li><a href="{$base}/copyright/">Legal Notices</a></li>
+		<li><a href="{$base}/copyright/">Notas Legales</a></li>
 		</ul>
 	</xsl:if>
 
 	<xsl:if test="$section = 'community'" >
 		<ul>
-		<li><a href="{$enbase}/community.html">Community</a></li>
+		<li><a href="{$enbase}/community.html">Comunidad</a></li>
 		<!--li><a href="{$base}/community/mailinglists.html">Listas de distribuci&#243;n</a></li>
 		<li><a href="{$base}/community/irc.html">IRC</a></li>
 		<li><a href="{$base}/community/newsgroups.html">Listas de news</a></li>
@@ -157,7 +157,9 @@
 		<li><a href="{$enbase}/doc/en_US.ISO8859-1/books/developers-handbook">Manual del desarrollador</a></li>
 		<li><a href="{$enbase}/doc/en_US.ISO8859-1/books/porters-handbook">Manual del Porter</a></li>
 		<li><a href="{$base}/support.html#cvs">Repositorio CVS</a></li>
-		<li><a href="{$enbase}/releng/index.html">Release Engineering</a></li>
+		<li><a
+		    href="{$enbase}/releng/index.html">Ingenier&#237;a
+		de Release</a></li>
 		<li><a href="{$enbase}/platforms/">Arquitecturas</a>
 			<ul>
 				<li><a href="{$enbase}/platforms/alpha.html">alpha</a></li>
@@ -179,14 +181,14 @@
 		<li><a href="{$enbase}/doc/es_ES.ISO8859-1/books/handbook/">Handbook</a></li>
 		<li><a href="{$base}/docs.html#man">Manuales</a>
 			<ul>
-				<li><a href="{$enbase}/cgi/man.cgi">Man Online</a></li>
+				<li><a href="{$enbase}/cgi/man.cgi">P&#225;ginas Man Online</a></li>
 			</ul>
 		</li>
-		<li><a href="{$base}/docs.html#books">Books and Articles Online</a></li>
+		<li><a href="{$base}/docs.html#books">Libros y art&#237;iculos Online</a></li>
 		<li><a href="{$base}/publish.html">Publicaciones</a></li>
 		<li><a href="{$base}/docs.html#links">Recursos Web</a></li>
 		<li><a href="{$base}/projects/newbies.html">Para principiantes</a></li>
-		<li><a href="{$base}/docproj/">Documentation Project</a></li>
+		<li><a href="{$base}/docproj/">Proyecto de Documentaci&#243;n</a></li>
 		</ul>
 	</xsl:if>
 
