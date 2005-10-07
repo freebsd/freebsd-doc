@@ -1,9 +1,9 @@
-<!-- $FreeBSD: www/fr/index.xsl,v 1.19 2005/10/06 15:18:22 blackend Exp $ -->
+<!-- $FreeBSD: www/fr/index.xsl,v 1.20 2005/10/06 16:07:22 blackend Exp $ -->
 
 <!-- 
    The FreeBSD French Documentation Project
-   Original revision: 1.117
-   
+   Original revision: 1.127
+
    Version francaise : Stephane Legrand <stephane@freebsd-fr.org>
    Mise a jour:	Marc Fonvieille <blackend@FreeBSD.org>
 -->
@@ -14,7 +14,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/fr/index.xsl,v 1.19 2005/10/06 15:18:22 blackend Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/fr/index.xsl,v 1.20 2005/10/06 16:07:22 blackend Exp $'"/>
   <xsl:variable name="title" select="'Le Projet FreeBSD'"/>
 
   <!-- these params should be externally bound. The values
@@ -38,9 +38,10 @@
       <head>
 	<title><xsl:value-of select="$title"/></title>
 	<meta name="description" content="The FreeBSD Project"/>
-	<meta name="keywords" content="FreeBSD, BSD, UNIX, Support, Gallery,
-	      Release, Application, Software, Handbook, FAQ, Tutorials, Bugs,
-	      CVS, CVSup, News, Commercial Vendors, homepage, CTM, Unix"/>
+	<meta name="keywords" content="FreeBSD, BSD, UNIX, Support, Gallerie,
+	      Version, Application, Logiciel, Manuel de
+	      R&#233;f&#233;rence, FAQ, Guides, Bugs, CVS, CVSup,
+	      Nouvelles, Revendeurs, homepage, CTM, Unix"/>
 	<link rel="shortcut icon" href="{$enbase}/favicon.ico" type="image/x-icon"/>
 	<link rel="icon" href="{$enbase}/favicon.ico" type="image/x-icon"/>
     <link rel="stylesheet" media="screen" href="{$enbase}/layout/css/fixed.css" type="text/css" title="Normal Text" />
