@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/Makefile,v 1.130 2005/10/06 14:28:40 ale Exp $
+# $FreeBSD: www/en/Makefile,v 1.131 2005/10/06 14:34:56 blackend Exp $
 
 .if exists(Makefile.conf)
 .include "Makefile.conf"
@@ -39,7 +39,7 @@ DATA=	favicon.ico
 DATA+=	freebsd.css
 DATA+=	index.css
 DATA+=	robots.txt
-DATA+=  vendors.html
+DATA+=	vendors.html
 
 # Subdirectories
 # SGML

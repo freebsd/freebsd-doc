@@ -1,11 +1,19 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/share/sgml/includes.release.xsl,v 1.9 2005/01/25 17:14:20 hrs Exp $ -->
+<!-- $FreeBSD: www/share/sgml/includes.release.xsl,v 1.10 2005/05/09 20:49:30 murray Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
   <xsl:variable name="rel.head" select='"6.0"'/>
   <xsl:variable name="rel.head.major" select='"6"'/>
+
+  <!-- An upcoming release that we want tested.  Set $beta.testing to the
+	empty string if we're not in the middle of a release cycle.  Ha ha. -->
+  <xsl:variable name="beta.testing" select="YES" />
+  <xsl:variable name="betarel.current" select='"6.0"'/>
+  <xsl:variable name="betarel.vers" select='"BETA5"'/>
+  <xsl:variable name="u.betarel.schedule">
+    <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$betarel.current"/>R/schedule.html</xsl:variable>
 
   <xsl:variable name="rel.current" select='"5.4"'/>
   <xsl:variable name="rel.current.major" select='"5"'/>
