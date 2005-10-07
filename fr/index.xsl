@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/fr/index.xsl,v 1.21 2005/10/07 08:21:10 blackend Exp $ -->
+<!-- $FreeBSD: www/fr/index.xsl,v 1.22 2005/10/07 08:33:02 blackend Exp $ -->
 
 <!--
    The FreeBSD French Documentation Project
@@ -14,7 +14,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/fr/index.xsl,v 1.21 2005/10/07 08:21:10 blackend Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/fr/index.xsl,v 1.22 2005/10/07 08:33:02 blackend Exp $'"/>
   <xsl:variable name="title" select="'Le Projet FreeBSD'"/>
 
   <!-- these params should be externally bound. The values
@@ -169,7 +169,7 @@
 					  <a href="{$base}/support.html#mailing-list" title="Listes de diffusion">Listes de diffusion</a>
 					</li>
 					<li>
-					  <a href="{$base}/send-pr.html" title="Envoyer un rapport de bug">Envoyer un rapport de bug</a>
+					  <a href="{$base}/send-pr.html" title="Envoyer un rapport de bogue">Envoyer un rapport de bogue</a>
 					</li>
 					<li>
 					  <a href="{$enbase}/doc/{$url.doc.langcode}/books/faq/index.html" title="FAQ">FAQ</a>
@@ -178,7 +178,7 @@
 					  <a href="{$enbase}/doc/{$url.doc.langcode}/books/handbook/index.html" title="Manuel de r&#233;f&#233;rence">Manuel de r&#233;f&#233;rence</a>
 					</li>
 					<li>
-					  <a href="http://www.freebsdfoundation.org/" title="Foundation">Fondation</a>
+					  <a href="http://www.freebsdfoundation.org/" title="Fondation">Fondation</a>
 					</li>
 				  </ul>
 			  </div> <!-- frontshortcutscontent -->
