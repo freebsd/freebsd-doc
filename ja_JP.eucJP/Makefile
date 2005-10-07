@@ -10,7 +10,7 @@ SUBDIR+= books
 SUBDIR+= man
 .endif
 
-COMPAT_SYMLINK = ja_JP.eucJP
+COMPAT_SYMLINK = ja
 
 DOC_PREFIX?= ${.CURDIR}/..
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"
