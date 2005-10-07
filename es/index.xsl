@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/es/index.xsl,v 1.8 2005/09/06 08:19:39 jcamou Exp $ -->
+<!-- $FreeBSD: www/es/index.xsl,v 1.9 2005/10/04 07:56:16 murray Exp $ -->
 <!-- $FreeBSDes: www/es/index.xsl,v 1.4 2004/09/07 21:46:11 jcamou Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -10,7 +10,7 @@
 
   <xsl:variable name="base" select="'.'"/>
   <xsl:variable name="enbase" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/es/index.xsl,v 1.8 2005/09/06 08:19:39 jcamou Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/es/index.xsl,v 1.9 2005/10/04 07:56:16 murray Exp $'"/>
   <xsl:variable name="title" select="'El Proyecto FreeBSD'"/>
 
   <!-- these params should be externally bound. The values
@@ -70,7 +70,7 @@
 		<div id="frontfeatureleft">
 			<div id="frontfeaturecontent">
 				<h1>
-				  Based on BSD UNIX&#174;
+				  Basado en BSD UNIX&#174;
 				</h1>				
 				<p>FreeBSD es un avanzado sistema operativo para arquitecturas
 				x86 compatibles (incluyendo Pentium&#174; y Athlon&#8482;),
@@ -85,7 +85,7 @@
 				<a href="{$enbase}/platforms/index.html">arquitecturas</a>
 				est&#225; en diferentes fases de desarrollo.</p>
 				<div id="txtfrontfeaturelink">
-				&#187;<a href="{$base}/about.html" title="Learn More">Learn More</a>
+				&#187;<a href="{$base}/about.html" title="M&#225;s Informaci&#243;n">M&#225;s Informaci&#243;n</a>
 				</div> <!-- txtfrontfeaturelink -->
 			</div> <!-- frontfeaturecontent -->
 		</div> <!-- frontfeatureleft -->
@@ -94,14 +94,14 @@
 			<div class="frontgetroundbox">
 			  <div class="frontgettop"><div>&#160;</div>&#160;</div>
 				<div class="frontgetcontent">
-				  <a href="{$base}/where.html">Get FreeBSD Now</a>
+				  <a href="{$base}/where.html">Obten FreeBSD Ahora</a>
 				</div> <!-- frontgetcontent -->
 			  <div class="frontgetbot"><div>&#160;</div>&#160;</div>
 			</div> <!-- frontgetroundbox -->
 			
 			<div id="frontreleases">
 			  <div id="frontreleasescontent" class="txtshortcuts">
-				  <h2>LATEST RELEASES</h2>
+				  <h2>&#218;ltimas versiones</h2>
 				  <ul id="frontreleaseslist">
 					<li>
 					  <a href="{$u.rel.announce}">Nueva Tecnolog&#237;a: <xsl:value-of select="$rel.current"/></a>
@@ -115,7 +115,7 @@
 		</div> <!-- frontfeaturemiddle -->
 
 		<div id="frontfeatureright">
-			<h2 class="blockhide">Language Links</h2>
+			<h2 class="blockhide">Enlace Idiomas</h2>
 			<div id="languagenav">
 				<ul id="languagenavlist">
 				  <li>
@@ -145,7 +145,7 @@
 			<div id="mirror">
 			  <form action="{$enbase}/cgi/mirror.cgi" method="get">
 				<div>
-				  <h2 class="blockhide"><label for="mirrorsel">Mirror</label></h2>
+				  <h2 class="blockhide"><label for="mirrorsel">R&#233;plicas</label></h2>
 				  <select id="mirrorsel" name="goto">
 					  <xsl:call-template name="html-index-mirrors-options-list">
 					    <xsl:with-param name="mirrors.xml" select="$mirrors.xml" />
@@ -157,7 +157,7 @@
 
 			<div id="frontshortcuts">
 			  <div id="frontshortcutscontent" class="txtshortcuts">
-				  <h2>SHORTCUTS</h2>
+				  <h2>ENLACES R&#193;PIDOS</h2>
 				  <ul id="frontshortcutslist">
 					<li>
 					  <a href="{$base}/support.html#mailing-list" title="Listas de distribuci&#243;n">Listas de distribuci&#243;n</a>
@@ -166,13 +166,13 @@
 					  <a href="{$enbase}/platforms/" title="Arquitecturas">Arquitecturas</a>
 					</li>
 					<li>
-					  <a href="{$base}/send-pr.html" title="Report a Bug">Report a Bug</a>
+					  <a href="{$base}/send-pr.html" title="Reporta un Fallo">Reporta un Fallo</a>
 					</li>
 					<li>
 					  <a href="{$enbase}/doc/{$url.doc.langcode}/books/faq/index.html" title="FAQ">FAQ</a>
 					</li>
 					<li>
-					  <a href="http://www.freebsdfoundation.org/" title="Foundation">Foundation</a>
+					  <a href="http://www.freebsdfoundation.org/" title="Foundation">Fundaci&#243;n</a>
 					</li>
 				  </ul>
 			  </div> <!-- frontshortcutscontent -->
@@ -181,7 +181,7 @@
 			<div class="frontnewroundbox">
 			  <div class="frontnewtop"><div>&#160;</div>&#160;</div>
 			    <div class="frontnewcontent">
-			      <a href="{$base}/projects/newbies.html">New to FreeBSD?</a>
+			      <a href="{$base}/projects/newbies.html">Nuevo en FreeBSD?</a>
 			    </div> <!-- frontnewcontent -->
 			  <div class="frontnewbot"><div>&#160;</div>&#160;</div>
 			</div> <!-- frontnewroundbox -->
@@ -193,7 +193,7 @@
             <div id="frontnemscontainer">
             	<div id="frontnews">
             	   <div id="frontnewscontent" class="txtnewsevent">
-			<h2>LATEST NEWS</h2>
+			<h2>&#218;LTIMAS NOTICIAS</h2>
 			<div class="newseventswrap">
 
 			<xsl:call-template name="html-index-news-project-items">
@@ -204,7 +204,7 @@
 			  <div>
 				<ul class="newseventslist">
 				  <li class="first-child">
-					<a href="{$base}/news/newsflash.html" title="More News">More News</a>
+					<a href="{$base}/news/newsflash.html" title="M&#225; Noticias">M&#225; Noticias</a>
 				  </li>
 				  <li class="last-child">
 					<a href="{$enbase}/news/news.rdf" title="News RSS Feed"><img class="rssimage" src="{$enbase}/layout/images/ico_rss.png" width="27" height="12" alt="News RSS Feed" /></a>
@@ -219,7 +219,7 @@
             	<div id="frontevents">
 		   <div id="fronteventscontent" class="txtnewsevent">
 
-			<h2>UPCOMING EVENTS</h2>
+			<h2>PR&#211;XIMOS EVENTOS</h2>
 			<div class="newseventswrap">
 
 			<xsl:call-template name="html-index-events-items">
@@ -231,7 +231,7 @@
 			  <div>
 				<ul class="newseventslist">
 				  <li class="only-child">
-					<a href="{$enbase}/events/" title="More Events">More Events</a>
+					<a href="{$enbase}/events/" title="M&#225;s Eventos">M&#225;s Eventos</a>
 				  </li>
 				</ul>
 			  </div> <!-- unnamed -->
@@ -243,7 +243,7 @@
             	<div id="frontmedia">
 		   <div id="frontmediacontent" class="txtnewsevent">
 
-			<h2>IN THE MEDIA</h2>
+			<h2>EN LOS MEDIOS</h2>
 			<div class="newseventswrap">
 
 			<xsl:call-template name="html-index-news-press-items">
@@ -254,7 +254,7 @@
 			  <div>
 				<ul class="newseventslist">
 				  <li class="only-child">
-					<a href="{$base}/news/press.html" title="More Media">More Media</a>
+					<a href="{$base}/news/press.html" title="M&#225;s Medios">M&#225;s Medios</a>
 				  </li>
 				</ul>
 			  </div> <!-- unnamed -->
@@ -277,10 +277,10 @@
 			  <div>
 				<ul class="newseventslist">
 				  <li class="first-child">
-					<a href="{$base}/security/" title="More Security Advisories">More</a>
+					<a href="{$base}/security/" title="M&#225;s Avisos de Seguridad">M&#225;s</a>
 				  </li>
 				  <li>
-					<a href="{$base}/send-pr.html" title="Submit a Problem Report">Submit Bug</a>
+					<a href="{$base}/send-pr.html" title="Env&#237; un Problem Report">Enviar un Bug</a>
 				  </li>
 				  <li class="last-child">
 					<a href="{$enbase}/security/advisories.rdf" title="Security Advisories RSS Feed"><img class="rssimage" src="{$enbase}/layout/images/ico_rss.png" width="27" height="12" alt="News RSS Feed" /></a>
