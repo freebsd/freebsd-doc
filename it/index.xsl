@@ -1,7 +1,7 @@
 <!--
      The FreeBSD Italian Documentation Project
 
-     $FreeBSD$
+     $FreeBSD: www/it/index.xsl,v 1.18 2005/10/07 09:21:18 ale Exp $
      Original revision: 1.133
 -->
 
@@ -10,7 +10,7 @@
   <xsl:import href="includes.xsl"/>
   <xsl:import href="../en/news/includes.xsl"/>
   
-  <xsl:variable name="date" select="'$FreeBSD: www/it/index.xsl,v 1.16 2005/08/29 15:04:36 ale Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/it/index.xsl,v 1.18 2005/10/07 09:21:18 ale Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -124,7 +124,7 @@
 			</div> <!-- languagenav -->
 
 			<div id="mirror">
-			  <form action="{$cgibase}/cgi/mirror.cgi" method="get">
+			  <form action="{$cgibase}/mirror.cgi" method="get">
 				<div>
 				  <h2 class="blockhide"><label for="mirrorsel">Mirror</label></h2>
 				  <select id="mirrorsel" name="goto">
