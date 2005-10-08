@@ -1,7 +1,7 @@
 #
 # $FreeBSD$
-# $FreeBSDde: de-docproj/books/handbook/Makefile,v 1.44 2005/08/15 19:07:04 jkois Exp $
-# basiert auf: 1.94
+# $FreeBSDde: de-docproj/books/handbook/Makefile,v 1.46 2005/09/21 17:39:51 jkois Exp $
+# basiert auf: 1.97
 #
 # Build the FreeBSD Handbook in its German translation.
 #
@@ -186,41 +186,45 @@ book.pdf: book.ps
 pgpkeyring: pgpkeys/chapter.sgml
 	@${JADE} -V nochunks ${OTHERFLAGS} ${JADEOPTS} -d ${DSLPGP} -t sgml ${MASTERDOC}
 
-.for p in ftp cvsup
-SRCS+= mirrors.sgml.${p}.inc
-CLEANFILES+= mirrors.sgml.${p}.inc
-CLEANFILES+= mirrors.sgml.${p}.inc.tmp
-.endfor
-
-SRCS+= eresources.sgml.www.inc
-CLEANFILES+= eresources.sgml.www.inc
-CLEANFILES+= eresources.sgml.www.inc.tmp
-
 URL_RELPREFIX?=	../../../..
 DOC_PREFIX?= ${.CURDIR}/../../..
+
+#
+# rules generating lists of mirror site from XML database.
+#
+XMLDOCS=	mirrors-ftp:::mirrors.sgml.ftp.inc.tmp \
+		mirrors-cvsup:::mirrors.sgml.cvsup.inc.tmp \
+		eresources:::eresources.sgml.www.inc.tmp
+DEPENDSET.DEFAULT=	transtable mirror
+XSLT.DEFAULT=		${XSL_MIRRORS}
+XML.DEFAULT=		${XML_MIRRORS}
+NO_TIDY.DEFAULT=	yes
+
+PARAMS.mirrors-ftp+=	--param 'type' "'ftp'" \
+			--param 'proto' "'ftp'" \
+			--param 'target' "'handbook/mirrors/chapter.sgml'"
+PARAMS.mirrors-cvsup+=	--param 'type' "'cvsup'" \
+			--param 'proto' "'cvsup'" \
+			--param 'target' "'handbook/mirrors/chapter.sgml'"
+PARAMS.eresources+=	--param 'type' "'www'" \
+			--param 'proto' "'http'" \
+			--param 'target' "'handbook/eresources/chapter.sgml'"
+
+SRCS+=		mirrors.sgml.ftp.inc \
+		mirrors.sgml.cvsup.inc \
+		eresources.sgml.www.inc
+CLEANFILES+=	mirrors-ftp:::mirrors.sgml.ftp.inc.tmp \
+		mirrors-cvsup:::mirrors.sgml.cvsup.inc.tmp \
+		eresources:::eresources.sgml.www.inc.tmp
 
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"
 
 .for p in ftp cvsup
-mirrors.sgml.${p}.inc: ${XML_MIRRORS} ${XSL_MIRRORS}
-	${XSLTPROC} ${XSLTPROCOPTS} \
-	    -o $@.tmp \
-	    --param 'type' "'$p'" \
-	    --param 'proto' "'$p'" \
-	    --param 'target' "'handbook/mirrors/chapter.sgml'" \
-	    ${XSL_MIRRORS} ${XML_MIRRORS}
+mirrors.sgml.${p}.inc: mirrors.sgml.${p}.inc.tmp
 	${SED} -e 's,<\([^ >]*\)\([^>]*\)/>,<\1\2></\1>,;s,</anchor>,,'\
 	    < $@.tmp > $@ || (${RM} -f $@ && false)
-	${RM} -f $@.tmp
 .endfor
 
-eresources.sgml.www.inc: ${XML_MIRRORS} ${XSL_MIRRORS}
-	${XSLTPROC} ${XSLTPROCOPTS} \
-	    -o $@.tmp \
-	    --param 'type' "'www'" \
-	    --param 'proto' "'http'" \
-	    --param 'target' "'handbook/eresources/chapter.sgml'" \
-	    ${XSL_MIRRORS} ${XML_MIRRORS}
+eresources.sgml.www.inc: eresources.sgml.www.inc.tmp
 	${SED} -e 's,<\([^ >]*\)\([^>]*\)/>,<\1\2></\1>,;s,</anchor>,,'\
 	    < $@.tmp > $@ || (${RM} -f $@ && false)
-	${RM} -f $@.tmp
