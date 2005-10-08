@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
 
-<!-- $FreeBSD: www/ja/index.xsl,v 1.43 2005/10/04 17:15:06 hrs Exp $ -->
-<!-- Original revision: 1.100 -->
+<!-- $FreeBSD: www/ja/index.xsl,v 1.44 2005/10/06 00:56:04 hrs Exp $ -->
+<!-- Original revision: 1.135 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -10,7 +10,7 @@
 
   <xsl:variable name="base" select="'.'"/>
   <xsl:variable name="enbase" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/ja/index.xsl,v 1.43 2005/10/04 17:15:06 hrs Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/ja/index.xsl,v 1.44 2005/10/06 00:56:04 hrs Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <!-- these params should be externally bound. The values
@@ -34,7 +34,7 @@
       <head>
 	<title><xsl:value-of select="$title"/></title>
 	<meta name="description" content="The FreeBSD Project"/>
-	<meta name="keywords" content="FreeBSD, BSD, UNIX, Support, Gallery,
+	<meta name="keywords" content="FreeBSD, BSD, UNIX, Support, Ports,
 	      Release, Application, Software, Handbook, FAQ, Tutorials, Bugs,
 	      CVS, CVSup, News, Commercial Vendors, homepage, CTM, Unix"/>
 	<link rel="shortcut icon" href="{$enbase}/favicon.ico" type="image/x-icon"/>
@@ -116,6 +116,13 @@
 			    <li>
 			      <a href="{$u.rel2.announce}">プロダクションリリース (旧版) <xsl:value-of select="$rel2.current"/></a>
 			    </li>
+			    <xsl:if test="$beta.testing">
+			      <li>
+				<a href="{$base}/where.html#HELPTEST">
+				  次回リリース予定
+				  <xsl:value-of select="concat($betarel.current, '-', $betarel.vers)"/></a>
+			      </li>
+			    </xsl:if>
 			  </ul>
 			</div> <!-- frontreleasescontent -->
 		      </div> <!-- frontreleases -->
@@ -151,7 +158,7 @@
 		      </div> <!-- languagenav -->
 
 		      <div id="mirror">
-			<form action="{$enbase}/cgi/mirror.cgi" method="get">
+			<form action="{$cgibase}/mirror.cgi" method="get">
 			  <div>
 			    <h2 class="blockhide"><label for="mirrorsel">ミラーサイト</label></h2>
 			    <select id="mirrorsel" name="goto">
@@ -160,6 +167,7 @@
 			      </xsl:call-template>
 			    </select>
 			  </div> <!-- unnamed -->
+			  <input type="submit" value="移動" />
 			</form>
 		      </div> <!-- mirror -->
 
@@ -171,13 +179,13 @@
 			      <a href="{$base}/support.html#mailing-list" title="Mailing Lists">メーリングリスト</a>
 			    </li>
 			    <li>
-			      <a href="{$base}/platforms/" title="Platforms">プラットフォーム</a>
-			    </li>
-			    <li>
 			      <a href="{$base}/send-pr.html" title="Report a Bug">バグの報告</a>
 			    </li>
 			    <li>
 			      <a href="{$enbase}/doc/{$url.doc.langcode}/books/faq/index.html" title="FAQ">FAQ</a>
+			    </li>
+			    <li>
+			      <a href="{$enbase}/doc/{$url.doc.langcode}/books/handbook/index.html" title="Handbook">ハンドブック</a>
 			    </li>
 			    <li>
 			      <a href="http://www.freebsdfoundation.org/" title="Foundation">FreeBSD 財団</a>

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
 
-<!-- $FreeBSD: www/ja/includes.xsl,v 1.29 2005/10/04 17:15:06 hrs Exp $ -->
+<!-- $FreeBSD: www/ja/includes.xsl,v 1.30 2005/10/08 11:45:23 hrs Exp $ -->
 <!-- Original revision: 1.20 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -57,7 +57,7 @@
       				</ul>
       			  </div> <!-- searchnav -->
       			<div id="search">
-      			  <form action="{$enbase}/cgi/search.cgi" method="get">
+      			  <form action="{$cgibase}/search.cgi" method="get">
       				<div>
       			      <h2 class="blockhide"><label for="words">Search</label></h2>
       				  <input type="hidden" name="max" value="25" /> <input type="hidden" name="source" value="www" /><input id="words" name="words" type="text" size="20" maxlength="255" onfocus="if( this.value==this.defaultValue ) this.value='';" value="Search" />&#160;<input id="submit" name="submit" type="submit" value="Search" />
@@ -163,7 +163,7 @@
 		<li><a href="{$base}/doc/{$url.doc.langcode}/books/handbook/">Handbook</a></li>
 		<li><a href="{$base}/docs.html#man">Manual Pages</a>
 			<ul>
-				<li><a href="{$enbase}/cgi/man.cgi">Man Online</a></li>
+				<li><a href="{$cgibase}/man.cgi">Man Online</a></li>
 			</ul>
 		</li>
 		<li><a href="{$base}/docs.html#books">Books and Articles Online</a></li>
