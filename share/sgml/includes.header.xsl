@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/share/sgml/includes.header.xsl,v 1.6 2005/10/06 19:27:37 ceri Exp $ -->
+<!-- $FreeBSD: www/share/sgml/includes.header.xsl,v 1.7 2005/10/07 14:15:48 ceri Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -160,7 +160,7 @@
 				<li><a href="{$base}/platforms/alpha.html">alpha</a></li>
 				<li><a href="{$base}/platforms/amd64.html">amd64</a></li>
 				<li><a href="{$base}/platforms/i386.html">i386</a></li>
-				<li><a href="{$base}/platforms/ia64.html">ia64</a></li>
+				<li><a href="{$base}/platforms/ia64/index.html">ia64</a></li>
 				<li><a href="{$base}/platforms/pc98.html">pc98</a></li>
 				<li><a href="{$base}/platforms/sparc.html">sparc64</a></li>
 			</ul>
