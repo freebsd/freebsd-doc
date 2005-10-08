@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
 
-<!-- $FreeBSD: www/ja/includes.xsl,v 1.28 2005/10/04 16:21:45 hrs Exp $ -->
+<!-- $FreeBSD: www/ja/includes.xsl,v 1.29 2005/10/04 17:15:06 hrs Exp $ -->
 <!-- Original revision: 1.20 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -46,13 +46,13 @@
       			  <div id="searchnav">
       				<ul id="searchnavlist">
       				  <li>
-      					Text Size: <a href="#" onkeypress="return false;" onclick="setActiveStyleSheet('Normal Text'); return false;" title="Normal Text Size">Normal</a> / <a href="#" onkeypress="return false;" onclick="setActiveStyleSheet('Large Text'); return false;" title="Large Text Size">Large</a>
+      					文字サイズ: <a href="#" onkeypress="return false;" onclick="setActiveStyleSheet('Normal Text'); return false;" title="Normal Text Size">中</a> / <a href="#" onkeypress="return false;" onclick="setActiveStyleSheet('Large Text'); return false;" title="Large Text Size">大</a>
       				  </li>
       				  <li>
       					<a href="{$enbase}/donations/" title="寄付・寄贈">寄付・寄贈</a>
       				  </li>
       				  <li class="last-child">
-      					<a href="{$base}/mailto.html" title="Contact">Contact</a>
+      					<a href="{$base}/mailto.html" title="Contact">連絡先</a>
       				  </li>
       				</ul>
       			  </div> <!-- searchnav -->
