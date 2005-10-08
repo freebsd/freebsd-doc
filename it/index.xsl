@@ -1,8 +1,8 @@
 <!--
      The FreeBSD Italian Documentation Project
 
-     $FreeBSD: www/it/index.xsl,v 1.19 2005/10/07 12:20:30 ale Exp $
-     Original revision: 1.133
+     $FreeBSD: www/it/index.xsl,v 1.20 2005/10/08 08:15:44 ale Exp $
+     Original revision: 1.135
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -10,7 +10,7 @@
   <xsl:import href="includes.xsl"/>
   <xsl:import href="../en/news/includes.xsl"/>
   
-  <xsl:variable name="date" select="'$FreeBSD: www/it/index.xsl,v 1.19 2005/10/07 12:20:30 ale Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/it/index.xsl,v 1.20 2005/10/08 08:15:44 ale Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -90,9 +90,9 @@
 					<li>
 					  <a href="{$u.rel2.announce}">Release di Produzione (Legacy) <xsl:value-of select="$rel2.current"/></a>
 					</li>
-				    <xsl:if test="$beta.testing != ''">
+				    <xsl:if test="$beta.testing">
 					<li>
-					  <a href="{$base}/where.html">Prossima Release
+					  <a href="{$base}/where.html#HELPTEST">Prossima Release
 					    <xsl:value-of select="concat($betarel.current, '-', $betarel.vers)"/></a>
 					</li>
 				    </xsl:if>
