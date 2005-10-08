@@ -1,7 +1,7 @@
 <!--
      The FreeBSD Italian Documentation Project
 
-     $FreeBSD: www/it/index.xsl,v 1.20 2005/10/08 08:15:44 ale Exp $
+     $FreeBSD: www/it/index.xsl,v 1.21 2005/10/08 11:31:04 ale Exp $
      Original revision: 1.135
 -->
 
@@ -10,7 +10,7 @@
   <xsl:import href="includes.xsl"/>
   <xsl:import href="../en/news/includes.xsl"/>
   
-  <xsl:variable name="date" select="'$FreeBSD: www/it/index.xsl,v 1.20 2005/10/08 08:15:44 ale Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/it/index.xsl,v 1.21 2005/10/08 11:31:04 ale Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -92,7 +92,7 @@
 					</li>
 				    <xsl:if test="$beta.testing">
 					<li>
-					  <a href="{$base}/where.html#HELPTEST">Prossima Release
+					  <a href="{$enbase}/where.html#HELPTEST">Prossima Release
 					    <xsl:value-of select="concat($betarel.current, '-', $betarel.vers)"/></a>
 					</li>
 				    </xsl:if>

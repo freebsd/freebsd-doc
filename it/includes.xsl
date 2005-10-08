@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/it/includes.xsl,v 1.15 2005/10/07 12:20:30 ale Exp $ -->
+<!-- $FreeBSD: www/it/includes.xsl,v 1.16 2005/10/08 08:15:43 ale Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -144,7 +144,7 @@
 
 	<xsl:if test="$section = 'developers'" >
 		<ul>
-		<li><a href="{$base}/projects/index.html">Sviluppo</a></li>
+		<li><a href="{$enbase}/projects/index.html">Sviluppo</a></li>
 		<li><a href="{$enbase}/doc/en_US.ISO8859-1/books/developers-handbook">Manuale dello Sviluppatore</a></li>
 		<li><a href="{$enbase}/doc/en_US.ISO8859-1/books/porters-handbook">Manuale del Porter</a></li>
 		<li><a href="{$enbase}/developers/cvs.html">Repository CVS</a></li>
@@ -184,14 +184,14 @@
 
 	<xsl:if test="$section = 'download'" >
 		<ul>
-		<li><a href="{$base}/where.html">Ottenere FreeBSD</a></li>
+		<li><a href="{$enbase}/where.html">Ottenere FreeBSD</a></li>
 		<li><a href="{$base}/releases/">Info sulle Release</a>
 			<ul>
 				<li><a href="{$u.rel.announce}">Release di Produzione: <xsl:value-of select="$rel.current"/></a></li>
 				<li><a href="{$u.rel2.announce}">Release di Produzione (Legacy): <xsl:value-of select="$rel2.current"/></a></li>
-				<li><a href="{$base}/snapshots/">Snapshot delle Release</a></li>
+				<li><a href="{$enbase}/snapshots/">Snapshot delle Release</a></li>
 				<xsl:if test="$beta.testing != ''">
-				  <li><a href="{$base}/where.html">Prossima Release <xsl:value-of
+				  <li><a href="{$enbase}/where.html">Prossima Release <xsl:value-of
 				    select="concat($betarel.current, '-', $betarel.vers)"/></a>
 				  </li>
 				</xsl:if>
@@ -203,7 +203,7 @@
     	
     	<xsl:if test="$section = 'support'" >
 		<ul>
-		<li><a href="{$base}/support.html">Supporto</a></li>
+		<li><a href="{$enbase}/support.html">Supporto</a></li>
 		<li><a href="{$enbase}/commercial/">Fornitori</a>
 			<ul>
 				<li><a href="{$enbase}/commercial/software_bycat.html">Software</a></li>
