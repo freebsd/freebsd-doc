@@ -1,7 +1,7 @@
 <!--
      The FreeBSD Italian Documentation Project
 
-     $FreeBSD: www/it/index.xsl,v 1.21 2005/10/08 11:31:04 ale Exp $
+     $FreeBSD: www/it/index.xsl,v 1.22 2005/10/08 17:21:07 ale Exp $
      Original revision: 1.135
 -->
 
@@ -10,7 +10,7 @@
   <xsl:import href="includes.xsl"/>
   <xsl:import href="../en/news/includes.xsl"/>
   
-  <xsl:variable name="date" select="'$FreeBSD: www/it/index.xsl,v 1.21 2005/10/08 11:31:04 ale Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/it/index.xsl,v 1.22 2005/10/08 17:21:07 ale Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -181,7 +181,7 @@
             <div id="frontnemscontainer">
             	<div id="frontnews">
             	   <div id="frontnewscontent" class="txtnewsevent">
-			<h2>LATEST NEWS</h2>
+			<h2>ULTIME NOTIZIE</h2>
 			<div class="newseventswrap">
 
 			<xsl:call-template name="html-index-news-project-items">
