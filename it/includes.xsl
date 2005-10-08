@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/it/includes.xsl,v 1.14 2005/10/07 09:21:18 ale Exp $ -->
+<!-- $FreeBSD: www/it/includes.xsl,v 1.15 2005/10/07 12:20:30 ale Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -53,13 +53,13 @@
       			  <div id="searchnav">
       				<ul id="searchnavlist">
       				  <li>
-      					Dimensione del Testo: <a href="#" onkeypress="return false;" onclick="setActiveStyleSheet('Normal Text'); return false;" title="Dimensione Testo Normale">Normale</a> / <a href="#" onkeypress="return false;" onclick="setActiveStyleSheet('Large Text'); return false;" title="Dimensione Testo Grande">Grande</a>
+      					Dimensione Testo: <a href="#" onkeypress="return false;" onclick="setActiveStyleSheet('Normal Text'); return false;" title="Dimensione Testo Normale">Normale</a> / <a href="#" onkeypress="return false;" onclick="setActiveStyleSheet('Large Text'); return false;" title="Dimensione Testo Grande">Grande</a>
       				  </li>
       				  <li>
       					<a href="{$enbase}/donations/" title="Donazioni">Donazioni</a>
       				  </li>
       				  <li class="last-child">
-      					<a href="{$base}/mailto.html" title="Contattaci">Contattaci</a>
+      					<a href="{$base}/mailto.html" title="Contatti">Contatti</a>
       				  </li>
       				</ul>
       			  </div> <!-- searchnav -->
@@ -154,7 +154,7 @@
 				<li><a href="{$enbase}/platforms/alpha.html">alpha</a></li>
 				<li><a href="{$enbase}/platforms/amd64.html">amd64</a></li>
 				<li><a href="{$enbase}/platforms/i386.html">i386</a></li>
-				<li><a href="{$enbase}/platforms/ia64.html">ia64</a></li>
+				<li><a href="{$enbase}/platforms/ia64/index.html">ia64</a></li>
 				<li><a href="{$enbase}/platforms/pc98.html">pc98</a></li>
 				<li><a href="{$enbase}/platforms/sparc.html">sparc64</a></li>
 			</ul>
@@ -190,6 +190,11 @@
 				<li><a href="{$u.rel.announce}">Release di Produzione: <xsl:value-of select="$rel.current"/></a></li>
 				<li><a href="{$u.rel2.announce}">Release di Produzione (Legacy): <xsl:value-of select="$rel2.current"/></a></li>
 				<li><a href="{$base}/snapshots/">Snapshot delle Release</a></li>
+				<xsl:if test="$beta.testing != ''">
+				  <li><a href="{$base}/where.html">Prossima Release <xsl:value-of
+				    select="concat($betarel.current, '-', $betarel.vers)"/></a>
+				  </li>
+				</xsl:if>
 			</ul>
 		</li>
 		<li><a href="{$enbase}/ports/">Applicazioni Portate</a></li>
@@ -229,6 +234,9 @@
 	<xsl:copy-of select="$date"/>
 	</div> <!-- footer -->
   </xsl:variable>
+
+  <xsl:variable name="u.betarel.schedule">
+    <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$betarel.current"/>R/schedule.html</xsl:variable>
 
   <xsl:variable name="u.rel.notes">
     <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel.current"/>R/relnotes.html</xsl:variable>
