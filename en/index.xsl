@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/index.xsl,v 1.134 2005/10/07 14:15:48 ceri Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.135 2005/10/08 09:26:48 ceri Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -6,7 +6,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.134 2005/10/07 14:15:48 ceri Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.135 2005/10/08 09:26:48 ceri Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <!-- these params should be externally bound. The values
@@ -98,7 +98,7 @@
 					</li>
 				    <xsl:if test="$beta.testing">
 					<li>
-					  <a href="{$base}/where.html#HELPTEST">Upcoming Release
+					  <a href="{$base}/where.html#helptest">Upcoming Release
 					    <xsl:value-of select="concat($betarel.current, '-', $betarel.vers)"/></a>
 					</li>
 				    </xsl:if>
