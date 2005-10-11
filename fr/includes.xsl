@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/fr/includes.xsl,v 1.13 2005/10/06 15:20:06 blackend Exp $ -->
+<!-- $FreeBSD: www/fr/includes.xsl,v 1.14 2005/10/06 15:58:19 blackend Exp $ -->
 
 <!-- 
    The FreeBSD French Documentation Project
@@ -98,7 +98,7 @@
 			<a href="{$base}/docs.html" title="Documentation">Documentation</a>
 		  </li>
 		  <li>
-			<a href="{$enbase}/community.html" title="Community">Communaut&#233;</a>
+			<a href="{$base}/community.html" title="Community">Communaut&#233;</a>
 		  </li>
 		  <li>
 			<a href="{$base}/projects/index.html" title="D&#233;veloppement">D&#233;veloppement</a>
@@ -140,12 +140,12 @@
 
 	<xsl:if test="$section = 'community'" >
 		<ul>
-		<li><a href="{$enbase}/community.html">Communauté</a></li>
-		<!--li><a href="{$base}/community/mailinglists.html">Listes de diffusion</a></li>
-		<li><a href="{$base}/community/irc.html">IRC</a></li>
-		<li><a href="{$base}/community/newsgroups.html">Forums de discussion</a></li>
-		<li><a href="{$base}/usergroups.html">Groupes d&#39;utilisateurs</a></li>
-		<li><a href="{$base}/community/webresources.html">Ressources Web</a></li-->
+		<li><a href="{$base}/community.html">Communauté</a></li>
+		<li><a href="{$enbase}/community/mailinglists.html">Listes de diffusion</a></li>
+		<li><a href="{$enbase}/community/irc.html">IRC</a></li>
+		<li><a href="{$enbase}/community/newsgroups.html">Forums de discussion</a></li>
+		<li><a href="{$enbase}/usergroups.html">Groupes d&#39;utilisateurs</a></li>
+		<li><a href="{$enbase}/community/webresources.html">Ressources Web</a></li>
 		</ul>
 	</xsl:if>
 
