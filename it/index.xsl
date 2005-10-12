@@ -1,8 +1,8 @@
 <!--
      The FreeBSD Italian Documentation Project
 
-     $FreeBSD: www/it/index.xsl,v 1.23 2005/10/08 18:47:39 ale Exp $
-     Original revision: 1.136
+     $FreeBSD: www/it/index.xsl,v 1.24 2005/10/12 06:16:14 ale Exp $
+     Original revision: 1.137
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -10,7 +10,7 @@
   <xsl:import href="includes.xsl"/>
   <xsl:import href="../en/news/includes.xsl"/>
   
-  <xsl:variable name="date" select="'$FreeBSD: www/it/index.xsl,v 1.23 2005/10/08 18:47:39 ale Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/it/index.xsl,v 1.24 2005/10/12 06:16:14 ale Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -161,6 +161,9 @@
 					</li>
 					<li>
 					  <a href="http://www.freebsdfoundation.org/" title="Fondazione">Fondazione</a>
+					</li>
+					<li>
+					  <a href="{$enbase}/ports/index.html" title="Port">Port</a>
 					</li>
 				  </ul>
 			  </div> <!-- frontshortcutscontent -->
