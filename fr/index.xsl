@@ -1,8 +1,8 @@
-<!-- $FreeBSD: www/fr/index.xsl,v 1.23 2005/10/07 08:39:02 blackend Exp $ -->
+<!-- $FreeBSD: www/fr/index.xsl,v 1.24 2005/10/09 19:27:49 blackend Exp $ -->
 
 <!--
    The FreeBSD French Documentation Project
-   Original revision: 1.136
+   Original revision: 1.137
 
    Version francaise : Stephane Legrand <stephane@freebsd-fr.org>
    Mise a jour:	Marc Fonvieille <blackend@FreeBSD.org>
@@ -14,7 +14,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/fr/index.xsl,v 1.23 2005/10/07 08:39:02 blackend Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/fr/index.xsl,v 1.24 2005/10/09 19:27:49 blackend Exp $'"/>
   <xsl:variable name="title" select="'Le Projet FreeBSD'"/>
 
   <!-- these params should be externally bound. The values
@@ -185,6 +185,13 @@
 					</li>
 					<li>
 					  <a href="http://www.freebsdfoundation.org/" title="Fondation">Fondation</a>
+					</li>
+					<li>
+					  <a
+					  href="{$enbase}/ports/index.html"
+					  title="Logiciels
+					  port&#233;s">Logiciels
+					  port&#233;s</a>
 					</li>
 				  </ul>
 			  </div> <!-- frontshortcutscontent -->
