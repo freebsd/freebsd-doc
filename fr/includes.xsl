@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/fr/includes.xsl,v 1.14 2005/10/06 15:58:19 blackend Exp $ -->
+<!-- $FreeBSD: www/fr/includes.xsl,v 1.15 2005/10/11 16:37:30 blackend Exp $ -->
 
 <!-- 
    The FreeBSD French Documentation Project
@@ -141,11 +141,11 @@
 	<xsl:if test="$section = 'community'" >
 		<ul>
 		<li><a href="{$base}/community.html">Communauté</a></li>
-		<li><a href="{$enbase}/community/mailinglists.html">Listes de diffusion</a></li>
-		<li><a href="{$enbase}/community/irc.html">IRC</a></li>
-		<li><a href="{$enbase}/community/newsgroups.html">Forums de discussion</a></li>
+		<li><a href="{$base}/community/mailinglists.html">Listes de diffusion</a></li>
+		<li><a href="{$base}/community/irc.html">IRC</a></li>
+		<li><a href="{$base}/community/newsgroups.html">Forums de discussion</a></li>
 		<li><a href="{$enbase}/usergroups.html">Groupes d&#39;utilisateurs</a></li>
-		<li><a href="{$enbase}/community/webresources.html">Ressources Web</a></li>
+		<li><a href="{$base}/community/webresources.html">Ressources Web</a></li>
 		</ul>
 	</xsl:if>
 
