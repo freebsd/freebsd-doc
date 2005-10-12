@@ -213,9 +213,9 @@ PARAMS.eresources+=	--param 'type' "'www'" \
 SRCS+=		mirrors.sgml.ftp.inc \
 		mirrors.sgml.cvsup.inc \
 		eresources.sgml.www.inc
-CLEANFILES+=	mirrors-ftp:::mirrors.sgml.ftp.inc.tmp \
-		mirrors-cvsup:::mirrors.sgml.cvsup.inc.tmp \
-		eresources:::eresources.sgml.www.inc.tmp
+CLEANFILES+=	mirrors.sgml.ftp.inc mirrors.sgml.ftp.inc.tmp \
+		mirrors.sgml.cvsup.inc mirrors.sgml.cvsup.inc.tmp \
+		eresources.sgml.www.inc eresources.sgml.www.inc.tmp
 
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"
 
