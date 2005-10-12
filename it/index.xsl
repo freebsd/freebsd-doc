@@ -1,8 +1,8 @@
 <!--
      The FreeBSD Italian Documentation Project
 
-     $FreeBSD: www/it/index.xsl,v 1.22 2005/10/08 17:21:07 ale Exp $
-     Original revision: 1.135
+     $FreeBSD: www/it/index.xsl,v 1.23 2005/10/08 18:47:39 ale Exp $
+     Original revision: 1.136
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -10,7 +10,7 @@
   <xsl:import href="includes.xsl"/>
   <xsl:import href="../en/news/includes.xsl"/>
   
-  <xsl:variable name="date" select="'$FreeBSD: www/it/index.xsl,v 1.22 2005/10/08 17:21:07 ale Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/it/index.xsl,v 1.23 2005/10/08 18:47:39 ale Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -92,7 +92,7 @@
 					</li>
 				    <xsl:if test="$beta.testing">
 					<li>
-					  <a href="{$enbase}/where.html#HELPTEST">Prossima Release
+					  <a href="{$enbase}/where.html#helptest">Prossima Release
 					    <xsl:value-of select="concat($betarel.current, '-', $betarel.vers)"/></a>
 					</li>
 				    </xsl:if>
