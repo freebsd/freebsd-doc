@@ -1,4 +1,4 @@
-# $FreeBSD: www/fr/Makefile,v 1.10 2005/10/06 15:41:34 remko Exp $
+# $FreeBSD: www/fr/Makefile,v 1.11 2005/10/10 20:43:12 blackend Exp $
 
 # The FreeBSD French Documentation Project
 # Original revision: 1.107
@@ -40,6 +40,7 @@ DATA+=  vendors.html
 # SGML
 SUBDIR=	 security
 SUBDIR+= commercial
+SUBDIR+= community
 SUBDIR+= docproj
 SUBDIR+= news
 SUBDIR+= advocacy
