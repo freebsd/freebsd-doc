@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/es/index.xsl,v 1.12 2005/10/10 10:32:35 jesusr Exp $ -->
+<!-- $FreeBSD: www/es/index.xsl,v 1.13 2005/10/10 10:40:25 jesusr Exp $ -->
 <!-- $FreeBSDes: www/es/index.xsl,v 1.4 2004/09/07 21:46:11 jcamou Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -10,7 +10,7 @@
 
   <xsl:variable name="base" select="'.'"/>
   <xsl:variable name="enbase" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/es/index.xsl,v 1.12 2005/10/10 10:32:35 jesusr Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/es/index.xsl,v 1.13 2005/10/10 10:40:25 jesusr Exp $'"/>
   <xsl:variable name="title" select="'El Proyecto FreeBSD'"/>
 
   <!-- these params should be externally bound. The values
@@ -34,7 +34,7 @@
       <head>
 	<title><xsl:value-of select="$title"/></title>
 	<meta name="description" content="The FreeBSD Project"/>
-	<meta name="keywords" content="FreeBSD, BSD, UNIX, Support, Gallery,
+	<meta name="keywords" content="FreeBSD, BSD, UNIX, Support, Ports,
 	      Release, Application, Software, Handbook, FAQ, Tutorials, Bugs,
 	      CVS, CVSup, News, Commercial Vendors, homepage, CTM, Unix"/>
 	<link rel="shortcut icon" href="{$enbase}/favicon.ico" type="image/x-icon"/>
@@ -164,16 +164,19 @@
 					  <a href="{$base}/support.html#mailing-list" title="Listas de distribuci&#243;n">Listas de distribuci&#243;n</a>
 					</li>
 					<li>
-					  <a href="{$enbase}/platforms/" title="Arquitecturas">Arquitecturas</a>
-					</li>
-					<li>
 					  <a href="{$base}/send-pr.html" title="Reporta un Fallo">Reporta un Fallo</a>
 					</li>
 					<li>
 					  <a href="{$enbase}/doc/{$url.doc.langcode}/books/faq/index.html" title="FAQ">FAQ</a>
 					</li>
 					<li>
+					  <a href="{$enbase}/doc/{$url.doc.langcode}/books/handbook/index.html" title="Handbook">Manual</a>
+					</li>
+					<li>
 					  <a href="http://www.freebsdfoundation.org/" title="Foundation">Fundaci&#243;n</a>
+					</li>
+					<li>
+					  <a href="{$base}/ports/index.html" title="Ports">Ports</a>
 					</li>
 				  </ul>
 			  </div> <!-- frontshortcutscontent -->
