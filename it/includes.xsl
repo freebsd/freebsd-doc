@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/it/includes.xsl,v 1.16 2005/10/08 08:15:43 ale Exp $ -->
+<!-- $FreeBSD: www/it/includes.xsl,v 1.17 2005/10/08 17:21:07 ale Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -156,6 +156,7 @@
 				<li><a href="{$enbase}/platforms/i386.html">i386</a></li>
 				<li><a href="{$enbase}/platforms/ia64/index.html">ia64</a></li>
 				<li><a href="{$enbase}/platforms/pc98.html">pc98</a></li>
+				<li><a href="{$enbase}/platforms/ppc.html">ppc</a></li>
 				<li><a href="{$enbase}/platforms/sparc.html">sparc64</a></li>
 			</ul>
 		</li>
