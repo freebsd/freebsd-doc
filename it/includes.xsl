@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/it/includes.xsl,v 1.17 2005/10/08 17:21:07 ale Exp $ -->
+<!-- $FreeBSD: www/it/includes.xsl,v 1.18 2005/10/14 09:15:28 ale Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -17,7 +17,7 @@
   </xsl:variable>
 
   <xsl:variable name="copyright">
-    <a href="{$enbase}/copyright/">Note Legali</a> | &#169; 1995-2005 the FreeBSD Project.  Tutti i diritti riservati.
+    <a href="{$base}/copyright/">Note Legali</a> | &#169; 1995-2005 the FreeBSD Project.  Tutti i diritti riservati.
   </xsl:variable>
 
   <xsl:variable name="home">
@@ -85,19 +85,19 @@
 			<a href="{$base}/about.html" title="Info">Info</a>
 		  </li>
 		  <li>
-			<a href="{$enbase}/where.html" title="Ottenere FreeBSD">Ottenere FreeBSD</a>
+			<a href="{$base}/where.html" title="Ottenere FreeBSD">Ottenere FreeBSD</a>
 		  </li>
 		  <li>
 			<a href="{$base}/docs.html" title="Documentazione">Documentazione</a>
 		  </li>
 		  <li>
-			<a href="{$enbase}/community.html" title="Comunità">Comunità</a>
+			<a href="{$base}/community.html" title="Comunità">Comunità</a>
 		  </li>
 		  <li>
 			<a href="{$enbase}/projects/index.html" title="Sviluppo">Sviluppo</a>
 		  </li>
 		  <li>
-			<a href="{$enbase}/support.html" title="Supporto">Supporto</a>
+			<a href="{$base}/support.html" title="Supporto">Supporto</a>
 		  </li>		  
 		</ul>
               </div> <!-- topnav -->
@@ -127,13 +127,13 @@
 		<li><a href="{$enbase}/news/press.html">Stampa</a></li>
 		<li><a href="{$enbase}/art.html">Illustrazioni</a></li>
 		<li><a href="{$enbase}/donations/">Donazioni</a></li>
-		<li><a href="{$enbase}/copyright/">Note Legali</a></li>
+		<li><a href="{$base}/copyright/">Note Legali</a></li>
 		</ul>
     	</xsl:if>
     	
     	<xsl:if test="$section = 'community'" >
 		<ul>
-		<li><a href="{$enbase}/community.html">Comunità</a></li>
+		<li><a href="{$base}/community.html">Comunità</a></li>
 		<!--li><a href="{$enbase}/community/mailinglists.html">Mailing List</a></li>
 		<li><a href="{$enbase}/community/irc.html">IRC</a></li>
 		<li><a href="{$enbase}/community/newsgroups.html">Newsgroup</a></li>
@@ -149,7 +149,7 @@
 		<li><a href="{$enbase}/doc/en_US.ISO8859-1/books/porters-handbook">Manuale del Porter</a></li>
 		<li><a href="{$enbase}/developers/cvs.html">Repository CVS</a></li>
 		<li><a href="{$enbase}/releng/index.html">Release Engineering</a></li>
-		<li><a href="{$enbase}/platforms/">Piattaforme</a>
+		<li><a href="{$base}/platforms/">Piattaforme</a>
 			<ul>
 				<li><a href="{$enbase}/platforms/alpha.html">alpha</a></li>
 				<li><a href="{$enbase}/platforms/amd64.html">amd64</a></li>
@@ -185,14 +185,14 @@
 
 	<xsl:if test="$section = 'download'" >
 		<ul>
-		<li><a href="{$enbase}/where.html">Ottenere FreeBSD</a></li>
+		<li><a href="{$base}/where.html">Ottenere FreeBSD</a></li>
 		<li><a href="{$base}/releases/">Info sulle Release</a>
 			<ul>
 				<li><a href="{$u.rel.announce}">Release di Produzione: <xsl:value-of select="$rel.current"/></a></li>
 				<li><a href="{$u.rel2.announce}">Release di Produzione (Legacy): <xsl:value-of select="$rel2.current"/></a></li>
 				<li><a href="{$enbase}/snapshots/">Snapshot delle Release</a></li>
 				<xsl:if test="$beta.testing != ''">
-				  <li><a href="{$enbase}/where.html">Prossima Release <xsl:value-of
+				  <li><a href="{$base}/where.html">Prossima Release <xsl:value-of
 				    select="concat($betarel.current, '-', $betarel.vers)"/></a>
 				  </li>
 				</xsl:if>
@@ -204,7 +204,7 @@
     	
     	<xsl:if test="$section = 'support'" >
 		<ul>
-		<li><a href="{$enbase}/support.html">Supporto</a></li>
+		<li><a href="{$base}/support.html">Supporto</a></li>
 		<li><a href="{$enbase}/commercial/">Fornitori</a>
 			<ul>
 				<li><a href="{$enbase}/commercial/software_bycat.html">Software</a></li>
