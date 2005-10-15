@@ -1,7 +1,7 @@
 <!--
      The FreeBSD Italian Documentation Project
 
-     $FreeBSD: www/it/index.xsl,v 1.24 2005/10/12 06:16:14 ale Exp $
+     $FreeBSD: www/it/index.xsl,v 1.25 2005/10/12 20:25:55 ale Exp $
      Original revision: 1.137
 -->
 
@@ -10,7 +10,7 @@
   <xsl:import href="includes.xsl"/>
   <xsl:import href="../en/news/includes.xsl"/>
   
-  <xsl:variable name="date" select="'$FreeBSD: www/it/index.xsl,v 1.24 2005/10/12 06:16:14 ale Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/it/index.xsl,v 1.25 2005/10/12 20:25:55 ale Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -63,7 +63,7 @@
 				&#200; sviluppato e mantenuto da <a
 				href="{$enbase}/doc/en_US.ISO8859-1/articles/contributors/index.html">un
 				grande gruppo di individui</a>.
-				<a href="{$enbase}/platforms/index.html">Piattaforme</a>
+				<a href="{$base}/platforms/index.html">Piattaforme</a>
 				aggiuntive sono in varie fasi di sviluppo.</p>
 				<div id="txtfrontfeaturelink">
 				&#187;<a href="{$base}/about.html" title="Approfondisci">Approfondisci</a>
@@ -75,7 +75,7 @@
 			<div class="frontgetroundbox">
 			  <div class="frontgettop"><div>&#160;</div>&#160;</div>
 				<div class="frontgetcontent">
-				  <a href="{$enbase}/where.html">Ottieni FreeBSD Ora</a>
+				  <a href="{$base}/where.html">Ottieni FreeBSD Ora</a>
 				</div> <!-- frontgetcontent -->
 			  <div class="frontgetbot"><div>&#160;</div>&#160;</div>
 			</div> <!-- frontgetroundbox -->
@@ -92,7 +92,7 @@
 					</li>
 				    <xsl:if test="$beta.testing">
 					<li>
-					  <a href="{$enbase}/where.html#helptest">Prossima Release
+					  <a href="{$base}/where.html#helptest">Prossima Release
 					    <xsl:value-of select="concat($betarel.current, '-', $betarel.vers)"/></a>
 					</li>
 				    </xsl:if>

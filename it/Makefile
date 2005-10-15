@@ -1,4 +1,4 @@
-# $FreeBSD: www/it/Makefile,v 1.8 2005/01/08 11:53:23 ale Exp $
+# $FreeBSD: www/it/Makefile,v 1.9 2005/10/06 14:27:50 ale Exp $
 .if exists(Makefile.conf)
 .include "Makefile.conf"
 .endif
@@ -9,12 +9,17 @@
 # These are turned into validated, normalized HTML files.
 
 DOCS=  about.sgml
+DOCS+= community.sgml
 DOCS+= docs.sgml
 DOCS+= mailto.sgml
+DOCS+= support.sgml
+DOCS+= where.sgml
 
 # Subdirectories
 # SGML
-SUBDIR=  docs
+SUBDIR=  copyright
+SUBDIR+= docs
+SUBDIR+= platforms
 SUBDIR+= releases
 .if !defined(WEB_ONLY) || empty(WEB_ONLY)
 SUBDIR+= doc
