@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/fr/includes.xsl,v 1.15 2005/10/11 16:37:30 blackend Exp $ -->
+<!-- $FreeBSD: www/fr/includes.xsl,v 1.16 2005/10/12 12:37:00 blackend Exp $ -->
 
 <!-- 
    The FreeBSD French Documentation Project
@@ -161,8 +161,9 @@
 				<li><a href="{$base}/platforms/alpha.html">alpha</a></li>
 				<li><a href="{$base}/platforms/amd64.html">amd64</a></li>
 				<li><a href="{$base}/platforms/i386.html">i386</a></li>
-				<li><a href="{$base}/platforms/ia64.html">ia64</a></li>
+				<li><a href="{$base}/platforms/ia64/index.html">ia64</a></li>
 				<li><a href="{$base}/platforms/pc98.html">pc98</a></li>
+				<li><a href="{$base}/platforms/ppc.html">pc98</a></li>
 				<li><a href="{$base}/platforms/sparc.html">sparc64</a></li>
 			</ul>
 		</li>
