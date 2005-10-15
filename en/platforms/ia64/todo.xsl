@@ -1,7 +1,7 @@
 <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
   <xsl:import href="../../includes.xsl"/>
   <xsl:import href="includes.xsl"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/platforms/ia64/todo.xsl,v 1.3 2005/09/09 01:14:06 marcel Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/platforms/ia64/todo.xsl,v 1.4 2005/10/04 19:43:49 hrs Exp $'"/>
   <xsl:variable name="section" select="'developers'"/>
   <xsl:output doctype-public="-//W3C//DTD HTML 4.01 Transitional//EN"
     encoding="iso-8859-1" method="html"/>
@@ -33,7 +33,7 @@
 		</form>
 
 	<h3>
-	  What needs to be done.
+	  What needs to be done
 	</h3>
 	<p>
 	  This page tries to be the starting point for people trying to find
@@ -45,7 +45,7 @@
 	</p>
 
 	<h4>
-	  Becoming a tier 1 platform.
+	  Becoming a tier 1 platform
 	</h4>
 	<p>
 	  With two releases as a tier 2 platform, it is time to work towards
@@ -70,7 +70,7 @@
 	</ul>
 
 	<h4>
-	  Ports and packages.
+	  Ports and packages
 	</h4>
 	<p>
 	  A very important task for the success of FreeBSD on ia64 is making
@@ -89,7 +89,7 @@
 	</p>
 
 	<h4>
-	  Sharpening the saw.
+	  Sharpening the saw
 	</h4>
 	<p>
 	  There are plenty functions (especially assembly routines) that
@@ -101,7 +101,7 @@
 	</p>
 
 	<h4>
-	  Core development.
+	  Core development
 	</h4>
 	<p>
 	  On top of the high-level things that do not work or do not exist,
