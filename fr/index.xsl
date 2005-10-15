@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/fr/index.xsl,v 1.24 2005/10/09 19:27:49 blackend Exp $ -->
+<!-- $FreeBSD: www/fr/index.xsl,v 1.25 2005/10/12 19:36:33 blackend Exp $ -->
 
 <!--
    The FreeBSD French Documentation Project
@@ -14,7 +14,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/fr/index.xsl,v 1.24 2005/10/09 19:27:49 blackend Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/fr/index.xsl,v 1.25 2005/10/12 19:36:33 blackend Exp $'"/>
   <xsl:variable name="title" select="'Le Projet FreeBSD'"/>
 
   <!-- these params should be externally bound. The values
@@ -90,7 +90,7 @@
 				<a href="{$base}/platforms/index.html">plates-formes</a> sont &#224;
 				divers stades de d&#233;veloppement.</p>
 				<div id="txtfrontfeaturelink">
-				&#187;<a href="{$base}/about.html" title="Learn More">En savoir plus</a>
+				&#187;<a href="{$base}/about.html" title="En savoir plus">En savoir plus</a>
 				</div> <!-- txtfrontfeaturelink -->
 			</div> <!-- frontfeaturecontent -->
 		</div> <!-- frontfeatureleft -->
@@ -223,10 +223,10 @@
 			  <div>
 				<ul class="newseventslist">
 				  <li class="first-child">
-					<a href="{$base}/news/newsflash.html" title="More News">Plus...</a>
+					<a href="{$base}/news/newsflash.html" title="Plus de nouvelles">Plus...</a>
 				  </li>
 				  <li class="last-child">
-					<a href="{$base}/news/news.rdf" title="News RSS Feed"><img class="rssimage" src="{$enbase}/layout/images/ico_rss.png" width="27" height="12" alt="News RSS Feed" /></a>
+					<a href="{$base}/news/news.rdf" title="Flux RSS de nouvelles"><img class="rssimage" src="{$enbase}/layout/images/ico_rss.png" width="27" height="12" alt="Flux RSS de nouvelles" /></a>
 				  </li>
 				</ul>
 			  </div> <!-- unnamed -->
@@ -250,7 +250,7 @@
 			  <div>
 				<ul class="newseventslist">
 				  <li class="only-child">
-					<a href="{$base}/events/" title="More Events">Plus...</a>
+					<a href="{$base}/events/" title="Plus d'&#233;v&#233;nements">Plus...</a>
 				  </li>
 				</ul>
 			  </div> <!-- unnamed -->
@@ -273,7 +273,7 @@
 			  <div>
 				<ul class="newseventslist">
 				  <li class="only-child">
-					<a href="{$base}/news/press.html" title="More Media">Plus...</a>
+					<a href="{$base}/news/press.html" title="Plus...">Plus...</a>
 				  </li>
 				</ul>
 			  </div> <!-- unnamed -->
@@ -296,13 +296,13 @@
 			  <div>
 				<ul class="newseventslist">
 				  <li class="first-child">
-					<a href="{$base}/security/" title="More Security Advisories">Plus...</a>
+					<a href="{$base}/security/" title="Plus d'avis de s&#233;curit&#233;">Plus...</a>
 				  </li>
 				  <li>
-					<a href="{$base}/send-pr.html" title="Submit a Problem Report">Envoyer un rapport de bogue</a>
+					<a href="{$base}/send-pr.html" title="Envoyer un rapport de bogue">Envoyer un rapport de bogue</a>
 				  </li>
 				  <li class="last-child">
-					<a href="{$enbase}/security/advisories.rdf" title="Security Advisories RSS Feed"><img class="rssimage" src="{$enbase}/layout/images/ico_rss.png" width="27" height="12" alt="Security Advisories RSS Feed" /></a>
+					<a href="{$enbase}/security/advisories.rdf" title="Flux RSS des avis de s&#233;curit&#233;"><img class="rssimage" src="{$enbase}/layout/images/ico_rss.png" width="27" height="12" alt="Flux RSS des avis de s&#233;curit&#233;" /></a>
 				  </li>
 				</ul>
 			  </div> <!-- unnamed -->
