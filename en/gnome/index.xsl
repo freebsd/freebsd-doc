@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.71 2005/10/04 20:06:58 hrs Exp $ -->
+<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.72 2005/10/16 07:43:36 adamw Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
 		xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -9,7 +9,7 @@
   <xsl:import href="includes.xsl"/>
 
   <xsl:variable name="base" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.71 2005/10/04 20:06:58 hrs Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.72 2005/10/16 07:43:36 adamw Exp $'"/>
   <xsl:variable name="section" select="'developers'"/>
   <xsl:variable name="title" select="'FreeBSD GNOME Project'"/>
 
@@ -127,9 +127,9 @@
 		  the FreeBSD ports tree is still in a partial lockdown for the release
 		  of FreeBSD 6.0. Merging in a GNOME upgrade during the freeze would be
 		  too disruptive; we're waiting until the tree is completely unfrozen.</p>
-	          
+
 	          <p>In the meantime, you can read the
-		  <a href="http://www.marcuscom.com/~adamw/data/gnome/docs/develfaq.html">Development
+		  <a href="docs/develfaq.html">Development
 		  Branch FAQ</a> for information about getting GNOME 2.12 from our development
 	          repository. However, keep in mind that maintaining a ports tree from two
 		  separate locations can be tricky; we advise that most users wait until
