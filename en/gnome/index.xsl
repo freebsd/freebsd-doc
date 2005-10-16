@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.73 2005/10/16 07:53:38 marcus Exp $ -->
+<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.74 2005/10/16 19:51:32 adamw Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
 		xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -9,7 +9,7 @@
   <xsl:import href="includes.xsl"/>
 
   <xsl:variable name="base" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.73 2005/10/16 07:53:38 marcus Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.74 2005/10/16 19:51:32 adamw Exp $'"/>
   <xsl:variable name="section" select="'developers'"/>
   <xsl:variable name="title" select="'FreeBSD GNOME Project'"/>
 
@@ -103,23 +103,16 @@
 			   everything is easy-to-use, attractive, powerful,
 			   and works the way you expect it to.</p>
 
-			  <p>The major components of GNOME are:</p>
-              <ul>
-                <li>The <a href="http://www.gnome.org">GNOME desktop</a>:  An easy
-                  to use window-based desktop environment.</li>
-                <li>The <a href="http://developer.gnome.org">GNOME development
-                  platform</a>:  A rich collection of tools, libraries,
-                  and components to develop powerful applications on Unix.</li>
-              </ul>
+		       <p>The major components of GNOME are the
+			  <a href="http://www.gnome.org">GNOME desktop</a>, an
+			  easy-to-use window-based desktop environment, and the
+			  <a href="http://developer.gnome.org">GNOME development
+			  platform</a>, a collection of application-development
+		          tools and libraries.</p>
 
-		          <p>The FreeBSD GNOME Project is a team of devoted
-			    committers and users that manage the integration
-			    of GNOME and FreeBSD.</p>
-
-			  <p>For more information about GNOME, check out
-			    the GNOME Project's
-			    "<a href="http://www.gnome.org/about/">What is GNOME?</a>"
-			    page.</p>
+		       <p>The FreeBSD GNOME Project is a team of devoted
+			  committers and users that manage the integration
+			  of GNOME and FreeBSD.</p>
 
 		<h2>Where is GNOME 2.12?</h2>
 
@@ -135,6 +128,7 @@
 		  separate locations can be tricky; we advise that most users wait until
 		  we merge GNOME 2.12 into the main FreeBSD ports tree.</p>
 
+<!--
 		<h2>Upgrading to GNOME 2.10?</h2>
 
 		<p>If you are upgrading from GNOME 2.8 to GNOME 2.10, read the
@@ -149,6 +143,7 @@
 		and 7-CURRENT.
 		Most of GNOME has been ported to FreeBSD, but there is still
 		<a href="docs/volunteer.html">plenty left to be done</a>!</p>
+-->
 
               <h2>Simple solutions to build problems - quickly!</h2>
 
