@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.70 2005/08/09 03:37:50 adamw Exp $ -->
+<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.71 2005/10/04 20:06:58 hrs Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
 		xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -9,7 +9,7 @@
   <xsl:import href="includes.xsl"/>
 
   <xsl:variable name="base" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.70 2005/08/09 03:37:50 adamw Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.71 2005/10/04 20:06:58 hrs Exp $'"/>
   <xsl:variable name="section" select="'developers'"/>
   <xsl:variable name="title" select="'FreeBSD GNOME Project'"/>
 
@@ -120,6 +120,20 @@
 			    the GNOME Project's
 			    "<a href="http://www.gnome.org/about/">What is GNOME?</a>"
 			    page.</p>
+
+		<h2>Where's GNOME 2.12?</h2>
+
+		<p>We've had the GNOME 2.12 upgrade ready since the day it came out, but
+		  the FreeBSD ports tree is still in a partial lockdown for the release
+		  of FreeBSD 6.0. Merging in a GNOME upgrade during the freeze would be
+		  too disruptive; we're waiting until the tree is completely unfrozen.</p>
+	          
+	          <p>In the meantime, you can read the
+		  <a href="http://www.marcuscom.com/~adamw/data/gnome/docs/develfaq.html">Development
+		  Branch FAQ</a> for information about getting GNOME 2.12 from our development
+	          repository. However, keep in mind that maintaining a ports tree from two
+		  separate locations can be tricky; we advise that most users wait until
+		  we merge GNOME 2.12 into the main FreeBSD ports tree.</p>
 
 		<h2>Upgrading to GNOME 2.10?</h2>
 
