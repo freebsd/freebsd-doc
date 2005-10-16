@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.72 2005/10/16 07:43:36 adamw Exp $ -->
+<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.73 2005/10/16 07:53:38 marcus Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
 		xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -9,7 +9,7 @@
   <xsl:import href="includes.xsl"/>
 
   <xsl:variable name="base" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.72 2005/10/16 07:43:36 adamw Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.73 2005/10/16 07:53:38 marcus Exp $'"/>
   <xsl:variable name="section" select="'developers'"/>
   <xsl:variable name="title" select="'FreeBSD GNOME Project'"/>
 
@@ -121,12 +121,12 @@
 			    "<a href="http://www.gnome.org/about/">What is GNOME?</a>"
 			    page.</p>
 
-		<h2>Where's GNOME 2.12?</h2>
+		<h2>Where is GNOME 2.12?</h2>
 
-		<p>We've had the GNOME 2.12 upgrade ready since the day it came out, but
+		<p>We have had the GNOME 2.12 upgrade ready since the day it came out, but
 		  the FreeBSD ports tree is still in a partial lockdown for the release
 		  of FreeBSD 6.0. Merging in a GNOME upgrade during the freeze would be
-		  too disruptive; we're waiting until the tree is completely unfrozen.</p>
+		  too disruptive, so we are waiting until the tree is completely unfrozen.</p>
 
 	          <p>In the meantime, you can read the
 		  <a href="docs/develfaq.html">Development
