@@ -8,6 +8,7 @@ SUBDIR+= checkpoint
 SUBDIR+= committers-guide
 SUBDIR+= console-server
 SUBDIR+= contributing
+SUBDIR+= contributing-ports
 SUBDIR+= contributors
 SUBDIR+= cvs-freebsd
 SUBDIR+= cvsup-advanced
