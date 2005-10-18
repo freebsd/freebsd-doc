@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/ports/Makefile,v 1.38 2004/11/05 12:47:07 simon Exp $
+# $FreeBSD: www/en/ports/Makefile,v 1.39 2004/11/13 12:23:18 ceri Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -77,7 +77,7 @@ all install clean:
 beforeinstall:
 .else
 beforeinstall:
-	${PERL} -pi -e 's/href=\"growth/href=\"http:\/\/www.FreeBSD.org\/ports\/growth/' index.html
+	${SED} -i "" -e 's,HREF="growth,href="http://www.FreeBSD.org/ports/growth,' index.html
 .endif
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
