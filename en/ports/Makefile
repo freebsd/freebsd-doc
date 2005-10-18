@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/ports/Makefile,v 1.39 2004/11/13 12:23:18 ceri Exp $
+# $FreeBSD: www/en/ports/Makefile,v 1.40 2005/10/18 03:45:12 linimon Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -62,7 +62,7 @@ Makefile.gen: index.sgml .NOTMAIN
 	${ECHO_CMD} NO_TIDY=${NO_TIDY} >> Makefile.gen
 .endif
 
-index.sgml: ${INDEX} categories packages.exists portindex ports.inc .NOTMAIN
+index.sgml: ${INDEX} categories categories.descriptions packages.exists portindex ports.inc .NOTMAIN
 	${RM} -f *.sgml
 	${PORTINDEX} ${INDEX} ${.CURDIR}
 
