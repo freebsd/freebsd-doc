@@ -1,5 +1,5 @@
 #!/usr/bin/perl -T
-# $FreeBSD: www/en/cgi/query-pr-summary.cgi,v 1.50 2005/09/12 20:30:25 remko Exp $
+# $FreeBSD: www/en/cgi/query-pr-summary.cgi,v 1.51 2005/09/13 18:17:46 remko Exp $
 
 sub escape($) { $_ = $_[0]; s/&/&amp;/g; s/</&lt;/g; s/>/&gt;/g; $_; }
 
@@ -119,6 +119,7 @@ sub header_info {
 
 <p>
 Bugs can be in one of several states:
+</p>
 <dl>
 <dt class='o'><strong>o - open</strong></dt>
 <dd>A problem report has been submitted, no sanity checking
@@ -235,6 +236,8 @@ if ($input{'closedtoo'}) {
 	print "<a href='$self_ref3&amp;closedtoo=on'>Include closed reports too</a>.";
 }
 
+print "</p>\n";
+
 	}
 }
 
@@ -305,7 +308,6 @@ if ($#prs < $[) {
 }
 
 print &html_footer if $html_mode;
-print "\n</body>\n</html>" if $html_mode;
 
 exit(0);
 
@@ -574,9 +576,10 @@ sub gnats_summary_line_text {
 
 sub displayform {
 print qq`
+<p>
 Please select the items you wish to search for.  Multiple items are AND'ed
 together.
-<p>
+</p>
 <form method='get' action='$self_ref'>
 
 <table>
