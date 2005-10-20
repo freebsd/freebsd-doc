@@ -15,7 +15,7 @@
 # Disclaimer:
 #   This is pretty ugly in places.
 #
-# $FreeBSD: www/en/cgi/search.cgi,v 1.22 2001/10/30 07:26:27 kuriyama Exp $
+# $FreeBSD: www/en/cgi/search.cgi,v 1.23 2002/04/22 05:08:41 kuriyama Exp $
 
 
 $server_root = '/usr/local/www';
@@ -119,7 +119,7 @@ sub do_wais {
 	print "The archive <em>@AVAIL_source</em> contains ";
     }
     print " the following items relevant to \`@FORM_words\':\n";
-    print "<OL>\n";
+    print "<ol>\n";
 
     &open2(WAISOUT, WAISIN, $waisq, "-g");
     print WAISIN $w_question;
@@ -193,7 +193,7 @@ sub do_wais {
     }
     #print qq[in: $in{'sort'}\n];
 
-    print "</OL>\n";
+    print "</ol>\n";
 
     print "<p>Didn't get what you expected? ";
     print "<a href=\"$hints\">Look here for searching hints</a>.</p>";
@@ -240,10 +240,10 @@ sub docdone {
         if ($file eq "www" || $file eq 'pkgdescr') {
             print "<li><a href=\"$headline\">$headline</a>\n";
         } else {
-            print "<li><A HREF=\"getmsg.cgi?fetch=${docid}\">$headline</A>\n";
+            print "<li><a href=\"getmsg.cgi?fetch=${docid}\">$headline</a>\n";
         }
-        print "<br>";
-#	print "<input type=\"checkbox\" name=\"rf\" value=\"$docnum\">";
+        print "<br/>";
+#	print "<input type=\"checkbox\" name=\"rf\" value=\"$docnum\"/>";
 	print "Score: <em>$score</em>; ";
     	$_ = $date;
     	/(...?)(..)(..)/ && ($yr = $1 + 1900, $mo = $months[$2 - 1], $dy = $3);
