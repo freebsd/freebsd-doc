@@ -6,7 +6,7 @@
 # by John Fieber
 # February 26, 1998
 #
-# $FreeBSD: www/en/cgi/getmsg.cgi,v 1.37 2004/04/04 21:49:38 phantom Exp $
+# $FreeBSD: www/en/cgi/getmsg.cgi,v 1.38 2005/03/29 20:43:20 simon Exp $
 #
 
 require "./cgi-lib.pl";
@@ -99,7 +99,6 @@ sub Fetch
     print &short_html_header("FreeBSD Mail Archives");
     print $message;
     print &html_footer;
-    print "</BODY></HTML>\n";
 }
 
 sub EscapeHTML
@@ -154,41 +153,41 @@ sub MessageToHTML
     if ($hdr{'message-id:'}) {
 	$tmid = $hdr{'message-id:'}; 
 	$hdr{'message-id:'} =~ 
-	    s%;([^&]+)&%;<a href="$mid?db=irt&id=$1">$1</a>&%oi;
+	    s%;([^&]+)&%;<a href="$mid?db=irt&amp;id=$1">$1</a>&%oi;
 	$message .= "<strong>Message-ID: </strong> $hdr{'message-id:'}\n";
     }
 
     if ($hdr{'resent-message-id:'}) {
 	$hdr{'resent-message-id:'} =~ 
-	    s%;([^&]+)&%;<a href="$mid?db=irt&id=$1">$1</a>&%oi;
+	    s%;([^&]+)&%;<a href="$mid?db=irt&amp;id=$1">$1</a>&%oi;
 	$message .= "<strong>Resent-Message-ID: </strong>$hdr{'resent-message-id:'}\n";
     }
 
     if ($hdr{'in-reply-to:'}) {
 	$tirt = $hdr{'in-reply-to:'};
 	$hdr{'in-reply-to:'} =~
-	    s%;([^&]+)&%;<a href="$mid?db=mid&id=$1">$1</a>&%oi;
+	    s%;([^&]+)&%;<a href="$mid?db=mid&amp;id=$1">$1</a>&%oi;
 	$message .= "<strong>In-Reply-To: </strong>$hdr{'in-reply-to:'}\n";
     }
 
     if ($hdr{'references:'}) {
 	$tref = $hdr{'references:'};
 	$hdr{'references:'} =~
-	    s%;([^&\s]+)&%;<a href="$mid?db=mid&id=$1">$1</a>&%goi;
+	    s%;([^&\s]+)&%;<a href="$mid?db=mid&amp;id=$1">$1</a>&%goi;
 	$message .= "<strong>References: </strong> $hdr{'references:'}\n";
     }
 
 
     $message .= "</pre>\n";
-    $message .= "<HR NOSHADE>\n";
+    $message .= "<hr noshade=\"noshade\"/>\n";
 
     if ($tmid =~ m%;([^&]+)&%) {
-	$message .= qq{<a href="$mid?db=irt&id=$1">Next in thread</a>\n};
+	$message .= qq{<a href="$mid?db=irt&amp;id=$1">Next in thread</a>\n};
     }
 
     if ($tirt  =~ m%;([^&]+)&% ||
 	$tref  =~ m%;([^&]+)&%) {
-	$message .= qq{| <a href="$mid?db=mid&id=$1">Previous in thread</a>\n};
+	$message .= qq{| <a href="$mid?db=mid&amp;id=$1">Previous in thread</a>\n};
     }
     $message .= qq{| <a href="$ENV{'REQUEST_URI'}+raw">Raw E-Mail</a>\n};
     my $file2 = $file;
@@ -203,14 +202,14 @@ sub MessageToHTML
     $tid =~ s/^&lt;//;
     $tid =~ s/\@.*//;
 
-    $message .= "<HR NOSHADE>\n";
-    #$message .= qq{<div onclick="document.location='$mid_full_url?db=irt&id=$tid'">\n};
-    $message .= "<p><pre>\n$body\n</pre>\n";
+    $message .= "<hr noshade=\"noshade\"/>\n";
+    #$message .= qq{<div onclick="document.location='$mid_full_url?db=irt&amp;id=$tid'">\n};
+    $message .= "<pre>\n$body\n</pre>\n";
     #$message .= qq{</div>\n};
 
-    $message .= qq{<hr>\nWant to link to this message? Use this URL: &lt;};
+    $message .= qq{<hr/>\n<p>Want to link to this message? Use this URL: &lt;};
     $message .= qq{<a href="} . $mid_full_url . '?' . $tid;
-    $message .= qq{">$mid_full_url} . '?' . $tid . qq{</a>&gt;};
+    $message .= qq{">$mid_full_url} . '?' . $tid . qq{</a>&gt;</p>};
     
     return $message;
 }

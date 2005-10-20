@@ -26,7 +26,7 @@
 #
 # Search a mail by Message-ID, References or In-Reply-To field
 #
-# $FreeBSD: www/en/cgi/mid.cgi,v 1.11 2000/12/28 13:16:39 wosch Exp $
+# $FreeBSD: www/en/cgi/mid.cgi,v 1.12 2002/04/22 05:08:41 kuriyama Exp $
 
 $hsty_base = '';
 
@@ -51,7 +51,7 @@ sub get_id {
 	exec("$lookCommand", $query, "$lookupdir/mid-current.$db") ||
 	do {
 	    print &midheader .
-		"Cannot connect to Message-ID database.<p>\n" . &foot;
+		"<p>Cannot connect to Message-ID database.</p>\n" . &foot;
     exit;
     	};
 
@@ -65,7 +65,7 @@ sub get_id {
 	exec("$lookCommand", $query, "$lookupdir/mid.$db") ||
 	do {
 	    print &midheader .
-		"Cannot connect to Message-ID database.<p>\n" . &foot;
+		"<p>Cannot connect to Message-ID database.</p>\n" . &foot;
 	    exit;
     	};
 
@@ -100,27 +100,27 @@ sub get_id {
     } else {                      # more than one hit
 	local($id, $file, $start, $name);
 	print &midheader;
-	print "<UL>\n";
+	print "<ul>\n";
 	foreach (@idlist) {
 	    ($id, $file, $start) = split;
 	    $name = $file;
 	    $name =~ s%.*/%%;
 	    $name =~ s%(....)(..)(..)\.%$1-$2-$3 %;
-	    print qq{<LI><A HREF="getmsg.cgi?fetch=$start+0+} .
+	    print qq{<li><a href="getmsg.cgi?fetch=$start+0+} .
                 ($file =~ /^current/ ? '' : "$prefix/") .
-		qq{$file">$name $start</A>\n};
+		qq{$file">$name $start</a></li>\n};
 	}
-	print "</UL>\n<p>\n";
+	print "</ul>\n<p></p>\n";
 	print &foot;
     }
 }
 
 sub midheader {
     return &short_html_header("FreeBSD Message-ID Mail Archives") .
-	qq{<p><a href="../search/search.html">Back to the search interface</a><p>\n};
+	qq{<p><a href="$hsty_base/search/search.html">Back to the search interface</a></p>\n};
 }
 
-sub foot { return &html_footer . "</BODY></HTML>\n"; }
+sub foot { return &html_footer; }
 
 ###
 # Main
