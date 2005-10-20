@@ -26,11 +26,10 @@
 #
 # url.cgi - make plain text URLs clickable
 #
-# $FreeBSD: www/en/cgi/url.cgi,v 1.32 2003/07/24 14:40:48 simon Exp $
+# $FreeBSD: www/en/cgi/url.cgi,v 1.33 2004/04/04 21:49:38 phantom Exp $
 
 use strict;
 
-$main::hsty_base = '..';
 $main::hsty_email = 'ports@FreeBSD.org';
 
 # shutup perl -w
