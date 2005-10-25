@@ -47,6 +47,7 @@ SUBDIR+= releng-packages
 SUBDIR+= solid-state
 #SUBDIR+= storage-devices
 #SUBDIR+= vinum
+SUBDIR+= version-guide
 SUBDIR+= vm-design
 SUBDIR+= zip-drive
 
