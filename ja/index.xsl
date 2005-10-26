@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
 
-<!-- $FreeBSD: www/ja/index.xsl,v 1.44 2005/10/06 00:56:04 hrs Exp $ -->
-<!-- Original revision: 1.135 -->
+<!-- $FreeBSD: www/ja/index.xsl,v 1.45 2005/10/08 11:57:22 hrs Exp $ -->
+<!-- Original revision: 1.137 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -10,7 +10,7 @@
 
   <xsl:variable name="base" select="'.'"/>
   <xsl:variable name="enbase" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/ja/index.xsl,v 1.44 2005/10/06 00:56:04 hrs Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/ja/index.xsl,v 1.45 2005/10/08 11:57:22 hrs Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <!-- these params should be externally bound. The values
@@ -118,7 +118,7 @@
 			    </li>
 			    <xsl:if test="$beta.testing">
 			      <li>
-				<a href="{$base}/where.html#HELPTEST">
+				<a href="{$base}/where.html#helptest">
 				  次回リリース予定
 				  <xsl:value-of select="concat($betarel.current, '-', $betarel.vers)"/></a>
 			      </li>
@@ -190,6 +190,9 @@
 			    <li>
 			      <a href="http://www.freebsdfoundation.org/" title="Foundation">FreeBSD 財団</a>
 			    </li>
+			    <li>
+			      <a href="{$base}/ports/index.html" title="Ports">Ports</a>
+			    </li>
 			  </ul>
 			</div> <!-- frontshortcutscontent -->
 		      </div> <!-- frontshortcuts -->
@@ -197,7 +200,7 @@
 		      <div class="frontnewroundbox">
 			<div class="frontnewtop"><div>&#160;</div>&#160;</div>
 			<div class="frontnewcontent">
-			  <a href="{$enbase}/projects/newbies.html">FreeBSD が初めてという方は、こちらへどうぞ</a>
+			  <a href="{$base}/projects/newbies.html">FreeBSD が初めてという方は、こちらへどうぞ</a>
 			</div> <!-- frontnewcontent -->
 			<div class="frontnewbot"><div>&#160;</div>&#160;</div>
 		      </div> <!-- frontnewroundbox -->
