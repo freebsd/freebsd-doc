@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/cgi/cgi-style.pl,v 1.22 2005/09/17 15:48:23 remko Exp $
+# $FreeBSD: www/en/cgi/cgi-style.pl,v 1.23 2005/10/28 14:55:13 fenner Exp $
 #
 # Perl routines to encapsulate various elements of HTML page style.
 
@@ -136,7 +136,7 @@ sub short_html_header {
     $xhtml = 1 unless defined($xhtml);
     $doctype = $xhtml ?  '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">' : '<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">';
     $endslash = $xhtml ? '/' : '';
-    $csshack = $xhtml ? '' : q`<style type="text/css">
+    $csshack = (1 || $xhtml) ? '' : q`<style type="text/css">
 tr, td {
   margin: 0;
   padding: 0;
