@@ -45,9 +45,9 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $Id: cvsweb.cgi,v 1.88 2002-09-30 21:02:05 scop Exp $
+# $Id: cvsweb.cgi,v 1.89 2005-10-28 14:55:57 fenner Exp $
 # $Idaemons: /home/cvs/cvsweb/cvsweb.cgi,v 1.84 2001/10/07 20:50:10 knu Exp $
-# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.87 2002/09/30 20:14:06 scop Exp $
+# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.88 2002/09/30 21:02:05 scop Exp $
 #
 ###
 
@@ -236,7 +236,7 @@ $LOG_REVSEPARATOR  = q/^-{28}$/;
 );
 
 $cgi_style::hsty_base = 'http://www.FreeBSD.org';
-$_ = q$FreeBSD: www/en/cgi/cvsweb.cgi,v 1.87 2002/09/30 20:14:06 scop Exp $;
+$_ = q$FreeBSD: www/en/cgi/cvsweb.cgi,v 1.88 2002/09/30 21:02:05 scop Exp $;
 @_ = split;
 $cgi_style::hsty_date = "@_[3,4]";
 
@@ -3638,16 +3638,8 @@ sub html_header($) {
 	my ($title) = @_;
 	http_header("text/html");
 
-	(my $header = &cgi_style::html_header) =~ s,\A.*</head>\n,,s;
-
-	print <<EOH;
-$HTML_DOCTYPE
-<html>
-<head>
-<title>$title</title>
-$HTML_META</head>
-$header
-EOH
+	(my $header = &cgi_style::html_header($title, 0)) =~ s,\A.*<head>,<head>\n$HTML_META,s;
+	print $header;
 }
 
 sub html_footer() {
