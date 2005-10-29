@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/cgi/cgi-style.pl,v 1.23 2005/10/28 14:55:13 fenner Exp $
+# $FreeBSD: www/en/cgi/cgi-style.pl,v 1.24 2005/10/28 19:07:36 fenner Exp $
 #
 # Perl routines to encapsulate various elements of HTML page style.
 
@@ -9,7 +9,15 @@ $mo += 1;
 $timestamp = "$mo-$md-$yr";
 
 if (!defined($hsty_base)) { 
-    $hsty_base = '..';
+    # $hsty_base should be relative if possible, so that mirrors
+    # serve their local copy instead of going to the main site.
+    # However, if we aren't running as a cgi, or if we're
+    # running on docs or people, use the absolute home path.
+    if (!defined($ENV{'HTTP_HOST'}) || $ENV{'HTTP_HOST'} =~ /(docs|people).freebsd.org/) {
+	$hsty_base = 'http://www.FreeBSD.org'
+    } else {
+	$hsty_base = '..';
+    }
 }
 if (!defined($hsty_email)) {
     $hsty_email = 'www@FreeBSD.org';
