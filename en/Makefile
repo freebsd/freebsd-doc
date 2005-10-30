@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/Makefile,v 1.131 2005/10/06 14:34:56 blackend Exp $
+# $FreeBSD: www/en/Makefile,v 1.132 2005/10/07 14:15:48 ceri Exp $
 
 .if exists(Makefile.conf)
 .include "Makefile.conf"
@@ -27,7 +27,7 @@ DOCS+= y2kbug.sgml
 
 XMLDOCS=	index:xsl:${XML_NEWS_NEWS}:
 DEPENDSET.index=transtable mirrors news press events \
-		navigation advisories notices
+		advisories notices
 
 XMLDOCS+=	usergroups:${XSL_USERGROUPS}:${XML_USERGROUPS}:
 DEPENDSET.usergroups=transtable usergroups
