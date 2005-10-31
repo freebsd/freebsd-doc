@@ -1,4 +1,4 @@
-# $FreeBSD: www/it/Makefile,v 1.9 2005/10/06 14:27:50 ale Exp $
+# $FreeBSD: www/it/Makefile,v 1.10 2005/10/15 13:09:15 ale Exp $
 .if exists(Makefile.conf)
 .include "Makefile.conf"
 .endif
@@ -46,7 +46,6 @@ index.html: index.xsl ${XML_INCLUDES} \
 		--param curdate.xml "'${XML_EVENTS_CURDATE}'" \
 		--param events.xml "'${XML_EVENTS_EVENTS_MASTER}'" \
 		--param mirrors.xml "'${XML_MIRRORS}'" \
-		--param navigation.xml "'${XML_NAVIGATION}'" \
 		--param news.press.xml "'${XML_NEWS_PRESS_MASTER}'" \
 		--param news.project.xml "'${XML_NEWS_NEWS_MASTER}'" \
 		--param notices.xml "'${XML_NOTICES}'" \
