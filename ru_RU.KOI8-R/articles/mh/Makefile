@@ -1,17 +1,18 @@
 #
+# The FreeBSD Russian Documentation Project
+#
 # $FreeBSD$
-# $FreeBSDru: frdp/doc/ru_RU.KOI8-R/articles/mh/Makefile,v 1.1 2001/07/19 10:20:52 phantom Exp $
+# $FreeBSDru: frdp/doc/ru_RU.KOI8-R/articles/mh/Makefile,v 1.3 2005/10/28 17:42:40 gad Exp $
 #
-# Original revision: 1.1
-#
+# Original revision: 1.11
+# 
+# Article: An MH Primer
 
-MAINTAINER=	andy@FreeBSD.org.ua
+DOC?= article
 
-DOC?=	article
+FORMATS?= html
 
-FORMATS?=	html
-
-INSTALL_COMPRESSED?=	gz
+INSTALL_COMPRESSED?=gz
 INSTALL_ONLY_COMPRESSED?=
 
 SRCS=	article.sgml
