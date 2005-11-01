@@ -1,4 +1,4 @@
-# $FreeBSD: www/it/Makefile,v 1.10 2005/10/15 13:09:15 ale Exp $
+# $FreeBSD: www/it/Makefile,v 1.11 2005/10/31 14:24:16 ale Exp $
 .if exists(Makefile.conf)
 .include "Makefile.conf"
 .endif
@@ -38,8 +38,7 @@ index.html: index.xsl ${XML_INCLUDES} \
 		${XML_NEWS_NEWS_MASTER} ${XML_NEWS_PRESS_MASTER} \
 		${XML_EVENTS_EVENTS_MASTER} ${XML_EVENTS_CURDATE} \
 		${XML_MIRRORS} ${XML_TRANSTABLE} \
-		${XML_ADVISORIES} ${XML_NOTICES} \
-		${XML_NAVIGATION}
+		${XML_ADVISORIES} ${XML_NOTICES}
 	${XSLTPROC} ${XSLTPROCOPTS} \
 		-o $@ \
 		--param advisories.xml "'${XML_ADVISORIES}'" \
