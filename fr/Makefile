@@ -1,4 +1,4 @@
-# $FreeBSD: www/fr/Makefile,v 1.14 2005/10/18 21:02:45 blackend Exp $
+# $FreeBSD: www/fr/Makefile,v 1.15 2005/11/02 21:39:11 blackend Exp $
 
 # The FreeBSD French Documentation Project
 # Original revision: 1.107
@@ -102,8 +102,7 @@ index.html: index.xsl ${XML_INCLUDES}\
 		${XML_NEWS_PRESS} ${XML_NEWS_PRESS_MASTER} \
 		${XML_EVENTS_EVENTS} ${XML_EVENTS_EVENTS_MASTER} ${XML_EVENTS_CURDATE} \
 		${XML_MIRRORS} ${XML_TRANSTABLE} \
-		${XML_ADVISORIES} ${XML_NOTICES} \
-		${XML_NAVIGATION}
+		${XML_ADVISORIES} ${XML_NOTICES}
 	${XSLTPROC} ${XSLTPROCOPTS} \
 		-o $@ \
 		--param mirrors.xml "'${XML_MIRRORS}'" \
@@ -117,7 +116,6 @@ index.html: index.xsl ${XML_INCLUDES}\
 		--param events.xml "'${XML_EVENTS_EVENTS}'" \
 		--param curdate.xml "'${XML_EVENTS_CURDATE}'" \
 		--param notices.xml "'${XML_NOTICES}'" \
-		--param navigation.xml "'${XML_NAVIGATION}'" \
 		${.CURDIR}/index.xsl ${XML_NEWS_NEWS} ${XML_EVENTS_EVENTS} ${XML_EVENTS_CURDATE}
 .if !defined(NO_TIDY)
 	-${TIDY} ${TIDYOPTS} ${.TARGET}
