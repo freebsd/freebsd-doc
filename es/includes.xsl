@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/es/includes.xsl,v 1.8 2005/10/04 07:56:16 murray Exp $ -->
+<!-- $FreeBSD: www/es/includes.xsl,v 1.9 2005/10/07 17:23:12 jesusr Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -17,7 +17,7 @@
   </xsl:variable>
 
   <xsl:variable name="copyright">
-    <a href="{$enbase}/copyright/index.html">Copyright</a> &#169; 1995-2004 the FreeBSD Project.  Todos los derechos reservados.
+    <a href="{$enbase}/copyright/index.html">Copyright</a> &#169; 1995-2005 the FreeBSD Project.  Todos los derechos reservados.
   </xsl:variable>
 
   <xsl:variable name="email" select="'freebsd-questions'"/>
@@ -53,7 +53,7 @@
             <div id="headercontainer">
       
               <div id="header">
-      	      <h2 class="blockhide">Cabecera y Logo</h2>
+      	      <h2 class="blockhide">Cabecera y logo</h2>
                 <div id="headerlogoleft">
                   <a href="{$base}" title="FreeBSD"><img src="{$enbase}/layout/images/logo.png" width="360" height="40" alt="FreeBSD" /></a>
                 </div> <!-- headerlogoleft -->
@@ -84,7 +84,7 @@
       
               </div> <!-- header -->
       
-        	<h2 class="blockhide">Navegacion</h2>
+        	<h2 class="blockhide">Navegaci&#243;n</h2>
               <div id="topnav">
                 <ul id="topnavlist">
 		  <li>
