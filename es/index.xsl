@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/es/index.xsl,v 1.13 2005/10/10 10:40:25 jesusr Exp $ -->
+<!-- $FreeBSD: www/es/index.xsl,v 1.14 2005/10/13 12:01:32 jesusr Exp $ -->
 <!-- $FreeBSDes: www/es/index.xsl,v 1.4 2004/09/07 21:46:11 jcamou Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -10,7 +10,7 @@
 
   <xsl:variable name="base" select="'.'"/>
   <xsl:variable name="enbase" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/es/index.xsl,v 1.13 2005/10/10 10:40:25 jesusr Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/es/index.xsl,v 1.14 2005/10/13 12:01:32 jesusr Exp $'"/>
   <xsl:variable name="title" select="'El Proyecto FreeBSD'"/>
 
   <!-- these params should be externally bound. The values
@@ -185,7 +185,7 @@
 			<div class="frontnewroundbox">
 			  <div class="frontnewtop"><div>&#160;</div>&#160;</div>
 			    <div class="frontnewcontent">
-			      <a href="{$base}/projects/newbies.html">Nuevo en FreeBSD?</a>
+			      <a href="{$base}/projects/newbies.html">&#191;Nuevo en FreeBSD?</a>
 			    </div> <!-- frontnewcontent -->
 			  <div class="frontnewbot"><div>&#160;</div>&#160;</div>
 			</div> <!-- frontnewroundbox -->
