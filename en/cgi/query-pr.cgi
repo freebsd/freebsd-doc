@@ -1,5 +1,5 @@
 #!/usr/bin/perl -T
-# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.44 2005/09/17 15:48:23 remko Exp $
+# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.45 2005/09/18 19:32:24 remko Exp $
 
 $ENV{'PATH'} = "/bin:/usr/bin:/usr/sbin:/sbin:/usr/local/bin";
 
@@ -54,6 +54,7 @@ $pr = int($pr); 	# numeralize: "0123" -> 123
 if ($pr < 1 || $pr > 499999) {
     print &html_header("FreeBSD Problem Report");
     print "<p>Invalid problem report number: $pr</p>\n";
+    print &summary_link;
     print &html_footer;
     exit 0;
 }
@@ -61,6 +62,7 @@ if ($pr < 1 || $pr > 499999) {
 unless (open(Q, "$query_pr -F $pr 2>&1 |")) {
     print &html_header("Server error");
     print "<p>Unable to open PR database.</p>\n";
+    print &summary_link;
     print &html_footer;
     die "Unable to query PR's";
 }
@@ -92,12 +94,14 @@ while(<Q>) {
 	} else {
 	    print "<p>No PR found matching $pr</p>\n";
 	}
+	print &summary_link;
 	print &html_footer;
 	exit;
     } elsif (/^lockf: /) {
 	print &html_header("FreeBSD problem report");
 	print "<p>The PR database is currently busy; please try ",
 	    "<a href='./query-pr.cgi?pr=$pr'>your query</a> again.</p>";
+	print &summary_link;
 	print &html_footer;
 	exit;
     }
@@ -181,7 +185,7 @@ print "</dl>";
 $origsyn =~ s/[^a-zA-Z+.@-]/"%" . sprintf("%02X", unpack("C", $&))/eg;
 $email =~ s/[^a-zA-Z+.@-]/"%" . sprintf("%02X", unpack("C", $&))/eg;
 
-print qq`<a href="mailto:bug-followup\@FreeBSD.org,${email}?subject=Re:%20${cat}/${number}:%20$origsyn">Submit Followup</a> | <a href="./query-pr.cgi?pr=$pr&amp;f=raw">Raw PR</a>\n`;
+print qq`<a href="mailto:bug-followup\@FreeBSD.org,${email}?subject=Re:%20${cat}/${number}:%20$origsyn">Submit Followup</a> | <a href="./query-pr.cgi?pr=$pr&amp;f=raw">Raw PR</a> | <a href="./query-pr-summary.cgi?query">Find Another PR</a>\n`;
 
 print &html_footer;
 
@@ -197,8 +201,9 @@ sub getline
     return $remainder;
 }
 
-
-
+sub summary_link {
+	return qq`<p><a href="./query-pr-summary.cgi?query">Search for Another PR</a></p>\n`;
+}
 
 sub cvsweb {
     local($file) = shift;
