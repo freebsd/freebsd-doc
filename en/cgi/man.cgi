@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp 
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.149 2005-06-27 09:55:49 wosch Exp $
+# $Id: man.cgi,v 1.150 2005-11-04 17:41:56 hrs Exp $
 
 #use Data::Dumper;
 #use Carp;
@@ -145,17 +145,20 @@ foreach my $os (keys %$sectionpath) {
      );
 
 $manLocalDir = '/usr/local/www/bsddoc/man';
-$manPathDefault = 'FreeBSD 5.4-RELEASE and Ports';
+$manPathDefault = 'FreeBSD 6.0-RELEASE and Ports';
 #$manPathDefault = 'FreeBSD 5.1-RELEASE';
 
 %manPath = 
     (
+     'FreeBSD 6.0-RELEASE and Ports',  "$manLocalDir/FreeBSD-6.0-RELEASE/man:$manLocalDir/FreeBSD-6.0-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-6.0-RELEASE",
      'FreeBSD 5.4-RELEASE and Ports',  "$manLocalDir/FreeBSD-5.4-RELEASE/man:$manLocalDir/FreeBSD-5.4-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-5.3-RELEASE",
 
-     'FreeBSD 6.0-current',     "$manLocalDir/FreeBSD-6-current",
+     'FreeBSD 7.0-current',     "$manLocalDir/FreeBSD-7-current",
+     'FreeBSD 6.0-stable',     "$manLocalDir/FreeBSD-6.0-stable",
      'FreeBSD 5.4-stable',   "$manLocalDir/FreeBSD-5.4-stable",
      'FreeBSD 4.11-stable',   "$manLocalDir/FreeBSD-4.11-stable",
 
+     'FreeBSD 6.0-RELEASE',   "$manLocalDir/FreeBSD-6.0-RELEASE/man:$manLocalDir/FreeBSD-6.0-RELEASE/openssl/man",
      'FreeBSD 5.4-RELEASE',   "$manLocalDir/FreeBSD-5.4-RELEASE/man:$manLocalDir/FreeBSD-5.4-RELEASE/openssl/man",
      'FreeBSD 5.3-RELEASE',   "$manLocalDir/FreeBSD-5.3-RELEASE/man:$manLocalDir/FreeBSD-5.3-RELEASE/openssl/man",
      'FreeBSD 5.2.1-RELEASE',   "$manLocalDir/FreeBSD-5.2-RELEASE/man:$manLocalDir/FreeBSD-5.2-RELEASE/openssl/man",
@@ -198,6 +201,8 @@ $manPathDefault = 'FreeBSD 5.4-RELEASE and Ports';
      'FreeBSD 1.1-RELEASE',   "$manLocalDir/FreeBSD-1.1-RELEASE",
      'FreeBSD 1.0-RELEASE',   "$manLocalDir/FreeBSD-1.0-RELEASE",
 
+     'FreeBSD Ports 6.0-RELEASE', "$manLocalDir/FreeBSD-ports-6.0-RELEASE",
+     'FreeBSD Ports 5.4-RELEASE', "$manLocalDir/FreeBSD-ports-5.4-RELEASE",
      'FreeBSD Ports 5.3-RELEASE', "$manLocalDir/FreeBSD-ports-5.3-RELEASE",
      'FreeBSD Ports 5.1-RELEASE', "$manLocalDir/FreeBSD-ports-5.1-RELEASE",
      'FreeBSD Ports 5.0-RELEASE', "$manLocalDir/FreeBSD-ports-5.0-RELEASE",
@@ -339,10 +344,12 @@ while (($key,$val) = each %manPath) {
 # keywords must be in lower cases.
 %manPathAliases = 
     (
-     'freebsd', 'FreeBSD 5.3-RELEASE',
-     'freebsd-stable', 'FreeBSD 4.11-stable',
+     'freebsd', 'FreeBSD 6.0-RELEASE',
+     'freebsd-stable', 'FreeBSD 6.0-stable',
+     'freebsd-stable4', 'FreeBSD 4.11-stable',
      'freebsd-stable5', 'FreeBSD 5.4-stable',
-     'freebsd-current', 'FreeBSD 6-current',
+     'freebsd-stable6', 'FreeBSD 6.0-stable',
+     'freebsd-current', 'FreeBSD 7-current',
      'slackware', 'Linux Slackware 3.1',
      'linux-de', 'deutsch - Linux/GNU',
      'redhat', 'Red Hat Linux/i386 9',
@@ -363,7 +370,7 @@ while (($key,$val) = each %manPath) {
      'sunos5', 'SunOS 5.9',
      'sunos4', 'SunOS 4.1.3',
      'sunos', 'SunOS 4.1.3',
-     'freebsd ports', 'FreeBSD Ports 5.3-RELEASE',
+     'freebsd ports', 'FreeBSD Ports 6.0-RELEASE',
      'ports', 'FreeBSD Ports 5.3-RELEASE',
      'plan9', 'Plan 9',
      'osf1', 'OSF1 V5.1/alpha',
@@ -1034,7 +1041,7 @@ ETX
 }
 
 sub copyright {
-    $id = '$Id: man.cgi,v 1.149 2005-06-27 09:55:49 wosch Exp $';
+    $id = '$Id: man.cgi,v 1.150 2005-11-04 17:41:56 hrs Exp $';
 
     return qq{\
 <PRE>
