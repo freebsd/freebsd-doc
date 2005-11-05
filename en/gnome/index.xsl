@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.75 2005/10/16 20:00:53 adamw Exp $ -->
+<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.76 2005/10/16 20:04:38 adamw Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
 		xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -9,7 +9,7 @@
   <xsl:import href="includes.xsl"/>
 
   <xsl:variable name="base" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.75 2005/10/16 20:00:53 adamw Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.76 2005/10/16 20:04:38 adamw Exp $'"/>
   <xsl:variable name="section" select="'developers'"/>
   <xsl:variable name="title" select="'FreeBSD GNOME Project'"/>
 
@@ -117,7 +117,7 @@
 		<h2>GNOME on FreeBSD</h2>
 		<ul>
 		  <li><a href="docs/faq2.html#q1">Installation Instructions</a></li>
-		  <li><a href="docs/faq210.html#q2">Upgrade Instructions</a></li>
+		  <li><a href="docs/faq212.html#q2">Upgrade Instructions</a></li>
 		  <li><a href="../ports/gnome.html">Available Applications</a></li>
 		  <li><a href="docs/volunteer.html">How to Help</a></li>
 		  <li><a href="docs/bugging.html">Reporting a Bug</a></li>
@@ -128,10 +128,10 @@
 		<h2>Documentation</h2>
 		<ul>
 		  <li><a href="docs/faq2.html">FAQ</a></li>
-		  <li><a href="docs/faq210.html">2.8 to 2.10 Upgrade FAQ</a></li>
+		  <li><a href="docs/faq212.html">2.8 to 2.10 Upgrade FAQ</a></li>
 		  <li><a href="docs/develfaq.html">Development Branch FAQ</a></li>
 		  <li><a href="docs/porting.html">Creating Ports</a></li>
-		  <li><a href="docs/faq210.html#q5">Known Issues</a></li>
+		  <li><a href="docs/faq212.html#q5">Known Issues</a></li>
 		</ul>
 
 		<h2>Where is GNOME 2.12?</h2>
@@ -152,7 +152,7 @@
 		<h2>Upgrading to GNOME 2.10?</h2>
 
 		<p>If you are upgrading from GNOME 2.8 to GNOME 2.10, read the
-		  <a href="docs/faq210.html">Upgrade FAQ</a> for upgrade
+		  <a href="docs/faq212.html">Upgrade FAQ</a> for upgrade
 		  instructions, and be sure to use the
 		  <a href="gnome_upgrade.sh">upgrade script</a>!</p>
 
