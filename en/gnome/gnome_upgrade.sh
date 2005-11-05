@@ -2,9 +2,9 @@
 #
 # ##################################################################
 # ##################################################################
-# ## If you want to upgrade your GNOME desktop from 2.8 to 2.10,  ##
+# ## If you want to upgrade your GNOME desktop from 2.10 to 2.12, ##
 # ## you're on the right track! Read our upgrade FAQ at           ##
-# ## http://www.freebsd.org/gnome/docs/faq210.html for complete   ##
+# ## http://www.freebsd.org/gnome/docs/faq212.html for complete   ##
 # ## instructions!                                                ##
 # ##################################################################
 # ##################################################################
@@ -34,14 +34,15 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $Id: gnome_upgrade.sh,v 1.22 2005-07-15 06:08:02 marcus Exp $
-# $FreeBSD$
+# $MCom: portstools/gnome_upgrade.sh.in,v 1.154 2005/10/02 05:50:39 marcus Exp $
+#   $FreeBSD$
 #
 
 # This script will aid in doing major upgrades to the GNOME Desktop (e.g.
-# an upgrade from 2.8 --> 2.10).
+# an upgrade from 2.10 --> 2.12).
 
-GNOME_UPGRADE_SH_VER=2.10-4;	# Increment this with every functional change
+GNOME_UPGRADE_SH_VER=2.12-3;	# Increment this with every functional change
+GNOME_UPGRADE_SH_REV='$Revision: 1.23 $'
 
 ## BEGIN global variable declarations.
 VERBOSE=${VERBOSE:=0}
@@ -52,10 +53,16 @@ X11BASE=${X11BASE:=/usr/X11R6}
 
 PROJECT_URL="http://www.FreeBSD.org/gnome/"
 SUPPORT_EMAIL="freebsd-gnome@FreeBSD.org"
+PORTSTREE="MarcusCom"
+TB_URL="http://www.marcuscom.com/tb/packages%s/%s-%s/Latest/"
 
-SUPPORTED_FREEBSD_VERSIONS="4.10 4.11 5.3 5.4 6.0 7.0"
+SUPPORTED_FREEBSD_VERSIONS="5.3 5.4 6.0 7.0"
 	# The Big Update updates UPGRADE_TARGET and everything that depends on it
 UPGRADE_TARGET="glib-2*"
+	# Ports to remove before doing the upgrade.
+RM_PORTS="clearlooks clearlooks-metacity"
+	# Apps that cannot be built with the new GNOME version and must be removed
+PORTUPGRADE_EXCLUDE=""
 	# Variables to be set across every portupgrade run
 PORTUPGRADE_MAKE_ENV="GNOME_UPGRADE_SH_VER=${GNOME_UPGRADE_SH_VER} DISABLE_VULNERABILITIES=1"
 
@@ -96,12 +103,28 @@ get_tmpfile()
     return 0
 }
 
+usage () {
+    echo "usage: $0 [-f] [-k] [-h] [-P] [-p] [-v] [-restart <list filename>]"
+    echo ""
+    echo "    -f       : Do not prompt for any confirmations (think: force)"
+    echo "    -k       : Keep going even if an error is encountered"
+    echo "    -h       : Print this usage summary and exit"
+    echo "    -p       : Use packages for upgrades where possible (note: Tinderbox                       packages will be used unless PACKAGESITE is set prior to starting               the upgrade)"
+    echo "    -P       : Only use packages for upgrades (note: Tinderbox packages will be                used unless PACKAGESITE is set prior to starting the upgrade)"
+    echo "    -v       : Print the version of $0 and exit"
+    echo "    -restart : Restart a failed upgrade using the <list filename> to get the                   list of ports that still require an upgrade"
+}
+
 cleanup()
 {
     retval=$1
     logfile=$2
 
-    echo "INFO: GNOME upgrade finished at `date`" >> ${logfile}
+    if [ ${retval} = 0 ]; then
+	echo "INFO: GNOME upgrade finished successfully at `date`" >> ${logfile}
+    else
+	echo "INFO: GNOME upgrade FAILED at `date`" >> ${logfile}
+    fi
 
     exit ${retval}
 }
@@ -174,19 +197,73 @@ run_portupgrade()
     return $?
 }
 
+rm_pkg()
+{
+    pkg=$1
+    logfile=$2
+
+    PKGDEINSTALL="${LOCALBASE}/sbin/pkg_deinstall"
+
+    echo -n "===> Removing ${pkg} ..."
+    echo "===> Removing ${pkg} ..." >> ${logfile}
+    if [ ${VERBOSE} != 0 ]; then
+        echo "INFO: Running ${PKGDEINSTALL} -fO ${pkg}"
+    fi
+    echo "INFO: Running ${PKGDEINSTALL} -fO ${pkg}" >> ${logfile}
+    ${PKGDEINSTALL} -fO ${pkg} >> ${logfile} 2>&1
+    echo "DONE."
+}
+
 ## BEGIN main block.
 # Print some basic version information
-if [ "$1" = "-v" ]; then
-    echo "FreeBSD GNOME Upgrade tool: gnome_upgrade.sh"
-    echo "--"
-    echo "Script version: ${GNOME_UPGRADE_SH_VER}"
-    echo 'MarcusCom revision: $Id: gnome_upgrade.sh,v 1.22 2005-07-15 06:08:02 marcus Exp $'
-    echo 'FreeBSD revision: $FreeBSD$'
-    echo "--"
-    echo "Visit http://www.freebsd.org/gnome for more information"
-    echo ""
-    exit 0
- fi
+force=0
+keepgoing=0
+restart=0
+packages=0
+onlypkgs=0
+upgrade_list=
+while [ $# -gt 0 ]; do
+    case "x$1" in
+	x-f)
+	  force=1
+	  ;;
+	x-k)
+	  keepgoing=1
+	  ;;
+	x-restart)
+	  shift
+	  restart=1
+	  upgrade_list=$1
+	  ;;
+	x-P)
+	  packages=1
+	  onlypkgs=1
+	  ;;
+	x-p)
+	  packages=1
+	  ;;
+	x-h)
+	  usage
+	  exit 0
+	  ;;
+	x-v)
+          echo "FreeBSD GNOME Upgrade tool: gnome_upgrade.sh"
+          echo "--"
+          echo "Script version: ${GNOME_UPGRADE_SH_VER}"
+          echo 'MarcusCom revision: $MCom: portstools/gnome_upgrade.sh.in,v 1.154 2005/10/02 05:50:39 marcus Exp $'
+          echo 'FreeBSD revision: $FreeBSD$'
+          echo "--"
+          echo "Visit http://www.freebsd.org/gnome for more information"
+          echo ""
+          exit 0
+	  ;;
+	*)
+	  usage
+	  exit 1
+	  ;;
+    esac
+    shift
+done
 
 if [ `/usr/bin/id -u` != 0 ]; then
     echo "ERROR: You must be root to run this script."
@@ -205,10 +282,12 @@ if [ ${VERBOSE} != 0 ]; then
     echo "INFO: OS version = ${version}, supported = ${supported}"
 fi
 
-restart=0
-upgrade_list=
-if [ "$1" = "-restart" ]; then
-    upgrade_list=$2
+if [ ${supported} = 0 ]; then
+    echo "ERROR: FreeBSD ${version} is not supported by the FreeBSD GNOME project.  Please refer to ${PROJECT_URL} for a list of supported versions." | /usr/bin/fmt 75 79
+    exit 1
+fi
+
+if [ ${restart} = 1 ]; then
     if [ -z "${upgrade_list}" ]; then
 	errormsg="ERROR: -restart requires a path to the list of GNOME ports to upgrade as its argument."
     fi
@@ -217,13 +296,13 @@ if [ "$1" = "-restart" ]; then
     fi
     if [ ! -z "${errormsg}" ]; then
     	echo "${errormsg}" | /usr/bin/fmt 75 79
-	possible_files=`/bin/ls ${TMPDIR}/gnome_upgrade_lst*`
+	tempdir=`get_tmpdir`
+	possible_files=`/bin/ls ${tempdir}/gnome_upgrade_lst*`
 	if [ $? = 0 ]; then
 		echo "Possible upgrade lists from previous upgrade attempts: ${possible_files}" | /usr/bin/fmt 75 79
 	fi
 	exit 1
     fi
-    restart=1
 else
     upgrade_list=`get_tmpfile gnome_upgrade_lst`
     if [ $? != 0 ]; then
@@ -232,19 +311,15 @@ else
     fi
 fi
 
-if [ ${supported} = 0 ]; then
-    echo "ERROR: FreeBSD ${version} is not supported by the FreeBSD GNOME project.  Please refer to ${PROJECT_URL} for a list of supported versions." | /usr/bin/fmt 75 79
-    exit 1
-fi
-
 # Seriously. We do this for your protection.
 echo
 echo "WARNING: To prevent crashing your system, as well as to significantly speed up the upgrade, you are strongly advised to run this program from a console.  If any GNOME or GTK+-2 application is running, you MUST abort now." | /usr/bin/fmt 75 79
 echo
 echo "WARNING: If necessary, hit Control-C now, drop to a terminal, and restart the upgrade." | /usr/bin/fmt 75 79
 echo
-# $i is a good clobberable variable name
-read -p "Hit <ENTER> to continue with the upgrade: " i
+if [ ${force} = 0 ]; then
+    read -p "Hit <ENTER> to continue with the upgrade: " i
+fi
 echo
 
 logfile=`get_tmpfile gnome_upgrade_log`
@@ -276,6 +351,57 @@ if [ ${WATCH_BUILD} = 0 ]; then
     fi
 fi
 echo "INFO: logfile = ${logfile}" >> ${logfile}
+
+export HTTP_USER_AGENT="gnome_upgrade/${GNOME_UPGRADE_SH_VER} (rev. ${GNOME_UPGRADE_SH_REV})"
+
+# Check to see if the user would like to use packages.
+if [ ${packages} = 1 ]; then
+    if [ ${VERBOSE} = 1 ]; then
+	echo "INFO: Enabling package support"
+    fi
+    echo "INFO: Enabling package support" >> ${logfile}
+    if [ -z "${PACKAGESITE}" ]; then
+        arch=`/usr/bin/uname -m`
+        if [ ${arch} = "i386" -o ${arch} = "amd64" ]; then
+	    tbarch=""
+	    if [ ${VERBOSE} = 1 ]; then
+	        echo "INFO: Architecture is ${arch}; using Tinderbox for PACKAGESITE"
+	    fi
+	    echo "INFO: Architecture is ${arch}; using Tinderbox for PACKAGESITE" >> ${logfile}
+	    if [ ${arch} = "amd64" ]; then
+	        tbarch="-amd64"
+	    fi
+	    tbversion=`echo ${version} | /usr/bin/cut -d'-' -f1`
+	    version_sufx=`echo ${version} | /usr/bin/cut -d'-' -f2`
+	    if [ ${version_sufx} = "CURRENT" -o ${version_sufx} = "STABLE" ]; then
+	        major_version=`echo ${tbversion} | /usr/bin/cut -d'.' -f1`
+	        tbversion="${major_version}-${version_sufx}"
+	    fi
+	    PACKAGESITE=`/usr/bin/printf ${TB_URL} "${tbarch}" ${tbversion} ${PORTSTREE}`
+	    if [ ${VERBOSE} = 1 ]; then
+	        echo "INFO: PACKAGESITE set to ${PACKAGESITE}"
+	    fi
+	    echo "INFO: PACKAGESITE set to ${PACKAGESITE}" >> ${logfile}
+	    export PACKAGESITE
+        else
+	    echo "WARNING: You are upgrading on ${arch} for which there is no Tinderbox.  Packages may not be available." | /usr/bin/fmt 75 79
+	    echo "WARNING: You are upgrading on ${arch} for which there is no Tinderbox.  Packages may not be available." >> ${logfile}
+	fi
+    else
+	if [ ${VERBOSE} = 1 ]; then
+	    echo "INFO: Using pre-set PACAKGESITE ${PACKAGESITE} for packages."
+	fi
+	echo "INFO: Using pre-set PACAKGESITE ${PACKAGESITE} for packages." >> ${logfile}
+    fi
+
+    if [ ${onlypkgs} = 1 ]; then
+	echo "WARNING: Only packages will be used for upgrading; this may lead to failures" | /usr/bin/fmt 75 79
+	echo "WARNING: Only packages will be used for upgrading; this may lead to failures" >> ${logfile}
+	PORTUPGRADE_ARGS="-PP"
+    else
+        PORTUPGRADE_ARGS="-P"
+    fi
+fi
 
 # First, check to see that we have portupgrade installed.
 PORTUPGRADE="${LOCALBASE}/sbin/portupgrade"
@@ -310,6 +436,13 @@ fi
 # Obtain a list of ports that need upgrading.  We can skip this if the upgrade
 # is being restarted.
 if [ ${restart} = 0 ]; then
+    if [ -n "${RM_PORTS}" ]; then
+        echo "===> Removing ports that can no longer be installed with GNOME."
+        echo "===> Removing ports that can no longer be installed with GNOME." >> ${logfile}
+        for i in ${RM_PORTS}; do
+	    rm_pkg ${i} ${logfile}
+        done
+    fi
     echo -n "===> Generating list of ports to upgrade in ${upgrade_list} ..."
     echo "===> Generating list of ports to upgrade in ${upgrade_list} ..." >> ${logfile}
     ${PORTUPGRADE} -rnf ${exclude_ports} ${UPGRADE_TARGET} | \
@@ -345,15 +478,6 @@ echo "DONE."
 
 echo
 echo ">>>>> STAGE 1 of 4: Cleaning the package database."
-
-echo
-echo "The nautilus-media port was removed, because its functionality"
-echo "was merged into another application. This next step might complain"
-echo "about the nautilus-media port no longer existing. When it asks what"
-echo "you want to do about it, you can either choose choose \"[no]\" to"
-echo "ignore the issue, or, if (and only if!) you are very familiar with"
-echo "pkgdb(1), you can hit CTRL-D to remove the dependency."
-echo
 
 # We run pkgdb twice. The first time, we run pkgdb -fu, which rebuilds the
 # entire database from scratch. This takes a decent chunk of time (a minute
@@ -395,16 +519,8 @@ if [ ${restart} = 0 ]; then
 # Remove any ports that depend upon ${UPGRADE_TARGET}.  This isn't as bad
 # as it seems since a portupgrade -f would have done this anyway.  We're
 # just taking care of it up front.
-PKGDEINSTALL="${LOCALBASE}/sbin/pkg_deinstall"
 for i in `/bin/cat ${upgrade_list}`; do
-    echo -n "===> Removing ${i} ..."
-    echo "===> Removing ${i} ..." >> ${logfile}
-    if [ ${VERBOSE} != 0 ]; then
-	echo "INFO: Running ${PKGDEINSTALL} -fO ${i}"
-    fi
-    echo "INFO: Running ${PKGDEINSTALL} -fO ${i}" >> ${logfile}
-    ${PKGDEINSTALL} -fO ${i} >> ${logfile} 2>&1
-    echo "DONE."
+    rm_pkg ${i} ${logfile}
 done
 
 # Correct any stale dependencies from stuff that got removed.
@@ -425,24 +541,44 @@ else
 	echo "Note: this will take a LONG time.  If you've been planning a day trip, now would be a great time to take it." | /usr/bin/fmt 75 79
 fi
 PORTINSTALL=${LOCALBASE}/sbin/portinstall
+failed_ports=
+port_count=0
+total_count=`/usr/bin/wc -l ${upgrade_list} | /usr/bin/awk '{print $1}'`
 for port in `/bin/cat ${upgrade_list}`; do
     echo "===> Running ${PORTINSTALL} -O -m \"BATCH=yes ${PORTUPGRADE_MAKE_ENV}\" ${PORTUPGRADE_ARGS} ${port}" >> ${logfile}
     if [ ${VERBOSE} != 0 ]; then
 	echo; echo "INFO: Running ${PORTINSTALL} -O -m \"BATCH=yes ${PORTUPGRADE_MAKE_ENV}\" ${PORTUPGRADE_ARGS} ${port}"
     fi
     echo "INFO: Running ${PORTINSTALL} -O -m \"BATCH=yes ${PORTUPGRADE_MAKE_ENV}\" ${PORTUPGRADE_ARGS} ${port}" >> ${logfile}
+    port_count=`expr ${port_count} + 1`
+    echo "Upgrading ${port} (${port_count}/${total_count})"
     ${PORTINSTALL} -O -m "BATCH=yes ${PORTUPGRADE_MAKE_ENV}" ${PORTUPGRADE_ARGS} ${port} >> ${logfile} 2>&1
     if [ $? != 0 ]; then
-        echo
-        echo "*** UPGRADE FAILED ***"
-        echo
-        echo "ERROR: ${PORTINSTALL} failed to install ${port}.  The output of the failed build is in ${logfile}.  If you require additional help in figuring out why the upgrade failed, please compress ${logfile} and send it to ${SUPPORT_EMAIL}." | /usr/bin/fmt 75 79
-	echo
-	echo "INFO: If you wish to resume this upgrade where it left off, re-run this script with the \"-restart ${upgrade_list}\" argument." | /usr/bin/fmt 75 79
-        cleanup 1 ${logfile}
+	if [ ${keepgoing} = 1 ]; then
+	    failed_ports="${failed_ports} ${port}"
+	else
+            echo
+            echo "*** UPGRADE FAILED ***"
+            echo
+            echo "ERROR: ${PORTINSTALL} failed to install ${port}.  The output of the failed build is in ${logfile}.  If you require additional help in figuring out why the upgrade failed, please compress ${logfile} and send it to ${SUPPORT_EMAIL}." | /usr/bin/fmt 75 79
+	    echo
+	    echo "INFO: If you wish to resume this upgrade where it left off, re-run this script with the \"-restart ${upgrade_list}\" argument." | /usr/bin/fmt 75 79
+            cleanup 1 ${logfile}
+	fi
     fi
 done
 echo
+if [ -n "${failed_ports}" ]; then
+    echo "*** UPGRADE FAILED ***"
+    echo
+    echo "ERROR: ${PORTINSTALL} failed to install the following ports.  The output of the failed build(s) are in ${logfile}.  If you require additional help in figuring out why the upgrade failed, please compress ${logfile} and send it to ${SUPPORT_EMAIL}." | /usr/bin/fmt 75 79
+    echo
+    for port in ${failed_ports}; do
+	echo "    ${port}"
+    done
+    cleanup 1 ${logfile}
+fi
+
 echo "${PORTINSTALL} has finished.  That was the hard part!"
 
 # Now, run pkgdb one last time just as a housekeeping step.
