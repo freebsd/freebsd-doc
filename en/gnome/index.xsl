@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.76 2005/10/16 20:04:38 adamw Exp $ -->
+<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.77 2005/11/05 07:22:29 marcus Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
 		xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -9,7 +9,7 @@
   <xsl:import href="includes.xsl"/>
 
   <xsl:variable name="base" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.76 2005/10/16 20:04:38 adamw Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.77 2005/11/05 07:22:29 marcus Exp $'"/>
   <xsl:variable name="section" select="'developers'"/>
   <xsl:variable name="title" select="'FreeBSD GNOME Project'"/>
 
@@ -128,30 +128,15 @@
 		<h2>Documentation</h2>
 		<ul>
 		  <li><a href="docs/faq2.html">FAQ</a></li>
-		  <li><a href="docs/faq212.html">2.8 to 2.10 Upgrade FAQ</a></li>
+		  <li><a href="docs/faq212.html">2.10 to 2.12 Upgrade FAQ</a></li>
 		  <li><a href="docs/develfaq.html">Development Branch FAQ</a></li>
 		  <li><a href="docs/porting.html">Creating Ports</a></li>
 		  <li><a href="docs/faq212.html#q5">Known Issues</a></li>
 		</ul>
 
-		<h2>Where is GNOME 2.12?</h2>
+		<h2>Upgrading to GNOME 2.12?</h2>
 
-		<p>We have had the GNOME 2.12 upgrade ready since the day it came out, but
-		  the FreeBSD ports tree is still in a partial lockdown for the release
-		  of FreeBSD 6.0. Merging in a GNOME upgrade during the freeze would be
-		  too disruptive, so we are waiting until the tree is completely unfrozen.</p>
-
-	          <p>In the meantime, you can read the
-		  <a href="docs/develfaq.html">Development
-		  Branch FAQ</a> for information about getting GNOME 2.12 from our development
-	          repository. However, keep in mind that maintaining a ports tree from two
-		  separate locations can be tricky; we advise that most users wait until
-		  we merge GNOME 2.12 into the main FreeBSD ports tree.</p>
-
-<!--
-		<h2>Upgrading to GNOME 2.10?</h2>
-
-		<p>If you are upgrading from GNOME 2.8 to GNOME 2.10, read the
+		<p>If you are upgrading from GNOME 2.10 to GNOME 2.12, read the
 		  <a href="docs/faq212.html">Upgrade FAQ</a> for upgrade
 		  instructions, and be sure to use the
 		  <a href="gnome_upgrade.sh">upgrade script</a>!</p>
@@ -159,11 +144,9 @@
               <h2>State of the port</h2>
 
 	      <p>GNOME for FreeBSD is currently supported on
-		4.10, 4.11, 5.3, 5.4, 6.0, 4-STABLE, 5-STABLE,
-		and 7-CURRENT.
+		5.3, 5.4, 6.0, 5-STABLE, and 7-CURRENT.
 		Most of GNOME has been ported to FreeBSD, but there is still
 		<a href="docs/volunteer.html">plenty left to be done</a>!</p>
--->
 
               <h2>Simple solutions to build problems - quickly!</h2>
 
