@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/de/includes.xsl,v 1.15 2005/05/20 17:13:46 brueffer Exp $
-     $FreeBSDde: de-www/includes.xsl,v 1.21 2005/05/20 13:33:58 brueffer Exp $
+<!-- $FreeBSD$
+     $FreeBSDde: de-www/includes.xsl,v 1.25 2005/11/06 14:10:40 jkois Exp $
      basiert auf: 1.20
 -->
 
@@ -51,14 +51,14 @@
     <link rel="stylesheet" media="screen" href="{$enbase}/layout/css/fixed.css" type="text/css" title="Normal Text" />
     <link rel="alternate stylesheet" media="screen" href="{$enbase}/layout/css/fixed_large.css" type="text/css" title="Large Text" />
     <script type="text/javascript" src="{$enbase}/layout/js/styleswitcher.js"></script>
-    </head>    
+    </head>
   </xsl:variable>
-  
+
   <xsl:variable name="header2">
             <span class="txtoffscreen"><a href="#content" title="Skip site navigation" accesskey="1">Skip site navigation</a> (1)</span>
             <span class="txtoffscreen"><a href="#contentwrap" title="Skip section navigation" accesskey="2">Skip section navigation</a> (2)</span>
             <div id="headercontainer">
-      
+
               <div id="header">
       	      <h2 class="blockhide">Header And Logo</h2>
                 <div id="headerlogoleft">
@@ -69,13 +69,13 @@
       			  <div id="searchnav">
       				<ul id="searchnavlist">
       				  <li>
-      					Text Size: <a href="#" onkeypress="return false;" onclick="setActiveStyleSheet('Normal Text'); return false;" title="Normal Text Size">Normal</a> / <a href="#" onkeypress="return false;" onclick="setActiveStyleSheet('Large Text'); return false;" title="Large Text Size">Large</a>
+      					Schriftgr&#246;&#223;e: <a href="#" onkeypress="return false;" onclick="setActiveStyleSheet('Normal Text'); return false;" title="Normale Schrift">Normal</a> / <a href="#" onkeypress="return false;" onclick="setActiveStyleSheet('Large Text'); return false;" title="Gro&#223;e Schrift">Gro&#223;</a>
       				  </li>
       				  <li>
       					<a href="{$enbase}/donations/" title="Spenden">Spenden</a>
       				  </li>
       				  <li class="last-child">
-      					<a href="{$base}/mailto.html" title="Contact">Contact</a>
+      					<a href="{$base}/mailto.html" title="Kontakt">Kontakt</a>
       				  </li>
       				</ul>
       			  </div> <!-- searchnav -->
@@ -88,17 +88,17 @@
       			  </form>
       			</div> <!-- search -->
                 </div> <!-- headerlogoright -->
-      
+
               </div> <!-- header -->
-      
+
         	<h2 class="blockhide">Site Navigation</h2>
               <div id="topnav">
                 <ul id="topnavlist">
 		  <li>
-			<a href="{$base}/" title="Home">Home</a>
+			<a href="{$base}/" title="Startseite">Startseite</a>
 		  </li>
 		  <li>
-			<a href="{$base}/about.html" title="About">About</a>
+			<a href="{$base}/about.html" title="&#220;ber FreeBSD">&#220;ber FreeBSD</a>
 		  </li>
 		  <li>
 			<a href="{$base}/where.html" title="FreeBSD Bezugsquellen">FreeBSD Bezugsquellen</a>
@@ -119,31 +119,31 @@
               </div> <!-- topnav -->
             </div> <!-- headercontainer -->
   </xsl:variable>
-  
+
   <xsl:variable name="header3">
   	<h1><xsl:value-of select="$title"/></h1>
   </xsl:variable>
-  
+
   <xsl:variable name="sidenav">
 	<div id="sidewrap">
-	
+
 	<div id="sidenav">
 	<h2 class="blockhide">Section Navigation</h2>
-	
+
 	<xsl:if test="$section = 'about'" >
 		<ul>
-		<li><a href="{$base}/about.html">About</a></li>
-		<li><a href="{$base}/features.html">Features</a></li>
-		<li><a href="{$base}/applications.html">Applications</a></li>
-		<li><a href="{$base}/internet.html">Internetworking</a></li>
-		<li><a href="{$enbase}/advocacy/">Advocacy</a></li>
+		<li><a href="{$base}/about.html">&#220;ber FreeBSD</a></li>
+		<li><a href="{$base}/features.html">Eigenschaften</a></li>
+		<li><a href="{$base}/applications.html">Anwendungen</a></li>
+		<li><a href="{$base}/internet.html">Netzwerkfunktionen</a></li>
+		<li><a href="{$enbase}/advocacy/">FreeBSD bewerben</a></li>
 		<li><a href="{$enbase}/marketing/">Marketing</a></li>
-		<li><a href="{$base}/news/newsflash.html">News</a></li>
+		<li><a href="{$base}/news/newsflash.html">Neuigkeiten</a></li>
 		<li><a href="{$enbase}/events/events.html">Veranstaltungen</a></li>
-		<li><a href="{$base}/news/press.html">Press</a></li>
-		<li><a href="{$enbase}/art.html">Artwork</a></li>
+		<li><a href="{$base}/news/press.html">Aus der Presse</a></li>
+		<li><a href="{$enbase}/art.html">Kunst</a></li>
 		<li><a href="{$enbase}/donations/">Spenden</a></li>
-		<li><a href="{$enbase}/copyright/">Legal Notices</a></li>
+		<li><a href="{$enbase}/copyright/">Rechtliches</a></li>
 		</ul>
 	</xsl:if>
 
@@ -160,7 +160,7 @@
 
 	<xsl:if test="$section = 'developers'" >
 		<ul>
-		<li><a href="{$base}/projects/index.html">Entwicklung</a></li>
+		<li><a href="{$enbase}/projects/index.html">Entwicklung</a></li>
 		<li><a href="{$enbase}/doc/en_US.ISO8859-1/books/developers-handbook">Developer&#39;s Handbook</a></li>
 		<li><a href="{$enbase}/doc/en_US.ISO8859-1/books/porters-handbook">Porter&#39;s Handbook</a></li>
 		<li><a href="{$base}/support.html#cvs">CVS Repository</a></li>
@@ -170,12 +170,13 @@
 				<li><a href="{$base}/platforms/alpha.html">alpha</a></li>
 				<li><a href="{$base}/platforms/amd64.html">amd64</a></li>
 				<li><a href="{$base}/platforms/i386.html">i386</a></li>
-				<li><a href="{$base}/platforms/ia64.html">ia64</a></li>
+				<li><a href="{$base}/platforms/ia64/index.html">ia64</a></li>
 				<li><a href="{$base}/platforms/pc98.html">pc98</a></li>
+				<li><a href="{$base}/platforms/ppc.html">ppc</a></li>
 				<li><a href="{$base}/platforms/sparc.html">sparc64</a></li>
 			</ul>
 		</li>
-		<li><a href="{$enbase}/doc/{$url.doc.langcode}/articles/contributing/index.html">Contributing</a></li>
+		<li><a href="{$enbase}/doc/{$url.doc.langcode}/articles/contributing/index.html">FreeBSD unterst&#252;tzen</a></li>
 		</ul>
 	</xsl:if>
 
@@ -186,12 +187,12 @@
 		<li><a href="{$enbase}/doc/{$url.doc.langcode}/books/handbook/">Handbuch</a></li>
 		<li><a href="{$base}/docs.html#man">Manual-Pages</a>
 			<ul>
-				<li><a href="{$enbase}/cgi/man.cgi">Man Online</a></li>
+				<li><a href="{$enbase}/cgi/man.cgi">Manual-Pages (Online)</a></li>
 			</ul>
 		</li>
-		<li><a href="{$base}/docs.html#books">Books and Articles Online</a></li>
-		<li><a href="{$enbase}/publish.html">Publications</a></li>
-		<li><a href="{$base}/docs.html#links">Web Ressourcen</a></li>
+		<li><a href="{$base}/docs.html#books">B&#252;cher und Artikel (Online)</a></li>
+		<li><a href="{$enbase}/publish.html">Publikationen</a></li>
+		<li><a href="{$base}/docs.html#links">Internet-Ressourcen</a></li>
 		<li><a href="{$base}/projects/newbies.html">F&#252;r Einsteiger</a></li>
 		<li><a href="{$enbase}/docproj/">Documentation Project</a></li>
 		</ul>
@@ -229,15 +230,15 @@
 				<li><a href="{$enbase}/send-pr.html">Einreichen</a></li>
 			</ul>
 		</li>
-		<li><a href="{$base}/support.html#general">Web Ressourcen</a></li>
+		<li><a href="{$base}/support.html#general">Internetressourcen</a></li>
 		</ul>
 	</xsl:if>
-	
+
 	</div> <!-- sidenav -->
-	
+
 	</div> <!-- sidewrap -->
   </xsl:variable>
-  
+
   <xsl:variable name="footer">
 	<div id="footer">
 	<xsl:copy-of select="$copyright"/><br />
@@ -245,7 +246,7 @@
 	</div> <!-- footer -->
   </xsl:variable>
 
-  <xsl:variable name="rel.current" select='"5.4"'/>
+  <xsl:variable name="rel.current" select='"6.0"'/>
   <xsl:variable name="u.rel.notes">
     <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel.current"/>R/relnotes.html</xsl:variable>
 
@@ -262,18 +263,18 @@
   <xsl:variable name="u.rel.migration">
     <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel.current"/>R/migration-guide.html</xsl:variable>
 
-  <xsl:variable name="rel2.current" select='"4.11"'/>
+  <xsl:variable name="rel2.current" select='"5.4"'/>
   <xsl:variable name="u.rel2.notes">
-    <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel2.current"/>R/relnotes.html</xsl:variable>
+    <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel2.current"/>R/relnotes.html</xsl:variable>
 
   <xsl:variable name="u.rel2.announce">
-    <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel2.current"/>R/announce.html</xsl:variable>
+    <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel2.current"/>R/announce.html</xsl:variable>
   <xsl:variable name="u.rel2.errata">
-    <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel2.current"/>R/errata.html</xsl:variable>
+    <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel2.current"/>R/errata.html</xsl:variable>
   <xsl:variable name="u.rel2.hardware">
-    <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel2.current"/>R/hardware.html</xsl:variable>
+    <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel2.current"/>R/hardware.html</xsl:variable>
   <xsl:variable name="u.rel2.installation">
-    <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel2.current"/>R/installation.html</xsl:variable>
+    <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel2.current"/>R/installation.html</xsl:variable>
   <xsl:variable name="u.rel2.readme">
-    <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel2.current"/>R/readme.html</xsl:variable>
+    <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel2.current"/>R/readme.html</xsl:variable>
 </xsl:stylesheet>

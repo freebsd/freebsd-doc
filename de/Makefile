@@ -1,8 +1,8 @@
 # The FreeBSD Documentation Project
 # The FreeBSD German Documentation Project
-# $FreeBSD: www/de/Makefile,v 1.22 2005/08/25 15:37:31 jkois Exp $
-# $FreeBSDde: de-www/Makefile,v 1.29 2005/08/13 16:25:01 jkois Exp $
-# basiert auf: 1.117
+# $FreeBSD$
+# $FreeBSDde: de-www/Makefile,v 1.35 2005/11/06 10:38:49 jkois Exp $
+# basiert auf: 1.133
 
 .if exists(Makefile.conf)
 .include "Makefile.conf"
@@ -13,7 +13,7 @@
 
 # These are turned into validated, normalized HTML files.
 
-DOCS=  about.sgml  
+DOCS= about.sgml
 DOCS+= applications.sgml
 DOCS+= availability.sgml
 DOCS+= docs.sgml
@@ -33,13 +33,15 @@ DOCS+= where.sgml
 
 # Subdirectories
 # SGML
-SUBDIR= news
+SUBDIR= docs
+SUBDIR+= news
 SUBDIR+= FAQ
 SUBDIR+= handbook
 SUBDIR+= platforms
 SUBDIR+= projects
 SUBDIR+= releases
 SUBDIR+= security
+SUBDIR+= support
 .if !defined(WEB_ONLY) || empty(WEB_ONLY)
 #SUBDIR+= ports
 SUBDIR+= doc
@@ -65,13 +67,11 @@ index.html: index.xsl ${XML_INCLUDES}\
 		${XML_NEWS_PRESS} ${XML_NEWS_PRESS_MASTER} \
 		${XML_EVENTS_EVENTS_MASTER} ${XML_EVENTS_CURDATE} \
 		${XML_MIRRORS} ${XML_TRANSTABLE} \
-		${XML_ADVISORIES} ${XML_NOTICES} \
-		${XML_NAVIGATION}
+		${XML_ADVISORIES} ${XML_NOTICES}
 	${XSLTPROC} ${XSLTPROCOPTS} \
 		-o $@ \
 		--param advisories.xml "'${XML_ADVISORIES}'" \
 		--param mirrors.xml "'${XML_MIRRORS}'" \
-		--param navigation.xml "'${XML_NAVIGATION}'" \
 		--param news.press.xml-master "'${XML_NEWS_PRESS_MASTER}'" \
 		--param news.press.xml "'${XML_NEWS_PRESS}'" \
 		--param news.project.xml-master "'${XML_NEWS_NEWS_MASTER}'" \
