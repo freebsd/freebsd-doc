@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/cgi/Makefile,v 1.24 2005/04/09 12:45:52 mlaier Exp $
+# $FreeBSD: www/en/cgi/Makefile,v 1.25 2005/10/06 15:44:08 remko Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -7,14 +7,36 @@
 .include "../Makefile.inc"
 .endif
 
-DATA=	ftp.mirrors html.pl cgi-lib.pl cgi-style.pl Gnats.pm
-DATA+=	cvsweb.conf cvsweb.conf-freebsd cvsweb.conf-netbsd cvsweb.conf-openbsd
-CGI=	ftp.cgi gallery.cgi mirror.cgi
-CGI+=	search.cgi cvsweb.cgi query-pr.cgi query-pr-summary.cgi
-CGI+=	dosendpr.cgi sendpr-code.cgi
+DATA=
+DATA+=	Gnats.pm
+DATA+=	cgi-lib.pl
+DATA+=	cgi-style.pl
+DATA+=	cvsweb.conf
+DATA+=	cvsweb.conf-freebsd
+DATA+=	cvsweb.conf-netbsd
+DATA+=	cvsweb.conf-openbsd
+DATA+=	ftp.mirrors
+DATA+=	html.pl
+
+CGI=
+CGI+=	cvsweb.cgi
+CGI+=	dosendpr.cgi
+CGI+=	ftp.cgi
+CGI+=	gallery.cgi
+CGI+=	getmsg.cgi
+CGI+=	mailindex.cgi
+CGI+=	man.cgi
+CGI+=	mid.cgi
+CGI+=	mirror.cgi
 CGI+=	missing_handler.cgi
-CGI+=	ports.cgi pds.cgi man.cgi url.cgi getmsg.cgi mid.cgi
-CGI+=	mailindex.cgi monthly.cgi
+CGI+=	monthly.cgi
+CGI+=	pds.cgi
+CGI+=	ports.cgi
+CGI+=	query-pr.cgi
+CGI+=	query-pr-summary.cgi
+CGI+=	search.cgi
+CGI+=	sendpr-code.cgi
+CGI+=	url.cgi
 
 .SUFFIXES:	.C .cgi
 
