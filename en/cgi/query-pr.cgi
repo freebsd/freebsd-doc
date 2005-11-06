@@ -3,12 +3,22 @@
 
 $ENV{'PATH'} = "/bin:/usr/bin:/usr/sbin:/sbin:/usr/local/bin";
 
+use DB_File;
+use Fcntl qw(:DEFAULT :flock);
+
 require "./cgi-lib.pl";
 require "./cgi-style.pl";
 require "getopts.pl";
 require "./Gnats.pm";  import Gnats;
 
-&Getopts('p:');
+my $expiretime = 2700;
+$dbpath = "/tmp/querypr-code.db";
+
+&Getopts('cp:');
+
+if ($opt_c) {
+    $codeentered = $opt_c;
+}
 
 if ($opt_p) {
 
@@ -22,8 +32,15 @@ if ($opt_p) {
 	($scriptname = $ENV{'SCRIPT_NAME'}) =~ s|^/?|/|;
 	$scriptname =~ s|/$||;
 	($summary = $scriptname) =~ s/query-pr/query-pr-summary/;
-	print "<form method='get' action='$scriptname'>\n";
+	print "<form method='post' action='$scriptname'>\n";
 	print "<input type='text' name='pr' />\n";
+	print "<p>To view the PR with email addresses, copy the code ";
+	print " from the image below: <input type='text' ";
+	print " name='code-confirm' id='code-confirm' size='8' />\n";
+	print "</p><p><label for='code-confirm'>";
+	print "<img src='http://www.FreeBSD.org/cgi/querypr-code.cgi?dummy=1' ";
+	print " alt='Random text; if you cannot see the image, please email ";
+	print " bugbusters\@FreeBSD.org' border='0' height='24' /></label></p>\n";
 	print "<input type='submit' value='Query' />\n</form>\n";
 	print "<p>See also the <a href='$summary'>PR summary</a></p>\n";
 	print &html_footer;
@@ -35,6 +52,56 @@ if ($opt_p) {
 if (!($pr = $input{'pr'}) && &MethGet) {
     $pr = $ENV{'QUERY_STRING'};
 }
+
+# Get the confirmation code if it exists
+#  (and wasn't specified with -c).
+$codeentered ||= $input{'code-confirm'};
+
+# Verify the data ...
+
+$db_obj = tie(%db_hash, 'DB_File', $dbpath, O_CREAT|O_RDWR, 0644)
+                    or die "dbcreate $dbpath $!";
+$fd = $db_obj->fd;
+open(DB_FH, "+<&=$fd") or die "fdopen $!";
+
+unless (flock (DB_FH, LOCK_EX | LOCK_NB)) {
+    unless (flock (DB_FH, LOCK_EX)) { die "flock: $!" }
+}
+
+# Sweep for and remove expired codes.
+foreach $randomcode (keys %db_hash) {
+	if ( ($currenttime - $expiretime) >= $db_hash{$randomcode}) {
+		delete $db_hash{"$randomcode"};
+	}
+}
+
+$currenttime = time();
+if (defined($codeentered) && $codeentered && $db_hash{$codeentered} && 
+    (($currenttime - $expiretime) <= $db_hash{$codeentered})) {
+	# This code is good.  Set the flag and remove the code.
+	$codeok++;
+	delete $db_hash{"$codeentered"};
+} else {
+	# Fail silently.
+	if ($db_hash{$codeentered}) {
+		print "code was in db\n";
+		print "time in db is $db_hash{$codeentered}\n";
+	} else {
+		print "code not in db\n";
+	}
+	print "code entered was $codeentered\n";
+	print "current time is $currenttime\n";
+	print "expire time is $expiretime\n";
+	
+	die ("shit: $@");
+	undef;
+}
+
+$db_obj->sync();                   # to flush
+flock(DB_FH, LOCK_UN);
+undef $db_obj;                     # removing the last reference to the DB
+                                   # closes it. Closing DB_FH is implicit.
+untie %db_hash;
 
 # be tolerant to <category>/<PR id> queries
 $pr =~ s%^.+/%%;	# remove <category>/ part
@@ -142,6 +209,10 @@ while(<Q>) {
 	$origsyn = $syn;
 	$syn = &fixline($syn);
 	print &html_header("Problem Report $cat/$number : $syn");
+	if (! $codeok ) {
+	    print "<p><a href='#SEEMAIL'>View PR with email
+		addresses</a></p>\n";
+	}
 	print "<p><strong>$syn</strong></p>\n<dl>\n";
     } else {
 	next if $inhdr;
@@ -154,7 +225,7 @@ while(<Q>) {
 	    } else {
 		$trailer .= $2;
 	    }
-	    if ($1 eq "Originator" && $from ne "") {	# add email address
+	    if ($1 eq "Originator" && $from ne "" && $codeok) {	# add email address
 		$trailer .= " &lt;<a href='mailto:$email'>" . &fixline($from) . "</a>&gt;";
 	    }
 	    $trailer .= '</dd>';
@@ -181,6 +252,22 @@ $origsyn =~ s/[^a-zA-Z+.@-]/"%" . sprintf("%02X", unpack("C", $&))/eg;
 $email =~ s/[^a-zA-Z+.@-]/"%" . sprintf("%02X", unpack("C", $&))/eg;
 
 print qq`<a href="mailto:bug-followup\@FreeBSD.org,${email}?subject=Re:%20${cat}/${number}:%20$origsyn">Submit Followup</a> | <a href="./query-pr.cgi?pr=$pr&amp;f=raw">Raw PR</a> | <a href="./query-pr-summary.cgi?query">Find Another PR</a>\n`;
+
+if (! $codeok ) {
+    print "<a name='SEEMAIL' id='SEEMAIL' />";
+    print "<p>To see this PR with email addresses ";
+    print " displayed, enter the code from the image and submit: \n";
+    print "<form method='post' action='$scriptname'>\n";
+    print "<input type='hidden' name='pr' value='$number'/>\n";
+    print "<input type='text' name='code-confirm' ";
+    print " id='code-confirm' size='8' />\n";
+    print "<label for='code-confirm'>";
+    print "<img src='http://www.FreeBSD.org/cgi/querypr-code.cgi?dummy=1' ";
+    print " alt='Random text; if you cannot see the image, please email ";
+    print " bugbusters\@FreeBSD.org' border='0' height='24' /></label>\n";
+    print "<input type='submit' value='Go' />\n";
+    print "</form></p>\n";
+}
 
 print &html_footer;
 
