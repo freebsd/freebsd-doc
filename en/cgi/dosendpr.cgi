@@ -8,7 +8,7 @@
 #  GNU General Public License Version 2.  
 #     (http://www.gnu.ai.mit.edu/copyleft/gpl.html)
 #
-# $FreeBSD: www/en/cgi/dosendpr.cgi,v 1.21 2004/02/16 16:57:10 ceri Exp $
+# $FreeBSD: www/en/cgi/dosendpr.cgi,v 1.22 2005/07/14 11:26:17 ceri Exp $
 
 require "html.pl";
 
@@ -129,7 +129,7 @@ delete $db_hash{"$codeentered"};
 
 # Sweep for and remove expired codes.
 foreach $randomcode (keys %db_hash) {
-	if ( ($currenttime - $expiretime) <= $db_hash{$randomcode}) {
+	if ( ($currenttime - $expiretime) >= $db_hash{$randomcode}) {
 		delete $db_hash{"$randomcode"};
 	}
 }
