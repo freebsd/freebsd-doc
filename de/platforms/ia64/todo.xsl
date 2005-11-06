@@ -1,51 +1,46 @@
 <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 
 <!--
-  $FreeBSDde: de-www/platforms/ia64/todo.xsl,v 1.5 2005/09/09 18:40:06 jkois Exp $
-  basiert auf: 1.3
+  $FreeBSDde: de-www/platforms/ia64/todo.xsl,v 1.9 2005/11/06 12:48:05 jkois Exp $
+  basiert auf: 1.5
 -->
 
   <xsl:import href="../../includes.xsl"/>
   <xsl:import href="includes.xsl"/>
-  <xsl:variable name="section" select="'developers'"/>  
   <xsl:variable name="base" select="'../..'"/>
   <xsl:variable name="enbase" select="'../../..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/de/platforms/ia64/todo.xsl,v 1.2 2005/08/25 15:37:32 jkois Exp $'"/>
+  <xsl:variable name="section" select="'developers'"/>
+  <xsl:variable name="date" select="'$FreeBSD$'"/>
   <xsl:output doctype-public="-//W3C//DTD HTML 4.01 Transitional//EN"
     encoding="iso-8859-1" method="html"/>
   <xsl:template match="/">
     <html>
       <xsl:copy-of select="$header1"/>
-      
-            <body xsl:use-attribute-sets="att.body">
-      
-        <div id="containerwrap">
-          <div id="container">
-      
-      	<xsl:copy-of select="$header2"/>
-      
-      	<div id="content">
-      
-      	      <xsl:copy-of select="$sidenav"/>
-      
-      	      <div id="contentwrap">
-      	      
-	      <xsl:copy-of select="$header3"/>
-	      
+
+      <body xsl:use-attribute-sets="att.body">
+
+	<div id="containerwrap">
+	  <div id="container">
+	    <xsl:copy-of select="$header2"/>
+
+	    <div id="content">
+	      <xsl:copy-of select="$sidenav"/>
+
+	      <div id="contentwrap">
+		<xsl:copy-of select="$header3"/>
+
               <img align="right" alt="Montecito die" src="{$enbase}/platforms/ia64/montecito-die.png"/>
 
-	<form action="http://www.FreeBSD.org/cgi/query-pr-summary.cgi"
-	      method="get">
-	    <p>Search the FreeBSD/ia64 PR database:</p>
-	    <input type="hidden" name="category" value="ia64"/>
-	    <input type="hidden" name="sort" value="none"/>
-	    <input type="text" name="text"/>
-	    <input type="submit" value="Los"/>
-	</form>
+	      <p>Die FreeBSD/ia64-PR-Datenbank durchsuchen:</p>
 
-	<h3>
-	  Was noch getan werden muss
-	</h3>
+		<form action="http://www.FreeBSD.org/cgi/query-pr-summary.cgi" method="get">
+		  <input type="hidden" name="category" value="ia64"/>
+		  <input type="hidden" name="sort" value="none"/>
+		  <input type="text" name="text"/>
+		  <input type="submit" value="Los"/>
+		</form>
+
+	<h3>Was noch getan werden muss</h3>
 
 	<p>Diese Seite ist Ausgangspunkt f&#252;r Leute, die Aufgaben
 	  suchen.  Die Reihenfolge der Aufgaben auf dieser Seite ist
@@ -56,9 +51,7 @@
 	  Instandhalten der ia64 Webseiten ...
 	  ungl&#252;cklicherweise.</p>
 
-	<h4>
-	  Auf dem Weg zur Tier 1 Plattform
-	</h4>
+	<h4>Auf dem Weg zur Tier 1 Plattform</h4>
 
 	<p>Nach zwei Ver&#246;ffentlichungen als Tier&#160;2 Plattform,
 	  wird es Zeit, eine Tier&#160;1 Plattform zu werden.  Dies
@@ -85,17 +78,15 @@
 	  </li>
 	</ul>
 
-	<h4>
-	  Ports and packages
-	</h4>
+	<h4>Ports und Packages</h4>
 
 	<p>Wichtig f&#252;r den Erfolg von FreeBSD auf ia64 sind neben
 	  ls(1) weitere laufende Programme.  Unsere umfangreiche
-	  Ports-Sammlung ist vor allem auf auf ia32 ausgerichtet,
+	  Ports-Sammlung ist vor allem auf ia32 ausgerichtet,
 	  kein Wunder also, dass viele Ports nicht unter ia64
 	  bauen oder laufen.  Es gibt eine aktuelle <a
 	    href="http://pointyhat.FreeBSD.org/errorlogs/ia64-6-latest/">Liste
-	    der Ports</a>, die sich aus dem einen oder anderen Grund
+	    der Ports</a>, die sich aus dem ein oder anderen Grund
 	    nicht bauen lassen.  Ein Port wird nicht gebaut und nicht
 	  gez&#228;hlt, wenn er von einem Port abh&#228;ngt, der sich
 	  nicht bauen l&#228;sst.  Es w&#228;re eine gro&#223;e
@@ -103,9 +94,7 @@
 	  Ports abh&#228;ngen (siehe die "Aff." Spalte der
 	  Tabelle).</p>
 
-	<h4>
-	  Feinschliff
-	</h4>
+	<h4>Feinschliff</h4>
 
 	<p>Es gibt viele Funktionen (vor allem Routinen in
 	  Maschinensprache), die ohne R&#252;cksicht auf
@@ -115,9 +104,7 @@
 	  unbedingt ein riesiges Wissen oder gro&#223;e Erfahrung
 	  voraus.</p>
 
-	<h4>
-	  Hauptentwicklung
-	</h4>
+	<h4>Hauptentwicklung</h4>
 
 	<p>Einige Sachen, die noch nicht funktionieren oder die
 	  es noch nicht gibt, sind so verzwickt und grundlegend, dass
@@ -161,7 +148,7 @@
 
 	</div> <!-- container -->
    </div> <!-- containerwrap -->
-	
+
       </body>
     </html>
   </xsl:template>

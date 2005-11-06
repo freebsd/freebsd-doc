@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
 <!--
-     $FreeBSD: www/de/news/newsflash.xsl,v 1.8 2005/04/17 21:04:49 jkois Exp $
-     $FreeBSDde: de-www/news/newsflash.xsl,v 1.14 2005/04/07 21:25:38 jkois Exp $
-     basiert auf: 1.13
+     $FreeBSD$
+     $FreeBSDde: de-www/news/newsflash.xsl,v 1.17 2005/11/06 14:32:27 jkois Exp $
+     basiert auf: 1.14
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
@@ -29,21 +29,22 @@
     <html>
 
       <xsl:copy-of select="$header1"/>
-      
+
             <body xsl:use-attribute-sets="att.body">
-      
+
         <div id="containerwrap">
           <div id="container">
-      
+
       	<xsl:copy-of select="$header2"/>
-      
+
       	<div id="content">
-      
+
       	      <xsl:copy-of select="$sidenav"/>
-      
+
       	      <div id="contentwrap">
-      	      
+
 	      <xsl:copy-of select="$header3"/>
+
 
 	<!-- Notice how entity references in SGML become variable references
 	     in the stylesheet, and that the syntax for referring to variables
@@ -82,7 +83,7 @@
 	    Information</a></strong>.</p>
 
 	<p>Die FreeBSD Sicherheitshinweise finden Sie auf der Seite
-	  <a href="{$enbase}/security/#adv">Security Information</a>.</p>
+	  <a href="{$base}/security/#adv">FreeBSD Sicherheit</a>.</p>
 
 	<xsl:call-template name="html-news-list-newsflash">
 	  <xsl:with-param name="news.project.xml-master" select="$news.project.xml-master" />
@@ -92,7 +93,6 @@
 	<xsl:call-template name="html-news-make-olditems-list" />
 
 	<xsl:copy-of select="$newshome"/>
-	
 		</div> <!-- contentwrap -->
 		<br class="clearboth" />
 
@@ -102,7 +102,6 @@
 
 	</div> <!-- container -->
    </div> <!-- containerwrap -->
-	
       </body>
     </html>
   </xsl:template>

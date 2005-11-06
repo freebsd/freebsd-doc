@@ -1,47 +1,46 @@
 <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 
 <!--
-  $FreeBSDde: de-www/platforms/ia64/index.xsl,v 1.2 2005/07/18 20:28:26 jkois Exp $
-  basiert auf: 1.1
+  $FreeBSDde: de-www/platforms/ia64/index.xsl,v 1.4 2005/11/06 12:48:05 jkois Exp $
+  basiert auf: 1.2
 -->
 
   <xsl:import href="../../includes.xsl"/>
   <xsl:import href="includes.xsl"/>
+  <xsl:variable name="base" select="'../..'"/>
+  <xsl:variable name="enbase" select="'../../..'"/>
+  <xsl:variable name="section" select="'developers'"/>
   <xsl:variable name="date" select="'$FreeBSD$'"/>
   <xsl:output doctype-public="-//W3C//DTD HTML 4.01 Transitional//EN"
     encoding="iso-8859-1" method="html"/>
   <xsl:template match="/">
     <html>
       <xsl:copy-of select="$header1"/>
-      <body alink="#0000FF" bgcolor="#FFFFFF" link="#0000FF" text="#000000"
-        vlink="#840084">
-        <table cellpadding="0" cellspacing="0" width="100%">
-          <tr>
-            <td border="0">
-              <xsl:copy-of select="$header2"/>
-            </td>
-            <td>
-              <img align="right" alt="McKinley die"
-		src="{$enbase}/../../platforms/ia64/mckinley-die.png"/>
-            </td>
-          </tr>
-        </table>
 
-        <hr/>
-        <form action="http://www.FreeBSD.org/cgi/search.cgi" method="get">
-          <center>
-            Durchsuchen der freebsd-ia64 Mailinglisten-Archive:
-            <input name="words" size="50" type="text"/>
-            <input name="max" type="hidden" value="25"/>
-            <input name="source" type="hidden" value="freebsd-ia64"/>
-            <input type="submit" value="Los"/>
-          </center>
-        </form>
-        <hr/>
+      <body xsl:use-attribute-sets="att.body">
 
-        <h3>
-          <a name="toc">Inhaltsverzeichnis</a>
-        </h3>
+	<div id="containerwrap">
+	  <div id="container">
+	    <xsl:copy-of select="$header2"/>
+
+	    <div id="content">
+	      <xsl:copy-of select="$sidenav"/>
+
+	      <div id="contentwrap">
+		<xsl:copy-of select="$header3"/>
+
+	      <img align="right" alt="McKinley die" src="{$enbase}/platforms/ia64/mckinley-die.png"/>
+
+	      <p>Das Archiv der ia64-Mailinglisten durchsuchen:</p>
+
+		<form action="http://www.FreeBSD.org/cgi/search.cgi" method="get">
+		  <input name="words" size="50" type="text"/>
+		  <input name="max" type="hidden" value="25"/>
+		  <input name="source" type="hidden" value="freebsd-ia64"/>
+		  <input type="submit" value="Los"/>
+		</form>
+
+	<h3><a name="toc">Inhaltsverzeichnis</a></h3>
 
         <ul>
           <li>
@@ -92,7 +91,13 @@
 	  zweckdienlich, auf R&#252;ckw&#228;rtskompatibilit&#228;t
 	  achten zu m&#252;ssen.</p>
 
-        <xsl:copy-of select="$footer"/>
+	      </div> <!-- contentwrap -->
+
+	      <br class="clearboth" />
+	    </div> <!-- content -->
+	    <xsl:copy-of select="$footer"/>
+	  </div> <!-- container -->
+	</div> <!-- containerwrap -->
       </body>
     </html>
   </xsl:template>
