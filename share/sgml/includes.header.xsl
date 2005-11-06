@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/share/sgml/includes.header.xsl,v 1.8 2005/10/08 00:09:20 marcel Exp $ -->
+<!-- $FreeBSD: www/share/sgml/includes.header.xsl,v 1.9 2005/10/14 09:12:17 ale Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -45,19 +45,19 @@
   </xsl:variable>
   
   <xsl:variable name="header2">
-            <span class="txtoffscreen"><a href="#content" title="Skip site navigation" accesskey="1">Skip site navigation</a> (1)</span>
-            <span class="txtoffscreen"><a href="#contentwrap" title="Skip section navigation" accesskey="2">Skip section navigation</a> (2)</span>
-            <div id="headercontainer">
+            <span class="txtoffscreen"><a href="#CONTENT" title="Skip site navigation" accesskey="1">Skip site navigation</a> (1)</span>
+            <span class="txtoffscreen"><a href="#CONTENTWRAP" title="Skip section navigation" accesskey="2">Skip section navigation</a> (2)</span>
+            <div id="HEADERCONTAINER">
       
-              <div id="header">
+              <div id="HEADER">
       	      <h2 class="blockhide">Header And Logo</h2>
-                <div id="headerlogoleft">
+                <div id="HEADERLOGOLEFT">
                   <a href="{$base}" title="FreeBSD"><img src="{$base}/layout/images/logo.png" width="360" height="40" alt="FreeBSD" /></a>
-                </div> <!-- headerlogoleft -->
-                <div id="headerlogoright">
+                </div> <!-- HEADERLOGOLEFT -->
+                <div id="HEADERLOGORIGHT">
       			<h2 class="blockhide">Peripheral Links</h2>
-      			  <div id="searchnav">
-      				<ul id="searchnavlist">
+      			  <div id="SEARCHNAV">
+      				<ul id="SEARCHNAVLIST">
       				  <li>
       					Text Size: <a href="#" onkeypress="return false;" onclick="setActiveStyleSheet('Normal Text'); return false;" title="Normal Text Size">Normal</a> / <a href="#" onkeypress="return false;" onclick="setActiveStyleSheet('Large Text'); return false;" title="Large Text Size">Large</a>
       				  </li>
@@ -68,22 +68,22 @@
       					<a href="{$base}/mailto.html" title="Contact">Contact</a>
       				  </li>
       				</ul>
-      			  </div> <!-- searchnav -->
-      			<div id="search">
+      			  </div> <!-- SEARCHNAV -->
+      			<div id="SEARCH">
       			  <form action="{$cgibase}/search.cgi" method="get">
       				<div>
       			      <h2 class="blockhide"><label for="words">Search</label></h2>
-      				  <input type="hidden" name="max" value="25" /> <input type="hidden" name="source" value="www" /><input id="words" name="words" type="text" size="20" maxlength="255" onfocus="if( this.value==this.defaultValue ) this.value='';" value="Search" />&#160;<input id="submit" name="submit" type="submit" value="Search" />
+      				  <input type="hidden" name="max" value="25" /> <input type="hidden" name="source" value="www" /><input id="WORDS" name="words" type="text" size="20" maxlength="255" onfocus="if( this.value==this.defaultValue ) this.value='';" value="Search" />&#160;<input id="SUBMIT" name="submit" type="submit" value="Search" />
       				</div>
       			  </form>
-      			</div> <!-- search -->
-                </div> <!-- headerlogoright -->
+      			</div> <!-- SEARCH -->
+                </div> <!-- HEADERLOGORIGHT -->
       
-              </div> <!-- header -->
+              </div> <!-- HEADER -->
       
         	<h2 class="blockhide">Site Navigation</h2>
-              <div id="topnav">
-                <ul id="topnavlist">
+              <div id="TOPNAV">
+                <ul id="TOPNAVLIST">
 		  <li>
 			<a href="{$base}/" title="Home">Home</a>
 		  </li>
@@ -106,8 +106,8 @@
 			<a href="{$base}/support.html" title="Support">Support</a>
 		  </li>
 		</ul>
-              </div> <!-- topnav -->
-            </div> <!-- headercontainer -->
+              </div> <!-- TOPNAV -->
+            </div> <!-- HEADERCONTAINER -->
   </xsl:variable>
   
   <xsl:variable name="header3">
@@ -115,9 +115,9 @@
   </xsl:variable>
   
   <xsl:variable name="sidenav">
-	<div id="sidewrap">
+	<div id="SIDEWRAP">
 	
-	<div id="sidenav">
+	<div id="SIDENAV">
 	<h2 class="blockhide">Section Navigation</h2>
 	
 	<xsl:if test="$section = 'about'" >
@@ -229,16 +229,16 @@
 		</ul>
     	</xsl:if>
 	
-	</div> <!-- sidenav -->
+	</div> <!-- SIDENAV -->
 	
-	</div> <!-- sidewrap -->
+	</div> <!-- SIDEWRAP -->
   </xsl:variable>
   
   <xsl:variable name="footer">
-	<div id="footer">
+	<div id="FOOTER">
 	<xsl:copy-of select="$copyright"/><br />
 	<xsl:copy-of select="$date"/>
-	</div> <!-- footer -->
+	</div> <!-- FOOTER -->
   </xsl:variable>
    
 </xsl:stylesheet>
