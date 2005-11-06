@@ -1,12 +1,7 @@
 #!/usr/bin/perl -T
-# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.45 2005/09/18 19:32:24 remko Exp $
+# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.46 2005/11/04 10:25:42 ceri Exp $
 
 $ENV{'PATH'} = "/bin:/usr/bin:/usr/sbin:/sbin:/usr/local/bin";
-
-%mons = ('Jan', '01',  'Feb', '02',  'Mar', '03',
-	 'Apr', '04',  'May', '05',  'Jun', '06',
-	 'Jul', '07',  'Aug', '08',  'Sep', '09',
-	 'Oct', '10',  'Nov', '11',  'Dec', '12');
 
 require "./cgi-lib.pl";
 require "./cgi-style.pl";
