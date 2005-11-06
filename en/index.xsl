@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/index.xsl,v 1.136 2005/10/09 16:14:38 ceri Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.137 2005/10/12 19:25:12 murray Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -6,7 +6,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.136 2005/10/09 16:14:38 ceri Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.137 2005/10/12 19:25:12 murray Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <!-- these params should be externally bound. The values
@@ -54,30 +54,30 @@
 
       <body>
 
-   <div id="containerwrap">
-    <div id="container">
+   <div id="CONTAINERWRAP">
+    <div id="CONTAINER">
       <xsl:copy-of select="$header2"/>
-      <div id="content">
+      <div id="CONTENT">
 
-        <div id="frontcontainer">
-          <div id="frontmain">
-            <div id="frontfeaturecontainer">
+        <div id="FRONTCONTAINER">
+          <div id="FRONTMAIN">
+            <div id="FRONTFEATURECONTAINER">
 
-		<div id="frontfeatureleft">
-			<div id="frontfeaturecontent">
+		<div id="FRONTFEATURELEFT">
+			<div id="FRONTFEATURECONTENT">
 				<h1>
 				  Based on BSD UNIX&#174;
 				</h1>
 				<p>
 				  FreeBSD is an advanced operating system for x86 compatible (including Pentium&#174; and Athlon &#8482;), amd64 compatible (including Opteron &#8482;, Athlon 64, and EM64T), Alpha/AXP, IA-64, PC-98 and UltraSPARC&#174; architectures. It is derived from BSD, the version of UNIX&#174; developed at the University of California, Berkeley. It is developed and maintained by a <a href="{$base}/doc/en_US.ISO8859-1/articles/contributors/index.html">large team of individuals</a>. Additional <a href="{$base}/platforms/">platforms</a> are in various stages of development.
 				</p>
-				<div id="txtfrontfeaturelink">
+				<div id="TXTFRONTFEATURELINK">
 				&#187;<a href="{$base}/about.html" title="Learn More">Learn More</a>
-				</div> <!-- txtfrontfeaturelink -->
-			</div> <!-- frontfeaturecontent -->
-		</div> <!-- frontfeatureleft -->
+				</div> <!-- TXTFRONTFEATURELINK -->
+			</div> <!-- FRONTFEATURECONTENT -->
+		</div> <!-- FRONTFEATURELEFT -->
 
-		<div id="frontfeaturemiddle">
+		<div id="FRONTFEATUREMIDDLE">
 			<div class="frontgetroundbox">
 			  <div class="frontgettop"><div><b style="display: none">.</b></div></div>
 				<div class="frontgetcontent">
@@ -86,10 +86,10 @@
 			  <div class="frontgetbot"><div><b style="display: none">.</b></div></div>
 			</div> <!-- frontgetroundbox -->
 			
-			<div id="frontreleases">
-			  <div id="frontreleasescontent" class="txtshortcuts">
+			<div id="FRONTRELEASES">
+			  <div id="FRONTRELEASESCONTENT" class="txtshortcuts">
 				  <h2>LATEST RELEASES</h2>
-				  <ul id="frontreleaseslist">
+				  <ul id="FRONTRELEASESLIST">
 					<li>
 					  <a href="{$u.rel.announce}">Production Release <xsl:value-of select="$rel.current"/></a>
 					</li>
@@ -103,14 +103,14 @@
 					</li>
 				    </xsl:if>
 				  </ul>
-			  </div> <!-- frontreleasescontent -->
-			</div> <!-- frontreleases -->
-		</div> <!-- frontfeaturemiddle -->
+			  </div> <!-- FRONTRELEASESCONTENT -->
+			</div> <!-- FRONTRELEASES -->
+		</div> <!-- FRONTFEATUREMIDDLE -->
 
-		<div id="frontfeatureright">
+		<div id="FRONTFEATURERIGHT">
 			<h2 class="blockhide">Language Links</h2>
-			<div id="languagenav">
-				<ul id="languagenavlist">
+			<div id="LANGUAGENAV">
+				<ul id="LANGUAGENAVLIST">
 				  <li>
 					<a href="{$base}/de/" title="German">de</a>
 				  </li>
@@ -135,11 +135,11 @@
 				</ul>
 			</div> <!-- languagenav -->
 
-			<div id="mirror">
+			<div id="MIRROR">
 			  <form action="{$cgibase}/mirror.cgi" method="get">
 				<div>
 				  <h2 class="blockhide"><label for="mirrorsel">Mirror</label></h2>
-				  <select id="mirrorsel" name="goto">
+				  <select id="MIRRORSEL" name="goto">
 					  <xsl:call-template name="html-index-mirrors-options-list">
 					    <xsl:with-param name="mirrors.xml" select="$mirrors.xml" />
 					  </xsl:call-template>
@@ -147,12 +147,12 @@
 				</div> <!-- unnamed -->
 				<input type="submit" value="Go" />
 			  </form>
-			</div> <!-- mirror -->
+			</div> <!-- MIRROR -->
 
-			<div id="frontshortcuts">
-			  <div id="frontshortcutscontent" class="txtshortcuts">
+			<div id="FRONTSHORTCUTS">
+			  <div id="FRONTSHORTCUTSCONTENT" class="txtshortcuts">
 				  <h2>SHORTCUTS</h2>
-				  <ul id="frontshortcutslist">
+				  <ul id="FRONTSHORTCUTSLIST">
 					<li>
 					  <a href="{$base}/community/mailinglists.html" title="Mailing Lists">Mailing Lists</a>
 					</li>
@@ -173,8 +173,8 @@
 					</li>
 
 				  </ul>
-			  </div> <!-- frontshortcutscontent -->
-			</div> <!-- frontshortcuts -->
+			  </div> <!-- FRONTSHORTCUTSCONTENT -->
+			</div> <!-- FRONTSHORTCUTS -->
 
 			<div class="frontnewroundbox">
 			  <div class="frontnewtop"><div><b style="display: none">.</b></div></div>
@@ -183,14 +183,14 @@
 			    </div> <!-- frontnewcontent -->
 			  <div class="frontnewbot"><div><b style="display: none">.</b></div></div>
 			</div> <!-- frontnewroundbox -->
-		</div> <!-- featureright -->
+		</div> <!-- FEATURERIGHT -->
 				
-            </div> <!-- frontfeaturecontainer -->
+            </div> <!-- FRONTFEATURECONTAINER -->
 
 	    <br class="clearboth" />
-            <div id="frontnemscontainer">
-            	<div id="frontnews">
-            	   <div id="frontnewscontent" class="txtnewsevent">
+            <div id="FRONTNEMSCONTAINER">
+            	<div id="FRONTNEWS">
+            	   <div id="FRONTNEWSCONTENT" class="txtnewsevent">
 			<h2>LATEST NEWS</h2>
 			<div class="newseventswrap">
 
@@ -214,8 +214,8 @@
             	   </div> <!-- frontnewscontent -->
             	</div> <!-- frontnews -->
             	<div class="frontseparator"><b style="display: none">.</b></div>
-            	<div id="frontevents">
-		   <div id="fronteventscontent" class="txtnewsevent">
+            	<div id="FRONTEVENTS">
+		   <div id="FRONTEVENTSCONTENT" class="txtnewsevent">
 
 			<h2>UPCOMING EVENTS</h2>
 			<div class="newseventswrap">
@@ -235,11 +235,11 @@
 			  </div> <!-- unnamed -->
 			</div> <!-- newseventswrap -->
 
-		   </div> <!-- frontnewsevents -->
-            	</div> <!-- frontevents -->
+		   </div> <!-- FRONTNEWSEVENTS -->
+            	</div> <!-- FRONTEVENTS -->
             	<div class="frontseparator"><b style="display: none">.</b></div>
-            	<div id="frontmedia">
-		   <div id="frontmediacontent" class="txtnewsevent">
+            	<div id="FRONTMEDIA">
+		   <div id="FRONTMEDIACONTENT" class="txtnewsevent">
 
 			<h2>IN THE MEDIA</h2>
 			<div class="newseventswrap">
@@ -258,11 +258,11 @@
 			  </div> <!-- unnamed -->
 			</div> <!-- newseventswrap -->
 
-		   </div> <!-- frontmediacontent -->
-            	</div> <!-- frontmedia -->
+		   </div> <!-- FRONTMEDIACONTENT -->
+            	</div> <!-- FRONTMEDIA -->
 		<div class="frontseparator"><b style="display: none">.</b></div>
-		<div id="frontsecurity">
-		   <div id="frontsecuritycontent" class="txtnewsevent">
+		<div id="FRONTSECURITY">
+		   <div id="FRONTSECURITYCONTENT" class="txtnewsevent">
 
 			<h2>SECURITY ADVISORIES</h2>
 			<div class="newseventswrap">
@@ -298,22 +298,22 @@
 
 			</div> <!-- newseventswrap -->
 
-		   </div> <!-- frontsecuritycontent -->
-            	</div> <!-- frontsecurity -->
+		   </div> <!-- FRONTSECURITYCONTENT -->
+            	</div> <!-- FRONTSECURITY -->
 
 		<br class="clearboth" />
 
-            </div> <!-- frontnemscontainer -->
-          </div> <!-- frontmain -->
-        </div> <!-- frontcontainer -->
+            </div> <!-- FRONTNEMSCONTAINER -->
+          </div> <!-- FRONTMAIN -->
+        </div> <!-- FRONTCONTAINER -->
 
-      </div> <!-- content -->
-      <div id="footer">
+      </div> <!-- CONTENT -->
+      <div id="FOOTER">
         <xsl:copy-of select="$copyright"/><br />
         <xsl:copy-of select="$date"/>
-      </div> <!-- footer -->
-    </div> <!-- container -->
-   </div> <!-- containerwrap -->
+      </div> <!-- FOOTER -->
+    </div> <!-- CONTAINER -->
+   </div> <!-- CONTAINERWRAP -->
 
       </body>
     </html>
