@@ -1,5 +1,5 @@
 #!/usr/bin/perl -T
-# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.46 2005/11/04 10:25:42 ceri Exp $
+# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.48 2005/11/06 22:29:45 ceri Exp $
 
 $ENV{'PATH'} = "/bin:/usr/bin:/usr/sbin:/sbin:/usr/local/bin";
 
@@ -83,18 +83,7 @@ if (defined($codeentered) && $codeentered && $db_hash{$codeentered} &&
 	delete $db_hash{"$codeentered"};
 } else {
 	# Fail silently.
-	if ($db_hash{$codeentered}) {
-		print "code was in db\n";
-		print "time in db is $db_hash{$codeentered}\n";
-	} else {
-		print "code not in db\n";
-	}
-	print "code entered was $codeentered\n";
-	print "current time is $currenttime\n";
-	print "expire time is $expiretime\n";
-	
-	die ("shit: $@");
-	undef;
+	;
 }
 
 $db_obj->sync();                   # to flush
