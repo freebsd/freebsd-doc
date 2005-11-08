@@ -3,8 +3,8 @@
 <!--
      The FreeBSD Russian Documentation Project
 
-     $FreeBSD: www/ru/includes.xsl,v 1.13 2005/10/05 20:39:12 simon Exp $
-     $FreeBSDru: frdp/www/ru/includes.xsl,v 1.13 2004/10/22 12:33:49 den Exp $
+     $FreeBSD$
+     $FreeBSDru: frdp/www/ru/includes.xsl,v 1.17 2005/11/03 18:13:16 gad Exp $
 
      Original revision: 1.20
 -->
@@ -37,7 +37,7 @@
 
   <xsl:variable name="header1">
     <head><title><xsl:value-of select="$title"/></title>
-    <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1" />
+    <meta http-equiv="Content-Type" content="text/html; charset=KOI8-R" />
     <meta name="MSSmartTagsPreventParsing" content="TRUE" />
     <link rel="shortcut icon" href="{$enbase}/favicon.ico" type="image/x-icon" />
     <link rel="icon" href="{$enbase}/favicon.ico" type="image/x-icon" />
@@ -100,7 +100,7 @@
 			<a href="{$base}/docs.html" title="äÏËÕÍÅÎÔÁÃÉÑ">äÏËÕÍÅÎÔÁÃÉÑ</a>
 		  </li>
 		  <li>
-	 	        <a href="{$enbase}/community.html" title="óÏÏÂÝÅÓÔ×Ï">óÏÏÂÝÅÓÔ×Ï</a>
+			<a href="{$base}/community.html" title="óÏÏÂÝÅÓÔ×Ï">óÏÏÂÝÅÓÔ×Ï</a>
 		  </li>
 		  <li>
 			<a href="{$base}/projects/index.html" title="òÁÚÒÁÂÏÔËÁ">òÁÚÒÁÂÏÔËÁ</a>
@@ -142,12 +142,12 @@
 
 	<xsl:if test="$section = 'community'" >
 		<ul>
-		<li><a href="{$enbase}/community.html">óÏÏÂÝÅÓÔ×Ï</a></li>
-		<!--li><a href="{$base}/community/mailinglists.html">Mailing Lists</a></li>
+		<li><a href="{$base}/community.html">óÏÏÂÝÅÓÔ×Ï</a></li>
+		<li><a href="{$base}/community/mailinglists.html">óÐÉÓËÉ ÒÁÓÓÙÌËÉ</a></li>
 		<li><a href="{$base}/community/irc.html">IRC</a></li>
-		<li><a href="{$base}/community/newsgroups.html">Newsgroups</a></li>
-		<li><a href="{$base}/usergroups.html">User Groups</a></li>
-		<li><a href="{$base}/community/webresources.html">Web Resources</a></li-->
+		<li><a href="{$base}/community/newsgroups.html">ôÅÌÅËÏÎÆÅÒÅÎÃÉÉ</a></li>
+		<li><a href="{$base}/usergroups.html">çÒÕÐÐÙ ÐÏÌØÚÏ×ÁÔÅÌÅÊ</a></li>
+		<li><a href="{$base}/community/webresources.html">Web ÒÅÓÕÒÓÙ</a></li>
 		</ul>
 	</xsl:if>
 
