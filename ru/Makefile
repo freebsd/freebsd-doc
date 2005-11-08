@@ -1,8 +1,8 @@
 #
 # The FreeBSD Russian Documentation Project
 #
-# $FreeBSD: www/ru/Makefile,v 1.46 2005/06/18 06:09:09 andy Exp $
-# $FreeBSDru: frdp/www/ru/Makefile,v 1.46 2005/06/17 07:03:44 andy Exp $
+# $FreeBSD: www/ru/Makefile,v 1.47 2005/10/05 20:39:12 simon Exp $
+# $FreeBSDru: frdp/www/ru/Makefile,v 1.49 2005/11/03 21:27:23 gad Exp $
 #
 # Original revision: 1.122
 #
@@ -21,6 +21,7 @@ DOCS=  about.sgml
 DOCS+=  applications.sgml
 DOCS+= art.sgml
 DOCS+= availability.sgml
+DOCS+= community.sgml
 DOCS+= docs.sgml
 DOCS+= features.sgml
 DOCS+= internet.sgml
@@ -45,6 +46,7 @@ DOCS+= y2kbug.sgml
 SUBDIR= FAQ
 #SUBDIR+= advocacy
 SUBDIR+= commercial
+SUBDIR+= community
 SUBDIR+= copyright
 SUBDIR+= docproj
 SUBDIR+= donations
@@ -66,6 +68,7 @@ SUBDIR+= search
 SUBDIR+= security
 SUBDIR+= smp
 SUBDIR+= snapshots
+SUBDIR+= support
 SUBDIR+= tutorials
 .if !defined(WEB_ONLY) || empty(WEB_ONLY)
 SUBDIR+= doc
@@ -78,6 +81,10 @@ SUBDIR+= relnotes
 # Non-SGML
 #SUBDIR+= cgi
 #SUBDIR+= gifs
+
+XMLDOCS=       usergroups:${XSL_USERGROUPS}:${XML_USERGROUPS}:
+DEPENDSET.usergroups=transtable usergroups
+PARAMS.usergroups=      --param pagename "'FreeBSD User Groups'"
 
 WEBDIR?=	data/ru
 
