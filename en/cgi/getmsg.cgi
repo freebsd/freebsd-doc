@@ -6,12 +6,22 @@
 # by John Fieber
 # February 26, 1998
 #
-# $FreeBSD: www/en/cgi/getmsg.cgi,v 1.38 2005/03/29 20:43:20 simon Exp $
+# $FreeBSD: www/en/cgi/getmsg.cgi,v 1.39 2005/10/20 19:54:57 fenner Exp $
 #
 
 require "./cgi-lib.pl";
 require "./cgi-style.pl";
 use POSIX qw(strftime);
+#
+# Site design includes setting a:visited to the same as a:link,
+# which isn't good in archived messages, e.g., you want to follow
+# links in commit messages and know which links you've visited.
+# Override it inside the <pre> that is the message.
+$t_style = qq`<style type="text/css">
+pre a:visited { color: #220000; }
+</style>
+`;
+
 
 #
 # Files MUST be fully qualified and MUST start with this path.
