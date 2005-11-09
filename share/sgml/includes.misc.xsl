@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/share/sgml/includes.misc.xsl,v 1.25 2005/10/04 06:13:33 murray Exp $ -->
+<!-- $FreeBSD: www/share/sgml/includes.misc.xsl,v 1.26 2005/10/06 01:45:27 hrs Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -978,8 +978,8 @@
     <xsl:param name="curdate.xml" select="''" />
     <xsl:variable name="curdate" select="document($curdate.xml)//curdate"/>
 
-    <xsl:for-each select="document($events.xml-master)/descendant::event[position() &lt; 5
-							        	and ((number(enddate/year) &gt; number($curdate/year)) or
+    <xsl:for-each select="document($events.xml-master)/descendant::event[
+									   ((number(enddate/year) &gt; number($curdate/year)) or
 								            (number(enddate/year) = number($curdate/year) and
 								             number(enddate/month) &gt; number($curdate/month)) or
 						          		    (number(enddate/year) = number($curdate/year) and
@@ -988,6 +988,8 @@
       <xsl:sort select="startdate/year" order="ascending"/>
       <xsl:sort select="format-number(startdate/month, '00')" order="ascending"/>
       <xsl:sort select="format-number(startdate/day, '00')" order="ascending"/>
+
+      <xsl:if test="position() &lt;= 5">
 
       <p>
       <span class="txtdate">
@@ -1013,6 +1015,7 @@
 	<br />
 	(<xsl:value-of select='location/city' />, <xsl:value-of select='location/country' />)
       </a></p>
+    </xsl:if>
     </xsl:for-each>
   </xsl:template>
 
