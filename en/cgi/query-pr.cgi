@@ -1,5 +1,5 @@
 #!/usr/bin/perl -T
-# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.48 2005/11/06 22:29:45 ceri Exp $
+# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.49 2005/11/07 10:43:19 ceri Exp $
 
 $ENV{'PATH'} = "/bin:/usr/bin:/usr/sbin:/sbin:/usr/local/bin";
 
@@ -245,7 +245,7 @@ print qq`<a href="mailto:bug-followup\@FreeBSD.org,${email}?subject=Re:%20${cat}
 if (! $codeok ) {
     print "<a name='SEEMAIL' id='SEEMAIL' />";
     print "<p>To see this PR with email addresses ";
-    print " displayed, enter the code from the image and submit: \n";
+    print " displayed, enter the code from the image and submit: </p>\n";
     print "<form method='post' action='$scriptname'>\n";
     print "<input type='hidden' name='pr' value='$number'/>\n";
     print "<input type='text' name='code-confirm' ";
@@ -255,7 +255,7 @@ if (! $codeok ) {
     print " alt='Random text; if you cannot see the image, please email ";
     print " bugbusters\@FreeBSD.org' border='0' height='24' /></label>\n";
     print "<input type='submit' value='Go' />\n";
-    print "</form></p>\n";
+    print "</form>\n";
 }
 
 print &html_footer;
