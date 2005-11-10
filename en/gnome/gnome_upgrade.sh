@@ -34,7 +34,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $MCom: portstools/gnome_upgrade.sh.in,v 1.154 2005/10/02 05:50:39 marcus Exp $
+# $MCom: portstools/gnome_upgrade.sh.in,v 1.148.2.8 2005/11/10 01:39:41 marcus Exp $
 #   $FreeBSD$
 #
 
@@ -42,7 +42,7 @@
 # an upgrade from 2.10 --> 2.12).
 
 GNOME_UPGRADE_SH_VER=2.12-3;	# Increment this with every functional change
-GNOME_UPGRADE_SH_REV='$Revision: 1.23 $'
+GNOME_UPGRADE_SH_REV='$Revision: 1.24 $'
 
 ## BEGIN global variable declarations.
 VERBOSE=${VERBOSE:=0}
@@ -53,7 +53,7 @@ X11BASE=${X11BASE:=/usr/X11R6}
 
 PROJECT_URL="http://www.FreeBSD.org/gnome/"
 SUPPORT_EMAIL="freebsd-gnome@FreeBSD.org"
-PORTSTREE="MarcusCom"
+PORTSTREE="FreeBSD"
 TB_URL="http://www.marcuscom.com/tb/packages%s/%s-%s/Latest/"
 
 SUPPORTED_FREEBSD_VERSIONS="5.3 5.4 6.0 7.0"
@@ -250,7 +250,7 @@ while [ $# -gt 0 ]; do
           echo "FreeBSD GNOME Upgrade tool: gnome_upgrade.sh"
           echo "--"
           echo "Script version: ${GNOME_UPGRADE_SH_VER}"
-          echo 'MarcusCom revision: $MCom: portstools/gnome_upgrade.sh.in,v 1.154 2005/10/02 05:50:39 marcus Exp $'
+          echo 'MarcusCom revision: $MCom: portstools/gnome_upgrade.sh.in,v 1.148.2.8 2005/11/10 01:39:41 marcus Exp $'
           echo 'FreeBSD revision: $FreeBSD$'
           echo "--"
           echo "Visit http://www.freebsd.org/gnome for more information"
