@@ -1,6 +1,6 @@
 #!/usr/bin/perl -T
 #
-# $FreeBSD$
+# $FreeBSD: www/en/cgi/querypr-code.cgi,v 1.1 2005/11/06 22:29:45 ceri Exp $
 #
 # Cribbed from sendpr-code.cgi, which is:
 #   Copyright (c) 2003 Eric Anderson
