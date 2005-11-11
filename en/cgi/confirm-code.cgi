@@ -1,6 +1,6 @@
 #!/usr/bin/perl -T
 #
-# $FreeBSD: www/en/cgi/sendpr-code.cgi,v 1.3 2004/07/27 20:34:40 ceri Exp $
+# $FreeBSD: www/en/cgi/confirm-code.cgi,v 1.4 2004/12/13 22:43:05 ceri Exp $
 #
 # Copyright (c) 2003 Eric Anderson
 
