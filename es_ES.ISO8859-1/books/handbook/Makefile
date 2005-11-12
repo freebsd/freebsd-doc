@@ -166,6 +166,7 @@ SRCS+= kerneldebug/chapter.sgml
 SRCS+= kernelopts/chapter.sgml
 SRCS+= l10n/chapter.sgml
 SRCS+= linuxemu/chapter.sgml
+SRCS+= mac/chapter.sgml
 SRCS+= mail/chapter.sgml
 SRCS+= mirrors/chapter.sgml
 SRCS+= multimedia/chapter.sgml
