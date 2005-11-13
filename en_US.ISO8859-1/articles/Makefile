@@ -3,6 +3,7 @@
 SUBDIR =
 SUBDIR+= 5-roadmap
 SUBDIR+= bsdl-gpl
+SUBDIR+= building-products
 SUBDIR+= casestudy-argentina.com
 SUBDIR+= checkpoint
 SUBDIR+= committers-guide
