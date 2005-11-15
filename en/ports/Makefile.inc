@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/ports/Makefile.inc,v 1.5 2001/01/04 22:12:42 wosch Exp $
+# $FreeBSD: www/en/ports/Makefile.inc,v 1.6 2001/06/14 03:09:56 dd Exp $
 
 PORTINDEX=	${PERL} ${.CURDIR}/portindex
 INDEX=		INDEX
@@ -10,6 +10,7 @@ CLEANFILES+=	${INDEX}
 CLEANFILES+=	packages.exists.temp  packages.exists
 CLEANFILES+= 	${DOCS} 
 CLEANFILES+=	Makefile.gen
+CLEANFILES+=	ports.size
 
 _ALLINSTALL= packages.exists ${INDEX} categories
 

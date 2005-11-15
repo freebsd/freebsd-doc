@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/ports/Makefile,v 1.40 2005/10/18 03:45:12 linimon Exp $
+# $FreeBSD: www/en/ports/Makefile,v 1.41 2005/10/18 12:24:12 edwin Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -62,7 +62,17 @@ Makefile.gen: index.sgml .NOTMAIN
 	${ECHO_CMD} NO_TIDY=${NO_TIDY} >> Makefile.gen
 .endif
 
-index.sgml: ${INDEX} categories categories.descriptions packages.exists portindex ports.inc .NOTMAIN
+PORTS_TARGZ_URL?= ftp://ftp-master.FreeBSD.org/pub/FreeBSD/ports/ports/ports.tar.gz
+
+ports.size:
+.if defined (NOPORTSNET)
+	touch ${.TARGET}
+.else
+	${RM} -f ${.TARGET}
+	${FETCH} -s ${PORTS_TARGZ_URL} > ${.TARGET}
+.endif
+
+index.sgml: ${INDEX} categories categories.descriptions packages.exists portindex ports.inc ports.size .NOTMAIN
 	${RM} -f *.sgml
 	${PORTINDEX} ${INDEX} ${.CURDIR}
 
