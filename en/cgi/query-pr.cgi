@@ -1,5 +1,5 @@
 #!/usr/bin/perl -T
-# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.49 2005/11/07 10:43:19 ceri Exp $
+# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.50 2005/11/09 21:38:31 fenner Exp $
 
 $ENV{'PATH'} = "/bin:/usr/bin:/usr/sbin:/sbin:/usr/local/bin";
 
@@ -38,7 +38,7 @@ if ($opt_p) {
 	print " from the image below: <input type='text' ";
 	print " name='code-confirm' id='code-confirm' size='8' />\n";
 	print "</p><p><label for='code-confirm'>";
-	print "<img src='http://www.FreeBSD.org/cgi/querypr-code.cgi?dummy=1' ";
+	print "<img src='querypr-code.cgi?dummy=1' ";
 	print " alt='Random text; if you cannot see the image, please email ";
 	print " bugbusters\@FreeBSD.org' border='0' height='24' /></label></p>\n";
 	print "<input type='submit' value='Query' />\n</form>\n";
@@ -75,6 +75,7 @@ foreach $randomcode (keys %db_hash) {
 	}
 }
 
+$codeentered =~ s/.*/\U$&/;	# Turn input uppercase
 $currenttime = time();
 if (defined($codeentered) && $codeentered && $db_hash{$codeentered} && 
     (($currenttime - $expiretime) <= $db_hash{$codeentered})) {
@@ -251,7 +252,7 @@ if (! $codeok ) {
     print "<input type='text' name='code-confirm' ";
     print " id='code-confirm' size='8' />\n";
     print "<label for='code-confirm'>";
-    print "<img src='http://www.FreeBSD.org/cgi/querypr-code.cgi?dummy=1' ";
+    print "<img src='querypr-code.cgi?dummy=1' ";
     print " alt='Random text; if you cannot see the image, please email ";
     print " bugbusters\@FreeBSD.org' border='0' height='24' /></label>\n";
     print "<input type='submit' value='Go' />\n";
