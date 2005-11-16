@@ -8,7 +8,7 @@
 #  GNU General Public License Version 2.  
 #     (http://www.gnu.ai.mit.edu/copyleft/gpl.html)
 #
-# $FreeBSD: www/en/cgi/dosendpr.cgi,v 1.22 2005/07/14 11:26:17 ceri Exp $
+# $FreeBSD: www/en/cgi/dosendpr.cgi,v 1.23 2005/11/06 22:07:23 ceri Exp $
 
 require "html.pl";
 
@@ -101,6 +101,7 @@ unless (flock (DB_FH, LOCK_EX | LOCK_NB)) {
 }
 
 $codeentered = $cgi_data{'code-confirm'};
+$codeentered =~ s/.*/\U$&/;	# Turn input uppercase
 $currenttime = time();
 if (defined($codeentered) && $codeentered && $db_hash{$codeentered} && 
   (($currenttime - $expiretime) <= $db_hash{$codeentered})) {
