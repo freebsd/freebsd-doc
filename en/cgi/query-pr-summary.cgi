@@ -1,5 +1,5 @@
 #!/usr/bin/perl -T
-# $FreeBSD: www/en/cgi/query-pr-summary.cgi,v 1.51 2005/09/13 18:17:46 remko Exp $
+# $FreeBSD: www/en/cgi/query-pr-summary.cgi,v 1.52 2005/10/19 15:47:38 fenner Exp $
 
 sub escape($) { $_ = $_[0]; s/&/&amp;/g; s/</&lt;/g; s/>/&gt;/g; $_; }
 
@@ -31,7 +31,7 @@ if ($html_mode) {
 	&ReadParse(*input) if $html_mode;
 
 } else {
-	&Getopts('CcqRr:s:');
+	&Getopts('CcqRr:s:T:');
 
 	$input{'responsible'}	= 'summary' if $opt_R;
 	if ($opt_r) {
@@ -47,6 +47,11 @@ if ($html_mode) {
 		$query_args   = '--confidential=yes ';
 	} elsif (!$opt_c) {
 		$query_args   = '--restricted ';
+	}
+	if ($opt_T) {
+		($tag)	= ($opt_T =~ m/^(\^?[-_a-zA-Z0-9@.]*\$?)$/);
+		die 'Insecure args' if ($tag ne $opt_T);
+		$input{'text'} = '\[' . $tag . '\]';
 	}
 }
 
@@ -65,6 +70,7 @@ if ($html_mode) {
     $pr = '<pre>';    $pr_e = '</pre>';
     $h1 = '<h1>';     $h1_e = '</h1>';
     $h3 = '<h3>';     $h3_e = '</h3>';
+    $hr = '<hr/>';
 
     $table   = "<table width='100%' border='0' cellspacing='1' cellpadding='0'>";
     $table_e = '</table>';
@@ -91,6 +97,8 @@ if ($html_mode) {
     $pr = ''; $pr_e = '';
     $h1 = ''; $h1_e = '';
     $h3 = ''; $h3_e = '';
+    $hr = "\n----------------------------------------" .
+	    "---------------------------------------\n";
 
     $table   = '';
     $table_e = '';
