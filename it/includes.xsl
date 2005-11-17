@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/it/includes.xsl,v 1.18 2005/10/14 09:15:28 ale Exp $ -->
+<!-- $FreeBSD$ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -39,19 +39,19 @@
   </xsl:variable>
   
   <xsl:variable name="header2">
-            <span class="txtoffscreen"><a href="#content" title="Salta la navigazione del sito" accesskey="1">Salta la navigazione del sito</a> (1)</span>
-            <span class="txtoffscreen"><a href="#contentwrap" title="Salta la navigazione della sezione" accesskey="2">Salta la navigazione della sezione</a> (2)</span>
-            <div id="headercontainer">
+            <span class="txtoffscreen"><a href="#CONTENT" title="Salta la navigazione del sito" accesskey="1">Salta la navigazione del sito</a> (1)</span>
+            <span class="txtoffscreen"><a href="#CONTENTWRAP" title="Salta la navigazione della sezione" accesskey="2">Salta la navigazione della sezione</a> (2)</span>
+            <div id="HEADERCONTAINER">
       
-              <div id="header">
+              <div id="HEADER">
       	      <h2 class="blockhide">Intestazione e Logo</h2>
-                <div id="headerlogoleft">
+                <div id="HEADERLOGOLEFT">
                   <a href="{$base}" title="FreeBSD"><img src="{$enbase}/layout/images/logo.png" width="360" height="40" alt="FreeBSD" /></a>
-                </div> <!-- headerlogoleft -->
-                <div id="headerlogoright">
+                </div> <!-- HEADERLOGOLEFT -->
+                <div id="HEADERLOGORIGHT">
       			<h2 class="blockhide">Collegamenti Periferici</h2>
-      			  <div id="searchnav">
-      				<ul id="searchnavlist">
+      			  <div id="SEARCHNAV">
+      				<ul id="SEARCHNAVLIST">
       				  <li>
       					Dimensione Testo: <a href="#" onkeypress="return false;" onclick="setActiveStyleSheet('Normal Text'); return false;" title="Dimensione Testo Normale">Normale</a> / <a href="#" onkeypress="return false;" onclick="setActiveStyleSheet('Large Text'); return false;" title="Dimensione Testo Grande">Grande</a>
       				  </li>
@@ -62,22 +62,22 @@
       					<a href="{$base}/mailto.html" title="Contatti">Contatti</a>
       				  </li>
       				</ul>
-      			  </div> <!-- searchnav -->
-      			<div id="search">
+      			  </div> <!-- SEARCHNAV -->
+      			<div id="SEARCH">
       			  <form action="{$cgibase}/search.cgi" method="get">
       				<div>
       			      <h2 class="blockhide"><label for="words">Cerca</label></h2>
-      				  <input type="hidden" name="max" value="25" /> <input type="hidden" name="source" value="www" /><input id="words" name="words" type="text" size="20" maxlength="255" onfocus="if( this.value==this.defaultValue ) this.value='';" value="Cerca" />&#160;<input id="submit" name="submit" type="submit" value="Cerca" />
+      				  <input type="hidden" name="max" value="25" /> <input type="hidden" name="source" value="www" /><input id="WORDS" name="words" type="text" size="20" maxlength="255" onfocus="if( this.value==this.defaultValue ) this.value='';" value="Cerca" />&#160;<input id="submit" name="submit" type="submit" value="Cerca" />
       				</div>
       			  </form>
-      			</div> <!-- search -->
-                </div> <!-- headerlogoright -->
+      			</div> <!-- SEARCH -->
+                </div> <!-- HEADERLOGORIGHT -->
       
-              </div> <!-- header -->
+              </div> <!-- HEADER -->
       
         	<h2 class="blockhide">Navigazione del Sito</h2>
-              <div id="topnav">
-                <ul id="topnavlist">
+              <div id="TOPNAV">
+                <ul id="TOPNAVLIST">
 		  <li>
 			<a href="{$base}/" title="Home">Home</a>
 		  </li>
@@ -100,8 +100,8 @@
 			<a href="{$base}/support.html" title="Supporto">Supporto</a>
 		  </li>		  
 		</ul>
-              </div> <!-- topnav -->
-            </div> <!-- headercontainer -->
+              </div> <!-- TOPNAV -->
+            </div> <!-- HEADERCONTAINER -->
   </xsl:variable>
   
   <xsl:variable name="header3">
@@ -109,9 +109,9 @@
   </xsl:variable>
   
   <xsl:variable name="sidenav">
-	<div id="sidewrap">
+	<div id="SIDEWRAP">
 	
-	<div id="sidenav">
+	<div id="SIDENAV">
 	<h2 class="blockhide">Navigation della Sezione</h2>
 	
 	<xsl:if test="$section = 'about'" >
@@ -224,16 +224,16 @@
 		</ul>
     	</xsl:if>
 	
-	</div> <!-- sidenav -->
+	</div> <!-- SIDENAV -->
 	
-	</div> <!-- sidewrap -->
+	</div> <!-- SIDEWRAP -->
   </xsl:variable>
   
   <xsl:variable name="footer">
-	<div id="footer">
+	<div id="FOOTER">
 	<xsl:copy-of select="$copyright"/><br />
 	<xsl:copy-of select="$date"/>
-	</div> <!-- footer -->
+	</div> <!-- FOOTER -->
   </xsl:variable>
 
   <xsl:variable name="u.betarel.schedule">
@@ -430,37 +430,38 @@
     <xsl:param name="curdate.xml" select="''" />
     <xsl:variable name="curdate" select="document($curdate.xml)//curdate"/>
 
-    <xsl:for-each select="document($events.xml)/descendant::event[position() &lt; 5
-                                                                        and ((number(enddate/year) &gt; number($curdate/year)) or
-                                                                            (number(enddate/year) = number($curdate/year) and
-                                                                             number(enddate/month) &gt; number($curdate/month)) or
-                                                                            (number(enddate/year) = number($curdate/year) and
-                                                                             number(enddate/month) = number($curdate/month) and
-                                                                             enddate/day &gt;= $curdate/day))]">
+    <xsl:for-each select="document($events.xml)/descendant::event[((number(enddate/year) &gt; number($curdate/year)) or
+                                                                   (number(enddate/year) = number($curdate/year) and
+                                                                    number(enddate/month) &gt; number($curdate/month)) or
+                                                                   (number(enddate/year) = number($curdate/year) and
+                                                                    number(enddate/month) = number($curdate/month) and
+                                                                    enddate/day &gt;= $curdate/day))]">
       <xsl:sort select="startdate/year" order="ascending"/>
       <xsl:sort select="format-number(startdate/month, '00')" order="ascending"/>
       <xsl:sort select="format-number(startdate/day, '00')" order="ascending"/>
 
-      <p>
-      <span class="txtdate">
-         <xsl:value-of select='
-            concat(format-number(startdate/day, "00"), "-",
-            format-number(startdate/month, "00"), "-",
-            format-number(startdate/year, "####"), " -  ",
-            format-number(enddate/day, "00"), "-",
-            format-number(enddate/month, "00"), "-",
-            format-number(enddate/year, "####"))' />
-      </span><br />
-      <a>
-        <xsl:attribute name="href">
-          <xsl:text>../events/#event:</xsl:text><xsl:value-of select='@id' />
-        </xsl:attribute>
+      <xsl:if test="position() &lt;= 5">
+        <p>
+        <span class="txtdate">
+           <xsl:value-of select='
+              concat(format-number(startdate/day, "00"), "-",
+              format-number(startdate/month, "00"), "-",
+              format-number(startdate/year, "####"), " -  ",
+              format-number(enddate/day, "00"), "-",
+              format-number(enddate/month, "00"), "-",
+              format-number(enddate/year, "####"))' />
+        </span><br />
+        <a>
+          <xsl:attribute name="href">
+            <xsl:text>../events/#event:</xsl:text><xsl:value-of select='@id' />
+          </xsl:attribute>
 
-        <xsl:value-of select="name"/>
+          <xsl:value-of select="name"/>
 
-        <br />
-        (<xsl:value-of select='location/city' />, <xsl:value-of select='location/country' />)
-      </a></p>
+          <br />
+          (<xsl:value-of select='location/city' />, <xsl:value-of select='location/country' />)
+        </a></p>
+      </xsl:if>
     </xsl:for-each>
   </xsl:template>
 
