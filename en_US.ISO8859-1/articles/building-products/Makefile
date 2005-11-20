@@ -12,7 +12,7 @@ INSTALL_ONLY_COMPRESSED?=
 
 SRCS=			article.sgml
 
-IMAGES_EN=		freebsd-branches.eps
+IMAGES_EN=		freebsd-branches.pic freebsd-organization.pic
 
 URL_RELPREFIX?=	../../../..
 DOC_PREFIX?= ${.CURDIR}/../../..
