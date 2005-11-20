@@ -158,6 +158,7 @@ SRCS+= bibliography/chapter.sgml
 SRCS+= boot/chapter.sgml
 SRCS+= config/chapter.sgml
 SRCS+= cutting-edge/chapter.sgml
+SRCS+= desktop/chapter.sgml
 SRCS+= disks/chapter.sgml
 SRCS+= eresources/chapter.sgml
 SRCS+= geom/chapter.sgml
