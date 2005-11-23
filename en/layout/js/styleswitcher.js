@@ -1,6 +1,6 @@
 /* http://www.alistapart.com/articles/alternate/ */
 
-/* $FreeBSD$ */
+/* $FreeBSD: www/en/layout/js/styleswitcher.js,v 1.2 2005/11/23 14:22:07 keramida Exp $ */
 
 var is_khtml = /Konqueror|Safari|KHTML/i.test(navigator.userAgent);
 var is_safari = /Safari/i.test(navigator.userAgent);
