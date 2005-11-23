@@ -1,5 +1,7 @@
 /* http://www.alistapart.com/articles/alternate/ */
 
+/* $FreeBSD$ */
+
 var is_khtml = /Konqueror|Safari|KHTML/i.test(navigator.userAgent);
 var is_safari = /Safari/i.test(navigator.userAgent);
 var is_konq = is_khtml&&!is_safari;
