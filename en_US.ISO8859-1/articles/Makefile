@@ -33,6 +33,7 @@ SUBDIR+= mailing-list-faq
 SUBDIR+= mh
 SUBDIR+= multi-os
 SUBDIR+= new-users
+SUBDIR+= p4-primer
 SUBDIR+= pam
 SUBDIR+= portbuild
 SUBDIR+= pr-guidelines
