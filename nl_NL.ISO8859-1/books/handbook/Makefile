@@ -1,6 +1,6 @@
 #
 # $FreeBSD$
-# $FreeBSDnl: nl_NL.ISO8859-1/books/handbook/Makefile,v 1.14 2005/08/15 20:54:56 siebrand Exp $
+# $FreeBSDnl: nl_NL.ISO8859-1/books/handbook/Makefile,v 1.16 2005/10/04 21:17:40 siebrand Exp $
 # Gebaseerd op: 1.95 (sortof)
 #
 # Build the FreeBSD Dutch Handbook.
