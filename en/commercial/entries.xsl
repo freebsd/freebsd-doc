@@ -24,7 +24,7 @@
      OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
      SUCH DAMAGE.
 
-     $FreeBSD: www/en/commercial/entries.xsl,v 1.4 2004/09/04 16:25:24 josef Exp $
+     $FreeBSD: www/en/commercial/entries.xsl,v 1.5 2005/10/04 16:33:22 simon Exp $
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
@@ -40,6 +40,8 @@
   </xsl:variable>
   <xsl:variable name="email" select="'freebsd-www'"/>
   <xsl:variable name="title" select="'Commercial Vendors'"/>
+  <xsl:variable name="upperCase" select="'ABCDEFGHIJKLMNOPQRSTUVWXYZ'"/>
+  <xsl:variable name="lowerCase" select="'abcdefghijklmnopqrstuvwxyz'"/>
   <xsl:param name="pagename" select="''"/>
 
   <xsl:output method="xml" encoding="iso-8859-1"
@@ -82,7 +84,8 @@
 	<h2><xsl:value-of select="$pagename"/></h2>
 
 	<xsl:for-each select="entry">
-	  <xsl:sort select="name" order="ascending"/>
+	  <xsl:sort select="translate(./name, $upperCase, $lowerCase)"
+	    order="ascending"/>
 	  <a name="{@id}" href="{url}">
 	    <xsl:value-of select="name"/>
 	  </a><br/>
