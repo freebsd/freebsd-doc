@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/ports/ports.inc,v 1.67 2003/08/03 12:08:38 kuriyama Exp $ -->
+<!-- $FreeBSD: www/en/ports/ports.inc,v 1.68 2005/10/18 03:45:12 linimon Exp $ -->
 <p>The FreeBSD Ports and Packages Collection offers a simple way for
 users and administrators to install applications.  The ports
 collection has been <a
@@ -79,6 +79,9 @@ Search for:
 <OPTION VALUE="all">All</OPTION>
 <OPTION VALUE="name">Package Name</OPTION>
 <OPTION VALUE="text">Description</OPTION>
+<OPTION VALUE="pkgdescr">Long description</OPTION>
+<OPTION VALUE="maintainer">Maintainer</OPTION>
+<OPTION VALUE="requires">Requires</OPTION>
 </SELECT>
 <INPUT TYPE="submit" VALUE="Submit">
 </FORM>
