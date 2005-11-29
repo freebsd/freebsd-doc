@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/ports.cgi,v 1.87 2005/11/29 22:02:43 pav Exp $
+# $FreeBSD: www/en/cgi/ports.cgi,v 1.88 2005/11/29 22:09:53 pav Exp $
 #
 # ports.cgi - search engine for FreeBSD ports
 #             	o search for a port by name or description
@@ -303,7 +303,7 @@ sub readcoll {
 
 # basic function for HTML output
 sub out {
-    local($line, $old) = @_;
+    local($line) = @_;
     local($version, $path, $local, $comment, $descfile, $email,
 	  $sections, $bdepends, $rdepends, @rest) =  split(/\|/, $line);
 
@@ -339,18 +339,6 @@ sub out {
     print qq{<DT><B><A NAME="$version">$version</A></B>\n};
     print qq{<DD>$comment<BR>\n};
 
-    if ($old) {
-	local($l) = $descfile;
-	$l =~ s%^$remotePrefixFtp%$remotePrefixCvs%o;
-	$l =~ s%/([^/]+)$%/Attic/$1%;
-
-	print  qq{<I>Was Maintained by:</I> <A HREF="mailto:$email} .
-           ($mailtoAdvanced ?
-              qq{?cc=$mailtoList&subject=FreeBSD%20Port:%20} .
-              &encode_url($version) : '') .  qq{">$email</A><BR>} .
-	   qq{<A HREF="$l">Removed why</A></DD>};
-
-    } else {
 	local($l) = $path;
 	$l =~ s%^$remotePrefixFtp%$remotePrefixCvs%o;
 	#$l .= '/Makefile';
@@ -401,9 +389,6 @@ print qq[<A HREF="$l">Changes</A> <B>:</B>
 
 };
 
-
-};
-
 # search and output
 sub search_ports {
     local(@a) = ();
@@ -422,17 +407,17 @@ sub search_ports {
 
 	#warn "$stype:$query: $name $text\n";
 	if ($stype eq "name" && $name =~ /$query/o) {
-	    &out($today{$key}, 0);
+	    &out($today{$key});
 	} elsif ($stype eq "text" && $text =~ /$query/oi) {
-	    &out($today{$key}, 0);
+	    &out($today{$key});
 	} elsif ($stype eq "all" &&
 		 ($text =~ /$query/oi || $name =~ /$query/io)) {
-	    &out($today{$key}, 0);
+	    &out($today{$key});
 	} elsif ($stype eq 'maintainer' && $a[5] =~ /$query/io) {
-	    &out($today{$key}, 0);
+	    &out($today{$key});
 	} elsif ($stype eq 'requires' &&
 		 ($a[7] =~ /$query/io || $a[8] =~ /$query/io)) {
-	    &out($today{$key}, 0);
+	    &out($today{$key});
 	}
 
     }
@@ -442,11 +427,11 @@ sub search_ports {
 sub forms {
     print qq{<HTML>
 <HEAD>
-<TITLE>FreeBSD Ports Changes</TITLE>
+<TITLE>FreeBSD Ports Search</TITLE>
 <meta name="robots" content="nofollow">
 </HEAD>
 <BODY BGCOLOR="#FFFFFF" TEXT="#000000">
-<H1><a href="../">FreeBSD Ports Changes</A> $daemonGif</H1>
+<H1><a href="../">FreeBSD Ports Search</A> $daemonGif</H1>
 
 <P>
 FreeBSD Ports [short description <a href="$portsDesc">followed</a> ...]
@@ -507,7 +492,7 @@ sub footer {
 <img ALIGN="RIGHT" src="/gifs/powerlogo.gif" alt="Powered by FreeBSD">
 &copy; 1996-2005 by Wolfram Schneider. All rights reserved.<br>
 };
-    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.87 2005/11/29 22:02:43 pav Exp $} . "<br>\n";
+    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.88 2005/11/29 22:09:53 pav Exp $} . "<br>\n";
     print qq{Please direct questions about this service to
 <I><A HREF="$mailtoURL">$mailto</A></I><br>\n};
     print qq{General questions about FreeBSD ports should be sent to } .
@@ -536,26 +521,12 @@ sub check_input {
 	    return;
 	}
     }
-
-    if (!($type eq "new" || $type eq "changed" || $type eq "removed")) {
-	&warn("unknown type `$type', use `new', `changed', or `removed'\n");
-	&exit(0);
-    }
-
-    if ($time !~ /^[1-9][0-9]*\s+(month|week)\s+ago$/ &&
-	# support diff by revision too
-	$time !~ /^rev[1-9]+\.[0-9]+$/
-	)
-    {
-	&warn("unknown date: `$time'\n");
-	&exit(0);
-    }
 }
 
 sub faq {
-    print qq{<HEAD>\n<TITLE>FAQ</TITLE>\n</HEAD>
+    print qq{<HEAD>\n<TITLE>FreeBSD Ports Search FAQ</TITLE>\n</HEAD>
 <BODY <BODY BGCOLOR="#FFFFFF" TEXT="#000000">
-<H1>FreeBSD Ports Changed FAQ</h1>
+<H1>FreeBSD Ports Search FAQ</h1>
 
 <h2>Keywords</h2>
 <dl>
@@ -567,14 +538,13 @@ sub faq {
 </dl>
 
 <h2>Misc</h2>
-All links point to the FreeBSD-stable
+Package download links point to the FreeBSD 6-STABLE
 version and <b>not</b> to the latest releases.<p>
 
 The script ports.cgi use the file
-<a href="$remotePrefixCvs/INDEX">
-FreeBSD-CVS/ports/INDEX,v</a>
-as database for most operations. INDEX,v will be updated by hand
-by the portsmeister.  An updated INDEX file is used if available.<p>
+<a href="../ports/$ports_database.bz2">$ports_database</a>
+as database for it's operations. $ports_database is updated automatically every
+two hours.<p>
 
 You may also search the
 <a href="http://www.FreeBSD.org/cgi/man.cgi?manpath=FreeBSD+Ports">ports manual pages</a>.<p>
@@ -595,8 +565,6 @@ $query_string = &env('QUERY_STRING');
 $path_info = &env('PATH_INFO');
 &decode_form($query_string, *form);
 
-$type = $form{'type'};
-$time = $form{'time'};
 $section = $form{'sektion'};
 $query = $form{'query'};
 $stype = $form{'stype'};
@@ -628,7 +596,7 @@ if ($path_info eq "/faq.html") {
 
 # allow `/ports.cgi?netscape' where 'netscape' is the query port to search
 # this make links to this script shorter
-if (!$query && !$type && $query_string =~ /^([^=&]+)$/) {
+if (!$query && $query_string =~ /^([^=&]+)$/) {
     $query = $1;
 }
 
@@ -639,11 +607,10 @@ if (!$query && !$type && $query_string =~ /^([^=&]+)$/) {
 $query =~ s/^\s+//;
 $query =~ s/\s+$//;
 
-if ($query_string eq "" || (!$query && !$type)) {
+if ($query_string eq "" || !$query) {
     &footer; &footer2; &exit(0);
 }
 
-#warn "type: $type time: $time section: $section stype: $stype query: $query";
 &check_input;
 $counter = 0;
 
