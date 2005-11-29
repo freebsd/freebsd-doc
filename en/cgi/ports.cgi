@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/ports.cgi,v 1.85 2005/11/29 20:45:47 pav Exp $
+# $FreeBSD: www/en/cgi/ports.cgi,v 1.86 2005/11/29 21:33:33 pav Exp $
 #
 # ports.cgi - search engine for FreeBSD ports
 #             	o search for a port by name or description
@@ -57,8 +57,9 @@ sub init_variables {
     local($pia64) = 'ftp://ftp.FreeBSD.org/pub/FreeBSD/ports/ia64';
     local($psparc64) = 'ftp://ftp.FreeBSD.org/pub/FreeBSD/ports/sparc64';
 
-    # XXX this now only serves for Package link, head INDEX is always checked
     $remotePrefixFtpPackagesDefault = '6-STABLE/i386';
+
+    # This is currently unused
     %remotePrefixFtpPackages =
 	(
 	 '7-CURRENT/i386', "$p/packages-7-current/All",
@@ -131,7 +132,7 @@ sub init_variables {
     $url = 'url.cgi';
 
     # extension type for packages
-    $packageExt = 'tgz';
+    $packageExt = 'tbz';
 
     local($packageDB) = '../ports/packages.exists';
     &packages_exist($packageDB, *packages) if -f $packageDB;
@@ -142,7 +143,6 @@ sub init_variables {
 sub parse_release {
 
     # XXX this must go away. instead, check what we got and use it.
-    $packageExt = 'tbz';
     $ports_database = 'INDEX-5';
 }
 
@@ -390,9 +390,10 @@ sub out {
 	print qq[<A HREF="$url?$descfile">Description</A> <B>:</B>
 <A HREF="$pds?$pathB">Sources</A> <B>:</B>\n];
 
-	# XXX Some kind of list of available arch/rels should replace this
-	# once release pulldown goes away.
-	print qq[<A HREF="$remotePrefixFtpPackages{$release}/$version.$packageExt">Package</A> <B>:</B>\n];
+	# Link package in "default" arch/release. Verify it's existence on ftp-master.
+	if ($packages{"$version.$packageExt"}) {
+	    print qq[<A HREF="$remotePrefixFtpPackages{$remotePrefixFtpPackagesDefault}/$version.$packageExt">Package</A> <B>:</B>\n];
+	}
 
 print qq[<A HREF="$l">Changes</A> <B>:</B>
 <A HREF="$pathDownload">Download</A>
@@ -481,14 +482,6 @@ Search for:
 	    qq{VALUE="$_">} . ($d{$_} ? $d{$_} : $_) . qq{</OPTION>\n};
     }
 
-
-    print qq{</SELECT><SELECT NAME="release">\n};
-    foreach (sort keys %remotePrefixFtpPackages) {
-	print qq{<OPTION} .
-	    (($_ eq $release) ? ' SELECTED ' : ' ') .
-		qq{VALUE=$_>$_</OPTION>\n};
-    }
-
     print qq{</SELECT>
 
 <SELECT NAME="sektion">
@@ -515,7 +508,7 @@ sub footer {
 <img ALIGN="RIGHT" src="/gifs/powerlogo.gif" alt="Powered by FreeBSD">
 &copy; 1996-2005 by Wolfram Schneider. All rights reserved.<br>
 };
-    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.85 2005/11/29 20:45:47 pav Exp $} . "<br>\n";
+    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.86 2005/11/29 21:33:33 pav Exp $} . "<br>\n";
     print qq{Please direct questions about this service to
 <I><A HREF="$mailtoURL">$mailto</A></I><br>\n};
     print qq{General questions about FreeBSD ports should be sent to } .
@@ -608,9 +601,6 @@ $time = $form{'time'};
 $section = $form{'sektion'};
 $query = $form{'query'};
 $stype = $form{'stype'};
-$release = $form{'release'};
-$release = $remotePrefixFtpPackagesDefault
-    if !$release  || !defined($remotePrefixFtpPackages{$release});
 $script_name = &env('SCRIPT_NAME');
 
 &parse_release;
