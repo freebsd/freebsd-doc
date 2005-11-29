@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/ports.cgi,v 1.86 2005/11/29 21:33:33 pav Exp $
+# $FreeBSD: www/en/cgi/ports.cgi,v 1.87 2005/11/29 22:02:43 pav Exp $
 #
 # ports.cgi - search engine for FreeBSD ports
 #             	o search for a port by name or description
@@ -35,11 +35,17 @@ use Time::Local;
 sub init_variables {
     $localPrefix = '/usr/ports';	# ports prefix
 
-    # Directory of the up-to-date INDEX/INDEX-5
+    # Directory of the up-to-date INDEX*
     $portsDatabaseHeadDir = "/usr/local/www/ports";
 
     # Ports database file to use
-    $ports_database = 'INDEX';
+    if (-f "$portsDatabaseHeadDir/INDEX-6") {
+	$ports_database = 'INDEX-6';
+    } elsif (-f "$portsDatabaseHeadDir/INDEX-5") {
+	$ports_database = 'INDEX-5';
+    } else {
+	$ports_database = 'INDEX';
+    }
 
     # URL of ports tree for browsing
     $remotePrefixFtp = 'ports';
@@ -137,13 +143,6 @@ sub init_variables {
     local($packageDB) = '../ports/packages.exists';
     &packages_exist($packageDB, *packages) if -f $packageDB;
 
-}
-
-# Parse selected version string and set version dependend settings
-sub parse_release {
-
-    # XXX this must go away. instead, check what we got and use it.
-    $ports_database = 'INDEX-5';
 }
 
 
@@ -508,7 +507,7 @@ sub footer {
 <img ALIGN="RIGHT" src="/gifs/powerlogo.gif" alt="Powered by FreeBSD">
 &copy; 1996-2005 by Wolfram Schneider. All rights reserved.<br>
 };
-    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.86 2005/11/29 21:33:33 pav Exp $} . "<br>\n";
+    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.87 2005/11/29 22:02:43 pav Exp $} . "<br>\n";
     print qq{Please direct questions about this service to
 <I><A HREF="$mailtoURL">$mailto</A></I><br>\n};
     print qq{General questions about FreeBSD ports should be sent to } .
@@ -602,13 +601,6 @@ $section = $form{'sektion'};
 $query = $form{'query'};
 $stype = $form{'stype'};
 $script_name = &env('SCRIPT_NAME');
-
-&parse_release;
-
-# Fallback to CVS if an updated INDEX isn't found
-if (!-r "$portsDatabaseHeadDir/$ports_database") {
-    $portsDatabaseHeadDir = "CVS";
-}
 
 if ($path_info eq "/source") {
     print "Content-type: text/plain\n\n";
