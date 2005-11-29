@@ -24,13 +24,15 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/ports.cgi,v 1.88 2005/11/29 22:09:53 pav Exp $
+# $FreeBSD: www/en/cgi/ports.cgi,v 1.89 2005/11/29 22:19:31 pav Exp $
 #
 # ports.cgi - search engine for FreeBSD ports
 #             	o search for a port by name or description
 
 use POSIX qw(strftime);
 use Time::Local;
+
+require "./cgi-style.pl";
 
 sub init_variables {
     $localPrefix = '/usr/ports';	# ports prefix
@@ -192,10 +194,6 @@ sub dec {
     return($_);
 }
 
-sub header {
-    print "Content-type: text/html\n";
-    print "\n";
-}
 
 
 # $indent is a bit of optional data processing I put in for
@@ -336,16 +334,25 @@ sub out {
     $comment =~ s/</\&lt;/g;
     $comment =~ s/>/\&gt;/g;
 
-    print qq{<DT><B><A NAME="$version">$version</A></B>\n};
+    local($l) = $path;
+    $l =~ s%^$remotePrefixFtp%$remotePrefixCvs%o;
+
+    print qq{<DT><B><A NAME="$version"></A><A HREF="$l">$version</A></B>\n};
     print qq{<DD>$comment<BR>\n};
 
-	local($l) = $path;
-	$l =~ s%^$remotePrefixFtp%$remotePrefixCvs%o;
-	#$l .= '/Makefile';
+    print qq[<A HREF="$url?$descfile">Long description</A> <B>:</B>\n];
+    print qq[<A HREF="$pds?$pathB">Sources</A> <B>:</B>\n];
+
+    # Link package in "default" arch/release. Verify it's existence on ftp-master.
+    if ($packages{"$version.$packageExt"}) {
+	print qq[<A HREF="$remotePrefixFtpPackages{$remotePrefixFtpPackagesDefault}/$version.$packageExt">Package</A> <B>:</B>\n];
+    }
+
+    print qq[<A HREF="$l">Changes</A> <B>:</B> <A HREF="$pathDownload">Download</A><BR>\n];
 
 	print  qq{<I>Maintained by:</I> <A HREF="mailto:$email} .
            ($mailtoAdvanced ?
-              qq{?cc=$mailtoList&subject=FreeBSD%20Port:%20} .
+              qq{?cc=$mailtoList&amp;subject=FreeBSD%20Port:%20} .
               &encode_url($version) : '') . qq{">$email</A><BR>};
 
 	local(@s) = split(/\s+/, $sections);
@@ -369,23 +376,12 @@ sub out {
 
 		print ", " if $flag;
 		$flag++;
-		print qq{<A HREF="$script_name?query=^$_&stype=name">$_</A>};
+		print qq{<A HREF="$script_name?query=^$_&amp;stype=name">$_</A>};
 	    }
 	    print "<BR>\n";
 	}
 
-	print qq[<A HREF="$url?$descfile">Description</A> <B>:</B>
-<A HREF="$pds?$pathB">Sources</A> <B>:</B>\n];
-
-	# Link package in "default" arch/release. Verify it's existence on ftp-master.
-	if ($packages{"$version.$packageExt"}) {
-	    print qq[<A HREF="$remotePrefixFtpPackages{$remotePrefixFtpPackagesDefault}/$version.$packageExt">Package</A> <B>:</B>\n];
-	}
-
-print qq[<A HREF="$l">Changes</A> <B>:</B>
-<A HREF="$pathDownload">Download</A>
-<p>
-];
+    print q[<p>];
 
 };
 
@@ -425,17 +421,9 @@ sub search_ports {
 
 
 sub forms {
-    print qq{<HTML>
-<HEAD>
-<TITLE>FreeBSD Ports Search</TITLE>
-<meta name="robots" content="nofollow">
-</HEAD>
-<BODY BGCOLOR="#FFFFFF" TEXT="#000000">
-<H1><a href="../">FreeBSD Ports Search</A> $daemonGif</H1>
-
-<P>
+    print qq{<P>
 FreeBSD Ports [short description <a href="$portsDesc">followed</a> ...]
-<a href="$script_name/faq.html">FAQ</a>
+<a href="$script_name?stype=faq">FAQ</a>
 <p>
 };
 
@@ -492,7 +480,7 @@ sub footer {
 <img ALIGN="RIGHT" src="/gifs/powerlogo.gif" alt="Powered by FreeBSD">
 &copy; 1996-2005 by Wolfram Schneider. All rights reserved.<br>
 };
-    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.88 2005/11/29 22:09:53 pav Exp $} . "<br>\n";
+    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.89 2005/11/29 22:19:31 pav Exp $} . "<br>\n";
     print qq{Please direct questions about this service to
 <I><A HREF="$mailtoURL">$mailto</A></I><br>\n};
     print qq{General questions about FreeBSD ports should be sent to } .
@@ -500,10 +488,6 @@ sub footer {
 	    qq{<i>$mailtoList</i></a><br>\n};
     print &last_update_message;
     print "<hr noshade>\n<P>\n";
-}
-
-sub footer2 {
-    print "\n</BODY>\n</HTML>\n";
 }
 
 
@@ -524,9 +508,7 @@ sub check_input {
 }
 
 sub faq {
-    print qq{<HEAD>\n<TITLE>FreeBSD Ports Search FAQ</TITLE>\n</HEAD>
-<BODY <BODY BGCOLOR="#FFFFFF" TEXT="#000000">
-<H1>FreeBSD Ports Search FAQ</h1>
+    print qq{<H1>FreeBSD Ports Search FAQ</h1>
 
 <h2>Keywords</h2>
 <dl>
@@ -571,6 +553,7 @@ $stype = $form{'stype'};
 $script_name = &env('SCRIPT_NAME');
 
 if ($path_info eq "/source") {
+    # XXX
     print "Content-type: text/plain\n\n";
     open(R, $0) || do { print "ick!\n"; &exit; };
     while(<R>) { print }
@@ -584,15 +567,16 @@ if ($stype eq 'pkgdescr') {
       'http://www.FreeBSD.org/cgi/search.cgi?source=pkgdescr&max=25';
     $query =~ s/\s+/+/g;
     print "Location:  $url&words=$query\n";
-    print "Content-type: text/plain\n\n";
     &exit;
 }
 
-&header;
-if ($path_info eq "/faq.html") {
+if ($stype eq "faq") {
+    print &short_html_header("FreeBSD Ports Search FAQ", 0);
     &faq;
-    &footer; &footer2; &exit(0);
+    &footer; print &html_footer; &exit(0);
 }
+
+print &html_header("FreeBSD Ports Search", 0);
 
 # allow `/ports.cgi?netscape' where 'netscape' is the query port to search
 # this make links to this script shorter
@@ -608,7 +592,7 @@ $query =~ s/^\s+//;
 $query =~ s/\s+$//;
 
 if ($query_string eq "" || !$query) {
-    &footer; &footer2; &exit(0);
+    &footer; print &html_footer; &exit(0);
 }
 
 &check_input;
@@ -631,4 +615,4 @@ if (!$counter) {
 
 print "<hr noshade>\n";
 &footer;
-&footer2;
+print &html_footer;
