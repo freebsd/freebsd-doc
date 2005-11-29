@@ -24,32 +24,22 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/ports.cgi,v 1.82 2005/02/16 16:32:17 wosch Exp $
+# $FreeBSD: www/en/cgi/ports.cgi,v 1.83 2005/06/14 21:34:44 simon Exp $
 #
 # ports.cgi - search engine for FreeBSD ports
 #             	o search for a port by name or description
-#               o search for new or updated ports
-#
-#
-# If you want use this script on your own host this line must
-# work for you: $ cvs rdiff -D'last week' ports/INDEX
 
 use POSIX qw(strftime);
 use Time::Local;
 
 sub init_variables {
-    $cvsroot = '/usr/local/www/cvsroot/FreeBSD';	# $CVSROOT
     $localPrefix = '/usr/ports';	# ports prefix
 
-    # Directory of the up-to-date INDEX/INDEX-5, or "CVS" if the HEAD
-    # version from the CVS repository should be used
+    # Directory of the up-to-date INDEX/INDEX-5
     $portsDatabaseHeadDir = "/usr/local/www/ports";
 
     # Ports database file to use
     $ports_database = 'INDEX';
-    # unset $ENV{'CVSROOT'};
-
-    @cvscmd = ('cvs', '-Q', '-R', '-d', $cvsroot);
 
     # URL of ports tree for browsing
     $remotePrefixFtp = 'ports';
@@ -67,6 +57,7 @@ sub init_variables {
     local($pia64) = 'ftp://ftp.FreeBSD.org/pub/FreeBSD/ports/ia64';
     local($psparc64) = 'ftp://ftp.FreeBSD.org/pub/FreeBSD/ports/sparc64';
 
+    # XXX this now only serves for Package link, head INDEX is always checked
     $remotePrefixFtpPackagesDefault = '5-STABLE/i386';
     %remotePrefixFtpPackages =
 	(
@@ -149,33 +140,10 @@ sub init_variables {
 
 # Parse selected version string and set version dependend settings
 sub parse_release {
-    if($release =~ /^(\d+)-(CURRENT|STABLE)\/(i386|alpha|ia64|sparc64|amd64)$/) {
-	$release_major = $1;
-	$release_type = $2;
-	$release_arch = $3;
-    } elsif($release =~ /^(\d+)\.(\d+)(\.(\d+))?-(CURRENT|STABLE|RELEASE)\/(i386|alpha|ia64|sparc64|amd64)$/) {
-	$release_major = $1;
-	$release_minor = $2;
-	$release_patch = $4;
-	if($release_patch eq "") {
-	    $release_patch = "0";
-	}
-	$release_type = $5;
-	$release_arch = $6;
-	if($release_type eq "RELEASE") {
-	    $release_tag = "RELEASE_" . $release_major . "_" . $release_minor .
-		"_" . $release_patch;
-	}
-    } else {
-	&header;
-	print "Internal error: Could not parse release string ('$release')<br><br>\n";
-	&footer; &footer2; &exit(0);
-    }
 
-    if($release_major > 4) {
-	$packageExt = 'tbz';
-	$ports_database = 'INDEX-5';
-    }
+    # XXX this must go away. instead, check what we got and use it.
+    $packageExt = 'tbz';
+    $ports_database = 'INDEX-5';
 }
 
 
@@ -198,27 +166,7 @@ sub packages_exist {
 
 
 # return the date of the last ports database update
-sub last_update_cvs {
-    local($file) = "$cvsroot/ports/$ports_database,v";
-    local($date) = 'unknown';
-    local($filebasename) = $ports_database;
-
-    open(DB, $file) || do {
-	&warn("$file: $!\n"); &exit;
-    };
-    local($head);
-    while(<DB>) {
-	$head = $1 if (/^head\s+([0-9.]+);?\s*$/);
-	if (/^date/ && /^date\s+([0-9]+)\.([0-9]+)\.([0-9]+)\.([0-9]+)\.([0-9]+)\.([0-9]+);\s+/) {
-	    $date = ($1 < 100 ? $1 + 1900 : $1) . qq{-$2-$3 $4:$5:$6 UTC};
-	    last;
-	}
-    }
-    close DB;
-    return $date . " (" . $filebasename . " revision " . $head . ")";
-}
-
-sub last_update_file {
+sub last_update {
     local($file) = "$portsDatabaseHeadDir/$ports_database";
     local($modtime, $modtimestr);
 
@@ -230,14 +178,6 @@ sub last_update_file {
     }
 
     return $modtimestr;
-}
-
-sub last_update {
-    if ($portsDatabaseHeadDir eq "CVS") {
-	return &last_update_cvs;
-    } else {
-	return &last_update_file;
-    }
 }
 
 sub last_update_message {
@@ -290,37 +230,13 @@ sub env { defined($ENV{$_[0]}) ? $ENV{$_[0]} : undef; }
 sub exit { exit 0 };
 
 sub readindex {
-    local($date, *var, *msec) = @_;
-    local(@co) = ('co', '-p');
-    local($use_cvs) = 1;
+    local(*var, *msec) = @_;
     local($localportsdb) = "$portsDatabaseHeadDir/$ports_database";
-
-    if ($date =~ /^rev([1-9]+\.[0-9]+)$/ ||
-	$date =~ /^(RELEASE_\d+_\d+_\d+)$/) {
-	# diff by revision
-	push(@co, ('-r', $1));
-    } elsif ($date eq "") {
-	# Get HEAD, no date or revision
-	if ($portsDatabaseHeadDir ne "CVS") {
-	    $use_cvs = 0;
-	}
-    } else {
-	# diff by date
-	push(@co, ('-D', $date));
-    }
-
-    push(@co, "ports/$ports_database");
-
-
     local(@tmp, @s);
 
-    if (!$use_cvs && -r $localportsdb) {
-	open(C, $localportsdb) || do {
-	    warn "Cannot open ports database $localportsdb: $!\n"; &exit;
-	};
-    } else {
-	open(C, "-|") || exec (@cvscmd, @co);
-    }
+    open(C, $localportsdb) || do {
+	warn "Cannot open ports database $localportsdb: $!\n"; &exit;
+    };
 
     while(<C>) {
 	next if $query && !/$query/oi;
@@ -338,7 +254,6 @@ sub readindex {
 
 # extract sub collections
 sub readcoll {
-    local(@co) = ('co', '-p', 'ports/INDEX');
 
     local(@a, @b, %key);
     local($file) = '../ports/categories';
@@ -362,8 +277,6 @@ sub readcoll {
 	    open(C, $localportsdb) || do {
 		warn "Cannot open ports database $localportsdb: $!\n"; &exit;
 	    }
-	} else {
-	    open(C, "-|") || exec (@cvscmd, @co);
 	}
 
 	while(<C>) {
@@ -477,12 +390,10 @@ sub out {
 	print qq[<A HREF="$url?$descfile">Description</A> <B>:</B>
 <A HREF="$pds?$pathB">Sources</A> <B>:</B>\n];
 
-	if (($release eq $remotePrefixFtpPackagesDefault &&
-	    $packages{"$version.tgz"}) ||
-	    $release ne $remotePrefixFtpPackagesDefault
-	    ) {
-	    print qq[<A HREF="$remotePrefixFtpPackages{$release}/$version.$packageExt">Package</A> <B>:</B>\n];
-	}
+	# XXX Some kind of list of available arch/rels should replace this
+	# once release pulldown goes away.
+	print qq[<A HREF="$remotePrefixFtpPackages{$release}/$version.$packageExt">Package</A> <B>:</B>\n];
+
 print qq[<A HREF="$l">Changes</A> <B>:</B>
 <A HREF="$pathDownload">Download</A>
 <p>
@@ -492,39 +403,6 @@ print qq[<A HREF="$l">Changes</A> <B>:</B>
 
 
 };
-
-# new/updated/removed ports output
-sub out_ports {
-
-    if ($type eq "new") {
-	foreach $key (sort keys %today) {
-	    if (!$past{$key}) {
-		if ($section eq "all" || $msec{"$key,$section"}) {
-		    &out($today{$key}, 0);
-		}
-	    }
-	}
-    } elsif ($type eq "removed") {
-	foreach $key (sort keys %past) {
-	    if (!$today{$key}) {
-		if ($section eq "all" || $msec{"$key,$section"}) {
-		    &out($past{$key}, 1);
-		}
-	    }
-	}
-    } else { # changed
-	foreach $key (sort keys %today) {
-	    if ($past{$key} && $past{$key} ne $today{$key}) {
-		@a = split(/\|/, $today{$key});
-		@b = split(/\|/, $past{$key});
-		next if $a[0] eq $b[0];
-		if ($section eq "all" || $msec{"$key,$section"}) {
-		    &out($today{$key}, 0);
-		}
-	    }
-	}
-    }
-}
 
 # search and output
 sub search_ports {
@@ -668,7 +546,7 @@ sub footer {
 <img ALIGN="RIGHT" src="/gifs/powerlogo.gif" alt="Powered by FreeBSD">
 &copy; 1996-2005 by Wolfram Schneider. All rights reserved.<br>
 };
-    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.82 2005/02/16 16:32:17 wosch Exp $} . "<br>\n";
+    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.83 2005/06/14 21:34:44 simon Exp $} . "<br>\n";
     print qq{Please direct questions about this service to
 <I><A HREF="$mailtoURL">$mailto</A></I><br>\n};
     print qq{General questions about FreeBSD ports should be sent to } .
@@ -820,16 +698,9 @@ $counter = 0;
 
 # search
 if ($query) {
-    &readindex($release_tag, *today, *msec);
+    &readindex(*today, *msec);
     $query =~ s/([^\w\^])/\\$1/g;
     &search_ports;
-}
-
-# ports changes
-else {
-    &readindex('today', *today, *msec);
-    &readindex($time, *past, *msec);
-    &out_ports;
 }
 
 if (!$counter) {
