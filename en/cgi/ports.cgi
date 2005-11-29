@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/ports.cgi,v 1.84 2005/11/29 20:39:37 pav Exp $
+# $FreeBSD: www/en/cgi/ports.cgi,v 1.85 2005/11/29 20:45:47 pav Exp $
 #
 # ports.cgi - search engine for FreeBSD ports
 #             	o search for a port by name or description
@@ -263,7 +263,7 @@ sub readcoll {
 	while(<C>) {
 	    chop;
 
-	    if (/^\s*\"([^\"]+)\"\s*,/) { #"
+	    if (/^\s*([^,]+),\s*"([^"]+)",\s*([A-Z]+)/) {
 		@b = split(/\s+/, $1);
 		foreach (@b) {
 		    if (!defined($key{$_})) {
@@ -416,6 +416,10 @@ sub search_ports {
 	$name = $a[0]; #$name =~ s/(\W)/\\$1/g;
 	$text = $a[3]; #$text =~ s/(\W)/\\$1/g;
 
+	if ($section ne "all") {
+	    next if $a[6] !~ /^$section(\s|$)/;
+	}
+
 	#warn "$stype:$query: $name $text\n";
 	if ($stype eq "name" && $name =~ /$query/o) {
 	    &out($today{$key}, 0);
@@ -484,43 +488,8 @@ Search for:
 	    (($_ eq $release) ? ' SELECTED ' : ' ') .
 		qq{VALUE=$_>$_</OPTION>\n};
     }
+
     print qq{</SELECT>
-<INPUT TYPE="submit" VALUE="Submit">
-</FORM>
-};
-
-    # Since we don't have frequent CVS versions of INDEX anymore it's
-    # not possible to make usable "new ports" listings based on INDEX.
-    print("<HR noshade>\n");
-    return;
-
-    print qq{<hr noshade>
-<p>
-"New" lists ports which are new in the ports collection or moved from
-another ports section. "Changed" lists updated ports.
-"Removed" lists ports which have been deleted from ports collections
-or moved to another ports section.
-
-<FORM METHOD="GET" ACTION="$script_name">
-<SELECT NAME="type">
-};
-
-    foreach ('new', 'changed', 'removed') {
-	print "<OPTION" . (($_ eq $type) ? ' SELECTED ' : ' ') .
-	    qq{VALUE="$_">$_</OPTION>\n};
-    }
-
-    print qq{</SELECT>\n\n<SELECT NAME="time">\n};
-    foreach ("1 week ago", "2 week ago", "3 week ago", "4 week ago",
-	     "6 week ago", "8 week ago", "3 month ago", "4 month ago",
-	     "6 month ago", "9 month ago", "12 month ago", "24 month ago")
-    {
-	print "<OPTION" .
-	    (($_ eq $time) ? ' SELECTED ' : ' ') .
-		qq{VALUE="$_">$_</OPTION>\n};
-    }
-
-	print q{</SELECT>
 
 <SELECT NAME="sektion">
 <OPTION VALUE="all">All Sections</OPTION>
@@ -546,7 +515,7 @@ sub footer {
 <img ALIGN="RIGHT" src="/gifs/powerlogo.gif" alt="Powered by FreeBSD">
 &copy; 1996-2005 by Wolfram Schneider. All rights reserved.<br>
 };
-    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.84 2005/11/29 20:39:37 pav Exp $} . "<br>\n";
+    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.85 2005/11/29 20:45:47 pav Exp $} . "<br>\n";
     print qq{Please direct questions about this service to
 <I><A HREF="$mailtoURL">$mailto</A></I><br>\n};
     print qq{General questions about FreeBSD ports should be sent to } .
