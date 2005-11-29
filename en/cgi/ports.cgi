@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/ports.cgi,v 1.83 2005/06/14 21:34:44 simon Exp $
+# $FreeBSD: www/en/cgi/ports.cgi,v 1.84 2005/11/29 20:39:37 pav Exp $
 #
 # ports.cgi - search engine for FreeBSD ports
 #             	o search for a port by name or description
@@ -58,42 +58,42 @@ sub init_variables {
     local($psparc64) = 'ftp://ftp.FreeBSD.org/pub/FreeBSD/ports/sparc64';
 
     # XXX this now only serves for Package link, head INDEX is always checked
-    $remotePrefixFtpPackagesDefault = '5-STABLE/i386';
+    $remotePrefixFtpPackagesDefault = '6-STABLE/i386';
     %remotePrefixFtpPackages =
 	(
-	 '6-CURRENT/i386', "$p/packages-6-current/All",
+	 '7-CURRENT/i386', "$p/packages-7-current/All",
+	 '6-STABLE/i386', " $p/packages-6-stable/All",
 	 '5-STABLE/i386', " $p/packages-5-stable/All",
 	 '4-STABLE/i386', " $p/packages-4-stable/All",
 
-	 '5.3-RELEASE/i386', "$p/packages-5.3-release/All",
-	 '5.2.1-RELEASE/i386', "$p/packages-5.2.1-release/All",
-	 '4.10-RELEASE/i386',"$p/packages-4.10-release/All",
+	 '6.0-RELEASE/i386', "$p/packages-6.0-release/All",
+	 '5.4-RELEASE/i386', "$p/packages-5.4-release/All",
+	 '4.11-RELEASE/i386',"$p/packages-4.11-release/All",
 
-	 '6-CURRENT/alpha', "$palpha/packages-6-current/All",
-	 '5-STABLE/alpha', "$palpha/packages-5-stable/All",
 	 '4-STABLE/alpha', "$palpha/packages-4-stable/All",
 
-	 '5.3-RELEASE/alpha', "$palpha/packages-5.3-release/All",
- 	 '5.2.1-RELEASE/alpha', "$palpha/packages-5.2.1-release/All",
-	 '4.10-RELEASE/alpha',"$palpha/packages-4.10-release/All",
+	 '5.4-RELEASE/alpha', "$palpha/packages-5.4-release/All",
+	 '4.11-RELEASE/alpha',"$palpha/packages-4.11-release/All",
 
-	 '6-CURRENT/amd64', "$pamd64/packages-6-current/All",
+	 '7-CURRENT/amd64', "$pamd64/packages-7-current/All",
+	 '6-STABLE/amd64', "$pamd64/packages-6-stable/All",
 	 '5-STABLE/amd64', "$pamd64/packages-5-stable/All",
 
- 	 '5.3-RELEASE/amd64', "$pamd64/packages-5.3-release/All",
- 	 '5.2.1-RELEASE/amd64', "$pamd64/packages-5.2.1-release/All",
+	 '6.0-RELEASE/amd64', "$pamd64/packages-6.0-release/All",
+	 '5.4-RELEASE/amd64', "$pamd64/packages-5.4-release/All",
 
-	 '6-CURRENT/ia64', "$pia64/packages-6-current/All",
-	 '5-STABLE/ia64', "$pia64/packages-5-stable/All",
+	 '7-CURRENT/ia64', "$pia64/packages-7-current/All",
+	 '6-STABLE/ia64', "$pia64/packages-6-stable/All",
 
-	 '5.3-RELEASE/ia64', "$pia64/packages-5.3-release/All",
-	 '5.2.1-RELEASE/ia64', "$pia64/packages-5.2.1-release/All",
+	 '6.0-RELEASE/ia64', "$pia64/packages-6.0-release/All",
+	 '5.4-RELEASE/ia64', "$pia64/packages-5.4-release/All",
 
-	 '6-CURRENT/sparc64', "$psparc64/packages-6-current/All",
+	 '7-CURRENT/sparc64', "$psparc64/packages-7-current/All",
+	 '6-STABLE/sparc64', "$psparc64/packages-6-stable/All",
 	 '5-STABLE/sparc64', "$psparc64/packages-5-stable/All",
 
-	 '5.3-RELEASE/sparc64', "$psparc64/packages-5.3-release/All",
-	 '5.2.1-RELEASE/sparc64', "$psparc64/packages-5.2.1-release/All",
+	 '6.0-RELEASE/sparc64', "$psparc64/packages-6.0-release/All",
+	 '5.4-RELEASE/sparc64', "$psparc64/packages-5.4-release/All",
 	);
 
     $remotePrefixHtml =
@@ -546,7 +546,7 @@ sub footer {
 <img ALIGN="RIGHT" src="/gifs/powerlogo.gif" alt="Powered by FreeBSD">
 &copy; 1996-2005 by Wolfram Schneider. All rights reserved.<br>
 };
-    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.83 2005/06/14 21:34:44 simon Exp $} . "<br>\n";
+    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.84 2005/11/29 20:39:37 pav Exp $} . "<br>\n";
     print qq{Please direct questions about this service to
 <I><A HREF="$mailtoURL">$mailto</A></I><br>\n};
     print qq{General questions about FreeBSD ports should be sent to } .
