@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 
-<!-- $FreeBSD: www/share/sgml/templates.usergroups.xsl,v 1.3 2005/10/04 17:18:41 hrs Exp $ -->
+<!-- $FreeBSD: www/share/sgml/templates.usergroups.xsl,v 1.4 2005/11/06 17:21:28 hrs Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS"
@@ -9,7 +9,7 @@
   <xsl:import href="includes.xsl" />
   <xsl:variable name="section" select="'community'"/>
 
-  <xsl:output method="xml"
+  <xsl:output method="xml" encoding="iso8859-1"
     doctype-system="http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"
     doctype-public="-//W3C//DTD XHTML 1.0 Transitional//EN"/>
 
