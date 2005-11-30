@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/ports/Makefile,v 1.43 2005/11/30 22:41:54 pav Exp $
+# $FreeBSD: www/en/ports/Makefile,v 1.44 2005/11/30 22:43:47 pav Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -56,7 +56,11 @@ Makefile.gen: index.sgml .NOTMAIN
 	${ECHO_CMD} NO_TIDY=${NO_TIDY} >> Makefile.gen
 .endif
 
+.if defined(CLUSTER_MACHINE)
 PORTS_TARGZ_URL?= ftp://ftp-master.FreeBSD.org/pub/FreeBSD/ports/ports/ports.tar.gz
+.else
+PORTS_TARGZ_URL?= ftp://ftp.FreeBSD.org/pub/FreeBSD/ports/ports/ports.tar.gz
+.endif
 
 ports.size:
 .if defined (NOPORTSNET)
