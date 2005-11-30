@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/index.xsl,v 1.137 2005/10/12 19:25:12 murray Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.138 2005/11/06 17:21:28 hrs Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -6,7 +6,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.137 2005/10/12 19:25:12 murray Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.138 2005/11/06 17:21:28 hrs Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <!-- these params should be externally bound. The values
@@ -69,7 +69,7 @@
 				  Based on BSD UNIX&#174;
 				</h1>
 				<p>
-				  FreeBSD is an advanced operating system for x86 compatible (including Pentium&#174; and Athlon &#8482;), amd64 compatible (including Opteron &#8482;, Athlon 64, and EM64T), Alpha/AXP, IA-64, PC-98 and UltraSPARC&#174; architectures. It is derived from BSD, the version of UNIX&#174; developed at the University of California, Berkeley. It is developed and maintained by a <a href="{$base}/doc/en_US.ISO8859-1/articles/contributors/index.html">large team of individuals</a>. Additional <a href="{$base}/platforms/">platforms</a> are in various stages of development.
+				  FreeBSD is an advanced operating system for x86 compatible (including Pentium&#174; and Athlon&#8482;), amd64 compatible (including Opteron&#8482;, Athlon 64, and EM64T), Alpha/AXP, IA-64, PC-98 and UltraSPARC&#174; architectures. It is derived from BSD, the version of UNIX&#174; developed at the University of California, Berkeley. It is developed and maintained by a <a href="{$base}/doc/en_US.ISO8859-1/articles/contributors/index.html">large team of individuals</a>. Additional <a href="{$base}/platforms/">platforms</a> are in various stages of development.
 				</p>
 				<div id="TXTFRONTFEATURELINK">
 				&#187;<a href="{$base}/about.html" title="Learn More">Learn More</a>
@@ -133,7 +133,7 @@
 					<a href="{$base}/ru/" title="Russian">ru</a>
 				  </li>
 				</ul>
-			</div> <!-- languagenav -->
+			</div> <!-- LANGUAGENAV -->
 
 			<div id="MIRROR">
 			  <form action="{$cgibase}/mirror.cgi" method="get">
@@ -211,8 +211,8 @@
 			  </div> <!-- unnamed -->
 			</div> <!-- newseventswrap -->
 
-            	   </div> <!-- frontnewscontent -->
-            	</div> <!-- frontnews -->
+            	   </div> <!-- FRONTNEWSCONTENT -->
+            	</div> <!-- FRONTNEWS -->
             	<div class="frontseparator"><b style="display: none">.</b></div>
             	<div id="FRONTEVENTS">
 		   <div id="FRONTEVENTSCONTENT" class="txtnewsevent">
@@ -235,7 +235,7 @@
 			  </div> <!-- unnamed -->
 			</div> <!-- newseventswrap -->
 
-		   </div> <!-- FRONTNEWSEVENTS -->
+		   </div> <!-- FRONTEVENTSCONTENT -->
             	</div> <!-- FRONTEVENTS -->
             	<div class="frontseparator"><b style="display: none">.</b></div>
             	<div id="FRONTMEDIA">
