@@ -1,7 +1,7 @@
 <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
   <xsl:import href="../../includes.xsl"/>
   <xsl:import href="includes.xsl"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/platforms/ia64/todo.xsl,v 1.4 2005/10/04 19:43:49 hrs Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/platforms/ia64/todo.xsl,v 1.5 2005/10/15 08:53:59 blackend Exp $'"/>
   <xsl:variable name="section" select="'developers'"/>
   <xsl:output doctype-public="-//W3C//DTD HTML 4.01 Transitional//EN"
     encoding="iso-8859-1" method="html"/>
@@ -11,14 +11,14 @@
 
       <body xsl:use-attribute-sets="att.body">
 
-	<div id="containerwrap">
-	  <div id="container">
+	<div id="CONTAINERWRAP">
+	  <div id="CONTAINER">
 	    <xsl:copy-of select="$header2"/>
 
-	    <div id="content">
+	    <div id="CONTENT">
 	      <xsl:copy-of select="$sidenav"/>
 
-	      <div id="contentwrap">
+	      <div id="CONTENTWRAP">
 		<xsl:copy-of select="$header3"/>
 		<img align="right" alt="Montecito die" src="montecito-die.png"/>
 
@@ -131,13 +131,13 @@
 	  </li>
 	</ul>
 
-	      </div> <!-- contentwrap -->
+	      </div> <!-- CONTENTWRAP -->
 
 	      <br class="clearboth" />
-	    </div> <!-- content -->
+	    </div> <!-- CONTENT -->
 	<xsl:copy-of select="$footer"/>
-	  </div> <!-- container -->
-	</div> <!-- containerwrap -->
+	  </div> <!-- CONTAINER -->
+	</div> <!-- CONTAINERWRAP -->
       </body>
     </html>
   </xsl:template>

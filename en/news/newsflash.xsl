@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/en/news/newsflash.xsl,v 1.13 2005/03/24 23:08:47 jcamou Exp $ -->
+<!-- $FreeBSD: www/en/news/newsflash.xsl,v 1.14 2005/10/04 06:22:24 murray Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -27,16 +27,16 @@
 
       <body xsl:use-attribute-sets="att.body">
 
-  <div id="containerwrap">
-    <div id="container">
+  <div id="CONTAINERWRAP">
+    <div id="CONTAINER">
 
 	<xsl:copy-of select="$header2"/>
 
-	<div id="content">
+	<div id="CONTENT">
 
 	      <xsl:copy-of select="$sidenav"/>
 
-	      <div id="contentwrap">
+	      <div id="CONTENTWRAP">
 	      
 	      <xsl:copy-of select="$header3"/>
 
@@ -86,15 +86,15 @@
 
 	<xsl:copy-of select="$newshome"/>
 	
-	  	</div> <!-- contentwrap -->
+	  	</div> <!-- CONTENTWRAP -->
 		<br class="clearboth" />
 	
-	</div> <!-- content -->
+	</div> <!-- CONTENT -->
 	
 	<xsl:copy-of select="$footer"/>
 	
-        </div> <!-- container -->
-   </div> <!-- containerwrap -->
+        </div> <!-- CONTAINER -->
+   </div> <!-- CONTAINERWRAP -->
 	
       </body>
     </html>
