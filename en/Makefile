@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/Makefile,v 1.132 2005/10/07 14:15:48 ceri Exp $
+# $FreeBSD: www/en/Makefile,v 1.133 2005/10/30 15:52:46 blackend Exp $
 
 .if exists(Makefile.conf)
 .include "Makefile.conf"
@@ -9,21 +9,21 @@
 
 # These are turned into validated, normalized HTML files.
 
-DOCS=  applications.sgml
-DOCS+= about.sgml
+DOCS=  about.sgml
+DOCS+= applications.sgml
 DOCS+= art.sgml
 DOCS+= availability.sgml
 DOCS+= community.sgml
-DOCS+= docs.sgml 
+DOCS+= docs.sgml
 DOCS+= features.sgml
-DOCS+= internet.sgml 
-DOCS+= mailto.sgml 
+DOCS+= internet.sgml
+DOCS+= mailto.sgml
 DOCS+= publish.sgml
 DOCS+= relnotes.sgml
 DOCS+= send-pr.sgml
 DOCS+= support.sgml
-DOCS+= where.sgml 
-DOCS+= y2kbug.sgml 
+DOCS+= where.sgml
+DOCS+= y2kbug.sgml
 
 XMLDOCS=	index:xsl:${XML_NEWS_NEWS}:
 DEPENDSET.index=transtable mirrors news press events \
@@ -58,7 +58,6 @@ SUBDIR+= handbook
 SUBDIR+= internal
 SUBDIR+= java
 SUBDIR+= kse
-SUBDIR+= layout
 SUBDIR+= marketing
 SUBDIR+= news
 SUBDIR+= platforms
