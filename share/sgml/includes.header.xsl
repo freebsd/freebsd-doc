@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/share/sgml/includes.header.xsl,v 1.9 2005/10/14 09:12:17 ale Exp $ -->
+<!-- $FreeBSD: www/share/sgml/includes.header.xsl,v 1.10 2005/11/06 17:21:28 hrs Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -46,6 +46,7 @@
   
   <xsl:variable name="header2">
             <span class="txtoffscreen"><a href="#CONTENT" title="Skip site navigation" accesskey="1">Skip site navigation</a> (1)</span>
+            <xsl:text> </xsl:text> 
             <span class="txtoffscreen"><a href="#CONTENTWRAP" title="Skip section navigation" accesskey="2">Skip section navigation</a> (2)</span>
             <div id="HEADERCONTAINER">
       
