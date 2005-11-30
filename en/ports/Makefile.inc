@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/ports/Makefile.inc,v 1.6 2001/06/14 03:09:56 dd Exp $
+# $FreeBSD: www/en/ports/Makefile.inc,v 1.7 2005/11/15 10:09:26 osa Exp $
 
 PORTINDEX=	${PERL} ${.CURDIR}/portindex
 INDEX=		INDEX
@@ -6,7 +6,7 @@ PINDEX=		ports/${INDEX}
 
 COOKIE=		${INDEX} Makefile.gen
 
-CLEANFILES+=	${INDEX} 
+CLEANFILES+=	${INDEX} ${INDEX}.bz2
 CLEANFILES+=	packages.exists.temp  packages.exists
 CLEANFILES+= 	${DOCS} 
 CLEANFILES+=	Makefile.gen
