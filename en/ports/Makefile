@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/ports/Makefile,v 1.41 2005/10/18 12:24:12 edwin Exp $
+# $FreeBSD: www/en/ports/Makefile,v 1.42 2005/11/15 10:09:26 osa Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -30,23 +30,16 @@ ${INDEX}:
 	${FETCH} ${FETCH_OPT} ${INDEXURI}
 .endif
 
-# build the list of available packages only on the 
-# main FreeBSD machines
-hostname!= hostname
-
-#
-# don't build the packages links if NO_PACKAGES_LINK
-# is set and not empty.
-#
-# XXX: you can set NO_PACKAGES_LINK to your hostname to
-#      test the packages link generation
-#
-.if defined(NO_PACKAGES_LINK) && !empty(NO_PACKAGES_LINK)
-hostname=	${NO_PACKAGES_LINK}
+HOSTNAME!= hostname
+.if ${HOSTNAME} == "hub.freebsd.org" || ${HOSTNAME} == "freefall.freebsd.org" || ${HOSTNAME} == "www.freebsd.org"
+CLUSTER_MACHINE=	YES
 .endif
 
+# Build the list of available packages, but only on the main FreeBSD machines.
+# Don't build the list if NO_PACKAGES_LINK is set and not empty.
+#
 packages.exists:
-.if ${hostname} == "hub.freebsd.org" || ${hostname} == "freefall.freebsd.org" || ${hostname} == "www.freebsd.org"
+.if defined(CLUSTER_MACHINE) && (!defined(NO_PACKAGES_LINK) || empty(NO_PACKAGES_LINK))
 	@if ${SH} ${.CURDIR}/packages > ${.TARGET}.temp; then \
 		${MV} ${.TARGET}.temp ${.TARGET}; \
 	else \
