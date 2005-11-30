@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/ports/Makefile,v 1.42 2005/11/15 10:09:26 osa Exp $
+# $FreeBSD: www/en/ports/Makefile,v 1.43 2005/11/30 22:41:54 pav Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -27,7 +27,8 @@ ${INDEX}: $${PORTSBASE}/${PINDEX}
 	${CP} ${PORTSBASE}/${PINDEX} ${INDEX}
 .else
 ${INDEX}:
-	${FETCH} ${FETCH_OPT} ${INDEXURI}
+	${FETCH} ${FETCH_OPT} -o ${INDEX}.bz2 ${INDEXURI}.bz2
+	${BUNZIP2} ${INDEX}.bz2
 .endif
 
 HOSTNAME!= hostname
