@@ -1,5 +1,5 @@
 #!/usr/bin/perl -T
-# $FreeBSD: www/en/cgi/query-pr-summary.cgi,v 1.52 2005/10/19 15:47:38 fenner Exp $
+# $FreeBSD: www/en/cgi/query-pr-summary.cgi,v 1.53 2005/11/17 04:43:38 fenner Exp $
 
 sub escape($) { $_ = $_[0]; s/&/&amp;/g; s/</&lt;/g; s/>/&gt;/g; $_; }
 
@@ -670,12 +670,12 @@ print qq`</select></td>
 <td><b>Release</b>:</td>
 <td><select name='release'>
 <option selected='selected' value=''>Any</option>
-<option value='^FreeBSD [2345]'>Pre-6.x</option>
-<option value='^FreeBSD 6'>6.x only</option>
-<option value='^FreeBSD 5'>5.x only</option>
-<option value='^FreeBSD 4'>4.x only</option>
-<option value='^FreeBSD 3'>3.x only</option>
-<option value='^FreeBSD 2'>2.x only</option>
+<option value='^FreeBSD [2345]'>Pre-6.X</option>
+<option value='^FreeBSD 6'>6.X only</option>
+<option value='^FreeBSD 5'>5.X only</option>
+<option value='^FreeBSD 4'>4.X only</option>
+<option value='^FreeBSD 3'>3.X only</option>
+<option value='^FreeBSD 2'>2.X only</option>
 </select></td>
 </tr>
 </table>
