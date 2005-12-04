@@ -52,7 +52,7 @@
 #
 #     _________________________________________________________________
 #
-# $FreeBSD: www/en/cgi/missing_handler.cgi,v 1.16 2004/04/05 14:46:16 phantom Exp $
+# $FreeBSD: www/en/cgi/missing_handler.cgi,v 1.17 2005/12/04 21:15:34 simon Exp $
 # ----------------------------------------------------------------------
 
 sub escape($) { $_ = $_[0]; s/&/&amp;/g; s/</&lt;/g; s/>/&gt;/g; $_; }
@@ -85,46 +85,35 @@ require './cgi-style.pl';
 print &html_header($title);
 
 # HTML body
-print qq[The file <blockquote><b>
+print qq[<p>The file</p>
+<blockquote><b>
 http://$http_host$redirect_url
 </b></blockquote>
-does not exist at this server.\n];
+<p>does not exist at this server.</p>\n];
 
 if ($http_referer) {
-    print qq{You are coming from
+    print qq{<p>You are coming from</p>
 <blockquote>
 <a href="$http_referer_url">$http_referer</a>.
 </blockquote>
-<p>\n};
+\n};
 }
 
-print qq[
+print qq[<p>
 The closest match to your request is
 <a href="http://$server_name">http://$server_name</a>.
 
 Please contact the members of the
-FreeBSD Documentation Project &lt;<A HREF="mailto:freebsd-doc\@FreeBSD.org?subject=Document%20not%20found%20-%20http://$http_host$redirect_url_save&body=$http_referer_url">freebsd-doc\@FreeBSD.org</A>&gt;
+FreeBSD Documentation Project &lt;<a href="mailto:freebsd-doc\@FreeBSD.org?subject=Document%20not%20found%20-%20http://$http_host$redirect_url_save&amp;body=$http_referer_url">freebsd-doc\@FreeBSD.org</a>&gt;
 or the server administrator
-<a href="mailto:$server_admin?subject=Document%20not%20found%20-%20http://$http_host$redirect_url_save&body=$http_referer_url">$server_admin</a>.<p>
+<a href="mailto:$server_admin?subject=Document%20not%20found%20-%20http://$http_host$redirect_url_save&amp;body=$http_referer_url">$server_admin</a>.</p>
 
-<center>
-Please try our
+<p>Please try our
 <a href="http://www.FreeBSD.org/search/index-site.html">Site Map</a> or
 <a href="http://www.FreeBSD.org/search/search.html">Search Page</a>
-</center>
-<p>
+</p>
 
-<center>
-<form action="http://www.FreeBSD.org/cgi/search.cgi" method="GET">
-<input type="TEXT" name="words" size="25">
-<input type="hidden" name="source" value="www">
-<input type="hidden" name="max" value="60">
-<input type="SUBMIT" value="Search">
-
-</form>
-</center>
-<p>
-Thank you very much!<p>
+<p>Thank you very much!</p>
 ];
 
 print&html_footer;
