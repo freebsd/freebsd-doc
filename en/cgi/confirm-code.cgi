@@ -1,6 +1,6 @@
 #!/usr/bin/perl -T
 #
-# $FreeBSD: www/en/cgi/confirm-code.cgi,v 1.5 2005/11/11 08:58:06 ceri Exp $
+# $FreeBSD: www/en/cgi/confirm-code.cgi,v 1.6 2005/12/04 16:18:40 ceri Exp $
 #
 # Copyright (c) 2003 Eric Anderson
 # Copyright (c) 2005 Ceri Davies <ceri@FreeBSD.org>
@@ -8,6 +8,7 @@
 use DB_File;
 use Fcntl qw(:DEFAULT :flock);
 use POSIX qw(strftime);
+use strict;
 
 require 'cgi-lib.pl';
 
@@ -16,6 +17,8 @@ $ENV{"TMPDIR"} = "/tmp";
 
 my($fd, $db_obj, %db_hash, $currenttime, $randomcode, $pngbindata, $randompick, $pnmlist, $i);
 my(%db, $expiretime, $rfc1123_expiry, $pnmcat, $pnmtopng, $pnmdatadir, $dbpath, $FORM_db);
+# %in cannot be declared with 'my', or ReadParse fails.
+use vars qw/ %in /;
 
 ############################################
 # generate 8 character code from A-Z0-9 (no I,O,0,1 for clarity)
