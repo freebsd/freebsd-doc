@@ -5,7 +5,7 @@ PINDEX=		ports/${INDEX}
 
 COOKIE=		${INDEX} Makefile.gen
 
-CLEANFILES+=	${INDEX} 
+CLEANFILES+=	${INDEX} ${INDEX}.bz2
 CLEANFILES+=	packages.exists.temp  packages.exists
 CLEANFILES+= 	${DOCS} 
 CLEANFILES+=	Makefile.gen

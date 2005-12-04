@@ -1,4 +1,4 @@
-# $FreeBSD: www/ja/ports/Makefile,v 1.26 2004/11/01 06:36:22 rushani Exp $
+# $FreeBSD: www/ja/ports/Makefile,v 1.27 2004/11/13 12:23:19 ceri Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.37
 
@@ -22,7 +22,8 @@ ${INDEX}: $${PORTSBASE}/${PINDEX}
 	${CP} ${PORTSBASE}/${PINDEX} ${INDEX}
 .else
 ${INDEX}:
-	${FETCH} ${FETCH_OPT} ${INDEXURI}
+	${FETCH} ${FETCH_OPT} -o ${INDEX}.bz2 ${INDEXURI}.bz2
+	${BUNZIP2} ${INDEX}.bz2
 .endif
 
 # build the list of available packages only on the 
