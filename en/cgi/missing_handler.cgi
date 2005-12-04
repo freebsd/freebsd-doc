@@ -36,30 +36,30 @@
 # missing_handler.cgi message:
 # ----------------------------------------------------------------------
 #                       FreeBSD.org - Document not found
-#                                       
+#
 #   The file
-#   
+#
 #      http://www.FreeBSD.org/~wosch/test/bla
-#     
+#
 #   does not exist at this server. You are coming from
-#   
+#
 #      http://www.FreeBSD.org/~wosch/test/error.html.
-#     
+#
 #   The closest match to your request is http://www.FreeBSD.org.
 #   Please contact the server administrator wosch@FreeBSD.org.
-#   
+#
 #   Thank you very much!
 #
 #     _________________________________________________________________
-#                                      
-# $FreeBSD: www/en/cgi/missing_handler.cgi,v 1.15 2004/04/04 21:49:38 phantom Exp $
+#
+# $FreeBSD: www/en/cgi/missing_handler.cgi,v 1.16 2004/04/05 14:46:16 phantom Exp $
 # ----------------------------------------------------------------------
 
 sub escape($) { $_ = $_[0]; s/&/&amp;/g; s/</&lt;/g; s/>/&gt;/g; $_; }
 sub escape2($) { $_ = $_[0]; s/</&lt;/g; s/>/&gt;/g; $_; }
 
 # output title
-$title = $ENV{'MISSING_HANDLER_TITLE'} || 
+$title = $ENV{'MISSING_HANDLER_TITLE'} ||
     'FreeBSD.org - Document not found';
 
 # footer message
@@ -91,7 +91,7 @@ http://$http_host$redirect_url
 does not exist at this server.\n];
 
 if ($http_referer) {
-    print qq{You are coming from 
+    print qq{You are coming from
 <blockquote>
 <a href="$http_referer_url">$http_referer</a>.
 </blockquote>
@@ -99,18 +99,18 @@ if ($http_referer) {
 }
 
 print qq[
-The closest match to your request is 
+The closest match to your request is
 <a href="http://$server_name">http://$server_name</a>.
 
 Please contact the members of the
-FreeBSD Documentation Project &lt;<A HREF="mailto:freebsd-doc\@FreeBSD.org?subject=Document%20not%20found%20-%20http://$http_host$redirect_url_save&body=$http_referer_url">freebsd-doc\@FreeBSD.org</A>&gt; 
+FreeBSD Documentation Project &lt;<A HREF="mailto:freebsd-doc\@FreeBSD.org?subject=Document%20not%20found%20-%20http://$http_host$redirect_url_save&body=$http_referer_url">freebsd-doc\@FreeBSD.org</A>&gt;
 or the server administrator
 <a href="mailto:$server_admin?subject=Document%20not%20found%20-%20http://$http_host$redirect_url_save&body=$http_referer_url">$server_admin</a>.<p>
 
 <center>
-Please try our 
+Please try our
 <a href="http://www.FreeBSD.org/search/index-site.html">Site Map</a> or
-<a href="http://www.FreeBSD.org/search/search.html">Search Page</a> 
+<a href="http://www.FreeBSD.org/search/search.html">Search Page</a>
 </center>
 <p>
 
