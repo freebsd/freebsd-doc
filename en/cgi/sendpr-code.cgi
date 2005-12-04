@@ -1,18 +1,20 @@
 #!/usr/bin/perl -T
 #
-# $FreeBSD: www/en/cgi/sendpr-code.cgi,v 1.4 2004/12/13 22:43:05 ceri Exp $
+# $FreeBSD: www/en/cgi/sendpr-code.cgi,v 1.5 2005/11/11 08:58:06 ceri Exp $
 #
 # Copyright (c) 2003 Eric Anderson
+# Copyright (c) 2005 Ceri Davies <ceri@FreeBSD.org>
 
 use DB_File;
 use Fcntl qw(:DEFAULT :flock);
+use POSIX qw(strftime);
 use strict;
 
 $ENV{"PATH"} = "/bin:/usr/bin";
 $ENV{"TMPDIR"} = "/tmp";
 
 my($fd, $db_obj, %db_hash, $currenttime, $randomcode, $pngbindata, $randompick, $pnmlist, $i);
-my($expiretime, $pnmcat, $pnmtopng, $pnmdatadir, $dbpath);
+my($expiretime, $rfc1123_expiry, $pnmcat, $pnmtopng, $pnmdatadir, $dbpath);
 
 ############################################
 # generate 8 character code from A-Z0-9 (no I,O,0,1 for clarity)
@@ -27,6 +29,7 @@ $expiretime = 2700;		# seconds until code expires
 ############################################
 
 $currenttime = time();
+$rfc1123_expiry = strftime "%a, %b %d %H:%M:%S %Y %Z", gmtime($currenttime + $expiretime);
 
 # DB stuff here
 $db_obj = tie(%db_hash, 'DB_File', $dbpath, O_CREAT|O_RDWR, 0644)
@@ -65,6 +68,7 @@ $/ = "";
 open(BUILDPNG, "$pnmcat -lr $pnmlist | $pnmtopng 2>/dev/null |");
 $pngbindata = <BUILDPNG>;
 print "Pragma: no-cache\n";
+print "Expires: $rfc1123_expiry\n";
 print "Content-type: image/png\n\n";
 print "$pngbindata";
 close(BUILDPNG);
