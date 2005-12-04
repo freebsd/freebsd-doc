@@ -1,7 +1,7 @@
 #
 # The FreeBSD Russian Documentation Project
 #
-# $FreeBSD: www/ru/ports/Makefile,v 1.7 2004/03/23 23:04:23 phantom Exp $
+# $FreeBSD: www/ru/ports/Makefile,v 1.8 2004/11/13 12:23:19 ceri Exp $
 # $FreeBSDru: frdp/www/ru/ports/Makefile,v 1.9 2004/03/23 21:09:19 phantom Exp $
 #
 # Original revision: 1.36
@@ -24,7 +24,8 @@ ${INDEX}: $${PORTSBASE}/${PINDEX}
 	${CP} ${PORTSBASE}/${PINDEX} ${INDEX}
 .else
 ${INDEX}:
-	${FETCH} ${FETCH_OPT} ${INDEXURI} || (${RM} -f ${INDEX} && false)
+	${FETCH} ${FETCH_OPT} -o ${INDEX}.bz2 ${INDEXURI}.bz2
+	${BUNZIP2} ${INDEX}.bz2
 .endif
 
 # build the list of available packages only on the 
