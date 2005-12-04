@@ -1,6 +1,6 @@
 #!/usr/bin/perl -T
 #
-# $FreeBSD: www/en/cgi/confirm-code.cgi,v 1.7 2005/12/04 16:36:51 ceri Exp $
+# $FreeBSD: www/en/cgi/confirm-code.cgi,v 1.8 2005/12/04 22:25:20 simon Exp $
 #
 # Copyright (c) 2003 Eric Anderson
 # Copyright (c) 2005 Ceri Davies <ceri@FreeBSD.org>
@@ -10,7 +10,7 @@ use Fcntl qw(:DEFAULT :flock);
 use POSIX qw(strftime);
 use strict;
 
-require 'cgi-lib.pl';
+require './cgi-lib.pl';
 
 $ENV{"PATH"} = "/bin:/usr/bin";
 $ENV{"TMPDIR"} = "/tmp";
