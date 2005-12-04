@@ -1,6 +1,6 @@
 #!/usr/bin/perl -T
 #
-# $FreeBSD: www/en/cgi/confirm-code.cgi,v 1.6 2005/12/04 16:18:40 ceri Exp $
+# $FreeBSD: www/en/cgi/confirm-code.cgi,v 1.7 2005/12/04 16:36:51 ceri Exp $
 #
 # Copyright (c) 2003 Eric Anderson
 # Copyright (c) 2005 Ceri Davies <ceri@FreeBSD.org>
@@ -38,11 +38,11 @@ $expiretime = 0;	# Default for the Expires: header
 %db = (
 # The querypr one is not used, but stands as an example.
 #	querypr => {
-#		path => '/tmp/querypr-code.db',
+#		path => '/usr/local/www/var/confirm-code/querypr-code.db',
 #		lifespan => 2700,
 #	},
 	sendpr => {
-		path => '/tmp/sendpr-code.db',
+		path => '/usr/local/www/var/confirm-code/sendpr-code.db',
 		lifespan => 2700,
 	},
 );
