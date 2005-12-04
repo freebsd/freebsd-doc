@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/cgi/Makefile,v 1.27 2005/11/06 22:29:45 ceri Exp $
+# $FreeBSD: www/en/cgi/Makefile,v 1.28 2005/12/04 12:50:17 ceri Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -19,6 +19,7 @@ DATA+=	ftp.mirrors
 DATA+=	html.pl
 
 CGI=
+CGI+=	confirm-code.cgi
 CGI+=	cvsweb.cgi
 CGI+=	dosendpr.cgi
 CGI+=	ftp.cgi
@@ -35,7 +36,6 @@ CGI+=	ports.cgi
 CGI+=	query-pr.cgi
 CGI+=	query-pr-summary.cgi
 CGI+=	search.cgi
-CGI+=	sendpr-code.cgi
 CGI+=	url.cgi
 
 .SUFFIXES:	.C .cgi

@@ -1,18 +1,21 @@
 #!/usr/bin/perl -T
 #
-# $FreeBSD: www/en/cgi/confirm-code.cgi,v 1.4 2004/12/13 22:43:05 ceri Exp $
+# $FreeBSD: www/en/cgi/confirm-code.cgi,v 1.5 2005/11/11 08:58:06 ceri Exp $
 #
 # Copyright (c) 2003 Eric Anderson
+# Copyright (c) 2005 Ceri Davies <ceri@FreeBSD.org>
 
 use DB_File;
 use Fcntl qw(:DEFAULT :flock);
-use strict;
+use POSIX qw(strftime);
+
+require 'cgi-lib.pl';
 
 $ENV{"PATH"} = "/bin:/usr/bin";
 $ENV{"TMPDIR"} = "/tmp";
 
 my($fd, $db_obj, %db_hash, $currenttime, $randomcode, $pngbindata, $randompick, $pnmlist, $i);
-my($expiretime, $pnmcat, $pnmtopng, $pnmdatadir, $dbpath);
+my(%db, $expiretime, $rfc1123_expiry, $pnmcat, $pnmtopng, $pnmdatadir, $dbpath, $FORM_db);
 
 ############################################
 # generate 8 character code from A-Z0-9 (no I,O,0,1 for clarity)
@@ -22,52 +25,81 @@ my @availchars = qw(A B C D E F G H J K L M N P Q R S T U V W X Y Z
 $pnmcat = "/usr/local/bin/pnmcat";
 $pnmtopng = "/usr/local/bin/pnmtopng";
 $pnmdatadir = "../gifs/";
-$dbpath = "/tmp/sendpr-code.db";
-$expiretime = 2700;		# seconds until code expires
+$expiretime = 0;	# Default for the Expires: header
 ############################################
 
+# The code databases that we know about.  If a query comes in for
+# anything else, we return a zero byte "image" (rather than an image
+# with a rude word in, which was tempting).
+
+%db = (
+# The querypr one is not used, but stands as an example.
+#	querypr => {
+#		path => '/tmp/querypr-code.db',
+#		lifespan => 2700,
+#	},
+	sendpr => {
+		path => '/tmp/sendpr-code.db',
+		lifespan => 2700,
+	},
+);
+
+&ReadParse(*in);
+$FORM_db = $in{"db"}; $FORM_db ||= "junk";
+
 $currenttime = time();
+$rfc1123_expiry = strftime "%a, %b %d %H:%M:%S %Y %Z",
+	gmtime($currenttime + $expiretime);
 
-# DB stuff here
-$db_obj = tie(%db_hash, 'DB_File', $dbpath, O_CREAT|O_RDWR, 0644)
+if (exists($db{$FORM_db})) {
+	$dbpath = $db{$FORM_db}->{'path'};
+	$expiretime = $db{$FORM_db}->{'lifespan'};
+
+	# DB stuff here
+	$db_obj = tie(%db_hash, 'DB_File', $dbpath, O_CREAT|O_RDWR, 0644)
                     or die "dbcreate $dbpath $!";
-$fd = $db_obj->fd;
-open(DB_FH, "+<&=$fd") or die "fdopen $!";
+	$fd = $db_obj->fd;
+	open(DB_FH, "+<&=$fd") or die "fdopen $!";
 
-unless (flock (DB_FH, LOCK_EX | LOCK_NB)) {
-    unless (flock (DB_FH, LOCK_EX)) { die "flock: $!" }
-}
-
-&gencode;
-
-while ($db_hash{$randomcode}) {
-	# it already exists so:
-	# we check age (over x seconds old?)
-	# if it is, override with new date
-	# if not, generate a new code
-	if ( ($currenttime - $expiretime) <= $db_hash{$randomcode}) {
-		&gencode;
-	} else {
-		delete $db_hash{"$randomcode"};
+	unless (flock (DB_FH, LOCK_EX | LOCK_NB)) {
+	    unless (flock (DB_FH, LOCK_EX)) { die "flock: $!" }
 	}
-}
 
-$db_hash{$randomcode} = $currenttime;
+	&gencode;
 
-$db_obj->sync();                   # to flush
-flock(DB_FH, LOCK_UN);
-undef $db_obj;                     # removing the last reference to the DB
-                                   # closes it. Closing DB_FH is implicit.
-untie %db_hash;
+	while ($db_hash{$randomcode}) {
+		# it already exists so:
+		# we check age (over x seconds old?)
+		# if it is, override with new date
+		# if not, generate a new code
+		if ( ($currenttime - $expiretime) <= $db_hash{$randomcode}) {
+			&gencode;
+		} else {
+			delete $db_hash{"$randomcode"};
+		}
+	}
 
-$/ = "";
+	$db_hash{$randomcode} = $currenttime;
 
-open(BUILDPNG, "$pnmcat -lr $pnmlist | $pnmtopng 2>/dev/null |");
-$pngbindata = <BUILDPNG>;
+	$db_obj->sync();                   # to flush
+	flock(DB_FH, LOCK_UN);
+	undef $db_obj;                     # removing the last reference to the DB
+	                                   # closes it. Closing DB_FH is implicit.
+	untie %db_hash;
+
+	$/ = "";
+
+	open(BUILDPNG, "$pnmcat -lr $pnmlist | $pnmtopng 2>/dev/null |");
+	$pngbindata = <BUILDPNG>;
+	close(BUILDPNG);
+} else {
+	$pngbindata = undef;
+};
+
 print "Pragma: no-cache\n";
+print "Expires: $rfc1123_expiry\n";
 print "Content-type: image/png\n\n";
 print "$pngbindata";
-close(BUILDPNG);
 
 ############################################
 sub gencode {
@@ -79,5 +111,4 @@ sub gencode {
 		$pnmlist .= "$pnmdatadir$randompick\.pnm ";
 	}
 }
-
 
