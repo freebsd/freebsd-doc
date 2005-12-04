@@ -8,7 +8,7 @@
 #  GNU General Public License Version 2.  
 #     (http://www.gnu.ai.mit.edu/copyleft/gpl.html)
 #
-# $FreeBSD: www/en/cgi/dosendpr.cgi,v 1.23 2005/11/06 22:07:23 ceri Exp $
+# $FreeBSD: www/en/cgi/dosendpr.cgi,v 1.24 2005/11/16 23:35:57 fenner Exp $
 
 require "html.pl";
 
@@ -23,7 +23,7 @@ my $blackhole_err = 0;
 my $openproxy;
 
 my $expiretime = 2700;
-$dbpath = "/tmp/sendpr-code.db";
+$dbpath = "/usr/local/www/var/confirm-code/sendpr-code.db";
 
 # Environment variables to stuff in the PR header.
 my @ENV_captures = qw/	REMOTE_HOST
