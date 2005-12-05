@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
 <!-- $FreeBSD$
-     $FreeBSDde: de-www/news/press.xsl,v 1.11 2005/10/21 18:51:44 jkois Exp $
-     basiert auf: 1.11
+     $FreeBSDde: de-www/news/press.xsl,v 1.12 2005/12/04 21:24:58 jkois Exp $
+     basiert auf: 1.12
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
@@ -40,16 +40,16 @@
 
             <body xsl:use-attribute-sets="att.body">
 
-        <div id="containerwrap">
-          <div id="container">
+        <div id="CONTAINERWRAP">
+          <div id="CONTAINER">
 
       	<xsl:copy-of select="$header2"/>
 
-      	<div id="content">
+      	<div id="CONTENT">
 
       	      <xsl:copy-of select="$sidenav"/>
 
-      	      <div id="contentwrap">
+      	      <div id="CONTENTWRAP">
 
 	      <xsl:copy-of select="$header3"/>
 
@@ -64,15 +64,15 @@
 	</xsl:call-template>
 
 	<xsl:copy-of select="$newshome"/>
-		</div> <!-- contentwrap -->
+		</div> <!-- CONTENTWRAP -->
 		<br class="clearboth" />
 
-	</div> <!-- content -->
+	</div> <!-- CONTENT -->
 
 	<xsl:copy-of select="$footer"/>
 
-	</div> <!-- container -->
-   </div> <!-- containerwrap -->
+	</div> <!-- CONTAINER -->
+   </div> <!-- CONTAINERWRAP -->
       </body>
     </html>
   </xsl:template>
