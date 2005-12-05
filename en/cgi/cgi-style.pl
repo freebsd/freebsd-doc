@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/cgi/cgi-style.pl,v 1.27 2005/11/29 22:57:21 pav Exp $
+# $FreeBSD: www/en/cgi/cgi-style.pl,v 1.28 2005/12/04 21:52:42 simon Exp $
 #
 # Perl routines to encapsulate various elements of HTML page style.
 
@@ -42,7 +42,7 @@ $i_topbar = qq`
         <span class="txtoffscreen"><a href="#content"
         title="Skip site navigation" accesskey="1">Skip site
         navigation</a> (1)</span><span class="txtoffscreen"><a
-        href="#contentwrap" title="Skip section navigation"
+        href="#content" title="Skip section navigation"
         accesskey="2">Skip section navigation</a> (2)</span>
 
         <div id="headercontainer">
