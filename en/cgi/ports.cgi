@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/ports.cgi,v 1.91 2005/11/29 23:24:52 pav Exp $
+# $FreeBSD: www/en/cgi/ports.cgi,v 1.92 2005/11/30 09:23:48 pav Exp $
 #
 # ports.cgi - search engine for FreeBSD ports
 #             	o search for a port by name or description
@@ -33,6 +33,10 @@ use POSIX qw(strftime);
 use Time::Local;
 
 require "./cgi-style.pl";
+$t_style = qq`<style type="text/css">
+h3 { font-size: 1.2em; border-bottom: thin solid black; }
+</style>
+`;
 
 sub init_variables {
     $localPrefix = '/usr/ports';	# ports prefix
@@ -480,7 +484,7 @@ sub footer {
 <img ALIGN="RIGHT" src="/gifs/powerlogo.gif" alt="Powered by FreeBSD">
 &copy; 1996-2005 by Wolfram Schneider. All rights reserved.<br>
 };
-    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.91 2005/11/29 23:24:52 pav Exp $} . "<br>\n";
+    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.92 2005/11/30 09:23:48 pav Exp $} . "<br>\n";
     print qq{Please direct questions about this service to
 <I><A HREF="$mailtoURL">$mailto</A></I><br>\n};
     print qq{General questions about FreeBSD ports should be sent to } .
