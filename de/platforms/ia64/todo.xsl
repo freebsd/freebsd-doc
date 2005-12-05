@@ -1,8 +1,8 @@
 <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 
 <!--
-  $FreeBSDde: de-www/platforms/ia64/todo.xsl,v 1.9 2005/11/06 12:48:05 jkois Exp $
-  basiert auf: 1.5
+  $FreeBSDde: de-www/platforms/ia64/todo.xsl,v 1.10 2005/12/04 21:24:58 jkois Exp $
+  basiert auf: 1.6
 -->
 
   <xsl:import href="../../includes.xsl"/>
@@ -19,14 +19,14 @@
 
       <body xsl:use-attribute-sets="att.body">
 
-	<div id="containerwrap">
-	  <div id="container">
+	<div id="CONTAINERWRAP">
+	  <div id="CONTAINER">
 	    <xsl:copy-of select="$header2"/>
 
-	    <div id="content">
+	    <div id="CONTENT">
 	      <xsl:copy-of select="$sidenav"/>
 
-	      <div id="contentwrap">
+	      <div id="CONTENTWRAP">
 		<xsl:copy-of select="$header3"/>
 
               <img align="right" alt="Montecito die" src="{$enbase}/platforms/ia64/montecito-die.png"/>
@@ -139,15 +139,15 @@
 	  </li>
 	</ul>
 
-		</div> <!-- contentwrap -->
+		</div> <!-- CONTENTWRAP -->
 		<br class="clearboth" />
 
-	</div> <!-- content -->
+	</div> <!-- CONTENT -->
 
 	<xsl:copy-of select="$footer"/>
 
-	</div> <!-- container -->
-   </div> <!-- containerwrap -->
+	</div> <!-- CONTAINER -->
+   </div> <!-- CONTAINERWRAP -->
 
       </body>
     </html>
