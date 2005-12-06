@@ -1,4 +1,4 @@
-# $FreeBSD: www/es/Makefile,v 1.18 2005/03/03 23:51:36 jcamou Exp $
+# $FreeBSD: www/es/Makefile,v 1.19 2005/10/04 07:56:16 murray Exp $
 # $FreeBSDes: www/es/Makefile,v 1.3 2004/09/07 21:43:32 jcamou Exp $
 
 .if exists(Makefile.conf)
@@ -14,6 +14,7 @@ DOCS=  about.sgml
 DOCS+=  applications.sgml
 DOCS+= auditors.sgml
 DOCS+= availability.sgml
+DOCS+= community.sgml
 DOCS+= docs.sgml
 DOCS+= features.sgml
 DOCS+= index.sgml
