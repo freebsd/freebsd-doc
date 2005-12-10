@@ -352,13 +352,13 @@ CLEANFILES+= ${DOC}.html
 CLEANFILES+= ${DOC}.html-text
 
 .elif ${_cf} == "dvi"
-CLEANFILES+= ${DOC}.aux ${DOC}.log ${DOC}.tex
+CLEANFILES+= ${DOC}.aux ${DOC}.log ${DOC}.out ${DOC}.tex
 
 .elif ${_cf} == "tex"
 CLEANFILES+= ${DOC}.aux ${DOC}.log
 
 .elif ${_cf} == "ps"
-CLEANFILES+= ${DOC}.aux ${DOC}.dvi ${DOC}.log ${DOC}.tex-ps ${DOC}.tex
+CLEANFILES+= ${DOC}.aux ${DOC}.dvi ${DOC}.log ${DOC}.out ${DOC}.tex-ps ${DOC}.tex
 .for _curimage in ${LOCAL_IMAGES_EPS:M*share*}
 CLEANFILES+= ${_curimage:T} ${_curimage:H:T}/${_curimage:T}
 .endfor
@@ -525,8 +525,10 @@ ${DOC}.html.tar: ${DOC}.html ${LOCAL_IMAGES_LIB} \
 
 # TXT --------------------------------------------------------------------
 
+.if !target(${DOC}.txt)
 ${DOC}.txt: ${DOC}.html-text
 	${HTML2TXT} ${HTML2TXTOPTS} ${.ALLSRC} > ${.TARGET}
+.endif	
 
 # PDB --------------------------------------------------------------------
 
@@ -591,6 +593,7 @@ ${DOC}.tex-pdf: ${SRCS} ${IMAGES_PDF} ${INDEX_SGML} ${PRINT_INDEX} \
 		${JADEOPTS} -t tex -o /dev/stdout ${MASTERDOC} >> ${.TARGET}
 .endif
 
+.if !target(${DOC}.dvi)
 ${DOC}.dvi: ${DOC}.tex ${LOCAL_IMAGES_EPS}
 .for _curimage in ${LOCAL_IMAGES_EPS:M*share*}
 	${CP} -p ${_curimage} ${.CURDIR:H:H}/${_curimage:H:S|${IMAGES_EN_DIR}/||:S|${.CURDIR}||}
@@ -601,6 +604,7 @@ ${DOC}.dvi: ${DOC}.tex ${LOCAL_IMAGES_EPS}
 	-${JADETEX_CMD} '${TEX_CMDSEQ} \nonstopmode\input{${DOC}.tex}'
 	@${ECHO} "==> TeX pass 3/3"
 	-${JADETEX_CMD} '${TEX_CMDSEQ} \nonstopmode\input{${DOC}.tex}'
+.endif
 
 .if !target(${DOC}.pdf)
 ${DOC}.pdf: ${DOC}.tex-pdf ${IMAGES_PDF}
@@ -685,8 +689,10 @@ ${HTML_SPLIT_INDEX}:
 		${JADEOPTS} -t sgml ${MASTERDOC} > /dev/null
 	${PERL} ${COLLATEINDEX} -i doc-index -g -o ${INDEX_SGML} ${.TARGET}
 
+.if !target(${PRINT_INDEX})
 ${PRINT_INDEX}: ${HTML_INDEX}
 	${CP} -p ${HTML_INDEX} ${.TARGET}
+.endif	
 
 
 # ------------------------------------------------------------------------
