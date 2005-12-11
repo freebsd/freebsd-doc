@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/index.xsl,v 1.138 2005/11/06 17:21:28 hrs Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.139 2005/11/30 19:42:19 pav Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -6,7 +6,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.138 2005/11/06 17:21:28 hrs Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.139 2005/11/30 19:42:19 pav Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <!-- these params should be externally bound. The values
@@ -138,7 +138,7 @@
 			<div id="MIRROR">
 			  <form action="{$cgibase}/mirror.cgi" method="get">
 				<div>
-				  <h2 class="blockhide"><label for="mirrorsel">Mirror</label></h2>
+				  <h2 class="blockhide"><label for="MIRRORSEL">Mirror</label></h2>
 				  <select id="MIRRORSEL" name="goto">
 					  <xsl:call-template name="html-index-mirrors-options-list">
 					    <xsl:with-param name="mirrors.xml" select="$mirrors.xml" />
