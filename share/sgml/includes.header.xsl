@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/share/sgml/includes.header.xsl,v 1.10 2005/11/06 17:21:28 hrs Exp $ -->
+<!-- $FreeBSD: www/share/sgml/includes.header.xsl,v 1.11 2005/11/30 20:05:51 pav Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -73,7 +73,7 @@
       			<div id="SEARCH">
       			  <form action="{$cgibase}/search.cgi" method="get">
       				<div>
-      			      <h2 class="blockhide"><label for="words">Search</label></h2>
+      			      <h2 class="blockhide"><label for="WORDS">Search</label></h2>
       				  <input type="hidden" name="max" value="25" /> <input type="hidden" name="source" value="www" /><input id="WORDS" name="words" type="text" size="20" maxlength="255" onfocus="if( this.value==this.defaultValue ) this.value='';" value="Search" />&#160;<input id="SUBMIT" name="submit" type="submit" value="Search" />
       				</div>
       			  </form>
