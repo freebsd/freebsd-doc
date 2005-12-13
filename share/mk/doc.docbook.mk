@@ -429,7 +429,6 @@ CLEANFILES+= ${.CURDIR:T}.${_curformat}.${_curcomp}
 #
 # Index generation
 #
-CLEANFILES+= 		${INDEX_SGML}
 
 .if defined(GEN_INDEX) && defined(HAS_INDEX)
 JADEFLAGS+=		-i chap.index
@@ -438,7 +437,12 @@ HTML_INDEX?=		html.index
 PRINT_INDEX?=		print.index
 INDEX_SGML?=		index.sgml
 
-CLEANFILES+= 		${HTML_SPLIT_INDEX} ${HTML_INDEX} ${PRINT_INDEX}
+CLEANFILES+= 		${INDEX_SGML} ${HTML_SPLIT_INDEX} ${HTML_INDEX} ${PRINT_INDEX}
+
+INIT_INDEX_SGML_CMD?=	${PERL} ${COLLATEINDEX} -i doc-index -N -o ${INDEX_SGML}
+GEN_INDEX_SGML_CMD?=	${PERL} ${COLLATEINDEX} -i doc-index -g -o ${INDEX_SGML} ${.ALLSRC:M*.index}
+.else
+GEN_INDEX_SGML_CMD?=	@${ECHO} "No index to generate."
 .endif
 
 .MAIN: all
@@ -462,12 +466,14 @@ ${DOC}.xml: ${SRCS}
 
 .if ${STYLESHEET_TYPE} == "dsssl"
 index.html HTML.manifest: ${SRCS} ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} \
-			  ${LOCAL_IMAGES_TXT} ${INDEX_SGML} ${HTML_SPLIT_INDEX} ${LOCAL_CSS_SHEET}
+			  ${LOCAL_IMAGES_TXT} ${HTML_SPLIT_INDEX} ${LOCAL_CSS_SHEET}
+	${GEN_INDEX_SGML_CMD}
 	${JADE_CMD} -V html-manifest ${HTMLOPTS} -ioutput.html.images \
 		${JADEOPTS} -t sgml ${MASTERDOC}
 .elif ${STYLESHEET_TYPE} == "xsl"
 index.html: ${DOC}.xml ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} \
-	${INDEX_SGML} ${HTML_SPLIT_INDEX} ${LOCAL_CSS_SHEET}
+	${HTML_SPLIT_INDEX} ${LOCAL_CSS_SHEET}
+	${GEN_INDEX_SGML_CMD}
 	${XSLTPROC} ${XSLTPROCOPTS} --param freebsd.output.html.images "'1'" ${XSLHTMLCHUNK} \
 		${DOC}.xml
 .endif
@@ -479,13 +485,15 @@ index.html: ${DOC}.xml ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} \
 
 .if ${STYLESHEET_TYPE} == "dsssl"
 ${DOC}.html: ${SRCS} ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} \
-	     ${LOCAL_IMAGES_TXT} ${INDEX_SGML} ${HTML_INDEX} ${LOCAL_CSS_SHEET}
+	     ${LOCAL_IMAGES_TXT} ${HTML_INDEX} ${LOCAL_CSS_SHEET}
+	${GEN_INDEX_SGML_CMD}
 	${JADE_CMD} -V nochunks ${HTMLOPTS} -ioutput.html.images \
 		${JADEOPTS} -t sgml ${MASTERDOC} > ${.TARGET} || \
 		(${RM} -f ${.TARGET} && false)
 .elif ${STYLESHEET_TYPE} == "xsl"
 ${DOC}.html: ${DOC}.xml ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} \
-	${INDEX_SGML} ${LOCAL_CSS_SHEET}     
+	${LOCAL_CSS_SHEET}     
+	${GEN_INDEX_SGML_CMD}
 	${XSLTPROC} ${XSLTPROCOPTS} --param freebsd.output.html.images "'1'" ${XSLHTML} \
 		${DOC}.xml > ${.TARGET}
 .endif
@@ -497,12 +505,14 @@ ${DOC}.html: ${DOC}.xml ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} \
 
 # Special target to produce HTML with no images in it.
 .if ${STYLESHEET_TYPE} == "dsssl"
-${DOC}.html-text: ${SRCS} ${INDEX_SGML} ${HTML_INDEX} ${LOCAL_IMAGES_TXT}
+${DOC}.html-text: ${SRCS} ${HTML_INDEX} ${LOCAL_IMAGES_TXT}
+	${GEN_INDEX_SGML_CMD}
 	${JADE_CMD} -V nochunks ${HTMLTXTOPTS} \
 		${JADEOPTS} -t sgml ${MASTERDOC} > ${.TARGET} || \
 		(${RM} -f ${.TARGET} && false)
 .elif ${STYLESHEET_TYPE} == "xsl"
-${DOC}.html-text: ${DOC}.xml ${INDEX_SGML} ${HTML_INDEX}
+${DOC}.html-text: ${DOC}.xml ${HTML_INDEX}
+	${GEN_INDEX_SGML_CMD}
 	${XSLTPROC} ${XSLTPROCOPTS} --param freebsd.output.html.images "'0'" ${XSLHTML} \
 		${DOC}.xml > ${.TARGET}
 .endif
@@ -558,7 +568,9 @@ NO_TEX=	yes
 # RTF --------------------------------------------------------------------
 
 .if !defined(NO_TEX)
-${DOC}.rtf: ${SRCS} ${LOCAL_IMAGES_EPS} ${LOCAL_IMAGES_TXT}
+${DOC}.rtf: ${SRCS} ${LOCAL_IMAGES_EPS} ${PRINT_INDEX} \
+		${LOCAL_IMAGES_TXT} ${LOCAL_IMAGES_PNG}
+	${GEN_INDEX_SGML_CMD}
 	${JADE_CMD} -V rtf-backend ${PRINTOPTS} -ioutput.rtf.images \
 		${JADEOPTS} -t rtf -o ${.TARGET} ${MASTERDOC}
 
@@ -576,8 +588,9 @@ ${DOC}.rtf.tar: ${DOC}.rtf ${LOCAL_IMAGES_PNG}
 # format, which will then lead on to a different .dvi file as well.
 #
 
-${DOC}.tex: ${SRCS} ${LOCAL_IMAGES_EPS} ${INDEX_SGML} ${PRINT_INDEX} \
+${DOC}.tex: ${SRCS} ${LOCAL_IMAGES_EPS} ${PRINT_INDEX} \
 		${LOCAL_IMAGES_TXT} ${LOCAL_IMAGES_EN}
+	${GEN_INDEX_SGML_CMD}
 	${JADE_CMD} -V tex-backend ${PRINTOPTS} \
 		${JADEOPTS} -t tex -o ${.TARGET} ${MASTERDOC}
 
@@ -585,8 +598,9 @@ ${DOC}.tex-ps: ${DOC}.tex
 	${LN} -f ${.ALLSRC} ${.TARGET}
 
 .if !target(${DOC}.tex-pdf)
-${DOC}.tex-pdf: ${SRCS} ${IMAGES_PDF} ${INDEX_SGML} ${PRINT_INDEX} \
+${DOC}.tex-pdf: ${SRCS} ${IMAGES_PDF} ${PRINT_INDEX} \
 		${LOCAL_IMAGES_TXT}
+	${GEN_INDEX_SGML_CMD}
 	${RM} -f ${.TARGET}
 	${CAT} ${PDFTEX_DEF} > ${.TARGET}
 	${JADE_CMD} -V tex-backend ${PRINTOPTS} -ioutput.print.pdf \
@@ -676,18 +690,16 @@ lint validate:
 # an empty index.sgml file so that we can reference index.sgml in book.sgml
 #
 
-${INDEX_SGML}:
-	${PERL} ${COLLATEINDEX} -i doc-index -N -o ${.TARGET}
 
-${HTML_INDEX}:
+${HTML_INDEX}: ${SRCS} ${LOCAL_IMAGES_TXT}
+	${INIT_INDEX_SGML_CMD}
 	${JADE_CMD} -V html-index -V nochunks ${HTMLOPTS} -ioutput.html.images \
 		${JADEOPTS} -t sgml ${MASTERDOC} > /dev/null
-	${PERL} ${COLLATEINDEX} -i doc-index -g -o ${INDEX_SGML} ${.TARGET}
 
-${HTML_SPLIT_INDEX}:
+${HTML_SPLIT_INDEX}: ${SRCS} ${LOCAL_IMAGES_TXT}
+	${INIT_INDEX_SGML_CMD}
 	${JADE_CMD} -V html-index ${HTMLOPTS} -ioutput.html.images \
 		${JADEOPTS} -t sgml ${MASTERDOC} > /dev/null
-	${PERL} ${COLLATEINDEX} -i doc-index -g -o ${INDEX_SGML} ${.TARGET}
 
 .if !target(${PRINT_INDEX})
 ${PRINT_INDEX}: ${HTML_INDEX}
