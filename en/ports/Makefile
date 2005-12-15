@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/ports/Makefile,v 1.44 2005/11/30 22:43:47 pav Exp $
+# $FreeBSD: www/en/ports/Makefile,v 1.45 2005/11/30 22:46:33 pav Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -50,8 +50,19 @@ packages.exists:
 	${TOUCH} ${.TARGET}
 .endif
 
-Makefile.gen: index.sgml .NOTMAIN
+Makefile.gen: categories-alpha.sgml categories-grouped.sgml index.sgml \
+	installing.sgml master-index.sgml references.sgml searching.sgml \
+	statistics.ent updating.sgml .NOTMAIN
 	${ECHO_CMD} DOCS= *.sgml > Makefile.gen
+	${ECHO_CMD} -n "DYNAMIC_DOCS= " >> Makefile.gen
+	${ECHO_CMD} -n " categories-alpha.sgml" >> Makefile.gen
+	${ECHO_CMD} -n " categories-grouped.sgml" >> Makefile.gen
+	${ECHO_CMD} -n " master-index.sgml" >> Makefile.gen
+	${ECHO_CMD} -n " statistics.ent" >> Makefile.gen
+	for categoryfile in ${CATEGORYLIST}; do \
+		${ECHO_CMD} -n " $$categoryfile.sgml" >> Makefile.gen; \
+	done
+	${ECHO_CMD} >> Makefile.gen
 .if defined(NO_TIDY)
 	${ECHO_CMD} NO_TIDY=${NO_TIDY} >> Makefile.gen
 .endif
@@ -70,8 +81,16 @@ ports.size:
 	${FETCH} -s ${PORTS_TARGZ_URL} > ${.TARGET}
 .endif
 
-index.sgml: ${INDEX} categories categories.descriptions packages.exists portindex ports.inc ports.size .NOTMAIN
-	${RM} -f *.sgml
+# this builds: categories-alpha.sgml, categories-grouped.sgml,
+# master-index.sgml, statistics.ent, <category>.sgml
+CATEGORYLIST=`grep "^[a-z]" categories | sed -e s"/,.*//"`
+categories-alpha.sgml: ${INDEX} categories categories.descriptions \
+	packages.exists portindex ports.ent ports.size .NOTMAIN
+	${RM} -f categories-alpha.sgml categories-grouped.sgml \
+		master-index.sgml statistics.ent
+	for categoryfile in ${CATEGORYLIST}; do \
+		rm -f "$$categoryfile.sgml"; \
+	done
 	${PORTINDEX} ${INDEX} ${.CURDIR}
 
 install: all beforeinstall
@@ -86,6 +105,7 @@ beforeinstall:
 .else
 beforeinstall:
 	${SED} -i "" -e 's,HREF="growth,href="http://www.FreeBSD.org/ports/growth,' index.html
+	${SED} -i "" -e 's,HREF="growth,href="http://www.FreeBSD.org/ports/growth,' references.html
 .endif
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
