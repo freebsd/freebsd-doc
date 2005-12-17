@@ -2,13 +2,13 @@
    The FreeBSD Documentation Project
    The FreeBSD French Documentation Project
 
-   Original revision: 1.2
+   Original revision: 1.3
 -->
 
 <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
   <xsl:import href="../../includes.xsl"/>
   <xsl:import href="includes.xsl"/>
-  <xsl:variable name="date" select="'$FreeBSD$'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/fr/platforms/ia64/index.xsl,v 1.1 2005/10/15 08:37:59 blackend Exp $'"/>
   <xsl:variable name="section" select="'developers'"/>
   <xsl:output doctype-public="-//W3C//DTD HTML 4.01 Transitional//EN"
     encoding="iso-8859-1" method="html"/>
@@ -18,15 +18,15 @@
 
       <body xsl:use-attribute-sets="att.body">
 
-	<div id="containerwrap">
-	  <div id="container">
+	<div id="CONTAINERWRAP">
+	  <div id="CONTAINER">
 	    <xsl:copy-of select="$header2"/>
 
-	    <div id="content">
+	    <div id="CONTENT">
 
 	      <xsl:copy-of select="$sidenav"/>
 
-	      <div id="contentwrap">
+	      <div id="CONTENTWRAP">
 		<xsl:copy-of select="$header3"/>
 
 		<img align="right" alt="McKinley die" src="{$enbase}/platforms/ia64/mckinley-die.png"/>
@@ -91,13 +91,13 @@
 		  importants au niveau de l'ABI et devoir maintenir une
 		  compatibilit&#233; aussi t&#244;t dans la vie du port
 		  ne serait pas tr&#232;s pratique.</p>
-	      </div> <!-- contentwrap -->
+	      </div> <!-- CONTENTWRAP -->
 
 	      <br class="clearboth" />
-	    </div> <!-- content -->
+	    </div> <!-- CONTENT -->
 	    <xsl:copy-of select="$footer"/>
-	  </div> <!-- container -->
-	</div> <!-- containerwrap -->
+	  </div> <!-- CONTAINER -->
+	</div> <!-- CONTAINERWRAP -->
       </body>
     </html>
   </xsl:template>
