@@ -2,7 +2,7 @@
 # The FreeBSD French Documentation Project
 #
 # $FreeBSD$
-# Original revision: 1.90
+# Original revision: 1.95 manque 1.91, 1.94 partiel
 #
 # Build the FreeBSD Handbook.
 #
@@ -44,6 +44,7 @@ IMAGES+= advanced-networking/isdn-twisted-pair.eps
 IMAGES+= advanced-networking/natd.eps
 IMAGES+= advanced-networking/net-routing.pic
 IMAGES_EN+= advanced-networking/static-routes.pic
+IMAGES_EN+= geom/striping.pic
 IMAGES_EN+= install/userconfig.scr
 IMAGES_EN+= install/userconfig2.scr
 IMAGES_EN+= install/hdwrconf.scr
@@ -162,6 +163,7 @@ SRCS+= cutting-edge/chapter.sgml
 SRCS+= desktop/chapter.sgml
 SRCS+= disks/chapter.sgml
 SRCS+= eresources/chapter.sgml
+SRCS+= geom/chapter.sgml
 SRCS+= install/chapter.sgml
 SRCS+= introduction/chapter.sgml
 SRCS+= kernelconfig/chapter.sgml
