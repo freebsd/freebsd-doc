@@ -1,8 +1,8 @@
 #
 # The FreeBSD Russian Documentation Project
 #
-# $FreeBSD: www/ru/Makefile,v 1.47 2005/10/05 20:39:12 simon Exp $
-# $FreeBSDru: frdp/www/ru/Makefile,v 1.49 2005/11/03 21:27:23 gad Exp $
+# $FreeBSD$
+# $FreeBSDru: frdp/www/ru/Makefile,v 1.51 2005/12/23 15:22:16 gad Exp $
 #
 # Original revision: 1.122
 #
@@ -49,6 +49,7 @@ SUBDIR+= commercial
 SUBDIR+= community
 SUBDIR+= copyright
 SUBDIR+= docproj
+SUBDIR+= docs
 SUBDIR+= donations
 SUBDIR+= events
 #SUBDIR+= gnome
