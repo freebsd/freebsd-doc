@@ -1,16 +1,17 @@
-<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.77 2005/11/05 07:22:29 marcus Exp $ -->
+<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.78 2005/11/05 07:26:06 marcus Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
 		xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
 		xmlns:rdf1="http://my.netscape.com/rdf/simple/0.9/"
 		exclude-result-prefixes="rdf rdf1" version="1.0">
 
+  <xsl:import href="includes.navgnome.xsl"/>
   <xsl:import href="../includes.xsl"/>
   <xsl:import href="includes.xsl"/>
 
   <xsl:variable name="base" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.77 2005/11/05 07:22:29 marcus Exp $'"/>
-  <xsl:variable name="section" select="'developers'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.78 2005/11/05 07:26:06 marcus Exp $'"/>
+  <xsl:variable name="section" select="'gnome'"/>
   <xsl:variable name="title" select="'FreeBSD GNOME Project'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -27,7 +28,7 @@
 	    <xsl:copy-of select="$header2"/>
 
 	    <div id="content">
-	      <xsl:copy-of select="$sidenav"/>
+	      <xsl:copy-of select="$gnome_sidenav"/>
 
 	      <div id="contentwrap">
 		<div id="rightwrap">
