@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.78 2005/11/05 07:26:06 marcus Exp $ -->
+<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.79 2005/12/29 07:27:05 adamw Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
 		xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -10,7 +10,7 @@
   <xsl:import href="includes.xsl"/>
 
   <xsl:variable name="base" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.78 2005/11/05 07:26:06 marcus Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.79 2005/12/29 07:27:05 adamw Exp $'"/>
   <xsl:variable name="section" select="'gnome'"/>
   <xsl:variable name="title" select="'FreeBSD GNOME Project'"/>
 
@@ -114,26 +114,6 @@
 		       <p>The FreeBSD GNOME Project is a team of devoted
 			  committers and users that manage the integration
 			  of GNOME and FreeBSD.</p>
-
-		<h2>GNOME on FreeBSD</h2>
-		<ul>
-		  <li><a href="docs/faq2.html#q1">Installation Instructions</a></li>
-		  <li><a href="docs/faq212.html#q2">Upgrade Instructions</a></li>
-		  <li><a href="../ports/gnome.html">Available Applications</a></li>
-		  <li><a href="docs/volunteer.html">How to Help</a></li>
-		  <li><a href="docs/bugging.html">Reporting a Bug</a></li>
-		  <li><a href="screenshots.html">Screenshots</a></li>
-		  <li><a href="contact.html">Contact Us</a></li>
-		</ul>
-
-		<h2>Documentation</h2>
-		<ul>
-		  <li><a href="docs/faq2.html">FAQ</a></li>
-		  <li><a href="docs/faq212.html">2.10 to 2.12 Upgrade FAQ</a></li>
-		  <li><a href="docs/develfaq.html">Development Branch FAQ</a></li>
-		  <li><a href="docs/porting.html">Creating Ports</a></li>
-		  <li><a href="docs/faq212.html#q5">Known Issues</a></li>
-		</ul>
 
 		<h2>Upgrading to GNOME 2.12?</h2>
 
