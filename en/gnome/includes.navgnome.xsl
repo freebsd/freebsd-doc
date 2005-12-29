@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD$ -->
+<!-- $FreeBSD: www/en/gnome/includes.navgnome.xsl,v 1.1 2005/12/29 07:27:05 adamw Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -11,7 +11,7 @@
 	<div id="SIDENAV">
 		<h2 class="blockhide">Section Navigation</h2>
 		<ul>
-			<li><a href="($base)/gnome/index.html">GNOME on FreeBSD</a>
+			<li><a href="($base)/gnome/index.html">FreeBSD/GNOME</a>
 				<ul>
 					<li><a href="($base)/gnome/docs/faq2.html#q1">Installation Instructions</a></li>
 					<li><a href="($base)/gnome/docs/faq212.html#q2">Upgrade Instructions</a></li>
