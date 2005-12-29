@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.81 2005/12/29 07:34:46 marcus Exp $ -->
+<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.82 2005/12/29 07:47:57 adamw Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
 		xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -10,7 +10,7 @@
   <xsl:import href="includes.xsl"/>
 
   <xsl:variable name="base" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.81 2005/12/29 07:34:46 marcus Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.82 2005/12/29 07:47:57 adamw Exp $'"/>
   <xsl:variable name="section" select="'gnome'"/>
   <xsl:variable name="title" select="'FreeBSD GNOME Project'"/>
 
@@ -101,12 +101,12 @@
 
 	       		<p>GNOME is a complete desktop environment, and a
 			   comprehensive suite of applications. In GNOME,
-			   everything is easy-to-use, attractive, powerful,
-			   and works the way you expect it to.</p>
+			   everything is easy to use, attractive, powerful,
+			   and works the way you expect.</p>
 
 		       <p>The major components of GNOME are the
-			  <a href="http://www.gnome.org">GNOME desktop</a>, an
-			  easy-to-use window-based desktop environment, and the
+			  <a href="http://www.gnome.org">GNOME desktop</a>, a
+			  straightforward window-based desktop environment, and the
 			  <a href="http://developer.gnome.org">GNOME development
 			  platform</a>, a collection of application-development
 		          tools and libraries.</p>
