@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/en/gnome/newsflash.xsl,v 1.5 2004/12/28 06:21:15 marcus Exp $ -->
+<!-- $FreeBSD: www/en/gnome/newsflash.xsl,v 1.6 2005/10/04 20:06:58 hrs Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS" exclude-result-prefixes="cvs">
 
+  <xsl:import href="includes.navgnome.xsl"/>
   <xsl:import href="../includes.xsl"/>
   <xsl:import href="includes.xsl"/>
 
@@ -31,7 +32,7 @@
 	<xsl:copy-of select="$header2"/>
 
 	    <div id="content">
-	      <xsl:copy-of select="$sidenav"/>
+	      <xsl:copy-of select="$gnome_sidenav"/>
 
 	      <div id="contentwrap">
 		<xsl:copy-of select="$header3"/>
