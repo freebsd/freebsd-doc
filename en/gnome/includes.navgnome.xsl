@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/en/gnome/includes.navgnome.xsl,v 1.2 2005/12/29 07:30:02 adamw Exp $ -->
+<!-- $FreeBSD: www/en/gnome/includes.navgnome.xsl,v 1.3 2005/12/29 17:10:36 ceri Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
 
 <xsl:variable name="gnome_sidenav">
 	<div id="SIDEWRAP">
-	
+
 	<div id="SIDENAV">
 		<h2 class="blockhide">Section Navigation</h2>
 		<ul>
