@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/fr/includes.xsl,v 1.17 2005/10/15 08:42:14 blackend Exp $ -->
+<!-- $FreeBSD: www/fr/includes.xsl,v 1.18 2005/11/02 21:39:11 blackend Exp $ -->
 
 <!-- 
    The FreeBSD French Documentation Project
@@ -196,7 +196,7 @@
 			<ul>
 				<li><a href="{$u.rel.announce}">Version de production: <xsl:value-of select="$rel.current"/></a></li>
 				<li><a href="{$u.rel2.announce}">Version (ancienne) de production: <xsl:value-of select="$rel2.current"/></a></li>
-				<li><a href="{$enbase}/snapshots/">Instantannés</a></li>
+				<li><a href="{$base}/snapshots/">Instantanés</a></li>
 			</ul>
 		</li>
 		<li><a href="{$enbase}/ports/">Applications disponibles</a></li>
