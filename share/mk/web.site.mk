@@ -1,5 +1,5 @@
 # bsd.web.mk
-# $FreeBSD: www/share/mk/web.site.mk,v 1.69 2005/10/04 17:18:41 hrs Exp $
+# $FreeBSD: www/share/mk/web.site.mk,v 1.70 2005/11/30 22:44:20 pav Exp $
 
 #
 # Build and install a web site.
@@ -151,23 +151,24 @@ WWW_LANGCODE:=			${.CURDIR:S,^${_WEB_PREFIX}/,,:C,^([^/]+)/.*,\1,}
 .endif
 .endif # !defined(WITHOUT_DOC)
 
-SGML_INCLUDES=	${WEB_PREFIX}/${WWW_LANGCODE}/includes.sgml
-SGML_INCLUDES+=	${WEB_PREFIX}/${WWW_LANGCODE}/includes.navabout.sgml
-SGML_INCLUDES+=	${WEB_PREFIX}/${WWW_LANGCODE}/includes.navcommunity.sgml
-SGML_INCLUDES+=	${WEB_PREFIX}/${WWW_LANGCODE}/includes.navdevelopers.sgml
-SGML_INCLUDES+=	${WEB_PREFIX}/${WWW_LANGCODE}/includes.navdocs.sgml
-SGML_INCLUDES+=	${WEB_PREFIX}/${WWW_LANGCODE}/includes.navdownload.sgml
-SGML_INCLUDES+=	${WEB_PREFIX}/${WWW_LANGCODE}/includes.navsupport.sgml
-SGML_INCLUDES+=	${WEB_PREFIX}/share/sgml/includes.header.sgml
-SGML_INCLUDES+=	${WEB_PREFIX}/share/sgml/includes.navabout.sgml
-SGML_INCLUDES+=	${WEB_PREFIX}/share/sgml/includes.navcommunity.sgml
-SGML_INCLUDES+=	${WEB_PREFIX}/share/sgml/includes.navdevelopers.sgml
-SGML_INCLUDES+=	${WEB_PREFIX}/share/sgml/includes.navdocs.sgml
-SGML_INCLUDES+=	${WEB_PREFIX}/share/sgml/includes.navdownload.sgml
-SGML_INCLUDES+=	${WEB_PREFIX}/share/sgml/includes.navsupport.sgml
-SGML_INCLUDES+=	${WEB_PREFIX}/share/sgml/includes.misc.sgml
-SGML_INCLUDES+=	${WEB_PREFIX}/share/sgml/includes.release.sgml
-SGML_INCLUDES+=	${WEB_PREFIX}/share/sgml/includes.sgml
+_SGML_INCLUDES=	${SGML_INCLUDES}
+_SGML_INCLUDES+=${WEB_PREFIX}/${WWW_LANGCODE}/includes.sgml
+_SGML_INCLUDES+=${WEB_PREFIX}/${WWW_LANGCODE}/includes.navabout.sgml
+_SGML_INCLUDES+=${WEB_PREFIX}/${WWW_LANGCODE}/includes.navcommunity.sgml
+_SGML_INCLUDES+=${WEB_PREFIX}/${WWW_LANGCODE}/includes.navdevelopers.sgml
+_SGML_INCLUDES+=${WEB_PREFIX}/${WWW_LANGCODE}/includes.navdocs.sgml
+_SGML_INCLUDES+=${WEB_PREFIX}/${WWW_LANGCODE}/includes.navdownload.sgml
+_SGML_INCLUDES+=${WEB_PREFIX}/${WWW_LANGCODE}/includes.navsupport.sgml
+_SGML_INCLUDES+=${WEB_PREFIX}/share/sgml/includes.header.sgml
+_SGML_INCLUDES+=${WEB_PREFIX}/share/sgml/includes.navabout.sgml
+_SGML_INCLUDES+=${WEB_PREFIX}/share/sgml/includes.navcommunity.sgml
+_SGML_INCLUDES+=${WEB_PREFIX}/share/sgml/includes.navdevelopers.sgml
+_SGML_INCLUDES+=${WEB_PREFIX}/share/sgml/includes.navdocs.sgml
+_SGML_INCLUDES+=${WEB_PREFIX}/share/sgml/includes.navdownload.sgml
+_SGML_INCLUDES+=${WEB_PREFIX}/share/sgml/includes.navsupport.sgml
+_SGML_INCLUDES+=${WEB_PREFIX}/share/sgml/includes.misc.sgml
+_SGML_INCLUDES+=${WEB_PREFIX}/share/sgml/includes.release.sgml
+_SGML_INCLUDES+=${WEB_PREFIX}/share/sgml/includes.sgml
 
 ##################################################################
 # Transformation rules
@@ -196,7 +197,7 @@ PREHTML?=	${SED} -e ${DATESUBST}
 GENDOCS+=	${DOCS:M*.sgml:S/.sgml$/.html/g}
 ORPHANS:=	${ORPHANS:N*.sgml}
 
-.sgml.html: ${SGML_INCLUDES}
+.sgml.html: ${_SGML_INCLUDES}
 	${PREHTML} ${PREHTMLOPTS} ${.IMPSRC} | \
 	${SETENV} SGML_CATALOG_FILES= \
 		${SGMLNORM} ${SGMLNORMOPTS} > ${.TARGET} || \
