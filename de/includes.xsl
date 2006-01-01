@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
 <!-- $FreeBSD$
-     $FreeBSDde: de-www/includes.xsl,v 1.25 2005/11/06 14:10:40 jkois Exp $
+     $FreeBSDde: de-www/includes.xsl,v 1.26 2006/01/01 10:20:00 jkois Exp $
      basiert auf: 1.20
 -->
 
@@ -23,8 +23,8 @@
   </xsl:variable>
 
   <xsl:variable name="copyright">
-    <a href="{$enbase}/copyright/index.html">Copyright</a> &#169; 1995-2005
-    the FreeBSD Project.  All rights reserved.
+    <a href="{$enbase}/copyright/index.html">Copyright</a> &#169; 1995-2006
+    Das FreeBSD Projekt.  Alle Rechte vorbehalten.
   </xsl:variable>
 
   <xsl:variable name="email" select="'freebsd-questions'"/>

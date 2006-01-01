@@ -2,8 +2,8 @@
 
 <!--
      $FreeBSD$
-     $FreeBSDde: de-www/index.xsl,v 1.54 2005/12/05 18:40:44 jkois Exp $
-     basiert auf: 1.139
+     $FreeBSDde: de-www/index.xsl,v 1.55 2006/01/01 09:44:32 jkois Exp $
+     basiert auf: 1.141
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -154,7 +154,7 @@
 			<div id="MIRROR">
 			  <form action="{$cgibase}/mirror.cgi" method="get">
 				<div>
-				  <h2 class="blockhide"><label for="mirrorsel">Mirror</label></h2>
+				  <h2 class="blockhide"><label for="MIRRORSEL">Mirror</label></h2>
 				  <select id="MIRRORSEL" name="goto">
 					  <xsl:call-template name="html-index-mirrors-options-list">
 					    <xsl:with-param name="mirrors.xml" select="$mirrors.xml" />
@@ -291,9 +291,6 @@
 				<ul class="newseventslist">
 				  <li class="first-child">
 					<a href="{$base}/security/" title="Weitere Security Advisories">Mehr</a>
-				  </li>
-				  <li>
-					<a href="{$enbase}/send-pr.html" title="Einen Problembericht erstellen">Problemberichte</a>
 				  </li>
 				  <li class="last-child">
 					<a href="{$base}/security/advisories.rdf" title="Security Advisories RSS Feed"><img class="rssimage" src="{$enbase}/layout/images/ico_rss.png" width="27" height="12" alt="News RSS Feed" /></a>
