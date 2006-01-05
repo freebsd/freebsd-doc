@@ -216,7 +216,7 @@
               (("xorg")    (string-append u "&" "amp;" "manpath=X11R6.7.0"))
               (("netbsd")  (string-append u "&" "amp;" "manpath=NetBSD+1.6.1"))
               (("openbsd") (string-append u "&" "amp;" "manpath=OpenBSD+3.4"))
-              (("ports")   (string-append u "&" "amp;" "manpath=FreeBSD+Ports"))
+              (("ports")   (string-append u "&" "amp;" "manpath=FreeBSD+5.4-RELEASE+and+Ports"))
               (else u))))
 
         (element application ($bold-seq$))
