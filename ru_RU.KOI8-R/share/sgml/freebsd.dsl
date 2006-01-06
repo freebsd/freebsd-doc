@@ -2,9 +2,9 @@
      The FreeBSD Russian Documentation Project
 
      $FreeBSD$
-     $FreeBSDru: frdp/doc/ru_RU.KOI8-R/share/sgml/freebsd.dsl,v 1.15 2004/12/23 14:59:36 den Exp $
+     $FreeBSDru: frdp/doc/ru_RU.KOI8-R/share/sgml/freebsd.dsl,v 1.16 2006/01/06 20:54:08 gad Exp $
 
-     Original revision: 1.20
+     Original revision: 1.21
 -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
@@ -219,7 +219,7 @@
 	       (renderas (inherited-attribute-string (normalize "renderas") sect))
 	       (hlevel                          ;; the apparent section level;
 	        (if renderas                    ;; if not real section level,
-  	            (string->number             ;;   then get the apparent level
+  	            (string-&gt;number             ;;   then get the apparent level
 	             (substring renderas 4 5))  ;;   from "renderas",
 	            (SECTLEVEL)))               ;; else use the real level
 	       (hs (HSIZE (- 4 hlevel))))
