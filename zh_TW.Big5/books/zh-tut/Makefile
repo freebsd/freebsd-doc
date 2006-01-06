@@ -23,7 +23,7 @@ DSLPRINT=	freebsd.dsl
 #
 
 # SGML content
-SRCS=  book.sgml
+SRCS=  zh-tut.sgml
 SRCS+= chapters/ack.sgml
 SRCS+= chapters/compose.sgml
 SRCS+= chapters/converter.sgml
