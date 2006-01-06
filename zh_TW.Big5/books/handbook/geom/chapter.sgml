@@ -1,0 +1,402 @@
+<!--
+     The FreeBSD Documentation Project
+     $FreeBSD$
+
+-->
+
+<chapter id="GEOM">
+  <chapterinfo>
+    <authorgroup>
+      <author>
+	<firstname>Tom</firstname>
+	<surname>Rhodes</surname>
+	<contrib>Written by </contrib>
+      </author>
+    </authorgroup>
+  </chapterinfo>
+
+  <title>GEOM: Modular Disk Transformation Framework</title>
+
+  <sect1 id="GEOM-synopsis">
+    <title>Synopsis</title>
+
+    <indexterm>
+      <primary>GEOM</primary>
+    </indexterm>
+    <indexterm>
+      <primary>GEOM Disk Framework</primary>
+      <see>GEOM</see>
+    </indexterm>
+
+	  <para>本章涵蓋如何在 &os; 的 GEOM 架構下使用磁碟，
+	  包含用來設定幾種常用的 <acronym 
+	  role="Redundant Array of Inexpensive Disks，磁碟陣列系統">RAID</acronym>
+	  的控制工具。本章不會深入探討 GEOM 如何處理底層的 I/O，這類資訊請參考 
+	  &man.geom.4; 及相關的 SEE ALSO 部份。本章也非 <acronym>RAID</acronym>
+	  設定指南，在這裡只會討論目前 GEOM 支援的 <acronym>RAID</acronym> 模式。
+	  </para>
+
+	  <para>閱讀本章後，您會知道這些資訊：</para>
+	  <itemizedlist>
+	  <listitem>
+	  <para>透過 GEOM 可支援哪些模式的 <acronym>RAID</acronym>。</para>
+	  </listitem>
+
+	  <listitem>
+	  <para>如何使用基本工具來配置、操作、維護不同模式的
+	  <acronym>RAID</acronym>。</para>
+	  </listitem>
+
+	  <listitem>
+	  <para>如何透過 GEOM 來完成鏡射 (mirror)、分散連結 (stripe)、加密 (encryp) 
+		、遠端連接磁碟等。</para>
+	  </listitem>
+
+	  <listitem>
+	  <para>當 GEOM 架構下的磁碟發生問題，如何排除。</para>
+	  </listitem>
+
+	  </itemizedlist>
+
+    <para>Before reading this chapter, you should:</para>
+	<para>在開始之前，請您確任下列背景知識：</para>
+
+
+    <itemizedlist>
+      <listitem>
+		<para>了解 &os; 如何看待磁碟 (<xref linkend="disks">) 。</para>
+	  </listitem>
+
+      <listitem>
+	<para>知道如何設定、安裝新的 &os; 核心 
+		(<xref linkend="kernelconfig">) 。</para>
+      </listitem>
+    </itemizedlist>
+  </sect1>
+
+  <sect1 id="GEOM-intro">
+    <title>GEOM 導論</title>
+
+	<para>GEOM 透過 privoder (即 <dilename role="directory">/dev/</filename>
+	下的特殊裝置檔案) 來操控 classes (如 Master Boot Records、
+	<acronym>BSD</acronym> labels 等) 。GEOM 支援多種軟體 
+	<acronym>RAID</acronym> 配置，透過 GEOM 存取時，
+	作業系統和應用程式不會意識到 GEOM 存在。</para>
+  </sect1>
+
+  <sect1 id="GEOM-striping">
+  <sect1info>
+    <authorgroup>
+      <author>
+	<firstname>Tom</firstname>
+	<surname>Rhodes</surname>
+	<contrib>Written by </contrib>
+      </author>
+      <author>
+	<firstname>Murray</firstname>
+	<surname>Stokely</surname>
+      </author>
+    </authorgroup>
+  </sect1info>
+
+    <title>RAID0 - 分散連結 (striping)</title>
+
+    <indexterm>
+      <primary>GEOM</primary>
+    </indexterm>
+    <indexterm>
+      <primary>分散連結 (Striping)</primary>
+    </indexterm>
+
+	<para>分散連結 (striping) 可用來連結多個磁碟成為一大塊空間。
+	很多時候硬體控制器可以完成這件事，不過 GEOM 也提供了軟體版本的 
+	<acronym>RAID</acronym>0，也就是分散連結 (striping)。</para>
+
+	<para>在 <acronym>RAID</acronym>0 裡，資料會被切分成很多塊，
+	再分散寫入全部的磁碟。例如要寫入 256k 的資料到單一磁碟，在
+	四個磁碟的 <acronym>RAID</acronym>0 中可同時寫入 64k 到四個磁碟裡，
+	因此可大幅提升 I/O 效能。如果使用更多的磁碟控制器，
+	I/O 效能可再提升。</para>
+
+	<para>由於讀或寫時會同步交錯對許多磁碟進行 I/O 處理，因此 
+	<acronym>RAID</acronym>0 的每個磁碟必需大小一樣。
+
+      <mediaobject>
+        <imageobject>
+          <imagedata fileref="geom/striping" align="center">
+        </imageobject>
+
+        <textobject>
+          <phrase>Disk Striping Illustration</phrase>
+        </textobject>
+      </mediaobject>
+
+    <procedure>
+      <title>用未格式化的 ATA 磁碟來建立分散連結</title>
+
+      <step><para>載入 <filename>geom_stripe</filename>
+        核心模組：</para>
+
+    <screen>&prompt.root; <userinput>kldload geom_stripe.ko</userinput></screen>
+	</step>
+
+      <step><para>確定掛載點 (mount point) 存在。
+	  如果想用分散連結的空間做為根目錄 (root partition，即 /)，
+	  則先用個暫時的掛載點，如 
+	  <filename role="directory">/mnt</filename>：</para>
+
+        <screen>&prompt.root; <userinput>mkdir /mnt</userinput></screen>
+      </step>
+
+      <step><para>確認要用來分散連結的裝置名稱，接著建新新的分散連結裝置。
+	  例如下面的指令會分散連結兩個未使用、尚未分區的 <acronym>ATA</acronym>
+	  磁碟 (<filename>/dev/ad2</filename> 和 
+	  <filename>/dev/ad3</filename>) ：</para>
+        <screen>&prompt.root; <userinput>
+		gstripe label -v st0 /dev/ad2 /dev/ad3</userinput></screen>
+
+        <screen>&prompt.root; <userinput>gstripe label -v st0 /dev/ad2 /dev/ad3</userinput></screen>
+
+<!-- 
+    <para>A message should be returned explaining that meta data has
+      been stored on the devices.
+XXX: What message?  Put it inside the screen output above.
+-->
+      </step>
+
+      <step><para>用下面的指令來建立分區表 (partition table)：</para>
+
+        <screen>&prompt.root; <userinput>bsdlabel -wB /dev/stripe/st0</userinput></screen>
+
+      </step>
+
+      <step><para>除了先前建立的 <devicename>st0</devices> ，這個步驟還會在
+	  <filename role="directory">/dev/stripe</filename> 下新增兩個裝置：
+	  <devicename>st0a</devicename> 和 <devicename>st0c</devicename>。
+	  利用 <command>newfs</command> 指令可以在 
+	  <devicename>st0a</devicename> 建立檔案系統：
+
+      <screen>&prompt.root; <userinput>newfs -U /dev/stripe/st0a</userinput></screen>
+
+      <para>螢幕上會有一堆數字傾瀉而過，幾秒鐘後就會完成。此時空間已建立，
+	  可用來掛載使用了。</para>
+    </step>
+  </procedure>
+
+  <para>下面指令可用來手動掛載分散連結空間：</para>
+
+  <screen>&prompt.root; <userinput>mount /dev/stripe/st0a /mnt</userinput></screen>
+
+  <para>如果要在開機時自動掛載，在 <filename>/etc/fstab</filename> 
+  加入這塊空間的資訊：</para>
+
+  <screen>&prompt.root; <userinput>echo "/dev/stripe/st0a /mnt ufs rw 2 2" \</userinput>
+    <userinput>&gt;&gt; /etc/fstab</userinput></screen>
+
+  <para>而 <filename>geom</filename> 核心模組必需在系統初始化時自動載入，
+  因此在 </filename>/boot/lodaer.conf</filename> 加入一行：</para>
+
+  <screen>&prompt.root; <userinput>echo 'geom_stripe_load="YES"' &gt;&gt; /boot/loader.conf</userinput></screen>
+
+  </sect1>
+
+  <sect1 id="GEOM-mirror">
+    <title>RAID1 - Mirroring</title>
+
+    <indexterm>
+      <primary>GEOM</primary>
+    </indexterm>
+    <indexterm>
+      <primary>Disk Mirroring</primary>
+    </indexterm>
+
+    <para>Mirroring is a technology used by many corporations and home
+      users to back up data without interruption.  When a mirror exists,
+      it simply means that diskB replicates diskA.  Or, perhaps diskC+D
+      replicates diskA+B.  Regardless of the disk configuration, the
+      important aspect is that information on one disk or partition is
+      being replicated.  Later, that information could be more easily
+      restored, backed up without causing service or access
+      interruption, and even be physically stored in a data
+      safe.</para>
+
+    <para>To begin, ensure the system has two disk drives of equal size,
+      this exercise assumes they are direct access (&man.da.4;)
+      <acronym>SCSI</acronym> disks.</para>
+
+    <para>Begin by installing &os; on the first disk with only two
+      partitions.  One should be a swap partition, double the
+      <acronym>RAM</acronym> size and all remaining space devoted to
+      the root (<filename role="directory">/</filename>) file system.
+      It is possible to have separate partitions for other mount points;
+      however, this will increase the difficulty level ten fold due to
+      manual alteration of the &man.bsdlabel.8; and &man.fdisk.8;
+      settings.</para>
+
+    <para>Reboot and wait for the system to fully initialize.  Once this
+      process has completed, log in as the <username>root</username>
+      user.</para>
+
+    <para>Create the <filename>/dev/mirror/gm</filename> device and link
+      it with <filename>/dev/da1</filename>:</para>
+
+    <screen>&prompt.root; <userinput>gmirror label -vnb round-robin gm0 /dev/da1</userinput></screen>
+
+    <para>The system should respond with:</para>
+    <screen>
+Metadata value stored on /dev/da1.
+Done.</screen>
+
+    <para>Initialize GEOM, this will load the
+      <filename>/boot/kernel/geom_mirror.ko</filename> kernel
+      module:</para>
+
+    <screen>&prompt.root; <userinput>gmirror load</userinput></screen>
+
+    <note>
+      <para>This command should have created the
+	<devicename>gm0</devicename>, device node under the
+	<filename role="directory">/dev/mirror</filename>
+	directory.</para>
+    </note>
+
+    <para>Install a generic <command>fdisk</command> label and boot code
+      to newly created <devicename>gm0</devicename> device:</para>
+
+    <screen>&prompt.root; <userinput>fdisk -vBI /dev/mirror/gm0</userinput></screen>
+
+    <para>Now install generic <command>bsdlabel</command>
+      information:</para>
+
+    <screen>&prompt.root; <userinput>bsdlabel -wB /dev/mirror/gm0s1</userinput></screen>
+
+    <note>
+      <para>If multiple slices and partitions exist, the flags for the
+	previous two commands will require alteration.  They must match
+	the slice and partition size of the other disk.</para>
+    </note>
+
+    <para>Use the &man.newfs.8; utility to create a default file
+      system on the <devicename>gm0s1a</devicename> device node:</para>
+
+    <screen>&prompt.root; <userinput>newfs -U /dev/mirror/gm0s1a</userinput></screen>
+
+    <para>This should have caused the system to spit out some
+      information and a bunch of numbers.  This is good.  Examine the
+      screen for any error messages and mount the device to the
+      <filename role="directory">/mnt</filename> mount point:</para>
+
+    <screen>&prompt.root; <userinput>mount /dev/mirror/gm0s1a /mnt</userinput></screen>
+
+    <para>Now move all data from the boot disk over to this new file
+      system.  This example uses the &man.dump.8; and &man.restore.8;
+      commands; however, &man.dd.1; would also work with this
+      scenario.</para>
+
+    <screen>&prompt.root; <userinput>dump -L -0 -f- / |(cd /mnt && restore -r -v -f-)</userinput></screen>
+
+    <para>This must be done for each file system.  Simply place the
+      appropriate file system in the correct location when running the
+      aforementioned command.</para>
+
+    <para>Now edit the replicated <filename>/mnt/etc/fstab</filename>
+      file and remove or comment out the swap file
+      <footnote>
+	<para>It should be noted that commenting out the swap file entry
+	in <filename>fstab</filename> will most likely require you to
+	re-establish a different way of enabling swap space.  Please
+	refer to <xref linkend="adding-swap-space"> for more
+	information.</para>
+      </footnote>.  Change the other file system information to use the
+      new disk.  See the following example:</para>
+
+    <programlisting># Device                Mountpoint      FStype  Options         Dump    Pass#
+#/dev/da0s2b             none            swap    sw              0       0
+/dev/mirror/gm0s1a       /               ufs     rw              1       1</programlisting>
+
+    <para>Now create a <filename>boot.conf</filename> file on both the
+      current and new root partitions.  This file will
+      <quote>help</quote> the system <acronym>BIOS</acronym>
+      boot the correct drive:</para>
+
+    <screen>&prompt.root; <userinput>echo "1:da(1,a)/boot/loader" &gt; /boot.config</userinput></screen>
+
+    <screen>&prompt.root; <userinput>echo "1:da(1,a)/boot/loader" &gt; /mnt/boot.config</userinput></screen>
+
+    <note>
+      <para>We have placed it on both root partitions to ensure proper
+        boot up.  If for some reason the system cannot read from the
+	new root partition, a failsafe is available.</para>
+    </note>
+
+    <para>Now add the following line to the new
+      <filename>/boot/loader.conf</filename>:</para>
+
+    <screen>&prompt.root; <userinput>echo 'geom_mirror_load="YES"' &gt;&gt; /mnt/boot/loader.conf</userinput></screen>
+
+    <para>This will instruct &man.loader.8; utility to load the
+      <filename>geom_mirror.ko</filename> module during system
+      initialization.</para>
+
+    <para>Reboot the system:</para>
+
+    <screen>&prompt.root; <userinput>shutdown -r now</userinput></screen>
+
+    <para>If all has gone well, the system should have booted from the
+      <devicename>gm0s1a</devicename> device and a <command>login</command>
+      prompt should be waiting.  If something went wrong, see review
+      the forthcoming troubleshooting section.  Now add the
+      <devicename>da0</devicename> disk to <devicename>gm0</devicename>
+      device:</para>
+
+    <screen>&prompt.root; <userinput>gmirror configure -a gm0</userinput>
+&prompt.root; <userinput>gmirror insert gm0 /dev/da0</userinput></screen>
+
+    <para>The <option>-a</option> flag tells &man.gmirror.8; to use
+      automatic synchronization; i.e., mirror the disk writes
+      automatically.  The manual page explains how to rebuild and
+      replace disks, although it uses <devicename>data</devicename>
+      in place of <devicename>gm0</devicename>.</para>
+
+    <sect2>
+      <title>Troubleshooting</title>
+
+      <sect3>
+	<title>System refuses to boot</title>
+
+	<para>If the system boots up to a prompt similar to:</para>
+
+	<programlisting>ffs_mountroot: can't find rootvp
+Root mount failed: 6
+mountroot></programlisting>
+
+	<para>Reboot the machine using the power or reset button.  At
+	  the boot menu, select option six (6).  This will drop the
+	  system to a &man.loader.8; prompt.  Load the kernel module
+	  manually:</para>
+
+	<screen>OK? <userinput>load geom_mirror.ko</userinput>
+OK? <userinput>boot</userinput></screen>
+
+	<para>If this works then for whatever reason the module was not
+	  being loaded properly.  Place:</para>
+
+	<programlisting>options	GEOM_MIRROR</programlisting>
+
+	<para>in the kernel configuration file, rebuild and reinstall.
+	  That should remedy this issue.</para>
+      </sect3>
+    </sect2>
+  </sect1>
+</chapter>
+
+<!--
+     Local Variables:
+     mode: sgml
+     sgml-declaration: "../chapter.decl"
+     sgml-indent-data: t
+     sgml-omittag: nil
+     sgml-always-quote-attributes: t
+     sgml-parent-document: ("../book.sgml" "part" "chapter")
+     End:
+-->
