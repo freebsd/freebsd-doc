@@ -19,40 +19,48 @@
       the unattached devices and see if a newly loaded kld will attach
       to any of them.</para>
 
+    <sect2>
+      <title>Sample Driver Source (<filename>mypci.c</filename>)</title>
+
 <programlisting>/*
  * Simple KLD to play with the PCI functions.
  *
  * Murray Stokely
  */
 
-#define MIN(a,b) (((a) &lt; (b)) ? (a) : (b))
-
-#include &lt;sys/param.h&gt;  /* defines used in kernel.h */
+#include &lt;sys/param.h&gt;		/* defines used in kernel.h */
 #include &lt;sys/module.h&gt;
 #include &lt;sys/systm.h&gt;
 #include &lt;sys/errno.h&gt;
-#include &lt;sys/kernel.h&gt; /* types used in module initialization */
-#include &lt;sys/conf.h&gt;   /* cdevsw struct */
-#include &lt;sys/uio.h&gt;    /* uio struct */
+#include &lt;sys/kernel.h&gt;		/* types used in module initialization */
+#include &lt;sys/conf.h&gt;		/* cdevsw struct */
+#include &lt;sys/uio.h&gt;		/* uio struct */
 #include &lt;sys/malloc.h&gt;
-#include &lt;sys/bus.h&gt;	/* structs, prototypes for pci bus stuff */
+#include &lt;sys/bus.h&gt;		/* structs, prototypes for pci bus stuff */
 
 #include &lt;machine/bus.h&gt;
 #include &lt;sys/rman.h&gt;
 #include &lt;machine/resource.h&gt;
 
-#include &lt;dev/pci/pcivar.h&gt; /* For get_pci macros! */
+#include &lt;dev/pci/pcivar.h&gt;	/* For pci_get macros! */
 #include &lt;dev/pci/pcireg.h&gt;
 
+/* The softc holds our per-instance data. */
+struct mypci_softc {
+	device_t	my_dev;
+	struct cdev	*my_cdev;
+};
+
 /* Function prototypes */
-d_open_t	mypci_open;
-d_close_t	mypci_close;
-d_read_t	mypci_read;
-d_write_t	mypci_write;
+static d_open_t		mypci_open;
+static d_close_t	mypci_close;
+static d_read_t		mypci_read;
+static d_write_t	mypci_write;
 
 /* Character device entry points */
 
 static struct cdevsw mypci_cdevsw = {
+	.d_version =	D_VERSION,
 	.d_open =	mypci_open,
 	.d_close =	mypci_close,
 	.d_read =	mypci_read,
@@ -60,62 +68,73 @@ static struct cdevsw mypci_cdevsw = {
 	.d_name =	"mypci",
 };
 
-/* vars */
-static dev_t sdev;
-
-/* We're more interested in probe/attach than with
-   open/close/read/write at this point */
+/*
+ * In the cdevsw routines, we find our softc by using the si_drv1 member
+ * of struct cdev.  We set this variable to point to our softc in our
+ * attach routine when we create the /dev entry.
+ */
 
 int
-mypci_open(dev_t dev, int oflags, int devtype, d_thread_t *td)
+mypci_open(struct cdev *dev, int oflags, int devtype, d_thread_t *td)
 {
-	int err = 0;
+	struct mypci_softc *sc;
 
-	printf("Opened device \"mypci\" successfully.\n");
-	return (err);
+	/* Look up our softc. */
+	sc = dev-&gt;si_drv1;
+	device_printf(sc-&gt;my_dev, "Opened successfully.\n");
+	return (0);
 }
 
 int
-mypci_close(dev_t dev, int fflag, int devtype, d_thread_t *td)
+mypci_close(struct cdev *dev, int fflag, int devtype, d_thread_t *td)
 {
-	int err = 0;
+	struct mypci_softc *sc;
 
-	printf("Closing device \"mypci.\"\n");
-	return (err);
+	/* Look up our softc. */
+	sc = dev-&gt;si_drv1;
+	device_printf(sc-&gt;my_dev, "Closed.\n");
+	return (0);
 }
 
 int
-mypci_read(dev_t dev, struct uio *uio, int ioflag)
+mypci_read(struct cdev *dev, struct uio *uio, int ioflag)
 {
-	int err = 0;
+	struct mypci_softc *sc;
 
-	printf("mypci read!\n");
-	return (err);
+	/* Look up our softc. */
+	sc = dev-&gt;si_drv1;
+	device_printf(sc-&gt;my_dev, "Asked to read %d bytes.\n", uio-&gt;uio_resid);
+	return (0);
 }
 
 int
-mypci_write(dev_t dev, struct uio *uio, int ioflag)
+mypci_write(struct cdev *dev, struct uio *uio, int ioflag)
 {
-	int err = 0;
+	struct mypci_softc *sc;
 
-	printf("mypci write!\n");
+	/* Look up our softc. */
+	sc = dev-&gt;si_drv1;
+	device_printf(sc-&gt;my_dev, "Asked to write %d bytes.\n", uio-&gt;uio_resid);
 	return (err);
 }
 
 /* PCI Support Functions */
 
 /*
- * Return identification string if this is device is ours.
+ * Compare the device ID of this device against the IDs that this driver
+ * supports.  If there is a match, set the description and return success.
  */
 static int
 mypci_probe(device_t dev)
 {
+
 	device_printf(dev, "MyPCI Probe\nVendor ID : 0x%x\nDevice ID : 0x%x\n",
 	    pci_get_vendor(dev), pci_get_device(dev));
 
 	if (pci_get_vendor(dev) == 0x11c1) {
 		printf("We've got the Winmodem, probe successful!\n");
-		return (0);
+		device_set_desc(dev, "WinModem");
+		return (BUS_PROBE_DEFAULT);
 	}
 	return (ENXIO);
 }
@@ -125,10 +144,22 @@ mypci_probe(device_t dev)
 static int
 mypci_attach(device_t dev)
 {
+	struct mypci_softc *sc;
 
 	printf("MyPCI Attach for : deviceID : 0x%x\n",pci_get_vendor(dev));
-	sdev = make_dev(<literal>&amp;</literal>mypci_cdevsw, 0, UID_ROOT,
-	    GID_WHEEL, 0600, "mypci");
+
+	/* Look up our softc and initialize its fields. */
+	sc = device_get_softc(dev);
+	sc-&gt;my_dev = dev;
+
+	/*
+	 * Create a /dev entry for this device.  The kernel will assign us
+	 * a major number automatically.  We use the unit number of this
+	 * device as the minor number and name the character device
+	 * "mypci&lt;unit&gt;".
+	 */
+	sc-&gt;my_cdev = make_dev(<literal>&amp;</literal>mypci_cdevsw, device_get_unit(dev),
+	    UID_ROOT, GID_WHEEL, 0600, "mypci%u", device_get_unit(dev));
 	printf("Mypci device loaded.\n");
 	return (ENXIO);
 }
@@ -138,7 +169,11 @@ mypci_attach(device_t dev)
 static int
 mypci_detach(device_t dev)
 {
+	struct mypci_softc *sc;
 
+	/* Teardown the state in our softc created in our attach routine. */
+	sc = device_get_softc(dev);
+	destroy_dev(sc-&gt;my_cdev);
 	printf("Mypci detach!\n");
 	return (0);
 }
@@ -167,7 +202,6 @@ mypci_suspend(device_t dev)
 /*
  * Device resume routine.
  */
-
 static int
 mypci_resume(device_t dev)
 {
@@ -188,27 +222,43 @@ static device_method_t mypci_methods[] = {
 	{ 0, 0 }
 };
 
-static driver_t mypci_driver = {
-	"mypci",
-	mypci_methods,
-	0,
-	/*	sizeof(struct mypci_softc), */
-};
-
 static devclass_t mypci_devclass;
 
+DEFINE_CLASS_0(mypci, mypci_driver, mypci_methods, sizeof(struct mypci_softc));
 DRIVER_MODULE(mypci, pci, mypci_driver, mypci_devclass, 0, 0);</programlisting>
+    </sect2>
 
-    <para>Additional Resources
-    <itemizedlist>
-      <listitem><simpara><ulink url="http://www.pcisig.org/">PCI
-	Special Interest Group</ulink></simpara></listitem>
+    <sect2>
+      <title><filename>Makefile</filename> for Sample Driver</title>
 
-      <listitem><simpara>PCI System Architecture, Fourth Edition by
-	Tom Shanley, et al.</simpara></listitem>
+<programlisting># Makefile for mypci driver
 
-    </itemizedlist>
-    </para>
+KMOD=	mypci
+SRCS=	mypci.c
+SRCS+=	device_if.h bus_if.h pci_if.h
+
+.include &lt;bsd.kmod.mk&gt;</programlisting>
+
+      <para>If you place the above source file and
+	<filename>Makefile</filename> into a directory, you may run
+	<command>make</command> to compile the sample driver.
+	Additionally, you may run <command>make load</command> to load
+	the driver into the currently running kernel and <command>make
+	unload</command> to unload the driver after it is
+	loaded.</para>
+    </sect2>
+
+    <sect2>
+      <title>Additional Resources</title>
+      <itemizedlist>
+	<listitem><simpara><ulink url="http://www.pcisig.org/">PCI
+	  Special Interest Group</ulink></simpara></listitem>
+
+	<listitem><simpara>PCI System Architecture, Fourth Edition by
+	  Tom Shanley, et al.</simpara></listitem>
+
+      </itemizedlist>
+    </sect2>
   </sect1>
 
   <sect1 id="pci-bus">
