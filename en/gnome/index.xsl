@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.82 2005/12/29 07:47:57 adamw Exp $ -->
+<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.83 2005/12/29 07:53:52 adamw Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
 		xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -10,7 +10,7 @@
   <xsl:import href="includes.xsl"/>
 
   <xsl:variable name="base" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.82 2005/12/29 07:47:57 adamw Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.83 2005/12/29 07:53:52 adamw Exp $'"/>
   <xsl:variable name="section" select="'gnome'"/>
   <xsl:variable name="title" select="'FreeBSD GNOME Project'"/>
 
@@ -157,15 +157,11 @@
 		  <li><a href="http://www.opengroup.org/desktop/">CDE (commercial)</a></li>
 		</ul>
 
-		<form action="http://lists.FreeBSD.org/htcgi/htsearch" method="post">
+		<a id="search" name="search"></a>
+		<form action="http://freebsd.rambler.ru/srch" method="get">
 		  <p>Search the freebsd-gnome mailing list archives:</p>
 		  <input type="text" name="words" size="25"/>
-		  <input type="hidden" name="config"
-		    value="htdig-mailman/freebsd-gnome"/>
-		  <input type="hidden" name="restrict"
-		    value=""/>
-		  <input type="hidden" name="exclude"
-		    value=""/>
+		  <input type="hidden" name="rubric" value="122" />
 		  <input type="submit" value="Search"/>
 		</form>
 

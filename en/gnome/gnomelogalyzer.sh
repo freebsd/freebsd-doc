@@ -27,7 +27,7 @@
 # Heh. "Tort."
 #
 # $MCom: portstools/gnomelogalyzer.sh.in,v 1.12 2005/06/28 05:47:54 adamw Exp $
-#   $FreeBSD$
+#   $FreeBSD: www/en/gnome/gnomelogalyzer.sh,v 1.6 2005/08/14 07:01:28 adamw Exp $
 #
 
 # This script uses some simple yet effective heuristics to analyse
@@ -263,7 +263,7 @@ echo "	* 99% of the commonly reported build failures can be solved by"
 echo "	  running \"portupgrade -a\""
 echo "	* Read the FAQs at http://www.FreeBSD.org/gnome/"
 echo "	* Search the archives of freebsd-gnome@FreeBSD.org.  Archives can be"
-echo "	  searched at http://lists.freebsd.org/pipermail/freebsd-gnome/"
+echo "	  searched at http://www.freebsd.org/gnome/index.html#search"
 echo
 echo "If you have not performed each of the above suggestions, don't bother asking for help.  The chances are good that you'll simply be told to perform one of the aforementioned steps." | fmt 75 79
 
