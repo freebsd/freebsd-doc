@@ -72,10 +72,9 @@ mv pgpkeys.ent pgpkeys.ent.orig || exit 1
 
 echo
 echo "Unless you are already listed there, you should now add the"
-echo "following text to"
-echo "doc/en_US.ISO8859-1/books/handbook/pgpkeys/chapter.sgml"
-echo "in the appropriate position of the developer section (unless"
-echo "this is a role key or you are a core member)."
+echo "following text to pgpkeys-developers.sgml (unless this is a"
+echo "role key or you are a core member. In that case add to"
+echo "pgpkeys-officers.sgml or pgpkeys-core.sgml)."
 echo "Remember to keep the list sorted by last name!"
 echo
 echo "    <sect2 id=\"pgpkey-${me}\">"
@@ -85,4 +84,5 @@ echo "    </sect2>"
 echo
 echo "If this is a new entry, don't forget to 'cvs add ${keyfile}',"
 echo "and to commit each of ${keyfile}, pgpkeys.ent and"
-echo "doc/en_US.ISO8859-1/books/handbook/pgpkeys/chapter.sgml."
+echo "pgpkeys-developers.sgml, pgpkeys-officers.sgml, or"
+echo "pgpkeys-core.sgml."
