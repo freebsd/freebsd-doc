@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/share/sgml/includes.misc.xsl,v 1.26 2005/10/06 01:45:27 hrs Exp $ -->
+<!-- $FreeBSD: www/share/sgml/includes.misc.xsl,v 1.27 2005/11/09 22:10:00 simon Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -187,10 +187,19 @@
 
   <xsl:template name="html-usergroups-list-header">
     <p>FreeBSD's widespread popularity has spawned a number of user groups
-      around the world.  If you know of a FreeBSD user group not listed here,
+      around the world.</p>
+    <p>If you know of a FreeBSD user group not listed here,
       please fill out a <a href="http://www.freebsd.org/send-pr.html">
-	problem report</a> for category www.  Submissions should be in HTML
-      and must offer a short description.</p>
+	problem report</a> for category www with the following information:</p>
+    <ol>
+      <li>A URL for the user group's website.</li>
+      <li>An email contact address of a human in charge,
+         for use by our visitors and website administrators.</li>
+      <li>A short (one paragraph) description of the user group.</li>
+    </ol>
+    <p>Submissions should be in HTML. In keeping with the spirit of FreeBSD,
+      we prefer user groups that are active and which conduct their business
+      in public.</p>
 
     <h3>Regions:</h3>
   </xsl:template>
