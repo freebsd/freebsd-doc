@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/news/Makefile,v 1.43 2005/09/19 20:18:28 hrs Exp $
+# $FreeBSD: www/en/news/Makefile,v 1.44 2005/11/05 13:10:53 ceri Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -19,6 +19,7 @@ DOCS+= press-rel-5.sgml
 DOCS+= press-rel-6.sgml
 DOCS+= press-rel-7.sgml
 DOCS+= press-rel-8.sgml
+DOCS+= press-rel-9.sgml
 
 # The yearly State of the Union address
 DOCS+= sou1999.sgml
