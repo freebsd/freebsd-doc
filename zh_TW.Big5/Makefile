@@ -1,6 +1,6 @@
 # $FreeBSD$
 
-#SUBDIR = articles
+SUBDIR = articles
 SUBDIR += books
 
 COMPAT_SYMLINK = zh
