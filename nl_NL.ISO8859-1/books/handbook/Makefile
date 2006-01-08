@@ -1,7 +1,7 @@
 #
 # $FreeBSD$
-# $FreeBSDnl: nl_NL.ISO8859-1/books/handbook/Makefile,v 1.16 2005/10/04 21:17:40 siebrand Exp $
-# Gebaseerd op: 1.95 (sortof)
+# $FreeBSDnl: doc/nl_NL.ISO8859-1/books/handbook/Makefile,v 1.19 2006/01/03 21:17:07 siebrand Exp $
+# Gebaseerd op: 1.97
 #
 # Build the FreeBSD Dutch Handbook.
 #
@@ -11,7 +11,7 @@
 # Handboekspecifieke variabelen
 #
 #	WITH_PGPKEYS	De gedrukte verie van het handboek geeft standaard
-#		 	alleen PGP vingerafdrukken weer.  Als het gewenst
+#			alleen PGP vingerafdrukken weer.  Als het gewenst
 #			is dat de complete sleutel wordt weergegeven dan
 #			dient deze variabele insteld te worden.  De optie
 #			heeft geen invloed op de HTML formaten.
@@ -27,16 +27,15 @@
 #
 # ------------------------------------------------------------------------
 
-.PATH: ${.CURDIR}/../../share/sgml/glossary/
+.PATH: ${.CURDIR}/../../share/sgml/glossary
 
-MAINTAINER=remko@FreeBSD.org
+MAINTAINER=	remko@FreeBSD.org
 
 DOC?= book
 
 FORMATS?= html-split
 
 HAS_INDEX= true
-WITH_GLOSSARY?=
 
 INSTALL_COMPRESSED?= gz
 INSTALL_ONLY_COMPRESSED?=
@@ -149,21 +148,21 @@ IMAGES_LIB+= callouts/8.png
 IMAGES_LIB+= callouts/9.png
 IMAGES_LIB+= callouts/10.png
 
-#
+# 
 # SRCS lists the individual SGML files that make up the document. Changes
 # to any of these files will force a rebuild
 #
 
 # SGML content
-SRCS=  audit/chapter.sgml
+SRCS+= audit/chapter.sgml
 SRCS+= book.sgml
 SRCS+= colophon.sgml
 SRCS+= freebsd-glossary.sgml
 SRCS+= advanced-networking/chapter.sgml
 SRCS+= basics/chapter.sgml
 SRCS+= bibliography/chapter.sgml
-SRCS+= config/chapter.sgml
 SRCS+= boot/chapter.sgml
+SRCS+= config/chapter.sgml
 SRCS+= cutting-edge/chapter.sgml
 SRCS+= desktop/chapter.sgml
 SRCS+= disks/chapter.sgml
@@ -192,7 +191,7 @@ SRCS+= vinum/chapter.sgml
 SRCS+= x11/chapter.sgml
 
 # Entities
-SRCS+= chapters.ent
+SRCS+= chapters.ent 
 
 SYMLINKS=	${DESTDIR} index.html handbook.html
 
@@ -202,8 +201,8 @@ CHAPTERS?= ${SRCS:M*chapter.sgml}
 SGMLFLAGS+= ${CHAPTERS:S/\/chapter.sgml//:S/^/-i chap./}
 SGMLFLAGS+= -i chap.freebsd-glossary
 
-# XXX The Handbook build currently overflows some internal, hardcoded
-# limits in pdftex.  Until we split the Handbook up, build the PDF
+# XXX The Handbook build currently overflows some internal, hardcoded 
+# limits in pdftex.  Until we split the Handbook up, build the PDF 
 # version using ps2pdf instead of pdftex.
 
 PS2PDF?=	${PREFIX}/bin/ps2pdf
@@ -215,8 +214,7 @@ book.pdf: book.ps
 	${PS2PDF} book.ps book.pdf
 
 pgpkeyring: pgpkeys/chapter.sgml
-	@${JADE} -V nochunks ${JADEOPTS} -d ${DSLPGP} -t sgml ${MASTERDOC}
-
+	@${JADE} -V nochunks ${OTHERFLAGS} ${JADEOPTS} -d ${DSLPGP} -t sgml ${MASTERDOC}
 
 #
 # Handbook-specific variables
@@ -226,40 +224,45 @@ JADEFLAGS+=	-V withpgpkeys
 .endif
 
 URL_RELPREFIX?=	../../../..
-DOC_PREFIX?= ${.CURDIR}/../../..
+DOC_PREFIX?=	${.CURDIR}/../../..
 
-.for p in ftp cvsup
-SRCS+= mirrors.sgml.${p}.inc
-CLEANFILES+= mirrors.sgml.${p}.inc
-CLEANFILES+= mirrors.sgml.${p}.inc.tmp
-.endfor
+#
+# rules generating lists of mirror site from XML database.
+#
+XMLDOCS=	mirrors-ftp:::mirrors.sgml.ftp.inc.tmp \
+		mirrors-cvsup:::mirrors.sgml.cvsup.inc.tmp \
+		eresources:::eresources.sgml.www.inc.tmp
+DEPENDSET.DEFAULT=	transtable mirror
+XSLT.DEFAULT=		${XSL_MIRRORS}
+XML.DEFAULT=		${XML_MIRRORS}
+NO_TIDY.DEFAULT=	yes
 
-SRCS+= eresources.sgml.www.inc
-CLEANFILES+= eresources.sgml.www.inc
-CLEANFILES+= eresources.sgml.www.inc.tmp
+PARAMS.mirrors-ftp+=	--param 'type' "'ftp'" \
+			--param 'proto' "'ftp'" \
+			--param 'target' "'handbook/mirrors/chapter.sgml'"
+PARAMS.mirrors-cvsup+=	--param 'type' "'cvsup'" \
+			--param 'proto' "'cvsup'" \
+			--param 'target' "'handbook/mirrors/chapter.sgml'"
+PARAMS.eresources+=	--param 'type' "'www'" \
+			--param 'proto' "'http'" \
+			--param 'target' "'handbook/eresources/chapter.sgml'"
+
+SRCS+=		mirrors.sgml.ftp.inc \
+		mirrors.sgml.cvsup.inc \
+		eresources.sgml.www.inc
+
+CLEANFILES+=	mirrors.sgml.ftp.inc mirrors.sgml.ftp.inc.tmp \
+		mirrors.sgml.cvsup.inc mirrors.sgml.cvsup.inc.tmp \
+		eresources.sgml.www.inc eresources.sgml.www.inc.tmp
 
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"
 
 .for p in ftp cvsup
-mirrors.sgml.${p}.inc: ${XML_MIRRORS} ${XSL_MIRRORS}
-	${XSLTPROC} ${XSLTPROCOPTS} \
-	    -o $@.tmp \
-	    --param 'type' "'$p'" \
-	    --param 'proto' "'$p'" \
-	    --param 'target' "'handbook/mirrors/chapter.sgml'" \
-	    ${XSL_MIRRORS} ${XML_MIRRORS}
+mirrors.sgml.${p}.inc: mirrors.sgml.${p}.inc.tmp
 	${SED} -e 's,<\([^ >]*\)\([^>]*\)/>,<\1\2></\1>,;s,</anchor>,,'\
 	    < $@.tmp > $@ || (${RM} -f $@ && false)
-	${RM} -f $@.tmp
 .endfor
 
-eresources.sgml.www.inc: ${XML_MIRRORS} ${XSL_MIRRORS}
-	${XSLTPROC} ${XSLTPROCOPTS} \
-	    -o $@.tmp \
-	    --param 'type' "'www'" \
-	    --param 'proto' "'http'" \
-	    --param 'target' "'handbook/eresources/chapter.sgml'" \
-	    ${XSL_MIRRORS} ${XML_MIRRORS}
+eresources.sgml.www.inc: eresources.sgml.www.inc.tmp
 	${SED} -e 's,<\([^ >]*\)\([^>]*\)/>,<\1\2></\1>,;s,</anchor>,,'\
 	    < $@.tmp > $@ || (${RM} -f $@ && false)
-	${RM} -f $@.tmp

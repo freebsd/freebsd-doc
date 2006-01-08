@@ -1,8 +1,7 @@
 <!--
       The FreeBSD Documentation Project
       $FreeBSD$
-      $FreeBSDnl: doc/nl_NL.ISO8859-1/share/sgml/freebsd.dsl,v 1.4 2003/05/22 15:03:49 hrs Exp $
-      Gebaseerd op: 1.20
+      Gebaseerd op: 1.21
 -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
@@ -190,7 +189,7 @@
 	       (renderas (inherited-attribute-string (normalize "renderas") sect))
 	       (hlevel                          ;; the apparent section level;
 	        (if renderas                    ;; if not real section level,
-  	            (string->number             ;;   then get the apparent level
+  	            (string-&gt;number             ;;   then get the apparent level
 	             (substring renderas 4 5))  ;;   from "renderas",
 	            (SECTLEVEL)))               ;; else use the real level
 	       (hs (HSIZE (- 4 hlevel))))
