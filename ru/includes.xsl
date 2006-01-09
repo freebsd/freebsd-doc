@@ -4,7 +4,7 @@
      The FreeBSD Russian Documentation Project
 
      $FreeBSD$
-     $FreeBSDru: frdp/www/ru/includes.xsl,v 1.17 2005/11/03 18:13:16 gad Exp $
+     $FreeBSDru: frdp/www/ru/includes.xsl,v 1.18 2006/01/09 17:23:43 gad Exp $
 
      Original revision: 1.20
 -->
@@ -239,22 +239,22 @@
   </xsl:variable>
 
   <xsl:variable name="u.rel.notes">
-    <xsl:value-of select="$base"/>/ru/releases/<xsl:value-of select="$rel.current"/>R/relnotes.html</xsl:variable>
+    <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel.current"/>R/relnotes.html</xsl:variable>
 
   <xsl:variable name="u.rel.announce">
-    <xsl:value-of select="$base"/>/ru/releases/<xsl:value-of select="$rel.current"/>R/announce.html</xsl:variable>
+    <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel.current"/>R/announce.html</xsl:variable>
   <xsl:variable name="u.rel.errata">
-    <xsl:value-of select="$base"/>/ru/releases/<xsl:value-of select="$rel.current"/>R/errata.html</xsl:variable>
+    <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel.current"/>R/errata.html</xsl:variable>
   <xsl:variable name="u.rel.hardware">
-    <xsl:value-of select="$base"/>/ru/releases/<xsl:value-of select="$rel.current"/>R/hardware.html</xsl:variable>
+    <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel.current"/>R/hardware.html</xsl:variable>
   <xsl:variable name="u.rel.installation">
-    <xsl:value-of select="$base"/>/ru/releases/<xsl:value-of select="$rel.current"/>R/installation.html</xsl:variable>
+    <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel.current"/>R/installation.html</xsl:variable>
   <xsl:variable name="u.rel.readme">
-    <xsl:value-of select="$base"/>/ru/releases/<xsl:value-of select="$rel.current"/>R/readme.html</xsl:variable>
+    <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel.current"/>R/readme.html</xsl:variable>
   <xsl:variable name="u.rel.early">
-    <xsl:value-of select="$base"/>/ru/releases/<xsl:value-of select="$rel.current"/>R/migration-guide.html</xsl:variable>
+    <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel.current"/>R/migration-guide.html</xsl:variable>
   <xsl:variable name="u.rel.migration">
-    <xsl:value-of select="$base"/>/ru/releases/<xsl:value-of select="$rel.current"/>R/migration-guide.html</xsl:variable>
+    <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel.current"/>R/migration-guide.html</xsl:variable>
 
   <xsl:variable name="u.rel2.notes">
     <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel2.current"/>R/relnotes.html</xsl:variable>
