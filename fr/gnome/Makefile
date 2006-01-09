@@ -1,7 +1,7 @@
-# $FreeBSD$
+# $FreeBSD: www/fr/gnome/Makefile,v 1.1 2003/12/15 16:05:02 stephane Exp $
 
 # The FreeBSD French Documentation Project
-# Original revision: 1.13
+# Original revision: 1.23
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -16,31 +16,19 @@ SUBDIR=		docs
 DOCS=	screenshots.sgml
 DOCS+=	contact.sgml
 
-DATA=	index.html newsflash.html news.rdf
+# DATA=	gnome_upgrade.sh
+# DATA+=	gnomelogalyzer.sh
 
-CLEANFILES=	index.html
-CLEANFILES+=	newsflash.html
-CLEANFILES+=	news.rdf
+SGML_INCLUDES+=	includes.navgnome.sgml
 
-index.html! index.xsl news.xml includes.xsl ../includes.xsl
-	${XSLTPROC} ${XSLTPROCOPTS:N-nonet} -o index.html \
-		${.CURDIR}/index.xsl ${.CURDIR}/news.xml
-.if !defined(NO_TIDY)
-	-${TIDY} ${TIDYOPTS} index.html
-.endif
+SRCS.DEFAULT=	includes.xsl
+SRCS.DEFAULT+=	includes.navgnome.xsl
+XML.DEFAULT=	news.xml
 
-news.rdf: rss.xsl news.xml includes.xsl ../includes.xsl
-	${XSLTPROC} ${XSLTPROCOPTS} -o news.rdf \
-		${.CURDIR}/rss.xsl ${.CURDIR}/news.xml
-.if !defined(NO_TIDY)
-	-${TIDY} -xml -wrap 0 ${TIDYOPTS} news.rdf
-.endif
+XMLDOCS=	index
+XSLTPROCOPTS.index=	${XSLTPROCOPTS:N--nonet}
 
-newsflash.html: newsflash.xsl news.xml includes.xsl ../includes.xsl
-	${XSLTPROC} ${XSLTPROCOPTS} -o ${.TARGET} \
-		${.CURDIR}/newsflash.xsl ${.CURDIR}/news.xml
-.if !defined(NO_TIDY)
-	-${TIDY} ${TIDYOPTS} ${.TARGET}
-.endif
+XMLDOCS+=	newsflash
+XMLDOCS+=	news:rss.xsl::news.rdf
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
