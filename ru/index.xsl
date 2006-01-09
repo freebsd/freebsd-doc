@@ -3,7 +3,7 @@
 <!--
      The FreeBSD Russian Documentation Project
 
-     $FreeBSD: www/ru/index.xsl,v 1.27 2005/10/05 20:39:12 simon Exp $
+     $FreeBSD: www/ru/index.xsl,v 1.28 2005/10/26 12:29:59 bvs Exp $
      $FreeBSDru: frdp/www/ru/index.xsl,v 1.45 2005/06/18 09:37:23 andy Exp $
 
      Original revision: 1.127
@@ -15,7 +15,7 @@
 
   <xsl:variable name="base" select="'.'"/>
   <xsl:variable name="enbase" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/ru/index.xsl,v 1.27 2005/10/05 20:39:12 simon Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/ru/index.xsl,v 1.28 2005/10/26 12:29:59 bvs Exp $'"/>
   <xsl:variable name="title" select="'Проект FreeBSD'"/>
 
   <!-- these params should be externally bound. The values
@@ -111,7 +111,7 @@
 				  <h2>Последние релизы</h2>
 				  <ul id="frontreleaseslist">
 					<li>
-					  <a href="{$u.rel.announce}">Продуктивный релиз <xsl:value-of select="$rel.current"/></a>
+					  <a href="../{$u.rel.announce}">Продуктивный релиз <xsl:value-of select="$rel.current"/></a>
 					</li>
 					<li>
 					  <a href="{$u.rel2.announce}">(Старый) Продуктивный релиз <xsl:value-of select="$rel2.current"/></a>
