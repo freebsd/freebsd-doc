@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/share/sgml/includes.misc.xsl,v 1.27 2005/11/09 22:10:00 simon Exp $ -->
+<!-- $FreeBSD: www/share/sgml/includes.misc.xsl,v 1.28 2006/01/07 12:32:11 jkoshy Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -610,7 +610,7 @@
 
     <xsl:choose>
       <xsl:when test="$type = 'advisory'">
-	<xsl:for-each select="document($advisories.xml)/descendant::advisory[position() &lt;= 3]">
+	<xsl:for-each select="document($advisories.xml)/descendant::advisory[position() &lt;= 4]">
 	  <xsl:param name="year" select="../../../name" />
           <xsl:param name="month" select="../../name" />
           <xsl:param name="day" select="../name" />
@@ -636,7 +636,7 @@
 	</xsl:for-each>
       </xsl:when>
       <xsl:when test="$type = 'notice'">
-	<xsl:for-each select="document($advisories.xml)/descendant::notice[position() &lt;= 3]">
+	<xsl:for-each select="document($advisories.xml)/descendant::notice[position() &lt;= 2]">
 	<xsl:param name="year" select="../../../name" />
 	<xsl:param name="month" select="../../name" />
 	<xsl:param name="day" select="../name" />
