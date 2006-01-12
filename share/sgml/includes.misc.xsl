@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/share/sgml/includes.misc.xsl,v 1.28 2006/01/07 12:32:11 jkoshy Exp $ -->
+<!-- $FreeBSD: www/share/sgml/includes.misc.xsl,v 1.29 2006/01/11 21:13:33 simon Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -602,7 +602,7 @@
   </xsl:template>
 
   <!-- template: "html-index-advisories-items"
-       pulls in the 10 most recent security advisories -->
+       pulls in the 6 most recent security advisories -->
 
   <xsl:template name="html-index-advisories-items">
     <xsl:param name="advisories.xml" select="''" />
