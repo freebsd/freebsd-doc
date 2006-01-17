@@ -3,8 +3,8 @@
 <!--
      The FreeBSD Russian Documentation Project
 
-     $FreeBSD: www/ru/index.xsl,v 1.28 2005/10/26 12:29:59 bvs Exp $
-     $FreeBSDru: frdp/www/ru/index.xsl,v 1.45 2005/06/18 09:37:23 andy Exp $
+     $FreeBSD: www/ru/index.xsl,v 1.29 2006/01/09 17:55:19 bvs Exp $
+     $FreeBSDru: frdp/www/ru/index.xsl,v 1.47 2006/01/16 21:27:51 gad Exp $
 
      Original revision: 1.127
 -->
@@ -15,7 +15,7 @@
 
   <xsl:variable name="base" select="'.'"/>
   <xsl:variable name="enbase" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/ru/index.xsl,v 1.28 2005/10/26 12:29:59 bvs Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD$'"/>
   <xsl:variable name="title" select="'Проект FreeBSD'"/>
 
   <!-- these params should be externally bound. The values
@@ -87,7 +87,7 @@
 				UltraSPARC&#174;.  Она основана на BSD, версии
 				<xsl:value-of select="$unix"/>, созданной в Калифорнийском
 				Университете в Беркли.  Она разрабатывается и поддерживается <a
-				href="{$base}/doc/en_US.ISO8859-1/articles/contributors/index.html">
+				href="{$enbase}/doc/en_US.ISO8859-1/articles/contributors/index.html">
 				большой командой разработчиков</a>.  Поддержка <a
 				href="platforms/index.html">других платформ</a>
 				находится на разных стадиях разработки.</p>
