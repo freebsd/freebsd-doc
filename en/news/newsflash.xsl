@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/en/news/newsflash.xsl,v 1.14 2005/10/04 06:22:24 murray Exp $ -->
+<!-- $FreeBSD: www/en/news/newsflash.xsl,v 1.15 2005/11/30 19:59:32 pav Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -25,7 +25,7 @@
       
       <xsl:copy-of select="$header1"/>
 
-      <body xsl:use-attribute-sets="att.body">
+      <body>
 
   <div id="CONTAINERWRAP">
     <div id="CONTAINER">
