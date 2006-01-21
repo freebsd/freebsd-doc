@@ -24,7 +24,7 @@
      OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
      SUCH DAMAGE.
 
-     $FreeBSD: www/en/commercial/entries.xsl,v 1.5 2005/10/04 16:33:22 simon Exp $
+     $FreeBSD: www/en/commercial/entries.xsl,v 1.6 2005/11/26 19:28:02 remko Exp $
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
@@ -53,7 +53,7 @@
 
       <xsl:copy-of select="$header1"/>
 
-      <body xsl:use-attribute-sets="att.body">
+      <body>
 
         <div id="containerwrap">
           <div id="container">

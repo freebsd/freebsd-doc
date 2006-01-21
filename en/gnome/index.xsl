@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.83 2005/12/29 07:53:52 adamw Exp $ -->
+<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.84 2006/01/07 06:14:16 mezz Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
 		xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -10,7 +10,7 @@
   <xsl:import href="includes.xsl"/>
 
   <xsl:variable name="base" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.83 2005/12/29 07:53:52 adamw Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.84 2006/01/07 06:14:16 mezz Exp $'"/>
   <xsl:variable name="section" select="'gnome'"/>
   <xsl:variable name="title" select="'FreeBSD GNOME Project'"/>
 
@@ -21,7 +21,7 @@
     <html>
       <xsl:copy-of select="$header1"/>
 
-      <body xsl:use-attribute-sets="att.body">
+      <body>
 
 	<div id="containerwrap">
 	  <div id="container">

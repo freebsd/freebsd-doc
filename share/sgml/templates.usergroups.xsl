@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 
-<!-- $FreeBSD: www/share/sgml/templates.usergroups.xsl,v 1.4 2005/11/06 17:21:28 hrs Exp $ -->
+<!-- $FreeBSD: www/share/sgml/templates.usergroups.xsl,v 1.5 2005/11/30 21:35:22 pav Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS"
@@ -24,7 +24,7 @@
     <html>
       <xsl:copy-of select="$header1"/>
 
-      <body xsl:use-attribute-sets="att.body">
+      <body>
         <div id="CONTAINERWRAP">
           <div id="CONTAINER">
 	    <xsl:copy-of select="$header2"/>

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/en/news/oldpress.xsl,v 1.1 2004/04/07 11:39:26 phantom Exp $ -->
+<!-- $FreeBSD: www/en/news/oldpress.xsl,v 1.2 2004/06/12 04:14:10 jkoshy Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -24,7 +24,7 @@
       
       <xsl:copy-of select="$header1"/>
 
-      <body xsl:use-attribute-sets="att.body">
+      <body>
 
 	<xsl:copy-of select="$header2"/>
 

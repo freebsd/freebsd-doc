@@ -1,7 +1,7 @@
 <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
   <xsl:import href="../../includes.xsl"/>
   <xsl:import href="includes.xsl"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/platforms/ia64/todo.xsl,v 1.5 2005/10/15 08:53:59 blackend Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/platforms/ia64/todo.xsl,v 1.6 2005/11/30 19:59:31 pav Exp $'"/>
   <xsl:variable name="section" select="'developers'"/>
   <xsl:output doctype-public="-//W3C//DTD HTML 4.01 Transitional//EN"
     encoding="iso-8859-1" method="html"/>
@@ -9,7 +9,7 @@
     <html>
       <xsl:copy-of select="$header1"/>
 
-      <body xsl:use-attribute-sets="att.body">
+      <body>
 
 	<div id="CONTAINERWRAP">
 	  <div id="CONTAINER">

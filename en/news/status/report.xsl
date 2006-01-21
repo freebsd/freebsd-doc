@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/en/news/status/report.xsl,v 1.7 2005/01/05 23:43:20 mlaier Exp $ -->
+<!-- $FreeBSD: www/en/news/status/report.xsl,v 1.8 2005/10/04 19:43:48 hrs Exp $ -->
 
 <!-- Standard header material -->
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
@@ -36,7 +36,7 @@
       
       <xsl:copy-of select="$header1"/>
 
-      <body xsl:use-attribute-sets="att.body">
+      <body>
 
 	<div id="containerwrap">
 	  <div id="container">
