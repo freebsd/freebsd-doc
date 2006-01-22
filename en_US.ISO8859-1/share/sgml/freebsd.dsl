@@ -189,7 +189,7 @@
 	       (renderas (inherited-attribute-string (normalize "renderas") sect))
 	       (hlevel                          ;; the apparent section level;
 	        (if renderas                    ;; if not real section level,
-  	            (string-&gt;number             ;;   then get the apparent level
+  	            (string->number             ;;   then get the apparent level
 	             (substring renderas 4 5))  ;;   from "renderas",
 	            (SECTLEVEL)))               ;; else use the real level
 	       (hs (HSIZE (- 4 hlevel))))
