@@ -1,8 +1,9 @@
 # $FreeBSD$
 
 SUBDIR = faq
-#SUBDIR+= handbook
-#SUBDIR+= porters-handbook
+SUBDIR+= fdp-primer
+SUBDIR+= handbook
+SUBDIR+= porters-handbook
 #SUBDIR+= zh-tut
 
 ROOT_SYMLINKS = faq
