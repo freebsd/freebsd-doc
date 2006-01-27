@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/docproj/Makefile,v 1.9 2001/07/31 00:24:23 murray Exp $
+# $FreeBSD: www/en/docproj/Makefile,v 1.10 2003/05/18 20:49:48 murray Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -16,6 +16,7 @@ DOCS+=  submitting.sgml
 DOCS+=  who.sgml 
 DOCS+=  translations.sgml
 DOCS+=	docproj.sgml
+DOCS+=	todo.sgml
 
 INDEXLINK= docproj.html
 
