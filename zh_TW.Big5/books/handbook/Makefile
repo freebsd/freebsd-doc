@@ -1,5 +1,6 @@
 #
 # $FreeBSD$
+# Original revision: 1.97
 #
 # Build the FreeBSD Handbook.
 #
