@@ -8,7 +8,7 @@ MAINTAINER=doc@FreeBSD.org
 
 DOC?= book
 
-FORMATS?= html-split
+FORMATS?= html-split html
 
 INSTALL_COMPRESSED?= gz
 INSTALL_ONLY_COMPRESSED?=
