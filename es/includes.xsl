@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/es/includes.xsl,v 1.9 2005/10/07 17:23:12 jesusr Exp $ -->
+<!-- $FreeBSD: www/es/includes.xsl,v 1.10 2005/11/03 21:17:45 jcamou Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -17,7 +17,7 @@
   </xsl:variable>
 
   <xsl:variable name="copyright">
-    <a href="{$enbase}/copyright/index.html">Copyright</a> &#169; 1995-2005 the FreeBSD Project.  Todos los derechos reservados.
+    <a href="{$enbase}/copyright/index.html">Copyright</a> &#169; 1995-2006 The FreeBSD Project.  Todos los derechos reservados.
   </xsl:variable>
 
   <xsl:variable name="email" select="'freebsd-questions'"/>
