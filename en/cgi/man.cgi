@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp 
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.151 2005-11-30 22:03:10 fenner Exp $
+# $Id: man.cgi,v 1.152 2006-02-03 13:17:29 wosch Exp $
 
 #use Data::Dumper;
 #use Carp;
@@ -324,8 +324,15 @@ $manPathDefault = 'FreeBSD 6.0-RELEASE and Ports';
      'Minix 2.0',             "$manLocalDir/Minix-2.0",
      'Unix Seventh Edition',  "$manLocalDir/v7man",
      'deutsch - Linux/GNU',   "$manLocalDir/linux-de-0.4",
-     'Darwin 1.3 PPC',        "$manLocalDir/Darwin-1.3-ppc",
-     'Darwin 7.0.1 PPC',      "$manLocalDir/Darwin-7.0.1-ppc",
+     "Darwin 1.3.1/x86",     "$manLocalDir/Darwin-1.3.1-x86",
+     "Darwin 1.4.1/x86",     "$manLocalDir/Darwin-1.4.1-x86",
+     "Darwin 6.0.2/x86",     "$manLocalDir/Darwin-6.0.2-x86",
+     "Darwin 7.0.1", "$manLocalDir/Darwin-7.0.1",
+     "Darwin 8.0.1/ppc",     "$manLocalDir/Darwin-8.0.1-ppc",
+     "OpenDarwin 20030208pre4/ppc",  "$manLocalDir/OpenDarwin-20030208pre4-ppc",
+     "OpenDarwin 6.6.1/x86", "$manLocalDir/OpenDarwin-6.6.1-x86",
+     "OpenDarwin 6.6.2/x86", "$manLocalDir/OpenDarwin-6.6.2-x86",
+     "OpenDarwin 7.2.1",     "$manLocalDir/OpenDarwin-7.2.1",
 );
 
 # delete not existing releases
@@ -355,8 +362,9 @@ while (($key,$val) = each %manPath) {
      'redhat', 'Red Hat Linux/i386 9',
      'suse', 'SuSE Linux/i386 8.2',
      'linux', 'Red Hat Linux/i386 9',
-     'darwin', 'Darwin 7.0.1 PPC',
-     'macosx', 'Darwin 7.0.1 PPC',
+     'darwin', 'Darwin 8.0.1/ppc',
+     'opendarwin', 'OpenDarwin 7.2.1',
+     'macosx', 'Darwin 8.0.1/ppc',
 
      'netbsd', 'NetBSD 2.0',
      'openbsd', 'OpenBSD 3.6',
@@ -1041,7 +1049,7 @@ ETX
 }
 
 sub copyright {
-    $id = '$Id: man.cgi,v 1.151 2005-11-30 22:03:10 fenner Exp $';
+    $id = '$Id: man.cgi,v 1.152 2006-02-03 13:17:29 wosch Exp $';
 
     return qq{\
 <PRE>
