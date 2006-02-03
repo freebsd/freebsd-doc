@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/fr/gnome/includes.xsl,v 1.1 2003/05/04 12:28:49 stephane Exp $ -->
+<!-- $FreeBSD: www/fr/gnome/includes.xsl,v 1.2 2006/01/09 19:54:30 blackend Exp $ -->
 
 <!-- 
   The FreeBSD French Documentation Project
-  Original revision: 1.11
+  Original revision: 1.12
 
   Version francaise : Stephane Legrand <stephane@freebsd-fr.org>
 -->
@@ -21,14 +21,6 @@
 
   <xsl:variable name="gnomedevelver">
 	2.13
-  </xsl:variable>
-
-  <xsl:variable name="author">
-    <a>
-      <xsl:attribute name="href">
-        <xsl:value-of select="concat($base, '/gnome/contact.html')"/>
-      </xsl:attribute>
-      <xsl:value-of select="'freebsd-gnome'"/>@FreeBSD.org</a><br/><xsl:copy-of select="$copyright"/>
   </xsl:variable>
 
   <!-- Generate a unique anchor for this event -->

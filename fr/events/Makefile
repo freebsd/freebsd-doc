@@ -1,7 +1,7 @@
-# $FreeBSD$
+# $FreeBSD: www/fr/events/Makefile,v 1.1 2004/03/06 17:33:18 stephane Exp $
 
 # The FreeBSD French Documentation Project
-# Original revision: 1.5
+# Original revision: 1.11
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -11,30 +11,28 @@
 .endif
 
 # SUBDIR= 2002 2003
+DATE?= /bin/date
+TR?= /usr/bin/tr
 
-DATA=   events.css
+DATA=	events.css
 
-DATA=	events.html
-CLEANFILES+= events.html curdate.xml
+CLEANFILES+= curdate.xml
 
-INDEXLINK= events.html
-
-DATE?=	/bin/date
-TR?=	/usr/bin/tr
 XMLLINT?= /usr/local/bin/xmllint # Part of textproc/libxml2.
 
-events.html: events.xsl events.xml ../includes.xsl curdate.xml
-	${XSLTPROC} ${XSLTPROCOPTS} -o ${.TARGET} \
-		${.CURDIR}/events.xsl ${.CURDIR}/events.xml
-.if !defined(NO_TIDY)
-	-${TIDY} ${TIDYOPTS} ${.TARGET}
-.endif
+XMLDOCS+=	events
+DEPENDSET.events=	events curdate.xml
+SRCS.events=	../includes.xsl curdate.xml
+
+XMLDOCS+=	events_ics:${WEB_PREFIX}/share/sgml/events2ics.xsl:events.xml:events.ics
 
 lint:
-	${XMLLINT} --valid -o /dev/null ${.CURDIR}/events.xml
+	${XMLLINT} ${XMLLINTOPTS} --valid -o /dev/null ${.CURDIR}/events.xml
 
-# XXX TODO: Handle this better, so curdate.xml isn't rebuild on install.
-curdate.xml!
+.if !make(install)
+.PHONY:	curdate.xml
+.endif
+curdate.xml:
 	@${ECHO} "Generating ${.TARGET}"
 	@${ECHO_CMD} '<?xml version="1.0"?>'	 > ${.TARGET}
 	@${ECHO_CMD} '<curdate>'		>> ${.TARGET}

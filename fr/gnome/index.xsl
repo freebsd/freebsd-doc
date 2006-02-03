@@ -1,8 +1,8 @@
-<!-- $FreeBSD: www/fr/gnome/index.xsl,v 1.2 2005/10/06 12:56:03 blackend Exp $ -->
+<!-- $FreeBSD: www/fr/gnome/index.xsl,v 1.3 2006/01/09 19:54:30 blackend Exp $ -->
 
 <!-- 
    The FreeBSD French Documentation Project 
-   Original revision: 1.84
+   Original revision: 1.85
    
    Version francaise : Stephane Legrand <stephane@freebsd-fr.org>
 -->
@@ -17,7 +17,7 @@
   <xsl:import href="includes.xsl"/>
 
   <xsl:variable name="base" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/fr/gnome/index.xsl,v 1.2 2005/10/06 12:56:03 blackend Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/fr/gnome/index.xsl,v 1.3 2006/01/09 19:54:30 blackend Exp $'"/>
   <xsl:variable name="section" select="'gnome'"/>
   <xsl:variable name="title" select="'Projet GNOME pour FreeBSD'"/>
 
@@ -28,7 +28,7 @@
     <html>
       <xsl:copy-of select="$header1"/>
 
-      <body xsl:use-attribute-sets="att.body">
+      <body>
 
 	<div id="containerwrap">
 	  <div id="container">

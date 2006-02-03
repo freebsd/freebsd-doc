@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/fr/gnome/newsflash.xsl,v 1.3 2005/10/06 12:56:03 blackend Exp $ -->
+<!-- $FreeBSD: www/fr/gnome/newsflash.xsl,v 1.4 2006/01/09 19:54:30 blackend Exp $ -->
 
 <!-- 
      The FreeBSD French Documentation Project
-     Original revision: 1.7
+     Original revision: 1.8
 
      Version francaise : Stephane Legrand <stephane@freebsd-fr.org>
 -->
@@ -31,7 +31,7 @@
 
       <xsl:copy-of select="$header1"/>
 
-      <body xsl:use-attribute-sets="att.body">
+      <body>
 
 	<div id="containerwrap">
 	  <div id="container">
