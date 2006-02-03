@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/fr/includes.xsl,v 1.18 2005/11/02 21:39:11 blackend Exp $ -->
+<!-- $FreeBSD: www/fr/includes.xsl,v 1.19 2005/12/31 11:26:15 blackend Exp $ -->
 
 <!-- 
    The FreeBSD French Documentation Project
@@ -24,7 +24,7 @@
   </xsl:variable>
 
   <xsl:variable name="copyright">
-    <a href="{$base}/copyright/index.html">Copyright</a> &#169; 1995-2005 Le Projet FreeBSD. Tous droits r&#233;serv&#233;s.
+    <a href="{$base}/copyright/index.html">Copyright</a> &#169; 1995-2006 Le Projet FreeBSD. Tous droits r&#233;serv&#233;s.
   </xsl:variable>
 
   <xsl:variable name="home">
