@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/fr/news/oldnewsflash.xsl,v 1.3 2004/01/08 00:26:44 stephane Exp $ -->
+<!-- $FreeBSD: www/fr/news/oldnewsflash.xsl,v 1.4 2004/08/07 15:33:38 mat Exp $ -->
 
 <!-- 
    The FreeBSD French Documentation Project
-   Original revision: 1.6
+   Original revision: 1.8
 
    Version francaise : Stephane Legrand <stephane@freebsd-fr.org>
    Version francaise (mise a jour) : Mathieu Arnold <mat@FreeBSD.org>
@@ -35,7 +35,7 @@
       
       <xsl:copy-of select="$header1"/>
 
-      <body xsl:use-attribute-sets="att.body">
+      <body>
 
 	<xsl:copy-of select="$header2"/>
 
@@ -108,15 +108,18 @@
 
   <xsl:template match="date"/>    <!-- Deliberately left blank -->
 
-  <!-- When the href attribute contains a '$base', expand it to the current
-       value of the $base variable. -->
+  <!-- When the href attribute contains a '$base' or '$enbase', expand it
+       to the current value of the $base or $enbase variable. -->
 
-  <!-- All your $base are belong to us.  Ho ho ho -->
+  <!-- All your $base or $enbase are belong to us.  Ho ho ho -->
   <xsl:template match="a">
     <a><xsl:attribute name="href">
 	<xsl:choose>
 	  <xsl:when test="contains(@href, '$base')">
 	    <xsl:value-of select="concat(substring-before(@href, '$base'), $base, substring-after(@href, '$base'))"/>
+	  </xsl:when>
+	  <xsl:when test="contains(@href, '$enbase')">
+	    <xsl:value-of select="concat(substring-before(@href, '$enbase'), $enbase, substring-after(@href, '$enbase'))"/>
 	  </xsl:when>
 	  <xsl:otherwise>
 	    <xsl:value-of select="@href"/>

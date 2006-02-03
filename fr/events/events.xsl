@@ -24,12 +24,12 @@
      OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
      SUCH DAMAGE.
 
-     $FreeBSD: www/fr/events/events.xsl,v 1.1 2004/03/06 17:33:18 stephane Exp $
+     $FreeBSD: www/fr/events/events.xsl,v 1.2 2005/10/06 12:56:03 blackend Exp $
 -->
 
 <!-- 
    The FreeBSD French Documentation Project
-   Original revision: 1.2
+   Original revision: 1.6
    
    Version francaise : Stephane Legrand <stephane@freebsd-fr.org>
 -->
@@ -62,23 +62,19 @@
   <xsl:template match="events">
     <html>
       <xsl:copy-of select="$header1"/>
-      
-            <body xsl:use-attribute-sets="att.body">
-      
-        <div id="containerwrap">
-          <div id="container">
-      
-      	<xsl:copy-of select="$header2"/>
-      
-      	<div id="content">
-      
-      	      <xsl:copy-of select="$sidenav"/>
-      
-      	      <div id="contentwrap">
-      	      
-	      <xsl:copy-of select="$header3"/>
 
-	<!--
+      <body>
+
+	<div id="containerwrap">
+	  <div id="container">
+	<xsl:copy-of select="$header2"/>
+
+	    <div id="content">
+	      <xsl:copy-of select="$sidenav"/>
+
+	      <div id="contentwrap">
+		<xsl:copy-of select="$header3"/>
+ 	<!--
 	     Note the current date to have a reference, if the
 	     upcoming/past events are split incorrectly.
 	-->
@@ -92,11 +88,18 @@
 	<p>Si vous avez connaissance d'&#233;v&#233;nements li&#233;s &#224; FreeBSD, ou d'&#233;v&#233;nements qui
 	  pourraient int&#233;ress&#233;s les utilisateurs FreeBSD, qui ne sont pas indiqu&#233;s
 	  ici, veuillez envoyer tous les d&#233;tails &#224; <a
-	  href="mailto:www@freebsd.org">www@FreeBSD.org</a> de mani&#232;re
+	  href="mailto:www@FreeBSD.org">www@FreeBSD.org</a> de mani&#232;re
 	  &#224; ce qu'ils puissent &#234;tre ajout&#233;s.</p>
 
+  <p>Les utilisateurs disposant d'un logiciel d'organisation comprenant le
+	  format iCalendar peuvent s'abonner au
+	  <a>
+	    <xsl:attribute name="href"><xsl:value-of select="$base"/>/events/events.ics</xsl:attribute>
+	    calendrier des &#233;v&#233;nements FreeBSD</a>
+	  qui comprend tous les &#233;v&#233;nements mentionn&#233;s ici.</p>
+
 	<h2 id="upcoming">
-          <xsl:text>Ev&#233;nements actuels / &#224; venir :</xsl:text>
+	  <xsl:text>Ev&#233;nements actuels / &#224; venir :</xsl:text>
 	</h2>
 
 	<xsl:for-each select="event[generate-id() =
@@ -176,17 +179,14 @@
 	    </xsl:for-each>
 	  </ul>
 	</xsl:for-each>
+	      </div> <!-- contentwrap -->
 
-	  	</div> <!-- contentwrap -->
-		<br class="clearboth" />
-	
-	</div> <!-- content -->
-	
-	<xsl:copy-of select="$footer"/>
-	
-        </div> <!-- container -->
-   </div> <!-- containerwrap -->
+	      <br class="clearboth" />
+	    </div> <!-- content -->
 
+	    <xsl:copy-of select="$footer"/>
+	  </div> <!-- container -->
+	</div> <!-- containerwrap -->
       </body>
     </html>
   </xsl:template>
