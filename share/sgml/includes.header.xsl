@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/share/sgml/includes.header.xsl,v 1.12 2005/12/12 08:41:37 delphij Exp $ -->
+<!-- $FreeBSD: www/share/sgml/includes.header.xsl,v 1.13 2005/12/31 18:41:17 ceri Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -160,11 +160,14 @@
 			<ul>
 				<li><a href="{$base}/platforms/alpha.html">alpha</a></li>
 				<li><a href="{$base}/platforms/amd64.html">amd64</a></li>
+				<li><a href="{$base}/platforms/arm.html">ARM</a></li>
 				<li><a href="{$base}/platforms/i386.html">i386</a></li>
 				<li><a href="{$base}/platforms/ia64/index.html">ia64</a></li>
+				<li><a href="{$base}/platforms/mips.html">MIPS</a></li>
 				<li><a href="{$base}/platforms/pc98.html">pc98</a></li>
 				<li><a href="{$base}/platforms/ppc.html">ppc</a></li>
 				<li><a href="{$base}/platforms/sparc.html">sparc64</a></li>
+				<li><a href="{$base}/platforms/xbox.html">xbox</a></li>
 			</ul>
 		</li>
 		<li><a href="{$base}/doc/en_US.ISO8859-1/articles/contributing/index.html">Contributing</a></li>
