@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/share/sgml/includes.header.xsl,v 1.13 2005/12/31 18:41:17 ceri Exp $ -->
+<!-- $FreeBSD: www/share/sgml/includes.header.xsl,v 1.14 2006/02/05 09:24:42 joel Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -200,7 +200,7 @@
 				<li><a href="{$u.rel.announce}">Production Release: <xsl:value-of select="$rel.current"/></a></li>
 				<li><a href="{$u.rel2.announce}">Production (Legacy) Release: <xsl:value-of select="$rel2.current"/></a></li>
 				<li><a href="{$base}/snapshots/">Snapshot Releases</a></li>
-				<xsl:if test="$beta.testing != ''">
+				<xsl:if test="$beta.testing != '0'">
 				  <li><a href="{$base}/where.html">Upcoming Release <xsl:value-of
 				    select="concat($betarel.current, '-', $betarel.vers)"/></a>
 				  </li>
