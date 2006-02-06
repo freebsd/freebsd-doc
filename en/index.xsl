@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/index.xsl,v 1.140 2005/12/11 14:15:55 delphij Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.141 2005/12/14 21:26:05 pav Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -6,7 +6,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.140 2005/12/11 14:15:55 delphij Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.141 2005/12/14 21:26:05 pav Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <!-- these params should be externally bound. The values
@@ -88,7 +88,7 @@
 			
 			<div id="FRONTRELEASES">
 			  <div id="FRONTRELEASESCONTENT" class="txtshortcuts">
-				  <h2>LATEST RELEASES</h2>
+				  <h2><a href="{$base}/releases/">LATEST RELEASES</a></h2>
 				  <ul id="FRONTRELEASESLIST">
 					<li>
 					  <a href="{$u.rel.announce}">Production Release <xsl:value-of select="$rel.current"/></a>
