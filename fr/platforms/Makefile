@@ -1,7 +1,7 @@
-# $FreeBSD: www/fr/platforms/Makefile,v 1.2 2005/01/12 15:57:55 stephane Exp $
+# $FreeBSD: www/fr/platforms/Makefile,v 1.3 2005/01/24 13:27:22 stephane Exp $
 
 # The FreeBSD French Documentation Project
-# Original revision: 1.9
+# Original revision: 1.11
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -21,7 +21,9 @@ DOCS+=	pc98.sgml
 DOCS+=	ppc.sgml
 DOCS+=	sparc.sgml
 DOCS+=	x86-64.sgml
+DOCS+=	xbox.sgml
 
+#SUBDIR=	amd64
 SUBDIR=	ia64
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
