@@ -1,8 +1,8 @@
-<!-- $FreeBSD: www/fr/index.xsl,v 1.26 2005/10/15 16:21:45 blackend Exp $ -->
+<!-- $FreeBSD: www/fr/index.xsl,v 1.27 2005/12/31 11:26:15 blackend Exp $ -->
 
 <!--
    The FreeBSD French Documentation Project
-   Original revision: 1.141
+   Original revision: 1.142
 
    Version francaise : Stephane Legrand <stephane@freebsd-fr.org>
    Mise a jour:	Marc Fonvieille <blackend@FreeBSD.org>
@@ -14,7 +14,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/fr/index.xsl,v 1.26 2005/10/15 16:21:45 blackend Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/fr/index.xsl,v 1.27 2005/12/31 11:26:15 blackend Exp $'"/>
   <xsl:variable name="title" select="'Le Projet FreeBSD'"/>
 
   <!-- these params should be externally bound. The values
@@ -106,7 +106,7 @@
 			
 			<div id="FRONTRELEASES">
 			  <div id="FRONTRELEASESCONTENT" class="txtshortcuts">
-				  <h2>DERNIERES VERSIONS</h2>
+				  <h2><a href="{$base}/releases/">DERNIERES VERSIONS</a></h2>
 				  <ul id="FRONTRELEASESLIST">
 					<li>
 					  <a href="{$u.rel.announce}">Version de production <xsl:value-of select="$rel.current"/></a>
