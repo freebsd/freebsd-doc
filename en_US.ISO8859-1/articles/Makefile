@@ -48,6 +48,7 @@ SUBDIR+= storage-devices
 SUBDIR+= version-guide
 SUBDIR+= vinum
 SUBDIR+= vm-design
+SUBDIR+= wp-toolbox
 SUBDIR+= zip-drive
 
 # ROOT_SYMLINKS+= new-users
