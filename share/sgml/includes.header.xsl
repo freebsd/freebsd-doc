@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/share/sgml/includes.header.xsl,v 1.14 2006/02/05 09:24:42 joel Exp $ -->
+<!-- $FreeBSD: www/share/sgml/includes.header.xsl,v 1.15 2006/02/05 12:14:08 ceri Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -203,6 +203,11 @@
 				<xsl:if test="$beta.testing != '0'">
 				  <li><a href="{$base}/where.html">Upcoming Release <xsl:value-of
 				    select="concat($betarel.current, '-', $betarel.vers)"/></a>
+				  </li>
+				</xsl:if>
+				<xsl:if test="$beta2.testing != '0'">
+				  <li><a href="{$base}/where.html">Upcoming Release <xsl:value-of
+				    select="concat($betarel2.current, '-', $betarel2.vers)"/></a>
 				  </li>
 				</xsl:if>
 			</ul>
