@@ -34,15 +34,15 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $MCom: portstools/gnome_upgrade.sh.in,v 1.148.2.8 2005/11/10 01:39:41 marcus Exp $
+# $MCom: portstools/gnome_upgrade.sh.in,v 1.148.2.9 2006/02/14 16:30:25 marcus Exp $
 #   $FreeBSD$
 #
 
 # This script will aid in doing major upgrades to the GNOME Desktop (e.g.
 # an upgrade from 2.10 --> 2.12).
 
-GNOME_UPGRADE_SH_VER=2.12-3;	# Increment this with every functional change
-GNOME_UPGRADE_SH_REV='$Revision: 1.24 $'
+GNOME_UPGRADE_SH_VER=2.12-4;	# Increment this with every functional change
+GNOME_UPGRADE_SH_REV='$Revision: 1.25 $'
 
 ## BEGIN global variable declarations.
 VERBOSE=${VERBOSE:=0}
@@ -56,7 +56,7 @@ SUPPORT_EMAIL="freebsd-gnome@FreeBSD.org"
 PORTSTREE="FreeBSD"
 TB_URL="http://www.marcuscom.com/tb/packages%s/%s-%s/Latest/"
 
-SUPPORTED_FREEBSD_VERSIONS="5.3 5.4 6.0 7.0"
+SUPPORTED_FREEBSD_VERSIONS="5.3 5.4 5.5 6.0 6.1 7.0"
 	# The Big Update updates UPGRADE_TARGET and everything that depends on it
 UPGRADE_TARGET="glib-2*"
 	# Ports to remove before doing the upgrade.
@@ -250,7 +250,7 @@ while [ $# -gt 0 ]; do
           echo "FreeBSD GNOME Upgrade tool: gnome_upgrade.sh"
           echo "--"
           echo "Script version: ${GNOME_UPGRADE_SH_VER}"
-          echo 'MarcusCom revision: $MCom: portstools/gnome_upgrade.sh.in,v 1.148.2.8 2005/11/10 01:39:41 marcus Exp $'
+          echo 'MarcusCom revision: $MCom: portstools/gnome_upgrade.sh.in,v 1.148.2.9 2006/02/14 16:30:25 marcus Exp $'
           echo 'FreeBSD revision: $FreeBSD$'
           echo "--"
           echo "Visit http://www.freebsd.org/gnome for more information"
