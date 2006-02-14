@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/share/sgml/includes.release.xsl,v 1.13 2005/10/11 15:29:01 ceri Exp $ -->
+<!-- $FreeBSD: www/share/sgml/includes.release.xsl,v 1.14 2005/11/04 15:16:43 hrs Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -9,11 +9,20 @@
 
   <!-- An upcoming release that we want tested.  Set $beta.testing to 0
 	if we're not in the middle of a release cycle.  Ha ha. -->
-  <xsl:variable name="beta.testing" select="0" />
-  <xsl:variable name="betarel.current" select='"6.0"'/>
-  <xsl:variable name="betarel.vers" select='"RC1"'/>
+  <xsl:variable name="beta.testing" select="1" />
+  <xsl:variable name="betarel.current" select='"6.1"'/>
+  <xsl:variable name="betarel.vers" select='"BETA1"'/>
   <xsl:variable name="u.betarel.schedule">
     <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$betarel.current"/>R/schedule.html</xsl:variable>
+
+  <!-- A second release that we want tested.  Set $beta2.testing to 0
+	if we're not in the middle of a release cycle for two releases
+	at once. -->
+  <xsl:variable name="beta2.testing" select="1" />
+  <xsl:variable name="betarel2.current" select='"5.5"'/>
+  <xsl:variable name="betarel2.vers" select='"BETA1"'/>
+  <xsl:variable name="u.betarel2.schedule">
+    <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$betarel2.current"/>R/schedule.html</xsl:variable>
 
   <xsl:variable name="rel.current" select='"6.0"'/>
   <xsl:variable name="rel.current.major" select='"6"'/>
