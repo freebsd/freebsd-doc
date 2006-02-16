@@ -1,8 +1,8 @@
-<!-- $FreeBSD: www/fr/index.xsl,v 1.27 2005/12/31 11:26:15 blackend Exp $ -->
+<!-- $FreeBSD: www/fr/index.xsl,v 1.28 2006/02/13 17:53:03 blackend Exp $ -->
 
 <!--
    The FreeBSD French Documentation Project
-   Original revision: 1.142
+   Original revision: 1.143
 
    Version francaise : Stephane Legrand <stephane@freebsd-fr.org>
    Mise a jour:	Marc Fonvieille <blackend@FreeBSD.org>
@@ -14,7 +14,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/fr/index.xsl,v 1.27 2005/12/31 11:26:15 blackend Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/fr/index.xsl,v 1.28 2006/02/13 17:53:03 blackend Exp $'"/>
   <xsl:variable name="title" select="'Le Projet FreeBSD'"/>
 
   <!-- these params should be externally bound. The values
@@ -118,6 +118,12 @@
 					<li>
 					  <a href="{$base}/where.html#helptest">Version &#224; venir
 					    <xsl:value-of select="concat($betarel.current, '-', $betarel.vers)"/></a>
+					</li>
+				    </xsl:if>
+				    <xsl:if test="$beta2.testing">
+					<li>
+					  <a href="{$base}/where.html#helptest">Version &#224; venir
+					    <xsl:value-of select="concat($betarel2.current, '-', $betarel2.vers)"/></a>
 					</li>
 				    </xsl:if>
 				  </ul>
