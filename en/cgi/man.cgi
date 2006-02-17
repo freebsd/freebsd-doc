@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp 
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.152 2006-02-03 13:17:29 wosch Exp $
+# $Id: man.cgi,v 1.153 2006-02-17 09:03:50 wosch Exp $
 
 #use Data::Dumper;
 #use Carp;
@@ -691,8 +691,10 @@ sub man {
     if ($manpath) {
 	if ($manPath{$manpath}) {
 	    unshift(@manargs, ('-M', $manPath{$manpath}));
+	    &groff_path($manPath{$manpath});
 	} elsif ($manpath{&dec($manpath)}) {
 	    unshift(@manargs, ('-M', $manPath{&dec($manpath)}));
+	    &groff_path( $manPath{&dec($manpath)} );
 	} else {
 	    # unset invalid manpath
 	    print "x $manpath x\n";
@@ -820,6 +822,28 @@ sub man {
 
     # Sleep 0.35 seconds to avoid DoS attacs
     select undef, undef, undef, 0.35;
+}
+
+#
+# You may need to precreate some mdoc.local files for every system you 
+# support (every collection of man pages), maybe like:
+#
+# $manLocalDir/NetBSD-1.4.2/tmac
+#
+# and then in your cgi script itself set the GROFF_TMAC_PATH as appropriate 
+# like:
+#
+# GROFF_TMAC_PATH=$manLocalDir/NetBSD-1.4.2/tmac:/usr/share/tmac/
+#
+sub groff_path {
+    local $manpath = shift;
+
+    local @groff_path;
+    foreach (split(/:/, $manpath)) {
+	push(@groff_path, $_ . '/tmac');
+    }
+
+    $ENV{'GROFF_TMAC_PATH'} = join(':', @groff_path, '/usr/share/tmac');
 }
 
 sub mlnk {
@@ -1049,7 +1073,7 @@ ETX
 }
 
 sub copyright {
-    $id = '$Id: man.cgi,v 1.152 2006-02-03 13:17:29 wosch Exp $';
+    $id = '$Id: man.cgi,v 1.153 2006-02-17 09:03:50 wosch Exp $';
 
     return qq{\
 <PRE>
