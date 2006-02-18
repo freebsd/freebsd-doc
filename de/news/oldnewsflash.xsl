@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
 <!-- $FreeBSD$
-     $FreeBSDde: de-www/news/oldnewsflash.xsl,v 1.6 2005/04/07 21:25:38 jkois Exp $
-     basiert auf: 1.7 -->
+     $FreeBSDde: de-www/news/oldnewsflash.xsl,v 1.7 2006/02/02 12:41:07 jkois Exp $
+     basiert auf: 1.8 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -28,7 +28,7 @@
 
       <xsl:copy-of select="$header1"/>
 
-      <body xsl:use-attribute-sets="att.body">
+      <body>
 
 	<xsl:copy-of select="$header2"/>
 

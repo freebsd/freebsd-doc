@@ -2,8 +2,8 @@
 
 <!--
      $FreeBSD$
-     $FreeBSDde: de-www/index.xsl,v 1.55 2006/01/01 09:44:32 jkois Exp $
-     basiert auf: 1.141
+     $FreeBSDde: de-www/index.xsl,v 1.59 2006/02/18 12:56:27 jkois Exp $
+     basiert auf: 1.142
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -104,7 +104,7 @@
 
 			<div id="FRONTRELEASES">
 			  <div id="FRONTRELEASESCONTENT" class="txtshortcuts">
-				  <h2>AKTUELLE VERSIONEN</h2>
+				  <h2><a href="{$base}/releases/">AKTUELLE VERSIONEN</a></h2>
 				  <ul id="FRONTRELEASESLIST">
 					<li>
 					  <a href="{$u.rel.announce}">Produktionsreife <xsl:value-of select="$rel.current"/></a>
@@ -112,12 +112,18 @@
 					<li>
 					  <a href="{$u.rel2.announce}">Produktionsreife (alt) <xsl:value-of select="$rel2.current"/></a>
 					</li>
-<!--					<xsl:if test="$beta.testing">
+					<xsl:if test="$beta.testing">
 					  <li>
 					    <a href="{$base}/where.html#helptest">Testversion
 					      <xsl:value-of select="concat($betarel.current, '-', $betarel.vers)"/></a>
 					  </li>
-					</xsl:if>-->
+					</xsl:if>
+					<xsl:if test="$beta2.testing">
+					  <li>
+					    <a href="{$base}/where.html#helptest">Testversion
+					      <xsl:value-of select="concat($betarel2.current, '-', $betarel2.vers)"/></a>
+					  </li>
+				        </xsl:if>
 				  </ul>
 			  </div> <!-- FRONTRELEASESCONTENT -->
 			</div> <!-- FRONTRELEASES -->
@@ -170,7 +176,7 @@
 				  <h2>SHORTCUTS</h2>
 				  <ul id="FRONTSHORTCUTSLIST">
 					<li>
-					  <a href="{$base}/support.html#mailing-list" title="Mailinglisten">Mailinglisten</a>
+					  <a href="{$base}/community/mailinglists.html" title="Mailinglisten">Mailinglisten</a>
 					</li>
 					<li>
 					  <a href="{$enbase}/send-pr.html" title="Einen Fehler melden">Einen Fehler melden</a>

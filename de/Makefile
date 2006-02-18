@@ -1,7 +1,7 @@
 # The FreeBSD Documentation Project
 # The FreeBSD German Documentation Project
 # $FreeBSD$
-# $FreeBSDde: de-www/Makefile,v 1.36 2005/12/04 20:05:06 jkois Exp $
+# $FreeBSDde: de-www/Makefile,v 1.38 2006/02/03 14:32:10 jkois Exp $
 # basiert auf: 1.134
 
 .if exists(Makefile.conf)
@@ -16,6 +16,7 @@
 DOCS= about.sgml
 DOCS+= applications.sgml
 DOCS+= availability.sgml
+DOCS+= community.sgml
 DOCS+= docs.sgml
 DOCS+= features.sgml
 DOCS+= internet.sgml
@@ -33,7 +34,8 @@ DOCS+= where.sgml
 
 # Subdirectories
 # SGML
-SUBDIR= docs
+SUBDIR= community
+SUBDIR+= docs
 SUBDIR+= news
 SUBDIR+= FAQ
 SUBDIR+= handbook
