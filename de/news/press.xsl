@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
 <!-- $FreeBSD$
-     $FreeBSDde: de-www/news/press.xsl,v 1.12 2005/12/04 21:24:58 jkois Exp $
-     basiert auf: 1.12
+     $FreeBSDde: de-www/news/press.xsl,v 1.13 2006/02/02 12:41:07 jkois Exp $
+     basiert auf: 1.13
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
@@ -38,7 +38,7 @@
 
       <xsl:copy-of select="$header1"/>
 
-            <body xsl:use-attribute-sets="att.body">
+            <body>
 
         <div id="CONTAINERWRAP">
           <div id="CONTAINER">

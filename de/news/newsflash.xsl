@@ -2,8 +2,8 @@
 
 <!--
      $FreeBSD$
-     $FreeBSDde: de-www/news/newsflash.xsl,v 1.18 2005/12/04 21:24:58 jkois Exp $
-     basiert auf: 1.15
+     $FreeBSDde: de-www/news/newsflash.xsl,v 1.19 2006/02/02 12:41:07 jkois Exp $
+     basiert auf: 1.16
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
@@ -30,7 +30,7 @@
 
       <xsl:copy-of select="$header1"/>
 
-            <body xsl:use-attribute-sets="att.body">
+            <body>
 
         <div id="CONTAINERWRAP">
           <div id="CONTAINER">

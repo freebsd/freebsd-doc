@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
 <!-- $FreeBSD$
-     $FreeBSDde: de-www/includes.xsl,v 1.26 2006/01/01 10:20:00 jkois Exp $
+     $FreeBSDde: de-www/includes.xsl,v 1.29 2006/02/18 12:56:27 jkois Exp $
      basiert auf: 1.20
 -->
 
@@ -107,7 +107,7 @@
 			<a href="{$base}/docs.html" title="Dokumentation">Dokumentation</a>
 		  </li>
 		  <li>
-			<a href="{$enbase}/community.html" title="Community">Community</a>
+			<a href="{$base}/community.html" title="Community">Community</a>
 		  </li>
 		  <li>
 			<a href="{$enbase}/projects/index.html" title="Entwicklung">Entwicklung</a>
@@ -149,12 +149,12 @@
 
 	<xsl:if test="$section = 'community'" >
 		<ul>
-		<li><a href="{$enbase}/community.html">Community</a></li>
-		<!--li><a href="{$base}/community/mailinglists.html"> Mailinglisten</a></li>
+		<li><a href="{$base}/community.html">Community</a></li>
+		<li><a href="{$base}/community/mailinglists.html"> Mailinglisten</a></li>
 		<li><a href="{$base}/community/irc.html">IRC</a></li>
 		<li><a href="{$base}/community/newsgroups.html">Newsgroups</a></li>
-		<li><a href="{$base}/usergroups.html">Benutzergruppen</a></li>
-		<li><a href="{$base}/community/webresources.html">Web Ressourcen</a></li-->
+		<li><a href="{$enbase}/usergroups.html">Anwendergruppen</a></li>
+		<li><a href="{$base}/community/webresources.html">Internetressourcen</a></li>
 		</ul>
 	</xsl:if>
 
@@ -169,11 +169,14 @@
 			<ul>
 				<li><a href="{$base}/platforms/alpha.html">alpha</a></li>
 				<li><a href="{$base}/platforms/amd64.html">amd64</a></li>
+				<li><a href="{$base}/platforms/arm.html">ARM</a></li>
 				<li><a href="{$base}/platforms/i386.html">i386</a></li>
 				<li><a href="{$base}/platforms/ia64/index.html">ia64</a></li>
+				<li><a href="{$base}/platforms/mips.html">MIPS</a></li>
 				<li><a href="{$base}/platforms/pc98.html">pc98</a></li>
 				<li><a href="{$base}/platforms/ppc.html">ppc</a></li>
 				<li><a href="{$base}/platforms/sparc.html">sparc64</a></li>
+				<li><a href="{$enbase}/platforms/xbox.html">xbox</a></li>
 			</ul>
 		</li>
 		<li><a href="{$enbase}/doc/{$url.doc.langcode}/articles/contributing/index.html">FreeBSD unterst&#252;tzen</a></li>
@@ -245,6 +248,24 @@
 	<xsl:copy-of select="$date"/>
 	</div> <!-- footer -->
   </xsl:variable>
+
+  <!-- A release that we want tested.  Set $beta.testing to 0
+	if we're not in the middle of a release cycle for two releases
+	at once. -->
+  <xsl:variable name="beta.testing" select="1" />
+  <xsl:variable name="betarel.current" select='"6.1"'/>
+  <xsl:variable name="betarel.vers" select='"BETA1"'/>
+  <xsl:variable name="u.betarel.schedule">
+    <xsl:value-of select="$base"/>/../releases/<xsl:value-of select="$betarel.current"/>R/schedule.html</xsl:variable>
+
+  <!-- A second release that we want tested.  Set $beta2.testing to 0
+	if we're not in the middle of a release cycle for two releases
+	at once. -->
+  <xsl:variable name="beta2.testing" select="1" />
+  <xsl:variable name="betarel2.current" select='"5.5"'/>
+  <xsl:variable name="betarel2.vers" select='"BETA1"'/>
+  <xsl:variable name="u.betarel2.schedule">
+    <xsl:value-of select="$base"/>/../releases/<xsl:value-of select="$betarel2.current"/>R/schedule.html</xsl:variable>
 
   <xsl:variable name="rel.current" select='"6.0"'/>
   <xsl:variable name="u.rel.notes">
