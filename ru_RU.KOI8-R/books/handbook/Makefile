@@ -2,7 +2,7 @@
 # The FreeBSD Russian Documentation Project
 #
 # $FreeBSD$
-# $FreeBSDru: frdp/doc/ru_RU.KOI8-R/books/handbook/Makefile,v 1.42 2006/02/19 12:21:47 marck Exp $
+# $FreeBSDru: frdp/doc/ru_RU.KOI8-R/books/handbook/Makefile,v 1.43 2006/02/19 21:52:34 marck Exp $
 #
 # Original revision: 1.93
 #
@@ -37,7 +37,7 @@ DOC?= book
 
 FORMATS?= html-split
 
-HAS_INDEX= true
+#HAS_INDEX= true
 
 INSTALL_COMPRESSED?= gz
 INSTALL_ONLY_COMPRESSED?=
