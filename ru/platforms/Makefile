@@ -2,7 +2,7 @@
 # The FreeBSD Russian Documentation Project
 #
 # $FreeBSD$
-# $FreeBSDru: frdp/www/ru/platforms/Makefile,v 1.10 2005/05/19 14:10:28 andy Exp $
+# $FreeBSDru: frdp/www/ru/platforms/Makefile,v 1.11 2006/02/13 18:29:37 gad Exp $
 #
 # Original revision: 1.10
 #
@@ -24,6 +24,7 @@ DOCS+=	mips.sgml
 DOCS+=	pc98.sgml
 DOCS+=	ppc.sgml
 DOCS+=	sparc.sgml
+DOCS+=  xbox.sgml
 DOCS+=	x86-64.sgml
 
 SUBDIR=	amd64
