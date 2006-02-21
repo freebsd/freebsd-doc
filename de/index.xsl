@@ -2,7 +2,7 @@
 
 <!--
      $FreeBSD$
-     $FreeBSDde: de-www/index.xsl,v 1.59 2006/02/18 12:56:27 jkois Exp $
+     $FreeBSDde: de-www/index.xsl,v 1.60 2006/02/19 18:15:15 jkois Exp $
      basiert auf: 1.142
 -->
 
@@ -179,7 +179,7 @@
 					  <a href="{$base}/community/mailinglists.html" title="Mailinglisten">Mailinglisten</a>
 					</li>
 					<li>
-					  <a href="{$enbase}/send-pr.html" title="Einen Fehler melden">Einen Fehler melden</a>
+					  <a href="{$base}/send-pr.html" title="Einen Fehler melden">Einen Fehler melden</a>
 					</li>
 					<li>
 					  <a href="{$enbase}/doc/{$url.doc.langcode}/books/faq/index.html" title="FAQ">FAQ</a>
