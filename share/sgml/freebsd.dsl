@@ -298,6 +298,13 @@
 		  (make entity-ref name: "#8482"))))
 	      ($charseq$)))
 
+	;; multiple copyright holders should be separated.
+	(element (copyright holder)
+	  (make sequence
+	    ($charseq$)
+	    (if (not (last-sibling? (current-node)))
+	        (literal ", ")
+	        (empty-sosofo))))
       ]]>
 
       <!-- HTML with images  ............................................ -->
