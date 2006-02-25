@@ -1,5 +1,5 @@
 # bsd.web.mk
-# $FreeBSD: www/share/mk/web.site.mk,v 1.70 2005/11/30 22:44:20 pav Exp $
+# $FreeBSD: www/share/mk/web.site.mk,v 1.71 2005/12/31 15:19:30 hrs Exp $
 
 #
 # Build and install a web site.
@@ -72,7 +72,7 @@ CLEANFILES+=	tidyerr.*
 .else
 _TIDYLOGFILE=	/dev/null
 .endif
-TIDYOPTS?=	-i -m -raw -preserve -f ${_TIDYLOGFILE} -asxml ${TIDYFLAGS}
+TIDYOPTS?=	-wrap 90 -m -raw -preserve -f ${_TIDYLOGFILE} -asxml ${TIDYFLAGS}
 
 HTML2TXT?=	${PREFIX}/bin/w3m
 HTML2TXTOPTS?=	-dump ${HTML2TXTFLAGS}
