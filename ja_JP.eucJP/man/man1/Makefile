@@ -15,6 +15,9 @@ MAN1 =	addftinfo.1\
 	biff.1\
 	brandelf.1\
 	bsdtar.1\
+	bsnmpd.1\
+	bthost.1\
+	btsockstat.1\
 	builtin.1\
 	bzip2.1\
 	c89.1\
@@ -100,6 +103,7 @@ MAN1 =	addftinfo.1\
 	gcov.1\
 	gdb.1\
 	gencat.1\
+	gensnmptree.1\
 	getNAME.1\
 	getconf.1\
 	getfacl.1\
@@ -120,6 +124,7 @@ MAN1 =	addftinfo.1\
 	gzexe.1\
 	gzip.1\
 	head.1\
+	hesinfo.1\
 	hexdump.1\
 	host.1\
 	hostname.1\
@@ -149,9 +154,12 @@ MAN1 =	addftinfo.1\
 	kenv.1\
 	keylogin.1\
 	keylogout.1\
+	kgdb.1\
 	kill.1\
 	killall.1\
+	klist.1\
 	kpasswd.1\
+	krb5-config.1\
 	ktrace.1\
 	lam.1\
 	last.1\
@@ -266,6 +274,7 @@ MAN1 =	addftinfo.1\
 	realpath.1\
 	refer.1\
 	rev.1\
+	rfcomm_sppd.1\
 	rlog.1\
 	rlogin.1\
 	rm.1\
