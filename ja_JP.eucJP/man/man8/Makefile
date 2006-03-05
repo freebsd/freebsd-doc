@@ -10,8 +10,6 @@ MAN8 =	IPXrouted.8\
 	amd.8\
 	amq.8\
 	ancontrol.8\
-	apm.8\
-	apmd.8\
 	arp.8\
 	asf.8\
 	atacontrol.8\
@@ -314,7 +312,6 @@ MAN8 =	IPXrouted.8\
 	zic.8\
 	zzz.8
 
-MLINKS+=apm.8 apmconf.8
 MLINKS+=boot_i386.8 boot.8
 MLINKS+=bootpd.8 bootpgw.8
 MLINKS+=bsdlabel.8 disklabel.8
