@@ -23,6 +23,8 @@ MAN=	aic.4 \
 	vx.4 \
 	wd.4
 
+MLINKS+=spkr.4 speaker.4
+
 MANSUBDIR=/i386	
 
 .include <bsd.prog.mk>

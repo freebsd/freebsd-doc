@@ -5,9 +5,6 @@ MAN4=	adv.4\
 	aha.4\
 	ahb.4\
 	ahc.4\
-	aic.4\
-	apm.4\
-	ar.4\
 	arp.4\
 	asc.4\
 	atkbd.4\
@@ -20,8 +17,6 @@ MAN4=	adv.4\
 	ccd.4\
 	cd.4\
 	ch.4\
-	cs.4\
-	cx.4\
 	cy.4\
 	da.4\
 	daic.4\
@@ -33,14 +28,10 @@ MAN4=	adv.4\
 	drum.4\
 	dummynet.4\
 	ed.4\
-	el.4\
 	en.4\
-	ep.4\
 	euc.4\
-	ex.4\
 	fd.4\
 	fdc.4\
-	fe.4\
 	fpa.4\
 	fxp.4\
 	gsc.4\
@@ -54,7 +45,6 @@ MAN4=	adv.4\
 	i4btel.4\
 	i4btrc.4\
 	icmp.4\
-	ie.4\
 	ifmib.4\
 	iic.4\
 	iicbb.4\
@@ -63,7 +53,6 @@ MAN4=	adv.4\
 	imm.4\
 	inet.4\
 	intro.4\
-	io.4\
 	ip.4\
 	ipfirewall.4\
 	ipnat.4\
@@ -72,13 +61,11 @@ MAN4=	adv.4\
 	labpc.4\
 	le.4\
 	lkm.4\
-	lnc.4\
 	lo.4\
 	lp.4\
 	lpbb.4\
 	lpt.4\
 	matcd.4\
-	mcd.4\
 	mem.4\
 	mouse.4\
 	mtio.4\
@@ -86,18 +73,14 @@ MAN4=	adv.4\
 	natm.4\
 	ncr.4\
 	netintro.4\
-	npx.4\
 	null.4\
 	od.4\
 	opie.4\
 	pass.4\
-	pcf.4\
 	pcm.4\
 	pcvt.4\
-	perfmon.4\
 	plip.4\
 	pn.4\
-	pnp.4\
 	ppbus.4\
 	ppc.4\
 	ppi.4\
@@ -111,7 +94,6 @@ MAN4=	adv.4\
 	route.4\
 	sa.4\
 	sb.4\
-	scd.4\
 	screen.4\
 	scsi.4\
 	sd.4\
@@ -122,9 +104,7 @@ MAN4=	adv.4\
 	smbus.4\
 	smp.4\
 	snp.4\
-	spkr.4\
 	splash.4\
-	sr.4\
 	ssc.4\
 	st.4\
 	stl.4\
@@ -147,9 +127,7 @@ MAN4=	adv.4\
 	vn.4\
 	vpo.4\
 	vr.4\
-	vx.4\
 	wb.4\
-	wd.4\
 	wfd.4\
 	worm.4\
 	wt.4\
@@ -172,7 +150,6 @@ MLINKS+=pcvt.4 vt.4
 MLINKS+=random.4 urandom.4
 MLINKS+=scsi.4 cam.4
 MLINKS+=smp.4 SMP.4
-MLINKS+=spkr.4 speaker.4
 MLINKS+=splash.4 screensaver.4
 MLINKS+=stl.4 stli.4
 MLINKS+=yp.4 NIS.4
