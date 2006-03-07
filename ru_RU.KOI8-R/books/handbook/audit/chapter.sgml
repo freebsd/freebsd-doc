@@ -1,0 +1,624 @@
+<!--
+     The FreeBSD Russian Documentation Project
+
+     $FreeBSDru: frdp/doc/ru_RU.KOI8-R/books/handbook/audit/chapter.sgml,v 1.4 2006/02/28 08:27:45 marck Exp $
+     $FreeBSD$
+
+     Original revision: 1.13
+-->
+
+<!-- Need more documentation on praudit, auditreduce, etc.  Plus more info
+on the triggers from the kernel (log rotation, out of space, etc).
+And the /dev/audit special file if we choose to support that.  Could use
+some coverage of integrating MAC with Event auditing and perhaps discussion
+on how some companies or organizations handle auditing and auditing
+requirements. -->
+<chapter id="audit">
+  <chapterinfo>
+    <authorgroup>
+      <author>
+	<firstname>Tom</firstname>
+	<surname>Rhodes</surname>
+	<contrib>Автор </contrib>
+      </author>
+    </authorgroup>
+    <authorgroup>
+      <author>
+	<firstname>Денис</firstname>
+	<surname>Баров</surname>
+	<contrib>Перевод на русский язык: </contrib>
+      </author>
+    </authorgroup>
+  </chapterinfo>
+  <title>Аудит событий безопасности</title>
+  <sect1 id="audit-synopsis">
+    <title>Краткий обзор</title>
+    <indexterm><primary>AUDIT</primary></indexterm>
+    <indexterm>
+      <primary>Аудит событий безопасности</primary>
+      <see>MAC</see>
+    </indexterm>
+    <para>&os;&nbsp;7-CURRENT включает в себя поддержку Аудита Событий
+      Безопасности (Security Event Auditing), стандарт которого описан
+      в проекте &posix;.1e и в опубликованном корпорацией Sun описании
+      <acronym>BSM</acronym> API.  Система аудита позволяет отслеживать
+      события, важные для безопасности системы.  Анализ лога событий
+      может быть жизненно необходим в случае краха системы, для
+      обнаружения нежелательных вторжений и для ликвидации последствий
+      событий подобного рода.  После тестирования во &os;&nbsp;7-CURRENT
+      поддержка системы аудита будет добавлена во &os;&nbsp;6-STABLE и
+      более ранние ветви &os;.</para>
+
+    <warning>
+      <para>Поддержка аудита во &os; считается экспериментальной,
+	использование системы аудита должно производиться только после
+	тщательного ознакомления со всеми рисками использования
+	экспериментального программного обеспечения.</para>
+    </warning>
+
+    <para>В этой главе описывается, в основном, процесс установки и
+      конфигурирования системы аудита.  В том числе, приводится
+      разъяснение политик аудита, а так же примеры конфигурационных
+      файлов.</para>
+
+    <para>После прочтения этой главы вы будете знать:</para>
+    <itemizedlist>
+      <listitem>
+	<para>Что такое система аудита и как она работает.</para>
+      </listitem>
+
+      <listitem>
+	<para>Как настроить систему аудита во &os; для мониторинга
+	пользователей и процессов.</para>
+      </listitem>
+    </itemizedlist>
+
+    <para>Перед прочтением этой главы вы должны:</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>Понимать основы &unix; и &os;
+	  (<xref linkend="basics">).</para>
+      </listitem>
+
+      <listitem>
+	<para>Уметь конфигурировать и компилировать ядро
+	  (<xref linkend="kernelconfig">).</para>
+      </listitem>
+
+      <listitem>
+	<para>Понимать основные принципы безопасности в применении
+	  к операционной системе &os; (<xref linkend="security">).</para>
+      </listitem>
+    </itemizedlist>
+
+    <warning>
+      <para>Использование системы аудита может привести к генерированию
+	огромных журнальных файлов: их размер в некоторых конфигурациях
+	может достигать нескольких гигабайт в неделю.  Администраторы
+	должны внимательно прочитать эту главу целиком, во избежание
+	непроизвольного отказа в обслуживании системы (<acronym>DoS</acronym>)
+	из-за неправильной конфигурации системы аудита.</para>
+    </warning>
+
+    <para>Реализация системы аудита во &os; похожа на реализацию
+      библиотеки Базового Модуля Безопасности корпорации Sun
+      (&sun; Basic Security Module, <acronym>BSM</acronym>).
+      Поэтому, его конфигурация почти полностью совпадает с
+      конфигурацией аналогичных по назначению модулей в операционных
+      системах &solaris; и Mac OS X/Darwin.</para>
+
+  </sect1>
+
+  <sect1 id="audit-inline-glossary">
+    <title>Ключевые понятия - краткий словарь.</title>
+
+    <para>Перед чтением этой главы необходимо определить несколько
+      ключевых понятий.  Это нужно для того, чтобы предотвратить
+      недоразумения, которые могут возникнуть из-за разницы в трактовке
+      некоторых терминов.  В русской версии документа приводятся
+      близкий по смыслу перевод и в скобках указывается оригинальный
+      английский термин.</para>
+
+    <itemizedlist>
+      <listitem>
+	<para><emphasis>событие</emphasis>(event): Событие, которое
+	  может быть занесено в журнал.  Администратор может выбирать,
+	  какие именно события будут журналироваться подсистемой
+	  аудита.  Список важных для безопасности системы
+	  событий включает: создание файла, инициализацию сетевого
+	  соединения, вход пользователя в систему.  События
+	  разделяются на <quote>приписываемые</quote> (attributable) -
+	  те, которые могут быть отнесены к конкретному пользователю -
+	  и <quote>не-приписываемые</quote> (non-attributable).  Пример
+	  не-приписываемого события - любое событие, произошедшее до
+	  авторизации пользователя, такое, как неудачный вход пользователя
+	  в систему.</para>
+      </listitem>
+
+      <listitem>
+	<para><emphasis>Класс</emphasis>(class): События могут быть
+	  отнесены к одному или более классам, обычно основываясь
+	  на категории события: <quote>создание файла</quote>,
+	  <quote>доступ к файлу</quote>,<quote>сеть</quote>.  События
+	  входа в систему и выхода из нее относятся к классу <literal>lo</literal>.
+	  Использование классов позволяет администратору создавать
+	  высокоуровневые правила аудита без указания конкретных
+	  операций, отчет о которых должен добавляться в журнал.</para>
+      </listitem>
+
+      <listitem>
+	<para><emphasis>Запись</emphasis>(record): <quote>Запись</quote> -
+	  это единичная запись в журнале, описывающая то или иное
+	  событие.  Запись обычно содержит информацию о типе события,
+	  информацию о субъекте события (пользователе), время события,
+	  информацию об объектах события (например, файлах) и
+	  информацию об успешности выполнения операции, породившей
+	  событие.
+      </listitem>
+
+      <listitem>
+	<para><emphasis>Журнал</emphasis>(trail):
+	  <quote>журнал</quote> аудита, или лог-файл -
+	  содержит серию <quote>записей</quote> о системных событиях.
+	  Как правило, журнал содержит записи в строгом
+	  хронологическом порядке по времени завершения
+	  события.  Только авторизованные процессы (например,
+	  <command>auditd</command>) имеют доступ к журналу.</para>
+     </listitem>
+
+      <listitem>
+	<para><emphasis>Префикс</emphasis>(prefix): Под префиксом понимается
+	  элемент, указывающий, вести ли аудит для успешного или
+	  ошибочного события.</para>
+      </listitem>
+    </itemizedlist>
+  </sect1>
+
+  <sect1 id="audit-install">
+    <title>Установка системы аудита</title>
+
+    <para>Система аудита обычно устанавливается в
+      процессе установки системы <maketarget>installworld</maketarget>.
+      Администратор может проверить, установлена ли система аудита,
+      просмотрев содержимое каталога
+      <filename role="directory">/etc/security</filename>.  В нём
+      должны находиться файлы, начинающиеся со слова
+      <emphasis>audit</emphasis>.  Например, <filename>audit_event</filename>.</para>
+
+    <para>Кроме того, поддержка аудита должна присутствовать в ядре.  Этого
+      можно добиться, добавив следующую строку в конфигурационный файл
+      вашего специального ядра:</para>
+
+    <programlisting>options	AUDIT</programlisting>
+
+    <para>Процесс сборки и установки ядра подробно описан в главе
+      <xref linkend="kernelconfig">.</para>
+
+   <para>После этого, необходимо разрешить запуск даемона аудита,
+      добавив следующую строку в &man.rc.conf.5;:</para>
+
+    <programlisting>auditd_enable="YES"</programlisting>
+
+    <para>Для запуска даемона со специфическими параметрами нужно
+      указать эти параметры в опции <option>auditd_flags</option>
+      файла &man.rc.conf.5;.
+  </sect1>
+
+  <sect1 id="audit-config">
+    <title>Настройка системы аудита</title>
+
+
+    <para>Все конфигурационные файлы системы аудита находятся в каталоге
+    <filename role="directory">/etc/security</filename>.   Перед запуском
+    даемона аудита там должны находиться следующие файлы:</para>
+
+    <itemizedlist>
+      <listitem>
+	<para><filename>audit_class</filename> - Содержит определения
+	  классов аудита.</para>
+      </listitem>
+
+      <listitem>
+	<para><filename>audit_control</filename> - Параметры системы
+	  аудита: классы по умолчанию, минимальное дисковое
+	  пространство, которое должно оставаться на разделе журнала
+	  аудита, и другие.</para>
+      </listitem>
+
+      <listitem>
+	<para><filename>audit_event</filename> - Определяет основные
+	  события аудита.  Это, в основном, системные вызовы.</para>
+      </listitem>
+
+      <listitem>
+	<para><filename>audit_user</filename> - События аудита для
+	  для отдельных пользователей.  Пользователи, не упоминаемые
+	  в этом файле, будут рассматриваться как субъекты конфигурации
+	  по-умолчанию в файле <filename>audit_control</filename>.</para>
+      </listitem>
+
+
+      <listitem>
+	<para><filename>audit_warn</filename> - Скрипт командного
+	  интерпретатора Bourne Shell, который используется, чтобы
+	  сгенерировать предупреждающие сообщения об исключительных
+	  ситуациях, например, когда заканчивается свободное дисковое
+	  пространство для записей журналов аудита.</para>
+      </listitem>
+    </itemizedlist>
+
+    <sect2>
+      <title>Формат конфигурационного файла</title>
+
+      <para>Формат конфигурационного файла не очень логичен, но с ним, тем
+	не менее, достаточно просто работать.  Однако, администраторам
+	следует быть очень внимательными при изменении значений по
+	умолчанию, поскольку это создает потенциальную опасность
+	неправильного сбора данных системой аудита.</para>
+
+       <para>В конфигурационном файле могут использоваться как полные,
+       так и сокращенные параметры.  Соответствия будут приведены
+       ниже.</para>
+
+      <para>Следующий список содержит все поддерживаемые классы:</para>
+
+      <itemizedlist>
+	<listitem>
+	  <para><option>all</option> - <literal>all</literal> -
+	  Установить все флаги.</para>
+	</listitem>
+
+	<listitem>
+	  <para><option>ad</option> - <literal>administrative</literal>
+	    - Аудит административных действий, произошедших в
+	      системе.</para>
+	</listitem>
+
+	<listitem>
+	  <para><option>ap</option> - <literal>application</literal> -
+	    Аудит события, вызванного каким-либо приложением.</para>
+	</listitem>
+
+	<listitem>
+	  <para><option>cl</option> - <literal>file_close</literal>
+	    - Аудит вызовов системной функции
+	    <function>close</function>.</para>
+	</listitem>
+
+	<listitem>
+	  <para><option>ex</option> - <literal>exec</literal> -
+	  Аудит запуска приложения.</para>
+	</listitem>
+
+	<listitem>
+	  <para><option>fa</option> - <literal>file_attr_acc</literal>
+	    - Аудит доступа к атрибутам объектов и их изменению,
+	    например через &man.stat.1;, &man.pathconf.2;, а
+	    также подобных этим событий.</para>
+	</listitem>
+
+	<listitem>
+	  <para><option>fc</option> - <literal>file_creation</literal>
+	    - Аудит событий, в результате которых создаются
+	    файлы.</para>
+	</listitem>
+
+	<listitem>
+	  <para><option>fd</option> - <literal>file_deletion</literal>
+	    - Аудит событий, в результате которых удаляются
+	    файлы.</para>
+	</listitem>
+
+	<listitem>
+	  <para><option>fm</option> - <literal>file_attr_mod</literal>
+	    - Аудит событий, в результате которых изменяются
+	    атрибуты файлов, например, &man.chown.8;,
+	    &man.chflags.1;, &man.flock.2;.</para>
+	</listitem>
+
+	<listitem>
+	  <para><option>fr</option> - <literal>file_read</literal>
+	    - Аудит событий, в результате которых происходит
+	    чтение данных, открываются файлы на чтение и т.п.</para>
+	</listitem>
+
+	<listitem>
+	  <para><option>fw</option> - <literal>file_write</literal> -
+	    - Аудит событий, в результате которых происходит
+	    запись данных, изменение файлов и так далее.</para>
+	</listitem>
+
+	<listitem>
+	  <para><option>io</option> - <literal>ioctl</literal> -
+	  Аудит вызовов системной функции &man.ioctl.2;.</para>
+	</listitem>
+
+	<listitem>
+	  <para><option>ip</option> - <literal>ipc</literal> -
+	    Аудит различных видов взаимодействия процессов,
+	    включая создание не-именованных каналов (pipe) и
+	    взаимодействие процессов в стиле System V
+	    <acronym>IPC</acronym>.
+	</listitem>
+
+	<listitem>
+	  <para><option>lo</option> - <literal>login_logout</literal> -
+	    Аудит событий  &man.login.1; и  &man.logout.1;.</para>
+	</listitem>
+
+	<listitem>
+	  <para><option>na</option> - <literal>non_attrib</literal> -
+	    Аудит не-приписываемых событий.</para>
+	</listitem>
+
+	<listitem>
+	  <para><option>no</option> - <literal>no_class</literal> -
+	    Пустой класс, используется для отключения
+	    аудита.</para>
+	</listitem>
+
+	<listitem>
+	  <para><option>nt</option> - <literal>network</literal> -
+	    Аудит событий, связанных с сетевыми подключениями,
+	    например &man.connect.2; и &man.accept.2;.</para>
+	</listitem>
+
+	<listitem>
+	  <para><option>ot</option> - <literal>other</literal> -
+	    Аудит событий, не вошедших в другие классы.</para>
+	</listitem>
+
+	<listitem>
+	  <para><option>pc</option> - <literal>process</literal> -
+	    Аудит действий процессов, таких как  &man.exec.3; и
+	    &man.exit.3;.</para>
+	</listitem>
+      </itemizedlist>
+
+      <para>Далее перечислены все поддерживаемые префиксы:</para>
+
+      <itemizedlist>
+	<listitem>
+	  <para><literal>[пустой префикс]</literal> - Аудит проводится как для
+	    успешного, так и для ошибочного события.  Например, просто
+	    указание класса без префикса приведёт к занесению события
+	    в журнал при любом результате операции.</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>+</literal> - Аудит только успешных
+	  событий.</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>-</literal> - Аудит только ошибочных
+	  событий.</para>
+	</listitem>
+      </itemizedlist>
+
+      <warning>
+	<para>Использование класса <option>all</option> с любым
+	  префиксом может привести к генерации огромного количества
+	  данных с очень большой частотой.</para>
+      </warning>
+
+      <para>Дополнительные префиксы, которые могут использоваться для
+	изменения настроек по умолчанию:</para>
+<!-- XXX: Perhaps a variable listing here. -->
+      <itemizedlist>
+	<listitem>
+	  <para><literal>^-</literal> - Отключение аудита ошибочных
+	    событий.</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>^+</literal> - Включение аудита успешных
+	    событий.</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>^</literal> - Отключение аудита как успешных, так и
+	    ошибочных событий.</para>
+	</listitem>
+      </itemizedlist>
+    </sect2>
+
+    <sect2>
+      <title>Конфигурационные файлы</title>
+
+      <para>В большинстве случаев администратору придётся вносить
+	изменения только в два конфигурационных файла системы аудита:
+	<filename>audit_control</filename> и
+	<filename>audit_user</filename>.  Первый из них содержит
+	общие настройки системы аудита и установки по умолчанию как
+	для приписываемых, так и для не-приписываемых событий.  Второй
+	используется для настройки аудита пользовательских событий.
+
+      <sect3 id="audit-auditcontrol">
+	<title>Файл <filename>audit_control</filename></title>
+
+	<para>Файл <filename>audit_control</filename> содержит
+	  настройки по умолчанию, которые, возможно, потребуется
+	  изменить.  Содержимое этого файла:</para>
+
+	<programlisting>dir:/var/audit
+flags:lo
+minfree:20
+naflags:lo</programlisting>
+
+	<para>Параметр <option>dir</option> указывает каталог, в
+	  котором будет сохраняться журнал системы аудита.  Как
+	  правило, система аудита конфигурируется таким образом, что
+	  журнал аудита хранится на отдельном разделе, чтобы
+	  предотвратить сбои в работе операционной системы, если
+	  свободное месте на разделе системы аудита будет
+	  исчерпано.</para>
+
+	<para>Параметр <option>flags</option> используется для
+	  установки глобальных опций.  Значение этого параметра
+	  <option>lo</option> настраивает аудит для всех событий
+	  &man.login.1; и &man.logout.1;.  Более подробный
+	  пример:</para>
+
+	  <programlisting>dir:/var/audit
+flags:lo,ad,-all,^-fa,^-fc,^-cl
+minfree:20
+naflags:lo</programlisting>
+
+	  <para>Такое значение параметра <option>flags</option>
+	  приведёт к аудиту всех событий &man.login.1; и
+	  &man.logout.1;, всех административных событий, всех ошибочных
+	  системных событий и, наконец, отключает аудит всех ошибочных
+	  событий классов <option>fa</option>, <option>fc</option> и
+	  <option>cl</option>.  Несмотря на то, что параметр
+	  <option>-all</option> указывает на необходимость аудита
+	  всех системных событий, префикс <option>^-</option> отменяет
+	  это поведение для всех последующих опций.</para>
+
+	<para>Заметьте, что значения считываются слева направо.
+	  Поэтому находящиеся справа значения переопределяют значения,
+	  находящиеся слева.</para>
+
+	<para>Параметр <option>minfree</option> определяет минимальное
+	  значение свободного дискового пространства на разделе, в
+	  который сохраняются файлы журналов аудита.  Например, если
+	  значение параметра <option>dir</option> установлено в
+	  <filename role="directory">/var/audit</filename>, а параметр
+	  <option>minfree</option> равен двадцати (20), то предупреждающее
+	  сообщение будет выдано, когда раздел <filename
+	  role="directory">/var</filename> будет заполнен на
+	  восемьдесят (80%) процентов.</para>
+
+	<para>Параметр <option>naflags</option> определяет классы
+	  аудита для не-приписываемых событий, то есть событий,
+	  для которых не определён конкретный пользователь.</para>
+
+      </sect3>
+
+      <sect3 id="audit-audituser">
+	<title>Файл <filename>audit_user</filename></title>
+
+	<para>Файл <filename>audit_user</filename> позволяет
+	  администратору определить классы событий, аудит которых будет
+	  производиться для каждого пользователя системы.</para>
+
+	<para>По умолчанию файл <filename>audit_user</filename>
+	содержит:</para>
+
+	<programlisting>root:lo:no
+audit:fc:no</programlisting>
+
+	<para>Обратите внимание: по умолчанию производится аудит всех
+	  <command>login</command>/<command>logout</command> событий и
+	  отключается аудит всех других событий для пользователя
+	  <username>root</username>.  Эта конфигурация также включает
+	  аудит всех событий, связанных с созданием файлов и отключает
+	  аудит всех других событий для пользователя
+	  <username>audit</username>.  Хотя использование системы
+	  аудита не требует наличия в системе специального
+	  пользователя, в некоторых конфигурациях, особенно
+	  использующих <acronym>MAC</acronym> (Mandatory Access
+	  Control), это может быть необходимо.</para>
+
+      </sect3>
+    </sect2>
+  </sect1>
+
+  <sect1 id="audit-administration">
+    <title>Администрирование системы аудита</title>
+
+
+    <para>Журнал событий, записываемый ядром системы аудита не может
+      быть прочитан или отредактирован как простой текст.  Данные
+      сохраняются и считываются методами, схожими с &man.ktrace.1; и
+      &man.kdump.1;, поэтому, журналы можно просмотреть только с
+      помощью команды <command>praudit</command>.  Информация
+      из журналов может быть отфильтрована при помощи команды
+      <command>auditreduce</command>, которая выбирает записи из
+      журналов, основываясь на определённых параметрах, таких как
+      пользователь, время события или тип операции.</para>
+
+    <para>Например, <command>praudit</command> может вывести всё
+      содержимое определённого журнала в текстовом формате.  Для этого
+      выполните команду:</para>
+
+    <screen>&prompt.root; <userinput>praudit /var/audit/AUDITFILE</userinput></screen>
+
+    <para>Здесь <replaceable>AUDITFILE</replaceable> - имя файла журнала
+      по вашему выбору.  Поскольку, файлы журналов могут содержать
+      гигантское количество данных, администратору может понадобиться
+      выбирать записи событий только одного пользователя.  Это возможно
+      с помощью следующей команды, в которой
+      <username>trhodes</username> - имя пользователя:</para>
+
+    <screen>&prompt.root; <userinput>auditreduce -e trhodes /var/audit/AUDITFILE | praudit</userinput></screen>
+
+    <para>Результатом будет выборка из файла
+      <replaceable>AUDITFILE</replaceable> всех событий, связанных с
+      пользователем <username>trhodes</username>.</para>
+
+    <para>Есть ряд других параметров для чтения журналов аудита, для
+      более детального изучения смотрите страницу справки команды
+      <command>praudit</command>.</para>
+
+    <sect2>
+      <title>Ротация лог-файлов системы аудита</title>
+
+      <para>Исходя из соображений безопасности, запись в журнал аудита
+	производится только ядром системы; все управление
+	журналом осуществляется даемоном <command>auditd</command>.
+	Администраторы не должны пытаться использовать
+	&man.newsyslog.conf.5; или другие инструменты для прямой
+	ротации логов системы аудита.  Вместо этого, для остановки,
+	переконфигурации системы аудита и для ротации лог-файлов используйте
+	утилиту управления <command>audit</command>.  Следующая команда
+	заставит даемон <command>auditd</command> создать новый
+	лог-файл и переключить систему аудита на его использование.
+	Старый лог-файл будет переименован:</para>
+
+      <screen>&prompt.root; <userinput>audit -n</userinput></screen>
+
+      <warning>
+	<para>Если даемон <command>auditd</command> не запущен, команда
+	  завершится с ошибкой.</para>
+      </warning>
+
+      <para>Добавление следующей строки в файл
+	<filename>/etc/crontab</filename> приведёт к автоматической
+	ротации лог-файлов каждые двенадцать часов при помощи &man.cron.8;:</para>
+
+      <programlisting>*     */12       *       *       *       root    /usr/sbin/audit -n</programlisting>
+
+      <para>Изменения вступят в силу сразу же после сохранения файла
+      <filename>/etc/crontab</filename>.</para>
+    </sect2>
+
+    <sect2>
+      <title>Передача прав на просмотр журнала аудита</title>
+
+      <para>По умолчанию, только пользователь
+	<username>root</username> имеет право просматривать журналы
+	аудита.  Тем не менее, эти права могут быть переданы, например,
+	пользователям, входящим в группу <literal>audit</literal>.
+	Для этого необходимо передать каталог системы
+	аудита и файлы журналов аудита группе
+	<literal>audit</literal>.  После этого нужно дать группе права
+	на чтение каталога и находящихся в нём файлов.
+	<!-- XXX Absent in the original chapter -->
+	Например, если раздел журналов аудита смонтирован в
+	<filename>/var/audit</filename>, нужно выполнить
+	команды:</para>
+
+	<screen>&prompt.root; <userinput>chown -R :audid /var/audit </userinput>
+&prompt.root; <userinput>chmod -R g+r /var/audit </userinput></screen>
+	<!-- /XXX -->
+
+	<para>Содержимое журнала аудита дает много информации о
+	взаимодействии пользователей, процессов и
+	функционировании системы в целом.  Поэтому рекомендуется
+	передавать права на работу с журналами аудита с большой
+	осмотрительностью.</para>
+    </sect2>
+  </sect1>
+</chapter>
