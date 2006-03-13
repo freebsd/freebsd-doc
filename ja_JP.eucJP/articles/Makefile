@@ -1,12 +1,15 @@
 # $FreeBSD$
-# Original revision: 1.42
+# Original revision: 1.47
 
 SUBDIR =
 #SUBDIR+= 5-roadmap
+#SUBDIR+= bsdl-gpl
+#SUBDIR+= casestudy-argentina.com
 #SUBDIR+= checkpoint
 #SUBDIR+= committers-guide
 #SUBDIR+= console-server
 SUBDIR+= contributing
+#SUBDIR+= contributing-ports
 SUBDIR+= contributors
 #SUBDIR+= cvs-freebsd
 #SUBDIR+= cvsup-advanced
@@ -19,11 +22,13 @@ SUBDIR+= fbsd-from-scratch
 SUBDIR+= fonts
 #SUBDIR+= formatting-media
 #SUBDIR+= freebsd-questions
+#SUBDIR+= geom-class
 #SUBDIR+= hats
 #SUBDIR+= hubs
 SUBDIR+= ipsec-must
 #SUBDIR+= java-tomcat
 #SUBDIR+= laptop
+#SUBDIR+= linux-comparison
 #SUBDIR+= mailing-list-faq
 #SUBDIR+= mh
 SUBDIR+= multi-os
@@ -39,6 +44,7 @@ SUBDIR+= problem-reports
 #SUBDIR+= serial-uart
 #SUBDIR+= solid-state
 #SUBDIR+= storage-devices
+#SUBDIR+= version-guide
 #SUBDIR+= vinum
 #SUBDIR+= vm-design
 SUBDIR+= zip-drive
