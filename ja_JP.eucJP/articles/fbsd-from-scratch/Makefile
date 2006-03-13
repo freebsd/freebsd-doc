@@ -14,9 +14,9 @@ MAINTAINER= schweikh@FreeBSD.org
 INSTALL_COMPRESSED?= gz
 INSTALL_ONLY_COMPRESSED?=
 
-#EXTRAS=	stage_1.conf.default
+EXTRAS=	stage_1.conf.default
 EXTRAS+=	stage_1.sh
-#EXTRAS+=	stage_2.conf.default
+EXTRAS+=	stage_2.conf.default
 EXTRAS+=	stage_2.sh
 EXTRAS+=	stage_3.mk
 
