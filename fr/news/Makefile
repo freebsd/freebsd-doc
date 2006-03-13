@@ -1,4 +1,4 @@
-# $FreeBSD: www/fr/news/Makefile,v 1.7 2004/02/29 13:20:40 stephane Exp $
+# $FreeBSD: www/fr/news/Makefile,v 1.8 2004/12/30 17:53:44 hrs Exp $
 
 # The FreeBSD French Documentation Project
 # Original revision: 1.39
@@ -21,6 +21,8 @@ DOCS+= press-rel-4.sgml
 DOCS+= press-rel-5.sgml
 DOCS+= press-rel-6.sgml
 DOCS+= press-rel-7.sgml
+DOCS+= press-rel-8.sgml
+DOCS+= press-rel-9.sgml
 
 # The yearly State of the Union address
 DOCS+= sou1999.sgml
