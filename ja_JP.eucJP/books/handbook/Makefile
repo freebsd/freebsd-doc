@@ -38,9 +38,9 @@ WITH_GLOSSARY?=
 INSTALL_COMPRESSED?= gz
 INSTALL_ONLY_COMPRESSED?=
 
-#IMAGES_EN = advanced-networking/isdn-bus.eps
-#IMAGES_EN+= advanced-networking/isdn-twisted-pair.eps
-#IMAGES_EN+= advanced-networking/natd.eps
+IMAGES_EN = advanced-networking/isdn-bus.eps
+IMAGES_EN+= advanced-networking/isdn-twisted-pair.eps
+IMAGES_EN+= advanced-networking/natd.eps
 #IMAGES_EN+= install/adduser1.scr
 #IMAGES_EN+= install/adduser2.scr
 #IMAGES_EN+= install/adduser3.scr
@@ -168,7 +168,7 @@ SRCS+= users/chapter.sgml
 #SRCS+= vinum/chapter.sgml
 SRCS+= x11/chapter.sgml
 SRCS+= ports/chapter.sgml
-#SRCS+= preface/preface.sgml
+SRCS+= preface/preface.sgml
 SRCS+= colophon.sgml
 
 # Entities
