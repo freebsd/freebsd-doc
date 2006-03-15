@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="GB2312"?>
+<!-- Original Revision: 1.2 -->
 <!-- $FreeBSD$ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -12,6 +13,10 @@
   <!-- these params should be externally bound. The values
        here are not used actually -->
   <xsl:param name="transtable.xml" select="'./transtable.xml'" />
-  <xsl:param name="transtable-conv-element" select="''" />
+  <xsl:param name="transtable-sortkey.xml" select="'./transtable-sortkey.xml'" />
+
+  <xsl:param name="transtable-target-element" select="''" />
+  <xsl:param name="transtable-word-group" select="''" />
+  <xsl:param name="transtable-mode" select="''" />
 
 </xsl:stylesheet>
