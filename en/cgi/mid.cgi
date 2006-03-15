@@ -26,7 +26,7 @@
 #
 # Search a mail by Message-ID, References or In-Reply-To field
 #
-# $FreeBSD: www/en/cgi/mid.cgi,v 1.14 2005/10/31 15:25:05 fenner Exp $
+# $FreeBSD: www/en/cgi/mid.cgi,v 1.15 2006/03/15 01:24:29 kuriyama Exp $
 
 require "./cgi-lib.pl";
 require "./cgi-style.pl";
@@ -151,7 +151,10 @@ $messageid =~ s/>$//;
 $messageid =~ s/@.*// if $shortid;
 ($messageid) = $messageid =~ m|^(\S+)$|;	# XXX: can be more strict...
 
-$database = $databaseDefault
-    if (!($database eq 'mid' || $database eq 'irt'));
+if ($database =~ m/^(mid|irt)$/) {
+    $database = $1;
+} else {
+    $database = $databaseDefault;
+}
 
 &get_id($messageid, $database);
