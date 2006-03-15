@@ -26,7 +26,7 @@
 #
 # Search a mail by Message-ID, References or In-Reply-To field
 #
-# $FreeBSD: www/en/cgi/mid.cgi,v 1.13 2005/10/20 19:54:57 fenner Exp $
+# $FreeBSD: www/en/cgi/mid.cgi,v 1.14 2005/10/31 15:25:05 fenner Exp $
 
 require "./cgi-lib.pl";
 require "./cgi-style.pl";
@@ -39,6 +39,7 @@ $bindir = "$home/bin"; # where search scripts located
 $script = $ENV{'SCRIPT_NAME'};
 $shortid = 1;
 $lookCommand = "/usr/bin/look";
+$ENV{PATH} = '/bin:/usr/bin';
 
 sub escape($) { $_ = $_[0]; s/&/&amp;/g; s/</&lt;/g; s/>/&gt;/g; $_; }
 
@@ -148,6 +149,7 @@ if (!$messageid) {
 $messageid =~ s/^<//;
 $messageid =~ s/>$//;
 $messageid =~ s/@.*// if $shortid;
+($messageid) = $messageid =~ m|^(\S+)$|;	# XXX: can be more strict...
 
 $database = $databaseDefault
     if (!($database eq 'mid' || $database eq 'irt'));
