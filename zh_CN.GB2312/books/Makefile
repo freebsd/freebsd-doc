@@ -1,7 +1,11 @@
-# Original Revision: 1.12
+#
+# The FreeBSD Simplified Chinese Project
+#
+# Original Revision: 1.14
 # $FreeBSD$
 
-SUBDIR = handbook
+SUBDIR = arch-handbook
+SUBDIR+= handbook
 SUBDIR+= porters-handbook
 
 ROOT_SYMLINKS= handbook
