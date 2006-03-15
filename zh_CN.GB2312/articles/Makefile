@@ -1,5 +1,5 @@
 # The FreeBSD Simplified Chinese Project
-# Original Revision: 1.42
+# Original Revision: 1.49
 #
 # $FreeBSD$
 
