@@ -180,12 +180,12 @@ IMAGES_LIB?=
 CATALOGS+=	-c ${c}
 .endif
 .endfor
-SGMLFLAGS+=	-D ${CANONICALOBJDIR}
+SGMLFLAGS+=	-D ${IMAGES_EN_DIR}/${DOC}s/${.CURDIR:T} -D ${CANONICALOBJDIR}
 JADEOPTS=	${JADEFLAGS} ${SGMLFLAGS} ${CATALOGS}
 XSLTPROCOPTS=	${XSLTPROCFLAGS}
 
 KNOWN_FORMATS=	html html.tar html-split html-split.tar \
-		txt rtf rtf.tar ps pdf tex dvi tar pdb
+		txt rtf ps pdf tex dvi tar pdb
 
 CSS_SHEET?=	${DOC_PREFIX}/share/misc/docbook.css
 PDFTEX_DEF?=	${DOC_PREFIX}/share/web2c/pdftex.def
@@ -264,6 +264,26 @@ DVIPS?=		${PREFIX}/bin/dvips
 DVIPSOPTS?=	-t ${PAPERSIZE:L}
 .endif
 DVIPSOPTS+=	${DVIPSFLAGS}
+
+#
+# Currently, we have to use the FixRTF utility available as textproc/fixrtf
+# to apply several RTF fixups:
+#
+# 1. Embed PNGs into RTF. (Option: -p)
+# 2. Embed FreeBSD-specific information into RTF, such as organization name,
+#    building time. But unfortunately, so far only Microsoft Word can read
+#    them. In contrast, Microsoft Word Viewer and OpenOffice even cannot read
+#    this kind of information from RTF created by Microsoft Word and
+#    OpenOffice. (Option: -i)
+# 3. Do some locale-specific fixing. (Option: -e <encoding>)
+# 
+# This is a transitional solution before Jade/OpenJade provides these features.
+#
+FIXRTF?=	${PREFIX}/bin/fixrtf
+FIXRTFOPTS?=	-i -p
+.if defined(SP_ENCODING)
+FIXRTFOPTS+=	-e ${SP_ENCODING}
+.endif
 
 GZIP?=	-9
 GZIP_CMD?=	gzip -qf ${GZIP}
@@ -354,6 +374,9 @@ CLEANFILES+= ${DOC}.html-text
 .elif ${_cf} == "dvi"
 CLEANFILES+= ${DOC}.aux ${DOC}.log ${DOC}.out ${DOC}.tex
 
+.elif ${_cf} == "rtf"
+CLEANFILES+= ${DOC}.rtf-nopng
+
 .elif ${_cf} == "tex"
 CLEANFILES+= ${DOC}.aux ${DOC}.log
 
@@ -442,7 +465,7 @@ CLEANFILES+= 		${INDEX_SGML} ${HTML_SPLIT_INDEX} ${HTML_INDEX} ${PRINT_INDEX}
 INIT_INDEX_SGML_CMD?=	${PERL} ${COLLATEINDEX} -i doc-index -N -o ${INDEX_SGML}
 GEN_INDEX_SGML_CMD?=	${PERL} ${COLLATEINDEX} -i doc-index -g -o ${INDEX_SGML} ${.ALLSRC:M*.index}
 .else
-GEN_INDEX_SGML_CMD?=	@${ECHO} "No index to generate."
+GEN_INDEX_SGML_CMD?=	@${ECHO} "Index is disabled or no index to generate."
 .endif
 
 .MAIN: all
@@ -572,14 +595,8 @@ ${DOC}.rtf: ${SRCS} ${LOCAL_IMAGES_EPS} ${PRINT_INDEX} \
 		${LOCAL_IMAGES_TXT} ${LOCAL_IMAGES_PNG}
 	${GEN_INDEX_SGML_CMD}
 	${JADE_CMD} -V rtf-backend ${PRINTOPTS} -ioutput.rtf.images \
-		${JADEOPTS} -t rtf -o ${.TARGET} ${MASTERDOC}
-
-${DOC}.rtf.tar: ${DOC}.rtf ${LOCAL_IMAGES_PNG}
-	${TAR} cf ${.TARGET} ${DOC}.rtf ${IMAGES_PNG:N*share*}
-.for _curimage in ${IMAGES_PNG:M*share*}
-	${TAR} rf ${.TARGET} -C ${IMAGES_EN_DIR}/${DOC}s/${.CURDIR:T} \
-		${_curimage:S|${IMAGES_EN_DIR}/${DOC}s/${.CURDIR:T}/||}
-.endfor
+		${JADEOPTS} -t rtf -o ${.TARGET}-nopng ${MASTERDOC}
+	${FIXRTF} ${FIXRTFOPTS} < ${.TARGET}-nopng > ${.TARGET}
 
 #
 # This sucks, but there's no way round it.  The PS and PDF formats need
@@ -630,13 +647,14 @@ ${DOC}.pdf: ${DOC}.tex-pdf ${IMAGES_PDF}
 	@${ECHO} "==> PDFTeX pass 2/3"
 	-${PDFJADETEX_CMD} '${TEX_CMDSEQ} \nonstopmode\input{${DOC}.tex-pdf}'
 	@${ECHO} "==> PDFTeX pass 3/3"
-	${PDFJADETEX_CMD} '${TEX_CMDSEQ} \nonstopmode\input{${DOC}.tex-pdf}'
+	-${PDFJADETEX_CMD} '${TEX_CMDSEQ} \nonstopmode\input{${DOC}.tex-pdf}'
 .endif
 
 ${DOC}.ps: ${DOC}.dvi
 	${DVIPS} ${DVIPSOPTS} -o ${.TARGET} ${.ALLSRC}
 .else
-${DOC}.rtf ${DOC}.rtf.tar ${DOC}.tex \
+#  NO_TEX
+${DOC}.rtf ${DOC}.tex \
 	${DOC}.tex-ps ${DOC}.dvi ${DOC}.ps:
 	${TOUCH} ${.TARGET}
 .if !target(${DOC}.pdf)
@@ -895,19 +913,6 @@ install-${_curformat}: ${DOC}.${_curformat}
 .endfor
 .elif ${_cf} == "pdb"
 	${LN} -f ${DESTDIR}/${.ALLSRC} ${DESTDIR}/${.CURDIR:T}.${_curformat}
-
-.elif ${_cf} == "rtf"
-.for _curimage in ${IMAGES_PNG:M*/*:M*share*}
-	${MKDIR} -p ${DESTDIR:H:H}/${_curimage:H:S|${IMAGES_EN_DIR}/||:S|${.CURDIR}||}
-	${INSTALL_DOCS} ${_curimage} ${DESTDIR:H:H}/${_curimage:H:S|${IMAGES_EN_DIR}/||:S|${.CURDIR}||}
-.endfor
-.for _curimage in ${IMAGES_PNG:M*/*:N*share*}
-	${MKDIR} -p ${DESTDIR}/${_curimage:H}
-	${INSTALL_DOCS} ${_curimage} ${DESTDIR}/${_curimage:H}
-.endfor
-.for _curimage in ${IMAGES_PNG:N*/*}
-	${INSTALL_DOCS} ${_curimage} ${DESTDIR}/${_curimage}
-.endfor
 .endif
 
 .if ${_cf} == "html-split"
