@@ -2,7 +2,7 @@
 # The FreeBSD Russian Documentation Project
 #
 # $FreeBSD$
-# $FreeBSDru: frdp/doc/ru_RU.KOI8-R/articles/Makefile,v 1.27 2004/07/10 10:06:24 marck Exp $
+# $FreeBSDru: frdp/doc/ru_RU.KOI8-R/articles/Makefile,v 1.37 2006/03/22 17:06:02 marck Exp $
 #
 # Original revision: 1.42
 #
@@ -28,7 +28,6 @@ SUBDIR+= freebsd-questions
 SUBDIR+= hats
 SUBDIR+= hubs
 SUBDIR+= ipsec-must
-SUBDIR+= java-tomcat
 SUBDIR+= laptop
 SUBDIR+= linux-comparison
 SUBDIR+= mailing-list-faq
