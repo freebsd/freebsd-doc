@@ -15,7 +15,7 @@
 # Disclaimer:
 #   This is pretty ugly in places.
 #
-# $FreeBSD: www/en/cgi/search.cgi,v 1.25 2005/10/23 17:22:51 wosch Exp $
+# $FreeBSD: www/en/cgi/search.cgi,v 1.26 2005/10/24 20:59:01 wosch Exp $
 
 
 $server_root = '/usr/local/www';
@@ -24,6 +24,7 @@ $sourcepath = "$server_root/db/index";
 $hints = "/search/searchhints.html"; 
 $searchpage = '/search/search.html';   
 $myurl = $ENV{'SCRIPT_NAME'};
+$ENV{PATH} = "/bin:/usr/bin:/usr/local/bin";
 
 require "open2.pl";
 require "./cgi-lib.pl";
@@ -36,9 +37,9 @@ sub escape($) { $_ = $_[0]; s/&/&amp;/g; s/</&lt;/g; s/>/&gt;/g; $_; }
 sub do_wais {
     &ReadParse;
     
-    @FORM_words = split(/ /, escape($in{"words"}));
+    @FORM_words = map { s|"||g; $_ } split(/ /, escape($in{"words"}));
     @FORM_source = split(/\0/, escape($in{"source"}));
-    $FORM_max = $in{"max"};
+    ($FORM_max) = $in{"max"} =~ m|^(\d+)$|;
     $FORM_docnum = $in{"docnum"};
     $FORM_index = $in{"index"};
 
@@ -220,6 +221,7 @@ sub checksource {
 
     $j = 0;
     foreach $i (@sources) {
+	($i) = $i =~ m|^([-a-z0-9]*)|;
     	if (stat("$sourcepath/$i.src")) {
        	    if (!stat("$sourcepath/$i.update.lock")) {
     	    	$goodsources[$j] = $i;
@@ -260,4 +262,6 @@ $| = 1;
 open (STDERR,"> /dev/null");
 #open (STDERR,">> /tmp/search");
 eval '&do_wais';
-
+if ($@) {
+	warn "eval failed: $@";
+}
