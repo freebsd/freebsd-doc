@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/mailindex.cgi,v 1.6 2000/12/28 13:19:03 wosch Exp $
+# $FreeBSD: www/en/cgi/mailindex.cgi,v 1.7 2005/10/31 15:25:05 fenner Exp $
 
 
 use CGI;
@@ -33,6 +33,7 @@ use CGI::Carp;
 require "./cgi-lib.pl";
 require "./cgi-style.pl";
 
+$ENV{PATH} = "/bin:/usr/bin:/usr/local/bin";
 
 # no sort
 my $sortopt = '';
