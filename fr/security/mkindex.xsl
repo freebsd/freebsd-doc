@@ -1,53 +1,34 @@
 <?xml version="1.0"?>
 
-<!-- $FreeBSD$ -->
+<!-- $FreeBSD: www/fr/security/mkindex.xsl,v 1.1 2003/12/15 15:41:15 stephane Exp $ -->
 
 <!-- 
   The FreeBSD French Documentation Project
-  Original revision: 1.2
+  Original revision: 1.4
 
   Version francaise : Stephane Legrand <stephane@freebsd-fr.org> 
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
-  
+
   <xsl:import href="../includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD$'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/fr/security/mkindex.xsl,v 1.1 2003/12/15 15:41:15 stephane Exp $'"/>
   <xsl:variable name="title" select="'untitled'"/>
-
-  <xsl:variable name="ftpbase" select="'ftp://ftp.FreeBSD.org/pub/FreeBSD/CERT/advisories/'" />
-  <xsl:variable name="ftpbaseold" select="'ftp://ftp.FreeBSD.org/pub/FreeBSD/CERT/advisories/old/'" />
-  <xsl:variable name="ulopen" select="'&lt;ul&gt;'" />
-  <xsl:variable name="ulclose" select="'&lt;/ul&gt;'" />
 
   <xsl:output type="xml" encoding="iso-8859-1"
               omit-xml-declaration="yes" />
 
   <xsl:template match="/">
-    <xsl:value-of select="$ulopen" disable-output-escaping="yes" />
-      <xsl:for-each select="descendant::advisory|descendant::release">
-        <xsl:choose>
-          <xsl:when test="self::release">
-            <xsl:value-of select="$ulclose" disable-output-escaping="yes" />
-            <p>Sortie de <xsl:value-of select="name"/>.</p>
-            <xsl:value-of select="$ulopen" disable-output-escaping="yes" />
-          </xsl:when>
-          
-          <xsl:when test="self::advisory">
-            <li>
-            <xsl:choose>
-              <xsl:when test="./name/@role='old'">
-                <a><xsl:attribute name="href"><xsl:value-of select="concat($ftpbaseold, name, '.asc')" /></xsl:attribute><xsl:value-of select="concat(name, '.asc')" /></a>
-              </xsl:when>
-              <xsl:otherwise>
-                 <a><xsl:attribute name="href"><xsl:value-of select="concat($ftpbase, name, '.asc')" /></xsl:attribute><xsl:value-of select="concat(name, '.asc')" /></a>             </xsl:otherwise>
-            </xsl:choose>
-            </li>
-          </xsl:when>
-        </xsl:choose>
-      </xsl:for-each>
-    <xsl:value-of select="$ulclose" disable-output-escaping="yes" />
+    <xsl:call-template name="html-list-advisories">
+       <xsl:with-param name="advisories.xml" select="$advisories.xml" />
+    </xsl:call-template>
+  </xsl:template>
+
+  <xsl:template name="html-list-advisories-release-label">
+    <xsl:param name="relname" select="'none'" />
+
+    <p>Sortie de <xsl:value-of select="$relname" />.</p>
   </xsl:template>
 </xsl:stylesheet>
