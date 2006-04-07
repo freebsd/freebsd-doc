@@ -108,7 +108,9 @@ PDFTEX_CMD?=	${PREFIX}/bin/pdftex
 .endif
 LATEX_CMD?=	${PREFIX}/bin/latex
 JADETEX_CMD?=	${TEX_CMD} "&jadetex"
+JADETEX_PREPROCESS?=	/bin/cat
 PDFJADETEX_CMD?=${PDFTEX_CMD} "&pdfjadetex"
+PDFJADETEX_PREPROCESS?=	/bin/cat
 FOP_CMD?=	${PREFIX}/share/fop/fop.sh
 XEP_CMD?=	sh ${HOME}/XEP/xep.sh
 JAVA_CMD?=	${PREFIX}/bin/javavm
