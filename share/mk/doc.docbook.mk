@@ -372,7 +372,7 @@ CLEANFILES+= ${DOC}.html
 CLEANFILES+= ${DOC}.html-text
 
 .elif ${_cf} == "dvi"
-CLEANFILES+= ${DOC}.aux ${DOC}.log ${DOC}.out ${DOC}.tex
+CLEANFILES+= ${DOC}.aux ${DOC}.log ${DOC}.out ${DOC}.tex ${DOC}.tex-tmp
 
 .elif ${_cf} == "rtf"
 CLEANFILES+= ${DOC}.rtf-nopng
@@ -381,13 +381,13 @@ CLEANFILES+= ${DOC}.rtf-nopng
 CLEANFILES+= ${DOC}.aux ${DOC}.log
 
 .elif ${_cf} == "ps"
-CLEANFILES+= ${DOC}.aux ${DOC}.dvi ${DOC}.log ${DOC}.out ${DOC}.tex-ps ${DOC}.tex
+CLEANFILES+= ${DOC}.aux ${DOC}.dvi ${DOC}.log ${DOC}.out ${DOC}.tex-ps ${DOC}.tex ${DOC}.tex-tmp
 .for _curimage in ${LOCAL_IMAGES_EPS:M*share*}
 CLEANFILES+= ${_curimage:T} ${_curimage:H:T}/${_curimage:T}
 .endfor
 
 .elif ${_cf} == "pdf"
-CLEANFILES+= ${DOC}.aux ${DOC}.dvi ${DOC}.log ${DOC}.out ${DOC}.tex-pdf \
+CLEANFILES+= ${DOC}.aux ${DOC}.dvi ${DOC}.log ${DOC}.out ${DOC}.tex-pdf ${DOC}.tex-pdf-tmp \
 		${DOC}.tex
 .for _curimage in ${IMAGES_PDF:M*share*}
 CLEANFILES+= ${_curimage:T} ${_curimage:H:T}/${_curimage:T}
@@ -629,12 +629,13 @@ ${DOC}.dvi: ${DOC}.tex ${LOCAL_IMAGES_EPS}
 .for _curimage in ${LOCAL_IMAGES_EPS:M*share*}
 	${CP} -p ${_curimage} ${.CURDIR:H:H}/${_curimage:H:S|${IMAGES_EN_DIR}/||:S|${.CURDIR}||}
 .endfor
+	${JADETEX_PREPROCESS} < ${DOC}.tex > ${DOC}.tex-tmp
 	@${ECHO} "==> TeX pass 1/3"
-	-${JADETEX_CMD} '${TEX_CMDSEQ} \nonstopmode\input{${DOC}.tex}'
+	-${JADETEX_CMD} '${TEX_CMDSEQ} \nonstopmode\input{${DOC}.tex-tmp}'
 	@${ECHO} "==> TeX pass 2/3"
-	-${JADETEX_CMD} '${TEX_CMDSEQ} \nonstopmode\input{${DOC}.tex}'
+	-${JADETEX_CMD} '${TEX_CMDSEQ} \nonstopmode\input{${DOC}.tex-tmp}'
 	@${ECHO} "==> TeX pass 3/3"
-	-${JADETEX_CMD} '${TEX_CMDSEQ} \nonstopmode\input{${DOC}.tex}'
+	-${JADETEX_CMD} '${TEX_CMDSEQ} \nonstopmode\input{${DOC}.tex-tmp}'
 .endif
 
 .if !target(${DOC}.pdf)
@@ -642,12 +643,13 @@ ${DOC}.pdf: ${DOC}.tex-pdf ${IMAGES_PDF}
 .for _curimage in ${IMAGES_PDF:M*share*}
 	${CP} -p ${_curimage} ${.CURDIR:H:H}/${_curimage:H:S|${IMAGES_EN_DIR}/||:S|${.CURDIR}||}
 .endfor
+	${PDFJADETEX_PREPROCESS} < ${DOC}.tex-pdf > ${DOC}.tex-pdf-tmp
 	@${ECHO} "==> PDFTeX pass 1/3"
-	-${PDFJADETEX_CMD} '${TEX_CMDSEQ} \nonstopmode\input{${DOC}.tex-pdf}'
+	-${PDFJADETEX_CMD} '${TEX_CMDSEQ} \nonstopmode\input{${DOC}.tex-pdf-tmp}'
 	@${ECHO} "==> PDFTeX pass 2/3"
-	-${PDFJADETEX_CMD} '${TEX_CMDSEQ} \nonstopmode\input{${DOC}.tex-pdf}'
+	-${PDFJADETEX_CMD} '${TEX_CMDSEQ} \nonstopmode\input{${DOC}.tex-pdf-tmp}'
 	@${ECHO} "==> PDFTeX pass 3/3"
-	-${PDFJADETEX_CMD} '${TEX_CMDSEQ} \nonstopmode\input{${DOC}.tex-pdf}'
+	-${PDFJADETEX_CMD} '${TEX_CMDSEQ} \nonstopmode\input{${DOC}.tex-pdf-tmp}'
 .endif
 
 ${DOC}.ps: ${DOC}.dvi
