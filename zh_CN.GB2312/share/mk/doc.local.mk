@@ -10,7 +10,7 @@ CJKTEXSTY_TEX_FLAGS?= -e ${SP_ENCODING} -f t1song
 CJKTEXSTY_PDFTEX_FLAGS?= -c -e ${SP_ENCODING} -f song
 
 # Don't use "?=" in the following two lines.
-# They have been pre-defined in "doc.project.mk".
+# They have been pre-defined in "doc.project.mk" and should be overridden here.
 # XXX: broken as of RELEASE_6_1_0
 #HTML2TXT=	${PREFIX}/bin/html2text
 #HTML2TXTOPTS=	-nobs -style pretty
@@ -30,7 +30,7 @@ NO_TEX=	yes
 # Then, PMake expands variables just when they are ACTUALLY USED.
 
 PDFJADETEX_PREPROCESS=	${CJKTEXSTY} ${CJKTEXSTY_PDFTEX_FLAGS}
-JADETEX_PREPROCESS=	${CJKTEXSTY} ${CJKTEXSTY_PDFTEX_FLAGS}
+JADETEX_PREPROCESS=	${CJKTEXSTY} ${CJKTEXSTY_TEX_FLAGS}
 
 # For Chinese-specific switch "output.for.print".
 print.index: ${SRCS} ${LOCAL_IMAGES_TXT}
