@@ -472,6 +472,30 @@ GEN_INDEX_SGML_CMD?=	@${ECHO} "Index is disabled or no index to generate."
 
 all: ${_docs}
 
+# put languages which have a problem on rendering printable formats
+# by using TeX to NO_TEX_LANG.
+NO_TEX_LANG?=	ja_JP.eucJP ru_RU.KOI8-R zh_TW.Big5
+
+# put languages which have a problem on rendering the plain text format
+# by using links1 to NO_PLAINTEXT_LANG.
+NO_PLAINTEXT_LANG?=	ja_JP.eucJP zh_CN.GB2312
+
+# put languages which have a problem on rendering the rtf format
+# by using jade to NO_RTF_LANG.
+NO_RTF_LANG?=
+
+.for _L in ${LANGCODE}
+.if ${NO_TEX_LANG:M${_L}} != ""
+NO_TEX=		yes
+.endif
+.if ${NO_PLAINTEXT_LANG:M${_L}} != ""
+NO_PLAINTEXT=	yes
+.endif
+.if ${NO_RTF_LANG:M${_L}} != ""
+NO_RTF=		yes
+.endif
+.endfor
+
 # XML --------------------------------------------------------------------
 
 # sx generates a lot of (spurious) errors of the form "reference to
@@ -559,9 +583,14 @@ ${DOC}.html.tar: ${DOC}.html ${LOCAL_IMAGES_LIB} \
 # TXT --------------------------------------------------------------------
 
 .if !target(${DOC}.txt)
+.if !defined(NO_PLAINTEXT)
 ${DOC}.txt: ${DOC}.html-text
 	${HTML2TXT} ${HTML2TXTOPTS} ${.ALLSRC} > ${.TARGET}
+.else
+${DOC}.txt:
+	${TOUCH} ${.TARGET}
 .endif	
+.endif
 
 # PDB --------------------------------------------------------------------
 
@@ -578,26 +607,25 @@ ${.CURDIR:T}.pdb.${_curcomp}: ${DOC}.pdb.${_curcomp}
 .endfor
 .endif
 
-# put languages which have a problem on rendering printable formats
-# by using TeX to NO_TEX_LANG.
-NO_TEX_LANG?=	ja_JP.eucJP ru_RU.KOI8-R zh_TW.Big5
-
-.for _L in ${LANGCODE}
-.if ${NO_TEX_LANG:M${_L}} != ""
-NO_TEX=	yes
-.endif
-.endfor
-
 # RTF --------------------------------------------------------------------
 
-.if !defined(NO_TEX)
+.if !target(${DOC}.rtf)
+.if !defined(NO_RTF)
 ${DOC}.rtf: ${SRCS} ${LOCAL_IMAGES_EPS} ${PRINT_INDEX} \
 		${LOCAL_IMAGES_TXT} ${LOCAL_IMAGES_PNG}
 	${GEN_INDEX_SGML_CMD}
 	${JADE_CMD} -V rtf-backend ${PRINTOPTS} -ioutput.rtf.images \
 		${JADEOPTS} -t rtf -o ${.TARGET}-nopng ${MASTERDOC}
 	${FIXRTF} ${FIXRTFOPTS} < ${.TARGET}-nopng > ${.TARGET}
+.else
+${DOC}.rtf:
+	${TOUCH} ${.TARGET}
+.endif
+.endif
 
+# PS/PDF -----------------------------------------------------------------
+
+.if !defined(NO_TEX)
 #
 # This sucks, but there's no way round it.  The PS and PDF formats need
 # to use different image formats, which are chosen at the .tex stage.  So,
@@ -639,10 +667,15 @@ ${DOC}.dvi: ${DOC}.tex ${LOCAL_IMAGES_EPS}
 .endif
 
 .if !target(${DOC}.pdf)
+.if !defined(USE_PS2PDF)
 ${DOC}.pdf: ${DOC}.tex-pdf ${IMAGES_PDF}
+.else
+${DOC}.pdf: ${DOC}.ps ${IMAGES_PDF}
+.endif
 .for _curimage in ${IMAGES_PDF:M*share*}
 	${CP} -p ${_curimage} ${.CURDIR:H:H}/${_curimage:H:S|${IMAGES_EN_DIR}/||:S|${.CURDIR}||}
 .endfor
+.if !defined(USE_PS2PDF)
 	${PDFJADETEX_PREPROCESS} < ${DOC}.tex-pdf > ${DOC}.tex-pdf-tmp
 	@${ECHO} "==> PDFTeX pass 1/3"
 	-${PDFJADETEX_CMD} '${TEX_CMDSEQ} \nonstopmode\input{${DOC}.tex-pdf-tmp}'
@@ -650,14 +683,16 @@ ${DOC}.pdf: ${DOC}.tex-pdf ${IMAGES_PDF}
 	-${PDFJADETEX_CMD} '${TEX_CMDSEQ} \nonstopmode\input{${DOC}.tex-pdf-tmp}'
 	@${ECHO} "==> PDFTeX pass 3/3"
 	-${PDFJADETEX_CMD} '${TEX_CMDSEQ} \nonstopmode\input{${DOC}.tex-pdf-tmp}'
+.else
+	${PS2PDF} ${DOC}.ps ${.TARGET}
+.endif
 .endif
 
 ${DOC}.ps: ${DOC}.dvi
 	${DVIPS} ${DVIPSOPTS} -o ${.TARGET} ${.ALLSRC}
 .else
 #  NO_TEX
-${DOC}.rtf ${DOC}.tex \
-	${DOC}.tex-ps ${DOC}.dvi ${DOC}.ps:
+${DOC}.tex ${DOC}.tex-ps ${DOC}.dvi ${DOC}.ps:
 	${TOUCH} ${.TARGET}
 .if !target(${DOC}.pdf)
 ${DOC}.pdf:
@@ -850,7 +885,25 @@ indexreport:
 _curinst+= ${FORMATS:S/^/install-/g}
 .endif
 
+.if defined(NO_TEX)
+_curinst_filter+=N*dvi* N*tex* N*ps* N*pdf*
+.endif
+.if defined(NO_RTF)
+_curinst_filter+=N*rtf*
+.endif
+.if defined(NO_PLAINTEXT)
+_curinst_filter+=N*txt*
+.endif
+
+_cff!=${ECHO_CMD} "${_curinst_filter}" | ${SED} 's, ,:,g'
+
+.if !defined(_cff) || empty(_cff)
 realinstall: ${_curinst}
+.else
+.for i in ${_cff}
+realinstall: ${_curinst:$i}
+.endfor
+.endif
 
 .for _curformat in ${KNOWN_FORMATS}
 _cf=${_curformat}
@@ -988,6 +1041,7 @@ PKG_SUFFIX=	tgz
 PKGDOCPFX!= realpath ${DOC_PREFIX}
 
 .for _curformat in ${KNOWN_FORMATS}
+__curformat=${_curformat}
 
 ${PACKAGES}/${.CURDIR:T}.${LANGCODE}.${_curformat}.${PKG_SUFFIX}:
 	${MKDIR} -p ${.OBJDIR}/pkg; \
@@ -1005,7 +1059,18 @@ ${PACKAGES}/${.CURDIR:T}.${LANGCODE}.${_curformat}.${PKG_SUFFIX}:
 			(${RM} -fr ${.TARGET} PLIST.${_curformat} && false); \
 	${RM} -rf ${.OBJDIR}/pkg
 
+.if !defined(_cff) || empty(_cff)
 package-${_curformat}: ${PACKAGES}/${.CURDIR:T}.${LANGCODE}.${_curformat}.${PKG_SUFFIX}
+.else
+.for i in ${_cff}
+.if !empty(__curformat:$i)
+package-${_curformat}: ${PACKAGES}/${.CURDIR:T}.${LANGCODE}.${_curformat}.${PKG_SUFFIX}
+.else
+package-${_curformat}:
+.endif
+.endfor
+.endif
+
 .endfor
 
 .if ${LOCAL_CSS_SHEET} != ${CSS_SHEET}
