@@ -38,6 +38,7 @@ DOC?= book
 FORMATS?= html-split
 
 #HAS_INDEX= true
+USE_PS2PDF=	yes
 
 INSTALL_COMPRESSED?= gz
 INSTALL_ONLY_COMPRESSED?=
@@ -203,18 +204,6 @@ CHAPTERS?=	${SRCS:M*chapter.sgml}
 
 SGMLFLAGS+=	${CHAPTERS:S/\/chapter.sgml//:S/^/-i chap./}
 SGMLFLAGS+=	-i chap.freebsd-glossary
-
-# XXX The Handbook build currently overflows some internal, hardcoded
-# limits in pdftex.  Until we split the Handbook up, build the PDF
-# version using ps2pdf instead of pdftex.
-
-PS2PDF?=	${PREFIX}/bin/ps2pdf
-
-book.tex-pdf:
-	${TOUCH} book.tex-pdf
-
-book.pdf: book.ps
-	${PS2PDF} book.ps book.pdf
 
 pgpkeyring: pgpkeys/chapter.sgml
 	@${JADE} -V nochunks ${OTHERFLAGS} ${JADEOPTS} -d ${DSLPGP} -t sgml ${MASTERDOC}

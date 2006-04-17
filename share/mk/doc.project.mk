@@ -111,6 +111,7 @@ JADETEX_CMD?=	${TEX_CMD} "&jadetex"
 JADETEX_PREPROCESS?=	/bin/cat
 PDFJADETEX_CMD?=${PDFTEX_CMD} "&pdfjadetex"
 PDFJADETEX_PREPROCESS?=	/bin/cat
+PS2PDF?=	${PREFIX}/bin/ps2pdf
 FOP_CMD?=	${PREFIX}/share/fop/fop.sh
 XEP_CMD?=	sh ${HOME}/XEP/xep.sh
 JAVA_CMD?=	${PREFIX}/bin/javavm
