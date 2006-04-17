@@ -36,6 +36,7 @@ DOC?= book
 FORMATS?= html-split
 
 HAS_INDEX= true
+USE_PS2PDF=	yes
 
 INSTALL_COMPRESSED?= gz
 INSTALL_ONLY_COMPRESSED?=
@@ -153,16 +154,6 @@ SYMLINKS=	${DESTDIR} index.html handbook.html
 CHAPTERS?= ${SRCS:M*chapter.sgml}
 
 SGMLFLAGS+= ${CHAPTERS:S/\/chapter.sgml//:S/^/-i chap./}
-
-# XXX The Handbook build currently overflows some internal, hardcoded 
-# limits in pdftex.  Until we split the Handbook up, build the PDF 
-# version using ps2pdf instead of pdftex.
-
-book.tex-pdf:
-	${TOUCH} book.tex-pdf
-
-book.pdf: book.ps
-	${PS2PDF} book.ps book.pdf
 
 pgpkeyring: pgpkeys/chapter.sgml
 	@${JADE} -V nochunks ${JADEOPTS} -d ${DSLPGP} -t sgml ${MASTERDOC}
