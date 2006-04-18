@@ -115,7 +115,7 @@ mypci_write(struct cdev *dev, struct uio *uio, int ioflag)
 	/* Look up our softc. */
 	sc = dev-&gt;si_drv1;
 	device_printf(sc-&gt;my_dev, "Asked to write %d bytes.\n", uio-&gt;uio_resid);
-	return (err);
+	return (0);
 }
 
 /* PCI Support Functions */
@@ -139,14 +139,14 @@ mypci_probe(device_t dev)
 	return (ENXIO);
 }
 
-/* Attach function is only called if the probe is successful */
+/* Attach function is only called if the probe is successful. */
 
 static int
 mypci_attach(device_t dev)
 {
 	struct mypci_softc *sc;
 
-	printf("MyPCI Attach for : deviceID : 0x%x\n",pci_get_vendor(dev));
+	printf("MyPCI Attach for : deviceID : 0x%x\n", pci_get_devid(dev));
 
 	/* Look up our softc and initialize its fields. */
 	sc = device_get_softc(dev);
@@ -160,8 +160,9 @@ mypci_attach(device_t dev)
 	 */
 	sc-&gt;my_cdev = make_dev(<literal>&amp;</literal>mypci_cdevsw, device_get_unit(dev),
 	    UID_ROOT, GID_WHEEL, 0600, "mypci%u", device_get_unit(dev));
+	sc-&gt;my_cdev-&gt;si_drv1 = sc;
 	printf("Mypci device loaded.\n");
-	return (ENXIO);
+	return (0);
 }
 
 /* Detach device. */
@@ -286,7 +287,7 @@ SRCS+=	device_if.h bus_if.h pci_if.h
       to this in the <function>attach()</function> function:</para>
 
 <programlisting>    sc-&gt;bar0id = PCIR_BAR(0);
-    sc-&gt;bar0res = bus_alloc_resource(dev, SYS_RES_MEMORY, &amp;(sc-&gt;bar0id),
+    sc-&gt;bar0res = bus_alloc_resource(dev, SYS_RES_MEMORY, &amp;sc-&gt;bar0id,
 				  0, ~0, 1, RF_ACTIVE);
     if (sc-&gt;bar0res == NULL) {
         printf("Memory allocation of PCI base register 0 failed!\n");
@@ -295,7 +296,7 @@ SRCS+=	device_if.h bus_if.h pci_if.h
     }
 
     sc-&gt;bar1id = PCIR_BAR(1);
-    sc-&gt;bar1res = bus_alloc_resource(dev, SYS_RES_MEMORY, &amp;(sc-&gt;bar1id),
+    sc-&gt;bar1res = bus_alloc_resource(dev, SYS_RES_MEMORY, &amp;sc-&gt;bar1id,
 				  0, ~0, 1, RF_ACTIVE);
     if (sc-&gt;bar1res == NULL) {
         printf("Memory allocation of PCI base register 1 failed!\n");
@@ -317,7 +318,8 @@ SRCS+=	device_if.h bus_if.h pci_if.h
         function to read from a board specific register like this:</para>
 
 <programlisting>uint16_t
-board_read(struct ni_softc *sc, uint16_t address) {
+board_read(struct ni_softc *sc, uint16_t address)
+{
     return bus_space_read_2(sc-&gt;bar1_bt, sc-&gt;bar1_bh, address);
 }
 </programlisting>
@@ -325,7 +327,8 @@ board_read(struct ni_softc *sc, uint16_t address) {
       <para>Similarly, one could write to the registers with:</para>
 
 <programlisting>void
-board_write(struct ni_softc *sc, uint16_t address, uint16_t value) {
+board_write(struct ni_softc *sc, uint16_t address, uint16_t value)
+{
     bus_space_write_2(sc-&gt;bar1_bt, sc-&gt;bar1_bh, address, value);
 }
 </programlisting>
@@ -335,6 +338,23 @@ board_write(struct ni_softc *sc, uint16_t address, uint16_t value) {
         <function>bus_space_{read|write}_{1|2|4}</function>
         accordingly.</para>
 
+      <note>
+	<para>In FreeBSD 7.0 and later, you can use the
+	  <function>bus_*</function> functions instead of
+	  <function>bus_space_*</function>.  The
+	  <function>bus_*</function> functions take a <type>struct
+	  resource *</type> pointer instead of a bus tag and handle.
+	  Thus, you could drop the bus tag and bus handle members from
+	  the <structname>softc</structname> and rewrite the
+	  <function>board_read()</function> function as:</para>
+
+<programlisting>uint16_t
+board_read(struct ni_softc *sc, uint16_t address)
+{
+	return (bus_read(sc-&gt;bar1res, address));
+}
+</programlisting>
+      </note>
     </sect2>
     <sect2>
       <title>Interrupts</title>
@@ -368,9 +388,6 @@ board_write(struct ni_softc *sc, uint16_t address, uint16_t value) {
 	printf("Couldn't set up irq\n");
 	goto fail4;
     }
-
-    sc-&gt;irq_bt = rman_get_bustag(sc-&gt;irqres);
-    sc-&gt;irq_bh = rman_get_bushandle(sc-&gt;irqres);
 </programlisting>
 
       <para>Some care must be taken in the detach routine of the
