@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
 <!-- $FreeBSD$
-     $FreeBSDde: de-www/includes.xsl,v 1.31 2006/03/15 18:56:31 jkois Exp $
+     $FreeBSDde: de-www/includes.xsl,v 1.32 2006/04/18 16:38:53 jkois Exp $
      basiert auf: 1.20
 -->
 
@@ -254,7 +254,7 @@
 	at once. -->
   <xsl:variable name="beta.testing" select="1" />
   <xsl:variable name="betarel.current" select='"6.1"'/>
-  <xsl:variable name="betarel.vers" select='"BETA4"'/>
+  <xsl:variable name="betarel.vers" select='"RC1"'/>
   <xsl:variable name="u.betarel.schedule">
     <xsl:value-of select="$base"/>/../releases/<xsl:value-of select="$betarel.current"/>R/schedule.html</xsl:variable>
 
