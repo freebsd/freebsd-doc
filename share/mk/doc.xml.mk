@@ -75,9 +75,11 @@ ${XML_MIRRORS}: ${XML_MIRRORS_MASTER} \
 		--param 'transtable-sortkey.xml' "'$@.sort'" \
 		${XSL_TRANSTABLE} ${XML_MIRRORS_MASTER}
 	${RM} -f $@.sort $@.sort.tmp
+.if ${LANGCODE} != .
 CLEANFILES+=	${XML_MIRRORS}
 CLEANFILES+=	${XML_MIRRORS}.sort
 CLEANFILES+=	${XML_MIRRORS}.sort.tmp
+.endif
 
 # DEPENDSET: usergroups ......................................................
 _DEPENDSET.usergroups=	${XML_USERGROUPS} ${XML_USERGROUPS_LOCAL} \
