@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/index.xsl,v 1.142 2006/02/06 19:43:18 jcamou Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.143 2006/02/14 19:19:10 ceri Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -6,7 +6,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.142 2006/02/06 19:43:18 jcamou Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.143 2006/02/14 19:19:10 ceri Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <!-- these params should be externally bound. The values
@@ -69,7 +69,7 @@
 				  Based on BSD UNIX&#174;
 				</h1>
 				<p>
-				  FreeBSD is an advanced operating system for x86 compatible (including Pentium&#174; and Athlon&#8482;), amd64 compatible (including Opteron&#8482;, Athlon 64, and EM64T), Alpha/AXP, IA-64, PC-98 and UltraSPARC&#174; architectures. It is derived from BSD, the version of UNIX&#174; developed at the University of California, Berkeley. It is developed and maintained by a <a href="{$base}/doc/en_US.ISO8859-1/articles/contributors/index.html">large team of individuals</a>. Additional <a href="{$base}/platforms/">platforms</a> are in various stages of development.
+				  FreeBSD is an advanced operating system for x86 compatible (including Pentium&#174; and Athlon&#8482;), amd64 compatible (including Opteron&#8482;, Athlon 64, and EM64T), Alpha/AXP, IA-64, PC-98 and UltraSPARC&#174; architectures. It is derived from BSD, the version of UNIX&#174; developed at the University of California, Berkeley. It is developed and maintained by a <a href="{$base}/doc/en_US.ISO8859-1/articles/contributors/staff-committers.html">large team of individuals</a>. Additional <a href="{$base}/platforms/">platforms</a> are in various stages of development.
 				</p>
 				<div id="TXTFRONTFEATURELINK">
 				&#187;<a href="{$base}/about.html" title="Learn More">Learn More</a>
