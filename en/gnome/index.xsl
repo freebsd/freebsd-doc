@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.84 2006/01/07 06:14:16 mezz Exp $ -->
+<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.85 2006/01/21 14:58:35 pav Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
 		xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -10,7 +10,7 @@
   <xsl:import href="includes.xsl"/>
 
   <xsl:variable name="base" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.84 2006/01/07 06:14:16 mezz Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/index.xsl,v 1.85 2006/01/21 14:58:35 pav Exp $'"/>
   <xsl:variable name="section" select="'gnome'"/>
   <xsl:variable name="title" select="'FreeBSD GNOME Project'"/>
 
@@ -115,18 +115,16 @@
 			  committers and users that manage the integration
 			  of GNOME and FreeBSD.</p>
 
-		<h2>Upgrading to GNOME 2.12?</h2>
+		<h2>Upgrading to GNOME 2.14?</h2>
 
-		<p>If you are upgrading from GNOME 2.10 to GNOME 2.12, read the
-		  <a href="docs/faq212.html">Upgrade FAQ</a> for upgrade
-		  instructions, and be sure to use the
-		  <a href="gnome_upgrade.sh">upgrade script</a>!</p>
+		<p>If you are upgrading from GNOME 2.12 to GNOME 2.14, read the
+		  <a href="docs/faq214.html">Upgrade FAQ</a> for upgrade
+		  instructions.</p>
 
               <h2>State of the port</h2>
 
 	      <p>GNOME for FreeBSD is currently supported on
-		5-STABLE, 6-STABLE, 7-CURRENT,
-		5.3, 5.4, and 6.0.
+		5-STABLE, 6-STABLE, 7-CURRENT, 5.4, and 6.0.
 		Most of GNOME has been ported to FreeBSD, but there is still
 		<a href="docs/volunteer.html">plenty left to be done</a>!</p>
 
