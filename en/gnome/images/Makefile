@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/gnome/images/Makefile,v 1.42 2005/11/05 07:09:44 marcus Exp $
+# $FreeBSD: www/en/gnome/images/Makefile,v 1.43 2006/03/19 04:51:43 marcus Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -19,13 +19,7 @@
 # E.g. the fourth screenshot for GNOME 2.6 is ss26-4.png, and the thumbnail
 # is ss26-4-tn.png
 
-DATA=	ss211-1.png
-DATA+=	ss211-1-tn.png
-DATA+=	ss211-2.png
-DATA+=	ss211-2-tn.png
-DATA+=	ss211-3.png
-DATA+=	ss211-3-tn.png
-DATA+=	ss214-1.png
+DATA=	ss214-1.png
 DATA+=	ss214-1-tn.png
 DATA+=	ss214-2.png
 DATA+=	ss214-2-tn.png
