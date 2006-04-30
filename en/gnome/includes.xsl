@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/en/gnome/includes.xsl,v 1.11 2005/11/05 07:08:49 marcus Exp $ -->
+<!-- $FreeBSD: www/en/gnome/includes.xsl,v 1.12 2006/01/21 12:03:38 pav Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -9,11 +9,11 @@
   </xsl:variable>
 
   <xsl:variable name="gnomever">
-    2.12
+    2.14
   </xsl:variable>
 
   <xsl:variable name="gnomedevelver">
-	2.13
+	2.15
   </xsl:variable>
 
   <!-- Generate a unique anchor for this event -->
