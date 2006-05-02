@@ -1,7 +1,7 @@
 #
 # $FreeBSD$
-# $FreeBSDde: de-docproj/books/handbook/Makefile,v 1.48 2006/03/13 20:57:05 jkois Exp $
-# basiert auf: 1.97
+# $FreeBSDde: de-docproj/books/handbook/Makefile,v 1.49 2006/04/22 13:23:23 jkois Exp $
+# basiert auf: 1.98
 #
 # Build the FreeBSD Handbook in its German translation.
 #
@@ -15,7 +15,7 @@ DOC?= book
 FORMATS?= html-split
 
 HAS_INDEX= true
-USE_PS2PDF=	yes
+USE_PS2PDF= yes
 
 INSTALL_COMPRESSED?= gz
 INSTALL_ONLY_COMPRESSED?=
