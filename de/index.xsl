@@ -2,8 +2,8 @@
 
 <!--
      $FreeBSD$
-     $FreeBSDde: de-www/index.xsl,v 1.60 2006/02/19 18:15:15 jkois Exp $
-     basiert auf: 1.142
+     $FreeBSDde: de-www/index.xsl,v 1.61 2006/04/28 18:52:00 jkois Exp $
+     basiert auf: 1.143
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -85,8 +85,8 @@
 				BSD, dem <xsl:value-of select="$unix"/>-Betriebssystem der
 				University of California, Berkeley.  Das System wird
 				von einer <a
-				href="{$enbase}/doc/en_US.ISO8859-1/articles/contributors/index.html">gro&#223;en
-				Entwicklergruppe</a> gepflegt und erweitert.</p>
+				href="{$enbase}/doc/en_US.ISO8859-1/articles/contributors/staff-committers.html">
+				gro&#223;en Entwicklergruppe</a> gepflegt und erweitert.</p>
 				<div id="TXTFRONTFEATURELINK">
 				&#187;<a href="{$base}/about.html" title="Weitere Informationen">Weitere Informationen</a>
 				</div> <!-- TXTFRONTFEATURELINK -->
