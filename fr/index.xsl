@@ -1,8 +1,8 @@
-<!-- $FreeBSD: www/fr/index.xsl,v 1.28 2006/02/13 17:53:03 blackend Exp $ -->
+<!-- $FreeBSD: www/fr/index.xsl,v 1.29 2006/02/16 12:35:26 blackend Exp $ -->
 
 <!--
    The FreeBSD French Documentation Project
-   Original revision: 1.143
+   Original revision: 1.144
 
    Version francaise : Stephane Legrand <stephane@freebsd-fr.org>
    Mise a jour:	Marc Fonvieille <blackend@FreeBSD.org>
@@ -14,7 +14,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/fr/index.xsl,v 1.28 2006/02/13 17:53:03 blackend Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/fr/index.xsl,v 1.29 2006/02/16 12:35:26 blackend Exp $'"/>
   <xsl:variable name="title" select="'Le Projet FreeBSD'"/>
 
   <!-- these params should be externally bound. The values
@@ -85,7 +85,7 @@
 				d&#233;velopp&#233; &#224;
 				l'Universit&#233; de Californie, Berkeley.
 				Il est d&#233;velopp&#233; et maintenu par
-				<a href="{$enbase}/doc/{$url.doc.langcode}/articles/contributors/index.html">une
+				<a href="{$enbase}/doc/{$url.doc.langcode}/articles/contributors/staff-committers.html">une
 				importante &#233;quipe de personnes</a>. D'autres
 				<a href="{$base}/platforms/index.html">plates-formes</a> sont &#224;
 				divers stades de d&#233;veloppement.</p>

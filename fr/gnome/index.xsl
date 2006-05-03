@@ -1,8 +1,8 @@
-<!-- $FreeBSD: www/fr/gnome/index.xsl,v 1.3 2006/01/09 19:54:30 blackend Exp $ -->
+<!-- $FreeBSD: www/fr/gnome/index.xsl,v 1.4 2006/02/03 11:54:54 blackend Exp $ -->
 
 <!-- 
    The FreeBSD French Documentation Project 
-   Original revision: 1.85
+   Original revision: 1.86
    
    Version francaise : Stephane Legrand <stephane@freebsd-fr.org>
 -->
@@ -17,7 +17,7 @@
   <xsl:import href="includes.xsl"/>
 
   <xsl:variable name="base" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/fr/gnome/index.xsl,v 1.3 2006/01/09 19:54:30 blackend Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/fr/gnome/index.xsl,v 1.4 2006/02/03 11:54:54 blackend Exp $'"/>
   <xsl:variable name="section" select="'gnome'"/>
   <xsl:variable name="title" select="'Projet GNOME pour FreeBSD'"/>
 
@@ -122,19 +122,17 @@
 			  et d'utilisateurs d&#233;vou&#233;s qui g&#232;rent l'int&#233;gration
 			  de GNOME et de FreeBSD.</p>
 
-		<h2>Mise &#224; jour vers GNOME 2.12 ?</h2>
+		<h2>Mise &#224; jour vers GNOME 2.14 ?</h2>
 
-		<p>Si vous mettez &#224; jour de GNOME 2.10 &#224; GNOME 2.12, lisez
-		  <a href="{$enbase}/gnome/docs/faq212.html">la FAQ de mise &#224; jour</a> pour des instructions
-		  de mise &#224; jour, et assurez vous d'utiliser le
-		  <a href="{$enbase}/gnome/gnome_upgrade.sh">script de mise &#224; jour</a>!</p>
+		<p>Si vous mettez &#224; jour de GNOME 2.12 &#224; GNOME 2.14, lisez
+		  <a href="{$enbase}/gnome/docs/faq214.html">la FAQ de mise &#224; jour</a> pour des instructions
+		  de mise &#224; jour.</p>
 
               <h2>Statut du port</h2>
 
 	      <p>GNOME pour FreeBSD est actuellement support&#233; sur
-		5-STABLE, 6-STABLE, 7-CURRENT,
-		5.3, 5.4, et 6.0.
-		La plupart de GNOME a &#233;t&#233; port&#233; sous FreeBSD, mais ils rester toujours
+		5-STABLE, 6-STABLE, 7-CURRENT, 5.4, et 6.0.
+		La plupart de GNOME a &#233;t&#233; port&#233; sous FreeBSD, mais il reste toujours
 		<a href="docs/volunteer.html">des choses &#224; faire</a>!</p>
 
               <h2>Des solutions simples pour les probl&#232;mes de compilation - rapidement !</h2>
