@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD$ -->
+<!-- $FreeBSD: www/fr/gnome/includes.navgnome.xsl,v 1.1 2006/01/09 19:53:57 blackend Exp $ -->
 <!--
    The FreeBSD French Documentation Project
-   Original revision: 1.4
+   Original revision: 1.5
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -29,7 +29,7 @@
 			<li><a href="{$base}/gnome/index.html">Documentation</a>
 				<ul>
 					<li><a href="{$base}/gnome/docs/faq2.html">FAQ</a></li>
-					<li><a href="{$enbase}/gnome/docs/faq212.html">FAQ mise &#224; jour 2.10 &#224; 2.12</a></li>
+					<li><a href="{$enbase}/gnome/docs/faq214.html">FAQ mise &#224; jour 2.12 &#224; 2.14</a></li>
 					<li><a href="{$enbase}/gnome/docs/develfaq.html">FAQ branche de développement</a></li>
 					<li><a href="{$base}/gnome/docs/porting.html">Création des ports</a></li>
 					<li><a href="{$enbase}/gnome/docs/faq212.html#q5">Problèmes connus</a></li>

@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/fr/gnome/includes.xsl,v 1.2 2006/01/09 19:54:30 blackend Exp $ -->
+<!-- $FreeBSD: www/fr/gnome/includes.xsl,v 1.3 2006/02/03 11:54:54 blackend Exp $ -->
 
 <!-- 
   The FreeBSD French Documentation Project
-  Original revision: 1.12
+  Original revision: 1.13
 
   Version francaise : Stephane Legrand <stephane@freebsd-fr.org>
 -->
@@ -16,11 +16,11 @@
   </xsl:variable>
 
   <xsl:variable name="gnomever">
-    2.12
+    2.14
   </xsl:variable>
 
   <xsl:variable name="gnomedevelver">
-	2.13
+	2.15
   </xsl:variable>
 
   <!-- Generate a unique anchor for this event -->
