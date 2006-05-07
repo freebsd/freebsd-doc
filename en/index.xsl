@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/index.xsl,v 1.143 2006/02/14 19:19:10 ceri Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.144 2006/04/27 10:14:01 joel Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -6,7 +6,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/index.xsl,v 1.143 2006/02/14 19:19:10 ceri Exp $'"/>
+  <xsl:variable name="date" select="''"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <!-- these params should be externally bound. The values
