@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/share/sgml/includes.header.xsl,v 1.15 2006/02/05 12:14:08 ceri Exp $ -->
+<!-- $FreeBSD: www/share/sgml/includes.header.xsl,v 1.16 2006/02/14 19:29:16 ceri Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -53,7 +53,7 @@
               <div id="HEADER">
       	      <h2 class="blockhide">Header And Logo</h2>
                 <div id="HEADERLOGOLEFT">
-                  <a href="{$base}" title="FreeBSD"><img src="{$base}/layout/images/logo.png" width="360" height="40" alt="FreeBSD" /></a>
+                  <a href="{$base}" title="FreeBSD"><img src="{$base}/layout/images/logo-red.png" width="457" height="75" alt="FreeBSD" /></a>
                 </div> <!-- HEADERLOGOLEFT -->
                 <div id="HEADERLOGORIGHT">
       			<h2 class="blockhide">Peripheral Links</h2>
