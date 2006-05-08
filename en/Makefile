@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/Makefile,v 1.133 2005/10/30 15:52:46 blackend Exp $
+# $FreeBSD: www/en/Makefile,v 1.134 2005/11/30 17:26:17 pav Exp $
 
 .if exists(Makefile.conf)
 .include "Makefile.conf"
@@ -17,6 +17,7 @@ DOCS+= community.sgml
 DOCS+= docs.sgml
 DOCS+= features.sgml
 DOCS+= internet.sgml
+DOCS+= logo.sgml
 DOCS+= mailto.sgml
 DOCS+= publish.sgml
 DOCS+= relnotes.sgml
@@ -84,6 +85,7 @@ SUBDIR+= relnotes
 SUBDIR+= cgi
 SUBDIR+= gifs
 SUBDIR+= layout
+SUBDIR+= logo
 
 WEB_LANG?=	da de es fr it ja nl pt_BR zh ru
 #WEB_LANG?=	da de es fr it ja nl pt_BR ru tr zh

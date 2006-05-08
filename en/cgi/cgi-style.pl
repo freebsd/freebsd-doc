@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/cgi/cgi-style.pl,v 1.29 2005/12/05 04:26:20 fenner Exp $
+# $FreeBSD: www/en/cgi/cgi-style.pl,v 1.30 2006/02/16 14:34:06 jcamou Exp $
 #
 # Perl routines to encapsulate various elements of HTML page style.
 
@@ -51,8 +51,8 @@ $i_topbar = qq`
 
             <div id="headerlogoleft">
               <a href="$hsty_base" title="FreeBSD"><img
-              src="$hsty_base/layout/images/logo.png" width="360"
-              height="40" alt="FreeBSD" /></a>
+              src="$hsty_base/layout/images/logo-red.png" width="457"
+              height="75" alt="FreeBSD" /></a>
             </div>
 
             <div id="headerlogoright">
