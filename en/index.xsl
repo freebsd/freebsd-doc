@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/index.xsl,v 1.144 2006/04/27 10:14:01 joel Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.145 2006/05/07 15:20:01 simon Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -35,7 +35,7 @@
 	      CVS, CVSup, News, Commercial Vendors, homepage, CTM, Unix"/>
 	<link rel="shortcut icon" href="{$base}/favicon.ico" type="image/x-icon"/>
 	<link rel="icon" href="{$base}/favicon.ico" type="image/x-icon"/>
-    <link rel="stylesheet" media="screen" href="{$base}/layout/css/fixed.css" type="text/css" title="Normal Text" />
+    <link rel="stylesheet" media="screen" href="{$base}/layout/css/fixed.css?20060509" type="text/css" title="Normal Text" />
     <link rel="alternate stylesheet" media="screen" href="{$base}/layout/css/fixed_large.css" type="text/css" title="Large Text" />
     <script type="text/javascript" src="{$base}/layout/js/styleswitcher.js"></script>
 	<link rel="alternate" type="application/rss+xml"

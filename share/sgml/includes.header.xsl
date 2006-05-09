@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/share/sgml/includes.header.xsl,v 1.16 2006/02/14 19:29:16 ceri Exp $ -->
+<!-- $FreeBSD: www/share/sgml/includes.header.xsl,v 1.17 2006/05/08 23:15:38 kuriyama Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -38,7 +38,7 @@
     <meta name="MSSmartTagsPreventParsing" content="TRUE" />
     <link rel="shortcut icon" href="{$base}/favicon.ico" type="image/x-icon" />
     <link rel="icon" href="{$base}/favicon.ico" type="image/x-icon" />
-    <link rel="stylesheet" media="screen" href="{$base}/layout/css/fixed.css" type="text/css" title="Normal Text" />
+    <link rel="stylesheet" media="screen" href="{$base}/layout/css/fixed.css?20060509" type="text/css" title="Normal Text" />
     <link rel="alternate stylesheet" media="screen" href="{$base}/layout/css/fixed_large.css" type="text/css" title="Large Text" />
     <script type="text/javascript" src="{$base}/layout/js/styleswitcher.js"></script>
     </head>    
