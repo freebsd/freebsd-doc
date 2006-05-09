@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/share/sgml/includes.misc.xsl,v 1.29 2006/01/11 21:13:33 simon Exp $ -->
+<!-- $FreeBSD: www/share/sgml/includes.misc.xsl,v 1.30 2006/01/12 10:14:44 ceri Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -753,7 +753,7 @@
     <xsl:param name="news.project.xml-master" select="'none'" />
     <xsl:param name="news.project.xml" select="'none'" />
 
-    <xsl:for-each select="document($news.project.xml-master)/descendant::day[position() &lt;= 5]">
+    <xsl:for-each select="document($news.project.xml-master)/descendant::day[position() &lt; 5]">
       <xsl:param name="year" select="ancestor::year/name" />
       <xsl:param name="month" select="ancestor::month/name" />
       <xsl:param name="day" select="name" />
