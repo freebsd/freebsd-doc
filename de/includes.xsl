@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
 <!-- $FreeBSD$
-     $FreeBSDde: de-www/includes.xsl,v 1.33 2006/05/03 19:26:16 jkois Exp $
+     $FreeBSDde: de-www/includes.xsl,v 1.35 2006/05/09 18:08:12 jkois Exp $
      basiert auf: 1.20
 -->
 
@@ -48,7 +48,7 @@
     <meta name="MSSmartTagsPreventParsing" content="TRUE" />
     <link rel="shortcut icon" href="{$enbase}/favicon.ico" type="image/x-icon" />
     <link rel="icon" href="{$enbase}/favicon.ico" type="image/x-icon" />
-    <link rel="stylesheet" media="screen" href="{$enbase}/layout/css/fixed.css" type="text/css" title="Normal Text" />
+    <link rel="stylesheet" media="screen" href="{$enbase}/layout/css/fixed.css?20060509" type="text/css" title="Normal Text" />
     <link rel="alternate stylesheet" media="screen" href="{$enbase}/layout/css/fixed_large.css" type="text/css" title="Large Text" />
     <script type="text/javascript" src="{$enbase}/layout/js/styleswitcher.js"></script>
     </head>
@@ -62,7 +62,7 @@
               <div id="header">
       	      <h2 class="blockhide">Header And Logo</h2>
                 <div id="headerlogoleft">
-                  <a href="{$base}" title="FreeBSD"><img src="{$enbase}/layout/images/logo.png" width="360" height="40" alt="FreeBSD" /></a>
+                  <a href="{$base}" title="FreeBSD"><img src="{$enbase}/layout/images/logo-red.png" width="457" height="75" alt="FreeBSD" /></a>
                 </div> <!-- headerlogoleft -->
                 <div id="headerlogoright">
       			<h2 class="blockhide">Peripheral Links</h2>
@@ -253,21 +253,22 @@
 	if we're not in the middle of a release cycle for two releases
 	at once. -->
   <xsl:variable name="beta.testing" select="1" />
-  <xsl:variable name="betarel.current" select='"6.1"'/>
-  <xsl:variable name="betarel.vers" select='"RC2"'/>
+  <xsl:variable name="betarel.current" select='"5.5"'/>
+  <xsl:variable name="betarel.vers" select='"BETA4"'/>
   <xsl:variable name="u.betarel.schedule">
     <xsl:value-of select="$base"/>/../releases/<xsl:value-of select="$betarel.current"/>R/schedule.html</xsl:variable>
 
   <!-- A second release that we want tested.  Set $beta2.testing to 0
 	if we're not in the middle of a release cycle for two releases
 	at once. -->
-  <xsl:variable name="beta2.testing" select="1" />
+
+  <xsl:variable name="beta2.testing" select="0" />
   <xsl:variable name="betarel2.current" select='"5.5"'/>
   <xsl:variable name="betarel2.vers" select='"BETA4"'/>
   <xsl:variable name="u.betarel2.schedule">
     <xsl:value-of select="$base"/>/../releases/<xsl:value-of select="$betarel2.current"/>R/schedule.html</xsl:variable>
 
-  <xsl:variable name="rel.current" select='"6.0"'/>
+  <xsl:variable name="rel.current" select='"6.1"'/>
   <xsl:variable name="u.rel.notes">
     <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel.current"/>R/relnotes.html</xsl:variable>
 

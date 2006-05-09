@@ -2,8 +2,8 @@
 
 <!--
      $FreeBSD$
-     $FreeBSDde: de-www/index.xsl,v 1.61 2006/04/28 18:52:00 jkois Exp $
-     basiert auf: 1.143
+     $FreeBSDde: de-www/index.xsl,v 1.63 2006/05/09 16:57:28 jkois Exp $
+     basiert auf: 1.146
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -11,7 +11,7 @@
   <xsl:import href="includes.xsl"/>
   <xsl:import href="news/includes.xsl"/>
 
-  <xsl:variable name="date" select="'$FreeBSD$'"/>
+  <xsl:variable name="date" select="''"/>
   <xsl:variable name="title" select="'Das FreeBSD Projekt'"/>
 
   <!-- these params should be externally bound. The values
@@ -41,7 +41,7 @@
 	      CVS, CVSup, News, Commercial Vendors, homepage, CTM, Unix"/>
 	<link rel="shortcut icon" href="{$enbase}/favicon.ico" type="image/x-icon"/>
 	<link rel="icon" href="{$enbase}/favicon.ico" type="image/x-icon"/>
-	<link rel="stylesheet" media="screen" href="{$enbase}/layout/css/fixed.css" type="text/css" title="Normal Text" />
+	<link rel="stylesheet" media="screen" href="{$enbase}/layout/css/fixed.css?20060509" type="text/css" title="Normal Text" />
 	<link rel="alternate stylesheet" media="screen" href="{$enbase}/layout/css/fixed_large.css" type="text/css" title="Large Text" />
 	<script type="text/javascript" src="{$enbase}/layout/js/styleswitcher.js"></script>
 	<link rel="alternate" type="application/rss+xml"
