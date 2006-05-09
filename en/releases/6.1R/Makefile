@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/releases/6.1R/Makefile,v 1.3 2006/05/09 01:42:46 murray Exp $
+# $FreeBSD: www/en/releases/6.1R/Makefile,v 1.4 2006/05/09 02:44:34 murray Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -37,6 +37,8 @@ DATA+= relnotes-sparc64.html
 FETCHFILE= http://people.freebsd.org/~pho/stress/log/news.rdf
 FETCHCMD=  /usr/bin/fetch
 CLEANFILES+= news.rdf stress.html
+
+DATA+=	docbook.css
 
 news.rdf:
 	${FETCHCMD} ${FETCHFILE}
