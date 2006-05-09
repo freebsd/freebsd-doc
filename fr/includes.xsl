@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/fr/includes.xsl,v 1.19 2005/12/31 11:26:15 blackend Exp $ -->
+<!-- $FreeBSD: www/fr/includes.xsl,v 1.20 2006/02/03 18:20:03 blackend Exp $ -->
 
 <!-- 
    The FreeBSD French Documentation Project
@@ -53,7 +53,7 @@
               <div id="header">
       	      <h2 class="blockhide">Header And Logo</h2>
                 <div id="headerlogoleft">
-                  <a href="{$base}" title="FreeBSD"><img src="{$enbase}/layout/images/logo.png" width="360" height="40" alt="FreeBSD" /></a>
+                  <a href="{$base}" title="FreeBSD"><img src="{$enbase}/layout/images/logo-red.png" width="457" height="75" alt="FreeBSD" /></a>
                 </div> <!-- headerlogoleft -->
                 <div id="headerlogoright">
       			<h2 class="blockhide">Peripheral Links</h2>
