@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/share/sgml/includes.misc.xsl,v 1.30 2006/01/12 10:14:44 ceri Exp $ -->
+<!-- $FreeBSD: www/share/sgml/includes.misc.xsl,v 1.31 2006/05/09 06:10:48 simon Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -14,7 +14,7 @@
 
   <!-- for security advisories -->
   <xsl:variable name="ftpbase"
-                select="'ftp://ftp.FreeBSD.org/pub/FreeBSD/CERT/advisories/'"/>
+                select="'http://security.FreeBSD.org/advisories/'"/>
   <xsl:variable name="ftpbaseold"
                 select="'ftp://ftp.FreeBSD.org/pub/FreeBSD/CERT/advisories/old/'"/>
 
