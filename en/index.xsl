@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/index.xsl,v 1.145 2006/05/07 15:20:01 simon Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.146 2006/05/09 07:30:29 kuriyama Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -69,7 +69,7 @@
 				  Based on BSD UNIX&#174;
 				</h1>
 				<p>
-				  FreeBSD is an advanced operating system for x86 compatible (including Pentium&#174; and Athlon&#8482;), amd64 compatible (including Opteron&#8482;, Athlon 64, and EM64T), Alpha/AXP, IA-64, PC-98 and UltraSPARC&#174; architectures. It is derived from BSD, the version of UNIX&#174; developed at the University of California, Berkeley. It is developed and maintained by a <a href="{$base}/doc/en_US.ISO8859-1/articles/contributors/staff-committers.html">large team of individuals</a>. Additional <a href="{$base}/platforms/">platforms</a> are in various stages of development.
+				  FreeBSD is an advanced operating system for x86 compatible (including Pentium&#174;, Athlon&#8482; and PC-98), amd64 compatible (including Opteron&#8482;, Athlon 64, and EM64T), UltraSPARC&#174;, IA-64 and ARM architectures. It is derived from BSD, the version of UNIX&#174; developed at the University of California, Berkeley. It is developed and maintained by a <a href="{$base}/doc/en_US.ISO8859-1/articles/contributors/staff-committers.html">large team of individuals</a>. Additional <a href="{$base}/platforms/">platforms</a> are in various stages of development.
 				</p>
 				<div id="TXTFRONTFEATURELINK">
 				&#187;<a href="{$base}/about.html" title="Learn More">Learn More</a>
