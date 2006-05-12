@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/index.xsl,v 1.147 2006/05/12 02:54:03 andre Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.148 2006/05/12 13:23:57 keramida Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -69,7 +69,7 @@
 				  Based on BSD UNIX&#174;
 				</h1>
 				<p>
-				  FreeBSD is an advanced operating system for
+				  FreeBSD&#174; is an advanced operating system for
 				  x86 compatible (including Pentium&#174;, Athlon&#8482; and PC-98),
 				  amd64 compatible (including Opteron&#8482;, Athlon 64, and EM64T),
 				  UltraSPARC&#174;, IA-64 and ARM architectures.
@@ -322,8 +322,14 @@
 
       </div> <!-- CONTENT -->
       <div id="FOOTER">
-        <xsl:copy-of select="$copyright"/><br />
-        <xsl:copy-of select="$date"/>
+        <xsl:copy-of select="$copyright"/>
+
+	The mark FreeBSD is a registered trademark of The FreeBSD
+	Foundation and is used by The FreeBSD Project with the
+	permission of <a
+	  href="http://www.freebsdfoundation.org/legal/guidelines.html">The
+	FreeBSD Foundation</a>.
+
       </div> <!-- FOOTER -->
     </div> <!-- CONTAINER -->
    </div> <!-- CONTAINERWRAP -->
