@@ -1,5 +1,5 @@
 # bsd.web.mk
-# $FreeBSD: www/share/mk/web.site.mk,v 1.71 2005/12/31 15:19:30 hrs Exp $
+# $FreeBSD: www/share/mk/web.site.mk,v 1.72 2006/02/25 23:19:40 hrs Exp $
 
 #
 # Build and install a web site.
@@ -191,7 +191,12 @@ DIR_IN_LOCAL!=	${ECHO_CMD} ${CANONPREFIX} | ${PERL} -pe 's@^[^/]+/?@@;'
 PREHTMLOPTS?=	-revcheck "${LOCALTOP}" "${DIR_IN_LOCAL}" ${PREHTMLFLAGS}
 .else
 DATESUBST?=	's/<!ENTITY date[ \t]*"$$Free[B]SD. .* \(.* .*\) .* .* $$">/<!ENTITY date	"Last modified: \1">/'
-PREHTML?=	${SED} -e ${DATESUBST}
+# Force override base to point to http://www.FreeBSD.org/.  Note: This
+# is used for http://security.FreeBSD.org/ .
+.if WITH_WWW_FREEBSD_ORG_BASE
+BASESUBST?=	-e 's/<!ENTITY base CDATA ".*">/<!ENTITY base CDATA "http:\/\/www.FreeBSD.org">/'
+.endif
+PREHTML?=	${SED} -e ${DATESUBST} ${BASESUBST}
 .endif
 
 GENDOCS+=	${DOCS:M*.sgml:S/.sgml$/.html/g}
