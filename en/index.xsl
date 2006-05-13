@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/index.xsl,v 1.148 2006/05/12 13:23:57 keramida Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.149 2006/05/12 19:19:17 simon Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -70,9 +70,9 @@
 				</h1>
 				<p>
 				  FreeBSD&#174; is an advanced operating system for
-				  x86 compatible (including Pentium&#174;, Athlon&#8482; and PC-98),
+				  x86 compatible (including Pentium&#174; and Athlon&#8482;),
 				  amd64 compatible (including Opteron&#8482;, Athlon 64, and EM64T),
-				  UltraSPARC&#174;, IA-64 and ARM architectures.
+				  UltraSPARC&#174;, IA-64, PC-98 and ARM architectures.
 				  It is derived from BSD, the version of UNIX&#174; developed at the
 				  University of California, Berkeley.
 				  It is developed and maintained by a
