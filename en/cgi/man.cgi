@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp 
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.156 2006-05-15 16:27:54 bmah Exp $
+# $Id: man.cgi,v 1.157 2006-05-15 20:25:59 bmah Exp $
 
 #use Data::Dumper;
 #use Carp;
@@ -163,6 +163,7 @@ $manPathDefault = 'FreeBSD 6.0-RELEASE and Ports';
 
      'FreeBSD 6.1-RELEASE',   "$manLocalDir/FreeBSD-6.1-RELEASE/man:$manLocalDir/FreeBSD-6.1-RELEASE/openssl/man",
      'FreeBSD 6.0-RELEASE',   "$manLocalDir/FreeBSD-6.0-RELEASE/man:$manLocalDir/FreeBSD-6.0-RELEASE/openssl/man",
+     'FreeBSD 5.5-RELEASE',   "$manLocalDir/FreeBSD-5.5-RELEASE/man:$manLocalDir/FreeBSD-5.5-RELEASE/openssl/man",
      'FreeBSD 5.4-RELEASE',   "$manLocalDir/FreeBSD-5.4-RELEASE/man:$manLocalDir/FreeBSD-5.4-RELEASE/openssl/man",
      'FreeBSD 5.3-RELEASE',   "$manLocalDir/FreeBSD-5.3-RELEASE/man:$manLocalDir/FreeBSD-5.3-RELEASE/openssl/man",
      'FreeBSD 5.2.1-RELEASE',   "$manLocalDir/FreeBSD-5.2-RELEASE/man:$manLocalDir/FreeBSD-5.2-RELEASE/openssl/man",
@@ -1078,7 +1079,7 @@ ETX
 }
 
 sub copyright {
-    $id = '$Id: man.cgi,v 1.156 2006-05-15 16:27:54 bmah Exp $';
+    $id = '$Id: man.cgi,v 1.157 2006-05-15 20:25:59 bmah Exp $';
 
     return qq{\
 <PRE>
