@@ -176,7 +176,6 @@ SRCS+= mac/chapter.sgml
 SRCS+= mail/chapter.sgml
 SRCS+= mirrors/chapter.sgml
 SRCS+= multimedia/chapter.sgml
-SRCS+= nanobsd/chapter.sgml
 SRCS+= network-servers/chapter.sgml
 SRCS+= pgpkeys/chapter.sgml
 SRCS+= ports/chapter.sgml
