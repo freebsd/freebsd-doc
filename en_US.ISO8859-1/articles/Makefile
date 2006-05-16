@@ -31,6 +31,7 @@ SUBDIR+= linux-comparison
 SUBDIR+= mailing-list-faq
 SUBDIR+= mh
 SUBDIR+= multi-os
+SUBDIR+= nanobsd
 SUBDIR+= new-users
 SUBDIR+= p4-primer
 SUBDIR+= pam
