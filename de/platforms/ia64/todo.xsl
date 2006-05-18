@@ -1,8 +1,8 @@
 <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 
 <!--
-  $FreeBSDde: de-www/platforms/ia64/todo.xsl,v 1.10 2005/12/04 21:24:58 jkois Exp $
-  basiert auf: 1.6
+  $FreeBSDde: de-www/platforms/ia64/todo.xsl,v 1.11 2006/05/13 16:54:09 jkois Exp $
+  basiert auf: 1.8
 -->
 
   <xsl:import href="../../includes.xsl"/>
@@ -17,7 +17,7 @@
     <html>
       <xsl:copy-of select="$header1"/>
 
-      <body xsl:use-attribute-sets="att.body">
+      <body>
 
 	<div id="CONTAINERWRAP">
 	  <div id="CONTAINER">
