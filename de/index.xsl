@@ -2,8 +2,8 @@
 
 <!--
      $FreeBSD$
-     $FreeBSDde: de-www/index.xsl,v 1.63 2006/05/09 16:57:28 jkois Exp $
-     basiert auf: 1.146
+     $FreeBSDde: de-www/index.xsl,v 1.64 2006/05/13 16:30:23 jkois Exp $
+     basiert auf: 1.150
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -12,7 +12,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="date" select="''"/>
-  <xsl:variable name="title" select="'Das FreeBSD Projekt'"/>
+  <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <!-- these params should be externally bound. The values
        here are not used actually -->
@@ -75,18 +75,20 @@
 				<h1>
 				  Auf BSD UNIX&#174; basierend
 				</h1>
-				<p>FreeBSD ist ein modernes Betriebssystem f&#252;r
-				x86 kompatible (einschlie&#223;lich Pentium&#174; und Athlon&#8482;),
-				amd64 kompatible (einschlie&#223;lich Opteron&#8482;, Athlon 64 und EM64T),
-				Alpha/AXP, IA-64, PC-98 und UltraSPARC&#174;-Architekturen.
-				An der Unterst&#252;tzung weiterer
-				<a href="{$base}/platforms/index.html">Plattformen</a>
-				wird gearbeitet.  FreeBSD ist eine Weiterentwicklung von
-				BSD, dem <xsl:value-of select="$unix"/>-Betriebssystem der
+				<p>FreeBSD&#174; ist ein modernes Betriebssystem f&#252;r
+				x86-kompatible (einschlie&#223;lich Pentium&#174; und
+				Athlon&#8482;), amd64-kompatible (einschlie&#223;lich
+				Opteron&#8482;, Athlon 64 und EM64T), UltraSPARC&#174;-,
+				IA-64-, PC-98- sowie ARM-Architekturen.  FreeBSD ist eine
+				Weiterentwicklung von BSD, dem
+				<xsl:value-of select="$unix"/>-Betriebssystem der
 				University of California, Berkeley.  Das System wird
 				von einer <a
 				href="{$enbase}/doc/en_US.ISO8859-1/articles/contributors/staff-committers.html">
-				gro&#223;en Entwicklergruppe</a> gepflegt und erweitert.</p>
+				gro&#223;en Entwicklergruppe</a> gepflegt und erweitert.
+				An der Unterst&#252;tzung weiterer
+				<a href="{$base}/platforms/index.html">Plattformen</a>
+				wird gearbeitet.</p>
 				<div id="TXTFRONTFEATURELINK">
 				&#187;<a href="{$base}/about.html" title="Weitere Informationen">Weitere Informationen</a>
 				</div> <!-- TXTFRONTFEATURELINK -->
@@ -327,8 +329,14 @@
 
       </div> <!-- CONTENT -->
       <div id="footer">
-        <xsl:copy-of select="$copyright"/><br />
-        <xsl:copy-of select="$date"/>
+        <xsl:copy-of select="$copyright"/>
+
+	Die Marke FreeBSD ist ein registriertes Warenzeichen der
+	FreeBSD Foundation und wird vom FreeBSD Project mit Erlaubnis
+	der <a
+	href="http://www.freebsdfoundation.org/legal/guidelines.html">
+	FreeBSD Foundation</a> verwendet.
+
       </div> <!-- footer -->
     </div> <!-- CONTAINER -->
    </div> <!-- CONTAINERWRAP -->

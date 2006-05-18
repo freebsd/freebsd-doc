@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
 <!-- $FreeBSD$
-     $FreeBSDde: de-www/includes.xsl,v 1.35 2006/05/09 18:08:12 jkois Exp $
+     $FreeBSDde: de-www/includes.xsl,v 1.37 2006/05/17 19:26:39 jkois Exp $
      basiert auf: 1.20
 -->
 
@@ -24,7 +24,7 @@
 
   <xsl:variable name="copyright">
     <a href="{$enbase}/copyright/index.html">Copyright</a> &#169; 1995-2006
-    Das FreeBSD Projekt.  Alle Rechte vorbehalten.
+    The FreeBSD Project.  Alle Rechte vorbehalten.
   </xsl:variable>
 
   <xsl:variable name="email" select="'freebsd-questions'"/>
@@ -254,7 +254,7 @@
 	at once. -->
   <xsl:variable name="beta.testing" select="1" />
   <xsl:variable name="betarel.current" select='"5.5"'/>
-  <xsl:variable name="betarel.vers" select='"BETA4"'/>
+  <xsl:variable name="betarel.vers" select='"RC1"'/>
   <xsl:variable name="u.betarel.schedule">
     <xsl:value-of select="$base"/>/../releases/<xsl:value-of select="$betarel.current"/>R/schedule.html</xsl:variable>
 
