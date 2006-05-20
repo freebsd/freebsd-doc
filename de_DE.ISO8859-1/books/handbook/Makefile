@@ -1,7 +1,7 @@
 #
 # $FreeBSD$
-# $FreeBSDde: de-docproj/books/handbook/Makefile,v 1.49 2006/04/22 13:23:23 jkois Exp $
-# basiert auf: 1.98
+# $FreeBSDde: de-docproj/books/handbook/Makefile,v 1.51 2006/05/17 19:51:09 jkois Exp $
+# basiert auf: 1.100
 #
 # Build the FreeBSD Handbook in its German translation.
 #
