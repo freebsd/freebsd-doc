@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/share/sgml/includes.release.xsl,v 1.21 2006/05/09 02:39:17 murray Exp $ -->
+<!-- $FreeBSD: www/share/sgml/includes.release.xsl,v 1.22 2006/05/17 05:08:51 brueffer Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -9,7 +9,7 @@
 
   <!-- An upcoming release that we want tested.  Set $beta.testing to 0
 	if we're not in the middle of a release cycle.  Ha ha. -->
-  <xsl:variable name="beta.testing" select="1" />
+  <xsl:variable name="beta.testing" select="0" />
   <xsl:variable name="betarel.current" select='"5.5"'/>
   <xsl:variable name="betarel.vers" select='"RC1"'/>
   <xsl:variable name="u.betarel.schedule">
@@ -45,7 +45,7 @@
   <xsl:variable name="u.rel.migration">
     <xsl:value-of select="$base"/>/releases/<xsl:value-of select="$rel.current"/>R/migration-guide.html</xsl:variable>
 
-  <xsl:variable name="rel2.current" select='"5.4"'/>
+  <xsl:variable name="rel2.current" select='"5.5"'/>
   <xsl:variable name="rel2.current.major" select='"5"'/>
 
   <xsl:variable name="u.rel2.notes">
