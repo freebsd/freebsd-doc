@@ -11,12 +11,8 @@ CJKTEXSTY_PDFTEX_FLAGS?= -c -e ${SP_ENCODING} -f song
 
 # Don't use "?=" in the following two lines.
 # They have been pre-defined in "doc.project.mk" and should be overridden here.
-# XXX: broken as of RELEASE_6_1_0
-#HTML2TXT=	${PREFIX}/bin/html2text
-#HTML2TXTOPTS=	-nobs -style pretty
-
-# XXX: broken as of RELEASE_6_1_0
-NO_TEX=	yes
+HTML2TXT=	${PREFIX}/bin/html2text
+HTML2TXTOPTS=	-nobs -style pretty
 
 # In "doc/share/mk/doc.project.mk", "doc.images.mk" and "doc.common.mk"
 # is included before "doc.local.mk". Thus, we can use variables defined
