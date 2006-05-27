@@ -11,6 +11,12 @@ WITH_ARTICLE_TOC?= YES
 INSTALL_COMPRESSED?= gz
 INSTALL_ONLY_COMPRESSED?=
 
+# Images from the cross-document image library
+IMAGES_LIB=  callouts/1.png
+IMAGES_LIB+= callouts/2.png
+IMAGES_LIB+= callouts/3.png
+IMAGES_LIB+= callouts/4.png
+
 SRCS=	article.sgml
 
 URL_RELPREFIX?=	../../../..
