@@ -13,7 +13,6 @@ DOCS+= 	about.sgml
 DOCS+= 	machines.sgml
 DOCS+= 	mirror.sgml
 DOCS+=	new-account.sgml
-DOCS+=	new-mailinglist.sgml
 DOCS+=	statistic.sgml
 DOCS+= 	developer.sgml
 DOCS+=	bylaws.sgml
@@ -23,8 +22,6 @@ DOCS+=	core-vote.sgml
 DOCS+=	doceng.sgml
 DOCS+=	rtp.sgml
 DOCS+=	policies.sgml
-DOCS+=	builds.sgml
-DOCS+=	buildstatus.sgml
 DOCS+=	fortunes.sgml
 
 INDEXLINK=	internal.html
@@ -45,15 +42,6 @@ homepage.html:  homepage.inc
 CLEANFILES+=	homepage.inc
 .endif
 
-buildstatus.html: buildstatus.xsl builds.xml ../includes.xsl
-	${XSLTPROC} ${XSLTPROCOPTS} -o ${.TARGET} \
-		${.CURDIR}/buildstatus.xsl ${.CURDIR}/builds.xml
-.if !defined(NO_TIDY)
-	-${TIDY} ${TIDYOPTS} ${.TARGET}
-.endif
-
-DATA+=		buildstatus.html
-CLEANFILES+=	buildstatus.html
 DATA+=	README.mirror ssh-keys.asc
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
