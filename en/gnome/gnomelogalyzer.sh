@@ -27,7 +27,7 @@
 # Heh. "Tort."
 #
 # $MCom: portstools/gnomelogalyzer.sh.in,v 1.12 2005/06/28 05:47:54 adamw Exp $
-#   $FreeBSD: www/en/gnome/gnomelogalyzer.sh,v 1.6 2005/08/14 07:01:28 adamw Exp $
+#   $FreeBSD: www/en/gnome/gnomelogalyzer.sh,v 1.7 2006/01/07 06:14:16 mezz Exp $
 #
 
 # This script uses some simple yet effective heuristics to analyse
@@ -153,12 +153,12 @@ fi
 #
 # TEST: Invalid pkg-config version
 #
-# SOLUTION: portupgrade pkgconfig
+# SOLUTION: portupgrade pkg-config
 
 debug -n "Checking pkg-config version... "
 if grep -q '\*\*\* Your version of pkg-config is too old.' ${buildlog} ; then
 	echo "You have an outdated version of pkg-config installed."
-	soln_portupgrade "pkgconfig"
+	soln_portupgrade "pkg-config"
 	exit
 else
 	debug "OK"
