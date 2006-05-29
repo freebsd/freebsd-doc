@@ -46,7 +46,7 @@ BUILDNAME?=	${DATE}
 #
 # Set defaults for FORMATS, DOC_LANG, and INSTALL_COMPRESSED.
 #
-FORMATS?=	ps pdf html html-split html-split.tar txt pdb
+FORMATS?=	pdf html html-split txt
 #DOC_LANG?=	en_US.ISO8859-1
 INSTALL_COMPRESSED?=	zip gz
 
@@ -137,7 +137,7 @@ cdrom.1:
 		${TAR} xf - -C ${DOCCDROMSTAGEDIR}
 # Make ISO images if desired.
 .if defined(MAKE_ISOS)
-	cd ${DOCROOTDIR} && ${MKISOFS} -r -J -V fbsd_doc -o ${DOCSTAGEDIR}/doc.iso ${DOCCDROMSTAGEDIR}
+	cd ${DOCROOTDIR} && ${MKISOFS} -r -J -V FreeBSD_Docs -publisher "The FreeBSD Project.  http://www.freebsd.org/" -o ${DOCSTAGEDIR}/doc.iso ${DOCCDROMSTAGEDIR}
 .endif
 
 .include "../share/mk/doc.project.mk"
