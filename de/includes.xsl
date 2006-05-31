@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
 <!-- $FreeBSD$
-     $FreeBSDde: de-www/includes.xsl,v 1.37 2006/05/17 19:26:39 jkois Exp $
+     $FreeBSDde: de-www/includes.xsl,v 1.38 2006/05/31 18:55:36 jkois Exp $
      basiert auf: 1.20
 -->
 
@@ -252,7 +252,7 @@
   <!-- A release that we want tested.  Set $beta.testing to 0
 	if we're not in the middle of a release cycle for two releases
 	at once. -->
-  <xsl:variable name="beta.testing" select="1" />
+  <xsl:variable name="beta.testing" select="0" />
   <xsl:variable name="betarel.current" select='"5.5"'/>
   <xsl:variable name="betarel.vers" select='"RC1"'/>
   <xsl:variable name="u.betarel.schedule">
@@ -285,7 +285,7 @@
   <xsl:variable name="u.rel.migration">
     <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel.current"/>R/migration-guide.html</xsl:variable>
 
-  <xsl:variable name="rel2.current" select='"5.4"'/>
+  <xsl:variable name="rel2.current" select='"5.5"'/>
   <xsl:variable name="u.rel2.notes">
     <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel2.current"/>R/relnotes.html</xsl:variable>
 
