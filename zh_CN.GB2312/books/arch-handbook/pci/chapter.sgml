@@ -2,7 +2,7 @@
      The FreeBSD Documentation Project
      The FreeBSD Simplified Chinese Project
 
-     Original Revision: 1.23
+     Original Revision: 1.24
      $FreeBSD$
 -->
 
@@ -123,7 +123,7 @@ mypci_write(struct cdev *dev, struct uio *uio, int ioflag)
 	/* Look up our softc. */
 	sc = dev-&gt;si_drv1;
 	device_printf(sc-&gt;my_dev, "Asked to write %d bytes.\n", uio-&gt;uio_resid);
-	return (err);
+	return (0);
 }
 
 /* PCI支持函数 */
@@ -154,7 +154,7 @@ mypci_attach(device_t dev)
 {
 	struct mypci_softc *sc;
 
-	printf("MyPCI Attach for : deviceID : 0x%x\n",pci_get_vendor(dev));
+	printf("MyPCI Attach for : deviceID : 0x%x\n", pci_get_devid(dev));
 
 	/* Look up our softc and initialize its fields. */
 	sc = device_get_softc(dev);
@@ -168,8 +168,9 @@ mypci_attach(device_t dev)
 	 */
 	sc-&gt;my_cdev = make_dev(<literal>&amp;</literal>mypci_cdevsw, device_get_unit(dev),
 	    UID_ROOT, GID_WHEEL, 0600, "mypci%u", device_get_unit(dev));
+	sc-&gt;my_cdev-&gt;si_drv1 = sc;
 	printf("Mypci device loaded.\n");
-	return (ENXIO);
+	return (0);
 }
 
 /* 分离设备。 */
@@ -291,7 +292,7 @@ SRCS+=	device_if.h bus_if.h pci_if.h
         函数中有些类似下面的东西：</para>
 
 <programlisting>    sc-&gt;bar0id = PCIR_BAR(0);
-    sc-&gt;bar0res = bus_alloc_resource(dev, SYS_RES_MEMORY, &amp;(sc-&gt;bar0id),
+    sc-&gt;bar0res = bus_alloc_resource(dev, SYS_RES_MEMORY, &amp;sc-&gt;bar0id,
 				  0, ~0, 1, RF_ACTIVE);
     if (sc-&gt;bar0res == NULL) {
         printf("Memory allocation of PCI base register 0 failed!\n");
@@ -300,7 +301,7 @@ SRCS+=	device_if.h bus_if.h pci_if.h
     }
 
     sc-&gt;bar1id = PCIR_BAR(1);
-    sc-&gt;bar1res = bus_alloc_resource(dev, SYS_RES_MEMORY, &amp;(sc-&gt;bar1id),
+    sc-&gt;bar1res = bus_alloc_resource(dev, SYS_RES_MEMORY, &amp;sc-&gt;bar1id,
 				  0, ~0, 1, RF_ACTIVE);
     if (sc-&gt;bar1res == NULL) {
         printf("Memory allocation of PCI base register 1 failed!\n");
@@ -320,7 +321,8 @@ SRCS+=	device_if.h bus_if.h pci_if.h
         特定的寄存器：</para>
 
 <programlisting>uint16_t
-board_read(struct ni_softc *sc, uint16_t address) {
+board_read(struct ni_softc *sc, uint16_t address)
+{
     return bus_space_read_2(sc-&gt;bar1_bt, sc-&gt;bar1_bh, address);
 }
 </programlisting>
@@ -328,7 +330,8 @@ board_read(struct ni_softc *sc, uint16_t address) {
       <para>类似的，可以用下面的函数写寄存器：</para>
 
 <programlisting>void
-board_write(struct ni_softc *sc, uint16_t address, uint16_t value) {
+board_write(struct ni_softc *sc, uint16_t address, uint16_t value)
+{
     bus_space_write_2(sc-&gt;bar1_bt, sc-&gt;bar1_bh, address, value);
 }
 </programlisting>
@@ -336,6 +339,23 @@ board_write(struct ni_softc *sc, uint16_t address, uint16_t value) {
       <para>这些函数以8位，16位和32位的版本存在，你应当相应地使用
         <function>bus_space_{read|write}_{1|2|4}</function>。</para>
 
+      <note>
+	<para>在 FreeBSD 7.0 和更高版本中， 可以用
+	  <function>bus_*</function> 函数来代替
+	  <function>bus_space_*</function>。
+	  <function>bus_*</function> 函数使用的参数是 <type>struct
+	  resource *</type> 指针， 而不是 bus tag 和句柄。
+	  这样， 您就可以将 <structname>softc</structname>
+	  中的 bus tag 和 bus 句柄这两个成员变量去掉， 并将
+	  <function>board_read()</function> 函数改写为：</para>
+
+<programlisting>uint16_t
+board_read(struct ni_softc *sc, uint16_t address)
+{
+	return (bus_read(sc-&gt;bar1res, address));
+}
+</programlisting>
+      </note>
     </sect2>
     <sect2>
       <title>中断</title>
@@ -367,9 +387,6 @@ board_write(struct ni_softc *sc, uint16_t address, uint16_t value) {
 	printf("Couldn't set up irq\n");
 	goto fail4;
     }
-
-    sc-&gt;irq_bt = rman_get_bustag(sc-&gt;irqres);
-    sc-&gt;irq_bh = rman_get_bushandle(sc-&gt;irqres);
 </programlisting>
 
       <para>在设备的分离例程中必须注意一些问题。你必须停顿设备的中断流，
