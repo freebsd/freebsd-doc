@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/es/includes.xsl,v 1.10 2005/11/03 21:17:45 jcamou Exp $ -->
+<!-- $FreeBSD: www/es/includes.xsl,v 1.11 2006/02/02 20:30:51 jcamou Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -55,7 +55,7 @@
               <div id="header">
       	      <h2 class="blockhide">Cabecera y logo</h2>
                 <div id="headerlogoleft">
-                  <a href="{$base}" title="FreeBSD"><img src="{$enbase}/layout/images/logo.png" width="360" height="40" alt="FreeBSD" /></a>
+                  <a href="{$base}" title="FreeBSD"><img src="{$enbase}/layout/images/logo-red.png" width="457" height="75" alt="FreeBSD" /></a>
                 </div> <!-- headerlogoleft -->
                 <div id="headerlogoright">
       			<h2 class="blockhide">Enlaces perifericos</h2>
