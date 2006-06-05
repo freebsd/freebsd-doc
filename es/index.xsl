@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/es/index.xsl,v 1.14 2005/10/13 12:01:32 jesusr Exp $ -->
+<!-- $FreeBSD: www/es/index.xsl,v 1.15 2005/11/03 00:36:40 jcamou Exp $ -->
 <!-- $FreeBSDes: www/es/index.xsl,v 1.4 2004/09/07 21:46:11 jcamou Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -10,7 +10,7 @@
 
   <xsl:variable name="base" select="'.'"/>
   <xsl:variable name="enbase" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/es/index.xsl,v 1.14 2005/10/13 12:01:32 jesusr Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/es/index.xsl,v 1.15 2005/11/03 00:36:40 jcamou Exp $'"/>
   <xsl:variable name="title" select="'El Proyecto FreeBSD'"/>
 
   <!-- these params should be externally bound. The values
@@ -58,26 +58,26 @@
 
       <body>
 
-   <div id="containerwrap">
-    <div id="container">
+   <div id="CONTAINERWRAP">
+    <div id="CONTAINER">
       <xsl:copy-of select="$header2"/>
-      <div id="content">
+      <div id="CONTENT">
 
-        <div id="frontcontainer">
-          <div id="frontmain">
-            <div id="frontfeaturecontainer">
+        <div id="FRONTCONTAINER">
+          <div id="FRONTMAIN">
+            <div id="FRONTFEATURECONTAINER">
 
-		<div id="frontfeatureleft">
-			<div id="frontfeaturecontent">
+		<div id="FRONTFEATURELEFT">
+			<div id="FRONTFEATURECONTENT">
 				<h1>
 				  Basado en BSD UNIX&#174;
 				</h1>				
 				<p>FreeBSD es un avanzado sistema operativo para arquitecturas
 				x86 compatibles (incluyendo Pentium&#174; y Athlon&#8482;),
 				amd64 compatibles (incluyendo Opteron&#8482;, Athlon 64 y EM64T),
-				Alpha/AXP, IA-64, PC-98 y UltraSPARC&#174;. 
+				UltraSPARC&#174;, IA-64, PC-98 y ARM.
 				FreeBSD es un derivado de BSD, la versi&#243;n de
-				<xsl:value-of select="$unix"/> desarrollada en la Universidad
+				UNIX&#174; desarrollada en la Universidad
 				de California, Berkeley.  FreeBSD es desarrollado y mantenido 
 				por un
 				<a href="{$enbase}/doc/en_US.ISO8859-1/articles/contributors/index.html">
@@ -90,34 +90,47 @@
 			</div> <!-- frontfeaturecontent -->
 		</div> <!-- frontfeatureleft -->
 
-		<div id="frontfeaturemiddle">
+		<div id="FRONTFEATUREMIDDLE">
 			<div class="frontgetroundbox">
-			  <div class="frontgettop"><div>&#160;</div>&#160;</div>
+			  <div class="frontgettop"><div><b style="display: none">.</b></div></div>
 				<div class="frontgetcontent">
 				  <a href="{$base}/where.html">Obtener FreeBSD Ahora</a>
 				</div> <!-- frontgetcontent -->
-			  <div class="frontgetbot"><div>&#160;</div>&#160;</div>
+			  <div class="frontgetbot"><div><b style="display: none">.</b></div></div>
 			</div> <!-- frontgetroundbox -->
 			
-			<div id="frontreleases">
-			  <div id="frontreleasescontent" class="txtshortcuts">
-				  <h2>&#218;ltimas versiones</h2>
-				  <ul id="frontreleaseslist">
+			<div id="FRONTRELEASES">
+			  <div id="FRONTRELEASESCONTENT" class="txtshortcuts">
+				  <h2><a href="{$enbase}/releases/">&#218;LTIMAS VERSIONES</a></h2>
+				  <ul id="FRONTRELEASELIST">
 					<li>
 					  <a href="{$u.rel.announce}">Nueva Tecnolog&#237;a: <xsl:value-of select="$rel.current"/></a>
 					</li>
 					<li>
 					  <a href="{$u.rel2.announce}">Release en Producci&#243;n: <xsl:value-of select="$rel2.current"/></a>
+
 					</li>
+				<xsl:if test="$beta.testing">
+				    <li>
+				      <a href="{$enbase}/where.html#helptest">Proxima Release
+					<xsl:value-of select="concat($betarel.current, '-', $betarel.vers)"/></a>
+				    </li>
+				</xsl:if>
+				<xsl:if test="$beta2.testing">
+				    <li>
+				      <a href="{$enbase}/where.html#helptest">Proxima Release
+					<xsl:value-of select="concat($betarel2.current, '-', $betarel2.vers)"/></a>
+				    </li>
+				</xsl:if>
 				  </ul>
 			  </div> <!-- frontreleasescontent -->
 			</div> <!-- frontreleases -->
 		</div> <!-- frontfeaturemiddle -->
 
-		<div id="frontfeatureright">
-			<h2 class="blockhide">Enlace Idiomas</h2>
-			<div id="languagenav">
-				<ul id="languagenavlist">
+		<div id="FRONTFEATURERIGHT">
+			<h2 class="blockhide">Enlace idiomas</h2>
+			<div id="LANGUAGENAV">
+				<ul id="LANGUAGENAVLIST">
 				  <li>
 					<a href="{$enbase}/de/" title="Tedesco">de</a>
 				  </li>
@@ -142,11 +155,11 @@
 				</ul>				
 			</div> <!-- languagenav -->
 
-			<div id="mirror">
+			<div id="MIRROR">
 			  <form action="{$enbase}/cgi/mirror.cgi" method="get">
 				<div>
 				  <h2 class="blockhide"><label for="mirrorsel">R&#233;plicas</label></h2>
-				  <select id="mirrorsel" name="goto">
+				  <select id="MIRRORSEL" name="goto">
 					  <xsl:call-template name="html-index-mirrors-options-list">
 					    <xsl:with-param name="mirrors.xml" select="$mirrors.xml" />
 					  </xsl:call-template>
@@ -156,10 +169,10 @@
 			  </form>
 			</div> <!-- mirror -->
 
-			<div id="frontshortcuts">
-			  <div id="frontshortcutscontent" class="txtshortcuts">
+			<div id="FRONTSHORTCUTS">
+			  <div id="FRONTSHORTCUTSCONTENT" class="txtshortcuts">
 				  <h2>ENLACES R&#193;PIDOS</h2>
-				  <ul id="frontshortcutslist">
+				  <ul id="FRONTSHORTCUTLIST">
 					<li>
 					  <a href="{$base}/support.html#mailing-list" title="Listas de distribuci&#243;n">Listas de distribuci&#243;n</a>
 					</li>
@@ -183,20 +196,20 @@
 			</div> <!-- frontshortcuts -->
 
 			<div class="frontnewroundbox">
-			  <div class="frontnewtop"><div>&#160;</div>&#160;</div>
+			  <div class="frontnewtop"><div><b style="display: none">.</b></div></div>
 			    <div class="frontnewcontent">
 			      <a href="{$base}/projects/newbies.html">&#191;Nuevo en FreeBSD?</a>
 			    </div> <!-- frontnewcontent -->
-			  <div class="frontnewbot"><div>&#160;</div>&#160;</div>
+			  <div class="frontnewbot"><div><b style="display: none">.</b></div></div>
 			</div> <!-- frontnewroundbox -->
 		</div> <!-- featureright -->
 				
             </div> <!-- frontfeaturecontainer -->
 
 	    <br class="clearboth" />
-            <div id="frontnemscontainer">
-            	<div id="frontnews">
-            	   <div id="frontnewscontent" class="txtnewsevent">
+            <div id="FRONTNEWSCONTAINER">
+            	<div id="FRONTNEWS">
+            	   <div id="FRONTNEWSCONTENT" class="txtnewsevent">
 			<h2>&#218;LTIMAS NOTICIAS</h2>
 			<div class="newseventswrap">
 
@@ -258,7 +271,7 @@
 			  <div>
 				<ul class="newseventslist">
 				  <li class="only-child">
-					<a href="{$base}/news/press.html" title="M&#225;s Medios">M&#225;s Medios</a>
+					<a href="{$base}/news/press.html" title="M&#225;s medios">M&#225;s medios</a>
 				  </li>
 				</ul>
 			  </div> <!-- unnamed -->
@@ -267,8 +280,8 @@
 		   </div> <!-- frontmediacontent -->
             	</div> <!-- frontmedia -->
 		<div class="frontseparator"><b style="display: none">.</b></div>
-		<div id="frontsecurity">
-		   <div id="frontsecuritycontent" class="txtnewsevent">
+		<div id="FRONTSECURITY">
+		   <div id="FRONTSECURITYCONTENT" class="txtnewsevent">
 
 			<h2>AVISOS DE SEGURIDAD</h2>
 			<div class="newseventswrap">
@@ -284,7 +297,7 @@
 					<a href="{$base}/security/" title="M&#225;s Avisos de Seguridad">M&#225;s</a>
 				  </li>
 				  <li>
-					<a href="{$base}/send-pr.html" title="Env&#237; un Problem Report">Enviar un Bug</a>
+					<a href="{$base}/send-pr.html" title="Env&#237; un reporte de problema">Enviar un bug</a>
 				  </li>
 				  <li class="last-child">
 					<a href="{$enbase}/security/advisories.rdf" title="Security Advisories RSS Feed"><img class="rssimage" src="{$enbase}/layout/images/ico_rss.png" width="27" height="12" alt="News RSS Feed" /></a>
