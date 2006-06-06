@@ -1,4 +1,4 @@
-# $FreeBSD: www/it/Makefile,v 1.11 2005/10/31 14:24:16 ale Exp $
+# $FreeBSD: www/it/Makefile,v 1.12 2005/11/01 14:18:01 blackend Exp $
 .if exists(Makefile.conf)
 .include "Makefile.conf"
 .endif
@@ -20,6 +20,7 @@ DOCS+= where.sgml
 SUBDIR=  copyright
 SUBDIR+= docs
 SUBDIR+= platforms
+SUBDIR+= ports
 SUBDIR+= releases
 .if !defined(WEB_ONLY) || empty(WEB_ONLY)
 SUBDIR+= doc
