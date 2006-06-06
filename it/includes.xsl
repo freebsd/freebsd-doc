@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/it/includes.xsl,v 1.20 2005/11/17 10:05:06 ale Exp $ -->
+<!-- $FreeBSD: www/it/includes.xsl,v 1.21 2005/11/23 21:57:06 ale Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -17,7 +17,7 @@
   </xsl:variable>
 
   <xsl:variable name="copyright">
-    <a href="{$base}/copyright/">Note Legali</a> | &#169; 1995-2005 the FreeBSD Project.  Tutti i diritti riservati.
+    <a href="{$base}/copyright/">Note Legali</a> | &#169; 1995-2006 the FreeBSD Project.  Tutti i diritti riservati.
   </xsl:variable>
 
   <xsl:variable name="home">
@@ -40,13 +40,14 @@
   
   <xsl:variable name="header2">
             <span class="txtoffscreen"><a href="#CONTENT" title="Salta la navigazione del sito" accesskey="1">Salta la navigazione del sito</a> (1)</span>
+            <xsl:text> </xsl:text>
             <span class="txtoffscreen"><a href="#CONTENTWRAP" title="Salta la navigazione della sezione" accesskey="2">Salta la navigazione della sezione</a> (2)</span>
             <div id="HEADERCONTAINER">
       
               <div id="HEADER">
       	      <h2 class="blockhide">Intestazione e Logo</h2>
                 <div id="HEADERLOGOLEFT">
-                  <a href="{$base}" title="FreeBSD"><img src="{$enbase}/layout/images/logo.png" width="360" height="40" alt="FreeBSD" /></a>
+                  <a href="{$base}" title="FreeBSD"><img src="{$enbase}/layout/images/logo-red.png" width="457" height="75" alt="FreeBSD" /></a>
                 </div> <!-- HEADERLOGOLEFT -->
                 <div id="HEADERLOGORIGHT">
       			<h2 class="blockhide">Collegamenti Periferici</h2>
@@ -66,7 +67,7 @@
       			<div id="SEARCH">
       			  <form action="{$cgibase}/search.cgi" method="get">
       				<div>
-      			      <h2 class="blockhide"><label for="words">Cerca</label></h2>
+      			      <h2 class="blockhide"><label for="WORDS">Cerca</label></h2>
       				  <input type="hidden" name="max" value="25" /> <input type="hidden" name="source" value="www" /><input id="WORDS" name="words" type="text" size="20" maxlength="255" onfocus="if( this.value==this.defaultValue ) this.value='';" value="Cerca" />&#160;<input id="SUBMIT" name="submit" type="submit" value="Cerca" />
       				</div>
       			  </form>
@@ -153,11 +154,14 @@
 			<ul>
 				<li><a href="{$enbase}/platforms/alpha.html">alpha</a></li>
 				<li><a href="{$enbase}/platforms/amd64.html">amd64</a></li>
+				<li><a href="{$enbase}/platforms/arm.html">ARM</a></li>
 				<li><a href="{$enbase}/platforms/i386.html">i386</a></li>
 				<li><a href="{$enbase}/platforms/ia64/index.html">ia64</a></li>
+				<li><a href="{$enbase}/platforms/mips.html">MIPS</a></li>
 				<li><a href="{$enbase}/platforms/pc98.html">pc98</a></li>
 				<li><a href="{$enbase}/platforms/ppc.html">ppc</a></li>
 				<li><a href="{$enbase}/platforms/sparc.html">sparc64</a></li>
+				<li><a href="{$enbase}/platforms/xbox.html">xbox</a></li>
 			</ul>
 		</li>
 		<li><a href="{$enbase}/doc/en_US.ISO8859-1/articles/contributing/index.html">Contribuire</a></li>
@@ -191,9 +195,14 @@
 				<li><a href="{$u.rel.announce}">Release di Produzione: <xsl:value-of select="$rel.current"/></a></li>
 				<li><a href="{$u.rel2.announce}">Release di Produzione (Legacy): <xsl:value-of select="$rel2.current"/></a></li>
 				<li><a href="{$enbase}/snapshots/">Snapshot delle Release</a></li>
-				<xsl:if test="$beta.testing != ''">
+				<xsl:if test="$beta.testing != '0'">
 				  <li><a href="{$base}/where.html">Prossima Release <xsl:value-of
 				    select="concat($betarel.current, '-', $betarel.vers)"/></a>
+				  </li>
+				</xsl:if>
+				<xsl:if test="$beta2.testing != '0'">
+				  <li><a href="{$base}/where.html">Prossima Release <xsl:value-of
+				    select="concat($betarel2.current, '-', $betarel2.vers)"/></a>
 				  </li>
 				</xsl:if>
 			</ul>
@@ -269,7 +278,7 @@
     <xsl:value-of select="$enbase"/>/releases/<xsl:value-of select="$rel2.current"/>R/readme.html</xsl:variable>
 
   <!-- template: "html-index-advisories-items"
-       pulls in the 10 most recent security advisories -->
+       pulls in the 6 most recent security advisories -->
 
   <xsl:template name="html-index-advisories-items">
     <xsl:param name="advisories.xml" select="''" />
@@ -277,7 +286,7 @@
 
     <xsl:choose>
       <xsl:when test="$type = 'advisory'">
-        <xsl:for-each select="document($advisories.xml)/descendant::advisory[position() &lt;= 3]">
+        <xsl:for-each select="document($advisories.xml)/descendant::advisory[position() &lt;= 4]">
           <xsl:param name="year" select="../../../name" />
           <xsl:param name="month" select="../../name" />
           <xsl:param name="day" select="../name" />
@@ -303,7 +312,7 @@
         </xsl:for-each>
       </xsl:when>
       <xsl:when test="$type = 'notice'">
-        <xsl:for-each select="document($advisories.xml)/descendant::notice[position() &lt;= 3]">
+        <xsl:for-each select="document($advisories.xml)/descendant::notice[position() &lt;= 2]">
         <xsl:param name="year" select="../../../name" />
         <xsl:param name="month" select="../../name" />
         <xsl:param name="day" select="../name" />
@@ -337,7 +346,7 @@
   <xsl:template name="html-index-news-project-items">
     <xsl:param name="news.project.xml" select="'none'" />
 
-    <xsl:for-each select="document($news.project.xml)/descendant::day[position() &lt;= 5]">
+    <xsl:for-each select="document($news.project.xml)/descendant::day[position() &lt; 5]">
       <xsl:param name="year" select="ancestor::year/name" />
       <xsl:param name="month" select="ancestor::month/name" />
       <xsl:param name="day" select="name" />

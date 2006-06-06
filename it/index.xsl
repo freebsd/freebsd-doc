@@ -1,7 +1,7 @@
 <!--
      The FreeBSD Italian Documentation Project
 
-     $FreeBSD: www/it/index.xsl,v 1.27 2005/11/17 10:05:06 ale Exp $
+     $FreeBSD: www/it/index.xsl,v 1.28 2005/11/23 21:57:06 ale Exp $
      Original revision: 1.138
 -->
 
@@ -10,7 +10,6 @@
   <xsl:import href="includes.xsl"/>
   <xsl:import href="../en/news/includes.xsl"/>
   
-  <xsl:variable name="date" select="'$FreeBSD: www/it/index.xsl,v 1.27 2005/11/17 10:05:06 ale Exp $'"/>
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
@@ -53,15 +52,15 @@
 				<h1>
 				  Basato su BSD UNIX&#174;
 				</h1>				
-				<p>FreeBSD &#232; un sistema operativo avanzato per architetture
-				compatibili x86 (inclusi Pentium&#174; eAthlon&#8482;), amd64 (inclusi
-				Opteron&#8482;, Athlon 64, e EM64T), Alpha/AXP, IA-64, PC-98 e
-				UltraSPARC&#174;.
+				<p>FreeBSD&#174; &#232; un sistema operativo avanzato per architetture
+				compatibili x86 (inclusi Pentium&#174; e Athlon&#8482;), amd64 (inclusi
+				Opteron&#8482;, Athlon 64, e EM64T),
+				UltraSPARC&#174;, IA-64, PC-98 e ARM.
 				&#200; derivato da BSD, la versione di
 				<xsl:value-of select="$unix"/> sviluppata
 				all'Universit&#224; della California, Berkeley.
 				&#200; sviluppato e mantenuto da <a
-				href="{$enbase}/doc/en_US.ISO8859-1/articles/contributors/index.html">un
+				href="{$enbase}/doc/en_US.ISO8859-1/articles/contributors/staff-committers.html">un
 				grande gruppo di individui</a>.
 				<a href="{$base}/platforms/index.html">Piattaforme</a>
 				aggiuntive sono in varie fasi di sviluppo.</p>
@@ -82,7 +81,7 @@
 			
 			<div id="FRONTRELEASES">
 			  <div id="FRONTRELEASESCONTENT" class="txtshortcuts">
-				  <h2>ULTIME RELEASE</h2>
+				  <h2><a href="{$base}/releases/">ULTIME RELEASE</a></h2>
 				  <ul id="FRONTRELEASESLIST">
 					<li>
 					  <a href="{$u.rel.announce}">Release di Produzione <xsl:value-of select="$rel.current"/></a>
@@ -94,6 +93,12 @@
 					<li>
 					  <a href="{$base}/where.html#helptest">Prossima Release
 					    <xsl:value-of select="concat($betarel.current, '-', $betarel.vers)"/></a>
+					</li>
+				    </xsl:if>
+				    <xsl:if test="$beta2.testing">
+					<li>
+					  <a href="{$base}/where.html#helptest">Prossima Release
+					    <xsl:value-of select="concat($betarel2.current, '-', $betarel2.vers)"/></a>
 					</li>
 				    </xsl:if>
 				  </ul>
@@ -132,7 +137,7 @@
 			<div id="MIRROR">
 			  <form action="{$cgibase}/mirror.cgi" method="get">
 				<div>
-				  <h2 class="blockhide"><label for="mirrorsel">Mirror</label></h2>
+				  <h2 class="blockhide"><label for="MIRRORSEL">Mirror</label></h2>
 				  <select id="MIRRORSEL" name="goto">
 					  <xsl:call-template name="html-index-mirrors-options-list">
 					    <xsl:with-param name="mirrors.xml" select="$mirrors.xml" />
@@ -163,7 +168,7 @@
 					  <a href="http://www.freebsdfoundation.org/" title="Fondazione">Fondazione</a>
 					</li>
 					<li>
-					  <a href="{$enbase}/ports/index.html" title="Port">Port</a>
+					  <a href="{$base}/ports/index.html" title="Port">Port</a>
 					</li>
 				  </ul>
 			  </div> <!-- FRONTSHORTCUTSCONTENT -->
@@ -267,9 +272,6 @@
 				  <li class="first-child">
 					<a href="{$enbase}/security/" title="Altri Avvisi di Sicurezza">Altri</a>
 				  </li>
-				  <li>
-					<a href="{$enbase}/send-pr.html" title="Invia un Report di Bug">Invia un Bug</a>
-				  </li>
 				  <li class="last-child">
 					<a href="{$enbase}/security/advisories.rdf" title="Security Advisories RSS Feed"><img class="rssimage" src="{$enbase}/layout/images/ico_rss.png" width="27" height="12" alt="News RSS Feed" /></a>
 				  </li>
@@ -299,8 +301,13 @@
 
       </div> <!-- CONTENT -->
       <div id="FOOTER">
-        <xsl:copy-of select="$copyright"/><br />
-        <xsl:copy-of select="$date"/>
+        <xsl:copy-of select="$copyright"/>
+
+	FreeBSD &#232; un marchio registrato della FreeBSD Foundation ed &#232;
+	usato dal FreeBSD Project con il permesso della <a
+	  href="http://www.freebsdfoundation.org/legal/guidelines.shtml">FreeBSD
+	  Foundation</a>.
+
       </div> <!-- FOOTER -->
     </div> <!-- CONTAINER -->
    </div> <!-- CONTAINERWRAP -->
