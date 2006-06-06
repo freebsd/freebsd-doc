@@ -1,7 +1,7 @@
 <!--
      The FreeBSD Italian Documentation Project
 
-     $FreeBSD: www/it/index.xsl,v 1.28 2005/11/23 21:57:06 ale Exp $
+     $FreeBSD: www/it/index.xsl,v 1.29 2006/06/06 11:08:49 ale Exp $
      Original revision: 1.138
 -->
 
@@ -9,7 +9,8 @@
 
   <xsl:import href="includes.xsl"/>
   <xsl:import href="../en/news/includes.xsl"/>
-  
+
+  <xsl:variable name="date" select="''"/>  
   <xsl:variable name="title" select="'The FreeBSD Project'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
