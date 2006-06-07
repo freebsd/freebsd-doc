@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/it/includes.xsl,v 1.21 2005/11/23 21:57:06 ale Exp $ -->
+<!-- $FreeBSD: www/it/includes.xsl,v 1.22 2006/06/06 11:08:49 ale Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -54,7 +54,7 @@
       			  <div id="SEARCHNAV">
       				<ul id="SEARCHNAVLIST">
       				  <li>
-      					Dimensione Testo: <a href="#" onkeypress="return false;" onclick="setActiveStyleSheet('Normal Text'); return false;" title="Dimensione Testo Normale">Normale</a> / <a href="#" onkeypress="return false;" onclick="setActiveStyleSheet('Large Text'); return false;" title="Dimensione Testo Grande">Grande</a>
+      					Testo: <a href="#" onkeypress="return false;" onclick="setActiveStyleSheet('Normal Text'); return false;" title="Dimensione Testo Normale">Normale</a> / <a href="#" onkeypress="return false;" onclick="setActiveStyleSheet('Large Text'); return false;" title="Dimensione Testo Grande">Grande</a>
       				  </li>
       				  <li>
       					<a href="{$enbase}/donations/" title="Donazioni">Donazioni</a>
