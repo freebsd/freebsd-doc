@@ -4,7 +4,7 @@
 -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
-<!ENTITY freebsd.dsl SYSTEM "/usr/doc/share/sgml/freebsd.dsl" CDATA DSSSL>
+<!ENTITY freebsd.dsl SYSTEM "../../share/sgml/freebsd.dsl" CDATA DSSSL>
 <!ENTITY % lang.zh.dsssl "IGNORE">
 ]>
 
