@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/gifs/Makefile,v 1.52 2004/08/04 18:16:08 ceri Exp $
+# $FreeBSD: www/en/gifs/Makefile,v 1.53 2005/05/08 15:49:57 murray Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -69,6 +69,7 @@ DATA+=  2.pnm 3.pnm 4.pnm 5.pnm 6.pnm 7.pnm 8.pnm 9.pnm
 DATA+=  A.pnm B.pnm C.pnm D.pnm E.pnm F.pnm G.pnm H.pnm J.pnm
 DATA+=  K.pnm L.pnm M.pnm N.pnm P.pnm Q.pnm R.pnm S.pnm T.pnm U.pnm
 DATA+=  V.pnm W.pnm X.pnm Y.pnm Z.pnm
+DATA+=  building_internet_servers.jpg building_internet_servers_small.jpg
 
 DATA+=	freebsd-advert.gif freebsd_3.gif
 DATA+=  plain.png smiley.png frowny.png
