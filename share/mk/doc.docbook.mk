@@ -478,7 +478,7 @@ NO_TEX_LANG?=	ja_JP.eucJP ru_RU.KOI8-R zh_TW.Big5
 
 # put languages which have a problem on rendering the plain text format
 # by using links1 to NO_PLAINTEXT_LANG.
-NO_PLAINTEXT_LANG?=	ja_JP.eucJP zh_CN.GB2312
+NO_PLAINTEXT_LANG?=	ja_JP.eucJP
 
 # put languages which have a problem on rendering the rtf format
 # by using jade to NO_RTF_LANG.
