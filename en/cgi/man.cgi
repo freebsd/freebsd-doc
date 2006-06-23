@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp 
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.159 2006-06-23 10:12:01 www Exp $
+# $Id: man.cgi,v 1.160 2006-06-23 10:17:08 www Exp $
 
 #use Data::Dumper;
 #use Carp;
@@ -203,7 +203,6 @@ $manPathDefault = 'FreeBSD 6.1-RELEASE';
      'FreeBSD 1.1-RELEASE',   "$manLocalDir/FreeBSD-1.1-RELEASE",
      'FreeBSD 1.0-RELEASE',   "$manLocalDir/FreeBSD-1.0-RELEASE",
 
-     'FreeBSD Ports 6.0-STABLE', "$manLocalDir/FreeBSD-ports-6.0-STABLE",
      'FreeBSD Ports 5.1-RELEASE', "$manLocalDir/FreeBSD-ports-5.1-RELEASE",
      'FreeBSD Ports 5.0-RELEASE', "$manLocalDir/FreeBSD-ports-5.0-RELEASE",
      'FreeBSD Ports 4.7-RELEASE', "$manLocalDir/FreeBSD-ports-4.7-RELEASE",
@@ -379,8 +378,8 @@ while (($key,$val) = each %manPath) {
      'sunos5', 'SunOS 5.10',
      'sunos4', 'SunOS 4.1.3',
      'sunos', 'SunOS 4.1.3',
-     'freebsd ports', 'FreeBSD Ports 6.0-STABLE',
-     'ports', 'FreeBSD Ports 5.3-RELEASE',
+     'freebsd ports', 'FreeBSD Ports 5.1-RELEASE',
+     'ports', 'FreeBSD Ports 5.1-RELEASE',
      'plan9', 'Plan 9',
      'osf1', 'OSF1 V5.1/alpha',
      'true64', 'OSF1 V5.1/alpha',
@@ -1074,7 +1073,7 @@ ETX
 }
 
 sub copyright {
-    $id = '$Id: man.cgi,v 1.159 2006-06-23 10:12:01 www Exp $';
+    $id = '$Id: man.cgi,v 1.160 2006-06-23 10:17:08 www Exp $';
 
     return qq{\
 <PRE>
