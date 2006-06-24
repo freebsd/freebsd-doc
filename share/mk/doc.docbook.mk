@@ -474,7 +474,7 @@ all: ${_docs}
 
 # put languages which have a problem on rendering printable formats
 # by using TeX to NO_TEX_LANG.
-NO_TEX_LANG?=	ja_JP.eucJP ru_RU.KOI8-R zh_TW.Big5
+NO_TEX_LANG?=	ja_JP.eucJP ru_RU.KOI8-R
 
 # put languages which have a problem on rendering the plain text format
 # by using links1 to NO_PLAINTEXT_LANG.
