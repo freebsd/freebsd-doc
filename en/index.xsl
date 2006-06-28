@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/index.xsl,v 1.150 2006/05/13 11:06:20 blackend Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.151 2006/05/21 10:31:53 simon Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -327,7 +327,7 @@
 	The mark FreeBSD is a registered trademark of The FreeBSD
 	Foundation and is used by The FreeBSD Project with the
 	permission of <a
-	  href="http://www.freebsdfoundation.org/legal/guidelines.shtml">The
+	  href="http://www.freebsdfoundation.org/documents/Guidelines.shtml">The
 	FreeBSD Foundation</a>.
 
       </div> <!-- FOOTER -->
