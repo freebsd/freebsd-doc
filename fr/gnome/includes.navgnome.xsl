@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/fr/gnome/includes.navgnome.xsl,v 1.1 2006/01/09 19:53:57 blackend Exp $ -->
+<!-- $FreeBSD: www/fr/gnome/includes.navgnome.xsl,v 1.2 2006/05/03 18:26:53 blackend Exp $ -->
 <!--
    The FreeBSD French Documentation Project
-   Original revision: 1.5
+   Original revision: 1.6
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -18,7 +18,7 @@
 			<li><a href="{$base}/gnome/index.html">FreeBSD/GNOME</a>
 				<ul>
 					<li><a href="{$base}/gnome/docs/faq2.html#q1">Instructions d'installation</a></li>
-					<li><a href="{$enbase}/gnome/docs/faq212.html#q2">Instructions de mise &#224; jour</a></li>
+					<li><a href="{$enbase}/gnome/docs/faq214.html#q2">Instructions de mise &#224; jour</a></li>
 					<li><a href="{$enbase}/gnome/../ports/gnome.html">Applications disponibles</a></li>
 					<li><a href="{$base}/gnome/docs/volunteer.html">Comment participer</a></li>
 					<li><a href="{$base}/gnome/docs/bugging.html">Rapporter un bogue</a></li>
@@ -32,7 +32,7 @@
 					<li><a href="{$enbase}/gnome/docs/faq214.html">FAQ mise &#224; jour 2.12 &#224; 2.14</a></li>
 					<li><a href="{$enbase}/gnome/docs/develfaq.html">FAQ branche de développement</a></li>
 					<li><a href="{$base}/gnome/docs/porting.html">Création des ports</a></li>
-					<li><a href="{$enbase}/gnome/docs/faq212.html#q5">Problèmes connus</a></li>
+					<li><a href="{$enbase}/gnome/docs/faq214.html#q5">Problèmes connus</a></li>
 				</ul>
 			</li>
 		</ul>

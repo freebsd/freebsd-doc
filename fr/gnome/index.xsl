@@ -1,8 +1,8 @@
-<!-- $FreeBSD: www/fr/gnome/index.xsl,v 1.4 2006/02/03 11:54:54 blackend Exp $ -->
+<!-- $FreeBSD: www/fr/gnome/index.xsl,v 1.5 2006/05/03 18:26:53 blackend Exp $ -->
 
 <!-- 
    The FreeBSD French Documentation Project 
-   Original revision: 1.86
+   Original revision: 1.87
    
    Version francaise : Stephane Legrand <stephane@freebsd-fr.org>
 -->
@@ -17,7 +17,7 @@
   <xsl:import href="includes.xsl"/>
 
   <xsl:variable name="base" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/fr/gnome/index.xsl,v 1.4 2006/02/03 11:54:54 blackend Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/fr/gnome/index.xsl,v 1.5 2006/05/03 18:26:53 blackend Exp $'"/>
   <xsl:variable name="section" select="'gnome'"/>
   <xsl:variable name="title" select="'Projet GNOME pour FreeBSD'"/>
 
@@ -131,7 +131,7 @@
               <h2>Statut du port</h2>
 
 	      <p>GNOME pour FreeBSD est actuellement support&#233; sur
-		5-STABLE, 6-STABLE, 7-CURRENT, 5.4, et 6.0.
+		5-STABLE, 6-STABLE, 7-CURRENT, 5.4, 6.0, et 6.1.
 		La plupart de GNOME a &#233;t&#233; port&#233; sous FreeBSD, mais il reste toujours
 		<a href="docs/volunteer.html">des choses &#224; faire</a>!</p>
 
