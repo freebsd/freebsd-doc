@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/fr/index.xsl,v 1.29 2006/02/16 12:35:26 blackend Exp $ -->
+<!-- $FreeBSD: www/fr/index.xsl,v 1.30 2006/05/03 18:26:53 blackend Exp $ -->
 
 <!--
    The FreeBSD French Documentation Project
@@ -14,7 +14,7 @@
   <xsl:import href="news/includes.xsl"/>
 
   <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/fr/index.xsl,v 1.29 2006/02/16 12:35:26 blackend Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/fr/index.xsl,v 1.30 2006/05/03 18:26:53 blackend Exp $'"/>
   <xsl:variable name="title" select="'Le Projet FreeBSD'"/>
 
   <!-- these params should be externally bound. The values
@@ -82,7 +82,7 @@
 				amd64 (y compris Opteron&#8482;, Athlon 64 et EM64T), 
 				Alpha/AXP, IA-64, PC-98 et UltraSPARC&#174;.
 				Il est d&#233;riv&#233; de UNIX BSD, la version d'<xsl:value-of select="$unix"/> 
-				d&#233;velopp&#233; &#224;
+				d&#233;velopp&#233;e &#224;
 				l'Universit&#233; de Californie, Berkeley.
 				Il est d&#233;velopp&#233; et maintenu par
 				<a href="{$enbase}/doc/{$url.doc.langcode}/articles/contributors/staff-committers.html">une
