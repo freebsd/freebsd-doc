@@ -6,6 +6,7 @@
 
 SUBDIR =
 SUBDIR+= contributing
+SUBDIR+= cvs-freebsd
 SUBDIR+= nanobsd
 
 DOC_PREFIX?= ${.CURDIR}/../..
