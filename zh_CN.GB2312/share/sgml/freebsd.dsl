@@ -828,49 +828,49 @@
 
 (declare-initial-value font-family-name
   (cond
-    (rtf-backend "AR PL SungtiL GB")
+    (rtf-backend "AR PL New Sung")
     (else "Times New Roman")
   )
 )
 
 (define %refentry-name-font-family%
   (cond
-    (rtf-backend "AR PL SungtiL GB")
+    (rtf-backend "AR PL New Sung")
     (else "Courier New")
   )
 )
 
 (define %title-font-family% 
   (cond
-    (rtf-backend "AR PL SungtiL GB")
+    (rtf-backend "AR PL New Sung")
     (else "Arial")
   )
 )
 
 (define %body-font-family%
   (cond
-    (rtf-backend "AR PL SungtiL GB")
+    (rtf-backend "AR PL New Sung")
     (else "Times New Roman")
   )
 )
 
 (define %mono-font-family% 
   (cond
-    (rtf-backend "AR PL SungtiL GB")
+    (rtf-backend "AR PL New Sung")
     (else "Courier New")
   )
 )
 
 (define %admon-font-family% 
   (cond
-    (rtf-backend "AR PL SungtiL GB")
+    (rtf-backend "AR PL New Sung")
     (else "Arial")
   )
 )
 
 (define %guilabel-font-family%
   (cond
-    (rtf-backend "AR PL SungtiL GB")
+    (rtf-backend "AR PL New Sung")
     (else "Arial")
   )
 )
