@@ -15,7 +15,7 @@ HTML2TXT=	${PREFIX}/bin/html2text
 HTML2TXTOPTS=	-nobs -style pretty
 
 # In "doc/share/mk/doc.project.mk", "doc.images.mk" and "doc.common.mk"
-# is included before "doc.local.mk". Thus, we can use variables defined
+# are included before "doc.local.mk". Thus, we can use variables defined
 # in these two files safely in XXX target:source declaration XXX.
 # E.g. ${IMAGES_PDF}, ${LOCAL_IMAGES_EPS}
 # ***********************************************************************
