@@ -6,6 +6,7 @@ SUBDIR+= cvs-freebsd
 SUBDIR+= freebsd-questions
 SUBDIR+= hubs
 SUBDIR+= mailing-list-faq
+SUBDIR+= nanobsd
 SUBDIR+= pr-guidelines
 SUBDIR+= problem-reports
 
