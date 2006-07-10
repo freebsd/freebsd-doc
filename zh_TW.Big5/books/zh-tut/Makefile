@@ -13,8 +13,6 @@ FORMATS?= html-split
 INSTALL_COMPRESSED?= gz
 INSTALL_ONLY_COMPRESSED?=
 
-TIDYFLAGS= -raw
-
 DSLHTML=	freebsd.dsl
 DSLPRINT=	freebsd.dsl
 # 
@@ -136,5 +134,6 @@ IMAGES+=	images/xmms.png
 IMAGES+=	images/xpdf.png
 IMAGES+=	images/zhcon.png
 
+URL_RELPREFIX?= ../../../..
 DOC_PREFIX?= ${.CURDIR}/../../..
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"
