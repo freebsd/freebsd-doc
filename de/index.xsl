@@ -2,8 +2,8 @@
 
 <!--
      $FreeBSD$
-     $FreeBSDde: de-www/index.xsl,v 1.65 2006/05/31 20:26:30 jkois Exp $
-     basiert auf: 1.151
+     $FreeBSDde: de-www/index.xsl,v 1.66 2006/06/29 18:47:31 jkois Exp $
+     basiert auf: 1.152
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -334,7 +334,7 @@
 	Die Marke FreeBSD ist ein registriertes Warenzeichen der
 	FreeBSD Foundation und wird vom FreeBSD Project mit Erlaubnis
 	der <a
-	href="http://www.freebsdfoundation.org/legal/guidelines.shtml">
+	href="http://www.freebsdfoundation.org/documents/Guidelines.shtml">
 	FreeBSD Foundation</a> verwendet.
 
       </div> <!-- footer -->
