@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp 
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.160 2006-06-23 10:17:08 www Exp $
+# $Id: man.cgi,v 1.161 2006-07-11 08:30:05 www Exp $
 
 #use Data::Dumper;
 #use Carp;
@@ -153,7 +153,6 @@ $manPathDefault = 'FreeBSD 6.1-RELEASE';
 %manPath = 
     (
      'FreeBSD 6.1-RELEASE and Ports',  "$manLocalDir/FreeBSD-6.1-RELEASE/man:$manLocalDir/FreeBSD-6.1-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports",
-     'FreeBSD 5.5-RELEASE and Ports',  "$manLocalDir/FreeBSD-5.5-RELEASE/man:$manLocalDir/FreeBSD-5.5-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-5.1-RELEASE",
 
      'FreeBSD 7.0-current',     "$manLocalDir/FreeBSD-7-current",
      'FreeBSD 5.5-stable',   "$manLocalDir/FreeBSD-5.5-stable",
@@ -203,6 +202,7 @@ $manPathDefault = 'FreeBSD 6.1-RELEASE';
      'FreeBSD 1.1-RELEASE',   "$manLocalDir/FreeBSD-1.1-RELEASE",
      'FreeBSD 1.0-RELEASE',   "$manLocalDir/FreeBSD-1.0-RELEASE",
 
+     'FreeBSD Ports 6.1-RELEASE', "$manLocalDir/FreeBSD-ports-6.1-RELEASE",
      'FreeBSD Ports 5.1-RELEASE', "$manLocalDir/FreeBSD-ports-5.1-RELEASE",
      'FreeBSD Ports 5.0-RELEASE', "$manLocalDir/FreeBSD-ports-5.0-RELEASE",
      'FreeBSD Ports 4.7-RELEASE', "$manLocalDir/FreeBSD-ports-4.7-RELEASE",
@@ -1073,7 +1073,7 @@ ETX
 }
 
 sub copyright {
-    $id = '$Id: man.cgi,v 1.160 2006-06-23 10:17:08 www Exp $';
+    $id = '$Id: man.cgi,v 1.161 2006-07-11 08:30:05 www Exp $';
 
     return qq{\
 <PRE>
