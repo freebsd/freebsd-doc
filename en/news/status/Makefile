@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/news/status/Makefile,v 1.31 2006/01/26 12:31:59 mlaier Exp $
+# $FreeBSD: www/en/news/status/Makefile,v 1.32 2006/04/14 03:12:02 mlaier Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -32,6 +32,7 @@ XMLDOCS+=	report-mar-2005-june-2005
 XMLDOCS+=	report-july-2005-oct-2005
 XMLDOCS+=	report-oct-2005-dec-2005
 XMLDOCS+=	report-jan-2006-mar-2006
+XMLDOCS+=	report-apr-2006-jun-2006
 
 XSLT.DEFAULT=	report.xsl
 SRCS.DEFAULT=	includes.xsl
