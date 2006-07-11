@@ -1,5 +1,5 @@
 # doc.xml.mk
-# $FreeBSD: www/share/mk/doc.xml.mk,v 1.3 2005/09/19 07:00:44 hrs Exp $
+# $FreeBSD: www/share/mk/doc.xml.mk,v 1.4 2005/10/04 17:18:41 hrs Exp $
 
 XML_CATALOG_FILES=	file://${DOC_PREFIX}/${LANGCODE}/share/sgml/catalog.xml \
 			file://${DOC_PREFIX}/share/sgml/catalog.xml \
@@ -75,9 +75,11 @@ ${XML_MIRRORS}: ${XML_MIRRORS_MASTER} \
 		--param 'transtable-sortkey.xml' "'$@.sort'" \
 		${XSL_TRANSTABLE} ${XML_MIRRORS_MASTER}
 	${RM} -f $@.sort $@.sort.tmp
+.if ${LANGCODE} != .
 CLEANFILES+=	${XML_MIRRORS}
 CLEANFILES+=	${XML_MIRRORS}.sort
 CLEANFILES+=	${XML_MIRRORS}.sort.tmp
+.endif
 
 # DEPENDSET: usergroups ......................................................
 _DEPENDSET.usergroups=	${XML_USERGROUPS} ${XML_USERGROUPS_LOCAL} \
