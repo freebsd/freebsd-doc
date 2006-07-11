@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp 
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.164 2006-07-11 11:50:34 www Exp $
+# $Id: man.cgi,v 1.165 2006-07-11 12:10:38 www Exp $
 
 #use Data::Dumper;
 #use Carp;
@@ -371,7 +371,7 @@ while (($key,$val) = each %manPath) {
      'opendarwin', 'OpenDarwin 7.2.1',
      'macosx', 'Darwin 8.0.1/ppc',
 
-     'netbsd', 'NetBSD 2.0',
+     'netbsd', 'NetBSD 3.0',
      'openbsd', 'OpenBSD 3.9',
      'v7', 'Unix Seventh Edition', 
      'v7man', 'Unix Seventh Edition', 
@@ -1078,7 +1078,7 @@ ETX
 }
 
 sub copyright {
-    $id = '$Id: man.cgi,v 1.164 2006-07-11 11:50:34 www Exp $';
+    $id = '$Id: man.cgi,v 1.165 2006-07-11 12:10:38 www Exp $';
 
     return qq{\
 <PRE>
