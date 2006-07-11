@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp 
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.162 2006-07-11 09:18:49 www Exp $
+# $Id: man.cgi,v 1.163 2006-07-11 09:19:45 www Exp $
 
 #use Data::Dumper;
 #use Carp;
@@ -110,12 +110,8 @@ $sectionpath = {
     'SunOS 5.5.1' => {
 	'path' => '1:1m:1c:1f:1s:1b:2:3:3c:3s:3x:3xc:3xn:3r:3t:3n:3m:3k:3g:3e:3b:9f:9s:9e:9:4:5:7:7d:7i:7m:7p:7fs:4b:6:l:n',
     },
-    'OpenBSD 3.0' => {
-	'path' => '1:2:3:3p:4:5:6:7:8:9',
-    },
-    'OpenBSD 3.1' => {
-	'path' => '1:2:3:3p:4:5:6:7:8:9',
-    },
+    'OpenBSD 3.0' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
+    'OpenBSD 3.1' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
     'OpenBSD 3.2' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
     'OpenBSD 3.3' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
     'OpenBSD 3.4' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
@@ -373,7 +369,7 @@ while (($key,$val) = each %manPath) {
      'macosx', 'Darwin 8.0.1/ppc',
 
      'netbsd', 'NetBSD 2.0',
-     'openbsd', 'OpenBSD 3.6',
+     'openbsd', 'OpenBSD 3.9',
      'v7', 'Unix Seventh Edition', 
      'v7man', 'Unix Seventh Edition', 
      'x11', 'X11R6.7.0',
@@ -1079,7 +1075,7 @@ ETX
 }
 
 sub copyright {
-    $id = '$Id: man.cgi,v 1.162 2006-07-11 09:18:49 www Exp $';
+    $id = '$Id: man.cgi,v 1.163 2006-07-11 09:19:45 www Exp $';
 
     return qq{\
 <PRE>
