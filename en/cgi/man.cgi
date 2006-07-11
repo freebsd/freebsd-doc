@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp 
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.163 2006-07-11 09:19:45 www Exp $
+# $Id: man.cgi,v 1.164 2006-07-11 11:50:34 www Exp $
 
 #use Data::Dumper;
 #use Carp;
@@ -248,6 +248,9 @@ $manPathDefault = 'FreeBSD 6.1-RELEASE';
      'NetBSD 1.6.1',          "$manLocalDir/NetBSD-1.6.1",
      'NetBSD 1.6.2',          "$manLocalDir/NetBSD-1.6.2",
      'NetBSD 2.0',            "$manLocalDir/NetBSD-2.0",
+     'NetBSD 2.0.2',          "$manLocalDir/NetBSD-2.0.2",
+     'NetBSD 2.1',            "$manLocalDir/NetBSD-2.1",
+     'NetBSD 3.0',            "$manLocalDir/NetBSD-3.0",
 
      '2.8 BSD',             "$manLocalDir/2.8BSD",
      '2.9.1 BSD',             "$manLocalDir/2.9.1BSD",
@@ -1075,7 +1078,7 @@ ETX
 }
 
 sub copyright {
-    $id = '$Id: man.cgi,v 1.163 2006-07-11 09:19:45 www Exp $';
+    $id = '$Id: man.cgi,v 1.164 2006-07-11 11:50:34 www Exp $';
 
     return qq{\
 <PRE>
