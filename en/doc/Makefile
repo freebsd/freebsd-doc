@@ -1,5 +1,5 @@
 #
-# $FreeBSD: www/en/doc/Makefile,v 1.7 2001/08/23 08:12:26 murray Exp $i
+# $FreeBSD: www/en/doc/Makefile,v 1.8 2001/10/29 10:14:31 murray Exp $
 #
 # Build the FreeBSD documentation *outside* of the www tree, and install it
 # in to the right place as necessary.
@@ -9,32 +9,39 @@
 # requirements here.
 #
 
+.if exists(../Makefile.conf)
+.include "../Makefile.conf"
+.endif
+.if exists(../Makefile.inc)
+.include "../Makefile.inc"
+.endif
+
 all: all-all all-install all-pgpkeyring
 
 all-all:
 	@unset DESTDIR || true; \
-	 cd ${.CURDIR}/../../../doc/en_US.ISO8859-1; \
+	 cd ${DOC_PREFIX}/${LANGCODE}; \
 		${MAKE} FORMATS="html-split html" \
 			INSTALL_COMPRESSED= all
 all-install:
 	@unset DESTDIR || true; \
-	 cd ${.CURDIR}/../../../doc/en_US.ISO8859-1; \
+	 cd ${DOC_PREFIX}/${LANGCODE}; \
 		${MAKE} FORMATS="html-split html" DOCDIR=${.OBJDIR} \
 			INSTALL_COMPRESSED= install
 all-pgpkeyring:
 	@unset DESTDIR || true; \
-	 cd ${.CURDIR}/../../../doc/en_US.ISO8859-1/books/handbook; \
+	 cd ${DOC_PREFIX}/${LANGCODE}/books/handbook; \
 		${MAKE} \
 			pgpkeyring > ${.OBJDIR}/pgpkeyring.txt
 
 install clean:
 	@unset DESTDIR || true; \
-	 cd ${.CURDIR}/../../../doc/en_US.ISO8859-1; \
+	 cd ${DOC_PREFIX}/${LANGCODE}; \
 		${MAKE} FORMATS="html-split html" DOCDIR=${DESTDIR}/data/doc \
 			INSTALL_COMPRESSED= ${.TARGET}
 .if make(install)
 	@unset DESTDIR || true; \
-	 cd ${.CURDIR}/../../../doc/en_US.ISO8859-1/books/handbook; \
+	 cd ${DOC_PREFIX}/${LANGCODE}/books/handbook; \
 		${MAKE} \
 			pgpkeyring > ${DESTDIR}/data/doc/pgpkeyring.txt
 .endif
@@ -42,11 +49,11 @@ install clean:
 	${RM} -rf en* handbook faq pgpkeyring.txt
 .endif
 
-.include "${.CURDIR}/../../share/mk/web.site.mk"
+.include "${WEB_PREFIX}/share/mk/web.site.mk"
 
 obj: _OBJUSE
 
 _OBJUSE: .USE
 	@unset DESTDIR || true; \
-	 cd ${.CURDIR}/../../../doc/en_US.ISO8859-1; \
+	 cd ${DOC_PREFIX}/${LANGCODE}; \
 		${MAKE} ${.TARGET}
