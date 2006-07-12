@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/projects/Makefile,v 1.25 2006/04/11 06:03:14 murray Exp $
+# $FreeBSD: www/en/projects/Makefile,v 1.26 2006/07/12 13:35:00 simon Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -15,6 +15,6 @@ DOCS+=	summerofcode-2005.sgml
 
 INDEXLINK= projects.html
 
-SUBDIR=	 acpi busdma c99 dingo gnats4 ideas mips bigdisk netperf
+SUBDIR=	 acpi busdma c99 dingo ideas mips bigdisk netperf
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
