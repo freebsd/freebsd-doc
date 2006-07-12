@@ -1,4 +1,4 @@
-# $FreeBSD: www/zh_CN/Makefile,v 1.1.1002.14 2006/06/26 05:13:33 delphij Exp $
+# $FreeBSD$
 # The FreeBSD Simplified Chinese Documentation Project
 # Original Revision: 1.135
 .if exists(../Makefile.conf)
@@ -80,7 +80,7 @@ SUBDIR+=	doc
 SUBDIR+= layout
 #SUBDIR+= logo
 
-WEBBASE?=	/data/zh_CN
+WEBDIR?=	data/zh_CN
 
 DATESUBST?=	's/<!ENTITY date[ \t]*"$$Free[B]SD. .* \(.* .*\) .* .* $$">/<!ENTITY date	"上次更新： \1">/'
 

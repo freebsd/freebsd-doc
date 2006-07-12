@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="GB2312" ?>
 
-<!-- $FreeBSD: www/zh_CN/news/news-rdf.xsl,v 1.1.1002.7 2005/12/18 18:18:01 delphij Exp $ -->
+<!-- $FreeBSD$ -->
 
 <!-- The FreeBSD Simplified Chinese Documentation Project -->
 <!-- Original Revision 1.7 -->
@@ -60,7 +60,7 @@
 	</xsl:otherwise>
       </xsl:choose>
       <link>
-	<xsl:text>http://cnsnap.cn.FreeBSD.org/zh_CN/news/newsflash.html#</xsl:text>
+	<xsl:text>http://www.FreeBSD.org/zh_CN/news/newsflash.html#</xsl:text>
 	<xsl:call-template name="html-news-generate-anchor">
 	  <xsl:with-param name="label" select="'event'" />
 	  <xsl:with-param name="year" select="$year" />
