@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: www/zh_TW/Makefile,v 1.1 2006/07/11 13:24:04 hrs Exp $
 # Original revision: 
 
 .if exists(../Makefile.conf)
@@ -12,6 +12,6 @@
 SUBDIR+=	doc
 .endif
 
-WEBBASE?=	/data/zh_TW
+WEBDIR?=	data/zh_TW
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
