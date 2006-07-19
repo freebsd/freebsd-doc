@@ -4,7 +4,7 @@
      The FreeBSD Russian Documentation Project
 
      $FreeBSD$
-     $FreeBSDru: frdp/www/ru/includes.xsl,v 1.18 2006/01/09 17:23:43 gad Exp $
+     $FreeBSDru: frdp/www/ru/includes.xsl,v 1.19 2006/07/19 10:45:38 den Exp $
 
      Original revision: 1.20
 -->
@@ -168,7 +168,7 @@
 				<li><a href="{$base}/platforms/sparc.html">sparc64</a></li>
 			</ul>
 		</li>
-		<li><a href="{$base}/doc/en_US.ISO8859-1/articles/contributing/index.html">Содействие проекту</a></li>
+		<li><a href="{$base}/doc/{$url.doc.langcode}/articles/contributing/index.html">Содействие проекту</a></li>
 		</ul>
 	</xsl:if>
 
