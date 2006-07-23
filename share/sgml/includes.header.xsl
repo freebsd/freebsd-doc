@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/share/sgml/includes.header.xsl,v 1.17 2006/05/08 23:15:38 kuriyama Exp $ -->
+<!-- $FreeBSD: www/share/sgml/includes.header.xsl,v 1.18 2006/05/09 07:30:29 kuriyama Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -170,6 +170,7 @@
 				<li><a href="{$base}/platforms/xbox.html">xbox</a></li>
 			</ul>
 		</li>
+		<li><a href="{$base}/projects/ideas/">Project Ideas</a></li>
 		<li><a href="{$base}/doc/en_US.ISO8859-1/articles/contributing/index.html">Contributing</a></li>
 		</ul>
     	</xsl:if>
