@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/cgi/cgi-style.pl,v 1.31 2006/05/08 23:15:37 kuriyama Exp $
+# $FreeBSD: www/en/cgi/cgi-style.pl,v 1.32 2006/07/23 18:36:53 simon Exp $
 #
 # Perl routines to encapsulate various elements of HTML page style.
 
@@ -13,7 +13,9 @@ if (!defined($hsty_base)) {
     # serve their local copy instead of going to the main site.
     # However, if we aren't running as a cgi, or if we're
     # running on cgi, hub, docs or people, use the absolute home path.
-    if (!defined($ENV{'HTTP_HOST'}) || $ENV{'HTTP_HOST'} =~ /(cgi|hub|docs|people).freebsd.org/) {
+    if (!defined($ENV{'HTTP_HOST'}) ||
+	$ENV{'HTTP_HOST'} =~ /(cgi|hub|docs|people).freebsd.org/i) {
+
 	$hsty_base = 'http://www.FreeBSD.org'
     } else {
 	$hsty_base = '..';
