@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/cgi/Makefile,v 1.28 2005/12/04 12:50:17 ceri Exp $
+# $FreeBSD: www/en/cgi/Makefile,v 1.29 2005/12/04 16:18:40 ceri Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -23,7 +23,6 @@ CGI+=	confirm-code.cgi
 CGI+=	cvsweb.cgi
 CGI+=	dosendpr.cgi
 CGI+=	ftp.cgi
-CGI+=	gallery.cgi
 CGI+=	getmsg.cgi
 CGI+=	mailindex.cgi
 CGI+=	man.cgi
