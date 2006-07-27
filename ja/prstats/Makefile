@@ -1,5 +1,5 @@
-# $FreeBSD: www/ja/prstats/Makefile,v 1.1 2002/05/13 20:09:04 hrs Exp $
-# Original revision: 1.4
+# $FreeBSD: www/ja/prstats/Makefile,v 1.2 2002/05/15 17:11:24 hrs Exp $
+# Original revision: 1.5
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -12,12 +12,5 @@ DOCS=	index.sgml
 
 ### Revision checking
 REVCHECK=	yes
-
-.if defined(WITH_PRSTATS)
-SUBDIR+= ../../tools/prstats
-.else
-beforeinstall:
-	${PERL} -pi -e 's/SRC=\"gnats/SRC=\"http:\/\/www.FreeBSD.org\/prstats\/gnats/' index.html
-.endif
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
