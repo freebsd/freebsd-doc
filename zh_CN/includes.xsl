@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="GB2312" ?>
 
-<!-- $FreeBSD: www/zh_CN/includes.xsl,v 1.1.1002.19 2006/06/26 05:13:33 delphij Exp $ -->
+<!-- $FreeBSD$ -->
 
 <!-- The FreeBSD Simplified Chinese Documentation Project -->
 <!-- Original revision: 1.20 -->
@@ -20,7 +20,7 @@
   <xsl:param name="param-l10n-date-format-MD"
              select="'%M %D 日'" />
 
-  <!-- From FreeBSD: www/share/sgml/includes.header.xsl,v 1.18 2006/05/09 07:30:29 kuriyama -->
+  <!-- From FreeBSD: www/share/sgml/includes.header.xsl,v 1.19 2006/07/23 13:27:16 joel -->
   <xsl:variable name="i.daemon">
     <img src="{$enbase}/gifs/daemon.gif" alt="" align="left" width="80" height="76"/>
   </xsl:variable>
@@ -171,6 +171,7 @@
 				<li><a href="{$base}/platforms/xbox.html">xbox</a></li>
 			</ul>
 		</li>
+		<li><a href="{$enbase}/projects/ideas/">项目人员招募 (英文)</a></li>
 		<li><a href="{$enbase}/doc/zh_CN.GB2312/articles/contributing/index.html">为 FreeBSD 提供帮助</a></li>
 		</ul>
     	</xsl:if>
