@@ -2,7 +2,7 @@
      The FreeBSD Russian Documentation Project
 
      $FreeBSD$
-     $FreeBSDru: frdp/doc/ru_RU.KOI8-R/share/sgml/freebsd.dsl,v 1.17 2006/03/27 16:13:46 gad Exp $
+     $FreeBSDru: frdp/doc/ru_RU.KOI8-R/share/sgml/freebsd.dsl,v 1.18 2006/08/08 07:49:39 marck Exp $
 
      Original revision: 1.22
 -->
@@ -46,7 +46,7 @@
             (make element gi: "p"
                   attributes: (list (list "align" "center"))
               (make element gi: "small"  
-                (literal "По вопросам связанными с FreeBSD, прочитайте ")
+                (literal "По вопросам, связанным с FreeBSD, прочитайте ")
 		(create-link
 		  (list (list "HREF" "http://www.FreeBSD.org/ru/docs.html"))
                   (literal "документацию"))
@@ -56,12 +56,12 @@
                   (literal "questions@FreeBSD.org"))
                 (literal ">.")
                 (make empty-element gi: "br")
-                (literal "По вопросам связанным с этой документацией, пишите <")
+                (literal "По вопросам, связанным с этой документацией, пишите <")
 		(create-link (list (list "HREF" "mailto:doc@FreeBSD.org"))
                   (literal "doc@FreeBSD.org"))
 	        (literal ">.")
                 (make empty-element gi: "br")
-                (literal "По вопросам связанным с русским переводом документации, пишите в рассылку <")
+                (literal "По вопросам, связанным с русским переводом документации, пишите в рассылку <")
 		(create-link (list (list "HREF" "mailto:frdp@FreeBSD.org.ua"))
                   (literal "frdp@FreeBSD.org.ua"))
 	        (literal ">.")
