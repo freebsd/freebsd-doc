@@ -26,7 +26,7 @@
 # pds.cgi - FreeBSD Ports download sources cgi script
 #	    print a list of source files for a port
 #
-# $FreeBSD: www/en/cgi/pds.cgi,v 1.9 2002/04/17 08:15:39 kuriyama Exp $
+# $FreeBSD: www/en/cgi/pds.cgi,v 1.10 2002/05/02 14:21:40 wosch Exp $
 
 sub escape($) { $_ = $_[0]; s/&/&amp;/g; s/</&lt;/g; s/>/&gt;/g; $_; }
 
@@ -36,7 +36,8 @@ $hsty_email = 'ports@FreeBSD.org';
 require "./cgi-lib.pl";
 require "./cgi-style.pl";
 
-$file = escape($ENV{'QUERY_STRING'});
+$ENV{'QUERY_STRING'} =~ /([\w\-\.\/+_@]+)/;
+$file = escape($1);
 $file_rcs = "$file/Makefile,v";
 
 $cvsroot = "/usr/local/www/cvsroot/FreeBSD";
@@ -62,6 +63,11 @@ sub footer {
 
 print &short_html_header("FreeBSD Ports download script");
 print "<p>\n";
+if ($file ne escape($ENV{'QUERY_STRING'})) {
+    print qq{Invalid query string\n} . &footer;
+    exit;
+}
+
 if ($file !~ m%^ports/[^/]+/[^/]+$%) {
     print qq{Invalid module name: "$file"\n} . &footer; 
     exit;
