@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: www/de/platforms/ia64/Makefile,v 1.3 2005/09/19 16:55:28 jkois Exp $
 # $FreeBSDde: de-www/platforms/ia64/Makefile,v 1.4 2005/09/18 10:33:54 jkois Exp $
 # basiert auf: 1.6
 
@@ -11,8 +11,6 @@
 
 DOCS=	machines.sgml refs.sgml
 #DATA=	i2inside.png mckinley-die.png merced-die.png montecito-die.png
-
-_GEN=	index.html todo.html
 
 XMLDOCS=        index::news.xml:
 XMLDOCS+=       todo::news.xml:

@@ -1,28 +1,29 @@
-<!-- $FreeBSD: www/es/gnome/index.xsl,v 1.4 2004/03/04 16:36:12 jesusr Exp $ -->
+<!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
+				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
+<!ENTITY base "..">
+<!ENTITY title "Proyecto FreeBSD GNOME">
+<!ENTITY % navinclude.gnome "INCLUDE">
+]>
+
+<!-- $FreeBSD: www/es/gnome/index.xsl,v 1.5 2004/03/05 19:31:58 jesusr Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
                 xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
                 xmlns:rdf1="http://my.netscape.com/rdf/simple/0.9/"
                 exclude-result-prefixes="rdf rdf1" version="1.0">
+  <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
 
-  <xsl:import href="../includes.xsl"/>
-  <xsl:import href="includes.xsl"/>
-
-  <xsl:variable name="base" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/es/gnome/index.xsl,v 1.4 2004/03/04 16:36:12 jesusr Exp $'"/>
-  <xsl:variable name="title" select="'Proyecto FreeBSD GNOME'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/es/gnome/index.xsl,v 1.5 2004/03/05 19:31:58 jesusr Exp $'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
               doctype-public="-//W3C//DTD HTML 4.01 Transitional//EN"/>
 
   <xsl:template match="/">
     <html>
-      <xsl:copy-of select="$header1"/>
+      &header1;
 
-      <body bgcolor="#FFFFFF" text="#000000" link="#0000FF" vlink="#840084"
-            alink="#0000FF">
-
-        <xsl:copy-of select="$header2"/>
+      <body>
+        &header2;
 
         <table border="0" cellspacing="0" cellpadding="2">
           <tr>
@@ -91,7 +92,7 @@
 
             <td align="left" valign="top" rowspan="2">
               <h2><font color="#990000">&#191;Qu&#233; es GNOME?</font></h2>
-              <img src="{$base}/gnome/images/gnome.png" align="right"
+              <img src="&base;/gnome/images/gnome.png" align="right"
                    border="0" alt="GNOME Logo"/>
 
               <p>El proyecto GNOME nace como un esfuerzo de crear un entorno
@@ -130,8 +131,7 @@
               <h2><font color="#990000">Estado de la migraci&#243;n</font>
 	        </h2>
 
-              <p>Actualmente se soporta GNOME 
-	        <xsl:copy-of select="$gnomever"/> en los sistemas FreeBSD 4.x
+              <p>Actualmente se soporta GNOME en los sistemas FreeBSD 4.x
 		y 5-CURRENT.  Cualquier versi&#243;n anterior a FreeBSD 4.8 
 		no est&#225; soportada.  La mayor parte de GNOME ha sido 
 		migrada aunque, a&#250;n queda 
@@ -215,7 +215,11 @@
 
           </tr>
         </table>
-        <xsl:copy-of select="$footer"/>
+
+	<div id="FOOTER">
+	  &copyright;<br />
+	  &date;
+	</div> <!-- FOOTER -->
       </body>
     </html>
   </xsl:template>
