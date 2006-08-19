@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/ports.cgi,v 1.92 2005/11/30 09:23:48 pav Exp $
+# $FreeBSD: www/en/cgi/ports.cgi,v 1.93 2005/12/05 21:16:19 fenner Exp $
 #
 # ports.cgi - search engine for FreeBSD ports
 #             	o search for a port by name or description
@@ -110,17 +110,17 @@ sub init_variables {
 	);
 
     $remotePrefixHtml =
-	'../ports';
+	"$hsty_base/ports";
 
     # CVS Web interface
     $remotePrefixCvs =
 	'http://cvsweb.FreeBSD.org/ports';
 
     # Ports documentation
-    $portsDesc = '../ports/';
+    $portsDesc = "$hsty_base/ports/";
 
     # location of the tiny BSD daemon
-    $daemonGif = '<IMG SRC="/gifs/littlelogo.gif" ALT="Really small BSD Daemon">';
+    $daemonGif = "<IMG SRC='$hsty_base/gifs/littlelogo.gif' ALT='Really small BSD Daemon'>";
 
     # visible E-Mail address, plain text
     $mailto = 'www@FreeBSD.org';
@@ -481,10 +481,10 @@ Search for:
 sub footer {
 
     print qq{
-<img ALIGN="RIGHT" src="/gifs/powerlogo.gif" alt="Powered by FreeBSD">
+<img ALIGN="RIGHT" src="$hsty_base/gifs/powerlogo.gif" alt="Powered by FreeBSD">
 &copy; 1996-2005 by Wolfram Schneider. All rights reserved.<br>
 };
-    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.92 2005/11/30 09:23:48 pav Exp $} . "<br>\n";
+    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.93 2005/12/05 21:16:19 fenner Exp $} . "<br>\n";
     print qq{Please direct questions about this service to
 <I><A HREF="$mailtoURL">$mailto</A></I><br>\n};
     print qq{General questions about FreeBSD ports should be sent to } .
@@ -528,14 +528,12 @@ Package download links point to the FreeBSD 6-STABLE
 version and <b>not</b> to the latest releases.<p>
 
 The script ports.cgi use the file
-<a href="../ports/$ports_database.bz2">$ports_database</a>
+<a href="$hsty_base/ports/$ports_database.bz2">$ports_database</a>
 as database for it's operations. $ports_database is updated automatically every
 two hours.<p>
 
 You may also search the
 <a href="http://www.FreeBSD.org/cgi/man.cgi?manpath=FreeBSD+Ports">ports manual pages</a>.<p>
-
-Get the <a href ="source">Source</a> of this script.<p>
 
 <a href="$script_name">Back to the search engine</a><p>
 <HR noshade>
