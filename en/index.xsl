@@ -1,13 +1,13 @@
-<!-- $FreeBSD: www/en/index.xsl,v 1.151 2006/05/21 10:31:53 simon Exp $ -->
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
+				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
+<!ENTITY title "The FreeBSD Project">
+]>
+
+<!-- $FreeBSD: www/en/index.xsl,v 1.152 2006/06/28 16:24:17 pav Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
-
-  <xsl:import href="includes.xsl"/>
-  <xsl:import href="news/includes.xsl"/>
-
-  <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="''"/>
-  <xsl:variable name="title" select="'The FreeBSD Project'"/>
+  <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
 
   <!-- these params should be externally bound. The values
        here are not used actually -->
@@ -20,31 +20,30 @@
   <xsl:param name="news.project.xml" select="'none'"/>
   <xsl:param name="events.xml-master" select="'none'"/>
   <xsl:param name="events.xml" select="'none'"/>
-  <xsl:param name="curdate.xml" select="'none'"/>
 
-  <xsl:output type="html" encoding="iso-8859-1"
+  <xsl:output type="html" encoding="&xml.encoding;"
               doctype-public="-//W3C//DTD HTML 4.01 Transitional//EN"/>
 
   <xsl:template match="/">
     <html>
       <head>
-	<title><xsl:value-of select="$title"/></title>
+	<title>&title;</title>
 	<meta name="description" content="The FreeBSD Project"/>
 	<meta name="keywords" content="FreeBSD, BSD, UNIX, Support, Ports,
 	      Release, Application, Software, Handbook, FAQ, Tutorials, Bugs,
 	      CVS, CVSup, News, Commercial Vendors, homepage, CTM, Unix"/>
-	<link rel="shortcut icon" href="{$base}/favicon.ico" type="image/x-icon"/>
-	<link rel="icon" href="{$base}/favicon.ico" type="image/x-icon"/>
-    <link rel="stylesheet" media="screen" href="{$base}/layout/css/fixed.css?20060509" type="text/css" title="Normal Text" />
-    <link rel="alternate stylesheet" media="screen" href="{$base}/layout/css/fixed_large.css" type="text/css" title="Large Text" />
-    <script type="text/javascript" src="{$base}/layout/js/styleswitcher.js"></script>
+	<link rel="shortcut icon" href="&base;/favicon.ico" type="image/x-icon"/>
+	<link rel="icon" href="&base;/favicon.ico" type="image/x-icon"/>
+    <link rel="stylesheet" media="screen" href="&base;/layout/css/fixed.css?20060509" type="text/css" title="Normal Text" />
+    <link rel="alternate stylesheet" media="screen" href="&base;/layout/css/fixed_large.css" type="text/css" title="Large Text" />
+    <script type="text/javascript" src="&base;/layout/js/styleswitcher.js"></script>
 	<link rel="alternate" type="application/rss+xml"
-	  title="FreeBSD Project News" href="{$base}/news/news.rdf" />
+	  title="FreeBSD Project News" href="&base;/news/news.rdf" />
 	<link rel="alternate" type="application/rss+xml"
-	  title="FreeBSD Security Advisories" href="{$base}/security/advisories.rdf" />
+	  title="FreeBSD Security Advisories" href="&base;/security/advisories.rdf" />
 	<link rel="alternate" type="application/rss+xml"
-	  title="FreeBSD GNOME Project News" href="{$base}/gnome/news.rdf" />
-	
+	  title="FreeBSD GNOME Project News" href="&base;/gnome/news.rdf" />
+
 	<!-- Formatted to be easy to spam harvest, please do not reformat. -->
 	<xsl:comment>
         Spamtrap, do not email:
@@ -56,7 +55,7 @@
 
    <div id="CONTAINERWRAP">
     <div id="CONTAINER">
-      <xsl:copy-of select="$header2"/>
+      &header2;
       <div id="CONTENT">
 
         <div id="FRONTCONTAINER">
@@ -76,13 +75,13 @@
 				  It is derived from BSD, the version of UNIX&#174; developed at the
 				  University of California, Berkeley.
 				  It is developed and maintained by a
-				  <a href="{$base}/doc/en_US.ISO8859-1/articles/contributors/staff-committers.html">large
+				  <a href="&base;/doc/en_US.ISO8859-1/articles/contributors/staff-committers.html">large
 				    team of individuals</a>.
-				  Additional <a href="{$base}/platforms/">platforms</a> are in
+				  Additional <a href="&base;/platforms/">platforms</a> are in
 				  various stages of development.
 				</p>
 				<div id="TXTFRONTFEATURELINK">
-				&#187;<a href="{$base}/about.html" title="Learn More">Learn More</a>
+				&#187;<a href="&base;/about.html" title="Learn More">Learn More</a>
 				</div> <!-- TXTFRONTFEATURELINK -->
 			</div> <!-- FRONTFEATURECONTENT -->
 		</div> <!-- FRONTFEATURELEFT -->
@@ -91,33 +90,33 @@
 			<div class="frontgetroundbox">
 			  <div class="frontgettop"><div><b style="display: none">.</b></div></div>
 				<div class="frontgetcontent">
-				  <a href="{$base}/where.html">Get FreeBSD Now</a>
+				  <a href="&base;/where.html">Get FreeBSD Now</a>
 				</div> <!-- frontgetcontent -->
 			  <div class="frontgetbot"><div><b style="display: none">.</b></div></div>
 			</div> <!-- frontgetroundbox -->
-			
+
 			<div id="FRONTRELEASES">
 			  <div id="FRONTRELEASESCONTENT" class="txtshortcuts">
-				  <h2><a href="{$base}/releases/">LATEST RELEASES</a></h2>
+				  <h2><a href="&base;/releases/">LATEST RELEASES</a></h2>
 				  <ul id="FRONTRELEASESLIST">
 					<li>
-					  <a href="{$u.rel.announce}">Production Release <xsl:value-of select="$rel.current"/></a>
+					  <a href="&u.rel.announce;">Production Release &rel.current;/></a>
 					</li>
 					<li>
-					  <a href="{$u.rel2.announce}">Production (Legacy) Release <xsl:value-of select="$rel2.current"/></a>
+					  <a href="&u.rel2.announce;">Production (Legacy) Release &rel2.current;</a>
 					</li>
-				    <xsl:if test="$beta.testing">
+			    <xsl:if test="'&beta.testing;' != 'IGNORE'">
 					<li>
-					  <a href="{$base}/where.html#helptest">Upcoming Release
-					    <xsl:value-of select="concat($betarel.current, '-', $betarel.vers)"/></a>
+					  <a href="&base;/where.html#helptest">Upcoming Release
+				            &betarel.current; - &betarel.vers;</a>
 					</li>
-				    </xsl:if>
-				    <xsl:if test="$beta2.testing">
+			    </xsl:if>
+			    <xsl:if test="'&beta2.testing;' != 'IGNORE'">
 					<li>
-					  <a href="{$base}/where.html#helptest">Upcoming Release
-					    <xsl:value-of select="concat($betarel2.current, '-', $betarel2.vers)"/></a>
+					  <a href="&base;/where.html#helptest">Upcoming Release
+				            &betarel2.current; - &betarel2.vers;</a>
 					</li>
-				    </xsl:if>
+			    </xsl:if>
 				  </ul>
 			  </div> <!-- FRONTRELEASESCONTENT -->
 			</div> <!-- FRONTRELEASES -->
@@ -128,31 +127,31 @@
 			<div id="LANGUAGENAV">
 				<ul id="LANGUAGENAVLIST">
 				  <li>
-					<a href="{$base}/de/" title="German">de</a>
+					<a href="&base;/de/" title="German">de</a>
 				  </li>
 				  <li>
-					<a href="{$base}/" title="English">en</a>
+					<a href="&base;/" title="English">en</a>
 				  </li>
 				  <li>
-					<a href="{$base}/es/" title="Spanish">es</a>
+					<a href="&base;/es/" title="Spanish">es</a>
 				  </li>
 				  <li>
-					<a href="{$base}/fr/" title="French">fr</a>
+					<a href="&base;/fr/" title="French">fr</a>
 				  </li>
 				  <li>
-					<a href="{$base}/it/" title="Italian">it</a>
+					<a href="&base;/it/" title="Italian">it</a>
 				  </li>
 				  <li>
-					<a href="{$base}/ja/" title="Japanese">ja</a>
+					<a href="&base;/ja/" title="Japanese">ja</a>
 				  </li>
 				  <li class="last-child">
-					<a href="{$base}/ru/" title="Russian">ru</a>
+					<a href="&base;/ru/" title="Russian">ru</a>
 				  </li>
 				</ul>
 			</div> <!-- LANGUAGENAV -->
 
 			<div id="MIRROR">
-			  <form action="{$cgibase}/mirror.cgi" method="get">
+			  <form action="&cgibase;/mirror.cgi" method="get">
 				<div>
 				  <h2 class="blockhide"><label for="MIRRORSEL">Mirror</label></h2>
 				  <select id="MIRRORSEL" name="goto">
@@ -170,22 +169,22 @@
 				  <h2>SHORTCUTS</h2>
 				  <ul id="FRONTSHORTCUTSLIST">
 					<li>
-					  <a href="{$base}/community/mailinglists.html" title="Mailing Lists">Mailing Lists</a>
+					  <a href="&base;/community/mailinglists.html" title="Mailing Lists">Mailing Lists</a>
 					</li>
 					<li>
-					  <a href="{$base}/send-pr.html" title="Report a Bug">Report a Bug</a>
+					  <a href="&base;/send-pr.html" title="Report a Bug">Report a Bug</a>
 					</li>
 					<li>
-					  <a href="{$base}/doc/en_US.ISO8859-1/books/faq/index.html" title="FAQ">FAQ</a>
+					  <a href="&base;/doc/en_US.ISO8859-1/books/faq/index.html" title="FAQ">FAQ</a>
 					</li>
 					<li>
-					  <a href="{$base}/doc/en_US.ISO8859-1/books/handbook/index.html" title="Handbook">Handbook</a>
+					  <a href="&base;/doc/en_US.ISO8859-1/books/handbook/index.html" title="Handbook">Handbook</a>
 					</li>
 					<li>
 					  <a href="http://www.freebsdfoundation.org/" title="Foundation">Foundation</a>
 					</li>
 					<li>
-					  <a href="{$base}/ports/index.html" title="Ports">Ports</a>
+					  <a href="&base;/ports/index.html" title="Ports">Ports</a>
 					</li>
 
 				  </ul>
@@ -195,12 +194,12 @@
 			<div class="frontnewroundbox">
 			  <div class="frontnewtop"><div><b style="display: none">.</b></div></div>
 			    <div class="frontnewcontent">
-			      <a href="{$base}/projects/newbies.html">New to FreeBSD?</a>
+			      <a href="&base;/projects/newbies.html">New to FreeBSD?</a>
 			    </div> <!-- frontnewcontent -->
 			  <div class="frontnewbot"><div><b style="display: none">.</b></div></div>
 			</div> <!-- frontnewroundbox -->
 		</div> <!-- FEATURERIGHT -->
-				
+
             </div> <!-- FRONTFEATURECONTAINER -->
 
 	    <br class="clearboth" />
@@ -218,10 +217,10 @@
 			  <div>
 				<ul class="newseventslist">
 				  <li class="first-child">
-					<a href="{$base}/news/newsflash.html" title="More News">More News</a>
+					<a href="&base;/news/newsflash.html" title="More News">More News</a>
 				  </li>
 				  <li class="last-child">
-					<a href="{$base}/news/news.rdf" title="News RSS Feed"><img class="rssimage" src="{$base}/layout/images/ico_rss.png" width="27" height="12" alt="News RSS Feed" /></a>
+					<a href="&base;/news/news.rdf" title="News RSS Feed"><img class="rssimage" src="&base;/layout/images/ico_rss.png" width="27" height="12" alt="News RSS Feed" /></a>
 				  </li>
 				</ul>
 			  </div> <!-- unnamed -->
@@ -239,13 +238,12 @@
 			<xsl:call-template name="html-index-events-items">
 				<xsl:with-param name="events.xml-master" select="$events.xml-master" />
 				<xsl:with-param name="events.xml" select="$events.xml" />
-				<xsl:with-param name="curdate.xml" select="$curdate.xml" />
 			</xsl:call-template>
 
 			  <div>
 				<ul class="newseventslist">
 				  <li class="only-child">
-					<a href="{$base}/events/" title="More Events">More Events</a>
+					<a href="&base;/events/" title="More Events">More Events</a>
 				  </li>
 				</ul>
 			  </div> <!-- unnamed -->
@@ -268,7 +266,7 @@
 			  <div>
 				<ul class="newseventslist">
 				  <li class="only-child">
-					<a href="{$base}/news/press.html" title="More Media">More Media</a>
+					<a href="&base;/news/press.html" title="More Media">More Media</a>
 				  </li>
 				</ul>
 			  </div> <!-- unnamed -->
@@ -291,10 +289,10 @@
 			  <div>
 				<ul class="newseventslist">
 				  <li class="first-child">
-					<a href="{$base}/security/" title="More Security Advisories">More</a>
+					<a href="&base;/security/" title="More Security Advisories">More</a>
 				  </li>
 				  <li class="last-child">
-					<a href="{$base}/security/advisories.rdf" title="Security Advisories RSS Feed"><img class="rssimage" src="{$base}/layout/images/ico_rss.png" width="27" height="12" alt="Security Advisories RSS Feed" /></a>
+					<a href="&base;/security/advisories.rdf" title="Security Advisories RSS Feed"><img class="rssimage" src="&base;/layout/images/ico_rss.png" width="27" height="12" alt="Security Advisories RSS Feed" /></a>
 				  </li>
 				</ul>
 			  </div> <!-- unnamed -->
@@ -322,7 +320,7 @@
 
       </div> <!-- CONTENT -->
       <div id="FOOTER">
-        <xsl:copy-of select="$copyright"/>
+	&copyright;
 
 	The mark FreeBSD is a registered trademark of The FreeBSD
 	Foundation and is used by The FreeBSD Project with the

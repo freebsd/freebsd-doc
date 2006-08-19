@@ -1,39 +1,43 @@
 <?xml version="1.0"?>
+<!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD Fragment//EN"
+                                "http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
+<!ENTITY base "../..">
+<!ENTITY title "User Groups">
+<!ENTITY email "freebsd-www">
+<!ENTITY % navinclude.community "INCLUDE">
+]>
 
-<!-- $FreeBSD: www/share/sgml/templates.usergroups.xsl,v 1.5 2005/11/30 21:35:22 pav Exp $ -->
+<!-- $FreeBSD$ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS"
   exclude-result-prefixes="cvs">
+  <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
 
-  <xsl:import href="includes.xsl" />
-  <xsl:variable name="section" select="'community'"/>
-
-  <xsl:output method="xml" encoding="iso8859-1"
+  <xsl:output method="xml"
     doctype-system="http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"
     doctype-public="-//W3C//DTD XHTML 1.0 Transitional//EN"/>
 
-  <xsl:variable name="base" select="'../..'"/>
   <xsl:variable name="date">
     <xsl:value-of select="//cvs:keyword[@name='freebsd']"/>
   </xsl:variable>
-  <xsl:variable name="email" select="'freebsd-www'"/>
-  <xsl:variable name="title" select="'User Groups'"/>
 
   <xsl:template match="/">
     <html>
-      <xsl:copy-of select="$header1"/>
+      &header1;
 
       <body>
-        <div id="CONTAINERWRAP">
-          <div id="CONTAINER">
-	    <xsl:copy-of select="$header2"/>
+	<div id="CONTAINERWRAP">
+	  <div id="CONTAINER">
+	    &header2;
 
 	    <div id="CONTENT">
-      	      <xsl:copy-of select="$sidenav"/>
+	      <div id="SIDEWRAP">
+		&nav;
+	      </div> <!-- SIDEWRAP -->
 
-      	      <div id="CONTENTWRAP">
-		<xsl:copy-of select="$header3"/>
+	      <div id="CONTENTWRAP">
+		&header3;
 
 	<xsl:call-template name="html-usergroups-list-header" />
 
@@ -48,11 +52,14 @@
 	</xsl:call-template>
 
 	      </div> <!-- CONTENTWRAP -->
+
 	      <br class="clearboth" />
 	    </div> <!-- CONTENT -->
 
-	    <xsl:copy-of select="$footer"/>
-
+	    <div id="FOOTER">
+	      &copyright;<br />
+	      &date;
+	    </div> <!-- FOOTER -->
 	  </div> <!-- CONTAINER -->
 	</div> <!-- CONTAINERWRAP -->
       </body>

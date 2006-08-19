@@ -1,15 +1,17 @@
-<!-- $FreeBSD: www/en/gnome/rss.xsl,v 1.3 2004/01/24 07:58:44 marcus Exp $ -->
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
+				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
+<!ENTITY base "..">
+<!ENTITY title "FreeBSD GNOME Project News System">
+]>
+
+<!-- $FreeBSD: www/en/gnome/rss.xsl,v 1.4 2005/09/20 23:35:29 marcus Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
                 xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
 		version="1.0">
 
-  <xsl:import href="../includes.xsl"/>
-  <xsl:import href="includes.xsl"/>
-
-  <xsl:variable name="base" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/gnome/rss.xsl,v 1.3 2004/01/24 07:58:44 marcus Exp $'"/>
-  <xsl:variable name="title" select="'FreeBSD GNOME Project News System'"/>
+  <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
 
   <xsl:output type="xml" />
 

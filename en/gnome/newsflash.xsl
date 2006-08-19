@@ -1,66 +1,58 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
+<!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
+				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
+<!ENTITY base "..">
+<!ENTITY title "FreeBSD GNOME News Flash">
+<!ENTITY email "freebsd-gnome">
+<!ENTITY % navinclude.developers "INCLUDE">
+]>
 
-<!-- $FreeBSD: www/en/gnome/newsflash.xsl,v 1.7 2005/12/29 07:27:05 adamw Exp $ -->
+<!-- $FreeBSD: www/en/gnome/newsflash.xsl,v 1.8 2006/01/21 14:58:35 pav Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS" exclude-result-prefixes="cvs">
 
-  <xsl:import href="includes.navgnome.xsl"/>
-  <xsl:import href="../includes.xsl"/>
-  <xsl:import href="includes.xsl"/>
+  <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
 
-
-  <xsl:variable name="base" select="'..'"/>
-  <xsl:variable name="title" select="'FreeBSD GNOME News Flash'"/>
   <xsl:variable name="date">
     <xsl:value-of select="//cvs:keyword[@name='freebsd']"/>
   </xsl:variable>
-  <xsl:variable name="section" select="'developers'"/>
 
-  <xsl:output type="html" encoding="iso-8859-1"/>
+  <xsl:output type="html" encoding="&xml.encoding;"/>
 
   <xsl:template match="news">
     <html>
-
-      <xsl:copy-of select="$header1"/>
-
+      &header1;
       <body>
 
-	<div id="containerwrap">
-	  <div id="container">
+	<div id="CONTAINERWRAP">
+	  <div id="CONTAINER">
+	    &header2;
 
-	<xsl:copy-of select="$header2"/>
+	    <div id="CONTENT">
+              <div id="SIDEWRAP">
+                &nav;
+              </div> <!-- SIDEWRAP -->
 
-	    <div id="content">
-	      <xsl:copy-of select="$gnome_sidenav"/>
+	      <div id="CONTENTWRAP">
+		&header3;
 
-	      <div id="contentwrap">
-		<xsl:copy-of select="$header3"/>
+		<img src="&base;/gifs/news.jpg" align="right" border="0" width="193"
+		  height="144" alt="FreeBSD GNOME News"/>
 
-	<!-- Notice how entity references in SGML become variable references
-	     in the stylesheet, and that the syntax for referring to variables
-	     inside an attribute is "{$variable}".
+		<xsl:apply-templates select="descendant::month"/>
 
-	     This is just dis-similar enough to Perl and the shell that you
-	     end up writing ${variable} all the time, and then scratch your
-	     head wondering why the stylesheet isn't working.-->
-
-	<!-- Also notice that because this is now XML and not SGML, empty
-             elements, like IMG, must have a trailing "/" just inside the
-   	     closing angle bracket, like this " ... />" -->
-	<img src="{$base}/gifs/news.jpg" align="right" border="0" width="193"
-	     height="144" alt="FreeBSD GNOME News"/>
-
-	<xsl:apply-templates select="descendant::month"/>
-
-	<xsl:copy-of select="$newshome"/>
+	        <xsl:call-templates name="html-news-list-homelink" />
 
 	      </div> <!-- contentwrap -->
 
 	      <br class="clearboth" />
 	    </div> <!-- content -->
 
-	    <xsl:copy-of select="$footer"/>
+            <div id="FOOTER">
+	      &copyright;<br />
+	      &date;
+            </div> <!-- FOOTER -->
 	  </div> <!-- container -->
 	</div> <!-- containerwrap -->
       </body>
@@ -94,35 +86,11 @@
 	  <xsl:text> </xsl:text>
 	  <xsl:value-of select="ancestor::month/name"/>,
 	  <xsl:value-of select="ancestor::year/name"/>:</b><xsl:text> </xsl:text>
-	<xsl:apply-templates select="p"/>
+	<xsl:copy-of select="p"/>
 	</p>
 
     </li>
   </xsl:template>
 
   <xsl:template match="date"/>    <!-- Deliberately left blank -->
-
-  <xsl:template match="i">
-    <i><xsl:value-of select="self::i"/></i>
-  </xsl:template>
-
-
-  <!-- When the href attribute contains a '$base', expand it to the current
-       value of the $base variable. -->
-
-  <!-- All your $base are belong to us.  Ho ho ho -->
-  <xsl:template match="a">
-    <a><xsl:attribute name="href">
-	<xsl:choose>
-	  <xsl:when test="contains(@href, '$base')">
-	    <xsl:value-of select="concat(substring-before(@href, '$base'), $base, substring-after(@href, '$base'))"/>
-	  </xsl:when>
-	  <xsl:otherwise>
-	    <xsl:value-of select="@href"/>
-	  </xsl:otherwise>
-	</xsl:choose>
-      </xsl:attribute>
-      <xsl:apply-templates/>
-    </a>
-  </xsl:template>
 </xsl:stylesheet>
