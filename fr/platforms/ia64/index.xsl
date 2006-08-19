@@ -1,3 +1,10 @@
+<!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
+				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
+<!ENTITY base "../..">
+<!ENTITY email "freebsd-ia64">
+<!ENTITY title "FreeBSD/ia64 Project">
+<!ENTITY % navinclude.developers "INCLUDE">
+]>
 <!--
    The FreeBSD Documentation Project
    The FreeBSD French Documentation Project
@@ -6,30 +13,31 @@
 -->
 
 <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
-  <xsl:import href="../../includes.xsl"/>
-  <xsl:import href="includes.xsl"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/fr/platforms/ia64/index.xsl,v 1.2 2005/12/17 10:58:29 blackend Exp $'"/>
-  <xsl:variable name="section" select="'developers'"/>
+  <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
+
+  <xsl:variable name="date" select="'$FreeBSD: www/fr/platforms/ia64/index.xsl,v 1.3 2006/02/03 11:54:54 blackend Exp $'"/>
+
   <xsl:output doctype-public="-//W3C//DTD HTML 4.01 Transitional//EN"
     encoding="iso-8859-1" method="html"/>
+
   <xsl:template match="/">
     <html>
-      <xsl:copy-of select="$header1"/>
-
+      &header1;
       <body>
 
 	<div id="CONTAINERWRAP">
 	  <div id="CONTAINER">
-	    <xsl:copy-of select="$header2"/>
+	    &header2;
 
 	    <div id="CONTENT">
-
-	      <xsl:copy-of select="$sidenav"/>
+	      <div id="SIDEWRAP">
+                &nav;
+              </div> <!-- SIDEWRAP -->
 
 	      <div id="CONTENTWRAP">
-		<xsl:copy-of select="$header3"/>
+		&header3;
 
-		<img align="right" alt="McKinley die" src="{$enbase}/platforms/ia64/mckinley-die.png"/>
+		<img align="right" alt="McKinley die" src="&enbase;/platforms/ia64/mckinley-die.png"/>
 
 		<p>Rechercher dans les archives de la liste de diffusion
 		  freebsd-ia64:</p>
@@ -95,7 +103,11 @@
 
 	      <br class="clearboth" />
 	    </div> <!-- CONTENT -->
-	    <xsl:copy-of select="$footer"/>
+
+            <div id="FOOTER">
+               &copyright;<br />
+               &date;
+            </div> <!-- FOOTER -->
 	  </div> <!-- CONTAINER -->
 	</div> <!-- CONTAINERWRAP -->
       </body>

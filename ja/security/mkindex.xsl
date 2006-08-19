@@ -1,17 +1,19 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
+<!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
+				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
+<!ENTITY base ".">
+<!ENTITY title "">
+]>
 
-<!-- $FreeBSD: www/ja/security/mkindex.xsl,v 1.1 2003/10/11 07:12:37 hrs Exp $ -->
+<!-- $FreeBSD: www/ja/security/mkindex.xsl,v 1.2 2004/01/19 17:19:34 hrs Exp $ -->
 <!-- Original revision: 1.4 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
+  <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
   
-  <xsl:import href="../includes.xsl"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/ja/security/mkindex.xsl,v 1.2 2004/01/19 17:19:34 hrs Exp $'"/>
 
-  <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/ja/security/mkindex.xsl,v 1.1 2003/10/11 07:12:37 hrs Exp $'"/>
-  <xsl:variable name="title" select="'untitled'"/>
-
-  <xsl:output type="xml" encoding="euc-jp"
+  <xsl:output type="xml" encoding="&xml.encoding;"
               omit-xml-declaration="yes" />
 
   <xsl:template match="/">

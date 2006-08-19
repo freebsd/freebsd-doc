@@ -1,4 +1,4 @@
-# $FreeBSD: www/ja/news/Makefile,v 1.35 2003/09/21 17:18:14 hrs Exp $
+# $FreeBSD: www/ja/news/Makefile,v 1.36 2004/12/30 17:53:44 hrs Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.38
 
@@ -26,6 +26,11 @@ DOCS+= press-rel-5.sgml
 
 INDEXLINK= news.html
 
+DEPENDSET.DEFAULT=	transtable news press
+
+XMLDOCS=	newsflash:${XSL_NEWS_NEWSFLASH}:${XML_NEWS_NEWS_MASTER}:
+XMLDOCS+=	press:${XSL_NEWS_PRESS}:${XML_NEWS_PRESS_MASTER}:
+
 #SUBDIR= 	1993
 SUBDIR+= 	1996
 SUBDIR+= 	1997
@@ -36,38 +41,8 @@ SUBDIR+= 	1997
 #SUBDIR+= 	2002
 #SUBDIR+=	status
 
-DATA=		newsflash.html press.html
-CLEANFILES+=	newsflash.html press.html
+### Revision checking
+REVCHECK=	YES
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
 
-newsflash.html: newsflash.xsl news.xml\
-			includes.xsl ${XML_INCLUDES}
-	${XSLTPROC} ${XSLTPROCOPTS} -o ${.TARGET} \
-		--param "news.project.xml-master" "'${XML_NEWS_NEWS_MASTER}'" \
-		--param "news.project.xml" "'${XML_NEWS_NEWS}'" \
-		--param "transtable.xml" "'${XML_TRANSTABLE}'" \
-		${.CURDIR}/newsflash.xsl ${.CURDIR}/news.xml
-.if !defined(NO_TIDY)
-	-${TIDY} ${TIDYOPTS} ${.TARGET}
-.endif
-
-news.rdf: news-rdf.xsl news.xml\
-		includes.xsl ${XML_INCLUDES}
-	${XSLTPROC} ${XSLTPROCOPTS} -o ${.TARGET} \
-		--param transtable.xml "'${XML_TRANSTABLE}'" \
-		${.CURDIR}/news-rdf.xsl ${.CURDIR}/news.xml
-
-press.html: press.xsl press.xml\
-		includes.xsl ${XML_INCLUDES}
-	${XSLTPROC} ${XSLTPROCOPTS} -o ${.TARGET} \
-		--param "news.press.xml-master" "'${XML_NEWS_PRESS_MASTER}'" \
-		--param "news.press.xml" "'${XML_NEWS_PRESS}'" \
-		--param "transtable.xml" "'${XML_TRANSTABLE}'" \
-		${.CURDIR}/press.xsl ${.CURDIR}/press.xml
-.if !defined(NO_TIDY)
-	-${TIDY} ${TIDYOPTS} ${.TARGET}
-.endif
-
-### Revision checking
-REVCHECK=	YES

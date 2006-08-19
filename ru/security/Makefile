@@ -1,7 +1,7 @@
 #
 # The FreeBSD Russian Documentation Project
 #
-# $FreeBSD$
+# $FreeBSD: www/ru/security/Makefile,v 1.6 2004/01/26 07:24:12 andy Exp $
 # $FreeBSDru: frdp/www/ru/security/Makefile,v 1.7 2004/01/25 15:18:18 andy Exp $
 #
 # Original revision: 1.11
@@ -19,13 +19,13 @@ DOCS+=	security.sgml
 
 INDEXLINK= security.html
 
-.include "${WEB_PREFIX}/share/mk/web.site.mk"
-
-CLEANFILES+= advisories.html.inc
-
 security.html: advisories.html.inc
 
-advisories.html.inc: mkindex.xsl ${XML_ADVISORIES} ${XML_INCLUDES}
-	${XSLTPROC} ${XSLTPROCOPTS} -o ${.TARGET} \
-		--param "advisories.xml" "'${XML_ADVISORIES}'" \
-		${.CURDIR}/mkindex.xsl ${XML_ADVISORIES}
+DEPENDSET.DEFAULT=	advisories
+XML.DEFAULT=		${XML_ADVISORIES}
+
+XMLDOCS=	advisories:mkindex.xsl::advisories.html.inc
+NO_DATA.advisories=	yes
+NO_TIDY.advisories=	yes
+
+.include "${WEB_PREFIX}/share/mk/web.site.mk"

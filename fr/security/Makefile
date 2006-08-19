@@ -1,4 +1,4 @@
-# $FreeBSD: www/fr/security/Makefile,v 1.1 2003/12/15 16:04:58 stephane Exp $
+# $FreeBSD: www/fr/security/Makefile,v 1.2 2006/04/03 19:58:44 blackend Exp $
 
 # The FreeBSD French Documentation Project
 # Original revision: 1.14
@@ -15,7 +15,7 @@ DOCS+=	security.sgml
 
 INDEXLINK=	security.html
 
-security.html: advisories.html.inc advisories.rdf
+security.html: advisories.html.inc
 
 DEPENDSET.DEFAULT=	advisories
 XML.DEFAULT=		${XML_ADVISORIES}
@@ -23,7 +23,5 @@ XML.DEFAULT=		${XML_ADVISORIES}
 XMLDOCS=	advisories:mkindex.xsl::advisories.html.inc
 NO_DATA.advisories=	yes
 NO_TIDY.advisories=	yes
-
-XMLDOCS+=	advisories-rdf:security-rdf.xsl::advisories.rdf
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"

@@ -1,31 +1,28 @@
-<?xml version="1.0" encoding="ISO-8859-9" ?>
+<?xml version="1.0" encoding="iso-8859-9"?>
+<!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
+				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
+<!ENTITY title "The FreeBSD Project">
+]>
 <!--
      The FreeBSD Turkish Documentation Project
      Original revision: 1.77
 -->
 
-<!-- $FreeBSD: www/tr/index.xsl,v 1.2 2003/12/07 09:21:00 blackend Exp $ -->
+<!-- $FreeBSD: www/tr/index.xsl,v 1.3 2004/02/04 15:41:06 ale Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
+  <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
 
-  <xsl:import href="includes.xsl"/>
-  <xsl:import href="../en/news/includes.xsl"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/tr/index.xsl,v 1.3 2004/02/04 15:41:06 ale Exp $'"/>
 
-  <xsl:variable name="base" select="'.'"/>
-  <xsl:variable name="enbase" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/tr/index.xsl,v 1.2 2003/12/07 09:21:00 blackend Exp $'"/>
-  <xsl:variable name="title" select="'FreeBSD Projesi'"/>
-
-  <xsl:output type="html" encoding="iso-8859-9"
+  <xsl:output type="html" encoding="&xml.encoding;"
               doctype-public="-//W3C//DTD HTML 4.01 Transitional//EN"/>
 
   <xsl:template match="/">
     <html>
       <head>
-	<title><xsl:value-of select="$title"/></title>
-
+	<title>&title;</title>
 	<meta name="description" content="The FreeBSD Projesi"/>
-
 	<meta name="keywords" content="FreeBSD, BSD, UNIX, Support, Gallery,
 	  Release, Application, Software, Handbook, FAQ, Tutorials, Bugs,
 	  CVS, CVSup, News, Commercial Vendors, homepage, CTM, Unix"/>
@@ -39,7 +36,7 @@
 	<table border="0" cellspacing="0" cellpadding="0" width="100%">
 	  <tr>
 	    <td><a href="http://www.FreeBSD.org/tr/index.html">
-	      <img src="{$enbase}/gifs/freebsd_1.gif" height="94" width="306"
+	      <img src="&enbase;/gifs/freebsd_1.gif" height="94" width="306"
 		alt="FreeBSD: The Power to Serve" border="0"/></a></td>
 
 	    <td align="right" valign="bottom">
@@ -166,11 +163,11 @@
 		<br/>
 
 		<font color="#990000"><b>Dil: </b></font>
-		<a href="{$enbase}/it/index.html">İtalyanca</a>,
-		<a href="{$enbase}/ja/index.html">Japonca</a>,
-		<a href="{$enbase}/ru/index.html">Rusça</a>,
-		<a href="{$enbase}/es/index.html">İspanyolca</a>,
-		<a href="{$enbase}/support.html#web">Diğerleri</a>
+		<a href="&enbase;/it/index.html">İtalyanca</a>,
+		<a href="&enbase;/ja/index.html">Japonca</a>,
+		<a href="&enbase;/ru/index.html">Rusça</a>,
+		<a href="&enbase;/es/index.html">İspanyolca</a>,
+		<a href="&enbase;/support.html#web">Diğerleri</a>
 	      </form>
 	    </td>
 	  </tr>
@@ -196,79 +193,79 @@
 
 
 			    <small><br/>
-			      &#183; <a href="{$enbase}/news/newsflash.html">Anonslar</a><br/>
-			      &#183; <a href="{$enbase}/news/press.html">Basın</a><br/>
-			      &#183; <a href="{$enbase}/news/index.html">Diğerleri ...</a>
+			      &#183; <a href="&enbase;/news/newsflash.html">Anonslar</a><br/>
+			      &#183; <a href="&enbase;/news/press.html">Basın</a><br/>
+			      &#183; <a href="&enbase;/news/index.html">Diğerleri ...</a>
 			    </small></p>
 
 			  <p><font size="+1" color="#990000"><b>Yazılım</b></font>
 			    <small><br/>
-			      &#183; <a href="{$enbase}/doc/en_US.ISO8859-1/books/handbook/mirrors.html">Nereden Bulabilirim?</a><br/>
-			      &#183; <a href="{$enbase}/releases/index.html">Sürüm Bilgileri</a><br/>
-			      &#183; <a href="{$enbase}/ports/index.html">Ports Uygulamaları</a><br/>
+			      &#183; <a href="&enbase;/doc/en_US.ISO8859-1/books/handbook/mirrors.html">Nereden Bulabilirim?</a><br/>
+			      &#183; <a href="&enbase;/releases/index.html">Sürüm Bilgileri</a><br/>
+			      &#183; <a href="&enbase;/ports/index.html">Ports Uygulamaları</a><br/>
 			    </small></p>
 
 			  <p><font size="+1" color="#990000"><b>Dokümantasyon</b></font>
 
 			    <small><br/>
-			      &#183; <a href="{$enbase}/projects/newbies.html">Yeniler İçin</a><br/>
-			      &#183; <a href="{$enbase}/doc/en_US.ISO8859-1/books/handbook/index.html">El Kitabı</a><br/>
-			      &#183; <a href="{$enbase}/doc/en_US.ISO8859-1/books/faq/index.html">SSS</a><br/>
+			      &#183; <a href="&enbase;/projects/newbies.html">Yeniler İçin</a><br/>
+			      &#183; <a href="&enbase;/doc/en_US.ISO8859-1/books/handbook/index.html">El Kitabı</a><br/>
+			      &#183; <a href="&enbase;/doc/en_US.ISO8859-1/books/faq/index.html">SSS</a><br/>
 			      &#183; <a href="http://www.FreeBSD.org/cgi/man.cgi">Klavuz Sayfaları</a><br/>
-			      &#183; <a href="{$enbase}/docproj/index.html">Dokümantasyon Proj.</a><br/>
+			      &#183; <a href="&enbase;/docproj/index.html">Dokümantasyon Proj.</a><br/>
 			      &#183; <a href="docs.html">Diğerleri...</a><br/>
 			    </small></p>
 
 			  <p><font size="+1" color="#990000"><b>Destek</b></font>
 
 			    <small><br/>
-			      &#183; <a href="{$enbase}/support.html#mailing-list">Mail listeleri</a><br/>
-			      &#183; <a href="{$enbase}/support.html#newsgroups">Haber Grupları</a><br/>
-			      &#183; <a href="{$enbase}/support.html#user">Kullanıcı Grupları</a><br/>
-			      &#183; <a href="{$enbase}/support.html#web">Web Kaynakları</a><br/>
-			      &#183; <a href="{$enbase}/security/index.html">Güvenlik</a><br/>
-			      &#183; <a href="{$enbase}/support.html">Diğerleri...</a>
+			      &#183; <a href="&enbase;/support.html#mailing-list">Mail listeleri</a><br/>
+			      &#183; <a href="&enbase;/support.html#newsgroups">Haber Grupları</a><br/>
+			      &#183; <a href="&enbase;/support.html#user">Kullanıcı Grupları</a><br/>
+			      &#183; <a href="&enbase;/support.html#web">Web Kaynakları</a><br/>
+			      &#183; <a href="&enbase;/security/index.html">Güvenlik</a><br/>
+			      &#183; <a href="&enbase;/support.html">Diğerleri...</a>
 			    </small></p>
 
 			  <p><font size="+1" color="#990000"><b>Hata Bildirimi</b></font>
 			    <small><br/>
-			      &#183; <a href="{$enbase}/send-pr.html">Hata Bildirimi Gönder</a><br/>
+			      &#183; <a href="&enbase;/send-pr.html">Hata Bildirimi Gönder</a><br/>
 			      &#183; <a href="http://www.FreeBSD.org/cgi/query-pr-summary.cgi">Hata Sorgulama</a><br/>
 			      &#183; <a href="http://www.FreeBSD.org/cgi/query-pr.cgi">Hata ID'sine Göre Ara</a><br/>
-			      &#183; <a href="{$enbase}/support.html#gnats">Diğerleri...</a><br/>
+			      &#183; <a href="&enbase;/support.html#gnats">Diğerleri...</a><br/>
 			    </small></p>
 
 
 			  <p><font size="+1" color="#990000"><b>Geliştirim</b></font>
 
 			    <small><br/>
-			      &#183; <a href="{$enbase}/projects/index.html">Projeler</a><br/>
-			      &#183; <a href="{$enbase}/releng/index.html">Sürüm Mühendisliği</a><br/>
-			      &#183; <a href="{$enbase}/support.html#cvs">CVS Deposu</a><br/>
+			      &#183; <a href="&enbase;/projects/index.html">Projeler</a><br/>
+			      &#183; <a href="&enbase;/releng/index.html">Sürüm Mühendisliği</a><br/>
+			      &#183; <a href="&enbase;/support.html#cvs">CVS Deposu</a><br/>
 			    </small></p>
 
 			  <p><font size="+1" color="#990000"><b>Satın Alma</b></font>
 
 			    <small><br/>
-			      &#183; <a href="{$enbase}/commercial/software_bycat.html">Yazılım</a><br/>
-			      &#183; <a href="{$enbase}/commercial/hardware.html">Donanım</a><br/>
-			      &#183; <a href="{$enbase}/commercial/consulting_bycat.html">Danışmanlık</a><br/>
-			      &#183; <a href="{$enbase}/commercial/misc.html">Diğer</a><br/>
+			      &#183; <a href="&enbase;/commercial/software_bycat.html">Yazılım</a><br/>
+			      &#183; <a href="&enbase;/commercial/hardware.html">Donanım</a><br/>
+			      &#183; <a href="&enbase;/commercial/consulting_bycat.html">Danışmanlık</a><br/>
+			      &#183; <a href="&enbase;/commercial/misc.html">Diğer</a><br/>
 			    </small></p>
 
 			  <p><font size="+1" color="#990000"><b>Bağışlar</b></font>
 			    <small><br/>
-			      &#183; <a href="{$enbase}/donations/index.html">Bağıs Kurumu</a><br/>
-			      &#183; <a href="{$enbase}/donations/donors.html">Yapılan Bağışlar</a><br/>
-			      &#183; <a href="{$enbase}/donations/wantlist.html">İhtiyaç Listesi</a><br/>
+			      &#183; <a href="&enbase;/donations/index.html">Bağıs Kurumu</a><br/>
+			      &#183; <a href="&enbase;/donations/donors.html">Yapılan Bağışlar</a><br/>
+			      &#183; <a href="&enbase;/donations/wantlist.html">İhtiyaç Listesi</a><br/>
 			    </small></p>
 
 			  <p><font size="+1" color="#990000"><b>Site içi</b></font>
 
 			    <small><br/>
-			      &#183; <a href="{$enbase}/search/index-site.html">Site Haritası</a><br/>
-			      &#183; <a href="{$enbase}/search/search.html">Arama</a><br/>
-			      &#183; <a href="{$enbase}/internal/index.html">Diğer ...</a><br/>
+			      &#183; <a href="&enbase;/search/index-site.html">Site Haritası</a><br/>
+			      &#183; <a href="&enbase;/search/search.html">Arama</a><br/>
+			      &#183; <a href="&enbase;/internal/index.html">Diğer ...</a><br/>
 
 			    </small></p>
 
@@ -297,12 +294,12 @@
 		UltraSPARC&#174; mimarileri için ileri seviye bir
 		işletim sistemidir.  Berkeleydeki Kaliforniya
 		Üniversitesinde geliştirilmiş
-		<xsl:value-of select="$unix"/> türevi olan BSD 'yi
+		&unix; türevi olan BSD 'yi
 		temel almıştır.  FreeBSD <a
-		href="{$enbase}/doc/en_US.ISO8859-1/articles/contributors/index.html">birçok
+		href="&enbase;/doc/en_US.ISO8859-1/articles/contributors/index.html">birçok
 		kişi </a> tarafından geliştirilmekte ve
 		devam ettirilmektedir. Ayrıca başka <a
-		href="{$enbase}/platforms/index.html">mimariler</a>
+		href="&enbase;/platforms/index.html">mimariler</a>
 		için geliştirim değişik
 		aşamalardadır.</p>
 
@@ -311,7 +308,7 @@
 
 	      <p>FreeBSD ileri seviyede ağ, performans,
 		güvenlik ve uyumluluk <a
-		href="{$base}/features.html">özellikleri</a>sunar.
+		href="&base;/features.html">özellikleri</a>sunar.
 		Bu özellikler ticari olan bazı işletim
 		sistemlerinde bile bulunmamaktadır.</p>
 
@@ -319,7 +316,7 @@
 		İnternet Çözümleri</font></h2>
 
 	      <p>FreeBSD ideal bir <a
-		href="{$enbase}/internet.html">İnternet ya da
+		href="&enbase;/internet.html">İnternet ya da
 		İntranet</a> sunucusu olabilir. Ağır
 		ağ yüklerinde sağlam ağ hizmetleri
 		verecek yapıdadır ve aynı anda
@@ -328,7 +325,7 @@
 		verimli bir şeklilde kullanır.  FreeBSD ile
 		çalışan uygulama ve servisler
 		için <a
-		href="{$enbase}/gallery/gallery.html">galeri</a>
+		href="&enbase;/gallery/gallery.html">galeri</a>
 		sayfamızı ziyaret edebilirsiniz.</p>
 
 	      <h2><font color="#990000">Binlerce Uygulamayı
@@ -337,11 +334,11 @@
 	      <p>FreeBSD kalitesi günümüzde
 		kullanılan düşük maliyetli PC
 		donanımları ile birleşince mevcut
-		ticari <xsl:value-of select="$unix"/> masaüstü
+		ticari &unix; masaüstü
 		sistemlere çok ekonomik bir alternatif
 		olmaktadır.  FreeBSD masaüstü ve sunucu
 		<a
-		href="{$enbase}/applications.html">uygulamaları</a>
+		href="&enbase;/applications.html">uygulamaları</a>
 		için hazır durumdadır.</p>
 
 	      <h2><font color="#990000">Kolay Kurulum</font></h2>
@@ -352,24 +349,24 @@
 		anonim FTP ya da NFS ile kurulabilir. Bütün
 		ihtiyacınız bir çift 1.44MB flopi ve
 		<a
-		href="{$enbase}/doc/en_US.ISO8859-1/books/handbook/install.html">bu</a>
+		href="&enbase;/doc/en_US.ISO8859-1/books/handbook/install.html">bu</a>
 		dokümandır.</p>
 
 	      <h2><font color="#990000">FreeBSD
 		<i>Ücretsizdir</i></font></h2>
 
-	      <a href="{$enbase}/copyright/daemon.html"><img
-		src="{$enbase}/gifs/dae_up3.gif" alt="" height="81"
+	      <a href="&enbase;/copyright/daemon.html"><img
+		src="&enbase;/gifs/dae_up3.gif" alt="" height="81"
 		width="72" align="right" border="0"/></a>
 
 	      <p>Bu özelliklere sahip bir işletim sisteminin
 		yüksek fiyatlar ile
 		satılacağını
 		düşünebilirsiniz fakat FreeBSD <a
-		href="{$enbase}/copyright/index.html">ücretsiz</a>
+		href="&enbase;/copyright/index.html">ücretsiz</a>
 		bir işletim sistemidir ve bütün kaynak
 		kodu ile beraber gelir. Eğer denemek isterseniz <a
-		href="{$enbase}/doc/en_US.ISO8859-1/books/handbook/mirrors.html">daha
+		href="&enbase;/doc/en_US.ISO8859-1/books/handbook/mirrors.html">daha
 		fazla bilgi </a> mevcuttur.</p>
 
 	      <h2><font color="#990000">FreeBSD 'ye Katkıda
@@ -384,7 +381,7 @@
 		göndermek olacaktır.  Yapacağınız değişiklik
 		dokümantasyon, sanatsal işler ya da kaynak kodu gibi
 		şeyler olabilir.  Ayrıntılı bilgi için <a
-		href="{$enbase}/doc/en_US.ISO8859-1/articles/contributing/index.html">FreeBSD'ye
+		href="&enbase;/doc/en_US.ISO8859-1/articles/contributing/index.html">FreeBSD'ye
 		Katkıda Bulunmak</a> makalesine başvurabilirsiniz.</p>
 
 		<p>Program yazan biri olmasanız bile FreeBSD
@@ -420,101 +417,50 @@
 			   bgcolor="#ffcc66" width="100%">
 		      <tr>
 			<td valign="top"><p><font size="+1" color="#990000"><b>Yeni Teknololi Sürümü:
-			    <xsl:value-of select="$rel.current"/></b></font><br/>
+			    &rel.current;</b></font><br/>
 
-			    <small>&#183; <a href="{$u.rel.announce}">Duyuru</a><br/>
-			      &#183; <a href="{$enbase}/doc/en_US.ISO8859-1/books/handbook/install.html">Kurulum Klavuzu</a><br/>
-			      &#183; <a href="{$u.rel.notes}">Sürüm Bilgileri</a><br/>
-			      &#183; <a href="{$u.rel.hardware}">Desteklenen Donanımlar</a><br/>
-			      &#183; <a href="{$u.rel.errata}">Düzeltilen Hatalar</a><br/>
-			      &#183; <a href="{$u.rel.early}">Erken Adaptasyon Klavuzu</a></small></p>
+			    <small>&#183; <a href="&u.rel.announce;">Duyuru</a><br/>
+			      &#183; <a href="&enbase;/doc/en_US.ISO8859-1/books/handbook/install.html">Kurulum Klavuzu</a><br/>
+			      &#183; <a href="&u.rel.notes;">Sürüm Bilgileri</a><br/>
+			      &#183; <a href="&u.rel.hardware;">Desteklenen Donanımlar</a><br/>
+			      &#183; <a href="&u.rel.errata;">Düzeltilen Hatalar</a><br/>
+			      &#183; <a href="&u.rel.early;">Erken Adaptasyon Klavuzu</a></small></p>
 
 			  <p><font size="+1" color="#990000"><b>Kararlı Sürüm:
-			    <xsl:value-of select="$rel2.current"/></b></font><br/>
+				&rel2.current;</b></font><br/>
 
-			    <small>&#183; <a href="{$u.rel2.announce}">Duyuru</a><br/>
-			      &#183; <a href="{$enbase}/doc/en_US.ISO8859-1/books/handbook/install.html">Kurulum Klavuzu</a><br/>
-			      &#183; <a href="{$u.rel2.notes}">Sürüm Bilgileri</a><br/>
-			      &#183; <a href="{$u.rel2.hardware}">Desteklenen Donanımlar</a><br/>
-			      &#183; <a href="{$u.rel2.errata}">Düzeltilen Hatalar</a></small></p>
+			    <small>&#183; <a href="&u.rel2.announce;">Duyuru</a><br/>
+			      &#183; <a href="&enbase;/doc/en_US.ISO8859-1/books/handbook/install.html">Kurulum Klavuzu</a><br/>
+			      &#183; <a href="&u.rel2.notes;">Sürüm Bilgileri</a><br/>
+			      &#183; <a href="&u.rel2.hardware;">Desteklenen Donanımlar</a><br/>
+			      &#183; <a href="&u.rel2.errata;">Düzeltilen Hatalar</a></small></p>
 
-			  <p><font size="+1" color="#990000"><b>Proje Haberleri</b></font><br/>
-			    <font size="-1">
-			       En Son Haberler:
-			      <xsl:value-of
-				select="descendant::month[position() = 1]/name"/>
-			      <xsl:text> </xsl:text>
-			      <xsl:value-of
-				select="descendant::day[position() = 1]/name"/>,
-			      <xsl:text> </xsl:text>
-			      <xsl:value-of
-				select="descendant::year[position() = 1]/name"/>
-			      <br/>
-			      <!-- Pull in the 10 most recent news items -->
-			      <xsl:for-each select="descendant::event[position() &lt;= 10]">
-				&#183;  <a>
-				  <xsl:attribute name="href">
-				   <xsl:value-of select="$enbase"/>/news/newsflash.html#<xsl:call-template name="generate-event-anchor"/>
-				  </xsl:attribute>
-				  <xsl:choose>
-				    <xsl:when test="count(child::title)">
-				      <xsl:value-of select="title"/><br/>
-				    </xsl:when>
-				    <xsl:otherwise>
-				      <xsl:value-of select="p"/><br/>
-				    </xsl:otherwise>
-				  </xsl:choose>
-				</a>
-			      </xsl:for-each>
-			      <a href="{$enbase}/news/newsflash.html">Öncekiler ...</a>
-			    </font></p>
+			  <p><font size="+1" color="#990000"><b>Proje Haberleri</b></font></p>
 
-			  <p><font size="+1" color="#990000"><b>Basında FreeBSD</b></font><br/>
+			  <xsl:call-template name="html-index-news-project-items">
+			    <xsl:with-param name="news.project.xml-master" select="$news.project.xml-master" />
+			    <xsl:with-param name="news.project.xml" select="$news.project.xml" />
+			  </xsl:call-template>
 
-			    <font size="-1">
-			      En Son Haberler:
-			      <xsl:value-of
-				select="document('../en/news/press.xml')/descendant::month[position() = 1]/name"/>
-			      <xsl:text> </xsl:text>
-			      <xsl:value-of
-				select="document('../en/news/press.xml')/descendant::year[position() = 1]/name"/>
-			      <br/>
-			      <!-- Pull in the 10 most recent press items -->
-			      <xsl:for-each select="document('../en/news/press.xml')/descendant::story[position() &lt; 10]">
-				&#183; <a>
-				  <xsl:attribute name="href">
-				    <xsl:value-of select="$enbase"/>/news/press.html#<xsl:call-template name="generate-story-anchor"/>
-				  </xsl:attribute>
-				  <xsl:value-of select="name"/>
-				</a><br/>
-			      </xsl:for-each>
-			      <a href="{$enbase}/en/news/press.html">Öncekiler ...</a>
-			    </font>
-			  </p>
+			  <p><a href="&enbase;/news/newsflash.html">Öncekiler ...</a></p>
 
-			  <p><font size="+1" color="#990000"><b>Güvenlik Tavsiyeleri</b></font><br/>
+			  <p><font size="+1" color="#990000"><b>Basında FreeBSD</b></font></p>
 
-			    <font size="-1">
-			      En Son Haberler:
-			      <xsl:value-of
-				select="document('../share/sgml/advisories.xml')/descendant::month[position() = 1]/name"/>
-			      <xsl:text> </xsl:text>
-			      <xsl:value-of
-				select="document('../share/sgml/advisories.xml')/descendant::day[position() = 1]/name"/>
-			      <xsl:text>, </xsl:text>
-			      <xsl:value-of
-				select="document('../share/sgml/advisories.xml')/descendant::year[position() = 1]/name"/>
-			      <br/>
-			      <!-- Pull in the 10 most recent security advisories -->
-			      <xsl:for-each select="document('../share/sgml/advisories.xml')/descendant::advisory[position() &lt; 10]">
-				&#183; <a>
-				  <xsl:attribute name="href">ftp://ftp.freebsd.org/pub/FreeBSD/CERT/advisories/<xsl:value-of select="name"/>.asc</xsl:attribute>
-				  <xsl:value-of select="name"/>
-				</a><br/>
-			      </xsl:for-each>
-			      <a href="{$enbase}/security/index.html">Öncekiler ...</a>
-			    </font>
-			  </p>
+			  <xsl:call-template name="html-index-news-press-items">
+			    <xsl:with-param name="news.press.xml-master" select="$news.press.xml-master" />
+			    <xsl:with-param name="news.press.xml" select="$news.press.xml" />
+			  </xsl:call-template>
+
+			  <p><a href="&enbase;/en/news/press.html">Öncekiler ...</a></p>
+
+			  <p><font size="+1" color="#990000"><b>Güvenlik Tavsiyeleri</b></font></p>
+
+			  <xsl:call-template name="html-index-advisories-items">
+			    <xsl:with-param name="advisories.xml" select="$advisories.xml" />
+			    <xsl:with-param name="type" select="'advisory'" />
+			  </xsl:call-template>
+
+			  <p><a href="&enbase;/security/index.html">Öncekiler ...</a></p>
 			</td>
 		      </tr>
 		    </table>
@@ -532,9 +478,9 @@
 		      bgcolor="#FFFFFF" width="100%"><tr> <td>FreeBSD
 		      hakkında daha fazla bilgi almak için
 		      FreeBSD ile alakali <a
-		      href="{$enbase}/publish.html">yayınlar</a> ya
+		      href="&enbase;/publish.html">yayınlar</a> ya
 		      da <a
-		      href="{$enbase}/news/press.html">Basında
+		      href="&enbase;/news/press.html">Basında
 		      FreeBSD</a>, sayfalarını ziyaret
 		      edebilirsiniz!</td>
 		      </tr>
@@ -551,20 +497,20 @@
 	<table width="100%" border="0" cellspacing="0" cellpadding="3">
 	  <tr>
 	    <td><a href="http://www.freebsdmall.com/"><img
-							   src="{$enbase}/gifs/mall_title_medium.gif" alt="[FreeBSD Mall]"
+							   src="&enbase;/gifs/mall_title_medium.gif" alt="[FreeBSD Mall]"
 							   height="65" width="165" border="0"/></a></td>
 
-	    <td><a href="http://www.ugu.com/"><img src="{$enbase}/gifs/ugu_icon.gif"
+	    <td><a href="http://www.ugu.com/"><img src="&enbase;/gifs/ugu_icon.gif"
 						   alt="[Sponsor of Unix Guru Universe]"
 						   height="64" width="76"
 						   border="0"/></a></td>
 
-	    <td><a href="http://www.daemonnews.org/"><img src="{$enbase}/gifs/darbylogo.gif"
+	    <td><a href="http://www.daemonnews.org/"><img src="&enbase;/gifs/darbylogo.gif"
 		alt="[Daemon News]" height="45" width="130"
 		border="0"/></a></td>
 
-	    <td><a href="{$enbase}/copyright/daemon.html"><img
-							     src="{$enbase}/gifs/powerlogo.gif"
+	    <td><a href="&enbase;/copyright/daemon.html"><img
+							     src="&enbase;/gifs/powerlogo.gif"
 							     alt="[Powered by FreeBSD]"
 							     height="64"
 							     width="160"
@@ -572,19 +518,16 @@
 	  </tr>
 	</table>
 
-	<table width="100%" cellpadding="0" border="0" cellspacing="0">
-	  <tr>
-	    <td align="left"
-		valign="top"><small><a href="{$base}/mailto.html">Bize Ulaşın
-		</a><br/>
-		<xsl:value-of select="$date"/></small></td>
+      <div id="FOOTER">
+	&copyright;
 
-	    <td align="right"
-		valign="top"><small><a href="{$enbase}/copyright/index.html">Yasal</a><br/> &#169; 1995-2003
-		The FreeBSD Projesi<br/>
-		Bütün Hakları saklıdır.</small></td>
-	  </tr>
-	</table>
+	The mark FreeBSD is a registered trademark of The FreeBSD
+	Foundation and is used by The FreeBSD Project with the
+	permission of <a
+	  href="http://www.freebsdfoundation.org/documents/Guidelines.shtml">The
+	FreeBSD Foundation</a>.
+
+      </div> <!-- FOOTER -->
       </body>
     </html>
   </xsl:template>

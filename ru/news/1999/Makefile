@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: www/ru/news/1999/Makefile,v 1.2 2004/04/09 12:03:23 phantom Exp $
 # The FreeBSD Russian Documentation Project
 # $FreeBSDru: frdp/www/ru/news/1999/Makefile,v 1.3 2004/04/09 11:16:51 phantom Exp $
 # Original revision: 1.3
@@ -13,16 +13,7 @@
  
 DOCS=	index.sgml
 
-DATA=		press.html
-CLEANFILES+=	press.html
-
-press.html: ../oldpress.xsl press.xml \
-		../includes.xsl ../../includes.xsl ${XML_TRANSTABLE}
-	${XSLTPROC} ${XSLTPROCOPTS} -o ${.TARGET} \
-		--param transtable.xml "'${XML_TRANSTABLE}'" \
-		${.CURDIR}/../oldpress.xsl ${.CURDIR}/press.xml
-.if !defined(NO_TIDY)
-	-${TIDY} ${TIDYOPTS} ${.TARGET}
-.endif
+XMLDOCS+=	press:${XSL_NEWS_PRESS_OLD}::
+DEPENDSET.press=transtable press
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"

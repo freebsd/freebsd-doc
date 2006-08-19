@@ -1,6 +1,6 @@
 # The FreeBSD Documentation Project
 # The FreeBSD Turkish Documentation Project
-# $FreeBSD: www/tr/Makefile,v 1.1 2003/12/01 21:26:21 blackend Exp $
+# $FreeBSD: www/tr/Makefile,v 1.2 2004/01/13 22:59:06 hrs Exp $
 # Original revision: 1.98
 .if exists(Makefile.conf)
 .include "Makefile.conf"
@@ -14,6 +14,10 @@
 DOCS= docs.sgml
 DOCS+= features.sgml
 DOCS+= mailto.sgml
+
+XMLDOCS=	index:xsl:${XML_NEWS_NEWS}:
+DEPENDSET.index=transtable mirrors news press events \
+		advisories notices
 
 # These will be directly installed.
 
@@ -67,17 +71,5 @@ SUBDIR= doc
 # Non-English
 
 WEBDIR=	data/tr
-
-# index.html is special, and generated from index.xsl and news/news.xml
-DATA+=		index.html
-CLEANFILES+=	index.html
-
-index.html: index.xsl ../en/news/news.xml ../en/news/press.xml includes.xsl ../en/news/includes.xsl ../share/sgml/advisories.xml
-	${XSLTPROC} ${XSLTPROCOPTS} -o ${.TARGET} \
-		${.CURDIR}/index.xsl ${.CURDIR}/../en/news/news.xml
-.if !defined(NO_TIDY)
-	-${TIDY} ${TIDYOPTS} ${.TARGET}
-.endif
-
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"

@@ -1,4 +1,4 @@
-# $FreeBSD: www/fr/events/Makefile,v 1.1 2004/03/06 17:33:18 stephane Exp $
+# $FreeBSD: www/fr/events/Makefile,v 1.2 2006/02/03 11:54:53 blackend Exp $
 
 # The FreeBSD French Documentation Project
 # Original revision: 1.11
@@ -11,40 +11,13 @@
 .endif
 
 # SUBDIR= 2002 2003
-DATE?= /bin/date
-TR?= /usr/bin/tr
 
-DATA=	events.css
+DATA=   events.css
 
-CLEANFILES+= curdate.xml
+XMLDOCS+=		events:${XSL_EVENTS}:${XML_EVENTS_EVENTS}:
+DEPENDSET.events=	events
 
-XMLLINT?= /usr/local/bin/xmllint # Part of textproc/libxml2.
-
-XMLDOCS+=	events
-DEPENDSET.events=	events curdate.xml
-SRCS.events=	../includes.xsl curdate.xml
-
-XMLDOCS+=	events_ics:${WEB_PREFIX}/share/sgml/events2ics.xsl:events.xml:events.ics
-
-lint:
-	${XMLLINT} ${XMLLINTOPTS} --valid -o /dev/null ${.CURDIR}/events.xml
-
-.if !make(install)
-.PHONY:	curdate.xml
-.endif
-curdate.xml:
-	@${ECHO} "Generating ${.TARGET}"
-	@${ECHO_CMD} '<?xml version="1.0"?>'	 > ${.TARGET}
-	@${ECHO_CMD} '<curdate>'		>> ${.TARGET}
-	@${ECHO_CMD} -n '  <year>'		>> ${.TARGET}
-	@${DATE} +%Y | ${TR} -d "\n"		>> ${.TARGET}
-	@${ECHO_CMD} '</year>'			>> ${.TARGET}
-	@${ECHO_CMD} -n '  <month>'		>> ${.TARGET}
-	@${DATE} +%m | ${TR} -d "\n"		>> ${.TARGET}
-	@${ECHO_CMD} '</month>'			>> ${.TARGET}
-	@${ECHO_CMD} -n '  <day>'		>> ${.TARGET}
-	@${DATE} +%d | ${TR} -d "\n"		>> ${.TARGET}
-	@${ECHO_CMD} '</day>'			>> ${.TARGET}
-	@${ECHO_CMD} '</curdate>'		>> ${.TARGET}
+XMLDOCS+=		events_ics:${XSL_EVENTS_ICS}:${XML_EVENTS_EVENTS}:events.ics
+DEPENDSET.events_ics=	events
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"

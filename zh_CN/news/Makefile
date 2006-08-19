@@ -1,7 +1,7 @@
 # The FreeBSD Simplified Chinese Documentation Project
 # Original Revision: 1.45
 #
-# $FreeBSD: www/zh_CN/news/Makefile,v 1.1.1002.5 2006/01/28 18:27:53 delphij Exp $
+# $FreeBSD: www/zh_CN/news/Makefile,v 1.1 2006/07/11 15:27:48 delphij Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -17,11 +17,9 @@ DOCS+= pressreleases.sgml
 
 INDEXLINK= news.html
 
-SRCS.DEFAULT=		includes.xsl
 DEPENDSET.DEFAULT=	transtable news press
 
-XMLDOCS=	newsflash::news.xml:
-XMLDOCS+=	news-rdf::news.xml:news.rdf
-XMLDOCS+=	press
+XMLDOCS=	newsflash:${XSL_NEWS_NEWSFLASH}:${XML_NEWS_NEWS_MASTER}:
+XMLDOCS+=	press:${XSL_NEWS_PRESS}:${XML_NEWS_PRESS_MASTER}:
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"

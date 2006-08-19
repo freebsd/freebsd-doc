@@ -1,4 +1,10 @@
-<!-- $FreeBSD: www/fr/gnome/rss.xsl,v 1.1 2003/12/15 15:41:15 stephane Exp $ -->
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
+				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
+<!ENTITY base "..">
+<!ENTITY title "Syst&#232;me de nouvelles du Projet GNOME pour FreeBSD">
+]>
+<!-- $FreeBSD: www/fr/gnome/rss.xsl,v 1.2 2005/12/17 10:58:29 blackend Exp $ -->
 
 <!-- 
   The FreeBSD French Documentation Project
@@ -11,12 +17,9 @@
                 xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
 		version="1.0">
 
-  <xsl:import href="../includes.xsl"/>
-  <xsl:import href="includes.xsl"/>
+  <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
 
-  <xsl:variable name="base" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/fr/gnome/rss.xsl,v 1.1 2003/12/15 15:41:15 stephane Exp $'"/>
-  <xsl:variable name="title" select="'Syst&#232;me de nouvelles du Projet GNOME pour FreeBSD'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/fr/gnome/rss.xsl,v 1.2 2005/12/17 10:58:29 blackend Exp $'"/>
 
   <xsl:output type="xml" />
 

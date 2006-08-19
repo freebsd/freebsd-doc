@@ -3,7 +3,7 @@
 <!--
      The FreeBSD Russian Documentation Project
 
-     $FreeBSD: www/ru/gnome/newsflash.xsl,v 1.1 2004/01/04 09:42:56 andy Exp $
+     $FreeBSD: www/ru/gnome/newsflash.xsl,v 1.2 2005/10/05 20:59:53 simon Exp $
      $FreeBSDru: frdp/www/ru/gnome/newsflash.xsl,v 1.1 2003/10/26 18:32:48 andy Exp $
 
      Original revision: 1.3
@@ -103,30 +103,11 @@
 	  <xsl:text> </xsl:text>
 	  <xsl:value-of select="ancestor::month/name"/>, 
 	  <xsl:value-of select="ancestor::year/name"/>:</b><xsl:text> </xsl:text>
-	<xsl:apply-templates select="p"/>
+	<xsl:copy-of select="p"/>
 	</p>
 
     </li>
   </xsl:template>
 
   <xsl:template match="date"/>    <!-- Deliberately left blank -->
-
-  <!-- When the href attribute contains a '$base', expand it to the current
-       value of the $base variable. -->
-
-  <!-- All your $base are belong to us.  Ho ho ho -->
-  <xsl:template match="a">
-    <a><xsl:attribute name="href">
-	<xsl:choose>
-	  <xsl:when test="contains(@href, '$base')">
-	    <xsl:value-of select="concat(substring-before(@href, '$base'), $base, substring-after(@href, '$base'))"/>
-	  </xsl:when>
-	  <xsl:otherwise>
-	    <xsl:value-of select="@href"/>
-	  </xsl:otherwise>
-	</xsl:choose>
-      </xsl:attribute>
-      <xsl:apply-templates/>
-    </a>
-  </xsl:template>
 </xsl:stylesheet>
