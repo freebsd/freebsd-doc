@@ -1,5 +1,5 @@
 # bsd.web.mk
-# $FreeBSD: www/share/mk/web.site.mk,v 1.72 2006/02/25 23:19:40 hrs Exp $
+# $FreeBSD: www/share/mk/web.site.mk,v 1.73 2006/05/13 03:27:22 simon Exp $
 
 #
 # Build and install a web site.
@@ -56,8 +56,7 @@ SGMLNORM?=	${PREFIX}/bin/sgmlnorm
 .else
 SGMLNORM?=	${PREFIX}/bin/osgmlnorm
 .endif
-CATALOG?=	${PREFIX}/share/sgml/html/catalog
-SGMLNORMOPTS?=	-d ${SGMLNORMFLAGS} -c ${CATALOG} -D ${.CURDIR}
+SGMLNORMOPTS?=	-d ${SGMLNORMFLAGS} ${CATALOG:S,^,-c ,} -D ${.CURDIR}
 
 XSLTPROC?=	${PREFIX}/bin/xsltproc
 XSLTPROCOPTS?=	${XSLTPROCFLAGS}
@@ -151,24 +150,25 @@ WWW_LANGCODE:=			${.CURDIR:S,^${_WEB_PREFIX}/,,:C,^([^/]+)/.*,\1,}
 .endif
 .endif # !defined(WITHOUT_DOC)
 
+_INCLIST=	navibar.ent \
+		navibar.l10n.ent
 _SGML_INCLUDES=	${SGML_INCLUDES}
-_SGML_INCLUDES+=${WEB_PREFIX}/${WWW_LANGCODE}/includes.sgml
-_SGML_INCLUDES+=${WEB_PREFIX}/${WWW_LANGCODE}/includes.navabout.sgml
-_SGML_INCLUDES+=${WEB_PREFIX}/${WWW_LANGCODE}/includes.navcommunity.sgml
-_SGML_INCLUDES+=${WEB_PREFIX}/${WWW_LANGCODE}/includes.navdevelopers.sgml
-_SGML_INCLUDES+=${WEB_PREFIX}/${WWW_LANGCODE}/includes.navdocs.sgml
-_SGML_INCLUDES+=${WEB_PREFIX}/${WWW_LANGCODE}/includes.navdownload.sgml
-_SGML_INCLUDES+=${WEB_PREFIX}/${WWW_LANGCODE}/includes.navsupport.sgml
-_SGML_INCLUDES+=${WEB_PREFIX}/share/sgml/includes.header.sgml
-_SGML_INCLUDES+=${WEB_PREFIX}/share/sgml/includes.navabout.sgml
-_SGML_INCLUDES+=${WEB_PREFIX}/share/sgml/includes.navcommunity.sgml
-_SGML_INCLUDES+=${WEB_PREFIX}/share/sgml/includes.navdevelopers.sgml
-_SGML_INCLUDES+=${WEB_PREFIX}/share/sgml/includes.navdocs.sgml
-_SGML_INCLUDES+=${WEB_PREFIX}/share/sgml/includes.navdownload.sgml
-_SGML_INCLUDES+=${WEB_PREFIX}/share/sgml/includes.navsupport.sgml
-_SGML_INCLUDES+=${WEB_PREFIX}/share/sgml/includes.misc.sgml
-_SGML_INCLUDES+=${WEB_PREFIX}/share/sgml/includes.release.sgml
-_SGML_INCLUDES+=${WEB_PREFIX}/share/sgml/includes.sgml
+
+.for F in ${_INCLIST}
+.if exists(${WEB_PREFIX}/${WWW_LANGCODE}/share/sgml/${F})
+_SGML_INCLUDES+=${WEB_PREFIX}/${WWW_LANGCODE}/share/sgml/${F}
+.endif
+.if exists(${WEB_PREFIX}/share/sgml/${F})
+_SGML_INCLUDES+=${WEB_PREFIX}/share/sgml/${F}
+.endif
+.endfor
+
+CATALOG?=	${PREFIX}/share/sgml/html/catalog \
+		${PREFIX}/share/sgml/catalog
+.if exists(${WEB_PREFIX}/${WWW_LANGCODE}/share/sgml/catalog)
+CATALOG+=	${WEB_PREFIX}/${WWW_LANGCODE}/share/sgml/catalog
+.endif
+CATALOG+=	${WEB_PREFIX}/share/sgml/catalog
 
 ##################################################################
 # Transformation rules
