@@ -1,7 +1,7 @@
 #
 # The FreeBSD Russian Documentation Project
 #
-# $FreeBSD$
+# $FreeBSD: www/ru/Makefile,v 1.50 2006/02/19 11:23:25 bvs Exp $
 # $FreeBSDru: frdp/www/ru/Makefile,v 1.53 2006/02/18 18:46:43 gad Exp $
 #
 # Original revision: 1.122
@@ -108,7 +108,6 @@ index.html: index.xsl ${XML_INCLUDES}\
 		-o $@ \
 		--param advisories.xml "'${XML_ADVISORIES}'" \
 		--param mirrors.xml "'${XML_MIRRORS}'" \
-		--param navigation.xml "'${XML_NAVIGATION}'" \
 		--param news.press.xml-master "'${XML_NEWS_PRESS_MASTER}'" \
 		--param news.press.xml "'${XML_NEWS_PRESS}'" \
 		--param news.project.xml-master "'${XML_NEWS_NEWS_MASTER}'" \
