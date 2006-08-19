@@ -1,6 +1,13 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
+<!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
+				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
+<!ENTITY base "../..">
+<!ENTITY title "FreeBSD Rapport de Statut">
+<!ENTITY email "freebsd-www">
+<!ENTITY % navinclude.about "INCLUDE">
+]>
 
-<!-- $FreeBSD: www/fr/news/status/report.xsl,v 1.1 2002/12/22 22:05:07 stephane Exp $ -->
+<!-- $FreeBSD: www/fr/news/status/report.xsl,v 1.2 2005/10/06 12:56:05 blackend Exp $ -->
 
 <!-- 
    The FreeBSD French Documentation Project
@@ -12,19 +19,7 @@
 <!-- Standard header material -->
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
-
-  <xsl:import href="../../includes.xsl"/>
-  <xsl:import href="../includes.xsl"/>
-  <xsl:import href="includes.xsl"/>
-  <xsl:variable name="section" select="'about'"/>
-
-  <xsl:variable name="base" select="'../..'"/>
-
-  <xsl:variable name="title">
-    <xsl:value-of select="report/date/month"/>
-    <xsl:text> </xsl:text>
-    <xsl:value-of select="report/date/year"/> Rapport de Statut
-  </xsl:variable>
+  <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
 
   <xsl:variable name="date">
     <xsl:value-of select="//cvs:keyword[@name='freebsd']"/>
@@ -39,36 +34,51 @@
 
   <xsl:template match="report">
     <html>
-      
-      <xsl:copy-of select="$header1"/>
-      
-            <body xsl:use-attribute-sets="att.body">
-      
+      &header1;
+
+      <body>
         <div id="containerwrap">
           <div id="container">
-      
-      	<xsl:copy-of select="$header2"/>
-      
-      	<div id="content">
-      
-      	      <xsl:copy-of select="$sidenav"/>
-      
-      	      <div id="contentwrap">
-      	      
-	      <xsl:copy-of select="$header3"/>
+            &header2;
+
+	<div id="content">
+              <div id="SIDEWRAP">
+                &nav;
+              </div> <!-- SIDEWRAP -->
+
+	      <div id="contentwrap">
+                &header3;
 
 	<!-- Process all the <sections>, in order -->
 	<xsl:apply-templates select="section"/>
 
+	<hr/>
+
 	<!-- Generate a table of contents, sorted -->
+	<xsl:for-each select="category">
+	  <h3><xsl:value-of select="description"/></h3>
+	  <xsl:variable name="cat-short" select="name"/>
+	  <ul>
+	    <xsl:for-each select="//project[@cat=$cat-short]">
+  	      <xsl:sort select="translate(title, $lcletters, $ucletters)"/>
+	      <li><a><xsl:attribute name="href">#<xsl:value-of
+	      select="translate(title, ' ',
+	      '-')"/></xsl:attribute><xsl:value-of select="title"/></a>
+	      </li>
+	    </xsl:for-each>
+	  </ul>
+	</xsl:for-each>
 	<ul>
-	  <xsl:for-each select="project">
-	    <xsl:sort select="translate(title, $lcletters, $ucletters)"/>
+	  <xsl:for-each select="//project[not(@cat)]">
+  	    <xsl:sort select="translate(title, $lcletters, $ucletters)"/>
 	    <li><a><xsl:attribute name="href">#<xsl:value-of
-	    select="translate(title, ' ', '-')"/></xsl:attribute><xsl:value-of
-	    select="title"/></a></li>
+	    select="translate(title, ' ',
+	    '-')"/></xsl:attribute><xsl:value-of select="title"/></a>
+	    </li>
 	  </xsl:for-each>
 	</ul>
+
+	<hr/>
 
 	<!-- Process each project, sorted -->
 	<xsl:apply-templates select="project">
@@ -76,19 +86,17 @@
 	</xsl:apply-templates>
 
 	<!-- Standard footer -->
-	<xsl:copy-of select="$newshome"/> |
-	<xsl:copy-of select="$statushome"/>
+	<a href="../news.html">News Home</a> | <a href="status.html">Status Home</a> 
+	      </div> <!-- contentwrap -->
 
-	  	</div> <!-- contentwrap -->
-		<br class="clearboth" />
-	
-	</div> <!-- content -->
-	
-	<xsl:copy-of select="$footer"/>
-	
-        </div> <!-- container -->
-   </div> <!-- containerwrap -->
-
+	      <br class="clearboth" />
+	    </div> <!-- content -->
+            <div id="FOOTER">
+               &copyright;<br />
+               &date;
+            </div> <!-- FOOTER -->
+	  </div> <!-- container -->
+	</div> <!-- containerwrap -->
       </body>
     </html>
   </xsl:template>

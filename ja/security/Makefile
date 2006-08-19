@@ -1,4 +1,4 @@
-# $FreeBSD: www/ja/security/Makefile,v 1.16 2004/01/10 18:38:00 rushani Exp $
+# $FreeBSD: www/ja/security/Makefile,v 1.17 2004/01/19 17:19:34 hrs Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.11
 
@@ -14,16 +14,16 @@ DOCS+=	security.sgml
 
 INDEXLINK= security.html
 
+security.html: advisories.html.inc
+
+DEPENDSET.DEFAULT=	advisories
+XML.DEFAULT=		${XML_ADVISORIES}
+
+XMLDOCS=	advisories:mkindex.xsl::advisories.html.inc
+NO_DATA.advisories=	yes
+NO_TIDY.advisories=	yes
+
 ### Revision checking
 REVCHECK=	YES
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
-
-CLEANFILES+= advisories.html.inc
-
-security.html: advisories.html.inc
-
-advisories.html.inc: mkindex.xsl ${XML_ADVISORIES} ${XML_INCLUDES}
-	${XSLTPROC} ${XSLTPROCOPTS} -o ${.TARGET} \
-		--param "advisories.xml" "'${XML_ADVISORIES}'" \
-		${.CURDIR}/mkindex.xsl ${XML_ADVISORIES}

@@ -1,4 +1,10 @@
-<!-- $FreeBSD: www/fr/gnome/index.xsl,v 1.5 2006/05/03 18:26:53 blackend Exp $ -->
+<!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
+				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
+<!ENTITY base "..">
+<!ENTITY title "Projet GNOME pour FreeBSD">
+<!ENTITY % navinclude.gnome "INCLUDE">
+]>
+<!-- $FreeBSD: www/fr/gnome/index.xsl,v 1.6 2006/07/03 16:03:57 blackend Exp $ -->
 
 <!-- 
    The FreeBSD French Documentation Project 
@@ -12,32 +18,29 @@
 		xmlns:rdf1="http://my.netscape.com/rdf/simple/0.9/"
 		exclude-result-prefixes="rdf rdf1" version="1.0">
 
-  <xsl:import href="includes.navgnome.xsl"/>
-  <xsl:import href="../includes.xsl"/>
-  <xsl:import href="includes.xsl"/>
+  <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
 
-  <xsl:variable name="base" select="'..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/fr/gnome/index.xsl,v 1.5 2006/05/03 18:26:53 blackend Exp $'"/>
-  <xsl:variable name="section" select="'gnome'"/>
-  <xsl:variable name="title" select="'Projet GNOME pour FreeBSD'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/fr/gnome/index.xsl,v 1.6 2006/07/03 16:03:57 blackend Exp $'"/>
+  <xsl:variable name="title" select="''"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
               doctype-public="-//W3C//DTD HTML 4.01 Transitional//EN"/>
 
   <xsl:template match="/">
     <html>
-      <xsl:copy-of select="$header1"/>
-
+      &header1;
       <body>
 
-	<div id="containerwrap">
-	  <div id="container">
-	    <xsl:copy-of select="$header2"/>
+	<div id="CONTAINERWRAP">
+	  <div id="CONTAINER">
+	    &header2;
 
-	    <div id="content">
-	      <xsl:copy-of select="$gnome_sidenav"/>
+	    <div id="CONTENT">
+              <div id="SIDEWRAP">
+                &nav;
+              </div> <!-- SIDEWRAP -->
 
-	      <div id="contentwrap">
+	      <div id="CONTENTWRAP">
 		<div id="rightwrap">
 		  <div class="rightnav">
 
@@ -99,11 +102,11 @@
                   </div> <!-- rightnav -->
                 </div> <!-- rightwrap -->
 
-		<xsl:copy-of select="$header3"/>
+		&header3;
 
 		<h2>Qu'est-ce que GNOME ?</h2>
 
-		<img src="{$enbase}/gnome/images/gnome.png" align="right"
+		<img src="&enbase;/gnome/images/gnome.png" align="right"
                    border="0" alt="GNOME Logo"/>
 
 	       		<p>GNOME est un environnement de travail complet, et une
@@ -125,7 +128,7 @@
 		<h2>Mise &#224; jour vers GNOME 2.14 ?</h2>
 
 		<p>Si vous mettez &#224; jour de GNOME 2.12 &#224; GNOME 2.14, lisez
-		  <a href="{$enbase}/gnome/docs/faq214.html">la FAQ de mise &#224; jour</a> pour des instructions
+		  <a href="&enbase;/gnome/docs/faq214.html">la FAQ de mise &#224; jour</a> pour des instructions
 		  de mise &#224; jour.</p>
 
               <h2>Statut du port</h2>
@@ -140,7 +143,7 @@
 	      <p>GNOME est simple et facile &#224; compiler en utilisant les ports FreeBSD, mais
 	        parfois les choses tournent mal. Si GNOME -- ou quelque chose qui utilise
 		les biblioth&#232;ques GNOME -- ne se compile pas comme il devrait, ex&#233;cutez simplement l'outil
-		<a href="{$enbase}/gnome/gnomelogalyzer.sh">gnomelogalyzer.sh</a>
+		<a href="&enbase;/gnome/gnomelogalyzer.sh">gnomelogalyzer.sh</a>
 		depuis le r&#233;pertoire du port r&#233;calcitrant, et laissez le gnomelogalyzer
 		trouver ce qui va mal et le corriger !</p>
 
@@ -174,7 +177,10 @@
 
 	      <br class="clearboth" />
 	    </div> <!-- content -->
-	    <xsl:copy-of select="$footer"/>
+            <div id="FOOTER">
+	      &copyright;<br />
+	      &date;
+            </div> <!-- FOOTER -->
 	  </div> <!-- container -->
 	</div> <!-- containerwrap -->
       </body>

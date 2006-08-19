@@ -1,13 +1,12 @@
 <?xml version="1.0" encoding="euc-jp"?>
 
-<!-- $FreeBSD: www/ja/share/sgml/templates.usergroups.xsl,v 1.1 2005/09/18 06:25:00 hrs Exp $ -->
+<!-- $FreeBSD: www/ja/share/sgml/templates.usergroups.xsl,v 1.2 2005/09/19 07:58:19 hrs Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS"
   exclude-result-prefixes="cvs">
 
-  <!-- must point to master copy, www/share/sgml/templates.usergroups.xsl -->
-  <xsl:import href="../../../share/sgml/templates.usergroups.xsl" />
+  <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/templates.usergroups.xsl" />
 
   <xsl:output type="xml" encoding="euc-jp"
 	      indent="yes"/>

@@ -1,7 +1,7 @@
 #
 # The FreeBSD Russian Documentation Project
 #
-# $FreeBSD$
+# $FreeBSD: www/ru/news/2003/Makefile,v 1.1 2005/04/27 18:28:35 andy Exp $
 # $FreeBSDru: frdp/www/ru/news/2003/Makefile,v 1.1 2005/04/27 17:55:52 andy Exp $
 #
 # Original revision: 1.1
@@ -14,25 +14,10 @@
 .include "../Makefile.inc"
 .endif
 
-DATA=		index.html press.html
-CLEANFILES+=	index.html press.html
+XMLDOCS+=	index:${XSL_NEWS_NEWSFLASH_OLD}:news.xml:
+DEPENDSET.index=transtable news
 
-index.html: ../oldnewsflash.xsl news.xml \
-		${XML_INCLUDES} ${XML_TRANSTABLE}
-	${XSLTPROC} ${XSLTPROCOPTS} -o ${.TARGET} \
-		--param transtable.xml "'${XML_TRANSTABLE}'" \
-		${.CURDIR}/../oldnewsflash.xsl ${.CURDIR}/news.xml
-.if !defined(NO_TIDY)
-	-${TIDY} ${TIDYOPTS} ${.TARGET}
-.endif
-
-press.html: ../oldpress.xsl press.xml \
-		${XML_INCLUDES} ${XML_TRANSTABLE}
-	${XSLTPROC} ${XSLTPROCOPTS} -o ${.TARGET} \
-		--param transtable.xml "'${XML_TRANSTABLE}'" \
-		${.CURDIR}/../oldpress.xsl ${.CURDIR}/press.xml
-.if !defined(NO_TIDY)
-	-${TIDY} ${TIDYOPTS} ${.TARGET}
-.endif
+XMLDOCS+=	press:${XSL_NEWS_PRESS_OLD}::
+DEPENDSET.press=transtable press
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"

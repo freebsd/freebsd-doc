@@ -1,5 +1,5 @@
 # Original Revision: 1.14
-# $FreeBSD: www/zh_CN/security/Makefile,v 1.1.1002.1 2005/12/18 08:09:14 delphij Exp $
+# $FreeBSD: www/zh_CN/security/Makefile,v 1.1 2006/07/11 15:27:53 delphij Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -13,7 +13,7 @@ DOCS+=	security.sgml
 
 INDEXLINK=	security.html
 
-security.html: advisories.html.inc advisories.rdf
+security.html: advisories.html.inc
 
 DEPENDSET.DEFAULT=	advisories
 XML.DEFAULT=		${XML_ADVISORIES}
@@ -21,7 +21,5 @@ XML.DEFAULT=		${XML_ADVISORIES}
 XMLDOCS=	advisories:mkindex.xsl::advisories.html.inc
 NO_DATA.advisories=	yes
 NO_TIDY.advisories=	yes
-
-XMLDOCS+=	advisories-rdf:security-rdf.xsl::advisories.rdf
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
