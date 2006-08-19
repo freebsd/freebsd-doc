@@ -1,5 +1,6 @@
 #
-# $FreeBSD$
+# $FreeBSD: www/nl/doc/Makefile,v 1.1 2004/09/27 12:00:03 josef Exp $
+# Original revision: 1.8
 #
 # Build the FreeBSD documentation *outside* of the www tree, and install it
 # in to the right place as necessary.
@@ -8,33 +9,39 @@
 # one another -- this was always the case anyway, so there are no extra
 # requirements here.
 #
+.if exists(../Makefile.conf)
+.include "../Makefile.conf"
+.endif
+.if exists(../Makefile.inc)
+.include "../Makefile.inc"
+.endif
 
 all: all-all all-install
 
 all-all:
 	@unset DESTDIR || true; \
-	 cd ${.CURDIR}/../../../doc/nl_NL.ISO8859-1; \
+	 cd ${DOC_PREFIX}/${LANGCODE}; \
 		${MAKE} FORMATS="html-split html" \
 			INSTALL_COMPRESSED= all
 all-install:
 	@unset DESTDIR || true; \
-	 cd ${.CURDIR}/../../../doc/nl_NL.ISO8859-1; \
+	 cd ${DOC_PREFIX}/${LANGCODE}; \
 		${MAKE} FORMATS="html-split html" DOCDIR=${.OBJDIR} \
 			INSTALL_COMPRESSED= install
 install clean:
 	@unset DESTDIR || true; \
-	 cd ${.CURDIR}/../../../doc/nl_NL.ISO8859-1; \
+	 cd ${DOC_PREFIX}/${LANGCODE}; \
 		${MAKE} FORMATS="html-split html" DOCDIR=${DESTDIR}/data/doc \
 			INSTALL_COMPRESSED= ${.TARGET}
 .if make(clean)
 	${RM} -rf nl*
 .endif
 
-.include "${.CURDIR}/../../share/mk/web.site.mk"
+.include "${WEB_PREFIX}/share/mk/web.site.mk"
 
 obj: _OBJUSE
 
 _OBJUSE: .USE
 	@unset DESTDIR || true; \
-	 cd ${.CURDIR}/../../../doc/nl_NL.ISO8859-1; \
+	 cd ${DOC_PREFIX}/${LANGCODE}; \
 		${MAKE} ${.TARGET}
