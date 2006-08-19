@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/news/status/Makefile,v 1.32 2006/04/14 03:12:02 mlaier Exp $
+# $FreeBSD: www/en/news/status/Makefile,v 1.33 2006/07/11 22:16:49 mlaier Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -35,7 +35,6 @@ XMLDOCS+=	report-jan-2006-mar-2006
 XMLDOCS+=	report-apr-2006-jun-2006
 
 XSLT.DEFAULT=	report.xsl
-SRCS.DEFAULT=	includes.xsl
 
 # Install a sample <project> entry.
 DATA=		report-sample.xml

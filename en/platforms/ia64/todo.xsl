@@ -1,25 +1,36 @@
+<!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
+				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
+<!ENTITY base "../..">
+<!ENTITY email "freebsd-ia64">
+<!ENTITY title "FreeBSD/ia64 Project">
+<!ENTITY % navinclude.developers "INCLUDE">
+]>
+
 <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
-  <xsl:import href="../../includes.xsl"/>
-  <xsl:import href="includes.xsl"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/en/platforms/ia64/todo.xsl,v 1.7 2006/01/21 14:58:36 pav Exp $'"/>
-  <xsl:variable name="section" select="'developers'"/>
+  <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
+
+  <xsl:variable name="date" select="'$FreeBSD: www/en/platforms/ia64/todo.xsl,v 1.8 2006/05/09 23:36:46 marcel Exp $'"/>
+
   <xsl:output doctype-public="-//W3C//DTD HTML 4.01 Transitional//EN"
     encoding="iso-8859-1" method="html"/>
+
   <xsl:template match="/">
     <html>
-      <xsl:copy-of select="$header1"/>
-
+      &header1;
       <body>
 
 	<div id="CONTAINERWRAP">
 	  <div id="CONTAINER">
-	    <xsl:copy-of select="$header2"/>
+	    &header2;
 
 	    <div id="CONTENT">
-	      <xsl:copy-of select="$sidenav"/>
+	      <div id="SIDEWRAP">
+                &nav;
+              </div> <!-- SIDEWRAP -->
 
 	      <div id="CONTENTWRAP">
-		<xsl:copy-of select="$header3"/>
+		&header3;
+
 		<img align="right" alt="Montecito die" src="montecito-die.png"/>
 
 		<p>Search the FreeBSD/ia64 PR database:</p>
@@ -135,7 +146,10 @@
 
 	      <br class="clearboth" />
 	    </div> <!-- CONTENT -->
-	<xsl:copy-of select="$footer"/>
+            <div id="FOOTER">
+               &copyright;<br />
+               &date;
+            </div> <!-- FOOTER -->
 	  </div> <!-- CONTAINER -->
 	</div> <!-- CONTAINERWRAP -->
       </body>

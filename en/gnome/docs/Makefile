@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/gnome/docs/Makefile,v 1.19 2006/01/01 20:32:17 adamw Exp $
+# $FreeBSD: www/en/gnome/docs/Makefile,v 1.20 2006/04/30 05:20:38 marcus Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -20,7 +20,5 @@ DOCS+=	bugging.sgml
 DOCS+=  volunteer.sgml
 DOCS+=	develfaq.sgml
 DOCS+=	example-Makefile.sgml
-
-SGML_INCLUDES+=	../includes.navgnome.sgml
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"

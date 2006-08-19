@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/commercial/Makefile,v 1.16 2004/05/05 07:56:31 josef Exp $
+# $FreeBSD: www/en/commercial/Makefile,v 1.17 2005/09/18 04:33:45 hrs Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -7,37 +7,38 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS=	commercial.sgml
-
+DOCS=		commercial.sgml
 INDEXLINK=	commercial.html
 
-SRCS.DEFAULT=	../includes.xsl
-XSLT.DEFAULT=	entries.xsl
+XSLT.DEFAULT=		${XSL_ENTRIES}
+DEPENDSET.DEFAULT=	commercial
 
-XMLDOCS=	consult
-PARAMS.consult=	--param pagename "'Consulting Services'"
+XMLDOCS=	consult::${XML_COMMERCIAL_CONSULT}:
+PARAMS.consult=	--param pagename "'Consulting Services'" \
+		--param basename "'consult.html'"
 
-XMLDOCS+=	consult_bycat::consult.xml:
+XMLDOCS+=	consult_bycat::${XML_COMMERCIAL_CONSULT}:
+PARAMS.consult_bycat=\
+		--param pagename "'Consulting Services'" \
+		--param basename "'consult.html'" \
+		--param sort "'bycat'"
 
-XMLDOCS+=	hardware
+XMLDOCS+=	hardware::${XML_COMMERCIAL_HARDWARE}:
 PARAMS.hardware= --param pagename "'Hardware Vendors'"
 
-XMLDOCS+=	isp
+XMLDOCS+=	isp::${XML_COMMERCIAL_ISP}:
 PARAMS.isp=	--param pagename "'Internet Service Providers'"
 
-XMLDOCS+=	misc
+XMLDOCS+=	misc::${XML_COMMERCIAL_MISC}:
 PARAMS.misc=	--param pagename "'Miscellaneous Vendors'"
 
-XMLDOCS+=	software
+XMLDOCS+=	software::${XML_COMMERCIAL_SOFTWARE}:
 PARAMS.software=--param pagename "'Software Vendors'"
 
-XMLDOCS+=	software_bycat:soft_bycat.xsl:software.xml:
-
-lint:
-	${XMLLINT} ${XMLLINTOPTS} --valid -o /dev/null ${.CURDIR}/consult.xml
-	${XMLLINT} ${XMLLINTOPTS} --valid -o /dev/null ${.CURDIR}/hardware.xml
-	${XMLLINT} ${XMLLINTOPTS} --valid -o /dev/null ${.CURDIR}/isp.xml
-	${XMLLINT} ${XMLLINTOPTS} --valid -o /dev/null ${.CURDIR}/misc.xml
-	${XMLLINT} ${XMLLINTOPTS} --valid -o /dev/null ${.CURDIR}/software.xml
+XMLDOCS+=	software_bycat::${XML_COMMERCIAL_SOFTWARE}:
+PARAMS.software_bycat=\
+		--param pagename "'Software Vendors'" \
+		--param basename "'software.html'" \
+		--param sort "'bycat'"
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"

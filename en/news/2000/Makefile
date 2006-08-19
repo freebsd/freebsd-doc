@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/news/2000/Makefile,v 1.3 2004/04/07 11:41:47 phantom Exp $
+# $FreeBSD: www/en/news/2000/Makefile,v 1.4 2005/09/18 04:33:45 hrs Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -9,8 +9,7 @@
 
 DOCS=	index.sgml
 
-XMLDOCS=	press:../oldpress.xsl::
-SRCS.press=	../includes.xsl
-DEPENDSET.press=	transtable
+XMLDOCS+=	press:${XSL_NEWS_PRESS_OLD}::
+DEPENDSET.press=transtable press
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
