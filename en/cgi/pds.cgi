@@ -26,11 +26,10 @@
 # pds.cgi - FreeBSD Ports download sources cgi script
 #	    print a list of source files for a port
 #
-# $FreeBSD: www/en/cgi/pds.cgi,v 1.10 2002/05/02 14:21:40 wosch Exp $
+# $FreeBSD: www/en/cgi/pds.cgi,v 1.11 2006/08/19 21:03:12 simon Exp $
 
 sub escape($) { $_ = $_[0]; s/&/&amp;/g; s/</&lt;/g; s/>/&gt;/g; $_; }
 
-$hsty_base = '';
 $hsty_email = 'ports@FreeBSD.org';
 
 require "./cgi-lib.pl";
