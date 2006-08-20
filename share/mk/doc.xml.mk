@@ -1,5 +1,5 @@
 # doc.xml.mk
-# $FreeBSD: www/share/mk/doc.xml.mk,v 1.5 2006/07/11 12:59:40 hrs Exp $
+# $FreeBSD: www/share/mk/doc.xml.mk,v 1.6 2006/08/19 21:18:53 hrs Exp $
 
 XML_CATALOG_FILES=	file://${DOC_PREFIX}/${LANGCODE}/share/sgml/catalog.xml \
 			file://${DOC_PREFIX}/share/sgml/catalog.xml \
@@ -12,7 +12,7 @@ XML_CATALOG_FILES=	file://${DOC_PREFIX}/${LANGCODE}/share/sgml/catalog.xml \
 # Variables used in DEPENDSET
 
 _DEPENDSET.all=	wwwstd transtable mirrors usergroups commercial \
-		news press events navigation advisories notices
+		news press events advisories notices
 
 # DEPENDSET: wwwstd  .........................................................
 _DEPENDSET.wwwstd=	${XML_INCLUDES}
@@ -173,11 +173,6 @@ XML_COMMERCIAL_MISC=	${WEB_PREFIX}/share/sgml/commercial.misc.xml
 XML_COMMERCIAL_SOFTWARE=${WEB_PREFIX}/share/sgml/commercial.software.xml
 
 XSL_ENTRIES=		${WEB_PREFIX}/share/sgml/templates.entries.xsl
-
-# DEPENDSET: navigation  .....................................................
-_DEPENDSET.navigation=	${XML_NAVIGATION} ${XML_INCLUDES}
-_PARAMS.navigation=	--param navigation.xml "'${XML_NAVIGATION}'"
-XML_NAVIGATION=		${WEB_PREFIX}/${WWW_LANGCODE}/navigation.xml
 
 # DEPENDSET: advisories  .....................................................
 _DEPENDSET.advisories=	${XML_ADVISORIES} ${XML_INCLUDES}
