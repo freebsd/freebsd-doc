@@ -4,7 +4,7 @@
 <!ENTITY title "The FreeBSD Project">
 ]>
 
-<!-- $FreeBSD: www/en/index.xsl,v 1.152 2006/06/28 16:24:17 pav Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.153 2006/08/19 21:20:30 hrs Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
@@ -100,7 +100,7 @@
 				  <h2><a href="&base;/releases/">LATEST RELEASES</a></h2>
 				  <ul id="FRONTRELEASESLIST">
 					<li>
-					  <a href="&u.rel.announce;">Production Release &rel.current;/></a>
+					  <a href="&u.rel.announce;">Production Release &rel.current;</a>
 					</li>
 					<li>
 					  <a href="&u.rel2.announce;">Production (Legacy) Release &rel2.current;</a>
