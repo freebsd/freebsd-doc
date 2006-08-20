@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
-<!-- $FreeBSD$ -->
+<!-- $FreeBSD: www/share/sgml/libcommon.xsl,v 1.1 2006/08/19 21:20:54 hrs Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
   version="1.0"
@@ -1056,16 +1056,14 @@
   <xsl:template name="html-index-events-items">
     <xsl:param name="events.xml-master" select="'none'" />
     <xsl:param name="events.xml" select="''" />
-    <xsl:param name="curdate.xml" select="''" />
-    <xsl:variable name="curdate" select="document($curdate.xml)//curdate"/>
 
     <xsl:for-each select="document($events.xml-master)/descendant::event[
-									   ((number(enddate/year) &gt; number($curdate/year)) or
-								            (number(enddate/year) = number($curdate/year) and
-								             number(enddate/month) &gt; number($curdate/month)) or
-						          		    (number(enddate/year) = number($curdate/year) and
-								             number(enddate/month) = number($curdate/month) and
-						   	            	     enddate/day &gt;= $curdate/day))]">
+									   ((number(enddate/year) &gt; number($curdate.year)) or
+								            (number(enddate/year) = number($curdate.year) and
+								             number(enddate/month) &gt; number($curdate.month)) or
+						          		    (number(enddate/year) = number($curdate.year) and
+								             number(enddate/month) = number($curdate.month) and
+						   	            	     enddate/day &gt;= $curdate.day))]">
       <xsl:sort select="startdate/year" order="ascending"/>
       <xsl:sort select="format-number(startdate/month, '00')" order="ascending"/>
       <xsl:sort select="format-number(startdate/day, '00')" order="ascending"/>
