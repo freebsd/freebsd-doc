@@ -1,4 +1,4 @@
-# $FreeBSD: www/ja/Makefile,v 1.71 2005/10/04 17:13:17 hrs Exp $
+# $FreeBSD: www/ja/Makefile,v 1.72 2005/10/06 04:20:44 remko Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.114
 
@@ -33,7 +33,7 @@ DOCS+= jabout.sgml
 
 XMLDOCS=	index:xsl:${XML_NEWS_NEWS}:
 DEPENDSET.index=transtable mirrors news press events \
-		navigation advisories notices
+		advisories notices
 
 XMLDOCS+=       usergroups:${XSL_USERGROUPS}:${XML_USERGROUPS}:
 DEPENDSET.usergroups=transtable usergroups
