@@ -108,6 +108,12 @@ WWW_LANGCODE?=	${_WWW_LANGCODE}
 DOC_PREFIX!=	${REALPATH} ${DOC_PREFIX}
 WEB_PREFIX!=	${REALPATH} ${WEB_PREFIX}
 
+.if ${WWW_LANGCODE} == "en"
+WEB_PREFIX_REL= ${.CURDIR:S,^${WEB_PREFIX},,:C,/[^/]+,/..,g:S,^/..,,:S,^/,,:S,^$,.,:S,^/..,,}
+.else
+WEB_PREFIX_REL= ${.CURDIR:S,^${WEB_PREFIX},,:C,/[^/]+,/..,g:S,^/..,,:S,^/,,:S,^$,.,}
+.endif
+
 .if !defined(URL_RELPREFIX)
 URLS_ABSOLUTE=	YES
 .elif !defined(URLS_ABSOLUTE)
