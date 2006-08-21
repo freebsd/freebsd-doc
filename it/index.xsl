@@ -7,7 +7,7 @@
 <!--
      The FreeBSD Italian Documentation Project
 
-     $FreeBSD: www/it/index.xsl,v 1.30 2006/06/06 14:22:13 ale Exp $
+     $FreeBSD: www/it/index.xsl,v 1.31 2006/08/19 21:24:05 hrs Exp $
      Original revision: 1.138
 -->
 
@@ -195,7 +195,8 @@
 			<div class="newseventswrap">
 
 			<xsl:call-template name="html-index-news-project-items">
-				<xsl:with-param name="news.project.xml" select="$news.project.xml" />
+			    <xsl:with-param name="news.project.xml-master" select="$news.project.xml-master" />
+			    <xsl:with-param name="news.project.xml" select="$news.project.xml" />
 			</xsl:call-template>
 
 			  <div>
@@ -220,8 +221,8 @@
 			<div class="newseventswrap">
 
 			<xsl:call-template name="html-index-events-items">
-				<xsl:with-param name="events.xml" select="$events.xml" />
-				<xsl:with-param name="curdate.xml" select="$curdate.xml" />
+			    <xsl:with-param name="events.xml-master" select="$events.xml-master" />
+			    <xsl:with-param name="events.xml" select="$events.xml" />
 			</xsl:call-template>
 
 			  <div>
@@ -243,7 +244,8 @@
 			<div class="newseventswrap">
 
 			<xsl:call-template name="html-index-news-press-items">
-				<xsl:with-param name="news.press.xml" select="$news.press.xml" />
+			    <xsl:with-param name="news.press.xml-master" select="$news.press.xml-master" />
+			    <xsl:with-param name="news.press.xml" select="$news.press.xml" />
 			</xsl:call-template>
 
 			  <div>
