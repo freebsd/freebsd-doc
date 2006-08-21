@@ -1,7 +1,9 @@
 # doc.xml.mk
-# $FreeBSD: www/share/mk/doc.xml.mk,v 1.6 2006/08/19 21:18:53 hrs Exp $
+# $FreeBSD: www/share/mk/doc.xml.mk,v 1.7 2006/08/20 06:31:51 hrs Exp $
 
-XML_CATALOG_FILES=	file://${DOC_PREFIX}/${LANGCODE}/share/sgml/catalog.xml \
+XML_CATALOG_FILES=	file://${.OBJDIR}/catalog-cwd.xml \
+			file://${DOC_PREFIX}/${LANGCODE}/share/sgml/catalog.xml \
+			file://${DOC_PREFIX}/${LANGCODE}/share/sgml/catalog.xml \
 			file://${DOC_PREFIX}/share/sgml/catalog.xml \
 			file://${DOC_PREFIX}/share/sgml/catalog-common.xml \
 			file://${WEB_PREFIX}/${WWW_LANGCODE}/share/sgml/catalog.xml \
@@ -28,6 +30,16 @@ XML_INCLUDES+=	${F}
 XML_INCLUDES+=	${F}
 .endif
 .endfor
+
+XML_INCLUDES+=	${.OBJDIR}/autogen.ent ${.OBJDIR}/catalog-cwd.xml
+CLEANFILES+=	${.OBJDIR}/autogen.ent ${.OBJDIR}/catalog-cwd.xml
+
+${.OBJDIR}/autogen.ent:
+	${ECHO_CMD} '<!ENTITY base "${WEB_PREFIX_REL}">' > ${.TARGET}
+${.OBJDIR}/catalog-cwd.xml: ${WEB_PREFIX}/share/sgml/catalog-cwd.xml
+	${INSTALL} ${.ALLSRC} ${.TARGET}
+
+DEPENDSET.DEFAULT+=	wwwstd
 
 # DEPENDSET: transtable  ......................................................
 _DEPENDSET.transtable=	${XML_TRANSTABLE} ${XSL_TRANSTABLE} \

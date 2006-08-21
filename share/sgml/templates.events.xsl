@@ -1,13 +1,12 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD Fragment//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
-<!ENTITY base "..">
 <!ENTITY title "FreeBSD Events">
 <!ENTITY email "freebsd-www">
 <!ENTITY % navinclude.about "INCLUDE">
 ]>
 
-<!-- $FreeBSD$ -->
+<!-- $FreeBSD: www/share/sgml/templates.events.xsl,v 1.1 2006/08/19 21:20:54 hrs Exp $ -->
 
 <!-- Copyright (c) 2003 Simon L. Nielsen <simon@FreeBSD.org>
      All rights reserved.
