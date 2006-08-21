@@ -4,10 +4,10 @@
 <!ENTITY title "Le Projet FreeBSD">
 ]>
 
-<!-- $FreeBSD: www/fr/index.xsl,v 1.31 2006/07/03 15:44:07 blackend Exp $ -->
+<!-- $FreeBSD: www/fr/index.xsl,v 1.32 2006/08/19 21:23:33 hrs Exp $ -->
 <!--
    The FreeBSD French Documentation Project
-   Original revision: 1.144
+   Original revision: 1.154
 
    Version francaise : Stephane Legrand <stephane@freebsd-fr.org>
    Mise a jour:	Marc Fonvieille <blackend@FreeBSD.org>
@@ -16,7 +16,7 @@
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
 
-  <xsl:variable name="date" select="'$FreeBSD: www/fr/index.xsl,v 1.31 2006/07/03 15:44:07 blackend Exp $'"/>
+  <xsl:variable name="date" select="''"/>
 
   <!-- these params should be externally bound. The values
        here are not used actually -->
@@ -78,10 +78,10 @@
 				<h1>
 				  Bas&#233; sur UNIX&#174; BSD
 				</h1>				
-				<p>FreeBSD est un syst&#232;me d'exploitation avanc&#233; pour
+				<p>FreeBSD&#174; est un syst&#232;me d'exploitation avanc&#233; pour
 				les architectures compatibles x86 (y compris Pentium&#174; et Athlon&#8482;), compatibles 
 				amd64 (y compris Opteron&#8482;, Athlon 64 et EM64T), 
-				Alpha/AXP, IA-64, PC-98 et UltraSPARC&#174;.
+				UltraSPARC&#174;, IA-64, PC-98 et ARM.
 				Il est d&#233;riv&#233; de UNIX BSD, la version d'&unix; 
 				d&#233;velopp&#233;e &#224;
 				l'Universit&#233; de Californie, Berkeley.
@@ -337,11 +337,11 @@
       <div id="FOOTER">
 	&copyright;
 
-	The mark FreeBSD is a registered trademark of The FreeBSD
-	Foundation and is used by The FreeBSD Project with the
-	permission of <a
-	  href="http://www.freebsdfoundation.org/documents/Guidelines.shtml">The
-	FreeBSD Foundation</a>.
+	Le nom FreeBSD est une marque d&#233;pos&#233;e appartenant
+	&#224; la fondation FreeBSD et est utilis&#233;e par le projet
+	FreeBSD avec la permission de la <a
+	href="http://www.freebsdfoundation.org/documents/Guidelines.shtml">fondation
+	FreeBSD</a>.
 
       </div> <!-- FOOTER -->
     </div> <!-- CONTAINER -->
