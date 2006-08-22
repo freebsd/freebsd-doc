@@ -11,6 +11,12 @@ XML_CATALOG_FILES=	file://${.OBJDIR}/catalog-cwd.xml \
 			file://${WEB_PREFIX}/share/sgml/catalog-common.xml \
 			file://${LOCALBASE}/share/xml/catalog
 
+.if exists(${WEB_PREFIX}/share/sgml/catalog-cwd.xml)
+XML_CATALOG_CWD=	${WEB_PREFIX}/share/sgml/catalog-cwd.xml
+.elif exists(${DOC_PREFIX}/share/sgml/catalog-cwd.xml)
+XML_CATALOG_CWD=	${DOC_PREFIX}/share/sgml/catalog-cwd.xml
+.endif
+
 # Variables used in DEPENDSET
 
 _DEPENDSET.all=	wwwstd transtable mirrors usergroups commercial \
@@ -31,13 +37,17 @@ XML_INCLUDES+=	${F}
 .endif
 .endfor
 
-XML_INCLUDES+=	${.OBJDIR}/autogen.ent ${.OBJDIR}/catalog-cwd.xml
-CLEANFILES+=	${.OBJDIR}/autogen.ent ${.OBJDIR}/catalog-cwd.xml
+.if defined(XML_CATALOG_CWD)
+XML_INCLUDES+=	${.OBJDIR}/catalog-cwd.xml
+CLEANFILES+=	${.OBJDIR}/catalog-cwd.xml
+${.OBJDIR}/catalog-cwd.xml: ${XML_CATALOG_CWD}
+	${INSTALL} ${.ALLSRC} ${.TARGET}
+.endif
 
+XML_INCLUDES+=	${.OBJDIR}/autogen.ent
+CLEANFILES+=	${.OBJDIR}/autogen.ent
 ${.OBJDIR}/autogen.ent:
 	${ECHO_CMD} '<!ENTITY base "${WEB_PREFIX_REL}">' > ${.TARGET}
-${.OBJDIR}/catalog-cwd.xml: ${WEB_PREFIX}/share/sgml/catalog-cwd.xml
-	${INSTALL} ${.ALLSRC} ${.TARGET}
 
 DEPENDSET.DEFAULT+=	wwwstd
 
