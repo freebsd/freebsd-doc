@@ -1,5 +1,5 @@
 # doc.xml.mk
-# $FreeBSD: www/share/mk/doc.xml.mk,v 1.7 2006/08/20 06:31:51 hrs Exp $
+# $FreeBSD: www/share/mk/doc.xml.mk,v 1.8 2006/08/21 18:27:42 hrs Exp $
 
 XML_CATALOG_FILES=	file://${.OBJDIR}/catalog-cwd.xml \
 			file://${DOC_PREFIX}/${LANGCODE}/share/sgml/catalog.xml \
@@ -10,6 +10,12 @@ XML_CATALOG_FILES=	file://${.OBJDIR}/catalog-cwd.xml \
 			file://${WEB_PREFIX}/share/sgml/catalog.xml \
 			file://${WEB_PREFIX}/share/sgml/catalog-common.xml \
 			file://${LOCALBASE}/share/xml/catalog
+
+.if exists(${WEB_PREFIX}/share/sgml/catalog-cwd.xml)
+XML_CATALOG_CWD=	${WEB_PREFIX}/share/sgml/catalog-cwd.xml
+.elif exists(${DOC_PREFIX}/share/sgml/catalog-cwd.xml)
+XML_CATALOG_CWD=	${DOC_PREFIX}/share/sgml/catalog-cwd.xml
+.endif
 
 # Variables used in DEPENDSET
 
@@ -31,13 +37,17 @@ XML_INCLUDES+=	${F}
 .endif
 .endfor
 
-XML_INCLUDES+=	${.OBJDIR}/autogen.ent ${.OBJDIR}/catalog-cwd.xml
-CLEANFILES+=	${.OBJDIR}/autogen.ent ${.OBJDIR}/catalog-cwd.xml
+.if defined(XML_CATALOG_CWD)
+XML_INCLUDES+=	${.OBJDIR}/catalog-cwd.xml
+CLEANFILES+=	${.OBJDIR}/catalog-cwd.xml
+${.OBJDIR}/catalog-cwd.xml: ${XML_CATALOG_CWD}
+	${INSTALL} ${.ALLSRC} ${.TARGET}
+.endif
 
+XML_INCLUDES+=	${.OBJDIR}/autogen.ent
+CLEANFILES+=	${.OBJDIR}/autogen.ent
 ${.OBJDIR}/autogen.ent:
 	${ECHO_CMD} '<!ENTITY base "${WEB_PREFIX_REL}">' > ${.TARGET}
-${.OBJDIR}/catalog-cwd.xml: ${WEB_PREFIX}/share/sgml/catalog-cwd.xml
-	${INSTALL} ${.ALLSRC} ${.TARGET}
 
 DEPENDSET.DEFAULT+=	wwwstd
 
