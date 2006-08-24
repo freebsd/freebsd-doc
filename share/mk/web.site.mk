@@ -1,5 +1,5 @@
 # bsd.web.mk
-# $FreeBSD: www/share/mk/web.site.mk,v 1.73 2006/05/13 03:27:22 simon Exp $
+# $FreeBSD: www/share/mk/web.site.mk,v 1.74 2006/08/19 21:18:53 hrs Exp $
 
 #
 # Build and install a web site.
@@ -202,11 +202,17 @@ PREHTML?=	${SED} -e ${DATESUBST} ${BASESUBST}
 GENDOCS+=	${DOCS:M*.sgml:S/.sgml$/.html/g}
 ORPHANS:=	${ORPHANS:N*.sgml}
 
+# XXX: using a pipe between ${PREHTML} and ${SGMLNORM} should be better,
+# but very strange errors will be reported when using osgmlnorm (from
+# OpenSP.  sgmlnorm works fine).  For the moment, we use a temporary file
+# to prevent it.
+
 .sgml.html: ${_SGML_INCLUDES}
-	${PREHTML} ${PREHTMLOPTS} ${.IMPSRC} | \
+	${PREHTML} ${PREHTMLOPTS} ${.IMPSRC} > ${.IMPSRC}-tmp
 	${SETENV} SGML_CATALOG_FILES= \
-		${SGMLNORM} ${SGMLNORMOPTS} > ${.TARGET} || \
-			(${RM} -f ${.TARGET} && false)
+		${SGMLNORM} ${SGMLNORMOPTS} ${.IMPSRC}-tmp > ${.TARGET} || \
+			(${RM} -f ${.IMPSRC}-tmp ${.TARGET} && false)
+	${RM} -f ${.IMPSRC}-tmp
 .if !defined(NO_TIDY)
 	-${TIDY} ${TIDYOPTS} ${.TARGET}
 .endif
