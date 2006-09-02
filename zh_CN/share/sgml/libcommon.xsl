@@ -8,7 +8,7 @@
 
   <xsl:template name="html-news-list-newsflash-preface">
     <img src="&enbase;/gifs/news.jpg" align="right" border="0" width="193"
-      height="144" alt="Nouvelles FreeBSD"/>
+      height="144" alt="FreeBSD 新闻速递"/>
 
     <p>FreeBSD 是一个正在迅速开发着的操作系统。
       保持一个最终的开发版是比较繁琐的！你可以定期来查看这个页面，同样，你可能希望订阅
