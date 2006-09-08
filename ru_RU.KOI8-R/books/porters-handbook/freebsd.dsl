@@ -2,7 +2,7 @@
      The FreeBSD Russian Documentation Project
 
      $FreeBSD$
-     $FreeBSDru: frdp/doc/ru_RU.KOI8-R/books/porters-handbook/freebsd.dsl,v 1.4 2001/11/28 12:12:51 andy Exp $
+     $FreeBSDru: frdp/doc/ru_RU.KOI8-R/books/porters-handbook/freebsd.dsl,v 1.6 2006/09/08 13:59:56 den Exp $
 
      Original revision: 1.5
 -->
@@ -28,7 +28,7 @@
               (literal "ports@FreeBSD.org"))
             (literal ">.")
             (make empty-element gi: "br")
-            (literal "По вопросам связанным с этом документацией, пишите по адресу <")
+            (literal "По вопросам, связанным с этой документацией, пишите по адресу <")
             (create-link (list (list "HREF" "mailto:doc@FreeBSD.org"))
               (literal "doc@FreeBSD.org"))
             (literal ">.")))
