@@ -1,7 +1,5 @@
 #!/usr/bin/perl -T
-# $FreeBSD: www/en/cgi/query-pr-summary.cgi,v 1.53 2005/11/17 04:43:38 fenner Exp $
-
-sub escape($) { $_ = $_[0]; s/&/&amp;/g; s/</&lt;/g; s/>/&gt;/g; $_; }
+# $FreeBSD: www/en/cgi/query-pr-summary.cgi,v 1.54 2005/12/01 03:19:22 jcamou Exp $
 
 $html_mode     = 1 if $ENV{'DOCUMENT_ROOT'};
 $self_ref      = $ENV{'SCRIPT_NAME'};
@@ -28,8 +26,7 @@ if ($ENV{'QUERY_STRING'} eq 'query') {
 
 if ($html_mode) {
 	$query_args   = '--restricted ';
-	&ReadParse(*input) if $html_mode;
-
+	&ReadParse(*input);
 } else {
 	&Getopts('CcqRr:s:T:');
 
@@ -207,7 +204,7 @@ EOM
 # If someone does a multiple-variable query they will probably do weird things.
 
 $self_ref1 = $self_ref . '?';
-$self_ref1 .= 'sort=' . escape($input{'sort'}) if $input{'sort'};
+$self_ref1 .= 'sort=' . html_fixline($input{'sort'}) if $input{'sort'};
 print "<p>You may view summaries by <a href='$self_ref1'>Severity</a>, ";
 $self_ref1 .= '&amp;' if ($self_ref1 !~/\?$/);
 print "<a href='${self_ref1}state=summary'>State</a>, ";
@@ -276,10 +273,18 @@ $query_args .= ' --skip-closed' unless $closed_too;
 foreach ('category', 'originator', 'priority', 'class', 'responsible',
 	'release', 'severity', 'state', 'submitter', 'text', 'multitext') {
 	if ($input{$_} && $input{$_} ne 'summary') {
-		$d = $input{$_};
-		$d =~ s/^"(.*)"$/$&/;
-		$d =~ s/'/\\'/;
-		$query_args .= " --${_}='$d'";
+		# Check if the arguments provided by user are secure.
+		# This is required to be able to run this script in
+		# taint mode (perl -T)
+		if ($input{$_} =~ /^([-^'\[\]\@\s\w.]+)$/) {
+			$d = $1;
+			$d =~ s/^"(.*)"$/$&/;
+			$d =~ s/'/\\'/;
+			$query_args .= " --${_}='$d'";
+		} else {
+			print "Insecure data in ${_}! Ignoring this filter.<br />".
+			      "Only alphanumeric characters and ', -, [, ], ^, @ are allowed.";
+		}
 	}
 }
 
