@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/releases/Makefile,v 1.47 2005/05/24 16:09:47 obrien Exp $
+# $FreeBSD: www/en/releases/Makefile,v 1.48 2006/01/26 00:29:37 murray Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -14,7 +14,7 @@ SUBDIR+=	2.2.1R 2.2.2R 2.2.5R 2.2.6R 2.2.7R 2.2.8R 3.0R 3.1R 3.2R
 SUBDIR+=	3.3R 3.4R 3.5R 4.0R 4.1R 4.1.1R 4.2R 4.3R 4.4R 4.5R 4.6R
 SUBDIR+=	4.6.2R 4.7R 4.8R 4.9R 4.10R 4.11R
 SUBDIR+=	5.0R 5.1R 5.2R 5.2.1R 5.3R 5.4R 5.5R
-SUBDIR+=	6.0R 6.1R
+SUBDIR+=	6.0R 6.1R 6.2R
 
 .if defined $(NEW_BUILD)
 SUBDIR=
