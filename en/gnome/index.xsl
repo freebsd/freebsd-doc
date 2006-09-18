@@ -4,7 +4,7 @@
 <!ENTITY title "The FreeBSD GNOME Project">
 <!ENTITY % navinclude.gnome "INCLUDE">
 ]>
-<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.87 2006/05/09 19:36:59 marcus Exp $ -->
+<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.88 2006/08/19 21:20:34 hrs Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
 		xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -73,7 +73,7 @@
 
 		    <h2>GNOME Project News</h2>
 		    <ul>
-		      <xsl:for-each select="document('http://gnomedesktop.org/backend.php')/rss/channel/*[name() = 'item'][position() &lt; 10]">
+		      <xsl:for-each select="document('http://gnomedesktop.org/node/feed')/rss/channel/*[name() = 'item'][position() &lt; 10]">
 			<li><a>
 			    <xsl:attribute name="href">
 			      <xsl:value-of select="link"/>
