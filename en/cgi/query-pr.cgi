@@ -1,243 +1,952 @@
-#!/usr/bin/perl -T
-# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.47 2005/11/06 22:13:05 ceri Exp $
+#!/usr/bin/perl -Tw
+#
+# A "More Useful" GNATS query-pr Interface
+#
+# Copyright (C) 2006, Shaun Amott <shaun@FreeBSD.org>
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+#
+# THIS SOFTWARE IS PROVIDED BY THE AUTHORS AND CONTRIBUTORS ``AS IS'' AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHORS OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+# OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+# LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+# OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+# SUCH DAMAGE.
+#
+# $FreeBSD$
+#
+
+use strict;
+#use warnings;
+
+use Convert::UU qw(uudecode uuencode);
+
+require './cgi-style.pl';
+
+use constant HTTP_HEADER        => "Content-type: text/html; charset=UTF-8\r\n\r\n";
+use constant HTTP_HEADER_PATCH  => "Content-type: text/plain; charset=UTF-8\r\n\r\n";
+
+use constant SECT_HEADER        => 1;
+use constant SECT_SFIELDS       => 2;
+use constant SECT_MFIELDS       => 3;
+
+use constant PATCH_ANY          => 0x0001;
+use constant PATCH_DIFF         => 0x0002;
+use constant PATCH_UUENC        => 0x0004;
+use constant PATCH_UUENC_BIN    => 0x0008;
+use constant PATCH_SHAR         => 0x0010;
+
+my @fields_single = (
+	"Number",       "Category",      "Synopsis",      "Confidential",
+	"Severity",     "Priority",      "Responsible",   "State",
+	"Quarter",      "Keywords",      "Date-Required", "Class",
+	"Submitter-Id", "Arrival-Date",  "Closed-Date",   "Last-Modified",
+	"Originator",   "Release",
+);
+
+my @fields_multiple = (
+	"Organization", "Environment",   "Description",   "How-To-Repeat",
+	"Fix",          "Release-Note",  "Audit-Trail",   "Unformatted",
+);
+
+my $fields_skip    = "Confidential|Quarter|Keywords|Date-Required|Submitter-Id";
+
+my $valid_category = '[A-Za-z0-9][A-Za-z0-9-_]{1,25}';
+my $valid_pr       = '\d{1,8}';
+
+my %fmt;
+
+my $f = "";
+my $PR = -1;
+my $getpatch = -1;
+my $inpatch = 0;
+my $patchendhint = 0;
+my $category;
+my @query;
+my (%header, %sfields, %mfields);
+
+my $iscgi = defined $ENV{'SCRIPT_NAME'};
 
 $ENV{'PATH'} = "/bin:/usr/bin:/usr/sbin:/sbin:/usr/local/bin";
 
-require "./cgi-lib.pl";
-require "./cgi-style.pl";
-require "getopts.pl";
-require "./Gnats.pm";  import Gnats;
+$ENV{'QUERY_STRING'} ||= "";
+$ENV{'SCRIPT_NAME'}  ||= $0;
 
-&Getopts('p:');
+# Junk from cgi-style.pl
+$main::hsty_base     ||= "";
+$main::t_style       ||= "";
 
-if ($opt_p) {
+my $scriptname  = htmlclean($ENV{'SCRIPT_NAME'});
+my $querystring = htmlclean($ENV{'QUERY_STRING'});
 
-    $input{'pr'} = $opt_p;
+# Do not change $self_url_base, unless you understand what it is for!
+# In particular: it is used as a delimiter between comments in the
+# Audit-Trail.
+my $self_url_base = "http://www.FreeBSD.org/cgi/query-pr.cgi?pr=";
+my $cvsweb_url    = "http://www.FreeBSD.org/cgi/cvsweb.cgi/";
+my $stylesheet    = "$main::hsty_base/layout/css/query-pr.css";
 
-} else {
 
-    if (! &ReadParse(*input)) {
-	print &html_header("PR Query Interface");
-	print "<p>Please enter the PR number you wish to query:</p>\n";
-	($scriptname = $ENV{'SCRIPT_NAME'}) =~ s|^/?|/|;
-	$scriptname =~ s|/$||;
-	($summary = $scriptname) =~ s/query-pr/query-pr-summary/;
-	print "<form method='get' action='$scriptname'>\n";
-	print "<input type='text' name='pr' />\n";
-	print "<input type='submit' value='Query' />\n</form>\n";
-	print "<p>See also the <a href='$summary'>PR summary</a></p>\n";
-	print &html_footer;
-	exit 0;
-    }
-}
+#-----------------------------------------------------------------------
+# Format strings
+#-----------------------------------------------------------------------
 
-# allow query-pr.cgi?<pr> queries
-if (!($pr = $input{'pr'}) && &MethGet) {
-    $pr = $ENV{'QUERY_STRING'};
-}
+$fmt{'header_thead'} = <<EOF;
+<table class="headtable">
+EOF
 
-# be tolerant to <category>/<PR id> queries
-$pr =~ s%^.+/%%;	# remove <category>/ part
-if ($pr =~ /(\d+)/) {
-    $pr = $1;
-} else {
-    $pr = 0;
-}
+$fmt{'header_tfoot'} = <<EOF;
+</table><br />
+EOF
 
-$pr = int($pr); 	# numeralize: "0123" -> 123
+$fmt{'header_trow'} = <<EOF;
+<tr><td class="key">%%(1):</td><td class="val">%%(2)</td></tr>
+EOF
 
-if ($pr < 1 || $pr > 499999) {
-    print &html_header("FreeBSD Problem Report");
-    print "<p>Invalid problem report number: $pr</p>\n";
-    print &summary_link;
-    print &html_footer;
-    exit 0;
-}
+$fmt{'sfields_thead'} = <<EOF;
+<table class="headtable">
+EOF
 
-unless (open(Q, "$query_pr -F $pr 2>&1 |")) {
-    print &html_header("Server error");
-    print "<p>Unable to open PR database.</p>\n";
-    print &summary_link;
-    print &html_footer;
-    die "Unable to query PR's";
-}
+$fmt{'sfields_trow'} = <<EOF;
+<tr><td class="key">%%(1):</td><td class="val">%%(2)</td></tr>
+EOF
 
-if ($input{'f'} eq 'raw') {
-    print "Content-Type: text/plain\r\n\r\n";
-    print <Q>;
-    close(Q);
-    exit 0;
-}
+$fmt{'sfields_tfoot'} = <<EOF;
+</table><br />
+EOF
 
-$inhdr = 1;
-$multiline = 0;
-$from = "";
-$replyto = "";
+$fmt{'mfields_header'} = <<EOF;
+<table class="headtable"><tr><td class="blkhead">%%(1):</td></tr></table>
+<div class="mfield">
+EOF
+$fmt{'mfields_header'} =~ s/\n+$//;
 
-while(<Q>) {
-    chop;
+$fmt{'mfields_footer'} = <<EOF;
+</div>
+EOF
 
-    $html_fixup = 1;
+$fmt{'patchblock_thead'} = <<EOF;
+<table class="patchblock" cellspacing="0" cellpadding="3">
+  <tr class="info"><td>
+    <b>Download <a href="${scriptname}?pr=%%(pr)&amp;getpatch=%%(1)">%%(2)</a></b>
+  </td></tr>
+<tr><td class="content"><pre>
+EOF
+$fmt{'patchblock_thead'} =~ s/\n+$//;
 
-    if (/^query-pr(:?\.(:?real|web))?: /) {
-	print &html_header("FreeBSD problem report");
-	if ($_ !~ /^query-pr(:?\.(:?real|web))?: no PRs matched$/) {
-	    print "<P>query-pr said:\n";
-	    print "<pre>$_\n";
-	    print <Q>;
-	    print "</pre>\n";
-	} else {
-	    print "<p>No PR found matching $pr</p>\n";
+$fmt{'patchblock_tfoot'} = <<EOF;
+</pre></td></tr>
+</table><br />
+EOF
+$fmt{'patchblock_tfoot'} =~ s/\n+$//;
+$fmt{'patchblock_tfoot'} =~ s/^\n+//;
+
+$fmt{'auditblock_thead'} = <<EOF;
+<table class="auditblock" cellspacing="0" cellpadding="3">
+  <tr class="info"><td colspan="2"><b>%%(1) Changed</b></td></tr>
+EOF
+
+$fmt{'auditblock_tfoot'} = <<EOF;
+  </table>
+<br />
+EOF
+
+$fmt{'auditblock_trow'} = <<EOF;
+<tr><td class="key" valign="top">%%(1):</td><td valign="top">%%(2)</td></tr>
+EOF
+
+$fmt{'responseblock_thead'} = <<EOF;
+<table class="replyblock" cellspacing="0" cellpadding="3">
+  <tr><td class="info" colspan="2"><b>Reply via E-mail</b></td></tr>
+EOF
+
+$fmt{'responseblock_tfoot'} = <<EOF;
+  </table><br />
+EOF
+
+$fmt{'responseblock_textfoot'} = <<EOF;
+</td></tr>
+EOF
+
+$fmt{'responseblock_texthead'} = <<EOF;
+<tr><td colspan="2">
+EOF
+
+$fmt{'responseblock_trow'} = <<EOF;
+<tr><td class="key"><b>%%(1):</b></td><td class="val">%%(2)</td></tr>
+EOF
+
+$fmt{'html_footerlinks'} = <<EOF;
+  <div>
+    <a href="%%(maillink)">Submit Followup</a>
+    | <a href="${scriptname}?pr=%%(pr)&amp;f=raw">Raw PR</a>
+    | <a href="query-pr-summary.cgi?query">Find another PR</a>
+  </div>
+EOF
+
+$fmt{'query_form'} = <<EOF;
+<form action="${scriptname}" method="GET">
+  <table cellspacing="0" cellpadding="3" class="headtable">
+    <tr><td width="130"><b>PR number:</b></td><td><input type="text" name="pr" maxlength="30" /></td></tr>
+    <tr><td width="130"><b>Category:</b></td><td><input type="text" name="cat" maxlength="30" /> (optional)</td></tr>
+    <tr><td></td><td><input type="submit" value="Submit" /></td></tr>
+  </table>
+</form>
+EOF
+
+$fmt{'quote_level_0'} = '<span class="quote0">&gt; ';
+$fmt{'quote_level_1'} = '<span class="quote1">&gt; ';
+$fmt{'quote_end'}     = '</span>';
+
+$fmt{'empty'}         = '&nbsp;';
+$fmt{'break'}         = "<br />\n";
+
+# From cgi-style.pl
+$main::t_style = "<link href=\"${stylesheet}\" rel=\"stylesheet\" type=\"text/css\">";
+
+
+#-----------------------------------------------------------------------
+# Begin Code
+#-----------------------------------------------------------------------
+
+if ($ENV{'QUERY_STRING'}) {
+	foreach (split(/&/, $ENV{'QUERY_STRING'})) {
+		my ($key, $val) = split /=/;
+		$f        = $val if ($key eq "f");
+		$PR       = $val if ($key eq "pr");
+		$category = $val if ($key eq "cat");
+		$getpatch = $val if ($key eq "getpatch");
 	}
-	print &summary_link;
-	print &html_footer;
-	exit;
-    } elsif (/^lockf: /) {
-	print &html_header("FreeBSD problem report");
-	print "<p>The PR database is currently busy; please try ",
-	    "<a href='./query-pr.cgi?pr=$pr'>your query</a> again.</p>";
-	print &summary_link;
-	print &html_footer;
-	exit;
-    }
-
-    # In e-mail header
-    if ($inhdr && /^From:\s*(.*)$/i) {
-	$from = $1;
-	$from =~ s/.*<(.*)>.*/$1/;
-	$from =~ s/\s*\(.*\)\s*//;
-    }
-    if ($inhdr && /^Reply-to:\s*(.*)$/i) {
-	$replyto = $1;
-	$replyto =~ s/.*<(.*)>.*/$1/;
-	$replyto =~ s/\s*\(.*\)\s*//;
-    }
-
-    # End of e-mail header
-    if ($inhdr && /^$/) {
-	$from = $replyto if ($replyto);
-	$email = $from;
-	$email .= '@FreeBSD.org' unless ($email =~ /@/);
-	$inhdr = 0;
-    }
-
-    if (/^>Responsible:/) {
-	$_ = &getline($_);
-	s/\(.*\)//;			# remove personal name
-	s/\s+//g;
-	$_ = $_ . '@FreeBSD.org' if !/@/;
-	$_ = ">Responsible:<a href='mailto:$_'>$_</a>";
-	$html_fixup = 0;
-    }
-
-    s/^>Last-Modified:\s*$/>Last-Modified: never/;
-
-    if (/^>Number:/) {
-	$number = &getline($_);
-    } elsif (/^>Category:/) {
-	$cat = &getline($_);
-    } elsif (/^>Synopsis:/) {
-	$syn = &getline($_);
-	$syn =~ s/[\t]+/ /g;
-	$origsyn = $syn;
-	$syn = &fixline($syn);
-	print &html_header("Problem Report $cat/$number : $syn");
-	print "<p><strong>$syn</strong></p>\n<dl>\n";
-    } else {
-	next if $inhdr;
-
-	if (/^>(\S+):\s*(.*)/) {
-	    print $trailer . "\n" unless ($blank);
-	    $trailer = "<dt><strong>$1</strong></dt><dd>\n";
-	    if ($html_fixup) {
-		$trailer .= &fixline($2);
-	    } else {
-		$trailer .= $2;
-	    }
-	    if ($1 eq "Originator" && $from ne "") {	# add email address
-		$trailer .= " &lt;<a href='mailto:$email'>" . &fixline($from) . "</a>&gt;";
-	    }
-	    $trailer .= '</dd>';
-	    $blank = !($2);
-	    $multiline = 0;
-	} else {
-	    unless ($multiline) {
-		next if /^\s*$/;
-		print $trailer . "\n<dd><pre>\n";
-	    }
-	    $multiline = 1;
-	    $blank = 0;
-	    print $html_fixup ? &fixline($_) : $_ , "\n";
-	    $trailer = "</pre></dd>";
-	}
-    }
 }
-close(Q);
 
-print "$trailer\n" unless ($blank);
-print "</dl>";
+unless (!$iscgi) {
+	print HTTP_HEADER_PATCH if ($getpatch > 0 or $f eq "raw");
+}
 
-$origsyn =~ s/[^a-zA-Z+.@-]/"%" . sprintf("%02X", unpack("C", $&))/eg;
-$email =~ s/[^a-zA-Z+.@-]/"%" . sprintf("%02X", unpack("C", $&))/eg;
+($category, $PR) = ($1, $2)
+	if ($PR =~ /^($valid_category)\/($valid_pr)$/);
 
-print qq`<a href="mailto:bug-followup\@FreeBSD.org,${email}?subject=Re:%20${cat}/${number}:%20$origsyn">Submit Followup</a> | <a href="./query-pr.cgi?pr=$pr&amp;f=raw">Raw PR</a> | <a href="./query-pr-summary.cgi?query">Find Another PR</a>\n`;
+$category = undef
+	if ($category && $category !~ /^$valid_category$/);
 
-print &html_footer;
+if ($PR < 0 || $PR !~ /^$valid_pr$/) {
+	print html_header("Query PR Database", 0);
+	sprint('query_form');
+	print html_footer();
+	exit;
+}
 
-# Sleep 0.35 seconds to avoid DoS attacks from broken robots
-select undef, undef, undef, 0.35;
+# Just in case
+$PR = int $PR;
+$PR = quotemeta $PR;
 
-exit 0;
+if ($category) {
+	$category = quotemeta $category;
+	@query = split /\n/, qx(query-pr --full --category=${category} ${PR});
+} else {
+	@query = split /\n/, qx(query-pr --full ${PR});
+}
 
-sub getline
+if (!@query) {
+	print html_header("No PRs Matched Query", 0);
+	print html_footer();
+	exit;
+}
+
+if ($f eq "raw") {
+	print "$_\n" foreach (@query);
+	exit;
+}
+
+
+#-----------------------------------------------------------------------
+# Process Results from query-pr
+#-----------------------------------------------------------------------
+
+my $section = SECT_HEADER;
+my $mfield = $fields_multiple[0];
+
+foreach my $line (@query)
 {
-    local($_) = @_;
-    ($tag,$remainder) = split(/\s+/, $_, 2);
-    return $remainder;
-}
+	my ($k, $v);
 
-sub summary_link {
-	return qq`<p><a href="./query-pr-summary.cgi?query">Search for Another PR</a></p>\n`;
-}
+	if ($section == SECT_HEADER) {
+		$section++ if ($line =~ /^\s*$/);
 
-sub cvsweb {
-    local($file) = shift;
-    $file =~ s/[,.;]$//;
-    return 'http://cvsweb.FreeBSD.org/' . $file;
-}
-    
+		next if ($line !~ /^([A-Z][A-Za-z0-9-_.]+): (.*)$/);
 
-sub srcref {
-    local($_) = shift;
+		($k, $v) = ($1, $2);
 
-    local($rev) = '(rev\.?|revision):?\s+[0-9]\.[0-9.]+(\s+of)?';
-    local($src) = '((src|www|doc|ports)/[^\s]+)';
+		$k = lc $k;
+		$header{$k} = $v;
 
-    if (m%$rev\s*$src%oi || m%$src\s*$rev%) {
-	s#$src#sprintf("<a href=%c%s%c>%s</a>", 34, &cvsweb($1), 34, $1)#ge;
-    }
-
-    return $_;
-}
-
-sub fixline {
-    local(@splitline) = split(/((?:https?|ftp):\/\/[^\s"\(\)<>,;]+)/, shift);
-
-    local($isurl) = 0;
-    foreach (@splitline) {
-	if ($isurl) {
-	    local($href) = local($html) = $_;
-	    $href =~ s/&/%26/g;
-	    $html =~ s/&/&amp;/g;
-	    $_ = "<a href='$href'>$html</a>";
-	} else {
-	    s/&/&amp;/g;
-	    s/</&lt;/g;
-	    s/>/&gt;/g;
-	    s%(\WPR[:s# \t]+)([a-z3486]+\/)?([0-9]+)%$1<a href="query-pr.cgi?pr=$3">$2$3</a>%ig;
+		next;
 	}
-	$isurl = ! $isurl;
-    }
 
-    return &srcref(join('', @splitline));
+	if ($section == SECT_SFIELDS) {
+		my $i = -1;
+		my $f = 0;
+
+		next if ($line !~ /^>([A-Z][A-Za-z-]+):\s*(.*)$/);
+
+		($k, $v) = ($1, $2);
+
+		foreach (@fields_single) {
+			if ($k eq $_) {
+				$f = 1;
+				last;
+			}
+
+			$i++;
+		}
+
+		if (!$f or $i == $#fields_single) {
+			$section++;
+			next;
+		}
+
+		$sfields{$k} = $v;
+
+		next;
+	}
+
+	if ($section == SECT_MFIELDS) {
+		my $f = 0;
+
+		if ($line =~ /^>([A-Z][A-Za-z-]+):\s*(.*)$/) {
+			foreach (@fields_multiple) {
+				$f = 1 if $1 eq $_;
+				next;
+			}
+
+			if ($f) {
+				$mfield = $1;
+			} else {
+				push @{$mfields{$mfield}}, $2;
+			}
+
+			next;
+		}
+
+		push @{$mfields{$mfield}}, $line;
+		next;
+	}
 }
+
+$getpatch = 0 if ($getpatch < 0);
+
+if ($getpatch > 0) {
+	extractpatch();
+	exit;
+}
+
+
+# Construct footer now we have enough information
+
+buildfooter();
+
+
+print html_header(htmlclean("$sfields{'Category'}/$sfields{'Number'}: "
+                            . $sfields{'Synopsis'}));
+
+sprint('header_thead');
+
+sprint('header_trow', 'From',    htmlclean($header{'from'}));
+sprint('header_trow', 'Date',    htmlclean($header{'date'}));
+sprint('header_trow', 'Subject', htmlclean($header{'subject'}));
+sprint('header_trow', 'Send-pr version',
+       htmlclean($header{'x-send-pr-version'}));
+
+sprint('header_tfoot');
+
+
+# Single-Line fields
+
+sprint('sfields_thead');
+
+foreach (@fields_single)
+{
+	my ($k, $v);
+
+	$k = htmlclean($_);
+	$v = htmlclean($sfields{$_}) || "";
+
+	$v =~ s/^(\S*).*$/<a href="mailto:$1\@FreeBSD.org">$1\@FreeBSD.org<\/a>/
+		if ($_ eq "Responsible");
+
+	$v = "never"
+		if ($_ eq "Last-Modified" and $v =~ /^\s*$/);
+
+	next if ($_ =~ /$fields_skip/i);
+
+	sprint('sfields_trow', $k, $v);
+}
+
+sprint('sfields_tfoot');
+
+
+# Multiple-Line fields
+
+foreach my $field (@fields_multiple)
+{
+	my $cfound = 0;
+
+	sprint('mfields_header', $field);
+
+	if ($field eq "Audit-Trail") {
+		my %block;
+		my $blockwhy;
+		my ($inblock, $inresponse, $mbreak) = (0, 0, 0);
+		my $url = "${self_url_base}${PR}";
+
+		# Hack for older PRs with no usable delimiter
+		push @{$mfields{'Audit-Trail'}}, $url;
+
+		$url = quotemeta $url;
+
+		foreach (@{$mfields{$field}})
+		{
+			if ($inblock == 1 && (/^${url}\s*$/i || /^([A-Za-z_]+-Changed-From-To: .*)$/ || /^(From: )/)) {
+				my $onnextline = ($1 ? 1 : 0);
+				if ($blockwhy) {
+					$blockwhy =~ s/<br \/>$//;
+					$blockwhy = htmlparse($blockwhy);
+				}
+
+				sprint('auditblock_trow', "Why", $blockwhy || "");
+
+				undef %block;
+				undef $blockwhy;
+				$inblock = 0;
+				$mbreak = 0;
+
+				if ($inresponse) {
+					if ($inpatch) {
+						$inpatch = 0;
+						sprint('patchblock_tfoot');
+						sprint('break');
+					}
+					sprint('responseblock_textfoot') if ($inresponse > 1);
+					sprint('responseblock_tfoot');
+					$inresponse = 0;
+				}
+
+				sprint('auditblock_tfoot');
+				next unless ($onnextline);
+			}
+
+			if (/^([A-Za-z_]+)-Changed-([A-Za-z_-]+?): (.*)$/) {
+				my $w = $1;
+				my $k = $2;
+
+				if ($inresponse) {
+					if ($inpatch) {
+						$inpatch = 0;
+						sprint('patchblock_tfoot');
+						sprint('break');
+					}
+					sprint('responseblock_textfoot') if ($inresponse > 1);
+					sprint('responseblock_tfoot');
+					$inresponse = 0;
+				}
+
+				if ($inblock == 0) {
+					$block{'changed'} = $w;
+					sprint('auditblock_thead', htmlclean($w));
+					$inblock = 1;
+				}
+
+				$block{$k} = $3;
+
+				if ($k ne "Why") {
+					sprint('auditblock_trow', htmlclean($k), htmlclean($block{$k}));
+					next;
+				}
+
+				next;
+			} elsif (/^(From|To|Cc|Subject|Date): (.*)$/) {
+				my ($k, $v);
+
+				$k = htmlclean($1);
+				$v = htmlclean($2);
+
+				if ($inresponse > 1) {
+					if ($inpatch) {
+						$inpatch = 0;
+						sprint('patchblock_tfoot');
+						sprint('break');
+					}
+					sprint('responseblock_textfoot');
+					sprint('responseblock_tfoot');
+				}
+
+				if (!$inresponse || $inresponse > 1) {
+					sprint('responseblock_thead');
+				}
+
+				if ($k eq "From" or $k eq "Date") {
+					sprint('responseblock_trow', $k, $v);
+				}
+
+				$inresponse = 1;
+				next;
+			} elsif (/^ (.*)$/) {
+				next if ($inresponse and !$mbreak);
+
+				if ($inresponse == 1) {
+					sprint('responseblock_texthead');
+					$inresponse++;
+				}
+
+				# XXX - use trailing cfound
+
+				if ($inresponse) {
+					my $txt = $1;
+					if ($txt =~ /^\s*((?:>\s*)+)/) {
+						my $level = $1;
+						if ($level =~ s/.*?>.*?/./g) {
+							my $i = 0;
+							my @levels = split(/\s*>\s*/, $txt,
+							                   length $level);
+							my $last = pop @levels;
+							foreach (@levels) {
+								sprint('quote_level_'.(++$i % 2));
+								$_ = htmlclean($_);
+								$_ = htmlparse($_);
+								print;
+							}
+							print htmlclean($last);
+							sprint('quote_end') while ($i--);
+							sprint('break');
+						}
+					} else {
+						$patchendhint = 1 if ($txt eq '-- ');
+
+						if ($inpatch or $txt) {
+							parsepatches($txt) || sprint('break');
+						} else {
+							sprint('break');
+						}
+					}
+				}
+			} elsif (/^$/ and $inresponse and !$mbreak) {
+				# XXX: >line 1 ignored (but not needed)
+				$mbreak = 1;
+				next;
+			}
+
+			$cfound = ($_ ? 1 : 0) if (!$cfound);
+			next if (!$cfound);
+
+			if (!$_) {
+				$cfound++;
+				next;
+			} else {
+				print "\n" while (--$cfound);
+				$cfound = 1;
+			}
+
+			$_ = htmlclean($_);
+			$blockwhy .= "$_<br />\n" if defined($block{'Why'});
+		}
+
+		if ($inresponse) {
+			if ($inpatch) {
+				$inpatch = 0;
+				sprint('patchblock_tfoot');
+				sprint('break');
+			}
+			sprint('responseblock_textfoot') if ($inresponse > 1);
+			sprint('responseblock_tfoot');
+			$inresponse = 0;
+		}
+	} elsif ($field eq "Fix") {
+		foreach (@{$mfields{$field}})
+		{
+			s/\s+$//;
+
+			$cfound = ($_ ? 1 : 0) if (!$cfound);
+			next if (!$cfound);
+
+			if (!$_) {
+				$cfound++;
+				next;
+			} else {
+				sprint('break')  while (--$cfound > 1);
+				$cfound = 1;
+			}
+
+			parsepatches($_) || sprint('break');
+		}
+
+		if ($inpatch) {
+			$inpatch = 0;
+			sprint('patchblock_tfoot');
+			sprint('break');
+		}
+	} else {
+		foreach (@{$mfields{$field}})
+		{
+			s/\s+$//;
+
+			$cfound = ($_ ? 1 : 0) if (!$cfound);
+			next if (!$cfound);
+
+			if (!$_) {
+				$cfound++;
+				next;
+			} else {
+				sprint('break') while (--$cfound);
+				$cfound = 1;
+			}
+
+			$_ = htmlclean($_);
+			$_ = htmlparse($_);
+
+			print;
+			sprint('break');
+		}
+		sprint('empty') if ($cfound <= 1);
+	}
+
+	sprint('mfields_footer');
+}
+
+sprint('html_footerlinks');
+print html_footer();
+
+# DoS protection -- apparently.
+select undef, undef, undef, 0.35
+	unless (!$iscgi);
+
+exit;
+
+
+#-----------------------------------------------------------------------
+# Func: extractpatch()
+# Desc: Isolate the requested patch, and print unformatted to STDOUT.
+#-----------------------------------------------------------------------
+
+sub extractpatch
+{
+	foreach (@{$mfields{'Fix'}}) {
+		return if (parsepatches($_) == -1);
+	}
+
+	foreach (@{$mfields{'Audit-Trail'}}) {
+		s/^ //;
+		return if (parsepatches($_) == -1);
+	}
+}
+
+
+#-----------------------------------------------------------------------
+# Func: sprint()
+# Desc: Merge provided list of strings into the desired message and
+#       print the result to STDOUT.
+#-----------------------------------------------------------------------
+
+sub sprint
+{
+	my $k = shift;
+	my $msg = $fmt{$k};
+
+	if (!$msg) {
+		warn "Message format \"$k\" not found";
+		return;
+	}
+
+	my $i = 1;
+
+	foreach (@_) {
+		$msg =~ s/%%()\(${i}\)/$_/g;
+		$i++;
+	}
+
+	$msg =~ s/%%\([0-9]+\)//g;
+
+	print $msg;
+}
+
+
+#-----------------------------------------------------------------------
+# Func: htmlclean()
+# Desc: Remove HTML entities from message and return the result.
+#-----------------------------------------------------------------------
+
+sub htmlclean
+{
+	my $v = shift;
+	return "" if (!$v);
+
+	$v =~ s/&/&amp;/g;
+	$v =~ s/</&lt;/g;
+	$v =~ s/>/&gt;/g;
+	return $v;
+}
+
+
+#-----------------------------------------------------------------------
+# Func: htmlclean()
+# Desc: Perform any fancy formatting on the message (e.g. HTML-ify
+#       URLs) and return the result.
+#-----------------------------------------------------------------------
+
+sub htmlparse
+{
+	my $v = shift;
+	return "" if (!$v);
+
+	$v =~ s/((?:https?|ftps?):\/\/[^\s\/]+\/[][A-Za-z0-9=_.\~\?\&\/\%;-]*)/<a href="$1">$1<\/a>/g;
+	$v =~ s/^RCS file: (\/home\/[A-Za-z0-9]+\/(.*?)),v$/RCS file: <a href="$cvsweb_url$2">$1<\/a>,v/;
+	return $v;
+}
+
+
+#-----------------------------------------------------------------------
+# Func: buildfooter()
+# Desc: Build the page footer links section.
+#-----------------------------------------------------------------------
+
+sub buildfooter
+{
+	my ($newstr, $synopsis, $mail, $replyto, $pr, $cat);
+	$pr       = htmlclean($sfields{'Number'});
+	$cat      = htmlclean($sfields{'Category'});
+	$synopsis = htmlclean($sfields{'Synopsis'});
+
+	$mail = $header{'from'};
+	if ($mail) {
+		$mail =~ s/^\s*(.*)\s*$/$1/;
+		$mail =~ s/.*<(.*)>.*/$1/;
+		$mail =~ s/\s*\(.*\)\s*//;
+	}
+
+	$replyto = $header{'reply-to'};
+	if ($replyto) {
+		$replyto =~ s/^\s*(.*)\s*$/$1/;
+		$replyto =~ s/.*<(.*)>.*/$1/;
+		$replyto =~ s/\s*\(.*\)\s*//;
+	}
+
+	$mail = $replyto if ($replyto);
+	$mail .= '@FreeBSD.org' unless ($mail =~ /@/);
+
+	$synopsis =~ s/[^a-zA-Z+.@-]/"%" . sprintf("%02X", unpack("C", $&))/eg;
+	$mail     =~ s/[^a-zA-Z+.@-]/"%" . sprintf("%02X", unpack("C", $&))/eg;
+
+	$newstr = "mailto:bug-followup\@FreeBSD.org,${mail}?subject=Re:%20${cat}/${pr}:%20${synopsis}";
+
+	$fmt{'html_footerlinks'} =~ s/%%\(maillink\)/${newstr}/g;
+
+	# Do some other replacements while here
+
+	$fmt{$_} =~ s/%%\(pr\)/${pr}/g
+		foreach (keys %fmt);
+}
+
+
+#-----------------------------------------------------------------------
+# Func: parsepatches()
+# Desc: Parse lines which might contain patches, adding HTML formatting
+#       if requested.
+#-----------------------------------------------------------------------
+
+{ # Local static variables
+my ($outp, $patchnum, $cfound, $lastcol, $lastrev, $context);
+
+sub parsepatches
+{
+	$_ = shift;
+
+	$outp     ||= "";
+	$patchnum ||= 0;
+	$cfound   ||= 0;
+	$context  ||= 0;
+
+	my $plus_s    = '<span class="patch_plusline">';
+	my $minus_s   = '<span class="patch_minusline">';
+	my $context_s = '<span class="patch_contextline">';
+	my $revinfo_s = '<span class="patch_revinfo">';
+	my $at_s      = '<span class="patch_hunkinfo">';
+	my $all_e     = '</span>';
+
+	my $maxcontext = 3;				# XXX: This ought to be dynamic
+
+	if (!$getpatch) {
+		$cfound = ($_ ? 1 : 0) if (!$cfound);
+		return 0 if (!$cfound);
+
+		if (!$_) {
+			$cfound++;
+			return 0;
+		} else {
+			sprint('break') while (--$cfound > 1);
+			$cfound = 1;
+		}
+	}
+
+	if (/^---{1,8}\s?([A-Za-z0-9-_.,]+) (begins|starts) here/i && !$inpatch) {
+		$patchnum++;
+		$inpatch |= PATCH_ANY;
+		return 1 if ($getpatch and $patchnum != $getpatch);
+		$lastcol = undef;
+		$lastrev = undef;
+
+		sprint('patchblock_thead', $patchnum, htmlclean($1))
+			unless ($getpatch);
+
+		return 1;
+	}
+
+	if (/^((?:(?:---|\*\*\*) (?:\S+)\s*(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun) .*)|(diff -.*? .*? .*)|(Index: \S+)|(\*{3} \d+,\d+ \*{4}))$/ && !$inpatch) {
+		$patchnum++;
+		$inpatch |= PATCH_DIFF;
+		return 1 if ($getpatch and $patchnum != $getpatch);
+		$lastcol = undef;
+		$lastrev = undef;
+
+		sprint('patchblock_thead', $patchnum, "patch-$patchnum.diff")
+			unless ($getpatch);
+	}
+
+	if (/^# This is a shell archive\.  Save it in a file, remove anything before/ && !$inpatch) {
+		$patchnum++;
+		$inpatch |= PATCH_SHAR;
+		return 1 if ($getpatch and $patchnum != $getpatch);
+		$lastcol = undef;
+		$lastrev = undef;
+
+		sprint('patchblock_thead', $patchnum, "patch-$patchnum.shar")
+			unless ($getpatch);
+	}
+
+	if (/^---{1,8}\s?[A-Za-z0-9-_.,]+ ends here/i && ($inpatch & PATCH_ANY)) {
+		#$inpatch ^= PATCH_ANY;
+		$inpatch = 0;
+		$context = 0;
+		sprint('patchblock_tfoot')
+			unless ($getpatch);
+
+		return (($patchnum == $getpatch) ? -1 : $inpatch)
+			if ($getpatch);
+
+		return $inpatch;
+	}
+
+	if (/^exit$/ && ($inpatch & PATCH_SHAR)) {
+		$inpatch ^= PATCH_SHAR;
+
+		print;
+		sprint('patchblock_tfoot') unless ($getpatch);
+		return 1;
+	}
+
+	if (/^begin \d\d\d (.*)/ && !($inpatch & PATCH_UUENC)) {
+		if (!$inpatch) {
+			$patchnum++;
+			return 1 if ($getpatch and $patchnum != $getpatch);
+		}
+		sprint('patchblock_thead', $patchnum, "patch-$patchnum.uu")
+			unless ($getpatch or $inpatch);
+
+		$inpatch |= PATCH_UUENC;
+		$inpatch |= PATCH_UUENC_BIN if ($1 =~ /(?:\.gz|\.bz2\.zip)$/);
+	}
+
+	if ($inpatch) {
+		if ($inpatch & PATCH_UUENC) {
+			if (!$getpatch or $patchnum == $getpatch) {
+				$outp .= "$_\n";
+				if (/^end$/) {
+					$outp = uudecode($outp)
+						unless (!$getpatch and $inpatch & PATCH_UUENC_BIN);
+					$outp = htmlclean($outp) unless ($getpatch);
+					print $outp;
+					$inpatch ^= PATCH_UUENC; $outp = "";
+					$inpatch ^= PATCH_UUENC_BIN;
+
+					# No outer container?
+					sprint('patchblock_tfoot') if (!$inpatch and !$getpatch);
+					return -1;
+				}
+			}
+		} else {
+			if (!$getpatch) {
+				if (!($inpatch & PATCH_ANY)) {
+					if (/^ / or $_ eq "") {
+						$context++;
+					} else {
+						if ($context == $maxcontext and $patchendhint) {
+							$context++;
+						} else {
+							$context = 0;
+						}
+					}
+
+					if ($context > $maxcontext and $patchendhint) {
+						$context = 0;
+						$inpatch = 0;
+						sprint('patchblock_tfoot');
+						print;
+						return 0;
+					}
+				}
+
+				$_ = htmlclean($_);
+				$_ = htmlparse($_);
+
+				while (s/\t/" " x (8 - ((length($`)-1) % 8))/e) {};
+
+				# Obfustication coutesy of cdiff
+
+				s/^(\+.*)$/${plus_s}$1${all_e}/o;
+				s/^(-.*)$/${minus_s}$1${all_e}/o
+					if !s/^(--- \d+,\d+ ----.*)$/${revinfo_s}$1${all_e}/o;
+				s/^(\*\*\* \d+,\d+ *\*\*\*.*)$/${revinfo_s}$1${all_e}/o;
+				s/^(\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*)$/${revinfo_s}$1${all_e}/o;
+				s/^(!.*)$/${context_s}$1${all_e}/o;
+				s/^(@@.*$)/${at_s}$1${all_e}/o;
+#				if (/^1.(\d+)(\s+\(\w+\s+\d{2}-\w{3}-\d{2}\):\s)(.*)/) {
+#					$lastcol = $lastcol || 0;
+#					$lastcol++ if defined($lastrev) && $lastrev != $1;
+#					$lastrev = $1;
+#					$lastcol %= 6;
+#					$_ = "\033[3" . ($lastcol + 1) . "m1.$1$2\033[0m$3\n";
+#				}
+			}
+
+			if (!$getpatch or $patchnum == $getpatch) {
+				print;
+				print "\n";
+			}
+		}
+	} else {
+		if (!$getpatch) {
+			$_ = htmlclean($_);
+			$_ = htmlparse($_);
+			print;
+		}
+	}
+
+	return $inpatch;
+
+}
+
+}
+
+
+# ex: ts=4 sw=4
