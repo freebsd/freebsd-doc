@@ -26,7 +26,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD$
+# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.53 2006/09/18 21:25:38 shaun Exp $
 #
 
 use strict;
@@ -546,6 +546,9 @@ foreach my $field (@fields_multiple)
 				# XXX: >line 1 ignored (but not needed)
 				$mbreak = 1;
 				next;
+			} elsif (/^$/) {
+				$mbreak = 0;
+				next;
 			}
 
 			$cfound = ($_ ? 1 : 0) if (!$cfound);
@@ -647,8 +650,11 @@ sub extractpatch
 	}
 
 	foreach (@{$mfields{'Audit-Trail'}}) {
-		s/^ //;
-		return if (parsepatches($_) == -1);
+		if (s/^ //) {
+			return if (parsepatches($_) == -1);
+		} else {
+			$inpatch = 0;
+		}
 	}
 }
 
@@ -899,10 +905,12 @@ sub parsepatches
 
 					if ($context > $maxcontext and $patchendhint) {
 						$context = 0;
-						$inpatch = 0;
-						sprint('patchblock_tfoot');
-						print;
-						return 0;
+						# Disabled for now, since it doesn't
+						# work quite right.
+#						$inpatch = 0;
+#						sprint('patchblock_tfoot');
+#						print;
+#						return 0;
 					}
 				}
 
