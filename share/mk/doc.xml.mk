@@ -27,7 +27,13 @@ _DEPENDSET.wwwstd=	${XML_INCLUDES}
 _XML_INCLIST=	libcommon.l10n.xsl \
 		libcommon.xsl \
 		navibar.l10n.ent \
-		navibar.ent
+		navibar.ent \
+		common.ent \
+		header.ent \
+		header.l10n.ent \
+		iso8879.ent \
+		l10n.ent \
+		release.ent
 .for F in ${_INCLIST}
 .if exists(${WEB_PREFIX}/${WWW_LANGCODE}/share/sgml/${F})
 XML_INCLUDES+=	${F}
