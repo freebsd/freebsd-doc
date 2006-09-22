@@ -1,5 +1,5 @@
 # doc.xml.mk
-# $FreeBSD: www/share/mk/doc.xml.mk,v 1.8 2006/08/21 18:27:42 hrs Exp $
+# $FreeBSD: www/share/mk/doc.xml.mk,v 1.9 2006/08/22 09:25:05 hrs Exp $
 
 XML_CATALOG_FILES=	file://${.OBJDIR}/catalog-cwd.xml \
 			file://${DOC_PREFIX}/${LANGCODE}/share/sgml/catalog.xml \
@@ -27,7 +27,13 @@ _DEPENDSET.wwwstd=	${XML_INCLUDES}
 _XML_INCLIST=	libcommon.l10n.xsl \
 		libcommon.xsl \
 		navibar.l10n.ent \
-		navibar.ent
+		navibar.ent \
+		common.ent \
+		header.ent \
+		header.l10n.ent \
+		iso8879.ent \
+		l10n.ent \
+		release.ent
 .for F in ${_INCLIST}
 .if exists(${WEB_PREFIX}/${WWW_LANGCODE}/share/sgml/${F})
 XML_INCLUDES+=	${F}

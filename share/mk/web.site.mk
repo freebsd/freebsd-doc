@@ -1,5 +1,5 @@
 # bsd.web.mk
-# $FreeBSD: www/share/mk/web.site.mk,v 1.74 2006/08/19 21:18:53 hrs Exp $
+# $FreeBSD: www/share/mk/web.site.mk,v 1.75 2006/08/24 20:02:06 hrs Exp $
 
 #
 # Build and install a web site.
@@ -151,7 +151,13 @@ WWW_LANGCODE:=			${.CURDIR:S,^${_WEB_PREFIX}/,,:C,^([^/]+)/.*,\1,}
 .endif # !defined(WITHOUT_DOC)
 
 _INCLIST=	navibar.ent \
-		navibar.l10n.ent
+		navibar.l10n.ent \
+		common.ent \
+		header.ent \
+		header.l10n.ent \
+		iso8879.ent \
+		l10n.ent \
+		release.ent
 _SGML_INCLUDES=	${SGML_INCLUDES}
 
 .for F in ${_INCLIST}
