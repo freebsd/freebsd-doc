@@ -26,13 +26,13 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.53 2006/09/18 21:25:38 shaun Exp $
+# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.54 2006/09/19 13:20:42 shaun Exp $
 #
 
 use strict;
 #use warnings;
 
-use Convert::UU qw(uudecode uuencode);
+use Convert::UU qw(uudecode uuencode); # ports/converters/p5-Convert-UU
 
 require './cgi-style.pl';
 
