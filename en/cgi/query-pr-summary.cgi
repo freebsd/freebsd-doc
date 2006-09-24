@@ -1,5 +1,5 @@
 #!/usr/bin/perl -T
-# $FreeBSD: www/en/cgi/query-pr-summary.cgi,v 1.54 2005/12/01 03:19:22 jcamou Exp $
+# $FreeBSD: www/en/cgi/query-pr-summary.cgi,v 1.55 2006/09/12 21:53:18 danger Exp $
 
 $html_mode     = 1 if $ENV{'DOCUMENT_ROOT'};
 $self_ref      = $ENV{'SCRIPT_NAME'};
@@ -17,7 +17,7 @@ require './cgi-lib.pl';
 require './cgi-style.pl';
 require 'getopts.pl';
 
-if ($ENV{'QUERY_STRING'} eq 'query') {
+if (!$ENV{'QUERY_STRING'} or $ENV{'QUERY_STRING'} eq 'query') {
 	print &html_header("Query $project problem reports");
 	&displayform;
 	print &html_footer;
@@ -591,7 +591,9 @@ sub displayform {
 print qq`
 <p>
 Please select the items you wish to search for.  Multiple items are AND'ed
-together.
+together.<br />
+To generate current list of all open PRs in GNATS database, just press
+the "Query PRs" button.
 </p>
 <form method='get' action='$self_ref'>
 
