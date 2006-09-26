@@ -1,6 +1,6 @@
 # The FreeBSD Documentation Project
 # The FreeBSD German Documentation Project
-# $FreeBSD$
+# $FreeBSD: www/de/Makefile,v 1.28 2006/02/21 18:02:21 jkois Exp $
 # $FreeBSDde: de-www/Makefile,v 1.39 2006/02/19 18:15:15 jkois Exp $
 # basiert auf: 1.134
 
@@ -62,28 +62,8 @@ WEBDIR?=	data/de
 DATA+=          index.html
 CLEANFILES+=    index.html
 
-.include "${WEB_PREFIX}/share/mk/web.site.mk"
+XMLDOCS=	index:xsl:${XML_NEWS_NEWS}:
+DEPENDSET.index=transtable mirrors news press events \
+		advisories notices
 
-index.html: index.xsl ${XML_INCLUDES}\
-		${XML_NEWS_INCLUDES} \
-		${XML_NEWS_NEWS} ${XML_NEWS_NEWS_MASTER} \
-		${XML_NEWS_PRESS} ${XML_NEWS_PRESS_MASTER} \
-		${XML_EVENTS_EVENTS_MASTER} ${XML_EVENTS_CURDATE} \
-		${XML_MIRRORS} ${XML_TRANSTABLE} \
-		${XML_ADVISORIES} ${XML_NOTICES}
-	${XSLTPROC} ${XSLTPROCOPTS} \
-		-o $@ \
-		--param advisories.xml "'${XML_ADVISORIES}'" \
-		--param mirrors.xml "'${XML_MIRRORS}'" \
-		--param news.press.xml-master "'${XML_NEWS_PRESS_MASTER}'" \
-		--param news.press.xml "'${XML_NEWS_PRESS}'" \
-		--param news.project.xml-master "'${XML_NEWS_NEWS_MASTER}'" \
-		--param news.project.xml "'${XML_NEWS_NEWS}'" \
-		--param events.xml-master "'${XML_EVENTS_EVENTS_MASTER}'" \
-		--param curdate.xml "'${XML_EVENTS_CURDATE}'" \
-		--param notices.xml "'${XML_NOTICES}'" \
-		--param transtable.xml "'${XML_TRANSTABLE}'" \
-		${.CURDIR}/index.xsl ${XML_NEWS_NEWS} ${XML_EVENTS_EVENTS_MASTER} ${XML_EVENTS_CURDATE}
-.if !defined(NO_TIDY)
-	-${TIDY} ${TIDYOPTS} ${.TARGET}
-.endif
+.include "${WEB_PREFIX}/share/mk/web.site.mk"

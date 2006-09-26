@@ -1,12 +1,11 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD Fragment//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
-<!ENTITY base "..">
 <!ENTITY title "The FreeBSD Project">
 ]>
 
 <!--
-     $FreeBSD: www/de/index.xsl,v 1.33 2006/07/10 18:14:33 jkois Exp $
+     $FreeBSD: www/de/index.xsl,v 1.34 2006/08/19 21:21:51 hrs Exp $
      $FreeBSDde: de-www/index.xsl,v 1.66 2006/06/29 18:47:31 jkois Exp $
      basiert auf: 1.152
 -->
@@ -247,7 +246,6 @@
 			<xsl:call-template name="html-index-events-items">
 				<xsl:with-param name="events.xml-master" select="$events.xml-master" />
 				<xsl:with-param name="events.xml" select="$events.xml" />
-				<xsl:with-param name="curdate.xml" select="$curdate.xml" />
 			</xsl:call-template>
 
 			  <div>
