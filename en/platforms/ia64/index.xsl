@@ -9,7 +9,7 @@
 <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
 
-  <xsl:variable name="date" select="'$FreeBSD: www/en/platforms/ia64/index.xsl,v 1.5 2006/05/09 23:36:46 marcel Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/platforms/ia64/index.xsl,v 1.6 2006/08/19 21:20:41 hrs Exp $'"/>
 
   <xsl:output doctype-public="-//W3C//DTD HTML 4.01 Transitional//EN"
     encoding="iso-8859-1" method="html"/>
@@ -65,7 +65,7 @@
 
 		<p>The FreeBSD/ia64 project pages contain information about the
 		  FreeBSD port to Intel's IA-64 architecture; officially known as
-		  the Intel Itanium&#174; Processor Family (IPF). As with the port
+		  the Intel Itanium&reg; Processor Family (IPF).  As with the port
 		  itself, these pages are still mostly a work in progress.</p>
 
 		<h3><a name="status">Current status</a></h3>
