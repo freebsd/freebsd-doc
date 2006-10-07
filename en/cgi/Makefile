@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/cgi/Makefile,v 1.30 2006/07/23 23:47:34 simon Exp $
+# $FreeBSD: www/en/cgi/Makefile,v 1.31 2006/08/29 19:46:27 simon Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -15,7 +15,6 @@ DATA+=	cvsweb.conf
 DATA+=	cvsweb.conf-freebsd
 DATA+=	cvsweb.conf-netbsd
 DATA+=	cvsweb.conf-openbsd
-DATA+=	html.pl
 
 CGI=
 CGI+=	confirm-code.cgi
