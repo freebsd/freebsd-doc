@@ -1,5 +1,5 @@
 # doc.xml.mk
-# $FreeBSD: www/share/mk/doc.xml.mk,v 1.9 2006/08/22 09:25:05 hrs Exp $
+# $FreeBSD: www/share/mk/doc.xml.mk,v 1.10 2006/09/22 21:05:03 hrs Exp $
 
 XML_CATALOG_FILES=	file://${.OBJDIR}/catalog-cwd.xml \
 			file://${DOC_PREFIX}/${LANGCODE}/share/sgml/catalog.xml \
@@ -57,6 +57,7 @@ ${.OBJDIR}/autogen.ent:
 
 DEPENDSET.DEFAULT+=	wwwstd
 
+.if !defined(WEB_ONLY)
 # DEPENDSET: transtable  ......................................................
 _DEPENDSET.transtable=	${XML_TRANSTABLE} ${XSL_TRANSTABLE} \
 			${XSL_TRANSTABLE_MASTER} ${XSL_TRANSTABLE_COMMON}
@@ -116,6 +117,7 @@ CLEANFILES+=	${XML_MIRRORS}
 CLEANFILES+=	${XML_MIRRORS}.sort
 CLEANFILES+=	${XML_MIRRORS}.sort.tmp
 .endif
+.endif # !defined(WEB_ONLY)
 
 # DEPENDSET: usergroups ......................................................
 _DEPENDSET.usergroups=	${XML_USERGROUPS} ${XML_USERGROUPS_LOCAL} \
