@@ -8,11 +8,10 @@
 #  GNU General Public License Version 2.  
 #     (http://www.gnu.ai.mit.edu/copyleft/gpl.html)
 #
-# $FreeBSD: www/en/cgi/dosendpr.cgi,v 1.24 2005/11/16 23:35:57 fenner Exp $
-
-require "html.pl";
+# $FreeBSD: www/en/cgi/dosendpr.cgi,v 1.25 2005/12/04 22:25:20 simon Exp $
 
 use Socket;
+use CGI qw/:standard/;
 use DB_File;
 use Fcntl qw(:DEFAULT :flock);
 require "./Gnats.pm"; import Gnats;
@@ -69,27 +68,22 @@ sub isopenproxy ($$$) {
 }
 
 sub prerror {
-    &html_title ("Problem Report Error");
-    &html_body();
+    print start_html("Problem Report Error");
     print "<p>There is an error in the configuration of the problem\n",
           "report form generator.  Please back up one page and report\n",
           "the problem to the owner of that page.<br />",
 	  "Report <span class=\"prerror\">$_[0]</span>.</p>";
-    &html_end();
+    print end_html();
     exit (1);
 }
 
-&www_content ("text","html");
-&cgi_form_in();
+print header();
 
 &prerror("request method problem") if $ENV{'REQUEST_METHOD'} eq 'GET';
 
 if (!$submission_program) { &prerror("submit program problem"); }
 
-&html_title ("Thank you for the problem report");
-&html_body ();
-
-# Verify the data ...
+# Verify the code...
 
 $db_obj = tie(%db_hash, 'DB_File', $dbpath, O_CREAT|O_RDWR, 0644)
                     or die "dbcreate $dbpath $!";
@@ -100,27 +94,28 @@ unless (flock (DB_FH, LOCK_EX | LOCK_NB)) {
     unless (flock (DB_FH, LOCK_EX)) { die "flock: $!" }
 }
 
-$codeentered = $cgi_data{'code-confirm'};
+$codeentered = param('code-confirm');
 $codeentered =~ s/.*/\U$&/;	# Turn input uppercase
 $currenttime = time();
 if (defined($codeentered) && $codeentered && $db_hash{$codeentered} && 
   (($currenttime - $expiretime) <= $db_hash{$codeentered})) {
-    if (!$cgi_data{'email'} || !$cgi_data{'originator'} ||
-        !$cgi_data{'synopsis'}) {
+    if (!param('email') || !param('originator') ||
+        !param('synopsis')) {
+	  print start_html("Problem Report Error");
 	  print "<h1>Bad Data</h1><p>You need to specify at least your ",
               "electronic mail address, your name and a synopsis ",
               "of the problem.<br />  Please return to the form and add the ",
               "missing information.  Thank you.</p>";
-          &html_end();
+          print end_html();
 
           exit(1);
     }
 } else {
-	print "<h1>Incorrect safety code</h1><p>You need to enter the correct ",
+	print start_html("Problem Report Error");
+	print "<h1>Incorrect confirmation code</h1><p>You need to enter the correct ",
           "code from the image displayed.  Please return to the form and enter the ",
           "code exactly as shown. Thank you.</p>";
-
-        &html_end();
+        print end_html();
 
         exit(1);
 }
@@ -152,39 +147,42 @@ if (defined $openproxy) {
 
 # Build the PR.
 $pr = "To: $submission_address\n" .
-      "From: $cgi_data{'originator'} <$cgi_data{'email'}>\n" . 
-      "Subject: $cgi_data{'synopsis'}\n" .
+      "From: " . param('originator') . "<" . param('email') . ">\n" . 
+      "Subject: " . param('synopsis') . "\n" .
       env2hdr(@ENV_captures);
 if ($blackhole_err) {
       $pr .= "X-REMOTE_ADDR-Is-Open-Proxy: Maybe\n";
 }
-$pr .= "X-Send-Pr-Version: www-2.3\n\n" .
-      ">Submitter-Id:\t$cgi_data{'submitterid'}\n" .
-      ">Originator:\t$cgi_data{'originator'}\n" .
-      ">Organization:\t$cgi_data{'organization'}\n" .
-      ">Confidential:\t$cgi_data{'confidential'}\n" .
-      ">Synopsis:\t$cgi_data{'synopsis'}\n" .
-      ">Severity:\t$cgi_data{'severity'}\n" .
-      ">Priority:\t$cgi_data{'priority'}\n" .
-      ">Category:\t$cgi_data{'category'}\n" .
-      ">Class:\t\t$cgi_data{'class'}\n" .
-      ">Release:\t$cgi_data{'release'}\n" .
-      ">Environment:\t$cgi_data{'environment'}\n" .
-      ">Description:\n$cgi_data{'description'}\n" .
-      ">How-To-Repeat:\n$cgi_data{'howtorepeat'}\n" .
-      ">Fix:\n$cgi_data{'fix'}\n";
 
-# remove any carrage returns that appear in the report.
+$pr .= "X-Send-Pr-Version: www-2.3\n\n" .
+      ">Submitter-Id:\t" . param('submitterid') . "\n" .
+      ">Originator:\t" . param('originator') . "\n" .
+      ">Organization:\t" . param('organization') . "\n" .
+      ">Confidential:\t" . param('confidential') . "\n" .
+      ">Synopsis:\t" . param('synopsis') . "\n" .
+      ">Severity:\t" . param('severity') . "\n" .
+      ">Priority:\t" . param('priority') . "\n" .
+      ">Category:\t" . param('category') . "\n" .
+      ">Class:\t\t" . param('class') . "\n" .
+      ">Release:\t" . param('release') . "\n" .
+      ">Environment:\t" . param('environment') . "\n" .
+      ">Description:\n" . param('description') . "\n" .
+      ">How-To-Repeat:\n" . param('howtorepeat') . "\n" .
+      ">Fix:\n" . param('fix') . "\n";
+
+# remove any carriage returns that appear in the report.
 $pr =~ s/\r//g;
 
 if (open (SUBMIT, "|$submission_program")){
 
     print SUBMIT $pr;
     close (SUBMIT);
+    print start_html("Thank you for the problem report");
     print "<h1>Thank You</h1>",
 	  "<p>Thank you for the problem report.  You should receive confirmation",
 	  " of your report by electronic mail within a day.</p>";
 } else {
+    print start_html("Error raising problem report");
     print "<h1>Error</h1><p>An error occured processing your problem report.</p>";
 }
-&html_end();
+print end_html();
