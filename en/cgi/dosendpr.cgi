@@ -8,7 +8,7 @@
 #  GNU General Public License Version 2.  
 #     (http://www.gnu.ai.mit.edu/copyleft/gpl.html)
 #
-# $FreeBSD: www/en/cgi/dosendpr.cgi,v 1.25 2005/12/04 22:25:20 simon Exp $
+# $FreeBSD$
 
 use Socket;
 use CGI qw/:standard/;
@@ -23,6 +23,12 @@ my $openproxy;
 
 my $expiretime = 2700;
 $dbpath = "/usr/local/www/var/confirm-code/sendpr-code.db";
+
+# Maximum size of patch that we'll accept from send-pr.html.
+$maxpatch = 102400;
+
+my $patchbuf;
+my $patchhandle;
 
 # Environment variables to stuff in the PR header.
 my @ENV_captures = qw/	REMOTE_HOST
@@ -77,11 +83,31 @@ sub prerror {
     exit (1);
 }
 
+sub piloterror {
+    print start_html("Problem Report Error");
+    print "<p>There is an error with your problem\n",
+          "report submission.\n",
+	  "The problem was: <span class=\"prerror\">$_[0]</span>.</p>";
+    print end_html();
+    exit (1);
+}
+
 print header();
 
 &prerror("request method problem") if $ENV{'REQUEST_METHOD'} eq 'GET';
 
 if (!$submission_program) { &prerror("submit program problem"); }
+
+if ($patchhandle = upload('patch')) {
+    use bytes;
+    unless (uploadInfo($patchhandle)->{'Content-Type'} =~ m!text/.*!) {
+	&piloterror("Patch file has wrong content type");
+    }
+    read($patchhandle,$patchbuf,$maxpatch + 1);
+    if (length($patchbuf) > $maxpatch) {
+	&piloterror("Patch file too big (over ${maxpatch} bytes)");
+    }
+}
 
 # Verify the code...
 
@@ -168,7 +194,12 @@ $pr .= "X-Send-Pr-Version: www-2.3\n\n" .
       ">Environment:\t" . param('environment') . "\n" .
       ">Description:\n" . param('description') . "\n" .
       ">How-To-Repeat:\n" . param('howtorepeat') . "\n" .
-      ">Fix:\n" . param('fix') . "\n";
+      ">Fix:\n" . param('fix');
+
+if (length($patchbuf) > 0) {
+	$pr .= "\n\nPatch attached with submission follows:\n\n"
+	    . $patchbuf . "\n";
+}
 
 # remove any carriage returns that appear in the report.
 $pr =~ s/\r//g;
