@@ -8,7 +8,7 @@
 #  GNU General Public License Version 2.  
 #     (http://www.gnu.ai.mit.edu/copyleft/gpl.html)
 #
-# $FreeBSD$
+# $FreeBSD: www/en/cgi/dosendpr.cgi,v 1.27 2006/10/07 18:08:04 ceri Exp $
 
 use Socket;
 use CGI qw/:standard/;
@@ -180,7 +180,7 @@ if ($blackhole_err) {
       $pr .= "X-REMOTE_ADDR-Is-Open-Proxy: Maybe\n";
 }
 
-$pr .= "X-Send-Pr-Version: www-2.3\n\n" .
+$pr .= "X-Send-Pr-Version: www-3.0\n\n" .
       ">Submitter-Id:\t" . param('submitterid') . "\n" .
       ">Originator:\t" . param('originator') . "\n" .
       ">Organization:\t" . param('organization') . "\n" .
@@ -194,10 +194,10 @@ $pr .= "X-Send-Pr-Version: www-2.3\n\n" .
       ">Environment:\t" . param('environment') . "\n" .
       ">Description:\n" . param('description') . "\n" .
       ">How-To-Repeat:\n" . param('howtorepeat') . "\n" .
-      ">Fix:\n" . param('fix');
+      ">Fix:\n" . param('fix') . "\n";
 
 if (length($patchbuf) > 0) {
-	$pr .= "\n\nPatch attached with submission follows:\n\n"
+	$pr .= "\nPatch attached with submission follows:\n\n"
 	    . $patchbuf . "\n";
 }
 
