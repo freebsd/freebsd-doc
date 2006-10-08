@@ -8,7 +8,7 @@
 #  GNU General Public License Version 2.  
 #     (http://www.gnu.ai.mit.edu/copyleft/gpl.html)
 #
-# $FreeBSD: www/en/cgi/dosendpr.cgi,v 1.27 2006/10/07 18:08:04 ceri Exp $
+# $FreeBSD: www/en/cgi/dosendpr.cgi,v 1.28 2006/10/07 18:12:16 ceri Exp $
 
 use Socket;
 use CGI qw/:standard/;
@@ -99,7 +99,7 @@ print header();
 if (!$submission_program) { &prerror("submit program problem"); }
 
 if ($patchhandle = upload('patch')) {
-    use bytes;
+#    use bytes;
     unless (uploadInfo($patchhandle)->{'Content-Type'} =~ m!text/.*!) {
 	&piloterror("Patch file has wrong content type");
     }
