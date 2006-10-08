@@ -1,5 +1,5 @@
 #!/usr/bin/perl -T
-# $FreeBSD: www/en/cgi/query-pr-summary.cgi,v 1.55 2006/09/12 21:53:18 danger Exp $
+# $FreeBSD: www/en/cgi/query-pr-summary.cgi,v 1.56 2006/09/24 13:34:55 danger Exp $
 
 $html_mode     = 1 if $ENV{'DOCUMENT_ROOT'};
 $self_ref      = $ENV{'SCRIPT_NAME'};
@@ -276,14 +276,14 @@ foreach ('category', 'originator', 'priority', 'class', 'responsible',
 		# Check if the arguments provided by user are secure.
 		# This is required to be able to run this script in
 		# taint mode (perl -T)
-		if ($input{$_} =~ /^([-^'\[\]\@\s\w.]+)$/) {
+		if ($input{$_} =~ /^([-^'\/\[\]\@\s\w.]+)$/) {
 			$d = $1;
 			$d =~ s/^"(.*)"$/$&/;
 			$d =~ s/'/\\'/;
 			$query_args .= " --${_}='$d'";
 		} else {
 			print "Insecure data in ${_}! Ignoring this filter.<br />".
-			      "Only alphanumeric characters and ', -, [, ], ^, @ are allowed.";
+			      "Only alphanumeric characters and ', /, -, [, ], ^, @ are allowed.";
 		}
 	}
 }
