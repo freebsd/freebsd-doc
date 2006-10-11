@@ -26,7 +26,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.54 2006/09/19 13:20:42 shaun Exp $
+# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.55 2006/09/23 14:02:27 simon Exp $
 #
 
 use strict;
@@ -198,7 +198,7 @@ $fmt{'html_footerlinks'} = <<EOF;
 EOF
 
 $fmt{'query_form'} = <<EOF;
-<form action="${scriptname}" method="GET">
+<form action="${scriptname}" method="get">
   <table cellspacing="0" cellpadding="3" class="headtable">
     <tr><td width="130"><b>PR number:</b></td><td><input type="text" name="pr" maxlength="30" /></td></tr>
     <tr><td width="130"><b>Category:</b></td><td><input type="text" name="cat" maxlength="30" /> (optional)</td></tr>
@@ -215,7 +215,7 @@ $fmt{'empty'}         = '&nbsp;';
 $fmt{'break'}         = "<br />\n";
 
 # From cgi-style.pl
-$main::t_style = "<link href=\"${stylesheet}\" rel=\"stylesheet\" type=\"text/css\">";
+$main::t_style = "<link href=\"${stylesheet}\" rel=\"stylesheet\" type=\"text/css\" />";
 
 
 #-----------------------------------------------------------------------
@@ -226,7 +226,8 @@ if ($ENV{'QUERY_STRING'}) {
 	foreach (split(/&/, $ENV{'QUERY_STRING'})) {
 		my ($key, $val) = split /=/;
 		$f        = $val if ($key eq "f");
-		$PR       = $val if ($key eq "pr");
+		$PR       = $val if ($key eq "pr" or $key eq "q");
+		$PR       = $key if ($key =~ /^(?:$valid_category\/)?$valid_pr$/);
 		$category = $val if ($key eq "cat");
 		$getpatch = $val if ($key eq "getpatch");
 	}
@@ -243,7 +244,7 @@ $category = undef
 	if ($category && $category !~ /^$valid_category$/);
 
 if ($PR < 0 || $PR !~ /^$valid_pr$/) {
-	print html_header("Query PR Database", 0);
+	print html_header("Query PR Database");
 	sprint('query_form');
 	print html_footer();
 	exit;
@@ -261,7 +262,8 @@ if ($category) {
 }
 
 if (!@query) {
-	print html_header("No PRs Matched Query", 0);
+	print html_header("No PRs Matched Query");
+	sprint('query_form');
 	print html_footer();
 	exit;
 }
@@ -706,7 +708,7 @@ sub htmlclean
 
 
 #-----------------------------------------------------------------------
-# Func: htmlclean()
+# Func: htmlparse()
 # Desc: Perform any fancy formatting on the message (e.g. HTML-ify
 #       URLs) and return the result.
 #-----------------------------------------------------------------------
@@ -716,7 +718,7 @@ sub htmlparse
 	my $v = shift;
 	return "" if (!$v);
 
-	$v =~ s/((?:https?|ftps?):\/\/[^\s\/]+\/[][A-Za-z0-9=_.\~\?\&\/\%;-]*)/<a href="$1">$1<\/a>/g;
+	$v =~ s/((?:https?|ftps?):\/\/[^\s\/]+\/[][\w=.,\'\(\)\~\?\!\&\/\%:;@#+-]*)/<a href="$1">$1<\/a>/g;
 	$v =~ s/^RCS file: (\/home\/[A-Za-z0-9]+\/(.*?)),v$/RCS file: <a href="$cvsweb_url$2">$1<\/a>,v/;
 	return $v;
 }
