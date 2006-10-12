@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/gnome/Makefile,v 1.24 2006/04/30 19:27:32 marcus Exp $
+# $FreeBSD: www/en/gnome/Makefile,v 1.25 2006/08/19 21:20:34 hrs Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -14,6 +14,7 @@ DOCS=	screenshots.sgml
 DOCS+=	contact.sgml
 
 DATA=	gnomelogalyzer.sh
+DATA+=	gnome_prefix.sh
 
 XML.DEFAULT=	news.xml
 
