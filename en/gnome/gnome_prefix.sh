@@ -27,7 +27,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD$
+# $FreeBSD: www/en/gnome/gnome_prefix.sh,v 1.1 2006/09/09 17:24:00 mezz Exp $
 #
 ### BEGIN changeable variables
 LOCALBASE=/usr/local
@@ -84,6 +84,7 @@ for d in ${dir}; do
 						export do_edit=yes
 					else
 						echo "Want to edit this file? [n]"
+						echo "${f}"
 						read EDIT
 
 						case "$EDIT" in
