@@ -28,6 +28,7 @@ SRCS=  book.sgml
 SRCS+= dma/chapter.sgml
 SRCS+= introduction/chapter.sgml
 SRCS+= ipv6/chapter.sgml
+SRCS+= kernelbuild/chapter.sgml
 SRCS+= kerneldebug/chapter.sgml
 SRCS+= l10n/chapter.sgml
 SRCS+= policies/chapter.sgml
