@@ -1,5 +1,5 @@
-# $FreeBSD: www/de/platforms/ia64/Makefile,v 1.3 2005/09/19 16:55:28 jkois Exp $
-# $FreeBSDde: de-www/platforms/ia64/Makefile,v 1.4 2005/09/18 10:33:54 jkois Exp $
+# $FreeBSD$
+# $FreeBSDde: de-www/platforms/ia64/Makefile,v 1.5 2006/10/19 19:26:04 jkois Exp $
 # basiert auf: 1.6
 
 .if exists(../Makefile.conf)

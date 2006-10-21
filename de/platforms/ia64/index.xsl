@@ -6,8 +6,8 @@
 <!ENTITY % navinclude.developers "INCLUDE">
 ]>
 <!--
-  $FreeBSDde: de-www/platforms/ia64/index.xsl,v 1.6 2006/05/13 16:52:15 jkois Exp $
-  basiert auf: 1.5
+  $FreeBSDde: de-www/platforms/ia64/index.xsl,v 1.8 2006/10/20 20:09:25 jkois Exp $
+  basiert auf: 1.7
 -->
 <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
@@ -68,7 +68,7 @@
 
 	<p>Die FreeBSD/ia64 Projekt-Seiten enthalten Informationen
 	  &#252;ber das Portieren von FreeBSD auf die Intel IA-64
-	  Architektur; offiziell als Intel Itanium&#174; Processor
+	  Architektur; offiziell als Intel Itanium&reg; Processor
 	  Family (IPF) bezeichnet.  Wie die Portierung selbst,
 	  befinden sich diese Seiten noch in Arbeit.</p>
 

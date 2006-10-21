@@ -1,6 +1,6 @@
-# $FreeBSD: www/de/news/Makefile,v 1.7 2005/09/20 04:39:37 jkois Exp $
-# $FreeBSDde: de-www/news/Makefile,v 1.10 2005/09/20 04:16:39 jkois Exp $
-# basiert auf: 1.43
+# $FreeBSD$
+# $FreeBSDde: de-www/news/Makefile,v 1.11 2006/10/19 19:26:02 jkois Exp $
+# basiert auf: 1.46
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -19,3 +19,4 @@ XMLDOCS=	newsflash:${XSL_NEWS_NEWSFLASH}:${XML_NEWS_NEWS_MASTER}:
 XMLDOCS+=	press:${XSL_NEWS_PRESS}:${XML_NEWS_PRESS_MASTER}:
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
+
