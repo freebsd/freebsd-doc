@@ -6,15 +6,15 @@
 ]>
 
 <!--
-	$FreeBSD: www/de/security/mkindex.xsl,v 1.2 2004/01/25 04:00:15 brueffer Exp $
-	$FreeBSDde: de-www/security/mkindex.xsl,v 1.2 2004/01/25 03:50:13 brueffer Exp $
-	basiert auf: 1.4
+	$FreeBSD$
+	$FreeBSDde: de-www/security/mkindex.xsl,v 1.3 2006/10/19 19:26:10 jkois Exp $
+	basiert auf: 1.5
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
 
-  <xsl:variable name="date" select="'$FreeBSD: www/de/security/mkindex.xsl,v 1.2 2004/01/25 04:00:15 brueffer Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD$'"/>
 
   <xsl:output type="xml" encoding="iso-8859-1"
               omit-xml-declaration="yes" />

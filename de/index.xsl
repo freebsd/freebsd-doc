@@ -3,11 +3,10 @@
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
 <!ENTITY title "The FreeBSD Project">
 ]>
-
 <!--
-     $FreeBSD: www/de/index.xsl,v 1.34 2006/08/19 21:21:51 hrs Exp $
-     $FreeBSDde: de-www/index.xsl,v 1.66 2006/06/29 18:47:31 jkois Exp $
-     basiert auf: 1.152
+     $FreeBSD$
+     $FreeBSDde: de-www/index.xsl,v 1.69 2006/10/20 18:18:39 jkois Exp $
+     basiert auf: 1.156
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -76,7 +75,7 @@
 				<p>FreeBSD&reg; ist ein modernes Betriebssystem f&#252;r
 				x86-kompatible (einschlie&#223;lich Pentium&reg; und
 				Athlon&trade;), amd64-kompatible (einschlie&#223;lich
-				Opteron&trade;, Athlon 64 und EM64T), UltraSPARC&reg;-,
+				Opteron&trade;, Athlon&trade;64 und EM64T), UltraSPARC&reg;-,
 				IA-64-, PC-98- sowie ARM-Architekturen.  FreeBSD ist eine
 				Weiterentwicklung von BSD, dem
 				&unix;-Betriebssystem der

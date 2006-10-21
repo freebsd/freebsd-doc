@@ -1,7 +1,7 @@
 # The FreeBSD Documentation Project
 # The FreeBSD German Documentation Project
-# $FreeBSD: www/de/Makefile,v 1.28 2006/02/21 18:02:21 jkois Exp $
-# $FreeBSDde: de-www/Makefile,v 1.39 2006/02/19 18:15:15 jkois Exp $
+# $FreeBSD$
+# $FreeBSDde: de-www/Makefile,v 1.40 2006/10/20 17:53:21 jkois Exp $
 # basiert auf: 1.134
 
 .if exists(Makefile.conf)

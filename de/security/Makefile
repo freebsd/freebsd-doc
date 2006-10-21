@@ -1,6 +1,6 @@
-# $FreeBSD: www/de/security/Makefile,v 1.5 2004/07/15 14:34:20 brueffer Exp $
-# $FreeBSDde: de-www/security/Makefile,v 1.5 2004/07/04 13:38:58 brueffer Exp $
-# basiert auf: 1.13
+# $FreeBSD$
+# $FreeBSDde: de-www/security/Makefile,v 1.6 2006/10/19 19:26:10 jkois Exp $
+# basiert auf: 1.14
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
