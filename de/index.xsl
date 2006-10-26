@@ -5,8 +5,8 @@
 ]>
 <!--
      $FreeBSD$
-     $FreeBSDde: de-www/index.xsl,v 1.69 2006/10/20 18:18:39 jkois Exp $
-     basiert auf: 1.156
+     $FreeBSDde: de-www/index.xsl,v 1.71 2006/10/26 13:23:55 jkois Exp $
+     basiert auf: 1.157
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -152,8 +152,11 @@
 				  <li>
 					<a href="&enbase;/ja/" title="Japanisch">ja</a>
 				  </li>
-				  <li class="last-child">
+				  <li>
 					<a href="&enbase;/ru/" title="Russisch">ru</a>
+				  </li>
+				  <li class="last-child">
+					<a href="&enbase;/zh_CN/" title="Chinesisch (vereinfacht)">zh_CN</a>
 				  </li>
 				</ul>
 			</div> <!-- LANGUAGENAV -->
