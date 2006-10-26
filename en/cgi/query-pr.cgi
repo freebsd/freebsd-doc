@@ -26,7 +26,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.55 2006/09/23 14:02:27 simon Exp $
+# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.56 2006/10/11 21:02:58 danger Exp $
 #
 
 use strict;
@@ -224,7 +224,8 @@ $main::t_style = "<link href=\"${stylesheet}\" rel=\"stylesheet\" type=\"text/cs
 
 if ($ENV{'QUERY_STRING'}) {
 	foreach (split(/&/, $ENV{'QUERY_STRING'})) {
-		my ($key, $val) = split /=/;
+		my ($key, $val) = map { s/%([0-9a-f]{2})/chr hex $1/egi; $_ }
+				  split /=/;
 		$f        = $val if ($key eq "f");
 		$PR       = $val if ($key eq "pr" or $key eq "q");
 		$PR       = $key if ($key =~ /^(?:$valid_category\/)?$valid_pr$/);
