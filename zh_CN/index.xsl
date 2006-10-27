@@ -5,8 +5,8 @@
 ]>
 
 <!-- The FreeBSD Simplified Chinese Documentation Project -->
-<!-- Original revision: 1.151 -->
-<!-- $FreeBSD: www/zh_CN/index.xsl,v 1.1 2006/07/11 15:27:47 delphij Exp $ -->
+<!-- Original revision: 1.156 -->
+<!-- $FreeBSD$ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
@@ -22,7 +22,6 @@
   <xsl:param name="news.project.xml" select="'none'"/>
   <xsl:param name="events.xml-master" select="'none'"/>
   <xsl:param name="events.xml" select="'none'"/>
-  <xsl:param name="curdate.xml" select="'none'"/>
 
   <xsl:output type="html" encoding="&xml.encoding;"
               doctype-public="-//W3C//DTD HTML 4.01 Transitional//EN"/>
@@ -46,7 +45,7 @@
 	  title="FreeBSD 安全公告" href="&enbase;/security/advisories.rdf" />
 	<link rel="alternate" type="application/rss+xml"
 	  title="FreeBSD GNOME Project 新闻" href="&enbase;/gnome/news.rdf" />
-	
+
 	<!-- Formatted to be easy to spam harvest, please do not reformat. -->
 	<xsl:comment>
         Spamtrap, do not email:
@@ -68,19 +67,17 @@
 		<div id="FRONTFEATURELEFT">
 			<div id="FRONTFEATURECONTENT">
 				<h1>
-				  基于 BSD UNIX&#174;
+				  基于 BSD &unix;
 				</h1>
 				<p>
-				  FreeBSD&#174; 是可以用于 x86 兼容机 (包括
-				  Pentium&#174;、 Athlon&#8482;)、
-				  amd64 兼容机 (包括 Opteron&#8482;、 Athlon 64 和 EM64T)、
-				  UltraSPARC&#174;、 IA-64 和 PC-98， 以及 ARM
-				  硬件架构上的一种先进的操作系统。 它源于 BSD，
-				  由加州大学伯克利分校开发的 UNIX&#174; 版本，
-				  并由来自世界各地的 <a href="&enbase;/doc/en_US.ISO8859-1/articles/contributors/staff-committers.html">大批志愿者</a>
-				  持续开发和维护。 对于一些其它的
-				  <a href="&base;/platforms/">硬件平台</a>，
-				  它也提供了不同程度的支持。
+				  FreeBSD&reg; 是可以用于
+				  x86 兼容机 (包括 Pentium&reg; 和 Athlon&trade;)、
+				  amd64 兼容机 (包括 Opteron&trade;、 Athlon&trade;64 和 EM64T)、
+				  UltraSPARC&reg;、 IA-64、 PC-98 以及 ARM 硬件架构上的一种先进的操作系统。
+				  它源于 BSD， 由加州大学伯克利分校开发的 &unix; 版本。 目前由
+				  <a href="&base;/doc/en_US.ISO8859-1/articles/contributors/staff-committers.html">一支包含大量开发人员的团队</a> 维护。
+				  对于一些其它的 <a href="&base;/platforms/">硬件平台</a> 的支持，
+				  也正处于不同的开发阶段。
 				</p>
 				<div id="TXTFRONTFEATURELINK">
 				&#187;<a href="&base;/about.html" title="了解更多">了解更多</a>
@@ -96,29 +93,29 @@
 				</div> <!-- frontgetcontent -->
 			  <div class="frontgetbot"><div><b style="display: none">.</b></div></div>
 			</div> <!-- frontgetroundbox -->
-			
+
 			<div id="FRONTRELEASES">
 			  <div id="FRONTRELEASESCONTENT" class="txtshortcuts">
-				  <h2><a href="&base;/releases/">最新版本</a></h2>
+				  <h2><a href="&base;/releases/"> 最新版本 </a></h2>
 				  <ul id="FRONTRELEASESLIST">
 					<li>
 					  <a href="&enbase;/&u.rel.announce;">生产适用版 &rel.current;</a>
 					</li>
 					<li>
-					  <a href="&enbase;/&u.rel2.announce;">生产适用版(旧式) &rel2.current;</a>
+					  <a href="&enbase;/&u.rel2.announce;">(旧式)生产适用版 &rel2.current;</a>
 					</li>
 			    <xsl:if test="'&beta.testing;' != 'IGNORE'">
 					<li>
 					  <a href="&base;/where.html#helptest">将发布的版本
-					    &betarel.current; - &betarel.vers;</a>
+				            &betarel.current; - &betarel.vers;</a>
 					</li>
-				    </xsl:if>
+			    </xsl:if>
 			    <xsl:if test="'&beta2.testing;' != 'IGNORE'">
 					<li>
 					  <a href="&base;/where.html#helptest">将发布的版本
-					    &betarel2.current; - &betarel2.vers;</a>
+				            &betarel2.current; - &betarel2.vers;</a>
 					</li>
-				    </xsl:if>
+			    </xsl:if>
 				  </ul>
 			  </div> <!-- FRONTRELEASESCONTENT -->
 			</div> <!-- FRONTRELEASES -->
@@ -177,10 +174,10 @@
 					  <a href="&enbase;/community/mailinglists.html" title="邮件列表">邮件列表</a>
 					</li>
 					<li>
-					  <a href="&enbase;/send-pr.html" title="报告 Bug">报告 Bug</a>
+					  <a href="&base;/send-pr.html" title="报告 Bug">报告 Bug</a>
 					</li>
 					<li>
-					  <a href="&enbase;/doc/zh_CN.GB2312/books/faq/index.html" title="FAQ">FAQ</a>
+					  <a href="&enbase;/doc/en_US.ISO8859-1/books/faq/index.html" title="FAQ">FAQ</a>
 					</li>
 					<li>
 					  <a href="&enbase;/doc/zh_CN.GB2312/books/handbook/index.html" title="Handbook">使用手册</a>
@@ -204,7 +201,7 @@
 			  <div class="frontnewbot"><div><b style="display: none">.</b></div></div>
 			</div> <!-- frontnewroundbox -->
 		</div> <!-- FEATURERIGHT -->
-				
+
             </div> <!-- FRONTFEATURECONTAINER -->
 
 	    <br class="clearboth" />
@@ -225,7 +222,7 @@
 					<a href="&base;/news/newsflash.html" title="更多新闻">更多新闻</a>
 				  </li>
 				  <li class="last-child">
-					<a href="&base;/news/news.rdf" title="新闻 RSS Feed"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="News RSS Feed" /></a>
+					<a href="&base;/news/news.rdf" title="新闻 RSS Feed"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="新闻 RSS Feed" /></a>
 				  </li>
 				</ul>
 			  </div> <!-- unnamed -->
@@ -243,7 +240,6 @@
 			<xsl:call-template name="html-index-events-items">
 				<xsl:with-param name="events.xml-master" select="$events.xml-master" />
 				<xsl:with-param name="events.xml" select="$events.xml" />
-				<xsl:with-param name="curdate.xml" select="$curdate.xml" />
 			</xsl:call-template>
 
 			  <div>
@@ -330,8 +326,8 @@
 
 	FreeBSD 标志是 FreeBSD
 	基金会的注册商标。 FreeBSD Project 使用此商标得到了 <a
-	  href="http://www.freebsdfoundation.org/legal/guidelines.shtml">FreeBSD 基金会</a>
-	  的许可。
+	  href="http://www.freebsdfoundation.org/documents/Guidelines.shtml">FreeBSD 基金会</a>
+	的许可。
 
       </div> <!-- FOOTER -->
     </div> <!-- CONTAINER -->
