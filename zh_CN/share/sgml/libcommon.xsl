@@ -6,6 +6,15 @@
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/libcommon.xsl"/>
 
+  <!-- Language-specific definitions should be put below this line -->
+  <!-- default format for date string -->
+  <xsl:param name="param-l10n-date-format-YMD"
+             select="'%Y 年 %M %D 日'" />
+  <xsl:param name="param-l10n-date-format-YM"
+             select="'%Y 年 %M'" />
+  <xsl:param name="param-l10n-date-format-MD"
+             select="'%M %D 日'" />
+
   <xsl:template name="html-news-list-newsflash-preface">
     <img src="&enbase;/gifs/news.jpg" align="right" border="0" width="193"
       height="144" alt="FreeBSD 新闻速递"/>
@@ -68,20 +77,27 @@
     <xsl:param name="nummonth"/>
     <xsl:variable name="month" select="number($nummonth)"/>
     <xsl:choose>
-      <xsl:when test="$month=1">Janvier</xsl:when>
-      <xsl:when test="$month=2">F&#233;vrier</xsl:when>
-      <xsl:when test="$month=3">Mars</xsl:when>
-      <xsl:when test="$month=4">Avril</xsl:when>
-      <xsl:when test="$month=5">Mai</xsl:when>
-      <xsl:when test="$month=6">Juin</xsl:when>
-      <xsl:when test="$month=7">Juillet</xsl:when>
-      <xsl:when test="$month=8">Ao&#251;t</xsl:when>
-      <xsl:when test="$month=9">Septembre</xsl:when>
-      <xsl:when test="$month=10">Octobre</xsl:when>
-      <xsl:when test="$month=11">Novembre</xsl:when>
-      <xsl:when test="$month=12">D&#233;cembre</xsl:when>
-      <xsl:otherwise>Mois invalide</xsl:otherwise>
+      <xsl:when test="$month=1">一月</xsl:when>
+      <xsl:when test="$month=2">二月</xsl:when>
+      <xsl:when test="$month=3">三月</xsl:when>
+      <xsl:when test="$month=4">四月</xsl:when>
+      <xsl:when test="$month=5">五月</xsl:when>
+      <xsl:when test="$month=6">六月</xsl:when>
+      <xsl:when test="$month=7">七月</xsl:when>
+      <xsl:when test="$month=8">八月</xsl:when>
+      <xsl:when test="$month=9">九月</xsl:when>
+      <xsl:when test="$month=10">十月</xsl:when>
+      <xsl:when test="$month=11">十一月</xsl:when>
+      <xsl:when test="$month=12">十二月</xsl:when>
+      <xsl:otherwise>月份无效</xsl:otherwise>
     </xsl:choose>
+  </xsl:template>
+
+  <xsl:template name="html-news-month-headings">
+    <xsl:param name="year" />
+    <xsl:param name="month" />
+
+    <xsl:value-of select="concat($year, ' 年 ', $month)" />
   </xsl:template>
 
 </xsl:stylesheet>
