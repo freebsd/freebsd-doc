@@ -75,7 +75,7 @@
 				  amd64 兼容机 (包括 Opteron&trade;、 Athlon&trade;64 和 EM64T)、
 				  UltraSPARC&reg;、 IA-64、 PC-98 以及 ARM 硬件架构上的一种先进的操作系统。
 				  它源于 BSD， 由加州大学伯克利分校开发的 &unix; 版本。 目前由
-				  <a href="&base;/doc/en_US.ISO8859-1/articles/contributors/staff-committers.html">一支包含大量开发人员的团队</a> 维护。
+				  <a href="&enbase;/doc/en_US.ISO8859-1/articles/contributors/staff-committers.html">一支包含大量开发人员的团队</a> 维护。
 				  对于一些其它的 <a href="&base;/platforms/">硬件平台</a> 的支持，
 				  也正处于不同的开发阶段。
 				</p>
