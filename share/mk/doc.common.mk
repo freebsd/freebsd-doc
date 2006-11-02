@@ -8,6 +8,7 @@
 AWK?=		/usr/bin/awk
 GREP?=		/usr/bin/grep
 REALPATH?=	/bin/realpath
+SED?=		/usr/bin/sed
 
 .if defined(DOC_PREFIX) && !empty(DOC_PREFIX)
 WEB_PREFIX?=	${DOC_PREFIX}/../www
