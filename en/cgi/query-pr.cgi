@@ -26,7 +26,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.56 2006/10/11 21:02:58 danger Exp $
+# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.57 2006/10/26 11:13:34 yar Exp $
 #
 
 use strict;
@@ -257,9 +257,9 @@ $PR = quotemeta $PR;
 
 if ($category) {
 	$category = quotemeta $category;
-	@query = split /\n/, qx(query-pr --full --category=${category} ${PR});
+	@query = split /\n/, qx(query-pr.web --full --category=${category} ${PR});
 } else {
-	@query = split /\n/, qx(query-pr --full ${PR});
+	@query = split /\n/, qx(query-pr.web --full ${PR});
 }
 
 if (!@query) {
