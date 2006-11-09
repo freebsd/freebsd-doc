@@ -1,6 +1,6 @@
 # $FreeBSD$
-# $FreeBSDde: de-www/platforms/Makefile,v 1.4 2005/01/02 20:08:38 jkois Exp $
-# basiert auf: 1.9
+# $FreeBSDde: de-www/platforms/Makefile,v 1.6 2006/11/09 19:38:06 jkois Exp $
+# basiert auf: 1.12
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -19,7 +19,9 @@ DOCS+=	mips.sgml
 DOCS+=	pc98.sgml
 DOCS+=	ppc.sgml
 DOCS+=	sparc.sgml
+DOCS+=  sun4v.sgml
 DOCS+=	x86-64.sgml
+DOCS+=  xbox.sgml
 
 SUBDIR=	ia64
 
