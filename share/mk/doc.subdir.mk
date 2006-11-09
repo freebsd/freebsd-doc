@@ -62,7 +62,7 @@ __initialized__:
 .if !target(install)
 install: afterinstall symlinks 
 afterinstall: realinstall
-realinstall: beforeinstall _SUBDIRUSE
+realinstall: beforeinstall
 .endif
 
 package: realpackage symlinks
