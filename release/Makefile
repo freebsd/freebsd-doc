@@ -40,6 +40,19 @@ TOUCH?=		/usr/bin/touch
 #		from the document release.  Creation of ISO images
 #		requires a mkisofs binary in the invoking user's path.
 #
+# MAKE_RELNOTES	If defined, enables generation of release documentation.
+#
+# RELNOTESTAG	CVS tag to use for checkouts of the release documentation.
+#		If not defined, treated as a checkout from HEAD.
+#
+.if !defined(DOCROOTDIR)
+.error "You must define DOCROOTDIR!"
+.endif
+
+.if !defined(CVSROOT)
+.error "You must define CVSROOT!"
+.endif
+
 DATE!=		date +%Y%m%d
 BUILDNAME?=	${DATE}
 
@@ -65,6 +78,7 @@ INSTALL_COMPRESSED?=	zip gz
 MISCOPTIONS+=	NO_JPMAN=yes RLE=yes IGNORE_COMPAT_SYMLINK=YES
 
 DOC_PREFIX=	${DOCROOTDIR}/doc
+RELNOTES_PREFIX=${DOCROOTDIR}/src/release/doc
 DOCSTAGEDIR=	${DOCROOTDIR}/R
 DOCBUILDFILE=	${DOCSTAGEDIR}/build.txt
 DOCKEYFILE=	${DOCSTAGEDIR}/pgpkeyring.txt
@@ -95,11 +109,26 @@ release.1:
 	cd ${DOCROOTDIR}; \
 	cvs -R -d ${CVSROOT} co -P doc
 .endif
+.if defined(MAKE_RELNOTES)
+.if defined(RELNOTESTAG)
+	cd ${DOCROOTDIR}; \
+	cvs -R -d ${CVSROOT} co -r${RELNOTESTAG} -P src/release/doc; \
+	cvs -R -d ${CVSROOT} co -r${RELNOTESTAG} -P src/share/man/man4
+.else
+	cd ${DOCROOTDIR}; \
+	cvs -R -d ${CVSROOT} co -P src/release/doc; \
+	cvs -R -d ${CVSROOT} co -P src/share/man/man4
+.endif
+.endif
 	${MKDIR} ${DOCSTAGEDIR}
 .endif
 # Build documents.
 	cd ${DOC_PREFIX} && \
-	${MAKE} all FORMATS="${FORMATS}" INSTALL_COMPRESSED="${INSTALL_COMPRESSED}" ${MISCOPTIONS}
+	${MAKE} FORMATS="${FORMATS}" INSTALL_COMPRESSED="${INSTALL_COMPRESSED}" ${MISCOPTIONS} all
+.if defined(MAKE_RELNOTES)
+	cd ${RELNOTES_PREFIX} && \
+	${MAKE} FORMATS="${FORMATS}" INSTALL_COMPRESSED="${INSTALL_COMPRESSED}" ${MISCOPTIONS} all
+.endif
 # Build PGP key ring
 	${RM} -f ${DOCKEYFILE}
 	cd ${DOC_PREFIX}/en_US.ISO8859-1/books/handbook && ${MAKE} pgpkeyring > ${DOCKEYFILE}
@@ -116,8 +145,14 @@ release.1:
 ftp.1:
 	${RM} -rf ${DOCFTPSTAGEDIR}
 	${MKDIR} ${DOCFTPSTAGEDIR}
+	${MKDIR} -p ${DOCFTPSTAGEDIR}/doc
 	cd ${DOC_PREFIX} && \
-	${MAKE} all install DOCDIR=${DOCFTPSTAGEDIR} FORMATS="${FORMATS}" INSTALL_COMPRESSED="${INSTALL_COMPRESSED}" ${MISCOPTIONS}
+	${MAKE} install DOCDIR=${DOCFTPSTAGEDIR}/doc FORMATS="${FORMATS}" INSTALL_COMPRESSED="${INSTALL_COMPRESSED}" ${MISCOPTIONS}
+.if defined(MAKE_RELNOTES)
+	${MKDIR} -p ${DOCFTPSTAGEDIR}/src/release/doc
+	cd ${RELNOTES_PREFIX} && \
+	${MAKE} install DOCDIR=${DOCFTPSTAGEDIR}/src/release/doc FORMATS="${FORMATS}" INSTALL_COMPRESSED="${INSTALL_COMPRESSED}" ${MISCOPTIONS}
+.endif
 # Copy newly generated files to staging area
 	${CP} ${DOCBUILDFILE} ${DOCKEYFILE} ${DOCFTPSTAGEDIR}
 # Copy any files in our texts/ directory to staging area
@@ -128,8 +163,14 @@ ftp.1:
 cdrom.1:
 	${RM} -rf ${DOCCDROMSTAGEDIR}
 	${MKDIR} ${DOCCDROMSTAGEDIR}
+	${MKDIR} -p ${DOCCDROMSTAGEDIR}/doc
 	cd ${DOC_PREFIX} && \
-	${MAKE} all install DOCDIR=${DOCCDROMSTAGEDIR} FORMATS="${FORMATS}" INSTALL_COMPRESSED="" ${MISCOPTIONS}
+	${MAKE} install DOCDIR=${DOCCDROMSTAGEDIR}/doc FORMATS="${FORMATS}" INSTALL_COMPRESSED="" ${MISCOPTIONS}
+.if defined(MAKE_RELNOTES)
+	${MKDIR} -p ${DOCCDROMSTAGEDIR}/src/release/doc
+	cd ${RELNOTES_PREFIX} && \
+	${MAKE} install DOCDIR=${DOCCDROMSTAGEDIR}/src/release/doc FORMATS="${FORMATS}" INSTALL_COMPRESSED="" ${MISCOPTIONS}
+.endif
 # Copy newly generated files to staging area
 	${CP} ${DOCBUILDFILE} ${DOCKEYFILE} ${DOCCDROMSTAGEDIR}
 # Copy any files in our texts/ directory to the staging area.
@@ -140,4 +181,5 @@ cdrom.1:
 	cd ${DOCROOTDIR} && ${MKISOFS} -r -J -V FreeBSD_Docs -publisher "The FreeBSD Project.  http://www.freebsd.org/" -o ${DOCSTAGEDIR}/doc.iso ${DOCCDROMSTAGEDIR}
 .endif
 
+.include "../share/mk/doc.common.mk"
 .include "../share/mk/doc.project.mk"
