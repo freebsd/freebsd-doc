@@ -6,7 +6,7 @@
 # by John Fieber
 # February 26, 1998
 #
-# $FreeBSD: www/en/cgi/getmsg.cgi,v 1.39 2005/10/20 19:54:57 fenner Exp $
+# $FreeBSD: www/en/cgi/getmsg.cgi,v 1.40 2005/11/09 22:27:47 fenner Exp $
 #
 
 require "./cgi-lib.pl";
@@ -61,7 +61,7 @@ sub Fetch
 	}
 	
 	# from the local mail archive for current mails
-	elsif ($file =~ m%^current/(cvs|freebsd|p4)-[a-z0-9-]+$% &&
+	elsif ($file =~ m%^current/(cvs|freebsd|p4|trustedbsd)-[a-z0-9-]+$% &&
 	       open(DATA, "$messagepathcurrent$file")) {
 	    print "Content-type: text/plain\n\n"; 
 	    while(<DATA>) {
@@ -73,7 +73,7 @@ sub Fetch
     }
 
     if (($file =~ /^$messagepath/ && -f $file && open(DATA, $file)) ||
-	($file =~ m%^current/(cvs|freebsd|p4)-[a-z0-9-]+$% &&
+	($file =~ m%^current/(cvs|freebsd|p4|trustedbsd)-[a-z0-9-]+$% &&
 	 open(DATA, "$messagepathcurrent$file")))
     {
 	@finfo = stat DATA;
