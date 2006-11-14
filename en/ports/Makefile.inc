@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/ports/Makefile.inc,v 1.8 2005/11/30 22:43:47 pav Exp $
+# $FreeBSD: www/en/ports/Makefile.inc,v 1.9 2005/12/15 01:02:28 linimon Exp $
 
 PORTINDEX=	${PERL} ${.CURDIR}/portindex
 INDEX=		INDEX
@@ -12,5 +12,5 @@ CLEANFILES+= 	${DYNAMIC_DOCS}
 CLEANFILES+=	Makefile.gen
 CLEANFILES+=	ports.count ports.size
 
-_ALLINSTALL= packages.exists ${INDEX} categories
+_ALLINSTALL= packages.exists categories
 
