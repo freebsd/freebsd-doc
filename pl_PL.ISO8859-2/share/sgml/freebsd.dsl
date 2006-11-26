@@ -2,12 +2,17 @@
      The FreeBSD Polish Documentation Project
 
      $FreeBSD$
-     Original revision: 1.14
+     Original revision: 1.22
  -->
+<!-- $FreeBSD$ -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
 <!ENTITY freebsd.dsl PUBLIC "-//FreeBSD//DOCUMENT DocBook Language Neutral Stylesheet//EN" CDATA DSSSL>
-<!ENTITY % output.html  "IGNORE">
+
+<!ENTITY % freebsd.l10n PUBLIC "-//FreeBSD//ENTITIES DocBook Language Specific Entities//EN">
+%freebsd.l10n;
+
+<!ENTITY % output.html  "IGNORE"> 
 <!ENTITY % output.print "IGNORE">
 <!ENTITY % output.print.niceheaders "IGNORE">
 ]>
@@ -16,42 +21,42 @@
   <style-specification use="docbook">
     <style-specification-body>
       <!-- HTML only .................................................... -->
-
-      <![ %output.html; [
+ 
+      <![ %output.html; [ 
 
         <!-- Generate links to HTML man pages -->
         (define %refentry-xref-link% #t)
 
-        (define ($email-footer$)
+	(define ($email-footer$)
           (make sequence
 	    (make element gi: "p"
                   attributes: (list (list "align" "center"))
               (make element gi: "small"
-                (literal "This, and other documents, can be downloaded from ")
+                (literal "Ten i inne dokumenty mo¿na pobraæ z ")
 		(create-link
 		  (list (list "HREF" "ftp://ftp.FreeBSD.org/pub/FreeBSD/doc/"))
                   (literal "ftp://ftp.FreeBSD.org/pub/FreeBSD/doc/"))
                 (literal ".")))
             (make element gi: "p"
                   attributes: (list (list "align" "center"))
-              (make element gi: "small"
-                (literal "For questions about FreeBSD, read the ")
+              (make element gi: "small"  
+                (literal "W przypadku pytañ o FreeBSD prosimy przeczytaæ dostêpn± ")
 		(create-link
 		  (list (list "HREF" "http://www.FreeBSD.org/docs.html"))
-                  (literal "documentation"))
-                (literal " before contacting <")
+                  (literal "dokumentacjê"))
+                (literal " przed kontaktem z <")
 		(create-link
 		  (list (list "HREF" "mailto:questions@FreeBSD.org"))
                   (literal "questions@FreeBSD.org"))
                 (literal ">.")
                 (make empty-element gi: "br")
-                (literal "For questions about this documentation, e-mail <")
+                (literal "W sprawie zapytañ o tê dokumentacjê prosimy o kontakt z <")
 		(create-link (list (list "HREF" "mailto:doc@FreeBSD.org"))
                   (literal "doc@FreeBSD.org"))
 	        (literal ">.")))))
       ]]>
 
-      <!-- More aesthetically pleasing chapter headers for print output -->
+      <!-- More aesthetically pleasing chapter headers for print output --> 
 
       <![ %output.print.niceheaders; [
 
@@ -70,7 +75,7 @@
 		 (select-elements (children (current-node)) (normalize "docinfo")))
 		((equal? (gi) (normalize "chapter"))
 		 (select-elements (children (current-node)) (normalize "docinfo")))
-		((equal? (gi) (normalize "dedication"))
+		((equal? (gi) (normalize "dedication")) 
 		 (empty-node-list))
 		((equal? (gi) (normalize "glossary"))
 		 (select-elements (children (current-node)) (normalize "docinfo")))
@@ -86,8 +91,8 @@
 		 (empty-node-list))))
 	 (exp-children (if (node-list-empty? info)
 			   (empty-node-list)
-			   (expand-children (children info)
-					    (list (normalize "bookbiblio")
+			   (expand-children (children info) 
+					    (list (normalize "bookbiblio") 
 						  (normalize "bibliomisc")
 						  (normalize "biblioset")))))
 	 (parent-titles (select-elements (children (current-node)) (normalize "title")))
@@ -164,7 +169,7 @@
 
       ]]>
 
-      <!-- Print only ................................................... -->
+      <!-- Print only ................................................... --> 
 
       <![ %output.print; [
 
@@ -177,8 +182,8 @@
       	       (info (info-element))
 	       (exp-children (if (node-list-empty? info)
 		 	         (empty-node-list)
-			         (expand-children (children info)
-					          (list (normalize "bookbiblio")
+			         (expand-children (children info) 
+					          (list (normalize "bookbiblio") 
 						        (normalize "bibliomisc")
 						        (normalize "biblioset")))))
 	       (parent-titles (select-elements (children sect) (normalize "title")))
@@ -207,9 +212,9 @@
 	    	  	       (* hs %head-after-factor%)
 	 	  	       0pt)
 	      start-indent: (if (or (>= hlevel 3)
-			            (member (gi) (list (normalize "refsynopsisdiv")
-					    	       (normalize "refsect1")
-						       (normalize "refsect2")
+			            (member (gi) (list (normalize "refsynopsisdiv") 
+					    	       (normalize "refsect1") 
+						       (normalize "refsect2") 
 						       (normalize "refsect3"))))
 	 		        %body-start-indent%
 			        0pt)
@@ -222,7 +227,7 @@
 	          (empty-sosofo)
 	          (if (string=? (element-label (current-node)) "")
 	  	      (empty-sosofo)
-		      (literal (element-label (current-node))
+		      (literal (element-label (current-node)) 
 			       (gentext-label-title-sep (gi sect)))))
 	      (element-title-sosofo (current-node)))
             (with-mode section-title-mode
@@ -244,8 +249,9 @@
           (list (normalize "sect4")             "  ")
           (list (normalize "sect5")             "  ")
           ))
+
     </style-specification-body>
   </style-specification>
-
+    
   <external-specification id="docbook" document="freebsd.dsl">
 </style-sheet>
