@@ -26,7 +26,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.57 2006/10/26 11:13:34 yar Exp $
+# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.58 2006/11/03 12:32:59 simon Exp $
 #
 
 use strict;
@@ -189,6 +189,14 @@ $fmt{'responseblock_trow'} = <<EOF;
 <tr><td class="key"><b>%%(1):</b></td><td class="val">%%(2)</td></tr>
 EOF
 
+$fmt{'unexpectedtext_thead'} = <<EOF;
+<table cellpadding="2" cellspacing="0" class="unexpectedblock"><tr><td>
+EOF
+
+$fmt{'unexpectedtext_tfoot'} = <<EOF;
+</td></tr></table><br />
+EOF
+
 $fmt{'html_footerlinks'} = <<EOF;
   <div>
     <a href="%%(maillink)">Submit Followup</a>
@@ -200,11 +208,17 @@ EOF
 $fmt{'query_form'} = <<EOF;
 <form action="${scriptname}" method="get">
   <table cellspacing="0" cellpadding="3" class="headtable">
-    <tr><td width="130"><b>PR number:</b></td><td><input type="text" name="pr" maxlength="30" /></td></tr>
-    <tr><td width="130"><b>Category:</b></td><td><input type="text" name="cat" maxlength="30" /> (optional)</td></tr>
+    <tr><td width="130"><b>PR number:</b></td><td><input type="text" name="pr" maxlength="30" value="%%(1)" /></td></tr>
+    <tr><td width="130"><b>Category:</b></td><td><input type="text" name="cat" maxlength="30" value="%%(2)" /> (optional)</td></tr>
     <tr><td></td><td><input type="submit" value="Submit" /></td></tr>
   </table>
 </form>
+EOF
+
+$fmt{'trylatermsg'} = <<EOF;
+<p>
+  Please <a href="${scriptname}?pr=%%(pr)">try again</a> later.
+</p>
 EOF
 
 $fmt{'quote_level_0'} = '<span class="quote0">&gt; ';
@@ -257,14 +271,19 @@ $PR = quotemeta $PR;
 
 if ($category) {
 	$category = quotemeta $category;
-	@query = split /\n/, qx(query-pr.web --full --category=${category} ${PR});
+	@query = split /\n/, qx(query-pr.web --full --category=${category} ${PR} 2>&1);
 } else {
-	@query = split /\n/, qx(query-pr.web --full ${PR});
+	@query = split /\n/, qx(query-pr.web --full ${PR} 2>&1);
 }
 
-if (!@query) {
+if (!@query or ($query[0] and $query[0] =~ /^query-pr(:?\.(:?real|web))?: /)) {
 	print html_header("No PRs Matched Query");
-	sprint('query_form');
+	sprint('query_form', $PR || "", $category || "");
+	print html_footer();
+	exit;
+} elsif ($query[0] =~ /^lockf: /) {
+	print html_header("PR Database Busy");
+	sprint('trylatermsg');
 	print html_footer();
 	exit;
 }
@@ -411,6 +430,7 @@ foreach my $field (@fields_multiple)
 
 	if ($field eq "Audit-Trail") {
 		my %block;
+		my $cliphack;
 		my $blockwhy;
 		my ($inblock, $inresponse, $mbreak) = (0, 0, 0);
 		my $url = "${self_url_base}${PR}";
@@ -422,6 +442,12 @@ foreach my $field (@fields_multiple)
 
 		foreach (@{$mfields{$field}})
 		{
+			# If we're sure we have a genuine Reply via E-mail block,
+			# allow for a border case, where there is a space rather
+			# than an empty line between the header and body.
+			$_ = "" if ($cliphack && /^ {1,2}$/);
+			$cliphack = 0;
+
 			if ($inblock == 1 && (/^${url}\s*$/i || /^([A-Za-z_]+-Changed-From-To: .*)$/ || /^(From: )/)) {
 				my $onnextline = ($1 ? 1 : 0);
 				if ($blockwhy) {
@@ -505,6 +531,7 @@ foreach my $field (@fields_multiple)
 				}
 
 				$inresponse = 1;
+				$cliphack = 1;
 				next;
 			} elsif (/^ (.*)$/) {
 				next if ($inresponse and !$mbreak);
@@ -551,6 +578,23 @@ foreach my $field (@fields_multiple)
 				next;
 			} elsif (/^$/) {
 				$mbreak = 0;
+				next;
+			} elsif (!$inblock and $_ !~ /^${url}\s*$/i) {
+				if ($inresponse > 1) {
+					if ($inpatch) {
+						$inpatch = 0;
+						sprint('patchblock_tfoot');
+						sprint('break');
+					}
+					sprint('responseblock_textfoot');
+					sprint('responseblock_tfoot');
+				}
+
+				sprint('unexpectedtext_thead');
+				print htmlclean($_);
+				sprint('unexpectedtext_tfoot');
+
+				$inresponse = 0;
 				next;
 			}
 
@@ -719,7 +763,7 @@ sub htmlparse
 	my $v = shift;
 	return "" if (!$v);
 
-	$v =~ s/((?:https?|ftps?):\/\/[^\s\/]+\/[][\w=.,\'\(\)\~\?\!\&\/\%:;@#+-]*)/<a href="$1">$1<\/a>/g;
+	$v =~ s/((?:https?|ftps?):\/\/[^\s\/]+\/[][\w=.,\'\(\)\~\?\!\&\/\%\$\{\}:;@#+-]*)/<a href="$1">$1<\/a>/g;
 	$v =~ s/^RCS file: (\/home\/[A-Za-z0-9]+\/(.*?)),v$/RCS file: <a href="$cvsweb_url$2">$1<\/a>,v/;
 	return $v;
 }
