@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/mailindex.cgi,v 1.7 2005/10/31 15:25:05 fenner Exp $
+# $FreeBSD: www/en/cgi/mailindex.cgi,v 1.8 2006/03/24 06:24:41 kuriyama Exp $
 
 
 use CGI;
@@ -67,6 +67,13 @@ if (!$file) {
 
 # forbid link to parent directories
 $file =~ s%\.\./%%g;
+if ($file =~ m,^([0-9a-z/-]+)$,) {
+    $file = $1;
+} else {
+    print "Unknown file name given\n";
+    exit;
+} 
+	
 
 sub file_not_exists {
     my $file = shift;
