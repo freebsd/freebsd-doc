@@ -4,7 +4,7 @@
 <!ENTITY title "The FreeBSD Project">
 ]>
 
-<!-- $FreeBSD: www/en/index.xsl,v 1.156 2006/10/06 16:48:02 danger Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.157 2006/10/26 10:36:16 delphij Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
@@ -182,9 +182,6 @@
 					</li>
 					<li>
 					  <a href="&base;/doc/en_US.ISO8859-1/books/handbook/index.html" title="Handbook">Handbook</a>
-					</li>
-					<li>
-					  <a href="http://www.freebsdfoundation.org/" title="Foundation">Foundation</a>
 					</li>
 					<li>
 					  <a href="&base;/ports/index.html" title="Ports">Ports</a>
