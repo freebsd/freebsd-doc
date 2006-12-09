@@ -26,12 +26,14 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.58 2006/11/03 12:32:59 simon Exp $
+# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.59 2006/11/27 17:12:50 shaun Exp $
 #
 
 use strict;
 #use warnings;
 
+use MIME::Base64;                      # ports/converters/p5-MIME-Base64
+use MIME::QuotedPrint;                 #
 use Convert::UU qw(uudecode uuencode); # ports/converters/p5-Convert-UU
 
 require './cgi-style.pl';
@@ -43,11 +45,15 @@ use constant SECT_HEADER        => 1;
 use constant SECT_SFIELDS       => 2;
 use constant SECT_MFIELDS       => 3;
 
+use constant ENCODING_BASE64    => 1;
+use constant ENCODING_QP        => 2;
+
 use constant PATCH_ANY          => 0x0001;
 use constant PATCH_DIFF         => 0x0002;
 use constant PATCH_UUENC        => 0x0004;
 use constant PATCH_UUENC_BIN    => 0x0008;
 use constant PATCH_SHAR         => 0x0010;
+use constant PATCH_BASE64       => 0x0020;
 
 my @fields_single = (
 	"Number",       "Category",      "Synopsis",      "Confidential",
@@ -64,8 +70,10 @@ my @fields_multiple = (
 
 my $fields_skip    = "Confidential|Quarter|Keywords|Date-Required|Submitter-Id";
 
-my $valid_category = '[A-Za-z0-9][A-Za-z0-9-_]{1,25}';
+my $valid_category = '[a-z0-9][A-Za-z0-9-_]{1,25}';
 my $valid_pr       = '\d{1,8}';
+
+my $binary_filetypes = '(?:\.gz|\.bz2|\.zip|\.tar)$';
 
 my %fmt;
 
@@ -190,11 +198,11 @@ $fmt{'responseblock_trow'} = <<EOF;
 EOF
 
 $fmt{'unexpectedtext_thead'} = <<EOF;
-<table cellpadding="2" cellspacing="0" class="unexpectedblock"><tr><td>
+
 EOF
 
 $fmt{'unexpectedtext_tfoot'} = <<EOF;
-</td></tr></table><br />
+<br />
 EOF
 
 $fmt{'html_footerlinks'} = <<EOF;
@@ -217,8 +225,12 @@ EOF
 
 $fmt{'trylatermsg'} = <<EOF;
 <p>
-  Please <a href="${scriptname}?pr=%%(pr)">try again</a> later.
+  Please <a href="${scriptname}?${querystring}">try again</a> later.
 </p>
+EOF
+
+$fmt{'mime_boundary'} = <<EOF;
+<hr class="mimeboundary" />
 EOF
 
 $fmt{'quote_level_0'} = '<span class="quote0">&gt; ';
@@ -240,11 +252,11 @@ if ($ENV{'QUERY_STRING'}) {
 	foreach (split(/&/, $ENV{'QUERY_STRING'})) {
 		my ($key, $val) = map { s/%([0-9a-f]{2})/chr hex $1/egi; $_ }
 				  split /=/;
-		$f        = $val if ($key eq "f");
-		$PR       = $val if ($key eq "pr" or $key eq "q");
-		$PR       = $key if ($key =~ /^(?:$valid_category\/)?$valid_pr$/);
-		$category = $val if ($key eq "cat");
-		$getpatch = $val if ($key eq "getpatch");
+		$f        = lc $val if ($key eq "f");
+		$PR       = lc $val if ($key eq "pr" or $key eq "q");
+		$PR       = lc $key if ($key =~ /^(?:$valid_category\/)?$valid_pr$/i);
+		$category = lc $val if ($key eq "cat");
+		$getpatch = lc $val if ($key eq "getpatch");
 	}
 }
 
@@ -258,7 +270,7 @@ unless (!$iscgi) {
 $category = undef
 	if ($category && $category !~ /^$valid_category$/);
 
-if ($PR < 0 || $PR !~ /^$valid_pr$/) {
+if ($PR !~ /^$valid_pr$/ || $PR < 0) {
 	print html_header("Query PR Database");
 	sprint('query_form');
 	print html_footer();
@@ -435,6 +447,12 @@ foreach my $field (@fields_multiple)
 		my ($inblock, $inresponse, $mbreak) = (0, 0, 0);
 		my $url = "${self_url_base}${PR}";
 
+		my $outp = "";
+		my %mime_headers;
+		my $mime_boundary;
+		my $mime_endheader;
+		my $encoding = 0;
+
 		# Hack for older PRs with no usable delimiter
 		push @{$mfields{'Audit-Trail'}}, $url;
 
@@ -518,6 +536,9 @@ foreach my $field (@fields_multiple)
 						sprint('patchblock_tfoot');
 						sprint('break');
 					}
+					$mime_boundary = undef;
+					$mime_endheader = 0;
+					$encoding = 0;
 					sprint('responseblock_textfoot');
 					sprint('responseblock_tfoot');
 				}
@@ -533,6 +554,9 @@ foreach my $field (@fields_multiple)
 				$inresponse = 1;
 				$cliphack = 1;
 				next;
+			} elsif (/^\s/ and $inresponse == 1 and !$mbreak) {
+				$cliphack = 1;
+				next;
 			} elsif (/^ (.*)$/) {
 				next if ($inresponse and !$mbreak);
 
@@ -545,8 +569,81 @@ foreach my $field (@fields_multiple)
 
 				if ($inresponse) {
 					my $txt = $1;
+
+					if ($txt !~ /^-+$/ && $txt !~ /(?:cut|snip)/i && $txt =~ /^--(\S+)$/) {
+						$mime_boundary = $1 if (!defined $mime_boundary && !$inpatch);
+
+						if ($1 =~ /^${mime_boundary}(--)?$/) {
+							$mime_boundary = undef if (defined $1);
+							if ($encoding == ENCODING_BASE64 and $outp ne "") {
+								my $patchname;
+								my $dp = $mime_headers{'disposition'};
+								if ($dp and $dp =~ /.*\bfilename=["']?([A-Za-z0-9\-\.:_]{6,36})["']?.*/) {
+									$patchname = $1;
+								} else {
+									$patchname = "attachment.dat";
+								}
+								if ($patchname =~ /$binary_filetypes/) {
+									$outp = "(Binary attachment not viewable.)\n";
+								} else {
+									$outp = decode_base64($outp);
+								}
+
+								$outp = "--- $patchname begins here ---\n"
+								      . $outp
+								      . "\n--- $patchname ends here ---\n";
+								parsepatches($_) foreach (split /\n/, $outp);
+								$outp = "";
+							}
+
+							sprint('mime_boundary');
+							$mime_endheader = 0;
+							$encoding = 0;
+							next;
+						}
+					}
+
+					if (defined $mime_boundary && !$mime_endheader && !$inpatch) {
+						if ($txt =~ /^Content-([A-Za-z-]{2,}):\s*(.*)\s*$/i) {
+							$mime_headers{lc $1} = $2;
+							next;
+						} elsif ($txt =~ /^\s*(?:file)?name=["']?.*?["']?\s*$/i) {
+							$mime_headers{'disposition'} ||= "";
+							if ($mime_headers{'disposition'} !~ /(?:file)?name=/) {
+								$mime_headers{'disposition'} .= "; $txt";
+							}
+							next;
+						} else {
+							$mime_endheader = 1;
+							if ($mime_headers{'transfer-encoding'}) {
+								my $enc = $mime_headers{'transfer-encoding'};
+								if ($enc =~ /^\s*["']?base64["']?\s*$/i) {
+									$encoding = ENCODING_BASE64;
+								} elsif ($enc =~ /^\s*["']?quoted-printable["']?\s*$/i) {
+									$encoding = ENCODING_QP;
+								} else {
+									$encoding = 0;
+								}
+							} else {
+								$encoding = 0;
+							}
+						}
+					}
+
+					if ($encoding == ENCODING_BASE64) {
+						$outp .= $txt;
+						next;
+					} elsif ($encoding == ENCODING_QP) {
+						# XXX: lines ending in = should be joined
+						$txt =~ s/=$//;
+						$txt = decode_qp($txt);
+					}
+
 					if ($txt =~ /^\s*((?:>\s*)+)/) {
 						my $level = $1;
+
+						$txt =~ s/^((?:>\s*)*={47})(=+\s*)$/$1 $2/;
+
 						if ($level =~ s/.*?>.*?/./g) {
 							my $i = 0;
 							my @levels = split(/\s*>\s*/, $txt,
@@ -566,7 +663,7 @@ foreach my $field (@fields_multiple)
 						$patchendhint = 1 if ($txt eq '-- ');
 
 						if ($inpatch or $txt) {
-							parsepatches($txt) || sprint('break');
+							parsepatches($txt) || ($inpatch || sprint('break'));
 						} else {
 							sprint('break');
 						}
@@ -609,6 +706,8 @@ foreach my $field (@fields_multiple)
 				$cfound = 1;
 			}
 
+			$_ =~ s/^((?:>\s*)*={47})(=+\s*)$/$1 $2/;
+
 			$_ = htmlclean($_);
 			$blockwhy .= "$_<br />\n" if defined($block{'Why'});
 		}
@@ -639,7 +738,7 @@ foreach my $field (@fields_multiple)
 				$cfound = 1;
 			}
 
-			parsepatches($_) || sprint('break');
+			parsepatches($_) || ($inpatch || sprint('break'));
 		}
 
 		if ($inpatch) {
@@ -763,6 +862,9 @@ sub htmlparse
 	my $v = shift;
 	return "" if (!$v);
 
+	my $iv = 'A-Za-z0-9\-_\/#@\$\\\\';
+	$v =~ s/(?<![$iv])($valid_category)\/($valid_pr)(?![$iv])/<a href="${scriptname}?pr=$2&cat=$1">$1\/$2<\/a>/g;
+
 	$v =~ s/((?:https?|ftps?):\/\/[^\s\/]+\/[][\w=.,\'\(\)\~\?\!\&\/\%\$\{\}:;@#+-]*)/<a href="$1">$1<\/a>/g;
 	$v =~ s/^RCS file: (\/home\/[A-Za-z0-9]+\/(.*?)),v$/RCS file: <a href="$cvsweb_url$2">$1<\/a>,v/;
 	return $v;
@@ -819,7 +921,7 @@ sub buildfooter
 #-----------------------------------------------------------------------
 
 { # Local static variables
-my ($outp, $patchnum, $cfound, $lastcol, $lastrev, $context);
+my ($outp, $patchnum, $cfound, $lastcol, $lastrev, $context, $mime_boundary);
 
 sub parsepatches
 {
@@ -852,7 +954,44 @@ sub parsepatches
 		}
 	}
 
-	if (/^---{1,8}\s?([A-Za-z0-9-_.,]+) (begins|starts) here/i && !$inpatch) {
+	if (/^--(\S+)$/ && $getpatch && !$inpatch) {
+		if ($getpatch == $patchnum+1) {
+			$mime_boundary = $1;
+			return 0;
+		}
+	}
+
+	if (/^Content-([A-Za-z-]{2,}):\s*(.*)\s*$/i && $getpatch) {
+		if (!$inpatch) {
+			my $k = lc $1;
+			my $v = lc $2;
+			if ($getpatch == $patchnum+1 and defined $mime_boundary) {
+				if ($k eq "transfer-encoding" && $v =~ /\bbase64\b/) {
+					$patchnum++;
+					$inpatch |= PATCH_BASE64;
+				}
+				return 0;
+			}
+		}
+		return 0;
+	}
+
+	if (defined $mime_boundary && /^--${mime_boundary}(?:--)?$/ && $getpatch && ($inpatch & PATCH_BASE64)) {
+		$inpatch = 0;
+		$mime_boundary = undef;
+		if ($outp ne "") {
+			print decode_base64($outp);
+			$outp = "";
+		}
+		return -1;
+	}
+
+	if (($inpatch & PATCH_BASE64) && $getpatch) {
+		$outp .= $_;
+		return 1;
+	}
+
+	if (/^---{1,8}\s?([A-Za-z0-9-_.,:%]+) (begins|starts) here/i && !$inpatch) {
 		$patchnum++;
 		$inpatch |= PATCH_ANY;
 		return 1 if ($getpatch and $patchnum != $getpatch);
@@ -887,7 +1026,7 @@ sub parsepatches
 			unless ($getpatch);
 	}
 
-	if (/^---{1,8}\s?[A-Za-z0-9-_.,]+ ends here/i && ($inpatch & PATCH_ANY)) {
+	if (/^---{1,8}\s?[A-Za-z0-9-_.,:%]+ ends here/i && ($inpatch & PATCH_ANY)) {
 		#$inpatch ^= PATCH_ANY;
 		$inpatch = 0;
 		$context = 0;
@@ -917,7 +1056,7 @@ sub parsepatches
 			unless ($getpatch or $inpatch);
 
 		$inpatch |= PATCH_UUENC;
-		$inpatch |= PATCH_UUENC_BIN if ($1 =~ /(?:\.gz|\.bz2\.zip)$/);
+		$inpatch |= PATCH_UUENC_BIN if ($1 =~ /$binary_filetypes/);
 	}
 
 	if ($inpatch) {
@@ -960,6 +1099,8 @@ sub parsepatches
 #						return 0;
 					}
 				}
+
+				$_=~ s/$//;
 
 				$_ = htmlclean($_);
 				$_ = htmlparse($_);
