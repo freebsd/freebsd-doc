@@ -5,7 +5,7 @@
 ]>
 
 <!-- The FreeBSD Simplified Chinese Documentation Project -->
-<!-- Original revision: 1.156 -->
+<!-- Original revision: 1.158 -->
 <!-- $FreeBSD$ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -126,9 +126,6 @@
 			<div id="LANGUAGENAV">
 				<ul id="LANGUAGENAVLIST">
 				  <li>
-					<a href="&enbase;/zh_CN/" title="简体中文">cn</a>
-				  </li>
-				  <li>
 					<a href="&enbase;/de/" title="德语">de</a>
 				  </li>
 				  <li>
@@ -146,8 +143,11 @@
 				  <li>
 					<a href="&enbase;/ja/" title="日语">ja</a>
 				  </li>
-				  <li class="last-child">
+				  <li>
 					<a href="&enbase;/ru/" title="俄语">ru</a>
+				  </li>
+				  <li class="last-child">
+					<a href="&enbase;/zh_CN/" title="中文 (简体)">zh_CN</a>
 				  </li>
 				</ul>
 			</div> <!-- LANGUAGENAV -->
@@ -181,9 +181,6 @@
 					</li>
 					<li>
 					  <a href="&enbase;/doc/zh_CN.GB2312/books/handbook/index.html" title="Handbook">使用手册</a>
-					</li>
-					<li>
-					  <a href="http://www.freebsdfoundation.org/" title="基金会">基金会</a>
 					</li>
 					<li>
 					  <a href="&enbase;/ports/index.html" title="Ports">Ports</a>
