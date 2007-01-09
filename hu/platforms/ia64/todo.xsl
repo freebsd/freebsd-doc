@@ -14,7 +14,7 @@
 <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
 
-  <xsl:variable name="date" select="'$FreeBSD: www/en/platforms/ia64/todo.xsl,v 1.9 2006/08/19 21:20:41 hrs Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/hu/platforms/ia64/todo.xsl,v 1.1 2007/01/07 22:44:47 keramida Exp $'"/>
 
   <xsl:output doctype-public="-//W3C//DTD HTML 4.01 Transitional//EN"
     encoding="iso-8859-2" method="html"/>
@@ -73,7 +73,7 @@
 	<ul>
 	  <li>
 	    A telep&iacute;t&#245; rendszer fejleszt&eacute;se, hogy
-	    sz&aacute;m&iacut;t&aacute;sba vegye, hogy GPT is l&eacute;tezik
+	    sz&aacute;m&iacute;t&aacute;sba vegye, hogy GPT is l&eacute;tezik
 	    egy EFI part&iacute;ci&oacute;val, bele&eacute;rtve m&aacute;s
 	    oper&aacute;ci&oacute;s rendszereket is.  A lehet&#245;s&eacute;g,
 	    hogy a FreeBSD-t hozz&aacute;adjuk az EFI boot
@@ -140,7 +140,7 @@
 	<p>
 	  A nem m&#251;k&ouml;d&#245;, vagy nem l&eacute;tez&#245;
 	  funkcionalit&aacute;sok mellett n&eacute;h&aacute;ny alapvet&#251;
-	  dolog &uuacute;jra&iacute;r&aacute;sa is akad, amelyek
+	  dolog &uacute;jra&iacute;r&aacute;sa is akad, amelyek
 	  potenci&aacute;lisan &eacute;rinthetik a t&ouml;bbi platformot is.
 	  Ezek:
 	</p>
