@@ -4,11 +4,11 @@
 <!ENTITY title "A FreeBSD Projekt">
 ]>
 
-<!-- $FreeBSD$ -->
+<!-- $FreeBSD: www/hu/index.xsl,v 1.1 2007/01/07 22:44:46 keramida Exp $ -->
 
 <!-- FreeBSD Hungarian Documentation Project
      Translated by: Gabor Kovesdan <gabor@FreeBSD.org>
-     Original Revision: r1.157				-->
+     Original Revision: r1.158				-->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
@@ -44,7 +44,7 @@
 	<link rel="alternate" type="application/rss+xml"
 	  title="FreeBSD Projekt H&uacute;rek" href="&base;/news/news.rdf" />
 	<link rel="alternate" type="application/rss+xml"
-	  title="FreeBSD Biztons&aacute;gi Bejelent&eacute;sek" href="&base;/security/advisories.rdf" />
+	  title="FreeBSD Biztons&aacute;gi Bejelent&eacute;sek" href="&enbase;/security/advisories.rdf" />
 	
 	<!-- Formatted to be easy to spam harvest, please do not reformat. -->
 	<xsl:comment>
@@ -74,7 +74,7 @@
 				  kompatibilis (Pentium&reg; &eacute;s Athlon&trade;), amd64
 				  kompatibilis (Opteron&trade;, Athlon&trade;64, &eacute;s EM64T),
 				  Alpha/AXP, IA-64, PC-98 &eacute;s UltraSPARC&reg;
-				  sz&aacute;m&uacute;t&oacute;g&eacute;p-architekt&uacute;r&aacute;kra.  A
+				  sz&aacute;m&iacute;t&oacute;g&eacute;p-architekt&uacute;r&aacute;kra.  A
 				  BSD rendszer lesz&aacute;rmazottja, amely a &unix; egy
 				  olyan verzi&oacute;ja, amelyet a california-i Berkeley
 				  egyetemen fejlesztettek ki.  A FreeBSD-t &ouml;nk&eacute;ntesek
@@ -99,7 +99,7 @@
 			
 			<div id="FRONTRELEASES">
 			  <div id="FRONTRELEASESCONTENT" class="txtshortcuts">
-				  <h2><a href="&base;/releases/">FRISS KIAD&#193;SOK</a></h2>
+				  <h2><a href="&enbase;/releases/">FRISS KIAD&#193;SOK</a></h2>
 				  <ul id="FRONTRELEASESLIST">
 					<li>
 					  <a href="&u.rel.announce;">Hivatalos Kiad&aacute;s &rel.current;</a>
@@ -189,10 +189,7 @@
 					  <a href="&enbase;/doc/en_US.ISO8859-1/books/handbook/index.html" title="K&eacute;zik&ouml;nyv">K&eacute;zik&ouml;nyv</a>
 					</li>
 					<li>
-					  <a href="http://www.freebsdfoundation.org/" title="Alap&uacute;tv&aacute;ny">Alap&uacute;tv&aacute;ny</a>
-					</li>
-					<li>
-					  <a href="&base;/ports/index.html" title="Portok">Portok</a>
+					  <a href="&enbase;/ports/index.html" title="Portok">Portok</a>
 					</li>
 
 				  </ul>
@@ -202,7 +199,7 @@
 			<div class="frontnewroundbox">
 			  <div class="frontnewtop"><div><b style="display: none">.</b></div></div>
 			    <div class="frontnewcontent">
-			      <a href="&base;/projects/newbies.html">&#218;j felhaszn&aacute;l&oacute;?</a>
+			      <a href="&enbase;/projects/newbies.html">&#218;j felhaszn&aacute;l&oacute;?</a>
 			    </div> <!-- frontnewcontent -->
 			  <div class="frontnewbot"><div><b style="display: none">.</b></div></div>
 			</div> <!-- frontnewroundbox -->
@@ -214,7 +211,7 @@
             <div id="FRONTNEMSCONTAINER">
             	<div id="FRONTNEWS">
             	   <div id="FRONTNEWSCONTENT" class="txtnewsevent">
-			<h2>FRISS H&uacute;REK</h2>
+			<h2>FRISS H&Iacute;REK</h2>
 			<div class="newseventswrap">
 
 			<xsl:call-template name="html-index-news-project-items">
@@ -225,10 +222,10 @@
 			  <div>
 				<ul class="newseventslist">
 				  <li class="first-child">
-					<a href="&base;/news/newsflash.html" title="T&ouml;bb">T&ouml;bb</a>
+					<a href="&enbase;/news/newsflash.html" title="T&ouml;bb">T&ouml;bb</a>
 				  </li>
 				  <li class="last-child">
-					<a href="&base;/news/news.rdf" title="H&uacute;rek RSS Feed"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="H&uacute;rek RSS Feed" /></a>
+					<a href="&enbase;/news/news.rdf" title="H&iacute;rek RSS Feed"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="H&uacute;rek RSS Feed" /></a>
 				  </li>
 				</ul>
 			  </div> <!-- unnamed -->
@@ -246,13 +243,12 @@
 			<xsl:call-template name="html-index-events-items">
 				<xsl:with-param name="events.xml-master" select="$events.xml-master" />
 				<xsl:with-param name="events.xml" select="$events.xml" />
-				<xsl:with-param name="curdate.xml" select="$curdate.xml" />
 			</xsl:call-template>
 
 			  <div>
 				<ul class="newseventslist">
 				  <li class="only-child">
-					<a href="&base;/events/" title="T&ouml;bb">T&ouml;bb</a>
+					<a href="&enbase;/events/" title="T&ouml;bb">T&ouml;bb</a>
 				  </li>
 				</ul>
 			  </div> <!-- unnamed -->
@@ -275,7 +271,7 @@
 			  <div>
 				<ul class="newseventslist">
 				  <li class="only-child">
-					<a href="&base;/news/press.html" title="T&ouml;bb">T&ouml;bb</a>
+					<a href="&enbase;/news/press.html" title="T&ouml;bb">T&ouml;bb</a>
 				  </li>
 				</ul>
 			  </div> <!-- unnamed -->
@@ -298,10 +294,10 @@
 			  <div>
 				<ul class="newseventslist">
 				  <li class="first-child">
-					<a href="&base;/security/" title="T&ouml;bb">T&ouml;bb</a>
+					<a href="&enbase;/security/" title="T&ouml;bb">T&ouml;bb</a>
 				  </li>
 				  <li class="last-child">
-					<a href="&base;/security/advisories.rdf" title="Biztons&aacute;gi Bejelnt&eacute;sek RSS Feed"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="Biztons&aacute;gi Bejelnt&eacute;sek RSS Feed" /></a>
+					<a href="&enbase;/security/advisories.rdf" title="Biztons&aacute;gi Bejelnt&eacute;sek RSS Feed"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="Biztons&aacute;gi Bejelnt&eacute;sek RSS Feed" /></a>
 				  </li>
 				</ul>
 			  </div> <!-- unnamed -->
@@ -331,10 +327,10 @@
       <div id="FOOTER">
 	&copyright;
 
-	A FreeBSD m&aacute;rkan&eacute;v a FreeBSD Alap&uacute;tv&aacute;ny tulajdona,
+	A FreeBSD m&aacute;rkan&eacute;v a FreeBSD Alap&iacute;tv&aacute;ny tulajdona,
 	a FreeBSD Projekt <a
 	  href="http://www.freebsdfoundation.org/legal/guidelines.shtml">A
-	FreeBSD Alap&uacute;tv&aacute;ny</a> enged&eacute;ly&eacute;vel haszn&aacute;lja azt.
+	FreeBSD Alap&iacute;tv&aacute;ny</a> enged&eacute;ly&eacute;vel haszn&aacute;lja azt.
 
       </div> <!-- FOOTER -->
     </div> <!-- CONTAINER -->
