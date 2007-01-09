@@ -4,7 +4,7 @@
 <!ENTITY title "The FreeBSD Project">
 ]>
 
-<!-- $FreeBSD: www/en/index.xsl,v 1.157 2006/10/26 10:36:16 delphij Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.158 2006/12/03 19:44:01 blackend Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
@@ -137,6 +137,9 @@
 				  </li>
 				  <li>
 					<a href="&base;/fr/" title="French">fr</a>
+				  </li>
+				  <li>
+					<a href="&base;/hu/" title="Hungarian">hu</a>
 				  </li>
 				  <li>
 					<a href="&base;/it/" title="Italian">it</a>
