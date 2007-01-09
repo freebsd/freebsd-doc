@@ -1,4 +1,4 @@
-# $FreeBSD: /usr/local/www/cvsroot/FreeBSD/www/en/Makefile,v 1.135 2006/05/08 23:15:37 kuriyama Exp $
+# $FreeBSD: www/hu/Makefile,v 1.1 2007/01/07 22:44:46 keramida Exp $
 
 ###################################################
 # The FreeBSD Hungarian Documentation Project     #
@@ -45,25 +45,11 @@ WEBDIR?=	data/hu
 DATA+=		index.html
 CLEANFILES+=	index.html
 
+XMLDOCS=	index:xsl:${XML_NEWS_NEWS}:
+DEPENDSET.index=	transtable mirrors news press events \
+			advisories notices
+
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
 
-index.html: index.xsl ${XML_INCLUDES}\
-		${XML_NEWS_INCLUDES} \
-		${XML_NEWS_NEWS} ${XML_NEWS_NEWS_MASTER} \
-		${XML_NEWS_PRESS} ${XML_NEWS_PRESS_MASTER} \
-		${XML_EVENTS_EVENTS_MASTER} ${XML_EVENTS_CURDATE} \
-		${XML_MIRRORS} ${XML_TRANSTABLE} \
-		${XML_ADVISORIES} ${XML_NOTICES}
-	${XSLTPROC} ${XSLTPROCOPTS} \
-		-o $@ \
-		--param advisories.xml "'${XML_ADVISORIES}'" \
-		--param mirrors.xml "'${XML_MIRRORS}'" \
-		--param news.press.xml-master "'${XML_NEWS_PRESS_MASTER}'" \
-		--param news.press.xml "'${XML_NEWS_PRESS}'" \
-		--param news.project.xml-master "'${XML_NEWS_NEWS_MASTER}'" \
-		--param news.project.xml "'${XML_NEWS_NEWS}'" \
-		--param events.xml-master "'${XML_EVENTS_EVENTS_MASTER}'" \
-		--param curdate.xml "'${XML_EVENTS_CURDATE}'" \
-		--param notices.xml "'${XML_NOTICES}'" \
-		--param transtable.xml "'${XML_TRANSTABLE}'" \
-		${.CURDIR}/index.xsl ${XML_NEWS_NEWS} ${XML_EVENTS_EVENTS_MASTER} ${XML_EVENTS_CURDATE}
+# Workaround against the wrong auto-detection of this path
+XML_MIRRORS:=	${XML_MIRRORS:S@hu*@.@}
