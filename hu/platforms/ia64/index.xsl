@@ -9,12 +9,12 @@
 
 <!-- FreeBSD Hungarian Documentation Project
      Translated by: Gabor Kovesdan <gabor@FreeBSD.org>
-     Original Revision: r1.6				-->
+     Original Revision: r1.7				-->
 
 <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
 
-  <xsl:variable name="date" select="'$FreeBSD$'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/hu/platforms/ia64/index.xsl,v 1.1 2007/01/07 22:44:47 keramida Exp $'"/>
 
   <xsl:output doctype-public="-//W3C//DTD HTML 4.01 Transitional//EN"
     encoding="iso-8859-2" method="html"/>
@@ -68,7 +68,7 @@
 
 		<h3><a name="intro">Bevezet&eacute;s</a></h3>
 
-		<p>Ez az oldal az Intel IA-64 architekt&uacut;r&aacute;n -
+		<p>Ez az oldal az Intel IA-64 architekt&uacute;r&aacute;n -
 		  hivatalosan Intel Itanium&reg; Processor Family (IPF) -
 		  fut&oacute; FreeBSD portr&oacute;l tartalmaz
 		  inform&aacute;ci&oacute;kat.  Ahogyan a port
