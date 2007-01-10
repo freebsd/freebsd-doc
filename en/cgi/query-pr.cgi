@@ -26,17 +26,17 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.59 2006/11/27 17:12:50 shaun Exp $
+# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.60 2006/12/09 15:46:06 shaun Exp $
 #
 
 use strict;
-#use warnings;
 
 use MIME::Base64;                      # ports/converters/p5-MIME-Base64
 use MIME::QuotedPrint;                 #
 use Convert::UU qw(uudecode uuencode); # ports/converters/p5-Convert-UU
 
 require './cgi-style.pl';
+require './query-pr-lib.pl';
 
 use constant HTTP_HEADER        => "Content-type: text/html; charset=UTF-8\r\n\r\n";
 use constant HTTP_HEADER_PATCH  => "Content-type: text/plain; charset=UTF-8\r\n\r\n";
@@ -213,16 +213,6 @@ $fmt{'html_footerlinks'} = <<EOF;
   </div>
 EOF
 
-$fmt{'query_form'} = <<EOF;
-<form action="${scriptname}" method="get">
-  <table cellspacing="0" cellpadding="3" class="headtable">
-    <tr><td width="130"><b>PR number:</b></td><td><input type="text" name="pr" maxlength="30" value="%%(1)" /></td></tr>
-    <tr><td width="130"><b>Category:</b></td><td><input type="text" name="cat" maxlength="30" value="%%(2)" /> (optional)</td></tr>
-    <tr><td></td><td><input type="submit" value="Submit" /></td></tr>
-  </table>
-</form>
-EOF
-
 $fmt{'trylatermsg'} = <<EOF;
 <p>
   Please <a href="${scriptname}?${querystring}">try again</a> later.
@@ -272,7 +262,7 @@ $category = undef
 
 if ($PR !~ /^$valid_pr$/ || $PR < 0) {
 	print html_header("Query PR Database");
-	sprint('query_form');
+	displayform();
 	print html_footer();
 	exit;
 }
@@ -290,7 +280,7 @@ if ($category) {
 
 if (!@query or ($query[0] and $query[0] =~ /^query-pr(:?\.(:?real|web))?: /)) {
 	print html_header("No PRs Matched Query");
-	sprint('query_form', $PR || "", $category || "");
+	displayform();
 	print html_footer();
 	exit;
 } elsif ($query[0] =~ /^lockf: /) {
