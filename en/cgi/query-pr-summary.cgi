@@ -1,5 +1,5 @@
 #!/usr/bin/perl -T
-# $FreeBSD: www/en/cgi/query-pr-summary.cgi,v 1.56 2006/09/24 13:34:55 danger Exp $
+# $FreeBSD: www/en/cgi/query-pr-summary.cgi,v 1.57 2006/10/08 17:00:12 ceri Exp $
 
 $html_mode     = 1 if $ENV{'DOCUMENT_ROOT'};
 $self_ref      = $ENV{'SCRIPT_NAME'};
@@ -15,6 +15,7 @@ $closed_too    = 0;
 
 require './cgi-lib.pl';
 require './cgi-style.pl';
+require './query-pr-lib.pl';
 require 'getopts.pl';
 
 if (!$ENV{'QUERY_STRING'} or $ENV{'QUERY_STRING'} eq 'query') {
@@ -411,48 +412,6 @@ sub severity_summary {
     &printcnt(&gnats_summary('$severity eq "non-critical"', $html_mode));
 }
 
-sub get_categories {
-    @categories = ();
-
-    open(Q, 'query-pr.web --list-categories 2>/dev/null |') ||
-	die "Cannot get categories\n";
-
-    while(<Q>) {
-	chop;
-	local ($cat, $desc, $responsible, $notify) = split(/:/);
-	push(@categories, $cat);
-	$catdesc{$cat} = $desc;
-    }
-}
-
-sub get_states {
-    @states = ();
-
-    open(Q, 'query-pr.web --list-states 2>/dev/null |') ||
-	die "Cannot get states\n";
-
-    while(<Q>) {
-	chop;
-	local ($state, $type, $desc) = split(/:/);
-	push(@states, $state);
-	$statedesc{$state} = $desc;
-    }
-}
-
-sub get_classes {
-    @classes = ();
-
-    open(Q, 'query-pr.web --list-classes 2>/dev/null |') ||
-	die "Cannot get classes\n";
-
-    while(<Q>) {
-	chop;
-	local ($class, $type, $desc) = split(/:/);
-	push(@classes, $class);
-	$classdesc{$class} = $desc;
-    }
-}
-
 sub read_gnats {
     local($report)   = @_[0];
 
@@ -585,109 +544,4 @@ sub gnats_summary_line_text {
 	(' ' x (17 - length($_))) .
 	$resp . (' ' x (10 - length($resp))) .
 	substr($syn,0,39) . "\n";
-}
-
-sub displayform {
-print qq`
-<p>
-Please select the items you wish to search for.  Multiple items are AND'ed
-together.<br />
-To generate current list of all open PRs in GNATS database, just press
-the "Query PRs" button.
-</p>
-<form method='get' action='$self_ref'>
-
-<table>
-<tr>
-<td><b>Category</b>:</td>
-<td><select name='category'>
-<option selected='selected' value=''>Any</option>`;
-
-&get_categories;
-foreach (sort @categories) {
-    #print "<option value='$_'>$_ ($catdesc{$_})</option>\n";
-    print "<option>$_</option>\n";
-}
-
-print qq`
-</select></td>
-<td><b>Severity</b>:</td>
-<td><select name='severity'>
-<option selected='selected' value=''>Any</option>
-<option>non-critical</option>
-<option>serious</option>
-<option>critical</option>
-</select></td>
-</tr><tr>
-<td><b>Priority</b>:</td>
-<td><select name='priority'>
-<option selected='selected' value=''>Any</option>
-<option>low</option>
-<option>medium</option>
-<option>high</option>
-</select></td>
-<td><b>Class</b>:</td>
-<td><select name='class'>
-<option selected='selected' value=''>Any</option>
-`;
-
-&get_classes;
-foreach (@classes) {
-	#print "<option value='$_'>$_ ($classdesc{$_})</option>\n";
-	print "<option>$_</option>\n";
-}
-
-print qq`</select></td>
-</tr><tr>
-<td><b>State</b>:</td>
-<td><select name='state'>
-<option selected='selected' value=''>Any</option>
-`;
-
-&get_states;
-foreach (@states) {
-	($us = $_) =~ s/^./\U$&/;
-	print "<option value='$_'>";
-	#print "$us ($statedesc{$_})</option>\n";
-	print "$us</option>\n";
-}
-
-print qq`</select></td>
-<td><b>Sort by</b>:</td>
-<td><select name='sort'>
-<option value='none'>No Sort</option>
-<option value='lastmod'>Last-Modified</option>
-<option value='category'>Category</option>
-<option value='responsible'>Responsible Party</option>
-</select></td>
-</tr><tr>
-<!-- We don't use submitter Submitter: -->
-<td><b>Text in single-line fields</b>:</td>
-<td><input type='text' name='text' /></td>
-<td><b>Responsible</b>:</td>
-<td><input type='text' name='responsible' /></td>
-</tr><tr>
-<td><b>Text in multi-line fields</b>:</td>
-<td><input type='text' name='multitext' /></td>
-<td><b>Originator</b>:</td>
-<td><input type='text' name='originator' /></td>
-</tr><tr>
-<td><b>Closed reports too</b>:</td>
-<td><input name='closedtoo' value='on' type='checkbox' /></td>
-<td><b>Release</b>:</td>
-<td><select name='release'>
-<option selected='selected' value=''>Any</option>
-<option value='^FreeBSD [2345]'>Pre-6.X</option>
-<option value='^FreeBSD 6'>6.X only</option>
-<option value='^FreeBSD 5'>5.X only</option>
-<option value='^FreeBSD 4'>4.X only</option>
-<option value='^FreeBSD 3'>3.X only</option>
-<option value='^FreeBSD 2'>2.X only</option>
-</select></td>
-</tr>
-</table>
-<input type='submit' value='Query PRs' />
-<input type='reset' value='Reset Form' />
-</form>
-`;
 }
