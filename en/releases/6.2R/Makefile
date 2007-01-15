@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/releases/6.2R/Makefile,v 1.1 2006/09/16 15:28:36 bmah Exp $
+# $FreeBSD: www/en/releases/6.2R/Makefile,v 1.2 2007/01/12 16:27:25 bmah Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -8,7 +8,7 @@
 .endif
 
 DOCS=	todo.sgml schedule.sgml approvals.sgml
-# DOCS+=	announce.sgml
+DOCS+=	announce.sgml
 DOCS+=	relnotes.sgml
 DOCS+=	hardware.sgml
 DOCS+=	installation.sgml
