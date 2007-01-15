@@ -1,4 +1,4 @@
-# $FreeBSD: www/zh_CN/releases/Makefile,v 1.1.1002.6 2006/05/24 07:51:42 delphij Exp $
+# $FreeBSD: www/zh_CN/releases/Makefile,v 1.1 2006/07/11 15:27:49 delphij Exp $
 # The FreeBSD Simplified Chinese Documentation Project
 # Original Revision 1.48
 
@@ -17,7 +17,7 @@ DOCS?=	index.sgml
 #SUBDIR+=	4.6.2R 4.7R 4.8R 4.9R 4.10R 4.11R
 #SUBDIR+=	5.0R 5.1R 5.2R 5.2.1R 5.3R 5.4R 5.5R
 SUBDIR+=	5.4R 5.5R
-SUBDIR+=	6.0R 6.1R
+SUBDIR+=	6.0R 6.1R 6.2R
 
 .if defined $(NEW_BUILD)
 SUBDIR=
