@@ -4,7 +4,7 @@
 <!ENTITY title "A FreeBSD Projekt">
 ]>
 
-<!-- $FreeBSD: www/hu/index.xsl,v 1.1 2007/01/07 22:44:46 keramida Exp $ -->
+<!-- $FreeBSD: www/hu/index.xsl,v 1.2 2007/01/09 17:11:16 keramida Exp $ -->
 
 <!-- FreeBSD Hungarian Documentation Project
      Translated by: Gabor Kovesdan <gabor@FreeBSD.org>
@@ -297,7 +297,7 @@
 					<a href="&enbase;/security/" title="T&ouml;bb">T&ouml;bb</a>
 				  </li>
 				  <li class="last-child">
-					<a href="&enbase;/security/advisories.rdf" title="Biztons&aacute;gi Bejelnt&eacute;sek RSS Feed"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="Biztons&aacute;gi Bejelnt&eacute;sek RSS Feed" /></a>
+					<a href="&enbase;/security/advisories.rdf" title="Biztons&aacute;gi Bejelent&eacute;sek RSS Feed"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="Biztons&aacute;gi Bejelnt&eacute;sek RSS Feed" /></a>
 				  </li>
 				</ul>
 			  </div> <!-- unnamed -->
