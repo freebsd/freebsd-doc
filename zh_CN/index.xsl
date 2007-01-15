@@ -5,7 +5,7 @@
 ]>
 
 <!-- The FreeBSD Simplified Chinese Documentation Project -->
-<!-- Original revision: 1.158 -->
+<!-- Original revision: 1.159 -->
 <!-- $FreeBSD$ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -136,6 +136,9 @@
 				  </li>
 				  <li>
 					<a href="&enbase;/fr/" title="法语">fr</a>
+				  </li>
+				  <li>
+					<a href="&enbase;/hu/" title="匈牙利语">hu</a>
 				  </li>
 				  <li>
 					<a href="&enbase;/it/" title="意大利语">it</a>
