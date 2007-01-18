@@ -5,8 +5,8 @@
 ]>
 <!--
      $FreeBSD$
-     $FreeBSDde: de-www/index.xsl,v 1.71 2006/10/26 13:23:55 jkois Exp $
-     basiert auf: 1.157
+     $FreeBSDde: de-www/index.xsl,v 1.72 2007/01/14 14:23:41 jkois Exp $
+     basiert auf: 1.159
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -147,6 +147,9 @@
 					<a href="&enbase;/fr/" title="Franz&#246;sisch">fr</a>
 				  </li>
 				  <li>
+					<a href="&enbase;/hu/" title="Ungarisch">hu</a>
+				  </li>
+				  <li>
 					<a href="&enbase;/it/" title="Italienisch">it</a>
 				  </li>
 				  <li>
@@ -191,9 +194,6 @@
 					<li>
 					  <a href="&enbase;/doc/&url.doc.langcode;/books/handbook/index.html" title="Handbook">Handbuch</a>
                                         </li>
-					<li>
-					  <a href="http://www.freebsdfoundation.org/" title="Foundation">Foundation</a>
-					</li>
 					<li>
 					  <a href="&enbase;/ports/index.html" title="Ports">Ports-Sammlung</a>
 					</li>
