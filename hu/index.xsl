@@ -4,11 +4,11 @@
 <!ENTITY title "A FreeBSD Projekt">
 ]>
 
-<!-- $FreeBSD: www/hu/index.xsl,v 1.2 2007/01/09 17:11:16 keramida Exp $ -->
+<!-- $FreeBSD: www/hu/index.xsl,v 1.3 2007/01/15 15:08:11 keramida Exp $ -->
 
 <!-- FreeBSD Hungarian Documentation Project
      Translated by: Gabor Kovesdan <gabor@FreeBSD.org>
-     Original Revision: r1.158				-->
+     Original Revision: r1.159				-->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
