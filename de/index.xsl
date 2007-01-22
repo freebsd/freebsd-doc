@@ -5,7 +5,7 @@
 ]>
 <!--
      $FreeBSD$
-     $FreeBSDde: de-www/index.xsl,v 1.72 2007/01/14 14:23:41 jkois Exp $
+     $FreeBSDde: de-www/index.xsl,v 1.73 2007/01/19 18:34:46 jkois Exp $
      basiert auf: 1.159
 -->
 
@@ -44,10 +44,10 @@
 	<link rel="alternate" type="application/rss+xml"
 	  title="FreeBSD Ank&#252;ndigungen" href="&base;/news/news.rdf" />
 	<link rel="alternate" type="application/rss+xml"
-	  title="FreeBSD Sicherheits-Hinweise" href="&base;/security/advisories.rdf" />
+	  title="FreeBSD Sicherheits-Hinweise" href="&enbase;/security/advisories.rdf" />
 	<link rel="alternate" type="application/rss+xml"
 	  title="Ank&#252;ndigungen des FreeBSD GNOME Projects"
-	  href="&base;/gnome/news.rdf" />
+	  href="&enbase;/gnome/news.rdf" />
 
 	<!-- Formatted to be easy to spam harvest, please do not reformat. -->
 	<xsl:comment>
@@ -230,7 +230,7 @@
 					<a href="&base;/news/newsflash.html" title="Weitere Neuigkeiten">Weitere Neuigkeiten</a>
 				  </li>
 				  <li class="last-child">
-					<a href="&base;/news/news.rdf" title="News RSS Feed"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="News RSS Feed" /></a>
+					<a href="&enbase;/news/news.rdf" title="News RSS Feed"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="News RSS Feed" /></a>
 				  </li>
 				</ul>
 			  </div> <!-- unnamed -->
@@ -302,7 +302,7 @@
 					<a href="&base;/security/" title="Weitere Security Advisories">Mehr</a>
 				  </li>
 				  <li class="last-child">
-					<a href="&base;/security/advisories.rdf" title="Security Advisories RSS Feed"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="News RSS Feed" /></a>
+					<a href="&enbase;/security/advisories.rdf" title="Security Advisories RSS Feed"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="News RSS Feed" /></a>
 				  </li>
 				</ul>
 			  </div> <!-- unnamed -->
