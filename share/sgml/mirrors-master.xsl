@@ -88,6 +88,7 @@
   </xsl:template>
 
   <xsl:template name="mirrors-docbook-country-index">
+    <xsl:param name="mirrors-docbook-country-index-without-period" />
     <link>
       <xsl:attribute name="linkend">
 	<xsl:value-of select="concat($mirrors-docbook-country-anchor-id, '-', @id, '-', $type)" />
