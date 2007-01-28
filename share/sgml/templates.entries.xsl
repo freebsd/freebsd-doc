@@ -6,7 +6,7 @@
 <!ENTITY % navinclude.support "INCLUDE">
 ]>
 
-<!-- $FreeBSD: www/share/sgml/templates.entries.xsl,v 1.1 2006/08/19 21:20:54 hrs Exp $ -->
+<!-- $FreeBSD: www/share/sgml/templates.entries.xsl,v 1.2 2006/08/21 18:27:43 hrs Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS"
@@ -102,7 +102,7 @@
     <xsl:choose>
       <xsl:when test="$sort = 'bycat'">
 	<xsl:for-each select="/entries/categories/category/@id">
-	  <xsl:param name="id" select="." />
+	  <xsl:variable name="id" select="." />
 
 	  <h3><xsl:value-of select="/entries/categories/category[@id = $id]" /></h3>
 
