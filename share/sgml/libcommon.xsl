@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
-<!-- $FreeBSD: www/share/sgml/libcommon.xsl,v 1.1 2006/08/19 21:20:54 hrs Exp $ -->
+<!-- $FreeBSD: www/share/sgml/libcommon.xsl,v 1.2 2006/08/20 11:52:10 hrs Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
   version="1.0"
@@ -86,7 +86,7 @@
 	generate-id() =
 	generate-id(key('html-usergroups-regions-key', @continent)[1])]">
 
-	<xsl:param name="id" select="
+	<xsl:variable name="id" select="
 	  translate(@continent,
 	  ' ,ABCDEFGHIJKLMNOPQRSTUVWXYZ',
 	  '--abcdefghijklmnopqrstuvwxyz')" />
@@ -118,8 +118,8 @@
       generate-id() =
       generate-id(key('html-usergroups-regions-key', @continent)[1])]">
 
-      <xsl:param name="continent" select="@continent" />
-      <xsl:param name="continent-lc" select="
+      <xsl:variable name="continent" select="@continent" />
+      <xsl:variable name="continent-lc" select="
 	translate(@continent,
 	' ,ABCDEFGHIJKLMNOPQRSTUVWXYZ',
 	'--abcdefghijklmnopqrstuvwxyz')" />
@@ -134,9 +134,9 @@
 	<xsl:for-each select="key('html-usergroups-regions-key', $continent)">
 	  <xsl:sort select="name" order="ascending"/>
 
-	  <xsl:param name="id"><xsl:value-of select="@id" /></xsl:param>
+	  <xsl:variable name="id"><xsl:value-of select="@id" /></xsl:variable>
 
-	  <xsl:param name="name">
+	  <xsl:variable name="name">
 	    <xsl:for-each select="document($usergroups-local.xml)">
 	      <xsl:choose>
 		<!-- $p[count(.|$q) = count($q)] means product set of $p and $q-->
@@ -158,9 +158,9 @@
 		</xsl:otherwise>
 	      </xsl:choose>
 	    </xsl:for-each>
-	  </xsl:param>
+	  </xsl:variable>
 
-	  <xsl:param name="desc">
+	  <xsl:variable name="desc">
 	    <xsl:for-each select="document($usergroups-local.xml)">
 	      <xsl:choose>
 		<!-- $p[count(.|$q) = count($q)] means product set of $p and $q-->
@@ -182,7 +182,7 @@
 		</xsl:otherwise>
 	      </xsl:choose>
 	    </xsl:for-each>
-	  </xsl:param>
+	  </xsl:variable>
 
 	  <dt><a name="{$continent-lc}-{$id}" href="{url}"><xsl:copy-of select="$name" /></a></dt>
 
@@ -355,10 +355,10 @@
     <xsl:param name="news.project.xml" select="'none'" />
 
     <xsl:for-each select="document($news.project.xml-master)//descendant::year">
-      <xsl:param name="year" select="name" />
+      <xsl:variable name="year" select="name" />
 
       <xsl:for-each select="month">
-	<xsl:param name="month" select="name" />
+	<xsl:variable name="month" select="name" />
 
 	<h1>
 	  <xsl:call-template name="misc-format-date-string">
@@ -370,11 +370,11 @@
 
 	<ul>
 	  <xsl:for-each select="day">
-	    <xsl:param name="day" select="name" />
-	    <xsl:param name="index" select="position()" />
+	    <xsl:variable name="day" select="name" />
+	    <xsl:variable name="index" select="position()" />
 
 	    <!-- search localized items per day basis -->
-	    <xsl:param name="localizeditems"
+	    <xsl:variable name="localizeditems"
 	      select="document($news.project.xml)
 	              //descendant::year[name = $year]
 	              /month[name = $month]
@@ -384,7 +384,7 @@
 	      <xsl:when test="$localizeditems">
 		<!-- when localized item exists -->
 		<xsl:for-each select="$localizeditems/event">
-		  <xsl:param name="anchor-position" select="position()" />
+		  <xsl:variable name="anchor-position" select="position()" />
 
 		  <li><p class="localized">
 		      <a><xsl:attribute name="name">
@@ -417,7 +417,7 @@
 	      <xsl:otherwise>
 		<!-- when localized item does not exist -->
 		<xsl:for-each select="event">
-		  <xsl:param name="anchor-position" select="position()" />
+		  <xsl:variable name="anchor-position" select="position()" />
 
 		  <li><p class="original">
 		      <a><xsl:attribute name="name">
@@ -459,10 +459,10 @@
     <xsl:param name="news.press.xml" select="'none'" />
 
     <xsl:for-each select="document($news.press.xml-master)//descendant::year">
-      <xsl:param name="year" select="name" />
+      <xsl:variable name="year" select="name" />
 
       <xsl:for-each select="month">
-	<xsl:param name="month" select="name" />
+	<xsl:variable name="month" select="name" />
 
 	<h1>
 	  <xsl:call-template name="misc-format-date-string">
@@ -478,13 +478,13 @@
 	    <xsl:variable name="site-url"><xsl:value-of select="site-url"/></xsl:variable>
 
 	    <!-- search localized items per story(URL) basis -->
-	    <xsl:param name="localizeditems"
+	    <xsl:variable name="localizeditems"
 	      select="document($news.press.xml)
 	              //descendant::year[name = $year]
 	              /month[name = $month]
 	              /story[url = $url]" />
 
-	    <xsl:param name="anchor-position" select="position()" />
+	    <xsl:variable name="anchor-position" select="position()" />
 
 	    <xsl:choose>
 	      <xsl:when test="$localizeditems">
@@ -579,7 +579,7 @@
 	<xsl:for-each select="document($advisories.xml)
 	  /descendant::release">
 
-	  <xsl:param name="relname" select="string(name)" />
+	  <xsl:variable name="relname" select="string(name)" />
 
 	  <xsl:call-template name="html-list-advisories-putitems">
 	    <xsl:with-param name="items" select="document($advisories.xml)
@@ -605,7 +605,7 @@
 	<xsl:for-each select="document($advisories.xml)
 	  /descendant::release">
 
-	  <xsl:param name="relname" select="string(name)" />
+	  <xsl:variable name="relname" select="string(name)" />
 
 	  <xsl:call-template name="html-list-advisories-putitems">
 	    <xsl:with-param name="items" select="document($advisories.xml)
@@ -683,9 +683,9 @@
     <xsl:choose>
       <xsl:when test="$type = 'advisory'">
 	<xsl:for-each select="document($advisories.xml)/descendant::advisory[position() &lt;= 4]">
-	  <xsl:param name="year" select="../../../name" />
-          <xsl:param name="month" select="../../name" />
-          <xsl:param name="day" select="../name" />
+	  <xsl:variable name="year" select="../../../name" />
+          <xsl:variable name="month" select="../../name" />
+          <xsl:variable name="day" select="../name" />
 	<p>
 	  <span class="txtdate">
 	      <xsl:value-of select='
@@ -709,9 +709,9 @@
       </xsl:when>
       <xsl:when test="$type = 'notice'">
 	<xsl:for-each select="document($advisories.xml)/descendant::notice[position() &lt;= 2]">
-	<xsl:param name="year" select="../../../name" />
-	<xsl:param name="month" select="../../name" />
-	<xsl:param name="day" select="../name" />
+	<xsl:variable name="year" select="../../../name" />
+	<xsl:variable name="month" select="../../name" />
+	<xsl:variable name="day" select="../name" />
 	<p>
 	  <span class="txtdate">
 	      <xsl:value-of select='
@@ -826,12 +826,12 @@
     <xsl:param name="news.project.xml" select="'none'" />
 
     <xsl:for-each select="document($news.project.xml-master)/descendant::day[position() &lt; 5]">
-      <xsl:param name="year" select="ancestor::year/name" />
-      <xsl:param name="month" select="ancestor::month/name" />
-      <xsl:param name="day" select="name" />
+      <xsl:variable name="year" select="ancestor::year/name" />
+      <xsl:variable name="month" select="ancestor::month/name" />
+      <xsl:variable name="day" select="name" />
 
       <!-- search localized items per day basis -->
-      <xsl:param name="localizeditems"
+      <xsl:variable name="localizeditems"
 	select="document($news.project.xml)
 	//descendant::year[name = $year]
 	/month[name = $month]
@@ -840,7 +840,7 @@
       <xsl:choose>
 	<xsl:when test="$localizeditems/event">
 	  <xsl:for-each select="$localizeditems/event">
-	    <xsl:param name="anchor-position" select="position()" />
+	    <xsl:variable name="anchor-position" select="position()" />
 
 	    <p>
 	    <span class="txtdate">
@@ -876,7 +876,7 @@
 
 	<xsl:otherwise>
 	  <xsl:for-each select="event">
-	    <xsl:param name="anchor-position" select="position()" />
+	    <xsl:variable name="anchor-position" select="position()" />
 
 	    <p>
 	    <span class="txtdate">
@@ -936,22 +936,22 @@
     <xsl:param name="news.press.xml" select="''" />
 
     <xsl:for-each select="document($news.press.xml-master)/descendant::story[position() &lt;= 5]">
-      <xsl:param name="year" select="../../name" />
-      <xsl:param name="month" select="../name" />
-      <xsl:param name="day" select="../name" />
-      <xsl:param name="url" select="url" />
-      <xsl:param name="site-url" select="site-url" />
+      <xsl:variable name="year" select="../../name" />
+      <xsl:variable name="month" select="../name" />
+      <xsl:variable name="day" select="../name" />
+      <xsl:variable name="url" select="url" />
+      <xsl:variable name="site-url" select="site-url" />
 
-      <xsl:param name="pos">
+      <xsl:variable name="pos">
 	<xsl:for-each select="../story">
 	  <xsl:if test="url = $url">
 	    <xsl:value-of select="position()" />
 	  </xsl:if>
 	</xsl:for-each>
-      </xsl:param>
+      </xsl:variable>
 
       <!-- search localized items per story(URL) basis -->
-      <xsl:param name="localizeditems"
+      <xsl:variable name="localizeditems"
 	select="document($news.press.xml)
 	//descendant::year[name = $year]
 	/month[name = $month]
