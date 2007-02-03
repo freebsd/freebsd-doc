@@ -7,7 +7,7 @@
 <!--
      The FreeBSD Russian Documentation Project
 
-     $FreeBSD: www/ru/index.xsl,v 1.30 2006/01/17 09:27:09 bvs Exp $
+     $FreeBSD: www/ru/index.xsl,v 1.31 2006/08/19 21:25:46 hrs Exp $
      $FreeBSDru: frdp/www/ru/index.xsl,v 1.47 2006/01/16 21:27:51 gad Exp $
 
      Original revision: 1.127
@@ -16,7 +16,7 @@
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
 
-  <xsl:variable name="date" select="'$FreeBSD: www/ru/index.xsl,v 1.30 2006/01/17 09:27:09 bvs Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/ru/index.xsl,v 1.31 2006/08/19 21:25:46 hrs Exp $'"/>
 
   <!-- these params should be externally bound. The values
        here are not used actually -->
@@ -52,9 +52,9 @@
 	<link rel="alternate" type="application/rss+xml"
 	  title="Новости проекта FreeBSD" href="&base;/news/news.rdf" />
 	<link rel="alternate" type="application/rss+xml"
-	  title="FreeBSD Security Advisories" href="&base;/security/advisories.rdf" />
+	  title="FreeBSD Security Advisories" href="&enbase;/security/advisories.rdf" />
 	<link rel="alternate" type="application/rss+xml"
-	  title="Новости проекта FreeBSD GNOME" href="&base;/gnome/news.rdf" />
+	  title="Новости проекта FreeBSD GNOME" href="&enbase;/gnome/news.rdf" />
 	
 	<!-- Formatted to be easy to spam harvest, please do not reformat. -->
 	<xsl:comment>
@@ -289,7 +289,7 @@
 				  <a href="&base;/send-pr.html" title="Послать сообщение об ошибке">Сообщить об ошибке</a>
 				  </li>
 				  <li class="last-child">
-					<a href="&base;/security/advisories.rdf" title="Security Advisories RSS Feed"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="News RSS Feed" /></a>
+					<a href="&enbase;/security/advisories.rdf" title="Security Advisories RSS Feed"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="Security Advisories RSS Feed" /></a>
 				  </li>
 				</ul>
 			  </div> <!-- unnamed -->
