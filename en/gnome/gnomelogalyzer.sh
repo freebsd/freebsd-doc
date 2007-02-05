@@ -27,7 +27,7 @@
 # Heh. "Tort."
 #
 # $MCom: portstools/gnomelogalyzer.sh.in,v 1.12 2005/06/28 05:47:54 adamw Exp $
-#   $FreeBSD: www/en/gnome/gnomelogalyzer.sh,v 1.7 2006/01/07 06:14:16 mezz Exp $
+#   $FreeBSD: www/en/gnome/gnomelogalyzer.sh,v 1.8 2006/05/29 18:12:05 mezz Exp $
 #
 
 # This script uses some simple yet effective heuristics to analyse
@@ -67,13 +67,13 @@ debug(){
 soln_portupgrade(){
     	if echo "$1" | grep -q "^-f" ; then
 		echo
-		echo "To correct this problem, make sure that sysutils/portupgrade is installed, and then run the command \"portupgrade $1\"." | fmt 75 79
+		echo "To correct this problem, make sure that ports-mgmt/portupgrade is installed, and then run the command \"portupgrade $1\"." | fmt 75 79
 	else
 		if [ -n "$1" ]; then
 			specific="either run \"portupgrade $1\", or "
 		fi
 		echo
-		echo "To correct this problem, make sure that sysutils/portupgrade is installed, and then ${specific}upgrade all out-of-date ports with the command \"portupgrade -a\"." | fmt 75 79
+		echo "To correct this problem, make sure that ports-mgmt/portupgrade is installed, and then ${specific}upgrade all out-of-date ports with the command \"portupgrade -a\"." | fmt 75 79
 	fi
 }
 
