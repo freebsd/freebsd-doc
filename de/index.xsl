@@ -5,7 +5,7 @@
 ]>
 <!--
      $FreeBSD$
-     $FreeBSDde: de-www/index.xsl,v 1.73 2007/01/19 18:34:46 jkois Exp $
+     $FreeBSDde: de-www/index.xsl,v 1.74 2007/02/08 16:44:16 jkois Exp $
      basiert auf: 1.159
 -->
 
@@ -42,7 +42,7 @@
 	<link rel="alternate stylesheet" media="screen" href="&enbase;/layout/css/fixed_large.css" type="text/css" title="Large Text" />
 	<script type="text/javascript" src="&enbase;/layout/js/styleswitcher.js"></script>
 	<link rel="alternate" type="application/rss+xml"
-	  title="FreeBSD Ank&#252;ndigungen" href="&base;/news/news.rdf" />
+	  title="FreeBSD Ank&#252;ndigungen" href="&enbase;/news/news.rdf" />
 	<link rel="alternate" type="application/rss+xml"
 	  title="FreeBSD Sicherheits-Hinweise" href="&enbase;/security/advisories.rdf" />
 	<link rel="alternate" type="application/rss+xml"
