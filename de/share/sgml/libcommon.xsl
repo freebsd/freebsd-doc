@@ -2,7 +2,7 @@
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
 <!-- $FreeBSD$
-     $FreeBSDde: de-www/share/sgml/libcommon.xsl,v 1.1 2006/10/19 19:26:11 jkois Exp $
+     $FreeBSDde: de-www/share/sgml/libcommon.xsl,v 1.2 2007/02/08 16:06:42 jkois Exp $
      basiert auf: 1.1
  -->
 
@@ -17,8 +17,8 @@
       des FreeBSD Betriebssystems Schritt zu halten.  Besuchen
       Sie diese Seite &#246;fter, um informiert zu bleiben.
       Weiterhin k&#246;nnen Sie die
-      <a href="&base;/../doc/de_DE.ISO8859-1/books/handbook/eresources.html#ERESOURCES-MAIL">Mailingliste
-	freebsd-announce</a> abonnieren oder den <a href="news.rdf">RSS
+      <a href="&enbase;/doc/de_DE.ISO8859-1/books/handbook/eresources.html#ERESOURCES-MAIL">Mailingliste
+	freebsd-announce</a> abonnieren oder den <a href="&enbase;/news/news.rdf">RSS
 	Ticker</a> benutzen.</p>
 
     <p>Die nachstehenden Projekte besitzen eigene Seiten,
