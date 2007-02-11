@@ -1,6 +1,6 @@
 #!/usr/bin/perl -T
 #
-# Copyright (c) 1996-2004 Wolfram Schneider <wosch@FreeBSD.org>
+# Copyright (c) 1996-2007 Wolfram Schneider <wosch@FreeBSD.org>
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -33,16 +33,16 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp 
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.168 2007-01-27 21:37:10 simon Exp $
+# $Id: man.cgi,v 1.169 2007-02-11 11:39:20 wosch Exp $
 
-#use Data::Dumper;
-#use Carp;
+############################################################################
+# !!! man.cgi is stale perl4 code !!!
+############################################################################
 
 
 $www{'title'} = 'FreeBSD Hypertext Man Pages';
 $www{'home'} = 'http://www.FreeBSD.org';
-$www{'head'} = qq[<A HREF="$www{'home'}">$www{'title'}</a> ] .
-               qq[<IMG SRC="/gifs/littlelogo.gif">] .
+$www{'head'} = $www{'title'};
                 "";
 
 $command{'man'} =     'man'; # 8Bit clean man
@@ -436,8 +436,8 @@ sub do_man {
     local($u) = 'http://user.cs.tu-berlin.de/~wosch/man.cgi';
 	local($u)= $BASE;
 
-    return &faq_output($u) if ($path =~ /faq.html$/);
-    return &copyright_output($u) if ($path =~ /copyright.html$/);
+    return &faq_output($u) if ($path =~ /\/(faq|help)\.html$/);
+    #return &copyright_output($u) if ($path =~ /copyright.html$/);
     return &get_the_sources if ($path =~ /source$/);
 
     return &include_output($path) 
@@ -986,16 +986,19 @@ sub indexpage {
     local($m) = ($manpath ? $manpath : $manPathDefault);
     $m = &encode_url($m);
 
-    print "<B><I>Section Indexes</I></B>: ";
+    print "<B><I>Section Indexes</I></B>:\n";
     foreach ('1', '2', '3', '4', '5', '6', '7', '8', '9', 'n') {
-	print qq{&#164; <A HREF="$BASE?query=($_)&sektion=&apropos=1&manpath=$m&title=Section%20$_Index">$_</A>\n};
+	print qq{&#164; } if $_ ne '1';
+	print qq{<A HREF="$BASE?query=($_)&sektion=&apropos=1&manpath=$m&title=Section%20$_Index">$_</A>\n};
     }
 
-    print "<BR><B><I>Explanations of Man Sections:</I></B>";
+    print "<BR><B><I>Explanations of Man Sections:</I></B>\n";
     foreach ('1', '2', '3', '4', '5', '6', '7', '8', '9') {
-	print qq{&#164; <A HREF="$BASE?query=intro&sektion=$_&apropos=0&manpath=$m&title=Introduction%20Section%20$_">intro($_)</A>\n};
+	print qq{&#164; } if $_ ne '1';
+	print qq{<A HREF="$BASE?query=intro&sektion=$_&apropos=0&manpath=$m&title=Introduction%20Section%20$_">intro($_)</A>\n};
     }
 
+    if (0) {
     print "<BR>\n<B><I>Quick Reference Categories:</I></B>\n";
     foreach ('database', 'disk', 'driver', 'ethernet', 'mail', 'net', 'nfs', 
              'nis', 'protocol', 'ppp', 'roff', 'string', 'scsi', 
@@ -1003,12 +1006,11 @@ sub indexpage {
     {
 	print qq{&#164; <A HREF="$BASE?query=$_&sektion=&apropos=1&manpath=$m&title=Quick%20Ref%20$_">$_</A>\n};
     }
+    }
+
 
     print <<ETX if $mailto;
 <HR noshade>
-<img ALIGN="RIGHT" src="/gifs/powerlogo.gif">
-Please direct questions about this server to
-<I><A HREF="$webmasterURL">$webmaster</A></I><br>
 URL:  <A HREF="$BASE" target=_parent>$www{'home'}$BASE</a><br>
 ETX
 
@@ -1071,20 +1073,19 @@ ETX
 Output format
 </FORM>
 
-<A HREF="$BASE?manpath=$m">Index Page and Help</A> |
-<A HREF="$BASE/faq.html">FAQ</A> |
-<A HREF="$BASE/copyright.html">Copyright</A>
+<A HREF="$BASE?manpath=$m">home</A> |
+<A HREF="$BASE/help.html">help</A> 
 <HR>
 ETX
     0;
 }
 
 sub copyright {
-    $id = '$Id: man.cgi,v 1.168 2007-01-27 21:37:10 simon Exp $';
+    $id = '$Id: man.cgi,v 1.169 2007-02-11 11:39:20 wosch Exp $';
 
     return qq{\
 <PRE>
-Copyright (c) 1996-2004 Wolfram Schneider <A HREF="$mailtoURL">&lt;$mailto&gt;</A>
+Copyright (c) 1996-2007 <a href="$mailtoURL">Wolfram Schneider</A>
 Copyright (c) 1993-1995 Berkeley Software Design, Inc.
 
 This data is part of a licensed program from BERKELEY SOFTWARE
@@ -1096,7 +1097,7 @@ Technology, Free Software Foundation, FreeBSD Inc., and others.
 This script has the revsion: $id
 <p>
 
-Copyright (c) for man pages by OS vendors.
+Copyright (&copy;) for man pages by OS vendors.
 <p>
 <a href="ftp://ftp.2bsd.com">2.11 BSD</a>,
 <a href="http://www.hp.com">HP</a>,
@@ -1132,10 +1133,37 @@ sub faq {
 	     &encode_url($_) . "\n") if $manPathAliases{$_};
     }
 
+    local $id = '$Id: man.cgi,v 1.169 2007-02-11 11:39:20 wosch Exp $';
     return qq{\
 <PRE>
-Copyright (c) 1996-2004 Wolfram Schneider <a href="$mailtoURL">&lt;$mailto&gt;</a>
-</PRE>
+Copyright (c) 1996-2007 <a href="$mailtoURL">Wolfram Schneider</A>
+Copyright (c) 1993-1995 Berkeley Software Design, Inc.
+
+This data is part of a licensed program from BERKELEY SOFTWARE
+DESIGN, INC.  Portions are copyrighted by BSDI, The Regents of
+the University of California, Massachusetts Institute of
+Technology, Free Software Foundation, FreeBSD Inc., and others.
+
+</PRE>\n
+This script has the revsion: $id
+<p>
+
+Copyright (c) for man pages by OS vendors.
+<p>
+<a href="ftp://ftp.2bsd.com">2.11 BSD</a>,
+<a href="http://www.hp.com">HP</a>,
+<a href="http://www.freebsd.org">FreeBSD</a>,
+<a href="http://www.cs.vu.nl/~ast/minix.html">Minix</a>,
+<a href="http://slackware.com">Linux Slackware</a>,
+<a href="http://www.linux.de">Linux/de</a>,
+<a href="http://www.netbsd.org">NetBSD</a>,
+<a href="http://www.openbsd.org">OpenBSD</a>,
+<a href="http://plan9.bell-labs.com/plan9/">Plan 9</a>,
+<a href="http://www.sun.com">SunOS</a>,
+<a href="http://www.digital.com">ULTRIX</a>,
+<a href="ftp://elib.zib.de/pub/netlib/att/cs/v7man">Unix Seventh Edition</a>,
+<a href="http://www.xfree86.org">XFree86</a>,
+<a href="http://www.x.org">X11R6</a>
 
 <h2>FAQ</h2>
 <UL>
@@ -1150,8 +1178,8 @@ and troff output.
 Unix family tree, BSD part</a>.
 <li>The <a href="http://www.freebsd.org/cgi/ports.cgi">
 FreeBSD Ports Changes</a> script.
-<li>Copyright (c) and download for man pages by <a href="$BASE/copyright.html">
-OS vendors</a>
+<li>Copyright (c) and download for man pages by 
+OS vendors
 </UL>
 
 <h2>Releases</h2>
@@ -1186,8 +1214,7 @@ the query dialog.  There are also several hypertext links provided
 as short-cuts to various queries:  <I>Section Indexes</I> is apropos
 listings of all man pages by section.  <I>Explanations of Man
 Sections</I> contains pointers to the intro pages for various man
-sections.  Or you can select a category from <I>Quick Reference
-Categories</I> and see man pages relevant to the selected topic.
+sections.
 <P>
 };
 }
@@ -1198,7 +1225,7 @@ sub copyright_output {
 	"<H1>$www{'head'}</H1>\n" . &copyright . qq{\
 <HR>
 
-<A HREF="$_[0]">Index Page and Help</A>
+<A HREF="$_[0]">home</A>
 </BODY>
 </HTML>
 };
@@ -1210,7 +1237,7 @@ sub faq_output {
 	"<H1>$www{'head'}</H1>\n" . &faq . qq{\
 <HR>
 
-<A HREF="$_[0]">Index Page and Help</A>
+<A HREF="$_[0]">home</A>
 </BODY>
 </HTML>
 };
@@ -1262,7 +1289,7 @@ sub mydie {
 
 print qq{
 <p>
-<A HREF="$BASE">Index Page and Help</A>
+<A HREF="$BASE">home</A>
 </BODY>
 </HTML>
 };
