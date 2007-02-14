@@ -2,7 +2,7 @@
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
 <!-- $FreeBSD$
-     $FreeBSDde: de-www/share/sgml/libcommon.xsl,v 1.2 2007/02/08 16:06:42 jkois Exp $
+     $FreeBSDde: de-www/share/sgml/libcommon.xsl,v 1.3 2007/02/14 18:28:02 jkois Exp $
      basiert auf: 1.1
  -->
 
@@ -64,4 +64,50 @@
       <a href="mailto:www@FreeBSD.org">www@FreeBSD.org</a> und
       wir nehmen den Artikel auf.</p>
   </xsl:template>
+
+<!-- Temporaerer Fix der Event-Liste - jkois - 2007-02-14 -->
+  <xsl:template name="html-index-events-items">
+    <xsl:param name="events.xml-master" select="'none'" />
+    <xsl:param name="events.xml" select="''" />
+
+    <xsl:for-each select="document($events.xml-master)/descendant::event[
+									   ((number(enddate/year) &gt; number($curdate.year)) or
+								            (number(enddate/year) = number($curdate.year) and
+								             number(enddate/month) &gt; number($curdate.month)) or
+						          		    (number(enddate/year) = number($curdate.year) and
+								             number(enddate/month) = number($curdate.month) and
+						   	            	     enddate/day &gt;= $curdate.day))]">
+      <xsl:sort select="startdate/year" order="ascending"/>
+      <xsl:sort select="format-number(startdate/month, '00')" order="ascending"/>
+      <xsl:sort select="format-number(startdate/day, '00')" order="ascending"/>
+
+      <xsl:if test="position() &lt;= 5">
+
+      <p>
+      <span class="txtdate">
+         <xsl:value-of select='
+	    concat(format-number(startdate/year, "####"), "-",
+	    format-number(startdate/month, "00"), "-",
+	    format-number(startdate/day, "00"), " -  ",
+	    format-number(enddate/year, "####"), "-",
+	    format-number(enddate/month, "00"), "-",
+	    format-number(enddate/day, "00"))' />
+      </span><br />
+      <a>
+        <xsl:attribute name="href">
+	  <xsl:choose>
+	    <xsl:when test="$events.xml = $events.xml-master">&enbase;/</xsl:when>
+	  </xsl:choose>
+          <xsl:text>events/#event:</xsl:text><xsl:value-of select='@id' />
+        </xsl:attribute>
+
+        <xsl:value-of select="name"/>
+
+	<br />
+	(<xsl:value-of select='location/city' />, <xsl:value-of select='location/country' />)
+      </a></p>
+    </xsl:if>
+    </xsl:for-each>
+  </xsl:template>
+<!-- Ende des temporaeren Fixes der Event-Liste - jkois - 2007-02-14 -->
 </xsl:stylesheet>
