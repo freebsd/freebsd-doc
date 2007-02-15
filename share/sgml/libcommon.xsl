@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
-<!-- $FreeBSD: www/share/sgml/libcommon.xsl,v 1.3 2007/01/28 18:43:07 pav Exp $ -->
+<!-- $FreeBSD: www/share/sgml/libcommon.xsl,v 1.4 2007/02/15 21:40:56 gabor Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
   version="1.0"
@@ -1092,7 +1092,8 @@
 	    <xsl:when test="$events.xml = 'none'">&enbase;/</xsl:when>
 	    <xsl:otherwise>&base;/</xsl:otherwise>
 	  </xsl:choose>
-          <xsl:text>events/#event:</xsl:text><xsl:value-of select='@id' />
+	  <xsl:text>events/#</xsl:text>
+	  <xsl:call-template name="generate-event-anchor"/>
         </xsl:attribute>
 
         <xsl:value-of select="name"/>
