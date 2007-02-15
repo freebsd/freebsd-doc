@@ -6,7 +6,7 @@
 <!ENTITY % navinclude.about "INCLUDE">
 ]>
 
-<!-- $FreeBSD: www/share/sgml/templates.oldnewsflash.xsl,v 1.1 2006/08/19 21:20:54 hrs Exp $ -->
+<!-- $FreeBSD: www/share/sgml/templates.oldnewsflash.xsl,v 1.2 2006/08/21 18:27:43 hrs Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -99,7 +99,10 @@
 	  </xsl:call-template>
 	  <xsl:text>, </xsl:text>
 	  <xsl:value-of select="ancestor::year/name"/>:</b><xsl:text> </xsl:text>
-	<xsl:copy-of select="p"/>
+	  <xsl:for-each select="p">
+	  <xsl:if test="position() &gt; 1"><br /><br /></xsl:if>
+	  <xsl:copy-of select="child::node()" />
+	  </xsl:for-each>
 	</p>
 
     </li>

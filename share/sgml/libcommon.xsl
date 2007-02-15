@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
-<!-- $FreeBSD: www/share/sgml/libcommon.xsl,v 1.2 2006/08/20 11:52:10 hrs Exp $ -->
+<!-- $FreeBSD: www/share/sgml/libcommon.xsl,v 1.3 2007/01/28 18:43:07 pav Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
   version="1.0"
@@ -408,7 +408,10 @@
 			</xsl:call-template></b>
 		      <!-- put localized text -->
 		      <xsl:text> </xsl:text>
-		      <xsl:copy-of select="p" />
+		      <xsl:for-each select="p">
+		      <xsl:if test="position() &gt; 1"><br /><br /></xsl:if>
+		      <xsl:copy-of select="child::node()" />
+		      </xsl:for-each>
 		    </p>
 		  </li>
 		</xsl:for-each>
@@ -441,7 +444,10 @@
 			</xsl:call-template></b>
 		      <!-- put English text -->
 		      <xsl:text> </xsl:text>
-		      <xsl:copy-of select="p" />
+		      <xsl:for-each select="p">
+		      <xsl:if test="position() &gt; 1"><br /><br /></xsl:if>
+		      <xsl:copy-of select="child::node()" />
+		      </xsl:for-each>
 		    </p>
 		  </li>
 		</xsl:for-each>
