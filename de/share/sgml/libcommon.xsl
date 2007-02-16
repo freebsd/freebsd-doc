@@ -2,8 +2,8 @@
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
 <!-- $FreeBSD$
-     $FreeBSDde: de-www/share/sgml/libcommon.xsl,v 1.3 2007/02/14 18:28:02 jkois Exp $
-     basiert auf: 1.1
+     $FreeBSDde: de-www/share/sgml/libcommon.xsl,v 1.5 2007/02/16 17:17:34 jkois Exp $
+     basiert auf: 1.5
  -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -45,6 +45,9 @@
 
   <xsl:template name="html-news-make-olditems-list">
     <p>&#196;ltere Ank&#252;ndigungen:
+      <a href="2005/index.html">2005</a>,
+      <a href="2004/index.html">2004</a>,
+      <a href="2003/index.html">2003</a>,
       <a href="2002/index.html">2002</a>,
       <a href="&enbase;/news/2001/index.html">2001</a>,
       <a href="&enbase;/news/2000/index.html">2000</a>,
@@ -66,6 +69,7 @@
   </xsl:template>
 
 <!-- Temporaerer Fix der Event-Liste - jkois - 2007-02-14 -->
+
   <xsl:template name="html-index-events-items">
     <xsl:param name="events.xml-master" select="'none'" />
     <xsl:param name="events.xml" select="''" />
@@ -98,7 +102,8 @@
 	  <xsl:choose>
 	    <xsl:when test="$events.xml = $events.xml-master">&enbase;/</xsl:when>
 	  </xsl:choose>
-          <xsl:text>events/#event:</xsl:text><xsl:value-of select='@id' />
+          <xsl:text>events/#</xsl:text>
+          <xsl:call-template name="generate-event-anchor"/>
         </xsl:attribute>
 
         <xsl:value-of select="name"/>
