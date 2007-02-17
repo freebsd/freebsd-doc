@@ -4,13 +4,13 @@
 <!ENTITY title "El Proyecto FreeBSD">
 ]>
 
-<!-- $FreeBSD: www/es/index.xsl,v 1.16 2006/06/05 21:17:31 jcamou Exp $ -->
+<!-- $FreeBSD: www/es/index.xsl,v 1.17 2006/08/19 21:22:30 hrs Exp $ -->
 <!-- $FreeBSDes: www/es/index.xsl,v 1.4 2004/09/07 21:46:11 jcamou Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
 
-  <xsl:variable name="date" select="'$FreeBSD: www/es/index.xsl,v 1.16 2006/06/05 21:17:31 jcamou Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/es/index.xsl,v 1.17 2006/08/19 21:22:30 hrs Exp $'"/>
 
   <!-- these params should be externally bound. The values
        here are not used actually -->  
@@ -106,7 +106,7 @@
 					  <a href="&u.rel.announce;">Nueva Tecnolog&#237;a: &rel.current;</a>
 					</li>
 					<li>
-					  <a href="&u.rel2.announce;">Release en Producci&#243;n: &rel2.current;</a>
+					  <a href="&u.rel2.announce;">Release (heredada) en Producci&#243;n: &rel2.current;</a>
 
 					</li>
 			    <xsl:if test="'&beta.testing;' != 'IGNORE'">
