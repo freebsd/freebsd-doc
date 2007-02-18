@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/releases/6.0R/stress.xsl,v 1.1 2005/07/18 20:42:13 murray Exp $ -->
+<!-- $FreeBSD: www/en/releases/6.1R/stress.xsl,v 1.1 2006/01/25 23:58:36 murray Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
 xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -15,6 +15,9 @@ exclude-result-prefixes="rdf cvs"
 
 <xsl:template match="/*[1]">
     <xsl:comment>Generated from XSLT</xsl:comment>
+
+    <xsl:choose>
+      <xsl:when test="*[local-name()='item']">
 <ul>
   <xsl:for-each select="*[local-name()='item']">
   <li>
@@ -25,7 +28,12 @@ exclude-result-prefixes="rdf cvs"
   </li>
 </xsl:for-each>
 </ul>
+      </xsl:when>
 
+      <xsl:otherwise>
+	<p>Currently none reported.</p>
+      </xsl:otherwise>
+    </xsl:choose>
 </xsl:template>
 
 </xsl:stylesheet>
