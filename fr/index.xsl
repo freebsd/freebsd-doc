@@ -4,10 +4,10 @@
 <!ENTITY title "Le Projet FreeBSD">
 ]>
 
-<!-- $FreeBSD: www/fr/index.xsl,v 1.32 2006/08/19 21:23:33 hrs Exp $ -->
+<!-- $FreeBSD: www/fr/index.xsl,v 1.33 2006/08/21 20:34:49 blackend Exp $ -->
 <!--
    The FreeBSD French Documentation Project
-   Original revision: 1.154
+   Original revision: 1.159
 
    Version francaise : Stephane Legrand <stephane@freebsd-fr.org>
    Mise a jour:	Marc Fonvieille <blackend@FreeBSD.org>
@@ -76,12 +76,12 @@
 		<div id="FRONTFEATURELEFT">
 			<div id="FRONTFEATURECONTENT">
 				<h1>
-				  Bas&#233; sur UNIX&#174; BSD
+				  Bas&#233; sur &unix; BSD
 				</h1>				
-				<p>FreeBSD&#174; est un syst&#232;me d'exploitation avanc&#233; pour
-				les architectures compatibles x86 (y compris Pentium&#174; et Athlon&#8482;), compatibles 
-				amd64 (y compris Opteron&#8482;, Athlon 64 et EM64T), 
-				UltraSPARC&#174;, IA-64, PC-98 et ARM.
+				<p>FreeBSD&reg; est un syst&#232;me d'exploitation avanc&#233; pour
+				les architectures compatibles x86 (y compris Pentium&reg; et Athlon&trade;), compatibles 
+				amd64 (y compris Opteron&trade;, Athlon&trade;64 et EM64T), 
+				UltraSPARC&reg;, IA-64, PC-98 et ARM.
 				Il est d&#233;riv&#233; de UNIX BSD, la version d'&unix; 
 				d&#233;velopp&#233;e &#224;
 				l'Universit&#233; de Californie, Berkeley.
@@ -149,13 +149,19 @@
 					<a href="&enbase;/fr/" title="Fran&#231;ais">fr</a>
 				  </li>
 				  <li>
+					<a href="&enbase;/hu/" title="Hongrois">hu</a>
+				  </li>
+				  <li>
 					<a href="&enbase;/it/" title="Italien">it</a>
 				  </li>
 				  <li>
 					<a href="&enbase;/ja/" title="Japonais">ja</a>
 				  </li>
-				  <li class="last-child">
+				  <li>
 					<a href="&enbase;/ru/" title="Russe">ru</a>
+				  </li>
+				  <li class="last-child">
+					<a href="&enbase;/zh_CN/" title="Chinois simplifi&#233;">zh_CN</a>
 				  </li>
 				</ul>
 			</div> <!-- LANGUAGENAV -->
@@ -189,9 +195,6 @@
 					</li>
 					<li>
 					  <a href="&enbase;/doc/&url.doc.langcode;/books/handbook/index.html" title="Manuel de r&#233;f&#233;rence">Manuel de r&#233;f&#233;rence</a>
-					</li>
-					<li>
-					  <a href="http://www.freebsdfoundation.org/" title="Fondation">Fondation</a>
 					</li>
 					<li>
 					  <a
