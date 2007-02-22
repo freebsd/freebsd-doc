@@ -8,11 +8,11 @@
 
   <!-- Language-specific definitions should be put below this line -->
   <!-- default format for date string -->
-  <xsl:param name="param-l10n-date-format-YMD"
+  <xsl:variable name="param-l10n-date-format-YMD"
              select="'%Y 年 %M %D 日'" />
-  <xsl:param name="param-l10n-date-format-YM"
+  <xsl:variable name="param-l10n-date-format-YM"
              select="'%Y 年 %M'" />
-  <xsl:param name="param-l10n-date-format-MD"
+  <xsl:variable name="param-l10n-date-format-MD"
              select="'%M %D 日'" />
 
   <xsl:template name="html-news-list-newsflash-preface">
@@ -74,7 +74,7 @@
 
   <!-- Convert a month number to the corresponding long English name. -->
   <xsl:template name="gen-long-en-month">
-    <xsl:param name="nummonth"/>
+    <xsl:variable name="nummonth"/>
     <xsl:variable name="month" select="number($nummonth)"/>
     <xsl:choose>
       <xsl:when test="$month=1">一月</xsl:when>
@@ -94,8 +94,8 @@
   </xsl:template>
 
   <xsl:template name="html-news-month-headings">
-    <xsl:param name="year" />
-    <xsl:param name="month" />
+    <xsl:variable name="year" />
+    <xsl:variable name="month" />
 
     <xsl:value-of select="concat($year, ' 年 ', $month)" />
   </xsl:template>
