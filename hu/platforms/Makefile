@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/platforms/Makefile,v 1.10 2005/04/18 21:11:59 pav Exp $
+# $FreeBSD: www/hu/platforms/Makefile,v 1.1 2007/01/07 22:44:47 keramida Exp $
 
 ###################################################
 # The FreeBSD Hungarian Documentation Project     #
@@ -23,6 +23,6 @@ DOCS+=	sparc.sgml
 DOCS+=	sun4v.sgml
 DOCS+=	xbox.sgml
 
-SUBDIR+=ia64
+SUBDIR=	ia64
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
