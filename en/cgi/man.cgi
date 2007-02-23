@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp 
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.169 2007-02-11 11:39:20 wosch Exp $
+# $Id: man.cgi,v 1.170 2007-02-23 21:09:54 ceri Exp $
 
 ############################################################################
 # !!! man.cgi is stale perl4 code !!!
@@ -154,7 +154,7 @@ $manPathDefault = 'FreeBSD 6.2-RELEASE';
      'FreeBSD 6.1-RELEASE and Ports',  "$manLocalDir/FreeBSD-6.1-RELEASE/man:$manLocalDir/FreeBSD-6.1-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports",
 
      'FreeBSD 7-current',   "$manLocalDir/FreeBSD-7-current/man:$manLocalDir/FreeBSD-7-current/openssl/man",
-     'FreeBSD 6.1-stable',   "$manLocalDir/FreeBSD-6.1-stable/man:$manLocalDir/FreeBSD-6.1-stable/openssl/man",
+     'FreeBSD 6.2-stable',   "$manLocalDir/FreeBSD-6.2-stable/man:$manLocalDir/FreeBSD-6.2-stable/openssl/man",
      'FreeBSD 5.5-stable',   "$manLocalDir/FreeBSD-5.5-stable",
 
      'FreeBSD 6.2-RELEASE',   "$manLocalDir/FreeBSD-6.2-RELEASE/man:$manLocalDir/FreeBSD-6.2-RELEASE/openssl/man",
@@ -358,11 +358,11 @@ while (($key,$val) = each %manPath) {
 # keywords must be in lower cases.
 %manPathAliases = 
     (
-     'freebsd', 'FreeBSD 6.1-RELEASE',
-     'freebsd-stable', 'FreeBSD 6.1-stable',
+     'freebsd', 'FreeBSD 6.2-RELEASE',
+     'freebsd-stable', 'FreeBSD 6.2-stable',
      'freebsd-stable4', 'FreeBSD 4.11-stable',
      'freebsd-stable5', 'FreeBSD 5.5-stable',
-     'freebsd-stable6', 'FreeBSD 6.1-stable',
+     'freebsd-stable6', 'FreeBSD 6.2-stable',
      'freebsd-current', 'FreeBSD 7-current',
      'slackware', 'Linux Slackware 3.1',
      'linux-de', 'deutsch - Linux/GNU',
@@ -1081,7 +1081,7 @@ ETX
 }
 
 sub copyright {
-    $id = '$Id: man.cgi,v 1.169 2007-02-11 11:39:20 wosch Exp $';
+    $id = '$Id: man.cgi,v 1.170 2007-02-23 21:09:54 ceri Exp $';
 
     return qq{\
 <PRE>
@@ -1133,7 +1133,7 @@ sub faq {
 	     &encode_url($_) . "\n") if $manPathAliases{$_};
     }
 
-    local $id = '$Id: man.cgi,v 1.169 2007-02-11 11:39:20 wosch Exp $';
+    local $id = '$Id: man.cgi,v 1.170 2007-02-23 21:09:54 ceri Exp $';
     return qq{\
 <PRE>
 Copyright (c) 1996-2007 <a href="$mailtoURL">Wolfram Schneider</A>
