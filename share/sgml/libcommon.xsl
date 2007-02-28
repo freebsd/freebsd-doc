@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
-<!-- $FreeBSD: www/share/sgml/libcommon.xsl,v 1.4 2007/02/15 21:40:56 gabor Exp $ -->
+<!-- $FreeBSD: www/share/sgml/libcommon.xsl,v 1.5 2007/02/15 21:47:10 gabor Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
   version="1.0"
@@ -688,7 +688,7 @@
 
     <xsl:choose>
       <xsl:when test="$type = 'advisory'">
-	<xsl:for-each select="document($advisories.xml)/descendant::advisory[position() &lt;= 4]">
+	<xsl:for-each select="document($advisories.xml)/descendant::advisory[position() &lt;= 3]">
 	  <xsl:variable name="year" select="../../../name" />
           <xsl:variable name="month" select="../../name" />
           <xsl:variable name="day" select="../name" />
@@ -714,7 +714,7 @@
 	</xsl:for-each>
       </xsl:when>
       <xsl:when test="$type = 'notice'">
-	<xsl:for-each select="document($advisories.xml)/descendant::notice[position() &lt;= 2]">
+	<xsl:for-each select="document($advisories.xml)/descendant::notice[position() &lt;= 3]">
 	<xsl:variable name="year" select="../../../name" />
 	<xsl:variable name="month" select="../../name" />
 	<xsl:variable name="day" select="../name" />
