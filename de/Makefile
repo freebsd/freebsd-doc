@@ -1,8 +1,8 @@
 # The FreeBSD Documentation Project
 # The FreeBSD German Documentation Project
 # $FreeBSD$
-# $FreeBSDde: de-www/Makefile,v 1.41 2007/01/14 16:42:42 jkois Exp $
-# basiert auf: 1.134
+# $FreeBSDde: de-www/Makefile,v 1.42 2007/03/01 20:27:51 jkois Exp $
+# basiert auf: 1.139
 
 .if exists(Makefile.conf)
 .include "Makefile.conf"
@@ -14,6 +14,7 @@
 # These are turned into validated, normalized HTML files.
 
 DOCS= about.sgml
+DOCS+= administration.sgml
 DOCS+= applications.sgml
 DOCS+= availability.sgml
 DOCS+= community.sgml
