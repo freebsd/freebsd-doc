@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/releases/5.0R/DP1/Makefile,v 1.3 2004/04/05 23:52:12 phantom Exp $
+# $FreeBSD: www/en/releases/5.0R/DP1/Makefile,v 1.4 2004/04/06 11:32:28 phantom Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -26,3 +26,5 @@ DATA+=	relnotes-i386.html
 DATA+=	relnotes-sparc64.html
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
+
+XML_MIRRORS:=	${XML_MIRRORS:S@en@usr@}
