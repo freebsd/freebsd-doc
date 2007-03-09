@@ -10,13 +10,13 @@
    The FreeBSD Documentation Project
    The FreeBSD French Documentation Project
 
-   Original revision: 1.7
+   Original revision: 1.9
 -->
 
 <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
 
-  <xsl:variable name="date" select="'$FreeBSD: www/fr/platforms/ia64/todo.xsl,v 1.3 2006/02/03 11:54:54 blackend Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/fr/platforms/ia64/todo.xsl,v 1.4 2006/08/19 21:23:40 hrs Exp $'"/>
 
   <xsl:output doctype-public="-//W3C//DTD HTML 4.01 Transitional//EN"
     encoding="iso-8859-1" method="html"/>
