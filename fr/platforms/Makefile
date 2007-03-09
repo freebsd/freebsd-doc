@@ -1,7 +1,7 @@
-# $FreeBSD: www/fr/platforms/Makefile,v 1.3 2005/01/24 13:27:22 stephane Exp $
+# $FreeBSD: www/fr/platforms/Makefile,v 1.4 2006/02/13 17:39:35 blackend Exp $
 
 # The FreeBSD French Documentation Project
-# Original revision: 1.11
+# Original revision: 1.12
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -20,6 +20,7 @@ DOCS+=	mips.sgml
 DOCS+=	pc98.sgml
 DOCS+=	ppc.sgml
 DOCS+=	sparc.sgml
+DOCS+=	sun4v.sgml
 DOCS+=	x86-64.sgml
 DOCS+=	xbox.sgml
 
