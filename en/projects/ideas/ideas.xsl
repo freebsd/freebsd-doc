@@ -7,7 +7,7 @@
 <!ENTITY % developers SYSTEM "../../developers.sgml"> %developers;
 ]>
 
-<!-- $FreeBSD: www/en/projects/ideas/ideas.xsl,v 1.1 2007/03/10 03:52:09 murray Exp $ -->
+<!-- $FreeBSD: www/en/projects/ideas/ideas.xsl,v 1.2 2007/03/10 10:15:15 joel Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -60,6 +60,12 @@
   href="mailto:joel@FreeBSD.org">&a.joel;</a>.  Technical questions
   should be directed to the Technical contact for each project, or to the <a
   href="mailto:hackers@FreeBSD.org">hackers mailinglist</a>.</p>
+
+<p>Also, there are several projects on the FreeBSD wiki which can serve as good
+  starting points for volunteers.  The most prominent projects are: <a
+    href="http://wiki.freebsd.org/Networking">Networking</a>, <a
+    href="http://wiki.freebsd.org/SMPTODO">SMPTODO</a>, and <a
+    href="http://wiki.freebsd.org/linux-kernel">Linuxulator</a>.</p>
 
 <hr />
 
