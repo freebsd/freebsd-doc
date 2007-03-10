@@ -7,7 +7,7 @@
 <!ENTITY % developers SYSTEM "../developers.sgml"> %developers;
 ]>
 
-<!-- $FreeBSD$ -->
+<!-- $FreeBSD: www/en/projects/summerofcode.xsl,v 1.1 2007/03/10 04:46:52 murray Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -136,7 +136,7 @@ SoC2006 Wiki</a> and the Google
     <ul><li>Sound and Linux emulation.</li></ul>
   </li>
   <li>&a.gnn; &lt;gnn@FreeBSD.org&gt;
-    <ul><li>IPv6, IPSec</li></ul>
+    <ul><li>IPv6, IPSec, networking.</li></ul>
   </li>
   <li>&a.phk; &lt;phk@FreeBSD.org&gt;
     <ul><li>Disk I/O</li></ul>
