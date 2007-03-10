@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/projects/Makefile,v 1.28 2006/10/04 22:01:50 murray Exp $
+# $FreeBSD: www/en/projects/Makefile,v 1.29 2007/02/12 20:43:06 joel Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -10,9 +10,13 @@
 DOCS=	projects.sgml
 DOCS+=	newbies.sgml
 DOCS+=	cvsweb.sgml
-DOCS+=	summerofcode.sgml
 DOCS+=	summerofcode-2005.sgml
 DOCS+=	summerofcode-2006.sgml
+
+XML_IDEAS=		${WEB_PREFIX}/en/projects/ideas/ideas.xml
+XSL_SOC=		${WEB_PREFIX}/en/projects/summerofcode.xsl
+
+XMLDOCS=	summerofcode:${XSL_SOC}:${XML_IDEAS}:
 
 INDEXLINK= projects.html
 
