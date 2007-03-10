@@ -1,13 +1,42 @@
-<!DOCTYPE HTML PUBLIC "-//FreeBSD//DTD HTML 4.01 Transitional-Based Extension//EN" [
-<!ENTITY base CDATA "..">
-<!ENTITY date "$FreeBSD: www/en/projects/summerofcode.sgml,v 1.63 2007/03/08 08:26:54 murray Exp $">
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
+				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
 <!ENTITY title "FreeBSD Summer Projects">
+<!ENTITY email "freebsd-www">
 <!ENTITY % navinclude.developers "INCLUDE">
 <!ENTITY % developers SYSTEM "../developers.sgml"> %developers;
 ]>
 
-<html>
-&header;
+<!-- $FreeBSD$ -->
+
+<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
+  xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
+  <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
+
+  <xsl:variable name="date">
+    <xsl:value-of select="//cvs:keyword[@name='freebsd']"/>
+  </xsl:variable>
+
+  <xsl:param name="ideas.xml" select="'ideas/ideas.xml'" />
+
+  <xsl:output type="html" encoding="&xml.encoding;"/>
+
+  <xsl:template match="ideas">
+    <html>
+      &header1;
+      <body>
+
+	<div id="CONTAINERWRAP">
+	  <div id="CONTAINER">
+	    &header2;
+
+	    <div id="CONTENT">
+              <div id="SIDEWRAP">
+                &nav;
+              </div> <!-- SIDEWRAP -->
+
+	      <div id="CONTENTWRAP">
+		&header3;
 
 <p>The FreeBSD Project is pleased to participate as a mentoring organization in the
   Google <a href="http://code.google.com/summerofcode.html">Summer of
@@ -46,16 +75,30 @@ SoC2006 Wiki</a> and the Google
 <a name="ideas"></a>
 <h2>Example Proposal Ideas</h2>
 
-<p>Please see the general <a
-  href="&base;/projects/ideas/index.html">FreeBSD Project Ideas</a>
-  page. The recent <a href="&base;/news/status">Developer Status
-  Reports</a> are also a good source of information about upcoming
+<p>The following example project ideas are a subset of the general
+  <a href="&base;/projects/ideas/index.html">FreeBSD Project Ideas</a>
+  list that we think are the most suitable for Summer of Code
   projects.</p>
 
-<!-- Do we want a summer of code-specific addendum here?
-  A Summer of Code-specific addendum may be posted here in
-  Spring 2007.</p>
--->
+    <xsl:for-each select="document($ideas.xml)//descendant::category[child::idea[@class='soc']]">
+      <h3><xsl:value-of select="title"/></h3>
+
+      <ul>
+      <xsl:for-each select="idea[@class='soc']">
+        <li><xsl:element name="a">
+	      <xsl:attribute name="href">
+		./ideas/index.html#p-<xsl:value-of select="@id" />
+	      </xsl:attribute>
+	      <xsl:value-of select="title" />
+            </xsl:element>
+         </li>
+      </xsl:for-each>
+      </ul>
+    </xsl:for-each>
+
+<p>For additional ideas about upcoming development projects in
+  FreeBSD, take a look at recent <a
+  href="&base;/news/status">Developer Status Reports</a>.</p>
 
 <a name="mentors"></a>
 <h2>Mentors</h2>
@@ -188,7 +231,7 @@ active in the community.</p>
   <li><p><strong>Where do I send my proposal?</strong></p>
 
     <p>Proposals must be sent directly to Google when the application
-      period begins.</p>
+      period begins.</p></li>
 
   <li><p><strong>What projects were completed successfully by students
     last summer?</strong></p>
@@ -200,6 +243,18 @@ active in the community.</p>
 
 </ul>
 
-&footer;
-</body>
+	      </div> <!-- CONTENTWRAP -->
+	      <br class="clearboth" />
+	    </div> <!-- CONTENT -->
+
+            <div id="FOOTER">
+               &copyright;<br />
+               &date;
+            </div> <!-- FOOTER -->
+        </div> <!-- CONTAINER -->
+   </div> <!-- CONTAINERWRAP -->
+
+      </body>
 </html>
+  </xsl:template>
+</xsl:stylesheet>
