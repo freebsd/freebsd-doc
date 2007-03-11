@@ -7,7 +7,7 @@
 <!ENTITY % developers SYSTEM "../../developers.sgml"> %developers;
 ]>
 
-<!-- $FreeBSD: www/en/projects/ideas/ideas.xsl,v 1.2 2007/03/10 10:15:15 joel Exp $ -->
+<!-- $FreeBSD: www/en/projects/ideas/ideas.xsl,v 1.3 2007/03/10 10:27:59 joel Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -91,20 +91,24 @@
 
     <hr />
 
-    <!-- The body of each idea. -->
+    <!-- The body of each idea, grouped by category. -->
 
-    <xsl:for-each select="document($ideas.xml)//descendant::idea">
+    <xsl:for-each select="document($ideas.xml)//descendant::category[child::idea]">
+      <h2><xsl:value-of select="title"/> Projects</h2>
+
+      <xsl:for-each select="idea">
       <xsl:element name="a">
 	      <xsl:attribute name="name">
 		p-<xsl:value-of select="@id" />
 	      </xsl:attribute>
       </xsl:element>
 
-      <h2><xsl:value-of select="title" /></h2>
+      <h3><xsl:value-of select="title" /></h3>
 
        <xsl:copy-of select="desc" />
 
     <hr />
+      </xsl:for-each>
     </xsl:for-each>
 
 <a name="p-projects"></a>
