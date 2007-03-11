@@ -4,7 +4,7 @@
 <!ENTITY title "The FreeBSD GNOME Project">
 <!ENTITY % navinclude.gnome "INCLUDE">
 ]>
-<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.89 2006/09/18 22:10:04 ahze Exp $ -->
+<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.90 2006/10/14 16:36:13 marcus Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
 		xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -104,16 +104,23 @@
 			   everything is easy to use, attractive, powerful,
 			   and works the way you expect.</p>
 
-		       <p>The major components of GNOME are the
-			  <a href="http://www.gnome.org">GNOME desktop</a>, a
-			  straightforward window-based desktop environment, and the
+			 <p>The
+			   <a href="http://www.gnome.org">GNOME
+			     desktop</a> is a window-based desktop
+			   environment that provides many business,
+			   productivity, and entertainment
+			   applications, and makes non-GNOME programs
+			   faster and easier to run. The
 			  <a href="http://developer.gnome.org">GNOME development
-			  platform</a>, a collection of application-development
-		          tools and libraries.</p>
+			    platform</a> is a collection of
+			  application-development tools and libraries
+			  used by many programs, such as <a
+			    href="http://www.firefox.com">Mozilla
+			    Firefox</a>.</p>
 
 		       <p>The FreeBSD GNOME Project is a team of devoted
-			  committers and users that manage the integration
-			  of GNOME and FreeBSD.</p>
+			 developers and users that manage the
+			 integration of GNOME and FreeBSD.</p>
 
 		<h2>Upgrading to GNOME 2.16?</h2>
 
@@ -128,7 +135,7 @@
 		Most of GNOME has been ported to FreeBSD, but there is still
 		<a href="docs/volunteer.html">plenty left to be done</a>!</p>
 
-              <h2>Simple solutions to build problems - quickly!</h2>
+	      <h2>One stop solution shop!</h2>
 
 	      <p>GNOME is simple and easy to build using the FreeBSD ports system, but
 	        sometimes things simply go wrong. If GNOME -- or anything that uses
