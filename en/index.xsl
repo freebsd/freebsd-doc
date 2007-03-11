@@ -4,7 +4,7 @@
 <!ENTITY title "The FreeBSD Project">
 ]>
 
-<!-- $FreeBSD: www/en/index.xsl,v 1.158 2006/12/03 19:44:01 blackend Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.159 2007/01/09 17:24:18 keramida Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
@@ -178,7 +178,7 @@
 					  <a href="&base;/community/mailinglists.html" title="Mailing Lists">Mailing Lists</a>
 					</li>
 					<li>
-					  <a href="&base;/send-pr.html" title="Report a Bug">Report a Bug</a>
+					  <a href="&base;/support/bugreports.html" title="Report a Bug">Report a Bug</a>
 					</li>
 					<li>
 					  <a href="&base;/doc/en_US.ISO8859-1/books/faq/index.html" title="FAQ">FAQ</a>
