@@ -6,7 +6,7 @@
 <!ENTITY % navinclude.about "INCLUDE">
 ]>
 
-<!-- $FreeBSD: www/share/sgml/templates.oldnewsflash.xsl,v 1.2 2006/08/21 18:27:43 hrs Exp $ -->
+<!-- $FreeBSD: www/share/sgml/templates.oldnewsflash.xsl,v 1.3 2007/02/15 21:40:56 gabor Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -33,7 +33,19 @@
 
       <body>
 
-	&header2;
+	<div id="CONTAINERWRAP">
+	<div id="CONTAINER">
+
+	  &header2;
+
+	<div id="CONTENT">
+	<div id="SIDEWRAP">
+	  &nav;
+	</div> <!-- SIDEWRAP -->
+
+	<div id="CONTENTWRAP">
+
+	&header3;
 
 	<!-- Notice how entity references in SGML become variable references
 	     in the stylesheet, and that the syntax for referring to variables
@@ -52,10 +64,20 @@
 	<xsl:apply-templates select="descendant::month"/>
 	
 	<a href="news.html">News Home</a>
+	</div> <!-- CONTENTWRAP -->
+	<br class="clearboth" />
+
+	  </div> <!-- CONTENT -->
+
             <div id="FOOTER">
                &copyright;<br />
                &date;
+
             </div> <!-- FOOTER -->
+
+	</div> <!-- CONTAINER -->
+	</div> <!-- CONTAINERWRAP -->
+
       </body>
     </html>
   </xsl:template>
