@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/platforms/Makefile.inc,v 1.1 2003/01/20 01:40:06 bmah Exp $
+# $FreeBSD: www/hu/platforms/Makefile.inc,v 1.1 2007/01/07 22:44:47 keramida Exp $
 
-WEBBASE?=	/data/platforms
+WEBBASE?=	/data/hu/platforms
 WEB_PREFIX?=	${.CURDIR}/../../..
