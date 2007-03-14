@@ -5,8 +5,8 @@
 ]>
 <!--
      $FreeBSD$
-     $FreeBSDde: de-www/index.xsl,v 1.74 2007/02/08 16:44:16 jkois Exp $
-     basiert auf: 1.159
+     $FreeBSDde: de-www/index.xsl,v 1.75 2007/03/11 17:17:55 jkois Exp $
+     basiert auf: 1.160
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -186,7 +186,8 @@
 					  <a href="&base;/community/mailinglists.html" title="Mailinglisten">Mailinglisten</a>
 					</li>
 					<li>
-					  <a href="&base;/send-pr.html" title="Einen Fehler melden">Einen Fehler melden</a>
+					  <a href="&base;/support/bugreports.html" title="Einen Fehler melden">
+					    Einen Fehler melden</a>
 					</li>
 					<li>
 					  <a href="&enbase;/doc/&url.doc.langcode;/books/faq/index.html" title="FAQ">FAQ</a>
