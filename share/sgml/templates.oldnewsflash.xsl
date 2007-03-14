@@ -6,7 +6,7 @@
 <!ENTITY % navinclude.about "INCLUDE">
 ]>
 
-<!-- $FreeBSD: www/share/sgml/templates.oldnewsflash.xsl,v 1.3 2007/02/15 21:40:56 gabor Exp $ -->
+<!-- $FreeBSD: www/share/sgml/templates.oldnewsflash.xsl,v 1.4 2007/03/13 12:27:59 gabor Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -58,7 +58,7 @@
 	<!-- Also notice that because this is now XML and not SGML, empty
              elements, like IMG, must have a trailing "/" just inside the 
    	     closing angle bracket, like this " ... />" -->
-	<img src="&base;/gifs/news.jpg" align="right" border="0" width="193"
+	<img src="&enbase;/gifs/news.jpg" align="right" border="0" width="193"
 	     height="144" alt="FreeBSD News"/>
 
 	<xsl:apply-templates select="descendant::month"/>
