@@ -7,7 +7,7 @@
 <!ENTITY % developers SYSTEM "../developers.sgml"> %developers;
 ]>
 
-<!-- $FreeBSD: www/en/projects/summerofcode.xsl,v 1.1 2007/03/10 04:46:52 murray Exp $ -->
+<!-- $FreeBSD: www/en/projects/summerofcode.xsl,v 1.2 2007/03/10 05:06:40 murray Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -143,6 +143,9 @@ SoC2006 Wiki</a> and the Google
   </li>
   <li>&a.dds; &lt;dds@FreeBSD.org&gt;
     <ul><li>Userland and infrastructure tools.</li></ul>
+  </li>
+  <li>&a.mlaier; &lt;mlaier@FreeBSD.org&gt;
+    <ul><li>Firewalls (ipfw, pf).</li></ul>
   </li>
 </ul>
 
