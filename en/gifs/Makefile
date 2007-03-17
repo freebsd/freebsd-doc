@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/gifs/Makefile,v 1.56 2006/09/25 06:18:03 chinsan Exp $
+# $FreeBSD: www/en/gifs/Makefile,v 1.57 2006/10/19 15:08:45 jkoshy Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -7,7 +7,7 @@
 .include "../Makefile.inc"
 .endif
 
-DATA=   apache.gif apachepower.gif daemon.gif dir.gif doc.gif
+DATA=   apache.gif apachepower.gif daemon.gif doc.gif
 DATA+=  home.gif littlelogo.gif new.gif power-button.gif
 DATA+=  powerlogo.gif ugu_icon.gif wclogo.gif topbar.gif
 DATA+=  flash0.gif flash1.gif soft0.gif soft1.gif support0.gif support1.gif
@@ -76,5 +76,8 @@ DATA+=	freebsdro.png
 
 DATA+=	freebsd-advert.gif freebsd_3.gif
 DATA+=  plain.png smiley.png frowny.png
+
+# cvsweb
+DATA+=	back.gif binary.gif dir.gif minigraph.png text.gif
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
