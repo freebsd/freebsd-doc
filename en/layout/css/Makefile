@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/layout/css/Makefile,v 1.1 2005/10/04 05:49:13 murray Exp $
+# $FreeBSD: www/en/layout/css/Makefile,v 1.2 2006/09/18 21:25:38 shaun Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -7,6 +7,14 @@
 .include "../Makefile.inc"
 .endif
 
-DATA=   fixed.css fixed_large.css global.css iefixes.css layout.css navigation.css table.css text.css query-pr.css
+DATA=	fixed.css
+DATA+=	fixed_large.css
+DATA+=	global.css
+DATA+=	iefixes.css
+DATA+=	layout.css
+DATA+=	navigation.css
+DATA+=	query-pr.css
+DATA+=	table.css
+DATA+=	text.css
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
