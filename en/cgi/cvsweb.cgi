@@ -1,4 +1,4 @@
-#!/usr/bin/perl -wT
+#!/usr/bin/perl -w
 #
 # cvsweb - a CGI interface to CVS trees.
 #
@@ -45,9 +45,9 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $Id: cvsweb.cgi,v 1.89 2005-10-28 14:55:57 fenner Exp $
+# $Id: cvsweb.cgi,v 1.90 2007-03-17 20:53:48 simon Exp $
 # $Idaemons: /home/cvs/cvsweb/cvsweb.cgi,v 1.84 2001/10/07 20:50:10 knu Exp $
-# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.88 2002/09/30 21:02:05 scop Exp $
+# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.89 2005/10/28 14:55:57 fenner Exp $
 #
 ###
 
@@ -236,7 +236,7 @@ $LOG_REVSEPARATOR  = q/^-{28}$/;
 );
 
 $cgi_style::hsty_base = 'http://www.FreeBSD.org';
-$_ = q$FreeBSD: www/en/cgi/cvsweb.cgi,v 1.88 2002/09/30 21:02:05 scop Exp $;
+$_ = q$FreeBSD: www/en/cgi/cvsweb.cgi,v 1.89 2005/10/28 14:55:57 fenner Exp $;
 @_ = split;
 $cgi_style::hsty_date = "@_[3,4]";
 
