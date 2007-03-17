@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/layout/css/Makefile,v 1.2 2006/09/18 21:25:38 shaun Exp $
+# $FreeBSD: www/en/layout/css/Makefile,v 1.3 2007/03/17 15:36:10 simon Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -7,7 +7,8 @@
 .include "../Makefile.inc"
 .endif
 
-DATA=	fixed.css
+DATA=	cvsweb.css
+DATA+=	fixed.css
 DATA+=	fixed_large.css
 DATA+=	global.css
 DATA+=	iefixes.css
