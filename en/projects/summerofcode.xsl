@@ -7,7 +7,7 @@
 <!ENTITY % developers SYSTEM "../developers.sgml"> %developers;
 ]>
 
-<!-- $FreeBSD: www/en/projects/summerofcode.xsl,v 1.2 2007/03/10 05:06:40 murray Exp $ -->
+<!-- $FreeBSD: www/en/projects/summerofcode.xsl,v 1.3 2007/03/15 16:15:50 murray Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -227,14 +227,16 @@ active in the community.</p>
     <p>Please see the program wiki <a
       href="http://code.google.com/p/google-summer-of-code/">here</a>.</p></li>
 
-  <li><p><strong>When does the application period begin?</strong></p>
+  <li><p><strong>When does the application period end?</strong></p>
 
-    <p>March 2007.</p></li>
+    <p>Applications will be accepted from March 14-24, 2007.  Students
+      are encouraged to apply early, so that any questions or
+      requests for clarification can be made before the deadline.</p></li>
 
   <li><p><strong>Where do I send my proposal?</strong></p>
 
-    <p>Proposals must be sent directly to Google when the application
-      period begins.</p></li>
+    <p>Proposals must be sent directly to <a
+      href="http://code.google.com/soc">Google</a>.</p></li>
 
   <li><p><strong>What projects were completed successfully by students
     last summer?</strong></p>
