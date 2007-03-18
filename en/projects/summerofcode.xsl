@@ -7,7 +7,7 @@
 <!ENTITY % developers SYSTEM "../developers.sgml"> %developers;
 ]>
 
-<!-- $FreeBSD: www/en/projects/summerofcode.xsl,v 1.3 2007/03/15 16:15:50 murray Exp $ -->
+<!-- $FreeBSD: www/en/projects/summerofcode.xsl,v 1.4 2007/03/18 18:52:25 murray Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -43,8 +43,8 @@
   Code</a> 2007.  This program funds students to contribute to an open
   source project over the summer break.  We had dozens of successful
   students working on FreeBSD as part of this program in <a
-  href="&base;/summerofcode-2005.html">2005</a> and <a
-  href="&base;/summerofcode-2006.html">2006</a>.</p>
+  href="&base;/projects/summerofcode-2005.html">2005</a> and <a
+  href="&base;/projects/summerofcode-2006.html">2006</a>.</p>
 
 <ul>
   <li><a href="#students">Past Student Projects</a></li>
