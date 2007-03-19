@@ -26,9 +26,11 @@
 #
 # url.cgi - make plain text URLs clickable
 #
-# $FreeBSD: www/en/cgi/url.cgi,v 1.34 2005/10/20 20:03:36 fenner Exp $
+# $FreeBSD: www/en/cgi/url.cgi,v 1.35 2007/03/19 17:52:39 wosch Exp $
 
 use strict;
+
+$ENV{"PATH"} = "/bin:/usr/bin";
 
 $main::hsty_email = 'ports@FreeBSD.org';
 
@@ -64,6 +66,9 @@ if ($file =~ m%^ports/([\w\-]+)/(\w[\w\-+.]+)/pkg-descr%) {
     print &html_header(
        "Port description for $1/$2");
     $portcategory = $1;
+
+    # XXX: shut up perl -T warnings
+    $file = qq{ports/$1/$2/pkg-descr};
 } else {
     print &short_html_header($file);
 }
