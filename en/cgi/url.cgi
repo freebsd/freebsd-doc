@@ -26,7 +26,7 @@
 #
 # url.cgi - make plain text URLs clickable
 #
-# $FreeBSD: www/en/cgi/url.cgi,v 1.33 2004/04/04 21:49:38 phantom Exp $
+# $FreeBSD: www/en/cgi/url.cgi,v 1.34 2005/10/20 20:03:36 fenner Exp $
 
 use strict;
 
@@ -60,7 +60,7 @@ $file =~ s%/pkg/DESCR$%/pkg-descr%;
 
 # print HTML header
 $file =~ s%(http|ftp)://ftp.FreeBSD.org/pub/FreeBSD/(branches/|FreeBSD)-current/%%i;
-if ($file =~ m%^ports/([\w-]+)/(\w[\w-+.]+)/pkg-descr%) {
+if ($file =~ m%^ports/([\w\-]+)/(\w[\w\-+.]+)/pkg-descr%) {
     print &html_header(
        "Port description for $1/$2");
     $portcategory = $1;
@@ -68,7 +68,7 @@ if ($file =~ m%^ports/([\w-]+)/(\w[\w-+.]+)/pkg-descr%) {
     print &short_html_header($file);
 }
 
-my $isvalidfilename = ($file =~ m%^ports/[\w-]+/\w[\w-+.]*/pkg-descr%);
+my $isvalidfilename = ($file =~ m%^ports/[\w\-]+/\w[\w\-+.]*/pkg-descr%);
 my $atticfile = $file;
 $atticfile =~ s%^(.*)/([^/]+)$%$1/Attic/$2%;
 
@@ -123,7 +123,7 @@ print $content;
 print "</pre>\n";
 
 # Add 'source' link for freebsd ports
-if ($file =~ m%^(ports/[\w-]+/\w[\w-+.]+)/pkg-descr%) {
+if ($file =~ m%^(ports/[\w\-]+/\w[\w\-+.]+)/pkg-descr%) {
     print qq{<HR><a href=\"pds.cgi?$1">Sources</a> |\n};
     print qq{<a href=\"../ports/$portcategory.html">};
     print qq{Category $portcategory</a>\n};
