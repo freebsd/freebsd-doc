@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp 
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.170 2007-02-23 21:09:54 ceri Exp $
+# $Id: man.cgi,v 1.171 2007-03-19 18:26:27 wosch Exp $
 
 ############################################################################
 # !!! man.cgi is stale perl4 code !!!
@@ -488,6 +488,8 @@ sub do_man {
     if (!$apropos && $query =~ m/^(.*)\(([^\)]*)\)/) {
 	$name = $1; $section = $2;
     }
+    $name = $1 if $name =~ /^([\w\-]+)$/;
+    $section = $1 if $section =~ /^([\w\-]+)$/;
     
     $apropos  ?  &apropos($query)  :  &man($name, $section);
 }
@@ -714,7 +716,7 @@ sub man {
         push(@manargs, '-t');
     }
 
-    # print "X $command{'man'} @manargs -- x $name x\n";
+    # warn "X $command{'man'} @manargs -- x $name x\n";
     &proc(*MAN, $command{'man'}, @manargs, "--", $name) ||
 	&mydie ("$0: open of $command{'man'} command failed: $!\n");
     if (eof(MAN)) {
@@ -1081,7 +1083,7 @@ ETX
 }
 
 sub copyright {
-    $id = '$Id: man.cgi,v 1.170 2007-02-23 21:09:54 ceri Exp $';
+    $id = '$Id: man.cgi,v 1.171 2007-03-19 18:26:27 wosch Exp $';
 
     return qq{\
 <PRE>
@@ -1133,7 +1135,7 @@ sub faq {
 	     &encode_url($_) . "\n") if $manPathAliases{$_};
     }
 
-    local $id = '$Id: man.cgi,v 1.170 2007-02-23 21:09:54 ceri Exp $';
+    local $id = '$Id: man.cgi,v 1.171 2007-03-19 18:26:27 wosch Exp $';
     return qq{\
 <PRE>
 Copyright (c) 1996-2007 <a href="$mailtoURL">Wolfram Schneider</A>
