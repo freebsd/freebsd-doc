@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp 
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.171 2007-03-19 18:26:27 wosch Exp $
+# $Id: man.cgi,v 1.172 2007-03-20 20:03:07 wosch Exp $
 
 ############################################################################
 # !!! man.cgi is stale perl4 code !!!
@@ -451,9 +451,9 @@ sub do_man {
     $format = 'html' if $format !~ /^(ps|pdf|ascii|latin1|dvi|troff)$/;
 
     local($fform) = &dec($form);
-    if ($fform =~ m%^([a-zA-Z_\-]+)$%) {
+    if ($fform =~ m%^([a-zA-Z_\-\.]+)$%) {
 	return &man($1, '');
-    } elsif ($fform =~ m%^([a-zA-Z_\-]+)\(([0-9a-zA-Z]+)\)$%) {
+    } elsif ($fform =~ m%^([a-zA-Z_\-\.]+)\(([0-9a-zA-Z]+)\)$%) {
 	return &man($1, $2);
     }
 
@@ -488,8 +488,8 @@ sub do_man {
     if (!$apropos && $query =~ m/^(.*)\(([^\)]*)\)/) {
 	$name = $1; $section = $2;
     }
-    $name = $1 if $name =~ /^([\w\-]+)$/;
-    $section = $1 if $section =~ /^([\w\-]+)$/;
+    $name = $1 if $name =~ /^([\w\-\.]+)$/;
+    $section = $1 if $section =~ /^([\w\-\.]+)$/;
     
     $apropos  ?  &apropos($query)  :  &man($name, $section);
 }
@@ -1083,7 +1083,7 @@ ETX
 }
 
 sub copyright {
-    $id = '$Id: man.cgi,v 1.171 2007-03-19 18:26:27 wosch Exp $';
+    $id = '$Id: man.cgi,v 1.172 2007-03-20 20:03:07 wosch Exp $';
 
     return qq{\
 <PRE>
@@ -1135,7 +1135,7 @@ sub faq {
 	     &encode_url($_) . "\n") if $manPathAliases{$_};
     }
 
-    local $id = '$Id: man.cgi,v 1.171 2007-03-19 18:26:27 wosch Exp $';
+    local $id = '$Id: man.cgi,v 1.172 2007-03-20 20:03:07 wosch Exp $';
     return qq{\
 <PRE>
 Copyright (c) 1996-2007 <a href="$mailtoURL">Wolfram Schneider</A>
