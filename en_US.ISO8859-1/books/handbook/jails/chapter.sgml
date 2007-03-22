@@ -1,0 +1,463 @@
+<!--
+    The FreeBSD Documentation Project
+
+    $FreeBSD$
+-->
+<chapter id="jails">
+  <chapterinfo>
+    <authorgroup>
+      <author>
+	<firstname>Matteo</firstname>
+	<surname>Riondato</surname>
+	<contrib>Contributed by </contrib>
+      </author>
+    </authorgroup>
+  </chapterinfo>
+
+  <title>Jails</title>
+
+  <indexterm><primary>jails</primary></indexterm>
+
+  <sect1 id="jails-synopsis">
+    <title>Synopsis</title>
+
+    <para>This chapter will provide an explanation of what &os; jails
+      are and how to use them.  Jails, sometimes referred to as an
+      enhanced replacement of <emphasis>chroot environments</emphasis>,
+      are very powerful tool for system administrators but their basic
+      usage can also be useful for advanced users.</para>
+
+    <para>After reading this chapter, you will know:</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>What a jail is and what purpose it may serve in &os;
+	  installations.</para>
+      </listitem>
+
+      <listitem>
+	<para>How to build, start, and stop a jail.</para>
+      </listitem>
+
+      <listitem>
+	<para>The basics of jail administration, both from inside
+	  and outside the jail.</para>
+      </listitem>
+    </itemizedlist>
+
+    <para>Other sources of useful information about jails are:</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>The &man.jail.8; manual page.  This is the full reference
+	  of the <command>jail</command> utility &mdash; the
+	  administrative tool which can be used in &os; to start, stop,
+	  and control &os; jails.</para>
+      </listitem>
+
+      <listitem>
+	<para>The mailing lists and their archives.  The archives of the
+	  &a.questions; and other mailing lists hosted by the
+	  &a.mailman.lists; already contain a wealth of material for
+	  jails.  It should always be engaging to search the archives,
+	  or post a new question to the &a.questions.name; mailing
+	  list.</para>
+      </listitem>
+    </itemizedlist>
+
+  </sect1>
+
+  <sect1 id="jails-terms">
+    <title>Terms Related to Jails</title>
+
+    <para>To facilitate better understanding of parts of the &os; system
+      related to jails, their internals and the way they interact with
+      the rest of &os;, the following terms are used further in this
+      section:</para>
+
+    <variablelist>
+      <varlistentry>
+        <term>&man.chroot.2; (command)</term>
+        <listitem><para></para></listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>&man.chroot.2; (environment)</term>
+        <listitem><para></para></listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>&man.jail.8; (command)</term>
+        <listitem><para></para></listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>host (system, process, user, etc.)</term>
+        <listitem><para></para></listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>hosted (system, process, user, etc.)</term>
+        <listitem><para></para></listitem>
+      </varlistentry>
+    </variablelist>
+  </sect1>
+
+  <sect1 id="jails-intro">
+    <title>Introduction</title>
+
+    <para>Since the system administration is a difficult and perplexing
+      task, many powerful tools were developed to make life easier for
+      the administrator.  That mostly provide enhancements of some sort
+      to the way systems are installed, configured and then maintained
+      without problems.  Part of these tasks which an administrator is
+      expected to do is to properly configure the security of a system,
+      so that it can continue serving its real purpose, without allowing
+      security violations.</para>
+
+    <para>One of the tools which can be used to enhance the security of
+      a &os; system are <emphasis>jails</emphasis>.  Jails were
+      introduced in &os; 4.X by &a.phk;, but were greatly improved in
+      &os; 5.X to make them a powerful and flexible subsystem.  Their
+      development still goes on to zest their usefulness, performance
+      and security.</para>
+
+    <sect2 id="jails-what">
+      <title>What is a Jail</title>
+
+      <para>BSD-like operating systems have had &man.chroot.2; since the
+	time of 4.2BSD.  The &man.chroot.2; utility can be used to
+	change the <filename role="directory">/</filename> directory
+	of a set of processes, creating a safe environment, separate
+	from the rest of the system: processes created in the chrooted
+	environment can not access files or resources outside of it.
+	For that reason, compromising a service running in a chrooted
+	environment should not allow the attacker to compromise the
+	entire system.  The &man.chroot.2; utility is good for easy
+	tasks, which do not require a lot of flexibility or complex and
+	advanced features.  Furthermore, since the inception of the
+	chroot concept, many ways have been found to escape from a
+	chrooted environment and, although they have been fixed in
+	modern versions of the &os; kernel, it was clear that
+	&man.chroot.2; was not the ideal solution for securing services.
+	A new subsystem had to be implemented.</para>
+
+      <para>These are the one of the main reasons why
+	<emphasis>jails</emphasis> were developed.</para>
+
+      <para>Jails improve on the concept of the traditional
+	&man.chroot.2; environment, in several ways.  In a traditional
+	&man.chroot.2; environment, processes are only limited in the
+	part of the file system they can access.  The rest of the system
+	resources (like the set of system users, the running processes,
+	or the networking subsystem) are shared by the chrooted
+	processes and the processes of the host system.  Jails expand
+	this model by virtualizing not only access to the file system,
+	but also the set of users, the networking subsystem of the &os;
+	kernel and a few other things.  A more complete set of
+	fine-grained controls available for tuning the access of a
+	jailed environment is described in <xref
+	  linkend="jails-tuning">.</para>
+
+      <para>A jail is characterized by four elements:</para>
+
+      <itemizedlist>
+	<listitem>
+	  <para>A directory subtree &mdash; the starting point from
+	    which a jail is entered.  Once inside the jail, a process
+	    is not permitted to escape outside of this subtree.
+	    Traditional security issues which plagued the original
+	    &man.chroot.2; design will not affect &os; jails.</para>
+	</listitem>
+
+	<listitem>
+	  <para>A hostname &mdash; the hostname which will be used
+	    within the jail.  Jails are mainly used for hosting network
+	    services, therefore having a descriptive hostname for each
+	    jail can really help the system administrator.</para>
+	</listitem>
+
+	<listitem>
+	  <para>An <acronym>IP</acronym> address &mdash; this will be
+	    assigned to the jail and cannot be changed in any way during
+	    the jail's life span.  It will usually be an alias address
+	    for an existing network interface.</para>
+	</listitem>
+
+	<listitem>
+	  <para>A command &mdash; the path name of an executable to run
+	    inside the jail.  This is relative to the root directory of
+	    the jail environment, and may vary a lot, depending on the
+	    type of the specific jail environment.</para>
+	</listitem>
+      </itemizedlist>
+
+      <para>Apart from these, jails can have their own set of users and
+	their own <username>root</username> user.  Naturally, the powers
+	of the <username>root</username> user are limited within the
+	jail environment and, from the point of view of the host system,
+	the jail <username>root</username> user is not omnipotent user.
+	In addition, the <username>root</username> user will not be
+	allowed to perfom critical operations to the system outside of
+	their respective &man.jail.8; environment.  More information
+	about capabilities and restrictions of the
+	<username>root</username> user will be discussed in <xref
+	  linkend="jails-tuning"> below.</para>
+    </sect2>
+  </sect1>
+
+  <sect1 id="jails-build">
+    <title>Creating, and Controlling the jail</title>
+
+    <para>Some administrators divide jails into the following two types:
+      <quote>complete</quote> jails, which resemble a real &os; system,
+      and <quote>service</quote> jails, dedicated to one application or
+      service, possibly running with privileges.  This is only a
+      conceptual division and the process of building a jail is not
+      affected by it.  The &man.jail.8; manual page is quite clear about
+      the procedure for building a jail:</para>
+
+      <screen>&prompt.root; <userinput>setenv D <replaceable>/here/is/the/jail</replaceable></userinput>
+&prompt.root; <userinput>mkdir -p $D</userinput> <co id="jailpath">
+&prompt.root; <userinput>cd /usr/src</userinput>
+&prompt.root; <userinput>make world DESTDIR=$D</userinput> <co id="jailworld">
+&prompt.root; <userinput>cd etc/</userinput> <footnote><para>This step
+is not required on &os; 6.0 and later.</para></footnote>
+&prompt.root; <userinput>make distribution DESTDIR=$D</userinput> <co id="jaildistrib">
+&prompt.root; <userinput>mount_devfs devfs $D/dev</userinput> <co id="jaildevfs"></screen>
+
+    <calloutlist>
+      <callout arearefs="jailpath">
+	<para>Selecting a location for jail is the best starting point.
+	  This is where a jail will physically reside on the host
+	  system.  A good choice can be <filename
+	    role="directory">/usr/jail/<replaceable>jailname</replaceable></filename>,
+	  where <replaceable>jailname</replaceable> is the hostname
+	  identifying the jail.  The <filename
+	    role="directory">/usr/</filename> file system usually has
+	  enough space for the jail file system, which is, in practice,
+	  a replication of every file present in a default installation
+	  of the &os; base system.</para>
+      </callout>
+
+      <callout arearefs="jailworld">
+	<para>This command will populate the directory subtree chosen
+	  as jail's physical location on the file system with the
+	  necessary binaries, libraries, manual pages and so on.
+	  Everything is done in the typical &os; style &mdash; first
+	  everything is built/compiled, then installed to the
+	  destination path.</para>
+      </callout>
+
+      <callout arearefs="jaildistrib">
+	<para>The <maketarget>distribution</maketarget> target for
+	  <application>make</application> installs every needed
+	  configuration file, in poor words, it copies
+	  <filename role="directory">/usr/src/etc/</filename> to
+	  <filename role="directory">$D/etc/</filename>.</para>
+      </callout>
+
+      <callout arearefs="jaildevfs">
+	<para>Mounting the &man.devfs.8; file system inside the jail is
+	  not required.  On the other hand, any, or almost any
+	  application requires access to at least one device, depending
+	  on the purpose of the given application.  It is very important
+	  to control access to devices from inside a jail, as improper
+	  settings could permit an attacker to do nasty things in the
+	  jail.  Control over &man.devfs.8; is managed through rulesets
+	  which are described in the &man.devfs.8; and
+	  &man.devfs.conf.5; manual pages.</para>
+      </callout>
+    </calloutlist>
+
+    <para>Once a jail is installed, it can be started by using the
+      &man.jail.8; utility.  The  &man.jail.8; utility takes four
+      mandatory arguments which are described in the <xref
+	linkend="jails-what"> section.  Other arguments may be
+      specified and give the ability to run the program as a specific
+      user.  The <command>command</command> argument depends on
+      the type of the jail; for a <emphasis>virtual system</emphasis>,
+      <filename>/etc/rc</filename> is a good choice, since it will
+      replicate the startup sequence of a real &os; system.  For a
+      <emphasis>service</emphasis> jail, it depends on the service or
+      application that will run within the jail.</para>
+
+    <para>Jails are often started at boot time and the &os;
+      <filename>rc</filename> mechanism provides an easy way to do
+      this.</para>
+
+    <procedure>
+      <step>
+	<para>A list of the jails which are enabled to start at boot
+	  time should be added to the &man.rc.conf.5; file:</para>
+
+	<programlisting>jail_enable="YES"   # Set to NO to disable starting of any jails
+jail_list="<replaceable>www</replaceable>"     # Space separated list of names of jails</programlisting>
+      </step>
+
+      <step>
+	<para>For each jail listed in <varname>jail_list</varname>, a
+	  group of &man.rc.conf.5; settings, which describe the
+	  particular jail, should be added:</para>
+
+	<programlisting>jail_<replaceable>www</replaceable>_rootdir="/usr/jail/www"     # jail's root directory
+jail_<replaceable>www</replaceable>_hostname="<replaceable>www</replaceable>.example.org"   # jail's hostname
+jail_<replaceable>www</replaceable>_ip_="192.168.0.10"          # jail's IP address
+jail_<replaceable>www</replaceable>_devfs_enable="YES"          # mount devfs in the jail
+jail_<replaceable>www</replaceable>_devfs_ruleset="<replaceable>www_ruleset</replaceable>" # devfs ruleset to apply to jail</programlisting>
+
+	<para>The default startup of jails configured in
+	  &man.rc.conf.5;, will run the <filename>/etc/rc</filename>
+	  script of the jail, which assumes the jail is a complete
+	  virtual system.  For service jails, the default startup
+	  command of the jail should be changed, by setting the
+	  <varname>jail_<replaceable>jailname</replaceable>_exec_start</varname>
+	  option appropriately.</para>
+
+	<note>
+	  <para>For full list of available options, please see the
+	    &man.rc.conf.5; manual page.</para>
+	</note>
+    </procedure>
+
+    <para>The <filename>/etc/rc.d/jail</filename> script can be used to
+      start or stop a jail by hand, if an entry for it exists in
+      <filename>rc.conf</filename>:</para>
+
+    <screen>&prompt.root; <userinput>/etc/rc.d/jail start <replaceable>www</replaceable></userinput>
+&prompt.root; <userinput>/etc/rc.d/jail stop <replaceable>www</replaceable></userinput></screen>
+
+    <para>A clean way to shut down a &man.jail.8; is not available at
+      the moment.  This is because commands normally used to accomplish
+      a clean system shutdown cannot be used inside a jail.  The best
+      way to shut down a jail is to run the following command from
+      within the jail itself or using the &man.jexec.8; utility from
+      outside the jail:</para>
+
+    <screen>&prompt.root; <userinput>sh /etc/rc.shutdown</userinput></screen>
+
+    <para>More information about this can be found in the &man.jail.8;
+      manual page.</para>
+  </sect1>
+
+  <sect1 id="jails-tuning">
+    <title>Fine Tuning and Administration</title>
+
+    <para>There are several options which can be set for any jail, and
+      various ways of combining a host &os; system with jails, to produce
+      higher level applications.  This section presents:</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>Some of the options available for tuning the behavior and
+	  security restrictions implemented by a jail
+	  installation.</para>
+      </listitem>
+
+      <listitem>
+	<para>Some of the high-level applications for jail management,
+	  which are available through the &os; Ports Collection, and can
+	  be used to implement overall jail-based solutions.</para>
+    </itemizedlist>
+
+    <sect2 id="jails-tuning-utilities">
+      <title>System tools for jail tuning in &os;</title>
+
+      <para>Fine tuning of a jail's configuration is mostly done by
+	setting &man.sysctl.8; variables.  A special subtree of sysctl
+	exists as a basis for organizing all the relevant options; the
+	<varname>security.jail.*</varname> hierarchy of &os; kernel
+	options.  Here is a list of the main jail-related sysctls,
+	complete with their default value.  Names should be
+	self-explanatory, but for more information about them, please
+	refer to the &man.jail.8; and &man.sysctl.8; manual
+	pages.</para>
+
+      <itemizedlist>
+	<listitem>
+	  <para><varname>security.jail.set_hostname_allowed:
+	     1</varname></para>
+	</listitem>
+
+	<listitem>
+	  <para><varname>security.jail.socket_unixiproute_only:
+	     1</varname></para>
+	</listitem>
+
+	<listitem>
+	  <para><varname>security.jail.sysvipc_allowed:
+	     0</varname></para>
+	</listitem>
+
+	<listitem>
+	  <para><varname>security.jail.enforce_statfs:
+	     2</varname></para>
+	</listitem>
+
+	<listitem>
+	  <para><varname>security.jail.allow_raw_sockets:
+	     0</varname></para>
+	</listitem>
+
+	<listitem>
+	  <para><varname>security.jail.chflags_allowed:
+	    0</varname></para>
+	</listitem>
+
+	<listitem>
+	  <para><varname>security.jail.jailed: 0</varname></para>
+	</listitem>
+      </itemizedlist>
+
+      <para>These variables can be used by the system administrator of
+	the <emphasis>host system</emphasis> to add or remove some of
+	the limitations imposed by default on the
+	<username>root</username> user.  Note that there are some
+	limitations which cannot be removed.  The
+	<username>root</username> user is not allowed to mount or
+	unmount file systems from within a &man.jail.8;.  The
+	<username>root</username> inside a jail may not load or unload
+	&man.devfs.8; rulesets, set firewall rules, or do many other
+	administration tasks which require modifications of in-kernel
+	data, such as setting the <varname>securelevel</varname> of the
+	kernel.</para>
+
+      <para>The base system of &os; contains a basic set of tools for
+	viewing information about the active jails, and attaching to a
+	jail to run administrative commands.  The &man.jls.8; and
+	&man.jexec.8; are part of the base &os; system, and can be used
+	to perform the following simple tasks:</para>
+
+      <itemizedlist>
+	<listitem>
+	  <para>Print a list of active jails and their corresponding
+	    jail identifier (<acronym>JID</acronym>),
+	    <acronym>IP</acronym> address, hostname and path.</para>
+	</listitem>
+
+	<listitem>
+	  <para>Attach to a running jail, from its host system, and run
+	    a command inside the jail administrative tasks inside the
+	    jail itself).  This is especially useful when the
+	    <username>root</username> user wants to cleanly shut down a
+	    jail.  The &man.jexec.8; utility can also be used to start a
+	    shell in a jail to do administration in it; for
+	    example:</para>
+
+	  <screen>&prompt.root; <userinput>jexec <replaceable>1</replaceable> tcsh</userinput></screen>
+	</listitem>
+      </itemizedlist>
+    </sect2>
+
+    <sect2 id="jails-tuning-admintools">
+      <title>High-level administrative tools in &os; Ports
+	Collection</title>
+
+    <para>Among the many third-party utilities for jail administration,
+      one of the most complete and useful is <filename
+	role="package">sysutils/jailutils</filename>.  It is a set of
+      small applications that contribute to &man.jail.8; management.
+      Please refer to its web page for more information.</para>
+    </sect2>
+  </sect1>
+</chapter>
