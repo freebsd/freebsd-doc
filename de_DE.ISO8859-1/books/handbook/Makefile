@@ -1,7 +1,7 @@
 #
 # $FreeBSD$
-# $FreeBSDde: de-docproj/books/handbook/Makefile,v 1.51 2006/05/17 19:51:09 jkois Exp $
-# basiert auf: 1.100
+# $FreeBSDde: de-docproj/books/handbook/Makefile,v 1.52 2007/03/23 15:50:37 jkois Exp $
+# basiert auf: 1.101
 #
 # Build the FreeBSD Handbook in its German translation.
 #
@@ -150,6 +150,7 @@ SRCS+= firewalls/chapter.sgml
 SRCS+= geom/chapter.sgml
 SRCS+= install/chapter.sgml
 SRCS+= introduction/chapter.sgml
+SRCS+= jails/chapter.sgml
 SRCS+= kernelconfig/chapter.sgml
 SRCS+= l10n/chapter.sgml
 SRCS+= linuxemu/chapter.sgml
