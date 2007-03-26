@@ -1,4 +1,4 @@
-# $FreeBSD: www/hu/Makefile,v 1.1 2007/01/07 22:44:46 keramida Exp $
+# $FreeBSD: www/hu/Makefile,v 1.2 2007/01/09 17:09:54 keramida Exp $
 
 ###################################################
 # The FreeBSD Hungarian Documentation Project     #
@@ -14,6 +14,7 @@
 # These are turned into validated, normalized HTML files.
 
 DOCS=	about.sgml
+DOCS+=	administration.sgml
 DOCS+=	applications.sgml
 DOCS+=	art.sgml
 DOCS+=	community.sgml
