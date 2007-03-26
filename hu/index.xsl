@@ -4,11 +4,11 @@
 <!ENTITY title "A FreeBSD Projekt">
 ]>
 
-<!-- $FreeBSD: www/hu/index.xsl,v 1.3 2007/01/15 15:08:11 keramida Exp $ -->
+<!-- $FreeBSD: www/hu/index.xsl,v 1.4 2007/01/21 06:58:32 keramida Exp $ -->
 
 <!-- FreeBSD Hungarian Documentation Project
      Translated by: Gabor Kovesdan <gabor@FreeBSD.org>
-     Original Revision: r1.159				-->
+     Original Revision: r1.160				-->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
@@ -73,7 +73,7 @@
 				  A FreeBSD&reg; egy fejlett oper&aacute;ci&oacute;s rendszer x86
 				  kompatibilis (Pentium&reg; &eacute;s Athlon&trade;), amd64
 				  kompatibilis (Opteron&trade;, Athlon&trade;64, &eacute;s EM64T),
-				  Alpha/AXP, IA-64, PC-98 &eacute;s UltraSPARC&reg;
+				  UltraSPARC&reg;, IA-64, PC-98 &eacute;s ARM
 				  sz&aacute;m&iacute;t&oacute;g&eacute;p-architekt&uacute;r&aacute;kra.  A
 				  BSD rendszer lesz&aacute;rmazottja, amely a &unix; egy
 				  olyan verzi&oacute;ja, amelyet a california-i Berkeley
@@ -180,7 +180,7 @@
 					  <a href="&base;/community/mailinglists.html" title="Levelez&eacute;si List&aacute;k">Levelez&eacute;si List&aacute;k</a>
 					</li>
 					<li>
-					  <a href="&base;/send-pr.html" title="Hibajelent&eacute;s">Hibajelent&eacute;s</a>
+					  <a href="&base;/support/bugreports.html" title="Hibajelent&eacute;s">Hibajelent&eacute;s</a>
 					</li>
 					<li>
 					  <a href="&enbase;/doc/en_US.ISO8859-1/books/faq/index.html" title="GYIK">GYIK</a>
