@@ -1,7 +1,7 @@
 # The FreeBSD Simplified Chinese Documentation Project
 #
 # Original Revision 1.10
-# $FreeBSD: www/zh_CN/platforms/Makefile,v 1.1.1002.3 2006/03/04 08:15:43 delphij Exp $
+# $FreeBSD$
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -21,7 +21,7 @@ DOCS+=	index.sgml
 #DOCS+=	sparc.sgml
 #DOCS+=	xbox.sgml
 
-#SUBDIR=	amd64
+SUBDIR=	amd64
 #SUBDIR+=ia64
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
