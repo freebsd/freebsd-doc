@@ -5,7 +5,7 @@
 ]>
 <!--
      $FreeBSD$
-     $FreeBSDde: de-www/index.xsl,v 1.75 2007/03/11 17:17:55 jkois Exp $
+     $FreeBSDde: de-www/index.xsl,v 1.76 2007/03/31 14:27:06 jkois Exp $
      basiert auf: 1.160
 -->
 
@@ -196,7 +196,7 @@
 					  <a href="&enbase;/doc/&url.doc.langcode;/books/handbook/index.html" title="Handbook">Handbuch</a>
                                         </li>
 					<li>
-					  <a href="&enbase;/ports/index.html" title="Ports">Ports-Sammlung</a>
+					  <a href="&base;/ports/index.html" title="Ports">Ports-Sammlung</a>
 					</li>
 				  </ul>
 			  </div> <!-- FRONTSHORTCUTSCONTENT -->
