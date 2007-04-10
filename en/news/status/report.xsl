@@ -2,12 +2,12 @@
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
 <!ENTITY base "../..">
-<!ENTITY title "FreeBSD Status Report">
+<!ENTITY title "FreeBSD Quarterly Status Report">
 <!ENTITY email "freebsd-www">
 <!ENTITY % navinclude.about "INCLUDE">
 ]>
 
-<!-- $FreeBSD: www/en/news/status/report.xsl,v 1.9 2006/01/21 14:58:36 pav Exp $ -->
+<!-- $FreeBSD: www/en/news/status/report.xsl,v 1.10 2006/08/19 21:20:40 hrs Exp $ -->
 
 <!-- Standard header material -->
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
