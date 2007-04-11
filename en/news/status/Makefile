@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/news/status/Makefile,v 1.36 2007/01/16 22:50:46 mlaier Exp $
+# $FreeBSD: www/en/news/status/Makefile,v 1.37 2007/04/10 03:35:31 brd Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -9,33 +9,33 @@
 
 DOCS=	status.sgml
 
-XMLDOCS=	report-june-2001
-XMLDOCS+=	report-july-2001
-XMLDOCS+=	report-august-2001
-XMLDOCS+=	report-september-2001
-XMLDOCS+=	report-november-2001
-XMLDOCS+=	report-dec-2001-jan-2002
-XMLDOCS+=	report-feb-2002-apr-2002
-XMLDOCS+=	report-may-2002-june-2002
-XMLDOCS+=	report-july-2002-aug-2002
-XMLDOCS+=	report-sept-2002-oct-2002
-XMLDOCS+=	report-nov-2002-dec-2002
-XMLDOCS+=	report-jan-2003-feb-2003
-XMLDOCS+=	report-mar-2003-sep-2003
-XMLDOCS+=	report-oct-2003-dec-2003
-XMLDOCS+=	report-jan-2004-feb-2004
-XMLDOCS+=	report-mar-2004-apr-2004
-XMLDOCS+=	report-may-2004-june-2004
-XMLDOCS+=	report-july-2004-dec-2004
-XMLDOCS+=	report-jan-2005-mar-2005
-XMLDOCS+=	report-mar-2005-june-2005
-XMLDOCS+=	report-july-2005-oct-2005
-XMLDOCS+=	report-oct-2005-dec-2005
-XMLDOCS+=	report-jan-2006-mar-2006
-XMLDOCS+=	report-apr-2006-jun-2006
-XMLDOCS+=	report-june-2006-oct-2006
-XMLDOCS+=	report-oct-2006-dec-2006
-XMLDOCS+=	report-2007-jan-2007-mar
+XMLDOCS=	report-2001-06
+XMLDOCS+=	report-2001-07
+XMLDOCS+=	report-2001-08
+XMLDOCS+=	report-2001-09
+XMLDOCS+=	report-2001-11
+XMLDOCS+=	report-2001-12-2002-01
+XMLDOCS+=	report-2002-02-2002-04
+XMLDOCS+=	report-2002-05-2002-06
+XMLDOCS+=	report-2002-07-2002-08
+XMLDOCS+=	report-2002-09-2002-10
+XMLDOCS+=	report-2002-11-2002-12
+XMLDOCS+=	report-2003-01-2003-02
+XMLDOCS+=	report-2003-03-2003-09
+XMLDOCS+=	report-2003-10-2003-12
+XMLDOCS+=	report-2004-01-2004-02
+XMLDOCS+=	report-2004-03-2004-04
+XMLDOCS+=	report-2004-05-2004-06
+XMLDOCS+=	report-2004-07-2004-12
+XMLDOCS+=	report-2005-01-2005-03
+XMLDOCS+=	report-2005-03-2005-06
+XMLDOCS+=	report-2005-07-2005-10
+XMLDOCS+=	report-2005-10-2005-12
+XMLDOCS+=	report-2006-01-2006-03
+XMLDOCS+=	report-2006-04-2006-06
+XMLDOCS+=	report-2006-06-2006-10
+XMLDOCS+=	report-2006-10-2006-12
+XMLDOCS+=	report-2007-01-2007-03
 
 XSLT.DEFAULT=	report.xsl
 
