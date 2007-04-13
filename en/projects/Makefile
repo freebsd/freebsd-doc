@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/projects/Makefile,v 1.29 2007/02/12 20:43:06 joel Exp $
+# $FreeBSD: www/en/projects/Makefile,v 1.30 2007/03/10 04:46:52 murray Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -12,6 +12,7 @@ DOCS+=	newbies.sgml
 DOCS+=	cvsweb.sgml
 DOCS+=	summerofcode-2005.sgml
 DOCS+=	summerofcode-2006.sgml
+DOCS+=	summerofcode-2007.sgml
 
 XML_IDEAS=		${WEB_PREFIX}/en/projects/ideas/ideas.xml
 XSL_SOC=		${WEB_PREFIX}/en/projects/summerofcode.xsl
