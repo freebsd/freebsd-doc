@@ -7,7 +7,7 @@
 <!ENTITY % developers SYSTEM "../developers.sgml"> %developers;
 ]>
 
-<!-- $FreeBSD: www/en/projects/summerofcode.xsl,v 1.5 2007/03/18 22:32:32 murray Exp $ -->
+<!-- $FreeBSD: www/en/projects/summerofcode.xsl,v 1.6 2007/04/13 02:02:54 murray Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -45,8 +45,8 @@
   students working on FreeBSD as part of this program in <a
   href="&base;/projects/summerofcode-2005.html">2005</a> and <a
   href="&base;/projects/summerofcode-2006.html">2006</a>.  We are
-  currently working with our 25 successful students for <a
-  href="&base;/projects/summerofcode-2007.html">Summer 2007</a></p>
+  currently working with 25 talented students for <a
+  href="&base;/projects/summerofcode-2007.html">Summer 2007</a>.</p>
 
 <a name="students"></a>
 <h2>Past Student Projects</h2>
@@ -55,7 +55,7 @@
 visit:</p>
 <ul>
   <li><a href="&base;/projects/summerofcode-2007.html">Summer of Code 2007 FreeBSD
-  Projects Summary</a> <em>(In Progress)</em></li>
+  Projects Summary</a> &nbsp; <em>(In Progress)</em></li>
   <li><a href="&base;/projects/summerofcode-2006.html">Summer of Code 2006 FreeBSD
   Projects Summary</a></li>
   <li><a href="&base;/projects/summerofcode-2005.html">Summer of Code 2005 FreeBSD
