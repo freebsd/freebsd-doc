@@ -7,7 +7,7 @@
 <!ENTITY % navinclude.developers "INCLUDE">
 ]>
 
-<!-- $FreeBSD: www/en/gnome/newsflash.xsl,v 1.8 2006/01/21 14:58:35 pav Exp $ -->
+<!-- $FreeBSD: www/en/gnome/newsflash.xsl,v 1.9 2006/08/19 21:20:34 hrs Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS" exclude-result-prefixes="cvs">
@@ -42,7 +42,8 @@
 
 		<xsl:apply-templates select="descendant::month"/>
 
-	        <xsl:call-templates name="html-news-list-homelink" />
+	        <xsl:call-template
+		  name="html-news-list-newsflash-homelink" />
 
 	      </div> <!-- contentwrap -->
 
