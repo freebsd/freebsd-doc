@@ -5,7 +5,7 @@
 ]>
 
 <!-- The FreeBSD Simplified Chinese Documentation Project -->
-<!-- Original revision: 1.159 -->
+<!-- Original revision: 1.160 -->
 <!-- $FreeBSD$ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -177,7 +177,7 @@
 					  <a href="&enbase;/community/mailinglists.html" title="邮件列表">邮件列表</a>
 					</li>
 					<li>
-					  <a href="&base;/send-pr.html" title="报告 Bug">报告 Bug</a>
+					  <a href="&enbase;/support/bugreports.html" title="报告 Bug">报告 Bug</a>
 					</li>
 					<li>
 					  <a href="&enbase;/doc/en_US.ISO8859-1/books/faq/index.html" title="FAQ">FAQ</a>
