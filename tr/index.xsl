@@ -8,12 +8,12 @@
      Original revision: 1.77
 -->
 
-<!-- $FreeBSD: www/tr/index.xsl,v 1.3 2004/02/04 15:41:06 ale Exp $ -->
+<!-- $FreeBSD: www/tr/index.xsl,v 1.4 2006/08/19 21:26:20 hrs Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
 
-  <xsl:variable name="date" select="'$FreeBSD: www/tr/index.xsl,v 1.3 2004/02/04 15:41:06 ale Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/tr/index.xsl,v 1.4 2006/08/19 21:26:20 hrs Exp $'"/>
 
   <xsl:output type="html" encoding="&xml.encoding;"
               doctype-public="-//W3C//DTD HTML 4.01 Transitional//EN"/>
@@ -59,7 +59,7 @@
 		  <option value="http://www2.at.FreeBSD.org/">IPv6 Avusturya</option>
 		  <option value="http://www.dk.FreeBSD.org/">IPv6 Danimarka</option>
 		  <option value="http://www2.de.FreeBSD.org">IPv6 Almanya</option>
-		  <option value="http://www.jp.FreeBSD.org/www.FreeBSD.org/">IPv6 (6Bone) Japonya</option>
+		  <option value="http://www.jp.FreeBSD.org/www.FreeBSD.org/">IPv6 Japonya</option>
 		  <option value="http://www2.no.FreeBSD.org/">IPv6 Norveç</option>
 		  <option value="http://www1.uk.FreeBSD.org/">IPv6 UK</option>
 		  <option value="http://www4.us.FreeBSD.org/">IPv6 USA/1</option>
