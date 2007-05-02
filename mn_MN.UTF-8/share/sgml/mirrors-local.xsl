@@ -21,7 +21,7 @@
   <xsl:template name="mirrors-docbook-contact">
     <xsl:param name="email" select="'someone@somewhere'"/>
 
-    <para>Асуудлууд гарвал энэ домены администратор 
+    <para>Асуудлууд гарвал энэ домэйны администратор 
       <email><xsl:value-of select="$email" /></email>-т хандана уу.</para>
   </xsl:template>
 
