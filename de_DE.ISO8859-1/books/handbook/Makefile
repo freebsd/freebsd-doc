@@ -1,7 +1,7 @@
 #
 # $FreeBSD$
-# $FreeBSDde: de-docproj/books/handbook/Makefile,v 1.53 2007/04/11 19:41:36 jkois Exp $
-# basiert auf: 1.102
+# $FreeBSDde: de-docproj/books/handbook/Makefile,v 1.54 2007/04/29 14:05:23 jkois Exp $
+# basiert auf: 1.103
 #
 # Build the FreeBSD Handbook in its German translation.
 #
@@ -114,6 +114,19 @@ IMAGES_EN+= vinum/vinum-raid5-org.pic
 IMAGES_EN+= vinum/vinum-simple-vol.pic
 IMAGES_EN+= vinum/vinum-striped-vol.pic
 IMAGES_EN+= vinum/vinum-striped.pic
+IMAGES_EN+= virtualization/parallels-freebsd1.png
+IMAGES_EN+= virtualization/parallels-freebsd2.png
+IMAGES_EN+= virtualization/parallels-freebsd3.png
+IMAGES_EN+= virtualization/parallels-freebsd4.png
+IMAGES_EN+= virtualization/parallels-freebsd5.png
+IMAGES_EN+= virtualization/parallels-freebsd6.png
+IMAGES_EN+= virtualization/parallels-freebsd7.png
+IMAGES_EN+= virtualization/parallels-freebsd8.png
+IMAGES_EN+= virtualization/parallels-freebsd9.png
+IMAGES_EN+= virtualization/parallels-freebsd10.png
+IMAGES_EN+= virtualization/parallels-freebsd11.png
+IMAGES_EN+= virtualization/parallels-freebsd12.png
+IMAGES_EN+= virtualization/parallels-freebsd13.png
 
 # Images from the cross-document image library
 IMAGES_LIB=  callouts/1.png
