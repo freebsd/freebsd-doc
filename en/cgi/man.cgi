@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp 
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.173 2007-05-04 19:58:59 wosch Exp $
+# $Id: man.cgi,v 1.174 2007-05-04 21:19:37 wosch Exp $
 
 ############################################################################
 # !!! man.cgi is stale perl4 code !!!
@@ -120,6 +120,8 @@ $sectionpath = {
     'OpenBSD 3.7' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
     'OpenBSD 3.8' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
     'OpenBSD 3.9' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
+    'OpenBSD 4.0' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
+    'OpenBSD 4.1' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
 };
 
 foreach my $os (keys %$sectionpath) {
@@ -228,6 +230,8 @@ $manPathDefault = 'FreeBSD 6.2-RELEASE';
      'OpenBSD 3.7',           "$manLocalDir/OpenBSD-3.7",
      'OpenBSD 3.8',           "$manLocalDir/OpenBSD-3.8",
      'OpenBSD 3.9',           "$manLocalDir/OpenBSD-3.9",
+     'OpenBSD 4.0',           "$manLocalDir/OpenBSD-4.0",
+     'OpenBSD 4.1',           "$manLocalDir/OpenBSD-4.1",
 
     #'NetBSD 0.9',            "$manLocalDir/NetBSD-0.9",
      'NetBSD 1.0',            "$manLocalDir/NetBSD-1.0",
@@ -374,7 +378,7 @@ while (($key,$val) = each %manPath) {
      'macosx', 'Darwin 8.0.1/ppc',
 
      'netbsd', 'NetBSD 3.0',
-     'openbsd', 'OpenBSD 3.9',
+     'openbsd', 'OpenBSD 4.1',
      'v7', 'Unix Seventh Edition', 
      'v7man', 'Unix Seventh Edition', 
      'x11', 'X11R6.7.0',
@@ -1090,7 +1094,7 @@ ETX
 }
 
 sub copyright {
-    $id = '$Id: man.cgi,v 1.173 2007-05-04 19:58:59 wosch Exp $';
+    $id = '$Id: man.cgi,v 1.174 2007-05-04 21:19:37 wosch Exp $';
 
     return qq{\
 <PRE>
@@ -1142,7 +1146,7 @@ sub faq {
 	     &encode_url($_) . "\n") if $manPathAliases{$_};
     }
 
-    local $id = '$Id: man.cgi,v 1.173 2007-05-04 19:58:59 wosch Exp $';
+    local $id = '$Id: man.cgi,v 1.174 2007-05-04 21:19:37 wosch Exp $';
     return qq{\
 <PRE>
 Copyright (c) 1996-2007 <a href="$mailtoURL">Wolfram Schneider</A>
