@@ -1,7 +1,7 @@
 #
 # $FreeBSD$
-# $FreeBSDde: de-docproj/books/handbook/Makefile,v 1.54 2007/04/29 14:05:23 jkois Exp $
-# basiert auf: 1.103
+# $FreeBSDde: de-docproj/books/handbook/Makefile,v 1.55 2007/05/12 12:03:11 jkois Exp $
+# basiert auf: 1.104
 #
 # Build the FreeBSD Handbook in its German translation.
 #
@@ -139,6 +139,11 @@ IMAGES_LIB+= callouts/7.png
 IMAGES_LIB+= callouts/8.png
 IMAGES_LIB+= callouts/9.png
 IMAGES_LIB+= callouts/10.png
+IMAGES_LIB+= callouts/11.png
+IMAGES_LIB+= callouts/12.png
+IMAGES_LIB+= callouts/13.png
+IMAGES_LIB+= callouts/14.png
+IMAGES_LIB+= callouts/15.png
 
 #
 # SRCS lists the individual SGML files that make up the document. Changes
