@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: www/en/multimedia/Makefile,v 1.1 2007/05/15 21:30:41 keramida Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -20,7 +20,11 @@ FHTML = \
 FLIST = multimedia.created
 FSCRIPT = multimedia.pl
 
+.if exists(${FLIST})
 DATA!=	cat ${FLIST}
+.else
+DATA=	${INDEXLINK}
+.endif
 
 all: ${FLIST}
 
