@@ -55,7 +55,7 @@
     <para>
       <application>Jail</application> consists of two realms: the
       user-space program, jail, and the code implemented within the
-      kernel: the <literal>jail()</literal> system call and associated
+      kernel: the <literal>jail</literal> system call and associated
       restrictions. I will be discussing the user-space program and
       then how jail is implemented within the kernel.</para>
 
@@ -94,10 +94,17 @@ struct jail {
           arguments passed to the jail program, and indeed, they are
           set during its execution.</para>
 
-        <programlisting><filename>/usr/src/usr.sbin/jail.c</filename>
-j.version = 0; 
-j.path = argv[1];
-j.hostname = argv[2];</programlisting>
+        <programlisting><filename>/usr/src/usr.sbin/jail/jail.c</filename>
+char path[PATH_MAX];
+...
+if (realpath(argv[0], path) == NULL)
+    err(1, "realpath: %s", argv[0]);
+if (chdir(path) != 0)
+    err(1, "chdir: %s", path);
+memset(&amp;j, 0, sizeof(j));
+j.version = 0;
+j.path = path;
+j.hostname = argv[1];</programlisting>
 
       </sect3>
 
@@ -106,23 +113,24 @@ j.hostname = argv[2];</programlisting>
 
         <para>One of the arguments passed to the Jail program is an IP
           address with which the jail can be accessed over the
-          network. Jail translates the ip address given into network
+          network. Jail translates the ip address given into host
           byte order and then stores it in j (the jail structure).</para>
 
         <programlisting><filename>/usr/src/usr.sbin/jail/jail.c</filename>:
-struct in.addr in; 
+struct in_addr in; 
 ... 
-i = inet_aton(argv[3], <![CDATA[&in]]>); 
-... 
-j.ip_number = ntohl(in.s.addr);</programlisting>
+if (inet_aton(argv[2], &amp;in) == 0)
+    errx(1, "Could not make sense of ip-number: %s", argv[2]);
+j.ip_number = ntohl(in.s_addr);</programlisting>
 
         <para>The
-          <citerefentry><refentrytitle>inet_aton</refentrytitle><manvolnum>3</manvolnum></citerefentry>
+          <citerefentry><refentrytitle>inet_aton</refentrytitle>
+          <manvolnum>3</manvolnum></citerefentry>
           function "interprets the specified character string as an
           Internet address, placing the address into the structure
           provided." The ip number node in the jail structure is set
           only when the ip address placed onto the in structure by
-          inet aton is translated into network byte order by
+          inet_aton is translated into host byte order by
           <function>ntohl()</function>.</para>
 
       </sect3>
@@ -132,13 +140,14 @@ j.ip_number = ntohl(in.s.addr);</programlisting>
 
         <para>Finally, the userland program jails the process, and
           executes the command specified. Jail now becomes an
-          imprisoned process itself and forks a child process which
-          then executes the command given using &man.execv.3;</para>
+          imprisoned process itself and then executes the command
+          given using &man.execv.3;</para>
 
         <programlisting><filename>/usr/src/sys/usr.sbin/jail/jail.c</filename>
-i = jail(<![CDATA[&j]]>); 
+i = jail(&amp;j); 
 ... 
-i = execv(argv[4], argv + 4);</programlisting>
+if (execv(argv[3], argv + 3) != 0)
+    err(1, "execv: %s", argv[3]);</programlisting>
 
         <para>As you can see, the jail function is being called, and
           its argument is the jail structure which has been filled
@@ -171,33 +180,32 @@ i = execv(argv[4], argv + 4);</programlisting>
 
 int     jail_set_hostname_allowed = 1;
 SYSCTL_INT(_security_jail, OID_AUTO, set_hostname_allowed, CTLFLAG_RW,
-    <![CDATA[&jail]]>_set_hostname_allowed, 0,
+    &amp;jail_set_hostname_allowed, 0,
     "Processes in jail can set their hostnames");
 
 int     jail_socket_unixiproute_only = 1;
 SYSCTL_INT(_security_jail, OID_AUTO, socket_unixiproute_only, CTLFLAG_RW,
-    <![CDATA[&jail]]>_socket_unixiproute_only, 0,
-    "Processes in jail are limited to creating &unix;/IPv4/route sockets only
-");
+    &amp;jail_socket_unixiproute_only, 0,
+    "Processes in jail are limited to creating &unix;/IPv4/route sockets only");
 
 int     jail_sysvipc_allowed = 0;
 SYSCTL_INT(_security_jail, OID_AUTO, sysvipc_allowed, CTLFLAG_RW,
-    <![CDATA[&jail]]>_sysvipc_allowed, 0,
+    &amp;jail_sysvipc_allowed, 0,
     "Processes in jail can use System V IPC primitives");
 
 static int jail_enforce_statfs = 2;
 SYSCTL_INT(_security_jail, OID_AUTO, enforce_statfs, CTLFLAG_RW,
-    <![CDATA[&jail]]>_enforce_statfs, 0,
+    &amp;jail_enforce_statfs, 0,
     "Processes in jail cannot see all mounted file systems");
 
 int    jail_allow_raw_sockets = 0;
 SYSCTL_INT(_security_jail, OID_AUTO, allow_raw_sockets, CTLFLAG_RW,
-    <![CDATA[&jail]]>_allow_raw_sockets, 0,
+    &amp;jail_allow_raw_sockets, 0,
     "Prison root can create raw sockets");
 
 int    jail_chflags_allowed = 0;
 SYSCTL_INT(_security_jail, OID_AUTO, chflags_allowed, CTLFLAG_RW,
-    <![CDATA[&jail]]>_chflags_allowed, 0,
+    &amp;jail_chflags_allowed, 0,
     "Processes in jail can alter system file flags");</programlisting>
 
         <para>Each of these sysctls can be accessed by the user
@@ -211,23 +219,26 @@ SYSCTL_INT(_security_jail, OID_AUTO, chflags_allowed, CTLFLAG_RW,
         <title>&man.jail.2; system call</title>
 
         <para>Like all system calls, the &man.jail.2; system call takes
-          two arguments, <literal>struct proc *p</literal> and
-          <literal>struct jail_args
-          *uap</literal>. <literal>p</literal> is a pointer to a proc
-          structure which describes the calling process. In this
-          context, uap is a pointer to a structure which specifies the
+          two arguments, <literal>struct thread *td</literal> and
+          <literal>struct jail_args *uap</literal>.
+          <literal>td</literal> is a pointer to the thread
+          structure which describes the calling thread. In this
+          context, uap is a pointer to the structure which specifies the
           arguments given to &man.jail.2; from the userland program
           <filename>jail.c</filename>. When I described the userland
           program before, you saw that the &man.jail.2; system call was
           given a jail structure as its own argument.</para>
 
         <programlisting><filename>/usr/src/sys/kern/kern_jail.c:</filename>
-int
-jail(p, uap)
-        struct proc *p;
-        struct jail_args /* {
-                syscallarg(struct jail *) jail;
-        } */ *uap;</programlisting>
+/*
+ * MPSAFE
+ *  
+ * struct jail_args {
+ *  struct jail *jail;
+ * };
+ */ 
+int 
+jail(struct thread *td, struct jail_args *uap)</programlisting>
 
         <para>Therefore, <literal>uap-&gt;jail</literal> would access the
           jail structure which was passed to the system call. Next,
@@ -242,7 +253,7 @@ jail(p, uap)
           <literal>j</literal>.</para>
 
         <programlisting><filename>/usr/src/sys/kern/kern_jail.c: </filename>
-error = copyin(uap-&gt;jail, <![CDATA[&j]]>, sizeof j);</programlisting>
+error = copyin(uap-&gt;jail, &amp;j, sizeof(j));</programlisting>
 
         <para>There is another important structure defined in
           jail.h. It is the prison structure
@@ -253,10 +264,17 @@ error = copyin(uap-&gt;jail, <![CDATA[&j]]>, sizeof j);</programlisting>
 
         <programlisting><filename>/usr/include/sys/jail.h</filename>:
 struct prison {
-        int             pr_ref;
-        char            pr_host[MAXHOSTNAMELEN];
-        u_int32_t       pr_ip;
-        void            *pr_linux;
+    LIST_ENTRY(prison) pr_list;         /* (a) all prisons */
+    int      pr_id;             /* (c) prison id */
+    int      pr_ref;            /* (p) refcount */
+    char         pr_path[MAXPATHLEN];       /* (c) chroot path */
+    struct vnode    *pr_root;           /* (c) vnode to rdir */
+    char         pr_host[MAXHOSTNAMELEN];   /* (p) jail hostname */
+    u_int32_t    pr_ip;             /* (c) ip addr host */
+    void        *pr_linux;          /* (p) linux abi */
+    int      pr_securelevel;        /* (p) securelevel */
+    struct task  pr_task;           /* (d) destroy task */
+    struct mtx   pr_mtx;
 };</programlisting>
 
         <para>The jail() system call then allocates memory for a
@@ -264,83 +282,96 @@ struct prison {
         structures.</para>
 
         <programlisting><filename>/usr/src/sys/kern/kern_jail.c</filename>:
- MALLOC(pr, struct prison *, sizeof *pr , M_PRISON, M_WAITOK);
- bzero((caddr_t)pr, sizeof *pr);
- error = copyinstr(j.hostname, <![CDATA[&pr-&gt;pr_host]]>, sizeof pr-&gt;pr_host, 0);
- if (error) 
-         goto bail;</programlisting>
-
-      <indexterm><primary>chroot</primary></indexterm>
-
-        <para>Finally, the jail system call chroots the path
-          specified. The chroot function is given two arguments. The
-          first is p, which represents the calling process, the second
-          is a pointer to the structure chroot args. The structure
-          chroot args contains the path which is to be chrooted. As
-          you can see, the path specified in the jail structure is
-          copied to the chroot args structure and used.</para>
-
-        <programlisting><filename>/usr/src/sys/kern/kern_jail.c</filename>:
-ca.path = j.path; 
-error = chroot(p, <![CDATA[&ca]]>);</programlisting>
-
+MALLOC(pr, struct prison *, sizeof(*pr), M_PRISON, M_WAITOK | M_ZERO);
+...
+error = copyinstr(j.path, &amp;pr-&gt;pr_path, sizeof(pr-&gt;pr_path), 0);
+if (error)
+    goto e_killmtx;
+...
+error = copyinstr(j.hostname, &amp;pr-&gt;pr_host, sizeof(pr-&gt;pr_host), 0);
+ if (error)
+     goto e_dropvnref;</programlisting>
         <para>These next three lines in the source are very important,
           as they specify how the kernel recognizes a process as
           jailed. Each process on a &unix; system is described by its
           own proc structure. You can see the whole proc structure in
           <filename>/usr/include/sys/proc.h</filename>. For example,
-          the p argument in any system call is actually a pointer to
-          that process' proc structure, as stated before. The proc
-          structure contains nodes which can describe the owner's
-          identity (<literal>p_cred</literal>), the process resource
-          limits (<literal>p_limit</literal>), and so on. In the
-          definition of the process structure, there is a pointer to a
-          prison structure. (<literal>p_prison</literal>).</para>
+          the td argument in any system call is actually a pointer to
+          that calling thread's thread structure, as stated before. The
+          td-&gt;td_proc is a pointer to the calling process' process
+          structure.  The proc structure contains nodes which can describe
+          the owner's identity (<literal>p_ucred</literal>), the process
+          resource limits (<literal>p_limit</literal>), and so on. In the
+          definition of the ucred structure, there is a pointer to a
+          prison structure. (<literal>cr_prison</literal>).</para>
 
         <programlisting><filename>/usr/include/sys/proc.h: </filename>
 struct proc { 
 ...
-struct prison *p_prison; 
+struct ucred *p_ucred; 
+...
+};
+<filename>/usr/include/sys/ucred.h</filename>
+struct ucred {
+...
+struct prison *cr_prison;
 ...
 };</programlisting>
 
         <para>In <filename>kern_jail.c</filename>, the function then
-          copies the pr structure, which is filled with all the
-          information from the original jail structure, over to the
-          <literal>p-&gt;p_prison</literal> structure. It then does a
-          bitwise OR of <literal>p-&gt;p_flag</literal> with the constant
-          <literal>P_JAILED</literal>, meaning that the calling
-          process is now recognized as jailed. The parent process of
-          each process, forked within the jail, is the program jail
-          itself, as it calls the &man.jail.2; system call. When the
-          program is executed through execve, it inherits the
-          properties of its parents proc structure, therefore it has
-          the <literal>p-&gt;p_flag</literal> set, and the
-          <literal>p-&gt;p_prison</literal> structure is filled.</para>
+          calls function jail_attach with a given jid. And the jail_attach
+          calls function change_root to change the root directory of the
+          calling process.  The jail_attach function then creates a new ucred
+          structure, and attaches the newly created ucred structure to the
+          calling process after it has successfully attaches the prison on the
+          cred structure. From then on, the calling process is recognized as
+          jailed. When calls function jailed with the newly created ucred
+          structure as the argument, it returns 1 to tell that the credential
+          is in a jail. The parent process of each process, forked within 
+          the jail, is the program jail itself, as it calls the &man.jail.2;
+          system call.  When the program is executed through execve, it
+          inherits the properties of its parent's ucred structure, therefore it
+          has the jailed ucred structure.</para>
 
         <programlisting><filename>/usr/src/sys/kern/kern_jail.c</filename>
-p-&gt;p.prison = pr; 
-p-&gt;p.flag |= P.JAILED;</programlisting>
+int
+jail(struct thread *td, struct jail_args *uap)
+{
+...
+    struct jail_attach_args jaa;
+...
+    error = jail_attach(td, &amp;jaa);
+    if (error)
+        goto e_dropprref;
+...
+}
 
+int
+jail_attach(struct thread *td, struct jail_attach_args *uap)
+{
+    struct proc *p;
+    struct ucred *newcred, *oldcred;
+    struct prison *pr;
+...
+    p = td-&gt;td_proc;
+...
+    pr = prison_find(uap-&gt;jid);
+...
+    change_root(pr-&gt;pr_root, td);
+...
+    newcred-&gt;cr_prison = pr;
+    p-&gt;p_ucred = newcred;
+...
+}</programlisting>
         <para>When a process is forked from a parent process, the
-          &man.fork.2; system call deals differently with imprisoned
-          processes. In the fork system call, there are two pointers
-          to a <literal>proc</literal> structure <literal>p1</literal>
-          and <literal>p2</literal>. <literal>p1</literal> points to
-          the parent's <literal>proc</literal> structure and p2 points
-          to the child's unfilled <literal>proc</literal>
-          structure. After copying all relevant data between the
-          structures, &man.fork.2; checks if the structure
-          <literal>p-&gt;p_prison</literal> is filled on
-          <literal>p2</literal>. If it is, it increments the
-          <literal>pr.ref</literal> by one, and sets the
-          <literal>p_flag</literal> to one on the child process.</para>
+          &man.fork.2; system call uses crhold to maintain the credential
+          for the newly forked process. It inherently keep the newly forked
+          child's credential consistent with its parent, so the child process
+          is also jailed.</para>
 
         <programlisting><filename>/usr/src/sys/kern/kern_fork.c</filename>:
-if (p2-&gt;p_prison) {
-        p2-&gt;p_prison-&gt;pr_ref++;
-	p2-&gt;p_flag |= P_JAILED;
-}</programlisting>
+p2-&gt;p_ucred = crhold(td-&gt;td_ucred);
+td2-&gt;td_ucred = crhold(p2-&gt;p_ucred);</programlisting>
 
       </sect3>
     </sect2>
@@ -354,8 +385,8 @@ if (p2-&gt;p_prison) {
       the process is jailed, and if so, returns an error. For
       example:</para>
 
-    <programlisting>if (p-&gt;p_prison) 
-        return EPERM;</programlisting>
+    <programlisting>if (jailed(td-&gt;td_ucred))
+        return (EPERM);</programlisting>
 
     <sect2>
       <title>SysV IPC</title>
@@ -369,9 +400,9 @@ if (p2-&gt;p_prison) {
         <literal>msgsend</literal> and <literal>msgrcv</literal>.
         Earlier, I mentioned that there were certain sysctls you could
         turn on or off in order to affect the behavior of Jail. One of
-        these sysctls was <literal>jail_sysvipc_allowed</literal>. On
-        most systems, this sysctl is set to 0. If it were set to 1, it
-        would defeat the whole purpose of having a jail; privileged
+        these sysctls was <literal>security.jail.sysvipc_allowed</literal>.
+        On most systems, this sysctl is set to 0. If it were set to 1,
+        it would defeat the whole purpose of having a jail; privileged
         users from within the jail would be able to affect processes
         outside of the environment. The difference between a message
         and a signal is that the message only consists of the signal
@@ -399,9 +430,9 @@ if (p2-&gt;p_prison) {
       <para>In each of these system calls, there is this
         conditional:</para>
 
-      <programlisting><filename>/usr/src/sys/kern/sysv msg.c</filename>:
-if (!jail.sysvipc.allowed &amp;&amp; p-&gt;p_prison != NULL)
-        return (ENOSYS);</programlisting>
+      <programlisting><filename>/usr/src/sys/kern/sysv_msg.c</filename>:
+if (!jail_sysvipc_allowed &amp;&amp; jailed(td-&gt;td_ucred)
+    return (ENOSYS);</programlisting>
 
       <indexterm><primary>semaphores</primary></indexterm>
       <para>Semaphore system calls allow processes to synchronize
@@ -430,7 +461,7 @@ if (!jail.sysvipc.allowed &amp;&amp; p-&gt;p_prison != NULL)
           <para><literal>Key and flag take on the same meaning as they
           do in msgget.</literal></para></listitem>
 
-        <listitem><para>&man.semop.2;<literal>(id, ops, num)</literal>:
+        <listitem><para>&man.semop.2;<literal>(semid, sops, nsops)</literal>:
           Semop does the set of semaphore operations in the array of
           structures ops, to the set of semaphores identified by
           id.</para></listitem>
@@ -445,22 +476,22 @@ if (!jail.sysvipc.allowed &amp;&amp; p-&gt;p_prison != NULL)
         shmat, oshmctl, shmctl, shmget</literal>, and
         <literal>shmsys</literal>.</para>
 
-      <para><filename>/usr/src/sys/kern/sysv shm.c</filename>:</para>
+      <para><filename>/usr/src/sys/kern/sysv_shm.c</filename>:</para>
 
       <itemizedlist>
-        <listitem><para>&man.shmctl.2;<literal>(id, cmd, buf)</literal>:
+        <listitem><para>&man.shmctl.2;<literal>(shmid, cmd, buf)</literal>:
         shmctl does various control operations on the shared memory
         region identified by id.</para></listitem>
 
         <listitem><para>&man.shmget.2;<literal>(key, size,
-        flag)</literal>: shmget accesses or creates a shared memory
+        shmflg)</literal>: shmget accesses or creates a shared memory
         region of size bytes.</para></listitem>
 
-        <listitem><para>&man.shmat.2;<literal>(id, addr, flag)</literal>:
+        <listitem><para>&man.shmat.2;<literal>(shmid, shmaddr, shmflg)</literal>:
         shmat attaches a shared memory region identified by id to the
         address space of a process.</para></listitem>
 
-        <listitem><para>&man.shmdt.2;<literal>(addr)</literal>: shmdt
+        <listitem><para>&man.shmdt.2;<literal>(shmaddr)</literal>: shmdt
         detaches the shared memory region previously attached at
         addr.</para></listitem>
 
@@ -475,7 +506,7 @@ if (!jail.sysvipc.allowed &amp;&amp; p-&gt;p_prison != NULL)
         lower-level socket functions in a special manner. In order to
         determine whether a certain socket is allowed to be created,
         it first checks to see if the sysctl
-        <literal>jail.socket.unixiproute.only</literal> is set. If
+        <literal>security.jail.socket_unixiproute_only</literal> is set. If
         set, sockets are only allowed to be created if the family
         specified is either <literal>PF_LOCAL</literal>,
         <literal>PF_INET</literal> or
@@ -483,15 +514,18 @@ if (!jail.sysvipc.allowed &amp;&amp; p-&gt;p_prison != NULL)
         error.</para>
 
       <programlisting><filename>/usr/src/sys/kern/uipc_socket.c</filename>:
-int socreate(dom, aso, type, proto, p) 
-... 
-register struct protosw *prp; 
-... 
+int
+socreate(dom, aso, type, proto, cred, td)
+...
 {
-        if (p-&gt;p_prison &amp;&amp; jail_socket_unixiproute_only &amp;&amp;
-            prp-&gt;pr_domain-&gt;dom_family != PR_LOCAL &amp;&amp; prp-&gt;pr_domain-&gt;dom_family != PF_INET 
-            &amp;&amp; prp-&gt;pr_domain-&gt;dom_family != PF_ROUTE)
-                return (EPROTONOSUPPORT); 
+    struct protosw *prp;
+...
+    if (jailed(cred) &amp;&amp; jail_socket_unixiproute_only &amp;&amp;
+        prp-&gt;pr_domain-&gt;dom_family != PF_LOCAL &amp;&amp;
+        prp-&gt;pr_domain-&gt;dom_family != PF_INET &amp;&amp;
+        prp-&gt;pr_domain-&gt;dom_family != PF_ROUTE) {
+        return (EPROTONOSUPPORT);
+    }
 ...
 }</programlisting>
 
@@ -506,17 +540,8 @@ register struct protosw *prp;
       <para>The Berkeley Packet Filter provides a raw interface to
         data link layers in a protocol independent fashion. The
         function <literal>bpfopen()</literal> opens an Ethernet
-        device. There is a conditional which disallows any jailed
-        processes from accessing this function.</para>
-
-      <programlisting><filename>/usr/src/sys/net/bpf.c</filename>: 
-static int bpfopen(dev, flags, fmt, p) 
-... 
-{
-        if (p-&gt;p_prison) 
-                return (EPERM);
-...
-}</programlisting>
+        device. It's now controlled by the devfs whether can be used
+        in the jail.
 
     </sect2>
 
@@ -534,78 +559,95 @@ static int bpfopen(dev, flags, fmt, p)
         which describes the address on which to bind the service. A
         more exact definition is that sockaddr "may be used as a
         template for referring to the identifying tag and length of
-        each address"[2]. In the function in
-        <literal>pcbbind</literal>, <literal>sin</literal> is a
-        pointer to a sockaddr.in structure, which contains the port,
+        each address"[2]. In the function
+        <literal>in_pcbbind_setup</literal>, <literal>sin</literal> is a
+        pointer to a sockaddr_in structure, which contains the port,
         address, length and domain family of the socket which is to be
         bound. Basically, this disallows any processes from jail to be
         able to specify the domain family.</para>
 
-      <programlisting><filename>/usr/src/sys/kern/netinet/in_pcb.c</filename>: 
-int in.pcbbind(int, nam, p) 
-...
-        struct sockaddr *nam; 
-        struct proc *p; 
+      <programlisting><filename>/usr/src/sys/netinet/in_pcb.c</filename>: 
+int
+in_pcbbind_setup(struct inpcb *inp, struct sockaddr *nam, in_addr_t *laddrp,
+    u_short *lportp, struct ucred *cred)
 {
-        ... 
-        struct sockaddr.in *sin; 
-        ... 
-        if (nam) {
-                sin = (struct sockaddr.in *)nam; 
-                ... 
-                if (sin-&gt;sin_addr.s_addr != INADDR_ANY) 
-                       if (prison.ip(p, 0, <![CDATA[&sin]]>-&gt;sin.addr.s_addr)) 
-                              return (EINVAL); 
-                ....
-        }
+    ...
+    struct sockaddr_in *sin;
+    ...
+    if (nam) {
+        sin = (struct sockaddr_in *)nam;
+        ...
+#ifdef notdef
+        /*
+         * We should check the family, but old programs
+         * incorrectly fail to initialize it.
+         */
+        if (sin->sin_family != AF_INET)
+            return (EAFNOSUPPORT);
+#endif
+        if (sin-&gt;sin_addr.s_addr != INADDR_ANY)
+            if (prison_ip(cred, 0, &amp;sin-&gt;sin_addr.s_addr))
+                return(EINVAL);
+        ...
+    }
 ...
 }</programlisting>
 
       <para>You might be wondering what function
-        <literal>prison_ip()</literal> does. prison.ip is given three
-        arguments, the current process (represented by
-        <literal>p</literal>), any flags, and an ip address. It
-        returns 1 if the ip address belongs to a jail or 0 if it does
-        not. As you can see from the code, if it is indeed an ip
-        address belonging to a jail, the protcol is not allowed to
-        bind to a certain port.</para>
+        <literal>prison_ip()</literal> does. prison_ip is given three
+        arguments, a pointer to the credential(represented by
+        <literal>cred</literal>), any flags, and an ip address. It
+        returns 1 if the ip address does NOT belong to the jail or
+        0 otherwise.  As you can see from the code, if it is indeed
+        an ip address not belonging to the jail, the protcol is
+        not allowed to bind to a certain port.</para>
 
       <programlisting><filename>/usr/src/sys/kern/kern_jail.c:</filename>
-int prison_ip(struct proc *p, int flag, u_int32_t *ip) {
-        u_int32_t tmp;
+int
+prison_ip(struct ucred *cred, int flag, u_int32_t *ip)
+{
+    u_int32_t tmp;
 
-       if (!p-&gt;p_prison) 
-              return (0); 
-       if (flag) 
-              tmp = *ip; 
-       else tmp = ntohl (*ip); 
-
-       if (tmp == INADDR_ANY) {
-              if (flag) 
-                     *ip = p-&gt;p_prison-&gt;pr_ip; 
-              else *ip = htonl(p-&gt;p_prison-&gt;pr_ip); 
-              return (0); 
-       }
-
-       if (p-&gt;p_prison-&gt;pr_ip != tmp) 
-              return (1); 
-       return (0); 
+    if (!jailed(cred))
+        return (0);
+    if (flag)
+        tmp = *ip;
+    else
+        tmp = ntohl(*ip);
+    if (tmp == INADDR_ANY) {
+        if (flag)
+            *ip = cred-&gt;cr_prison-&gt;pr_ip;
+        else
+            *ip = htonl(cred-&gt;cr_prison-&gt;pr_ip);
+        return (0);
+    }
+    if (tmp == INADDR_LOOPBACK) {
+        if (flag)
+            *ip = cred-&gt;cr_prison-&gt;pr_ip;
+        else
+            *ip = htonl(cred-&gt;cr_prison-&gt;pr_ip);
+        return (0);
+    }
+    if (cred-&gt;cr_prison-&gt;pr_ip != tmp)
+        return (1);
+    return (0);
 }</programlisting>
 
       <para>Jailed users are not allowed to bind services to an ip
         which does not belong to the jail. The restriction is also
-        written within the function <literal>in_pcbbind</literal>:</para>
+        written within the function <literal>in_pcbbind_setup</literal>:</para>
 
-      <programlisting><filename>/usr/src/sys/net inet/in_pcb.c</filename>
+      <programlisting><filename>/usr/src/sys/netinet/in_pcb.c</filename>
         if (nam) {
                ... 
                lport = sin-&gt;sin.port; 
                ... if (lport) { 
-                          ... 
-                         if (p &amp;&amp; p-&gt;p_prison)
+                         ... 
+                         if (jailed(cred))
                                 prison = 1; 
+                         ...
                          if (prison &amp;&amp;
-                             prison_ip(p, 0, <![CDATA[&sin]]>-&gt;sin_addr.s_addr))
+                             prison_ip(cred, 0, &amp;sin-&gt;sin_addr.s_addr))
 			            return (EADDRNOTAVAIL);</programlisting>
 
     </sect2>
@@ -619,14 +661,20 @@ int prison_ip(struct proc *p, int flag, u_int32_t *ip) {
         the securelevel is greater than 0.</para>
 
       <programlisting>/usr/src/sys/ufs/ufs/ufs_vnops.c:
-int ufs.setattr(ap) 
-        ... 
+static int
+ufs_setattr(ap)
+    ...
 {
-        if ((cred-&gt;cr.uid == 0) &amp;&amp; (p-&gt;prison == NULL)) {
-	        if ((ip-&gt;i_flags 
-                     &amp; (SF_NOUNLINK | SF_IMMUTABLE | SF_APPEND)) &amp;&amp; 
-                     securelevel &gt; 0)
-		       return (EPERM);
+    ...
+        if (!suser_cred(cred,
+            jail_chflags_allowed ? SUSER_ALLOWJAIL : 0)) {
+            if (ip-&gt;i_flags
+                &amp; (SF_NOUNLINK | SF_IMMUTABLE | SF_APPEND)) {
+                error = securelevel_gt(cred, 0);
+                if (error)
+                    return (error);
+            }
+            ...
 }</programlisting>
 
     </sect2>
