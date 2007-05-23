@@ -8,7 +8,7 @@
 #  GNU General Public License Version 2.  
 #     (http://www.gnu.ai.mit.edu/copyleft/gpl.html)
 #
-# $FreeBSD: www/en/cgi/dosendpr.cgi,v 1.29 2006/10/08 10:09:39 ceri Exp $
+# $FreeBSD: www/en/cgi/dosendpr.cgi,v 1.30 2007/03/16 06:35:54 remko Exp $
 
 use Socket;
 use CGI qw/:standard/;
@@ -209,6 +209,7 @@ $pr =~ s/\r//g;
 if (open (SUBMIT, "|$submission_program")){
 
     print SUBMIT $pr;
+    print SUBMIT "\n.\n";
     close (SUBMIT);
     print start_html("Thank you for the problem report");
     print "<h1>Thank You</h1>",
