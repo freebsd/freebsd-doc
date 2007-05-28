@@ -484,4 +484,459 @@ jail_<replaceable>www</replaceable>_devfs_ruleset="<replaceable>www_ruleset</rep
       Please refer to its web page for more information.</para>
     </sect2>
   </sect1>
+
+  <sect1 id="jails-application">
+    <title>Application of Jails</title>
+
+    <sect2 id="jails-service-jails">
+      <sect2info>
+	<authorgroup>
+	  <author>
+	    <firstname>Daniel</firstname>
+	    <surname>Gerzo</surname>
+	    <contrib>Contributed by </contrib>
+	    <!-- 15. May 2007 -->
+	  </author>
+	</authorgroup>
+      </sect2info>
+
+      <title>Service Jails</title>
+
+      <para>This section is based upon an idea originally presented by
+	&a.simon; at <ulink
+	url="http://simon.nitro.dk/service-jails.html"></ulink>, and an
+	updated article written by Ken Tom
+	<email>locals@gmail.com</email>.  This section illustrates how
+	to set up a &os; system that adds an additional layer of
+	security, using the &man.jail.8; feature.  It is also assumed
+	that the given system is at least running RELENG_6_0 and the
+	information provided earlier in this chapter has been well
+	understood.</para>
+
+      <sect3 id="jails-service-jails-design">
+       <title>Design</title>
+
+	<para>One of the major problems with jails is the management of
+	  their upgrade process.  This tends to be a problem because
+	  every jail has to be rebuilt from scratch whenever it is
+	  updated.  This is usually not a problem for a single jail,
+	  since the update process is fairly simple, but can be quite
+	  time consuming and tedious if a lot of jails are
+	  created.</para>
+
+	<warning>
+	  <para>This setup requires advanced experience with &os; and
+	    usage of its features.  If the presented steps below look
+	    too complicated, it is advised to take a look at a simpler
+	    system such as <filename
+	      role="package">sysutils/ezjail</filename>, which provides
+	    an easier method of administering &os; jails and is not as
+	    sophisticated as this setup.</para>
+	</warning>
+
+	<para>This idea has been presented to resolve such issues by
+	  sharing as much as is possible between jails, in a safe way
+	  &mdash; using read-only &man.mount.nullfs.8; mounts, so that
+	  updating will be be simpler, and putting single services into
+	  individual jails will become more attractive.  Additionally,
+	  it provides a simple way to add or remove jails as well as a
+	  way to upgrade them.</para>
+
+	<note>
+	  <para>Examples of services in this context are: an
+	  <acronym>HTTP</acronym> server, a <acronym>DNS</acronym>
+	  server, a <acronym>SMTP</acronym> server, and so forth.</para>
+	</note>
+
+	<para>The goals of the setup described in this section 
+	  are:</para>
+
+	<itemizedlist>
+	  <listitem>
+	    <para>Create a simple and easy to understand jail structure.
+	      This implies <emphasis>not</emphasis> having to run a full
+	      installworld on each and every jail.</para>
+	  </listitem>
+	  <listitem>
+	    <para>Make it easy to add new jails or remove existing
+	      ones.</para>
+	  </listitem>
+	  <listitem>
+	    <para>Make it easy to update or upgrade existing
+	      jails.</para>
+	  </listitem>
+	  <listitem>
+	    <para>Make it possible to run a customized &os;
+	      branch.</para>
+	  </listitem>
+	  <listitem>
+	    <para>Be paranoid about security, reducing as much as
+	      possible the possibility of compromise.</para>
+	  </listitem>
+	  <listitem>
+	    <para>Save space and inodes, as much as possible.</para>
+	  </listitem>
+	</itemizedlist>
+
+	<para>As it has been already mentioned, this design relies
+	  heavily on having a single master template which is read-only
+	  (known as <application>nullfs</application>) mounted into each
+	  jail and one read-write device per jail.  A device can be a
+	  separate physical disc, a partition, or a vnode backed
+	  &man.md.4; device.  In this example, we will use read-write
+	  <application>nullfs</application> mounts.</para>
+
+	<para>The file system layout is described in the following
+	  list:</para>
+
+	<itemizedlist>
+	  <listitem>
+	    <para>Each jail will be mounted under the <filename
+	      role="directory">/home/j</filename> directory.</para>
+	  </listitem>
+	  <listitem>
+	    <para><filename role="directory">/home/j/mroot</filename> is
+	      the template for each jail and the read-only partition for
+	      all of the jails.</para>
+	  </listitem>
+	  <listitem>
+	    <para>A blank directory will be created for each jail under
+	      the  <filename role="directory">/home/j</filename>
+	      directory.</para>
+	  </listitem>
+	  <listitem>
+	    <para>Each jail will have a <filename
+		role="directory">/s</filename> directory, that will be
+	      linked to the read-write portion of the system.</para>
+	  </listitem>
+	  <listitem>
+	    <para>Each jail shall have its own read-write system that is
+	      based upon <filename
+		role="directory">/home/j/skel</filename>.</para>
+	  </listitem>
+	  <listitem>
+	    <para>Each jailspace (read-write portion of each jail) shall
+	      be created in <filename
+		role="directory">/home/js</filename>.<para>
+	  </listitem>
+	</itemizedlist>
+
+	<note>
+	  <para>This assumes that the jails are based under the
+	    <filename role="directory">/home</filename> partition.  This
+	    can, of course, be changed to anything else, but this change
+	    will have to be reflected in each of the examples
+	    below.</para>
+	</note>
+	<!-- Insert an image or drawing here to illustrate the example. -->
+      </sect3>
+
+      <sect3 id="jails-service-jails-template">
+	<title>Creating the Template</title>
+
+	<para>This section will describe the steps needed to create the
+	  master template that will be the read-only portion for the
+	  jails to use.<para>
+
+	<para>It is always a good idea to update the &os; system to the
+	  latest -RELEASE branch.  Check the corresponding Handbook
+	  <ulink url="&url.books.handbook;/makeworld.html">Chapter</ulink>
+	  to accomplish this task.  In the case the update is not
+	  feasible, the buildworld will be required in order to be able
+	  to proceed.  Additionally, the <filename
+	    role="package">sysutils/cpdup</filename> package will be
+	  required.  We will use the &man.portsnap.8; utility to
+	  download the &os; Ports Collection.  The Handbook <ulink
+	    url="&url.books.handbook;/portsnap.html">Portsnap Chapter</ulink>
+	  is always good reading for newcomers.</para>
+
+	<procedure>
+	  <step>
+	    <para>First, create a directory structure for the read-only
+	      file system which will contain the &os; binaries for our
+	      jails, then change directory to the &os; source tree and
+	      install the read-only file system to the jail
+	      template:</para>
+
+	    <screen>&prompt.root; <userinput>mkdir /home/j /home/j/mroot</userinput>
+&prompt.root; <userinput>cd /usr/src</userinput>
+&prompt.root; <userinput>make installworld DESTDIR=/home/j/mroot</userinput></screen>
+	  </step>
+	  <step>
+	    <para>Next, prepare a &os; Ports Collection for the jails as
+	      well as a &os; source tree, which is required for
+	      <application>mergemaster</application>:</para>
+
+	    <screen>&prompt.root; <userinput>cd /home/j/mroot</userinput>
+&prompt.root; <userinput>mkdir usr/ports</userinput>
+&prompt.root; <userinput>portsnap -p /home/j/mroot/usr/ports fetch extract</userinput>
+&prompt.root; <userinput>cpdup /usr/src /home/j/mroot/usr/src</userinput></screen>
+	  </step>
+	  <step>
+	    <para>Create a skeleton for the read-write portion of the
+	      system:</para>
+
+	    <screen>&prompt.root; <userinput>mkdir /home/j/skel /home/j/skel/home /home/j/skel/usr-X11R6 /home/j/skel/distfiles</userinput>
+&prompt.root; <userinput>mv etc /home/j/skel</userinput>
+&prompt.root; <userinput>mv usr/local /home/j/skel/usr-local</userinput>
+&prompt.root; <userinput>mv tmp /home/j/skel</userinput>
+&prompt.root; <userinput>mv var /home/j/skel</userinput>
+&prompt.root; <userinput>mv root /home/j/skel</userinput></screen>
+	  </step>
+	  <step>
+	    <para>Use <application>mergemaster</application> to install
+	      missing configuration files.  Then get rid of the extra
+	      directories that <application>mergemaster</application>
+	      creates:</para>
+
+	    <screen>&prompt.root; <userinput>mergemaster -t /home/j/skel/var/tmp/temproot -D /home/j/skel -i</userinput>
+&prompt.root; <userinput>cd /home/j/skel</userinput>
+&prompt.root; <userinput>rm -R bin boot lib libexec mnt proc rescue sbin sys usr dev</userinput></screen>
+	  </step>
+	  <step>
+	    <para>Now, symlink the read-write file system to the
+	      read-only file system.  Please make sure that the symlinks
+	      are created in the correct <filename
+		role="directory">s/</filename> locations.  Real
+	      directories or the creation of directories in the wrong
+	      locations will cause the installation to  fail.</para>
+
+	    <screen>&prompt.root; <userinput>cd /home/j/mroot</userinput>
+&prompt.root; <userinput>mkdir s</userinput>
+&prompt.root; <userinput>ln -s s/etc etc</userinput>
+&prompt.root; <userinput>ln -s s/home home</userinput>
+&prompt.root; <userinput>ln -s s/root root</userinput>
+&prompt.root; <userinput>ln -s ../s/usr-local usr/local</userinput>
+&prompt.root; <userinput>ln -s ../s/usr-X11R6 usr/X11R6</userinput>
+&prompt.root; <userinput>ln -s ../../s/distfiles usr/ports/distfiles</userinput>
+&prompt.root; <userinput>ln -s s/tmp tmp</userinput>
+&prompt.root; <userinput>ln -s s/var var</userinput></screen>
+	  </step>
+	  <step>
+	    <para>As a last step, create a generic
+	      <filename>/home/j/skel/etc/make.conf</filename> with its
+	      contents as shown below:</para>
+
+	      <programlisting>WRKDIRPREFIX?=  /s/portbuild</programlisting>
+
+
+	      <para>Having <literal>WRKDIRPREFIX</literal> set up this
+	      way will make it possible to compile &os; ports inside
+	      each jail.  Remember that the ports directory is part of
+	      the read-only system.  The custom path for
+	      <literal>WRKDIRPREFIX</literal> allows builds to be done
+	      in the read-write portion of every jail.</para>
+	  </step>
+	</procedure>
+      </sect3>
+
+      <sect3 id="jails-service-jails-creating">
+	<title>Creating Jails</title>
+
+	<para>Now that we have a complete &os; jail template, we can
+	  setup and configure the jails in
+	  <filename>/etc/rc.conf</filename>.  This example demonstrates
+	  the creation of 3 jails: <quote>NS</quote>,
+	  <quote>MAIL</quote> and <quote>WWW</quote>.<para>
+
+	<procedure>
+	  <step>
+	    <para>Put the following lines into the
+	      <filename>/etc/fstab</filename> file, so that the
+	      read-only template for the jails and the read-write space
+	      will be available in the respective jails:</para>
+
+	    <programlisting>/home/j/mroot   /home/j/ns     nullfs  ro  0   0
+/home/j/mroot   /home/j/mail   nullfs  ro  0   0
+/home/j/mroot   /home/j/www    nullfs  ro  0   0
+/home/js/ns     /home/j/ns/s   nullfs  rw  0   0
+/home/js/mail   /home/j/mail/s nullfs  rw  0   0
+/home/js/www    /home/j/www/s  nullfs  rw  0   0</programlisting>
+	
+	    <note>
+	      <para>Partitions marked with a 0 pass number are not
+		checked by &man.fsck.8; during boot, and partitions
+		marked with a 0 dump number are not backed up by
+		&man.dump.8;.  We do not want
+		<application>fsck</application> to check
+		<application>nullfs</application> mounts or
+		<application>dump</application> to back up the read-only
+		nullfs mounts of the jails.  This is why they are marked
+		with <quote>0&nbsp;0</quote> in the last two columns of
+		each <filename>fstab</filename> entry above.</para>
+	    </note>
+	  </step>
+	  <step>
+	    <para>Configure the jails in
+	      <filename>/etc/rc.conf</filename>:</para>
+
+	    <programlisting>jail_enable="YES"
+jail_set_hostname_allow="NO"
+jail_list="ns mail www"
+jail_ns_hostname="ns.example.org"
+jail_ns_ip="192.168.3.17"
+jail_ns_rootdir="/home/j/ns"
+jail_ns_devfs_enable="YES"
+jail_mail_hostname="mail.example.org"
+jail_mail_ip="192.168.3.18"
+jail_mail_rootdir="/home/j/mail"
+jail_mail_devfs_enable="YES"
+jail_www_hostname="www.example.org"
+jail_www_ip="62.123.43.14"
+jail_www_rootdir="/home/j/www"
+jail_www_devfs_enable="YES"</programlisting>
+	  </step>
+	  <step>
+	    <para>Create the required mount points for the read-only
+	      file system of each jail:</para>
+
+	    <screen>&prompt.root; <userinput>mkdir /home/j/ns /home/j/mail /home/j/www</userinput></screen>
+	  </step>
+	  <step>
+	    <para>Install the read-write template into each jail.  Note
+	      the use of <filename
+		role="package">sysutils/cpdup</filename>, which helps to
+	      ensure that a correct copy is done of each
+	      directory:</para>
+	    <!-- keramida: Why is cpdup required here?  Doesn't cpio(1)
+	     already include adequate functionality for performing this
+	     job *and* have the advantage of being part of the base
+	     system of FreeBSD? -->
+
+	    <screen>&prompt.root; <userinput>mkdir /home/js</userinput>
+&prompt.root; <userinput>cpdup /home/j/skel /home/js/ns</userinput>
+&prompt.root; <userinput>cpdup /home/j/skel /home/js/mail</userinput>
+&prompt.root; <userinput>cpdup /home/j/skel /home/js/www</userinput></screen>
+	  </step>
+	  <step>
+	    <para>In this phase, the jails are built and prepared to
+	      run.  First, mount the required file systems for each
+	      jail, and then start them using the
+	      <filename>/etc/rc.d/jail</filename> script:</para>
+
+	    <screen>&prompt.root; <userinput>mount -a</userinput>
+&prompt.root; <userinput>/etc/rc.d/jail start</userinput></screen>
+	  </step>
+	</procedure>
+
+	<para>The jails should be running now.  To check if they have
+	  started correctly, use the &man.jls.8; command.  Its output
+	  should be similar to the following:</para>
+
+	<screen>&prompt.root; <userinput>jls</userinput>
+   JID  IP Address      Hostname                      Path
+     3  192.168.3.17    ns.example.org                /home/j/ns
+     2  192.168.3.18    mail.example.org              /home/j/mail
+     1  62.123.43.14    www.example.org               /home/j/www</screen>
+
+	<para>At this point, it should be possible to log onto each
+	  jail, add new users or configure daemons.  The
+	  <literal>JID</literal> column indicates the jail
+	  indentification number of each running jail.  Use the
+	  following command in order to perform administrative tasks in
+	  the jail whose <literal>JID</literal> is 3:</para>
+
+	<screen>&prompt.root; <userinput>jexec 3 tcsh</userinput></screen>
+      </sect3>
+
+      <sect3 id="jails-service-jails-upgrading">
+	<title>Upgrading</title>
+
+	<para>In time, there will be a need to upgrade the system to a
+	  newer version of &os;, either because of a security issue, or
+	  because new features have been implemented which are useful
+	  for the existing jails.  The design of this setup provides an
+	  easy way to upgrade existing jails.  Additionally, it
+	  minimizes their downtime, as the jails will be brought down
+	  only in the very last minute.  Also, it provides a way to roll
+	  back to the older versions should any problems occur.</para>
+
+	<procedure>
+	  <step>
+	    <para>The first step is to upgrade the host system in the
+	      usual manner.  Then create a new temporary read-only
+	      template in <filename
+		role="directory">/home/j/mroot2</filename>.</para>
+
+	    <screen>&prompt.root; <userinput>mkdir /home/j/mroot2</userinput>
+&prompt.root; <userinput>cd /usr/src</userinput>
+&prompt.root; <userinput>make installworld DESTDIR=/home/j/mroot2</userinput>
+&prompt.root; <userinput>cd /home/j/mroot2</userinput>
+&prompt.root; <userinput>cpdup /usr/src usr/src</userinput>
+&prompt.root; <userinput>mkdir s</userinput></screen>
+
+	    <para>The <maketarget>installworld</maketarget> run creates
+	      a few unnecessary directories, which should be
+	      removed:</para>
+
+	    <screen>&prompt.root; <userinput>chflags -R 0 var</userinput>
+&prompt.root; <userinput>rm -R etc var root usr/local tmp</userinput></screen>
+	  </step>
+	  <step>
+	    <para>Recreate the read-write symlinks for the master file
+	      system:</para>
+
+	    <screen>&prompt.root; <userinput>ln -s s/etc etc</userinput>
+&prompt.root; <userinput>ln -s s/root root</userinput>
+&prompt.root; <userinput>ln -s s/home home</userinput>
+&prompt.root; <userinput>ln -s ../s/usr-local usr/local</userinput>
+&prompt.root; <userinput>ln -s ../s/usr-X11R6 usr/X11R6</userinput>
+&prompt.root; <userinput>ln -s s/tmp tmp</userinput>
+&prompt.root; <userinput>ln -s s/var var</userinput></screen>
+	  </step>
+	  <step>
+	    <para>The right time to stop the jails is now:</para>
+
+	    <screen>&prompt.root; <userinput>/etc/rc.d/jail stop</userinput></screen>
+	  </step>
+	  <step>
+	    <para>Unmount the original file systems:</para>
+	    <!-- keramida: Shouldn't we suggest a short script-based
+	     loop here, instead of tediously copying the same commands
+	     multiple times? -->
+
+	    <screen>&prompt.root; <userinput>umount /home/j/ns/s</userinput>
+&prompt.root; <userinput>umount /home/j/ns</userinput>
+&prompt.root; <userinput>umount /home/j/mail/s</userinput>
+&prompt.root; <userinput>umount /home/j/mail</userinput>
+&prompt.root; <userinput>umount /home/j/www/s</userinput>
+&prompt.root; <userinput>umount /home/j/www</userinput></screen>
+
+	    <note>
+	      <para>The read-write systems are attached to the read-only
+		system (<filename role="directory">/s</filename>) and
+		must be unmounted first.</para>
+	    </note>
+	  </step>
+	  <step>
+	    <para>Move the old read-only file system and replace it with
+	      the new one.  This will serve a backup and archive of the
+	      old read-only file system should something go wrong.  The
+	      naming convention used here corresponds to when a new
+	      read-only file system has been created.  Move the original
+	      &os; Ports Collection over to the new file system to save
+	      some space and inodes:</para>
+
+	    <screen>&prompt.root; <userinput>cd /home/j</userinput>
+&prompt.root; <userinput>mv mroot mroot.20060601</userinput>
+&prompt.root; <userinput>mv mroot2 mroot</userinput>
+&prompt.root; <userinput>mv mroot.20060601/usr/ports mroot/usr</userinput></screen>
+	  </step>
+	  <step>
+	    <para>At this point the new read-only template is ready, so
+	      the only remaining task is to remount the file systems and
+	      start the jails:</para>
+
+	    <screen>&prompt.root; <userinput>mount -a</userinput>
+&prompt.root; <userinput>/etc/rc.d/jail start</userinput></screen>
+	  </step>
+	</procedure>
+
+	<para>Use &man.jls.8; to check if the jails started correctly.
+	  Do not forget to run mergemaster in each jail.  The
+	  configuration files will need to be updated as well as the
+	  rc.d scripts.</para>
+      </sect3>
+    </sect2>
+  </sect1>
 </chapter>
