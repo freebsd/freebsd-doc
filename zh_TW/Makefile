@@ -1,4 +1,4 @@
-# $FreeBSD: www/zh_TW/Makefile,v 1.2 2006/07/12 17:10:59 hrs Exp $
+# $FreeBSD: www/zh_TW/Makefile,v 1.3 2007/01/06 05:10:58 chinsan Exp $
 # Original revision: 
 
 .if exists(../Makefile.conf)
@@ -10,16 +10,24 @@
 
 # These are turned into validated, normalized HTML files.
 DOCS=  about.sgml
-#DOCS+= applications.sgml
+DOCS+= applications.sgml
 DOCS+= art.sgml
 DOCS+= availability.sgml
 DOCS+= community.sgml
 DOCS+= docs.sgml
+DOCS+= logo.sgml
 DOCS+= send-pr.sgml
+DOCS+= support.sgml
+DOCS+= where.sgml
 
+# Subdirectories
+# SGML
 .if !defined(WEB_ONLY) || empty(WEB_ONLY)
 SUBDIR+=	doc
 .endif
+
+# Non-SGML
+SUBDIR+= layout
 
 WEBDIR?=	data/zh_TW
 
