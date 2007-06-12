@@ -8,7 +8,7 @@
 #  GNU General Public License Version 2.  
 #     (http://www.gnu.ai.mit.edu/copyleft/gpl.html)
 #
-# $FreeBSD: www/en/cgi/dosendpr.cgi,v 1.32 2007/06/12 06:06:41 ceri Exp $
+# $FreeBSD: www/en/cgi/dosendpr.cgi,v 1.33 2007/06/12 06:14:34 ceri Exp $
 
 use Socket;
 use CGI qw/:standard/;
@@ -176,7 +176,7 @@ if (defined $openproxy) {
 
 # Build the PR.
 $pr = "To: $submission_address\n" .
-      "From: " . param('originator') . "<" . param('email') . ">\n" . 
+      "From: " . param('originator') . " <" . param('email') . ">\n" . 
       "Subject: " . param('synopsis') . "\n" .
       env2hdr(@ENV_captures);
 if ($blackhole_err) {
