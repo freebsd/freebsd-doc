@@ -26,7 +26,14 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.60 2006/12/09 15:46:06 shaun Exp $
+# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.61 2007/01/10 17:47:39 danger Exp $
+#
+
+#
+# Note: this is a script to run on a webserver. If you want to do tests
+# on the command-line, use the QUERY_STRING environment variable to
+# pass parameters to the script:
+#	$ QUERY_STRING=pr=bin/106049 ./query-pr.cgi
 #
 
 use strict;
@@ -39,7 +46,7 @@ require './cgi-style.pl';
 require './query-pr-lib.pl';
 
 use constant HTTP_HEADER        => "Content-type: text/html; charset=UTF-8\r\n\r\n";
-use constant HTTP_HEADER_PATCH  => "Content-type: text/plain; charset=UTF-8\r\n\r\n";
+use constant HTTP_HEADER_PATCH  => "Content-type: text/plain; charset=UTF-8\r\nContent-Disposition: inline; filename=\"%s\"\r\n\r\n";
 
 use constant SECT_HEADER        => 1;
 use constant SECT_SFIELDS       => 2;
@@ -80,6 +87,7 @@ my %fmt;
 my $f = "";
 my $PR = -1;
 my $getpatch = -1;
+my $mimepatch = "";
 my $inpatch = 0;
 my $patchendhint = 0;
 my $category;
@@ -149,7 +157,7 @@ EOF
 $fmt{'patchblock_thead'} = <<EOF;
 <table class="patchblock" cellspacing="0" cellpadding="3">
   <tr class="info"><td>
-    <b>Download <a href="${scriptname}?pr=%%(pr)&amp;getpatch=%%(1)">%%(2)</a></b>
+    <b>Download <a href="${scriptname}?prp=%%(pr)-%%(1)-%%(3)">%%(2)</a></b>
   </td></tr>
 <tr><td class="content"><pre>
 EOF
@@ -247,11 +255,31 @@ if ($ENV{'QUERY_STRING'}) {
 		$PR       = lc $key if ($key =~ /^(?:$valid_category\/)?$valid_pr$/i);
 		$category = lc $val if ($key eq "cat");
 		$getpatch = lc $val if ($key eq "getpatch");
+
+		if ($key eq "prp") {
+			if ( lc ($val) =~ /^(\d+)-(\d+)-(\w+)$/ ) {
+				$PR = $1;
+				$getpatch = $2;
+				$mimepatch = $3;
+			}
+		}
 	}
 }
 
 unless (!$iscgi) {
-	print HTTP_HEADER_PATCH if ($getpatch > 0 or $f eq "raw");
+	if ($getpatch > 0 or $f eq "raw") {
+		if ($mimepatch eq "diff") {
+			printf HTTP_HEADER_PATCH, "patch-$getpatch.diff";
+		} elsif ($mimepatch eq "shar") {
+			printf HTTP_HEADER_PATCH, "shar-$getpatch.sh";
+		} elsif ($mimepatch eq "uu") {
+			printf HTTP_HEADER_PATCH, "patch-$getpatch.uu";
+		} elsif ($mimepatch eq "txt") {
+			printf HTTP_HEADER_PATCH, "txt-$getpatch.txt";
+		} else {
+			printf HTTP_HEADER_PATCH, "unknown-$getpatch.txt";
+		}
+	}
 }
 
 ($category, $PR) = ($1, $2)
@@ -852,7 +880,7 @@ sub htmlparse
 	my $v = shift;
 	return "" if (!$v);
 
-	my $iv = 'A-Za-z0-9\-_\/#@\$\\\\';
+	my $iv = 'A-Za-z0-9\-_\/#@\$=\\\\';
 	$v =~ s/(?<![$iv])($valid_category)\/($valid_pr)(?![$iv])/<a href="${scriptname}?pr=$2&cat=$1">$1\/$2<\/a>/g;
 
 	$v =~ s/((?:https?|ftps?):\/\/[^\s\/]+\/[][\w=.,\'\(\)\~\?\!\&\/\%\$\{\}:;@#+-]*)/<a href="$1">$1<\/a>/g;
@@ -988,7 +1016,7 @@ sub parsepatches
 		$lastcol = undef;
 		$lastrev = undef;
 
-		sprint('patchblock_thead', $patchnum, htmlclean($1))
+		sprint('patchblock_thead', $patchnum, htmlclean($1), "txt")
 			unless ($getpatch);
 
 		return 1;
@@ -1001,7 +1029,7 @@ sub parsepatches
 		$lastcol = undef;
 		$lastrev = undef;
 
-		sprint('patchblock_thead', $patchnum, "patch-$patchnum.diff")
+		sprint('patchblock_thead', $patchnum, "patch-$patchnum.diff", "diff")
 			unless ($getpatch);
 	}
 
@@ -1012,7 +1040,7 @@ sub parsepatches
 		$lastcol = undef;
 		$lastrev = undef;
 
-		sprint('patchblock_thead', $patchnum, "patch-$patchnum.shar")
+		sprint('patchblock_thead', $patchnum, "shar-$patchnum.sh", "shar")
 			unless ($getpatch);
 	}
 
@@ -1042,7 +1070,7 @@ sub parsepatches
 			$patchnum++;
 			return 1 if ($getpatch and $patchnum != $getpatch);
 		}
-		sprint('patchblock_thead', $patchnum, "patch-$patchnum.uu")
+		sprint('patchblock_thead', $patchnum, "patch-$patchnum.uu", "uu")
 			unless ($getpatch or $inpatch);
 
 		$inpatch |= PATCH_UUENC;
