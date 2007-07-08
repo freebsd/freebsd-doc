@@ -1,5 +1,5 @@
 #!/usr/bin/perl -T
-# Copyright (c) Juli 1997-2000. Wolfram Schneider <wosch@FreeBSD.org>, Berlin.
+# Copyright (c) July 1997-2007. Wolfram Schneider <wosch@FreeBSD.org>
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -52,7 +52,7 @@
 #
 #     _________________________________________________________________
 #
-# $FreeBSD: www/en/cgi/missing_handler.cgi,v 1.17 2005/12/04 21:15:34 simon Exp $
+# $FreeBSD: www/en/cgi/missing_handler.cgi,v 1.18 2005/12/04 21:45:45 simon Exp $
 # ----------------------------------------------------------------------
 
 sub escape($) { $_ = $_[0]; s/&/&amp;/g; s/</&lt;/g; s/>/&gt;/g; $_; }
@@ -75,7 +75,7 @@ $server_name=escape($ENV{'SERVER_NAME'});
 
 # rfc1738 says that ";"|"/"|"?"|":"|"@"|"&"|"=" may be reserved.
 $http_referer_url = escape2($ENV{'HTTP_REFERER'});
-$http_referer_url =~ s/([^a-zA-Z0-9;\/?:&=])/sprintf("%%%02x",ord($1))/eg;
+$http_referer_url =~ s/([^a-zA-Z0-9;\/?:&=\.%])/sprintf("%%%02x",ord($1))/eg;
 $redirect_url_save = escape2($ENV{'REDIRECT_URL'});
 $redirect_url_save =~ s/([^a-zA-Z0-9;\/?:&=])/sprintf("%%%02x",ord($1))/eg;
 
