@@ -1,0 +1,938 @@
+<!--
+     The FreeBSD Documentation Project
+     The FreeBSD French Documentation Project
+
+     $FreeBSD$
+     Original revision: 1.28
+-->
+
+<!-- Need more documentation on praudit, auditreduce, etc.  Plus more info
+on the triggers from the kernel (log rotation, out of space, etc).
+And the /dev/audit special file if we choose to support that.  Could use
+some coverage of integrating MAC with Event auditing and perhaps discussion
+on how some companies or organizations handle auditing and auditing
+requirements. -->
+
+<chapter id="audit">
+  <chapterinfo>
+    <authorgroup>
+      <author>
+	<firstname>Tom</firstname>
+	<surname>Rhodes</surname>
+	<contrib>Ecrit par </contrib>
+      </author>
+      <author>
+	<firstname>Robert</firstname>
+	<surname>Watson</surname>
+      </author>
+    </authorgroup>
+  </chapterinfo>
+
+  <title>Audit des &eacute;v&eacute;nements relatifs &agrave; la
+    s&eacute;curit&eacute; du syst&egrave;me</title>
+  &trans.a.fonvieille;
+
+  <sect1 id="audit-synopsis">
+    <title>Synopsis</title>
+
+    <indexterm><primary>AUDIT</primary></indexterm>
+    <indexterm>
+      <primary>Audit des &eacute;v&eacute;nements relatifs &agrave; la
+	s&eacute;curit&eacute; du syst&egrave;me</primary>
+      <see>MAC</see>
+    </indexterm>
+
+    <para>&os; 6.2-RELEASE et les versions suivantes disposent d'un
+      support pour l'audit d'&eacute;v&eacute;nements relatifs
+      &agrave; la s&eacute;curit&eacute; du syst&egrave;me.  L'audit
+      d'&eacute;v&eacute;nements permet un enregistrement fiable et
+      configurable d'une grande vari&eacute;t&eacute;
+      d'&eacute;v&eacute;nements syst&egrave;me en rapport avec la
+      s&eacute;curit&eacute;, parmi lesquels les ouvertures de
+      session, les modifications de la configuration, et les
+      acc&egrave;s aux fichiers et au r&eacute;seau.  Ces
+      enregistrements ou journaux peuvent &ecirc;tre d'une tr&egrave;s
+      grande aide pour la surveillance d'un syst&egrave;me, pour la
+      d&eacute;tection d'intrusion, et les analyses post-mortem.  &os;
+      impl&eacute;mente l'API et le format de fichiers
+      <acronym>BSM</acronym> publi&eacute;s par &sun; qui sont
+      interop&eacute;rables avec les impl&eacute;mentations d'audits
+      de &solaris; de &sun; et de &macos; X d'&apple;.</para>
+
+    <para>Ce chapitre se concentre sur l'installation et la
+      configuration de l'audit des &eacute;v&eacute;nements.  Il
+      explique les strat&eacute;gies utilis&eacute;es pour l'audit, et
+      propose un exemple de configuration.</para>
+
+    <para>Apr&egrave;s la lecture de ce chapitre, vous saurez:</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>Ce qu'est l'audit d'&eacute;v&eacute;nements et comment
+	  cela fonctionne.</para>
+      </listitem>
+
+      <listitem>
+	<para>Comment configurer l'audit d'&eacute;v&eacute;nements
+	  sous &os; pour les utilisateurs et les processus.</para>
+      </listitem>
+
+      <listitem>
+	<para>Comment lire une trace d'audit en utilisant les outils
+	  de r&eacute;duction et de lecture.</para>
+    </itemizedlist>
+
+    <para>Avant de lire ce chapitre, vous devrez:</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>Comprendre les fondements d'&unix; et de &os;
+	  (<xref linkend="basics">).</para>
+      </listitem>
+
+      <listitem>
+	<para>Etre familier avec la configuration et la compilation du
+	  noyau (<xref linkend="kernelconfig">).</para>
+      </listitem>
+
+      <listitem>
+	<para>Avoir quelques notions de s&eacute;curit&eacute; et
+	  savoir comment les appliquer &agrave; &os; (<xref
+	  linkend="security">).</para>
+      </listitem>
+    </itemizedlist>
+
+    <warning>
+      <para>La fonctionnalit&eacute; d'audit sous &os; 6.2 est
+	consid&eacute;r&eacute;e comme exp&eacute;rimentale, aussi un
+	d&eacute;ploiement en production ne devrait intervenir
+	qu'apr&egrave;s avoir consid&eacute;r&eacute; avec prudence les
+	risques d&eacute;coulant de l'utilisation de logiciels
+	exp&eacute;rimentaux.  Parmi les limitations connues, on peut
+	citer le fait que tous les &eacute;v&eacute;nements
+	syst&egrave;mes en rapport avec la s&eacute;curit&eacute; ne
+	peuvent pas &ecirc;tre soumis &agrave; un audit, et que certains
+	m&eacute;canismes d'ouverture de session, comme les
+	gestionnaires de proc&eacute;dures de connexions bas&eacute;s
+	sur X11 et des <quote>d&eacute;mons</quote> tiers, ne permettent
+	pas une configuration correcte de l'audit pour les ouvertures de
+	session utilisateur.</para>
+    </warning>
+
+    <warning>
+      <para>Le syst&egrave;me d'audit des &eacute;v&eacute;nements
+	permet la g&eacute;n&eacute;ration d'enregistrements
+	d&eacute;taill&eacute;s de l'activit&eacute; du syst&egrave;me:
+	sur un syst&egrave;me occup&eacute;, un fichier journal d'audit
+	peut &ecirc;tre tr&egrave;s important quand le syst&egrave;me
+	est configur&eacute; pour un haut niveau de d&eacute;tail,
+	d&eacute;passant plusieurs gigaoctets par semaine sur certaines
+	configurations.  Les administrateurs syst&egrave;me devraient
+	prendre en compte les besoins en espace disque associ&eacute;s
+	avec les configurations d'audit &agrave; haut niveau de
+	d&eacute;tail.  Par exemple, il peut &ecirc;tre
+	recommand&eacute; de d&eacute;dier un syst&egrave;me de fichiers
+	&agrave; l'arborescence <filename>/var/audit</filename> de
+	mani&egrave;re &agrave; ce que les autres syst&egrave;mes de
+	fichiers ne soient pas affect&eacute;s si le syst&egrave;me de
+	fichiers pour les audits est plein.</para>
+    </warning>
+  </sect1>
+
+  <sect1 id="audit-inline-glossary">
+    <title>Mots-cl&eacute;s utilis&eacute;s dans ce chapitre</title>
+
+    <para>Avant de lire ce chapitre, quelques termes relatifs &agrave;
+      l'audit doivent &ecirc;tre explicit&eacute;s:</para>
+
+    <itemizedlist>
+      <listitem>
+	<para><emphasis>&eacute;v&eacute;nement</emphasis>: un
+	  &eacute;v&eacute;nement pouvant &ecirc;tre audit&eacute; est
+	  n'importe quel &eacute;v&eacute;nement pouvant faire l'objet
+	  d'un suivi par le syst&egrave;me d'audit.  La cr&eacute;ation
+	  d'un fichier, la mise en place d'une connection r&eacute;seau,
+	  ou une ouverture de session sont des exemples
+	  d'&eacute;v&eacute;nements relatifs &agrave; la
+	  s&eacute;curit&eacute;.  Les &eacute;v&eacute;nements sont
+	  consid&eacute;r&eacute;s soit comme
+	  <quote>attribuables</quote>, quand on peut les relier &agrave;
+	  un utilisateur authentifi&eacute;, soit
+	  <quote>non-attribuables</quote> quand on ne peut pas les
+	  relier &agrave; un utilisateur authentifi&eacute;.  Des
+	  &eacute;v&eacute;nements comme ceux qui apparaissent avant
+	  l'authentification durant le processus d'ouverture de session,
+	  tels que les tentatives avec un mauvais mot de passe, sont des
+	  &eacute;v&eacute;nement non-attribuables.</para>
+      </listitem>
+
+      <listitem>
+	<para><emphasis>classe</emphasis>: les classes
+	  d'&eacute;v&eacute;nement d&eacute;signent &agrave; l'aide
+	  d'un nom particulier des ensembles
+	  d'&eacute;v&eacute;nements en rapport les uns avec les
+	  autres et sont utilis&eacute;es dans les expressions de
+	  s&eacute;lection des &eacute;v&eacute;nements.  Les classes
+	  d'&eacute;v&eacute;nement g&eacute;n&eacute;ralement
+	  utilis&eacute;es sont la <quote>cr&eacute;ation de
+	  fichiers</quote> (fc) l'<quote>ex&eacute;cution</quote> (ex)
+	  et l'<quote>ouverture/fermeture de session</quote>
+	  (lo).</para>
+      </listitem>
+
+      <listitem>
+	<para><emphasis>enregistrement</emphasis>: un enregistrement
+	  est une entr&eacute;e du fichier de trace d'audit
+	  d&eacute;crivant un &eacute;v&eacute;nement relatif &agrave;
+	  la s&eacute;curit&eacute;.  Les enregistrements contiennent
+	  le type d'&eacute;v&eacute;nement, des informations sur
+	  l'auteur (l'utilisateur) de l'action, la date et l'heure,
+	  des informations sur tout objet ou argument en relation avec
+	  l'action, et une condition de succ&egrave;s ou
+	  d'&eacute;chec.</para>
+      </listitem>
+
+      <listitem>
+	<para><emphasis>trace d'audit</emphasis>: une trace d'audit,
+	  ou fichier journal, consiste en une s&eacute;rie
+	  d'enregistrements d&eacute;crivant les
+	  &eacute;v&eacute;nements relatifs &agrave; la
+	  s&eacute;curit&eacute;.  G&eacute;n&eacute;ralement ces traces
+	  sont organis&eacute;es de mani&egrave;re chronologiques par
+	  rapport &agrave; l'horaire de fin des
+	  &eacute;v&eacute;nements.  Seuls les processus
+	  autoris&eacute;s peuvent ajouter des enregistrements aux
+	  fichiers journaux d'audit.</para>
+      </listitem>
+
+      <listitem>
+	<para><emphasis>expression de s&eacute;lection</emphasis>: une
+	  expression de s&eacute;lection est une cha&icirc;ne de
+	  caract&egrave;res contenant une liste de pr&eacute;fixes et
+	  de classes d'&eacute;v&eacute;nement d'audit utilis&eacute;s
+	  pour d&eacute;signer des &eacute;v&eacute;nements.</para>
+      </listitem>
+
+      <listitem>
+	<para><emphasis>pr&eacute;selection</emphasis>: le processus
+	  par lequel le syst&egrave;me identifie quels
+	  &eacute;v&eacute;nements int&eacute;ressent l'administrateur
+	  afin d'&eacute;viter la g&eacute;n&eacute;ration
+	  d'enregistrements d'audit sans int&eacute;r&ecirc;t pour
+	  l'administrateur.  La configuration de la
+	  pr&eacute;s&eacute;lection utilise une s&eacute;rie
+	  d'expressions de s&eacute;lection pour d&eacute;terminer
+	  quelles classes d'&eacute;v&eacute;nement sont &agrave;
+	  auditer et pour quels utilisateurs, ainsi que le
+	  param&eacute;trage global qui s'applique aux processus
+	  authentifi&eacute;s et non-authentifi&eacute;s.</para>
+      </listitem>
+
+      <listitem>
+	<para><emphasis>r&eacute;duction</emphasis>: le processus par
+	  lequel les enregistrements de traces d'audit existantes sont
+	  s&eacute;lectionn&eacute;s pour &ecirc;tre conserv&eacute;s,
+	  imprim&eacute;s ou analys&eacute;s. Ou encore le processus
+	  qui supprime de la trace d'audit les enregistrements
+	  non-d&eacute;sir&eacute;s.  En utilisant le principe de
+	  r&eacute;duction, les administrateurs peuvent mettre en
+	  place des strat&eacute;gies pour la conservation des
+	  donn&eacute;es d'audit.  Par exemple, les traces d'audit
+	  d&eacute;taill&eacute;es peuvent &ecirc;tre
+	  conserv&eacute;es pendant un mois, mais pass&eacute; ce
+	  d&eacute;lai, les traces seront r&eacute;duites afin de ne
+	  pr&eacute;server pour archivage que les informations
+	  relatives aux ouvertures de sessions.</para>
+      </listitem>
+    </itemizedlist>
+  </sect1>
+
+  <sect1 id="audit-install">
+    <title>Installation du support pour les audits</title>
+
+    <para>Le support pour l'audit des &eacute;v&eacute;nements est
+      install&eacute; avec le syst&egrave;me de base de &os; depuis la
+      version 6.2-RELEASE.  Cependant ce support doit &ecirc;tre
+      compil&eacute; dans le noyau en ajoutant la ligne suivante au
+      fichier de configuration du noyau:</para>
+
+    <programlisting>options	AUDIT</programlisting>
+
+    <para>Recompilez et r&eacute;installez le noyau en suivant le
+      processus classique expliqu&eacute; dans le <xref
+      linkend="kernelconfig">.</para>
+
+    <para>Une fois que le noyau a &eacute;t&eacute; compil&eacute;,
+      install&eacute;, et que le syst&egrave;me a &eacute;t&eacute;
+      red&eacute;marr&eacute;, activez le <quote>d&eacute;mon</quote>
+      d'audit en ajoutant la ligne suivante au fichier
+      &man.rc.conf.5;:</para>
+
+    <programlisting>auditd_enable="YES"</programlisting>
+
+    <para>Le support pour les audits peut alors &ecirc;tre
+      lanc&eacute; par un red&eacute;marrage de la machine ou
+      manuellement en lan&ccedil;ant le <quote>d&eacute;mon</quote>
+      d'audit:</para>
+
+    <programlisting>/etc/rc.d/auditd start</programlisting>
+  </sect1>
+
+  <sect1 id="audit-config">
+    <title>Configuration de l'audit</title>
+
+    <para>Tous les fichiers de configuration de l'audit
+      d'&eacute;v&eacute;nements en rapport avec la
+      s&eacute;curit&eacute; se trouvent dans le r&eacute;pertoire
+      <filename class="directory">/etc/security</filename>.  Les
+      fichiers suivants doivent &ecirc;tre pr&eacute;sents avant le
+      lancement du <quote>d&eacute;mon</quote> d'audit:</para>
+
+    <itemizedlist>
+      <listitem>
+	<para><filename>audit_class</filename> - contient les
+	  d&eacute;finitions des classes d'audit.</para>
+      </listitem>
+
+      <listitem>
+	<para><filename>audit_control</filename> - contr&ocirc;le les
+	  caract&eacute;ristiques du syst&egrave;me d'audit comme les
+	  classes d'audit par d&eacute;faut, l'espace disque minimal
+	  &agrave; conserver sur le volume r&eacute;serv&eacute; aux
+	  journaux, la taille maximale des traces d'audit, etc.</para>
+      </listitem>
+
+      <listitem>
+	<para><filename>audit_event</filename> - les noms et la
+	  description des &eacute;v&eacute;nements syst&egrave;mes
+	  audit&eacute;s ainsi qu'une liste de classes auxquelles
+	  appartiennent chaque &eacute;v&eacute;nement.</para>
+      </listitem>
+
+      <listitem>
+	<para><filename>audit_user</filename> - les classes
+	  d'&eacute;v&eacute;nement &agrave; auditer pour des
+	  utilisateurs sp&eacute;cifiques, qui s'ajoutent aux
+	  param&egrave;tres g&eacute;n&eacute;raux fix&eacute;s par
+	  d&eacute;faut &agrave; l'ouverture de session.</para>
+      </listitem>
+
+      <listitem>
+	<para><filename>audit_warn</filename> - une proc&eacute;dure
+	  modifiable utilis&eacute;e par
+	  <application>auditd</application> pour g&eacute;n&eacute;rer
+	  des messages d'alerte lors des situations exceptionnelles
+	  comme un espace disque faible pour les fichiers journaux
+	  d'audit ou quand il y a eu rotation de ces fichiers
+	  journaux.</para>
+      </listitem>
+    </itemizedlist>
+
+    <warning>
+      <para>Les fichiers de configuration de l'audit devraient
+	&ecirc;tre modifi&eacute;s et g&eacute;r&eacute;s avec prudence
+	&eacute;tant donn&eacute; que des erreurs dans la configuration
+	pourraient donner lieu &agrave; un enregistrement incorrect des
+	&eacute;v&eacute;nements.</para>
+    </warning>
+
+    <sect2>
+      <title>Expressions de s&eacute;lection des
+	&eacute;v&eacute;nements</title>
+
+      <para>Les expressions de s&eacute;lection sont utilis&eacute;es
+	&agrave; plusieurs endroits dans la configuration du
+	syst&egrave;me d'audit pour d&eacute;terminer quels
+	&eacute;v&eacute;nements doivent &ecirc;tre suivis.  Les
+	expressions contiennent une liste de classes
+	d'&eacute;v&eacute;nements, chacune avec un pr&eacute;fixe
+	indiquant si les enregistrements correspondants doivent
+	&ecirc;tre accept&eacute;s ou ignor&eacute;s, et qui peut, de
+	mani&egrave;re optionnelle, indiquer si l'entr&eacute;e se
+	limite aux op&eacute;rations r&eacute;ussies ou aux
+	&eacute;checs.  Les expressions de s&eacute;lection sont
+	&eacute;valu&eacute;es de gauche &agrave; droite, et deux
+	expressions sont combin&eacute;es en ajoutant l'une &agrave;
+	la suite de l'autre.</para>
+
+      <para>La liste suivante contient les classes
+	d'&eacute;v&eacute;nements pr&eacute;sentes par d&eacute;faut
+	dans le fichier <filename>audit_class</filename>:</para>
+
+      <itemizedlist>
+	<listitem>
+	  <para><literal>all</literal> - <emphasis>all</emphasis>
+	    (tout) - correspond &agrave; toutes les classes
+	    d'&eacute;v&eacute;nements.</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>ad</literal> -
+	    <emphasis>administrative</emphasis> (administration)
+	    - actions d'administration du syst&egrave;me.</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>ap</literal> -
+	    <emphasis>application</emphasis> - action d&eacute;finie
+	    par l'application.</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>cl</literal> - <emphasis>file
+	    close</emphasis> (fermeture de fichiers) - enregistre les
+	    utilisations de l'appel syst&egrave;me
+	    <function>close</function>.</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>ex</literal> - <emphasis>exec</emphasis>
+	    (ex&eacute;cution) - audite les ex&eacute;cutions de
+	    programmes.  L'audit des arguments en ligne de commande et
+	    des variables d'environnement est contr&ocirc;l&eacute;
+	    par via &man.audit.control.5; en utilisant les
+	    param&egrave;tres <literal>argv</literal> et
+	    <literal>envv</literal> pour l'entr&eacute;e
+	    <literal>policy</literal>.</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>fa</literal> - <emphasis>file attribute
+	    access</emphasis> - enregistre l'acc&egrave;s aux
+	    attributs des objets comme &man.stat.1;, &man.pathconf.2;
+	    et les &eacute;v&eacute;nements similaires.</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>fc</literal> - <emphasis>file
+	    create</emphasis> (cration de fichiers) - enregistre les
+	    &eacute;v&eacute;nements ayant pour r&eacute;sultat la
+	    cr&eacute;ation d'un fichier.</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>fd</literal> - <emphasis>file
+	    delete</emphasis> (suppression de fichiers) - enregistre
+	    les &eacute;v&eacute;nements pour lesquels une suppression
+	    de fichier a lieu.</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>fm</literal> - <emphasis>file attribute
+	    modify</emphasis> (modification des attributs d'un
+	    fichier) - enregistre les &eacute;v&eacute;nements lors
+	    desquels une modification des attributs d'un fichier
+	    intervient, comme l'utilisation de &man.chown.8;,
+	    &man.chflags.1;, &man.flock.2;, etc.</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>fr</literal> - <emphasis>file read</emphasis>
+	    (lecture de fichiers) - enregistre les
+	    &eacute;v&eacute;nements qui donnent lieu &agrave; la
+	    lecture de donn&eacute;es, l'ouverture de fichiers
+	    &agrave; la lecture, etc.</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>fw</literal> - <emphasis>file
+	    write</emphasis> (&eacute;criture de fichiers) -
+	    enregistre les &eacute;v&eacute;nements qui donnent lieu
+	    &agrave; l'&eacute;criture de donn&eacute;es, &agrave;
+	    l'&eacute;criture ou &agrave; la modification de fichiers,
+	    etc.</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>io</literal> - <emphasis>ioctl</emphasis> -
+	    enregistre l'utilisation de l'appel syst&egrave;me
+	    &man.ioctl.2;.</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>ip</literal> - <emphasis>ipc</emphasis> -
+	    enregistre les diff&eacute;rentes utilisations de
+	    communication inter-processus, dont les utilisations des
+	    tubes POSIX et les op&eacute;rations
+	    <acronym>IPC</acronym> Syst&egrave;me V.</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>lo</literal> -
+	    <emphasis>login_logout</emphasis> (ouverture et fermeture
+	    de session) - enregistre les ouvertures et fermeture de
+	    session (&man.login.1; et &man.logout.1;) intervenant sur
+	    le syst&egrave;me.</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>na</literal> - <emphasis>non
+	    attributable</emphasis> (non-attribuable) - enregistre les
+	    &eacute;v&eacute;nements non-attribuables.</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>no</literal> - <emphasis>invalid
+	    class</emphasis> (classe invalide) - ne correspond
+	    &agrave; aucun des &eacute;v&eacute;nements
+	    surveill&eacute;s.</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>nt</literal> - <emphasis>network</emphasis>
+	    (r&eacute;seau) - enregistre les &eacute;v&eacute;nements
+	    relatifs au r&eacute;seau, comme l'utilisation des
+	    fonctions &man.connect.2; et &man.accept.2;.</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>ot</literal> - <emphasis>other</emphasis>
+	    (autre) - enregistre les &eacute;v&eacute;nements
+	    divers.</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>pc</literal> - <emphasis>process</emphasis>
+	    (processus) - enregistre les op&eacute;rations sur les
+	    processus, comme l'utilisation des fonctions &man.exec.3;
+	    et &man.exit.3;.</para>
+	</listitem>
+      </itemizedlist>
+
+      <para>Ces classes d'&eacute;v&eacute;nement peuvent &ecirc;tre
+	personnalis&eacute;es en modifiant les fichiers de
+	configuration <filename>audit_class</filename> et
+	<filename>audit_event</filename>.</para>
+
+      <para>Chaque classe d'audit dans la liste est combin&eacute;e
+	avec un pr&eacute;fixe indiquant si les op&eacute;rations
+	r&eacute;ussies/&eacute;chou&eacute;es sont
+	s&eacute;lectionn&eacute;es, et si l'entr&eacute;e ajoute ou
+	supprime une s&eacute;lection pour la classe ou le type
+	concern&eacute;.</para>
+
+      <itemizedlist>
+	<listitem>
+	  <para>(rien) enregistre les succ&egrave;s et les
+	    &eacute;checs de l'&eacute;v&eacute;nement.</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>+</literal> enregistre les
+	    &eacute;v&eacute;nements r&eacute;ussis de cette
+	    classe.</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>-</literal> enregistre les
+	    &eacute;v&eacute;nements de cette classe qui ont
+	    &eacute;chou&eacute;.</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>^</literal> n'enregistre ni les
+	    &eacute;v&eacute;nements r&eacute;ussis ni les &eacute;checs
+	    de cette classe.</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>^+</literal> ne pas enregistrer les
+	    &eacute;v&eacute;nements r&eacute;ussis de cette
+	    classe.</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>^-</literal> ne pas enregistrer les
+	    &eacute;v&eacute;nements de cette classe qui ont
+	    &eacute;chou&eacute;.</para>
+	</listitem>
+      </itemizedlist>
+
+      <para>L'exemple suivant d'expression de s&eacute;lection permet
+	la s&eacute;lection des ouvertures et fermetures de session
+	r&eacute;ussies ou &eacute;chou&eacute;es, et uniquement les
+	ex&eacute;cutions ayant r&eacute;ussies:</para>
+
+      <programlisting>lo,+ex</programlisting>
+    </sect2>
+
+    <sect2>
+      <title>Fichiers de configuration</title>
+
+      <para>Dans la plupart des cas, les administrateurs ne devront
+	modifier que deux fichiers lors de la configuration du
+	syst&egrave;me d'audit: <filename>audit_control</filename> et
+	<filename>audit_user</filename>.  Le premier contr&ocirc;le
+	les propri&eacute;t&eacute;s et les strat&eacute;gies au
+	niveau du syst&egrave;me; le second peut &ecirc;tre
+	utilis&eacute; pour affiner l'audit pour chaque
+	utilisateur.</para>
+
+      <sect3 id="audit-auditcontrol">
+	<title>Le fichier <filename>audit_control</filename></title>
+
+	<para>Le fichier <filename>audit_control</filename> fixe un
+	  certain nombre de param&egrave;tres par d&eacute;faut pour
+	  le syst&egrave;me d'audit.  Le contenu de ce fichier
+	  ressemble &agrave; ce qui suit:</para>
+
+	<programlisting>dir:/var/audit
+flags:lo
+minfree:20
+naflags:lo
+policy:cnt
+filesz:0</programlisting>
+
+	<para>L'option <literal>dir</literal> est utilis&eacute;e pour
+	  d&eacute;clarer un ou plusieurs r&eacute;pertoires dans
+	  lesquels seront stock&eacute;s les fichiers journaux.  Si
+	  l'on mentionne plus d'un r&eacute;pertoire, ces derniers
+	  seront utilis&eacute;s dans l'ordre &agrave; mesure qu'ils
+	  se remplissent.  Il est classique de configurer le
+	  syst&egrave;me d'audit pour le stockage des fichiers
+	  journaux sur un syst&egrave;me de fichiers
+	  d&eacute;di&eacute;, afin d'&eacute;viter toute
+	  interf&eacute;rence entre le syst&egrave;me d'audit et
+	  d'autres syst&egrave;mes si le syst&egrave;me de fichiers
+	  est plein.</para>
+
+	<para>Le champ <literal>flags</literal> fixe le masque
+	  g&eacute;n&eacute;ral de pr&eacute;s&eacute;lection
+	  utilis&eacute; par d&eacute;faut pour les
+	  &eacute;v&eacute;nements attribuables.  Dans l'exemple
+	  ci-dessus, les ouvertures et fermetures de sessions
+	  r&eacute;ussies ou &eacute;chou&eacute;es sont
+	  enregistr&eacute;es pour tous les utilisateurs.</para>
+
+	<para>L'option <literal>minfree</literal> d&eacute;finit le
+	  pourcentage minimal d'espace libre du syst&egrave;me de
+	  fichiers sur lequel les traces d'audit sont stock&eacute;es.
+	  Si cette limite est d&eacute;pass&eacute;e, un avertissement
+	  sera g&eacute;n&eacute;r&eacute;.  L'exemple ci-dessus fixe
+	  l'espace minimal &agrave; vingt pourcents.</para>
+
+	<para>L'entr&eacute;e <literal>naflags</literal> indique les
+	  classes &agrave; surveiller pour les
+	  &eacute;v&eacute;nements non-attribu&eacute;s, comme les
+	  processus d'ouverture de session et les
+	  <quote>d&eacute;mons</quote> syst&egrave;me.</para>
+
+	<para>L'entr&eacute;e <literal>policy</literal> donne une
+	  liste d'indicateurs de strat&eacute;gie contr&ocirc;lant
+	  divers aspect du comportement de l'audit
+	  s&eacute;par&eacute;s par une virgule.  L'indicateur
+	  <literal>cnt</literal> indique que le syst&egrave;me devrait
+	  continuer &agrave; fonctionner en d&eacute;pit d'un
+	  &eacute;chec dans l'audit (l'emploi de cet indicateur est
+	  hautement recommand&eacute;).  Un autre indicateur
+	  g&eacute;n&eacute;ralement utilis&eacute; est
+	  <literal>argv</literal>, qui provoque l'audit des arguments
+	  pass&eacute;s &agrave; l'appel syst&egrave;me &man.execve.2;
+	  lors de l'audit de l'ex&eacute;cution des commandes.</para>
+
+	<para>L'entr&eacute;e <literal>filez</literal> indique la
+	  taille maximale en octets autoris&eacute;e pour un fichier
+	  de trace avant qu'il soit interrompu et que le
+	  syst&egrave;me provoque sa rotation.  La valeur par
+	  d&eacute;faut, 0, d&eacute;sactive la rotation automatique
+	  des journaux.  Si la taille de fichier est diff&eacute;rente
+	  de z&eacute;ro mais inf&eacute;rieure &agrave; 512K, elle
+	  sera ignor&eacute;e et un message sera
+	  g&eacute;n&eacute;r&eacute;.</para>
+      </sect3>
+
+      <sect3 id="audit-audituser">
+	<title>Le fichier <filename>audit_user</filename></title>
+
+	<para>Le fichier <filename>audit_user</filename> permet
+	  &agrave; l'administrateur de pr&eacute;ciser des conditions
+	  suppl&eacute;mentaires d'audit pour des utilisateurs
+	  sp&eacute;cifiques.  Chaque ligne param&egrave;tre l'audit
+	  pour un utilisateur par l'interm&eacute;diaire de deux
+	  champs: le premier est le champ
+	  <literal>alwaysaudit</literal>, qui indique l'ensemble des
+	  &eacute;v&eacute;nements qui devraient toujours &ecirc;tre
+	  surveill&eacute;s pour l'utilisateur, le deuxi&egrave;me
+	  champ, <literal>neveraudit</literal>, indique un ensemble
+	  d'&eacute;v&eacute;nements qui ne devrait jamais &ecirc;tre
+	  audit&eacute; pour cet utilisateur.</para>
+
+	<para>L'exemple suivant de fichier
+	  <filename>audit_user</filename> permet le suivi des
+	  ouvertures et fermetures de sessions et l'ex&eacute;cution
+	  de commandes avec succ&egrave;s de l'utilisateur
+	  <username>root</username>, et audite la cr&eacute;ation de
+	  fichiers et l'ex&eacute;cution de commandes avec
+	  succ&egrave;s pour l'utilisateur <username>www</username>.
+	  Si ce fichier est utilis&eacute; avec l'exemple
+	  pr&eacute;c&eacute;dent de fichier
+	  <filename>audit_control</filename>, l'entr&eacute;e
+	  <literal>lo</literal> pour <username>root</username> est
+	  redondante, et les &eacute;v&eacute;nements relatifs aux
+	  ouvertures et aux fermetures de sessions seront
+	  &eacute;galement enregistr&eacute;s pour l'utilisateur
+	  <username>www</username>.</para>
+
+	<programlisting>root:lo,+ex:no
+www:fc,+ex:no</programlisting>
+      </sect3>
+    </sect2>
+  </sect1>
+
+  <sect1 id="audit-administration">
+    <title>Administration du syst&egrave;me d'audit</title>
+
+    <sect2>
+      <title>Consultation des traces d'audit</title>
+
+      <para>Les traces d'audit sont stock&eacute;es sous le format
+	binaire BSM (<quote>Basic Security Module</quote>), aussi il
+	sera n&eacute;cessaire d'utiliser des outils pour modifier ou
+	convertir en texte les fichiers de trace.  La commande
+	&man.praudit.1; convertit les fichiers de trace en simple
+	texte; la commande &man.auditreduce.1; peut &ecirc;tre
+	utilis&eacute;e pour r&eacute;duire le fichier de trace en vue
+	d'une analyse, d'un archivage, ou d'une impression.  La
+	commande <command>auditreduce</command> supporte une
+	vari&eacute;t&eacute; de param&egrave;tres de
+	s&eacute;lection, parmi lesquels le type
+	d'&eacute;v&eacute;nement, la classe de
+	l'&eacute;v&eacute;nement, l'utilisateur, la date ou l'heure
+	de l'&eacute;v&eacute;nement, et le chemin d'acc&egrave;s ou
+	l'objet sur lequel on agit.</para>
+
+      <para>Par exemple, l'utilitaire <command>praudit</command>
+	affichera sous forme de texte brut l'int&eacute;gralit&eacute;
+	du contenu du fichier journal d'audit
+	pr&eacute;cis&eacute;:</para>
+
+      <screen>&prompt.root; <userinput>praudit /var/audit/AUDITFILE</userinput></screen>
+
+      <para>O&ugrave;
+	<filename><replaceable>AUDITFILE</replaceable></filename> est
+	le journal &agrave; afficher.</para>
+
+      <para>Les traces d'audit consistent en une s&eacute;rie
+	d'enregistrements constitu&eacute;s de champs que la commande
+	<command>praudit</command> affiche de mani&egrave;re
+	s&eacute;quentielle, un par ligne.  Chaque champ est
+	sp&eacute;cifique, comme <literal>header</literal> contenant
+	l'ent&ecirc;te de l'enregistrement, ou <literal>path</literal>
+	contenant le chemin d'acc&egrave;s.  Ce qui suit est un
+	exemple d'&eacute;v&eacute;nement
+	<literal>execve</literal>:</para>
+
+      <programlisting>header,133,10,execve(2),0,Mon Sep 25 15:58:03 2006, + 384 msec
+exec arg,finger,doug
+path,/usr/bin/finger
+attribute,555,root,wheel,90,24918,104944
+subject,robert,root,wheel,root,wheel,38439,38032,42086,128.232.9.100
+return,success,0
+trailer,133</programlisting>
+
+      <para>Cet audit repr&eacute;sente un appel r&eacute;ussi
+	&agrave; <literal>execve</literal>, lors de l'ex&eacute;cution
+	de la commande <literal>finger doug</literal>.  Le champ pour
+	les arguments contient la ligne de commande
+	pr&eacute;sent&eacute;e par l'interpr&eacute;teur de commandes
+	au noyau.  Le champ <literal>path</literal> contient le chemin
+	d'acc&egrave;s &agrave; l'ex&eacute;cutable comme le voit le
+	noyau.  Le champ <literal>attribute</literal> d&eacute;crit le
+	binaire, et en particulier, pr&eacute;cise les permissions sur
+	le fichier qui permettent de d&eacute;terminer si
+	l'application avait les permissions <quote>setuid</quote>.  Le
+	champ <literal>subject</literal> d&eacute;crit le sujet de
+	l'audit, et conserve sous la forme d'une s&eacute;quence
+	l'identifiant (ID) de l'utilisateur audit&eacute;, les
+	identifiants groupe et utilisateur effectifs, les identifiants
+	groupe et utilisateur r&eacute;els, l'ID du processus, l'ID de
+	la session, l'ID du port, et l'adresse correspondant &agrave;
+	la session.  Notez que l'ID de l'utilisateur pour l'audit
+	diff&egrave;re de l'ID r&eacute;el de l'utilisateur:
+	l'utilisateur <username>robert</username> est pass&eacute; en
+	<username>root</username> avant l'ex&eacute;cution de la
+	commande, mais l'audit se fait par rapport &agrave;
+	l'utilisateur authentifi&eacute; original.  Et enfin, le champ
+	<literal>return</literal> indique la r&eacute;ussite de
+	l'ex&eacute;cution, et le champ <literal>trailer</literal>
+	termine l'enregistrement.</para>
+    </sect2>
+
+    <sect2>
+      <title>R&eacute;duction des traces d'audit</title>
+
+      <para>Comme les journaux d'audit peuvent &ecirc;tre tr&egrave;s
+	gros, un administrateur voudra ne conserver qu'une partie des
+	enregistrements, comme par exemple les enregistrements
+	associ&eacute;s &agrave; un utilisateur particulier:</para>
+
+      <screen>&prompt.root; <userinput>auditreduce -u trhodes /var/audit/AUDITFILE | praudit</userinput></screen>
+
+      <para>Cette commande s&eacute;lectionnera tous les
+	enregistrements stock&eacute;s dans le fichier
+	<filename><replaceable>AUDITFILE</replaceable></filename> et
+	concernant l'utilisateur <username>trhodes</username>.</para>
+    </sect2>
+
+    <sect2>
+      <title>D&eacute;l&eacute;gation des droits d'acc&egrave;s aux
+	r&eacute;sultats des audits</title>
+
+      <para>Les membres du groupe <groupname>audit</groupname> sont
+	autoris&eacute;s &agrave; lire les traces d'audit
+	pr&eacute;sentes dans le r&eacute;pertoire <filename
+	class="directory">/var/audit</filename>; par d&eacute;faut ce
+	groupe est vide, par cons&eacute;quent seul l'utilisateur
+	<username>root</username> pourra lire les traces d'audit.  Des
+	utilisateurs peuvent &ecirc;tre ajout&eacute;s au groupe
+	<groupname>audit</groupname> afin de d&eacute;l&eacute;guer
+	les droits de lecture des audits &agrave; ses utilisateurs.
+	Comme la possibilit&eacute; de suivre le contenu des fichiers
+	journaux de l'audit donne un aper&ccedil;u significatif du
+	comportement des utilisateurs et des processus, il est donc
+	recommand&eacute; de d&eacute;l&eacute;guer avec prudence les
+	droits de lecture des audits.</para>
+    </sect2>
+
+    <sect2>
+      <title>Surveillance en direct &agrave; l'aide de tubes
+	d'audit</title>
+
+      <para>Les tubes (<quote>pipes</quote>) d'audit sont des
+	pseudo-p&eacute;riph&eacute;riques <quote>clonables</quote> du
+	syst&egrave;me de fichiers des p&eacute;riph&eacute;riques qui
+	autorisent aux applications l'acc&egrave;s au flux
+	d'enregistrement des audits en cours.  C'est de tout premier
+	int&eacute;r&ecirc;t pour les auteurs d'applications de
+	d&eacute;tection des intrusions et de surveillance du
+	syst&egrave;me.  Pour l'administrateur, le tube d'audit est un
+	moyen pratique d'autoriser la surveillance en direct sans
+	avoir &agrave; faire face aux probl&egrave;mes de permissions
+	ou de rotation des fichiers journaux interrompant le flux des
+	enregistrements des &eacute;v&eacute;nements.  Pour suivre le
+	flux des enregistrements de l'audit en cours, utiliser la
+	ligne de commande suivante:</para>
+
+      <screen>&prompt.root; <userinput>praudit /dev/auditpipe</userinput></screen>
+
+      <para>Par d&eacute;faut, les fichiers sp&eacute;ciaux de
+	p&eacute;riph&eacute;riques correspondant aux tubes d'audit ne
+	sont accessibles qu'&agrave; l'utilisateur
+	<username>root</username>.  Pour les rendre accessibles aux
+	membres du groupe <groupname>audit</groupname>, ajoutez une
+	r&egrave;gle <literal>devfs</literal> au fichier
+	<filename>devfs.rules</filename>:</para>
+
+      <programlisting>add path 'auditpipe*' mode 0440 group audit</programlisting>
+
+      <para>Consultez la page de manuel &man.devfs.rules.5; pour plus
+	d'information sur la configuration du syst&egrave;me de
+	fichiers devfs.</para>
+
+      <warning>
+	<para>Il est relativement simple de produire un effet de
+	  boucle sans fin, dans lequel la consultation de chaque
+	  &eacute;v&eacute;nement enregistr&eacute; par le
+	  syst&egrave;me d'audit provoque la g&eacute;n&eacute;ration
+	  de nouveaux &eacute;v&eacute;nements d'audit.  Par exemple,
+	  si toutes les entr&eacute;es/sorties r&eacute;seau sont
+	  surveill&eacute;es, et que &man.praudit.1; est
+	  ex&eacute;cut&eacute; depuis une session SSH, alors un flux
+	  continu d'&eacute;v&eacute;nements sera
+	  g&eacute;n&eacute;r&eacute; suivant une fr&eacute;quence
+	  importante, chaque &eacute;v&eacute;nement affich&eacute;
+	  g&eacute;n&eacute;rant un autre &eacute;v&eacute;nement.  Il
+	  est recommand&eacute; d'ex&eacute;cuter
+	  <command>praudit</command> sur un tube par
+	  l'interm&eacute;diaire de sessions sans surveillance
+	  pr&eacute;cise des entr&eacute;es/sortie afin
+	  d'&eacute;viter que ne survienne un tel
+	  probl&egrave;me.</para>
+      </warning>
+    </sect2>
+
+    <sect2>
+      <title>Rotation des fichiers de trace d'audit</title>
+
+      <para>Les traces d'audit ne sont &eacute;crites que par le
+	noyau, et ne sont g&eacute;r&eacute;es que par le
+	<quote>d&eacute;mon</quote> d'audit,
+	<application>auditd</application>.  Les administrateurs ne
+	devraient donc pas tenter d'utiliser &man.newsyslog.conf.5; ou
+	tout autre outil pour assurer la rotation directe des journaux
+	d'audit.  A la place, l'utilitaire <command>audit</command>
+	devrait &ecirc;tre employ&eacute; pour stopper l'audit,
+	reconfigurer le syst&egrave;me d'audit et effectuer la
+	rotation des journaux.  La commande suivante provoque la
+	cr&eacute;ation d'un nouveau fichier journal d'audit par le
+	<quote>d&eacute;mon</quote> et signale au noyau d'utiliser le
+	nouveau fichier pour les enregistrements.  L'ancien fichier
+	journal sera ferm&eacute; et renomm&eacute; et pourra,
+	&agrave; partir de cet instant, &ecirc;tre manipul&eacute; par
+	l'administrateur.</para>
+
+      <screen>&prompt.root; <userinput>audit -n</userinput></screen>
+
+      <warning>
+	<para>Si le <quote>d&eacute;mon</quote>
+	  <application>auditd</application> ne tourne pas, cette
+	  commande &eacute;chouera et un message d'erreur sera
+	  g&eacute;n&eacute;r&eacute;.</para>
+      </warning>
+
+      <para>Ajouter la ligne suivante au fichier
+	<filename>/etc/crontab</filename> provoquera la rotation des
+	fichiers toutes les douze heures &agrave; l'aide de
+	&man.cron.8;:</para>
+
+      <programlisting>0     */12       *       *       *       root    /usr/sbin/audit -n</programlisting>
+
+      <para>La modification sera prise en compte une fois que aurez
+	sauvegard&eacute; le nouveau fichier
+	<filename>/etc/crontab</filename>.</para>
+
+      <para>La rotation automatique du fichier d'une trace d'audit
+	bas&eacute;e sur la taille du fichier est possible &agrave;
+	l'aide de l'option <option>filesz</option> de
+	&man.audit.control.5;, cette option est d&eacute;crite dans la
+	section de ce chapitre concernant les fichiers de
+	configuration.</para>
+    </sect2>
+
+    <sect2>
+      <title>Compresser les traces d'audit</title>
+
+      <para>Les fichiers de trace d'audit peuvent devenir tr&egrave;s
+	gros, il est souvent d&eacute;sirable de les compresser ou
+	sinon de les archiver une fois qu'ils ont &eacute;t&eacute;
+	ferm&eacute;s par le <quote>d&eacute;mon</quote> d'audit.  La
+	proc&eacute;dure <filename>audit_warn</filename> peut
+	&ecirc;tre employ&eacute;e pour effectuer des
+	op&eacute;rations personnalis&eacute;es pour une
+	vari&eacute;t&eacute; d'&eacute;v&eacute;nements relatifs
+	&agrave; l'audit, y compris l'arr&ecirc;t propre des traces
+	d'audit lors de leur rotation.  Par exemple, ce qui suit peut
+	&ecirc;tre ajout&eacute; &agrave; la proc&eacute;dure
+	<filename>audit_warn</filename> pour compresser les traces
+	d'audit &agrave; leur fermeture:</para>
+
+      <programlisting>#
+# Compression des fichiers de trace d'audit &agrave; leur fermeture.
+#
+if [ "$1" = closefile ]; then
+        gzip -9 $2
+fi</programlisting>
+
+      <para>D'autres activit&eacute;s d'archivage pourront inclure la
+	copie des fichiers de trace vers un serveur central, la
+	suppression d'anciennes traces, ou la r&eacute;duction des
+	traces pour supprimer les enregistrements inutiles.  La
+	proc&eacute;dure ne sera ex&eacute;cut&eacute;e que lorsque
+	les fichiers de trace d'audit auront &eacute;t&eacute;
+	proprement arr&ecirc;t&eacute;s, et ne sera pas
+	ex&eacute;cut&eacute;e sur les traces interrompues en cours
+	d'utilisation suite &agrave; un arr&ecirc;t incorrect du
+	syst&egrave;me.</para>
+    </sect2>
+  </sect1>
+</chapter>
