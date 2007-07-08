@@ -2,7 +2,7 @@
 # The FreeBSD French Documentation Project
 #
 # $FreeBSD$
-# Original revision: 1.95 manque 1.91, 1.94 partiel
+# Original revision: 1.104 manque 1.91
 #
 # Build the FreeBSD Handbook.
 #
@@ -46,24 +46,15 @@ IMAGES+= advanced-networking/natd.eps
 IMAGES+= advanced-networking/net-routing.pic
 IMAGES_EN+= advanced-networking/static-routes.pic
 IMAGES_EN+= geom/striping.pic
-IMAGES_EN+= install/userconfig.scr
-IMAGES_EN+= install/userconfig2.scr
-IMAGES_EN+= install/hdwrconf.scr
-IMAGES_EN+= install/probstart.scr
-IMAGES_EN+= install/main1.scr
-IMAGES_EN+= install/sysinstall-exit.scr
-IMAGES_EN+= install/main-doc.scr
-IMAGES_EN+= install/docmenu1.scr
-IMAGES_EN+= install/main-keymap.scr
-IMAGES_EN+= install/keymap.scr
-IMAGES_EN+= install/main-options.scr
-IMAGES_EN+= install/options.scr
-IMAGES_EN+= install/main-std.scr
-IMAGES_EN+= install/fdisk-drive1.scr
-IMAGES_EN+= install/fdisk-edit1.scr
-IMAGES_EN+= install/fdisk-edit2.scr
+IMAGES_EN+= install/adduser1.scr
+IMAGES_EN+= install/adduser2.scr
+IMAGES_EN+= install/adduser3.scr
 IMAGES_EN+= install/boot-mgr.scr
-IMAGES_EN+= install/fdisk-drive2.scr
+IMAGES_EN+= install/console-saver1.scr
+IMAGES_EN+= install/console-saver2.scr
+IMAGES_EN+= install/console-saver3.scr
+IMAGES_EN+= install/console-saver4.scr
+IMAGES_EN+= install/desktop.scr
 IMAGES_EN+= install/disklabel-ed1.scr
 IMAGES_EN+= install/disklabel-auto.scr
 IMAGES_EN+= install/disklabel-root1.scr
@@ -73,44 +64,53 @@ IMAGES_EN+= install/disklabel-root3.scr
 IMAGES_EN+= install/disklabel-ed2.scr
 IMAGES_EN+= install/dist-set.scr
 IMAGES_EN+= install/dist-set2.scr
-IMAGES_EN+= install/media.scr
+IMAGES_EN+= install/docmenu1.scr
 IMAGES_EN+= install/ed0-conf.scr
 IMAGES_EN+= install/ed0-conf2.scr
+IMAGES_EN+= install/edit-inetd-conf.scr
+IMAGES_EN+= install/fdisk-drive1.scr
+IMAGES_EN+= install/fdisk-edit1.scr
+IMAGES_EN+= install/fdisk-edit2.scr
+IMAGES_EN+= install/fdisk-drive2.scr
 IMAGES_EN+= install/ftp-anon1.scr
 IMAGES_EN+= install/ftp-anon2.scr
-IMAGES_EN+= install/nfs-server-edit.scr
-IMAGES_EN+= install/security.scr
-IMAGES_EN+= install/console-saver1.scr
-IMAGES_EN+= install/console-saver2.scr
-IMAGES_EN+= install/console-saver3.scr
-IMAGES_EN+= install/console-saver4.scr
-IMAGES_EN+= install/timezone1.scr
-IMAGES_EN+= install/timezone2.scr
-IMAGES_EN+= install/timezone3.scr
+IMAGES_EN+= install/hdwrconf.scr
+IMAGES_EN+= install/keymap.scr
+IMAGES_EN+= install/main1.scr
+IMAGES_EN+= install/mainexit.scr
+IMAGES_EN+= install/main-doc.scr
+IMAGES_EN+= install/main-keymap.scr
+IMAGES_EN+= install/main-options.scr
+IMAGES_EN+= install/main-std.scr
+IMAGES_EN+= install/media.scr
 IMAGES_EN+= install/mouse1.scr
 IMAGES_EN+= install/mouse2.scr
 IMAGES_EN+= install/mouse3.scr
 IMAGES_EN+= install/mouse4.scr
 IMAGES_EN+= install/mouse5.scr
 IMAGES_EN+= install/mouse6.scr
-IMAGES_EN+= install/xf86setup.scr
-IMAGES_EN+= install/desktop.scr
-IMAGES_EN+= install/pkg-cat.scr
-IMAGES_EN+= install/pkg-sel.scr
-IMAGES_EN+= install/pkg-install.scr
-IMAGES_EN+= install/pkg-confirm.scr
-IMAGES_EN+= install/adduser1.scr
-IMAGES_EN+= install/adduser2.scr
-IMAGES_EN+= install/adduser3.scr
-IMAGES_EN+= install/mainexit.scr
-IMAGES+= install/disk-layout.eps
-IMAGES_EN+= install/edit-inetd-conf.scr
 IMAGES_EN+= install/mta-main.scr
 IMAGES_EN+= install/net-config-menu1.scr
 IMAGES_EN+= install/net-config-menu2.scr
+IMAGES_EN+= install/nfs-server-edit.scr
 IMAGES_EN+= install/ntp-config.scr
+IMAGES_EN+= install/options.scr
+IMAGES_EN+= install/pkg-cat.scr
+IMAGES_EN+= install/pkg-confirm.scr
+IMAGES_EN+= install/pkg-install.scr
+IMAGES_EN+= install/pkg-sel.scr
+IMAGES_EN+= install/probstart.scr
 IMAGES_EN+= install/routed.scr
+IMAGES_EN+= install/security.scr
+IMAGES_EN+= install/sysinstall-exit.scr
+IMAGES_EN+= install/timezone1.scr
+IMAGES_EN+= install/timezone2.scr
+IMAGES_EN+= install/timezone3.scr
+IMAGES_EN+= install/userconfig.scr
+IMAGES_EN+= install/userconfig2.scr
+IMAGES_EN+= install/xf86setup.scr
 
+IMAGES+= install/disk-layout.eps
 IMAGES+= install/example-dir1.eps
 IMAGES+= install/example-dir2.eps
 IMAGES+= install/example-dir3.eps
@@ -158,6 +158,11 @@ IMAGES_LIB+= callouts/7.png
 IMAGES_LIB+= callouts/8.png
 IMAGES_LIB+= callouts/9.png
 IMAGES_LIB+= callouts/10.png
+IMAGES_LIB+= callouts/11.png
+IMAGES_LIB+= callouts/12.png
+IMAGES_LIB+= callouts/13.png
+IMAGES_LIB+= callouts/14.png
+IMAGES_LIB+= callouts/15.png
 
 #
 # SRCS lists the individual SGML files that make up the document. Changes
@@ -165,6 +170,7 @@ IMAGES_LIB+= callouts/10.png
 #
 
 # SGML content
+SRCS+= audit/chapter.sgml
 SRCS+= book.sgml
 SRCS+= colophon.sgml
 SRCS+= freebsd-glossary.sgml
@@ -222,41 +228,46 @@ pgpkeyring: pgpkeys/chapter.sgml
 JADEFLAGS+=	-V withpgpkeys
 .endif
 
-.for p in ftp cvsup
-SRCS+= mirrors.sgml.${p}.inc
-CLEANFILES+= mirrors.sgml.${p}.inc
-CLEANFILES+= mirrors.sgml.${p}.inc.tmp
-.endfor
-
-SRCS+= eresources.sgml.www.inc
-CLEANFILES+= eresources.sgml.www.inc
-CLEANFILES+= eresources.sgml.www.inc.tmp
-
 URL_RELPREFIX?=	../../../..
 DOC_PREFIX?= ${.CURDIR}/../../..
+
+#
+# rules generating lists of mirror site from XML database.
+#
+XMLDOCS=	mirrors-ftp:::mirrors.sgml.ftp.inc.tmp \
+		mirrors-cvsup:::mirrors.sgml.cvsup.inc.tmp \
+		eresources:::eresources.sgml.www.inc.tmp
+DEPENDSET.DEFAULT=	transtable mirror
+XSLT.DEFAULT=		${XSL_MIRRORS}
+XML.DEFAULT=		${XML_MIRRORS}
+NO_TIDY.DEFAULT=	yes
+
+PARAMS.mirrors-ftp+=	--param 'type' "'ftp'" \
+			--param 'proto' "'ftp'" \
+			--param 'target' "'handbook/mirrors/chapter.sgml'"
+PARAMS.mirrors-cvsup+=	--param 'type' "'cvsup'" \
+			--param 'proto' "'cvsup'" \
+			--param 'target' "'handbook/mirrors/chapter.sgml'"
+PARAMS.eresources+=	--param 'type' "'www'" \
+			--param 'proto' "'http'" \
+			--param 'target' "'handbook/eresources/chapter.sgml'"
+
+SRCS+=		mirrors.sgml.ftp.inc \
+		mirrors.sgml.cvsup.inc \
+		eresources.sgml.www.inc
+
+CLEANFILES+=	mirrors.sgml.ftp.inc mirrors.sgml.ftp.inc.tmp \
+		mirrors.sgml.cvsup.inc mirrors.sgml.cvsup.inc.tmp \
+		eresources.sgml.www.inc eresources.sgml.www.inc.tmp
 
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"
 
 .for p in ftp cvsup
-mirrors.sgml.${p}.inc: ${XML_MIRRORS} ${XSL_MIRRORS}
-	${XSLTPROC} ${XSLTPROCOPTS} \
-	    -o $@.tmp \
-	    --param 'type' "'$p'" \
-	    --param 'proto' "'$p'" \
-	    --param 'target' "'handbook/mirrors/chapter.sgml'" \
-	    ${XSL_MIRRORS} ${XML_MIRRORS}
+mirrors.sgml.${p}.inc: mirrors.sgml.${p}.inc.tmp
 	${SED} -e 's,<\([^ >]*\)\([^>]*\)/>,<\1\2></\1>,;s,</anchor>,,'\
 	    < $@.tmp > $@ || (${RM} -f $@ && false)
-	${RM} -f $@.tmp
 .endfor
 
-eresources.sgml.www.inc: ${XML_MIRRORS} ${XSL_MIRRORS}
-	${XSLTPROC} ${XSLTPROCOPTS} \
-	    -o $@.tmp \
-	    --param 'type' "'www'" \
-	    --param 'proto' "'http'" \
-	    --param 'target' "'handbook/eresources/chapter.sgml'" \
-	    ${XSL_MIRRORS} ${XML_MIRRORS}
+eresources.sgml.www.inc: eresources.sgml.www.inc.tmp
 	${SED} -e 's,<\([^ >]*\)\([^>]*\)/>,<\1\2></\1>,;s,</anchor>,,'\
 	    < $@.tmp > $@ || (${RM} -f $@ && false)
-	${RM} -f $@.tmp
