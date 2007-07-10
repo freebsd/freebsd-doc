@@ -1,7 +1,7 @@
 #
 # $FreeBSD$
-# $FreeBSDde: de-docproj/books/handbook/Makefile,v 1.56 2007/06/27 10:19:24 jkois Exp $
-# basiert auf: 1.105
+# $FreeBSDde: de-docproj/books/handbook/Makefile,v 1.57 2007/07/10 07:12:14 jkois Exp $
+# basiert auf: 1.106
 #
 # Build the FreeBSD Handbook in its German translation.
 #
@@ -30,6 +30,7 @@ IMAGES_EN+= install/adduser1.scr
 IMAGES_EN+= install/adduser2.scr
 IMAGES_EN+= install/adduser3.scr
 IMAGES_EN+= install/boot-mgr.scr
+IMAGES_EN+= install/config-country.scr
 IMAGES_EN+= install/console-saver1.scr
 IMAGES_EN+= install/console-saver2.scr
 IMAGES_EN+= install/console-saver3.scr
