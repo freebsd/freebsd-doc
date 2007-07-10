@@ -4,7 +4,7 @@
 <!ENTITY title "The FreeBSD GNOME Project">
 <!ENTITY % navinclude.gnome "INCLUDE">
 ]>
-<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.93 2007/03/19 17:36:33 marcus Exp $ -->
+<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.94 2007/04/16 05:19:08 marcus Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
 		xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -152,7 +152,6 @@
 		  <li><a
 		      href="http://www.gnomefiles.org">GNOME
 		      Files</a></li>
-		  <li><a href="http://gnu-darwin.sourceforge.net/GNOME/">GNOME on GNU/Darwin</a></li>
 		</ul>
 
 		<h2>Related Projects</h2>
