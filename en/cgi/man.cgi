@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp 
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.175 2007-06-12 19:09:50 wosch Exp $
+# $Id: man.cgi,v 1.176 2007-07-16 17:33:41 wosch Exp $
 
 ############################################################################
 # !!! man.cgi is stale perl4 code !!!
@@ -430,6 +430,7 @@ $manstat = 'http://www.de.freebsd.org/de/stat/man';
     unless defined($main'plexus_configured);
 
 $enable_include_links = 0;
+$enable_mailto_links = 0;
 
 # Plexus Native Interface
 sub do_man {
@@ -813,7 +814,7 @@ sub man {
 	    s,((<[IB]>)?[\w\_\.\-]+\s*(</[IB]>)?\s*\(([1-9ln][a-zA-Z]*)\)),&mlnk($1),oige;
 
 	# detect E-Mail Addreses in manpages
-	if (/\@/) {
+	if ($enable_mailto_links && /\@/) {
 	    s/([a-z0-9_\-\.]+\@[a-z0-9\-\.]+\.[a-z]+)/<A HREF="mailto:$1">$1<\/A>/gi;
 	}
 
@@ -822,10 +823,10 @@ sub man {
 	    s,((ftp|http)://[^\s<>\)]+),<A HREF="$1">$1</A>,gi;
 	}
 
-	if (/^<B>\S+/ && m%^<B>([^<]+)%) {
-	    $i = $1; $j = &encode_url($i);
-	    s%^<B>([^<]+)</B>%<a name="$j" href="#end"><B>$i</B></a>%;
-	    push(@sect, $1);
+	if (s%^(<B>.*?</B>)+$% ($str = $1) =~ s,(<B>|</B>),,g; "$str" %ge ) {
+	    $i = $_; $j = &encode_url($i);
+	    $_ = qq{<a name="$j" href="#end"><B>$i</B></a>};
+	    push(@sect, $i);
         }
 	print;
     }
@@ -966,14 +967,15 @@ sub encode_data {
     s/\</\&lt\;/g; 
     s/\>/\&gt\;/g;
 
-    s,((_\010.)+),($str = $1) =~ s/.\010//g; "<I>$str</I>";,ge;
-    s,(.\010)+,$1,g;
-
-    if (!s,((.\010.)+\s+(.\010.)+),($str = $1) =~ s/.\010//g; "<B>$str</B>";,ge) {
+    s,((_\010[^_])+),($str = $1) =~ s/.\010//g; "<I>$str</I>";,ge;
     s,((.\010.)+),($str = $1) =~ s/.\010//g; "<B>$str</B>";,ge;
-    }
 
-
+    #s,((_\010.)+),($str = $1) =~ s/.\010//g; "<I>$str</I>";,ge;
+    #s,(.\010)+,$1,g;
+    #if (!s,((.\010.)+\s+(.\010.)+),($str = $1) =~ s/.\010//g; "<B>$str</B>";,ge) {
+    # s,(([^_]\010.)+),($str = $1) =~ s/[^_]\010//g; "<B>$str</B>";,ge;
+    # s,(([_]\010.)+),($str = $1) =~ s/[_]\010//g; "<i>$str</i>";,ge;
+    #}
     # Escape binary data except for ^H which we process below
     # \375 gets turned into the & for the entity reference
     #s/([^\010\012\015\032-\176])/sprintf('\375#%03d;',ord($1))/eg;
@@ -985,6 +987,7 @@ sub encode_data {
     # Now convert our magic chars into our tag markers
     #s/\375/\&/g; s/\376/</g; s/\377/>/g;
 
+    # cleanup all the rest
     s,.\010,,g;
 
     $_;
@@ -1094,7 +1097,7 @@ ETX
 }
 
 sub copyright {
-    $id = '$Id: man.cgi,v 1.175 2007-06-12 19:09:50 wosch Exp $';
+    $id = '$Id: man.cgi,v 1.176 2007-07-16 17:33:41 wosch Exp $';
 
     return qq{\
 <PRE>
@@ -1146,7 +1149,7 @@ sub faq {
 	     &encode_url($_) . "\n") if $manPathAliases{$_};
     }
 
-    local $id = '$Id: man.cgi,v 1.175 2007-06-12 19:09:50 wosch Exp $';
+    local $id = '$Id: man.cgi,v 1.176 2007-07-16 17:33:41 wosch Exp $';
     return qq{\
 <PRE>
 Copyright (c) 1996-2007 <a href="$mailtoURL">Wolfram Schneider</A>
