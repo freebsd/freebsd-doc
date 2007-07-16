@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.178 2007-07-16 17:40:22 wosch Exp $
+# $Id: man.cgi,v 1.179 2007-07-16 17:48:29 wosch Exp $
 
 ############################################################################
 # !!! man.cgi is stale perl4 code !!!
@@ -42,10 +42,7 @@
 $www{'title'} = 'FreeBSD Hypertext Man Pages';
 $www{'home'}  = 'http://www.FreeBSD.org';
 $www{'head'}  = $www{'title'};
-"";
 
-$command{'man'} = 'man';                        # 8Bit clean man
-$command{'man'} = '/home/wosch/bin/cgi-man';    # 8Bit clean man
 $command{'man'} = '/usr/bin/man';               # 8Bit clean man
 
 # Config Options
@@ -430,12 +427,13 @@ $sections = join( "|", @sections );    # sections regexp
 
 # mailto - Author
 # webmaster - who run this service
-$mailto       = 'wosch@FreeBSD.org';
-$mailtoURL    = 'http://wolfram.schneider.org';
-$mailtoURL    = "mailto:$mailto" if !$mailtoURL;
-$webmaster    = $mailto;
-$webmasterURL = $mailtoURL;
-$manstat      = 'http://www.de.freebsd.org/de/stat/man';
+$mailto    = 'wosch@FreeBSD.org';
+$mailtoURL = 'http://wolfram.schneider.org';
+$mailtoURL = "mailto:$mailto" if !$mailtoURL;
+
+#$webmaster    = $mailto;
+#$webmasterURL = $mailtoURL;
+#$manstat      = 'http://www.de.freebsd.org/de/stat/man';
 
 &secure_env;
 
@@ -449,10 +447,8 @@ $enable_mailto_links  = 0;
 # Plexus Native Interface
 sub do_man {
     local ( $BASE, $path, $form ) = @_;
-    local ( $_, %form, $query, $proto, $name, $section, $apropos );
+    local ( $_, %form, $query, $name, $section, $apropos );
 
-    # spinner is buggy, shit
-    local ($u) = 'http://user.cs.tu-berlin.de/~wosch/man.cgi';
     local ($u) = $BASE;
 
     return &faq_output($u) if ( $path =~ /\/(faq|help)\.html$/ );
@@ -937,8 +933,8 @@ sub proc {
     local ($pid) = open( FH, "-|" );
     return undef unless defined($pid);
     if ( $pid == 0 ) {
-        exec $prog, @args;
-        &mydie("exec $prog failed\n");
+        exec( $prog, @args )
+          or &mydie("exec $prog failed\n");
     }
     1;
 }
@@ -1165,7 +1161,7 @@ ETX
 }
 
 sub copyright {
-    $id = '$Id: man.cgi,v 1.178 2007-07-16 17:40:22 wosch Exp $';
+    $id = '$Id: man.cgi,v 1.179 2007-07-16 17:48:29 wosch Exp $';
 
     return qq{\
 <pre>
@@ -1220,7 +1216,7 @@ sub faq {
           if $manPathAliases{$_};
     }
 
-    local $id = '$Id: man.cgi,v 1.178 2007-07-16 17:40:22 wosch Exp $';
+    local $id = '$Id: man.cgi,v 1.179 2007-07-16 17:48:29 wosch Exp $';
     return qq{\
 <pre>
 Copyright (c) 1996-2007 <a href="$mailtoURL">Wolfram Schneider</a>
