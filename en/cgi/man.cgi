@@ -30,41 +30,39 @@
 # bsdi-man -- HTML hypertext BSDI man page interface
 # based on bsdi-man.pl,v 2.10 1993/10/02 06:13:23 sanders Exp
 # by polk@BSDI.COM 1/10/95
-#	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp 
+#	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.177 2007-07-16 17:36:53 wosch Exp $
+# $Id: man.cgi,v 1.178 2007-07-16 17:40:22 wosch Exp $
 
 ############################################################################
 # !!! man.cgi is stale perl4 code !!!
 ############################################################################
 
-
 $www{'title'} = 'FreeBSD Hypertext Man Pages';
-$www{'home'} = 'http://www.FreeBSD.org';
-$www{'head'} = $www{'title'};
-                "";
+$www{'home'}  = 'http://www.FreeBSD.org';
+$www{'head'}  = $www{'title'};
+"";
 
-$command{'man'} =     'man'; # 8Bit clean man
-$command{'man'} =     '/home/wosch/bin/cgi-man'; # 8Bit clean man
-$command{'man'} =     '/usr/bin/man'; # 8Bit clean man
-
+$command{'man'} = 'man';                        # 8Bit clean man
+$command{'man'} = '/home/wosch/bin/cgi-man';    # 8Bit clean man
+$command{'man'} = '/usr/bin/man';               # 8Bit clean man
 
 # Config Options
 # map sections to their man command argument(s)
 %sections = (
-    '', '',
+    '',    '',
     'All', '',
-    '0', '',
+    '0',   '',
 
-    '1', '-S1',
+    '1',  '-S1',
     '1c', '-S1',
     '1C', '-S1',
     '1g', '-S1',
     '1m', '-S1',
-    '2', '-S2',
+    '2',  '-S2',
     '2j', '-S2',
-    '3', '-S3',
+    '3',  '-S3',
     '3S', '-S3',
     '3f', '-S3',
     '3j', '-S3',
@@ -73,15 +71,15 @@ $command{'man'} =     '/usr/bin/man'; # 8Bit clean man
     '3r', '-S3',
     '3s', '-S3',
     '3x', '-S3',
-    '4', '-S4',
-    '5', '-S5',
-    '6', '-S6',
-    '7', '-S7',
-    '8', '-S8',
+    '4',  '-S4',
+    '5',  '-S5',
+    '6',  '-S6',
+    '7',  '-S7',
+    '8',  '-S8',
     '8c', '-S8',
-    '9', '-S9',
-    'l', '-Sl',
-    'n', '-Sn',
+    '9',  '-S9',
+    'l',  '-Sl',
+    'n',  '-Sn',
 );
 
 $sectionpath = {
@@ -92,23 +90,29 @@ $sectionpath = {
     'HP-UX 10.20' => { 'path' => '1:1m:2:3:4:5:7:9' },
     'HP-UX 10.10' => { 'path' => '1:1m:2:3:4:5:7:9' },
     'HP-UX 10.01' => { 'path' => '1:1m:2:3:4:5:7:9' },
-    'SunOS 5.10' => {
-	'path' => '1:1m:1s:1as:2:3:3c:3malloc:3nsl:3socket:3ldap:3nisdb:3rac:3resolv:3rpc:3slp:3proc:3rt:3c_db:3elf:3kvm:3kstat:3m:3mp:3mvec:3pam:3aio:3bsm:3tsol:3contract:3cpc:3sec:3secdb:3smartcard:3cfgadm:3crypt:3devid:3devinfo:3door:3lib:3libucb:3head:3nvpair:3rsm:7:7d:7fs:7i:7ipp:7m:7p:9:9e:9f:9p:9s:4:5:4b:3gen:3exacct:3sysevent:3uuid:3wsreg:3dmi:3snmp:3tnf:3volmgt:3mail:3layout:3ext:3picl:3picltree:3pool:3project:3perl:3lgrp:3sasl:3scf:3dat:3hbaapi:3tecla:1b:1c:1f:3ucb:3xnet:3curses:3plot:3xcurses:3gss:6:3tiff:3fontconfig:3mlib:l:n',
+    'SunOS 5.10'  => {
+        'path' =>
+'1:1m:1s:1as:2:3:3c:3malloc:3nsl:3socket:3ldap:3nisdb:3rac:3resolv:3rpc:3slp:3proc:3rt:3c_db:3elf:3kvm:3kstat:3m:3mp:3mvec:3pam:3aio:3bsm:3tsol:3contract:3cpc:3sec:3secdb:3smartcard:3cfgadm:3crypt:3devid:3devinfo:3door:3lib:3libucb:3head:3nvpair:3rsm:7:7d:7fs:7i:7ipp:7m:7p:9:9e:9f:9p:9s:4:5:4b:3gen:3exacct:3sysevent:3uuid:3wsreg:3dmi:3snmp:3tnf:3volmgt:3mail:3layout:3ext:3picl:3picltree:3pool:3project:3perl:3lgrp:3sasl:3scf:3dat:3hbaapi:3tecla:1b:1c:1f:3ucb:3xnet:3curses:3plot:3xcurses:3gss:6:3tiff:3fontconfig:3mlib:l:n',
     },
     'SunOS 5.9' => {
-	'path' => '1:1m:1s:2:3:3c:3malloc:3dl:3nsl:3socket:3ldap:3nisdb:3rac:3resolv:3rpc:3slp:3xfn:3proc:3rt:3thr:3elf:3kvm:3kstat:3m:3mp:3pam:3sched:3aio:3bsm:3cpc:3sec:3secdb:3cfgadm:3crypt:3devid:3devinfo:3door:3lib:3libucb:3head:3nvpair:3rsm:7:7d:7fs:7i:7m:7p:9:9e:9f:9p:9s:4:5:4b:3gen:3exacct:3sysevent:3wsreg:3dmi:3snmp:3tnf:3volmgt:3mail:3layout:3ext:3picl:3picltree:3pool:3project:1b:1c:1f:3ucb:3xnet:3curses:3plot:3xcurses:3gss:6:l:n',
+        'path' =>
+'1:1m:1s:2:3:3c:3malloc:3dl:3nsl:3socket:3ldap:3nisdb:3rac:3resolv:3rpc:3slp:3xfn:3proc:3rt:3thr:3elf:3kvm:3kstat:3m:3mp:3pam:3sched:3aio:3bsm:3cpc:3sec:3secdb:3cfgadm:3crypt:3devid:3devinfo:3door:3lib:3libucb:3head:3nvpair:3rsm:7:7d:7fs:7i:7m:7p:9:9e:9f:9p:9s:4:5:4b:3gen:3exacct:3sysevent:3wsreg:3dmi:3snmp:3tnf:3volmgt:3mail:3layout:3ext:3picl:3picltree:3pool:3project:1b:1c:1f:3ucb:3xnet:3curses:3plot:3xcurses:3gss:6:l:n',
     },
     'SunOS 5.8' => {
-	'path' => '1:1m:1s:2:3:3c:3malloc:3dl:3nsl:3socket:3ldap:3krb:3nisdb:3rac:3resolv:3rpc:3slp:3xfn:3proc:3rt:3thr:3elf:3kvm:3kstat:3m:3mp:3pam:3sched:3aio:3bsm:3cpc:3sec:3secdb:3cfgadm:3crypt:3devid:3devinfo:3door:3lib:3libucb:3head:7:7d:7fs:7i:7m:7p:9:9e:9f:9s:4:5:4b:3gen:3dmi:3snmp:3tnf:3volmgt:3mail:3layout:3ext:1b:1c:1f:3ucb:3xnet:3curses:3plot:3xcurses:6:l:n',
+        'path' =>
+'1:1m:1s:2:3:3c:3malloc:3dl:3nsl:3socket:3ldap:3krb:3nisdb:3rac:3resolv:3rpc:3slp:3xfn:3proc:3rt:3thr:3elf:3kvm:3kstat:3m:3mp:3pam:3sched:3aio:3bsm:3cpc:3sec:3secdb:3cfgadm:3crypt:3devid:3devinfo:3door:3lib:3libucb:3head:7:7d:7fs:7i:7m:7p:9:9e:9f:9s:4:5:4b:3gen:3dmi:3snmp:3tnf:3volmgt:3mail:3layout:3ext:1b:1c:1f:3ucb:3xnet:3curses:3plot:3xcurses:6:l:n',
     },
     'SunOS 5.7' => {
-	'path' => '1:1m:1c:1f:1s:1b:2:3:3c:3s:3x:3xc:3n:3r:3t:3xn:3m:3k:3g:3e:3b:9f:9s:9e:9:4:5:7:7d:7i:7m:7p:7fs:4b:6:l:n',
+        'path' =>
+'1:1m:1c:1f:1s:1b:2:3:3c:3s:3x:3xc:3n:3r:3t:3xn:3m:3k:3g:3e:3b:9f:9s:9e:9:4:5:7:7d:7i:7m:7p:7fs:4b:6:l:n',
     },
     'SunOS 5.6' => {
-	'path' => '1:1m:1c:1f:1s:1b:2:3:3c:3s:3x:3xc:3xn:3r:3t:3n:3m:3k:3g:3e:3b:9f:9s:9e:9:4:5:7:7d:7i:7m:7p:7fs:4b:6:l:n',
+        'path' =>
+'1:1m:1c:1f:1s:1b:2:3:3c:3s:3x:3xc:3xn:3r:3t:3n:3m:3k:3g:3e:3b:9f:9s:9e:9:4:5:7:7d:7i:7m:7p:7fs:4b:6:l:n',
     },
     'SunOS 5.5.1' => {
-	'path' => '1:1m:1c:1f:1s:1b:2:3:3c:3s:3x:3xc:3xn:3r:3t:3n:3m:3k:3g:3e:3b:9f:9s:9e:9:4:5:7:7d:7i:7m:7p:7fs:4b:6:l:n',
+        'path' =>
+'1:1m:1c:1f:1s:1b:2:3:3c:3s:3x:3xc:3xn:3r:3t:3n:3m:3k:3g:3e:3b:9f:9s:9e:9:4:5:7:7d:7i:7m:7p:7fs:4b:6:l:n',
     },
     'OpenBSD 3.0' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
     'OpenBSD 3.1' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
@@ -124,235 +128,244 @@ $sectionpath = {
     'OpenBSD 4.1' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
 };
 
-foreach my $os (keys %$sectionpath) {
-    foreach my $section (split(/:/, $sectionpath->{$os}{'path'})) {
-	$section =~ /(.)(.*)/;
-	$sectionpath->{$os}{$1} .= 
-	    ($sectionpath->{$os}{$1} ? ':' : '') . $section;
+foreach my $os ( keys %$sectionpath ) {
+    foreach my $section ( split( /:/, $sectionpath->{$os}{'path'} ) ) {
+        $section =~ /(.)(.*)/;
+        $sectionpath->{$os}{$1} .=
+          ( $sectionpath->{$os}{$1} ? ':' : '' ) . $section;
     }
 }
 
+%sectionName = (
+    '0', 'All Sections',             '1', '1 - General Commands',
+    '2', '2 - System Calls',         '3', '3 - Subroutines',
+    '4', '4 - Special Files',        '5', '5 - File Formats',
+    '6', '6 - Games',                '7', '7 - Macros and Conventions',
+    '8', '8 - Maintenance Commands', '9', '9 - Kernel Interface',
+    'n', 'n - New Commands',
+);
 
-%sectionName = 
-    (
-     '0', 'All Sections',
-     '1', '1 - General Commands',
-     '2', '2 - System Calls',
-     '3', '3 - Subroutines',
-     '4', '4 - Special Files',
-     '5', '5 - File Formats',
-     '6', '6 - Games',
-     '7', '7 - Macros and Conventions',
-     '8', '8 - Maintenance Commands',
-     '9', '9 - Kernel Interface',
-     'n', 'n - New Commands',
-     );
-
-$manLocalDir = '/usr/local/www/bsddoc/man';
+$manLocalDir    = '/usr/local/www/bsddoc/man';
 $manPathDefault = 'FreeBSD 6.2-RELEASE';
 
-%manPath = 
-    (
-     'FreeBSD 6.1-RELEASE and Ports',  "$manLocalDir/FreeBSD-6.1-RELEASE/man:$manLocalDir/FreeBSD-6.1-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports",
+%manPath = (
+    'FreeBSD 6.1-RELEASE and Ports',
+"$manLocalDir/FreeBSD-6.1-RELEASE/man:$manLocalDir/FreeBSD-6.1-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports",
 
-     'FreeBSD 7-current',   "$manLocalDir/FreeBSD-7-current/man:$manLocalDir/FreeBSD-7-current/openssl/man",
-     'FreeBSD 6.2-stable',   "$manLocalDir/FreeBSD-6.2-stable/man:$manLocalDir/FreeBSD-6.2-stable/openssl/man",
-     'FreeBSD 5.5-stable',   "$manLocalDir/FreeBSD-5.5-stable",
+    'FreeBSD 7-current',
+"$manLocalDir/FreeBSD-7-current/man:$manLocalDir/FreeBSD-7-current/openssl/man",
+    'FreeBSD 6.2-stable',
+"$manLocalDir/FreeBSD-6.2-stable/man:$manLocalDir/FreeBSD-6.2-stable/openssl/man",
+    'FreeBSD 5.5-stable', "$manLocalDir/FreeBSD-5.5-stable",
 
-     'FreeBSD 6.2-RELEASE',   "$manLocalDir/FreeBSD-6.2-RELEASE/man:$manLocalDir/FreeBSD-6.2-RELEASE/openssl/man",
-     'FreeBSD 6.1-RELEASE',   "$manLocalDir/FreeBSD-6.1-RELEASE/man:$manLocalDir/FreeBSD-6.1-RELEASE/openssl/man",
-     'FreeBSD 6.0-RELEASE',   "$manLocalDir/FreeBSD-6.0-RELEASE/man:$manLocalDir/FreeBSD-6.0-RELEASE/openssl/man",
-     'FreeBSD 5.5-RELEASE',   "$manLocalDir/FreeBSD-5.5-RELEASE/man:$manLocalDir/FreeBSD-5.5-RELEASE/openssl/man",
-     'FreeBSD 5.4-RELEASE',   "$manLocalDir/FreeBSD-5.4-RELEASE/man:$manLocalDir/FreeBSD-5.4-RELEASE/openssl/man",
-     'FreeBSD 5.3-RELEASE',   "$manLocalDir/FreeBSD-5.3-RELEASE/man:$manLocalDir/FreeBSD-5.3-RELEASE/openssl/man",
-     'FreeBSD 5.2.1-RELEASE',   "$manLocalDir/FreeBSD-5.2-RELEASE/man:$manLocalDir/FreeBSD-5.2-RELEASE/openssl/man",
-     'FreeBSD 5.2-RELEASE',   "$manLocalDir/FreeBSD-5.2-RELEASE/man:$manLocalDir/FreeBSD-5.2-RELEASE/openssl/man",
-     'FreeBSD 5.1-RELEASE',   "$manLocalDir/FreeBSD-5.1-RELEASE/man:$manLocalDir/FreeBSD-5.1-RELEASE/openssl/man",
-     'FreeBSD 5.0-RELEASE',   "$manLocalDir/FreeBSD-5.0-RELEASE",
-     'FreeBSD 4.11-RELEASE',  "$manLocalDir/FreeBSD-4.11-RELEASE/man:$manLocalDir/FreeBSD-4.11-RELEASE/openssl/man:$manLocalDir/FreeBSD-4.11-RELEASE/perl/man",
-     'FreeBSD 4.10-RELEASE',  "$manLocalDir/FreeBSD-4.10-RELEASE/man:$manLocalDir/FreeBSD-4.10-RELEASE/openssl/man:$manLocalDir/FreeBSD-4.10-RELEASE/perl/man",
-     'FreeBSD 4.9-RELEASE',   "$manLocalDir/FreeBSD-4.9-RELEASE",
-     'FreeBSD 4.8-RELEASE',   "$manLocalDir/FreeBSD-4.8-RELEASE",
-     'FreeBSD 4.7-RELEASE',   "$manLocalDir/FreeBSD-4.7-RELEASE",
-     'FreeBSD 4.6.2-RELEASE', "$manLocalDir/FreeBSD-4.6.2-RELEASE",
-     'FreeBSD 4.6-RELEASE',   "$manLocalDir/FreeBSD-4.6-RELEASE",
-     'FreeBSD 4.5-RELEASE',   "$manLocalDir/FreeBSD-4.5-RELEASE",
-     'FreeBSD 4.4-RELEASE',   "$manLocalDir/FreeBSD-4.4-RELEASE",
-     'FreeBSD 4.3-RELEASE',   "$manLocalDir/FreeBSD-4.3-RELEASE",
-     'FreeBSD 4.2-RELEASE',   "$manLocalDir/FreeBSD-4.2-RELEASE",
-     'FreeBSD 4.1.1-RELEASE', "$manLocalDir/FreeBSD-4.1.1-RELEASE",
-     'FreeBSD 4.1-RELEASE',   "$manLocalDir/FreeBSD-4.1-RELEASE",
-     'FreeBSD 4.0-RELEASE',   "$manLocalDir/FreeBSD-4.0-RELEASE",
-     'FreeBSD 3.5.1-RELEASE',   "$manLocalDir/FreeBSD-3.5.1-RELEASE",
-     'FreeBSD 3.4-RELEASE',   "$manLocalDir/FreeBSD-3.4-RELEASE",
-     'FreeBSD 3.3-RELEASE',   "$manLocalDir/FreeBSD-3.3-RELEASE",
-     'FreeBSD 3.2-RELEASE',   "$manLocalDir/FreeBSD-3.2-RELEASE",
-     'FreeBSD 3.1-RELEASE',   "$manLocalDir/FreeBSD-3.1-RELEASE",
-     'FreeBSD 3.0-RELEASE',   "$manLocalDir/FreeBSD-3.0-RELEASE",
-     'FreeBSD 2.2.5-RELEASE',   "$manLocalDir/FreeBSD-2.2.5-RELEASE",
-     'FreeBSD 2.2.6-RELEASE',   "$manLocalDir/FreeBSD-2.2.6-RELEASE",
-     'FreeBSD 2.2.7-RELEASE',   "$manLocalDir/FreeBSD-2.2.7-RELEASE",
-     'FreeBSD 2.2.8-RELEASE',   "$manLocalDir/FreeBSD-2.2.8-RELEASE",
-     'FreeBSD 2.2.2-RELEASE',   "$manLocalDir/FreeBSD-2.2.2-RELEASE",
-     'FreeBSD 2.2.1-RELEASE',   "$manLocalDir/FreeBSD-2.2.1-RELEASE",
-     'FreeBSD 2.1.7.1-RELEASE', "$manLocalDir/FreeBSD-2.1.7.1-RELEASE",
-     'FreeBSD 2.1.6.1-RELEASE', "$manLocalDir/FreeBSD-2.1.6.1-RELEASE",
-     'FreeBSD 2.1.5-RELEASE', "$manLocalDir/FreeBSD-2.1.5-RELEASE",
-     'FreeBSD 2.1.0-RELEASE', "$manLocalDir/FreeBSD-2.1.0-RELEASE",
-     'FreeBSD 2.0.5-RELEASE', "$manLocalDir/FreeBSD-2.0.5-RELEASE",
-     'FreeBSD 2.0-RELEASE',   "$manLocalDir/FreeBSD-2.0-RELEASE",
-     'FreeBSD 1.1.5.1-RELEASE', "$manLocalDir/FreeBSD-1.1.5.1-RELEASE",
-     'FreeBSD 1.1-RELEASE',   "$manLocalDir/FreeBSD-1.1-RELEASE",
-     'FreeBSD 1.0-RELEASE',   "$manLocalDir/FreeBSD-1.0-RELEASE",
+    'FreeBSD 6.2-RELEASE',
+"$manLocalDir/FreeBSD-6.2-RELEASE/man:$manLocalDir/FreeBSD-6.2-RELEASE/openssl/man",
+    'FreeBSD 6.1-RELEASE',
+"$manLocalDir/FreeBSD-6.1-RELEASE/man:$manLocalDir/FreeBSD-6.1-RELEASE/openssl/man",
+    'FreeBSD 6.0-RELEASE',
+"$manLocalDir/FreeBSD-6.0-RELEASE/man:$manLocalDir/FreeBSD-6.0-RELEASE/openssl/man",
+    'FreeBSD 5.5-RELEASE',
+"$manLocalDir/FreeBSD-5.5-RELEASE/man:$manLocalDir/FreeBSD-5.5-RELEASE/openssl/man",
+    'FreeBSD 5.4-RELEASE',
+"$manLocalDir/FreeBSD-5.4-RELEASE/man:$manLocalDir/FreeBSD-5.4-RELEASE/openssl/man",
+    'FreeBSD 5.3-RELEASE',
+"$manLocalDir/FreeBSD-5.3-RELEASE/man:$manLocalDir/FreeBSD-5.3-RELEASE/openssl/man",
+    'FreeBSD 5.2.1-RELEASE',
+"$manLocalDir/FreeBSD-5.2-RELEASE/man:$manLocalDir/FreeBSD-5.2-RELEASE/openssl/man",
+    'FreeBSD 5.2-RELEASE',
+"$manLocalDir/FreeBSD-5.2-RELEASE/man:$manLocalDir/FreeBSD-5.2-RELEASE/openssl/man",
+    'FreeBSD 5.1-RELEASE',
+"$manLocalDir/FreeBSD-5.1-RELEASE/man:$manLocalDir/FreeBSD-5.1-RELEASE/openssl/man",
+    'FreeBSD 5.0-RELEASE', "$manLocalDir/FreeBSD-5.0-RELEASE",
+    'FreeBSD 4.11-RELEASE',
+"$manLocalDir/FreeBSD-4.11-RELEASE/man:$manLocalDir/FreeBSD-4.11-RELEASE/openssl/man:$manLocalDir/FreeBSD-4.11-RELEASE/perl/man",
+    'FreeBSD 4.10-RELEASE',
+"$manLocalDir/FreeBSD-4.10-RELEASE/man:$manLocalDir/FreeBSD-4.10-RELEASE/openssl/man:$manLocalDir/FreeBSD-4.10-RELEASE/perl/man",
+    'FreeBSD 4.9-RELEASE',     "$manLocalDir/FreeBSD-4.9-RELEASE",
+    'FreeBSD 4.8-RELEASE',     "$manLocalDir/FreeBSD-4.8-RELEASE",
+    'FreeBSD 4.7-RELEASE',     "$manLocalDir/FreeBSD-4.7-RELEASE",
+    'FreeBSD 4.6.2-RELEASE',   "$manLocalDir/FreeBSD-4.6.2-RELEASE",
+    'FreeBSD 4.6-RELEASE',     "$manLocalDir/FreeBSD-4.6-RELEASE",
+    'FreeBSD 4.5-RELEASE',     "$manLocalDir/FreeBSD-4.5-RELEASE",
+    'FreeBSD 4.4-RELEASE',     "$manLocalDir/FreeBSD-4.4-RELEASE",
+    'FreeBSD 4.3-RELEASE',     "$manLocalDir/FreeBSD-4.3-RELEASE",
+    'FreeBSD 4.2-RELEASE',     "$manLocalDir/FreeBSD-4.2-RELEASE",
+    'FreeBSD 4.1.1-RELEASE',   "$manLocalDir/FreeBSD-4.1.1-RELEASE",
+    'FreeBSD 4.1-RELEASE',     "$manLocalDir/FreeBSD-4.1-RELEASE",
+    'FreeBSD 4.0-RELEASE',     "$manLocalDir/FreeBSD-4.0-RELEASE",
+    'FreeBSD 3.5.1-RELEASE',   "$manLocalDir/FreeBSD-3.5.1-RELEASE",
+    'FreeBSD 3.4-RELEASE',     "$manLocalDir/FreeBSD-3.4-RELEASE",
+    'FreeBSD 3.3-RELEASE',     "$manLocalDir/FreeBSD-3.3-RELEASE",
+    'FreeBSD 3.2-RELEASE',     "$manLocalDir/FreeBSD-3.2-RELEASE",
+    'FreeBSD 3.1-RELEASE',     "$manLocalDir/FreeBSD-3.1-RELEASE",
+    'FreeBSD 3.0-RELEASE',     "$manLocalDir/FreeBSD-3.0-RELEASE",
+    'FreeBSD 2.2.5-RELEASE',   "$manLocalDir/FreeBSD-2.2.5-RELEASE",
+    'FreeBSD 2.2.6-RELEASE',   "$manLocalDir/FreeBSD-2.2.6-RELEASE",
+    'FreeBSD 2.2.7-RELEASE',   "$manLocalDir/FreeBSD-2.2.7-RELEASE",
+    'FreeBSD 2.2.8-RELEASE',   "$manLocalDir/FreeBSD-2.2.8-RELEASE",
+    'FreeBSD 2.2.2-RELEASE',   "$manLocalDir/FreeBSD-2.2.2-RELEASE",
+    'FreeBSD 2.2.1-RELEASE',   "$manLocalDir/FreeBSD-2.2.1-RELEASE",
+    'FreeBSD 2.1.7.1-RELEASE', "$manLocalDir/FreeBSD-2.1.7.1-RELEASE",
+    'FreeBSD 2.1.6.1-RELEASE', "$manLocalDir/FreeBSD-2.1.6.1-RELEASE",
+    'FreeBSD 2.1.5-RELEASE',   "$manLocalDir/FreeBSD-2.1.5-RELEASE",
+    'FreeBSD 2.1.0-RELEASE',   "$manLocalDir/FreeBSD-2.1.0-RELEASE",
+    'FreeBSD 2.0.5-RELEASE',   "$manLocalDir/FreeBSD-2.0.5-RELEASE",
+    'FreeBSD 2.0-RELEASE',     "$manLocalDir/FreeBSD-2.0-RELEASE",
+    'FreeBSD 1.1.5.1-RELEASE', "$manLocalDir/FreeBSD-1.1.5.1-RELEASE",
+    'FreeBSD 1.1-RELEASE',     "$manLocalDir/FreeBSD-1.1-RELEASE",
+    'FreeBSD 1.0-RELEASE',     "$manLocalDir/FreeBSD-1.0-RELEASE",
 
-     'FreeBSD Ports 6.1-RELEASE', "$manLocalDir/FreeBSD-ports-6.1-RELEASE",
-     'FreeBSD Ports 5.1-RELEASE', "$manLocalDir/FreeBSD-ports-5.1-RELEASE",
-     'FreeBSD Ports 5.0-RELEASE', "$manLocalDir/FreeBSD-ports-5.0-RELEASE",
-     'FreeBSD Ports 4.7-RELEASE', "$manLocalDir/FreeBSD-ports-4.7-RELEASE",
+    'FreeBSD Ports 6.1-RELEASE', "$manLocalDir/FreeBSD-ports-6.1-RELEASE",
+    'FreeBSD Ports 5.1-RELEASE', "$manLocalDir/FreeBSD-ports-5.1-RELEASE",
+    'FreeBSD Ports 5.0-RELEASE', "$manLocalDir/FreeBSD-ports-5.0-RELEASE",
+    'FreeBSD Ports 4.7-RELEASE', "$manLocalDir/FreeBSD-ports-4.7-RELEASE",
 
-     'OpenBSD 2.0',           "$manLocalDir/OpenBSD-2.0",
-     'OpenBSD 2.1',           "$manLocalDir/OpenBSD-2.1",
-     'OpenBSD 2.2',           "$manLocalDir/OpenBSD-2.2",
-     'OpenBSD 2.3',           "$manLocalDir/OpenBSD-2.3",
-     'OpenBSD 2.4',           "$manLocalDir/OpenBSD-2.4",
-     'OpenBSD 2.5',           "$manLocalDir/OpenBSD-2.5",
-     'OpenBSD 2.6',           "$manLocalDir/OpenBSD-2.6",
-     'OpenBSD 2.7',           "$manLocalDir/OpenBSD-2.7",
-     'OpenBSD 2.8',           "$manLocalDir/OpenBSD-2.8",
-     'OpenBSD 2.9',           "$manLocalDir/OpenBSD-2.9",
-     'OpenBSD 3.0',           "$manLocalDir/OpenBSD-3.0",
-     'OpenBSD 3.1',           "$manLocalDir/OpenBSD-3.1",
-     'OpenBSD 3.2',           "$manLocalDir/OpenBSD-3.2",
-     'OpenBSD 3.3',           "$manLocalDir/OpenBSD-3.3",
-     'OpenBSD 3.4',           "$manLocalDir/OpenBSD-3.4/share/man:$manLocalDir/OpenBSD-3.4/X11R6/man",
-     'OpenBSD 3.5',           "$manLocalDir/OpenBSD-3.5/share/man:$manLocalDir/OpenBSD-3.5/X11R6/man",
-     'OpenBSD 3.6',           "$manLocalDir/OpenBSD-3.6/share/man:$manLocalDir/OpenBSD-3.6/X11R6/man",
-     'OpenBSD 3.7',           "$manLocalDir/OpenBSD-3.7",
-     'OpenBSD 3.8',           "$manLocalDir/OpenBSD-3.8",
-     'OpenBSD 3.9',           "$manLocalDir/OpenBSD-3.9",
-     'OpenBSD 4.0',           "$manLocalDir/OpenBSD-4.0",
-     'OpenBSD 4.1',           "$manLocalDir/OpenBSD-4.1",
+    'OpenBSD 2.0', "$manLocalDir/OpenBSD-2.0",
+    'OpenBSD 2.1', "$manLocalDir/OpenBSD-2.1",
+    'OpenBSD 2.2', "$manLocalDir/OpenBSD-2.2",
+    'OpenBSD 2.3', "$manLocalDir/OpenBSD-2.3",
+    'OpenBSD 2.4', "$manLocalDir/OpenBSD-2.4",
+    'OpenBSD 2.5', "$manLocalDir/OpenBSD-2.5",
+    'OpenBSD 2.6', "$manLocalDir/OpenBSD-2.6",
+    'OpenBSD 2.7', "$manLocalDir/OpenBSD-2.7",
+    'OpenBSD 2.8', "$manLocalDir/OpenBSD-2.8",
+    'OpenBSD 2.9', "$manLocalDir/OpenBSD-2.9",
+    'OpenBSD 3.0', "$manLocalDir/OpenBSD-3.0",
+    'OpenBSD 3.1', "$manLocalDir/OpenBSD-3.1",
+    'OpenBSD 3.2', "$manLocalDir/OpenBSD-3.2",
+    'OpenBSD 3.3', "$manLocalDir/OpenBSD-3.3",
+    'OpenBSD 3.4',
+    "$manLocalDir/OpenBSD-3.4/share/man:$manLocalDir/OpenBSD-3.4/X11R6/man",
+    'OpenBSD 3.5',
+    "$manLocalDir/OpenBSD-3.5/share/man:$manLocalDir/OpenBSD-3.5/X11R6/man",
+    'OpenBSD 3.6',
+    "$manLocalDir/OpenBSD-3.6/share/man:$manLocalDir/OpenBSD-3.6/X11R6/man",
+    'OpenBSD 3.7', "$manLocalDir/OpenBSD-3.7",
+    'OpenBSD 3.8', "$manLocalDir/OpenBSD-3.8",
+    'OpenBSD 3.9', "$manLocalDir/OpenBSD-3.9",
+    'OpenBSD 4.0', "$manLocalDir/OpenBSD-4.0",
+    'OpenBSD 4.1', "$manLocalDir/OpenBSD-4.1",
 
     #'NetBSD 0.9',            "$manLocalDir/NetBSD-0.9",
-     'NetBSD 1.0',            "$manLocalDir/NetBSD-1.0",
-     'NetBSD 1.1',            "$manLocalDir/NetBSD-1.1",
-     'NetBSD 1.2',            "$manLocalDir/NetBSD-1.2",
-     'NetBSD 1.2.1',          "$manLocalDir/NetBSD-1.2.1",
-     'NetBSD 1.3',            "$manLocalDir/NetBSD-1.3",
-     'NetBSD 1.3.1',          "$manLocalDir/NetBSD-1.3.1",
-     'NetBSD 1.3.2',          "$manLocalDir/NetBSD-1.3.2",
-     'NetBSD 1.3.3',          "$manLocalDir/NetBSD-1.3.3",
-     'NetBSD 1.4',            "$manLocalDir/NetBSD-1.4",
-     'NetBSD 1.4.1',          "$manLocalDir/NetBSD-1.4.1",
-     'NetBSD 1.4.2',          "$manLocalDir/NetBSD-1.4.2",
-     'NetBSD 1.4.3',          "$manLocalDir/NetBSD-1.4.3",
-     'NetBSD 1.5',            "$manLocalDir/NetBSD-1.5",
-     'NetBSD 1.5.1',          "$manLocalDir/NetBSD-1.5.1",
-     'NetBSD 1.5.2',          "$manLocalDir/NetBSD-1.5.2",
-     'NetBSD 1.5.3',          "$manLocalDir/NetBSD-1.5.3",
-     'NetBSD 1.6',            "$manLocalDir/NetBSD-1.6",
-     'NetBSD 1.6.1',          "$manLocalDir/NetBSD-1.6.1",
-     'NetBSD 1.6.2',          "$manLocalDir/NetBSD-1.6.2",
-     'NetBSD 2.0',            "$manLocalDir/NetBSD-2.0",
-     'NetBSD 2.0.2',          "$manLocalDir/NetBSD-2.0.2",
-     'NetBSD 2.1',            "$manLocalDir/NetBSD-2.1",
-     'NetBSD 3.0',            "$manLocalDir/NetBSD-3.0",
+    'NetBSD 1.0',   "$manLocalDir/NetBSD-1.0",
+    'NetBSD 1.1',   "$manLocalDir/NetBSD-1.1",
+    'NetBSD 1.2',   "$manLocalDir/NetBSD-1.2",
+    'NetBSD 1.2.1', "$manLocalDir/NetBSD-1.2.1",
+    'NetBSD 1.3',   "$manLocalDir/NetBSD-1.3",
+    'NetBSD 1.3.1', "$manLocalDir/NetBSD-1.3.1",
+    'NetBSD 1.3.2', "$manLocalDir/NetBSD-1.3.2",
+    'NetBSD 1.3.3', "$manLocalDir/NetBSD-1.3.3",
+    'NetBSD 1.4',   "$manLocalDir/NetBSD-1.4",
+    'NetBSD 1.4.1', "$manLocalDir/NetBSD-1.4.1",
+    'NetBSD 1.4.2', "$manLocalDir/NetBSD-1.4.2",
+    'NetBSD 1.4.3', "$manLocalDir/NetBSD-1.4.3",
+    'NetBSD 1.5',   "$manLocalDir/NetBSD-1.5",
+    'NetBSD 1.5.1', "$manLocalDir/NetBSD-1.5.1",
+    'NetBSD 1.5.2', "$manLocalDir/NetBSD-1.5.2",
+    'NetBSD 1.5.3', "$manLocalDir/NetBSD-1.5.3",
+    'NetBSD 1.6',   "$manLocalDir/NetBSD-1.6",
+    'NetBSD 1.6.1', "$manLocalDir/NetBSD-1.6.1",
+    'NetBSD 1.6.2', "$manLocalDir/NetBSD-1.6.2",
+    'NetBSD 2.0',   "$manLocalDir/NetBSD-2.0",
+    'NetBSD 2.0.2', "$manLocalDir/NetBSD-2.0.2",
+    'NetBSD 2.1',   "$manLocalDir/NetBSD-2.1",
+    'NetBSD 3.0',   "$manLocalDir/NetBSD-3.0",
 
-     '2.8 BSD',             "$manLocalDir/2.8BSD",
-     '2.9.1 BSD',             "$manLocalDir/2.9.1BSD",
-     '2.10 BSD',              "$manLocalDir/2.10BSD",
-     '2.11 BSD',              "$manLocalDir/2.11BSD",
-     '386BSD 0.0',            "$manLocalDir/386BSD-0.0",
-     '386BSD 0.1',            "$manLocalDir/386BSD-0.1",
-     '4.3BSD Reno',	      "$manLocalDir/4.3BSD-Reno",
-     '4.3BSD NET/2',          "$manLocalDir/net2",
-     '4.4BSD Lite2',	      "$manLocalDir/4.4BSD-Lite2",
+    '2.8 BSD',      "$manLocalDir/2.8BSD",
+    '2.9.1 BSD',    "$manLocalDir/2.9.1BSD",
+    '2.10 BSD',     "$manLocalDir/2.10BSD",
+    '2.11 BSD',     "$manLocalDir/2.11BSD",
+    '386BSD 0.0',   "$manLocalDir/386BSD-0.0",
+    '386BSD 0.1',   "$manLocalDir/386BSD-0.1",
+    '4.3BSD Reno',  "$manLocalDir/4.3BSD-Reno",
+    '4.3BSD NET/2', "$manLocalDir/net2",
+    '4.4BSD Lite2', "$manLocalDir/4.4BSD-Lite2",
 
-     'Linux Slackware 3.1',   "$manLocalDir/Slackware-3.1",
-     'Red Hat Linux/i386 4.2', "$manLocalDir/RedHat-4.2",
-     'Red Hat Linux/i386 5.0', "$manLocalDir/RedHat-5.0",
-     'Red Hat Linux/i386 5.2', "$manLocalDir/RedHat-5.2-i386",
-     'Red Hat Linux/i386 6.1', "$manLocalDir/RedHat-6.1-i386",
-     'Red Hat Linux/i386 6.2', "$manLocalDir/RedHat-6.2-i386",
-     'Red Hat Linux/i386 7.0', "$manLocalDir/RedHat-7.0-i386",
-     'Red Hat Linux/i386 7.1', "$manLocalDir/RedHat-7.1-i386",
-     'Red Hat Linux/i386 7.2', "$manLocalDir/RedHat-7.2-i386",
-     'Red Hat Linux/i386 7.3', "$manLocalDir/RedHat-7.3-i386",
-     'Red Hat Linux/i386 8.0', "$manLocalDir/RedHat-8.0-i386",
-     'Red Hat Linux/i386 9',   "$manLocalDir/RedHat-9-i386",
+    'Linux Slackware 3.1',    "$manLocalDir/Slackware-3.1",
+    'Red Hat Linux/i386 4.2', "$manLocalDir/RedHat-4.2",
+    'Red Hat Linux/i386 5.0', "$manLocalDir/RedHat-5.0",
+    'Red Hat Linux/i386 5.2', "$manLocalDir/RedHat-5.2-i386",
+    'Red Hat Linux/i386 6.1', "$manLocalDir/RedHat-6.1-i386",
+    'Red Hat Linux/i386 6.2', "$manLocalDir/RedHat-6.2-i386",
+    'Red Hat Linux/i386 7.0', "$manLocalDir/RedHat-7.0-i386",
+    'Red Hat Linux/i386 7.1', "$manLocalDir/RedHat-7.1-i386",
+    'Red Hat Linux/i386 7.2', "$manLocalDir/RedHat-7.2-i386",
+    'Red Hat Linux/i386 7.3', "$manLocalDir/RedHat-7.3-i386",
+    'Red Hat Linux/i386 8.0', "$manLocalDir/RedHat-8.0-i386",
+    'Red Hat Linux/i386 9',   "$manLocalDir/RedHat-9-i386",
 
-     'SuSE Linux/i386 4.3',   "$manLocalDir/SuSE-4.3-i386",
-     'SuSE Linux/i386 5.0',   "$manLocalDir/SuSE-5.0-i386",
-     'SuSE Linux/i386 5.2',   "$manLocalDir/SuSE-5.2-i386",
-     'SuSE Linux/i386 5.3',   "$manLocalDir/SuSE-5.3-i386",
-     'SuSE Linux/i386 6.0',   "$manLocalDir/SuSE-6.0-i386",
-     'SuSE Linux/i386 6.1',   "$manLocalDir/SuSE-6.1-i386",
-     'SuSE Linux/i386 6.3',   "$manLocalDir/SuSE-6.3-i386",
-     'SuSE Linux/i386 6.4',   "$manLocalDir/SuSE-6.4-i386",
-     'SuSE Linux/i386 7.0',   "$manLocalDir/SuSE-7.0-i386",
-     'SuSE Linux/i386 7.1',   "$manLocalDir/SuSE-7.1-i386",
-     'SuSE Linux/i386 7.2',   "$manLocalDir/SuSE-7.2-i386",
-     'SuSE Linux/i386 7.3',   "$manLocalDir/SuSE-7.3-i386",
-     'SuSE Linux/i386 8.0',   "$manLocalDir/SuSE-8.0-i386",
-     'SuSE Linux/i386 8.1',   "$manLocalDir/SuSE-8.1-i386",
-     'SuSE Linux/i386 8.2',   "$manLocalDir/SuSE-8.2-i386",
+    'SuSE Linux/i386 4.3', "$manLocalDir/SuSE-4.3-i386",
+    'SuSE Linux/i386 5.0', "$manLocalDir/SuSE-5.0-i386",
+    'SuSE Linux/i386 5.2', "$manLocalDir/SuSE-5.2-i386",
+    'SuSE Linux/i386 5.3', "$manLocalDir/SuSE-5.3-i386",
+    'SuSE Linux/i386 6.0', "$manLocalDir/SuSE-6.0-i386",
+    'SuSE Linux/i386 6.1', "$manLocalDir/SuSE-6.1-i386",
+    'SuSE Linux/i386 6.3', "$manLocalDir/SuSE-6.3-i386",
+    'SuSE Linux/i386 6.4', "$manLocalDir/SuSE-6.4-i386",
+    'SuSE Linux/i386 7.0', "$manLocalDir/SuSE-7.0-i386",
+    'SuSE Linux/i386 7.1', "$manLocalDir/SuSE-7.1-i386",
+    'SuSE Linux/i386 7.2', "$manLocalDir/SuSE-7.2-i386",
+    'SuSE Linux/i386 7.3', "$manLocalDir/SuSE-7.3-i386",
+    'SuSE Linux/i386 8.0', "$manLocalDir/SuSE-8.0-i386",
+    'SuSE Linux/i386 8.1', "$manLocalDir/SuSE-8.1-i386",
+    'SuSE Linux/i386 8.2', "$manLocalDir/SuSE-8.2-i386",
 
-     'HP-UX 11.22',	      "$manLocalDir/HP-UX-11.22",
-     'HP-UX 11.20',	      "$manLocalDir/HP-UX-11.20",
-     'HP-UX 11.11',	      "$manLocalDir/HP-UX-11.11",
-     'HP-UX 11.00',	      "$manLocalDir/HP-UX-11.00",
-     'HP-UX 10.20',	      "$manLocalDir/HP-UX-10.20",
-     'HP-UX 10.10',	      "$manLocalDir/HP-UX-10.10",
-     'HP-UX 10.01',	      "$manLocalDir/HP-UX-10.01",
+    'HP-UX 11.22', "$manLocalDir/HP-UX-11.22",
+    'HP-UX 11.20', "$manLocalDir/HP-UX-11.20",
+    'HP-UX 11.11', "$manLocalDir/HP-UX-11.11",
+    'HP-UX 11.00', "$manLocalDir/HP-UX-11.00",
+    'HP-UX 10.20', "$manLocalDir/HP-UX-10.20",
+    'HP-UX 10.10', "$manLocalDir/HP-UX-10.10",
+    'HP-UX 10.01', "$manLocalDir/HP-UX-10.01",
 
-     'SunOS 5.10',	      "$manLocalDir/SunOS-5.10",
-     'SunOS 5.9',	      "$manLocalDir/SunOS-5.9",
-     'SunOS 5.8',	      "$manLocalDir/SunOS-5.8",
-     'SunOS 5.7',	      "$manLocalDir/SunOS-5.7",
-     'SunOS 5.6',	      "$manLocalDir/SunOS-5.6",
-     'SunOS 5.5.1',	      "$manLocalDir/SunOS-5.5.1",
-     'SunOS 4.1.3',	      "$manLocalDir/SunOS-4.1.3",
+    'SunOS 5.10',  "$manLocalDir/SunOS-5.10",
+    'SunOS 5.9',   "$manLocalDir/SunOS-5.9",
+    'SunOS 5.8',   "$manLocalDir/SunOS-5.8",
+    'SunOS 5.7',   "$manLocalDir/SunOS-5.7",
+    'SunOS 5.6',   "$manLocalDir/SunOS-5.6",
+    'SunOS 5.5.1', "$manLocalDir/SunOS-5.5.1",
+    'SunOS 4.1.3', "$manLocalDir/SunOS-4.1.3",
 
-     'XFree86 3.2',	      "$manLocalDir/XFree86-3.2",
-     'XFree86 3.3',	      "$manLocalDir/XFree86-3.3",
-     'XFree86 3.3.6',	      "$manLocalDir/XFree86-3.3.6",
-     'XFree86 4.0',	      "$manLocalDir/XFree86-4.0",
-     'XFree86 4.0.1',	      "$manLocalDir/XFree86-4.0.1",
-     'XFree86 4.0.2',	      "$manLocalDir/XFree86-4.0.2",
-     'XFree86 4.1.0',	      "$manLocalDir/XFree86-4.1.0",
-     'XFree86 4.2.0',	      "$manLocalDir/XFree86-4.2.0",
-     'XFree86 4.2.99.3',      "$manLocalDir/XFree86-4.2.99.3",
-     'XFree86 4.3.0',         "$manLocalDir/XFree86-4.3.0",
-     'XFree86 4.4.0',         "$manLocalDir/XFree86-4.4.0",
+    'XFree86 3.2',      "$manLocalDir/XFree86-3.2",
+    'XFree86 3.3',      "$manLocalDir/XFree86-3.3",
+    'XFree86 3.3.6',    "$manLocalDir/XFree86-3.3.6",
+    'XFree86 4.0',      "$manLocalDir/XFree86-4.0",
+    'XFree86 4.0.1',    "$manLocalDir/XFree86-4.0.1",
+    'XFree86 4.0.2',    "$manLocalDir/XFree86-4.0.2",
+    'XFree86 4.1.0',    "$manLocalDir/XFree86-4.1.0",
+    'XFree86 4.2.0',    "$manLocalDir/XFree86-4.2.0",
+    'XFree86 4.2.99.3', "$manLocalDir/XFree86-4.2.99.3",
+    'XFree86 4.3.0',    "$manLocalDir/XFree86-4.3.0",
+    'XFree86 4.4.0',    "$manLocalDir/XFree86-4.4.0",
 
-     'X11R6.7.0',         "$manLocalDir/X11R6.7.0",
+    'X11R6.7.0', "$manLocalDir/X11R6.7.0",
 
-     'ULTRIX 4.2',	      "$manLocalDir/ULTRIX-4.2",
-     'OSF1 V4.0/alpha',	      "$manLocalDir/OSF1-V4.0-alpha",
-     'OSF1 V5.1/alpha',	      "$manLocalDir/OSF1-V5.1-alpha",
+    'ULTRIX 4.2',      "$manLocalDir/ULTRIX-4.2",
+    'OSF1 V4.0/alpha', "$manLocalDir/OSF1-V4.0-alpha",
+    'OSF1 V5.1/alpha', "$manLocalDir/OSF1-V5.1-alpha",
 
-     'Plan 9',		      "$manLocalDir/plan9",
-     'Minix 2.0',             "$manLocalDir/Minix-2.0",
-     'Unix Seventh Edition',  "$manLocalDir/v7man",
-     'deutsch - Linux/GNU',   "$manLocalDir/linux-de-0.4",
-     "Darwin 1.3.1/x86",     "$manLocalDir/Darwin-1.3.1-x86",
-     "Darwin 1.4.1/x86",     "$manLocalDir/Darwin-1.4.1-x86",
-     "Darwin 6.0.2/x86",     "$manLocalDir/Darwin-6.0.2-x86",
-     "Darwin 7.0.1", "$manLocalDir/Darwin-7.0.1",
-     "Darwin 8.0.1/ppc",     "$manLocalDir/Darwin-8.0.1-ppc",
-     "OpenDarwin 20030208pre4/ppc",  "$manLocalDir/OpenDarwin-20030208pre4-ppc",
-     "OpenDarwin 6.6.1/x86", "$manLocalDir/OpenDarwin-6.6.1-x86",
-     "OpenDarwin 6.6.2/x86", "$manLocalDir/OpenDarwin-6.6.2-x86",
-     "OpenDarwin 7.2.1",     "$manLocalDir/OpenDarwin-7.2.1",
+    'Plan 9',                      "$manLocalDir/plan9",
+    'Minix 2.0',                   "$manLocalDir/Minix-2.0",
+    'Unix Seventh Edition',        "$manLocalDir/v7man",
+    'deutsch - Linux/GNU',         "$manLocalDir/linux-de-0.4",
+    "Darwin 1.3.1/x86",            "$manLocalDir/Darwin-1.3.1-x86",
+    "Darwin 1.4.1/x86",            "$manLocalDir/Darwin-1.4.1-x86",
+    "Darwin 6.0.2/x86",            "$manLocalDir/Darwin-6.0.2-x86",
+    "Darwin 7.0.1",                "$manLocalDir/Darwin-7.0.1",
+    "Darwin 8.0.1/ppc",            "$manLocalDir/Darwin-8.0.1-ppc",
+    "OpenDarwin 20030208pre4/ppc", "$manLocalDir/OpenDarwin-20030208pre4-ppc",
+    "OpenDarwin 6.6.1/x86",        "$manLocalDir/OpenDarwin-6.6.1-x86",
+    "OpenDarwin 6.6.2/x86",        "$manLocalDir/OpenDarwin-6.6.2-x86",
+    "OpenDarwin 7.2.1",            "$manLocalDir/OpenDarwin-7.2.1",
 );
 
 # delete not existing releases
-while (($key,$val) = each %manPath) {
+while ( ( $key, $val ) = each %manPath ) {
     my $counter = 0;
 
     # if the manpath contains colons, at least one directory must exists
-    foreach (split(/:/, $val)) {
-	$counter++ if -d;
+    foreach ( split( /:/, $val ) ) {
+        $counter++ if -d;
     }
 
     # give up and delete release
@@ -360,106 +373,109 @@ while (($key,$val) = each %manPath) {
 }
 
 # keywords must be in lower cases.
-%manPathAliases = 
-    (
-     'freebsd', 'FreeBSD 6.2-RELEASE',
-     'freebsd-stable', 'FreeBSD 6.2-stable',
-     'freebsd-stable4', 'FreeBSD 4.11-stable',
-     'freebsd-stable5', 'FreeBSD 5.5-stable',
-     'freebsd-stable6', 'FreeBSD 6.2-stable',
-     'freebsd-current', 'FreeBSD 7-current',
-     'slackware', 'Linux Slackware 3.1',
-     'linux-de', 'deutsch - Linux/GNU',
-     'redhat', 'Red Hat Linux/i386 9',
-     'suse', 'SuSE Linux/i386 8.2',
-     'linux', 'Red Hat Linux/i386 9',
-     'darwin', 'Darwin 8.0.1/ppc',
-     'opendarwin', 'OpenDarwin 7.2.1',
-     'macosx', 'Darwin 8.0.1/ppc',
+%manPathAliases = (
+    'freebsd',         'FreeBSD 6.2-RELEASE',
+    'freebsd-stable',  'FreeBSD 6.2-stable',
+    'freebsd-stable4', 'FreeBSD 4.11-stable',
+    'freebsd-stable5', 'FreeBSD 5.5-stable',
+    'freebsd-stable6', 'FreeBSD 6.2-stable',
+    'freebsd-current', 'FreeBSD 7-current',
+    'slackware',       'Linux Slackware 3.1',
+    'linux-de',        'deutsch - Linux/GNU',
+    'redhat',          'Red Hat Linux/i386 9',
+    'suse',            'SuSE Linux/i386 8.2',
+    'linux',           'Red Hat Linux/i386 9',
+    'darwin',          'Darwin 8.0.1/ppc',
+    'opendarwin',      'OpenDarwin 7.2.1',
+    'macosx',          'Darwin 8.0.1/ppc',
 
-     'netbsd', 'NetBSD 3.0',
-     'openbsd', 'OpenBSD 4.1',
-     'v7', 'Unix Seventh Edition', 
-     'v7man', 'Unix Seventh Edition', 
-     'x11', 'X11R6.7.0',
-     'xfree86', 'XFree86 4.4.0',
-     'ultrix', 'ULTRIX 4.2',
-     'hpux', 'HP-UX 11.22',
-     'solaris', 'SunOS 5.10',
-     'sunos5', 'SunOS 5.10',
-     'sunos4', 'SunOS 4.1.3',
-     'sunos', 'SunOS 4.1.3',
-     'freebsd ports', 'FreeBSD Ports 5.1-RELEASE',
-     'ports', 'FreeBSD Ports 5.1-RELEASE',
-     'plan9', 'Plan 9',
-     'osf1', 'OSF1 V5.1/alpha',
-     'true64', 'OSF1 V5.1/alpha',
+    'netbsd',        'NetBSD 3.0',
+    'openbsd',       'OpenBSD 4.1',
+    'v7',            'Unix Seventh Edition',
+    'v7man',         'Unix Seventh Edition',
+    'x11',           'X11R6.7.0',
+    'xfree86',       'XFree86 4.4.0',
+    'ultrix',        'ULTRIX 4.2',
+    'hpux',          'HP-UX 11.22',
+    'solaris',       'SunOS 5.10',
+    'sunos5',        'SunOS 5.10',
+    'sunos4',        'SunOS 4.1.3',
+    'sunos',         'SunOS 4.1.3',
+    'freebsd ports', 'FreeBSD Ports 5.1-RELEASE',
+    'ports',         'FreeBSD Ports 5.1-RELEASE',
+    'plan9',         'Plan 9',
+    'osf1',          'OSF1 V5.1/alpha',
+    'true64',        'OSF1 V5.1/alpha',
 );
 
-foreach (sort keys %manPathAliases) {
+foreach ( sort keys %manPathAliases ) {
+
     # delete non-existing aliases
-    if (!defined($manPath{$manPathAliases{$_}})) {
-	undef $manPathAliases{$_};
-	next;
+    if ( !defined( $manPath{ $manPathAliases{$_} } ) ) {
+        undef $manPathAliases{$_};
+        next;
     }
 
     # add aliases, replases spaces with dashes
     if (/\s/) {
-	local($key) = $_;
-	$key =~ s/\s+/-/g;
-	$manPathAliases{$key} = $manPathAliases{$_};
+        local ($key) = $_;
+        $key =~ s/\s+/-/g;
+        $manPathAliases{$key} = $manPathAliases{$_};
     }
 }
 
-@sections = keys %sections; shift @sections;	# all but the "" entry
-$sections = join("|", @sections);		# sections regexp
-
+@sections = keys %sections;
+shift @sections;    # all but the "" entry
+$sections = join( "|", @sections );    # sections regexp
 
 # mailto - Author
 # webmaster - who run this service
-$mailto = 'wosch@FreeBSD.org';
-$mailtoURL = 'http://wolfram.schneider.org';
-$mailtoURL = "mailto:$mailto" if !$mailtoURL;
-$webmaster = $mailto;
+$mailto       = 'wosch@FreeBSD.org';
+$mailtoURL    = 'http://wolfram.schneider.org';
+$mailtoURL    = "mailto:$mailto" if !$mailtoURL;
+$webmaster    = $mailto;
 $webmasterURL = $mailtoURL;
-$manstat = 'http://www.de.freebsd.org/de/stat/man';
+$manstat      = 'http://www.de.freebsd.org/de/stat/man';
 
 &secure_env;
+
 # CGI Interface -- runs at load time
-&do_man(&env('SCRIPT_NAME'), &env('PATH_INFO'), &env('QUERY_STRING'))
-    unless defined($main'plexus_configured);
+&do_man( &env('SCRIPT_NAME'), &env('PATH_INFO'), &env('QUERY_STRING') )
+  unless defined($main'plexus_configured);
 
 $enable_include_links = 0;
-$enable_mailto_links = 0;
+$enable_mailto_links  = 0;
 
 # Plexus Native Interface
 sub do_man {
-    local($BASE, $path, $form) = @_;
-    local($_, %form, $query, $proto, $name, $section, $apropos);
+    local ( $BASE, $path, $form ) = @_;
+    local ( $_, %form, $query, $proto, $name, $section, $apropos );
 
     # spinner is buggy, shit
-    local($u) = 'http://user.cs.tu-berlin.de/~wosch/man.cgi';
-	local($u)= $BASE;
+    local ($u) = 'http://user.cs.tu-berlin.de/~wosch/man.cgi';
+    local ($u) = $BASE;
 
-    return &faq_output($u) if ($path =~ /\/(faq|help)\.html$/);
+    return &faq_output($u) if ( $path =~ /\/(faq|help)\.html$/ );
+
     #return &copyright_output($u) if ($path =~ /copyright.html$/);
-    return &get_the_sources if ($path =~ /source$/);
+    return &get_the_sources if ( $path =~ /source$/ );
 
-    return &include_output($path) 
-    	if ($enable_include_links && $path =~ m%^/usr/include/% && -f $path);
+    return &include_output($path)
+      if ( $enable_include_links && $path =~ m%^/usr/include/% && -f $path );
 
-    return &indexpage if ($form eq "");
+    return &indexpage if ( $form eq "" );
 
-    &decode_form($form, *form, 0);
-    
+    &decode_form( $form, *form, 0 );
+
     $format = $form{'format'};
     $format = 'html' if $format !~ /^(ps|pdf|ascii|latin1|dvi|troff)$/;
 
-    local($fform) = &dec($form);
-    if ($fform =~ m%^([a-zA-Z_\-\.]+)$%) {
-	return &man($1, '');
-    } elsif ($fform =~ m%^([a-zA-Z_\-\.]+)\(([0-9a-zA-Z]+)\)$%) {
-	return &man($1, $2);
+    local ($fform) = &dec($form);
+    if ( $fform =~ m%^([a-zA-Z_\-\.]+)$% ) {
+        return &man( $1, '' );
+    }
+    elsif ( $fform =~ m%^([a-zA-Z_\-\.]+)\(([0-9a-zA-Z]+)\)$% ) {
+        return &man( $1, $2 );
     }
 
     # remove trailing spaces for dumb users
@@ -467,59 +483,63 @@ sub do_man {
     $form{'query'} =~ s/^\s+//;
 
     $name = $query = $form{'query'};
-    $section = $form{'sektion'};
-    $apropos = $form{'apropos'};
+    $section  = $form{'sektion'};
+    $apropos  = $form{'apropos'};
     $alttitle = $form{'title'};
-    $manpath = $form{'manpath'};
+    $manpath  = $form{'manpath'};
 
-    if ($manpath =~ /^([0-9A-Za-z \.\-\/]+)$/) {
-	$manpath = $1;
-    } else {
-	$manpath = '';
+    if ( $manpath =~ /^([0-9A-Za-z \.\-\/]+)$/ ) {
+        $manpath = $1;
+    }
+    else {
+        $manpath = '';
     }
 
-    if (!$manpath) {
-	$manpath = $manPathDefault;
-    } elsif (!$manPath{$manpath}) {
-	local($m) = ($manpath =~ y/A-Z/a-z/);
-	if ($manPath{$manPathAliases{$manpath}}) {
-	    $manpath = $manPathAliases{$manpath};
-	} else {
-	    $manpath = $manPathDefault;
-	}
+    if ( !$manpath ) {
+        $manpath = $manPathDefault;
+    }
+    elsif ( !$manPath{$manpath} ) {
+        local ($m) = ( $manpath =~ y/A-Z/a-z/ );
+        if ( $manPath{ $manPathAliases{$manpath} } ) {
+            $manpath = $manPathAliases{$manpath};
+        }
+        else {
+            $manpath = $manPathDefault;
+        }
     }
 
     # download a man hierarchie as gzip'd tar file
-    return &download if ($apropos > 1);
+    return &download if ( $apropos > 1 );
 
     # empty query
-    return &indexpage if ($manpath && $form !~ /query=/);
+    return &indexpage if ( $manpath && $form !~ /query=/ );
 
     $section = "" if $section eq "ALL" || $section eq '';
 
-    if (!$apropos && $query =~ m/^(.*)\(([^\)]*)\)/) {
-	$name = $1; $section = $2;
+    if ( !$apropos && $query =~ m/^(.*)\(([^\)]*)\)/ ) {
+        $name    = $1;
+        $section = $2;
     }
-    $name = $1 if $name =~ /^([\w\-\.]+)$/;
+    $name    = $1 if $name    =~ /^([\w\-\.]+)$/;
     $section = $1 if $section =~ /^([\w\-\.]+)$/;
-    
-    $apropos  ?  &apropos($query)  :  &man($name, $section);
+
+    $apropos ? &apropos($query) : &man( $name, $section );
 }
 
 # --------------------- support routines ------------------------
 
 sub debug {
     &http_header("text/plain");
-    print @_,"\n----------\n\n\n";
+    print @_, "\n----------\n\n\n";
 }
 
 sub get_the_sources {
-    local($file) = '/usr/local/www/bsddoc/bin/man.cgi';
-    $file = $0 if ! -f $file;
+    local ($file) = '/usr/local/www/bsddoc/bin/man.cgi';
+    $file = $0 if !-f $file;
 
-    open(R, $file) || &mydie("open $file: $!\n");
+    open( R, $file ) || &mydie("open $file: $!\n");
     print "Content-type: text/plain\n\n";
-    while(<R>) { print }
+    while (<R>) { print }
     close R;
     exit;
 }
@@ -533,22 +553,23 @@ sub download {
     $filename = &encode_url($filename);
     $filename .= '.tar.gz';
 
-    print qq{Content-type: application/x-tar\n} .
-	qq{Content-encoding: x-gzip\n} .
-	qq{Content-disposition: inline; filename="$filename"\n} .
-	"\n";
+    print qq{Content-type: application/x-tar\n}
+      . qq{Content-encoding: x-gzip\n}
+      . qq{Content-disposition: inline; filename="$filename"\n} . "\n";
 
-    local(@m); 
-    local($m) = $manPath{"$manpath"};
-    foreach (split(/:/, $m)) {
-	push(@m, $_) if s%^$manLocalDir/?%%;
+    local (@m);
+    local ($m) = $manPath{"$manpath"};
+    foreach ( split( /:/, $m ) ) {
+        push( @m, $_ ) if s%^$manLocalDir/?%%;
     }
 
     chdir($manLocalDir) || do {
-	print "chdir: $!\n"; exit(0);
+        print "chdir: $!\n";
+        exit(0);
     };
 
-    $m = join(" ", @m);
+    $m = join( " ", @m );
+
     #warn "find $m -print | cpio -o -H tar 2>/dev/null | gzip -cqf";
 
     sleep 1;
@@ -557,30 +578,32 @@ sub download {
 }
 
 sub http_header {
-    local($content_type) = @_;
-    if (defined($main'plexus_configured)) {
-	&main'MIME_header('ok', $content_type);
-    } else {
-	print "Content-type: $content_type\n\n";
+    local ($content_type) = @_;
+    if ( defined($main'plexus_configured) ) {
+        &main'MIME_header( 'ok', $content_type );
+    }
+    else {
+        print "Content-type: $content_type\n\n";
     }
 }
 
-sub env { defined($main'ENV{$_[0]}) ? $main'ENV{$_[0]} : undef; }
+sub env { defined( $main'ENV{ $_[0] } ) ? $main'ENV{ $_[0] } : undef; }
 
 sub apropos {
-    local($query) = @_;
-    local($_, $title, $head, *APROPOS);
-    local($names, $section, $msg, $key);
-    local($prefix);
+    local ($query) = @_;
+    local ( $_,     $title,   $head, *APROPOS );
+    local ( $names, $section, $msg,  $key );
+    local ($prefix);
 
     $prefix = "Apropos ";
     if ($alttitle) {
-	$prefix = "";
-	$title = &encode_title($alttitle);
-	$head = &encode_data($alttitle);
-    } else {
-	$title = &encode_title($query);
-	$head = &encode_data($query);
+        $prefix = "";
+        $title  = &encode_title($alttitle);
+        $head   = &encode_data($alttitle);
+    }
+    else {
+        $title = &encode_title($query);
+        $head  = &encode_data($query);
     }
 
     &http_header("text/html");
@@ -588,257 +611,283 @@ sub apropos {
     print "<h1>", $www{'head'}, "</h1>\n\n";
     &formquery;
 
-    local($mpath) = $manPath{$manpath};
+    local ($mpath) = $manPath{$manpath};
 
-    open(APROPOS, "env MANPATH=$mpath $command{'man'} -k . |") || do {
-	warn "$0: Cannot open whatis database for `$mpath'\n";
-	print "Cannot open whatis database for `$mpath'\n";
-	print "</dl>\n</body>\n</html>\n";
-	return;
+    open( APROPOS, "env MANPATH=$mpath $command{'man'} -k . |" ) || do {
+        warn "$0: Cannot open whatis database for `$mpath'\n";
+        print "Cannot open whatis database for `$mpath'\n";
+        print "</dl>\n</body>\n</html>\n";
+        return;
     };
 
-    local($q) = $query; 
+    local ($q) = $query;
     $q =~ s/(\W)/\\W/g;
-    local($acounter) = 0;
-    
-    while (<APROPOS>) {
-	next if !/$q/oi;
-	$acounter++;
+    local ($acounter) = 0;
 
-    	# matches whatis.db lines: name[, name ...] (sect) - msg
-	$names = $section = $msg = $key = undef;
-	($key, $section) = m/^([^()]+)\(([^)]*)\)/;
+    while (<APROPOS>) {
+        next if !/$q/oi;
+        $acounter++;
+
+        # matches whatis.db lines: name[, name ...] (sect) - msg
+        $names = $section = $msg = $key = undef;
+        ( $key, $section ) = m/^([^()]+)\(([^)]*)\)/;
         $key =~ s/\s+$//;
         $key =~ s/.*\s+//;
-        ($names, $msg) = m/^(.*\))\s+-\s+(.*)/;
-	print "<dt><a href=\"$BASE?query=", &encode_url($key),
-	    "&amp;sektion=", &encode_url($section), "&amp;apropos=0", 
-            "&amp;manpath=", &encode_url($manpath), "\">",
-	    &encode_data("$names"), "</a>\n<dd>",
-	    &encode_data($msg), "\n";
+        ( $names, $msg ) = m/^(.*\))\s+-\s+(.*)/;
+        print "<dt><a href=\"$BASE?query=", &encode_url($key), "&amp;sektion=",
+          &encode_url($section), "&amp;apropos=0", "&amp;manpath=",
+          &encode_url($manpath), "\">", &encode_data("$names"), "</a>\n<dd>",
+          &encode_data($msg), "\n";
     }
     close(APROPOS);
 
-    if (!$acounter) {
-	print "Sorry, no data found for `$query'.\n";
-	print qq{You may look for other } . 
-	    qq{<a href="../../search/">FreeBSD Search Services</a>.\n};
+    if ( !$acounter ) {
+        print "Sorry, no data found for `$query'.\n";
+        print qq{You may look for other }
+          . qq{<a href="../../search/">FreeBSD Search Services</a>.\n};
     }
     print "</dl>\n</body>\n</html>\n";
 }
 
 sub man {
-    local($name, $section) = @_;
-    local($_, $title, $head, *MAN);
-    local($html_name, $html_section, $prefix);
-    local(@manargs);
-    local($query) = $name;
+    local ( $name, $section ) = @_;
+    local ( $_, $title, $head, *MAN );
+    local ( $html_name, $html_section, $prefix );
+    local (@manargs);
+    local ($query) = $name;
 
     # $section =~ s/^([0-9ln]).*$/$1/;
     $section =~ tr/A-Z/a-z/;
 
     $prefix = "Man ";
     if ($alttitle) {
-	$prefix = "";
-	$title = &encode_title($alttitle);
-	$head = &encode_data($alttitle);
-    } elsif ($section) {
-	$title = &encode_title("${name}($section)");
-	$head = &encode_data("${name}($section)");
-    } else {
-	$title = &encode_title("${name}");
-	$head = &encode_data("${name}");
+        $prefix = "";
+        $title  = &encode_title($alttitle);
+        $head   = &encode_data($alttitle);
+    }
+    elsif ($section) {
+        $title = &encode_title("${name}($section)");
+        $head  = &encode_data("${name}($section)");
+    }
+    else {
+        $title = &encode_title("${name}");
+        $head  = &encode_data("${name}");
     }
 
-    if ($format eq "html") {
-	&http_header("text/html");
-	print &html_header("$title");
-	print "<h1>", $www{'head'}, "</h1>\n\n";
-	&formquery;
-	print "<pre>\n";
-    } else {
-	#$format =~ /^(ps|ascii|latin1|dvi|troff)$/')
-	$ENV{'NROFF_FORMAT'} = $format;
+    if ( $format eq "html" ) {
+        &http_header("text/html");
+        print &html_header("$title");
+        print "<h1>", $www{'head'}, "</h1>\n\n";
+        &formquery;
+        print "<pre>\n";
+    }
+    else {
 
-	# Content-encoding: x-gzip
-	if ($format eq "ps") {
-	    &http_header("application/postscript");
-	} elsif ($format eq "pdf") {
-	    &http_header("application/pdf");
-	} elsif ($format eq "dvi") {
-	    &http_header("application/x-dvi");
-	} elsif ($format eq "troff") {
-	    &http_header("application/x-troff-mandoc");
-	} else {
-	    &http_header("text/plain");
-	}
+        #$format =~ /^(ps|ascii|latin1|dvi|troff)$/')
+        $ENV{'NROFF_FORMAT'} = $format;
+
+        # Content-encoding: x-gzip
+        if ( $format eq "ps" ) {
+            &http_header("application/postscript");
+        }
+        elsif ( $format eq "pdf" ) {
+            &http_header("application/pdf");
+        }
+        elsif ( $format eq "dvi" ) {
+            &http_header("application/x-dvi");
+        }
+        elsif ( $format eq "troff" ) {
+            &http_header("application/x-troff-mandoc");
+        }
+        else {
+            &http_header("text/plain");
+        }
     }
 
-    $html_name = &encode_data($name);
+    $html_name    = &encode_data($name);
     $html_section = &encode_data($section);
 
     #print Dumper($sectionpath);
     #print "yy $section yy $manpath\n";
-    if ($name =~ /^\s*$/) {	
-	print "Empty input, no man page given.\n";
-	return;
+    if ( $name =~ /^\s*$/ ) {
+        print "Empty input, no man page given.\n";
+        return;
     }
 
-    if (index($name, '*') != -1) {	
-	print "Invalid character input '*': $name\n";
-	return;
+    if ( index( $name, '*' ) != -1 ) {
+        print "Invalid character input '*': $name\n";
+        return;
     }
 
-    if ($section !~ /^[0-9ln]\w*$/ && $section ne '') {
-	print "Sorry, section `$section' is not valid\n";
-	return;
+    if ( $section !~ /^[0-9ln]\w*$/ && $section ne '' ) {
+        print "Sorry, section `$section' is not valid\n";
+        return;
     }
 
-    if (!$section) {
-	if ($sectionpath->{$manpath}) {
-	    $section = "-S " . $sectionpath->{$manpath}{'path'};
-	} else {
-	    $section =  '';
-	}
-    } else {
-	if ($sectionpath->{$manpath}{$section}) {
-	    $section = "-S " . $sectionpath->{$manpath}{$section};
-	} else {
-	    $section = "-S $section";
-	}
+    if ( !$section ) {
+        if ( $sectionpath->{$manpath} ) {
+            $section = "-S " . $sectionpath->{$manpath}{'path'};
+        }
+        else {
+            $section = '';
+        }
+    }
+    else {
+        if ( $sectionpath->{$manpath}{$section} ) {
+            $section = "-S " . $sectionpath->{$manpath}{$section};
+        }
+        else {
+            $section = "-S $section";
+        }
     }
 
-    @manargs = split(/ /, $section);
+    @manargs = split( / /, $section );
     if ($manpath) {
-	if ($manPath{$manpath}) {
-	    unshift(@manargs, ('-M', $manPath{$manpath}));
-	    &groff_path($manPath{$manpath});
-	} elsif ($manpath{&dec($manpath)}) {
-	    unshift(@manargs, ('-M', $manPath{&dec($manpath)}));
-	    &groff_path( $manPath{&dec($manpath)} );
-	} else {
-	    # unset invalid manpath
-	    print "x $manpath x\n";
-	    print "x " . &dec($manpath) . "x\n";
-	    undef $manpath;
-	}
+        if ( $manPath{$manpath} ) {
+            unshift( @manargs, ( '-M', $manPath{$manpath} ) );
+            &groff_path( $manPath{$manpath} );
+        }
+        elsif ( $manpath{ &dec($manpath) } ) {
+            unshift( @manargs, ( '-M', $manPath{ &dec($manpath) } ) );
+            &groff_path( $manPath{ &dec($manpath) } );
+        }
+        else {
+
+            # unset invalid manpath
+            print "x $manpath x\n";
+            print "x " . &dec($manpath) . "x\n";
+            undef $manpath;
+        }
     }
 
-    if ($format =~ /^(ps|pdf)$/) {
-        push(@manargs, '-t');
+    if ( $format =~ /^(ps|pdf)$/ ) {
+        push( @manargs, '-t' );
     }
 
     # warn "X $command{'man'} @manargs -- x $name x\n";
-    &proc(*MAN, $command{'man'}, @manargs, "--", $name) ||
-	&mydie ("$0: open of $command{'man'} command failed: $!\n");
-    if (eof(MAN)) {
-	# print "X $command{'man'} @manargs -- x $name x\n";
-	print "Sorry, no data found for `$html_name" .
-		($html_section ? "($html_section)": '') . "'.\n";
-	print qq{You may look for other } . 
-	    qq{<a href="../../search/">FreeBSD Search Services</a>.\n};
-	return;
+    &proc( *MAN, $command{'man'}, @manargs, "--", $name )
+      || &mydie("$0: open of $command{'man'} command failed: $!\n");
+    if ( eof(MAN) ) {
+
+        # print "X $command{'man'} @manargs -- x $name x\n";
+        print "Sorry, no data found for `$html_name"
+          . ( $html_section ? "($html_section)" : '' ) . "'.\n";
+        print qq{You may look for other }
+          . qq{<a href="../../search/">FreeBSD Search Services</a>.\n};
+        return;
     }
 
-    if ($format ne "html") {
-	if ($format eq "latin1" || $format eq "ascii") {
-	    while(<MAN>) { s/.//g; print; }
-	} elsif ($format eq "pdf") {
-	    # 
-	    # run a PostScript to PDF converter
-	    #
-	    local(@args) = ('mktemp', '/tmp/_man.cgi-ps2pdf-XXXXXXXXXXXX');
-	    open(TMP, "-|") or 
-		exec(@args) or die "open @args: $!\n";
-	    local($tempfile) = <TMP>;
-	    close TMP;
+    if ( $format ne "html" ) {
+        if ( $format eq "latin1" || $format eq "ascii" ) {
+            while (<MAN>) { s/.//g; print; }
+        }
+        elsif ( $format eq "pdf" ) {
 
-	    # chomp, avoid security warnings using -T switch
-	    #chop($tempfile);
-	    if ($tempfile =~ /(\S+)/) {
-		$tempfile = $1;
-	    }
+            #
+            # run a PostScript to PDF converter
+            #
+            local (@args) = ( 'mktemp', '/tmp/_man.cgi-ps2pdf-XXXXXXXXXXXX' );
+            open( TMP, "-|" )
+              or exec(@args)
+              or die "open @args: $!\n";
+            local ($tempfile) = <TMP>;
+            close TMP;
 
-	    if (!$tempfile || ! -f $tempfile) {
-		die "Cannot create tempfile: $tempfile\n";
-	    }
-	    #warn $tempfile;
+            # chomp, avoid security warnings using -T switch
+            #chop($tempfile);
+            if ( $tempfile =~ /(\S+)/ ) {
+                $tempfile = $1;
+            }
 
-	    #$tempfile = '/tmp/bla2';
-	    open(TMP, "> $tempfile") or die "open $tempfile: $!\n";
-	    while(<MAN>) {
-		print TMP $_;
-	    }
-	    close TMP;
-	    local($ENV{'PATH'}) = '/bin:/usr/bin:/usr/local/bin';
-	    open(PDF, "-|") or 
-		exec('/usr/local/bin/ps2pdf', $tempfile, '/dev/stdout') or
-		die "open ps2pdf: $!\n";
+            if ( !$tempfile || !-f $tempfile ) {
+                die "Cannot create tempfile: $tempfile\n";
+            }
+
+            #warn $tempfile;
+
+            #$tempfile = '/tmp/bla2';
+            open( TMP, "> $tempfile" ) or die "open $tempfile: $!\n";
+            while (<MAN>) {
+                print TMP $_;
+            }
+            close TMP;
+            local ( $ENV{'PATH'} ) = '/bin:/usr/bin:/usr/local/bin';
+            open( PDF, "-|" )
+              or exec( '/usr/local/bin/ps2pdf', $tempfile, '/dev/stdout' )
+              or die "open ps2pdf: $!\n";
 
             # sleep and delete the temp file
             #select(undef, undef, undef, 0.8);
-	    #unlink($tempfile);
+            #unlink($tempfile);
 
-	    while(<PDF>) {
-		print;
-	    }
-	    close PDF;
-	    unlink($tempfile);
+            while (<PDF>) {
+                print;
+            }
+            close PDF;
+            unlink($tempfile);
 
-	} else {
-	    while(<MAN>) { print; }
-	}
-	close(MAN);
-	exit(0);
+        }
+        else {
+            while (<MAN>) { print; }
+        }
+        close(MAN);
+        exit(0);
     }
 
-    local($space) = 1;
-    local(@sect);
-    local($i, $j);
-    while(<MAN>) {
-	# remove tailing white space
-	if (/^\s+$/) {
-	    next if $space;
-	    $space = 1;
-	} else {
-	    $space = 0;
-	}
+    local ($space) = 1;
+    local (@sect);
+    local ( $i, $j );
+    while (<MAN>) {
 
-	$_ = &encode_data($_);
-	if($enable_include_links &&
-	   m,(<b>)?\#include(</b>)?\s+(<b>)?\&lt\;(.*\.h)\&gt\;(</b>)?,) {
-	    $match = $4; ($regexp = $match) =~ s/\./\\\./;
-	    s,$regexp,\<a href=\"$BASE/usr/include/$match\"\>$match\</A\>,;
+        # remove tailing white space
+        if (/^\s+$/) {
+            next if $space;
+            $space = 1;
         }
-	/^\s/ && 			# skip headers
-	    s,((<[IB]>)?[\w\_\.\-]+\s*(</[IB]>)?\s*\(([1-9ln][a-zA-Z]*)\)),&mlnk($1),oige;
-
-	# detect E-Mail Addreses in manpages
-	if ($enable_mailto_links && /\@/) {
-	    s/([a-z0-9_\-\.]+\@[a-z0-9\-\.]+\.[a-z]+)/<a href="mailto:$1">$1<\/A>/gi;
-	}
-
-	# detect URLs in manpages
-	if (m%tp://%) {
-	    s,((ftp|http)://[^\s<>\)]+),<a href="$1">$1</a>,gi;
-	}
-
-	if (s%^(<b>.*?</b>)+\n?$% ($str = $1) =~ s,(<b>|</b>),,g; $str%ge ) {
-	    $i = $_; $j = &encode_url($i);
-	    $j =~ s/\+/_/g;
-	    $_ = qq{<a name="$j" href="#end"><b>$i</b></a>};
-	    push(@sect, $i);
+        else {
+            $space = 0;
         }
-	print;
+
+        $_ = &encode_data($_);
+        if ( $enable_include_links
+            && m,(<b>)?\#include(</b>)?\s+(<b>)?\&lt\;(.*\.h)\&gt\;(</b>)?, )
+        {
+            $match = $4;
+            ( $regexp = $match ) =~ s/\./\\\./;
+            s,$regexp,\<a href=\"$BASE/usr/include/$match\"\>$match\</A\>,;
+        }
+        /^\s/ &&    # skip headers
+s,((<[IB]>)?[\w\_\.\-]+\s*(</[IB]>)?\s*\(([1-9ln][a-zA-Z]*)\)),&mlnk($1),oige;
+
+        # detect E-Mail Addreses in manpages
+        if ( $enable_mailto_links && /\@/ ) {
+s/([a-z0-9_\-\.]+\@[a-z0-9\-\.]+\.[a-z]+)/<a href="mailto:$1">$1<\/A>/gi;
+        }
+
+        # detect URLs in manpages
+        if (m%tp://%) {
+            s,((ftp|http)://[^\s<>\)]+),<a href="$1">$1</a>,gi;
+        }
+
+        if (s%^(<b>.*?</b>)+\n?$% ($str = $1) =~ s,(<b>|</b>),,g; $str%ge) {
+            $i = $_;
+            $j = &encode_url($i);
+            $j =~ s/\+/_/g;
+            $_ = qq{<a name="$j" href="#end"><b>$i</b></a>};
+            push( @sect, $i );
+        }
+        print;
     }
     close(MAN);
     print qq{</pre>\n<a name="end" />\n<hr noshade="noshade" />\n};
 
-    for ($i = 0; $i <= $#sect; $i++) {
-	$j =  &encode_url($sect[$i]); $j =~ s/\+/_/g;
+    for ( $i = 0 ; $i <= $#sect ; $i++ ) {
+        $j = &encode_url( $sect[$i] );
+        $j =~ s/\+/_/g;
 
-	print qq{<a href="#$j} . 
-            qq{">$sect[$i]</a>} . ($i < $#sect ? " |\n" : "\n");
+        print qq{<a href="#$j}
+          . qq{">$sect[$i]</a>}
+          . ( $i < $#sect ? " |\n" : "\n" );
     }
 
     print "</body>\n";
@@ -849,12 +898,12 @@ sub man {
 }
 
 #
-# You may need to precreate some mdoc.local files for every system you 
+# You may need to precreate some mdoc.local files for every system you
 # support (every collection of man pages), maybe like:
 #
 # $manLocalDir/NetBSD-1.4.2/tmac
 #
-# and then in your cgi script itself set the GROFF_TMAC_PATH as appropriate 
+# and then in your cgi script itself set the GROFF_TMAC_PATH as appropriate
 # like:
 #
 # GROFF_TMAC_PATH=$manLocalDir/NetBSD-1.4.2/tmac:/usr/share/tmac/
@@ -863,33 +912,33 @@ sub groff_path {
     local $manpath = shift;
 
     local @groff_path;
-    foreach (split(/:/, $manpath)) {
-	push(@groff_path, $_ . '/tmac');
+    foreach ( split( /:/, $manpath ) ) {
+        push( @groff_path, $_ . '/tmac' );
     }
 
-    $ENV{'GROFF_TMAC_PATH'} = join(':', @groff_path, '/usr/share/tmac');
+    $ENV{'GROFF_TMAC_PATH'} = join( ':', @groff_path, '/usr/share/tmac' );
 }
 
 sub mlnk {
-    local($matched) = @_;
-    local($link, $section);
-    ($link = $matched) =~ s/[\s]+//g;
+    local ($matched) = @_;
+    local ( $link, $section );
+    ( $link = $matched ) =~ s/[\s]+//g;
     $link =~ s/<\/?[IB]>//g;
-    ($link, $section) = ($link =~ m/^([^\(]*)\((.*)\)/);
-    $link = &encode_url($link);
+    ( $link, $section ) = ( $link =~ m/^([^\(]*)\((.*)\)/ );
+    $link    = &encode_url($link);
     $section = &encode_url($section);
-    local($manpath) = &encode_url($manpath);
-    return qq{<a href="$BASE?query=$link} . 
-           qq{&amp;sektion=$section&amp;apropos=0&amp;manpath=$manpath">$matched</a>};
+    local ($manpath) = &encode_url($manpath);
+    return qq{<a href="$BASE?query=$link}
+      . qq{&amp;sektion=$section&amp;apropos=0&amp;manpath=$manpath">$matched</a>};
 }
 
 sub proc {
-    local(*FH, $prog, @args) = @_;
-    local($pid) = open(FH, "-|");
+    local ( *FH, $prog, @args ) = @_;
+    local ($pid) = open( FH, "-|" );
     return undef unless defined($pid);
-    if ($pid == 0) {
-	exec $prog, @args;
-	&mydie("exec $prog failed\n");
+    if ( $pid == 0 ) {
+        exec $prog, @args;
+        &mydie("exec $prog failed\n");
     }
     1;
 }
@@ -899,15 +948,15 @@ sub proc {
 # This is derived from code by Denis Howe <dbh@doc.ic.ac.uk>
 # and Thomas A Fine <fine@cis.ohio-state.edu>
 sub decode_form {
-    local($form, *data, $indent, $key, $_) = @_;
-    foreach $_ (split(/&/, $form)) {
-	($key, $_) = split(/=/, $_, 2);
-	$_   =~ s/\+/ /g;				# + -> space
-	$key =~ s/\+/ /g;				# + -> space
-	$_   =~ s/%([\da-f]{1,2})/pack(C,hex($1))/eig;	# undo % escapes
-	$key =~ s/%([\da-f]{1,2})/pack(C,hex($1))/eig;	# undo % escapes
-	$_   =~ s/[\r\n]+/\n\t/g if defined($indent);	# indent data after \n
-	$data{$key} = &escape($_);
+    local ( $form, *data, $indent, $key, $_ ) = @_;
+    foreach $_ ( split( /&/, $form ) ) {
+        ( $key, $_ ) = split( /=/, $_, 2 );
+        $_   =~ s/\+/ /g;                                 # + -> space
+        $key =~ s/\+/ /g;                                 # + -> space
+        $_   =~ s/%([\da-f]{1,2})/pack(C,hex($1))/eig;    # undo % escapes
+        $key =~ s/%([\da-f]{1,2})/pack(C,hex($1))/eig;    # undo % escapes
+        $_   =~ s/[\r\n]+/\n\t/g if defined($indent);     # indent data after \n
+        $data{$key} = &escape($_);
     }
 }
 
@@ -915,12 +964,12 @@ sub decode_form {
 sub escape($) { $_ = $_[0]; s/&/&amp;/g; s/</&lt;/g; s/>/&gt;/g; $_; }
 
 sub dec {
-    local($_) = @_;
+    local ($_) = @_;
 
-    s/\+/ /g;                       # '+'   -> space
-    s/%(..)/pack("c",hex($1))/ge;   # '%ab' -> char ab
+    s/\+/ /g;                                             # '+'   -> space
+    s/%(..)/pack("c",hex($1))/ge;                         # '%ab' -> char ab
 
-    return($_);
+    return ($_);
 }
 
 #
@@ -928,67 +977,73 @@ sub dec {
 # usage: @items = &main'splitquery($query);
 #
 sub splitquery {
-    local($query) = @_;
-    grep((s/%([\da-f]{1,2})/pack(C,hex($1))/eig, 1), split(/\+/, $query));
+    local ($query) = @_;
+    grep( ( s/%([\da-f]{1,2})/pack(C,hex($1))/eig, 1 ), split( /\+/, $query ) );
 }
 
 # encode unknown data for use in a URL <a href="...">
 sub encode_url {
-    local($_) = @_;
+    local ($_) = @_;
+
     # rfc1738 says that ";"|"/"|"?"|":"|"@"|"&"|"=" may be reserved.
     # And % is the escape character so we escape it along with
     # single-quote('), double-quote("), grave accent(`), less than(<),
     # greater than(>), and non-US-ASCII characters (binary data),
     # and white space.  Whew.
-    s/([\000-\032\;\/\?\:\@\&\=\%\'\"\`\<\>\177-\377 ])/sprintf('%%%02x',ord($1))/eg;
+s/([\000-\032\;\/\?\:\@\&\=\%\'\"\`\<\>\177-\377 ])/sprintf('%%%02x',ord($1))/eg;
     s/%20/+/g;
     $_;
 }
+
 # encode unknown data for use in <TITLE>...</TITILE>
 sub encode_title {
+
     # like encode_url but less strict (I couldn't find docs on this)
-    local($_) = @_;
+    local ($_) = @_;
     s/([\000-\031\%\&\<\>\177-\377])/sprintf('%%%02x',ord($1))/eg;
     $_;
 }
+
 # encode unknown data for use inside markup attributes <MARKUP ATTR="...">
 sub encode_attribute {
+
     # rfc1738 says to use entity references here
-    local($_) = @_;
+    local ($_) = @_;
     s/([\000-\031\"\'\`\%\&\<\>\177-\377])/sprintf('\&#%03d;',ord($1))/eg;
     $_;
 }
+
 # encode unknown text data for using as HTML,
 # treats ^H as overstrike ala nroff.
 sub encode_data {
-    local($_) = @_;
-    local($str);
+    local ($_) = @_;
+    local ($str);
 
     # Escape &, < and >
     s,\010[><&],,g;
-    s/\&/\&amp\;/g; 
-    s/\</\&lt\;/g; 
+    s/\&/\&amp\;/g;
+    s/\</\&lt\;/g;
     s/\>/\&gt\;/g;
 
     s,((_\010[^_])+),($str = $1) =~ s/.\010//g; "<i>$str</i>";,ge;
     s,((.\010.)+),($str = $1) =~ s/.\010//g; "<b>$str</b>";,ge;
 
-    #s,((_\010.)+),($str = $1) =~ s/.\010//g; "<i>$str</i>";,ge;
-    #s,(.\010)+,$1,g;
-    #if (!s,((.\010.)+\s+(.\010.)+),($str = $1) =~ s/.\010//g; "<b>$str</b>";,ge) {
-    # s,(([^_]\010.)+),($str = $1) =~ s/[^_]\010//g; "<b>$str</b>";,ge;
-    # s,(([_]\010.)+),($str = $1) =~ s/[_]\010//g; "<i>$str</i>";,ge;
-    #}
-    # Escape binary data except for ^H which we process below
-    # \375 gets turned into the & for the entity reference
-    #s/([^\010\012\015\032-\176])/sprintf('\375#%03d;',ord($1))/eg;
-    # Process ^H sequences, we use \376 and \377 (already escaped
-    # above) to stand in for < and > until those characters can
-    # be properly escaped below.
-    #s,\376[IB]\377_\376/[IB]\377,,g;
-    #s/.[\b]//g;			# just do an erase for anything else
-    # Now convert our magic chars into our tag markers
-    #s/\375/\&/g; s/\376/</g; s/\377/>/g;
+ #s,((_\010.)+),($str = $1) =~ s/.\010//g; "<i>$str</i>";,ge;
+ #s,(.\010)+,$1,g;
+ #if (!s,((.\010.)+\s+(.\010.)+),($str = $1) =~ s/.\010//g; "<b>$str</b>";,ge) {
+ # s,(([^_]\010.)+),($str = $1) =~ s/[^_]\010//g; "<b>$str</b>";,ge;
+ # s,(([_]\010.)+),($str = $1) =~ s/[_]\010//g; "<i>$str</i>";,ge;
+ #}
+ # Escape binary data except for ^H which we process below
+ # \375 gets turned into the & for the entity reference
+ #s/([^\010\012\015\032-\176])/sprintf('\375#%03d;',ord($1))/eg;
+ # Process ^H sequences, we use \376 and \377 (already escaped
+ # above) to stand in for < and > until those characters can
+ # be properly escaped below.
+ #s,\376[IB]\377_\376/[IB]\377,,g;
+ #s/.[\b]//g;			# just do an erase for anything else
+ # Now convert our magic chars into our tag markers
+ #s/\375/\&/g; s/\376/</g; s/\377/>/g;
 
     # cleanup all the rest
     s,.\010,,g;
@@ -998,35 +1053,40 @@ sub encode_data {
 
 sub indexpage {
     &http_header("text/html");
-    print &html_header("$www{'title'}: Index Page") .
-	 "<h1>", $www{'head'}, "</h1>\n\n" . &intro;
+    print &html_header("$www{'title'}: Index Page") . "<h1>", $www{'head'},
+      "</h1>\n\n" . &intro;
     &formquery;
 
-    local($m) = ($manpath ? $manpath : $manPathDefault);
+    local ($m) = ( $manpath ? $manpath : $manPathDefault );
     $m = &encode_url($m);
 
     print "<b><i>Section Indexes</i></b>:\n";
-    foreach ('1', '2', '3', '4', '5', '6', '7', '8', '9', 'n') {
-	print qq{&#164; } if $_ ne '1';
-	print qq{<a href="$BASE?query=($_)&amp;sektion=&amp;apropos=1&amp;manpath=$m&amp;title=Section%20$_Index">$_</a>\n};
+    foreach ( '1', '2', '3', '4', '5', '6', '7', '8', '9', 'n' ) {
+        print qq{&#164; } if $_ ne '1';
+        print
+qq{<a href="$BASE?query=($_)&amp;sektion=&amp;apropos=1&amp;manpath=$m&amp;title=Section%20$_Index">$_</a>\n};
     }
 
     print "<br /><b><i>Explanations of Man Sections:</i></b>\n";
-    foreach ('1', '2', '3', '4', '5', '6', '7', '8', '9') {
-	print qq{&#164; } if $_ ne '1';
-	print qq{<a href="$BASE?query=intro&amp;sektion=$_&amp;apropos=0&amp;manpath=$m&amp;title=Introduction%20Section%20$_">intro($_)</a>\n};
+    foreach ( '1', '2', '3', '4', '5', '6', '7', '8', '9' ) {
+        print qq{&#164; } if $_ ne '1';
+        print
+qq{<a href="$BASE?query=intro&amp;sektion=$_&amp;apropos=0&amp;manpath=$m&amp;title=Introduction%20Section%20$_">intro($_)</a>\n};
     }
 
     if (0) {
-    print "<br />\n<b><i>Quick Reference Categories:</i></b>\n";
-    foreach ('database', 'disk', 'driver', 'ethernet', 'mail', 'net', 'nfs', 
-             'nis', 'protocol', 'ppp', 'roff', 'string', 'scsi', 
-	     'statistic', 'tcl', 'tcp', 'time') 
-    {
-	print qq{&#164; <a href="$BASE?query=$_&amp;sektion=&amp;apropos=1&amp;manpath=$m&amp;title=Quick%20Ref%20$_">$_</a>\n};
+        print "<br />\n<b><i>Quick Reference Categories:</i></b>\n";
+        foreach (
+            'database', 'disk',   'driver', 'ethernet',  'mail',
+            'net',      'nfs',    'nis',    'protocol',  'ppp',
+            'roff',     'string', 'scsi',   'statistic', 'tcl',
+            'tcp',      'time'
+          )
+        {
+            print
+qq{&#164; <a href="$BASE?query=$_&amp;sektion=&amp;apropos=1&amp;manpath=$m&amp;title=Quick%20Ref%20$_">$_</a>\n};
+        }
     }
-    }
-
 
     print <<ETX if $mailto;
 <hr noshade="noshade" />
@@ -1039,11 +1099,12 @@ ETX
 }
 
 sub formquery {
-    local($astring, $bstring);
-    if (!$apropos) {
-	$astring = q{ checked="checked"};
-    } else {
-	$bstring = q{ checked="checked"};
+    local ( $astring, $bstring );
+    if ( !$apropos ) {
+        $astring = q{ checked="checked"};
+    }
+    else {
+        $bstring = q{ checked="checked"};
     }
 
     print <<ETX;
@@ -1057,23 +1118,23 @@ sub formquery {
 <select name="sektion">
 ETX
 
-
-    foreach $key (sort keys %sectionName) {
-        print "<option" . (($key eq $section) ? ' selected="selected" ' : ' ') .
-                qq{value="$key">$sectionName{$key}</option>\n};
-    };
-
+    foreach $key ( sort keys %sectionName ) {
+        print "<option"
+          . ( ( $key eq $section ) ? ' selected="selected" ' : ' ' )
+          . qq{value="$key">$sectionName{$key}</option>\n};
+    }
 
     print qq{</select>\n<select name="manpath">\n};
 
-    local($l) = ($manpath ? $manpath : $manPathDefault);
-    foreach (sort keys %manPath) {
-	$key = $_;
-	print "<option" . (($key eq $l) ? ' selected="selected" ' : ' ') .
-	      qq{value="$key">$key</option>\n};
+    local ($l) = ( $manpath ? $manpath : $manPathDefault );
+    foreach ( sort keys %manPath ) {
+        $key = $_;
+        print "<option"
+          . ( ( $key eq $l ) ? ' selected="selected" ' : ' ' )
+          . qq{value="$key">$key</option>\n};
     }
 
-    local($m) = &encode_url($l);
+    local ($m) = &encode_url($l);
     print <<ETX;
 </select>
 <br />
@@ -1081,11 +1142,15 @@ ETX
 <select name="format">
 ETX
 
-    foreach ('html', 'ps', 'pdf',
-	     # 'dvi', # you need a 8 bit clean man, e.g. jp-man
-	     'ascii', 'latin1') {
-	print qq{<option value="$_">$_</option>\n};
-    };
+    foreach (
+        'html', 'ps', 'pdf',
+
+        # 'dvi', # you need a 8 bit clean man, e.g. jp-man
+        'ascii', 'latin1'
+      )
+    {
+        print qq{<option value="$_">$_</option>\n};
+    }
 
     print <<ETX;
 </select>
@@ -1100,7 +1165,7 @@ ETX
 }
 
 sub copyright {
-    $id = '$Id: man.cgi,v 1.177 2007-07-16 17:36:53 wosch Exp $';
+    $id = '$Id: man.cgi,v 1.178 2007-07-16 17:40:22 wosch Exp $';
 
     return qq{\
 <pre>
@@ -1136,23 +1201,26 @@ Copyright (&copy;) for man pages by OS vendors.
 }
 
 sub faq {
-    
-    local(@list, @list2);
-    local($url);
-    foreach (sort keys %manPath) {
-	$url = &encode_url($_);
-	push(@list, 
-	     qq{<li><a href="$BASE?apropos=2&amp;manpath=$url">[download]} .
-	     qq{</a> "$_" -> $BASE?manpath=$url});
+
+    local ( @list, @list2 );
+    local ($url);
+    foreach ( sort keys %manPath ) {
+        $url = &encode_url($_);
+        push( @list,
+                qq{<li><a href="$BASE?apropos=2&amp;manpath=$url">[download]}
+              . qq{</a> "$_" -> $BASE?manpath=$url} );
     }
 
-    foreach (sort keys %manPathAliases) {
-	push(@list2, qq[<li>"$_" -> "$manPathAliases{$_}" -> ] .
-	     "$BASE?manpath=" . 
-	     &encode_url($_) . "\n") if $manPathAliases{$_};
+    foreach ( sort keys %manPathAliases ) {
+        push( @list2,
+                qq[<li>"$_" -> "$manPathAliases{$_}" -> ]
+              . "$BASE?manpath="
+              . &encode_url($_)
+              . "\n" )
+          if $manPathAliases{$_};
     }
 
-    local $id = '$Id: man.cgi,v 1.177 2007-07-16 17:36:53 wosch Exp $';
+    local $id = '$Id: man.cgi,v 1.178 2007-07-16 17:40:22 wosch Exp $';
     return qq{\
 <pre>
 Copyright (c) 1996-2007 <a href="$mailtoURL">Wolfram Schneider</a>
@@ -1222,7 +1290,6 @@ lifetime, eg. 'openbsd' points always to the latest OpenBSD release.
 };
 }
 
-
 sub intro {
     return qq{\
 <p />
@@ -1240,8 +1307,10 @@ sections.
 
 sub copyright_output {
     &http_header("text/html");
-    print &html_header("HTML hypertext FreeBSD man page interface") .
-	"<h1>", $www{'head'}, "</h1>\n" . &copyright . qq{\
+    print &html_header("HTML hypertext FreeBSD man page interface") . "<h1>",
+      $www{'head'},
+      "</h1>\n"
+      . &copyright . qq{\
 <hr />
 
 <a href="$_[0]">home</a>
@@ -1252,8 +1321,8 @@ sub copyright_output {
 
 sub faq_output {
     &http_header("text/html");
-    print &html_header("HTML hypertext FreeBSD man page interface") .
-	"<h1>", $www{'head'}, "</h1>\n" . &faq . qq{\
+    print &html_header("HTML hypertext FreeBSD man page interface") . "<h1>",
+      $www{'head'}, "</h1>\n" . &faq . qq{\
 <hr />
 
 <a href="$_[0]">home</a>
@@ -1283,41 +1352,40 @@ i { color: #008000; background-color: #EEEEEE; }
 }
 
 sub secure_env {
-    $main'ENV{'PATH'} = '/bin:/usr/bin';
+    $main'ENV{'PATH'}    = '/bin:/usr/bin';
     $main'ENV{'MANPATH'} = $manPath{$manPathDefault};
-    $main'ENV{'IFS'} = " \t\n";
-    $main'ENV{'PAGER'} = 'cat';
-    $main'ENV{'SHELL'} = '/bin/sh';
-    $main'ENV{'LANG'} = 'en_US.ISO_8859-1';
+    $main'ENV{'IFS'}     = " \t\n";
+    $main'ENV{'PAGER'}   = 'cat';
+    $main'ENV{'SHELL'}   = '/bin/sh';
+    $main'ENV{'LANG'}    = 'en_US.ISO_8859-1';
     undef $main'ENV{'DISPLAY'};
 }
 
 sub include_output {
-    local($inc) = @_;
+    local ($inc) = @_;
 
     &http_header("text/plain");
-    open(I, "$inc") || do { print "open $inc: $!\n"; exit(1) };
-    while(<I>) { print }
+    open( I, "$inc" ) || do { print "open $inc: $!\n"; exit(1) };
+    while (<I>) { print }
     close(I);
 }
 
 # CGI script must die with error status 0
 sub mydie {
-	local($message) = @_;
-	&http_header("text/html");
-	print &html_header("Error");
-	print $message;
+    local ($message) = @_;
+    &http_header("text/html");
+    print &html_header("Error");
+    print $message;
 
-print qq{
+    print qq{
 <p />
 <a href="$BASE">home</a>
 </body>
 </html>
 };
 
-	exit(0);
+    exit(0);
 }
 
 1;
-
 
