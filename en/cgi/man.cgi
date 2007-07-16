@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp 
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.176 2007-07-16 17:33:41 wosch Exp $
+# $Id: man.cgi,v 1.177 2007-07-16 17:36:53 wosch Exp $
 
 ############################################################################
 # !!! man.cgi is stale perl4 code !!!
@@ -585,7 +585,7 @@ sub apropos {
 
     &http_header("text/html");
     print &html_header("Apropos $title");
-    print "<H1>$www{'head'}</H1>\n\n";
+    print "<h1>", $www{'head'}, "</h1>\n\n";
     &formquery;
 
     local($mpath) = $manPath{$manpath};
@@ -593,7 +593,7 @@ sub apropos {
     open(APROPOS, "env MANPATH=$mpath $command{'man'} -k . |") || do {
 	warn "$0: Cannot open whatis database for `$mpath'\n";
 	print "Cannot open whatis database for `$mpath'\n";
-	print "</DL>\n</BODY>\n</HTML>\n";
+	print "</dl>\n</body>\n</html>\n";
 	return;
     };
 
@@ -611,10 +611,10 @@ sub apropos {
         $key =~ s/\s+$//;
         $key =~ s/.*\s+//;
         ($names, $msg) = m/^(.*\))\s+-\s+(.*)/;
-	print "<DT><A HREF=\"$BASE?query=", &encode_url($key),
-	    "&sektion=", &encode_url($section), "&apropos=0", 
-            "&manpath=", &encode_url($manpath), "\">",
-	    &encode_data("$names"), "</A>\n<DD>",
+	print "<dt><a href=\"$BASE?query=", &encode_url($key),
+	    "&amp;sektion=", &encode_url($section), "&amp;apropos=0", 
+            "&amp;manpath=", &encode_url($manpath), "\">",
+	    &encode_data("$names"), "</a>\n<dd>",
 	    &encode_data($msg), "\n";
     }
     close(APROPOS);
@@ -624,7 +624,7 @@ sub apropos {
 	print qq{You may look for other } . 
 	    qq{<a href="../../search/">FreeBSD Search Services</a>.\n};
     }
-    print "</DL>\n</BODY>\n</HTML>\n";
+    print "</dl>\n</body>\n</html>\n";
 }
 
 sub man {
@@ -653,9 +653,9 @@ sub man {
     if ($format eq "html") {
 	&http_header("text/html");
 	print &html_header("$title");
-	print "<H1>$www{'head'}</H1>\n\n";
+	print "<h1>", $www{'head'}, "</h1>\n\n";
 	&formquery;
-	print "<PRE>\n";
+	print "<pre>\n";
     } else {
 	#$format =~ /^(ps|ascii|latin1|dvi|troff)$/')
 	$ENV{'NROFF_FORMAT'} = $format;
@@ -806,40 +806,43 @@ sub man {
 
 	$_ = &encode_data($_);
 	if($enable_include_links &&
-	   m,(<B>)?\#include(</B>)?\s+(<B>)?\&lt\;(.*\.h)\&gt\;(</B>)?,) {
+	   m,(<b>)?\#include(</b>)?\s+(<b>)?\&lt\;(.*\.h)\&gt\;(</b>)?,) {
 	    $match = $4; ($regexp = $match) =~ s/\./\\\./;
-	    s,$regexp,\<A HREF=\"$BASE/usr/include/$match\"\>$match\</A\>,;
+	    s,$regexp,\<a href=\"$BASE/usr/include/$match\"\>$match\</A\>,;
         }
 	/^\s/ && 			# skip headers
 	    s,((<[IB]>)?[\w\_\.\-]+\s*(</[IB]>)?\s*\(([1-9ln][a-zA-Z]*)\)),&mlnk($1),oige;
 
 	# detect E-Mail Addreses in manpages
 	if ($enable_mailto_links && /\@/) {
-	    s/([a-z0-9_\-\.]+\@[a-z0-9\-\.]+\.[a-z]+)/<A HREF="mailto:$1">$1<\/A>/gi;
+	    s/([a-z0-9_\-\.]+\@[a-z0-9\-\.]+\.[a-z]+)/<a href="mailto:$1">$1<\/A>/gi;
 	}
 
 	# detect URLs in manpages
 	if (m%tp://%) {
-	    s,((ftp|http)://[^\s<>\)]+),<A HREF="$1">$1</A>,gi;
+	    s,((ftp|http)://[^\s<>\)]+),<a href="$1">$1</a>,gi;
 	}
 
-	if (s%^(<B>.*?</B>)+$% ($str = $1) =~ s,(<B>|</B>),,g; "$str" %ge ) {
+	if (s%^(<b>.*?</b>)+\n?$% ($str = $1) =~ s,(<b>|</b>),,g; $str%ge ) {
 	    $i = $_; $j = &encode_url($i);
-	    $_ = qq{<a name="$j" href="#end"><B>$i</B></a>};
+	    $j =~ s/\+/_/g;
+	    $_ = qq{<a name="$j" href="#end"><b>$i</b></a>};
 	    push(@sect, $i);
         }
 	print;
     }
     close(MAN);
-    print qq{</PRE>\n<a name="end">\n<hr noshade>\n};
+    print qq{</pre>\n<a name="end" />\n<hr noshade="noshade" />\n};
 
     for ($i = 0; $i <= $#sect; $i++) {
-	print qq{<a href="#} . &encode_url($sect[$i]) . 
+	$j =  &encode_url($sect[$i]); $j =~ s/\+/_/g;
+
+	print qq{<a href="#$j} . 
             qq{">$sect[$i]</a>} . ($i < $#sect ? " |\n" : "\n");
     }
 
-    print "</BODY>\n";
-    print "</HTML>\n";
+    print "</body>\n";
+    print "</html>\n";
 
     # Sleep 0.35 seconds to avoid DoS attacs
     select undef, undef, undef, 0.35;
@@ -876,8 +879,8 @@ sub mlnk {
     $link = &encode_url($link);
     $section = &encode_url($section);
     local($manpath) = &encode_url($manpath);
-    return qq{<A HREF="$BASE?query=$link} . 
-           qq{&sektion=$section&apropos=0&manpath=$manpath">$matched</A>};
+    return qq{<a href="$BASE?query=$link} . 
+           qq{&amp;sektion=$section&amp;apropos=0&amp;manpath=$manpath">$matched</a>};
 }
 
 sub proc {
@@ -929,7 +932,7 @@ sub splitquery {
     grep((s/%([\da-f]{1,2})/pack(C,hex($1))/eig, 1), split(/\+/, $query));
 }
 
-# encode unknown data for use in a URL <A HREF="...">
+# encode unknown data for use in a URL <a href="...">
 sub encode_url {
     local($_) = @_;
     # rfc1738 says that ";"|"/"|"?"|":"|"@"|"&"|"=" may be reserved.
@@ -967,13 +970,13 @@ sub encode_data {
     s/\</\&lt\;/g; 
     s/\>/\&gt\;/g;
 
-    s,((_\010[^_])+),($str = $1) =~ s/.\010//g; "<I>$str</I>";,ge;
-    s,((.\010.)+),($str = $1) =~ s/.\010//g; "<B>$str</B>";,ge;
+    s,((_\010[^_])+),($str = $1) =~ s/.\010//g; "<i>$str</i>";,ge;
+    s,((.\010.)+),($str = $1) =~ s/.\010//g; "<b>$str</b>";,ge;
 
-    #s,((_\010.)+),($str = $1) =~ s/.\010//g; "<I>$str</I>";,ge;
+    #s,((_\010.)+),($str = $1) =~ s/.\010//g; "<i>$str</i>";,ge;
     #s,(.\010)+,$1,g;
-    #if (!s,((.\010.)+\s+(.\010.)+),($str = $1) =~ s/.\010//g; "<B>$str</B>";,ge) {
-    # s,(([^_]\010.)+),($str = $1) =~ s/[^_]\010//g; "<B>$str</B>";,ge;
+    #if (!s,((.\010.)+\s+(.\010.)+),($str = $1) =~ s/.\010//g; "<b>$str</b>";,ge) {
+    # s,(([^_]\010.)+),($str = $1) =~ s/[^_]\010//g; "<b>$str</b>";,ge;
     # s,(([_]\010.)+),($str = $1) =~ s/[_]\010//g; "<i>$str</i>";,ge;
     #}
     # Escape binary data except for ^H which we process below
@@ -996,112 +999,112 @@ sub encode_data {
 sub indexpage {
     &http_header("text/html");
     print &html_header("$www{'title'}: Index Page") .
-	 "<H1>$www{'head'}</H1>\n\n" . &intro;
+	 "<h1>", $www{'head'}, "</h1>\n\n" . &intro;
     &formquery;
 
     local($m) = ($manpath ? $manpath : $manPathDefault);
     $m = &encode_url($m);
 
-    print "<B><I>Section Indexes</I></B>:\n";
+    print "<b><i>Section Indexes</i></b>:\n";
     foreach ('1', '2', '3', '4', '5', '6', '7', '8', '9', 'n') {
 	print qq{&#164; } if $_ ne '1';
-	print qq{<A HREF="$BASE?query=($_)&sektion=&apropos=1&manpath=$m&title=Section%20$_Index">$_</A>\n};
+	print qq{<a href="$BASE?query=($_)&amp;sektion=&amp;apropos=1&amp;manpath=$m&amp;title=Section%20$_Index">$_</a>\n};
     }
 
-    print "<BR><B><I>Explanations of Man Sections:</I></B>\n";
+    print "<br /><b><i>Explanations of Man Sections:</i></b>\n";
     foreach ('1', '2', '3', '4', '5', '6', '7', '8', '9') {
 	print qq{&#164; } if $_ ne '1';
-	print qq{<A HREF="$BASE?query=intro&sektion=$_&apropos=0&manpath=$m&title=Introduction%20Section%20$_">intro($_)</A>\n};
+	print qq{<a href="$BASE?query=intro&amp;sektion=$_&amp;apropos=0&amp;manpath=$m&amp;title=Introduction%20Section%20$_">intro($_)</a>\n};
     }
 
     if (0) {
-    print "<BR>\n<B><I>Quick Reference Categories:</I></B>\n";
+    print "<br />\n<b><i>Quick Reference Categories:</i></b>\n";
     foreach ('database', 'disk', 'driver', 'ethernet', 'mail', 'net', 'nfs', 
              'nis', 'protocol', 'ppp', 'roff', 'string', 'scsi', 
 	     'statistic', 'tcl', 'tcp', 'time') 
     {
-	print qq{&#164; <A HREF="$BASE?query=$_&sektion=&apropos=1&manpath=$m&title=Quick%20Ref%20$_">$_</A>\n};
+	print qq{&#164; <a href="$BASE?query=$_&amp;sektion=&amp;apropos=1&amp;manpath=$m&amp;title=Quick%20Ref%20$_">$_</a>\n};
     }
     }
 
 
     print <<ETX if $mailto;
-<HR noshade>
-URL:  <A HREF="$BASE" target=_parent>$www{'home'}$BASE</a><br>
+<hr noshade="noshade" />
+URL:  <a href="$BASE" target="_parent">$www{'home'}$BASE</a><br />
 ETX
 
-    print "<br>\n";
-    print "</BODY>\n</HTML>\n";
+    print "<br />\n";
+    print "</body>\n</html>\n";
     0;
 }
 
 sub formquery {
     local($astring, $bstring);
     if (!$apropos) {
-	$astring = " CHECKED";
+	$astring = q{ checked="checked"};
     } else {
-	$bstring = " CHECKED";
+	$bstring = q{ checked="checked"};
     }
 
     print <<ETX;
-<FORM METHOD="GET" ACTION="$BASE">
-<B><I>Man Page or Keyword Search:</I></B>
-<INPUT VALUE="$query" NAME="query">
-<INPUT TYPE="submit" VALUE="Submit">
-<INPUT TYPE="reset" VALUE="Reset">
-<BR>
-<INPUT NAME="apropos" VALUE="0" TYPE="RADIO"$astring> <A HREF="$BASE?query=man&sektion=1&apropos=0">Man</A>
-<SELECT NAME="sektion">
+<form method="get" action="$BASE">
+<b><i>Man Page or Keyword Search:</i></b>
+<input value="$query" name="query" />
+<input type="submit" value="Submit" />
+<input type="reset" value="Reset" />
+<br />
+<input name="apropos" value="0" type="radio"$astring /> <a href="$BASE?query=man&amp;sektion=1&amp;apropos=0">Man</a>
+<select name="sektion">
 ETX
 
 
     foreach $key (sort keys %sectionName) {
-        print "<OPTION" . (($key eq $section) ? ' SELECTED ' : ' ') .
-                qq{VALUE="$key">$sectionName{$key}</OPTION>\n};
+        print "<option" . (($key eq $section) ? ' selected="selected" ' : ' ') .
+                qq{value="$key">$sectionName{$key}</option>\n};
     };
 
 
-    print qq{</SELECT>\n<SELECT NAME="manpath">\n};
+    print qq{</select>\n<select name="manpath">\n};
 
     local($l) = ($manpath ? $manpath : $manPathDefault);
     foreach (sort keys %manPath) {
 	$key = $_;
-	print "<OPTION" . (($key eq $l) ? ' SELECTED ' : ' ') .
-	      qq{VALUE="$key">$key</OPTION>\n};
+	print "<option" . (($key eq $l) ? ' selected="selected" ' : ' ') .
+	      qq{value="$key">$key</option>\n};
     }
 
     local($m) = &encode_url($l);
     print <<ETX;
-</SELECT>
-<BR>
-<INPUT NAME="apropos" VALUE="1" TYPE="RADIO"$bstring> <A HREF="$BASE?query=apropos&sektion=1&apropos=0">Apropos</A> Keyword Search (all sections)
-<SELECT NAME="format">
+</select>
+<br />
+<input name="apropos" value="1" type="radio"$bstring /> <a href="$BASE?query=apropos&amp;sektion=1&amp;apropos=0">Apropos</a> Keyword Search (all sections)
+<select name="format">
 ETX
 
     foreach ('html', 'ps', 'pdf',
 	     # 'dvi', # you need a 8 bit clean man, e.g. jp-man
 	     'ascii', 'latin1') {
-	print qq{<OPTION VALUE="$_">$_</OPTION>\n};
+	print qq{<option value="$_">$_</option>\n};
     };
 
     print <<ETX;
-</SELECT>
+</select>
 Output format
-</FORM>
+</form>
 
-<A HREF="$BASE?manpath=$m">home</A> |
-<A HREF="$BASE/help.html">help</A> 
-<HR>
+<a href="$BASE?manpath=$m">home</a> |
+<a href="$BASE/help.html">help</a> 
+<hr />
 ETX
     0;
 }
 
 sub copyright {
-    $id = '$Id: man.cgi,v 1.176 2007-07-16 17:33:41 wosch Exp $';
+    $id = '$Id: man.cgi,v 1.177 2007-07-16 17:36:53 wosch Exp $';
 
     return qq{\
-<PRE>
-Copyright (c) 1996-2007 <a href="$mailtoURL">Wolfram Schneider</A>
+<pre>
+Copyright (c) 1996-2007 <a href="$mailtoURL">Wolfram Schneider</a>
 Copyright (c) 1993-1995 Berkeley Software Design, Inc.
 
 This data is part of a licensed program from BERKELEY SOFTWARE
@@ -1109,12 +1112,12 @@ DESIGN, INC.  Portions are copyrighted by BSDI, The Regents of
 the University of California, Massachusetts Institute of
 Technology, Free Software Foundation, FreeBSD Inc., and others.
 
-</PRE>\n
+</pre>\n
 This script has the revsion: $id
-<p>
+<p />
 
 Copyright (&copy;) for man pages by OS vendors.
-<p>
+<p />
 <a href="ftp://ftp.2bsd.com">2.11 BSD</a>,
 <a href="http://www.hp.com">HP</a>,
 <a href="http://www.freebsd.org">FreeBSD</a>,
@@ -1139,7 +1142,7 @@ sub faq {
     foreach (sort keys %manPath) {
 	$url = &encode_url($_);
 	push(@list, 
-	     qq{<li><a href="$BASE?apropos=2&manpath=$url">[download]} .
+	     qq{<li><a href="$BASE?apropos=2&amp;manpath=$url">[download]} .
 	     qq{</a> "$_" -> $BASE?manpath=$url});
     }
 
@@ -1149,10 +1152,10 @@ sub faq {
 	     &encode_url($_) . "\n") if $manPathAliases{$_};
     }
 
-    local $id = '$Id: man.cgi,v 1.176 2007-07-16 17:33:41 wosch Exp $';
+    local $id = '$Id: man.cgi,v 1.177 2007-07-16 17:36:53 wosch Exp $';
     return qq{\
-<PRE>
-Copyright (c) 1996-2007 <a href="$mailtoURL">Wolfram Schneider</A>
+<pre>
+Copyright (c) 1996-2007 <a href="$mailtoURL">Wolfram Schneider</a>
 Copyright (c) 1993-1995 Berkeley Software Design, Inc.
 
 This data is part of a licensed program from BERKELEY SOFTWARE
@@ -1160,12 +1163,12 @@ DESIGN, INC.  Portions are copyrighted by BSDI, The Regents of
 the University of California, Massachusetts Institute of
 Technology, Free Software Foundation, FreeBSD Inc., and others.
 
-</PRE>\n
+</pre>\n
 This script has the revsion: $id
-<p>
+<p />
 
 Copyright (c) for man pages by OS vendors.
-<p>
+<p/>
 <a href="ftp://ftp.2bsd.com">2.11 BSD</a>,
 <a href="http://www.hp.com">HP</a>,
 <a href="http://www.freebsd.org">FreeBSD</a>,
@@ -1182,7 +1185,7 @@ Copyright (c) for man pages by OS vendors.
 <a href="http://www.x.org">X11R6</a>
 
 <h2>FAQ</h2>
-<UL>
+<ul>
 <li>Get the <a href="$BASE/source">source</a> of the man.cgi script
 <li>Troff macros works only if defined in FreeBSD/groff. OS specific
 macros like `appeared in NetBSD version 1.2' are not supported.
@@ -1196,16 +1199,16 @@ Unix family tree, BSD part</a>.
 FreeBSD Ports Changes</a> script.
 <li>Copyright (c) and download for man pages by 
 OS vendors
-</UL>
+</ul>
 
 <h2>Releases</h2>
 
 Releases and Releases Aliases are information how 
 to make a link to this script to the right OS version.
-<p>
+<p />
 You may download the manpages as gzip'd tar archive
 for private use. A tarball is usually 5MB big.
-<p>
+<p />
 <ul>
 @list
 </ul>
@@ -1222,59 +1225,61 @@ lifetime, eg. 'openbsd' points always to the latest OpenBSD release.
 
 sub intro {
     return qq{\
-<P>
-<I>Man Page Lookup</I> searches for man pages name and section as
-given in the selection menu and the query dialog.  <I>Apropos
-Keyword Search</I> searches the database for the string given in
+<p />
+<i>Man Page Lookup</i> searches for man pages name and section as
+given in the selection menu and the query dialog.  <i>Apropos
+Keyword Search</i> searches the database for the string given in
 the query dialog.  There are also several hypertext links provided
-as short-cuts to various queries:  <I>Section Indexes</I> is apropos
-listings of all man pages by section.  <I>Explanations of Man
-Sections</I> contains pointers to the intro pages for various man
+as short-cuts to various queries:  <i>Section Indexes</i> is apropos
+listings of all man pages by section.  <i>Explanations of Man
+Sections</i> contains pointers to the intro pages for various man
 sections.
-<P>
+<p />
 };
 }
 
 sub copyright_output {
     &http_header("text/html");
     print &html_header("HTML hypertext FreeBSD man page interface") .
-	"<H1>$www{'head'}</H1>\n" . &copyright . qq{\
-<HR>
+	"<h1>", $www{'head'}, "</h1>\n" . &copyright . qq{\
+<hr />
 
-<A HREF="$_[0]">home</A>
-</BODY>
-</HTML>
+<a href="$_[0]">home</a>
+</body>
+</html>
 };
 }
 
 sub faq_output {
     &http_header("text/html");
     print &html_header("HTML hypertext FreeBSD man page interface") .
-	"<H1>$www{'head'}</H1>\n" . &faq . qq{\
-<HR>
+	"<h1>", $www{'head'}, "</h1>\n" . &faq . qq{\
+<hr />
 
-<A HREF="$_[0]">home</A>
-</BODY>
-</HTML>
+<a href="$_[0]">home</a>
+</body>
+</html>
 };
 }
 
 sub html_header {
-    return qq{<HTML>
-<HEAD>
-<TITLE>$_[0]</TITLE>
-<link rev="made" href="mailto:wosch\@FreeBSD.ORG">
-<META name="robots" content="nofollow">
-<meta content="text/html; charset=iso-8859-1" http-equiv="Content-Type">
+    return qq{<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+	"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en-US" xml:lang="en-US">
+<head>
+<title>$_[0]</title>
+<meta name="robots" content="nofollow" />
+<meta content="text/html; charset=iso-8859-1" http-equiv="Content-Type" />
 <style type="text/css">
 <!--
-body {color:#000000;background-color:#EEEEEE}
-b {color:#996600;background-color:#EEEEEE}
-i {color:#008000;background-color:#EEEEEE}
-//-->
+body { color: #000000; background-color: #EEEEEE; }
+b { color: #996600; background-color: #EEEEEE; }
+i { color: #008000; background-color: #EEEEEE; }
+-->
 </style>
-</HEAD> 
-<BODY BGCOLOR="#FFFFFF" TEXT="#000000">\n\n};
+</head> 
+<body>
+};
 }
 
 sub secure_env {
@@ -1304,10 +1309,10 @@ sub mydie {
 	print $message;
 
 print qq{
-<p>
-<A HREF="$BASE">home</A>
-</BODY>
-</HTML>
+<p />
+<a href="$BASE">home</a>
+</body>
+</html>
 };
 
 	exit(0);
