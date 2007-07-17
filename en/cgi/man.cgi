@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.179 2007-07-16 17:48:29 wosch Exp $
+# $Id: man.cgi,v 1.180 2007-07-17 17:54:01 wosch Exp $
 
 ############################################################################
 # !!! man.cgi is stale perl4 code !!!
@@ -43,7 +43,7 @@ $www{'title'} = 'FreeBSD Hypertext Man Pages';
 $www{'home'}  = 'http://www.FreeBSD.org';
 $www{'head'}  = $www{'title'};
 
-$command{'man'} = '/usr/bin/man';               # 8Bit clean man
+$command{'man'} = '/usr/bin/man';    # 8Bit clean man
 
 # Config Options
 # map sections to their man command argument(s)
@@ -620,6 +620,7 @@ sub apropos {
     $q =~ s/(\W)/\\W/g;
     local ($acounter) = 0;
 
+    print qq{<dl>\n};
     while (<APROPOS>) {
         next if !/$q/oi;
         $acounter++;
@@ -632,9 +633,10 @@ sub apropos {
         ( $names, $msg ) = m/^(.*\))\s+-\s+(.*)/;
         print "<dt><a href=\"$BASE?query=", &encode_url($key), "&amp;sektion=",
           &encode_url($section), "&amp;apropos=0", "&amp;manpath=",
-          &encode_url($manpath), "\">", &encode_data("$names"), "</a>\n<dd>",
-          &encode_data($msg), "\n";
+          &encode_url($manpath), "\">",            &encode_data("$names"),
+          "</a>\n</dt>\n<dd>", &encode_data($msg), "</dd>\n";
     }
+    print qq{</dl>\n};
     close(APROPOS);
 
     if ( !$acounter ) {
@@ -642,7 +644,7 @@ sub apropos {
         print qq{You may look for other }
           . qq{<a href="../../search/">FreeBSD Search Services</a>.\n};
     }
-    print "</dl>\n</body>\n</html>\n";
+    print "\n</body>\n</html>\n";
 }
 
 sub man {
@@ -869,7 +871,7 @@ s/([a-z0-9_\-\.]+\@[a-z0-9\-\.]+\.[a-z]+)/<a href="mailto:$1">$1<\/A>/gi;
             $i = $_;
             $j = &encode_url($i);
             $j =~ s/\+/_/g;
-            $_ = qq{<a name="$j" href="#end"><b>$i</b></a>};
+            $_ = qq{<a name="$j" href="#end"><b>$i</b></a>\n};
             push( @sect, $i );
         }
         print;
@@ -919,7 +921,7 @@ sub mlnk {
     local ($matched) = @_;
     local ( $link, $section );
     ( $link = $matched ) =~ s/[\s]+//g;
-    $link =~ s/<\/?[IB]>//g;
+    $link =~ s/<\/?[IB]>//ig;
     ( $link, $section ) = ( $link =~ m/^([^\(]*)\((.*)\)/ );
     $link    = &encode_url($link);
     $section = &encode_url($section);
@@ -1161,7 +1163,7 @@ ETX
 }
 
 sub copyright {
-    $id = '$Id: man.cgi,v 1.179 2007-07-16 17:48:29 wosch Exp $';
+    $id = '$Id: man.cgi,v 1.180 2007-07-17 17:54:01 wosch Exp $';
 
     return qq{\
 <pre>
@@ -1204,7 +1206,8 @@ sub faq {
         $url = &encode_url($_);
         push( @list,
                 qq{<li><a href="$BASE?apropos=2&amp;manpath=$url">[download]}
-              . qq{</a> "$_" -> $BASE?manpath=$url} );
+              . qq{</a> "$_" -> $BASE?manpath=$url}
+              . qq{</li>\n} );
     }
 
     foreach ( sort keys %manPathAliases ) {
@@ -1212,11 +1215,11 @@ sub faq {
                 qq[<li>"$_" -> "$manPathAliases{$_}" -> ]
               . "$BASE?manpath="
               . &encode_url($_)
-              . "\n" )
+              . "</li>\n" )
           if $manPathAliases{$_};
     }
 
-    local $id = '$Id: man.cgi,v 1.179 2007-07-16 17:48:29 wosch Exp $';
+    local $id = '$Id: man.cgi,v 1.180 2007-07-17 17:54:01 wosch Exp $';
     return qq{\
 <pre>
 Copyright (c) 1996-2007 <a href="$mailtoURL">Wolfram Schneider</a>
@@ -1250,19 +1253,19 @@ Copyright (c) for man pages by OS vendors.
 
 <h2>FAQ</h2>
 <ul>
-<li>Get the <a href="$BASE/source">source</a> of the man.cgi script
+<li>Get the <a href="$BASE/source">source</a> of the man.cgi script</li>
 <li>Troff macros works only if defined in FreeBSD/groff. OS specific
-macros like `appeared in NetBSD version 1.2' are not supported.
-<li>Netscape is buggy, you may press twice the link 'Index Page and Help'
+macros like `appeared in NetBSD version 1.2' are not supported.</li>
+<li>Netscape is buggy, you may press twice the link 'Index Page and Help'</li>
 <li>Some OSs provide only formated manual pages (catpages), e.g. NetBSD
 and OpenBSD. In this case it is not possible to create Postscript
-and troff output.
+and troff output.</li>
 <li>The <a href="http://cvsweb.freebsd.org/src/share/misc/bsd-family-tree">
-Unix family tree, BSD part</a>.
+Unix family tree, BSD part</a>.</li>
 <li>The <a href="http://www.freebsd.org/cgi/ports.cgi">
-FreeBSD Ports Changes</a> script.
+FreeBSD Ports Changes</a> script.</li>
 <li>Copyright (c) and download for man pages by 
-OS vendors
+OS vendors</li>
 </ul>
 
 <h2>Releases</h2>
