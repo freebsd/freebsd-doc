@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.180 2007-07-17 17:54:01 wosch Exp $
+# $Id: man.cgi,v 1.181 2007-07-27 20:22:11 wosch Exp $
 
 ############################################################################
 # !!! man.cgi is stale perl4 code !!!
@@ -1163,7 +1163,7 @@ ETX
 }
 
 sub copyright {
-    $id = '$Id: man.cgi,v 1.180 2007-07-17 17:54:01 wosch Exp $';
+    $id = '$Id: man.cgi,v 1.181 2007-07-27 20:22:11 wosch Exp $';
 
     return qq{\
 <pre>
@@ -1219,7 +1219,7 @@ sub faq {
           if $manPathAliases{$_};
     }
 
-    local $id = '$Id: man.cgi,v 1.180 2007-07-17 17:54:01 wosch Exp $';
+    local $id = '$Id: man.cgi,v 1.181 2007-07-27 20:22:11 wosch Exp $';
     return qq{\
 <pre>
 Copyright (c) 1996-2007 <a href="$mailtoURL">Wolfram Schneider</a>
@@ -1356,7 +1356,7 @@ sub secure_env {
     $main'ENV{'IFS'}     = " \t\n";
     $main'ENV{'PAGER'}   = 'cat';
     $main'ENV{'SHELL'}   = '/bin/sh';
-    $main'ENV{'LANG'}    = 'en_US.ISO_8859-1';
+    $main'ENV{'LANG'}    = 'C';
     undef $main'ENV{'DISPLAY'};
 }
 
