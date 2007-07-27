@@ -1,6 +1,6 @@
 # $FreeBSD$
-# $FreeBSDde: de-www/docs/Makefile,v 1.1 2005/10/23 14:24:54 jkois Exp $
-# basiert auf: 1.5
+# $FreeBSDde: de-www/docs/Makefile,v 1.2 2007/07/22 07:02:49 jkois Exp $
+# basiert auf: 1.6
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -10,7 +10,6 @@
 .endif
 
 DOCS= books.sgml
-DOCS+= man.sgml
 DOCS+= webresources.sgml
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
