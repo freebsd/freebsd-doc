@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.183 2007-07-29 15:03:51 wosch Exp $
+# $Id: man.cgi,v 1.184 2007-07-29 15:34:16 wosch Exp $
 
 ############################################################################
 # !!! man.cgi is stale perl4 code !!!
@@ -339,6 +339,7 @@ $manPathDefault = 'FreeBSD 6.2-RELEASE';
     'X11R6.7.0', "$manLocalDir/X11R6.7.0",
     'X11R6.8.2', "$manLocalDir/X11R6.8.2",
     'X11R6.9.0', "$manLocalDir/X11R6.9.0",
+    'X11R7.2',   "$manLocalDir/X11R7.2",
 
     'ULTRIX 4.2',      "$manLocalDir/ULTRIX-4.2",
     'OSF1 V4.0/alpha', "$manLocalDir/OSF1-V4.0-alpha",
@@ -393,7 +394,7 @@ while ( ( $key, $val ) = each %manPath ) {
     'openbsd',       'OpenBSD 4.1',
     'v7',            'Unix Seventh Edition',
     'v7man',         'Unix Seventh Edition',
-    'x11',           'X11R6.9.0',
+    'x11',           'X11R7.2',
     'xfree86',       'XFree86 4.5.0',
     'ultrix',        'ULTRIX 4.2',
     'hpux',          'HP-UX 11.22',
@@ -1173,7 +1174,7 @@ ETX
 }
 
 sub copyright {
-    $id = '$Id: man.cgi,v 1.183 2007-07-29 15:03:51 wosch Exp $';
+    $id = '$Id: man.cgi,v 1.184 2007-07-29 15:34:16 wosch Exp $';
 
     return qq{\
 <pre>
@@ -1229,7 +1230,7 @@ sub faq {
           if $manPathAliases{$_};
     }
 
-    local $id = '$Id: man.cgi,v 1.183 2007-07-29 15:03:51 wosch Exp $';
+    local $id = '$Id: man.cgi,v 1.184 2007-07-29 15:34:16 wosch Exp $';
     return qq{\
 <pre>
 Copyright (c) 1996-2007 <a href="$mailtoURL">Wolfram Schneider</a>
@@ -1331,7 +1332,9 @@ sub copyright_output {
 sub faq_output {
     &http_header("text/html");
     print &html_header("HTML hypertext FreeBSD man page interface") . "<h1>",
-      $www{'head'}, "</h1>\n" . &faq . qq{\
+      $www{'head'},
+      "</h1>\n" 
+      . &faq . qq{\
 <hr />
 
 <a href="$_[0]">home</a>
