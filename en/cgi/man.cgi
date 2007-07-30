@@ -33,11 +33,18 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.188 2007-07-30 20:44:47 wosch Exp $
+# $Id: man.cgi,v 1.189 2007-07-30 20:47:40 wosch Exp $
 
 ############################################################################
 # !!! man.cgi is stale perl4 code !!!
 ############################################################################
+
+# Use standard FreeBSD CGI Style if available. Otherwise
+# print simple HTML design.
+package cgi_style;
+use constant HAS_FREEBSD_CGI_STYLE => eval { require "./cgi-style.pl"; };
+
+package main;
 
 $www{'title'} = 'FreeBSD Hypertext Man Pages';
 $www{'home'}  = 'http://www.FreeBSD.org';
@@ -451,6 +458,45 @@ $mailtoURL = "mailto:$mailto" if !$mailtoURL;
 $enable_include_links = 0;
 $enable_mailto_links  = 0;
 
+#
+# end of config
+#######################################################################################
+
+sub html_footer {
+    if (cgi_style::HAS_FREEBSD_CGI_STYLE) {
+        print q{<hr noshade="noshade" />};
+        print &cgi_style::html_footer;
+    }
+    else {
+        print "</body>\n</html>\n";
+    }
+}
+
+sub html_header {
+    my ( $title, $base ) = @_;
+
+    my $html_meta = q|
+<meta name="robots" content="nofollow" />
+<meta content="text/html; charset=iso-8859-1" http-equiv="Content-Type" />
+<style type="text/css">
+<!--
+b { color: #996600; }
+i { color: #008000; }
+-->
+</style>
+|;
+
+    return &html_header2( $title, $html_meta )
+      if !cgi_style::HAS_FREEBSD_CGI_STYLE;
+
+    ( my $header = &cgi_style::short_html_header( $title, 1 ) ) =~
+      s,<head>,<head>\n$html_meta,s;
+
+    $header =~ s,^Content-type:\s+\S+\s+,,s;
+    $header =~ s,<head>,<head>\n<base href="$base" />,s if $base;
+    return $header;
+}
+
 # Plexus Native Interface
 sub do_man {
     local ( $BASE, $path, $form ) = @_;
@@ -658,7 +704,7 @@ sub apropos {
         print qq{You may look for other }
           . qq{<a href="../../search/">FreeBSD Search Services</a>.\n};
     }
-    print "\n</body>\n</html>\n";
+    &html_footer;
 }
 
 sub man {
@@ -902,8 +948,7 @@ s/([a-z0-9_\-\.]+\@[a-z0-9\-\.]+\.[a-z]+)/<a href="mailto:$1">$1<\/A>/gi;
           . ( $i < $#sect ? " |\n" : "\n" );
     }
 
-    print "</body>\n";
-    print "</html>\n";
+    &html_footer;
 
     # Sleep 0.35 seconds to avoid DoS attacs
     select undef, undef, undef, 0.35;
@@ -1100,14 +1145,12 @@ qq{&#164; <a href="$BASE?query=$_&amp;sektion=&amp;apropos=1&amp;manpath=$m&amp;
         }
     }
 
-    print <<ETX if $mailto;
-<hr noshade="noshade" />
+    print <<ETX if 0 && $mailto;
 URL:  <a href="$BASE" target="_parent">$www{'home'}$BASE</a><br />
 ETX
 
     print "<br />\n";
-    print "</body>\n</html>\n";
-    0;
+    &html_footer;
 }
 
 sub formquery {
@@ -1121,7 +1164,7 @@ sub formquery {
 
     print <<ETX;
 <form method="get" action="$BASE">
-<b><i>Man Page or Keyword Search:</i></b>
+Man Page or Keyword Search:
 <input value="$query" name="query" />
 <input type="submit" value="Submit" />
 <input type="reset" value="Reset" />
@@ -1177,7 +1220,7 @@ ETX
 }
 
 sub copyright {
-    $id = '$Id: man.cgi,v 1.188 2007-07-30 20:44:47 wosch Exp $';
+    $id = '$Id: man.cgi,v 1.189 2007-07-30 20:47:40 wosch Exp $';
 
     return qq{\
 <pre>
@@ -1235,7 +1278,7 @@ sub faq {
           if $manPathAliases{$_};
     }
 
-    local $id = '$Id: man.cgi,v 1.188 2007-07-30 20:44:47 wosch Exp $';
+    local $id = '$Id: man.cgi,v 1.189 2007-07-30 20:47:40 wosch Exp $';
     return qq{\
 <pre>
 Copyright (c) 1996-2007 <a href="$mailtoURL">Wolfram Schneider</a>
@@ -1329,40 +1372,36 @@ sub copyright_output {
 <hr />
 
 <a href="$_[0]">home</a>
-</body>
-</html>
 };
+    &html_footer;
 }
 
 sub faq_output {
+    my $base = $BASE;
+    $base =~ s,[^/]*$,,;
+    $base = 'http://www.freebsd.org/cgi/';    # XXX
+
     &http_header("text/html");
-    print &html_header("HTML hypertext FreeBSD man page interface") . "<h1>",
-      $www{'head'},
+    print &html_header( "HTML hypertext FreeBSD man page interface", $base )
+      . "<h1>", $www{'head'},
       "</h1>\n" 
       . &faq . qq{\
 <hr />
 
 <a href="$_[0]">home</a>
-</body>
-</html>
 };
+    &html_footer;
 }
 
-sub html_header {
+sub html_header2 {
+    my ( $title, $head ) = @_;
+
     return qq{<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
 	"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en-US" xml:lang="en-US">
 <head>
-<title>$_[0]</title>
-<meta name="robots" content="nofollow" />
-<meta content="text/html; charset=iso-8859-1" http-equiv="Content-Type" />
-<style type="text/css">
-<!--
-body { color: #000000; background-color: #EEEEEE; }
-b { color: #996600; background-color: #EEEEEE; }
-i { color: #008000; background-color: #EEEEEE; }
--->
-</style>
+<title>$title</title>
+$head
 </head> 
 <body>
 };
@@ -1397,10 +1436,8 @@ sub mydie {
     print qq{
 <p />
 <a href="$BASE">home</a>
-</body>
-</html>
 };
-
+    &html_footer;
     exit(0);
 }
 
