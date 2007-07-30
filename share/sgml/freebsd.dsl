@@ -212,11 +212,11 @@
                          (data r) "&" "amp;" "sektion=" (data m))))
             (case v
               (("current") (string-append u "&" "amp;" "manpath=FreeBSD+7-current"))
-              (("xfree86") (string-append u "&" "amp;" "manpath=XFree86+4.4.0"))
-              (("xorg")    (string-append u "&" "amp;" "manpath=X11R6.7.0"))
+              (("xfree86") (string-append u "&" "amp;" "manpath=XFree86+4.5.0"))
+              (("xorg")    (string-append u "&" "amp;" "manpath=X11R7.2"))
               (("netbsd")  (string-append u "&" "amp;" "manpath=NetBSD+3.0"))
-              (("openbsd") (string-append u "&" "amp;" "manpath=OpenBSD+3.9"))
-              (("ports")   (string-append u "&" "amp;" "manpath=FreeBSD+6.1-RELEASE+and+Ports"))
+              (("openbsd") (string-append u "&" "amp;" "manpath=OpenBSD+4.1"))
+              (("ports")   (string-append u "&" "amp;" "manpath=FreeBSD+6.2-RELEASE+and+Ports"))
               (else u))))
 
         (element application ($bold-seq$))
