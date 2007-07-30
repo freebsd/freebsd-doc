@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.185 2007-07-29 18:38:56 wosch Exp $
+# $Id: man.cgi,v 1.186 2007-07-30 20:42:22 wosch Exp $
 
 ############################################################################
 # !!! man.cgi is stale perl4 code !!!
@@ -376,20 +376,22 @@ while ( ( $key, $val ) = each %manPath ) {
 
 # keywords must be in lower cases.
 %manPathAliases = (
-    'freebsd',         'FreeBSD 6.2-RELEASE',
-    'freebsd-stable',  'FreeBSD 6.2-stable',
-    'freebsd-stable4', 'FreeBSD 4.11-stable',
-    'freebsd-stable5', 'FreeBSD 5.5-stable',
-    'freebsd-stable6', 'FreeBSD 6.2-stable',
-    'freebsd-current', 'FreeBSD 7-current',
-    'slackware',       'Linux Slackware 3.1',
-    'linux-de',        'deutsch - Linux/GNU',
-    'redhat',          'Red Hat Linux/i386 9',
-    'suse',            'SuSE Linux/i386 8.2',
-    'linux',           'Red Hat Linux/i386 9',
-    'darwin',          'Darwin 8.0.1/ppc',
-    'opendarwin',      'OpenDarwin 7.2.1',
-    'macosx',          'Darwin 8.0.1/ppc',
+    'freebsd',               'FreeBSD 6.2-RELEASE',
+    'freebsd-release',       'FreeBSD 6.2-RELEASE',
+    'freebsd-stable',        'FreeBSD 6.2-stable',
+    'freebsd-stable4',       'FreeBSD 4.11-stable',
+    'freebsd-stable5',       'FreeBSD 5.5-stable',
+    'freebsd-stable6',       'FreeBSD 6.2-stable',
+    'freebsd-current',       'FreeBSD 7-current',
+    'freebsd-release-ports', 'FreeBSD 6.2-RELEASE and Ports',
+    'slackware',             'Linux Slackware 3.1',
+    'linux-de',              'deutsch - Linux/GNU',
+    'redhat',                'Red Hat Linux/i386 9',
+    'suse',                  'SuSE Linux/i386 8.2',
+    'linux',                 'Red Hat Linux/i386 9',
+    'darwin',                'Darwin 8.0.1/ppc',
+    'opendarwin',            'OpenDarwin 7.2.1',
+    'macosx',                'Darwin 8.0.1/ppc',
 
     'netbsd',        'NetBSD 3.0',
     'openbsd',       'OpenBSD 4.1',
@@ -403,8 +405,8 @@ while ( ( $key, $val ) = each %manPath ) {
     'sunos5',        'SunOS 5.10',
     'sunos4',        'SunOS 4.1.3',
     'sunos',         'SunOS 4.1.3',
-    'freebsd ports', 'FreeBSD Ports 5.1-RELEASE',
-    'ports',         'FreeBSD Ports 5.1-RELEASE',
+    'freebsd ports', 'FreeBSD Ports 6.2-RELEASE',
+    'ports',         'FreeBSD Ports 6.2-RELEASE',
     'plan9',         'Plan 9',
     'osf1',          'OSF1 V5.1/alpha',
     'true64',        'OSF1 V5.1/alpha',
@@ -1175,7 +1177,7 @@ ETX
 }
 
 sub copyright {
-    $id = '$Id: man.cgi,v 1.185 2007-07-29 18:38:56 wosch Exp $';
+    $id = '$Id: man.cgi,v 1.186 2007-07-30 20:42:22 wosch Exp $';
 
     return qq{\
 <pre>
@@ -1231,7 +1233,7 @@ sub faq {
           if $manPathAliases{$_};
     }
 
-    local $id = '$Id: man.cgi,v 1.185 2007-07-29 18:38:56 wosch Exp $';
+    local $id = '$Id: man.cgi,v 1.186 2007-07-30 20:42:22 wosch Exp $';
     return qq{\
 <pre>
 Copyright (c) 1996-2007 <a href="$mailtoURL">Wolfram Schneider</a>
