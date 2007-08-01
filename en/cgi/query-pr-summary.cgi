@@ -1,5 +1,5 @@
 #!/usr/bin/perl -T
-# $FreeBSD: www/en/cgi/query-pr-summary.cgi,v 1.57 2006/10/08 17:00:12 ceri Exp $
+# $FreeBSD: www/en/cgi/query-pr-summary.cgi,v 1.58 2007/01/10 17:47:39 danger Exp $
 
 $html_mode     = 1 if $ENV{'DOCUMENT_ROOT'};
 $self_ref      = $ENV{'SCRIPT_NAME'};
@@ -53,7 +53,8 @@ if ($html_mode) {
 	}
 }
 
-$closed_too = 1 if $input{'state'} eq 'closed' || $input{'closedtoo'};
+$closed_too = 1 if $input{'state'} eq 'closed' || 
+	($input{'closedtoo'} && ($input{'multitext'} || $input{'text'} || $input{'responsible'} || $input{'originator'}));
 
 #------------------------------------------------------------------------
 
