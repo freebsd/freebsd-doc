@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.189 2007-07-30 20:47:40 wosch Exp $
+# $Id: man.cgi,v 1.190 2007-08-01 19:31:49 wosch Exp $
 
 ############################################################################
 # !!! man.cgi is stale perl4 code !!!
@@ -828,10 +828,14 @@ sub man {
     if ( eof(MAN) ) {
 
         # print "X $command{'man'} @manargs -- x $name x\n";
-        print "Sorry, no data found for `$html_name"
+        print qq{</pre>\n};
+        print "Sorry, no data found for `<i>$html_name</i>"
           . ( $html_section ? "($html_section)" : '' ) . "'.\n";
-        print qq{You may look for other }
-          . qq{<a href="../../search/">FreeBSD Search Services</a>.\n};
+        print
+qq{Please try a <a href="$BASE?apropos=1&amp;manpath=freebsd-release-ports&amp;query=$html_name">keyword search</a>.\n};
+        print qq{<p>You may look for other }
+          . qq{<a href="../../search/">FreeBSD Search Services</a>.</p>\n};
+        &html_footer;
         return;
     }
 
@@ -1220,7 +1224,7 @@ ETX
 }
 
 sub copyright {
-    $id = '$Id: man.cgi,v 1.189 2007-07-30 20:47:40 wosch Exp $';
+    $id = '$Id: man.cgi,v 1.190 2007-08-01 19:31:49 wosch Exp $';
 
     return qq{\
 <pre>
@@ -1278,7 +1282,7 @@ sub faq {
           if $manPathAliases{$_};
     }
 
-    local $id = '$Id: man.cgi,v 1.189 2007-07-30 20:47:40 wosch Exp $';
+    local $id = '$Id: man.cgi,v 1.190 2007-08-01 19:31:49 wosch Exp $';
     return qq{\
 <pre>
 Copyright (c) 1996-2007 <a href="$mailtoURL">Wolfram Schneider</a>
