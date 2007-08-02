@@ -1,6 +1,6 @@
 #!/usr/bin/perl -T
 #
-# Copyright (c) 1996-2005 Wolfram Schneider <wosch@FreeBSD.ORG>
+# Copyright (c) 1996-2007 Wolfram Schneider <wosch@FreeBSD.ORG>
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/ports.cgi,v 1.93 2005/12/05 21:16:19 fenner Exp $
+# $FreeBSD: www/en/cgi/ports.cgi,v 1.94 2006/08/19 21:40:25 simon Exp $
 #
 # ports.cgi - search engine for FreeBSD ports
 #             	o search for a port by name or description
@@ -120,7 +120,7 @@ sub init_variables {
     $portsDesc = "$hsty_base/ports/";
 
     # location of the tiny BSD daemon
-    $daemonGif = "<IMG SRC='$hsty_base/gifs/littlelogo.gif' ALT='Really small BSD Daemon'>";
+    $daemonGif = "<img src='$hsty_base/gifs/littlelogo.gif' alt='Really small BSD Daemon'>";
 
     # visible E-Mail address, plain text
     $mailto = 'www@FreeBSD.org';
@@ -161,7 +161,7 @@ sub packages_exist {
         return 1;
     };
 
-    while(<P>) {
+    while(<p>) {
         chop;
         $p{$_} = 1;
     }
@@ -186,7 +186,7 @@ sub last_update {
 }
 
 sub last_update_message {
-    return "<p>Last database update: " . &last_update . "<br>\n";
+    return "<p>Last database update: " . &last_update . "</p>\n";
 }
 
 sub dec {
@@ -217,8 +217,18 @@ sub decode_form {
     }
 }
 
+sub escapeHTML {
+         my $toencode = shift;
+         return "" unless defined($toencode);
 
-# encode unknown data for use in a URL <A HREF="...">
+         $toencode =~ s{&}{&amp;}gso;
+         $toencode =~ s{<}{&lt;}gso;
+         $toencode =~ s{>}{&gt;}gso;
+         $toencode =~ s{"}{&quot;}gso;
+	 return $toencode;
+}
+
+# encode unknown data for use in a URL <a href="...">
 sub encode_url {
     local($_) = @_;
     s/([\000-\032\;\/\?\:\@\&\=\%\'\"\`\<\>\177-\377 ])/sprintf('%%%02x',ord($1))/eg;
@@ -311,10 +321,10 @@ sub out {
 
     if ($path =~ m%^$localPrefix/([^/]+)%o) {
 	if (!$out_sec || $1 ne $out_sec) {
-	    print "</DL>\n" if $counter > 0;
-	    print qq{\n<H3>} .
+	    print "</dl>\n" if $counter > 0;
+	    print qq{\n<h3>} .
 		qq{<a href="$remotePrefixHtml/$1.html">Category $1</a>} .
-                "</H3>\n<DL>\n";
+                "</h3>\n<dl>\n";
 	    $out_sec = $1;
 	}
     }
@@ -335,44 +345,45 @@ sub out {
        }
     }
     $descfile =~ s/^$localPrefix/$remotePrefixFtp/o;
-    $comment =~ s/</\&lt;/g;
-    $comment =~ s/>/\&gt;/g;
+    $version = &encode_url($version);
+    #$version =~ s/[\+,]/X/g;
 
     local($l) = $path;
     $l =~ s%^$remotePrefixFtp%$remotePrefixCvs%o;
 
-    print qq{<DT><B><A NAME="$version"></A><A HREF="$l">$version</A></B>\n};
-    print qq{<DD>$comment<BR>\n};
+    print qq{<dt><b><a name="$version"></a><a href="$l">$version</a></b></dt>\n};
+    print qq{<dd>}, &escapeHTML($comment), qq{<br />\n};
 
-    print qq[<A HREF="$url?$descfile">Long description</A> <B>:</B>\n];
-    print qq[<A HREF="$pds?$pathB">Sources</A> <B>:</B>\n];
+    print qq[<a href="$url?$descfile">Long description</a> <b>:</b>\n];
+    print qq[<a href="$pds?$pathB">Sources</a> <b>:</b>\n];
 
     # Link package in "default" arch/release. Verify it's existence on ftp-master.
     if ($packages{"$version.$packageExt"}) {
-	print qq[<A HREF="$remotePrefixFtpPackages{$remotePrefixFtpPackagesDefault}/$version.$packageExt">Package</A> <B>:</B>\n];
+	print qq[<a href="$remotePrefixFtpPackages{$remotePrefixFtpPackagesDefault}/$version.$packageExt">Package</a> <b>:</b>\n];
     }
 
-    print qq[<A HREF="$l">Changes</A> <B>:</B> <A HREF="$pathDownload">Download</A><BR>\n];
+    print qq[<a href="$l">Changes</a> <b>:</b>\n];
+    print qq[<a href="$pathDownload">Download</a><br />\n];
 
-	print  qq{<I>Maintained by:</I> <A HREF="mailto:$email} .
+	print  qq{<i>Maintained by:</i> <a href="mailto:$email} .
            ($mailtoAdvanced ?
               qq{?cc=$mailtoList&amp;subject=FreeBSD%20Port:%20} .
-              &encode_url($version) : '') . qq{">$email</A><BR>};
+              &encode_url($version) : '') . qq{">$email</a><br />\n};
 
 	local(@s) = split(/\s+/, $sections);
 	if ($#s > 0) {
-	    print qq{<I>Also listed in:</I> };
+	    print qq{<i>Also listed in:</i> };
 	    foreach (@s) {
-		print qq{<A HREF="$remotePrefixHtml/$_.html">$_</A> }
+		print qq{<a href="$remotePrefixHtml/$_.html">$_</a> }
 		    if $_ ne $out_sec;
 	    }
-	    print "<BR>\n";
+	    print "<br />\n";
 	}
 
 	if ($bdepends || $rdepends) {
 	    local($flag) = 0;
 	    local($last) = '';
-	    print qq{<I>Requires:</I> };
+	    print qq{<i>Requires:</i> };
 	    foreach (sort split(/\s+/, "$bdepends $rdepends")) {
 		# delete double entries
 		next if $_ eq $last;
@@ -380,12 +391,16 @@ sub out {
 
 		print ", " if $flag;
 		$flag++;
-		print qq{<A HREF="$script_name?query=^$_&amp;stype=name">$_</A>};
+		print qq{<a href="$script_name?query=^$_&amp;stype=name">$_</a>};
 	    }
-	    print "<BR>\n";
+	    print "<br />\n";
 	}
 
-    print q[<p>];
+    print qq[</dd>];
+
+    # XXX: should be done in a CSS
+    print qq[<dd>&nbsp;</dd>];
+    print qq[\n\n];
 
 };
 
@@ -425,23 +440,23 @@ sub search_ports {
 
 
 sub forms {
-    print qq{<P>
+    print qq{<p>
 FreeBSD Ports [short description <a href="$portsDesc">followed</a> ...]
 <a href="$script_name?stype=faq">FAQ</a>
-<p>
+</p>
 };
 
-    print qq{
+    print qq{<p>
 "Package Name" searches for the name of a port or distribution.
 "Description" searches case-insensitive in a short comment about the port.
 "All" searches case-insensitive for the package name and in the
 description about the port.
-<p>
+</p>
 
-<FORM METHOD="GET" ACTION="$script_name">
+<form method="get" action="$script_name">
 Search for:
-<INPUT NAME="query" VALUE="$query">
-<SELECT NAME="stype">
+<input name="query" value="$query" />
+<select name="stype">
 };
 
     local(%d);
@@ -454,26 +469,26 @@ Search for:
 	  );
 
     foreach ('all', 'name', 'text', 'pkgdescr', 'maintainer', 'requires') {
-	print "<OPTION" . (($_ eq $stype) ? ' SELECTED ' : ' ') .
-	    qq{VALUE="$_">} . ($d{$_} ? $d{$_} : $_) . qq{</OPTION>\n};
+	print "<option" . (($_ eq $stype) ? ' selected="selected" ' : ' ') .
+	    qq{value="$_">} . ($d{$_} ? $d{$_} : $_) . qq{</option>\n};
     }
 
-    print qq{</SELECT>
+    print qq{</select>
 
-<SELECT NAME="sektion">
-<OPTION VALUE="all">All Sections</OPTION>
+<select name="sektion">
+<option value="all">All Sections</option>
 };
 
     foreach (@sec) {
-	print "<OPTION" .
-	    (($_ eq $section) ? ' SELECTED ' : ' ') .
-		qq{VALUE="$_">$_</OPTION>\n};
+	print "<option" .
+	    (($_ eq $section) ? ' selected="selected" ' : ' ') .
+		qq{value="$_">$_</option>\n};
     }
 
-    print q{</SELECT>
-<INPUT TYPE="submit" VALUE="Submit">
-</FORM>
-<HR noshade>
+    print q{</select>
+<input type="submit" value="Submit" />
+</form>
+<hr noshade="noshade" />
 };
 
 }
@@ -481,17 +496,17 @@ Search for:
 sub footer {
 
     print qq{
-<img ALIGN="RIGHT" src="$hsty_base/gifs/powerlogo.gif" alt="Powered by FreeBSD">
-&copy; 1996-2005 by Wolfram Schneider. All rights reserved.<br>
+<img align="right" src="$hsty_base/gifs/powerlogo.gif" alt="Powered by FreeBSD" />
+&copy; 1996-2007 by Wolfram Schneider. All rights reserved.<br />
 };
-    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.93 2005/12/05 21:16:19 fenner Exp $} . "<br>\n";
+    #print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.94 2006/08/19 21:40:25 simon Exp $} . "<br />\n";
     print qq{Please direct questions about this service to
-<I><A HREF="$mailtoURL">$mailto</A></I><br>\n};
+<i><a href="$mailtoURL">$mailto</a></i><br />\n};
     print qq{General questions about FreeBSD ports should be sent to } .
 	qq{<a href="mailto:$mailtoList">} .
-	    qq{<i>$mailtoList</i></a><br>\n};
+	    qq{<i>$mailtoList</i></a><br />\n};
     print &last_update_message;
-    print "<hr noshade>\n<P>\n";
+    print qq{<hr noshade="noshade" />\n<p />\n};
 }
 
 
@@ -524,19 +539,23 @@ sub faq {
 </dl>
 
 <h2>Misc</h2>
+<p>
 Package download links point to the FreeBSD 6-STABLE
-version and <b>not</b> to the latest releases.<p>
+version and <b>not</b> to the latest releases.</p>
 
+<p>
 The script ports.cgi use the file
 <a href="$hsty_base/ports/$ports_database.bz2">$ports_database</a>
 as database for it's operations. $ports_database is updated automatically every
-two hours.<p>
+two hours.</p>
 
+<p>
 You may also search the
-<a href="http://www.FreeBSD.org/cgi/man.cgi?manpath=FreeBSD+Ports">ports manual pages</a>.<p>
+<a href="http://www.FreeBSD.org/cgi/man.cgi?manpath=FreeBSD+Ports">ports manual pages</a>.</p>
 
-<a href="$script_name">Back to the search engine</a><p>
-<HR noshade>
+<p>
+<a href="$script_name">Back to the search engine</a></p>
+<hr noshade="noshade" />
 };
 }
 
@@ -574,12 +593,12 @@ if ($stype eq 'pkgdescr') {
 }
 
 if ($stype eq "faq") {
-    print &short_html_header("FreeBSD Ports Search FAQ", 0);
+    print &short_html_header("FreeBSD Ports Search FAQ", 1);
     &faq;
     &footer; print &html_footer; &exit(0);
 }
 
-print &html_header("FreeBSD Ports Search", 0);
+print &html_header("FreeBSD Ports Search", 1);
 
 # allow `/ports.cgi?netscape' where 'netscape' is the query port to search
 # this make links to this script shorter
@@ -616,6 +635,6 @@ if (!$counter) {
     print "</dl>\n";
 }
 
-print "<hr noshade>\n";
+print qq{<hr noshade="noshade" />\n};
 &footer;
 print &html_footer;
