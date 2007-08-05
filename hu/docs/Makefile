@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/docs/Makefile,v 1.5 2005/10/04 05:52:15 murray Exp $
+# $FreeBSD: www/hu/docs/Makefile,v 1.1 2007/01/07 22:44:47 keramida Exp $
 
 ###################################################
 # The FreeBSD Hungarian Documentation Project     #
@@ -11,6 +11,6 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS=   books.sgml man.sgml webresources.sgml
+DOCS=   books.sgml webresources.sgml
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
