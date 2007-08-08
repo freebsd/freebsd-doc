@@ -1,6 +1,6 @@
 #
 # $FreeBSD$
-# Original revision: 1.97
+# Original revision: 1.107
 #
 # Build the FreeBSD Handbook.
 #
@@ -48,7 +48,9 @@ IMAGES_EN+= geom/striping.pic
 IMAGES_EN+= install/adduser1.scr
 IMAGES_EN+= install/adduser2.scr
 IMAGES_EN+= install/adduser3.scr
+IMAGES_EN+= install/boot-loader-menu.scr
 IMAGES_EN+= install/boot-mgr.scr
+IMAGES_EN+= install/config-country.scr
 IMAGES_EN+= install/console-saver1.scr
 IMAGES_EN+= install/console-saver2.scr
 IMAGES_EN+= install/console-saver3.scr
@@ -132,6 +134,19 @@ IMAGES_EN+= vinum/vinum-raid5-org.pic
 IMAGES_EN+= vinum/vinum-simple-vol.pic
 IMAGES_EN+= vinum/vinum-striped-vol.pic
 IMAGES_EN+= vinum/vinum-striped.pic
+IMAGES_EN+= virtualization/parallels-freebsd1.png
+IMAGES_EN+= virtualization/parallels-freebsd2.png
+IMAGES_EN+= virtualization/parallels-freebsd3.png
+IMAGES_EN+= virtualization/parallels-freebsd4.png
+IMAGES_EN+= virtualization/parallels-freebsd5.png
+IMAGES_EN+= virtualization/parallels-freebsd6.png
+IMAGES_EN+= virtualization/parallels-freebsd7.png
+IMAGES_EN+= virtualization/parallels-freebsd8.png
+IMAGES_EN+= virtualization/parallels-freebsd9.png
+IMAGES_EN+= virtualization/parallels-freebsd10.png
+IMAGES_EN+= virtualization/parallels-freebsd11.png
+IMAGES_EN+= virtualization/parallels-freebsd12.png
+IMAGES_EN+= virtualization/parallels-freebsd13.png
 
 # Images from the cross-document image library
 IMAGES_LIB=  callouts/1.png
@@ -144,6 +159,11 @@ IMAGES_LIB+= callouts/7.png
 IMAGES_LIB+= callouts/8.png
 IMAGES_LIB+= callouts/9.png
 IMAGES_LIB+= callouts/10.png
+IMAGES_LIB+= callouts/11.png
+IMAGES_LIB+= callouts/12.png
+IMAGES_LIB+= callouts/13.png
+IMAGES_LIB+= callouts/14.png
+IMAGES_LIB+= callouts/15.png
 
 # 
 # SRCS lists the individual SGML files that make up the document. Changes
@@ -168,6 +188,7 @@ SRCS+= firewalls/chapter.sgml
 SRCS+= geom/chapter.sgml
 SRCS+= install/chapter.sgml
 SRCS+= introduction/chapter.sgml
+#SRCS+= jails/chapter.sgml
 SRCS+= kernelconfig/chapter.sgml
 SRCS+= l10n/chapter.sgml
 SRCS+= linuxemu/chapter.sgml
@@ -185,6 +206,7 @@ SRCS+= security/chapter.sgml
 SRCS+= serialcomms/chapter.sgml
 SRCS+= users/chapter.sgml
 SRCS+= vinum/chapter.sgml
+#SRCS+= virtualization/chapter.sgml
 SRCS+= x11/chapter.sgml
 
 # Entities
