@@ -8,7 +8,7 @@
 #  GNU General Public License Version 2.  
 #     (http://www.gnu.ai.mit.edu/copyleft/gpl.html)
 #
-# $FreeBSD: www/en/cgi/dosendpr.cgi,v 1.35 2007/08/06 12:16:17 ceri Exp $
+# $FreeBSD: www/en/cgi/dosendpr.cgi,v 1.36 2007/08/08 11:30:57 remko Exp $
 
 use Socket;
 use CGI qw/:standard/;
@@ -185,7 +185,7 @@ if ($blackhole_err) {
       $pr .= "X-REMOTE_ADDR-Is-Open-Proxy: Maybe\n";
 }
 
-$pr .= "X-Send-Pr-Version: www-3.0\n" .
+$pr .= "X-Send-Pr-Version: www-3.1\n" .
       "X-GNATS-Notify: \n\n" .
       ">Submitter-Id:\t" . param('submitterid') . "\n" .
       ">Originator:\t" . param('originator') . "\n" .
