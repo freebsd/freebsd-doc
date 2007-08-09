@@ -2,7 +2,7 @@
     The FreeBSD Documentation Project
     The FreeBSD Simplified Chinese Project
 
-    Original Revision: 1.6
+    Original Revision: 1.13
     $FreeBSD$
 -->
 <chapter id="jails">
@@ -249,9 +249,9 @@ is not required on &os; 6.0 and later.</para></footnote>
     <para>一旦装好了 jail， 就可以使用
       &man.jail.8; 工具来安装它了。 &man.jail.8; 工具需要四个必填参数，
       这些参数在 <xref
-	linkend="jails-what"> 小节中进行了介绍。 除了这四个参数之外，
+	linkend="jails-what"> 中进行了介绍。 除了这四个参数之外，
       您还可以指定一些其他参数， 例如， 以特定用户身份来在 jail 中运行程序等等。
-      这里， <command>command</command> 参数取决于您希望建立的 jail
+      这里，  <option><replaceable>command</replaceable></option> 参数取决于您希望建立的 jail
       的类型； 对于 <emphasis>虚拟系统</emphasis>， 可以选择
       <filename>/etc/rc</filename>， 因为它会完成真正的 &os; 系统启动所需的操作。 对于
       <emphasis>服务</emphasis> jail， 执行的命令取决于将在 jail
@@ -379,7 +379,7 @@ jail_<replaceable>www</replaceable>_devfs_ruleset="<replaceable>www_ruleset</rep
 
       <para>&os; 的基本系统包含一系列用于查看目前在用的 jail 信息， 以及接入
 	jail 并执行管理命令所需的基本工具。 &man.jls.8; 和
-	&man.jexec.8; 都是 &os; 基本系统的一部分， 并可用于执行简单的任务：</para>
+	&man.jexec.8; 命令都是 &os; 基本系统的一部分， 并可用于执行简单的任务：</para>
 
       <itemizedlist>
 	<listitem>
@@ -406,6 +406,396 @@ jail_<replaceable>www</replaceable>_devfs_ruleset="<replaceable>www_ruleset</rep
     <para>在众多第三方 jail 管理工具中， 最完整和好用的一个是 <filename
 	role="package">sysutils/jailutils</filename>。 这是一系列方便 &man.jail.8;
       管理的小工具。 请参见其网站以了解进一步的详情。</para>
+    </sect2>
+  </sect1>
+
+  <sect1 id="jails-application">
+    <title>Jail 的应用</title>
+
+    <sect2 id="jails-service-jails">
+      <sect2info>
+	<authorgroup>
+	  <author>
+	    <firstname>Daniel</firstname>
+	    <surname>Gerzo</surname>
+	    <contrib>原作 </contrib>
+	    <!-- 15. May 2007 -->
+	  </author>
+	</authorgroup>
+      </sect2info>
+
+      <title>服务 Jail</title>
+
+      <para>这一节主要基于
+	&a.simon; 的 <ulink
+	url="http://simon.nitro.dk/service-jails.html"></ulink> 中的思路，
+	以及由 Ken Tom
+	<email>locals@gmail.com</email> 更新的文档。 这一节中描述了如何配置
+	&os; 系统的 &man.jail.8; 功能为其增加一个安全层次。
+	这部分假定您运行 RELENG_6_0 或更新版本， 并理解本章之前部分的内容。</para>
+
+      <sect3 id="jails-service-jails-design">
+       <title>设计</title>
+
+	<para>jail 的一个主要问题是如何对它们进行升级和管理。
+	  由于每个 jail 都是从头联编的， 对于单个 jail 而言升级也许还不是个很严重的问题，
+	  因为升级不会太过麻烦， 而对于多个 jail 而言， 升级不仅会耗费大量时间，
+	  并且十分乏味的过程。</para>
+
+	<warning>
+	  <para>这个配置过程需要您对 &os; 有较多的配置和使用经验。
+	    如果这些过程显得太过复杂， 您应考虑使用较简单的系统， 例如 <filename
+	      role="package">sysutils/ezjail</filename>，
+	    它提供了更简单的管理 &os; jail 的方法。</para>
+	</warning>
+
+	<para>基本的想法是， 在不同的 jail 中尽可能多地以安全的方式使用共享的资源
+	  &mdash; 使用只读的 &man.mount.nullfs.8; 挂接， 这会让升级简单许多，
+	  从而使为每个服务建立不同的 jail 这种方案变得更加可行。 另外，
+	  它也为增加或删除以及升级 jail 提供了更为便捷的方法。</para>
+
+	<note>
+	  <para>在这里服务的常见例子包括：
+	  <acronym>HTTP</acronym> 服务、 <acronym>DNS</acronym>
+	  服务、 <acronym>SMTP</acronym> 服务等等， 诸如此类。</para>
+	</note>
+
+	<para>这节介绍的配置的目的包括：</para>
+
+	<itemizedlist>
+	  <listitem>
+	    <para>建立简单并易于理解的 jail 结构。
+	      也就是说 <emphasis>不必</emphasis> 为每个 jail 执行完整的
+	      installworld 操作。</para>
+	  </listitem>
+	  <listitem>
+	    <para>使增删 jail 更容易。</para>
+	  </listitem>
+	  <listitem>
+	    <para>使更新或升级 jail 更容易。</para>
+	  </listitem>
+	  <listitem>
+	    <para>使运行自订的 &os; 分支成为可能。</para>
+	  </listitem>
+	  <listitem>
+	    <para>对安全的更偏执的追求， 尽可能减少被攻陷的可能。</para>
+	  </listitem>
+	  <listitem>
+	    <para>尽可能节省空间和 inode。</para>
+	  </listitem>
+	</itemizedlist>
+
+	<para>如前面提到的那样， 这个设计极大程度上依赖于将一份只读的主模板
+	  (known as <application>nullfs</application>) 挂接到没一个
+	  jail 中， 并为每个 jail 配置一个可读写的设备。 这种设备可以是物理磁盘、
+	  分区， 或以 vnode 为后端的
+	  &man.md.4; 设备。 在这个例子中， 我们将使用可读写的
+	  <application>nullfs</application> 挂接。</para>
+
+	<para>下面的表中描述了文件系统格局：</para>
+
+	<itemizedlist>
+	  <listitem>
+	    <para>每个 jail 挂接到 <filename
+	      role="directory">/home/j</filename> 目录下的一个目录。</para>
+	  </listitem>
+	  <listitem>
+	    <para><filename role="directory">/home/j/mroot</filename>
+	      是每个 jail 共用的模板， 对于所有的 jail 而言都是只读的。</para>
+	  </listitem>
+	  <listitem>
+	    <para>在 <filename role="directory">/home/j</filename>
+	      目录中， 每个 jail 有一个对应的空目录。</para>
+	  </listitem>
+	  <listitem>
+	    <para>每个 jail 中都有一个 <filename
+		role="directory">/s</filename> 目录， 这个目录将连接到系统中的可读写部分。</para>
+	  </listitem>
+	  <listitem>
+	    <para>每个 jail 应基于 <filename
+		role="directory">/home/j/skel</filename> 建立其可读写空间。</para>
+	  </listitem>
+	  <listitem>
+	    <para>每个 jailspace (jail 中的可读写部分) 应创建到 <filename
+		role="directory">/home/js</filename>。<para>
+	  </listitem>
+	</itemizedlist>
+
+	<note>
+	  <para>这假定所有的 jail 都放置于
+	    <filename role="directory">/home</filename> 分区中。 当然，
+	    您可以根据需要将这个配置改为需要的任何样子，
+	    但在接下来的例子中， 也应相应地加以变动。</para>
+	</note>
+	<!-- Insert an image or drawing here to illustrate the example. -->
+      </sect3>
+
+      <sect3 id="jails-service-jails-template">
+	<title>建立模板</title>
+
+	<para>这一节将介绍创建 jail 所需的只读主模板所需的步骤。<para>
+
+	<para>一般来说， 您应将系统升级到最新的 &os; -RELEASE 分支， 具体做法请参见本手册的相关
+	  <ulink url="&url.books.handbook;/makeworld.html">章节</ulink>。
+	  当更新不可行时， 则需要完成 buildworld 过程， 另外， 您还需要 <filename
+	    role="package">sysutils/cpdup</filename> 软件包。
+	  我们将使用 &man.portsnap.8; 工具来下载 &os; Ports 套件。 在使用手册的 <ulink
+	    url="&url.books.handbook;/portsnap.html">Portsnap 章节</ulink>
+	  中， 提供了针对初学者的介绍。</para>
+
+	<procedure>
+	  <step>
+	    <para>首先， 需要为将要存放只读的 &os; 执行文件的文件系统建立一个目录，
+	      接着进入 &os; 源代码的目录， 并在其中安装 jail
+	      模板：</para>
+
+	    <screen>&prompt.root; <userinput>mkdir /home/j /home/j/mroot</userinput>
+&prompt.root; <userinput>cd /usr/src</userinput>
+&prompt.root; <userinput>make installworld DESTDIR=/home/j/mroot</userinput></screen>
+	  </step>
+	  <step>
+	    <para>接着， 准备一份 &os; Ports 套件， 以及用于执行
+	      <application>mergemaster</application> 的 &os; 源代码：</para>
+
+	    <screen>&prompt.root; <userinput>cd /home/j/mroot</userinput>
+&prompt.root; <userinput>mkdir usr/ports</userinput>
+&prompt.root; <userinput>portsnap -p /home/j/mroot/usr/ports fetch extract</userinput>
+&prompt.root; <userinput>cpdup /usr/src /home/j/mroot/usr/src</userinput></screen>
+	  </step>
+	  <step>
+	    <para>创建系统中可读写部分的骨架：</para>
+
+	    <screen>&prompt.root; <userinput>mkdir /home/j/skel /home/j/skel/home /home/j/skel/usr-X11R6 /home/j/skel/distfiles</userinput>
+&prompt.root; <userinput>mv etc /home/j/skel</userinput>
+&prompt.root; <userinput>mv usr/local /home/j/skel/usr-local</userinput>
+&prompt.root; <userinput>mv tmp /home/j/skel</userinput>
+&prompt.root; <userinput>mv var /home/j/skel</userinput>
+&prompt.root; <userinput>mv root /home/j/skel</userinput></screen>
+	  </step>
+	  <step>
+	    <para>使用 <application>mergemaster</application> 安装缺失的配置文件。
+	      接下来， 删除 <application>mergemaster</application>
+	      创建的多余目录：</para>
+
+	    <screen>&prompt.root; <userinput>mergemaster -t /home/j/skel/var/tmp/temproot -D /home/j/skel -i</userinput>
+&prompt.root; <userinput>cd /home/j/skel</userinput>
+&prompt.root; <userinput>rm -R bin boot lib libexec mnt proc rescue sbin sys usr dev</userinput></screen>
+	  </step>
+	  <step>
+	    <para>现在， 将可读写文件系统连接到只读文件系统中。 请确保您在 <filename
+		role="directory">s/</filename> 目录中建立了适当的符号连接。
+	      如果没有建立目录或建立的位置不正确， 可能会导致安装失败。</para>
+
+	    <screen>&prompt.root; <userinput>cd /home/j/mroot</userinput>
+&prompt.root; <userinput>mkdir s</userinput>
+&prompt.root; <userinput>ln -s s/etc etc</userinput>
+&prompt.root; <userinput>ln -s s/home home</userinput>
+&prompt.root; <userinput>ln -s s/root root</userinput>
+&prompt.root; <userinput>ln -s ../s/usr-local usr/local</userinput>
+&prompt.root; <userinput>ln -s ../s/usr-X11R6 usr/X11R6</userinput>
+&prompt.root; <userinput>ln -s ../../s/distfiles usr/ports/distfiles</userinput>
+&prompt.root; <userinput>ln -s s/tmp tmp</userinput>
+&prompt.root; <userinput>ln -s s/var var</userinput></screen>
+	  </step>
+	  <step>
+	    <para>最后， 创建一个默认的包含下列配置的
+	      <filename>/home/j/skel/etc/make.conf</filename>：</para>
+
+	      <programlisting>WRKDIRPREFIX?=  /s/portbuild</programlisting>
+
+
+	      <para>配置 <literal>WRKDIRPREFIX</literal> 使得在每个 jail
+	      中分别编译 &os; 成为可能。 请注意 ports 目录是只读系统的一部分。 而自订的
+	      <literal>WRKDIRPREFIX</literal> 则使得联编过程得以在 jail
+	      中的可读写部分完成。</para>
+	  </step>
+	</procedure>
+      </sect3>
+
+      <sect3 id="jails-service-jails-creating">
+	<title>建立 Jail</title>
+
+	<para>现在我们已经有了完整的 &os; jail 模板， 可以在
+	  <filename>/etc/rc.conf</filename> 中安装并配置它们了。
+	  这个例子中演示了建立 3 个 jail： <quote>NS</quote>、
+	  <quote>MAIL</quote> 和 <quote>WWW</quote>。<para>
+
+	<procedure>
+	  <step>
+	    <para>在 <filename>/etc/fstab</filename> 文件中加入下列配置，
+	      以便让系统自动挂接 jail 的只读模板和读写空间：</para>
+
+	    <programlisting>/home/j/mroot   /home/j/ns     nullfs  ro  0   0
+/home/j/mroot   /home/j/mail   nullfs  ro  0   0
+/home/j/mroot   /home/j/www    nullfs  ro  0   0
+/home/js/ns     /home/j/ns/s   nullfs  rw  0   0
+/home/js/mail   /home/j/mail/s nullfs  rw  0   0
+/home/js/www    /home/j/www/s  nullfs  rw  0   0</programlisting>
+	
+	    <note>
+	      <para>扫描批次号 (pass number) 为 0 的分区不会在启动时使用 &man.fsck.8;
+		进行检查， 而转存批次号 (dump number) 为 0 的分区则不会在
+		&man.dump.8; 时备份。 我们不希望
+		<application>fsck</application> 检查
+		<application>nullfs</application> 挂接， 或让
+		<application>dump</application> 备份 jail 中的只读
+		nullfs 挂接。 这就是为什么在每个 <filename>fstab</filename>
+		条目的最后两列是 <quote>0&nbsp;0</quote> 的原因。</para>
+	    </note>
+	  </step>
+	  <step>
+	    <para>在
+	      <filename>/etc/rc.conf</filename> 中配置 jail：</para>
+
+	    <programlisting>jail_enable="YES"
+jail_set_hostname_allow="NO"
+jail_list="ns mail www"
+jail_ns_hostname="ns.example.org"
+jail_ns_ip="192.168.3.17"
+jail_ns_rootdir="/home/j/ns"
+jail_ns_devfs_enable="YES"
+jail_mail_hostname="mail.example.org"
+jail_mail_ip="192.168.3.18"
+jail_mail_rootdir="/home/j/mail"
+jail_mail_devfs_enable="YES"
+jail_www_hostname="www.example.org"
+jail_www_ip="62.123.43.14"
+jail_www_rootdir="/home/j/www"
+jail_www_devfs_enable="YES"</programlisting>
+	  </step>
+	  <step>
+	    <para>为每个 jail 创建所需的只读文件系统挂接点：</para>
+
+	    <screen>&prompt.root; <userinput>mkdir /home/j/ns /home/j/mail /home/j/www</userinput></screen>
+	  </step>
+	  <step>
+	    <para>在 jail 中安装可读写的模板。 注意您需要使用 <filename
+		role="package">sysutils/cpdup</filename>，
+	      它能够帮助您确保每个目录都是正确地复制的：</para>
+	    <!-- keramida: Why is cpdup required here?  Doesn't cpio(1)
+	     already include adequate functionality for performing this
+	     job *and* have the advantage of being part of the base
+	     system of FreeBSD? -->
+
+	    <screen>&prompt.root; <userinput>mkdir /home/js</userinput>
+&prompt.root; <userinput>cpdup /home/j/skel /home/js/ns</userinput>
+&prompt.root; <userinput>cpdup /home/j/skel /home/js/mail</userinput>
+&prompt.root; <userinput>cpdup /home/j/skel /home/js/www</userinput></screen>
+	  </step>
+	  <step>
+	    <para>这样， 就完成了 jail 的制作， 可以运行了。 首先为
+	      jail 挂接文件系统， 然后使用
+	      <filename>/etc/rc.d/jail</filename> 脚本来启动它们：</para>
+
+	    <screen>&prompt.root; <userinput>mount -a</userinput>
+&prompt.root; <userinput>/etc/rc.d/jail start</userinput></screen>
+	  </step>
+	</procedure>
+
+	<para>现在 jail 应该就启动起来了。 要检查它们是否运行正常，
+	  可以使用 &man.jls.8; 命令。 它的输出应该类似这样：</para>
+
+	<screen>&prompt.root; <userinput>jls</userinput>
+   JID  IP Address      Hostname                      Path
+     3  192.168.3.17    ns.example.org                /home/j/ns
+     2  192.168.3.18    mail.example.org              /home/j/mail
+     1  62.123.43.14    www.example.org               /home/j/www</screen>
+
+	<para>这时， 就可以登入 jail 并增加用户和配置服务了。
+	  <literal>JID</literal> 列给出了正在运行的 jail 的标识编号。
+	  您可以使用下面的命令来在 <literal>JID</literal> 编号为 3 的 jail
+	  中执行管理任务：</para>
+
+	<screen>&prompt.root; <userinput>jexec 3 tcsh</userinput></screen>
+      </sect3>
+
+      <sect3 id="jails-service-jails-upgrading">
+	<title>升级</title>
+
+	<para>有时， 由于安全问题， 或新增功能有用， 会希望将系统升级到一个新版本的 &os;。
+	  这种安装方式的设计使得升级现有 jail 变得很容易。 另外，
+	  它也能最大限度地减小停机时间， 因为 jail 只在最后时刻才需要关闭。
+	  另外， 它也提供了简单的回退到先前版本的方法。</para>
+
+	<procedure>
+	  <step>
+	    <para>第一步是按通常的方法升级主机的系统。 接着，
+	      在 <filename
+		role="directory">/home/j/mroot2</filename> 中建立一个新的临时模板：</para>
+
+	    <screen>&prompt.root; <userinput>mkdir /home/j/mroot2</userinput>
+&prompt.root; <userinput>cd /usr/src</userinput>
+&prompt.root; <userinput>make installworld DESTDIR=/home/j/mroot2</userinput>
+&prompt.root; <userinput>cd /home/j/mroot2</userinput>
+&prompt.root; <userinput>cpdup /usr/src usr/src</userinput>
+&prompt.root; <userinput>mkdir s</userinput></screen>
+
+	    <para>在运行 <maketarget>installworld</maketarget> 时会创建一些不需要的目录，
+	      应将它们删除：</para>
+
+	    <screen>&prompt.root; <userinput>chflags -R 0 var</userinput>
+&prompt.root; <userinput>rm -R etc var root usr/local tmp</userinput></screen>
+	  </step>
+	  <step>
+	    <para>重建到主系统中的可读写符号连接：</para>
+
+	    <screen>&prompt.root; <userinput>ln -s s/etc etc</userinput>
+&prompt.root; <userinput>ln -s s/root root</userinput>
+&prompt.root; <userinput>ln -s s/home home</userinput>
+&prompt.root; <userinput>ln -s ../s/usr-local usr/local</userinput>
+&prompt.root; <userinput>ln -s ../s/usr-X11R6 usr/X11R6</userinput>
+&prompt.root; <userinput>ln -s s/tmp tmp</userinput>
+&prompt.root; <userinput>ln -s s/var var</userinput></screen>
+	  </step>
+	  <step>
+	    <para>现在是时候关闭 jail 了：</para>
+
+	    <screen>&prompt.root; <userinput>/etc/rc.d/jail stop</userinput></screen>
+	  </step>
+	  <step>
+	    <para>卸下原先的文件系统：</para>
+	    <!-- keramida: Shouldn't we suggest a short script-based
+	     loop here, instead of tediously copying the same commands
+	     multiple times? -->
+
+	    <screen>&prompt.root; <userinput>umount /home/j/ns/s</userinput>
+&prompt.root; <userinput>umount /home/j/ns</userinput>
+&prompt.root; <userinput>umount /home/j/mail/s</userinput>
+&prompt.root; <userinput>umount /home/j/mail</userinput>
+&prompt.root; <userinput>umount /home/j/www/s</userinput>
+&prompt.root; <userinput>umount /home/j/www</userinput></screen>
+
+	    <note>
+	      <para>可读写的文件系统
+		(<filename role="directory">/s</filename>)
+		会在只读系统之后挂接， 因此应首先卸载。</para>
+	    </note>
+	  </step>
+	  <step>
+	    <para>将先前的只读文件系统挪走， 换成新的系统。
+	      这样做也同时保留了先前系统的备份， 从而可以在出现问题时从中恢复。
+	      这里我们根据新系统的创建时间来命名。 此外我们把先前的
+	      &os; Ports 套件直接移动到新的文件系统中，
+	      以节省磁盘空间和 inode：</para>
+
+	    <screen>&prompt.root; <userinput>cd /home/j</userinput>
+&prompt.root; <userinput>mv mroot mroot.20060601</userinput>
+&prompt.root; <userinput>mv mroot2 mroot</userinput>
+&prompt.root; <userinput>mv mroot.20060601/usr/ports mroot/usr</userinput></screen>
+	  </step>
+	  <step>
+	    <para>现在新的只读模板就可以用了， 剩下的事情是重新挂接文件系统并启动
+	      jails：</para>
+
+	    <screen>&prompt.root; <userinput>mount -a</userinput>
+&prompt.root; <userinput>/etc/rc.d/jail start</userinput></screen>
+	  </step>
+	</procedure>
+
+	<para>最后用 &man.jls.8; 检查 jail 启动是否正常。
+	  不要忘记在 jail 中运行 mergemaster。 配置文件和
+	  rc.d 脚本在升级时应进行更新。</para>
+      </sect3>
     </sect2>
   </sect1>
 </chapter>
