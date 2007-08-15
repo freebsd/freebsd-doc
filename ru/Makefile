@@ -1,7 +1,7 @@
 #
 # The FreeBSD Russian Documentation Project
 #
-# $FreeBSD: www/ru/Makefile,v 1.50 2006/02/19 11:23:25 bvs Exp $
+# $FreeBSD: www/ru/Makefile,v 1.51 2006/08/19 21:58:14 hrs Exp $
 # $FreeBSDru: frdp/www/ru/Makefile,v 1.53 2006/02/18 18:46:43 gad Exp $
 #
 # Original revision: 1.122
@@ -77,7 +77,7 @@ SUBDIR+= doc
 SUBDIR+= ports
 .endif
 .if defined(BUILD_RELNOTES)
-SUBDIR+= relnotes
+#SUBDIR+= relnotes
 .endif
 
 # Non-SGML
