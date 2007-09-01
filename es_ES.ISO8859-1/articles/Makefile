@@ -9,6 +9,7 @@ SUBDIR+= dialup-firewall
 SUBDIR+= euro
 SUBDIR+= explaining-bsd
 SUBDIR+= fbsd-from-scratch
+SUBDIR+= fdp-es
 SUBDIR+= laptop
 SUBDIR+= mailing-list-faq
 SUBDIR+= p4-primer
