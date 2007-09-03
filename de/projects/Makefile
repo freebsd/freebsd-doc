@@ -2,8 +2,8 @@
 # The FreeBSD German Documentation Project
 #
 # $FreeBSD$
-# $FreeBSDde: de-www/projects/Makefile,v 1.2 2006/10/19 19:26:04 jkois Exp $
-# basiert auf: 1.20
+# $FreeBSDde: de-www/projects/Makefile,v 1.3 2007/08/29 08:47:34 as Exp $
+# basiert auf: 1.31 
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -12,6 +12,10 @@
 .include "../Makefile.inc"
 .endif
 
+DOCS=	projects.sgml
 DOCS+=	newbies.sgml
+DOCS+=	cvsweb.sgml
+
+INDEXLINK= projects.html
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
