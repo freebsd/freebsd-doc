@@ -1,4 +1,4 @@
-# $FreeBSD: www/hu/Makefile,v 1.3 2007/03/26 15:22:53 gabor Exp $
+# $FreeBSD: www/hu/Makefile,v 1.4 2007/04/20 20:01:29 gabor Exp $
 
 ###################################################
 # The FreeBSD Hungarian Documentation Project     #
@@ -35,6 +35,7 @@ SUBDIR+=	copyright
 SUBDIR+=	developers
 SUBDIR+=	docproj
 SUBDIR+=	docs
+SUBDIR+=	news
 SUBDIR+=	platforms
 SUBDIR+=	search
 SUBDIR+=	projects
