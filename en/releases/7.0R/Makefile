@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: www/en/releases/7.0R/Makefile,v 1.1 2007/06/21 14:30:18 hrs Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -7,8 +7,20 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS=	schedule.sgml approvals.sgml
+DOCS=	todo.sgml schedule.sgml approvals.sgml
+
+FETCHFILE= http://people.freebsd.org/~pho/stress/log/news.rss
+FETCHCMD=  /usr/bin/fetch
+CLEANFILES+= news.rss stress.html
 
 DATA+=	docbook.css
+
+news.rss:
+	${FETCHCMD} ${FETCHFILE}
+
+stress.html: news.rss stress.xsl
+	${XSLTPROC} stress.xsl news.rss > stress.html
+
+todo.html: stress.html
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
