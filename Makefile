@@ -1,4 +1,4 @@
-# $FreeBSD: www/Makefile,v 1.24 2003/12/05 20:00:18 blackend Exp $
+# $FreeBSD: www/Makefile,v 1.25 2004/04/09 10:17:19 phantom Exp $
 
 WEB_PREFIX=	${.CURDIR}
 
@@ -7,4 +7,3 @@ SUBDIR= en
 links:
 
 .include <bsd.obj.mk>
-.include <bsd.subdir.mk>
