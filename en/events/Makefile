@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/events/Makefile,v 1.11 2005/10/05 04:55:34 murray Exp $
+# $FreeBSD: www/en/events/Makefile,v 1.12 2006/08/19 21:20:34 hrs Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -11,6 +11,7 @@ SUBDIR=  2002
 SUBDIR+= 2003
 
 DATA=	events.css
+INDEXLINK=	events.html
 
 XMLDOCS+=		events:${XSL_EVENTS}:${XML_EVENTS_EVENTS}:
 DEPENDSET.events=	events
