@@ -1,7 +1,7 @@
 # The FreeBSD Documentation Project
 # The FreeBSD German Documentation Project
 # $FreeBSD$
-# $FreeBSDde: de-www/Makefile,v 1.45 2007/04/03 16:05:03 jkois Exp $
+# $FreeBSDde: de-www/Makefile,v 1.46 2007/09/09 18:48:48 as Exp $
 # basiert auf: 1.139
 
 .if exists(Makefile.conf)
@@ -17,6 +17,7 @@ DOCS= about.sgml
 DOCS+= administration.sgml
 DOCS+= applications.sgml
 DOCS+= availability.sgml
+DOCS+= art.sgml
 DOCS+= community.sgml
 DOCS+= docs.sgml
 DOCS+= features.sgml
