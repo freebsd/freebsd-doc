@@ -2,6 +2,7 @@
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
 <!-- $FreeBSD$ -->
+<!-- Original Revision: 1.7 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/libcommon.xsl"/>
@@ -44,6 +45,8 @@
 
   <xsl:template name="html-news-make-olditems-list">
     <p>更早的公告：
+      <a href="&enbase;/news/2005/index.html">2005</a>,
+      <a href="&enbase;/news/2004/index.html">2004</a>,
       <a href="&enbase;/news/2003/index.html">2003</a>,
       <a href="&enbase;/news/2002/index.html">2002</a>,
       <a href="&enbase;/news/2001/index.html">2001</a>,
