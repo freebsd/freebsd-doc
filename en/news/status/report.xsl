@@ -7,7 +7,7 @@
 <!ENTITY % navinclude.about "INCLUDE">
 ]>
 
-<!-- $FreeBSD: www/en/news/status/report.xsl,v 1.10 2006/08/19 21:20:40 hrs Exp $ -->
+<!-- $FreeBSD: www/en/news/status/report.xsl,v 1.11 2007/04/10 03:35:31 brd Exp $ -->
 
 <!-- Standard header material -->
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
@@ -54,7 +54,15 @@
 	  <h3><xsl:value-of select="description"/></h3>
 	  <xsl:variable name="cat-short" select="name"/>
 	  <ul>
-	    <xsl:for-each select="//project[@cat=$cat-short]">
+	    <xsl:for-each select="//project[@cat=$cat-short and @summary]">
+  	      <xsl:sort select="translate(title, $lcletters, $ucletters)"/>
+	      <li><a><xsl:attribute name="href">#<xsl:value-of
+	      select="translate(title, ' ',
+	      '-')"/></xsl:attribute><xsl:value-of select="title"/></a>
+	      </li>
+	    </xsl:for-each>
+
+	    <xsl:for-each select="//project[@cat=$cat-short and not(@summary)]">
   	      <xsl:sort select="translate(title, $lcletters, $ucletters)"/>
 	      <li><a><xsl:attribute name="href">#<xsl:value-of
 	      select="translate(title, ' ',
