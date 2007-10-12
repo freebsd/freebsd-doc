@@ -206,11 +206,11 @@ SRCS+= security/chapter.sgml
 SRCS+= serialcomms/chapter.sgml
 SRCS+= users/chapter.sgml
 SRCS+= vinum/chapter.sgml
-#SRCS+= virtualization/chapter.sgml
+SRCS+= virtualization/chapter.sgml
 SRCS+= x11/chapter.sgml
 
 # Entities
-SRCS+= chapters.ent 
+SRCS+= chapters.ent
 
 SYMLINKS=	${DESTDIR} index.html handbook.html
 
