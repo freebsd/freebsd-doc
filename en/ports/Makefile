@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/ports/Makefile,v 1.46 2005/12/15 01:02:28 linimon Exp $
+# $FreeBSD: www/en/ports/Makefile,v 1.47 2006/08/19 21:20:41 hrs Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -95,8 +95,8 @@ all install clean:
 	cd ${.CURDIR}; \
 		${MAKE} ${MAKEFLAGS} -f ${.CURDIR}/Makefile.inc0 ${.TARGET}
 .if defined(WITH_PORTS_GROWTH)
-	cd growth; \
-		${MAKE} ${MAKEFLAGS} ${.TARGET}
+#	cd growth; \
+#		${MAKE} ${MAKEFLAGS} ${.TARGET}
 beforeinstall:
 .else
 beforeinstall:
