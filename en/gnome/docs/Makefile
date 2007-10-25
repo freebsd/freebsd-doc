@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/gnome/docs/Makefile,v 1.22 2006/10/14 16:45:32 marcus Exp $
+# $FreeBSD: www/en/gnome/docs/Makefile,v 1.23 2007/03/19 17:36:34 marcus Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -14,6 +14,7 @@ DOCS+=	faq212.sgml
 DOCS+=	faq214.sgml
 DOCS+=	faq216.sgml
 DOCS+=	faq218.sgml
+DOCS+=	faq220.sgml
 DOCS+=	gnome_porting.sgml
 DOCS+=	gnome1_porting.sgml
 DOCS+=	gnome2_porting.sgml
