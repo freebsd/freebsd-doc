@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
-<!ENTITY title "FreeBSD list of projects and ideas for volunteers">
+<!ENTITY title "The &os; list of projects and ideas for volunteers">
 <!ENTITY email "freebsd-www">
 <!ENTITY % navinclude.developers "INCLUDE">
 <!ENTITY % developers SYSTEM "../../developers.sgml"> %developers;
 ]>
 
-<!-- $FreeBSD: www/en/projects/ideas/ideas.xsl,v 1.5 2007/03/15 18:40:42 murray Exp $ -->
+<!-- $FreeBSD: www/en/projects/ideas/ideas.xsl,v 1.6 2007/04/22 20:24:17 netchild Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -39,21 +39,21 @@
 		&header3;
 <h2>Introduction</h2>
 
-<p>The FreeBSD project has hundreds of active developers spread all over the
+<p>The &os; project has hundreds of active developers spread all over the
   world, and many of them have their own parts of the source-tree that they
   work on.  However, there are always a lot of new interesting projects and
-  ideas that needs to be investigated and evaluated, and this is where the
-  FreeBSD project relies on heroic efforts from volunteers.  The following
+  ideas that need to be investigated and evaluated, and this is where the
+  &os; project relies on heroic efforts from volunteers.  The following
   list of possible projects is in no way complete, but it should serve as a
   nice starting point for volunteers who would like to become committers in
   the future.</p>
 
 <p>Please note that we cannot guarantee that your work will be included in the
-  FreeBSD source tree.  This is because people tend to disagree about specifics
+  &os; source tree.  This is because people tend to disagree about specifics
   in the implementation of new features or functionality.  However, if you can
   find a developer who is interested in your work, and you can get him or her
   to review it, then you are pretty far on your way to get your code into the
-  FreeBSD source tree.</p>
+  &os; source tree.</p>
 
 <p>If you have any non-technical questions about this list, please contact <a
   href="mailto:netchild@FreeBSD.org">&a.netchild;</a> and <a
@@ -61,7 +61,7 @@
   should be directed to the Technical contact for each project, or to the <a
   href="mailto:hackers@FreeBSD.org">hackers mailinglist</a>.</p>
 
-<p>Also, there are several projects on the FreeBSD wiki which can serve as good
+<p>Also, there are several projects on the &os; wiki which can serve as good
   starting points for volunteers.  The most prominent projects are: <a
     href="http://wiki.freebsd.org/Networking">Networking</a>, <a
     href="http://wiki.freebsd.org/SMPTODO">SMPTODO</a>, and <a
@@ -117,13 +117,13 @@
 <a name="p-projects"></a>
 <h2>Projects at FreeBSD.org</h2>
 <p>Additional projects may be found by browsing the <a
-  href="../projects.html">FreeBSD Development Projects page</a>.  The most
+  href="../projects.html">&os; Development Projects page</a>.  The most
   prominent projects are:</p>
 <ul>
-  <li><a href="../acpi/index.html">The FreeBSD ACPI Project</a></li>
+  <li><a href="../acpi/index.html">The &os; ACPI Project</a></li>
   <li><a href="../c99/index.html">C99 and POSIX Conformance Project</a></li>
-  <li><a href="../bigdisk/index.html">Large data storage in FreeBSD
-    Project</a></li>
+  <li><a href="../bigdisk/index.html">Large data storage in the &os;
+    operating system</a></li>
   <li><a href="../netperf/index.html">Network Performance Project</a></li>
   <li><a href="../busdma/index.html">busdma and SMPng driver conversion
     Project</a></li>
