@@ -7,6 +7,7 @@ SUBDIR+= dialup-firewall
 SUBDIR+= explaining-bsd
 SUBDIR+= formatting-media
 SUBDIR+= freebsd-questions
+SUBDIR+= greek-language-support
 SUBDIR+= laptop
 SUBDIR+= multi-os
 SUBDIR+= new-users
