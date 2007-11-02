@@ -1,0 +1,677 @@
+<!--
+     The FreeBSD Documentation Project
+     $FreeBSD$
+
+-->
+
+<chapter id="GEOM">
+  <chapterinfo>
+    <authorgroup>
+      <author>
+	<firstname>Tom</firstname>
+	<surname>Rhodes</surname>
+	<contrib>Γράφτηκε από τον </contrib>
+      </author>
+    </authorgroup>
+  </chapterinfo>
+
+  <title>GEOM: Διαχείριση Συστοιχιών Δίσκων</title>
+
+  <sect1 id="GEOM-synopsis">
+    <title>Σύνοψη</title>
+
+    <indexterm>
+      <primary>GEOM</primary>
+    </indexterm>
+    <indexterm>
+      <primary>GEOM Disk Framework</primary>
+      <see>GEOM</see>
+    </indexterm>
+
+    <para>Το κεφάλαιο αυτό καλύπτει τη χρήση των δίσκων κάτω από το πλαίσιο
+      λειτουργιών GEOM στο &os;. Περιλαμβάνει τα κυριότερα προγράμματα ελέγχου
+      <acronym role="Redundant Array of Inexpensive Disks">RAID</acronym>
+      των οποίων οι ρυθμίσεις βασίζονται στο πλαίσιο GEOM. Το κεφάλαιο αυτό
+      δεν αναλύει σε βάθος τον τρόπο με τον οποίο το GEOM χειρίζεται ή ελέγχει
+      λειτουργίες Εισόδου / Εξόδου (IO), το υποσύστημα που βρίσκεται κάτω από
+      αυτό, ή τον κώδικα του. Οι πληροφορίες αυτές παρέχονται από τη σελίδα
+      manual του &man.geom.4; καθώς και από τις αναφορές που περιέχει σε άλλες
+      σχετικές σελίδες. Επίσης το κεφάλαιο αυτό δεν αποτελεί καθοριστικό οδηγό
+      για όλες τις ρυθμίσεις του <acronym>RAID</acronym>. Θα συζητηθούν μόνο
+      οι καταστάσεις λειτουργίας του <acronym>RAID</acronym> που
+      υποστηρίζονται από το GEOM.</para>
+
+    <para>Αφού διαβάσετε αυτό το κεφάλαιο, θα ξέρετε:</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>Το είδος της υποστήριξης  <acronym>RAID</acronym> που είναι
+          διαθέσιμο μέσω του GEOM.</para>
+      </listitem>
+
+      <listitem>
+	<para>Πως να χρησιμοποιήσετε τα βασικά βοηθητικά προγράμματα για την
+          ρύθμιση, συντήρηση και διαχείριση των διαφόρων επιπέδων <acronym>
+          RAID</acronym>.</para>
+      </listitem>
+
+      <listitem>
+        <para>Πως να δημιουργήσετε mirror ή stripe, να κρυπτογραφήσετε, και να
+          συνδέσετε δίσκους με το GEOM, μέσω μιας απομακρυσμένης σύνδεσης.
+	</para>
+      </listitem>
+
+      <listitem>
+	<para>Πως να αντιμετωπίσετε προβλήματα δίσκων που χρησιμοποιούν το
+          πλαίσιο λειτουργιών GEOM.</para>
+      </listitem>
+    </itemizedlist>
+
+    <para>Πριν διαβάσετε αυτό το κεφάλαιο, θα πρέπει:</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>Να κατανοείτε πως μεταχειρίζεται το &os; τις συσκευές δίσκων
+	  (<xref linkend="disks">).</para>
+      <listitem>
+	<para>Να γνωρίζετε πως θα ρυθμίσετε και θα εγκαταστήσετε ένα νέο
+          πυρήνα στο &os;
+	  (<xref linkend="kernelconfig">).</para>
+      </listitem>
+    </itemizedlist>
+  </sect1>
+
+  <sect1 id="GEOM-intro">
+    <title>GEOM Introduction</title>
+
+    <para>GEOM permits access and control to classes &mdash; Master Boot
+      Records, <acronym>BSD</acronym> labels, etc &mdash; through the
+      use of providers, or the special files in
+      <filename role="directory">/dev</filename>.  Supporting various
+      software <acronym>RAID</acronym> configurations, GEOM will
+      transparently provide access to the operating system and
+      operating system utilities.</para>
+  </sect1>
+
+  <sect1 id="GEOM-striping">
+  <sect1info>
+    <authorgroup>
+      <author>
+	<firstname>Tom</firstname>
+	<surname>Rhodes</surname>
+	<contrib>Written by </contrib>
+      </author>
+      <author>
+	<firstname>Murray</firstname>
+	<surname>Stokely</surname>
+      </author>
+    </authorgroup>
+  </sect1info>
+
+    <title>RAID0 - Striping</title>
+
+    <indexterm>
+      <primary>GEOM</primary>
+    </indexterm>
+    <indexterm>
+      <primary>Striping</primary>
+    </indexterm>
+
+    <para>Striping is a method used to combine several disk drives into
+      a single volume.  In many cases, this is done through the use of
+      hardware controllers.  The GEOM disk subsystem provides
+      software support for <acronym>RAID</acronym>0, also known as
+      disk striping.</para>
+
+    <para>In a <acronym>RAID</acronym>0 system, data are split up in
+      blocks that get written across all the drives in the array.
+      Instead of having to wait on the system to write 256k to one
+      disk, a <acronym>RAID</acronym>0 system can simultaneously write
+      64k to each of four different disks, offering superior I/O
+      performance.  This performance can be enhanced further by using
+      multiple disk controllers.</para>
+
+    <para>Each disk in a <acronym>RAID</acronym>0 stripe must be of
+      the same size, since I/O requests are interleaved to read or
+      write to multiple disks in parallel.</para>
+
+      <mediaobject>
+        <imageobject>
+          <imagedata fileref="geom/striping" align="center">
+        </imageobject>
+
+        <textobject>
+          <phrase>Disk Striping Illustration</phrase>
+        </textobject>
+      </mediaobject>
+
+    <procedure>
+      <title>Creating a stripe of unformatted ATA disks</title>
+
+      <step><para>Load the <filename>geom_stripe</filename>
+        module:</para>
+
+    <screen>&prompt.root; <userinput>kldload geom_stripe</userinput></screen>
+	</step>
+
+      <step><para>Ensure that a suitable mount point exists.  If this
+        volume will become a root partition, then temporarily use
+        another mount point such as <filename
+        role="directory">/mnt</filename>:</para>
+
+        <screen>&prompt.root; <userinput>mkdir /mnt</userinput></screen>
+      </step>
+
+      <step><para>Determine the device names for the disks which will
+        be striped, and create the new stripe device.  For example,
+	to stripe two unused and unpartitioned <acronym>ATA</acronym> disks,
+	for example <filename>/dev/ad2</filename> and
+	<filename>/dev/ad3</filename>:</para>
+
+        <screen>&prompt.root; <userinput>gstripe label -v st0 /dev/ad2 /dev/ad3</userinput></screen>
+
+<!-- 
+    <para>A message should be returned explaining that meta data has
+      been stored on the devices.
+XXX: What message?  Put it inside the screen output above.
+-->
+      </step>
+
+      <step><para>Write a standard label, also known as a partition
+        table, on the new volume and install the default
+        bootstrap code:</para>
+
+        <screen>&prompt.root; <userinput>bsdlabel -wB /dev/stripe/st0</userinput></screen>
+
+      </step>
+
+      <step><para>This process should have created two other devices
+        in the <filename role="directory">/dev/stripe</filename>
+        directory in addition to the <devicename>st0</devicename> device.
+        Those include <devicename>st0a</devicename> and
+        <devicename>st0c</devicename>.  At this point a file system may be created
+        on the <devicename>st0a</devicename> device with the
+        <command>newfs</command> utility:</para>
+
+      <screen>&prompt.root; <userinput>newfs -U /dev/stripe/st0a</userinput></screen>
+
+      <para>Many numbers will glide across the screen, and after a few
+        seconds, the process will be complete.  The volume has been
+        created and is ready to be mounted.</para>
+    </step>
+  </procedure>
+
+  <para>To manually mount the created disk stripe:</para>
+
+  <screen>&prompt.root; <userinput>mount /dev/stripe/st0a /mnt</userinput></screen>
+
+  <para>To mount this striped file system automatically during the boot
+    process, place the volume information in
+    <filename>/etc/fstab</filename> file:</para>
+
+  <screen>&prompt.root; <userinput>echo "/dev/stripe/st0a /mnt ufs rw 2 2" \</userinput>
+    <userinput>&gt;&gt; /etc/fstab</userinput></screen>
+
+  <para>The <filename>geom_stripe</filename> module must also be automatically loaded during
+    system initialization, by adding a line to
+    <filename>/boot/loader.conf</filename>:</para>
+
+  <screen>&prompt.root; <userinput>echo 'geom_stripe_load="YES"' &gt;&gt; /boot/loader.conf</userinput></screen>
+
+  </sect1>
+
+  <sect1 id="GEOM-mirror">
+    <title>RAID1 - Mirroring</title>
+
+    <indexterm>
+      <primary>GEOM</primary>
+    </indexterm>
+    <indexterm>
+      <primary>Disk Mirroring</primary>
+    </indexterm>
+
+    <para>Mirroring is a technology used by many corporations and home
+      users to back up data without interruption.  When a mirror exists,
+      it simply means that diskB replicates diskA.  Or, perhaps diskC+D
+      replicates diskA+B.  Regardless of the disk configuration, the
+      important aspect is that information on one disk or partition is
+      being replicated.  Later, that information could be more easily
+      restored, backed up without causing service or access
+      interruption, and even be physically stored in a data
+      safe.</para>
+
+    <para>To begin, ensure the system has two disk drives of equal size,
+      this exercise assumes they are direct access (&man.da.4;)
+      <acronym>SCSI</acronym> disks.</para>
+
+    <para>Begin by installing &os; on the first disk with only two
+      partitions.  One should be a swap partition, double the
+      <acronym>RAM</acronym> size and all remaining space devoted to
+      the root (<filename role="directory">/</filename>) file system.
+      It is possible to have separate partitions for other mount points;
+      however, this will increase the difficulty level ten fold due to
+      manual alteration of the &man.bsdlabel.8; and &man.fdisk.8;
+      settings.</para>
+
+    <para>Reboot and wait for the system to fully initialize.  Once this
+      process has completed, log in as the <username>root</username>
+      user.</para>
+
+    <para>Create the <filename>/dev/mirror/gm</filename> device and link
+      it with <filename>/dev/da1</filename>:</para>
+
+    <screen>&prompt.root; <userinput>gmirror label -vnb round-robin gm0 /dev/da1</userinput></screen>
+
+    <para>The system should respond with:</para>
+    <screen>
+Metadata value stored on /dev/da1.
+Done.</screen>
+
+    <para>Initialize GEOM, this will load the
+      <filename>/boot/kernel/geom_mirror.ko</filename> kernel
+      module:</para>
+
+    <screen>&prompt.root; <userinput>gmirror load</userinput></screen>
+
+    <note>
+      <para>This command should have created the
+	<devicename>gm0</devicename>, device node under the
+	<filename role="directory">/dev/mirror</filename>
+	directory.</para>
+    </note>
+
+    <para>Install a generic <command>fdisk</command> label and boot code
+      to new <devicename>gm0</devicename> device:</para>
+
+    <screen>&prompt.root; <userinput>fdisk -vBI /dev/mirror/gm0</userinput></screen>
+
+    <para>Now install generic <command>bsdlabel</command>
+      information:</para>
+
+    <screen>&prompt.root; <userinput>bsdlabel -wB /dev/mirror/gm0s1</userinput></screen>
+
+    <note>
+      <para>If multiple slices and partitions exist, the flags for the
+	previous two commands will require alteration.  They must match
+	the slice and partition size of the other disk.</para>
+    </note>
+
+    <para>Use the &man.newfs.8; utility to construct a default <acronym>UFS</acronym>
+      file system on the <devicename>gm0s1a</devicename> device node:</para>
+
+    <screen>&prompt.root; <userinput>newfs -U /dev/mirror/gm0s1a</userinput></screen>
+
+    <para>This should have caused the system to spit out some
+      information and a bunch of numbers.  This is good.  Examine the
+      screen for any error messages and mount the device to the
+      <filename role="directory">/mnt</filename> mount point:</para>
+
+    <screen>&prompt.root; <userinput>mount /dev/mirror/gm0s1a /mnt</userinput></screen>
+
+    <para>Now move all data from the boot disk over to this new file
+      system.  This example uses the &man.dump.8; and &man.restore.8;
+      commands; however, &man.dd.1; would also work with this
+      scenario.</para>
+
+    <screen>&prompt.root; <userinput>dump -L -0 -f- / |(cd /mnt &amp;&amp; restore -r -v -f-)</userinput></screen>
+
+    <para>This must be done for each file system.  Simply place the
+      appropriate file system in the correct location when running the
+      aforementioned command.</para>
+
+    <para>Now edit the replicated <filename>/mnt/etc/fstab</filename>
+      file and remove or comment out the swap file
+      <footnote>
+	<para>It should be noted that commenting out the swap file entry
+	in <filename>fstab</filename> will most likely require you to
+	re-establish a different way of enabling swap space.  Please
+	refer to <xref linkend="adding-swap-space"> for more
+	information.</para>
+      </footnote>.  Change the other file system information to use the
+      new disk as shown in the following example:</para>
+
+    <programlisting># Device                Mountpoint      FStype  Options         Dump    Pass#
+#/dev/da0s2b             none            swap    sw              0       0
+/dev/mirror/gm0s1a       /               ufs     rw              1       1</programlisting>
+
+    <para>Now create a <filename>boot.config</filename> file on both the
+      current and new root partitions.  This file will
+      <quote>help</quote> the system <acronym>BIOS</acronym>
+      boot the correct drive:</para>
+
+    <screen>&prompt.root; <userinput>echo "1:da(1,a)/boot/loader" &gt; /boot.config</userinput></screen>
+
+    <screen>&prompt.root; <userinput>echo "1:da(1,a)/boot/loader" &gt; /mnt/boot.config</userinput></screen>
+
+    <note>
+      <para>We have placed it on both root partitions to ensure proper
+        boot up.  If for some reason the system cannot read from the
+	new root partition, a failsafe is available.</para>
+    </note>
+
+    <para>Ensure the <filename>geom_mirror.ko</filename> module will load
+      on boot by running the following command:</para>
+
+    <screen>&prompt.root; <userinput>echo 'geom_mirror_load="YES"' &gt;&gt; /mnt/boot/loader.conf</userinput></screen>
+
+    <para>Reboot the system:</para>
+
+    <screen>&prompt.root; <userinput>shutdown -r now</userinput></screen>
+
+    <para>If all has gone well, the system should have booted from the
+      <devicename>gm0s1a</devicename> device and a <command>login</command>
+      prompt should be waiting.  If something went wrong, see review
+      the forthcoming troubleshooting section.  Now add the
+      <devicename>da0</devicename> disk to <devicename>gm0</devicename>
+      device:</para>
+
+    <screen>&prompt.root; <userinput>gmirror configure -a gm0</userinput>
+&prompt.root; <userinput>gmirror insert gm0 /dev/da0</userinput></screen>
+
+    <para>The <option>-a</option> flag tells &man.gmirror.8; to use
+      automatic synchronization; i.e., mirror the disk writes
+      automatically.  The manual page explains how to rebuild and
+      replace disks, although it uses <devicename>data</devicename>
+      in place of <devicename>gm0</devicename>.</para>
+
+    <sect2>
+      <title>Troubleshooting</title>
+
+      <sect3>
+	<title>System refuses to boot</title>
+
+	<para>If the system boots up to a prompt similar to:</para>
+
+	<programlisting>ffs_mountroot: can't find rootvp
+Root mount failed: 6
+mountroot></programlisting>
+
+	<para>Reboot the machine using the power or reset button.  At
+	  the boot menu, select option six (6).  This will drop the
+	  system to a &man.loader.8; prompt.  Load the kernel module
+	  manually:</para>
+
+	<screen>OK? <userinput>load geom_mirror</userinput>
+OK? <userinput>boot</userinput></screen>
+
+	<para>If this works then for whatever reason the module was not
+	  being loaded properly.  Place:</para>
+
+	<programlisting>options	GEOM_MIRROR</programlisting>
+
+	<para>in the kernel configuration file, rebuild and reinstall.
+	  That should remedy this issue.</para>
+      </sect3>
+    </sect2>
+  </sect1>
+
+  <sect1 id="geom-ggate">
+    <title>GEOM Gate Network Devices</title>
+
+    <para>GEOM supports the remote use of devices, such as disks,
+      CD-ROMs, files, etc. through the use of the gate utilities.
+      This is similar to <acronym>NFS</acronym>.</para>
+
+    <para>To begin, an exports file must be created.  This file
+      specifies who is permitted to access the exported resources and
+      what level of access they are offered.  For example, to export
+      the fourth slice on the first <acronym>SCSI</acronym> disk, the
+      following <filename>/etc/gg.exports</filename> is more than
+      adequate:</para>
+
+    <programlisting>192.168.1.0/24 RW /dev/da0s4d</programlisting>
+
+    <para>It will allow all hosts inside the private network access
+      the file system on the <devicename>da0s4d</devicename>
+      partition.</para>
+
+    <para>To export this device, ensure it is not currently mounted,
+      and start the &man.ggated.8; server daemon:</para>
+
+    <screen>&prompt.root; <userinput>ggated</userinput></screen>
+
+    <para>Now to <command>mount</command> the device on the client
+      machine, issue the following commands:</para>
+
+    <screen>&prompt.root; <userinput>ggatec create -o rw 192.168.1.1 /dev/da0s4d</userinput></screen>
+    <screen>ggate0</screen>
+    <screen>&prompt.root; <userinput>mount /dev/ggate0 /mnt</userinput></screen>
+
+    <para>From here on, the device may be accessed through the
+      <filename role="directory">/mnt</filename> mount point.</para>
+
+    <note>
+      <para>It should be pointed out that this will fail if the device
+	is currently mounted on either the server machine or any other
+	machine on the network.</para>
+    </note>
+
+    <para>When the device is no longer needed, it may be safely
+      unmounted with the &man.umount.8; command, similar to any other
+      disk device.</para>
+  </sect1>
+
+  <sect1 id="geom-glabel">
+    <title>Labeling Disk Devices</title>
+
+    <indexterm>
+      <primary>GEOM</primary>
+    </indexterm>
+    <indexterm>
+      <primary>Disk Labels</primary>
+    </indexterm>
+
+    <para>During system initialization, the &os; kernel will create
+      device nodes as devices are found.  This method of probing for
+      devices raises some issues, for instance what if a new disk
+      device is added via <acronym>USB</acronym>?  It is very likely
+      that a flash device may be handed the device name of
+      <devicename>da0</devicename> and the original
+      <devicename>da0</devicename> shifted to
+      <devicename>da1</devicename>.  This will cause issues mounting
+      file systems if they are listed in
+      <filename>/etc/fstab</filename>, effectively, this may also
+      prevent the system from booting.</para>
+
+    <para>One solution to this issue is to chain the
+      <acronym>SCSI</acronym> devices in order so a new device added to
+      the <acronym>SCSI</acronym> card will be issued unused device
+      numbers.  But what about <acronym>USB</acronym> devices which may
+      replace the primary <acronym>SCSI</acronym> disk?  This happens
+      because <acronym>USB</acronym> devices are usually
+      probed before the <acronym>SCSI</acronym> card.  One solution
+      is to only insert these devices after the system has been
+      booted.  Another method could be to use only a single
+      <acronym>ATA</acronym> drive and never list the
+      <acronym>SCSI</acronym> devices in
+      <filename>/etc/fstab</filename>.</para>
+
+    <para>A better solution is available.  By using the
+      <command>glabel</command> utility, an administrator or user may
+      label their disk devices and use these labels in
+      <filename>/etc/fstab</filename>.  Because
+      <command>glabel</command> stores the label in the last sector of
+      a given provider, the label will remain persistent across reboots.
+      By using this label as a device, the file system may always be
+      mounted regardless of what device node it is accessed
+      through.</para>
+
+    <note>
+      <para>This goes without saying that a label be permanent.  The
+	<command>glabel</command> utility may be used to create both a
+	transient and permanent label.  Only the permanent label will
+	remain consistent across reboots.  See the &man.glabel.8;
+	manual page for more information on the differences between
+	labels.</para>
+    </note>
+
+    <sect2>
+      <title>Label Types and Examples</title>
+
+      <para>There are two types of labels, a generic label and a
+	file system label.  The difference between the labels is
+	the auto detection associated with permanent labels, and the
+	fact that this type of label will be persistent across reboots.
+	These labels are given a special directory in
+	<filename role="directory">/dev</filename>, which will be named
+	based on their file system type.  For example,
+	<acronym>UFS</acronym>2 file system labels will be created in
+	the <filename role="directory">/dev/ufs2</filename>
+	directory.</para>
+
+      <para>A generic label will go away with the next reboot. These
+	labels will be created in the
+	<filename role="directory">/dev/label</filename> directory and
+	are perfect for experimentation.</para>
+
+<!-- XXXTR: How do you create a file system label without running newfs
+            or when there is no newfs (e.g.: cd9660)? -->
+
+      <para>Permanent labels may be placed on the file system using the
+	<command>tunefs</command> or <command>newfs</command>
+	utilities.  To create a permanent label for a
+	<acronym>UFS</acronym>2 file system without destroying any
+	data, issue the following commands:</para>
+
+      <screen>&prompt.root; <userinput>tunefs -L home /dev/da3</userinput></screen>
+
+      <warning>
+	<para>If the file system is full, this may cause data
+	  corruption; however, if the file system is full then the
+	  main goal should be removing stale files and not adding
+	  labels.</para>
+      </warning>
+
+      <para>A label should now exist in
+	<filename role="directory">/dev/ufs2</filename> which may be
+	added to <filename>/etc/fstab</filename>:</para>
+
+      <programlisting>/dev/ufs2/home		/home            ufs     rw              2      2</programlisting>
+
+      <note>
+	<para>The file system must not be mounted while attempting
+	  to run <command>tunefs</command>.</para>
+      </note>
+
+      <para>Now the file system may be mounted like normal:</para>
+
+      <screen>&prompt.root; <userinput>mount /home</userinput></screen>
+
+      <para>The following command can be used to destroy the
+	label:</para>
+
+      <screen>&prompt.root; <userinput>glabel destroy home</userinput></screen>
+
+      <para>From this point on, so long as the
+	<filename>geom_label.ko</filename> kernel module is loaded at
+	boot with <filename>/boot/loader.conf</filename> or the
+	<devicename>GEOM_LABEL</devicename> kernel option is present,
+	the device node may change without any ill effect on the
+	system.</para>
+
+      <para>File systems may also be created with a default label
+	by using the <option>-L</option> flag with
+	<command>newfs</command>.  See the &man.newfs.8; manual page
+	for more information.</para>
+    </sect2>
+  </sect1>
+
+<!--
+  <sect1 id="geom-gjournal">
+    <title>UFS Journaling Through GEOM</title>
+    
+    <indexterm>
+      <primary>GEOM</primary>
+    </indexterm>
+    <indexterm>
+      <primary>Journaling</primary>
+    </indexterm>
+
+    <para>With the release of &os;&nbsp;7.0, the long awaited feature
+      of <acronym>UFS</acronym> journals has been implemented.  The
+      implementation itself is provided through the
+      <acronym>GEOM</acronym> subsystem and is easily configured
+      via the &man.gjournal.8; utility.</para>
+
+    <para>What is journaling?  Journaling capability stores a log of
+      file system transactions, i.e.: changes that make up a complete
+      disk write operation, before meta-data and file writes are
+      committed to the disk proper. This transaction log can later
+      be replayed to redo file system transactions, preventing file
+      system inconsistencies.</para>
+
+    <para>This method is yet another mechanism to protect against data
+      loss and inconsistencies of the file system.  Unlike Soft Updates
+      which tracks and enforces meta-data updates and Snapshots which
+      is an image of the file system, an actual log is stored at the
+      end sector and, in some cases, may be stored on another disk
+      entirely.</para>
+
+    <para>Unlike other file system journaling implementations, the
+      <command>gjournal</command> method is block based and not
+      implemented as part of the file system - only as a
+      <acronym>GEOM</acronym> extension.</para>
+
+    <para>To enable support for <command>gjournal</command>, the
+      &os; kernel must have the following option - which is the
+      default on 7.X systems:</para>
+
+    <programlisting>options	UFS_GJOURNAL</programlisting>
+
+    <para>Creating a journal on a free file system may now be done
+      using the following steps, considering that the
+      <devicename>da4</devicename> is a new <acronym>SCSI</acronym>
+      disk:</para>
+
+    <screen>&prompt.root; <userinput>gjournal label /dev/da4</userinput>
+    <userinput>gjournal load</userinput></screen>
+
+    <para>At this point, there should be a
+      <devicename>/dev/da4</devicename> device node and a
+      <devicename>/dev/da4.journal</devicename> device node.  A
+      file system may now be created on this device:</para>
+
+    <screen>&prompt.root; <userinput>newfs -O 2 -J /dev/da4.journal</userinput></screen>
+
+    <para>The previously issued command will create a
+      <acronym>UFS</acronym>2 file system with journaling being made
+      active.
+
+    <para>Effectively <command>mount</command> the device at the
+      desired point with:</para>
+
+    <screen>&prompt.root <userinput>mount /dev/da4.journal /mnt</userinput></screen>
+
+    <note>
+      <para>In the case of several slices, a journal will be created
+	for each individual slice.  For instance, if ad4s1 and ad4s2
+	are both slices, then <command>gjournal</command> will create
+	ad4s1.journal and ad4s2.journal.  In the case of the command
+	being run twice, the result will be
+	<quote>journals</quote>.</para>
+    </note>
+
+    <para>Under some circumstances, keeping the journal on another disk
+      may be desired.  For these cases, the journal provider or storage
+      device should be listed after the device to enable journaling
+      on.  Journaling may also be enabled on current file systems by
+      using <command>tunefs</command>; however, always make a backup
+      before attempting to alter a file system.  In most cases, the
+      <command>gjournal</command> will fail if it is unable to create
+      the actual journal but this does not protect against data loss
+      incurred as a result of misusing
+      <command>tunefs</command>.</para>
+  </sect1>
+-->
+</chapter>
+
+<!--
+     Local Variables:
+     mode: sgml
+     sgml-declaration: "../chapter.decl"
+     sgml-indent-data: t
+     sgml-omittag: nil
+     sgml-always-quote-attributes: t
+     sgml-parent-document: ("../book.sgml" "part" "chapter")
+     End:
+-->
