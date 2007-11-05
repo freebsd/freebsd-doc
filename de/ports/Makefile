@@ -1,6 +1,6 @@
 # $FreeBSD$
-# $FreeBSDde: de-www/ports/Makefile,v 1.2 2007/10/19 08:30:28 jkois Exp $
-# basiert auf: 1.48
+# $FreeBSDde: de-www/ports/Makefile,v 1.3 2007/10/28 13:00:38 jkois Exp $
+# basiert auf: 1.49
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -97,8 +97,8 @@ all install clean:
 	cd ${.CURDIR}; \
 		${MAKE} ${MAKEFLAGS} -f ${.CURDIR}/Makefile.inc0 ${.TARGET}
 .if defined(WITH_PORTS_GROWTH)
-#	cd growth; \
-#		${MAKE} ${MAKEFLAGS} ${.TARGET}
+	cd growth; \
+		${MAKE} ${MAKEFLAGS} ${.TARGET}
 beforeinstall:
 .else
 beforeinstall:
