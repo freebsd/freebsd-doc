@@ -5,8 +5,8 @@
 ]>
 <!--
      $FreeBSD$
-     $FreeBSDde: de-www/index.xsl,v 1.76 2007/03/31 14:27:06 jkois Exp $
-     basiert auf: 1.160
+     $FreeBSDde: de-www/index.xsl,v 1.77 2007/10/27 19:01:59 jkois Exp $
+     basiert auf: 1.161
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -109,10 +109,12 @@
 					  <a href="&u.rel.announce;">Produktionsreife
                                             &rel.current;</a>
 					</li>
+<!-- Should be re-enabled when 7.0 is out IE, when rel2 = 6.X
 					<li>
 					  <a href="&u.rel2.announce;">Produktionsreife (alt)
                                             &rel2.current;</a>
 					</li>
+-->
 			    <xsl:if test="'&beta.testing;' != 'IGNORE'">
 					  <li>
 					    <a href="&base;/where.html#helptest">Testversion
