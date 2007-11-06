@@ -1,4 +1,4 @@
-# $FreeBSD: www/hu/Makefile,v 1.4 2007/04/20 20:01:29 gabor Exp $
+# $FreeBSD: www/hu/Makefile,v 1.5 2007/09/10 21:43:26 gabor Exp $
 
 ###################################################
 # The FreeBSD Hungarian Documentation Project     #
@@ -53,5 +53,7 @@ CLEANFILES+=	index.html
 XMLDOCS=	index:xsl:${XML_NEWS_NEWS}:
 DEPENDSET.index=	transtable mirrors news press events \
 			advisories notices
+
+DATESUBST=	's/<!ENTITY date[ \t]*"$$Free[B]SD. .* \(.* .*\) .* .* $$">/<!ENTITY date	"Utols\&oacute\; m\&oacute\;dos\&iacute\;t\&aacute\;s: \1">/'
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
