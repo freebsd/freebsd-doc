@@ -1,4 +1,4 @@
-# $FreeBSD: www/es/copyright/Makefile,v 1.2 1999/09/06 07:03:01 peter Exp $
+# $FreeBSD: www/es/copyright/Makefile,v 1.3 2000/11/29 23:56:56 kuriyama Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -7,19 +7,10 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS=	license.sgml
-DOCS+=	freebsd-license.sgml
+DOCS=	freebsd-license.sgml
 DOCS+=	daemon.sgml
 DOCS+=	copyright.sgml
 
 INDEXLINK= copyright.html
-
-DATA+= COPYING COPYING.LIB ${LEGAL}
-
-# FreeBSD Ports redistribution restrictions
-#LEGAL= LEGAL
-#CLEANFILES+= ${LEGAL}
-#${LEGAL}: $${CVSROOT}/ports/LEGAL,v
-#	co -q -p ${.ALLSRC} > ${.TARGET}
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"

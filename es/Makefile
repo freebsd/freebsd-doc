@@ -1,4 +1,4 @@
-# $FreeBSD: www/es/Makefile,v 1.20 2005/12/06 23:09:33 jcamou Exp $
+# $FreeBSD: www/es/Makefile,v 1.21 2006/08/19 21:22:30 hrs Exp $
 # $FreeBSDes: www/es/Makefile,v 1.3 2004/09/07 21:43:32 jcamou Exp $
 
 .if exists(Makefile.conf)
@@ -12,12 +12,10 @@
 
 DOCS=  about.sgml
 DOCS+=  applications.sgml
-DOCS+= auditors.sgml
 DOCS+= availability.sgml
 DOCS+= community.sgml
 DOCS+= docs.sgml
 DOCS+= features.sgml
-DOCS+= index.sgml
 DOCS+= internet.sgml
 DOCS+= mailto.sgml
 DOCS+= publish.sgml
@@ -34,7 +32,6 @@ SUBDIR=  security
 #SUBDIR+= commercial
 SUBDIR+= docproj
 SUBDIR+= news
-SUBDIR+= alpha
 SUBDIR+= internal
 SUBDIR+= copyright
 SUBDIR+= search
@@ -42,7 +39,6 @@ SUBDIR+= search
 SUBDIR+= projects
 SUBDIR+= releases
 #SUBDIR+= doc-es
-SUBDIR+= gnome
 
 .if !defined(WEB_ONLY) || empty(WEB_ONLY)
 SUBDIR+= ports
