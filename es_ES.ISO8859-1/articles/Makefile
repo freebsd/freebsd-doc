@@ -11,6 +11,7 @@ SUBDIR+= explaining-bsd
 SUBDIR+= fbsd-from-scratch
 SUBDIR+= fdp-es
 SUBDIR+= laptop
+SUBDIR+= linux-comparison
 SUBDIR+= mailing-list-faq
 SUBDIR+= p4-primer
 SUBDIR+= problem-reports
