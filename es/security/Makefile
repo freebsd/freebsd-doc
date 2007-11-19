@@ -1,4 +1,4 @@
-# $FreeBSD: www/es/security/Makefile,v 1.2 1999/09/06 07:03:14 peter Exp $
+# $FreeBSD: www/es/security/Makefile,v 1.3 2000/11/29 23:57:09 kuriyama Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -7,10 +7,7 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS=  
-DOCS+=	programmers.sgml
-DOCS+=	security.sgml
-DOCS+=  secure.sgml
+DOCS=	security.sgml
 
 INDEXLINK= security.html
 
