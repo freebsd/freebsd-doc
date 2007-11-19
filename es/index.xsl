@@ -4,16 +4,13 @@
 <!ENTITY title "El Proyecto FreeBSD">
 ]>
 
-<!-- $FreeBSD: www/es/index.xsl,v 1.18 2007/02/17 13:19:56 jesusr Exp $ -->
-<!-- $FreeBSDes: www/es/index.xsl,v 1.4 2004/09/07 21:46:11 jcamou Exp $ -->
-
 <!-- The FreeBSD Spanish Documentation Project
-     Original Revision: r1.160-->
+     Original Revision: r1.160			-->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
 
-  <xsl:variable name="date" select="'$FreeBSD: www/es/index.xsl,v 1.18 2007/02/17 13:19:56 jesusr Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/es/index.xsl,v 1.19 2007/11/07 09:01:08 gabor Exp $'"/>
 
   <!-- these params should be externally bound. The values
        here are not used actually -->  
@@ -335,7 +332,7 @@
       <div id="FOOTER">
 	&copyright;
 
-	La marca FreeBSD es el trademark ragistrado de la Fundaci&oacute;n de
+	La marca FreeBSD es el trademark registrado de la Fundaci&oacute;n de
 	FreeBSD y es usado con el permiso de la <a
 	  href="http://www.freebsdfoundation.org/documents/Guidelines.shtml">Fundaci&oacute;n
 	de FreeBSD</a> por el proyecto FreeBSD.
