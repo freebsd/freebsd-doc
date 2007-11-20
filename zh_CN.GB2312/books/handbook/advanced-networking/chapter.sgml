@@ -2,7 +2,7 @@
      The FreeBSD Documentation Project
      The FreeBSD Chinese Documentation Project
 
-     Original revision: 1.399
+     Original revision: 1.400
      $FreeBSD$
 -->
 
@@ -2598,6 +2598,176 @@ BEGEMOT-BRIDGE-MIB::begemotBridgeStpDesignatedRoot."bridge2" = Hex-STRING: 80 00
 	<screen>&prompt.user; <userinput>snmpset -v 2c -c private bridge1.example.com</userinput>
 BEGEMOT-BRIDGE-MIB::begemotBridgeDefaultBridgeIf.0 s bridge2</screen>
       </sect3>
+    </sect2>
+  </sect1>
+
+  <sect1 id="network-aggregation">
+    <sect1info>
+      <authorgroup>
+        <author>
+	  <firstname>Andrew</firstname>
+	  <surname>Thompson</surname>
+	  <contrib>Written by </contrib>
+        </author>
+      </authorgroup>
+    </sect1info>
+    <title>链路聚合与故障转移</title>
+
+    <indexterm><primary>lagg</primary></indexterm>
+    <indexterm><primary>failover (故障转移)</primary></indexterm>
+    <indexterm><primary>fec</primary></indexterm>
+    <indexterm><primary>lacp</primary></indexterm>
+    <indexterm><primary>loadbalance (负载均衡)</primary></indexterm>
+    <indexterm><primary>roundrobin (轮转)</primary></indexterm>
+
+    <sect2>
+      <title>介绍</title>
+      <para>使用 &man.lagg.4; 接口， 能够将多个网络接口聚合为一个虚拟接口，
+	以提供容灾和高速连接的能力。</para>
+    </sect2>
+
+    <sect2>
+      <title>运行模式</title>
+
+      <variablelist>
+
+	<varlistentry><term>failover (故障转移)</term>
+
+	<listitem>
+	<para>只通过主网口收发数据。 如果主网口不可用， 则使用下一个激活的网口。
+	  您在这里加入的第一个网口便会被视为主网口； 此后加入的其他网口，
+	  则会被视为故障转移的备用网口。</para>
+        </listitem>
+        </varlistentry>
+
+	<varlistentry><term>fec</term>
+
+	<listitem>
+	<para>用以支持 Cisco EtherChannel。 这是一种静态配置，
+	  并不进行节点间协商或交换以太网帧来监控链路情况。
+	  如果交换机支持 LACP， 则应使用后者而非这种配置。</para>
+
+	<para>这种做法是将输出流量在激活的网口之间以协议头散列信息为依据分拆，
+	  并接收来自任意激活网口的入流量。 散列信息包含以太网源地址、
+	  目的地址， 以及 (如果有的话) VLAN tag 和 IPv4/IPv6 源地址及目的地址信息。</para>
+        </listitem>
+	</varlistentry>
+
+	<varlistentry><term>lacp</term>
+
+	<listitem>
+	<para>支持 IEEE 802.3ad 链路聚合控制协议
+	  (LACP) 和标记协议。 LACP 能够在节点与若干链路聚合组之间协商链路。
+	  每一个链路聚合组 (LAG) 由一组相同速度、 以全双工模式运行的网口组成。
+	  流量在 LAG 中的网口之间， 会以总速度最大的原则进行分摊。
+	  当物理链路发生变化时， 链路聚合会迅速适应变动形成新的配置。</para>
+
+	<para>这种做法也是将输出流量在激活的网口之间以协议头散列信息为依据分拆，
+	  并接收来自任意激活网口的入流量。 散列信息包含以太网源地址、
+	  目的地址， 以及 (如果有的话) VLAN tag 和 IPv4/IPv6 源地址及目的地址信息。</para>
+        </listitem>
+	</varlistentry>
+
+	<varlistentry><term>loadbalance (负载均衡)</term>
+
+	<listitem>
+	<para>这是 <emphasis>fec</emphasis> 模式的别名。</para>
+        </listitem>
+        </varlistentry>
+
+	<varlistentry><term>roundrobin (轮转)</term>
+
+	<listitem>
+	<para>将输出流量以轮转方式在所有激活端口之间调度， 并从任意激活端口接收进入流量。
+	  这种模式违反了以太网帧排序规则， 因此应小心使用。</para>
+        </listitem>
+	</varlistentry>
+      </variablelist>
+    </sect2>
+
+    <sect2>
+      <title>例子</title>
+
+      <example id="networking-lacp-aggregation-cisco">
+	<title>与 Cisco 交换机配合完成 LACP 链路聚合</title>
+
+	<para>在这个例子中， 我们将 &os; 的两个网口作为一个负载均衡和故障转移链路聚合组接到交换机上。
+	  在此基础上， 还可以增加更多的网口， 以提高吞吐量和故障容灾能力。
+	  由于以太网链路上两节点间的帧序是强制性的， 因此两个节点之间的连接速度，
+	  会取决于一块网卡的最大速度。 传输算法会尽量采用更多的信息，
+	  以便将不同的网络流量分摊到不同的网络接口上， 并平衡不同网口的负载。</para>
+
+	<para>在 Cisco 交换机上将网口添加到通道组 （channel group) 中。</para>
+
+	<screen>interface FastEthernet0/1
+ channel-group 1 mode active
+ channel-protocol lacp
+!
+interface FastEthernet0/2
+ channel-group 1 mode active
+ channel-protocol lacp
+!</screen>
+
+	<para>在 &os; 机器上创建 lagg 接口。</para>
+
+        <screen>&prompt.root; <userinput>ifconfig lagg0 create</userinput>
+&prompt.root; <userinput>ifconfig lagg0 up laggproto lacp laggport fxp0 laggport fxp1</userinput></screen>
+
+	<para>从 ifconfig 查看接口状态： 标记为
+	  <emphasis>ACTIVE</emphasis> 的接口属于激活的聚合组，
+	  并且已经完成了与交换机的协商过程， 能够收发网络流量了。
+	  您可以利用 &man.ifconfig.8;
+	  的输出细节来检视 LAG 标识。</para>
+
+	<screen>lagg0: flags=8843&lt;UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST&gt; metric 0 mtu 1500
+        options=8&lt;VLAN_MTU&gt;
+        ether 00:05:5d:71:8d:b8
+        media: Ethernet autoselect
+        status: active
+        laggproto lacp
+        laggport: fxp1 flags=1c&lt;ACTIVE,COLLECTING,DISTRIBUTING&gt;
+        laggport: fxp0 flags=1c&lt;ACTIVE,COLLECTING,DISTRIBUTING&gt;</screen>
+
+	<para>交换机上会显示哪些端口是激活的。 如果需要了解更多细节， 则可以使用
+	  <userinput>show lacp neighbor detail</userinput>。</para>
+
+	<screen>switch# show lacp neighbor 
+Flags:  S - Device is requesting Slow LACPDUs 
+        F - Device is requesting Fast LACPDUs
+        A - Device is in Active mode       P - Device is in Passive mode     
+
+Channel group 1 neighbors
+
+Partner's information:
+
+                  LACP port                        Oper    Port     Port
+Port      Flags   Priority  Dev ID         Age     Key     Number   State
+Fa0/1     SA      32768     0005.5d71.8db8  29s    0x146   0x3      0x3D  
+Fa0/2     SA      32768     0005.5d71.8db8  29s    0x146   0x4      0x3D</screen>
+
+      </example>
+      <example id="networking-lagg-failover">
+	<title>故障转移模式</title>
+
+	<para>故障转移模式可以用于在主端口连接中断时切换到备用端口。</para>
+
+        <screen>&prompt.root; <userinput>ifconfig lagg0 create</userinput>
+&prompt.root; <userinput>ifconfig lagg0 up laggproto failover laggport fxp0 laggport fxp1</userinput></screen>
+
+	<screen>lagg0: flags=8843&lt;UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST&gt; metric 0 mtu 1500
+        options=8&lt;VLAN_MTU&gt;
+        ether 00:05:5d:71:8d:b8
+        media: Ethernet autoselect
+        status: active
+        laggproto failover
+        laggport: fxp1 flags=0&lt;&gt;
+        laggport: fxp0 flags=5&lt;MASTER,ACTIVE&gt;</screen>
+
+	<para>系统将在
+	  <devicename>fxp0</devicename> 上进行流量的收发。 如果
+	  <devicename>fxp0</devicename> 的连接中断， 则 <devicename>fxp1</devicename>
+	  会自动成为激活连接。 如果主端口的连接恢复， 则它又会成为激活连接。</para>
+      </example>
     </sect2>
   </sect1>
 
