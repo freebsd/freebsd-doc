@@ -1,5 +1,5 @@
 # $FreeBSD$
-# $FreeBSDru: frdp/doc/ru_RU.KOI8-R/man/Makefile,v 1.7 2007/11/20 06:53:01 ru Exp $
+# $FreeBSDru: frdp/doc/ru_RU.KOI8-R/man/Makefile,v 1.8 2007/11/21 15:56:48 ru Exp $
 
 BINDIR=	${SHAREDIR}/man/ru_RU.KOI8-R
 
