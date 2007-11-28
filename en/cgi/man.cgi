@@ -33,7 +33,8 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $FreeBSD: man.cgi,v 1.168 2007/01/27 21:37:10 simon Exp wosch $
+# $Id: man.cgi,v 1.192 2007-11-28 20:36:21 hrs Exp $
+# $FreeBSD: www/en/cgi/man.cgi,v 1.191 2007/08/27 18:41:00 wosch Exp $
 
 ############################################################################
 # !!! man.cgi is stale perl4 code !!!
@@ -152,104 +153,101 @@ foreach my $os ( keys %$sectionpath ) {
 $manLocalDir    = '/usr/local/www/bsddoc/man';
 $manPathDefault = 'FreeBSD 6.2-RELEASE';
 
-%manPath = (
-    'FreeBSD 6.2-RELEASE and Ports',
-"$manLocalDir/FreeBSD-6.2-RELEASE/man:$manLocalDir/FreeBSD-6.2-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports",
+%manPath = 
+    (
+     'FreeBSD 7.0-RELEASE and Ports',  "$manLocalDir/FreeBSD-7.0-RELEASE/man:$manLocalDir/FreeBSD-7.0-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports",
+     'FreeBSD 6.3-RELEASE and Ports',  "$manLocalDir/FreeBSD-6.3-RELEASE/man:$manLocalDir/FreeBSD-6.3-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports",
+     'FreeBSD 6.2-RELEASE and Ports',  "$manLocalDir/FreeBSD-6.2-RELEASE/man:$manLocalDir/FreeBSD-6.2-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports",
 
-    'FreeBSD 7-current',
-"$manLocalDir/FreeBSD-7-current/man:$manLocalDir/FreeBSD-7-current/openssl/man",
-    'FreeBSD 6.2-stable',
-"$manLocalDir/FreeBSD-6.2-stable/man:$manLocalDir/FreeBSD-6.2-stable/openssl/man",
-    'FreeBSD 5.5-stable', "$manLocalDir/FreeBSD-5.5-stable",
+     'FreeBSD 8-current',   "$manLocalDir/FreeBSD-8-current/man:$manLocalDir/FreeBSD-8-current/openssl/man",
 
-    'FreeBSD 6.2-RELEASE',
-"$manLocalDir/FreeBSD-6.2-RELEASE/man:$manLocalDir/FreeBSD-6.2-RELEASE/openssl/man",
-    'FreeBSD 6.1-RELEASE',
-"$manLocalDir/FreeBSD-6.1-RELEASE/man:$manLocalDir/FreeBSD-6.1-RELEASE/openssl/man",
-    'FreeBSD 6.0-RELEASE',
-"$manLocalDir/FreeBSD-6.0-RELEASE/man:$manLocalDir/FreeBSD-6.0-RELEASE/openssl/man",
-    'FreeBSD 5.5-RELEASE',
-"$manLocalDir/FreeBSD-5.5-RELEASE/man:$manLocalDir/FreeBSD-5.5-RELEASE/openssl/man",
-    'FreeBSD 5.4-RELEASE',
-"$manLocalDir/FreeBSD-5.4-RELEASE/man:$manLocalDir/FreeBSD-5.4-RELEASE/openssl/man",
-    'FreeBSD 5.3-RELEASE',
-"$manLocalDir/FreeBSD-5.3-RELEASE/man:$manLocalDir/FreeBSD-5.3-RELEASE/openssl/man",
-    'FreeBSD 5.2.1-RELEASE',
-"$manLocalDir/FreeBSD-5.2-RELEASE/man:$manLocalDir/FreeBSD-5.2-RELEASE/openssl/man",
-    'FreeBSD 5.2-RELEASE',
-"$manLocalDir/FreeBSD-5.2-RELEASE/man:$manLocalDir/FreeBSD-5.2-RELEASE/openssl/man",
-    'FreeBSD 5.1-RELEASE',
-"$manLocalDir/FreeBSD-5.1-RELEASE/man:$manLocalDir/FreeBSD-5.1-RELEASE/openssl/man",
-    'FreeBSD 5.0-RELEASE', "$manLocalDir/FreeBSD-5.0-RELEASE",
-    'FreeBSD 4.11-RELEASE',
-"$manLocalDir/FreeBSD-4.11-RELEASE/man:$manLocalDir/FreeBSD-4.11-RELEASE/openssl/man:$manLocalDir/FreeBSD-4.11-RELEASE/perl/man",
-    'FreeBSD 4.10-RELEASE',
-"$manLocalDir/FreeBSD-4.10-RELEASE/man:$manLocalDir/FreeBSD-4.10-RELEASE/openssl/man:$manLocalDir/FreeBSD-4.10-RELEASE/perl/man",
-    'FreeBSD 4.9-RELEASE',     "$manLocalDir/FreeBSD-4.9-RELEASE",
-    'FreeBSD 4.8-RELEASE',     "$manLocalDir/FreeBSD-4.8-RELEASE",
-    'FreeBSD 4.7-RELEASE',     "$manLocalDir/FreeBSD-4.7-RELEASE",
-    'FreeBSD 4.6.2-RELEASE',   "$manLocalDir/FreeBSD-4.6.2-RELEASE",
-    'FreeBSD 4.6-RELEASE',     "$manLocalDir/FreeBSD-4.6-RELEASE",
-    'FreeBSD 4.5-RELEASE',     "$manLocalDir/FreeBSD-4.5-RELEASE",
-    'FreeBSD 4.4-RELEASE',     "$manLocalDir/FreeBSD-4.4-RELEASE",
-    'FreeBSD 4.3-RELEASE',     "$manLocalDir/FreeBSD-4.3-RELEASE",
-    'FreeBSD 4.2-RELEASE',     "$manLocalDir/FreeBSD-4.2-RELEASE",
-    'FreeBSD 4.1.1-RELEASE',   "$manLocalDir/FreeBSD-4.1.1-RELEASE",
-    'FreeBSD 4.1-RELEASE',     "$manLocalDir/FreeBSD-4.1-RELEASE",
-    'FreeBSD 4.0-RELEASE',     "$manLocalDir/FreeBSD-4.0-RELEASE",
-    'FreeBSD 3.5.1-RELEASE',   "$manLocalDir/FreeBSD-3.5.1-RELEASE",
-    'FreeBSD 3.4-RELEASE',     "$manLocalDir/FreeBSD-3.4-RELEASE",
-    'FreeBSD 3.3-RELEASE',     "$manLocalDir/FreeBSD-3.3-RELEASE",
-    'FreeBSD 3.2-RELEASE',     "$manLocalDir/FreeBSD-3.2-RELEASE",
-    'FreeBSD 3.1-RELEASE',     "$manLocalDir/FreeBSD-3.1-RELEASE",
-    'FreeBSD 3.0-RELEASE',     "$manLocalDir/FreeBSD-3.0-RELEASE",
-    'FreeBSD 2.2.5-RELEASE',   "$manLocalDir/FreeBSD-2.2.5-RELEASE",
-    'FreeBSD 2.2.6-RELEASE',   "$manLocalDir/FreeBSD-2.2.6-RELEASE",
-    'FreeBSD 2.2.7-RELEASE',   "$manLocalDir/FreeBSD-2.2.7-RELEASE",
-    'FreeBSD 2.2.8-RELEASE',   "$manLocalDir/FreeBSD-2.2.8-RELEASE",
-    'FreeBSD 2.2.2-RELEASE',   "$manLocalDir/FreeBSD-2.2.2-RELEASE",
-    'FreeBSD 2.2.1-RELEASE',   "$manLocalDir/FreeBSD-2.2.1-RELEASE",
-    'FreeBSD 2.1.7.1-RELEASE', "$manLocalDir/FreeBSD-2.1.7.1-RELEASE",
-    'FreeBSD 2.1.6.1-RELEASE', "$manLocalDir/FreeBSD-2.1.6.1-RELEASE",
-    'FreeBSD 2.1.5-RELEASE',   "$manLocalDir/FreeBSD-2.1.5-RELEASE",
-    'FreeBSD 2.1.0-RELEASE',   "$manLocalDir/FreeBSD-2.1.0-RELEASE",
-    'FreeBSD 2.0.5-RELEASE',   "$manLocalDir/FreeBSD-2.0.5-RELEASE",
-    'FreeBSD 2.0-RELEASE',     "$manLocalDir/FreeBSD-2.0-RELEASE",
-    'FreeBSD 1.1.5.1-RELEASE', "$manLocalDir/FreeBSD-1.1.5.1-RELEASE",
-    'FreeBSD 1.1-RELEASE',     "$manLocalDir/FreeBSD-1.1-RELEASE",
-    'FreeBSD 1.0-RELEASE',     "$manLocalDir/FreeBSD-1.0-RELEASE",
+     'FreeBSD 7.0-stable',   "$manLocalDir/FreeBSD-7.0-stable/man:$manLocalDir/FreeBSD-7.0-stable/openssl/man",
+     'FreeBSD 7.0-RELEASE',   "$manLocalDir/FreeBSD-7.0-RELEASE/man:$manLocalDir/FreeBSD-7.0-RELEASE/openssl/man",
+     'FreeBSD Ports 7.0-RELEASE', "$manLocalDir/FreeBSD-ports-7.0-RELEASE",
 
-    'FreeBSD Ports 6.2-RELEASE', "$manLocalDir/FreeBSD-ports-6.2-RELEASE",
-    'FreeBSD Ports 6.1-RELEASE', "$manLocalDir/FreeBSD-ports-6.1-RELEASE",
-    'FreeBSD Ports 5.1-RELEASE', "$manLocalDir/FreeBSD-ports-5.1-RELEASE",
-    'FreeBSD Ports 5.0-RELEASE', "$manLocalDir/FreeBSD-ports-5.0-RELEASE",
-    'FreeBSD Ports 4.7-RELEASE', "$manLocalDir/FreeBSD-ports-4.7-RELEASE",
+     'FreeBSD 6.3-stable',   "$manLocalDir/FreeBSD-6.3-stable/man:$manLocalDir/FreeBSD-6.3-stable/openssl/man",
+     'FreeBSD 6.3-RELEASE',   "$manLocalDir/FreeBSD-6.3-RELEASE/man:$manLocalDir/FreeBSD-6.3-RELEASE/openssl/man",
+     'FreeBSD Ports 6.3-RELEASE', "$manLocalDir/FreeBSD-ports-6.3-RELEASE",
 
-    'OpenBSD 2.0', "$manLocalDir/OpenBSD-2.0",
-    'OpenBSD 2.1', "$manLocalDir/OpenBSD-2.1",
-    'OpenBSD 2.2', "$manLocalDir/OpenBSD-2.2",
-    'OpenBSD 2.3', "$manLocalDir/OpenBSD-2.3",
-    'OpenBSD 2.4', "$manLocalDir/OpenBSD-2.4",
-    'OpenBSD 2.5', "$manLocalDir/OpenBSD-2.5",
-    'OpenBSD 2.6', "$manLocalDir/OpenBSD-2.6",
-    'OpenBSD 2.7', "$manLocalDir/OpenBSD-2.7",
-    'OpenBSD 2.8', "$manLocalDir/OpenBSD-2.8",
-    'OpenBSD 2.9', "$manLocalDir/OpenBSD-2.9",
-    'OpenBSD 3.0', "$manLocalDir/OpenBSD-3.0",
-    'OpenBSD 3.1', "$manLocalDir/OpenBSD-3.1",
-    'OpenBSD 3.2', "$manLocalDir/OpenBSD-3.2",
-    'OpenBSD 3.3', "$manLocalDir/OpenBSD-3.3",
-    'OpenBSD 3.4',
-    "$manLocalDir/OpenBSD-3.4/share/man:$manLocalDir/OpenBSD-3.4/X11R6/man",
-    'OpenBSD 3.5',
-    "$manLocalDir/OpenBSD-3.5/share/man:$manLocalDir/OpenBSD-3.5/X11R6/man",
-    'OpenBSD 3.6',
-    "$manLocalDir/OpenBSD-3.6/share/man:$manLocalDir/OpenBSD-3.6/X11R6/man",
-    'OpenBSD 3.7', "$manLocalDir/OpenBSD-3.7",
-    'OpenBSD 3.8', "$manLocalDir/OpenBSD-3.8",
-    'OpenBSD 3.9', "$manLocalDir/OpenBSD-3.9",
-    'OpenBSD 4.0', "$manLocalDir/OpenBSD-4.0",
-    'OpenBSD 4.1', "$manLocalDir/OpenBSD-4.1",
+     'FreeBSD 6.2-stable',   "$manLocalDir/FreeBSD-6.2-stable/man:$manLocalDir/FreeBSD-6.2-stable/openssl/man",
+     'FreeBSD 6.2-RELEASE',   "$manLocalDir/FreeBSD-6.2-RELEASE/man:$manLocalDir/FreeBSD-6.2-RELEASE/openssl/man",
+     'FreeBSD Ports 6.2-RELEASE', "$manLocalDir/FreeBSD-ports-6.2-RELEASE",
+
+     'FreeBSD 6.1-RELEASE',   "$manLocalDir/FreeBSD-6.1-RELEASE/man:$manLocalDir/FreeBSD-6.1-RELEASE/openssl/man",
+     'FreeBSD 6.0-RELEASE',   "$manLocalDir/FreeBSD-6.0-RELEASE/man:$manLocalDir/FreeBSD-6.0-RELEASE/openssl/man",
+
+     'FreeBSD 5.5-stable',   "$manLocalDir/FreeBSD-5.5-stable",
+     'FreeBSD 5.5-RELEASE',   "$manLocalDir/FreeBSD-5.5-RELEASE/man:$manLocalDir/FreeBSD-5.5-RELEASE/openssl/man",
+     'FreeBSD Ports 5.5-RELEASE', "$manLocalDir/FreeBSD-ports-5.4-RELEASE",
+
+     'FreeBSD 5.4-RELEASE',   "$manLocalDir/FreeBSD-5.4-RELEASE/man:$manLocalDir/FreeBSD-5.4-RELEASE/openssl/man",
+     'FreeBSD 5.3-RELEASE',   "$manLocalDir/FreeBSD-5.3-RELEASE/man:$manLocalDir/FreeBSD-5.3-RELEASE/openssl/man",
+     'FreeBSD 5.2.1-RELEASE',   "$manLocalDir/FreeBSD-5.2-RELEASE/man:$manLocalDir/FreeBSD-5.2-RELEASE/openssl/man",
+     'FreeBSD 5.2-RELEASE',   "$manLocalDir/FreeBSD-5.2-RELEASE/man:$manLocalDir/FreeBSD-5.2-RELEASE/openssl/man",
+     'FreeBSD 5.1-RELEASE',   "$manLocalDir/FreeBSD-5.1-RELEASE/man:$manLocalDir/FreeBSD-5.1-RELEASE/openssl/man",
+     'FreeBSD 5.0-RELEASE',   "$manLocalDir/FreeBSD-5.0-RELEASE",
+
+     'FreeBSD 4.11-stable',   "$manLocalDir/FreeBSD-4.11-stable",
+     'FreeBSD 4.11-RELEASE',  "$manLocalDir/FreeBSD-4.11-RELEASE/man:$manLocalDir/FreeBSD-4.11-RELEASE/openssl/man:$manLocalDir/FreeBSD-4.11-RELEASE/perl/man",
+     'FreeBSD Ports 4.11-RELEASE', "$manLocalDir/FreeBSD-ports-4.11-RELEASE",
+
+     'FreeBSD 4.10-RELEASE',  "$manLocalDir/FreeBSD-4.10-RELEASE/man:$manLocalDir/FreeBSD-4.10-RELEASE/openssl/man:$manLocalDir/FreeBSD-4.10-RELEASE/perl/man",
+     'FreeBSD 4.9-RELEASE',   "$manLocalDir/FreeBSD-4.9-RELEASE",
+     'FreeBSD 4.8-RELEASE',   "$manLocalDir/FreeBSD-4.8-RELEASE",
+     'FreeBSD 4.7-RELEASE',   "$manLocalDir/FreeBSD-4.7-RELEASE",
+     'FreeBSD 4.6.2-RELEASE', "$manLocalDir/FreeBSD-4.6.2-RELEASE",
+     'FreeBSD 4.6-RELEASE',   "$manLocalDir/FreeBSD-4.6-RELEASE",
+     'FreeBSD 4.5-RELEASE',   "$manLocalDir/FreeBSD-4.5-RELEASE",
+     'FreeBSD 4.4-RELEASE',   "$manLocalDir/FreeBSD-4.4-RELEASE",
+     'FreeBSD 4.3-RELEASE',   "$manLocalDir/FreeBSD-4.3-RELEASE",
+     'FreeBSD 4.2-RELEASE',   "$manLocalDir/FreeBSD-4.2-RELEASE",
+     'FreeBSD 4.1.1-RELEASE', "$manLocalDir/FreeBSD-4.1.1-RELEASE",
+     'FreeBSD 4.1-RELEASE',   "$manLocalDir/FreeBSD-4.1-RELEASE",
+     'FreeBSD 4.0-RELEASE',   "$manLocalDir/FreeBSD-4.0-RELEASE",
+     'FreeBSD 3.5.1-RELEASE',   "$manLocalDir/FreeBSD-3.5.1-RELEASE",
+     'FreeBSD 3.4-RELEASE',   "$manLocalDir/FreeBSD-3.4-RELEASE",
+     'FreeBSD 3.3-RELEASE',   "$manLocalDir/FreeBSD-3.3-RELEASE",
+     'FreeBSD 3.2-RELEASE',   "$manLocalDir/FreeBSD-3.2-RELEASE",
+     'FreeBSD 3.1-RELEASE',   "$manLocalDir/FreeBSD-3.1-RELEASE",
+     'FreeBSD 3.0-RELEASE',   "$manLocalDir/FreeBSD-3.0-RELEASE",
+     'FreeBSD 2.2.5-RELEASE',   "$manLocalDir/FreeBSD-2.2.5-RELEASE",
+     'FreeBSD 2.2.6-RELEASE',   "$manLocalDir/FreeBSD-2.2.6-RELEASE",
+     'FreeBSD 2.2.7-RELEASE',   "$manLocalDir/FreeBSD-2.2.7-RELEASE",
+     'FreeBSD 2.2.8-RELEASE',   "$manLocalDir/FreeBSD-2.2.8-RELEASE",
+     'FreeBSD 2.2.2-RELEASE',   "$manLocalDir/FreeBSD-2.2.2-RELEASE",
+     'FreeBSD 2.2.1-RELEASE',   "$manLocalDir/FreeBSD-2.2.1-RELEASE",
+     'FreeBSD 2.1.7.1-RELEASE', "$manLocalDir/FreeBSD-2.1.7.1-RELEASE",
+     'FreeBSD 2.1.6.1-RELEASE', "$manLocalDir/FreeBSD-2.1.6.1-RELEASE",
+     'FreeBSD 2.1.5-RELEASE', "$manLocalDir/FreeBSD-2.1.5-RELEASE",
+     'FreeBSD 2.1.0-RELEASE', "$manLocalDir/FreeBSD-2.1.0-RELEASE",
+     'FreeBSD 2.0.5-RELEASE', "$manLocalDir/FreeBSD-2.0.5-RELEASE",
+     'FreeBSD 2.0-RELEASE',   "$manLocalDir/FreeBSD-2.0-RELEASE",
+     'FreeBSD 1.1.5.1-RELEASE', "$manLocalDir/FreeBSD-1.1.5.1-RELEASE",
+     'FreeBSD 1.1-RELEASE',   "$manLocalDir/FreeBSD-1.1-RELEASE",
+     'FreeBSD 1.0-RELEASE',   "$manLocalDir/FreeBSD-1.0-RELEASE",
+
+     'OpenBSD 2.0',           "$manLocalDir/OpenBSD-2.0",
+     'OpenBSD 2.1',           "$manLocalDir/OpenBSD-2.1",
+     'OpenBSD 2.2',           "$manLocalDir/OpenBSD-2.2",
+     'OpenBSD 2.3',           "$manLocalDir/OpenBSD-2.3",
+     'OpenBSD 2.4',           "$manLocalDir/OpenBSD-2.4",
+     'OpenBSD 2.5',           "$manLocalDir/OpenBSD-2.5",
+     'OpenBSD 2.6',           "$manLocalDir/OpenBSD-2.6",
+     'OpenBSD 2.7',           "$manLocalDir/OpenBSD-2.7",
+     'OpenBSD 2.8',           "$manLocalDir/OpenBSD-2.8",
+     'OpenBSD 2.9',           "$manLocalDir/OpenBSD-2.9",
+     'OpenBSD 3.0',           "$manLocalDir/OpenBSD-3.0",
+     'OpenBSD 3.1',           "$manLocalDir/OpenBSD-3.1",
+     'OpenBSD 3.2',           "$manLocalDir/OpenBSD-3.2",
+     'OpenBSD 3.3',           "$manLocalDir/OpenBSD-3.3",
+     'OpenBSD 3.4',           "$manLocalDir/OpenBSD-3.4/share/man:$manLocalDir/OpenBSD-3.4/X11R6/man",
+     'OpenBSD 3.5',           "$manLocalDir/OpenBSD-3.5/share/man:$manLocalDir/OpenBSD-3.5/X11R6/man",
+     'OpenBSD 3.6',           "$manLocalDir/OpenBSD-3.6/share/man:$manLocalDir/OpenBSD-3.6/X11R6/man",
+     'OpenBSD 3.7',           "$manLocalDir/OpenBSD-3.7",
+     'OpenBSD 3.8',           "$manLocalDir/OpenBSD-3.8",
+     'OpenBSD 3.9',           "$manLocalDir/OpenBSD-3.9",
+     'OpenBSD 4.0', "$manLocalDir/OpenBSD-4.0",
+     'OpenBSD 4.1', "$manLocalDir/OpenBSD-4.1",
 
     #'NetBSD 0.9',            "$manLocalDir/NetBSD-0.9",
     'NetBSD 1.0',   "$manLocalDir/NetBSD-1.0",
@@ -389,7 +387,8 @@ while ( ( $key, $val ) = each %manPath ) {
     'freebsd-stable4',       'FreeBSD 4.11-stable',
     'freebsd-stable5',       'FreeBSD 5.5-stable',
     'freebsd-stable6',       'FreeBSD 6.2-stable',
-    'freebsd-current',       'FreeBSD 7-current',
+    'freebsd-stable7',       'FreeBSD 7.0-stable',
+    'freebsd-current',       'FreeBSD 8-current',
     'freebsd-release-ports', 'FreeBSD 6.2-RELEASE and Ports',
     'slackware',             'Linux Slackware 3.1',
     'linux-de',              'deutsch - Linux/GNU',
@@ -1223,7 +1222,7 @@ ETX
 }
 
 sub copyright {
-    $id = '$Id: man.cgi,v 1.191 2007-08-27 18:41:00 wosch Exp $';
+    $id = '$Id: man.cgi,v 1.192 2007-11-28 20:36:21 hrs Exp $';
 
     return qq{\
 <pre>
@@ -1281,7 +1280,7 @@ sub faq {
           if $manPathAliases{$_};
     }
 
-    local $id = '$Id: man.cgi,v 1.191 2007-08-27 18:41:00 wosch Exp $';
+    local $id = '$Id: man.cgi,v 1.192 2007-11-28 20:36:21 hrs Exp $';
     return qq{\
 <pre>
 Copyright (c) 1996-2007 <a href="$mailtoURL">Wolfram Schneider</a>
