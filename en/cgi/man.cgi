@@ -33,8 +33,8 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.194 2007-12-02 21:18:14 wosch Exp $
-# $FreeBSD: www/en/cgi/man.cgi,v 1.193 2007/11/29 21:00:24 wosch Exp $
+# $Id: man.cgi,v 1.195 2007-12-02 21:21:18 wosch Exp $
+# $FreeBSD: www/en/cgi/man.cgi,v 1.194 2007/12/02 21:18:14 wosch Exp $
 
 ############################################################################
 # !!! man.cgi is stale perl4 code !!!
@@ -504,8 +504,6 @@ sub do_man {
     local ($u) = $BASE;
 
     return &faq_output($u) if ( $path =~ /\/(faq|help)\.html$/ );
-
-    #return &copyright_output($u) if ($path =~ /copyright.html$/);
     return &get_the_sources if ( $path =~ /source$/ );
 
     return &include_output($path)
@@ -1221,42 +1219,6 @@ ETX
     0;
 }
 
-sub copyright {
-    $id = '$FreeBSD: www/en/cgi/man.cgi,v 1.193 2007/11/29 21:00:24 wosch Exp $';
-
-    return qq{\
-<pre>
-Copyright (c) 1996-2007 <a href="$mailtoURL">Wolfram Schneider</a>
-Copyright (c) 1993-1995 Berkeley Software Design, Inc.
-
-This data is part of a licensed program from BERKELEY SOFTWARE
-DESIGN, INC.  Portions are copyrighted by BSDI, The Regents of
-the University of California, Massachusetts Institute of
-Technology, Free Software Foundation, FreeBSD Inc., and others.
-
-</pre>\n
-This script has the revsion: $id
-<p />
-
-Copyright (&copy;) for man pages by OS vendors.
-<p />
-<a href="ftp://ftp.2bsd.com">2.11 BSD</a>,
-<a href="http://www.hp.com">HP</a>,
-<a href="http://www.freebsd.org">FreeBSD</a>,
-<a href="http://www.cs.vu.nl/~ast/minix.html">Minix</a>,
-<a href="http://slackware.com">Linux Slackware</a>,
-<a href="http://www.linux.de">Linux/de</a>,
-<a href="http://www.netbsd.org">NetBSD</a>,
-<a href="http://www.openbsd.org">OpenBSD</a>,
-<a href="http://plan9.bell-labs.com/plan9/">Plan 9</a>,
-<a href="http://www.sun.com">SunOS</a>,
-<a href="http://www.digital.com">ULTRIX</a>,
-<a href="ftp://elib.zib.de/pub/netlib/att/cs/v7man">Unix Seventh Edition</a>,
-<a href="http://www.xfree86.org">XFree86</a>,
-<a href="http://www.x.org">X11R6</a>
-};
-}
-
 sub faq {
 
     local ( @list, @list2 );
@@ -1280,7 +1242,7 @@ sub faq {
           if $manPathAliases{$_};
     }
 
-    local $id = '$FreeBSD: www/en/cgi/man.cgi,v 1.193 2007/11/29 21:00:24 wosch Exp $';
+    local $id = '$FreeBSD: www/en/cgi/man.cgi,v 1.194 2007/12/02 21:18:14 wosch Exp $';
     return qq{\
 <pre>
 Copyright (c) 1996-2007 <a href="$mailtoURL">Wolfram Schneider</a>
@@ -1363,19 +1325,6 @@ Sections</i> contains pointers to the intro pages for various man
 sections.
 <p />
 };
-}
-
-sub copyright_output {
-    &http_header("text/html");
-    print &html_header("HTML hypertext FreeBSD man page interface") . "<h1>",
-      $www{'head'},
-      "</h1>\n"
-      . &copyright . qq{\
-<hr />
-
-<a href="$_[0]">home</a>
-};
-    &html_footer;
 }
 
 sub faq_output {
