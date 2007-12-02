@@ -33,8 +33,8 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.193 2007-11-29 21:00:24 wosch Exp $
-# $FreeBSD: www/en/cgi/man.cgi,v 1.192 2007/11/28 20:36:21 hrs Exp $
+# $Id: man.cgi,v 1.194 2007-12-02 21:18:14 wosch Exp $
+# $FreeBSD: www/en/cgi/man.cgi,v 1.193 2007/11/29 21:00:24 wosch Exp $
 
 ############################################################################
 # !!! man.cgi is stale perl4 code !!!
@@ -1222,7 +1222,7 @@ ETX
 }
 
 sub copyright {
-    $id = '$FreeBSD: www/en/cgi/man.cgi,v 1.192 2007/11/28 20:36:21 hrs Exp $';
+    $id = '$FreeBSD: www/en/cgi/man.cgi,v 1.193 2007/11/29 21:00:24 wosch Exp $';
 
     return qq{\
 <pre>
@@ -1280,7 +1280,7 @@ sub faq {
           if $manPathAliases{$_};
     }
 
-    local $id = '$Id: man.cgi,v 1.193 2007-11-29 21:00:24 wosch Exp $';
+    local $id = '$FreeBSD: www/en/cgi/man.cgi,v 1.193 2007/11/29 21:00:24 wosch Exp $';
     return qq{\
 <pre>
 Copyright (c) 1996-2007 <a href="$mailtoURL">Wolfram Schneider</a>
