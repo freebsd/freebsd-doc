@@ -96,6 +96,7 @@ MAN=	apply.1 \
 	rwall.1 \
 	rwho.1 \
 	script.1 \
+	sh.1 \
 	shar.1 \
 	sleep.1 \
 	split.1 \
