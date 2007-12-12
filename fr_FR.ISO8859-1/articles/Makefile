@@ -24,6 +24,7 @@ SUBDIR+= laptop
 SUBDIR+= make-world
 SUBDIR+= mh
 SUBDIR+= multi-os
+SUBDIR+= nanobsd
 SUBDIR+= new-users
 SUBDIR+= ntfs
 SUBDIR+= pam
