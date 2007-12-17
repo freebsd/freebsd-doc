@@ -26,7 +26,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.61 2007/01/10 17:47:39 danger Exp $
+# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.62 2007/06/12 19:38:30 simon Exp $
 #
 
 #
@@ -157,7 +157,7 @@ EOF
 $fmt{'patchblock_thead'} = <<EOF;
 <table class="patchblock" cellspacing="0" cellpadding="3">
   <tr class="info"><td>
-    <b>Download <a href="${scriptname}?prp=%%(pr)-%%(1)-%%(3)">%%(2)</a></b>
+    <b>Download <a href="${scriptname}?prp=%%(pr)-%%(1)-%%(3)&n=/%%(2)">%%(2)</a></b>
   </td></tr>
 <tr><td class="content"><pre>
 EOF
