@@ -138,7 +138,6 @@ MAN8 =	IPXrouted.8\
 	mlxcontrol.8\
 	mount.8\
 	mount_cd9660.8\
-	mount_ext2fs.8\
 	mount_msdosfs.8\
 	mount_nfs.8\
 	mount_ntfs.8\
@@ -146,9 +145,7 @@ MAN8 =	IPXrouted.8\
 	mount_nwfs.8\
 	mount_portalfs.8\
 	mount_smbfs.8\
-	mount_std.8\
 	mount_udf.8\
-	mount_umapfs.8\
 	mount_unionfs.8\
 	mountd.8\
 	moused.8\
