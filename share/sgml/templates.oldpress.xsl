@@ -6,7 +6,7 @@
 <!ENTITY % navinclude.about "INCLUDE">
 ]>
 
-<!-- $FreeBSD: www/share/sgml/templates.oldpress.xsl,v 1.2 2006/08/21 18:27:43 hrs Exp $ -->
+<!-- $FreeBSD: www/share/sgml/templates.oldpress.xsl,v 1.3 2007/03/13 12:27:59 gabor Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -55,7 +55,7 @@
 	  <a href="../1998/press.html">1998-1996</a></p>
 
 	<a href="press.html">Press Home</a>,
-	<a href="news.html">News Home</a>
+	<a href="&base;/news/news.html">News Home</a>
 	</div> <!-- CONTENTWRAP -->
 	<br class="clearboth" />
 

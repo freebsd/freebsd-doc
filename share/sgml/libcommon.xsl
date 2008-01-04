@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
-<!-- $FreeBSD: www/share/sgml/libcommon.xsl,v 1.7 2007/03/15 16:21:15 murray Exp $ -->
+<!-- $FreeBSD: www/share/sgml/libcommon.xsl,v 1.8 2008/01/04 21:16:27 jkois Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
   version="1.0"
@@ -321,7 +321,7 @@
 
   <!-- template: "html-news-list-newsflash-homelink" -->
   <xsl:template name="html-news-list-newsflash-homelink">
-    <a href="news.html">News Home</a>
+    <a href="&base;/news/news.html">News Home</a>
   </xsl:template>
 
   <!-- template: "html-news-list-press-preface" -->
