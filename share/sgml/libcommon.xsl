@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
-<!-- $FreeBSD: www/share/sgml/libcommon.xsl,v 1.6 2007/02/28 18:57:34 simon Exp $ -->
+<!-- $FreeBSD: www/share/sgml/libcommon.xsl,v 1.7 2007/03/15 16:21:15 murray Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
   version="1.0"
@@ -277,6 +277,7 @@
   <!-- template: "html-news-make-olditems-list" -->
   <xsl:template name="html-news-make-olditems-list">
     <p>Old announcements:
+      <a href="2006/index.html">2006</a>,
       <a href="2005/index.html">2005</a>,
       <a href="2004/index.html">2004</a>,
       <a href="2003/index.html">2003</a>,
