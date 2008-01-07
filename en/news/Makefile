@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/news/Makefile,v 1.47 2007/03/15 16:21:15 murray Exp $
+# $FreeBSD: www/en/news/Makefile,v 1.48 2008/01/04 21:16:27 jkois Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -30,6 +30,7 @@ DEPENDSET.DEFAULT=	transtable news press
 
 XMLDOCS=	newsflash:${XSL_NEWS_NEWSFLASH}:${XML_NEWS_NEWS_MASTER}:
 XMLDOCS+=	news-rdf:${XSL_NEWS_NEWS_RDF}:${XML_NEWS_NEWS_MASTER}:news.rdf
+XMLDOCS+=	news-rss:${XSL_NEWS_NEWS_RSS}:${XML_NEWS_NEWS_MASTER}:rss.xml
 XMLDOCS+=	press:${XSL_NEWS_PRESS}:${XML_NEWS_PRESS_MASTER}:
 
 SUBDIR= 	1993
