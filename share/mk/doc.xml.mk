@@ -140,6 +140,7 @@ XSL_USERGROUPS=	${WEB_PREFIX}/share/sgml/templates.usergroups.xsl
 _DEPENDSET.news=	${XML_NEWS_NEWS_MASTER} ${XML_NEWS_NEWS} \
 			${XSL_NEWS_NEWSFLASH} \
 			${XSL_NEWS_NEWS_RDF} \
+			${XSL_NEWS_NEWS_RSS} \
 			${XML_INCLUDES}
 _PARAMS.news=		--param news.project.xml-master "'${XML_NEWS_NEWS_MASTER}'" \
 			--param news.project.xml "'${XML_NEWS_NEWS}'"
@@ -153,6 +154,7 @@ XML_NEWS_NEWS=		${WEB_PREFIX}/share/sgml/news.xml
 XSL_NEWS_NEWSFLASH=	${WEB_PREFIX}/share/sgml/templates.newsflash.xsl
 XSL_NEWS_NEWSFLASH_OLD=	${WEB_PREFIX}/share/sgml/templates.oldnewsflash.xsl
 XSL_NEWS_NEWS_RDF=	${WEB_PREFIX}/share/sgml/templates.news-rdf.xsl
+XSL_NEWS_NEWS_RSS=	${WEB_PREFIX}/share/sgml/templates.news-rss.xsl
 
 # DEPENDSET: press  ..........................................................
 _DEPENDSET.press=	${XML_NEWS_PRESS_MASTER} ${XML_NEWS_PRESS} \
