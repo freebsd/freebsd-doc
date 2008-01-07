@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
-<!-- $FreeBSD: www/share/sgml/libcommon.xsl,v 1.8 2008/01/04 21:16:27 jkois Exp $ -->
+<!-- $FreeBSD: www/share/sgml/libcommon.xsl,v 1.9 2008/01/04 22:28:53 jkois Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
   version="1.0"
@@ -19,6 +19,8 @@
              select="'%M %Y'" />
   <xsl:param name="param-l10n-date-format-MD"
              select="'%D %M'" />
+  <xsl:param name="param-l10n-date-format-rfc822"
+             select="'%W, %D %m %Y 00:00:00 PST'" />
 
   <xsl:variable name="curdate.year" select="date:year()"/>
   <xsl:variable name="curdate.month" select="date:month-in-year()"/>
@@ -63,8 +65,10 @@
      html-index-mirrors-options-list               index.xsl
 
      misc-format-date-string                     generic
+     calculate-dow                               generic
 
-     get-long-en-month                           templates.events.xsl
+     gen-long-en-month                           templates.events.xsl
+     gen-short-en-month                          templates.news-rss.xsl
      gen-date-interval                           templates.events.xsl
      generate-event-anchor                       templates.events.xsl
 
@@ -214,6 +218,63 @@
     <h3>Regions:</h3>
   </xsl:template>
 
+  <!-- template: "calculate-dow"
+       calculate the RFC822 day of the week for a given
+       date between 1/1/2000 and 12/31/2099 -->
+
+  <xsl:template name="calculate-dow">
+    <xsl:param name="year" select="'none'" />
+    <xsl:param name="month" select="'none'" />
+    <xsl:param name="day" select="'none'" />
+
+    <!-- whether the current year is a leap year -->
+    <xsl:variable name="leap">
+      <xsl:choose>
+        <xsl:when test="(number($year) mod 4)=0">1</xsl:when>
+        <xsl:otherwise>0</xsl:otherwise>
+      </xsl:choose>
+    </xsl:variable>
+
+    <!-- number of days since Jan 1 of the current year -->
+    <xsl:variable name="daysthisyear">
+      <xsl:choose>
+        <xsl:when test="$month=1"><xsl:value-of select="number($day)"/></xsl:when>
+        <xsl:when test="$month=2"><xsl:value-of select="31 + number($day)"/></xsl:when>
+        <xsl:when test="$month=3"><xsl:value-of select="59 + $leap + number($day)"/></xsl:when>
+        <xsl:when test="$month=4"><xsl:value-of select="90 + $leap + number($day)"/></xsl:when>
+        <xsl:when test="$month=5"><xsl:value-of select="120 + $leap + number($day)"/></xsl:when>
+        <xsl:when test="$month=6"><xsl:value-of select="151 + $leap + number($day)"/></xsl:when>
+        <xsl:when test="$month=7"><xsl:value-of select="181 + $leap + number($day)"/></xsl:when>
+        <xsl:when test="$month=8"><xsl:value-of select="212 + $leap + number($day)"/></xsl:when>
+        <xsl:when test="$month=9"><xsl:value-of select="243 + $leap + number($day)"/></xsl:when>
+        <xsl:when test="$month=10"><xsl:value-of select="273 + $leap + number($day)"/></xsl:when>
+        <xsl:when test="$month=11"><xsl:value-of select="304 + $leap + number($day)"/></xsl:when>
+        <xsl:when test="$month=12"><xsl:value-of select="334 + $leap + number($day)"/></xsl:when>
+	<xsl:otherwise><xsl:value-of select="number(0)"/></xsl:otherwise>
+      </xsl:choose>
+    </xsl:variable>
+
+    <!-- number of leap years prior to current year (after 2000). -->
+    <xsl:variable name="leapyears" select="floor((number($year + 3) - 2000) div 4)"/>
+
+    <xsl:variable name="totaldayssince2000" select="(number($year)-2000)*365 + $leapyears + $daysthisyear"/>
+
+    <!-- 5 is constant for day of week Jan 1 2000. -->
+    <xsl:variable name="dow" select="(5 + $totaldayssince2000) mod 7"/>
+
+    <xsl:choose>
+      <xsl:when test="$dow=0">Sun</xsl:when>
+      <xsl:when test="$dow=1">Mon</xsl:when>
+      <xsl:when test="$dow=2">Tue</xsl:when>
+      <xsl:when test="$dow=3">Wed</xsl:when>
+      <xsl:when test="$dow=4">Thu</xsl:when>
+      <xsl:when test="$dow=5">Fri</xsl:when>
+      <xsl:when test="$dow=6">Sat</xsl:when>
+      <xsl:when test="$dow=7">Sun</xsl:when>
+      <xsl:otherwise>???</xsl:otherwise>
+    </xsl:choose>
+  </xsl:template>
+
   <!-- template: "misc-format-date-string"
        format date string with localization if needed -->
 
@@ -223,10 +284,24 @@
     <xsl:param name="day" select="'none'" />
     <xsl:param name="date-format" select="$param-l10n-date-format-YMD" />
 
+    <xsl:param name="dow">
+      <xsl:call-template name="calculate-dow">
+        <xsl:with-param name="year" select="$year" />
+        <xsl:with-param name="month" select="$month" />
+        <xsl:with-param name="day" select="$day" />
+      </xsl:call-template>
+    </xsl:param>
+
     <xsl:param name="lmonth">
       <xsl:call-template name="transtable-lookup">
 	<xsl:with-param name="word-group" select="'number-month'" />
 	<xsl:with-param name="word" select="$month" />
+      </xsl:call-template>
+    </xsl:param>
+
+    <xsl:param name="smonth">
+      <xsl:call-template name="gen-short-en-month">
+	<xsl:with-param name="nummonth" select="$month" />
       </xsl:call-template>
     </xsl:param>
 
@@ -246,10 +321,26 @@
       </xsl:call-template>
     </xsl:param>
 
+    <xsl:param name="tmp-replace-day-of-week">
+      <xsl:call-template name="misc-format-date-string-replace">
+	<xsl:with-param name="target" select="$tmp-replace-day" />
+	<xsl:with-param name="before" select="'%W'" />
+	<xsl:with-param name="after" select="$dow" />
+      </xsl:call-template>
+    </xsl:param>
+
+    <xsl:param name="tmp-replace-month">
+      <xsl:call-template name="misc-format-date-string-replace">
+	<xsl:with-param name="target" select="$tmp-replace-day-of-week" />
+	<xsl:with-param name="before" select="'%M'" />
+	<xsl:with-param name="after" select="$lmonth" />
+      </xsl:call-template>
+    </xsl:param>
+
     <xsl:call-template name="misc-format-date-string-replace">
-      <xsl:with-param name="target" select="$tmp-replace-day" />
-      <xsl:with-param name="before" select="'%M'" />
-      <xsl:with-param name="after" select="$lmonth" />
+      <xsl:with-param name="target" select="$tmp-replace-month" />
+      <xsl:with-param name="before" select="'%m'" />
+      <xsl:with-param name="after" select="$smonth" />
     </xsl:call-template>
   </xsl:template>
 
@@ -1198,6 +1289,27 @@
       <xsl:when test="$month=10">October</xsl:when>
       <xsl:when test="$month=11">November</xsl:when>
       <xsl:when test="$month=12">December</xsl:when>
+      <xsl:otherwise>Invalid month</xsl:otherwise>
+    </xsl:choose>
+  </xsl:template>
+
+  <!-- Convert a month number to the corresponding short English name. -->
+  <xsl:template name="gen-short-en-month">
+    <xsl:param name="nummonth"/>
+    <xsl:variable name="month" select="number($nummonth)"/>
+    <xsl:choose>
+      <xsl:when test="$month=1">Jan</xsl:when>
+      <xsl:when test="$month=2">Feb</xsl:when>
+      <xsl:when test="$month=3">Mar</xsl:when>
+      <xsl:when test="$month=4">Apr</xsl:when>
+      <xsl:when test="$month=5">May</xsl:when>
+      <xsl:when test="$month=6">Jun</xsl:when>
+      <xsl:when test="$month=7">Jul</xsl:when>
+      <xsl:when test="$month=8">Aug</xsl:when>
+      <xsl:when test="$month=9">Sep</xsl:when>
+      <xsl:when test="$month=10">Oct</xsl:when>
+      <xsl:when test="$month=11">Nov</xsl:when>
+      <xsl:when test="$month=12">Dec</xsl:when>
       <xsl:otherwise>Invalid month</xsl:otherwise>
     </xsl:choose>
   </xsl:template>
