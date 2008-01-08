@@ -7,7 +7,7 @@
 <!ENTITY realname "Webmaster Team">
 ]>
 
-<!-- $FreeBSD$ -->
+<!-- $FreeBSD: www/share/sgml/templates.news-rss.xsl,v 1.1 2008/01/07 07:50:27 murray Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS"
@@ -23,7 +23,7 @@
 
   <!-- Generate the main body of the RDF file -->
   <xsl:template match="news">
-    <rss version="2.0">
+    <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
 
       <channel>
 	<title>&title;</title>
@@ -39,7 +39,7 @@
 	  <title>&title;</title>
 	  <link>&link;</link>
 	</image>
-
+	<atom:link href="&link;rss.xml" rel="self" type="application/rss+xml" />
       <!-- Only include the last 10 events -->
       <xsl:apply-templates select="descendant::event[position() &lt;= 10]"/>
 
