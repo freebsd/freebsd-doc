@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
-<!-- $FreeBSD: www/share/sgml/libcommon.xsl,v 1.10 2008/01/07 07:39:35 murray Exp $ -->
+<!-- $FreeBSD: www/share/sgml/libcommon.xsl,v 1.11 2008/01/10 04:23:39 murray Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
   version="1.0"
@@ -395,7 +395,7 @@
       be sure and check this page periodically.  Also, you may wish to
       subscribe to the
       <a href="&base;/doc/en_US.ISO8859-1/books/handbook/eresources.html#ERESOURCES-MAIL">freebsd-announce
-	mailing list</a> or the <a href="news.rdf">RSS feed</a>.</p>
+	mailing list</a> or the <a href="rss.xml">RSS feed</a>.</p>
 
     <p>The following projects have their own news pages, which should
       be checked for project specific updates.</p>
