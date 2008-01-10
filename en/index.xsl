@@ -4,7 +4,7 @@
 <!ENTITY title "The FreeBSD Project">
 ]>
 
-<!-- $FreeBSD: www/en/index.xsl,v 1.160 2007/03/11 16:39:43 gabor Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.161 2007/10/27 18:09:38 simon Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
@@ -38,11 +38,11 @@
     <link rel="alternate stylesheet" media="screen" href="&base;/layout/css/fixed_large.css" type="text/css" title="Large Text" />
     <script type="text/javascript" src="&base;/layout/js/styleswitcher.js"></script>
 	<link rel="alternate" type="application/rss+xml"
-	  title="FreeBSD Project News" href="&base;/news/news.rdf" />
+	  title="FreeBSD Project News" href="&base;/news/rss.xml" />
 	<link rel="alternate" type="application/rss+xml"
-	  title="FreeBSD Security Advisories" href="&base;/security/advisories.rdf" />
+	  title="FreeBSD Security Advisories" href="&base;/security/rss.xml" />
 	<link rel="alternate" type="application/rss+xml"
-	  title="FreeBSD GNOME Project News" href="&base;/gnome/news.rdf" />
+	  title="FreeBSD GNOME Project News" href="&base;/gnome/rss.xml" />
 
 	<!-- Formatted to be easy to spam harvest, please do not reformat. -->
 	<xsl:comment>
@@ -225,7 +225,7 @@
 					<a href="&base;/news/newsflash.html" title="More News">More News</a>
 				  </li>
 				  <li class="last-child">
-					<a href="&base;/news/news.rdf" title="News RSS Feed"><img class="rssimage" src="&base;/layout/images/ico_rss.png" width="27" height="12" alt="News RSS Feed" /></a>
+					<a href="&base;/news/rss.xml" title="News RSS Feed"><img class="rssimage" src="&base;/layout/images/ico_rss.png" width="27" height="12" alt="News RSS Feed" /></a>
 				  </li>
 				</ul>
 			  </div> <!-- unnamed -->
@@ -297,7 +297,7 @@
 					<a href="&base;/security/" title="More Security Advisories">More</a>
 				  </li>
 				  <li class="last-child">
-					<a href="&base;/security/advisories.rdf" title="Security Advisories RSS Feed"><img class="rssimage" src="&base;/layout/images/ico_rss.png" width="27" height="12" alt="Security Advisories RSS Feed" /></a>
+					<a href="&base;/security/rss.xml" title="Security Advisories RSS Feed"><img class="rssimage" src="&base;/layout/images/ico_rss.png" width="27" height="12" alt="Security Advisories RSS Feed" /></a>
 				  </li>
 				</ul>
 			  </div> <!-- unnamed -->
