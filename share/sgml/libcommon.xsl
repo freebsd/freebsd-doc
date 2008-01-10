@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
-<!-- $FreeBSD: www/share/sgml/libcommon.xsl,v 1.9 2008/01/04 22:28:53 jkois Exp $ -->
+<!-- $FreeBSD: www/share/sgml/libcommon.xsl,v 1.10 2008/01/07 07:39:35 murray Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
   version="1.0"
@@ -54,6 +54,10 @@
      rdf-security-advisories                     security/security-rdf.xsl
      rdf-security-advisories-title               security/security-rdf.xsl (for l10n)
      rdf-security-advisories-items               security/security-rdf.xsl
+
+     rss-security-advisories                     security/security-rss.xsl
+     rss-security-advisories-title               security/security-rss.xsl (for l10n)
+     rss-security-advisories-items               security/security-rss.xsl
 
      html-index-advisories-items                   index.xsl
      html-index-advisories-items-lastmodified      index.xsl (for i10n)
@@ -912,6 +916,78 @@
 	  </xsl:when>
 	  <xsl:otherwise>
 	    <link><xsl:value-of select="concat('&ftpbase;', name, '.asc')" /></link>
+	  </xsl:otherwise>
+	</xsl:choose>
+      </item>
+    </xsl:for-each>
+  </xsl:template>
+
+  <!-- template: "rss-security-advisories"
+       generate a rdf of 10 most recent security advisories -->
+
+  <xsl:template name="rss-security-advisories">
+    <xsl:param name="advisories.xml" select="''" />
+
+    <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+      <channel>
+        <xsl:call-template name="rss-security-advisories-title">
+	  <xsl:with-param name="advisories.xml" select="$advisories.xml" />
+        </xsl:call-template>
+        <xsl:call-template name="rss-security-advisories-items">
+	  <xsl:with-param name="advisories.xml" select="$advisories.xml" />
+        </xsl:call-template>
+      </channel>
+    </rss>
+
+  </xsl:template>
+
+  <!-- template: "rss-security-advisories-title"
+       pulls in the 10 most recent security advisories -->
+
+  <xsl:template name="rss-security-advisories-title"
+                xmlns:atom="http://www.w3.org/2005/Atom">
+    <xsl:param name="advisories.xml" select="''" />
+
+    <xsl:variable name="title">FreeBSD Security Advisories</xsl:variable>
+    <xsl:variable name="link">http://www.FreeBSD.org/security/</xsl:variable>
+
+    <title><xsl:value-of select="$title" /></title>
+    <link><xsl:value-of select="$link" /></link>
+    <description>Security advisories published from the FreeBSD Project</description>
+    <language>en-us</language>
+    <webMaster>secteam@FreeBSD.org (FreeBSD Security Team)</webMaster>
+    <managingEditor>secteam@FreeBSD.org (FreeBSD Security Team)</managingEditor>
+    <docs>http://blogs.law.harvard.edu/tech/rss</docs>
+    <ttl>120</ttl>
+    <image>
+      <url>http://www.FreeBSD.org/logo/logo-full.png</url>
+      <title><xsl:value-of select="$title" /></title>
+      <link><xsl:value-of select="$link" /></link>
+    </image>
+    <atom:link rel="self" type="application/rss+xml">
+      <xsl:attribute name="href">
+        <xsl:value-of select="$link" /><xsl:text>rss.xml</xsl:text>
+      </xsl:attribute>
+    </atom:link> 
+  </xsl:template>
+
+  <!-- template: "rss-security-advisories-items"
+       pulls in the 10 most recent security advisories -->
+
+  <xsl:template name="rss-security-advisories-items"
+                xmlns:atom="http://www.w3.org/2005/Atom">
+    <xsl:param name="advisories.xml" select="''" />
+
+    <xsl:for-each select="document($advisories.xml)/descendant::advisory[position() &lt;= 10]">
+      <item>
+	<title><xsl:value-of select="name"/></title>
+	<xsl:choose>
+	  <xsl:when test="@omithref = 'yes'">
+	    <xsl:value-of select="name"/>
+	  </xsl:when>
+	  <xsl:otherwise>
+	    <link><xsl:value-of select="concat('&ftpbase;', name, '.asc')" /></link>
+	    <guid><xsl:value-of select="concat('&ftpbase;', name, '.asc')" /></guid>
 	  </xsl:otherwise>
 	</xsl:choose>
       </item>

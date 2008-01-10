@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/security/Makefile,v 1.13 2004/05/25 01:19:50 hrs Exp $
+# $FreeBSD: www/en/security/Makefile,v 1.14 2005/09/18 04:33:46 hrs Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -22,5 +22,6 @@ NO_DATA.advisories=	yes
 NO_TIDY.advisories=	yes
 
 XMLDOCS+=	advisories-rdf:security-rdf.xsl::advisories.rdf
+XMLDOCS+=	advisories-rss:security-rss.xsl::rss.xml
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
