@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
-<!-- $FreeBSD: www/share/sgml/libcommon.xsl,v 1.11 2008/01/10 04:23:39 murray Exp $ -->
+<!-- $FreeBSD: www/share/sgml/libcommon.xsl,v 1.12 2008/01/10 08:03:39 murray Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
   version="1.0"
@@ -383,6 +383,20 @@
       <a href="1998/index.html">1998</a>,
       <a href="1997/index.html">1997</a>,
       <a href="1996/index.html">1996</a></p>
+  </xsl:template>
+
+  <!-- template: "html-press-make-olditems-list" -->
+  <xsl:template name="html-press-make-olditems-list">
+    <p>Old press publications:
+      <a href="2006/press.html">2006</a>,
+      <a href="2005/press.html">2005</a>,
+      <a href="2004/press.html">2004</a>,
+      <a href="2003/press.html">2003</a>,
+      <a href="2002/press.html">2002</a>,
+      <a href="2001/press.html">2001</a>,
+      <a href="2000/press.html">2000</a>,
+      <a href="1999/press.html">1999</a>,
+      <a href="1998/press.html">1998-1996</a></p>
   </xsl:template>
 
   <!-- template: "html-news-list-newsflash-preface" -->
