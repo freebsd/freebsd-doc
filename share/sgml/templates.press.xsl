@@ -6,7 +6,7 @@
 <!ENTITY % navinclude.about "INCLUDE">
 ]>
 
-<!-- $FreeBSD: www/share/sgml/templates.press.xsl,v 1.1 2006/08/19 21:20:54 hrs Exp $ -->
+<!-- $FreeBSD: www/share/sgml/templates.press.xsl,v 1.2 2006/08/21 18:27:43 hrs Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -47,6 +47,8 @@
           <xsl:with-param name="news.press.xml-master" select="$news.press.xml-master" />
           <xsl:with-param name="news.press.xml" select="$news.press.xml" />
 	</xsl:call-template>
+
+		<xsl:call-template name="html-press-make-olditems-list" />
 
 		<xsl:call-template name="html-news-list-newsflash-homelink" />
 
