@@ -1,4 +1,13 @@
-<!-- $FreeBSD$ -->
+<!--
+
+  DSSSL style-sheet για μορφοποίηση της Ελληνικής τεκμηρίωσης του FreeBSD
+
+  $FreeBSD$
+
+  %SOURCE%	en_US.ISO8859-1/share/sgml/freebsd.dsl
+  %SRCID%	1.1
+
+-->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
 <!ENTITY freebsd.dsl PUBLIC "-//FreeBSD//DOCUMENT DocBook Language Neutral Stylesheet//EN" CDATA DSSSL>

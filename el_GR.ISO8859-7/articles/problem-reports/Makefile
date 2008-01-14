@@ -1,5 +1,7 @@
 # $FreeBSD$
-# Original version:	1.1
+#
+# %SOURCE%	en_US.ISO8859-1/articles/problem-reports/Makefile
+# %SRCID%	1.1
 
 DOC?= article
 

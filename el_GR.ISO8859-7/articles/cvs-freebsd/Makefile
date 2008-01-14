@@ -1,7 +1,7 @@
 # $FreeBSD$
-# Original version: 1.5
 #
-# Στήνοντας ένα CVS repository με τα εργαλεία του FreeBSD.
+# %SOURCE%	en_US.ISO8859-1/articles/cvs-freebsd/Makefile
+# %SRCID%	1.5
 
 MAINTAINER= keramida@freebsd.org
 

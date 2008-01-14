@@ -1,4 +1,7 @@
 # $FreeBSD$
+#
+# %SOURCE%	en_US.ISO8859-1/articles/dialup-firewall/Makefile
+# %SRCID%	1.16
 
 DOC?= article
 
