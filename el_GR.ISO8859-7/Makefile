@@ -1,5 +1,7 @@
 # $FreeBSD$
-# Original version: 1.7
+#
+# %SOURCE%	en_US.ISO8859-1/Makefile
+# %SRCID%	1.7
 
 SUBDIR = articles
 SUBDIR+= books

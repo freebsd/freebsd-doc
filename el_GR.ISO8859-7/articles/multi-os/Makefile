@@ -1,7 +1,7 @@
-#
 # $FreeBSD$
-# Original version: 1.8
 #
+# %SOURCE%	en_US.ISO8859-1/articles/multi-os/Makefile
+# %SRCID%	1.8
 
 DOC?= article
 

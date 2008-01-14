@@ -1,8 +1,7 @@
-#
 # $FreeBSD$
-# Original version: 1.7
 #
-# Article: FreeBSD Release Engineering
+# %SOURCE%	en_US.ISO8859-1/articles/releng/Makefile
+# %SRCID%	1.7
 
 DOC?= article
 

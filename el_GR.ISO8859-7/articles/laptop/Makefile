@@ -1,9 +1,7 @@
-#
 # $FreeBSD$
-# Original version: 1.1
 #
-# Article about using FreeBSD on laptops
-#
+# %SOURCE%	en_US.ISO8859-1/articles/laptop/Makefile
+# %SRCID%	1.1
 
 DOC?= article
 

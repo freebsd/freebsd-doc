@@ -2,6 +2,9 @@
 #
 # Customizations to the FreeBSD doc/ makefile infrastructure that are
 # specific to the el_GR.ISO8859-7 language.
+#
+# %SOURCE%	en_US.ISO8859-1/share/mk/doc.local.mk
+# %SRCID%	1.1
 
 SP_ENCODING?=	${LANGCODE:C,^.*\.,,}
 

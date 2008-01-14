@@ -1,7 +1,7 @@
 # $FreeBSD$
-# Original version: 1.1
 #
-# Article: FreeBSD Release Engineering of Third Party Software Packages
+# %SOURCE%	articles/releng-packages/Makefile,
+# %SRCID%	1.1
 
 DOC?= article
 

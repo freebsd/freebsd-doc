@@ -1,4 +1,7 @@
 # $FreeBSD$
+#
+# %SOURCE%	en_US.ISO8859-1/articles/formatting-media/Makefile
+# %SRCID%	1.1
 
 DOC?= article
 
