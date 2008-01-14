@@ -1,5 +1,7 @@
 # $FreeBSD$
-# Original version: 1.39
+#
+# %SOURCE%	en_US.ISO8859-1/articles/Makefile
+# %SRCID%	1.39
 
 SUBDIR =
 SUBDIR+= cvs-freebsd
