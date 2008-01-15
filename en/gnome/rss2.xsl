@@ -5,7 +5,7 @@
 <!ENTITY title "FreeBSD GNOME Project News System">
 ]>
 
-<!-- $FreeBSD$ -->
+<!-- $FreeBSD: www/en/gnome/rss2.xsl,v 1.1 2008/01/10 04:57:20 murray Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS"
@@ -66,8 +66,8 @@
               </description>
             </xsl:if>
 
-            <link>http://www.FreeBSD.org/gnome/newsflash#<xsl:value-of select="$guid" /></link>
-            <guid>http://www.FreeBSD.org/gnome/newsflash#<xsl:value-of select="$guid" /></guid>
+            <link>http://www.FreeBSD.org/gnome/newsflash.html#<xsl:value-of select="$guid" /></link>
+            <guid>http://www.FreeBSD.org/gnome/newsflash.html#<xsl:value-of select="$guid" /></guid>
           </item>
         </xsl:for-each>
 
