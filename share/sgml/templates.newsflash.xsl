@@ -6,7 +6,7 @@
 <!ENTITY % navinclude.about "INCLUDE">
 ]>
 
-<!-- $FreeBSD: www/share/sgml/templates.newsflash.xsl,v 1.1 2006/08/19 21:20:54 hrs Exp $ -->
+<!-- $FreeBSD: www/share/sgml/templates.newsflash.xsl,v 1.2 2006/08/21 18:27:43 hrs Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -33,6 +33,20 @@
 	    <div id="CONTENT">
               <div id="SIDEWRAP">
                 &nav;
+                <div id="FEEDLINKS">
+                  <ul>
+                    <li>
+                      <a href="rss.xml" title="FreeBSD RSS 2.0 Feed">
+                        RSS 2.0 Feed
+                      </a>
+                    </li>
+                    <li>
+                      <a href="news.rdf" title="FreeBSD RDF/RSS 0.9 Feed">
+                        RSS 0.9 Feed
+                      </a>
+                    </li>
+                  </ul>
+                </div> <!-- FEEDLINKS -->
               </div> <!-- SIDEWRAP -->
 
 	      <div id="CONTENTWRAP">
