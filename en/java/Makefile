@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/java/Makefile,v 1.3 2000/11/07 04:05:16 kuriyama Exp $
+# $FreeBSD: www/en/java/Makefile,v 1.4 2004/05/13 20:52:49 simon Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -15,8 +15,11 @@ DOCS =  advocacy.sgml
 DOCS+=  howhelp.sgml
 DOCS+=  index.sgml
 DOCS+=  install.sgml
-DOCS+=  newsflash.sgml
 
 DATA=	j2j.gif
+
+XML.DEFAULT=	news.xml
+XMLDOCS=	newsflash
+XMLDOCS+=	news:java-rss.xsl::rss.xml
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
