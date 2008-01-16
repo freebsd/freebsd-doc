@@ -3,10 +3,13 @@
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
 <!ENTITY title "FreeBSD Events">
 <!ENTITY email "freebsd-www">
+<!ENTITY rsslink "&base;/events/rss.xml">
+<!ENTITY rsstitle "Upcoming FreeBSD Events">
 <!ENTITY % navinclude.about "INCLUDE">
+<!ENTITY % header.rss "INCLUDE">
 ]>
 
-<!-- $FreeBSD: www/share/sgml/templates.events.xsl,v 1.1 2006/08/19 21:20:54 hrs Exp $ -->
+<!-- $FreeBSD: www/share/sgml/templates.events.xsl,v 1.2 2006/08/21 18:27:43 hrs Exp $ -->
 
 <!-- Copyright (c) 2003 Simon L. Nielsen <simon@FreeBSD.org>
      All rights reserved.
@@ -66,6 +69,15 @@
 	    <div id="content">
               <div id="SIDEWRAP">
                 &nav;
+                <div id="FEEDLINKS">
+                  <ul>
+                    <li>
+                      <a href="&rsslink;" title="&rsstitle;">
+                        RSS 2.0 Feed
+                      </a>
+                    </li>
+                  </ul>
+                </div> <!-- FEEDLINKS -->
               </div> <!-- SIDEWRAP -->
 
 	      <div id="contentwrap">
