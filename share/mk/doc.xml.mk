@@ -1,5 +1,5 @@
 # doc.xml.mk
-# $FreeBSD: www/share/mk/doc.xml.mk,v 1.11 2006/10/07 04:05:33 trhodes Exp $
+# $FreeBSD: www/share/mk/doc.xml.mk,v 1.12 2008/01/07 07:50:27 murray Exp $
 
 XML_CATALOG_FILES=	file://${.OBJDIR}/catalog-cwd.xml \
 			file://${DOC_PREFIX}/${LANGCODE}/share/sgml/catalog.xml \
@@ -171,6 +171,7 @@ XML_NEWS_PRESS=		${WEB_PREFIX}/${WWW_LANGCODE}/share/sgml/press.xml
 XML_NEWS_PRESS=		${WEB_PREFIX}/share/sgml/press.xml
 .endif
 XSL_NEWS_PRESS=		${WEB_PREFIX}/share/sgml/templates.press.xsl
+XSL_NEWS_PRESS_RSS=	${WEB_PREFIX}/share/sgml/templates.press-rss.xsl
 XSL_NEWS_PRESS_OLD=	${WEB_PREFIX}/share/sgml/templates.oldpress.xsl
 
 # DEPENDSET: events  ..........................................................
@@ -291,7 +292,6 @@ XMLLINT=	env ${XSLTPROC_ENV} ${PREFIX}/bin/xmllint
 # XXX: ${__ID} is used because ${A}=B does not work except
 #      for the iterate variable in the .for statement.
 __ID=${D:C,:.*$,,}
-
 .for _ID in ${__ID}
 _tmpD=	${D:M*\:*}
 .if !empty(_tmpD)

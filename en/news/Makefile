@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/news/Makefile,v 1.48 2008/01/04 21:16:27 jkois Exp $
+# $FreeBSD: www/en/news/Makefile,v 1.49 2008/01/07 07:50:27 murray Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -32,6 +32,7 @@ XMLDOCS=	newsflash:${XSL_NEWS_NEWSFLASH}:${XML_NEWS_NEWS_MASTER}:
 XMLDOCS+=	news-rdf:${XSL_NEWS_NEWS_RDF}:${XML_NEWS_NEWS_MASTER}:news.rdf
 XMLDOCS+=	news-rss:${XSL_NEWS_NEWS_RSS}:${XML_NEWS_NEWS_MASTER}:rss.xml
 XMLDOCS+=	press:${XSL_NEWS_PRESS}:${XML_NEWS_PRESS_MASTER}:
+XMLDOCS+=	press-rss:${XSL_NEWS_PRESS_RSS}:${XML_NEWS_PRESS_MASTER}:press-rss.xml
 
 SUBDIR= 	1993
 SUBDIR+= 	1996
