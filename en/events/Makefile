@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/events/Makefile,v 1.12 2006/08/19 21:20:34 hrs Exp $
+# $FreeBSD: www/en/events/Makefile,v 1.13 2007/09/18 15:23:05 simon Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -18,5 +18,7 @@ DEPENDSET.events=	events
 
 XMLDOCS+=		events_ics:${XSL_EVENTS_ICS}:${XML_EVENTS_EVENTS}:events.ics
 DEPENDSET.events_ics=	events
+
+XMLDOCS+=		events_rss:rss.xsl:${XML_EVENTS_EVENTS}:rss.xml
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
