@@ -3,10 +3,13 @@
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
 <!ENTITY title "FreeBSD News Flash">
 <!ENTITY email "freebsd-www">
+<!ENTITY rsslink "rss.xml">
+<!ENTITY rsstitle "&title;">
 <!ENTITY % navinclude.about "INCLUDE">
+<!ENTITY % header.rss "INCLUDE">
 ]>
 
-<!-- $FreeBSD: www/share/sgml/templates.newsflash.xsl,v 1.2 2006/08/21 18:27:43 hrs Exp $ -->
+<!-- $FreeBSD: www/share/sgml/templates.newsflash.xsl,v 1.3 2008/01/15 21:30:38 murray Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
