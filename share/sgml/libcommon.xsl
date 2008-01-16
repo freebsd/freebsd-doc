@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
-<!-- $FreeBSD: www/share/sgml/libcommon.xsl,v 1.12 2008/01/10 08:03:39 murray Exp $ -->
+<!-- $FreeBSD: www/share/sgml/libcommon.xsl,v 1.13 2008/01/11 23:36:14 jkois Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
   version="1.0"
@@ -932,6 +932,7 @@
 	    <link><xsl:value-of select="concat('&ftpbase;', name, '.asc')" /></link>
 	  </xsl:otherwise>
 	</xsl:choose>
+
       </item>
     </xsl:for-each>
   </xsl:template>
@@ -997,13 +998,21 @@
 	<title><xsl:value-of select="name"/></title>
 	<xsl:choose>
 	  <xsl:when test="@omithref = 'yes'">
-	    <xsl:value-of select="name"/>
+	    <link>http://www.FreeBSD.org/security</link>
 	  </xsl:when>
 	  <xsl:otherwise>
 	    <link><xsl:value-of select="concat('&ftpbase;', name, '.asc')" /></link>
-	    <guid><xsl:value-of select="concat('&ftpbase;', name, '.asc')" /></guid>
 	  </xsl:otherwise>
 	</xsl:choose>
+        <guid><xsl:value-of select="concat('&ftpbase;', name, '.asc')" /></guid>
+        <pubDate>
+          <xsl:call-template name="misc-format-date-string">
+            <xsl:with-param name="year" select="../../../name" />
+            <xsl:with-param name="month" select="../../name" />
+            <xsl:with-param name="day" select="../name" />
+            <xsl:with-param name="date-format" select="$param-l10n-date-format-rfc822" />
+          </xsl:call-template>
+        </pubDate>
       </item>
     </xsl:for-each>
   </xsl:template>
