@@ -3,10 +3,13 @@
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
 <!ENTITY title "FreeBSD in the Press">
 <!ENTITY email "freebsd-www">
+<!ENTITY rsslink "press-rss.xml">
+<!ENTITY rsstitle "&title;">
 <!ENTITY % navinclude.about "INCLUDE">
+<!ENTITY % header.rss "INCLUDE">
 ]>
 
-<!-- $FreeBSD: www/share/sgml/templates.press.xsl,v 1.2 2006/08/21 18:27:43 hrs Exp $ -->
+<!-- $FreeBSD: www/share/sgml/templates.press.xsl,v 1.3 2008/01/11 23:36:14 jkois Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -35,6 +38,15 @@
 	<div id="CONTENT">
               <div id="SIDEWRAP">
                 &nav;
+                <div id="FEEDLINKS">
+                  <ul>
+                    <li>
+                      <a href="rss.xml" title="FreeBSD in the Press RSS 2.0 Feed">
+                        RSS 2.0 Feed
+                      </a>
+                    </li>
+                  </ul>
+                </div> <!-- FEEDLINKS -->
               </div> <!-- SIDEWRAP -->
 
 	      <div id="CONTENTWRAP">
