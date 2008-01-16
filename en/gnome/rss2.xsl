@@ -5,7 +5,7 @@
 <!ENTITY title "FreeBSD GNOME Project News System">
 ]>
 
-<!-- $FreeBSD: www/en/gnome/rss2.xsl,v 1.1 2008/01/10 04:57:20 murray Exp $ -->
+<!-- $FreeBSD: www/en/gnome/rss2.xsl,v 1.2 2008/01/15 19:48:15 murray Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS"
@@ -49,6 +49,8 @@
         <xsl:for-each select="descendant::event[position() &lt;= 10]">
           <xsl:variable name="guid"><xsl:call-template name="generate-event-anchor"/></xsl:variable>
 
+          <xsl:variable name="month"><xsl:call-template name="generate-month-num"><xsl:with-param name="month" select="../../name"/></xsl:call-template></xsl:variable>
+
           <item>
             <title>
               <xsl:choose>
@@ -68,6 +70,16 @@
 
             <link>http://www.FreeBSD.org/gnome/newsflash.html#<xsl:value-of select="$guid" /></link>
             <guid>http://www.FreeBSD.org/gnome/newsflash.html#<xsl:value-of select="$guid" /></guid>
+
+            <pubDate>
+              <xsl:call-template name="misc-format-date-string">
+                <xsl:with-param name="year" select="../../../name" />
+                <xsl:with-param name="month" select="$month" />
+                <xsl:with-param name="day" select="../name" />
+                <xsl:with-param name="date-format" select="$param-l10n-date-format-rfc822" />
+              </xsl:call-template>
+            </pubDate>
+
           </item>
         </xsl:for-each>
 
