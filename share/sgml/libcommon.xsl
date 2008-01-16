@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
-<!-- $FreeBSD: www/share/sgml/libcommon.xsl,v 1.13 2008/01/11 23:36:14 jkois Exp $ -->
+<!-- $FreeBSD: www/share/sgml/libcommon.xsl,v 1.14 2008/01/16 09:14:18 murray Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
   version="1.0"
@@ -665,6 +665,27 @@
     </xsl:call-template>
 
     <xsl:text>:</xsl:text>
+  </xsl:template>
+
+  <!-- template: "generate-month-num" -->
+  <xsl:template name="generate-month-num">
+    <xsl:param name="month" />
+
+    <xsl:choose>
+      <xsl:when test="$month='January'">1</xsl:when>
+      <xsl:when test="$month='February'">2</xsl:when>
+      <xsl:when test="$month='March'">3</xsl:when>
+      <xsl:when test="$month='April'">4</xsl:when>
+      <xsl:when test="$month='May'">5</xsl:when>
+      <xsl:when test="$month='June'">6</xsl:when>
+      <xsl:when test="$month='July'">7</xsl:when>
+      <xsl:when test="$month='August'">8</xsl:when>
+      <xsl:when test="$month='September'">9</xsl:when>
+      <xsl:when test="$month='October'">10</xsl:when>
+      <xsl:when test="$month='November'">11</xsl:when>
+      <xsl:when test="$month='December'">12</xsl:when>
+      <xsl:otherwise>???</xsl:otherwise>
+    </xsl:choose>
   </xsl:template>
 
   <!-- template: "html-news-generate-anchor" (for l10n) -->
