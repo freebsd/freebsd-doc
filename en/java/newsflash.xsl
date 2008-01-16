@@ -2,12 +2,15 @@
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
 <!ENTITY base "..">
+<!ENTITY rsslink "&base;/java/rss.xml">
 <!ENTITY title "FreeBSD &java; Project: Newsflash">
+<!ENTITY rsstitle "FreeBSD Java Project News">
 <!ENTITY email "freebsd-java">
 <!ENTITY % navinclude.developers "INCLUDE">
+<!ENTITY % header.rss "INCLUDE">
 ]>
 
-<!-- $FreeBSD$ -->
+<!-- $FreeBSD: www/en/java/newsflash.xsl,v 1.1 2008/01/15 21:16:25 murray Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS" exclude-result-prefixes="cvs">
@@ -35,7 +38,7 @@
                 <div id="FEEDLINKS">
                   <ul>
                     <li>
-                      <a href="rss.xml" title="Java RSS 2.0 feed">
+                      <a href="&rsslink;" title="&rsstitle;">
                         RSS 2.0 Feed
                       </a>
                     </li>

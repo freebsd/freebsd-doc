@@ -3,11 +3,14 @@
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
 <!ENTITY base "..">
 <!ENTITY title "FreeBSD GNOME News Flash">
+<!ENTITY rsslink "&base;/gnome/rss.xml">
+<!ENTITY rsstitle "&title;">
 <!ENTITY email "freebsd-gnome">
 <!ENTITY % navinclude.developers "INCLUDE">
+<!ENTITY % header.rss "INCLUDE">
 ]>
 
-<!-- $FreeBSD: www/en/gnome/newsflash.xsl,v 1.10 2007/04/16 04:47:15 marcus Exp $ -->
+<!-- $FreeBSD: www/en/gnome/newsflash.xsl,v 1.11 2008/01/15 21:25:49 murray Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS" exclude-result-prefixes="cvs">
@@ -35,7 +38,7 @@
                 <div id="FEEDLINKS">
                   <ul>
                     <li>
-                      <a href="rss.xml" title="GNOME RSS 2.0 Feed">
+                      <a href="&rsslink;" title="GNOME RSS 2.0 Feed">
                         RSS 2.0 Feed
                       </a>
                     </li>
