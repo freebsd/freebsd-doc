@@ -169,6 +169,7 @@ XML_NEWS_PRESS=		${WEB_PREFIX}/${WWW_LANGCODE}/share/sgml/press.xml
 XML_NEWS_PRESS=		${WEB_PREFIX}/share/sgml/press.xml
 .endif
 XSL_NEWS_PRESS=		${WEB_PREFIX}/share/sgml/templates.press.xsl
+XSL_NEWS_PRESS_RSS=	${WEB_PREFIX}/share/sgml/templates.press-rss.xsl
 XSL_NEWS_PRESS_OLD=	${WEB_PREFIX}/share/sgml/templates.oldpress.xsl
 
 # DEPENDSET: events  ..........................................................
