@@ -33,8 +33,8 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.195 2007-12-02 21:21:18 wosch Exp $
-# $FreeBSD: www/en/cgi/man.cgi,v 1.194 2007/12/02 21:18:14 wosch Exp $
+# $Id: man.cgi,v 1.196 2008-01-17 16:44:52 hrs Exp $
+# $FreeBSD: www/en/cgi/man.cgi,v 1.195 2007/12/02 21:21:18 wosch Exp $
 
 ############################################################################
 # !!! man.cgi is stale perl4 code !!!
@@ -273,6 +273,7 @@ $manPathDefault = 'FreeBSD 6.2-RELEASE';
     'NetBSD 2.0.2', "$manLocalDir/NetBSD-2.0.2",
     'NetBSD 2.1',   "$manLocalDir/NetBSD-2.1",
     'NetBSD 3.0',   "$manLocalDir/NetBSD-3.0",
+    'NetBSD 4.0',   "$manLocalDir/NetBSD-4.0",
 
     '2.8 BSD',      "$manLocalDir/2.8BSD",
     '2.9.1 BSD',    "$manLocalDir/2.9.1BSD",
@@ -399,7 +400,7 @@ while ( ( $key, $val ) = each %manPath ) {
     'opendarwin',            'OpenDarwin 7.2.1',
     'macosx',                'Darwin 8.0.1/ppc',
 
-    'netbsd',        'NetBSD 3.0',
+    'netbsd',        'NetBSD 4.0',
     'openbsd',       'OpenBSD 4.1',
     'v7',            'Unix Seventh Edition',
     'v7man',         'Unix Seventh Edition',
@@ -1242,7 +1243,7 @@ sub faq {
           if $manPathAliases{$_};
     }
 
-    local $id = '$FreeBSD: www/en/cgi/man.cgi,v 1.194 2007/12/02 21:18:14 wosch Exp $';
+    local $id = '$FreeBSD: www/en/cgi/man.cgi,v 1.195 2007/12/02 21:21:18 wosch Exp $';
     return qq{\
 <pre>
 Copyright (c) 1996-2007 <a href="$mailtoURL">Wolfram Schneider</a>
