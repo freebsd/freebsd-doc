@@ -1,6 +1,6 @@
 # The FreeBSD Simplified Chinese Project
 #
-# $FreeBSD: www/zh_CN/releases/6.3R/Makefile,v 1.2 2008/01/17 20:57:32 delphij Exp $
+# $FreeBSD: www/zh_CN/releases/6.3R/Makefile,v 1.1 2008/01/17 21:00:00 delphij Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -18,7 +18,6 @@ DATA+=	hardware-amd64.html
 DATA+=	hardware-i386.html
 DATA+=	installation-alpha.html
 DATA+=	installation-amd64.html
-DATA+=	installation-ia64.html
 DATA+=	installation-i386.html
 DATA+=	installation-pc98.html
 DATA+=	installation-powerpc.html
@@ -26,7 +25,6 @@ DATA+=	installation-sparc64.html
 DATA+=	readme.html
 DATA+=	relnotes-alpha.html
 DATA+=	relnotes-amd64.html
-DATA+=	relnotes-ia64.html
 DATA+=	relnotes-i386.html
 DATA+=	relnotes-pc98.html
 DATA+=	relnotes-powerpc.html
