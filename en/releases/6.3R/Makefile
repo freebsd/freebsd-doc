@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/releases/6.3R/Makefile,v 1.4 2008/01/18 17:49:46 bmah Exp $
+# $FreeBSD: www/en/releases/6.3R/Makefile,v 1.5 2008/01/18 18:39:33 bmah Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -22,17 +22,20 @@ DATA+=	hardware-alpha.html
 DATA+=	hardware-amd64.html
 DATA+=	hardware-i386.html
 DATA+=	hardware-pc98.html
+DATA+=	hardware-powerpc.html
 DATA+=	hardware-sparc64.html
 DATA+=	installation-alpha.html
 DATA+=	installation-amd64.html
 DATA+=	installation-i386.html
 DATA+=	installation-pc98.html
+DATA+=	installation-powerpc.html
 DATA+=	installation-sparc64.html
 DATA+=	readme.html
 DATA+=	relnotes-alpha.html
 DATA+=	relnotes-amd64.html
 DATA+=	relnotes-i386.html
 DATA+=	relnotes-pc98.html
+DATA+=	relnotes-powerpc.html
 DATA+=	relnotes-sparc64.html
 
 DATA+=	docbook.css
