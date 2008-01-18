@@ -9,7 +9,7 @@
 <!ENTITY % header.rss "INCLUDE">
 ]>
 
-<!-- $FreeBSD: www/share/sgml/templates.press.xsl,v 1.3 2008/01/11 23:36:14 jkois Exp $ -->
+<!-- $FreeBSD: www/share/sgml/templates.press.xsl,v 1.4 2008/01/16 08:25:02 murray Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -41,7 +41,7 @@
                 <div id="FEEDLINKS">
                   <ul>
                     <li>
-                      <a href="rss.xml" title="FreeBSD in the Press RSS 2.0 Feed">
+                      <a href="&rsslink;" title="FreeBSD in the Press RSS 2.0 Feed">
                         RSS 2.0 Feed
                       </a>
                     </li>
