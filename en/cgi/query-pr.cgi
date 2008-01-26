@@ -26,7 +26,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.62 2007/06/12 19:38:30 simon Exp $
+# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.63 2007/12/17 17:46:05 shaun Exp $
 #
 
 #
@@ -95,6 +95,8 @@ my @query;
 my (%header, %sfields, %mfields);
 
 my $iscgi = defined $ENV{'SCRIPT_NAME'};
+
+my $fromwebform = 0;
 
 $ENV{'PATH'} = "/bin:/usr/bin:/usr/sbin:/sbin:/usr/local/bin";
 
@@ -399,6 +401,9 @@ foreach my $line (@query)
 }
 
 $getpatch = 0 if ($getpatch < 0);
+
+$fromwebform =
+	$header{'x-send-pr-version'} =~ /^www-/;
 
 if ($getpatch > 0) {
 	extractpatch();
@@ -1006,6 +1011,19 @@ sub parsepatches
 
 	if (($inpatch & PATCH_BASE64) && $getpatch) {
 		$outp .= $_;
+		return 1;
+	}
+
+	if (/^Patch attached with submission follows:$/ && $fromwebform && !$inpatch) {
+		$patchnum++;
+		$inpatch |= PATCH_ANY;
+		return 1 if ($getpatch and $patchnum != $getpatch);
+		$lastcol = undef;
+		$lastrev = undef;
+
+		sprint('patchblock_thead', $patchnum, 'patch.txt', "txt")
+			unless ($getpatch);
+
 		return 1;
 	}
 
