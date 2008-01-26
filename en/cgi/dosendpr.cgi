@@ -8,7 +8,7 @@
 #  GNU General Public License Version 2.  
 #     (http://www.gnu.ai.mit.edu/copyleft/gpl.html)
 #
-# $FreeBSD: www/en/cgi/dosendpr.cgi,v 1.37 2007/08/08 12:06:29 remko Exp $
+# $FreeBSD: www/en/cgi/dosendpr.cgi,v 1.38 2008/01/26 15:22:33 shaun Exp $
 
 use Socket;
 use CGI qw/:standard/;
@@ -204,10 +204,7 @@ $pr .= "X-Send-Pr-Version: www-3.1\n" .
 
 if (length($patchbuf) > 0) {
 	$pr .= "\nPatch attached with submission follows:\n\n"
-	    . "--- patch.txt begins here ---\n"
-	    . $patchbuf . "\n"
-	    . "--- patch.txt ends here ---\n"
-	    . "\n";
+	    . $patchbuf . "\n";
 }
 
 # remove any carriage returns that appear in the report.
