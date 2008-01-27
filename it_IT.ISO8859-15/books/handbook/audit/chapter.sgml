@@ -2,52 +2,756 @@
      The FreeBSD Italian Documentation Project
 
      $FreeBSD$
-     Original revision: 1.5
+     Original revision: 1.33
 -->
 
 <chapter id="audit">
   <chapterinfo>
     <authorgroup>
       <author>
-	<firstname>Tom</firstname>
+        <firstname>Tom</firstname>
 
-	<surname>Rhodes</surname>
+        <surname>Rhodes</surname>
 
-	<contrib>Scritto da </contrib>
+        <contrib>Scritto da </contrib>
+      </author>
+
+      <author>
+        <firstname>Robert</firstname>
+
+        <surname>Watson</surname>
       </author>
     </authorgroup>
   </chapterinfo>
 
-  <title>Auditing degli Eventi del Kernel</title>
+  <title>Auditing degli Eventi di Sicurezza</title>
 
   <sect1 id="audit-synopsis">
     <title>Sinossi</title>
 
-    <para>Traduzione in corso</para>
+    <indexterm><primary>AUDIT</primary></indexterm>
+    <indexterm>
+      <primary>Auditing degli Eventi di Sicurezza</primary>
+      <see>MAC</see>
+    </indexterm>
+
+    <para>&os; 6.2-RELEASE e i successivi includono supporto
+      per audit di eventi relativi alla sicurezza.  L'audit
+      degli eventi permette di tener traccia attraverso i log in modo
+      affidabile, preciso e configurabile di una variet&agrave;
+      di eventi rilevanti per la sicurezza del sistema, inclusi
+      i login, i cambiamenti della configurazione e l'accesso
+      ai file ed alla rete.  Questi dati loggati possono essere
+      molto preziosi per il monitoraggio di sistemi in produzione,
+      ricerca di intrusioni ed analisi post mortem.  &os;
+      implementa le API di <acronym>BSM</acronym> di &sun; e i suoi
+      formati di file, ed &egrave; interoperabile sia con le
+      implementazioni di audit di &sun; &solaris;
+      che con quelle di &apple; &macos; X.</para>
+
+    <para>Questo capitolo si focalizza sull'installazione
+      e la configurazione dell'Auditing degli Eventi.  Spiega politiche di
+      auditing e fornisce come esempio una configurazione di audit.</para>
+
+    <para>Dopo aver letto questo capitolo, saprai:</para>
+
+    <itemizedlist>
+      <listitem>
+        <para>Cosa &egrave; l'Auditing di Eventi e come funziona.</para>
+      </listitem>
+
+      <listitem>
+        <para>Come configurare l'Auditing di Eventi su &os;
+          per utenti e processi.</para>
+      </listitem>
+
+      <listitem>
+        <para>Come rivedere la traccia di audit usando la riduzione dell'audit
+          e i tool per studiarla.</para>
+      </listitem>
+    </itemizedlist>
+
+    <para>Prima di leggere questo capitolo, dovresti:</para>
+
+    <itemizedlist>
+      <listitem>
+        <para>Comprendere le basi di &unix; e &os;
+        (<xref linkend="basics">).</para>
+      </listitem>
+
+      <listitem>
+        <para>Essere familiare con le basi di configurazione e compilazione
+          del kernel (<xref linkend="kernelconfig">).</para>
+      </listitem>
+
+      <listitem>
+        <para>Avere una certa familiarit&agrave; con la sicurezza
+          e come si applica a &os; (<xref linkend="security">).</para>
+      </listitem>
+    </itemizedlist>
+
+    <warning>
+      <para>La funzione di audit in &os; 6.<replaceable>X</replaceable>
+        &egrave; sperimentale
+        e la messa in produzione dovrebbe avvenire solo dopo aver ben
+        ponderato i rischi connessi al software sperimentale.
+        Le limitazioni note includono che non tutti gli eventi
+        relativi alla sicurezza al momento posso essere tracciati
+        con l'audit, e che alcuni meccanismi di login, come
+        display manager basati su X11 e demoni di terze parti,
+        non sono correttamente configurabili per tracciare sotto audit
+        le sessioni di login degli utenti.</para>
+
+      <para>La funzione di audit di sicurezza pu&ograve; generare
+        log molto dettagliati dell'attivit&agrave; di sistema: su un
+        sistema carico, i file di traccia possono essere molto grandi
+        quando sono configurati in dettaglio, oltre i gigabytes per settimana.
+        Gli amministratori dovrebbero tenere in conto le richieste di spazio
+        associate alla configurazione dell'audit di grandi dimensioni.
+        Ad esempio, potrebbe essere desiderabile dedicare un intero
+        file system alle  directory sotto <filename>/var/audit</filename>
+        in modo che gli altri file system non siano toccati se il file system
+        di audit si riempie completamente.</para>
+    </warning>
   </sect1>
 
   <sect1 id="audit-inline-glossary">
     <title>Termini chiave - Parole da conoscere</title>
 
-    <para>Traduzione in corso</para>
+    <para>Prima di leggere questo capitolo, dobbiamo chiarire alcuni termini relativi
+      all'audit:</para>
+
+    <itemizedlist>
+      <listitem>
+        <para><emphasis>event</emphasis>: Un event tracciabile da audit
+          &egrave; ogni evento che pu&ograve; essere tenuto sotto
+          osservazione dal sottosistema di audit.
+          Esempi di eventi rilevanti per la sicurezza includono
+          la creazione di un file, lo stabilire una connessione di rete,
+          o il loggarsi di un utente.
+          Gli event sono o <quote>attribuibili</quote>,
+          ovvero possono essere riferiti ad un utente
+          autenticato, o <quote>non attribuibili</quote> se non
+          possono esserlo.  Esempi di eventi non attribuibili sono
+          tutti gli eventi che occorrono prima dell'autenticazione
+          nel processo di login, come tentativi di login con
+          password errata.</para>
+      </listitem>
+
+      <listitem>
+        <para><emphasis>class</emphasis>: Le class di eventi sono insiemi
+          di eventi correlati fra loro, e sono usati nelle espressioni
+          di selezione.  Class di eventi usate spesso includono <quote>
+          la creazione di file</quote> (fc), <quote>esecuzione</quote> (ex)
+          e <quote>login_logout</quote> (lo).</para>
+      </listitem>
+
+      <listitem>
+        <para><emphasis>record</emphasis>: Un record &egrave; una voce nel log
+          di audit che descrive un evento di sicurezza.  I record contengono
+          il tipo di evento, informazione sul soggetto che ha causato l'evento,
+          informazione sulla data e sull'ora dell'evento, informazione su ogni
+          oggetto o argomento, ed una condizione di successo o fallimento.</para>
+      </listitem>
+
+      <listitem>
+        <para><emphasis>trail</emphasis>: Una traccia di audit, o file di log,
+          consiste in una serie di record di eventi che descrivono
+          eventi di sicurezza.  Tipicamente le tracce sono in qualche modo
+          in ordine cronologico rispetto all'istante in cui l'evento
+          si &egrave; realizzato.  Solo processi autorizzati
+          hanno il permesso di tracciare record nella traccia di audit.</para>
+      </listitem>
+
+      <listitem>
+        <para><emphasis>selection expression</emphasis>: Una espressione
+          di selezione &egrave; una stringa che contiene una lista di prefissi
+          e nomi di classi di eventi usati per catalogare eventi.</para>
+      </listitem>
+
+      <listitem>
+        <para><emphasis>preselection</emphasis>: Il processo attraverso il quale
+          il sistema identifica quali eventi sono di interesse per l'amministratore
+          al fine di evitare di generare record di audit per eventi che
+          non siano di interesse.  La configurazione della preselezione
+          usa una serie di espressioni di selezioni per identificare
+          quali classi di eventi siano da tracciare per quale utente,
+          come anche impostazioni globali che si applicano sia a processi
+          autenticati che nono autenticati.</para>
+      </listitem>
+
+      <listitem>
+        <para><emphasis>reduction</emphasis>: Il processo attraverso
+          il quale i record di un audit esistente sono selezionati
+          per il salvataggio, la stampa, l'analisi.  Ovvero, il processo
+          attraverso il quale record di audit non desiderati siano
+          rimossi dalla traccia di audit.  Usando la riduzione, gli amministratori
+          sono in grado di implementare politiche per il salvataggio
+          di dati di audit.  Per esempio, tracce di audit dettagliate
+          possono essere tenute per un mese, dopodich&egrave; le
+          tracce possono essere ridotte al fine di preservare solo
+          le informazioni di login.</para>
+      </listitem>
+    </itemizedlist>
   </sect1>
 
   <sect1 id="audit-install">
     <title>Installare il Supporto Audit</title>
 
-    <para>Traduzione in corso</para>
+    <para>Il supporto in user space per l'Audit degli Eventi
+      &egrave; installato come parte del sistema operativo &os;.
+      In &os; 7.0 e successivi, il supporto kernel all'Audit degli eventi
+      &egrave; compilato di default.  In &os; 6.<replaceable>X</replaceable>,
+      il supporto all'Audit degli eventi deve essere compilato
+      esplicitamente nel kernel aggiungendo le seguenti
+      righe al file di configurazione del kernel:</para>
+
+    <programlisting>options  AUDIT</programlisting>
+
+    <para>Ricompila e reinstalla il kernel attraverso
+      il normale processo spiegato in
+      <xref linkend="kernelconfig">.</para>
+
+    <para>Una volta che il kernel &egrave; stato compilato ed
+      installato con l'audit abilitato, ed il
+      sistema &egrave; stato rebootato, abilita il demone audit
+      aggiungendo la seguente riga in &man.rc.conf.5;:</para>
+
+    <programlisting>auditd_enable="YES"</programlisting>
+
+    <para>Il supporto all'audit a questo punto deve essere avviato
+      al reboot, o manualmente avviando il demone:</para>
+
+    <programlisting>/etc/rc.d/auditd start</programlisting>
   </sect1>
 
   <sect1 id="audit-config">
     <title>Configurazione dell'Audit</title>
 
-    <para>Traduzione in corso</para>
+    <para>Tutti i file di configurazione per l'audit di sicurezza
+      si trovano in <filename class="directory">/etc/security</filename>.
+      I seguenti file devono essere presenti prima dell'avvio
+      del demone audit:</para>
+
+    <itemizedlist>
+      <listitem>
+        <para><filename>audit_class</filename> - Contiene le definizioni
+          delle classi di audit.</para>
+      </listitem>
+
+      <listitem>
+        <para><filename>audit_control</filename> - Controlla aspetti
+          del sottosistema dell'audit, come le classi audit di default,
+          il minimo spazio su disco da lasciare al log di audit,
+          la massima dimensione della traccia di audit, etc.</para>
+      </listitem>
+
+      <listitem>
+        <para><filename>audit_event</filename> - Nomi testuali e descrizioni
+          degli eventi di audit di sistema, cos&iacute; come una lista
+          di quali classi contengano quali eventi.</para>
+      </listitem>
+
+      <listitem>
+        <para><filename>audit_user</filename> - Requisiti specifici dell'audit
+          per l'utente, combinati con i default globali
+          al login.</para>
+      </listitem>
+
+      <listitem>
+        <para><filename>audit_warn</filename> - Uno script customizzabile
+          usato da <application>auditd</application> per generare messaggi di
+          warning in situazioni eccezionali,
+          come ad esempio quando sta finendo lo spazio per i record
+          o quando le tracce dell'audit sono ruotate.</para>
+      </listitem>
+    </itemizedlist>
+
+    <warning>
+      <para>I file di configurazione dell'audit dovrebbero essere editati
+        e manotenuti con attenzione, dato che errori nella
+        configurazione possono risultare in un tracciamento improprio
+        degli eventi.</para>
+    </warning>
+
+    <sect2>
+      <title>Espressioni per la Selezione degli Eventi</title>
+
+      <para>Le espressioni per la selezione sono usate in un certo
+        numero di posti nella configurazione dell'audit per determinare
+        quali eventi dovrebbero essere sotto audit.
+        Le espressioni contengono una serie di classi di eventi,
+        ognuna con un prefisso che indica se i record che sono indicati
+        debbano essere accettati o ignorati, ed opzionalmente ad indicare
+        se i record che vengono individuati siano da tracciare ad
+        un successo o ad un fallimento.  Le espressioni di selezione
+        sono valutate da sinistra a destra, e due espressioni sono
+        combinate aggiungendo una all'altra.</para>
+
+      <para>La seguente lista contiene le classi di eventi di default
+        presenti in <filename>audit_class</filename>:</para>
+
+      <itemizedlist>
+        <listitem>
+          <para><literal>all</literal> - <emphasis>all</emphasis> - Indica
+            tutte le classi di eventi.</para>
+        </listitem>
+
+        <listitem>
+          <para><literal>ad</literal> - <emphasis>administrative</emphasis>
+            - Le azioni amministrative eseguite su un sistema
+            nel suo complesso.</para>
+        </listitem>
+
+        <listitem>
+          <para><literal>ap</literal> - <emphasis>application</emphasis> -
+            Azioni definite dall'applicazione.</para>
+        </listitem>
+
+        <listitem>
+          <para><literal>cl</literal> - <emphasis>file close</emphasis> -
+            Chiamate audit alla system call <function>close</function>.
+        </listitem>
+
+        <listitem>
+          <para><literal>ex</literal> - <emphasis>exec</emphasis> - Fa l'audit
+            delle esecuzioni di un programma.  L'audit degli argomenti
+            della command line e delle variabili di ambiente &egrave;
+            controllato da &man.audit.control.5; usando i parametri
+            <literal>argv</literal> e <literal>envv</literal> nelle
+            impostazioni della <literal>policy</literal>.</para>
+        </listitem>
+
+        <listitem>
+          <para><literal>fa</literal> - <emphasis>file attribute access</emphasis>
+            - Fa l'audit dell'accesso ad attributi di accesso
+            come &man.stat.1;, &man.pathconf.2; ed eventi simili.</para>
+        </listitem>
+
+        <listitem>
+          <para><literal>fc</literal> - <emphasis>file create</emphasis>
+            - Fa l'audit di eventi che hanno come risultato
+            la creazione di un file.</para>
+        </listitem>
+
+        <listitem>
+          <para><literal>fd</literal> - <emphasis>file delete</emphasis>
+            - Fa l'audit di eventi in cui avvenga una cancellazione
+            di file.</para>
+        </listitem>
+
+        <listitem>
+          <para><literal>fm</literal> - <emphasis>file attribute modify</emphasis>
+            - Fa l'audit di eventi in cui avvenga una modifica
+            degli attributi dei file, come &man.chown.8;, &man.chflags.1;, &man.flock.2;,
+            etc.</para>
+        </listitem>
+
+        <listitem>
+          <para><literal>fr</literal> - <emphasis>file read</emphasis>
+            - Fa l'audit di eventi nei quali dei dati siano letti,
+            file siano aperti in lettura, etc.</para>
+        </listitem>
+
+        <listitem>
+          <para><literal>fw</literal> - <emphasis>file write</emphasis> -
+            Fa l'audit di eventi in cui dati siano scritti,
+            file siano scritti o modificati, etc.</para>
+        </listitem>
+
+        <listitem>
+          <para><literal>io</literal> - <emphasis>ioctl</emphasis> -
+            Fa l'audit dell'uso della system call &man.ioctl.2;.</para>
+        </listitem>
+
+        <listitem>
+          <para><literal>ip</literal> - <emphasis>ipc</emphasis> - Fa l'audit
+            di varie forme di Inter-Process Communication, incluse pipe
+            POSIX e operazioni  <acronym>IPC</acronym> System V.</para>
+        </listitem>
+
+        <listitem>
+          <para><literal>lo</literal> - <emphasis>login_logout</emphasis> -
+            Fa l'audit di eventi di &man.login.1; e &man.logout.1; che occorrano
+            nel sistema.</para>
+        </listitem>
+
+        <listitem>
+          <para><literal>na</literal> - <emphasis>non attributable</emphasis> -
+            Fa l'audit di eventi non attribuibili.</para>
+        </listitem>
+
+        <listitem>
+          <para><literal>no</literal> - <emphasis>invalid class</emphasis> -
+            Indica nessun evento di audit.</para>
+        </listitem>
+
+        <listitem>
+          <para><literal>nt</literal> - <emphasis>network</emphasis> -
+            Fa l'audit di eventi relativi ad azioni di rete, come
+            &man.connect.2; e &man.accept.2;.</para>
+        </listitem>
+
+        <listitem>
+          <para><literal>ot</literal> - <emphasis>other</emphasis> -
+            Fa l'audit di eventi miscellanei.</para>
+        </listitem>
+
+        <listitem>
+          <para><literal>pc</literal> - <emphasis>process</emphasis> -
+            Fa l'audit di operazioni dei processi, come
+            &man.exec.3; e &man.exit.3;.</para>
+        </listitem>
+      </itemizedlist>
+
+      <para>Queste classi di eventi audit possono essere personalizzate
+        modificando i file di configurazione
+        <filename>audit_class</filename> e
+        <filename>audit_event</filename>.</para>
+
+      <para>Ogni classe di audit nella lista &egrave; combinata
+        con un prefisso che indica se le operazione di successo
+        o andate in fallimento siano intercettate, e se la entry
+        sta aggiungendo o togliendo delle regole di intercettazione
+        per la classe ed il tipo.</para>
+
+      <itemizedlist>
+        <listitem>
+          <para>(none) Fa l'audit di istanze dell'evento sia di successo
+            che fallite.</para>
+        </listitem>
+
+        <listitem>
+          <para><literal>+</literal> Fa l'audit di eventi di successo
+            in questa classe.</para>
+        </listitem>
+
+        <listitem>
+          <para><literal>-</literal> fa l'audit di eventi falliti
+            in questa classe.</para>
+        </listitem>
+
+        <listitem>
+          <para><literal>^</literal> Non fa l'audit di eventi n&egrave;
+            di successo n&egrave; falliti in questa classe.</para>
+        </listitem>
+
+        <listitem>
+          <para><literal>^+</literal> Non fa l'audit di eventi di successo
+            in questa classe.</para>
+        </listitem>
+
+        <listitem>
+          <para><literal>^-</literal> Non fa l'audit di eventi falliti in
+            questa classe.</para>
+        </listitem>
+      </itemizedlist>
+
+      <para>Il seguente esempio di selezione indica eventi di login/logout
+        sia di successo che non, ma solo eventi di successo di esecuzione:</para>
+
+      <programlisting>lo,+ex</programlisting>
+    </sect2>
+
+    <sect2>
+      <title>File di Configurazione</title>
+
+      <para>Nella maggior parte dei casi, gli amministratori dovranno
+        solo modificare due file quando configurano il sistema audit:
+        <filename>audit_control</filename> ed <filename>audit_user</filename>.
+        Il primo controlla le propriet&agrave; e le politiche di tutto
+        il sistema, il secondo pu&ograve; essere usato per fare del
+        fine tuning iper il singolo utente.</para>
+
+      <sect3 id="audit-auditcontrol">
+        <title>Il File <filename>audit_control</filename></title>
+
+        <para>Il file <filename>audit_control</filename> specifica un certo numero
+          di valori di default per il sottosistema audit.  Leggendo i contenuti
+          di questo file, notiamo le seguenti righe:</para>
+
+        <programlisting>dir:/var/audit
+flags:lo
+minfree:20
+naflags:lo
+policy:cnt
+filesz:0</programlisting>
+
+        <para>L'opzione <option>dir</option> viene usata per impostare
+         una o pi&ugrave; directory dove i file di log dell'audit vengono
+         salvati.  Se appare pi&ugrave; di una directory, saranno
+         usati in ordine uno dopo l'altro, dopo che uno si riempie.
+         &Egrave; comune configurare
+         audit cosicch&egrave; i log siano tenuti in un filesystem
+         dedicato, per prevenire interferenze fra il sottosistema
+         audit ed altri sottosistemi se il filesystem si riempie.</para>
+
+        <para>Il campo <option>flags</option> imposta la maschera di preselzione
+          per gli eventi attribuibili per tutto il sistema.  Nell'esempio
+          sopra, i login ed i logout di successo e quelli falliti
+          sono tenuti sotto audit per tutto il sistema.</para>
+
+        <para>L'opzione <option>minfree</option> definisce la minima percentuale
+          di spazio libero per i file system dove vengono conservate
+          le tracce dell'audit.  Quando questo limite viene superato,
+          sar&agrave; generato un warning.  L'esempio sopra imposta
+          il minimo spazio libero al venti per cento.</para>
+
+        <para>L'opzione <option>naflags</option> specifica le classi di audit
+          da tenere sotto audit per gli eventi non attribuibili, come
+          il processo di login ed i demoni di sistema.</para>
+
+        <para>L'opzione <option>policy</option> specifica una lista separata
+          da virgole di flag per le politiche che controllano vari aspetti
+          del comportamento dell'audit.  Il flag di default <literal>cnt</literal>
+          indica che il sistema dovrebbe continuare a funzionare nonostante
+          un errore dell'audit (questa flag &egrave; altamente consigliato).
+          Un altro flag usato di comune &egrave; <literal>argv</literal>,
+          che fa s&igrave; che gli argomenti di command line della sistema call &man.execve.2;
+          siano tenuti sotto audit come parte dell'esecuzione del comando.</para>
+
+        <para>L'opzione <option>filesz</option> specifica la massima dimensione
+          in bytes da tenere per le tracce di audit, prima di terminarli
+          automaticamente e routarli.  Il default, 0, disabilita la rotazione
+          dei file di log.  Se la dimensione &egrave; diversa di zero
+          ma minore del minimo, 512k, sar&agrave; ignorata ed un messaggio di log
+          sar&agrave; generato.</para>
+      </sect3>
+
+      <sect3 id="audit-audituser">
+        <title>Il File <filename>audit_user</filename></title>
+
+        <para>Il file <filename>audit_user</filename> permette all'amministratore
+          di specificare ulteriori requisiti dell'audit per utenti
+          specifici.  Ogni linea configura l'audit per un utente
+          attraverso due campi: il primo campo &egrave; <literal>alwaysaudit</literal>,
+          che specifica un insieme di eventi che dovrebbero sempre essere tenuti
+          sotto audit per l'utente, ed il secondo &egrave; il campo
+          <literal>neveraudit</literal>, che specifica un insieme di eventi
+          che non dovrebbero mai essere tenuti sotto audit per l'utente.
+        </para>
+
+        <para>Il seguente esempio di file <filename>audit_user</filename> fa
+          l'audit di eventi di login/logout e delle esecuzioni di successo
+          per l'utente <username>root</username>, e fa l'audit della creazione
+          e dell'esecuzione di successo per l'utente <username>www</username>.
+          Se usato con il file di esempio <filename>audit_control</filename>
+          sopra riportato, l'entry <literal>lo</literal> per
+          <username>root</username> &egrave; ridondante, e gli eventi di
+          login/logout sarano tenuti sotto audit anche per l'utente
+          <username>www</username>.</para>
+
+        <programlisting>root:lo,+ex:no
+www:fc,+ex:no</programlisting>
+      </sect3>
+    </sect2>
   </sect1>
 
   <sect1 id="audit-administration">
-    <title>Amministrazione degli Eventi Audit</title>
+    <title>Amministrare il Sottosistema Audit</title>
 
-    <para>Traduzione in corso</para>
+    <sect2>
+      <title>Leggere le Tracce di Audit</title>
+
+      <para>Le tracce di audit sono conservate nel formato binario BSM,
+        cos&igrave; devono essere usati degli strumenti appositi
+        per modificare o convertirli a testo.  Il comando &man.praudit.1;
+        converte file di traccia a semplice formato testo; il comando
+        <command>auditreduce</command> pu&ograve; essere usato per ridurre
+        file di traccia per analisi, archiviazione o stampa.
+        &man.auditreduce.1; supporta una variet&agrave; di
+        parametri di selezione, incluso il tipo di evento, la classe
+        dell'evento, l'utente, la data o l'ora dell'evento, ed il percorso
+        del file o l'oggetto su cui si opera.</para>
+
+      <para>Per esempio, l'utility <command>praudit</command> far&agrave; il
+        dump dell'intero contenuto di uno specifico file di log di audit
+        in semplice formato testuale:</para>
+
+      <screen>&prompt.root; <userinput>praudit /var/audit/AUDITFILE</userinput></screen>
+
+      <para>Dove <filename><replaceable>AUDITFILE</replaceable></filename>
+        &egrave; il nome del file di log di cui fare il dump.</para>
+
+      <para>Le tracce di audit consistono in una serie di record di audit
+        composti da token, che <command>praudit</command> scrive sequenzialmente
+        uno per linea.  Ogni token &egrave; per un tipo specifico,
+        come <literal>header</literal> che tiene un header di un record
+        audit, o <literal>path</literal> che tiene un percorso di file
+        da una ricerca del nome.
+        Il seguente &egrave; un esempio di un evento <literal>execve</literal>:</para>
+
+      <programlisting>header,133,10,execve(2),0,Mon Sep 25 15:58:03 2006, + 384 msec
+exec arg,finger,doug
+path,/usr/bin/finger
+attribute,555,root,wheel,90,24918,104944
+subject,robert,root,wheel,root,wheel,38439,38032,42086,128.232.9.100
+return,success,0
+trailer,133</programlisting>
+
+      <para>Questo audit rappresenta una chiamata di successo a
+        <literal>execve</literal>, in cui il comando
+        <literal>finger doug</literal> &egrave; stato eseguito.
+        Il token degli argomenti contiene la riga di comando presentata
+        dalla shell al kernel.  Il token <literal>path</literal> contiene
+        il percorso dell'eseguibile usato dal kernel.
+        Il token <literal>attribute</literal> descrive il binario, ed in particolare
+        include i permessi del file che possono essere usato per determinare
+        se l'applicazione era setuid.  Il token <literal>subject</literal>
+        descrive il processo
+        in oggetto e conserva in sequenza l'id utente dell'audit, l'id effettivo
+        dell'utente, il group id, lo user id reale ed il group id reale,
+        il process id, l'id della sessione, l'id della porta e l'indirizzo di login.
+        Nota che l'audit user id ed il real user id sono diversi:
+        l'utente <username>robert</username> &egrave; diventato
+        <username>root</username> prima di eseguire questo comando, ma questo
+        viene tenuto sotto audit usando lo user id originale.  Infine, il token
+        <literal>return</literal> indica l'esecuzione andata a buon fine, ed il
+        <literal>trailer</literal> chiude il record.</para>
+
+      <para>In &os; 6.3 e successive, <command>praudit</command> supporta
+        anche il formato di output XML, che pu&ograve; essere selezionato
+        usando l'argomento <option>-x</option>.</para>
+    </sect2>
+
+    <sect2>
+      <title>Ridurre le Tracce di Audit</title>
+
+      <para>Dato che i log dell'audit possono essere molto grandi,
+        un amministratore probabilmente vorr&agrave; selezionarne
+        solo un sottoinsieme utile, ad esempio i record
+        associati con un utente specifico:</para>
+
+      <screen>&prompt.root; <userinput>auditreduce -u trhodes /var/audit/AUDITFILE | praudit</userinput></screen>
+
+      <para>Questo selezioner&agrave; tutti i record di audit per
+        l'utente <username>trhodes</username> conservati nel file
+        <filename><replaceable>AUDITFILE</replaceable></filename>.</para>
+    </sect2>
+
+    <sect2>
+      <title>Delegare Diritti di Ispezionare l'Audit</title>
+
+      <para>I membri del gruppo <groupname>audit</groupname> hanno
+        il permesso di leggere tracce di audit in <filename>/var/audit</filename>;
+        di default questo gruppo e' vuoto, cos&igrave; solo
+        <username>root</username> pu&ograve; leggere le tracce di audit.
+        Utenti possono essere aggiunti al gruppo <groupname>audit</groupname>
+        per delegare diritti di lettura sull'audit.
+        Dato che l'abilit&agrave; di tracciare contenuti del log di audit
+        fornisce significative informazioni sul comportamento di utenti
+        e processi, si raccomanda che la delega di lettura sia fatta con cautela.</para>
+    </sect2>
+
+    <sect2>
+      <title>Monitoraggio dal Vivo Usando Pipe di Audit</title>
+
+      <para>Le pipe di audit sono degli pseudo-device clonanti nel
+        file system dei device che permettono alle applicazioni di intercettare
+        lo stream dei record di audit in tempo reale.  Questo &egrave;
+        di primario interesse per i creatori di applicativi di intrusion
+        detection e di monitoraggio di sistemi.
+        In ogni caso, per l'amministratore il device della pipe dell'audit
+        &egrave; un modo conveniente per permettere il monitaraggio dal vivo
+        senza incontrare problemi con i permessi della traccia audit o
+        la rotazione dei log che interrompono lo stream degli eventi.
+        Per tracciare lo stream degli eventi dell'audit, usa la seguente
+        linea di comando:</para>
+
+      <screen>&prompt.root; <userinput>praudit /dev/auditpipe</userinput></screen>
+
+      <para>Di default, i nodi di device delle pipe dell'audit sono accessibili
+        solo dall'utente <username>root</username>.  Per renderlo accessibile
+        ai membri del gruppo <groupname>audit</groupname>, aggiungi una
+        regola <literal>devfs</literal>
+        al file <filename>devfs.rules</filename>:</para>
+
+      <programlisting>add path 'auditpipe*' mode 0440 group audit</programlisting>
+
+      <para>Leggi &man.devfs.rules.5; per altre informazioni su come
+        configurare il filesystem devfs.</para>
+
+      <warning>
+        <para>&Egrave; facile produrre cicli di feedback di eventi audit,
+          in cui il semplice osservare ogni evento di audit risulta nella
+          creazione di pi&ugrave; eventi di audit.  Per esempio, se tutto
+          il traffico di rete viene tenuto sotto audit, e &man.praudit.1; viene
+          eseguito da una sessione SSH, un flusso continuo di notevoli dimensioni di eventi
+          audit sar&agrave; generato, dato che ogni evento scritto generer&agrave;
+          un altro evento.  &Egrave; consigliabile eseguire
+          <command>praudit</command> su un device
+          pipe di audit da sessioni senza audit I/O in grande dettaglio, per evitare
+          fenomeni come questo.</para>
+      </warning>
+    </sect2>
+
+    <sect2>
+      <title>Ruotare File di Traccia di Audit</title>
+
+      <para>Le tracce di audit sono scritte solo dal kernel, e gestite
+        solo dal demone dell'audit, <application>auditd</application>.  Gli
+        amministratori non dovrebbero cercare  di usare &man.newsyslog.conf.5;
+        o altri tool per ruotare direttamente i log di audit.  Invece,
+        il tool di gestione <command>audit</command> pu&ograve; essere usato
+        per interrompere l'audit, riconfigurare il sistema di audit,
+        ed eseguire la rotazione dei log.  Il seguente comando fa s&igrave;
+        che il demone audit crei un nuovo log di audit e segnali al kernel
+        di usare il nuovo log.  I vecchio log sar&agrave; terminato
+        e rinominato, ed a questo punto potr&agrave; essere manipolato
+        dall'amministratore.</para>
+
+      <screen>&prompt.root; <userinput>audit -n</userinput></screen>
+
+      <warning>
+        <para>Se il demone <application>auditd</application> non sta girando
+          al momento, questo comando fallir&agrave; e sar&agrave; prodotto
+          un messaggio di errore.</para>
+      </warning>
+
+      <para>Aggiungendo la seguente linea a
+        <filename>/etc/crontab</filename> forzer&agrave; la rotazione
+        ogni dodici ore da parte di &man.cron.8;:</para>
+
+      <programlisting>0     */12       *       *       *       root    /usr/sbin/audit -n</programlisting>
+
+      <para>Il cambiamento prender&agrave; effetto dopo che hai salvato
+        il nuovo <filename>/etc/crontab</filename>.</para>
+
+      <para>La rotazione automatica della traccia dell'audit basata
+        sulla dimensione del file &egrave; possibile attraverso l'opzione
+        <option>filesz</option> in &man.audit.control.5;, ed &egrave;
+        descritta nella sezione sui file di configurazione di questo capitolo.</para>
+    </sect2>
+
+    <sect2>
+      <title>Comprimere le Tracce di Audit</title>
+
+      <para>Man mano che i file di traccia dell'audit diventano
+        di grandi dimensioni, &egrave; spesso desiderabile
+        comprimerli o in qualche modo archiviarli dopo che sono
+        stati chiusi dal demone audit.  Lo script <filename>audit_warn</filename>
+        pu&ograve; essere usato per eseguire operazioni personalizzate
+        per una variet&agrave; di eventi relativi all'audit, incluse
+        la chiusura pulita delle tracce di audit quando sono ruotate.
+        Ad esempio, il seguente comando pu&ograve; essere aggiunto
+        allo script <filename>audit_warn</filename> per comprimere
+        le tracce di audit alla chiusura:</para>
+
+      <programlisting>#
+# Compress audit trail files on close.
+#
+if [ "$1" = closefile ]; then
+        gzip -9 $2
+fi</programlisting>
+
+      <para>Altre attivit&agrave; di archiviazione possono includere
+        copiare i file di traccia su di un server centralizzato, cancellare
+        file di traccia vecchi, o ridurre la traccia di audit per rimuovere
+        i record non voluti.  Lo script sar&agrave; eseguito solo quando
+        i file di traccia sono chiusi in maniera pulita, cos&igrave;
+        non sar&agrave; eseguito su tracce lasciate non terminate
+        a seguito di uno shutdown improprio.</para>
+    </sect2>
   </sect1>
 </chapter>
 
