@@ -4,11 +4,11 @@
 <!ENTITY title "A FreeBSD Projekt">
 ]>
 
-<!-- $FreeBSD: www/hu/index.xsl,v 1.5 2007/03/26 15:22:53 gabor Exp $ -->
+<!-- $FreeBSD: www/hu/index.xsl,v 1.6 2007/11/06 12:44:24 gabor Exp $ -->
 
 <!-- FreeBSD Hungarian Documentation Project
      Translated by: Gabor Kovesdan <gabor@FreeBSD.org>
-     Original Revision: r1.161				-->
+     Original Revision: r1.162				-->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
@@ -42,9 +42,9 @@
     <link rel="alternate stylesheet" media="screen" href="&enbase;/layout/css/fixed_large.css" type="text/css" title="Large Text" />
     <script type="text/javascript" src="&enbase;/layout/js/styleswitcher.js"></script>
 	<link rel="alternate" type="application/rss+xml"
-	  title="FreeBSD Projekt H&uacute;rek" href="&base;/news/news.rdf" />
+	  title="FreeBSD Projekt H&iacute;rek" href="&base;/news/rss.xml" />
 	<link rel="alternate" type="application/rss+xml"
-	  title="FreeBSD Biztons&aacute;gi Bejelent&eacute;sek" href="&enbase;/security/advisories.rdf" />
+	  title="FreeBSD Biztons&aacute;gi Bejelent&eacute;sek" href="&enbase;/security/rss.xml" />
 	
 	<!-- Formatted to be easy to spam harvest, please do not reformat. -->
 	<xsl:comment>
@@ -227,7 +227,7 @@
 					<a href="&enbase;/news/newsflash.html" title="T&ouml;bb">T&ouml;bb</a>
 				  </li>
 				  <li class="last-child">
-					<a href="&enbase;/news/news.rdf" title="H&iacute;rek RSS Feed"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="H&uacute;rek RSS Feed" /></a>
+					<a href="&enbase;/news/rss.xml" title="H&iacute;rek RSS Feed"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="H&uacute;rek RSS Feed" /></a>
 				  </li>
 				</ul>
 			  </div> <!-- unnamed -->
@@ -299,7 +299,7 @@
 					<a href="&enbase;/security/" title="T&ouml;bb">T&ouml;bb</a>
 				  </li>
 				  <li class="last-child">
-					<a href="&enbase;/security/advisories.rdf" title="Biztons&aacute;gi Bejelent&eacute;sek RSS Feed"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="Biztons&aacute;gi Bejelnt&eacute;sek RSS Feed" /></a>
+					<a href="&enbase;/security/rss.xml" title="Biztons&aacute;gi Bejelent&eacute;sek RSS Feed"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="Biztons&aacute;gi Bejelnt&eacute;sek RSS Feed" /></a>
 				  </li>
 				</ul>
 			  </div> <!-- unnamed -->
