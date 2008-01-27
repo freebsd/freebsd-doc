@@ -1,6 +1,6 @@
 #
 # $FreeBSD$
-# Original revision: 1.95
+# Original revision: 1.108
 #
 # Crea il Manuale di FreeBSD.
 #
@@ -35,7 +35,7 @@ DOC?= book
 FORMATS?= html-split
 
 HAS_INDEX= true
-USE_PS2PDF=	yes
+USE_PS2PDF= yes
 
 INSTALL_COMPRESSED?= gz
 INSTALL_ONLY_COMPRESSED?=
@@ -49,12 +49,13 @@ IMAGES_EN+= geom/striping.pic
 IMAGES_EN+= install/adduser1.scr
 IMAGES_EN+= install/adduser2.scr
 IMAGES_EN+= install/adduser3.scr
+IMAGES_EN+= install/boot-loader-menu.scr
 IMAGES_EN+= install/boot-mgr.scr
+IMAGES_EN+= install/config-country.scr
 IMAGES_EN+= install/console-saver1.scr
 IMAGES_EN+= install/console-saver2.scr
 IMAGES_EN+= install/console-saver3.scr
 IMAGES_EN+= install/console-saver4.scr
-IMAGES_EN+= install/desktop.scr
 IMAGES_EN+= install/disklabel-auto.scr
 IMAGES_EN+= install/disklabel-ed1.scr
 IMAGES_EN+= install/disklabel-ed2.scr
@@ -114,7 +115,6 @@ IMAGES_EN+= install/timezone2.scr
 IMAGES_EN+= install/timezone3.scr
 IMAGES_EN+= install/userconfig.scr
 IMAGES_EN+= install/userconfig2.scr
-IMAGES_EN+= install/xf86setup.scr
 IMAGES_EN+= mail/mutt1.scr
 IMAGES_EN+= mail/mutt2.scr
 IMAGES_EN+= mail/mutt3.scr
@@ -134,6 +134,32 @@ IMAGES_EN+= vinum/vinum-raid5-org.pic
 IMAGES_EN+= vinum/vinum-simple-vol.pic
 IMAGES_EN+= vinum/vinum-striped-vol.pic
 IMAGES_EN+= vinum/vinum-striped.pic
+IMAGES_EN+= virtualization/parallels-freebsd1.png
+IMAGES_EN+= virtualization/parallels-freebsd2.png
+IMAGES_EN+= virtualization/parallels-freebsd3.png
+IMAGES_EN+= virtualization/parallels-freebsd4.png
+IMAGES_EN+= virtualization/parallels-freebsd5.png
+IMAGES_EN+= virtualization/parallels-freebsd6.png
+IMAGES_EN+= virtualization/parallels-freebsd7.png
+IMAGES_EN+= virtualization/parallels-freebsd8.png
+IMAGES_EN+= virtualization/parallels-freebsd9.png
+IMAGES_EN+= virtualization/parallels-freebsd10.png
+IMAGES_EN+= virtualization/parallels-freebsd11.png
+IMAGES_EN+= virtualization/parallels-freebsd12.png
+IMAGES_EN+= virtualization/parallels-freebsd13.png
+IMAGES_EN+= virtualization/virtualpc-freebsd1.png
+IMAGES_EN+= virtualization/virtualpc-freebsd2.png
+IMAGES_EN+= virtualization/virtualpc-freebsd3.png
+IMAGES_EN+= virtualization/virtualpc-freebsd4.png
+IMAGES_EN+= virtualization/virtualpc-freebsd5.png
+IMAGES_EN+= virtualization/virtualpc-freebsd6.png
+IMAGES_EN+= virtualization/virtualpc-freebsd7.png
+IMAGES_EN+= virtualization/virtualpc-freebsd8.png
+IMAGES_EN+= virtualization/virtualpc-freebsd9.png
+IMAGES_EN+= virtualization/virtualpc-freebsd10.png
+IMAGES_EN+= virtualization/virtualpc-freebsd11.png
+IMAGES_EN+= virtualization/virtualpc-freebsd12.png
+IMAGES_EN+= virtualization/virtualpc-freebsd13.png
 
 # Immagini dalla libreria per tutti i documenti
 IMAGES_LIB = callouts/1.png
@@ -146,6 +172,11 @@ IMAGES_LIB+= callouts/7.png
 IMAGES_LIB+= callouts/8.png
 IMAGES_LIB+= callouts/9.png
 IMAGES_LIB+= callouts/10.png
+IMAGES_LIB+= callouts/11.png
+IMAGES_LIB+= callouts/12.png
+IMAGES_LIB+= callouts/13.png
+IMAGES_LIB+= callouts/14.png
+IMAGES_LIB+= callouts/15.png
 
 #
 # SRCS lista i singoli files SGML che compongono il documento. Modifiche
@@ -170,6 +201,7 @@ SRCS+= firewalls/chapter.sgml
 SRCS+= geom/chapter.sgml
 SRCS+= install/chapter.sgml
 SRCS+= introduction/chapter.sgml
+SRCS+= jails/chapter.sgml
 SRCS+= kernelconfig/chapter.sgml
 SRCS+= l10n/chapter.sgml
 SRCS+= linuxemu/chapter.sgml
@@ -187,6 +219,7 @@ SRCS+= security/chapter.sgml
 SRCS+= serialcomms/chapter.sgml
 SRCS+= users/chapter.sgml
 SRCS+= vinum/chapter.sgml
+SRCS+= virtualization/chapter.sgml
 SRCS+= x11/chapter.sgml
 
 # Entities
@@ -210,41 +243,46 @@ pgpkeyring: pgpkeys/chapter.sgml
 JADEFLAGS+=	-V withpgpkeys
 .endif
 
-.for p in ftp cvsup
-SRCS+= mirrors.sgml.${p}.inc
-CLEANFILES+= mirrors.sgml.${p}.inc
-CLEANFILES+= mirrors.sgml.${p}.inc.tmp
-.endfor
-
-SRCS+= eresources.sgml.www.inc
-CLEANFILES+= eresources.sgml.www.inc
-CLEANFILES+= eresources.sgml.www.inc.tmp
-
 URL_RELPREFIX?= ../../../..
 DOC_PREFIX?= ${.CURDIR}/../../..
+
+#
+# rules generating lists of mirror site from XML database.
+#
+XMLDOCS=	mirrors-ftp:::mirrors.sgml.ftp.inc.tmp \
+		mirrors-cvsup:::mirrors.sgml.cvsup.inc.tmp \
+		eresources:::eresources.sgml.www.inc.tmp
+DEPENDSET.DEFAULT=	transtable mirror
+XSLT.DEFAULT=		${XSL_MIRRORS}
+XML.DEFAULT=		${XML_MIRRORS}
+NO_TIDY.DEFAULT=	yes
+
+PARAMS.mirrors-ftp+=	--param 'type' "'ftp'" \
+			--param 'proto' "'ftp'" \
+			--param 'target' "'handbook/mirrors/chapter.sgml'"
+PARAMS.mirrors-cvsup+=	--param 'type' "'cvsup'" \
+			--param 'proto' "'cvsup'" \
+			--param 'target' "'handbook/mirrors/chapter.sgml'"
+PARAMS.eresources+=	--param 'type' "'www'" \
+			--param 'proto' "'http'" \
+			--param 'target' "'handbook/eresources/chapter.sgml'"
+
+SRCS+=		mirrors.sgml.ftp.inc \
+		mirrors.sgml.cvsup.inc \
+		eresources.sgml.www.inc
+
+CLEANFILES+=	mirrors.sgml.ftp.inc mirrors.sgml.ftp.inc.tmp \
+		mirrors.sgml.cvsup.inc mirrors.sgml.cvsup.inc.tmp \
+		eresources.sgml.www.inc eresources.sgml.www.inc.tmp
 
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"
 
 .for p in ftp cvsup
-mirrors.sgml.${p}.inc: ${XML_MIRRORS} ${XSL_MIRRORS}
-	${XSLTPROC} ${XSLTPROCOPTS} \
-	    -o $@.tmp \
-	    --param 'type' "'$p'" \
-	    --param 'proto' "'$p'" \
-	    --param 'target' "'handbook/mirrors/chapter.sgml'" \
-	    ${XSL_MIRRORS} ${XML_MIRRORS}
+mirrors.sgml.${p}.inc: mirrors.sgml.${p}.inc.tmp
 	${SED} -e 's,<\([^ >]*\)\([^>]*\)/>,<\1\2></\1>,;s,</anchor>,,' \
 	    < $@.tmp > $@ || (${RM} -f $@ && false)
-	${RM} -f $@.tmp
 .endfor
 
-eresources.sgml.www.inc: ${XML_MIRRORS} ${XSL_MIRRORS}
-	${XSLTPROC} ${XSLTPROCOPTS} \
-	    -o $@.tmp \
-	    --param 'type' "'www'" \
-	    --param 'proto' "'http'" \
-	    --param 'target' "'handbook/eresources/chapter.sgml'" \
-	    ${XSL_MIRRORS} ${XML_MIRRORS}
+eresources.sgml.www.inc: eresources.sgml.www.inc.tmp
 	${SED} -e 's,<\([^ >]*\)\([^>]*\)/>,<\1\2></\1>,;s,</anchor>,,' \
 	    < $@.tmp > $@ || (${RM} -f $@ && false)
-	${RM} -f $@.tmp
