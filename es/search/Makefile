@@ -1,4 +1,4 @@
-# $FreeBSD: www/es/search/Makefile,v 1.2 1999/09/06 07:03:13 peter Exp $
+# $FreeBSD: www/es/search/Makefile,v 1.3 2000/11/29 23:57:09 kuriyama Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -18,9 +18,9 @@ CLEANFILES+=atoz.sgml site.sgml
 
 index-site.html: atoz.sgml site.sgml
 atoz.sgml: web.atoz 
-	sort -fu ${.ALLSRC} | ${PERL} ${.CURDIR}/atoz.pl > ${.TARGET}
+	sort -fu ${.ALLSRC} | ${PERL} ${.CURDIR}/../../en/search/atoz.pl > ${.TARGET}
 
 site.sgml: site.map
-	${PERL} ${.CURDIR}/site.pl < ${.ALLSRC} > ${.TARGET}
+	${PERL} ${.CURDIR}/../../en/search/site.pl < ${.ALLSRC} > ${.TARGET}
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
