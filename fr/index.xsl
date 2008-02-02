@@ -4,10 +4,10 @@
 <!ENTITY title "Le Projet FreeBSD">
 ]>
 
-<!-- $FreeBSD: www/fr/index.xsl,v 1.33 2006/08/21 20:34:49 blackend Exp $ -->
+<!-- $FreeBSD: www/fr/index.xsl,v 1.34 2007/02/19 19:10:37 blackend Exp $ -->
 <!--
    The FreeBSD French Documentation Project
-   Original revision: 1.159
+   Original revision: 1.162
 
    Version francaise : Stephane Legrand <stephane@freebsd-fr.org>
    Mise a jour:	Marc Fonvieille <blackend@FreeBSD.org>
@@ -49,11 +49,11 @@
     <link rel="alternate stylesheet" media="screen" href="&enbase;/layout/css/fixed_large.css" type="text/css" title="Large Text" />
     <script type="text/javascript" src="&enbase;/layout/js/styleswitcher.js"></script>
 	<link rel="alternate" type="application/rss+xml"
-	  title="FreeBSD Project News" href="&enbase;/news/news.rdf" />
+	  title="FreeBSD Project News" href="&enbase;/news/rss.xml" />
 	<link rel="alternate" type="application/rss+xml"
-	  title="FreeBSD Security Advisories" href="&enbase;/security/advisories.rdf" />
+	  title="FreeBSD Security Advisories" href="&enbase;/security/rss.xml" />
 	<link rel="alternate" type="application/rss+xml"
-	  title="FreeBSD GNOME Project News" href="&enbase;/gnome/news.rdf" />
+	  title="FreeBSD GNOME Project News" href="&enbase;/gnome/rss.xml" />
 	
 	<!-- Formatted to be easy to spam harvest, please do not reformat. -->
 	<xsl:comment>
@@ -112,9 +112,11 @@
 					<li>
 					  <a href="&u.rel.announce;">Version de production &rel.current;</a>
 					</li>
+<!-- Devra etre reactive quand la 7.0 sera sortie i.e., quand rel2 = 6.X
 					<li>
 					  <a href="&u.rel2.announce;">Version (ancienne) de production &rel2.current;</a>
 					</li>
+-->
 			    <xsl:if test="'&beta.testing;' != 'IGNORE'">
 					<li>
 					  <a href="&base;/where.html#helptest">Version &#224; venir
@@ -188,7 +190,7 @@
 					  <a href="&base;/support.html#mailing-list" title="Listes de diffusion">Listes de diffusion</a>
 					</li>
 					<li>
-					  <a href="&base;/send-pr.html" title="Envoyer un rapport de bogue">Envoyer un rapport de bogue</a>
+					  <a href="&base;/support/bugreports.html" title="Envoyer un rapport de bogue">Envoyer un rapport de bogue</a>
 					</li>
 					<li>
 					  <a href="&enbase;/doc/&url.doc.langcode;/books/faq/index.html" title="FAQ">FAQ</a>
@@ -237,7 +239,7 @@
 					<a href="&base;/news/newsflash.html" title="Plus de nouvelles">Plus...</a>
 				  </li>
 				  <li class="last-child">
-					<a href="&base;/news/news.rdf" title="Flux RSS de nouvelles"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="Flux RSS de nouvelles" /></a>
+					<a href="&base;/news/rss.xml" title="Flux RSS de nouvelles"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="Flux RSS de nouvelles" /></a>
 				  </li>
 				</ul>
 			  </div> <!-- unnamed -->
@@ -310,7 +312,7 @@
 					<a href="&base;/security/" title="Plus d'avis de s&#233;curit&#233;">Plus...</a>
 				  </li>
 				  <li class="last-child">
-					<a href="&enbase;/security/advisories.rdf" title="Flux RSS des avis de s&#233;curit&#233;"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="Flux RSS des avis de s&#233;curit&#233;" /></a>
+					<a href="&enbase;/security/rss.xml" title="Flux RSS des avis de s&#233;curit&#233;"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="Flux RSS des avis de s&#233;curit&#233;" /></a>
 				  </li>
 				</ul>
 			  </div> <!-- unnamed -->
