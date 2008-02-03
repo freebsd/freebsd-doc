@@ -16,6 +16,7 @@ SUBDIR+= mailing-list-faq
 SUBDIR+= p4-primer
 SUBDIR+= problem-reports
 SUBDIR+= releng
+SUBDIR+= version-guide
 SUBDIR+= zip-drive
 
 DOC_PREFIX?= ${.CURDIR}/../..
