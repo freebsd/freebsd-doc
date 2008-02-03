@@ -2,8 +2,8 @@
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
 <!-- $FreeBSD$
-     $FreeBSDde: de-www/share/sgml/libcommon.xsl,v 1.6 2007/03/15 17:17:10 jkois Exp $
-     basiert auf: 1.7
+     $FreeBSDde: de-www/share/sgml/libcommon.xsl,v 1.9 2008/01/16 23:28:51 jkois Exp $
+     basiert auf: 1.13
  -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -25,7 +25,7 @@
       auf denen Sie projektbezogene Ank&#252;ndigungen finden:</p>
 
     <ul>
-      <li><a href="&enbase;/java/newsflash.html">&java; unter FreeBSD</a></li>
+      <li><a href="&base;/java/">&java; unter FreeBSD</a></li>
       <li><a href="http://freebsd.kde.org/">KDE unter FreeBSD</a></li>
       <li><a href="&enbase;/gnome/newsflash.html">GNOME unter FreeBSD</a></li>
     </ul>
@@ -45,6 +45,7 @@
 
   <xsl:template name="html-news-make-olditems-list">
     <p>&#196;ltere Ank&#252;ndigungen:
+      <a href="2006/index.html">2006</a>,
       <a href="2005/index.html">2005</a>,
       <a href="2004/index.html">2004</a>,
       <a href="2003/index.html">2003</a>,
@@ -60,6 +61,19 @@
   <xsl:variable name="html-news-list-press-homelink">
     <a href="&base;/news/press.html">FreeBSD Pressemeldungen</a>
   </xsl:variable>
+
+  <xsl:template name="html-press-make-olditems-list">
+    <p>&#196;ltere Presseberichte:
+      <a href="2006/press.html">2006</a>,
+      <a href="2005/press.html">2005</a>,
+      <a href="2004/press.html">2004</a>,
+      <a href="&enbase;/news/2003/press.html">2003</a>,
+      <a href="&enbase;/news/2002/press.html">2002</a>,
+      <a href="&enbase;/news/2001/press.html">2001</a>,
+      <a href="&enbase;/news/2000/press.html">2000</a>,
+      <a href="&enbase;/news/1999/press.html">1999</a>,
+      <a href="&enbase;/news/1998/press.html">1998-1996</a></p>
+  </xsl:template>
 
   <xsl:template name="html-news-list-press-preface">
     <p>Kennen Sie einen hier nicht aufgef&#252;hrten Artikel?
