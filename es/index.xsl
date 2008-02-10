@@ -5,12 +5,12 @@
 ]>
 
 <!-- The FreeBSD Spanish Documentation Project
-     Original Revision: r1.160			-->
+     Original Revision: r1.161			-->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
 
-  <xsl:variable name="date" select="'$FreeBSD: www/es/index.xsl,v 1.19 2007/11/07 09:01:08 gabor Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/es/index.xsl,v 1.20 2007/11/19 20:43:17 carvay Exp $'"/>
 
   <!-- these params should be externally bound. The values
        here are not used actually -->  
@@ -105,10 +105,11 @@
 					<li>
 					  <a href="&u.rel.announce;">Release estable: &rel.current;</a>
 					</li>
+<!-- Should be re-enabled when 7.0 is out IE, when rel2 = 6.X
 					<li>
 					  <a href="&u.rel2.announce;">Release estable (heredera): &rel2.current;</a>
-
 					</li>
+-->
 			    <xsl:if test="'&beta.testing;' != 'IGNORE'">
 				    <li>
 				      <a href="&enbase;/where.html#helptest">Pr&oacute;xima Release
@@ -297,9 +298,6 @@
 				<ul class="newseventslist">
 				  <li class="first-child">
 					<a href="&base;/security/" title="M&aacute;s Avisos de Seguridad">M&aacute;s</a>
-				  </li>
-				  <li>
-					<a href="&base;/send-pr.html" title="Env&iacute; un reporte de problema">Enviar un bug</a>
 				  </li>
 				  <li class="last-child">
 					<a href="&enbase;/security/advisories.rdf" title="Fuente RSS de avisos de seguridad"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="Fuente RSS de noticias" /></a>
