@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/Makefile,v 1.141 2007/05/15 21:30:40 keramida Exp $
+# $FreeBSD: www/en/Makefile,v 1.142 2007/05/15 23:11:04 keramida Exp $
 
 .if exists(Makefile.conf)
 .include "Makefile.conf"
@@ -88,8 +88,8 @@ SUBDIR+= gifs
 SUBDIR+= layout
 SUBDIR+= logo
 
-WEB_LANG?=	da de es fr hu it ja mn nl pt_BR ru zh_CN zh_TW
-#WEB_LANG?=	da de es fr hu it ja mn nl pt_BR ru tr zh
+WEB_LANG?=	da de el es fr hu it ja mn nl pt_BR ru zh_CN zh_TW
+#WEB_LANG?=	da de el es fr hu it ja mn nl pt_BR ru tr zh
 
 # Non-English
 
