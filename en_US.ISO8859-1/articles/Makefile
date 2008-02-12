@@ -7,6 +7,7 @@ SUBDIR+= building-products
 SUBDIR+= casestudy-argentina.com
 SUBDIR+= checkpoint
 SUBDIR+= committers-guide
+SUBDIR+= compiz-fusion
 SUBDIR+= console-server
 SUBDIR+= contributing
 SUBDIR+= contributing-ports
