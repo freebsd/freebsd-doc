@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/gifs/Makefile,v 1.58 2007/03/17 21:33:09 simon Exp $
+# $FreeBSD: www/en/gifs/Makefile,v 1.59 2007/03/21 04:11:35 jkoshy Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -73,6 +73,7 @@ DATA+=  building_internet_servers.jpg building_internet_servers_small.jpg
 DATA+=  pf_packet_filter_book_cover.jpg
 DATA+=	unleashed6.jpg twbsd6cover.jpg
 DATA+=	freebsdro.png
+DATA+=	freebsd-basics-cover-front-145.png
 DATA+=	rbsdc-2007-01-cover-01.jpg
 
 DATA+=	freebsd-advert.gif freebsd_3.gif
