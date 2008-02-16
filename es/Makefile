@@ -1,5 +1,4 @@
-# $FreeBSD: www/es/Makefile,v 1.22 2007/11/07 09:01:08 gabor Exp $
-# $FreeBSDes: www/es/Makefile,v 1.3 2004/09/07 21:43:32 jcamou Exp $
+# $FreeBSD: www/es/Makefile,v 1.23 2008/01/28 23:06:10 gabor Exp $
 
 .if exists(Makefile.conf)
 .include "Makefile.conf"
@@ -11,7 +10,7 @@
 # These are turned into validated, normalized HTML files.
 
 DOCS=  about.sgml
-DOCS+=  applications.sgml
+DOCS+= applications.sgml
 DOCS+= availability.sgml
 DOCS+= community.sgml
 DOCS+= docs.sgml
@@ -29,16 +28,14 @@ CLEANFILES+=atoz.sgml site.sgml
 # Subdirectories
 # SGML
 SUBDIR=  security
-#SUBDIR+= commercial
 SUBDIR+= docproj
 SUBDIR+= news
 SUBDIR+= internal
 SUBDIR+= copyright
 SUBDIR+= search
-#SUBDIR+= gallery
+SUBDIR+= platforms
 SUBDIR+= projects
 SUBDIR+= releases
-#SUBDIR+= doc-es
 
 .if !defined(WEB_ONLY) || empty(WEB_ONLY)
 SUBDIR+= doc
@@ -50,28 +47,10 @@ WEBDIR?=	data/es
 DATA+=		index.html
 CLEANFILES+=	index.html
 
-.include "${WEB_PREFIX}/share/mk/web.site.mk"
+XMLDOCS=		index:xsl:${XML_NEWS_NEWS}:
+DEPENDSET.index=	transtable mirrors news press events \
+			advisories notices
 
-index.html: index.xsl ${XML_INCLUDES}\
-		${XML_NEWS_INCLUDES} \
-		${XML_NEWS_NEWS} ${XML_NEWS_NEWS_MASTER} \
-		${XML_NEWS_PRESS} ${XML_NEWS_PRESS_MASTER} \
-		${XML_EVENTS_EVENTS_MASTER} ${XML_EVENTS_CURDATE} \
-		${XML_MIRRORS} ${XML_TRANSTABLE} \
-		${XML_ADVISORIES} ${XML_NOTICES}
-	${XSLTPROC} ${XSLTPROCOPTS} \
-		-o $@ \
-		--param advisories.xml "'${XML_ADVISORIES}'" \
-		--param mirrors.xml "'${XML_MIRRORS}'" \
-		--param news.press.xml-master "'${XML_NEWS_PRESS_MASTER}'" \
-		--param news.press.xml "'${XML_NEWS_PRESS}'" \
-		--param news.project.xml-master "'${XML_NEWS_NEWS_MASTER}'" \
-		--param news.project.xml "'${XML_NEWS_NEWS}'" \
-		--param events.xml-master "'${XML_EVENTS_EVENTS_MASTER}'" \
-		--param curdate.xml "'${XML_EVENTS_CURDATE}'" \
-		--param notices.xml "'${XML_NOTICES}'" \
-		--param transtable.xml "'${XML_TRANSTABLE}'" \
-		${.CURDIR}/index.xsl ${XML_NEWS_NEWS} ${XML_EVENTS_EVENTS_MASTER} ${XML_EVENTS_CURDATE}
-.if !defined(NO_TIDY)
-	-${TIDY} ${TIDYOPTS} ${.TARGET}
-.endif
+DATESUBST=	's/<!ENTITY date[ \t]*"$$Free[B]SD. .* \(.* .*\) .* .* $$">/<!ENTITY date	"\&Uacute\;ltima modificaci\&oacute\;n: \1">/'
+
+.include "${WEB_PREFIX}/share/mk/web.site.mk"

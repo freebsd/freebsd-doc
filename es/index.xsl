@@ -5,15 +5,15 @@
 ]>
 
 <!-- The FreeBSD Spanish Documentation Project
-     Original Revision: r1.161			-->
+     Original Revision: r1.162			-->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
 
-  <xsl:variable name="date" select="'$FreeBSD: www/es/index.xsl,v 1.20 2007/11/19 20:43:17 carvay Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/es/index.xsl,v 1.21 2008/02/10 17:44:34 carvay Exp $'"/>
 
   <!-- these params should be externally bound. The values
-       here are not used actually -->  
+       here are not used actually -->
   <xsl:param name="advisories.xml" select="'none'"/>
   <xsl:param name="notices.xml" select="'none'"/>
   <xsl:param name="mirrors.xml" select="'none'"/>
@@ -23,7 +23,6 @@
   <xsl:param name="news.project.xml" select="'none'"/>
   <xsl:param name="events.xml-master" select="'none'"/>
   <xsl:param name="events.xml" select="'none'"/>
-  <xsl:param name="curdate.xml" select="'none'"/>
 
   <xsl:output type="html" encoding="&xml.encoding;"
               doctype-public="-//W3C//DTD HTML 4.01 Transitional//EN"/>
@@ -42,11 +41,11 @@
     <link rel="alternate stylesheet" media="screen" href="&enbase;/layout/css/fixed_large.css" type="text/css" title="Large Text" />
     <script type="text/javascript" src="&enbase;/layout/js/styleswitcher.js"></script>
 	<link rel="alternate" type="application/rss+xml"
-	  title="Noticias del proyecto FreeBSD" href="&enbase;/news/news.rdf" />
+	  title="Noticias del proyecto FreeBSD" href="&enbase;/news/rss.xml" />
 	<link rel="alternate" type="application/rss+xml"
-	  title="Avisos de seguridad de FreeBSD" href="&enbase;/security/advisories.rdf" />
+	  title="Avisos de seguridad de FreeBSD" href="&enbase;/security/rss.xml" />
 	<link rel="alternate" type="application/rss+xml"
-	  title="Noticias del proyecto GNOME para FreeBSD" href="&enbase;/gnome/news.rdf" />
+	  title="Noticias del proyecto GNOME para FreeBSD" href="&enbase;/gnome/rss.xml" />
 	
 	<!-- Formatted to be easy to spam harvest, please do not reformat. -->
 	<xsl:comment>
@@ -128,7 +127,7 @@
 		</div> <!-- frontfeaturemiddle -->
 
 		<div id="FRONTFEATURERIGHT">
-			<h2 class="blockhide">Enlace de idiomas</h2>
+			<h2 class="blockhide">Enlaces de idiomas</h2>
 			<div id="LANGUAGENAV">
 				<ul id="LANGUAGENAVLIST">
 				  <li>
@@ -183,13 +182,13 @@
 					  <a href="&base;/support.html#mailing-list" title="Listas de distribuci&oacute;n">Listas de distribuci&oacute;n</a>
 					</li>
 					<li>
-					  <a href="&base;/support/bugreports.html" title="Reporta un Fallo">Reporta un Fallo</a>
+					  <a href="&base;/support/bugreports.html" title="Reporte un Fallo">Reporte un Fallo</a>
 					</li>
 					<li>
 					  <a href="&enbase;/doc/&url.doc.langcode;/books/faq/index.html" title="FAQ">FAQ</a>
 					</li>
 					<li>
-					  <a href="&enbase;/doc/&url.doc.langcode;/books/handbook/index.html" title="Manual">Manual</a>
+					  <a href="&enbase;/doc/&url.doc.langcode;/books/handbook/index.html" title="Handbook">Handbook</a>
 					</li>
 					<li>
 					  <a href="&base;/ports/index.html" title="Ports">Ports</a>
@@ -227,7 +226,7 @@
 					<a href="&base;/news/newsflash.html" title="M&aacute;s Noticias">M&aacute;s Noticias</a>
 				  </li>
 				  <li class="last-child">
-					<a href="&enbase;/news/news.rdf" title="News RSS Feed"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="News RSS Feed" /></a>
+					<a href="&enbase;/news/rss.xml" title="News RSS Feed"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="News RSS Feed" /></a>
 				  </li>
 				</ul>
 			  </div> <!-- unnamed -->
@@ -245,7 +244,6 @@
 			<xsl:call-template name="html-index-events-items">
 				<xsl:with-param name="events.xml-master" select="$events.xml-master" />
 				<xsl:with-param name="events.xml" select="$events.xml" />
-				<xsl:with-param name="curdate.xml" select="$curdate.xml" />
 			</xsl:call-template>
 
 			  <div>
@@ -331,7 +329,7 @@
 	&copyright;
 
 	La marca FreeBSD es el trademark registrado de la Fundaci&oacute;n de
-	FreeBSD y es usado con el permiso de la <a
+	FreeBSD y est&aacute; usado con el permiso de la <a
 	  href="http://www.freebsdfoundation.org/documents/Guidelines.shtml">Fundaci&oacute;n
 	de FreeBSD</a> por el proyecto FreeBSD.
 
