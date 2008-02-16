@@ -1,6 +1,6 @@
 # The FreeBSD Spanish Documentation Project
 #
-# $FreeBSD$
+# $FreeBSD: www/es/platforms/Makefile,v 1.2 2008/02/10 17:44:34 carvay Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -16,5 +16,10 @@ DOCS+=	i386.sgml
 DOCS+=	index.sgml
 DOCS+=	mips.sgml
 DOCS+=	pc98.sgml
+DOCS+=	sparc.sgml
+DOCS+=	sun4v.sgml
+DOCS+=	xbox.sgml
+
+SUBDIR=	ia64
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
