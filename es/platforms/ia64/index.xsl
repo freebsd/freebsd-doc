@@ -12,7 +12,7 @@
 <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
 
-  <xsl:variable name="date" select="'$FreeBSD$'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/es/platforms/ia64/index.xsl,v 1.1 2008/02/16 11:16:46 gabor Exp $'"/>
 
   <xsl:output doctype-public="-//W3C//DTD HTML 4.01 Transitional//EN"
     encoding="iso-8859-1" method="html"/>
@@ -35,7 +35,7 @@
 
 		<img align="right" alt="McKinley" src="&enbase;/platforms/mckinley-die.png"/>
 
-		<p>Buscar los archivos de la lista de distribuci&oacute;n de
+		<p>Buscar en los archivos de la lista de distribuci&oacute;n de
 		  ia64:</p>
 
 		<form action="http://www.FreeBSD.org/cgi/search.cgi" method="get">
@@ -67,30 +67,34 @@
 
 		<h3><a name="intro">Introducci&oacute;n</a></h3>
 
-		<p>Las p&aacute;ginas del Proyecto FreeBSD/ia64 project
-		  contienen informaciones sobre el port de FreeBSD para la
+		<p>Las p&aacute;ginas del Proyecto FreeBSD/ia64
+		  contienen informaci&oacute;n sobre el port de FreeBSD para la
 		  arquitectura IA-64 de Intel, oficialmente conocida como
 		  Intel&nbsp;Itanium&reg; Processor Family (IPF).  Como el port
-		  mismo, estas p&aacute;ginas est&aacute;n siendo
-		  preparadas.</p>
+		  mismo, estas p&aacute;ginas est&aacute;n en fase
+		  de desarrollo.</p>
 
 		<h3><a name="status">Estado actual</a></h3>
 
-		<p>El platforma ia64 todav&iacute;a se considere una platforma
-		  de la categor&iacute;a Tier 2.  Esto significa no estar
-		  completamente soportada por nuestro security officer,
+		<p>La plataforma ia64 todav&iacute;a se considera una plataforma
+		  de la categor&iacute;a Tier 2.  Esto significa que no
+		  est&aacute; completamente soportada por nuestro security 
+		  officer, ingenieros de release y el equipo responsable
+		  del mantenimiento de las "toolchains".  
 		  ingenieros de release y mantenedores de los toolchain.
-		  Pr&aacute;cticamente, la distinci&oacute;n entre una
-		  platforma Tier 1 (que est&aacute; completamente soportada) y
-		  una platforma Tier 2 no es tan estricta como lo parece.
-		  En casi todos los apectos, el port ia64 es una platforma
-		  Tier 1.<br/>
-		  Del aspecto de un desarrollador, hay ventajas de que el port
-		  ia64 sea una platforma Tier 2 durante un poco m&aacute;s
-		  largo tiempo.  Todav&iacute;a tenemos cambios que rompen
-		  la compatibilidad de ABI en el pipeline y la necesidad de
-		  mantener compatibilidad con versiones anteriores tan temprano
-		  en la vida del port no es ideal.</p>
+		  En la pr&aacute;ctica la diferencia entre una plataforma
+		  Tier 1 (que est&aacute; completamente soportada) y
+		  una plataforma Tier 2 no es tan grande como podr&iacute;a
+		  parecer.  En casi todos los aspectos el port ia64 es una
+		  plataforma Tier 1.<br/>
+		  Por otra parte, desde el punto de vista de los
+		  desarrolladores el hecho de que el port de ia64 sea una
+		  plataforma Tier 2 un poco m&aacute;s de tiempo tiene sus
+		  ventajas.  Todav&iacute;a hay cambios que rompen la
+		  compatibilidad de ABI en el pipeline y la necesidad de
+		  mantener la compatibilidad con versiones anteriores en
+		  una etapa tan temprana de de la vida del port no es lo
+		  ideal.</p>
 	      </div> <!-- CONTENTWRAP -->
 
 	      <br class="clearboth" />
