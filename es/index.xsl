@@ -10,7 +10,7 @@
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
 
-  <xsl:variable name="date" select="'$FreeBSD: www/es/index.xsl,v 1.21 2008/02/10 17:44:34 carvay Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/es/index.xsl,v 1.22 2008/02/16 11:16:45 gabor Exp $'"/>
 
   <!-- these params should be externally bound. The values
        here are not used actually -->
@@ -71,8 +71,8 @@
 				  Basado en BSD UNIX&reg;
 				</h1>				
 				<p>FreeBSD es un avanzado sistema operativo para arquitecturas
-				x86 compatibles (incluyendo Pentium&reg; y Athlon&trade;),
-				amd64 compatibles (incluyendo Opteron&trade;, Athlon&trade;64 EM64T),
+				x86 compatibles (como Pentium&reg; y Athlon&trade;),
+				amd64 compatibles (como Opteron&trade;, Athlon&trade;64 EM64T),
 				UltraSPARC&reg;, IA-64, PC-98 y ARM.
 				FreeBSD es un derivado de BSD, la versi&oacute;n de
 				UNIX&reg; desarrollada en la Universidad
@@ -80,7 +80,7 @@
 				por un
 				<a href="&enbase;/doc/en_US.ISO8859-1/articles/contributors/index.html">
 				numeroso equipo de personas</a>.  El soporte para otras
-				<a href="&enbase;/platforms/index.html">arquitecturas</a>
+				<a href="&base;/platforms/index.html">arquitecturas</a>
 				est&aacute; en diferentes fases de desarrollo.</p>
 				<div id="txtfrontfeaturelink">
 				&raquo;<a href="&base;/about.html" title="M&aacute;s Informaci&oacute;n">M&aacute;s Informaci&oacute;n</a>
@@ -92,7 +92,7 @@
 			<div class="frontgetroundbox">
 			  <div class="frontgettop"><div><b style="display: none">.</b></div></div>
 				<div class="frontgetcontent">
-				  <a href="&base;/where.html">Obtener FreeBSD Ahora</a>
+				  <a href="&base;/where.html">Conseguir FreeBSD</a>
 				</div> <!-- frontgetcontent -->
 			  <div class="frontgetbot"><div><b style="display: none">.</b></div></div>
 			</div> <!-- frontgetroundbox -->
@@ -305,7 +305,7 @@
 			</div> <!-- newseventswrap -->
 
 			<br />
-			<h2>NOTICIAS ERRATA</h2>
+			<h2>AVISOS SOBRE ERRORES</h2>
 			<div class="newseventswrap">
 
 			<xsl:call-template name="html-index-advisories-items">
@@ -328,10 +328,10 @@
       <div id="FOOTER">
 	&copyright;
 
-	La marca FreeBSD es el trademark registrado de la Fundaci&oacute;n de
-	FreeBSD y est&aacute; usado con el permiso de la <a
+	La marca FreeBSD es una marca registrada de la Fundaci&oacute;n
+	FreeBSD y el proyecto FreeBSD la usa con permiso de la <a
 	  href="http://www.freebsdfoundation.org/documents/Guidelines.shtml">Fundaci&oacute;n
-	de FreeBSD</a> por el proyecto FreeBSD.
+	FreeBSD</a> 
 
       </div> <!-- FOOTER -->
     </div> <!-- CONTAINER -->
