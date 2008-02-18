@@ -151,6 +151,7 @@ IMAGES_LIB+= callouts/10.png
 #
 
 # SGML content
+SRCS+= audit/chapter.sgml
 SRCS+=  book.sgml
 SRCS+= colophon.sgml
 SRCS+= advanced-networking/chapter.sgml
@@ -166,6 +167,7 @@ SRCS+= firewalls/chapter.sgml
 SRCS+= geom/chapter.sgml
 SRCS+= install/chapter.sgml
 SRCS+= introduction/chapter.sgml
+SRCS+= jails/chapter.sgml
 SRCS+= kernelconfig/chapter.sgml
 SRCS+= kerneldebug/chapter.sgml
 SRCS+= kernelopts/chapter.sgml
@@ -175,6 +177,7 @@ SRCS+= mac/chapter.sgml
 SRCS+= mail/chapter.sgml
 SRCS+= mirrors/chapter.sgml
 SRCS+= multimedia/chapter.sgml
+SRCS+= network-servers/chapter.sgml
 SRCS+= pgpkeys/chapter.sgml
 SRCS+= ports/chapter.sgml
 SRCS+= ppp-and-slip/chapter.sgml
@@ -184,6 +187,7 @@ SRCS+= security/chapter.sgml
 SRCS+= serialcomms/chapter.sgml
 SRCS+= users/chapter.sgml
 SRCS+= vinum/chapter.sgml
+SRCS+= virtualization/chapter.sgml
 SRCS+= x11/chapter.sgml
 
 # Entities
