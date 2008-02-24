@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/releases/7.0R/Makefile,v 1.1 2007/06/21 14:30:18 hrs Exp $
+# $FreeBSD: www/en/releases/7.0R/Makefile,v 1.2 2007/09/10 12:26:48 murray Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -14,6 +14,10 @@ FETCHCMD=  /usr/bin/fetch
 CLEANFILES+= news.rss stress.html
 
 DATA+=	docbook.css
+DATA+=	errata.html
+DATA+=	hardware.html
+DATA+=	readme.html
+DATA+=	relnotes.html
 
 news.rss:
 	${FETCHCMD} ${FETCHFILE}
