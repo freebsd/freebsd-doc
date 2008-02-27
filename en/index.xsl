@@ -4,7 +4,7 @@
 <!ENTITY title "The FreeBSD Project">
 ]>
 
-<!-- $FreeBSD: www/en/index.xsl,v 1.161 2007/10/27 18:09:38 simon Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.162 2008/01/10 08:03:38 murray Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
@@ -102,11 +102,9 @@
 					<li>
 					  <a href="&u.rel.announce;">Production Release &rel.current;</a>
 					</li>
-<!-- Should be re-enabled when 7.0 is out IE, when rel2 = 6.X
 					<li>
 					  <a href="&u.rel2.announce;">Production (Legacy) Release &rel2.current;</a>
 					</li>
--->
 			    <xsl:if test="'&beta.testing;' != 'IGNORE'">
 					<li>
 					  <a href="&base;/where.html#helptest">Upcoming Release
