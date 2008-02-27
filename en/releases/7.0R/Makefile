@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/releases/7.0R/Makefile,v 1.2 2007/09/10 12:26:48 murray Exp $
+# $FreeBSD: www/en/releases/7.0R/Makefile,v 1.3 2008/02/24 05:55:04 bmah Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -7,7 +7,7 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS=	todo.sgml schedule.sgml approvals.sgml
+DOCS=	announce.sgml todo.sgml schedule.sgml approvals.sgml
 
 FETCHFILE= http://people.freebsd.org/~pho/stress/log/news.rss
 FETCHCMD=  /usr/bin/fetch
