@@ -18,6 +18,7 @@ DOCS?=	index.sgml
 #SUBDIR+=	5.0R 5.1R 5.2R 5.2.1R 5.3R 5.4R 5.5R
 SUBDIR+=	5.4R 5.5R
 SUBDIR+=	6.0R 6.1R 6.2R 6.3R
+SUBDIR+=	7.0R
 
 .if defined $(NEW_BUILD)
 SUBDIR=
