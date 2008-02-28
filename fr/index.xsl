@@ -4,10 +4,10 @@
 <!ENTITY title "Le Projet FreeBSD">
 ]>
 
-<!-- $FreeBSD: www/fr/index.xsl,v 1.34 2007/02/19 19:10:37 blackend Exp $ -->
+<!-- $FreeBSD: www/fr/index.xsl,v 1.35 2008/02/02 09:18:17 blackend Exp $ -->
 <!--
    The FreeBSD French Documentation Project
-   Original revision: 1.162
+   Original revision: 1.163
 
    Version francaise : Stephane Legrand <stephane@freebsd-fr.org>
    Mise a jour:	Marc Fonvieille <blackend@FreeBSD.org>
@@ -112,11 +112,9 @@
 					<li>
 					  <a href="&u.rel.announce;">Version de production &rel.current;</a>
 					</li>
-<!-- Devra etre reactive quand la 7.0 sera sortie i.e., quand rel2 = 6.X
 					<li>
 					  <a href="&u.rel2.announce;">Version (ancienne) de production &rel2.current;</a>
 					</li>
--->
 			    <xsl:if test="'&beta.testing;' != 'IGNORE'">
 					<li>
 					  <a href="&base;/where.html#helptest">Version &#224; venir
