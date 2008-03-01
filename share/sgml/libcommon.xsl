@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
-<!-- $FreeBSD: www/share/sgml/libcommon.xsl,v 1.14 2008/01/16 09:14:18 murray Exp $ -->
+<!-- $FreeBSD: www/share/sgml/libcommon.xsl,v 1.15 2008/01/16 09:29:16 murray Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
   version="1.0"
@@ -715,29 +715,11 @@
 
     <xsl:choose>
       <xsl:when test="$type = 'advisory'">
-	<xsl:for-each select="document($advisories.xml)
-	  /descendant::release">
-
-	  <xsl:variable name="relname" select="string(name)" />
-
-	  <xsl:call-template name="html-list-advisories-putitems">
-	    <xsl:with-param name="items" select="document($advisories.xml)
-	      //advisory[$relname = string(following::release/name[1])]" />
-	    <xsl:with-param name="prefix" select="'&ftpbase;'" />
-	    <xsl:with-param name="prefixold" select="'&ftpbaseold;'" />
-	  </xsl:call-template>
-
-	  <xsl:call-template name="html-list-advisories-release-label">
-	    <xsl:with-param name="relname" select="name" />
-	  </xsl:call-template>
-	</xsl:for-each>
-
-	<xsl:call-template name="html-list-advisories-putitems">
-	  <xsl:with-param name="items" select="document($advisories.xml)
-	    //advisory[not(following::release/name[1])]" />
-	  <xsl:with-param name="prefix" select="'&ftpbase;'" />
-	  <xsl:with-param name="prefixold" select="'&ftpbaseold;'" />
-	</xsl:call-template>
+        <xsl:call-template name="html-list-advisories-putitems">
+          <xsl:with-param name="items" select="document($advisories.xml)//advisory" />
+          <xsl:with-param name="prefix" select="'&ftpbase;'" />
+          <xsl:with-param name="prefixold" select="'&ftpbaseold;'" />
+        </xsl:call-template>
       </xsl:when>
 
       <xsl:when test="$type = 'notice'">
@@ -777,10 +759,24 @@
     <xsl:param name="prefixold" select="''" />
 
     <xsl:if test="$items">
-      <ul>
-	<xsl:for-each select="$items">
-	  <li>
+      <table>
+        <tr><th>Date</th><th>Advisory name</th></tr>
+        <xsl:for-each select="$items">
+          <xsl:variable name="year" select="../../../name" />
+          <xsl:variable name="month" select="../../name" />
+          <xsl:variable name="day" select="../name" />
+          <tr>
+            <td class="txtdate">
+	      <xsl:value-of select='
+		concat(format-number($year, "####"), "-",
+		format-number($month, "00"), "-",
+		format-number($day, "00"))' />
+            </td>
+            <td>
 	    <xsl:choose>
+	      <xsl:when test="@type='release'">
+                <i><xsl:value-of select="name" /></i>
+	      </xsl:when>
 	      <xsl:when test="@omithref='yes'">
 		<xsl:value-of select="name" />
 	      </xsl:when>
@@ -794,12 +790,12 @@
 		<a><xsl:attribute name="href">
 		    <xsl:value-of select="concat($prefix, name, '.asc')" />
 		  </xsl:attribute>
-		  <xsl:value-of select="concat(name, '.asc')" /></a>
+		  <xsl:value-of select="name" /></a>
 	      </xsl:otherwise>
 	    </xsl:choose>
-	  </li>
+          </td></tr>
 	</xsl:for-each>
-      </ul>
+      </table>
     </xsl:if>
   </xsl:template>
 
