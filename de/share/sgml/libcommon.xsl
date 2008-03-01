@@ -2,8 +2,8 @@
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
 <!-- $FreeBSD$
-     $FreeBSDde: de-www/share/sgml/libcommon.xsl,v 1.9 2008/01/16 23:28:51 jkois Exp $
-     basiert auf: 1.13
+     $FreeBSDde: de-www/share/sgml/libcommon.xsl,v 1.10 2008/03/01 17:12:06 jkois Exp $
+     basiert auf: 1.16
  -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -36,7 +36,8 @@
 	  Information</a></strong>.</p>
 
     <p>Die FreeBSD Sicherheitshinweise finden Sie auf der Seite
-      <a href="&base;/security/#adv">FreeBSD Sicherheit</a>.</p>
+      <a href="&enbase;/security/advisories.html">FreeBSD Security
+      Advisories</a>.</p>
   </xsl:template>
 
   <xsl:template name="html-news-list-newsflash-homelink">
