@@ -159,6 +159,18 @@ IMAGES_EN+= virtualization/virtualpc-freebsd10.png
 IMAGES_EN+= virtualization/virtualpc-freebsd11.png
 IMAGES_EN+= virtualization/virtualpc-freebsd12.png
 IMAGES_EN+= virtualization/virtualpc-freebsd13.png
+IMAGES_EN+= virtualization/vmware-freebsd01.png
+IMAGES_EN+= virtualization/vmware-freebsd02.png
+IMAGES_EN+= virtualization/vmware-freebsd03.png
+IMAGES_EN+= virtualization/vmware-freebsd04.png
+IMAGES_EN+= virtualization/vmware-freebsd05.png
+IMAGES_EN+= virtualization/vmware-freebsd06.png
+IMAGES_EN+= virtualization/vmware-freebsd07.png
+IMAGES_EN+= virtualization/vmware-freebsd08.png
+IMAGES_EN+= virtualization/vmware-freebsd09.png
+IMAGES_EN+= virtualization/vmware-freebsd10.png
+IMAGES_EN+= virtualization/vmware-freebsd11.png
+IMAGES_EN+= virtualization/vmware-freebsd12.png
 
 # Images from the cross-document image library
 IMAGES_LIB=  callouts/1.png
