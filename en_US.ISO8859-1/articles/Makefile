@@ -29,6 +29,7 @@ SUBDIR+= hubs
 SUBDIR+= ipsec-must
 SUBDIR+= laptop
 SUBDIR+= linux-comparison
+SUBDIR+= linux-emulation
 SUBDIR+= mailing-list-faq
 SUBDIR+= mh
 SUBDIR+= multi-os
