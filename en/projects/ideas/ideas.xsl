@@ -7,7 +7,7 @@
 <!ENTITY % developers SYSTEM "../../developers.sgml"> %developers;
 ]>
 
-<!-- $FreeBSD: www/en/projects/ideas/ideas.xsl,v 1.6 2007/04/22 20:24:17 netchild Exp $ -->
+<!-- $FreeBSD: www/en/projects/ideas/ideas.xsl,v 1.7 2007/11/01 15:38:18 danger Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -130,6 +130,7 @@
   <li><a href="http://www.TrustedBSD.org/">TrustedBSD Project</a> and <a
     href="http://wiki.FreeBSD.org/TrustedBSDTODO/">TrustedBSD TODO
     list.</a></li>
+  <li><a href="http://wiki.freebsd.org/Bsnmp">BSNMP Project</a></li>
 </ul>
 <p>Do not forget to have a look at the other projects too or by viewing some
   of the recent <a href="&base;/news/status">Developer Status Reports.</a></p>
