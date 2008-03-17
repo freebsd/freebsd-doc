@@ -7,7 +7,7 @@
 <!ENTITY % developers SYSTEM "../../developers.sgml"> %developers;
 ]>
 
-<!-- $FreeBSD: www/en/projects/ideas/ideas.xsl,v 1.7 2007/11/01 15:38:18 danger Exp $ -->
+<!-- $FreeBSD: www/en/projects/ideas/ideas.xsl,v 1.8 2008/03/14 17:47:13 rwatson Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -61,11 +61,30 @@
   should be directed to the Technical contact for each project, or to the <a
   href="mailto:hackers@FreeBSD.org">hackers mailinglist</a>.</p>
 
-<p>Also, there are several projects on the &os; wiki which can serve as good
-  starting points for volunteers.  The most prominent projects are: <a
-    href="http://wiki.freebsd.org/Networking">Networking</a>, <a
-    href="http://wiki.freebsd.org/SMPTODO">SMPTODO</a>, and <a
-    href="http://wiki.freebsd.org/linux-kernel">Linuxulator</a>.</p>
+<a name="p-projects"></a>
+<h2>Projects at FreeBSD.org</h2>
+<p>A number of specific project ideas may be found on this page, but you can
+  find many further ideas by visiting the <a
+  href="../projects.html">&os; Development Projects page</a>.  Some of the
+  most prominent projects are:</p>
+<ul>
+  <li><a href="../acpi/index.html">The &os; ACPI Project</a></li>
+  <li><a href="http://wiki.freebsd.org/Bsnmp">BSNMP Project</a></li>
+  <li><a href="../busdma/index.html">busdma and SMPng driver conversion
+    Project</a></li>
+  <li><a href="../c99/index.html">C99 and POSIX Conformance Project</a></li>
+  <li><a href="../bigdisk/index.html">Large data storage in the &os;
+    operating system</a></li>
+  <li><a href="http://wiki.freebsd.org/linux-kernel">Linuxulator</a></li>
+  <li><a href="http://wiki.freebsd.org/Networking">Networking</a></li>
+  <li><a href="../netperf/index.html">Network Performance Project</a></li>
+  <li><a href="http://wiki.freebsd.org/SMPTODO">SMPTODO</a></li>
+  <li><a href="http://www.TrustedBSD.org/">TrustedBSD Project</a> and <a
+    href="http://wiki.FreeBSD.org/TrustedBSDTODO/">TrustedBSD TODO
+    list.</a></li>
+</ul>
+<p>Do not forget to have a look at the other projects too or by viewing some
+  of the recent <a href="&base;/news/status">Developer Status Reports.</a></p>
 
 <hr />
 
@@ -114,28 +133,6 @@
       </xsl:for-each>
     </xsl:for-each>
 
-<a name="p-projects"></a>
-<h2>Projects at FreeBSD.org</h2>
-<p>Additional projects may be found by browsing the <a
-  href="../projects.html">&os; Development Projects page</a>.  The most
-  prominent projects are:</p>
-<ul>
-  <li><a href="../acpi/index.html">The &os; ACPI Project</a></li>
-  <li><a href="../c99/index.html">C99 and POSIX Conformance Project</a></li>
-  <li><a href="../bigdisk/index.html">Large data storage in the &os;
-    operating system</a></li>
-  <li><a href="../netperf/index.html">Network Performance Project</a></li>
-  <li><a href="../busdma/index.html">busdma and SMPng driver conversion
-    Project</a></li>
-  <li><a href="http://www.TrustedBSD.org/">TrustedBSD Project</a> and <a
-    href="http://wiki.FreeBSD.org/TrustedBSDTODO/">TrustedBSD TODO
-    list.</a></li>
-  <li><a href="http://wiki.freebsd.org/Bsnmp">BSNMP Project</a></li>
-</ul>
-<p>Do not forget to have a look at the other projects too or by viewing some
-  of the recent <a href="&base;/news/status">Developer Status Reports.</a></p>
-
-<hr />
 
 <a name="p-tc"></a>
 <h2>Technical contacts</h2>
