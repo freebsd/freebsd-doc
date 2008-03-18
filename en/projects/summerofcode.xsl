@@ -7,7 +7,7 @@
 <!ENTITY % developers SYSTEM "../developers.sgml"> %developers;
 ]>
 
-<!-- $FreeBSD: www/en/projects/summerofcode.xsl,v 1.8 2007/09/17 20:22:56 murray Exp $ -->
+<!-- $FreeBSD: www/en/projects/summerofcode.xsl,v 1.9 2008/03/17 21:14:56 murray Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -49,6 +49,7 @@
   href="&base;/summerofcode-2007.html">2007</a>.</p>
 
 <ul>
+  <li><a href="#students">Benefits of Participating</a></li>
   <li><a href="#students">Past Student Projects</a></li>
   <li><a href="#ideas">Example Proposal Ideas</a></li>
   <li><a href="#mentors">Possible Mentors</a></li>
@@ -56,6 +57,29 @@
   <li><a href="#infrastructure">Infrastructure Provided to Students</a></li>
   <li><a href="#faq">Frequently Asked Questions</a></li>
 </ul>
+
+<a name="benefits"></a>
+<h2>Benefit of Participating</h2>
+
+<p>Google Summer of Code is an exciting opportunity for students to
+  "intern" with an open source project for a summer.  The FreeBSD
+  Project, as one of the most successful and oldest open source projects,
+  is an excellent place to do this internship.  Founded in 1993, the
+  project now consists of several hundred "committers" and tens of
+  thousands of contributors.  FreeBSD is the foundation for many
+  commercial products, including Apple's Mac OS X, NetApp's OnTap/GX,
+  Juniper's JunOS, as well countless other products, and is widely used
+  in the Internet Service Provider and corporate IT worlds.  Many of
+  these sponsors participate daily in the FreeBSD community, and students
+  have the opportunity to develop software ideas in an exciting
+  environment with many real world applications, and under the mentorship
+  of experienced developers.</p>
+
+<p>After the summer ends, many of our students are sponsored by Google or
+  the FreeBSD Foundation to attend operating systems and open source
+  conferences to present on their work, and a significant number go on to
+  become FreeBSD developers.  It's also a great job networking
+  opportunity!</p>
  
 <a name="students"></a>
 <h2>Past Student Projects</h2>
@@ -136,6 +160,12 @@ href="http://wiki.freebsd.org/moin.cgi/SummerOfCode2005">2005</a>].</p>
 
     <li><strong>Possible Mentor</strong> <em>(optional)</em></li>
 
+    <li><strong>Who you have talked to about the project</strong> - if
+      you have communicated with a FreeBSD Developer in the preparation
+      of this proposal, please let us know who it was.  This will allow
+      us to consult them regarding your proposal if we have any
+      questions.</li>
+
     <li><strong>Benefits to the FreeBSD Community</strong> - a good
       project will not just be fun to work on, but also generally
       useful to others.</li>
@@ -159,8 +189,25 @@ href="http://wiki.freebsd.org/moin.cgi/SummerOfCode2005">2005</a>].</p>
       this summer?</li>
 
     <li><strong>Bio</strong> - Who are you? What makes you the best
-      person to work on this project?</li>
+      person to work on this project?  Do you use FreeBSD already?
+      If your project includes programming in a particular language,
+      such as C, or in a specific environment, such as the kernel or
+      an embedded platform, what experience do you have working in
+      that area?  Are you familiar with or a user of revision control
+      systems?</li>
   </ul>
+
+  <p>Please note: in the past, a significant number of proposals have
+    been received that consist solely of copies of ideas from our
+    ideas list.  Proposals of this sort are rejected without further
+    consideration.  A strong project proposal will consist either of
+    a detailed original proposal or a significantly elaborated
+    proposal from the idea list, and must reflect the necessary
+    background work to understand the problem and possible solutions.
+    Special attention is paid to proposals where the student has
+    identified appropriate members of the community in advance and
+    worked with them to develop their project idea prior to
+    submitting the proposal.</p>
 
 <a name="infrastructure"></a>
 <h2>Infrastructure Provided to Students</h2>
