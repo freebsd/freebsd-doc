@@ -4,7 +4,7 @@
 <!ENTITY title "The FreeBSD GNOME Project">
 <!ENTITY % navinclude.gnome "INCLUDE">
 ]>
-<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.96 2007/10/25 16:56:36 marcus Exp $ -->
+<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.97 2008/03/24 04:41:17 marcus Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
 		xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -122,10 +122,10 @@
 			 developers and users that manage the
 			 integration of GNOME and FreeBSD.</p>
 
-		<h2>Upgrading to GNOME 2.20?</h2>
+		<h2>Upgrading to GNOME 2.22?</h2>
 
-		<p>If you are upgrading from GNOME 2.18 to GNOME 2.20, read the
-		  <a href="docs/faq220.html">Upgrade FAQ</a> for upgrade
+		<p>If you are upgrading from GNOME 2.20 to GNOME 2.22, read the
+		  <a href="docs/faq222.html">Upgrade FAQ</a> for upgrade
 		  instructions.</p>
 
               <h2>State of the port</h2>
