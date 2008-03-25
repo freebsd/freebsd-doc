@@ -3,29 +3,845 @@
      The FreeBSD German Documentation Project
 
      $FreeBSD$
-     $FreeBSDde: de-docproj/books/handbook/audit/chapter.sgml,v 1.2 2006/02/15 09:51:27 brueffer Exp $
-     basiert auf:
+     $FreeBSDde: de-docproj/books/handbook/audit/chapter.sgml,v 1.11 2008/03/02 09:51:39 jkois Exp $
+     basiert auf: 1.33
 -->
+
+<!-- Need more documentation on praudit, auditreduce, etc.  Plus more info
+on the triggers from the kernel (log rotation, out of space, etc).
+And the /dev/audit special file if we choose to support that.  Could use
+some coverage of integrating MAC with Event auditing and perhaps discussion
+on how some companies or organizations handle auditing and auditing
+requirements. -->
 
 <chapter id="audit">
+  <chapterinfo>
+    <authorgroup>
+      <author>
+	<firstname>Tom</firstname>
+	<surname>Rhodes</surname>
+	<contrib>Geschrieben von </contrib>
+      </author>
+      <author>
+	<firstname>Robert</firstname>
+	<surname>Watson</surname>
+      </author>
+    </authorgroup>
+    <authorgroup>
+      <author>
+	<firstname>Daniel</firstname>
+	<surname>Seuffert</surname>
+	<contrib>&Uuml;bersetzt von </contrib>
+      </author>
+    </authorgroup>
+  </chapterinfo>
 
-  <title>Security Event Auditing (noch nicht &uuml;bersetzt)</title>
+  <title>Security Event Auditing</title>
 
-  <para>Dieses Kapitel ist noch nicht &uuml;bersetzt.
-    Lesen Sie bitte <ulink
-      url="&url.books.handbook.en;/audit.html">
-    das Original in englischer Sprache</ulink>.  Wenn Sie helfen
-    wollen, dieses Kapitel zu &uuml;bersetzen, senden Sie bitte
-    eine E-Mail an die Mailingliste &a.de.translators;.</para>
+  <sect1 id="audit-synopsis">
+    <title>Einleitung</title>
+
+    <indexterm><primary>AUDIT</primary></indexterm>
+    <indexterm>
+      <primary>Security Event Auditing</primary>
+      <see>MAC</see>
+    </indexterm>
+
+    <para>FreeBSD 6.2 und neuer unterst&uuml;tzen
+      ein feingranuliertes Sicherheits-Auditing.
+      Ereignis-Auditing erlaubt die
+      zuverl&auml;ssige, feingranulierte und konfigurierbare
+      Aufzeichnung einer Vielzahl von sicherheitsrelevanten
+      Systemereignissen einschliesslich Benutzereingaben,
+      Konfigurations&auml;nderungen sowie Datei- und
+      Netzwerkzugriffen. Diese Log-Datens&auml;tze k&ouml;nnen
+      unsch&auml;tzbar wertvoll sein f&uuml;r direkte
+      System&uuml;berwachung, Einbruchserkennung und
+      Post-Mortem-Analyse. &os; implementiert &sun;s &ouml;ffentlich
+      zug&auml;ngliche <acronym>BSM</acronym> API und Dateiformat. Die
+      &os;-Implementierung kann mit den Audit-Implementierungen von
+      &sun; &solaris; und &apple; &macos; X zusammenarbeiten.</para>
+
+    <para>Dieses Kapitel konzentriert sich auf die Installation
+      und Konfiguration des Ereignis-Auditings. Es erkl&auml;rt
+      Audit-Richtlinien und stellt ein Beispiel einer
+      Audit-Konfiguration vor.</para>
+
+    <para>Nach dem Lesen dieses Kapitels werden Sie
+      Folgendes wissen:</para>
+
+    <itemizedlist>
+      <listitem>
+        <para>Was Ereignis-Auditing ist und wie es arbeitet.</para>
+      </listitem>
+
+      <listitem>
+	<para>Wie man Ereignis-Auditing in &os; f&uuml;r Benutzer
+	  und Prozesse konfiguriert.</para>
+      </listitem>
+
+      <listitem>
+	<para>Wie man den Audit-Pfad mittels Audit-Reduktion und
+	  Revisionswerkzeugen &uuml;berpr&uuml;ft.</para>
+      </listitem>
+    </itemizedlist>
+
+    <para>Vor dem Lesen dieses Kapitels sollten Sie:</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>Sowohl &unix; als auch &os;-Basismechanismen
+	  beherrschen (<xref linkend="basics">).</para>
+      </listitem>
+
+      <listitem>
+	<para>Mit den grundlegenden Mechanismen der
+	  Kernel-Konfiguration und -Kompilierung vertraut sein (<xref
+	  linkend="kernelconfig">).</para>
+      </listitem>
+
+      <listitem>
+	<para>Mit den Ma&szlig;nahmen zur Sicherung von &os;
+	  vertraut sein (<xref linkend="security">).</para>
+      </listitem>
+    </itemizedlist>
+
+    <warning>
+      <para>Die Audit-Funktionalit&auml;t in
+	&os; 6.<replaceable>X</replaceable> ist nach wie vor
+	experimentell. Ihre Anwendung auf Produktivsystemen sollte
+	nur nach sorgf&auml;ltiger Abw&auml;gung der Risiken des
+	Einsatzes experimenteller Software erfolgen. Zu den bekannten
+	Einschr&auml;nkungen geh&ouml;rt, dass zur Zeit nicht alle
+	sicherheitsrelevanten System-Ereignisse auditierbar sind und
+	dass einige Anmelde-Mechanismen, wie z.B. X11-basierte
+	Bildschirm-Manager und Daemonen von Drittanbietern, das
+	Auditing f&uuml;r Benutzeranmeldungen nicht korrekt
+	konfigurieren.</para>
+    </warning>
+
+    <warning>
+      <para>Das Sicherheits-Auditing ist in der Lage, sehr
+	detaillierte Log-Dateien von Systemaktivit&auml;ten zu
+	erzeugen. Auf einem ausgelasteten System kann die Pfad-Datei
+	sehr gro&szlig; werden, wenn sie f&uuml;r hohe Aufl&ouml;sung
+	konfiguriert ist, und im Extremfall pro Woche um mehrere
+	Gigabyte anwachsen. Administratoren sollten daher den
+	ben&ouml;tigten Plattenplatz in Verbindung mit umfangreichen
+	Audit-Konfigurationen ber&uuml;cksichtigen. So kann es
+	w&uuml;nschenswert sein, ein eigenes
+	Dateisystem f&uuml;r <filename>/var/audit</filename>
+	einzusetzen, damit andere Dateisysteme nicht betoffen sind,
+	wenn das Dateisystem des Audit voll l&auml;uft.</para>
+    </warning>
+  </sect1>
+
+  <sect1 id="audit-inline-glossary">
+    <title>Schl&uuml;sselbegriffe</title>
+
+    <para>Vor dem Lesen dieses Kapitels m&uuml;ssen einige
+      Audit-bezogene Schl&uuml;sselbegriffe erl&auml;utert
+      werden:</para>
+
+    <itemizedlist>
+      <listitem>
+	<para><emphasis>event</emphasis>: Ein auditierbares Ereignis
+	  ist ein Ereignis, das mit dem Audit-Subsystem
+	  aufgezeichnet werden kann. Beispiele f&uuml;r
+	  sicherheitsrelevante Systemereignisse sind etwa das Anlegen
+	  von Dateien, das Erstellen einer Netzwerkverbindung oder
+	  eine Benutzeranmeldung. Ereignisse sind entweder
+	  <quote>attributierbar</quote>, k&ouml;nnen also zu einen
+	  authentifizierten Benutzer zur&uuml;ckverfolgt werden, oder
+	  sind <quote>nicht-attributierbar</quote>, falls dies nicht
+	  m&ouml;glich ist. Nicht-attributierbare Ereignisse erfolgen
+	  daher vor der Authentifizierung im Anmeldeprozess
+	  (beispielsweise die Eingabe eines falschen Passworts).</para>
+      </listitem>
+
+      <listitem>
+	<para><emphasis>class</emphasis>: Ereignisklassen sind
+	  benannte Zusammenstellungen von zusammengeh&ouml;renden
+	  Ereignissen und werden in Auswahl-Ausdr&uuml;cken benutzt.
+	  H&auml;ufig genutzte Klassen von Ereignissen schlie&szlig;en
+	  <quote>file creation</quote> (fc, Anlegen von Dateien),
+	  <quote>exec</quote> (ex, Ausf&uuml;hrung) und
+	  <quote>login_logout</quote> (lo, Anmeldung-Abmeldung)
+	  ein.</para>
+      </listitem>
+
+      <listitem>
+	<para><emphasis>record</emphasis>: Ein Datensatz ist ein
+	  Audit-Logeintrag, welcher ein Sicherheitsereignis
+	  enth&auml;lt. Jeder Datensatz enth&auml;lt einen
+	  Ereignistyp, Informationen &uuml;ber den Gegenstand
+	  (Benutzer), welcher die Aktion durchf&uuml;hrt, Datums- und
+	  Zeitinformationen, Informationen &uuml;ber jedes Objekt oder
+	  Argument sowie den Zustand hinsichtlich Erfolg oder
+	  Scheitern der Operation.</para>
+      </listitem>
+
+      <listitem>
+	<para><emphasis>trail</emphasis>: Ein Audit-Pfad (audit
+	  trail) oder eine Log-Datei besteht aus einer Reihe von
+	  Audit-Datens&auml;tzen, die Sicherheitsereignisse
+	  beschreiben. Normalerweise sind die Pfade in grober
+	  zeitlicher Reihenfolge bez&uuml;glich des Zeitpunktes,
+	  an welchem ein Ereignis beendet wurde. Nur authorisierte
+	  Prozesse d&uuml;rfen Datens&auml;tze zum Audit-Pfad
+	  hinzuf&uuml;gen.</para>
+      </listitem>
+
+      <listitem>
+	<para><emphasis>selection expression</emphasis>: Ein
+	  Auswahlausdruck ist eine Zeichenkette, welche eine Liste von
+	  Pr&auml;fixen und Audit-Ereignisklassennamen enth&auml;lt,
+	  um Ereignisse abzugleichen.</para>
+      </listitem>
+
+      <listitem>
+	<para><emphasis>preselection</emphasis>: Die Vorauswahl ist
+	  der Prozess, durch den das System erkennt, welche Ereignisse
+	  von Interesse f&uuml;r den Administrator sind, um die
+	  Erzeugung von Datens&auml;tze zu verhindern, welche nicht
+	  von Belang sind. Die Konfiguration der Vorauswahl benutzt
+	  eine Reihe von Auswahl-Ausdr&uuml;cken, um zu erkennen,
+	  welche Klassen von Ereignissen f&uuml;r welche Benutzer
+	  aufgezeichnet werden sollen sowie globale Einstellungen,
+	  welche sowohl auf authorisierte
+	  als auch unauthorisierte Prozesse angewendet werden.</para>
+      </listitem>
+
+      <listitem>
+	<para><emphasis>reduction</emphasis>: Die Reduzierung ist
+	  der Prozess, durch den Datens&auml;tze von bestehenden
+	  Audit-Pfaden ausgew&auml;hlt werden f&uuml;r Speicherung,
+	  Ausdruck oder Analyse. Ebenso der Prozess, durch den
+	  unerw&uuml;nschte Datens&auml;tze aus dem Audit-Pfad
+	  entfernt werden. Mittels Reduzierung k&ouml;nnen
+	  Administratoren Richtlinien f&uuml;r die Speicherung von
+	  Audit-Daten vorgeben. Zum Beispiel k&ouml;nnen
+	  ausf&uuml;hrliche Audit-Pfade f&uuml;r einen Monat
+	  gespeichert werden, um danach den Pfad f&uuml;r
+	  archivarische Zwecke auf die Anmeldeinformationen
+	  zu reduzieren.</para>
+      </listitem>
+    </itemizedlist>
+  </sect1>
+
+  <sect1 id="audit-install">
+    <title>Installation der Audit-Unterst&uuml;tzung</title>
+
+    <para>Die Unterst&uuml;tzung des Ereignis-Auditings f&uuml;r den
+      Benutzerbereich wird bereits als Teil des Basissystems installiert.
+      Ab &os; 7.0 ist die Audit-Unterst&uuml;tzung bereits im
+      Standardkernel enthalten.  Verwenden Sie hingegen noch
+      &os; 6.<replaceable>X</replaceable>, m&uuml;ssen Sie
+      folgende Zeile in Ihre Kernelkonfigurationsdatei aufnehmen und
+      den Kernel neu bauen:</para>
+
+    <programlisting>options	AUDIT</programlisting>
+
+    <para>Bauen und installieren Sie den Kernel wie in
+      <xref linkend="kernelconfig"> beschrieben ist.</para>
+
+    <para>Nachdem der Kernel mit Audit-Unterst&uuml;tzung
+      gebaut und installiert ist und das System neu gestartet wurde,
+      aktivieren Sie den Audit-Daemon
+      durch das Einf&uuml;gen der folgenden Zeile in die Datei
+      &man.rc.conf.5;:</para>
+
+    <programlisting>auditd_enable="YES"</programlisting>
+
+    <para>Die Audit-Unterst&uuml;tzung kann nun durch einen
+      Neustart des Systems oder durch das manuelle Starten
+      des Audit-Daemon aktiviert werden:</para>
+
+    <programlisting>/etc/rc.d/auditd start</programlisting>
+  </sect1>
+
+  <sect1 id="audit-config">
+    <title>Die Konfiguration des Audit</title>
+
+    <para>Alle Konfigurationsdateien f&uuml;r das Sicherheits-Audit
+      finden sich unter
+      <filename class="directory">/etc/security</filename>.
+      Die folgenden Dateien m&uuml;ssen vorhanden sein, bevor
+      der Audit-Daemon gestartet wird:</para>
+
+    <itemizedlist>
+      <listitem>
+	<para><filename>audit_class</filename>&nbsp;&ndash;&nbsp;Enth&auml;lt
+	  die Definitionen der Audit-Klassen.</para>
+      </listitem>
+
+      <listitem>
+	<para><filename>audit_control</filename>&nbsp;&ndash;&nbsp;Steuert
+	  Teile des Audit-Subsystems wie Audit-Klassen, minimaler
+	  Plattenplatz auf dem Audit-Log-Datentr&auml;ger, maximale
+	  Gr&ouml;&szlig;e des Audit-Pfades usw.</para>
+      </listitem>
+
+      <listitem>
+	<para><filename>audit_event</filename>&nbsp;&ndash;&nbsp;W&ouml;rtliche
+	  Namen und Beschreibungen von System-Audit-Ereignissen sowie
+	  eine Liste, welche Klassen welches Ereignis
+	  aufzeichnen.</para>
+      </listitem>
+
+      <listitem>
+	<para><filename>audit_user</filename>&nbsp;&ndash;&nbsp;Benutzerspezifische
+	  Audit-Erfordernisse, welche mit den globalen Vorgaben bei
+	  der Anmeldung kombiniert werden.</para>
+      </listitem>
+
+      <listitem>
+	<para><filename>audit_warn</filename>&nbsp;&ndash;&nbsp;Ein
+	  anpassbares Shell-Skript, welches von
+	  <application>auditd</application> benutzt wird, um
+	  Warnhinweise in aussergew&ouml;hnlichen Situationen zu
+	  erzeugen, z.B. wenn der Platz f&uuml;r die
+	  Audit-Datens&auml;tze knapp wird oder wenn die Datei des
+	  Audit-Pfades rotiert wurde.</para>
+      </listitem>
+    </itemizedlist>
+
+    <warning>
+      <para>Audit-Konfigurationsdateien sollten vorsichtig gewartet und
+	bearbeitet werden, da Fehler in der Konfiguration zu falscher
+	Aufzeichnung von Ereignissen f&uuml;hren k&ouml;nnten.</para>
+    </warning>
+
+    <sect2>
+      <title>Ereignis-Auswahlausdr&uuml;cke</title>
+
+      <para>Auswahlausdr&uuml;cke werden an einigen Stellen
+	der Audit-Konfiguration ben&uuml;tzt, um zu bestimmen,
+	welche Ereignisse auditiert werden sollen. Die Ausdr&uuml;cke
+	enthalten eine Liste der Ereignisklassen, welche verglichen
+	werden sollen, jede mit einem Pr&auml;fix, welches anzeigt,
+	ob verglichene Datens&auml;tze akzeptiert oder ignoriert
+	werden sollen und optional, um anzuzeigen, ob der Eintrag
+	beabsichtigt, erfolgreiche oder fehlgeschlagene Operationen
+	zu vergleichen. Auswahlausdr&uuml;cke werden von links nach
+	rechts ausgewertet und zwei Ausdr&uuml;cke werden durch
+	Aneinanderh&auml;ngen miteinander kombiniert.</para>
+
+      <para>Die folgende Liste enth&auml;lt die
+	Standard-Ereignisklassen f&uuml;r das Audit und ist in
+	<filename>audit_class</filename> festgehalten:</para>
+
+      <itemizedlist>
+	<listitem>
+	    <para><literal>all</literal>&nbsp;&ndash;&nbsp;<emphasis>all</emphasis>&nbsp;&ndash;&nbsp;Vergleiche
+	      alle Ereignisklassen.</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>ad</literal>&nbsp;&ndash;&nbsp;<emphasis>administrative</emphasis>&nbsp;&ndash;&nbsp;Administrative
+	    Aktionen ausgef&uuml;hrt auf dem System als Ganzes.</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>ap</literal>&nbsp;&ndash;&nbsp;<emphasis>application</emphasis>&nbsp;&ndash;&nbsp;Aktionen
+	    definiert f&uuml;r Applikationen.</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>cl</literal>&nbsp;&ndash;&nbsp;<emphasis>file
+	    close</emphasis>&nbsp;&ndash;&nbsp;Audit-Aufrufe f&uuml;r
+	    den Systemaufruf <function>close</function>.</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>ex</literal>&nbsp;&ndash;&nbsp;<emphasis>exec</emphasis>&nbsp;&ndash;&nbsp;Ausf&uuml;hrung
+	    des Audit-Programms. Auditierung von
+	    Befehlszeilen-Argumenten und Umgebungsvariablen wird
+	    gesteuert durch &man.audit.control.5; mittels der
+	    <literal>argv</literal> und
+	    <literal>envv</literal>-Parametergem&auml;ss der
+	    <literal>Richtlinien</literal>-Einstellungen.</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>fa</literal>&nbsp;&ndash;&nbsp;<emphasis>file
+	    attribute access</emphasis>&nbsp;&ndash;&nbsp;Auditierung
+	    des Zugriffs auf Objektattribute wie &man.stat.1;,
+	    &man.pathconf.2; und &auml;hnlichen Ereignissen.</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>fc</literal>&nbsp;&ndash;&nbsp;<emphasis>file
+	    create</emphasis>&nbsp;&ndash;&nbsp;Audit-Ereignisse,
+	    bei denen eine Datei als Ergebnis angelegt wird.</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>fd</literal>&nbsp;&ndash;&nbsp;<emphasis>file
+	    delete</emphasis>&nbsp;&ndash;&nbsp;Audit-Ereignisse,
+	    bei denen Dateil&ouml;schungen vorkommen.</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>fm</literal>&nbsp;&ndash;&nbsp;<emphasis>file
+	    attribute modify</emphasis>&nbsp;&ndash;&nbsp;Audit-Ereignisse,
+	    bei welchen Dateiattribute ge&auml;ndert werden, wie
+	    &man.chown.8;, &man.chflags.1;, &man.flock.2; etc.</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>fr</literal>&nbsp;&ndash;&nbsp;<emphasis>file
+	    read</emphasis>&nbsp;&ndash;&nbsp;Audit-Ereignisse, bei
+	    denen Daten gelesen oder Dateien zum lesen ge&ouml;ffnet
+	    werden usw.</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>fw</literal>&nbsp;&ndash;&nbsp;<emphasis>file write</emphasis>&nbsp;&ndash;&nbsp;Audit-Ereignisse,
+	    bei welchen Daten geschrieben oder Dateien geschrieben
+	    oder ver&auml;ndert werden usw.</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>io</literal>&nbsp;&ndash;&nbsp;<emphasis>ioctl</emphasis>&nbsp;&ndash;&nbsp;Nutzung
+	    des Systemaufrufes &man.ioctl.2; durch Audit.</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>ip</literal>&nbsp;&ndash;&nbsp;<emphasis>ipc</emphasis>&nbsp;&ndash;&nbsp;Auditierung
+	    verschiedener Formen von Inter-Prozess-Kommunikation
+	    einschliesslich POSIX-Pipes und System V
+	    <acronym>IPC</acronym>-Operationen.</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>lo</literal>&nbsp;&ndash;&nbsp;<emphasis>login_logout</emphasis>&nbsp;&ndash;&nbsp;Audit-Ereignisse
+	    betreffend &man.login.1; und &man.logout.1;, welche auf
+	    dem System auftreten.</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>na</literal>&nbsp;&ndash;&nbsp;<emphasis>non
+	    attributable</emphasis>&nbsp;&ndash;&nbsp;Auditierung
+	    nicht-attributierbarer Ereignisse (Ereignisse, die nicht auf
+	    einen bestimmten Benutzer zur&uuml;ckgef&uuml;hrt werden
+	    k&ouml;nnen).</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>no</literal>&nbsp;&ndash;&nbsp;<emphasis>invalid
+	    class</emphasis>&nbsp;&ndash;&nbsp;Kein Abgleich von
+	    Audit-Ereignissen.</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>nt</literal>&nbsp;&ndash;&nbsp;<emphasis>network</emphasis>&nbsp;&ndash;&nbsp;Audit-Ereignisse
+	    in Zusammenhang mit Netzwerkaktivit&auml;ten wie
+	    z.B. &man.connect.2; und &man.accept.2;.</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>ot</literal>&nbsp;&ndash;&nbsp;<emphasis>other</emphasis>&nbsp;&ndash;&nbsp;Auditierung
+	    verschiedener Ereignisse.</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>pc</literal>&nbsp;&ndash;&nbsp;<emphasis>process</emphasis>&nbsp;&ndash;&nbsp;Auditierung
+	    von Prozess-Operationen wie &man.exec.3; und
+	    &man.exit.3;.</para>
+	</listitem>
+      </itemizedlist>
+
+      <para>Diese Ereignisklassen k&ouml;nnen angepasst werden durch
+	Modifizierung der Konfigurationsdateien
+	<filename>audit_class</filename> und
+	<filename>audit_event</filename>.</para>
+
+      <para>Jede Audit-Klasse in dieser Liste ist kombiniert mit
+	einem Pr&auml;fix, welches anzeigt, ob
+	erfolgreiche/gescheiterte Operationen abgebildet werden, und
+	ob der Eintrag den Abgleich hinzuf&uuml;gt oder entfernt
+	f&uuml;r die Klasse und den Typ.</para>
+
+      <itemizedlist>
+	<listitem>
+	  <para>(none) Kein Pr&auml;fix, sowohl erfolgreiche als
+	    auch gescheiterte Vorkommen eines Ereignisses werden
+	    auditiert.</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>+</literal> Auditiere nur erfolgreiche
+	    Ereignisse in dieser Klasse.</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>-</literal> Auditiere nur gescheiterte
+	    Operationen in dieser Klasse.</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>^</literal> Auditiere weder erfolgreiche
+	    noch gescheiterte Ereignisse in dieser Klasse.</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>^+</literal> Auditiere keine erfolgreichen
+	    Ereignisse in dieser Klasse.</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>^-</literal> Auditiere keine gescheiterten
+	    Ereignisse in dieser Klasse.</para>
+	</listitem>
+      </itemizedlist>
+
+      <para>Das folgende Beispiel einer Auswahl-Zeichenkette
+	w&auml;hlt erfolgreiche und gescheiterte
+	Anmelde/Abmelde-Ereignisse aus, aber nur erfolgreich beendete
+	Ausf&uuml;hrungs-Ereignisse:</para>
+
+      <programlisting>lo,+ex</programlisting>
+    </sect2>
+
+    <sect2>
+      <title>Konfigurationsdateien</title>
+
+      <para>In den meisten F&auml;llen m&uuml;ssen Administratoren
+	nur zwei Dateien &auml;ndern, wenn sie das Audit-System
+	konfigurieren: <filename>audit_control</filename> und
+	<filename>audit_user</filename>. Die erste Datei steuert
+	systemweite Audit-Eigenschaften und -Richtlinien; die zweite
+	Datei kann f&uuml;r die Feinanpassung der Auditierung von
+	Benutzern verwendet werden.</para>
+
+      <sect3 id="audit-auditcontrol">
+        <title>Die <filename>audit_control</filename>-Datei</title>
+
+	<para>Die <filename>audit_control</filename>-Datei legt eine
+	  Anzahl Vorgabewerte fest. Beim Betrachten des Inhaltes der
+	  Datei sehen wir Folgendes:</para>
+
+	<programlisting>dir:/var/audit
+flags:lo
+minfree:20
+naflags:lo
+policy:cnt
+filesz:0</programlisting>
+
+	<para>Die Option <option>dir</option> wird genutzt, um eines
+	  oder mehrere Verzeichnisse festzulegen, in welchen
+	  Audit-Protokolle gespeichert werden. Gibt es mehrere
+	  Verzeichniseintr&auml;ge, werden diese in der
+	  angegebenen Reihenfolge genutzt, bis sie jeweils
+	  gef&uuml;llt sind. Es ist &uuml;blich, Audit so zu
+	  konfigurieren, dass die Audit-Logs auf einem dedizierten
+	  Dateisystem abgelegt werden, um Wechselwirkungen zwischen
+	  dem Audit-Subsystem und anderen Subsystemen zu verhindern,
+	  falls das Dateisystem voll l&auml;uft.</para>
+
+	<para>Das <option>flags</option>-Feld legt die systemweite
+	  Standard-Vorauswahl-Maske f&uuml;r attributierbare (direkt
+	  einem Benutzer zuordenbare) Ereignisse fest. Im
+	  obigen Beispiel werden alle gescheiterten und erfolgreichen
+	  Anmelde- und Abmelde-Ereignisse f&uuml;r alle Benutzer
+	  aufgezeichnet.</para>
+
+	<para>Die Option <option>minfree</option> definiert den
+	  minimalen Prozentsatz an freiem Plattenplatz f&uuml;r das
+	  Dateisystem, in welchem der Audit-Pfad abgespeichert wird.
+	  Wenn diese Schwelle &uuml;berschritten ist, wird ein
+	  Warnhinweis erzeugt. Das obige Beispiel legt den minimalen
+	  freien Platz auf zwanzig Prozent fest.</para>
+
+	<para>Die <option>naflags</option>-Option bestimmt diejenigen
+	  Audit-Klassen, f&uuml;r die nicht-attributierbare Ereignisse
+	  aufgezeichnet werden sollen (beispielsweise Anmeldeprozesse
+	  und System-Daemonen.</para>
+
+	<para>Die Option <option>policy</option> legt eine durch Kommata
+	  getrennte Liste von policy-Flags fest, welche verschiedene
+	  Aspekte des Audit-Verhaltens steuern. Der vorgegebene Flag
+	  <literal>cnt</literal> zeigt an, dass das System trotz eines
+	  Audit-Fehlers weiterlaufen soll (dieses Flag wird dringend
+	  angeraten). Ein anderes, h&auml;ufig genutztes Flag ist
+	  <literal>argv</literal>, welches dazu f&uuml;hrt, dass
+	  Befehlszeilen-Argumente f&uuml;r den Systemauruf
+	  &man.execve.2; als Teil der Befehlsausf&uuml;hrung
+	  aufgezeichnet werden.</para>
+
+	<para>Die <option>filesz</option>-Option spezifiziert die
+	  maximale Gr&ouml;&szlig;e in Bytes, welche eine
+	  Audit-Pfad-Datei wachsen darf, bevor sie automatisch beendet
+	  und rotiert wird. Die Standardvorgabe <literal>0</literal>
+	  setzt die automatische Log-Rotation ausser Kraft. Falls die
+	  angeforderte Dateigr&ouml;&szlig;e gr&ouml;&szlig;er Null
+	  und gleichzeitig unterhalb des Minimums von 512K ist, dann
+	  wird die Angabe verworfen und ein Log-Hinweis wird
+	  erzeugt.</para>
+      </sect3>
+
+      <sect3 id="audit-audituser">
+	<title>Die Datei <filename>audit_user</filename></title>
+
+	<para>Die <filename>audit_user</filename>-Datei erlaubt es dem
+	  Administrator, weitere Audit-Erfordernisse f&uuml;r bestimmte
+	  Benutzer festzulegen. Jede Zeile konfiguriert das Auditing
+	  f&uuml;r einen Benutzer &uuml;ber zwei Felder: Das erste Feld
+	  ist <literal>alwaysaudit</literal>, welches eine Ansammlung
+	  von Ereignissen vorgibt, welche immer f&uuml;r diesen Benutzer
+	  aufgezeichnet werden. Das zweite Feld
+	  <literal>neveraudit</literal> legt eine Menge an Ereignissen
+	  fest, die niemals f&uuml;r diesen Benutzer auditiert werden
+	  sollen.</para>
+
+	<para>Das folgende Beispiel einer
+	  <filename>audit_user</filename>-Datei zeichnet
+	  Anmelde/Abmelde-Ereignisse, erfolgreiche
+	  Befehlsausf&uuml;hrungen f&uuml;r den Benutzer
+	  <username>root</username>, Anlegen von Dateien und
+	  erfolgreiche Befehlsausf&uuml;hrungen f&uuml;r den Benutzer
+	  <username>www</username> auf. Falls das Beispiel zusammen
+	  mit der vorstehend als Beispiel gezeigten Datei
+	  <filename>audit_control</filename> benutzt wird, dann ist
+	  der Eintrag <literal>lo</literal> f&uuml;r Benutzer
+	  <username>root</username> &uuml;berfl&uuml;ssig und
+	  Anmelde/Abmelde-Ereignisse werden f&uuml;r den Benutzer
+	  <username>www</username> ebenfalls aufgezeichnet.</para>
+
+	<programlisting>root:lo,+ex:no
+www:fc,+ex:no</programlisting>
+      </sect3>
+    </sect2>
+  </sect1>
+
+  <sect1 id="audit-administration">
+    <title>Administration des Audit-Subsystems</title>
+
+    <sect2>
+      <title>Audit-Pfade betrachten</title>
+
+      <para>Audit-Pfade werden im bin&auml;ren BSM-Format
+	gespeichert, daher ben&ouml;tigen Sie spezielle Werkzeuge, um
+	derartige Dateien zu &auml;ndern oder Sie in Textdateien zu
+	konvertieren. Der
+	Befehl &man.praudit.1; wandelt alle Pfad-Dateien in ein
+	einfaches Textformat um. Der Befehl &man.auditreduce.1; kann
+	genutzt werden, um die Pfad-Dateien f&uuml;r Analyse,
+	Ausdruck, Archivierung oder andere Zwecke zu reduzieren.
+	<command>auditreduce</command> unterst&uuml;tzt eine Reihe von
+	Auswahl-Parametern einschliesslich Ereignistyp,
+	Ereignisklasse, Benutzer, Datum oder Uhrzeit des Ereignisses und
+	den Dateipfad oder das Objekt, mit dem gearbeitet
+	wurde.</para>
+
+      <para>Das Dienstprogramm <command>praudit</command> schreibt
+	zum Beispiel den gesamten Inhalt einer angegebenen
+	Audit-Protokolldatei in eine simple Textdatei:</para>
+
+      <screen>&prompt.root; <userinput>praudit /var/audit/AUDITFILE</userinput></screen>
+
+      <para><filename><replaceable>AUDITFILE</replaceable></filename>
+	ist hier die zu schreibende Protokolldatei.</para>
+
+      <para>Audit-Pfade bestehen aus einer Reihe von Datens&auml;tzen,
+	die wiederum aus K&uuml;rzeln (token) gebildet werden, die von
+	<command>praudit</command> fortlaufend zeilenweise ausgegeben
+	werden. Jedes K&uuml;rzel ist von einem bestimmten Typ, z.B.
+	enth&auml;lt <literal>header</literal> einen
+	audit-Datensatz-Header oder <literal>path</literal>
+	enth&auml;lt einen Dateipfad von einer Suche. Hier ein
+	Beispiel eines <literal>execve</literal>-Ereignisses:</para>
+
+      <programlisting>header,133,10,execve(2),0,Mon Sep 25 15:58:03 2006, + 384 msec
+exec arg,finger,doug
+path,/usr/bin/finger
+attribute,555,root,wheel,90,24918,104944
+subject,robert,root,wheel,root,wheel,38439,38032,42086,128.232.9.100
+return,success,0
+trailer,133</programlisting>
+
+      <para>Dieser Audit stellt einen erfolgreichen
+	<literal>execve</literal>-Aufruf dar, in welchem der Befehl
+	<literal>finger doug</literal> ausgef&uuml;hrt wurde. Das
+	K&uuml;rzel des Argumentes enth&auml;lt die Befehlszeile,
+	welche die Shell an den Kernel weiterleitet. Das K&uuml;rzel
+	<literal>path</literal> enth&auml;lt den Pfad zur
+	ausf&uuml;hrbaren Datei (wie vom Kernel wahrgenommen). Das
+	K&uuml;rzel <literal>attribute</literal> beschreibt die
+	Bin&auml;rdatei (insbesondere den Datei-Modus, der genutzt
+	werden kann, um zu bestimmen, ob setuid auf die Applikation
+	angewendet wurde). Das K&uuml;rzel <literal>subject</literal>
+	beschreibt den untergeordneten Prozess und speichert daher in
+	Aufeinanderfolge Audit-Benutzer-ID, effektive Benutzer-ID und
+	Gruppen-ID, wirkliche Benutzer-ID und Grppen-ID, Process-ID,
+	Session- ID, Port-ID und Anmelde-Adresse. Beachten Sie, dass
+	Audit-Benutzer-ID und wirkliche Benutzer-ID abweichen: Der Benutzer
+	<username>robert</username> wurde zum Benutzer
+	<username>root</username>, bevor er diesen Befehl
+	ausf&uuml;hrte, aber er wird auditiert mit dem
+	urspr&uuml;nglich authentifizierten Benutzer. Schlie&szlig;lich zeigt
+	das K&uuml;rzel <literal>return</literal> die erfolgreiche
+	Ausf&uuml;hrung an und <literal>trailer</literal> schlie&szlig;t
+	den Datensatz ab.</para>
+
+      <para>Seit &os; 6.3 unterst&uuml;tzt <command>praudit</command> auch
+	die Ausgabe im XML-Format (die sie &uuml;ber die Option
+	<option>-x</option> w&auml;hlen.</para>
+    </sect2>
+
+    <sect2>
+      <title>Audit-Pfade reduzieren</title>
+
+      <para>Da Audit-Protokolldateien sehr gro&szlig; sein k&ouml;nnen,
+	wird ein Administrator h&ouml;chstwahrscheinlich eine Auswahl
+	an Datens&auml;tzen verwenden, wie z.B. alle Datens&auml;tze
+	zu einem bestimmten Benutzer:</para>
+
+      <screen>&prompt.root; <userinput>auditreduce -u trhodes /var/audit/AUDITFILE | praudit</userinput></screen>
+
+      <para>Dies wird alle Audit-Datens&auml;tze des Benutzers
+	<username>trhodes</username> ausw&auml;hlen, die in der
+	Datei
+	<filename><replaceable>AUDITFILE</replaceable></filename>
+	gespeichert sind.</para>
+    </sect2>
+
+    <sect2>
+      <title>Delegation von Rechten f&uuml;r Audit-Reviews</title>
+
+      <para>Mitglieder der Gruppe <groupname>audit</groupname> haben
+	die Erlaubnis, Audit-Pfade in <filename>/var/audit</filename>
+	zu lesen; standardm&auml;ssig ist diese Gruppe leer, daher
+	kann nur der Benutzer <username>root</username> die Audit-Pfade
+	lesen. Benutzer k&ouml;nnen der Gruppe
+	<groupname>audit</groupname> hinzugef&uuml;gt werden, um
+	Rechte f&uuml;r Audit-Reviews zu gew&auml;hren. Da die
+	F&auml;higkeit, Inhalte von Audit-Protokolldateien zu verfolgen,
+	tiefgreifende Einblicke in das Verhalten von Benutzern und
+	Prozessen erlaubt, wird empfohlen, dass die Gew&auml;hrung von
+	Rechten f&uuml;r Audit-Reviews mit Bedacht erfolgt.</para>
+    </sect2>
+
+    <sect2>
+      <title>Aktive &Uuml;berwachung mittles Audit-Pipes</title>
+
+      <para>Audit-Pipes sind nachgebildete (geklonte)
+	Pseudo-Ger&auml;te im Dateisystem des Ger&auml;tes, welche es
+	Applikationen erlauben, die laufenden Audit-Datens&auml;tze
+	anzuzapfen. Dies ist vorrangig f&uuml;r Autoren von Intrusion
+	Detection Software und System&uuml;berwachungsprogrammen von
+	Bedeutung. Allerdings ist f&uuml;r den Administrator das
+	Audit-Pipe-Ger&auml;t ein angenehmer Weg, aktive
+	&Uuml;berwachung zu gestatten, ohne Gefahr von Problemen durch
+	Besitzerrechte der Audit-Pfad-Datei oder Unterbrechung des
+	Stroms von Ereignissen durch Log-Rotation. Um den laufenden
+	Audit-Ereignisstrom zu verfolgen, geben Sie bitte folgende
+	Befehlszeile ein:</para>
+
+      <screen>&prompt.root; <userinput>praudit /dev/auditpipe</userinput></screen>
+
+      <para>In der Voreinstellung kann nur der Benutzer
+	<username>root</username> auf die
+	Audit-Pipe-Ger&auml;te-Knotenpunkte zugreifen. Um sie allen
+	Mitgliedern der Gruppe <groupname>audit</groupname>
+	zug&auml;nglich zu machen, f&uuml;gen Sie eine
+	<literal>devfs</literal>-Regel in
+	<filename>devfs.rules</filename> hinzu:</para>
+
+      <programlisting>add path 'auditpipe*' mode 0440 group audit</programlisting>
+
+      <para>Lesen Sie  &man.devfs.rules.5; f&uuml;r weitere
+	Informationen, wie das devfs-Dateisystem konfiguriert
+	wird.</para>
+
+      <warning>
+	<para>Es ist sehr leicht, R&uuml;ckmeldungszyklen von
+	  Audit-Ereignissen hervorzurufen, in welcher das Betrachten
+	  des Resultates eines Audit-Ereignisses in die Erzeugung von
+	  mehr Audit-Ereignissen m&uuml;ndet. Wenn zum Beispiel der
+	  gesamte Netzwerk-I/O auditiert wird, w&auml;hrend
+	  &man.praudit.1; in einer SSH-Sitzung gestartet wurde, dann
+	  wird ein kontinuierlicher, m&auml;chtiger Strom von
+	  Audit-Ereignissen erzeugt, da jedes ausgegebene Ereignis
+	  wiederum neue Ereignisse erzeugt. Es ist anzuraten,
+	  <command>praudit</command> an einem Audit-Pipe-Ger&auml;t
+	  nur von Sitzungen anzuwenden (ohne feingranuliertes
+	  I/O-Auditing), um dies zu vermeiden.</para>
+      </warning>
+    </sect2>
+
+    <sect2>
+      <title>Rotation von Audit-Pfad-Dateien</title>
+
+      <para>Audit-Pfade werden nur vom Kernel geschrieben und nur
+	vom Audit-Daemon <application>auditd</application> verwaltet.
+	Administratoren sollten nicht versuchen, &man.newsyslog.conf.5;
+	oder andere Werkzeuge zu benutzen, um Audit-Protokolldateien
+	direkt zu rotieren. Stattdessen sollte das
+	<command>audit</command> Management-Werkzeug benutzt werden,
+	um die Auditierung zu beenden, das Audit-System neu zu
+	konfigurieren und eine Log-Rotation durchzuf&uuml;hren. Der
+	folgende Befehl veranlasst den Audit-Daemon, eine neue
+	Protokolldatei anzulegen und dem Kernel zu signalisieren, die
+	neue Datei zu nutzen. Die alte Datei wird beendet und
+	umbenannt.  Ab diesem Zeitpunkt kann sie vom Administrator
+	bearbeitet werden.</para>
+
+      <screen>&prompt.root; <userinput>audit -n</userinput></screen>
+
+      <warning>
+	<para>Falls der <application>auditd</application>-Daemon
+	  gegenw&auml;rtig nicht l&auml;uft, wird dieser Befehl scheitern
+	  und eine Fehlermeldung wird ausgegeben.</para>
+      </warning>
+
+      <para>Das Hinzuf&uuml;gen der folgenden Zeile in
+	<filename>/etc/crontab</filename> wird die Log-Rotation alle
+	zw&ouml;lf Stunden durch &man.cron.8; erzwingen:</para>
+
+      <programlisting>0     */12       *       *       *       root    /usr/sbin/audit -n</programlisting>
+
+      <para>Die &Auml;nderung wird wirksam, sobald Sie die neue
+	<filename>/etc/crontab</filename> gespeichert haben.</para>
+
+      <para>Die automatische Rotation der Audit-Pfad-Datei in
+	Abh&auml;ngigkeit von der Dateigr&ouml;&szlig;e ist m&ouml;glich
+	durch die Angabe der Option <option>filesz</option> in
+	&man.audit.control.5;.  Dieser Vorgang ist im Abschnitt
+	Konfigurationsdateien dieses Kapitels beschrieben.</para>
+    </sect2>
+
+    <sect2>
+      <title>Komprimierung von Audit-Pfaden</title>
+
+      <para>Da Audit-Pfad-Dateien sehr gro&szlig; werden k&ouml;nnen,
+	ist es oft w&uuml;nschenswert, Pfade zu komprimieren oder
+	anderweitig zu archivieren, sobald sie vom Audit-Daemon
+	geschlossen wurden. Das Skript
+	<filename>audit_warn</filename> kann genutzt werden, um
+	angepasste Aktionen f&uuml;r eine Vielzahl von audit-bezogenen
+	Ereignissen auszuf&uuml;hren, einschliesslich der sauberen
+	Beendigung von Audit-Pfaden, wenn diese geschlossen werden.
+	Zum Beispiel kann man die folgenden Zeilen in das
+	<filename>audit_warn</filename>-Skript aufnehmen, um
+	Audit-Pfade beim Beenden zu komprimieren:</para>
+
+      <programlisting>#
+# Compress audit trail files on close.
+#
+if [ "$1" = closefile ]; then
+        gzip -9 $2
+fi</programlisting>
+
+      <para>Andere Archivierungsaktivit&auml;ten k&ouml;nnen das
+	Kopieren zu einem zentralen Server, die L&ouml;schung der alten
+	Pfad-Dateien oder die Reduzierung des alten Audit-Pfades durch
+	Entfernung nicht ben&ouml;tigter Datens&auml;tze
+	einschliessen. Das Skript wird nur dann ausgef&uuml;hrt, wenn
+	die Audit-Pfad-Dateien sauber beendet wurden, daher wird es
+	nicht auf Pfaden laufen, welche durch ein unsauberes Herunterfahren
+	des Systems nicht beendet wurden.</para>
+    </sect2>
+  </sect1>
 </chapter>
-
-<!--
-     Local Variables:
-     mode: sgml
-     sgml-declaration: "../chapter.decl"
-     sgml-indent-data: t
-     sgml-omittag: nil
-     sgml-always-quote-attributes: t
-     sgml-parent-document: ("../book.sgml" "part" "chapter")
-     End:
--->
