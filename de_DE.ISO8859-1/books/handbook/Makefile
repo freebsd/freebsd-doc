@@ -1,7 +1,7 @@
 #
 # $FreeBSD$
-# $FreeBSDde: de-docproj/books/handbook/Makefile,v 1.59 2007/10/22 19:47:34 jkois Exp $
-# basiert auf: 1.108
+# $FreeBSDde: de-docproj/books/handbook/Makefile,v 1.60 2008/03/26 16:57:34 jkois Exp $
+# basiert auf: 1.109
 #
 # Build the FreeBSD Handbook in its German translation.
 #
@@ -140,6 +140,18 @@ IMAGES_EN+= virtualization/virtualpc-freebsd10.png
 IMAGES_EN+= virtualization/virtualpc-freebsd11.png
 IMAGES_EN+= virtualization/virtualpc-freebsd12.png
 IMAGES_EN+= virtualization/virtualpc-freebsd13.png
+IMAGES_EN+= virtualization/vmware-freebsd01.png
+IMAGES_EN+= virtualization/vmware-freebsd02.png
+IMAGES_EN+= virtualization/vmware-freebsd03.png
+IMAGES_EN+= virtualization/vmware-freebsd04.png
+IMAGES_EN+= virtualization/vmware-freebsd05.png
+IMAGES_EN+= virtualization/vmware-freebsd06.png
+IMAGES_EN+= virtualization/vmware-freebsd07.png
+IMAGES_EN+= virtualization/vmware-freebsd08.png
+IMAGES_EN+= virtualization/vmware-freebsd09.png
+IMAGES_EN+= virtualization/vmware-freebsd10.png
+IMAGES_EN+= virtualization/vmware-freebsd11.png
+IMAGES_EN+= virtualization/vmware-freebsd12.png
 
 # Images from the cross-document image library
 IMAGES_LIB=  callouts/1.png
