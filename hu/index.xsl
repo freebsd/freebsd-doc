@@ -4,11 +4,11 @@
 <!ENTITY title "A FreeBSD Projekt">
 ]>
 
-<!-- $FreeBSD: www/hu/index.xsl,v 1.6 2007/11/06 12:44:24 gabor Exp $ -->
+<!-- $FreeBSD: www/hu/index.xsl,v 1.7 2008/01/27 19:14:55 gabor Exp $ -->
 
 <!-- FreeBSD Hungarian Documentation Project
      Translated by: Gabor Kovesdan <gabor@FreeBSD.org>
-     Original Revision: r1.162				-->
+     Original Revision: r1.163				-->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
@@ -104,11 +104,9 @@
 					<li>
 					  <a href="&u.rel.announce;">Hivatalos Kiad&aacute;s &rel.current;</a>
 					</li>
-<!-- Should be re-enabled when 7.0 is out IE, when rel2 = 6.X
 					<li>
 					  <a href="&u.rel2.announce;">Hivatalos (&#214;r&ouml;ks&eacute;gi) Kiad&aacute;s &rel2.current;</a>
 					</li>
--->
 			    <xsl:if test="'&beta.testing;' != 'IGNORE'">
 					<li>
 					  <a href="&base;/where.html#helptest">K&ouml;vetkez&#245; Kiad&aacute;s
