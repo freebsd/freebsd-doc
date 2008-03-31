@@ -7,7 +7,7 @@
 <!ENTITY % developers SYSTEM "../developers.sgml"> %developers;
 ]>
 
-<!-- $FreeBSD: www/en/projects/summerofcode.xsl,v 1.10 2008/03/18 22:25:53 rwatson Exp $ -->
+<!-- $FreeBSD: www/en/projects/summerofcode.xsl,v 1.11 2008/03/31 20:15:12 miwi Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -247,10 +247,10 @@ href="http://wiki.freebsd.org/moin.cgi/SummerOfCode2005">2005</a>].</p>
 
   <li><p><strong>When does the application period end?</strong></p>
 
-    <p>March 31, 2008 5:00PM PDT (April 1 0:00 UTC).  Note, however
-      that you should apply several days before the deadline in case
-      your potential mentor wants to clarify anything in your
-      application or offer additional guidance.</p></li>
+    <p>Monday, April 7, 2008.  Note, however that you should apply
+      several days before the deadline in case your potential mentor
+      wants to clarify anything in your application or offer
+      additional guidance.</p></li>
 
   <li><p><strong>Where do I send my proposal?</strong></p>
 
