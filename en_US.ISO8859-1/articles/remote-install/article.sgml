@@ -1,0 +1,561 @@
+<!DOCTYPE article PUBLIC "-//FreeBSD//DTD DocBook V4.1-Based Extension//EN" [
+<!ENTITY % articles.ent PUBLIC "-//FreeBSD//ENTITIES DocBook FreeBSD Articles Entity Set//EN">
+%articles.ent;
+]>
+
+<article>
+  <articleinfo>
+    <title>Remote Installation of the &os; Operating System without a
+      Remote Console</title>
+
+    <author>
+      <firstname>Daniel</firstname>
+      <surname>Gerzo</surname>
+      <affiliation>
+	<address><email>danger@FreeBSD.org</email></address>
+      </affiliation>
+      <!-- 11 April 2008 -->
+    </author>
+
+    <pubdate>$FreeBSD$</pubdate>
+
+    <legalnotice id="trademarks" role="trademarks">
+      &tm-attrib.freebsd;
+      &tm-attrib.general;
+    </legalnotice>
+
+    <copyright>
+      <year>2008</year>
+      <holder>The &os; Documentation Project</holder>
+    </copyright>
+
+    <abstract>
+      <para>This article documents the remote installation of the &os;
+	operating system when the console of the remote system is
+	unavailable.  The main idea behind this article is the result of
+	a collaboration with &a.mm; with valuable input provided by
+	&a.pjd;.</para>
+    </abstract>
+  </articleinfo>
+
+  <sect1 id="background">
+    <title>Background</title>
+
+    <para>There are many server hosting providers in the world, but very
+      few of them are officially supporting &os;.  They usually provide
+      support for a &linux; distribution to be installed on the servers
+      they offer.</para>
+
+    <para>In some cases, these companies will install your preferred
+      &linux; distribution if you request it.  Using this option, we will
+      attempt to install &os;.  In other cases, they may offer a rescue
+      system which would be used in an emergency.  It's possible to use
+      this for our purposes as well.</para>
+
+    <para>This article covers the basic installation and configuration
+      steps required to bootstrap a remote installation of &os; with
+      RAID-1 and <application>ZFS</application> capabilities.</para>
+  </sect1>
+
+  <sect1 id="intro">
+    <title>Introduction</title>
+
+    <para>This section will summarize the purpose of this article and
+      better explain what is covered herein.  The instructions included
+      in this article will benefit those using services provided by
+      colocation facilities not supporting &os;.</para>
+
+    <procedure>
+      <step>
+	<para>As we have mentioned in the <link
+	    linkend="background">Background</link> section, many of the
+	  reputable server hosting companies provide some kind of rescue
+	  system, which is booted from their <acronym>LAN</acronym> and
+	  accessible over <application>SSH</application>.  They usually
+	  provide this support in order to help their customers fix
+	  broken operating systems.  As this article will explain, it is
+	  possible to install &os; with the help of these rescue
+	  systems.</para>
+	<!-- XXXTR: Solaris has a restore command, something like
+	  sysrestore, FreeBSD Should have one too. -->
+      </step>
+
+      <step>
+	<para>The next section of this article will describe how to
+	  configure, and build minimalistic &os; on the local machine.
+	  That version will eventually be running on the remote machine
+	  from a ramdisk, which will allow us to install a complete &os;
+	  operating system from an <acronym>FTP</acronym> mirror using
+	  the <application>sysinstall</application> utility.</para>
+      </step>
+
+      <step>
+	<para>The rest of this article will describe the installation
+	  procedure itself, as well as the configuration of the
+	  <application>ZFS</application> file system.</para>
+      </step>
+    </procedure>
+
+    <sect2 id="requirements">
+      <title>Requirements</title>
+
+      <para>To continue successfully, you must:</para>
+
+      <itemizedlist>
+	<listitem>
+	  <para>have a network accessible operating system with
+	    <application>SSH</application> access</para>
+	</listitem>
+
+	<listitem>
+	  <para>understand the &os; installation process</para>
+	</listitem>
+
+	<listitem>
+	  <para>be familiar with the &man.sysinstall.8; utility</para>
+	</listitem>
+
+	<listitem>
+	  <para>have the &os; installation <acronym>ISO</acronym> image
+	    or <acronym>CD</acronym> handy</para>
+	</listitem>
+      </itemizedlist>
+    </sect2>
+  </sect1>
+
+  <sect1 id="preparation">
+    <title>Preparation - <application>mfsBSD</application></title>
+
+    <para>Before &os; may be installed on the target system, it is
+      necessary to build the minimal &os; operating system image which
+      will boot from the hard drive.  This way the new system can be
+      accessed from the network, and the rest of the installation can be
+      done without remote access to the system console.</para>
+
+    <para>The <application>mfsBSD</application> tool-set can be used to
+      build a tiny &os; image.  As the name of
+      <application>mfsBSD</application> suggests (<quote>mfs</quote>
+      means <quote>memory file system</quote>), the resulting image runs
+      entirely from a ramdisk.  Thanks to this feature, the manipulation
+      of hard drives will not be limited, therefore it will be possible
+      to install a complete &os; operating system.  The home page of
+      <application>mfsBSD</application>, at <ulink
+	url="http://people.freebsd.org/~mm/mfsbsd/"></ulink>, includes
+      pointers to the latest release of the toolset.</para>
+
+    <para>Please note that the internals of
+      <application>mfsBSD</application> and how it all fits together is
+      beyond the scope of this article.  The interested reader should
+      consult the original documentation of
+      <application>mfsBSD</application> for more details.</para>
+
+    <para>Download and extract the latest
+      <application>mfsBSD</application> release and change your working
+      directory to the directory where the
+      <application>mfsBSD</application> scripts will reside:</para>
+
+    <screen>&prompt.root; <userinput>fetch http://people.freebsd.org/~mm/mfsbsd/mfsbsd-1.0-beta1.tar.gz</userinput>
+&prompt.root; <userinput>tar xvzf mfsbsd-1.0-beta1.tar.gz</userinput>
+&prompt.root; <userinput>cd mfsbsd-1.0-beta1/</userinput></screen>
+
+    <sect2 id="mfsbsd-config">
+      <title>Configuration of <application>mfsBSD</application></title>
+
+      <para>Before booting <application>mfsBSD</application>, a few
+	important configuration options have to be set.  The most
+	important that we have to get right is, naturally, the network
+	setup.  The most suitable method to configure networking options
+	depends on whether we know beforehand the type of the network
+	interface we will use, and the network interface driver to be
+	loaded for our hardware.  We will see how
+	<application>mfsBSD</application> can be configured in either
+	case.</para>
+
+      <para>Another important thing to set is the
+	<username>root</username> password.  This can be done by editing
+	the <filename>conf/rootpw.conf</filename> file. Please keep in
+	mind that the file will contain your password in the plain text,
+	thus we do not recommend to use real password here.
+	Nevertheless, this is just a temporary one-time password which
+	can be later changed in a live system.</para>
+
+      <sect3>
+	<title>The <filename>conf/interfaces.conf</filename> method</title>
+
+	<para>When the installed network interface card is unknown, we
+	  can use the auto-detection features of
+	  <application>mfsBSD</application>.  The startup scripts of
+	  <application>mfsBSD</application> can detect the correct
+	  driver to use, based on the MAC address of the interface, if
+	  we set the following options in
+	  <filename>conf/interfaces.conf</filename>:</para>
+
+	<programlisting>initconf_interfaces="ext1"
+initconf_mac_ext1="00:00:00:00:00:00"
+initconf_ip_ext1="192.168.0.2"
+initconf_netmask_ext1="255.255.255.0"</programlisting>
+
+	<para>Do not forget to add the <literal>defaultrouter</literal>
+	  information to the <filename>conf/rc.conf</filename>
+	  file:</para>
+
+	<programlisting>defaultrouter="192.168.0.1"</programlisting>
+      </sect3>
+
+      <sect3>
+	<title>The <filename>conf/rc.conf</filename> method</title>
+
+	<para>When the network interface driver is known, it is more
+	  convenient to use the <filename>conf/rc.conf</filename> file
+	  for networking options.  The syntax of this file is the same
+	  as the one used in the standard &man.rc.conf.5; file of
+	  &os;.</para>
+
+	<para>For example, if you know that a &man.re.4; network
+	  interface is going to be available, you can set the following
+	  options in <filename>conf/rc.conf</filename>:</para>
+
+	<programlisting>defaultrouter="192.168.0.1"
+ifconfig_re0="inet 192.168.0.2 netmask 255.255.255.0"</programlisting>
+      </sect3>
+    </sect2>
+
+    <sect2 id="mfsbsd-build">
+      <title>Building an <application>mfsBSD</application> image</title>
+
+      <para>The process of building an <application>mfsBSD</application>
+	image is pretty straightforward.</para>
+
+      <para>The first step is to mount the &os; installation
+	<acronym>CD</acronym>, or the installation
+	<acronym>ISO</acronym> image to <filename
+	  role="directory">/cdrom</filename>.  For the sake of example,
+	in this article we will assume that you have downloaded the &os;
+	7.0-RELEASE <acronym>ISO</acronym>.  Mounting this ISO image to
+	the <filename role="directory">/cdrom</filename> directory is
+	easy with the &man.mdconfig.8; utility:</para>
+
+      <screen>&prompt.root; <userinput>mdconfig -a -t vnode -u 10 -f <replaceable>7.0-RELEASE-amd64-disc1.iso</replaceable></userinput>
+&prompt.root; <userinput>mount_cd9660 /dev/md10 /cdrom</userinput></screen>
+
+      <para>Next, build the bootable <application>mfsBSD</application>
+	image:</para>
+
+      <screen>&prompt.root; <userinput>make BASE=/cdrom/<replaceable>7.0-RELEASE</replaceable></userinput></screen>
+
+      <note>
+	<para>The above <command>make</command> command has to be run
+	  from the top level of the <application>mfsBSD</application>
+	  directory tree, i.e. <filename
+	    role="directory">~/mfsbsd-1.0-beta1/</filename>.</para>
+      </note>
+    </sect2>
+
+    <sect2>
+      <title>Booting <application>mfsBSD</application></title>
+
+      <para>Now that the <application>mfsBSD</application> image is
+	ready, it must be uploaded to the remote system running a live
+	rescue system or pre-installed &linux; distribution.  The most
+	suitable tool for this task is
+	<application>scp</application>:</para>
+
+      <screen>&prompt.root; <userinput>scp disk.img root@192.168.0.2:.</userinput></screen>
+
+      <para>To boot <application>mfsBSD</application> image properly, it
+	must be placed on the first (bootable) device of the given
+	machine.  This may be accomplished using this example providing
+	that <devicename>sda</devicename> is the first bootable disk
+	device:</para>
+
+      <screen>&prompt.root; <userinput>dd if=/root/disk.img of=/dev/sda bs=1M</userinput></screen>
+
+      <para>If all went well, the image should now be in the
+	<acronym>MBR</acronym> of the first device and the machine can
+	be rebooted.  Watch for the machine to boot up properly with the
+	&man.ping.8; tool.  Once it has came back on-line, it should be
+	possible to access it over &man.ssh.1; as user
+	<username>root</username> with the configured password.</para>
+    </sect2>
+  </sect1>
+
+  <sect1 id="installation">
+    <title>Installation of The &os; Operating System</title>
+
+    <para>The <application>mfsBSD</application> has been successfully
+      booted and it should be possible to log in through &man.ssh.1;.
+      This section will describe how to create and label slices, set up
+      <application>gmirror</application> for RAID-1, and how to use
+      <application>sysinstall</application> to install a minimal
+      distribution of the &os; operating system.</para>
+
+    <sect2>
+      <title>Preparation of Hard Drives</title>
+
+      <para>The first task is to allocate disk space for &os;, i.e.: to
+	create slices and partitions.  Obviously, the currently running
+	system is fully loaded in system memory and therefore there will
+	be no problems with manipulating hard drives.  To complete this
+	task, it is possible to use either
+	<application>sysinstall</application> or &man.fdisk.8; in
+	conjunction to &man.bsdlabel.8;.</para>
+
+      <para>At the start, mark all system disks as empty.  Repeat the
+	following command for each hard drive:</para>
+
+      <screen>&prompt.root; <userinput>dd if=/dev/zero of=/dev/<replaceable>ad0</replaceable> count=2</userinput></screen>
+
+      <para>Next, create slices and label them with your preferred tool.
+	While it is considered easier to use
+	<application>sysinstall</application>, a powerful and also
+	probably less buggy method will be to use standard text-based
+	&unix; tools, such as &man.fdisk.8; and &man.bsdlabel.8;, which
+	will also be covered in this section.  The former option is well
+	documented in the <ulink
+	  url="&url.books.handbook;/install-steps.html">Installing &os;</ulink>
+	chapter of the &os; Handbook.  As it was mentioned in the
+	introduction, this article will present how to set up a system
+	with RAID-1 and <application>ZFS</application> capabilities.
+	Our set up will consist of a small &man.gmirror.8; mirrored
+	<filename role="directory">/</filename> (root), <filename
+	  role="directory">/usr</filename> and <filename
+	  role="directory">/var</filename> file systems, and the rest of
+	the disk space will be allocated for a &man.zpool.8; mirrored
+	<application>ZFS</application> file system.  Please note, that
+	the <application>ZFS</application> file system will be
+	configured after the &os; operating system is successfully
+	installed and booted.</para>
+
+      <para>The following example will describe how to create slices and
+	labels, initialize &man.gmirror.8; on each partition and how to
+	create a <application>UFS2</application> file system in each
+	mirrored partition:</para>
+
+      <screen>&prompt.root; <userinput>fdisk -BI /dev/ad0</userinput> <co id="fdisk">
+&prompt.root; <userinput>fdisk -BI /dev/ad1</userinput>
+&prompt.root; <userinput>bsdlabel -wB /dev/ad0s1</userinput> <co id="bsdlabel-writing">
+&prompt.root; <userinput>bsdlabel -wB /dev/ad1s1</userinput>
+&prompt.root; <userinput>bsdlabel -e /dev/ad0s1</userinput> <co id="bsdlabel-editing">
+&prompt.root; <userinput>bsdlabel /dev/ad0s1 > /tmp/bsdlabel.txt && bsdlabel -R /tmp/bsdlabel.txt</userinput> <co id="bsdlabel-restore">
+&prompt.root; <userinput>gmirror label root /dev/ad[01]s1a</userinput> <co id="gmirror1">
+&prompt.root; <userinput>gmirror label var /dev/ad[01]s1d</userinput>
+&prompt.root; <userinput>gmirror label usr /dev/ad[01]s1e</userinput>
+&prompt.root; <userinput>gmirror label -F swap /dev/ad[01]s1b</userinput> <co id="gmirror2">
+&prompt.root; <userinput>newfs /dev/mirror/root</userinput> <co id="newfs">
+&prompt.root; <userinput>newfs /dev/mirror/var</userinput>
+&prompt.root; <userinput>newfs /dev/mirror/usr</userinput></screen>
+
+      <calloutlist>
+	<callout arearefs="fdisk">
+	  <para>Create a slice covering the entire disk and initialize
+	    the boot code contained in sector 0 of the given disk.
+	    Repeat this command for all hard drives in the
+	    system.</para>
+	</callout>
+
+	<callout arearefs="bsdlabel-writing">
+	  <para>Write a standard label for each disk including the
+	    bootstrap code.</para>
+	</callout>
+
+	<callout arearefs="bsdlabel-editing">
+	  <para>Now, manually edit the label of the given disk.  Refer
+	    to the &man.bsdlabel.8; manual page in order to find out how
+	    to create partitions.  Create partitions
+	    <literal>a</literal> for <filename
+	      role="directory">/</filename> (root) file system,
+	    <literal>b</literal> for swap, <literal>d</literal> for
+	    <filename role="directory">/var</filename>,
+	    <literal>e</literal> for <filename
+	      role="directory">/usr</filename> and finally
+	    <literal>f</literal> which will later be used for
+	    <application>ZFS</application>.</para>
+	</callout>
+
+	<callout arearefs="bsdlabel-restore">
+	  <para>Import the recently created label for the second hard
+	    drive, so both hard drives will be labeled in the same
+	    way.</para>
+	</callout>
+
+	<callout arearefs="gmirror1">
+	  <para>Initialize &man.gmirror.8; on each partition.</para>
+	</callout>
+
+	<callout arearefs="gmirror2">
+	  <para>Note the <option>-F</option> option used for swap
+	    partition.  This instructs &man.gmirror.8; to assume that
+	    the device is in the consistent state after the power/system
+	    failure.</para>
+	</callout>
+
+	<callout arearefs="newfs">
+	  <para>Create a <application>UFS2</application> file system on
+	    each mirrored partition.</para>
+      </calloutlist>
+    </sect2>
+
+    <sect2>
+      <title>System Installation</title>
+
+      <para>This is the most important part.  This section will describe
+	how to actually install the minimal distribution of &os; on the
+	hard drives that we have prepared in the previous section.  To
+	accomplish this goal, all file systems need to be mounted so
+	<application>sysinstall</application> may write the contents of
+	&os; to the hard drives:</para>
+
+      <screen>&prompt.root; <userinput>mount /dev/mirror/root /mnt</userinput>
+&prompt.root; <userinput>mkdir /mnt/var /mnt/usr</userinput>
+&prompt.root; <userinput>mount /dev/mirror/var /mnt/var</userinput>
+&prompt.root; <userinput>mount /dev/mirror/usr /mnt/usr</userinput></screen>
+
+      <para>When you are done, start &man.sysinstall.8;.  Select the
+	<guimenuitem>Custom</guimenuitem> installation from the main
+	menu.  Select <guimenuitem>Options</guimenuitem> and press
+	<keycap>Enter</keycap>.  With the help of arrow keys, move the
+	cursor on the <literal>Install Root</literal> item, press
+	<keycap>Space</keycap> and change it to <filename
+	  role="directory">/mnt</filename>.  Press
+	<keycap>Enter</keycap> to submit your changes and exit the
+	<guimenuitem>Options</guimenuitem> menu by pressing
+	<keycap>q</keycap>.</para>
+
+      <warning>
+	<para>Note that this step is very important and if skipped,
+	  <application>sysinstall</application> will be unable to
+	  install &os;.</para>
+      </warning>
+
+      <para>Go to the <guimenuitem>Distributions</guimenuitem> menu,
+	move the cursor with the arrow keys on the
+	<option>Minimal</option> option, and check it by pressing
+	<keycap>Space</keycap>.  This article uses the Minimal
+	distribution in order to save network traffic, because the
+	system itself will be installed over
+	<application>ftp</application>.  Exit this menu by choosing
+	<option>Exit</option> option.</para>
+
+      <note>
+	<para>The <guimenuitem>Partition</guimenuitem> and
+	  <guimenuitem>Label</guimenuitem> menus will be skipped, as
+	  these are useless now.</para>
+      </note>
+
+      <para>In the <guimenuitem>Media</guimenuitem> menu, select
+	<option>FTP</option>.  Select the nearest mirror and let
+	<application>sysinstall</application> assume that the network is
+	already configured.  You will be returned back to the
+	<guimenuitem>Custom</guimenuitem> menu.</para>
+
+      <para>Finally, perform the system installation by selecting the
+	latest available option - <guimenuitem>Commit</guimenuitem>.
+	Exit <application>sysinstall</application> when it finishes the
+	installation.</para>
+    </sect2>
+
+    <sect2>
+      <title>Post Installation Steps</title>
+
+      <para>The &os; operating system should be installed now; however,
+	the process is not finished yet.  It is necessary to perform
+	some post installation steps in order to allow &os; to boot in
+	the future and to be able to log in to the system.</para>
+
+      <para>You must now &man.chroot.8; into the freshly installed
+	system in order to finish the installation.  Use the following
+	command:</para>
+
+      <screen>&prompt.root; <userinput>chroot /mnt</userinput></screen>
+
+      <para>To complete our goal, perform these steps:</para>
+
+      <itemizedlist>
+	<listitem>
+	  <para>Copy the <literal>GENERIC</literal> kernel to the
+	    <filename role="directory">/boot/kernel</filename>
+	    directory:</para>
+
+	  <screen>&prompt.root; <userinput>cp -Rp /boot/GENERIC/* /boot/kernel</userinput></screen>
+	</listitem>
+
+	<listitem>
+	  <para>Create the <filename>/etc/rc.conf</filename>,
+	    <filename>/etc/resolv.conf</filename> and
+	    <filename>/etc/fstab</filename> files.  Do not forget to
+	    properly set the network information and to enable
+	    <application>sshd</application> in the
+	    <filename>/etc/rc.conf</filename> file.  The contents of the
+	    <filename>/etc/fstab</filename> file will be similar to the
+	    following:</para>
+
+	  <programlisting># Device                Mountpoint      FStype  Options         Dump    Pass#
+/dev/mirror/swap        none            swap    sw              0       0
+/dev/mirror/root        /               ufs     rw              1       1
+/dev/mirror/usr         /usr            ufs     rw              2       2
+/dev/mirror/var         /var            ufs     rw              2       2
+/dev/cd0                /cdrom          cd9660  ro,noauto       0       0</programlisting>
+	</listitem>
+
+	<listitem>
+	  <para>Create the <filename>/boot/loader.conf</filename> file,
+	    with the following contents:</para>
+
+	  <programlisting>geom_mirror_load="YES"
+zfs_load="YES"</programlisting>
+	</listitem>
+
+	<listitem>
+	  <para>Perform the following command, which will make
+	    <application>ZFS</application> available on the next
+	    boot:</para>
+
+	  <screen>&prompt.root; <userinput>echo 'zfs_enable="YES"' >> /etc/rc.conf </userinput></screen>
+	</listitem>
+
+	<listitem>
+	  <para>Add additional users to the system using the
+	    &man.adduser.8; tool.  Do not forget to add a user to the
+	    <groupname>wheel</groupname> group so you may obtain root
+	    access after the reboot.</para>
+	</listitem>
+
+	<listitem>
+	  <para>Double-check all your settings.</para>
+	</listitem>
+      </itemizedlist>
+
+      <para>The system should now be ready for the next boot. Use the
+	&man.reboot.8; command to reboot your system.</para>
+    </sect2>
+  </sect1>
+
+  <sect1 id="zfs">
+    <title>ZFS</title>
+
+    <para>If your system survived the reboot, it should now be possible
+      to log in.  Welcome to the fresh &os; installation, performed
+      remotely without the use of a remote console!</para>
+
+    <para>The only remaining step is to configure &man.zpool.8; and
+      create some &man.zfs.8; file systems.  Creating and administering
+      <application>ZFS</application> is very straightforward.  First,
+      create a mirrored pool:</para>
+
+    <screen>&prompt.root; <userinput>zpool create tank mirror /dev/ad[01]s1f</userinput></screen>
+
+    <para>Next, create some file systems:</para>
+
+    <screen>&prompt.root; <userinput>zfs create tank/ports</userinput>
+&prompt.root; <userinput>zfs create tank/src</userinput>
+&prompt.root; <userinput>zfs set compression=gzip tank/ports</userinput>
+&prompt.root; <userinput>zfs set compression=on tank/src</userinput>
+&prompt.root; <userinput>zfs set mountpoint=/usr/ports tank/ports</userinput>
+&prompt.root; <userinput>zfs set mountpoint=/usr/src tank/src</userinput></screen>
+
+    <para>That's all.  If you are interested in more details about
+      <application>ZFS</application> on &os;, please refer to the <ulink
+	url="http://wiki.freebsd.org/ZFS">ZFS</ulink> section of the &os;
+      Wiki.</para>
+  </sect1>
+</article>
