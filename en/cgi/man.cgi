@@ -1,6 +1,6 @@
 #!/usr/bin/perl -T
 #
-# Copyright (c) 1996-2007 Wolfram Schneider <wosch@FreeBSD.org>
+# Copyright (c) 1996-2008 Wolfram Schneider <wosch@FreeBSD.org>
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -33,8 +33,8 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.197 2008-02-02 00:18:58 danger Exp $
-# $FreeBSD: www/en/cgi/man.cgi,v 1.196 2008/01/17 16:44:52 hrs Exp $
+# $Id: man.cgi,v 1.198 2008-04-15 09:57:12 wosch Exp $
+# $FreeBSD: www/en/cgi/man.cgi,v 1.197 2008/02/02 00:18:58 danger Exp $
 
 ############################################################################
 # !!! man.cgi is stale perl4 code !!!
@@ -1243,16 +1243,16 @@ sub faq {
           if $manPathAliases{$_};
     }
 
-    local $id = '$FreeBSD: www/en/cgi/man.cgi,v 1.196 2008/01/17 16:44:52 hrs Exp $';
+    local $id = '$FreeBSD: www/en/cgi/man.cgi,v 1.197 2008/02/02 00:18:58 danger Exp $';
     return qq{\
 <pre>
-Copyright (c) 1996-2007 <a href="$mailtoURL">Wolfram Schneider</a>
+Copyright (c) 1996-2008 <a href="$mailtoURL">Wolfram Schneider</a>
 Copyright (c) 1993-1995 Berkeley Software Design, Inc.
 
 This data is part of a licensed program from BERKELEY SOFTWARE
 DESIGN, INC.  Portions are copyrighted by BSDI, The Regents of
 the University of California, Massachusetts Institute of
-Technology, Free Software Foundation, FreeBSD Inc., and others.
+Technology, Free Software Foundation, The FreeBSD Project, and others.
 
 </pre>\n
 This script has the revsion: $id
