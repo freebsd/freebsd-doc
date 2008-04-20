@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/Makefile,v 1.142 2007/05/15 23:11:04 keramida Exp $
+# $FreeBSD: www/en/Makefile,v 1.143 2008/02/10 09:41:24 keramida Exp $
 
 .if exists(Makefile.conf)
 .include "Makefile.conf"
@@ -14,7 +14,6 @@ DOCS+= administration.sgml
 DOCS+= applications.sgml
 DOCS+= art.sgml
 DOCS+= availability.sgml
-DOCS+= community.sgml
 DOCS+= docs.sgml
 DOCS+= features.sgml
 DOCS+= internet.sgml
@@ -34,6 +33,8 @@ DEPENDSET.index=transtable mirrors news press events \
 XMLDOCS+=	usergroups:${XSL_USERGROUPS}:${XML_USERGROUPS}:
 DEPENDSET.usergroups=transtable usergroups
 PARAMS.usergroups=	--param pagename "'FreeBSD User Groups'"
+
+XMLDOCS+=	community::${XML_EVENTS_EVENTS}:
 
 # These will be directly installed.
 
