@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
-<!-- $FreeBSD: www/share/sgml/libcommon.xsl,v 1.15 2008/01/16 09:29:16 murray Exp $ -->
+<!-- $FreeBSD: www/share/sgml/libcommon.xsl,v 1.16 2008/03/01 01:55:27 simon Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
   version="1.0"
@@ -451,6 +451,22 @@
       iCalendar format can subscribe to the
       <a href="&base;/events/events.ics">FreeBSD events calendar</a>
       which contains all of the events listed here.</p>
+  </xsl:template>
+
+  <xsl:template name="html-events-map">
+    <xsl:param name="mapurl" select="'none'" />
+
+    <p>Countries and regions displayed in dark red on the map below
+      are hosting upcoming FreeBSD-related events.  Countries that
+      have hosted FreeBSD-related events in the past show up in yellow
+      or orange, with darker colors representing a larger number of
+      previous events.</p>
+
+    <img>
+      <xsl:attribute name="src">
+        <xsl:value-of select="$mapurl" />
+      </xsl:attribute>
+    </img>
   </xsl:template>
 
   <xsl:template name="html-events-list-upcoming-heading">
