@@ -7,7 +7,7 @@
 <!ENTITY % developers SYSTEM "../developers.sgml"> %developers;
 ]>
 
-<!-- $FreeBSD: www/en/projects/summerofcode.xsl,v 1.11 2008/03/31 20:15:12 miwi Exp $ -->
+<!-- $FreeBSD: www/en/projects/summerofcode.xsl,v 1.12 2008/03/31 22:10:28 murray Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -136,11 +136,7 @@ href="http://wiki.freebsd.org/moin.cgi/SummerOfCode2005">2005</a>].</p>
 <p>A number of FreeBSD committers are willing to mentor students this
   year.  A good place to start is the 'Technical contacts' listed with
   the example projects on the <a
-  href="&base;/projects/ideas/index.html">Ideas page</a>.  In addition
-  to those specific projects, the following mentors are willing to
-  work with students in any of the broad areas listed below.</p>
-
-<p><em>Coming soon.</em></p>
+  href="&base;/projects/ideas/index.html">Ideas page</a>.</p>
 
 <a name="proposals"></a>
 <h2>Proposal Guidelines</h2>
@@ -229,33 +225,17 @@ href="http://wiki.freebsd.org/moin.cgi/SummerOfCode2005">2005</a>].</p>
 <h2>Frequently Asked Questions</h2>
 
 <ul>
-  <li><p><strong>Am I eligible?</strong></p>
+  <li><p><strong>I wasn't selected for funding by Google as part of the Google Summer of Code, can I still participate?</strong></p>
 
-    <p>Please see the Google Summer of Code 2008 <a
-      href="http://code.google.com/opensource/gsoc/2008/faqs.html#0.1_eligibility">FAQ</a>
-      for all questions about eligibility.</p></li>
+    <p>Yes!  By all means.  Each year we have many more talented
+      student applications that there are available places and we are
+      very happy when students choose to get involved with FreeBSD.
+      Please mail soc-mentors@FreeBSD.org about how to proceed with
+      your project.</p></li>
 
-  <li><p><strong>Where can I find more information about being a
-      student or mentor in this program?</strong></p>
+  <li><p><strong>When are successful student applications announced?</strong></p>
 
-    <p>Please see the program wiki <a
-      href="http://code.google.com/p/google-summer-of-code/">here</a>.</p></li>
-
-  <li><p><strong>When does the application period begin?</strong></p>
-
-    <p>March 24, 2008.</p></li>
-
-  <li><p><strong>When does the application period end?</strong></p>
-
-    <p>Monday, April 7, 2008.  Note, however that you should apply
-      several days before the deadline in case your potential mentor
-      wants to clarify anything in your application or offer
-      additional guidance.</p></li>
-
-  <li><p><strong>Where do I send my proposal?</strong></p>
-
-    <p>Proposals must be sent directly to Google when the application
-      period begins.</p></li>
+    <p>April 21, 2008.</p></li>
 
   <li><p><strong>What projects were completed successfully by students
     last summer?</strong></p>
