@@ -9,7 +9,7 @@
 <!ENTITY % header.rss "INCLUDE">
 ]>
 
-<!-- $FreeBSD: www/share/sgml/templates.events.xsl,v 1.2 2006/08/21 18:27:43 hrs Exp $ -->
+<!-- $FreeBSD: www/share/sgml/templates.events.xsl,v 1.3 2008/01/16 07:48:51 murray Exp $ -->
 
 <!-- Copyright (c) 2003 Simon L. Nielsen <simon@FreeBSD.org>
      All rights reserved.
@@ -55,8 +55,42 @@
   <xsl:key name="event-by-month" match="event"
     use="concat(startdate/year, format-number(startdate/month, '00'))"/>
 
+  <xsl:key name="event-by-country" match="event"
+    use="location/country" />
+
+  <xsl:key name="upcoming-event-by-country" match="event[((number(enddate/year) &gt; number($curdate.year)) or
+	    (number(enddate/year) = number($curdate.year) and
+	     number(enddate/month) &gt; number($curdate.month)) or
+	    (number(enddate/year) = number($curdate.year) and
+	     number(enddate/month) = number($curdate.month) and
+	     enddate/day &gt;= $curdate.day))]"
+    use="location/country" />
+
+  <xsl:variable name="charturl" select="'http://chart.apis.google.com/chart?cht=t&amp;chs=400x200&amp;chtm=world&amp;chco=ffffff,ffbe38,600000&amp;chf=bg,s,4D89F9'" />
+
   <!-- Template: events -->
   <xsl:template match="events">
+  <xsl:variable name="chart-countries">
+    <xsl:for-each select="event[
+	generate-id() =
+	generate-id(key('event-by-country', location/country)[1])]">
+      <xsl:sort select="format-number(count(key('event-by-country', location/country)), '000')" order="descending"/>
+        <xsl:value-of select="location/country/@code" />
+    </xsl:for-each>
+  </xsl:variable>
+
+  <xsl:variable name="chart-country-counts">
+    <xsl:for-each select="event[
+	generate-id() =
+	generate-id(key('event-by-country', location/country)[1])]">
+      <xsl:sort select="format-number(count(key('event-by-country', location/country)), '000')" order="descending"/>
+        <xsl:if test="count(key('upcoming-event-by-country', location/country)) != 0">100.0</xsl:if>
+        <xsl:if test="count(key('upcoming-event-by-country', location/country)) = 0"><xsl:value-of select="count(key('event-by-country', location/country))" />.0</xsl:if>
+        <xsl:if test="position()!=last()">,</xsl:if></xsl:for-each>
+  </xsl:variable>
+
+  <xsl:variable name="imageurl"><xsl:value-of select="$charturl"/>&amp;chd=t:<xsl:value-of select="$chart-country-counts"/>&amp;chld=<xsl:value-of select="$chart-countries"/></xsl:variable>
+
     <html>
       &header1;
 
@@ -94,6 +128,10 @@
 	</xsl:comment>
 
 		<xsl:call-template name="html-events-list-preface" />
+
+		<xsl:call-template name="html-events-map">
+		  <xsl:with-param name="mapurl" select="$imageurl" />
+		</xsl:call-template>
 
 		<xsl:call-template name="html-events-list-upcoming-heading" />
 
