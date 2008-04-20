@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
-<!-- $FreeBSD: www/share/sgml/libcommon.xsl,v 1.16 2008/03/01 01:55:27 simon Exp $ -->
+<!-- $FreeBSD: www/share/sgml/libcommon.xsl,v 1.17 2008/04/20 01:28:57 murray Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
   version="1.0"
@@ -83,19 +83,19 @@
   <!-- template: "html-usergroups-list-regions"
        list all regions in a usergroup database -->
 
-  <xsl:key name="html-usergroups-regions-key" match="entry" use="@continent" />
+  <xsl:key name="html-usergroups-regions-key" match="entry" use="../../@name" />
   <xsl:key name="html-usergroups-id-key" match="entry" use="@id" />
 
   <xsl:template name="html-usergroups-list-regions">
     <xsl:param name="usergroups.xml" select="'usergroups.xml'" />
 
     <ul>
-      <xsl:for-each select="document($usergroups.xml)//entry[
-	generate-id() =
-	generate-id(key('html-usergroups-regions-key', @continent)[1])]">
+      <xsl:for-each select="document($usergroups.xml)//continent">
+      <xsl:sort select="format-number(count(country/entry), '000')"
+      		order="descending"/>
 
 	<xsl:variable name="id" select="
-	  translate(@continent,
+	  translate(@name,
 	  ' ,ABCDEFGHIJKLMNOPQRSTUVWXYZ',
 	  '--abcdefghijklmnopqrstuvwxyz')" />
 
@@ -107,9 +107,10 @@
 
 	      <xsl:call-template name="transtable-lookup">
 		<xsl:with-param name="word-group" select="'continents'" />
-		<xsl:with-param name="word" select="@continent" />
+		<xsl:with-param name="word" select="@name" />
 	      </xsl:call-template>
-	    </xsl:element></p>
+	    </xsl:element>
+	    ( <xsl:value-of select="count(country/entry)" /> user groups )</p>
 	</li>
       </xsl:for-each>
     </ul>
@@ -122,13 +123,13 @@
     <xsl:param name="usergroups.xml" select="'usergroups.xml'" />
     <xsl:param name="usergroups-local.xml" select="'usergroups-local.xml'" />
 
-    <xsl:for-each select="document($usergroups.xml)//entry[
-      generate-id() =
-      generate-id(key('html-usergroups-regions-key', @continent)[1])]">
+    <xsl:for-each select="document($usergroups.xml)//continent">
+      <xsl:sort select="format-number(count(country/entry), '000')"
+      		order="descending"/>
 
-      <xsl:variable name="continent" select="@continent" />
+      <xsl:variable name="continent" select="@name" />
       <xsl:variable name="continent-lc" select="
-	translate(@continent,
+	translate(@name,
 	' ,ABCDEFGHIJKLMNOPQRSTUVWXYZ',
 	'--abcdefghijklmnopqrstuvwxyz')" />
 
@@ -139,8 +140,13 @@
 	  </xsl:call-template></a></h3>
 
       <dl>
-	<xsl:for-each select="key('html-usergroups-regions-key', $continent)">
-	  <xsl:sort select="name" order="ascending"/>
+        <xsl:for-each select="country/entry">
+<!--	  <xsl:sort select="@name" order="ascending"/>
+
+          <h4><xsl:value-of select="@name" /></h4>
+          <xsl:for-each select="entry">
+	    <xsl:sort select="name" order="ascending"/>
+-->
 
 	  <xsl:variable name="id"><xsl:value-of select="@id" /></xsl:variable>
 
