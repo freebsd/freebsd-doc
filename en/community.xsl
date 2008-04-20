@@ -3,11 +3,10 @@
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
 <!ENTITY title "FreeBSD Community">
 <!ENTITY email "freebsd-www">
-<!ENTITY base "http://www.FreeBSD.org/">
 <!ENTITY % navinclude.community "INCLUDE">
 ]>
 
-<!-- $FreeBSD$ -->
+<!-- $FreeBSD: www/en/community.xsl,v 1.1 2008/04/20 03:22:44 murray Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
