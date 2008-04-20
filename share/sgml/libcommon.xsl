@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
-<!-- $FreeBSD: www/share/sgml/libcommon.xsl,v 1.17 2008/04/20 01:28:57 murray Exp $ -->
+<!-- $FreeBSD: www/share/sgml/libcommon.xsl,v 1.18 2008/04/20 22:14:54 murray Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
   version="1.0"
@@ -141,12 +141,6 @@
 
       <dl>
         <xsl:for-each select="country/entry">
-<!--	  <xsl:sort select="@name" order="ascending"/>
-
-          <h4><xsl:value-of select="@name" /></h4>
-          <xsl:for-each select="entry">
-	    <xsl:sort select="name" order="ascending"/>
--->
 
 	  <xsl:variable name="id"><xsl:value-of select="@id" /></xsl:variable>
 
