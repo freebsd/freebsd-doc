@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
-<!-- $FreeBSD: www/share/sgml/libcommon.xsl,v 1.18 2008/04/20 22:14:54 murray Exp $ -->
+<!-- $FreeBSD: www/share/sgml/libcommon.xsl,v 1.19 2008/04/20 22:22:34 murray Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
   version="1.0"
@@ -29,6 +29,7 @@
   <!--
      template name                               used in
 
+     html-usergroups-map			 templates.usergroups.xsl
      html-usergroups-list-regions                templates.usergroups.xsl
      html-usergroups-list-entries                templates.usergroups.xsl
      html-usergroups-list-header                 templates.usergroups.xsl (for l10n)
@@ -44,6 +45,7 @@
      html-news-list-press-preface                templates.press.xsl (for l10n)
      html-news-list-press                        templates.press.xsl
 
+     html-events-map			 	 templates.events.xsl (for l10n)
      html-events-list-preface                    templates.events.xsl (for l10n)
      html-events-list-upcoming-heading           templates.events.xsl (for l10n)
      html-events-list-past-heading               templates.events.xsl (for l10n)
@@ -85,6 +87,16 @@
 
   <xsl:key name="html-usergroups-regions-key" match="entry" use="../../@name" />
   <xsl:key name="html-usergroups-id-key" match="entry" use="@id" />
+
+  <xsl:template name="html-usergroups-map">
+    <xsl:param name="mapurl" select="'none'" />
+
+    <img>
+      <xsl:attribute name="src">
+        <xsl:value-of select="$mapurl" />
+      </xsl:attribute>
+    </img>
+  </xsl:template>
 
   <xsl:template name="html-usergroups-list-regions">
     <xsl:param name="usergroups.xml" select="'usergroups.xml'" />
