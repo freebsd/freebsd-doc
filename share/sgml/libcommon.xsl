@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
-<!-- $FreeBSD: www/share/sgml/libcommon.xsl,v 1.19 2008/04/20 22:22:34 murray Exp $ -->
+<!-- $FreeBSD: www/share/sgml/libcommon.xsl,v 1.20 2008/04/20 22:49:25 murray Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
   version="1.0"
@@ -227,9 +227,14 @@
          for use by our visitors and website administrators.</li>
       <li>A short (one paragraph) description of the user group.</li>
     </ol>
-    <p>Submissions should be in HTML. In keeping with the spirit of FreeBSD,
-      we prefer user groups that are active and which conduct their business
-      in public.</p>
+
+    <p>Submissions should be in HTML. In keeping with the spirit of
+      FreeBSD, we prefer user groups that are active and which conduct
+      their business in public.  If you can't find a group near you,
+      please consider finding other interested individuals near you
+      through <a
+      href="http://bsd.meetup.com/">http://bsd.meetup.com/</a> and
+      forming your own user group.</p>
 
     <h3>Regions:</h3>
   </xsl:template>
