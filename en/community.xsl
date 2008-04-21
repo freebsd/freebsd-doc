@@ -6,7 +6,7 @@
 <!ENTITY % navinclude.community "INCLUDE">
 ]>
 
-<!-- $FreeBSD: www/en/community.xsl,v 1.1 2008/04/20 03:22:44 murray Exp $ -->
+<!-- $FreeBSD: www/en/community.xsl,v 1.2 2008/04/20 03:24:34 murray Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -49,11 +49,15 @@
 		href="&base;/community/mailinglists.html">mailing
 		lists</a> and several <a
 		href="&base;/community/newsgroups.html">newsgroups</a>
-		available.  There are a number of FreeBSD <a
-		href="&base;/usergroups.html">User Groups</a> around
-		the world, and there is also an active <a
-		href="&base;/community/irc.html">IRC</a> community.  Many
-		developers also maintain <a
+		available.  There are over <xsl:value-of
+		select="count(document($usergroups.xml)//entry)"
+		/><xsl:text> </xsl:text><a
+		href="&base;/usergroups.html">user groups</a> in
+		<xsl:value-of
+		select="count(document($usergroups.xml)//country)" />
+		unique countries around the world.  There is also an
+		active <a href="&base;/community/irc.html">IRC</a>
+		community.  Many developers also maintain <a
 		href="http://planet.freebsdish.org">blogs</a> about
 		their FreeBSD work.</p>
 
