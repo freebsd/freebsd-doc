@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/Makefile,v 1.143 2008/02/10 09:41:24 keramida Exp $
+# $FreeBSD: www/en/Makefile,v 1.144 2008/04/20 03:22:44 murray Exp $
 
 .if exists(Makefile.conf)
 .include "Makefile.conf"
@@ -35,6 +35,7 @@ DEPENDSET.usergroups=transtable usergroups
 PARAMS.usergroups=	--param pagename "'FreeBSD User Groups'"
 
 XMLDOCS+=	community::${XML_EVENTS_EVENTS}:
+DEPENDSET.community=usergroups events
 
 # These will be directly installed.
 
