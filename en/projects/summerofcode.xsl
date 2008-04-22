@@ -7,7 +7,7 @@
 <!ENTITY % developers SYSTEM "../developers.sgml"> %developers;
 ]>
 
-<!-- $FreeBSD: www/en/projects/summerofcode.xsl,v 1.12 2008/03/31 22:10:28 murray Exp $ -->
+<!-- $FreeBSD: www/en/projects/summerofcode.xsl,v 1.13 2008/04/20 03:45:11 murray Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -49,11 +49,11 @@
   href="&base;/projects/summerofcode-2007.html">2007</a>.</p>
 
 <ul>
-  <li><a href="#students">Benefits of Participating</a></li>
+  <li><a href="#benefits">Benefits of Participating</a></li>
+  <li><a href="#current">Current Student Projects</a></li>
   <li><a href="#students">Past Student Projects</a></li>
   <li><a href="#ideas">Example Proposal Ideas</a></li>
   <li><a href="#mentors">Possible Mentors</a></li>
-  <li><a href="#proposals">Proposal Guidelines</a></li>
   <li><a href="#infrastructure">Infrastructure Provided to Students</a></li>
   <li><a href="#faq">Frequently Asked Questions</a></li>
 </ul>
@@ -81,6 +81,17 @@
   become FreeBSD developers.  It's also a great job networking
   opportunity!</p>
  
+<a name="current"></a>
+<h2>Current Student Projects</h2>
+
+<p>We've recently <a
+  href="&base;/projects/summerofcode-2008.html">announced</a> the
+  successful student applicants for the Summer of Code 2008 and we are
+  currently working to create accounts for them and help integrate
+  these students into our community.  More information about this
+  year's student projects will soon be available on our <a
+  href="http://wiki.FreeBSD.org/SummerOfCode2008">wiki</a>.</p>
+
 <a name="students"></a>
 <h2>Past Student Projects</h2>
 
@@ -105,27 +116,12 @@ href="http://wiki.freebsd.org/moin.cgi/SummerOfCode2005">2005</a>].</p>
 <a name="ideas"></a>
 <h2>Example Proposal Ideas</h2>
 
-  <p>The following example project ideas are a subset of the general
-    <a href="&base;/projects/ideas/index.html">FreeBSD Project
-    Ideas</a> list that we think are the most suitable for Summer of
-    Code projects.</p>
+  <p>The application period for this year has closed, but students and
+    interested developers can always find interesting work that needs
+    to be done on the <a
+    href="&base;/projects/ideas/index.html">FreeBSD Project Ideas</a>
+    list.</p>
 
-  <xsl:for-each select="document($ideas.xml)//descendant::category[child::idea[@class='soc']]">
-    <h3><xsl:value-of select="title"/></h3>
-
-    <ul>
-      <xsl:for-each select="idea[@class='soc']">
-      <li><xsl:element name="a">
-        <xsl:attribute name="href">
-	./ideas/index.html#p-<xsl:value-of select="@id" />
-        </xsl:attribute>
-        <xsl:value-of select="title" />
-        </xsl:element>
-      </li>
-      </xsl:for-each>
-    </ul>
-  </xsl:for-each>
- 
   <p>For additional ideas about upcoming development projects in
     FreeBSD, take a look at recent <a
     href="&base;/news/status">Developer Status Reports</a>.</p>
@@ -133,77 +129,10 @@ href="http://wiki.freebsd.org/moin.cgi/SummerOfCode2005">2005</a>].</p>
 <a name="mentors"></a>
 <h2>Mentors</h2>
  
-<p>A number of FreeBSD committers are willing to mentor students this
-  year.  A good place to start is the 'Technical contacts' listed with
-  the example projects on the <a
+<p>A number of FreeBSD committers are willing to mentor students.  A
+  good place to start is the 'Technical contacts' listed with the
+  example projects on the <a
   href="&base;/projects/ideas/index.html">Ideas page</a>.</p>
-
-<a name="proposals"></a>
-<h2>Proposal Guidelines</h2>
-
-<p>Students are responsible for writing a proposal and submitting it
-  to Google before the application deadline.  The following outline
-  was adapted from the Perl Foundation <a
-  href="http://www.perlfoundation.org/gc/grants/proposals.html">open
-  source proposal HOWTO</a>.  A strong proposal will include:</p>
-
-  <ul>
-    <li><strong>Name</strong></li>
-
-    <li><strong>Email</strong></li>
-
-    <li><strong>Project Title</strong></li>
-
-    <li><strong>Possible Mentor</strong> <em>(optional)</em></li>
-
-    <li><strong>Who you have talked to about the project</strong> - if
-      you have communicated with a FreeBSD Developer in the preparation
-      of this proposal, please let us know who it was.  This will allow
-      us to consult them regarding your proposal if we have any
-      questions.</li>
-
-    <li><strong>Benefits to the FreeBSD Community</strong> - a good
-      project will not just be fun to work on, but also generally
-      useful to others.</li>
-
-    <li><strong>Deliverables</strong> - It is very important to list
-  quantifiable results here e.g. 
-      <ul>
-        <li>"Improve X modules in ways Y and Z."</li>
-        <li>"Write 3 new man pages for the new interfaces."</li>
-        <li>"Improve test coverage by writing X more unit/regression
-        tests."</li>
-        <li>"Improve performance in FOO by X%."</li>
-      </ul>
-    </li>
-
-    <li><strong>Project Schedule</strong> - How long will the project
-      take? When can you begin work?</li>
-
-    <li><strong>Availability</strong> - How many hours per week can
-      you spend working on this?  What other obligations do you have
-      this summer?</li>
-
-    <li><strong>Bio</strong> - Who are you? What makes you the best
-      person to work on this project?  Do you use FreeBSD already?
-      If your project includes programming in a particular language,
-      such as C, or in a specific environment, such as the kernel or
-      an embedded platform, what experience do you have working in
-      that area?  Are you familiar with or a user of revision control
-      systems?</li>
-  </ul>
-
-  <p>Please note: in the past, a significant number of proposals have
-    been received that consist solely of copies of ideas from our
-    ideas list.  Proposals of this sort are rejected without further
-    consideration.  A strong project proposal will consist either of
-    a detailed original proposal or a significantly elaborated
-    proposal from the idea list, and must reflect the necessary
-    background work to understand the problem and possible solutions.
-    Special attention is paid to proposals where the student has
-    identified appropriate members of the community in advance and
-    worked with them to develop their project idea prior to
-    submitting the proposal.</p>
 
 <a name="infrastructure"></a>
 <h2>Infrastructure Provided to Students</h2>
@@ -232,10 +161,6 @@ href="http://wiki.freebsd.org/moin.cgi/SummerOfCode2005">2005</a>].</p>
       very happy when students choose to get involved with FreeBSD.
       Please mail soc-mentors@FreeBSD.org about how to proceed with
       your project.</p></li>
-
-  <li><p><strong>When are successful student applications announced?</strong></p>
-
-    <p>April 21, 2008.</p></li>
 
   <li><p><strong>What projects were completed successfully by students
     last summer?</strong></p>
