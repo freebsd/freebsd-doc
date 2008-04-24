@@ -22,7 +22,7 @@
 	    (make element gi: "p"
                   attributes: (list (list "align" "center"))
               (make element gi: "small"
-                (literal "Éste y otros documentos pueden obtenerse en ")
+                (literal "Puede descargar éste y muchos otros documentos desde ")
 		(create-link
 		  (list (list "HREF" "ftp://ftp.FreeBSD.org/pub/FreeBSD/doc/"))
                   (literal "ftp://ftp.FreeBSD.org/pub/FreeBSD/doc/"))
@@ -30,17 +30,17 @@
             (make element gi: "p"
                   attributes: (list (list "align" "center"))
               (make element gi: "small"  
-                (literal "Para preguntas acerca de FreeBSD, leer la ")
+                (literal "Si tiene dudas sobre FreeBSD consulte la ")
 		(create-link
 		  (list (list "HREF" "http://www.FreeBSD.org/docs.html"))
                   (literal "documentación"))
-                (literal " antes de contactar con la lista <")
+                (literal " antes de escribir a la lista <")
 		(create-link
 		  (list (list "HREF" "mailto:questions@FreeBSD.org"))
                   (literal "questions@FreeBSD.org"))
                 (literal ">.")
                 (make empty-element gi: "br")
-                (literal "Para preguntas acerca de esta documentación, e-mail a <")
+                (literal "Envíe sus preguntas sobre la documentación a <")
 		(create-link (list (list "HREF" "mailto:doc@FreeBSD.org"))
                   (literal "doc@FreeBSD.org"))
 	        (literal ">.")))))
