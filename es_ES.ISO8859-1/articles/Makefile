@@ -12,6 +12,7 @@ SUBDIR+= fbsd-from-scratch
 SUBDIR+= fdp-es
 SUBDIR+= laptop
 SUBDIR+= linux-comparison
+SUBDIR+= linux-users
 SUBDIR+= mailing-list-faq
 SUBDIR+= nanobsd
 SUBDIR+= p4-primer
