@@ -2,7 +2,7 @@
 	$FreeBSD$
 	The FreeBSD Hungarian Documentation Project
 	Translated by: Gabor Kovesdan <gabor@FreeBSD.org>
-	Original revision: 1.20
+	Original revision: 1.22
 -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
