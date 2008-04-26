@@ -33,8 +33,8 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.199 2008-04-26 15:48:39 wosch Exp $
-# $FreeBSD: www/en/cgi/man.cgi,v 1.198 2008/04/15 09:57:12 wosch Exp $
+# $Id: man.cgi,v 1.200 2008-04-26 15:49:48 wosch Exp $
+# $FreeBSD: www/en/cgi/man.cgi,v 1.199 2008/04/26 15:48:39 wosch Exp $
 
 ############################################################################
 # !!! man.cgi is stale perl4 code !!!
@@ -1243,7 +1243,7 @@ sub faq {
           if $manPathAliases{$_};
     }
 
-    local $id = '$FreeBSD: www/en/cgi/man.cgi,v 1.198 2008/04/15 09:57:12 wosch Exp $';
+    local $id = '$FreeBSD: www/en/cgi/man.cgi,v 1.199 2008/04/26 15:48:39 wosch Exp $';
     return qq{\
 <pre>
 Copyright (c) 1996-2008 <a href="$mailtoURL">Wolfram Schneider</a>
@@ -1280,7 +1280,6 @@ Copyright (c) for man pages by OS vendors.
 <li>Get the <a href="$BASE/source">source</a> of the man.cgi script</li>
 <li>Troff macros works only if defined in FreeBSD/groff. OS specific
 macros like `appeared in NetBSD version 1.2' are not supported.</li>
-<li>Netscape is buggy, you may press twice the link 'Index Page and Help'</li>
 <li>Some OSs provide only formated manual pages (catpages), e.g. NetBSD
 and OpenBSD. In this case it is not possible to create Postscript
 and troff output.</li>
