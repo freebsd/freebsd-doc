@@ -33,8 +33,8 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.201 2008-04-27 10:46:19 wosch Exp $
-# $FreeBSD: www/en/cgi/man.cgi,v 1.200 2008/04/26 15:49:48 wosch Exp $
+# $Id: man.cgi,v 1.202 2008-04-27 10:53:18 wosch Exp $
+# $FreeBSD: www/en/cgi/man.cgi,v 1.201 2008/04/27 10:46:19 wosch Exp $
 
 ############################################################################
 # !!! man.cgi is stale perl4 code !!!
@@ -169,7 +169,6 @@ $manPathDefault = 'FreeBSD 6.3-RELEASE';
      'FreeBSD 6.3-RELEASE',   "$manLocalDir/FreeBSD-6.3-RELEASE/man:$manLocalDir/FreeBSD-6.3-RELEASE/openssl/man",
      'FreeBSD Ports 6.3-RELEASE', "$manLocalDir/FreeBSD-ports-6.3-RELEASE",
 
-     'FreeBSD 6.2-stable',   "$manLocalDir/FreeBSD-6.2-stable/man:$manLocalDir/FreeBSD-6.2-stable/openssl/man",
      'FreeBSD 6.2-RELEASE',   "$manLocalDir/FreeBSD-6.2-RELEASE/man:$manLocalDir/FreeBSD-6.2-RELEASE/openssl/man",
      'FreeBSD Ports 6.2-RELEASE', "$manLocalDir/FreeBSD-ports-6.2-RELEASE",
 
@@ -387,7 +386,7 @@ while ( ( $key, $val ) = each %manPath ) {
 
     'freebsd-stable',        'FreeBSD 7.0-stable',
     'freebsd-stable7',       'FreeBSD 7.0-stable',
-    'freebsd-stable6',       'FreeBSD 6.2-stable',
+    'freebsd-stable6',       'FreeBSD 6.3-stable',
     'freebsd-stable5',       'FreeBSD 5.5-stable',
     'freebsd-stable4',       'FreeBSD 4.11-stable',
 
@@ -1246,7 +1245,7 @@ sub faq {
           if $manPathAliases{$_};
     }
 
-    local $id = '$FreeBSD: www/en/cgi/man.cgi,v 1.200 2008/04/26 15:49:48 wosch Exp $';
+    local $id = '$FreeBSD: www/en/cgi/man.cgi,v 1.201 2008/04/27 10:46:19 wosch Exp $';
     return qq{\
 <pre>
 Copyright (c) 1996-2008 <a href="$mailtoURL">Wolfram Schneider</a>
