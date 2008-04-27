@@ -33,8 +33,8 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.200 2008-04-26 15:49:48 wosch Exp $
-# $FreeBSD: www/en/cgi/man.cgi,v 1.199 2008/04/26 15:48:39 wosch Exp $
+# $Id: man.cgi,v 1.201 2008-04-27 10:46:19 wosch Exp $
+# $FreeBSD: www/en/cgi/man.cgi,v 1.200 2008/04/26 15:49:48 wosch Exp $
 
 ############################################################################
 # !!! man.cgi is stale perl4 code !!!
@@ -382,15 +382,18 @@ while ( ( $key, $val ) = each %manPath ) {
 
 # keywords must be in lower cases.
 %manPathAliases = (
-    'freebsd',               'FreeBSD 6.2-RELEASE',
-    'freebsd-release',       'FreeBSD 6.2-RELEASE',
-    'freebsd-stable',        'FreeBSD 6.2-stable',
-    'freebsd-stable4',       'FreeBSD 4.11-stable',
-    'freebsd-stable5',       'FreeBSD 5.5-stable',
-    'freebsd-stable6',       'FreeBSD 6.2-stable',
+    'freebsd',               'FreeBSD 7.0-RELEASE',
+    'freebsd-release',       'FreeBSD 7.0-RELEASE',
+
+    'freebsd-stable',        'FreeBSD 7.0-stable',
     'freebsd-stable7',       'FreeBSD 7.0-stable',
+    'freebsd-stable6',       'FreeBSD 6.2-stable',
+    'freebsd-stable5',       'FreeBSD 5.5-stable',
+    'freebsd-stable4',       'FreeBSD 4.11-stable',
+
     'freebsd-current',       'FreeBSD 8-current',
-    'freebsd-release-ports', 'FreeBSD 6.2-RELEASE and Ports',
+    'freebsd-release-ports', 'FreeBSD 7.0-RELEASE and Ports',
+
     'slackware',             'Linux Slackware 3.1',
     'linux-de',              'deutsch - Linux/GNU',
     'redhat',                'Red Hat Linux/i386 9',
@@ -412,8 +415,8 @@ while ( ( $key, $val ) = each %manPath ) {
     'sunos5',        'SunOS 5.10',
     'sunos4',        'SunOS 4.1.3',
     'sunos',         'SunOS 4.1.3',
-    'freebsd ports', 'FreeBSD Ports 6.2-RELEASE',
-    'ports',         'FreeBSD Ports 6.2-RELEASE',
+    'freebsd ports', 'FreeBSD Ports 7.0-RELEASE',
+    'ports',         'FreeBSD Ports 7.0-RELEASE',
     'plan9',         'Plan 9',
     'osf1',          'OSF1 V5.1/alpha',
     'true64',        'OSF1 V5.1/alpha',
@@ -1243,7 +1246,7 @@ sub faq {
           if $manPathAliases{$_};
     }
 
-    local $id = '$FreeBSD: www/en/cgi/man.cgi,v 1.199 2008/04/26 15:48:39 wosch Exp $';
+    local $id = '$FreeBSD: www/en/cgi/man.cgi,v 1.200 2008/04/26 15:49:48 wosch Exp $';
     return qq{\
 <pre>
 Copyright (c) 1996-2008 <a href="$mailtoURL">Wolfram Schneider</a>
