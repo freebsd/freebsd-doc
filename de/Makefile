@@ -1,8 +1,8 @@
 # The FreeBSD Documentation Project
 # The FreeBSD German Documentation Project
 # $FreeBSD$
-# $FreeBSDde: de-www/Makefile,v 1.48 2007/11/23 02:40:40 as Exp $
-# basiert auf: 1.139
+# $FreeBSDde: de-www/Makefile,v 1.49 2008/04/27 18:03:21 jkois Exp $
+# basiert auf: 1.145
 
 .if exists(Makefile.conf)
 .include "Makefile.conf"
@@ -18,7 +18,6 @@ DOCS+= administration.sgml
 DOCS+= applications.sgml
 DOCS+= availability.sgml
 DOCS+= art.sgml
-DOCS+= community.sgml
 DOCS+= docs.sgml
 DOCS+= features.sgml
 DOCS+= internet.sgml
@@ -72,5 +71,7 @@ CLEANFILES+=    index.html
 XMLDOCS=	index:xsl:${XML_NEWS_NEWS}:
 DEPENDSET.index=transtable mirrors news press events \
 		advisories notices
+
+XMLDOCS+=       community::${XML_EVENTS_EVENTS}:
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
