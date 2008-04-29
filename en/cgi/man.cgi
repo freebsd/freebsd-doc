@@ -33,8 +33,8 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.202 2008-04-27 10:53:18 wosch Exp $
-# $FreeBSD: www/en/cgi/man.cgi,v 1.201 2008/04/27 10:46:19 wosch Exp $
+# $Id: man.cgi,v 1.203 2008-04-29 17:28:53 wosch Exp $
+# $FreeBSD: www/en/cgi/man.cgi,v 1.202 2008/04/27 10:53:18 wosch Exp $
 
 ############################################################################
 # !!! man.cgi is stale perl4 code !!!
@@ -157,7 +157,6 @@ $manPathDefault = 'FreeBSD 6.3-RELEASE';
     (
      'FreeBSD 7.0-RELEASE and Ports',  "$manLocalDir/FreeBSD-7.0-RELEASE/man:$manLocalDir/FreeBSD-7.0-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports",
      'FreeBSD 6.3-RELEASE and Ports',  "$manLocalDir/FreeBSD-6.3-RELEASE/man:$manLocalDir/FreeBSD-6.3-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports",
-     'FreeBSD 6.2-RELEASE and Ports',  "$manLocalDir/FreeBSD-6.2-RELEASE/man:$manLocalDir/FreeBSD-6.2-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports",
 
      'FreeBSD 8-current',   "$manLocalDir/FreeBSD-8-current/man:$manLocalDir/FreeBSD-8-current/openssl/man",
 
@@ -1245,7 +1244,7 @@ sub faq {
           if $manPathAliases{$_};
     }
 
-    local $id = '$FreeBSD: www/en/cgi/man.cgi,v 1.201 2008/04/27 10:46:19 wosch Exp $';
+    local $id = '$FreeBSD: www/en/cgi/man.cgi,v 1.202 2008/04/27 10:53:18 wosch Exp $';
     return qq{\
 <pre>
 Copyright (c) 1996-2008 <a href="$mailtoURL">Wolfram Schneider</a>
