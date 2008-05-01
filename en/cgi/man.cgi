@@ -33,8 +33,8 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.204 2008-05-01 11:08:23 wosch Exp $
-# $FreeBSD: www/en/cgi/man.cgi,v 1.203 2008/04/29 17:28:53 wosch Exp $
+# $Id: man.cgi,v 1.205 2008-05-01 12:41:16 wosch Exp $
+# $FreeBSD: www/en/cgi/man.cgi,v 1.204 2008/05/01 11:08:23 wosch Exp $
 
 ############################################################################
 # !!! man.cgi is stale perl4 code !!!
@@ -131,6 +131,8 @@ $sectionpath = {
     'OpenBSD 3.9' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
     'OpenBSD 4.0' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
     'OpenBSD 4.1' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
+    'OpenBSD 4.2' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
+    'OpenBSD 4.3' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
 };
 
 foreach my $os ( keys %$sectionpath ) {
@@ -246,6 +248,8 @@ $manPathDefault = 'FreeBSD 7.0-RELEASE';
      'OpenBSD 3.9',           "$manLocalDir/OpenBSD-3.9",
      'OpenBSD 4.0', "$manLocalDir/OpenBSD-4.0",
      'OpenBSD 4.1', "$manLocalDir/OpenBSD-4.1",
+     'OpenBSD 4.2', "$manLocalDir/OpenBSD-4.2",
+     'OpenBSD 4.3', "$manLocalDir/OpenBSD-4.3",
 
     #'NetBSD 0.9',            "$manLocalDir/NetBSD-0.9",
     'NetBSD 1.0',   "$manLocalDir/NetBSD-1.0",
@@ -402,7 +406,7 @@ while ( ( $key, $val ) = each %manPath ) {
     'macosx',                'Darwin 8.0.1/ppc',
 
     'netbsd',        'NetBSD 4.0',
-    'openbsd',       'OpenBSD 4.1',
+    'openbsd',       'OpenBSD 4.3',
     'v7',            'Unix Seventh Edition',
     'v7man',         'Unix Seventh Edition',
     'x11',           'X11R7.2',
@@ -1244,7 +1248,7 @@ sub faq {
           if $manPathAliases{$_};
     }
 
-    local $id = '$FreeBSD: www/en/cgi/man.cgi,v 1.203 2008/04/29 17:28:53 wosch Exp $';
+    local $id = '$FreeBSD: www/en/cgi/man.cgi,v 1.204 2008/05/01 11:08:23 wosch Exp $';
     return qq{\
 <pre>
 Copyright (c) 1996-2008 <a href="$mailtoURL">Wolfram Schneider</a>
