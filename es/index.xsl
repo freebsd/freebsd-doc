@@ -5,12 +5,12 @@
 ]>
 
 <!-- The FreeBSD Spanish Documentation Project
-     Original Revision: r1.162			-->
+     Original Revision: r1.163			-->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
 
-  <xsl:variable name="date" select="'$FreeBSD: www/es/index.xsl,v 1.22 2008/02/16 11:16:45 gabor Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/es/index.xsl,v 1.23 2008/02/17 19:52:28 gabor Exp $'"/>
 
   <!-- these params should be externally bound. The values
        here are not used actually -->
@@ -104,11 +104,9 @@
 					<li>
 					  <a href="&u.rel.announce;">Release estable: &rel.current;</a>
 					</li>
-<!-- Should be re-enabled when 7.0 is out IE, when rel2 = 6.X
 					<li>
 					  <a href="&u.rel2.announce;">Release estable (heredera): &rel2.current;</a>
 					</li>
--->
 			    <xsl:if test="'&beta.testing;' != 'IGNORE'">
 				    <li>
 				      <a href="&enbase;/where.html#helptest">Pr&oacute;xima Release
