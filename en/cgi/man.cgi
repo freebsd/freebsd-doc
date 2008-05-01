@@ -33,8 +33,8 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.205 2008-05-01 12:41:16 wosch Exp $
-# $FreeBSD: www/en/cgi/man.cgi,v 1.204 2008/05/01 11:08:23 wosch Exp $
+# $Id: man.cgi,v 1.206 2008-05-01 15:08:26 wosch Exp $
+# $FreeBSD: www/en/cgi/man.cgi,v 1.205 2008/05/01 12:41:16 wosch Exp $
 
 ############################################################################
 # !!! man.cgi is stale perl4 code !!!
@@ -315,6 +315,7 @@ $manPathDefault = 'FreeBSD 7.0-RELEASE';
     'SuSE Linux/i386 8.0', "$manLocalDir/SuSE-8.0-i386",
     'SuSE Linux/i386 8.1', "$manLocalDir/SuSE-8.1-i386",
     'SuSE Linux/i386 8.2', "$manLocalDir/SuSE-8.2-i386",
+    'SuSE Linux/i386 10.1', "$manLocalDir/SLES-10-SP1-i386",
 
     'HP-UX 11.22', "$manLocalDir/HP-UX-11.22",
     'HP-UX 11.20', "$manLocalDir/HP-UX-11.20",
@@ -399,7 +400,7 @@ while ( ( $key, $val ) = each %manPath ) {
     'slackware',             'Linux Slackware 3.1',
     'linux-de',              'deutsch - Linux/GNU',
     'redhat',                'Red Hat Linux/i386 9',
-    'suse',                  'SuSE Linux/i386 8.2',
+    'suse',                  'SuSE Linux/i386 10.1',
     'linux',                 'Red Hat Linux/i386 9',
     'darwin',                'Darwin 8.0.1/ppc',
     'opendarwin',            'OpenDarwin 7.2.1',
@@ -1248,7 +1249,7 @@ sub faq {
           if $manPathAliases{$_};
     }
 
-    local $id = '$FreeBSD: www/en/cgi/man.cgi,v 1.204 2008/05/01 11:08:23 wosch Exp $';
+    local $id = '$FreeBSD: www/en/cgi/man.cgi,v 1.205 2008/05/01 12:41:16 wosch Exp $';
     return qq{\
 <pre>
 Copyright (c) 1996-2008 <a href="$mailtoURL">Wolfram Schneider</a>
