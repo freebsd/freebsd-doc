@@ -7,6 +7,7 @@
 SUBDIR =
 SUBDIR+= contributing
 SUBDIR+= cvs-freebsd
+SUBDIR+= linux-users
 SUBDIR+= nanobsd
 SUBDIR+= remote-install
 
