@@ -8,7 +8,7 @@
 
 NO_TIDY= yes
 
-MAINTAINER= pali.gabor@gmail.com
+MAINTAINER= pgj@FreeBSD.org
 
 DOC?= article
 
