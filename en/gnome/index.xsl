@@ -4,7 +4,7 @@
 <!ENTITY title "The FreeBSD GNOME Project">
 <!ENTITY % navinclude.gnome "INCLUDE">
 ]>
-<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.98 2008/03/24 05:16:11 marcus Exp $ -->
+<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.99 2008/03/30 18:30:45 marcus Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
 		xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -99,28 +99,31 @@
 		<img src="&base;/gnome/images/gnome.png" align="right"
                    border="0" alt="GNOME Logo"/>
 
-	       		<p>GNOME is a complete desktop environment, and a
-			   comprehensive suite of applications. In GNOME,
-			   everything is easy to use, attractive, powerful,
-			   and works the way you expect.</p>
-
-			 <p>The
-			   <a href="http://www.gnome.org">GNOME
-			     desktop</a> is a window-based desktop
-			   environment that provides many business,
-			   productivity, and entertainment
-			   applications, and makes non-GNOME programs
-			   faster and easier to run. The
-			  <a href="http://developer.gnome.org">GNOME development
-			    platform</a> is a collection of
-			  application-development tools and libraries
-			  used by many programs, such as <a
-			    href="http://www.firefox.com">Mozilla
-			    Firefox</a>.</p>
+	       		<p>GNOME is a complete graphical desktop for X,
+	       	   including everything from a window manager to
+	       	   web browsers, audio players, office programs, and
+	       	   more.</p>
 
 		       <p>The FreeBSD GNOME Project is a team of devoted
 			 developers and users that manage the
 			 integration of GNOME and FreeBSD.</p>
+
+		<h2>How to install GNOME</h2>
+
+		<p>The easiest way to install GNOME is to install either of
+		the following ports:</p>
+		<ul>
+			<li>x11/gnome2 (the full desktop)</li>
+			<li>x11/gnome2-lite (the minimum desktop environment)</li>
+		</ul>
+
+		<p>And, as desired, one or all of:</p>
+		<ul>
+			<li>x11/gnome2-fifth-toe (common applications)</li>
+			<li>x11/gnome2-power-tools (tools/toys for power users)</li>
+			<li>editors/gnome2-office (office productivity)</li>
+			<li>devel/gnome2-hacker-tools (development tools)</li>
+		</ul>
 
 		<h2>Upgrading to GNOME 2.22?</h2>
 
@@ -147,11 +150,11 @@
 		<h2>Resources</h2>
 		<ul>
 		  <li><a href="http://www.gnome.org/">GNOME Project</a></li>
+		  <li><a href="http://developer.gnome.org">GNOME development platform</a></li>
 		  <li><a href="http://gnomedesktop.org">FootNotes</a></li>
 		  <li><a href="http://www.gnomejournal.org">GNOME Journal</a></li>
-		  <li><a
-		      href="http://www.gnomefiles.org">GNOME
-		      Files</a></li>
+		  <li><a href="http://www.gnomefiles.org">GNOME Files</a></li>
+		  <li><a href="http://planet.gnome.org">Planet GNOME (blogs)</a></li>
 		</ul>
 
 		<h2>Related Projects</h2>
