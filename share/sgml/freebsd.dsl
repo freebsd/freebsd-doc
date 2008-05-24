@@ -211,12 +211,12 @@
                  (u (string-append "http://www.FreeBSD.org/cgi/man.cgi?query="
                          (data r) "&" "amp;" "sektion=" (data m))))
             (case v
-              (("current") (string-append u "&" "amp;" "manpath=FreeBSD+7-current"))
+              (("current") (string-append u "&" "amp;" "manpath=FreeBSD+8-current"))
               (("xfree86") (string-append u "&" "amp;" "manpath=XFree86+4.5.0"))
               (("xorg")    (string-append u "&" "amp;" "manpath=X11R7.2"))
               (("netbsd")  (string-append u "&" "amp;" "manpath=NetBSD+3.0"))
               (("openbsd") (string-append u "&" "amp;" "manpath=OpenBSD+4.1"))
-              (("ports")   (string-append u "&" "amp;" "manpath=FreeBSD+6.2-RELEASE+and+Ports"))
+              (("ports")   (string-append u "&" "amp;" "manpath=FreeBSD+7.0-RELEASE+and+Ports"))
               (else u))))
 
         (element application ($bold-seq$))
