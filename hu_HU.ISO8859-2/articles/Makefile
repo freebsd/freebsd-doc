@@ -10,6 +10,7 @@ SUBDIR=		dialup-firewall
 SUBDIR+=	explaining-bsd
 SUBDIR+=	laptop
 SUBDIR+=	linux-comparison
+SUBDIR+=	linux-users
 SUBDIR+=	multi-os
 SUBDIR+=	version-guide
 
