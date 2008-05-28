@@ -242,7 +242,7 @@
 
       <!-- Both sets of stylesheets ..................................... -->
 
-      (define (local-en-label-title-sep)
+      (define (local-el-label-title-sep)
         (list
           (list (normalize "warning")		": ")
 	  (list (normalize "caution")		": ")
