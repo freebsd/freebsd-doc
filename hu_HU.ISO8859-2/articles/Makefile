@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: doc/hu_HU.ISO8859-2/articles/Makefile,v 1.4 2008/05/26 20:21:04 pgj Exp $
 
 #
 # The FreeBSD Hungarian Documentation Project
@@ -6,7 +6,8 @@
 
 MAINTAINER=	gabor@FreeBSD.org
 
-SUBDIR=		dialup-firewall	
+SUBDIR =	compiz-fusion
+SUBDIR+=	dialup-firewall	
 SUBDIR+=	explaining-bsd
 SUBDIR+=	laptop
 SUBDIR+=	linux-comparison
