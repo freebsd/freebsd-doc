@@ -12,6 +12,7 @@ SUBDIR+= console-server
 SUBDIR+= contributing
 SUBDIR+= contributing-ports
 SUBDIR+= contributors
+SUBDIR+= cups
 SUBDIR+= cvs-freebsd
 SUBDIR+= cvsup-advanced
 SUBDIR+= dialup-firewall
