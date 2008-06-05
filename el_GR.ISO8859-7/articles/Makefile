@@ -4,6 +4,7 @@
 # %SRCID%	1.39
 
 SUBDIR =
+SUBDIR+= compiz-fusion
 SUBDIR+= cvs-freebsd
 SUBDIR+= dialup-firewall
 SUBDIR+= explaining-bsd
