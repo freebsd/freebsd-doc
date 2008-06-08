@@ -9,7 +9,7 @@
 <!ENTITY % header.rss "INCLUDE">
 ]>
 
-<!-- $FreeBSD: www/share/sgml/templates.events.xsl,v 1.3 2008/01/16 07:48:51 murray Exp $ -->
+<!-- $FreeBSD: www/share/sgml/templates.events.xsl,v 1.4 2008/04/20 01:28:57 murray Exp $ -->
 
 <!-- Copyright (c) 2003 Simon L. Nielsen <simon@FreeBSD.org>
      All rights reserved.
@@ -167,7 +167,7 @@
 	      concat(startdate/year, format-number(startdate/month, '00')))">
 
 	      <xsl:sort select="format-number(startdate/day, '00')" order="ascending"/>
-	      <xsl:apply-templates select="."/>
+	      <xsl:apply-templates select="." mode="upcoming"/>
 	    </xsl:for-each>
 	  </ul>
 	</xsl:for-each>
@@ -196,7 +196,7 @@
 	    </xsl:attribute>
 	    <xsl:call-template name="gen-long-en-month">
 	      <xsl:with-param name="nummonth" select="startdate/month"/>
-	    </xsl:call-template>
+	    </xsl:call-template >
 	    <xsl:text> </xsl:text>
 	    <xsl:value-of select="startdate/year"/>
 	  </h3>
@@ -226,8 +226,7 @@
   </xsl:template>
 
   <!-- Template: event -->
-  <xsl:template match="event">
-    <li>
+  <xsl:template name="eventbody">
       <xsl:attribute name="id">
 	<xsl:call-template name="generate-event-anchor"/>
       </xsl:attribute>
@@ -269,6 +268,25 @@
       <xsl:if test="link">
 	<p><xsl:apply-templates select="link"/></p>
       </xsl:if>
+  </xsl:template>
+
+  <!-- Template: event -->
+  <xsl:template match="event" mode="upcoming">
+    <li>
+      <xsl:call-template name="eventbody"/>
+      <p>Social links: <a>
+        <xsl:attribute name="href">http://upcoming.yahoo.com/search?type=Events&amp;q=<xsl:value-of select="name" />&amp;Search=GO</xsl:attribute>
+upcoming</a></p>
+    </li>
+  </xsl:template>
+
+  <!-- Template: event -->
+  <xsl:template match="event">
+    <li>
+      <xsl:call-template name="eventbody"/>
+      <p>Social links: <a>
+        <xsl:attribute name="href">http://www.flickr.com/search/?w=all&amp;q=<xsl:value-of select="name" />&amp;m=text</xsl:attribute>
+      Flickr</a></p>
     </li>
   </xsl:template>
 
