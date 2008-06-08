@@ -9,7 +9,7 @@
 <!ENTITY % header.rss "INCLUDE">
 ]>
 
-<!-- $FreeBSD: www/share/sgml/templates.events.xsl,v 1.4 2008/04/20 01:28:57 murray Exp $ -->
+<!-- $FreeBSD: www/share/sgml/templates.events.xsl,v 1.5 2008/06/08 22:27:52 murray Exp $ -->
 
 <!-- Copyright (c) 2003 Simon L. Nielsen <simon@FreeBSD.org>
      All rights reserved.
@@ -274,7 +274,7 @@
   <xsl:template match="event" mode="upcoming">
     <li>
       <xsl:call-template name="eventbody"/>
-      <p>Social links: <a>
+      <p>Social links: <a rel="nofollow">
         <xsl:attribute name="href">http://upcoming.yahoo.com/search?type=Events&amp;q=<xsl:value-of select="name" />&amp;Search=GO</xsl:attribute>
 upcoming</a></p>
     </li>
@@ -284,7 +284,7 @@ upcoming</a></p>
   <xsl:template match="event">
     <li>
       <xsl:call-template name="eventbody"/>
-      <p>Social links: <a>
+      <p>Social links: <a rel="nofollow">
         <xsl:attribute name="href">http://www.flickr.com/search/?w=all&amp;q=<xsl:value-of select="name" />&amp;m=text</xsl:attribute>
       Flickr</a></p>
     </li>
