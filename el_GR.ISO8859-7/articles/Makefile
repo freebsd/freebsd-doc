@@ -13,6 +13,7 @@ SUBDIR+= freebsd-questions
 SUBDIR+= gjournal-desktop
 SUBDIR+= greek-language-support
 SUBDIR+= laptop
+SUBDIR+= linux-users
 SUBDIR+= multi-os
 SUBDIR+= new-users
 SUBDIR+= problem-reports
