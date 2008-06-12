@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 
 #
-# $Id: multimedia.pl,v 1.2 2008-05-30 15:22:01 remko Exp $
+# $Id: multimedia.pl,v 1.3 2008-06-12 19:02:27 remko Exp $
 # $FreeBSD$
 #
 
@@ -9,6 +9,7 @@ use strict;
 use XML::Parser;
 use Data::Dumper;
 use POSIX;
+use IO::File;
 
 my @months = (
     "", "January", "February", "March",
@@ -17,7 +18,9 @@ my @months = (
     "November", "December"
 );
 
-my @createdfiles = ();
+my @createdhtml = ();
+my @createdsgml = ();
+my @createdxml = ();
 
 my @tree = ();
 my @values = ();
@@ -28,6 +31,7 @@ my $ci = -1;
 my %sources;
 my $sid = "";
 my %tags;
+my $tag = "";
 
 sub addtags {
     my $tags = shift;
@@ -78,11 +82,22 @@ sub xml_start {
      && $treeindex == 5) {
 	$items[$ci]{fc}++;
     }
+
+    if ($treeindex == 3 &&
+	$element eq "tags") {
+	$tag = "";
+    }
 }
 
 sub xml_end {
     my $expat = shift;
     my $element = shift;
+
+    if ($treeindex == 3 &&
+	$element eq "tags") {
+	@{$items[$ci]{tags}} = split(/,/, $tag);
+	addtags($tag);
+    }
 
     $values[$treeindex] = ();
     $treeindex--;
@@ -122,8 +137,7 @@ sub xml_char {
 		    return;
 		}
 		if ($tree[3] eq "tags") {
-		    @{$items[$ci]{tags}} = split(/,/, $value);
-		    addtags($value);
+		    $tag .= $value;
 		    return;
 		}
 
@@ -240,92 +254,110 @@ my @date_order = ();
 # HTML overview output
 #
 sub print_htmlitem {
+    my $fhandle = shift;
     my $item = shift;
     my %item = %{$item};
     my $source = shift;
     my %source = %{$source};
 
-    print FOUT "<li><p>";
+    print $fhandle "<li><p>";
     if (defined $item{overview}) {
-	print FOUT "<a href=\"$item{overview}\">$item{title}</a>\n";
+	print $fhandle "<a href=\"$item{overview}\">$item{title}</a>\n";
     } else {
 	my %media = %{$item{files}{0}};
-	print FOUT "<a href=\"$media{url}\">$item{title}</a>\n";
+	print $fhandle "<a href=\"$media{url}\">$item{title}</a>\n";
 	if (defined $media{size} || defined $media{length}) {
 	    my $s = "";
-	    print FOUT "(";
+	    print $fhandle "(";
 	    if (defined $media{size}) {
-		print FOUT "$media{size}";
+		print $fhandle "$media{size}";
 		$s = ", ";
 	    }
 	    if (defined $media{length}) {
-		print FOUT "$s$media{length}";
+		print $fhandle "$s$media{length}";
 		$s = ", ";
 	    }
-	    print FOUT ")";
+	    print $fhandle ")";
 	}
     }
-    print FOUT "<br>Source: <a href=\"", $source{url}, "\">",
+    print $fhandle "<br>Source: <a href=\"", $source{url}, "\">",
 	$source{name}, "</a><br>\n";
-    print FOUT "Added: ",
+    print $fhandle "Added: ",
 	    substr($item{added}, 6, 2), " ",
 	    $months[substr($item{added}, 4, 2)], " ",
 	    substr($item{added}, 0, 4), "<br>\n";
 
-    print FOUT "Tags: ";
+    print $fhandle "Tags: ";
     {
 	my $first = 1;
 	foreach my $t (@{$item{tags}}) {
-	    print FOUT ", " if (!$first);
+	    print $fhandle ", " if (!$first);
 #	    join(", ", @{$item{$t}}), "<br>\n";
 	    my $th = $t;
 	    $th =~ s/ /_/g;
-	    print FOUT "<a href=\"multimedia-tag-$th.html\">$t</a>";
+	    print $fhandle "<a href=\"tag-$th.html\">$t</a>";
 	    $first = 0;
 	}
     }
-    print FOUT "<br>\n";
+    print $fhandle "<br>\n";
 
     if (defined $item{overview} && defined $item{files}) {
 	my $c = 0;
 	foreach my $m (keys(%{$item{files}})) {
 	    my %file = %{$item{files}{$m}};
-	    print FOUT ", " if ($c++);
+	    print $fhandle ", " if ($c++);
 	    if (defined $item{prefix}) {
-		print FOUT "<a href=\"$item{prefix}/$file{url}\">$file{desc}</a>";
+		print $fhandle "<a href=\"$item{prefix}/$file{url}\">$file{desc}</a>";
 	    } else {
-		print FOUT "<a href=\"$file{url}\">$file{desc}</a>";
+		print $fhandle "<a href=\"$file{url}\">$file{desc}</a>";
 	    }
 	    if (defined $file{size} || defined $file{length}) {
 		my $s = "";
-		print FOUT " (";
+		print $fhandle " (";
 		if (defined $file{size}) {
-		    print FOUT "$file{size}";
+		    print $fhandle "$file{size}";
 		    $s = ", ";
 		}
 		if (defined $file{length}) {
-		    print FOUT "$s$file{length}";
+		    print $fhandle "$s$file{length}";
 		    $s = ", ";
 		}
-		print FOUT ")";
+		print $fhandle ")";
 	    }
 	}
-	print FOUT "<br>\n";
+	print $fhandle "<br>\n";
     }
-    print FOUT "$item{desc}\n";
+    print $fhandle "</p>\n";
+    print $fhandle "$item{desc}\n";
+    print $fhandle "</li>\n";
 }
 {
-    $createdfiles[$#createdfiles+1] = "multimedia.html";
-    open(FOUT, ">multimedia.html");
+    $createdhtml[$#createdhtml+1] = "multimedia.html";
+    $createdsgml[$#createdsgml+1] = "multimedia.sgml";
+    my $fhtml = new IO::File;
+    my $fsgml = new IO::File;
+
+    open($fhtml, ">multimedia.html");
     open(FIN, "multimedia.html.pre");
     my @lines = <FIN>;
     close(FIN);
-    print FOUT @lines;
+    print $fhtml @lines;
     open(FIN, "multimedia.html.intro");
     @lines = <FIN>;
     close(FIN);
-    print FOUT @lines;
-    print FOUT "<h2 id=\"latest\">Newest resources</h2>\n";
+    print $fhtml @lines;
+    print $fhtml "<h2 id=\"latest\">Newest resources</h2>\n";
+
+    open($fsgml, ">multimedia.sgml");
+    open(FIN, "multimedia.sgml.pre");
+    @lines = <FIN>;
+    close(FIN);
+    print $fsgml @lines;
+    open(FIN, "multimedia.sgml.intro");
+    @lines = <FIN>;
+    close(FIN);
+    print $fsgml @lines;
+    print $fsgml "<h2 id=\"latest\">Newest resources</h2>\n";
 
     my $month = "";
 
@@ -333,38 +365,64 @@ sub print_htmlitem {
 	my %item = %{$items[$order]};
 	my %source = %{$sources{$item{source}}};
 	if (substr($item{added}, 0, 6) ne $month) {
-	    print FOUT "</ul><h2>", $months[substr($item{added}, 4, 2)+0], " ", substr($item{added}, 0, 4), "</h2><ul>";
+	    if ($month ne "") {
+		print $fhtml "</ul>\n";
+		print $fsgml "</ul>\n";
+	    }
+	    print $fhtml "<h2>", $months[substr($item{added}, 4, 2)+0], " ", substr($item{added}, 0, 4), "</h2><ul>";
+	    print $fsgml "<h2>", $months[substr($item{added}, 4, 2)+0], " ", substr($item{added}, 0, 4), "</h2><ul>";
 	    $month = substr($item{added}, 0, 6);
 	}
 
-	print_htmlitem(\%item, \%source);
+	print_htmlitem($fhtml, \%item, \%source);
+	print_htmlitem($fsgml, \%item, \%source);
     }
 
-    print FOUT "</ul>\n";
-
+    print $fhtml "</ul>\n";
     open(FIN, "multimedia.html.post");
     @lines = <FIN>;
     close(FIN);
-    print FOUT @lines;
+    print $fhtml @lines;
+    close($fhtml);
 
-    close(FOUT);
+    print $fsgml "</ul>\n";
+    open(FIN, "multimedia.sgml.post");
+    @lines = <FIN>;
+    close(FIN);
+    print $fsgml @lines;
+    close($fsgml);
 }
 
 #
 # HTML cloud output
 #
 {
-    $createdfiles[$#createdfiles+1] = "multimedia-tags.html";
-    open(FOUT, ">multimedia-tags.html");
+    $createdhtml[$#createdhtml+1] = "tags.html";
+    $createdsgml[$#createdsgml+1] = "tags.sgml";
+    my $fhtml = new IO::File;
+    my $fsgml = new IO::File;
+    open($fhtml, ">tags.html");
+    open($fsgml, ">tags.sgml");
+
     open(FIN, "multimedia.html.pre");
     my @lines = <FIN>;
     close(FIN);
-    print FOUT @lines;
+    print $fhtml @lines;
     open(FIN, "multimedia.html.intro");
     @lines = <FIN>;
     close(FIN);
-    print FOUT @lines;
-    print FOUT "<h2 id=\"latest\">Tags</h2>\n";
+    print $fhtml @lines;
+    print $fhtml "<h2 id=\"latest\">Tags</h2>\n";
+
+    open(FIN, "multimedia.sgml.pre");
+    @lines = <FIN>;
+    close(FIN);
+    print $fsgml @lines;
+    open(FIN, "multimedia.sgml.intro");
+    @lines = <FIN>;
+    close(FIN);
+    print $fsgml @lines;
+    print $fsgml "<h2 id=\"latest\">Tags</h2>\n";
 
     my $month = "";
 
@@ -377,16 +435,23 @@ sub print_htmlitem {
     foreach my $tag (sort size(keys(%tags))) {
 	my $ftag = $tag;
 	$ftag =~ s/ /_/g;
-	print FOUT "<font style=\"font-size:${size}pt\"><a href=\"multimedia-tag-$ftag.html\">$tag</a></font>\n";
+	print $fhtml "<font style=\"font-size:${size}pt\"><a href=\"tag-$ftag.html\">$tag</a></font>\n";
+	print $fsgml "<font style=\"font-size:${size}pt\"><a href=\"tag-$ftag.html\">$tag</a></font>\n";
 	$size-- if ($c++%10 == 0 && $size > 2);
     }
 
     open(FIN, "multimedia.html.post");
     @lines = <FIN>;
     close(FIN);
-    print FOUT @lines;
+    print $fhtml @lines;
 
-    close(FOUT);
+    open(FIN, "multimedia.sgml.post");
+    @lines = <FIN>;
+    close(FIN);
+    print $fsgml @lines;
+
+    close($fhtml);
+    close($fsgml);
 }
 
 #
@@ -394,21 +459,37 @@ sub print_htmlitem {
 #
 {
     foreach my $tag (keys(%tags)) {
+	my $fhtml = new IO::File;
+	my $fsgml = new IO::File;
+
 	my $ftag = $tag;
 	$ftag =~ s/ /_/g;
-	$createdfiles[$#createdfiles+1] = "multimedia-tag-$ftag.html";
-	open(FOUT, ">multimedia-tag-$ftag.html");
+	$createdhtml[$#createdhtml+1] = "tag-$ftag.html";
+	$createdsgml[$#createdsgml+1] = "tag-$ftag.sgml";
+	open($fhtml, ">tag-$ftag.html");
+	open($fsgml, ">tag-$ftag.sgml");
 
 	open(FIN, "multimedia.html.pre");
 	my @lines = <FIN>;
 	close(FIN);
-	print FOUT @lines;
+	print $fhtml @lines;
 	open(FIN, "multimedia.html.intro");
 	@lines = <FIN>;
 	close(FIN);
-	print FOUT @lines;
-	print FOUT "<h2 id=\"latest\">Tag: $tag</h2>\n";
-	print FOUT "<ul>\n";
+	print $fhtml @lines;
+	print $fhtml "<h2 id=\"latest\">Tag: $tag</h2>\n";
+	print $fhtml "<ul>\n";
+
+	open(FIN, "multimedia.sgml.pre");
+	@lines = <FIN>;
+	close(FIN);
+	print $fsgml @lines;
+	open(FIN, "multimedia.sgml.intro");
+	@lines = <FIN>;
+	close(FIN);
+	print $fsgml @lines;
+	print $fsgml "<h2 id=\"latest\">Tag: $tag</h2>\n";
+	print $fsgml "<ul>\n";
 
 	foreach my $item (@items) {
 	    my %item = %{$item};
@@ -435,16 +516,25 @@ sub print_htmlitem {
 		}
 	    }
 
-	    print_htmlitem(\%item, \%source) if ($found);
+	    print_htmlitem($fhtml, \%item, \%source) if ($found);
+	    print_htmlitem($fsgml, \%item, \%source) if ($found);
 
 	}
 
-	print FOUT "</ul>\n";
+	print $fhtml "</ul>\n";
 	open(FIN, "multimedia.html.post");
 	@lines = <FIN>;
 	close(FIN);
-	print FOUT @lines;
-	close(FOUT);
+	print $fhtml @lines;
+	close($fhtml);
+
+	print $fsgml "</ul>\n";
+	open(FIN, "multimedia.sgml.post");
+	@lines = <FIN>;
+	close(FIN);
+	print $fsgml @lines;
+	close($fsgml);
+
     }
 }
 
@@ -452,18 +542,35 @@ sub print_htmlitem {
 # HTML all-sources output
 #
 {
-    $createdfiles[$#createdfiles+1] = "multimedia-sources.html";
-    open(FOUT, ">multimedia-sources.html");
+    my $fhtml = new IO::File;
+    my $fsgml = new IO::File;
+
+    $createdhtml[$#createdhtml+1] = "sources.html";
+    $createdsgml[$#createdsgml+1] = "sources.sgml";
+    open($fhtml, ">sources.html");
+    open($fsgml, ">sources.sgml");
+
     open(FIN, "multimedia.html.pre");
     my @lines = <FIN>;
     close(FIN);
-    print FOUT @lines;
+    print $fhtml @lines;
     open(FIN, "multimedia.html.intro");
     @lines = <FIN>;
     close(FIN);
-    print FOUT @lines;
-    print FOUT "<h2 id=\"latest\">Sources</h2>\n";
-    print FOUT "<ul>\n";
+    print $fhtml @lines;
+    print $fhtml "<h2 id=\"latest\">Sources</h2>\n";
+    print $fhtml "<ul>\n";
+
+    open(FIN, "multimedia.sgml.pre");
+    @lines = <FIN>;
+    close(FIN);
+    print $fsgml @lines;
+    open(FIN, "multimedia.sgml.intro");
+    @lines = <FIN>;
+    close(FIN);
+    print $fsgml @lines;
+    print $fsgml "<h2 id=\"latest\">Sources</h2>\n";
+    print $fsgml "<ul>\n";
 
     my $lastsource = "";
     foreach my $item (@site_order) {
@@ -471,21 +578,33 @@ sub print_htmlitem {
 	next if ($lastsource eq $item{source});
 	$lastsource = $item{source};
 
-	print FOUT "<li><a href=\"multimedia-source-$lastsource.html\">", $sources{$item{source}}{name}, "</a>\n";
+	print $fhtml "<li><a href=\"source-$lastsource.html\">", $sources{$item{source}}{name}, "</a>\n";
+	print $fsgml "<li><a href=\"source-$lastsource.html\">", $sources{$item{source}}{name}, "</a>\n";
     }
 
-    print FOUT "</ul>\n";
+    print $fhtml "</ul>\n";
     open(FIN, "multimedia.html.post");
     @lines = <FIN>;
     close(FIN);
-    print FOUT @lines;
-    close(FOUT);
+    print $fhtml @lines;
+    close($fhtml);
+
+    print $fsgml "</ul>\n";
+    open(FIN, "multimedia.sgml.post");
+    @lines = <FIN>;
+    close(FIN);
+    print $fsgml @lines;
+    close($fsgml);
+
 }
 
 #
 # HTML per-source output
 #
 {
+    my $fhtml = new IO::File;
+    my $fsgml = new IO::File;
+
     my $lastsource = "";
     foreach my $item (@site_order) {
 	my %item = %{$item};
@@ -493,36 +612,67 @@ sub print_htmlitem {
 	if ($lastsource ne $item{source}) {
 
 	    if ($lastsource) {
-		print FOUT "</ul>\n";
+		print $fhtml "</ul>\n";
+		print $fsgml "</ul>\n";
+
 		open(FIN, "multimedia.html.post");
 		my @lines = <FIN>;
 		close(FIN);
-		print FOUT @lines;
-		close(FOUT);
+		print $fhtml @lines;
+		close($fhtml);
+
+		open(FIN, "multimedia.sgml.post");
+		@lines = <FIN>;
+		close(FIN);
+		print $fsgml @lines;
+		close($fsgml);
+
 	    }
-	    $createdfiles[$#createdfiles+1] = "multimedia-source-$item{source}.html";
-	    open(FOUT, ">multimedia-source-$item{source}.html");
+	    $createdhtml[$#createdhtml+1] = "source-$item{source}.html";
+	    $createdsgml[$#createdsgml+1] = "source-$item{source}.sgml";
+	    open($fhtml, ">source-$item{source}.html");
+	    open($fsgml, ">source-$item{source}.sgml");
+
 	    open(FIN, "multimedia.html.pre");
 	    my @lines = <FIN>;
 	    close(FIN);
-	    print FOUT @lines;
+	    print $fhtml @lines;
 	    open(FIN, "multimedia.html.intro");
 	    @lines = <FIN>;
 	    close(FIN);
-	    print FOUT @lines;
+	    print $fhtml @lines;
+
+	    open(FIN, "multimedia.sgml.pre");
+	    @lines = <FIN>;
+	    close(FIN);
+	    print $fsgml @lines;
+	    open(FIN, "multimedia.sgml.intro");
+	    @lines = <FIN>;
+	    close(FIN);
+	    print $fsgml @lines;
+
 	    $lastsource = $item{source};
-	    print FOUT "<h2 id=\"latest\">$source{name}</h2>\n";
-	    print FOUT "<ul>\n";
+	    print $fhtml "<h2 id=\"latest\">$source{name}</h2>\n<ul>\n";
+	    print $fsgml "<h2 id=\"latest\">$source{name}</h2>\n<ul>\n";
 	}
-	print_htmlitem(\%item, \%source);
+	print_htmlitem($fhtml, \%item, \%source);
+	print_htmlitem($fsgml, \%item, \%source);
 
     }
-    print FOUT "</ul>\n";
+    print $fhtml "</ul>\n";
+    print $fsgml "</ul>\n";
+
     open(FIN, "multimedia.html.post");
     my @lines = <FIN>;
     close(FIN);
-    print FOUT @lines;
-    close(FOUT);
+    print $fhtml @lines;
+    close($fhtml);
+
+    open(FIN, "multimedia.sgml.post");
+    @lines = <FIN>;
+    close(FIN);
+    print $fsgml @lines;
+    close($fsgml);
 }
 
 #
@@ -579,14 +729,14 @@ sub print_htmlitem {
 	print FOUT "<pubDate>$date</pubDate>\n";
 	print FOUT "<enclosure url=\"", htmlentities($file{url}), "\" length=\"1\" type=\"application/octet-stream\" />\n";
 	print FOUT "<description>";
-	print FOUT htmlentities("$item{title}<br>From: $source{name}<br>");
-	print FOUT htmlentities("Tags: $tags<br>\n");
+	print FOUT htmlentities("$item{title}<br/>From: $source{name}<br/>");
+	print FOUT htmlentities("Tags: $tags<br/>\n");
 	print FOUT htmlentities("$item{desc}");
 	print FOUT "</description>\n";
 	print FOUT "</item>\n";
     }
 
-    $createdfiles[$#createdfiles+1] = "multimedia.xml";
+    $createdxml[$#createdxml+1] = "multimedia.xml";
     open(FOUT, ">multimedia.xml");
 
     my @s = stat("multimedia-input.xml");
@@ -624,8 +774,14 @@ EOF
 # Created files
 #
 {
-    open(FOUT, ">multimedia.created");
-    foreach my $f (@createdfiles) {
+    open(FOUT, ">multimedia.html.created");
+    foreach my $f (@createdhtml) {
+	print FOUT "$f\n";
+    }
+    close(FOUT);
+
+    open(FOUT, ">multimedia.sgml.created");
+    foreach my $f (@createdsgml) {
 	print FOUT "$f\n";
     }
     close(FOUT);
