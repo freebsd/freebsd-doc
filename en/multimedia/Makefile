@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/multimedia/Makefile,v 1.1 2007/05/15 21:30:41 keramida Exp $
+# $FreeBSD: www/en/multimedia/Makefile,v 1.2 2007/05/15 21:53:43 keramida Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -10,30 +10,30 @@
 .include "Makefile.inc"
 .endif
 
-INDEXLINK= multimedia.html
+#all: build
+all: build
+	cd output && make all DIRPRFX=multimedia/output/
 
-FXML = multimedia-input.xml
-FHTML = \
-	multimedia.html.intro \
-	multimedia.html.pre \
-	multimedia.html.post
-FLIST = multimedia.created
-FSCRIPT = multimedia.pl
+install:
+	cd output && make install DIRPRFX=multimedia/output/
 
-.if exists(${FLIST})
-DATA!=	cat ${FLIST}
-.else
-DATA=	${INDEXLINK}
-.endif
-
-all: ${FLIST}
+TEMPLATES=	multimedia.sgml.intro \
+		multimedia.sgml.post \
+		multimedia.sgml.pre \
+		multimedia.html.intro \
+		multimedia.html.post \
+		multimedia.html.pre \
+		multimedia-input.xml
 
 clean:
-	if test -f ${FLIST} ; then \
-		xargs ${RM} < ${FLIST} && ${RM} ${FLIST} ; \
-	fi
+	-${RM} output/*
 
-${FLIST}: ${FSCRIPT} ${FXML} ${FHTML}
-	perl -Tw ${FSCRIPT}
+build:
+	(test -d output || ${MKDIR} output ) && \
+	cd output && \
+	${LN} -fs ../Makefile.output Makefile && \
+	( for f in ${TEMPLATES}; do ${LN} -fs ../$$f $$f; done ) && \
+	${PERL} -Tw ../multimedia.pl && \
+	${RM} -f *.html
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
