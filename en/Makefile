@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/Makefile,v 1.144 2008/04/20 03:22:44 murray Exp $
+# $FreeBSD: www/en/Makefile,v 1.145 2008/04/21 01:41:45 murray Exp $
 
 .if exists(Makefile.conf)
 .include "Makefile.conf"
@@ -63,6 +63,7 @@ SUBDIR+= internal
 SUBDIR+= java
 SUBDIR+= kse
 SUBDIR+= marketing
+SUBDIR+= multimedia
 SUBDIR+= news
 SUBDIR+= platforms
 SUBDIR+= portmgr
