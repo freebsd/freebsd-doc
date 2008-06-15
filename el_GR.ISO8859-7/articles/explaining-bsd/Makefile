@@ -1,6 +1,6 @@
 # $FreeBSD$
 #
-# %SOURCE%	en_US.ISO8859-1/articles/explaining-freebsd/Makefile
+# %SOURCE%	en_US.ISO8859-1/articles/explaining-bsd/Makefile
 # %SRCID%	1.1
 
 MAINTAINER=keramida@FreeBSD.org
