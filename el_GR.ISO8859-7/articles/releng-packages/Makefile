@@ -1,6 +1,6 @@
 # $FreeBSD$
 #
-# %SOURCE%	articles/releng-packages/Makefile,
+# %SOURCE%	en_US.ISO8859-1/articles/releng-packages/Makefile
 # %SRCID%	1.1
 
 DOC?= article
