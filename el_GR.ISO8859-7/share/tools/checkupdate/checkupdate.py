@@ -173,10 +173,10 @@ def freebsdrevision(fname):
                 rev = nrev
     except IOError, inst:
         if inst.errno == errno.ENOENT:
-            warning("%s: cannot open file for reading" % fname)
+            debug(3, "%s: cannot open file for reading" % fname)
             return None
     except Exception, inst:
-        warning("%s: cannot extract revision number: %s" % (fname, str(inst)))
+        debug(3, "%s: cannot extract revision number: %s" % (fname, str(inst)))
         return None
     if not rev:
         debug(3, "FreeBSD revision not found in file `%s'" % fname)
@@ -217,8 +217,10 @@ def fileinfo(fname):
             if m:
                 nsrc = m.group(2)
             # Validate the `%SOURCE%' path, to avoid false matches with
-            # `%SOURCE%' tags in comments or documentation.
-            if nsrc and os.path.exists(nsrc):
+            # `%SOURCE%' tags in comments or documentation.  This isn't
+            # exactly a perfect validation check, but it should catch most
+            # of the common cases.
+            if nsrc and ('/' in nsrc or os.path.exists(nsrc)):
                 if src:
                     warning("multiple %%SOURCE%% tags in file %s" % fname)
                 src = nsrc
@@ -259,7 +261,7 @@ def reportfile(fname, frev, srcfile, srcexists, srcid, srcrev):
     text = "%s%s" % (fname, frev and " rev. " + str(frev) or "")
     revtext = "%-10s -> %-10s" % (srcid or "NO-%SRCID%", srcrev or "NONE")
     if srcfile and not srcexists:
-        filetext = "%s (DELETED)" % srcfile
+        filetext = "%s (MISSING)" % srcfile
     elif srcfile:
         filetext = "%s" % srcfile
     else:
