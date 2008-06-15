@@ -252,6 +252,22 @@ def fileinfo(fname):
     info = (fname, fid, src, srcexists, srcid, newsrcid)
     return info
 
+def reportfile(fname, frev, srcfile, srcexists, srcid, srcrev):
+    """Report that an update is needed for a translated file."""
+
+    text = "%s%s" % (fname, frev and " rev. " + str(frev) or "")
+    revtext = "%-10s -> %-10s" % (srcid or "NO-%SRCID%", srcrev or "NONE")
+    if srcfile and not srcexists:
+        filetext = "%s (DELETED)" % srcfile
+    elif srcfile:
+        filetext = "%s" % srcfile
+    else:
+        filetext = "NO-%SOURCE%"
+
+    print "%s" % text
+    print "    %s  %s" % (revtext, filetext)
+    print ""
+
 def checkinfo(info):
     """Check the `info' tuple of file information.  The tuple should
     have at least six pieces of file information:
@@ -280,21 +296,35 @@ def checkinfo(info):
         debug(2, "No translated file in info: %s" % str(info))
         return None
 
-    # Print a line with the name & revision (if present) of the current
-    # translated file.
-    text = "%s%s" % (fname, frev and " rev. " + str(frev) or "")
-    revtext = "%-10s -> %-10s" % (srcid or "NO-%SRCID%", srcrev or "NONE")
-    if srcfile and not srcexists:
-        filetext = "%s (DELETED)" % srcfile
-    elif srcfile:
-        filetext = "%s" % srcfile
-    else:
-        filetext = "NO-%SOURCE%"
+    # If a file has an fname and only one of srcfile but no srcid or
+    # srcrev, then we report it because it seems 'odd' to have only a
+    # `%SOURCE%' tag.
+    if srcfile and (not srcid or not srcrev):
+        reportfile(fname, frev, srcfile, srcexists, srcid, srcrev)
+        return True
 
-    print "%s" % text
-    print "    %s  %s" % (revtext, filetext)
-    print ""
-    return True
+    # Similarly, if a file only has srcid, we report it.
+    if srcid and (not srcfile or not srcrev):
+        reportfile(fname, frev, srcfile, srcexists, srcid, srcrev)
+        return True
+
+    # The same if a file only has srcrev.
+    if srcrev and (not srcfile or not srcid):
+        reportfile(fname, frev, srcfile, srcexists, srcid, srcrev)
+        return True
+
+    # The same is one of srcid, srcrev is unavailable.
+    if not srcid or not srcrev:
+        reportfile(fname, frev, srcfile, srcexists, srcid, srcrev)
+        return True
+
+    # Finally, if we have both srcrev, srcid, report only the files that
+    # have different values for these two.
+    if srcid != srcrev:
+        reportfile(fname, frev, srcfile, srcexists, srcid, srcrev)
+        return True
+
+    return None
 
 def processfile(fname):
     """Process a single file, looking for updates and any other checks
