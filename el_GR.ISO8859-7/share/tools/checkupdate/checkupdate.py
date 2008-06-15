@@ -71,6 +71,7 @@ checks = None                   # No checks are done by default.
 patchmode = False               # Snow patches that need translation.
 root = "."                      # The default workspace directory.
 verbose = None                  # Run in `quiet' mode by default.
+everything = False              # Report everything, i.e. all input files.
 
 # -------------------- useful functions --------------------------------
 
@@ -296,6 +297,11 @@ def checkinfo(info):
         debug(2, "No translated file in info: %s" % str(info))
         return None
 
+    # Report all files, if `everything' is enabled.
+    if everything:
+        reportfile(fname, frev, srcfile, srcexists, srcid, srcrev)
+        return True
+
     # If a file has an fname and only one of srcfile but no srcid or
     # srcrev, then we report it because it seems 'odd' to have only a
     # `%SOURCE%' tag.
@@ -353,7 +359,7 @@ def processfile(fname):
 
 def usage():
     """Print a usage message, and exit."""
-    print "usage: %s [-anpqv] [-R workspace]" % progname
+    print "usage: %s [-aenpqv] [-R workspace]" % progname
     exit(1)
 
 # -------------------- main script body --------------------------------
@@ -361,7 +367,7 @@ def usage():
 if __name__ == "__main__":
     debug(3, "Parsing script options")
     try:
-        opts, args = getopt.getopt(sys.argv[1:], 'anpqR:v')
+        opts, args = getopt.getopt(sys.argv[1:], 'aenpqR:v')
     except getopt.GetoptError, err:
         usage()
 
@@ -371,6 +377,9 @@ if __name__ == "__main__":
         if o == '-a':
             debug(3, "Enabling all file checks")
             checks = allchecks  # All file checks enabled.
+        elif o == '-e':
+            debug(3, "Reporting file revision info for everything")
+            everything = True
         elif o == '-n':
             debug(3, "Disabling all file checks")
             checks = None       # No file checks enabled.
