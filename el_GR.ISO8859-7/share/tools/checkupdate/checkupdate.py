@@ -72,6 +72,7 @@ patchmode = False               # Snow patches that need translation.
 root = "."                      # The default workspace directory.
 verbose = None                  # Run in `quiet' mode by default.
 everything = False              # Report everything, i.e. all input files.
+tuplemode = False               # Use the standard output mode
 
 # -------------------- useful functions --------------------------------
 
@@ -349,19 +350,23 @@ def processfile(fname):
         debug(2, "Skipping directory `%s'" % fname)
         return None
 
+    retval = None
     info = fileinfo(fname)
     if info:
-        checkinfo(info)
-
-    # XXX: Add `patchmode' handling here, to show the diffs of the original
-    # XXX: English text.
-    if patchmode:
-        message("Patch preview mode not implemented for `%s'" % fname)
-    return fname
+        r = fname
+        if tuplemode:
+            print info
+        else:
+            checkinfo(info)
+            if patchmode:
+                # XXX: Add `patchmode' handling here, to show the diffs of the
+                # XXX: original  English text.
+                message("Patch preview mode not implemented for `%s'" % fname)
+    return retval
 
 def usage():
     """Print a usage message, and exit."""
-    print "usage: %s [-aenpqv] [-R workspace]" % progname
+    print "usage: %s [-aenpqtv] [-R workspace]" % progname
     exit(1)
 
 # -------------------- main script body --------------------------------
@@ -369,7 +374,7 @@ def usage():
 if __name__ == "__main__":
     debug(3, "Parsing script options")
     try:
-        opts, args = getopt.getopt(sys.argv[1:], 'aenpqR:v')
+        opts, args = getopt.getopt(sys.argv[1:], 'aenpqtR:v')
     except getopt.GetoptError, err:
         usage()
 
@@ -395,6 +400,9 @@ if __name__ == "__main__":
             debug(3, "Switching to workspace at `%s'" % v)
             if not setroot(v):
                 error(1, "Directory `%s' does not exist" % v)
+        elif o == '-t':
+            debug(3, "Output formatted as tuples")
+            tuplemode = True
         elif o == '-v':
             verbose = verbose and (verbose + 1) or 1
             debug(1, "Bumping verbosity level to %d" % verbose)
