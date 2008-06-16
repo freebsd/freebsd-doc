@@ -1,14 +1,17 @@
 # $FreeBSD$
 #
 # %SOURCE%	en_US.ISO8859-1/articles/multi-os/Makefile
-# %SRCID%	1.8
+# %SRCID%	1.12
 
 DOC?= article
 
 FORMATS?= html
-INSTALL_COMPRESSED?=gz
+WITH_ARTICLE_TOC?= YES
 
-SRCS= article.sgml
+INSTALL_COMPRESSED?=gz
+INSTALL_ONLY_COMPRESSED?=
+
+SRCS=	article.sgml
 
 DOC_PREFIX?= ${.CURDIR}/../../..
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"

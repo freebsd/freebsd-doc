@@ -1,7 +1,7 @@
 # $FreeBSD$
 #
 # %SOURCE%	en_US.ISO8859-1/articles/laptop/Makefile
-# %SRCID%	1.1
+# %SRCID%	1.4
 
 DOC?= article
 
