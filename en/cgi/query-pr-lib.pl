@@ -145,6 +145,7 @@ print qq`</select></td>
 <td><select name='release'>
 <option selected='selected' value=''>Any</option>
 <option value='^FreeBSD [2345]'>Pre-6.X</option>
+<option value='^FreeBSD 7'>7.X only</option>
 <option value='^FreeBSD 6'>6.X only</option>
 <option value='^FreeBSD 5'>5.X only</option>
 <option value='^FreeBSD 4'>4.X only</option>
