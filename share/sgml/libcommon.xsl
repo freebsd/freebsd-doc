@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
-<!-- $FreeBSD: www/share/sgml/libcommon.xsl,v 1.20 2008/04/20 22:49:25 murray Exp $ -->
+<!-- $FreeBSD: www/share/sgml/libcommon.xsl,v 1.21 2008/04/21 01:21:41 murray Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
   version="1.0"
@@ -60,6 +60,10 @@
      rss-security-advisories                     security/security-rss.xsl
      rss-security-advisories-title               security/security-rss.xsl (for l10n)
      rss-security-advisories-items               security/security-rss.xsl
+
+     rss-errata-notices				 security/errata-rss.xsl
+     rss-errata-notices-title			 security/errata-rss.xsl (for l10n)
+     rss-errata-notices-items			 security/errata-rss.xsl
 
      html-index-advisories-items                   index.xsl
      html-index-advisories-items-lastmodified      index.xsl (for i10n)
@@ -1044,6 +1048,86 @@
     <xsl:param name="advisories.xml" select="''" />
 
     <xsl:for-each select="document($advisories.xml)/descendant::advisory[position() &lt;= 10]">
+      <item>
+	<title><xsl:value-of select="name"/></title>
+	<xsl:choose>
+	  <xsl:when test="@omithref = 'yes'">
+	    <link>http://www.FreeBSD.org/security</link>
+	  </xsl:when>
+	  <xsl:otherwise>
+	    <link><xsl:value-of select="concat('&ftpbase;', name, '.asc')" /></link>
+	  </xsl:otherwise>
+	</xsl:choose>
+        <guid><xsl:value-of select="concat('&ftpbase;', name, '.asc')" /></guid>
+        <pubDate>
+          <xsl:call-template name="misc-format-date-string">
+            <xsl:with-param name="year" select="../../../name" />
+            <xsl:with-param name="month" select="../../name" />
+            <xsl:with-param name="day" select="../name" />
+            <xsl:with-param name="date-format" select="$param-l10n-date-format-rfc822" />
+          </xsl:call-template>
+        </pubDate>
+      </item>
+    </xsl:for-each>
+  </xsl:template>
+
+  <!-- template: "rss-errata-notices"
+       generate a rdf of 10 most recent errata notices -->
+
+  <xsl:template name="rss-errata-notices">
+    <xsl:param name="notices.xml" select="''" />
+
+    <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+      <channel>
+        <xsl:call-template name="rss-errata-notices-title">
+	  <xsl:with-param name="notices.xml" select="$notices.xml" />
+        </xsl:call-template>
+        <xsl:call-template name="rss-errata-notices-items">
+	  <xsl:with-param name="notices.xml" select="$notices.xml" />
+        </xsl:call-template>
+      </channel>
+    </rss>
+
+  </xsl:template>
+
+  <!-- template: "rss-errata-notices-title"
+       pulls in the 10 most recent errata notices -->
+
+  <xsl:template name="rss-errata-notices-title"
+                xmlns:atom="http://www.w3.org/2005/Atom">
+    <xsl:param name="notices.xml" select="''" />
+
+    <xsl:variable name="title">FreeBSD Errata Norices</xsl:variable>
+    <xsl:variable name="link">http://www.FreeBSD.org/security/</xsl:variable>
+
+    <title><xsl:value-of select="$title" /></title>
+    <link><xsl:value-of select="$link" /></link>
+    <description>Errata notices published from the FreeBSD Project</description>
+    <language>en-us</language>
+    <webMaster>secteam@FreeBSD.org (FreeBSD Security Team)</webMaster>
+    <managingEditor>secteam@FreeBSD.org (FreeBSD Security Team)</managingEditor>
+    <docs>http://blogs.law.harvard.edu/tech/rss</docs>
+    <ttl>120</ttl>
+    <image>
+      <url>http://www.FreeBSD.org/logo/logo-full.png</url>
+      <title><xsl:value-of select="$title" /></title>
+      <link><xsl:value-of select="$link" /></link>
+    </image>
+    <atom:link rel="self" type="application/rss+xml">
+      <xsl:attribute name="href">
+        <xsl:value-of select="$link" /><xsl:text>rss.xml</xsl:text>
+      </xsl:attribute>
+    </atom:link> 
+  </xsl:template>
+
+  <!-- template: "rss-errata-notices-items"
+       pulls in the 10 most recent errata notices -->
+
+  <xsl:template name="rss-errata-notices-items"
+                xmlns:atom="http://www.w3.org/2005/Atom">
+    <xsl:param name="notices.xml" select="''" />
+
+    <xsl:for-each select="document($notices.xml)/descendant::notice[position() &lt;= 10]">
       <item>
 	<title><xsl:value-of select="name"/></title>
 	<xsl:choose>
