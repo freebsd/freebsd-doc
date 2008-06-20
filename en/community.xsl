@@ -6,7 +6,7 @@
 <!ENTITY % navinclude.community "INCLUDE">
 ]>
 
-<!-- $FreeBSD: www/en/community.xsl,v 1.2 2008/04/20 03:24:34 murray Exp $ -->
+<!-- $FreeBSD: www/en/community.xsl,v 1.3 2008/04/21 01:41:45 murray Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -42,7 +42,7 @@
 	      <div id="CONTENTWRAP">
 		&header3;
 
-	      <p>FreeBSD is well supported by its active
+	      <p>&os; is well supported by its active
 		community.</p>
 
 	      <p>There are more than one hundred <a
@@ -59,11 +59,15 @@
 		active <a href="&base;/community/irc.html">IRC</a>
 		community.  Many developers also maintain <a
 		href="http://planet.freebsdish.org">blogs</a> about
-		their FreeBSD work.</p>
+	      	their &os; work.  &os; developers and key contributors
+		also maintain <a
+		  href="http://wiki.FreeBSD.org/">wiki</a>, which
+		contains various information about &os; development
+		and &os; related projects.</p>
 
 	      <p>Last year there were <xsl:value-of
 	        select="count(event[number(enddate/year) =
-	        (number($curdate.year) -1)])" /> FreeBSD events in
+	        (number($curdate.year) -1)])" /> &os; events in
 		<xsl:value-of
 		select="count(event[(number(enddate/year) =
 		(number($curdate.year) -1)) and (generate-id() =
@@ -72,7 +76,7 @@
 		around the world.  A <a
 		href="&base;/events/events.ics">calendar</a> and
 		<a href="&base;/events/rss.xml">RSS feed</a> of
-		upcoming FreeBSD-related events are maintained on our
+		upcoming &os;-related events are maintained on our
 		<a href="&base;/events/events.html">events
 		page</a>.</p>
 
