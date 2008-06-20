@@ -4,7 +4,7 @@
 <!ENTITY title "The FreeBSD Project">
 ]>
 
-<!-- $FreeBSD: www/en/index.xsl,v 1.162 2008/01/10 08:03:38 murray Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.163 2008/02/27 22:09:31 bmah Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
@@ -310,6 +310,16 @@
 				<xsl:with-param name="type" select="'notice'" />
 			</xsl:call-template>
 
+			  <div>
+			    	<ul class="newseventslist">
+				  <li class="first-child">
+				    <a href="&base;/security/" title="More Errata Notices">More</a>
+				  </li>
+				  <li class="last-child">
+				    <a href="&base;/security/errata.xml" title="Errata Notices RSS Feed"><img class="rssimage" src="&base;/layout/images/ico_rss.png" width="27" height="12" alt="Errata Notices RSS Feed" /></a>
+				  </li>
+				</ul>
+			  </div> <!-- unnamed -->
 			</div> <!-- newseventswrap -->
 
 		   </div> <!-- FRONTSECURITYCONTENT -->
