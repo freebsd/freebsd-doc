@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
-<!-- $FreeBSD: www/share/sgml/libcommon.xsl,v 1.21 2008/04/21 01:21:41 murray Exp $ -->
+<!-- $FreeBSD: www/share/sgml/libcommon.xsl,v 1.22 2008/06/20 20:03:29 danger Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
   version="1.0"
@@ -1097,7 +1097,7 @@
                 xmlns:atom="http://www.w3.org/2005/Atom">
     <xsl:param name="notices.xml" select="''" />
 
-    <xsl:variable name="title">FreeBSD Errata Norices</xsl:variable>
+    <xsl:variable name="title">FreeBSD Errata Notices</xsl:variable>
     <xsl:variable name="link">http://www.FreeBSD.org/security/</xsl:variable>
 
     <title><xsl:value-of select="$title" /></title>
