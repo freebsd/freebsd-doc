@@ -7,7 +7,7 @@
 <!--
      The FreeBSD Russian Documentation Project
 
-     $FreeBSD: www/ru/index.xsl,v 1.31 2006/08/19 21:25:46 hrs Exp $
+     $FreeBSD: www/ru/index.xsl,v 1.32 2007/02/03 11:49:49 marck Exp $
      $FreeBSDru: frdp/www/ru/index.xsl,v 1.47 2006/01/16 21:27:51 gad Exp $
 
      Original revision: 1.127
@@ -16,7 +16,7 @@
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
 
-  <xsl:variable name="date" select="'$FreeBSD: www/ru/index.xsl,v 1.31 2006/08/19 21:25:46 hrs Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/ru/index.xsl,v 1.32 2007/02/03 11:49:49 marck Exp $'"/>
 
   <!-- these params should be externally bound. The values
        here are not used actually -->
@@ -231,7 +231,6 @@
 			<xsl:call-template name="html-index-events-items">
 				<xsl:with-param name="events.xml-master" select="$events.xml-master" />
 				<xsl:with-param name="events.xml" select="$events.xml" />
-				<xsl:with-param name="curdate.xml" select="$curdate.xml" />
 			</xsl:call-template>
 
 			  <div>

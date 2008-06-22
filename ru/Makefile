@@ -1,7 +1,7 @@
 #
 # The FreeBSD Russian Documentation Project
 #
-# $FreeBSD: www/ru/Makefile,v 1.51 2006/08/19 21:58:14 hrs Exp $
+# $FreeBSD: www/ru/Makefile,v 1.52 2007/08/15 21:13:14 marck Exp $
 # $FreeBSDru: frdp/www/ru/Makefile,v 1.53 2006/02/18 18:46:43 gad Exp $
 #
 # Original revision: 1.122
@@ -32,6 +32,14 @@ DOCS+= send-pr.sgml
 DOCS+= support.sgml
 DOCS+= where.sgml
 DOCS+= y2kbug.sgml
+
+XMLDOCS=	index:xsl:${XML_NEWS_NEWS}:
+DEPENDSET.index=transtable mirrors news press events \
+		advisories notices
+
+XMLDOCS+=	usergroups:${XSL_USERGROUPS}:${XML_USERGROUPS}:
+DEPENDSET.usergroups=	transtable usergroups
+PARAMS.usergroups=	--param pagename "'FreeBSD User Groups'"
 
 # These will be directly installed.
 
@@ -84,39 +92,6 @@ SUBDIR+= ports
 #SUBDIR+= cgi
 #SUBDIR+= gifs
 
-XMLDOCS=       usergroups:${XSL_USERGROUPS}:${XML_USERGROUPS}:
-DEPENDSET.usergroups=transtable usergroups
-PARAMS.usergroups=      --param pagename "'FreeBSD User Groups'"
-
 WEBDIR?=	data/ru
 
-# index.html is special, and generated from index.xsl and news/news.xml
-DATA+=		index.html
-CLEANFILES+=	index.html
-
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
-
-index.html: index.xsl ${XML_INCLUDES}\
-		${XML_NEWS_INCLUDES} \
-		${XML_NEWS_NEWS} ${XML_NEWS_NEWS_MASTER} \
-		${XML_NEWS_PRESS} ${XML_NEWS_PRESS_MASTER} \
-		${XML_EVENTS_EVENTS_MASTER} ${XML_EVENTS_CURDATE} \
-		${XML_MIRRORS} ${XML_TRANSTABLE} \
-		${XML_ADVISORIES} ${XML_NOTICES} \
-		${XML_NAVIGATION}
-	${XSLTPROC} ${XSLTPROCOPTS} \
-		-o $@ \
-		--param advisories.xml "'${XML_ADVISORIES}'" \
-		--param mirrors.xml "'${XML_MIRRORS}'" \
-		--param news.press.xml-master "'${XML_NEWS_PRESS_MASTER}'" \
-		--param news.press.xml "'${XML_NEWS_PRESS}'" \
-		--param news.project.xml-master "'${XML_NEWS_NEWS_MASTER}'" \
-		--param news.project.xml "'${XML_NEWS_NEWS}'" \
-		--param events.xml-master "'${XML_EVENTS_EVENTS_MASTER}'" \
-		--param curdate.xml "'${XML_EVENTS_CURDATE}'" \
-		--param notices.xml "'${XML_NOTICES}'" \
-		--param transtable.xml "'${XML_TRANSTABLE}'" \
-		${.CURDIR}/index.xsl ${XML_NEWS_NEWS} ${XML_EVENTS_EVENTS_MASTER} ${XML_EVENTS_CURDATE}
-.if !defined(NO_TIDY)
-	-${TIDY} ${TIDYOPTS} ${.TARGET}
-.endif
