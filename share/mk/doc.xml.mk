@@ -1,5 +1,5 @@
 # doc.xml.mk
-# $FreeBSD: www/share/mk/doc.xml.mk,v 1.12 2008/01/07 07:50:27 murray Exp $
+# $FreeBSD: www/share/mk/doc.xml.mk,v 1.13 2008/01/16 08:21:47 murray Exp $
 
 XML_CATALOG_FILES=	file://${.OBJDIR}/catalog-cwd.xml \
 			file://${DOC_PREFIX}/${LANGCODE}/share/sgml/catalog.xml \
@@ -189,6 +189,7 @@ XML_EVENTS_EVENTS=	${XML_EVENTS_EVENTS_MASTER}
 .endif
 XSL_EVENTS=		${WEB_PREFIX}/share/sgml/templates.events.xsl
 XSL_EVENTS_ICS=		${WEB_PREFIX}/share/sgml/templates.events2ics.xsl
+XSL_EVENTS_PAST=	${WEB_PREFIX}/share/sgml/templates.pastevents.xsl
 
 # DEPENDSET: commercial ........................................................
 _DEPENDSET.commercial=	${XML_COMMERCIAL_CONSULT} \
