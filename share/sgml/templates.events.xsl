@@ -9,9 +9,10 @@
 <!ENTITY % header.rss "INCLUDE">
 ]>
 
-<!-- $FreeBSD: www/share/sgml/templates.events.xsl,v 1.6 2008/06/08 22:29:31 murray Exp $ -->
+<!-- $FreeBSD: www/share/sgml/templates.events.xsl,v 1.7 2008/06/09 03:17:58 murray Exp $ -->
 
 <!-- Copyright (c) 2003 Simon L. Nielsen <simon@FreeBSD.org>
+     Copyright (c) 2008 Murray M Stokely <murray@FreeBSD.org>
      All rights reserved.
 
      Redistribution and use in source and binary forms, with or without
@@ -177,7 +178,8 @@
 	<xsl:for-each select="event[generate-id() =
 	  generate-id(key('event-by-month', concat(startdate/year,
 	    format-number(startdate/month, '00')))[1])
-	  and ((number(enddate/year) &lt; number($curdate.year)) or
+	  and ((number(enddate/year) &gt;= $startyear)) and
+           ((number(enddate/year) &lt; number($curdate.year)) or
 	    (number(enddate/year) = number($curdate.year) and
 	     number(enddate/month) &lt; number($curdate.month)) or
 	    (number(enddate/year) = number($curdate.year) and
@@ -210,6 +212,15 @@
 	    </xsl:for-each>
 	  </ul>
 	</xsl:for-each>
+
+	<p>Events from past years:</p>
+
+        <ul id="events-past-years">
+	<xsl:call-template name="split-string">
+          <xsl:with-param name="seperator" select="' '"/>
+          <xsl:with-param name="text" select="$pastyears"/>
+        </xsl:call-template>
+        </ul>
 	      </div> <!-- contentwrap -->
 
 	      <br class="clearboth" />
@@ -309,4 +320,31 @@ upcoming</a></p>
       <xsl:value-of select="../name"/>
     </a>
   </xsl:template>
+
+  <xsl:template name="split-string">
+    <xsl:param name="seperator"/>
+    <xsl:param name="text"/>
+    <xsl:variable name="first" select="substring-before($text, $seperator)"/>
+    <xsl:choose>
+      <xsl:when test="$first or substring-after($text,$seperator)">
+        <xsl:if test="$first">
+          <li><a>
+	    <xsl:attribute name="href">events<xsl:value-of select="$first"/>.html</xsl:attribute>
+            <xsl:value-of select="$first" />
+          </a></li>    
+        </xsl:if>
+        <xsl:call-template name="split-string">
+          <xsl:with-param name="text" select="substring-after($text,$seperator)"/>
+          <xsl:with-param name="seperator" select="$seperator"/>
+        </xsl:call-template>
+      </xsl:when>
+      <xsl:otherwise>
+          <li><a>
+	    <xsl:attribute name="href">events<xsl:value-of select="$text"/>.html</xsl:attribute>
+            <xsl:value-of select="$text" />
+          </a></li>
+      </xsl:otherwise>
+    </xsl:choose>
+   </xsl:template>
+
 </xsl:stylesheet>
