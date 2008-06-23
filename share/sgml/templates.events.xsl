@@ -9,7 +9,7 @@
 <!ENTITY % header.rss "INCLUDE">
 ]>
 
-<!-- $FreeBSD: www/share/sgml/templates.events.xsl,v 1.7 2008/06/09 03:17:58 murray Exp $ -->
+<!-- $FreeBSD: www/share/sgml/templates.events.xsl,v 1.8 2008/06/22 23:18:55 murray Exp $ -->
 
 <!-- Copyright (c) 2003 Simon L. Nielsen <simon@FreeBSD.org>
      Copyright (c) 2008 Murray M Stokely <murray@FreeBSD.org>
@@ -52,6 +52,9 @@
   <xsl:output method="xml" encoding="&xml.encoding;"
     doctype-system="http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"
     doctype-public="-//W3C//DTD XHTML 1.0 Transitional//EN"/>
+
+  <xsl:param name="startyear">2007</xsl:param>
+  <xsl:param name="pastyears">2003 2004 2005 2006</xsl:param>
 
   <xsl:key name="event-by-month" match="event"
     use="concat(startdate/year, format-number(startdate/month, '00'))"/>
