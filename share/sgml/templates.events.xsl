@@ -5,11 +5,11 @@
 <!ENTITY email "freebsd-www">
 <!ENTITY rsslink "&base;/events/rss.xml">
 <!ENTITY rsstitle "Upcoming FreeBSD Events">
-<!ENTITY % navinclude.about "INCLUDE">
+<!ENTITY % navinclude.community "INCLUDE">
 <!ENTITY % header.rss "INCLUDE">
 ]>
 
-<!-- $FreeBSD: www/share/sgml/templates.events.xsl,v 1.8 2008/06/22 23:18:55 murray Exp $ -->
+<!-- $FreeBSD: www/share/sgml/templates.events.xsl,v 1.9 2008/06/23 05:56:49 murray Exp $ -->
 
 <!-- Copyright (c) 2003 Simon L. Nielsen <simon@FreeBSD.org>
      Copyright (c) 2008 Murray M Stokely <murray@FreeBSD.org>
