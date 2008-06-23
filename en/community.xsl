@@ -6,7 +6,7 @@
 <!ENTITY % navinclude.community "INCLUDE">
 ]>
 
-<!-- $FreeBSD: www/en/community.xsl,v 1.3 2008/04/21 01:41:45 murray Exp $ -->
+<!-- $FreeBSD: www/en/community.xsl,v 1.4 2008/06/20 21:19:24 danger Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -59,11 +59,14 @@
 		active <a href="&base;/community/irc.html">IRC</a>
 		community.  Many developers also maintain <a
 		href="http://planet.freebsdish.org">blogs</a> about
-	      	their &os; work.  &os; developers and key contributors
-		also maintain <a
+	      	their &os; work.  Developers and key contributors
+		also maintain a <a
 		  href="http://wiki.FreeBSD.org/">wiki</a>, which
-		contains various information about &os; development
-		and &os; related projects.</p>
+		contains information about &os; development
+		and related projects.  You can also find &os; represented
+		on a variety of different <a
+		href="&base;/community/social.html">social
+		networking</a> sites.</p>
 
 	      <p>Last year there were <xsl:value-of
 	        select="count(event[number(enddate/year) =
