@@ -1,6 +1,10 @@
 # $FreeBSD$
 #
 # Article: Installing and Using FreeBSD With Other Operating Systems
+#
+# %SOURCE%    en_US.ISO8859-1/articles/multi-os/Makefile
+# %SRCID%     1.12
+#
 
 #
 # Tidy messes up iso-8859-2 characters

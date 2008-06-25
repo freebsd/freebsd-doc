@@ -1,6 +1,10 @@
 # $FreeBSD$
 #
 # Article: FreeBSD on Laptops
+#
+# %SOURCE%    en_US.ISO8859-1/articles/laptop/Makefile
+# %SRCID%     1.4
+#
 
 #
 # Tidy messes up iso-8859-2 characters

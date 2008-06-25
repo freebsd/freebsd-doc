@@ -1,5 +1,6 @@
 # $FreeBSD$
-#
+# %SOURCE%    en_US.ISO8859-1/flyer/Makefile
+# %SRCID%     1.2
 
 pdf: dvi ps
 	ps2pdf13 -sPAPERSIZE=a4 flyer.ps

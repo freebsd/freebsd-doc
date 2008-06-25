@@ -1,6 +1,10 @@
 # $FreeBSD$
 #
 # Article: FreeBSD and Linux Comparison Whitepaper
+#
+# %SOURCE%    en_US.ISO8859-1/articles/linux-comparison/Makefile
+# %SRCID%     1.1
+#
 
 #
 # Tidy messes up iso-8859-2 characters

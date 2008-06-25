@@ -1,6 +1,10 @@
 # $FreeBSD$
 #
 # Article: FreeBSD Version Guide
+#
+# %SOURCE%    en_US.ISO8859-1/articles/version-guide/Makefile
+# %SRCID%     1.3
+#
 
 #
 # Tidy messes up iso-8859-2 characters

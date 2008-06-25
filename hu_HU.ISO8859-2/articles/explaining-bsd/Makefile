@@ -1,6 +1,10 @@
 # $FreeBSD$
 #
 # Article: Explaining BSD
+#
+# %SOURCE%    en_US.ISO8859-1/articles/explaining-bsd/Makefile
+# %SRCID%     1.6
+#
 
 #
 # Tidy messes up iso-8859-2 characters
