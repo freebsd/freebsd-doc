@@ -6,11 +6,13 @@
 <!ENTITY % navinclude.community "INCLUDE">
 ]>
 
-<!-- $FreeBSD$ -->
+<!-- $FreeBSD: www/hu/community.xsl,v 1.1 2008/05/02 08:56:08 pgj Exp $ -->
 
 <!-- The FreeBSD Hungarian Documentation Project
      Translated by: Gabor Kovesdan <gabor@FreeBSD.org>
-     Original Revision: r1.3                           -->
+     %SOURCE%   en/community.xsl
+     %SRCID%    1.3
+-->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">

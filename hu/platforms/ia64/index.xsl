@@ -9,12 +9,14 @@
 
 <!-- FreeBSD Hungarian Documentation Project
      Translated by: Gabor Kovesdan <gabor@FreeBSD.org>
-     Original Revision: r1.7				-->
+     %SOURCE%	en/platforms/ia64/index.xsl
+     %SRCID%	1.7
+-->
 
 <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
 
-  <xsl:variable name="date" select="'$FreeBSD: www/hu/platforms/ia64/index.xsl,v 1.1 2007/01/07 22:44:47 keramida Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/hu/platforms/ia64/index.xsl,v 1.2 2007/01/09 17:15:54 keramida Exp $'"/>
 
   <xsl:output doctype-public="-//W3C//DTD HTML 4.01 Transitional//EN"
     encoding="iso-8859-2" method="html"/>

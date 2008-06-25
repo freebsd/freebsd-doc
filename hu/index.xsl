@@ -4,11 +4,13 @@
 <!ENTITY title "A FreeBSD Projekt">
 ]>
 
-<!-- $FreeBSD: www/hu/index.xsl,v 1.8 2008/03/29 11:48:17 gabor Exp $ -->
+<!-- $FreeBSD: www/hu/index.xsl,v 1.9 2008/05/17 15:10:46 pgj Exp $ -->
 
 <!-- FreeBSD Hungarian Documentation Project
      Translated by: Gabor Kovesdan <gabor@FreeBSD.org>
-     Original Revision: r1.163				-->
+     %SOURCE%	en/index.xsl
+     %SRCID%	1.163
+-->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
