@@ -2,6 +2,10 @@
 # $FreeBSD$
 #
 # Article: FreeBSD Quickstart for Linux Users
+#
+# %SOURCE%    en_US.ISO8859-1/articles/linux-users/Makefile
+# %SRCID%     1.1
+#
 
 #
 # Tidy messes up iso-8859-2 characters

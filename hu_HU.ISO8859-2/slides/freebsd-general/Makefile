@@ -1,6 +1,9 @@
 #
 # $FreeBSD$
 #
+# %SOURCE%    en_US.ISO8859-1/slides/freebsd-general/Makefile
+# %SRCID%     1.1
+#
 # Build an example FreeBSD Presentation
 #
 

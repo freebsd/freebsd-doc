@@ -2,6 +2,10 @@
 # $FreeBSD$
 #
 # Article: Installing and using compiz-fusion
+#
+# %SOURCE%    en_US.ISO8859-1/articles/compiz-fusion/Makefile
+# %SRCID%     1.1
+#
 
 NO_TIDY = yes
 
