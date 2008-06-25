@@ -3,7 +3,8 @@
 # The FreeBSD Hungarian Documentation Project
 
 # $FreeBSD$
-# Original Revision: 1.109
+# %SOURCE%    en_US.ISO8859-1/books/handbook/Makefile
+# %SRCID%     1.109
 #
 # Build the FreeBSD Handbook.
 #

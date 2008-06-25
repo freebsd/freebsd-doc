@@ -1,6 +1,9 @@
 #
 # Build the Handbook with just the content from this chapter.
 #
+# %SOURCE%    en_US.ISO8859-1/books/handbook/pgpkeys/Makefile
+# %SRCID%     1.3
+#
 # $FreeBSD$
 #
 

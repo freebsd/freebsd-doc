@@ -1,6 +1,10 @@
 # $FreeBSD$
 #
 # Article: Dialup firewalling with FreeBSD
+#
+# %SOURCE%    en_US.ISO8859-1/articles/dialup-firewall/Makefile
+# %SRCID%     1.5
+#
 
 #
 # Tidy messes up iso-8859-2 characters

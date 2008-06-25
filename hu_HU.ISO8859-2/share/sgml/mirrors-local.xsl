@@ -3,7 +3,9 @@
 
 <!-- The FreeBSD Hungarian Documentation Project
      Translated by: PALI, Gabor <pgj@FreeBSD.org>
-     Original Revision: 1.6                       -->
+     %SOURCE%	share/sgml/mirrors-master.xsl
+     %SRCID%	1.6
+-->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 

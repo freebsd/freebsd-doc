@@ -3,7 +3,8 @@
 #  The FreeBSD Hungarian Documentation Project
 #
 #  $FreeBSD$
-#  Original Revision: 1.4
+#  %SOURCE%    en_US.ISO8859-1/books/Makefile
+#  %SRCID%     1.14
 #
 
 SUBDIR = handbook
