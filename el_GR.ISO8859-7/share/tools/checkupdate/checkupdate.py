@@ -57,6 +57,7 @@ import getopt
 import os
 import re
 import sys
+import subprocess
 
 # Alias some functions from other modules, to shorter, easier to use names.
 exit = sys.exit
@@ -68,11 +69,13 @@ progname = os.path.basename(sys.argv[0])
 
 allchecks = None                # All the file check functions we support.
 checks = None                   # No checks are done by default.
-patchmode = False               # Snow patches that need translation.
+patchmode = False               # Show patches that need translation.
 root = "."                      # The default workspace directory.
 verbose = None                  # Run in `quiet' mode by default.
 everything = False              # Report everything, i.e. all input files.
 tuplemode = False               # Use the standard output mode
+compactmode = False             # Generate compact stdout suitable for commit logs.
+pickymode = True                # Skip files without '%SRCID%' and '%SOURCE%' (default).
 
 # -------------------- useful functions --------------------------------
 
@@ -259,18 +262,64 @@ def fileinfo(fname):
 def reportfile(fname, frev, srcfile, srcexists, srcid, srcrev):
     """Report that an update is needed for a translated file."""
 
-    text = "%s%s" % (fname, frev and " rev. " + str(frev) or "")
+    if not compactmode:
+        text = "%s%s" % (fname, frev and " rev. " + str(frev) or "")
     revtext = "%-10s -> %-10s" % (srcid or "NO-%SRCID%", srcrev or "NONE")
-    if srcfile and not srcexists:
-        filetext = "%s (MISSING)" % srcfile
-    elif srcfile:
-        filetext = "%s" % srcfile
-    else:
-        filetext = "NO-%SOURCE%"
+    if not compactmode:
+        if srcfile and not srcexists:
+            filetext = "%s (MISSING)" % srcfile
+        elif srcfile:
+            filetext = "%s" % srcfile
+        else:
+            filetext = "NO-%SOURCE%"
 
-    print "%s" % text
-    print "    %s  %s" % (revtext, filetext)
+    if compactmode:
+        print "%s %s" % (revtext, fname)
+    else:
+        print "%s" % text
+        print "    %s  %s" % (revtext, filetext)
+        print ""
+
+def showdiff(fname, frev, srcfile, srcexists, srcid, srcrev):
+    """Show differences in the original file."""
+
+    if not (srcfile and srcexists and srcid and srcrev):
+        # Raise an exception?
+        print "    No patch could be retrieved."
+        print ""
+        return None
+
+    cvsdiff = ["cvs", "-R", "diff", "-u",
+               "-r%s" % srcid, "-r%s" % srcrev, "%s" % srcfile]
+
+    svndiff = ["svn", "diff",
+               "-r", "%s:%s" % (srcid, srcrev), "%s" % srcfile]
+
+    diffargs = None
+    if os.path.isdir(root + "/CVS"):
+        diffargs = cvsdiff
+    elif os.path.isdir(root + "/.svn"):
+        diffargs = svndiff
+
+    if not diffargs:
+        print "    Not a Subversion or CVS checkout."
+        print ""
+        return None
+
+    diffcmd = ""
+
+    for arg in diffargs:
+        diffcmd += (arg + " ")
+
+    print "    Patch review for:"
+    print "    %s" % diffcmd
     print ""
+
+    output = subprocess.Popen(diffargs, stdout=subprocess.PIPE, cwd=root).communicate()[0]
+
+    print output
+    print ""
+    return True
 
 def checkinfo(info):
     """Check the `info' tuple of file information.  The tuple should
@@ -322,7 +371,16 @@ def checkinfo(info):
         reportfile(fname, frev, srcfile, srcexists, srcid, srcrev)
         return True
 
-    # The same is one of srcid, srcrev is unavailable.
+    # There is no frev, srcid, srcrev so do not report (has no sense).
+    if (pickymode and not everything) and (not srcid and not srcrev and not frev):
+        return None
+
+    # There is no srcid, srcrev, may be the user does not want to track
+    # this file.
+    if (pickymode and not everything) and (not srcid and not srcrev):
+        return None
+
+    # If one of srcid, srcrev is unavailable, we report it.
     if not srcid or not srcrev:
         reportfile(fname, frev, srcfile, srcexists, srcid, srcrev)
         return True
@@ -331,6 +389,8 @@ def checkinfo(info):
     # have different values for these two.
     if srcid != srcrev:
         reportfile(fname, frev, srcfile, srcexists, srcid, srcrev)
+        if patchmode:
+            return showdiff(fname, frev, srcfile, srcexists, srcid, srcrev)
         return True
 
     return None
@@ -358,15 +418,11 @@ def processfile(fname):
             print info
         else:
             checkinfo(info)
-            if patchmode:
-                # XXX: Add `patchmode' handling here, to show the diffs of the
-                # XXX: original  English text.
-                message("Patch preview mode not implemented for `%s'" % fname)
     return retval
 
 def usage():
     """Print a usage message, and exit."""
-    print "usage: %s [-aenpqtv] [-R workspace]" % progname
+    print "usage: %s [-acenpPqtv] [-R workspace]" % progname
     exit(1)
 
 # -------------------- main script body --------------------------------
@@ -374,7 +430,7 @@ def usage():
 if __name__ == "__main__":
     debug(3, "Parsing script options")
     try:
-        opts, args = getopt.getopt(sys.argv[1:], 'aenpqtR:v')
+        opts, args = getopt.getopt(sys.argv[1:], 'acenpPqtR:v')
     except getopt.GetoptError, err:
         usage()
 
@@ -384,6 +440,10 @@ if __name__ == "__main__":
         if o == '-a':
             debug(3, "Enabling all file checks")
             checks = allchecks  # All file checks enabled.
+        elif o == '-c':
+            debug(3, "Compact mode on")
+            compactmode = True  # Generate compact report.
+            patchmode = False   # No previews allowed.
         elif o == '-e':
             debug(3, "Reporting file revision info for everything")
             everything = True
@@ -391,8 +451,14 @@ if __name__ == "__main__":
             debug(3, "Disabling all file checks")
             checks = None       # No file checks enabled.
         elif o == '-p':
-            debug(3, "Enabling patch preview mode")
-            patchmode = True
+            if not compactmode:
+                debug(3, "Enabling patch preview mode")
+                patchmode = True# Show diffs for files to be merged.
+            else:
+                debug(3, "No patch preview due to compact mode")
+        elif o == '-P':
+            debug(3, "Disabling picky mode")
+            pickymode = False   # Picky mode: no check if no revision.
         elif o == '-q':
             debug(3, "Going into quiet mode.")
             verbose = False     # Quiet mode; no verbose messages.
