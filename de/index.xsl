@@ -5,8 +5,8 @@
 ]>
 <!--
      $FreeBSD$
-     $FreeBSDde: de-www/index.xsl,v 1.78 2008/03/01 15:28:01 jkois Exp $
-     basiert auf: 1.163
+     $FreeBSDde: de-www/index.xsl,v 1.80 2008/07/12 17:07:02 jkois Exp $
+     basiert auf: 1.164
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -318,6 +318,18 @@
 				<xsl:with-param name="type" select="'notice'" />
 			</xsl:call-template>
 
+			<div>
+			  <ul class="newseventslist">
+			    <li class="first-child">
+			      <a href="&base;/security/" title="Weitere Errata-Hinweise">Mehr</a>
+			    </li>
+			    <li class="last-child">
+			      <a href="&enbase;/security/errata.xml" title="Errata Notices RSS Feed">
+				<img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27"
+				height="12" alt="Errata Notices RSS Feed" /></a>
+			    </li>
+			  </ul>
+			  </div> <!-- unnamed -->
 			</div> <!-- newseventswrap -->
 
 		   </div> <!-- FRONTSECURITYCONTENT -->
