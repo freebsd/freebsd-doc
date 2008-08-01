@@ -33,8 +33,8 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.206 2008-05-01 15:08:26 wosch Exp $
-# $FreeBSD: www/en/cgi/man.cgi,v 1.205 2008/05/01 12:41:16 wosch Exp $
+# $Id: man.cgi,v 1.207 2008-08-01 21:05:26 wosch Exp $
+# $FreeBSD: www/en/cgi/man.cgi,v 1.206 2008/05/01 15:08:26 wosch Exp $
 
 ############################################################################
 # !!! man.cgi is stale perl4 code !!!
@@ -176,7 +176,6 @@ $manPathDefault = 'FreeBSD 7.0-RELEASE';
      'FreeBSD 6.1-RELEASE',   "$manLocalDir/FreeBSD-6.1-RELEASE/man:$manLocalDir/FreeBSD-6.1-RELEASE/openssl/man",
      'FreeBSD 6.0-RELEASE',   "$manLocalDir/FreeBSD-6.0-RELEASE/man:$manLocalDir/FreeBSD-6.0-RELEASE/openssl/man",
 
-     'FreeBSD 5.5-stable',   "$manLocalDir/FreeBSD-5.5-stable",
      'FreeBSD 5.5-RELEASE',   "$manLocalDir/FreeBSD-5.5-RELEASE/man:$manLocalDir/FreeBSD-5.5-RELEASE/openssl/man",
      'FreeBSD Ports 5.5-RELEASE', "$manLocalDir/FreeBSD-ports-5.4-RELEASE",
 
@@ -187,7 +186,6 @@ $manPathDefault = 'FreeBSD 7.0-RELEASE';
      'FreeBSD 5.1-RELEASE',   "$manLocalDir/FreeBSD-5.1-RELEASE/man:$manLocalDir/FreeBSD-5.1-RELEASE/openssl/man",
      'FreeBSD 5.0-RELEASE',   "$manLocalDir/FreeBSD-5.0-RELEASE",
 
-     'FreeBSD 4.11-stable',   "$manLocalDir/FreeBSD-4.11-stable",
      'FreeBSD 4.11-RELEASE',  "$manLocalDir/FreeBSD-4.11-RELEASE/man:$manLocalDir/FreeBSD-4.11-RELEASE/openssl/man:$manLocalDir/FreeBSD-4.11-RELEASE/perl/man",
      'FreeBSD Ports 4.11-RELEASE', "$manLocalDir/FreeBSD-ports-4.11-RELEASE",
 
@@ -391,8 +389,6 @@ while ( ( $key, $val ) = each %manPath ) {
     'freebsd-stable',        'FreeBSD 7.0-stable',
     'freebsd-stable7',       'FreeBSD 7.0-stable',
     'freebsd-stable6',       'FreeBSD 6.3-stable',
-    'freebsd-stable5',       'FreeBSD 5.5-stable',
-    'freebsd-stable4',       'FreeBSD 4.11-stable',
 
     'freebsd-current',       'FreeBSD 8-current',
     'freebsd-release-ports', 'FreeBSD 7.0-RELEASE and Ports',
@@ -1249,7 +1245,7 @@ sub faq {
           if $manPathAliases{$_};
     }
 
-    local $id = '$FreeBSD: www/en/cgi/man.cgi,v 1.205 2008/05/01 12:41:16 wosch Exp $';
+    local $id = '$FreeBSD: www/en/cgi/man.cgi,v 1.206 2008/05/01 15:08:26 wosch Exp $';
     return qq{\
 <pre>
 Copyright (c) 1996-2008 <a href="$mailtoURL">Wolfram Schneider</a>
