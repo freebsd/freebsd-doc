@@ -33,8 +33,8 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.207 2008-08-01 21:05:26 wosch Exp $
-# $FreeBSD: www/en/cgi/man.cgi,v 1.206 2008/05/01 15:08:26 wosch Exp $
+# $Id: man.cgi,v 1.208 2008-08-01 21:42:47 wosch Exp $
+# $FreeBSD: www/en/cgi/man.cgi,v 1.207 2008/08/01 21:05:26 wosch Exp $
 
 ############################################################################
 # !!! man.cgi is stale perl4 code !!!
@@ -47,6 +47,7 @@ use constant HAS_FREEBSD_CGI_STYLE => eval { require "./cgi-style.pl"; };
 
 package main;
 
+$debug = 2;
 $www{'title'} = 'FreeBSD Man Pages';
 $www{'home'}  = 'http://www.FreeBSD.org';
 $www{'head'}  = $www{'title'};
@@ -160,15 +161,14 @@ $manPathDefault = 'FreeBSD 7.0-RELEASE';
      'FreeBSD 7.0-RELEASE and Ports',  "$manLocalDir/FreeBSD-7.0-RELEASE/man:$manLocalDir/FreeBSD-7.0-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports",
      'FreeBSD 6.3-RELEASE and Ports',  "$manLocalDir/FreeBSD-6.3-RELEASE/man:$manLocalDir/FreeBSD-6.3-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports",
 
-     'FreeBSD 8-current',   "$manLocalDir/FreeBSD-8-current/man:$manLocalDir/FreeBSD-8-current/openssl/man",
+     'FreeBSD 8-current',   "$manLocalDir/FreeBSD-8-current",
 
-     'FreeBSD 7.0-stable',   "$manLocalDir/FreeBSD-7.0-stable/man:$manLocalDir/FreeBSD-7.0-stable/openssl/man",
+     'FreeBSD 7.0-stable',   "$manLocalDir/FreeBSD-7.0-stable",
      'FreeBSD 7.0-RELEASE',   "$manLocalDir/FreeBSD-7.0-RELEASE/man:$manLocalDir/FreeBSD-7.0-RELEASE/openssl/man",
      'FreeBSD Ports 7.0-RELEASE', "$manLocalDir/FreeBSD-ports-7.0-RELEASE",
 
-     'FreeBSD 6.3-stable',   "$manLocalDir/FreeBSD-6.3-stable/man:$manLocalDir/FreeBSD-6.3-stable/openssl/man",
+     'FreeBSD 6.3-stable',   "$manLocalDir/FreeBSD-6.3-stable",
      'FreeBSD 6.3-RELEASE',   "$manLocalDir/FreeBSD-6.3-RELEASE/man:$manLocalDir/FreeBSD-6.3-RELEASE/openssl/man",
-     'FreeBSD Ports 6.3-RELEASE', "$manLocalDir/FreeBSD-ports-6.3-RELEASE",
 
      'FreeBSD 6.2-RELEASE',   "$manLocalDir/FreeBSD-6.2-RELEASE/man:$manLocalDir/FreeBSD-6.2-RELEASE/openssl/man",
      'FreeBSD Ports 6.2-RELEASE', "$manLocalDir/FreeBSD-ports-6.2-RELEASE",
@@ -177,7 +177,7 @@ $manPathDefault = 'FreeBSD 7.0-RELEASE';
      'FreeBSD 6.0-RELEASE',   "$manLocalDir/FreeBSD-6.0-RELEASE/man:$manLocalDir/FreeBSD-6.0-RELEASE/openssl/man",
 
      'FreeBSD 5.5-RELEASE',   "$manLocalDir/FreeBSD-5.5-RELEASE/man:$manLocalDir/FreeBSD-5.5-RELEASE/openssl/man",
-     'FreeBSD Ports 5.5-RELEASE', "$manLocalDir/FreeBSD-ports-5.4-RELEASE",
+     'FreeBSD Ports 5.1-RELEASE', "$manLocalDir/FreeBSD-ports-5.1-RELEASE",
 
      'FreeBSD 5.4-RELEASE',   "$manLocalDir/FreeBSD-5.4-RELEASE/man:$manLocalDir/FreeBSD-5.4-RELEASE/openssl/man",
      'FreeBSD 5.3-RELEASE',   "$manLocalDir/FreeBSD-5.3-RELEASE/man:$manLocalDir/FreeBSD-5.3-RELEASE/openssl/man",
@@ -187,7 +187,7 @@ $manPathDefault = 'FreeBSD 7.0-RELEASE';
      'FreeBSD 5.0-RELEASE',   "$manLocalDir/FreeBSD-5.0-RELEASE",
 
      'FreeBSD 4.11-RELEASE',  "$manLocalDir/FreeBSD-4.11-RELEASE/man:$manLocalDir/FreeBSD-4.11-RELEASE/openssl/man:$manLocalDir/FreeBSD-4.11-RELEASE/perl/man",
-     'FreeBSD Ports 4.11-RELEASE', "$manLocalDir/FreeBSD-ports-4.11-RELEASE",
+     'FreeBSD Ports 4.7-RELEASE', "$manLocalDir/FreeBSD-ports-4.7-RELEASE",
 
      'FreeBSD 4.10-RELEASE',  "$manLocalDir/FreeBSD-4.10-RELEASE/man:$manLocalDir/FreeBSD-4.10-RELEASE/openssl/man:$manLocalDir/FreeBSD-4.10-RELEASE/perl/man",
      'FreeBSD 4.9-RELEASE',   "$manLocalDir/FreeBSD-4.9-RELEASE",
@@ -331,7 +331,7 @@ $manPathDefault = 'FreeBSD 7.0-RELEASE';
     'SunOS 5.5.1', "$manLocalDir/SunOS-5.5.1",
     'SunOS 4.1.3', "$manLocalDir/SunOS-4.1.3",
 
-    'XFree86 3.2',      "$manLocalDir/XFree86-3.2",
+    #'XFree86 3.2',      "$manLocalDir/XFree86-3.2",
     'XFree86 3.3',      "$manLocalDir/XFree86-3.3",
     'XFree86 3.3.6',    "$manLocalDir/XFree86-3.3.6",
     'XFree86 4.0',      "$manLocalDir/XFree86-4.0",
@@ -378,7 +378,10 @@ while ( ( $key, $val ) = each %manPath ) {
     }
 
     # give up and delete release
-    delete $manPath{"$key"} if !$counter && $key ne $manPathDefault;
+    if (!$counter && $key ne $manPathDefault) {
+    	delete $manPath{"$key"};
+	warn qq{man.cgi Remove release "$key"\n} if $debug >= 2;
+    }
 }
 
 # keywords must be in lower cases.
@@ -1245,7 +1248,7 @@ sub faq {
           if $manPathAliases{$_};
     }
 
-    local $id = '$FreeBSD: www/en/cgi/man.cgi,v 1.206 2008/05/01 15:08:26 wosch Exp $';
+    local $id = '$FreeBSD: www/en/cgi/man.cgi,v 1.207 2008/08/01 21:05:26 wosch Exp $';
     return qq{\
 <pre>
 Copyright (c) 1996-2008 <a href="$mailtoURL">Wolfram Schneider</a>
