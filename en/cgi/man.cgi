@@ -33,8 +33,8 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.209 2008-08-01 22:13:25 wosch Exp $
-# $FreeBSD: www/en/cgi/man.cgi,v 1.208 2008/08/01 21:42:47 wosch Exp $
+# $Id: man.cgi,v 1.210 2008-08-02 10:19:33 wosch Exp $
+# $FreeBSD: www/en/cgi/man.cgi,v 1.209 2008/08/01 22:13:25 wosch Exp $
 
 ############################################################################
 # !!! man.cgi is stale perl4 code !!!
@@ -520,7 +520,7 @@ sub do_man {
     &decode_form( $form, *form, 0 );
 
     $format = $form{'format'};
-    $format = 'html' if $format !~ /^(ps|pdf|ascii|latin1|dvi|troff)$/;
+    $format = 'html' if $format !~ /^(ps|pdf|ascii|latin1)$/;
 
     local ($fform) = &dec($form);
     if ( $fform =~ m%^([a-zA-Z_\-\.]+)$% ) {
@@ -636,7 +636,11 @@ sub download {
 }
 
 sub http_header {
-    local ($content_type) = @_;
+    local ($content_type, $filename) = @_;
+
+    print qq{Content-disposition: inline; filename="$filename"\n} 
+	if $filename;
+
     if ( defined($main'plexus_configured) ) {
         &main'MIME_header( 'ok', $content_type );
     }
@@ -709,6 +713,20 @@ sub apropos {
     &html_footer;
 }
 
+sub to_filename {
+	my %args = @_;
+
+	my $name = exists $args{'name'} ? $args{'name'} : 'manpage';
+	my $section = exists $args{'section'} && $args{'section'} ne "" ? $args{'section'} : '0';
+	my $format = exists $args{'format'} ? $args{'format'} : 'unkown'; 
+
+	my $filename = qq{$name.$section.$format};
+	$filename =~ s/[^\w\-\.]/_/g;
+	$filename =~ s/_+/_/g;
+
+	return $filename;
+}
+
 sub man {
     local ( $name, $section ) = @_;
     local ( $_, $title, $head, *MAN );
@@ -743,21 +761,15 @@ sub man {
     }
     else {
 
-        #$format =~ /^(ps|ascii|latin1|dvi|troff)$/')
+        #$format =~ /^(ps|ascii|latin1)$/')
         $ENV{'NROFF_FORMAT'} = $format;
 
         # Content-encoding: x-gzip
         if ( $format eq "ps" ) {
-            &http_header("application/postscript");
+            &http_header("application/postscript", &to_filename('name'=>$name, 'section'=>$section, 'format'=>'ps'));
         }
         elsif ( $format eq "pdf" ) {
-            &http_header("application/pdf");
-        }
-        elsif ( $format eq "dvi" ) {
-            &http_header("application/x-dvi");
-        }
-        elsif ( $format eq "troff" ) {
-            &http_header("application/x-troff-mandoc");
+            &http_header("application/pdf", &to_filename('name'=>$name, 'section'=>$section, 'format'=>'pdf'));
         }
         else {
             &http_header("text/plain");
@@ -1206,7 +1218,7 @@ ETX
     foreach (
         'html', 'ps', 'pdf',
 
-        # 'dvi', # you need a 8 bit clean man, e.g. jp-man
+        # you need a 8 bit clean man, e.g. jp-man
         'ascii', 'latin1'
       )
     {
@@ -1248,7 +1260,7 @@ sub faq {
           if $manPathAliases{$_};
     }
 
-    local $id = '$FreeBSD: www/en/cgi/man.cgi,v 1.208 2008/08/01 21:42:47 wosch Exp $';
+    local $id = '$FreeBSD: www/en/cgi/man.cgi,v 1.209 2008/08/01 22:13:25 wosch Exp $';
     return qq{\
 <pre>
 Copyright (c) 1996-2008 <a href="$mailtoURL">Wolfram Schneider</a>
