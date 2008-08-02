@@ -33,8 +33,8 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.210 2008-08-02 10:19:33 wosch Exp $
-# $FreeBSD: www/en/cgi/man.cgi,v 1.209 2008/08/01 22:13:25 wosch Exp $
+# $Id: man.cgi,v 1.211 2008-08-02 13:40:22 wosch Exp $
+# $FreeBSD: www/en/cgi/man.cgi,v 1.210 2008/08/02 10:19:33 wosch Exp $
 
 ############################################################################
 # !!! man.cgi is stale perl4 code !!!
@@ -74,6 +74,8 @@ $command{'man'} = '/usr/bin/man';    # 8Bit clean man
     '3j', '-S3',
     '3m', '-S3',
     '3n', '-S3',
+    '3p', '-S3',
+    '3pm', '-S3',
     '3r', '-S3',
     '3s', '-S3',
     '3x', '-S3',
@@ -313,7 +315,15 @@ $manPathDefault = 'FreeBSD 7.0-RELEASE';
     'SuSE Linux/i386 8.0', "$manLocalDir/SuSE-8.0-i386",
     'SuSE Linux/i386 8.1', "$manLocalDir/SuSE-8.1-i386",
     'SuSE Linux/i386 8.2', "$manLocalDir/SuSE-8.2-i386",
-    'SuSE Linux/i386 10.1', "$manLocalDir/SLES-10-SP1-i386",
+    'SuSE Linux/i386 9.2', "$manLocalDir/SuSE-9.2-i386",
+    'SuSE Linux/i386 9.3', "$manLocalDir/SuSE-9.3-i386",
+    'SuSE Linux/i386 10.0', "$manLocalDir/SuSE-10.0",
+    'SuSE Linux/i386 10.1', "$manLocalDir/SuSE-10.1",
+    'SuSE Linux/i386 10.2', "$manLocalDir/SuSE-10.2",
+    'SuSE Linux/i386 10.3', "$manLocalDir/SuSE-10.3",
+    'SuSE Linux/i386 11.0', "$manLocalDir/SuSE-11.0",
+
+    'SuSE Linux/i386 ES 10 SP1', "$manLocalDir/SLES-10-SP1-i386",
 
     'HP-UX 11.22', "$manLocalDir/HP-UX-11.22",
     'HP-UX 11.20', "$manLocalDir/HP-UX-11.20",
@@ -399,7 +409,7 @@ while ( ( $key, $val ) = each %manPath ) {
     'slackware',             'Linux Slackware 3.1',
     'linux-de',              'deutsch - Linux/GNU',
     'redhat',                'Red Hat Linux/i386 9',
-    'suse',                  'SuSE Linux/i386 10.1',
+    'suse',                  'SuSE Linux/i386 11.0',
     'linux',                 'Red Hat Linux/i386 9',
     'darwin',                'Darwin 8.0.1/ppc',
     'opendarwin',            'OpenDarwin 7.2.1',
@@ -809,7 +819,7 @@ sub man {
             $section = "-S " . $sectionpath->{$manpath}{$section};
         }
         else {
-            $section = "-S $section";
+            $section = "-S $section" . (exists $sections{$section} ? " " .  $sections{$section} : '');
         }
     }
 
@@ -836,7 +846,8 @@ sub man {
         push( @manargs, '-t' );
     }
 
-    # warn "X $command{'man'} @manargs -- x $name x\n";
+    warn "X $command{'man'} @manargs -- x $name x\n" if $debug >= 3;
+
     &proc( *MAN, $command{'man'}, @manargs, "--", $name )
       || &mydie("$0: open of $command{'man'} command failed: $!\n");
     if ( eof(MAN) ) {
@@ -1260,7 +1271,7 @@ sub faq {
           if $manPathAliases{$_};
     }
 
-    local $id = '$FreeBSD: www/en/cgi/man.cgi,v 1.209 2008/08/01 22:13:25 wosch Exp $';
+    local $id = '$FreeBSD: www/en/cgi/man.cgi,v 1.210 2008/08/02 10:19:33 wosch Exp $';
     return qq{\
 <pre>
 Copyright (c) 1996-2008 <a href="$mailtoURL">Wolfram Schneider</a>
