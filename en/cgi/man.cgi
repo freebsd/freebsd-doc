@@ -33,8 +33,8 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.216 2008-08-03 19:52:06 wosch Exp $
-# $FreeBSD: www/en/cgi/man.cgi,v 1.215 2008/08/03 19:50:05 wosch Exp $
+# $Id: man.cgi,v 1.217 2008-08-03 21:08:13 wosch Exp $
+# $FreeBSD: www/en/cgi/man.cgi,v 1.216 2008/08/03 19:52:06 wosch Exp $
 
 ############################################################################
 # !!! man.cgi is stale perl4 code !!!
@@ -702,6 +702,12 @@ sub apropos {
     &formquery;
 
     local ($mpath) = $manPath{$manpath};
+    if ($debug >= 2) {
+	foreach my $dir (split(/:/, $mpath)) {
+		my $whatis = $dir . '/whatis';
+		warn "$manpath: no whatis file found: $whatis\n" if ! -f $whatis;
+        }		 
+    }
 
     open( APROPOS, "env MANPATH=$mpath $command{'man'} -k . |" ) || do {
         warn "$0: Cannot open whatis database for `$mpath'\n";
@@ -1309,7 +1315,7 @@ sub faq {
     }
 
     local $id =
-      '$FreeBSD: www/en/cgi/man.cgi,v 1.215 2008/08/03 19:50:05 wosch Exp $';
+      '$FreeBSD: www/en/cgi/man.cgi,v 1.216 2008/08/03 19:52:06 wosch Exp $';
     return qq{\
 <pre>
 Copyright (c) 1996-2008 <a href="$mailtoURL">Wolfram Schneider</a>
