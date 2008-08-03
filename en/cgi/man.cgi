@@ -33,8 +33,8 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.214 2008-08-02 19:54:30 wosch Exp $
-# $FreeBSD: www/en/cgi/man.cgi,v 1.213 2008/08/02 15:59:20 wosch Exp $
+# $Id: man.cgi,v 1.215 2008-08-03 19:50:05 wosch Exp $
+# $FreeBSD: www/en/cgi/man.cgi,v 1.214 2008/08/02 19:54:30 wosch Exp $
 
 ############################################################################
 # !!! man.cgi is stale perl4 code !!!
@@ -362,6 +362,7 @@ $manPathDefault = 'FreeBSD 7.0-RELEASE';
     'SunOS 4.1.3', "$manLocalDir/SunOS-4.1.3",
 
     #'XFree86 3.2',      "$manLocalDir/XFree86-3.2",
+    'XFree86 2.1',      "$manLocalDir/XFree86-2.1",
     'XFree86 3.3',      "$manLocalDir/XFree86-3.3",
     'XFree86 3.3.6',    "$manLocalDir/XFree86-3.3.6",
     'XFree86 4.0',      "$manLocalDir/XFree86-4.0",
@@ -373,11 +374,14 @@ $manPathDefault = 'FreeBSD 7.0-RELEASE';
     'XFree86 4.3.0',    "$manLocalDir/XFree86-4.3.0",
     'XFree86 4.4.0',    "$manLocalDir/XFree86-4.4.0",
     'XFree86 4.5.0',    "$manLocalDir/XFree86-4.5.0",
+    'XFree86 4.6.0',    "$manLocalDir/XFree86-4.6.0",
+    'XFree86 4.7.0',    "$manLocalDir/XFree86-4.7.0",
 
     'X11R6.7.0', "$manLocalDir/X11R6.7.0",
     'X11R6.8.2', "$manLocalDir/X11R6.8.2",
     'X11R6.9.0', "$manLocalDir/X11R6.9.0",
     'X11R7.2',   "$manLocalDir/X11R7.2",
+    'X11R7.3.2',   "$manLocalDir/X11R7.3.2",
 
     'ULTRIX 4.2',      "$manLocalDir/ULTRIX-4.2",
     'OSF1 V4.0/alpha', "$manLocalDir/OSF1-V4.0-alpha",
@@ -439,8 +443,8 @@ while ( ( $key, $val ) = each %manPath ) {
     'openbsd',       'OpenBSD 4.3',
     'v7',            'Unix Seventh Edition',
     'v7man',         'Unix Seventh Edition',
-    'x11',           'X11R7.2',
-    'xfree86',       'XFree86 4.5.0',
+    'x11',           'X11R7.3.2',
+    'xfree86',       'XFree86 4.7.0',
     'ultrix',        'ULTRIX 4.2',
     'hpux',          'HP-UX 11.22',
     'solaris',       'SunOS 5.10',
@@ -1307,7 +1311,7 @@ sub faq {
     }
 
     local $id =
-      '$FreeBSD: www/en/cgi/man.cgi,v 1.213 2008/08/02 15:59:20 wosch Exp $';
+      '$FreeBSD: www/en/cgi/man.cgi,v 1.214 2008/08/02 19:54:30 wosch Exp $';
     return qq{\
 <pre>
 Copyright (c) 1996-2008 <a href="$mailtoURL">Wolfram Schneider</a>
