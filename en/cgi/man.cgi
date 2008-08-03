@@ -33,8 +33,8 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.215 2008-08-03 19:50:05 wosch Exp $
-# $FreeBSD: www/en/cgi/man.cgi,v 1.214 2008/08/02 19:54:30 wosch Exp $
+# $Id: man.cgi,v 1.216 2008-08-03 19:52:06 wosch Exp $
+# $FreeBSD: www/en/cgi/man.cgi,v 1.215 2008/08/03 19:50:05 wosch Exp $
 
 ############################################################################
 # !!! man.cgi is stale perl4 code !!!
@@ -390,7 +390,6 @@ $manPathDefault = 'FreeBSD 7.0-RELEASE';
     'Plan 9',                      "$manLocalDir/plan9",
     'Minix 2.0',                   "$manLocalDir/Minix-2.0",
     'Unix Seventh Edition',        "$manLocalDir/v7man",
-    'deutsch - Linux/GNU',         "$manLocalDir/linux-de-0.4",
     "Darwin 1.3.1/x86",            "$manLocalDir/Darwin-1.3.1-x86",
     "Darwin 1.4.1/x86",            "$manLocalDir/Darwin-1.4.1-x86",
     "Darwin 6.0.2/x86",            "$manLocalDir/Darwin-6.0.2-x86",
@@ -431,7 +430,6 @@ while ( ( $key, $val ) = each %manPath ) {
     'freebsd-release-ports', 'FreeBSD 7.0-RELEASE and Ports',
 
     'slackware',  'Linux Slackware 3.1',
-    'linux-de',   'deutsch - Linux/GNU',
     'redhat',     'Red Hat Linux/i386 9',
     'suse',       'SuSE Linux/i386 11.0',
     'linux',      'Red Hat Linux/i386 9',
@@ -1311,7 +1309,7 @@ sub faq {
     }
 
     local $id =
-      '$FreeBSD: www/en/cgi/man.cgi,v 1.214 2008/08/02 19:54:30 wosch Exp $';
+      '$FreeBSD: www/en/cgi/man.cgi,v 1.215 2008/08/03 19:50:05 wosch Exp $';
     return qq{\
 <pre>
 Copyright (c) 1996-2008 <a href="$mailtoURL">Wolfram Schneider</a>
