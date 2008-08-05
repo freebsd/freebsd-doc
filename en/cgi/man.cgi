@@ -33,8 +33,8 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.217 2008-08-03 21:08:13 wosch Exp $
-# $FreeBSD: www/en/cgi/man.cgi,v 1.216 2008/08/03 19:52:06 wosch Exp $
+# $Id: man.cgi,v 1.218 2008-08-05 21:56:16 wosch Exp $
+# $FreeBSD: www/en/cgi/man.cgi,v 1.217 2008/08/03 21:08:13 wosch Exp $
 
 ############################################################################
 # !!! man.cgi is stale perl4 code !!!
@@ -42,8 +42,8 @@
 
 # run `perltidy -b man.cgi' to indent the code
 
-# Use standard FreeBSD CGI Style if available. Otherwise
-# print simple HTML design.
+# Use standard FreeBSD CGI Style if available.
+# Otherwise print simple HTML design.
 package cgi_style;
 use constant HAS_FREEBSD_CGI_STYLE => eval { require "./cgi-style.pl"; };
 
@@ -381,7 +381,7 @@ $manPathDefault = 'FreeBSD 7.0-RELEASE';
     'X11R6.8.2', "$manLocalDir/X11R6.8.2",
     'X11R6.9.0', "$manLocalDir/X11R6.9.0",
     'X11R7.2',   "$manLocalDir/X11R7.2",
-    'X11R7.3.2',   "$manLocalDir/X11R7.3.2",
+    'X11R7.3.2', "$manLocalDir/X11R7.3.2",
 
     'ULTRIX 4.2',      "$manLocalDir/ULTRIX-4.2",
     'OSF1 V4.0/alpha', "$manLocalDir/OSF1-V4.0-alpha",
@@ -478,9 +478,11 @@ $sections = join( "|", @sections );    # sections regexp
 
 # mailto - Author
 # webmaster - who run this service
-$mailto    = 'wosch@FreeBSD.org';
-$mailtoURL = 'http://wolfram.schneider.org';
-$mailtoURL = "mailto:$mailto" if !$mailtoURL;
+$mailto                    = 'wosch@FreeBSD.org';
+$mailtoURL                 = 'http://wolfram.schneider.org';
+$mailtoURL                 = "mailto:$mailto" if !$mailtoURL;
+$full_url                  = 'http://www.freebsd.org/cgi/man.cgi';
+$want_to_link_to_this_page = 1;
 
 &secure_env;
 
@@ -702,11 +704,11 @@ sub apropos {
     &formquery;
 
     local ($mpath) = $manPath{$manpath};
-    if ($debug >= 2) {
-	foreach my $dir (split(/:/, $mpath)) {
-		my $whatis = $dir . '/whatis';
-		warn "$manpath: no whatis file found: $whatis\n" if ! -f $whatis;
-        }		 
+    if ( $debug >= 2 ) {
+        foreach my $dir ( split( /:/, $mpath ) ) {
+            my $whatis = $dir . '/whatis';
+            warn "$manpath: no whatis file found: $whatis\n" if !-f $whatis;
+        }
     }
 
     open( APROPOS, "env MANPATH=$mpath $command{'man'} -k . |" ) || do {
@@ -751,8 +753,7 @@ sub to_filename {
     my %args = @_;
 
     my $name = exists $args{'name'} ? $args{'name'} : 'manpage';
-    my $section =
-      exists $args{'section'}
+    my $section = exists $args{'section'}
       && $args{'section'} ne "" ? $args{'section'} : '0';
     my $format = exists $args{'format'} ? $args{'format'} : 'unkown';
 
@@ -1018,6 +1019,19 @@ s/([a-z0-9_\-\.]+\@[a-z0-9\-\.]+\.[a-z]+)/<a href="mailto:$1">$1<\/A>/gi;
         print qq{<a href="#$j}
           . qq{">$sect[$i]</a>}
           . ( $i < $#sect ? " |\n" : "\n" );
+    }
+
+    if ($want_to_link_to_this_page) {
+        print
+qq{<p align="left">Want to link to this manual page? Use this URL: <br />&lt;};
+
+        print qq{<a href="$full_url?query=$html_name};
+        print qq{&sektion=$html_section} if $html_section != 0;
+        print qq{&manpath=}, &encode_url($manpath), qq{">};
+
+        print qq{$full_url?query=$html_name};
+        print qq{&amp;sektion=$html_section} if $html_section != 0;
+        print qq{&amp;manpath=}, &encode_url($manpath), qq{</a>&gt;</p>\n};
     }
 
     &html_footer;
@@ -1315,7 +1329,7 @@ sub faq {
     }
 
     local $id =
-      '$FreeBSD: www/en/cgi/man.cgi,v 1.216 2008/08/03 19:52:06 wosch Exp $';
+      '$FreeBSD: www/en/cgi/man.cgi,v 1.217 2008/08/03 21:08:13 wosch Exp $';
     return qq{\
 <pre>
 Copyright (c) 1996-2008 <a href="$mailtoURL">Wolfram Schneider</a>
