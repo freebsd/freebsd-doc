@@ -33,8 +33,8 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.218 2008-08-05 21:56:16 wosch Exp $
-# $FreeBSD: www/en/cgi/man.cgi,v 1.217 2008/08/03 21:08:13 wosch Exp $
+# $Id: man.cgi,v 1.219 2008-08-06 19:38:43 wosch Exp $
+# $FreeBSD: www/en/cgi/man.cgi,v 1.218 2008/08/05 21:56:16 wosch Exp $
 
 ############################################################################
 # !!! man.cgi is stale perl4 code !!!
@@ -498,6 +498,12 @@ $enable_mailto_links  = 0;
 #######################################################################################
 
 sub html_footer {
+    my %args = @_;
+
+    print
+qq{<a href="$BASE?manpath=$m">home</a> | <a href="$BASE/help.html">help</a> \n}
+      if !$args{'no_home_link'};
+
     if (cgi_style::HAS_FREEBSD_CGI_STYLE) {
         print q{<hr noshade="noshade" />};
         print &cgi_style::html_footer;
@@ -552,14 +558,6 @@ sub do_man {
     $format = $form{'format'};
     $format = 'html' if $format !~ /^(ps|pdf|ascii|latin1)$/;
 
-    local ($fform) = &dec($form);
-    if ( $fform =~ m%^([a-zA-Z_\-\.]+)$% ) {
-        return &man( $1, '' );
-    }
-    elsif ( $fform =~ m%^([a-zA-Z_\-\.]+)\(([0-9a-zA-Z]+)\)$% ) {
-        return &man( $1, $2 );
-    }
-
     # remove trailing spaces for dumb users
     $form{'query'} =~ s/\s+$//;
     $form{'query'} =~ s/^\s+//;
@@ -588,6 +586,14 @@ sub do_man {
         else {
             $manpath = $manPathDefault;
         }
+    }
+
+    local ($fform) = &dec($form);
+    if ( $fform =~ m%^([a-zA-Z_\-\.:]+)$% ) {
+        return &man( $1, '' );
+    }
+    elsif ( $fform =~ m%^([a-zA-Z_\-\.:]+)\(([0-9a-zA-Z]+)\)$% ) {
+        return &man( $1, $2 );
     }
 
     # download a man hierarchie as gzip'd tar file
@@ -1010,7 +1016,7 @@ s/([a-z0-9_\-\.]+\@[a-z0-9\-\.]+\.[a-z]+)/<a href="mailto:$1">$1<\/A>/gi;
         print;
     }
     close(MAN);
-    print qq{</pre>\n<a name="end" />\n<hr noshade="noshade" />\n};
+    print qq{</pre>\n<a name="end" />\n<hr />\n};
 
     for ( $i = 0 ; $i <= $#sect ; $i++ ) {
         $j = &encode_url( $sect[$i] );
@@ -1022,16 +1028,12 @@ s/([a-z0-9_\-\.]+\@[a-z0-9\-\.]+\.[a-z]+)/<a href="mailto:$1">$1<\/A>/gi;
     }
 
     if ($want_to_link_to_this_page) {
-        print
-qq{<p align="left">Want to link to this manual page? Use this URL: <br />&lt;};
+        my $url = qq{$full_url?query=$html_name};
+        $url .= qq{&amp;sektion=$html_section} if $html_section != 0;
+        $url .= qq{&amp;manpath=} . &encode_url($manpath);
 
-        print qq{<a href="$full_url?query=$html_name};
-        print qq{&sektion=$html_section} if $html_section != 0;
-        print qq{&manpath=}, &encode_url($manpath), qq{">};
-
-        print qq{$full_url?query=$html_name};
-        print qq{&amp;sektion=$html_section} if $html_section != 0;
-        print qq{&amp;manpath=}, &encode_url($manpath), qq{</a>&gt;</p>\n};
+        print qq{<p align="left">Want to link to this manual page? };
+        print qq{Use this URL:<br/>&lt;<a href="$url">$url</a>&gt;</p>\n};
     }
 
     &html_footer;
@@ -1236,7 +1238,7 @@ URL:  <a href="$BASE" target="_parent">$www{'home'}$BASE</a><br />
 ETX
 
     print "<br />\n";
-    &html_footer;
+    &html_footer( 'no_home_link' => 1 );
 }
 
 sub formquery {
@@ -1329,7 +1331,7 @@ sub faq {
     }
 
     local $id =
-      '$FreeBSD: www/en/cgi/man.cgi,v 1.217 2008/08/03 21:08:13 wosch Exp $';
+      '$FreeBSD: www/en/cgi/man.cgi,v 1.218 2008/08/05 21:56:16 wosch Exp $';
     return qq{\
 <pre>
 Copyright (c) 1996-2008 <a href="$mailtoURL">Wolfram Schneider</a>
@@ -1350,12 +1352,13 @@ Copyright (c) for man pages by OS vendors.
 <a href="http://www.hp.com">HP</a>,
 <a href="http://www.freebsd.org">FreeBSD</a>,
 <a href="http://www.cs.vu.nl/~ast/minix.html">Minix</a>,
-<a href="http://slackware.com">Linux Slackware</a>,
-<a href="http://www.linux.de">Linux/de</a>,
 <a href="http://www.netbsd.org">NetBSD</a>,
 <a href="http://www.openbsd.org">OpenBSD</a>,
 <a href="http://plan9.bell-labs.com/plan9/">Plan 9</a>,
+<a href="http://www.redhat.com">Red Hat</a>,
+<a href="http://slackware.com">Slackware Linux</a>,
 <a href="http://www.sun.com">SunOS</a>,
+<a href="http://www.suse.com">SuSE</a>,
 <a href="http://www.digital.com">ULTRIX</a>,
 <a href="ftp://elib.zib.de/pub/netlib/att/cs/v7man">Unix Seventh Edition</a>,
 <a href="http://www.xfree86.org">XFree86</a>,
@@ -1376,6 +1379,14 @@ FreeBSD Ports Changes</a> script.</li>
 <li>Copyright (c) and download for man pages by 
 OS vendors</li>
 </ul>
+
+<h2>Shortcuts for FreeBSD manual pages</h2>
+
+<ul>
+<li>which manpage: <a href="$BASE?which">$full_url$BASE?which</a></li>
+<li>socket(2) manpage: <a href="$BASE?socket(2)">$full_url$BASE?socket(2)</a></li>
+</ul>
+
 
 <h2>Releases</h2>
 
@@ -1420,11 +1431,7 @@ sub faq_output {
 
     &http_header("text/html");
     print &html_header( "FreeBSD manual page help", $base ) . "<h1>",
-      $www{'head'}, "</h1>\n" . &faq . qq{\
-<hr />
-
-<a href="$_[0]">home</a>
-};
+      $www{'head'}, "</h1>\n" . &faq . qq{<br />\n};
     &html_footer;
 }
 
