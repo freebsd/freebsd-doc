@@ -25,7 +25,6 @@ IMAGES_EN= sockets/layers.eps sockets/sain.eps sockets/sainfill.eps sockets/sain
 
 # SGML content
 SRCS=  book.sgml
-SRCS+= dma/chapter.sgml
 SRCS+= introduction/chapter.sgml
 SRCS+= ipv6/chapter.sgml
 SRCS+= kernelbuild/chapter.sgml
