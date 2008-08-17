@@ -20,12 +20,8 @@ SRCS+=	${ORGDIR}/contrib.ent
 SRCS+=	${ORGDIR}/contrib.386bsd.sgml
 SRCS+=	${ORGDIR}/contrib.additional.sgml
 SRCS+=	${ORGDIR}/contrib.committers.sgml
-SRCS+=	${ORGDIR}/contrib.core.sgml
 SRCS+=	${ORGDIR}/contrib.corealumni.sgml
 SRCS+=	${ORGDIR}/contrib.develalumni.sgml
-SRCS+=	${ORGDIR}/contrib.docproj.sgml
-SRCS+=	${ORGDIR}/contrib.staff.sgml
-SRCS+=	${ORGDIR}/contrib.who.sgml
 
 URL_RELPREFIX?=	../../../..
 DOC_PREFIX?=	${.CURDIR}/../../..
