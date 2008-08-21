@@ -4,7 +4,7 @@
 <!ENTITY title "A &os; Projekt">
 ]>
 
-<!-- $FreeBSD: www/hu/index.xsl,v 1.10 2008/06/25 11:31:16 gabor Exp $ -->
+<!-- $FreeBSD: www/hu/index.xsl,v 1.11 2008/08/04 20:24:49 pgj Exp $ -->
 
 <!-- FreeBSD Hungarian Documentation Project
      Translated by: Gabor Kovesdan <gabor@FreeBSD.org>
@@ -198,7 +198,7 @@
 					</li>
 					<li>
 					  <a
-					    href="&enbase;/doc/en/books/faq/index.html" title="GYIK">GYIK</a>
+					    href="&enbase;/doc/hu/books/faq/index.html" title="GYIK">GYIK</a>
 					</li>
 					<li>
 					  <a
