@@ -1,7 +1,7 @@
-# 
+#
 # $FreeBSD$
 #
-# ¶ρθρο: FreeBSD: Γρήγορο ξεκίνημα για χρήστες Linux
+# ¶ρθρο:	FreeBSD: Γρήγορο ξεκίνημα για χρήστες Linux
 #
 # %SOURCE%	en_US.ISO8859-1/articles/linux-users/Makefile
 # %SRCID%	1.1
