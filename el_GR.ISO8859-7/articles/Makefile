@@ -3,7 +3,7 @@
 # %SOURCE%	en_US.ISO8859-1/articles/Makefile
 # %SRCID%	1.39
 
-SUBDIR =
+SUBDIR = bsdl-gpl
 SUBDIR+= compiz-fusion
 SUBDIR+= cvs-freebsd
 SUBDIR+= dialup-firewall
