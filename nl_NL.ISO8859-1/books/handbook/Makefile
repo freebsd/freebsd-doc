@@ -1,9 +1,11 @@
 #
 # $FreeBSD$
 # $FreeBSDnl: doc/nl_NL.ISO8859-1/books/handbook/Makefile,v 1.19 2006/01/03 21:17:07 siebrand Exp $
-# Gebaseerd op: 1.97
 #
-# Build the FreeBSD Dutch Handbook.
+# %SOURCE%	en_US.ISO8859-1/books/handbook/Makefile
+# %SRCID%	1.109
+#
+# Bouw het Nederlandse FreeBSD Handboek.
 #
 
 # ------------------------------------------------------------------------
@@ -50,12 +52,13 @@ IMAGES_EN+= geom/striping.pic
 IMAGES_EN+= install/adduser1.scr
 IMAGES_EN+= install/adduser2.scr
 IMAGES_EN+= install/adduser3.scr
+IMAGES_EN+= install/boot-loader-menu.scr
 IMAGES_EN+= install/boot-mgr.scr
+IMAGES_EN+= install/config-country.scr
 IMAGES_EN+= install/console-saver1.scr
 IMAGES_EN+= install/console-saver2.scr
 IMAGES_EN+= install/console-saver3.scr
 IMAGES_EN+= install/console-saver4.scr
-IMAGES_EN+= install/desktop.scr
 IMAGES_EN+= install/disklabel-auto.scr
 IMAGES_EN+= install/disklabel-ed1.scr
 IMAGES_EN+= install/disklabel-ed2.scr
@@ -110,7 +113,6 @@ IMAGES_EN+= install/timezone2.scr
 IMAGES_EN+= install/timezone3.scr
 IMAGES_EN+= install/userconfig.scr
 IMAGES_EN+= install/userconfig2.scr
-IMAGES_EN+= install/xf86setup.scr
 IMAGES_EN+= mail/mutt1.scr
 IMAGES_EN+= mail/mutt2.scr
 IMAGES_EN+= mail/mutt3.scr
@@ -186,8 +188,13 @@ IMAGES_LIB+= callouts/7.png
 IMAGES_LIB+= callouts/8.png
 IMAGES_LIB+= callouts/9.png
 IMAGES_LIB+= callouts/10.png
+IMAGES_LIB+= callouts/11.png
+IMAGES_LIB+= callouts/12.png
+IMAGES_LIB+= callouts/13.png
+IMAGES_LIB+= callouts/14.png
+IMAGES_LIB+= callouts/15.png
 
-# 
+#
 # SRCS lists the individual SGML files that make up the document. Changes
 # to any of these files will force a rebuild
 #
@@ -232,7 +239,7 @@ SRCS+= virtualization/chapter.sgml
 SRCS+= x11/chapter.sgml
 
 # Entities
-SRCS+= chapters.ent 
+SRCS+= chapters.ent
 
 SYMLINKS=	${DESTDIR} index.html handbook.html
 
