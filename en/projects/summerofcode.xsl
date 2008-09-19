@@ -7,7 +7,7 @@
 <!ENTITY % developers SYSTEM "../developers.sgml"> %developers;
 ]>
 
-<!-- $FreeBSD: www/en/projects/summerofcode.xsl,v 1.13 2008/04/20 03:45:11 murray Exp $ -->
+<!-- $FreeBSD: www/en/projects/summerofcode.xsl,v 1.14 2008/04/22 09:07:09 murray Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -42,11 +42,12 @@
   organization in the <a
   href="http://code.google.com/summerofcode.html">Google Summer of
   Code</a> 2008.  This program funds students to contribute to an open
-  source project over the summer break.  We have had over 50 successful
+  source project over the summer break.  We have had over 70 successful
   students working on FreeBSD as part of this program in <a
   href="&base;/projects/summerofcode-2005.html">2005</a>, <a
-  href="&base;/projects/summerofcode-2006.html">2006</a>, and <a
-  href="&base;/projects/summerofcode-2007.html">2007</a>.</p>
+  href="&base;/projects/summerofcode-2006.html">2006</a>, <a
+  href="&base;/projects/summerofcode-2007.html">2007</a>. and <a
+  href="&base;/projects/summerofcode-2008.html">2008</a>.</p>
 
 <ul>
   <li><a href="#benefits">Benefits of Participating</a></li>
@@ -86,11 +87,7 @@
 
 <p>We've recently <a
   href="&base;/projects/summerofcode-2008.html">announced</a> the
-  successful student applicants for the Summer of Code 2008 and we are
-  currently working to create accounts for them and help integrate
-  these students into our community.  More information about this
-  year's student projects will soon be available on our <a
-  href="http://wiki.FreeBSD.org/SummerOfCode2008">wiki</a>.</p>
+  successful students from the Summer of Code 2008.</p>
 
 <a name="students"></a>
 <h2>Past Student Projects</h2>
@@ -98,6 +95,8 @@
 <p>For a complete list of student projects from previous years,
 visit:</p>
 <ul>
+  <li><a href="&base;/projects/summerofcode-2008.html">Summer of Code 2008 FreeBSD
+  Projects Summary</a></li>
   <li><a href="&base;/projects/summerofcode-2007.html">Summer of Code 2007 FreeBSD
   Projects Summary</a></li>
   <li><a href="&base;/projects/summerofcode-2006.html">Summer of Code 2006 FreeBSD
@@ -107,6 +106,8 @@ visit:</p>
 </ul>
 
 <p>See also our wiki pages for student projects [<a
+href="http://wiki.freebsd.org/moin.cgi/SummerOfCode2008">2008</a>,
+<a
 href="http://wiki.freebsd.org/moin.cgi/SummerOfCode2007">2007</a>,
 <a
 href="http://wiki.freebsd.org/moin.cgi/SummerOfCode2006">2006</a>, and 
@@ -165,9 +166,10 @@ href="http://wiki.freebsd.org/moin.cgi/SummerOfCode2005">2005</a>].</p>
   <li><p><strong>What projects were completed successfully by students
     last summer?</strong></p>
 
-    <p>Please see the <a href="summerofcode-2007.html">2007 FreeBSD
+    <p>Please see the <a href="summerofcode-2008.html">2008 FreeBSD
       Summer of Code</a> page, as well as older project pages from <a
-      href="summerofcode-2006.html">2006</a> and <a
+      href="summerofcode-2007.html">2007</a>, <a
+      href="summerofcode-2006.html">2006</a>, and <a
       href="summerofcode-2005.html">2005</a> for a list of the
       completed projects from previous years.</p></li>
 
