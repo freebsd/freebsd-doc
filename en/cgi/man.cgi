@@ -33,8 +33,8 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.220 2008-08-07 08:30:32 wosch Exp $
-# $FreeBSD: www/en/cgi/man.cgi,v 1.219 2008/08/06 19:38:43 wosch Exp $
+# $Id: man.cgi,v 1.221 2008-09-21 19:07:43 wosch Exp $
+# $FreeBSD: www/en/cgi/man.cgi,v 1.220 2008/08/07 08:30:32 wosch Exp $
 
 ############################################################################
 # !!! man.cgi is stale perl4 code !!!
@@ -1331,7 +1331,7 @@ sub faq {
     }
 
     local $id =
-      '$FreeBSD: www/en/cgi/man.cgi,v 1.219 2008/08/06 19:38:43 wosch Exp $';
+      '$FreeBSD: www/en/cgi/man.cgi,v 1.220 2008/08/07 08:30:32 wosch Exp $';
     return qq{\
 <pre>
 Copyright (c) 1996-2008 <a href="$mailtoURL">Wolfram Schneider</a>
@@ -1381,6 +1381,13 @@ OS vendors</li>
 </ul>
 
 <h2>Shortcuts for FreeBSD manual pages</h2>
+
+<ul>
+<li>which manpage: <a href="http://man.freebsd.org/which">http://man.freebsd.org/which</a></li>
+<li>socket(2) manpage: <a href="http://man.freebsd.org/socket/2">http://man.freebsd.org/socket/2</a></li>
+</ul>
+
+<p />
 
 <ul>
 <li>which manpage: <a href="$BASE?which">$full_url?which</a></li>
