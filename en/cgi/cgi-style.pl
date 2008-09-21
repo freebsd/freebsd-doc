@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/cgi/cgi-style.pl,v 1.35 2007/12/31 22:20:54 delphij Exp $
+# $FreeBSD: www/en/cgi/cgi-style.pl,v 1.36 2008/09/21 10:20:10 wosch Exp $
 #
 # Perl routines to encapsulate various elements of HTML page style.
 
@@ -173,6 +173,7 @@ $html
     href="$hsty_base/layout/css/fixed_large.css" type="text/css"
     title="Large Text" $endslash>
     <link rel="shortcut icon" href="../../favicon.ico" type="image/x-icon" />
+    <link rel="apple-touch-icon" href="../../favicon.ico" type="image/x-icon" />
 $csshack
 <script type="text/javascript" src="$hsty_base/layout/js/styleswitcher.js">
 </script>
