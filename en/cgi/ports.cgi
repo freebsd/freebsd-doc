@@ -1,6 +1,6 @@
 #!/usr/bin/perl -T
 #
-# Copyright (c) 1996-2007 Wolfram Schneider <wosch@FreeBSD.ORG>
+# Copyright (c) 1996-2008 Wolfram Schneider <wosch@FreeBSD.ORG>
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/ports.cgi,v 1.95 2007/08/02 18:28:26 wosch Exp $
+# $FreeBSD: www/en/cgi/ports.cgi,v 1.96 2007/08/02 18:30:21 wosch Exp $
 #
 # ports.cgi - search engine for FreeBSD ports
 #             	o search for a port by name or description
@@ -36,6 +36,7 @@ require "./cgi-style.pl";
 $t_style = qq`<style type="text/css">
 h3 { font-size: 1.2em; border-bottom: thin solid black; }
 </style>
+<link rel="search" type="application/opensearchdescription+xml" href="http://www.freebsd.org/search/opensearch/ports.xml" title="FreeBSD Ports" />
 `;
 
 sub init_variables {
@@ -514,10 +515,10 @@ sub footer {
 
     print qq{
 <img align="right" src="$hsty_base/gifs/powerlogo.gif" alt="Powered by FreeBSD" />
-&copy; 1996-2007 by Wolfram Schneider. All rights reserved.<br />
+&copy; 1996-2008 by Wolfram Schneider. All rights reserved.<br />
 };
 
-#print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.95 2007/08/02 18:28:26 wosch Exp $} . "<br />\n";
+#print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.96 2007/08/02 18:30:21 wosch Exp $} . "<br />\n";
     print qq{Please direct questions about this service to
 <i><a href="$mailtoURL">$mailto</a></i><br />\n};
     print qq{General questions about FreeBSD ports should be sent to }

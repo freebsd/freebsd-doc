@@ -26,7 +26,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.63 2007/12/17 17:46:05 shaun Exp $
+# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.64 2008/01/26 15:53:55 shaun Exp $
 #
 
 #
@@ -242,6 +242,7 @@ $fmt{'break'}         = "<br />\n";
 
 # From cgi-style.pl
 $main::t_style = "<link href=\"${stylesheet}\" rel=\"stylesheet\" type=\"text/css\" />";
+$main::t_style .= qq{\n<link rel="search" type="application/opensearchdescription+xml" href="http://www.freebsd.org/search/opensearch/query-pr.xml" title="FreeBSD Bugs" />\n};
 
 
 #-----------------------------------------------------------------------
