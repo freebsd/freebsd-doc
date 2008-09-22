@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/search/Makefile,v 1.8 2000/11/07 04:05:36 kuriyama Exp $
+# $FreeBSD: www/en/search/Makefile,v 1.9 2001/10/29 10:14:33 murray Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -11,6 +11,8 @@ DOCS+= index-site.sgml
 DOCS+= search.sgml 
 DOCS+= searchhints.sgml
 DOCS+=	search-mid.sgml
+
+SUBDIR+= opensearch
 
 INDEXLINK=	search.html
 CLEANFILES+=atoz.sgml site.sgml
