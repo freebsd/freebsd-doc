@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/cgi/Makefile,v 1.34 2007/03/19 05:44:58 dougb Exp $
+# $FreeBSD: www/en/search/opensearch/Makefile,v 1.1 2008/09/22 18:56:22 wosch Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -6,6 +6,9 @@
 .if exists(../Makefile.inc)
 .include "../Makefile.inc"
 .endif
+
+DOCS+= 		opensearch.sgml 
+INDEXLINK=	opensearch.html
 
 DATA=
 DATA+=	opensearch.js
