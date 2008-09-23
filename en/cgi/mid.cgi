@@ -26,7 +26,7 @@
 #
 # Search a mail by Message-ID, References or In-Reply-To field
 #
-# $FreeBSD: www/en/cgi/mid.cgi,v 1.15 2006/03/15 01:24:29 kuriyama Exp $
+# $FreeBSD: www/en/cgi/mid.cgi,v 1.16 2006/03/15 04:07:54 kuriyama Exp $
 
 require "./cgi-lib.pl";
 require "./cgi-style.pl";
@@ -40,6 +40,8 @@ $script = $ENV{'SCRIPT_NAME'};
 $shortid = 1;
 $lookCommand = "/usr/bin/look";
 $ENV{PATH} = '/bin:/usr/bin';
+
+$main::t_style .= qq{\n<link rel="search" type="application/opensearchdescription+xml" href="http://www.freebsd.org/search/opensearch/message-id.xml" title="FreeBSD Mail Message-ID" />\n};
 
 sub escape($) { $_ = $_[0]; s/&/&amp;/g; s/</&lt;/g; s/>/&gt;/g; $_; }
 
