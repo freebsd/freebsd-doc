@@ -45,8 +45,8 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.1.1.37 2007/03/17 21:52:33 simon Exp $
-# $Id: cvsweb.cgi,v 1.91 2007-03-17 22:28:31 simon Exp $
+# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.91 2007/03/17 22:28:31 simon Exp $
+# $Id: cvsweb.cgi,v 1.92 2008-09-23 16:31:45 wosch Exp $
 # $Idaemons: /home/cvs/cvsweb/cvsweb.cgi,v 1.84 2001/10/07 20:50:10 knu Exp $
 #
 ###
@@ -142,7 +142,7 @@ EOM
   $CheckoutMagic = '~checkout~';
 
   $cgi_style::hsty_base = 'http://www.FreeBSD.org';
-  $_ = q$FreeBSD: www/en/cgi/cvsweb.cgi,v 1.89 2005/10/28 14:55:57 fenner Exp $;
+  $_ = q$FreeBSD: www/en/cgi/cvsweb.cgi,v 1.91 2007/03/17 22:28:31 simon Exp $;
   @_ = split;
   $cgi_style::hsty_date = "@_[3,4]";
 
@@ -151,6 +151,7 @@ EOM
 
   package cgi_style;
   require "./cgi-style.pl";
+  $cgi_style::t_style = qq{\n<link rel="search" type="application/opensearchdescription+xml" href="http://www.freebsd.org/search/opensearch/cvsweb.xml" title="FreeBSD cvsweb" />\n};
   package main;
 }
 
