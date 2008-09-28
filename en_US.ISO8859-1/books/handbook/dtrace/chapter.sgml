@@ -1,0 +1,385 @@
+<!--
+Recently I suggested to myself that this should become a profiling
+and debugging chapter, which covers things like ktrace(1) and
+using other debugging (like -x in shell scripts).  But then I
+realized that, over time and while DTrace becomes better supported,
+that might make this chapter too large.
+-->
+
+<!--
+     The FreeBSD Documentation Project
+     $FreeBSD$
+-->
+
+<chapter id="dtrace">
+  <chapterinfo>
+    <authorgroup>
+      <author>
+	<firstname>Tom</firstname>
+	<surname>Rhodes</surname>
+	<contrib>Written by </contrib>
+      </author>
+    </authorgroup>
+  </chapterinfo>
+
+  <title>DTrace</title>
+
+  <para>DTrace, also known as Dynamic Tracing, was developed by
+    &sun; as a tool for locating performance bottlenecks
+    in production and pre-production systems.  It is not, in any way,
+    a debugging tool, but a tool for real time system analysis to
+    locate performance and other issues.</para>
+
+  <para>DTrace is a remarkable profiling tool, with an impressive
+    array of features for diagnosing system issues.  It may also be
+    used to run pre-written scripts to take advantage of its
+    capabilities.  Users may even author their own utilities using
+    the DTrace D Language, allowing them to customize their profiling
+    based on specific needs.</para>
+
+  <sect1 id="dtrace-synopsis">
+    <title>Synopsis</title>
+
+    <indexterm><primary>DTrace</primary></indexterm>
+    <indexterm>
+      <primary>DTrace support</primary>
+      <see>DTrace</see>
+    </indexterm>
+
+    <para>After reading this chapter, you will know:</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>What DTrace is and what features it provides.</para>
+      </listitem>
+
+      <listitem>
+	<para>Differences between the &solaris; DTrace implementation
+	  and the one provided by &os;.</para>
+      </listitem>
+
+      <listitem>
+	<para>How to enable and use DTrace on &os;.</para>
+      </listitem>
+    </itemizedlist>
+
+    <para>Before reading this chapter, you should:</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>Understand &unix; and &os; basics
+	  (<xref linkend="basics">).</para>
+      </listitem>
+
+      <listitem>
+	<para>Be familiar with
+	  the basics of kernel configuration/compilation
+	  (<xref linkend="kernelconfig">).</para>
+      </listitem>
+
+      <listitem>
+	<para>Have some familiarity with security and how it
+	  pertains to &os; (<xref linkend="security">).</para>
+      </listitem>
+
+      <listitem>
+	<para>Understand how to obtain and rebuild the &os; sources
+	  (<xref linkend="cutting-edge">).</para>
+      </listitem>
+    </itemizedlist>
+
+    <!--
+      Temporary warning to avoid listing experimental versions
+      and production versions of FreeBSD with this technology.
+    -->
+    <warning>
+      <para>This feature is considered experimental.  Some options
+	may be lacking in functionality, other parts may not work
+	at all.  In time, this feature will be considered production
+	ready and this documentation will be altered to fit that
+	situation.</para>
+    </warning>
+  </sect1>
+
+  <sect1 id="dtrace-implementation">
+    <title>Implementation Differences</title>
+
+    <para>While the DTrace in &os; is very similar to that found
+      in &solaris;, differences exist that should be explained before
+      continuing.  The primary difference users will notice is that
+      on &os;, DTrace needs to be specifically enabled.  There are
+      kernel options and modules which must be enabled for DTrace to
+      work properly.  These will be explained later.</para>
+
+    <para>There is a <literal>DDB_CTF</literal> kernel option which
+      is used to enable support for loading the <acronym>CTF</acronym>
+      data from kernel modules and the kernel itself.
+      <acronym>CTF</acronym> is the &solaris; Compressed C Type format
+      which encapsulates a reduced form of debugging information
+      similar to <acronym>DWARF</acronym> and the venerable stabs.
+      This <acronym>CTF</acronym> data is added to the binaries by the
+      <command>ctfconvert</command> and <command>ctfmerge</command>
+      build tools.  The <command>ctfconvert</command> utility parses
+      <acronym>DWARF</acronym> debug <acronym>ELF</acronym> sections
+      created by the compiler and <command>ctfmerge</command> merges
+      <acronym>CTF</acronym> <acronym>ELF</acronym> sections from
+      objects into either executables or shared libraries.  More on
+      how to enable this for the kernel and &os; build is
+      forthcoming.</para>
+
+    <para>Some different providers exist for &os; than for &solaris;.
+      Most notable is the <literal>dtmalloc</literal> provider, which
+      allows tracing <function>malloc()</function> by type in the
+      &os; kernel.</para>
+
+    <para>Only <username>root</username> may use DTrace on &os;.
+      This is related to security differences, &solaris; has a few
+      low level security checks which do not yet exist in &os;.  As
+      such, the <devicename>/dev/dtrace/dtrace</devicename> is strictly
+      limited to <username>root</username> users only.</para>
+
+    <para>Finally, the DTrace software falls under &sun;'s
+      <acronym>CDDL</acronym> license.  The <literal>Common Development
+      and Distribution License</literal> comes with &os;, see the
+      <filename>/usr/src/cddl/contrib/opensolaris/OPENSOLARIS.LICENSE</filename>
+      or view it online at
+      <ulink url="http://www.opensolaris.org/os/licensing">
+      http://www.opensolaris.org/os/licensing</ulink>.</para>
+
+    <para>This license means that a &os; kernel with the DTrace options
+      is still <acronym>BSD</acronym> licensed; however the
+      <acronym>CDDL</acronym> kicks in when the modules are distributed
+      in binary form, or the binaries are loaded.</para>
+  </sect1>
+
+  <sect1 id="dtrace-enable">
+    <title>Enabling DTrace Support</title>
+
+    <para>To enable support for DTrace, add the following lines to
+      the kernel configuration file:</para>
+
+    <programlisting>options         KDTRACE_HOOKS
+options         DDB_CTF</programlisting>
+
+    <note>
+      <para>Users of the AMD64 architecture will want to add the
+	following line to their kernel configuration file:</para>
+
+      <programlisting>options         KDTRACE_FRAME</programlisting>
+
+      <para>This option provides support for the <acronym>FBT</acronym>
+	feature.  DTrace will work without this option; however, there
+	will be limited support for function boundary tracing.</para>
+      </note>
+
+    <para>All sources must be rebuilt and installed with CTF options.
+      To accomplish this task, rebuild the &os; sources using:</para>
+
+    <screen>&prompt.root; <userinput>cd /usr/src</userinput>
+    &prompt.root; <userinput>make WITH_CTF=1 buildworld</userinput>
+    &prompt.root; <userinput>make WITH_CFT=1 kernel</userinput>
+    &prompt.root; <userinput>make WITH_CFT=1 installworld</userinput>
+    &prompt.root; <userinput>mergemaster -Ui</userinput></screen>
+
+    <para>The system will need to be restarted.</para>
+
+    <para>After rebooting and allowing the new kernel to be loaded
+      into memory, support for the Korn shell should be added.  This
+      is needed as the DTrace toolkit has several utilities written
+      in <command>ksh</command>.  Install the
+      <filename role="package">shells/ksh93</filename>.  It is also
+      possible to run these tools under
+      <filename role="package">shells/pdksh</filename> or
+      <filename role="package">shells/mksh</filename>.</para>
+
+    <para>Finally, obtain the current DTrace toolkit.  The current
+      version is available at
+      <ulink url="http://www.opensolaris.org/os/community/dtrace/dtracetoolkit/">
+      http://www.opensolaris.org/os/community/dtrace/dtracetoolkit/</ulink>.
+      There is an install mechanism included; however, installation
+      is not required to make use of the bundled utilities.</para>
+  </sect1>
+
+  <sect1 id="dtrace-using">
+    <title>Using DTrace</title>
+
+    <para>Before making use of DTrace functionality, the DTrace device
+      must exist.  To load the device, issue the following
+      command:</para>
+
+    <screen>&prompt.root; <userinput>kldload dtraceall</userinput></screen>
+
+    <para>DTrace support should now be available.  To view all probes
+      the administrator may now execute the following command:</para>
+
+    <screen>&prompt.root; <userinput>dtrace -l | more</userinput></screen>
+
+    <para>All output is passed to the <command>more</command>
+      utility as it will quickly overflow the screen buffer.  At
+      this point, DTrace should be considered working.  It is now
+      time to review the toolkit.</para>
+
+    <para>The toolkit is a collection of ready-made scripts to run
+      with DTrace to collect system information.  There are scripts
+      to check open files, memory, <acronym>CPU</acronym> usage and
+      a lot more.  Extract the scripts with the following
+      command:</para>
+
+    <screen>&prompt.root; <userinput>gunzip -c DTraceToolkit* | tar xvf -</userinput></screen>
+
+    <para>Change into that directory with the <command>cd</command>
+      and change the execution permissions on all files, designated
+      as those files with lower case names, to
+      <literal>755</literal>.</para>
+
+    <para>All of these scripts will need modifications to their
+      contents.  The ones which refer to
+      <filename>/usr/bin/ksh</filename> need that changed to
+      <filename>/usr/local/bin/ksh</filename>, the others which
+      use <filename>/usr/bin/sh</filename> need to be altered to use
+      <filename>/bin/sh</filename>, and finally the ones which
+      use <filename>/usr/bin/perl</filename> will need altered to
+      use <filename>/usr/local/bin/perl</filename>.</para>
+
+    <important>
+      <para>At this point it is prudent to remind the reader that
+	DTrace support in &os; is <emphasis>incomplete</emphasis>
+	and <emphasis>experimental</emphasis>.  Many of these scripts
+	will not work as they are either too &solaris;-specific or
+	use probes which are unsupported at this time.</para>
+    </important>
+
+    <para>At the time of this writing only two of the scripts of the
+      DTrace Toolkit are fully supported in &os;:
+      the <filename>hotkernel</filename>
+      and <filename>procsystime</filename> scripts.  These are the two
+      we will explore in the following parts of this section.</para>
+
+    <para>The <filename>hotkernel</filename> is designed to identify
+      which function is using the most kernel time.  Run normally, it
+      will produce output similar to the following:</para>
+
+    <screen>&prompt.root; <userinput>./hotkernel</userinput>
+localhost# ./hotkernel
+Sampling... Hit Ctrl-C to end.</screen>
+
+    <para>The system administrator must use the
+      <keycombo action="simul"><keycap>Ctrl</keycap><keycap>C</keycap>
+      </keycombo> key combination to stop the process.  Upon
+      termination, the script will display a list of kernel functions and
+      timing information, sorting the output in increasing order of
+      time:</para>
+
+    <screen>kernel`_thread_lock_flags                                   2   0.0%
+0xc1097063                                                  2   0.0%
+kernel`sched_userret                                        2   0.0%
+kernel`kern_select                                          2   0.0%
+kernel`generic_copyin                                       3   0.0%
+kernel`_mtx_assert                                          3   0.0%
+kernel`vm_fault                                             3   0.0%
+kernel`sopoll_generic                                       3   0.0%
+kernel`fixup_filename                                       4   0.0%
+kernel`_isitmyx                                             4   0.0%
+kernel`find_instance                                        4   0.0%
+kernel`_mtx_unlock_flags                                    5   0.0%
+kernel`syscall                                              5   0.0%
+kernel`DELAY                                                5   0.0%
+0xc108a253                                                  6   0.0%
+kernel`witness_lock                                         7   0.0%
+kernel`read_aux_data_no_wait                                7   0.0%
+kernel`Xint0x80_syscall                                     7   0.0%
+kernel`witness_checkorder                                   7   0.0%
+kernel`sse2_pagezero                                        8   0.0%
+kernel`strncmp                                              9   0.0%
+kernel`spinlock_exit                                       10   0.0%
+kernel`_mtx_lock_flags                                     11   0.0%
+kernel`witness_unlock                                      15   0.0%
+kernel`sched_idletd                                       137   0.3%
+0xc10981a5                                              42139  99.3%</screen>
+
+    <!-- XXXTR: I attempted to use objdump and nm on /boot/kernel/kernel
+        to find 0xc10981a5, but to no avail.  It would be nice to know
+	how we should look that up. -->
+
+    <para>This script will also work with kernel modules.  To use this
+      feature, run the script with the <option>-m</option> flag:</para>
+
+    <screen>&prompt.root; <userinput>./hotkernel -m</userinput></screen>
+
+    <screen>localhost# <userinput>./hotkernel -m</userinput>
+Sampling... Hit Ctrl-C to end.
+^C
+MODULE                                                  COUNT   PCNT
+0xc107882e                                                  1   0.0%
+0xc10e6aa4                                                  1   0.0%
+0xc1076983                                                  1   0.0%
+0xc109708a                                                  1   0.0%
+0xc1075a5d                                                  1   0.0%
+0xc1077325                                                  1   0.0%
+0xc108a245                                                  1   0.0%
+0xc107730d                                                  1   0.0%
+0xc1097063                                                  2   0.0%
+0xc108a253                                                 73   0.0%
+kernel                                                    874   0.4%
+0xc10981a5                                             213781  99.6%</screen>
+
+    <!-- XXXTR: I was unable to match these up with output from
+        kldstat and kldstat -v and grep.  Maybe I'm missing something
+	seriously obvious.  It is 5AM btw. -->
+
+    <para>The <filename>procsystime</filename> script captures and
+      prints the system call time usage for a given
+      <acronym>PID</acronym> or process name.  In the following
+      example, a new instance of <filename>/bin/csh</filename>
+      was spawned.  The <filename>procsystime</filename> was executed
+      and remained waiting while a few commands were typed on the
+      other incarnation of <command>csh</command>.  These are the
+      results of this test:</para>
+
+    <screen>&prompt.root; <userinput>./procsystime -n csh</userinput>
+Tracing... Hit Ctrl-C to end...
+^C
+
+Elapsed Times for processes csh,
+
+         SYSCALL          TIME (ns)
+          getpid               6131
+       sigreturn               8121
+           close              19127
+           fcntl              19959
+             dup              26955
+         setpgid              28070
+            stat              31899
+       setitimer              40938
+           wait4              62717
+       sigaction              67372
+     sigprocmask             119091
+    gettimeofday             183710
+           write             263242
+          execve             492547
+           ioctl             770073
+           vfork            3258923
+      sigsuspend            6985124
+            read         3988049784</screen>
+
+    <para>As shown, the read system call seems to use the
+      most time in nanoseconds with the <function>getpid()</function>
+      system call used the least amount of time.</para>
+  </sect1>
+
+  <sect1 id="dtrace-language">
+    <title>The D Language</title>
+
+    <para>The DTrace Toolkit includes many scripts in the special language of
+      DTrace.  This language is called <quote>the D language</quote> by &sun;
+      documentation, and it is very similar to C++.  An in depth
+      discussion of the language is beyond the scope of this document.  It is
+      extensively discussed
+      at <ulink url="http://wikis.sun.com/display/DTrace/Documentation"></ulink>.</para>
+  </sect1>
+</chapter>
+
+    <!-- XXXTR: Should probably put links and resources here.  I'm
+        nervous about this chapter as it may require a partial
+	re-write and large modification once DTrace is complete, but
+	at least we can get everyone started ... -->
