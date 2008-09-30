@@ -9,8 +9,9 @@
 MAINTAINER=	gabor@FreeBSD.org
 
 SUBDIR =	compiz-fusion
-SUBDIR+=	dialup-firewall	
+SUBDIR+=	dialup-firewall
 SUBDIR+=	explaining-bsd
+SUBDIR+=	gjournal-desktop
 SUBDIR+=	laptop
 SUBDIR+=	linux-comparison
 SUBDIR+=	linux-users
