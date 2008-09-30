@@ -1,0 +1,1020 @@
+<!-- $FreeBSD$ -->
+
+<!--
+
+  Implementing UFS Journaling on a desktop PC
+
+  The FreeBSD Documentation Project
+
+-->
+
+<!-- The FreeBSD Hungarian Documentation Project
+     Translated by: PALI, Gabor <pgj@FreeBSD.org>
+     %SOURCE%   en_US.ISO8859-1/articles/gjournal-desktop/article.sgml
+     %SRCID%    1.4
+-->
+
+<!DOCTYPE article PUBLIC "-//FreeBSD//DTD DocBook V4.1-Based Extension//EN" [
+<!-- <!ENTITY % freebsd.urls.absolute "INCLUDE"> -->
+<!ENTITY % articles.ent PUBLIC "-//FreeBSD//ENTITIES DocBook FreeBSD Articles Entity Set//HU">
+%articles.ent;
+]>
+
+<article lang="hu">
+  <articleinfo>
+    <title>Napl&oacute;z&oacute; UFS haszn&aacute;lata asztali
+      sz&aacute;m&iacute;t&oacute;g&eacute;peken</title>
+
+    <author>
+      <firstname>Manolis</firstname>
+      <surname>Kiagias</surname>
+      <affiliation>
+	<address><email>manolis@FreeBSD.org</email></address>
+      </affiliation>
+    </author>
+
+    <copyright>
+      <year>2008</year>
+      <holder role="mailto:manolis@FreeBSD.org">Manolis Kiagias</holder>
+    </copyright>
+
+    <releaseinfo>$FreeBSD$</releaseinfo>
+
+    <legalnotice id="trademarks" role="trademarks">
+      &tm-attrib.freebsd;
+      &tm-attrib.general;
+    </legalnotice>
+
+    <abstract>
+      <para>A napl&oacute;z&oacute; &aacute;llom&aacute;nyrendszerek egy
+	napl&oacute; seg&iacute;ts&eacute;g&eacute;vel
+	r&ouml;gz&iacute;tik az &ouml;sszes benn&uuml;k lezajlott
+	tranzakci&oacute;t, ezzel igyekszenek meg&#245;rizni egy
+	rendszeroml&aacute;st vagy &aacute;ramkimarad&aacute;st
+	k&ouml;vet&#245;en a rajtuk t&aacute;rolt adatok
+	&eacute;ps&eacute;g&eacute;t.  Noha m&eacute;g &iacute;gy is
+	el&#245;fordulhat, hogy elvesz&iacute;tj&uuml;k az adott
+	pillanatban el nem mentett v&aacute;ltoztat&aacute;sainkat, a
+	napl&oacute;z&aacute;s viszont az &aacute;llom&aacute;nyrendszer
+	sz&aacute;m&aacute;ra t&ouml;k&eacute;letes v&eacute;delmet
+	ny&uacute;jt a rendszer szab&aacute;lytalan
+	le&aacute;ll&aacute;sa sor&aacute;n keletkez&#245;
+	s&eacute;r&uuml;l&eacute;sek ellen.  Alkalmaz&aacute;sa
+	tov&aacute;bb&aacute; jelent&#245;s m&eacute;rt&eacute;kben
+	ler&ouml;vid&iacute;ti a helyre&aacute;ll&iacute;t&aacute;shoz
+	sz&uuml;ks&eacute;ges ellen&#245;rz&eacute;s idej&eacute;t.  A
+	&os; alaprendszerben megtal&aacute;lhat&oacute; UFS
+	&aacute;llom&aacute;nyrendszer &ouml;nmag&aacute;ban nem
+	tartalmaz napl&oacute;z&aacute;st, azonban a
+	&os;&nbsp;7.<replaceable>X</replaceable> v&aacute;ltozataiban
+	m&aacute;r megjelent egy olyan GEOM-oszt&aacute;ly, amellyel az
+	&aacute;llom&aacute;nyrendszert&#245;l f&uuml;ggetlen
+	m&oacute;don ezt meg tudjuk val&oacute;s&iacute;tani.  Ebben a
+	cikkben bemutatjuk mik&eacute;nt alak&iacute;tsunk ki UFS
+	alap&uacute; napl&oacute;z&aacute;st egy h&eacute;tk&ouml;znapi
+	asztali sz&aacute;m&iacute;t&oacute;g&eacute;pen.</para>
+
+      <para><emphasis>Ford&iacute;totta: &a.hu.pgj;</emphasis></para>
+    </abstract>
+  </articleinfo>
+
+  <sect1 id="introduction">
+    <title>Bevezet&eacute;s</title>
+
+    <para>M&iacute;g az ipari szervereket &aacute;ltal&aacute;ban
+      alaposan felk&eacute;sz&iacute;tik az esetlegesen
+      bek&ouml;vetkez&#245; v&aacute;ratlan le&aacute;ll&aacute;sokra,
+      addig egy &aacute;tlagos asztali
+      sz&aacute;m&iacute;t&oacute;g&eacute;p teljesen
+      kiszolg&aacute;ltatott az &aacute;ramkimarad&aacute;sok, a
+      v&eacute;letlen &uacute;jraind&iacute;t&aacute;sok &eacute;s
+      minden m&aacute;s olyan beavatkoz&aacute;s sz&aacute;m&aacute;ra,
+      amelyek a rendszer nem szab&aacute;lyos
+      le&aacute;ll&aacute;s&aacute;t eredm&eacute;nyezik.  A Soft
+      Updates ilyen helyzetekben &aacute;ltal&aacute;ban
+      hat&eacute;konyan v&eacute;delmezi az
+      &aacute;llom&aacute;nyrendszert, ez azonban a legt&ouml;bb esetben
+      egy hosszadalmasabb h&aacute;tt&eacute;rbeli
+      ellen&#245;rz&eacute;st von maga ut&aacute;n.  Nagyon
+      ritk&aacute;n viszont az &aacute;llom&aacute;nyrendszer olyan
+      m&eacute;rt&eacute;kben k&aacute;rosodik, hogy a
+      helyre&aacute;ll&iacute;t&aacute;s&aacute;hoz m&aacute;r
+      felhaszn&aacute;l&oacute;i beavatkoz&aacute;s
+      sz&uuml;ks&eacute;geltetik &eacute;s gyakran adatveszt&eacute;ssel
+      is j&aacute;r.</para>
+
+    <para>A GEOM alrendszerhez nemr&eacute;g hozz&aacute;adott &uacute;j
+      napl&oacute;z&aacute;si k&eacute;pess&eacute;g az ilyen
+      szitu&aacute;ci&oacute;kban remek&uuml;l alkalmazhat&oacute;,
+      &eacute;s ennek k&ouml;sz&ouml;nhet&#245;en szinte
+      egy&aacute;ltal&aacute;n nem ig&eacute;nyel id&#245;t a
+      s&eacute;r&uuml;lt &aacute;llom&aacute;nyrendszer
+      ellen&#245;rz&eacute;se, illetve gondoskodik a legutols&oacute;
+      stabil &aacute;llapot vill&aacute;mgyors
+      vissza&aacute;ll&iacute;t&aacute;s&aacute;r&oacute;l.</para>
+
+    <para>Ebben a cikkben bemutatunk egy elj&aacute;r&aacute;st, amely
+      seg&iacute;ts&eacute;g&eacute;vel UFS
+      &aacute;llom&aacute;nyrendszerekhez tudunk napl&oacute;z&aacute;st
+      be&aacute;ll&iacute;tani hagyom&aacute;nyos asztali
+      sz&aacute;m&iacute;t&oacute;g&eacute;peken
+      (felt&eacute;telezz&uuml;k, hogy az oper&aacute;ci&oacute;s
+      rendszer &eacute;s az adatok egyetlen merevlemezen helyezkednek
+      el).  A folyamatot a &os; telep&iacute;t&eacute;s&eacute;n
+      kereszt&uuml;l ismertetj&uuml;k, &eacute;s olyan l&eacute;pesekre
+      bontottuk, hogy lehet&#245;leg ker&uuml;lj&uuml;k a bonyolultabb
+      parancssori m&#251;veleteket.</para>
+
+    <para>A cikk elolvas&aacute;sa sor&aacute;n megismerj&uuml;k:</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>a &os; telep&iacute;t&eacute;se sor&aacute;n hogyan
+	  hagyjunk helyet a napl&oacute; sz&aacute;m&aacute;ra;</para>
+      </listitem>
+
+      <listitem>
+	<para>hogyan t&ouml;lts&uuml;k be &eacute;s
+	  enged&eacute;lyezz&uuml;k a <literal>geom_journal</literal>
+	  modult (vagy &eacute;p&iacute;ts&uuml;k be egy saj&aacute;t
+	  rendszermagba);</para>
+      </listitem>
+
+      <listitem>
+	<para>hogyan alak&iacute;tsuk &aacute;t a m&aacute;r
+	  meglev&#245; &aacute;llom&aacute;nyrendszereinket
+	  napl&oacute;z&oacute;v&aacute;, az
+	  <filename>/etc/fstab</filename> &aacute;llom&aacute;nyban
+	  milyen be&aacute;ll&iacute;t&aacute;sokat kell megadnunk a
+	  csatlakoztat&aacute;sukhoz;</para>
+      </listitem>
+
+      <listitem>
+	<para>hogyan &aacute;ll&iacute;tsuk be a napl&oacute;z&aacute;st
+	  &uacute;j (&uuml;res) part&iacute;ci&oacute;kon;</para>
+      </listitem>
+
+      <listitem>
+	<para>hogyan oldjuk meg a napl&oacute;z&aacute;ssal kapcsolatban
+	  leggyakrabban jelentkez&#245; probl&eacute;m&aacute;kat.</para>
+      </listitem>
+    </itemizedlist>
+
+    <para>A cikk elolvas&aacute;s&aacute;hoz aj&aacute;nlott:</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>a &unix; &eacute;s a &os; alapvet&#245; fogalmainak
+      ismerete;</para>
+      </listitem>
+
+      <listitem>
+	<para>a &os; telep&iacute;t&eacute;s menet&eacute;nek &eacute;s
+	  a <application>sysinstall</application> alkalmaz&aacute;s
+	  ismerete.</para>
+      </listitem>
+    </itemizedlist>
+
+    <warning>
+      <para>Az itt megadott elj&aacute;r&aacute;s alapvet&#245;en egy
+	&uacute;j rendszer telep&iacute;t&eacute;s&eacute;nek
+	eset&eacute;re vonatkozik, ahol m&eacute;g semmilyen
+	felhaszn&aacute;l&oacute;i adatot nem t&aacute;rolunk a lemezen.
+	Term&eacute;szetesen ez a m&oacute;dszer
+	&aacute;t&uuml;ltethet&#245; m&#251;k&ouml;d&#245;, &eacute;les
+	rendszerekre is, azonban ilyenkor mindig
+	k&eacute;sz&iacute;ts&uuml;nk <emphasis>biztons&aacute;gi
+	ment&eacute;st</emphasis> miel&#245;tt nekikezden&eacute;nk.
+	Ugyanis amikor ilyen alacsony szinten dolgozunk lemezekkel
+	&eacute;s part&iacute;ci&oacute;kkal, b&aacute;rmilyen hiba
+	k&ouml;nnyed&eacute;n v&eacute;gzetesnek bizonyulhat az
+	adatainkra n&eacute;zve.</para>
+    </warning>
+  </sect1>
+
+  <sect1 id="understanding-journaling">
+    <title>Napl&oacute;z&aacute;s &os; alatt</title>
+
+    <para>A &os;&nbsp;7.<replaceable>X</replaceable>
+      v&aacute;ltozataiban a GEOM r&eacute;sz&eacute;r&#245;l
+      felk&iacute;n&aacute;lt napl&oacute;z&aacute;si
+      lehet&#245;s&eacute;g (elt&eacute;r&#245;en p&eacute;ld&aacute;ul
+      a &linux; t&iacute;pus&uacute; rendszerekben
+      tal&aacute;lhat&oacute; ext3
+      &aacute;llom&aacute;nyrendszert&#245;l) nem k&ouml;t&#245;dik
+      konkr&eacute;t &aacute;llom&aacute;nyrendszerhez, de blokkok
+      szintj&eacute;n &uuml;zemel.  Hab&aacute;r ez arra utal, hogy
+      k&uuml;l&ouml;nb&ouml;z&#245; &aacute;llom&aacute;nyrendszerek
+      eset&eacute;n is haszn&aacute;lhat&oacute;, a &os; 7.0-RELEASE
+      kiad&aacute;s&aacute;ban m&eacute;g csak az UFS2 felett
+      m&#251;k&ouml;dik.</para>
+
+    <para>Ezt a funkci&oacute;t a <filename>geom_journal.ko</filename>
+      modul bet&ouml;lt&eacute;s&eacute;vel (vagy rendszermagba
+      &eacute;p&iacute;t&eacute;s&eacute;vel) tudjuk aktiv&aacute;lni,
+      majd a <command>gjournal</command> paranccsal &eacute;rj&uuml;k el
+      az &aacute;llom&aacute;nyrendszerek
+      konfigur&aacute;ci&oacute;j&aacute;hoz sz&uuml;ks&eacute;ges
+      fel&uuml;letet.  &Aacute;ltal&aacute;ban nagyobb
+      &aacute;llom&aacute;nyrendszereken, p&eacute;ld&aacute;ul a
+      <filename>/usr</filename> part&iacute;ci&oacute;n &eacute;rdemes
+      enged&eacute;lyezni a napl&oacute;z&aacute;st.  Nem szabad
+      elfelejten&uuml;nk, hogy ehhez azonban fenn kell tartanunk
+      n&eacute;mi szabad ter&uuml;letet a lemezen (err&#245;l a
+      k&ouml;vetkez&#245; szakaszban lesz sz&oacute;).</para>
+
+    <para>Amikor egy &aacute;llom&aacute;nyrendszeren bekapcsoljuk a
+      napl&oacute;z&aacute;st, mag&aacute;t a napl&oacute;t is
+      t&aacute;rolnunk kell valahol a lemezen.  A t&eacute;nyleges
+      adatokat t&aacute;rol&oacute; lemezter&uuml;letet
+      <emphasis>adatter&uuml;letnek</emphasis>, m&iacute;g a
+      napl&oacute;t t&aacute;rol&oacute; ter&uuml;letet pedig
+      <emphasis>napl&oacute;ter&uuml;letnek</emphasis> nevezz&uuml;k.
+      Ha egy meglev&#245; (nem &uuml;res) part&iacute;ci&oacute;hoz
+      akarunk napl&oacute;z&aacute;st t&aacute;rs&iacute;tani, akkor az
+      adat- &eacute;s napl&oacute;ter&uuml;leteknek k&uuml;l&ouml;n
+      part&iacute;ci&oacute;kon kell lenni&uuml;k.  Amikor viszont egy
+      teljesen &uacute;j part&iacute;ci&oacute;hoz kapcsolunk
+      napl&oacute;z&aacute;st, lehet&#245;s&eacute;g&uuml;nk van
+      egyetlen ter&uuml;leten t&aacute;rolni az adatokat &eacute;s a
+      napl&oacute;t.  B&aacute;rmelyik esettel is van dolgunk, a
+      <command>gjournal</command> parancs a napl&oacute;z&oacute;
+      &aacute;llom&aacute;nyrendszer v&eacute;gleges&iacute;tett
+      v&aacute;ltozat&aacute;t ezen k&eacute;t fajta ter&uuml;let
+      egyes&iacute;t&eacute;s&eacute;b&#245;l hozza l&eacute;tre.
+      P&eacute;ld&aacute;ul:</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>A <filename class="devicefile">/dev/ad0s1f</filename>
+	  eszk&ouml;z&ouml;n tal&aacute;lhat&oacute;
+	  <filename>/usr</filename> &aacute;llom&aacute;nyrendszeren
+	  szeretn&eacute;nk napl&oacute;z&aacute;st haszn&aacute;lni
+	  (amely m&aacute;r eleve tartalmaz hasznos adatokat).</para>
+      </listitem>
+
+      <listitem>
+	<para>A part&iacute;ci&oacute;k l&eacute;trehoz&aacute;sa
+	  sor&aacute;n a <filename
+	    class="devicefile">/dev/ad0s1g</filename> eszk&ouml;z&ouml;n
+	  lefoglaltunk valamennyi helyet.</para>
+      </listitem>
+
+      <listitem>
+	<para>A <command>gjournal</command> parancs
+	  seg&iacute;ts&eacute;g&eacute;vel k&eacute;sz&iacute;t&uuml;nk
+	  egy <filename
+	    class="devicefile">/dev/ad0s1f.journal</filename>
+	  eszk&ouml;zt, ahol a <filename
+	  class="devicefile">/dev/ad0s1f</filename> eszk&ouml;z&ouml;n
+	  t&aacute;roljuk az adatokat &eacute;s a <filename
+	  class="devicefile">/dev/ad0s1g</filename> eszk&ouml;z&ouml;n a
+	  napl&oacute;t.  A tov&aacute;bbiakban ezt az &uacute;j
+	  eszk&ouml;zt fogjuk haszn&aacute;lni.</para>
+      </listitem>
+    </itemizedlist>
+
+    <para>A napl&oacute; sz&aacute;m&aacute;ra fenntartott hely
+      mennyis&eacute;ge nem az adatok m&eacute;ret&eacute;t&#245;l, hanem
+      az &aacute;llom&aacute;nyrendszer
+      terhelts&eacute;g&eacute;t&#245;l f&uuml;gg.
+      P&eacute;ld&aacute;ul egy &aacute;tlagos irodai
+      sz&aacute;m&iacute;t&oacute;g&eacute;p eset&eacute;n a
+      <filename>/usr</filename> &aacute;llom&aacute;nyrendszerhez
+      nagyj&aacute;b&oacute;l egy 1&nbsp;GB m&eacute;ret&#251;
+      napl&oacute;z&aacute;si ter&uuml;let remek&uuml;l megfelel,
+      viszont egy terheltebb rendszer (amellyel p&eacute;ld&aacute;ul
+      videoanyagok v&aacute;g&aacute;s&aacute;t v&eacute;gezz&uuml;k)
+      sz&aacute;m&aacute;ra enn&eacute;l t&ouml;bb kellhet.  A
+      napl&oacute;ter&uuml;let id&#245; el&#245;tti
+      kimer&uuml;l&eacute;se a rendszermag
+      &ouml;sszeoml&aacute;s&aacute;val j&aacute;r.</para>
+
+    <note>
+      <para>A cikkben javasolt m&eacute;retek
+	haszn&aacute;lat&aacute;val nagyon
+	val&oacute;sz&iacute;n&#251;tlen, hogy h&eacute;tk&ouml;znapi
+	feladataink (b&ouml;ng&eacute;sz&eacute;s az interneten,
+	sz&ouml;vegszerkeszt&eacute;s, k&uuml;l&ouml;nb&ouml;z&#245;
+	multim&eacute;dia anyagok lej&aacute;tsz&aacute;sa) k&ouml;zben
+	b&aacute;rmilyen probl&eacute;m&aacute;t
+	&eacute;szleln&eacute;nk.  Ha viszont a lemez&uuml;nk
+	tart&oacute;sabb terhel&eacute;s alatt van, a
+	k&ouml;vetkez&#245; szab&aacute;ly betart&aacute;s&aacute;val
+	&eacute;rhetj&uuml;k el a legjobb eredm&eacute;nyt: a
+	sz&aacute;m&iacute;t&oacute;g&eacute;p&uuml;nkben lev&#245;
+	k&ouml;zponti mem&oacute;ria teljes tartalm&aacute;nak mindig el
+	kell tudnia f&eacute;rni a napl&oacute;ter&uuml;let
+	egyharmad&aacute;n.  Teh&aacute;t p&eacute;ld&aacute;ul ha a
+	rendszer&uuml;nk 1&nbsp;GB mem&oacute;ri&aacute;val rendelkezik,
+	akkor egy k&ouml;zel 3,3&nbsp;GB m&eacute;ret&#251;
+	napl&oacute;ter&uuml;let aj&aacute;nlott.
+	(&Aacute;ltal&aacute;nosan: &Uacute;gy kapjuk meg a
+	napl&oacute;ter&uuml;let m&eacute;ret&eacute;t, ha megszorozzuk
+	a mem&oacute;ria m&eacute;retet 3,3-mal.)</para>
+    </note>
+
+    <para>A napl&oacute;z&aacute;sr&oacute;l r&eacute;szleteiben a
+      &man.gjournal.8; man oldalon olvashatunk.</para>
+  </sect1>
+
+  <sect1 id="reserve-space">
+    <title>A &os; telep&iacute;t&eacute;se sor&aacute;n
+      elv&eacute;gzend&#245; l&eacute;p&eacute;sek</title>
+
+    <sect2>
+      <title>Lemezter&uuml;let lefoglal&aacute;sa a
+	napl&oacute;nak</title>
+
+      <para>Az asztali sz&aacute;m&iacute;t&oacute;g&eacute;pekben
+	t&ouml;bbnyire csup&aacute;n egyetlen merevlemez
+	tal&aacute;lhat&oacute;, amelyen maga az oper&aacute;ci&oacute;s
+	rendszer &eacute;s az adatok helyezkednek el.  A
+	<application>sysinstall</application> &aacute;ltal
+	felaj&aacute;nlott alap&eacute;rtelmezett
+	part&iacute;cion&aacute;l&aacute;si s&eacute;ma
+	alkalmass&aacute;ga vitathat&oacute;: egy asztali g&eacute;p
+	eset&eacute;n p&eacute;ld&aacute;ul nincs
+	sz&uuml;ks&eacute;g&uuml;nk akkora <filename>/var</filename>
+	part&iacute;ci&oacute;ra, viszont a <filename>/usr</filename>
+	foglalja el a merevlemez legnagyobb r&eacute;sz&eacute;t, hiszen
+	a felhaszn&aacute;l&oacute;k adatai &eacute;s a rendszerre
+	telep&iacute;tett csomagok ide fognak ker&uuml;lni.</para>
+
+      <para>Az alap&eacute;rtelmez&eacute;s szerinti feloszt&aacute;s
+	(amely a <application>Disklabel</application>
+	part&iacute;ci&oacute;szerkeszt&#245;ben az <keycap>A</keycap>
+	billenty&#251;vel &eacute;rhet&#245; el) nem hagy semennyi
+	lemezter&uuml;letet szabadon.  Ah&aacute;ny
+	part&iacute;ci&oacute;t napl&oacute;z&aacute;ssal akarunk
+	ell&aacute;tni, annyi tov&aacute;bbi part&iacute;ci&oacute;ra
+	lesz sz&uuml;ks&eacute;g&uuml;nk a napl&oacute;khoz.  Mivel a
+	<filename>/usr</filename> lesz k&ouml;z&uuml;l&uuml;k a
+	legnagyobb, pr&oacute;b&aacute;ljuk meg ezen
+	part&iacute;ci&oacute; m&eacute;ret&eacute;nek
+	cs&ouml;kkent&eacute;s&eacute;vel helyet csin&aacute;lni a
+	napl&oacute;nak.</para>
+
+      <para>A p&eacute;ld&aacute;ban most egy 80&nbsp;GB
+	m&eacute;ret&#251; lemezt l&aacute;thatunk.  Az
+	&aacute;br&aacute;n most a telep&iacute;t&eacute;s k&ouml;zben a
+	<application>Disklabel</application> szerint
+	alap&eacute;rtelmezetten kiosztott part&iacute;ci&oacute;kat
+	l&aacute;thatjuk:</para>
+
+      <mediaobject>
+	<imageobject>
+	  <imagedata fileref="disklabel1.png">
+	</imageobject>
+      </mediaobject>
+
+      <para>Amennyiben ez k&ouml;r&uuml;lbel&uuml;l megfelel&#245; a
+	sz&aacute;munkra, akkor innen m&aacute;r nagyon egyszer&#251;
+	el&#245;k&eacute;sz&iacute;teni a napl&oacute; hely&eacute;t.  A
+	nyilak haszn&aacute;lat&aacute;val v&aacute;lasszuk ki a
+	<filename>/usr</filename> part&iacute;ci&oacute;t &eacute;s a
+	<keycap>D</keycap> billenty&#251; lenyom&aacute;s&aacute;val
+	t&ouml;r&ouml;lj&uuml;k le.</para>
+
+      <para>Ezut&aacute;n v&aacute;lasszuk ki a k&eacute;perny&#245;
+	fels&#245; r&eacute;sz&eacute;ben a lemez nev&eacute;t, majd a
+	<keycap>C</keycap> billenty&#251; lenyom&aacute;s&aacute;val
+	hozzunk l&eacute;tre egy &uacute;j part&iacute;ci&oacute;t a
+	<filename>/usr</filename> sz&aacute;m&aacute;ra.  Ez viszont
+	legyen most 1&nbsp;GB-tal (ha napl&oacute; csak a
+	<filename>/usr</filename> mell&eacute; lesz) vagy 2&nbsp;GB-tal
+	(ha egyar&aacute;nt napl&oacute;zni akarjuk a
+	<filename>/usr</filename> &eacute;s <filename>/var</filename>
+	part&iacute;ci&oacute;kat is) kisebb.  A felbukkan&oacute;
+	ablakban v&aacute;lasszuk az &aacute;llom&aacute;nyrendszer
+	l&eacute;trehoz&aacute;s&aacute;t &eacute;s a
+	<filename>/usr</filename> k&ouml;nyvt&aacute;rat adjuk meg
+	csatlakoz&aacute;si pontk&eacute;nt.</para>
+
+      <note>
+	<para>Sz&uuml;ks&eacute;g&uuml;nk van-e napl&oacute;ra a
+	  <filename>/var</filename> part&iacute;ci&oacute;hoz?  A
+	  napl&oacute;z&aacute;snak alapvet&#245;en csak
+	  &oacute;ri&aacute;si m&eacute;ret&#251;
+	  part&iacute;ci&oacute;k eset&eacute;ben van &eacute;rtelme.
+	  Ennek megfelel&#245;en nem kell felt&eacute;tlen&uuml;l
+	  enged&eacute;lyezn&uuml;nk a napl&oacute;z&aacute;st a
+	  <filename>/var</filename> part&iacute;ci&oacute;n is,
+	  hab&aacute;r egy asztali g&eacute;p eset&eacute;ben ez sosem
+	  &aacute;rthat.  Ha ezt az &aacute;llom&aacute;nyrendszert alig
+	  haszn&aacute;ljuk (ami nagyon val&oacute;sz&iacute;n&#251; egy
+	  asztali g&eacute;pn&eacute;l), kevesebb ter&uuml;letet is
+	  rendelhet&uuml;nk a napl&oacute;hoz.</para>
+
+	<para>A p&eacute;ld&aacute;nkban a <filename>/usr</filename>
+	  &eacute;s <filename>/var</filename> part&iacute;ci&oacute;khoz
+	  is kapcsoltunk napl&oacute;kat.  Term&eacute;szetesen a
+	  m&oacute;dszer ezen l&eacute;p&eacute;se ig&eacute;ny szerint
+	  megv&aacute;ltoztathat&oacute;.</para>
+      </note>
+
+      <para>Mivel tov&aacute;bbra sem szeretn&eacute;nk
+	elbonyol&iacute;tani a l&eacute;p&eacute;seket, ez&eacute;rt a
+	napl&oacute;z&aacute;s bevezet&eacute;s&eacute;hez
+	sz&uuml;ks&eacute;ges part&iacute;ci&oacute;k
+	l&eacute;trehoz&aacute;s&aacute;t szint&eacute;n a
+	<application>sysinstall</application>
+	seg&iacute;t&eacute;s&eacute;vel v&eacute;gezz&uuml;k.  A
+	telep&iacute;t&eacute;s k&ouml;zben a
+	<application>sysinstall</application> felt&eacute;tlen&uuml;l
+	ragaszkodik ahhoz, hogy minden l&eacute;trehozott
+	part&iacute;ci&oacute;hoz csatlakoz&aacute;si pontot is
+	megadjunk.  A napl&oacute;kat t&aacute;rol&oacute;
+	part&iacute;ci&oacute;khoz viszont ilyen nem tartozik, s&#245;t,
+	<emphasis>egy&aacute;ltal&aacute;n nem is kell</emphasis>.  Ezek
+	ugyanis nem olyan h&eacute;tk&ouml;znapi
+	part&iacute;ci&oacute;k, amelyeket b&aacute;rmikor is
+	csatlakoztatni fogunk.</para>
+
+      <para>A <application>sysinstall</application> haszn&aacute;lata
+	sor&aacute;n ezt a probl&eacute;m&aacute;t &uacute;gy tudjuk
+	elker&uuml;lni, ha a napl&oacute;z&aacute;snak sz&aacute;nt
+	part&iacute;ci&oacute;kat lapoz&oacute;ter&uuml;letk&eacute;nt
+	adjuk meg.  A lapoz&oacute;ter&uuml;letet sem kell soha
+	csatlakoztatni, &eacute;s a
+	<application>sysinstall</application> ezekb&#245;l
+	tetsz&#245;leges mennyis&eacute;g&#251;t k&eacute;pes
+	k&eacute;sz&iacute;teni.  A telep&iacute;t&eacute;st
+	k&ouml;vet&#245; &uacute;jraind&iacute;t&aacute;s ut&aacute;n
+	term&eacute;szetesen majd &aacute;t kell szerkeszten&uuml;nk az
+	<filename>/etc/fstab</filename> &aacute;llom&aacute;nyban az
+	&iacute;gy l&eacute;trehozott part&iacute;ci&oacute;k
+	jellemz&#245;it.</para>
+
+      <para>Lapoz&oacute;ter&uuml;let
+	kialak&iacute;t&aacute;s&aacute;hoz ism&eacute;t a
+	ny&iacute;lbillenty&#251;k haszn&aacute;lat&aacute;val
+	navig&aacute;ljunk a <application>Disklabel</application>
+	alkalmaz&aacute;shoz tartoz&oacute; k&eacute;perny&#245;
+	fels&#245; r&eacute;sz&eacute;be &eacute;s v&aacute;lasszuk ki a
+	lemez nev&eacute;t.  Ezut&aacute;n nyomjuk le az
+	<keycap>N</keycap> billenty&#251;t, majd adjuk meg a
+	k&iacute;v&aacute;nt m&eacute;retet
+	(<replaceable>1024M</replaceable>) &eacute;s a
+	k&ouml;vetkez&#245; men&uuml;b&#245;l v&aacute;lasszuk a
+	<quote>swap space</quote> (lapoz&oacute;ter&uuml;let)
+	t&iacute;pust.  Ism&eacute;telj&uuml;k meg az im&eacute;nti
+	m&#251;veletet az &ouml;sszes napl&oacute; eset&eacute;n.  A
+	p&eacute;ld&aacute;nkban ezen a m&oacute;don
+	k&eacute;sz&iacute;tett&uuml;nk egy napl&oacute;t a
+	<filename>/usr</filename>, &eacute;s m&eacute;g egyet a
+	<filename>/var</filename> &aacute;llom&aacute;nyrendszer
+	sz&aacute;m&aacute;ra.  A v&eacute;geredm&eacute;ny a
+	k&ouml;vetkez&#245; k&eacute;pen l&aacute;that&oacute;:</para>
+
+      <mediaobject>
+	<imageobject>
+	  <imagedata fileref="disklabel2.png">
+	</imageobject>
+      </mediaobject>
+
+      <para>Javasoljuk, ahogy befejezt&uuml;k a part&iacute;ci&oacute;k
+	l&eacute;trehoz&aacute;s&aacute;t, jegyezz&uuml;k fel a neveiket
+	&eacute;s a hozz&aacute;tartoz&oacute; csatlakoz&aacute;si
+	pontokat, &iacute;gy a soron k&ouml;vetkez&#245;
+	konfigur&aacute;ci&oacute;s l&eacute;p&eacute;sekben
+	k&ouml;nnyebben tudunk majd vel&uuml;k dolgozni.  Ez egyben
+	seg&iacute;t m&eacute;rs&eacute;kelni a telep&iacute;t&eacute;st
+	k&aacute;ros&iacute;t&oacute; hib&aacute;k
+	elk&ouml;vet&eacute;s&eacute;nek es&eacute;ly&eacute;t.  A
+	k&ouml;vetkez&#245; t&aacute;bl&aacute;zatban a
+	p&eacute;ld&aacute;ban eml&iacute;tett
+	konfigur&aacute;ci&oacute;hoz vett&uuml;k fel ezeket az
+	adatokat:</para>
+
+      <table pgwide="1">
+	<title>Part&iacute;ci&oacute;k &eacute;s napl&oacute;k</title>
+
+	<tgroup cols="3">
+	<thead>
+	  <row>
+	    <entry>Part&iacute;ci&oacute;</entry>
+	    <entry>Csatlakoz&aacute;si pont</entry>
+	    <entry>Napl&oacute;</entry>
+	  </row>
+	</thead>
+
+	<tbody>
+	  <row>
+	    <entry>ad0s1d</entry>
+	    <entry>/var</entry>
+	    <entry>ad0s1h</entry>
+	  </row>
+
+	  <row>
+	    <entry>ad0s1f</entry>
+	    <entry>/usr</entry>
+	    <entry>ad0s1g</entry>
+	  </row>
+	</tbody>
+      </table>
+
+      <para>Ezut&aacute;n a megszokott m&oacute;don folytassuk a
+	telep&iacute;t&eacute;st.  Javasoljuk azonban, hogy a
+	k&uuml;ls&#245; alkalmaz&aacute;sokat (csomagokat) addig
+	m&eacute;g ne tegy&uuml;nk fel a rendszer&uuml;nkre, am&iacute;g
+	teljesen be nem fejezt&uuml;k a napl&oacute;z&aacute;s
+	be&aacute;ll&iacute;t&aacute;s&aacute;t.</para>
+    </sect2>
+
+    <sect2 id="first-boot">
+      <title>A rendszer els&#245; ind&iacute;t&aacute;sa</title>
+
+      <para>A rendszer&uuml;nk a szok&aacute;sos m&oacute;don fog
+	indulni, de a napl&oacute;k sz&aacute;m&aacute;ra
+	hozz&aacute;adott plusz lapoz&oacute;ter&uuml;letekhez
+	tartoz&oacute; bejegyz&eacute;seket el kell
+	t&aacute;vol&iacute;tanunk az <filename>/etc/fstab</filename>
+	&aacute;llom&aacute;nyb&oacute;l.  A lapoz&oacute;ter&uuml;letek
+	k&ouml;z&uuml;l t&eacute;nylegesen lapoz&aacute;sra
+	&aacute;ltal&aacute;ban a <quote>b</quote> (teh&aacute;t a
+	p&eacute;ld&aacute;nkban az <devicename>ad0s1b</devicename>)
+	part&iacute;ci&oacute;t &eacute;rdemes meghagyni.  Az
+	&ouml;sszes t&ouml;bbit egyszer&#251;en t&ouml;r&ouml;lj&uuml;k
+	ki, ind&iacute;tsuk &uacute;jra a rendszer&uuml;nket &eacute;s a
+	&os; m&aacute;r nem fogja tov&aacute;bb haszn&aacute;lni
+	ezeket.</para>
+
+      <para>Ahogy a rendszer &uacute;jra elindul, k&eacute;szen is
+	&aacute;llunk a napl&oacute;z&aacute;s
+	be&aacute;ll&iacute;t&aacute;s&aacute;ra.</para>
+    </sect2>
+
+  <sect1 id="configure-journal">
+    <title>A napl&oacute;z&aacute;s
+      be&aacute;ll&iacute;t&aacute;sa</title>
+
+    <sect2 id="running-gjournal">
+      <title>A <command>gjournal</command> futtat&aacute;sa</title>
+
+      <para>A napl&oacute;z&aacute;st nagyon k&ouml;nny&#251; lesz
+	be&aacute;ll&iacute;tani miut&aacute;n m&aacute;r
+	el&#245;k&eacute;sz&iacute;tett&uuml;k az ehhez
+	sz&uuml;ks&eacute;ges part&iacute;ci&oacute;kat.
+	V&aacute;ltsunk &aacute;t egyfelhaszn&aacute;l&oacute;s
+	m&oacute;dba, teh&aacute;t jelentkezz&uuml;nk be
+	<username>root</username> felhaszn&aacute;l&oacute;k&eacute;nt
+	&eacute;s g&eacute;pelj&uuml;k be:</para>
+
+      <screen>&prompt.root; <userinput>shutdown now</userinput></screen>
+
+      <para>Ezut&aacute;n az <keycap>Enter</keycap> billenty&#251;
+	lenyom&aacute;s&aacute;val megkapjuk az alap&eacute;rtelmezett
+	parancs&eacute;rtelmez&#245;t.  V&aacute;lasszuk le azokat a
+	part&iacute;ci&oacute;kat, amelyeken enged&eacute;lyezni
+	k&iacute;v&aacute;njuk a napl&oacute;z&aacute;st.  Ezek a
+	p&eacute;ld&aacute;nkban a <filename>/usr</filename> &eacute;s
+	<filename>/var</filename> part&iacute;ci&oacute;k voltak:</para>
+
+      <screen>&prompt.root; <userinput>umount /usr /var</userinput></screen>
+
+      <para>T&ouml;lts&uuml;k be a napl&oacute;z&aacute;shoz
+	sz&uuml;ks&eacute;ges modult:</para>
+
+      <screen>&prompt.root; <userinput>gjournal load</userinput></screen>
+
+      <para>Most pedig a kor&aacute;bbi feljegyz&eacute;seink
+	alapj&aacute;n &aacute;llap&iacute;tsuk meg melyik
+	napl&oacute;hoz melyik part&iacute;ci&oacute;t fogjuk rendelni.
+	A p&eacute;ld&aacute;nkban a <filename>/usr</filename>
+	csatlakoz&aacute;si ponthoz az <filename
+	  class="devicefile">ad0s1f</filename> eszk&ouml;z tartozik,
+	&eacute;s ennek a napl&oacute;ja az <filename
+	  class="devicefile">ad0s1g</filename> eszk&ouml;z lesz,
+	mik&ouml;zben a <filename>/var</filename> ponthoz az <filename
+	  class="devicefile">ad0s1d</filename> eszk&ouml;zt
+	rendelt&uuml;k, &eacute;s ezt az <filename
+	  class="devicefile">ad0s1h</filename> eszk&ouml;z&ouml;n
+	napl&oacute;zzuk.  Ennek megfelel&#245;en a k&ouml;vetkez&#245;
+	parancsokat kell kiadnunk:</para>
+
+      <screen>&prompt.root; <userinput>gjournal label ad0s1f ad0s1g</userinput>
+
+GEOM_JOURNAL: Journal 2948326772: ad0s1f contains data.
+GEOM_JOURNAL: Journal 2948326772: ad0s1g contains journal.
+
+&prompt.root; <userinput>gjournal label ad0s1d ad0s1h</userinput>
+
+GEOM_JOURNAL: Journal 3193218002: ad0s1d contains data.
+GEOM_JOURNAL: Journal 3193218002: ad0s1h contains journal.</screen>
+
+      <note>
+	<para>A <command>gjournal</command> hib&aacute;t fog jelezni, ha
+	  b&aacute;rmelyik part&iacute;ci&oacute; utols&oacute; szektora
+	  m&aacute;r haszn&aacute;latban van.  Ilyen helyzetekben az
+	  <option>-f</option> kapcsol&oacute;
+	  seg&iacute;ts&eacute;g&eacute;vel
+	  fel&uuml;l&iacute;r&aacute;sra tudjuk
+	  k&eacute;nyszer&iacute;teni a parancsot, mint
+	  p&eacute;ld&aacute;ul:</para>
+
+	<screen>&prompt.root; <userinput>gjournal label -f ad0s1d ad0s1h</userinput></screen>
+
+	<para>Mivel most telep&iacute;tett&uuml;k a rendszer&uuml;nket,
+	  el&eacute;g kicsi a val&oacute;sz&iacute;n&#251;s&eacute;ge,
+	  hogy &iacute;gy b&aacute;rmit is t&eacute;nylegesen
+	  fel&uuml;l&iacute;rn&aacute;nk.</para>
+      </note>
+
+      <para>L&eacute;trej&ouml;tt k&eacute;t &uacute;j eszk&ouml;z,
+	n&eacute;v szerint az <filename
+	class="devicefile">ad0s1d.journal</filename> &eacute;s az
+	<filename class="devicefile">ad0s1f.journal</filename>.  Ezek
+	k&eacute;pviselik azokat a <filename>/var</filename> &eacute;s
+	<filename>/usr</filename> part&iacute;ci&oacute;kat, amelyeket
+	val&oacute;j&aacute;ban csatlakoztatnunk kell.  A
+	csatlakoztat&aacute;suk el&#245;tt azonban
+	&aacute;ll&iacute;tsuk be hozz&aacute;juk a
+	napl&oacute;z&aacute;st &eacute;s tiltsuk le a Soft Updates
+	haszn&aacute;lat&aacute;t:</para>
+
+      <screen>&prompt.root; <userinput>tunefs -J enable -n disable ad0s1d.journal</userinput>
+
+tunefs: gjournal set
+tunefs: soft updates cleared
+
+&prompt.root; <userinput>tunefs -J enable -n disable ad0s1f.journal</userinput>
+
+tunefs: gjournal set
+tunefs: soft updates cleared</screen>
+
+      <para>Ezt k&ouml;vet&#245;en parancssorb&oacute;l csatlakoztassuk
+	az &uacute;j eszk&ouml;z&ouml;ket a nekik megfelel&#245; pontokra
+	(itt most m&aacute;r haszn&aacute;lhatjuk az
+	<option>async</option> be&aacute;ll&iacute;t&aacute;st):</para>
+
+      <screen>&prompt.root; <userinput>mount -o async /dev/ad0s1d.journal /var</userinput>
+&prompt.root; <userinput>mount -o async /dev/ad0s1f.journal /usr</userinput></screen>
+
+      <para>Nyissuk meg az <filename>/etc/fstab</filename>
+	&aacute;llom&aacute;nyt, &eacute;s az el&#245;bbiek szerint
+	jav&iacute;tsuk ki a <filename>/usr</filename> &eacute;s a
+	<filename>/var</filename> &aacute;llom&aacute;nyrendszerekhez
+	tartoz&oacute; bejegyz&eacute;seket:</para>
+
+      <programlisting>/dev/ad0s1f.journal     /usr            ufs     rw,async      2       2
+/dev/ad0s1d.journal     /var            ufs     rw,async      2       2</programlisting>
+
+      <warning>
+	<para>Figyelmesen ellen&#245;rizz&uuml;k a bejegyz&eacute;seket,
+	  mert ha hib&aacute;san adjuk meg ezeket, akkor az
+	  &uacute;jraind&iacute;t&aacute;s ut&aacute;n gondok lehetnek a
+	  rendszer ind&iacute;t&aacute;s&aacute;val!</para>
+      </warning>
+
+      <para>V&eacute;gezet&uuml;l gondoskodjunk r&oacute;la, hogy a
+	&man.gjournal.8; modul minden egyes ind&iacute;t&aacute;s
+	sor&aacute;n bet&ouml;lt&#245;dj&ouml;n.  Ehhez nyissuk meg a
+	<filename>/boot/loader.conf</filename> &aacute;llom&aacute;nyt
+	&eacute;s adjuk hozz&aacute; a k&ouml;vetkez&#245; sort:</para>
+
+      <programlisting>geom_journal_load="YES"</programlisting>
+
+      <para>Gratul&aacute;lunk, sikeresen be&aacute;ll&iacute;tottuk a
+	rendszer&uuml;nk&ouml;n a napl&oacute;z&aacute;st!  Innen vagy az
+	<userinput>exit</userinput> beg&eacute;pel&eacute;s&eacute;vel
+	l&eacute;pj&uuml;nk vissza a t&ouml;bbfelhaszn&aacute;l&oacute;s
+	m&oacute;dba, vagy egy &uacute;jraind&iacute;t&aacute;ssal
+	pr&oacute;b&aacute;ljuk ki a konfigur&aacute;ci&oacute;
+	eredm&eacute;ny&eacute;t (mi ezt javasoljuk).  A
+	rendszerind&iacute;t&aacute;s sor&aacute;n a
+	k&ouml;vetkez&#245;h&ouml;z hasonl&oacute; &uuml;zeneteket kell
+	majd l&aacute;tnunk:</para>
+
+      <screen>ad0: 76293MB XEC XE800JD-00HBC0 08.02D08 at ata0-master SATA150
+GEOM_JOURNAL: Journal 2948326772: ad0s1g contains journal.
+GEOM_JOURNAL: Journal 3193218002: ad0s1h contains journal.
+GEOM_JOURNAL: Journal 3193218002: ad0s1d contains data.
+GEOM_JOURNAL: Journal ad0s1d clean.
+GEOM_JOURNAL: Journal 2948326772: ad0s1f contains data.
+GEOM_JOURNAL: Journal ad0s1f clean.</screen>
+
+      <para>Szab&aacute;lytalan le&aacute;ll&aacute;sok eset&eacute;n az
+	im&eacute;nti &uuml;zenetek n&eacute;mileg v&aacute;ltozhatnak,
+	p&eacute;ld&aacute;ul:</para>
+
+      <screen>GEOM_JOURNAL: Journal ad0s1d consistent.</screen>
+
+      <para>Ez &aacute;ltal&aacute;ban arra utal, hogy a
+	&man.gjournal.8; a napl&oacute;ter&uuml;leten t&aacute;rolt
+	inform&aacute;ci&oacute;k seg&iacute;ts&eacute;g&eacute;vel
+	helyre&aacute;ll&iacute;totta az
+	&aacute;llom&aacute;nyrendszert.</para>
+    </sect2>
+
+    <sect2 id="gjournal-new">
+      <title>A napl&oacute;z&aacute;s enged&eacute;lyez&eacute;se
+	frissen l&eacute;trehozott part&iacute;ci&oacute;kon</title>
+
+      <para>M&iacute;g az el&#245;bbiekben t&aacute;rgyalt
+	megold&aacute;st legink&aacute;bb olyan part&iacute;ci&oacute;k
+	eset&eacute;n alkalmazhatjuk, amelyek m&aacute;r eleve
+	tartalmaznak adatokat, addig egy &uacute;jonnan
+	l&eacute;trehozott part&iacute;ci&oacute;t n&eacute;mileg
+	k&ouml;nnyebb napl&oacute;z&aacute;ssal ell&aacute;tni, mivel
+	ilyenkor az adat- &eacute;s a napl&oacute;ter&uuml;let egyazon
+	part&iacute;ci&oacute;n is kialak&iacute;that&oacute;.
+	P&eacute;ld&aacute;ul most tegy&uuml;k fel, hogy
+	hozz&aacute;adtunk egy &uacute;jabb lemezt a
+	rendszer&uuml;nkh&ouml;z, amelyen
+	k&eacute;sz&iacute;tett&uuml;nk egy &uacute;j <filename
+	class="devicefile">/dev/ad1s1d</filename> nev&#251;
+	part&iacute;ci&oacute;t.  A napl&oacute;
+	l&eacute;trehoz&aacute;sa ekkor csup&aacute;n ennyi:</para>
+
+      <screen>&prompt.root; <userinput>gjournal label ad1s1d</userinput></screen>
+
+      <para>A napl&oacute; m&eacute;rete alap&eacute;rtelmez&eacute;s
+	szerint 1&nbsp;GB lesz, amelyet viszont a <option>-s</option>
+	opci&oacute; haszn&aacute;lat&aacute;val tetsz&eacute;s szerint
+	&aacute;t&aacute;ll&iacute;thatunk.  Az &eacute;rt&eacute;ket
+	megadhatjuk byte-okban, vagy a <literal>K</literal>,
+	<literal>M</literal>, illetve <literal>G</literal>
+	hozz&aacute;f&#251;z&eacute;s&eacute;vel kilobyte-okban,
+	megabyte-okban, illetve gigabyte-okban is.  Arra azonban
+	figyelj&uuml;nk, hogy a <command>gjournal</command> nem enged
+	t&uacute;ls&aacute;gosan kis m&eacute;ret&#251; napl&oacute;t
+	l&eacute;trehozni.</para>
+
+      <para>P&eacute;ld&aacute;ul egy 2&nbsp;GB m&eacute;ret&#251;
+	napl&oacute; az al&aacute;bbi paranccsal hozhat&oacute;
+	l&eacute;tre:</para>
+
+      <screen>&prompt.root; <userinput>gjournal label -s 2G ad1s1d</userinput></screen>
+
+      <para>Mell&eacute; hozzunk l&eacute;tre egy
+	&aacute;llom&aacute;nyrendszert az &uacute;j
+	part&iacute;ci&oacute;n, ahol a <option>-J</option>
+	kapcsol&oacute;val enged&eacute;lyezz&uuml;k a
+	napl&oacute;z&aacute;st:</para>
+
+      <screen>&prompt.root; <userinput>newfs -J /dev/ad1s1d.journal</userinput></screen>
+    </sect2>
+
+    <sect2 id="configure-kernel">
+      <title>A napl&oacute;z&aacute;s t&aacute;mogat&aacute;s&aacute;nak
+	be&eacute;p&iacute;t&eacute;se a rendszermagba</title>
+
+      <para>Amennyiben nem k&iacute;v&aacute;njuk bet&ouml;lteni a
+	<literal>geom_journal</literal> modult,
+	lehet&#245;s&eacute;g&uuml;nk van k&ouml;zvetlen&uuml;l a
+	rendszermagba be&eacute;p&iacute;teni a
+	hozz&aacute;tartoz&oacute; funkcionalit&aacute;st.  Ehhez
+	nyissunk meg (vagy hozzunk l&eacute;tre) egy saj&aacute;t
+	rendszermag-konfigur&aacute;ci&oacute;s &aacute;llom&aacute;nyt,
+	&eacute;s vegy&uuml;k fel benne a k&ouml;vetkez&#245; k&eacute;t
+	sort:</para>
+
+      <programlisting>options UFS_GJOURNAL # Megjegyz&eacute;s: Ez r&eacute;sze a GENERIC rendszermagnak
+options GEOM_JOURNAL # Ezt se felejts&uuml;k ki</programlisting>
+
+      <para>A <ulink url="&url.books.handbook;/kernelconfig.html">&os;
+	k&eacute;zik&ouml;nyvben</ulink> szerepl&#245;
+	utas&iacute;t&aacute;sok ment&eacute;n ford&iacute;tsuk le
+	&eacute;s telep&iacute;ts&uuml;k az &uacute;j
+	rendszermagot.</para>
+
+      <para>Ha kor&aacute;bban haszn&aacute;ltuk volna a modult, akkor
+	ezzel egy&uuml;tt ne felejts&uuml;k el kivenni a
+	<filename>/boot/loader.conf</filename>
+	&aacute;llom&aacute;nyb&oacute;l sem a
+	hozz&aacute;tartoz&oacute; sort.</para>
+    </sect2>
+  </sect1>
+
+  <sect1 id="troubleshooting-gjournal">
+    <title>A napl&oacute;z&aacute;s haszn&aacute;lata sor&aacute;n
+      felmer&uuml;l&#245; hib&aacute;k kezel&eacute;se</title>
+
+    <para>Ebben a szakaszban a napl&oacute;z&aacute;s
+      alkalmaz&aacute;sakor jelentkez&#245; gondokra vonatkoz&oacute;
+      gyakran ism&eacute;telt k&eacute;rd&eacute;seket foglaljuk
+      &ouml;ssze.</para>
+
+    <qandaset>
+      <qandaentry>
+	<question id="kernel-panic">
+	  <para>A rendszer folyamatosan &ouml;sszeomlik komolyabb
+	    lemezterhel&eacute;s mellett.  Van ennek valamilyen k&ouml;ze
+	    a napl&oacute;z&aacute;shoz?</para>
+	</question>
+
+	<answer>
+	  <para>A napl&oacute; ilyenkor val&oacute;sz&iacute;n&#251;leg
+	    gyorsabban betelik, mint ahogy ki&iacute;r&oacute;dhatna a
+	    lemezre.  Nem szabad elfeledkezn&uuml;nk r&oacute;la, hogy
+	    a napl&oacute; m&eacute;ret&eacute;nek sosem az
+	    adatter&uuml;let m&eacute;ret&eacute;vel kell
+	    ar&aacute;nyosnak lennie, hanem a lemez
+	    terhelts&eacute;g&eacute;vel.  Ha teh&aacute;t a lemezeink
+	    nagyobb terhel&eacute;s alatt vannak, akkor egy nagyobb
+	    ter&uuml;letet kell hozz&aacute;rendeln&uuml;nk a
+	    napl&oacute;hoz.  Ezzel kapcsolatban lásd a <link
+	      linkend="understanding-journaling">Napl&oacute;z&aacute;s
+	    &os; alatt</link> c&iacute;m&#251; szakaszt.</para>
+	</answer>
+      </qandaentry>
+
+      <qandaentry>
+	<question id="unable-boot">
+	  <para>Valamit nem siker&uuml;lt rendesen
+	    be&aacute;ll&iacute;tani a konfigur&aacute;ci&oacute;
+	    sor&aacute;n, ez&eacute;rt most nem indul a rendszer.  Meg
+	    lehet valahogy jav&iacute;tani?</para>
+	</question>
+
+	<answer>
+	  <para>Ilyenkor vagy elfelejtett&uuml;k (vagy netal&aacute;n
+	    el&iacute;rtuk) a <filename>/boot/loader.conf</filename>
+	    &aacute;llom&aacute;nyban sz&uuml;ks&eacute;ges
+	    bejegyz&eacute;st, vagy az <filename>/etc/fstab</filename>
+	    &aacute;llom&aacute;nyunk hib&aacute;kat tartalmaz.  Az
+	    ilyen jelleg&#251; probl&eacute;m&aacute;kat viszonylag
+	    k&ouml;nny&#251; helyrehozni.  Az <keycap>Enter</keycap>
+	    billenty&#251; lenyom&aacute;s&aacute;val hozzuk el&#245; az
+	    egyfelhaszn&aacute;l&oacute;s m&oacute;dhoz tartoz&oacute;
+	    parancs&eacute;rtelmez&#245;t.  Ha ez siker&uuml;lt, akkor
+	    kutassuk fel a probl&eacute;ma ok&aacute;t:</para>
+
+	  <screen>&prompt.root; <userinput>cat /boot/loader.conf</userinput></screen>
+
+	  <para>Ha innen hi&aacute;nyzik vagy nem helyesen szerepel a
+	    <literal>geom_journal_load</literal> bejegyz&eacute;s, akkor a
+	    napl&oacute;z&aacute;s haszn&aacute;lat&aacute;hoz
+	    sz&uuml;ks&eacute;ges eszk&ouml;z&ouml;k nem fognak
+	    l&eacute;trej&ouml;nni.  T&ouml;lts&uuml;k be a modult
+	    manu&aacute;lisan, csatlakoztassuk az &ouml;sszes
+	    part&iacute;ci&oacute;t &eacute;s folytassuk a
+	    t&ouml;bbfelhaszn&aacute;l&oacute;s m&oacute;d
+	    ind&iacute;t&aacute;s&aacute;t:</para>
+
+	  <screen>&prompt.root; <userinput>gjournal load</userinput>
+
+GEOM_JOURNAL: Journal 2948326772: ad0s1g contains journal.
+GEOM_JOURNAL: Journal 3193218002: ad0s1h contains journal.
+GEOM_JOURNAL: Journal 3193218002: ad0s1d contains data.
+GEOM_JOURNAL: Journal ad0s1d clean.
+GEOM_JOURNAL: Journal 2948326772: ad0s1f contains data.
+GEOM_JOURNAL: Journal ad0s1f clean.
+
+&prompt.root; <userinput>mount -a</userinput>
+&prompt.root; <userinput>exit</userinput>
+<emphasis>(a rendszerind&iacute;t&aacute;s folytat&oacute;dik)</emphasis></screen>
+
+	  <para>Ha viszont ezzel a bejegyz&eacute;ssel kapcsolatban
+	    semmilyen hib&aacute;t nem tal&aacute;ltunk, akkor
+	    n&eacute;zz&uuml;k meg az <filename>/etc/fstab</filename>
+	    &aacute;llom&aacute;nyt.  Akkor
+	    val&oacute;sz&iacute;n&#251;leg itt fogunk tal&aacute;lni
+	    egy hib&aacute;san be&iacute;rt vagy &eacute;ppen
+	    hi&aacute;nyz&oacute; bejegyz&eacute;st.  Amennyiben
+	    err&#245;l lenne sz&oacute;, csatlakoztassuk k&eacute;zzel a
+	    fennmarad&oacute; part&iacute;ci&oacute;kat &eacute;s
+	    folytassuk a t&ouml;bbfelhaszn&aacute;l&oacute;s m&oacute;d
+	    ind&iacute;t&aacute;s&aacute;t.</para>
+	</answer>
+      </qandaentry>
+
+      <qandaentry>
+	<question id="remove-journaling">
+	  <para>Visszavonhat&oacute; a napl&oacute;z&aacute;s, vissza
+	    lehet valahogy t&eacute;rni a Soft Updates
+	    haszn&aacute;lat&aacute;hoz?</para>
+	</question>
+
+	<answer>
+	  <para>Hogyne.  A most k&ouml;vetkez&#245; m&oacute;dszer
+	    seg&iacute;ts&eacute;g&eacute;vel megford&iacute;that&oacute;
+	    az eg&eacute;sz folyamat.  Miut&aacute;n
+	    v&eacute;gezt&uuml;nk, a napl&oacute;z&aacute;s
+	    r&eacute;sz&eacute;re kor&aacute;bban kialak&iacute;tott
+	    part&iacute;ci&oacute;k tetsz&eacute;s szerint
+	    felhaszn&aacute;lhat&oacute;ak.<para>
+
+	  <para>Jelentkezz&uuml;k be <username>root</username>
+	    felhaszn&aacute;l&oacute;k&eacute;nt &eacute;s
+	    v&aacute;ltsunk egyfelhaszn&aacute;l&oacute;s
+	    m&oacute;dba:</para>
+
+	  <screen>&prompt.root; <userinput>shutdown now</userinput></screen>
+
+	  <para>&Iacute;rassuk ki lemezre a napl&oacute;k
+	    tartalm&aacute;t:</para>
+
+	  <screen>&prompt.root; <userinput>gjournal sync</userinput></screen>
+
+	  <para>V&aacute;lasszuk le a napl&oacute;z&aacute;st
+	    alkalmaz&oacute; part&iacute;ci&oacute;kat:</para>
+
+	  <screen>&prompt.root; <userinput>umount /usr /var</userinput></screen>
+
+	  <para>&Aacute;ll&iacute;tsuk le a
+	    napl&oacute;z&oacute;ter&uuml;letek
+	    haszn&aacute;lat&aacute;t:</para>
+
+	  <screen>&prompt.root; <userinput>gjournal stop ad0s1d.journal</userinput>
+&prompt.root; <userinput>gjournal stop ad0s1f.journal</userinput></screen>
+
+	  <para>T&ouml;r&ouml;lj&uuml;k le az eszk&ouml;z&ouml;k&ouml;n
+	    t&aacute;rolt &ouml;sszes napl&oacute;z&aacute;si
+	    metainform&aacute;ci&oacute;t:</para>
+
+	  <screen>&prompt.root; <userinput>gjournal clear ad0s1d</userinput>
+&prompt.root; <userinput>gjournal clear ad0s1f</userinput>
+&prompt.root; <userinput>gjournal clear ad0s1g</userinput>
+&prompt.root; <userinput>gjournal clear ad0s1h</userinput></screen>
+
+	  <para>Tiltsuk le az &aacute;llom&aacute;nyrendszer
+	    napl&oacute;z&aacute;s&aacute;t &eacute;s
+	    &aacute;ll&iacute;tsuk vissza a Soft Updates
+	    haszn&aacute;lat&aacute;t:</para>
+
+	  <screen>&prompt.root; <userinput>tunefs -J disable -n enable ad0s1d</userinput>
+
+tunefs: gjournal cleared
+tunefs: soft updates set
+
+&prompt.root; <userinput>tunefs -J disable -n enable ad0s1f</userinput>
+
+tunefs: gjournal cleared
+tunefs: soft updates set</screen>
+
+	  <para>Manu&aacute;lisan csatlakoztassuk &uacute;jra a
+	    r&eacute;gi eszk&ouml;z&ouml;ket:</para>
+
+	  <screen>&prompt.root; <userinput>mount -o rw /dev/ad0s1d /var</userinput>
+&prompt.root; <userinput>mount -o rw /dev/ad0s1f /usr</userinput></screen>
+
+	  <para>Az <filename>/etc/fstab</filename>
+	    &aacute;llom&aacute;nyban &aacute;ll&iacute;tsunk vissza
+	    mindent az eredeti &aacute;llapot&aacute;ba:</para>
+
+	  <programlisting>/dev/ad0s1f     /usr            ufs     rw      2       2
+/dev/ad0s1d     /var            ufs     rw      2       2</programlisting>
+
+	  <para>V&eacute;g&uuml;l a
+	    <filename>/boot/loader.conf</filename>
+	    &aacute;llom&aacute;nyb&oacute;l t&aacute;vol&iacute;tsuk el
+	    a <literal>geom_journal</literal> modul
+	    bet&ouml;lt&eacute;s&eacute;re vonatkoz&oacute;
+	    bejegyz&eacute;st &eacute;s ind&iacute;tsuk &uacute;jra a
+	    rendszert.</para>
+	</answer>
+      </qandaentry>
+    </qandaset>	
+  </sect1>
+
+  <sect1 id="further-reading">
+    <title>Aj&aacute;nlott olvasm&aacute;nyok</title>
+
+    <para>A napl&oacute;z&aacute;s m&eacute;g viszonylag
+      &uacute;jdons&aacute;gnak sz&aacute;m&iacute;t a &os;
+      eset&eacute;ben, ez&eacute;rt nem felt&eacute;tlen&uuml;l
+      tal&aacute;lunk r&oacute;la t&uacute;ls&aacute;gosan sok
+      dokument&aacute;ci&oacute;t.  Ett&#245;l f&uuml;ggetlen&uuml;l
+      azonban a k&ouml;vetkez&#245; forr&aacute;sok elolvas&aacute;sa
+      az&eacute;rt hasznosnak bizonyulhat:</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>A &os; k&eacute;zik&ouml;nyv napl&oacute;z&aacute;ssal
+	  foglalkoz&oacute; <ulink
+	    url="&url.books.handbook;/geom-gjournal.html">szakasza</ulink>.</para>
+      </listitem>
+
+      <listitem>
+	<para>&a.pjd;, a &man.gjournal.8; fejleszt&#245;j&eacute;nek a
+	  &a.current.name; levelez&eacute;si list&aacute;ra
+	  k&uuml;ld&ouml;tt <ulink
+	    url="http://lists.freebsd.org/pipermail/freebsd-current/2006-June/064043.html">levele</ulink>.</para>
+      </listitem>
+ 
+      <listitem>
+	<para>&a.ivoras; a &a.questions.name; levelez&eacute;si
+	  list&aacute;ra k&uuml;ld&ouml;tt <ulink
+	    url="http://lists.freebsd.org/pipermail/freebsd-questions/2008-April/173501.html">levele</ulink>.
+      </listitem>
+
+      <listitem>
+	<para>A &man.gjournal.8; &eacute;s &man.geom.8; man
+	  oldalak.</para>
+      </listitem>
+    </itemizedlist>
+  </sect1>
+</article>
+
+<!--
+  Local Variables:
+  mode: sgml
+  sgml-indent-data: t
+  sgml-omittag: nil
+  sgml-always-quote-attributes: t
+  fill-column: 78
+  indent-tabs-mode: nil
+  End:
+-->
