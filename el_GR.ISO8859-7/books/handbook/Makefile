@@ -4,7 +4,7 @@
 # Μορφοποίηση του Εγχειριδίου του FreeBSD
 #
 # %SOURCE%	en_US.ISO8859-1/books/handbook/Makefile
-# %SRCID%	1.109
+# %SRCID%	1.110
 #
 
 # ------------------------------------------------------------------------
@@ -202,6 +202,7 @@ IMAGES_LIB+= callouts/15.png
 SRCS+= audit/chapter.sgml
 SRCS+= book.sgml
 SRCS+= colophon.sgml
+SRCS+= dtrace/chapter.sgml
 SRCS+= freebsd-glossary.sgml
 SRCS+= advanced-networking/chapter.sgml
 SRCS+= basics/chapter.sgml
@@ -213,6 +214,7 @@ SRCS+= desktop/chapter.sgml
 SRCS+= disks/chapter.sgml
 SRCS+= eresources/chapter.sgml
 SRCS+= firewalls/chapter.sgml
+SRCS+= filesystems/chapter.sgml
 SRCS+= geom/chapter.sgml
 SRCS+= install/chapter.sgml
 SRCS+= introduction/chapter.sgml
@@ -232,6 +234,7 @@ SRCS+= preface/preface.sgml
 SRCS+= printing/chapter.sgml
 SRCS+= security/chapter.sgml
 SRCS+= serialcomms/chapter.sgml
+SRCS+= updating/chapter.sgml
 SRCS+= users/chapter.sgml
 SRCS+= vinum/chapter.sgml
 SRCS+= virtualization/chapter.sgml
