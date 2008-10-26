@@ -2,7 +2,7 @@
 
 SUBDIR = articles
 
-# COMPAT_SYMLINK = dk
+COMPAT_SYMLINK = da
 
 DOC_PREFIX?= ${.CURDIR}/..
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"
