@@ -4,6 +4,11 @@
 #
 # Build the FreeBSD Handbook.
 #
+#  The FreeBSD Spanish Documentation Project
+
+#  %SOURCE%   en_US.ISO8859-1/books/handbook/Makefile
+#  %SRCID%    0.0
+
 
 # ------------------------------------------------------------------------
 #
