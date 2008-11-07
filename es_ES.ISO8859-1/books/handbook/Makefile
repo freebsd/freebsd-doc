@@ -190,6 +190,7 @@ SRCS+= preface/preface.sgml
 SRCS+= printing/chapter.sgml
 SRCS+= security/chapter.sgml
 SRCS+= serialcomms/chapter.sgml
+SRCS+= updating/chapter.sgml
 SRCS+= users/chapter.sgml
 SRCS+= vinum/chapter.sgml
 SRCS+= virtualization/chapter.sgml
