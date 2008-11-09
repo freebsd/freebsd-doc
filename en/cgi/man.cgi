@@ -33,8 +33,8 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.223 2008-11-09 17:52:24 wosch Exp $
-# $FreeBSD: www/en/cgi/man.cgi,v 1.222 2008/09/22 19:13:42 wosch Exp $
+# $Id: man.cgi,v 1.224 2008-11-09 18:29:53 wosch Exp $
+# $FreeBSD: www/en/cgi/man.cgi,v 1.223 2008/11/09 17:52:24 wosch Exp $
 
 ############################################################################
 # !!! man.cgi is stale perl4 code !!!
@@ -403,6 +403,44 @@ $manPathDefault = 'FreeBSD 7.0-RELEASE';
     "OpenDarwin 7.2.1",            "$manLocalDir/OpenDarwin-7.2.1",
 );
 
+my @no_pdf_output = (
+    '386BSD 0.0',
+    '386BSD 0.1',
+    '4.4BSD Lite2',
+    'NetBSD 0.9',
+    'NetBSD 1.0',
+    'NetBSD 1.1',
+    'NetBSD 1.2',
+    'NetBSD 1.2.1',
+    'OpenBSD 2.0',
+    'OpenBSD 2.1',
+    'OpenBSD 2.2',
+    'OpenBSD 2.3',
+    'OpenBSD 2.4',
+    'OpenBSD 2.5',
+    'OpenBSD 2.6',
+    'OpenBSD 2.7',
+    'OpenBSD 2.8',
+    'OpenBSD 2.9',
+    'OpenBSD 3.0',
+    'OpenBSD 3.1',
+    'OpenBSD 3.2',
+    'OpenBSD 3.3',
+    'OpenBSD 3.4',
+    'OpenBSD 3.5',
+    'OpenBSD 3.6',
+    'OpenBSD 3.7',
+    'OpenBSD 3.8',
+    'OpenBSD 3.9',
+    'OpenBSD 4.0',
+    'OpenBSD 4.1',
+    'OpenBSD 4.2',
+    'OpenBSD 4.3',
+    'OpenBSD 4.4',
+);
+
+my %no_pdf_output = map { $_ => 1 } @no_pdf_output;
+
 # delete not existing releases
 while ( ( $key, $val ) = each %manPath ) {
     my $counter = 0;
@@ -590,6 +628,8 @@ sub do_man {
             $manpath = $manPathDefault;
         }
     }
+
+    $format = 'html' if $no_pdf_output{$manpath} && $format =~ /^(ps|pdf)$/;
 
     local ($fform) = &dec($form);
     if ( $fform =~ m%^([a-zA-Z_\-\.:]+)$% ) {
@@ -1288,13 +1328,12 @@ ETX
 <select name="format">
 ETX
 
-    foreach (
-        'html', 'ps', 'pdf',
+    my @format = ('html');
+    push( @format, ( 'pdf', 'ps' ) ) if !$no_pdf_output{$manpath};
+    push( @format, ( 'latin1', 'ascii' ) )
+      ;    # you need a 8 bit clean man, e.g. jp-man
 
-        # you need a 8 bit clean man, e.g. jp-man
-        'ascii', 'latin1'
-      )
-    {
+    foreach (@format) {
         print qq{<option value="$_">$_</option>\n};
     }
 
@@ -1334,7 +1373,7 @@ sub faq {
     }
 
     local $id =
-      '$FreeBSD: www/en/cgi/man.cgi,v 1.222 2008/09/22 19:13:42 wosch Exp $';
+      '$FreeBSD: www/en/cgi/man.cgi,v 1.223 2008/11/09 17:52:24 wosch Exp $';
     return qq{\
 <pre>
 Copyright (c) 1996-2008 <a href="$mailtoURL">Wolfram Schneider</a>
