@@ -58,6 +58,13 @@
 		(create-link (list (list "HREF" "mailto:doc@FreeBSD.org"))
                   (literal "doc@FreeBSD.org"))
 	        (literal ">.")))))
+
+        <!-- More aesthetically pleasing Greek quotes for HTML output. -->
+        (element quote
+          (make sequence
+            (make entity-ref name: "laquo")
+            (process-children)
+            (make entity-ref name: "raquo")))
       ]]>
 
       <!-- More aesthetically pleasing chapter headers for print output --> 
