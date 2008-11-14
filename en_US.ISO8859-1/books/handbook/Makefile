@@ -23,6 +23,13 @@
 #                       easily be imported into PGP/GPG.
 #
 # ------------------------------------------------------------------------
+#
+# To add a new chapter to the Handbook:
+#
+# - Update this Makefile, chapters.ent and book.sgml
+# - Add a descriptive entry for the new chapter in preface/preface.sgml
+#
+# ------------------------------------------------------------------------
 
 .PATH: ${.CURDIR}/../../share/sgml/glossary
 
