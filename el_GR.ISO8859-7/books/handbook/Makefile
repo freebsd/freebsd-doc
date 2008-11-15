@@ -4,7 +4,7 @@
 # Μορφοποίηση του Εγχειριδίου του FreeBSD
 #
 # %SOURCE%	en_US.ISO8859-1/books/handbook/Makefile
-# %SRCID%	1.110
+# %SRCID%	1.111
 #
 
 # ------------------------------------------------------------------------
@@ -25,6 +25,13 @@
 #                       be redirected into a file and distributed as a 
 #                       public keyring of FreeBSD developers that can
 #                       easily be imported into PGP/GPG.
+#
+# ------------------------------------------------------------------------
+#
+# Για να προσθέσετε ένα νέο κεφάλαιο στο Εγχειρίδιο:
+#
+# - Ενημερώστε αυτό το Makefile, το chapters.ent και το book.sgml
+# - Προσθέστε μια σύντομη περιγραφή του κεφαλαίου στο preface/preface.sgml
 #
 # ------------------------------------------------------------------------
 
