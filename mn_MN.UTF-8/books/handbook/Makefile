@@ -2,7 +2,7 @@
 #
 # The FreeBSD Mongolian Documentation Project
 #
-# Original revision 1.110
+# Original revision 1.111
 #
 # Build the FreeBSD Handbook.
 #
@@ -24,6 +24,13 @@
 #                       be redirected into a file and distributed as a 
 #                       public keyring of FreeBSD developers that can
 #                       easily be imported into PGP/GPG.
+#
+# ------------------------------------------------------------------------
+#
+# To add a new chapter to the Handbook:
+#
+# - Update this Makefile, chapters.ent and book.sgml
+# - Add a descriptive entry for the new chapter in preface/preface.sgml
 #
 # ------------------------------------------------------------------------
 
