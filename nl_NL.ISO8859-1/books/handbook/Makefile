@@ -3,7 +3,7 @@
 # $FreeBSDnl: doc/nl_NL.ISO8859-1/books/handbook/Makefile,v 1.19 2006/01/03 21:17:07 siebrand Exp $
 #
 # %SOURCE%	en_US.ISO8859-1/books/handbook/Makefile
-# %SRCID%	1.110
+# %SRCID%	1.111
 #
 # Bouw het Nederlandse FreeBSD Handboek.
 #
@@ -26,6 +26,12 @@
 #			en verspreid worden als een publieke sleutelring
 #			van FreeBSD ontwikkelaars die eenvoudig in
 #			PGP/GPG ingelezen kan worden.
+#
+# ------------------------------------------------------------------------
+# Om een nieuw hoofdstuk aan het Handboek toe te voegen:
+#
+# - Werk deze Makefile, chapters.ent en book.sgml bij
+# - Voeg een beschrijving voor het nieuwe hoofdstuk toe aan preface/preface.sgml
 #
 # ------------------------------------------------------------------------
 
