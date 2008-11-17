@@ -4,7 +4,7 @@
 
 # $FreeBSD$
 # %SOURCE%    en_US.ISO8859-1/books/handbook/Makefile
-# %SRCID%     1.110
+# %SRCID%     1.111
 #
 # Build the FreeBSD Handbook.
 #
@@ -26,6 +26,13 @@
 #                       be redirected into a file and distributed as a 
 #                       public keyring of FreeBSD developers that can
 #                       easily be imported into PGP/GPG.
+#
+# ------------------------------------------------------------------------
+#
+# To add a new chapter to the Handbook:
+#
+# - Update this Makefile, chapters.ent and book.sgml
+# - Add a descriptive entry for the new chapter in preface/preface.sgml
 #
 # ------------------------------------------------------------------------
 
