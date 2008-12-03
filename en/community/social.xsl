@@ -6,7 +6,7 @@
 <!ENTITY % navinclude.community "INCLUDE">
 ]>
 
-<!-- $FreeBSD$ -->
+<!-- $FreeBSD: www/en/community/social.xsl,v 1.1 2008/06/23 07:06:05 murray Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -55,7 +55,7 @@
 		<li>There are hundreds of videos from conferences,
 		screencasts, and demonstrations relating to <a
 		href="http://www.youtube.com/results?search_query=freebsd&amp;search_type=&amp;aq=f">FreeBSD</a>
-		on <a href="http://www.youtube.com">YouTube</a>.</li>
+		on <a href="http://www.youtube.com">YouTube</a>.  In particular, there is a new <a href="http://www.youtube.com/bsdconferences">BSD Conferences</a> channel with full length 1 hour taped presentations from FreeBSD technical conferences.</li>
 
 		<li>There is a <a
 		href="http://www.facebook.com/home.php#/group.php?gid=2204657214">FreeBSD
