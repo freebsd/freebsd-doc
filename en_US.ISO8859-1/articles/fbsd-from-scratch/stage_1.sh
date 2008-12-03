@@ -2,11 +2,11 @@
 #
 # stage_1.sh - FreeBSD From Scratch, Stage 1: System Installation.
 #              Usage: ./stage_1.sh profile
-#              will read ./stage_1.conf.profile
+#              will read profile
 #              and write ./stage_1.log.profile
 #
 # Author:      Jens Schweikhardt
-# $Id: stage_1.sh,v 1.5 2004-07-19 21:02:26 schweikh Exp $
+# $Id: stage_1.sh,v 1.6 2008-12-03 21:59:51 schweikh Exp $
 # $FreeBSD$
 
 PATH=/bin:/usr/bin:/sbin:/usr/sbin
@@ -16,7 +16,7 @@ PATH=/bin:/usr/bin:/sbin:/usr/sbin
 # a) Successfully completed "make buildworld" and "make buildkernel"
 # b) Unused partitions (at least one for the root fs, probably more for
 #    the new /usr and /var, to your liking.)
-# c) A customized stage_1.conf.profile file.
+# c) A customized profile file.
 
 if test $# -ne 1; then
   echo "usage: stage_1.sh profile" 1>&2
@@ -30,7 +30,7 @@ fi
 step_one () {
   create_file_systems
   # Now create all the other directories. Mandatory.
-  cd ${SRC}/etc; make distrib-dirs DESTDIR=${DESTDIR}
+  cd ${SRC}/etc; make distrib-dirs DESTDIR=${DESTDIR} TARGET=${TARGET}
 }
 
 # ---------------------------------------------------------------------------- #
@@ -73,12 +73,7 @@ step_two () {
 
 step_three () {
   cd ${SRC}
-  make installworld DESTDIR=${DESTDIR}
-  # Install additional compatibility libraries (optional). Use this if you
-  # have programs dynamically linked against libc.so.4, i.e. if you see
-  # /usr/libexec/ld-elf.so.1: Shared object "libc.so.4" not found
-  cd lib/compat/compat4x.i386
-  make all install DESTDIR=${DESTDIR}
+  make installworld DESTDIR=${DESTDIR} TARGET=${TARGET}
 }
 
 # ---------------------------------------------------------------------------- #
@@ -91,7 +86,7 @@ step_four () {
   # If you have not copied them in Step 2, cp them as shown in the next 2 lines.
   #   cp sys/boot/forth/loader.conf ${DESTDIR}/boot/defaults
   #   cp sys/i386/conf/GENERIC.hints ${DESTDIR}/boot/device.hints
-  make installkernel DESTDIR=${DESTDIR} KERNCONF=${KERNCONF}
+  make installkernel DESTDIR=${DESTDIR} KERNCONF=${KERNCONF} TARGET=${TARGET}
 }
 
 # ---------------------------------------------------------------------------- #
@@ -118,6 +113,7 @@ step_six () {
 
 do_steps () {
   echo "PROFILE=${PROFILE}"
+  echo "TARGET=${TARGET}"
   echo "DESTDIR=${DESTDIR}"
   echo "SRC=${SRC}"
   echo "KERNCONF=${KERNCONF}"
@@ -140,28 +136,28 @@ do_steps () {
 
 PROFILE="$1"
 set -x -e -u # Stop for any error or use of an undefined variable.
-. ./stage_1.conf.${PROFILE}
+. ${PROFILE}
 
 # Determine a few variables from the sources that were used to make the
 # world. The variables can be used to modify actions, e.g. depending on
-# whether we install a 4.x or 5.x system. The __FreeBSD_version numbers
+# the system's version. The __FreeBSD_version numbers
 # for RELDATE are documented in the Porter's Handbook,
 # doc/en_US.ISO8859-1/books/porters-handbook/freebsd-versions.html.
 # Scheme is:  <major><two digit minor><0 if release branch, otherwise 1>xx
 # The result will be something like
 #
 #   TYPE="FreeBSD"
-#   REVISION="4.9"
+#   REVISION="8.0"
 #   BRANCH="RC"      { "CURRENT", "STABLE", "RELEASE" }
-#   RELDATE="502101"
+#   RELDATE="800028"
 #
 eval $(awk '/^(TYPE|REVISION|BRANCH)=/' ${SRC}/sys/conf/newvers.sh)
 RELDATE=$(awk '/^[ \t]*#[ \t]*define[ \t][ \t]*__FreeBSD_version[ \t]/ {
                 print $3
               }' ${SRC}/sys/sys/param.h)
 
-echo "=> Logging to stage_1.log.${PROFILE}"
-do_steps 2>&1 | tee stage_1.log.${PROFILE}
+echo "=> Logging to stage_1.${PROFILE}.log"
+do_steps 2>&1 | tee "stage_1.${PROFILE}.log"
 
 # vim: tabstop=2:expandtab:shiftwidth=2:
 # EOF $RCSfile: stage_1.sh,v $
