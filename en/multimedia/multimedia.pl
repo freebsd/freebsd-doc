@@ -1,8 +1,8 @@
 #!/usr/bin/perl -w
 
 #
-# $Id: multimedia.pl,v 1.4 2008-12-06 02:50:43 edwin Exp $
-# $FreeBSD: www/en/multimedia/multimedia.pl,v 1.3 2008/06/12 19:02:27 remko Exp $
+# $Id: multimedia.pl,v 1.5 2008-12-06 06:25:37 hrs Exp $
+# $FreeBSD: www/en/multimedia/multimedia.pl,v 1.4 2008/12/06 02:50:43 edwin Exp $
 #
 
 use strict;
@@ -157,7 +157,7 @@ sub xml_char {
 			    # Note that $items[$ci]{fc} gets incremented in xml_start
 			    $items[$ci]{files}{$items[$ci]{fc}}{url} = ""
 				if (!defined $items[$ci]{files}{$items[$ci]{fc}}{url});
-			    $items[$ci]{files}{$items[$ci]{fc}}{url} .= $value;
+			    $items[$ci]{files}{$items[$ci]{fc}}{url} .= htmlentities($value);
 			    return;
 			}
 			if ($tree[5] eq "size") {
@@ -204,7 +204,7 @@ sub xml_char {
 		    return;
 		}
 		if ($tree[3] eq "url") {
-		    $sources{$sid}{url} = $value;
+		    $sources{$sid}{url} = htmlentities($value);
 		    return;
 		}
 		goto error;
