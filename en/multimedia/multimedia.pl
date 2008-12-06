@@ -1,8 +1,8 @@
 #!/usr/bin/perl -w
 
 #
-# $Id: multimedia.pl,v 1.3 2008-06-12 19:02:27 remko Exp $
-# $FreeBSD$
+# $Id: multimedia.pl,v 1.4 2008-12-06 02:50:43 edwin Exp $
+# $FreeBSD: www/en/multimedia/multimedia.pl,v 1.3 2008/06/12 19:02:27 remko Exp $
 #
 
 use strict;
@@ -262,10 +262,10 @@ sub print_htmlitem {
 
     print $fhandle "<li><p>";
     if (defined $item{overview}) {
-	print $fhandle "<a href=\"$item{overview}\">$item{title}</a>\n";
+	print $fhandle "<a href=\"", htmlentities($item{overview}), "\">$item{title}</a>\n";
     } else {
 	my %media = %{$item{files}{0}};
-	print $fhandle "<a href=\"$media{url}\">$item{title}</a>\n";
+	print $fhandle "<a href=\"", htmlentities($media{url}), "\">$item{title}</a>\n";
 	if (defined $media{size} || defined $media{length}) {
 	    my $s = "";
 	    print $fhandle "(";
@@ -280,7 +280,7 @@ sub print_htmlitem {
 	    print $fhandle ")";
 	}
     }
-    print $fhandle "<br>Source: <a href=\"", $source{url}, "\">",
+    print $fhandle "<br>Source: <a href=\"", htmlentities($source{url}), "\">",
 	$source{name}, "</a><br>\n";
     print $fhandle "Added: ",
 	    substr($item{added}, 6, 2), " ",
