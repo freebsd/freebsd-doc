@@ -1,8 +1,8 @@
 #!/usr/bin/perl -w
 
 #
-# $Id: multimedia.pl,v 1.5 2008-12-06 06:25:37 hrs Exp $
-# $FreeBSD: www/en/multimedia/multimedia.pl,v 1.4 2008/12/06 02:50:43 edwin Exp $
+# $Id: multimedia.pl,v 1.6 2008-12-07 06:12:06 edwin Exp $
+# $FreeBSD: www/en/multimedia/multimedia.pl,v 1.5 2008/12/06 06:25:37 hrs Exp $
 #
 
 use strict;
@@ -157,7 +157,7 @@ sub xml_char {
 			    # Note that $items[$ci]{fc} gets incremented in xml_start
 			    $items[$ci]{files}{$items[$ci]{fc}}{url} = ""
 				if (!defined $items[$ci]{files}{$items[$ci]{fc}}{url});
-			    $items[$ci]{files}{$items[$ci]{fc}}{url} .= htmlentities($value);
+			    $items[$ci]{files}{$items[$ci]{fc}}{url} .= $value;
 			    return;
 			}
 			if ($tree[5] eq "size") {
@@ -204,7 +204,7 @@ sub xml_char {
 		    return;
 		}
 		if ($tree[3] eq "url") {
-		    $sources{$sid}{url} = htmlentities($value);
+		    $sources{$sid}{url} = $value;
 		    return;
 		}
 		goto error;
@@ -307,9 +307,9 @@ sub print_htmlitem {
 	    my %file = %{$item{files}{$m}};
 	    print $fhandle ", " if ($c++);
 	    if (defined $item{prefix}) {
-		print $fhandle "<a href=\"$item{prefix}/$file{url}\">$file{desc}</a>";
+		print $fhandle "<a href=\"" . htmlentities($item{prefix} . "/" . $file{url}) . "\">$file{desc}</a>";
 	    } else {
-		print $fhandle "<a href=\"$file{url}\">$file{desc}</a>";
+		print $fhandle "<a href=\"" . htmlentities($file{url}) . "\">$file{desc}</a>";
 	    }
 	    if (defined $file{size} || defined $file{length}) {
 		my $s = "";
