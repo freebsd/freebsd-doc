@@ -266,3 +266,11 @@
 
   <external-specification id="docbook" document="freebsd.dsl">
 </style-sheet>
+
+<!--
+Local variables:
+coding: iso-8859-7
+mode: dsssl
+fill-column: 78
+End:
+-->
