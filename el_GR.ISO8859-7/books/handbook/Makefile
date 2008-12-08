@@ -311,3 +311,8 @@ mirrors.sgml.${p}.inc: mirrors.sgml.${p}.inc.tmp
 eresources.sgml.www.inc: eresources.sgml.www.inc.tmp
 	${SED} -e 's,<\([^ >]*\)\([^>]*\)/>,<\1\2></\1>,;s,</anchor>,,'\
 	    < $@.tmp > $@ || (${RM} -f $@ && false)
+
+# Local variables:
+# mode: makefile-bsdmake
+# coding: iso-8859-7
+# End:
