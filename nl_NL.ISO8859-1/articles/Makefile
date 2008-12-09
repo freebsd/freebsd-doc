@@ -4,7 +4,7 @@
 # %SRCID%	1.60
 
 SUBDIR =
-# SUBDIR+= contributing
+SUBDIR+= contributing
 SUBDIR+= explaining-bsd
 
 # ROOT_SYMLINKS+= new-users
