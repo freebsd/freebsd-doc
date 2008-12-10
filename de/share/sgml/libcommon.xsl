@@ -2,7 +2,7 @@
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
 <!-- $FreeBSD$
-     $FreeBSDde: de-www/share/sgml/libcommon.xsl,v 1.11 2008/07/12 16:12:35 jkois Exp $
+     $FreeBSDde: de-www/share/sgml/libcommon.xsl,v 1.12 2008/12/09 10:32:06 jkois Exp $
      basiert auf: 1.23
  -->
 
@@ -46,6 +46,7 @@
 
   <xsl:template name="html-news-make-olditems-list">
     <p>&#196;ltere Ank&#252;ndigungen:
+      <a href="2007/index.html">2007</a>,
       <a href="2006/index.html">2006</a>,
       <a href="2005/index.html">2005</a>,
       <a href="2004/index.html">2004</a>,
@@ -65,6 +66,7 @@
 
   <xsl:template name="html-press-make-olditems-list">
     <p>&#196;ltere Presseberichte:
+      <a href="2007/press.html">2007</a>,
       <a href="2006/press.html">2006</a>,
       <a href="2005/press.html">2005</a>,
       <a href="2004/press.html">2004</a>,
