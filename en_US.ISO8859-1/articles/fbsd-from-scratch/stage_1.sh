@@ -6,7 +6,7 @@
 #              and write ./stage_1.log.profile
 #
 # Author:      Jens Schweikhardt
-# $Id: stage_1.sh,v 1.6 2008-12-03 21:59:51 schweikh Exp $
+# $Id: stage_1.sh,v 1.7 2008-12-11 19:48:21 schweikh Exp $
 # $FreeBSD$
 
 PATH=/bin:/usr/bin:/sbin:/usr/sbin
@@ -85,7 +85,7 @@ step_four () {
   # The loader.conf and device.hints are required by the installkernel target.
   # If you have not copied them in Step 2, cp them as shown in the next 2 lines.
   #   cp sys/boot/forth/loader.conf ${DESTDIR}/boot/defaults
-  #   cp sys/i386/conf/GENERIC.hints ${DESTDIR}/boot/device.hints
+  #   cp sys/${TARGET}/conf/GENERIC.hints ${DESTDIR}/boot/device.hints
   make installkernel DESTDIR=${DESTDIR} KERNCONF=${KERNCONF} TARGET=${TARGET}
 }
 
