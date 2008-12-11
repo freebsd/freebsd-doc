@@ -4,7 +4,7 @@
 <!ENTITY title "The FreeBSD Project">
 ]>
 
-<!-- $FreeBSD: www/en/index.xsl,v 1.163 2008/02/27 22:09:31 bmah Exp $ -->
+<!-- $FreeBSD$ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
