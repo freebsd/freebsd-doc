@@ -5,8 +5,8 @@
 ]>
 <!--
      $FreeBSD$
-     $FreeBSDde: de-www/index.xsl,v 1.80 2008/07/12 17:07:02 jkois Exp $
-     basiert auf: 1.164
+     $FreeBSDde: de-www/index.xsl,v 1.81 2008/12/14 16:37:35 jkois Exp $
+     basiert auf: 1.165
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
