@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/events/Makefile,v 1.15 2008/06/22 23:18:55 murray Exp $
+# $FreeBSD: www/en/events/Makefile,v 1.16 2008/12/15 02:38:22 murray Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -26,6 +26,7 @@ DEPENDSET.events=	events
 .for year in ${PASTYEARS}
 XMLDOCS+=		events${year}:${XSL_EVENTS_PAST}:${XML_EVENTS_EVENTS}:
 PARAMS.events${year}=	--param year ${year}
+PARAMS.events${year}+=	--stringparam pastyears '${PASTYEARS}'
 DEPENDSET.events${year}= events${year}
 .endfor
 
