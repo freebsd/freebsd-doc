@@ -4,12 +4,12 @@
 <!ENTITY title "A &os; Projekt">
 ]>
 
-<!-- $FreeBSD: www/hu/index.xsl,v 1.11 2008/08/04 20:24:49 pgj Exp $ -->
+<!-- $FreeBSD: www/hu/index.xsl,v 1.12 2008/08/21 11:51:48 pgj Exp $ -->
 
 <!-- FreeBSD Hungarian Documentation Project
      Translated by: Gabor Kovesdan <gabor@FreeBSD.org>
      %SOURCE%	en/index.xsl
-     %SRCID%	1.164
+     %SRCID%	1.165
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
