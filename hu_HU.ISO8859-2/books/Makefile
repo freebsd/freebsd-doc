@@ -8,6 +8,7 @@
 #
 
 SUBDIR = faq
+SUBDIR+= fdp-primer
 SUBDIR+= handbook
 
 ROOT_SYMLINKS= faq handbook
