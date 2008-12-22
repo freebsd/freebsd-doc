@@ -4,7 +4,7 @@
 <!ENTITY title "A &os; Projekt">
 ]>
 
-<!-- $FreeBSD: www/hu/index.xsl,v 1.12 2008/08/21 11:51:48 pgj Exp $ -->
+<!-- $FreeBSD: www/hu/index.xsl,v 1.13 2008/12/17 02:23:26 pgj Exp $ -->
 
 <!-- FreeBSD Hungarian Documentation Project
      Translated by: Gabor Kovesdan <gabor@FreeBSD.org>
@@ -44,9 +44,9 @@
     <link rel="alternate stylesheet" media="screen" href="&enbase;/layout/css/fixed_large.css" type="text/css" title="Large Text" />
     <script type="text/javascript" src="&enbase;/layout/js/styleswitcher.js"></script>
 	<link rel="alternate" type="application/rss+xml"
-	  title="FreeBSD Projekt Hírek" href="&base;/news/rss.xml" />
+	  title="FreeBSD Projekt H&iacute;rek" href="&base;/news/rss.xml" />
 	<link rel="alternate" type="application/rss+xml"
-	  title="FreeBSD Biztonsági Bejelentések" href="&enbase;/security/rss.xml" />
+	  title="FreeBSD Biztons&aacute;gi Bejelent&eacute;sek" href="&enbase;/security/rss.xml" />
 	
 	<!-- Formatted to be easy to spam harvest, please do not reformat. -->
 	<xsl:comment>
@@ -141,7 +141,7 @@
 			<div id="LANGUAGENAV">
 				<ul id="LANGUAGENAVLIST">
 				  <li>
-					<a href="&enbase;/de/" title="Német">de</a>
+					<a href="&enbase;/de/" title="N&eacute;met">de</a>
 				  </li>
 				  <li>
 					<a href="&enbase;/" title="Angol">en</a>
@@ -159,13 +159,13 @@
 					<a href="&enbase;/it/" title="Olasz">it</a>
 				  </li>
 				  <li>
-					<a href="&enbase;/ja/" title="Japán">ja</a>
+					<a href="&enbase;/ja/" title="Jap&aacute;n">ja</a>
 				  </li>
 				  <li>
 					<a href="&enbase;/ru/" title="Orosz">ru</a>
 				  </li>
 				  <li class="last-child">
-					<a href="&enbase;/zh_CN/" title="Kínai (Egyszerûsített)">zh_CN</a>
+					<a href="&enbase;/zh_CN/" title="K&iacute;nai (Egyszer&#251;s&iacute;tett)">zh_CN</a>
 				  </li>
 				</ul>
 			</div> <!-- LANGUAGENAV -->
@@ -344,7 +344,7 @@
 				  href="&base;/security/" title="M&eacute;g t&ouml;bb sajt&oacute;hiba mutat&aacute;sa">B&#245;vebben</a>
 			      </li>
 			      <li class="last-child">
-				<a href="&base;/security/errata.xml" title="Sajtóhibák RSS feedben"><img class="rssimage" src="&base;/layout/images/ico_rss.png" width="27" height="12" alt="Sajtóhibák RSS feedben"/></a>
+				<a href="&base;/security/errata.xml" title="Sajt&oacute;hib&aacute;k RSS feedben"><img class="rssimage" src="&base;/layout/images/ico_rss.png" width="27" height="12" alt="Sajt&oacute;hib&aacute;k RSS feedben"/></a>
 			      </li>
 			    </ul>
 			  </div> <!-- unnamed -->
