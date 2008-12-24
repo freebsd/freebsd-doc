@@ -64,19 +64,20 @@
 
 ;; Taken from Norm's stylesheets; modified to add support for TITLE so
 ;; that we get a mouse over definition for acronyms in HTML output.
-       (define ($acronym-seq$ #!optional (sosofo (process-children)))
-	 ;; FIXME: html4 only
-	 (let ((title (attribute-string (normalize "role") (current-node))))
-	   (if title
-	 (make element gi: "ACRONYM"
-	       attributes: (list
-			    (list "TITLE" title)
-			    (list "CLASS" (gi)))
-	       sosofo)
-	 (make element gi: "ACRONYM"
-	       attributes: (list
-			    (list "CLASS" (gi)))
-	       sosofo))))
+
+	(define ($acronym-seq$ #!optional (sosofo (process-children)))
+	  (let* ((acronym-remark (select-elements
+				  (children (current-node))
+				  (normalize "remark"))))
+	    (let* ((title (if (and acronym-remark
+				   (equal? (attribute-string (normalize "role") acronym-remark) "acronym"))
+			      (data acronym-remark)
+			      "")))
+	      (make element gi: "ACRONYM"
+		    attributes: (list
+				 (list "CLASS" (gi))
+				 (list "TITLE" title))
+		    sosofo))))
 
         (define (book-titlepage-recto-elements)
           (list (normalize "title")
