@@ -2,7 +2,7 @@
 #
 # The FreeBSD Mongolian Documentation Project
 #
-# Original revision 1.111
+# Original revision 1.112
 #
 # Build the FreeBSD Handbook.
 #
@@ -240,7 +240,6 @@ SRCS+= preface/preface.sgml
 SRCS+= printing/chapter.sgml
 SRCS+= security/chapter.sgml
 SRCS+= serialcomms/chapter.sgml
-SRCS+= updating/chapter.sgml
 SRCS+= users/chapter.sgml
 SRCS+= vinum/chapter.sgml
 SRCS+= virtualization/chapter.sgml
