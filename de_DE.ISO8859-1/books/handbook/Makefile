@@ -1,10 +1,18 @@
 #
 # $FreeBSD$
-# $FreeBSDde: de-docproj/books/handbook/Makefile,v 1.61 2008/09/28 14:34:40 jkois Exp $
-# basiert auf: 1.110
+# $FreeBSDde: de-docproj/books/handbook/Makefile,v 1.62 2008/12/27 12:14:01 jkois Exp $
+# basiert auf: 1.112
 #
 # Build the FreeBSD Handbook in its German translation.
 #
+# ------------------------------------------------------------------------
+#
+# To add a new chapter to the Handbook:
+#
+# - Update this Makefile, chapters.ent and book.sgml
+# - Add a descriptive entry for the new chapter in preface/preface.sgml
+#
+# ------------------------------------------------------------------------
 
 .PATH: ${.CURDIR}/../../share/sgml/glossary
 
@@ -211,7 +219,6 @@ SRCS+= preface/preface.sgml
 SRCS+= printing/chapter.sgml
 SRCS+= security/chapter.sgml
 SRCS+= serialcomms/chapter.sgml
-SRCS+= updating/chapter.sgml
 SRCS+= users/chapter.sgml
 SRCS+= vinum/chapter.sgml
 SRCS+= virtualization/chapter.sgml
