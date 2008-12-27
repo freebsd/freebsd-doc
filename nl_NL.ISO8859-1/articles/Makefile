@@ -5,6 +5,7 @@
 
 SUBDIR =
 SUBDIR+= contributing
+SUBDIR+= contributing-ports
 SUBDIR+= explaining-bsd
 SUBDIR+= problem-reports
 
