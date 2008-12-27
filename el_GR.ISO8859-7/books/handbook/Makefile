@@ -4,7 +4,7 @@
 # Μορφοποίηση του Εγχειριδίου του FreeBSD
 #
 # %SOURCE%	en_US.ISO8859-1/books/handbook/Makefile
-# %SRCID%	1.111
+# %SRCID%	1.112
 #
 
 # ------------------------------------------------------------------------
@@ -241,7 +241,6 @@ SRCS+= preface/preface.sgml
 SRCS+= printing/chapter.sgml
 SRCS+= security/chapter.sgml
 SRCS+= serialcomms/chapter.sgml
-SRCS+= updating/chapter.sgml
 SRCS+= users/chapter.sgml
 SRCS+= vinum/chapter.sgml
 SRCS+= virtualization/chapter.sgml
