@@ -1,6 +1,9 @@
 #
 # $FreeBSD$
 #
+# %SOURCE%	en_US.ISO8859-1/articles/problem-reports/Makefile
+# %SRCID%	1.6
+#
 # Article: Writing FreeBSD Problem Reports
 
 DOC?= article

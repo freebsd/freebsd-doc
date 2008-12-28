@@ -1,5 +1,8 @@
 #
-# $FreeBSD: $
+# $FreeBSD$
+#
+# %SOURCE%	en_US.ISO8859-1/articles/contributing-ports/Makefile
+# %SRCID%	1.1
 #
 # Article: Contributing to the FreeBSD Ports Collection
 

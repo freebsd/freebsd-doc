@@ -3,6 +3,9 @@
 #
 # $FreeBSD$
 #
+# %SOURCE%	en_US.ISO8859-1/books/handbook/firewalls/Makefile
+# %SRCID%	1.1
+#
 
 CHAPTERS= 	firewalls/chapter.sgml
 
