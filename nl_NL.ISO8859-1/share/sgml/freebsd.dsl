@@ -2,7 +2,9 @@
       The FreeBSD Documentation Project
       $FreeBSD$
       $FreeBSDnl$
-      Gebaseerd op: 1.22
+
+      %SOURCE%	en_US.ISO8859-1/share/sgml/freebsd.dsl
+      %SRCID%	1.22
 -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [

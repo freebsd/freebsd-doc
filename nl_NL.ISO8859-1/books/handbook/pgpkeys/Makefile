@@ -3,6 +3,9 @@
 #
 # $FreeBSD$
 #
+# %SOURCE%	en_US.ISO8859-1/books/handbook/pgpkeys/Makefile
+# %SRCID%	1.3
+#
 
 CHAPTERS= 	pgpkeys/chapter.sgml
 

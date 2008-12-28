@@ -3,6 +3,9 @@
 #
 # $FreeBSD$
 #
+# %SOURCE%	en_US.ISO8859-1/books/handbook/advanced-networking/Makefile
+# %SRCID%	1.2
+#
 
 CHAPTERS= 	advanced-networking/chapter.sgml
 

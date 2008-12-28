@@ -3,6 +3,9 @@
 #
 # $FreeBSD$
 #
+# %SOURCE%	en_US.ISO8859-1/books/handbook/filesystems/Makefile
+# %SRCID%	1.1
+#
 
 CHAPTERS= 	filesystems/chapter.sgml
 
