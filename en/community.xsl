@@ -6,7 +6,7 @@
 <!ENTITY % navinclude.community "INCLUDE">
 ]>
 
-<!-- $FreeBSD: www/en/community.xsl,v 1.4 2008/06/20 21:19:24 danger Exp $ -->
+<!-- $FreeBSD: www/en/community.xsl,v 1.5 2008/06/23 07:50:03 murray Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -83,6 +83,63 @@
 		<a href="&base;/events/events.html">events
 		page</a>.</p>
 
+<!-- The Latest Videos section is placed inside an invisible block, which
+     is only made visible if the browser supports Javascript. -->
+
+              <div id="latest-videos" style="display:none;">
+	      <h3>Latest Videos</h3>
+
+<!-- See http://www.google.com/uds/solutions/wizards/videobar.html -->
+  <div id="videoBar-bar">
+    <span style="color:#676767;font-size:11px;margin:10px;padding:4px;">Loading...</span>
+  </div>
+
+  <script src="http://www.google.com/uds/api?file=uds.js&amp;v=1.0&amp;source=uds-vbw"
+    type="text/javascript"></script>
+  <style type="text/css">
+    @import url("http://www.google.com/uds/css/gsearch.css");
+  </style>
+  <!-- Video Bar Code and Stylesheet -->
+  <script type="text/javascript">
+    window._uds_vbw_donotrepair = true;
+  </script>
+  <script src="http://www.google.com/uds/solutions/videobar/gsvideobar.js?mode=new"
+    type="text/javascript"></script>
+  <style type="text/css">
+    @import url("http://www.google.com/uds/solutions/videobar/gsvideobar.css");
+  </style>
+
+  <style type="text/css">
+    .playerInnerBox_gsvb .player_gsvb {
+      width : 320px;
+      height : 260px;
+    }
+  </style>
+  <script type="text/javascript">
+    document.getElementById('latest-videos').style.display = 'block';
+
+    function LoadVideoBar() {
+
+    var videoBar;
+    var options = {
+        largeResultSet : !true,
+        horizontal : true,
+        autoExecuteList : {
+          cycleTime : GSvideoBar.CYCLE_TIME_MEDIUM,
+          cycleMode : GSvideoBar.CYCLE_MODE_LINEAR,
+          executeList : ["ytchannel:bsdconferences"]
+        }
+      }
+
+    videoBar = new GSvideoBar(document.getElementById("videoBar-bar"),
+                              GSvideoBar.PLAYER_ROOT_FLOATING,
+                              options);
+    }
+    // arrange for this function to be called during body.onload
+    // event processing
+    GSearch.setOnLoadCallback(LoadVideoBar);
+  </script>
+              </div> <!-- Latest Videos -->
 	      </div> <!-- CONTENTWRAP -->
 	      <br class="clearboth" />
 	    </div> <!-- CONTENT -->
