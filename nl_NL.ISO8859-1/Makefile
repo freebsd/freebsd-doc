@@ -1,7 +1,11 @@
 # $FreeBSD$
+#
+# %SOURCE%	en_US.ISO8859-1/Makefile
+# %SRCID%	1.7
+#
 
-SUBDIR = books
-SUBDIR+= articles
+SUBDIR = articles
+SUBDIR+= books 
 
 COMPAT_SYMLINK = nl
 

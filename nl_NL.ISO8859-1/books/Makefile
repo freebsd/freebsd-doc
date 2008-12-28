@@ -1,4 +1,8 @@
 # $FreeBSD$
+#
+# %SOURCE%	en_US.ISO8859-1/books/Makefile
+# %SRCID%	1.14
+#
 
 SUBDIR = handbook
 
