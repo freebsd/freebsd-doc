@@ -9,7 +9,7 @@
 <!ENTITY % header.rss "INCLUDE">
 ]>
 
-<!-- $FreeBSD: www/share/sgml/templates.pastevents.xsl,v 1.2 2008/06/23 07:08:02 murray Exp $ -->
+<!-- $FreeBSD: www/share/sgml/templates.pastevents.xsl,v 1.3 2008/12/15 02:50:38 murray Exp $ -->
 
 <!-- Copyright (c) 2003 Simon L. Nielsen <simon@FreeBSD.org>
      Copyright (c) 2008 Murray M Stokely <murray@FreeBSD.org>
@@ -254,12 +254,19 @@ upcoming</a></p>
 
   <!-- Template: event -->
   <xsl:template match="event">
+    <xsl:variable name="lower">abcdefghijklmnopqrstuvwxyz</xsl:variable>
+    <xsl:variable name="upper">ABCDEFGHIJKLMNOPQRSTUVWXYZ</xsl:variable>
+    <xsl:variable name="name" select="name" />
+    <xsl:variable name="lcname" select="translate($name, $upper, $lower)" />
+
     <li>
       <xsl:call-template name="eventbody"/>
       <p>Social links: <a rel="nofollow">
         <xsl:attribute name="href">http://www.flickr.com/search/?w=all&amp;q=<xsl:value-of select="name" />&amp;m=text</xsl:attribute>
       Flickr</a>, <a rel="nofollow">
-        <xsl:attribute name="href">http://blogsearch.google.com/blogsearch?q=<xsl:value-of select="name" /></xsl:attribute>Blog Search</a>.</p>
+        <xsl:attribute name="href">http://blogsearch.google.com/blogsearch?q=<xsl:value-of select="name" /></xsl:attribute>Blog Search</a><xsl:if test="contains($lcname, 'meetbsd') or contains($lcname, 'nycbsdcon')">,
+        <a rel="nofollow">
+        <xsl:attribute name="href">http://www.youtube.com/results?search_query=bsdconferences+<xsl:value-of select="name" /></xsl:attribute>YouTube</a></xsl:if>.</p>
     </li>
   </xsl:template>
 
