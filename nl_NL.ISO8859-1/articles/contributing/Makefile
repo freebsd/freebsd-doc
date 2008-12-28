@@ -1,6 +1,9 @@
 #
 # $FreeBSD$
 #
+# %SOURCE%	en_US.ISO8859-1/articles/contributing/Makefile
+# %SRCID%	1.6
+#
 # Article: Contributing to FreeBSD
 
 DOC?= article
