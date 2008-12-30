@@ -6,7 +6,7 @@
 <!ENTITY % navinclude.community "INCLUDE">
 ]>
 
-<!-- $FreeBSD: www/en/community/social.xsl,v 1.1 2008/06/23 07:06:05 murray Exp $ -->
+<!-- $FreeBSD: www/en/community/social.xsl,v 1.2 2008/12/03 15:49:59 murray Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -60,7 +60,7 @@
 		<li>There is a <a
 		href="http://www.facebook.com/home.php#/group.php?gid=2204657214">FreeBSD
 		Users Group</a> on <a
-		href="http://www.facebook.com">Facebook</a>.</li>
+		href="http://www.facebook.com">Facebook</a> and a <a href="http://www.linkedin.com/groups?gid=47628">FreeBSD Group</a> on <a href="http://www.linkedin.com">LinkedIn</a>.</li>
 
 	      </ul>
 
