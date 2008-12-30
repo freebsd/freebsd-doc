@@ -6,12 +6,12 @@
 <!ENTITY % navinclude.community "INCLUDE">
 ]>
 
-<!-- $FreeBSD: www/hu/community.xsl,v 1.2 2008/06/25 11:31:16 gabor Exp $ -->
+<!-- $FreeBSD: www/hu/community.xsl,v 1.3 2008/08/04 20:24:49 pgj Exp $ -->
 
 <!-- The FreeBSD Hungarian Documentation Project
      Translated by: Gabor Kovesdan <gabor@FreeBSD.org>
      %SOURCE%   en/community.xsl
-     %SRCID%    1.5
+     %SRCID%    1.7
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
@@ -96,8 +96,63 @@
 		  href="&base;/events/events.ics">kalend&aacute;riumban</a>
 		&eacute;s <a
 		  href="&base;/events/rss.xml">RSS feedeken</a>
-		kereszt&uuml;l &eacute;rtes&uuml;lhet&uuml;nk.</p>
+		kereszt&uuml;l &eacute;rtes&uuml;lhet&uuml;nk.  A
+		kor&aacute;bban lezajlott esem&eacute;nyekr&#245;l a
+		YouTube oldal&aacute;n egy <a
+		  href="http://www.youtube.com/bsdconferences">BSD
+		  konferenci&aacute;kat</a> &ouml;sszefoglal&oacute;
+		csatorn&aacute;n tal&aacute;lhatunk videoanyagokat.</p>
 
+		<div id="latest-videos" style="display:none;">
+		  <h3>A legfrissebb vide&oacute;k</h3>
+
+		  <div id="videoBar-bar">
+		    <span style="color:#676767;font-size:11px;margin:10px;padding:4px;">Bet&ouml;lt&eacute;s...</span>
+		  </div>
+
+		  <script src="http://www.google.com/uds/api?file=uds.jp&amp;v=1.0&amp;source=uds-vbw" type="text/javascript"></script>
+
+		  <style type="text/css">
+		    @import url("http://www.google.com/uds/css/gsearch.css");
+		  </style>
+
+		  <script type="text/javascript">
+		    window._uds_vbw_donotrepair = true;
+		  </script>
+
+		  <script src="http://www.google.com/uds/solutions/videobar/gsvideobar.js?mode=new" text="text/javascript"></script>
+
+		  <style type="text/css">
+		    @import url("http://www.google.com/uds/solutions/videobar/gsvideobar.css");
+		  </style>
+
+		  <style type="text/css">
+		    .playerInnerBox_gsvb .player_gsvb {
+		      width  : 320px;
+		      height : 260px;
+		    }
+		  </style>
+
+		  <script type="text/javascript">
+		    document.getElementById('latest-videos').style.display = 'block';
+		    function LoadVideoBar() {
+		      var videoBar;
+		      var options = {
+			largeResultSet : !true,
+			horizontal : true,
+			autoExecuteList : {
+			  cycleTime   : GSvideoBar.CYCLE_TIME_MEDIUM,
+			  cycleMode   : GSvideoBar.CYCLE_MODE_LINEAR,
+			  executeList : ["ytchannel:bsdconferences"]
+			}
+		      }
+		      videoBar = new GSvideoBar(document.getElementById("videoBar-bar"),
+		                                GSvideoBar.PLAYER_ROOT_FLOATING,
+		                                options);
+		    }
+		    GSearch.setOnLoadCallback(LoadVideoBar);
+		  </script>
+		</div> <!-- latest-videos -->
 	      </div> <!-- CONTENTWRAP -->
 	      <br class="clearboth" />
 	    </div> <!-- CONTENT -->
