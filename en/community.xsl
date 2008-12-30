@@ -6,7 +6,7 @@
 <!ENTITY % navinclude.community "INCLUDE">
 ]>
 
-<!-- $FreeBSD: www/en/community.xsl,v 1.5 2008/06/23 07:50:03 murray Exp $ -->
+<!-- $FreeBSD: www/en/community.xsl,v 1.6 2008/12/28 10:20:54 murray Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -81,7 +81,10 @@
 		<a href="&base;/events/rss.xml">RSS feed</a> of
 		upcoming &os;-related events are maintained on our
 		<a href="&base;/events/events.html">events
-		page</a>.</p>
+		page</a>.  There are dozens of videos from past events
+		on the <a
+		href="http://www.youtube.com/bsdconferences">BSD
+		Conferences</a> channel on YouTube.</p>
 
 <!-- The Latest Videos section is placed inside an invisible block, which
      is only made visible if the browser supports Javascript. -->
