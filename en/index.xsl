@@ -4,7 +4,7 @@
 <!ENTITY title "The FreeBSD Project">
 ]>
 
-<!-- $FreeBSD$ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.165 2008/12/11 21:11:25 blackend Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
@@ -67,24 +67,35 @@
 				<h1>
 				  Based on BSD &unix;
 				</h1>
-				<p>
-				  FreeBSD&reg; is an advanced operating system for
-				  x86 compatible (including Pentium&reg; and Athlon&trade;),
-				  amd64 compatible (including Opteron&trade;, Athlon&trade;64, and EM64T),
-				  UltraSPARC&reg;, IA-64, PC-98 and ARM architectures.
-				  It is derived from BSD, the version of &unix; developed at the
-				  University of California, Berkeley.
-				  It is developed and maintained by a
-				  <a href="&base;/doc/en_US.ISO8859-1/articles/contributors/staff-committers.html">large
-				    team of individuals</a>.
-				  Additional <a href="&base;/platforms/">platforms</a> are in
-				  various stages of development.
-				</p>
-				<div id="TXTFRONTFEATURELINK">
-				&#187;<a href="&base;/about.html" title="Learn More">Learn More</a>
-				</div> <!-- TXTFRONTFEATURELINK -->
-			</div> <!-- FRONTFEATURECONTENT -->
-		</div> <!-- FRONTFEATURELEFT -->
+
+				<p>FreeBSD&reg; is an advanced
+				  operating system for modern server,
+				  desktop, and embedded computer <a
+				  href="&base;/platforms/">platforms</a>.
+				  FreeBSD's code base has undergone
+				  over thirty years of continuous
+				  development, improvement, and
+				  optimization.  It is developed and
+				  maintained by a <a
+				  href="&base;/doc/en_US.ISO8859-1/articles/contributors/staff-committers.html">large
+				  team of individuals</a>.  FreeBSD
+				  provides advanced networking,
+				  impressive security features, and
+				  world class performance and is used
+				  by some of the world's <a
+				  href="&base;/doc/en_US.ISO8859-1/books/handbook/nutshell.html#INTRODUCTION-NUTSHELL-USERS">busiest
+				  web sites</a> and most pervasive
+				  embedded networking and storage
+				  devices.</p>
+
+                                  <div
+				  id="TXTFRONTFEATURELINK"> &#187;<a
+				  href="&base;/about.html"
+				  title="Learn More">Learn More</a>
+
+				  </div> <!-- TXTFRONTFEATURELINK -->
+			  </div> <!-- FRONTFEATURECONTENT -->
+		  </div> <!-- FRONTFEATURELEFT -->
 
 		<div id="FRONTFEATUREMIDDLE">
 			<div class="frontgetroundbox">
