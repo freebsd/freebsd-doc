@@ -6,7 +6,7 @@
 <!ENTITY % navinclude.community "INCLUDE">
 ]>
 
-<!-- $FreeBSD: www/en/community/social.xsl,v 1.2 2008/12/03 15:49:59 murray Exp $ -->
+<!-- $FreeBSD: www/en/community/social.xsl,v 1.3 2008/12/30 08:58:50 murray Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -63,6 +63,15 @@
 		href="http://www.facebook.com">Facebook</a> and a <a href="http://www.linkedin.com/groups?gid=47628">FreeBSD Group</a> on <a href="http://www.linkedin.com">LinkedIn</a>.</li>
 
 	      </ul>
+
+	      <h3>Blog Activity</h3>
+
+	      <p>Posts that contain <a
+href="http://technorati.com/search/freebsd?sub=chartlet&amp;language=n&amp;authority=n">FreeBSD</a> per day for the last 90 days.<br /><a
+href="http://technorati.com/search/freebsd?sub=chartlet&amp;language=n&amp;authority=n"><img
+src="http://technorati.com/chartimg/freebsd?totalHits=24190&amp;size=s&amp;days=90"
+style="border:0" alt="Technorati Chart" /></a>
+              </p>
 
 	      </div> <!-- CONTENTWRAP -->
 	      <br class="clearboth" />
