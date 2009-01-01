@@ -3,7 +3,7 @@
 # $FreeBSDnl: doc/nl_NL.ISO8859-1/books/handbook/Makefile,v 1.19 2006/01/03 21:17:07 siebrand Exp $
 #
 # %SOURCE%	en_US.ISO8859-1/books/handbook/Makefile
-# %SRCID%	1.111
+# %SRCID%	1.112
 #
 # Bouw het Nederlandse FreeBSD Handboek.
 #
@@ -241,7 +241,6 @@ SRCS+= preface/preface.sgml
 SRCS+= printing/chapter.sgml
 SRCS+= security/chapter.sgml
 SRCS+= serialcomms/chapter.sgml
-SRCS+= updating/chapter.sgml
 SRCS+= users/chapter.sgml
 SRCS+= vinum/chapter.sgml
 SRCS+= virtualization/chapter.sgml
