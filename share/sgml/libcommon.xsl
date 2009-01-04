@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
-<!-- $FreeBSD: www/share/sgml/libcommon.xsl,v 1.22 2008/06/20 20:03:29 danger Exp $ -->
+<!-- $FreeBSD: www/share/sgml/libcommon.xsl,v 1.23 2008/06/21 08:02:32 danger Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
   version="1.0"
@@ -880,7 +880,7 @@
 	</xsl:for-each>
       </xsl:when>
       <xsl:when test="$type = 'notice'">
-	<xsl:for-each select="document($advisories.xml)/descendant::notice[position() &lt;= 3]">
+	<xsl:for-each select="document($advisories.xml)/descendant::notice[position() &lt;= 2]">
 	<xsl:variable name="year" select="../../../name" />
 	<xsl:variable name="month" select="../../name" />
 	<xsl:variable name="day" select="../name" />
