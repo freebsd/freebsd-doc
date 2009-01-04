@@ -4,7 +4,7 @@
 <!ENTITY title "The FreeBSD Project">
 ]>
 
-<!-- $FreeBSD: www/en/index.xsl,v 1.165 2008/12/11 21:11:25 blackend Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.166 2008/12/31 04:00:29 murray Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
@@ -303,7 +303,7 @@
 			  <div>
 				<ul class="newseventslist">
 				  <li class="first-child">
-					<a href="&base;/security/" title="More Security Advisories">More</a>
+					<a href="&base;/security/advisories.html" title="More Security Advisories">More</a>
 				  </li>
 				  <li class="last-child">
 					<a href="&base;/security/rss.xml" title="Security Advisories RSS Feed"><img class="rssimage" src="&base;/layout/images/ico_rss.png" width="27" height="12" alt="Security Advisories RSS Feed" /></a>
