@@ -33,8 +33,8 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.226 2008-12-21 23:04:17 wosch Exp $
-# $FreeBSD: www/en/cgi/man.cgi,v 1.225 2008/11/29 14:47:06 wosch Exp $
+# $Id: man.cgi,v 1.227 2009-01-05 20:46:44 hrs Exp $
+# $FreeBSD: www/en/cgi/man.cgi,v 1.226 2008/12/21 23:04:17 wosch Exp $
 
 ############################################################################
 # !!! man.cgi is stale perl4 code !!!
@@ -159,19 +159,22 @@ foreach my $os ( keys %$sectionpath ) {
 );
 
 $manLocalDir    = '/usr/local/www/bsddoc/man';
-$manPathDefault = 'FreeBSD 7.0-RELEASE';
+$manPathDefault = 'FreeBSD 7.1-RELEASE';
 
 %manPath = (
-    'FreeBSD 7.0-RELEASE and Ports',
+    'FreeBSD 7.1-RELEASE and Ports',
 "$manLocalDir/FreeBSD-7.0-RELEASE/man:$manLocalDir/FreeBSD-7.0-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports",
     'FreeBSD 6.4-RELEASE and Ports',
 "$manLocalDir/FreeBSD-6.4-RELEASE/man:$manLocalDir/FreeBSD-6.4-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports",
 
     'FreeBSD 8-current', "$manLocalDir/FreeBSD-8-current/man:$manLocalDir/FreeBSD-8-current/openssl/man",
 
-    'FreeBSD 7.0-stable', "$manLocalDir/FreeBSD-7.0-stable",
-    'FreeBSD 7.0-RELEASE',
-"$manLocalDir/FreeBSD-7.0-RELEASE/man:$manLocalDir/FreeBSD-7.0-RELEASE/openssl/man",
+
+    'FreeBSD 7.1-stable', "$manLocalDir/FreeBSD-7.1-stable",
+    'FreeBSD 7.1-RELEASE', "$manLocalDir/FreeBSD-7.1-RELEASE/man:$manLocalDir/FreeBSD-7.1-RELEASE/openssl/man",
+    'FreeBSD Ports 7.1-RELEASE', "$manLocalDir/FreeBSD-ports-7.1-RELEASE",
+
+    'FreeBSD 7.0-RELEASE', "$manLocalDir/FreeBSD-7.0-RELEASE/man:$manLocalDir/FreeBSD-7.0-RELEASE/openssl/man",
     'FreeBSD Ports 7.0-RELEASE', "$manLocalDir/FreeBSD-ports-7.0-RELEASE",
 
     'FreeBSD 6.4-stable', "$manLocalDir/FreeBSD-6.4-stable",
@@ -461,15 +464,15 @@ while ( ( $key, $val ) = each %manPath ) {
 
 # keywords must be in lower cases.
 %manPathAliases = (
-    'freebsd',         'FreeBSD 7.0-RELEASE',
-    'freebsd-release', 'FreeBSD 7.0-RELEASE',
+    'freebsd',         'FreeBSD 7.1-RELEASE',
+    'freebsd-release', 'FreeBSD 7.1-RELEASE',
 
-    'freebsd-stable',  'FreeBSD 7.0-stable',
-    'freebsd-stable7', 'FreeBSD 7.0-stable',
+    'freebsd-stable',  'FreeBSD 7.1-stable',
+    'freebsd-stable7', 'FreeBSD 7.1-stable',
     'freebsd-stable6', 'FreeBSD 6.4-stable',
 
     'freebsd-current',       'FreeBSD 8-current',
-    'freebsd-release-ports', 'FreeBSD 7.0-RELEASE and Ports',
+    'freebsd-release-ports', 'FreeBSD 7.1-RELEASE and Ports',
 
     'slackware',  'Linux Slackware 3.1',
     'redhat',     'Red Hat Linux/i386 9',
@@ -1375,7 +1378,7 @@ sub faq {
     }
 
     local $id =
-      '$FreeBSD: www/en/cgi/man.cgi,v 1.225 2008/11/29 14:47:06 wosch Exp $';
+      '$FreeBSD: www/en/cgi/man.cgi,v 1.226 2008/12/21 23:04:17 wosch Exp $';
     return qq{\
 <pre>
 Copyright (c) 1996-2008 <a href="$mailtoURL">Wolfram Schneider</a>
