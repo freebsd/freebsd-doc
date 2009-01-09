@@ -5,8 +5,8 @@
 ]>
 <!--
      $FreeBSD$
-     $FreeBSDde: de-www/index.xsl,v 1.81 2008/12/14 16:37:35 jkois Exp $
-     basiert auf: 1.165
+     $FreeBSDde: de-www/index.xsl,v 1.83 2009/01/09 09:22:12 jkois Exp $
+     basiert auf: 1.167
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -73,22 +73,28 @@
 				  Auf BSD UNIX&reg; basierend
 				</h1>
 				<p>FreeBSD&reg; ist ein modernes Betriebssystem f&#252;r
-				x86-kompatible (einschlie&#223;lich Pentium&reg; und
-				Athlon&trade;), amd64-kompatible (einschlie&#223;lich
-				Opteron&trade;, Athlon&trade;64 und EM64T), UltraSPARC&reg;-,
-				IA-64-, PC-98- sowie ARM-Architekturen.  FreeBSD ist eine
-				Weiterentwicklung von BSD, dem
-				&unix;-Betriebssystem der
-				University of California, Berkeley.  Das System wird
-				von einer <a
-				href="&enbase;/doc/en_US.ISO8859-1/articles/contributors/staff-committers.html">
-				gro&#223;en Entwicklergruppe</a> gepflegt und erweitert.
-				An der Unterst&#252;tzung weiterer
-				<a href="&base;/platforms/index.html">Plattformen</a>
-				wird gearbeitet.</p>
-				<div id="TXTFRONTFEATURELINK">
-				&#187;<a href="&base;/about.html" title="Weitere Informationen">Weitere Informationen</a>
-				</div> <!-- TXTFRONTFEATURELINK -->
+				  Server, Desktops und eingebettete Systeme, das auf
+				  zahlreichen <a
+				  href="&base;/platforms/index.html">Plattformen</a>
+				  l&#228;uft.  Der Quellcode von FreeBSD wird seit
+				  mehr als 30 Jahren kontinuierlich weiterentwickelt,
+				  verbessert und optimiert.  Das System wird
+				  von einer <a
+				  href="&enbase;/doc/en_US.ISO8859-1/articles/contributors/staff-committers.html">
+				  gro&#223;en Entwicklergruppe</a> gepflegt und erweitert.
+				  FreeBSD bietet Ihnen leistungsf&#228;hige
+				  und beeindruckende Netzwerk- und
+				  Sicherheitsfunktionen und eine exzellente
+				  Performance und wird deswegen beispielsweise von
+				  einigen der gr&#246;&#223;ten <a
+				  href="&enbase;/doc/en_US.ISO8859-1/books/handbook/nutshell.html#INTRODUCTION-NUTSHELL-USERS">
+				  Internet-Seiten</a> und von zahlreichen Anbietern
+				  eingebetteter Netzwerk- und Speicherger&#228;te
+				  eingesetzt.</p>
+
+				  <div id="TXTFRONTFEATURELINK"> &#187;<a
+				    href="&base;/about.html" title="Learn More">Mehr Informationen</a>
+				  </div> <!-- TXTFRONTFEATURELINK -->
 			</div> <!-- FRONTFEATURECONTENT -->
 		</div> <!-- FRONTFEATURELEFT -->
 
@@ -300,7 +306,7 @@
 			  <div>
 				<ul class="newseventslist">
 				  <li class="first-child">
-					<a href="&base;/security/" title="Weitere Security Advisories">Mehr</a>
+					<a href="&enbase;/security/advisories.html" title="Weitere Security Advisories">Mehr</a>
 				  </li>
 				  <li class="last-child">
 					<a href="&enbase;/security/advisories.rdf" title="Security Advisories RSS Feed"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="News RSS Feed" /></a>
