@@ -2,8 +2,8 @@
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
 <!-- $FreeBSD$
-     $FreeBSDde: de-www/share/sgml/libcommon.xsl,v 1.12 2008/12/09 10:32:06 jkois Exp $
-     basiert auf: 1.23
+     $FreeBSDde: de-www/share/sgml/libcommon.xsl,v 1.13 2009/01/09 09:36:25 jkois Exp $
+     basiert auf: 1.24
  -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
