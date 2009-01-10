@@ -4,12 +4,12 @@
 <!ENTITY title "A &os; Projekt">
 ]>
 
-<!-- $FreeBSD: www/hu/index.xsl,v 1.13 2008/12/17 02:23:26 pgj Exp $ -->
+<!-- $FreeBSD: www/hu/index.xsl,v 1.14 2008/12/22 15:42:11 pgj Exp $ -->
 
 <!-- FreeBSD Hungarian Documentation Project
      Translated by: Gabor Kovesdan <gabor@FreeBSD.org>
      %SOURCE%	en/index.xsl
-     %SRCID%	1.165
+     %SRCID%	1.167
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -70,30 +70,35 @@
 			<div id="FRONTFEATURECONTENT">
 				<h1>A BSD &unix; alapjain</h1>
 
-				<p>A &os;&reg; egy x86 kompatibilis
-				  (Pentium&reg; &eacute;s
-				  Athlon&trade;), amd64 kompatibilis
-				  (Opteron&trade;, Athlon&trade;64,
-				  &eacute;s EM64T), UltraSPARC&reg;,
-				  IA-64, PC-98 &eacute;s ARM
-				  sz&aacute;m&iacute;t&oacute;g&eacute;p-architekt&uacute;r&aacute;kra
-				  k&eacute;sz&uuml;lt fejlett
-				  oper&aacute;ci&oacute;s rendszer.  A
-				  BSD rendszer egyik
-				  lesz&aacute;rmazottja, amely a &unix;
-				  egy olyan verzi&oacute;ja, amelyet a
-				  kaliforniai Berkeley Egyetemen
-				  fejlesztettek ki.  A &os;-t <a
-				    href="&base;/doc/en/articles/contributors/staff-committers.html">&ouml;nk&eacute;ntesek egy nagyobb csoportja</a>
-				  fejleszti &eacute;s tartja karban.  A
-				  fejleszt&eacute;s
-				  k&uuml;l&ouml;nb&ouml;z&#245;
-				  f&aacute;zisaiban tov&aacute;bbi <a
-				    href="&base;/platforms/">platformok</a>
-				  is el&eacute;rhet&#245;ek.</p>
+				<p>A &os;&reg; napjaink szerver, asztali
+				  &eacute;s be&aacute;gyazott <a
+				  href="&base;/platforms/">sz&aacute;m&iacute;t&oacute;g&eacute;peinek</a>
+				  oper&aacute;ci&oacute;s rendszere.  A
+				  &os; k&oacute;db&aacute;zisa t&ouml;bb
+				  mint harminc &eacute;v folyamatos
+				  fejleszt&eacute;s&eacute;nek,
+				  munk&aacute;j&aacute;nak &eacute;s
+				  optimaliz&aacute;l&aacute;s&aacute;nak
+				  eredm&eacute;nye.  Jelenleg <a
+				    href="&base;/doc/en/articles/contributors/staff-committers.html">egyéni
+				    fejleszt&#245;k egy nagyobb csoportja</a>
+				  tartja karban.  A &os; legfontosabb
+				  jellemz&#245;i t&ouml;bbek k&ouml;zt a
+				  fejlett
+				  h&aacute;l&oacute;zatkezel&eacute;s, a
+				  kifinomult biztons&aacute;gi
+				  lehet&#245;s&eacute;gek &eacute;s a
+				  vil&aacute;gsz&iacute;nvonal&uacute;
+				  teljes&iacute;tm&eacute;ny, amelyet a
+				  vil&aacute;gban <a
+				    href="&base;/doc/en/books/handbook/nutshell.html/#INTRODUCTION-NUTSHELL-USERS">sz&aacute;mos forgalmasabb kiszolg&aacute;l&oacute;</a>,
+				  hat&eacute;kony be&aacute;gyazott
+				  rendszer &eacute;s
+				  t&aacute;rol&oacute;eszk&ouml;z
+				  haszn&aacute;l.</p>
 
-				<div id="TXTFRONTFEATURELINK">
-				&#187;<a href="&base;/about.html" title="B&#245;vebben">B&#245;vebben</a>
+				<div id="TXTFRONTFEATURELINK"> &#187;
+				  <a href="&base;/about.html" title="B&#245;vebben">B&#245;vebben</a>
 				</div> <!-- TXTFRONTFEATURELINK -->
 			</div> <!-- FRONTFEATURECONTENT -->
 		</div> <!-- FRONTFEATURELEFT -->
@@ -318,7 +323,7 @@
 				<ul class="newseventslist">
 				  <li class="first-child">
 					<a
-					  href="&enbase;/security/" title="Tov&aacute;bbi biztons&aacute;gi figyelmeztet&eacute;sek">Tov&aacute;bb</a>
+					  href="&enbase;/security/advisories.html" title="Tov&aacute;bbi biztons&aacute;gi figyelmeztet&eacute;sek">Tov&aacute;bb</a>
 				  </li>
 				  <li class="last-child">
 					<a
