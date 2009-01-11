@@ -4,7 +4,7 @@
 <!ENTITY title "The FreeBSD GNOME Project">
 <!ENTITY % navinclude.gnome "INCLUDE">
 ]>
-<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.101 2008/07/04 17:40:25 marcus Exp $ -->
+<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.102 2009/01/11 22:11:15 marcus Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
 		xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -128,7 +128,7 @@
 		<h2>Upgrading to GNOME 2.24?</h2>
 
 		<p>If you are upgrading from GNOME 2.22 to GNOME 2.24, read the
-		  <a href="docs/faq222.html">Upgrade FAQ</a> for upgrade
+		  <a href="docs/faq224.html">Upgrade FAQ</a> for upgrade
 		  instructions.</p>
 
               <h2>State of the port</h2>
