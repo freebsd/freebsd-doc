@@ -6,7 +6,7 @@
 <!ENTITY % navinclude.community "INCLUDE">
 ]>
 
-<!-- $FreeBSD: www/en/community.xsl,v 1.7 2008/12/30 08:58:50 murray Exp $ -->
+<!-- $FreeBSD: www/en/community.xsl,v 1.8 2009/01/24 12:47:30 danger Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -47,9 +47,9 @@
 
 	      <p>There are more than one hundred <a
 		href="&base;/community/mailinglists.html">mailing
-		lists</a>, online web-based <a
-		  href="http://forums.FreeBSD.org/">forums</a> as well
-		as several <a
+		lists</a>, dozens of web-based <a
+		  href="http://forums.FreeBSD.org/">forums</a>, and
+		several <a
 		href="&base;/community/newsgroups.html">newsgroups</a>
 		available.  There are over <xsl:value-of
 		select="count(document($usergroups.xml)//entry)"
