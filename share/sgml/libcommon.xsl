@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
-<!-- $FreeBSD: www/share/sgml/libcommon.xsl,v 1.24 2009/01/04 22:20:04 simon Exp $ -->
+<!-- $FreeBSD: www/share/sgml/libcommon.xsl,v 1.25 2009/01/13 22:44:00 lwhsu Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
   version="1.0"
@@ -1428,7 +1428,9 @@
         <xsl:value-of select="name"/>
 
 	<br />
-	(<xsl:value-of select='location/city' />, <xsl:value-of select='location/country' />)
+	<xsl:if test="location/city!='' and location/country!=''">
+	  (<xsl:value-of select='location/city' />, <xsl:value-of select='location/country' />)
+	</xsl:if>
       </a></p>
     </xsl:if>
     </xsl:for-each>
