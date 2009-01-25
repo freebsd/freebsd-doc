@@ -2,8 +2,8 @@
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
 <!-- $FreeBSD$
-     $FreeBSDde: de-www/share/sgml/libcommon.xsl,v 1.14 2009/01/17 16:55:23 jkois Exp $
-     basiert auf: 1.25
+     $FreeBSDde: de-www/share/sgml/libcommon.xsl,v 1.15 2009/01/25 22:19:11 jkois Exp $
+     basiert auf: 1.26
  -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -126,7 +126,11 @@
         <xsl:value-of select="name"/>
 
 	<br />
-	(<xsl:value-of select='location/city' />, <xsl:value-of select='location/country' />)
+	  <xsl:if test="location/city!='' and location/country!=''">
+	    (<xsl:value-of select='location/city' />, <xsl:value-of select='location/country' />)
+ 	  </xsl:if>
+	  <xsl:if test="location/city='' and location/country=''">
+ 	  </xsl:if>
       </a></p>
     </xsl:if>
     </xsl:for-each>
