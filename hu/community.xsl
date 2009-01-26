@@ -6,12 +6,12 @@
 <!ENTITY % navinclude.community "INCLUDE">
 ]>
 
-<!-- $FreeBSD: www/hu/community.xsl,v 1.3 2008/08/04 20:24:49 pgj Exp $ -->
+<!-- $FreeBSD: www/hu/community.xsl,v 1.4 2008/12/30 19:39:42 pgj Exp $ -->
 
 <!-- The FreeBSD Hungarian Documentation Project
      Translated by: Gabor Kovesdan <gabor@FreeBSD.org>
      %SOURCE%   en/community.xsl
-     %SRCID%    1.7
+     %SRCID%    1.9
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
@@ -54,7 +54,9 @@
 
 	      <p>T&ouml;bb mint sz&aacute;z <a
 		  href="&base;/community/mailinglists.html">levelez&eacute;si
-		lista</a> &eacute;s sz&aacute;mos <a
+		lista</a>, tucatnyi <a
+		  href="http://forums.FreeBSD.org/">f&oacute;rum</a>,
+		  &eacute;s sz&aacute;mos <a
 		  href="&base;/community/newsgroups.html">h&iacute;rcsoport</a>
 		&aacute;ll rendelkez&eacute;sre.  Ezenk&iacute;v&uuml;l
 		<xsl:value-of
