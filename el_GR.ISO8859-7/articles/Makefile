@@ -15,6 +15,7 @@ SUBDIR+= greek-language-support
 SUBDIR+= laptop
 SUBDIR+= linux-users
 SUBDIR+= multi-os
+SUBDIR+= nanobsd
 SUBDIR+= new-users
 SUBDIR+= problem-reports
 SUBDIR+= releng
