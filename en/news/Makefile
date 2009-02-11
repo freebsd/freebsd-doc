@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/news/Makefile,v 1.50 2008/01/16 08:21:47 murray Exp $
+# $FreeBSD: www/en/news/Makefile,v 1.51 2008/12/08 09:10:44 murray Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -47,6 +47,7 @@ SUBDIR+= 	2004
 SUBDIR+= 	2005
 SUBDIR+= 	2006
 SUBDIR+= 	2007
+SUBDIR+=  2008
 SUBDIR+=	status
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
