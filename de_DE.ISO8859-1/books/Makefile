@@ -6,7 +6,8 @@
 #    $FreeBSDde: de-docproj/books/Makefile,v 1.6 2007/08/20 19:11:15 jkois Exp $
 #
 
-SUBDIR =	faq
+SUBDIR =	developers-handbook
+SUBDIR+=	faq
 SUBDIR+=	fdp-primer
 SUBDIR+=	handbook
 SUBDIR+=	porters-handbook
