@@ -6,7 +6,7 @@
 <!ENTITY % navinclude.about "INCLUDE">
 ]>
 
-<!-- $FreeBSD: www/share/sgml/templates.oldnewsflash.xsl,v 1.7 2008/01/11 23:36:14 jkois Exp $ -->
+<!-- $FreeBSD: www/share/sgml/templates.oldnewsflash.xsl,v 1.8 2008/12/08 09:10:45 murray Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -64,6 +64,7 @@
 	<xsl:apply-templates select="descendant::month"/>
 	
 	<p>Other project news:
+	  <a href="../2008/index.html">2008</a>,
 	  <a href="../2007/index.html">2007</a>,
 	  <a href="../2006/index.html">2006</a>,
 	  <a href="../2005/index.html">2005</a>,
