@@ -6,7 +6,7 @@
 <!ENTITY % navinclude.about "INCLUDE">
 ]>
 
-<!-- $FreeBSD: www/share/sgml/templates.oldpress.xsl,v 1.5 2008/01/11 23:36:14 jkois Exp $ -->
+<!-- $FreeBSD: www/share/sgml/templates.oldpress.xsl,v 1.6 2008/12/08 09:10:45 murray Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -47,6 +47,7 @@
 	<xsl:apply-templates select="//month"/>
 	
 	<p>Other press publications:
+	  <a href="../2008/press.html">2008</a>,
 	  <a href="../2007/press.html">2007</a>,
 	  <a href="../2006/press.html">2006</a>,
 	  <a href="../2005/press.html">2005</a>,
