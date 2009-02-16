@@ -42,6 +42,12 @@
                       attributes: (list (list "href" "mailto:gabor@FreeBSD.org"))
                   (literal "gabor@FreeBSD.org>."))
 	        ))))
+          
+	(define (local-hu-label-title-sep)
+	  (list
+	    (list (normalize "caution")		": ")
+	    (list (normalize "warning")		": ")
+	  ))
       ]]>
     </style-specification-body>
   </style-specification>
