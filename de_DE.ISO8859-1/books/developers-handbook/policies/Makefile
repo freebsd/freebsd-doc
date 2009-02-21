@@ -2,7 +2,7 @@
 # Build the Handbook with just the content from this chapter.
 #
 # $FreeBSD$
-# $FreeBSDde: de-docproj/books/developers-handbook/policies/Makefile,v 1.1.1.1 2007/08/01 19:18:33 as Exp $
+# $FreeBSDde: de-docproj/books/developers-handbook/policies/Makefile,v 1.2 2009/02/14 22:12:52 miwi Exp $
 # basiert auf: 1.1
 #
 
