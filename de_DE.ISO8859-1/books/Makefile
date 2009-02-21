@@ -3,10 +3,10 @@
 #    The FreeBSD German Documentation Project
 #
 #    $FreeBSD$
-#    $FreeBSDde: de-docproj/books/Makefile,v 1.6 2007/08/20 19:11:15 jkois Exp $
+#    $FreeBSDde: de-docproj/books/Makefile,v 1.7 2009/02/10 11:36:13 jkois Exp $
 #
 
-SUBDIR =	developers-handbook
+SUBDIR=		developers-handbook
 SUBDIR+=	faq
 SUBDIR+=	fdp-primer
 SUBDIR+=	handbook
