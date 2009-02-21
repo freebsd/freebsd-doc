@@ -3,13 +3,14 @@
 #    The FreeBSD German Documentation Project
 #
 #       $FreeBSD$
-#       $FreeBSDde: de-docproj/articles/Makefile,v 1.5 2007/07/11 18:41:07 jkois Exp $
+#       $FreeBSDde: de-docproj/articles/Makefile,v 1.6 2009/01/17 11:49:01 jkois Exp $
 #       basiert auf:  1.42
 
 SUBDIR = contributing
 SUBDIR+= contributing-ports
 SUBDIR+= explaining-bsd
 SUBDIR+= laptop
+SUBDIR+= linux-comparison
 SUBDIR+= new-users
 SUBDIR+= version-guide
 
