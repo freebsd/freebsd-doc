@@ -2,8 +2,8 @@
 # The FreeBSD German Documentation Project
 #
 # $FreeBSD$
-# $FreeBSDde: de-docproj/books/developers-handbook/Makefile,v 1.2 2007/08/31 01:42:15 as Exp $
-# basiert auf: 1.23
+# $FreeBSDde: de-docproj/books/developers-handbook/Makefile,v 1.3 2009/02/21 19:12:23 jkois Exp $
+# basiert auf: 1.24
 #
 # Build the FreeBSD Developers' Handbook.
 #
@@ -22,14 +22,13 @@ INSTALL_ONLY_COMPRESSED?=
 # Images
 IMAGES_EN= sockets/layers.eps sockets/sain.eps sockets/sainfill.eps sockets/sainlsb.eps sockets/sainmsb.eps sockets/sainserv.eps sockets/serv.eps sockets/serv2.eps sockets/slayers.eps
 
-# 
+#
 # SRCS lists the individual SGML files that make up the document. Changes
 # to any of these files will force a rebuild
 #
 
 # SGML content
 SRCS=  book.sgml
-SRCS+= dma/chapter.sgml
 SRCS+= introduction/chapter.sgml
 SRCS+= ipv6/chapter.sgml
 SRCS+= kernelbuild/chapter.sgml
