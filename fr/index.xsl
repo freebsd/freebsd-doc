@@ -4,10 +4,10 @@
 <!ENTITY title "Le Projet FreeBSD">
 ]>
 
-<!-- $FreeBSD: www/fr/index.xsl,v 1.35 2008/02/02 09:18:17 blackend Exp $ -->
+<!-- $FreeBSD: www/fr/index.xsl,v 1.36 2008/02/28 16:49:08 blackend Exp $ -->
 <!--
    The FreeBSD French Documentation Project
-   Original revision: 1.163
+   Original revision: 1.167
 
    Version francaise : Stephane Legrand <stephane@freebsd-fr.org>
    Mise a jour:	Marc Fonvieille <blackend@FreeBSD.org>
@@ -77,19 +77,29 @@
 			<div id="FRONTFEATURECONTENT">
 				<h1>
 				  Bas&#233; sur &unix; BSD
-				</h1>				
+				</h1>
 				<p>FreeBSD&reg; est un syst&#232;me d'exploitation avanc&#233; pour
-				les architectures compatibles x86 (y compris Pentium&reg; et Athlon&trade;), compatibles 
-				amd64 (y compris Opteron&trade;, Athlon&trade;64 et EM64T), 
-				UltraSPARC&reg;, IA-64, PC-98 et ARM.
-				Il est d&#233;riv&#233; de UNIX BSD, la version d'&unix; 
-				d&#233;velopp&#233;e &#224;
-				l'Universit&#233; de Californie, Berkeley.
+				les <a
+				href="&base;/platforms/">plates-formes</a>
+				modernes de type serveur, station de
+				travail et syst&#232;mes embarqu&#233;s.  Le code
+				de base de FreeBSD a &#233;t&#233; d&#233;velopp&#233;,
+				am&#233;lior&#233; et optimis&#233; continuellement
+				pendant plus de trente ans.
 				Il est d&#233;velopp&#233; et maintenu par
 				<a href="&enbase;/doc/&url.doc.langcode;/articles/contributors/staff-committers.html">une
-				importante &#233;quipe de personnes</a>. D'autres
-				<a href="&base;/platforms/index.html">plates-formes</a> sont &#224;
-				divers stades de d&#233;veloppement.</p>
+				importante &#233;quipe de personnes</a>.
+				FreeBSD propose des fonctionnalit&#233;s
+				r&#233;seau avanc&#233;es, une s&#233;curit&#233; pouss&#233;e et
+				des performances de haut niveau.
+				FreeBSD est utilis&#233; par certains des <a
+				href="&base;/doc/&url.doc.langcode;/books/handbook/nutshell.html#INTRODUCTION-NUTSHELL-USERS">sites
+				web les plus visit&#233;s</a> ainsi que par
+				la plupart
+				des syst&#232;mes embarqu&#233;s orient&#233;s r&#233;seau
+				et des syst&#232;mes de stockage les plus
+				r&#233;pandus.</p>
+
 				<div id="txtfrontfeaturelink">
 				&#187;<a href="&base;/about.html" title="En savoir plus">En savoir plus</a>
 				</div> <!-- txtfrontfeaturelink -->
@@ -307,7 +317,7 @@
 			  <div>
 				<ul class="newseventslist">
 				  <li class="first-child">
-					<a href="&base;/security/" title="Plus d'avis de s&#233;curit&#233;">Plus...</a>
+					<a href="&base;/security/advisories.html" title="Plus d'avis de s&#233;curit&#233;">Plus...</a>
 				  </li>
 				  <li class="last-child">
 					<a href="&enbase;/security/rss.xml" title="Flux RSS des avis de s&#233;curit&#233;"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="Flux RSS des avis de s&#233;curit&#233;" /></a>
@@ -325,7 +335,17 @@
 				<xsl:with-param name="type" select="'notice'" />
 			</xsl:call-template>
 
-			</div> <!-- newseventswrap -->
+			<div>
+			      <ul class="newseventslist">
+				<li class="first-child">
+				  <a href="&base;/security/" title="Plus d'Errata">Plus</a>
+				</li>
+				<li class="last-child">
+				  <a href="&base;/security/errata.xml" title="Flux RSS des Errata"><img class="rssimage" src="&base;/layout/images/ico_rss.png" width="27" height="12" alt="Flux RSS des Errata" /></a>
+				</li>
+			      </ul>
+			</div> <!-- unnamed -->
+		      </div> <!-- newseventswrap -->
 
 		   </div> <!-- FRONTSECURITYCONTENT -->
             	</div> <!-- FRONTSECURITY -->
