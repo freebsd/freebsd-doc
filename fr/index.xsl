@@ -4,7 +4,7 @@
 <!ENTITY title "Le Projet FreeBSD">
 ]>
 
-<!-- $FreeBSD: www/fr/index.xsl,v 1.36 2008/02/28 16:49:08 blackend Exp $ -->
+<!-- $FreeBSD: www/fr/index.xsl,v 1.37 2009/02/25 08:42:39 blackend Exp $ -->
 <!--
    The FreeBSD French Documentation Project
    Original revision: 1.167
@@ -93,7 +93,7 @@
 				r&#233;seau avanc&#233;es, une s&#233;curit&#233; pouss&#233;e et
 				des performances de haut niveau.
 				FreeBSD est utilis&#233; par certains des <a
-				href="&base;/doc/&url.doc.langcode;/books/handbook/nutshell.html#INTRODUCTION-NUTSHELL-USERS">sites
+				href="&enbase;/doc/&url.doc.langcode;/books/handbook/nutshell.html#INTRODUCTION-NUTSHELL-USERS">sites
 				web les plus visit&#233;s</a> ainsi que par
 				la plupart
 				des syst&#232;mes embarqu&#233;s orient&#233;s r&#233;seau
