@@ -7,7 +7,7 @@
 <!ENTITY % developers SYSTEM "../../developers.sgml"> %developers;
 ]>
 
-<!-- $FreeBSD: www/en/projects/ideas/ideas.xsl,v 1.9 2008/03/17 22:08:57 rwatson Exp $ -->
+<!-- $FreeBSD: www/en/projects/ideas/ideas.xsl,v 1.10 2008/03/18 00:01:09 rwatson Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -127,7 +127,7 @@
 
       <h3><xsl:value-of select="title" /></h3>
       <xsl:if test="@class='soc2007'"><em>Part of Summer of Code 2007</em></xsl:if>
-      <xsl:if test="@class='soc'"><em>Suggested Summer of Code 2008 project idea</em></xsl:if>
+      <xsl:if test="@class='soc'"><em>Suggested Summer of Code 2009 project idea</em></xsl:if>
 
       <xsl:copy-of select="desc" />
 
