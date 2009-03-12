@@ -7,7 +7,7 @@
 <!ENTITY % developers SYSTEM "../../developers.sgml"> %developers;
 ]>
 
-<!-- $FreeBSD: www/en/projects/ideas/ideas.xsl,v 1.11 2009/03/05 18:52:30 danger Exp $ -->
+<!-- $FreeBSD: www/en/projects/ideas/ideas.xsl,v 1.12 2009/03/06 04:41:39 brooks Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -146,7 +146,7 @@
 <ul>
   <li><strong>ACPI</strong>:
     <a href="mailto:njl@FreeBSD.org">&a.njl;</a>,
-    <a href="mailto:bruno@FreeBSD.og">&a.bruno;</a>.</li>
+    <a href="mailto:bruno@FreeBSD.org">&a.bruno;</a>.</li>
   <li><strong>File systems</strong>:
     <a href="mailto:scottl@FreeBSD.org">&a.scottl;</a>,
     <a href="mailto:alfred@FreeBSD.org">&a.alfred;</a>.</li>
