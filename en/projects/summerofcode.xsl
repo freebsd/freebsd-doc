@@ -7,7 +7,7 @@
 <!ENTITY % developers SYSTEM "../developers.sgml"> %developers;
 ]>
 
-<!-- $FreeBSD: www/en/projects/summerofcode.xsl,v 1.17 2009/03/16 12:03:35 rwatson Exp $ -->
+<!-- $FreeBSD: www/en/projects/summerofcode.xsl,v 1.18 2009/03/16 13:42:23 rwatson Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -51,7 +51,6 @@
 
 <ul>
   <li><a href="#benefits">Benefits of Participating</a></li>
-  <li><a href="#current">Current Student Projects</a></li>
   <li><a href="#students">Past Student Projects</a></li>
   <li><a href="#ideas">Example Proposal Ideas</a></li>
   <li><a href="#mentors">Possible Mentors</a></li>
@@ -84,12 +83,6 @@
   become FreeBSD developers.  It's also a great job networking
   opportunity!</p>
  
-<a name="current"></a>
-<h2>Current Student Projects</h2>
-
-  <p>All GSoC 2008 projects have been completed, and we are eagerly awaiting
-    applications for GSoC 2009.</p>
-
 <a name="students"></a>
 <h2>Past Student Projects</h2>
 
