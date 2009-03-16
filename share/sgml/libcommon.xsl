@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
-<!-- $FreeBSD: www/share/sgml/libcommon.xsl,v 1.26 2009/01/25 10:12:01 danger Exp $ -->
+<!-- $FreeBSD: www/share/sgml/libcommon.xsl,v 1.27 2009/02/11 17:15:28 pgj Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
   version="1.0"
@@ -411,7 +411,6 @@
   <!-- template: "html-press-make-olditems-list" -->
   <xsl:template name="html-press-make-olditems-list">
     <p>Old press publications:
-      <a href="2008/press.html">2008</a>,
       <a href="2007/press.html">2007</a>,
       <a href="2006/press.html">2006</a>,
       <a href="2005/press.html">2005</a>,
