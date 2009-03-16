@@ -7,7 +7,7 @@
 <!ENTITY % developers SYSTEM "../developers.sgml"> %developers;
 ]>
 
-<!-- $FreeBSD: www/en/projects/summerofcode.xsl,v 1.15 2008/09/19 05:01:12 murray Exp $ -->
+<!-- $FreeBSD: www/en/projects/summerofcode.xsl,v 1.16 2009/03/16 10:45:03 rwatson Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -368,6 +368,14 @@ href="http://wiki.freebsd.org/moin.cgi/SummerOfCode2005">2005</a>].</p>
       a good person to talk to about your idea, send them to <a
       href="mailto:soc-admins@FreeBSD.org">soc-admins@FreeBSD.org</a>.</p>
       </li>
+
+  <li><p><strong>Is there an IRC channel I can join to talk about proposal
+    ideas or get help finding out more?</strong></p>
+
+    <p>Yes, you can join #freebsd-soc on the efnet IRC network to chat with
+      FreeBSD developers interested in mentoring student proposals and
+      projects, past FreeBSD/GSoC students, and other students applying to
+      FreeBSD/GSoC this year.</p></li>
 
 </ul>
 
