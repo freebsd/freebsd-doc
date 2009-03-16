@@ -7,7 +7,7 @@
 <!ENTITY % developers SYSTEM "../developers.sgml"> %developers;
 ]>
 
-<!-- $FreeBSD: www/en/projects/summerofcode.xsl,v 1.16 2009/03/16 10:45:03 rwatson Exp $ -->
+<!-- $FreeBSD: www/en/projects/summerofcode.xsl,v 1.17 2009/03/16 12:03:35 rwatson Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -58,6 +58,7 @@
   <li><a href="#proposals">Proposal Guidelines</a></li>
   <li><a href="#infrastructure">Infrastructure Provided to Students</a></li>
   <li><a href="#faq">Frequently Asked Questions</a></li>
+  <li><a href="#advertise">Advertise on Your Campus</a></li>
 </ul>
 
 <a name="benefits"></a>
@@ -378,6 +379,20 @@ href="http://wiki.freebsd.org/moin.cgi/SummerOfCode2005">2005</a>].</p>
       FreeBSD/GSoC this year.</p></li>
 
 </ul>
+
+<a name="advertise"></a>
+<h2>Advertise on Your Campus</h2>
+
+  <p>Please help us advertise Google Summer of Code with FreeBSD at your
+    local university or college campus!  You can forward around our e-mail
+    announcement to department and club mailing lists, and to department
+    secretaries to distribute.  You can also print out and post copies of the
+    <a href="2009-freebsd-gsoc.pdf">FreeBSD GSoC 2009 poster</a>.</p>
+
+  <p><a href="2009-freebsd-gsoc.pdf" align="left"> <img
+    src="2009-freebsd-gsoc-thumbnail.jpg"
+    alt="[FreeBSD GSoC 2009 poster thumnail]" height="248" width="192"
+    border="0" /></a></p>
 
 	      </div> <!-- CONTENTWRAP -->
 	      <br class="clearboth" />
