@@ -7,7 +7,7 @@
 <!ENTITY % developers SYSTEM "../developers.sgml"> %developers;
 ]>
 
-<!-- $FreeBSD: www/en/projects/summerofcode.xsl,v 1.20 2009/03/16 14:01:39 rwatson Exp $ -->
+<!-- $FreeBSD: www/en/projects/summerofcode.xsl,v 1.21 2009/03/16 14:09:07 rwatson Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -309,11 +309,10 @@ href="http://wiki.freebsd.org/moin.cgi/SummerOfCode2005">2005</a>].</p>
   <li><p><strong>Can I submit multiple project proposals to the FreeBSD
     Project?</strong></p>
 
-    <p>Yes, but do make sure you invest adequate time in each proposal so
-      that we can evaluate them properly.  We will only be able to accept
-      one proposal from any given student, so you may do better writing just
-      one or two detailed proposals than submitting lots of less detailed
-      ones.</p></li>
+    <p>Yes, but do make sure you invest adequate time in each proposal.  We
+      are not able to accept more than one project per student, so you may do
+      better spending more time on one or two detailed proposals than by
+      submitting lots of less-detailed ones.</p></li>
 
   <li><p><strong>Will the FreeBSD Project accept more than one student for
     the same idea?</strong></p>
@@ -322,21 +321,21 @@ href="http://wiki.freebsd.org/moin.cgi/SummerOfCode2005">2005</a>].</p>
       idea, as most proposal ideas in our ideas list are sized with a single
       student summer project in mind.  This is a good reason to consider
       coming up with your own idea, or at least, making sure that your
-      proposal for one of our project list ideas reflects your unique
-      contribution and viewpoint.  If you plan to submit multiple proposals,
-      you might consider doing one with an idea from the list, and another
-      with an original idea.</p></li>
+      proposal for one of our project ideas reflects your unique contribution
+      and viewpoint.  If you plan to submit multiple proposals, you might
+      consider doing one with an idea from the list, and another with an
+      original idea.</p></li>
 
   <li><p><strong>What if my proposal is not selected in the application
     process?  Can I still participate?</strong></p>
 
-    <p>Unfortunately, we always have more good applications than student
-      places, but that doesn't mean you can't do the project anyway.  The
-      FreeBSD Project always welcomes new volunteers to work on projects, and
-      is generally happy to provide mentoring and support for students whose
-      proposals could not be selected in order to allow them to work on their
-      project anyway.  You will need to work with the FreeBSD Project GSoC
-      administrators to identify a possible mento.  However, Google will not
+    <p>We always have more good applications than student places, but that
+      doesn't mean you can't do the project anyway.  The FreeBSD Project
+      always welcomes new volunteers to work on projects, and is generally
+      happy to provide mentoring and support for students whose proposals
+      could not be selected in order to allow them to work on their project
+      anyway.  You will need to work with the FreeBSD Project GSoC
+      administrators to identify a possible mentor.  However, Google will not
       fund that participation.</p></li>
 
   <li><p><strong>What projects were completed successfully by students
@@ -366,7 +365,7 @@ href="http://wiki.freebsd.org/moin.cgi/SummerOfCode2005">2005</a>].</p>
   <li><p><strong>Is there an IRC channel I can join to talk about proposal
     ideas or get help finding out more?</strong></p>
 
-    <p>Yes, you can join #freebsd-soc on the efnet IRC network to chat with
+    <p>You can join #freebsd-soc on the efnet IRC network to chat with
       FreeBSD developers interested in mentoring student proposals and
       projects, past FreeBSD/GSoC students, and other students applying to
       FreeBSD/GSoC this year.</p></li>
