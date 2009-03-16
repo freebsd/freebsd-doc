@@ -7,7 +7,7 @@
 <!ENTITY % developers SYSTEM "../developers.sgml"> %developers;
 ]>
 
-<!-- $FreeBSD: www/en/projects/summerofcode.xsl,v 1.18 2009/03/16 13:42:23 rwatson Exp $ -->
+<!-- $FreeBSD: www/en/projects/summerofcode.xsl,v 1.19 2009/03/16 13:50:08 rwatson Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -161,76 +161,72 @@ href="http://wiki.freebsd.org/moin.cgi/SummerOfCode2005">2005</a>].</p>
 
   <h3>General Information</h3>
   <ul>
-    <li><strong>Name</strong></li>
+    <li><p><strong>Name</strong></p></li>
 
-    <li><strong>Email</strong></li>
+    <li><p><strong>Email</strong></p></li>
 
-    <li><strong>Phone</strong></li>
+    <li><p><strong>Phone</strong></p></li>
 
-    <li><strong>IM/IRC</strong></li>
+    <li><p><strong>IM/IRC</strong></p></li>
 
-    <li><strong>Availability</strong>
+    <li><p><strong>Availability</strong></p>
 
-      How many hours per week will you spend working on this? How many on
-      other things? What other obligations (work, school, vacation, weddings,
-      etc) do you have this summer? Be as specific as possible: when will the
-      project begin and and?  You should be ready to produce a day by day
-      schedule before the program starts.)</li>
+      <p>How many hours per week will you spend working on this? How many on
+	other things? What other obligations (work, school, vacation,
+	weddings, etc) do you have this summer? Be as specific as possible:
+	when will the project begin and and?  You should be ready to produce
+	a day by day schedule before the program starts.)</p></li>
 
-    <li><strong>Bio</strong>
+    <li><p><strong>Bio</strong></p>
 
-      Who are you? What skills do you bring to this project? What is your
-      past involvement with The FreeBSD Project?  (Past involvement is not
-      required, but ideally you will have at least installed FreeBSD and
-      perhaps fixed a bug or two)  If your project includes programming in a
-      particular language, such as C, or in a specific environment, such as
-      the kernel or an embedded platform, what experience do you have working
-      in that area?  Are you familiar with or a user of revision control
-      systems?  Have you completed courses that will be relevant to your
-      project idea?  What do you think you will need to learn to complete
-      this project?</li>
+      <p>Who are you? What skills do you bring to this project? What is your
+	past involvement with The FreeBSD Project?  (Past involvement is not
+	required, but ideally you will have at least installed FreeBSD and
+	perhaps fixed a bug or two)  If your project includes programming in
+	a particular language, such as C, or in a specific environment, such
+	as the kernel or an embedded platform, what experience do you have
+	working in that area?  Are you familiar with or a user of revision
+	control systems?  Have you completed courses that will be relevant to
+	your project idea?  What do you think you will need to learn to
+	complete this project?</p></li>
 
-    <li><strong>Possible Mentor</strong>
+    <li><p><strong>Possible Mentor</strong></p>
 
-      Optional, but highly recommended. Do not put a name here if you have
-      not contacted them.</li>
-
-    <li><strong>Project Title</strong></li>
+      <p>Optional, but highly recommended. Do not put a name here if you have
+	not contacted them.</p></li>
   </ul>
 
   <h3>Project Information</h3>
   <ul>
+    <li><p><strong>Project Title</strong></p>
 
-    <li><strong>Project Description</strong>
+      <p>In forty characters or less, what you propose to do.</p></li>
 
-      A few paragraphs describing your project. Direct copies from the ideas
-      page will be rejected - proposals should reveal that you have done
-      some research into the problem and its solutions.  Include both what
-      you will be doing and why it is a good thing for The FreeBSD Project.
-      </li>
+    <li><p><strong>Project Description</strong></p>
 
-    <li><strong>Deliverables</strong>
+      <p>A few paragraphs describing your project.  Direct copies from the
+	ideas page will be rejected - proposals should reveal that you have
+	done some research into the problem and its solutions.  Include both
+	what you will be doing and why it is a good thing for The FreeBSD
+	Project.</p></li>
 
-      A list quantifiable results and related code milestones. We suggest at
-      least two milestones before the mid-term evaluations and two after.
-      Where appropriate, this schedule should include multiple committable or
-      releasable points so people can benefit from and/or test your work as
-      early as possible.</li>
+    <li><p><strong>Deliverables</strong></p>
 
-    <li><strong>Test Plan</strong>
+      <p>A list quantifiable results and related code milestones. We suggest
+	at least two milestones before the mid-term evaluations and two
+	after.  Where appropriate, this schedule should include multiple
+	committable or releasable points so people can benefit from and/or
+	test your work as early as possible.</p></li>
 
-      What parts of your code need testing and how do you plan to test them?
-      This might include both functionality and performance tests.</li>
+    <li><p><strong>Test Plan</strong></p>
 
-    <li><strong>Project Schedule</strong> - How long will the project
-      take? When can you begin work?</li>
+      <p>What parts of your code need testing and how do you plan to test
+	them?  This might include both functionality and performance tests.
+	</p></li>
 
-    <li><strong>Availability</strong> - How many hours per week can
-      you spend working on this?  What other obligations do you have
-      this summer?</li>
+    <li><p><strong>Project Schedule</strong></p>
 
-    <li><strong>Bio</strong> - Who are you? What makes you the best
-      person to work on this project?  Do you use FreeBSD already?</li>
+      <p>How long will the project take? When can you begin work?</p></li>
 
   </ul>
 
