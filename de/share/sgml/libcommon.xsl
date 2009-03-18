@@ -2,8 +2,8 @@
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
 <!-- $FreeBSD$
-     $FreeBSDde: de-www/share/sgml/libcommon.xsl,v 1.16 2009/02/15 09:09:49 jkois Exp $
-     basiert auf: 1.27
+     $FreeBSDde: de-www/share/sgml/libcommon.xsl,v 1.17 2009/03/18 22:05:57 jkois Exp $
+     basiert auf: 1.28
  -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -67,7 +67,9 @@
 
   <xsl:template name="html-press-make-olditems-list">
     <p>&#196;ltere Presseberichte:
+<!--
       <a href="2008/press.html">2008</a>,
+-->
       <a href="2007/press.html">2007</a>,
       <a href="2006/press.html">2006</a>,
       <a href="2005/press.html">2005</a>,
