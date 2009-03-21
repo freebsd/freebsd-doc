@@ -7,7 +7,7 @@
 <!ENTITY % developers SYSTEM "../developers.sgml"> %developers;
 ]>
 
-<!-- $FreeBSD: www/en/projects/summerofcode.xsl,v 1.21 2009/03/16 14:09:07 rwatson Exp $ -->
+<!-- $FreeBSD: www/en/projects/summerofcode.xsl,v 1.22 2009/03/16 14:19:06 rwatson Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -40,7 +40,7 @@
 
 <p>The FreeBSD Project is looking forward to participating as a mentoring
   organization in <a
-  href="http://code.google.com/summerofcode.html">Google Summer of
+  href="http://socghop.appspot.com/">Google Summer of
   Code</a> 2009.  This program funds students to contribute to an open
   source project over the summer break.  We have had over 70 successful
   students working on FreeBSD as part of this program in <a
