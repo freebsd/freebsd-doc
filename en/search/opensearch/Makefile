@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/search/opensearch/Makefile,v 1.4 2008/09/23 12:32:58 wosch Exp $
+# $FreeBSD: www/en/search/opensearch/Makefile,v 1.5 2008/09/23 16:31:45 wosch Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -24,5 +24,6 @@ DATA+=	cvsweb.xml
 # external sites
 DATA+=	markmail.xml
 DATA+=	rambler.xml
+DATA+=	portoverview.xml
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
