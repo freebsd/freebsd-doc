@@ -4,7 +4,7 @@
 <!ENTITY title "A &os; Projekt">
 ]>
 
-<!-- $FreeBSD: www/hu/index.xsl,v 1.14 2008/12/22 15:42:11 pgj Exp $ -->
+<!-- $FreeBSD: www/hu/index.xsl,v 1.15 2009/01/10 19:39:41 pgj Exp $ -->
 
 <!-- FreeBSD Hungarian Documentation Project
      Translated by: Gabor Kovesdan <gabor@FreeBSD.org>
@@ -44,9 +44,9 @@
     <link rel="alternate stylesheet" media="screen" href="&enbase;/layout/css/fixed_large.css" type="text/css" title="Large Text" />
     <script type="text/javascript" src="&enbase;/layout/js/styleswitcher.js"></script>
 	<link rel="alternate" type="application/rss+xml"
-	  title="FreeBSD Projekt H&iacute;rek" href="&base;/news/rss.xml" />
+	  title="A &os; Projekt h&iacute;rei" href="&base;/news/rss.xml" />
 	<link rel="alternate" type="application/rss+xml"
-	  title="FreeBSD Biztons&aacute;gi Bejelent&eacute;sek" href="&enbase;/security/rss.xml" />
+	  title="A &os; Projekt biztons&aacute;gi figyelmeztet&eacute;sei" href="&base;/security/rss.xml" />
 	
 	<!-- Formatted to be easy to spam harvest, please do not reformat. -->
 	<xsl:comment>
@@ -98,7 +98,7 @@
 				  haszn&aacute;l.</p>
 
 				<div id="TXTFRONTFEATURELINK"> &#187;
-				  <a href="&base;/about.html" title="B&#245;vebben">B&#245;vebben</a>
+				  <a href="&base;/about.html" title="Tov&aacute;bb">Tov&aacute;bb</a>
 				</div> <!-- TXTFRONTFEATURELINK -->
 			</div> <!-- FRONTFEATURECONTENT -->
 		</div> <!-- FRONTFEATURELEFT -->
@@ -122,7 +122,7 @@
 					</li>
 					<li>
 					  <a
-					    href="&u.rel2.announce;">Stabil (hagyom&aacute;nyos) kiad&aacute;s: &rel2.current;</a>
+					    href="&u.rel2.announce;">Stabil (kifut&oacute;) kiad&aacute;s: &rel2.current;</a>
 					</li>
 			    <xsl:if test="'&beta.testing;' != 'IGNORE'">
 					<li>
@@ -246,11 +246,11 @@
 				<ul class="newseventslist">
 				  <li class="first-child">
 					<a
-					  href="&enbase;/news/newsflash.html" title="Tov&aacute;bbi h&iacute;rek">Tov&aacute;bbi h&iacute;rek</a>
+					  href="&base;/news/newsflash.html" title="Tov&aacute;bbi h&iacute;rek">Tov&aacute;bbi h&iacute;rek</a>
 				  </li>
 				  <li class="last-child">
 					<a
-					  href="&enbase;/news/rss.xml" title="H&iacute;rek RSS Feed"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="H&iacute;rek RSS Feed" /></a>
+					  href="&base;/news/rss.xml" title="H&iacute;rek RSS Feed"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="H&iacute;rek RSS feedben" /></a>
 				  </li>
 				</ul>
 			  </div> <!-- unnamed -->
@@ -274,7 +274,7 @@
 				<ul class="newseventslist">
 				  <li class="only-child">
 					<a
-					  href="&enbase;/events/" title="Tov&aacute;bbi esem&eacute;nyek">Tov&aacute;bbi esem&eacute;nyek</a>
+					  href="&base;/events/" title="Tov&aacute;bbi esem&eacute;nyek">Tov&aacute;bbi esem&eacute;nyek</a>
 				  </li>
 				</ul>
 			  </div> <!-- unnamed -->
@@ -298,7 +298,7 @@
 				<ul class="newseventslist">
 				  <li class="only-child">
 					<a
-					  href="&enbase;/news/press.html" title="Tov&aacute;bb esem&eacute;nyek a m&eacute;di&aacute;ban">Tov&aacute;bb</a>
+					  href="&base;/news/press.html" title="Tov&aacute;bb esem&eacute;nyek a m&eacute;di&aacute;ban">Tov&aacute;bb</a>
 				  </li>
 				</ul>
 			  </div> <!-- unnamed -->
@@ -323,11 +323,11 @@
 				<ul class="newseventslist">
 				  <li class="first-child">
 					<a
-					  href="&enbase;/security/advisories.html" title="Tov&aacute;bbi biztons&aacute;gi figyelmeztet&eacute;sek">Tov&aacute;bb</a>
+					  href="&base;/security/advisories.html" title="Tov&aacute;bbi biztons&aacute;gi figyelmeztet&eacute;sek">Tov&aacute;bb</a>
 				  </li>
 				  <li class="last-child">
 					<a
-					  href="&enbase;/security/rss.xml" title="Biztons&aacute;gi figyelmeztet&eacute;sek RSS Feed"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="Biztons&aacute;gi figyelmeztet&eacute;sek RSS Feed" /></a>
+					  href="&base;/security/rss.xml" title="Biztons&aacute;gi figyelmeztet&eacute;sek RSS Feed"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="Biztons&aacute;gi figyelmeztet&eacute;sek RSS feedben" /></a>
 				  </li>
 				</ul>
 			  </div> <!-- unnamed -->
@@ -346,10 +346,11 @@
 			    <ul class="newseventslist">
 			      <li class="first-child">
 				<a
-				  href="&base;/security/" title="M&eacute;g t&ouml;bb sajt&oacute;hiba mutat&aacute;sa">B&#245;vebben</a>
+				  href="&base;/security/" title="M&eacute;g t&ouml;bb sajt&oacute;hiba mutat&aacute;sa">Tov&aacute;bb</a>
 			      </li>
 			      <li class="last-child">
-				<a href="&base;/security/errata.xml" title="Sajt&oacute;hib&aacute;k RSS feedben"><img class="rssimage" src="&base;/layout/images/ico_rss.png" width="27" height="12" alt="Sajt&oacute;hib&aacute;k RSS feedben"/></a>
+				<a
+				  href="&base;/security/errata.xml" title="Sajt&oacute;hib&aacute;k RSS Feed"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="Sajt&oacute;hib&aacute;k RSS feedben"/></a>
 			      </li>
 			    </ul>
 			  </div> <!-- unnamed -->
