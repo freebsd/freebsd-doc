@@ -4,7 +4,7 @@
 <!ENTITY title "A &os; Projekt">
 ]>
 
-<!-- $FreeBSD: www/hu/index.xsl,v 1.15 2009/01/10 19:39:41 pgj Exp $ -->
+<!-- $FreeBSD: www/hu/index.xsl,v 1.16 2009/04/06 17:56:08 pgj Exp $ -->
 
 <!-- FreeBSD Hungarian Documentation Project
      Translated by: Gabor Kovesdan <gabor@FreeBSD.org>
@@ -80,7 +80,7 @@
 				  munk&aacute;j&aacute;nak &eacute;s
 				  optimaliz&aacute;l&aacute;s&aacute;nak
 				  eredm&eacute;nye.  Jelenleg <a
-				    href="&base;/doc/en/articles/contributors/staff-committers.html">egyéni
+				    href="&enbase;/doc/en/articles/contributors/article.html#STAFF-COMMITTERS">egyéni
 				    fejleszt&#245;k egy nagyobb csoportja</a>
 				  tartja karban.  A &os; legfontosabb
 				  jellemz&#245;i t&ouml;bbek k&ouml;zt a
@@ -91,7 +91,7 @@
 				  vil&aacute;gsz&iacute;nvonal&uacute;
 				  teljes&iacute;tm&eacute;ny, amelyet a
 				  vil&aacute;gban <a
-				    href="&base;/doc/en/books/handbook/nutshell.html/#INTRODUCTION-NUTSHELL-USERS">sz&aacute;mos forgalmasabb kiszolg&aacute;l&oacute;</a>,
+				    href="&enbase;/doc/hu/books/handbook/nutshell.html/#INTRODUCTION-NUTSHELL-USERS">sz&aacute;mos forgalmasabb kiszolg&aacute;l&oacute;</a>,
 				  hat&eacute;kony be&aacute;gyazott
 				  rendszer &eacute;s
 				  t&aacute;rol&oacute;eszk&ouml;z
