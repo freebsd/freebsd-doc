@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="ISO-8859-2" ?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
-<!-- $FreeBSD: www/hu/share/sgml/libcommon.xsl,v 1.3 2008/08/12 05:07:13 pgj Exp $ -->
+<!-- $FreeBSD: www/hu/share/sgml/libcommon.xsl,v 1.4 2009/04/06 17:56:08 pgj Exp $ -->
 
 <!-- The FreeBSD Hungarian Documentation Project
      Translated by: Gabor Kovesdan <gabor@FreeBSD.org>
@@ -294,6 +294,55 @@
 	</xsl:call-template>
       </xsl:when>
     </xsl:choose>
+  </xsl:template>
+
+  <!-- template: "html-list-advisories-putitems"
+       sub-routine to generate a list -->
+
+  <xsl:template name="html-list-advisories-putitems">
+    <xsl:param name="items" select="''" />
+    <xsl:param name="prefix" select="''" />
+    <xsl:param name="prefixold" select="''" />
+
+    <xsl:if test="$items">
+      <table>
+        <tr><th>D&aacute;tum</th><th>Figyelmeztet&eacute;s</th></tr>
+        <xsl:for-each select="$items">
+          <xsl:variable name="year" select="../../../name" />
+          <xsl:variable name="month" select="../../name" />
+          <xsl:variable name="day" select="../name" />
+          <tr>
+            <td class="txtdate">
+	      <xsl:value-of select='
+		concat(format-number($year, "####"), "-",
+		format-number($month, "00"), "-",
+		format-number($day, "00"))' />
+            </td>
+            <td>
+	    <xsl:choose>
+	      <xsl:when test="@type='release'">
+                <i><xsl:value-of select="name" /></i>
+	      </xsl:when>
+	      <xsl:when test="@omithref='yes'">
+		<xsl:value-of select="name" />
+	      </xsl:when>
+	      <xsl:when test="name/@role='old'">
+		<a><xsl:attribute name="href">
+		    <xsl:value-of select="concat($prefixold, name, '.asc')" />
+		  </xsl:attribute>
+		  <xsl:value-of select="concat(name, '.asc')" /></a>
+	      </xsl:when>
+	      <xsl:otherwise>
+		<a><xsl:attribute name="href">
+		    <xsl:value-of select="concat($prefix, name, '.asc')" />
+		  </xsl:attribute>
+		  <xsl:value-of select="name" /></a>
+	      </xsl:otherwise>
+	    </xsl:choose>
+          </td></tr>
+	</xsl:for-each>
+      </table>
+    </xsl:if>
   </xsl:template>
 
   <xsl:template name="html-index-news-project-items-lastmodified">
