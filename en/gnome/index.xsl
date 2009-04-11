@@ -4,7 +4,7 @@
 <!ENTITY title "The FreeBSD GNOME Project">
 <!ENTITY % navinclude.gnome "INCLUDE">
 ]>
-<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.102 2009/01/11 22:11:15 marcus Exp $ -->
+<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.103 2009/01/11 22:35:24 marcus Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
 		xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -125,16 +125,16 @@
 			<li>devel/gnome2-hacker-tools (development tools)</li>
 		</ul>
 
-		<h2>Upgrading to GNOME 2.24?</h2>
+		<h2>Upgrading to GNOME 2.26?</h2>
 
-		<p>If you are upgrading from GNOME 2.22 to GNOME 2.24, read the
-		  <a href="docs/faq224.html">Upgrade FAQ</a> for upgrade
+		<p>If you are upgrading from GNOME 2.22 to GNOME 2.26, read the
+		  <a href="docs/faq226.html">Upgrade FAQ</a> for upgrade
 		  instructions.</p>
 
               <h2>State of the port</h2>
 
 	      <p>GNOME for FreeBSD is currently supported on
-		6.4, 6-STABLE, 7.0, 7.1, 7-STABLE, and 8-CURRENT.
+		6.4, 6-STABLE, 7.1, 7-STABLE, and 8-CURRENT.
 		Most of GNOME has been ported to FreeBSD, but there is still
 		<a href="docs/volunteer.html">plenty left to be done</a>!</p>
 
