@@ -9,7 +9,7 @@
 <!ENTITY % header.rss "INCLUDE">
 ]>
 
-<!-- $FreeBSD: www/share/sgml/templates.events.xsl,v 1.12 2008/12/28 10:59:06 murray Exp $ -->
+<!-- $FreeBSD: www/hu/share/sgml/templates.events.xsl,v 1.1 2009/04/06 17:56:08 pgj Exp $ -->
 
 <!-- Copyright (c) 2003 Simon L. Nielsen <simon@FreeBSD.org>
      Copyright (c) 2008 Murray M Stokely <murray@FreeBSD.org>
@@ -40,7 +40,7 @@
 <!-- The FreeBSD Hungarian Documentation Project
      Translated by: PALI, Gabor <pgj@FreeBSD.org>
      %SOURCE%	share/sgml/templates.events.xsl
-     %SRCID%	1.12
+     %SRCID%	1.13
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
@@ -324,7 +324,7 @@
       <p>K&ouml;z&ouml;ss&eacute;gi linkek: <a rel="nofollow">
         <xsl:attribute name="href">http://www.flickr.com/search/?w=all&amp;q=<xsl:value-of select="name" />&amp;m=text</xsl:attribute>
       Flickr</a>, <a rel="nofollow">
-        <xsl:attribute name="href">http://blogsearch.google.com/blogsearch?q=<xsl:value-of select="name" /></xsl:attribute>Blog Search</a><xsl:if test="contains($lcname, 'meetbsd') or contains($lcname, 'nycbsdcon')">,
+        <xsl:attribute name="href">http://blogsearch.google.com/blogsearch?q=<xsl:value-of select="name" /></xsl:attribute>Blog Search</a><xsl:if test="contains($lcname, 'meetbsd') or contains($lcname, 'nycbsdcon') or contains($lcname, 'dcbsdcon') or contains($lcname, 'asiabsdcon')">,
         <a rel="nofollow">
         <xsl:attribute name="href">http://www.youtube.com/results?search_query=bsdconferences+<xsl:value-of select="name" /></xsl:attribute>YouTube</a></xsl:if>.</p>
     </li>
