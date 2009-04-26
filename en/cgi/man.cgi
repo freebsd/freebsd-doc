@@ -33,8 +33,8 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.227 2009-01-05 20:46:44 hrs Exp $
-# $FreeBSD: www/en/cgi/man.cgi,v 1.226 2008/12/21 23:04:17 wosch Exp $
+# $Id: man.cgi,v 1.228 2009-04-26 20:30:24 danger Exp $
+# $FreeBSD: www/en/cgi/man.cgi,v 1.227 2009/01/05 20:46:44 hrs Exp $
 
 ############################################################################
 # !!! man.cgi is stale perl4 code !!!
@@ -163,12 +163,12 @@ $manPathDefault = 'FreeBSD 7.1-RELEASE';
 
 %manPath = (
     'FreeBSD 7.1-RELEASE and Ports',
-"$manLocalDir/FreeBSD-7.0-RELEASE/man:$manLocalDir/FreeBSD-7.0-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports",
+"$manLocalDir/FreeBSD-7.1-RELEASE/man:$manLocalDir/FreeBSD-7.1-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports",
     'FreeBSD 6.4-RELEASE and Ports',
 "$manLocalDir/FreeBSD-6.4-RELEASE/man:$manLocalDir/FreeBSD-6.4-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports",
 
+    'FreeBSD Ports', "$manLocalDir/FreeBSD-ports",
     'FreeBSD 8-current', "$manLocalDir/FreeBSD-8-current/man:$manLocalDir/FreeBSD-8-current/openssl/man",
-
 
     'FreeBSD 7.1-stable', "$manLocalDir/FreeBSD-7.1-stable",
     'FreeBSD 7.1-RELEASE', "$manLocalDir/FreeBSD-7.1-RELEASE/man:$manLocalDir/FreeBSD-7.1-RELEASE/openssl/man",
@@ -494,8 +494,8 @@ while ( ( $key, $val ) = each %manPath ) {
     'sunos5',        'SunOS 5.10',
     'sunos4',        'SunOS 4.1.3',
     'sunos',         'SunOS 4.1.3',
-    'freebsd ports', 'FreeBSD Ports 7.0-RELEASE',
-    'ports',         'FreeBSD Ports 7.0-RELEASE',
+    'freebsd ports', 'FreeBSD Ports',
+    'ports',         'FreeBSD Ports',
     'plan9',         'Plan 9',
     'osf1',          'OSF1 V5.1/alpha',
     'true64',        'OSF1 V5.1/alpha',
@@ -1378,7 +1378,7 @@ sub faq {
     }
 
     local $id =
-      '$FreeBSD: www/en/cgi/man.cgi,v 1.226 2008/12/21 23:04:17 wosch Exp $';
+      '$FreeBSD: www/en/cgi/man.cgi,v 1.227 2009/01/05 20:46:44 hrs Exp $';
     return qq{\
 <pre>
 Copyright (c) 1996-2008 <a href="$mailtoURL">Wolfram Schneider</a>
