@@ -5,6 +5,7 @@
 
 SUBDIR = bsdl-gpl
 SUBDIR+= compiz-fusion
+SUBDIR+= contributing
 SUBDIR+= cvs-freebsd
 SUBDIR+= dialup-firewall
 SUBDIR+= explaining-bsd
