@@ -33,8 +33,8 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.229 2009-05-02 19:56:34 wosch Exp $
-# $FreeBSD: www/en/cgi/man.cgi,v 1.228 2009/04/26 20:30:24 danger Exp $
+# $Id: man.cgi,v 1.230 2009-05-02 20:58:23 wosch Exp $
+# $FreeBSD: www/en/cgi/man.cgi,v 1.229 2009/05/02 19:56:34 wosch Exp $
 
 ############################################################################
 # !!! man.cgi is stale perl4 code !!!
@@ -393,6 +393,7 @@ $manPathDefault = 'FreeBSD 7.1-RELEASE';
     'X11R6.9.0', "$manLocalDir/X11R6.9.0",
     'X11R7.2',   "$manLocalDir/X11R7.2",
     'X11R7.3.2', "$manLocalDir/X11R7.3.2",
+    'X11R7.4',   "$manLocalDir/X11R7.4",
 
     'ULTRIX 4.2',      "$manLocalDir/ULTRIX-4.2",
     'OSF1 V4.0/alpha', "$manLocalDir/OSF1-V4.0-alpha",
@@ -491,7 +492,7 @@ while ( ( $key, $val ) = each %manPath ) {
     'openbsd',       'OpenBSD 4.5',
     'v7',            'Unix Seventh Edition',
     'v7man',         'Unix Seventh Edition',
-    'x11',           'X11R7.3.2',
+    'x11',           'X11R7.4',
     'xfree86',       'XFree86 4.7.0',
     'ultrix',        'ULTRIX 4.2',
     'hpux',          'HP-UX 11.22',
@@ -1383,7 +1384,7 @@ sub faq {
     }
 
     local $id =
-      '$FreeBSD: www/en/cgi/man.cgi,v 1.228 2009/04/26 20:30:24 danger Exp $';
+      '$FreeBSD: www/en/cgi/man.cgi,v 1.229 2009/05/02 19:56:34 wosch Exp $';
     return qq{\
 <pre>
 Copyright (c) 1996-2008 <a href="$mailtoURL">Wolfram Schneider</a>
