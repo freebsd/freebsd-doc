@@ -33,8 +33,8 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.228 2009-04-26 20:30:24 danger Exp $
-# $FreeBSD: www/en/cgi/man.cgi,v 1.227 2009/01/05 20:46:44 hrs Exp $
+# $Id: man.cgi,v 1.229 2009-05-02 19:56:34 wosch Exp $
+# $FreeBSD: www/en/cgi/man.cgi,v 1.228 2009/04/26 20:30:24 danger Exp $
 
 ############################################################################
 # !!! man.cgi is stale perl4 code !!!
@@ -139,6 +139,7 @@ $sectionpath = {
     'OpenBSD 4.2' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
     'OpenBSD 4.3' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
     'OpenBSD 4.4' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
+    'OpenBSD 4.5' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
 };
 
 foreach my $os ( keys %$sectionpath ) {
@@ -276,6 +277,7 @@ $manPathDefault = 'FreeBSD 7.1-RELEASE';
     'OpenBSD 4.2', "$manLocalDir/OpenBSD-4.2",
     'OpenBSD 4.3', "$manLocalDir/OpenBSD-4.3",
     'OpenBSD 4.4', "$manLocalDir/OpenBSD-4.4",
+    'OpenBSD 4.5', "$manLocalDir/OpenBSD-4.5",
 
     #'NetBSD 0.9',            "$manLocalDir/NetBSD-0.9",
     'NetBSD 1.0',   "$manLocalDir/NetBSD-1.0",
@@ -303,6 +305,8 @@ $manPathDefault = 'FreeBSD 7.1-RELEASE';
     'NetBSD 3.0',   "$manLocalDir/NetBSD-3.0",
     'NetBSD 3.1',   "$manLocalDir/NetBSD-3.1",
     'NetBSD 4.0',   "$manLocalDir/NetBSD-4.0",
+    'NetBSD 4.0.1', "$manLocalDir/NetBSD-4.0.1",
+    'NetBSD 5.0',   "$manLocalDir/NetBSD-5.0",
 
     '2.8 BSD',      "$manLocalDir/2.8BSD",
     '2.9.1 BSD',    "$manLocalDir/2.9.1BSD",
@@ -442,6 +446,7 @@ my @no_pdf_output = (
     'OpenBSD 4.2',
     'OpenBSD 4.3',
     'OpenBSD 4.4',
+    'OpenBSD 4.5',
 );
 
 my %no_pdf_output = map { $_ => 1 } @no_pdf_output;
@@ -482,8 +487,8 @@ while ( ( $key, $val ) = each %manPath ) {
     'opendarwin', 'OpenDarwin 7.2.1',
     'macosx',     'Darwin 8.0.1/ppc',
 
-    'netbsd',        'NetBSD 4.0',
-    'openbsd',       'OpenBSD 4.4',
+    'netbsd',        'NetBSD 5.0',
+    'openbsd',       'OpenBSD 4.5',
     'v7',            'Unix Seventh Edition',
     'v7man',         'Unix Seventh Edition',
     'x11',           'X11R7.3.2',
@@ -1378,7 +1383,7 @@ sub faq {
     }
 
     local $id =
-      '$FreeBSD: www/en/cgi/man.cgi,v 1.227 2009/01/05 20:46:44 hrs Exp $';
+      '$FreeBSD: www/en/cgi/man.cgi,v 1.228 2009/04/26 20:30:24 danger Exp $';
     return qq{\
 <pre>
 Copyright (c) 1996-2008 <a href="$mailtoURL">Wolfram Schneider</a>
