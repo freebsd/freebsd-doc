@@ -33,8 +33,8 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.230 2009-05-02 20:58:23 wosch Exp $
-# $FreeBSD: www/en/cgi/man.cgi,v 1.229 2009/05/02 19:56:34 wosch Exp $
+# $Id: man.cgi,v 1.231 2009-05-02 21:40:43 wosch Exp $
+# $FreeBSD: www/en/cgi/man.cgi,v 1.230 2009/05/02 20:58:23 wosch Exp $
 
 ############################################################################
 # !!! man.cgi is stale perl4 code !!!
@@ -699,11 +699,10 @@ sub download {
     my $filename = $manpath;
     $filename =~ s/\s+/_/;
     $filename = &encode_url($filename);
-    $filename .= '.tar.gz';
+    $filename .= '.tgz';
 
-    print qq{Content-type: application/x-tar\n}
-      . qq{Content-encoding: x-gzip\n}
-      . qq{Content-disposition: inline; filename="$filename"\n} . "\n";
+    print qq{Content-type: application/x-tgz\n}
+      . qq{Content-disposition: attachment; filename="$filename"\n} . "\n";
 
     local (@m);
     local ($m) = $manPath{"$manpath"};
@@ -1384,7 +1383,7 @@ sub faq {
     }
 
     local $id =
-      '$FreeBSD: www/en/cgi/man.cgi,v 1.229 2009/05/02 19:56:34 wosch Exp $';
+      '$FreeBSD: www/en/cgi/man.cgi,v 1.230 2009/05/02 20:58:23 wosch Exp $';
     return qq{\
 <pre>
 Copyright (c) 1996-2008 <a href="$mailtoURL">Wolfram Schneider</a>
