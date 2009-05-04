@@ -1,10 +1,9 @@
-# $FreeBSD$
+# $FreeBSD: www/el/Makefile.inc,v 1.1 2008/02/10 09:40:20 keramida Exp $
 #
 # The FreeBSD Greek Documentation Project
-# Makefile.inc for www/el directory (should be created) 
 #
-# %SOURCE%	mn/Makefile.inc
-# %SRCID%	1.1
+# %SOURCE%	en/Makefile.inc
+# %SRCID%	1.8
 #
 
 WEBBASE?=	/data/el
