@@ -1,5 +1,5 @@
 #
-# $FreeBSD$
+# $FreeBSD: www/el/doc/Makefile,v 1.1 2008/02/10 09:40:20 keramida Exp $
 #
 # 
 # The FreeBSD Greek Documentation Project
@@ -14,7 +14,7 @@
 # This file should be placed in the www/el/doc directory
 # (which should be created)
 #
-# %SOURCE%	mn/doc/Makefile
+# %SOURCE%	en/doc/Makefile
 # %SRCID%	1.1
 #
 .if exists(../Makefile.conf)
