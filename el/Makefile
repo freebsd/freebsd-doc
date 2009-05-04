@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: www/el/Makefile,v 1.1 2008/02/10 09:40:20 keramida Exp $
 
 #
 # The FreeBSD Greek Documentation Project
@@ -14,8 +14,11 @@
 .include "../Makefile.inc"
 .endif
 
+# Subdirectories
+# SGML
+SUBDIR=	 FAQ
 .if !defined(WEB_ONLY) || empty(WEB_ONLY)
-SUBDIR=	doc
+SUBDIR+= doc
 .endif
 
 WEBDIR?=	data/el
