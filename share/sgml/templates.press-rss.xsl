@@ -7,7 +7,7 @@
 <!ENTITY realname "Webmaster Team">
 ]>
 
-<!-- $FreeBSD$ -->
+<!-- $FreeBSD: www/share/sgml/templates.press-rss.xsl,v 1.1 2008/01/16 08:21:47 murray Exp $ -->
 
 <!-- Copyright (c) 2008 Murray Stokely <murray@FreeBSD.org>
 
@@ -41,7 +41,7 @@
 
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
   
-  <xsl:output method="xml" indent="yes"/>
+  <xsl:output method="xml" indent="yes" encoding="&xml.encoding;"/>
 
   <xsl:variable name="date">
     <xsl:value-of select="//cvs:keyword[@name='freebsd']"/>

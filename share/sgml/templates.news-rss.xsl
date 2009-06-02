@@ -7,7 +7,7 @@
 <!ENTITY realname "Webmaster Team">
 ]>
 
-<!-- $FreeBSD: www/share/sgml/templates.news-rss.xsl,v 1.1 2008/01/07 07:50:27 murray Exp $ -->
+<!-- $FreeBSD: www/share/sgml/templates.news-rss.xsl,v 1.2 2008/01/08 06:07:52 murray Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS"
@@ -15,7 +15,7 @@
 
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
   
-  <xsl:output method="xml" indent="yes"/>
+  <xsl:output method="xml" indent="yes" encoding="&xml.encoding;"/>
 
   <xsl:variable name="date">
     <xsl:value-of select="//cvs:keyword[@name='freebsd']"/>

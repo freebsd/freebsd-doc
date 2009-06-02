@@ -6,14 +6,14 @@
 <!ENTITY % navinclude.community "INCLUDE">
 ]>
 
-<!-- $FreeBSD: www/share/sgml/templates.usergroups.xsl,v 1.10 2008/04/20 22:22:34 murray Exp $ -->
+<!-- $FreeBSD: www/share/sgml/templates.usergroups.xsl,v 1.11 2008/04/20 22:49:25 murray Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS"
   exclude-result-prefixes="cvs">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
 
-  <xsl:output method="xml"
+  <xsl:output method="xml" encoding="&xml.encoding;"
     doctype-system="http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"
     doctype-public="-//W3C//DTD XHTML 1.0 Transitional//EN"/>
 
