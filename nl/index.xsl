@@ -38,8 +38,8 @@
 	      CVS, CVSup, Nieuws, Commerciele Leveranciers, homepage, CTM, Unix"/>
 	<link rel="shortcut icon" href="&enbase;/favicon.ico" type="image/x-icon"/>
 	<link rel="icon" href="&enbase;/favicon.ico" type="image/x-icon"/>
-	<link rel="stylesheet" media="screen" href="&enbase;/layout/css/fixed.css?20060509" type="text/css" title="Normale tekst" />
-	<link rel="alternate stylesheet" media="screen" href="&enbase;/layout/css/fixed_large.css" type="text/css" title="Grote tekst" />
+	<link rel="stylesheet" media="screen" href="&enbase;/layout/css/fixed.css?20060509" type="text/css" title="Normal Text" />
+	<link rel="alternate stylesheet" media="screen" href="&enbase;/layout/css/fixed_large.css" type="text/css" title="Large Text" />
 	<script type="text/javascript" src="&enbase;/layout/js/styleswitcher.js"></script>
 	<link rel="alternate" type="application/rss+xml"
 	  title="&os; Projectnieuws" href="&enbase;/news/rss.xml" />
@@ -98,7 +98,7 @@
 			<div class="frontgetroundbox">
 			  <div class="frontgettop"><div><b style="display: none">.</b></div></div>
 				<div class="frontgetcontent">
-				  <a href="&base;/where.html">Download &os;</a>
+				  <a href="&base;/where.html">Verkrijg &os;</a>
 				</div> <!-- frontgetcontent -->
 			  <div class="frontgetbot"><div><b style="display: none">.</b></div></div>
 			</div> <!-- frontgetroundbox -->
