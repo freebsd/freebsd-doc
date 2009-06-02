@@ -4,7 +4,7 @@
 <!ENTITY title "The FreeBSD Project">
 ]>
 
-<!-- $FreeBSD: www/en/index.xsl,v 1.167 2009/01/04 22:26:15 simon Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.168 2009/06/02 19:16:33 rene Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
@@ -34,6 +34,13 @@
 	      CVS, CVSup, News, Commercial Vendors, homepage, CTM, Unix"/>
 	<link rel="shortcut icon" href="&base;/favicon.ico" type="image/x-icon"/>
 	<link rel="icon" href="&base;/favicon.ico" type="image/x-icon"/>
+<!--
+	FOR TRANSLATORS:
+
+	Do not translate the "Normal Text" and "Large Text" attributes in the
+	following two lines.  They are not literal texts but JavaScript
+	parameters.  Changing them will result in rendering errors.
+-->
     <link rel="stylesheet" media="screen" href="&base;/layout/css/fixed.css?20060509" type="text/css" title="Normal Text" />
     <link rel="alternate stylesheet" media="screen" href="&base;/layout/css/fixed_large.css" type="text/css" title="Large Text" />
     <script type="text/javascript" src="&base;/layout/js/styleswitcher.js"></script>
