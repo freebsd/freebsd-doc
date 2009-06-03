@@ -4,12 +4,12 @@
 <!ENTITY title "A &os; Projekt">
 ]>
 
-<!-- $FreeBSD: www/hu/index.xsl,v 1.16 2009/04/06 17:56:08 pgj Exp $ -->
+<!-- $FreeBSD: www/hu/index.xsl,v 1.17 2009/04/07 13:59:13 pgj Exp $ -->
 
 <!-- FreeBSD Hungarian Documentation Project
      Translated by: Gabor Kovesdan <gabor@FreeBSD.org>
      %SOURCE%	en/index.xsl
-     %SRCID%	1.167
+     %SRCID%	1.169
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -81,13 +81,13 @@
 				  optimaliz&aacute;l&aacute;s&aacute;nak
 				  eredm&eacute;nye.  Jelenleg <a
 				    href="&enbase;/doc/en/articles/contributors/article.html#STAFF-COMMITTERS">egyéni
-				    fejleszt&#245;k egy nagyobb csoportja</a>
+				    fejleszt&#337;k egy nagyobb csoportja</a>
 				  tartja karban.  A &os; legfontosabb
-				  jellemz&#245;i t&ouml;bbek k&ouml;zt a
+				  jellemz&#337;i t&ouml;bbek k&ouml;zt a
 				  fejlett
 				  h&aacute;l&oacute;zatkezel&eacute;s, a
 				  kifinomult biztons&aacute;gi
-				  lehet&#245;s&eacute;gek &eacute;s a
+				  lehet&#337;s&eacute;gek &eacute;s a
 				  vil&aacute;gsz&iacute;nvonal&uacute;
 				  teljes&iacute;tm&eacute;ny, amelyet a
 				  vil&aacute;gban <a
@@ -127,13 +127,13 @@
 			    <xsl:if test="'&beta.testing;' != 'IGNORE'">
 					<li>
 					  <a
-					    href="&base;/where.html#helptest">K&ouml;vetkez&#245; kiad&aacute;s: &betarel.current; - &betarel.vers;</a>
+					    href="&base;/where.html#helptest">K&ouml;vetkez&#337; kiad&aacute;s: &betarel.current; - &betarel.vers;</a>
 					</li>
 			    </xsl:if>
 			    <xsl:if test="'&beta2.testing;' != 'IGNORE'">
 					<li>
 					  <a
-					    href="&base;/where.html#helptest">K&ouml;vetkez&#245; kiad&aacute;s: &betarel2.current; - &betarel2.vers;</a>
+					    href="&base;/where.html#helptest">K&ouml;vetkez&#337; kiad&aacute;s: &betarel2.current; - &betarel2.vers;</a>
 					</li>
 			    </xsl:if>
 				  </ul>
@@ -165,6 +165,9 @@
 				  </li>
 				  <li>
 					<a href="&enbase;/ja/" title="Jap&aacute;n">ja</a>
+				  </li>
+				  <li>
+					<a href="&enbase;/nl/" title="Holland">nl</a>
 				  </li>
 				  <li>
 					<a href="&enbase;/ru/" title="Orosz">ru</a>

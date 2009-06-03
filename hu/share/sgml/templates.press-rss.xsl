@@ -7,7 +7,7 @@
 <!ENTITY realname "Webmesterek">
 ]>
 
-<!-- $FreeBSD$ -->
+<!-- $FreeBSD: www/hu/share/sgml/templates.press-rss.xsl,v 1.1 2009/04/06 17:56:08 pgj Exp $ -->
 
 <!-- Copyright (c) 2008 Murray Stokely <murray@FreeBSD.org>
 
@@ -38,7 +38,7 @@
 <!-- The FreeBSD Hungarian Documentation Project
      Translated by: PALI, Gabor <pgj@FreeBSD.org>
      %SOURCE%	share/sgml/templates.press-rss.xsl
-     %SRCID%	1.1
+     %SRCID%	1.2
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
@@ -47,7 +47,7 @@
 
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
   
-  <xsl:output method="xml" indent="yes"/>
+  <xsl:output method="xml" indent="yes" encoding="&xml.encoding;"/>
 
   <xsl:variable name="date">
     <xsl:value-of select="//cvs:keyword[@name='freebsd']"/>
