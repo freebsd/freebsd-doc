@@ -5,12 +5,12 @@
 <!ENTITY email "freebsd-www">
 ]>
 
-<!-- $FreeBSD$ -->
+<!-- $FreeBSD: www/hu/share/sgml/templates.news-rdf.xsl,v 1.1 2009/04/06 17:56:08 pgj Exp $ -->
 
 <!-- The FreeBSD Hungarian Documentation Project
      Translated by: PALI, Gabor <pgj@FreeBSD.org>
      %SOURCE%	share/sgml/templates.news-rdf.xsl
-     %SRCID%	1.2
+     %SRCID%	1.3
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
@@ -18,7 +18,7 @@
 
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
   
-  <xsl:output method="xml" indent="yes"/>
+  <xsl:output method="xml" indent="yes" encoding="$xml.encoding;"/>
 
   <xsl:variable name="date">
     <xsl:value-of select="//cvs:keyword[@name='freebsd']"/>
