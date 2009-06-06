@@ -5,8 +5,8 @@
 ]>
 <!--
      $FreeBSD$
-     $FreeBSDde: de-www/index.xsl,v 1.83 2009/01/09 09:22:12 jkois Exp $
-     basiert auf: 1.167
+     $FreeBSDde: de-www/index.xsl,v 1.85 2009/06/06 08:50:28 jkois Exp $
+     basiert auf: 1.169
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -38,6 +38,16 @@
 	      CVS, CVSup, News, Commercial Vendors, homepage, CTM, Unix"/>
 	<link rel="shortcut icon" href="&enbase;/favicon.ico" type="image/x-icon"/>
 	<link rel="icon" href="&enbase;/favicon.ico" type="image/x-icon"/>
+
+<!--
+FUER UEBERSETZER - ACHTUNG:
+
+Die zwei Attribute "Normal Text" und "Large Text" in den naechsten beiden
+Zeilen NICHT uebersetzen!  Es handelt sich dabei nicht um Text, sondern um
+JavaScript-Parameter.  Eine Uebersetzung dieser Parameter fuehrt zu
+Problemen bei der Darstellung der Webseiten.
+-->
+
 	<link rel="stylesheet" media="screen" href="&enbase;/layout/css/fixed.css?20060509" type="text/css" title="Normal Text" />
 	<link rel="alternate stylesheet" media="screen" href="&enbase;/layout/css/fixed_large.css" type="text/css" title="Large Text" />
 	<script type="text/javascript" src="&enbase;/layout/js/styleswitcher.js"></script>
@@ -157,6 +167,9 @@
 				  </li>
 				  <li>
 					<a href="&enbase;/it/" title="Italienisch">it</a>
+				  </li>
+				  <li>
+					<a href="&enbase;/nl/" title="Holl&#228;ndisch">nl</a>
 				  </li>
 				  <li>
 					<a href="&enbase;/ja/" title="Japanisch">ja</a>
