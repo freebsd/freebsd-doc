@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
 <!-- Vertaald door: Siebrand Mazeland / Rene Ladan
      %SOURCE%	en/index.xsl
-     %SRCID%	1.167
+     %SRCID%	1.169
 -->
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
 <!ENTITY title "Het &os; Project">
 ]>
 
-<!-- $FreeBSD$ -->
+<!-- $FreeBSD: www/nl/index.xsl,v 1.2 2009/06/02 19:15:02 rene Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
@@ -38,6 +38,13 @@
 	      CVS, CVSup, Nieuws, Commerciele Leveranciers, homepage, CTM, Unix"/>
 	<link rel="shortcut icon" href="&enbase;/favicon.ico" type="image/x-icon"/>
 	<link rel="icon" href="&enbase;/favicon.ico" type="image/x-icon"/>
+<!--
+	VOOR VERTALERS:
+
+	Vertaal de attributen "Normal Text" en "Large Text" in de volgende twee regels niet.
+	Ze zijn geen letterlijke tekst maar JavaScript-parameters.  Als ze veranderd worden
+	resulteert dit in opmaakfouten.
+-->
 	<link rel="stylesheet" media="screen" href="&enbase;/layout/css/fixed.css?20060509" type="text/css" title="Normal Text" />
 	<link rel="alternate stylesheet" media="screen" href="&enbase;/layout/css/fixed_large.css" type="text/css" title="Large Text" />
 	<script type="text/javascript" src="&enbase;/layout/js/styleswitcher.js"></script>
