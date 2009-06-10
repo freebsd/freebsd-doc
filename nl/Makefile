@@ -1,4 +1,4 @@
-# $FreeBSD: www/nl/Makefile,v 1.1 2004/09/27 12:00:03 josef Exp $
+# $FreeBSD: www/nl/Makefile,v 1.2 2009/06/01 20:02:31 rene Exp $
 # %SOURCE%	en/Makefile
 # %SRCID%	1.146
 
@@ -21,7 +21,7 @@ DOCS+= features.sgml
 DOCS+= internet.sgml
 DOCS+= logo.sgml
 DOCS+= mailto.sgml
-#DOCS+= publish.sgml
+DOCS+= publish.sgml
 DOCS+= relnotes.sgml
 DOCS+= send-pr.sgml
 DOCS+= support.sgml
