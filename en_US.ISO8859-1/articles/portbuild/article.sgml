@@ -20,6 +20,7 @@
       <year>2006</year>
       <year>2007</year>
       <year>2008</year>
+      <year>2009</year>
       <holder role="mailto:portmgr@FreeBSD.org">The &os; Ports
 	Management Team</holder>
     </copyright>
@@ -1152,6 +1153,601 @@ umount: Cleanup of /x/tmp/6-exp/chroot/53837/compat/linux/proc failed!
       informing people of the changes.  A summary of all changes
       should also be committed  to
       <filename>/usr/ports/CHANGES</filename>.</para>
+  </sect1>
+
+  <sect1 id="new-node">
+    <title>How to configure a new package building node</title>
+
+    <para>Before following these steps, please coordinate with
+      <literal>portmgr</literal>.
+    </para>
+
+    <sect2 id="node-requirements">
+      <title>Node requirements</title>
+
+      <para><literal>portmgr</literal> is still working on characterizing
+	what a node needs to be generally useful.</para>
+
+      <itemizedlist>
+	<listitem>
+	  <para>CPU capacity: TBA.  However, we have several dual-CPU
+	    P-III &i386; 1.0GHz machines available, so anything with
+	    less horsepower than that is not as likely to be useful.
+	    (However, many of our &sparc64;s are single-CPU, 500MHz
+	    machines, so our requirements are lower.)</para>
+
+	  <note>
+	    <para>We are able to adjust the number of jobs
+	      dispatched to each machine, and we generally tune
+	      the number to use 100% of CPU.</para>
+	  </note>
+	</listitem>
+
+	<listitem>
+	  <para>RAM: TBA.  Again, we have been tuning to one job
+	    per 512M of RAM.  (Anything less than 512M is very
+	    unlikely to be useful.)</para>
+	</listitem>
+
+	<listitem>
+	  <para>disk: at least 20G is needed for filesystem; 32G is
+	    needed for swap.  Best performance will be if multiple
+	    disks are used, and configured as <literal>geom</literal>
+	    stripes.  Performance numbers are also TBA.</para>
+
+	  <note>
+	    <para>Package building will test disk drives to destruction.
+	      Be aware of what you are signing up for!</para>
+	  </note>
+	</listitem>
+
+	<listitem>
+	  <para>network bandwidth: TBA.  However, an 8-job machine
+	    has been shown to saturate a cable modem line.</para>
+	</listitem>
+      </itemizedlist>
+
+    </sect2>
+
+    <sect2 id="node-preparation">
+      <title>Preparation</title>
+
+      <procedure>
+	<step>
+	  <para>Pick a unique hostname.  It does not have to be
+	    a publicly resolvable hostname (it can be a name on
+	    your internal network).</para>
+	</step>
+
+	<step>
+	  <para>By default, package building requires the following TCP
+	    ports to be accessible: 22 (<literal>ssh</literal>), 414
+	    (<literal>infoseek</literal>), and 8649
+	    (<literal>ganglia</literal>).  If these are not accessible,
+	    pick others and ensure that an <command>ssh</command> tunnel
+	    is set up (see below).</para>
+
+	  <para>(Note: if you have more than one machine at your site,
+	    you will need an individual TCP port for each service on
+	    each machine, and thus <command>ssh</command> tunnels
+	    will be necessary.  As such, you will probably need to
+	    configure port forwarding on your firewall.)</para>
+	</step>
+
+	<step>
+	  <para>Decide if you will be booting natively or via
+	    <literal>pxeboot</literal>.  You will find that it is
+	    easier to keep up with changes to <literal>-current</literal>
+	    with the latter, especially if you have multiple machines
+	    at your site.</para>
+	</step>
+
+	<step>
+	  <para>Pick a directory to hold ports configuration and
+	    <command>chroot</command> subdirectories.  It may be
+	    best to put it this on its own partition.  (Example:
+	    <filename>/usr2/</filename>.)</para>
+	</step>
+      </procedure>
+
+    </sect2>
+
+    <sect2 id="node-src">
+      <title>Configuring <literal>src</literal></title>
+
+      <procedure>
+	<step>
+	  <para>Create a directory to contain the latest
+	    <literal>-current</literal> source tree and check it
+	    out.  (Since your machine will likely be asked to build
+	    packages for <literal>-current</literal>, the kernel it
+	    runs should be reasonably up-to-date with the
+	    <literal>bindist</literal> that will be exported
+	    by our scripts.)
+	</step>
+
+	<step>
+	  <para>If you are using <literal>pxeboot</literal>: create a
+	    directory to contain the install bits.  You will probably
+	    want to use a subdirectory of <filename>/pxeroot</filename>,
+	    e.g.,
+	    <filename>/pxeroot/<replaceable>${arch}</replaceable>-<replaceable>${branch}</replaceable></filename>.
+	    Export that as <makevar>DESTDIR</makevar>.</para>
+	</step>
+
+	<step>
+	  <para>If you are cross-building, export
+	    <literal>TARGET_ARCH</literal>=<replaceable>${arch}</replaceable>.
+	  <para>
+	  <note>
+	    <para>The procedure for cross-building ports is not yet
+	      defined.</para>
+	  </note>
+	</step>
+
+	<step>
+	  <para>Generate a kernel config file.  Include
+	    <literal>GENERIC</literal> (or, if you are using more than
+	    3.5G on &i386;, <literal>PAE</literal>).
+	    Suggested options:<screen>
+options         GEOM_CONCAT
+options         GEOM_STRIPE
+options         NULLFS
+options         TMPFS
+options         SHMMAXPGS=65536
+options         SEMMNI=40
+options         SEMMNS=240
+options         SEMUME=40
+options         SEMMNU=120
+
+options         ALT_BREAK_TO_DEBUGGER
+options         PRINTF_BUFR_SIZE=128</screen>
+	  </para>
+
+	  <para>For <literal>PAE</literal>, it is not currently possible
+	    to load modules.  Therefore, you will need to add:<screen>
+options         COMPAT_LINUX
+options         LINPROCFS</screen>
+	  </para>
+	</step>
+
+	<step>
+	  <para>As root, do the usual build steps, e.g.:<screen>
+<userinput>make -j4 buildworld</userinput>
+<userinput>make buildkernel KERNCONF=<replaceable>${kernconf}</replaceable></userinput>
+<userinput>make installkernel KERNCONF=<replaceable>${kernconf}</replaceable></userinput>
+<userinput>make installworld</userinput></screen>
+	    The install steps use <makevar>DESTDIR</makevar>.
+	  </para>
+	</step>
+
+	<step>
+	  <para>Customize files in <filename>etc/</filename>.
+	    Whether you do this on the client itself, or another
+	    machine, will depend on whether you are using
+	    <literal>pxeboot</literal>.</para>
+
+	  <para>If you are using <literal>pxeboot</literal>: create
+	    a subdirectory of
+	    <filename><replaceable>${DESTDIR}</replaceable></filename>
+	    called <filename>conf/</filename>.  Create one subdirectory
+	    <filename>default/etc/</filename>, and (if your site will host
+	    multiple nodes), subdirectories
+	    <filename><replaceable>${ip-address}</replaceable>/etc/</filename>
+	    to contain override files for individual hosts.  (You may find
+	    it handy to symlink each of those directories to a hostname.)
+	    Copy the entire contents of
+	    <filename><replaceable>${DESTDIR}</replaceable>/etc/</filename>
+	    to <filename>default/etc/</filename>; that is where you will
+	    edit your files.  The by-ip-address
+	    <filename>etc/</filename> directories will probably only need
+	    customized <filename>rc.conf</filename> files.</para>
+
+	  <para>In either case, apply the following steps:</para>
+
+	  <itemizedlist>
+	    <listitem>
+	      <para>Create a
+		<literal>ports-<replaceable>${arch}</replaceable></literal>
+		user and group.  Add it to the <literal>wheel</literal>
+		group.  It can have the <literal>'*'</literal> password.</para>
+
+	      <para>Create
+		<filename>/home/ports-<replaceable>${arch}/.ssh/</replaceable></filename>
+		and populate <filename>authorized_keys</filename>.  </para>
+	    </listitem>
+
+	    <listitem>
+	      <para>Also add the following users:<screen>
+squid:*:100:100::0:0:User &:/usr/local/squid:/bin/sh
+ganglia:*:102:102::0:0:User &:/usr/local/ganglia:/bin/sh</screen>
+	      </para>
+	      <para>Add them to <filename>etc/group</filename> as well.</para>
+	    </listitem>
+
+	    <listitem>
+	      <para>Create the appropriate files in
+		<filename>etc/.ssh/</filename>.</para>
+	    </listitem>
+
+	    <listitem>
+	      <para>In <filename>etc/crontab</filename>: add
+		<screen>*       *       *       *       *       root    /var/portbuild/scripts/client-metrics</screen>
+	      </para>
+	    </listitem>
+
+	    <listitem>
+	      <para>Create the appropriate
+		<filename>etc/fstab</filename>.  (If you have multiple,
+		  different, machines, you will need to put those in
+		  the override directories.)</para>
+	    </listitem>
+
+	    <listitem>
+	      <para>In <filename>etc/inetd.conf</filename>: add
+		<screen>infoseek        stream  tcp     nowait  nobody  /var/portbuild/scripts/reportload       reportload <replaceable>${arch}</replaceable></screen>
+	      </para>
+	    </listitem>
+
+	    <listitem>
+	      <para>Create the appropriate
+		<filename>etc/rc.conf</filename>.  (If you have multiple,
+		  different, machines, you will need to put those in
+		  the override directories.)</para>
+
+	      <para>Recommended entries:<screen>
+hostname="<replaceable>${hostname}</replaceable>
+inetd_enable="YES"
+linux_enable="YES"
+nfs_client_enable="YES"
+sendmail_enable="NONE"
+sshd_enable="YES"
+sshd_program="/usr/local/sbin/sshd"
+
+squid_enable="YES"
+gmond_enable="YES"
+</screen>
+	      </para>
+	    </listitem>
+
+	    <listitem>
+	      <para>Create <filename>etc/resolv.conf</filename>, if
+		necessary.</para>
+	    </listitem>
+
+	    <listitem>
+	      <para>Modify <filename>etc/sysctl.conf</filename>:<screen>
+9a10,30
+> kern.corefile=/tmp/%N.core
+> kern.sugid_coredump=1
+> #debug.witness_ddb=0
+> #debug.witness_watch=0
+>
+> # squid needs a lot of fds (leak?)
+> kern.maxfiles=40000
+> kern.maxfilesperproc=30000
+>
+> # Since the NFS root is static we don't need to check frequently for file changes
+> # This saves >75% of NFS traffic
+> vfs.nfs.access_cache_timeout=300
+> debug.debugger_on_panic=1
+>
+> # For jailing
+> security.jail.sysvipc_allowed=1
+> security.jail.allow_raw_sockets=1
+> security.jail.chflags_allowed=1
+> security.jail.enforce_statfs=1
+>
+> vfs.lookup_shared=1</screen>
+	      </para>
+	    </listitem>
+
+	    <listitem>
+	      <para>If desired, modify <filename>etc/syslog.conf</filename>
+		to change the logging destinations to
+		<literal>@pointyhat.freebsd.org</literal>.</para>
+	    </listitem>
+	  </itemizedlist>
+
+	</step>
+
+      </procedure>
+
+    </sect2>
+
+    <sect2 id="node-ports">
+      <title>Configuring <literal>ports</literal></title>
+
+      <procedure>
+	<step>
+	  <para>Install the following ports:<screen>
+net/rsync
+security/openssh-portable
+security/sudo
+sysutils/ganglia-monitor-core (with GMETAD off)
+www/squid</screen>
+	  </para>
+
+	  <para>There is a WIP to create a meta-port, but it is not yet
+	    complete.
+	  </para>
+	</step>
+
+	<step>
+	  <para>Customize files in <filename>usr/local/etc/</filename>.
+	    Whether you do this on the client itself, or another
+	    machine, will depend on whether you are using
+	    <literal>pxeboot</literal>.</para>
+
+	  <note>
+	    <para>The trick of using <filename>conf</filename>
+	      override subdirectories is less effective here, because
+	      you would need to copy over all subdirectories of
+	      <filename>usr/</filename>.  This is an implementation
+	      detail of how the pxeboot works.</para>
+	  </note>
+
+	  <para>Apply the following steps:</para>
+
+	  <itemizedlist>
+	    <listitem>
+	      <para>Modify
+		 <filename>usr/local/etc/gmond.conf</filename>:<screen>
+21,22c21,22
+<   name = "unspecified"
+<   owner = "unspecified"
+---
+>   name = "<replaceable>${arch}</replaceable> package build cluster"
+>   owner = "portmgr@FreeBSD.org"
+24c24
+<   url = "unspecified"
+---
+>   url = "http://pointyhat.freebsd.org"</screen>
+	      </para>
+
+	      <!-- XXX MCL adapted literally from krismail; I do not understand it -->
+	      <para>If there are machines from more than one cluster in the
+		same multicast domain (basically = LAN) then change the
+		multicast groups to different values (.71, .72, etc).</para>
+	    </listitem>
+
+	    <listitem>
+	      <para>Create
+		 <filename>usr/local/etc/rc.d/portbuild.sh</filename>:<screen>
+#!/bin/sh
+#
+# Configure the system post-boot
+
+ln -sf /usr2/portbuild /var/portbuild
+
+# Identify builds ready for use
+cd /var/portbuild/${arch}
+for i in */builds/*; do
+    if [ -f ${i}/.ready ]; then
+        mkdir /tmp/.setup-${i##*/}
+    fi
+done
+
+# Flag that we are ready to accept jobs
+touch /tmp/.boot_finished</screen>
+	      </para>
+
+	      <!-- XXX MCL adapted literally from krismail; I do not understand it -->
+	      <para>If there are machines from more than one cluster in the
+		same multicast domain (basically = LAN) then change the
+		multicast groups to different values (.71, .72, etc).</para>
+	    </listitem>
+
+	    <listitem>
+	      <para>Modify
+		 <filename>usr/local/etc/squid/squid.conf</filename>:<screen>
+288,290c288,290
+< #auth_param basic children 5
+< #auth_param basic realm Squid proxy-caching web server
+< #auth_param basic credentialsttl 2 hours
+---
+> auth_param basic children 5
+> auth_param basic realm Squid proxy-caching web server
+> auth_param basic credentialsttl 2 hours
+611a612
+> acl localnet src 127.0.0.0/255.0.0.0
+655a657
+> http_access allow localnet
+2007a2011
+> maximum_object_size 400 MB
+2828a2838
+> negative_ttl 0 minutes</screen>
+	      </para>
+
+	      <para>Also, change <filename>usr/local</filename>
+		to <filename>usr2</filename> in the definitions of
+		<literal>cache_dir</literal>,
+		<literal>access_log</literal>,
+		<literal>cache_log</literal>,
+		<literal>cache_store_log</literal>,
+		<literal>pid_filename</literal>,
+		<literal>netdb_filename</literal>,
+		<literal>coredump_dir</literal>.
+	      </para>
+	    </listitem>
+
+	    <!-- XXX MCL adapted literally from krismail; I do not understand it -->
+	    <listitem>
+	      <para>Configure <command>ssh</command>: copy
+		<filename>/etc/ssh</filename> to
+		<filename>/usr/local/etc/ssh</filename> and add
+		<literal>NoneEnabled=yes</literal> to
+		<filename>sshd_config</filename>.</para>
+	    </listitem>
+
+	    <listitem>
+	      <para>Modify
+		 <filename>usr/local/etc/sudoers</filename>:<screen>
+38a39,42
+>
+> # local changes for package building
+> %wheel        ALL=(ALL) ALL
+> ports-<replaceable>${arch}</replaceable>    ALL=(ALL) NOPASSWD: ALL</screen>
+	      </para>
+	    </listitem>
+	  </itemizedlist>
+	</step>
+      </procedure>
+
+    </sect2>
+
+    <sect2 id="node-configuration">
+      <title>Configuration on the client itself</title>
+
+      <procedure>
+	<step>
+	  <para>Change into the port/package directory you picked
+	    above, e.g., <command>cd /usr2</command>.</para>
+	</step>
+
+	<step>
+	  <para>As root:<screen>
+<userinput>mkdir portbuild</userinput>
+<userinput>chown ports-<replaceable>${arch}</replaceable>:ports-<replaceable>${arch}</replaceable> portbuild</userinput>
+<userinput>mkdir pkgbuild</userinput>
+<userinput>chown ports-<replaceable>${arch}</replaceable>:ports-<replaceable>${arch}</replaceable> pkgbuild</userinput>
+<userinput>mkdir squid</userinput>
+<userinput>mkdir squid/cache</userinput>
+<userinput>mkdir squid/logs</userinput>
+<userinput>chown -R squid:squid squid</userinput></screen>
+	  </para>
+
+	<!-- XXX MCL adapted literally from krismail; I do not understand it -->
+	<step>
+	  <para>If clients preserve <filename>/var/portbuild</filename>
+	    between boots then they must either preserve their
+	    <filename>/tmp</filename>, or revalidate their available
+	    builds at boot time (see the script on the <literal>amd64</literal>
+	    machines).  They must also clean up stale chroots from previous
+	    builds before creating <filename>/tmp/.boot_finished</filename>.
+	  </para>
+	</step>
+
+	<step>
+	  <para>Boot the client.</para>
+	</step>
+
+	<step>
+	  <para>As root, initialize the <command>squid</command>
+	    directories:
+	    <screen><userinput>squid -z</userinput></screen></para>
+	</step>
+
+	<step>
+	  <para>Test each of the TCP ports by executing
+	    <command>telnet <replaceable>hostname</replaceable> <replaceable>portnumber</replaceable></command>.
+	    <literal>414</literal> (or its tunnel) should give you a few lines of status
+	    information; <literal>8649</literal> should give you an
+	    <literal>XML</literal> response.</para>
+	</step>
+      </procedure>
+
+    </sect2>
+
+    <sect2 id="node-enabling">
+      <title>Enabling the node</title>
+
+      <para>These steps need to be taken by a <literal>portmgr</literal>
+	acting as <literal>root</literal> on <hostid>pointyhat</hostid>.
+      </para>
+
+      <procedure>
+	<step>
+	  <para>If any of the default TCP ports is not available (see
+	    above), you will need to create an <command>ssh</command>
+	    tunnel for it and include it in the appropriate
+	    <filename>crontab</filename>.</para>
+	</step>
+
+	<step>
+	  <para>Add an entry to
+	    <filename>/home/ports-<replaceable>${arch}</replaceable>/.ssh/config</filename>
+	    to specify the public IP address, TCP port for
+	    <command>ssh</command>, username, and any other necessary
+	    information.</para>
+	</step>
+
+	<step>
+	  <para>Test each of the TCP ports by executing
+	    <command>telnet <replaceable>hostname</replaceable> <replaceable>portnumber</replaceable></command>,
+	    where <literal>portnumber</literal> is either the native
+	    portnumber or its tunnelled equivalent.</para>
+	</step>
+
+	<step>
+	  <para>Add the public IP address to
+	    <filename>/etc/hosts.allow</filename>.  (Remember, multiple
+	    machines can be on the same IP address.)</para>
+	</step>
+
+	<step>
+	  <para>Create
+<filename>/var/portbuild/<replaceable>${arch}</replaceable>/clients/bindist-<replaceable>${hostname}</replaceable>.tar</filename>.
+	  </para>
+
+	  <itemizedlist>
+	    <listitem>
+	      <para>Copy one of the existing ones as a template and unpack it
+		in a temporary directory.</para>
+	    </listitem>
+	    <listitem>
+	      <para>Customize <filename>etc/resolv.conf</filename> and
+	      <filename>etc/make.conf</filename> for the local site.</para>
+	    </listitem>
+	    <listitem>
+	      <para><command>tar</command> it up and move it to the right
+		location.</para>
+	    </listitem>
+	  </itemizedlist>
+
+	  <para>Hint: you will need one of these for each machine;
+	    however, if you have multiple machines at one site, you may
+	    be able to create a site-specific one and symlink to it.</para>
+	</step>
+
+	<step>
+	  <para>Create
+<filename>/var/portbuild/<replaceable>${arch}</replaceable>/portbuild-<replaceable>${hostname}</replaceable></filename>
+	    using one of the existing ones as a guide.  This
+	    file contains overrides to
+<filename>/var/portbuild/<replaceable>${arch}</replaceable>/portbuild.conf</filename>.</para>
+
+	  <para>Suggested values:<screen>
+disconnected=1
+http_proxy="http://localhost:3128/"
+squid_dir=/usr2/squid
+scratchdir=/usr2/pkgbuild
+client_user=ports-<replaceable>${arch}</replaceable>
+sudo_cmd="sudo -H"
+rsync_gzip=-z
+
+infoseek_host=localhost
+infoseek_port=<replaceable>${tunelled-tcp-port}</replaceable></screen>
+	  </para>
+
+	  <para>Possible other values:<screen>
+use_md_swap=1
+md_size=9g
+use_zfs=1
+scp_cmd="/usr/local/bin/scp"
+ssh_cmd="/usr/local/bin/ssh"
+</screen>
+	  </para>
+	</step>
+
+	<step>
+	  <para>Add an appropriate entry to
+	    <filename>/usr/local/etc/gmetad.conf</filename>.</para>
+	</step>
+      </procedure>
+
+    </sect2>
+
   </sect1>
 
   <sect1 id="disk-failure">
