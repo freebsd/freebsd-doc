@@ -216,6 +216,7 @@ def fileinfo(fname):
         debug(3, "Finding %%SOURCE%% and %%SRCID%% info of file `%s'" % fname)
 
         for l in file(fname):
+            l = l.rstrip('\r\n')
             nsrc = None
             m = srcre.match(l)
             if m:
