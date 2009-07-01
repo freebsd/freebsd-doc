@@ -4,13 +4,13 @@
 <!ENTITY title "The FreeBSD Project">
 ]>
 
-<!-- $FreeBSD: www/ja/index.xsl,v 1.46 2005/10/26 18:15:57 hrs Exp $ -->
-<!-- Original revision: 1.137 -->
+<!-- $FreeBSD: www/ja/index.xsl,v 1.47 2006/08/19 21:24:39 hrs Exp $ -->
+<!-- Original revision: 1.153 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
 
-  <xsl:variable name="date" select="'$FreeBSD: www/ja/index.xsl,v 1.46 2005/10/26 18:15:57 hrs Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/ja/index.xsl,v 1.47 2006/08/19 21:24:39 hrs Exp $'"/>
 
   <!-- these params should be externally bound. The values
        here are not used actually -->
@@ -23,7 +23,6 @@
   <xsl:param name="news.project.xml" select="'none'"/>
   <xsl:param name="events.xml-master" select="'none'"/>
   <xsl:param name="events.xml" select="'none'"/>
-  <xsl:param name="curdate.xml" select="'none'"/>
 
   <xsl:output type="html" encoding="EUC-JP"
               doctype-public="-//W3C//DTD HTML 4.01 Transitional//EN"/>
@@ -38,7 +37,7 @@
 	      CVS, CVSup, News, Commercial Vendors, homepage, CTM, Unix"/>
 	<link rel="shortcut icon" href="&enbase;/favicon.ico" type="image/x-icon"/>
 	<link rel="icon" href="&enbase;/favicon.ico" type="image/x-icon"/>
-	<link rel="stylesheet" media="screen" href="&enbase;/layout/css/fixed.css" type="text/css" title="Normal Text" />
+	<link rel="stylesheet" media="screen" href="&enbase;/layout/css/fixed.css?20060509" type="text/css" title="Normal Text" />
 	<link rel="alternate stylesheet" media="screen" href="&enbase;/layout/css/fixed_large.css" type="text/css" title="Large Text" />
 	<script type="text/javascript" src="&enbase;/layout/js/styleswitcher.js"></script>
 	<link rel="alternate" type="application/rss+xml"
@@ -68,50 +67,45 @@
 
 		  <div id="FRONTFEATURELEFT">
 		    <div id="FRONTFEATURECONTENT">
+			<h1>
+			  ベースは BSD UNIX<!-- &#174; -->(R)
+			</h1>
 
-			<h1>ベースは BSD UNIX<!-- &#174; -->(R)</h1>
-
-			<p>FreeBSD は x86 互換機 (Pentium<!-- &#174; -->(R) や Athlon<!-- &#8482; -->(TM) など),
+			<p>FreeBSD<!-- &#174; -->(R) は
+			  x86 互換機 (Pentium<!-- &#174; -->(R) や Athlon<!-- &#8482; -->(TM) など),
 			  amd64 互換機 (Opteron<!-- &#8482; -->(TM), Athlon 64, EM64T など),
-			  Alpha/AXP, IA-64, PC-98, UltraSPARC<!-- &#174; -->(R)
+			  UltraSPARC<!-- &#174; -->(R), IA-64, PC-98 および ARM 
 			  の各アーキテクチャに対応した高性能なオペレーティングシステムです。
 			  FreeBSD は BSD と呼ばれる、カリフォルニア大学バークレー校で開発された
 			  UNIX<!-- &#174; -->(R) に由来しており、
-			  <a href="&base;/doc/ja_JP.eucJP/articles/contributors/index.html"
-			    >多くの人々が参加する開発者チーム</a>によって開発・保守がおこなわれています。
+			  <a href="&enbase;/doc/ja_JP.eucJP/articles/contributors/staff-committers.html"
+			    >多くの人々が参加する開発者チーム</a>
+			  によって開発・保守がおこなわれています。
 			  また、未対応の<a href="&base;/platforms/">プラットフォーム</a
-			    >の開発作業も進行中です。</p>
+			    >の開発作業も進行中です。
+			</p>
 
-				<div id="TXTFRONTFEATURELINK">
+			<div id="TXTFRONTFEATURELINK">
 			  &#187;<a href="&base;/about.html" title="Learn More">詳しくはこちら</a>
-				</div> <!-- TXTFRONTFEATURELINK -->
-			</div> <!-- FRONTFEATURECONTENT -->
+			</div> <!-- TXTFRONTFEATURELINK -->
+		    </div> <!-- FRONTFEATURECONTENT -->
 		</div> <!-- FRONTFEATURELEFT -->
 
 		  <div id="FRONTFEATUREMIDDLE">
 		      <div class="frontgetroundbox">
-			<div class="frontgettop">
-			  <div>
-			    &#160;
-			  </div>
-			  &#160;</div>
+			<div class="frontgettop"><div>&#160;</div>&#160;</div>
 
 			<div class="frontgetcontent">
 			  <a href="&base;/where.html">FreeBSD を入手する</a>
 			</div> <!-- frontgetcontent -->
 
-			<div class="frontgetbot">
-			  <div>
-			    &#160;
-			  </div>
-			  &#160;</div>
+			<div class="frontgetbot"><div>&#160;</div>&#160;</div>
 		      </div> <!-- frontgetroundbox -->
 
 			<div id="FRONTRELEASES">
 			  <div id="FRONTRELEASESCONTENT" class="txtshortcuts">
-			  <h2>最新リリース</h2>
-
-				  <ul id="FRONTRELEASESLIST">
+			  <h2><a href="&base;/releases/">最新リリース</a></h2>
+			  <ul id="FRONTRELEASESLIST">
 			    <li>
 			      <a href="&u.rel.announce;">プロダクションリリース &rel.current;</a>
 			    </li>
@@ -121,16 +115,17 @@
 			    </li>
 			    <xsl:if test="'&beta.testing;' != 'IGNORE'">
 			    <li>
-			      <a href="&base;/where.html#helptest">
-				次回リリース予定
-				&betarel.current; - &betarel.vers;</a></li>
+			      <a href="&base;/where.html#helptest">次回リリース予定
+				&betarel.current; - &betarel.vers;</a>
+			    </li>
 			    </xsl:if>
 			    <xsl:if test="'&beta2.testing;' != 'IGNORE'">
 			    <li>
-			      <a href="&base;/where.html#helptest">
-				次回リリース予定
-				&betarel2.current; - &betarel2.vers;</a></li>
-			    </xsl:if>			  </ul>
+			      <a href="&base;/where.html#helptest">次回リリース予定
+				&betarel2.current; - &betarel2.vers;</a>
+			    </li>
+			    </xsl:if>
+			  </ul>
 			  </div> <!-- FRONTRELEASESCONTENT -->
 			</div> <!-- FRONTRELEASES -->
 		  </div> <!-- FRONTFEATUREMIDDLE -->
@@ -138,8 +133,8 @@
 		<div id="FRONTFEATURERIGHT">
 		      <h2 class="blockhide">他言語へのリンク</h2>
 
-		      <div id="languagenav">
-			<ul id="languagenavlist">
+		      <div id="LANGUAGENAV">
+			<ul id="LANGUAGENAVLIST">
 			  <li>
 			    <a href="&enbase;/de/" title="German">de</a>
 			  </li>
@@ -162,13 +157,13 @@
 			    <a href="&enbase;/ru/" title="Russian">ru</a>
 			  </li>
 			</ul>
-		      </div> <!-- languagenav -->
+		      </div> <!-- LANGUAGENAV -->
 
-		      <div id="mirror">
+		      <div id="MIRROR">
 			<form action="&cgibase;/mirror.cgi" method="get">
 			  <div>
-			    <h2 class="blockhide"><label for="mirrorsel">ミラーサイト</label></h2>
-			    <select id="mirrorsel" name="goto">
+			    <h2 class="blockhide"><label for="MIRRORSEL">ミラーサイト</label></h2>
+			    <select id="MIRRORSEL" name="goto">
 			      <xsl:call-template name="html-index-mirrors-options-list">
 				<xsl:with-param name="mirrors.xml" select="$mirrors.xml" />
 			      </xsl:call-template>
@@ -176,12 +171,12 @@
 			  </div> <!-- unnamed -->
 			  <input type="submit" value="移動" />
 			</form>
-		      </div> <!-- mirror -->
+		      </div> <!-- MIRROR -->
 
-		      <div id="frontshortcuts">
-			<div id="frontshortcutscontent" class="txtshortcuts">
+		      <div id="FRONTSHORTCUTS">
+			<div id="FRONTSHORTCUTSCONTENT" class="txtshortcuts">
 			  <h2>ショートカット</h2>
-			  <ul id="frontshortcutslist">
+			  <ul id="FRONTSHORTCUTSLIST">
 			    <li>
 			      <a href="&base;/support.html#mailing-list" title="Mailing Lists">メーリングリスト</a>
 			    </li>
@@ -201,8 +196,8 @@
 			      <a href="&base;/ports/index.html" title="Ports">Ports</a>
 			    </li>
 			  </ul>
-			</div> <!-- frontshortcutscontent -->
-		      </div> <!-- frontshortcuts -->
+			</div> <!-- FRONTSHORTCUTSCONTENT -->
+		      </div> <!-- FRONTSHORTCUTS -->
 
 		      <div class="frontnewroundbox">
 			<div class="frontnewtop"><div>&#160;</div>&#160;</div>
@@ -211,15 +206,15 @@
 			</div> <!-- frontnewcontent -->
 			<div class="frontnewbot"><div>&#160;</div>&#160;</div>
 		      </div> <!-- frontnewroundbox -->
-		    </div> <!-- featureright -->
+		    </div> <!-- FEATURERIGHT -->
 
-		  </div> <!-- frontfeaturecontainer -->
+		  </div> <!-- FRONTFEATURECONTAINER -->
 
 		  <br class="clearboth" />
 
-		  <div id="frontnemscontainer">
-		    <div id="frontnews">
-		      <div id="frontnewscontent" class="txtnewsevent">
+		  <div id="FRONTNEMSCONTAINER">
+		    <div id="FRONTNEWS">
+		      <div id="FRONTNEWSCONTENT" class="txtnewsevent">
 			<h2>最新ニュース</h2>
 			<div class="newseventswrap">
 			  <xsl:call-template name="html-index-news-project-items">
@@ -239,20 +234,19 @@
 			  </div> <!-- unnamed -->
 			</div> <!-- newseventswrap -->
 
-		      </div> <!-- frontnewscontent -->
-		    </div> <!-- frontnews -->
+		      </div> <!-- FRONTNEWSCONTENT -->
+		    </div> <!-- FRONTNEWS -->
 
 		    <div class="frontseparator"><b style="display: none">.</b></div>
 
-		    <div id="frontevents">
-		      <div id="fronteventscontent" class="txtnewsevent">
+		    <div id="FRONTEVENTS">
+		      <div id="FRONTEVENTSCONTENT" class="txtnewsevent">
 			<h2>イベント予定</h2>
 
 			<div class="newseventswrap">
 			  <xsl:call-template name="html-index-events-items">
 			    <xsl:with-param name="events.xml-master" select="$events.xml-master" />
 			    <xsl:with-param name="events.xml" select="$events.xml" />
-			    <xsl:with-param name="curdate.xml" select="$curdate.xml" />
 			  </xsl:call-template>
 
 			  <div>
@@ -264,13 +258,13 @@
 			  </div> <!-- unnamed -->
 			</div> <!-- newseventswrap -->
 
-		      </div> <!-- frontnewsevents -->
-		    </div> <!-- frontevents -->
+		      </div> <!-- FRONTEVENTSCONTENT -->
+		    </div> <!-- FRONTEVENTS -->
 
 		    <div class="frontseparator"><b style="display: none">.</b></div>
 
-		    <div id="frontmedia">
-		      <div id="frontmediacontent" class="txtnewsevent">
+		    <div id="FRONTMEDIA">
+		      <div id="FRONTMEDIACONTENT" class="txtnewsevent">
 			<h2>ニュース記事</h2>
 
 			<div class="newseventswrap">
@@ -288,13 +282,13 @@
 			  </div> <!-- unnamed -->
 			</div> <!-- newseventswrap -->
 
-		      </div> <!-- frontmediacontent -->
-		    </div> <!-- frontmedia -->
+		      </div> <!-- FRONTMEDIACONTENT -->
+		    </div> <!-- FRONTMEDIA -->
 
 		    <div class="frontseparator"><b style="display: none">.</b></div>
 
-		    <div id="frontsecurity">
-		      <div id="frontsecuritycontent" class="txtnewsevent">
+		    <div id="FRONTSECURITY">
+		      <div id="FRONTSECURITYCONTENT" class="txtnewsevent">
 			<h2>セキュリティ勧告</h2>
 
 			<div class="newseventswrap">
@@ -308,11 +302,8 @@
 			      <li class="first-child">
 				<a href="&base;/security/" title="More Security Advisories">すべて表示</a>
 			      </li>
-			      <li>
-				<a href="&base;/send-pr.html" title="Submit a Problem Report">バグ報告の提出</a>
-			      </li>
 			      <li class="last-child">
-				<a href="&enbase;/security/advisories.rdf" title="Security Advisories RSS Feed"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="News RSS Feed" /></a>
+				<a href="&enbase;/security/advisories.rdf" title="Security Advisories RSS Feed"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="Security Advisories RSS Feed" /></a>
 			      </li>
 			    </ul>
 			  </div> <!-- unnamed -->
@@ -329,15 +320,15 @@
 			  </xsl:call-template>
 
 			</div> <!-- newseventswrap -->
-		      </div> <!-- frontsecuritycontent -->
-		    </div> <!-- frontsecurity -->
+		      </div> <!-- FRONTSECURITYCONTENT -->
+		    </div> <!-- FRONTSECURITY -->
 
 		    <br class="clearboth" />
 
-		  </div> <!-- frontnemscontainer -->
-		</div> <!-- frontmain -->
-	      </div> <!-- frontcontainer -->
-	    </div> <!-- content -->
+		  </div> <!-- FRONTNEMSCONTAINER -->
+		</div> <!-- FRONTMAIN -->
+	      </div> <!-- FRONTCONTAINER -->
+	    </div> <!-- CONTENT -->
 
       <div id="FOOTER">
 	&copyright;
