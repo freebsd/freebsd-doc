@@ -4,13 +4,13 @@
 <!ENTITY title "The FreeBSD Project">
 ]>
 
-<!-- $FreeBSD: www/ja/index.xsl,v 1.48 2009/07/01 19:43:33 hrs Exp $ -->
-<!-- Original revision: 1.157 -->
+<!-- $FreeBSD: www/ja/index.xsl,v 1.49 2009/07/02 16:25:01 hrs Exp $ -->
+<!-- Original revision: 1.159 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
 
-  <xsl:variable name="date" select="'$FreeBSD: www/ja/index.xsl,v 1.48 2009/07/01 19:43:33 hrs Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/ja/index.xsl,v 1.49 2009/07/02 16:25:01 hrs Exp $'"/>
 
   <!-- these params should be externally bound. The values
        here are not used actually -->
@@ -148,6 +148,9 @@
 			    <a href="&enbase;/fr/" title="French">fr</a>
 			  </li>
 			  <li>
+			    <a href="&enbase;/hu/" title="Hungarian">hu</a>
+			  </li>
+			  <li>
 			    <a href="&enbase;/it/" title="Italian">it</a>
 			  </li>
 			  <li>
@@ -191,9 +194,6 @@
 			    </li>
 			    <li>
 			      <a href="&enbase;/doc/&url.doc.langcode;/books/handbook/index.html" title="Handbook">ハンドブック</a>
-			    </li>
-			    <li>
-			      <a href="http://www.freebsdfoundation.org/" title="Foundation">FreeBSD 財団</a>
 			    </li>
 			    <li>
 			      <a href="&base;/ports/index.html" title="Ports">Ports</a>
