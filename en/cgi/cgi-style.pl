@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/cgi/cgi-style.pl,v 1.37 2008/09/21 10:24:01 wosch Exp $
+# $FreeBSD: www/en/cgi/cgi-style.pl,v 1.38 2009/02/14 21:14:27 miwi Exp $
 #
 # Perl routines to encapsulate various elements of HTML page style.
 
@@ -100,29 +100,77 @@ $i_topbar = qq`
 
           <h2 class="blockhide">Site Navigation</h2>
 
-          <div id="topnav">
-            <ul id="topnavlist">
-              <li><a href="$hsty_base/" title="Home">Home</a></li>
-
-              <li><a href="$hsty_base/about.html"
-              title="About">About</a></li>
-
-              <li><a href="$hsty_base/where.html" title="Get FreeBSD">Get
-              FreeBSD</a></li>
-
-              <li><a href="$hsty_base/docs.html"
-              title="Documentation">Documentation</a></li>
-
-              <li><a href="$hsty_base/community.html"
-              title="Community">Community</a></li>
-
-              <li><a href="$hsty_base/projects/index.html"
-              title="Developers">Developers</a></li>
-
-              <li><a href="$hsty_base/support.html"
-              title="Support">Support</a></li>
-            </ul>
-          </div>
+	  <div id="MENU">
+	    <ul class="first">
+	      <li><a href="$hsty_base/">Home</a></li>
+	    </ul>
+	    <ul>
+	      <li><a href="$hsty_base/about.html">About</a>
+		<ul>
+		  <li><a href="$hsty_base/projects/newbies.html">Introduction</a></li>
+		  <li><a href="$hsty_base/features.html">Features</a></li>
+		  <li><a href="$hsty_base/advocacy/">Advocacy</a></li>
+		  <li><a href="$hsty_base/marketing/">Marketing</a></li>
+		</ul>
+	      </li>
+	    </ul>
+	    <ul>
+	      <li><a href="$hsty_base/where.html">Get FreeBSD</a>
+		<ul>
+		  <li><a href="$hsty_base/releases/">Release Information</a></li>
+		  <li><a href="$hsty_base/releng/">Release Engineering</a></li>
+		</ul>
+	      </li>
+	    </ul>
+	    <ul>
+	      <li><a href="$hsty_base/docs.html">Documentation</a>
+		<ul>
+		  <li><a href="$hsty_base/doc/en_US.ISO8859-1/books/faq/">FAQ</a></li>
+		  <li><a href="$hsty_base/doc/en_US.ISO8859-1/books/handbook/">Handbook</a></li>
+		  <li><a href="$hsty_base/doc/en_US.ISO8859-1/books/porters-handbook">Porter's Handbook</a></li>
+		  <li><a href="$hsty_base/doc/en_US.ISO8859-1/books/developers-handbook">Developer's Handbook</a></li>
+		  <li><a href="$hsty_base/cgi/man.cgi">Manual Pages</a></li>
+		</ul>
+	      </li>
+	    </ul>
+	    <ul>
+	      <li><a href="$hsty_base/community.html">Community</a>
+		<ul>
+		  <li><a href="$hsty_base/community/mailinglists.html">Mailing Lists</a></li>
+		  <li><a href="http://forums.freebsd.org">Forums</a></li>
+		  <li><a href="$hsty_base/usergroups.html">User Groups</a></li>
+		  <li><a href="$hsty_base/events/events.html">Events</a></li>
+		</ul>
+	      </li>
+	    </ul>
+	    <ul>
+	      <li><a href="$hsty_base/projects/index.html">Developers</a>
+		<ul>
+		  <li><a href="$hsty_base/projects/ideas/ideas.html">Project Ideas</a></li>
+		  <li><a href="http://svn.FreeBSD.org/viewvc/base/">SVN Repository</a></li>
+		  <li><a href="http://cvsweb.FreeBSD.org">CVS Repository</a></li>
+		  <li><a href="http://p4web.FreeBSD.org">Perforce Repository</a></li>
+		</ul>
+	      </li>
+	    </ul>
+	    <ul>
+	      <li><a href="$hsty_base/support.html">Support</a>
+		<ul>
+		  <li><a href="$hsty_base/commercial/commercial.html">Vendors</a></li>
+		  <li><a href="http://security.FreeBSD.org/">Security Information</a></li>
+		  <li><a href="$hsty_base/cgi/query-pr-summary.cgi">Bug Reports</a></li>
+		  <li><a href="$hsty_base/send-pr.html">Submit Bug-report</a></li>
+		</ul>
+	      </li>
+	    </ul>
+	    <ul>
+	      <li><a href="http://www.freebsdfoundation.org/">Foundation</a>
+		<ul>
+		  <li><a href="http://www.freebsdfoundation.org/donate/">Donate</a></li>
+		</ul>
+	      </li>
+	    </ul>
+	  </div> <!-- MENU -->
         </div>
 
 	<div id="content">
