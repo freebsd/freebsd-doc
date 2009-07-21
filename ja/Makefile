@@ -1,4 +1,4 @@
-# $FreeBSD: www/ja/Makefile,v 1.72 2005/10/06 04:20:44 remko Exp $
+# $FreeBSD: www/ja/Makefile,v 1.73 2006/08/20 06:28:53 hrs Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.114
 
@@ -68,6 +68,7 @@ SUBDIR+= platforms
 SUBDIR+= releases
 #SUBDIR+= releng
 SUBDIR+= smp
+SUBDIR+= support
 #SUBDIR+= kse
 #SUBDIR+= gnome
 #SUBDIR+= donations
