@@ -4,13 +4,11 @@
 <!ENTITY title "The FreeBSD Project">
 ]>
 
-<!-- $FreeBSD: www/ja/index.xsl,v 1.49 2009/07/02 16:25:01 hrs Exp $ -->
-<!-- Original revision: 1.159 -->
+<!-- $FreeBSD: www/ja/index.xsl,v 1.50 2009/07/05 15:58:38 hrs Exp $ -->
+<!-- Original revision: 1.165 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
-
-  <xsl:variable name="date" select="'$FreeBSD: www/ja/index.xsl,v 1.49 2009/07/02 16:25:01 hrs Exp $'"/>
 
   <!-- these params should be externally bound. The values
        here are not used actually -->
@@ -41,11 +39,11 @@
 	<link rel="alternate stylesheet" media="screen" href="&enbase;/layout/css/fixed_large.css" type="text/css" title="Large Text" />
 	<script type="text/javascript" src="&enbase;/layout/js/styleswitcher.js"></script>
 	<link rel="alternate" type="application/rss+xml"
-	  title="FreeBSD Project News" href="&enbase;/news/news.rdf" />
+	  title="FreeBSD Project News" href="&enbase;/news/rss.xml" />
 	<link rel="alternate" type="application/rss+xml"
-	  title="FreeBSD Security Advisories" href="&enbase;/security/advisories.rdf" />
+	  title="FreeBSD Security Advisories" href="&enbase;/security/rss.xml" />
 	<link rel="alternate" type="application/rss+xml"
-	  title="FreeBSD GNOME Project News" href="&enbase;/gnome/news.rdf" />
+	  title="FreeBSD GNOME Project News" href="&enbase;/gnome/rss.xml" />
 
 	<!-- Formatted to be easy to spam harvest, please do not reformat. -->
 	<xsl:comment>
@@ -187,7 +185,7 @@
 			      <a href="&base;/support.html#mailing-list" title="Mailing Lists">メーリングリスト</a>
 			    </li>
 			    <li>
-			      <a href="&base;/send-pr.html" title="Report a Bug">バグの報告</a>
+			      <a href="&base;/support/bugreports.html" title="Report a Bug">バグの報告</a>
 			    </li>
 			    <li>
 			      <a href="&enbase;/doc/&url.doc.langcode;/books/faq/index.html" title="FAQ">FAQ</a>
@@ -231,7 +229,7 @@
 				<a href="&base;/news/newsflash.html" title="More News">すべてのニュース</a>
 			      </li>
 			      <li class="last-child">
-				<a href="&enbase;/news/news.rdf" title="News RSS Feed"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="News RSS Feed" /></a>
+				<a href="&enbase;/news/rss.xml" title="News RSS Feed"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="News RSS Feed" /></a>
 			      </li>
 			    </ul>
 			  </div> <!-- unnamed -->
@@ -306,7 +304,7 @@
 				<a href="&base;/security/" title="More Security Advisories">すべて表示</a>
 			      </li>
 			      <li class="last-child">
-				<a href="&enbase;/security/advisories.rdf" title="Security Advisories RSS Feed"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="Security Advisories RSS Feed" /></a>
+				<a href="&enbase;/security/rss.xml" title="Security Advisories RSS Feed"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="Security Advisories RSS Feed" /></a>
 			      </li>
 			    </ul>
 			  </div> <!-- unnamed -->
@@ -322,6 +320,16 @@
 			    <xsl:with-param name="type" select="'notice'" />
 			  </xsl:call-template>
 
+			  <div>
+			    <ul class="newseventslist">
+			      <li class="first-child">
+				<a href="&base;/security/" title="More Errata Notices">もっと詳しく</a>
+			      </li>
+			      <li class="last-child">
+				<a href="&enbase;/security/errata.xml" title="Errata Notices RSS Feed"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="Errata Notices RSS Feed" /></a>
+			      </li>
+			    </ul>
+			  </div> <!-- unnamed -->
 			</div> <!-- newseventswrap -->
 		      </div> <!-- FRONTSECURITYCONTENT -->
 		    </div> <!-- FRONTSECURITY -->
