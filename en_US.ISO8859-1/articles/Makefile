@@ -13,6 +13,7 @@ SUBDIR+= contributing
 SUBDIR+= contributing-ports
 SUBDIR+= contributors
 SUBDIR+= cups
+SUBDIR+= custom-gcc
 SUBDIR+= cvs-freebsd
 SUBDIR+= cvsup-advanced
 SUBDIR+= dialup-firewall
