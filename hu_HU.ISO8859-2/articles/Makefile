@@ -1,9 +1,9 @@
-# $FreeBSD$
+# $FreeBSD: doc/hu_HU.ISO8859-2/articles/Makefile,v 1.8 2008/10/29 20:43:35 pgj Exp $
 
 #
 # The FreeBSD Hungarian Documentation Project
 # %SOURCE%    en_US.ISO8859-1/articles/Makefile
-# %SRCID%     1.60
+# %SRCID%     1.61
 #
 
 MAINTAINER=	gabor@FreeBSD.org
