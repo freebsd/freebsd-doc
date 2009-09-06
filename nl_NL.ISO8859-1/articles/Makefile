@@ -1,7 +1,7 @@
-# $FreeBSD: doc/nl_NL.ISO8859-1/articles/Makefile,v 1.4 2008/12/27 20:34:02 rene Exp $
+# $FreeBSD$
 
 # %SOURCE%	en_US.ISO8859-1/articles/Makefile
-# %SRCID%	1.60
+# %SRCID%	1.61
 
 SUBDIR =
 SUBDIR+= contributing
