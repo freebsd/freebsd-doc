@@ -1,7 +1,7 @@
-# $FreeBSD: www/fr/security/Makefile,v 1.2 2006/04/03 19:58:44 blackend Exp $
+# $FreeBSD: www/fr/security/Makefile,v 1.3 2006/08/19 21:23:44 hrs Exp $
 
 # The FreeBSD French Documentation Project
-# Original revision: 1.14
+# Original revision: 1.16
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -12,6 +12,9 @@
 
 DOCS=
 DOCS+=	security.sgml
+DOCS+=	advisories.sgml
+
+advisories.sgml: advisories.html.inc
 
 INDEXLINK=	security.html
 
