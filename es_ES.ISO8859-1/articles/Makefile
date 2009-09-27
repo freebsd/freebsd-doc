@@ -17,6 +17,7 @@ SUBDIR+= mailing-list-faq
 SUBDIR+= nanobsd
 SUBDIR+= p4-primer
 SUBDIR+= problem-reports
+SUBDIR+= pxe
 SUBDIR+= releng
 SUBDIR+= version-guide
 SUBDIR+= zip-drive
