@@ -26,7 +26,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.64 2008/01/26 15:53:55 shaun Exp $
+# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.65 2008/09/22 19:13:42 wosch Exp $
 #
 
 #
@@ -302,6 +302,8 @@ if ($PR !~ /^$valid_pr$/ || $PR < 0) {
 $PR = int $PR;
 $PR = quotemeta $PR;
 
+# Note: query-pr.web is just a anti DoS wrapper around query-pr which
+# make sure we do not run too many query-pr instances at once.
 if ($category) {
 	$category = quotemeta $category;
 	@query = split /\n/, qx(query-pr.web --full --category=${category} ${PR} 2>&1);
