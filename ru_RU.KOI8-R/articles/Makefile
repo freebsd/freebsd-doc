@@ -25,6 +25,7 @@ SUBDIR+= fbsd-from-scratch
 SUBDIR+= fonts
 SUBDIR+= formatting-media
 SUBDIR+= freebsd-questions
+SUBDIR+= geom-class
 SUBDIR+= hats
 SUBDIR+= hubs
 SUBDIR+= ipsec-must
