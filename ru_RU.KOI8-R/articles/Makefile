@@ -26,6 +26,7 @@ SUBDIR+= fonts
 SUBDIR+= formatting-media
 SUBDIR+= freebsd-questions
 SUBDIR+= geom-class
+SUBDIR+= gjournal-desktop
 SUBDIR+= hats
 SUBDIR+= hubs
 SUBDIR+= ipsec-must
