@@ -15,6 +15,7 @@ SUBDIR+= gjournal-desktop
 SUBDIR+= greek-language-support
 SUBDIR+= laptop
 SUBDIR+= linux-users
+SUBDIR+= mailing-list-faq
 SUBDIR+= multi-os
 SUBDIR+= nanobsd
 SUBDIR+= new-users
