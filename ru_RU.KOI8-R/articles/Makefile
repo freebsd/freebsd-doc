@@ -14,6 +14,7 @@ SUBDIR+= committers-guide
 SUBDIR+= console-server
 SUBDIR+= contributing
 #SUBDIR+= contributors
+SUBDIR+= custom-gcc
 SUBDIR+= cvs-freebsd
 SUBDIR+= cvsup-advanced
 SUBDIR+= dialup-firewall
