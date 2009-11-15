@@ -26,7 +26,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.66 2009/09/29 19:45:37 simon Exp $
+# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.67 2009/11/15 12:08:18 remko Exp $
 #
 
 #
@@ -1121,8 +1121,8 @@ sub parsepatches
 						unless (!$getpatch and $inpatch & PATCH_UUENC_BIN);
 					$outp = htmlclean($outp) unless ($getpatch);
 					print $outp;
-					$inpatch ^= PATCH_UUENC; $outp = "";
-					$inpatch ^= PATCH_UUENC_BIN;
+					$outp = "";
+					$inpatch &= ~(PATCH_UUENC | PATCH_UUENC_BIN);
 
 					# No outer container?
 					sprint('patchblock_tfoot') if (!$inpatch and !$getpatch);
