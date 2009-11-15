@@ -26,7 +26,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.65 2008/09/22 19:13:42 wosch Exp $
+# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.66 2009/09/29 19:45:37 simon Exp $
 #
 
 #
@@ -474,6 +474,7 @@ foreach my $field (@fields_multiple)
 		my $url = "${self_url_base}${PR}";
 
 		my $outp = "";
+		my $qpcont = "";
 		my %mime_headers;
 		my $mime_boundary;
 		my $mime_endheader;
@@ -596,6 +597,21 @@ foreach my $field (@fields_multiple)
 				if ($inresponse) {
 					my $txt = $1;
 
+					# Detect Q-P line continuations,
+					# join them with the next line
+					# and process when the full line
+					# will be assembled.
+					if ($encoding == ENCODING_QP) {
+						if ($txt =~ /=$/) {
+							$txt =~ s/=$//;
+							$qpcont .= $txt;
+							next;
+						} else {
+							$txt = $qpcont . $txt;
+							$qpcont = "";
+						}
+					}
+
 					if ($txt !~ /^-+$/ && $txt !~ /(?:cut|snip)/i && $txt =~ /^--(\S+)$/) {
 						$mime_boundary = $1 if (!defined $mime_boundary && !$inpatch);
 
@@ -660,8 +676,6 @@ foreach my $field (@fields_multiple)
 						$outp .= $txt;
 						next;
 					} elsif ($encoding == ENCODING_QP) {
-						# XXX: lines ending in = should be joined
-						$txt =~ s/=$//;
 						$txt = decode_qp($txt);
 					}
 
