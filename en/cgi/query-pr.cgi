@@ -26,7 +26,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.67 2009/11/15 12:08:18 remko Exp $
+# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.68 2009/11/15 16:28:32 remko Exp $
 #
 
 #
@@ -673,6 +673,7 @@ foreach my $field (@fields_multiple)
 					}
 
 					if ($encoding == ENCODING_BASE64) {
+						next if $txt =~ /:/;
 						$outp .= $txt;
 						next;
 					} elsif ($encoding == ENCODING_QP) {
@@ -1027,7 +1028,7 @@ sub parsepatches
 	}
 
 	if (($inpatch & PATCH_BASE64) && $getpatch) {
-		$outp .= $_;
+		$outp .= $_ unless /:/;
 		return 1;
 	}
 
