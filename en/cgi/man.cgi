@@ -33,8 +33,8 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.236 2009-11-22 11:44:59 wosch Exp $
-# $FreeBSD: www/en/cgi/man.cgi,v 1.235 2009/11/22 11:26:17 wosch Exp $
+# $Id: man.cgi,v 1.237 2009-11-22 12:05:08 wosch Exp $
+# $FreeBSD: www/en/cgi/man.cgi,v 1.236 2009/11/22 11:44:59 wosch Exp $
 
 ############################################################################
 # !!! man.cgi is stale perl4 code !!!
@@ -141,6 +141,10 @@ $sectionpath = {
     'OpenBSD 4.4' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
     'OpenBSD 4.5' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
     'OpenBSD 4.6' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
+
+    'CentOS Linux/i386 3.9' => { 'path' => '1:2:3:3p:4:5:6:7:8:9:n', },
+    'CentOS Linux/i386 4.8' => { 'path' => '1:1p:2:3:3p:4:5:6:7:8:9:n:0p', },
+    'CentOS Linux/i386 5.4' => { 'path' => '0p:1:1p:1x:2:2x:3:3p:3x:4:4x:5:5x:6:6x:7:7x:8:8x:9:9x:l:n', },
 };
 
 foreach my $os ( keys %$sectionpath ) {
@@ -1394,7 +1398,7 @@ sub faq {
     }
 
     local $id =
-      '$FreeBSD: www/en/cgi/man.cgi,v 1.235 2009/11/22 11:26:17 wosch Exp $';
+      '$FreeBSD: www/en/cgi/man.cgi,v 1.236 2009/11/22 11:44:59 wosch Exp $';
     return qq{\
 <pre>
 Copyright (c) 1996-2008 <a href="$mailtoURL">Wolfram Schneider</a>
