@@ -33,8 +33,8 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.237 2009-11-22 12:05:08 wosch Exp $
-# $FreeBSD: www/en/cgi/man.cgi,v 1.236 2009/11/22 11:44:59 wosch Exp $
+# $Id: man.cgi,v 1.238 2009-11-22 12:20:23 wosch Exp $
+# $FreeBSD: www/en/cgi/man.cgi,v 1.237 2009/11/22 12:05:08 wosch Exp $
 
 ############################################################################
 # !!! man.cgi is stale perl4 code !!!
@@ -145,6 +145,31 @@ $sectionpath = {
     'CentOS Linux/i386 3.9' => { 'path' => '1:2:3:3p:4:5:6:7:8:9:n', },
     'CentOS Linux/i386 4.8' => { 'path' => '1:1p:2:3:3p:4:5:6:7:8:9:n:0p', },
     'CentOS Linux/i386 5.4' => { 'path' => '0p:1:1p:1x:2:2x:3:3p:3x:4:4x:5:5x:6:6x:7:7x:8:8x:9:9x:l:n', },
+
+    'SuSE Linux/i386 4.3' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
+    'SuSE Linux/i386 5.0' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
+    'SuSE Linux/i386 5.2' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
+    'SuSE Linux/i386 5.3' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
+    'SuSE Linux/i386 6.0' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
+    'SuSE Linux/i386 6.1' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
+    'SuSE Linux/i386 6.3' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
+    'SuSE Linux/i386 6.4' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
+    'SuSE Linux/i386 7.0' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
+    'SuSE Linux/i386 7.1' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
+    'SuSE Linux/i386 7.2' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
+    'SuSE Linux/i386 7.3' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
+    'SuSE Linux/i386 8.0' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
+    'SuSE Linux/i386 8.1' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
+    'SuSE Linux/i386 8.2' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
+    'SuSE Linux/i386 9.2' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
+    'SuSE Linux/i386 9.3' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
+    'SuSE Linux/i386 10.0' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
+    'SuSE Linux/i386 10.1' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
+    'SuSE Linux/i386 10.2' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
+    'SuSE Linux/i386 10.3' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
+    'SuSE Linux/i386 11.0' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
+    'SuSE Linux/i386 11.1' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
+    'SuSE Linux/i386 11.2' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
 };
 
 foreach my $os ( keys %$sectionpath ) {
@@ -1398,7 +1423,7 @@ sub faq {
     }
 
     local $id =
-      '$FreeBSD: www/en/cgi/man.cgi,v 1.236 2009/11/22 11:44:59 wosch Exp $';
+      '$FreeBSD: www/en/cgi/man.cgi,v 1.237 2009/11/22 12:05:08 wosch Exp $';
     return qq{\
 <pre>
 Copyright (c) 1996-2008 <a href="$mailtoURL">Wolfram Schneider</a>
