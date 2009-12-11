@@ -7,7 +7,7 @@
 <!--
      The FreeBSD Russian Documentation Project
 
-     $FreeBSD: www/ru/index.xsl,v 1.34 2009/12/07 05:52:20 bland Exp $
+     $FreeBSD: www/ru/index.xsl,v 1.35 2009/12/10 15:54:21 bland Exp $
      $FreeBSDru: frdp/www/ru/index.xsl,v 1.47 2006/01/16 21:27:51 gad Exp $
 
      Original revision: 1.169
@@ -155,7 +155,7 @@
 					<a href="&enbase;/fr/" title="Французский">fr</a>
 				  </li>
 				  <li>
-					<a href="&base;/hu/" title="Венгерский">hu</a>
+					<a href="&enbase;/hu/" title="Венгерский">hu</a>
 				  </li>
 				  <li>
 					<a href="&enbase;/it/" title="Итальянский">it</a>
@@ -164,13 +164,13 @@
 					<a href="&enbase;/ja/" title="Японский">ja</a>
 				  </li>
 				  <li>
-					<a href="&base;/nl/" title="Голландский">nl</a>
+					<a href="&enbase;/nl/" title="Голландский">nl</a>
 				  </li>
 				  <li>
-					<a href="&enbase;/ru/" title="Русский">ru</a>
+					<a href="&base;/" title="Русский">ru</a>
 				  </li>
 				  <li class="last-child">
-					<a href="&base;/zh_CN/" title="Китайский (упрощенный)">zh_CN</a>
+					<a href="&enbase;/zh_CN/" title="Китайский (упрощенный)">zh_CN</a>
 				  </li>
 				</ul>
 			</div> <!-- LANGUAGENAV -->
