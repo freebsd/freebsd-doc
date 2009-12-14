@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/ports/Makefile,v 1.48 2007/10/18 01:43:31 hrs Exp $
+# $FreeBSD: www/en/ports/Makefile,v 1.49 2007/10/27 20:41:37 simon Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -47,7 +47,7 @@ Makefile.gen: categories-alpha.sgml categories-grouped.sgml index.sgml \
 	installing.sgml master-index.sgml references.sgml searching.sgml \
 	statistics.ent updating.sgml .NOTMAIN
 	(	${ECHO_CMD} TIDY=${PERL};\
-		${ECHO_CMD} TIDYOPTS="-i'' -npe 's,\"-//FreeBSD//DTD HTML 4.01 Transitional-Based Extension//EN\",\"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\",'";\
+		${ECHO_CMD} TIDYOPTS="-i'' -npe 's,\"-//FreeBSD//DTD HTML 4.01 Transitional-Based Extension//EN\",\"-//W3C//DTD HTML 4.01 Transitional//EN\" \"http://www.w3.org/TR/html4/loose.dtd\",'";\
 		${ECHO_CMD} DOCS= *.sgml;\
 		${ECHO_CMD} -n "DYNAMIC_DOCS= ";\
 		${ECHO_CMD} -n " categories-alpha.sgml";\
