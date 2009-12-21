@@ -1,16 +1,15 @@
 #
 # The FreeBSD Russian Documentation Project
 #
-# $FreeBSD: www/ru/Makefile,v 1.52 2007/08/15 21:13:14 marck Exp $
+# $FreeBSD: www/ru/Makefile,v 1.53 2008/06/22 07:17:53 hrs Exp $
 # $FreeBSDru: frdp/www/ru/Makefile,v 1.53 2006/02/18 18:46:43 gad Exp $
 #
-# Original revision: 1.122
+# Original revision: 1.146
 #
 
 .if exists(Makefile.conf)
 .include "Makefile.conf"
 .endif
-
 .if exists(../Makefile.inc)
 .include "../Makefile.inc"
 .endif
@@ -18,13 +17,15 @@
 # These are turned into validated, normalized HTML files.
 
 DOCS=  about.sgml
-DOCS+=  applications.sgml
+#DOCS+= administration.sgml
+DOCS+= applications.sgml
 DOCS+= art.sgml
 DOCS+= availability.sgml
 DOCS+= community.sgml
 DOCS+= docs.sgml
 DOCS+= features.sgml
 DOCS+= internet.sgml
+#DOCS+= logo.sgml
 DOCS+= mailto.sgml
 DOCS+= publish.sgml
 DOCS+= relnotes.sgml
@@ -38,7 +39,7 @@ DEPENDSET.index=transtable mirrors news press events \
 		advisories notices
 
 XMLDOCS+=	usergroups:${XSL_USERGROUPS}:${XML_USERGROUPS}:
-DEPENDSET.usergroups=	transtable usergroups
+DEPENDSET.usergroups=transtable usergroups
 PARAMS.usergroups=	--param pagename "'FreeBSD User Groups'"
 
 # These will be directly installed.
@@ -67,6 +68,7 @@ SUBDIR+= internal
 SUBDIR+= java
 SUBDIR+= kse
 SUBDIR+= marketing
+#SUBDIR+= multimedia
 SUBDIR+= news
 SUBDIR+= platforms
 SUBDIR+= portmgr
