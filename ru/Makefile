@@ -1,7 +1,7 @@
 #
 # The FreeBSD Russian Documentation Project
 #
-# $FreeBSD: www/ru/Makefile,v 1.53 2008/06/22 07:17:53 hrs Exp $
+# $FreeBSD: www/ru/Makefile,v 1.54 2009/12/21 02:08:11 bland Exp $
 # $FreeBSDru: frdp/www/ru/Makefile,v 1.53 2006/02/18 18:46:43 gad Exp $
 #
 # Original revision: 1.146
@@ -25,7 +25,7 @@ DOCS+= community.sgml
 DOCS+= docs.sgml
 DOCS+= features.sgml
 DOCS+= internet.sgml
-#DOCS+= logo.sgml
+DOCS+= logo.sgml
 DOCS+= mailto.sgml
 DOCS+= publish.sgml
 DOCS+= relnotes.sgml
