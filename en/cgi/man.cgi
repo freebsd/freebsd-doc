@@ -33,8 +33,8 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.239 2009-11-23 18:45:05 wosch Exp $
-# $FreeBSD: www/en/cgi/man.cgi,v 1.238 2009/11/22 12:20:23 wosch Exp $
+# $Id: man.cgi,v 1.240 2009-12-21 10:09:13 wosch Exp $
+# $FreeBSD: www/en/cgi/man.cgi,v 1.239 2009/11/23 18:45:05 wosch Exp $
 
 ############################################################################
 # !!! man.cgi is stale perl4 code !!!
@@ -201,9 +201,11 @@ $manPathDefault = 'FreeBSD 8.0-RELEASE';
 "$manLocalDir/FreeBSD-6.4-RELEASE/man:$manLocalDir/FreeBSD-6.4-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports",
 
     'FreeBSD Ports', "$manLocalDir/FreeBSD-ports",
-    'FreeBSD 8-current', "$manLocalDir/FreeBSD-8-current/man:$manLocalDir/FreeBSD-8-current/openssl/man",
+    'FreeBSD 9-current', "$manLocalDir/FreeBSD-9-current/man:$manLocalDir/FreeBSD-9-current/openssl/man",
 
     'FreeBSD 8.0-RELEASE', "$manLocalDir/FreeBSD-8.0-RELEASE/man:$manLocalDir/FreeBSD-8.0-RELEASE/openssl/man",
+    'FreeBSD 8.0-stable', "$manLocalDir/FreeBSD-8.0-stable",
+
     'FreeBSD 7.2-stable', "$manLocalDir/FreeBSD-7.2-stable",
     'FreeBSD 7.2-RELEASE', "$manLocalDir/FreeBSD-7.2-RELEASE/man:$manLocalDir/FreeBSD-7.2-RELEASE/openssl/man",
     'FreeBSD 7.1-RELEASE', "$manLocalDir/FreeBSD-7.1-RELEASE/man:$manLocalDir/FreeBSD-7.1-RELEASE/openssl/man",
@@ -520,7 +522,7 @@ while ( ( $key, $val ) = each %manPath ) {
     'freebsd-stable7', 'FreeBSD 7.2-stable',
     'freebsd-stable6', 'FreeBSD 6.4-stable',
 
-    'freebsd-current',       'FreeBSD 8-current',
+    'freebsd-current',       'FreeBSD 9-current',
     'freebsd-release-ports', 'FreeBSD 8.0-RELEASE and Ports',
 
     'slackware',  'Linux Slackware 3.1',
@@ -1427,7 +1429,7 @@ sub faq {
     }
 
     local $id =
-      '$FreeBSD: www/en/cgi/man.cgi,v 1.238 2009/11/22 12:20:23 wosch Exp $';
+      '$FreeBSD: www/en/cgi/man.cgi,v 1.239 2009/11/23 18:45:05 wosch Exp $';
     return qq{\
 <pre>
 Copyright (c) 1996-2008 <a href="$mailtoURL">Wolfram Schneider</a>
