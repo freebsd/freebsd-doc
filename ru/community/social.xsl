@@ -9,7 +9,7 @@
 <!--
      The FreeBSD Russian Documentation Project
 
-     $FreeBSD$
+     $FreeBSD: www/ru/community/social.xsl,v 1.1 2009/12/21 09:40:42 bland Exp $
 
      Original revision: 1.2
 -->
@@ -79,7 +79,7 @@
 
 	      <h3>Активность в блогах</h3>
 
-	      <p>Сообщения, содержащие <a
+	      <p>Сообщения, относящиеся к <a
 href="http://technorati.com/search/freebsd?sub=chartlet&amp;language=n&amp;authority=n">FreeBSD</a>, за последние 90 дней.<br /><a
 href="http://technorati.com/search/freebsd?sub=chartlet&amp;language=n&amp;authority=n"><img
 src="http://technorati.com/chartimg/freebsd?totalHits=24190&amp;size=s&amp;days=90"
