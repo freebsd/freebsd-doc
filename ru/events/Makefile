@@ -1,7 +1,7 @@
 #
 # The FreeBSD Russian Documentation Project
 #
-# $FreeBSD: www/ru/events/Makefile,v 1.2 2006/08/19 21:25:49 hrs Exp $
+# $FreeBSD: www/ru/events/Makefile,v 1.3 2009/12/22 04:46:25 bland Exp $
 # $FreeBSDru: frdp/www/ru/events/Makefile,v 1.3 2005/06/18 06:00:21 andy Exp $
 #
 # Original revision: 1.17
@@ -40,6 +40,6 @@ DEPENDSET.events${year}= events${year}
 XMLDOCS+=		events_ics:${XSL_EVENTS_ICS}:${XML_EVENTS_EVENTS}:events.ics
 DEPENDSET.events_ics=	events
 
-XMLDOCS+=		events_rss:rss.xsl:${XML_EVENTS_EVENTS}:rss.xml
+#XMLDOCS+=		events_rss:rss.xsl:${XML_EVENTS_EVENTS}:rss.xml
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
