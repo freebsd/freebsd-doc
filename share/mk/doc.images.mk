@@ -202,7 +202,9 @@ PS2EPSOPTS?=	-q -dNOPAUSE -dSAFER -dDELAYSAFER \
 # from the command line.  So ps->eps suffix rule is defined.  In the rule,
 # gs(1) is used to generate the bitmap preview and the size of the
 # bounding box.
+# XXX: GS 8.70 needs that $outfile exists before being created.
 .ps.eps:
+	${TOUCH} ${.TARGET}
 	${SETENV} outfile=${.TARGET} ${PS2EPS} ${PS2EPSOPTS} < ${.ALLSRC} 1>&2
 	(echo "save countdictstack mark newpath /showpage {} def /setpagedevice {pop} def";\
 		echo "%%EndProlog";\
