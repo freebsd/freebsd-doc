@@ -7,7 +7,7 @@
 <!--
      The FreeBSD Russian Documentation Project
 
-     $FreeBSD: www/ru/index.xsl,v 1.35 2009/12/10 15:54:21 bland Exp $
+     $FreeBSD: www/ru/index.xsl,v 1.36 2009/12/11 02:22:03 bland Exp $
      $FreeBSDru: frdp/www/ru/index.xsl,v 1.47 2006/01/16 21:27:51 gad Exp $
 
      Original revision: 1.169
@@ -57,7 +57,7 @@
 	<link rel="alternate" type="application/rss+xml"
 	  title="Новости проекта FreeBSD" href="&enbase;/news/rss.xml" />
 	<link rel="alternate" type="application/rss+xml"
-	  title="FreeBSD Security Advisories" href="&enbase;/security/rss.xml" />
+	  title="Бюллетени безопасности FreeBSD" href="&base;/security/rss.xml" />
 	<link rel="alternate" type="application/rss+xml"
 	  title="Новости проекта FreeBSD GNOME" href="&enbase;/gnome/rss.xml" />
 
@@ -310,7 +310,7 @@
 			  <div>
 				<ul class="newseventslist">
 				  <li class="first-child">
-					<a href="&enbase;/security/advisories.html" title="Все бюллетени по безопасности">Все</a>
+					<a href="&base;/security/advisories.html" title="Все бюллетени по безопасности">Все</a>
 				  </li>
 				  <li class="last-child">
 					<a href="&enbase;/security/rss.xml" title="Security Advisories RSS Feed"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="Security Advisories RSS Feed" /></a>
