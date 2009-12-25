@@ -160,6 +160,10 @@ PS2EPS?=	${PREFIX}/bin/gs
 PS2EPSOPTS?=	-q -dNOPAUSE -dSAFER -dDELAYSAFER \
 		-sPAPERSIZE=letter -r72 -sDEVICE=bit \
 		-sOutputFile=/dev/null ${PS2EPSFLAGS} ps2epsi.ps
+PS2BBOX?=	${PREFIX}/bin/gs
+PS2BBOXOPTS?=	-q -dNOPAUSE -dBATCH -dSAFER -dDELAYSAFER \
+		-sPAPERSIZE=letter -r72 -sDEVICE=bbox \
+		-sOutputFile=/dev/null ${PS2BBOXFLAGS}
 #
 # Use suffix rules to convert .scr files to other formats
 .SUFFIXES:	.scr .pic .png .ps .eps .txt
@@ -202,9 +206,12 @@ PS2EPSOPTS?=	-q -dNOPAUSE -dSAFER -dDELAYSAFER \
 # from the command line.  So ps->eps suffix rule is defined.  In the rule,
 # gs(1) is used to generate the bitmap preview and the size of the
 # bounding box.
-# XXX: GS 8.70 needs that $outfile exists before being created.
+#
+# ps2epsi.ps in GS 8.70 requires $outfile before the conversion and it
+# must contain %%BoundingBox line which the "gs -sDEVICE=bbox" outputs
+# (the older versions calculated BBox directly in ps2epsi.ps).
 .ps.eps:
-	${TOUCH} ${.TARGET}
+	${PS2BBOX} ${PS2BBOXOPTS} ${.ALLSRC} > ${.TARGET} 2>&1
 	${SETENV} outfile=${.TARGET} ${PS2EPS} ${PS2EPSOPTS} < ${.ALLSRC} 1>&2
 	(echo "save countdictstack mark newpath /showpage {} def /setpagedevice {pop} def";\
 		echo "%%EndProlog";\
