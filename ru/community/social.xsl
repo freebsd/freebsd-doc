@@ -9,7 +9,7 @@
 <!--
      The FreeBSD Russian Documentation Project
 
-     $FreeBSD: www/ru/community/social.xsl,v 1.1 2009/12/21 09:40:42 bland Exp $
+     $FreeBSD: www/ru/community/social.xsl,v 1.2 2009/12/22 04:52:59 bland Exp $
 
      Original revision: 1.2
 -->
@@ -58,7 +58,7 @@
 		на <a href="http://www.flickr.com">flickr</a>.</li>
 
 		<li>Сотни видеороликов с конференций,
-		скринкастов и демонстраций, свазанных с <a
+		скринкастов и демонстраций, связанных с <a
 		href="http://www.youtube.com/results?search_query=freebsd&amp;search_type=&amp;aq=f">FreeBSD</a>,
 		на <a href="http://www.youtube.com">YouTube</a>. В частности, там же размещен канал <a href="http://www.youtube.com/bsdconferences">BSD Conferences</a>, содержащий около 1 часа записей презентаций, сделанных на технических конференциях FreeBSD.</li>
 
