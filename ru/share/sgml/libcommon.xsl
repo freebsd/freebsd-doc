@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="koi8-r"?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
-<!-- $FreeBSD$ -->
+<!-- $FreeBSD: www/ru/share/sgml/libcommon.xsl,v 1.1 2006/08/19 21:25:55 hrs Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/libcommon.xsl"/>
@@ -59,7 +59,7 @@
 
   <xsl:template name="html-news-list-press-preface">
     <p>Если вы не нашли здесь определённой публикации, пожалуйста,
-      отрправте её URL на адрес <a
+      отправьте её URL на адрес <a
 	href="mailto:www@FreeBSD.org">www@FreeBSD.org</a></p>
 
     <p>Кроме того, новости прессы о проекте FreeBSD Java вы можете найти,
