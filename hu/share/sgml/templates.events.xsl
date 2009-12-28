@@ -9,7 +9,7 @@
 <!ENTITY % header.rss "INCLUDE">
 ]>
 
-<!-- $FreeBSD: www/hu/share/sgml/templates.events.xsl,v 1.1 2009/04/06 17:56:08 pgj Exp $ -->
+<!-- $FreeBSD: www/hu/share/sgml/templates.events.xsl,v 1.2 2009/04/22 11:04:02 pgj Exp $ -->
 
 <!-- Copyright (c) 2003 Simon L. Nielsen <simon@FreeBSD.org>
      Copyright (c) 2008 Murray M Stokely <murray@FreeBSD.org>
@@ -66,7 +66,7 @@
     use="concat(startdate/year, format-number(startdate/month, '00'))"/>
 
   <xsl:key name="event-by-country" match="event"
-    use="location/country" />
+    use="location/country/@code" />
 
   <xsl:key name="upcoming-event-by-country" match="event[((number(enddate/year) &gt; number($curdate.year)) or
 	    (number(enddate/year) = number($curdate.year) and
@@ -74,7 +74,7 @@
 	    (number(enddate/year) = number($curdate.year) and
 	     number(enddate/month) = number($curdate.month) and
 	     enddate/day &gt;= $curdate.day))]"
-    use="location/country" />
+    use="location/country/@code" />
 
   <xsl:variable name="charturl" select="'http://chart.apis.google.com/chart?cht=t&amp;chs=400x200&amp;chtm=world&amp;chco=ffffff,ffbe38,600000&amp;chf=bg,s,4D89F9'" />
 
@@ -83,8 +83,8 @@
   <xsl:variable name="chart-countries">
     <xsl:for-each select="event[
 	generate-id() =
-	generate-id(key('event-by-country', location/country)[1])]">
-      <xsl:sort select="format-number(count(key('event-by-country', location/country)), '000')" order="descending"/>
+	generate-id(key('event-by-country', location/country/@code)[1])]">
+      <xsl:sort select="format-number(count(key('event-by-country', location/country/@code)), '000')" order="descending"/>
         <xsl:value-of select="location/country/@code" />
     </xsl:for-each>
   </xsl:variable>
@@ -92,10 +92,10 @@
   <xsl:variable name="chart-country-counts">
     <xsl:for-each select="event[
 	generate-id() =
-	generate-id(key('event-by-country', location/country)[1])]">
-      <xsl:sort select="format-number(count(key('event-by-country', location/country)), '000')" order="descending"/>
-        <xsl:if test="count(key('upcoming-event-by-country', location/country)) != 0">100.0</xsl:if>
-        <xsl:if test="count(key('upcoming-event-by-country', location/country)) = 0"><xsl:value-of select="count(key('event-by-country', location/country))" />.0</xsl:if>
+	generate-id(key('event-by-country', location/country/@code)[1])]">
+      <xsl:sort select="format-number(count(key('event-by-country', location/country/@code)), '000')" order="descending"/>
+        <xsl:if test="count(key('upcoming-event-by-country', location/country/@code)) != 0">100.0</xsl:if>
+        <xsl:if test="count(key('upcoming-event-by-country', location/country/@code)) = 0"><xsl:value-of select="count(key('event-by-country', location/country/@code))" />.0</xsl:if>
         <xsl:if test="position()!=last()">,</xsl:if></xsl:for-each>
   </xsl:variable>
 
