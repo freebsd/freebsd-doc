@@ -1,7 +1,7 @@
 #
 # The FreeBSD Russian Documentation Project
 #
-# $FreeBSD: www/ru/Makefile,v 1.54 2009/12/21 02:08:11 bland Exp $
+# $FreeBSD: www/ru/Makefile,v 1.55 2009/12/21 09:39:18 bland Exp $
 # $FreeBSDru: frdp/www/ru/Makefile,v 1.53 2006/02/18 18:46:43 gad Exp $
 #
 # Original revision: 1.146
@@ -73,7 +73,7 @@ SUBDIR+= news
 SUBDIR+= platforms
 SUBDIR+= portmgr
 SUBDIR+= projects
-#SUBDIR+= prstats
+SUBDIR+= prstats
 SUBDIR+= releases
 SUBDIR+= releng
 SUBDIR+= search
