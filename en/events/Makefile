@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/events/Makefile,v 1.16 2008/12/15 02:38:22 murray Exp $
+# $FreeBSD: www/en/events/Makefile,v 1.17 2008/12/15 02:50:38 murray Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -11,9 +11,9 @@ SUBDIR=  2002
 SUBDIR+= 2003
 
 # The year the top level events.html file starts from:
-YEARSTART= 2008
+YEARSTART= 2009
 # Years to generate past events pages for and link from top level:
-PASTYEARS= 2003 2004 2005 2006 2007
+PASTYEARS= 2009 2008 2007 2006 2005 2004 2003
 
 DATA=	events.css
 INDEXLINK=	events.html
@@ -27,7 +27,7 @@ DEPENDSET.events=	events
 XMLDOCS+=		events${year}:${XSL_EVENTS_PAST}:${XML_EVENTS_EVENTS}:
 PARAMS.events${year}=	--param year ${year}
 PARAMS.events${year}+=	--stringparam pastyears '${PASTYEARS}'
-DEPENDSET.events${year}= events${year}
+DEPENDSET.events${year}= events
 .endfor
 
 XMLDOCS+=		events_ics:${XSL_EVENTS_ICS}:${XML_EVENTS_EVENTS}:events.ics
