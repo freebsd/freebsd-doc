@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="euc-jp"?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
-<!-- $FreeBSD: www/ja/share/sgml/libcommon.xsl,v 1.1 2006/08/19 21:24:50 hrs Exp $ -->
+<!-- $FreeBSD: www/ja/share/sgml/libcommon.xsl,v 1.2 2010/01/04 13:32:24 ryusuke Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/libcommon.xsl"/>
@@ -81,10 +81,31 @@
   </xsl:template>
 
   <xsl:template name="html-events-list-preface">
+    <p>ここに載っていない FreeBSD に関連したイベントや、
+      FreeBSD ユーザが興味をもちそうなイベントをご存じなら、
+      我々がここに載せられるように詳細を
+      <a href="mailto:www@freebsd.org">www@FreeBSD.org</a> まで
+      (英語で) 送ってください。</p>
+
     <p>iCalendar 形式に対応したスケジュール管理ソフトウェアを使っているなら、
-      イベントを集めた
-      <a href="&enbase;/events/events.ics">FreeBSD イベントカレンダー</a>
-      が利用できます。</p>
+      ここに載っているすべてのイベントを集めた
+      <a href="&base;/events/events.ics">FreeBSD イベントカレンダー</a>
+      を利用できます。</p>
+  </xsl:template>
+
+  <xsl:template name="html-events-map">
+    <xsl:param name="mapurl" select="'none'" />
+
+    <p>今後 FreeBSD に関連したイベントを開催する国や地域は、
+      以下の地図において暗赤色に塗られています。
+      過去に FreeBSD に関連したイベントを開催した国は黄色やオレンジ色で塗られています。
+      より暗い色で塗られた地域ほど過去に多くのイベントを開催しています。</p>
+
+    <img>
+      <xsl:attribute name="src">
+        <xsl:value-of select="$mapurl" />
+      </xsl:attribute>
+    </img>
   </xsl:template>
 
   <xsl:template name="html-events-list-upcoming-heading">
