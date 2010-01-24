@@ -4,7 +4,7 @@
 <!ENTITY title "The FreeBSD Project">
 ]>
 
-<!-- $FreeBSD: www/ja/index.xsl,v 1.51 2009/07/23 17:38:57 hrs Exp $ -->
+<!-- $FreeBSD: www/ja/index.xsl,v 1.52 2010/01/07 12:53:30 ryusuke Exp $ -->
 <!-- Original revision: 1.165 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -256,7 +256,7 @@
 			  <div>
 			    <ul class="newseventslist">
 			      <li class="only-child">
-				<a href="&enbase;/events/" title="More Events">すべてのイベント</a>
+				<a href="&base;/events/" title="More Events">すべてのイベント</a>
 			      </li>
 			    </ul>
 			  </div> <!-- unnamed -->
