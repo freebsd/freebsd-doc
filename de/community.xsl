@@ -7,7 +7,7 @@
 ]>
 
 <!-- $FreeBSD$ -->
-<!-- $FreeBSDde: de-www/community.xsl,v 1.5 2009/02/24 14:09:14 jkois Exp $ -->
+<!-- $FreeBSDde: de-www/community.xsl,v 1.6 2010/01/29 21:50:39 jkois Exp $ -->
 <!-- basiert auf: 1.9 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
@@ -53,7 +53,7 @@
 		href="http://forums.FreeBSD.org/">Foren</a> sowie
 		diverse <a
 		href="&base;/community/newsgroups.html">Newsgroups</a>.
-		Dazu kommen mehr als 92 <!-- <xsl:value-of
+		Dazu kommen mehr als 93 <!-- <xsl:value-of
 		select="count(document($usergroups.xml)//entry)"
 		/><xsl:text> </xsl:text>--> <a
 		href="&enbase;/usergroups.html">User Groups</a> in
@@ -72,10 +72,10 @@
 		href="&enbase;/community/social.html">Sozialen
 		Netzwerken</a> vertreten.</p>
 
-	      <p>Letztes Jahr gab es insgesamt 21 <!-- <xsl:value-of
+	      <p>Letztes Jahr gab es insgesamt 19 <!-- <xsl:value-of
 	        select="count(event[number(enddate/year) =
 	        (number($curdate.year) -1)])" />-->
-		&os;-Veranstaltungen in 10 <!--<xsl:value-of
+		&os;-Veranstaltungen in 12 <!--<xsl:value-of
 		select="count(event[(number(enddate/year) =
 		(number($curdate.year) -1)) and (generate-id() =
 		generate-id(key('last-year-event-by-country',
