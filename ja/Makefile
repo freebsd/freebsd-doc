@@ -1,4 +1,4 @@
-# $FreeBSD: www/ja/Makefile,v 1.74 2009/07/21 06:12:12 hrs Exp $
+# $FreeBSD: www/ja/Makefile,v 1.75 2010/01/20 15:51:38 ryusuke Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.114
 
@@ -15,7 +15,6 @@ DOCS=	about.sgml
 DOCS+=	applications.sgml
 #DOCS+= art.sgml
 DOCS+= availability.sgml
-DOCS+=	community.sgml
 DOCS+= docs.sgml 
 DOCS+= features.sgml
 DOCS+= internet.sgml 
@@ -38,6 +37,9 @@ DEPENDSET.index=transtable mirrors news press events \
 XMLDOCS+=       usergroups:${XSL_USERGROUPS}:${XML_USERGROUPS}:
 DEPENDSET.usergroups=transtable usergroups
 PARAMS.usergroups=      --param pagename "'FreeBSD User Groups'"
+
+XMLDOCS+=	community::${XML_EVENTS_EVENTS}:
+DEPENDSET.community=usergroups events
 
 # These will be directly installed.
 
