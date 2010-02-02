@@ -6,7 +6,7 @@
 <!ENTITY % navinclude.community "INCLUDE">
 ]>
 
-<!-- $FreeBSD$ -->
+<!-- $FreeBSD: www/ja/community.xsl,v 1.1 2010/01/29 16:48:47 ryusuke Exp $ -->
 <!-- Original revision: 1.9 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
@@ -45,7 +45,7 @@
 
 		<p>&os; には、開発を支える活発なコミュニティがあります。</p>
 
-		<p><a href="&base;/community/mailinglists.html"
+		<p><a href="&base;/support.html#mailing-list"
 		      >メーリングリスト</a> の数は 100 を超えており、
 		  たくさんのウェブベースの
 		  <a href="http://forums.FreeBSD.org/">フォーラム</a> や、
