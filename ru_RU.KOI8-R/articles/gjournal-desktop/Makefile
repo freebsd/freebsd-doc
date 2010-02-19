@@ -2,6 +2,9 @@
 # $FreeBSD$
 #
 # Article: Implementing UFS journaling on a desktop PC
+#
+# Original revision: 1.1
+#
 
 DOC?= article
 

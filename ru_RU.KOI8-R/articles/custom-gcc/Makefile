@@ -1,6 +1,9 @@
 # 
 # $FreeBSD$
 #
+# Original revision: 1.1
+#
+
 
 DOC?= article
 
