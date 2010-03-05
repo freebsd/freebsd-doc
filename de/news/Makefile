@@ -1,6 +1,6 @@
 # $FreeBSD$
-# $FreeBSDde: de-www/news/Makefile,v 1.16 2009/02/15 09:09:48 jkois Exp $
-# basiert auf: 1.52
+# $FreeBSDde: de-www/news/Makefile,v 1.17 2010/03/05 08:47:25 jkois Exp $
+# basiert auf: 1.53
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -12,7 +12,8 @@
 DOCS+= news.sgml
 
 #Subdirs fuer alte News
-SUBDIR=  2008
+SUBDIR=  2009
+SUBDIR+= 2008
 SUBDIR+= 2007
 SUBDIR+= 2006
 SUBDIR+= 2005
