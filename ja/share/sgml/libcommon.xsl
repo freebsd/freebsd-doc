@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="euc-jp"?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
-<!-- $FreeBSD: www/ja/share/sgml/libcommon.xsl,v 1.2 2010/01/04 13:32:24 ryusuke Exp $ -->
+<!-- $FreeBSD: www/ja/share/sgml/libcommon.xsl,v 1.3 2010/01/20 15:51:38 ryusuke Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/libcommon.xsl"/>
@@ -49,6 +49,7 @@
 
   <xsl:template name="html-news-make-olditems-list">
     <p>過去のニュース:
+      <a href="&enbase;/news/2009/index.html">2009</a>,
       <a href="&enbase;/news/2008/index.html">2008</a>,
       <a href="&enbase;/news/2007/index.html">2007</a>,
       <a href="&enbase;/news/2006/index.html">2006</a>,
