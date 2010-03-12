@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="ISO-8859-2" ?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
-<!-- $FreeBSD: www/hu/share/sgml/libcommon.xsl,v 1.4 2009/04/06 17:56:08 pgj Exp $ -->
+<!-- $FreeBSD: www/hu/share/sgml/libcommon.xsl,v 1.5 2009/04/07 12:01:02 pgj Exp $ -->
 
 <!-- The FreeBSD Hungarian Documentation Project
      Translated by: Gabor Kovesdan <gabor@FreeBSD.org>
      %SOURCE%	share/sgml/libcommon.xsl
-     %SRCID%	1.28
+     %SRCID%	1.30
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -106,7 +106,9 @@
   </xsl:template>
 
   <xsl:template name="html-news-make-olditems-list">
-    <p>A kor&aacute;bbi &eacute;vek h&iacute;rei:
+    <p>A kor&aacute;bbi &eacute;vek h&iacute;rei (2009-t&#245;l
+      magyarul):
+      <a href="&base;/news/2009/index.html">2009</a>,
       <a href="&enbase;/news/2008/index.html">2008</a>,
       <a href="&enbase;/news/2007/index.html">2007</a>,
       <a href="&enbase;/news/2006/index.html">2006</a>,
@@ -127,7 +129,9 @@
   </xsl:template>
 
   <xsl:template name="html-press-make-olditems-list">
-    <p>A kor&aacute;bbi &eacute;vek sajt&oacute;kiadv&aacute;nyai:
+    <p>A kor&aacute;bbi &eacute;vek sajt&oacute;kiadv&aacute;nyai
+      (2008-t&oacute;l magyarul):
+      <a href="&base;/news/2008/press.html">2008</a>,
       <a href="&enbase;/news/2007/press.html">2007</a>,
       <a href="&enbase;/news/2006/press.html">2006</a>,
       <a href="&enbase;/news/2005/press.html">2005</a>,
