@@ -7,7 +7,7 @@
 <!ENTITY % developers SYSTEM "../developers.sgml"> %developers;
 ]>
 
-<!-- $FreeBSD: www/en/projects/summerofcode.xsl,v 1.24 2010/03/18 22:33:13 murray Exp $ -->
+<!-- $FreeBSD: www/en/projects/summerofcode.xsl,v 1.25 2010/03/22 16:18:36 rwatson Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -49,6 +49,11 @@
   href="&base;/projects/summerofcode-2007.html">2007</a>, <a
 href="&base;/projects/summerofcode-2008.html">2008</a>, and
   <a href="http://wiki.freebsd.org/SummerOfCode2009Projects">2009</a>.</p>
+
+  <p>This page will be updated throughout the GSoC 2010 application period
+    to include new information, such as project ideas, proposal information,
+    and potential mentor contact information.  If you don't see an idea that
+    interests you, visit again in a couple of days!</p>
 
 <ul>
   <li><a href="#benefits">Benefits of Participating</a></li>
