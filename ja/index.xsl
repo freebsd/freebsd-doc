@@ -4,8 +4,8 @@
 <!ENTITY title "The FreeBSD Project">
 ]>
 
-<!-- $FreeBSD: www/ja/index.xsl,v 1.52 2010/01/07 12:53:30 ryusuke Exp $ -->
-<!-- Original revision: 1.165 -->
+<!-- $FreeBSD: www/ja/index.xsl,v 1.53 2010/01/24 00:56:22 ryusuke Exp $ -->
+<!-- Original revision: 1.169 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
@@ -35,6 +35,13 @@
 	      CVS, CVSup, News, Commercial Vendors, homepage, CTM, Unix"/>
 	<link rel="shortcut icon" href="&enbase;/favicon.ico" type="image/x-icon"/>
 	<link rel="icon" href="&enbase;/favicon.ico" type="image/x-icon"/>
+<!--
+	FOR TRANSLATORS:
+
+	Do not translate the "Normal Text" and "Large Text" attributes in the
+	following two lines.  They are not literal texts but JavaScript
+	parameters.  Changing them will result in rendering errors.
+-->
 	<link rel="stylesheet" media="screen" href="&enbase;/layout/css/fixed.css?20060509" type="text/css" title="Normal Text" />
 	<link rel="alternate stylesheet" media="screen" href="&enbase;/layout/css/fixed_large.css" type="text/css" title="Large Text" />
 	<script type="text/javascript" src="&enbase;/layout/js/styleswitcher.js"></script>
@@ -66,28 +73,30 @@
 		  <div id="FRONTFEATURELEFT">
 		    <div id="FRONTFEATURECONTENT">
 			<h1>
-			  ベースは BSD &unix;
+			  ベースは BSD UNIX<!-- &unix; -->(R)
 			</h1>
 
-			<p>FreeBSD&reg; は
-			  x86 互換機 (Pentium&reg; や Athlon&trade; など),
-			  amd64 互換機 (Opteron&trade;, Athlon&trade;64, EM64T など),
-			  UltraSPARC&reg;, IA-64, PC-98 および ARM 
-			  の各アーキテクチャに対応した高性能なオペレーティングシステムです。
-			  FreeBSD は BSD と呼ばれる、カリフォルニア大学バークレー校で開発された
-			  &unix; に由来しており、
+			<p>FreeBSD<!-- &reg; -->(R) は、最新のサーバ、デスクトップおよび組み込み
+			  <a href="&base;/platforms/">プラットフォーム</a>
+			  用の高性能なオペレーティングシステムです。
+			  FreeBSD のコードベースは、
+			  30 年以上にも渡って開発、改良、最適化が続けられています。
 			  <a href="&enbase;/doc/ja_JP.eucJP/articles/contributors/staff-committers.html"
 			    >多くの人々が参加する開発者チーム</a>
-			  によって開発・保守がおこなわれています。
-			  また、未対応の<a href="&base;/platforms/">プラットフォーム</a
-			    >の開発作業も進行中です。
+			  が開発・保守をおこなっています。
+			  FreeBSD は高度なネットワーク、堅固なセキュリティ機能、
+			  世界最大クラスのパフォーマンスを提供し、
+			  世界最大規模の <a	
+			  href = "&enbase;/doc/ja_JP.eucJP/books/handbook/nutshell.html#INTRODUCTION-NUTSHELL-USERS">ウェブサイト</a> や、
+			  広く普及している組み込みネットワーク機器、
+			  ストレージデバイスで利用されています。
 			</p>
 
 			<div id="TXTFRONTFEATURELINK">
 			  &#187;<a href="&base;/about.html" title="Learn More">詳しくはこちら</a>
 			</div> <!-- TXTFRONTFEATURELINK -->
 		    </div> <!-- FRONTFEATURECONTENT -->
-		</div> <!-- FRONTFEATURELEFT -->
+		  </div> <!-- FRONTFEATURELEFT -->
 
 		  <div id="FRONTFEATUREMIDDLE">
 		      <div class="frontgetroundbox">
