@@ -7,7 +7,7 @@
 <!ENTITY % developers SYSTEM "../developers.sgml"> %developers;
 ]>
 
-<!-- $FreeBSD: www/en/projects/summerofcode.xsl,v 1.25 2010/03/22 16:18:36 rwatson Exp $ -->
+<!-- $FreeBSD: www/en/projects/summerofcode.xsl,v 1.26 2010/03/22 16:22:14 rwatson Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -95,6 +95,8 @@ href="&base;/projects/summerofcode-2008.html">2008</a>, and
 <p>For a complete list of student projects from previous years,
 visit:</p>
 <ul>
+  <li><a href="http://wiki.freebsd.org/SummerOfCode2009Projects">Summer of
+    Code 2009 FreeBSD Projects Wiki</a></li>
   <li><a href="&base;/projects/summerofcode-2008.html">Summer of Code 2008 FreeBSD
   Projects Summary</a></li>
   <li><a href="&base;/projects/summerofcode-2007.html">Summer of Code 2007 FreeBSD
