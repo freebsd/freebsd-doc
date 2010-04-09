@@ -6,7 +6,7 @@
 <!ENTITY % navinclude.community "INCLUDE">
 ]>
 
-<!-- $FreeBSD: www/ja/community.xsl,v 1.1 2010/01/29 16:48:47 ryusuke Exp $ -->
+<!-- $FreeBSD: www/ja/community.xsl,v 1.2 2010/02/02 09:28:04 ryusuke Exp $ -->
 <!-- Original revision: 1.9 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
@@ -49,7 +49,7 @@
 		      >メーリングリスト</a> の数は 100 を超えており、
 		  たくさんのウェブベースの
 		  <a href="http://forums.FreeBSD.org/">フォーラム</a> や、
-		  いくつもの <a href="&enbase;/community/newsgroups.html"
+		  いくつもの <a href="&base;/support.html#newsgroups"
 		     >ニュースグループ</a> があります。
 		  世界
 		  <xsl:value-of
@@ -60,7 +60,7 @@
 		     /><xsl:text> </xsl:text> を越える
 		  <a href="&base;/usergroups.html">ユーザグループ</a>
 		  があり、
-		  <a href="&enbase;/community/irc.html">IRC</a>
+		  <a href="&base;/support.html#irc">IRC</a>
 		  のコミュニティも活発です。
 		  多くの開発者は、関連する &os; の情報を
 		  <a href="http://planet.freebsdish.org">ブログ</a>
