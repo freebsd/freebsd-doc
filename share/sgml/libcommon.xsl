@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
-<!-- $FreeBSD: www/share/sgml/libcommon.xsl,v 1.29 2010/03/05 00:07:21 danger Exp $ -->
+<!-- $FreeBSD: www/share/sgml/libcommon.xsl,v 1.30 2010/03/05 00:17:57 danger Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
   version="1.0"
@@ -447,11 +447,12 @@
     </ul>
 
     <p>For a detailed description of past, present, and future releases,
-      see the <strong><a href="&base;/releases/index.html">Release
-	  Information</a></strong> page.</p>
+      see the <a href="&base;/releases/index.html">Release Information</a>
+      page.</p>
 
-    <p>For FreeBSD Security Advisories, please refer to the
-      <a href="&base;/security/#adv">Security Information</a> page.</p>
+    <p>For FreeBSD security information and a list of available
+      Security Advisories, please refer to the
+      <a href="&base;/security/">Security Information</a> page.</p>
   </xsl:template>
 
   <!-- template: "html-news-list-newsflash-homelink" -->
