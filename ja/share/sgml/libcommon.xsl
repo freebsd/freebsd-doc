@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="euc-jp"?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
-<!-- $FreeBSD: www/ja/share/sgml/libcommon.xsl,v 1.3 2010/01/20 15:51:38 ryusuke Exp $ -->
+<!-- $FreeBSD: www/ja/share/sgml/libcommon.xsl,v 1.4 2010/03/06 14:35:13 ryusuke Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/libcommon.xsl"/>
@@ -24,7 +24,7 @@
       情報通になるために、このページを定期的にチェックするようにしましょう。
       また、<a href="&enbase;/doc/en_US.ISO8859-1/books/handbook/eresources.html#ERESOURCES-MAIL">freebsd-announce
 	メーリングリスト</a> や <a href="&enbase;/news/rss.xml">RSS feed</a>
-      も購読するとよいでしょう。</p>
+      を購読したいという方もいるかもしれませんね。</p>
 
     <p>それぞれのプロジェクトの最新情報は、次の各ウェブページをご覧ください。</p>
 
@@ -35,11 +35,12 @@
     </ul>
 
     <p>過去、現在、そして将来のリリースの詳細については、
-      <strong><a href="&base;/releases/index.html">リリース情報</a></strong>
+      <a href="&base;/releases/index.html">リリース情報</a>
       のページをご覧ください。</p>
 
-    <p>FreeBSD セキュリティ勧告については、<a href="&base;/security/#adv">
-	セキュリティ情報</a> のページをご覧ください。</p>
+    <p>FreeBSD セキュリティ情報やセキュリティ勧告の一覧については、
+      <a href="&base;/security/">セキュリティ情報</a>
+      のページをご覧ください。</p>
   </xsl:template>
 
   <!-- template: "html-news-list-newsflash-homelink" -->
