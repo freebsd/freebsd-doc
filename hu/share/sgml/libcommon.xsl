@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="ISO-8859-2" ?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
-<!-- $FreeBSD: www/hu/share/sgml/libcommon.xsl,v 1.5 2009/04/07 12:01:02 pgj Exp $ -->
+<!-- $FreeBSD: www/hu/share/sgml/libcommon.xsl,v 1.6 2010/03/12 23:06:04 pgj Exp $ -->
 
 <!-- The FreeBSD Hungarian Documentation Project
      Translated by: Gabor Kovesdan <gabor@FreeBSD.org>
      %SOURCE%	share/sgml/libcommon.xsl
-     %SRCID%	1.30
+     %SRCID%	1.31
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -95,14 +95,16 @@
     </ul>
 
     <p>A kor&aacute;bbi, a jelenlegi &eacute;s a j&ouml;v&#245;beni
-      kiad&aacute;sokr&oacute;l b&#245;vebben a <strong><a
+      kiad&aacute;sokr&oacute;l b&#245;vebben a <a
 	href="&enbase;/releases/index.html">kiad&aacute;sok
-	inform&aacute;ci&oacute;s oldal&aacute;n</a></strong>
+	inform&aacute;ci&oacute;s oldal&aacute;n</a>
       olvashatunk.</p>
 
-    <p>A &os; Projekt biztons&aacute;gi figyelmeztet&eacute;seit a <a
-	href="&enbase;/security/#adv">biztons&aacute;gi
-	inform&aacute;ci&oacute;s oldalon</a> tal&aacute;ljuk meg.</p>
+    <p>A &os; Projekt biztons&aacute;g&aacute;val kapcsolatos
+      inform&aacute;ci&oacute;kat &eacute;s a biztons&aacute;gi
+      figyelmeztet&eacute;seket &ouml;sszefoglal&oacute; list&aacute;t a
+      <a href="&base;/security/#adv">biztons&aacute;gi inform&aacute;ci&oacute;k</a>
+      oldalon tal&aacute;ljuk meg.</p>
   </xsl:template>
 
   <xsl:template name="html-news-make-olditems-list">
