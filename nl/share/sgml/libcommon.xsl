@@ -1,21 +1,21 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
-<!-- $FreeBSD: www/nl/share/sgml/libcommon.xsl,v 1.2 2010/03/07 14:08:30 rene Exp $
+<!-- $FreeBSD: www/nl/share/sgml/libcommon.xsl,v 1.3 2010/03/16 22:02:38 rene Exp $
      %SOURCE%	share/sgml/libcommon.xsl
-     %SRCID%	1.30
+     %SRCID%	1.31
  -->
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/libcommon.xsl"/>
 
   <xsl:param name="param-l10n-date-format-YMD"
-             select="'%Y-%M-%D'" />
+	     select="'%Y-%M-%D'" />
   <xsl:param name="param-l10n-date-format-YM"
-             select="'%Y %M'" />
+	     select="'%Y %M'" />
   <xsl:param name="param-l10n-date-format-MD"
-             select="'%D %M'" />
+	     select="'%D %M'" />
   <xsl:param name="param-l10n-date-format-rfc822"
-             select="'%W, %D %m %Y 00:00:00 CET'" />
+	     select="'%W, %D %m %Y 00:00:00 CET'" />
 
   <xsl:template name="html-usergroups-list-header">
     <p>De wijdverbreide populariteit van &os; heeft tot een aantal
@@ -103,13 +103,14 @@
       <li><a href="&enbase;/gnome/newsflash.html">GNOME op &os;</a></li>
     </ul>
 
-    <p>Zie voor een gedetailleerde beschrijving van vroegere, huidige en
-      toekomstige uitgaven de pagina <strong><a
-	 href="&enbase;/releases/index.html">Uitgave-informatie</a></strong>.</p>
+    <p>Een gedetailleerde beschrijving van vroegere, huidige en toekomstige
+      uitgaven staat op de pagina <a
+	href="&enbase;/releases/index.html">Uitgave-informatie</a>.</p>
 
     <p>Bekijk alstublieft de pagina <a
-      href="&enbase;/security/#adv">Beveiligingsinformatie</a> voor
-      beveiligingsadviezen voor &os;.</p>
+      href="&enbase;/security/">Beveiligingsinformatie</a> voor
+      beveiligingsinformatie voor &os; en een lijst van beschikbare
+      Beveiligingsadviezen.</p>
   </xsl:template>
 
   <!-- template: "html-news-list-newsflash-homelink" -->
@@ -245,7 +246,7 @@
        generate title for the security advisories rdf -->
 
   <xsl:template name="rdf-security-advisories-title"
-                xmlns="http://my.netscape.com/rdf/simple/0.9/">
+		xmlns="http://my.netscape.com/rdf/simple/0.9/">
     <channel>
       <title>&os; beveiligingsadviezen</title>
       <link>http://www.FreeBSD.org/security/</link>
@@ -257,7 +258,7 @@
        pulls in the 10 most recent security advisories -->
 
   <xsl:template name="rss-security-advisories-title"
-                xmlns:atom="http://www.w3.org/2005/Atom">
+		xmlns:atom="http://www.w3.org/2005/Atom">
     <xsl:param name="advisories.xml" select="''" />
 
     <xsl:variable name="title">&os; beveiligingsadviezen</xsl:variable>
@@ -287,7 +288,7 @@
        pulls in the 10 most recent errata notices -->
 
   <xsl:template name="rss-errata-notices-title"
-                xmlns:atom="http://www.w3.org/2005/Atom">
+		xmlns:atom="http://www.w3.org/2005/Atom">
     <xsl:param name="notices.xml" select="''" />
 
     <xsl:variable name="title">&os; erratamededelingen</xsl:variable>
@@ -328,8 +329,8 @@
 
       <xsl:otherwise>
 	<xsl:for-each select="document($mirrors.xml)/mirrors/entry[
-                              (not(country/@role) or country/@role != 'primary') and
-                              host[@type = 'www']/url[@proto = 'httpv6']]">
+			      (not(country/@role) or country/@role != 'primary') and
+			      host[@type = 'www']/url[@proto = 'httpv6']]">
 	  <xsl:sort select="country/@sortkey" data-type="number" />
 	  <xsl:sort select="country" />
 
@@ -348,8 +349,8 @@
 	</xsl:for-each>
 
 	<xsl:for-each select="document($mirrors.xml)/mirrors/entry[
-                              (not(country/@role) or country/@role != 'primary') and
-                              host[@type = 'www']/url[@proto = 'http']]">
+			      (not(country/@role) or country/@role != 'primary') and
+			      host[@type = 'www']/url[@proto = 'http']]">
 	  <xsl:sort select="country/@sortkey" data-type="number" />
 	  <xsl:sort select="country" />
 
