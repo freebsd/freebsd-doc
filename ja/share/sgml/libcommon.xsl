@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="euc-jp"?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
-<!-- $FreeBSD: www/ja/share/sgml/libcommon.xsl,v 1.4 2010/03/06 14:35:13 ryusuke Exp $ -->
+<!-- $FreeBSD: www/ja/share/sgml/libcommon.xsl,v 1.5 2010/04/10 10:37:34 ryusuke Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/libcommon.xsl"/>
@@ -91,7 +91,7 @@
 
     <p>iCalendar 形式に対応したスケジュール管理ソフトウェアを使っているなら、
       ここに載っているすべてのイベントを集めた
-      <a href="&base;/events/events.ics">FreeBSD イベントカレンダー</a>
+      <a href="&base;/events/events.ics">FreeBSD イベントカレンダ</a>
       を利用できます。</p>
   </xsl:template>
 
@@ -111,10 +111,10 @@
   </xsl:template>
 
   <xsl:template name="html-events-list-upcoming-heading">
-    <h2 id="upcoming">Current/Upcoming Events:</h2>
+    <h2 id="upcoming">現在開催中、または今後開催予定のイベント</h2>
   </xsl:template>
 
   <xsl:template name="html-events-list-past-heading">
-    <h2 id="past">Past Events:</h2>
+    <h2 id="past">過去のイベント</h2>
   </xsl:template>
 </xsl:stylesheet>
