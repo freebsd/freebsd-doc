@@ -4,7 +4,7 @@
 <!ENTITY title "The FreeBSD Project">
 ]>
 
-<!-- $FreeBSD: www/ja/index.xsl,v 1.53 2010/01/24 00:56:22 ryusuke Exp $ -->
+<!-- $FreeBSD: www/ja/index.xsl,v 1.54 2010/03/30 11:27:08 ryusuke Exp $ -->
 <!-- Original revision: 1.169 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -194,7 +194,7 @@
 			  <h2>ショートカット</h2>
 			  <ul id="FRONTSHORTCUTSLIST">
 			    <li>
-			      <a href="&base;/support.html#mailing-list" title="Mailing Lists">メーリングリスト</a>
+			      <a href="&base;/community/mailinglists.html" title="Mailing Lists">メーリングリスト</a>
 			    </li>
 			    <li>
 			      <a href="&base;/support/bugreports.html" title="Report a Bug">バグの報告</a>
