@@ -4,7 +4,7 @@
 <!ENTITY title "The FreeBSD Project">
 ]>
 
-<!-- $FreeBSD: www/ja/index.xsl,v 1.54 2010/03/30 11:27:08 ryusuke Exp $ -->
+<!-- $FreeBSD: www/ja/index.xsl,v 1.55 2010/05/03 18:24:18 ryusuke Exp $ -->
 <!-- Original revision: 1.169 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -143,34 +143,34 @@
 		      <div id="LANGUAGENAV">
 			<ul id="LANGUAGENAVLIST">
 			  <li>
-			    <a href="&enbase;/de/" title="German">de</a>
+			    <a href="&enbase;/de/" title="ドイツ語">de</a>
 			  </li>
 			  <li>
-			    <a href="&enbase;/" title="English">en</a>
+			    <a href="&enbase;/" title="英語">en</a>
 			  </li>
 			  <li>
-			    <a href="&enbase;/es/" title="Spanish">es</a>
+			    <a href="&enbase;/es/" title="スペイン語">es</a>
 			  </li>
 			  <li>
-			    <a href="&enbase;/fr/" title="French">fr</a>
+			    <a href="&enbase;/fr/" title="フランス語">fr</a>
 			  </li>
 			  <li>
-			    <a href="&enbase;/hu/" title="Hungarian">hu</a>
+			    <a href="&enbase;/hu/" title="ハンガリー語">hu</a>
 			  </li>
 			  <li>
-			    <a href="&enbase;/it/" title="Italian">it</a>
+			    <a href="&enbase;/it/" title="イタリア語">it</a>
 			  </li>
 			  <li>
-			    <a href="&enbase;/ja/" title="Japanese">ja</a>
+			    <a href="&enbase;/ja/" title="日本語">ja</a>
 			  </li>
 			  <li>
-			    <a href="&enbase;/nl/" title="Dutch">nl</a>
+			    <a href="&enbase;/nl/" title="オランダ語">nl</a>
 			  </li>
 			  <li>
-			    <a href="&enbase;/ru/" title="Russian">ru</a>
+			    <a href="&enbase;/ru/" title="ロシア語">ru</a>
 			  </li>
 			  <li class="last-child">
-			    <a href="&enbase;/zh_CN/" title="Chinese (Simplified)">zh_CN</a>
+			    <a href="&enbase;/zh_CN/" title="中国語 (簡体字)">zh_CN</a>
 			  </li>
 			</ul>
 		      </div> <!-- LANGUAGENAV -->
@@ -194,16 +194,16 @@
 			  <h2>ショートカット</h2>
 			  <ul id="FRONTSHORTCUTSLIST">
 			    <li>
-			      <a href="&base;/community/mailinglists.html" title="Mailing Lists">メーリングリスト</a>
+			      <a href="&base;/community/mailinglists.html" title="メーリングリスト">メーリングリスト</a>
 			    </li>
 			    <li>
-			      <a href="&base;/support/bugreports.html" title="Report a Bug">バグの報告</a>
+			      <a href="&base;/support/bugreports.html" title="バグの報告">バグの報告</a>
 			    </li>
 			    <li>
 			      <a href="&enbase;/doc/&url.doc.langcode;/books/faq/index.html" title="FAQ">FAQ</a>
 			    </li>
 			    <li>
-			      <a href="&enbase;/doc/&url.doc.langcode;/books/handbook/index.html" title="Handbook">ハンドブック</a>
+			      <a href="&enbase;/doc/&url.doc.langcode;/books/handbook/index.html" title="ハンドブック">ハンドブック</a>
 			    </li>
 			    <li>
 			      <a href="&base;/ports/index.html" title="Ports">Ports</a>
@@ -238,10 +238,10 @@
 			  <div>
 			    <ul class="newseventslist">
 			      <li class="first-child">
-				<a href="&base;/news/newsflash.html" title="More News">すべてのニュース</a>
+				<a href="&base;/news/newsflash.html" title="すべてのニュース">すべてのニュース</a>
 			      </li>
 			      <li class="last-child">
-				<a href="&enbase;/news/rss.xml" title="News RSS Feed"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="News RSS Feed" /></a>
+				<a href="&enbase;/news/rss.xml" title="ニュースの RSS フィード"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="News RSS Feed" /></a>
 			      </li>
 			    </ul>
 			  </div> <!-- unnamed -->
@@ -265,7 +265,7 @@
 			  <div>
 			    <ul class="newseventslist">
 			      <li class="only-child">
-				<a href="&base;/events/" title="More Events">すべてのイベント</a>
+				<a href="&base;/events/" title="すべてのイベント">すべてのイベント</a>
 			      </li>
 			    </ul>
 			  </div> <!-- unnamed -->
@@ -289,7 +289,7 @@
 			  <div>
 			    <ul class="newseventslist">
 			      <li class="only-child">
-				<a href="&base;/news/press.html" title="More Media">すべてのニュース記事</a>
+				<a href="&base;/news/press.html" title="すべてのニュース記事">すべてのニュース記事</a>
 			      </li>
 			    </ul>
 			  </div> <!-- unnamed -->
@@ -313,10 +313,10 @@
 			  <div>
 			    <ul class="newseventslist">
 			      <li class="first-child">
-				<a href="&enbase;/security/advisories.html" title="More Security Advisories">すべて表示</a>
+				<a href="&enbase;/security/advisories.html" title="すべてのセキュリティ勧告">すべて表示</a>
 			      </li>
 			      <li class="last-child">
-				<a href="&enbase;/security/rss.xml" title="Security Advisories RSS Feed"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="Security Advisories RSS Feed" /></a>
+				<a href="&enbase;/security/rss.xml" title="セキュリティ勧告の RSS フィード"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="Security Advisories RSS Feed" /></a>
 			      </li>
 			    </ul>
 			  </div> <!-- unnamed -->
@@ -335,10 +335,10 @@
 			  <div>
 			    <ul class="newseventslist">
 			      <li class="first-child">
-				<a href="&base;/security/" title="More Errata Notices">もっと詳しく</a>
+				<a href="&base;/security/" title="もっと詳しく">もっと詳しく</a>
 			      </li>
 			      <li class="last-child">
-				<a href="&enbase;/security/errata.xml" title="Errata Notices RSS Feed"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="Errata Notices RSS Feed" /></a>
+				<a href="&enbase;/security/errata.xml" title="Errata 情報の RSS フィード"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="Errata Notices RSS Feed" /></a>
 			      </li>
 			    </ul>
 			  </div> <!-- unnamed -->
