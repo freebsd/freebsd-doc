@@ -4,7 +4,7 @@
 <!ENTITY title "The FreeBSD Project">
 ]>
 
-<!-- $FreeBSD: www/ja/index.xsl,v 1.55 2010/05/03 18:24:18 ryusuke Exp $ -->
+<!-- $FreeBSD: www/ja/index.xsl,v 1.56 2010/05/11 15:42:22 ryusuke Exp $ -->
 <!-- Original revision: 1.169 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -93,7 +93,7 @@
 			</p>
 
 			<div id="TXTFRONTFEATURELINK">
-			  &#187;<a href="&base;/about.html" title="Learn More">詳しくはこちら</a>
+			  &#187;<a href="&base;/about.html" title="詳しくはこちら">詳しくはこちら</a>
 			</div> <!-- TXTFRONTFEATURELINK -->
 		    </div> <!-- FRONTFEATURECONTENT -->
 		  </div> <!-- FRONTFEATURELEFT -->
