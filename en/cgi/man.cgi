@@ -33,8 +33,8 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.244 2010-03-26 02:44:48 hrs Exp $
-# $FreeBSD: www/en/cgi/man.cgi,v 1.243 2010/03/23 17:55:05 hrs Exp $
+# $Id: man.cgi,v 1.245 2010-05-23 23:14:46 wosch Exp $
+# $FreeBSD: www/en/cgi/man.cgi,v 1.244 2010/03/26 02:44:48 hrs Exp $
 
 ############################################################################
 # !!! man.cgi is stale perl4 code !!!
@@ -141,6 +141,7 @@ $sectionpath = {
     'OpenBSD 4.4' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
     'OpenBSD 4.5' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
     'OpenBSD 4.6' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
+    'OpenBSD 4.7' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
 
     'CentOS Linux/i386 3.9' => { 'path' => '1:2:3:3p:4:5:6:7:8:9:n', },
     'CentOS Linux/i386 4.8' => { 'path' => '1:1p:2:3:3p:4:5:6:7:8:9:n:0p', },
@@ -317,6 +318,7 @@ $manPathDefault = 'FreeBSD 8.0-RELEASE';
     'OpenBSD 4.4', "$manLocalDir/OpenBSD-4.4",
     'OpenBSD 4.5', "$manLocalDir/OpenBSD-4.5",
     'OpenBSD 4.6', "$manLocalDir/OpenBSD-4.6",
+    'OpenBSD 4.7', "$manLocalDir/OpenBSD-4.7",
 
     #'NetBSD 0.9',            "$manLocalDir/NetBSD-0.9",
     'NetBSD 1.0',   "$manLocalDir/NetBSD-1.0",
@@ -494,6 +496,7 @@ my @no_pdf_output = (
     'OpenBSD 4.4',
     'OpenBSD 4.5',
     'OpenBSD 4.6',
+    'OpenBSD 4.7',
 );
 
 my %no_pdf_output = map { $_ => 1 } @no_pdf_output;
@@ -537,7 +540,7 @@ while ( ( $key, $val ) = each %manPath ) {
     'macosx',     'Darwin 8.0.1/ppc',
 
     'netbsd',        'NetBSD 5.0',
-    'openbsd',       'OpenBSD 4.6',
+    'openbsd',       'OpenBSD 4.7',
     'v7',            'Unix Seventh Edition',
     'v7man',         'Unix Seventh Edition',
     'x11',           'X11R7.4',
@@ -1431,7 +1434,7 @@ sub faq {
     }
 
     local $id =
-      '$FreeBSD: www/en/cgi/man.cgi,v 1.243 2010/03/23 17:55:05 hrs Exp $';
+      '$FreeBSD: www/en/cgi/man.cgi,v 1.244 2010/03/26 02:44:48 hrs Exp $';
     return qq{\
 <pre>
 Copyright (c) 1996-2010 <a href="$mailtoURL">Wolfram Schneider</a>
