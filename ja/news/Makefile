@@ -1,4 +1,4 @@
-# $FreeBSD: www/ja/news/Makefile,v 1.37 2006/08/19 21:24:42 hrs Exp $
+# $FreeBSD: www/ja/news/Makefile,v 1.38 2010/04/23 22:52:29 ryusuke Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.38
 
@@ -40,7 +40,7 @@ SUBDIR+= 	1997
 #SUBDIR+= 	1998
 #SUBDIR+= 	1999
 #SUBDIR+= 	2000
-#SUBDIR+= 	2001
+SUBDIR+= 	2001
 #SUBDIR+= 	2002
 #SUBDIR+=	status
 
