@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="euc-jp"?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
-<!-- $FreeBSD: www/ja/share/sgml/libcommon.xsl,v 1.5 2010/04/10 10:37:34 ryusuke Exp $ -->
+<!-- $FreeBSD: www/ja/share/sgml/libcommon.xsl,v 1.6 2010/04/20 21:33:55 ryusuke Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/libcommon.xsl"/>
@@ -58,7 +58,7 @@
       <a href="&enbase;/news/2004/index.html">2004</a>,
       <a href="&enbase;/news/2003/index.html">2003</a>,
       <a href="&enbase;/news/2002/index.html">2002</a>,
-      <a href="&enbase;/news/2001/index.html">2001</a>,
+      <a href="2001/index.html">2001</a>,
       <a href="&enbase;/news/2000/index.html">2000</a>,
       <a href="&enbase;/news/1999/index.html">1999</a>,
       <a href="&enbase;/news/1998/index.html">1998</a>,
