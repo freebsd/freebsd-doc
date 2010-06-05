@@ -29,8 +29,8 @@ SUBDIR+=	zh_TW.Big5
 
 DOC_PREFIX?=   ${.CURDIR}
 
-SUP?=		${PREFIX}/bin/cvsup
-SUPFLAGS?=	-g -L 2 -P -
+SUP?=		/usr/bin/csup
+SUPFLAGS?=	-L 2
 .if defined(SUPHOST)
 SUPFLAGS+=	-h ${SUPHOST}
 .endif
