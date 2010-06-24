@@ -1,4 +1,4 @@
-# $FreeBSD: www/ja/search/Makefile,v 1.11 2000/11/07 11:38:09 kuriyama Exp $
+# $FreeBSD: www/ja/search/Makefile,v 1.12 2001/11/17 17:21:09 hrs Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.9
 
@@ -23,7 +23,7 @@ index-site.html: atoz.sgml site.sgml
 atoz.sgml: web.atoz 
 	${SORT} -fu ${.ALLSRC} | ${PERL} ${.CURDIR}/../../en/search/atoz.pl > ${.TARGET}
 
-site.sgml: ${.CURDIR}/../../en/search/site.map
+site.sgml: site.map
 	${PERL} ${.CURDIR}/../../en/search/site.pl < ${.ALLSRC} > ${.TARGET}
 
 ### Revision checking
