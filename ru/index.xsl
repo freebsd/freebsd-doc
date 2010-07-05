@@ -7,7 +7,7 @@
 <!--
      The FreeBSD Russian Documentation Project
 
-     $FreeBSD: www/ru/index.xsl,v 1.36 2009/12/11 02:22:03 bland Exp $
+     $FreeBSD: www/ru/index.xsl,v 1.37 2009/12/24 06:49:01 bland Exp $
      $FreeBSDru: frdp/www/ru/index.xsl,v 1.47 2006/01/16 21:27:51 gad Exp $
 
      Original revision: 1.169
@@ -119,7 +119,7 @@
 					  <a href="../&u.rel.announce;">Продуктивный релиз &rel.current;</a>
 					</li>
 					<li>
-					  <a href="&u.rel2.announce;">(Старый) Продуктивный релиз &rel2.current;</a>
+					    <a href="../&u.rel2.announce;">(Старый) Продуктивный релиз &rel2.current;</a>
 					</li>
 			    <xsl:if test="'&beta.testing;' != 'IGNORE'">
 					<li>
