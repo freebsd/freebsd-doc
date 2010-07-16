@@ -33,8 +33,8 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.247 2010-05-23 23:55:51 wosch Exp $
-# $FreeBSD: www/en/cgi/man.cgi,v 1.246 2010/05/23 23:18:58 wosch Exp $
+# $Id: man.cgi,v 1.248 2010-07-16 22:41:29 wosch Exp $
+# $FreeBSD: www/en/cgi/man.cgi,v 1.247 2010/05/23 23:55:51 wosch Exp $
 
 ############################################################################
 # !!! man.cgi is stale perl4 code !!!
@@ -171,6 +171,7 @@ $sectionpath = {
     'SuSE Linux/i386 11.0' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
     'SuSE Linux/i386 11.1' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
     'SuSE Linux/i386 11.2' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
+    'SuSE Linux/i386 11.3' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
 };
 
 foreach my $os ( keys %$sectionpath ) {
@@ -402,6 +403,7 @@ $manPathDefault = 'FreeBSD 8.0-RELEASE';
     'SuSE Linux/i386 11.0', "$manLocalDir/SuSE-11.0",
     'SuSE Linux/i386 11.1', "$manLocalDir/SuSE-11.1",
     'SuSE Linux/i386 11.2', "$manLocalDir/SuSE-11.2",
+    'SuSE Linux/i386 11.3', "$manLocalDir/SuSE-11.3",
 
     'SuSE Linux/i386 ES 10 SP1', "$manLocalDir/SLES-10-SP1-i386",
 
@@ -535,8 +537,8 @@ while ( ( $key, $val ) = each %manPath ) {
     'slackware',  'Linux Slackware 3.1',
     'redhat',     'Red Hat Linux/i386 9',
     'centos',     'CentOS Linux/i386 5.4',
-    'suse',       'SuSE Linux/i386 11.2',
-    'linux',      'SuSE Linux/i386 11.2',
+    'suse',       'SuSE Linux/i386 11.3',
+    'linux',      'SuSE Linux/i386 11.3',
     'darwin',     'Darwin 8.0.1/ppc',
     'opendarwin', 'OpenDarwin 7.2.1',
     'macosx',     'Darwin 8.0.1/ppc',
@@ -1436,7 +1438,7 @@ sub faq {
     }
 
     local $id =
-      '$FreeBSD: www/en/cgi/man.cgi,v 1.246 2010/05/23 23:18:58 wosch Exp $';
+      '$FreeBSD: www/en/cgi/man.cgi,v 1.247 2010/05/23 23:55:51 wosch Exp $';
     return qq{\
 <pre>
 Copyright (c) 1996-2010 <a href="$mailtoURL">Wolfram Schneider</a>
