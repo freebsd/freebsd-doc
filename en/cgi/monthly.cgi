@@ -200,7 +200,7 @@ print
    h3("Category:"),
    popup_menu(-name => "Category",
        -values => ['proj', 'docs', 'kern', 'bin', 'arch', 'ports', 'vendor',
-        'misc', 'soc'], -default => 'proj'),
+        'misc', 'soc', 'team'], -default => 'proj'),
 
    h3("Developers:"),
    blockquote(table({"BORDER" => 0,
