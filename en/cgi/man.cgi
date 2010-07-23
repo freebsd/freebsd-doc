@@ -33,8 +33,8 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.248 2010-07-16 22:41:29 wosch Exp $
-# $FreeBSD: www/en/cgi/man.cgi,v 1.247 2010/05/23 23:55:51 wosch Exp $
+# $Id: man.cgi,v 1.249 2010-07-23 23:16:03 hrs Exp $
+# $FreeBSD: www/en/cgi/man.cgi,v 1.248 2010/07/16 22:41:29 wosch Exp $
 
 ############################################################################
 # !!! man.cgi is stale perl4 code !!!
@@ -192,9 +192,11 @@ foreach my $os ( keys %$sectionpath ) {
 );
 
 $manLocalDir    = '/usr/local/www/bsddoc/man';
-$manPathDefault = 'FreeBSD 8.0-RELEASE';
+$manPathDefault = 'FreeBSD 8.1-RELEASE';
 
 %manPath = (
+    'FreeBSD 8.1-RELEASE and Ports',
+"$manLocalDir/FreeBSD-8.1-RELEASE/man:$manLocalDir/FreeBSD-7.2-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports",
     'FreeBSD 8.0-RELEASE and Ports',
 "$manLocalDir/FreeBSD-8.0-RELEASE/man:$manLocalDir/FreeBSD-7.2-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports",
     'FreeBSD 7.3-RELEASE and Ports',
@@ -1438,7 +1440,7 @@ sub faq {
     }
 
     local $id =
-      '$FreeBSD: www/en/cgi/man.cgi,v 1.247 2010/05/23 23:55:51 wosch Exp $';
+      '$FreeBSD: www/en/cgi/man.cgi,v 1.248 2010/07/16 22:41:29 wosch Exp $';
     return qq{\
 <pre>
 Copyright (c) 1996-2010 <a href="$mailtoURL">Wolfram Schneider</a>
