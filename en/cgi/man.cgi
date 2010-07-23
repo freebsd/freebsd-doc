@@ -33,8 +33,8 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.249 2010-07-23 23:16:03 hrs Exp $
-# $FreeBSD: www/en/cgi/man.cgi,v 1.248 2010/07/16 22:41:29 wosch Exp $
+# $Id: man.cgi,v 1.250 2010-07-23 23:44:33 hrs Exp $
+# $FreeBSD: www/en/cgi/man.cgi,v 1.249 2010/07/23 23:16:03 hrs Exp $
 
 ############################################################################
 # !!! man.cgi is stale perl4 code !!!
@@ -207,6 +207,8 @@ $manPathDefault = 'FreeBSD 8.1-RELEASE';
     'FreeBSD Ports', "$manLocalDir/FreeBSD-ports",
     'FreeBSD 9-current', "$manLocalDir/FreeBSD-9-current/man:$manLocalDir/FreeBSD-9-current/openssl/man",
 
+    'FreeBSD 8.1-RELEASE', "$manLocalDir/FreeBSD-8.1-RELEASE/man:$manLocalDir/FreeBSD-8.1-RELEASE/openssl/man",
+    'FreeBSD 8.1-stable', "$manLocalDir/FreeBSD-8.1-stable/man:$manLocalDir/FreeBSD-8.1-stable/openssl/man",
     'FreeBSD 8.0-RELEASE', "$manLocalDir/FreeBSD-8.0-RELEASE/man:$manLocalDir/FreeBSD-8.0-RELEASE/openssl/man",
     'FreeBSD 8.0-stable', "$manLocalDir/FreeBSD-8.0-stable/man:$manLocalDir/FreeBSD-8.0-stable/openssl/man",
     'FreeBSD Ports 8.0-RELEASE', "$manLocalDir/FreeBSD-ports-8.0-RELEASE",
@@ -1440,7 +1442,7 @@ sub faq {
     }
 
     local $id =
-      '$FreeBSD: www/en/cgi/man.cgi,v 1.248 2010/07/16 22:41:29 wosch Exp $';
+      '$FreeBSD: www/en/cgi/man.cgi,v 1.249 2010/07/23 23:16:03 hrs Exp $';
     return qq{\
 <pre>
 Copyright (c) 1996-2010 <a href="$mailtoURL">Wolfram Schneider</a>
