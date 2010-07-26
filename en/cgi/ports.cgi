@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/ports.cgi,v 1.97 2008/09/22 19:13:42 wosch Exp $
+# $FreeBSD: www/en/cgi/ports.cgi,v 1.98 2009/12/31 16:37:18 wosch Exp $
 #
 # ports.cgi - search engine for FreeBSD ports
 #             	o search for a port by name or description
@@ -518,7 +518,7 @@ sub footer {
 &copy; 1996-2010 by Wolfram Schneider. All rights reserved.<br />
 };
 
-#print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.97 2008/09/22 19:13:42 wosch Exp $} . "<br />\n";
+#print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.98 2009/12/31 16:37:18 wosch Exp $} . "<br />\n";
     print qq{Please direct questions about this service to
 <i><a href="$mailtoURL">$mailto</a></i><br />\n};
     print qq{General questions about FreeBSD ports should be sent to }
@@ -637,10 +637,11 @@ if ( !$query && $query_string =~ /^([^=&]+)$/ ) {
 
 # automatically read collections, need only 0.2 sec on a pentium
 @sec = &readcoll;
-&forms;
 
+$query =~ s/"/ /g;
 $query =~ s/^\s+//;
 $query =~ s/\s+$//;
+&forms;
 
 if ( $query_string eq "" || !$query ) {
     &footer;
