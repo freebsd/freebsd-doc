@@ -33,8 +33,8 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.251 2010-08-03 15:28:38 wosch Exp $
-# $FreeBSD: www/en/cgi/man.cgi,v 1.250 2010/07/23 23:44:33 hrs Exp $
+# $Id: man.cgi,v 1.252 2010-08-04 17:16:10 wosch Exp $
+# $FreeBSD: www/en/cgi/man.cgi,v 1.251 2010/08/03 15:28:38 wosch Exp $
 
 ############################################################################
 # !!! man.cgi is stale perl4 code !!!
@@ -196,7 +196,7 @@ $manPathDefault = 'FreeBSD 8.1-RELEASE';
 
 %manPath = (
     'FreeBSD 8.1-RELEASE and Ports',
-"$manLocalDir/FreeBSD-8.1-RELEASE/man:$manLocalDir/FreeBSD-8.1-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-8.0-RELEASE",
+"$manLocalDir/FreeBSD-8.1-RELEASE/man:$manLocalDir/FreeBSD-8.1-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-8.1-RELEASE",
     'FreeBSD 8.0-RELEASE and Ports',
 "$manLocalDir/FreeBSD-8.0-RELEASE/man:$manLocalDir/FreeBSD-8.0-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-8.0-RELEASE",
     'FreeBSD 7.3-RELEASE and Ports',
@@ -210,6 +210,7 @@ $manPathDefault = 'FreeBSD 8.1-RELEASE';
     'FreeBSD 8.1-stable', "$manLocalDir/FreeBSD-8.1-stable/man:$manLocalDir/FreeBSD-8.1-stable/openssl/man",
     'FreeBSD 8.1-RELEASE', "$manLocalDir/FreeBSD-8.1-RELEASE/man:$manLocalDir/FreeBSD-8.1-RELEASE/openssl/man",
     'FreeBSD 8.0-RELEASE', "$manLocalDir/FreeBSD-8.0-RELEASE/man:$manLocalDir/FreeBSD-8.0-RELEASE/openssl/man",
+    'FreeBSD Ports 8.1-RELEASE', "$manLocalDir/FreeBSD-ports-8.1-RELEASE",
     'FreeBSD Ports 8.0-RELEASE', "$manLocalDir/FreeBSD-ports-8.0-RELEASE",
 
     'FreeBSD 7.3-stable', "$manLocalDir/FreeBSD-7.3-RELEASE/man:$manLocalDir/FreeBSD-7.3-RELEASE/openssl/man",
@@ -1441,7 +1442,7 @@ sub faq {
     }
 
     local $id =
-      '$FreeBSD: www/en/cgi/man.cgi,v 1.250 2010/07/23 23:44:33 hrs Exp $';
+      '$FreeBSD: www/en/cgi/man.cgi,v 1.251 2010/08/03 15:28:38 wosch Exp $';
     return qq{\
 <pre>
 Copyright (c) 1996-2010 <a href="$mailtoURL">Wolfram Schneider</a>
