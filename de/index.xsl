@@ -5,7 +5,7 @@
 ]>
 <!--
      $FreeBSD$
-     $FreeBSDde: de-www/index.xsl,v 1.85 2009/06/06 08:50:28 jkois Exp $
+     $FreeBSDde: de-www/index.xsl,v 1.86 2010/08/04 08:01:25 jkois Exp $
      basiert auf: 1.169
 -->
 
@@ -97,7 +97,7 @@ Problemen bei der Darstellung der Webseiten.
 				  Sicherheitsfunktionen und eine exzellente
 				  Performance und wird deswegen beispielsweise von
 				  einigen der gr&#246;&#223;ten <a
-				  href="&enbase;/doc/en_US.ISO8859-1/books/handbook/nutshell.html#INTRODUCTION-NUTSHELL-USERS">
+				  href="&enbase;/doc/&url.doc.langcode;/books/handbook/nutshell.html#INTRODUCTION-NUTSHELL-USERS">
 				  Internet-Seiten</a> und von zahlreichen Anbietern
 				  eingebetteter Netzwerk- und Speicherger&#228;te
 				  eingesetzt.</p>
