@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.252 2010-08-04 17:16:10 wosch Exp $
+# $Id: man.cgi,v 1.253 2010-08-04 17:17:58 wosch Exp $
 # $FreeBSD: www/en/cgi/man.cgi,v 1.251 2010/08/03 15:28:38 wosch Exp $
 
 ############################################################################
@@ -527,16 +527,16 @@ while ( ( $key, $val ) = each %manPath ) {
 
 # keywords must be in lower cases.
 %manPathAliases = (
-    'freebsd',         'FreeBSD 8.0-RELEASE',
-    'freebsd-release', 'FreeBSD 8.0-RELEASE',
+    'freebsd',         'FreeBSD 8.1-RELEASE',
+    'freebsd-release', 'FreeBSD 8.1-RELEASE',
 
-    'freebsd-stable',  'FreeBSD 8.0-stable',
-    'freebsd-stable8', 'FreeBSD 8.0-stable',
+    'freebsd-stable',  'FreeBSD 8.1-stable',
+    'freebsd-stable8', 'FreeBSD 8.1-stable',
     'freebsd-stable7', 'FreeBSD 7.3-stable',
     'freebsd-stable6', 'FreeBSD 6.4-stable',
 
     'freebsd-current',       'FreeBSD 9-current',
-    'freebsd-release-ports', 'FreeBSD 8.0-RELEASE and Ports',
+    'freebsd-release-ports', 'FreeBSD 8.1-RELEASE and Ports',
 
     'slackware',  'Linux Slackware 3.1',
     'redhat',     'Red Hat Linux/i386 9',
