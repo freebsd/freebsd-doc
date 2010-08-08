@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="ISO-8859-2" ?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
-<!-- $FreeBSD: www/hu/share/sgml/libcommon.xsl,v 1.7 2010/04/10 16:52:46 pgj Exp $ -->
+<!-- $FreeBSD: www/hu/share/sgml/libcommon.xsl,v 1.8 2010/08/08 11:42:49 pgj Exp $ -->
 
 <!-- The FreeBSD Hungarian Documentation Project
      Translated by: Gabor Kovesdan <gabor@FreeBSD.org>
@@ -161,12 +161,12 @@
       s&ouml;t&eacute;t pirossal jel&ouml;lt&uuml;k azokat az
       orsz&aacute;gokat &eacute;s r&eacute;gi&oacute;kat, ahol a
       k&ouml;zelj&ouml;v&#245;ben valamilyen nagyobb &os;
-      t&eacute;m&aacute;j&uacute; esem&eacute;ny v&aacute;rhat&oacute;.
+      t&eacute;m&aacute;j&uacute; rendezv&eacute;ny v&aacute;rhat&oacute;.
       S&aacute;rg&aacute;val &eacute;s narancss&aacute;rg&aacute;val
       jel&ouml;lt&uuml;k azokat az orsz&aacute;gokat, ahol
       kor&aacute;bban m&aacute;r lezajlott valamilyen &os;
-      t&eacute;m&aacute;j&uacute; esem&eacute;ny.  Itt a sz&iacute;nek
-      az esem&eacute;nyek sz&aacute;m&aacute;val egyre
+      t&eacute;m&aacute;j&uacute; rendezv&eacute;ny.  Itt a sz&iacute;nek
+      az rendezv&eacute;nyek sz&aacute;m&aacute;val egyre
       s&ouml;t&eacute;tednek.</p>
 
     <img>
@@ -178,7 +178,7 @@
 
   <xsl:template name="html-events-list-preface">
     <p>Ha tudunk valamilyen olyan &os; t&eacute;m&aacute;j&uacute;
-      esem&eacute;nyr&#245;l vagy esem&eacute;nyekr&#245;l, amelyek a
+      rendezv&eacute;nyr&#245;l vagy rendezv&eacute;nyekr&#245;l, amelyek a
       t&ouml;bbi &os; felhaszn&aacute;l&oacute; sz&aacute;m&aacute;ra is
       &eacute;rdekesek lehetnek, de m&eacute;g nem szerepelnek az
       oldalon tal&aacute;lhat&oacute; list&aacute;ban, &iacute;rjuk meg
@@ -187,18 +187,18 @@
 
     <p>Az iCalendar form&aacute;tumot ismer&#245; programokkal
       dolgoz&oacute; felhaszn&aacute;l&oacute;k az oldalon szerepl&#245;
-      &ouml;sszes esem&eacute;nyt el&eacute;rhetik a <a
+      &ouml;sszes rendezv&eacute;nyt el&eacute;rhetik a <a
 	href="&base;/events/events.ics">kalend&aacute;riumk&eacute;nt</a>
       is.</p>
   </xsl:template>
 
   <xsl:template name="html-events-list-upcoming-heading">
     <h2 id="upcoming">Aktu&aacute;lis/k&ouml;zelg&#245;
-      esem&eacute;nyek:</h2>
+      rendezv&eacute;nyek:</h2>
   </xsl:template>
 
   <xsl:template name="html-events-list-past-heading">
-    <h2 id="past">Kor&aacute;bbi esem&eacute;nyek:</h2>
+    <h2 id="past">Kor&aacute;bbi rendezv&eacute;nyek:</h2>
   </xsl:template>
 
   <xsl:template name="html-list-advisories-release-label">

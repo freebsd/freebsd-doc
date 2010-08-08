@@ -1,15 +1,15 @@
 <?xml version="1.0"?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD Fragment//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
-<!ENTITY title "Kor&aacute;bbi esem&eacute;nyek">
+<!ENTITY title "Kor&aacute;bbi rendezv&eacute;nyek">
 <!ENTITY email "freebsd-www">
 <!ENTITY rsslink "&base;/events/rss.xml">
-<!ENTITY rsstitle "K&ouml;zelg&#245; esem&eacute;nyek">
+<!ENTITY rsstitle "K&ouml;zelg&#245; rendezv&eacute;nyek">
 <!ENTITY % navinclude.community "INCLUDE">
 <!ENTITY % header.rss "INCLUDE">
 ]>
 
-<!-- $FreeBSD$ -->
+<!-- $FreeBSD: www/hu/share/sgml/templates.pastevents.xsl,v 1.1 2009/04/06 17:56:08 pgj Exp $ -->
 
 <!-- Copyright (c) 2003 Simon L. Nielsen <simon@FreeBSD.org>
      Copyright (c) 2008 Murray M Stokely <murray@FreeBSD.org>
@@ -177,9 +177,9 @@
 	  </ul>
 	</xsl:for-each>
 
-        <p><a href="events.html">Aktu&aacute;lis esem&eacute;nyek</a></p>
+        <p><a href="events.html">Aktu&aacute;lis rendezv&eacute;nyek</a></p>
 
-	<p>Az elm&uacute;lt &eacute;vek esem&eacute;nyei:</p>
+	<p>Az elm&uacute;lt &eacute;vek rendezv&eacute;nyei:</p>
 
         <ul id="events-past-years">
 	<xsl:call-template name="split-string">

@@ -6,7 +6,7 @@
 <!ENTITY % navinclude.community "INCLUDE">
 ]>
 
-<!-- $FreeBSD: www/hu/community.xsl,v 1.4 2008/12/30 19:39:42 pgj Exp $ -->
+<!-- $FreeBSD: www/hu/community.xsl,v 1.5 2009/01/26 22:56:25 pgj Exp $ -->
 
 <!-- The FreeBSD Hungarian Documentation Project
      Translated by: Gabor Kovesdan <gabor@FreeBSD.org>
@@ -85,13 +85,13 @@
 
 	      <p>Tavaly a &os;-vel kapcsolatban <xsl:value-of
 		select="count(event[number(enddate/year) =
-		(number($curdate.year) -1)])" /> esem&eacute;ny zajlott
+		(number($curdate.year) -1)])" /> rendezv&eacute;ny zajlott
 		le a vil&aacute;g <xsl:value-of
 		select="count(event[(number(enddate/year) =
 		(number($curdate.year) -1)) and (generate-id() =
 		generate-id(key('last-year-event-by-country',
 		location/country)[1]))])" /> orsz&aacute;g&aacute;ban.
-		A k&ouml;zelg&#245; esem&eacute;nyekr&#245;l a <a
+		A k&ouml;zelg&#245; rendezv&eacute;nyekr&#245;l a <a
 		  href="&base;/events/events.html"> r&oacute;luk
 		sz&oacute;l&oacute; lapon</a> tal&aacute;lhat&oacute;,
 		folyamatosan friss&uuml;l&#245; <a
@@ -99,7 +99,7 @@
 		&eacute;s <a
 		  href="&base;/events/rss.xml">RSS feedeken</a>
 		kereszt&uuml;l &eacute;rtes&uuml;lhet&uuml;nk.  A
-		kor&aacute;bban lezajlott esem&eacute;nyekr&#245;l a
+		kor&aacute;bban lezajlott rendezv&eacute;nyekr&#245;l a
 		YouTube oldal&aacute;n egy <a
 		  href="http://www.youtube.com/bsdconferences">BSD
 		  konferenci&aacute;kat</a> &ouml;sszefoglal&oacute;
