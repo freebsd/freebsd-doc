@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="ISO-8859-2" ?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
-<!-- $FreeBSD: www/hu/share/sgml/libcommon.xsl,v 1.6 2010/03/12 23:06:04 pgj Exp $ -->
+<!-- $FreeBSD: www/hu/share/sgml/libcommon.xsl,v 1.7 2010/04/10 16:52:46 pgj Exp $ -->
 
 <!-- The FreeBSD Hungarian Documentation Project
      Translated by: Gabor Kovesdan <gabor@FreeBSD.org>
@@ -78,7 +78,7 @@
       feliratkoznunk a <a
 	href="&base;/doc/hu/books/handbook/eresources.html#ERESOURCES-MAIL">freebsd-announce
 	levelez&eacute;si list&aacute;ra</a>, vagy a
-	hozz&aacute;tartoz&oacute; <a href="rss.xml">RSS feed</a>re.</p>
+	hozz&aacute; tartoz&oacute; <a href="rss.xml">RSS feed</a>re.</p>
 
     <p>Tov&aacute;bb&aacute; az al&aacute;bbi projektek rendelkeznek
       saj&aacute;t k&uuml;l&ouml;n h&iacute;roldallal, amelyek figyelemmel
