@@ -1,15 +1,15 @@
 <?xml version="1.0" ?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD Fragment//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
-<!ENTITY title "&os; t&eacute;m&aacute;j&uacute; esem&eacute;nyek">
+<!ENTITY title "&os; t&eacute;m&aacute;j&uacute; rendezv&eacute;nyek">
 <!ENTITY email "freebsd-www">
 <!ENTITY rsslink "&base;/events/rss.xml">
-<!ENTITY rsstitle "K&ouml;zelg&#245; &os; t&eacute;m&aacute;j&uacute; esem&eacute;nyek">
+<!ENTITY rsstitle "K&ouml;zelg&#245; &os; t&eacute;m&aacute;j&uacute; rendezv&eacute;nyek">
 <!ENTITY % navinclude.community "INCLUDE">
 <!ENTITY % header.rss "INCLUDE">
 ]>
 
-<!-- $FreeBSD: www/hu/share/sgml/templates.events.xsl,v 1.2 2009/04/22 11:04:02 pgj Exp $ -->
+<!-- $FreeBSD: www/hu/share/sgml/templates.events.xsl,v 1.3 2009/12/28 23:18:54 pgj Exp $ -->
 
 <!-- Copyright (c) 2003 Simon L. Nielsen <simon@FreeBSD.org>
      Copyright (c) 2008 Murray M Stokely <murray@FreeBSD.org>
@@ -222,7 +222,7 @@
 	  </ul>
 	</xsl:for-each>
 
-	<p>A kor&aacute;bbi &eacute;vek esem&eacute;nyei:</p>
+	<p>A kor&aacute;bbi &eacute;vek rendezv&eacute;nyei:</p>
 
         <ul id="events-past-years">
 	<xsl:call-template name="split-string">

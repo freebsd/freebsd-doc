@@ -1,12 +1,12 @@
 <?xml version="1.0"?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD Fragment//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
-<!ENTITY title "&os; k&ouml;zpont&uacute; esem&eacute;nyek">
+<!ENTITY title "&os; k&ouml;zpont&uacute; rendezv&eacute;nyek">
 <!ENTITY email "freebsd-www">
 <!ENTITY % navinclude.about "INCLUDE">
 ]>
 
-<!-- $FreeBSD$ -->
+<!-- $FreeBSD: www/hu/events/rss.xsl,v 1.1 2009/04/06 17:56:08 pgj Exp $ -->
 
 <!-- Copyright (c) 2008 Murray Stokely <murray@FreeBSD.org>
      Copyright (c) 2003 Simon L. Nielsen <simon@FreeBSD.org>
@@ -61,7 +61,7 @@
   <!-- Template: events -->
   <xsl:template match="events">
     <xsl:variable name="title">A &os; Projekttel kapcsolatos k&ouml;zelg&#245;
-      esem&eacute;nyek</xsl:variable>
+      rendezv&eacute;nyek</xsl:variable>
     <xsl:variable name="link">http://www.FreeBSD.org/hu/events/</xsl:variable>
 
     <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
@@ -72,7 +72,7 @@
 	  ker&uuml;l&#245;, k&uuml;l&ouml;nb&ouml;z&#245; &os;
 	  t&eacute;m&aacute;j&uacute; konferenci&aacute;k,
 	  gy&#251;l&eacute;sek, kurzusok &eacute;s egy&eacute;b fontos
-	  esem&eacute;nyek.</description>
+	  rendezv&eacute;nyek.</description>
 	<language>hu-hu</language>
         <webMaster>freebsd-www@FreeBSD.org (Webmesterek)</webMaster>
         <managingEditor>freebsd-www@FreeBSD.org (Webmesterek)</managingEditor>
@@ -139,7 +139,7 @@
                 <xsl:with-param name="enddate" select="enddate" />
               </xsl:call-template>
 
-              <xsl:text>. </xsl:text>
+              <xsl:text>  </xsl:text>
 
               <xsl:apply-templates select="description"/>
 

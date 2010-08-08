@@ -4,7 +4,7 @@
 <!ENTITY title "A &os; Projekt">
 ]>
 
-<!-- $FreeBSD: www/hu/index.xsl,v 1.17 2009/04/07 13:59:13 pgj Exp $ -->
+<!-- $FreeBSD: www/hu/index.xsl,v 1.18 2009/06/03 08:55:41 pgj Exp $ -->
 
 <!-- FreeBSD Hungarian Documentation Project
      Translated by: Gabor Kovesdan <gabor@FreeBSD.org>
@@ -265,7 +265,7 @@
             	<div id="FRONTEVENTS">
 		   <div id="FRONTEVENTSCONTENT" class="txtnewsevent">
 
-			<h2>ESEM&Eacute;NYEK</h2>
+			<h2>RENDEZV&Eacute;NYEK</h2>
 			<div class="newseventswrap">
 
 			<xsl:call-template name="html-index-events-items">
@@ -277,7 +277,7 @@
 				<ul class="newseventslist">
 				  <li class="only-child">
 					<a
-					  href="&base;/events/" title="Tov&aacute;bbi esem&eacute;nyek">Tov&aacute;bbi esem&eacute;nyek</a>
+					  href="&base;/events/" title="Tov&aacute;bbi rendezv&eacute;nyek">Tov&aacute;bbi rendezv&eacute;nyek</a>
 				  </li>
 				</ul>
 			  </div> <!-- unnamed -->
