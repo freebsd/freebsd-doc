@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/search/opensearch/Makefile,v 1.5 2008/09/23 16:31:45 wosch Exp $
+# $FreeBSD: www/en/search/opensearch/Makefile,v 1.6 2009/03/22 14:53:36 wosch Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -14,6 +14,7 @@ DATA=
 DATA+=	opensearch.js
 
 DATA+=	man.xml
+DATA+=	man-freebsd-release-ports.xml
 DATA+=	ports.xml 
 DATA+=	query-pr.xml
 DATA+=	web.xml
