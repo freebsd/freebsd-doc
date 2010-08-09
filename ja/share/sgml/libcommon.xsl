@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="euc-jp"?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
-<!-- $FreeBSD: www/ja/share/sgml/libcommon.xsl,v 1.6 2010/04/20 21:33:55 ryusuke Exp $ -->
+<!-- $FreeBSD: www/ja/share/sgml/libcommon.xsl,v 1.7 2010/06/04 17:58:04 ryusuke Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/libcommon.xsl"/>
@@ -23,7 +23,7 @@
       最新の進歩について行くのが面倒になる時がありますよね。
       情報通になるために、このページを定期的にチェックするようにしましょう。
       また、<a href="&enbase;/doc/en_US.ISO8859-1/books/handbook/eresources.html#ERESOURCES-MAIL">freebsd-announce
-	メーリングリスト</a> や <a href="&enbase;/news/rss.xml">RSS feed</a>
+	メーリングリスト</a> や <a href="&base;/news/rss.xml">RSS フィード</a>
       を購読したいという方もいるかもしれませんね。</p>
 
     <p>それぞれのプロジェクトの最新情報は、次の各ウェブページをご覧ください。</p>
