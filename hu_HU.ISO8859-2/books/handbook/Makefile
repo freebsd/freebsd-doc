@@ -4,7 +4,7 @@
 
 # $FreeBSD$
 # %SOURCE%    en_US.ISO8859-1/books/handbook/Makefile
-# %SRCID%     1.112
+# %SRCID%     1.113
 #
 # Build the FreeBSD Handbook.
 #
@@ -68,6 +68,7 @@ IMAGES_EN+= install/adduser3.scr
 IMAGES_EN+= install/boot-loader-menu.scr
 IMAGES_EN+= install/boot-mgr.scr
 IMAGES_EN+= install/config-country.scr
+IMAGES_EN+= install/config-keymap.scr
 IMAGES_EN+= install/console-saver1.scr
 IMAGES_EN+= install/console-saver2.scr
 IMAGES_EN+= install/console-saver3.scr
