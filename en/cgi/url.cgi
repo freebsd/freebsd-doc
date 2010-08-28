@@ -26,7 +26,7 @@
 #
 # url.cgi - make plain text URLs clickable
 #
-# $FreeBSD: www/en/cgi/url.cgi,v 1.35 2007/03/19 17:52:39 wosch Exp $
+# $FreeBSD: www/en/cgi/url.cgi,v 1.36 2007/03/19 18:13:51 wosch Exp $
 
 use strict;
 
@@ -48,7 +48,7 @@ my $portcategory;
 # security checks
 if ($file !~ m%^(http|ftp)://[a-z_\-0-9]+\.freebsd\.(com|org)%i &&
     $file !~ m%^ports/%) {
-    &CgiError(("Invalid url: $file", "Only http://*.freebsd.* is allowed.\n"));
+    &CgiError(("Invalid URL", "Only http://*.freebsd.* is allowed.\n"));
     exit(0);
 }
 
