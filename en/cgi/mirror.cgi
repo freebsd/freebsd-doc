@@ -1,18 +1,31 @@
 #!/usr/bin/perl -T
-# (c) Wolfram Schneider, Berlin. June 1996. Public domain.
+# (c) 1996-2010 Wolfram Schneider. Public domain.
 #
 # FreeBSD WWW mirror redirect
 #
-# $FreeBSD: www/en/cgi/mirror.cgi,v 1.3 1999/09/06 07:02:40 peter Exp $
 
-$_ = $ENV{'QUERY_STRING'};
+use CGI;
+use strict;
+use warnings;
 
-s/^[^=]+=//;			# 'variable=value' -> 'value'
-s/\+/ /g;			# '+'   -> space
-s/%(..)/pack("c",hex($1))/ge;	# '%ab' -> char ab
+my $debug      = 1;
+my $master_url = 'http://www.freebsd.org/';
 
-print "Window-target: _top\n";
-print "Location: $_\n";
-print "Content-type: text/plain\n\n";
+my $q = new CGI;
+my $url = $q->param('goto') || "";
 
-exit 0;
+if (   $url =~ m,^http://[a-z0-9\.]+\.freebsd\.org/?$,i
+    || $url =~ m,^http://[a-z0-9\.]+\.freebsd\.org/www\.FreeBSD\.org/(data)?$,i
+    || $url =~ m,^http://(freebsd\.unixtech\.be|www\.gufi\.org/mirrors/www.freebsd.org/data)/$,i
+  )
+{
+    # ok
+}
+
+else {
+    warn "Ignore illegal redirect URL: $url\n" if $debug;
+    $url = $master_url;
+}
+
+print $q->redirect($url);
+
