@@ -45,8 +45,8 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.91 2007/03/17 22:28:31 simon Exp $
-# $Id: cvsweb.cgi,v 1.92 2008-09-23 16:31:45 wosch Exp $
+# $FreeBSD: www/en/cgi/cvsweb.cgi,v 1.92 2008/09/23 16:31:45 wosch Exp $
+# $Id: cvsweb.cgi,v 1.93 2010-11-13 16:37:18 simon Exp $
 # $Idaemons: /home/cvs/cvsweb/cvsweb.cgi,v 1.84 2001/10/07 20:50:10 knu Exp $
 #
 ###
@@ -142,7 +142,7 @@ EOM
   $CheckoutMagic = '~checkout~';
 
   $cgi_style::hsty_base = 'http://www.FreeBSD.org';
-  $_ = q$FreeBSD: www/en/cgi/cvsweb.cgi,v 1.91 2007/03/17 22:28:31 simon Exp $;
+  $_ = q$FreeBSD: www/en/cgi/cvsweb.cgi,v 1.92 2008/09/23 16:31:45 wosch Exp $;
   @_ = split;
   $cgi_style::hsty_date = "@_[3,4]";
 
@@ -4281,7 +4281,7 @@ sub http_header(;$$)
         || (defined($CMD{gzip}) && open(GZIP, "| $CMD{gzip} -1 -c")))
     {
 
-      push(@headers, 'Content-Encoding: x-gzip');
+      push(@headers, 'Content-Encoding: gzip');
       push(@headers, 'Vary: Accept-Encoding');     # RFC 2616, 14.44
       print join("\r\n", @headers) . "\r\n\r\n";
 
