@@ -4,7 +4,7 @@
 <!ENTITY title "The FreeBSD GNOME Project">
 <!ENTITY % navinclude.gnome "INCLUDE">
 ]>
-<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.105 2009/11/29 20:39:14 marcus Exp $ -->
+<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.106 2010/05/10 19:33:23 kwm Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
 		xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -125,10 +125,10 @@
 			<li>devel/gnome2-hacker-tools (development tools)</li>
 		</ul>
 
-		<h2>Upgrading to GNOME 2.30?</h2>
+		<h2>Upgrading to GNOME 2.32?</h2>
 
-		<p>If you are upgrading from GNOME 2.28 to GNOME 2.30, read the
-		  <a href="docs/faq230.html">Upgrade FAQ</a> for upgrade
+		<p>If you are upgrading from GNOME 2.30 to GNOME 2.32, read the
+		  <a href="docs/faq232.html">Upgrade FAQ</a> for upgrade
 		  instructions.</p>
 
               <h2>State of the port</h2>
