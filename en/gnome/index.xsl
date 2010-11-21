@@ -4,7 +4,7 @@
 <!ENTITY title "The FreeBSD GNOME Project">
 <!ENTITY % navinclude.gnome "INCLUDE">
 ]>
-<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.106 2010/05/10 19:33:23 kwm Exp $ -->
+<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.107 2010/11/20 15:22:27 kwm Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
 		xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -134,7 +134,7 @@
               <h2>State of the port</h2>
 
 	      <p>GNOME for FreeBSD is currently supported on
-		6-STABLE, 7.1, 7.2, 7-STABLE, 8.0, 8-STABLE, and 9-CURRENT.
+		7.1, 7.3, 7-STABLE, 8.0, 8.1, 8-STABLE, and 9-CURRENT.
 		Most of GNOME has been ported to FreeBSD, but there is still
 		<a href="docs/volunteer.html">plenty left to be done</a>!</p>
 
