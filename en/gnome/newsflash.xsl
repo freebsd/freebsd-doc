@@ -6,11 +6,11 @@
 <!ENTITY rsslink "&base;/gnome/rss.xml">
 <!ENTITY rsstitle "&title;">
 <!ENTITY email "freebsd-gnome">
-<!ENTITY % navinclude.developers "INCLUDE">
+<!ENTITY % navinclude.gnome "INCLUDE">
 <!ENTITY % header.rss "INCLUDE">
 ]>
 
-<!-- $FreeBSD: www/en/gnome/newsflash.xsl,v 1.11 2008/01/15 21:25:49 murray Exp $ -->
+<!-- $FreeBSD: www/en/gnome/newsflash.xsl,v 1.12 2008/01/16 03:02:00 murray Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS" exclude-result-prefixes="cvs">
