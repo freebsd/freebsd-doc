@@ -13,7 +13,7 @@
 
 NO_TIDY = yes
 
-MAINTAINER = pgj@FreeBSD.org
+MAINTAINER = doc@FreeBSD.org
 
 DOC?= article
 

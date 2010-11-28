@@ -6,7 +6,7 @@
 # Build the FreeBSD FAQ
 #
 
-MAINTAINER=pgj@FreeBSD.org
+MAINTAINER=doc@FreeBSD.org
 
 NO_TIDY = yes
 
