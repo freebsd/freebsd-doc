@@ -19,6 +19,7 @@ SRCS+=	contrib.committers.sgml
 SRCS+=	contrib.corealumni.sgml
 SRCS+=	contrib.develalumni.sgml
 SRCS+=	contrib.develinmemoriam.sgml
+SRCS+=	contrib.portmgralumni.sgml
 
 URL_RELPREFIX?=	../../../..
 DOC_PREFIX?=	${.CURDIR}/../../..
