@@ -4,7 +4,7 @@
 <!ENTITY title "The FreeBSD Project">
 ]>
 
-<!-- $FreeBSD: www/ja/index.xsl,v 1.56 2010/05/11 15:42:22 ryusuke Exp $ -->
+<!-- $FreeBSD: www/ja/index.xsl,v 1.57 2010/05/12 13:21:39 ryusuke Exp $ -->
 <!-- Original revision: 1.169 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -241,7 +241,7 @@
 				<a href="&base;/news/newsflash.html" title="すべてのニュース">すべてのニュース</a>
 			      </li>
 			      <li class="last-child">
-				<a href="&enbase;/news/rss.xml" title="ニュースの RSS フィード"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="News RSS Feed" /></a>
+				<a href="&base;/news/rss.xml" title="ニュースの RSS フィード"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="News RSS Feed" /></a>
 			      </li>
 			    </ul>
 			  </div> <!-- unnamed -->
