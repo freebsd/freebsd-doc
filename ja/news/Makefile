@@ -1,4 +1,4 @@
-# $FreeBSD: www/ja/news/Makefile,v 1.38 2010/04/23 22:52:29 ryusuke Exp $
+# $FreeBSD: www/ja/news/Makefile,v 1.39 2010/06/04 17:35:53 ryusuke Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.38
 
@@ -30,7 +30,7 @@ DEPENDSET.DEFAULT=	transtable news press
 
 XMLDOCS=	newsflash:${XSL_NEWS_NEWSFLASH}:${XML_NEWS_NEWS_MASTER}:
 XMLDOCS+=	news-rdf:${XSL_NEWS_NEWS_RDF}:${XML_NEWS_NEWS_MASTER}:news.rdf
-XMLDOCS+=	news-rss:${XSL_NEWS_NEWS_RSS}:${XML_NEWS_NEWS_MASTER}:rss.xml
+XMLDOCS+=	news-rss:../share/sgml/templates.news-rss.xsl:../share/sgml/news.xml:rss.xml
 XMLDOCS+=	press:${XSL_NEWS_PRESS}:${XML_NEWS_PRESS_MASTER}:
 XMLDOCS+=	press-rss:${XSL_NEWS_PRESS_RSS}:${XML_NEWS_PRESS_MASTER}:press-rss.xml
 
