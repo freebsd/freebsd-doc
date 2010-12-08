@@ -2,7 +2,7 @@
      The FreeBSD Documentation Project
      The FreeBSD French Documentation Project
 
-     $Id: freebsd.dsl,v 1.12 2003-05-22 15:03:49 hrs Exp $
+     $Id: freebsd.dsl,v 1.13 2010-12-08 06:25:59 hrs Exp $
      $FreeBSD$
      Original revision: 1.17
 
@@ -10,6 +10,7 @@
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
 <!ENTITY freebsd.dsl PUBLIC "-//FreeBSD//DOCUMENT DocBook Language Neutral Stylesheet//EN" CDATA DSSSL>
+
 <!ENTITY % output.html  "IGNORE">
 <!ENTITY % output.print "IGNORE">
 ]>
@@ -20,9 +21,6 @@
  
       <![ %output.html; [ 
 
-	<!-- Generate links to HTML man pages -->                        
-        (define %refentry-xref-link% #t)                                 
-                                                                         
         <!-- Fix a problem with the French localisation.  This should really
              be a patch to the dsssl-docbook-modular port, but this gets it
              more widely available sooner.  A patch will be applied to the
