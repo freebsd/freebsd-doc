@@ -188,7 +188,7 @@
           ;; /DESC
           ;; AUTHOR N/A
           ;; /REFENTRY
-          #f)
+          #t)
 
         <!-- Specify how to generate the man page link HREF -->
         (define ($create-refentry-xref-link$ #!optional (n (current-node)))
@@ -292,7 +292,6 @@
 	    (if (not (last-sibling? (current-node)))
 	        (literal ", ")
 	        (empty-sosofo))))
-
       ]]>
 
       <!-- HTML with images  ............................................ -->

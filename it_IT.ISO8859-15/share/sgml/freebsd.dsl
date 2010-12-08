@@ -7,20 +7,15 @@
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
 <!ENTITY freebsd.dsl PUBLIC "-//FreeBSD//DOCUMENT DocBook Language Neutral Stylesheet//EN" CDATA DSSSL>
+
 <!ENTITY % output.html  "IGNORE">
 <!ENTITY % output.print "IGNORE">
-<!ENTITY % output.print.niceheaders "IGNORE">
 ]>
 
 <style-sheet>
   <style-specification use="docbook">
     <style-specification-body>
-      <!-- HTML only .................................................... -->
-
       <![ %output.html; [
-
-        <!-- Generate links to HTML man pages -->
-        (define %refentry-xref-link% #t)
 
         (define ($email-footer$)
           (make sequence
@@ -50,8 +45,6 @@
                   (literal "doc@FreeBSD.org"))
                 (literal ">.")))))
       ]]>
-
-      <!-- Both sets of stylesheets ..................................... -->
 
       (define (local-it-label-title-sep)
         (list
