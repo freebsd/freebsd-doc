@@ -5,6 +5,9 @@
 %freebsd.l10n;
 <!ENTITY % freebsd.l10n-common PUBLIC "-//FreeBSD//ENTITIES DocBook Language Neutral Entities//EN">
 %freebsd.l10n-common;
+
+<!ENTITY % output.html  "IGNORE"> 
+<!ENTITY % output.print "IGNORE">
 ]>
 
 <style-sheet>
@@ -325,6 +328,18 @@
 	    (if (not (equal? role "acronym"))
 		($charseq$)
 		(empty-sosofo))))
+
+      (define (local-en-label-title-sep)
+        (list
+          (list (normalize "warning")		": ")
+	  (list (normalize "caution")		": ")
+          (list (normalize "chapter")           "  ")
+          (list (normalize "sect1")             "  ")
+          (list (normalize "sect2")             "  ")
+          (list (normalize "sect3")             "  ")
+          (list (normalize "sect4")             "  ")
+          (list (normalize "sect5")             "  ")
+          ))
 
     </style-specification-body>
   </style-specification>

@@ -20,9 +20,6 @@
  
       <![ %output.html; [ 
 
-	<!-- Generate links to HTML man pages -->
-	(define %refentry-xref-link% #t)
-
 	(define ($email-footer$)
           (make sequence
             (make element gi: "p"
