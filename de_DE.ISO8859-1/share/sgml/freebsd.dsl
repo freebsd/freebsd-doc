@@ -1,7 +1,7 @@
 <!--
 	$FreeBSD$
-	$FreeBSDde: de-docproj/share/sgml/freebsd.dsl,v 1.15 2009/05/05 19:19:07 bcr Exp $
-	basiert auf: 1.22
+	$FreeBSDde: de-docproj/share/sgml/freebsd.dsl,v 1.16 2010/12/17 13:16:39 jkois Exp $
+	basiert auf: 1.23
 -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
