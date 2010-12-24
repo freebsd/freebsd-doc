@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/ja/ports/ports.inc,v 1.23 2002/03/14 11:15:36 kuriyama Exp $ -->
+<!-- $FreeBSD: www/ja/ports/ports.inc,v 1.24 2003/10/12 10:52:33 rushani Exp $ -->
 <!-- The FreeBSD Japanese Documentation Project -->
 <!-- Original revision: 1.67 -->
 <p>FreeBSD Ports/Packages Collection は、
@@ -58,7 +58,7 @@ FreeBSD ports の更新情報</a> ページを参照してください。</p>
 <INPUT NAME="query" VALUE="">
 <SELECT NAME="stype">
 <OPTION VALUE="all">すべて</OPTION>
-<OPTION VALUE="name">パッケージ名</OPTION>
+<OPTION VALUE="name">package 名</OPTION>
 <OPTION VALUE="text">詳細</OPTION>
 </SELECT>
 <INPUT TYPE="submit" VALUE="検索">
@@ -68,5 +68,5 @@ FreeBSD ports の更新情報</a> ページを参照してください。</p>
 <a href="../../doc/ja_JP.eucJP/books/handbook/">FreeBSD ハンドブック</a> にある
 <a href="../../doc/ja_JP.eucJP/books/handbook/ports.html">アプリケーションのインストール: Ports Collection</a>
 を、また、新しい ports を作るための情報は
-<a href="../../doc/en_US.ISO8859-1/books/porters-handbook/index.html">Porter's ハンドブック</a> を参照
-してください。</p>
+<a href="../../doc/ja_JP.eucJP/books/porters-handbook/index.html">port 作成者のためのハンドブック</a>
+を参照してください。</p>
