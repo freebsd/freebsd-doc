@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="euc-jp"?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
-<!-- $FreeBSD: www/ja/share/sgml/libcommon.xsl,v 1.7 2010/06/04 17:58:04 ryusuke Exp $ -->
+<!-- $FreeBSD: www/ja/share/sgml/libcommon.xsl,v 1.8 2010/08/09 13:53:29 ryusuke Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/libcommon.xsl"/>
@@ -72,6 +72,22 @@
       我々がここに載せられるように詳細を
       <a href="mailto:www@freebsd.org">www@FreeBSD.org</a> まで
       (英語で) 送ってください。</p>
+  </xsl:template>
+
+  <!-- template: "html-press-make-olditems-list" -->
+  <xsl:template name="html-press-make-olditems-list">
+    <p>過去のニュース記事:
+      <a href="&enbase;/news/2008/press.html">2008</a>,
+      <a href="&enbase;/news/2007/press.html">2007</a>,
+      <a href="&enbase;/news/2006/press.html">2006</a>,
+      <a href="&enbase;/news/2005/press.html">2005</a>,
+      <a href="&enbase;/news/2004/press.html">2004</a>,
+      <a href="&enbase;/news/2003/press.html">2003</a>,
+      <a href="&enbase;/news/2002/press.html">2002</a>,
+      <a href="&enbase;/news/2001/press.html">2001</a>,
+      <a href="&enbase;/news/2000/press.html">2000</a>,
+      <a href="&enbase;/news/1999/press.html">1999</a>,
+      <a href="&enbase;/news/1998/press.html">1998-1996</a></p>
   </xsl:template>
 
   <!-- for l10n -->
