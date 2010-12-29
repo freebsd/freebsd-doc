@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/ports.cgi,v 1.98 2009/12/31 16:37:18 wosch Exp $
+# $FreeBSD: www/en/cgi/ports.cgi,v 1.99 2010/07/26 10:30:51 wosch Exp $
 #
 # ports.cgi - search engine for FreeBSD ports
 #             	o search for a port by name or description
@@ -46,11 +46,11 @@ sub init_variables {
     $portsDatabaseHeadDir = "/usr/local/www/ports";
 
     # Ports database file to use
-    if ( -f "$portsDatabaseHeadDir/INDEX-6" ) {
-        $ports_database = 'INDEX-6';
+    if ( -f "$portsDatabaseHeadDir/INDEX-9" ) {
+        $ports_database = 'INDEX-9';
     }
-    elsif ( -f "$portsDatabaseHeadDir/INDEX-5" ) {
-        $ports_database = 'INDEX-5';
+    elsif ( -f "$portsDatabaseHeadDir/INDEX-8" ) {
+        $ports_database = 'INDEX-8';
     }
     else {
         $ports_database = 'INDEX';
@@ -518,7 +518,7 @@ sub footer {
 &copy; 1996-2010 by Wolfram Schneider. All rights reserved.<br />
 };
 
-#print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.98 2009/12/31 16:37:18 wosch Exp $} . "<br />\n";
+#print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.99 2010/07/26 10:30:51 wosch Exp $} . "<br />\n";
     print qq{Please direct questions about this service to
 <i><a href="$mailtoURL">$mailto</a></i><br />\n};
     print qq{General questions about FreeBSD ports should be sent to }
