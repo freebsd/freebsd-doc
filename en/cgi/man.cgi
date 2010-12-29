@@ -33,8 +33,8 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.257 2010-12-27 12:30:56 wosch Exp $
-# $FreeBSD: www/en/cgi/man.cgi,v 1.256 2010/11/22 21:24:40 wosch Exp $
+# $Id: man.cgi,v 1.258 2010-12-29 15:20:51 wosch Exp $
+# $FreeBSD: www/en/cgi/man.cgi,v 1.257 2010/12/27 12:30:56 wosch Exp $
 
 ############################################################################
 # !!! man.cgi is stale perl4 code !!!
@@ -569,7 +569,54 @@ while ( ( $key, $val ) = each %manPath ) {
     'true64',        'OSF1 V5.1/alpha',
 );
 
-foreach ( sort keys %manPathAliases ) {
+#
+# sort by OS release number
+#
+# e.g.:
+#
+# XFree86 2.1
+# XFree86 3.3
+# XFree86 3.3.6
+# XFree86 4.0
+# ...
+# XFree86 10.0
+# XFree86 10.0.1
+# XFree86 11
+#
+sub sort_versions {
+    my @a = ( lc($a) =~ /(\d+|\D+)/g );
+    my @b = ( lc($b) =~ /(\d+|\D+)/g );
+
+    my $flag = 0;
+    while ( @a and @b ) {
+        my $a1 = shift @a;
+        my $b1 = shift @b;
+
+        # sort numerically if possible
+        if ( $a1 =~ /^\d+$/ && $b1 =~ /^\d+$/ ) {
+            return $a1 <=> $b1 if $a1 <=> $b1;
+            $flag++;
+        }
+
+        # sort by characters
+        else {
+            # minor number and characters
+            # 4.1 RELEASE <=>  4.1.1 RELEASE
+            if ( $flag && ( $a1 =~ /^\d+$/ || $b1 =~ /^\d+$/ ) ) {
+                return $a1 =~ /^\d+$/ ? 1 : -1;
+            }
+
+            # characters only
+            return $a1 cmp $b1 if $a1 cmp $b1;
+            $flag = 0;
+        }
+    }
+
+    # longest version string wins
+    return @a <=> @b;
+}
+
+foreach ( sort { &sort_versions } keys %manPathAliases ) {
 
     # delete non-existing aliases
     if ( !defined( $manPath{ $manPathAliases{$_} } ) ) {
@@ -1384,7 +1431,7 @@ ETX
     print qq{</select>\n<select name="manpath">\n};
 
     local ($l) = ( $manpath ? $manpath : $manPathDefault );
-    foreach ( sort keys %manPath ) {
+    foreach ( sort { &sort_versions } keys %manPath ) {
         $key = $_;
         print "<option"
           . ( ( $key eq $l ) ? ' selected="selected" ' : ' ' )
@@ -1424,7 +1471,7 @@ sub faq {
 
     local ( @list, @list2 );
     local ($url);
-    foreach ( sort keys %manPath ) {
+    foreach ( sort { &sort_versions } keys %manPath ) {
         $url = &encode_url($_);
         push( @list,
                 qq{<li><a href="$BASE?apropos=2&amp;manpath=$url">[download]}
@@ -1432,7 +1479,7 @@ sub faq {
               . qq{</li>\n} );
     }
 
-    foreach ( sort keys %manPathAliases ) {
+    foreach ( sort { &sort_versions } keys %manPathAliases ) {
         push( @list2,
                 qq[<li>"$_" -> "$manPathAliases{$_}" -> ]
               . qq{<a href="$BASE?manpath=}
@@ -1444,7 +1491,7 @@ sub faq {
     }
 
     local $id =
-      '$FreeBSD: www/en/cgi/man.cgi,v 1.256 2010/11/22 21:24:40 wosch Exp $';
+      '$FreeBSD: www/en/cgi/man.cgi,v 1.257 2010/12/27 12:30:56 wosch Exp $';
     return qq{\
 <pre>
 Copyright (c) 1996-2010 <a href="$mailtoURL">Wolfram Schneider</a>
