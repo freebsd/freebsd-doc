@@ -19,28 +19,28 @@
 	    (make element gi: "p"
                   attributes: (list (list "align" "center"))
               (make element gi: "small"
-                (literal "This, and other documents, can be downloaded from ")
+                (literal "本文書、および他の文書は ")
 		(create-link
 		  (list (list "HREF" "ftp://ftp.FreeBSD.org/pub/FreeBSD/doc/"))
                   (literal "ftp://ftp.FreeBSD.org/pub/FreeBSD/doc/"))
-                (literal ".")))
+                (literal " からダウンロードできます。")))
             (make element gi: "p"
                   attributes: (list (list "align" "center"))
               (make element gi: "small"  
-                (literal "For questions about FreeBSD, read the ")
+                (literal "FreeBSD に関する質問がある場合には、")
 		(create-link
-		  (list (list "HREF" "http://www.FreeBSD.org/docs.html"))
-                  (literal "documentation"))
-                (literal " before contacting <")
+		  (list (list "HREF" "http://www.FreeBSD.org/ja/docs.html"))
+                  (literal "ドキュメント"))
+                (literal " を読んだ上で <")
 		(create-link
 		  (list (list "HREF" "mailto:questions@FreeBSD.org"))
                   (literal "questions@FreeBSD.org"))
-                (literal ">.")
+                (literal "> まで (英語で) 連絡してください。")
                 (make empty-element gi: "br")
-                (literal "For questions about this documentation, e-mail <")
+                (literal "本文書に関する質問については、<")
 		(create-link (list (list "HREF" "mailto:doc@FreeBSD.org"))
                   (literal "doc@FreeBSD.org"))
-	        (literal ">.")))))
+	        (literal "> まで電子メールを (英語で) 送ってください。")))))
       ]]>
     </style-specification-body>
   </style-specification>
