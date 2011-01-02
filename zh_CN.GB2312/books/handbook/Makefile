@@ -3,7 +3,7 @@
 #
 # Build the FreeBSD Handbook (Simplified Chinese).
 #
-# Original revision: 1.112
+# Original revision: 1.113
 
 # ------------------------------------------------------------------------
 #
@@ -58,6 +58,7 @@ IMAGES_EN+= install/adduser3.scr
 IMAGES_EN+= install/boot-loader-menu.scr
 IMAGES_EN+= install/boot-mgr.scr
 IMAGES_EN+= install/config-country.scr
+IMAGES_EN+= install/config-keymap.scr
 IMAGES_EN+= install/console-saver1.scr
 IMAGES_EN+= install/console-saver2.scr
 IMAGES_EN+= install/console-saver3.scr
