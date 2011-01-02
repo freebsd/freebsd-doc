@@ -1,7 +1,7 @@
 <!--
      DocBook Language Specific Style Sheet for Localization (Simplified Chinese).
 
-     Original Revision: 1.22
+     Original Revision: 1.23
      $FreeBSD$
  -->
 
