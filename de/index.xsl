@@ -5,8 +5,8 @@
 ]>
 <!--
      $FreeBSD$
-     $FreeBSDde: de-www/index.xsl,v 1.86 2010/08/04 08:01:25 jkois Exp $
-     basiert auf: 1.169
+     $FreeBSDde: de-www/index.xsl,v 1.89 2011/01/04 20:58:19 jkois Exp $
+     basiert auf: 1.170
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -42,7 +42,7 @@
 <!--
 FUER UEBERSETZER - ACHTUNG:
 
-Die zwei Attribute "Normal Text" und "Large Text" in den naechsten beiden
+Die zwei Attribute "Normal Text" und "Large Text" in den beiden naechsten
 Zeilen NICHT uebersetzen!  Es handelt sich dabei nicht um Text, sondern um
 JavaScript-Parameter.  Eine Uebersetzung dieser Parameter fuehrt zu
 Problemen bei der Darstellung der Webseiten.
@@ -322,7 +322,7 @@ Problemen bei der Darstellung der Webseiten.
 					<a href="&enbase;/security/advisories.html" title="Weitere Security Advisories">Mehr</a>
 				  </li>
 				  <li class="last-child">
-					<a href="&enbase;/security/advisories.rdf" title="Security Advisories RSS Feed"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="News RSS Feed" /></a>
+					<a href="&enbase;/security/rss.xml" title="Security Advisories RSS Feed"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="News RSS Feed" /></a>
 				  </li>
 				</ul>
 			  </div> <!-- unnamed -->
@@ -340,7 +340,7 @@ Problemen bei der Darstellung der Webseiten.
 			<div>
 			  <ul class="newseventslist">
 			    <li class="first-child">
-			      <a href="&base;/security/" title="Weitere Errata-Hinweise">Mehr</a>
+			      <a href="&enbase;/security/notices.html" title="Weitere Errata-Hinweise">Mehr</a>
 			    </li>
 			    <li class="last-child">
 			      <a href="&enbase;/security/errata.xml" title="Errata Notices RSS Feed">
