@@ -5,7 +5,7 @@
 <!ENTITY title "">
 ]>
 
-<!-- $FreeBSD: www/en/security/mkindex.xsl,v 1.5 2006/08/19 21:20:52 hrs Exp $ -->
+<!-- $FreeBSD: www/en/security/mkindex.xsl,v 1.6 2008/03/01 01:55:27 simon Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
@@ -16,6 +16,7 @@
   <xsl:template match="/">
     <xsl:call-template name="html-list-advisories">
        <xsl:with-param name="advisories.xml" select="$advisories.xml" />
+       <xsl:with-param name="type" select="$type" />
     </xsl:call-template>
   </xsl:template>
 </xsl:stylesheet>

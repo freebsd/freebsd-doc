@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
-<!-- $FreeBSD: www/share/sgml/libcommon.xsl,v 1.30 2010/03/05 00:17:57 danger Exp $ -->
+<!-- $FreeBSD: www/share/sgml/libcommon.xsl,v 1.31 2010/04/09 10:09:05 jkois Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
   version="1.0"
@@ -760,32 +760,16 @@
       <xsl:when test="$type = 'advisory'">
         <xsl:call-template name="html-list-advisories-putitems">
           <xsl:with-param name="items" select="document($advisories.xml)//advisory" />
+          <xsl:with-param name="itemtype" select="'Advisory'" />
           <xsl:with-param name="prefix" select="'&ftpbase;'" />
           <xsl:with-param name="prefixold" select="'&ftpbaseold;'" />
         </xsl:call-template>
       </xsl:when>
 
       <xsl:when test="$type = 'notice'">
-	<xsl:for-each select="document($advisories.xml)
-	  /descendant::release">
-
-	  <xsl:variable name="relname" select="string(name)" />
-
-	  <xsl:call-template name="html-list-advisories-putitems">
-	    <xsl:with-param name="items" select="document($advisories.xml)
-	      //notice[$relname = string(following::release/name[1])]" />
-	    <xsl:with-param name="prefix" select="'&ftpbaseerrata;'" />
-	    <xsl:with-param name="prefixold" select="'&ftpbaseerrata;'" />
-	  </xsl:call-template>
-
-	  <xsl:call-template name="html-list-advisories-release-label">
-	    <xsl:with-param name="relname" select="name" />
-	  </xsl:call-template>
-	</xsl:for-each>
-
 	<xsl:call-template name="html-list-advisories-putitems">
-	  <xsl:with-param name="items" select="document($advisories.xml)
-	    //notice[not(following::release/name[1])]" />
+	  <xsl:with-param name="items" select="document($advisories.xml)//notice" />
+	  <xsl:with-param name="itemtype" select="'Errata Notice'" />
 	  <xsl:with-param name="prefix" select="'&ftpbaseerrata;'" />
 	  <xsl:with-param name="prefixold" select="'&ftpbaseerrata;'" />
 	</xsl:call-template>
@@ -798,12 +782,13 @@
 
   <xsl:template name="html-list-advisories-putitems">
     <xsl:param name="items" select="''" />
+    <xsl:param name="itemtype" select="''" />
     <xsl:param name="prefix" select="''" />
     <xsl:param name="prefixold" select="''" />
 
     <xsl:if test="$items">
       <table>
-        <tr><th>Date</th><th>Advisory name</th></tr>
+        <tr><th>Date</th><th><xsl:value-of select='$itemtype' /> name</th></tr>
         <xsl:for-each select="$items">
           <xsl:variable name="year" select="../../../name" />
           <xsl:variable name="month" select="../../name" />
