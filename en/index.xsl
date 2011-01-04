@@ -4,7 +4,7 @@
 <!ENTITY title "The FreeBSD Project">
 ]>
 
-<!-- $FreeBSD: www/en/index.xsl,v 1.168 2009/06/02 19:16:33 rene Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.169 2009/06/02 21:11:59 gabor Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
@@ -334,7 +334,7 @@
 			  <div>
 			    	<ul class="newseventslist">
 				  <li class="first-child">
-				    <a href="&base;/security/" title="More Errata Notices">More</a>
+				    <a href="&base;/security/notices.html" title="More Errata Notices">More</a>
 				  </li>
 				  <li class="last-child">
 				    <a href="&base;/security/errata.xml" title="Errata Notices RSS Feed"><img class="rssimage" src="&base;/layout/images/ico_rss.png" width="27" height="12" alt="Errata Notices RSS Feed" /></a>
