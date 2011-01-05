@@ -4,8 +4,8 @@
 <!ENTITY title "The FreeBSD Project">
 ]>
 
-<!-- $FreeBSD: www/ja/index.xsl,v 1.57 2010/05/12 13:21:39 ryusuke Exp $ -->
-<!-- Original revision: 1.169 -->
+<!-- $FreeBSD: www/ja/index.xsl,v 1.58 2010/12/07 14:23:08 ryusuke Exp $ -->
+<!-- Original revision: 1.170 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
@@ -335,7 +335,7 @@
 			  <div>
 			    <ul class="newseventslist">
 			      <li class="first-child">
-				<a href="&base;/security/" title="もっと詳しく">もっと詳しく</a>
+				<a href="&enbase;/security/notices.html" title="すべての Errata 情報">すべて表示</a>
 			      </li>
 			      <li class="last-child">
 				<a href="&enbase;/security/errata.xml" title="Errata 情報の RSS フィード"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="Errata Notices RSS Feed" /></a>
