@@ -1,5 +1,5 @@
 #!/usr/bin/perl -T
-# (c) 1996-2010 Wolfram Schneider. Public domain.
+# (c) 1996-2011 Wolfram Schneider. Public domain.
 #
 # FreeBSD WWW mirror redirect
 #
