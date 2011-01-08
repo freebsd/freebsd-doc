@@ -1,5 +1,5 @@
 #!/usr/bin/perl -T
-# Copyright (c) July 1997-2010. Wolfram Schneider <wosch@FreeBSD.org>
+# Copyright (c) July 1997-2011. Wolfram Schneider <wosch@FreeBSD.org>
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -52,7 +52,7 @@
 #
 #     _________________________________________________________________
 #
-# $FreeBSD: www/en/cgi/missing_handler.cgi,v 1.19 2007/07/08 12:28:11 wosch Exp $
+# $FreeBSD: www/en/cgi/missing_handler.cgi,v 1.20 2009/12/31 16:37:18 wosch Exp $
 # ----------------------------------------------------------------------
 
 sub escape($) { $_ = $_[0]; s/&/&amp;/g; s/</&lt;/g; s/>/&gt;/g; $_; }

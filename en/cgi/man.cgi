@@ -1,6 +1,6 @@
 #!/usr/bin/perl -T
 #
-# Copyright (c) 1996-2010 Wolfram Schneider <wosch@FreeBSD.org>
+# Copyright (c) 1996-2011 Wolfram Schneider <wosch@FreeBSD.org>
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -33,8 +33,8 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.258 2010-12-29 15:20:51 wosch Exp $
-# $FreeBSD: www/en/cgi/man.cgi,v 1.257 2010/12/27 12:30:56 wosch Exp $
+# $Id: man.cgi,v 1.259 2011-01-08 14:58:27 wosch Exp $
+# $FreeBSD: www/en/cgi/man.cgi,v 1.258 2010/12/29 15:20:51 wosch Exp $
 
 ############################################################################
 # !!! man.cgi is stale perl4 code !!!
@@ -1491,10 +1491,10 @@ sub faq {
     }
 
     local $id =
-      '$FreeBSD: www/en/cgi/man.cgi,v 1.257 2010/12/27 12:30:56 wosch Exp $';
+      '$FreeBSD: www/en/cgi/man.cgi,v 1.258 2010/12/29 15:20:51 wosch Exp $';
     return qq{\
 <pre>
-Copyright (c) 1996-2010 <a href="$mailtoURL">Wolfram Schneider</a>
+Copyright (c) 1996-2011 <a href="$mailtoURL">Wolfram Schneider</a>
 Copyright (c) 1993-1995 Berkeley Software Design, Inc.
 
 This data is part of a licensed program from BERKELEY SOFTWARE

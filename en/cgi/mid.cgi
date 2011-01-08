@@ -1,6 +1,6 @@
 #!/usr/bin/perl -T
 #
-# Copyright (c) March 1998-2010 Wolfram Schneider <wosch@FreeBSD.org>. Berlin.
+# Copyright (c) March 1998-2011 Wolfram Schneider <wosch@FreeBSD.org>. Berlin.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -26,7 +26,7 @@
 #
 # Search a mail by Message-ID, References or In-Reply-To field
 #
-# $FreeBSD: www/en/cgi/mid.cgi,v 1.17 2008/09/23 12:42:17 wosch Exp $
+# $FreeBSD: www/en/cgi/mid.cgi,v 1.18 2009/12/31 16:37:18 wosch Exp $
 
 require "./cgi-lib.pl";
 require "./cgi-style.pl";
