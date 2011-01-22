@@ -1,6 +1,6 @@
-# $FreeBSD$
+# $FreeBSD: www/ja/events/Makefile,v 1.1 2010/01/20 15:51:38 ryusuke Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.18
+# Original revision: 1.19
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -13,9 +13,9 @@
 #SUBDIR+= 2003
 
 # The year the top level events.html file starts from:
-YEARSTART= 2009
+YEARSTART= 2010
 # Years to generate past events pages for and link from top level:
-PASTYEARS= 2008 2007 2006 2005 2004 2003
+PASTYEARS= 2009 2008 2007 2006 2005 2004 2003
 
 DATA=	events.css
 INDEXLINK=	events.html
