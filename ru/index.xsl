@@ -7,10 +7,10 @@
 <!--
      The FreeBSD Russian Documentation Project
 
-     $FreeBSD: www/ru/index.xsl,v 1.37 2009/12/24 06:49:01 bland Exp $
+     $FreeBSD: www/ru/index.xsl,v 1.38 2010/07/05 09:11:54 maxim Exp $
      $FreeBSDru: frdp/www/ru/index.xsl,v 1.47 2006/01/16 21:27:51 gad Exp $
 
-     Original revision: 1.169
+     Original revision: 1.170
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -331,7 +331,7 @@
 			  <div>
 			    	<ul class="newseventslist">
 				  <li class="first-child">
-				    <a href="&base;/security/" title="Все уведомления об исправлениях">Все</a>
+				    <a href="&base;/security/notices.html" title="Все уведомления об исправлениях">Все</a>
 				  </li>
 				  <li class="last-child">
 				    <a href="&enbase;/security/errata.xml" title="Errata Notices RSS Feed"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="Errata Notices RSS Feed" /></a>
