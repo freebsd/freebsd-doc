@@ -1,4 +1,4 @@
-# $FreeBSD: www/ja/events/Makefile,v 1.1 2010/01/20 15:51:38 ryusuke Exp $
+# $FreeBSD: www/ja/events/Makefile,v 1.2 2011/01/22 15:01:19 ryusuke Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.19
 
@@ -20,7 +20,7 @@ PASTYEARS= 2009 2008 2007 2006 2005 2004 2003
 DATA=	events.css
 INDEXLINK=	events.html
 
-XMLDOCS+=		events:${XSL_EVENTS}:${XML_EVENTS_EVENTS}:
+XMLDOCS+=		events:../share/sgml/templates.events.xsl:${XML_EVENTS_EVENTS}:
 PARAMS.events=		--param startyear ${YEARSTART}
 PARAMS.events+=		--stringparam pastyears '${PASTYEARS}'
 DEPENDSET.events=	events

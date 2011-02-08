@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="euc-jp"?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
-<!-- $FreeBSD: www/ja/share/sgml/libcommon.xsl,v 1.8 2010/08/09 13:53:29 ryusuke Exp $ -->
+<!-- $FreeBSD: www/ja/share/sgml/libcommon.xsl,v 1.9 2010/12/28 14:50:27 ryusuke Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/libcommon.xsl"/>
@@ -132,5 +132,49 @@
 
   <xsl:template name="html-events-list-past-heading">
     <h2 id="past">過去のイベント</h2>
+  </xsl:template>
+
+  <!-- Generate a date interval. -->
+  <!-- Sample: 27 November, 2002 - 29 December, 2003 -->
+  <xsl:template name="gen-date-interval">
+    <xsl:param name="startdate"/>
+    <xsl:param name="enddate"/>
+
+    <xsl:value-of select="startdate/year"/>
+    <xsl:text> 年 </xsl:text>
+    <xsl:value-of select="startdate/month"/>
+    <xsl:text> 月 </xsl:text>
+    <xsl:value-of select="startdate/day"/>
+
+    <xsl:if test="number(startdate/month) != number(enddate/month) or
+		  number(startdate/day) != number(enddate/day) or
+		  number(startdate/year) != number(enddate/year)">
+
+      <xsl:if test="number(startdate/month) != number(enddate/month) or
+		    number(startdate/year) != number(enddate/year)">
+	<xsl:text> 日</xsl:text>
+      </xsl:if>
+
+      <xsl:text> - </xsl:text>
+
+      <xsl:if test="number(startdate/year) != number(enddate/year)">
+	<xsl:value-of select="enddate/year"/>
+	<xsl:text> 年 </xsl:text>
+      </xsl:if>
+
+      <xsl:if test="number(startdate/month) != number(enddate/month) or
+		    number(startdate/year) != number(enddate/year)">
+	<xsl:value-of select="enddate/month"/>
+	<xsl:text> 月</xsl:text>
+      </xsl:if>
+
+      <xsl:if test="number(startdate/day) != number(enddate/day) or
+		    number(startdate/month) != number(enddate/month) or
+		    number(startdate/year) != number(enddate/year)">
+	<xsl:text> </xsl:text>
+	<xsl:value-of select="enddate/day"/>
+	<xsl:text> 日</xsl:text>
+      </xsl:if>
+    </xsl:if>
   </xsl:template>
 </xsl:stylesheet>
