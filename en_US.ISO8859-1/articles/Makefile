@@ -25,6 +25,7 @@ SUBDIR+= filtering-bridges
 SUBDIR+= fonts
 SUBDIR+= formatting-media
 SUBDIR+= freebsd-questions
+SUBDIR+= freebsd-update-server
 SUBDIR+= geom-class
 SUBDIR+= gjournal-desktop
 SUBDIR+= hats
