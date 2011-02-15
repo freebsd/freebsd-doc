@@ -5,7 +5,7 @@
   $FreeBSD$
 
   %SOURCE%	en_US.ISO8859-1/share/sgml/freebsd.dsl
-  %SRCID%	1.22
+  %SRCID%	1.23
 
 -->
 
