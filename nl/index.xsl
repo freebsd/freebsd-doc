@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
 <!-- Vertaald door: Siebrand Mazeland / Rene Ladan
      %SOURCE%	en/index.xsl
-     %SRCID%	1.169
+     %SRCID%	1.170
 -->
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
 <!ENTITY title "Het &os; Project">
 ]>
 
-<!-- $FreeBSD: www/nl/index.xsl,v 1.2 2009/06/02 19:15:02 rene Exp $ -->
+<!-- $FreeBSD: www/nl/index.xsl,v 1.3 2009/06/08 18:58:09 rene Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
@@ -331,7 +331,7 @@
 			  <div>
 			    <ul class="newseventslist">
 			      <li class="first-child">
-				<a href="&enbase;/security/" title="Meer erratamededelingen">Meer</a>
+				<a href="&enbase;/security/notices.html" title="Meer erratamededelingen">Meer</a>
 			      </li>
 			      <li class="last-child">
 				<a href="&enbase;/security/errata.xml" title="Erratamededelingen RSS feed"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="Erratamededelingen RSS feed"/></a>
