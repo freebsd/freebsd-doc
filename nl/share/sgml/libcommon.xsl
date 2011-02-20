@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
-<!-- $FreeBSD: www/nl/share/sgml/libcommon.xsl,v 1.3 2010/03/16 22:02:38 rene Exp $
+<!-- $FreeBSD: www/nl/share/sgml/libcommon.xsl,v 1.4 2010/04/11 18:34:30 rene Exp $
      %SOURCE%	share/sgml/libcommon.xsl
-     %SRCID%	1.31
+     %SRCID%	1.32
  -->
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/libcommon.xsl"/>
@@ -189,12 +189,14 @@
 
   <xsl:template name="html-list-advisories-putitems">
     <xsl:param name="items" select="''" />
+    <xsl:param name="itemtype" select="''" />
+    <xsl:param name="itemtype" select="''" />
     <xsl:param name="prefix" select="''" />
     <xsl:param name="prefixold" select="''" />
 
     <xsl:if test="$items">
       <table>
-	<tr><th>Datum</th><th>Naam advies</th></tr>
+	<tr><th>Datum</th><th><xsl:value-of select='$itemtype' /> naam</th></tr>
 	<xsl:for-each select="$items">
 	  <xsl:variable name="year" select="../../../name" />
 	  <xsl:variable name="month" select="../../name" />
