@@ -17,6 +17,12 @@ EXTRAS+=	diff.txt
 SRCS=		article.sgml
 SRCS+=		${EXTRAS}
 
+IMAGES_LIB=	callouts/1.png
+IMAGES_LIB+=	callouts/2.png
+IMAGES_LIB+=	callouts/3.png
+IMAGES_LIB+=	callouts/4.png
+IMAGES_LIB+=	callouts/5.png
+
 afterinstall:
 .for entry in ${EXTRAS}
 	${INSTALL_DOCS} ${.CURDIR}/${entry} ${DESTDIR}
