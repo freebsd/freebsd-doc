@@ -1,6 +1,6 @@
-# $FreeBSD: www/ja/releases/2.1.6R/Makefile,v 1.4 2000/10/02 09:16:12 kuriyama Exp $
+# $FreeBSD: www/ja/releases/2.1.6R/Makefile,v 1.5 2000/11/07 11:37:58 kuriyama Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.3
+# Original revision: 1.4
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -9,8 +9,10 @@
 .include "../Makefile.inc"
 .endif
 
-#DOCS=	announce.sgml notes.sgml security.sgml
-DOCS=	notes.sgml security.sgml
+#DOCS=	announce.sgml
+#DOCS+=	notes.sgml
+DOCS=	notes.sgml
+DOCS+=	security.sgml
 
 ### Revision checking
 REVCHECK=	YES
