@@ -3996,6 +3996,667 @@ Device          1K-blocks     Used    Avail Capacity
       </screen>
     </sect2>
   </sect1>
+
+  <sect1 id="disks-hast">
+    <sect1info>
+      <authorgroup>
+	<author>
+	  <firstname>Daniel</firstname>
+	  <surname>Gerzo</surname>
+	  <contrib>Contributed by </contrib>
+	</author>
+      </authorgroup>
+      <authorgroup>
+	<author>
+	  <firstname>Freddie</firstname>
+	  <surname>Cash</surname>
+	  <contrib>With inputs from </contrib>
+	</author>
+	<author>
+	  <firstname>Pawel Jakub</firstname>
+	  <surname>Dawidek</surname>
+	</author>
+	<author>
+	  <firstname>Michael W.</firstname>
+	  <surname>Lucas</surname>
+	</author>
+	<author>
+	  <firstname>Viktor</firstname>
+	  <surname>Petersson</surname>
+	</author>
+      </authorgroup>
+      <!-- Date of writing: 26 February 2011 -->
+    </sect1info>
+
+    <title>Highly Available Storage (HAST)</title>
+    <indexterm>
+      <primary>HAST</primary>
+      <secondary>high availability</secondary>
+    </indexterm>
+
+    <sect2>
+      <title>Synopsis</title>
+
+      <para>High-availability is one of the main requirements in serious
+	business applications and highly-available storage is a key
+	component in such environments.  Highly Available STorage, or
+	<acronym>HAST<remark role="acronym">Highly Available
+	  STorage</remark></acronym>, was developed by &a.pjd; as a
+	framework which allows transparent storage of the same data
+	across several physically separated machines connected by a
+	TCP/IP network.  <acronym>HAST</acronym> can be understood as
+	a network-based RAID1 (mirror), and is similar to the
+	DRBD&reg; storage system known from the GNU/&linux; platform.
+	In combination with other high-availability features of &os;
+	like <acronym>CARP</acronym>, <acronym>HAST</acronym> makes it
+	possible to build a highly-available storage cluster that is
+	resistant to hardware failures.</para>
+
+      <para>After reading this section, you will know:</para>
+
+      <itemizedlist>
+	<listitem>
+	  <para>What <acronym>HAST</acronym> is, how it works and
+	    which features it provides.</para>
+	</listitem>
+	<listitem>
+	  <para>How to set up and use <acronym>HAST</acronym> on
+	    &os;.</para>
+	</listitem>
+	<listitem>
+	  <para>How to integrate <acronym>CARP</acronym> and
+	    &man.devd.8;; to build a robust storage system.</para>
+ 	</listitem>
+      </itemizedlist>
+
+      <para>Before reading this section, you should:</para>
+
+      <itemizedlist>
+	<listitem>
+	  <para>Understand &unix; and &os; basics
+	    (<xref linkend="basics">).</para>
+	</listitem>
+	<listitem>
+	  <para>Know how to configure network interfaces and other
+	    core &os; subsystems (<xref
+	    linkend="config-tuning">).</para>
+	</listitem>
+	<listitem>
+	  <para>Have a good understanding of &os; networking
+	    (<xref linkend="network-communication">).</para>
+	</listitem>
+	<listitem>
+	  <para>Use &os;&nbsp;8.1-RELEASE or newer.</para>
+	</listitem>
+      </itemizedlist>
+
+      <para>The <acronym>HAST</acronym> project was sponsored by The
+	&os; Foundation with the support from <ulink
+	  url="http://www.omc.net/">OMCnet Internet Service GmbH</ulink>
+	and <ulink url="http://www.transip.nl/">TransIP BV</ulink>.</para>
+    </sect2>
+
+    <sect2>
+      <title>HAST Features</title>
+
+      <para>The main features of the <acronym>HAST</acronym> system
+	are:</para>
+
+      <itemizedlist>
+        <listitem>
+	  <para>Can be used to mask I/O errors on local hard
+	  drives.</para>
+	</listitem>
+	<listitem>
+	  <para>File system agnostic, thus allowing to use any file
+	    system supported by &os;.</para>
+	</listitem>
+	<listitem>
+	  <para>Efficient and quick resynchronization, synchronizing
+	    only blocks that were modified during the downtime of a
+	    node.</para>
+	</listitem>
+	<!--
+        <listitem>
+	  <para>Has several synchronization modes to allow for fast
+	    failover.</para>
+	</listitem>
+	-->
+	<listitem>
+	  <para>Can be used in an already deployed environment to add
+	    additional redundancy.</para>
+	</listitem>
+	<listitem>
+	  <para>Together with <acronym>CARP</acronym>,
+	    <application>Heartbeat</application>, or other tools, it
+	    can be used to build a robust and durable storage
+	    system.</para>
+	</listitem>
+      </itemizedlist>
+    </sect2>
+
+    <sect2>
+      <title>HAST Operation</title>
+
+      <para>As <acronym>HAST</acronym> provides a synchronous
+	block-level replication of any storage media to several
+	machines, it requires at least two nodes (physical machines)
+	&mdash; the <literal>primary</literal> (also known as
+	<literal>master</literal>) node, and the
+	<literal>secondary</literal> (<literal>slave</literal>) node.
+	These two machines together will be called a cluster.</para>
+
+      <note>
+	<para>HAST is currently limited to two cluster nodes in
+	total.</para>
+      </note>
+
+      <para>Since the <acronym>HAST</acronym> works in
+	primary-secondary configuration, it allows only one of the
+	cluster nodes to be active at any given time.  The
+	<literal>primary</literal> node, also called
+	<literal>active</literal>, is the one which will handle all
+	the I/O requests to <acronym>HAST</acronym>-managed
+	devices.  The <literal>secondary</literal> node is then being
+	automatically synchronized from the <literal>primary</literal>
+	node.</para>
+
+      <para>The physical components of the <acronym>HAST</acronym>
+	system are:</para>
+
+      <itemizedlist>
+	<listitem>
+	  <para>local disk (on primary node)</para>
+	</listitem>
+	<listitem>
+	  <para>disk on remote machine (secondary node)</para>
+	</listitem>
+      </itemizedlist>
+
+      <para><acronym>HAST</acronym> operates synchronously on a block
+	level, which makes it transparent for file systems and
+	applications.  <acronym>HAST</acronym> provides regular GEOM
+	providers in <filename class="directory">/dev/hast/</filename>
+	directory for use by other tools or applications, thus there is
+	no difference between using <acronym>HAST</acronym>-provided
+	devices and raw disks, partitions, etc.</para>
+
+      <para>Each write, delete or flush operation is sent to the local
+	disk and to the remote disk over TCP/IP.  Each read operation
+	is served from the local disk, unless the local disk is not
+	up-to-date or an I/O error occurs.  In such case, the read
+	operation is sent to the secondary node.</para>
+
+      <sect3>
+	<title>Synchronization and Replication Modes</title>
+
+	<para><acronym>HAST</acronym> tries to provide fast failure
+	  recovery.  For this reason, it is very important to reduce
+	  synchronization time after a node's outage.  To provide fast
+	  synchronization, <acronym>HAST</acronym> manages an on-disk
+	  bitmap of dirty extents and only synchronizes those during a
+	  regular synchronization (with an exception of the initial
+	  sync).</para>
+
+	<para>There are many ways to handle synchronization.
+	  <acronym>HAST</acronym> implements several replication modes
+	  to handle different synchronization methods:</para>
+
+	<itemizedlist>
+	  <listitem>
+	    <para><emphasis>memsync</emphasis>: report write operation
+	      as completed when the local write operation is finished
+	      and when the remote node acknowledges data arrival, but
+	      before actually storing the data.  The data on the
+	      remote node will be stored directly after sending the
+	      acknowledgement.  This mode is intended to reduce
+	      latency, but still provides very good reliability.  The
+	      <emphasis>memsync</emphasis> replication mode is
+	      currently not implemented.</para>
+	  </listitem>
+	  <listitem>
+	    <para><emphasis>fullsync</emphasis>: report write
+	      operation as completed when local write completes and when
+	      remote write completes.  This is the safest and the
+	      slowest replication mode.  This mode is the
+	      default.</para>
+	  </listitem>
+	  <listitem>
+	    <para><emphasis>async</emphasis>: report write operation
+	      as completed when local write completes.  This is the
+	      fastest and the most dangerous replication mode.  It
+	      should be used when replicating to a distant node where
+	      latency is too high for other modes.  The
+	      <emphasis>async</emphasis> replication mode is currently
+	      not implemented.</para>
+	  </listitem>
+	</itemizedlist>
+
+	<warning>
+	  <para>Only the <emphasis>fullsync</emphasis> replication mode
+	    is currently supported.</para>
+	</warning>
+      </sect3>
+    </sect2>
+
+    <sect2>
+      <title>HAST Configuration</title>
+
+      <para><acronym>HAST</acronym> requires
+	<literal>GEOM_GATE</literal> support in order to function.
+	The <literal>GENERIC</literal> kernel does
+	<emphasis>not</emphasis> include <literal>GEOM_GATE</literal>
+	by default, however the <filename>geom_gate.ko</filename>
+	loadable module is available in the default &os; installation.
+	For stripped-down systems, make sure this module is available.
+	Alternatively, it is possible to build
+	<acronym>GEOM_GATE</acronym> support into the kernel
+	statically, by adding the following line to the custom kernel
+	configuration file:</para>
+
+      <programlisting>options	GEOM_GATE</programlisting>
+
+      <para>The <acronym>HAST</acronym> framework consists of several
+	parts from the operating system's point of view:</para>
+
+      <itemizedlist>
+        <listitem>
+	  <para>the &man.hastd.8; daemon responsible for the data
+	    synchronization,</para>
+	</listitem>
+	<listitem>
+	  <para>the &man.hastctl.8; userland management utility,</para>
+	</listitem>
+	<listitem>
+	  <para>the &man.hast.conf.5; configuration file.</para>
+	</listitem>
+      </itemizedlist>
+
+      <para>The following example describes how to configure two nodes
+	in <literal>master</literal>-<literal>slave</literal> /
+	<literal>primary</literal>-<literal>secondary</literal>
+	operation using <acronym>HAST</acronym> to replicate the data
+	between the two.  The nodes will be called
+	<literal><replaceable>hasta</replaceable></literal> with an IP
+	address <replaceable>172.16.0.1</replaceable> and
+	<literal><replaceable>hastb</replaceable></literal> with an IP
+	address <replaceable>172.16.0.2</replaceable>.  Both of these
+	nodes will have a dedicated hard drive
+	<devicename>/dev/<replaceable>ad6</replaceable></devicename> of
+	the same size for <acronym>HAST</acronym> operation.
+	The <acronym>HAST</acronym> pool (sometimes also referred to
+	as a resource, i.e. the GEOM provider in <filename
+	  class="directory">/dev/hast/</filename>) will be called
+	<filename><replaceable>test</replaceable></filename>.</para>
+
+      <para>The configuration of <acronym>HAST</acronym> is being done
+	in the <filename>/etc/hast.conf</filename> file.  This file
+	should be the same on both nodes.  The simplest configuration
+	possible is following:</para>
+
+      <programlisting>resource test {
+	on hasta {
+		local /dev/ad6
+		remote 172.16.0.1
+	}
+	on hastb {
+		local /dev/ad6
+		remote 172.16.0.2
+	}
+}</programlisting>
+
+      <para>For more advanced configuration, please consult the
+	&man.hast.conf.5; manual page.</para>
+
+      <tip>
+	<para>It is also possible to use host names in the
+	  <literal>remote</literal> statements.  In such a case, make
+	  sure that these hosts are resolvable, e.g. they are defined
+	  in the <filename>/etc/hosts</filename> file, or
+	  alternatively in the local <acronym>DNS</acronym>.</para>
+      </tip>
+
+      <para>Now that the configuration exists on both nodes, it is
+	possible to create the <acronym>HAST</acronym> pool.  Run the
+	following commands on both nodes to place the initial metadata
+	onto the local disk, and start the &man.hastd.8; daemon:</para>
+
+      <screen>&prompt.root; <userinput>hastctl create test</userinput>
+&prompt.root; <userinput>/etc/rc.d/hastd onestart</userinput></screen>
+
+      <note>
+	<para>It is <emphasis>not</emphasis> possible to use GEOM
+	  providers with an existing file system (i.e. convert an
+	  existing storage to <acronym>HAST</acronym>-managed pool),
+	  because this procedure needs to store some metadata onto the
+	  provider and there will not be enough required space
+	  available.</para>
+      </note>
+
+      <para>HAST is not responsible for selecting node's role
+	(<literal>primary</literal> or <literal>secondary</literal>).
+	Node's role has to be configured by an administrator or other
+	software like <application>Heartbeat</application> using the
+	&man.hastctl.8; utility.  Move to the primary node
+	(<literal><replaceable>hasta</replaceable></literal>) and
+	issue the following command:</para>
+
+      <screen>&prompt.root; <userinput>hastctl role primary test</userinput></screen>
+
+      <para>Similarly, run the following command on the secondary node
+	(<literal><replaceable>hastb</replaceable></literal>):</para>
+
+      <screen>&prompt.root; <userinput>hastctl role secondary test</userinput></screen>
+
+      <caution>
+	<para>It may happen that both of the nodes are not able to
+	  communicate with each other and both are configured as
+	  primary nodes; the consequence of this condition is called
+	  <literal>split-brain</literal>.  In order to troubleshoot
+	  this situation, follow the steps described in <xref
+	  linkend="disks-hast-sb">.</para>
+      </caution>
+
+      <para>It is possible to verify the result with the
+	&man.hastctl.8; utility on each node:</para>
+
+      <screen>&prompt.root; <userinput>hastctl status test</userinput></screen>
+
+      <para>The important text is the <literal>status</literal> line
+	from its output and it should say <literal>complete</literal>
+	on each of the nodes.  If it says <literal>degraded</literal>,
+	something went wrong.  At this point, the synchronization
+	between the nodes has already started.  The synchronization
+	completes when the <command>hastctl status</command> command
+	reports 0 bytes of <literal>dirty</literal> extents.</para>
+
+
+      <para>The last step is to create a filesystem on the
+	<devicename>/dev/hast/<replaceable>test</replaceable></devicename>
+	GEOM provider and mount it.  This has to be done on the
+	<literal>primary</literal> node (as the
+	<filename>/dev/hast/<replaceable>test</replaceable></filename>
+	appears only on the <literal>primary</literal> node), and
+	it can take a few minutes depending on the size of the hard
+	drive:</para>
+
+      <screen>&prompt.root; <userinput>newfs -U /dev/hast/test</userinput>
+&prompt.root; <userinput>mkdir /hast/test</userinput>
+&prompt.root; <userinput>mount /dev/hast/test /hast/test</userinput></screen>
+
+      <para>Once the <acronym>HAST</acronym> framework is configured
+	properly, the final step is to make sure that
+	<acronym>HAST</acronym> is started during the system boot time
+	automatically.  The following line should be added to the
+	<filename>/etc/rc.conf</filename> file:</para>
+
+      <programlisting>hastd_enable="YES"</programlisting>
+
+      <sect3>
+	<title>Failover Configuration</title>
+
+	<para>The goal of this example is to build a robust storage
+	  system which is resistant from the failures of any given node.
+	  The key task here is to remedy a scenario when a
+	  <literal>primary</literal> node of the cluster fails.  Should
+	  it happen, the <literal>secondary</literal> node is there to
+	  take over seamlessly, check and mount the file system, and
+	  continue to work without missing a single bit of data.</para>
+
+	<para>In order to accomplish this task, it will be required to
+	  utilize another feature available under &os; which provides
+	  for automatic failover on the IP layer &mdash;
+	  <acronym>CARP</acronym>.  <acronym>CARP</acronym> stands for
+	  Common Address Redundancy Protocol and allows multiple hosts
+	  on the same network segment to share an IP address.  Set up
+ 	  <acronym>CARP</acronym> on both nodes of the cluster according
+	  to the documentation available in <xref linkend="carp">.
+	  After completing this task, each node should have its own
+	  <devicename>carp0</devicename> interface with a shared IP
+	  address <replaceable>172.16.0.254</replaceable>.
+	  Obviously, the primary <acronym>HAST</acronym> node of the
+	  cluster has to be the master <acronym>CARP</acronym>
+	  node.</para>
+
+	<para>The <acronym>HAST</acronym> pool created in the previous
+	  section is now ready to be exported to the other hosts on
+	  the network.  This can be accomplished by exporting it
+	  through <acronym>NFS</acronym>,
+	  <application>Samba</application> etc, using the shared IP
+	  address <replaceable>172.16.0.254</replaceable>.  The only
+	  problem which remains unresolved is an automatic failover
+	  should the primary node fail.</para>
+
+	<para>In the event of <acronym>CARP</acronym> interfaces going
+	  up or down, the &os; operating system generates a &man.devd.8;
+	  event, which makes it possible to watch for the state changes
+	  on the <acronym>CARP</acronym> interfaces.  A state change on
+	  the <acronym>CARP</acronym> interface is an indication that
+	  one of the nodes failed or came back online.  In such a case,
+	  it is possible to run a particular script which will
+	  automatically handle the failover.</para>
+
+	<para>To be able to catch the state changes on the
+	  <acronym>CARP</acronym> interfaces, the following
+	  configuration has to be added to the
+	  <filename>/etc/devd.conf</filename> file on each node:</para>
+
+	<programlisting>notify 30 {
+	match "system" "IFNET";
+	match "subsystem" "carp0";
+	match "type" "LINK_UP";
+	action "/usr/local/sbin/carp-hast-switch master";
+};
+
+notify 30 {
+	match "system" "IFNET";
+	match "subsystem" "carp0";
+	match "type" "LINK_DOWN";
+	action "/usr/local/sbin/carp-hast-switch slave";
+};</programlisting>
+
+	<para>To put the new configuration into effect, run the
+	  following command on both nodes:</para>
+
+	<screen>&prompt.root; <userinput>/etc/rc.d/devd restart</userinput></screen>
+
+	<para>In the event that the <devicename>carp0</devicename>
+	  interface goes up or down (i.e. the interface state changes),
+	  the system generates a notification, allowing the &man.devd.8;
+	  subsystem to run an arbitrary script, in this case
+	  <filename>/usr/local/sbin/carp-hast-switch</filename>.  This
+	  is the script which will handle the automatic
+	  failover.  For further clarification about the above
+	  &man.devd.8; configuration, please consult the
+	  &man.devd.conf.5; manual page.</para>
+
+	<para>An example of such a script could be following:</para>
+
+<programlisting>#!/bin/sh
+
+# Original script by Freddie Cash &lt;fjwcash@gmail.com&gt;
+# Modified by Michael W. Lucas &lt;mwlucas@BlackHelicopters.org&gt;
+# and Viktor Petersson &lt;vpetersson@wireload.net&gt;
+
+# The names of the HAST resources, as listed in /etc/hast.conf
+resources="test"
+
+# delay in mounting HAST resource after becoming master
+# make your best guess
+delay=3
+
+# logging
+log="local0.debug"
+name="carp-hast"
+
+# end of user configurable stuff
+
+case "$1" in
+	master)
+		logger -p $log -t $name "Switching to primary provider for ${resources}."
+		sleep ${delay}
+
+		# Wait for any "hastd secondary" processes to stop
+		for disk in ${resources}; do
+			while $( pgrep -lf "hastd: ${disk} \(secondary\)" > /dev/null 2>&1 ); do
+				sleep 1
+			done
+
+			# Switch role for each disk
+			hastctl role primary ${disk}
+			if [ $? -ne 0 ]; then
+				logger -p $log -t $name "Unable to change role to primary for resource ${disk}."
+				exit 1
+			fi
+		done
+
+		# Wait for the /dev/hast/* devices to appear
+		for disk in ${resources}; do
+			for I in $( jot 60 ); do
+				[ -c "/dev/hast/${disk}" ] && break
+				sleep 0.5
+			done
+
+			if [ ! -c "/dev/hast/${disk}" ]; then
+				logger -p $log -t $name "GEOM provider /dev/hast/${disk} did not appear."
+				exit 1
+			fi
+		done
+
+		logger -p $log -t $name "Role for HAST resources ${resources} switched to primary."
+
+
+		logger -p $log -t $name "Mounting disks."
+		for disk in ${resources}; do
+			mkdir -p /hast/${disk}
+			fsck -p -y -t ufs /dev/hast/${disk}
+			mount /dev/hast/${disk} /hast/${disk}
+		done
+
+	;;
+
+	slave)
+		logger -p $log -t $name "Switching to secondary provider for ${resources}."
+
+		# Switch roles for the HAST resources
+		for disk in ${resources}; do
+			if ! mount | grep -q "^${disk} on "
+			then
+			else
+				umount -f /hast/${disk}
+			fi
+			sleep $delay
+			hastctl role secondary ${disk} 2>&1
+			if [ $? -ne 0 ]; then
+				logger -p $log -t $name "Unable to switch role to secondary for resource ${disk}."
+				exit 1
+			fi
+			logger -p $log -t $name "Role switched to secondary for resource ${disk}."
+		done
+	;;
+esac</programlisting>
+
+	<para>In a nutshell, the script does the following when a node
+	  becomes <literal>master</literal> /
+	  <literal>primary</literal>:</para>
+
+	<itemizedlist>
+	  <listitem>
+	    <para>Promotes the <acronym>HAST</acronym> pools as
+	      primary on a given node.</para>
+	  </listitem>
+	  <listitem>
+	    <para>Checks the file system under the
+	      <acronym>HAST</acronym> pool.</para>
+	  </listitem>
+	  <listitem>
+	    <para>Mounts the pools at appropriate place.</para>
+	  </listitem>
+	</itemizedlist>
+
+	<para>When a node becomes <literal>backup</literal> /
+	  <literal>secondary</literal>:</para>
+
+	<itemizedlist>
+	  <listitem>
+	    <para>Unmounts the <acronym>HAST</acronym> pools.</para>
+	  </listitem>
+	  <listitem>
+	    <para>Degrades the <acronym>HAST</acronym> pools to
+	      secondary.</para>
+	  </listitem>
+	</itemizedlist>
+
+	<caution>
+	  <para>Keep in mind that this is just an example script which
+	    should serve as a proof of concept solution.  It does not
+	    handle all the possible scenarios and can be extended or
+	    altered in any way, for example it can start/stop required
+	    services etc.</para>
+	</caution>
+
+	<tip>
+	  <para>For the purpose of this example we used a standard UFS
+	    file system.  In order to reduce the time needed for
+	    recovery, a journal-enabled UFS or ZFS file system can
+	    be used.</para>
+	</tip>
+
+	<para>More detailed information with additional examples can be
+	  found in the <ulink
+	    url="http://wiki.FreeBSD.org/HAST">HAST Wiki</ulink>
+	  page.</para>
+      </sect3>
+    </sect2>
+    <sect2>
+      <title>Troubleshooting</title>
+
+      <sect3>
+	<title>General Troubleshooting Tips</title>
+
+	<para><acronym>HAST</acronym> should be generally working
+	  without any issues, however as with any other software
+	  product, there may be times when it does not work as
+	  supposed.  The sources of the problems may be different, but
+	  the rule of thumb is to ensure that the time is synchronized
+	  between all nodes of the cluster.</para>
+
+	<para>The debugging level of the &man.hastd.8; should be
+	  increased when troubleshooting <acronym>HAST</acronym>
+	  problems.  This can be accomplished by starting the
+	  &man.hastd.8; daemon with the <literal>-d</literal>
+	  argument.  Note, that this argument may be specified
+	  multiple times to further increase the debugging level.  A
+	  lot of useful information may be obtained this way.  It
+	  should be also considered to use <literal>-F</literal>
+	  argument, which will start the &man.hastd.8; daemon in
+	  foreground.</para>
+     </sect3>
+
+      <sect3 id="disks-hast-sb">
+	<title>Recovering from the Split-brain Condition</title>
+
+	<para>The consequence of a situation when both nodes of the
+	  cluster are not able to communicate with each other and both
+	  are configured as primary nodes is called
+	  <literal>split-brain</literal>.  This is a dangerous
+	  condition because it allows both nodes to make incompatible
+	  changes to the data.  This situation has to be handled by
+	  the system administrator manually.</para>
+
+	<para>In order to fix this situation the administrator has to
+	  decide which node has more important changes (or merge them
+	  manually) and let the <acronym>HAST</acronym> perform
+	  the full synchronization of the node which has the broken
+	  data.  To do this, issue the following commands on the node
+	  which needs to be resynchronized:</para>
+
+        <screen>&prompt.root; <userinput>hastctl role init &lt;resource&gt;</userinput>
+&prompt.root; <userinput>hastctl create &lt;resource&gt;</userinput>
+&prompt.root; <userinput>hastctl role secondary &lt;resource&gt;</userinput></screen>
+      </sect3>
+    </sect2>
+  </sect1>
 </chapter>
 
 <!--
