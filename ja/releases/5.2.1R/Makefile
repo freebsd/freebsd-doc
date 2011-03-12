@@ -1,5 +1,5 @@
-# $FreeBSD$
-# Original revision: 1.2
+# $FreeBSD: www/ja/releases/5.2.1R/Makefile,v 1.1 2004/03/05 04:29:47 rushani Exp $
+# Original revision: 1.5
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -8,8 +8,10 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS=	hardware.sgml relnotes.sgml
-DOCS+=	announce.sgml
+DOCS=	announce.sgml
+DOCS+=	hardware.sgml
+#DOCS+=	installation.sgml
+DOCS+=	relnotes.sgml
 
 DATA=	docbook.css
 DATA+=  errata.html
@@ -20,6 +22,13 @@ DATA+=  hardware-ia64.html
 DATA+=  hardware-i386.html
 DATA+=  hardware-pc98.html
 DATA+=  hardware-sparc64.html
+#DATA+=  installation-alpha.html
+#DATA+=  installation-amd64.html
+#DATA+=  installation-ia64.html
+#DATA+=  installation-i386.html
+#DATA+=  installation-pc98.html
+#DATA+=  installation-sparc64.html
+#DATA+=  readme.html
 DATA+=  relnotes-alpha.html
 DATA+=  relnotes-amd64.html
 DATA+=  relnotes-ia64.html
