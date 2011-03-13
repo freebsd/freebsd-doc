@@ -1,6 +1,6 @@
-# $FreeBSD: www/ja/java/Makefile,v 1.11 2000/12/31 11:08:41 hrs Exp $
+# $FreeBSD: www/ja/java/Makefile,v 1.12 2001/04/03 19:13:11 hrs Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.3
+# Original revision: 1.4
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -14,11 +14,10 @@ SUBDIR =	dists
 SUBDIR+=	links
 
 DOCS =  advocacy.sgml
-#DOCS+=  howhelp.sgml
+DOCS+=  howhelp.sgml
 DOCS+=  index.sgml
 DOCS+=  install.sgml
 DOCS+=  newsflash.sgml
-DOCS+=  press.sgml
 
 ### Revision checking
 REVCHECK= YES
