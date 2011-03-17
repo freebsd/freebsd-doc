@@ -1,6 +1,6 @@
-# $FreeBSD: www/ja/internal/Makefile,v 1.20 2002/05/13 20:09:04 hrs Exp $
+# $FreeBSD: www/ja/internal/Makefile,v 1.21 2004/01/10 18:37:58 rushani Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.38
+# Original revision: 1.49
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -9,25 +9,41 @@
 .include "../Makefile.inc"
 .endif
 
-# DOCS=   photos.sgml     
-DOCS+=  internal.sgml   
 DOCS+=  about.sgml
+#DOCS+=	bylaws.sgml
+#DOCS+=	core-vote.sgml
+DOCS+=	developer.sgml
+#DOCS+=	doceng.sgml
+#DOCS+=	expire-bits.sgml
+#DOCS+=	fortunes.sgml
+#DOCS+=	i18n.sgml
+DOCS+=  internal.sgml   
 DOCS+=  machines.sgml
 DOCS+=  mirror.sgml
 #DOCS+=	new-account.sgml
-DOCS+=	statistic.sgml
-DOCS+=	developer.sgml
-#DOCS+=	bylaws.sgml
+#DOCS+=	policies.sgml
 #DOCS+=	releng.sgml
-#DOCS+=	expire-bits.sgml
-#DOCS+=	core-vote.sgml
-#DOCS+=	trb-dispute.sgml
-#DOCS+=	doceng.sgml
-#DOCS+=	rtp.sgml
+DOCS+=	statistic.sgml
 
 INDEXLINK=	internal.html
 
-# DATA+=  README.mirror
+# build the list of personal homepages of FreeBSD developers only 
+# on the main FreeBSD machines
+#hostname!= hostname
+#.if ${hostname} == "hub.freebsd.org" || ${hostname} == "freefall.freebsd.org" || ${hostname} == "www.freebsd.org"
+#DOCS+=	homepage.sgml
+#
+#.if !make(install)
+#.PHONY: homepage.inc
+#.endif
+#homepage.inc: homepage.pl
+#	${PERL} ${.CURDIR}/homepage.pl > ${.TARGET}
+#
+#homepage.html:  homepage.inc
+#CLEANFILES+=	homepage.inc
+#.endif
+#
+#DATA+=	README.mirror ssh-keys.asc
 
 ### Revision checking
 REVCHECK=	yes

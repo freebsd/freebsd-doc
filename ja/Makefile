@@ -1,6 +1,6 @@
-# $FreeBSD: www/ja/Makefile,v 1.78 2010/05/07 12:37:15 ryusuke Exp $
+# $FreeBSD: www/ja/Makefile,v 1.79 2010/07/05 17:00:55 ryusuke Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.114
+# Original revision: 1.133
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -23,7 +23,6 @@ DOCS+= publish.sgml
 DOCS+= relnotes.sgml
 DOCS+= send-pr.sgml
 DOCS+= support.sgml
-#DOCS+= usergroups.sgml
 DOCS+= where.sgml 
 DOCS+= y2kbug.sgml 
 
@@ -44,50 +43,55 @@ DEPENDSET.community=usergroups events
 # These will be directly installed.
 
 #DATA=	favicon.ico
-#DATA+=	robots.txt
 DATA+=	freebsd.css
-#DATA+=  vendors.html
+#DATA+=	robots.txt
+#DATA+= vendors.html
 
 # Subdirectories
 # SGML
-SUBDIR=	 security
+SUBDIR= FAQ
+#SUBDIR+= advocacy
 SUBDIR+= commercial
 SUBDIR+= community
+SUBDIR+= copyright
+SUBDIR+= developers
 SUBDIR+= docproj
 SUBDIR+= docs
-SUBDIR+= developers
-SUBDIR+= news
-#SUBDIR+= advocacy
-
+#SUBDIR+= donations
 SUBDIR+= events
-SUBDIR+= FAQ
+#SUBDIR+= gnome
 SUBDIR+= handbook
-SUBDIR+= tutorials
 SUBDIR+= internal
 SUBDIR+= java
-SUBDIR+= copyright
-SUBDIR+= search
+#SUBDIR+= kse
+#SUBDIR+= layout
+#SUBDIR+= marketing
+SUBDIR+= news
+SUBDIR+= platforms
+#SUBDIR+= portmgr
 SUBDIR+= projects
 SUBDIR+= prstats
-SUBDIR+= platforms
 SUBDIR+= releases
 #SUBDIR+= releng
+SUBDIR+= search
+SUBDIR+= security
 SUBDIR+= smp
+#SUBDIR+= snapshots
 SUBDIR+= support
-#SUBDIR+= kse
-#SUBDIR+= gnome
-#SUBDIR+= donations
+SUBDIR+= tutorials
+
 .if !defined(WEB_ONLY) || empty(WEB_ONLY)
-SUBDIR+= ports
 SUBDIR+= doc
+SUBDIR+= ports
 # .endif
 # .if defined(BUILD_RELNOTES)
 # SUBDIR+= relnotes
 .endif
 
 # Non-SGML
-#SUBDIR+= gifs
 #SUBDIR+= cgi
+#SUBDIR+= gifs
+#SUBDIR+= layout
 
 WEBDIR?=	data/ja
 
