@@ -2,7 +2,7 @@
      The FreeBSD Documentation Project
      The FreeBSD Japanese Documentation Project
 
-     Original revision: 1.257
+     Original revision: 1.258
      $FreeBSD$
 -->
 
@@ -2087,46 +2087,656 @@ EXTRACT_ONLY=  source.tar.gz</programlisting>
 	</note>
       </sect2>
 
-      <sect2>
-	<title>異なるサイトからの複数の配布ファイル</title>
+      <sect2 id="porting-master-sites-n">
+	<title>異なるサイトやサブディレクトリからの複数の配布ファイルまたはパッチ
+	  (<literal>MASTER_SITES:n</literal>)</title>
 
-	<para>アプリケーションによっては、
-	  いくつもの異なるサイトからダウンロードする複数の配布ファイルからなっているものがあります。
-	  たとえば、<application>Ghostscript</application>
-	  は、中核部のプログラムと、
-	  ユーザのプリンタに応じて使われる多数のドライバファイルからなっています。
-	  このドライバファイルの一部は中核部と共に供給されますが、
-	  多くはさまざまなサイトからダウンロードしなければなりません。</para>
+	<para>この節は <literal>MASTER_SITES:n</literal> や
+	  <literal>MASTER_SITES_NN</literal>
+	  と呼ばれる取得方法について説明しています。
+	  ここでは、この方式を <literal>MASTER_SITES:n</literal>
+	  と呼びます。</para>
 
-	<para>これに対応するため、<makevar>DISTFILES</makevar>
-	  の各項目の後ろには、コロンと<quote>タグ名称</quote>
-	  をつけられるようになっています。<makevar>MASTER_SITES</makevar>
-	  に設定されているそれぞれのサイトの末尾にも、コロンと、
-	  そのサイトからダウンロードすべきファイルを示すためのタグを加えます。</para>
+	<para>まず、背景を少し説明しておきましょう。OpenBSD
+	  には、<makevar>DISTFILES</makevar> と
+	  <makevar>PATCHFILES</makevar>
+	  変数の両方に素敵な機能があります。ファイル、パッチの両方とも、
+	  後ろに <literal>:n</literal> (<literal>n</literal>
+	  は <literal>[0-9]</literal> のどれかになります)
+	  をつけてグループを指示できます。たとえば、</para>
 
-	<para>たとえば、ソースコードが
-	  <filename>source1.tar.gz</filename> と
-	  <filename>source2.tar.gz</filename> に分けられていて、
-	  2 つの別のサイトからダウンロードしなければならないアプリケーションを考えてみましょう。
-	  その port の <filename>Makefile</filename>
-	  には、次のような行があるでしょう。</para>
+	<programlisting>DISTFILES=      alpha:0 beta:1</programlisting>
 
-	<programlisting>MASTER_SITES= ftp://ftp.example1.com/:source1 \
-              ftp://ftp.example2.com/:source2
-DISTFILES=    source1.tar.gz:source1 \
-              source2.tar.gz:source2</programlisting>
+	<para>OpenBSD では、配布ファイル <filename>alpha</filename>
+	  は、通常の <makevar>MASTER_SITES</makevar> ではなく
+	  <makevar>MASTER_SITES0</makevar> に、
+	  <filename>beta</filename> は <makevar>MASTER_SITES1</makevar>
+	  に結び付けられます。</para>
+
+	<para>これは、正しいダウンロードサイトを際限なく探す羽目になるのを減らせる、
+	  興味深い機能です。</para>
+
+	<para><makevar>DISTFILES</makevar> にファイルが
+	  2 つ指定され、<makevar>MASTER_SITES</makevar> が
+	  20 サイトあって、サイトはものすごく遅く、
+	  <filename>beta</filename> は <makevar>MASTER_SITES</makevar>
+	  中のすべてのサイトに置かれていますが、
+	  <filename>alpha</filename> は
+	  20 番目のサイトにしかないという場合を考えてください。
+	  メンテナがあらかじめそのことを知っていたら、
+	  すべてのサイトを確認するのは無駄だと思いませんか?
+	  楽しい週末のはじまりというわけにはゆきませんね。</para>
+
+	<para>イメージできたら、今度は <makevar>DISTFILES</makevar>
+	  や <makevar>MASTER_SITES</makevar>
+	  がもっと沢山あるのを想像してください。
+	  <quote>distfiles 調査マイスタ</quote>は、
+	  ネットワーク負荷が緩和されることを喜ぶに違いありません。</para>
+
+	<para>次節からは、FreeBSD におけるこのアイディアの実装について説明します。
+	  OpenBSD の考え方を多少改良しています。</para>
+
+	<sect3>
+	  <title>簡単な説明</title>
+
+	  <para>この節では、複数の配布ファイルやパッチを、
+	    異なるサイトやサブディレクトリから細かく分けて取得する簡単な設定を示します。
+	    ここでは、単純化した <literal>MASTER_SITES:n</literal>
+	    の使い方を説明します。ほとんどの場面ではこれで十分です。
+	    さらに詳しいことを知りたければ、次の節をお読みください。</para>
+
+	  <para>アプリケーションによっては、
+	    いくつもの異なるサイトからダウンロードする複数の配布ファイルからなっているものがあります。
+	    たとえば、<application>Ghostscript</application>
+	    は、中核部のプログラムと、
+	    ユーザのプリンタに応じて使い分けられる多数のドライバファイルからなっています。
+	    このドライバファイルの一部は中核部と共に配布されますが、
+	    多くはさまざまなサイトからダウンロードしなければなりません。</para>
+
+	  <para>これに対応するため、<makevar>DISTFILES</makevar>
+	    の各項目の後ろには、コロンと<quote>タグ名</quote>
+	    をつけられるようになっています。<makevar>MASTER_SITES</makevar>
+	    に設定されているそれぞれのサイトの末尾にも、コロンと、
+	    そのサイトからダウンロードすべきファイルを示すためのタグを加えます。</para>
+
+	  <para>たとえば、ソースコードが
+	    <filename>source1.tar.gz</filename> と
+	    <filename>source2.tar.gz</filename> の
+	    2 つに分けられていて、
+	    2 つの別のサイトからダウンロードしなければならないアプリケーションを考えてみましょう。
+	    その port の <filename>Makefile</filename>
+	    には、<xref
+	      linkend="ports-master-sites-n-example-simple-use-one-file-per-site">
+	    のような行があるとします。</para>
+
+	  <example
+	    id="ports-master-sites-n-example-simple-use-one-file-per-site">
+	    <title>各サイトに 1 つファイルがある場合の、簡単な
+	      <literal>MASTER_SITES:n</literal> の使用法</title>
+
+	    <programlisting>MASTER_SITES=   ftp://ftp.example1.com/:source1 \
+                ftp://ftp.example2.com/:source2
+DISTFILES=      source1.tar.gz:source1 \
+                source2.tar.gz:source2</programlisting>
+	  </example>
 
 	<para>複数の配布ファイルに同じタグがついていてもかまいません。
 	  先ほどの例に続いて、3 番目の配布ファイル
 	  <filename>source3.tar.gz</filename> があって、
 	  <hostid>ftp.example2.com</hostid> からダウンロードすべきだとしましょう。
-	  <filename>Makefile</filename> は次のようになります。</para>
+	  <filename>Makefile</filename> は <xref
+	      linkend="ports-master-sites-n-example-simple-use-more-than-one-file-per-site">
+	    のようになります。</para>
 
-	<programlisting>MASTER_SITES= ftp://ftp.example1.com/:source1 \
-              ftp://ftp.example2.com/:source2
-DISTFILES=    source1.tar.gz:source1 \
-              source2.tar.gz:source2 \
-              source3.tar.gz:source2</programlisting>
+	  <example
+	    id="ports-master-sites-n-example-simple-use-more-than-one-file-per-site">
+	    <title>各サイトに 1 つ以上ファイルがある場合の、簡単な
+	      <literal>MASTER_SITES:n</literal> の使用法</title>
+
+	    <programlisting>MASTER_SITES=   ftp://ftp.example1.com/:source1 \
+                ftp://ftp.example2.com/:source2
+DISTFILES=      source1.tar.gz:source1 \
+                source2.tar.gz:source2 \
+                source3.tar.gz:source2</programlisting>
+	  </example>
+	</sect3>
+
+	<sect3>
+	  <title>詳しい説明</title>
+
+	  <para>分かりました。
+	    前節の例ではあなたの要求を満足できなかったわけですね。
+	    この節では、ファイルの取得を細かく制御する仕組み
+	    <literal>MASTER_SITES:n</literal>
+	    がどう働くかと、これを利用するために
+	    ports をどう変更すればよいかを詳しく説明します。</para>
+
+	  <orderedlist>
+	    <listitem>
+	      <para>要素の末尾に
+		<literal>:<replaceable>n</replaceable></literal>
+		をつけることができます。
+		ここで、<replaceable>n</replaceable> は
+		<literal>[^:,]+</literal>
+		つまり、概念上はいかなる文字と数字からなる文字列でもよいのですが、
+		われわれとしては、当面は
+		<literal>[a-zA-Z_][0-9a-zA-Z_]+</literal>
+		に制限します。</para>
+
+	      <para>さらに、文字列のマッチは大文字と小文字を区別します。
+		つまり、<literal>n</literal> と <literal>N</literal>
+		は別の文字として扱われます。</para>
+
+	      <para>しかし、
+		<literal>default</literal>, <literal>all</literal>,
+		<literal>ALL</literal>
+		は特別な意味を与えられているので、
+		末尾に付加するのには使えません
+		(これは、<xref
+		  linkend="porting-master-sites-n-what-changes-in-port-targets">
+		項で内部的に利用されています)。
+		さらに、<literal>DEFAULT</literal>
+		は特別な意味を持つ単語です
+		(<xref
+		  linkend="porting-master-sites-n-DEFAULT-group">
+		の項を確認してください)。</para>
+	    </listitem>
+
+	    <listitem>
+	      <para><literal>:n</literal> がついた要素は、グループ
+		<literal>n</literal> に属し、
+		<literal>:m</literal> がついた要素は、グループ
+		<literal>m</literal>
+		に属するということになります。</para>
+	    </listitem>
+
+	    <listitem id="porting-master-sites-n-DEFAULT-group">
+	      <para>接尾辞がついていない要素はグループに属しません。
+		これは、特別なグループ <literal>DEFAULT</literal>
+		に属しているとして扱われます。
+		要素の後ろに <literal>DEFAULT</literal>
+		をつけるのは、その要素を <literal>DEFAULT</literal>
+		とそれ以外のグループに同時に割り当てたいのでなければ、
+		冗長に過ぎません
+		(<xref linkend="porting-master-sites-n-comma-operator">
+		の項を確認してください)。</para>
+
+	      <para>次の例はどちらも同じ意味ですが、
+		最初の方が好ましいです。</para>
+
+	      <programlisting>MASTER_SITES=   alpha
+
+MASTER_SITES=   alpha:DEFAULT</programlisting>
+	    </listitem>
+
+	    <listitem>
+	      <para>グループは相互排他ではありません。
+		ひとつの要素が同時に複数のグループに属することができ、
+		ひとつのグループには複数の要素が属することも、
+		何も割り当てないこともできます。
+		同じグループで何回も指定された要素は、
+		単に複数回指定された要素ということになります。</para>
+	    </listitem>
+
+	    <listitem id="porting-master-sites-n-comma-operator">
+	      <para>ある要素を同時にいくつものグループに所属させたい時は、
+		カンマ演算子 (<literal>,</literal>) が使えます。</para>
+
+	      <para>その都度別の接尾辞をつけて繰り返すかわりに、
+		一度だけ接尾辞を指定して複数のグループを指定できます。
+		たとえば、<literal>:m,n,o</literal>
+		と書くと、その要素はグループ <literal>m</literal>,
+		<literal>n</literal> および <literal>o</literal>
+		に属することを示します。</para>
+
+	      <para>以下の例はすべて同等ですが、
+		最後の形式がもっともよいでしょう。</para>
+
+	      <programlisting>MASTER_SITES=   alpha alpha:SOME_SITE
+
+MASTER_SITES=   alpha:DEFAULT alpha:SOME_SITE
+
+MASTER_SITES=   alpha:SOME_SITE,DEFAULT
+
+MASTER_SITES=   alpha:DEFAULT,SOME_SITE</programlisting>
+	    </listitem>
+
+	    <listitem>
+	      <para>任意のグループ内のサイトは、
+		<makevar>MASTER_SORT_AWK</makevar>
+		によって整列されます。
+		<makevar>MASTER_SITES</makevar> と
+		<makevar>PATCH_SITES</makevar>
+		内のすべてのグループについても同様に整列されます。</para>
+	    </listitem>
+
+	    <listitem id="porting-master-sites-n-group-semantics">
+	      <para>グループの概念は、変数 
+		<makevar>MASTER_SITES</makevar>,
+		<makevar>PATCH_SITES</makevar>,
+		<makevar>MASTER_SITE_SUBDIR</makevar>,
+		<makevar>PATCH_SITE_SUBDIR</makevar>,
+		<makevar>DISTFILES</makevar> および
+		<makevar>PATCHFILES</makevar>
+		においても、下記の文法に従って使えます。</para>
+
+	      <orderedlist>
+		<listitem>
+		  <para><makevar>MASTER_SITES</makevar>,
+		    <makevar>PATCH_SITES</makevar>,
+		    <makevar>MASTER_SITE_SUBDIR</makevar> および
+		    <makevar>PATCH_SITE_SUBDIR</makevar>
+		    のすべての要素はスラッシュ <literal>/</literal>
+		    記号で終端されていなければなりません。
+		    ある要素がどれかのグループに属しているなら、
+		    グループの接尾辞
+		    <literal>:<replaceable>n</replaceable></literal>
+		    は、終端記号 <literal>/</literal>
+		    のすぐ後にこなければなりません。
+		    <literal>MASTER_SITES:n</literal>
+		    の仕組みでは、終端記号
+		    <literal>/</literal> があることで、
+		    <literal>:n</literal> が要素の有効な一部である場合と、
+		    <literal>:n</literal> がグループ <literal>n</literal>
+		    を示す場合の混同を避けることができます。
+		    以前は、
+		    <makevar>MASTER_SITE_SUBDIR</makevar> と
+		    <makevar>PATCH_SITE_SUBDIR</makevar>
+		    要素のいずれにおいても終端記号 <literal>/</literal>
+		    は不要だったので、互換性を保つために、
+		    接尾辞の直前の文字が <literal>/</literal>
+		    でなければ、
+		    要素の接尾辞が <literal>:n</literal> であっても、
+		    グループの接尾語ではなく、
+		    要素の有効な一部分として扱われます。
+		    <xref
+		      linkend="ports-master-sites-n-example-detailed-use-master-site-subdir">
+		    と <xref
+		      linkend="ports-master-sites-n-example-detailed-use-complete-example-master-sites">
+		    の両方をご覧ください。</para>
+
+		  <example id="ports-master-sites-n-example-detailed-use-master-site-subdir">
+		    <title><makevar>MASTER_SITE_SUBDIR</makevar> における
+		      <literal>MASTER_SITES:n</literal> の詳細な使用法</title>
+
+		    <programlisting>MASTER_SITE_SUBDIR=     old:n new/:NEW</programlisting>
+
+		    <itemizedlist>
+		      <listitem>
+			<para>グループ <literal>DEFAULT</literal>
+			  に属するディレクトリ -> old:n</para>
+		      </listitem>
+
+		      <listitem>
+			<para>グループ <literal>NEW</literal>
+			  に属するディレクトリ -> new</para>
+		      </listitem>
+		    </itemizedlist>
+		  </example>
+
+		  <example
+		    id="ports-master-sites-n-example-detailed-use-complete-example-master-sites">
+		      <title>カンマ演算子、複数のファイル、複数のサイト、
+			複数のサブディレクトリと合わせた
+			<literal>MASTER_SITES:n</literal>
+			の詳細な使用法</title>
+
+		    <programlisting>MASTER_SITES=   http://site1/%SUBDIR%/ http://site2/:DEFAULT \
+                http://site3/:group3 http://site4/:group4 \
+                http://site5/:group5 http://site6/:group6 \
+                http://site7/:DEFAULT,group6 \
+                http://site8/%SUBDIR%/:group6,group7 \
+                http://site9/:group8
+DISTFILES=      file1 file2:DEFAULT file3:group3 \
+                file4:group4,group5,group6 file5:grouping \
+                file6:group7
+MASTER_SITE_SUBDIR=     directory-trial:1 directory-n/:groupn \
+                        directory-one/:group6,DEFAULT \
+                        directory</programlisting>
+
+		    <para>上の例は、次のような細かく分けた取得を実現します。
+		      サイトは、利用される順番で挙げられています。</para>
+
+		    <itemizedlist>
+		      <listitem>
+			<para><filename>file1</filename>
+			  は次のサイトから取得されます。</para>
+
+			<itemizedlist>
+			  <listitem>
+			    <para><makevar>MASTER_SITE_OVERRIDE</makevar></para>
+			  </listitem>
+
+			  <listitem>
+			    <para>http://site1/directory/</para>
+			  </listitem>
+
+			  <listitem>
+			    <para>http://site1/directory-one/</para>
+			  </listitem>
+
+			  <listitem>
+			    <para>http://site1/directory-trial:1/</para>
+			  </listitem>
+
+			  <listitem>
+			    <para>http://site2/</para>
+			  </listitem>
+
+			  <listitem>
+			    <para>http://site7/</para>
+			  </listitem>
+
+			  <listitem>
+			    <para><makevar>MASTER_SITE_BACKUP</makevar></para>
+			  </listitem>
+			</itemizedlist>
+		      </listitem>
+
+		      <listitem>
+			<para><filename>file2</filename>
+			  は、<filename>file1</filename>
+			  と同じグループに属しているので、
+			  まったく同じように取得されます。</para>
+
+			<itemizedlist>
+			  <listitem>
+			    <para><makevar>MASTER_SITE_OVERRIDE</makevar></para>
+			  </listitem>
+
+			  <listitem>
+			    <para>http://site1/directory/</para>
+			  </listitem>
+
+			  <listitem>
+			    <para>http://site1/directory-one/</para>
+			  </listitem>
+
+			  <listitem>
+			    <para>http://site1/directory-trial:1/</para>
+			  </listitem>
+
+			  <listitem>
+			    <para>http://site2/</para>
+			  </listitem>
+
+			  <listitem>
+			    <para>http://site7/</para>
+			  </listitem>
+
+			  <listitem>
+			    <para><makevar>MASTER_SITE_BACKUP</makevar></para>
+			  </listitem>
+			</itemizedlist>
+		      </listitem>
+
+		      <listitem>
+			<para><filename>file3</filename>
+			  は次のサイトから取得されます。</para>
+
+			<itemizedlist>
+			  <listitem>
+			    <para><makevar>MASTER_SITE_OVERRIDE</makevar></para>
+			  </listitem>
+
+			  <listitem>
+			    <para>http://site3/</para>
+			  </listitem>
+
+			  <listitem>
+			    <para><makevar>MASTER_SITE_BACKUP</makevar></para>
+			  </listitem>
+			</itemizedlist>
+		      </listitem>
+
+		      <listitem>
+			<para><filename>file4</filename>
+			  は次のサイトから取得されます。</para>
+
+			<itemizedlist>
+			  <listitem>
+			    <para><makevar>MASTER_SITE_OVERRIDE</makevar></para>
+			  </listitem>
+
+			  <listitem>
+			    <para>http://site4/</para>
+			  </listitem>
+
+			  <listitem>
+			    <para>http://site5/</para>
+			  </listitem>
+
+			  <listitem>
+			    <para>http://site6/</para>
+			  </listitem>
+
+			  <listitem>
+			    <para>http://site7/</para>
+			  </listitem>
+
+			  <listitem>
+			    <para>http://site8/directory-one/</para>
+			  </listitem>
+
+			  <listitem>
+			    <para><makevar>MASTER_SITE_BACKUP</makevar></para>
+			  </listitem>
+			</itemizedlist>
+		      </listitem>
+
+		      <listitem>
+			<para><filename>file5</filename>
+			  は次のサイトから取得されます。</para>
+
+			<itemizedlist>
+			  <listitem>
+			    <para><makevar>MASTER_SITE_OVERRIDE</makevar></para>
+			  </listitem>
+
+			  <listitem>
+			    <para><makevar>MASTER_SITE_BACKUP</makevar></para>
+			  </listitem>
+			</itemizedlist>
+		      </listitem>
+
+		      <listitem>
+			<para><filename>file6</filename>
+			  は次のサイトから取得されます。</para>
+
+			<itemizedlist>
+			  <listitem>
+			    <para><makevar>MASTER_SITE_OVERRIDE</makevar></para>
+			  </listitem>
+
+			  <listitem>
+			    <para>http://site8/directory-one/</para>
+			  </listitem>
+
+			  <listitem>
+			    <para><makevar>MASTER_SITE_BACKUP</makevar></para>
+			  </listitem>
+			</itemizedlist>
+		      </listitem>
+		    </itemizedlist>
+		  </example>
+		</listitem>
+	      </orderedlist>
+	    </listitem>
+
+	    <listitem>
+	      <para><makevar>MASTER_SITE_SOURCEFORGE</makevar>
+		のように、<filename>bsd.sites.mk</filename>
+		で定義される特別な変数をグループに割り当てるにはどうすればよいですか?</para>
+
+	      <para><xref
+		  linkend="ports-master-sites-n-example-detailed-use-master-site-sourceforge">
+		をご覧ください。</para>
+
+	      <example
+		id="ports-master-sites-n-example-detailed-use-master-site-sourceforge">
+		<title><makevar>MASTER_SITE_SOURCEFORGE</makevar>
+		  と合わせた <literal>MASTER_SITES:n</literal>
+		  の詳しい使用法</title>
+
+		<programlisting>MASTER_SITES=   http://site1/ ${MASTER_SITE_SOURCEFORGE:S/$/:sourceforge,TEST/}
+DISTFILES=      something.tar.gz:sourceforge</programlisting>
+	      </example>
+
+	      <para><filename>something.tar.gz</filename>
+		は、<makevar>MASTER_SITE_SOURCEFORGE</makevar>
+		に含まれるあらゆるサイトから取得されます。</para>
+	    </listitem>
+
+	    <listitem>
+	      <para>これを <makevar>PATCH*</makevar>
+		変数と組み合わせて使うにはどうすればよいでしょうか?</para>
+
+	      <para>すべての例で <makevar>MASTER*</makevar>
+		変数を使っていますが、<xref
+		  linkend="ports-master-sites-n-example-detailed-use-patch-sites">
+		にあるように、<makevar>PATCH*</makevar>
+		変数に対してもまったく同じように働きます。</para>
+
+	      <example
+		id="ports-master-sites-n-example-detailed-use-patch-sites">
+		<title><makevar>PATCH_SITES</makevar> と合わせた
+		  <literal>MASTER_SITES:n</literal> の簡単な使用法</title>
+
+		<programlisting>PATCH_SITES=    http://site1/ http://site2/:test
+PATCHFILES=     patch1:test</programlisting>
+	      </example>
+	    </listitem>
+	  </orderedlist>
+	</sect3>
+
+	<sect3>
+	  <title>ports
+	    について何が変更され、何が変わらないのでしょうか?</title>
+
+	  <orderedlist numeration="lowerroman">
+	    <listitem>
+	      <para>現在のすべての ports はそのまま変わりません。
+		<literal>MASTER_SITES:n</literal>
+		機能のコードは、<xref
+		  linkend="porting-master-sites-n-group-semantics">
+		で述べた文法に従う
+		<literal>:<replaceable>n</replaceable></literal>
+		のような形式が後ろについた要素がある場合だけ動作します。</para>
+	    </listitem>
+
+	    <listitem id="porting-master-sites-n-what-changes-in-port-targets">
+	      <para>port を make する際のターゲットにも変更はありません。
+		<maketarget>checksum</maketarget>,
+		<maketarget>makesum</maketarget>,
+		<maketarget>patch</maketarget>,
+		<maketarget>configure</maketarget>,
+		<maketarget>build</maketarget> 等です。
+		もちろん、<maketarget>do-fetch</maketarget>,
+		<maketarget>fetch-list</maketarget>,
+		<maketarget>master-sites</maketarget> それから
+		<maketarget>patch-sites</maketarget>
+		は例外です。</para>
+
+	      <itemizedlist>
+		<listitem>
+		  <para><maketarget>do-fetch</maketarget>
+		    は、新しくグループ分けの接尾辞のついた
+		    <makevar>DISTFILES</makevar> と
+		    <makevar>PATCHFILES</makevar>
+		    を設定します。それぞれが、対応する
+		    <makevar>MASTER_SITES</makevar> と
+		    <makevar>PATCH_SITES</makevar>
+		    を利用し、さらに対応する
+		    <makevar>MASTER_SITE_SUBDIR</makevar> と
+		    <makevar>PATCH_SITE_SUBDIR</makevar>
+		    を利用します。<xref
+		      linkend="ports-master-sites-n-example-detailed-use-complete-example-master-sites">
+		    をご覧ください。</para>
+		</listitem>
+
+		<listitem>
+		  <para><maketarget>fetch-list</maketarget>
+		    は、<maketarget>do-fetch</maketarget>
+		    と同じようにグループを利用するということを除いて、以前の
+		    <maketarget>fetch-list</maketarget>
+		    のように動作します。</para>
+		</listitem>
+
+		<listitem>
+		  <para><maketarget>master-sites</maketarget> および
+		    <maketarget>patch-sites</maketarget> は、
+		    (古いバージョンと互換性がなくなり)
+		    <literal>DEFAULT</literal>
+		    グループの要素を返すだけになっています。
+		    実際は、それぞれ
+		    <maketarget>master-sites-default</maketarget> および
+		    <maketarget>patch-sites-default</maketarget>
+		    というターゲットを実行します。</para>
+
+		  <para>さらに、
+		    <maketarget>MASTER_SITES</maketarget> や
+		    <maketarget>PATCH_SITES</maketarget>
+		    を直接確認するよりも、
+		    <maketarget>master-sites-all</maketarget> または
+		    <maketarget>patch-sites-all</maketarget>
+		    のどちらかのターゲットを使う方がよいです。
+		    また、将来のバージョンでも直接確認ができるかどうかは保証されていません。
+		    これら新規 port ターゲットについては、<xref
+		      linkend="porting-master-sites-n-new-port-targets-master-sites-all">
+		    の項をご確認ください。</para>
+		</listitem>
+
+	      </itemizedlist>
+	    </listitem>
+
+	    <listitem>
+	      <para>新規の port ターゲット</para>
+
+	      <orderedlist>
+		<listitem>
+		  <para><makevar>MASTER_SITES</makevar> および
+		    <makevar>PATCH_SITES</makevar>
+		    のそれぞれについて、
+		    グループ <replaceable>n</replaceable> の要素を表示する
+		    <maketarget>master-sites-<replaceable>n</replaceable></maketarget>
+		    および
+		    <maketarget>patch-sites-<replaceable>n</replaceable></maketarget>
+		    ターゲットがあります。たとえば、
+		    <maketarget>master-sites-DEFAULT</maketarget> および
+		    <maketarget>patch-sites-DEFAULT</maketarget>
+		    のいずれも <literal>DEFAULT</literal>
+		    グループの要素を返し、
+		    <maketarget>master-sites-test</maketarget> および
+		    <maketarget>patch-sites-test</maketarget>
+		    は <literal>test</literal>
+		    グループの要素を返します。</para>
+		</listitem>
+
+		<listitem id="porting-master-sites-n-new-port-targets-master-sites-all">
+		  <para>以前の
+		    <maketarget>master-sites</maketarget> および
+		    <maketarget>patch-sites</maketarget>
+		    が行っていた作業を行う
+		    <maketarget>master-sites-all</maketarget> および
+		    <maketarget>patch-sites-all</maketarget>
+		    という新たなターゲットがあります。
+		    これらのターゲットは、
+		    すべてのグループの要素をすべてが同じグループに属しているかのように返します。
+		    ただし、
+		    <maketarget>master-sites-all</maketarget> および
+		    <maketarget>patch-sites-all</maketarget>
+		    のそれぞれについて、
+		    <makevar>DISTFILES</makevar> や
+		    <makevar>PATCHFILES</makevar>
+		    で定義されているグループと同じ数だけ
+		    <makevar>MASTER_SITE_BACKUP</makevar> と
+		    <makevar>MASTER_SITE_OVERRIDE</makevar>
+		    を表示します。</para>
+		</listitem>
+	      </orderedlist>
+	    </listitem>
+	  </orderedlist>
+	</sect3>
       </sect2>
 
       <sect2>
