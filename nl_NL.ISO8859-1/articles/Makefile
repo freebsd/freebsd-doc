@@ -1,7 +1,7 @@
 # $FreeBSD$
 
 # %SOURCE%	en_US.ISO8859-1/articles/Makefile
-# %SRCID%	1.61
+# %SRCID%	1.62
 
 SUBDIR =
 SUBDIR+= contributing
