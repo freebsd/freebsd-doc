@@ -1,4 +1,4 @@
-# $FreeBSD: www/ja/ports/Makefile,v 1.29 2006/07/16 11:22:04 simon Exp $
+# $FreeBSD: www/ja/ports/Makefile,v 1.30 2006/08/19 21:24:43 hrs Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.37
 
@@ -72,7 +72,21 @@ Makefile.gen: index.sgml .NOTMAIN
 	${ECHO_CMD} NO_TIDY=${NO_TIDY} >> Makefile.gen
 .endif
 
-index.sgml: ${INDEX} categories packages.exists portindex ports.inc .NOTMAIN
+.if defined(CLUSTER_MACHINE)
+PORTS_TARGZ_URL?= ftp://ftp-master.FreeBSD.org/pub/FreeBSD/ports/ports/ports.tar.gz
+.else
+PORTS_TARGZ_URL?= ftp://ftp.FreeBSD.org/pub/FreeBSD/ports/ports/ports.tar.gz
+.endif
+
+ports.size:
+.if defined (NOPORTSNET)
+	touch ${.TARGET}
+.else
+	${RM} -f ${.TARGET}
+	${FETCH} -s ${PORTS_TARGZ_URL} > ${.TARGET}
+.endif
+
+index.sgml: ${INDEX} categories categories.descriptions packages.exists portindex ports.inc ports.size .NOTMAIN
 	${RM} -f *.sgml
 	${PORTINDEX} ${INDEX} ${.CURDIR}
 
