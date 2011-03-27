@@ -7,7 +7,7 @@
 <!ENTITY % developers SYSTEM "../developers.sgml"> %developers;
 ]>
 
-<!-- $FreeBSD: www/en/projects/summerofcode.xsl,v 1.26 2010/03/22 16:22:14 rwatson Exp $ -->
+<!-- $FreeBSD: www/en/projects/summerofcode.xsl,v 1.27 2010/04/06 09:01:38 rwatson Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -40,17 +40,21 @@
 
 <p>The FreeBSD Project is looking forward to participating as a mentoring
   organization in <a
-  href="http://socghop.appspot.com/">Google Summer of
-  Code</a> 2010.  This program funds students to contribute to an open
-  source project over the summer break.  We have had over 85 successful
+  href="http://www.google-melange.com/gsoc/homepage/google/gsoc2011">Google
+  Summer of Code</a> 2011.
+  This program funds students to contribute to an open source project over
+  the summer break.
+  We have had over 100 successful
   students working on FreeBSD as part of this program in <a
   href="&base;/projects/summerofcode-2005.html">2005</a>, <a
   href="&base;/projects/summerofcode-2006.html">2006</a>, <a
   href="&base;/projects/summerofcode-2007.html">2007</a>, <a
-href="&base;/projects/summerofcode-2008.html">2008</a>, and
-  <a href="http://wiki.freebsd.org/SummerOfCode2009Projects">2009</a>.</p>
+  href="&base;/projects/summerofcode-2008.html">2008</a>,
+  <a href="http://wiki.freebsd.org/SummerOfCode2009Projects">2009</a>,
+  and
+  <a href="http://wiki.freebsd.org/SummerOfCode2010Projects">2010</a>.</p>
 
-  <p>This page will be updated throughout the GSoC 2010 application period
+  <p>This page will be updated throughout the GSoC 2011 application period
     to include new information, such as project ideas, proposal information,
     and potential mentor contact information.  If you don't see an idea that
     interests you, visit again in a couple of days!</p>
@@ -95,6 +99,8 @@ href="&base;/projects/summerofcode-2008.html">2008</a>, and
 <p>For a complete list of student projects from previous years,
 visit:</p>
 <ul>
+  <li><a href="http://wiki.freebsd.org/SummerOfCode2010Projects">Summer of
+    Code 2010 FreeBSD Projects Wiki</a></li>
   <li><a href="http://wiki.freebsd.org/SummerOfCode2009Projects">Summer of
     Code 2009 FreeBSD Projects Wiki</a></li>
   <li><a href="&base;/projects/summerofcode-2008.html">Summer of Code 2008 FreeBSD
@@ -119,28 +125,18 @@ href="http://wiki.freebsd.org/moin.cgi/SummerOfCode2005">2005</a>].</p>
 <a name="ideas"></a>
 <h2>Example Proposal Ideas</h2>
 
-  <p>The following example project ideas are a subset of the general
-    <a href="&base;/projects/ideas/index.html">FreeBSD Project
-    Ideas</a> list that we think are the most suitable for Summer of
-    Code projects.  You are not required to submit a proposal using one of
-    these ideas - original ideas, if of interest to the project, are
-    most welcome.</p>
-
-  <xsl:for-each select="document($ideas.xml)//descendant::category[child::idea[@class='soc']]">
-    <h3><xsl:value-of select="title"/></h3>
-
-    <ul>
-      <xsl:for-each select="idea[@class='soc']">
-      <li><xsl:element name="a">
-	<xsl:attribute name="href">
-	./ideas/index.html#p-<xsl:value-of select="@id" />
-	</xsl:attribute>
-	<xsl:value-of select="title" />
-	</xsl:element>
-      </li>
-      </xsl:for-each>
-    </ul>
-  </xsl:for-each>
+  <p>The FreeBSD Project maintains an <a
+    href="http://wiki.freebsd.org/IdeasPage">Ideas Page</a> on our
+    wiki.
+    Projects specifically tagged as "GSoC" are believed to be sized for a
+    useful summer hacking, and have technical contacts who can help answer
+    questions as you write your proposal.
+    Ideas not marked as GSoC-friendly are also fine to propose, but may be
+    scoped larger or smaller than a summer, or might not have such a clear
+    mentor -- we suggest e-mailing our soc-admins alias for help if you do
+    decide to propose one of them.
+    You are, of course, welcome to propose your own ideas, and if the
+    proposal is strong, we'll try to match you with a mentor!</p>
 
   <p>For additional ideas about upcoming development projects in
     FreeBSD, take a look at recent <a
@@ -151,9 +147,8 @@ href="http://wiki.freebsd.org/moin.cgi/SummerOfCode2005">2005</a>].</p>
 
 <p>Students are responsible for writing a proposal and submitting it
   to Google before the application deadline.  The following outline
-  was adapted from the Perl Foundation <a
-  href="http://www.perlfoundation.org/gc/grants/proposals.html">open
-  source proposal HOWTO</a>.  The objective of the proposal is to identify
+  was adapted from the Perl Foundation.
+  The objective of the proposal is to identify
   what is to be done, explain why this needs to be done, and convince us
   that:</p>
 
@@ -248,7 +243,7 @@ href="http://wiki.freebsd.org/moin.cgi/SummerOfCode2005">2005</a>].</p>
 <p>A number of FreeBSD committers are willing to mentor students.  A
   good place to start is the 'Technical contacts' listed with the
   example projects on the <a
-  href="&base;/projects/ideas/index.html">Ideas page</a>.</p>
+  href="http://wiki.freebsd.org/IdeasPage">ideas page</a>.</p>
 
 <a name="infrastructure"></a>
 <h2>Infrastructure Provided to Students</h2>
@@ -280,28 +275,28 @@ href="http://wiki.freebsd.org/moin.cgi/SummerOfCode2005">2005</a>].</p>
       <li><p><strong>18 March</strong> - Google to announce what open source
 	organizations will participate in Google Summer of Code 2010.</p></li>
 
-      <li><p><strong>29 March</strong> - Student application period opens.
+      <li><p><strong>28 March</strong> - Student application period opens.
 	</p></li>
 
-      <li><p><strong>9 April</strong> - Student application period closes.
+      <li><p><strong>8 April</strong> - Student application period closes.
 	</p></li>
 
-      <li><p><strong>21 April</strong> - Organizations finish reviewing
+      <li><p><strong>22 April</strong> - Organizations finish reviewing
 	applications an mentors registered.</p></li>
 
-      <li><p><strong>26 April</strong> - Accepted students announced.</p>
+      <li><p><strong>25 April</strong> - Accepted students announced.</p>
 	</li>
     </ul>
 
     <p>Note that these dates may change, and the Google FAQ timeline is the
       authoritative source of detailed schedule information:</p>
 
-    <ul><p><a href="http://socghop.appspot.com/document/show/gsoc_program/google/gsoc2010/timeline">GSoC 2010 Timeline</a></p></ul>
+    <ul><p><a href="http://www.google-melange.com/gsoc/events/google/gsoc2011">GSoC 2011 Timeline</a></p></ul>
 
     <p>All students must register with, and submit applications via, the
       Google Summer of Code home page:</p>
 
-    <ul><p><a href="http://socghop.appspot.com/program/home/google/gsoc2010">Google Summer of Code Home Page</a></p></ul></li>
+    <ul><p><a href="http://www.google-melange.com/gsoc/homepage/google/gsoc2011">Google Summer of Code Home Page</a></p></ul></li>
 
   <li><p><strong>What advice do you have for a student who might want to
     submit a proposal?</strong></p>
@@ -349,8 +344,10 @@ href="http://wiki.freebsd.org/moin.cgi/SummerOfCode2005">2005</a>].</p>
   <li><p><strong>What projects were completed successfully by students
     in previous summers?</strong></p>
 
-    <p>Please see the <a href="http://wiki.freebsd.org/SummerOfCode2009Projects">2009 FreeBSD
-      Summer of Code</a> page, as well as older project pages from <a
+    <p>Please see the <a
+      href="http://wiki.freebsd.org/SummerOfCode2010Projects">2010 FreeBSD
+      Summer of Code page</a>,  as well as older project pages from
+     <a href="http://wiki.freebsd.org/SummerOfCode2009Projects">2009</a>, <a
       href="summerofcode-2008.html">2008</a>, <a
       href="summerofcode-2007.html">2007</a>, <a
       href="summerofcode-2006.html">2006</a>, and <a
