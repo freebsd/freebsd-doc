@@ -33,8 +33,8 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.260 2011-03-04 18:20:15 chinsan Exp $
-# $FreeBSD: www/en/cgi/man.cgi,v 1.259 2011/01/08 14:58:27 wosch Exp $
+# $Id: man.cgi,v 1.261 2011-03-29 21:54:40 wosch Exp $
+# $FreeBSD: www/en/cgi/man.cgi,v 1.260 2011/03/04 18:20:15 chinsan Exp $
 
 ############################################################################
 # !!! man.cgi is stale perl4 code !!!
@@ -216,7 +216,6 @@ $manPathDefault = 'FreeBSD 8.2-RELEASE';
     'FreeBSD 8.2-RELEASE', "$manLocalDir/FreeBSD-8.2-RELEASE/man:$manLocalDir/FreeBSD-8.2-RELEASE/openssl/man",
     'FreeBSD Ports 8.2-RELEASE', "$manLocalDir/FreeBSD-ports-8.2-RELEASE",
     
-    'FreeBSD 8.1-stable', "$manLocalDir/FreeBSD-8.1-stable/man:$manLocalDir/FreeBSD-8.1-stable/openssl/man",
     'FreeBSD 8.1-RELEASE', "$manLocalDir/FreeBSD-8.1-RELEASE/man:$manLocalDir/FreeBSD-8.1-RELEASE/openssl/man",
     'FreeBSD 8.0-RELEASE', "$manLocalDir/FreeBSD-8.0-RELEASE/man:$manLocalDir/FreeBSD-8.0-RELEASE/openssl/man",
 
@@ -227,7 +226,6 @@ $manPathDefault = 'FreeBSD 8.2-RELEASE';
     'FreeBSD 7.4-RELEASE', "$manLocalDir/FreeBSD-7.4-RELEASE/man:$manLocalDir/FreeBSD-7.4-RELEASE/openssl/man",
     'FreeBSD Ports 7.4-RELEASE', "$manLocalDir/FreeBSD-ports-7.4-RELEASE",
     
-    'FreeBSD 7.3-stable', "$manLocalDir/FreeBSD-7.3-RELEASE/man:$manLocalDir/FreeBSD-7.3-RELEASE/openssl/man",
     'FreeBSD 7.3-RELEASE', "$manLocalDir/FreeBSD-7.3-RELEASE/man:$manLocalDir/FreeBSD-7.3-RELEASE/openssl/man",
     'FreeBSD Ports 7.3-RELEASE', "$manLocalDir/FreeBSD-ports-7.3-RELEASE",
 
@@ -1504,7 +1502,7 @@ sub faq {
     }
 
     local $id =
-      '$FreeBSD: www/en/cgi/man.cgi,v 1.259 2011/01/08 14:58:27 wosch Exp $';
+      '$FreeBSD: www/en/cgi/man.cgi,v 1.260 2011/03/04 18:20:15 chinsan Exp $';
     return qq{\
 <pre>
 Copyright (c) 1996-2011 <a href="$mailtoURL">Wolfram Schneider</a>
