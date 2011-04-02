@@ -7,7 +7,7 @@
 <!ENTITY % developers SYSTEM "../developers.sgml"> %developers;
 ]>
 
-<!-- $FreeBSD: www/en/projects/summerofcode.xsl,v 1.28 2011/03/27 16:22:30 rwatson Exp $ -->
+<!-- $FreeBSD: www/en/projects/summerofcode.xsl,v 1.29 2011/03/29 15:11:12 rwatson Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -385,10 +385,10 @@ href="http://wiki.freebsd.org/moin.cgi/SummerOfCode2005">2005</a>].</p>
     local university or college campus!  You can forward around our e-mail
     announcement to department and club mailing lists, and to department
     secretaries to distribute.  You can also print out and post copies of the
-    <a href="2011-freebsd-gsoc.pdf">FreeBSD GSoC 2010 poster</a>.</p>
+    <a href="2011-freebsd-gsoc.pdf">FreeBSD GSoC 2011 poster</a>.</p>
 
   <p><a href="2011-freebsd-gsoc.pdf" align="left"> <img
-    src="2011-freebsd-gsoc-thumbnail.jpg"
+    src="2011-freebsd-gsoc.jpg"
     alt="[FreeBSD GSoC 2011 poster thumnail]" height="248" width="192"
     border="0" /></a></p>
 
