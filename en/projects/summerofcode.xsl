@@ -7,7 +7,7 @@
 <!ENTITY % developers SYSTEM "../developers.sgml"> %developers;
 ]>
 
-<!-- $FreeBSD: www/en/projects/summerofcode.xsl,v 1.29 2011/03/29 15:11:12 rwatson Exp $ -->
+<!-- $FreeBSD: www/en/projects/summerofcode.xsl,v 1.30 2011/04/02 00:18:26 ryusuke Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -273,7 +273,7 @@ href="http://wiki.freebsd.org/moin.cgi/SummerOfCode2005">2005</a>].</p>
 
     <ul>
       <li><p><strong>18 March</strong> - Google to announce what open source
-	organizations will participate in Google Summer of Code 2010.</p></li>
+	organizations will participate in Google Summer of Code 2011.</p></li>
 
       <li><p><strong>28 March</strong> - Student application period opens.
 	</p></li>
