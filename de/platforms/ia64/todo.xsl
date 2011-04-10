@@ -6,8 +6,8 @@
 <!ENTITY % navinclude.developers "INCLUDE">
 ]>
 <!--
-  $FreeBSDde: de-www/platforms/ia64/todo.xsl,v 1.12 2006/10/19 19:26:04 jkois Exp $
-  basiert auf: 1.9
+  $FreeBSDde: de-www/platforms/ia64/todo.xsl,v 1.14 2011/04/10 07:44:40 jkois Exp $
+  basiert auf: 1.10
 -->
 
 <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
@@ -91,9 +91,9 @@
 	  Ports-Sammlung ist vor allem auf ia32 ausgerichtet,
 	  kein Wunder also, dass viele Ports nicht unter ia64
 	  bauen oder laufen.  Es gibt eine aktuelle <a
-	    href="http://pointyhat.FreeBSD.org/errorlogs/ia64-6-latest/">Liste
-	    der Ports</a>, die sich aus dem ein oder anderen Grund
-	    nicht bauen lassen.  Ein Port wird nicht gebaut und nicht
+	  href="http://pointyhat.FreeBSD.org/errorlogs/ia64-8-latest/">Liste
+	  der Ports</a>, die sich aus dem ein oder anderen Grund
+	  nicht bauen lassen.  Ein Port wird nicht gebaut und nicht
 	  gez&#228;hlt, wenn er von einem Port abh&#228;ngt, der sich
 	  nicht bauen l&#228;sst.  Es w&#228;re eine gro&#223;e
 	  Hilfe, wenn Sie an Ports arbeiten, von denen viele andere
