@@ -9,7 +9,7 @@
 <!ENTITY % header.rss "INCLUDE">
 ]>
 
-<!-- $FreeBSD$ -->
+<!-- $FreeBSD: www/ja/share/sgml/templates.events.xsl,v 1.1 2011/02/08 11:29:15 ryusuke Exp $ -->
 <!-- The FreeBSD Japanese Documentation Project -->
 <!-- Original revision: 1.13 -->
 
@@ -288,7 +288,7 @@
   <xsl:template match="event" mode="upcoming">
     <li>
       <xsl:call-template name="eventbody"/>
-      <p>Social links: <a rel="nofollow">
+      <p>ソーシャルリンク : <a rel="nofollow">
       <xsl:if test="upcomingurl">
         <xsl:attribute name="href"><xsl:value-of select="upcomingurl" /></xsl:attribute>
       </xsl:if>
@@ -316,7 +316,7 @@
 
     <li>
       <xsl:call-template name="eventbody"/>
-      <p>Social links: <a rel="nofollow">
+      <p>ソーシャルリンク : <a rel="nofollow">
         <xsl:attribute name="href">http://www.flickr.com/search/?w=all&amp;q=<xsl:value-of select="name" />&amp;m=text</xsl:attribute>
       Flickr</a>, <a rel="nofollow">
         <xsl:attribute name="href">http://blogsearch.google.com/blogsearch?q=<xsl:value-of select="name" /></xsl:attribute>Blog Search</a><xsl:if test="contains($lcname, 'meetbsd') or contains($lcname, 'nycbsdcon') or contains($lcname, 'dcbsdcon') or contains($lcname, 'asiabsdcon')">,
