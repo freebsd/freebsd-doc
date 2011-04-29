@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="euc-jp"?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
-<!-- $FreeBSD: www/ja/share/sgml/libcommon.xsl,v 1.9 2010/12/28 14:50:27 ryusuke Exp $ -->
+<!-- $FreeBSD: www/ja/share/sgml/libcommon.xsl,v 1.10 2011/02/08 11:29:15 ryusuke Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/libcommon.xsl"/>
@@ -175,6 +175,11 @@
 	<xsl:value-of select="enddate/day"/>
 	<xsl:text> 日</xsl:text>
       </xsl:if>
+    </xsl:if>
+    <xsl:if test="number(startdate/month) = number(enddate/month) and
+		  number(startdate/day) = number(enddate/day) and
+		  number(startdate/year) = number(enddate/year)">
+      <xsl:text> 日</xsl:text>
     </xsl:if>
   </xsl:template>
 </xsl:stylesheet>
