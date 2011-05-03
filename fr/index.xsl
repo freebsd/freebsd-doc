@@ -4,10 +4,10 @@
 <!ENTITY title "Le Projet FreeBSD">
 ]>
 
-<!-- $FreeBSD: www/fr/index.xsl,v 1.37 2009/02/25 08:42:39 blackend Exp $ -->
+<!-- $FreeBSD: www/fr/index.xsl,v 1.38 2009/02/26 09:05:29 blackend Exp $ -->
 <!--
    The FreeBSD French Documentation Project
-   Original revision: 1.167
+   Original revision: 1.170
 
    Version francaise : Stephane Legrand <stephane@freebsd-fr.org>
    Mise a jour:	Marc Fonvieille <blackend@FreeBSD.org>
@@ -45,6 +45,13 @@
 	      Nouvelles, Revendeurs, homepage, CTM, Unix"/>
 	<link rel="shortcut icon" href="&enbase;/favicon.ico" type="image/x-icon"/>
 	<link rel="icon" href="&enbase;/favicon.ico" type="image/x-icon"/>
+<!--
+	FOR TRANSLATORS:
+
+	Do not translate the "Normal Text" and "Large Text" attributes in the
+	following two lines.  They are not literal texts but JavaScript
+	parameters.  Changing them will result in rendering errors.
+-->
     <link rel="stylesheet" media="screen" href="&enbase;/layout/css/fixed.css" type="text/css" title="Normal Text" />
     <link rel="alternate stylesheet" media="screen" href="&enbase;/layout/css/fixed_large.css" type="text/css" title="Large Text" />
     <script type="text/javascript" src="&enbase;/layout/js/styleswitcher.js"></script>
@@ -166,6 +173,9 @@
 				  </li>
 				  <li>
 					<a href="&enbase;/ja/" title="Japonais">ja</a>
+				  </li>
+				  <li>
+					<a href="&enbase;/nl/" title="N&#233;erlandais">nl</a>
 				  </li>
 				  <li>
 					<a href="&enbase;/ru/" title="Russe">ru</a>
@@ -338,7 +348,7 @@
 			<div>
 			      <ul class="newseventslist">
 				<li class="first-child">
-				  <a href="&base;/security/" title="Plus d'Errata">Plus</a>
+				  <a href="&base;/security/notices.html" title="Plus d'Errata">Plus</a>
 				</li>
 				<li class="last-child">
 				  <a href="&base;/security/errata.xml" title="Flux RSS des Errata"><img class="rssimage" src="&base;/layout/images/ico_rss.png" width="27" height="12" alt="Flux RSS des Errata" /></a>
