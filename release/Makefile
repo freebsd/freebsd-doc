@@ -72,7 +72,7 @@ INSTALL_COMPRESSED?=	zip gz
 #
 # Turn on RLE encoding and indexing.
 #
-# Don't make the compatability symlinks.
+# Don't make the compatibility symlinks.
 #
 #MISCOPTIONS+=	NO_JPMAN=yes RLE=yes GEN_INDEX=1 IGNORE_COMPAT_SYMLINK=YES
 MISCOPTIONS+=	NO_JPMAN=yes RLE=yes IGNORE_COMPAT_SYMLINK=YES
