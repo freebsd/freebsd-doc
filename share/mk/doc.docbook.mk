@@ -62,14 +62,14 @@
 #	SPELLCHECK	Use the special spellcheck.dsl stylesheet to render
 #			HTML that is suitable for processing through a 
 #			spellchecker.  For example, PGP keys and filenames
-#			will be ommitted from this output.
+#			will be omitted from this output.
 #
 # Print-output options :
 #
 #       NICE_HEADERS    If defined, customized chapter headers will be created
 #			that you may find more aesthetically pleasing.	Note
 #			that this option only effects print output formats for
-#			Enlish language books.
+#			English language books.
 #
 #       MIN_SECT_LABELS If defined, do not display the section number for 4th
 #                       and 5th level section titles.  This would change 
@@ -90,14 +90,14 @@
 #
 #       JUSTIFY         If defined, text will be right justified so that the
 #                       right edge is smooth.  Words may be hyphenated using
-#                       the defalt TeX hyphenation rules for this purpose.
+#                       the default TeX hyphenation rules for this purpose.
 #
 #       BOOK_OUTPUT     A collection of options are set suitable for printing
 #                       a book.  This option may be an order of magnitude more
 #                       CPU intensive than the default build.
 #
 #       RLE             Use Run-Length Encoding for EPS files, this will
-#                       result in signficiantly smaller PostScript files, 
+#                       result in significantly smaller PostScript files, 
 #                       but may take longer for a printer to process.
 #
 #       GREYSCALE_IMAGES Convert the screenshots to greyscale before
@@ -294,7 +294,7 @@ ZIP_CMD?=	${PREFIX}/bin/zip -j ${ZIP}
 
 #
 # Instruction for bsd.subdir.mk to not to process SUBDIR directive.
-# It is not neccessary since doc.docbook.mk do it too.
+# It is not necessary since doc.docbook.mk do it too.
 #
 NO_SUBDIR=      YES
 
