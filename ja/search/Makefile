@@ -1,6 +1,6 @@
-# $FreeBSD: www/ja/search/Makefile,v 1.12 2001/11/17 17:21:09 hrs Exp $
+# $FreeBSD: www/ja/search/Makefile,v 1.13 2010/06/24 17:23:39 ryusuke Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.9
+# Original revision: 1.10
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -15,6 +15,8 @@ DOCS+= index-site.sgml
 DOCS+= search.sgml 
 DOCS+= searchhints.sgml
 DOCS+= search-mid.sgml
+
+#SUBDIR+= opensearch
 
 INDEXLINK=      search.html
 CLEANFILES+=atoz.sgml site.sgml
