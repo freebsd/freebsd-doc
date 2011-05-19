@@ -7,7 +7,7 @@
 <!--
      The FreeBSD Russian Documentation Project
 
-     $FreeBSD: www/ru/index.xsl,v 1.38 2010/07/05 09:11:54 maxim Exp $
+     $FreeBSD: www/ru/index.xsl,v 1.39 2011/01/31 15:03:42 pluknet Exp $
      $FreeBSDru: frdp/www/ru/index.xsl,v 1.47 2006/01/16 21:27:51 gad Exp $
 
      Original revision: 1.170
@@ -83,20 +83,31 @@
 			<div id="FRONTFEATURECONTENT">
 				<h1>
 				  Основана на BSD &unix;
-				</h1>				
-				<p>FreeBSD&reg; - это современная операционная система для
-				компьютеров, совместимых с архитектурами x86 (в том числе
-				Pentium&#174; и Athlon&#8482;), amd64 (включая Opteron&#8482;,
-				Athlon 64 и EM64T), Alpha/AXP, IA-64, PC-98 и
-				UltraSPARC&#174;.  Она основана на BSD, версии
-				&unix;, созданной в Калифорнийском
-				Университете в Беркли.  Она разрабатывается и поддерживается <a
-				href="&enbase;/doc/en_US.ISO8859-1/articles/contributors/index.html">
-				большой командой разработчиков</a>.  Поддержка <a
-				href="platforms/index.html">других платформ</a>
-				находится на разных стадиях разработки.</p>
-				<div id="txtfrontfeaturelink">
-				&#187;<a href="&base;/about.html" title="Подробнее">Подробнее</a>
+				</h1>
+				<p>FreeBSD&reg; - это передовая
+				  операционная система для современных
+				  серверов, десктопов и встроенных
+				  компьютерных <a
+				  href="&base;/platforms/">платформ</a>.
+				  Кодовая база FreeBSD прошла через 30 лет
+				  непрерывной разработки, улучшений и
+				  оптимизаций. Она разрабатывается и
+				  поддерживается <a
+				  href="&enbase;/doc/en_US.ISO8859-1/articles/contributors/staff-committers.html">
+				  большой командой разработчиков</a>.  FreeBSD
+				  обеспечивает современные сетевые возможности,
+				  впечатляющую безопасность и
+				  производительность на мировом уровне и
+				  используется на одних из <a
+				  href="&enbase;/doc/en_US.ISO8859-1/books/handbook/nutshell.html#INTRODUCTION-NUTSHELL-USERS">
+				  самых загруженных веб-сайтов</a> мира и на
+				  наиболее распространенных встроенных сетевых
+				  устройствах и устройствах хранения.</p>
+
+				  <div
+				  id="TXTFRONTFEATURELINK"> &#187;<a
+				  href="&base;/about.html"
+				  title="Подробнее">Подробнее</a>
 
 				  </div> <!-- TXTFRONTFEATURELINK -->
 			  </div> <!-- FRONTFEATURECONTENT -->
@@ -119,7 +130,7 @@
 					  <a href="../&u.rel.announce;">Продуктивный релиз &rel.current;</a>
 					</li>
 					<li>
-					    <a href="../&u.rel2.announce;">(Старый) Продуктивный релиз &rel2.current;</a>
+					  <a href="../&u.rel2.announce;">(Старый) Продуктивный релиз &rel2.current;</a>
 					</li>
 			    <xsl:if test="'&beta.testing;' != 'IGNORE'">
 					<li>
@@ -185,6 +196,7 @@
 					  </xsl:call-template>
 				  </select>
 				</div> <!-- unnamed -->
+				<input type="submit" value="Go" />
 			  </form>
 			</div> <!-- MIRROR -->
 
@@ -276,7 +288,7 @@
             	<div id="FRONTMEDIA">
 		   <div id="FRONTMEDIACONTENT" class="txtnewsevent">
 
-			   <h2>В СМИ</h2>
+			<h2>В СМИ</h2>
 			<div class="newseventswrap">
 
 			<xsl:call-template name="html-index-news-press-items">
