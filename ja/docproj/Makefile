@@ -1,6 +1,6 @@
-# $FreeBSD: www/ja/docproj/Makefile,v 1.14 2001/11/18 22:33:58 hrs Exp $
+# $FreeBSD: www/ja/docproj/Makefile,v 1.15 2004/01/10 18:37:57 rushani Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.10
+# Original revision: 1.11
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -18,6 +18,7 @@ DOCS+= submitting.sgml
 DOCS+= who.sgml 
 DOCS+= translations.sgml
 DOCS+= docproj.sgml
+#DOCS+=	todo.sgml
 
 INDEXLINK= docproj.html
 
