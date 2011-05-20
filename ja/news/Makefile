@@ -1,6 +1,6 @@
-# $FreeBSD: www/ja/news/Makefile,v 1.39 2010/06/04 17:35:53 ryusuke Exp $
+# $FreeBSD: www/ja/news/Makefile,v 1.40 2010/12/07 14:23:08 ryusuke Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.38
+# Original revision: 1.53
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -20,6 +20,8 @@ DOCS+= press-rel-4.sgml
 DOCS+= press-rel-5.sgml
 #DOCS+= press-rel-6.sgml
 #DOCS+= press-rel-7.sgml
+#DOCS+= press-rel-8.sgml
+#DOCS+= press-rel-9.sgml
 
 # The yearly State of the Union address
 #DOCS+=	sou1999.sgml
@@ -42,6 +44,13 @@ SUBDIR+= 	1997
 #SUBDIR+= 	2000
 SUBDIR+= 	2001
 #SUBDIR+= 	2002
+#SUBDIR+= 	2003
+#SUBDIR+= 	2004
+#SUBDIR+= 	2005
+#SUBDIR+= 	2006
+#SUBDIR+= 	2007
+#SUBDIR+=	2008
+#SUBDIR+=	2009
 #SUBDIR+=	status
 
 ### Revision checking
