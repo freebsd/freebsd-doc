@@ -3872,6 +3872,333 @@ mail            IN      A       192.168.1.5</programlisting>
     </sect2>
 
     <sect2>
+      <title><acronym
+        role="Doman Name Security Extensions">DNSSEC</acronym></title>
+      <indexterm>
+        <primary>BIND</primary>
+        <secondary>DNS security extensions</secondary>
+      </indexterm>
+
+      <para>Domain Name System Security Extensions, or <acronym
+        role="Domain Name Security Extensions">DNSSEC</acronym> for short, is a
+        suite of specifications to protect resolving name servers from forged 
+        <acronym>DNS</acronym> data, such as spoofed <acronym>DNS</acronym>
+        records.  By using digital signatures, a resolver can verify the 
+        integrity of the record.  Note that <acronym
+        role="Domain Name Security Extensions">DNSSEC</acronym> only provides 
+        integrity via digitally signing the Resource Records (<acronym 
+        role="Resource Record">RR</acronym>s).  It provides neither
+        confidentiality nor protection against false end-user assumptions.
+        This means that it cannot protect against people going to <hostid
+        role="domainname">example.net</hostid> instead of <hostid
+        role="domainname">example.com</hostid>.  The only thing
+        <acronym>DNSSEC</acronym> does is authenticate that the data has not
+        been compromised in transit.  The security of <acronym>DNS</acronym> is 
+        an important step in securing the Internet in general.  For more
+        in-depth details of how <acronym>DNSSEC</acronym> works, the relevant
+        <acronym>RFC</acronym>s are a good place to start.  See the list in
+        <xref linkend="dns-read">.</para>
+
+      <para>The following sections will demonstrate how to enable
+        <acronym>DNSSEC</acronym> for an authoritative <acronym>DNS</acronym>
+        server and a recursive (or caching) <acronym>DNS</acronym> server
+        running <acronym>BIND</acronym> 9.  While all versions of
+        <acronym>BIND</acronym> 9 support <acronym>DNSSEC</acronym>, it is
+        necessary to have at least version 9.6.2 in order to be able to use the
+        signed root zone when validating <acronym>DNS</acronym> queries.  This
+        is because earlier versions lack the required algorithms to enable
+        validation using the root zone key.  It is strongly recommended to use
+        the latest version of <acronym>BIND</acronym> 9.7 or later to take
+        advantage of automatic key updating for the root key, as well as other
+        features to automatically keep zones signed and signatures up to date.
+        Where configurations differ between 9.6.2 and 9.7 and later,
+        differences will be pointed out.</para>
+
+      <sect3>
+        <title>Recursive <acronym>DNS</acronym> server configuration</title>
+
+		<para>Enabling <acronym>DNSSEC</acronym> validation of queries
+		  performed by a recursive <acronym>DNS</acronym> server requires a few
+		  changes to <filename>named.conf</filename>.  Before making these
+		  changes the root zone key, or trust anchor, must be acquired.
+		  Currently the root zone key is not available in a file format
+		  <acronym>BIND</acronym> understands, so it has to be manually
+		  converted into the proper format.  The key itself can be obtained by
+		  querying the root zone for it using <application>dig</application>.
+		  By running</para>
+
+		<screen>&prompt.user; <userinput>dig +multi +noall +answer DNSKEY . &gt; root.dnskey</userinput></screen>
+
+		<para>the key will end up in <filename>root.dnskey</filename>.  The
+		  contents should look something like this:</para>
+
+		<programlisting>. 93910 IN DNSKEY 257 3 8 (
+            AwEAAagAIKlVZrpC6Ia7gEzahOR+9W29euxhJhVVLOyQ
+            bSEW0O8gcCjFFVQUTf6v58fLjwBd0YI0EzrAcQqBGCzh
+            /RStIoO8g0NfnfL2MTJRkxoXbfDaUeVPQuYEhg37NZWA
+            JQ9VnMVDxP/VHL496M/QZxkjf5/Efucp2gaDX6RS6CXp
+            oY68LsvPVjR0ZSwzz1apAzvN9dlzEheX7ICJBBtuA6G3
+            LQpzW5hOA2hzCTMjJPJ8LbqF6dsV6DoBQzgul0sGIcGO
+            Yl7OyQdXfZ57relSQageu+ipAdTTJ25AsRTAoub8ONGc
+            LmqrAmRLKBP1dfwhYB4N7knNnulqQxA+Uk1ihz0=
+            ) ; key id = 19036
+. 93910 IN DNSKEY 256 3 8 (
+            AwEAAcaGQEA+OJmOzfzVfoYN249JId7gx+OZMbxy69Hf
+            UyuGBbRN0+HuTOpBxxBCkNOL+EJB9qJxt+0FEY6ZUVjE
+            g58sRr4ZQ6Iu6b1xTBKgc193zUARk4mmQ/PPGxn7Cn5V
+            EGJ/1h6dNaiXuRHwR+7oWh7DnzkIJChcTqlFrXDW3tjt
+            ) ; key id = 34525</programlisting>
+
+        <para>Do not be alarmed if the obtained keys differ from this example.
+          They might have changed since these instructions were last updated.
+          This output actually contains two keys.  The first key in the
+          listing, with the value 257 after the DNSKEY record type, is the one
+          needed.  This value indicates that this is a Secure Entry Point
+          (<acronym role="Secure Entry Point">SEP</acronym>),
+          commonly known as a Key Signing Key (<acronym
+          role="Key Signing Key">KSK</acronym>).  The second key, with value
+          256, is a subordinate key, commonly called a Zone Signing Key
+          (<acronym role="Zone Signing Key">ZSK</acronym>).  More on the
+          different key types later in the <xref
+          linkend="dns-dnssec-auth">.</para>
+
+        <para>Now the key must be verified and formatted so that
+          <acronym>BIND</acronym> can use it.  To verify the key, generate a
+          <acronym role="Delegation Signer">DS</acronym> 
+          <acronym role="Resource Record">RR</acronym> set.  Create a file
+          containing these <acronym role="Resource Record">RR</acronym>s
+          with</para>
+
+        <screen>&prompt.user; <userinput>dnssec-dsfromkey -f root-dnskey . &gt; root.ds</userinput></screen>
+
+        <para>These records use SHA-1 and SHA-256 respectively, and should
+          look similar to the following example, where the longer is using
+          SHA-256.</para>
+
+        <programlisting>. IN DS 19036 8 1 B256BD09DC8DD59F0E0F0D8541B8328DD986DF6E
+. IN DS 19036 8 2 49AAC11D7B6F6446702E54A1607371607A1A41855200FD2CE1CDDE32F24E8FB5</programlisting>
+
+		<para>The SHA-256 <acronym>RR</acronym> can now be compared to the
+		  digest in <ulink
+		  url="https://data.iana.org/root-anchors/root-anchors.xml">https://data.iana.org/root-anchors/root-anchors.xml</ulink>.  To be absolutely sure
+		  that the key has not been tampered with the data in the
+		  <acronym>XML</acronym> file can be verified using the
+		  <acronym>PGP</acronym> signature in <ulink
+		  url="https://data.iana.org/root-anchors/root-anchors.asc">https://data.iana.org/root-anchors/root-anchors.asc</ulink>.</para>
+	    
+		<para>Next, the key must be formatted properly.  This differs a
+		  little between <acronym>BIND</acronym> versions 9.6.2 and 9.7 and
+		  later.  In version 9.7 support was added to automatically track
+		  changes to the key and update it as necessary.  This is done using
+		  <literal>managed-keys</literal> as seen in the example below.	 When 
+		  using the older version, the key is added using a
+		  <literal>trusted-keys</literal> statement and updates must be done
+		  manually.  For <acronym>BIND</acronym> 9.6.2 the format should look
+		  like:</para>
+
+		<programlisting>trusted-keys {
+	"." 257 3 8
+	"AwEAAagAIKlVZrpC6Ia7gEzahOR+9W29euxhJhVVLOyQbSEW0O8gcCjF
+	FVQUTf6v58fLjwBd0YI0EzrAcQqBGCzh/RStIoO8g0NfnfL2MTJRkxoX
+	bfDaUeVPQuYEhg37NZWAJQ9VnMVDxP/VHL496M/QZxkjf5/Efucp2gaD
+	X6RS6CXpoY68LsvPVjR0ZSwzz1apAzvN9dlzEheX7ICJBBtuA6G3LQpz
+	W5hOA2hzCTMjJPJ8LbqF6dsV6DoBQzgul0sGIcGOYl7OyQdXfZ57relS
+	Qageu+ipAdTTJ25AsRTAoub8ONGcLmqrAmRLKBP1dfwhYB4N7knNnulq
+	QxA+Uk1ihz0=";
+};</programlisting>
+
+		<para>For 9.7 the format will instead be:</para>
+
+		<programlisting>managed-keys {
+        "." initial-key 257 3 8
+	"AwEAAagAIKlVZrpC6Ia7gEzahOR+9W29euxhJhVVLOyQbSEW0O8gcCjF
+	FVQUTf6v58fLjwBd0YI0EzrAcQqBGCzh/RStIoO8g0NfnfL2MTJRkxoX
+	bfDaUeVPQuYEhg37NZWAJQ9VnMVDxP/VHL496M/QZxkjf5/Efucp2gaD
+	X6RS6CXpoY68LsvPVjR0ZSwzz1apAzvN9dlzEheX7ICJBBtuA6G3LQpz
+	W5hOA2hzCTMjJPJ8LbqF6dsV6DoBQzgul0sGIcGOYl7OyQdXfZ57relS
+	Qageu+ipAdTTJ25AsRTAoub8ONGcLmqrAmRLKBP1dfwhYB4N7knNnulq
+	QxA+Uk1ihz0=";
+};</programlisting>
+
+		<para>The root key can now be added to <filename>named.conf</filename>
+		  either directly or by including a file containing the key.  After
+		  these steps, configure <acronym>BIND</acronym> to do
+		  <acronym>DNSSEC</acronym> validation on queries by editing
+		  <filename>named.conf</filename> and adding the following to the
+		  <literal>options</literal> directive:</para>
+
+		<programlisting>dnssec-enable yes;
+dnssec-validation yes;</programlisting>
+
+		<para>To verify that it is actually working use
+		  <application>dig</application> to make a query for a signed zone
+		  using the resolver just configured.  A successful reply will contain
+		  the <literal>AD</literal> flag to indicate the data was
+		  authenticated.  Running a query such as</para>
+
+		<screen>&prompt.user; <userinput>dig @<replaceable>resolver</replaceable> +dnssec se ds </userinput></screen>
+
+		<para>should return the <acronym>DS</acronym> <acronym>RR</acronym> for
+		  the <literal>.se</literal> zone.  In the <literal>flags:</literal> 
+		  section the <literal>AD</literal> flag should be set, as seen
+		  in:</para>
+
+		<programlisting>...
+;; flags: qr rd ra ad; QUERY: 1, ANSWER: 3, AUTHORITY: 0, ADDITIONAL: 1
+...</programlisting>
+
+		<para>The resolver is now capable of authenticating
+		  <acronym>DNS</acronym> queries.</para>
+      </sect3>
+
+      <sect3 id="dns-dnssec-auth">
+        <title>Authoritative <acronym>DNS</acronym> server configuration</title>
+
+		<para>In order to get an authoritative name server to serve a
+		  <acronym>DNSSEC</acronym> signed zone a little more work is
+		  required.  A zone is signed using cryptographic keys which must be
+		  generated.  It is possible to use only one key for this.  The
+		  preferred method however is to have a strong well-protected Key
+		  Signing Key (<acronym role="Key Signing Key">KSK</acronym>) that is
+		  not rotated very often and a Zone Signing Key (<acronym
+		  role="Zone Signing Key">ZSK</acronym>) that is rotated more
+		  frequently.  Information on recommended operational practices can be
+		  found in <ulink
+		  url="http://tools.ietf.org/rfc/rfc4641.txt"><acronym>RFC</acronym> 4641: <acronym>DNSSEC</acronym> Operational Practices</ulink>.  Practices
+		  regarding the root zone can be found in <ulink
+		  url="http://www.root-dnssec.org/wp-content/uploads/2010/06/icann-dps-00.txt"><acronym>DNSSEC</acronym> Practice Statement for the Root Zone
+		  <acronym>KSK</acronym> operator</ulink> and <ulink
+		  url="http://www.root-dnssec.org/wp-content/uploads/2010/06/vrsn-dps-00.txt"><acronym>DNSSEC</acronym> Practice Statement for the Root Zone
+		  <acronym>ZSK</acronym> operator</ulink>.  The <acronym
+		  role="Key Signing Key">KSK</acronym> is used to build a chain
+          of authority to the data in need of validation and as such is also
+          called a Secure Entry Point (<acronym
+          role="Secure Entry Point">SEP</acronym>) key.  A message digest of
+          this key, called a Delegation Signer (<acronym
+          role="Delegation Signer">DS</acronym>) record, must be published in
+          the parent zone to establish the trust chain.  How this is
+          accomplished depends on the parent zone owner.  The <acronym
+          role="Zone Signing Key">ZSK</acronym> is used to sign the zone, and
+          only needs to be published there.</para>
+
+        <para>To enable <acronym>DNSSEC</acronym> for the <hostid
+          role="domainname">example.com</hostid> zone depicted in previous
+          examples, the first step is to use
+          <application>dnssec-keygen</application> to generate the
+          <acronym>KSK</acronym> and <acronym>ZSK</acronym> key pair.  This
+          key pair can utilize different cryptographic algorithms.  It is
+          recommended to use RSA/SHA256 for the keys and 2048 bits key length
+          should be enough.  To generate the <acronym>KSK</acronym> for <hostid
+          role="domainname">example.com</hostid>, run</para>
+
+        <screen>&prompt.user; <userinput>dnssec-keygen -f KSK -a RSASHA256 -b 2048 -n ZONE example.com</userinput></screen>
+
+        <para>and to generate the <acronym>ZSK</acronym>, run</para>
+
+        <screen>&prompt.user; <userinput>dnssec-keygen -a RSASHA256 -b 2048 -n ZONE example.com</userinput></screen>
+
+        <para><application>dnssec-keygen</application> outputs two files, the
+          public and the private keys in files named similar to
+          <filename>Kexample.com.+005+nnnnn.key</filename> (public) and
+          <filename>Kexample.com.+005+nnnnn.private</filename> (private).  The
+          <literal>nnnnn</literal> part of the file name is a five digit key
+          ID.  Keep track of which key ID belongs to which key.  This is
+          especially important when having more than one key in a zone.  It is
+          also possible to rename the keys.  For each <acronym>KSK</acronym>
+          file do:</para>
+
+        <screen>&prompt.user; <userinput>mv Kexample.com+005+nnnnn.key Kexample.com+005+nnnnn.KSK.key</userinput>
+&prompt.user; <userinput>mv Kexample.com+005+nnnnn.private Kexample.com+005+nnnnn.KSK.private</userinput></screen>
+
+        <para>For the <acronym>ZSK</acronym> files, substitute
+          <literal>KSK</literal> for <literal>ZSK</literal> as necessary.  The
+          files can now be included in the zone file, using the
+          <literal>$include</literal> statement.  It should look something like
+          this:</para>
+
+		<programlisting>$include Kexample.com.+005+nnnnn.KSK.key    ; KSK
+$include Kexample.com.+005+nnnnn.ZSK.key    ; ZSK</programlisting>
+
+		<para>Finally, sign the zone and tell <acronym>BIND</acronym> to use
+		  the signed zone file.  To sign a zone
+		  <application>dnssec-signzone</application> is used.  The command to
+		  sign the zone <hostid role="domainname">example.com</hostid>, located
+		  in <filename>example.com.db</filename> would look similar to</para>
+
+		<screen>&prompt.user; <userinput>dnssec-signzone -o example.com -k Kexample.com+005+nnnnn.KSK example.com.db Kexample.com+005+nnnnn.ZSK.key</userinput></screen>
+
+		<para>The key supplied to the <option>-k</option> argument is the
+		  <acronym>KSK</acronym> and the other key file is the
+		  <acronym>ZSK</acronym> that should be used in the signing.  It is
+		  possible to supply more than one <acronym>KSK</acronym> and
+		  <acronym>ZSK</acronym>, which will result in the zone being signed
+		  with all supplied keys.  This can be needed to supply zone data
+		  signed using more than one algorithm.  The output of
+		  <application>dnssec-signzone</application> is a zone file with all
+		  <acronym>RR</acronym>s signed.  This output will end up in a file
+		  with the extension <literal>.signed</literal>, such as
+		  <filename>example.com.db.signed</filename>.  The <acronym
+		  role="Delegation Signer">DS</acronym> records will also be
+		  written to a separate file <filename>dsset-example.com</filename>.
+		  To use this signed zone just modify the zone directive in
+		  <filename>named.conf</filename> to use
+		  <filename>example.com.db.signed</filename>.  By default, the
+		  signatures are only valid 30 days, meaning that the zone needs to be 
+		  resigned in about 15 days to be sure that resolvers are not caching
+		  records with stale signatures.  It is possible to make a script and a 
+		  cron job to do this.  See relevant manuals for details.</para>
+
+		<para>Be sure to keep private keys confidential, as with all
+		  cryptographic keys.  When changing a key it is best to include the
+		  new key into the zone, while still signing with the old one, and then
+		  move over to using the new key to sign.  After these steps are done
+		  the old key can be removed from the zone.  Failure to do this might
+		  render the <acronym>DNS</acronym> data unavailable for a time, until
+		  the new key has propagated through the <acronym>DNS</acronym>
+		  hierarchy.  For more information on key rollovers and other
+		  <acronym>DNSSEC</acronym> operational issues, see <ulink
+		  url="http://www.ietf.org/rfc/rfc4641.txt"><acronym>RFC</acronym> 4641: <acronym>DNSSEC</acronym> Operational practices</ulink>.</para>
+      </sect3>
+
+      <sect3>
+        <title>Automation using <acronym>BIND</acronym> 9.7 or later</title>
+    
+		<para>Beginning with <acronym>BIND</acronym> version 9.7 a new
+		  feature called <emphasis>Smart Signing</emphasis> was introduced.
+		  This feature aims to make the key management and signing process
+		  simpler by automating parts of the task.  By putting the keys into a
+          directory called a <emphasis>key repository</emphasis>, and using the
+          new option <literal>auto-dnssec</literal>, it is possible to create a 
+          dynamic zone which will be resigned as needed.  To update this zone
+          use <application>nsupdate</application> with the new option
+          <option>-l</option>. <application>rndc</application> has also grown
+          the ability to sign zones with keys in the key repository, using the
+          option <option>sign</option>.  To tell <acronym>BIND</acronym> to use
+          this automatic signing and zone updating for <hostid
+          role="domainname">example.com</hostid>, add the following to
+          <filename>named.conf</filename>:</para>
+
+		<programlisting>zone example.com {
+	type master;
+	key-directory "/etc/named/keys";
+	update-policy local;
+	auto-dnssec maintain;
+	file "/etc/named/dynamic/example.com.zone";
+};</programlisting> 
+
+		<para>After making these changes, generate keys for the zone as
+		  explained in <xref linkend="dns-dnssec-auth">, put those keys in the 
+		  key repository given as the argument to the
+		  <literal>key-directory</literal> in the zone configuration and the
+		  zone will be signed automatically.  Updates to a zone configured this 
+		  way must be done using <application>nsupdate</application>, which
+		  will take care of re-signing the zone with the new data added.  For
+		  further details, see <xref linkend="dns-read"> and the
+		  <acronym>BIND</acronym> documentation.</para>
+      </sect3>
+    </sect2>
+
+    <sect2>
       <title>Security</title>
 
       <para>Although BIND is the most common implementation of DNS,
@@ -3897,41 +4224,76 @@ mail            IN      A       192.168.1.5</programlisting>
       </tip>
     </sect2>
 
-    <sect2>
+    <sect2 id="dns-read">
       <title>Further Reading</title>
 
       <para>BIND/<application>named</application> manual pages:
-      &man.rndc.8; &man.named.8; &man.named.conf.5;</para>
+        &man.rndc.8; &man.named.8; &man.named.conf.5; &man.nsupdate.8;
+        &man.dnssec-signzone.8; &man.dnssec-keygen.8;</para>
 
       <itemizedlist>
-	<listitem>
-	  <para><ulink
-	      url="https://www.isc.org/software/bind">Official ISC BIND
-	      Page</ulink></para>
-	</listitem>
+		<listitem>
+		  <para><ulink url="https://www.isc.org/software/bind">Official ISC
+		    BIND Page</ulink></para>
+		</listitem>
 
-	<listitem>
-	  <para><ulink
-	      url="https://www.isc.org/software/guild">Official ISC BIND
-	      Forum</ulink></para>
-	</listitem>
+		<listitem>
+		  <para><ulink url="https://www.isc.org/software/guild">Official ISC
+		    BIND Forum</ulink></para>
+		</listitem>
 
-	<listitem>
-	  <para><ulink url="http://www.oreilly.com/catalog/dns5/">O'Reilly
-	      DNS and BIND 5th Edition</ulink></para>
-	</listitem>
+		<listitem>
+	  	  <para><ulink url="http://www.oreilly.com/catalog/dns5/">O'Reilly
+	  	    DNS and BIND 5th Edition</ulink></para>
+		</listitem>
 
-	<listitem>
-	  <para><ulink
-	      url="http://tools.ietf.org/html/rfc1034">RFC1034
-	      - Domain Names - Concepts and Facilities</ulink></para>
-	</listitem>
+		<listitem>
+		  <para><ulink url="http://www.root-dnssec.org/documentation/">Root
+		    <acronym>DNSSEC</acronym></ulink></para>
+		</listitem>
 
-	<listitem>
-	  <para><ulink
-	      url="http://tools.ietf.org/html/rfc1035">RFC1035
-	      - Domain Names - Implementation and Specification</ulink></para>
-	</listitem>
+		<listitem>
+		  <para><ulink
+		    url="http://data.iana.org/root-anchors/draft-icann-dnssec-trust-anchor.html"><acronym>DNSSEC</acronym> Trust Anchor Publication for the Root
+		    Zone</ulink></para>
+		</listitem>
+
+		<listitem>
+		  <para><ulink url="http://tools.ietf.org/html/rfc1034">RFC1034
+		    - Domain Names - Concepts and Facilities</ulink></para>
+		</listitem>
+
+		<listitem>
+		  <para><ulink url="http://tools.ietf.org/html/rfc1035">RFC1035
+		    - Domain Names - Implementation and Specification</ulink></para>
+		</listitem>
+
+		<listitem>
+		  <para><ulink url="http://tools.ietf.org/html/rfc4033">RFC4033
+		    - DNS Security Introduction and Requirements</ulink></para>
+		</listitem>
+
+		<listitem>
+		  <para><ulink url="http://tools.ietf.org/html/rfc4034">RFC4034
+	        - Resource Records for the DNS Security Extensions</ulink></para>
+		</listitem>
+
+		<listitem>
+		  <para><ulink url="http://tools.ietf.org/html/rfc4035">RFC4035
+		    - Protocol Modifications for the DNS Security
+		    Extensions</ulink></para>
+		</listitem>
+
+		<listitem>
+		  <para><ulink url="http://tools.ietf.org/html/rfc4641">RFC4641
+		    - DNSSEC Operational Practices</ulink></para>
+		</listitem>
+
+		<listitem>
+	 	  <para><ulink url="http://tools.ietf.org/html/rfc5011">RFC 5011
+	 	    - Automated Updates of DNS Security (<acronym>DNSSEC</acronym>
+	 	    Trust Anchors</ulink></para>
+		</listitem>
       </itemizedlist>
     </sect2>
   </sect1>
