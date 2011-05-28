@@ -1,6 +1,6 @@
-# $FreeBSD: www/ja/ports/Makefile,v 1.30 2006/08/19 21:24:43 hrs Exp $
+# $FreeBSD: www/ja/ports/Makefile,v 1.31 2011/03/21 11:01:41 ryusuke Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.37
+# Original revision: 1.45
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -26,24 +26,16 @@ ${INDEX}:
 	${BUNZIP2} ${INDEX}.bz2
 .endif
 
-# build the list of available packages only on the 
-# main FreeBSD machines
-hostname!= hostname
-
-
-#
-# don't build the packages links if NO_PACKAGES_LINK
-# is set and not empty.
-#
-# XXX: you can set NO_PACKAGES_LINK to your hostname to
-#      test the packages link generation
-#
-.if defined(NO_PACKAGES_LINK) && !empty(NO_PACKAGES_LINK)
-hostname=	${NO_PACKAGES_LINK}
+HOSTNAME!= hostname
+.if ${HOSTNAME} == "hub.freebsd.org" || ${HOSTNAME} == "freefall.freebsd.org" || ${HOSTNAME} == "www.freebsd.org"
+CLUSTER_MACHINE=	YES
 .endif
 
+# Build the list of available packages, but only on the main FreeBSD machines.
+# Don't build the list if NO_PACKAGES_LINK is set and not empty.
+#
 packages.exists:
-.if ${hostname} == "hub.freebsd.org" || ${hostname} == "freefall.freebsd.org" || ${hostname} == "www.freebsd.org"
+.if defined(CLUSTER_MACHINE) && (!defined(NO_PACKAGES_LINK) || empty(NO_PACKAGES_LINK))
 .if  exists(${.CURDIR}/../../en/ports/packages.exists)
 	cp ${.CURDIR}/../../en/ports/${.TARGET} .
 .else
@@ -107,7 +99,7 @@ all install clean:
 beforeinstall:
 .else
 beforeinstall:
-	${PERL} -pi -e 's/href=\"growth/href=\"http:\/\/www.FreeBSD.org\/ports\/growth/' index.html
+	${SED} -i "" -e 's,HREF="growth,href="http://www.FreeBSD.org/ports/growth,' index.html
 .endif
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
