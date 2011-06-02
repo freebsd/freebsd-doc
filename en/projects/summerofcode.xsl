@@ -7,7 +7,7 @@
 <!ENTITY % developers SYSTEM "../developers.sgml"> %developers;
 ]>
 
-<!-- $FreeBSD: www/en/projects/summerofcode.xsl,v 1.30 2011/04/02 00:18:26 ryusuke Exp $ -->
+<!-- $FreeBSD: www/en/projects/summerofcode.xsl,v 1.31 2011/04/03 22:01:24 rwatson Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -176,8 +176,8 @@ href="http://wiki.freebsd.org/moin.cgi/SummerOfCode2005">2005</a>].</p>
 
       <p>How many hours per week will you spend working on this? How many on
 	other things? What other obligations (work, school, vacation,
-	weddings, etc) do you have this summer? Be as specific as possible:
-	when will the project begin and and?  You should be ready to produce
+	weddings, etc.) do you have this summer? Be as specific as possible:
+	when will the project begin and end?  You should be ready to produce
 	a day by day schedule before the program starts.)</p>
 
       <p><strong>Please note</strong>: participating in Google Summer of Code
