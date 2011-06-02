@@ -9,7 +9,7 @@
 <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
 
-  <xsl:variable name="date" select="'$FreeBSD: www/en/platforms/ia64/todo.xsl,v 1.9 2006/08/19 21:20:41 hrs Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD: www/en/platforms/ia64/todo.xsl,v 1.10 2011/04/03 19:30:06 rene Exp $'"/>
 
   <xsl:output doctype-public="-//W3C//DTD HTML 4.01 Transitional//EN"
     encoding="iso-8859-1" method="html"/>
@@ -50,7 +50,7 @@
 	  This page tries to be the starting point for people trying to find
 	  anything that can be done. The order of the items on this page are
 	  not strictly an indication of priority, but it is a good indication.
-	  There are in all likelyhood tasks that are not mentioned here, but
+	  There are in all likelihood tasks that are not mentioned here, but
 	  that should be done nonetheless. A typical example is the maintenance
 	  of the ia64 web pages... unfortunately.
 	</p>
@@ -75,7 +75,7 @@
 	  </li>
 	  <li>
 	    Port the X server (ports/x11/XFree86-4-Server). Not really
-	    required for tier 1 status, but one cannot truely do without
+	    required for tier 1 status, but one cannot truly do without
 	    if one wants to use ia64 as a desktop machine.
 	  </li>
 	</ul>
@@ -117,7 +117,7 @@
 	<p>
 	  On top of the high-level things that do not work or do not exist,
 	  there is also some rather involved rewriting to be done at the
-	  foundation and can potentionally affect all other platforms as well.
+	  foundation and can potentially affect all other platforms as well.
 	  This includes:
 	</p>
 	<ul>
