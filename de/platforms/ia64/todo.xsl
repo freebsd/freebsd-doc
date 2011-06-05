@@ -6,14 +6,15 @@
 <!ENTITY % navinclude.developers "INCLUDE">
 ]>
 <!--
-  $FreeBSDde: de-www/platforms/ia64/todo.xsl,v 1.14 2011/04/10 07:44:40 jkois Exp $
-  basiert auf: 1.10
+  $FreeBSDde: de-www/platforms/ia64/todo.xsl,v 1.16 2011/06/05 17:57:18 jkois Exp $
+  $FreeBSD$
+  basiert auf: 1.11
 -->
 
 <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
 
-  <xsl:variable name="date" select="'$FreeBSD: /repoman/r/dcvs/www/de/platforms/ia64/todo.xsl,v 1.8 2006/08/19 21:21:54 hrs Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD$'"/>
 
   <xsl:output doctype-public="-//W3C//DTD HTML 4.01 Transitional//EN"
     encoding="iso-8859-1" method="html"/>
