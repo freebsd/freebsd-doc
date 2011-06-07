@@ -4,8 +4,8 @@
 <!ENTITY title "The FreeBSD Project">
 ]>
 
-<!-- $FreeBSD: www/ja/index.xsl,v 1.58 2010/12/07 14:23:08 ryusuke Exp $ -->
-<!-- Original revision: 1.170 -->
+<!-- $FreeBSD: www/ja/index.xsl,v 1.59 2011/01/05 16:59:38 ryusuke Exp $ -->
+<!-- Original revision: 1.171 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
@@ -135,6 +135,10 @@
 			  </ul>
 			  </div> <!-- FRONTRELEASESCONTENT -->
 			</div> <!-- FRONTRELEASES -->
+                 <div class="frontipv6wd">
+			<a href="&enbase;/ipv6/w6d.html"><img
+			  src="&enbase;/ipv6/IPv6-badge-blue-128-trans.png"/></a>
+		</div>
 		  </div> <!-- FRONTFEATUREMIDDLE -->
 
 		<div id="FRONTFEATURERIGHT">
