@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/ipv6/Makefile,v 1.1 2011/06/03 12:48:52 bz Exp $
+# $FreeBSD: www/en/ipv6/Makefile,v 1.2 2011/06/06 09:49:52 bz Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -11,6 +11,7 @@ DOCS+=		index.sgml
 DOCS+=		ipv6only.sgml
 DOCS+=		w6d.sgml
 
-DATA+=		IPv6-badge-blue-256-trans.png
+DATA+=		IPv6-badge-blue-256-trans.png \
+		IPv6-badge-blue-128-trans.png
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
