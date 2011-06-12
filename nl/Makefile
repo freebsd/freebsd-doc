@@ -1,6 +1,6 @@
-# $FreeBSD: www/nl/Makefile,v 1.2 2009/06/01 20:02:31 rene Exp $
+# $FreeBSD: www/nl/Makefile,v 1.3 2009/06/10 21:08:59 rene Exp $
 # %SOURCE%	en/Makefile
-# %SRCID%	1.146
+# %SRCID%	1.147
 
 .if exists(Makefile.conf)
 .include "Makefile.conf"
@@ -62,6 +62,7 @@ DATA+=	vendors.html
 #SUBDIR+= gnome
 #SUBDIR+= handbook
 #SUBDIR+= internal
+#SUBDIR+= ipv6
 #SUBDIR+= java
 #SUBDIR+= kse
 #SUBDIR+= marketing
