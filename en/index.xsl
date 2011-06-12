@@ -4,7 +4,7 @@
 <!ENTITY title "The FreeBSD Project">
 ]>
 
-<!-- $FreeBSD: www/en/index.xsl,v 1.170 2011/01/04 20:14:36 jkois Exp $ -->
+<!-- $FreeBSD$ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
@@ -138,10 +138,6 @@
 				  </ul>
 			  </div> <!-- FRONTRELEASESCONTENT -->
 			</div> <!-- FRONTRELEASES -->
-                 <div class="frontipv6wd">
-			<a href="&base;/ipv6/w6d.html"><img
-			  src="ipv6/IPv6-badge-blue-128-trans.png"/></a>
-		</div>
 		</div> <!-- FRONTFEATUREMIDDLE -->
 
 		<div id="FRONTFEATURERIGHT">
