@@ -1,7 +1,7 @@
 # The FreeBSD Documentation Project
 # The FreeBSD German Documentation Project
 # $FreeBSD$
-# $FreeBSDde: de-www/Makefile,v 1.50 2010/04/18 19:37:55 jkois Exp $
+# $FreeBSDde: de-www/Makefile,v 1.51 2011/06/13 21:33:54 jkois Exp $
 # basiert auf: 1.145
 
 .if exists(Makefile.conf)
@@ -44,6 +44,7 @@ SUBDIR+= docs
 SUBDIR+= news
 SUBDIR+= FAQ
 SUBDIR+= handbook
+SUBDIR+= ipv6
 SUBDIR+= java
 SUBDIR+= platforms
 #SUBDIR+= ports
