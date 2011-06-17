@@ -1,4 +1,4 @@
-# $FreeBSD: www/ja/Makefile,v 1.79 2010/07/05 17:00:55 ryusuke Exp $
+# $FreeBSD: www/ja/Makefile,v 1.80 2011/03/17 13:21:37 ryusuke Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.133
 
@@ -76,7 +76,7 @@ SUBDIR+= releases
 SUBDIR+= search
 SUBDIR+= security
 SUBDIR+= smp
-#SUBDIR+= snapshots
+SUBDIR+= snapshots
 SUBDIR+= support
 SUBDIR+= tutorials
 
