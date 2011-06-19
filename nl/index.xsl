@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
 <!-- Vertaald door: Siebrand Mazeland / Rene Ladan
      %SOURCE%	en/index.xsl
-     %SRCID%	1.170
+     %SRCID%	1.172
 -->
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
 <!ENTITY title "Het &os; Project">
 ]>
 
-<!-- $FreeBSD: www/nl/index.xsl,v 1.3 2009/06/08 18:58:09 rene Exp $ -->
+<!-- $FreeBSD: www/nl/index.xsl,v 1.4 2011/02/20 08:58:01 remko Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
