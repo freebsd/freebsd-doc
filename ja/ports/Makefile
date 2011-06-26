@@ -1,6 +1,6 @@
-# $FreeBSD: www/ja/ports/Makefile,v 1.31 2011/03/21 11:01:41 ryusuke Exp $
+# $FreeBSD: www/ja/ports/Makefile,v 1.32 2011/05/28 07:36:43 ryusuke Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.45
+# Original revision: 1.50
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -49,17 +49,22 @@ packages.exists:
 	${TOUCH} ${.TARGET}
 .endif
 
-Makefile.gen: index.sgml .NOTMAIN
+Makefile.gen: categories-alpha.sgml categories-grouped.sgml index.sgml \
+	installing.sgml master-index.sgml references.sgml searching.sgml \
+	statistics.ent updating.sgml .NOTMAIN
 	(	${ECHO_CMD} TIDY=${PERL};\
-		${ECHO_CMD} TIDYOPTS="-i'' -npe 's,\"-//FreeBSD//DTD HTML 4.01 Transitional-Based Extension//EN\",\"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\",'";\
+		${ECHO_CMD} TIDYOPTS="-i'' -npe 's,\"-//FreeBSD//DTD HTML 4.01 Transitional-Based Extension//EN\",\"-//W3C//DTD HTML 4.01 Transitional//EN\" \"http://www.w3.org/TR/html4/loose.dtd\",'";\
 		${ECHO_CMD} DOCS= *.sgml;\
 		${ECHO_CMD} -n "DYNAMIC_DOCS= ";\
+		${ECHO_CMD} -n " categories-alpha.sgml";\
+		${ECHO_CMD} -n " categories-grouped.sgml";\
 		${ECHO_CMD} -n " master-index.sgml";\
-		${ECHO_CMD} -n " index.sgml";\
+		${ECHO_CMD} -n " statistics.ent";\
 	) > Makefile.gen
 	for categoryfile in ${CATEGORYLIST}; do \
 		${ECHO_CMD} -n " $$categoryfile.sgml" >> Makefile.gen; \
 	done
+	${ECHO_CMD} >> Makefile.gen
 .if defined(NO_TIDY)
 	${ECHO_CMD} NO_TIDY=${NO_TIDY} >> Makefile.gen
 .endif
@@ -78,13 +83,17 @@ ports.size:
 	${FETCH} -s ${PORTS_TARGZ_URL} > ${.TARGET}
 .endif
 
-index.sgml: ${INDEX} categories categories.descriptions packages.exists portindex ports.inc ports.size .NOTMAIN
-	${RM} -f *.sgml
-	${PORTINDEX} ${INDEX} ${.CURDIR}
-
 # this builds: categories-alpha.sgml, categories-grouped.sgml,
 # master-index.sgml, statistics.ent, <category>.sgml
 CATEGORYLIST=`grep "^[a-z]" ../../en/ports/categories | sed -e s"/,.*//"`
+categories-alpha.sgml: ${INDEX} categories categories.descriptions \
+	packages.exists portindex ports.ent ports.size .NOTMAIN
+	${RM} -f categories-alpha.sgml categories-grouped.sgml \
+		master-index.sgml statistics.ent
+	for categoryfile in ${CATEGORYLIST}; do \
+		rm -f "$$categoryfile.sgml"; \
+	done
+	${PORTINDEX} ${INDEX} ${.CURDIR}
 
 install: all beforeinstall
 
@@ -100,6 +109,7 @@ beforeinstall:
 .else
 beforeinstall:
 	${SED} -i "" -e 's,HREF="growth,href="http://www.FreeBSD.org/ports/growth,' index.html
+	${SED} -i "" -e 's,HREF="growth,href="http://www.FreeBSD.org/ports/growth,' references.html
 .endif
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
