@@ -1,6 +1,6 @@
-# $FreeBSD: www/ja/Makefile,v 1.80 2011/03/17 13:21:37 ryusuke Exp $
+# $FreeBSD: www/ja/Makefile,v 1.81 2011/06/17 12:52:33 ryusuke Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.133
+# Original revision: 1.147
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -11,20 +11,22 @@
 
 # These are turned into validated, normalized HTML files.
 
-DOCS=	about.sgml
-DOCS+=	applications.sgml
+DOCS=  about.sgml
+#DOCS+= administration.sgml
+DOCS+= applications.sgml
 #DOCS+= art.sgml
 DOCS+= availability.sgml
-DOCS+= docs.sgml 
+DOCS+= docs.sgml
 DOCS+= features.sgml
-DOCS+= internet.sgml 
-DOCS+= mailto.sgml 
+DOCS+= internet.sgml
+#DOCS+= logo.sgml
+DOCS+= mailto.sgml
 DOCS+= publish.sgml
 DOCS+= relnotes.sgml
 DOCS+= send-pr.sgml
 DOCS+= support.sgml
-DOCS+= where.sgml 
-DOCS+= y2kbug.sgml 
+DOCS+= where.sgml
+DOCS+= y2kbug.sgml
 
 # Japanese-only file
 DOCS+= jabout.sgml
@@ -62,10 +64,12 @@ SUBDIR+= events
 #SUBDIR+= gnome
 SUBDIR+= handbook
 SUBDIR+= internal
+#SUBDIR+= ipv6
 SUBDIR+= java
 #SUBDIR+= kse
 #SUBDIR+= layout
 #SUBDIR+= marketing
+#SUBDIR+= multimedia
 SUBDIR+= news
 SUBDIR+= platforms
 #SUBDIR+= portmgr
@@ -92,6 +96,7 @@ SUBDIR+= ports
 #SUBDIR+= cgi
 #SUBDIR+= gifs
 #SUBDIR+= layout
+#SUBDIR+= logo
 
 WEBDIR?=	data/ja
 
