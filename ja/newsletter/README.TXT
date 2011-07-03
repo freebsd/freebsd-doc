@@ -8,7 +8,7 @@
 もし森林を保護したいとお考えでしたら、その意思を大切にさせてもらいます。
 このディレクトリから PDF 版のニュースレターをダウンロードして、
 お気に入りの PDF リーダで読んでください。
-ports コレクションをインストールしているなら、
+Ports Collection をインストールしているなら、
 /usr/ports/graphics/xpdf と /usr/ports/print/gv のどちらを使っても
 まずまずの品質で PDF ドキュメントを X ウィンドウ上に表示することができます。
 (ports をインストールしていなければ、http://www.freebsd.org/ports を
@@ -37,5 +37,5 @@ newsletter@freebsd.org まで送ってください。- 普通の ASCII テキストで
 
 ありがとう !
 
-				Jordan K。Hubbard
+				Jordan K. Hubbard
 				ニュースレター編集長
