@@ -36,6 +36,11 @@ IMAGES_LIB+=	callouts/7.png
 IMAGES_LIB+=	callouts/8.png
 IMAGES_LIB+=	callouts/9.png
 IMAGES_LIB+=	callouts/10.png
+IMAGES_LIB+=	callouts/11.png
+IMAGES_LIB+=	callouts/12.png
+IMAGES_LIB+=	callouts/13.png
+IMAGES_LIB+=	callouts/14.png
+IMAGES_LIB+=	callouts/15.png
 
 URL_RELPREFIX?=	../../../..
 DOC_PREFIX?= ${.CURDIR}/../../..
