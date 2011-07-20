@@ -1,5 +1,5 @@
 # bsd.web.mk
-# $FreeBSD: www/share/mk/web.site.mk,v 1.75 2006/08/24 20:02:06 hrs Exp $
+# $FreeBSD: www/share/mk/web.site.mk,v 1.76 2006/09/22 21:05:04 hrs Exp $
 
 #
 # Build and install a web site.
@@ -358,6 +358,14 @@ realinstall: ${COOKIE} ${_ALLINSTALL} ${CGI} _PROGSUBDIR
 .endif
 .if defined(CGI) && !empty(CGI)
 	@${MKDIR} -p ${CGIINSTALLDIR}
+.if defined(CGI_SUBDIRS) && !empty(CGI_SUBDIRS)
+.for sd in ${CGI_SUBDIRS}
+	@${MKDIR} ${CGIINSTALLDIR}/${sd}
+.endfor
+.for sf in ${CGI_SUBFILES}
+	${INSTALL_CGI} ${CGIINSTALLDIR}/${sf} ${CGIINSTALLDIR}/${sf}
+.endfor
+.endif
 .for entry in ${CGI}
 	${INSTALL_CGI} ${.CURDIR}/${entry} ${CGIINSTALLDIR}
 .endfor
