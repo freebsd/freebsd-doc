@@ -43,6 +43,7 @@ SUBDIR+= nanobsd
 SUBDIR+= new-users
 SUBDIR+= p4-primer
 SUBDIR+= pam
+SUBDIR+= port-mentor-guidelines
 SUBDIR+= portbuild
 SUBDIR+= pr-guidelines
 SUBDIR+= problem-reports
