@@ -1,8 +1,8 @@
 #!/usr/bin/perl -Tw
+#------------------------------------------------------------------------------
+# GNATS query-pr Interface, Generation III
 #
-# A "More Useful" GNATS query-pr Interface
-#
-# Copyright (C) 2006, Shaun Amott <shaun@FreeBSD.org>
+# Copyright (C) 2006-2011, Shaun Amott <shaun@FreeBSD.org>
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -26,1177 +26,820 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.68 2009/11/15 16:28:32 remko Exp $
+# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.69 2009/11/15 18:40:26 remko Exp $
 #
-
+# Useful PRs for testing:
 #
-# Note: this is a script to run on a webserver. If you want to do tests
-# on the command-line, use the QUERY_STRING environment variable to
-# pass parameters to the script:
-#	$ QUERY_STRING=pr=bin/106049 ./query-pr.cgi
+# - ports/147261 - RFC 2047 words, attachments, interjected e-mail (inc.
+#                  malformed header)
+# - ports/138672 - Lots of attachments, multi-level MIME.
+# - ports/132344 - Base64-encoded attachment.
 #
+# TODO:
+#
+# - Charset and transfer encoding transformation.
+# - Refine linkifier.
+# - Better end-of-diff detection.
+# - Inline patches inside MIME parts (probably just the first part).
+# - Modernise HTML (may require altering site-wide CSS)
+#------------------------------------------------------------------------------
 
-use strict;
+use CGI;
 
-use MIME::Base64;                      # ports/converters/p5-MIME-Base64
-use MIME::QuotedPrint;                 #
-use Convert::UU qw(uudecode uuencode); # ports/converters/p5-Convert-UU
+use GnatsPR;
+use GnatsPR::SectionIterator;
+use GnatsPR::MIMEIterator;
+
+#use MIME::EncWords (decode_mimewords);   # mail/p5-MIME-EncWords
+sub decode_mimewords { wantarray ? @_ : join ' ', @_; } # Temp. subsitute for the above
 
 require './cgi-style.pl';
 require './query-pr-lib.pl';
 
-use constant HTTP_HEADER        => "Content-type: text/html; charset=UTF-8\r\n\r\n";
-use constant HTTP_HEADER_PATCH  => "Content-type: text/plain; charset=UTF-8\r\nContent-Disposition: inline; filename=\"%s\"\r\n\r\n";
-
-use constant SECT_HEADER        => 1;
-use constant SECT_SFIELDS       => 2;
-use constant SECT_MFIELDS       => 3;
-
-use constant ENCODING_BASE64    => 1;
-use constant ENCODING_QP        => 2;
-
-use constant PATCH_ANY          => 0x0001;
-use constant PATCH_DIFF         => 0x0002;
-use constant PATCH_UUENC        => 0x0004;
-use constant PATCH_UUENC_BIN    => 0x0008;
-use constant PATCH_SHAR         => 0x0010;
-use constant PATCH_BASE64       => 0x0020;
-
-my @fields_single = (
-	"Number",       "Category",      "Synopsis",      "Confidential",
-	"Severity",     "Priority",      "Responsible",   "State",
-	"Quarter",      "Keywords",      "Date-Required", "Class",
-	"Submitter-Id", "Arrival-Date",  "Closed-Date",   "Last-Modified",
-	"Originator",   "Release",
-);
-
-my @fields_multiple = (
-	"Organization", "Environment",   "Description",   "How-To-Repeat",
-	"Fix",          "Release-Note",  "Audit-Trail",   "Unformatted",
-);
-
-my $fields_skip    = "Confidential|Quarter|Keywords|Date-Required|Submitter-Id";
-
-my $valid_category = '[a-z0-9][A-Za-z0-9-_]{1,25}';
-my $valid_pr       = '\d{1,8}';
-
-my $binary_filetypes = '(?:\.gz|\.bz2|\.zip|\.tar)$';
-
-my %fmt;
-
-my $f = "";
-my $PR = -1;
-my $getpatch = -1;
-my $mimepatch = "";
-my $inpatch = 0;
-my $patchendhint = 0;
-my $category;
-my @query;
-my (%header, %sfields, %mfields);
-
-my $iscgi = defined $ENV{'SCRIPT_NAME'};
-
-my $fromwebform = 0;
-
-$ENV{'PATH'} = "/bin:/usr/bin:/usr/sbin:/sbin:/usr/local/bin";
-
-$ENV{'QUERY_STRING'} ||= "";
-$ENV{'SCRIPT_NAME'}  ||= $0;
-
-# Junk from cgi-style.pl
-$main::hsty_base     ||= "";
-$main::t_style       ||= "";
-
-my $scriptname  = htmlclean($ENV{'SCRIPT_NAME'});
-my $querystring = htmlclean($ENV{'QUERY_STRING'});
-
-# Do not change $self_url_base, unless you understand what it is for!
-# In particular: it is used as a delimiter between comments in the
-# Audit-Trail.
-my $self_url_base = "http://www.FreeBSD.org/cgi/query-pr.cgi?pr=";
-my $cvsweb_url    = "http://www.FreeBSD.org/cgi/cvsweb.cgi/";
-my $stylesheet    = "$main::hsty_base/layout/css/query-pr.css";
+use strict;
 
 
-#-----------------------------------------------------------------------
-# Format strings
-#-----------------------------------------------------------------------
+#------------------------------------------------------------------------------
+# Constants
+#------------------------------------------------------------------------------
 
-$fmt{'header_thead'} = <<EOF;
-<table class="headtable">
-EOF
-
-$fmt{'header_tfoot'} = <<EOF;
-</table><br />
-EOF
-
-$fmt{'header_trow'} = <<EOF;
-<tr><td class="key">%%(1):</td><td class="val">%%(2)</td></tr>
-EOF
-
-$fmt{'sfields_thead'} = <<EOF;
-<table class="headtable">
-EOF
-
-$fmt{'sfields_trow'} = <<EOF;
-<tr><td class="key">%%(1):</td><td class="val">%%(2)</td></tr>
-EOF
-
-$fmt{'sfields_tfoot'} = <<EOF;
-</table><br />
-EOF
-
-$fmt{'mfields_header'} = <<EOF;
-<table class="headtable"><tr><td class="blkhead">%%(1):</td></tr></table>
-<div class="mfield">
-EOF
-$fmt{'mfields_header'} =~ s/\n+$//;
-
-$fmt{'mfields_footer'} = <<EOF;
-</div>
-EOF
-
-$fmt{'patchblock_thead'} = <<EOF;
-<table class="patchblock" cellspacing="0" cellpadding="3">
-  <tr class="info"><td>
-    <b>Download <a href="${scriptname}?prp=%%(pr)-%%(1)-%%(3)&n=/%%(2)">%%(2)</a></b>
-  </td></tr>
-<tr><td class="content"><pre>
-EOF
-$fmt{'patchblock_thead'} =~ s/\n+$//;
-
-$fmt{'patchblock_tfoot'} = <<EOF;
-</pre></td></tr>
-</table><br />
-EOF
-$fmt{'patchblock_tfoot'} =~ s/\n+$//;
-$fmt{'patchblock_tfoot'} =~ s/^\n+//;
-
-$fmt{'auditblock_thead'} = <<EOF;
-<table class="auditblock" cellspacing="0" cellpadding="3">
-  <tr class="info"><td colspan="2"><b>%%(1) Changed</b></td></tr>
-EOF
-
-$fmt{'auditblock_tfoot'} = <<EOF;
-  </table>
-<br />
-EOF
-
-$fmt{'auditblock_trow'} = <<EOF;
-<tr><td class="key" valign="top">%%(1):</td><td valign="top">%%(2)</td></tr>
-EOF
-
-$fmt{'responseblock_thead'} = <<EOF;
-<table class="replyblock" cellspacing="0" cellpadding="3">
-  <tr><td class="info" colspan="2"><b>Reply via E-mail</b></td></tr>
-EOF
-
-$fmt{'responseblock_tfoot'} = <<EOF;
-  </table><br />
-EOF
-
-$fmt{'responseblock_textfoot'} = <<EOF;
-</td></tr>
-EOF
-
-$fmt{'responseblock_texthead'} = <<EOF;
-<tr><td colspan="2">
-EOF
-
-$fmt{'responseblock_trow'} = <<EOF;
-<tr><td class="key"><b>%%(1):</b></td><td class="val">%%(2)</td></tr>
-EOF
-
-$fmt{'unexpectedtext_thead'} = <<EOF;
-
-EOF
-
-$fmt{'unexpectedtext_tfoot'} = <<EOF;
-<br />
-EOF
-
-$fmt{'html_footerlinks'} = <<EOF;
-  <div>
-    <a href="%%(maillink)">Submit Followup</a>
-    | <a href="${scriptname}?pr=%%(pr)&amp;f=raw">Raw PR</a>
-    | <a href="query-pr-summary.cgi?query">Find another PR</a>
-  </div>
-EOF
-
-$fmt{'trylatermsg'} = <<EOF;
-<p>
-  Please <a href="${scriptname}?${querystring}">try again</a> later.
-</p>
-EOF
-
-$fmt{'mime_boundary'} = <<EOF;
-<hr class="mimeboundary" />
-EOF
-
-$fmt{'quote_level_0'} = '<span class="quote0">&gt; ';
-$fmt{'quote_level_1'} = '<span class="quote1">&gt; ';
-$fmt{'quote_end'}     = '</span>';
-
-$fmt{'empty'}         = '&nbsp;';
-$fmt{'break'}         = "<br />\n";
-
-# From cgi-style.pl
-$main::t_style = "<link href=\"${stylesheet}\" rel=\"stylesheet\" type=\"text/css\" />";
-$main::t_style .= qq{\n<link rel="search" type="application/opensearchdescription+xml" href="http://www.freebsd.org/search/opensearch/query-pr.xml" title="FreeBSD Bugs" />\n};
+use constant EXIT_NOPRS   => 1;
+use constant EXIT_DBBUSY  => 2;
+use constant EXIT_NOPATCH => 3;
 
 
-#-----------------------------------------------------------------------
+#------------------------------------------------------------------------------
+# Globals
+#------------------------------------------------------------------------------
+
+our $valid_category = '[a-z0-9][A-Za-z0-9-_]{1,25}';
+our $valid_pr       = '\d{1,8}';
+
+our $cvsweb_url    = 'http://www.FreeBSD.org/cgi/cvsweb.cgi/';
+our $stylesheet    = "$main::hsty_base/layout/css/query-pr.css";
+
+our $iscgi = defined $ENV{'SCRIPT_NAME'};
+
+# Keep this ahead of CGI
+
+if (!$iscgi && !exists $ENV{'REQUEST_METHOD'}) {
+	# Makes debugging easier
+	$ENV{'REQUEST_METHOD'} = 'GET';
+}
+
+# Stuff from cgi-style.pl
+
+$main::hsty_base ||= '';
+$main::t_style   ||= '';
+
+$main::t_style =
+qq{<link href="$stylesheet" rel="stylesheet" type="text/css" />
+<link rel="search" type="application/opensearchdescription+xml"
+	href="http://www.freebsd.org/search/opensearch/query-pr.xml"
+	title="FreeBSD Bugs" />
+};
+
+# Global CGI accessor
+
+our $q = new CGI;
+
+
+#------------------------------------------------------------------------------
+# Environment vars
+#------------------------------------------------------------------------------
+
+$ENV{'PATH'} = '/bin:/usr/bin:/usr/sbin:/sbin:/usr/local/bin';
+
+$ENV{'SCRIPT_NAME'} ||= $0;
+
+
+#------------------------------------------------------------------------------
 # Begin Code
-#-----------------------------------------------------------------------
+#------------------------------------------------------------------------------
 
-if ($ENV{'QUERY_STRING'}) {
-	foreach (split(/&/, $ENV{'QUERY_STRING'})) {
-		my ($key, $val) = map { s/%([0-9a-f]{2})/chr hex $1/egi; $_ }
-				  split /=/;
-		$f        = lc $val if ($key eq "f");
-		$PR       = lc $val if ($key eq "pr" or $key eq "q");
-		$PR       = lc $key if ($key =~ /^(?:$valid_category\/)?$valid_pr$/i);
-		$category = lc $val if ($key eq "cat");
-		$getpatch = lc $val if ($key eq "getpatch");
+main();
 
-		if ($key eq "prp") {
-			if ( lc ($val) =~ /^(\d+)-(\d+)-(\w+)$/ ) {
-				$PR = $1;
-				$getpatch = $2;
-				$mimepatch = $3;
-			}
-		}
-	}
-}
 
-unless (!$iscgi) {
-	if ($getpatch > 0 or $f eq "raw") {
-		if ($mimepatch eq "diff") {
-			printf HTTP_HEADER_PATCH, "patch-$getpatch.diff";
-		} elsif ($mimepatch eq "shar") {
-			printf HTTP_HEADER_PATCH, "shar-$getpatch.sh";
-		} elsif ($mimepatch eq "uu") {
-			printf HTTP_HEADER_PATCH, "patch-$getpatch.uu";
-		} elsif ($mimepatch eq "txt") {
-			printf HTTP_HEADER_PATCH, "txt-$getpatch.txt";
+#------------------------------------------------------------------------------
+# Main routine
+#------------------------------------------------------------------------------
+
+sub main
+{
+	my ($PR, $category, $rawdata, $gnatspr);
+
+	binmode STDOUT, ':utf8';
+
+	if ($q->param('pr')) {
+		$PR = $q->param('pr');
+	} elsif ($q->param('q')) {
+		$PR = $q->param('q');
+	} elsif ($q->param('prp')) {
+		# Legacy param format
+		my $prp = $q->param('prp');
+
+		if ($prp =~ /^(\d+)-(\d+)/) {
+			my $get = $2;
+			$PR = $1;
+
+			$q->param(-name => 'pr', -value => $PR);
+			$q->param(-name => 'getpatch', -value => $get);
 		} else {
-			printf HTTP_HEADER_PATCH, "unknown-$getpatch.txt";
-		}
-	}
-}
-
-($category, $PR) = ($1, $2)
-	if ($PR =~ /^($valid_category)\/($valid_pr)$/);
-
-$category = undef
-	if ($category && $category !~ /^$valid_category$/);
-
-if ($PR !~ /^$valid_pr$/ || $PR < 0) {
-	print html_header("Query PR Database");
-	displayform();
-	print html_footer();
-	exit;
-}
-
-# Just in case
-$PR = int $PR;
-$PR = quotemeta $PR;
-
-# Note: query-pr.web is just a anti DoS wrapper around query-pr which
-# make sure we do not run too many query-pr instances at once.
-if ($category) {
-	$category = quotemeta $category;
-	@query = split /\n/, qx(query-pr.web --full --category=${category} ${PR} 2>&1);
-} else {
-	@query = split /\n/, qx(query-pr.web --full ${PR} 2>&1);
-}
-
-if (!@query or ($query[0] and $query[0] =~ /^query-pr(:?\.(:?real|web))?: /)) {
-	print html_header("No PRs Matched Query");
-	displayform();
-	print html_footer();
-	exit;
-} elsif ($query[0] =~ /^lockf: /) {
-	print html_header("PR Database Busy");
-	sprint('trylatermsg');
-	print html_footer();
-	exit;
-}
-
-if ($f eq "raw") {
-	print "$_\n" foreach (@query);
-	exit;
-}
-
-
-#-----------------------------------------------------------------------
-# Process Results from query-pr
-#-----------------------------------------------------------------------
-
-my $section = SECT_HEADER;
-my $mfield = $fields_multiple[0];
-
-foreach my $line (@query)
-{
-	my ($k, $v);
-
-	if ($section == SECT_HEADER) {
-		$section++ if ($line =~ /^\s*$/);
-
-		next if ($line !~ /^([A-Z][A-Za-z0-9-_.]+): (.*)$/);
-
-		($k, $v) = ($1, $2);
-
-		$k = lc $k;
-		$header{$k} = $v;
-
-		next;
-	}
-
-	if ($section == SECT_SFIELDS) {
-		my $i = -1;
-		my $f = 0;
-
-		next if ($line !~ /^>([A-Z][A-Za-z-]+):\s*(.*)$/);
-
-		($k, $v) = ($1, $2);
-
-		foreach (@fields_single) {
-			if ($k eq $_) {
-				$f = 1;
-				last;
-			}
-
-			$i++;
-		}
-
-		if (!$f or $i == $#fields_single) {
-			$section++;
-			next;
-		}
-
-		$sfields{$k} = $v;
-
-		next;
-	}
-
-	if ($section == SECT_MFIELDS) {
-		my $f = 0;
-
-		if ($line =~ /^>([A-Z][A-Za-z-]+):\s*(.*)$/) {
-			foreach (@fields_multiple) {
-				$f = 1 if $1 eq $_;
-				next;
-			}
-
-			if ($f) {
-				$mfield = $1;
-			} else {
-				push @{$mfields{$mfield}}, $2;
-			}
-
-			next;
-		}
-
-		push @{$mfields{$mfield}}, $line;
-		next;
-	}
-}
-
-$getpatch = 0 if ($getpatch < 0);
-
-$fromwebform =
-	$header{'x-send-pr-version'} =~ /^www-/;
-
-if ($getpatch > 0) {
-	extractpatch();
-	exit;
-}
-
-
-# Construct footer now we have enough information
-
-buildfooter();
-
-
-print html_header(htmlclean("$sfields{'Category'}/$sfields{'Number'}: "
-                            . $sfields{'Synopsis'}));
-
-sprint('header_thead');
-
-sprint('header_trow', 'From',    htmlclean($header{'from'}));
-sprint('header_trow', 'Date',    htmlclean($header{'date'}));
-sprint('header_trow', 'Subject', htmlclean($header{'subject'}));
-sprint('header_trow', 'Send-pr version',
-       htmlclean($header{'x-send-pr-version'}));
-
-sprint('header_tfoot');
-
-
-# Single-Line fields
-
-sprint('sfields_thead');
-
-foreach (@fields_single)
-{
-	my ($k, $v);
-
-	$k = htmlclean($_);
-	$v = htmlclean($sfields{$_}) || "";
-
-	$v =~ s/^(\S*).*$/<a href="mailto:$1\@FreeBSD.org">$1\@FreeBSD.org<\/a>/
-		if ($_ eq "Responsible");
-
-	$v = "never"
-		if ($_ eq "Last-Modified" and $v =~ /^\s*$/);
-
-	next if ($_ =~ /$fields_skip/i);
-
-	sprint('sfields_trow', $k, $v);
-}
-
-sprint('sfields_tfoot');
-
-
-# Multiple-Line fields
-
-foreach my $field (@fields_multiple)
-{
-	my $cfound = 0;
-
-	sprint('mfields_header', $field);
-
-	if ($field eq "Audit-Trail") {
-		my %block;
-		my $cliphack;
-		my $blockwhy;
-		my ($inblock, $inresponse, $mbreak) = (0, 0, 0);
-		my $url = "${self_url_base}${PR}";
-
-		my $outp = "";
-		my $qpcont = "";
-		my %mime_headers;
-		my $mime_boundary;
-		my $mime_endheader;
-		my $encoding = 0;
-
-		# Hack for older PRs with no usable delimiter
-		push @{$mfields{'Audit-Trail'}}, $url;
-
-		$url = quotemeta $url;
-
-		foreach (@{$mfields{$field}})
-		{
-			# If we're sure we have a genuine Reply via E-mail block,
-			# allow for a border case, where there is a space rather
-			# than an empty line between the header and body.
-			$_ = "" if ($cliphack && /^ {1,2}$/);
-			$cliphack = 0;
-
-			if ($inblock == 1 && (/^${url}\s*$/i || /^([A-Za-z_]+-Changed-From-To: .*)$/ || /^(From: )/)) {
-				my $onnextline = ($1 ? 1 : 0);
-				if ($blockwhy) {
-					$blockwhy =~ s/<br \/>$//;
-					$blockwhy = htmlparse($blockwhy);
-				}
-
-				sprint('auditblock_trow', "Why", $blockwhy || "");
-
-				undef %block;
-				undef $blockwhy;
-				$inblock = 0;
-				$mbreak = 0;
-
-				if ($inresponse) {
-					if ($inpatch) {
-						$inpatch = 0;
-						sprint('patchblock_tfoot');
-						sprint('break');
-					}
-					sprint('responseblock_textfoot') if ($inresponse > 1);
-					sprint('responseblock_tfoot');
-					$inresponse = 0;
-				}
-
-				sprint('auditblock_tfoot');
-				next unless ($onnextline);
-			}
-
-			if (/^([A-Za-z_]+)-Changed-([A-Za-z_-]+?): (.*)$/) {
-				my $w = $1;
-				my $k = $2;
-
-				if ($inresponse) {
-					if ($inpatch) {
-						$inpatch = 0;
-						sprint('patchblock_tfoot');
-						sprint('break');
-					}
-					sprint('responseblock_textfoot') if ($inresponse > 1);
-					sprint('responseblock_tfoot');
-					$inresponse = 0;
-				}
-
-				if ($inblock == 0) {
-					$block{'changed'} = $w;
-					sprint('auditblock_thead', htmlclean($w));
-					$inblock = 1;
-				}
-
-				$block{$k} = $3;
-
-				if ($k ne "Why") {
-					sprint('auditblock_trow', htmlclean($k), htmlclean($block{$k}));
-					next;
-				}
-
-				next;
-			} elsif (/^(From|To|Cc|Subject|Date): (.*)$/) {
-				my ($k, $v);
-
-				$k = htmlclean($1);
-				$v = htmlclean($2);
-
-				if ($inresponse > 1) {
-					if ($inpatch) {
-						$inpatch = 0;
-						sprint('patchblock_tfoot');
-						sprint('break');
-					}
-					$mime_boundary = undef;
-					$mime_endheader = 0;
-					$encoding = 0;
-					sprint('responseblock_textfoot');
-					sprint('responseblock_tfoot');
-				}
-
-				if (!$inresponse || $inresponse > 1) {
-					sprint('responseblock_thead');
-				}
-
-				if ($k eq "From" or $k eq "Date") {
-					sprint('responseblock_trow', $k, $v);
-				}
-
-				$inresponse = 1;
-				$cliphack = 1;
-				next;
-			} elsif (/^\s/ and $inresponse == 1 and !$mbreak) {
-				$cliphack = 1;
-				next;
-			} elsif (/^ (.*)$/) {
-				next if ($inresponse and !$mbreak);
-
-				if ($inresponse == 1) {
-					sprint('responseblock_texthead');
-					$inresponse++;
-				}
-
-				# XXX - use trailing cfound
-
-				if ($inresponse) {
-					my $txt = $1;
-
-					# Detect Q-P line continuations,
-					# join them with the next line
-					# and process when the full line
-					# will be assembled.
-					if ($encoding == ENCODING_QP) {
-						if ($txt =~ /=$/) {
-							$txt =~ s/=$//;
-							$qpcont .= $txt;
-							next;
-						} else {
-							$txt = $qpcont . $txt;
-							$qpcont = "";
-						}
-					}
-
-					if ($txt !~ /^-+$/ && $txt !~ /(?:cut|snip)/i && $txt =~ /^--(\S+)$/) {
-						$mime_boundary = $1 if (!defined $mime_boundary && !$inpatch);
-
-						if ($1 =~ /^${mime_boundary}(--)?$/) {
-							$mime_boundary = undef if (defined $1);
-							if ($encoding == ENCODING_BASE64 and $outp ne "") {
-								my $patchname;
-								my $dp = $mime_headers{'disposition'};
-								if ($dp and $dp =~ /.*\bfilename=["']?([A-Za-z0-9\-\.:_]{6,36})["']?.*/) {
-									$patchname = $1;
-								} else {
-									$patchname = "attachment.dat";
-								}
-								if ($patchname =~ /$binary_filetypes/) {
-									$outp = "(Binary attachment not viewable.)\n";
-								} else {
-									$outp = decode_base64($outp);
-								}
-
-								$outp = "--- $patchname begins here ---\n"
-								      . $outp
-								      . "\n--- $patchname ends here ---\n";
-								parsepatches($_) foreach (split /\n/, $outp);
-								$outp = "";
-							}
-
-							sprint('mime_boundary');
-							$mime_endheader = 0;
-							$encoding = 0;
-							next;
-						}
-					}
-
-					if (defined $mime_boundary && !$mime_endheader && !$inpatch) {
-						if ($txt =~ /^Content-([A-Za-z-]{2,}):\s*(.*)\s*$/i) {
-							$mime_headers{lc $1} = $2;
-							next;
-						} elsif ($txt =~ /^\s*(?:file)?name=["']?.*?["']?\s*$/i) {
-							$mime_headers{'disposition'} ||= "";
-							if ($mime_headers{'disposition'} !~ /(?:file)?name=/) {
-								$mime_headers{'disposition'} .= "; $txt";
-							}
-							next;
-						} else {
-							$mime_endheader = 1;
-							if ($mime_headers{'transfer-encoding'}) {
-								my $enc = $mime_headers{'transfer-encoding'};
-								if ($enc =~ /^\s*["']?base64["']?\s*$/i) {
-									$encoding = ENCODING_BASE64;
-								} elsif ($enc =~ /^\s*["']?quoted-printable["']?\s*$/i) {
-									$encoding = ENCODING_QP;
-								} else {
-									$encoding = 0;
-								}
-							} else {
-								$encoding = 0;
-							}
-						}
-					}
-
-					if ($encoding == ENCODING_BASE64) {
-						next if $txt =~ /:/;
-						$outp .= $txt;
-						next;
-					} elsif ($encoding == ENCODING_QP) {
-						$txt = decode_qp($txt);
-					}
-
-					if ($txt =~ /^\s*((?:>\s*)+)/) {
-						my $level = $1;
-
-						$txt =~ s/^((?:>\s*)*={47})(=+\s*)$/$1 $2/;
-
-						if ($level =~ s/.*?>.*?/./g) {
-							my $i = 0;
-							my @levels = split(/\s*>\s*/, $txt,
-							                   length $level);
-							my $last = pop @levels;
-							foreach (@levels) {
-								sprint('quote_level_'.(++$i % 2));
-								$_ = htmlclean($_);
-								$_ = htmlparse($_);
-								print;
-							}
-							print htmlclean($last);
-							sprint('quote_end') while ($i--);
-							sprint('break');
-						}
-					} else {
-						$patchendhint = 1 if ($txt eq '-- ');
-
-						if ($inpatch or $txt) {
-							parsepatches($txt) || ($inpatch || sprint('break'));
-						} else {
-							sprint('break');
-						}
-					}
-				}
-			} elsif (/^$/ and $inresponse and !$mbreak) {
-				# XXX: >line 1 ignored (but not needed)
-				$mbreak = 1;
-				next;
-			} elsif (/^$/) {
-				$mbreak = 0;
-				next;
-			} elsif (!$inblock and $_ !~ /^${url}\s*$/i) {
-				if ($inresponse > 1) {
-					if ($inpatch) {
-						$inpatch = 0;
-						sprint('patchblock_tfoot');
-						sprint('break');
-					}
-					sprint('responseblock_textfoot');
-					sprint('responseblock_tfoot');
-				}
-
-				sprint('unexpectedtext_thead');
-				print htmlclean($_);
-				sprint('unexpectedtext_tfoot');
-
-				$inresponse = 0;
-				next;
-			}
-
-			$cfound = ($_ ? 1 : 0) if (!$cfound);
-			next if (!$cfound);
-
-			if (!$_) {
-				$cfound++;
-				next;
-			} else {
-				print "\n" while (--$cfound);
-				$cfound = 1;
-			}
-
-			$_ =~ s/^((?:>\s*)*={47})(=+\s*)$/$1 $2/;
-
-			$_ = htmlclean($_);
-			$blockwhy .= "$_<br />\n" if defined($block{'Why'});
-		}
-
-		if ($inresponse) {
-			if ($inpatch) {
-				$inpatch = 0;
-				sprint('patchblock_tfoot');
-				sprint('break');
-			}
-			sprint('responseblock_textfoot') if ($inresponse > 1);
-			sprint('responseblock_tfoot');
-			$inresponse = 0;
-		}
-	} elsif ($field eq "Fix") {
-		foreach (@{$mfields{$field}})
-		{
-			s/\s+$//;
-
-			$cfound = ($_ ? 1 : 0) if (!$cfound);
-			next if (!$cfound);
-
-			if (!$_) {
-				$cfound++;
-				next;
-			} else {
-				sprint('break')  while (--$cfound > 1);
-				$cfound = 1;
-			}
-
-			parsepatches($_) || ($inpatch || sprint('break'));
-		}
-
-		if ($inpatch) {
-			$inpatch = 0;
-			sprint('patchblock_tfoot');
-			sprint('break');
+			ErrorExit();
 		}
 	} else {
-		foreach (@{$mfields{$field}})
-		{
-			s/\s+$//;
+		ErrorExit(EXIT_NOPRS);
+	}
 
-			$cfound = ($_ ? 1 : 0) if (!$cfound);
-			next if (!$cfound);
+	if ($PR =~ /^($valid_category)\/($valid_pr)$/) {
+		$category = $1;
+		$PR = $2;
+	}
 
-			if (!$_) {
-				$cfound++;
-				next;
-			} else {
-				sprint('break') while (--$cfound);
-				$cfound = 1;
+	length $PR > 0
+		or ErrorExit();
+
+	# category may be undef
+	$rawdata = DoQueryPR($PR, $category);
+
+	# Dump the raw PR data if requested
+	if ($q->param('f') && $q->param('f') eq 'raw') {
+		print "Content-type: text/plain; charset=UTF-8\r\n\r\n";
+		print $rawdata;
+		Exit();
+	}
+
+	# Run PR text through the parser
+	$gnatspr = GnatsPR->new($rawdata);
+
+	# User is requesting a patch extraction?
+	if ($q->param('getpatch')) {
+		my ($patch, $patchnum);
+
+		$patchnum  = $q->param('getpatch');
+		$patchnum =~ s/[^0-9]+//g;
+
+		$patch = $gnatspr->GetAttachment($patchnum);
+
+		defined $patch
+			or ErrorExit(EXIT_NOPATCH);
+
+		print 'Content-type: %s; charset=UTF-8'."\r\n",
+			($patch->isbinary ? 'application/octet-stream' : 'text/plain');
+
+		printf 'Content-Length: "%s"'."\r\n"
+			. 'Content-Disposition: inline; filename="%s"'."\r\n",
+			$patch->size,
+			$patch->filename;
+
+		print $patch->data;
+
+		Exit();
+	}
+
+	# Otherwise, output PR
+
+	PrintPR($gnatspr);
+
+	Exit();
+}
+
+
+#------------------------------------------------------------------------------
+# Func: DoQueryPR()
+# Desc: Invoke the query-pr binary and return the results as a blob of text.
+#       Exits gracefully on failure.
+#
+# Args: $PR     - PR number
+#       $cat    - PR category (optional)
+#
+# Retn: \$data  - Ref. to raw data.
+#------------------------------------------------------------------------------
+
+sub DoQueryPR
+{
+	my ($PR, $cat) = @_;
+	my ($data);
+
+	$PR =~ s/[^0-9]+//g;
+
+	# Note: query-pr.web is just an anti DoS wrapper around query-pr which
+	# makes sure we do not run too many query-pr instances at once.
+	if (defined $cat) {
+		$cat =~ s/[^0-9A-Za-z-]+//g;
+		$data = qx(query-pr.web --full --category=${cat} ${PR} 2>&1);
+	} else {
+		$data = qx(query-pr.web --full ${PR} 2>&1);
+	}
+
+	if (!$data or $data =~ /^query-pr(:?\.(:?real|web))?: /) {
+		ErrorExit(EXIT_NOPRS);
+	} elsif ($data =~ /^lockf: /) {
+		ErrorExit(EXIT_DBBUSY);
+	}
+
+	return \$data;
+}
+
+
+#------------------------------------------------------------------------------
+# Func: PrintPR()
+# Desc: Output the parsed PR.
+#
+# Args: $gnatspr - GnatsPR instance.
+#
+# Retn: n/a
+#------------------------------------------------------------------------------
+
+sub PrintPR
+{
+	my ($gnatspr) = @_;
+
+	# Page title
+
+	print html_header(
+		$q->escapeHTML(
+			$gnatspr->FieldSingle('Category')
+			. '/'
+			. $gnatspr->FieldSingle('Number')
+			. ': '
+			. $gnatspr->FieldSingle('Synopsis')
+		)
+	);
+
+	# Header stuff of interest
+
+	print $q->start_table({-class => 'headtable'});
+
+	foreach my $field ('From', 'Date', 'Subject') {
+		my $val = $q->escapeHTML(
+			scalar decode_mimewords($gnatspr->Header($field))
+		);
+		print $q->Tr(
+			$q->td({-class => 'key'}, $field . ':'),
+			$q->td({-class => 'val'}, $val)
+		)
+	}
+
+	print $q->Tr(
+		$q->td({-class => 'key'}, 'Send-pr version:'),
+		$q->td({-class => 'val'}, $q->escapeHTML($gnatspr->Header('x-send-pr-version')))
+	);
+
+	print $q->end_table;
+
+	# Single fields
+
+	print $q->start_table({-class => 'headtable'});
+
+	foreach my $field (
+		'Number',
+		'Category',
+		'Synopsis',
+		'Severity',
+		'Priority',
+		'Responsible',
+		'State',
+		'Class',
+		'Arrival-Date',
+		'Closed-Date',
+		'Last-Modified',
+		'Originator',
+		'Release'
+	) {
+		my $val = $q->escapeHTML($gnatspr->FieldSingle($field));
+		print $q->Tr(
+			$q->td({-class => 'key'}, $field . ":"),
+			$q->td({-class => 'val'}, $val)
+		);
+	}
+
+	print $q->end_table;
+
+	# Sections
+
+	my $iter = GnatsPR::SectionIterator->new(
+		$gnatspr,
+		# Fields we want sections from; this also
+		# dictates the order they will come.
+		'Organization',
+		'Environment',
+		'Description',
+		'How-To-Repeat',
+		'Fix',
+		'Release-Note',
+		'Audit-Trail',
+		'Unformatted'
+	);
+
+	my $replynum = 0;
+	my $patchnum = 0;
+
+	while (my $item = $iter->next()) {
+		# Start of new field
+		if (ref $item eq 'GnatsPR::Section::FieldStart') {
+			my $text = $item->string();
+			$text = $q->escapeHTML($text);
+			#print $q->h2($text);
+			print $q->table({-class => 'mfieldtable'},
+				$q->Tr($q->td({-class => 'blkhead'}, $text)));
+			next;
+		}
+
+		# A chunk of text
+		if (ref $item eq 'GnatsPR::Section::Text') {
+			my $text = $item->string();
+			$text = $q->escapeHTML($text);
+			$text = Linkify($text);
+			$text = AddBreaks($text);
+
+			# Table used to ensure text CSS consistency (evil, I know)
+			print $q->table($q->tbody($q->Tr($q->td({class => 'mfield'}, $text))))
+				if $text;
+			#print $q->p($text);
+
+			next;
+		}
+
+		# Patch block
+		if (ref $item eq 'GnatsPR::Section::Patch') {
+			my $text = $item->string();
+			$text = $q->escapeHTML($text);
+			$text = ColourPatch($text)
+				if ($item->type eq 'diff');
+			$text = AddBreaks($text); # Unless binary
+
+			print AttachmentHeader($item->{filename}, ++$patchnum);
+			print $text;
+			print AttachmentFooter();
+
+			next;
+		}
+
+		# Audit-Trail state/responsible change block
+		if (ref $item eq 'GnatsPR::Section::StateChange') {
+			# This must be hard-coded - the old value will still
+			# linger in PRs, even if the script moves.
+			my $selfurl = "http://www.freebsd.org/cgi/query-pr.cgi?pr="
+				. $gnatspr->FieldSingle('Number');
+
+			# Remove the URL, as it is merely clutter
+			my $why = $item->why;
+			$why =~ s/[\n\s]*\Q$selfurl\E[\n\s]*$//;
+			$item->why($why);
+
+			print $q->table({-class => 'auditblock', -cellspacing => '1'},
+				$q->Tr(
+					$q->th(
+						{-colspan => 2, -class => 'info'},
+						$q->escapeHTML($item->what) . " Changed"
+					)
+				),
+
+				$q->Tr(
+					$q->td({-class => 'key'}, 'From-To:'),
+					$q->td(
+						$q->escapeHTML(
+							$item->from . '->' . $item->to
+						)
+					)
+				),
+
+				$q->Tr(
+					$q->td({-class => 'key'}, 'By:'),
+					$q->td($q->escapeHTML($item->by))
+				),
+
+				$q->Tr(
+					$q->td({-class => 'key'}, 'When:'),
+					$q->td($q->escapeHTML($item->when))
+				),
+
+				$q->Tr(
+					$q->td({-class => 'key'}, 'Why:'),
+					AddBreaks($q->td($q->escapeHTML($item->why)))
+				)
+			);
+
+			next;
+		}
+
+		# Reply via E-mail
+		if (ref $item eq 'GnatsPR::Section::Email') {
+			print $q->start_table({-class => 'replyblock',
+				-cellspacing => '1'});
+
+			$replynum++;
+
+			print $q->Tr($q->th(
+				{-colspan => 2, -class => 'info'},
+				'Reply via E-mail '
+				. $q->a({href => '#reply'.$replynum,
+					name => 'reply'.$replynum}, '[Link]')
+			));
+
+			# Try to determine if sender is submitter
+
+			my $fromtag = FromSubmitter($item, $gnatspr)
+				? $q->b('&nbsp;[submitter]') : '';
+
+			# Print header
+
+			foreach my $f ('From', 'To', 'Date') {
+				print $q->Tr(
+					$q->td({-class => 'key'}, $f . ':'),
+					$q->td({-class => 'val'},
+						$q->escapeHTML(
+							scalar decode_mimewords($item->Header($f))
+						)
+						.
+						(($f eq 'From') ? $fromtag : '')
+					)
+				);
 			}
 
-			$_ = htmlclean($_);
-			$_ = htmlparse($_);
+			print $q->start_Tr;
+			print $q->start_td({-colspan => 2});
 
-			print;
-			sprint('break');
+			# MIME parts
+
+			my $mime_iter = GnatsPR::MIMEIterator->new($item);
+
+			while (my $part = $mime_iter->next()) {
+				print $q->hr({-class => 'mimeboundary'})
+					unless ($mime_iter->isfirst);
+
+				$part->isattachment
+					and print AttachmentHeader($part->filename, ++$patchnum);
+
+				if ($part->isbinary) { # Implies isattachment
+					print $q->escapeHTML($part->body);
+				} else {
+					my $text;
+
+					if ($part->header('content-type') eq 'text/plain'
+							&& !$part->isattachment) {
+						# ColourEmail escapes too
+						$text = Linkify(ColourEmail($part->data));
+					} else {
+						$text = $q->escapeHTML($part->data);
+					}
+
+					if ($part->isattachment
+							&& $part->filename =~ /\.(?:diff|patch)\b/i) {
+						$text = ColourPatch($text);
+					}
+
+					print AddBreaks($text);
+				}
+
+				$part->isattachment
+					and print AttachmentFooter();
+			}
+
+			print $q->end_td;
+			print $q->end_Tr;
 		}
-		sprint('empty') if ($cfound <= 1);
+
+		print $q->end_table;
 	}
 
-	sprint('mfields_footer');
-}
+	print FooterLinks($gnatspr);
 
-sprint('html_footerlinks');
-print html_footer();
-
-# DoS protection -- apparently.
-select undef, undef, undef, 0.35
-	unless (!$iscgi);
-
-exit;
-
-
-#-----------------------------------------------------------------------
-# Func: extractpatch()
-# Desc: Isolate the requested patch, and print unformatted to STDOUT.
-#-----------------------------------------------------------------------
-
-sub extractpatch
-{
-	foreach (@{$mfields{'Fix'}}) {
-		return if (parsepatches($_) == -1);
-	}
-
-	foreach (@{$mfields{'Audit-Trail'}}) {
-		if (s/^ //) {
-			return if (parsepatches($_) == -1);
-		} else {
-			$inpatch = 0;
-		}
-	}
+	print html_footer();
 }
 
 
-#-----------------------------------------------------------------------
-# Func: sprint()
-# Desc: Merge provided list of strings into the desired message and
-#       print the result to STDOUT.
-#-----------------------------------------------------------------------
+#------------------------------------------------------------------------------
+# Func: AddBreaks()
+# Desc: Convert newlines to HTML break elements.
+#
+# Args: $text - Input
+#
+# Retn: $text - Output
+#------------------------------------------------------------------------------
 
-sub sprint
+sub AddBreaks
 {
-	my $k = shift;
-	my $msg = $fmt{$k};
+	my $text = shift;
 
-	if (!$msg) {
-		warn "Message format \"$k\" not found";
-		return;
-	}
+	$text =~ s/\n/<br \/>/g;
 
-	my $i = 1;
-
-	foreach (@_) {
-		$msg =~ s/%%()\(${i}\)/$_/g;
-		$i++;
-	}
-
-	$msg =~ s/%%\([0-9]+\)//g;
-
-	print $msg;
+	return $text;
 }
 
 
-#-----------------------------------------------------------------------
-# Func: htmlclean()
-# Desc: Remove HTML entities from message and return the result.
-#-----------------------------------------------------------------------
+#------------------------------------------------------------------------------
+# Func: Linkify()
+# Desc: Perform any fancy formatting on the message (e.g. HTML-ify URLs) and
+#       return the result.
+#
+# Args: $html - Input string
+#
+# Retn: $html - Output string
+#------------------------------------------------------------------------------
 
-sub htmlclean
+sub Linkify
 {
-	my $v = shift;
-	return "" if (!$v);
+	my ($html) = @_;
 
-	$v =~ s/&/&amp;/g;
-	$v =~ s/</&lt;/g;
-	$v =~ s/>/&gt;/g;
-	return $v;
-}
+	# XXX: clean up
 
-
-#-----------------------------------------------------------------------
-# Func: htmlparse()
-# Desc: Perform any fancy formatting on the message (e.g. HTML-ify
-#       URLs) and return the result.
-#-----------------------------------------------------------------------
-
-sub htmlparse
-{
-	my $v = shift;
-	return "" if (!$v);
+	$html or return '';
 
 	my $iv = 'A-Za-z0-9\-_\/#@\$=\\\\';
-	$v =~ s/(?<![$iv])($valid_category)\/($valid_pr)(?![$iv])/<a href="${scriptname}?pr=$2&cat=$1">$1\/$2<\/a>/g;
 
-	$v =~ s/((?:https?|ftps?):\/\/[^\s\/]+\/[][\w=.,\'\(\)\~\?\!\&\/\%\$\{\}:;@#+-]*)/<a href="$1">$1<\/a>/g;
-	$v =~ s/^RCS file: (\/home\/[A-Za-z0-9]+\/(.*?)),v$/RCS file: <a href="$cvsweb_url$2">$1<\/a>,v/;
-	return $v;
+	my $scriptname = $q->escapeHTML($ENV{'SCRIPT_NAME'});
+
+	# PR references
+	$html =~
+		s/(?<![$iv])($valid_category)\/($valid_pr)(?![$iv])/<a href="${scriptname}?pr=$2&cat=$1">$1\/$2<\/a>/g;
+
+	# URLs
+	$html =~
+		s/((?:https?|ftps?):\/\/[^\s\/]+\/[][\w=.,\'\(\)\~\?\!\&\/\%\$\{\}:;@#+-]*)/<a href="$1">$1<\/a>/g;
+
+	# CVS files
+	$html =~
+		s/^RCS file: (\/home\/[A-Za-z0-9]+\/(.*?)),v$/RCS file: <a href="$cvsweb_url$2">$1<\/a>,v/mg;
+
+	return $html;
 }
 
 
-#-----------------------------------------------------------------------
-# Func: buildfooter()
-# Desc: Build the page footer links section.
-#-----------------------------------------------------------------------
+#------------------------------------------------------------------------------
+# Func: ColourPatch()
+# Desc: Apply 'cdiff' style colours to a patch.
+#
+# Args: $html - Input string
+#
+# Retn: $html - Output string
+#------------------------------------------------------------------------------
 
-sub buildfooter
+sub ColourPatch
 {
-	my ($newstr, $synopsis, $mail, $replyto, $pr, $cat);
-	$pr       = htmlclean($sfields{'Number'});
-	$cat      = htmlclean($sfields{'Category'});
-	$synopsis = htmlclean($sfields{'Synopsis'});
+	my ($html) = @_;
+	my $res = '';
 
-	$mail = $header{'from'};
+	# XXX: clean up
+
+	my $plus_s    = $q->start_span({-class => 'patch_plusline'});
+	my $minus_s   = $q->start_span({-class => 'patch_minusline'});
+	my $context_s = $q->start_span({-class => 'patch_contextline'});
+	my $revinfo_s = $q->start_span({-class => 'patch_revinfo'});
+	my $at_s      = $q->start_span({-class => 'patch_hunkinfo'});
+	my $all_e     = $q->end_span;
+
+	# Expand tabs
+	while ($html =~ s/\t/" " x (8 - ((length($`)-1) % 8))/e) {};
+
+	foreach my $line (split /\n/, $html) {
+		$line =~ s/^(\+.*)$/${plus_s}$1${all_e}/o;
+		$line =~ s/^(-.*)$/${minus_s}$1${all_e}/o
+			if $line !~ s/^(--- \d+,\d+ ----.*)$/${revinfo_s}$1${all_e}/o;
+		$line =~ s/^(\*\*\* \d+,\d+ *\*\*\*.*)$/${revinfo_s}$1${all_e}/o;
+		$line =~ s/^(\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*)$/${revinfo_s}$1${all_e}/o;
+		$line =~ s/^(!.*)$/${context_s}$1${all_e}/o;
+		$line =~ s/^(@@.*$)/${at_s}$1${all_e}/o;
+		$line =~ s/^ /&nbsp;/;
+		$res .= "$line\n";
+	}
+
+	$res =~ s/\n$//;
+
+	return $res;
+}
+
+
+#------------------------------------------------------------------------------
+# Func: ColourEmail()
+# Desc: Colourise quoting levels in e-mails, and escape.
+#
+# Args: $email - Input string
+#
+# Retn: $email - Output string
+#------------------------------------------------------------------------------
+
+sub ColourEmail
+{
+	my ($email) = @_;
+
+	my $result = '';
+
+	foreach my $line (split /\n/, $email) {
+		if ($line =~ /^\s*((?:>\s*)+)(.*)$/) {
+			my $levels = $1;
+			my $text = $2;
+			my $depth;
+
+			$depth = $levels;
+			$depth =~ s/[^>]+//g;
+			$depth = length $depth;
+
+			$levels =~ s/>/&gt;/g;
+
+			# Vim style rather than mutt
+
+			$result .= $q->span({
+				-class => 'quote' . ($depth % 2 ? 0 : 1)
+			}, $levels . $q->escapeHTML($text));
+		} else {
+			$result .= $q->escapeHTML($line);
+		}
+		$result .= "\n";
+	}
+
+	return $result;
+}
+
+
+#------------------------------------------------------------------------------
+# Func: Exit()
+# Desc: Exit script.
+#
+# Args: n/a
+#
+# Retn: n/a
+#------------------------------------------------------------------------------
+
+sub Exit
+{
+	# Introduce a short delay, as a DoS protection measure
+	select undef, undef, undef, 0.35
+		unless !$iscgi;
+
+	exit;
+}
+
+
+#------------------------------------------------------------------------------
+# Func: ErrorExit()
+# Desc: Print an error message and exit.
+#
+# Args: $code - EXIT_* code
+#
+# Retn: n/a
+#------------------------------------------------------------------------------
+
+sub ErrorExit
+{
+	my ($code) = @_;
+
+	if ($code == EXIT_NOPRS) {
+		print "Content-type: text/plain; charset=UTF-8\r\n";
+		print html_header("No PRs Matched Query");
+		displayform();
+		print html_footer();
+	} elsif ($code == EXIT_DBBUSY) {
+		print "Content-type: text/plain; charset=UTF-8\r\n";
+		print html_header("PR Database Busy");
+		print $q->p(
+			'Please '
+			. $q->a({-href => $q->url}, 'try again')
+			. ' later'
+		);
+		print html_footer();
+	} elsif ($code == EXIT_NOPATCH) {
+		print "Content-type: text/plain; charset=UTF-8\r\n";
+		print "No such patch!\n";
+	}
+
+	Exit();
+}
+
+
+#------------------------------------------------------------------------------
+# Func: FromSubmitter()
+# Desc: Try determine if the sender of a reply is the sender of the PR.
+#
+# Args: $item    - GnatsPR::Section::Email instance.
+#       $gnatspr - GnatsPR instance
+#
+# Retn: $result  - Is sender the submitter?
+#------------------------------------------------------------------------------
+
+sub FromSubmitter
+{
+	my ($item, $gnatspr) = @_;
+
+	my $from = lc $item->Header('From');
+	my $submitter = lc $gnatspr->Header('From');
+
+	$from =~ s/^.*<// and $from =~ s/>.*$//;
+	$from =~ s/\s+//g;
+	$submitter =~ s/^.*<// and $submitter =~ s/>.*$//;
+	$submitter =~ s/\s+//g;
+
+	return $from eq $submitter;
+}
+
+
+#------------------------------------------------------------------------------
+# Func: AttachmentHeader()
+# Desc: Construct an attachment block header.
+#
+# Args: $filename - Name of attachment.
+#       $patchnum - Patch index.
+#
+# Retn: $text     - Header text.
+#------------------------------------------------------------------------------
+
+sub AttachmentHeader
+{
+	my ($filename, $patchnum) = @_;
+
+	my $text = '';
+
+	$text .= $q->start_table({-class => 'patchblock', -cellspacing => '1'});
+	$text .=
+		$q->Tr(
+			$q->td({-class => 'info'}, $q->b(
+				'Download ' . $q->a({-href => $q->url . '&getpatch=' . $patchnum},
+				$filename)
+			))
+		);
+
+	$text .= $q->start_tbody;
+	$text .= $q->start_Tr;
+	$text .= $q->start_td({-class => 'content'});
+	$text .= $q->start_pre({-class => 'attachwin'});
+
+	return $text;
+}
+
+
+#------------------------------------------------------------------------------
+# Func: AttachmentFooter()
+# Desc: Construct an attachment block footer.
+#
+# Args: n/a
+#
+# Retn: $text - Footer text.
+#------------------------------------------------------------------------------
+
+sub AttachmentFooter
+{
+	my $text = '';
+
+	$text .= $q->end_pre;
+	$text .= $q->end_td;
+	$text .= $q->end_Tr;
+	$text .= $q->end_tbody;
+	$text .= $q->end_table;
+
+	return $text;
+}
+
+
+#------------------------------------------------------------------------------
+# Func: FooterLinks()
+# Desc: Construct the page footer links (for a valid PR page)
+#
+# Args: $gnatspr - GnatsPR instance.
+#
+# Retn: $text    - Footer text.
+#------------------------------------------------------------------------------
+
+sub FooterLinks
+{
+	my ($gnatspr) = @_;
+
+	my $pr       = $q->escapeHTML($gnatspr->FieldSingle('Number'));
+	my $cat      = $q->escapeHTML($gnatspr->FieldSingle('Category'));
+	my $synopsis = $q->escapeHTML($gnatspr->FieldSingle('Synopsis'));
+
+	my $mail = $gnatspr->Header('From');
+
+	# Try to extract just the e-mail address from the 'From' header
 	if ($mail) {
 		$mail =~ s/^\s*(.*)\s*$/$1/;
 		$mail =~ s/.*<(.*)>.*/$1/;
 		$mail =~ s/\s*\(.*\)\s*//;
 	}
 
-	$replyto = $header{'reply-to'};
+	my $replyto = $gnatspr->Header('Reply-To');
+
+	# ... same with the 'Reply-To' header
 	if ($replyto) {
 		$replyto =~ s/^\s*(.*)\s*$/$1/;
 		$replyto =~ s/.*<(.*)>.*/$1/;
 		$replyto =~ s/\s*\(.*\)\s*//;
 	}
 
+	# Prefer 'Reply-To' if present
 	$mail = $replyto if ($replyto);
 	$mail .= '@FreeBSD.org' unless ($mail =~ /@/);
 
+	# Prepare for mailto: link
 	$synopsis =~ s/[^a-zA-Z+.@-]/"%" . sprintf("%02X", unpack("C", $&))/eg;
 	$mail     =~ s/[^a-zA-Z+.@-]/"%" . sprintf("%02X", unpack("C", $&))/eg;
 
-	$newstr = "mailto:bug-followup\@FreeBSD.org,${mail}?subject=Re:%20${cat}/${pr}:%20${synopsis}";
+	my $maillink = 'mailto:bug-followup@FreeBSD.org,'
+		. "$mail?subject=Re:%20$cat/$pr:%20$synopsis";
 
-	$fmt{'html_footerlinks'} =~ s/%%\(maillink\)/${newstr}/g;
-
-	# Do some other replacements while here
-
-	$fmt{$_} =~ s/%%\(pr\)/${pr}/g
-		foreach (keys %fmt);
+	return $q->div({-class => 'footerlinks'},
+		$q->a({-href => $maillink}, 'Submit Followup')
+		. ' | ' . $q->a({-href => $q->url . '&f=raw'}, 'Raw PR')
+		. ' | ' . $q->a({-href => 'query-pr-summary.cgi?query'}, 'Find another PR')
+	);
 }
-
-
-#-----------------------------------------------------------------------
-# Func: parsepatches()
-# Desc: Parse lines which might contain patches, adding HTML formatting
-#       if requested.
-#-----------------------------------------------------------------------
-
-{ # Local static variables
-my ($outp, $patchnum, $cfound, $lastcol, $lastrev, $context, $mime_boundary);
-
-sub parsepatches
-{
-	$_ = shift;
-
-	$outp     ||= "";
-	$patchnum ||= 0;
-	$cfound   ||= 0;
-	$context  ||= 0;
-
-	my $plus_s    = '<span class="patch_plusline">';
-	my $minus_s   = '<span class="patch_minusline">';
-	my $context_s = '<span class="patch_contextline">';
-	my $revinfo_s = '<span class="patch_revinfo">';
-	my $at_s      = '<span class="patch_hunkinfo">';
-	my $all_e     = '</span>';
-
-	my $maxcontext = 3;				# XXX: This ought to be dynamic
-
-	if (!$getpatch) {
-		$cfound = ($_ ? 1 : 0) if (!$cfound);
-		return 0 if (!$cfound);
-
-		if (!$_) {
-			$cfound++;
-			return 0;
-		} else {
-			sprint('break') while (--$cfound > 1);
-			$cfound = 1;
-		}
-	}
-
-	if (/^--(\S+)$/ && $getpatch && !$inpatch) {
-		if ($getpatch == $patchnum+1) {
-			$mime_boundary = $1;
-			return 0;
-		}
-	}
-
-	if (/^Content-([A-Za-z-]{2,}):\s*(.*)\s*$/i && $getpatch) {
-		if (!$inpatch) {
-			my $k = lc $1;
-			my $v = lc $2;
-			if ($getpatch == $patchnum+1 and defined $mime_boundary) {
-				if ($k eq "transfer-encoding" && $v =~ /\bbase64\b/) {
-					$patchnum++;
-					$inpatch |= PATCH_BASE64;
-				}
-				return 0;
-			}
-		}
-		return 0;
-	}
-
-	if (defined $mime_boundary && /^--${mime_boundary}(?:--)?$/ && $getpatch && ($inpatch & PATCH_BASE64)) {
-		$inpatch = 0;
-		$mime_boundary = undef;
-		if ($outp ne "") {
-			print decode_base64($outp);
-			$outp = "";
-		}
-		return -1;
-	}
-
-	if (($inpatch & PATCH_BASE64) && $getpatch) {
-		$outp .= $_ unless /:/;
-		return 1;
-	}
-
-	if (/^Patch attached with submission follows:$/ && $fromwebform && !$inpatch) {
-		$patchnum++;
-		$inpatch |= PATCH_ANY;
-		return 1 if ($getpatch and $patchnum != $getpatch);
-		$lastcol = undef;
-		$lastrev = undef;
-
-		sprint('patchblock_thead', $patchnum, 'patch.txt', "txt")
-			unless ($getpatch);
-
-		return 1;
-	}
-
-	if (/^---{1,8}\s?([A-Za-z0-9-_.,:%]+) (begins|starts) here/i && !$inpatch) {
-		$patchnum++;
-		$inpatch |= PATCH_ANY;
-		return 1 if ($getpatch and $patchnum != $getpatch);
-		$lastcol = undef;
-		$lastrev = undef;
-
-		sprint('patchblock_thead', $patchnum, htmlclean($1), "txt")
-			unless ($getpatch);
-
-		return 1;
-	}
-
-	if (/^((?:(?:---|\*\*\*) (?:\S+)\s*(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun) .*)|(diff -.*? .*? .*)|(Index: \S+)|(\*{3} \d+,\d+ \*{4}))$/ && !$inpatch) {
-		$patchnum++;
-		$inpatch |= PATCH_DIFF;
-		return 1 if ($getpatch and $patchnum != $getpatch);
-		$lastcol = undef;
-		$lastrev = undef;
-
-		sprint('patchblock_thead', $patchnum, "patch-$patchnum.diff", "diff")
-			unless ($getpatch);
-	}
-
-	if (/^# This is a shell archive\.  Save it in a file, remove anything before/ && !$inpatch) {
-		$patchnum++;
-		$inpatch |= PATCH_SHAR;
-		return 1 if ($getpatch and $patchnum != $getpatch);
-		$lastcol = undef;
-		$lastrev = undef;
-
-		sprint('patchblock_thead', $patchnum, "shar-$patchnum.sh", "shar")
-			unless ($getpatch);
-	}
-
-	if (/^---{1,8}\s?[A-Za-z0-9-_.,:%]+ ends here/i && ($inpatch & PATCH_ANY)) {
-		#$inpatch ^= PATCH_ANY;
-		$inpatch = 0;
-		$context = 0;
-		sprint('patchblock_tfoot')
-			unless ($getpatch);
-
-		return (($patchnum == $getpatch) ? -1 : $inpatch)
-			if ($getpatch);
-
-		return $inpatch;
-	}
-
-	if (/^exit$/ && ($inpatch & PATCH_SHAR)) {
-		$inpatch ^= PATCH_SHAR;
-
-		print;
-		sprint('patchblock_tfoot') unless ($getpatch);
-		return 1;
-	}
-
-	if (/^begin \d\d\d (.*)/ && !($inpatch & PATCH_UUENC)) {
-		if (!$inpatch) {
-			$patchnum++;
-			return 1 if ($getpatch and $patchnum != $getpatch);
-		}
-		sprint('patchblock_thead', $patchnum, "patch-$patchnum.uu", "uu")
-			unless ($getpatch or $inpatch);
-
-		$inpatch |= PATCH_UUENC;
-		$inpatch |= PATCH_UUENC_BIN if ($1 =~ /$binary_filetypes/);
-	}
-
-	if ($inpatch) {
-		if ($inpatch & PATCH_UUENC) {
-			if (!$getpatch or $patchnum == $getpatch) {
-				$outp .= "$_\n";
-				if (/^end$/) {
-					$outp = uudecode($outp)
-						unless (!$getpatch and $inpatch & PATCH_UUENC_BIN);
-					$outp = htmlclean($outp) unless ($getpatch);
-					print $outp;
-					$outp = "";
-					$inpatch &= ~(PATCH_UUENC | PATCH_UUENC_BIN);
-
-					# No outer container?
-					sprint('patchblock_tfoot') if (!$inpatch and !$getpatch);
-					return -1;
-				}
-			}
-		} else {
-			if (!$getpatch) {
-				if (!($inpatch & PATCH_ANY)) {
-					if (/^ / or $_ eq "") {
-						$context++;
-					} else {
-						if ($context == $maxcontext and $patchendhint) {
-							$context++;
-						} else {
-							$context = 0;
-						}
-					}
-
-					if ($context > $maxcontext and $patchendhint) {
-						$context = 0;
-						# Disabled for now, since it doesn't
-						# work quite right.
-#						$inpatch = 0;
-#						sprint('patchblock_tfoot');
-#						print;
-#						return 0;
-					}
-				}
-
-				$_=~ s/$//;
-
-				$_ = htmlclean($_);
-				$_ = htmlparse($_);
-
-				while (s/\t/" " x (8 - ((length($`)-1) % 8))/e) {};
-
-				# Obfustication coutesy of cdiff
-
-				s/^(\+.*)$/${plus_s}$1${all_e}/o;
-				s/^(-.*)$/${minus_s}$1${all_e}/o
-					if !s/^(--- \d+,\d+ ----.*)$/${revinfo_s}$1${all_e}/o;
-				s/^(\*\*\* \d+,\d+ *\*\*\*.*)$/${revinfo_s}$1${all_e}/o;
-				s/^(\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*)$/${revinfo_s}$1${all_e}/o;
-				s/^(!.*)$/${context_s}$1${all_e}/o;
-				s/^(@@.*$)/${at_s}$1${all_e}/o;
-#				if (/^1.(\d+)(\s+\(\w+\s+\d{2}-\w{3}-\d{2}\):\s)(.*)/) {
-#					$lastcol = $lastcol || 0;
-#					$lastcol++ if defined($lastrev) && $lastrev != $1;
-#					$lastrev = $1;
-#					$lastcol %= 6;
-#					$_ = "\033[3" . ($lastcol + 1) . "m1.$1$2\033[0m$3\n";
-#				}
-			}
-
-			if (!$getpatch or $patchnum == $getpatch) {
-				print;
-				print "\n";
-			}
-		}
-	} else {
-		if (!$getpatch) {
-			$_ = htmlclean($_);
-			$_ = htmlparse($_);
-			print;
-		}
-	}
-
-	return $inpatch;
-
-}
-
-}
-
-
-# ex: ts=4 sw=4
