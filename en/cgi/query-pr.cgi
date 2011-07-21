@@ -26,7 +26,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.72 2011/07/21 01:25:28 shaun Exp $
+# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.73 2011/07/21 02:09:02 shaun Exp $
 #
 # Useful PRs for testing:
 #
@@ -689,6 +689,8 @@ sub ErrorExit
 {
 	my ($code) = @_;
 
+	my $url = $q->url(-full => 1, -query => 1);
+
 	if ($code == EXIT_NOPRS) {
 		print "Content-type: text/plain; charset=UTF-8\r\n";
 		print html_header("No PRs Matched Query");
@@ -699,7 +701,7 @@ sub ErrorExit
 		print html_header("PR Database Busy");
 		print $q->p(
 			'Please '
-			. $q->a({-href => $q->url}, 'try again')
+			. $q->a({-href => $url}, 'try again')
 			. ' later'
 		);
 		print html_footer();
@@ -754,11 +756,13 @@ sub AttachmentHeader
 
 	my $text = '';
 
+	my $url = $q->url(-full => 1, -query => 1);
+
 	$text .= $q->start_table({-class => 'patchblock', -cellspacing => '1'});
 	$text .=
 		$q->Tr(
 			$q->td({-class => 'info'}, $q->b(
-				'Download ' . $q->a({-href => $q->url . '&getpatch=' . $patchnum},
+				'Download ' . $q->a({-href => $url . '&getpatch=' . $patchnum},
 				$filename)
 			))
 		);
@@ -808,6 +812,8 @@ sub FooterLinks
 {
 	my ($gnatspr) = @_;
 
+	my $url = $q->url(-full => 1, -query => 1);
+
 	my $pr       = $q->escapeHTML($gnatspr->FieldSingle('Number'));
 	my $cat      = $q->escapeHTML($gnatspr->FieldSingle('Category'));
 	my $synopsis = $q->escapeHTML($gnatspr->FieldSingle('Synopsis'));
@@ -843,7 +849,7 @@ sub FooterLinks
 
 	return $q->div({-class => 'footerlinks'},
 		$q->a({-href => $maillink}, 'Submit Followup')
-		. ' | ' . $q->a({-href => $q->url . '&f=raw'}, 'Raw PR')
+		. ' | ' . $q->a({-href => $url . '&f=raw'}, 'Raw PR')
 		. ' | ' . $q->a({-href => 'query-pr-summary.cgi?query'}, 'Find another PR')
 	);
 }
