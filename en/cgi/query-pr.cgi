@@ -26,7 +26,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.69 2009/11/15 18:40:26 remko Exp $
+# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.70 2011/07/20 22:23:23 shaun Exp $
 #
 # Useful PRs for testing:
 #
@@ -43,6 +43,8 @@
 # - Inline patches inside MIME parts (probably just the first part).
 # - Modernise HTML (may require altering site-wide CSS)
 #------------------------------------------------------------------------------
+
+BEGIN { push @INC, '.'; }
 
 use CGI;
 
