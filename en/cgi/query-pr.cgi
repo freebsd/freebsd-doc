@@ -26,7 +26,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.74 2011/07/21 02:44:20 shaun Exp $
+# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.75 2011/07/21 03:06:06 shaun Exp $
 #
 # Useful PRs for testing:
 #
@@ -190,7 +190,7 @@ sub main
 			($patch->isbinary ? 'application/octet-stream' : 'text/plain');
 
 		printf 'Content-Length: "%s"'."\r\n"
-			. 'Content-Disposition: inline; filename="%s"'."\r\n",
+			. 'Content-Disposition: inline; filename="%s"'."\r\n\r\n",
 			$patch->size,
 			$patch->filename;
 
@@ -692,12 +692,12 @@ sub ErrorExit
 	my $url = $q->url(-full => 1, -query => 1);
 
 	if ($code == EXIT_NOPRS) {
-		print "Content-type: text/plain; charset=UTF-8\r\n";
+		print "Content-type: text/plain; charset=UTF-8\r\n\r\n";
 		print html_header("No PRs Matched Query");
 		displayform();
 		print html_footer();
 	} elsif ($code == EXIT_DBBUSY) {
-		print "Content-type: text/plain; charset=UTF-8\r\n";
+		print "Content-type: text/plain; charset=UTF-8\r\n\r\n";
 		print html_header("PR Database Busy");
 		print $q->p(
 			'Please '
@@ -706,7 +706,7 @@ sub ErrorExit
 		);
 		print html_footer();
 	} elsif ($code == EXIT_NOPATCH) {
-		print "Content-type: text/plain; charset=UTF-8\r\n";
+		print "Content-type: text/plain; charset=UTF-8\r\n\r\n";
 		print "No such patch!\n";
 	}
 
