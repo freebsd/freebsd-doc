@@ -26,7 +26,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.70 2011/07/20 22:23:23 shaun Exp $
+# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.71 2011/07/21 01:07:13 shaun Exp $
 #
 # Useful PRs for testing:
 #
@@ -224,13 +224,16 @@ sub DoQueryPR
 	my ($data);
 
 	$PR =~ s/[^0-9]+//g;
+	$PR = quotemeta $PR;
 
 	# Note: query-pr.web is just an anti DoS wrapper around query-pr which
 	# makes sure we do not run too many query-pr instances at once.
 	if (defined $cat) {
 		$cat =~ s/[^0-9A-Za-z-]+//g;
+		$cat = quotemeta $cat;
 		$data = qx(query-pr.web --full --category=${cat} ${PR} 2>&1);
 	} else {
+		$PR = quotemeta $PR;
 		$data = qx(query-pr.web --full ${PR} 2>&1);
 	}
 
