@@ -26,7 +26,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.73 2011/07/21 02:09:02 shaun Exp $
+# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.74 2011/07/21 02:44:20 shaun Exp $
 #
 # Useful PRs for testing:
 #
@@ -186,7 +186,7 @@ sub main
 		defined $patch
 			or ErrorExit(EXIT_NOPATCH);
 
-		print 'Content-type: %s; charset=UTF-8'."\r\n",
+		printf 'Content-type: %s; charset=UTF-8'."\r\n",
 			($patch->isbinary ? 'application/octet-stream' : 'text/plain');
 
 		printf 'Content-Length: "%s"'."\r\n"
