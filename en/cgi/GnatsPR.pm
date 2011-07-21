@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD$
+# $FreeBSD: www/en/cgi/GnatsPR.pm,v 1.1 2011/07/20 22:23:23 shaun Exp $
 #------------------------------------------------------------------------------
 
 package GnatsPR;
@@ -87,13 +87,9 @@ sub new
 	bless $self, $class;
 
 	if (defined $data) {
-		my $dataref;
-
 		ref $data
-			? $dataref = $data
-			: $dataref = \$data;
-
-		$self->Parse($dataref);
+			? $self->Parse($data)
+			: $self->Parse(\$data);
 	}
 
 	return $self;
@@ -165,6 +161,7 @@ sub Parse
 	# into a complete section.
 	while ($fieldblobs[$#fieldblobs] !~ /^Unformatted:/) {
 		my $last = pop @fieldblobs;
+		exists $fieldblobs[$#fieldblobs] or last;
 		$fieldblobs[$#fieldblobs] .= $last;
 	}
 

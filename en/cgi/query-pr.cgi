@@ -26,7 +26,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.71 2011/07/21 01:07:13 shaun Exp $
+# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.72 2011/07/21 01:25:28 shaun Exp $
 #
 # Useful PRs for testing:
 #
@@ -53,7 +53,7 @@ use GnatsPR::SectionIterator;
 use GnatsPR::MIMEIterator;
 
 #use MIME::EncWords (decode_mimewords);   # mail/p5-MIME-EncWords
-sub decode_mimewords { wantarray ? @_ : join ' ', @_; } # Temp. subsitute for the above
+sub decode_mimewords { wantarray ? @_ : join ' ', @_; } # Temp. substitute for the above
 
 require './cgi-style.pl';
 require './query-pr-lib.pl';
@@ -167,7 +167,7 @@ sub main
 	# Dump the raw PR data if requested
 	if ($q->param('f') && $q->param('f') eq 'raw') {
 		print "Content-type: text/plain; charset=UTF-8\r\n\r\n";
-		print $rawdata;
+		print $$rawdata;
 		Exit();
 	}
 
@@ -233,7 +233,6 @@ sub DoQueryPR
 		$cat = quotemeta $cat;
 		$data = qx(query-pr.web --full --category=${cat} ${PR} 2>&1);
 	} else {
-		$PR = quotemeta $PR;
 		$data = qx(query-pr.web --full ${PR} 2>&1);
 	}
 
