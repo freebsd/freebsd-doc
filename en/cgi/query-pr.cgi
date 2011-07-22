@@ -26,7 +26,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.77 2011/07/21 12:37:17 shaun Exp $
+# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.78 2011/07/21 14:31:41 shaun Exp $
 #
 # Useful PRs for testing:
 #
@@ -389,7 +389,7 @@ sub PrintPR
 
 			# Remove the URL, as it is merely clutter
 			my $why = $item->why;
-			$why =~ s/[\n\s]*\Q$selfurl\E[\n\s]*$//;
+			$why =~ s/[\n\s]*\Q$selfurl\E[\n\s]*$//i;
 			$item->why($why);
 
 			print $q->table({-class => 'auditblock', -cellspacing => '1'},
@@ -470,11 +470,56 @@ sub PrintPR
 			my $mime_iter = GnatsPR::MIMEIterator->new($item);
 
 			while (my $part = $mime_iter->next()) {
+				my $ctype = $part->header('content-type');
+				my $elide = 0;
+
 				print $q->hr({-class => 'mimeboundary'})
 					unless ($mime_iter->isfirst);
 
 				$part->isattachment
-					and print AttachmentHeader($part->filename, ++$patchnum);
+					and ++$patchnum;
+
+				# Skip (inline) HTML parts -- but only if we have
+				# a plaintext part. We could possibly be a bit more
+				# rigorous in verifying the existence of the latter,
+				# but testing for the MIME header or other part will
+				# suffice, as it is unlikely a HTML-only e-mail will
+				# have more than that single part.
+				if ($ctype eq 'text/html' && !$part->isattachment &&
+						!$mime_iter->isfirst) {
+					$elide = 1;
+
+				# S/MIME signatures - of questionable value here
+				} elsif ($ctype eq 'application/pkcs7-signature') {
+					$elide = 1;
+				}
+
+				if ($elide) {
+					if ($part->isattachment) {
+						my $url = $q->url(-full => 1, -query => 1);
+
+						my $dlink =
+							$q->a({-href => $url . '&getpatch=' . $patchnum},
+								'[Download]');
+
+						print $q->div(
+							{-class => 'elidemsg'},
+							'Attachment of type "' . $q->escapeHTML($ctype)
+							. '" ' . $dlink
+						);
+					} else {
+						print $q->div(
+							{-class => 'elidemsg'},
+							'MIME part of type "' . $q->escapeHTML($ctype)
+							. '" elided'
+						);
+					}
+
+					next;
+				}
+
+				$part->isattachment
+					and print AttachmentHeader($part->filename, $patchnum);
 
 				if ($part->isbinary) { # Implies isattachment
 					print $q->escapeHTML($part->body);
