@@ -1,5 +1,5 @@
-# $FreeBSD: www/en/community/Makefile,v 1.1 2005/10/04 05:44:55 murray Exp $
-# Original Revision: 1.1
+# $FreeBSD: www/ja/community/Makefile,v 1.1 2010/05/03 14:13:07 ryusuke Exp $
+# Original Revision: 1.2
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -9,5 +9,7 @@
 .endif
 
 DOCS=   irc.sgml mailinglists.sgml newsgroups.sgml webresources.sgml
+
+#XMLDOCS+=	social::${XML_EVENTS_EVENTS}:
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
