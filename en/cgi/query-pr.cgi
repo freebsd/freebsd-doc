@@ -26,7 +26,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.78 2011/07/21 14:31:41 shaun Exp $
+# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.79 2011/07/22 23:38:58 shaun Exp $
 #
 # Useful PRs for testing:
 #
@@ -93,6 +93,9 @@ if (!$iscgi && !exists $ENV{'REQUEST_METHOD'}) {
 
 $main::hsty_base ||= '';
 $main::t_style   ||= '';
+$main::hsty_charset ||= '';
+
+$main::hsty_charset = 'utf-8';
 
 $main::t_style =
 qq{<link href="$stylesheet" rel="stylesheet" type="text/css" />

@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD$
+# $FreeBSD: www/en/cgi/GnatsPR/Section/MIME.pm,v 1.1 2011/07/20 22:23:23 shaun Exp $
 #------------------------------------------------------------------------------
 
 package GnatsPR::Section::MIME;
@@ -136,10 +136,10 @@ sub Parse
 {
 	my $self = shift;
 
-	# XXX: decode other charsets?
+	my $charset;
 
 	$self->{body} =~ s/^[\n\s]+//;
-	$self->{body} =~ s/[\n\s]+$//;
+	$self->{body} =~ s/[\n\s]+$/\n/;
 
 	$self->ParseHeader();
 
@@ -157,14 +157,32 @@ sub Parse
 		return;
 	}
 
+	if ($self->header('content-type:charset')) {
+		my $cs = $self->header('content-type:charset');
+
+		if ($cs =~ /utf.*8/i) {
+			$cs = 'utf-8';
+		} else {
+			$cs = Encode::resolve_alias($cs);
+		}
+
+		if ($cs and $cs ne 'ascii') {
+			$charset = $cs;
+		}
+	}
+
 	# Look for Quoted-Printable (explicit or using a silly heuristic)
 	if (lc $self->header('content-transfer-encoding') eq 'quoted-printable'
 			or $self->{body} =~ /=[0-9A-Fa-f]{2}=[0-9A-Fa-f]{2}/) {
-		$self->{body} = decode('utf8', decode_qp($self->{body}));
+		$self->{body} = decode_qp($self->{body});
+		$self->{body} = decode($charset, $self->{body})
+			if ($charset);
 
 	# Base64 -- probably better not to decode
 	} elsif (lc $self->header('content-transfer-encoding') eq 'base64') {
-		$self->{decoded_body} = decode('utf8', decode_base64($self->{body}));
+		$self->{decoded_body} = decode_base64($self->{body});
+		$self->{decoded_body} = decode($charset, $self->{decoded_body})
+			if ($charset);
 		$self->{encoded} = 1;
 	}
 
@@ -189,7 +207,7 @@ sub Parse
 	}
 
 	if ($self->{body} =~ /^begin \d\d\d (.*)/ && !$self->{encoded}) {
-		$self->{decoded_body} = decode('utf8', uudecode($self->{body}));
+		$self->{decoded_body} = uudecode($self->{body});
 		$self->{encoded} = 1;
 	}
 }
