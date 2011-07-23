@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/cgi/cgi-style.pl,v 1.41 2010/12/29 13:08:41 wosch Exp $
+# $FreeBSD: www/en/cgi/cgi-style.pl,v 1.42 2011/01/08 14:58:27 wosch Exp $
 #
 # Perl routines to encapsulate various elements of HTML page style.
 
@@ -30,6 +30,10 @@ if (!defined($hsty_author)) {
 
 if (!defined($hsty_date)) {
     $hsty_date = '';
+}
+
+if (!defined($hsty_charset)) {
+    $hsty_charset = 'iso-8859-1';
 }
 
 # This can be set to either a string containing an inline CSS stylesheet
@@ -212,7 +216,7 @@ $doctype
 $html
 
 <head><title>$title</title>
-<meta http-equiv='content-type' content='text/html; charset=iso-8859-1' $endslash>
+<meta http-equiv='content-type' content='text/html; charset=$hsty_charset' $endslash>
 <meta name='robots' content='nofollow' $endslash>
     <link rel="stylesheet" media="screen"
     href="$hsty_base/layout/css/fixed.css" type="text/css"
