@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/cgi/Makefile,v 1.34 2007/03/19 05:44:58 dougb Exp $
+# $FreeBSD: www/en/cgi/Makefile,v 1.35 2011/07/20 23:52:12 shaun Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -15,18 +15,6 @@ DATA+=	cgi-style.pl
 DATA+=	cvsweb.conf
 DATA+=	cvsweb.conf-freebsd
 DATA+=	query-pr-lib.pl
-
-CGI_SUBDIRS=	GnatsPR GnatsPR/Section
-
-CGI_SUBFILES+=	GnatsPR/MIMEIterator.pm
-CGI_SUBFILES+=	GnatsPR/Section.pm
-CGI_SUBFILES+=	GnatsPR/Section/Email.pm
-CGI_SUBFILES+=	GnatsPR/Section/FieldStart.pm
-CGI_SUBFILES+=	GnatsPR/Section/MIME.pm
-CGI_SUBFILES+=	GnatsPR/Section/Patch.pm
-CGI_SUBFILES+=	GnatsPR/Section/StateChange.pm
-CGI_SUBFILES+=	GnatsPR/Section/Text.pm
-CGI_SUBFILES+=	GnatsPR/SectionIterator.pm
 
 CGI=
 CGI+=	confirm-code.cgi
@@ -45,6 +33,8 @@ CGI+=	query-pr.cgi
 CGI+=	query-pr-summary.cgi
 CGI+=	search.cgi
 CGI+=	url.cgi
+
+SUBDIR=	GnatsPR
 
 .SUFFIXES:	.C .cgi
 
