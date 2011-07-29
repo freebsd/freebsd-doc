@@ -24,10 +24,13 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD$
+# $FreeBSD: www/en/cgi/GnatsPR/Section/Patch.pm,v 1.1 2011/07/20 22:23:23 shaun Exp $
 #------------------------------------------------------------------------------
 
 package GnatsPR::Section::Patch;
+
+use MIME::Base64;                      # ports/converters/p5-MIME-Base64
+use Convert::UU qw(uudecode uuencode); # ports/converters/p5-Convert-UU
 
 use strict;
 
@@ -53,6 +56,8 @@ sub new
 	my $self = {
 		text     => '',
 		filename => 'patch.txt',
+		binary   => 0,
+		encoded  => 0,
 		type     => 'unknown'
 	};
 
@@ -62,6 +67,17 @@ sub new
 
 	$self->{filename} = $filename if $filename;
 	$self->{type} = $type if $type;
+
+	$self->{filename} =~ '(?:\.gz|\.bz2|\.zip|\.tar)$'
+		and $self->{binary} = 1;
+
+	if ($self->{type} eq 'uuencoded') {
+		$self->{encoded} = 1;
+		$self->{decoded_text} = uudecode($self->{text});
+	} elsif ($self->{type} eq 'base64') {
+		$self->{encoded} = 1;
+		$self->{decoded_text} = decode_base64($self->{text});
+	}
 
 	return $self;
 }
@@ -97,7 +113,7 @@ sub size
 {
 	my $self = shift;
 
-	return length($self->{text});
+	return length($self->{encoded} ? $self->{decoded_text} : $self->{text});
 }
 
 
@@ -114,7 +130,7 @@ sub data
 {
 	my $self = shift;
 
-	return $self->{text};
+	return $self->{encoded} ? $self->{decoded_text} : $self->{text};
 }
 
 
@@ -165,7 +181,7 @@ sub isbinary
 {
 	my $self = shift;
 
-	return 0;
+	return $self->{binary};
 }
 
 
