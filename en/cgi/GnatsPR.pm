@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/GnatsPR.pm,v 1.1 2011/07/20 22:23:23 shaun Exp $
+# $FreeBSD: www/en/cgi/GnatsPR.pm,v 1.2 2011/07/21 02:09:02 shaun Exp $
 #------------------------------------------------------------------------------
 
 package GnatsPR;
@@ -204,7 +204,7 @@ sub Parse
 			#$ismulti = ($2 and $2 eq "\n");
 
 			# It's multi-liners from here on in
-			$key eq 'Description'
+			$key eq 'Organization'
 				and $ismulti = 1;
 		} else {
 			# Hmm...
