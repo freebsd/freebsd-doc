@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/GnatsPR.pm,v 1.2 2011/07/21 02:09:02 shaun Exp $
+# $FreeBSD: www/en/cgi/GnatsPR.pm,v 1.3 2011/07/29 20:37:43 shaun Exp $
 #------------------------------------------------------------------------------
 
 package GnatsPR;
@@ -539,7 +539,12 @@ sub FindPatchStart
 	# UUencoded file. Characteristics:
 	#   - Has header and footer.
 	$$text =~ /^begin \d\d\d (.*)/m
-		and return {start => $-[0], type => 'uuencoded'};
+		and return {start => $-[0], type => 'uuencoded', name => $1};
+
+	# Base64 encoded file. Characteristics:
+	#   - Has header and footer.
+	$$text =~ /^begin-base64 \d\d\d (.*)/m
+		and return {start => $-[0], type => 'base64', name => $1};
 
 	return undef;
 }
@@ -582,6 +587,9 @@ sub FindPatchEnd
 			and $pi->{size} = $+[0];
 	} elsif ($pi->{type} eq 'uuencoded') {
 		$$text =~ /^end$/m
+			and $pi->{size} = $+[0];
+	} elsif ($pi->{type} eq 'base64') {
+		$$text =~ /^====$/m
 			and $pi->{size} = $+[0];
 	}
 
