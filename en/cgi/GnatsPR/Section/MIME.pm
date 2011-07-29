@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/GnatsPR/Section/MIME.pm,v 1.1 2011/07/20 22:23:23 shaun Exp $
+# $FreeBSD: www/en/cgi/GnatsPR/Section/MIME.pm,v 1.2 2011/07/23 02:42:59 shaun Exp $
 #------------------------------------------------------------------------------
 
 package GnatsPR::Section::MIME;
@@ -300,6 +300,11 @@ sub ParseHeader
 
 		$self->{headers}->{$key} =~ s/;.*$//;
 	}
+
+	# Normalise
+
+	$self->{headers}->{'content-type'} =
+		lc $self->{headers}->{'content-type'};
 }
 
 
