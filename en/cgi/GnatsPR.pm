@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/GnatsPR.pm,v 1.3 2011/07/29 20:37:43 shaun Exp $
+# $FreeBSD: www/en/cgi/GnatsPR.pm,v 1.4 2011/07/29 22:59:32 shaun Exp $
 #------------------------------------------------------------------------------
 
 package GnatsPR;
@@ -154,7 +154,7 @@ sub Parse
 	# character on a line, except for field headers.
 	# Any lines beginning with > will be shunted into
 	# 'Unformatted'
-	my @fieldblobs = split /\n>/m, $$data;
+	my @fieldblobs = split /\n>(?!\s)/m, $$data;
 
 	# In the rare case the Unformatted field did
 	# have some debris, be sure to assemble it back
