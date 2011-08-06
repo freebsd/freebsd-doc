@@ -7,7 +7,7 @@
 ]>
 
 <!-- $FreeBSD$ -->
-<!-- $FreeBSDde: de-www/community.xsl,v 1.6 2010/01/29 21:50:39 jkois Exp $ -->
+<!-- $FreeBSDde: de-www/community.xsl,v 1.7 2011/08/01 09:27:32 jkois Exp $ -->
 <!-- basiert auf: 1.9 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
@@ -53,11 +53,11 @@
 		href="http://forums.FreeBSD.org/">Foren</a> sowie
 		diverse <a
 		href="&base;/community/newsgroups.html">Newsgroups</a>.
-		Dazu kommen mehr als 93 <!-- <xsl:value-of
+		Dazu kommen mehr als 86 <!-- <xsl:value-of
 		select="count(document($usergroups.xml)//entry)"
 		/><xsl:text> </xsl:text>--> <a
 		href="&enbase;/usergroups.html">User Groups</a> in
-		39 L&#228;ndern. <!--<xsl:value-of
+		36 L&#228;ndern. <!--<xsl:value-of
 		select="count(document($usergroups.xml)//country)" />-->
 		Zus&#228;tzlich existiert eine aktive <a
 		href="&base;/community/irc.html">IRC</a>-Gemeinde.
