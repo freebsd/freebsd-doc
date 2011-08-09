@@ -174,17 +174,29 @@ XSL_NEWS_PRESS_OLD=	${WEB_PREFIX}/share/sgml/templates.oldpress.xsl
 
 # DEPENDSET: events  ..........................................................
 _DEPENDSET.events=	${XML_EVENTS_EVENTS_MASTER} ${XML_EVENTS_EVENTS} \
+			${XML_EVENTS_EVENTS_MASTER_SUBFILES} \
+			${XML_EVENTS_EVENTS_SUBFILES} \
 			${XSL_EVENTS} \
 			${XSL_EVENTS_ICS} \
 			${XML_INCLUDES}
 _PARAMS.events=		--param events.xml-master "'${XML_EVENTS_EVENTS_MASTER}'" \
 			--param events.xml "'${XML_EVENTS_EVENTS}'"
 XML_EVENTS_EVENTS_MASTER=${WEB_PREFIX}/share/sgml/events.xml
+XML_EVENTS_EVENTS_MASTER_SUBFILES=
+.for Y in 2003 2004 2005 2006 2007 2008 2009 2010 2011 2012 2013
+XML_EVENTS_EVENTS_MASTER_SUBFILES+=	${WEB_PREFIX}/share/sgml/events${Y}.xml
+.endfor
 .if exists(${WEB_PREFIX}/${WWW_LANGCODE}/share/sgml/events.xml)
 XML_EVENTS_EVENTS=	${WEB_PREFIX}/${WWW_LANGCODE}/share/sgml/events.xml
 .else
 XML_EVENTS_EVENTS=	${XML_EVENTS_EVENTS_MASTER}
 .endif
+XML_EVENTS_EVENTS_SUBFILES=
+.for Y in 2003 2004 2005 2006 2007 2008 2009 2010 2011 2012 2013
+.if exists(${WEB_PREFIX}/${WWW_LANGCODE}/share/sgml/events${Y}.xml)
+XML_EVENTS_EVENTS_SUBFILES+=	${WEB_PREFIX}/${WWW_LANGCODE}/share/sgml/events${Y}.xml
+.endif
+.endfor
 XSL_EVENTS=		${WEB_PREFIX}/share/sgml/templates.events.xsl
 XSL_EVENTS_ICS=		${WEB_PREFIX}/share/sgml/templates.events2ics.xsl
 XSL_EVENTS_PAST=	${WEB_PREFIX}/share/sgml/templates.pastevents.xsl
