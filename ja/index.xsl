@@ -4,8 +4,8 @@
 <!ENTITY title "The FreeBSD Project">
 ]>
 
-<!-- $FreeBSD: www/ja/index.xsl,v 1.60 2011/06/07 22:07:23 ryusuke Exp $ -->
-<!-- Original revision: 1.172 -->
+<!-- $FreeBSD: www/ja/index.xsl,v 1.61 2011/06/12 11:09:10 ryusuke Exp $ -->
+<!-- Original revision: 1.173 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
@@ -45,6 +45,7 @@
 	<link rel="stylesheet" media="screen" href="&enbase;/layout/css/fixed.css?20060509" type="text/css" title="Normal Text" />
 	<link rel="alternate stylesheet" media="screen" href="&enbase;/layout/css/fixed_large.css" type="text/css" title="Large Text" />
 	<script type="text/javascript" src="&enbase;/layout/js/styleswitcher.js"></script>
+	<script type="text/javascript" src="&enbase;/layout/js/google.js"></script>
 	<link rel="alternate" type="application/rss+xml"
 	  title="FreeBSD Project News" href="&enbase;/news/rss.xml" />
 	<link rel="alternate" type="application/rss+xml"
