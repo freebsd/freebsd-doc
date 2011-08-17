@@ -1,11 +1,12 @@
-/* $FreeBSD: www/en/layout/js/google.js,v 1.1 2011/08/15 00:30:17 gjb Exp $ */
+/* $FreeBSD: www/en/layout/js/google.js,v 1.2 2011/08/16 23:19:35 gjb Exp $ */
 
 h=document.location.host;
 /*
  * Check that the hosting domain is actually a FreeBSD.org domain, so
  * we don't accidentally obtain data from mirrors.
  */
-if (h == "www.freebsd.org" || h == "freebsd.org" || h == "wiki.freebsd.org") {
+fbsdregex=/m/((www|wiki)\.)?freebsd\.org\/(.*)?/i;
+if (h.test(fbsdregex)) {
 	var _gaq = _gaq || [];
 	_gaq.push(['_setAccount', 'UA-22767463-1']);
 	_gaq.push(['_trackPageview']);
