@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/cgi/cgi-style.pl,v 1.42 2011/01/08 14:58:27 wosch Exp $
+# $FreeBSD: www/en/cgi/cgi-style.pl,v 1.43 2011/07/23 00:06:42 shaun Exp $
 #
 # Perl routines to encapsulate various elements of HTML page style.
 
@@ -228,6 +228,7 @@ $html
     <link rel="apple-touch-icon" href="/favicon.ico" type="image/x-icon" />
 $csshack
 <script type="text/javascript" src="$hsty_base/layout/js/styleswitcher.js">
+<script type="text/javascript" src="$hsty_base/layout/js/google.js">
 </script>
 $t_style
 </head>
