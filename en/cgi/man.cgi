@@ -33,8 +33,8 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.261 2011-03-29 21:54:40 wosch Exp $
-# $FreeBSD: www/en/cgi/man.cgi,v 1.260 2011/03/04 18:20:15 chinsan Exp $
+# $Id: man.cgi,v 1.262 2011-08-20 20:22:59 wosch Exp $
+# $FreeBSD: www/en/cgi/man.cgi,v 1.261 2011/03/29 21:54:40 wosch Exp $
 
 ############################################################################
 # !!! man.cgi is stale perl4 code !!!
@@ -145,26 +145,30 @@ $sectionpath = {
 
     'CentOS Linux/i386 3.9' => { 'path' => '1:2:3:3p:4:5:6:7:8:9:n', },
     'CentOS Linux/i386 4.8' => { 'path' => '1:1p:2:3:3p:4:5:6:7:8:9:n:0p', },
-    'CentOS Linux/i386 5.4' => { 'path' => '0p:1:1p:1x:2:2x:3:3p:3x:4:4x:5:5x:6:6x:7:7x:8:8x:9:9x:l:n', },
-    'CentOS Linux/i386 5.5' => { 'path' => '0p:1:1p:1x:2:2x:3:3p:3x:4:4x:5:5x:6:6x:7:7x:8:8x:9:9x:l:n', },
+    'CentOS Linux/i386 5.4' => {
+        'path' => '0p:1:1p:1x:2:2x:3:3p:3x:4:4x:5:5x:6:6x:7:7x:8:8x:9:9x:l:n',
+    },
+    'CentOS Linux/i386 5.5' => {
+        'path' => '0p:1:1p:1x:2:2x:3:3p:3x:4:4x:5:5x:6:6x:7:7x:8:8x:9:9x:l:n',
+    },
 
-    'SuSE Linux/i386 4.3' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
-    'SuSE Linux/i386 5.0' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
-    'SuSE Linux/i386 5.2' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
-    'SuSE Linux/i386 5.3' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
-    'SuSE Linux/i386 6.0' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
-    'SuSE Linux/i386 6.1' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
-    'SuSE Linux/i386 6.3' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
-    'SuSE Linux/i386 6.4' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
-    'SuSE Linux/i386 7.0' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
-    'SuSE Linux/i386 7.1' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
-    'SuSE Linux/i386 7.2' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
-    'SuSE Linux/i386 7.3' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
-    'SuSE Linux/i386 8.0' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
-    'SuSE Linux/i386 8.1' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
-    'SuSE Linux/i386 8.2' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
-    'SuSE Linux/i386 9.2' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
-    'SuSE Linux/i386 9.3' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
+    'SuSE Linux/i386 4.3'  => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
+    'SuSE Linux/i386 5.0'  => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
+    'SuSE Linux/i386 5.2'  => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
+    'SuSE Linux/i386 5.3'  => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
+    'SuSE Linux/i386 6.0'  => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
+    'SuSE Linux/i386 6.1'  => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
+    'SuSE Linux/i386 6.3'  => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
+    'SuSE Linux/i386 6.4'  => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
+    'SuSE Linux/i386 7.0'  => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
+    'SuSE Linux/i386 7.1'  => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
+    'SuSE Linux/i386 7.2'  => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
+    'SuSE Linux/i386 7.3'  => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
+    'SuSE Linux/i386 8.0'  => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
+    'SuSE Linux/i386 8.1'  => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
+    'SuSE Linux/i386 8.2'  => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
+    'SuSE Linux/i386 9.2'  => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
+    'SuSE Linux/i386 9.3'  => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
     'SuSE Linux/i386 10.0' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
     'SuSE Linux/i386 10.1' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
     'SuSE Linux/i386 10.2' => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
@@ -210,30 +214,41 @@ $manPathDefault = 'FreeBSD 8.2-RELEASE';
 "$manLocalDir/FreeBSD-6.4-RELEASE/man:$manLocalDir/FreeBSD-6.4-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-6.2-RELEASE",
 
     'FreeBSD Ports', "$manLocalDir/FreeBSD-ports",
-    'FreeBSD 9-current', "$manLocalDir/FreeBSD-9-current/man:$manLocalDir/FreeBSD-9-current/openssl/man",
+    'FreeBSD 9-current',
+"$manLocalDir/FreeBSD-9-current/man:$manLocalDir/FreeBSD-9-current/openssl/man",
 
-    'FreeBSD 8.2-stable', "$manLocalDir/FreeBSD-8.2-stable/man:$manLocalDir/FreeBSD-8.2-stable/openssl/man",
-    'FreeBSD 8.2-RELEASE', "$manLocalDir/FreeBSD-8.2-RELEASE/man:$manLocalDir/FreeBSD-8.2-RELEASE/openssl/man",
+    'FreeBSD 8.2-stable',
+"$manLocalDir/FreeBSD-8.2-stable/man:$manLocalDir/FreeBSD-8.2-stable/openssl/man",
+    'FreeBSD 8.2-RELEASE',
+"$manLocalDir/FreeBSD-8.2-RELEASE/man:$manLocalDir/FreeBSD-8.2-RELEASE/openssl/man",
     'FreeBSD Ports 8.2-RELEASE', "$manLocalDir/FreeBSD-ports-8.2-RELEASE",
-    
-    'FreeBSD 8.1-RELEASE', "$manLocalDir/FreeBSD-8.1-RELEASE/man:$manLocalDir/FreeBSD-8.1-RELEASE/openssl/man",
-    'FreeBSD 8.0-RELEASE', "$manLocalDir/FreeBSD-8.0-RELEASE/man:$manLocalDir/FreeBSD-8.0-RELEASE/openssl/man",
+
+    'FreeBSD 8.1-RELEASE',
+"$manLocalDir/FreeBSD-8.1-RELEASE/man:$manLocalDir/FreeBSD-8.1-RELEASE/openssl/man",
+    'FreeBSD 8.0-RELEASE',
+"$manLocalDir/FreeBSD-8.0-RELEASE/man:$manLocalDir/FreeBSD-8.0-RELEASE/openssl/man",
 
     'FreeBSD Ports 8.1-RELEASE', "$manLocalDir/FreeBSD-ports-8.1-RELEASE",
     'FreeBSD Ports 8.0-RELEASE', "$manLocalDir/FreeBSD-ports-8.0-RELEASE",
 
-    'FreeBSD 7.4-stable', "$manLocalDir/FreeBSD-7.4-RELEASE/man:$manLocalDir/FreeBSD-7.4-RELEASE/openssl/man",
-    'FreeBSD 7.4-RELEASE', "$manLocalDir/FreeBSD-7.4-RELEASE/man:$manLocalDir/FreeBSD-7.4-RELEASE/openssl/man",
+    'FreeBSD 7.4-stable',
+"$manLocalDir/FreeBSD-7.4-RELEASE/man:$manLocalDir/FreeBSD-7.4-RELEASE/openssl/man",
+    'FreeBSD 7.4-RELEASE',
+"$manLocalDir/FreeBSD-7.4-RELEASE/man:$manLocalDir/FreeBSD-7.4-RELEASE/openssl/man",
     'FreeBSD Ports 7.4-RELEASE', "$manLocalDir/FreeBSD-ports-7.4-RELEASE",
-    
-    'FreeBSD 7.3-RELEASE', "$manLocalDir/FreeBSD-7.3-RELEASE/man:$manLocalDir/FreeBSD-7.3-RELEASE/openssl/man",
+
+    'FreeBSD 7.3-RELEASE',
+"$manLocalDir/FreeBSD-7.3-RELEASE/man:$manLocalDir/FreeBSD-7.3-RELEASE/openssl/man",
     'FreeBSD Ports 7.3-RELEASE', "$manLocalDir/FreeBSD-ports-7.3-RELEASE",
 
-    'FreeBSD 7.2-RELEASE', "$manLocalDir/FreeBSD-7.2-RELEASE/man:$manLocalDir/FreeBSD-7.2-RELEASE/openssl/man",
-    'FreeBSD 7.1-RELEASE', "$manLocalDir/FreeBSD-7.1-RELEASE/man:$manLocalDir/FreeBSD-7.1-RELEASE/openssl/man",
+    'FreeBSD 7.2-RELEASE',
+"$manLocalDir/FreeBSD-7.2-RELEASE/man:$manLocalDir/FreeBSD-7.2-RELEASE/openssl/man",
+    'FreeBSD 7.1-RELEASE',
+"$manLocalDir/FreeBSD-7.1-RELEASE/man:$manLocalDir/FreeBSD-7.1-RELEASE/openssl/man",
     'FreeBSD Ports 7.1-RELEASE', "$manLocalDir/FreeBSD-ports-7.1-RELEASE",
 
-    'FreeBSD 7.0-RELEASE', "$manLocalDir/FreeBSD-7.0-RELEASE/man:$manLocalDir/FreeBSD-7.0-RELEASE/openssl/man",
+    'FreeBSD 7.0-RELEASE',
+"$manLocalDir/FreeBSD-7.0-RELEASE/man:$manLocalDir/FreeBSD-7.0-RELEASE/openssl/man",
     'FreeBSD Ports 7.0-RELEASE', "$manLocalDir/FreeBSD-ports-7.0-RELEASE",
 
     'FreeBSD 6.4-stable', "$manLocalDir/FreeBSD-6.4-stable",
@@ -392,10 +407,10 @@ $manPathDefault = 'FreeBSD 8.2-RELEASE';
     'Red Hat Linux/i386 8.0', "$manLocalDir/RedHat-8.0-i386",
     'Red Hat Linux/i386 9',   "$manLocalDir/RedHat-9-i386",
 
-    'CentOS Linux/i386 3.9',   "$manLocalDir/CentOS-3.9",
-    'CentOS Linux/i386 4.8',   "$manLocalDir/CentOS-4.8",
-    'CentOS Linux/i386 5.4',   "$manLocalDir/CentOS-5.4",
-    'CentOS Linux/i386 5.5',   "$manLocalDir/CentOS-5.5",
+    'CentOS Linux/i386 3.9', "$manLocalDir/CentOS-3.9",
+    'CentOS Linux/i386 4.8', "$manLocalDir/CentOS-4.8",
+    'CentOS Linux/i386 5.4', "$manLocalDir/CentOS-5.4",
+    'CentOS Linux/i386 5.5', "$manLocalDir/CentOS-5.5",
 
     'SuSE Linux/i386 4.3',  "$manLocalDir/SuSE-4.3-i386",
     'SuSE Linux/i386 5.0',  "$manLocalDir/SuSE-5.0-i386",
@@ -611,6 +626,7 @@ sub sort_versions {
 
         # sort by characters
         else {
+
             # minor number and characters
             # 4.1 RELEASE <=>  4.1.1 RELEASE
             if ( $flag && ( $a1 =~ /^\d+$/ || $b1 =~ /^\d+$/ ) ) {
@@ -1502,7 +1518,7 @@ sub faq {
     }
 
     local $id =
-      '$FreeBSD: www/en/cgi/man.cgi,v 1.260 2011/03/04 18:20:15 chinsan Exp $';
+      '$FreeBSD: www/en/cgi/man.cgi,v 1.261 2011/03/29 21:54:40 wosch Exp $';
     return qq{\
 <pre>
 Copyright (c) 1996-2011 <a href="$mailtoURL">Wolfram Schneider</a>
