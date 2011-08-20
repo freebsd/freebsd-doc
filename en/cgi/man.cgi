@@ -33,7 +33,6 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $Id: man.cgi,v 1.262 2011-08-20 20:22:59 wosch Exp $
 # $FreeBSD: www/en/cgi/man.cgi,v 1.261 2011/03/29 21:54:40 wosch Exp $
 
 ############################################################################
@@ -538,6 +537,13 @@ my @no_pdf_output = (
 
 my %no_pdf_output = map { $_ => 1 } @no_pdf_output;
 
+my %valid_arch = map { $_ => 1 }
+  qw/acorn26 acorn32 algor alpha amd64 amiga arc arm arm26 arm32 armish atari aviion bebox cats cesfic cobalt dreamcast evbarm evbmips evbppc evbsh3 evbsh5 hp300 hp700 hpcarm hpcmips hpcsh hppa hppa64 i386 ibmnws landisk loongson luna68k luna88k mac68k macppc mipsco mmeye mvme68k mvme88k mvmeppc netwinder news68k newsmips next68k ofppc palm pc532 pegasos playstation2 pmax pmppc powerpc prep sandpoint sbmips sgi sgimips shark socppc sparc sparc64 sun2 sun3 sun3x tahoe vax walnut wgrisc x68k zaurus/;
+my $default_arch = 'i386';
+my %arch =
+  ( 'FreeBSD 8.2-RELEASE' =>
+      { 'default' => 'i386', 'arch' => [qw/amd64 arm i386 powerpc sparc64/] } );
+
 # delete not existing releases
 while ( ( $key, $val ) = each %manPath ) {
     my $counter = 0;
@@ -747,6 +753,19 @@ sub do_man {
     $format = $form{'format'};
     $format = 'html' if $format !~ /^(ps|pdf|ascii|latin1)$/;
 
+    $arch = $form{'arch'} || "";
+    $arch = '' if $arch eq 'none' || $arch eq 'default';
+    if ( $arch =~ /^([a-zA-Z0-9]+)$/ && $valid_arch{$arch} ) {
+        $arch = $1;
+    }
+    elsif ($arch) {
+        warn "Unknown arch: '$arch', ignored\n";
+        $arch = "";
+    }
+    else {
+        $arch = "";
+    }
+
     # remove trailing spaces for dumb users
     $form{'query'} =~ s/\s+$//;
     $form{'query'} =~ s/^\s+//;
@@ -809,7 +828,7 @@ sub do_man {
     }
     else { $section = ''; }
 
-    $apropos ? &apropos($query) : &man( $name, $section );
+    $apropos ? &apropos($query) : &man( $name, $section, $arch );
 }
 
 # --------------------- support routines ------------------------
@@ -959,7 +978,7 @@ sub to_filename {
 }
 
 sub man {
-    local ( $name, $section ) = @_;
+    local ( $name, $section, $arch ) = @_;
     local ( $_, $title, $head, *MAN );
     local ( $html_name, $html_section, $prefix );
     local (@manargs);
@@ -1085,6 +1104,8 @@ sub man {
     }
 
     warn "X $command{'man'} @manargs -- x $name x\n" if $debug >= 3;
+
+    push( @manargs, ( "-m", $arch ) ) if $arch;
 
     &proc( *MAN, $command{'man'}, @manargs, "--", $name )
       || &mydie("$0: open of $command{'man'} command failed: $!\n");
@@ -1465,9 +1486,22 @@ ETX
           . qq{value="$key">$key</option>\n};
     }
 
+    print qq{</select>\n};
+    print qq{<select name="arch">\n};
+    my @arch = exists $arch{$l} ? @{ $arch{$l}->{'arch'} } : $default_arch;
+    unshift @arch, 'default';
+
+    my $a = exists $arch{$l}->{'default'} ? $arch{$l}->{'default'} : 'default';
+    foreach (@arch) {
+        my $selected = $_ eq $a ? ' selected="selected"' : "";
+        print qq{<option $selected value="$_">$_</option>\n};
+    }
+
+    print qq{</select>\nArchitecture\n\n};
+
     local ($m) = &encode_url($l);
+
     print <<ETX;
-</select>
 <br />
 <input name="apropos" value="1" type="radio"$bstring /> <a href="$BASE?query=apropos&amp;sektion=1&amp;apropos=0">Apropos</a> Keyword Search (all sections)
 <select name="format">
