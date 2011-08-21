@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $FreeBSD: www/en/cgi/man.cgi,v 1.261 2011/03/29 21:54:40 wosch Exp $
+# $FreeBSD: www/en/cgi/man.cgi,v 1.263 2011/08/20 20:25:00 wosch Exp $
 
 ############################################################################
 # !!! man.cgi is stale perl4 code !!!
@@ -1491,7 +1491,17 @@ ETX
     my @arch = exists $arch{$l} ? @{ $arch{$l}->{'arch'} } : $default_arch;
     unshift @arch, 'default';
 
-    my $a = exists $arch{$l}->{'default'} ? $arch{$l}->{'default'} : 'default';
+    my $a;
+    # machine type selected by user
+    if ($arch) { 
+    	$a = $arch;
+    } 
+
+    # pickup a default machine type
+    else {
+	exists $arch{$l}->{'default'} ? $arch{$l}->{'default'} : 'default';
+	}
+
     foreach (@arch) {
         my $selected = $_ eq $a ? ' selected="selected"' : "";
         print qq{<option $selected value="$_">$_</option>\n};
@@ -1552,7 +1562,7 @@ sub faq {
     }
 
     local $id =
-      '$FreeBSD: www/en/cgi/man.cgi,v 1.261 2011/03/29 21:54:40 wosch Exp $';
+      '$FreeBSD: www/en/cgi/man.cgi,v 1.263 2011/08/20 20:25:00 wosch Exp $';
     return qq{\
 <pre>
 Copyright (c) 1996-2011 <a href="$mailtoURL">Wolfram Schneider</a>
