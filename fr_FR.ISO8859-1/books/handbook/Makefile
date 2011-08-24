@@ -186,6 +186,7 @@ IMAGES_LIB+= callouts/15.png
 SRCS+= audit/chapter.sgml
 SRCS+= book.sgml
 SRCS+= colophon.sgml
+SRCS+= dtrace/chapter.sgml
 SRCS+= freebsd-glossary.sgml
 SRCS+= advanced-networking/chapter.sgml
 SRCS+= basics/chapter.sgml
