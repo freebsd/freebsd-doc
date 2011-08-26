@@ -4,7 +4,7 @@
 <!ENTITY title "The FreeBSD Project">
 ]>
 
-<!-- $FreeBSD: www/en/index.xsl,v 1.172 2011/06/12 08:45:47 simon Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.173 2011/08/15 00:30:17 gjb Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
@@ -119,21 +119,21 @@
 				  <h2><a href="&base;/releases/">LATEST RELEASES</a></h2>
 				  <ul id="FRONTRELEASESLIST">
 					<li>
-					  <a href="&u.rel.announce;">Production Release &rel.current;</a>
+					  <a href="&u.rel.announce;">Production: &rel.current;</a>
 					</li>
 					<li>
-					  <a href="&u.rel2.announce;">Production (Legacy) Release &rel2.current;</a>
+					  <a href="&u.rel2.announce;">Legacy: &rel2.current;</a>
 					</li>
 			    <xsl:if test="'&beta.testing;' != 'IGNORE'">
 					<li>
-					  <a href="&base;/where.html#helptest">Upcoming Release
-				            &betarel.current; - &betarel.vers;</a>
+					  <a href="&base;/where.html#helptest">Upcoming:
+				            &betarel.current;-&betarel.vers;</a>
 					</li>
 			    </xsl:if>
 			    <xsl:if test="'&beta2.testing;' != 'IGNORE'">
 					<li>
-					  <a href="&base;/where.html#helptest">Upcoming Release
-				            &betarel2.current; - &betarel2.vers;</a>
+					  <a href="&base;/where.html#helptest">Upcoming:
+				            &betarel2.current;-&betarel2.vers;</a>
 					</li>
 			    </xsl:if>
 				  </ul>
