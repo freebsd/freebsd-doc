@@ -4,8 +4,8 @@
 <!ENTITY title "The FreeBSD Project">
 ]>
 
-<!-- $FreeBSD: www/ja/index.xsl,v 1.61 2011/06/12 11:09:10 ryusuke Exp $ -->
-<!-- Original revision: 1.173 -->
+<!-- $FreeBSD: www/ja/index.xsl,v 1.62 2011/08/15 09:46:56 ryusuke Exp $ -->
+<!-- Original revision: 1.174 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
@@ -115,22 +115,22 @@
 			  <h2><a href="&base;/releases/">最新リリース</a></h2>
 			  <ul id="FRONTRELEASESLIST">
 			    <li>
-			      <a href="&u.rel.announce;">プロダクションリリース &rel.current;</a>
+			      <a href="&u.rel.announce;">プロダクション: &rel.current;</a>
 			    </li>
 
 			    <li>
-			      <a href="&u.rel2.announce;">プロダクションリリース (旧版) &rel2.current;</a>
+			      <a href="&u.rel2.announce;">レガシー: &rel2.current;</a>
 			    </li>
 			    <xsl:if test="'&beta.testing;' != 'IGNORE'">
 			    <li>
-			      <a href="&base;/where.html#helptest">次回リリース予定
-				&betarel.current; - &betarel.vers;</a>
+			      <a href="&base;/where.html#helptest">次回予定:
+				&betarel.current;-&betarel.vers;</a>
 			    </li>
 			    </xsl:if>
 			    <xsl:if test="'&beta2.testing;' != 'IGNORE'">
 			    <li>
-			      <a href="&base;/where.html#helptest">次回リリース予定
-				&betarel2.current; - &betarel2.vers;</a>
+			      <a href="&base;/where.html#helptest">次回予定:
+				&betarel2.current;-&betarel2.vers;</a>
 			    </li>
 			    </xsl:if>
 			  </ul>
