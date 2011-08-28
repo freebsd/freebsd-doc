@@ -1,6 +1,6 @@
-# $FreeBSD: www/nl/Makefile,v 1.3 2009/06/10 21:08:59 rene Exp $
+# $FreeBSD: www/nl/Makefile,v 1.4 2011/06/12 20:36:07 rene Exp $
 # %SOURCE%	en/Makefile
-# %SRCID%	1.147
+# %SRCID%	1.148
 
 .if exists(Makefile.conf)
 .include "Makefile.conf"
@@ -21,6 +21,7 @@ DOCS+= features.sgml
 DOCS+= internet.sgml
 DOCS+= logo.sgml
 DOCS+= mailto.sgml
+DOCS+= privacy.sgml
 DOCS+= publish.sgml
 DOCS+= relnotes.sgml
 DOCS+= send-pr.sgml
