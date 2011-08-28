@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
 <!-- Vertaald door: Siebrand Mazeland / Rene Ladan
      %SOURCE%	en/index.xsl
-     %SRCID%	1.172
+     %SRCID%	1.174
 -->
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
 <!ENTITY title "Het &os; Project">
 ]>
 
-<!-- $FreeBSD: www/nl/index.xsl,v 1.4 2011/02/20 08:58:01 remko Exp $ -->
+<!-- $FreeBSD: www/nl/index.xsl,v 1.5 2011/06/19 13:48:18 rene Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
@@ -47,7 +47,7 @@
 -->
 	<link rel="stylesheet" media="screen" href="&enbase;/layout/css/fixed.css?20060509" type="text/css" title="Normal Text" />
 	<link rel="alternate stylesheet" media="screen" href="&enbase;/layout/css/fixed_large.css" type="text/css" title="Large Text" />
-	<script type="text/javascript" src="&enbase;/layout/js/styleswitcher.js"></script>
+	<script type="text/javascript" src="&enbase;/layout/js/google.js"></script>
 	<link rel="alternate" type="application/rss+xml"
 	  title="&os; Projectnieuws" href="&enbase;/news/rss.xml" />
 	<link rel="alternate" type="application/rss+xml"
@@ -115,21 +115,21 @@
 				  <h2><a href="&enbase;/releases/">NIEUWSTE UITGAVEN</a></h2>
 				  <ul id="FRONTRELEASESLIST">
 					<li>
-					  <a href="&u.rel.announce;">Productie-uitgave &rel.current;</a>
+					  <a href="&u.rel.announce;">Productie: &rel.current;</a>
 					</li>
 					<li>
-					  <a href="&u.rel2.announce;">Productie-uitgave (ouder) &rel2.current;</a>
+					  <a href="&u.rel2.announce;">Ouder: &rel2.current;</a>
 					</li>
 				    <xsl:if test="'&beta.testing;' != 'IGNORE'">
 					<li>
-					  <a href="&base;/where.html#helptest">Volgende uitgave
-					    &betarel.current; - &betarel.vers;</a>
+					  <a href="&base;/where.html#helptest">Aankomend:
+					    &betarel.current;-&betarel.vers;</a>
 					</li>
 				    </xsl:if>
 				    <xsl:if test="'&beta2.testing;' != 'IGNORE'">
 					<li>
-					  <a href="&base;/where.html#helptest">Volgende uitgave
-					    &betarel2.current; - &betarel2.vers;</a>
+					  <a href="&base;/where.html#helptest">Aankomend:
+					    &betarel2.current;-&betarel2.vers;</a>
 					</li>
 				    </xsl:if>
 				  </ul>
