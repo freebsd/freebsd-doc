@@ -5,8 +5,8 @@
 ]>
 <!--
      $FreeBSD$
-     $FreeBSDde: de-www/index.xsl,v 1.89 2011/01/04 20:58:19 jkois Exp $
-     basiert auf: 1.170
+     $FreeBSDde: de-www/index.xsl,v 1.92 2011/08/31 16:09:40 jkois Exp $
+     basiert auf: 1.174
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -122,23 +122,21 @@ Problemen bei der Darstellung der Webseiten.
 				  <h2><a href="&base;/releases/">AKTUELLE VERSIONEN</a></h2>
 				  <ul id="FRONTRELEASESLIST">
 					<li>
-					  <a href="&u.rel.announce;">Produktionsreife
-                                            &rel.current;</a>
+					  <a href="&u.rel.announce;">Produktion:&nbsp;&rel.current;</a>
 					</li>
 					<li>
-					  <a href="&u.rel2.announce;">Produktionsreife (alt)
-                                            &rel2.current;</a>
+					  <a href="&u.rel2.announce;">Produktion (alt):&nbsp;&rel2.current;</a>
 					</li>
 			    <xsl:if test="'&beta.testing;' != 'IGNORE'">
 					  <li>
-					    <a href="&base;/where.html#helptest">Testversion
-					      &betarel.current; - &betarel.vers;</a>
+					    <a href="&base;/where.html#helptest">Test:&nbsp;
+					      &betarel.current;-&betarel.vers;</a>
 					  </li>
 			    </xsl:if>
 			    <xsl:if test="'&beta2.testing;' != 'IGNORE'">
 					  <li>
-					    <a href="&base;/where.html#helptest">Testversion
-					      &betarel2.current; - &betarel2.vers;</a>
+					    <a href="&base;/where.html#helptest">Test:&nbsp;
+					      &betarel2.current;-&betarel2.vers;</a>
 					  </li>
 			    </xsl:if>
 				  </ul>
