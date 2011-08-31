@@ -1,6 +1,7 @@
-/* $FreeBSD: www/en/layout/js/google.js,v 1.6 2011/08/17 21:40:30 gjb Exp $ */
+/* $FreeBSD: www/en/layout/js/google.js,v 1.7 2011/08/20 23:47:06 gjb Exp $ */
 
-var h=document.location.host;
+//var h=document.location.host;
+var h=null;
 /*
  * Check that the hosting domain is actually a FreeBSD.org domain, so
  * we don't accidentally obtain data from mirrors.
