@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/marketing/Makefile,v 1.1 2005/05/08 15:53:13 murray Exp $
+# $FreeBSD: www/en/marketing/Makefile,v 1.2 2005/07/24 16:24:41 murray Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -7,6 +7,6 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS?=	index.sgml os-comparison.sgml
+DOCS?=	index.sgml
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
