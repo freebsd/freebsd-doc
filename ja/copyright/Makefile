@@ -1,4 +1,4 @@
-# $FreeBSD: www/ja/copyright/Makefile,v 1.17 2003/11/02 07:36:56 rushani Exp $
+# $FreeBSD: www/ja/copyright/Makefile,v 1.18 2011/03/17 13:21:37 ryusuke Exp $
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.15
 
@@ -13,7 +13,7 @@ DOCS=	copyright.sgml
 DOCS+=	daemon.sgml
 #DOCS+=	freebsd-doc-license.sgml
 DOCS+=	freebsd-license.sgml
-DOCS=	license.sgml
+DOCS+=	license.sgml
 DOCS+=	trademarks.sgml
 
 INDEXLINK= copyright.html
