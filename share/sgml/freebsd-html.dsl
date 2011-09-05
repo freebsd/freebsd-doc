@@ -322,7 +322,7 @@
 
         (define %callout-graphics-number-limit%
           ;; Number of largest callout graphic
-          15)
+          30)
 
         (define %callout-graphics-path%
           ;; Path to callout graphics
