@@ -33,6 +33,10 @@
       </listitem>
 
       <listitem>
+	<para>How to set up network PXE booting with an NFS root file system.</para>
+      </listitem>
+
+      <listitem>
 	<para>How to set up network address translation.</para>
       </listitem>
 
@@ -4168,6 +4172,309 @@ cd /usr/src/etc; make distribution</programlisting>
 
       </sect3>
 
+    </sect2>
+  </sect1>
+
+  <sect1 id="network-pxe-nfs">
+    <sect1info>
+      <authorgroup>
+	<author>
+	  <firstname>Craig</firstname>
+	  <surname>Rodrigues</surname>
+	  <affiliation>
+	    <address>rodrigc@FreeBSD.org</address>
+	  </affiliation>
+	  <contrib>Written by </contrib>
+	</author>
+      </authorgroup>
+    </sect1info>
+    <title>PXE Booting with an NFS root file system</title>
+
+    <para>The &intel; Preboot eXecution Environment (<acronym>PXE</acronym>)
+      allows booting the operating system over the network.
+      <acronym>PXE</acronym> support is usually provided in the
+      <acronym>BIOS</acronym> of modern motherboards, where
+      it can be enabled in the <acronym>BIOS</acronym> settings
+      which enable booting from the network.  A fully functioning
+      <acronym>PXE</acronym> setup also requires properly configured
+      <acronym>DHCP</acronym> and <acronym>TFTP</acronym> servers.</para>
+
+    <para>When the host computer boots, it receives information over
+      <acronym>DHCP</acronym> about where to obtain the initial boot
+      loader via TFTP.  After the host computer receives this information,
+      it downloads the boot loader via <acronym>TFTP</acronym>, and then
+      executes the boot loader.  This is documented in section 2.2.1 of the
+      <ulink url="http://download.intel.com/design/archives/wfm/downloads/pxespec.pdf">Preboot Execution Environment (PXE) Specification</ulink>.
+      In &os;, the boot loader retrieved during the <acronym>PXE</acronym>
+      process is <filename>/boot/pxeboot</filename>.  After
+      <filename>/boot/pxeboot</filename> executes, the &os; kernel is
+      loaded, and the rest of the &os; bootup sequence proceeds.
+      Refer to <xref linkend="boot"> for more information about
+      the &os; booting process.</para>
+
+    <sect2>
+      <title>Setting Up the <command>chroot</command> Environment for the NFS Root File system</title>
+
+	<procedure>
+	  <step>
+	    <para>Choose a directory which will have a &os; installation
+	      which will be NFS mountable.  For example, a directory such
+	      as <filename>/b/tftpboot/FreeBSD/install</filename> can be used.</para>
+
+	  <screen>&prompt.root; <userinput>export NFSROOTDIR=/b/tftpboot/FreeBSD/install</userinput>
+&prompt.root; <userinput>mkdir -p ${NFSROOTDIR}</userinput></screen>
+	  </step>
+
+	  <step>
+	    <para>Enable the NFS server by following the instructions in
+	      <xref linkend="network-configuring-nfs">.</para>
+	  </step>
+
+	  <step>
+	    <para>Export the directory via NFS by adding the following to
+	      <filename>/etc/exports</filename>:</para>
+
+	      <programlisting>/b -ro -alldirs</programlisting>
+	  </step>
+
+	  <step>
+	    <para>Restart the NFS server:</para>
+
+	    <screen>&prompt.root; <userinput>/etc/rc.d/nfsd restart</userinput></screen>
+	  </step>
+
+	  <step>
+	    <para>Enable &man.inetd.8; by following the steps outlined in
+	      <xref linkend="network-inetd-settings">.</para>
+	  </step>
+
+	  <step>
+	    <para>Add the following line to
+	      <filename>/etc/inetd.conf</filename>:</para>
+
+	    <programlisting>tftp dgram udp wait root /usr/libexec/tftpd tftpd -l -s /b/tftpboot</programlisting>
+	  </step>
+
+	  <step>
+	    <para>Restart inetd:</para>
+
+	    <screen>&prompt.root; <userinput>/etc/rc.d/inetd restart</userinput></screen>
+	  </step>
+
+	  <step>
+	    <para><link linkend="makeworld">Rebuild the &os; kernel and userland</link>:</para>
+
+	    <screen>&prompt.root; <userinput>cd /usr/src</userinput>
+&prompt.root; <userinput>make buildworld</userinput>
+&prompt.root; <userinput>make buildkernel</userinput></screen>
+	  </step>
+
+	  <step>
+	    <para>Install &os; into the directory mounted over
+	    <acronym>NFS</acronym>:</para>
+
+	    <screen>
+&prompt.root; <userinput>make installworld DESTDIR=${NFSROOTDIR}</userinput>
+&prompt.root; <userinput>make installkernel DESTDIR=${NFSROOTDIR}</userinput>
+&prompt.root; <userinput>make distribution DESTDIR=${NFSROOTDIR}</userinput>
+	    </screen>
+	  </step>
+
+	  <step>
+	    <para>Test that the <acronym>TFTP</acronym> server works and
+	      can download the boot loader which will be obtained via PXE:</para>
+
+	    <screen>
+&prompt.root; <userinput>tftp localhost</userinput>
+tftp> <userinput>get FreeBSD/install/boot/pxeboot</userinput>
+Received 264951 bytes in 0.1 seconds
+	    </screen>
+	  </step>
+
+	  <step>
+	    <para>Edit <filename>${NFSROOTDIR}/etc/fstab</filename> and create an entry
+	      to mount the root file system over NFS:</para>
+
+	    <programlisting>
+# Device                                         Mountpoint    FSType   Options  Dump Pass
+myhost.example.com:/b/tftpboot/FreeBSD/install       /         nfs      ro        0    0
+	    </programlisting>
+
+	    <para>Replace <replaceable>myhost.example.com</replaceable>
+	      with the hostname or IP address of your <acronym>NFS</acronym>
+	      server.  In this example, the root file system is mounted
+	      "read-only" in order to prevent <acronym>NFS</acronym>
+	      clients from potentially deleting the contents of the root
+	      file system.</para>
+	  </step>
+
+	  <step>
+	    <para>Set the root password in the &man.chroot.8;
+	      environment.</para>
+	      <screen>&prompt.root; <userinput>chroot ${NFSROOTDIR}</userinput>
+&prompt.root; <userinput>passwd</userinput></screen>
+	      <para>This will set the root password for client machines
+	      which are <acronym>PXE</acronym> booting.
+	  </step>
+
+	  <step>
+	    <para>Enable ssh root logins for client machines which are
+	      <acronym>PXE</acronym> booting by editing
+	      <filename>${NFSROOTDIR}/etc/ssh/sshd_config</filename>
+	      and enabling the <literal>PermitRootLogin</literal> option.
+	      This is documented in &man.sshd.config.5;.</para>
+	  </step>
+
+	  <step>
+	    <para>Perform other customizations of the &man.chroot.8;
+              environment in ${NFSROOTDIR}.  These customizations could
+	      include things like adding packages with &man.pkg.add.1;,
+	      editing the password file with &man.vipw.8;, or editing
+	      &man.amd.conf.5; maps for automounting.  For example:</para>
+
+	    <screen>
+&prompt.root; <userinput>chroot ${NFSROOTDIR}</userinput>
+&prompt.root; <userinput>pkg_add -r bash</userinput></screen>
+	  </step>
+	</procedure>
+      </sect2>
+
+      <sect2>
+	<title>Configuring Memory File Systems used by <filename>/etc/rc.initdiskless</filename></title>
+
+	<para>If you boot from an NFS root volume,
+	  <filename>/etc/rc</filename>
+	  detects that you booted over NFS and runs the
+	  <filename>/etc/rc.initdiskless</filename> script.
+	  Read the comments in this script to understand what is going on.
+	  We need to make <filename>/etc</filename> and
+	  <filename>/var</filename> memory backed
+	  file systems because these directories need to be writable, but
+	  the NFS root directory is read-only.</para>
+
+	<screen>
+&prompt.root; <userinput>chroot ${NFSROOTDIR}</userinput>
+&prompt.root; <userinput>mkdir -p conf/base</userinput>
+&prompt.root; <userinput>tar -c -v -f conf/base/etc.cpio.gz --format cpio --gzip etc</userinput>
+&prompt.root; <userinput>tar -c -v -f conf/base/var.cpio.gz --format cpio --gzip var</userinput></screen>
+
+	<para>When the system boots, memory file systems for
+	  <filename>/etc</filename> and <filename>/var</filename>
+	  will be created and mounted, and the contents of the
+	  <filename>cpio.gz</filename> files will be copied into them.</para>
+      </sect2>
+
+      <sect2>
+	<title>Setting up the DHCP Server</title>
+
+	<para>PXE requires a <acronym>TFTP</acronym> server and a
+	  <acronym>DHCP</acronym> server to be set up.  The
+	  <acronym>DHCP</acronym> server does not necessarily need
+	  to be the same machine as the <acronym>TFTP</acronym> server,
+	  but it needs to be accessible in your network.</para>
+
+	<procedure>
+	  <step>
+	    <para>Install the <acronym>DHCP</acronym> server by following
+	      the instructions documented at <xref linkend="network-dhcp-server">.
+	      Make sure that <filename>/etc/rc.conf</filename>
+	      and <filename>/usr/local/etc/dhcpd.conf</filename>
+	      are correctly configured.</para>
+	  </step>
+
+	  <step>
+	    <para>In <filename>/usr/local/etc/dhcpd.conf</filename>, configure
+	      the <literal>next-server</literal>, <literal>filename</literal>,
+	      and <literal>option root-path</literal> settings,
+	      to specify your <acronym>TFTP</acronym> server IP address,
+	      the path to <filename>/boot/pxeboot</filename> in
+	      <acronym>TFTP</acronym>, and the path to the <acronym>NFS</acronym>
+	      root file system.  Here is a sample <filename>dhcpd.conf</filename>
+	      setup:</para>
+
+	    <programlisting>
+subnet 192.168.0.0 netmask 255.255.255.0 {
+   range 192.168.0.2 192.168.0.3 ;
+   option subnet-mask 255.255.255.0 ;
+   option routers 192.168.0.1 ;
+   option broadcast-address 192.168.0.255 ;
+   option domain-name-server 192.168.35.35, 192.168.35.36 ;
+   option domain-name "example.com";
+
+   # IP address of TFTP server
+   next-server 192.168.0.1 ;
+
+   # path of boot loader obtained
+   # via tftp
+   filename "FreeBSD/install/boot/pxeboot" ;
+
+   # pxeboot boot loader will try to NFS mount this directory for root FS
+   option root-path "192.168.0.1:/b/tftpboot/FreeBSD/intall/" ;
+
+}
+	    </programlisting>
+	  </step>
+	</procedure>
+      </sect2>
+
+      <sect2>
+	<title>Configuring the PXE client and Debugging Connection Problems</title>
+
+	<procedure>
+	  <step>
+	    <para>When the client machine boots up, enter the
+	      <acronym>BIOS</acronym> configuration menu.  Configure the
+	      <acronym>BIOS</acronym> to boot from the network.  If all your
+	      previous configuration steps are correct, then everything should
+	      &quot;just work&quot;.</para>
+	  </step>
+
+	  <step>
+	    <para>Use the <filename role="package">net/wireshark</filename>
+	      port to debug the <acronym>DHCP</acronym> and <acronym>TFTP</acronym>
+	      network traffic to look for any problems.</para>
+	  </step>
+
+	  <step>
+	    <para>Make sure that the <filename>pxeboot</filename> file can
+	      be retrieved by <acronym>TFTP</acronym>.  On your
+	      <acronym>TFTP</acronym> server, look in
+	      <filename>/var/log/xferlog</filename> to ensure that the
+	      <filename>pxeboot</filename> file is being retrieved from
+	      the correct location.  To test the configuration from
+	      <filename>dhcpd.conf</filename> above:</para>
+
+	    <screen>&prompt.root; <userinput>tftp 192.168.0.1</userinput>
+tftp> <userinput>get FreeBSD/install/boot/pxeboot</userinput>
+Received 264951 bytes in 0.1 seconds</screen>
+
+          <para>Read &man.tftpd.8; and &man.tftp.1;.  The 
+                <literal>BUGS</literal> sections in these pages
+                document some limitations with
+                <acronym>TFTP</acronym>.</para>
+	</step>
+
+	<step>
+	  <para>Make sure that the root file system can be mounted
+	    via <acronym>NFS</acronym>.  To test configuration from
+	    <filename>dhcpd.conf</filename> above:</para>
+
+	  <screen>&prompt.root; <userinput>mount -t nfs 192.168.0.1:/b/tftpboot/FreeBSD/install /mnt</userinput></screen>
+	</step>
+
+	<step>
+	  <para>Read the code in <filename>src/sys/boot/i386/libi386/pxe.c</filename>
+	    to understand how the <filename>pxeboot</filename> loader sets
+	    variables like <literal>boot.nfsroot.server</literal> and
+	    <literal>boot.nfsroot.path</literal>.  These variables are then
+	    used in the NFS diskless root mount code in
+	    <filename>src/sys/nfsclient/nfs_diskless.c</filename>.</para>
+	</step>
+
+	<step>
+	  <para>Read &man.pxeboot.8; and &man.loader.8;.</para>
+	</step>
+      </procedure>
     </sect2>
   </sect1>
 
