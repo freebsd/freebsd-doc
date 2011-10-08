@@ -1,7 +1,7 @@
 #
 # $FreeBSD$
-# $FreeBSDde: de-docproj/books/handbook/Makefile,v 1.63 2010/08/20 18:09:14 jkois Exp $
-# basiert auf: 1.113
+# $FreeBSDde: de-docproj/books/handbook/Makefile,v 1.66 2011/10/08 17:30:49 jkois Exp $
+# basiert auf: 1.116
 #
 # Build the FreeBSD Handbook in its German translation.
 #
@@ -33,6 +33,44 @@ IMAGES_EN+= advanced-networking/isdn-twisted-pair.eps
 IMAGES_EN+= advanced-networking/natd.eps
 IMAGES_EN+= advanced-networking/net-routing.pic
 IMAGES_EN+= advanced-networking/static-routes.pic
+#IMAGES_EN+= bsdinstall/bsdinstall-adduser1.png
+#IMAGES_EN+= bsdinstall/bsdinstall-adduser2.png
+#IMAGES_EN+= bsdinstall/bsdinstall-adduser3.png
+#IMAGES_EN+= bsdinstall/bsdinstall-boot-loader-menu.png
+#IMAGES_EN+= bsdinstall/bsdinstall-choose-mode.png
+#IMAGES_EN+= bsdinstall/bsdinstall-config-components.png
+#IMAGES_EN+= bsdinstall/bsdinstall-config-hostname.png
+#IMAGES_EN+= bsdinstall/bsdinstall-config-keymap.png
+#IMAGES_EN+= bsdinstall/bsdinstall-config-services.png
+#IMAGES_EN+= bsdinstall/bsdinstall-configure-network-interface-ipv4-dhcp.png
+#IMAGES_EN+= bsdinstall/bsdinstall-configure-network-interface-ipv4.png
+#IMAGES_EN+= bsdinstall/bsdinstall-configure-network-interface-ipv4-static.png
+#IMAGES_EN+= bsdinstall/bsdinstall-configure-network-interface-ipv6.png
+#IMAGES_EN+= bsdinstall/bsdinstall-configure-network-interface-ipv6-static.png
+#IMAGES_EN+= bsdinstall/bsdinstall-configure-network-interface-slaac.png
+#IMAGES_EN+= bsdinstall/bsdinstall-configure-network-interface.png
+#IMAGES_EN+= bsdinstall/bsdinstall-configure-network-ipv4-dns.png
+#IMAGES_EN+= bsdinstall/bsdinstall-distfile-extracting.png
+#IMAGES_EN+= bsdinstall/bsdinstall-distfile-fetching.png
+#IMAGES_EN+= bsdinstall/bsdinstall-distfile-verifying.png
+#IMAGES_EN+= bsdinstall/bsdinstall-final-confirmation.png
+#IMAGES_EN+= bsdinstall/bsdinstall-finalconfiguration.png
+#IMAGES_EN+= bsdinstall/bsdinstall-mainexit.png
+#IMAGES_EN+= bsdinstall/bsdinstall-netinstall-files.png
+#IMAGES_EN+= bsdinstall/bsdinstall-netinstall-mirrorselect.png
+#IMAGES_EN+= bsdinstall/bsdinstall-part-entire-part.png
+#IMAGES_EN+= bsdinstall/bsdinstall-part-guided-disk.png
+#IMAGES_EN+= bsdinstall/bsdinstall-part-guided-manual.png
+#IMAGES_EN+= bsdinstall/bsdinstall-part-manual-addpart.png
+#IMAGES_EN+= bsdinstall/bsdinstall-part-manual-create.png
+#IMAGES_EN+= bsdinstall/bsdinstall-part-manual-partscheme.png
+#IMAGES_EN+= bsdinstall/bsdinstall-part-review.png
+#IMAGES_EN+= bsdinstall/bsdinstall-post-root-passwd.png
+#IMAGES_EN+= bsdinstall/bsdinstall-set-clock-local-utc.png
+#IMAGES_EN+= bsdinstall/bsdinstall-timezone-confirm.png
+#IMAGES_EN+= bsdinstall/bsdinstall-timezone-country.png
+#IMAGES_EN+= bsdinstall/bsdinstall-timezone-region.png
+#IMAGES_EN+= bsdinstall/bsdinstall-timezone-zone.png
 IMAGES_EN+= geom/striping.pic
 IMAGES_EN+= install/adduser1.scr
 IMAGES_EN+= install/adduser2.scr
@@ -187,6 +225,7 @@ IMAGES_LIB+= callouts/15.png
 # SGML content
 SRCS+= audit/chapter.sgml
 SRCS+= book.sgml
+SRCS+= bsdinstall/chapter.sgml
 SRCS+= colophon.sgml
 SRCS+= freebsd-glossary.sgml
 SRCS+= advanced-networking/chapter.sgml
