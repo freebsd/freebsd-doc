@@ -2,7 +2,7 @@
      The FreeBSD Documentation Project
      The FreeBSD Simplified Chinese Project
 
-     Original Revision: 1.302
+     Original Revision: 1.309
      $FreeBSD$
 -->
 
@@ -180,11 +180,15 @@
 
     <para>由于 &man.bsdlabel.8; 使用 32-位 的整数来表示扇区号，
       因此在多数情况下它的表现力限于每个磁盘
-      2^32-1 个扇区或 2TB。 &man.fdisk.8; 格式允许的起始扇区号不能高于
-      2^32-1 而分区长度也不能大于 2^32-1， 通常情况下这限制了分区大小最大为
-      2TB 而磁盘大小则是 4TB。 &man.sunlabel.8; 格式的限制是每个分区
-      2^32-1 个扇区， 但允许 8 个分区因此最大支持 16TB 的磁盘。
-      要使用更大的分区， 则应使用 &man.gpt.8;。</para>
+      2^32-1 个扇区， 或 2TB。
+      &man.fdisk.8; 格式允许的起始扇区号不能高于
+      2^32-1， 而分区尺寸也不能超过 2^32-1， 这样一来通常情况下分区尺寸不能超过
+      2TB， 而磁盘尺寸则不能超过 4TB。 &man.sunlabel.8;
+      格式的限制是每个分区 2^32-1 个扇区，
+      但可以有 8 个分区， 因而可以支持最大 16TB 的磁盘。
+      对于更大的磁盘， 可以使用 &man.gpart.8;
+      来创建 <acronym>GPT</acronym> 分区。 <acronym>GPT</acronym>
+      除了支持大磁盘之外， 还不受 4 个 slice 的限制。</para>
 
     <sect2>
       <title>使用 &man.sysinstall.8;</title>
@@ -3529,6 +3533,605 @@ Device          1K-blocks     Used    Avail Capacity
 Device          1K-blocks     Used    Avail Capacity
 /dev/ad0s1b.eli    542720        0   542720     0%
       </screen>
+    </sect2>
+  </sect1>
+
+  <sect1 id="disks-hast">
+    <sect1info>
+      <authorgroup>
+	<author>
+	  <firstname>Daniel</firstname>
+	  <surname>Gerzo</surname>
+	  <contrib>Contributed by </contrib>
+	</author>
+      </authorgroup>
+      <authorgroup>
+	<author>
+	  <firstname>Freddie</firstname>
+	  <surname>Cash</surname>
+	  <contrib>With inputs from </contrib>
+	</author>
+	<author>
+	  <firstname>Pawel Jakub</firstname>
+	  <surname>Dawidek</surname>
+	</author>
+	<author>
+	  <firstname>Michael W.</firstname>
+	  <surname>Lucas</surname>
+	</author>
+	<author>
+	  <firstname>Viktor</firstname>
+	  <surname>Petersson</surname>
+	</author>
+      </authorgroup>
+      <!-- Date of writing: 26 February 2011 -->
+    </sect1info>
+
+    <title>高可用性存储 (HAST)</title>
+    <indexterm>
+      <primary>HAST</primary>
+      <secondary>高可用性 (high availability)</secondary>
+    </indexterm>
+
+    <sect2>
+      <title>概述</title>
+
+      <para>高可用性是担负关键业务的应用的一项主要需求，
+	而高可用存储则是这类环境中的一项关键组件。
+	高可用存储 Highly Available STorage， 或
+	<acronym>HAST<remark role="acronym">Highly Available
+	  STorage</remark></acronym>， 是由 &a.pjd;
+	开发的一种用于提供在两台物理上隔离的系统之间以透明的方式， 通过
+	TCP/IP 网络传输数据的高可用性框架。 <acronym>HAST</acronym>
+	可以看作通过网络进行的 RAID1 (镜像)， 类似于 GNU/&linux; 平台上的
+	DRBD&reg; 存储系统。 配合 &os; 提供的其他高可用性基础设施，
+	如 <acronym>CARP</acronym>， <acronym>HAST</acronym>
+	可以用来构建可以抗御硬件故障的高可用存储集群。</para>
+
+      <para>读完这节， 您将了解：</para>
+
+      <itemizedlist>
+	<listitem>
+	  <para>何为 <acronym>HAST</acronym>， 它如何工作以及提供哪些功能。</para>
+	</listitem>
+	<listitem>
+	  <para>如何在 &os; 上配置和使用 <acronym>HAST</acronym>。</para>
+	</listitem>
+	<listitem>
+	  <para>如何与 <acronym>CARP</acronym> 及
+	    &man.devd.8; 配合构建可靠的存储系统。</para>
+ 	</listitem>
+      </itemizedlist>
+
+      <para>在阅读这节之前， 您应：</para>
+
+      <itemizedlist>
+	<listitem>
+	  <para>了解 &unix; 和 &os; 的基础知识
+	    (<xref linkend="basics">)。</para>
+	</listitem>
+	<listitem>
+	  <para>知道如何配置网络接口以及其他核心 &os; 子系统 (<xref
+	    linkend="config-tuning">)。</para>
+	</listitem>
+	<listitem>
+	  <para>理解 &os; 的网络功能
+	    (<xref linkend="network-communication">)。</para>
+	</listitem>
+	<listitem>
+	  <para>使用 &os;&nbsp;8.1-RELEASE 或更新版本。</para>
+	</listitem>
+      </itemizedlist>
+
+      <para><acronym>HAST</acronym> 项目是由
+	&os; 基金会资助完成的， 并得到了来自 <ulink
+	  url="http://www.omc.net/">OMCnet Internet Service GmbH</ulink>
+	和 <ulink url="http://www.transip.nl/">TransIP BV</ulink>
+	的支持。</para>
+    </sect2>
+
+    <sect2>
+      <title>HAST 的功能</title>
+
+      <para><acronym>HAST</acronym> 系统提供的功能主要包括：</para>
+
+      <itemizedlist>
+        <listitem>
+	  <para>可以掩盖本地硬盘的 I/O 错误。</para>
+	</listitem>
+	<listitem>
+	  <para>文件系统无关， 因而可以配合 &os; 支持的任何文件系统使用。</para>
+	</listitem>
+	<listitem>
+	  <para>高效率的快速重新同步机制， 令系统只同步在另一节点停机时修改过的块。</para>
+	</listitem>
+	<!--
+        <listitem>
+	  <para>Has several synchronization modes to allow for fast
+	    failover.</para>
+	</listitem>
+	-->
+	<listitem>
+	  <para>可以在已经部署好的环境中添加冗余。</para>
+	</listitem>
+	<listitem>
+	  <para>配合 <acronym>CARP</acronym>、
+	    <application>Heartbeat</application> 或其他类似的工具，
+	    可以实现健壮的可靠存储系统。</para>
+	</listitem>
+      </itemizedlist>
+    </sect2>
+
+    <sect2>
+      <title>HAST 的运行机制</title>
+
+      <para>由于 <acronym>HAST</acronym> 本质上是在多个机器间同步地进行块级复制，
+	因此它需要至少两个节点 (物理的机器)
+	&mdash; 其一作为 <literal>主</literal> (也称作
+	<literal>master</literal>) 节点， 另一个作为
+	<literal>从</literal> (<literal>slave</literal>) 节点。
+	这两台机器会共同构成一个集群。</para>
+
+      <note>
+	<para>目前 HAST 只能使用最多两个集群节点。</para>
+      </note>
+
+      <para>由于 <acronym>HAST</acronym> 是配置成以主从节点的方式运行，
+	在任何时刻都只能有唯一的一个节点是主节点。
+	<literal>主</literal> 节点， 也称作
+	<literal>活跃</literal> 节点， 负责处理由 <acronym>HAST</acronym>
+	管理的设备的全部 I/O 请求。 而
+	<literal>从</literal> 节点则会自动从 <literal>主</literal>
+	节点同步数据的变更操作。</para>
+
+      <para>在 <acronym>HAST</acronym>
+	系统中的物理设备包括：</para>
+
+      <itemizedlist>
+	<listitem>
+	  <para>本地磁盘 (在主节点上)</para>
+	</listitem>
+	<listitem>
+	  <para>远程磁盘 (在从节点上)</para>
+	</listitem>
+      </itemizedlist>
+
+      <para><acronym>HAST</acronym> 在块的级别上同步运行，
+	这使其对文件系统和应用程序透明。 <acronym>HAST</acronym>
+	在 <filename class="directory">/dev/hast/</filename>
+	目录中提供标准的 GEOM 设备供其他工具或应用程序使用，
+	因此， 在使用上， 对应用程序或文件系统而言，
+	<acronym>HAST</acronym> 提供的设备与普通的裸盘或分区等没有任何区别。</para>
+
+      <para>发到本地磁盘的每次写、 删除或缓存刷写操作，
+	都会同时通过 TCP/IP 发到远程磁盘上。
+	读操作是由本地磁盘完成， 除非本地磁盘上的数据不是最新的，
+	或发生了 I/O 错误。 在这种情况下，
+	读操作会在从节点上完成。</para>
+
+      <sect3>
+	<title>同步及复制模式</title>
+
+	<para><acronym>HAST</acronym> 希望提供快速的故障恢复能力。
+	  基于这一考量， 减少在某个节点停机后需要的同步时间就十分重要。
+	  为了提供快速的同步能力， <acronym>HAST</acronym>
+	  会维护一份保存在磁盘上的脏区段位映射表 (bitmap of dirty extents)，
+	  在普通的同步模式中， 它只同步这些部分的数据 (初始的同步除外)。</para>
+
+	<para>处理同步有多种不同的方式，
+	  <acronym>HAST</acronym> 计划实现以下几种同步方式：</para>
+
+	<itemizedlist>
+	  <listitem>
+	    <para><emphasis>memsync</emphasis>： 当本地的写操作已经完成，
+	      并且远程节点汇报已经收到数据时， 便认为数据的写操作已经完成，
+	      而不是等待远程节点完成数据的写操作。 远程节点在发出回应之后，
+	      会立即开始执行写操作。 这种模式的目标是减少响应时间，
+	      但在同时仍然保持很好的可靠性。 目前
+	      <emphasis>memsync</emphasis> 复制模式尚未实现。</para>
+	  </listitem>
+	  <listitem>
+	    <para><emphasis>fullsync</emphasis>： 只有在本地写操作完成，
+	      并且远程的写操作也已经完成的情况下， 才认为数据的写操作已经完成。
+	      这种模式是最保险， 同时也是最慢的一种复制模式。
+	      这是目前系统预设的复制模式。</para>
+	  </listitem>
+	  <listitem>
+	    <para><emphasis>async</emphasis>： 在本地写操作完成时，
+	      即认为数据已经写完。 这是最快， 同时也是风险最大的复制模式，
+	      一般而言只有在另一节点的延迟较大时才应考虑使用。 目前
+	      <emphasis>async</emphasis> 复制模式尚未实现。</para>
+	  </listitem>
+	</itemizedlist>
+
+	<warning>
+	  <para>目前， 只支持 <emphasis>fullsync</emphasis> 复制模式。</para>
+	</warning>
+      </sect3>
+    </sect2>
+
+    <sect2>
+      <title>HAST 的配置</title>
+
+      <para><acronym>HAST</acronym> 需要
+	<literal>GEOM_GATE</literal> 支持才能正常工作。
+	系统自带的预设 <literal>GENERIC</literal> 内核
+	<emphasis>并不</emphasis> 包含 <literal>GEOM_GATE</literal>，
+	但默认的 &os; 安装包含了 <filename>geom_gate.ko</filename>
+	内核模块。 如果对系统进行了裁剪，
+	则应确认这个模块是否可用。 此外，
+	<literal>GEOM_GATE</literal> 也可以静态联编进内核，
+	方法是在内核的编译配置中添加下面的设置：</para>
+
+      <programlisting>options	GEOM_GATE</programlisting>
+
+      <para>从操作系统的角度， <acronym>HAST</acronym> 框架包含了下面这些部件：</para>
+
+      <itemizedlist>
+        <listitem>
+	  <para>负责进行数据同步的 &man.hastd.8; 服务程序，</para>
+	</listitem>
+	<listitem>
+	  <para>用于执行管理操作的 &man.hastctl.8; 用户态管理工具，</para>
+	</listitem>
+	<listitem>
+	  <para>配置文件 &man.hast.conf.5;。</para>
+	</listitem>
+      </itemizedlist>
+
+      <para>下面的例子将介绍使用 <acronym>HAST</acronym> 在两个节点之间以
+	<literal>主</literal>-<literal>从</literal> 模式复制数据的方法。
+	两个节点的名字分别是
+	<literal><replaceable>hasta</replaceable></literal> 其 IP，
+	地址为 <replaceable>172.16.0.1</replaceable>， 以及
+	<literal><replaceable>hastb</replaceable></literal>， 其 IP
+	地址为 <replaceable>172.16.0.2</replaceable>。
+	这两台机器都使用尺寸相同的磁盘
+	<devicename>/dev/<replaceable>ad6</replaceable></devicename>
+	来专用于 <acronym>HAST</acronym> 的运行。
+	<acronym>HAST</acronym> 存储池 (有时也称为资源，
+	例如位于 <filename
+	  class="directory">/dev/hast/</filename> 的设备文件) 将命名为
+	<filename><replaceable>test</replaceable></filename>。</para>
+
+      <para><acronym>HAST</acronym> 的配置文件是
+	<filename>/etc/hast.conf</filename>。 在两个节点上，
+	这个文件的内容应该是完全一样的。
+	最简配置如下：</para>
+
+      <programlisting>resource test {
+	on hasta {
+		local /dev/ad6
+		remote 172.16.0.2
+	}
+	on hastb {
+		local /dev/ad6
+		remote 172.16.0.1
+	}
+}</programlisting>
+
+      <para>如果需要更高级的配置， 请参阅联机手册
+	&man.hast.conf.5;。</para>
+
+      <tip>
+	<para>在 <literal>remote</literal> 语句中也可以使用主机名。
+	  这种情况下需要确保这些主机名是可以解析的，
+	  例如在 <filename>/etc/hosts</filename> 文件中，
+	  或在本地 <acronym>DNS</acronym> 中进行了定义。</para>
+      </tip>
+
+      <para>现在在两个节点上都有同样的配置了，
+	接下来我们需要创建 <acronym>HAST</acronym> 存储池。
+	在两个节点上分别运行下面的命令来初始化本地此怕，
+	并启动 &man.hastd.8; 服务：</para>
+
+      <screen>&prompt.root; <userinput>hastctl create test</userinput>
+&prompt.root; <userinput>/etc/rc.d/hastd onestart</userinput></screen>
+
+      <note>
+	<para><emphasis>没有</emphasis> 办法使用已经包含文件系统的 GEOM
+	  设备来创建存储池 (换言之，
+	  已经存在的文件系统无法转换为 <acronym>HAST</acronym> 管理的存储池)，
+	  这是因为创建存储池的过程需要保存一些元数据，
+	  而已经写入文件系统的设备不再能提供保存这些元数据所需的空间。</para>
+      </note>
+
+      <para>HAST 并不负责选择节点的角色
+	(<literal>主</literal> 或 <literal>从</literal>)。
+	节点的角色是由管理员手工，
+	或由类似 <application>Heartbeat</application> 这样的软件通过
+	&man.hastctl.8; 来完成配置的。 在希望成为主节点的系统
+	(<literal><replaceable>hasta</replaceable></literal>)
+	上运行下面的命令令其成为主节点：</para>
+
+      <screen>&prompt.root; <userinput>hastctl role primary test</userinput></screen>
+
+      <para>类似地， 用下面的命令来指明从节点
+	(<literal><replaceable>hastb</replaceable></literal>)：</para>
+
+      <screen>&prompt.root; <userinput>hastctl role secondary test</userinput></screen>
+
+      <caution>
+	<para>有可能会出现两个节点之间无法正常通讯，
+	  但又都配置为主节点这样的情况； 这种称作
+	  <literal>脑分裂</literal> 的状态是十分危险的。 在 <xref
+	  linkend="disks-hast-sb"> 中介绍了如何从这种状态中恢复的方法。</para>
+      </caution>
+
+      <para>接下来， 可以在两个节点上分别用
+	&man.hastctl.8; 工具来验证节点身份是否正确：</para>
+
+      <screen>&prompt.root; <userinput>hastctl status test</userinput></screen>
+
+      <para>这其中比较重要的是 <literal>status</literal>(状态) 这行，
+	在两个节点上， 其输出均应为 <literal>complete</literal>(完好)。
+	如果系统给出的输出是 <literal>degraded</literal> (降级)，
+	则表示出现了问题。 正常情况下， 节点间的同步已经开始。
+	当 <command>hastctl status</command> 命令报告的
+	<literal>dirty</literal> 数据块数量为 0 字节时，
+	表示两个节点的数据已经完全同步。</para>
+
+
+      <para>最后一步是在 GEOM 设备
+	<devicename>/dev/hast/<replaceable>test</replaceable></devicename>
+	上创建文件系统。 这项工作必须在
+	<literal>主</literal> 节点上进行 (因为
+	<filename>/dev/hast/<replaceable>test</replaceable></filename>
+	只在 <literal>主</literal> 节点上出现)，
+	随硬盘尺寸的不同， 这可能需要花费数分钟的时间：</para>
+
+      <screen>&prompt.root; <userinput>newfs -U /dev/hast/test</userinput>
+&prompt.root; <userinput>mkdir /hast/test</userinput>
+&prompt.root; <userinput>mount /dev/hast/test /hast/test</userinput></screen>
+
+      <para>一旦完成了 <acronym>HAST</acronym> 框架的配置，
+	最后一步就是确保
+	<acronym>HAST</acronym> 在系统引导过程中会自动启动了。
+	为了达到这个目的， 应在
+	<filename>/etc/rc.conf</filename> 文件中添加这行配置：</para>
+
+      <programlisting>hastd_enable="YES"</programlisting>
+
+      <sect3>
+	<title>故障转移配置</title>
+
+	<para>这个例子的目的在于建立一套健壮的存储系统，
+	  令其能够抵御在任何一个节点上发生的故障。
+	  这其中的关键任务是对集群中的
+	  <literal>主</literal> 节点发生故障的情形进行及时的补救处理。
+	  当发生这种情况时， <literal>从</literal>
+	  节点可以无缝地接手主节点的工作， 对文件系统进行检查并挂接，
+	  从而继续运行， 而不损失任何数据。</para>
+
+	<para>为了达成这一任务， 需要使用 &os; 提供的另一项功能 &mdash;
+	  <acronym>CARP</acronym> 所提供的 IP 层自动故障转移能力。
+	  <acronym>CARP</acronym> 是共用地址冗余协议
+	  Common Address Redundancy Protocol 的缩写，
+	  它允许多个同网段的主机共享同一 IP 地址。 请根据 <xref linkend="carp">
+	  的介绍在两个节点上都配置 <acronym>CARP</acronym>。
+	  完成这些配置之后， 两个节点都会有自己的
+	  <devicename>carp0</devicename> 网络接口，
+	  共用 IP 地址 <replaceable>172.16.0.254</replaceable>。
+	  显然， 集群中的 <acronym>HAST</acronym> 主节点也必须是
+	  <acronym>CARP</acronym> 主节点。</para>
+
+	<para>前面一节中创建的 <acronym>HAST</acronym>
+	  存储池现在可以提供给网络上的其他主机使用了。
+	  其上的文件系统可以通过 <acronym>NFS</acronym>、
+	  <application>Samba</application> 等等，
+	  以共用 IP 地址 <replaceable>172.16.0.254</replaceable> 来访问。
+	  现在余下的唯一问题是自动化对主节点故障的处理。</para>
+
+	<para>当 <acronym>CARP</acronym> 网络接口的链路状态发生变化时，
+	  &os; 操作系统会产生一个 &man.devd.8;
+	  消息， 这样就可以监视 <acronym>CARP</acronym>
+	  网络接口的状态了。 <acronym>CARP</acronym>
+	  接口的状态变化表示节点发生故障， 或重新回到了网络中。
+	  这些情况下需要运行特定的脚本来完成对应的处理。</para>
+
+	<para>为了截获
+	  <acronym>CARP</acronym> 网络接口的状态变化，
+	  需要在两个节点的
+	  <filename>/etc/devd.conf</filename>
+	  文件中添加如下的设置：</para>
+
+	<programlisting>notify 30 {
+	match "system" "IFNET";
+	match "subsystem" "carp0";
+	match "type" "LINK_UP";
+	action "/usr/local/sbin/carp-hast-switch master";
+};
+
+notify 30 {
+	match "system" "IFNET";
+	match "subsystem" "carp0";
+	match "type" "LINK_DOWN";
+	action "/usr/local/sbin/carp-hast-switch slave";
+};</programlisting>
+
+	<para>为使编辑的配置生效， 需要在两个节点上执行下面的命令：</para>
+
+	<screen>&prompt.root; <userinput>/etc/rc.d/devd restart</userinput></screen>
+
+	<para>当网络接口 <devicename>carp0</devicename>
+	  的状态发生变化时， 系统会产生一个通知消息，
+	  这允许 &man.devd.8; 子系统运行管理员指定的任意脚本，
+	  在这个例子中是
+	  <filename>/usr/local/sbin/carp-hast-switch</filename>。
+	  这个脚本的作用是自动化故障转移。 关于前面
+	  &man.devd.8; 配置的具体含义， 请参阅联机手册
+	  &man.devd.conf.5;。</para>
+
+	<para>下面是一个这种脚本的示例：</para>
+
+<programlisting>#!/bin/sh
+
+# Original script by Freddie Cash &lt;fjwcash@gmail.com&gt;
+# Modified by Michael W. Lucas &lt;mwlucas@BlackHelicopters.org&gt;
+# and Viktor Petersson &lt;vpetersson@wireload.net&gt;
+
+# The names of the HAST resources, as listed in /etc/hast.conf
+resources="test"
+
+# delay in mounting HAST resource after becoming master
+# make your best guess
+delay=3
+
+# logging
+log="local0.debug"
+name="carp-hast"
+
+# end of user configurable stuff
+
+case "$1" in
+	master)
+		logger -p $log -t $name "Switching to primary provider for ${resources}."
+		sleep ${delay}
+
+		# Wait for any "hastd secondary" processes to stop
+		for disk in ${resources}; do
+			while $( pgrep -lf "hastd: ${disk} \(secondary\)" > /dev/null 2>&1 ); do
+				sleep 1
+			done
+
+			# Switch role for each disk
+			hastctl role primary ${disk}
+			if [ $? -ne 0 ]; then
+				logger -p $log -t $name "Unable to change role to primary for resource ${disk}."
+				exit 1
+			fi
+		done
+
+		# Wait for the /dev/hast/* devices to appear
+		for disk in ${resources}; do
+			for I in $( jot 60 ); do
+				[ -c "/dev/hast/${disk}" ] && break
+				sleep 0.5
+			done
+
+			if [ ! -c "/dev/hast/${disk}" ]; then
+				logger -p $log -t $name "GEOM provider /dev/hast/${disk} did not appear."
+				exit 1
+			fi
+		done
+
+		logger -p $log -t $name "Role for HAST resources ${resources} switched to primary."
+
+
+		logger -p $log -t $name "Mounting disks."
+		for disk in ${resources}; do
+			mkdir -p /hast/${disk}
+			fsck -p -y -t ufs /dev/hast/${disk}
+			mount /dev/hast/${disk} /hast/${disk}
+		done
+
+	;;
+
+	slave)
+		logger -p $log -t $name "Switching to secondary provider for ${resources}."
+
+		# Switch roles for the HAST resources
+		for disk in ${resources}; do
+			if ! mount | grep -q "^/dev/hast/${disk} on "
+			then
+			else
+				umount -f /hast/${disk}
+			fi
+			sleep $delay
+			hastctl role secondary ${disk} 2>&1
+			if [ $? -ne 0 ]; then
+				logger -p $log -t $name "Unable to switch role to secondary for resource ${disk}."
+				exit 1
+			fi
+			logger -p $log -t $name "Role switched to secondary for resource ${disk}."
+		done
+	;;
+esac</programlisting>
+
+	<para>简而言之， 在节点成为网络的 <literal>master</literal> /
+	  <literal>primary</literal> 节点时， 脚本会进行下面的操作：</para>
+
+	<itemizedlist>
+	  <listitem>
+	    <para>在本节点升格为 <acronym>HAST</acronym> 存储池的主节点。</para>
+	  </listitem>
+	  <listitem>
+	    <para>检查
+	      <acronym>HAST</acronym> 存储池上的文件系统。</para>
+	  </listitem>
+	  <listitem>
+	    <para>挂接存储池中的文件系统到适当的位置。</para>
+	  </listitem>
+	</itemizedlist>
+
+	<para>当节点成为 <literal>backup</literal> /
+	  <literal>secondary</literal> 节点时：</para>
+
+	<itemizedlist>
+	  <listitem>
+	    <para>卸下 <acronym>HAST</acronym> 存储池。</para>
+	  </listitem>
+	  <listitem>
+	    <para>将本节点降格为 <acronym>HAST</acronym> 存储池的从节点。</para>
+	  </listitem>
+	</itemizedlist>
+
+	<caution>
+	  <para>务必注意， 上面的脚本只是概念性的介绍。
+	    它并不能处理所有可能发生的情况， 因此应根据实际情况进行修改，
+	    例如启动/停止必要的服务， 等等。</para>
+	</caution>
+
+	<tip>
+	  <para>在前面的例子中， 出于示范的目的我们使用的是标准的 UFS
+	    文件系统。 为了减少恢复所需的时间， 可以使用带日志的 UFS
+	    文件系统， 或者使用 ZFS 文件系统。</para>
+	</tip>
+
+	<para>更具体的信息和例子请参阅 <ulink
+	    url="http://wiki.FreeBSD.org/HAST">HAST Wiki</ulink>
+	  页面。</para>
+      </sect3>
+    </sect2>
+    <sect2>
+      <title>故障排除</title>
+
+      <sect3>
+	<title>一般故障排除提示</title>
+
+	<para><acronym>HAST</acronym> 通常都能够无故障地运行，
+	  不过， 和任何其他软件产品一样，
+	  有时它也可能会无法以希望的方式运转。
+	  导致问题的可能性有很多，
+	  但一般来说， 首先要确保集群中所有节点的时间是同步的。</para>
+
+	<para>当尝试排除 <acronym>HAST</acronym> 故障时，
+	  应提高 &man.hastd.8; 的调试级别。 这可以通过在启动
+	  &man.hastd.8; 服务时指定 <literal>-d</literal>
+	  参数来实现。 需要说明的是，
+	  可以多次指定这一参数来进一步提高调试级别。
+	  此外， 还可以考虑使用 <literal>-F</literal>
+	  参数来启动服务， 它会令 &man.hastd.8; 服务在前台运行。</para>
+     </sect3>
+
+      <sect3 id="disks-hast-sb">
+	<title>从脑分裂状态恢复</title>
+
+	<para>当集群中的两个节点之间无法相互通讯时，
+	  两个节点都会认为自己是主节点， 从而导致
+	  <literal>脑分裂</literal> 的状态。
+	  这种情形十分危险， 因为两个节点会产生互相无法合并的数据。
+	  这种情形需要系统管理员实施手工干预。</para>
+
+	<para>从这种状态中恢复时， 管理员必须决定哪一个节点包含最重要的数据变动
+	  (或者手工合并这些改动) 并让 <acronym>HAST</acronym>
+	  进行一次完整的同步操作， 覆盖有问题的那个节点的数据。
+	  要完成这个工作，在有问题的节点上执行下面的命令：</para>
+
+        <screen>&prompt.root; <userinput>hastctl role init &lt;resource&gt;</userinput>
+&prompt.root; <userinput>hastctl create &lt;resource&gt;</userinput>
+&prompt.root; <userinput>hastctl role secondary &lt;resource&gt;</userinput></screen>
+      </sect3>
     </sect2>
   </sect1>
 </chapter>
