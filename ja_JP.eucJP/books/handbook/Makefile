@@ -3,7 +3,7 @@
 #
 # Build the FreeBSD Handbook (Japanese).
 #
-# Original revision: 1.74
+# Original revision: 1.77
 #
 
 # ------------------------------------------------------------------------
@@ -42,6 +42,7 @@ INSTALL_ONLY_COMPRESSED?=
 IMAGES_EN = advanced-networking/isdn-bus.eps
 IMAGES_EN+= advanced-networking/isdn-twisted-pair.eps
 IMAGES_EN+= advanced-networking/natd.eps
+IMAGES_EN+= advanced-networking/net-routing.pic
 IMAGES_EN+= install/adduser1.scr
 IMAGES_EN+= install/adduser2.scr
 IMAGES_EN+= install/adduser3.scr
