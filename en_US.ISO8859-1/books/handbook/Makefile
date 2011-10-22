@@ -75,6 +75,7 @@ IMAGES_EN+= bsdinstall/bsdinstall-distfile-fetching.png
 IMAGES_EN+= bsdinstall/bsdinstall-distfile-verifying.png
 IMAGES_EN+= bsdinstall/bsdinstall-final-confirmation.png
 IMAGES_EN+= bsdinstall/bsdinstall-finalconfiguration.png
+IMAGES_EN+= bsdinstall/bsdinstall-keymap-select-default.png
 IMAGES_EN+= bsdinstall/bsdinstall-mainexit.png
 IMAGES_EN+= bsdinstall/bsdinstall-netinstall-files.png
 IMAGES_EN+= bsdinstall/bsdinstall-netinstall-mirrorselect.png
