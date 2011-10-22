@@ -3,7 +3,7 @@
 #
 # Build the FreeBSD Handbook (Japanese).
 #
-# Original revision: 1.77
+# Original revision: 1.81
 #
 
 # ------------------------------------------------------------------------
@@ -110,6 +110,14 @@ IMAGES_EN+= install/timezone3.scr
 IMAGES_EN+= install/userconfig.scr
 IMAGES_EN+= install/userconfig2.scr
 IMAGES_EN+= install/xf86setup.scr
+IMAGES_EN+= mail/mutt1.scr
+IMAGES_EN+= mail/mutt2.scr
+IMAGES_EN+= mail/mutt3.scr
+IMAGES_EN+= mail/pine1.scr
+IMAGES_EN+= mail/pine2.scr
+IMAGES_EN+= mail/pine3.scr
+IMAGES_EN+= mail/pine4.scr
+IMAGES_EN+= mail/pine5.scr
 #
 IMAGES_EN+= install/example-dir1.eps
 IMAGES_EN+= install/example-dir2.eps
@@ -222,7 +230,6 @@ CLEANFILES+= eresources.sgml.www.inc.tmp
 mirrors.sgml.${p}.inc: ${XML_MIRRORS} ${XSL_MIRRORS}
 	${XSLTPROC} ${XSLTPROCOPTS} \
 	    -o $@.tmp \
-	    --param 'transtable.xml' "'${XML_TRANSTABLE}'" \
 	    --param 'type' "'$p'" \
 	    --param 'proto' "'$p'" \
 	    --param 'target' "'handbook/mirrors/chapter.sgml'" \
@@ -235,7 +242,6 @@ mirrors.sgml.${p}.inc: ${XML_MIRRORS} ${XSL_MIRRORS}
 eresources.sgml.www.inc: ${XML_MIRRORS} ${XSL_MIRRORS}
 	${XSLTPROC} ${XSLTPROCOPTS} \
 	    -o $@.tmp \
-	    --param 'transtable.xml' "'${XML_TRANSTABLE}'" \
 	    --param 'type' "'www'" \
 	    --param 'proto' "'http'" \
 	    --param 'target' "'handbook/eresources/chapter.sgml'" \
