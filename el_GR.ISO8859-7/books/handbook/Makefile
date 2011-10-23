@@ -4,7 +4,7 @@
 # Μορφοποίηση του Εγχειριδίου του FreeBSD
 #
 # %SOURCE%	en_US.ISO8859-1/books/handbook/Makefile
-# %SRCID%	1.117
+# %SRCID%	1.118
 #
 
 # ------------------------------------------------------------------------
@@ -79,6 +79,7 @@ IMAGES_EN+= bsdinstall/bsdinstall-distfile-fetching.png
 IMAGES_EN+= bsdinstall/bsdinstall-distfile-verifying.png
 IMAGES_EN+= bsdinstall/bsdinstall-final-confirmation.png
 IMAGES_EN+= bsdinstall/bsdinstall-finalconfiguration.png
+IMAGES_EN+= bsdinstall/bsdinstall-keymap-select-default.png
 IMAGES_EN+= bsdinstall/bsdinstall-mainexit.png
 IMAGES_EN+= bsdinstall/bsdinstall-netinstall-files.png
 IMAGES_EN+= bsdinstall/bsdinstall-netinstall-mirrorselect.png
