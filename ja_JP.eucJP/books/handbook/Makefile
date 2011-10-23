@@ -3,7 +3,7 @@
 #
 # Build the FreeBSD Handbook (Japanese).
 #
-# Original revision: 1.81
+# Original revision: 1.100
 #
 
 # ------------------------------------------------------------------------
@@ -26,6 +26,8 @@
 #
 # ------------------------------------------------------------------------
 
+.PATH: ${.CURDIR}/../../share/sgml/glossary
+
 MAINTAINER=	doc@FreeBSD.org
 
 DOC?= book
@@ -33,7 +35,6 @@ DOC?= book
 FORMATS?= html-split
 
 HAS_INDEX= true
-WITH_GLOSSARY?=
 USE_PS2PDF=	yes
 
 INSTALL_COMPRESSED?= gz
@@ -43,6 +44,8 @@ IMAGES_EN = advanced-networking/isdn-bus.eps
 IMAGES_EN+= advanced-networking/isdn-twisted-pair.eps
 IMAGES_EN+= advanced-networking/natd.eps
 IMAGES_EN+= advanced-networking/net-routing.pic
+IMAGES_EN+= advanced-networking/static-routes.pic
+IMAGES_EN+= geom/striping.pic
 IMAGES_EN+= install/adduser1.scr
 IMAGES_EN+= install/adduser2.scr
 IMAGES_EN+= install/adduser3.scr
@@ -118,7 +121,7 @@ IMAGES_EN+= mail/pine2.scr
 IMAGES_EN+= mail/pine3.scr
 IMAGES_EN+= mail/pine4.scr
 IMAGES_EN+= mail/pine5.scr
-#
+
 IMAGES_EN+= install/example-dir1.eps
 IMAGES_EN+= install/example-dir2.eps
 IMAGES_EN+= install/example-dir3.eps
@@ -154,35 +157,41 @@ IMAGES_LIB+= callouts/10.png
 #
 
 # SGML content
+#SRCS+= audit/chapter.sgml
 SRCS+= book.sgml
+SRCS+= colophon.sgml
+#SRCS+= freebsd-glossary.sgml
 SRCS+= advanced-networking/chapter.sgml
 SRCS+= basics/chapter.sgml
 SRCS+= bibliography/chapter.sgml
-SRCS+= config/chapter.sgml
 SRCS+= boot/chapter.sgml
+SRCS+= config/chapter.sgml
 SRCS+= cutting-edge/chapter.sgml
+SRCS+= desktop/chapter.sgml
 SRCS+= disks/chapter.sgml
 SRCS+= eresources/chapter.sgml
+#SRCS+= firewalls/chapter.sgml
+#SRCS+= geom/chapter.sgml
 SRCS+= install/chapter.sgml
 SRCS+= introduction/chapter.sgml
 SRCS+= kernelconfig/chapter.sgml
 SRCS+= l10n/chapter.sgml
 SRCS+= linuxemu/chapter.sgml
+#SRCS+= mac/chapter.sgml
 SRCS+= mail/chapter.sgml
 SRCS+= mirrors/chapter.sgml
 SRCS+= multimedia/chapter.sgml
-SRCS+= desktop/chapter.sgml
+#SRCS+= network-servers/chapter.sgml
 SRCS+= pgpkeys/chapter.sgml
+SRCS+= ports/chapter.sgml
 SRCS+= ppp-and-slip/chapter.sgml
+SRCS+= preface/preface.sgml
 SRCS+= printing/chapter.sgml
 SRCS+= security/chapter.sgml
 SRCS+= serialcomms/chapter.sgml
 SRCS+= users/chapter.sgml
 #SRCS+= vinum/chapter.sgml
 SRCS+= x11/chapter.sgml
-SRCS+= ports/chapter.sgml
-SRCS+= preface/preface.sgml
-SRCS+= colophon.sgml
 
 # Entities
 SRCS+= chapters.ent 
@@ -196,14 +205,10 @@ SYMLINKS=	${DESTDIR} index.html handbook.html
 CHAPTERS?= ${SRCS:M*chapter.sgml}
 
 SGMLFLAGS+= ${CHAPTERS:S/\/chapter.sgml//:S/^/-i chap./}
-.if defined(WITH_GLOSSARY) && !empty(WITH_GLOSSARY)
 SGMLFLAGS+= -i chap.freebsd-glossary
-.endif
 
 pgpkeyring: pgpkeys/chapter.sgml
-	@${JADE} -V nochunks ${JADEOPTS} -d ${DSLPGP} -t sgml ${MASTERDOC}
-
-DOC_PREFIX?= ${.CURDIR}/../../..
+	@${JADE} -V nochunks ${OTHERFLAGS} ${JADEOPTS} -d ${DSLPGP} -t sgml ${MASTERDOC}
 
 #
 # Handbook-specific variables
@@ -212,40 +217,46 @@ DOC_PREFIX?= ${.CURDIR}/../../..
 JADEFLAGS+=	-V withpgpkeys
 .endif
 
-DOC_PREFIX?= ${.CURDIR}/../../..
+URL_RELPREFIX?=	../../../..
+DOC_PREFIX?=	${.CURDIR}/../../..
 
-.for p in ftp cvsup
-SRCS+= mirrors.sgml.${p}.inc
-CLEANFILES+= mirrors.sgml.${p}.inc
-CLEANFILES+= mirrors.sgml.${p}.inc.tmp
-.endfor
+#
+# rules generating lists of mirror site from XML database.
+#
+XMLDOCS=	mirrors-ftp:::mirrors.sgml.ftp.inc.tmp \
+		mirrors-cvsup:::mirrors.sgml.cvsup.inc.tmp \
+		eresources:::eresources.sgml.www.inc.tmp
+DEPENDSET.DEFAULT=	transtable mirror
+XSLT.DEFAULT=		${XSL_MIRRORS}
+XML.DEFAULT=		${XML_MIRRORS}
+NO_TIDY.DEFAULT=	yes
 
-SRCS+= eresources.sgml.www.inc
-CLEANFILES+= eresources.sgml.www.inc
-CLEANFILES+= eresources.sgml.www.inc.tmp
+PARAMS.mirrors-ftp+=	--param 'type' "'ftp'" \
+			--param 'proto' "'ftp'" \
+			--param 'target' "'handbook/mirrors/chapter.sgml'"
+PARAMS.mirrors-cvsup+=	--param 'type' "'cvsup'" \
+			--param 'proto' "'cvsup'" \
+			--param 'target' "'handbook/mirrors/chapter.sgml'"
+PARAMS.eresources+=	--param 'type' "'www'" \
+			--param 'proto' "'http'" \
+			--param 'target' "'handbook/eresources/chapter.sgml'"
+
+SRCS+=		mirrors.sgml.ftp.inc \
+		mirrors.sgml.cvsup.inc \
+		eresources.sgml.www.inc
+
+CLEANFILES+=	mirrors.sgml.ftp.inc mirrors.sgml.ftp.inc.tmp \
+		mirrors.sgml.cvsup.inc mirrors.sgml.cvsup.inc.tmp \
+		eresources.sgml.www.inc eresources.sgml.www.inc.tmp
 
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"
 
 .for p in ftp cvsup
-mirrors.sgml.${p}.inc: ${XML_MIRRORS} ${XSL_MIRRORS}
-	${XSLTPROC} ${XSLTPROCOPTS} \
-	    -o $@.tmp \
-	    --param 'type' "'$p'" \
-	    --param 'proto' "'$p'" \
-	    --param 'target' "'handbook/mirrors/chapter.sgml'" \
-	    ${XSL_MIRRORS} ${XML_MIRRORS}
+mirrors.sgml.${p}.inc: mirrors.sgml.${p}.inc.tmp
 	${SED} -e 's,<\([^ >]*\)\([^>]*\)/>,<\1\2></\1>,;s,</anchor>,,'\
 	    < $@.tmp > $@ || (${RM} -f $@ && false)
-	${RM} -f $@.tmp
 .endfor
 
-eresources.sgml.www.inc: ${XML_MIRRORS} ${XSL_MIRRORS}
-	${XSLTPROC} ${XSLTPROCOPTS} \
-	    -o $@.tmp \
-	    --param 'type' "'www'" \
-	    --param 'proto' "'http'" \
-	    --param 'target' "'handbook/eresources/chapter.sgml'" \
-	    ${XSL_MIRRORS} ${XML_MIRRORS}
+eresources.sgml.www.inc: eresources.sgml.www.inc.tmp
 	${SED} -e 's,<\([^ >]*\)\([^>]*\)/>,<\1\2></\1>,;s,</anchor>,,'\
 	    < $@.tmp > $@ || (${RM} -f $@ && false)
-	${RM} -f $@.tmp
