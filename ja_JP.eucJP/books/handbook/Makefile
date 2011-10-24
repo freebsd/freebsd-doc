@@ -3,7 +3,7 @@
 #
 # Build the FreeBSD Handbook (Japanese).
 #
-# Original revision: 1.100
+# Original revision: 1.113
 #
 
 # ------------------------------------------------------------------------
@@ -23,6 +23,13 @@
 #                       be redirected into a file and distributed as a 
 #                       public keyring of FreeBSD developers that can
 #                       easily be imported into PGP/GPG.
+#
+# ------------------------------------------------------------------------
+#
+# To add a new chapter to the Handbook:
+#
+# - Update this Makefile, chapters.ent and book.sgml
+# - Add a descriptive entry for the new chapter in preface/preface.sgml
 #
 # ------------------------------------------------------------------------
 
@@ -57,7 +64,6 @@ IMAGES_EN+= install/console-saver1.scr
 IMAGES_EN+= install/console-saver2.scr
 IMAGES_EN+= install/console-saver3.scr
 IMAGES_EN+= install/console-saver4.scr
-IMAGES_EN+= install/desktop.scr
 IMAGES_EN+= install/disklabel-auto.scr
 IMAGES_EN+= install/disklabel-ed1.scr
 IMAGES_EN+= install/disklabel-ed2.scr
@@ -112,7 +118,6 @@ IMAGES_EN+= install/timezone2.scr
 IMAGES_EN+= install/timezone3.scr
 IMAGES_EN+= install/userconfig.scr
 IMAGES_EN+= install/userconfig2.scr
-IMAGES_EN+= install/xf86setup.scr
 IMAGES_EN+= mail/mutt1.scr
 IMAGES_EN+= mail/mutt2.scr
 IMAGES_EN+= mail/mutt3.scr
@@ -138,6 +143,44 @@ IMAGES_EN+= install/example-dir5.eps
 #IMAGES_EN+= vinum/vinum-simple-vol.pic
 #IMAGES_EN+= vinum/vinum-striped-vol.pic
 #IMAGES_EN+= vinum/vinum-striped.pic
+IMAGES_EN+= virtualization/parallels-freebsd1.png
+IMAGES_EN+= virtualization/parallels-freebsd2.png
+IMAGES_EN+= virtualization/parallels-freebsd3.png
+IMAGES_EN+= virtualization/parallels-freebsd4.png
+IMAGES_EN+= virtualization/parallels-freebsd5.png
+IMAGES_EN+= virtualization/parallels-freebsd6.png
+IMAGES_EN+= virtualization/parallels-freebsd7.png
+IMAGES_EN+= virtualization/parallels-freebsd8.png
+IMAGES_EN+= virtualization/parallels-freebsd9.png
+IMAGES_EN+= virtualization/parallels-freebsd10.png
+IMAGES_EN+= virtualization/parallels-freebsd11.png
+IMAGES_EN+= virtualization/parallels-freebsd12.png
+IMAGES_EN+= virtualization/parallels-freebsd13.png
+IMAGES_EN+= virtualization/virtualpc-freebsd1.png
+IMAGES_EN+= virtualization/virtualpc-freebsd2.png
+IMAGES_EN+= virtualization/virtualpc-freebsd3.png
+IMAGES_EN+= virtualization/virtualpc-freebsd4.png
+IMAGES_EN+= virtualization/virtualpc-freebsd5.png
+IMAGES_EN+= virtualization/virtualpc-freebsd6.png
+IMAGES_EN+= virtualization/virtualpc-freebsd7.png
+IMAGES_EN+= virtualization/virtualpc-freebsd8.png
+IMAGES_EN+= virtualization/virtualpc-freebsd9.png
+IMAGES_EN+= virtualization/virtualpc-freebsd10.png
+IMAGES_EN+= virtualization/virtualpc-freebsd11.png
+IMAGES_EN+= virtualization/virtualpc-freebsd12.png
+IMAGES_EN+= virtualization/virtualpc-freebsd13.png
+IMAGES_EN+= virtualization/vmware-freebsd01.png
+IMAGES_EN+= virtualization/vmware-freebsd02.png
+IMAGES_EN+= virtualization/vmware-freebsd03.png
+IMAGES_EN+= virtualization/vmware-freebsd04.png
+IMAGES_EN+= virtualization/vmware-freebsd05.png
+IMAGES_EN+= virtualization/vmware-freebsd06.png
+IMAGES_EN+= virtualization/vmware-freebsd07.png
+IMAGES_EN+= virtualization/vmware-freebsd08.png
+IMAGES_EN+= virtualization/vmware-freebsd09.png
+IMAGES_EN+= virtualization/vmware-freebsd10.png
+IMAGES_EN+= virtualization/vmware-freebsd11.png
+IMAGES_EN+= virtualization/vmware-freebsd12.png
 
 # Images from the cross-document image library
 IMAGES_LIB=  callouts/1.png
@@ -150,6 +193,11 @@ IMAGES_LIB+= callouts/7.png
 IMAGES_LIB+= callouts/8.png
 IMAGES_LIB+= callouts/9.png
 IMAGES_LIB+= callouts/10.png
+IMAGES_LIB+= callouts/11.png
+IMAGES_LIB+= callouts/12.png
+IMAGES_LIB+= callouts/13.png
+IMAGES_LIB+= callouts/14.png
+IMAGES_LIB+= callouts/15.png
 
 # 
 # SRCS lists the individual SGML files that make up the document. Changes
@@ -160,6 +208,7 @@ IMAGES_LIB+= callouts/10.png
 #SRCS+= audit/chapter.sgml
 SRCS+= book.sgml
 SRCS+= colophon.sgml
+#SRCS+= dtrace/chapter.sgml
 #SRCS+= freebsd-glossary.sgml
 SRCS+= advanced-networking/chapter.sgml
 SRCS+= basics/chapter.sgml
@@ -171,9 +220,11 @@ SRCS+= desktop/chapter.sgml
 SRCS+= disks/chapter.sgml
 SRCS+= eresources/chapter.sgml
 #SRCS+= firewalls/chapter.sgml
+#SRCS+= filesystems/chapter.sgml
 #SRCS+= geom/chapter.sgml
 SRCS+= install/chapter.sgml
 SRCS+= introduction/chapter.sgml
+#SRCS+= jails/chapter.sgml
 SRCS+= kernelconfig/chapter.sgml
 SRCS+= l10n/chapter.sgml
 SRCS+= linuxemu/chapter.sgml
@@ -191,6 +242,7 @@ SRCS+= security/chapter.sgml
 SRCS+= serialcomms/chapter.sgml
 SRCS+= users/chapter.sgml
 #SRCS+= vinum/chapter.sgml
+#SRCS+= virtualization/chapter.sgml
 SRCS+= x11/chapter.sgml
 
 # Entities
