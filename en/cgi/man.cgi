@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $FreeBSD: www/en/cgi/man.cgi,v 1.264 2011/08/21 12:20:31 wosch Exp $
+# $FreeBSD: www/en/cgi/man.cgi,v 1.265 2011/08/21 12:35:12 wosch Exp $
 
 ############################################################################
 # !!! man.cgi is stale perl4 code !!!
@@ -141,6 +141,9 @@ $sectionpath = {
     'OpenBSD 4.5' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
     'OpenBSD 4.6' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
     'OpenBSD 4.7' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
+    'OpenBSD 4.8' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
+    'OpenBSD 4.9' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
+    'OpenBSD 5.0' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
 
     'CentOS Linux/i386 3.9' => { 'path' => '1:2:3:3p:4:5:6:7:8:9:n', },
     'CentOS Linux/i386 4.8' => { 'path' => '1:1p:2:3:3p:4:5:6:7:8:9:n:0p', },
@@ -352,6 +355,9 @@ $manPathDefault = 'FreeBSD 8.2-RELEASE';
     'OpenBSD 4.5', "$manLocalDir/OpenBSD-4.5",
     'OpenBSD 4.6', "$manLocalDir/OpenBSD-4.6",
     'OpenBSD 4.7', "$manLocalDir/OpenBSD-4.7",
+    'OpenBSD 4.8', "$manLocalDir/OpenBSD-4.8",
+    'OpenBSD 4.9', "$manLocalDir/OpenBSD-4.9",
+    'OpenBSD 5.0', "$manLocalDir/OpenBSD-5.0",
 
     #'NetBSD 0.9',            "$manLocalDir/NetBSD-0.9",
     'NetBSD 1.0',   "$manLocalDir/NetBSD-1.0",
@@ -533,6 +539,8 @@ my @no_pdf_output = (
     'OpenBSD 4.5',
     'OpenBSD 4.6',
     'OpenBSD 4.7',
+    'OpenBSD 4.8',
+    'OpenBSD 4.9',
 );
 
 my %no_pdf_output = map { $_ => 1 } @no_pdf_output;
@@ -546,6 +554,9 @@ my %arch = (
 'FreeBSD 8.2-RELEASE' => { 'default' => 'i386', 'arch' => [qw/amd64 arm i386 powerpc sparc64/] } ,
 'NetBSD 5.1' => { 'arch' => [qw/acorn26 acorn32 alpha amiga arc atari cobalt dreamcast evbarm evbmips evbppc hp300 hp700 hpcarm hpcmips hpcsh i386 mac68k macppc mvme68k pmax prep sgimips sparc sparc64 sun2 sun3 vax x68k/] } ,
 'OpenBSD 4.7' => { 'arch' => [qw/alpha amd64 armish aviion hp300 hppa hppa64 i386 landisk loongson luna88k mac68k macppc mvme68k mvme88k mvmeppc palm sgi socppc sparc sparc64 vax zaurus/] }, 
+'OpenBSD 4.8' => { 'arch' => [qw/alpha amd64 armish aviion hp300 hppa hppa64 i386 landisk loongson luna88k mac68k macppc mvme68k mvme88k mvmeppc palm sgi socppc sparc sparc64 vax zaurus/] }, 
+'OpenBSD 4.9' => { 'arch' => [qw/alpha amd64 armish aviion hp300 hppa hppa64 i386 landisk loongson luna88k mac68k macppc mvme68k mvme88k mvmeppc palm sgi socppc sparc sparc64 vax zaurus/] }, 
+'OpenBSD 5.0' => { 'arch' => [qw/alpha amd64 armish aviion hp300 hppa hppa64 i386 landisk loongson luna88k mac68k macppc mvme68k mvme88k mvmeppc palm sgi socppc sparc sparc64 vax zaurus/] }, 
 );
 
 # delete not existing releases
@@ -587,7 +598,7 @@ while ( ( $key, $val ) = each %manPath ) {
     'macosx',     'Darwin 8.0.1/ppc',
 
     'netbsd',        'NetBSD 5.1',
-    'openbsd',       'OpenBSD 4.7',
+    'openbsd',       'OpenBSD 5.0',
     'v7',            'Unix Seventh Edition',
     'v7man',         'Unix Seventh Edition',
     'x11',           'X11R7.4',
@@ -1566,7 +1577,7 @@ sub faq {
     }
 
     local $id =
-      '$FreeBSD: www/en/cgi/man.cgi,v 1.264 2011/08/21 12:20:31 wosch Exp $';
+      '$FreeBSD: www/en/cgi/man.cgi,v 1.265 2011/08/21 12:35:12 wosch Exp $';
     return qq{\
 <pre>
 Copyright (c) 1996-2011 <a href="$mailtoURL">Wolfram Schneider</a>
