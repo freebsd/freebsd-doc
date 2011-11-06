@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $FreeBSD: www/en/cgi/man.cgi,v 1.265 2011/08/21 12:35:12 wosch Exp $
+# $FreeBSD: www/en/cgi/man.cgi,v 1.266 2011/11/06 16:43:01 wosch Exp $
 
 ############################################################################
 # !!! man.cgi is stale perl4 code !!!
@@ -53,7 +53,8 @@ $www{'title'} = 'FreeBSD Man Pages';
 $www{'home'}  = 'http://www.FreeBSD.org';
 $www{'head'}  = $www{'title'};
 
-$command{'man'} = '/usr/bin/man';    # 8Bit clean man
+#$command{'man'} = '/usr/bin/man';    # 8Bit clean man
+$command{'man'} = '/usr/local/www/bin/man.wrapper';    # set CPU limits
 
 # Config Options
 # map sections to their man command argument(s)
@@ -1577,7 +1578,7 @@ sub faq {
     }
 
     local $id =
-      '$FreeBSD: www/en/cgi/man.cgi,v 1.265 2011/08/21 12:35:12 wosch Exp $';
+      '$FreeBSD: www/en/cgi/man.cgi,v 1.266 2011/11/06 16:43:01 wosch Exp $';
     return qq{\
 <pre>
 Copyright (c) 1996-2011 <a href="$mailtoURL">Wolfram Schneider</a>
