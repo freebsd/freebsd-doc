@@ -3,7 +3,7 @@
 #
 # Build the FreeBSD Handbook (Japanese).
 #
-# Original revision: 1.116
+# Original revision: 1.118
 #
 
 # ------------------------------------------------------------------------
@@ -69,11 +69,15 @@ IMAGES_EN+= bsdinstall/bsdinstall-configure-network-interface-ipv6-static.png
 IMAGES_EN+= bsdinstall/bsdinstall-configure-network-interface-slaac.png
 IMAGES_EN+= bsdinstall/bsdinstall-configure-network-interface.png
 IMAGES_EN+= bsdinstall/bsdinstall-configure-network-ipv4-dns.png
+IMAGES_EN+= bsdinstall/bsdinstall-configure-wireless-accesspoints.png
+IMAGES_EN+= bsdinstall/bsdinstall-configure-wireless-scan.png
+IMAGES_EN+= bsdinstall/bsdinstall-configure-wireless-wpa2setup.png
 IMAGES_EN+= bsdinstall/bsdinstall-distfile-extracting.png
 IMAGES_EN+= bsdinstall/bsdinstall-distfile-fetching.png
 IMAGES_EN+= bsdinstall/bsdinstall-distfile-verifying.png
 IMAGES_EN+= bsdinstall/bsdinstall-final-confirmation.png
 IMAGES_EN+= bsdinstall/bsdinstall-finalconfiguration.png
+IMAGES_EN+= bsdinstall/bsdinstall-keymap-select-default.png
 IMAGES_EN+= bsdinstall/bsdinstall-mainexit.png
 IMAGES_EN+= bsdinstall/bsdinstall-netinstall-files.png
 IMAGES_EN+= bsdinstall/bsdinstall-netinstall-mirrorselect.png
