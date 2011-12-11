@@ -1,6 +1,6 @@
-# $FreeBSD: www/ja/Makefile,v 1.81 2011/06/17 12:52:33 ryusuke Exp $
+# $FreeBSD: www/ja/Makefile,v 1.82 2011/07/03 00:40:44 ryusuke Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.147
+# Original revision: 1.148
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -21,6 +21,7 @@ DOCS+= features.sgml
 DOCS+= internet.sgml
 #DOCS+= logo.sgml
 DOCS+= mailto.sgml
+#DOCS+= privacy.sgml
 DOCS+= publish.sgml
 DOCS+= relnotes.sgml
 DOCS+= send-pr.sgml
