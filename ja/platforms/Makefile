@@ -1,6 +1,6 @@
-# $FreeBSD: www/ja/platforms/Makefile,v 1.7 2004/01/23 03:18:44 hrs Exp $
+# $FreeBSD: www/ja/platforms/Makefile,v 1.8 2005/01/10 02:39:55 rushani Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.9
+# Original revision: 1.13
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -19,7 +19,9 @@ DOCS+=	mips.sgml
 DOCS+=	pc98.sgml
 DOCS+=	ppc.sgml
 DOCS+=	sparc.sgml
+#DOCS+=	sun4v.sgml
 DOCS+=	x86-64.sgml
+#DOCS+=	xbox.sgml
 
 SUBDIR=	ia64
 
