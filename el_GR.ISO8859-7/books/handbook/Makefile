@@ -4,7 +4,7 @@
 # Μορφοποίηση του Εγχειριδίου του FreeBSD
 #
 # %SOURCE%	en_US.ISO8859-1/books/handbook/Makefile
-# %SRCID%	1.118
+# %SRCID%	1.119
 #
 
 # ------------------------------------------------------------------------
@@ -63,6 +63,7 @@ IMAGES_EN+= bsdinstall/bsdinstall-config-components.png
 IMAGES_EN+= bsdinstall/bsdinstall-config-hostname.png
 IMAGES_EN+= bsdinstall/bsdinstall-config-keymap.png
 IMAGES_EN+= bsdinstall/bsdinstall-config-services.png
+IMAGES_EN+= bsdinstall/bsdinstall-config-crashdump.png
 IMAGES_EN+= bsdinstall/bsdinstall-configure-network-interface-ipv4-dhcp.png
 IMAGES_EN+= bsdinstall/bsdinstall-configure-network-interface-ipv4.png
 IMAGES_EN+= bsdinstall/bsdinstall-configure-network-interface-ipv4-static.png
@@ -79,6 +80,7 @@ IMAGES_EN+= bsdinstall/bsdinstall-distfile-fetching.png
 IMAGES_EN+= bsdinstall/bsdinstall-distfile-verifying.png
 IMAGES_EN+= bsdinstall/bsdinstall-final-confirmation.png
 IMAGES_EN+= bsdinstall/bsdinstall-finalconfiguration.png
+IMAGES_EN+= bsdinstall/bsdinstall-final-modification-shell.png
 IMAGES_EN+= bsdinstall/bsdinstall-keymap-select-default.png
 IMAGES_EN+= bsdinstall/bsdinstall-mainexit.png
 IMAGES_EN+= bsdinstall/bsdinstall-netinstall-files.png
