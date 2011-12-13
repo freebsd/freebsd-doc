@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="euc-jp"?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
-<!-- $FreeBSD: www/ja/share/sgml/libcommon.xsl,v 1.10 2011/02/08 11:29:15 ryusuke Exp $ -->
+<!-- $FreeBSD: www/ja/share/sgml/libcommon.xsl,v 1.11 2011/04/29 15:31:07 ryusuke Exp $ -->
+<!-- The FreeBSD Japanese Documentation Project -->
+<!-- Original revision: 1.33 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/libcommon.xsl"/>
@@ -21,8 +23,8 @@
 
     <p>FreeBSD は急速に発展を続けるオペレーティングシステムなので、
       最新の進歩について行くのが面倒になる時がありますよね。
-      情報通になるために、このページを定期的にチェックするようにしましょう。
-      また、<a href="&enbase;/doc/en_US.ISO8859-1/books/handbook/eresources.html#ERESOURCES-MAIL">freebsd-announce
+      情報通になるために、このページを定期的にチェックするようにしましょう。また、
+      <a href="http://lists.freebsd.org/mailman/listinfo/freebsd-announce">freebsd-announce
 	メーリングリスト</a> や <a href="&base;/news/rss.xml">RSS フィード</a>
       を購読したいという方もいるかもしれませんね。</p>
 
