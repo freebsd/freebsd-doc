@@ -206,6 +206,14 @@
               (("ports")   (string-append u "&" "amp;" "manpath=FreeBSD+8.2-RELEASE+and+Ports"))
               (else u))))
 
+	<!-- Specify how to generate the link HREF to SVN revision commit page -->
+	<!-- http://svnweb.freebsd.org/base?view=revision&revision=222741 -->
+	(element svnref
+	      (let ((svnurl	(string-append
+	          "http://svnweb.freebsd.org/base?view=revision" "&" "amp;" "revision="
+		       (data (current-node)))))
+		(create-link (list (list "HREF" svnurl)) ($mono-seq$))))
+
         (element application ($bold-seq$))
 
         (element citerefentry
