@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
-<!-- $FreeBSD: www/nl/share/sgml/libcommon.xsl,v 1.4 2010/04/11 18:34:30 rene Exp $
+<!-- $FreeBSD: www/nl/share/sgml/libcommon.xsl,v 1.5 2011/02/20 09:04:12 remko Exp $
      %SOURCE%	share/sgml/libcommon.xsl
-     %SRCID%	1.32
+     %SRCID%	1.33
  -->
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/libcommon.xsl"/>
@@ -89,7 +89,7 @@
       bijhouden van de nieuwste ontwikkelingen kan een klus zijn!  Zorg
       ervoor dat u periodiek deze pagina bekijkt om bovenop de dingen te
       blijven.  U kunt zich ook op de <a
-	href="&enbase;/doc/nl_NL.ISO8859-1/books/handbook/eresources.html#ERESOURCES-MAIL">freebsd-announce
+	href="http://lists.freebsd.org/mailman/listinfo/freebsd-announce">freebsd-announce
 	mailinglijst</a> of de <a href="rss.xml">RSS-stroom</a>
       abonneren.</p>
 
