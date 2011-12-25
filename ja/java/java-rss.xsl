@@ -86,8 +86,8 @@
           </description>
         </xsl:if>
 
-        <link>http://www.FreeBSD.org/java/newsflash.html#<xsl:value-of select="$guid" /></link>
-        <guid>http://www.FreeBSD.org/java/newsflash.html#<xsl:value-of select="$guid" /></guid>
+        <link>http://www.FreeBSD.org/ja/java/newsflash.html#<xsl:value-of select="$guid" /></link>
+        <guid>http://www.FreeBSD.org/ja/java/newsflash.html#<xsl:value-of select="$guid" /></guid>
 
         <pubDate>
           <xsl:call-template name="misc-format-date-string">

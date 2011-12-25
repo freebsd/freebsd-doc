@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="euc-jp"?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
-<!-- $FreeBSD: www/ja/share/sgml/libcommon.xsl,v 1.11 2011/04/29 15:31:07 ryusuke Exp $ -->
+<!-- $FreeBSD: www/ja/share/sgml/libcommon.xsl,v 1.12 2011/12/13 16:28:09 ryusuke Exp $ -->
 <!-- The FreeBSD Japanese Documentation Project -->
 <!-- Original revision: 1.33 -->
 
@@ -47,7 +47,7 @@
 
   <!-- template: "html-news-list-newsflash-homelink" -->
   <xsl:template name="html-news-list-newsflash-homelink">
-    <a href="news.html">ニュースページ</a>
+    <a href="&base;/news/news.html">ニュースページ</a>
   </xsl:template>
 
   <xsl:template name="html-news-make-olditems-list">
