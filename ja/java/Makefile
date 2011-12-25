@@ -1,6 +1,6 @@
-# $FreeBSD: www/ja/java/Makefile,v 1.12 2001/04/03 19:13:11 hrs Exp $
+# $FreeBSD: www/ja/java/Makefile,v 1.13 2011/03/13 05:15:29 ryusuke Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.4
+# Original revision: 1.5
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -17,7 +17,10 @@ DOCS =  advocacy.sgml
 DOCS+=  howhelp.sgml
 DOCS+=  index.sgml
 DOCS+=  install.sgml
-DOCS+=  newsflash.sgml
+
+XML.DEFAULT=	news.xml
+XMLDOCS=	newsflash
+XMLDOCS+=	news:java-rss.xsl::rss.xml
 
 ### Revision checking
 REVCHECK= YES
