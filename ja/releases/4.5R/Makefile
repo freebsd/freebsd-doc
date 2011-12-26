@@ -1,5 +1,5 @@
-# $FreeBSD: www/ja/releases/4.5R/Makefile,v 1.5 2002/02/26 02:08:47 kuriyama Exp $
-# Original revision: 1.6
+# $FreeBSD: www/ja/releases/4.5R/Makefile,v 1.6 2002/03/07 03:22:00 kuriyama Exp $
+# Original revision: 1.7
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -8,8 +8,12 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS=	hardware.sgml notes.sgml qa.sgml announce.sgml schedule.sgml
+DOCS=	announce.sgml
 DOCS+=	contents.sgml
+DOCS+=	hardware.sgml
+DOCS+=	notes.sgml
+DOCS+=	qa.sgml
+DOCS+=	schedule.sgml
 
 DATA=	docbook.css
 DATA+=	errata.html
@@ -17,6 +21,7 @@ DATA+=	errata.html
 #DATA+=	hardware-i386.html
 DATA+=	relnotes-alpha.html
 DATA+=	relnotes-i386.html
+
 #DATA+=  cd1.txt cd2.txt cd3.txt cd4.txt
 
 ### Revision checking
