@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="euc-jp"?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
-<!-- $FreeBSD: www/ja/share/sgml/libcommon.xsl,v 1.12 2011/12/13 16:28:09 ryusuke Exp $ -->
+<!-- $FreeBSD: www/ja/share/sgml/libcommon.xsl,v 1.13 2011/12/25 14:15:54 ryusuke Exp $ -->
 <!-- The FreeBSD Japanese Documentation Project -->
 <!-- Original revision: 1.33 -->
 
@@ -15,6 +15,77 @@
              select="'%Y 年 %M'" />
   <xsl:param name="param-l10n-date-format-MD"
              select="'%M %D 日'" />
+
+  <!-- template: "html-usergroups-list-regions"
+       list all regions in a usergroup database -->
+
+  <xsl:key name="html-usergroups-regions-key" match="entry" use="../../@name" />
+  <xsl:key name="html-usergroups-id-key" match="entry" use="@id" />
+
+  <xsl:template name="html-usergroups-map">
+    <xsl:param name="mapurl" select="'none'" />
+
+    <img>
+      <xsl:attribute name="src">
+        <xsl:value-of select="$mapurl" />
+      </xsl:attribute>
+    </img>
+  </xsl:template>
+
+  <xsl:template name="html-usergroups-list-regions">
+    <xsl:param name="usergroups.xml" select="'usergroups.xml'" />
+
+    <ul>
+      <xsl:for-each select="document($usergroups.xml)//continent">
+      <xsl:sort select="format-number(count(country/entry), '000')"
+      		order="descending"/>
+
+	<xsl:variable name="id" select="
+	  translate(@name,
+	  ' ,ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+	  '--abcdefghijklmnopqrstuvwxyz')" />
+
+	<li>
+	  <p><xsl:element name="a">
+	      <xsl:attribute name="href">
+		<xsl:value-of select="concat('#', $id)" />
+	      </xsl:attribute>
+
+	      <xsl:call-template name="transtable-lookup">
+		<xsl:with-param name="word-group" select="'continents'" />
+		<xsl:with-param name="word" select="@name" />
+	      </xsl:call-template>
+	    </xsl:element>
+	    ( <xsl:value-of select="count(country/entry)" /> ユーザグループ)</p>
+	</li>
+      </xsl:for-each>
+    </ul>
+  </xsl:template>
+
+  <!-- template: "html-usergroups-list-header"
+       print header part of usergroup listing (l10n) -->
+
+  <xsl:template name="html-usergroups-list-header">
+    <p>FreeBSD は広く使われており、世界中にたくさんのユーザグループがあります。</p>
+    <p>このリストに載っていないユーザグループをご存知でしたら、
+      ぜひ、<a href="http://www.freebsd.org/ja/send-pr.html">障害報告</a
+	> の www カテゴリを使って以下の情報をお知らせください。</p>
+    <ol>
+      <li>ユーザグループのウェブサイトの URL</li>
+      <li>訪問者とウェブサイトの管理のために、担当者の連絡先のメールアドレス</li>
+      <li>ユーザグループの簡単な (一段落の) 紹介文</li>
+    </ol>
+
+    <p>報告は HTML 形式でお願いします。
+      FreeBSD のポリシーから、
+      活発なユーザグループの活動の公開は好ましいことです。
+      近くにユーザグループがなければ、ぜひ <a
+	href="http://bsd.meetup.com/">http://bsd.meetup.com/</a>
+      を使って近所にいる興味を持っている個人を見つけ、
+      ユーザグループを作ってください。</p>
+
+    <h3>地域</h3>
+  </xsl:template>
 
   <!-- template: "html-news-list-newsflash-preface" -->
   <xsl:template name="html-news-list-newsflash-preface">
