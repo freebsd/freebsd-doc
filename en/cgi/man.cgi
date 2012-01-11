@@ -33,7 +33,7 @@
 #	BSDI	Id: bsdi-man,v 1.2 1995/01/11 02:30:01 polk Exp
 # Dual CGI/Plexus mode and new interface by sanders@bsdi.com 9/22/1995
 #
-# $FreeBSD: www/en/cgi/man.cgi,v 1.266 2011/11/06 16:43:01 wosch Exp $
+# $FreeBSD: www/en/cgi/man.cgi,v 1.267 2011/11/06 16:45:23 wosch Exp $
 
 ############################################################################
 # !!! man.cgi is stale perl4 code !!!
@@ -200,9 +200,11 @@ foreach my $os ( keys %$sectionpath ) {
 );
 
 $manLocalDir    = '/usr/local/www/bsddoc/man';
-$manPathDefault = 'FreeBSD 8.2-RELEASE';
+$manPathDefault = 'FreeBSD 9.0-RELEASE';
 
 %manPath = (
+    'FreeBSD 9.0-RELEASE and Ports',
+"$manLocalDir/FreeBSD-9.0-RELEASE/man:$manLocalDir/FreeBSD-9.0-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-8.2-RELEASE",
     'FreeBSD 8.2-RELEASE and Ports',
 "$manLocalDir/FreeBSD-8.2-RELEASE/man:$manLocalDir/FreeBSD-8.2-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-8.2-RELEASE",
     'FreeBSD 8.1-RELEASE and Ports',
@@ -220,6 +222,8 @@ $manPathDefault = 'FreeBSD 8.2-RELEASE';
     'FreeBSD 9-current',
 "$manLocalDir/FreeBSD-9-current/man:$manLocalDir/FreeBSD-9-current/openssl/man",
 
+    'FreeBSD 9.0-RELEASE',
+"$manLocalDir/FreeBSD-9.0-RELEASE/man:$manLocalDir/FreeBSD-9.0-RELEASE/openssl/man",
     'FreeBSD 8.2-stable',
 "$manLocalDir/FreeBSD-8.2-stable/man:$manLocalDir/FreeBSD-8.2-stable/openssl/man",
     'FreeBSD 8.2-RELEASE',
@@ -578,8 +582,8 @@ while ( ( $key, $val ) = each %manPath ) {
 
 # keywords must be in lower cases.
 %manPathAliases = (
-    'freebsd',         'FreeBSD 8.2-RELEASE',
-    'freebsd-release', 'FreeBSD 8.2-RELEASE',
+    'freebsd',         'FreeBSD 9.0-RELEASE',
+    'freebsd-release', 'FreeBSD 9.0-RELEASE',
 
     'freebsd-stable',  'FreeBSD 8.2-stable',
     'freebsd-stable8', 'FreeBSD 8.2-stable',
@@ -587,7 +591,7 @@ while ( ( $key, $val ) = each %manPath ) {
     'freebsd-stable6', 'FreeBSD 6.4-stable',
 
     'freebsd-current',       'FreeBSD 9-current',
-    'freebsd-release-ports', 'FreeBSD 8.2-RELEASE and Ports',
+    'freebsd-release-ports', 'FreeBSD 9.0-RELEASE and Ports',
 
     'slackware',  'Linux Slackware 3.1',
     'redhat',     'Red Hat Linux/i386 9',
@@ -1578,7 +1582,7 @@ sub faq {
     }
 
     local $id =
-      '$FreeBSD: www/en/cgi/man.cgi,v 1.266 2011/11/06 16:43:01 wosch Exp $';
+      '$FreeBSD: www/en/cgi/man.cgi,v 1.267 2011/11/06 16:45:23 wosch Exp $';
     return qq{\
 <pre>
 Copyright (c) 1996-2011 <a href="$mailtoURL">Wolfram Schneider</a>
