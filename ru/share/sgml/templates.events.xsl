@@ -12,7 +12,7 @@
 <!--
      The FreeBSD Russian Documentation Project
 
-     $FreeBSD$
+     $FreeBSD: www/ru/share/sgml/templates.events.xsl,v 1.1 2009/12/22 04:46:25 bland Exp $
 
      Original revision: 1.13
 -->
@@ -59,8 +59,8 @@
     doctype-system="http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"
     doctype-public="-//W3C//DTD XHTML 1.0 Transitional//EN"/>
 
-  <xsl:param name="startyear">2009</xsl:param>
-  <xsl:param name="pastyears">2008 2007 2006 2005 2004 2003</xsl:param>
+  <xsl:param name="startyear">2007</xsl:param>
+  <xsl:param name="pastyears">2003 2004 2005 2006</xsl:param>
 
   <xsl:key name="event-by-month" match="event"
     use="concat(startdate/year, format-number(startdate/month, '00'))"/>
