@@ -7,10 +7,10 @@
 <!--
      The FreeBSD Russian Documentation Project
 
-     $FreeBSD: www/ru/index.xsl,v 1.40 2011/05/19 10:59:52 pluknet Exp $
+     $FreeBSD: www/ru/index.xsl,v 1.41 2011/05/24 15:01:16 pluknet Exp $
      $FreeBSDru: frdp/www/ru/index.xsl,v 1.47 2006/01/16 21:27:51 gad Exp $
 
-     Original revision: 1.170
+     Original revision: 1.175
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -54,6 +54,7 @@
     <link rel="stylesheet" media="screen" href="&enbase;/layout/css/fixed.css?20060509" type="text/css" title="Normal Text" />
     <link rel="alternate stylesheet" media="screen" href="&enbase;/layout/css/fixed_large.css" type="text/css" title="Large Text" />
     <script type="text/javascript" src="&enbase;/layout/js/styleswitcher.js"></script>
+    <script type="text/javascript" src="&enbase;/layout/js/google.js"></script>
 	<link rel="alternate" type="application/rss+xml"
 	  title="Новости проекта FreeBSD" href="&enbase;/news/rss.xml" />
 	<link rel="alternate" type="application/rss+xml"
@@ -125,21 +126,27 @@
 			  <div id="FRONTRELEASESCONTENT" class="txtshortcuts">
 				  <h2><a href="&base;/releases/">ПОСЛЕДНИЕ РЕЛИЗЫ</a></h2>
 				  <ul id="FRONTRELEASESLIST">
+					<!-- XXX: Uncomment this for
+					     9.0-RELEASE
 					<li>
-					  <a href="../&u.rel.announce;">Продуктивный релиз &rel.current;</a>
+					  <a href="../&u.rel.announce;">Продуктивный: &rel.current;</a>
+					</li>
+					-->
+					<li>
+					  <a href="../&u.rel2.announce;">Продуктивный: &rel2.current;</a>
 					</li>
 					<li>
-					  <a href="../&u.rel2.announce;">(Старый) Продуктивный релиз &rel2.current;</a>
-					</li>
+					  <a href="../&u.rel3.announce;">Старый: &rel3.current;</a>
+ 					</li>
 			    <xsl:if test="'&beta.testing;' != 'IGNORE'">
 					<li>
-					  <a href="&base;/where.html#helptest">Upcoming Release
+					  <a href="&base;/where.html#helptest">Предстоящий:
 				            &betarel.current; - &betarel.vers;</a>
 					</li>
 			    </xsl:if>
 			    <xsl:if test="'&beta2.testing;' != 'IGNORE'">
 					<li>
-					  <a href="&base;/where.html#helptest">Upcoming Release
+					  <a href="&base;/where.html#helptest">Предстоящий:
 				            &betarel2.current; - &betarel2.vers;</a>
 					</li>
 			    </xsl:if>
