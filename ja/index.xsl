@@ -4,8 +4,8 @@
 <!ENTITY title "The FreeBSD Project">
 ]>
 
-<!-- $FreeBSD: www/ja/index.xsl,v 1.63 2011/08/26 23:29:45 ryusuke Exp $ -->
-<!-- Original revision: 1.175 -->
+<!-- $FreeBSD: www/ja/index.xsl,v 1.64 2012/01/12 13:11:28 ryusuke Exp $ -->
+<!-- Original revision: 1.176 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
@@ -114,18 +114,10 @@
 			  <div id="FRONTRELEASESCONTENT" class="txtshortcuts">
 			  <h2><a href="&base;/releases/">最新リリース</a></h2>
 			  <ul id="FRONTRELEASESLIST">
-					<!-- XXX: Uncomment this for
-					     9.0-RELEASE
-			    <li>
-			      <a href="&u.rel.announce;">プロダクション: &rel.current;</a>
-			    </li>
-+					-->
-			    <li>
-			      <a href="&u.rel2.announce;">プロダクション: &rel2.current;</a>
-			    </li>
-			      <li>
-			      <a href="&u.rel3.announce;">レガシー: &rel3.current;</a>
-			    </li>
+			    <li>プロダクション:&nbsp;<a
+				href="&u.rel.announce;">&rel.current;</a>,&nbsp;<a href="&u.rel2.announce;">&rel2.current;</a></li>
+			    <li>レガシー: <a
+				href="&u.rel3.announce;">&rel3.current;</a></li>
 			    <xsl:if test="'&beta.testing;' != 'IGNORE'">
 			    <li>
 			      <a href="&base;/where.html#helptest">次回予定:
