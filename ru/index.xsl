@@ -7,10 +7,10 @@
 <!--
      The FreeBSD Russian Documentation Project
 
-     $FreeBSD: www/ru/index.xsl,v 1.41 2011/05/24 15:01:16 pluknet Exp $
+     $FreeBSD: www/ru/index.xsl,v 1.42 2012/01/11 14:02:58 pluknet Exp $
      $FreeBSDru: frdp/www/ru/index.xsl,v 1.47 2006/01/16 21:27:51 gad Exp $
 
-     Original revision: 1.175
+     Original revision: 1.176
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -126,18 +126,10 @@
 			  <div id="FRONTRELEASESCONTENT" class="txtshortcuts">
 				  <h2><a href="&base;/releases/">ПОСЛЕДНИЕ РЕЛИЗЫ</a></h2>
 				  <ul id="FRONTRELEASESLIST">
-					<!-- XXX: Uncomment this for
-					     9.0-RELEASE
-					<li>
-					  <a href="../&u.rel.announce;">Продуктивный: &rel.current;</a>
-					</li>
-					-->
-					<li>
-					  <a href="../&u.rel2.announce;">Продуктивный: &rel2.current;</a>
-					</li>
-					<li>
-					  <a href="../&u.rel3.announce;">Старый: &rel3.current;</a>
- 					</li>
+					<li>Продуктивный:&nbsp;<a
+				href="&u.rel.announce;">&rel.current;</a>,&nbsp;<a href="&u.rel2.announce;">&rel2.current;</a></li>
+					<li>Старый: <a
+				href="&u.rel3.announce;">&rel3.current;</a></li>
 			    <xsl:if test="'&beta.testing;' != 'IGNORE'">
 					<li>
 					  <a href="&base;/where.html#helptest">Предстоящий:
