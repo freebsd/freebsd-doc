@@ -5,8 +5,8 @@
 ]>
 <!--
      $FreeBSD$
-     $FreeBSDde: de-www/index.xsl,v 1.92 2011/08/31 16:09:40 jkois Exp $
-     basiert auf: 1.174
+     $FreeBSDde: de-www/index.xsl,v 1.93 2012/01/14 10:31:37 jkois Exp $
+     basiert auf: 1.176
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -122,10 +122,11 @@ Problemen bei der Darstellung der Webseiten.
 				  <h2><a href="&base;/releases/">AKTUELLE VERSIONEN</a></h2>
 				  <ul id="FRONTRELEASESLIST">
 					<li>
-					  <a href="&u.rel.announce;">Produktion:&nbsp;&rel.current;</a>
+					  Produktion:&nbsp;<a href="&u.rel.announce;">&rel.current;</a>,&nbsp;
+					  <a href="&u.rel2.announce;">&nbsp;&rel2.current;</a>
 					</li>
 					<li>
-					  <a href="&u.rel2.announce;">Produktion (alt):&nbsp;&rel2.current;</a>
+					  Produktion (alt):&nbsp;<a href="&u.rel3.announce;">&rel3.current;</a>
 					</li>
 			    <xsl:if test="'&beta.testing;' != 'IGNORE'">
 					  <li>
