@@ -1,6 +1,6 @@
-# $FreeBSD: www/ja/java/dists/Makefile,v 1.7 2005/06/16 14:51:35 rushani Exp $
+# $FreeBSD: www/ja/java/dists/Makefile,v 1.8 2010/08/06 20:54:16 ryusuke Exp $
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.7
+# Original revision: 1.8
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -16,6 +16,7 @@ DOCS+=	13.sgml
 DOCS+=	14.sgml
 DOCS+=	15.sgml
 #DOCS+=	16.sgml
+#DOCS+=	17.sgml
 DOCS+=	index.sgml
 
 ### Revision checking
