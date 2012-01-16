@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/java/dists/Makefile,v 1.6 2005/01/20 09:00:13 phantom Exp $
+# $FreeBSD: www/en/java/dists/Makefile,v 1.7 2008/02/22 04:41:19 glewis Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -14,6 +14,7 @@ DOCS+=	13.sgml
 DOCS+=	14.sgml
 DOCS+=	15.sgml
 DOCS+=	16.sgml
+DOCS+=	17.sgml
 DOCS+=	index.sgml
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"
