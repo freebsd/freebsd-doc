@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
 <!-- Vertaald door: Siebrand Mazeland / Rene Ladan
      %SOURCE%	en/index.xsl
-     %SRCID%	1.174
+     %SRCID%	1.176
 -->
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
 <!ENTITY title "Het &os; Project">
 ]>
 
-<!-- $FreeBSD: www/nl/index.xsl,v 1.5 2011/06/19 13:48:18 rene Exp $ -->
+<!-- $FreeBSD: www/nl/index.xsl,v 1.6 2011/08/28 13:29:22 rene Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
@@ -114,12 +114,11 @@
 			  <div id="FRONTRELEASESCONTENT" class="txtshortcuts">
 				  <h2><a href="&enbase;/releases/">NIEUWSTE UITGAVEN</a></h2>
 				  <ul id="FRONTRELEASESLIST">
-					<li>
-					  <a href="&u.rel.announce;">Productie: &rel.current;</a>
-					</li>
-					<li>
-					  <a href="&u.rel2.announce;">Ouder: &rel2.current;</a>
-					</li>
+				    <li>Productie:&nbsp;<a
+				href="&u.rel.announce;">&rel.current;</a>,&nbsp;<a
+				href="&u.rel2.announce;">&rel2.current;</a></li>
+				    <li>Ouder: <a
+				href="&u.rel3.announce;">&rel3.current;</a></li>
 				    <xsl:if test="'&beta.testing;' != 'IGNORE'">
 					<li>
 					  <a href="&base;/where.html#helptest">Aankomend:
