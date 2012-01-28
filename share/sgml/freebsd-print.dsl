@@ -6,12 +6,12 @@
 <!ENTITY % output.print.pdf 	"IGNORE">
 <!ENTITY % output.print.justify	"IGNORE">
 <!ENTITY % output.print.twoside	"IGNORE">
+<!ENTITY % output.print.niceheaders	"IGNORE">
 
 <!ENTITY % freebsd.l10n PUBLIC "-//FreeBSD//ENTITIES DocBook Language Specific Entities//EN">
 %freebsd.l10n;
 <!ENTITY % freebsd.l10n-common PUBLIC "-//FreeBSD//ENTITIES DocBook Language Neutral Entities//EN">
 %freebsd.l10n-common;
-]]>
 ]>
 
 <style-sheet>
@@ -616,6 +616,93 @@
             (with-mode section-title-mode
 	      (process-node-list subtitles))
             ($section-info$ info))))
+
+	;; Expand a literal tab character to spaces in elements like
+	;; programlisting.
+	(define %default-tab-spacing% 8)
+
+	(define ($verbatim-display$ indent line-numbers?)
+	  (let* ((width-in-chars (if (attribute-string (normalize "width"))
+				     (string->number
+				       (attribute-string (normalize "width")))
+				     %verbatim-default-width%))
+		 (fsize (lambda () (if (or (attribute-string (normalize "width"))
+					   (not %verbatim-size-factor%))
+				       (/ (/ (- %text-width%
+						(inherited-start-indent))
+					     width-in-chars)
+					  0.7)
+				       (* (inherited-font-size)
+					  %verbatim-size-factor%))))
+		 (vspace-before (if (INBLOCK?)
+				    0pt
+				    (if (INLIST?)
+					%para-sep%
+					%block-sep%)))
+		 (vspace-after (if (INBLOCK?)
+				   0pt
+				   (if (INLIST?)
+				       0pt
+				       %block-sep%))))
+		(make paragraph
+			use: verbatim-style
+			space-before: (if (and (string=? (gi (parent))
+							 (normalize "entry"))
+					       (absolute-first-sibling?))
+					0pt
+					vspace-before)
+			space-after:  (if (and (string=? (gi (parent))
+							 (normalize "entry"))
+					       (absolute-last-sibling?))
+					0pt
+					vspace-after)
+			font-size: (fsize)
+			line-spacing: (* (fsize) %line-spacing-factor%)
+			start-indent: (if (INBLOCK?)
+					(inherited-start-indent)
+					(+ %block-start-indent%
+					   (inherited-start-indent)))
+		 (if (or indent line-numbers?)
+			($linespecific-line-by-line$ indent line-numbers?)
+			(let loop ((kl (children (current-node)))
+				   (tabsp %default-tab-spacing%)
+				   (res (empty-sosofo)))
+			  (if (node-list-empty? kl)
+			      res
+			      (loop
+			       (node-list-rest kl)
+			       (cond
+				((char=? (node-property
+					  'char (node-list-first kl)
+					  default: #\U-0000) #\U-0009)
+				 %default-tab-spacing%)
+				((char=? (node-property
+					  'char (node-list-first kl)
+					  default: #\U-0000) #\U-000D)
+				 %default-tab-spacing%)
+				(#t ;; normal char or element node
+				 (- (if (= (modulo tabsp %default-tab-spacing%) 0)
+					%default-tab-spacing%
+					(modulo tabsp %default-tab-spacing%))
+				    (modulo (string-length (data (node-list-first kl)))
+					    %default-tab-spacing%))))
+			       (let ((c (node-list-first kl)))
+				 (if (char=? (node-property
+					      'char c
+					      default: #\U-0000) #\U-0009)
+				     (sosofo-append res
+						    (let sploop
+							((spc
+							  (if (= tabsp 0)
+							      %default-tab-spacing%
+							      tabsp)))
+						      (if (> spc 0)
+							  (sosofo-append
+							   (literal " ")
+							   (sploop (- spc 1)))
+							  (empty-sosofo))))
+				     (sosofo-append res
+						    (process-node-list c)))))))))))
       ]]>
 
       <![ %output.print.pdf; [
