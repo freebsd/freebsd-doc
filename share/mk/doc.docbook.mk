@@ -525,6 +525,7 @@ index.html: ${DOC}.xml ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} \
 		${DOC}.xml
 .endif
 .if !defined(NO_TIDY)
+	${REINPLACE_TABS_CMD} $$(${XARGS} < HTML.manifest)
 	-${TIDY} ${TIDYOPTS} $$(${XARGS} < HTML.manifest)
 .endif
 
@@ -545,6 +546,7 @@ ${DOC}.html: ${DOC}.xml ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} \
 		${DOC}.xml > ${.TARGET}
 .endif
 .if !defined(NO_TIDY)
+	${REINPLACE_TABS_CMD} ${.TARGET}
 	-${TIDY} ${TIDYOPTS} ${.TARGET}
 .endif
 
