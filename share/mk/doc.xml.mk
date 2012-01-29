@@ -385,6 +385,7 @@ ${TARGET.${_ID}}: ${XML.${_ID}} ${DEPENDS.${_ID}}
 		${XSLT.${_ID}} ${XML.${_ID}}
 . if !defined(NO_TIDY) || empty(NO_TIDY)
 .  if !defined(NO_TIDY.${_ID}) || empty(NO_TIDY.${_ID})
+	${REINPLACE_TABS_CMD} ${.TARGET}
 	-${TIDY} ${TIDYOPTS} ${.TARGET}
 .  endif
 . endif

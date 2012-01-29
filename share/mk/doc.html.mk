@@ -144,6 +144,7 @@ all: ${_docs}
 ${DOC}.html: ${SRCS} ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} ${LOCAL_CSS_SHEET}
 	${SGMLNORM} -c ${HTMLCATALOG} ${SRCS:S|^|${.CURDIR}/|} > ${.TARGET}
 .if !defined(NO_TIDY)
+	${REINPLACE_TABS_CMD} ${.TARGET}
 	-${TIDY} ${TIDYOPTS} ${.TARGET}
 .endif
 

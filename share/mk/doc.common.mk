@@ -9,6 +9,9 @@ AWK?=		/usr/bin/awk
 GREP?=		/usr/bin/grep
 REALPATH?=	/bin/realpath
 SED?=		/usr/bin/sed
+# a hack to keep tidy from converting tabs to spaces
+# replace them with &#09; before calling tidy
+REINPLACE_TABS_CMD?=	${SED} -i -e 's/	/\&\#09;/g'
 
 .if defined(DOC_PREFIX) && !empty(DOC_PREFIX)
 WEB_PREFIX?=	${DOC_PREFIX}/../www
