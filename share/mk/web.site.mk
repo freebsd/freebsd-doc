@@ -1,5 +1,5 @@
 # bsd.web.mk
-# $FreeBSD: www/share/mk/web.site.mk,v 1.80 2011/07/25 07:35:42 hrs Exp $
+# $FreeBSD: www/share/mk/web.site.mk,v 1.81 2011/09/27 19:08:40 gjb Exp $
 
 #
 # Build and install a web site.
@@ -77,6 +77,10 @@ HTML2TXT?=	${PREFIX}/bin/w3m
 HTML2TXTOPTS?=	-dump ${HTML2TXTFLAGS}
 ISPELL?=	ispell
 ISPELLOPTS?=	-l -p /usr/share/dict/freebsd ${ISPELLFLAGS}
+
+.if defined(WWWFREEBSDORG)
+SGMLNORMOPTS+=	-i html.header.script.google
+.endif
 
 WEBCHECK?=	${PREFIX}/bin/webcheck
 WEBCHECKOPTS?=	-ab ${WEBCHECKFLAGS}
