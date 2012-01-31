@@ -289,6 +289,9 @@ XSLTPROCOPTS+=	--stringparam WEB_PREFIX ${WEB_PREFIX}
 .if defined(XML_CATALOG_FILES) && !empty(XML_CATALOG_FILES)
 XSLTPROCOPTS+=	--nonet --catalogs
 .endif
+.if defined(WWWFREEBSDORG)
+XSLTPROCOPTS+=	--param "html.header.script.google" "'INCLUDE'"
+.endif
 XSLTPROC=	env ${XSLTPROC_ENV} ${LOCALBASE}/bin/xsltproc
 
 XMLLINTOPTS=	${XMLLINTFLAGS}

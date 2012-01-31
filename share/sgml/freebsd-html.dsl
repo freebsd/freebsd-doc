@@ -24,8 +24,49 @@
 
         (define %hyphenation% #f)        <!-- Silence a warning -->
 
-        (define %html-header-tags% '(("META" ("HTTP-EQUIV" "Content-Type")
-          ("CONTENT" "text/html; charset=&doc.html.charset;"))))
+	<!--
+	  Redefine $user-html-header$ to put </script> in a single line.
+	  This is an ugly hack but it should work.
+	-->
+	(define ($user-html-header$ #!optional 
+	                            (home (empty-node-list))
+	                            (up (empty-node-list))
+	                            (prev (empty-node-list))
+	                            (next (empty-node-list)))
+	  ;; Add additional header tags.
+	  (let loop ((tl %html-header-tags%))
+	    (if (or (null? tl) (null? (car tl)))
+	      (empty-sosofo)
+	      (make sequence
+		(cond
+		  ((equal? (normalize "SCRIPT") (car (car tl)))
+		    (make sequence
+		      (make empty-element gi: (car (car tl))
+		                          attributes: (cdr (car tl)))
+		      (htmlnewline)
+		      (make formatting-instruction data: "</")
+		      (make formatting-instruction data: "SCRIPT>")))
+		  (else
+		    (make sequence
+		      (make empty-element gi: (car (car tl))
+					  attributes: (cdr (car tl))))))
+		(loop (cdr tl))))))
+
+        <!-- Use javascript for google analytics -->
+        (define %html-header-script-googlejs%
+		"http://www.FreeBSD.org/layout/js/google.js")
+        (define %html-header-script%
+		#f)
+
+        (define %html-header-tags%
+	  (list (quote ("META"
+			("HTTP-EQUIV" "Content-Type")
+			("CONTENT" "text/html; charset=&doc.html.charset;")))
+		(if %html-header-script%
+		    (list "SCRIPT"
+			  (list "TYPE" "text/javascript")
+			  (list "SRC" %html-header-script-googlejs%))
+		    '())))
 
         (define %gentext-nav-use-tables%
           ;; Use tables to build the navigation headers and footers?
