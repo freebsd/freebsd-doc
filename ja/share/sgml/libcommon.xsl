@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="euc-jp"?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
-<!-- $FreeBSD: www/ja/share/sgml/libcommon.xsl,v 1.13 2011/12/25 14:15:54 ryusuke Exp $ -->
+<!-- $FreeBSD: www/ja/share/sgml/libcommon.xsl,v 1.14 2012/01/02 16:46:45 ryusuke Exp $ -->
 <!-- The FreeBSD Japanese Documentation Project -->
 <!-- Original revision: 1.33 -->
 
@@ -157,7 +157,7 @@
       <a href="&enbase;/news/2004/press.html">2004</a>,
       <a href="&enbase;/news/2003/press.html">2003</a>,
       <a href="&enbase;/news/2002/press.html">2002</a>,
-      <a href="&enbase;/news/2001/press.html">2001</a>,
+      <a href="&base;/news/2001/press.html">2001</a>,
       <a href="&enbase;/news/2000/press.html">2000</a>,
       <a href="&enbase;/news/1999/press.html">1999</a>,
       <a href="&enbase;/news/1998/press.html">1998-1996</a></p>
