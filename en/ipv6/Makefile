@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/ipv6/Makefile,v 1.3 2011/06/07 21:33:10 simon Exp $
+# $FreeBSD: www/en/ipv6/Makefile,v 1.4 2011/06/10 11:46:31 bz Exp $
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -10,6 +10,7 @@
 DOCS+=		index.sgml
 DOCS+=		ipv6only.sgml
 DOCS+=		w6d.sgml
+DOCS+=		w6l.sgml
 DOCS+=		w6d-www-stats.sgml
 
 DATA+=		IPv6-badge-blue-256-trans.png	\
