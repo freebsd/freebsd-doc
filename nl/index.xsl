@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
 <!-- Vertaald door: Siebrand Mazeland / Rene Ladan
      %SOURCE%	en/index.xsl
-     %SRCID%	1.176
+     %SRCID%	1.177
 -->
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
 <!ENTITY title "Het &os; Project">
 ]>
 
-<!-- $FreeBSD: www/nl/index.xsl,v 1.6 2011/08/28 13:29:22 rene Exp $ -->
+<!-- $FreeBSD: www/nl/index.xsl,v 1.7 2012/01/19 21:56:46 rene Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
@@ -24,6 +24,7 @@
   <xsl:param name="news.project.xml" select="'none'"/>
   <xsl:param name="events.xml-master" select="'none'"/>
   <xsl:param name="events.xml" select="'none'"/>
+  <xsl:param name="html.header.script.google" select="'IGNORE'"/>
 
   <xsl:output type="html" encoding="&xml.encoding;"
               doctype-public="-//W3C//DTD HTML 4.01 Transitional//EN"/>
@@ -47,7 +48,9 @@
 -->
 	<link rel="stylesheet" media="screen" href="&enbase;/layout/css/fixed.css?20060509" type="text/css" title="Normal Text" />
 	<link rel="alternate stylesheet" media="screen" href="&enbase;/layout/css/fixed_large.css" type="text/css" title="Large Text" />
-	<script type="text/javascript" src="&enbase;/layout/js/google.js"></script>
+	<xsl:if test="$html.header.script.google != 'IGNORE'">
+	  <script type="text/javascript" src="&enbase;/layout/js/google.js"></script>
+	</xsl:if>
 	<link rel="alternate" type="application/rss+xml"
 	  title="&os; Projectnieuws" href="&enbase;/news/rss.xml" />
 	<link rel="alternate" type="application/rss+xml"
