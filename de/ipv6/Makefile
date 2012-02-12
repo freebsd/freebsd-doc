@@ -1,6 +1,6 @@
-# $FreeBSDde: de-www/ipv6/Makefile,v 1.1 2011/06/13 21:33:54 jkois Exp $
+# $FreeBSDde: de-www/ipv6/Makefile,v 1.2 2012/02/12 09:51:12 jkois Exp $
 # $FreeBSD$
-# basiert auf: 1.4
+# basiert auf: 1.5
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
