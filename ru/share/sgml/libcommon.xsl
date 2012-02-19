@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="koi8-r"?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
-<!-- $FreeBSD: www/ru/share/sgml/libcommon.xsl,v 1.1 2006/08/19 21:25:55 hrs Exp $ -->
+<!-- $FreeBSD: www/ru/share/sgml/libcommon.xsl,v 1.2 2009/12/26 16:58:58 maxim Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/libcommon.xsl"/>
@@ -44,6 +44,7 @@
 
   <xsl:template name="html-news-make-olditems-list">
     <p>Анонсы прошлых лет:
+      <a href="2003/index.html">2003</a>,
       <a href="2002/index.html">2002</a>,
       <a href="2001/index.html">2001</a>,
       <a href="2000/index.html">2000</a>,
