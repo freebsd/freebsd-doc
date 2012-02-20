@@ -4,7 +4,7 @@
 <!ENTITY title "The FreeBSD Project">
 ]>
 
-<!-- $FreeBSD: www/en/index.xsl,v 1.176 2012/01/12 20:42:22 hrs Exp $ -->
+<!-- $FreeBSD: www/en/index.xsl,v 1.177 2012/01/31 02:01:32 hrs Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
@@ -126,16 +126,12 @@
 					<li>Legacy: <a
 				href="&u.rel3.announce;">&rel3.current;</a></li>
 			    <xsl:if test="'&beta.testing;' != 'IGNORE'">
-					<li>
-					  <a href="&base;/where.html#helptest">Upcoming:
-				            &betarel.current;-&betarel.vers;</a>
-					</li>
+					<li>Upcoming: <a
+				href="&base;/where.html#helptest">&betarel.current;-&betarel.vers;</a></li>
 			    </xsl:if>
 			    <xsl:if test="'&beta2.testing;' != 'IGNORE'">
-					<li>
-					  <a href="&base;/where.html#helptest">Upcoming:
-				            &betarel2.current;-&betarel2.vers;</a>
-					</li>
+					<li>Upcoming: <a
+				href="&base;/where.html#helptest">&betarel2.current;-&betarel2.vers;</a></li>
 			    </xsl:if>
 				  </ul>
 			  </div> <!-- FRONTRELEASESCONTENT -->
