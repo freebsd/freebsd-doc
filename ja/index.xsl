@@ -4,8 +4,8 @@
 <!ENTITY title "The FreeBSD Project">
 ]>
 
-<!-- $FreeBSD: www/ja/index.xsl,v 1.65 2012/01/12 23:02:57 ryusuke Exp $ -->
-<!-- Original revision: 1.177 -->
+<!-- $FreeBSD: www/ja/index.xsl,v 1.66 2012/01/31 09:54:54 ryusuke Exp $ -->
+<!-- Original revision: 1.178 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
@@ -122,16 +122,12 @@
 			    <li>レガシー: <a
 				href="&u.rel3.announce;">&rel3.current;</a></li>
 			    <xsl:if test="'&beta.testing;' != 'IGNORE'">
-			    <li>
-			      <a href="&base;/where.html#helptest">次回予定:
-				&betarel.current;-&betarel.vers;</a>
-			    </li>
+			    <li>次回予定: <a
+				href="&base;/where.html#helptest">&betarel.current;-&betarel.vers;</a></li>
 			    </xsl:if>
 			    <xsl:if test="'&beta2.testing;' != 'IGNORE'">
-			    <li>
-			      <a href="&base;/where.html#helptest">次回予定:
-				&betarel2.current;-&betarel2.vers;</a>
-			    </li>
+			    <li>次回予定: <a
+				href="&base;/where.html#helptest">&betarel2.current;-&betarel2.vers;</a></li>
 			    </xsl:if>
 			  </ul>
 			  </div> <!-- FRONTRELEASESCONTENT -->
