@@ -5,8 +5,8 @@
 ]>
 <!--
      $FreeBSD$
-     $FreeBSDde: de-www/index.xsl,v 1.93 2012/01/14 10:31:37 jkois Exp $
-     basiert auf: 1.176
+     $FreeBSDde: de-www/index.xsl,v 1.94 2012/02/23 17:35:11 jkois Exp $
+     basiert auf: 1.178
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -23,6 +23,7 @@
   <xsl:param name="news.project.xml" select="'none'"/>
   <xsl:param name="events.xml-master" select="'none'"/>
   <xsl:param name="events.xml" select="'none'"/>
+  <xsl:param name="html.header.script.google" select="'IGNORE'"/>
 
   <xsl:output type="html" encoding="iso-8859-1"
               doctype-public="-//W3C//DTD HTML 4.01 Transitional//EN"/>
@@ -51,6 +52,9 @@ Problemen bei der Darstellung der Webseiten.
 	<link rel="stylesheet" media="screen" href="&enbase;/layout/css/fixed.css?20060509" type="text/css" title="Normal Text" />
 	<link rel="alternate stylesheet" media="screen" href="&enbase;/layout/css/fixed_large.css" type="text/css" title="Large Text" />
 	<script type="text/javascript" src="&enbase;/layout/js/styleswitcher.js"></script>
+	<xsl:if test="$html.header.script.google != 'IGNORE'">
+	  <script type="text/javascript" src="&base;/layout/js/google.js"></script>
+	</xsl:if>
 	<link rel="alternate" type="application/rss+xml"
 	  title="FreeBSD Ank&#252;ndigungen" href="&enbase;/news/news.rdf" />
 	<link rel="alternate" type="application/rss+xml"
@@ -130,13 +134,13 @@ Problemen bei der Darstellung der Webseiten.
 					</li>
 			    <xsl:if test="'&beta.testing;' != 'IGNORE'">
 					  <li>
-					    <a href="&base;/where.html#helptest">Test:&nbsp;
+					    Test:&nbsp;<a href="&base;/where.html#helptest">
 					      &betarel.current;-&betarel.vers;</a>
 					  </li>
 			    </xsl:if>
 			    <xsl:if test="'&beta2.testing;' != 'IGNORE'">
 					  <li>
-					    <a href="&base;/where.html#helptest">Test:&nbsp;
+					    Test:&nbsp;<a href="&base;/where.html#helptest">
 					      &betarel2.current;-&betarel2.vers;</a>
 					  </li>
 			    </xsl:if>
