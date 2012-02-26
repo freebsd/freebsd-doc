@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
 <!-- Vertaald door: Siebrand Mazeland / Rene Ladan
      %SOURCE%	en/index.xsl
-     %SRCID%	1.177
+     %SRCID%	1.178
 -->
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
 <!ENTITY title "Het &os; Project">
 ]>
 
-<!-- $FreeBSD: www/nl/index.xsl,v 1.7 2012/01/19 21:56:46 rene Exp $ -->
+<!-- $FreeBSD: www/nl/index.xsl,v 1.8 2012/02/05 17:06:56 rene Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
@@ -123,14 +123,14 @@
 				    <li>Ouder: <a
 				href="&u.rel3.announce;">&rel3.current;</a></li>
 				    <xsl:if test="'&beta.testing;' != 'IGNORE'">
-					<li>
-					  <a href="&base;/where.html#helptest">Aankomend:
+					<li>Aankomend:
+					  <a href="&base;/where.html#helptest">
 					    &betarel.current;-&betarel.vers;</a>
 					</li>
 				    </xsl:if>
 				    <xsl:if test="'&beta2.testing;' != 'IGNORE'">
-					<li>
-					  <a href="&base;/where.html#helptest">Aankomend:
+					<li>Aankomend:
+					  <a href="&base;/where.html#helptest">
 					    &betarel2.current;-&betarel2.vers;</a>
 					</li>
 				    </xsl:if>
