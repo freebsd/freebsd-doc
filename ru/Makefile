@@ -1,7 +1,7 @@
 #
 # The FreeBSD Russian Documentation Project
 #
-# $FreeBSD: www/ru/Makefile,v 1.55 2009/12/21 09:39:18 bland Exp $
+# $FreeBSD: www/ru/Makefile,v 1.56 2010/01/14 06:56:09 bland Exp $
 # $FreeBSDru: frdp/www/ru/Makefile,v 1.53 2006/02/18 18:46:43 gad Exp $
 #
 # Original revision: 1.146
@@ -21,7 +21,6 @@ DOCS=  about.sgml
 DOCS+= applications.sgml
 DOCS+= art.sgml
 DOCS+= availability.sgml
-DOCS+= community.sgml
 DOCS+= docs.sgml
 DOCS+= features.sgml
 DOCS+= internet.sgml
@@ -41,6 +40,9 @@ DEPENDSET.index=transtable mirrors news press events \
 XMLDOCS+=	usergroups:${XSL_USERGROUPS}:${XML_USERGROUPS}:
 DEPENDSET.usergroups=transtable usergroups
 PARAMS.usergroups=	--param pagename "'FreeBSD User Groups'"
+
+XMLDOCS+= community::${XML_EVENTS_EVENTS}:
+DEPENDSET.community=usergroups events
 
 # These will be directly installed.
 
