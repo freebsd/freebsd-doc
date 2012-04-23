@@ -6,7 +6,7 @@
 <!ENTITY % navinclude.community "INCLUDE">
 ]>
 
-<!-- $FreeBSD: www/en/community/social.xsl,v 1.4 2009/01/01 02:15:12 murray Exp $ -->
+<!-- $FreeBSD: www/en/community/social.xsl,v 1.5 2009/03/13 02:12:31 murray Exp $ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -71,15 +71,6 @@
 		on <a href="http://twitter.com">Twitter</a>.</li>
 
 	      </ul>
-
-	      <h3>Blog Activity</h3>
-
-	      <p>Posts that contain <a
-href="http://technorati.com/search/freebsd?sub=chartlet&amp;language=n&amp;authority=n">FreeBSD</a> per day for the last 90 days.<br /><a
-href="http://technorati.com/search/freebsd?sub=chartlet&amp;language=n&amp;authority=n"><img
-src="http://technorati.com/chartimg/freebsd?totalHits=24190&amp;size=s&amp;days=90"
-style="border:0" alt="Technorati Chart" /></a>
-              </p>
 
 	      </div> <!-- CONTENTWRAP -->
 	      <br class="clearboth" />
