@@ -9,9 +9,9 @@
 <!--
      The FreeBSD Russian Documentation Project
 
-     $FreeBSD: www/ru/community/social.xsl,v 1.2 2009/12/22 04:52:59 bland Exp $
+     $FreeBSD: www/ru/community/social.xsl,v 1.3 2009/12/26 16:47:46 maxim Exp $
 
-     Original revision: 1.2
+     Original revision: 1.6
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
@@ -76,15 +76,6 @@
 		на <a href="http://twitter.com">Twitter</a>.</li>
 
 	      </ul>
-
-	      <h3>Активность в блогах</h3>
-
-	      <p>Сообщения, относящиеся к <a
-href="http://technorati.com/search/freebsd?sub=chartlet&amp;language=n&amp;authority=n">FreeBSD</a>, за последние 90 дней.<br /><a
-href="http://technorati.com/search/freebsd?sub=chartlet&amp;language=n&amp;authority=n"><img
-src="http://technorati.com/chartimg/freebsd?totalHits=24190&amp;size=s&amp;days=90"
-style="border:0" alt="Technorati Chart" /></a>
-              </p>
 
 	      </div> <!-- CONTENTWRAP -->
 	      <br class="clearboth" />
