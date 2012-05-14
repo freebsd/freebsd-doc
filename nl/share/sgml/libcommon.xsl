@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
-<!-- $FreeBSD: www/nl/share/sgml/libcommon.xsl,v 1.5 2011/02/20 09:04:12 remko Exp $
+<!-- $FreeBSD: www/nl/share/sgml/libcommon.xsl,v 1.6 2011/12/18 20:02:22 rene Exp $
      %SOURCE%	share/sgml/libcommon.xsl
-     %SRCID%	1.33
+     %SRCID%	1.34
  -->
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/libcommon.xsl"/>
@@ -67,6 +67,7 @@
   <!-- template: "html-press-make-olditems-list" -->
   <xsl:template name="html-press-make-olditems-list">
     <p>Oude persberichten:
+      <a href="&enbase;/news/2009/press.html">2009</a>,
       <a href="&enbase;/news/2008/press.html">2008</a>,
       <a href="&enbase;/news/2007/press.html">2007</a>,
       <a href="&enbase;/news/2006/press.html">2006</a>,
