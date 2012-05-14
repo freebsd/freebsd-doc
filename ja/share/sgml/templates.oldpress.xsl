@@ -6,9 +6,9 @@
 <!ENTITY % navinclude.about "INCLUDE">
 ]>
 
-<!-- $FreeBSD$ -->
+<!-- $FreeBSD: www/ja/share/sgml/templates.oldpress.xsl,v 1.1 2012/02/04 01:46:14 ryusuke Exp $ -->
 <!-- The FreeBSD Japanese Documentation Project -->
-<!-- Original revision: 1.7 -->
+<!-- Original revision: 1.8 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -49,6 +49,7 @@
 	<xsl:apply-templates select="//month"/>
 	
 	<p>過去のニュース記事:
+	  <a href="&enbase;/news/2009/press.html">2009</a>,
 	  <a href="&enbase;/news/2008/press.html">2008</a>,
 	  <a href="&enbase;/news/2007/press.html">2007</a>,
 	  <a href="&enbase;/news/2006/press.html">2006</a>,
