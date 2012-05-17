@@ -48,7 +48,7 @@ DOC_PREFIX!=	${REALPATH} ${DOC_PREFIX}
 
 # Used for &base;
 .if ${LANGCODE} == "en_US.ISO8859-1"
-DOC_PREFIX_REL=	${.CURDIR:S,^${DOC_PREFIX},,:C,/[^/]+,/..,g:S,^/..,,:S,^/,,:S,^$,.,:S,^/..,,}
+DOC_PREFIX_REL=	${.CURDIR:S,^${DOC_PREFIX}/${LANGCODE},,:C,/[^/]+,/..,g:S,^/..,,:S,^/,,:S,^$,.,:S,^/..,,}
 .else
 DOC_PREFIX_REL=	${.CURDIR:S,^${DOC_PREFIX},,:C,/[^/]+,/..,g:S,^/..,,:S,^/,,:S,^$,.,}
 .endif
