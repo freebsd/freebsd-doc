@@ -22,4 +22,4 @@ install:
 		${LN} -fs ../doc/es_ES.ISO8859-1/books/handbook/* \
 			${DOCINSTALLDIR}
 
-.include "${WEB_PREFIX}/share/mk/web.site.mk"
+.include "${DOC_PREFIX}/share/mk/web.site.mk"

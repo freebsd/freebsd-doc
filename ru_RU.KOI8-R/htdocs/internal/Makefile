@@ -42,8 +42,8 @@ DOCS+=	homepage.sgml
 .if !make(install)
 .PHONY: homepage.inc
 .endif
-homepage.inc: ${WEB_PREFIX}/en/internal/homepage.pl
-	${PERL} ${WEB_PREFIX}/en/internal/homepage.pl > ${.TARGET}
+homepage.inc: ${DOC_PREFIX}/en/internal/homepage.pl
+	${PERL} ${DOC_PREFIX}/en/internal/homepage.pl > ${.TARGET}
 
 homepage.html:  homepage.inc
 CLEANFILES+=	homepage.inc
@@ -51,4 +51,4 @@ CLEANFILES+=	homepage.inc
 
 DATA+=	README.mirror
 
-.include "${WEB_PREFIX}/share/mk/web.site.mk"
+.include "${DOC_PREFIX}/share/mk/web.site.mk"

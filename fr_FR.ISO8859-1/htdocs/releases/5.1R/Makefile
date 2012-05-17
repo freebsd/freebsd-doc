@@ -33,4 +33,4 @@ DOCS= relnotes.sgml installation.sgml
 # DATA+=	installation-pc98.html
 # DATA+=	installation-sparc64.html
 
-.include "${WEB_PREFIX}/share/mk/web.site.mk"
+.include "${DOC_PREFIX}/share/mk/web.site.mk"

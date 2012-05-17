@@ -4,4 +4,4 @@
 # Original version: 1.5
 
 WEBBASE?=	/data/ru/releases
-WEB_PREFIX?=	${.CURDIR}/../../..
+DOC_PREFIX?=	${.CURDIR}/../../../..

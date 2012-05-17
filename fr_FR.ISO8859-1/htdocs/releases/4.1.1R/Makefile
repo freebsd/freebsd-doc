@@ -13,4 +13,4 @@
 # DOCS=	announce.sgml notes.sgml errata.sgml
 DOCS= errata.sgml
 
-.include "${WEB_PREFIX}/share/mk/web.site.mk"
+.include "${DOC_PREFIX}/share/mk/web.site.mk"

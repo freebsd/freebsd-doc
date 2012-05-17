@@ -4,7 +4,7 @@
 <!ENTITY title "The &os; list of projects and ideas for volunteers">
 <!ENTITY email "freebsd-www">
 <!ENTITY % navinclude.developers "INCLUDE">
-<!ENTITY % developers SYSTEM "../../developers.sgml"> %developers;
+<!ENTITY % developers PUBLIC "-//FreeBSD//ENTITIES FreeBSD Developers Entities//EN"> %developers;
 ]>
 
 <!-- $FreeBSD: www/en/projects/ideas/ideas.xsl,v 1.17 2010/03/08 22:31:22 rwatson Exp $ -->

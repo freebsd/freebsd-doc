@@ -3,4 +3,4 @@
 # basiert auf: 1.2
 
 WEBBASE?=	/data/java
-WEB_PREFIX?=	${.CURDIR}/../../..
+DOC_PREFIX?=	${.CURDIR}/../../../..

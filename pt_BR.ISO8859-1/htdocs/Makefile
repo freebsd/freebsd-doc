@@ -22,4 +22,4 @@ SUBDIR+=	doc
 
 WEBDIR?=	data/pt_BR
 
-.include "${WEB_PREFIX}/share/mk/web.site.mk"
+.include "${DOC_PREFIX}/share/mk/web.site.mk"

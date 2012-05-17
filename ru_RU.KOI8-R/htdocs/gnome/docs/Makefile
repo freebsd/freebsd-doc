@@ -25,4 +25,4 @@ DOCS+=	knownissues.sgml
 DOCS+=	develfaq.sgml
 DOCS+=	example-Makefile.sgml
 
-.include "${WEB_PREFIX}/share/mk/web.site.mk"
+.include "${DOC_PREFIX}/share/mk/web.site.mk"

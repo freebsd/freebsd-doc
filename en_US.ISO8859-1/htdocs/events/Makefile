@@ -35,4 +35,4 @@ DEPENDSET.events_ics=	events
 
 XMLDOCS+=		events_rss:rss.xsl:${XML_EVENTS_EVENTS}:rss.xml
 
-.include "${WEB_PREFIX}/share/mk/web.site.mk"
+.include "${DOC_PREFIX}/share/mk/web.site.mk"

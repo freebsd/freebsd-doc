@@ -17,4 +17,4 @@ SUBDIR+= 6.0R
 SUBDIR=
 .endif
 
-.include "${WEB_PREFIX}/share/mk/web.site.mk"
+.include "${DOC_PREFIX}/share/mk/web.site.mk"

@@ -8,24 +8,30 @@
 # one another -- this was always the case anyway, so there are no extra
 # requirements here.
 #
+.if exists(../Makefile.conf)
+.include "../Makefile.conf"
+.endif
+.if exists(../Makefile.inc)
+.include "../Makefile.inc"
+.endif
 
 all: all-all all-install
 
 all-all:
 	@unset DESTDIR || true; \
-	cd ${.CURDIR}/../../../doc/es_ES.ISO8859-1; \
+	 cd ${DOC_PREFIX}/${LANGCODE}; \
 		${MAKE} FORMATS="html-split html" \
 			INSTALL_COMPRESSED= all
 
 all-install:
 	@unset DESTDIR || true; \
-	 cd ${.CURDIR}/../../../doc/es_ES.ISO8859-1; \
+	 cd ${DOC_PREFIX}/${LANGCODE}; \
 		${MAKE} FORMATS="html-split html" DOCDIR=${.OBJDIR} \
 			INSTALL_COMPRESSED= install
 
 install clean:
 	@unset DESTDIR || true; \
-	 cd ${.CURDIR}/../../../doc/es_ES.ISO8859-1; \
+	 cd ${DOC_PREFIX}/${LANGCODE}; \
 		${MAKE} FORMATS="html-split html" DOCDIR=${DESTDIR}/data/doc \
 			INSTALL_COMPRESSED= ${.TARGET}
 
@@ -33,7 +39,7 @@ install clean:
 	${RM} -rf es*
 .endif
 
-.include "${.CURDIR}/../../share/mk/web.site.mk"
+.include "${DOC_PREFIX}/share/mk/web.site.mk"
 
 obj: _OBJUSE
 

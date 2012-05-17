@@ -8,8 +8,8 @@
 .if exists(../Makefile.inc)
 .include "../Makefile.inc"
 .endif
-.if exists(../../en/ports/Makefile.inc)
-.include "../../en/ports/Makefile.inc"
+.if exists(${DOC_PREFIX}/en_US.ISO8859-1/htdocs/ports/Makefile.inc)
+.include "${DOC_PREFIX}/en_US.ISO8859-1/htdocs/ports/Makefile.inc"
 .endif
 
 FETCH_OPT?=	-am
@@ -36,10 +36,10 @@ CLUSTER_MACHINE=	YES
 #
 packages.exists:
 .if defined(CLUSTER_MACHINE) && (!defined(NO_PACKAGES_LINK) || empty(NO_PACKAGES_LINK))
-.if  exists(${.CURDIR}/../../en/ports/packages.exists)
-	cp ${.CURDIR}/../../en/ports/${.TARGET} .
+.if  exists(${DOC_PREFIX}/en_US.ISO8859-1/htdocs/ports/packages.exists)
+	cp ${DOC_PREFIX}/en_US.ISO8859-1/htdocs/ports/${.TARGET} .
 .else
-	@if ${SH} ${.CURDIR}/../../en/ports/packages > ${.TARGET}.temp; then \
+	@if ${SH} ${DOC_PREFIX}/en_US.ISO8859-1/htdocs/ports/packages > ${.TARGET}.temp; then \
 		${MV} ${.TARGET}.temp ${.TARGET}; \
 	else \
 		${RM} ${.TARGET}.temp; ${TOUCH} ${.TARGET}; \
@@ -85,7 +85,7 @@ ports.size:
 
 # this builds: categories-alpha.sgml, categories-grouped.sgml,
 # master-index.sgml, statistics.ent, <category>.sgml
-CATEGORYLIST=`grep "^[a-z]" ../../en/ports/categories | sed -e s"/,.*//"`
+CATEGORYLIST=`grep "^[a-z]" ${DOC_PREFIX}/en_US.ISO8859-1/htdocs/ports/categories | sed -e s"/,.*//"`
 categories-alpha.sgml: ${INDEX} categories categories.descriptions \
 	packages.exists portindex ports.ent ports.size .NOTMAIN
 	${RM} -f categories-alpha.sgml categories-grouped.sgml \
@@ -112,4 +112,4 @@ beforeinstall:
 	${SED} -i "" -e 's,HREF="growth,href="http://www.FreeBSD.org/ports/growth,' references.html
 .endif
 
-.include "${WEB_PREFIX}/share/mk/web.site.mk"
+.include "${DOC_PREFIX}/share/mk/web.site.mk"

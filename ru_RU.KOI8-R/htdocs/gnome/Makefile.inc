@@ -6,4 +6,4 @@
 # Original revision: 1.1
 
 WEBBASE?=	/data/ru/gnome
-WEB_PREFIX?=	${.CURDIR}/../../..
+DOC_PREFIX?=	${.CURDIR}/../../..

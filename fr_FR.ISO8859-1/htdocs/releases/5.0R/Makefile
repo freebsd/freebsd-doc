@@ -35,4 +35,4 @@
 # SUBDIR=	DP1 DP2
 SUBDIR= DP1
 
-.include "${WEB_PREFIX}/share/mk/web.site.mk"
+.include "${DOC_PREFIX}/share/mk/web.site.mk"

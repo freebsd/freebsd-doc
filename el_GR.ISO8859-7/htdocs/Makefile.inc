@@ -7,4 +7,4 @@
 #
 
 WEBBASE?=	/data/el
-WEB_PREFIX?=	${.CURDIR}/../..
+DOC_PREFIX?=	${.CURDIR}/../../..

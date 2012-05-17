@@ -2,14 +2,14 @@
 # $FreeBSD: www/tools/prstats/Makefile,v 1.2 2001/11/18 16:11:34 murray Exp $
 #
 
-.if exists(../../en/Makefile.conf)
-.include "../../en/Makefile.conf"
+.if exists(../../../en_US.ISO8859-1/Makefile.conf)
+.include "../../../en_US.ISO8859-1/Makefile.conf"
 .endif
-.if exists(../../en/Makefile.inc)
-.include "../../en/Makefile.inc"
+.if exists(../../../en_US.ISO8859-1/Makefile.inc)
+.include "../../../en_US.ISO8859-1/Makefile.inc"
 .endif
 
-WEB_PREFIX?= ${.CURDIR}/../..
+DOC_PREFIX?= ${.CURDIR}/../../..
 GNATSDIR?= /c/gnats
 PRGRAPHDIR?= ${DESTDIR}${WEBBASE}/prstats
 GNUPLOT?= /usr/local/bin/gnuplot
@@ -43,4 +43,4 @@ install: ${GRAPHS}
 .endif
 .endfor
 
-.include "${WEB_PREFIX}/share/mk/web.site.mk"
+.include "${DOC_PREFIX}/share/mk/web.site.mk"

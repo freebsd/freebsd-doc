@@ -3,7 +3,7 @@
 # basiert auf: 1.2
 #
 
-TOOLDIR=${.CURDIR}/../../../tools/portsgrowth
+TOOLDIR=${.CURDIR}/../../../../share/tools/portsgrowth
 
 all install clean:
 	cd ${TOOLDIR}; \

@@ -18,9 +18,9 @@ CLEANFILES+=	atoz.sgml site.sgml
 
 index-site.html: atoz.sgml site.sgml
 atoz.sgml: web.atoz 
-	${SORT} -fu ${.ALLSRC} | ${PERL} ${.CURDIR}/../../en/search/atoz.pl > ${.TARGET}
+	${SORT} -fu ${.ALLSRC} | ${PERL} ${DOC_PREFIX}/en_US.ISO8859-1/htdocs/search/atoz.pl > ${.TARGET}
 
 site.sgml: site.map
-	${PERL} ${.CURDIR}/../../en/search/site.pl < ${.ALLSRC} > ${.TARGET}
+	${PERL} ${DOC_PREFIX}/en_US.ISO8859-1/htdocs/search/site.pl < ${.ALLSRC} > ${.TARGET}
 
-.include "${WEB_PREFIX}/share/mk/web.site.mk"
+.include "${DOC_PREFIX}/share/mk/web.site.mk"

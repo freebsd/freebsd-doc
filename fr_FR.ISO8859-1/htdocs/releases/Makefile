@@ -41,4 +41,4 @@ SUBDIR+=	5.1R
 SUBDIR=
 .endif
 
-.include "${WEB_PREFIX}/share/mk/web.site.mk"
+.include "${DOC_PREFIX}/share/mk/web.site.mk"

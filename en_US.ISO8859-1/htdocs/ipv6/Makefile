@@ -20,4 +20,4 @@ DATA+=		w6d-www-stats-large.png		\
 		w6d-www-stats-v6.png		\
 		w6d-www-stats.png
 
-.include "${WEB_PREFIX}/share/mk/web.site.mk"
+.include "${DOC_PREFIX}/share/mk/web.site.mk"

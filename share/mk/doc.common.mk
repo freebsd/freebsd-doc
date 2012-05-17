@@ -13,14 +13,6 @@ SED?=		/usr/bin/sed
 # replace them with &#09; before calling tidy
 REINPLACE_TABS_CMD?=	${SED} -i "" -e 's/	/\&\#09;/g'
 
-.if defined(DOC_PREFIX) && !empty(DOC_PREFIX)
-WEB_PREFIX?=	${DOC_PREFIX}/../www
-.elif defined(WEB_PREFIX) && !empty(WEB_PREFIX)
-DOC_PREFIX?=	${WEB_PREFIX}/../doc
-.else
-.error "You must define either WEB_PREFIX or DOC_PREFIX!"
-.endif
-
 # ------------------------------------------------------------------------
 #
 # Work out the language and encoding used for this document.
@@ -32,91 +24,27 @@ DOC_PREFIX?=	${WEB_PREFIX}/../doc
 DOC_PREFIX_NAME!=	${REALPATH} ${DOC_PREFIX}
 DOC_PREFIX_NAME:=	${DOC_PREFIX_NAME:T}
 .else
-DOC_PREFIX_NAME?=	doc
+DOC_PREFIX_NAME?=	head
 .endif
 
-.if defined(WEB_PREFIX) && !empty(WEB_PREFIX)
-WWW_PREFIX_NAME!=	${REALPATH} ${WEB_PREFIX}
-WWW_PREFIX_NAME:=	${WWW_PREFIX_NAME:T}
-.else
-WWW_PREFIX_NAME?=	www
-.endif
-
-.if (!defined(LANGCODE) || empty(LANGCODE)) && (!defined(WWW_LANGCODE) || empty(WWW_LANGCODE))
+.if (!defined(LANGCODE) || empty(LANGCODE))
 # Calculate _LANGCODE.
 _LANGCODE:=	${.CURDIR}
-.for _ in 1 2 3 4 5 6 7 8 9 10
-.if !(${_LANGCODE:H:T} == ${DOC_PREFIX_NAME}) && !(${_LANGCODE:H:T} == ${WWW_PREFIX_NAME})
+. for _ in 1 2 3 4 5 6 7 8 9 10
+.  if !(${_LANGCODE:H:T} == ${DOC_PREFIX_NAME})
 _LANGCODE:=	${_LANGCODE:H}
-.endif
-.endfor
-.if (${_LANGCODE:H:T} == ${DOC_PREFIX_NAME})
-# We are in doc/.
+.  endif
+. endfor
 _LANGCODE:=	${_LANGCODE:T}
-_WWW_LANGCODE:=	.
-.else
-# We are in www/.
-_WWW_LANGCODE:=	${_LANGCODE:T}
-_LANGCODE:=	.
-.endif
-.else
-# when LANGCODE or WWW_LANGCODE is defined, use the value.
-.if defined(LANGCODE) && !empty(LANGCODE)
+.else # (!defined(LANGCODE) || empty(LANGCODE))
+# when LANGCODE is defined, use the value.
 _LANGCODE?=	${LANGCODE}
-.else
-_LANGCODE?=	.
-.endif
-.if defined(WWW_LANGCODE) && !empty(WWW_LANGCODE)
-_WWW_LANGCODE?=	${WWW_LANGCODE}
-.else
-_WWW_LANGCODE?=	.
-.endif
-.endif
+.endif # (!defined(LANGCODE) || empty(LANGCODE))
 
-# fixup _LANGCODE
-.if (${_LANGCODE} == .)
-# We have a short name such as `en' in ${_WWW_LANGCODE} now.
-# Guess _LANGCODE using _WWW_LANGCODE.
-_LANGCODE:=	${_WWW_LANGCODE}
-.if (${_LANGCODE} != .)
-_LANGCODE!=	${ECHO} ${DOC_PREFIX}/${_WWW_LANGCODE}*
-.for _ in 1 2 3 4 5 6 7 8 9 10
-.if !(${_LANGCODE:H:T} == ${DOC_PREFIX_NAME})
-_LANGCODE:=	${_LANGCODE:H}
-.endif
-.endfor
-_LANGCODE:=	${_LANGCODE:T}
-.endif
-.endif
 LANGCODE?=	${_LANGCODE}
 
-# fixup _WWW_LANGCODE
-.if (${_WWW_LANGCODE} == .)
-# We have a long name such as `en_US.ISO8859-1' in ${LANGCODE} now.
-# Guess _WWW_LANGCODE using _LANGCODE.
-_WWW_LANGCODE!=	${ECHO} ${WEB_PREFIX}/*
-_WWW2_LANGCODE!=	${ECHO} ${_WWW_LANGCODE:T} |\
-		${SED} -e 's,.*\(${LANGCODE:R:C,(..)_.*,\1,}[^. ]*\).*,\1,'
-.if ${_WWW_LANGCODE:T} == "*"
-_WWW_LANGCODE:= .
-.elif ${_WWW_LANGCODE:T} == ${_WWW2_LANGCODE}
-_WWW_LANGCODE:= .
-.else
-_WWW_LANGCODE:= ${_WWW2_LANGCODE}
-.endif
-.undef _WWW2_LANGCODE
-.endif
-WWW_LANGCODE?=	${_WWW_LANGCODE}
-
-# normalize DOC_PREFIX and WEB_PREFIX
+# normalize DOC_PREFIX
 DOC_PREFIX!=	${REALPATH} ${DOC_PREFIX}
-WEB_PREFIX!=	${REALPATH} ${WEB_PREFIX}
-
-.if ${WWW_LANGCODE} == "en"
-WEB_PREFIX_REL= ${.CURDIR:S,^${WEB_PREFIX},,:C,/[^/]+,/..,g:S,^/..,,:S,^/,,:S,^$,.,:S,^/..,,}
-.else
-WEB_PREFIX_REL= ${.CURDIR:S,^${WEB_PREFIX},,:C,/[^/]+,/..,g:S,^/..,,:S,^/,,:S,^$,.,}
-.endif
 
 .if !defined(URL_RELPREFIX)
 URLS_ABSOLUTE=	YES

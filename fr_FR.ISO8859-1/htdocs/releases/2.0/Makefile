@@ -13,4 +13,4 @@
 # DOCS=	announce.sgml credits.sgml install.sgml notes.sgml
 DOCS= credits.sgml
 
-.include "${WEB_PREFIX}/share/mk/web.site.mk"
+.include "${DOC_PREFIX}/share/mk/web.site.mk"

@@ -19,4 +19,4 @@ INDEXLINK= projects.html
 
 SUBDIR=	 busdma c99 mips
 
-.include "${WEB_PREFIX}/share/mk/web.site.mk"
+.include "${DOC_PREFIX}/share/mk/web.site.mk"

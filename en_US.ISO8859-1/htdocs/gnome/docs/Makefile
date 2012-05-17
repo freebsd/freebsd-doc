@@ -31,4 +31,4 @@ DOCS+=	develfaq.sgml
 DOCS+=	example-Makefile.sgml
 DOCS+=	halfaq.sgml
 
-.include "${WEB_PREFIX}/share/mk/web.site.mk"
+.include "${DOC_PREFIX}/share/mk/web.site.mk"
