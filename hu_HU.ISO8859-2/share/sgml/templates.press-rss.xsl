@@ -7,7 +7,7 @@
 <!ENTITY realname "Webmesterek">
 ]>
 
-<!-- $FreeBSD: www/hu/share/sgml/templates.press-rss.xsl,v 1.1 2009/04/06 17:56:08 pgj Exp $ -->
+<!-- $FreeBSD$ -->
 
 <!-- Copyright (c) 2008 Murray Stokely <murray@FreeBSD.org>
 

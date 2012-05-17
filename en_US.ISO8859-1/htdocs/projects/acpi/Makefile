@@ -1,6 +1,6 @@
 # ACPI project page
 #
-# $FreeBSD: www/en/projects/acpi/Makefile,v 1.1 2004/04/18 20:34:26 marks Exp $
+# $FreeBSD$
 
 MAINTAINER=	marks
 

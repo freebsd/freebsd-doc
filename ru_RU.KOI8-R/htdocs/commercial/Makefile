@@ -1,4 +1,4 @@
-# $FreeBSD: www/ru/commercial/Makefile,v 1.3 2000/11/10 17:27:30 phantom Exp $
+# $FreeBSD$
 # The FreeBSD Russian Documentation Project
 # $FreeBSDru: frdp/www/ru/commercial/Makefile,v 1.3 2000/11/10 17:04:48 phantom Exp $
 # Original revision: 1.14

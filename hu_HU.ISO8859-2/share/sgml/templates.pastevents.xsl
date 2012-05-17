@@ -9,7 +9,7 @@
 <!ENTITY % header.rss "INCLUDE">
 ]>
 
-<!-- $FreeBSD: www/hu/share/sgml/templates.pastevents.xsl,v 1.1 2009/04/06 17:56:08 pgj Exp $ -->
+<!-- $FreeBSD$ -->
 
 <!-- Copyright (c) 2003 Simon L. Nielsen <simon@FreeBSD.org>
      Copyright (c) 2008 Murray M Stokely <murray@FreeBSD.org>

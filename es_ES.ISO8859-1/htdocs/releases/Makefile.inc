@@ -1,4 +1,4 @@
-# $FreeBSD: www/es/releases/Makefile.inc,v 1.2 1999/09/06 07:03:05 peter Exp $
+# $FreeBSD$
 
 WEBBASE?=	/data/es/releases
 DOC_PREFIX?=	${.CURDIR}/../../..

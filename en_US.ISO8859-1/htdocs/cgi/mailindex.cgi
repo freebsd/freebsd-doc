@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/mailindex.cgi,v 1.10 2006/12/01 21:58:22 wosch Exp $
+# $FreeBSD$
 
 
 use CGI;

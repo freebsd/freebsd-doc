@@ -9,7 +9,7 @@
 
 <!-- The FreeBSD Russian Documentation Project -->
 <!-- $FreeBSDru: frdp/www/ru/share/sgml/templates.usergroups.xsl,v 1.2 2005/11/03 18:27:42 gad Exp $ -->
-<!-- $FreeBSD: www/ru/share/sgml/templates.usergroups.xsl,v 1.1 2005/11/08 18:22:23 bvs Exp $ -->
+<!-- $FreeBSD$ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS"

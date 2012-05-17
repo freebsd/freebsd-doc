@@ -5,7 +5,7 @@
 <!ENTITY title "">
 ]>
 
-<!-- $FreeBSD: www/en/security/mkindex.xsl,v 1.6 2008/03/01 01:55:27 simon Exp $ -->
+<!-- $FreeBSD$ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>

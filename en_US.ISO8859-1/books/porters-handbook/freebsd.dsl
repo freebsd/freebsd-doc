@@ -1,4 +1,4 @@
-<!-- $FreeBSD: doc/en_US.ISO8859-1/books/porters-handbook/freebsd.dsl,v 1.4 2001/06/03 00:07:28 dd Exp $ -->
+<!-- $FreeBSD$ -->
 
 <!-- Local DSSSL file for the Porter's Handbook.  This is so we can include
      a link to the -ports mailing list at the bottom of the HTML files, 

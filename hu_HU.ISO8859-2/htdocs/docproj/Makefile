@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/docproj/Makefile,v 1.11 2006/01/27 11:04:03 blackend Exp $
+# $FreeBSD$
 
 ###################################################
 # The FreeBSD Hungarian Documentation Project     #

@@ -1,5 +1,5 @@
 #
-# $FreeBSD: www/ja/tutorials/Makefile,v 1.9 2001/07/30 13:31:59 kuriyama Exp $
+# $FreeBSD$
 #
 # Original revision: 1.12
 #

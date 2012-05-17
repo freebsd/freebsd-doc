@@ -3,7 +3,7 @@
 #
 # Based on: 1.105
 #
-# $FreeBSD: www/pt_BR/Makefile,v 1.2 2004/01/05 03:02:25 lioux Exp $
+# $FreeBSD$
 
 .if exists(Makefile.conf)
 .include "Makefile.conf"

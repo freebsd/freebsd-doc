@@ -1,6 +1,6 @@
 # Summary for C99 project status
 #
-# $FreeBSD: www/en/projects/c99/Makefile,v 1.1 2002/04/12 05:54:19 murray Exp $
+# $FreeBSD$
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"

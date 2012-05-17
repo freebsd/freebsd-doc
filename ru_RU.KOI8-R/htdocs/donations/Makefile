@@ -1,4 +1,4 @@
-# $FreeBSD: www/ru/donations/Makefile,v 1.1 2003/09/30 17:32:14 andy Exp $
+# $FreeBSD$
 # $FreeBSDru: frdp/www/ru/donations/Makefile,v 1.1 2003/09/30 17:23:51 andy Exp $
 # Original revision: 1.5
 

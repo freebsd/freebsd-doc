@@ -6,7 +6,7 @@
 <!ENTITY % navinclude.community "INCLUDE">
 ]>
 
-<!-- $FreeBSD: www/ja/share/sgml/templates.usergroups.xsl,v 1.3 2006/08/19 21:24:50 hrs Exp $ -->
+<!-- $FreeBSD$ -->
 <!-- The FreeBSD Japanese Documentation Project -->
 <!-- Original revision: 1.12 -->
 

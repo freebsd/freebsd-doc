@@ -6,7 +6,7 @@
 <!ENTITY % navinclude.about "INCLUDE">
 ]>
 
-<!-- $FreeBSD: www/ja/share/sgml/templates.oldpress.xsl,v 1.1 2012/02/04 01:46:14 ryusuke Exp $ -->
+<!-- $FreeBSD$ -->
 <!-- The FreeBSD Japanese Documentation Project -->
 <!-- Original revision: 1.8 -->
 

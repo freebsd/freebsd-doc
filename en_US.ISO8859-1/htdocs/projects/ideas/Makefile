@@ -1,6 +1,6 @@
 # FreeBSD list of projects and ideas for volunteers
 #
-# $FreeBSD: www/en/projects/ideas/Makefile,v 1.1 2005/12/06 15:09:29 joel Exp $
+# $FreeBSD$
 
 MAINTAINER=	joel
 

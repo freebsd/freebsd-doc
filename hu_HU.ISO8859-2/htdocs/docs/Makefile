@@ -1,4 +1,4 @@
-# $FreeBSD: www/hu/docs/Makefile,v 1.1 2007/01/07 22:44:47 keramida Exp $
+# $FreeBSD$
 
 ###################################################
 # The FreeBSD Hungarian Documentation Project     #

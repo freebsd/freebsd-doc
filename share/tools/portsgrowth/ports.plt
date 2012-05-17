@@ -1,4 +1,4 @@
-# $FreeBSD: www/tools/portsgrowth/ports.plt,v 1.2 2004/09/26 13:36:01 simon Exp $
+# $FreeBSD$
 set terminal png
 set output "ports.png"
 set ylabel "Number of ports"

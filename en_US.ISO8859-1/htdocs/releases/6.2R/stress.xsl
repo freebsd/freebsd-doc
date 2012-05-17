@@ -1,4 +1,4 @@
-<!-- $FreeBSD: www/en/releases/6.2R/stress.xsl,v 1.1 2006/09/16 15:28:36 bmah Exp $ -->
+<!-- $FreeBSD$ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
 xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"

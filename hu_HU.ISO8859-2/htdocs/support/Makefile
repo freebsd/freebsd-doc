@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/support/Makefile,v 1.1 2005/10/04 05:52:16 murray Exp $
+# $FreeBSD$
 
 ###################################################
 # The FreeBSD Hungarian Documentation Project     #

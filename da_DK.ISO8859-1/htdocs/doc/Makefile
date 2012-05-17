@@ -1,5 +1,5 @@
 #
-# $FreeBSD: www/da/doc/Makefile,v 1.1 2003/10/28 23:04:05 simon Exp $
+# $FreeBSD$
 #
 # Build the FreeBSD documentation *outside* of the www tree, and install it
 # in to the right place as necessary.

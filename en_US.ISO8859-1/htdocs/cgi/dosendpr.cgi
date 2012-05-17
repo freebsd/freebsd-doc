@@ -8,7 +8,7 @@
 #  GNU General Public License Version 2.  
 #     (http://www.gnu.ai.mit.edu/copyleft/gpl.html)
 #
-# $FreeBSD: www/en/cgi/dosendpr.cgi,v 1.38 2008/01/26 15:22:33 shaun Exp $
+# $FreeBSD$
 
 use Socket;
 use CGI qw/:standard/;

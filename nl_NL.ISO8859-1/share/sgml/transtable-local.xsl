@@ -2,7 +2,7 @@
 <!--
      The FreeBSD Dutch Documentation Project
 
-     $FreeBSD: $
+     $FreeBSD$
 
      %SOURCE%	share/sgml/transtable-local.xsl
      %SRCID%	1.2

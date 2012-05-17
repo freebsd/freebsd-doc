@@ -1,4 +1,4 @@
-# $FreeBSD: www/ja/events/Makefile,v 1.3 2011/02/08 11:29:16 ryusuke Exp $
+# $FreeBSD$
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.20
 

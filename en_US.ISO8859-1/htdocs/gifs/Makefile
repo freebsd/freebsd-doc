@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/gifs/Makefile,v 1.60 2008/02/12 19:52:02 remko Exp $
+# $FreeBSD$
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"

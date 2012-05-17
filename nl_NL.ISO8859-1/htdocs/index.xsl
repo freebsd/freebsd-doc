@@ -8,7 +8,7 @@
 <!ENTITY title "Het &os; Project">
 ]>
 
-<!-- $FreeBSD: www/nl/index.xsl,v 1.8 2012/02/05 17:06:56 rene Exp $ -->
+<!-- $FreeBSD$ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>

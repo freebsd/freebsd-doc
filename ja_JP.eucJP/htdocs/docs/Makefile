@@ -1,4 +1,4 @@
-# $FreeBSD: www/ja/docs/Makefile,v 1.1 2010/07/05 17:00:55 ryusuke Exp $
+# $FreeBSD$
 # Original Revision: 1.6
 
 .if exists(../Makefile.conf)

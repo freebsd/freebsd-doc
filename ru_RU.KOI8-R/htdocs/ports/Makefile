@@ -1,7 +1,7 @@
 #
 # The FreeBSD Russian Documentation Project
 #
-# $FreeBSD: www/ru/ports/Makefile,v 1.10 2006/07/16 11:22:05 simon Exp $
+# $FreeBSD$
 # $FreeBSDru: frdp/www/ru/ports/Makefile,v 1.9 2004/03/23 21:09:19 phantom Exp $
 #
 # Original revision: 1.38

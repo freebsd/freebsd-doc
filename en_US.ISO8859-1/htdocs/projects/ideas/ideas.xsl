@@ -7,7 +7,7 @@
 <!ENTITY % developers PUBLIC "-//FreeBSD//ENTITIES FreeBSD Developers Entities//EN" "http://www.FreeBSD.org/XML/www/share/sgml/developers.ent"> %developers;
 ]>
 
-<!-- $FreeBSD: www/en/projects/ideas/ideas.xsl,v 1.17 2010/03/08 22:31:22 rwatson Exp $ -->
+<!-- $FreeBSD$ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">

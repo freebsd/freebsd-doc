@@ -3,7 +3,7 @@
 #
 # Original version: 1.8
 #
-# $FreeBSD: www/pt_BR/doc/Makefile,v 1.1 2004/01/05 03:05:24 lioux Exp $
+# $FreeBSD$
 #
 # Build the FreeBSD documentation *outside* of the www tree, and install it
 # in to the right place as necessary.

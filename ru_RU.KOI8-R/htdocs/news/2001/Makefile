@@ -1,4 +1,4 @@
-# $FreeBSD: www/ru/news/2001/Makefile,v 1.3 2004/04/09 12:03:23 phantom Exp $
+# $FreeBSD$
 # $FreeBSDru: frdp/www/ru/news/2001/Makefile,v 1.4 2004/04/09 11:16:51 phantom Exp $
 # Original revision: 1.3
 

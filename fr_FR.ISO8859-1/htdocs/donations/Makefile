@@ -1,4 +1,4 @@
-# $FreeBSD: www/fr/donations/Makefile,v 1.1 2003/03/23 15:08:25 stephane Exp $
+# $FreeBSD$
 
 # The FreeBSD French Documentation Project
 # Original revision: 1.5

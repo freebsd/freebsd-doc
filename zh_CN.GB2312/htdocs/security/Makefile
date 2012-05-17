@@ -1,5 +1,5 @@
 # Original Revision: 1.14
-# $FreeBSD: www/zh_CN/security/Makefile,v 1.1 2006/07/11 15:27:53 delphij Exp $
+# $FreeBSD$
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"

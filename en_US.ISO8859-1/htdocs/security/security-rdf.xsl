@@ -4,7 +4,7 @@
 <!ENTITY base ".">
 <!ENTITY title "">
 ]>
-<!-- $FreeBSD: www/en/security/security-rdf.xsl,v 1.1 2004/05/25 01:19:50 hrs Exp $ -->
+<!-- $FreeBSD$ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>

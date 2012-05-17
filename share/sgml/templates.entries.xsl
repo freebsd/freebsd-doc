@@ -6,7 +6,7 @@
 <!ENTITY % navinclude.support "INCLUDE">
 ]>
 
-<!-- $FreeBSD: www/share/sgml/templates.entries.xsl,v 1.2 2006/08/21 18:27:43 hrs Exp $ -->
+<!-- $FreeBSD$ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS"

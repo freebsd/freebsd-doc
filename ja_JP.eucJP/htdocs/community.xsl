@@ -6,7 +6,7 @@
 <!ENTITY % navinclude.community "INCLUDE">
 ]>
 
-<!-- $FreeBSD: www/ja/community.xsl,v 1.3 2010/04/09 10:56:14 ryusuke Exp $ -->
+<!-- $FreeBSD$ -->
 <!-- Original revision: 1.9 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"

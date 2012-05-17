@@ -18,7 +18,7 @@
   <xsl:variable name="section" select="'developers'"/>
 
   <xsl:variable name="base" select="'../..'"/>
-  <xsl:variable name="date" select="'$FreeBSD: www/ru/gnome/index.xsl,v 1.3 2004/01/13 12:09:33 andy Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD$'"/>
   <xsl:variable name="title" select="'Проект FreeBSD GNOME'"/>
 
   <xsl:output type="html" encoding="koi8-r"

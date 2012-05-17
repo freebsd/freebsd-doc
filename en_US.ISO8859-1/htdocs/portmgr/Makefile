@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/portmgr/Makefile,v 1.4 2010/09/17 13:29:46 tabthorpe Exp $
+# $FreeBSD$
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
