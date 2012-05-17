@@ -7,7 +7,7 @@
 <!ENTITY % navinclude.about "INCLUDE">
 ]>
 
-<!-- $FreeBSD: www/en/news/status/report.xsl,v 1.11 2007/04/10 03:35:31 brd Exp $ -->
+<!-- $FreeBSD$ -->
 
 <!-- Standard header material -->
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"

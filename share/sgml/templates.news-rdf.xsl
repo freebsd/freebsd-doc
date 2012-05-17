@@ -5,7 +5,7 @@
 <!ENTITY email "freebsd-www">
 ]>
 
-<!-- $FreeBSD: www/share/sgml/templates.news-rdf.xsl,v 1.3 2009/06/02 17:33:09 gabor Exp $ -->
+<!-- $FreeBSD$ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">

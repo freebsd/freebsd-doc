@@ -1,5 +1,5 @@
 # bsd.web.mk
-# $FreeBSD: www/share/mk/web.site.mk,v 1.81 2011/09/27 19:08:40 gjb Exp $
+# $FreeBSD$
 
 #
 # Build and install a web site.

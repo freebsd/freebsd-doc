@@ -1,4 +1,4 @@
-# $FreeBSD: www/ru/copyright/Makefile,v 1.5 2003/10/08 08:40:39 den Exp $
+# $FreeBSD$
 # The FreeBSD Russian Documentation Project
 # $FreeBSDru: frdp/www/ru/copyright/Makefile,v 1.4 2003/10/07 13:44:55 den Exp $
 # Original revision: 1.14

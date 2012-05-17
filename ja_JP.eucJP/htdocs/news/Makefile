@@ -1,4 +1,4 @@
-# $FreeBSD: www/ja/news/Makefile,v 1.40 2010/12/07 14:23:08 ryusuke Exp $
+# $FreeBSD$
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.53
 

@@ -1,5 +1,5 @@
 #
-# $FreeBSD: doc/nl_NL.ISO8859-1/books/handbook/Makefile,v 1.17 2011/11/04 21:04:42 rene Exp $
+# $FreeBSD$
 #
 # %SOURCE%	en_US.ISO8859-1/books/handbook/Makefile
 # %SRCID%	1.119

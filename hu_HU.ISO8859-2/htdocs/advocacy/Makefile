@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/advocacy/Makefile,v 1.3 2002/04/05 05:37:35 kuriyama Exp $
+# $FreeBSD$
 
 ###################################################
 # The FreeBSD Hungarian Documentation Project     #

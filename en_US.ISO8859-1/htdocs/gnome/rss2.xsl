@@ -5,7 +5,7 @@
 <!ENTITY title "FreeBSD GNOME Project News System">
 ]>
 
-<!-- $FreeBSD: www/en/gnome/rss2.xsl,v 1.2 2008/01/15 19:48:15 murray Exp $ -->
+<!-- $FreeBSD$ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS"

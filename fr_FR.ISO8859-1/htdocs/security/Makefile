@@ -1,4 +1,4 @@
-# $FreeBSD: www/fr/security/Makefile,v 1.3 2006/08/19 21:23:44 hrs Exp $
+# $FreeBSD$
 
 # The FreeBSD French Documentation Project
 # Original revision: 1.16

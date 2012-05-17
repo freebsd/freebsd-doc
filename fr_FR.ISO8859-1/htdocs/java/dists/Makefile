@@ -1,4 +1,4 @@
-# $FreeBSD: www/fr/java/dists/Makefile,v 1.1 2003/05/25 13:53:13 stephane Exp $
+# $FreeBSD$
 
 # The FreeBSD French Documentation Project
 # Original revision: 1.6

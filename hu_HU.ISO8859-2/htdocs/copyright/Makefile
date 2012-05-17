@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/copyright/Makefile,v 1.15 2004/06/09 17:32:09 ceri Exp $
+# $FreeBSD$
 
 ###################################################
 # The FreeBSD Hungarian Documentation Project     #

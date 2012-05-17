@@ -1,4 +1,4 @@
-# $FreeBSD: www/fr/copyright/Makefile,v 1.4 2004/09/15 14:49:33 stephane Exp $
+# $FreeBSD$
 
 # The FreeBSD French Documentation Project
 # Original revision: 1.15

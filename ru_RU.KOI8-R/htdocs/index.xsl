@@ -7,7 +7,7 @@
 <!--
      The FreeBSD Russian Documentation Project
 
-     $FreeBSD: www/ru/index.xsl,v 1.42 2012/01/11 14:02:58 pluknet Exp $
+     $FreeBSD$
      $FreeBSDru: frdp/www/ru/index.xsl,v 1.47 2006/01/16 21:27:51 gad Exp $
 
      Original revision: 1.176

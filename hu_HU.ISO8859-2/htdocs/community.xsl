@@ -6,7 +6,7 @@
 <!ENTITY % navinclude.community "INCLUDE">
 ]>
 
-<!-- $FreeBSD: www/hu/community.xsl,v 1.5 2009/01/26 22:56:25 pgj Exp $ -->
+<!-- $FreeBSD$ -->
 
 <!-- The FreeBSD Hungarian Documentation Project
      Translated by: Gabor Kovesdan <gabor@FreeBSD.org>

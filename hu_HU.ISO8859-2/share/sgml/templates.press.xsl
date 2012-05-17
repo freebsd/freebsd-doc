@@ -9,7 +9,7 @@
 <!ENTITY % header.rss "INCLUDE">
 ]>
 
-<!-- $FreeBSD: www/share/sgml/templates.press.xsl,v 1.5 2008/01/18 03:06:05 murray Exp $ -->
+<!-- $FreeBSD$ -->
 
 <!-- The FreeBSD Hungarian Documentation Project
      Translated by: PALI, Gabor <pgj@FreeBSD.org>

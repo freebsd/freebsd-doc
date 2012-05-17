@@ -4,7 +4,7 @@
 <!ENTITY title "The FreeBSD GNOME Project">
 <!ENTITY % navinclude.gnome "INCLUDE">
 ]>
-<!-- $FreeBSD: www/en/gnome/index.xsl,v 1.109 2011/02/24 20:09:50 kwm Exp $ -->
+<!-- $FreeBSD$ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
 		xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"

@@ -3,7 +3,7 @@
 <!--
      The FreeBSD Russian Documentation Project
 
-     $FreeBSD: www/ru/gnome/newsflash.xsl,v 1.2 2005/10/05 20:59:53 simon Exp $
+     $FreeBSD$
      $FreeBSDru: frdp/www/ru/gnome/newsflash.xsl,v 1.1 2003/10/26 18:32:48 andy Exp $
 
      Original revision: 1.3

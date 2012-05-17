@@ -9,7 +9,7 @@
 <!ENTITY % header.rss "INCLUDE">
 ]>
 
-<!-- $FreeBSD: www/ja/share/sgml/templates.events.xsl,v 1.1 2011/02/08 11:29:15 ryusuke Exp $ -->
+<!-- $FreeBSD$ -->
 <!-- The FreeBSD Japanese Documentation Project -->
 <!-- Original revision: 1.13 -->
 

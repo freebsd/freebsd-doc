@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/java/Makefile.inc,v 1.1 2000/03/02 15:55:14 phantom Exp $
+# $FreeBSD$
 
 WEBBASE?=	/data/java
 DOC_PREFIX?=	${.CURDIR}/../../../..

@@ -4,7 +4,7 @@
 <!ENTITY title "A &os; Projekt">
 ]>
 
-<!-- $FreeBSD: www/hu/index.xsl,v 1.18 2009/06/03 08:55:41 pgj Exp $ -->
+<!-- $FreeBSD$ -->
 
 <!-- FreeBSD Hungarian Documentation Project
      Translated by: Gabor Kovesdan <gabor@FreeBSD.org>

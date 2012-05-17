@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/GnatsPR/Section/MIME.pm,v 1.2 2011/07/23 02:42:59 shaun Exp $
+# $FreeBSD$
 #------------------------------------------------------------------------------
 
 package GnatsPR::Section::MIME;

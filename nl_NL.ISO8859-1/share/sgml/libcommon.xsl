@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
-<!-- $FreeBSD: www/nl/share/sgml/libcommon.xsl,v 1.6 2011/12/18 20:02:22 rene Exp $
+<!-- $FreeBSD$
      %SOURCE%	share/sgml/libcommon.xsl
      %SRCID%	1.34
  -->

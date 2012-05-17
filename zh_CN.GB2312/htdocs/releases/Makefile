@@ -1,4 +1,4 @@
-# $FreeBSD: www/zh_CN/releases/Makefile,v 1.6 2009/01/05 07:00:58 delphij Exp $
+# $FreeBSD$
 # The FreeBSD Simplified Chinese Documentation Project
 # Original Revision 1.52
 

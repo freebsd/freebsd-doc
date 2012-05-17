@@ -1,6 +1,6 @@
 # Summary for busdma project status
 #
-# $FreeBSD: www/en/projects/netperf/Makefile,v 1.1 2004/11/11 22:21:42 rwatson Exp $
+# $FreeBSD$
 
 MAINTAINER=	rwatson
 

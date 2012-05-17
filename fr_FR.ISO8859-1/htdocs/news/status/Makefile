@@ -1,4 +1,4 @@
-# $FreeBSD: www/fr/news/status/Makefile,v 1.2 2003/12/15 16:09:26 stephane Exp $
+# $FreeBSD$
 
 # The FreeBSD French Documentation Project
 # Original revision: 1.21

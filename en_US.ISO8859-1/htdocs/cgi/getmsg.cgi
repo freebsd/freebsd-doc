@@ -6,7 +6,7 @@
 # by John Fieber
 # February 26, 1998
 #
-# $FreeBSD: www/en/cgi/getmsg.cgi,v 1.43 2007/07/16 18:12:04 wosch Exp $
+# $FreeBSD$
 #
 
 require "./cgi-lib.pl";

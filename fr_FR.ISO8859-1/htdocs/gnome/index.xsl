@@ -4,7 +4,7 @@
 <!ENTITY title "Projet GNOME pour FreeBSD">
 <!ENTITY % navinclude.gnome "INCLUDE">
 ]>
-<!-- $FreeBSD: www/fr/gnome/index.xsl,v 1.6 2006/07/03 16:03:57 blackend Exp $ -->
+<!-- $FreeBSD$ -->
 
 <!-- 
    The FreeBSD French Documentation Project 
@@ -20,7 +20,7 @@
 
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
 
-  <xsl:variable name="date" select="'$FreeBSD: www/fr/gnome/index.xsl,v 1.6 2006/07/03 16:03:57 blackend Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD$'"/>
   <xsl:variable name="title" select="''"/>
 
   <xsl:output type="html" encoding="iso-8859-1"

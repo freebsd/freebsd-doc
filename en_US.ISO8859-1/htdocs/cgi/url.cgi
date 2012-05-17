@@ -26,7 +26,7 @@
 #
 # url.cgi - make plain text URLs clickable
 #
-# $FreeBSD: www/en/cgi/url.cgi,v 1.37 2010/08/28 19:15:22 wosch Exp $
+# $FreeBSD$
 
 use strict;
 

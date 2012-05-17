@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: www/tools/buildpnms.sh,v 1.2 2004/07/27 20:34:40 ceri Exp $
+# $FreeBSD$
 #
 # Shell script to generate the .pnm files required for the send-pr
 # mechanism.  This is not used by the build process, as it requires

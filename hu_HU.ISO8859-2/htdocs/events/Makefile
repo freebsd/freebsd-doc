@@ -1,4 +1,4 @@
-# $FreeBSD: www/hu/events/Makefile,v 1.1 2009/04/06 17:56:08 pgj Exp $
+# $FreeBSD$
 
 ###################################################
 # The FreeBSD Hungarian Documentation Project     #

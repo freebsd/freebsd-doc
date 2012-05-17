@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 
-<!-- $FreeBSD: www/fr/includes.xsl,v 1.20 2006/02/03 18:20:03 blackend Exp $ -->
+<!-- $FreeBSD$ -->
 
 <!-- 
    The FreeBSD French Documentation Project

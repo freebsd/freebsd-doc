@@ -1,7 +1,7 @@
 #
 # The FreeBSD Russian Documentation Project
 #
-# $FreeBSD: www/ru/security/Makefile,v 1.8 2009/12/24 06:49:01 bland Exp $
+# $FreeBSD$
 # $FreeBSDru: frdp/www/ru/security/Makefile,v 1.7 2004/01/25 15:18:18 andy Exp $
 #
 # Original revision: 1.18

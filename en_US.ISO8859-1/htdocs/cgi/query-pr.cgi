@@ -26,7 +26,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/query-pr.cgi,v 1.79 2011/07/22 23:38:58 shaun Exp $
+# $FreeBSD$
 #
 # Useful PRs for testing:
 #

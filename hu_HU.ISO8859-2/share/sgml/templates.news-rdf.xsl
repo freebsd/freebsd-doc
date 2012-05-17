@@ -5,7 +5,7 @@
 <!ENTITY email "freebsd-www">
 ]>
 
-<!-- $FreeBSD: www/hu/share/sgml/templates.news-rdf.xsl,v 1.2 2009/06/03 08:55:41 pgj Exp $ -->
+<!-- $FreeBSD$ -->
 
 <!-- The FreeBSD Hungarian Documentation Project
      Translated by: PALI, Gabor <pgj@FreeBSD.org>

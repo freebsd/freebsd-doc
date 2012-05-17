@@ -7,7 +7,7 @@
 <!ENTITY realname "Webmaster Team">
 ]>
 
-<!-- $FreeBSD: www/share/sgml/templates.news-rss.xsl,v 1.2 2008/01/08 06:07:52 murray Exp $ -->
+<!-- $FreeBSD$ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS"

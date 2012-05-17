@@ -1,7 +1,7 @@
 <!--
      The FreeBSD Russian Documentation Project
 
-     $FreeBSD: www/ru/ports/ports.inc,v 1.11 2004/04/08 07:46:46 den Exp $
+     $FreeBSD$
      $FreeBSDru: frdp/www/ru/ports/ports.inc,v 1.13 2004/04/08 07:08:55 den Exp $
 
      Original revision: 1.67

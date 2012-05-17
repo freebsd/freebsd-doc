@@ -1,5 +1,5 @@
 #
-# $FreeBSD: www/es/FAQ/Makefile,v 1.5 2002/11/25 12:23:00 jesusr Exp $
+# $FreeBSD$
 #
 # Build the FreeBSD FAQ *outside* of the www tree, and install it
 # in to the right place as necessary.

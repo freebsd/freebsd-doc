@@ -1,5 +1,5 @@
 #
-# $FreeBSD: www/el/doc/Makefile,v 1.1 2008/02/10 09:40:20 keramida Exp $
+# $FreeBSD$
 #
 # 
 # The FreeBSD Greek Documentation Project

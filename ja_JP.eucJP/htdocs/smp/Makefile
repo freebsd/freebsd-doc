@@ -1,4 +1,4 @@
-# $FreeBSD: www/ja/smp/Makefile,v 1.1 2000/12/30 14:25:15 hrs Exp $
+# $FreeBSD$
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.2
 

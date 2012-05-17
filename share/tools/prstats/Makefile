@@ -1,5 +1,5 @@
 #
-# $FreeBSD: www/tools/prstats/Makefile,v 1.2 2001/11/18 16:11:34 murray Exp $
+# $FreeBSD$
 #
 
 .if exists(../../../en_US.ISO8859-1/Makefile.conf)

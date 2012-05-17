@@ -1,4 +1,4 @@
-# $FreeBSD: www/nl/Makefile,v 1.4 2011/06/12 20:36:07 rene Exp $
+# $FreeBSD$
 # %SOURCE%	en/Makefile
 # %SRCID%	1.148
 

@@ -1,4 +1,4 @@
-# $FreeBSD: www/ja/releases/2.2.6R/Makefile,v 1.7 2000/11/07 11:38:00 kuriyama Exp $
+# $FreeBSD$
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.3
 

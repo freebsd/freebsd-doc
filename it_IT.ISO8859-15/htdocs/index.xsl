@@ -7,7 +7,7 @@
 <!--
      The FreeBSD Italian Documentation Project
 
-     $FreeBSD: www/it/index.xsl,v 1.31 2006/08/19 21:24:05 hrs Exp $
+     $FreeBSD$
      Original revision: 1.138
 -->
 

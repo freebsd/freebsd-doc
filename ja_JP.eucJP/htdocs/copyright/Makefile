@@ -1,4 +1,4 @@
-# $FreeBSD: www/ja/copyright/Makefile,v 1.18 2011/03/17 13:21:37 ryusuke Exp $
+# $FreeBSD$
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.15
 

@@ -15,7 +15,7 @@
 # Disclaimer:
 #   This is pretty ugly in places.
 #
-# $FreeBSD: www/en/cgi/search.cgi,v 1.27 2006/03/24 01:51:18 kuriyama Exp $
+# $FreeBSD$
 
 
 $server_root = '/usr/local/www';
