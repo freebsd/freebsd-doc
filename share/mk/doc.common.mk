@@ -46,6 +46,13 @@ LANGCODE?=	${_LANGCODE}
 # normalize DOC_PREFIX
 DOC_PREFIX!=	${REALPATH} ${DOC_PREFIX}
 
+# Used for &base;
+.if ${LANGCODE} == "en_US.ISO8859-1"
+DOC_PREFIX_REL=	${.CURDIR:S,^${DOC_PREFIX},,:C,/[^/]+,/..,g:S,^/..,,:S,^/,,:S,^$,.,:S,^/..,,}
+.else
+DOC_PREFIX_REL=	${.CURDIR:S,^${DOC_PREFIX},,:C,/[^/]+,/..,g:S,^/..,,:S,^/,,:S,^$,.,}
+.endif
+
 .if !defined(URL_RELPREFIX)
 URLS_ABSOLUTE=	YES
 .elif !defined(URLS_ABSOLUTE)
