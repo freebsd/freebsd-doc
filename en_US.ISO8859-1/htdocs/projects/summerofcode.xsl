@@ -4,7 +4,7 @@
 <!ENTITY title "FreeBSD Summer Projects">
 <!ENTITY email "freebsd-www">
 <!ENTITY % navinclude.developers "INCLUDE">
-<!ENTITY % developers PUBLIC "-//FreeBSD//ENTITIES FreeBSD Developers Entities//EN"> %developers;
+<!ENTITY % developers PUBLIC "-//FreeBSD//ENTITIES FreeBSD Developers Entities//EN" "http://www.FreeBSD.org/XML/www/share/sgml/developers.ent"> %developers;
 ]>
 
 <!-- $FreeBSD: www/en/projects/summerofcode.xsl,v 1.31 2011/04/03 22:01:24 rwatson Exp $ -->
