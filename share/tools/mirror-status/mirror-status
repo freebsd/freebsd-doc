@@ -1,0 +1,98 @@
+#!/usr/bin/perl
+#
+# Copyright (c) May 2001-2003 Wolfram Schneider <wosch@FreeBSD.org>
+# All rights reserved.
+# 
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+# OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+# LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+# OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+# SUCH DAMAGE.
+# 
+# $Id: mirror-status,v 1.1 2003-03-11 14:46:00 wosch Exp $
+# 
+# mirror-status - check if the FreeBSD web mirrors are up-to-date
+#
+
+
+use strict;
+use HTTP::Request;
+use LWP::UserAgent;
+use Digest::MD5 qw(md5 md5_hex md5_base64);
+
+#
+# Configuration
+#
+my $timeout = 2 * 10;
+my $url = 'http://www.freebsd.org/';  # Web master server
+
+
+
+my $ua = new LWP::UserAgent;
+$ua->timeout($timeout);
+#$ua->proxy(['http', 'ftp'], 'http://proxy.freebsd.org:3128/');
+
+sub download {
+  my $url = shift;
+  my $request = new HTTP::Request 'GET', $url;
+  my $response = $ua->request($request);
+
+  if ($response -> is_success) { 
+    return $response;
+  } else {
+    warn "Error: ", $response->code, " $url\n";
+    return (-1);
+  }
+}
+
+sub mirror_list {
+  my $page = shift;
+  my @list;
+
+  foreach my $line (split(/\n/, $page)) {
+    push(@list, $1) if $line =~ m%<OPTION VALUE="([^"]+)"%io;
+  }
+  return @list;
+}
+
+
+############################################################
+# 
+# Main
+#
+
+my $r = &download($url);
+my ($md5) = md5_base64($r->content);
+my $size = length($r->content);
+die "Arghh: starturl $url\n" if ($md5 < 0);
+
+
+foreach my $mirror (&mirror_list($r->content)) {
+
+  my $response = &download($mirror);
+  next if $response < 0; # error
+
+  my $mirror_md5 = md5_base64($response->content);
+  my $mirror_size = length($response->content);
+
+
+  warn "$mirror outdated, Date: ",
+	$response->header('Last-Modified'), 
+	", size: $size <=> $mirror_size\n" if ($md5 ne $mirror_md5);
+}
+

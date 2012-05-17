@@ -1,0 +1,154 @@
+#!/bin/sh
+# Copyright (c) 2001 Wolfram Schneider <wosch@FreeBSD.org>
+# Copyright (c) 2001 Dima Dorfman <dd@FreeBSD.org>
+#
+# Update the FreeBSD web site from the CVS repository.
+#
+#
+# NOTE: Changes to this file is NOT automatically used for the web
+# site build on www.FreeBSD.org.  If an update to the main build
+# script is required, please contact webmaster@FreeBSD.org or a member
+# of the wwwadm team.
+#
+#
+# Major variables:
+#
+#	PATH		- The search path as interpreted by the shell.
+#	CVSROOT		- Path to the FreeBSD CVS repository.
+#	BUILDDIR	- Where the checked out copies of the files are stored.
+#	DESTDIR		- Where the rendered copies should wind up.
+#	LOGFILE		- Name of the log file to use (in $BUILDDIR).
+#	BUILDARGS	- Arguments to pass to make(1) when {build,install}ing.
+#	INSTARGS	- Arguments to pass to make(1) when installing.
+#	WEBMAILTO	- Address to send mail to if the build fails.
+#
+#	subtrees	- List of directores in $BUILDDIR which are from CVS.
+#
+# Variables which are in uppercase are derived from the environment
+# unless they don't exist, in which case a value suitable for
+# www.FreeBSD.org is used.  Variables in lowercase can't be safely
+# changed without editing other parts of the script; thus, their value
+# in the environment is ignored.
+#
+# Exit codes:
+#
+#	0	- success
+#	1	- unknown failure
+#	2	- failure in CVS operations
+#	3	- failure in make operations
+#
+# $FreeBSD: www/tools/webupdate,v 1.15 2005/07/15 15:27:43 hrs Exp $
+#
+
+#
+# Default configuration.
+#
+DEFAULT_PATH=/bin:/usr/bin:/usr/local/bin;
+DEFAULT_CVSROOT=/home/ncvs;
+DEFAULT_BUILDDIR=/usr/local/www/build;
+DEFAULT_LOGDIR=/usr/local/www/build/log;
+DEFAULT_DESTDIR=/usr/local/www;
+DEFAULT_LOGFILE=log.make.`date '+%d.%H'`;
+DEFAULT_BUILDARGS='';
+DEFAULT_INSTARGS='';
+DEFAULT_WEBMAILTO=freebsd-doc;
+
+#
+# Variable setup.
+#
+PATH=${PATH:-${DEFAULT_PATH}}; export PATH;
+CVSROOT=${CVSROOT:-${DEFAULT_CVSROOT}}; export CVSROOT;
+BUILDDIR=${BUILDDIR:-${DEFAULT_BUILDDIR}};
+LOGDIR=${LOGDIR:-${DEFAULT_LOGDIR}};
+DESTDIR=${DESTDIR:-${DEFAULT_DESTDIR}}; export DESTDIR
+LOGFILE=${LOGFILE:-${LOGDIR}/${DEFAULT_LOGFILE}};
+BUILDARGS=${BUILDARGS:-${DEFAULT_BUILDARGS}};
+INSTARGS="${BUILDARGS} ${INSTARGS:-${DEFAULT_INSTARGS}}";
+WEBMAILTO=${WEBMAILTO:-${DEFAULT_WEBMAILTO}};
+
+# Notes on the names of the release notes directories:
+#
+# - They weren't named the same way they will be on the web site
+# (CURRENT, 4-STABLE) becuase that wouldn't make it obvious that they
+# were release notes.
+#
+# - They weren't named after their path names in the repository
+# (src/release/doc) because that doesn't play well with branches.
+#
+# - The '/doc' part is necessary because of the way doc.subdir.mk finds
+# ${LANGCODE}.  It strips off the last component of ${.CURDIR} one by
+# one and compares the last component to 'doc'.  When it finds it, it
+# assumes that the directory right below that is the language code.
+# This works fine if all the languages are in a directory called
+# 'doc', and not at all if they aren't.
+subtrees='www doc relnotes/doc relnotes/man4 relnotes6/doc relnotes6/man4 relnotes7/doc relnotes7/man4';
+
+#
+# Update the checked out copies.  Check out new copies every Sunday or
+# if they don't exist.
+#
+
+# Only create $BUILDDIR if the directory right above it exists.
+cd `dirname $BUILDDIR` || exit 1;
+if [ ! -d $BUILDDIR ]; then
+	mkdir $BUILDDIR;
+fi
+umask 002
+cd $BUILDDIR || exit 1;
+
+mkdir -p $LOGDIR
+rm -f $LOGFILE 2>/dev/null;
+touch $LOGFILE;
+
+# XXX If one of the directories in $subtrees doesn't exist, *all* of
+# them will be wiped and checked out again.  This should only happen
+# if something went terribly wrong, or if there's a new entry in
+# $subtrees, so I (dd) don't plan on fixing it; there's no sense in
+# optimizing something that should only happen twice a year (if that).
+cond="X`date '+%u'` = X7 `echo $subtrees | sed -E 's/([^ ]*)/-o ! -d \1/g'`";
+if [ $cond ]; then
+	# Remove the old copies.
+	rm -Rf $subtrees 2>/dev/null;
+	chflags -R noschg $subtrees 2>/dev/null;
+	rm -Rf $subtrees 2>/dev/null;
+
+	# Check out the new copies.  This creates all the $subtrees.
+	cvs -qR checkout -P www >> $LOGFILE 2>&1 || exit 2;
+	cvs -qR checkout -P doc >> $LOGFILE 2>&1 || exit 2;
+
+	test -d relnotes || mkdir relnotes;
+	cvs -qR checkout -Pd relnotes/doc src/release/doc >> \
+		$LOGFILE 2>&1 || exit 2;
+	cvs -qR checkout -Pd relnotes/man4 src/share/man/man4 >> \
+		$LOGFILE 2>&1 || exit 2;
+
+	test -d relnotes7 || mkdir relnotes7;
+	cvs -qR checkout -Pd relnotes7/doc -rRELENG_7 src/release/doc >> \
+		$LOGFILE 2>&1 || exit 2;
+	cvs -qR checkout -Pd relnotes7/man4 -rRELENG_7 src/share/man/man4 >> \
+		$LOGFILE 2>&1 || exit 2;
+
+	test -d relnotes6 || mkdir relnotes6;
+	cvs -qR checkout -Pd relnotes6/doc -rRELENG_6 src/release/doc >> \
+		$LOGFILE 2>&1 || exit 2;
+	cvs -qR checkout -Pd relnotes6/man4 -rRELENG_6 src/share/man/man4 >> \
+		$LOGFILE 2>&1 || exit 2;
+else
+	cvs -qR update -dP $subtrees >> $LOGFILE 2>&1 || exit 2;
+fi
+
+#
+# Build the web site.
+#
+cd $BUILDDIR/www/en || exit 1;
+
+time make ${BUILDARGS} all >> $LOGFILE 2>&1 &&
+    time make ${INSTARGS} install >> $LOGFILE 2>&1 ||
+	(tail -50 $LOGFILE |
+	 mail -s "FreeBSD web build failed on `hostname`" $WEBMAILTO;
+	 exit 3) || exit 3;
+
+gzip -f $LOGFILE
+find $LOGDIR -mtime +60 -print0 | perl -n0e unlink
+
+exit 0;
