@@ -5,4 +5,4 @@
 
 
 WEBBASE?=	/data/tr
-WEB_PREFIX?=	${.CURDIR}/../..
+DOC_PREFIX?=	${.CURDIR}/../../..

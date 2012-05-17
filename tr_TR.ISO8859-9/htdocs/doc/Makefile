@@ -39,7 +39,7 @@ install clean:
 	${RM} -rf tr*
 .endif
 
-.include "${WEB_PREFIX}/share/mk/web.site.mk"
+.include "${DOC_PREFIX}/share/mk/web.site.mk"
 
 obj: _OBJUSE
 

@@ -1,4 +1,4 @@
 # $FreeBSD$
 
 WEBBASE?=	/data/cgi/GnatsPR
-WEB_PREFIX?=	${.CURDIR}/../../../..
+DOC_PREFIX?=	${.CURDIR}/../../../../..

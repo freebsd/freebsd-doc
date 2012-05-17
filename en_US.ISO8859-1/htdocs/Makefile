@@ -93,17 +93,6 @@ SUBDIR+= gifs
 SUBDIR+= layout
 SUBDIR+= logo
 
-WEB_LANG?=	da de el es fr hu it ja mn nl pt_BR ru zh_CN zh_TW
-#WEB_LANG?=	da de el es fr hu it ja mn nl pt_BR ru tr zh
-
-# Non-English
-
-.if !defined(ENGLISH_ONLY) || empty(ENGLISH_ONLY)
-.for DIR in ${WEB_LANG}
-SUBDIR+=	../${DIR}
-.endfor
-.endif
-
 WEBDIR?=	data
 
-.include "${WEB_PREFIX}/share/mk/web.site.mk"
+.include "${DOC_PREFIX}/share/mk/web.site.mk"

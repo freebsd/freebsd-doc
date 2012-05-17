@@ -11,4 +11,4 @@ DOCS=	index.sgml
 
 DATA=	docbook.css
 
-.include "${WEB_PREFIX}/share/mk/web.site.mk"
+.include "${DOC_PREFIX}/share/mk/web.site.mk"

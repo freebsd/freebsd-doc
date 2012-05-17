@@ -3,4 +3,4 @@
 # basiert auf: 1.1
 
 WEBBASE?=	/data/de/ipv6
-WEB_PREFIX?=	${.CURDIR}/../../..
+DOC_PREFIX?=	${.CURDIR}/../../../..

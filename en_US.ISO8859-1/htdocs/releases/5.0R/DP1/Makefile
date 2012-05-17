@@ -25,6 +25,6 @@ DATA+=	relnotes-alpha.html
 DATA+=	relnotes-i386.html
 DATA+=	relnotes-sparc64.html
 
-.include "${WEB_PREFIX}/share/mk/web.site.mk"
+.include "${DOC_PREFIX}/share/mk/web.site.mk"
 
 XML_MIRRORS:=	${XML_MIRRORS:S@en@usr@}

@@ -18,4 +18,4 @@ DOCS+=	13.sgml
 DOCS+=	14.sgml
 DOCS+=	index.sgml
 
-.include "${WEB_PREFIX}/share/mk/web.site.mk"
+.include "${DOC_PREFIX}/share/mk/web.site.mk"

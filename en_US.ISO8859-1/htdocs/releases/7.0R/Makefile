@@ -27,4 +27,4 @@ stress.html: news.rss stress.xsl
 
 todo.html: stress.html
 
-.include "${WEB_PREFIX}/share/mk/web.site.mk"
+.include "${DOC_PREFIX}/share/mk/web.site.mk"

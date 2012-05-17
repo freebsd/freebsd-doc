@@ -76,4 +76,4 @@ DEPENDSET.index=transtable mirrors news press events \
 
 XMLDOCS+=       community::${XML_EVENTS_EVENTS}:
 
-.include "${WEB_PREFIX}/share/mk/web.site.mk"
+.include "${DOC_PREFIX}/share/mk/web.site.mk"

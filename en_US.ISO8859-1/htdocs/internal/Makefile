@@ -45,4 +45,4 @@ CLEANFILES+=	homepage.inc
 
 DATA+=	README.mirror ssh-keys.asc
 
-.include "${WEB_PREFIX}/share/mk/web.site.mk"
+.include "${DOC_PREFIX}/share/mk/web.site.mk"

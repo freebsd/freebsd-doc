@@ -16,4 +16,4 @@ DOCS+=	policies_contributors.sgml
 DOCS+=	policies_eol.sgml
 DOCS+=	qa.sgml
 
-.include "${WEB_PREFIX}/share/mk/web.site.mk"
+.include "${DOC_PREFIX}/share/mk/web.site.mk"

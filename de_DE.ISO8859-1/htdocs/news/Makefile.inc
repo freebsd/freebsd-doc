@@ -3,4 +3,4 @@
 # basiert auf: 1.2
 
 WEBBASE?=	/data/de/news
-WEB_PREFIX?=	${.CURDIR}/../../..
+DOC_PREFIX?=	${.CURDIR}/../../../..

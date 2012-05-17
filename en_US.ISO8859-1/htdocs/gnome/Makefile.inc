@@ -1,4 +1,4 @@
 # $FreeBSD$
 
 WEBBASE?=	/data/gnome
-WEB_PREFIX?=	${.CURDIR}/../../..
+DOC_PREFIX?=	${.CURDIR}/../../../..

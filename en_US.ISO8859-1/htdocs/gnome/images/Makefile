@@ -35,4 +35,4 @@ DATA+=	kwm.jpg
 DATA+=	marcus.jpg
 DATA+=	mezz.jpg
 
-.include "${WEB_PREFIX}/share/mk/web.site.mk"
+.include "${DOC_PREFIX}/share/mk/web.site.mk"

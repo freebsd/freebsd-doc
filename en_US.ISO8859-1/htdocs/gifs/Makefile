@@ -82,4 +82,4 @@ DATA+=  plain.png smiley.png frowny.png
 # cvsweb
 DATA+=	back.gif binary.gif dir.gif minigraph.png text.gif
 
-.include "${WEB_PREFIX}/share/mk/web.site.mk"
+.include "${DOC_PREFIX}/share/mk/web.site.mk"

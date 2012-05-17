@@ -44,4 +44,4 @@ SUBDIR+=	2002
 SUBDIR+=	2003
 SUBDIR+=	status
 
-.include "${WEB_PREFIX}/share/mk/web.site.mk"
+.include "${DOC_PREFIX}/share/mk/web.site.mk"

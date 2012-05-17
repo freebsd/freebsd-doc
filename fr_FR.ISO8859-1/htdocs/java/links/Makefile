@@ -21,4 +21,4 @@ DOCS+=	vendor.sgml
 DOCS+=	documentation.sgml
 DOCS+=	servlets.sgml
 
-.include "${WEB_PREFIX}/share/mk/web.site.mk"
+.include "${DOC_PREFIX}/share/mk/web.site.mk"

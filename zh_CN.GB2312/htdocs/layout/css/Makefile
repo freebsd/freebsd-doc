@@ -13,4 +13,4 @@
 
 DATA=   fixed.css fixed_large.css global.css iefixes.css layout.css navigation.css table.css text.css query-pr.css
 
-.include "${WEB_PREFIX}/share/mk/web.site.mk"
+.include "${DOC_PREFIX}/share/mk/web.site.mk"

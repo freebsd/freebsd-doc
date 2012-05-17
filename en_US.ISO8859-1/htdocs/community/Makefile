@@ -11,4 +11,4 @@ DOCS=   irc.sgml mailinglists.sgml newsgroups.sgml webresources.sgml
 
 XMLDOCS+=	social::${XML_EVENTS_EVENTS}:
 
-.include "${WEB_PREFIX}/share/mk/web.site.mk"
+.include "${DOC_PREFIX}/share/mk/web.site.mk"

@@ -22,4 +22,4 @@ DATA+=	relnotes-alpha.html
 DATA+=	relnotes-i386.html
 # DATA+=  cd1.txt cd2.txt cd3.txt cd4.txt
 
-.include "${WEB_PREFIX}/share/mk/web.site.mk"
+.include "${DOC_PREFIX}/share/mk/web.site.mk"

@@ -46,4 +46,4 @@ PARAMS.software_bycat=\
 ### Revision checking
 REVCHECK=	yes
 
-.include "${WEB_PREFIX}/share/mk/web.site.mk"
+.include "${DOC_PREFIX}/share/mk/web.site.mk"

@@ -9,4 +9,4 @@
 
 DOCS=   books.sgml webresources.sgml
 
-.include "${WEB_PREFIX}/share/mk/web.site.mk"
+.include "${DOC_PREFIX}/share/mk/web.site.mk"

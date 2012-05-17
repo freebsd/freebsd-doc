@@ -45,4 +45,4 @@ newsflash.html: newsflash.xsl news.xml includes.xsl ../includes.xsl
 	-${TIDY} ${TIDYOPTS} ${.TARGET}
 .endif
 
-.include "${WEB_PREFIX}/share/mk/web.site.mk"
+.include "${DOC_PREFIX}/share/mk/web.site.mk"

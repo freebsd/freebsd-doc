@@ -1,4 +1,4 @@
 # $FreeBSD$
 
 WEBBASE?=	/data/ipv6
-WEB_PREFIX?=	${.CURDIR}/../../..
+DOC_PREFIX?=	${.CURDIR}/../../..

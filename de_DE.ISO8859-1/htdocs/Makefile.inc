@@ -5,4 +5,4 @@
 # basiert auf: 1.8
 
 WEBBASE?=	/data/de
-WEB_PREFIX?=	${.CURDIR}/../..
+DOC_PREFIX?=	${.CURDIR}/../../..

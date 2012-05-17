@@ -2,7 +2,11 @@
 #
 # The user can override the default list of languages to build and install
 # with the DOC_LANG variable.
-# 
+#
+.if defined(ENGLISH_ONLY) && !empty(ENGLISH_ONLY)
+DOC_LANG=	en_US.ISO8859-1
+.endif
+
 .if defined(DOC_LANG) && !empty(DOC_LANG)
 SUBDIR = 	${DOC_LANG}
 .else

@@ -9,7 +9,7 @@
 
 DOCS=	machines.sgml refs.sgml
 
-XMLDOCS=	index::../../../en/platforms/ia64/news.xml:
-XMLDOCS+=	todo::../../../en/platforms/ia64/news.xml:
+XMLDOCS=	index::${DOC_PREFIX}/en_US.ISO8859-1/htdocs/platforms/ia64/news.xml:
+XMLDOCS+=	todo::${DOC_PREFIX}/en_US.ISO8859-1/htdocs/platforms/ia64/news.xml:
 
-.include "${WEB_PREFIX}/share/mk/web.site.mk"
+.include "${DOC_PREFIX}/share/mk/web.site.mk"

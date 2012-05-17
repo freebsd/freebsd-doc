@@ -27,4 +27,4 @@ XSLTPROCOPTS.index=	${XSLTPROCOPTS:N--nonet}
 XMLDOCS+=	newsflash
 XMLDOCS+=	news:rss.xsl::news.rdf
 
-.include "${WEB_PREFIX}/share/mk/web.site.mk"
+.include "${DOC_PREFIX}/share/mk/web.site.mk"
