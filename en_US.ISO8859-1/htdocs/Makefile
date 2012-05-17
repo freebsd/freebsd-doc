@@ -93,6 +93,28 @@ SUBDIR+= gifs
 SUBDIR+= layout
 SUBDIR+= logo
 
+.if !defined(WEB_LANG) || empty(WEB_LANG)
+WEB_LANG=	da_DK.ISO8859-1 \
+		de_DE.ISO8859-1 \
+		el_GR.ISO8859-7 \
+		es_ES.ISO8859-1 \
+		fr_FR.ISO8859-1 \
+		hu_HU.ISO8859-2 \
+		it_IT.ISO8859-15 \
+		ja_JP.eucJP \
+		mn_MN.UTF-8 \
+		nl_NL.ISO8859-1 \
+		pt_BR.ISO8859-1 \
+		ru_RU.KOI8-R \
+		zh_CN.GB2312 \
+		zh_TW.Big5
+.endif
+.if !defined(ENGLISH_ONLY) || empty(ENGLISH_ONLY)
+.for _D in ${WEB_LANG}
+SUBDIR+=	../../${_D}/htdocs
+.endfor
+.endif
+
 WEBDIR?=	data
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"
