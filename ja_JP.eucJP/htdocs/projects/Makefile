@@ -24,8 +24,8 @@ DOCS+=	cvsweb.sgml
 #DATA+=	2011-freebsd-gsoc-thumbnail.jpg
 #DATA+=	2011-freebsd-gsoc.pdf
 
-#XML_IDEAS=		${WEB_PREFIX}/en/projects/ideas/ideas.xml
-#XSL_SOC=		${WEB_PREFIX}/en/projects/summerofcode.xsl
+#XML_IDEAS=		${DOC_PREFIX}/en/projects/ideas/ideas.xml
+#XSL_SOC=		${DOC_PREFIX}/en/projects/summerofcode.xsl
 
 #XMLDOCS=	summerofcode:${XSL_SOC}:${XML_IDEAS}:
 
@@ -37,4 +37,4 @@ SUBDIR=	mips
 ### Revision checking
 REVCHECK=	yes
 
-.include "${WEB_PREFIX}/share/mk/web.site.mk"
+.include "${DOC_PREFIX}/share/mk/web.site.mk"

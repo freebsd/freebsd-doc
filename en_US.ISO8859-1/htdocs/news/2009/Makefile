@@ -10,7 +10,7 @@
 XMLDOCS+=	index:${XSL_NEWS_NEWSFLASH_OLD}:news.xml:
 DEPENDSET.index=transtable news
 
-XMLDOCS+=	press:${XSL_NEWS_PRESS_OLD}::
+.include "${DOC_PREFIX}/share/mk/web.site.mk"
 DEPENDSET.press=transtable press
 
 .include "${WEB_PREFIX}/share/mk/web.site.mk"

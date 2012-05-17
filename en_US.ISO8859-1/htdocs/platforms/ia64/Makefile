@@ -13,4 +13,4 @@ DATA=	i2inside.png mckinley-die.png merced-die.png montecito-die.png
 XMLDOCS=	index::news.xml:
 XMLDOCS+=	todo::news.xml:
 
-.include "${WEB_PREFIX}/share/mk/web.site.mk"
+.include "${DOC_PREFIX}/share/mk/web.site.mk"

@@ -3,4 +3,4 @@
 # Original revision: 1.8
 
 WEBBASE?=	/data/ru
-WEB_PREFIX?=	${.CURDIR}/../..
+DOC_PREFIX?=	${.CURDIR}/../../..

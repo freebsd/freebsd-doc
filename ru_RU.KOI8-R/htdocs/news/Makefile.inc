@@ -4,4 +4,4 @@
 # Original revision: 1.2
 
 WEBBASE?=	/data/ru/news
-WEB_PREFIX?=	${.CURDIR}/../../..
+DOC_PREFIX?=	${.CURDIR}/../../../..

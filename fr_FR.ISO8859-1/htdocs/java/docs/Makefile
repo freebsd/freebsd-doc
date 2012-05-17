@@ -16,4 +16,4 @@ DOCS+=	newbies.sgml
 DOCS+=	tutorials.sgml
 DOCS+=	performance.sgml
 
-.include "${WEB_PREFIX}/share/mk/web.site.mk"
+.include "${DOC_PREFIX}/share/mk/web.site.mk"

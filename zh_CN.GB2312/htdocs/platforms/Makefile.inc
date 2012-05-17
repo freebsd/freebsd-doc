@@ -3,4 +3,4 @@
 # Original Revision 1.1
 
 WEBBASE?=	/data/zh_CN/platforms
-WEB_PREFIX?=	${.CURDIR}/../../..
+DOC_PREFIX?=	${.CURDIR}/../../../..

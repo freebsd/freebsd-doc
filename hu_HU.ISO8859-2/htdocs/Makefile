@@ -60,4 +60,4 @@ DEPENDSET.community=usergroups events
 
 DATESUBST=	's/<!ENTITY date[ \t]*"$$Free[B]SD. .* \(.* .*\) .* .* $$">/<!ENTITY date	"Utols\&oacute\; m\&oacute\;dos\&iacute\;t\&aacute\;s: \1">/'
 
-.include "${WEB_PREFIX}/share/mk/web.site.mk"
+.include "${DOC_PREFIX}/share/mk/web.site.mk"

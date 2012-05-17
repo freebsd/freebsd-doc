@@ -1,4 +1,5 @@
 # $FreeBSD$
+
 .if exists(Makefile.conf)
 .include "Makefile.conf"
 .endif
@@ -14,4 +15,4 @@ SUBDIR=  doc
 
 WEBDIR?=	data/da
 
-.include "${WEB_PREFIX}/share/mk/web.site.mk"
+.include "${DOC_PREFIX}/share/mk/web.site.mk"

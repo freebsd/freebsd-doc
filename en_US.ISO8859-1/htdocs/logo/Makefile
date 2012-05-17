@@ -20,4 +20,4 @@ DATA+=	wall1.jpg wall1-thumb.jpg
 DATA+=	wall2.jpg wall2-thumb.jpg
 DATA+=	wall3.jpg wall3-thumb.jpg
 
-.include "${WEB_PREFIX}/share/mk/web.site.mk"
+.include "${DOC_PREFIX}/share/mk/web.site.mk"

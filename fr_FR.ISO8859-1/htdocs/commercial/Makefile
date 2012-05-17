@@ -54,4 +54,4 @@ software.inc: gencommercial.pl commercial.desc software.raw
 software_bycat.inc: gencommercial.pl commercial.desc software.raw
 	${PERL} ${.CURDIR}/gencommercial.pl -s ${.CURDIR} -c software
 
-.include "${WEB_PREFIX}/share/mk/web.site.mk"
+.include "${DOC_PREFIX}/share/mk/web.site.mk"

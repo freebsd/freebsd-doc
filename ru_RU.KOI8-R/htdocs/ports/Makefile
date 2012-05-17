@@ -13,8 +13,8 @@
 .if exists(../Makefile.inc)
 .include "../Makefile.inc"
 .endif
-.if exists(Makefile.inc)
-.include "Makefile.inc"
+.if exists(${DOC_PREFIX}/en_US.ISO8859-1/htdocs/ports/Makefile.inc)
+.include "${DOC_PREFIX}/en_US.ISO8859-1/htdocs/ports/Makefile.inc"
 .endif
 
 FETCH_OPT?=	-am
@@ -48,10 +48,10 @@ hostname=	${NO_PACKAGES_LINK}
 
 packages.exists:
 .if ${hostname} == "hub.freebsd.org" || ${hostname} == "freefall.freebsd.org" || ${hostname} == "www.freebsd.org"
-.if  exists(${.CURDIR}/../../en/ports/packages.exists)
-	${CP} ${.CURDIR}/../../en/ports/${.TARGET} ${.CURDIR}
+.if  exists(${DOC_PREFIX}/en_US.ISO8859-1/htdocs/ports/packages.exists)
+	${CP} ${DOC_PREFIX}/en_US.ISO8859-1/htdocs/ports/${.TARGET} ${.CURDIR}
 .else
-	@if ${SH} ${.CURDIR}/../../en/ports/packages > ${.TARGET}.temp; then \
+	@if ${SH} ${DOC_PREFIX}/en_US.ISO8859-1/htdocs/ports/packages > ${.TARGET}.temp; then \
 		${MV} ${.TARGET}.temp ${.TARGET}; \
 	else \
 		${RM} ${.TARGET}.temp; ${TOUCH} ${.TARGET}; \
@@ -82,7 +82,7 @@ index.sgml: ${INDEX} categories packages.exists portindex ports.inc .NOTMAIN
 
 # this builds: categories-alpha.sgml, categories-grouped.sgml,
 # master-index.sgml, statistics.ent, <category>.sgml
-CATEGORYLIST=`grep "^[a-z]" ../../en/ports/categories | sed -e s"/,.*//"`
+CATEGORYLIST=`grep "^[a-z]" ${DOC_PREFIX}/en_US.ISO8859-1/htdocs/ports/categories | sed -e s"/,.*//"`
 
 install: all beforeinstall
 
@@ -98,4 +98,4 @@ beforeinstall:
 	${PERL} -pi -e 's/href=\"growth/href=\"http:\/\/www.FreeBSD.org\/ports\/growth/' index.html
 #.endif
 
-.include "${WEB_PREFIX}/share/mk/web.site.mk"
+.include "${DOC_PREFIX}/share/mk/web.site.mk"

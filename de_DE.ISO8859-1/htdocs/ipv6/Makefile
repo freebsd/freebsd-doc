@@ -18,4 +18,4 @@ DOCS+=		index.sgml
 #		../../en/ipv6/w6d-www-stats-v6.png		\
 #		../../en/ipv6/w6d-www-stats.png
 
-.include "${WEB_PREFIX}/share/mk/web.site.mk"
+.include "${DOC_PREFIX}/share/mk/web.site.mk"

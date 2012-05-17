@@ -14,4 +14,4 @@
 
 DOCS=	index.sgml machines.sgml refs.sgml todo.sgml
 
-.include "${WEB_PREFIX}/share/mk/web.site.mk"
+.include "${DOC_PREFIX}/share/mk/web.site.mk"

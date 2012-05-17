@@ -25,4 +25,4 @@ atoz.sgml: web.atoz
 site.sgml: site.map
 	${PERL} ${.CURDIR}/site.pl < ${.ALLSRC} > ${.TARGET}
 
-.include "${WEB_PREFIX}/share/mk/web.site.mk"
+.include "${DOC_PREFIX}/share/mk/web.site.mk"

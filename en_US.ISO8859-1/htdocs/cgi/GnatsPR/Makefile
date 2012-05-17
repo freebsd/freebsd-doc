@@ -11,4 +11,4 @@ SUBDIR=	Section
 
 DATA=	MIMEIterator.pm Section.pm
 
-.include "${WEB_PREFIX}/share/mk/web.site.mk"
+.include "${DOC_PREFIX}/share/mk/web.site.mk"

@@ -3,4 +3,4 @@
 # %SRCID%	1.8
 
 WEBBASE?=	/data/nl
-WEB_PREFIX?=	${.CURDIR}/../..
+DOC_PREFIX?=	${.CURDIR}/../../..

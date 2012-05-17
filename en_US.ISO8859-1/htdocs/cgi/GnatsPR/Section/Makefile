@@ -9,4 +9,4 @@
 
 DATA=	Email.pm FieldStart.pm MIME.pm Patch.pm StateChange.pm Text.pm
 
-.include "${WEB_PREFIX}/share/mk/web.site.mk"
+.include "${DOC_PREFIX}/share/mk/web.site.mk"

@@ -75,27 +75,13 @@ SUBDIR+= doc
 SUBDIR+= relnotes
 .endif
 
-# Non-SGML
-# SUBDIR+= gifs
-# SUBDIR+= cgi
-
-# WEB_LANG?=	da de es fr it ja pt_BR ru tr zh
-
-# Non-English
-
-# .if !defined(ENGLISH_ONLY) || empty(ENGLISH_ONLY)
-# .for DIR in ${WEB_LANG}
-# SUBDIR+=	../${DIR}
-# .endfor
-# .endif
-
 WEBDIR?=	data/fr
 
 # index.html is special, and generated from index.xsl and news/news.xml
 DATA+=		index.html
 CLEANFILES+=	index.html
 
-.include "${WEB_PREFIX}/share/mk/web.site.mk"
+.include "${DOC_PREFIX}/share/mk/web.site.mk"
 
 index.html: index.xsl ${XML_INCLUDES}\
 		${XML_NEWS_INCLUDES} \

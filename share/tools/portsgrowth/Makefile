@@ -1,13 +1,13 @@
 # $FreeBSD: www/tools/portsgrowth/Makefile,v 1.1 2002/05/20 10:46:13 phantom Exp $
 
-.if exists(../../en/Makefile.conf)
-.include "../../en/Makefile.conf"
+.if exists(../../../en_US.ISO8859-1/Makefile.conf)
+.include "../../../en_US.ISO8859-1/Makefile.conf"
 .endif
-.if exists(../../en/Makefile.inc)
-.include "../../en/Makefile.inc"
+.if exists(../../../en_US.ISO8859-1/Makefile.inc)
+.include "../../../en_US.ISO8859-1/Makefile.inc"
 .endif
 
-WEB_PREFIX?= ${.CURDIR}/../..
+DOC_PREFIX?= ${.CURDIR}/../../..
 PRGRAPHDIR?= ${DESTDIR}${WEBBASE}/ports/growth
 GNUPLOT?= /usr/local/bin/gnuplot
 PNGTOPNM?= /usr/local/bin/pngtopnm
@@ -37,4 +37,4 @@ install:	${IMG}
 	${INSTALL_WEB} ${IMG} ${PRGRAPHDIR}
 .endif
 
-.include "${WEB_PREFIX}/share/mk/web.site.mk"
+.include "${DOC_PREFIX}/share/mk/web.site.mk"

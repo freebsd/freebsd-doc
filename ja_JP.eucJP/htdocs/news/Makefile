@@ -32,7 +32,7 @@ DEPENDSET.DEFAULT=	transtable news press
 
 XMLDOCS=	newsflash:${XSL_NEWS_NEWSFLASH}:${XML_NEWS_NEWS_MASTER}:
 XMLDOCS+=	news-rdf:${XSL_NEWS_NEWS_RDF}:${XML_NEWS_NEWS_MASTER}:news.rdf
-XMLDOCS+=	news-rss:../share/sgml/templates.news-rss.xsl:../share/sgml/news.xml:rss.xml
+XMLDOCS+=	news-rss:${DOC_PREFIX}/${LANGCODE}/share/sgml/templates.news-rss.xsl:${DOC_PREFIX}/${LANGCODE}/share/sgml/news.xml:rss.xml
 XMLDOCS+=	press:${XSL_NEWS_PRESS}:${XML_NEWS_PRESS_MASTER}:
 XMLDOCS+=	press-rss:${XSL_NEWS_PRESS_RSS}:${XML_NEWS_PRESS_MASTER}:press-rss.xml
 
@@ -56,5 +56,5 @@ SUBDIR+= 	2001
 ### Revision checking
 REVCHECK=	YES
 
-.include "${WEB_PREFIX}/share/mk/web.site.mk"
+.include "${DOC_PREFIX}/share/mk/web.site.mk"
 

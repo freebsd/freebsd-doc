@@ -7,5 +7,5 @@
 # Original revision: 1.2
 #
 
-WEB_PREFIX?=	${.CURDIR}/../../..
+DOC_PREFIX?=	${.CURDIR}/../../../..
 WEBBASE?=	/data/ru/events

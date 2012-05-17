@@ -49,7 +49,7 @@ install clean:
 	${RM} -rf en* handbook faq pgpkeyring.txt
 .endif
 
-.include "${WEB_PREFIX}/share/mk/web.site.mk"
+.include "${DOC_PREFIX}/share/mk/web.site.mk"
 
 obj: _OBJUSE
 

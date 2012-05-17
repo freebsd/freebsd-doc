@@ -22,4 +22,4 @@ XML.DEFAULT=	news.xml
 XMLDOCS=	newsflash
 XMLDOCS+=	news:java-rss.xsl::rss.xml
 
-.include "${WEB_PREFIX}/share/mk/web.site.mk"
+.include "${DOC_PREFIX}/share/mk/web.site.mk"

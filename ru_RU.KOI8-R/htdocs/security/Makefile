@@ -45,4 +45,4 @@ XMLDOCS+=	advisories-rdf:security-rdf.xsl::advisories.rdf
 XMLDOCS+=	advisories-rss:security-rss.xsl::rss.xml
 XMLDOCS+=	errata-rss:errata-rss.xsl::errata.xml
 
-.include "${WEB_PREFIX}/share/mk/web.site.mk"
+.include "${DOC_PREFIX}/share/mk/web.site.mk"

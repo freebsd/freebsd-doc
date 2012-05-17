@@ -8,4 +8,4 @@
 #
 
 WEBBASE?=	/data/ru/snapshots
-WEB_PREFIX?=	${.CURDIR}/../../..
+DOC_PREFIX?=	${.CURDIR}/../../..

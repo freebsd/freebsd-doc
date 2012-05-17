@@ -12,28 +12,35 @@
 # The FreeBSD French Documentation Project
 # Original revision: 1.8
 
+.if exists(Makefile.conf)
+.include "Makefile.conf"
+.endif
+.if exists(../Makefile.inc)
+.include "../Makefile.inc"
+.endif
+
 # all: all-all all-install all-pgpkeyring
 all: all-all all-install
 
 all-all:
 	@unset DESTDIR || true; \
-	 cd ${.CURDIR}/../../../doc/fr_FR.ISO8859-1; \
+	 cd ${DOC_PREFIX}/${LANGCODE}; \
 		${MAKE} FORMATS="html-split html" \
 			INSTALL_COMPRESSED= all
 all-install:
 	@unset DESTDIR || true; \
-	 cd ${.CURDIR}/../../../doc/fr_FR.ISO8859-1; \
+	 cd ${DOC_PREFIX}/${LANGCODE}; \
 		${MAKE} FORMATS="html-split html" DOCDIR=${.OBJDIR} \
 			INSTALL_COMPRESSED= install
 all-pgpkeyring:
 	@unset DESTDIR || true; \
-	 cd ${.CURDIR}/../../../doc/fr_FR.ISO8859-1/books/handbook; \
+	 cd ${DOC_PREFIX}/${LANGCODE}; \
 		${MAKE} \
 			pgpkeyring > ${.OBJDIR}/pgpkeyring.txt
 
 install clean:
 	@unset DESTDIR || true; \
-	 cd ${.CURDIR}/../../../doc/fr_FR.ISO8859-1; \
+	 cd ${DOC_PREFIX}/${LANGCODE}; \
 		${MAKE} FORMATS="html-split html" DOCDIR=${DESTDIR}/data/doc \
 			INSTALL_COMPRESSED= ${.TARGET}
 # .if make(install)
@@ -47,7 +54,7 @@ install clean:
 	${RM} -rf fr*
 .endif
 
-.include "${.CURDIR}/../../share/mk/web.site.mk"
+.include "${DOC_PREFIX}/share/mk/web.site.mk"
 
 obj: _OBJUSE
 

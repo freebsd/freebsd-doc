@@ -18,4 +18,4 @@ DATA+=	query-pr.css
 DATA+=	table.css
 DATA+=	text.css
 
-.include "${WEB_PREFIX}/share/mk/web.site.mk"
+.include "${DOC_PREFIX}/share/mk/web.site.mk"

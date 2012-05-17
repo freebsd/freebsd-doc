@@ -4,4 +4,4 @@
 # $FreeBSD$
 
 WEBBASE?=	/data/zh_TW/layout
-WEB_PREFIX?=	${.CURDIR}/../../..
+DOC_PREFIX?=	${.CURDIR}/../../../..

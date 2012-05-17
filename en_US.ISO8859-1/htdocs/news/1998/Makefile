@@ -12,4 +12,4 @@ DOCS=	index.sgml
 XMLDOCS+=	press:${XSL_NEWS_PRESS_OLD}::
 DEPENDSET.press=transtable press
 
-.include "${WEB_PREFIX}/share/mk/web.site.mk"
+.include "${DOC_PREFIX}/share/mk/web.site.mk"
