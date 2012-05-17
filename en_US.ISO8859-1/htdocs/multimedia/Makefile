@@ -26,10 +26,10 @@ TEMPLATES=	multimedia.sgml.intro \
 		multimedia-input.xml
 
 clean:
-	-${RM} output/*
+	${RM} -rf output
 
 build:
-	(test -d output || ${MKDIR} output ) && \
+	${MKDIR} -p output && \
 	cd output && \
 	${LN} -fs ../Makefile.output Makefile && \
 	( for f in ${TEMPLATES}; do ${LN} -fs ../$$f $$f; done ) && \
