@@ -1,4 +1,4 @@
-# $FreeBSD: www/tools/portsgrowth/Makefile,v 1.1 2002/05/20 10:46:13 phantom Exp $
+# $FreeBSD$
 
 .if exists(../../../en_US.ISO8859-1/Makefile.conf)
 .include "../../../en_US.ISO8859-1/Makefile.conf"

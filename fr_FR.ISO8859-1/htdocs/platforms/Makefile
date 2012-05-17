@@ -1,4 +1,4 @@
-# $FreeBSD: www/fr/platforms/Makefile,v 1.4 2006/02/13 17:39:35 blackend Exp $
+# $FreeBSD$
 
 # The FreeBSD French Documentation Project
 # Original revision: 1.12

@@ -1,4 +1,4 @@
-# $FreeBSD: www/fr/events/Makefile,v 1.2 2006/02/03 11:54:53 blackend Exp $
+# $FreeBSD$
 
 # The FreeBSD French Documentation Project
 # Original revision: 1.11

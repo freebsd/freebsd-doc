@@ -1,4 +1,4 @@
-# $FreeBSD: www/ja/security/Makefile,v 1.18 2006/08/19 21:24:49 hrs Exp $
+# $FreeBSD$
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.18
 

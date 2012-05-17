@@ -1,7 +1,7 @@
 # The FreeBSD Simplified Chinese Project
 # Original Revision: 1.5
 #
-# $FreeBSD: www/zh_CN/releases/5.4R/Makefile,v 1.1.1000.1 2006/03/07 16:37:59 delphij Exp $
+# $FreeBSD$
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"

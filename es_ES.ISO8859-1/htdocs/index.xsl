@@ -10,7 +10,7 @@
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
 
-  <xsl:variable name="date" select="'$FreeBSD: www/es/index.xsl,v 1.23 2008/02/17 19:52:28 gabor Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD$'"/>
 
   <!-- these params should be externally bound. The values
        here are not used actually -->

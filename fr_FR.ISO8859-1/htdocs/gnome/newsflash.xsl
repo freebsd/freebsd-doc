@@ -7,7 +7,7 @@
 <!ENTITY % navinclude.developers "INCLUDE">
 ]>
 
-<!-- $FreeBSD: www/fr/gnome/newsflash.xsl,v 1.5 2006/02/03 11:54:54 blackend Exp $ -->
+<!-- $FreeBSD$ -->
 
 <!-- 
      The FreeBSD French Documentation Project

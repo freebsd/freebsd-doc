@@ -1,4 +1,4 @@
-# $FreeBSD: www/ja/releases/4.9R/Makefile,v 1.2 2003/10/29 10:36:27 hrs Exp $
+# $FreeBSD$
 # Original revision: 1.7
 
 .if exists(../Makefile.conf)

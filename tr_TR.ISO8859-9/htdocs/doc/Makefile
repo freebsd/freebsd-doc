@@ -1,7 +1,7 @@
 #
 # The FreeBSD Documentation Project
 # The FreeBSD Turkish Documentation Project#
-# $FreeBSD: www/tr/doc/Makefile,v 1.1 2003/12/01 21:26:21 blackend Exp $
+# $FreeBSD$
 # Based on: 1.8
 #
 # Build the FreeBSD documentation *outside* of the www tree, and install it

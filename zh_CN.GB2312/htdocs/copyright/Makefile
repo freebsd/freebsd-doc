@@ -1,4 +1,4 @@
-# $FreeBSD: www/zh_CN/copyright/Makefile,v 1.1.1002.1 2005/12/18 06:45:09 delphij Exp $
+# $FreeBSD$
 # Original Revision: 1.15
 
 .if exists(../Makefile.conf)

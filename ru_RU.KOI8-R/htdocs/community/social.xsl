@@ -9,7 +9,7 @@
 <!--
      The FreeBSD Russian Documentation Project
 
-     $FreeBSD: www/ru/community/social.xsl,v 1.3 2009/12/26 16:47:46 maxim Exp $
+     $FreeBSD$
 
      Original revision: 1.6
 -->

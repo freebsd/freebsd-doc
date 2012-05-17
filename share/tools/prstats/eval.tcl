@@ -1,6 +1,6 @@
 #!/usr/local/bin/tclsh8.3
 #
-# $FreeBSD: www/tools/prstats/eval.tcl,v 1.1 2001/10/29 01:58:12 murray Exp $
+# $FreeBSD$
 #
 
 set fi [open "|sort -n _"]

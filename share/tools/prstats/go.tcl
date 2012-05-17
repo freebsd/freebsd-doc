@@ -1,6 +1,6 @@
 #!/usr/local/bin/tclsh8.3
 #
-# $FreeBSD: www/tools/prstats/go.tcl,v 1.2 2001/11/18 16:11:34 murray Exp $
+# $FreeBSD$
 #
 # This script expects the directory of a GNATS database as its sole argument.
 

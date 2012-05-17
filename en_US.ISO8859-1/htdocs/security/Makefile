@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/security/Makefile,v 1.17 2008/06/20 20:03:28 danger Exp $
+# $FreeBSD$
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"

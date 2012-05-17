@@ -1,7 +1,7 @@
 #
 # The FreeBSD Russian Documentation Project
 #
-# $FreeBSD: www/ru/news/2003/Makefile,v 1.1 2005/04/27 18:28:35 andy Exp $
+# $FreeBSD$
 # $FreeBSDru: frdp/www/ru/news/2003/Makefile,v 1.1 2005/04/27 17:55:52 andy Exp $
 #
 # Original revision: 1.1

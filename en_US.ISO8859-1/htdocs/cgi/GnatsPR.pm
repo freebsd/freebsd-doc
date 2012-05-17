@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/GnatsPR.pm,v 1.4 2011/07/29 22:59:32 shaun Exp $
+# $FreeBSD$
 #------------------------------------------------------------------------------
 
 package GnatsPR;

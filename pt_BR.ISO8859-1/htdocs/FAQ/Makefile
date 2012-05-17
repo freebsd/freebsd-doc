@@ -3,7 +3,7 @@
 #
 # Original version: 1.8
 #
-# $FreeBSD: www/pt_BR/FAQ/Makefile,v 1.1 2002/10/05 16:03:59 lioux Exp $
+# $FreeBSD$
 #
 # Build the FreeBSD FAQ *outside* of the www tree, and install it
 # in to the right place as necessary.

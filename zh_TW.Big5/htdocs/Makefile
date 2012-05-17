@@ -1,4 +1,4 @@
-# $FreeBSD: www/zh_TW/Makefile,v 1.4 2007/06/05 13:00:09 chinsan Exp $
+# $FreeBSD$
 # Original revision: 
 
 .if exists(../Makefile.conf)

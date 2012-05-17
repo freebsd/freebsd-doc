@@ -6,7 +6,7 @@
 # it with our current list. This lets us keep info about revisions that
 # have been axed from the repository during ports/INDEX cleanup.
 #
-# $FreeBSD: www/tools/portsgrowth/getinfo.sh,v 1.2 2002/05/20 11:33:17 phantom Exp $
+# $FreeBSD$
 
 CVSCMD='cvs -QR'
 INDEX=ports/INDEX

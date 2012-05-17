@@ -1,4 +1,4 @@
-/* $FreeBSD: www/en/layout/js/google.js,v 1.7 2011/08/20 23:47:06 gjb Exp $ */
+/* $FreeBSD$ */
 
 //var h=document.location.host;
 var h=null;

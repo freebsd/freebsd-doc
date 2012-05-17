@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/ports/Makefile.inc,v 1.9 2005/12/15 01:02:28 linimon Exp $
+# $FreeBSD$
 
 PORTINDEX=	${PERL} ${.CURDIR}/portindex
 INDEX=		INDEX

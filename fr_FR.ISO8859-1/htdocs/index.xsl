@@ -4,7 +4,7 @@
 <!ENTITY title "Le Projet FreeBSD">
 ]>
 
-<!-- $FreeBSD: www/fr/index.xsl,v 1.38 2009/02/26 09:05:29 blackend Exp $ -->
+<!-- $FreeBSD$ -->
 <!--
    The FreeBSD French Documentation Project
    Original revision: 1.170

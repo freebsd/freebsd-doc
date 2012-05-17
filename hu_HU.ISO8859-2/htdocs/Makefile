@@ -1,4 +1,4 @@
-# $FreeBSD: www/hu/Makefile,v 1.7 2008/05/02 08:56:08 pgj Exp $
+# $FreeBSD$
 
 ###################################################
 # The FreeBSD Hungarian Documentation Project     #

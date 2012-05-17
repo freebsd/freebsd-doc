@@ -26,7 +26,7 @@
 #
 # Search a mail by Message-ID, References or In-Reply-To field
 #
-# $FreeBSD: www/en/cgi/mid.cgi,v 1.18 2009/12/31 16:37:18 wosch Exp $
+# $FreeBSD$
 
 require "./cgi-lib.pl";
 require "./cgi-style.pl";

@@ -5,13 +5,13 @@
 <!ENTITY title "">
 ]>
 
-<!-- $FreeBSD: www/zh_CN/security/mkindex.xsl,v 1.1 2006/07/11 15:27:53 delphij Exp $ -->
+<!-- $FreeBSD$ -->
 <!-- Original Revision: 1.4 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
 
-  <xsl:variable name="date" select="'$FreeBSD: www/zh_CN/security/mkindex.xsl,v 1.1 2006/07/11 15:27:53 delphij Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD$'"/>
 
   <xsl:output type="xml" encoding="&xml.encoding;"
               omit-xml-declaration="yes" />

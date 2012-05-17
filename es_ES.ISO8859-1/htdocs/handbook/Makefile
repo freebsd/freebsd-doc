@@ -1,5 +1,5 @@
 #
-# $FreeBSD: www/es/handbook/Makefile,v 1.1 2002/11/25 12:27:14 jesusr Exp $
+# $FreeBSD$
 #
 
 .if exists(../Makefile.conf)

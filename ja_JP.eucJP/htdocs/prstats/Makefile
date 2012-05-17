@@ -1,4 +1,4 @@
-# $FreeBSD: www/ja/prstats/Makefile,v 1.2 2002/05/15 17:11:24 hrs Exp $
+# $FreeBSD$
 # Original revision: 1.5
 
 .if exists(../Makefile.conf)

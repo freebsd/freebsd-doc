@@ -7,7 +7,7 @@
 <!ENTITY realname "Webmaster Team">
 ]>
 
-<!-- $FreeBSD: www/share/sgml/templates.press-rss.xsl,v 1.1 2008/01/16 08:21:47 murray Exp $ -->
+<!-- $FreeBSD$ -->
 
 <!-- Copyright (c) 2008 Murray Stokely <murray@FreeBSD.org>
 

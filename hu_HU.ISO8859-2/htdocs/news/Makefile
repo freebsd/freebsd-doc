@@ -2,7 +2,7 @@
 # %SOURCE%  en/news/Makefile
 # %SRCID%   1.53
 #
-# $FreeBSD: www/hu/news/Makefile,v 1.2 2009/04/06 17:56:08 pgj Exp $
+# $FreeBSD$
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"

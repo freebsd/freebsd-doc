@@ -12,7 +12,7 @@
 <!--
      The FreeBSD Russian Documentation Project
 
-     $FreeBSD: www/ru/share/sgml/templates.events.xsl,v 1.1 2009/12/22 04:46:25 bland Exp $
+     $FreeBSD$
 
      Original revision: 1.13
 -->

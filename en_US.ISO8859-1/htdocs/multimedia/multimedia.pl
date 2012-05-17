@@ -2,7 +2,7 @@
 
 #
 # $Id: multimedia.pl,v 1.6 2008-12-07 06:12:06 edwin Exp $
-# $FreeBSD: www/en/multimedia/multimedia.pl,v 1.5 2008/12/06 06:25:37 hrs Exp $
+# $FreeBSD$
 #
 
 use strict;

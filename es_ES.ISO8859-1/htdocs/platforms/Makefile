@@ -1,6 +1,6 @@
 # The FreeBSD Spanish Documentation Project
 #
-# $FreeBSD: www/es/platforms/Makefile,v 1.2 2008/02/10 17:44:34 carvay Exp $
+# $FreeBSD$
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"

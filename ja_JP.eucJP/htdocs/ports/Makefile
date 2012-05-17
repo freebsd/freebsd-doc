@@ -1,4 +1,4 @@
-# $FreeBSD: www/ja/ports/Makefile,v 1.32 2011/05/28 07:36:43 ryusuke Exp $
+# $FreeBSD$
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.50
 

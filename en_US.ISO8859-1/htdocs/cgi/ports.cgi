@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/ports.cgi,v 1.101 2011/01/08 14:58:27 wosch Exp $
+# $FreeBSD$
 #
 # ports.cgi - search engine for FreeBSD ports
 #             	o search for a port by name or description
@@ -518,7 +518,7 @@ sub footer {
 &copy; 1996-2012 by Wolfram Schneider. All rights reserved.<br />
 };
 
-#print q{$FreeBSD: www/en/cgi/ports.cgi,v 1.101 2011/01/08 14:58:27 wosch Exp $} . "<br />\n";
+#print q{$FreeBSD$} . "<br />\n";
     print qq{Please direct questions about this service to
 <i><a href="$mailtoURL">$mailto</a></i><br />\n};
     print qq{General questions about FreeBSD ports should be sent to }

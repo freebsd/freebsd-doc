@@ -1,6 +1,6 @@
 # The FreeBSD Documentation Project
 # The FreeBSD Turkish Documentation Project
-# $FreeBSD: www/tr/Makefile,v 1.2 2004/01/13 22:59:06 hrs Exp $
+# $FreeBSD$
 # Original revision: 1.98
 .if exists(Makefile.conf)
 .include "Makefile.conf"

@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/cgi/GnatsPR/Section/Patch.pm,v 1.1 2011/07/20 22:23:23 shaun Exp $
+# $FreeBSD$
 #------------------------------------------------------------------------------
 
 package GnatsPR::Section::Patch;

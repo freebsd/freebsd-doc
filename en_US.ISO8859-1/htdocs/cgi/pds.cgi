@@ -26,7 +26,7 @@
 # pds.cgi - FreeBSD Ports download sources cgi script
 #	    print a list of source files for a port
 #
-# $FreeBSD: www/en/cgi/pds.cgi,v 1.13 2009/12/31 16:37:18 wosch Exp $
+# $FreeBSD$
 
 sub escape($) { $_ = $_[0]; s/&/&amp;/g; s/</&lt;/g; s/>/&gt;/g; $_; }
 

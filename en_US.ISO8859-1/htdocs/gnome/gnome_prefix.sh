@@ -27,7 +27,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: www/en/gnome/gnome_prefix.sh,v 1.1 2006/09/09 17:24:00 mezz Exp $
+# $FreeBSD$
 #
 ### BEGIN changeable variables
 LOCALBASE=/usr/local

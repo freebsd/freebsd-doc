@@ -27,7 +27,7 @@
 # Heh. "Tort."
 #
 # $MCom: portstools/gnomelogalyzer.sh.in,v 1.12 2005/06/28 05:47:54 adamw Exp $
-#   $FreeBSD: www/en/gnome/gnomelogalyzer.sh,v 1.8 2006/05/29 18:12:05 mezz Exp $
+#   $FreeBSD$
 #
 
 # This script uses some simple yet effective heuristics to analyse

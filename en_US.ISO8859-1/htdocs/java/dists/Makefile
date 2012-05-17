@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/java/dists/Makefile,v 1.7 2008/02/22 04:41:19 glewis Exp $
+# $FreeBSD$
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"

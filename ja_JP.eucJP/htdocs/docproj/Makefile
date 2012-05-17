@@ -1,4 +1,4 @@
-# $FreeBSD: www/ja/docproj/Makefile,v 1.15 2004/01/10 18:37:57 rushani Exp $
+# $FreeBSD$
 # The FreeBSD Japanese Documentation Project
 # Original revision: 1.11
 

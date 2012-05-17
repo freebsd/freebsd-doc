@@ -1,6 +1,6 @@
 #!/usr/bin/perl -T
 #
-# $FreeBSD: www/en/cgi/confirm-code.cgi,v 1.8 2005/12/04 22:25:20 simon Exp $
+# $FreeBSD$
 #
 # Copyright (c) 2003 Eric Anderson
 # Copyright (c) 2005 Ceri Davies <ceri@FreeBSD.org>

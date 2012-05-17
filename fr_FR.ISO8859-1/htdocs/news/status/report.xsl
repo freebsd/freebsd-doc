@@ -7,7 +7,7 @@
 <!ENTITY % navinclude.about "INCLUDE">
 ]>
 
-<!-- $FreeBSD: www/fr/news/status/report.xsl,v 1.2 2005/10/06 12:56:05 blackend Exp $ -->
+<!-- $FreeBSD$ -->
 
 <!-- 
    The FreeBSD French Documentation Project

@@ -5,7 +5,7 @@
 <!ENTITY title "">
 ]>
 
-<!-- $FreeBSD: www/ja/security/mkindex.xsl,v 1.3 2006/08/19 21:24:49 hrs Exp $ -->
+<!-- $FreeBSD$ -->
 <!-- Original revision: 1.7 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">

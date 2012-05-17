@@ -1,4 +1,4 @@
-# $FreeBSD: www/en/cgi/cgi-style.pl,v 1.45 2011/08/17 14:18:39 gjb Exp $
+# $FreeBSD$
 #
 # Perl routines to encapsulate various elements of HTML page style.
 

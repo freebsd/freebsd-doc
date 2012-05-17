@@ -4,7 +4,7 @@
 <!ENTITY base "..">
 <!ENTITY title "Syst&#232;me de nouvelles du Projet GNOME pour FreeBSD">
 ]>
-<!-- $FreeBSD: www/fr/gnome/rss.xsl,v 1.2 2005/12/17 10:58:29 blackend Exp $ -->
+<!-- $FreeBSD$ -->
 
 <!-- 
   The FreeBSD French Documentation Project
@@ -19,7 +19,7 @@
 
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
 
-  <xsl:variable name="date" select="'$FreeBSD: www/fr/gnome/rss.xsl,v 1.2 2005/12/17 10:58:29 blackend Exp $'"/>
+  <xsl:variable name="date" select="'$FreeBSD$'"/>
 
   <xsl:output type="xml" />
 

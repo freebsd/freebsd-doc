@@ -1,7 +1,7 @@
 # The FreeBSD Russian Documentation Project
 #
 # $FreeBSDru: frdp/www/ru/community/Makefile,v 1.1 2005/10/31 13:38:09 gad Exp $
-# $FreeBSD: www/ru/community/Makefile,v 1.1 2005/11/08 18:22:23 bvs Exp $
+# $FreeBSD$
 #
 # Original revision: 1.2
 
