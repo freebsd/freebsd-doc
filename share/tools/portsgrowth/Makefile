@@ -1,12 +1,5 @@
 # $FreeBSD$
 
-.if exists(../../../en_US.ISO8859-1/Makefile.conf)
-.include "../../../en_US.ISO8859-1/Makefile.conf"
-.endif
-.if exists(../../../en_US.ISO8859-1/Makefile.inc)
-.include "../../../en_US.ISO8859-1/Makefile.inc"
-.endif
-
 DOC_PREFIX?= ${.CURDIR}/../../..
 PRGRAPHDIR?= ${DESTDIR}${WEBBASE}/ports/growth
 GNUPLOT?= /usr/local/bin/gnuplot
