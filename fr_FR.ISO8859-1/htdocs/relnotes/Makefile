@@ -10,24 +10,8 @@
 # $FreeBSD$
 # Original Revision: 1.5 
 #
+.if exists(../Makefile.inc)
+.include "../Makefile.inc"
+.endif
 
-RELNOTES?=	CURRENT ${.CURDIR}/../../../relnotes/doc/fr_FR.ISO8859-1 \
-		4-STABLE ${.CURDIR}/../../../relnotes4/doc/fr_FR.ISO8859-1
-
-all install clean obj:
-	@set ${RELNOTES}; \
-	while :; do \
-		case $$# in \
-			0) break;; \
-			1) ${ECHO_CMD} "bad \$$RELNOTES value"; false; break;; \
-		esac; \
-		webname=$$1; shift; realpath=$$1; shift; \
-		(unset DESTDIR || true; \
-			cd $$realpath && ${MAKE} \
-				FORMATS=html\ html-split \
-				DOCDIR=${DESTDIR}/data/fr/${.CURDIR:T}/$$webname \
-				DOC_PREFIX=${.CURDIR}/../../../doc \
-				DIRPRFX=${.CURDIR:T}/$$webname/ \
-				NO_LANGCODE_IN_DESTDIR=true \
-				${.TARGET}); \
-	done;
+.include "${DOC_PREFIX}/en_US.ISO8859-1/htdocs/relnotes/Makefile.inc"
