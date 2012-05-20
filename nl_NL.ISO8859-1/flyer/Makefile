@@ -1,8 +1,7 @@
 # $FreeBSD$
-# $FreeBSDnl: nl_NL.ISO8859-1/flyer/Makefile,v 1.2 2005/04/30 11:45:54 remko Exp $
 #
 # %SOURCE%	en_US.ISO8859-1/flyer/Makefile
-# %SRCID%	1.2
+# %SRCID%	38826
 
 pdf: dvi ps
 	ps2pdf13 -sPAPERSIZE=a4 flyer.ps
