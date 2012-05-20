@@ -4,7 +4,7 @@
 # $FreeBSD$
 #
 # %SOURCE%	en_US.ISO8859-1/books/handbook/multimedia/Makefile
-# %SRCID%	1.2
+# %SRCID%	38826
 #
 
 CHAPTERS= 	multimedia/chapter.sgml

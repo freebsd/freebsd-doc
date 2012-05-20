@@ -1,6 +1,6 @@
 # $FreeBSD$
-# %SOURCE%	en/Makefile
-# %SRCID%	1.148
+# %SOURCE%	en_US.ISO8859-1/htdocs/Makefile
+# %SRCID%	38828
 
 .if exists(Makefile.conf)
 .include "Makefile.conf"
