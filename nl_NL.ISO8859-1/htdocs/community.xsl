@@ -7,8 +7,8 @@
 ]>
 <!-- $FreeBSD$
      Vertaald door: Rene Ladan
-     %SOURCE%	en/community.xsl
-     %SRCID%	1.9
+     %SOURCE%	en_US.ISO8859-1/htdocs/community.xsl
+     %SRCID%	38826
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"

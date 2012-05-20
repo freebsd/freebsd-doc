@@ -4,7 +4,7 @@
 # $FreeBSD$
 #
 # %SOURCE%	en_US.ISO8859-1/books/handbook/users/Makefile
-# %SRCID%	1.1
+# %SRCID%	38826
 #
 
 CHAPTERS= 	users/chapter.sgml
