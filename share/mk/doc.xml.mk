@@ -140,7 +140,7 @@ _PARAMS.news=		--param news.project.xml-master "'${XML_NEWS_NEWS_MASTER}'" \
 			--param news.project.xml "'${XML_NEWS_NEWS}'"
 XML_NEWS_NEWS_MASTER=	${DOC_PREFIX}/share/sgml/news.xml
 .if exists(${DOC_PREFIX}/${LANGCODE}/share/sgml/news.xml)
-XML_NEWS_NEWS=		${DOC_PREFIX}/${WWW_LANGCODE}/share/sgml/news.xml
+XML_NEWS_NEWS=		${DOC_PREFIX}/${LANGCODE}/share/sgml/news.xml
 .else
 XML_NEWS_NEWS=		${DOC_PREFIX}/share/sgml/news.xml
 .endif
