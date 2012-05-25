@@ -4,7 +4,7 @@
 # $FreeBSD$
 # $FreeBSDru: frdp/doc/ru_RU.KOI8-R/articles/5-roadmap/Makefile,v 1.2 2005/06/14 06:18:55 gad Exp $
 #
-# Original revision: 1.4
+# Original revision: r20561
 #
 # Article: FreeBSD 5-STABLE roadmap
 

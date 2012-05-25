@@ -1,7 +1,7 @@
 # 
 # $FreeBSD$
 #
-# Original revision: 1.1
+# Original revision: r34669
 #
 
 

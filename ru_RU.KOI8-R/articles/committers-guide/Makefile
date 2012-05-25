@@ -4,7 +4,7 @@
 # $FreeBSD$
 # $FreeBSDru: frdp/doc/ru_RU.KOI8-R/articles/committers-guide/Makefile,v 1.2 2004/09/21 08:24:32 marck Exp $
 #
-# Original revision: 1.10
+# Original revision: r21980
 #
 # Article: The FreeBSD Committers Guide
 

@@ -4,7 +4,7 @@
 # $FreeBSD$
 # $FreeBSDru: frdp/doc/ru_RU.KOI8-R/articles/checkpoint/Makefile,v 1.1 2004/01/10 08:43:19 andy Exp $
 #
-# Original revision: 1.8
+# Original revision: r27200
 #
 
 DOC?= article

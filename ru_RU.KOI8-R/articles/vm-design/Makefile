@@ -4,7 +4,7 @@
 # $FreeBSD$
 # $FreeBSDru: frdp/doc/ru_RU.KOI8-R/articles/vm-design/Makefile,v 1.6 2005/06/12 04:12:31 gad Exp $
 #
-# Original revision: 1.6
+# Original revision: r20561
 #
 # Article: Design elements of the FreeBSD VM system
 

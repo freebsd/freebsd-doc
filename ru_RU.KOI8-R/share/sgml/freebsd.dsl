@@ -4,7 +4,7 @@
      $FreeBSD$
      $FreeBSDru: frdp/doc/ru_RU.KOI8-R/share/sgml/freebsd.dsl,v 1.18 2006/08/08 07:49:39 marck Exp $
 
-     Original revision: 1.22
+     Original revision: r26925
 -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [

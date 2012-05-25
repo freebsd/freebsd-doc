@@ -4,7 +4,7 @@
 # $FreeBSD$
 # $FreeBSDru: frdp/doc/ru_RU.KOI8-R/flyer/Makefile,v 1.1 2005/05/13 09:33:41 den Exp $
 #
-# Original revision: 1.1
+# Original revision: r19823
 #
 
 pdf: dvi ps

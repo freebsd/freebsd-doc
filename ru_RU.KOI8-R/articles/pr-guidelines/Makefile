@@ -5,7 +5,7 @@
 #
 # Article: Problem Report Handling Guidelines
 #
-#  Original revision: 1.6
+#  Original revision: r21827
 
 DOC?= article
 

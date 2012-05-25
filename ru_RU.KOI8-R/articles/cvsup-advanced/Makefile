@@ -4,7 +4,7 @@
 # $FreeBSD$
 # $FreeBSDru: frdp/doc/ru_RU.KOI8-R/articles/cvsup-advanced/Makefile,v 1.3 2005/06/12 05:19:07 gad Exp $
 #
-# Original revision: 1.5
+# Original revision: r20561
 #
 # Article: CVSup Advanced Points
 

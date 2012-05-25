@@ -4,7 +4,7 @@
 # $FreeBSD$
 # $FreeBSDru: frdp/doc/ru_RU.KOI8-R/books/handbook/audit/Makefile,v 1.2 2006/03/07 16:27:33 marck Exp $
 #
-# Original revision: 1.1
+# Original revision: r25313
 
 CHAPTERS= 	audit/chapter.sgml
 
