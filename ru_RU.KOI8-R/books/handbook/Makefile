@@ -4,7 +4,7 @@
 # $FreeBSD$
 # $FreeBSDru: frdp/doc/ru_RU.KOI8-R/books/handbook/Makefile,v 1.46 2006/05/19 12:09:01 marck Exp $
 #
-# Original revision: 1.100
+# Original revision: r27853
 #
 # Build the FreeBSD Handbook.
 #

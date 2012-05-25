@@ -4,7 +4,7 @@
      $FreeBSD$
      $FreeBSDru: frdp/doc/ru_RU.KOI8-R/books/porters-handbook/freebsd.dsl,v 1.6 2006/09/08 13:59:56 den Exp $
 
-     Original revision: 1.5
+     Original revision: r10492
 -->
 
 <!-- Local DSSSL file for the Porter's Handbook.  This is so we can include
