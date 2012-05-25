@@ -4,7 +4,7 @@
 # $FreeBSD$
 # $FreeBSDru: frdp/doc/ru_RU.KOI8-R/articles/euro/Makefile,v 1.3 2005/06/12 06:08:28 gad Exp $
 #
-# Original revision: 1.5
+# Original revision: r21827
 #
 # Article: The Euro Symbol on FreeBSD
 

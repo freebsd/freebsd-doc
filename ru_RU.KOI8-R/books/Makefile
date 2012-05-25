@@ -2,7 +2,7 @@
 # $FreeBSD$
 # $FreeBSDru: frdp/doc/ru_RU.KOI8-R/books/Makefile,v 1.6 2001/07/25 10:33:31 phantom Exp $
 #
-# Original revision: 1.10
+# Original revision: r9233
 
 #SUBDIR = design-44bsd
 SUBDIR = faq
