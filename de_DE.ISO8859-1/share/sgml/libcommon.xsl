@@ -68,7 +68,7 @@
 
   <xsl:template name="html-press-make-olditems-list">
     <p>&#196;ltere Presseberichte:
-      <a href="2008/press.html">2009</a>,
+      <a href="2009/press.html">2009</a>,
       <a href="2008/press.html">2008</a>,
       <a href="2007/press.html">2007</a>,
       <a href="2006/press.html">2006</a>,
