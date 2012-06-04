@@ -83,7 +83,7 @@ sub xml_start {
 	$items[$ci]{fc}++;
     }
 
-    if ($treeindex == 3 &&
+    if (($treeindex == 3 || $treeindex == 5) &&
 	$element eq "tags") {
 	$tag = "";
     }
@@ -96,6 +96,11 @@ sub xml_end {
     if ($treeindex == 3 &&
 	$element eq "tags") {
 	@{$items[$ci]{tags}} = split(/,/, $tag);
+	addtags($tag);
+    }
+    if ($treeindex == 5 &&
+	$element eq "tags") {
+	@{$items[$ci]{files}{$items[$ci]{fc}}{tags}} = split(/,/, $tag);
 	addtags($tag);
     }
 
@@ -179,9 +184,7 @@ sub xml_char {
 			    return;
 			}
 			if ($tree[5] eq "tags") {
-			    @{$items[$ci]{files}{$items[$ci]{fc}}{tags}} = split(/,/, $value);
-			    addtags($value);
-			    addtags("", $items[$ci]{tags});
+			    $tag .= $value;
 			    return;
 			}
 			goto error;
@@ -432,7 +435,7 @@ sub print_htmlitem {
     }
     my $size = 20;
     my $c = 0;
-    foreach my $tag (sort size(keys(%tags))) {
+    foreach my $tag (sort size keys(%tags)) {
 	my $ftag = $tag;
 	$ftag =~ s/ /_/g;
 	print $fhtml "<font style=\"font-size:${size}pt\"><a href=\"tag-$ftag.html\">$tag</a></font>\n";
