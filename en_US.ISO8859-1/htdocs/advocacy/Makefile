@@ -11,5 +11,5 @@
 
 DOCS=   index.sgml
 DOCS+=	myths.sgml
-
+DOCS+=	whyusefreebsd.sgml
 .include "${DOC_PREFIX}/share/mk/web.site.mk"
