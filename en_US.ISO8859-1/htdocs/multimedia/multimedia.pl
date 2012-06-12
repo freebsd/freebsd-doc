@@ -132,7 +132,7 @@ sub xml_char {
 		    return;
 		}
 		if ($tree[3] eq "overview") {
-		    $items[$ci]{overview} = "" if (!defined $items[$ci]{desc});
+		    $items[$ci]{overview} = "" if (!defined $items[$ci]{overview});
 		    $items[$ci]{overview} .= $value;
 		    return;
 		}
