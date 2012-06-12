@@ -8,6 +8,7 @@
 
 SUBDIR = committers-guide
 SUBDIR+= contributing
+SUBDIR+= contributing-ports
 SUBDIR+= contributors
 SUBDIR+= cvsup-advanced
 SUBDIR+= dialup-firewall
