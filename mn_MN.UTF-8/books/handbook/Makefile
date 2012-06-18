@@ -2,7 +2,7 @@
 #
 # The FreeBSD Mongolian Documentation Project
 #
-# Original revision 1.119
+# Original revision 39022
 #
 # Build the FreeBSD Handbook.
 #
@@ -52,6 +52,7 @@ IMAGES_EN = advanced-networking/isdn-bus.eps
 IMAGES_EN+= advanced-networking/isdn-twisted-pair.eps
 IMAGES_EN+= advanced-networking/natd.eps
 IMAGES_EN+= advanced-networking/net-routing.pic
+IMAGES_EN+= advanced-networking/pxe-nfs.png
 IMAGES_EN+= advanced-networking/static-routes.pic
 IMAGES_EN+= bsdinstall/bsdinstall-adduser1.png
 IMAGES_EN+= bsdinstall/bsdinstall-adduser2.png
