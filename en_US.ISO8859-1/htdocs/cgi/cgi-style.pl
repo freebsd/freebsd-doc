@@ -151,8 +151,8 @@ $i_topbar = qq`
 	      <li><a href="$hsty_base/projects/index.html">Developers</a>
 		<ul>
 		  <li><a href="$hsty_base/projects/ideas/ideas.html">Project Ideas</a></li>
-		  <li><a href="http://svn.FreeBSD.org/viewvc/base/">Source SVN Repository</a></li>
-		  <li><a href="http://svn.FreeBSD.org/viewvc/doc/">Documentation SVN Repository</a></li>
+		  <li><a href="http://svnweb.FreeBSD.org/base/">Source SVN Repository</a></li>
+		  <li><a href="http://svnweb.FreeBSD.org/doc/">Documentation SVN Repository</a></li>
 		  <li><a href="http://cvsweb.FreeBSD.org">CVS Repository</a></li>
 		  <li><a href="http://p4web.FreeBSD.org">Perforce Repository</a></li>
 		</ul>
