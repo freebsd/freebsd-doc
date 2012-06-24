@@ -350,10 +350,12 @@ CLEANFILES+=	mirrors.sgml.ftp.inc mirrors.sgml.ftp.inc.tmp \
 
 .for p in ftp cvsup
 mirrors.sgml.${p}.inc: mirrors.sgml.${p}.inc.tmp
-	${SED} -e 's,<\([^ >]*\)\([^>]*\)/>,<\1\2></\1>,;s,</anchor>,,'\
-	    < $@.tmp > $@ || (${RM} -f $@ && false)
+	${CP} ${.ALLSRC} ${.TARGET}
+#	${SED} -e 's,<\([^ >]*\)\([^>]*\)/>,<\1\2></\1>,;s,</anchor>,,'\
+#	    < $@.tmp > $@ || (${RM} -f $@ && false)
 .endfor
 
 eresources.sgml.www.inc: eresources.sgml.www.inc.tmp
-	${SED} -e 's,<\([^ >]*\)\([^>]*\)/>,<\1\2></\1>,;s,</anchor>,,'\
-	    < $@.tmp > $@ || (${RM} -f $@ && false)
+	${CP} ${.ALLSRC} ${.TARGET}
+#	${SED} -e 's,<\([^ >]*\)\([^>]*\)/>,<\1\2></\1>,;s,</anchor>,,'\
+#	    < $@.tmp > $@ || (${RM} -f $@ && false)
