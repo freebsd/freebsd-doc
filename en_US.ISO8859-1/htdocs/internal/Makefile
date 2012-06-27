@@ -15,6 +15,7 @@ DOCS+= 	developer.sgml
 DOCS+=	doceng.sgml
 DOCS+=	expire-bits.sgml
 DOCS+=	fortunes.sgml
+DOCS+=	hats.sgml
 DOCS+=	i18n.sgml
 DOCS+=	internal.sgml	
 DOCS+= 	machines.sgml
