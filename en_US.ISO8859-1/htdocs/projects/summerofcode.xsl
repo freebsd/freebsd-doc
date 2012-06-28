@@ -40,8 +40,8 @@
 
 <p>The FreeBSD Project is looking forward to participating as a mentoring
   organization in <a
-  href="http://www.google-melange.com/gsoc/homepage/google/gsoc2011">Google
-  Summer of Code</a> 2011.
+  href="http://www.google-melange.com/gsoc/homepage/google/gsoc2012">Google
+  Summer of Code</a> 2012.
   This program funds students to contribute to an open source project over
   the summer break.
   We have had over 100 successful
@@ -51,10 +51,11 @@
   href="&base;/projects/summerofcode-2007.html">2007</a>, <a
   href="&base;/projects/summerofcode-2008.html">2008</a>,
   <a href="http://wiki.freebsd.org/SummerOfCode2009Projects">2009</a>,
+  <a href="http://wiki.freebsd.org/SummerOfCode2010Projects">2010</a>
   and
-  <a href="http://wiki.freebsd.org/SummerOfCode2010Projects">2010</a>.</p>
+  <a href="http://wiki.freebsd.org/SummerOfCode2011Projects">2011</a>.</p>
 
-  <p>This page will be updated throughout the GSoC 2011 application period
+  <p>This page will be updated throughout the application period
     to include new information, such as project ideas, proposal information,
     and potential mentor contact information.  If you don't see an idea that
     interests you, visit again in a couple of days!</p>
@@ -99,6 +100,8 @@
 <p>For a complete list of student projects from previous years,
 visit:</p>
 <ul>
+  <li><a href="http://wiki.freebsd.org/SummerOfCode2011Projects">Summer of
+    Code 2011 FreeBSD Projects Wiki</a></li>
   <li><a href="http://wiki.freebsd.org/SummerOfCode2010Projects">Summer of
     Code 2010 FreeBSD Projects Wiki</a></li>
   <li><a href="http://wiki.freebsd.org/SummerOfCode2009Projects">Summer of
@@ -272,31 +275,31 @@ href="http://wiki.freebsd.org/moin.cgi/SummerOfCode2005">2005</a>].</p>
       interest relating to the application process:</p>
 
     <ul>
-      <li><p><strong>18 March</strong> - Google to announce what open source
-	organizations will participate in Google Summer of Code 2011.</p></li>
+      <li><p><strong>16 March</strong> - Google to announce what open source
+	organizations will participate in Google Summer of Code 2012.</p></li>
 
-      <li><p><strong>28 March</strong> - Student application period opens.
+      <li><p><strong>26 March</strong> - Student application period opens.
 	</p></li>
 
-      <li><p><strong>8 April</strong> - Student application period closes.
+      <li><p><strong>6 April</strong> - Student application period closes.
 	</p></li>
 
-      <li><p><strong>22 April</strong> - Organizations finish reviewing
+      <li><p><strong>20 April</strong> - Organizations finish reviewing
 	applications an mentors registered.</p></li>
 
-      <li><p><strong>25 April</strong> - Accepted students announced.</p>
+      <li><p><strong>23 April</strong> - Accepted students announced.</p>
 	</li>
     </ul>
 
     <p>Note that these dates may change, and the Google FAQ timeline is the
       authoritative source of detailed schedule information:</p>
 
-    <ul><p><a href="http://www.google-melange.com/gsoc/events/google/gsoc2011">GSoC 2011 Timeline</a></p></ul>
+    <ul><p><a href="http://www.google-melange.com/gsoc/events/google/gsoc2012">GSoC 2012 Timeline</a></p></ul>
 
     <p>All students must register with, and submit applications via, the
       Google Summer of Code home page:</p>
 
-    <ul><p><a href="http://www.google-melange.com/gsoc/homepage/google/gsoc2011">Google Summer of Code Home Page</a></p></ul></li>
+    <ul><p><a href="http://www.google-melange.com/gsoc/homepage/google/gsoc2012">Google Summer of Code Home Page</a></p></ul></li>
 
   <li><p><strong>What advice do you have for a student who might want to
     submit a proposal?</strong></p>
@@ -345,8 +348,9 @@ href="http://wiki.freebsd.org/moin.cgi/SummerOfCode2005">2005</a>].</p>
     in previous summers?</strong></p>
 
     <p>Please see the <a
-      href="http://wiki.freebsd.org/SummerOfCode2010Projects">2010 FreeBSD
+      href="http://wiki.freebsd.org/SummerOfCode2011Projects">2011 FreeBSD
       Summer of Code page</a>,  as well as older project pages from
+     <a href="http://wiki.freebsd.org/SummerOfCode2010Projects">2010</a>,
      <a href="http://wiki.freebsd.org/SummerOfCode2009Projects">2009</a>, <a
       href="summerofcode-2008.html">2008</a>, <a
       href="summerofcode-2007.html">2007</a>, <a
