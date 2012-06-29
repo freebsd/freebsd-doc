@@ -8,7 +8,7 @@
 
 <!-- $FreeBSD$ -->
 <!-- The FreeBSD Japanese Documentation Project -->
-<!-- Original revision: 1.10 -->
+<!-- Original revision: r39146 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
@@ -78,7 +78,8 @@
 	  <a href="&enbase;/1999/index.html">1999</a>,
 	  <a href="&enbase;/1998/index.html">1998</a>,
 	  <a href="../1997/index.html">1997</a>,
-	  <a href="../1996/index.html">1996</a></p>
+	  <a href="../1996/index.html">1996</a>,
+	  <a href="&enbase;/1993/index.html">1993</a></p>
 
 	<a href="&base;/news/news.html">News Home</a>
 	</div> <!-- CONTENTWRAP -->
