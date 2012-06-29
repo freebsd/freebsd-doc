@@ -3,7 +3,7 @@
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
 <!-- $FreeBSD$
      $FreeBSDde$
-     basiert auf: r38826
+     basiert auf: r39141
  -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
@@ -59,7 +59,8 @@
       <a href="&enbase;/news/1999/index.html">1999</a>,
       <a href="&enbase;/news/1998/index.html">1998</a>,
       <a href="&enbase;/news/1997/index.html">1997</a>,
-      <a href="&enbase;/news/1996/index.html">1996</a></p>
+      <a href="&enbase;/news/1996/index.html">1996</a>,
+      <a href="&enbase;/news/1993/index.html">1993</a></p>
   </xsl:template>
 
   <xsl:variable name="html-news-list-press-homelink">
