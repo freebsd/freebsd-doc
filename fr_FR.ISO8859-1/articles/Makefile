@@ -22,6 +22,7 @@ SUBDIR+= ip-aliasing
 SUBDIR+= ipsec-must
 SUBDIR+= java-tomcat
 SUBDIR+= laptop
+SUBDIR+= linux-users
 SUBDIR+= make-world
 SUBDIR+= mh
 SUBDIR+= multi-os
