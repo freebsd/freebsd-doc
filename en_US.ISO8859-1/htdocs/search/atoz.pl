@@ -11,9 +11,9 @@ if ($ARGV[0] eq '-u' && $#ARGV > 0) {
 } elsif ($ARGV[0] =~ /^-/) { die "usage: $0 [-u urlprefix] files ...\n" }
 
 $top = 'ruebezahl';       # HTML tag name for `go to top of page'
-$hr = "<HR NOSHADE>\n\n"; $h2 = 'H2';
+$hr = "<hr noshade=\"noshade\"/>\n\n"; $h2 = 'h2';
 $table = 1;               # use table output for alphabet
-sub eol { "</UL>\n\n" }
+sub eol { "</ul>\n\n" }
 
 $firstold = ''; @az = (); @list = ();
 while(<>) {
@@ -24,27 +24,27 @@ while(<>) {
 	push(@az, $first);
 	push(@list, &eol) if $#az > 0; # close previous list
 	push(@list, 
-	     qq{<$h2><A NAME="$first" HREF="#$top">$first</a></$h2>\n<UL>\n});
+	     qq{<$h2><a name="$first" href="#$top">$first</a></$h2>\n<ul>\n});
     }
     $firstold = $first;
     ($title, $url) = split('\|', $_); $url =~ s/^\s+//; $url =~ s/\s+$//;
     $url = $urlprefix . $url unless 
 	($url =~ m%^/% || $url =~ /^(news|mailto|ftp|http|telnet):/oi);
-    push(@list, qq{<LI><A HREF="$url">$title</A>\n});
+    push(@list, qq{<li><a href="$url">$title</a></li>\n});
 }
 push(@list, &eol); # close last list
 
 # Output header, list, and copyright
-print qq{<A NAME="$top"></A>\n};
-print qq{<TABLE BORDER=4><TR>\n} if $table;
+print qq{<a name="$top"></a>\n};
+print qq{<table border="4"><tr>\n} if $table;
 foreach (@az) {
     if ($table) {
-	print qq{<TD><A HREF="#$_">$_</A></TD>\n};
+	print qq{<td><a href="#$_">$_</a></td>\n};
     } else { 
-	print qq{<A HREF="#$_">$_</A>\n};
+	print qq{<a href="#$_">$_</a>\n};
     }
 }
-print "</TR></TABLE>\n" if $table;
+print "</tr></table>\n" if $table;
 print $hr; print @list; 
 #print qq{<link ref="made" href="http://www.de.FreeBSD.org/~wosch/">\n};
 
