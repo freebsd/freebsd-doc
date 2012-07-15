@@ -190,20 +190,12 @@ PREHTML?=	${SED} -e ${DATESUBST} ${BASESUBST}
 GENDOCS+=	${DOCS:M*.sgml:S/.sgml$/.html/g}
 ORPHANS:=	${ORPHANS:N*.sgml}
 
-# XXX: using a pipe between ${PREHTML} and ${SGMLNORM} should be better,
-# but very strange errors will be reported when using osgmlnorm (from
-# OpenSP.  sgmlnorm works fine).  For the moment, we use a temporary file
-# to prevent it.
-
-.sgml.html: ${_SGML_INCLUDES}
+.sgml.html: ${_DEPENDSET.wwwstd} ${DOC_PREFIX}/share/sgml/xhtml.xsl
 	${PREHTML} ${PREHTMLOPTS} ${.IMPSRC} > ${.IMPSRC}-tmp
-	${SETENV} SGML_CATALOG_FILES= \
-		${SGMLNORM} ${SGMLNORMOPTS} ${.IMPSRC}-tmp > ${.TARGET} || \
+	${XMLLINT} ${XMLLINTOPTS} ${.IMPSRC}-tmp
+	${XSLTPROC} ${XSLTPROCOPTS} --debug -o ${.TARGET} ${DOC_PREFIX}/share/sgml/xhtml.xsl ${.IMPSRC}-tmp || \
 			(${RM} -f ${.IMPSRC}-tmp ${.TARGET} && false)
 	${RM} -f ${.IMPSRC}-tmp
-.if !defined(NO_TIDY)
-	-${TIDY} ${TIDYOPTS} ${.TARGET}
-.endif
 
 ##################################################################
 # Special Targets
