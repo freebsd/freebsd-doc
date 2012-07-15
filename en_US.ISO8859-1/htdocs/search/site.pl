@@ -16,7 +16,7 @@
 
 sub dl {
     $menu = 0;
-    print "<DL>\n";
+    print "<dl>\n";
 
     while(<>) {
 	# ignore comments and empty lines
@@ -32,12 +32,12 @@ sub dl {
 	if (!$url && $description) {
 	    # close last <dd>
 	    if ($menu) {
-		print "\n", "  </DD>\n", "\n";
+		print "\n", "  </dd>\n", "\n";
 	    }
 
 	    $menu = 1;
-	    print " <DT><STRONG>", $description, "</STRONG></DT>\n";
-	    print "  <DD>\n";
+	    print " <dt><strong>", $description, "</strong></dt>\n";
+	    print "  <dd>\n";
 	} 
 
 	# entries for a section
@@ -45,13 +45,13 @@ sub dl {
 	    # a comma execpt for the last entry
 	    print ",\n" if ($menu > 1);
 
-	    print "   <A HREF=", '"', $url, '">', $description, "</A>";
+	    print "   <a href=", '"', $url, '">', $description, "</a>";
 	    $menu++;
 	}
     }
 
-    print "\n", "  </DD>\n";
-    print "</DL>\n";
+    print "\n", "  </dd>\n";
+    print "</dl>\n";
 }
 
 &dl;
