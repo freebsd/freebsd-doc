@@ -16,23 +16,9 @@
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS" exclude-result-prefixes="cvs">
 
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
+  <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/xhtml.xsl"/>
 
-  <xsl:variable name="date">
-    <xsl:value-of select="//cvs:keyword[@name='freebsd']"/>
-  </xsl:variable>
-
-  <xsl:output type="html" encoding="&xml.encoding;"/>
-
-  <xsl:template match="news">
-    <html>
-      &header1;
-      <body>
-
-	<div id="CONTAINERWRAP">
-	  <div id="CONTAINER">
-	    &header2;
-
-	    <div id="CONTENT">
+  <xsl:template name="process.content">
               <div id="SIDEWRAP">
                 &nav;
                 <div id="FEEDLINKS">
@@ -52,24 +38,16 @@
 		<img src="&base;/gifs/news.jpg" align="right" border="0" width="193"
 		  height="144" alt="FreeBSD Java News"/>
 
-		<xsl:apply-templates select="descendant::month"/>
+		<xsl:apply-templates select="/news/descendant::month"/>
 
+		<xsl:for-each select="/news">
 	        <xsl:call-template
 		  name="html-news-list-newsflash-homelink" />
+		</xsl:for-each>
 
 	      </div> <!-- contentwrap -->
 
 	      <br class="clearboth" />
-	    </div> <!-- content -->
-
-            <div id="FOOTER">
-	      &copyright;<br />
-	      &date;
-            </div> <!-- FOOTER -->
-	  </div> <!-- container -->
-	</div> <!-- containerwrap -->
-      </body>
-    </html>
   </xsl:template>
 
   <!-- Everything that follows are templates for the rest of the content -->
