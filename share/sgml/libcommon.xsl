@@ -1363,7 +1363,7 @@
 
   <!-- template: "link" generates links inside of category -->
   <xsl:template match="link">
-    <xsl:value-of select="$leadingmark" />
+    &leadingmark;
     <a>
       <xsl:attribute name="href">
 	<xsl:choose>
