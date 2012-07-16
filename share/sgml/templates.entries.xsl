@@ -12,9 +12,7 @@
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS"
   exclude-result-prefixes="cvs">
 
-  <xsl:variable name="date">
-    <xsl:value-of select="//cvs:keyword[@name='freebsd']"/>
-  </xsl:variable>
+  <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/xhtml.xsl"/>
 
   <xsl:param name="basename" select="'none'" />
   <xsl:param name="sort" select="'none'" />
@@ -22,19 +20,7 @@
   <xsl:variable name="uc" select="'ABCDEFGHIJKLMNOPQRSTUVWXYZ'"/>
   <xsl:variable name="lc" select="'abcdefghijklmnopqrstuvwxyz'"/>
 
-  <xsl:output method="xml" encoding="&xml.encoding;"
-    doctype-system="http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"
-    doctype-public="-//W3C//DTD XHTML 1.0 Transitional//EN"/>
-
-  <xsl:template match="/entries">
-    <html>
-      &header1;
-      <body>
-	<div id="containerwrap">
-	  <div id="container">
-	    &header2;
-
-	    <div id="content">
+  <xsl:template name="process.content">
               <div id="SIDEWRAP">
                 &nav;
               </div> <!-- SIDEWRAP -->
@@ -42,25 +28,15 @@
 	      <div id="contentwrap">
 		&header3;
 
+		<xsl:for-each select="/entries">
 		<xsl:call-template name="html-commercial-preface" />
 
 		<xsl:call-template name="html-commercial-listing" />
+		</xsl:for-each>
 
 	      </div> <!-- contentwrap -->
 
 	      <br class="clearboth" />
-
-	    </div> <!-- content -->
-
-            <div id="FOOTER">
-	      &copyright;<br />
-	      &date;
-            </div> <!-- FOOTER -->
-
-	  </div> <!-- container -->
-	</div> <!-- containerwrap -->
-      </body>
-    </html>
   </xsl:template>
 
   <xsl:template name="html-commercial-preface">
