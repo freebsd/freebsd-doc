@@ -81,6 +81,19 @@ parameters.  Changing them will result in rendering errors.
 	  </div> <!-- HEADERCONTAINER -->
 
 	  <div id="CONTENT">
+	      <xsl:call-template name="process.content"/>
+	    </div> <!-- CONTENT -->
+
+	    <div id="FOOTER">
+	      <xsl:call-template name="process.footer"/>
+	    </div> <!-- FOOTER -->
+	  </div> <!-- CONTAINER -->
+	</div> <!-- CONTAINERWRAP -->
+      </body>
+    </html>
+  </xsl:template>
+
+  <xsl:template name="process.content">
 	    <div id="SIDEWRAP">
 	      <xsl:choose xmlns:xhtml="http://www.w3.org/1999/xhtml">
 		<xsl:when test="xhtml:html/xhtml:body/@class = 'navinclude.about'">
@@ -118,25 +131,20 @@ parameters.  Changing them will result in rendering errors.
 	    </div> <!-- SIDEWRAP -->
 
 	    <div id="CONTENTWRAP">
-	      <xsl:call-template name="process.content"/>
+      <xsl:call-template name="process.contentwrap"/>
 	    </div> <!-- CONTENTWRAP -->
 
 	    <br class="clearboth" />
-	  </div> <!-- CONTENT -->
-
-	    <div id="FOOTER">
-	      &copyright;<br/>
-	      &lastmod; <xsl:value-of select="$date"/>
-	    </div> <!-- FOOTER -->
-	  </div> <!-- CONTAINER -->
-	</div> <!-- CONTAINERWRAP -->
-      </body>
-    </html>
   </xsl:template>
 
-  <xsl:template name="process.content">
+  <xsl:template name="process.contentwrap">
     <h1><xsl:value-of select="$title" /></h1>
 
     <xsl:copy-of xmlns:xhtml="http://www.w3.org/1999/xhtml" select="xhtml:html/xhtml:body/*" />
+  </xsl:template>
+
+  <xsl:template name="process.footer">
+    &copyright;<br/>
+    &lastmod; <xsl:value-of select="$date"/>
   </xsl:template>
 </xsl:stylesheet>
