@@ -14,29 +14,14 @@
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
 
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
-
-  <xsl:variable name="date">
-    <xsl:value-of select="//cvs:keyword[@name='freebsd']"/>
-  </xsl:variable>
+  <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/xhtml.xsl"/>
 
   <xsl:variable name="ucletters"
     select="'ABCDEFGHIJKLMNOPQRSTUVWXYZ'"/>
   <xsl:variable name="lcletters"
     select="'abcdefghijklmnopqrstuvwxyz'"/>
   
-  <xsl:output type="html" encoding="iso-8859-1"/>
-
-  <xsl:template match="report">
-    <html>
-      &header1;
-
-      <body>
-
-	<div id="containerwrap">
-	  <div id="container">
-            &header2;
-
-	<div id="content">
+  <xsl:template name="process.content">
               <div id="SIDEWRAP">
                 &nav;
               </div> <!-- SIDEWRAP -->
@@ -45,12 +30,12 @@
                 &header3;
 
 	<!-- Process all the <sections>, in order -->
-	<xsl:apply-templates select="section"/>
+	<xsl:apply-templates select="report/section"/>
 
 	<hr/>
 
 	<!-- Generate a table of contents, sorted -->
-	<xsl:for-each select="category">
+	<xsl:for-each select="report/category">
 	  <h3><xsl:value-of select="description"/></h3>
 	  <xsl:variable name="cat-short" select="name"/>
 	  <ul>
@@ -84,7 +69,7 @@
 	<hr/>
 
 	<!-- Process each project, sorted -->
-	<xsl:apply-templates select="project">
+	<xsl:apply-templates select="report/project">
 	  <xsl:sort select="translate(title, $lcletters, $ucletters)"/>
 	</xsl:apply-templates>
 
@@ -93,15 +78,6 @@
 	      </div> <!-- contentwrap -->
 
 	      <br class="clearboth" />
-	    </div> <!-- content -->
-            <div id="FOOTER">
-               &copyright;<br />
-               &date;
-            </div> <!-- FOOTER -->
-	  </div> <!-- container -->
-	</div> <!-- containerwrap -->
-      </body>
-    </html>
   </xsl:template>
 
   <!-- Everything that follows are templates for the rest of the content -->

@@ -145,14 +145,5 @@
 	      </div> <!-- CONTENTWRAP -->
 
 	      <br class="clearboth" />
-	    </div> <!-- CONTENT -->
-            <div id="FOOTER">
-               &copyright;<br />
-               &date;
-            </div> <!-- FOOTER -->
-	  </div> <!-- CONTAINER -->
-	</div> <!-- CONTAINERWRAP -->
-      </body>
-    </html>
   </xsl:template>
 </xsl:stylesheet>

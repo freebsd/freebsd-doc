@@ -25,16 +25,7 @@
 
   <xsl:key name="event-by-year" match="event" use="enddate/year" />
 
-  <xsl:template match="events">
-    <html>
-      &header1;
-      <body>
-
-	<div id="CONTAINERWRAP">
-	  <div id="CONTAINER">
-	    &header2;
-
-	    <div id="CONTENT">
+  <xsl:template name="process.content">
               <div id="SIDEWRAP">
                 &nav;
               </div> <!-- SIDEWRAP -->
@@ -71,10 +62,10 @@
 		networking</a> sites.</p>
 
 	      <p>Last year there were <xsl:value-of
-	        select="count(event[number(enddate/year) =
+	        select="count(/events/event[number(enddate/year) =
 	        (number($curdate.year) -1)])" /> &os; events in
 		<xsl:value-of
-		select="count(event[(number(enddate/year) =
+		select="count(/events/event[(number(enddate/year) =
 		(number($curdate.year) -1)) and (generate-id() =
 		generate-id(key('last-year-event-by-country',
 		location/country)[1]))])" /> different countries
@@ -147,16 +138,5 @@
               </div> <!-- Latest Videos -->
 	      </div> <!-- CONTENTWRAP -->
 	      <br class="clearboth" />
-	    </div> <!-- CONTENT -->
-
-            <div id="FOOTER">
-               &copyright;<br />
-               &date;
-            </div> <!-- FOOTER -->
-        </div> <!-- CONTAINER -->
-   </div> <!-- CONTAINERWRAP -->
-
-      </body>
-</html>
   </xsl:template>
 </xsl:stylesheet>
