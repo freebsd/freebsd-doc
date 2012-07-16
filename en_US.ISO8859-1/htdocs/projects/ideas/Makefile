@@ -13,11 +13,6 @@ MAINTAINER=	joel
 
 DATA=	style.css
 
-XML_IDEAS=		${DOC_PREFIX}/en_US.ISO8859-1/htdocs/projects/ideas/ideas.xml
-XSL_IDEAS=		${DOC_PREFIX}/en_US.ISO8859-1/htdocs/projects/ideas/ideas.xsl
-
-XMLDOCS=	ideas:${XSL_IDEAS}:${XML_IDEAS}:
-
-INDEXLINK=	ideas.html
+DOCS=	ideas.sgml
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"
