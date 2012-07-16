@@ -1,25 +1,16 @@
-<?xml version="1.0" encoding="ISO-8859-1" ?>
-<!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
-				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE html PUBLIC "-//FreeBSD//DTD XHTML 1.0 Transitional-Based Extension//EN"
+"http://www.FreeBSD.org/XML/doc/share/sgml/xhtml10-freebsd.dtd" [
+<!ENTITY base "..">
+<!ENTITY date "$FreeBSD$">
 <!ENTITY title "FreeBSD Social Networks">
 <!ENTITY email "freebsd-www">
-<!ENTITY % navinclude.community "INCLUDE">
 ]>
 
-<!-- $FreeBSD$ -->
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head><title>&title;</title></head>
 
-<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
-  xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
-  <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
-  <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/xhtml.xsl"/>
-
-  <xsl:template name="process.content">
-              <div id="SIDEWRAP">
-                &nav;
-              </div> <!-- SIDEWRAP -->
-
-	      <div id="CONTENTWRAP">
-		&header3;
+  <body class="navinclude.community">
 
 	      <p>&os; is represented on a number of different social
 	        networks.</p>
@@ -56,7 +47,5 @@
 
 	      </ul>
 
-	      </div> <!-- CONTENTWRAP -->
-	      <br class="clearboth" />
-  </xsl:template>
-</xsl:stylesheet>
+  </body>
+</html>

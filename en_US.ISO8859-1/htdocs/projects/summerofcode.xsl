@@ -1,26 +1,16 @@
-<?xml version="1.0" encoding="ISO-8859-1" ?>
-<!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
-				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE html PUBLIC "-//FreeBSD//DTD XHTML 1.0 Transitional-Based Extension//EN"
+"http://www.FreeBSD.org/XML/doc/share/sgml/xhtml10-freebsd.dtd" [
+<!ENTITY base "../..">
+<!ENTITY date "$FreeBSD$">
 <!ENTITY title "FreeBSD Summer Projects">
 <!ENTITY email "freebsd-www">
-<!ENTITY % navinclude.developers "INCLUDE">
-<!ENTITY % developers PUBLIC "-//FreeBSD//ENTITIES FreeBSD Developers Entities//EN" "http://www.FreeBSD.org/XML/www/share/sgml/developers.ent"> %developers;
 ]>
 
-<!-- $FreeBSD$ -->
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head><title>&title;</title></head>
 
-<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
-  xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
-  <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
-  <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/xhtml.xsl"/>
-
-  <xsl:template name="process.content">
-              <div id="SIDEWRAP">
-                &nav;
-              </div> <!-- SIDEWRAP -->
-
-	      <div id="CONTENTWRAP">
-		&header3;
+  <body class="navinclude.developers">
 
 <p>The FreeBSD Project is looking forward to participating as a mentoring
   organization in <a
@@ -275,12 +265,12 @@ href="http://wiki.freebsd.org/moin.cgi/SummerOfCode2005">2005</a>].</p>
     <p>Note that these dates may change, and the Google FAQ timeline is the
       authoritative source of detailed schedule information:</p>
 
-    <ul><p><a href="http://www.google-melange.com/gsoc/events/google/gsoc2011">GSoC 2011 Timeline</a></p></ul>
+    <ul><li><a href="http://www.google-melange.com/gsoc/events/google/gsoc2011">GSoC 2011 Timeline</a></li></ul>
 
     <p>All students must register with, and submit applications via, the
       Google Summer of Code home page:</p>
 
-    <ul><p><a href="http://www.google-melange.com/gsoc/homepage/google/gsoc2011">Google Summer of Code Home Page</a></p></ul></li>
+    <ul><li><a href="http://www.google-melange.com/gsoc/homepage/google/gsoc2011">Google Summer of Code Home Page</a></li></ul></li>
 
   <li><p><strong>What advice do you have for a student who might want to
     submit a proposal?</strong></p>
@@ -371,12 +361,10 @@ href="http://wiki.freebsd.org/moin.cgi/SummerOfCode2005">2005</a>].</p>
     secretaries to distribute.  You can also print out and post copies of the
     <a href="2011-freebsd-gsoc.pdf">FreeBSD GSoC 2011 poster</a>.</p>
 
-  <p><a href="2011-freebsd-gsoc.pdf" align="left"> <img
+  <p><a href="2011-freebsd-gsoc.pdf" style="float: left;"> <img
     src="2011-freebsd-gsoc.jpg"
     alt="[FreeBSD GSoC 2011 poster thumnail]" height="248" width="192"
     border="0" /></a></p>
 
-	      </div> <!-- CONTENTWRAP -->
-	      <br class="clearboth" />
-  </xsl:template>
-</xsl:stylesheet>
+  </body>
+</html>

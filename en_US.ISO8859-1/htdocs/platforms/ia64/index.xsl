@@ -1,35 +1,16 @@
-<!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
-				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE html PUBLIC "-//FreeBSD//DTD XHTML 1.0 Transitional-Based Extension//EN"
+"http://www.FreeBSD.org/XML/doc/share/sgml/xhtml10-freebsd.dtd" [
 <!ENTITY base "../..">
+<!ENTITY date "$FreeBSD$">
 <!ENTITY email "freebsd-ia64">
 <!ENTITY title "FreeBSD/ia64 Project">
-<!ENTITY % navinclude.developers "INCLUDE">
 ]>
 
-<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
-  <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head><title>&title;</title></head>
 
-  <xsl:variable name="date" select="'$FreeBSD$'"/>
-
-  <xsl:output doctype-public="-//W3C//DTD HTML 4.01 Transitional//EN"
-    encoding="iso-8859-1" method="html"/>
-  <xsl:template match="/">
-    <html>
-      &header1;
-      <body>
-
-	<div id="CONTAINERWRAP">
-	  <div id="CONTAINER">
-	    &header2;
-
-	    <div id="CONTENT">
-	      <div id="SIDEWRAP">
-                &nav;
-              </div> <!-- SIDEWRAP -->
-
-	      <div id="CONTENTWRAP">
-		&header3;
-
+  <body class="navinclude.developers">
 		<img align="right" alt="McKinley die" src="mckinley-die.png"/>
 
 		<p>Search the ia64 mailing list archives:</p>
@@ -82,8 +63,5 @@
 		  of ABI breaking changes in the pipeline and having to maintain
 		  backward compatibility this early in a ports life is less than
 		  ideal.</p>
-	      </div> <!-- CONTENTWRAP -->
-
-	      <br class="clearboth" />
-  </xsl:template>
-</xsl:stylesheet>
+  </body>
+</html>
