@@ -44,14 +44,7 @@
   exclude-result-prefixes="cvs">
 
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
-
-  <xsl:variable name="date">
-    <xsl:value-of select="//cvs:keyword[@name='freebsd']"/>
-  </xsl:variable>
-
-  <xsl:output method="xml" encoding="&xml.encoding;"
-    doctype-system="http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"
-    doctype-public="-//W3C//DTD XHTML 1.0 Transitional//EN"/>
+  <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/xhtml.xsl"/>
 
   <xsl:param name="pastyears">2003 2004 2005 2006</xsl:param>
 
@@ -71,8 +64,8 @@
 
   <xsl:variable name="charturl" select="'http://chart.apis.google.com/chart?cht=t&amp;chs=400x200&amp;chtm=world&amp;chco=ffffff,ffbe38,600000&amp;chf=bg,s,4D89F9'" />
 
-  <!-- Template: events -->
-  <xsl:template match="events">
+  <xsl:template name="process.content">
+
   <xsl:variable name="chart-countries">
     <xsl:for-each select="event[
 	generate-id() =
@@ -94,16 +87,6 @@
 
   <xsl:variable name="imageurl"><xsl:value-of select="$charturl"/>&amp;chd=t:<xsl:value-of select="$chart-country-counts"/>&amp;chld=<xsl:value-of select="$chart-countries"/></xsl:variable>
 
-    <html>
-      &header1;
-
-      <body>
-
-	<div id="containerwrap">
-	  <div id="container">
-	  &header2;
-
-	    <div id="content">
               <div id="SIDEWRAP">
                 &nav;
                 <div id="FEEDLINKS">
@@ -130,6 +113,7 @@
 	    format-number($curdate.day, '00'))"/>
 	</xsl:comment>
 
+	<xsl:for-each select="/events">
 		<xsl:call-template name="html-events-list-preface" />
 
 		<xsl:call-template name="html-events-map">
@@ -138,8 +122,9 @@
 
 <!-- with parameter $year here? -->
 		<xsl:call-template name="html-events-list-past-heading" />
+	</xsl:for-each>
 
-	<xsl:for-each select="event[generate-id() =
+	<xsl:for-each select="/events/event[generate-id() =
 	  generate-id(key('event-by-month', concat(startdate/year,
 	    format-number(startdate/month, '00')))[1])
 	  and ((number(enddate/year) = $year))]">
@@ -176,25 +161,17 @@
 	<p>Events from past years:</p>
 
         <ul id="events-past-years">
+	<xsl:for-each select="/events">
 	<xsl:call-template name="split-string">
           <xsl:with-param name="seperator" select="' '"/>
           <xsl:with-param name="text" select="$pastyears"/>
         </xsl:call-template>
+	</xsl:for-each>
         </ul>
 
 	      </div> <!-- contentwrap -->
 
 	      <br class="clearboth" />
-	    </div> <!-- content -->
-
-            <div id="FOOTER">
-               &copyright;<br />
-               &date;
-            </div> <!-- FOOTER -->
-	  </div> <!-- container -->
-	</div> <!-- containerwrap -->
-      </body>
-    </html>
   </xsl:template>
 
   <!-- Template: event -->
