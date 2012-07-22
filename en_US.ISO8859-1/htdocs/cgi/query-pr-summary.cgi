@@ -211,7 +211,7 @@ print "<p>You may view summaries by <a href='$self_ref1'>Severity</a>, ";
 $self_ref1 .= '&amp;' if ($self_ref1 !~/\?$/);
 print "<a href='${self_ref1}state=summary'>State</a>, ";
 print "<a href='${self_ref1}category=summary'>Category</a>, or ";
-print "<a href='${self_ref1}responsible=summary'>Responsible Party</a>.";
+print "<a href='${self_ref1}responsible=summary'>Responsible Party</a>.\n";
 
 $self_ref2 = $self_ref . '?';
 foreach ('category', 'originator', 'priority', 'class', 'responsible',
