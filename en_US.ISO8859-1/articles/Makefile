@@ -47,7 +47,6 @@ SUBDIR+= port-mentor-guidelines
 SUBDIR+= portbuild
 SUBDIR+= pr-guidelines
 SUBDIR+= problem-reports
-SUBDIR+= pxe
 SUBDIR+= rc-scripting
 SUBDIR+= relaydelay
 SUBDIR+= releng
