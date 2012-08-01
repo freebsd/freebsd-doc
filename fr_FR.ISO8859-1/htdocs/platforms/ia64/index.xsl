@@ -14,22 +14,11 @@
 
 <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
+  <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/xhtml.xsl"/>
 
   <xsl:variable name="date" select="'$FreeBSD$'"/>
 
-  <xsl:output doctype-public="-//W3C//DTD HTML 4.01 Transitional//EN"
-    encoding="iso-8859-1" method="html"/>
-
-  <xsl:template match="/">
-    <html>
-      &header1;
-      <body>
-
-	<div id="CONTAINERWRAP">
-	  <div id="CONTAINER">
-	    &header2;
-
-	    <div id="CONTENT">
+  <xsl:template name="process.content">
 	      <div id="SIDEWRAP">
                 &nav;
               </div> <!-- SIDEWRAP -->
@@ -100,17 +89,5 @@
 		  compatibilit&#233; aussi t&#244;t dans la vie du port
 		  ne serait pas tr&#232;s pratique.</p>
 	      </div> <!-- CONTENTWRAP -->
-
-	      <br class="clearboth" />
-	    </div> <!-- CONTENT -->
-
-            <div id="FOOTER">
-               &copyright;<br />
-               &date;
-            </div> <!-- FOOTER -->
-	  </div> <!-- CONTAINER -->
-	</div> <!-- CONTAINERWRAP -->
-      </body>
-    </html>
   </xsl:template>
 </xsl:stylesheet>
