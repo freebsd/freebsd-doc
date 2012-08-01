@@ -9,6 +9,7 @@
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
+  <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/xhtml.xsl"/>
 
   <xsl:variable name="date" select="'$FreeBSD$'"/>
 
@@ -24,43 +25,7 @@
   <xsl:param name="events.xml-master" select="'none'"/>
   <xsl:param name="events.xml" select="'none'"/>
 
-  <xsl:output type="html" encoding="&xml.encoding;"
-              doctype-public="-//W3C//DTD HTML 4.01 Transitional//EN"/>
-
-<xsl:template match="/">
-    <html>
-      <head>
-	<title>&title;</title>
-	<meta name="description" content="El Proyecto FreeBSD"/>
-	<meta name="keywords" content="FreeBSD, BSD, UNIX, Support, Ports,
-	      Release, Application, Software, Handbook, FAQ, Tutorials, Bugs,
-	      CVS, CVSup, News, Commercial Vendors, homepage, CTM, Unix"/>
-	<link rel="shortcut icon" href="&enbase;/favicon.ico" type="image/x-icon"/>
-	<link rel="icon" href="&enbase;/favicon.ico" type="image/x-icon"/>
-    <link rel="stylesheet" media="screen" href="&enbase;/layout/css/fixed.css" type="text/css" title="Normal Text" />
-    <link rel="alternate stylesheet" media="screen" href="&enbase;/layout/css/fixed_large.css" type="text/css" title="Large Text" />
-    <script type="text/javascript" src="&enbase;/layout/js/styleswitcher.js"></script>
-	<link rel="alternate" type="application/rss+xml"
-	  title="Noticias del proyecto FreeBSD" href="&enbase;/news/rss.xml" />
-	<link rel="alternate" type="application/rss+xml"
-	  title="Avisos de seguridad de FreeBSD" href="&enbase;/security/rss.xml" />
-	<link rel="alternate" type="application/rss+xml"
-	  title="Noticias del proyecto GNOME para FreeBSD" href="&enbase;/gnome/rss.xml" />
-	
-	<!-- Formatted to be easy to spam harvest, please do not reformat. -->
-	<xsl:comment>
-        Spamtrap, do not email:
-        &lt;a href="mailto:bruscar@freebsd.org"&gt;bruscar@freebsd.org&lt;/a&gt;
-	</xsl:comment>
-      </head>
-
-      <body>
-
-   <div id="CONTAINERWRAP">
-    <div id="CONTAINER">
-      &header2;
-      <div id="CONTENT">
-
+<xsl:template name="process.content">
         <div id="FRONTCONTAINER">
           <div id="FRONTMAIN">
             <div id="FRONTFEATURECONTAINER">
@@ -321,22 +286,6 @@
             </div> <!-- frontnemscontainer -->
           </div> <!-- frontmain -->
         </div> <!-- frontcontainer -->
-
-      </div> <!-- CONTENT -->
-      <div id="FOOTER">
-	&copyright;
-
-	La marca FreeBSD es una marca registrada de la Fundaci&oacute;n
-	FreeBSD y el proyecto FreeBSD la usa con permiso de la <a
-	  href="http://www.freebsdfoundation.org/documents/Guidelines.shtml">Fundaci&oacute;n
-	FreeBSD</a> 
-
-      </div> <!-- FOOTER -->
-    </div> <!-- CONTAINER -->
-   </div> <!-- CONTAINERWRAP -->
-
-      </body>
-    </html>
   </xsl:template>
 </xsl:stylesheet>
 
