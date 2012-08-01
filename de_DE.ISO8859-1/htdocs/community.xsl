@@ -13,30 +13,18 @@
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
+  <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/xhtml.xsl"/>
 
   <xsl:variable name="date">
     <xsl:value-of select="//cvs:keyword[@name='freebsd']"/>
   </xsl:variable>
-
-  <xsl:output method="xml" encoding="&xml.encoding;"
-    doctype-system="http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"
-    doctype-public="-//W3C//DTD XHTML 1.0 Transitional//EN"/>
 
   <xsl:key name="last-year-event-by-country" match="event[number(enddate/year) = (number($curdate.year) - 1)]"
     use="location/country" />
 
   <xsl:key name="event-by-year" match="event" use="enddate/year" />
 
-  <xsl:template match="events">
-    <html>
-      &header1;
-      <body>
-
-	<div id="CONTAINERWRAP">
-	  <div id="CONTAINER">
-	    &header2;
-
-	    <div id="CONTENT">
+  <xsl:template name="process.content">
               <div id="SIDEWRAP">
                 &nav;
               </div> <!-- SIDEWRAP -->
@@ -73,10 +61,10 @@
 		Netzwerken</a> vertreten.</p>
 
 	      <p>Letztes Jahr gab es insgesamt 19 <!-- <xsl:value-of
-	        select="count(event[number(enddate/year) =
+	        select="count(/events/event[number(enddate/year) =
 	        (number($curdate.year) -1)])" />-->
 		&os;-Veranstaltungen in 12 <!--<xsl:value-of
-		select="count(event[(number(enddate/year) =
+		select="count(/events/event[(number(enddate/year) =
 		(number($curdate.year) -1)) and (generate-id() =
 		generate-id(key('last-year-event-by-country',
 		location/country)[1]))])" />--> verschiedenen L&#228;ndern.
@@ -149,17 +137,5 @@
 
 	      </div> <!-- Latest Videos -->
 	      </div> <!-- CONTENTWRAP -->
-	      <br class="clearboth" />
-	    </div> <!-- CONTENT -->
-
-            <div id="FOOTER">
-               &copyright;<br />
-               &date;
-            </div> <!-- FOOTER -->
-        </div> <!-- CONTAINER -->
-   </div> <!-- CONTAINERWRAP -->
-
-      </body>
-</html>
   </xsl:template>
 </xsl:stylesheet>
