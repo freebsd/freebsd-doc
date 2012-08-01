@@ -19,23 +19,12 @@
 		exclude-result-prefixes="rdf rdf1" version="1.0">
 
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
+  <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/xhtml.xsl"/>
 
   <xsl:variable name="date" select="'$FreeBSD$'"/>
   <xsl:variable name="title" select="''"/>
 
-  <xsl:output type="html" encoding="iso-8859-1"
-              doctype-public="-//W3C//DTD HTML 4.01 Transitional//EN"/>
-
-  <xsl:template match="/">
-    <html>
-      &header1;
-      <body>
-
-	<div id="CONTAINERWRAP">
-	  <div id="CONTAINER">
-	    &header2;
-
-	    <div id="CONTENT">
+  <xsl:template names="process.content">
               <div id="SIDEWRAP">
                 &nav;
               </div> <!-- SIDEWRAP -->
@@ -82,6 +71,9 @@
 		  <div class="rightnav">
 
 		    <h2>Nouvelles du Projet GNOME</h2>
+<!-- XXX: (1) does not work at the moment
+          (2) should we really copy over GNOME news?
+
 		    <ul>
 		      <xsl:for-each select="document('http://gnomedesktop.org/backend.php')/rss/channel/*[name() = 'item'][position() &lt; 10]">
 			<li><a>
@@ -99,6 +91,7 @@
 			  </xsl:for-each>
 			</a></li>
 		    </ul>
+-->
                   </div> <!-- rightnav -->
                 </div> <!-- rightwrap -->
 
@@ -174,16 +167,5 @@
 		</form>
 
 	  	</div> <!-- contentwrap -->
-
-	      <br class="clearboth" />
-	    </div> <!-- content -->
-            <div id="FOOTER">
-	      &copyright;<br />
-	      &date;
-            </div> <!-- FOOTER -->
-	  </div> <!-- container -->
-	</div> <!-- containerwrap -->
-      </body>
-    </html>
   </xsl:template>
 </xsl:stylesheet>

@@ -15,6 +15,7 @@
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
+  <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/xhtml.xsl"/>
 
   <xsl:variable name="date" select="''"/>
 
@@ -31,51 +32,7 @@
   <xsl:param name="events.xml" select="'none'"/>
   <xsl:param name="curdate.xml" select="'none'"/>
 
-  <xsl:output type="html" encoding="iso-8859-1"
-              doctype-public="-//W3C//DTD HTML 4.01 Transitional//EN"/>
-
-<xsl:template match="/">
-    <html>
-      <head>
-	<title>&title;</title>
-	<meta name="description" content="The FreeBSD Project"/>
-	<meta name="keywords" content="FreeBSD, BSD, UNIX, Support, Ports,
-	      Version, Application, Logiciel, Manuel de
-	      R&#233;f&#233;rence, FAQ, Guides, Bugs, CVS, CVSup,
-	      Nouvelles, Revendeurs, homepage, CTM, Unix"/>
-	<link rel="shortcut icon" href="&enbase;/favicon.ico" type="image/x-icon"/>
-	<link rel="icon" href="&enbase;/favicon.ico" type="image/x-icon"/>
-<!--
-	FOR TRANSLATORS:
-
-	Do not translate the "Normal Text" and "Large Text" attributes in the
-	following two lines.  They are not literal texts but JavaScript
-	parameters.  Changing them will result in rendering errors.
--->
-    <link rel="stylesheet" media="screen" href="&enbase;/layout/css/fixed.css" type="text/css" title="Normal Text" />
-    <link rel="alternate stylesheet" media="screen" href="&enbase;/layout/css/fixed_large.css" type="text/css" title="Large Text" />
-    <script type="text/javascript" src="&enbase;/layout/js/styleswitcher.js"></script>
-	<link rel="alternate" type="application/rss+xml"
-	  title="FreeBSD Project News" href="&enbase;/news/rss.xml" />
-	<link rel="alternate" type="application/rss+xml"
-	  title="FreeBSD Security Advisories" href="&enbase;/security/rss.xml" />
-	<link rel="alternate" type="application/rss+xml"
-	  title="FreeBSD GNOME Project News" href="&enbase;/gnome/rss.xml" />
-	
-	<!-- Formatted to be easy to spam harvest, please do not reformat. -->
-	<xsl:comment>
-        Spamtrap, do not email:
-        &lt;a href="mailto:bruscar@freebsd.org"&gt;bruscar@freebsd.org&lt;/a&gt;
-	</xsl:comment>
-      </head>
-
-      <body>
-
-   <div id="CONTAINERWRAP">
-    <div id="CONTAINER">
-      &header2;
-      <div id="CONTENT">
-
+<xsl:template names="process.content">
         <div id="FRONTCONTAINER">
           <div id="FRONTMAIN">
             <div id="FRONTFEATURECONTAINER">
@@ -365,22 +322,6 @@
             </div> <!-- FRONTNEMSCONTAINER -->
           </div> <!-- FRONTMAIN -->
         </div> <!-- FRONTCONTAINER -->
-
-      </div> <!-- CONTENT -->
-      <div id="FOOTER">
-	&copyright;
-
-	Le nom FreeBSD est une marque d&#233;pos&#233;e appartenant
-	&#224; la fondation FreeBSD et est utilis&#233;e par le projet
-	FreeBSD avec la permission de la <a
-	href="http://www.freebsdfoundation.org/documents/Guidelines.shtml">fondation
-	FreeBSD</a>.
-
-      </div> <!-- FOOTER -->
-    </div> <!-- CONTAINER -->
-   </div> <!-- CONTAINERWRAP -->
-      </body>
-    </html>
   </xsl:template>
 </xsl:stylesheet>
 
