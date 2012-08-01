@@ -16,8 +16,7 @@
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
 
-  <xsl:output type="xml" encoding="iso-8859-2"
-              omit-xml-declaration="yes" />
+  <xsl:output type="xml" encoding="iso-8859-2"/>
 
   <xsl:template match="/">
     <xsl:call-template name="html-list-advisories">
