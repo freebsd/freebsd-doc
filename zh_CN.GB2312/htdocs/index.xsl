@@ -10,6 +10,7 @@
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
+  <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/xhtml.xsl"/>
 
   <!-- these params should be externally bound. The values
        here are not used actually -->
@@ -23,43 +24,7 @@
   <xsl:param name="events.xml-master" select="'none'"/>
   <xsl:param name="events.xml" select="'none'"/>
 
-  <xsl:output type="html" encoding="&xml.encoding;"
-              doctype-public="-//W3C//DTD HTML 4.01 Transitional//EN"/>
-
-  <xsl:template match="/">
-    <html>
-      <head>
-	<title>&title;</title>
-	<meta name="description" content="The FreeBSD Project"/>
-	<meta name="keywords" content="FreeBSD, BSD, UNIX, 支持, 案例,
-	      发行版, 应用, 软件, 手册, FAQ, 教程, Bugs,
-	      CVS, CVSup, 新闻, 商业发行商, 主页, CTM, Unix"/>
-	<link rel="shortcut icon" href="&enbase;/favicon.ico" type="image/x-icon"/>
-	<link rel="icon" href="&enbase;/favicon.ico" type="image/x-icon"/>
-    <link rel="stylesheet" media="screen" href="&base;/layout/css/fixed.css" type="text/css" title="Normal Text" />
-    <link rel="alternate stylesheet" media="screen" href="&base;/layout/css/fixed_large.css" type="text/css" title="Large Text" />
-    <script type="text/javascript" src="&enbase;/layout/js/styleswitcher.js"></script>
-	<link rel="alternate" type="application/rss+xml"
-	  title="FreeBSD Project 新闻" href="&base;/news/news.rdf" />
-	<link rel="alternate" type="application/rss+xml"
-	  title="FreeBSD 安全公告" href="&enbase;/security/advisories.rdf" />
-	<link rel="alternate" type="application/rss+xml"
-	  title="FreeBSD GNOME Project 新闻" href="&enbase;/gnome/news.rdf" />
-
-	<!-- Formatted to be easy to spam harvest, please do not reformat. -->
-	<xsl:comment>
-        Spamtrap, do not email:
-        &lt;a href="mailto:bruscar@freebsd.org"&gt;bruscar@freebsd.org&lt;/a&gt;
-	</xsl:comment>
-      </head>
-
-      <body>
-
-   <div id="CONTAINERWRAP">
-    <div id="CONTAINER">
-      &header2;
-      <div id="CONTENT">
-
+  <xsl:template name="process.content">
         <div id="FRONTCONTAINER">
           <div id="FRONTMAIN">
             <div id="FRONTFEATURECONTAINER">
@@ -319,22 +284,6 @@
             </div> <!-- FRONTNEMSCONTAINER -->
           </div> <!-- FRONTMAIN -->
         </div> <!-- FRONTCONTAINER -->
-
-      </div> <!-- CONTENT -->
-      <div id="FOOTER">
-	&copyright;
-
-	FreeBSD 标志是 FreeBSD
-	基金会的注册商标。 FreeBSD Project 使用此商标得到了 <a
-	  href="http://www.freebsdfoundation.org/documents/Guidelines.shtml">FreeBSD 基金会</a>
-	的许可。
-
-      </div> <!-- FOOTER -->
-    </div> <!-- CONTAINER -->
-   </div> <!-- CONTAINERWRAP -->
-
-      </body>
-    </html>
   </xsl:template>
 </xsl:stylesheet>
 
