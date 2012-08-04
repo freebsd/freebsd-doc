@@ -64,15 +64,6 @@ XSLTPROCOPTS?=	${XSLTPROCFLAGS}
 XMLLINT?=	${PREFIX}/bin/xmllint
 XMLLINTOPTS?=	${XMLLINTFLAGS}
 
-TIDY?=		${PREFIX}/bin/tidy
-.if defined(TIDY_VERBOSE)
-_TIDYLOGFILE=	tidyerr.${.TARGET}
-CLEANFILES+=	tidyerr.*
-.else
-_TIDYLOGFILE=	/dev/null
-.endif
-TIDYOPTS?=	-wrap 90 -m -raw -preserve -f ${_TIDYLOGFILE} -asxml ${TIDYFLAGS}
-
 HTML2TXT?=	${PREFIX}/bin/w3m
 HTML2TXTOPTS?=	-dump ${HTML2TXTFLAGS}
 ISPELL?=	ispell

@@ -25,6 +25,5 @@ XML.DEFAULT=		${XML_ADVISORIES}
 
 XMLDOCS=	advisories:mkindex.xsl::advisories.html.inc
 NO_DATA.advisories=	yes
-NO_TIDY.advisories=	yes
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"
