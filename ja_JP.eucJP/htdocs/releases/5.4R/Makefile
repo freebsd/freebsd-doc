@@ -38,7 +38,4 @@ DATA+=	hardware-sparc64.html
 #DATA+=	relnotes-pc98.html
 #DATA+=	relnotes-sparc64.html
 
-### Revision checking
-REVCHECK=	YES
-
 .include "${DOC_PREFIX}/share/mk/web.site.mk"

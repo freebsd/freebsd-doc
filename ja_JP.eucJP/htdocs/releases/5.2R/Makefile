@@ -38,7 +38,4 @@ DATA+=	relnotes-i386.html
 DATA+=	relnotes-pc98.html
 DATA+=	relnotes-sparc64.html
 
-### Revision checking
-REVCHECK=	YES
-
 .include "${DOC_PREFIX}/share/mk/web.site.mk"

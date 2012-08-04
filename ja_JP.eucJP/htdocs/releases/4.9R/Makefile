@@ -26,7 +26,4 @@ DATA+=	errata.html
 DATA+=	relnotes-alpha.html
 DATA+=	relnotes-i386.html
 
-### Revision checking
-REVCHECK=	YES
-
 .include "${DOC_PREFIX}/share/mk/web.site.mk"

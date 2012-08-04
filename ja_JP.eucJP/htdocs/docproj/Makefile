@@ -22,7 +22,4 @@ DOCS+= docproj.sgml
 
 INDEXLINK= docproj.html
 
-### Revision checking
-REVCHECK=	yes
-
 .include "${DOC_PREFIX}/share/mk/web.site.mk"

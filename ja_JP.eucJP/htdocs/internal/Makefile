@@ -47,7 +47,4 @@ INDEXLINK=	internal.html
 #
 #DATA+=	README.mirror ssh-keys.asc
 
-### Revision checking
-REVCHECK=	yes
-
 .include "${DOC_PREFIX}/share/mk/web.site.mk"

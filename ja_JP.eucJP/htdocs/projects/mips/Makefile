@@ -16,7 +16,4 @@ MAINTAINER=	jmallett
 DOCS=	index.sgml
 DATA=	style.css
 
-### Revision checking
-REVCHECK=	yes
-
 .include "${DOC_PREFIX}/share/mk/web.site.mk"

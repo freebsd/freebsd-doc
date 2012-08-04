@@ -27,7 +27,4 @@ DATA+=	relnotes-i386.html
 
 #DATA+=  CHECKSUM-i386.MD5
 
-### Revision checking
-REVCHECK=       YES
-
 .include "${DOC_PREFIX}/share/mk/web.site.mk"

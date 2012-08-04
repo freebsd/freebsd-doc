@@ -22,7 +22,4 @@ XML.DEFAULT=	news.xml
 XMLDOCS=	newsflash
 XMLDOCS+=	news:java-rss.xsl::rss.xml
 
-### Revision checking
-REVCHECK= YES
-
 .include "${DOC_PREFIX}/share/mk/web.site.mk"
