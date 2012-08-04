@@ -14,6 +14,7 @@
 
   <xsl:import href="../includes.xsl"/>
   <xsl:import href="includes.xsl"/>
+  <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/xhtml.xsl"/>
   <xsl:variable name="section" select="'developers'"/>
 
   <xsl:variable name="base" select="'../..'"/>
@@ -22,58 +23,14 @@
     <xsl:value-of select="//cvs:keyword[@name='freebsd']"/>
   </xsl:variable>
   
-  <xsl:output type="html" encoding="koi8-r"/>
+  <xsl:template name="process.content">
+    <div id="contentwrap">
 
-  <xsl:template match="news">
-    <html>
-      
-      <xsl:copy-of select="$header1"/>
-      
-            <body xsl:use-attribute-sets="att.body">
-      
-        <div id="containerwrap">
-          <div id="container">
-      
-      	<xsl:copy-of select="$header2"/>
-      
-      	<div id="content">
-      
-      	      <xsl:copy-of select="$sidenav"/>
-      
-      	      <div id="contentwrap">
-      	      
-	      <xsl:copy-of select="$header3"/>
-
-	<!-- Notice how entity references in SGML become variable references
-	     in the stylesheet, and that the syntax for referring to variables
-	     inside an attribute is "{$variable}".
-
-	     This is just dis-similar enough to Perl and the shell that you
-	     end up writing ${variable} all the time, and then scratch your 
-	     head wondering why the stylesheet isn't working.-->
-
-	<!-- Also notice that because this is now XML and not SGML, empty
-             elements, like IMG, must have a trailing "/" just inside the 
-   	     closing angle bracket, like this " ... />" -->
-	<img src="{$base}/gifs/news.jpg" align="right" border="0" width="193"
-	     height="144" alt="Новости FreeBSD GNOME"/>
-
-	<xsl:apply-templates select="descendant::month"/>
+	<xsl:apply-templates select="/events/descendant::month"/>
 	
 	<xsl:copy-of select="$newshome"/>
 
 	  	</div> <!-- contentwrap -->
-		<br class="clearboth" />
-	
-	</div> <!-- content -->
-	
-	<xsl:copy-of select="$footer"/>
-	
-        </div> <!-- container -->
-   </div> <!-- containerwrap -->
-
-      </body>
-    </html>
   </xsl:template>
 
   <!-- Everything that follows are templates for the rest of the content -->
