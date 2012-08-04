@@ -5,10 +5,16 @@
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS"
-  xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  xmlns:xhtml="http://www.w3.org/1999/xhtml"
+  xmlns:str="http://exslt.org/strings"
+  extension-element-prefixes="str">
+
+  <xsl:variable name="svnKeyword">
+    <xsl:value-of select="//cvs:keyword[1]"/>
+  </xsl:variable>
 
   <xsl:variable name="date">
-    <xsl:value-of select="//cvs:keyword[@name='freebsd']"/>
+    <xsl:value-of select="str:split($svnKeyword, ' ')[4]"/>
   </xsl:variable>
 
   <xsl:variable name="title">

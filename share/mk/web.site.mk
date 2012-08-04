@@ -169,24 +169,27 @@ LOCALTOP!=	${ECHO_CMD} ${CANONPREFIX} | \
 DIR_IN_LOCAL!=	${ECHO_CMD} ${CANONPREFIX} | ${PERL} -pe 's@^[^/]+/?@@;'
 PREHTMLOPTS?=	-revcheck "${LOCALTOP}" "${DIR_IN_LOCAL}" ${PREHTMLFLAGS}
 .else
-DATESUBST?=	's/<!ENTITY date[ \t]*"$$Free[B]SD. \(.*\) \(.*\) \(.* .*\) .* $$">/<!ENTITY date	"Last modified: \3 \(\1 r\2\)">/'
 # Force override base to point to http://www.FreeBSD.org/.  Note: This
 # is used for http://security.FreeBSD.org/ .
 .if WITH_WWW_FREEBSD_ORG_BASE
-BASESUBST?=	-e 's/<!ENTITY base CDATA ".*">/<!ENTITY base CDATA "http:\/\/www.FreeBSD.org">/'
+PREHTML?=	${SED} -e 's/<!ENTITY base CDATA ".*">/<!ENTITY base CDATA "http:\/\/www.FreeBSD.org">/'
 .endif
-PREHTML?=	${SED} -e ${DATESUBST} ${BASESUBST}
 .endif
 
 GENDOCS+=	${DOCS:M*.sgml:S/.sgml$/.html/g}
 ORPHANS:=	${ORPHANS:N*.sgml}
 
 .sgml.html: ${_DEPENDSET.wwwstd} ${DOC_PREFIX}/share/sgml/xhtml.xsl
+.if defined(PREHTML)
 	${PREHTML} ${PREHTMLOPTS} ${.IMPSRC} > ${.IMPSRC}-tmp
 	${XMLLINT} ${XMLLINTOPTS} ${.IMPSRC}-tmp
 	${XSLTPROC} ${XSLTPROCOPTS} --debug -o ${.TARGET} ${DOC_PREFIX}/share/sgml/xhtml.xsl ${.IMPSRC}-tmp || \
 			(${RM} -f ${.IMPSRC}-tmp ${.TARGET} && false)
 	${RM} -f ${.IMPSRC}-tmp
+.else
+	${XMLLINT} ${XMLLINTOPTS} ${.IMPSRC}
+	${XSLTPROC} ${XSLTPROCOPTS} --debug -o ${.TARGET} ${DOC_PREFIX}/share/sgml/xhtml.xsl ${.IMPSRC}
+.endif
 
 ##################################################################
 # Special Targets
