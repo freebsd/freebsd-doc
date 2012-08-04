@@ -53,8 +53,5 @@ SUBDIR+= 	2001
 #SUBDIR+=	2009
 #SUBDIR+=	status
 
-### Revision checking
-REVCHECK=	YES
-
 .include "${DOC_PREFIX}/share/mk/web.site.mk"
 

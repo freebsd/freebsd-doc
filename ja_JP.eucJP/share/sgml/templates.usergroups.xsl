@@ -14,10 +14,7 @@
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS"
   exclude-result-prefixes="cvs">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
-
-  <xsl:output method="xml" encoding="&xml.encoding;"
-    doctype-system="http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"
-    doctype-public="-//W3C//DTD XHTML 1.0 Transitional//EN"/>
+  <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/xhtml.xsl"/>
 
   <xsl:variable name="date">
     <xsl:value-of select="//cvs:keyword[@name='freebsd']"/>
@@ -28,16 +25,7 @@
 
   <xsl:variable name="charturl" select="'http://chart.apis.google.com/chart?cht=t&amp;chs=400x200&amp;chtm=world&amp;chco=ffffff,ffbe38,600000&amp;chf=bg,s,4D89F9'" />
 
-  <xsl:template match="/">
-    <html>
-      &header1;
-
-      <body>
-	<div id="CONTAINERWRAP">
-	  <div id="CONTAINER">
-	    &header2;
-
-	    <div id="CONTENT">
+  <xsl:template name="process.content">
 	      <div id="SIDEWRAP">
 		&nav;
 	      </div> <!-- SIDEWRAP -->
@@ -81,17 +69,5 @@
 	</xsl:call-template>
 
 	      </div> <!-- CONTENTWRAP -->
-
-	      <br class="clearboth" />
-	    </div> <!-- CONTENT -->
-
-	    <div id="FOOTER">
-	      &copyright;<br />
-	      &date;
-	    </div> <!-- FOOTER -->
-	  </div> <!-- CONTAINER -->
-	</div> <!-- CONTAINERWRAP -->
-      </body>
-    </html>
   </xsl:template>
 </xsl:stylesheet>

@@ -12,7 +12,4 @@
 DOCS=	notes.sgml
 DOCS+=	errata.sgml
 
-### Revision checking
-REVCHECK=	YES
-
 .include "${DOC_PREFIX}/share/mk/web.site.mk"

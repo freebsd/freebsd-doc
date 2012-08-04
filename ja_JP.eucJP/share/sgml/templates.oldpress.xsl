@@ -14,6 +14,7 @@
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
 
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
+  <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/xhtml.xsl"/>
 
   <xsl:variable name="year">
     <xsl:value-of select="descendant::year/name"/>
@@ -23,21 +24,7 @@
     <xsl:value-of select="//cvs:keyword[@name='freebsd']"/>
   </xsl:variable>
   
-  <xsl:output type="html" encoding="&xml.encoding;"/>
-
-  <xsl:template match="press">
-    <html>
-      
-      &header1;
-
-      <body>
-
-	<div id="CONTAINERWRAP">
-	<div id="CONTAINER">
-
-	  &header2;
-
-	<div id="CONTENT">
+  <xsl:template name="process.content">
 	<div id="SIDEWRAP">
 	  &nav;
 	</div> <!-- SIDEWRAP -->
@@ -64,20 +51,6 @@
 
 	<a href="&base;/news/news.html">ニュースページ</a>
 	</div> <!-- CONTENTWRAP -->
-	<br class="clearboth" />
-
-	</div> <!-- CONTENT -->
-
-            <div id="FOOTER">
-               &copyright;<br />
-               &date;
-            </div> <!-- FOOTER -->
-
-	</div> <!-- CONTAINER -->
-	</div> <!-- CONTAINERWRAP -->
-
-      </body>
-    </html>
   </xsl:template>
 
   <!-- Everything that follows are templates for the rest of the content -->

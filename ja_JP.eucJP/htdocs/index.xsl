@@ -9,6 +9,7 @@
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
+  <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/xhtml.xsl"/>
 
   <!-- these params should be externally bound. The values
        here are not used actually -->
@@ -23,53 +24,7 @@
   <xsl:param name="events.xml" select="'none'"/>
   <xsl:param name="html.header.script.google" select="'IGNORE'"/>
 
-  <xsl:output type="html" encoding="EUC-JP"
-              doctype-public="-//W3C//DTD HTML 4.01 Transitional//EN"/>
-
-  <xsl:template match="/">
-    <html>
-      <head>
-	<title>&title;</title>
-	<meta name="description" content="The FreeBSD Project"/>
-	<meta name="keywords" content="FreeBSD, BSD, UNIX, Support, Ports,
-	      Release, Application, Software, Handbook, FAQ, Tutorials, Bugs,
-	      CVS, CVSup, News, Commercial Vendors, homepage, CTM, Unix"/>
-	<link rel="shortcut icon" href="&enbase;/favicon.ico" type="image/x-icon"/>
-	<link rel="icon" href="&enbase;/favicon.ico" type="image/x-icon"/>
-<!--
-	FOR TRANSLATORS:
-
-	Do not translate the "Normal Text" and "Large Text" attributes in the
-	following two lines.  They are not literal texts but JavaScript
-	parameters.  Changing them will result in rendering errors.
--->
-	<link rel="stylesheet" media="screen" href="&enbase;/layout/css/fixed.css?20060509" type="text/css" title="Normal Text" />
-	<link rel="alternate stylesheet" media="screen" href="&enbase;/layout/css/fixed_large.css" type="text/css" title="Large Text" />
-	<script type="text/javascript" src="&enbase;/layout/js/styleswitcher.js"></script>
-	<xsl:if test="$html.header.script.google != 'IGNORE'">
-	  <script type="text/javascript" src="&enbase;/layout/js/google.js"></script>
-	</xsl:if>
-	<link rel="alternate" type="application/rss+xml"
-	  title="FreeBSD Project News" href="&enbase;/news/rss.xml" />
-	<link rel="alternate" type="application/rss+xml"
-	  title="FreeBSD Security Advisories" href="&enbase;/security/rss.xml" />
-	<link rel="alternate" type="application/rss+xml"
-	  title="FreeBSD GNOME Project News" href="&enbase;/gnome/rss.xml" />
-
-	<!-- Formatted to be easy to spam harvest, please do not reformat. -->
-	<xsl:comment>
-        Spamtrap, do not email:
-        &lt;a href="mailto:bruscar@freebsd.org"&gt;bruscar@freebsd.org&lt;/a&gt;
-	</xsl:comment>
-      </head>
-
-      <body>
-
-      <div id="CONTAINERWRAP">
-	<div id="CONTAINER">
-	  &header2;
-	  <div id="CONTENT">
-
+  <xsl:template name="process.content">
 	    <div id="FRONTCONTAINER">
 	      <div id="FRONTMAIN">
 		<div id="FRONTFEATURECONTAINER">
@@ -348,22 +303,6 @@
 		  </div> <!-- FRONTNEMSCONTAINER -->
 		</div> <!-- FRONTMAIN -->
 	      </div> <!-- FRONTCONTAINER -->
-	    </div> <!-- CONTENT -->
-
-      <div id="FOOTER">
-	&copyright;
-
-	The mark FreeBSD is a registered trademark of The FreeBSD
-	Foundation and is used by The FreeBSD Project with the
-	permission of <a
-	  href="http://www.freebsdfoundation.org/documents/Guidelines.shtml">The
-	FreeBSD Foundation</a>.
-
-	  </div> <!-- FOOTER -->
-	</div> <!-- CONTAINER -->
-      </div> <!-- CONTAINERWRAP -->
-    </body>
-    </html>
   </xsl:template>
 </xsl:stylesheet>
 

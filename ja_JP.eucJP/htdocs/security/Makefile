@@ -41,7 +41,4 @@ NO_TIDY.notices=	yes
 #XMLDOCS+=	advisories-rss:security-rss.xsl::rss.xml
 #XMLDOCS+=	errata-rss:errata-rss.xsl::errata.xml
 
-### Revision checking
-REVCHECK=	YES
-
 .include "${DOC_PREFIX}/share/mk/web.site.mk"

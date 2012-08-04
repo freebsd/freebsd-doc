@@ -19,7 +19,4 @@ DOCS+=	15.sgml
 #DOCS+=	17.sgml
 DOCS+=	index.sgml
 
-### Revision checking
-REVCHECK= YES
-
 .include "${DOC_PREFIX}/share/mk/web.site.mk"

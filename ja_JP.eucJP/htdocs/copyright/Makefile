@@ -39,7 +39,4 @@ CVS_OPT+=	-R
 #       ${CVS} ${CVS_OPT} co -p ${LEGAL_FILE} > ${.TARGET}
 #.endif
 
-### Revision checking
-REVCHECK=	yes
-
 .include "${DOC_PREFIX}/share/mk/web.site.mk"
