@@ -1,28 +1,19 @@
-<!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
-				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE html PUBLIC "-//FreeBSD//DTD XHTML 1.0 Transitional-Based Extension//EN"
+"http://www.FreeBSD.org/XML/doc/share/sgml/xhtml10-freebsd.dtd" [
 <!ENTITY base "../..">
+<!ENTITY date "$FreeBSD$">
 <!ENTITY email "freebsd-ia64">
 <!ENTITY title "Proyecto FreeBSD/ia64">
-<!ENTITY % navinclude.developers "INCLUDE">
 ]>
 
 <!-- The FreeBSD Spanish Documentation Project
-     Original Revision: r1.7			-->
+     Original Revision: r1.7                    -->
 
-<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
-  <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
-  <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/xhtml.xsl"/>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head><title>&title;</title></head>
 
-  <xsl:variable name="date" select="'$FreeBSD$'"/>
-
-  <xsl:template name="process.content">
-	      <div id="SIDEWRAP">
-                &nav;
-              </div> <!-- SIDEWRAP -->
-
-	      <div id="CONTENTWRAP">
-		&header3;
-
+  <body class="navinclude.developers">
 		<img align="right" alt="McKinley" src="&enbase;/platforms/mckinley-die.png"/>
 
 		<p>Buscar en los archivos de la lista de distribuci&oacute;n de
@@ -85,6 +76,6 @@
 		  mantener la compatibilidad con versiones anteriores en
 		  una etapa tan temprana de de la vida del port no es lo
 		  ideal.</p>
-	      </div> <!-- CONTENTWRAP -->
-  </xsl:template>
-</xsl:stylesheet>
+
+  </body>
+</html>

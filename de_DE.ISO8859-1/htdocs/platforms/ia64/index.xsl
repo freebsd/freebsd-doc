@@ -1,26 +1,21 @@
-<!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
-				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE html PUBLIC "-//FreeBSD//DTD XHTML 1.0 Transitional-Based Extension//EN"
+"http://www.FreeBSD.org/XML/doc/share/sgml/xhtml10-freebsd.dtd" [
 <!ENTITY base "../..">
+<!ENTITY date "$FreeBSD$">
 <!ENTITY email "freebsd-ia64">
 <!ENTITY title "FreeBSD/ia64 Project">
-<!ENTITY % navinclude.developers "INCLUDE">
 ]>
+
 <!--
   $FreeBSDde: de-www/platforms/ia64/index.xsl,v 1.8 2006/10/20 20:09:25 jkois Exp $
   basiert auf: 1.7
 -->
-<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
-  <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
-    <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/xhtml.xsl"/>
 
-  <xsl:template names="process.content">
-	      <div id="SIDEWRAP">
-                &nav;
-              </div> <!-- SIDEWRAP -->
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head><title>&title;</title></head>
 
-	      <div id="CONTENTWRAP">
-		&header3;
-
+  <body class="navinclude.developers">
 		<img align="right" alt="McKinley die" src="&enbase;/platforms/ia64/mckinley-die.png"/>
 
 	      <p>Das Archiv der ia64-Mailinglisten durchsuchen:</p>
@@ -83,6 +78,5 @@
 	  zweckdienlich, auf R&#252;ckw&#228;rtskompatibilit&#228;t
 	  achten zu m&#252;ssen.</p>
 
-	      </div> <!-- CONTENTWRAP -->
-  </xsl:template>
-</xsl:stylesheet>
+  </body>
+</html>

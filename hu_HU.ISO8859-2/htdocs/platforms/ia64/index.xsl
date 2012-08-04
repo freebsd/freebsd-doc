@@ -1,10 +1,10 @@
-<!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
-				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
+<?xml version="1.0" encoding="iso-8859-2"?>
+<!DOCTYPE html PUBLIC "-//FreeBSD//DTD XHTML 1.0 Transitional-Based Extension//EN"
+"http://www.FreeBSD.org/XML/doc/share/sgml/xhtml10-freebsd.dtd" [
 <!ENTITY base "../..">
-<!ENTITY enbase "../../..">
+<!ENTITY date "$FreeBSD$">
 <!ENTITY email "freebsd-ia64">
 <!ENTITY title "A &os;/ia64 projekt">
-<!ENTITY % navinclude.developers "INCLUDE">
 ]>
 
 <!-- FreeBSD Hungarian Documentation Project
@@ -13,20 +13,10 @@
      %SRCID%	1.7
 -->
 
-<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
-  <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
-  <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/xhtml.xsl"/>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head><title>&title;</title></head>
 
-  <xsl:variable name="date" select="'$FreeBSD$'"/>
-
-  <xsl:template names="process.content">
-	      <div id="SIDEWRAP">
-                &nav;
-              </div> <!-- SIDEWRAP -->
-
-	      <div id="CONTENTWRAP">
-		&header3;
-
+  <body class="navinclude.developers">
 		<img align="right" alt="McKinley die" src="&enbase;/platforms/ia64/mckinley-die.png"/>
 
 		<p>Keres&eacute;s az ia64 levelez&eacute;si lista
@@ -90,6 +80,6 @@
 		  folyamatban, &eacute;s a kompatibilit&aacute;s
 		  felt&eacute;tlen megtart&aacute;sa m&eacute;g nem
 		  c&eacute;lszer&#251; ebben a kezdeti szakaszban.</p>
-	      </div> <!-- CONTENTWRAP -->
-  </xsl:template>
-</xsl:stylesheet>
+
+  </body>
+</html>
