@@ -269,10 +269,6 @@ XML_NOTICES=		${DOC_PREFIX}/share/sgml/notices.xml
 #   The ${TARGET.<id>} file will not be listed in $DATA if defined.
 #   NO_DATA.DEFAULT is the setting for all <id>s.
 #
-# NO_TIDY.<id>
-#   The ${TARGET.<id>} file will not be processed by tidy if defined.
-#   NO_TIDY.DEFAULT is the setting for all <id>s.
-#
 XSLTPROC_ENV+=	SGML_CATALOG_FILES=
 XSLTPROC_ENV+=	XML_CATALOG_FILES="${XML_CATALOG_FILES}"
 
@@ -334,13 +330,6 @@ DEPENDSET.${_ID}=	${DEPENDSET.DEFAULT}
 DEPENDSET.${_ID}=
 .endif
 .endif
-.if !defined(NO_TIDY.${_ID}) || empty(NO_TIDY.${_ID})
-.if defined(NO_TIDY.DEFAULT)
-NO_TIDY.${_ID}=	${NO_TIDY.DEFAULT}
-.else
-NO_TIDY.${_ID}=
-.endif
-.endif
 .if !defined(NO_DATA.${_ID}) || empty(NO_DATA.${_ID})
 .if defined(NO_DATA.DEFAULT)
 NO_DATA.${_ID}=	${NO_DATA.DEFAULT}
@@ -380,12 +369,6 @@ ${TARGET.${_ID}}: ${XML.${_ID}} ${DEPENDS.${_ID}}
 	${XSLTPROC} ${XSLTPROCOPTS.${_ID}} \
 		-o ${.TARGET} ${PARAMS.${_ID}} \
 		${XSLT.${_ID}} ${XML.${_ID}}
-. if !defined(NO_TIDY) || empty(NO_TIDY)
-.  if !defined(NO_TIDY.${_ID}) || empty(NO_TIDY.${_ID})
-	${REINPLACE_TABS_CMD} ${.TARGET}
-	-${TIDY} ${TIDYOPTS} ${.TARGET}
-.  endif
-. endif
 
 VALIDATE_DOCS+=	VALIDATE.${_ID}
 VALIDATE.${_ID}:

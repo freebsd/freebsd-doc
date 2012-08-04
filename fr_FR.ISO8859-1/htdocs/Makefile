@@ -104,7 +104,5 @@ index.html: index.xsl ${XML_INCLUDES}\
 		--param curdate.xml "'${XML_EVENTS_CURDATE}'" \
 		--param notices.xml "'${XML_NOTICES}'" \
 		${.CURDIR}/index.xsl ${XML_NEWS_NEWS} ${XML_EVENTS_EVENTS} ${XML_EVENTS_CURDATE}
-.if !defined(NO_TIDY)
-	-${TIDY} ${TIDYOPTS} ${.TARGET}
 .endif
 
