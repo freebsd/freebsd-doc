@@ -15,33 +15,15 @@
   
   <xsl:import href="../includes.xsl"/>
   <xsl:import href="includes.xsl"/>
+  <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/xhtml.xsl"/>
   <xsl:variable name="section" select="'developers'"/>
 
   <xsl:variable name="base" select="'../..'"/>
   <xsl:variable name="date" select="'$FreeBSD$'"/>
   <xsl:variable name="title" select="'Проект FreeBSD GNOME'"/>
 
-  <xsl:output type="html" encoding="koi8-r"
-              doctype-public="-//W3C//DTD HTML 4.01 Transitional//EN"/>
-
-  <xsl:template match="/">
-    <html>
-      <xsl:copy-of select="$header1"/>
-      
-            <body xsl:use-attribute-sets="att.body">
-      
-        <div id="containerwrap">
-          <div id="container">
-      
-      	<xsl:copy-of select="$header2"/>
-      
-      	<div id="content">
-      
-      	      <xsl:copy-of select="$sidenav"/>
-      
-      	      <div id="contentwrap">
-      	      
-	      <xsl:copy-of select="$header3"/>
+  <xsl:template names="process.content">
+	<div id="contentwrap">
 
         <table border="0" cellspacing="0" cellpadding="2">
           <tr>
@@ -229,16 +211,5 @@
         </table>
 
 	  	</div> <!-- contentwrap -->
-		<br class="clearboth" />
-	
-	</div> <!-- content -->
-	
-	<xsl:copy-of select="$footer"/>
-	
-        </div> <!-- container -->
-   </div> <!-- containerwrap -->
-
-      </body>
-    </html>
   </xsl:template>
 </xsl:stylesheet>
