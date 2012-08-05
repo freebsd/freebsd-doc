@@ -1,31 +1,25 @@
-<?xml version="1.0" encoding="iso-8859-2"?>
-<!DOCTYPE html PUBLIC "-//FreeBSD//DTD XHTML 1.0 Transitional-Based Extension//EN"
-"http://www.FreeBSD.org/XML/doc/share/sgml/xhtml10-freebsd.dtd" [
-<!ENTITY base "..">
-<!ENTITY enbase "../..">
+<?xml version="1.0" encoding="ISO-8859-2"?>
+<!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
+                                "http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
 <!ENTITY title "A http://www.FreeBSD.org oldalt&eacute;rk&eacute;pe
   &eacute;s indexe">
-<!ENTITY atoz SYSTEM "atoz.sgml">
-<!ENTITY site SYSTEM "site.sgml">
 ]>
 
-<!-- The FreeBSD Hungarian Documentation Project
-     Translated by: Gabor Kovesdan <gabor@FreeBSD.org>
-     %SOURCE%	en/search/index-site.sgml
-     %SRCID%	1.29
--->
+<!-- $FreeBSD$ -->
 
-<html xmlns="http://www.w3.org/1999/xhtml">
-    <head>
-      <title>&title;</title>
+<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
+  <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/libcommon.xsl"/>
+  <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/xhtml.xsl"/>
 
-      <cvs:keyword xmlns:cvs="http://www.FreeBSD.org/XML/CVS">$FreeBSD$</cvs:keyword>
-    </head>
+  <xsl:variable name="lowercase" select="'aábcdeéfghiíjklmnoóöőpqrstuúüűvwxyz'"/>
+  <xsl:variable name="uppercase" select="'AÁBCDEÉFGHIÍJKLMNOÓÖŐPQRSTUÚÜŰVWXYZ'"/>
 
-    <body class="">
+  <xsl:key name="indexLetter" match="term" use="translate(substring(text, 1, 1), $lowercase, $uppercase)"/>
 
+  <xsl:template name="process.contentwrap">
     <h1>Oldalt&eacute;rk&eacute;p</h1>
-    &site;
+
+    <xsl:call-template name="html-sitemap"/>
 
     <h2>Metaoldalak</h2>
 
@@ -42,22 +36,16 @@
       <li><a href="&base;/search/search.html">Keres&eacute;s</a></li>
       <li><a href="&enbase;/security/security.html">Biztons&aacute;g</a></li>
       <li><a href="&base;/support.html">T&aacute;mogat&aacute;s</a></li>
-    </ul> 
+    </ul>
 
     <hr noshade="noshade"/>
 
     <h1>A-Z Index</h1>
 
-    &atoz;
+    <xsl:call-template name="html-index-toc"/>
 
-  </body>
-</html>
+    <hr noshade="noshade"/>
 
-
-<!-- Keep this comment at the end of the file
-Local variables:
-mode: sgml
-sgml-omittag:nil
-sgml-shorttag:nil
-End:
--->
+    <xsl:call-template name="html-index"/>
+  </xsl:template>
+</xsl:stylesheet>

@@ -1,24 +1,21 @@
-<?xml version="1.0" encoding="iso-8859-1"?>
-<!DOCTYPE html PUBLIC "-//FreeBSD//DTD XHTML 1.0 Transitional-Based Extension//EN"
-"http://www.FreeBSD.org/XML/doc/share/sgml/xhtml10-freebsd.dtd" [
-<!ENTITY base "..">
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
+                                "http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
 <!ENTITY title "Site Map and Index of http://www.FreeBSD.org">
-<!ENTITY atoz SYSTEM "atoz.sgml">
-<!ENTITY site SYSTEM "site.sgml">
 ]>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
-    <head>
-      <title>&title;</title>
+<!-- $FreeBSD$ -->
 
-      <cvs:keyword xmlns:cvs="http://www.FreeBSD.org/XML/CVS">$FreeBSD$</cvs:keyword>
-    </head>
+<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
+  <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/libcommon.xsl"/>
+  <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/xhtml.xsl"/>
 
-    <body>
+  <xsl:key name="indexLetter" match="term" use="translate(substring(text, 1, 1), $lowercase, $uppercase)"/>
 
+  <xsl:template name="process.contentwrap">
     <h1>Site Map</h1>
 
-    &site;
+    <xsl:call-template name="html-sitemap"/>
 
     <h2>Meta homepages</h2>
 
@@ -41,16 +38,10 @@
 
     <h1>A-Z Index</h1>
 
-    &atoz;
+    <xsl:call-template name="html-index-toc"/>
 
+    <hr noshade="noshade"/>
 
-  </body>
-</html>
-
-  <!-- Keep this comment at the end of the file
-    Local variables:
-    mode: sgml
-    sgml-omittag:nil
-    sgml-shorttag:nil
-    End:
-  -->
+    <xsl:call-template name="html-index"/>
+  </xsl:template>
+</xsl:stylesheet>
