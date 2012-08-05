@@ -1582,4 +1582,107 @@
     <xsl:text>, </xsl:text>
     <xsl:value-of select="enddate/year"/>
   </xsl:template>
+
+  <!-- Generate sitemap -->
+  <xsl:template name="html-sitemap">
+    <!--
+          We iterate over all categories and list all the sitemap
+          items that are enumerated for that category.
+          Listing is not done in alphabetical order but in
+          document order so that items can be arranged in a
+          logical order.
+    -->
+
+    <dl>
+      <xsl:for-each select="/sitemap/category">
+        <dt><strong><xsl:value-of select="@name"/></strong></dt>
+
+        <dd>
+          <xsl:for-each select="item">
+            <a>
+              <xsl:attribute name="href">
+                <xsl:value-of select="destination"/>
+              </xsl:attribute>
+
+              <xsl:value-of select="text"/>
+            </a>
+          </xsl:for-each>
+        </dd>
+      </xsl:for-each>
+    </dl>
+  </xsl:template>
+
+  <xsl:variable name="lowercase" select="'abcdefghijklmnopqrstuvwxyz'"/>
+  <xsl:variable name="uppercase" select="'ABCDEFGHIJKLMNOPQRSTUVWXYZ'"/>
+
+  <!-- Generate index toc -->
+  <xsl:template name="html-index-toc">
+    <!--
+          First we make a toc by iterating over the index terms.
+          We need one entry per initial letter so this is done
+          by using a key and only processing the first term for
+          each initial letter.  For each initial letter, we emit
+          a link that will point to entries beginning with that letter.
+    -->
+
+    <a name="toc"></a>
+
+    <table border="4">
+      <tr>
+        <xsl:for-each select="/sitemap/term">
+          <xsl:sort select="text"/>
+
+          <xsl:variable name="firstLetter" select="translate(substring(text, 1, 1), $lowercase, $uppercase)"/>
+
+          <xsl:if test="generate-id(.) = generate-id(key('indexLetter', $firstLetter)[1])">
+            <td><a>
+              <xsl:attribute name="href">
+                <xsl:value-of select="concat('#', $firstLetter)"/>
+              </xsl:attribute>
+
+              <xsl:value-of select="$firstLetter"/>
+            </a></td>
+          </xsl:if>
+        </xsl:for-each>
+      </tr>
+    </table>
+  </xsl:template>
+
+  <!-- Generate index -->
+  <xsl:template name="html-index">
+    <!--
+          Then we need to generate the actual entries but grouped by their
+          initial letter.  The same method is used here as above:
+          take the first entry of each initial letter; it gives us the
+          letter.  And then, we do another iteration but only process
+          those terms that begin with the current letter and emit
+          an unordered list of them.
+    -->
+
+    <xsl:for-each select="/sitemap/term">
+      <xsl:sort select="text"/>
+
+      <xsl:variable name="firstLetter" select="translate(substring(text, 1, 1), $lowercase, $uppercase)"/>
+
+      <xsl:if test="generate-id(.) = generate-id(key('indexLetter', $firstLetter)[1])">
+        <h2><a href="#toc" name="{$firstLetter}">
+          <xsl:value-of select="$firstLetter"/>
+        </a></h2>
+
+        <ul>
+          <xsl:for-each select="/sitemap/term[translate(substring(text, 1, 1), $lowercase, $uppercase) = $firstLetter]">
+            <xsl:sort select="text"/>
+
+            <li><a>
+              <xsl:attribute name="href">
+                <xsl:value-of select="destination"/>
+              </xsl:attribute>
+
+              <xsl:value-of select="text"/>
+            </a></li>
+          </xsl:for-each>
+        </ul>
+      </xsl:if>
+    </xsl:for-each>
+  </xsl:template>
 </xsl:stylesheet>

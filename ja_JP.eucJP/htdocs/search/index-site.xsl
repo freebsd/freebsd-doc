@@ -1,26 +1,24 @@
 <?xml version="1.0" encoding="eucJP"?>
-<!DOCTYPE html PUBLIC "-//FreeBSD//DTD XHTML 1.0 Transitional-Based Extension//EN"
-"http://www.FreeBSD.org/XML/doc/share/sgml/xhtml10-freebsd.dtd" [
-<!ENTITY base "..">
+<!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
+                                "http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
 <!ENTITY title "http://www.FreeBSD.org のサイトマップおよび索引">
-<!ENTITY atoz SYSTEM "atoz.sgml">
-<!ENTITY site SYSTEM "site.sgml">
 ]>
+
+<!-- $FreeBSD$ -->
+
 <!-- The FreeBSD Japanese Documentation Project -->
 <!-- Original revision: 1.29 -->
 
-<html xmlns="http://www.w3.org/1999/xhtml">
-    <head>
-      <title>&title;</title>
+<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
+  <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/libcommon.xsl"/>
+  <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/xhtml.xsl"/>
 
-      <cvs:keyword xmlns:cvs="http://www.FreeBSD.org/XML/CVS">$FreeBSD$</cvs:keyword>
-    </head>
+  <xsl:key name="indexLetter" match="term" use="translate(substring(text, 1, 1), $lowercase, $uppercase)"/>
 
-    <body class="">
-
+  <xsl:template name="process.contentwrap">
     <h1>サイトマップ</h1>
 
-    &site;
+    <xsl:call-template name="html-sitemap"/>
 
     <h2>各ホームページ</h2>
 
@@ -43,16 +41,10 @@
 
     <h1>A-Z 索引</h1>
 
-    &atoz;
+    <xsl:call-template name="html-index-toc"/>
 
+    <hr noshade="noshade"/>
 
-  </body>
-</html>
-
-  <!-- Keep this comment at the end of the file
-    Local variables:
-    mode: sgml
-    sgml-omittag:nil
-    sgml-shorttag:nil
-    End:
-  -->
+    <xsl:call-template name="html-index"/>
+  </xsl:template>
+</xsl:stylesheet>
