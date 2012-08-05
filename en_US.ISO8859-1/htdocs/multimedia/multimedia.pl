@@ -123,12 +123,12 @@ sub xml_char {
 
 		if ($tree[3] eq "title") {
 		    $items[$ci]{title} = "" if (!defined $items[$ci]{title});
-		    $items[$ci]{title} .= $value;
+		    $items[$ci]{title} .= htmlentities($value);
 		    return;
 		}
 		if ($tree[3] eq "desc") {
 		    $items[$ci]{desc} = "" if (!defined $items[$ci]{desc});
-		    $items[$ci]{desc} .= $value;
+		    $items[$ci]{desc} .= htmlentities($value);
 		    return;
 		}
 		if ($tree[3] eq "overview") {
@@ -180,7 +180,7 @@ sub xml_char {
 			if ($tree[5] eq "desc") {
 			    $items[$ci]{files}{$items[$ci]{fc}}{desc} = ""
 				if (!defined $items[$ci]{files}{$items[$ci]{fc}}{desc});
-			    $items[$ci]{files}{$items[$ci]{fc}}{desc} .= $value;
+			    $items[$ci]{files}{$items[$ci]{fc}}{desc} .= htmlentities($value);
 			    return;
 			}
 			if ($tree[5] eq "tags") {
@@ -283,26 +283,26 @@ sub print_htmlitem {
 	    print $fhandle ")";
 	}
     }
-    print $fhandle "<br>Source: <a href=\"", htmlentities($source{url}), "\">",
-	$source{name}, "</a><br>\n";
+    print $fhandle "<br/>Source: <a href=\"", htmlentities($source{url}), "\">",
+	$source{name}, "</a><br/>\n";
     print $fhandle "Added: ",
 	    substr($item{added}, 6, 2), " ",
 	    $months[substr($item{added}, 4, 2)], " ",
-	    substr($item{added}, 0, 4), "<br>\n";
+	    substr($item{added}, 0, 4), "<br/>\n";
 
     print $fhandle "Tags: ";
     {
 	my $first = 1;
 	foreach my $t (@{$item{tags}}) {
 	    print $fhandle ", " if (!$first);
-#	    join(", ", @{$item{$t}}), "<br>\n";
+#	    join(", ", @{$item{$t}}), "<br/>\n";
 	    my $th = $t;
 	    $th =~ s/ /_/g;
 	    print $fhandle "<a href=\"tag-$th.html\">$t</a>";
 	    $first = 0;
 	}
     }
-    print $fhandle "<br>\n";
+    print $fhandle "<br/>\n";
 
     if (defined $item{overview} && defined $item{files}) {
 	my $c = 0;
@@ -328,7 +328,7 @@ sub print_htmlitem {
 		print $fhandle ")";
 	    }
 	}
-	print $fhandle "<br>\n";
+	print $fhandle "<br/>\n";
     }
     print $fhandle "</p>\n";
     print $fhandle "$item{desc}\n";
@@ -581,8 +581,8 @@ sub print_htmlitem {
 	next if ($lastsource eq $item{source});
 	$lastsource = $item{source};
 
-	print $fhtml "<li><a href=\"source-$lastsource.html\">", $sources{$item{source}}{name}, "</a>\n";
-	print $fsgml "<li><a href=\"source-$lastsource.html\">", $sources{$item{source}}{name}, "</a>\n";
+	print $fhtml "<li><a href=\"source-$lastsource.html\">", $sources{$item{source}}{name}, "</a></li>\n";
+	print $fsgml "<li><a href=\"source-$lastsource.html\">", $sources{$item{source}}{name}, "</a></li>\n";
     }
 
     print $fhtml "</ul>\n";
