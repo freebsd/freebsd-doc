@@ -336,12 +336,3 @@
         </div> <!-- FRONTCONTAINER -->
   </xsl:template>
 </xsl:stylesheet>
-
-<!--
-     Local Variables:
-     mode: xml
-     sgml-indent-data: t
-     sgml-omittag: nil
-     sgml-always-quote-attributes: t
-     End:
--->
