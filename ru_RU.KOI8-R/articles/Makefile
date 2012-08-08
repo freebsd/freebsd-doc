@@ -42,7 +42,6 @@ SUBDIR+= pam
 SUBDIR+= portbuild
 SUBDIR+= pr-guidelines
 SUBDIR+= problem-reports
-SUBDIR+= pxe
 SUBDIR+= relaydelay
 SUBDIR+= releng
 SUBDIR+= releng-packages
