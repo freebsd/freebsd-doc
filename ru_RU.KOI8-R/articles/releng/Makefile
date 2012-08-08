@@ -5,7 +5,7 @@
 # $FreeBSD$
 # $FreeBSDru: frdp/doc/ru_RU.KOI8-R/articles/releng/Makefile,v 1.4 2005/07/01 06:51:22 gad Exp $
 #
-# Original revision: r34983
+# Original revision: r38826
 #
 
 DOC?= article
@@ -24,6 +24,7 @@ IMAGES_EN+=	branches-releng5.pic
 IMAGES_EN+=	branches-releng6.pic
 IMAGES_EN+=	branches-releng7.pic
 IMAGES_EN+=	branches-releng8.pic
+IMAGES_EN+=	branches-releng9.pic
 
 CSS_SHEET_ADDITIONS= extra.css
 
