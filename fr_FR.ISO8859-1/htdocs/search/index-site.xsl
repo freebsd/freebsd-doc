@@ -33,7 +33,7 @@
 
       <ul>
 	<li><a href="../commercial/commercial.html">Commercial</a></li>
-	<li><a href="../copyright/copyright.html">Copyright et Informations l&eacute;gales</a></li>
+	<li><a href="../copyright/copyright.html">Copyright et Informations légales</a></li>
 	<li><a href="../docs.html">Documentation</a></li>
 	<li><a href="../internal/internal.html">Interne</a></li>
 	<li><a href="../news/news.html">Nouvelles</a></li>
@@ -42,7 +42,7 @@
 	<li><a href="../projects/projects.html">Projets</a></li>
 	<li><a href="../releases/index.html">Information sur les versions</a></li>
 	<li><a href="../search/search.html">Recherche</a></li>
-	<li><a href="../security/security.html">S&eacute;curit&eacute;</a></li>
+	<li><a href="../security/security.html">Sécurité</a></li>
 	<li><a href="../support.html">Support</a></li>
     </ul>
 
