@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
                                 "http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
-<!ENTITY title "Mapa de sitio e &iacute;ndice de http://www.FreeBSD.org">
+<!ENTITY title "Mapa de sitio e índice de http://www.FreeBSD.org">
 ]>
 
 <!-- $FreeBSD$ -->
@@ -23,18 +23,18 @@
 
     <xsl:call-template name="html-sitemap"/>
 
-    <h2>Metap&aacute;ginas</h2>
+    <h2>Metapáginas</h2>
 
     <ul>
       <li><a href="&enbase;/commercial/commercial.html">Distribuidores comerciales</a></li>
       <li><a href="&base;/copyright/copyright.html">Copyright</a></li>
-      <li><a href="&base;/docs.html">Documentaci&oacute;n</a></li>
-      <li><a href="&base;/internal/internal.html">Informaci&oacute;n interna</a></li>
+      <li><a href="&base;/docs.html">Documentación</a></li>
+      <li><a href="&base;/internal/internal.html">Información interna</a></li>
       <li><a href="&base;/news/news.html">Noticias</a></li>
       <li><a href="&base;/platforms/">Plataformas</a></li>
       <li><a href="&enbase;/ports/index.html">Ports</a></li>
       <li><a href="&base;/projects/projects.html">Proyectos</a></li>
-      <li><a href="&base;/releases/index.html">Informaci&oacute;n de releases</a></li>
+      <li><a href="&base;/releases/index.html">Información de releases</a></li>
       <li><a href="&base;/search/search.html">B&acute;squeda</a></li>
       <li><a href="&enbase;/security/security.html">Seguridad</a></li>
       <li><a href="&base;/support.html">Soporte</a></li>
@@ -42,7 +42,7 @@
 
     <hr noshade="noshade"/>
 
-    <h1>&Iacute;ndice alfab&eacute;tico</h1>
+    <h1>Índice alfabético</h1>
 
     <xsl:call-template name="html-index-toc"/>
 
