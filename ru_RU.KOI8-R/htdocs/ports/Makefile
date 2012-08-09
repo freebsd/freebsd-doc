@@ -70,7 +70,6 @@ Makefile.gen: index.sgml .NOTMAIN
 	for categoryfile in ${CATEGORYLIST}; do \
 		${ECHO_CMD} -n " $$categoryfile.sgml" >> Makefile.gen; \
 	done
-.endif
 
 index.sgml: ${INDEX} categories packages.exists portindex ports.inc .NOTMAIN
 	${RM} -f *.sgml
