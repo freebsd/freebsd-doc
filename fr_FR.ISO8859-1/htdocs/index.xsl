@@ -40,43 +40,43 @@
 		<div id="FRONTFEATURELEFT">
 			<div id="FRONTFEATURECONTENT">
 				<h1>
-				  Bas&#233; sur &unix; BSD
+				  Basé sur &unix; BSD
 				</h1>
-				<p>FreeBSD&reg; est un syst&#232;me d'exploitation avanc&#233; pour
+				<p>FreeBSD&reg; est un système d'exploitation avancé pour
 				les <a
 				href="&base;/platforms/">plates-formes</a>
 				modernes de type serveur, station de
-				travail et syst&#232;mes embarqu&#233;s.  Le code
-				de base de FreeBSD a &#233;t&#233; d&#233;velopp&#233;,
-				am&#233;lior&#233; et optimis&#233; continuellement
+				travail et systèmes embarqués.  Le code
+				de base de FreeBSD a été développé,
+				amélioré et optimisé continuellement
 				pendant plus de trente ans.
-				Il est d&#233;velopp&#233; et maintenu par
+				Il est développé et maintenu par
 				<a href="&enbase;/doc/&url.doc.langcode;/articles/contributors/staff-committers.html">une
-				importante &#233;quipe de personnes</a>.
-				FreeBSD propose des fonctionnalit&#233;s
-				r&#233;seau avanc&#233;es, une s&#233;curit&#233; pouss&#233;e et
+				importante équipe de personnes</a>.
+				FreeBSD propose des fonctionnalités
+				réseau avancées, une sécurité poussée et
 				des performances de haut niveau.
-				FreeBSD est utilis&#233; par certains des <a
+				FreeBSD est utilisé par certains des <a
 				href="&enbase;/doc/&url.doc.langcode;/books/handbook/nutshell.html#INTRODUCTION-NUTSHELL-USERS">sites
-				web les plus visit&#233;s</a> ainsi que par
+				web les plus visités</a> ainsi que par
 				la plupart
-				des syst&#232;mes embarqu&#233;s orient&#233;s r&#233;seau
-				et des syst&#232;mes de stockage les plus
-				r&#233;pandus.</p>
+				des systèmes embarqués orientés réseau
+				et des systèmes de stockage les plus
+				répandus.</p>
 
 				<div id="txtfrontfeaturelink">
-				&#187;<a href="&base;/about.html" title="En savoir plus">En savoir plus</a>
+				»<a href="&base;/about.html" title="En savoir plus">En savoir plus</a>
 				</div> <!-- txtfrontfeaturelink -->
 			</div> <!-- frontfeaturecontent -->
 		</div> <!-- frontfeatureleft -->
 
 		<div id="FRONTFEATUREMIDDLE">
 			<div class="frontgetroundbox">
-			  <div class="frontgettop"><div>&#160;</div>&#160;</div>
+			  <div class="frontgettop"><div>&nbsp;</div>&nbsp;</div>
 				<div class="frontgetcontent">
 				  <a href="&base;/where.html">Obtenir FreeBSD maintenant</a>
 				</div> <!-- frontgetcontent -->
-			  <div class="frontgetbot"><div>&#160;</div>&#160;</div>
+			  <div class="frontgetbot"><div>&nbsp;</div>&nbsp;</div>
 			</div> <!-- frontgetroundbox -->
 			
 			<div id="FRONTRELEASES">
@@ -91,13 +91,13 @@
 					</li>
 			    <xsl:if test="'&beta.testing;' != 'IGNORE'">
 					<li>
-					  <a href="&base;/where.html#helptest">Version &#224; venir
+					  <a href="&base;/where.html#helptest">Version à venir
 					    &betarel.current; - &betarel.vers;</a>
 					</li>
 				    </xsl:if>
 			    <xsl:if test="'&beta2.testing;' != 'IGNORE'">
 					<li>
-					  <a href="&base;/where.html#helptest">Version &#224; venir
+					  <a href="&base;/where.html#helptest">Version à venir
 					    &betarel2.current; - &betarel2.vers;</a>
 					</li>
 				    </xsl:if>
@@ -120,7 +120,7 @@
 					<a href="&enbase;/es/" title="Espagnol">es</a>
 				  </li>
 				  <li>
-					<a href="&enbase;/fr/" title="Fran&#231;ais">fr</a>
+					<a href="&enbase;/fr/" title="Français">fr</a>
 				  </li>
 				  <li>
 					<a href="&enbase;/hu/" title="Hongrois">hu</a>
@@ -132,13 +132,13 @@
 					<a href="&enbase;/ja/" title="Japonais">ja</a>
 				  </li>
 				  <li>
-					<a href="&enbase;/nl/" title="N&#233;erlandais">nl</a>
+					<a href="&enbase;/nl/" title="Néerlandais">nl</a>
 				  </li>
 				  <li>
 					<a href="&enbase;/ru/" title="Russe">ru</a>
 				  </li>
 				  <li class="last-child">
-					<a href="&enbase;/zh_CN/" title="Chinois simplifi&#233;">zh_CN</a>
+					<a href="&enbase;/zh_CN/" title="Chinois simplifié">zh_CN</a>
 				  </li>
 				</ul>
 			</div> <!-- LANGUAGENAV -->
@@ -171,14 +171,14 @@
 					  <a href="&enbase;/doc/&url.doc.langcode;/books/faq/index.html" title="FAQ">FAQ</a>
 					</li>
 					<li>
-					  <a href="&enbase;/doc/&url.doc.langcode;/books/handbook/index.html" title="Manuel de r&#233;f&#233;rence">Manuel de r&#233;f&#233;rence</a>
+					  <a href="&enbase;/doc/&url.doc.langcode;/books/handbook/index.html" title="Manuel de référence">Manuel de référence</a>
 					</li>
 					<li>
 					  <a
 					  href="&enbase;/ports/index.html"
 					  title="Logiciels
-					  port&#233;s">Logiciels
-					  port&#233;s</a>
+					  portés">Logiciels
+					  portés</a>
 					</li>
 
 				  </ul>
@@ -186,11 +186,11 @@
 			</div> <!-- FRONTSHORTCUTS -->
 
 			<div class="frontnewroundbox">
-			  <div class="frontnewtop"><div>&#160;</div>&#160;</div>
+			  <div class="frontnewtop"><div>&nbsp;</div>&nbsp;</div>
 			    <div class="frontnewcontent">
-			      <a href="&base;/projects/newbies.html">D&#233;butant sous FreeBSD?</a>
+			      <a href="&base;/projects/newbies.html">Débutant sous FreeBSD?</a>
 			    </div> <!-- frontnewcontent -->
-			  <div class="frontnewbot"><div>&#160;</div>&#160;</div>
+			  <div class="frontnewbot"><div>&nbsp;</div>&nbsp;</div>
 			</div> <!-- frontnewroundbox -->
 		</div> <!-- FEATURERIGHT -->
 				
@@ -238,7 +238,7 @@
 			  <div>
 				<ul class="newseventslist">
 				  <li class="only-child">
-					<a href="&base;/events/" title="Plus d'&#233;v&#233;nements">Plus...</a>
+					<a href="&base;/events/" title="Plus d'événements">Plus...</a>
 				  </li>
 				</ul>
 			  </div> <!-- unnamed -->
@@ -284,10 +284,10 @@
 			  <div>
 				<ul class="newseventslist">
 				  <li class="first-child">
-					<a href="&base;/security/advisories.html" title="Plus d'avis de s&#233;curit&#233;">Plus...</a>
+					<a href="&base;/security/advisories.html" title="Plus d'avis de sécurité">Plus...</a>
 				  </li>
 				  <li class="last-child">
-					<a href="&enbase;/security/rss.xml" title="Flux RSS des avis de s&#233;curit&#233;"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="Flux RSS des avis de s&#233;curit&#233;" /></a>
+					<a href="&enbase;/security/rss.xml" title="Flux RSS des avis de sécurité"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="Flux RSS des avis de sécurité" /></a>
 				  </li>
 				</ul>
 			  </div> <!-- unnamed -->
