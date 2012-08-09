@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="koi8-r"?>
 <!--
      The FreeBSD Russian Documentation Project
 
@@ -7,6 +8,7 @@
      Original revision: 1.67
 -->
 
+<div xmlns="http://www.w3.org/1999/xhtml">
   <p>Коллекция Портов и Пакетов FreeBSD даёт пользователям и администраторам
     простой метод установки приложений.  Коллекция портов <a
     href="../../../ports/growth/status.png">растёт с потрясающей
@@ -52,16 +54,16 @@
     href="http://www.FreeBSD.org/cgi/ports.cgi">
     Изменений портов FreeBSD</a>.</p>
 
-  <FORM
-    METHOD="GET" ACTION="http://www.FreeBSD.org/cgi/ports.cgi">Поиск по полям:
-    <INPUT NAME="query" VALUE="">
-    <SELECT NAME="stype">
-      <OPTION VALUE="all">Все</OPTION>
-      <OPTION VALUE="name">Название пакаджа</OPTION>
-      <OPTION VALUE="text">Описание</OPTION>
-    </SELECT>
-    <INPUT TYPE="submit" VALUE="Искать">
-  </FORM>
+  <form
+    method="get" action="http://www.FreeBSD.org/cgi/ports.cgi">Поиск по полям:
+    <input name="query" value=""/>
+    <select name="stype">
+      <option value="all">Все</option>
+      <option value="name">Название пакаджа</option>
+      <option value="text">Описание</option>
+    </select>
+    <input type="submit" value="Искать"/>
+  </form>
 
   <p>Более подробная информация об использовании портов находится в главе
     <a href="../../doc/ru_RU.KOI8-R/books/handbook/ports.html">Установка
@@ -70,3 +72,4 @@
     FreeBSD</a>. Информация о создании новых портов находится в книге <a
     href="../../doc/ru_RU.KOI8-R/books/porters-handbook/index.html">
     Руководство по созданию портов</a>.</p>
+</div>

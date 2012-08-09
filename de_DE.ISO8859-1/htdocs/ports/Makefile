@@ -78,7 +78,7 @@ ports.size:
 # master-index.sgml, statistics.ent, <category>.sgml
 CATEGORYLIST=`grep "^[a-z]" categories | sed -e s"/,.*//"`
 categories-alpha.sgml: ${INDEX} categories categories.descriptions \
-	packages.exists portindex ports.ent ports.size .NOTMAIN
+	packages.exists ports.ent ports.size .NOTMAIN
 	${RM} -f categories-alpha.sgml categories-grouped.sgml \
 		master-index.sgml statistics.ent
 	for categoryfile in ${CATEGORYLIST}; do \

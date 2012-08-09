@@ -57,7 +57,6 @@ Makefile.gen: categories-alpha.sgml categories-grouped.sgml index.sgml \
 		${ECHO_CMD} -n " $$categoryfile.sgml" >> Makefile.gen; \
 	done
 	${ECHO_CMD} >> Makefile.gen
-.endif
 
 .if defined(CLUSTER_MACHINE)
 PORTS_TARGZ_URL?= ftp://ftp-master.FreeBSD.org/pub/FreeBSD/ports/ports/ports.tar.gz
