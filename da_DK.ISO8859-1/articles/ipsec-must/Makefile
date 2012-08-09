@@ -1,7 +1,7 @@
 #
 # $FreeBSD$
 #
-# Article: Uafh&aelig;ngig Verifikation af IPsec Funktionalitet i FreeBSD
+# Article: Uafhængig Verifikation af IPsec Funktionalitet i FreeBSD
 
 DOC?= article
 
