@@ -16,24 +16,11 @@ DOCS+=	trademarks.sgml
 
 INDEXLINK= copyright.html
 
-CVS_READONLY?=	YES
-CVS_OPT+=	-Q
-.if !empty(CVS_READONLY)
-CVS_OPT+=	-R
-.endif
+DATA+= COPYING COPYING.LIB LEGAL
 
-DATA+= COPYING COPYING.LIB ${LEGAL}
+CLEANFILES+= LEGAL
 
-# FreeBSD Ports redistribution restrictions
-LEGAL= LEGAL
-LEGAL_FILE= 	ports/LEGAL
-CLEANFILES+=	${LEGAL}
-.if defined(NOPORTSCVS)
-${LEGAL}: $${PORTSBASE}/${LEGAL_FILE}
-	${CP} ${PORTSBASE}/${LEGAL_FILE} ${LEGAL}
-.else
-${LEGAL}:
-	${CVS} ${CVS_OPT} co -p ${LEGAL_FILE} > ${.TARGET}
-.endif
+LEGAL:
+	${FETCH} http://svn.freebsd.org/ports/head/LEGAL
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"
