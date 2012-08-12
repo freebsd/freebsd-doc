@@ -2,8 +2,6 @@
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
 <!ENTITY title "Социальные сети FreeBSD">
-<!ENTITY email "freebsd-www">
-<!ENTITY % navinclude.community "INCLUDE">
 ]>
 
 <!--
@@ -14,23 +12,20 @@
      Original revision: 1.6
 -->
 
-<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
-  xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
+<xsl:stylesheet version="1.0"
+  xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+  xmlns="http://www.w3.org/1999/xhtml">
+
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
   <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/xhtml.xsl"/>
 
-  <xsl:variable name="date">
-    <xsl:value-of select="//cvs:keyword[@name='freebsd']"/>
-  </xsl:variable>
+  <xsl:variable name="title">&title;</xsl:variable>
 
-  <xsl:template name="process.content">
-              <div id="SIDEWRAP">
-                &nav;
-              </div> <!-- SIDEWRAP -->
+  <xsl:template name="process.sidewrap">
+    &nav.community;
+  </xsl:template>
 
-	      <div id="CONTENTWRAP">
-		&header3;
-
+  <xsl:template name="process.contentwrap">
 	      <p>&os; представлена в различных социальных сетях.</p>
 
 	      <ul>
@@ -64,7 +59,5 @@
 		на <a href="http://twitter.com">Twitter</a>.</li>
 
 	      </ul>
-
-	      </div> <!-- CONTENTWRAP -->
   </xsl:template>
 </xsl:stylesheet>

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="koi8-r"?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
                                 "http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
-<!ENTITY title "Карта сервера и алфавитный указатель http://www.FreeBSD.org">
+<!ENTITY title "Карта сервера">
 ]>
 
 <!-- $FreeBSD$ -->
@@ -14,15 +14,18 @@
      Original revision: 1.25
 -->
 
-<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
+<xsl:stylesheet version="1.0"
+  xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+  xmlns="http://www.w3.org/1999/xhtml">
+
   <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/libcommon.xsl"/>
   <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/xhtml.xsl"/>
 
   <xsl:key name="indexLetter" match="term" use="translate(substring(text, 1, 1), $lowercase, $uppercase)"/>
 
-  <xsl:template name="process.contentwrap">
-    <h1>Карта сервера</h1>
+  <xsl:variable name="title">&title;</xsl:variable>
 
+  <xsl:template name="process.contentwrap">
     <xsl:call-template name="html-sitemap"/>
 
     <h2>Разделы сайта</h2>

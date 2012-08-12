@@ -9,8 +9,9 @@
      Original revision: 1.3
 -->
 
-<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
-  xmlns:cvs="http://www.FreeBSD.org/XML/CVS" exclude-result-prefixes="cvs">
+<xsl:stylesheet version="1.0"
+  xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+  xmlns="http://www.w3.org/1999/xhtml">
 
   <xsl:import href="../includes.xsl"/>
   <xsl:import href="includes.xsl"/>
@@ -19,9 +20,6 @@
 
   <xsl:variable name="base" select="'../..'"/>
   <xsl:variable name="title" select="'Последние новости FreeBSD GNOME'"/>
-  <xsl:variable name="date">
-    <xsl:value-of select="//cvs:keyword[@name='freebsd']"/>
-  </xsl:variable>
   
   <xsl:template name="process.content">
     <div id="contentwrap">

@@ -3,7 +3,6 @@
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
 <!ENTITY base "..">
 <!ENTITY title "The FreeBSD GNOME Project">
-<!ENTITY % navinclude.gnome "INCLUDE">
 ]>
 <!-- $FreeBSD$ -->
 
@@ -15,9 +14,11 @@
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
   <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/xhtml.xsl"/>
 
+  <xsl:variable name="title">&title;</xsl:variable>
+
   <xsl:template name="process.content">
               <div id="SIDEWRAP">
-                &nav;
+                &nav.gnome;
               </div> <!-- SIDEWRAP -->
 
 	      <div id="CONTENTWRAP">
@@ -86,7 +87,7 @@
                   </div> <!-- rightnav -->
                 </div> <!-- rightwrap -->
 
-		&header3;
+		<h1>&title;</h1>
 
 		<h2>What is GNOME?</h2>
 

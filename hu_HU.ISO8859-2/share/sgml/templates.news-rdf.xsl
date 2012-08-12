@@ -1,9 +1,6 @@
 <?xml version="1.0"?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
-				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
-<!ENTITY title "RDF &os; h&iacute;rek">
-<!ENTITY email "freebsd-www">
-]>
+				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
 
 <!-- $FreeBSD$ -->
 
@@ -19,10 +16,6 @@
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
   
   <xsl:output method="xml" indent="yes" encoding="&xml.encoding;"/>
-
-  <xsl:variable name="date">
-    <xsl:value-of select="//cvs:keyword[@name='freebsd']"/>
-  </xsl:variable>
 
   <!-- Generate the main body of the RDF file -->
   <xsl:template match="news">

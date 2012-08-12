@@ -2,11 +2,8 @@
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
 <!ENTITY title "&os; h&iacute;rek">
-<!ENTITY email "freebsd-www">
 <!ENTITY rsslink "rss.xml">
 <!ENTITY rsstitle "&title;">
-<!ENTITY % navinclude.about "INCLUDE">
-<!ENTITY % header.rss "INCLUDE">
 ]>
 
 <!-- $FreeBSD$ -->
@@ -17,17 +14,25 @@
      %SRCID%	1.4
 -->
 
-<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
-  xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
+<xsl:stylesheet version="1.0"
+  xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+  xmlns="http://www.w3.org/1999/xhtml">
+
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
   <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/xhtml.xsl"/>
 
   <xsl:param name="news.project.xml-master" select="'none'" />
   <xsl:param name="news.project.xml" select="'none'" />
 
+  <xsl:variable name="title">&title;</xsl:variable>
+
+  <xsl:variable name="rsstitle">&rsstitle;</xsl:variable>
+
+  <xsl:variable name="rsslink">&rsslink;</xsl:variable>
+
   <xsl:template name="process.content">
               <div id="SIDEWRAP">
-                &nav;
+                &nav.about;
                 <div id="FEEDLINKS">
                   <ul>
                     <li>
@@ -45,7 +50,7 @@
               </div> <!-- SIDEWRAP -->
 
 	      <div id="CONTENTWRAP">
-		&header3;
+		<h1>&title;</h1>
 
 		<xsl:for-each select="/news">
 		<xsl:call-template name="html-news-list-newsflash-preface" />

@@ -2,8 +2,6 @@
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
 <!ENTITY title "&os; h&iacute;rek">
-<!ENTITY email "freebsd-www">
-<!ENTITY % navinclude.about "INCLUDE">
 ]>
 
 <!-- $FreeBSD$ -->
@@ -14,11 +12,14 @@
      %SRCID%	1.10
 -->
 
-<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
-  xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
+<xsl:stylesheet version="1.0"
+  xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+  xmlns="http://www.w3.org/1999/xhtml">
 
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
   <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/xhtml.xsl"/>
+
+  <xsl:variable name="title">&title;</xsl:variable>
 
   <xsl:variable name="year">
     <xsl:value-of select="descendant::year/name"/>
@@ -28,15 +29,11 @@
     <xsl:copy-of select="." />
   </xsl:template>
 
-  <xsl:template names="process.content">
-	<div id="SIDEWRAP">
-	  &nav;
-	</div> <!-- SIDEWRAP -->
+  <xsl:template name="process.sidewrap">
+    &nav.about;
+  </xsl:template>
 
-	<div id="CONTENTWRAP">
-
-	&header3;
-
+  <xsl:template name="process.contentwrap">
 	<img src="&enbase;/gifs/news.jpg" align="right" border="0" width="193"
 	     height="144" alt="&os; h&iacute;rek"/>
 
@@ -60,7 +57,6 @@
 	  <a href="&enbase;/news/1996/index.html">1996</a></p>
 
 	<a href="&base;/news/news.html">H&iacute;rek f&#245;oldal</a>
-	</div> <!-- CONTENTWRAP -->
   </xsl:template>
 
   <xsl:template match="month">

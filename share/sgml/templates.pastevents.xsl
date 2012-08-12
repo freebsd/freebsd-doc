@@ -2,11 +2,8 @@
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD Fragment//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
 <!ENTITY title "FreeBSD Past Events">
-<!ENTITY email "freebsd-www">
 <!ENTITY rsslink "&base;/events/rss.xml">
 <!ENTITY rsstitle "Upcoming FreeBSD Events">
-<!ENTITY % navinclude.community "INCLUDE">
-<!ENTITY % header.rss "INCLUDE">
 ]>
 
 <!-- $FreeBSD$ -->
@@ -38,10 +35,9 @@
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
-  xmlns:cvs="http://www.FreeBSD.org/XML/CVS"
   xmlns:date="http://exslt.org/dates-and-times"
-  extension-element-prefixes="date"
-  exclude-result-prefixes="cvs">
+  xmlns="http://www.w3.org/1999/xhtml"
+  extension-element-prefixes="date">
 
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
   <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/xhtml.xsl"/>
@@ -63,6 +59,12 @@
     use="location/country" />
 
   <xsl:variable name="charturl" select="'http://chart.apis.google.com/chart?cht=t&amp;chs=400x200&amp;chtm=world&amp;chco=ffffff,ffbe38,600000&amp;chf=bg,s,4D89F9'" />
+
+  <xsl:variable name="title">&title;</xsl:variable>
+
+  <xsl:variable name="rsstitle">&rsstitle;</xsl:variable>
+
+  <xsl:variable name="rsslink">&rsslink;</xsl:variable>
 
   <xsl:template name="process.content">
 
@@ -88,7 +90,7 @@
   <xsl:variable name="imageurl"><xsl:value-of select="$charturl"/>&amp;chd=t:<xsl:value-of select="$chart-country-counts"/>&amp;chld=<xsl:value-of select="$chart-countries"/></xsl:variable>
 
               <div id="SIDEWRAP">
-                &nav;
+                &nav.community;
                 <div id="FEEDLINKS">
                   <ul>
                     <li>
@@ -101,7 +103,7 @@
               </div> <!-- SIDEWRAP -->
 
 	      <div id="contentwrap">
-		&header3;
+		<h1>&title;</h1>
  	<!--
 	     Note the current date to have a reference, if the
 	     upcoming/past events are split incorrectly.

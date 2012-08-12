@@ -11,6 +11,7 @@
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
 		xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
 		xmlns:rdf1="http://my.netscape.com/rdf/simple/0.9/"
+		xmlns="http://www.w3.org/1999/xhtml"
 		exclude-result-prefixes="rdf rdf1" version="1.0">
   
   <xsl:import href="../includes.xsl"/>

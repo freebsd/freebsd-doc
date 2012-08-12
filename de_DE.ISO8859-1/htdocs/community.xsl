@@ -2,7 +2,6 @@
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
 <!ENTITY title "Die FreeBSD-Gemeinde">
-<!ENTITY email "freebsd-www">
 <!ENTITY % navinclude.community "INCLUDE">
 ]>
 
@@ -10,28 +9,23 @@
 <!-- $FreeBSDde: de-www/community.xsl,v 1.7 2011/08/01 09:27:32 jkois Exp $ -->
 <!-- basiert auf: 1.9 -->
 
-<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
-  xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
+<xsl:stylesheet version="1.0"
+  xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+  xmlns="http://www.w3.org/1999/xhtml">
+
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
   <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/xhtml.xsl"/>
-
-  <xsl:variable name="date">
-    <xsl:value-of select="//cvs:keyword[@name='freebsd']"/>
-  </xsl:variable>
 
   <xsl:key name="last-year-event-by-country" match="event[number(enddate/year) = (number($curdate.year) - 1)]"
     use="location/country" />
 
   <xsl:key name="event-by-year" match="event" use="enddate/year" />
 
-  <xsl:template name="process.content">
-              <div id="SIDEWRAP">
-                &nav;
-              </div> <!-- SIDEWRAP -->
+  <xsl:template name="process.sidewrap">
+    &nav.community;
+  </xsl:template>
 
-	      <div id="CONTENTWRAP">
-		&header3;
-
+  <xsl:template name="process.contentwrap">
 	      <p>&os; wird von einer aktiven Gemeinschaft
 		unterst&uuml;tzt.</p>
 
@@ -136,6 +130,5 @@
   </script>
 
 	      </div> <!-- Latest Videos -->
-	      </div> <!-- CONTENTWRAP -->
   </xsl:template>
 </xsl:stylesheet>

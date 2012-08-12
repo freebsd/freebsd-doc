@@ -1,10 +1,7 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
-<!ENTITY base "..">
 <!ENTITY title "Nouvelles sur le projet GNOME pour FreeBSD">
-<!ENTITY email "freebsd-gnome">
-<!ENTITY % navinclude.developers "INCLUDE">
 ]>
 
 <!-- $FreeBSD$ -->
@@ -16,24 +13,20 @@
      Version francaise : Stephane Legrand <stephane@freebsd-fr.org>
 -->
 
-<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
-  xmlns:cvs="http://www.FreeBSD.org/XML/CVS" exclude-result-prefixes="cvs">
+<xsl:stylesheet version="1.0"
+  xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+  xmlns="http://www.w3.org/1999/xhtml">
 
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
   <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/xhtml.xsl"/>
 
-  <xsl:variable name="date">
-    <xsl:value-of select="//cvs:keyword[@name='freebsd']"/>
-  </xsl:variable>
+  <xsl:variable name="title">&title;</xsl:variable>
 
-  <xsl:template names="process.content">
-              <div id="SIDEWRAP">
-                &nav;
-              </div> <!-- SIDEWRAP -->
+  <xsl:template name="process.sidewrap">
+    &nav.developers;
+  </xsl:template>
 
-	      <div id="CONTENTWRAP">
-		&header3;
-
+  <xsl:template names="process.contentwrap">
 	<img src="&enbase;/gifs/news.jpg" align="right" border="0" width="193"
 	     height="144" alt="FreeBSD GNOME News"/>
 
@@ -42,8 +35,6 @@
 	<xsl:for-each select="/news">
 	<xsl:call-templates name="html-news-list-homelink" />
 	</xsl:for-each>
-
-	      </div> <!-- contentwrap -->
   </xsl:template>
 
   <!-- Everything that follows are templates for the rest of the content -->
@@ -78,6 +69,4 @@
 
     </li>
   </xsl:template>
-
-  <xsl:template match="date"/>    <!-- Deliberately left blank -->
 </xsl:stylesheet>

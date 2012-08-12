@@ -1,9 +1,7 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
-<!ENTITY base "..">
 <!ENTITY title "Projet GNOME pour FreeBSD">
-<!ENTITY % navinclude.gnome "INCLUDE">
 ]>
 <!-- $FreeBSD$ -->
 
@@ -22,12 +20,13 @@
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
   <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/xhtml.xsl"/>
 
-  <xsl:variable name="date" select="'$FreeBSD$'"/>
-  <xsl:variable name="title" select="''"/>
+  <xsl:variable name="svnKeyword" select="'$FreeBSD$'"/>
+
+  <xsl:variable name="title">&title;</xsl:variable>
 
   <xsl:template names="process.content">
               <div id="SIDEWRAP">
-                &nav;
+                &nav.gnome;
               </div> <!-- SIDEWRAP -->
 
 	      <div id="CONTENTWRAP">
@@ -96,7 +95,7 @@
                   </div> <!-- rightnav -->
                 </div> <!-- rightwrap -->
 
-		&header3;
+		<h1>&title;</h1>
 
 		<h2>Qu'est-ce que GNOME ?</h2>
 

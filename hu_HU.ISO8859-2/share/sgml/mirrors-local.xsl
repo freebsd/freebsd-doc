@@ -21,11 +21,6 @@
 
   <xsl:param name="mirrors-docbook-country-anchor-id" select="translate($target, '/.', '--')" />
 
-  <xsl:variable name="date">
-    <xsl:value-of xmlns:cvs="http://www.FreeBSD.org/XML/CVS"
-                  select="normalize-space(//cvs:keyword[@name='freebsd'])"/>
-  </xsl:variable>
-
   <!--
      templates available:
 
