@@ -4,7 +4,10 @@
 <!-- $FreeBSD$ -->
 <!-- Original Revision: 1.7 -->
 
-<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
+<xsl:stylesheet version="1.0"
+  xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+  xmlns="http://www.w3.org/1999/xhtml">
+
   <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/libcommon.xsl"/>
 
   <!-- Language-specific definitions should be put below this line -->

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
                                 "http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
-<!ENTITY title "Plan du site et index de http://www.FreeBSD.org">
+<!ENTITY title "Plan du site">
 ]>
 
 <!-- $FreeBSD$ -->
@@ -15,18 +15,21 @@
   Version francaise (mise a jour) : Antoine Brodin <antoine.brodin@laposte.net>
 -->
 
-<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
+<xsl:stylesheet version="1.0"
+  xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+  xmlns="http://www.w3.org/1999/xhtml">
+
   <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/libcommon.xsl"/>
   <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/xhtml.xsl"/>
 
   <xsl:variable name="lowercase" select="'aàbcçdeéèêfghiîjklmnoôpqrstuùûvwxyz'"/>
   <xsl:variable name="uppercase" select="'AÀBCÇDEÉÈÊFGHIÎJKLMNOÔPQRSTUÙÛVWXYZ'"/>
 
+  <xsl:variable name="title">&title;</xsl:variable>
+
   <xsl:key name="indexLetter" match="term" use="translate(substring(text, 1, 1), $lowercase, $uppercase)"/>
 
   <xsl:template name="process.contentwrap">
-    <h1>Plan du site</h1>
-
     <xsl:call-template name="html-sitemap"/>
 
     <h2>Meta pages d'accueil</h2>

@@ -3,11 +3,18 @@
 "http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
 <!-- $FreeBSD$ -->
 
-<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
+<xsl:stylesheet version="1.0"
+  xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS"
   xmlns:xhtml="http://www.w3.org/1999/xhtml"
   xmlns:str="http://exslt.org/strings"
+  xmlns="http://www.w3.org/1999/xhtml"
+  exclude-result-prefixes="cvs xhtml"
   extension-element-prefixes="str">
+
+  <xsl:variable name="rsslink" select="''"/>
+
+  <xsl:variable name="rsstitle" select="''"/>
 
   <xsl:variable name="svnKeyword">
     <xsl:value-of select="//cvs:keyword[1]"/>
@@ -44,7 +51,8 @@ parameters.  Changing them will result in rendering errors.
 -->
 	<link rel="stylesheet" media="screen" href="&stylesheet;" type="text/css" title="Normal Text" />
 	<link rel="alternate stylesheet" media="screen" href="&stylesheetlarge;" type="text/css" title="Large Text" />
-	&header1.rsslink;
+	<xsl:copy-of select="/xhtml:html/xhtml:head/xhtml:link"/>
+	<xsl:call-template name="process.rss.link"/>
 	<script type="text/javascript" src="&enbase;/layout/js/styleswitcher.js"></script>
 	&header1.googlejs;
       </head>
@@ -99,41 +107,52 @@ parameters.  Changing them will result in rendering errors.
     </html>
   </xsl:template>
 
+  <xsl:template name="process.rss.link">
+    <xsl:if test="$rsslink != ''">
+      <link rel="alternate" type="application/rss+xml"
+	title="{$rsstitle}" href="{$rsslink}" />
+    </xsl:if>
+  </xsl:template>
+
+  <xsl:template name="process.sidewrap">
+              <xsl:choose xmlns:xhtml="http://www.w3.org/1999/xhtml">
+                <xsl:when test="xhtml:html/xhtml:body/@class = 'navinclude.about'">
+                  &nav.about;
+                </xsl:when>
+
+                <xsl:when test="xhtml:html/xhtml:body/@class = 'navinclude.community'">
+                  &nav.community;
+                </xsl:when>
+
+                <xsl:when test="xhtml:html/xhtml:body/@class = 'navinclude.developers'">
+                  &nav.developers;
+                </xsl:when>
+
+                <xsl:when test="xhtml:html/xhtml:body/@class = 'navinclude.docs'">
+                  &nav.docs;
+                </xsl:when>
+
+                <xsl:when test="xhtml:html/xhtml:body/@class = 'navinclude.download'">
+                  &nav.download;
+                </xsl:when>
+
+                <xsl:when test="xhtml:html/xhtml:body/@class = 'navinclude.gnome'">
+                  &nav.gnome;
+                </xsl:when>
+
+                <xsl:when test="xhtml:html/xhtml:body/@class = 'navinclude.ports'">
+                  &nav.ports;
+                </xsl:when>
+
+                <xsl:when test="xhtml:html/xhtml:body/@class = 'navinclude.support'">
+                  &nav.support;
+                </xsl:when>
+              </xsl:choose>
+  </xsl:template>
+
   <xsl:template name="process.content">
 	    <div id="SIDEWRAP">
-	      <xsl:choose xmlns:xhtml="http://www.w3.org/1999/xhtml">
-		<xsl:when test="xhtml:html/xhtml:body/@class = 'navinclude.about'">
-		  &nav.about;
-		</xsl:when>
-
-		<xsl:when test="xhtml:html/xhtml:body/@class = 'navinclude.community'">
-		  &nav.community;
-		</xsl:when>
-
-		<xsl:when test="xhtml:html/xhtml:body/@class = 'navinclude.developers'">
-		  &nav.developers;
-		</xsl:when>
-
-		<xsl:when test="xhtml:html/xhtml:body/@class = 'navinclude.docs'">
-		  &nav.docs;
-		</xsl:when>
-
-		<xsl:when test="xhtml:html/xhtml:body/@class = 'navinclude.download'">
-		  &nav.download;
-		</xsl:when>
-
-		<xsl:when test="xhtml:html/xhtml:body/@class = 'navinclude.gnome'">
-		  &nav.gnome;
-		</xsl:when>
-
-		<xsl:when test="xhtml:html/xhtml:body/@class = 'navinclude.ports'">
-		  &nav.ports;
-		</xsl:when>
-
-		<xsl:when test="xhtml:html/xhtml:body/@class = 'navinclude.support'">
-		  &nav.support;
-		</xsl:when>
-	      </xsl:choose>
+      <xsl:call-template name="process.sidewrap"/>
 	    </div> <!-- SIDEWRAP -->
 
 	    <div id="CONTENTWRAP">

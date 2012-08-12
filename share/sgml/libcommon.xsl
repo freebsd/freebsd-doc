@@ -7,10 +7,20 @@
   version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS"
   xmlns:date="http://exslt.org/dates-and-times"
-  extension-element-prefixes="date"
+  xmlns:str="http://exslt.org/strings"
+  extension-element-prefixes="date str"
+  xmlns="http://www.w3.org/1999/xhtml"
   exclude-result-prefixes="date cvs">
 
   <xsl:import href="./transtable-common.xsl" />
+
+  <xsl:variable name="svnKeyword">
+    <xsl:value-of select="//cvs:keyword[1]"/>
+  </xsl:variable>
+
+  <xsl:variable name="date">
+    <xsl:value-of select="str:split($svnKeyword, ' ')[4]"/>
+  </xsl:variable>
 
   <!-- default format for date string -->
   <xsl:param name="param-l10n-date-format-YMD"

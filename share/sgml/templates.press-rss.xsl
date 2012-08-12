@@ -43,10 +43,6 @@
   
   <xsl:output method="xml" indent="yes" encoding="&xml.encoding;"/>
 
-  <xsl:variable name="date">
-    <xsl:value-of select="//cvs:keyword[@name='freebsd']"/>
-  </xsl:variable>
-
   <!-- Generate the main body of the RSS file -->
   <xsl:template match="press">
     <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">

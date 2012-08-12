@@ -2,41 +2,32 @@
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
 <!ENTITY title "Commercial Vendors">
-<!ENTITY email "freebsd-www">
-<!ENTITY % navinclude.support "INCLUDE">
 ]>
 
 <!-- $FreeBSD$ -->
 
-<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
-  xmlns:cvs="http://www.FreeBSD.org/XML/CVS"
-  exclude-result-prefixes="cvs">
+<xsl:stylesheet version="1.0"
+  xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+  xmlns="http://www.w3.org/1999/xhtml">
 
+  <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/libcommon.xsl"/>
   <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/xhtml.xsl"/>
 
   <xsl:param name="basename" select="'none'" />
   <xsl:param name="sort" select="'none'" />
 
-  <xsl:variable name="uc" select="'ABCDEFGHIJKLMNOPQRSTUVWXYZ'"/>
-  <xsl:variable name="lc" select="'abcdefghijklmnopqrstuvwxyz'"/>
+  <xsl:variable name="title">&title;</xsl:variable>
 
-  <xsl:template name="process.content">
-              <div id="SIDEWRAP">
-                &nav;
-              </div> <!-- SIDEWRAP -->
+  <xsl:template name="process.sidewrap">
+    &nav.support;
+  </xsl:template>
 
-	      <div id="contentwrap">
-		&header3;
-
+  <xsl:template name="process.contentwrap">
 		<xsl:for-each select="/entries">
 		<xsl:call-template name="html-commercial-preface" />
 
 		<xsl:call-template name="html-commercial-listing" />
 		</xsl:for-each>
-
-	      </div> <!-- contentwrap -->
-
-	      <br class="clearboth" />
   </xsl:template>
 
   <xsl:template name="html-commercial-preface">
@@ -100,7 +91,7 @@
       <xsl:otherwise>
 	<dl>
 	  <xsl:for-each select="/entries/entry">
-	    <xsl:sort select="translate(name, $uc, $lc)" order="ascending"/>
+	    <xsl:sort select="translate(name, $uppercase, $lowercase)" order="ascending"/>
 
 	    <dt><xsl:element name="a">
 		<xsl:attribute name="name">

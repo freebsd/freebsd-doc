@@ -2,15 +2,14 @@
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD Fragment//EN"
                                 "http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
 <!ENTITY title "User Groups">
-<!ENTITY email "freebsd-www">
-<!ENTITY % navinclude.community "INCLUDE">
 ]>
 
 <!-- $FreeBSD$ -->
 
-<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
-  xmlns:cvs="http://www.FreeBSD.org/XML/CVS"
-  exclude-result-prefixes="cvs">
+<xsl:stylesheet version="1.0"
+  xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+  xmlns="http://www.w3.org/1999/xhtml">
+
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
   <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/xhtml.xsl"/>
 
@@ -19,14 +18,13 @@
 
   <xsl:variable name="charturl" select="'http://chart.apis.google.com/chart?cht=t&amp;chs=400x200&amp;chtm=world&amp;chco=ffffff,ffbe38,600000&amp;chf=bg,s,4D89F9'" />
 
-  <xsl:template name="process.content">
-	      <div id="SIDEWRAP">
-		&nav;
-	      </div> <!-- SIDEWRAP -->
+  <xsl:variable name="title">&title;</xsl:variable>
 
-	      <div id="CONTENTWRAP">
-		&header3;
+  <xsl:template name="process.sidewrap">
+    &nav.community;
+  </xsl:template>
 
+  <xsl:template name="process.contentwrap">
   <xsl:variable name="chart-countries">
     <xsl:for-each select="//entry[
 	generate-id() =
@@ -61,9 +59,5 @@
           <xsl:with-param name="usergroups.xml" select="$usergroups.xml" />
           <xsl:with-param name="usergroups-local.xml" select="$usergroups-local.xml" />
 	</xsl:call-template>
-
-	      </div> <!-- CONTENTWRAP -->
-
-	      <br class="clearboth" />
   </xsl:template>
 </xsl:stylesheet>

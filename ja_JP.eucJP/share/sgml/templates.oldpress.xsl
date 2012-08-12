@@ -2,37 +2,30 @@
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
 <!ENTITY title "ニュース記事">
-<!ENTITY email "freebsd-www">
-<!ENTITY % navinclude.about "INCLUDE">
 ]>
 
 <!-- $FreeBSD$ -->
 <!-- The FreeBSD Japanese Documentation Project -->
 <!-- Original revision: 1.8 -->
 
-<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
-  xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
+<xsl:stylesheet version="1.0"
+  xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+  xmlns="http://www.w3.org/1999/xhtml">
 
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
   <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/xhtml.xsl"/>
+
+  <xsl:variable name="title">&title;</xsl:variable>
 
   <xsl:variable name="year">
     <xsl:value-of select="descendant::year/name"/>
   </xsl:variable>
 
-  <xsl:variable name="date">
-    <xsl:value-of select="//cvs:keyword[@name='freebsd']"/>
-  </xsl:variable>
-  
-  <xsl:template name="process.content">
-	<div id="SIDEWRAP">
-	  &nav;
-	</div> <!-- SIDEWRAP -->
+  <xsl:template name="process.sidewrap">
+    &nav.about;
+  </xsl:template>
 
-	<div id="CONTENTWRAP">
-
-	  &header3;
-
+  <xsl:template name="process.contentwrap">
 	<xsl:apply-templates select="//month"/>
 	
 	<p>過去のニュース記事:
@@ -50,7 +43,6 @@
 	  <a href="&enbase;/news/1998/press.html">1998-1996</a></p>
 
 	<a href="&base;/news/news.html">ニュースページ</a>
-	</div> <!-- CONTENTWRAP -->
   </xsl:template>
 
   <!-- Everything that follows are templates for the rest of the content -->

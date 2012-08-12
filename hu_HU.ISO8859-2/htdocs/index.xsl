@@ -12,7 +12,10 @@
      %SRCID%	1.169
 -->
 
-<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
+<xsl:stylesheet version="1.0"
+  xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+  xmlns="http://www.w3.org/1999/xhtml">
+
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
   <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/xhtml.xsl"/>
 
@@ -27,6 +30,10 @@
   <xsl:param name="news.project.xml" select="'none'"/>
   <xsl:param name="events.xml-master" select="'none'"/>
   <xsl:param name="events.xml" select="'none'"/>
+
+  <xsl:variable name="svnKeyword">$FreeBSD$</xsl:variable>
+
+  <xsl:variable name="title">&title;</xsl:variable>
 
   <xsl:template name="process.content">
         <div id="FRONTCONTAINER">

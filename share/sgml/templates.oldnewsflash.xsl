@@ -2,14 +2,13 @@
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
 <!ENTITY title "FreeBSD News Flash">
-<!ENTITY email "freebsd-www">
-<!ENTITY % navinclude.about "INCLUDE">
 ]>
 
 <!-- $FreeBSD$ -->
 
-<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
-  xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
+<xsl:stylesheet version="1.0"
+  xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+  xmlns="http://www.w3.org/1999/xhtml">
 
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
   <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/xhtml.xsl"/>
@@ -17,20 +16,18 @@
   <xsl:variable name="year">
     <xsl:value-of select="descendant::year/name"/>
   </xsl:variable>
+
+  <xsl:variable name="title">&title;</xsl:variable>
   
   <xsl:template match="p">
     <xsl:copy-of select="." />
   </xsl:template>
 
-  <xsl:template name="process.content">
-	<div id="SIDEWRAP">
-	  &nav;
-	</div> <!-- SIDEWRAP -->
+  <xsl:template name="process.sidewrap">
+    &nav.about;
+  </xsl:template>
 
-	<div id="CONTENTWRAP">
-
-	&header3;
-
+  <xsl:template name="process.contentwrap">
 	<!-- Notice how entity references in SGML become variable references
 	     in the stylesheet, and that the syntax for referring to variables
 	     inside an attribute is "{$variable}".
@@ -64,8 +61,6 @@
 	  <a href="../1996/index.html">1996</a></p>
 
 	<a href="&base;/news/news.html">News Home</a>
-	</div> <!-- CONTENTWRAP -->
-	<br class="clearboth" />
   </xsl:template>
 
   <!-- Everything that follows are templates for the rest of the content -->

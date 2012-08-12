@@ -1,34 +1,26 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
-<!ENTITY base "../..">
 <!ENTITY title "FreeBSD Quarterly Status Report">
-<!ENTITY email "freebsd-www">
-<!ENTITY % navinclude.about "INCLUDE">
 ]>
 
 <!-- $FreeBSD$ -->
 
 <!-- Standard header material -->
-<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
-  xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
+<xsl:stylesheet version="1.0"
+  xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+  xmlns="http://www.w3.org/1999/xhtml">
 
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
   <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/xhtml.xsl"/>
 
-  <xsl:variable name="ucletters"
-    select="'ABCDEFGHIJKLMNOPQRSTUVWXYZ'"/>
-  <xsl:variable name="lcletters"
-    select="'abcdefghijklmnopqrstuvwxyz'"/>
-  
-  <xsl:template name="process.content">
-              <div id="SIDEWRAP">
-                &nav;
-              </div> <!-- SIDEWRAP -->
+  <xsl:variable name="title">&title;</xsl:variable>
 
-	      <div id="contentwrap">
-                &header3;
+  <xsl:template name="process.sidewrap">
+    &nav.about;
+  </xsl:template>
 
+  <xsl:template name="process.contentwrap">
 	<!-- Process all the <sections>, in order -->
 	<xsl:apply-templates select="report/section"/>
 
@@ -40,7 +32,7 @@
 	  <xsl:variable name="cat-short" select="name"/>
 	  <ul>
 	    <xsl:for-each select="//project[@cat=$cat-short and @summary]">
-  	      <xsl:sort select="translate(title, $lcletters, $ucletters)"/>
+  	      <xsl:sort select="translate(title, $lowercase, $uppercase)"/>
 	      <li><a><xsl:attribute name="href">#<xsl:value-of
 	      select="translate(title, ' ',
 	      '-')"/></xsl:attribute><xsl:value-of select="title"/></a>
@@ -48,7 +40,7 @@
 	    </xsl:for-each>
 
 	    <xsl:for-each select="//project[@cat=$cat-short and not(@summary)]">
-  	      <xsl:sort select="translate(title, $lcletters, $ucletters)"/>
+  	      <xsl:sort select="translate(title, $lowercase, $uppercase)"/>
 	      <li><a><xsl:attribute name="href">#<xsl:value-of
 	      select="translate(title, ' ',
 	      '-')"/></xsl:attribute><xsl:value-of select="title"/></a>
@@ -58,7 +50,7 @@
 	</xsl:for-each>
 	<ul>
 	  <xsl:for-each select="//project[not(@cat)]">
-  	    <xsl:sort select="translate(title, $lcletters, $ucletters)"/>
+  	    <xsl:sort select="translate(title, $lowercase, $uppercase)"/>
 	    <li><a><xsl:attribute name="href">#<xsl:value-of
 	    select="translate(title, ' ',
 	    '-')"/></xsl:attribute><xsl:value-of select="title"/></a>
@@ -70,14 +62,11 @@
 
 	<!-- Process each project, sorted -->
 	<xsl:apply-templates select="report/project">
-	  <xsl:sort select="translate(title, $lcletters, $ucletters)"/>
+	  <xsl:sort select="translate(title, $lowercase, $uppercase)"/>
 	</xsl:apply-templates>
 
 	<!-- Standard footer -->
 	<a href="../news.html">News Home</a> | <a href="status.html">Status Home</a> 
-	      </div> <!-- contentwrap -->
-
-	      <br class="clearboth" />
   </xsl:template>
 
   <!-- Everything that follows are templates for the rest of the content -->
