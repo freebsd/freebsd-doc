@@ -47,6 +47,9 @@ ${.OBJDIR}/catalog-cwd.xml: ${XML_CATALOG_CWD}
 XML_INCLUDES+=	${.OBJDIR}/autogen.ent
 CLEANFILES+=	${.OBJDIR}/autogen.ent
 ${.OBJDIR}/autogen.ent:
+.if ${LANGCODE} != en_US.ISO8859-1
+	${ECHO_CMD} '<!ENTITY enbase "${DOC_PREFIX_REL}/..">' > ${.TARGET}
+.endif
 	${ECHO_CMD} '<!ENTITY base "${DOC_PREFIX_REL}">' > ${.TARGET}
 
 DEPENDSET.DEFAULT+=	wwwstd
