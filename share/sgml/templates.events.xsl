@@ -69,7 +69,7 @@
 
   <xsl:template name="process.content">
   <xsl:variable name="chart-countries">
-    <xsl:for-each select="event[
+    <xsl:for-each select="//event[
 	generate-id() =
 	generate-id(key('event-by-country', location/country)[1])]">
       <xsl:sort select="format-number(count(key('event-by-country', location/country)), '000')" order="descending"/>
@@ -78,7 +78,7 @@
   </xsl:variable>
 
   <xsl:variable name="chart-country-counts">
-    <xsl:for-each select="event[
+    <xsl:for-each select="//event[
 	generate-id() =
 	generate-id(key('event-by-country', location/country)[1])]">
       <xsl:sort select="format-number(count(key('event-by-country', location/country)), '000')" order="descending"/>
