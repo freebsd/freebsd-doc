@@ -1,0 +1,141 @@
+Index: sys/netinet/ip_output.c
+===================================================================
+RCS file: /home/cvs/src/sys/netinet/ip_output.c,v
+retrieving revision 1.242.2.8
+diff -u -r1.242.2.8 ip_output.c
+--- sys/netinet/ip_output.c	31 Jan 2006 16:06:05 -0000	1.242.2.8
++++ sys/netinet/ip_output.c	25 Aug 2006 15:07:44 -0000
+@@ -1162,6 +1162,9 @@
+ 		return (EINVAL);
+ 	}
+ 
++	if (inp == NULL)
++		return (EINVAL);
++
+ 	switch (sopt->sopt_dir) {
+ 	case SOPT_SET:
+ 		switch (sopt->sopt_name) {
+Index: sys/netinet6/in6.c
+===================================================================
+RCS file: /home/cvs/src/sys/netinet6/in6.c,v
+retrieving revision 1.51.2.8
+diff -u -r1.51.2.8 in6.c
+--- sys/netinet6/in6.c	9 Mar 2006 11:59:03 -0000	1.51.2.8
++++ sys/netinet6/in6.c	25 Aug 2006 15:07:56 -0000
+@@ -1720,20 +1720,55 @@
+ 
+ 	/* we could do in(6)_socktrim here, but just omit it at this moment. */
+ 
++	if (newhost && nd6_need_cache(ifp) != 0) {
++		/* set the rtrequest function to create llinfo */
++		ia->ia_ifa.ifa_rtrequest = nd6_rtrequest;
++	}
++
+ 	/*
+ 	 * Special case:
+ 	 * If a new destination address is specified for a point-to-point
+ 	 * interface, install a route to the destination as an interface
+-	 * direct route.
++	 * direct route.  In addition, if the link is expected to have neighbor
++	 * cache entries, specify RTF_LLINFO so that a cache entry for the
++	 * destination address will be created.
++	 * created
+ 	 * XXX: the logic below rejects assigning multiple addresses on a p2p
+-	 * interface that share a same destination.
++	 * interface that share the same destination.
+ 	 */
+ 	plen = in6_mask2len(&ia->ia_prefixmask.sin6_addr, NULL); /* XXX */
+ 	if (!(ia->ia_flags & IFA_ROUTE) && plen == 128 &&
+ 	    ia->ia_dstaddr.sin6_family == AF_INET6) {
+-		if ((error = rtinit(&(ia->ia_ifa), (int)RTM_ADD,
+-				    RTF_UP | RTF_HOST)) != 0)
++		int rtflags = RTF_UP | RTF_HOST;
++		struct rtentry *rt = NULL, **rtp = NULL;
++
++		if (nd6_need_cache(ifp) != 0) {
++			rtflags |= RTF_LLINFO;
++			rtp = &rt;
++		}
++
++		error = rtrequest(RTM_ADD, (struct sockaddr *)&ia->ia_dstaddr,
++		    (struct sockaddr *)&ia->ia_addr,
++		    (struct sockaddr *)&ia->ia_prefixmask,
++		    ia->ia_flags | rtflags, rtp);
++		if (error != 0)
+ 			return (error);
++		if (rt != NULL) {
++			struct llinfo_nd6 *ln;
++
++			RT_LOCK(rt);
++			ln = (struct llinfo_nd6 *)rt->rt_llinfo;
++			if (ln != NULL) {
++				/*
++				 * Set the state to STALE because we don't
++				 * have to perform address resolution on this
++				 * link.
++				 */
++				ln->ln_state = ND6_LLINFO_STALE;
++			}
++			RT_REMREF(rt);
++			RT_UNLOCK(rt);
++		}
+ 		ia->ia_flags |= IFA_ROUTE;
+ 	}
+ 	if (plen < 128) {
+@@ -1744,11 +1779,8 @@
+ 	}
+ 
+ 	/* Add ownaddr as loopback rtentry, if necessary (ex. on p2p link). */
+-	if (newhost) {
+-		/* set the rtrequest function to create llinfo */
+-		ia->ia_ifa.ifa_rtrequest = nd6_rtrequest;
++	if (newhost)
+ 		in6_ifaddloop(&(ia->ia_ifa));
+-	}
+ 
+ 	return (error);
+ }
+Index: sys/netinet6/nd6.c
+===================================================================
+RCS file: /home/cvs/src/sys/netinet6/nd6.c,v
+retrieving revision 1.48.2.12
+diff -u -r1.48.2.12 nd6.c
+--- sys/netinet6/nd6.c	29 Mar 2006 21:05:11 -0000	1.48.2.12
++++ sys/netinet6/nd6.c	25 Aug 2006 15:08:02 -0000
+@@ -512,6 +512,19 @@
+ 			ln->ln_asked++;
+ 			nd6_llinfo_settimer(ln, (long)ndi->retrans * hz / 1000);
+ 			nd6_ns_output(ifp, dst, dst, ln, 0);
++		} else if (rt->rt_ifa != NULL &&
++		    rt->rt_ifa->ifa_addr->sa_family == AF_INET6 &&
++		    (((struct in6_ifaddr *)rt->rt_ifa)->ia_flags & IFA_ROUTE)) {
++			/*
++			 * This is an unreachable neighbor whose address is
++			 * specified as the destination of a p2p interface
++			 * (see in6_ifinit()).  We should not free the entry
++			 * since this is sort of a "static" entry generated
++			 * via interface address configuration. 
++			 */
++			ln->ln_asked = 0;
++			ln->ln_expire = 0; /* make it permanent */
++			ln->ln_state = ND6_LLINFO_STALE;
+ 		} else {
+ 			(void)nd6_free(rt, 0);
+ 			ln = NULL;
+Index: sys/vm/uma_core.c
+===================================================================
+RCS file: /home/cvs/src/sys/vm/uma_core.c,v
+retrieving revision 1.119.2.15
+diff -u -r1.119.2.15 uma_core.c
+--- sys/vm/uma_core.c	14 Feb 2006 03:37:58 -0000	1.119.2.15
++++ sys/vm/uma_core.c	25 Aug 2006 15:08:12 -0000
+@@ -2417,8 +2417,7 @@
+ 	 * If nothing else caught this, we'll just do an internal free.
+ 	 */
+ zfree_internal:
+-	uma_zfree_internal(zone, item, udata, SKIP_DTOR, ZFREE_STATFAIL |
+-	    ZFREE_STATFREE);
++	uma_zfree_internal(zone, item, udata, SKIP_DTOR, ZFREE_STATFREE);
+ 
+ 	return;
+ }

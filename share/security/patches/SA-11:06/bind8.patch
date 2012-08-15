@@ -1,0 +1,83 @@
+Index: contrib/bind9/lib/dns/rbtdb.c
+===================================================================
+--- contrib/bind9/lib/dns/rbtdb.c	(revision 228802)
++++ contrib/bind9/lib/dns/rbtdb.c	(working copy)
+@@ -278,6 +278,7 @@
+ #define RDATASET_ATTR_RESIGN            0x0020
+ #define RDATASET_ATTR_STATCOUNT         0x0040
+ #define RDATASET_ATTR_OPTOUT		0x0080
++#define RDATASET_ATTR_NEGATIVE		0x0100
+ 
+ typedef struct acache_cbarg {
+ 	dns_rdatasetadditional_t        type;
+@@ -316,6 +317,8 @@
+ 	(((header)->attributes & RDATASET_ATTR_RESIGN) != 0)
+ #define OPTOUT(header) \
+ 	(((header)->attributes & RDATASET_ATTR_OPTOUT) != 0)
++#define NEGATIVE(header) \
++	(((header)->attributes & RDATASET_ATTR_NEGATIVE) != 0)
+ 
+ #define DEFAULT_NODE_LOCK_COUNT         7       /*%< Should be prime. */
+ 
+@@ -4620,7 +4623,7 @@
+ 			      rdataset);
+ 		if (need_headerupdate(found, search.now))
+ 			update = found;
+-		if (foundsig != NULL) {
++		if (!NEGATIVE(found) && foundsig != NULL) {
+ 			bind_rdataset(search.rbtdb, node, foundsig, search.now,
+ 				      sigrdataset);
+ 			if (need_headerupdate(foundsig, search.now))
+@@ -5249,7 +5252,7 @@
+ 	}
+ 	if (found != NULL) {
+ 		bind_rdataset(rbtdb, rbtnode, found, now, rdataset);
+-		if (foundsig != NULL)
++		if (!NEGATIVE(found) && foundsig != NULL)
+ 			bind_rdataset(rbtdb, rbtnode, foundsig, now,
+ 				      sigrdataset);
+ 	}
+Index: contrib/bind9/bin/named/query.c
+===================================================================
+--- contrib/bind9/bin/named/query.c	(revision 228802)
++++ contrib/bind9/bin/named/query.c	(working copy)
+@@ -1280,11 +1280,9 @@
+ 			goto addname;
+ 		if (result == DNS_R_NCACHENXRRSET) {
+ 			dns_rdataset_disassociate(rdataset);
+-			/*
+-			 * Negative cache entries don't have sigrdatasets.
+-			 */
+-			INSIST(sigrdataset == NULL ||
+-			       ! dns_rdataset_isassociated(sigrdataset));
++			if (sigrdataset != NULL &&
++			    dns_rdataset_isassociated(sigrdataset))
++				dns_rdataset_disassociate(sigrdataset);
+ 		}
+ 		if (result == ISC_R_SUCCESS) {
+ 			mname = NULL;
+@@ -1325,8 +1323,9 @@
+ 			goto addname;
+ 		if (result == DNS_R_NCACHENXRRSET) {
+ 			dns_rdataset_disassociate(rdataset);
+-			INSIST(sigrdataset == NULL ||
+-			       ! dns_rdataset_isassociated(sigrdataset));
++			if (sigrdataset != NULL &&
++			    dns_rdataset_isassociated(sigrdataset))
++				dns_rdataset_disassociate(sigrdataset);
+ 		}
+ 		if (result == ISC_R_SUCCESS) {
+ 			mname = NULL;
+@@ -1775,10 +1774,8 @@
+ 		goto setcache;
+ 	if (result == DNS_R_NCACHENXRRSET) {
+ 		dns_rdataset_disassociate(rdataset);
+-		/*
+-		 * Negative cache entries don't have sigrdatasets.
+-		 */
+-		INSIST(! dns_rdataset_isassociated(sigrdataset));
++		if (dns_rdataset_isassociated(sigrdataset))
++			dns_rdataset_disassociate(sigrdataset);
+ 	}
+ 	if (result == ISC_R_SUCCESS) {
+ 		/* Remember the result as a cache */

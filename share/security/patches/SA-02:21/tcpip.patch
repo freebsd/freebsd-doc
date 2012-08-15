@@ -1,0 +1,82 @@
+Index: sys/netinet/ip_icmp.c
+diff -u sys/netinet/ip_icmp.c:1.39.2.14 sys/netinet/ip_icmp.c:1.39.2.14.2.1
+--- sys/netinet/ip_icmp.c:1.39.2.14	Mon Jan 14 01:54:35 2002
++++ sys/netinet/ip_icmp.c	Mon Apr 15 12:12:05 2002
+@@ -615,6 +615,8 @@
+ 	}
+ 	t = ip->ip_dst;
+ 	ip->ip_dst = ip->ip_src;
++	ro = &rt;
++	bzero(ro, sizeof(*ro));
+ 	/*
+ 	 * If the incoming packet was addressed directly to us,
+ 	 * use dst as the src for the reply.  Otherwise (broadcast
+@@ -635,8 +637,6 @@
+ 				goto match;
+ 		}
+ 	}
+-	ro = &rt;
+-	bzero(ro, sizeof(*ro));
+ 	ia = ip_rtaddr(ip->ip_dst, ro);
+ 	/* We need a route to do anything useful. */
+ 	if (ia == NULL) {
+Index: sys/netinet/ip_mroute.c
+diff -u sys/netinet/ip_mroute.c:1.56.2.3 sys/netinet/ip_mroute.c:1.56.2.3.2.1
+--- sys/netinet/ip_mroute.c:1.56.2.3	Fri Dec  7 03:23:11 2001
++++ sys/netinet/ip_mroute.c	Mon Apr 15 12:12:05 2002
+@@ -1890,6 +1890,7 @@
+ {
+     struct ip_moptions imo;
+     int error;
++    static struct route ro;
+     int s = splnet();
+ 
+     if (vifp->v_flags & VIFF_TUNNEL) {
+@@ -1908,7 +1909,7 @@
+ 	 * should get rejected because they appear to come from
+ 	 * the loopback interface, thus preventing looping.
+ 	 */
+-	error = ip_output(m, (struct mbuf *)0, NULL,
++	error = ip_output(m, (struct mbuf *)0, &ro,
+ 			  IP_FORWARDING, &imo);
+ 
+ 	if (mrtdebug & DEBUG_XMIT)
+Index: sys/netinet/ip_output.c
+diff -u sys/netinet/ip_output.c:1.99.2.24 sys/netinet/ip_output.c:1.99.2.24.2.1
+--- sys/netinet/ip_output.c:1.99.2.24	Fri Dec 28 04:08:33 2001
++++ sys/netinet/ip_output.c	Mon Apr 15 12:12:05 2002
+@@ -124,11 +124,11 @@
+ 	struct mbuf *m = m0;
+ 	int hlen = sizeof (struct ip);
+ 	int len, off, error = 0;
+-	struct route iproute;
+ 	struct sockaddr_in *dst;
+ 	struct in_ifaddr *ia = NULL;
+ 	int isbroadcast, sw_csum;
+ #ifdef IPSEC
++	struct route iproute;
+ 	struct socket *so = NULL;
+ 	struct secpolicy *sp = NULL;
+ #endif
+@@ -185,6 +185,9 @@
+ #ifdef	DIAGNOSTIC
+ 	if ((m->m_flags & M_PKTHDR) == 0)
+ 		panic("ip_output no HDR");
++	if (!ro)
++		panic("ip_output no route, proto = %d",
++		      mtod(m, struct ip *)->ip_p);
+ #endif
+ 	if (opt) {
+ 		m = ip_insertoptions(m, opt, &len);
+@@ -207,11 +210,6 @@
+ 		hlen = IP_VHL_HL(ip->ip_vhl) << 2;
+ 	}
+ 
+-	/* Route packet. */
+-	if (ro == NULL) {
+-		ro = &iproute;
+-		bzero(ro, sizeof(*ro));
+-	}
+ 	dst = (struct sockaddr_in *)&ro->ro_dst;
+ 	/*
+ 	 * If there is a cached route,
