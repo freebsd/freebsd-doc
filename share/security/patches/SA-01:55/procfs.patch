@@ -1,0 +1,181 @@
+Index: sys/i386/linux/linprocfs/linprocfs_vnops.c
+===================================================================
+RCS file: /usr2/ncvs/src/sys/i386/linux/linprocfs/Attic/linprocfs_vnops.c,v
+retrieving revision 1.3.2.4
+retrieving revision 1.3.2.5
+diff -u -r1.3.2.4 -r1.3.2.5
+--- sys/i386/linux/linprocfs/linprocfs_vnops.c	2001/06/25 19:46:47	1.3.2.4
++++ sys/i386/linux/linprocfs/linprocfs_vnops.c	2001/08/12 14:29:19	1.3.2.5
+@@ -64,7 +64,6 @@
+ #include <sys/pioctl.h>
+ 
+ extern struct vnode *procfs_findtextvp __P((struct proc *));
+-extern int	procfs_kmemaccess __P((struct proc *));
+ 
+ static int	linprocfs_access __P((struct vop_access_args *));
+ static int	linprocfs_badop __P((void));
+@@ -143,8 +142,7 @@
+ 			return (EBUSY);
+ 
+ 		p1 = ap->a_p;
+-		if (p_trespass(p1, p2) &&
+-		    !procfs_kmemaccess(p1))
++		if (p_trespass(p1, p2))
+ 			return (EPERM);
+ 
+ 		if (ap->a_mode & FWRITE)
+@@ -455,21 +453,6 @@
+ 	vap->va_atime = vap->va_mtime = vap->va_ctime;
+ 
+ 	/*
+-	 * If the process has exercised some setuid or setgid
+-	 * privilege, then rip away read/write permission so
+-	 * that only root can gain access.
+-	 */
+-	switch (pfs->pfs_type) {
+-	case Pmem:
+-		/* Retain group kmem readablity. */
+-		if (procp->p_flag & P_SUGID)
+-			vap->va_mode &= ~(VREAD|VWRITE);
+-		break;
+-	default:
+-		break;
+-	}
+-
+-	/*
+ 	 * now do the object specific fields
+ 	 *
+ 	 * The size could be set from struct reg, but it's hardly
+@@ -545,7 +528,6 @@
+ 			vap->va_uid = 0;
+ 		else
+ 			vap->va_uid = procp->p_ucred->cr_uid;
+-		vap->va_gid = KMEM_GROUP;
+ 		break;
+ 
+ 	case Pprocstat:
+Index: sys/miscfs/procfs/procfs.h
+===================================================================
+RCS file: /usr2/ncvs/src/sys/miscfs/procfs/Attic/procfs.h,v
+retrieving revision 1.32.2.1
+retrieving revision 1.32.2.2
+diff -u -r1.32.2.1 -r1.32.2.2
+--- sys/miscfs/procfs/procfs.h	2000/11/01 20:19:48	1.32.2.1
++++ sys/miscfs/procfs/procfs.h	2001/08/12 14:29:19	1.32.2.2
+@@ -88,8 +88,6 @@
+ 	 ((cnp)->cn_namelen == (len) && \
+ 	  (bcmp((s), (cnp)->cn_nameptr, (len)) == 0))
+ 
+-#define KMEM_GROUP 2
+-
+ #define PROCFS_FILENO(pid, type) \
+ 	(((type) < Pproc) ? \
+ 			((type) + 2) : \
+@@ -147,9 +145,6 @@
+ int procfs_dotype __P((struct proc *, struct proc *, struct pfsnode *pfsp, struct uio *uio));
+ int procfs_docmdline __P((struct proc *, struct proc *, struct pfsnode *pfsp, struct uio *uio));
+ int procfs_dorlimit __P((struct proc *, struct proc *, struct pfsnode *pfsp, struct uio *uio));
+-
+-/* Return 1 if process has special kernel digging privileges */
+-int procfs_kmemaccess __P((struct proc *));
+ 
+ /* functions to check whether or not files should be displayed */
+ int procfs_validfile __P((struct proc *));
+Index: sys/miscfs/procfs/procfs_mem.c
+===================================================================
+RCS file: /usr2/ncvs/src/sys/miscfs/procfs/Attic/procfs_mem.c,v
+retrieving revision 1.46.2.1
+retrieving revision 1.46.2.2
+diff -u -r1.46.2.1 -r1.46.2.2
+--- sys/miscfs/procfs/procfs_mem.c	2000/11/01 20:19:48	1.46.2.1
++++ sys/miscfs/procfs/procfs_mem.c	2001/08/12 14:29:19	1.46.2.2
+@@ -244,21 +244,7 @@
+ 	if (uio->uio_resid == 0)
+ 		return (0);
+ 
+- 	/*
+- 	 * XXX
+- 	 * We need to check for KMEM_GROUP because ps is sgid kmem;
+- 	 * not allowing it here causes ps to not work properly.  Arguably,
+- 	 * this is a bug with what ps does.  We only need to do this
+- 	 * for Pmem nodes, and only if it's reading.  This is still not
+- 	 * good, as it may still be possible to grab illicit data if
+- 	 * a process somehow gets to be KMEM_GROUP.  Note that this also
+- 	 * means that KMEM_GROUP can't change without editing procfs.h!
+- 	 * All in all, quite yucky.
+- 	 */
+- 
+- 	if ((!CHECKIO(curp, p) || p_trespass(curp, p)) &&
+-	    !(uio->uio_rw == UIO_READ &&
+-	      procfs_kmemaccess(curp)))
++ 	if (!CHECKIO(curp, p) || p_trespass(curp, p))
+  		return EPERM;
+ 
+ 	return (procfs_rwmem(curp, p, uio));
+@@ -295,22 +281,4 @@
+ {
+ 
+ 	return (p->p_textvp);
+-}
+-
+-int procfs_kmemaccess(curp)
+-	struct proc *curp;
+-{
+-	int i;
+-	struct ucred *cred;
+-
+-	cred = curp->p_ucred;
+-	if (suser(curp))
+-		return 1;
+-
+-	/* XXX: Why isn't this done with file-perms ??? */
+-	for (i = 0; i < cred->cr_ngroups; i++)
+-		if (cred->cr_groups[i] == KMEM_GROUP)	
+-			return 1;
+-	
+-	return 0;
+ }
+Index: sys/miscfs/procfs/procfs_vnops.c
+===================================================================
+RCS file: /usr2/ncvs/src/sys/miscfs/procfs/Attic/procfs_vnops.c,v
+retrieving revision 1.76.2.4
+retrieving revision 1.76.2.5
+diff -u -r1.76.2.4 -r1.76.2.5
+--- sys/miscfs/procfs/procfs_vnops.c	2001/08/04 13:12:24	1.76.2.4
++++ sys/miscfs/procfs/procfs_vnops.c	2001/08/12 14:29:19	1.76.2.5
+@@ -148,8 +148,7 @@
+ 			return (EBUSY);
+ 
+ 		p1 = ap->a_p;
+-		if ((!CHECKIO(p1, p2) || p_trespass(p1, p2)) &&
+-		    !procfs_kmemaccess(p1))
++		if (!CHECKIO(p1, p2) || p_trespass(p1, p2))
+ 			return (EPERM);
+ 
+ 		if (ap->a_mode & FWRITE)
+@@ -477,16 +476,12 @@
+ 	case Pregs:
+ 	case Pfpregs:
+ 	case Pdbregs:
++	case Pmem:
+ 		if (procp->p_flag & P_SUGID)
+ 			vap->va_mode &= ~((VREAD|VWRITE)|
+ 					  ((VREAD|VWRITE)>>3)|
+ 					  ((VREAD|VWRITE)>>6));
+ 		break;
+-	case Pmem:
+-		/* Retain group kmem readablity. */
+-		if (procp->p_flag & P_SUGID)
+-			vap->va_mode &= ~(VREAD|VWRITE);
+-		break;
+ 	default:
+ 		break;
+ 	}
+@@ -556,7 +551,6 @@
+ 			vap->va_uid = 0;
+ 		else
+ 			vap->va_uid = procp->p_ucred->cr_uid;
+-		vap->va_gid = KMEM_GROUP;
+ 		break;
+ 
+ 	case Pregs:

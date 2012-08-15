@@ -1,0 +1,499 @@
+Index: contrib/cpio/copyin.c
+===================================================================
+RCS file: /home/ncvs/src/contrib/cpio/Attic/copyin.c,v
+retrieving revision 1.7
+diff -u -d -r1.7 copyin.c
+--- contrib/cpio/copyin.c	21 Mar 2001 21:17:54 -0000	1.7
++++ contrib/cpio/copyin.c	3 Jan 2006 22:01:58 -0000
+@@ -46,6 +46,19 @@
+ #define lchown chown
+ #endif
+ 
++# ifndef DIRECTORY_SEPARATOR
++#  define DIRECTORY_SEPARATOR '/'
++# endif
++
++# ifndef ISSLASH
++#  define ISSLASH(C) ((C) == DIRECTORY_SEPARATOR)
++# endif
++
++# ifndef FILE_SYSTEM_PREFIX_LEN
++#  define FILE_SYSTEM_PREFIX_LEN(Filename) 0
++# endif
++
++
+ static void read_pattern_file ();
+ static void tape_skip_padding ();
+ static void defer_copyin ();
+@@ -376,6 +389,54 @@
+ /* Current time for verbose table.  */
+ static time_t current_time;
+ 
++/* Return a safer suffix of FILE_NAME, or "." if it has no safer
++   suffix.  Check for fully specified file names and other atrocities.  */
++
++static const char *
++safer_name_suffix (char const *file_name)
++{
++  char const *p;
++
++  /* Skip file system prefixes, leading file name components that contain
++     "..", and leading slashes.  */
++
++  size_t prefix_len = FILE_SYSTEM_PREFIX_LEN (file_name);
++
++  for (p = file_name + prefix_len; *p;)
++    {
++      if (p[0] == '.' && p[1] == '.' && (ISSLASH (p[2]) || !p[2]))
++       prefix_len = p + 2 - file_name;
++
++      do
++       {
++         char c = *p++;
++         if (ISSLASH (c))
++           break;
++       }
++      while (*p);
++    }
++
++  for (p = file_name + prefix_len; ISSLASH (*p); p++)
++    continue;
++  prefix_len = p - file_name;
++
++  if (prefix_len)
++    {
++      char *prefix = alloca (prefix_len + 1);
++      memcpy (prefix, file_name, prefix_len);
++      prefix[prefix_len] = '\0';
++
++
++      error (0, 0, "Removing leading `%s' from member names", prefix);
++    }
++
++  if (!*p)
++    p = ".";
++
++  return p;
++}
++
++
+ /* Read the collection from standard input and create files
+    in the file system.  */
+ 
+@@ -396,6 +457,7 @@
+   int in_file_des;		/* Input file descriptor.  */
+   char skip_file;		/* Flag for use with patterns.  */
+   int existing_dir;		/* True if file is a dir & already exists.  */
++  mode_t existing_mode;
+   int i;			/* Loop index variable.  */
+   char *link_name = NULL;	/* Name of hard and symbolic links.  */
+ #ifdef HPUX_CDF
+@@ -494,18 +556,11 @@
+ 
+       /* Do we have to ignore absolute paths, and if so, does the filename
+          have an absolute path?  */
+-      if (no_abs_paths_flag && file_hdr.c_name && file_hdr.c_name [0] == '/')
++      if (!abs_paths_flag && file_hdr.c_name && file_hdr.c_name[0])
+ 	{
+-	  char *p;
++	  const char *p = safer_name_suffix (file_hdr.c_name);
+ 
+-	  p = file_hdr.c_name;
+-	  while (*p == '/')
+-	    ++p;
+-	  if (*p == '\0')
+-	    {
+-	      strcpy (file_hdr.c_name, ".");
+-	    }
+-	  else
++	  if (p != file_hdr.c_name)
+ 	    {
+ 	      char *non_abs_name;
+ 
+@@ -642,6 +697,7 @@
+ 		     we are trying to create, don't complain about
+ 		     it.  */
+ 		  existing_dir = TRUE;
++		  existing_mode = file_stat.st_mode;
+ 		}
+ 	      else if (!unconditional_flag
+ 		       && file_hdr.c_mtime <= file_stat.st_mtime)
+@@ -778,8 +834,6 @@
+ 		    }
+ 		  copy_files_tape_to_disk (in_file_des, out_file_des, file_hdr.c_filesize);
+ 		  disk_empty_output_buffer (out_file_des);
+-		  if (close (out_file_des) < 0)
+-		    error (0, errno, "%s", file_hdr.c_name);
+ 
+ 		  if (archive_format == arf_crcascii)
+ 		    {
+@@ -789,13 +843,15 @@
+ 		    }
+ 		  /* File is now copied; set attributes.  */
+ 		  if (!no_chown_flag)
+-		    if ((chown (file_hdr.c_name,
++		    if ((fchown (out_file_des,
+ 				set_owner_flag ? set_owner : file_hdr.c_uid,
+ 			   set_group_flag ? set_group : file_hdr.c_gid) < 0)
+ 			&& errno != EPERM)
+ 		      error (0, errno, "%s", file_hdr.c_name);
+ 		  /* chown may have turned off some permissions we wanted. */
+-		  if (chmod (file_hdr.c_name, (int) file_hdr.c_mode) < 0)
++		  if (fchmod (out_file_des, (int) file_hdr.c_mode) < 0)
++		    error (0, errno, "%s", file_hdr.c_name);
++		  if (close (out_file_des) < 0)
+ 		    error (0, errno, "%s", file_hdr.c_name);
+ 		  if (retain_time_flag)
+ 		    {
+@@ -847,14 +903,23 @@
+ 		      cdf_flag = 1;
+ 		    }
+ #endif
+-		  res = mkdir (file_hdr.c_name, file_hdr.c_mode);
++		  res = mkdir (file_hdr.c_name, file_hdr.c_mode & ~077);
+ 		}
+ 	      else
+-		res = 0;
++		{
++		  if (!no_chown_flag && (existing_mode & 077) != 0
++		     && chmod (file_hdr.c_name, existing_mode & 07700) < 0)
++		   {
++		     error (0, errno, "%s: chmod", file_hdr.c_name);
++		     return;
++		   }
++		   res = 0;
++		}
++
+ 	      if (res < 0 && create_dir_flag)
+ 		{
+ 		  create_all_directories (file_hdr.c_name);
+-		  res = mkdir (file_hdr.c_name, file_hdr.c_mode);
++		  res = mkdir (file_hdr.c_name, file_hdr.c_mode & ~077);
+ 		}
+ 	      if (res < 0)
+ 		{
+@@ -936,20 +1001,20 @@
+ 	      
+ #ifdef CP_IFIFO
+ 	      if ((file_hdr.c_mode & CP_IFMT) == CP_IFIFO)
+-		res = mkfifo (file_hdr.c_name, file_hdr.c_mode);
++		res = mkfifo (file_hdr.c_name, file_hdr.c_mode & ~077);
+ 	      else
+ #endif
+-		res = mknod (file_hdr.c_name, file_hdr.c_mode,
++		res = mknod (file_hdr.c_name, file_hdr.c_mode & ~077,
+ 		      makedev (file_hdr.c_rdev_maj, file_hdr.c_rdev_min));
+ 	      if (res < 0 && create_dir_flag)
+ 		{
+ 		  create_all_directories (file_hdr.c_name);
+ #ifdef CP_IFIFO
+ 		  if ((file_hdr.c_mode & CP_IFMT) == CP_IFIFO)
+-		    res = mkfifo (file_hdr.c_name, file_hdr.c_mode);
++		    res = mkfifo (file_hdr.c_name, file_hdr.c_mode & ~077);
+ 		  else
+ #endif
+-		    res = mknod (file_hdr.c_name, file_hdr.c_mode,
++		    res = mknod (file_hdr.c_name, file_hdr.c_mode & ~077,
+ 				 makedev (file_hdr.c_rdev_maj,
+ 					  file_hdr.c_rdev_min));
+ 		}
+@@ -1376,18 +1441,18 @@
+ 	  continue;
+ 	}
+ 
+-      if (close (out_file_des) < 0)
+-	error (0, errno, "%s", d->header.c_name);
+-
++  
+       /* File is now copied; set attributes.  */
+       if (!no_chown_flag)
+-	if ((chown (d->header.c_name,
++	if ((fchown (out_file_des,
+ 		    set_owner_flag ? set_owner : d->header.c_uid,
+ 	       set_group_flag ? set_group : d->header.c_gid) < 0)
+ 	    && errno != EPERM)
+ 	  error (0, errno, "%s", d->header.c_name);
+       /* chown may have turned off some permissions we wanted. */
+-      if (chmod (d->header.c_name, (int) d->header.c_mode) < 0)
++      if (fchmod (out_file_des, (int) d->header.c_mode) < 0)
++	error (0, errno, "%s", d->header.c_name);
++      if (close (out_file_des) < 0)
+ 	error (0, errno, "%s", d->header.c_name);
+       if (retain_time_flag)
+ 	{
+Index: contrib/cpio/copyout.c
+===================================================================
+RCS file: /home/ncvs/src/contrib/cpio/Attic/copyout.c,v
+retrieving revision 1.2
+diff -u -d -r1.2 copyout.c
+--- contrib/cpio/copyout.c	30 Mar 1997 10:34:16 -0000	1.2
++++ contrib/cpio/copyout.c	3 Jan 2006 00:11:55 -0000
+@@ -49,12 +49,13 @@
+     {
+       char ascii_header[112];
+       char *magic_string;
++      int ret;
+ 
+       if (archive_format == arf_crcascii)
+ 	magic_string = "070702";
+       else
+ 	magic_string = "070701";
+-      sprintf (ascii_header,
++      ret = snprintf (ascii_header, sizeof(ascii_header),
+ 	       "%6s%08lx%08lx%08lx%08lx%08lx%08lx%08lx%08lx%08lx%08lx%08lx%08lx%08lx",
+ 	       magic_string,
+ 	       file_hdr->c_ino, file_hdr->c_mode, file_hdr->c_uid,
+@@ -62,6 +63,10 @@
+ 	     file_hdr->c_filesize, file_hdr->c_dev_maj, file_hdr->c_dev_min,
+ 	   file_hdr->c_rdev_maj, file_hdr->c_rdev_min, file_hdr->c_namesize,
+ 	       file_hdr->c_chksum);
++      if (ret >= sizeof(ascii_header)) {
++	fprintf(stderr, "Internal overflow, aborting\n");
++	exit (1);
++      }
+       tape_buffered_write (ascii_header, out_des, 110L);
+ 
+       /* Write file name to output.  */
+@@ -71,6 +76,7 @@
+   else if (archive_format == arf_oldascii || archive_format == arf_hpoldascii)
+     {
+       char ascii_header[78];
++      int ret;
+ #ifndef __MSDOS__
+       dev_t dev;
+       dev_t rdev;
+@@ -112,7 +118,7 @@
+       if ((file_hdr->c_ino >> 16) != 0)
+ 	error (0, 0, "%s: truncating inode number", file_hdr->c_name);
+ 
+-      sprintf (ascii_header,
++      ret = snprintf (ascii_header, sizeof(ascii_header),
+ 	       "%06o%06o%06lo%06lo%06lo%06lo%06lo%06o%011lo%06lo%011lo",
+ 	       file_hdr->c_magic & 0xFFFF, dev & 0xFFFF,
+ 	       file_hdr->c_ino & 0xFFFF, file_hdr->c_mode & 0xFFFF,
+@@ -120,6 +126,10 @@
+ 	       file_hdr->c_nlink & 0xFFFF, rdev & 0xFFFF,
+ 	       file_hdr->c_mtime, file_hdr->c_namesize & 0xFFFF,
+ 	       file_hdr->c_filesize);
++      if (ret >= sizeof(ascii_header)) {
++	fprintf(stderr, "Internal overflow, aborting\n");
++	exit (1);
++      }
+       tape_buffered_write (ascii_header, out_des, 76L);
+ 
+       /* Write file name to output.  */
+@@ -258,6 +268,14 @@
+ 	  file_hdr.c_dev_maj = major (file_stat.st_dev);
+ 	  file_hdr.c_dev_min = minor (file_stat.st_dev);
+ 	  file_hdr.c_ino = file_stat.st_ino;
++
++	  /* Skip files larger than 4GB which will cause problems on
++	     64bit platforms (and just not work on 32bit). */
++	  if (file_stat.st_size > 0xffffffff) {
++	    error (0, 0, "%s: skipping >4GB file", input_name.ds_string);
++	    continue;
++	  }
++
+ 	  /* For POSIX systems that don't define the S_IF macros,
+ 	     we can't assume that S_ISfoo means the standard Unix
+ 	     S_IFfoo bit(s) are set.  So do it manually, with a
+Index: contrib/cpio/copypass.c
+===================================================================
+RCS file: /home/ncvs/src/contrib/cpio/Attic/copypass.c,v
+retrieving revision 1.3
+diff -u -d -r1.3 copypass.c
+--- contrib/cpio/copypass.c	11 Jul 2003 02:19:19 -0000	1.3
++++ contrib/cpio/copypass.c	3 Jan 2006 22:01:58 -0000
+@@ -174,18 +174,18 @@
+ 	      disk_empty_output_buffer (out_file_des);
+ 	      if (close (in_file_des) < 0)
+ 		error (0, errno, "%s", input_name.ds_string);
+-	      if (close (out_file_des) < 0)
+-		error (0, errno, "%s", output_name.ds_string);
+ 
+ 	      /* Set the attributes of the new file.  */
+ 	      if (!no_chown_flag)
+-		if ((chown (output_name.ds_string,
++		if ((fchown (out_file_des,
+ 			    set_owner_flag ? set_owner : in_file_stat.st_uid,
+ 		      set_group_flag ? set_group : in_file_stat.st_gid) < 0)
+ 		    && errno != EPERM)
+ 		  error (0, errno, "%s", output_name.ds_string);
+ 	      /* chown may have turned off some permissions we wanted. */
+-	      if (chmod (output_name.ds_string, in_file_stat.st_mode) < 0)
++	      if (fchmod (out_file_des, in_file_stat.st_mode) < 0)
++		error (0, errno, "%s", output_name.ds_string);
++	      if (close (out_file_des) < 0)
+ 		error (0, errno, "%s", output_name.ds_string);
+ 	      if (reset_time_flag)
+ 		{
+@@ -224,15 +224,24 @@
+ 		  cdf_flag = 1;
+ 		}
+ #endif
+-	      res = mkdir (output_name.ds_string, in_file_stat.st_mode);
++	      res = mkdir (output_name.ds_string, in_file_stat.st_mode & ~077);
+ 
+ 	    }
+ 	  else
+-	    res = 0;
++            {
++              if (!no_chown_flag && (out_file_stat.st_mode & 077) != 0
++                  && chmod (output_name.ds_string, out_file_stat.st_mode & 07700) < 0)
++                {
++                  error (0, errno, "%s: chmod", output_name.ds_string);
++                  continue;
++                }
++              res = 0;
++            }
++
+ 	  if (res < 0 && create_dir_flag)
+ 	    {
+ 	      create_all_directories (output_name.ds_string);
+-	      res = mkdir (output_name.ds_string, in_file_stat.st_mode);
++	      res = mkdir (output_name.ds_string, in_file_stat.st_mode & ~077);
+ 	    }
+ 	  if (res < 0)
+ 	    {
+@@ -298,20 +307,20 @@
+ 	    {
+ #ifdef S_ISFIFO
+ 	      if (S_ISFIFO (in_file_stat.st_mode))
+-		res = mkfifo (output_name.ds_string, in_file_stat.st_mode);
++		res = mkfifo (output_name.ds_string, in_file_stat.st_mode & ~077);
+ 	      else
+ #endif
+-		res = mknod (output_name.ds_string, in_file_stat.st_mode,
++		res = mknod (output_name.ds_string, in_file_stat.st_mode & ~077,
+ 			     in_file_stat.st_rdev);
+ 	      if (res < 0 && create_dir_flag)
+ 		{
+ 		  create_all_directories (output_name.ds_string);
+ #ifdef S_ISFIFO
+ 		  if (S_ISFIFO (in_file_stat.st_mode))
+-		    res = mkfifo (output_name.ds_string, in_file_stat.st_mode);
++		    res = mkfifo (output_name.ds_string, in_file_stat.st_mode & ~077);
+ 		  else
+ #endif
+-		    res = mknod (output_name.ds_string, in_file_stat.st_mode,
++		    res = mknod (output_name.ds_string, in_file_stat.st_mode & ~077,
+ 				 in_file_stat.st_rdev);
+ 		}
+ 	      if (res < 0)
+Index: contrib/cpio/cpio.1
+===================================================================
+RCS file: /home/ncvs/src/contrib/cpio/Attic/cpio.1,v
+retrieving revision 1.3
+diff -u -d -r1.3 cpio.1
+--- contrib/cpio/cpio.1	30 Aug 1997 11:01:54 -0000	1.3
++++ contrib/cpio/cpio.1	2 Jan 2006 23:36:02 -0000
+@@ -19,7 +19,7 @@
+ [\-\-unconditional] [\-\-verbose] [\-\-block-size=blocks] [\-\-swap-halfwords]
+ [\-\-io-size=bytes] [\-\-pattern-file=file] [\-\-format=format]
+ [\-\-owner=[user][:.][group]] [\-\-no-preserve-owner] [\-\-message=message]
+-[\-\-force\-local] [\-\-no\-absolute\-filenames] [\-\-sparse] [\-\-only\-verify\-crc]
++[\-\-force\-local] [\-\-absolute\-filenames] [\-\-sparse] [\-\-only\-verify\-crc]
+ [\-\-quiet] [\-\-help] [\-\-version] [pattern...] [< archive]
+ 
+ .B cpio
+@@ -251,9 +251,9 @@
+ In the verbose table of contents listing, show numeric UID and GID
+ instead of translating them into names.
+ .TP
+-.I " \-\-no-absolute-filenames"
+-In copy-in mode, create all files relative to the current directory,
+-even if they have an absolute file name in the archive.
++.I " \-\-absolute-filenames"
++Do not strip leading file name components that contain ".."
++and leading slashes from file names in copy-in mode
+ .TP
+ .I " \-\-no-preserve-owner"
+ In copy-in mode and copy-pass mode, do not change the ownership of the
+Index: contrib/cpio/extern.h
+===================================================================
+RCS file: /home/ncvs/src/contrib/cpio/Attic/extern.h,v
+retrieving revision 1.2
+diff -u -d -r1.2 extern.h
+--- contrib/cpio/extern.h	30 Mar 1997 10:45:44 -0000	1.2
++++ contrib/cpio/extern.h	2 Jan 2006 23:36:02 -0000
+@@ -46,7 +46,7 @@
+ extern int sparse_flag;
+ extern int quiet_flag;
+ extern int only_verify_crc_flag;
+-extern int no_abs_paths_flag;
++extern int abs_paths_flag;
+ 
+ extern int last_header_start;
+ extern int copy_matching_files;
+Index: contrib/cpio/global.c
+===================================================================
+RCS file: /home/ncvs/src/contrib/cpio/Attic/global.c,v
+retrieving revision 1.1.1.1
+diff -u -d -r1.1.1.1 global.c
+--- contrib/cpio/global.c	29 Mar 1997 22:40:44 -0000	1.1.1.1
++++ contrib/cpio/global.c	2 Jan 2006 23:36:02 -0000
+@@ -98,8 +98,8 @@
+    actually extract the files. */
+ int only_verify_crc_flag = FALSE;
+ 
+-/* If TRUE, don't use any absolute paths, prefix them by `./'.  */
+-int no_abs_paths_flag = FALSE;
++/* If TRUE, allow any absolute paths */
++int abs_paths_flag = FALSE;
+ 
+ #ifdef DEBUG_CPIO
+ /* If TRUE, print debugging information.  */
+Index: contrib/cpio/main.c
+===================================================================
+RCS file: /home/ncvs/src/contrib/cpio/Attic/main.c,v
+retrieving revision 1.3
+diff -u -d -r1.3 main.c
+--- contrib/cpio/main.c	15 Sep 1999 01:47:13 -0000	1.3
++++ contrib/cpio/main.c	2 Jan 2006 23:36:02 -0000
+@@ -56,7 +56,7 @@
+   {"list", 0, &table_flag, TRUE},
+   {"make-directories", 0, &create_dir_flag, TRUE},
+   {"message", 1, 0, 'M'},
+-  {"no-absolute-filenames", 0, 0, 136},
++  {"absolute-filenames", 0, 0, 136},
+   {"no-preserve-owner", 0, 0, 134},
+   {"nonmatching", 0, &copy_matching_files, FALSE},
+   {"numeric-uid-gid", 0, &numeric_uid, TRUE},
+@@ -105,7 +105,7 @@
+        [--unconditional] [--verbose] [--block-size=blocks] [--swap-halfwords]\n\
+        [--io-size=bytes] [--pattern-file=file] [--format=format]\n\
+        [--owner=[user][:.][group]] [--no-preserve-owner] [--message=message]\n\
+-       [--force-local] [--no-absolute-filenames] [--sparse] [--only-verify-crc]\n\
++       [--force-local] [--absolute-filenames] [--sparse] [--only-verify-crc]\n\
+        [--quiet] [--help] [--version] [pattern...] [< archive]\n",
+ 	   program_name);
+   fprintf (fp, "\
+@@ -266,8 +266,8 @@
+ 	  numeric_uid = TRUE;
+ 	  break;
+ 
+-	case 136:		/* --no-absolute-filenames */
+-	  no_abs_paths_flag = TRUE;
++	case 136:		/* --absolute-filenames */
++	  abs_paths_flag = TRUE;
+ 	  break;
+ 	
+ 	case 134:		/* --no-preserve-owner */
+@@ -414,7 +414,7 @@
+ 	  || retain_time_flag || no_chown_flag || set_owner_flag
+ 	  || set_group_flag || swap_bytes_flag || swap_halfwords_flag
+ 	  || (append_flag && !(archive_name || output_archive_name))
+-	  || rename_batch_file || no_abs_paths_flag
++	  || rename_batch_file || abs_paths_flag
+ 	  || input_archive_name || (archive_name && output_archive_name))
+ 	usage (stderr, 2);
+       if (archive_format == arf_unknown)
+@@ -429,7 +429,7 @@
+       if (argc - 1 != optind || archive_format != arf_unknown
+ 	  || swap_bytes_flag || swap_halfwords_flag
+ 	  || table_flag || rename_flag || append_flag
+-	  || rename_batch_file || no_abs_paths_flag)
++	  || rename_batch_file || abs_paths_flag)
+ 	usage (stderr, 2);
+       directory_name = argv[optind];
+     }

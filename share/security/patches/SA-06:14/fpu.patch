@@ -1,0 +1,141 @@
+Index: sys/amd64/amd64/fpu.c
+===================================================================
+RCS file: /home/ncvs/src/sys/amd64/amd64/fpu.c,v
+retrieving revision 1.157
+diff -u -I__FBSDID -r1.157 fpu.c
+--- sys/amd64/amd64/fpu.c	11 Mar 2005 22:16:09 -0000	1.157
++++ sys/amd64/amd64/fpu.c	16 Apr 2006 20:18:07 -0000
+@@ -96,6 +96,8 @@
+ 
+ typedef u_char bool_t;
+ 
++static	void	fpu_clean_state(void);
++
+ int	hw_float = 1;
+ SYSCTL_INT(_hw,HW_FLOATINGPT, floatingpoint,
+ 	CTLFLAG_RD, &hw_float, 0, 
+@@ -407,6 +409,8 @@
+ 	PCPU_SET(fpcurthread, curthread);
+ 	pcb = PCPU_GET(curpcb);
+ 
++	fpu_clean_state();
++
+ 	if ((pcb->pcb_flags & PCB_FPUINITDONE) == 0) {
+ 		/*
+ 		 * This is the first time this thread has used the FPU,
+@@ -474,6 +478,7 @@
+ 
+ 	s = intr_disable();
+ 	if (td == PCPU_GET(fpcurthread)) {
++		fpu_clean_state();
+ 		fxrstor(addr);
+ 		intr_restore(s);
+ 	} else {
+@@ -484,6 +489,37 @@
+ }
+ 
+ /*
++ * On AuthenticAMD processors, the fxrstor instruction does not restore
++ * the x87's stored last instruction pointer, last data pointer, and last
++ * opcode values, except in the rare case in which the exception summary
++ * (ES) bit in the x87 status word is set to 1.
++ *
++ * In order to avoid leaking this information across processes, we clean
++ * these values by performing a dummy load before executing fxrstor().
++ */
++static	double	dummy_variable = 0.0;
++static void
++fpu_clean_state(void)
++{
++	u_short status;
++
++	/*
++	 * Clear the ES bit in the x87 status word if it is currently
++	 * set, in order to avoid causing a fault in the upcoming load.
++	 */
++	fnstsw(&status);
++	if (status & 0x80)
++		fnclex();
++
++	/*
++	 * Load the dummy variable into the x87 stack.  This mangles
++	 * the x87 stack, but we don't care since we're about to call
++	 * fxrstor() anyway.
++	 */
++	__asm __volatile("ffree %%st(7); fld %0" : : "m" (dummy_variable));
++}
++
++/*
+  * This really sucks.  We want the acpi version only, but it requires
+  * the isa_if.h file in order to get the definitions.
+  */
+Index: sys/i386/isa/npx.c
+===================================================================
+RCS file: /home/ncvs/src/sys/i386/isa/npx.c,v
+retrieving revision 1.164
+diff -u -I__FBSDID -r1.164 npx.c
+--- sys/i386/isa/npx.c	6 Apr 2006 17:17:45 -0000	1.164
++++ sys/i386/isa/npx.c	16 Apr 2006 20:18:08 -0000
+@@ -142,6 +142,10 @@
+ 
+ typedef u_char bool_t;
+ 
++#ifdef CPU_ENABLE_SSE
++static	void	fpu_clean_state(void);
++#endif
++
+ static	void	fpusave(union savefpu *);
+ static	void	fpurstor(union savefpu *);
+ static	int	npx_attach(device_t dev);
+@@ -952,15 +956,49 @@
+ 		fnsave(addr);
+ }
+ 
++#ifdef CPU_ENABLE_SSE
++/*
++ * On AuthenticAMD processors, the fxrstor instruction does not restore
++ * the x87's stored last instruction pointer, last data pointer, and last
++ * opcode values, except in the rare case in which the exception summary
++ * (ES) bit in the x87 status word is set to 1.
++ *
++ * In order to avoid leaking this information across processes, we clean
++ * these values by performing a dummy load before executing fxrstor().
++ */
++static	double	dummy_variable = 0.0;
++static void
++fpu_clean_state(void)
++{
++	u_short status;
++
++	/*
++	 * Clear the ES bit in the x87 status word if it is currently
++	 * set, in order to avoid causing a fault in the upcoming load.
++	 */
++	fnstsw(&status);
++	if (status & 0x80)
++		fnclex();
++
++	/*
++	 * Load the dummy variable into the x87 stack.  This mangles
++	 * the x87 stack, but we don't care since we're about to call
++	 * fxrstor() anyway.
++	 */
++	__asm __volatile("ffree %%st(7); fld %0" : : "m" (dummy_variable));
++}
++#endif /* CPU_ENABLE_SSE */
++
+ static void
+ fpurstor(addr)
+ 	union savefpu *addr;
+ {
+ 
+ #ifdef CPU_ENABLE_SSE
+-	if (cpu_fxsr)
++	if (cpu_fxsr) {
++		fpu_clean_state();
+ 		fxrstor(addr);
+-	else
++	} else
+ #endif
+ 		frstor(addr);
+ }

@@ -1,0 +1,98 @@
+Index: gen/fts.c
+===================================================================
+RCS file: /home/ncvs/src/lib/libc/gen/fts.c,v
+retrieving revision 1.14.2.1
+diff -u -r1.14.2.1 fts.c
+--- gen/fts.c	2001/03/05 04:44:42	1.14.2.1
++++ gen/fts.c	2001/08/18 23:21:03
+@@ -63,7 +63,7 @@
+ static int	 fts_palloc __P((FTS *, size_t));
+ static FTSENT	*fts_sort __P((FTS *, FTSENT *, int));
+ static u_short	 fts_stat __P((FTS *, FTSENT *, int));
+-static int	 fts_safe_changedir __P((FTS *, FTSENT *, int));
++static int	 fts_safe_changedir __P((FTS *, FTSENT *, int, char *));
+ 
+ #define	ISDOT(a)	(a[0] == '.' && (!a[1] || (a[1] == '.' && !a[2])))
+ 
+@@ -71,7 +71,6 @@
+ #define	ISSET(opt)	(sp->fts_options & (opt))
+ #define	SET(opt)	(sp->fts_options |= (opt))
+ 
+-#define	CHDIR(sp, path)	(!ISSET(FTS_NOCHDIR) && chdir(path))
+ #define	FCHDIR(sp, fd)	(!ISSET(FTS_NOCHDIR) && fchdir(fd))
+ 
+ /* fts_build flags */
+@@ -275,6 +274,7 @@
+ fts_read(sp)
+ 	register FTS *sp;
+ {
++	struct stat sb;
+ 	register FTSENT *p, *tmp;
+ 	register int instr;
+ 	register char *t;
+@@ -351,7 +351,7 @@
+ 		 * FTS_STOP or the fts_info field of the node.
+ 		 */
+ 		if (sp->fts_child != NULL) {
+-			if (fts_safe_changedir(sp, p, -1)) {
++			if (fts_safe_changedir(sp, p, -1, p->fts_accpath)) {
+ 				p->fts_errno = errno;
+ 				p->fts_flags |= FTS_DONTCHDIR;
+ 				for (p = sp->fts_child; p != NULL; 
+@@ -449,11 +449,10 @@
+ 			return (NULL);
+ 		}
+ 		(void)_close(p->fts_symfd);
+-	} else if (!(p->fts_flags & FTS_DONTCHDIR)) {
+-		if (CHDIR(sp, "..")) {
+-			SET(FTS_STOP);
+-			return (NULL);
+-		}
++	} else if (!(p->fts_flags & FTS_DONTCHDIR) &&
++		   fts_safe_changedir(sp, p->fts_parent, -1, "..")) {
++		SET(FTS_STOP);
++		return (NULL);
+ 	}
+ 	p->fts_info = p->fts_errno ? FTS_ERR : FTS_DP;
+ 	return (sp->fts_cur = p);
+@@ -640,7 +639,7 @@
+ 	 */
+ 	cderrno = 0;
+ 	if (nlinks || type == BREAD) {
+-		if (fts_safe_changedir(sp, cur, dirfd(dirp))) {
++		if (fts_safe_changedir(sp, cur, dirfd(dirp), NULL)) {
+ 			if (nlinks && type == BREAD)
+ 				cur->fts_errno = errno;
+ 			cur->fts_flags |= FTS_DONTCHDIR;
+@@ -806,7 +805,8 @@
+ 	 */
+ 	if (descend && (type == BCHILD || !nitems) &&
+ 	    (cur->fts_level == FTS_ROOTLEVEL ?
+-	    FCHDIR(sp, sp->fts_rfd) : CHDIR(sp, ".."))) {
++	    FCHDIR(sp, sp->fts_rfd) :
++	    fts_safe_changedir(sp, cur->fts_parent, -1, ".."))) {
+ 		cur->fts_info = FTS_ERR;
+ 		SET(FTS_STOP);
+ 		return (NULL);
+@@ -1069,10 +1069,11 @@
+  * Assumes p->fts_dev and p->fts_ino are filled in.
+  */
+ static int
+-fts_safe_changedir(sp, p, fd)
++fts_safe_changedir(sp, p, fd, path)
+ 	FTS *sp;
+ 	FTSENT *p;
+ 	int fd;
++	char *path;
+ {
+ 	int ret, oerrno, newfd;
+ 	struct stat sb;
+@@ -1080,7 +1081,7 @@
+ 	newfd = fd;
+ 	if (ISSET(FTS_NOCHDIR))
+ 		return (0);
+-	if (fd < 0 && (newfd = _open(p->fts_accpath, O_RDONLY, 0)) < 0)
++	if (fd < 0 && (newfd = _open(path, O_RDONLY, 0)) < 0)
+ 		return (-1);
+ 	if (fstat(newfd, &sb)) {
+ 		ret = -1;

@@ -1,0 +1,194 @@
+Index: sys/kern/kern_exec.c
+diff -u sys/kern/kern_exec.c:1.107.2.12 src/sys/kern/kern_exec.c:1.107.2.13
+--- sys/kern/kern_exec.c:1.107.2.12	Mon Jan  7 22:13:21 2002
++++ sys/kern/kern_exec.c	Tue Jan 22 11:22:59 2002
+@@ -114,6 +114,15 @@
+ 	imgp = &image_params;
+ 
+ 	/*
++	 * Lock the process and set the P_INEXEC flag to indicate that
++	 * it should be left alone until we're done here.  This is
++	 * necessary to avoid race conditions - e.g. in ptrace() -
++	 * that might allow a local user to illicitly obtain elevated
++	 * privileges.
++	 */
++	p->p_flag |= P_INEXEC;
++
++	/*
+ 	 * Initialize part of the common data
+ 	 */
+ 	imgp->proc = p;
+@@ -348,10 +357,12 @@
+ 	VREF(ndp->ni_vp);
+ 	p->p_textvp = ndp->ni_vp;
+ 
+-	/*
+-	 * notify others that we exec'd
+-	 */
++        /*
++         * Notify others that we exec'd, and clear the P_INEXEC flag
++         * as we're now a bona fide freshly-execed process.
++         */
+ 	KNOTE(&p->p_klist, NOTE_EXEC);
++	p->p_flag &= ~P_INEXEC;
+ 
+ 	/*
+ 	 * If tracing the process, trap to debugger so breakpoints
+@@ -405,6 +416,8 @@
+ 		return (0);
+ 
+ exec_fail:
++	/* we're done here, clear P_INEXEC */
++	p->p_flag &= ~P_INEXEC;
+ 	if (imgp->vmspace_destroyed) {
+ 		/* sorry, no more process anymore. exit gracefully */
+ 		exit1(p, W_EXITCODE(0, SIGABRT));
+Index: sys/kern/sys_process.c
+diff -u sys/kern/sys_process.c:1.51.2.2 src/sys/kern/sys_process.c:1.51.2.3
+--- sys/kern/sys_process.c:1.51.2.2	Wed Oct  3 01:55:42 2001
++++ sys/kern/sys_process.c	Tue Jan 22 11:22:59 2002
+@@ -220,6 +220,10 @@
+ 	if (!PRISON_CHECK(curp, p))
+ 		return (ESRCH);
+ 
++	/* Can't trace a process that's currently exec'ing. */ 
++	if ((p->p_flag & P_INEXEC) != 0)
++		return EAGAIN;
++
+ 	/*
+ 	 * Permissions check
+ 	 */
+Index: sys/miscfs/procfs/procfs.h
+diff -u sys/miscfs/procfs/procfs.h:1.32.2.2 src/sys/miscfs/procfs/procfs.h:1.32.2.3
+--- sys/miscfs/procfs/procfs.h:1.32.2.2	Sun Aug 12 09:29:19 2001
++++ sys/miscfs/procfs/procfs.h	Tue Jan 22 11:22:59 2002
+@@ -97,7 +97,7 @@
+      ((((p1)->p_cred->pc_ucred->cr_uid == (p2)->p_cred->p_ruid) && \
+        ((p1)->p_cred->p_ruid == (p2)->p_cred->p_ruid) && \
+        ((p1)->p_cred->p_svuid == (p2)->p_cred->p_ruid) && \
+-       ((p2)->p_flag & P_SUGID) == 0) || \
++       ((p2)->p_flag & (P_SUGID|P_INEXEC)) == 0) || \
+       (suser_xxx((p1)->p_cred->pc_ucred, (p1), PRISON_ROOT) == 0))
+ 
+ /*
+Index: sys/miscfs/procfs/procfs_ctl.c
+diff -u sys/miscfs/procfs/procfs_ctl.c:1.20.2.1 src/sys/miscfs/procfs/procfs_ctl.c:1.20.2.2
+--- sys/miscfs/procfs/procfs_ctl.c:1.20.2.1	Sat Dec 16 21:13:05 2000
++++ sys/miscfs/procfs/procfs_ctl.c	Tue Jan 22 11:22:59 2002
+@@ -110,6 +110,9 @@
+ {
+ 	int error;
+ 
++	/* Can't trace a process that's currently exec'ing. */ 
++	if ((p->p_flag & P_INEXEC) != 0)
++		return EAGAIN;
+ 	/*
+ 	 * Authorization check: rely on normal debugging protection, except
+ 	 * allow processes to disengage debugging on a process onto which
+Index: sys/miscfs/procfs/procfs_dbregs.c
+diff -u sys/miscfs/procfs/procfs_dbregs.c:1.4.2.2 src/sys/miscfs/procfs/procfs_dbregs.c:1.4.2.3
+--- sys/miscfs/procfs/procfs_dbregs.c:1.4.2.2	Sat Aug  4 08:12:24 2001
++++ sys/miscfs/procfs/procfs_dbregs.c	Tue Jan 22 11:22:59 2002
+@@ -62,6 +62,9 @@
+ 	char *kv;
+ 	int kl;
+ 
++	/* Can't trace a process that's currently exec'ing. */ 
++	if ((p->p_flag & P_INEXEC) != 0)
++		return EAGAIN;
+ 	if (!CHECKIO(curp, p) || p_trespass(curp, p))
+ 		return (EPERM);
+ 	kl = sizeof(r);
+Index: sys/miscfs/procfs/procfs_fpregs.c
+diff -u sys/miscfs/procfs/procfs_fpregs.c:1.11.2.2 src/sys/miscfs/procfs/procfs_fpregs.c:1.11.2.3
+--- sys/miscfs/procfs/procfs_fpregs.c:1.11.2.2	Sat Aug  4 08:12:24 2001
++++ sys/miscfs/procfs/procfs_fpregs.c	Tue Jan 22 11:22:59 2002
+@@ -59,6 +59,9 @@
+ 	char *kv;
+ 	int kl;
+ 
++	/* Can't trace a process that's currently exec'ing. */ 
++	if ((p->p_flag & P_INEXEC) != 0)
++		return EAGAIN;
+ 	if (!CHECKIO(curp, p) || p_trespass(curp, p))
+ 		return EPERM;
+ 	kl = sizeof(r);
+Index: sys/miscfs/procfs/procfs_regs.c
+diff -u sys/miscfs/procfs/procfs_regs.c:1.10.2.2 src/sys/miscfs/procfs/procfs_regs.c:1.10.2.3
+--- sys/miscfs/procfs/procfs_regs.c:1.10.2.2	Sat Aug  4 08:12:24 2001
++++ sys/miscfs/procfs/procfs_regs.c	Tue Jan 22 11:22:59 2002
+@@ -60,6 +60,9 @@
+ 	char *kv;
+ 	int kl;
+ 
++	/* Can't trace a process that's currently exec'ing. */ 
++	if ((p->p_flag & P_INEXEC) != 0)
++		return EAGAIN;
+ 	if (!CHECKIO(curp, p) || p_trespass(curp, p))
+ 		return EPERM;
+ 	kl = sizeof(r);
+Index: sys/miscfs/procfs/procfs_status.c
+diff -u sys/miscfs/procfs/procfs_status.c:1.20.2.3 src/sys/miscfs/procfs/procfs_status.c:1.20.2.4
+--- sys/miscfs/procfs/procfs_status.c:1.20.2.3	Thu Nov 16 07:50:00 2000
++++ sys/miscfs/procfs/procfs_status.c	Tue Jan 22 11:22:59 2002
+@@ -211,7 +211,9 @@
+ 	 */
+ 
+ 	if (p->p_args &&
+-	    (ps_argsopen || (CHECKIO(curp, p) && !p_trespass(curp, p)))) {
++	    (ps_argsopen || (CHECKIO(curp, p) &&
++			     (p->p_flag & P_INEXEC) == 0 &&
++			     !p_trespass(curp, p)))) {
+ 		bp = p->p_args->ar_args;
+ 		buflen = p->p_args->ar_length;
+ 		buf = 0;
+Index: sys/sys/proc.h
+diff -u sys/sys/proc.h:1.99.2.5 src/sys/sys/proc.h:1.99.2.6
+--- sys/sys/proc.h:1.99.2.5	Thu Sep  7 14:13:54 2000
++++ sys/sys/proc.h	Tue Jan 22 11:23:02 2002
+@@ -291,6 +291,7 @@
+ #define	P_JAILED	0x1000000 /* Process is in jail */
+ #define	P_OLDMASK	0x2000000 /* need to restore mask before pause */
+ #define	P_ALTSTACK	0x4000000 /* have alternate signal stack */
++#define	P_INEXEC	0x8000000 /* Process is in execve(). */
+ 
+ /*
+  * MOVE TO ucred.h?
+Index: sys/miscfs/procfs/procfs_mem.c
+diff -u sys/miscfs/procfs/procfs_mem.c:1.46.2.2 src/sys/miscfs/procfs/procfs_mem.c:1.46.2.3
+--- sys/miscfs/procfs/procfs_mem.c:1.46.2.2	Sun Aug 12 09:29:19 2001
++++ sys/miscfs/procfs/procfs_mem.c	Tue Jan 22 11:22:59 2002
+@@ -244,6 +244,9 @@
+ 	if (uio->uio_resid == 0)
+ 		return (0);
+ 
++	/* Can't trace a process that's currently exec'ing. */ 
++	if ((p->p_flag & P_INEXEC) != 0)
++		return EAGAIN;
+  	if (!CHECKIO(curp, p) || p_trespass(curp, p))
+  		return EPERM;
+ 
+Index: sys/miscfs/procfs/procfs_vnops.c
+diff -u sys/miscfs/procfs/procfs_vnops.c:1.76.2.6 src/sys/miscfs/procfs/procfs_vnops.c:1.76.2.7
+--- sys/miscfs/procfs/procfs_vnops.c:1.76.2.6	Mon Oct 29 14:15:30 2001
++++ sys/miscfs/procfs/procfs_vnops.c	Tue Jan 22 11:22:59 2002
+@@ -148,6 +148,9 @@
+ 			return (EBUSY);
+ 
+ 		p1 = ap->a_p;
++		/* Can't trace a process that's currently exec'ing. */ 
++		if ((p2->p_flag & P_INEXEC) != 0)
++			return EAGAIN;
+ 		if (!CHECKIO(p1, p2) || p_trespass(p1, p2))
+ 			return (EPERM);
+ 
+@@ -239,6 +242,9 @@
+ 		return ENOTTY;
+ 	}
+ 
++	/* Can't trace a process that's currently exec'ing. */ 
++	if ((procp->p_flag & P_INEXEC) != 0)
++		return EAGAIN;
+ 	if (!CHECKIO(p, procp) || p_trespass(p, procp))
+ 		return EPERM;
+ 

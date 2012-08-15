@@ -1,0 +1,87 @@
+Index: sys/netinet6/in6.h
+===================================================================
+RCS file: /home/ncvs/src/sys/netinet6/in6.h,v
+retrieving revision 1.51.2.1
+diff -u -p -r1.51.2.1 in6.h
+--- sys/netinet6/in6.h	1 Sep 2008 19:23:04 -0000	1.51.2.1
++++ sys/netinet6/in6.h	28 Sep 2008 21:07:34 -0000
+@@ -599,7 +599,9 @@ struct ip6_mtuinfo {
+ /* New entries should be added here from current IPV6CTL_MAXID value. */
+ /* to define items, should talk with KAME guys first, for *BSD compatibility */
+ #define IPV6CTL_STEALTH		45
+-#define IPV6CTL_MAXID		46
++
++#define	ICMPV6CTL_ND6_ONLINKNSRFC4861	47
++#define IPV6CTL_MAXID		48
+ #endif /* __BSD_VISIBLE */
+ 
+ /*
+Index: sys/netinet6/in6_proto.c
+===================================================================
+RCS file: /home/ncvs/src/sys/netinet6/in6_proto.c,v
+retrieving revision 1.46.2.2
+diff -u -p -r1.46.2.2 in6_proto.c
+--- sys/netinet6/in6_proto.c	1 Sep 2008 19:23:04 -0000	1.46.2.2
++++ sys/netinet6/in6_proto.c	28 Sep 2008 21:14:27 -0000
+@@ -394,6 +394,7 @@ time_t	ip6_log_time = (time_t)0L;
+ #ifdef IPSTEALTH
+ int	ip6stealth = 0;
+ #endif
++int	nd6_onlink_ns_rfc4861 = 0; /* allow 'on-link' nd6 NS (as in RFC 4861) */
+ 
+ /* icmp6 */
+ /*
+@@ -567,3 +568,6 @@ SYSCTL_INT(_net_inet6_icmp6, ICMPV6CTL_N
+ 	nd6_maxnudhint, CTLFLAG_RW,	&nd6_maxnudhint, 0, "");
+ SYSCTL_INT(_net_inet6_icmp6, ICMPV6CTL_ND6_DEBUG,
+ 	nd6_debug, CTLFLAG_RW,	&nd6_debug,		0, "");
++SYSCTL_INT(_net_inet6_icmp6, ICMPV6CTL_ND6_ONLINKNSRFC4861,
++	nd6_onlink_ns_rfc4861, CTLFLAG_RW, &nd6_onlink_ns_rfc4861, 0,
++	"Accept 'on-link' nd6 NS in compliance with RFC 4861.");
+Index: sys/netinet6/nd6.h
+===================================================================
+RCS file: /home/ncvs/src/sys/netinet6/nd6.h,v
+retrieving revision 1.21.2.1
+diff -u -p -r1.21.2.1 nd6.h
+--- sys/netinet6/nd6.h	1 Sep 2008 19:23:04 -0000	1.21.2.1
++++ sys/netinet6/nd6.h	28 Sep 2008 21:18:01 -0000
+@@ -339,6 +339,7 @@ extern struct llinfo_nd6 llinfo_nd6;
+ extern struct nd_drhead nd_defrouter;
+ extern struct nd_prhead nd_prefix;
+ extern int nd6_debug;
++extern int nd6_onlink_ns_rfc4861;
+ 
+ #define nd6log(x)	do { if (nd6_debug) log x; } while (/*CONSTCOND*/ 0)
+ 
+Index: sys/netinet6/nd6_nbr.c
+===================================================================
+RCS file: /home/ncvs/src/sys/netinet6/nd6_nbr.c,v
+retrieving revision 1.47.2.2
+diff -u -p -r1.47.2.2 nd6_nbr.c
+--- sys/netinet6/nd6_nbr.c	1 Sep 2008 19:23:04 -0000	1.47.2.2
++++ sys/netinet6/nd6_nbr.c	28 Sep 2008 21:14:44 -0000
+@@ -145,6 +145,24 @@ nd6_ns_input(struct mbuf *m, int off, in
+ 			    "(wrong ip6 dst)\n"));
+ 			goto bad;
+ 		}
++	} else if (!nd6_onlink_ns_rfc4861) {
++		struct sockaddr_in6 src_sa6;
++
++		/*
++		 * According to recent IETF discussions, it is not a good idea
++		 * to accept a NS from an address which would not be deemed
++		 * to be a neighbor otherwise.  This point is expected to be
++		 * clarified in future revisions of the specification.
++		 */
++		bzero(&src_sa6, sizeof(src_sa6));
++		src_sa6.sin6_family = AF_INET6;
++		src_sa6.sin6_len = sizeof(src_sa6);
++		src_sa6.sin6_addr = saddr6;
++		if (!nd6_is_addr_neighbor(&src_sa6, ifp)) {
++			nd6log((LOG_INFO, "nd6_ns_input: "
++				"NS packet from non-neighbor\n"));
++			goto bad;
++		}
+ 	}
+ 
+ 	if (IN6_IS_ADDR_MULTICAST(&taddr6)) {
