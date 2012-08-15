@@ -1,0 +1,195 @@
+Index: sys/dev/twe/twe.c
+===================================================================
+RCS file: /home/ncvs/src/sys/dev/twe/twe.c,v
+retrieving revision 1.1.2.8.2.1
+retrieving revision 1.1.2.8.2.2
+diff -u -r1.1.2.8.2.1 -r1.1.2.8.2.2
+--- sys/dev/twe/twe.c	12 May 2004 03:37:43 -0000	1.1.2.8.2.1
++++ sys/dev/twe/twe.c	26 Jun 2004 02:22:24 -0000	1.1.2.8.2.2
+@@ -26,7 +26,7 @@
+  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+  * SUCH DAMAGE.
+  *
+- *	$FreeBSD: src/sys/dev/twe/twe.c,v 1.1.2.8.2.1 2004/05/12 03:37:43 vkashyap Exp $
++ *	$FreeBSD: src/sys/dev/twe/twe.c,v 1.1.2.8.2.2 2004/06/26 02:22:24 kensmith Exp $
+  */
+ 
+ /*
+@@ -382,7 +382,7 @@
+ 
+     debug_called(4);
+ 
+-    if (sc->twe_state & TWE_STATE_FRZN)
++    if (sc->twe_state & (TWE_STATE_CTLR_BUSY | TWE_STATE_FRZN))
+ 	    return;
+ 
+     /* spin until something prevents us from doing any work */
+@@ -433,6 +433,8 @@
+ 	error = twe_map_request(tr);
+ 
+ 	if (error != 0) {
++	    if (error == EBUSY)
++		break;
+ 	    tr->tr_status = TWE_CMD_ERROR;
+ 	    if (tr->tr_private != NULL) {
+ 		bp = (twe_bio *)(tr->tr_private);
+@@ -758,7 +760,7 @@
+     } else {
+ 	tr->tr_complete = func;
+ 	error = twe_map_request(tr);
+-	if (error == 0)
++	if ((error == 0) || (error == EBUSY))
+ 	    return(func);
+     }
+ 
+@@ -924,8 +926,10 @@
+ 
+     debug_called(4);
+ 
++    tr->tr_status = TWE_CMD_BUSY;
+     if ((error = twe_map_request(tr)) != 0)
+-	return(error);
++	if (error != EBUSY)
++	    return(error);
+     while (tr->tr_status == TWE_CMD_BUSY){
+ 	twe_done(tr->tr_sc);
+     }
+@@ -1117,6 +1121,7 @@
+ 	    /* move to completed queue */
+ 	    twe_remove_busy(tr);
+ 	    twe_enqueue_complete(tr);
++	    sc->twe_state &= ~TWE_STATE_CTLR_BUSY;
+ 	} else {
+ 	    break;					/* no response ready */
+ 	}
+Index: sys/dev/twe/twe_freebsd.c
+===================================================================
+RCS file: /home/ncvs/src/sys/dev/twe/twe_freebsd.c,v
+retrieving revision 1.2.2.8
+retrieving revision 1.2.2.8.2.1
+diff -u -r1.2.2.8 -r1.2.2.8.2.1
+--- sys/dev/twe/twe_freebsd.c	7 Apr 2004 22:18:00 -0000	1.2.2.8
++++ sys/dev/twe/twe_freebsd.c	26 Jun 2004 02:22:24 -0000	1.2.2.8.2.1
+@@ -26,7 +26,7 @@
+  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+  * SUCH DAMAGE.
+  *
+- * $FreeBSD: src/sys/dev/twe/twe_freebsd.c,v 1.2.2.8 2004/04/07 22:18:00 vkashyap Exp $
++ * $FreeBSD: src/sys/dev/twe/twe_freebsd.c,v 1.2.2.8.2.1 2004/06/26 02:22:24 kensmith Exp $
+  */
+ 
+ /*
+@@ -999,8 +999,10 @@
+ 	    bcopy(tr->tr_realdata, tr->tr_data, tr->tr_length);
+ 	bus_dmamap_sync(tr->tr_sc->twe_buffer_dmat, tr->tr_dmamap, BUS_DMASYNC_PREWRITE);
+     }
+-    if (twe_start(tr) == EBUSY)
++    if (twe_start(tr) == EBUSY) {
++	tr->tr_sc->twe_state |= TWE_STATE_CTLR_BUSY;
+ 	twe_requeue_ready(tr);
++    }
+ }
+ 
+ static void
+@@ -1022,8 +1024,10 @@
+ 
+     debug_called(4);
+ 
+-    if (sc->twe_state & TWE_STATE_FRZN)
++    if (sc->twe_state & (TWE_STATE_CTLR_BUSY | TWE_STATE_FRZN)) {
++	twe_requeue_ready(tr);
+ 	return (EBUSY);
++    }
+ 
+     /*
+      * Map the command into bus space.
+@@ -1061,8 +1065,8 @@
+ 	}
+     } else {
+ 	if ((error = twe_start(tr)) == EBUSY) {
++	    sc->twe_state |= TWE_STATE_CTLR_BUSY;
+ 	    twe_requeue_ready(tr);
+-	    error = 0;
+ 	}
+     }
+ 
+Index: sys/dev/twe/twevar.h
+===================================================================
+RCS file: /home/ncvs/src/sys/dev/twe/twevar.h,v
+retrieving revision 1.1.2.6.2.1
+retrieving revision 1.1.2.6.2.2
+diff -u -r1.1.2.6.2.1 -r1.1.2.6.2.2
+--- sys/dev/twe/twevar.h	12 May 2004 03:37:43 -0000	1.1.2.6.2.1
++++ sys/dev/twe/twevar.h	26 Jun 2004 02:22:24 -0000	1.1.2.6.2.2
+@@ -26,10 +26,10 @@
+  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+  * SUCH DAMAGE.
+  *
+- *	$FreeBSD: src/sys/dev/twe/twevar.h,v 1.1.2.6.2.1 2004/05/12 03:37:43 vkashyap Exp $
++ *	$FreeBSD: src/sys/dev/twe/twevar.h,v 1.1.2.6.2.2 2004/06/26 02:22:24 kensmith Exp $
+  */
+ 
+-#define TWE_DRIVER_VERSION_STRING	"1.40.01.001"
++#define TWE_DRIVER_VERSION_STRING	"1.40.01.002"
+ #define TWE_CDEV_MAJOR			146
+ #define TWED_CDEV_MAJOR			147
+ 
+@@ -149,7 +149,8 @@
+ #define TWE_STATE_SHUTDOWN	(1<<1)	/* controller is shut down */
+ #define TWE_STATE_OPEN		(1<<2)	/* control device is open */
+ #define TWE_STATE_SUSPEND	(1<<3)	/* controller is suspended */
+-#define TWE_STATE_FRZN		(1<<4)
++#define TWE_STATE_FRZN		(1<<4)	/* got EINPROGRESS */
++#define TWE_STATE_CTLR_BUSY	(1<<5)	/* controller cmd queue full */
+     int			twe_host_id;
+     struct twe_qstat	twe_qstat[TWEQ_COUNT];	/* queue statistics */
+ 
+Index: sys/conf/newvers.sh
+===================================================================
+RCS file: /home/ncvs/src/sys/conf/newvers.sh,v
+retrieving revision 1.44.2.34.2.2
+retrieving revision 1.44.2.34.2.3
+diff -u -r1.44.2.34.2.2 -r1.44.2.34.2.3
+--- sys/conf/newvers.sh	25 May 2004 05:30:47 -0000	1.44.2.34.2.2
++++ sys/conf/newvers.sh	26 Jun 2004 02:22:24 -0000	1.44.2.34.2.3
+@@ -32,11 +32,11 @@
+ # SUCH DAMAGE.
+ #
+ #	@(#)newvers.sh	8.1 (Berkeley) 4/20/94
+-# $FreeBSD: src/sys/conf/newvers.sh,v 1.44.2.34.2.2 2004/05/25 05:30:47 scottl Exp $
++# $FreeBSD: src/sys/conf/newvers.sh,v 1.44.2.34.2.3 2004/06/26 02:22:24 kensmith Exp $
+ 
+ TYPE="FreeBSD"
+ REVISION="4.10"
+-BRANCH="RELEASE"
++BRANCH="RELEASE-p1"
+ RELEASE="${REVISION}-${BRANCH}"
+ VERSION="${TYPE} ${RELEASE}"
+ 
+Index: UPDATING
+===================================================================
+RCS file: /home/ncvs/src/UPDATING,v
+retrieving revision 1.73.2.90
+retrieving revision 1.73.2.90.2.2
+diff -u -r1.73.2.90 -r1.73.2.90.2.2
+--- UPDATING	31 Oct 2003 16:40:39 -0000	1.73.2.90
++++ UPDATING	26 Jun 2004 04:39:46 -0000	1.73.2.90.2.2
+@@ -8,6 +8,12 @@
+ the common items quick how-tos, followed by entries for versions of
+ -current prior to 4.0 Release.
+ 
++20040626:	p1	FreeBSD-EN-04:01.twe
++	Fix a bug in twe(4) that could cause kernel lockups.
++	
++20040527:
++	FreeBSD 4.10-RELEASE.
++
+ 20031028:
+ 	FreeBSD 4.9-RELEASE.
+ 
+@@ -1185,4 +1191,4 @@
+ If you find this document useful, and you want to, you may buy the
+ author a beer.
+ 
+-$FreeBSD: src/UPDATING,v 1.73.2.90 2003/10/31 16:40:39 simon Exp $
++$FreeBSD: src/UPDATING,v 1.73.2.90.2.2 2004/06/26 04:39:46 kensmith Exp $

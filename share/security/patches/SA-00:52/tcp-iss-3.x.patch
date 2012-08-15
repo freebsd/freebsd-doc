@@ -1,0 +1,196 @@
+Index: tcp_seq.h
+===================================================================
+RCS file: /usr2/ncvs/src/sys/netinet/tcp_seq.h,v
+retrieving revision 1.11
+retrieving revision 1.12
+diff -u -r1.11 -r1.12
+--- netinet/tcp_seq.h	1999/12/29 04:41:02	1.11
++++ netinet/tcp_seq.h	2000/09/29 01:37:19	1.12
+@@ -91,7 +91,7 @@
+  * number in the range [0-0x3ffff] that is hard to predict.
+  */
+ #ifndef tcp_random18
+-#define	tcp_random18()	((random() >> 14) & 0x3ffff)
++#define	tcp_random18()	(arc4random() & 0x3ffff)
+ #endif
+ #define	TCP_ISSINCR	(122*1024 + tcp_random18())
+ 
+Index: tcp_subr.c
+===================================================================
+RCS file: /usr2/ncvs/src/sys/netinet/tcp_subr.c,v
+retrieving revision 1.80
+retrieving revision 1.81
+diff -u -r1.80 -r1.81
+--- netinet/tcp_subr.c	2000/09/25 23:40:22	1.80
++++ netinet/tcp_subr.c	2000/09/29 01:37:19	1.81
+@@ -178,7 +178,7 @@
+ {
+ 	int hashsize;
+ 	
+-	tcp_iss = random();	/* wrong, but better than a constant */
++	tcp_iss = arc4random();	/* wrong, but better than a constant */
+ 	tcp_ccgen = 1;
+ 	tcp_cleartaocache();
+ 
+Index: sys/alpha/conf/files.alpha
+===================================================================
+RCS file: /usr2/ncvs/src/sys/alpha/conf/Attic/files.alpha,v
+retrieving revision 1.15.2.3
+retrieving revision 1.15.2.4
+diff -u -u -r1.15.2.3 -r1.15.2.4
+--- alpha/conf/files.alpha	1999/12/06 21:03:17	1.15.2.3
++++ alpha/conf/files.alpha	2000/09/29 22:07:27	1.15.2.4
+@@ -120,6 +120,7 @@
+ alpha/isa/isa.c			optional	isa
+ alpha/isa/mcclock_isa.c		optional	isa
+ alpha/alpha/elf_machdep.c	standard
++libkern/arc4random.c		standard
+ libkern/bcd.c			standard
+ libkern/bcmp.c			standard
+ libkern/ffs.c			standard
+Index: sys/i386/conf/files.i386
+===================================================================
+RCS file: /usr2/ncvs/src/sys/i386/conf/Attic/files.i386,v
+retrieving revision 1.220.2.17
+retrieving revision 1.220.2.18
+diff -u -u -r1.220.2.17 -r1.220.2.18
+--- i386/conf/files.i386	1999/12/06 21:03:19	1.220.2.17
++++ i386/conf/files.i386	2000/09/29 22:07:28	1.220.2.18
+@@ -330,6 +330,7 @@
+ i4b/layer1/i4b_elsa_qs1i.c	optional	isic	device-driver
+ i4b/layer1/i4b_elsa_qs1p.c	optional	isic	device-driver
+ i4b/layer1/i4b_siemens_isurf.c	optional	isic	device-driver
++libkern/arc4random.c		standard
+ libkern/bcd.c			standard
+ libkern/divdi3.c		standard
+ libkern/inet_ntoa.c		standard
+Index: sys/sys/libkern.h
+===================================================================
+RCS file: /usr2/ncvs/src/sys/sys/libkern.h,v
+retrieving revision 1.16.4.1
+retrieving revision 1.16.4.2
+diff -u -u -r1.16.4.1 -r1.16.4.2
+--- sys/libkern.h	1999/08/29 16:32:28	1.16.4.1
++++ sys/libkern.h	2000/09/29 22:07:29	1.16.4.2
+@@ -61,6 +61,7 @@
+ static __inline u_long ulmin(u_long a, u_long b) { return (a < b ? a : b); }
+ 
+ /* Prototypes for non-quad routines. */
++u_int32_t arc4random __P((void));
+ int	 bcmp __P((const void *, const void *, size_t));
+ #ifndef HAVE_INLINE_FFS
+ int	 ffs __P((int));
+--- /dev/null	Thu Oct  5 03:00:27 2000
++++ libkern/arc4random.c	Fri Sep 29 15:07:29 2000
+@@ -0,0 +1,111 @@
++/*-
++ * THE BEER-WARE LICENSE
++ *
++ * <dan@FreeBSD.ORG> wrote this file.  As long as you retain this notice you
++ * can do whatever you want with this stuff.  If we meet some day, and you
++ * think this stuff is worth it, you can buy me a beer in return.
++ *
++ * Dan Moschuk
++ *
++ * $FreeBSD: src/sys/libkern/arc4random.c,v 1.6.2.1 2000/09/29 22:07:29 kris Exp $
++ */
++
++#include <sys/libkern.h>
++
++#define	ARC4_MAXRUNS 64
++
++static u_int8_t arc4_i, arc4_j;
++static int arc4_initialized = 0;
++static int arc4_numruns = 0;
++static u_int8_t arc4_sbox[256];
++
++extern u_int read_random (void *, u_int);
++
++static __inline void
++arc4_swap(u_int8_t *a, u_int8_t *b)
++{
++	u_int8_t c;
++
++	c = *a;
++	*a = *b;
++	*b = c;
++}	
++
++/*
++ * Stir our S-box.
++ */
++static void
++arc4_randomstir (void)
++{
++	u_int8_t key[256];
++	int r, n;
++
++	r = read_random(key, sizeof(key));
++	/* if r == 0 || -1, just use what was on the stack */
++	if (r > 0)
++	{
++		for (n = r; n < sizeof(key); n++)
++			key[n] = key[n % r];
++	}
++
++	for (n = 0; n < 256; n++)
++	{
++		arc4_j = (arc4_j + arc4_sbox[n] + key[n]) % 256;
++		arc4_swap(&arc4_sbox[n], &arc4_sbox[arc4_j]);
++	}
++}
++
++/*
++ * Initialize our S-box to its beginning defaults.
++ */
++static void
++arc4_init(void)
++{
++	int n;
++
++	arc4_i = arc4_j = 0;
++	for (n = 0; n < 256; n++)
++		arc4_sbox[n] = (u_int8_t) n;
++
++	arc4_randomstir();
++	arc4_initialized = 1;
++}
++
++/*
++ * Generate a random byte.
++ */
++static u_int8_t
++arc4_randbyte(void)
++{
++	u_int8_t arc4_t;
++
++	arc4_i = (arc4_i + 1) % 256;
++	arc4_j = (arc4_j + arc4_sbox[arc4_i]) % 256;
++
++	arc4_swap(&arc4_sbox[arc4_i], &arc4_sbox[arc4_j]);
++
++	arc4_t = (arc4_sbox[arc4_i] + arc4_sbox[arc4_j]) % 256;
++	return arc4_sbox[arc4_t];
++}
++
++u_int32_t
++arc4random(void)
++{
++	u_int32_t ret;
++
++	/* Initialize array if needed. */
++	if (!arc4_initialized)
++		arc4_init();
++	if (++arc4_numruns > ARC4_MAXRUNS)
++	{
++		arc4_randomstir();
++		arc4_numruns = 0;
++	}
++
++	ret = arc4_randbyte();
++	ret |= arc4_randbyte() << 8;
++	ret |= arc4_randbyte() << 16;
++	ret |= arc4_randbyte() << 24;
++
++	return ret;
++}

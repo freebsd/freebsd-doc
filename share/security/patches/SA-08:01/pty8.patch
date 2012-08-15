@@ -1,0 +1,205 @@
+Index: lib/libc/stdlib/grantpt.c
+===================================================================
+RCS file: /home/ncvs/src/lib/libc/stdlib/grantpt.c,v
+retrieving revision 1.9
+diff -u -I__FBSDID -I$FreeBSD -r1.9 grantpt.c
+--- lib/libc/stdlib/grantpt.c	21 Dec 2007 21:26:08 -0000	1.9
++++ lib/libc/stdlib/grantpt.c	10 Jan 2008 20:35:06 -0000
+@@ -75,23 +75,6 @@
+  */
+ #define _PATH_PTCHOWN	"/usr/libexec/pt_chown"
+ 
+-/*
+- * ISPTM(x) returns 0 for struct stat x if x is not a pty master.
+- * The bounds checking may be unnecessary but it does eliminate doubt.
+- */
+-#define ISPTM(x)	(S_ISCHR((x).st_mode) && 			\
+-			 minor((x).st_rdev) >= 0 &&			\
+-			 minor((x).st_rdev) < PTY_MAX)
+-
+-
+-static int
+-is_pts(int fd)
+-{
+-	int nb;
+-
+-	return (_ioctl(fd, TIOCGPTN, &nb) == 0);
+-}
+-
+ int
+ __use_pts(void)
+ {
+@@ -251,33 +234,43 @@
+ ptsname(int fildes)
+ {
+ 	static char pty_slave[] = _PATH_DEV PTYS_PREFIX "XY";
++#if 0
+ 	static char ptmx_slave[] = _PATH_DEV PTMXS_PREFIX "4294967295";
+-	char *retval;
++#endif
++	const char *master;
+ 	struct stat sbuf;
++#if 0
++	int ptn;
+ 
+-	retval = NULL;
+-
+-	if (_fstat(fildes, &sbuf) == 0) {
+-		if (!ISPTM(sbuf))
+-			errno = EINVAL;
+-		else {
+-			if (!is_pts(fildes)) {
+-				(void)snprintf(pty_slave, sizeof(pty_slave),
+-					       _PATH_DEV PTYS_PREFIX "%s",
+-					       devname(sbuf.st_rdev, S_IFCHR) +
+-					       strlen(PTYM_PREFIX));
+-				retval = pty_slave;
+-			} else {
+-				(void)snprintf(ptmx_slave, sizeof(ptmx_slave),
+-					       _PATH_DEV PTMXS_PREFIX "%s",
+-					       devname(sbuf.st_rdev, S_IFCHR) +
+-					       strlen(PTMXM_PREFIX));
+-				retval = ptmx_slave;
+-			}
+-		}
++	/* Handle pts(4) masters first. */
++	if (_ioctl(fildes, TIOCGPTN, &ptn) == 0) {
++		(void)snprintf(ptmx_slave, sizeof(ptmx_slave),
++		    _PATH_DEV PTMXS_PREFIX "%d", ptn);
++		return (ptmx_slave);
+ 	}
++#endif
+ 
+-	return (retval);
++	/* All master pty's must be char devices. */
++	if (_fstat(fildes, &sbuf) == -1)
++		goto invalid;
++	if (!S_ISCHR(sbuf.st_mode))
++		goto invalid;
++
++	/* Check to see if this device is a pty(4) master. */
++	master = devname(sbuf.st_rdev, S_IFCHR);
++	if (strlen(master) != strlen(PTYM_PREFIX "XY"))
++		goto invalid;
++	if (strncmp(master, PTYM_PREFIX, strlen(PTYM_PREFIX)) != 0)
++		goto invalid;
++
++	/* It is, so generate the corresponding pty(4) slave name. */
++	(void)snprintf(pty_slave, sizeof(pty_slave), _PATH_DEV PTYS_PREFIX "%s",
++	    master + strlen(PTYM_PREFIX));
++	return (pty_slave);
++
++invalid:
++	errno = EINVAL;
++	return (NULL);
+ }
+ 
+ /*
+@@ -286,18 +279,14 @@
+ int
+ unlockpt(int fildes)
+ {
+-	int retval;
+-	struct stat sbuf;
+ 
+ 	/*
+ 	 * Unlocking a master/slave pseudo-terminal pair has no meaning in a
+ 	 * non-streams PTY environment.  However, we do ensure fildes is a
+ 	 * valid master pseudo-terminal device.
+ 	 */
+-	if ((retval = _fstat(fildes, &sbuf)) == 0 && !ISPTM(sbuf)) {
+-		errno = EINVAL;
+-		retval = -1;
+-	}
++	if (ptsname(fildes) == NULL)
++		return (-1);
+ 
+-	return (retval);
++	return (0);
+ }
+Index: lib/libutil/pty.c
+===================================================================
+RCS file: /home/ncvs/src/lib/libutil/pty.c,v
+retrieving revision 1.19
+diff -u -I__FBSDID -I$FreeBSD -r1.19 pty.c
+--- lib/libutil/pty.c	20 Dec 2007 21:10:06 -0000	1.19
++++ lib/libutil/pty.c	10 Jan 2008 20:35:06 -0000
+@@ -49,10 +49,8 @@
+ #include <termios.h>
+ #include <unistd.h>
+ 
+-int __use_pts(void);
+-
+-static int
+-new_openpty(int *amaster, int *aslave, char *name, struct termios *termp,
++int
++openpty(int *amaster, int *aslave, char *name, struct termios *termp,
+     struct winsize *winp)
+ {
+ 	const char *slavename;
+@@ -94,7 +92,7 @@
+ 	*aslave = slave;
+ 
+ 	if (name)
+-		strcpy(name, ptsname(master));
++		strcpy(name, slavename);
+ 	if (termp)
+ 		tcsetattr(slave, TCSAFLUSH, termp);
+ 	if (winp)
+@@ -104,56 +102,6 @@
+ }
+ 
+ int
+-openpty(int *amaster, int *aslave, char *name, struct termios *termp, struct winsize *winp)
+-{
+-	char line[] = "/dev/ptyXX";
+-	const char *cp1, *cp2;
+-	int master, slave, ttygid;
+-	struct group *gr;
+-
+-	if (__use_pts())
+-		return (new_openpty(amaster, aslave, name, termp, winp));
+-
+-	if ((gr = getgrnam("tty")) != NULL)
+-		ttygid = gr->gr_gid;
+-	else
+-		ttygid = -1;
+-
+-	for (cp1 = "pqrsPQRSlmnoLMNO"; *cp1; cp1++) {
+-		line[8] = *cp1;
+-		for (cp2 = "0123456789abcdefghijklmnopqrstuv"; *cp2; cp2++) {
+-			line[5] = 'p';
+-			line[9] = *cp2;
+-			if ((master = open(line, O_RDWR, 0)) == -1) {
+-				if (errno == ENOENT)
+-					break; /* try the next pty group */
+-			} else {
+-				line[5] = 't';
+-				(void) chown(line, getuid(), ttygid);
+-				(void) chmod(line, S_IRUSR|S_IWUSR|S_IWGRP);
+-				(void) revoke(line);
+-				if ((slave = open(line, O_RDWR, 0)) != -1) {
+-					*amaster = master;
+-					*aslave = slave;
+-					if (name)
+-						strcpy(name, line);
+-					if (termp)
+-						(void) tcsetattr(slave,
+-							TCSAFLUSH, termp);
+-					if (winp)
+-						(void) ioctl(slave, TIOCSWINSZ,
+-							(char *)winp);
+-					return (0);
+-				}
+-				(void) close(master);
+-			}
+-		}
+-	}
+-	errno = ENOENT;	/* out of ptys */
+-	return (-1);
+-}
+-
+-int
+ forkpty(int *amaster, char *name, struct termios *termp, struct winsize *winp)
+ {
+ 	int master, slave, pid;

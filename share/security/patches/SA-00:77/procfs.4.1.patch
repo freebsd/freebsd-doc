@@ -1,0 +1,334 @@
+Index: miscfs/procfs/procfs.h
+===================================================================
+RCS file: /home/ncvs/src/sys/miscfs/procfs/procfs.h,v
+retrieving revision 1.32
+retrieving revision 1.32.2.1
+diff -u -r1.32 -r1.32.2.1
+--- miscfs/procfs/procfs.h	1999/12/29 04:54:46	1.32
++++ miscfs/procfs/procfs.h	2000/11/01 20:19:48	1.32.2.1
+@@ -95,6 +95,13 @@
+ 			((type) + 2) : \
+ 			((((pid)+1) << 4) + ((int) (type))))
+ 
++#define CHECKIO(p1, p2) \
++     ((((p1)->p_cred->pc_ucred->cr_uid == (p2)->p_cred->p_ruid) && \
++       ((p1)->p_cred->p_ruid == (p2)->p_cred->p_ruid) && \
++       ((p1)->p_cred->p_svuid == (p2)->p_cred->p_ruid) && \
++       ((p2)->p_flag & P_SUGID) == 0) || \
++      (suser_xxx((p1)->p_cred->pc_ucred, (p1), PRISON_ROOT) == 0))
++
+ /*
+  * Convert between pfsnode vnode
+  */
+Index: miscfs/procfs/procfs_ctl.c
+===================================================================
+RCS file: /home/ncvs/src/sys/miscfs/procfs/procfs_ctl.c,v
+retrieving revision 1.20
+retrieving revision 1.20.2.1
+diff -u -r1.20 -r1.20.2.1
+--- miscfs/procfs/procfs_ctl.c	1999/12/08 08:59:36	1.20
++++ miscfs/procfs/procfs_ctl.c	2000/12/17 03:13:05	1.20.2.1
+@@ -111,6 +111,20 @@
+ 	int error;
+ 
+ 	/*
++	 * Authorization check: rely on normal debugging protection, except
++	 * allow processes to disengage debugging on a process onto which
++	 * they have previously attached, but no longer have permission to
++	 * debug.
++	 */
++	if (op != PROCFS_CTL_DETACH) {
++		if (securelevel > 0 && p->p_pid == 1)
++			return (EPERM);
++
++		if (!CHECKIO(curp, p) || p_trespass(curp, p))
++			return (EPERM);
++	}
++
++	/*
+ 	 * Attach - attaches the target process for debugging
+ 	 * by the calling process.
+ 	 */
+@@ -122,10 +136,6 @@
+ 		/* can't trace yourself! */
+ 		if (p->p_pid == curp->p_pid)
+ 			return (EINVAL);
+-
+-		/* can't trace init when securelevel > 0 */
+-		if (securelevel > 0 && p->p_pid == 1)
+-			return (EPERM);
+ 
+ 		/*
+ 		 * Go ahead and set the trace flag.
+Index: miscfs/procfs/procfs_dbregs.c
+===================================================================
+RCS file: /home/ncvs/src/sys/miscfs/procfs/procfs_dbregs.c,v
+retrieving revision 1.4
+retrieving revision 1.4.2.1
+diff -u -r1.4 -r1.4.2.1
+--- miscfs/procfs/procfs_dbregs.c	1999/12/08 08:59:36	1.4
++++ miscfs/procfs/procfs_dbregs.c	2000/11/01 20:19:48	1.4.2.1
+@@ -62,7 +62,7 @@
+ 	char *kv;
+ 	int kl;
+ 
+-	if (p_trespass(curp, p))
++	if (!CHECKIO(curp, p) || p_trespass(curp, p))
+ 		return (EPERM);
+ 	kl = sizeof(r);
+ 	kv = (char *) &r;
+Index: miscfs/procfs/procfs_fpregs.c
+===================================================================
+RCS file: /home/ncvs/src/sys/miscfs/procfs/procfs_fpregs.c,v
+retrieving revision 1.11
+retrieving revision 1.11.2.1
+diff -u -r1.11 -r1.11.2.1
+--- miscfs/procfs/procfs_fpregs.c	1999/12/08 08:59:37	1.11
++++ miscfs/procfs/procfs_fpregs.c	2000/11/01 20:19:48	1.11.2.1
+@@ -59,7 +59,7 @@
+ 	char *kv;
+ 	int kl;
+ 
+-	if (p_trespass(curp, p))
++	if (!CHECKIO(curp, p) || p_trespass(curp, p))
+ 		return EPERM;
+ 	kl = sizeof(r);
+ 	kv = (char *) &r;
+Index: miscfs/procfs/procfs_mem.c
+===================================================================
+RCS file: /home/ncvs/src/sys/miscfs/procfs/procfs_mem.c,v
+retrieving revision 1.46
+retrieving revision 1.46.2.1
+diff -u -r1.46 -r1.46.2.1
+--- miscfs/procfs/procfs_mem.c	1999/12/20 18:26:58	1.46
++++ miscfs/procfs/procfs_mem.c	2000/11/01 20:19:48	1.46.2.1
+@@ -256,7 +256,7 @@
+  	 * All in all, quite yucky.
+  	 */
+  
+- 	if (p_trespass(curp, p) &&
++ 	if ((!CHECKIO(curp, p) || p_trespass(curp, p)) &&
+ 	    !(uio->uio_rw == UIO_READ &&
+ 	      procfs_kmemaccess(curp)))
+  		return EPERM;
+Index: miscfs/procfs/procfs_regs.c
+===================================================================
+RCS file: /home/ncvs/src/sys/miscfs/procfs/procfs_regs.c,v
+retrieving revision 1.10
+retrieving revision 1.10.2.1
+diff -u -r1.10 -r1.10.2.1
+--- miscfs/procfs/procfs_regs.c	1999/11/21 19:03:19	1.10
++++ miscfs/procfs/procfs_regs.c	2000/11/01 20:19:48	1.10.2.1
+@@ -60,7 +60,7 @@
+ 	char *kv;
+ 	int kl;
+ 
+-	if (p_trespass(curp, p))
++	if (!CHECKIO(curp, p) || p_trespass(curp, p))
+ 		return EPERM;
+ 	kl = sizeof(r);
+ 	kv = (char *) &r;
+Index: miscfs/procfs/procfs_status.c
+===================================================================
+RCS file: /home/ncvs/src/sys/miscfs/procfs/procfs_status.c,v
+retrieving revision 1.20
+retrieving revision 1.20.2.3
+diff -u -r1.20 -r1.20.2.3
+--- miscfs/procfs/procfs_status.c	1999/12/27 16:03:38	1.20
++++ miscfs/procfs/procfs_status.c	2000/11/16 13:50:00	1.20.2.3
+@@ -55,6 +55,7 @@
+ #include <vm/vm_param.h>
+ #include <sys/exec.h>
+ 
++#define DOCHECK() do { if (ps >= psbuf+sizeof(psbuf)) goto bailout; } while (0)
+ int
+ procfs_dostatus(curp, p, pfs, uio)
+ 	struct proc *curp;
+@@ -71,7 +72,7 @@
+ 	int i;
+ 	int xlen;
+ 	int error;
+-	char psbuf[256];		/* XXX - conservative */
++	char psbuf[256];	/* XXX - conservative */
+ 
+ 	if (uio->uio_rw != UIO_READ)
+ 		return (EOPNOTSUPP);
+@@ -85,62 +86,85 @@
+ /* comm pid ppid pgid sid maj,min ctty,sldr start ut st wmsg 
+                                 euid ruid rgid,egid,groups[1 .. NGROUPS]
+ */
++	KASSERT(sizeof(psbuf) > MAXCOMLEN,
++			("Too short buffer for new MAXCOMLEN"));
++
+ 	ps = psbuf;
+ 	bcopy(p->p_comm, ps, MAXCOMLEN);
+ 	ps[MAXCOMLEN] = '\0';
+ 	ps += strlen(ps);
+-	ps += sprintf(ps, " %d %d %d %d ", pid, ppid, pgid, sid);
+-
++	DOCHECK();
++	ps += snprintf(ps, psbuf + sizeof(psbuf) - ps,
++	    " %d %d %d %d ", pid, ppid, pgid, sid);
++	DOCHECK();
+ 	if ((p->p_flag&P_CONTROLT) && (tp = sess->s_ttyp))
+-		ps += sprintf(ps, "%d,%d ", major(tp->t_dev), minor(tp->t_dev));
++		ps += snprintf(ps, psbuf + sizeof(psbuf) - ps,
++		    "%d,%d ", major(tp->t_dev), minor(tp->t_dev));
+ 	else
+-		ps += sprintf(ps, "%d,%d ", -1, -1);
++		ps += snprintf(ps, psbuf + sizeof(psbuf) - ps,
++		    "%d,%d ", -1, -1);
++	DOCHECK();
+ 
+ 	sep = "";
+ 	if (sess->s_ttyvp) {
+-		ps += sprintf(ps, "%sctty", sep);
++		ps += snprintf(ps, psbuf + sizeof(psbuf) - ps, "%sctty", sep);
+ 		sep = ",";
++		DOCHECK();
+ 	}
+ 	if (SESS_LEADER(p)) {
+-		ps += sprintf(ps, "%ssldr", sep);
++		ps += snprintf(ps, psbuf + sizeof(psbuf) - ps, "%ssldr", sep);
+ 		sep = ",";
++		DOCHECK();
++	}
++	if (*sep != ',') {
++		ps += snprintf(ps, psbuf + sizeof(psbuf) - ps, "noflags");
++		DOCHECK();
+ 	}
+-	if (*sep != ',')
+-		ps += sprintf(ps, "noflags");
+ 
+ 	if (p->p_flag & P_INMEM) {
+ 		struct timeval ut, st;
+ 
+ 		calcru(p, &ut, &st, (struct timeval *) NULL);
+-		ps += sprintf(ps, " %ld,%ld %ld,%ld %ld,%ld",
++		ps += snprintf(ps, psbuf + sizeof(psbuf) - ps,
++		    " %ld,%ld %ld,%ld %ld,%ld",
+ 		    p->p_stats->p_start.tv_sec,
+ 		    p->p_stats->p_start.tv_usec,
+ 		    ut.tv_sec, ut.tv_usec,
+ 		    st.tv_sec, st.tv_usec);
+ 	} else
+-		ps += sprintf(ps, " -1,-1 -1,-1 -1,-1");
++		ps += snprintf(ps, psbuf + sizeof(psbuf) - ps,
++		    " -1,-1 -1,-1 -1,-1");
++	DOCHECK();
+ 
+-	ps += sprintf(ps, " %s",
++	ps += snprintf(ps, psbuf + sizeof(psbuf) - ps, " %s",
+ 		(p->p_wchan && p->p_wmesg) ? p->p_wmesg : "nochan");
++	DOCHECK();
+ 
+ 	cr = p->p_ucred;
+ 
+-	ps += sprintf(ps, " %lu %lu %lu", 
++	ps += snprintf(ps, psbuf + sizeof(psbuf) - ps, " %lu %lu %lu", 
+ 		(u_long)cr->cr_uid,
+ 		(u_long)p->p_cred->p_ruid,
+ 		(u_long)p->p_cred->p_rgid);
++	DOCHECK();
+ 
+ 	/* egid (p->p_cred->p_svgid) is equal to cr_ngroups[0] 
+ 	   see also getegid(2) in /sys/kern/kern_prot.c */
+ 
+-	for (i = 0; i < cr->cr_ngroups; i++)
+-		ps += sprintf(ps, ",%lu", (u_long)cr->cr_groups[i]);
++	for (i = 0; i < cr->cr_ngroups; i++) {
++		ps += snprintf(ps, psbuf + sizeof(psbuf) - ps,
++		    ",%lu", (u_long)cr->cr_groups[i]);
++		DOCHECK();
++	}
+ 
+ 	if (p->p_prison)
+-		ps += sprintf(ps, " %s", p->p_prison->pr_host);
++		ps += snprintf(ps, psbuf + sizeof(psbuf) - ps,
++		    " %s", p->p_prison->pr_host);
+ 	else
+-		ps += sprintf(ps, " -");
+-	ps += sprintf(ps, "\n");
++		ps += snprintf(ps, psbuf + sizeof(psbuf) - ps, " -");
++	DOCHECK();
++	ps += snprintf(ps, psbuf + sizeof(psbuf) - ps, "\n");
++	DOCHECK();
+ 
+ 	xlen = ps - psbuf;
+ 	xlen -= uio->uio_offset;
+@@ -152,6 +176,9 @@
+ 		error = uiomove(ps, xlen, uio);
+ 
+ 	return (error);
++
++bailout:
++	return (ENOMEM);
+ }
+ 
+ int
+@@ -183,7 +210,8 @@
+ 	 * Linux behaviour is to return zero-length in this case.
+ 	 */
+ 
+-	if (p->p_args && (ps_argsopen ||!p_trespass(curp, p))) {
++	if (p->p_args &&
++	    (ps_argsopen || (CHECKIO(curp, p) && !p_trespass(curp, p)))) {
+ 		bp = p->p_args->ar_args;
+ 		buflen = p->p_args->ar_length;
+ 		buf = 0;
+Index: miscfs/procfs/procfs_vnops.c
+===================================================================
+RCS file: /home/ncvs/src/sys/miscfs/procfs/procfs_vnops.c,v
+retrieving revision 1.76.2.1
+retrieving revision 1.76.2.3
+diff -u -r1.76.2.1 -r1.76.2.3
+--- miscfs/procfs/procfs_vnops.c	2000/06/21 09:33:43	1.76.2.1
++++ miscfs/procfs/procfs_vnops.c	2000/11/07 23:40:07	1.76.2.3
+@@ -148,7 +148,7 @@
+ 			return (EBUSY);
+ 
+ 		p1 = ap->a_p;
+-		if (p_trespass(p1, p2) &&
++		if ((!CHECKIO(p1, p2) || p_trespass(p1, p2)) &&
+ 		    !procfs_kmemaccess(p1))
+ 			return (EPERM);
+ 
+@@ -240,7 +240,7 @@
+ 		return ENOTTY;
+ 	}
+ 
+-	if (p_trespass(p, procp))
++	if (!CHECKIO(p, procp) || p_trespass(p, procp))
+ 		return EPERM;
+ 
+ 	switch (ap->a_command) {
+@@ -901,7 +901,7 @@
+ 				dp->d_fileno = PROCFS_FILENO(p->p_pid, Pproc);
+ 				dp->d_namlen = sprintf(dp->d_name, "%ld",
+ 				    (long)p->p_pid);
+-				dp->d_type = DT_REG;
++				dp->d_type = DT_DIR;
+ 				p = p->p_list.le_next;
+ 				break;
+ 			}
+Index: i386/i386/pmap.c
+===================================================================
+RCS file: /home/ncvs/src/sys/i386/i386/pmap.c,v
+retrieving revision 1.250.2.6
+retrieving revision 1.250.2.7
+diff -u -r1.250.2.6 -r1.250.2.7
+--- i386/i386/pmap.c	2000/09/30 02:49:32	1.250.2.6
++++ i386/i386/pmap.c	2000/11/07 18:32:15	1.250.2.7
+@@ -2322,8 +2322,11 @@
+ 		return;
+ 	}
+ 
+-	if (psize + pindex > object->size)
++	if (psize + pindex > object->size) {
++		if (object->size < pindex)
++			return;		  
+ 		psize = object->size - pindex;
++	}
+ 
+ 	mpte = NULL;
+ 	/*
