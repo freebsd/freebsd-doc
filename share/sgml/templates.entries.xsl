@@ -105,7 +105,7 @@
 		<xsl:value-of select="name"/>
 	      </xsl:element></dt>
 
-	    <dd><xsl:copy-of select="description/child::node()" /></dd>
+	    <dd><xsl:apply-templates select="description/child::node()" mode="copy.html"/></dd>
 	  </xsl:for-each>
 	</dl>
       </xsl:otherwise>

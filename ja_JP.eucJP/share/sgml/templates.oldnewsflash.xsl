@@ -15,6 +15,9 @@
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
   <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/xhtml.xsl"/>
 
+  <!-- Do not add last modified date for old news/press -->
+  <xsl:variable name="date"/>
+
   <xsl:variable name="title">&title;</xsl:variable>
 
   <xsl:variable name="year">
@@ -22,7 +25,7 @@
   </xsl:variable>
 
   <xsl:template match="p">
-    <xsl:copy-of select="." />
+    <xsl:apply-templates select="." mode="copy.html"/>
   </xsl:template>
 
   <xsl:template name="process.sidewrap">
@@ -95,13 +98,10 @@
 	  <xsl:text> Æü</xsl:text>:</b><xsl:text> </xsl:text>
 	  <xsl:for-each select="p">
 	  <xsl:if test="position() &gt; 1"><br /><br /></xsl:if>
-	  <xsl:copy-of select="child::node()" />
+	  <xsl:apply-templates select="child::node()" mode="copy.html"/>
 	  </xsl:for-each>
 	</p>
 
     </li>
   </xsl:template>
-
-  <xsl:template match="date"/>    <!-- Deliberately left blank -->
-
 </xsl:stylesheet>

@@ -261,7 +261,7 @@
 	    <xsl:with-param name="enddate" select="enddate" />
 	  </xsl:call-template>
 	</em><br/>
-	<xsl:copy-of select="description/child::node()"/>
+	<xsl:apply-templates select="description/child::node()" mode="copy.html"/>
       </p>
       <xsl:if test="link">
 	<p><xsl:apply-templates select="link"/></p>

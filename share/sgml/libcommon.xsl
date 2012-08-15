@@ -15,7 +15,7 @@
   <xsl:import href="./transtable-common.xsl" />
 
   <xsl:variable name="svnKeyword">
-    <xsl:value-of select="//cvs:keyword[1]"/>
+    <xsl:value-of select="normalize-space(//cvs:keyword[1])"/>
   </xsl:variable>
 
   <xsl:variable name="date">
@@ -35,6 +35,16 @@
   <xsl:variable name="curdate.year" select="date:year()"/>
   <xsl:variable name="curdate.month" select="date:month-in-year()"/>
   <xsl:variable name="curdate.day" select="date:day-in-month()"/>
+
+  <!--
+     Used to copy HTML chunks to the output.
+  -->
+  <xsl:template match="*" mode="copy.html">
+    <xsl:element name="{local-name()}" namespace="http://www.w3.org/1999/xhtml">
+      <xsl:copy-of select="attribute::*"/>
+      <xsl:apply-templates select="child::node()" mode="copy.html"/>
+    </xsl:element>
+  </xsl:template>
 
   <!--
      template name                               used in
@@ -203,15 +213,15 @@
 		  [count(.|key('html-usergroups-id-key', string($id)))
 		  = count(key('html-usergroups-id-key', string($id)))]
 		  ">
-		  <xsl:copy-of select="
+		  <xsl:apply-templates select="
 		    key('html-usergroups-regions-key', string($continent))
 		    [count(.|key('html-usergroups-id-key', string($id)))
 		    = count(key('html-usergroups-id-key', string($id)))]/description/node()
-		    " />
+		    " mode="copy.html"/>
 		</xsl:when>
 		<xsl:otherwise>
 		  <xsl:for-each select="document($usergroups.xml)">
-		    <xsl:copy-of select="key('html-usergroups-id-key', string($id))/description/node()" />
+		    <xsl:apply-templates select="key('html-usergroups-id-key', string($id))/description/node()" mode="copy.html"/>
 		  </xsl:for-each>
 		</xsl:otherwise>
 	      </xsl:choose>
@@ -576,7 +586,7 @@
 		      <xsl:text> </xsl:text>
 		      <xsl:for-each select="p">
 		      <xsl:if test="position() &gt; 1"><br /><br /></xsl:if>
-		      <xsl:copy-of select="child::node()" />
+		      <xsl:apply-templates select="child::node()" mode="copy.html"/>
 		      </xsl:for-each>
 		    </p>
 		  </li>
@@ -612,7 +622,7 @@
 		      <xsl:text> </xsl:text>
 		      <xsl:for-each select="p">
 		      <xsl:if test="position() &gt; 1"><br /><br /></xsl:if>
-		      <xsl:copy-of select="child::node()" />
+		      <xsl:apply-templates select="child::node()" mode="copy.html"/>
 		      </xsl:for-each>
 		    </p>
 		  </li>
@@ -673,7 +683,7 @@
 		      <a href="{$url}"><b><xsl:value-of select="name"/></b></a><br/>
 		      <a href="{$site-url}"><xsl:value-of select="site-name"/></a>,
 		      <xsl:value-of select="author"/><br/>
-		      <xsl:copy-of select="p/child::node()"/>
+		      <xsl:apply-templates select="p/child::node()" mode="copy.html"/>
 		    </p>
 		  </li>
 		</xsl:for-each>
@@ -694,7 +704,7 @@
 		      <a href="{$url}"><b><xsl:value-of select="name"/></b></a><br/>
 		      <a href="{$site-url}"><xsl:value-of select="site-name"/></a>,
 		      <xsl:value-of select="author"/><br/>
-		      <xsl:copy-of select="p/child::node()"/>
+		      <xsl:apply-templates select="p/child::node()" mode="copy.html"/>
 		    </p>
 		  </li>
 		</xsl:for-each>

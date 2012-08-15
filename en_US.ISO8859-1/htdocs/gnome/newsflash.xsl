@@ -86,7 +86,7 @@
 	  <xsl:text> </xsl:text>
 	  <xsl:value-of select="ancestor::month/name"/>,
 	  <xsl:value-of select="ancestor::year/name"/>:</b><xsl:text> </xsl:text>
-	<xsl:copy-of select="p"/>
+	<xsl:apply-templates select="p" mode="copy.html"/>
 	</p>
 
     </li>
