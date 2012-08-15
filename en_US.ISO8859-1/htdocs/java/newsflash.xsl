@@ -83,9 +83,8 @@
 	  <xsl:value-of select="ancestor::year/name"/>:</b><xsl:text> </xsl:text>
 	<xsl:value-of select="title"/>
         </p>
-	<xsl:copy-of select="p"/>
+
+	<xsl:apply-templates select="p" mode="copy.html"/>
     </li>
   </xsl:template>
-
-  <xsl:template match="date"/>    <!-- Deliberately left blank -->
 </xsl:stylesheet>

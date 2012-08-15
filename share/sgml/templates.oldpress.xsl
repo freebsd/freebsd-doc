@@ -13,6 +13,9 @@
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
   <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/xhtml.xsl"/>
 
+  <!-- Do not add last modified date for old news/press -->
+  <xsl:variable name="date"/>
+
   <xsl:variable name="title">&title;</xsl:variable>
 
   <xsl:variable name="year">
@@ -78,7 +81,7 @@
 	  
 	<a href="{$site-url}"><xsl:value-of
 	select="site-name"/></a>, <xsl:value-of select="author"/><br/>
-	<xsl:copy-of select="p/child::node()"/>
+	<xsl:apply-templates select="p/child::node()" mode="copy.html"/>
       </p>
     </li>
   </xsl:template>

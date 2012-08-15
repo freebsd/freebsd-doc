@@ -17,7 +17,7 @@
   <xsl:variable name="rsstitle" select="''"/>
 
   <xsl:variable name="svnKeyword">
-    <xsl:value-of select="//cvs:keyword[1]"/>
+    <xsl:value-of select="normalize-space(//cvs:keyword[1])"/>
   </xsl:variable>
 
   <xsl:variable name="date">
@@ -170,6 +170,8 @@ parameters.  Changing them will result in rendering errors.
 
   <xsl:template name="process.footer">
     &copyright;<br/>
-    &lastmod; <xsl:value-of select="$date"/>
+    <xsl:if test="$date != ''">
+      &lastmod; <xsl:value-of select="$date"/>
+    </xsl:if>
   </xsl:template>
 </xsl:stylesheet>

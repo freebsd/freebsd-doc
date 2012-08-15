@@ -9,6 +9,7 @@
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
 		xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
 		xmlns:rdf1="http://my.netscape.com/rdf/simple/0.9/"
+		xmlns="http://www.w3.org/1999/xhtml"
 		exclude-result-prefixes="rdf rdf1" version="1.0">
 
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
@@ -49,7 +50,7 @@
 				<xsl:value-of select="title"/><br/>
 			      </xsl:when>
 			      <xsl:otherwise>
-				<xsl:value-of select="p"/><br/>
+				<xsl:apply-templates select="p" mode="copy.html"/><br/>
 			      </xsl:otherwise>
 			    </xsl:choose>
 			  </a></li>

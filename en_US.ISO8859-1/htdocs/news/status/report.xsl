@@ -76,7 +76,7 @@
   <xsl:template match="section">
     <h1><xsl:value-of select="title"/></h1>
 
-    <xsl:copy-of select="p"/>
+    <xsl:apply-templates select="p" mode="copy.html"/>
   </xsl:template>
 
   <!-- A project creates a header, and then process the three components of
@@ -129,14 +129,14 @@
   <!-- Body is a doddle.  Since it contains HTML we just copy in all the
        child elements. -->
   <xsl:template match="body">
-    <xsl:copy-of select="child::node()"/>
+    <xsl:apply-templates select="child::node()" mode="copy.html"/>
   </xsl:template>
 
   <xsl:template match="help">
     <h3>Open tasks:</h3>
     <ol>
       <xsl:for-each select="task">
-	<li><xsl:copy-of select="child::node()"/></li>
+	<li><xsl:apply-templates select="child::node()" mode="copy.html"/></li>
       </xsl:for-each>
     </ol>    
   </xsl:template>

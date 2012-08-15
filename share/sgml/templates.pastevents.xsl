@@ -42,6 +42,9 @@
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
   <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/xhtml.xsl"/>
 
+  <!-- Do not add last modified date for old news/press -->
+  <xsl:variable name="date"/>
+
   <xsl:param name="pastyears">2003 2004 2005 2006</xsl:param>
 
   <xsl:key name="event-by-month" match="event"
@@ -214,7 +217,7 @@
 	    <xsl:with-param name="enddate" select="enddate" />
 	  </xsl:call-template>
 	</em><br/>
-	<xsl:copy-of select="description/child::node()"/>
+	<xsl:apply-templates select="description/child::node()" mode="copy.html"/>
       </p>
       <xsl:if test="link">
 	<p><xsl:apply-templates select="link"/></p>
