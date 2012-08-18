@@ -37,12 +37,12 @@
   <xsl:variable name="title">&title;</xsl:variable>
 
   <xsl:template name="process.content">
-        <div id="FRONTCONTAINER">
-          <div id="FRONTMAIN">
-            <div id="FRONTFEATURECONTAINER">
+        <div id="frontcontainer">
+          <div id="frontmain">
+            <div id="frontfeaturecontainer">
 
-		<div id="FRONTFEATURELEFT">
-			<div id="FRONTFEATURECONTENT">
+		<div id="frontfeatureleft">
+			<div id="frontfeaturecontent">
 				<h1>
 				  Основана на BSD &unix;
 				</h1>
@@ -66,7 +66,7 @@
 				  устройствах и устройствах хранения.</p>
 
 				  <div
-				  id="TXTFRONTFEATURELINK"> &#187;<a
+				  id="txtfrontfeaturelink"> &#187;<a
 				  href="&base;/about.html"
 				  title="Подробнее">Подробнее</a>
 
@@ -74,7 +74,7 @@
 			  </div> <!-- FRONTFEATURECONTENT -->
 		  </div> <!-- FRONTFEATURELEFT -->
 
-		<div id="FRONTFEATUREMIDDLE">
+		<div id="frontfeaturemiddle">
 			<div class="frontgetroundbox">
 			  <div class="frontgettop"><div><b style="display: none">.</b></div></div>
 				<div class="frontgetcontent">
@@ -83,10 +83,10 @@
 			  <div class="frontgetbot"><div><b style="display: none">.</b></div></div>
 			</div> <!-- frontgetroundbox -->
 
-			<div id="FRONTRELEASES">
-			  <div id="FRONTRELEASESCONTENT" class="txtshortcuts">
+			<div id="frontreleases">
+			  <div id="frontreleasescontent" class="txtshortcuts">
 				  <h2><a href="&base;/releases/">ПОСЛЕДНИЕ РЕЛИЗЫ</a></h2>
-				  <ul id="FRONTRELEASESLIST">
+				  <ul id="frontreleaseslist">
 					<li>Продуктивный:&nbsp;<a
 				href="&u.rel.announce;">&rel.current;</a>,&nbsp;<a href="&u.rel2.announce;">&rel2.current;</a></li>
 					<li>Старый: <a
@@ -108,10 +108,10 @@
 			</div> <!-- FRONTRELEASES -->
 		</div> <!-- FRONTFEATUREMIDDLE -->
 
-		<div id="FRONTFEATURERIGHT">
+		<div id="frontfeatureright">
 			<h2 class="blockhide">Языки</h2>
-			<div id="LANGUAGENAV">
-				<ul id="LANGUAGENAVLIST">
+			<div id="languagenav">
+				<ul id="languagenavlist">
 				  <li>
 					<a href="&enbase;/de/" title="Немецкий">de</a>
 				  </li>
@@ -145,11 +145,11 @@
 				</ul>
 			</div> <!-- LANGUAGENAV -->
 
-			<div id="MIRROR">
+			<div id="mirror">
 			  <form action="&cgibase;/mirror.cgi" method="get">
 				<div>
 				  <h2 class="blockhide"><label for="MIRRORSEL">Зеркало</label></h2>
-				  <select id="MIRRORSEL" name="goto">
+				  <select id="mirrorsel" name="goto">
 					  <xsl:call-template name="html-index-mirrors-options-list">
 					    <xsl:with-param name="mirrors.xml" select="$mirrors.xml" />
 					  </xsl:call-template>
@@ -159,10 +159,10 @@
 			  </form>
 			</div> <!-- MIRROR -->
 
-			<div id="FRONTSHORTCUTS">
-			  <div id="FRONTSHORTCUTSCONTENT" class="txtshortcuts">
+			<div id="frontshortcuts">
+			  <div id="frontshortcutscontent" class="txtshortcuts">
 				  <h2>БЫСТРЫЕ ССЫЛКИ</h2>
-				  <ul id="FRONTSHORTCUTSLIST">
+				  <ul id="frontshortcutslist">
 					<li>
 					  <a href="&base;/community/mailinglists.html" title="Списки рассылки">Списки рассылки</a>
 					</li>
@@ -195,9 +195,9 @@
             </div> <!-- FRONTFEATURECONTAINER -->
 
 	    <br class="clearboth" />
-            <div id="FRONTNEMSCONTAINER">
-            	<div id="FRONTNEWS">
-            	   <div id="FRONTNEWSCONTENT" class="txtnewsevent">
+            <div id="frontnemscontainer">
+            	<div id="frontnews">
+            	   <div id="frontnewscontent" class="txtnewsevent">
 			<h2>ПОСЛЕДНИЕ НОВОСТИ</h2>
 			<div class="newseventswrap">
 
@@ -221,8 +221,8 @@
             	   </div> <!-- FRONTNEWSCONTENT -->
             	</div> <!-- FRONTNEWS -->
             	<div class="frontseparator"><b style="display: none">.</b></div>
-            	<div id="FRONTEVENTS">
-		   <div id="FRONTEVENTSCONTENT" class="txtnewsevent">
+            	<div id="frontevents">
+		   <div id="fronteventscontent" class="txtnewsevent">
 
 			<h2>ПРЕДСТОЯЩИЕ СОБЫТИЯ</h2>
 			<div class="newseventswrap">
@@ -244,8 +244,8 @@
 		   </div> <!-- FRONTEVENTSCONTENT -->
             	</div> <!-- FRONTEVENTS -->
             	<div class="frontseparator"><b style="display: none">.</b></div>
-            	<div id="FRONTMEDIA">
-		   <div id="FRONTMEDIACONTENT" class="txtnewsevent">
+            	<div id="frontmedia">
+		   <div id="frontmediacontent" class="txtnewsevent">
 
 			<h2>В СМИ</h2>
 			<div class="newseventswrap">
@@ -267,8 +267,8 @@
 		   </div> <!-- FRONTMEDIACONTENT -->
             	</div> <!-- FRONTMEDIA -->
 		<div class="frontseparator"><b style="display: none">.</b></div>
-		<div id="FRONTSECURITY">
-		   <div id="FRONTSECURITYCONTENT" class="txtnewsevent">
+		<div id="frontsecurity">
+		   <div id="frontsecuritycontent" class="txtnewsevent">
 
 			<h2>БЮЛЛЕТЕНИ БЕЗОПАСНОСТИ</h2>
 			<div class="newseventswrap">

@@ -32,12 +32,12 @@
   <xsl:variable name="title">&title;</xsl:variable>
 
   <xsl:template name="process.content">
-	    <div id="FRONTCONTAINER">
-	      <div id="FRONTMAIN">
-		<div id="FRONTFEATURECONTAINER">
+	    <div id="frontcontainer">
+	      <div id="frontmain">
+		<div id="frontfeaturecontainer">
 
-		  <div id="FRONTFEATURELEFT">
-		    <div id="FRONTFEATURECONTENT">
+		  <div id="frontfeatureleft">
+		    <div id="frontfeaturecontent">
 			<h1>
 			  ベースは BSD UNIX<!-- &unix; -->(R)
 			</h1>
@@ -58,13 +58,13 @@
 			  ストレージデバイスで利用されています。
 			</p>
 
-			<div id="TXTFRONTFEATURELINK">
+			<div id="txtfrontfeaturelink">
 			  &#187;<a href="&base;/about.html" title="詳しくはこちら">詳しくはこちら</a>
 			</div> <!-- TXTFRONTFEATURELINK -->
 		    </div> <!-- FRONTFEATURECONTENT -->
 		  </div> <!-- FRONTFEATURELEFT -->
 
-		  <div id="FRONTFEATUREMIDDLE">
+		  <div id="frontfeaturemiddle">
 		      <div class="frontgetroundbox">
 			<div class="frontgettop"><div>&#160;</div>&#160;</div>
 
@@ -75,10 +75,10 @@
 			<div class="frontgetbot"><div>&#160;</div>&#160;</div>
 		      </div> <!-- frontgetroundbox -->
 
-			<div id="FRONTRELEASES">
-			  <div id="FRONTRELEASESCONTENT" class="txtshortcuts">
+			<div id="frontreleases">
+			  <div id="frontreleasescontent" class="txtshortcuts">
 			  <h2><a href="&base;/releases/">最新リリース</a></h2>
-			  <ul id="FRONTRELEASESLIST">
+			  <ul id="frontreleaseslist">
 			    <li>プロダクション:&nbsp;<a
 				href="&u.rel.announce;">&rel.current;</a>,&nbsp;<a href="&u.rel2.announce;">&rel2.current;</a></li>
 			    <li>レガシー: <a
@@ -96,11 +96,11 @@
 			</div> <!-- FRONTRELEASES -->
 		  </div> <!-- FRONTFEATUREMIDDLE -->
 
-		<div id="FRONTFEATURERIGHT">
+		<div id="frontfeatureright">
 		      <h2 class="blockhide">他言語へのリンク</h2>
 
-		      <div id="LANGUAGENAV">
-			<ul id="LANGUAGENAVLIST">
+		      <div id="languagenav">
+			<ul id="languagenavlist">
 			  <li>
 			    <a href="&enbase;/de/" title="ドイツ語">de</a>
 			  </li>
@@ -134,11 +134,11 @@
 			</ul>
 		      </div> <!-- LANGUAGENAV -->
 
-		      <div id="MIRROR">
+		      <div id="mirror">
 			<form action="&cgibase;/mirror.cgi" method="get">
 			  <div>
 			    <h2 class="blockhide"><label for="MIRRORSEL">ミラーサイト</label></h2>
-			    <select id="MIRRORSEL" name="goto">
+			    <select id="mirrorsel" name="goto">
 			      <xsl:call-template name="html-index-mirrors-options-list">
 				<xsl:with-param name="mirrors.xml" select="$mirrors.xml" />
 			      </xsl:call-template>
@@ -148,10 +148,10 @@
 			</form>
 		      </div> <!-- MIRROR -->
 
-		      <div id="FRONTSHORTCUTS">
-			<div id="FRONTSHORTCUTSCONTENT" class="txtshortcuts">
+		      <div id="frontshortcuts">
+			<div id="frontshortcutscontent" class="txtshortcuts">
 			  <h2>ショートカット</h2>
-			  <ul id="FRONTSHORTCUTSLIST">
+			  <ul id="frontshortcutslist">
 			    <li>
 			      <a href="&base;/community/mailinglists.html" title="メーリングリスト">メーリングリスト</a>
 			    </li>
@@ -184,9 +184,9 @@
 
 		  <br class="clearboth" />
 
-		  <div id="FRONTNEMSCONTAINER">
-		    <div id="FRONTNEWS">
-		      <div id="FRONTNEWSCONTENT" class="txtnewsevent">
+		  <div id="frontnemscontainer">
+		    <div id="frontnews">
+		      <div id="frontnewscontent" class="txtnewsevent">
 			<h2>最新ニュース</h2>
 			<div class="newseventswrap">
 			  <xsl:call-template name="html-index-news-project-items">
@@ -211,8 +211,8 @@
 
 		    <div class="frontseparator"><b style="display: none">.</b></div>
 
-		    <div id="FRONTEVENTS">
-		      <div id="FRONTEVENTSCONTENT" class="txtnewsevent">
+		    <div id="frontevents">
+		      <div id="fronteventscontent" class="txtnewsevent">
 			<h2>イベント予定</h2>
 
 			<div class="newseventswrap">
@@ -235,8 +235,8 @@
 
 		    <div class="frontseparator"><b style="display: none">.</b></div>
 
-		    <div id="FRONTMEDIA">
-		      <div id="FRONTMEDIACONTENT" class="txtnewsevent">
+		    <div id="frontmedia">
+		      <div id="frontmediacontent" class="txtnewsevent">
 			<h2>ニュース記事</h2>
 
 			<div class="newseventswrap">
@@ -259,8 +259,8 @@
 
 		    <div class="frontseparator"><b style="display: none">.</b></div>
 
-		    <div id="FRONTSECURITY">
-		      <div id="FRONTSECURITYCONTENT" class="txtnewsevent">
+		    <div id="frontsecurity">
+		      <div id="frontsecuritycontent" class="txtnewsevent">
 			<h2>セキュリティ勧告</h2>
 
 			<div class="newseventswrap">

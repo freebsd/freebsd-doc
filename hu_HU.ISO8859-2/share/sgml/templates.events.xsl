@@ -95,9 +95,9 @@
 
   <xsl:variable name="imageurl"><xsl:value-of select="$charturl"/>&amp;chd=t:<xsl:value-of select="$chart-country-counts"/>&amp;chld=<xsl:value-of select="$chart-countries"/></xsl:variable>
 
-              <div id="SIDEWRAP">
+              <div id="sidewrap">
                 &nav.community;
-                <div id="FEEDLINKS">
+                <div id="feedlinks">
                   <ul>
                     <li>
                       <a href="&rsslink;" title="&rsstitle;">

@@ -18,11 +18,11 @@
   <xsl:variable name="title">&title;</xsl:variable>
 
   <xsl:template name="process.content">
-              <div id="SIDEWRAP">
+              <div id="sidewrap">
                 &nav.gnome;
               </div> <!-- SIDEWRAP -->
 
-	      <div id="CONTENTWRAP">
+	      <div id="contentwrap">
 		<div id="rightwrap">
 		  <div class="rightnav">
 

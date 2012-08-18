@@ -58,20 +58,20 @@ parameters.  Changing them will result in rendering errors.
       </head>
 
       <body>
-	<div id="CONTAINERWRAP">
-	  <div id="CONTAINER">
+	<div id="containerwrap">
+	  <div id="container">
 	    &header2.skipnav;
 
-	    <div id="HEADERCONTAINER">
-	      <div id="HEADER">
+	    <div id="headercontainer">
+	      <div id="header">
 
 		&header2.logo-red.label;
 
-		<div id="HEADERLOGOLEFT">
+		<div id="headerlogoleft">
 		  &header2.logo-red;
 		</div> <!-- HEADERLOGOLEFT -->
 
-		<div id="HEADERLOGORIGHT">
+		<div id="headerlogoright">
 		  &header2.searchnav.label;
 
 		  &header2.searchnav;
@@ -94,11 +94,11 @@ parameters.  Changing them will result in rendering errors.
 
 	  </div> <!-- HEADERCONTAINER -->
 
-	  <div id="CONTENT">
+	  <div id="content">
 	      <xsl:call-template name="process.content"/>
 	    </div> <!-- CONTENT -->
 
-	    <div id="FOOTER">
+	    <div id="footer">
 	      <xsl:call-template name="process.footer"/>
 	    </div> <!-- FOOTER -->
 	  </div> <!-- CONTAINER -->
@@ -151,11 +151,11 @@ parameters.  Changing them will result in rendering errors.
   </xsl:template>
 
   <xsl:template name="process.content">
-	    <div id="SIDEWRAP">
+	    <div id="sidewrap">
       <xsl:call-template name="process.sidewrap"/>
 	    </div> <!-- SIDEWRAP -->
 
-	    <div id="CONTENTWRAP">
+	    <div id="contentwrap">
       <xsl:call-template name="process.contentwrap"/>
 	    </div> <!-- CONTENTWRAP -->
 

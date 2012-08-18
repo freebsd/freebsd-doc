@@ -31,12 +31,12 @@
   <xsl:variable name="title">&title;</xsl:variable>
 
 <xsl:template name="process.content">
-        <div id="FRONTCONTAINER">
-          <div id="FRONTMAIN">
-            <div id="FRONTFEATURECONTAINER">
+        <div id="frontcontainer">
+          <div id="frontmain">
+            <div id="frontfeaturecontainer">
 
-		<div id="FRONTFEATURELEFT">
-			<div id="FRONTFEATURECONTENT">
+		<div id="frontfeatureleft">
+			<div id="frontfeaturecontent">
 				<h1>
 				  Basado en BSD UNIX&reg;
 				</h1>				
@@ -58,7 +58,7 @@
 			</div> <!-- frontfeaturecontent -->
 		</div> <!-- frontfeatureleft -->
 
-		<div id="FRONTFEATUREMIDDLE">
+		<div id="frontfeaturemiddle">
 			<div class="frontgetroundbox">
 			  <div class="frontgettop"><div><b style="display: none">.</b></div></div>
 				<div class="frontgetcontent">
@@ -67,8 +67,8 @@
 			  <div class="frontgetbot"><div><b style="display: none">.</b></div></div>
 			</div> <!-- frontgetroundbox -->
 			
-			<div id="FRONTRELEASES">
-			  <div id="FRONTRELEASESCONTENT" class="txtshortcuts">
+			<div id="frontreleases">
+			  <div id="frontreleasescontent" class="txtshortcuts">
 				  <h2><a href="&enbase;/releases/">ÚLTIMAS VERSIONES</a></h2>
 				  <ul id="FRONTRELEASELIST">
 					<li>
@@ -94,10 +94,10 @@
 			</div> <!-- frontreleases -->
 		</div> <!-- frontfeaturemiddle -->
 
-		<div id="FRONTFEATURERIGHT">
+		<div id="frontfeatureright">
 			<h2 class="blockhide">Enlaces de idiomas</h2>
-			<div id="LANGUAGENAV">
-				<ul id="LANGUAGENAVLIST">
+			<div id="languagenav">
+				<ul id="languagenavlist">
 				  <li>
 					<a href="&enbase;/de/" title="Alemán">de</a>
 				  </li>
@@ -128,11 +128,11 @@
 				</ul>				
 			</div> <!-- languagenav -->
 
-			<div id="MIRROR">
+			<div id="mirror">
 			  <form action="&enbase;/cgi/mirror.cgi" method="get">
 				<div>
 				  <h2 class="blockhide"><label for="mirrorsel">Réplicas</label></h2>
-				  <select id="MIRRORSEL" name="goto">
+				  <select id="mirrorsel" name="goto">
 					  <xsl:call-template name="html-index-mirrors-options-list">
 					    <xsl:with-param name="mirrors.xml" select="$mirrors.xml" />
 					  </xsl:call-template>
@@ -142,8 +142,8 @@
 			  </form>
 			</div> <!-- mirror -->
 
-			<div id="FRONTSHORTCUTS">
-			  <div id="FRONTSHORTCUTSCONTENT" class="txtshortcuts">
+			<div id="frontshortcuts">
+			  <div id="frontshortcutscontent" class="txtshortcuts">
 				  <h2>ENLACES RÁPIDOS</h2>
 				  <ul id="FRONTSHORTCUTLIST">
 					<li>
@@ -178,8 +178,8 @@
 
 	    <br class="clearboth" />
             <div id="FRONTNEWSCONTAINER">
-            	<div id="FRONTNEWS">
-            	   <div id="FRONTNEWSCONTENT" class="txtnewsevent">
+            	<div id="frontnews">
+            	   <div id="frontnewscontent" class="txtnewsevent">
 			<h2>ÚLTIMAS NOTICIAS</h2>
 			<div class="newseventswrap">
 
@@ -249,8 +249,8 @@
 		   </div> <!-- frontmediacontent -->
             	</div> <!-- frontmedia -->
 		<div class="frontseparator"><b style="display: none">.</b></div>
-		<div id="FRONTSECURITY">
-		   <div id="FRONTSECURITYCONTENT" class="txtnewsevent">
+		<div id="frontsecurity">
+		   <div id="frontsecuritycontent" class="txtnewsevent">
 
 			<h2>AVISOS DE SEGURIDAD</h2>
 			<div class="newseventswrap">
