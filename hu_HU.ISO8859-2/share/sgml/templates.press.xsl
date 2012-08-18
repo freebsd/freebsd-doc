@@ -31,9 +31,9 @@
   <xsl:variable name="rsslink">&rsslink;</xsl:variable>
 
   <xsl:template name="process.content">
-              <div id="SIDEWRAP">
+              <div id="sidewrap">
                 &nav.about;
-                <div id="FEEDLINKS">
+                <div id="feedlinks">
                   <ul>
                     <li>
                       <a href="&rsslink;" title="RSS 2.0 Feed">
@@ -44,7 +44,7 @@
                 </div> <!-- FEEDLINKS -->
               </div> <!-- SIDEWRAP -->
 
-	      <div id="CONTENTWRAP">
+	      <div id="contentwrap">
 
 	      <h1>&title;</h1>
 
