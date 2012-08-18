@@ -37,7 +37,7 @@
 
   <xsl:variable name="title">&title;</xsl:variable>
 
-<xsl:template names="process.content">
+<xsl:template name="process.content">
         <div id="FRONTCONTAINER">
           <div id="FRONTMAIN">
             <div id="FRONTFEATURECONTAINER">
