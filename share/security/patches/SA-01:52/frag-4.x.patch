@@ -1,0 +1,118 @@
+Index: sys/netinet/ip_input.c
+===================================================================
+RCS file: /mnt/ncvs/src/sys/netinet/ip_input.c,v
+retrieving revision 1.130.2.21
+retrieving revision 1.130.2.22
+diff -u -r1.130.2.21 -r1.130.2.22
+--- sys/netinet/ip_input.c	2001/03/08 23:14:54	1.130.2.21
++++ sys/netinet/ip_input.c	2001/06/16 23:48:04	1.130.2.22
+@@ -122,6 +122,12 @@
+ 	&ip_keepfaith,	0,
+ 	"Enable packet capture for FAITH IPv4->IPv6 translater daemon");
+ 
++static int	ip_nfragpackets = 0;
++static int	ip_maxfragpackets;	/* initialized in ip_init() */
++SYSCTL_INT(_net_inet_ip, OID_AUTO, maxfragpackets, CTLFLAG_RW,
++	&ip_maxfragpackets, 0,
++	"Maximum number of IPv4 fragment reassembly queue entries");
++
+ /*
+  * XXX - Setting ip_checkinterface mostly implements the receive side of
+  * the Strong ES model described in RFC 1122, but since the routing table
+@@ -248,7 +254,8 @@
+ 	for (i = 0; i < IPREASS_NHASH; i++)
+ 	    ipq[i].next = ipq[i].prev = &ipq[i];
+ 
+-	maxnipq = nmbclusters/4;
++	maxnipq = nmbclusters / 4;
++	ip_maxfragpackets = nmbclusters / 4;
+ 
+ 	ip_id = time_second & 0xffff;
+ 	ipintrq.ifq_maxlen = ipqmaxlen;
+@@ -861,6 +868,15 @@
+ 	 * If first fragment to arrive, create a reassembly queue.
+ 	 */
+ 	if (fp == 0) {
++		/*
++		 * Enforce upper bound on number of fragmented packets
++		 * for which we attempt reassembly;
++		 * If maxfrag is 0, never accept fragments.
++		 * If maxfrag is -1, accept all fragments without limitation.
++		 */
++		if ((ip_maxfragpackets >= 0) && (ip_nfragpackets >= ip_maxfragpackets))
++			goto dropfrag;
++		ip_nfragpackets++;
+ 		if ((t = m_get(M_DONTWAIT, MT_FTABLE)) == NULL)
+ 			goto dropfrag;
+ 		fp = mtod(t, struct ipq *);
+@@ -1009,6 +1025,7 @@
+ 	remque(fp);
+ 	nipq--;
+ 	(void) m_free(dtom(fp));
++	ip_nfragpackets--;
+ 	m->m_len += (IP_VHL_HL(ip->ip_vhl) << 2);
+ 	m->m_data -= (IP_VHL_HL(ip->ip_vhl) << 2);
+ 	/* some debugging cruft by sklower, below, will go away soon */
+@@ -1049,6 +1066,7 @@
+ 	}
+ 	remque(fp);
+ 	(void) m_free(dtom(fp));
++	ip_nfragpackets--;
+ 	nipq--;
+ }
+ 
+@@ -1074,6 +1092,20 @@
+ 			if (fp->prev->ipq_ttl == 0) {
+ 				ipstat.ips_fragtimeout++;
+ 				ip_freef(fp->prev);
++			}
++		}
++	}
++	/*
++	 * If we are over the maximum number of fragments
++	 * (due to the limit being lowered), drain off
++	 * enough to get down to the new limit.
++	 */
++	for (i = 0; i < IPREASS_NHASH; i++) {
++		if (ip_maxfragpackets >= 0) {
++			while ((ip_nfragpackets > ip_maxfragpackets) &&
++				(ipq[i].next != &ipq[i])) {
++				ipstat.ips_fragdropped++;
++				ip_freef(ipq[i].next);
+ 			}
+ 		}
+ 	}
+Index: sys/netinet6/frag6.c
+===================================================================
+RCS file: /mnt/ncvs/src/sys/netinet6/frag6.c,v
+retrieving revision 1.2.2.3
+retrieving revision 1.2.2.4
+diff -u -r1.2.2.3 -r1.2.2.4
+--- sys/netinet6/frag6.c	2001/05/23 09:47:24	1.2.2.3
++++ sys/netinet6/frag6.c	2001/06/16 23:48:11	1.2.2.4
+@@ -81,6 +81,8 @@
+ {
+ 	struct timeval tv;
+ 
++	ip6_maxfragpackets = nmbclusters / 4;
++
+ 	/*
+ 	 * in many cases, random() here does NOT return random number
+ 	 * as initialization during bootstrap time occur in fixed order.
+Index: sys/netinet6/in6_proto.c
+===================================================================
+RCS file: /mnt/ncvs/src/sys/netinet6/in6_proto.c,v
+retrieving revision 1.6.2.3
+retrieving revision 1.6.2.4
+diff -u -r1.6.2.3 -r1.6.2.4
+--- sys/netinet6/in6_proto.c	2001/03/05 13:09:04	1.6.2.3
++++ sys/netinet6/in6_proto.c	2001/06/16 23:48:11	1.6.2.4
+@@ -286,7 +286,7 @@
+ int	ip6_defhlim = IPV6_DEFHLIM;
+ int	ip6_defmcasthlim = IPV6_DEFAULT_MULTICAST_HOPS;
+ int	ip6_accept_rtadv = 0;	/* "IPV6FORWARDING ? 0 : 1" is dangerous */
+-int	ip6_maxfragpackets = 200;
++int	ip6_maxfragpackets;	/* initialized in frag6.c:frag6_init() */
+ int	ip6_log_interval = 5;
+ int	ip6_hdrnestlimit = 50;	/* appropriate? */
+ int	ip6_dad_count = 1;	/* DupAddrDetectionTransmits */

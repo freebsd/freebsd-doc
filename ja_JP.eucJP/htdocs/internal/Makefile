@@ -1,6 +1,6 @@
 # $FreeBSD$
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.50
+# Original revision: r39133
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -17,6 +17,7 @@ DOCS+=	developer.sgml
 #DOCS+=	doceng.sgml
 #DOCS+=	expire-bits.sgml
 #DOCS+=	fortunes.sgml
+#DOCS+=	hats.sgml
 #DOCS+=	i18n.sgml
 DOCS+=  internal.sgml   
 DOCS+=  machines.sgml

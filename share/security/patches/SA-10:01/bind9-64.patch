@@ -1,0 +1,317 @@
+Index: contrib/bind9/lib/dns/rbtdb.c
+===================================================================
+--- contrib/bind9/lib/dns/rbtdb.c	(revision 200669)
++++ contrib/bind9/lib/dns/rbtdb.c	(working copy)
+@@ -2667,7 +2667,7 @@ cache_zonecut_callback(dns_rbtnode_t *node, dns_na
+ 	}
+ 
+ 	if (dname_header != NULL &&
+-	    (dname_header->trust != dns_trust_pending ||
++	    (!DNS_TRUST_PENDING(dname_header->trust) ||
+ 	     (search->options & DNS_DBFIND_PENDINGOK) != 0)) {
+ 		/*
+ 		 * We increment the reference count on node to ensure that
+@@ -3129,7 +3129,7 @@ cache_find(dns_db_t *db, dns_name_t *name, dns_dbv
+ 	if (found == NULL ||
+ 	    (found->trust == dns_trust_glue &&
+ 	     ((options & DNS_DBFIND_GLUEOK) == 0)) ||
+-	    (found->trust == dns_trust_pending &&
++	    (DNS_TRUST_PENDING(found->trust) &&
+ 	     ((options & DNS_DBFIND_PENDINGOK) == 0))) {
+ 		/*
+ 		 * If there is an NS rdataset at this node, then this is the
+Index: contrib/bind9/lib/dns/include/dns/types.h
+===================================================================
+--- contrib/bind9/lib/dns/include/dns/types.h	(revision 200669)
++++ contrib/bind9/lib/dns/include/dns/types.h	(working copy)
+@@ -226,40 +226,51 @@ enum {
+ 	dns_trust_none = 0,
+ #define dns_trust_none			((dns_trust_t)dns_trust_none)
+ 
+-	/* Subject to DNSSEC validation but has not yet been validated */
+-	dns_trust_pending = 1,
+-#define dns_trust_pending		((dns_trust_t)dns_trust_pending)
++	/*%
++	 * Subject to DNSSEC validation but has not yet been validated
++	 * dns_trust_pending_additional (from the additional section).
++	 */
++	dns_trust_pending_additional = 1,
++#define dns_trust_pending_additional \
++		((dns_trust_t)dns_trust_pending_additional)
+ 
+-	/* Received in the additional section of a response. */
+-	dns_trust_additional = 2,
++	dns_trust_pending_answer = 2,
++#define dns_trust_pending_answer	((dns_trust_t)dns_trust_pending_answer)
++
++	/*% Received in the additional section of a response. */
++	dns_trust_additional = 3,
+ #define dns_trust_additional		((dns_trust_t)dns_trust_additional)
+ 
+-	/* Received in a referral response. */ 
+-	dns_trust_glue = 3,
++	/* Received in a referral response. */
++	dns_trust_glue = 4,
+ #define dns_trust_glue			((dns_trust_t)dns_trust_glue)
+ 
+-	/* Answser from a non-authoritative server */
+-	dns_trust_answer = 4,
++	/* Answer from a non-authoritative server */
++	dns_trust_answer = 5,
+ #define dns_trust_answer		((dns_trust_t)dns_trust_answer)
+ 
+ 	/*  Received in the authority section as part of an
+ 	    authoritative response */
+-	dns_trust_authauthority = 5,
++	dns_trust_authauthority = 6,
+ #define dns_trust_authauthority		((dns_trust_t)dns_trust_authauthority)
+ 
+-	/* Answser from an authoritative server */
+-	dns_trust_authanswer = 6,
++	/* Answer from an authoritative server */
++	dns_trust_authanswer = 7,
+ #define dns_trust_authanswer		((dns_trust_t)dns_trust_authanswer)
+ 
+-	/* Successfully DNSSEC validated */	
+-	dns_trust_secure = 7,
++	/* Successfully DNSSEC validated */
++	dns_trust_secure = 8,
+ #define dns_trust_secure		((dns_trust_t)dns_trust_secure)
+ 
+ 	/* This server is authoritative */
+-	dns_trust_ultimate = 8
++	dns_trust_ultimate = 9
+ #define dns_trust_ultimate		((dns_trust_t)dns_trust_ultimate)
+ };
+ 
++#define DNS_TRUST_PENDING(x)		((x) == dns_trust_pending_answer || \
++					 (x) == dns_trust_pending_additional)
++#define DNS_TRUST_GLUE(x)		((x) == dns_trust_glue)
++
+ /*
+  * Name checking severites.
+  */
+Index: contrib/bind9/lib/dns/resolver.c
+===================================================================
+--- contrib/bind9/lib/dns/resolver.c	(revision 200669)
++++ contrib/bind9/lib/dns/resolver.c	(working copy)
+@@ -3657,6 +3657,7 @@ cache_name(fetchctx_t *fctx, dns_name_t *name, dns
+ 		 * for it, unless it is glue.
+ 		 */
+ 		if (secure_domain && rdataset->trust != dns_trust_glue) {
++			dns_trust_t trust;
+ 			/*
+ 			 * RRSIGs are validated as part of validating the
+ 			 * type they cover.
+@@ -3693,12 +3694,34 @@ cache_name(fetchctx_t *fctx, dns_name_t *name, dns
+ 			}
+ 
+ 			/*
++			 * Reject out of bailiwick additional records
++			 * without RRSIGs as they can't possibly validate
++			 * as "secure" and as we will never never want to
++			 * store these as "answers" after validation.
++			 */
++			if (rdataset->trust == dns_trust_additional &&
++			    sigrdataset == NULL && EXTERNAL(rdataset))
++				continue;
++ 
++			/*
++			 * XXXMPA: If we store as "answer" after validating
++			 * then we need to do bailiwick processing and
++			 * also need to track whether RRsets are in or
++			 * out of bailiwick.  This will require a another
++			 * pending trust level.
++			 *
+ 			 * Cache this rdataset/sigrdataset pair as
+-			 * pending data.
++			 * pending data.  Track whether it was additional
++			 * or not.
+ 			 */
+-			rdataset->trust = dns_trust_pending;
++			if (rdataset->trust == dns_trust_additional)
++				trust = dns_trust_pending_additional;
++			else
++				trust = dns_trust_pending_answer;
++ 
++			rdataset->trust = trust;
+ 			if (sigrdataset != NULL)
+-				sigrdataset->trust = dns_trust_pending;
++				sigrdataset->trust = trust;
+ 			if (!need_validation)
+ 				addedrdataset = ardataset;
+ 			else
+@@ -4044,7 +4067,7 @@ ncache_message(fetchctx_t *fctx, dns_adbaddrinfo_t
+ 			for (trdataset = ISC_LIST_HEAD(tname->list);
+ 			     trdataset != NULL;
+ 			     trdataset = ISC_LIST_NEXT(trdataset, link))
+-				trdataset->trust = dns_trust_pending;
++				trdataset->trust = dns_trust_pending_answer;
+ 			result = dns_message_nextname(fctx->rmessage,
+ 						      DNS_SECTION_AUTHORITY);
+ 		}
+Index: contrib/bind9/lib/dns/masterdump.c
+===================================================================
+--- contrib/bind9/lib/dns/masterdump.c	(revision 200669)
++++ contrib/bind9/lib/dns/masterdump.c	(working copy)
+@@ -763,7 +763,8 @@ dump_order_compare(const void *a, const void *b) {
+ 
+ static const char *trustnames[] = {
+ 	"none",
+-	"pending",
++	"pending-additional",
++	"pending-answer",
+ 	"additional",
+ 	"glue",
+ 	"answer",
+Index: contrib/bind9/lib/dns/validator.c
+===================================================================
+--- contrib/bind9/lib/dns/validator.c	(revision 200669)
++++ contrib/bind9/lib/dns/validator.c	(working copy)
+@@ -238,7 +238,7 @@ auth_nonpending(dns_message_t *message) {
+ 		     rdataset != NULL;
+ 		     rdataset = ISC_LIST_NEXT(rdataset, link))
+ 		{
+-			if (rdataset->trust == dns_trust_pending)
++			if (DNS_TRUST_PENDING(rdataset->trust))
+ 				rdataset->trust = dns_trust_authauthority;
+ 		}
+ 	}
+@@ -1175,7 +1175,7 @@ get_key(dns_validator_t *val, dns_rdata_rrsig_t *s
+ 		 * We have an rrset for the given keyname.
+ 		 */
+ 		val->keyset = &val->frdataset;
+-		if (val->frdataset.trust == dns_trust_pending &&
++		if (DNS_TRUST_PENDING(val->frdataset.trust) &&
+ 		    dns_rdataset_isassociated(&val->fsigrdataset))
+ 		{
+ 			/*
+@@ -1190,7 +1190,7 @@ get_key(dns_validator_t *val, dns_rdata_rrsig_t *s
+ 			if (result != ISC_R_SUCCESS)
+ 				return (result);
+ 			return (DNS_R_WAIT);
+-		} else if (val->frdataset.trust == dns_trust_pending) {
++		} else if (DNS_TRUST_PENDING(val->frdataset.trust)) {
+ 			/*
+ 			 * Having a pending key with no signature means that
+ 			 * something is broken.
+@@ -1758,7 +1758,7 @@ validatezonekey(dns_validator_t *val) {
+ 			 * We have DS records.
+ 			 */
+ 			val->dsset = &val->frdataset;
+-			if (val->frdataset.trust == dns_trust_pending &&
++			if (DNS_TRUST_PENDING(val->frdataset.trust) &&
+ 			    dns_rdataset_isassociated(&val->fsigrdataset))
+ 			{
+ 				result = create_validator(val,
+@@ -1771,7 +1771,7 @@ validatezonekey(dns_validator_t *val) {
+ 				if (result != ISC_R_SUCCESS)
+ 					return (result);
+ 				return (DNS_R_WAIT);
+-			} else if (val->frdataset.trust == dns_trust_pending) {
++			} else if (DNS_TRUST_PENDING(val->frdataset.trust)) {
+ 				/*
+ 				 * There should never be an unsigned DS.
+ 				 */
+@@ -2564,7 +2564,7 @@ proveunsecure(dns_validator_t *val, isc_boolean_t
+ 			 * There is no DS.  If this is a delegation,
+ 			 * we maybe done.
+ 			 */
+-			if (val->frdataset.trust == dns_trust_pending) {
++			if (DNS_TRUST_PENDING(val->frdataset.trust)) {
+ 				result = create_fetch(val, tname,
+ 						      dns_rdatatype_ds,
+ 						      dsfetched2,
+Index: contrib/bind9/bin/named/query.c
+===================================================================
+--- contrib/bind9/bin/named/query.c	(revision 200669)
++++ contrib/bind9/bin/named/query.c	(working copy)
+@@ -92,6 +92,8 @@
+ #define DNS_GETDB_NOLOG 0x02U
+ #define DNS_GETDB_PARTIAL 0x04U
+ 
++#define PENDINGOK(x)	(((x) & DNS_DBFIND_PENDINGOK) != 0)
++
+ static void
+ query_find(ns_client_t *client, dns_fetchevent_t *event, dns_rdatatype_t qtype);
+ 
+@@ -1698,14 +1700,14 @@ query_addbestns(ns_client_t *client) {
+ 		zsigrdataset = NULL;
+ 	}
+ 
+-	if ((client->query.dboptions & DNS_DBFIND_PENDINGOK) == 0 &&
+-	    (rdataset->trust == dns_trust_pending ||
+-	     (sigrdataset != NULL && sigrdataset->trust == dns_trust_pending)))
++	if ((DNS_TRUST_PENDING(rdataset->trust) ||
++	    (sigrdataset != NULL && DNS_TRUST_PENDING(sigrdataset->trust))) &&
++	    !PENDINGOK(client->query.dboptions))
+ 		goto cleanup;
+ 
+-	if (WANTDNSSEC(client) && SECURE(client) &&
+-	    (rdataset->trust == dns_trust_glue ||
+-	     (sigrdataset != NULL && sigrdataset->trust == dns_trust_glue)))
++	if ((DNS_TRUST_GLUE(rdataset->trust) ||
++	    (sigrdataset != NULL && DNS_TRUST_GLUE(sigrdataset->trust))) &&
++  	    SECURE(client) && WANTDNSSEC(client))
+ 		goto cleanup;
+ 
+ 	query_addrrset(client, &fname, &rdataset, &sigrdataset, dbuf,
+@@ -2367,6 +2369,8 @@ query_find(ns_client_t *client, dns_fetchevent_t *
+ 	unsigned int options;
+ 	isc_boolean_t empty_wild;
+ 	dns_rdataset_t *noqname;
++	dns_rdataset_t tmprdataset;
++	unsigned int dboptions;
+ 
+ 	CTRACE("query_find");
+ 
+@@ -2566,9 +2570,47 @@ query_find(ns_client_t *client, dns_fetchevent_t *
+ 	/*
+ 	 * Now look for an answer in the database.
+ 	 */
++	dboptions = client->query.dboptions;
++	if (sigrdataset == NULL && client->view->enablednssec) {
++		/*
++		 * If the client doesn't want DNSSEC we still want to
++		 * look for any data pending validation to save a remote
++		 * lookup if possible.
++		 */
++		dns_rdataset_init(&tmprdataset);
++		sigrdataset = &tmprdataset;
++		dboptions |= DNS_DBFIND_PENDINGOK;
++	}
++ refind:
+ 	result = dns_db_find(db, client->query.qname, version, type,
+-			     client->query.dboptions, client->now,
+-			     &node, fname, rdataset, sigrdataset);
++			     dboptions, client->now, &node, fname,
++			     rdataset, sigrdataset);
++	/*
++	 * If we have found pending data try to validate it.
++	 * If the data does not validate as secure and we can't
++	 * use the unvalidated data requery the database with
++	 * pending disabled to prevent infinite looping.
++	 */
++	if (result != ISC_R_SUCCESS || !DNS_TRUST_PENDING(rdataset->trust))
++		goto validation_done;
++	if (rdataset->trust != dns_trust_pending_answer ||
++	    !PENDINGOK(client->query.dboptions)) {
++		dns_rdataset_disassociate(rdataset);
++		if (sigrdataset != NULL &&
++		    dns_rdataset_isassociated(sigrdataset))
++			dns_rdataset_disassociate(sigrdataset);
++		if (sigrdataset == &tmprdataset)
++			sigrdataset = NULL;
++		dns_db_detachnode(db, &node);
++		dboptions &= ~DNS_DBFIND_PENDINGOK;
++		goto refind;
++	}
++ validation_done:
++	if (sigrdataset == &tmprdataset) {
++		if (dns_rdataset_isassociated(sigrdataset))
++			dns_rdataset_disassociate(sigrdataset);
++		sigrdataset = NULL;
++	}
+ 
+  resume:
+ 	CTRACE("query_find: resume");

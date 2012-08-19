@@ -1,0 +1,81 @@
+Index: sys/dev/random/randomdev.c
+===================================================================
+--- sys/dev/random/randomdev.c	(revision 185214)
++++ sys/dev/random/randomdev.c	(working copy)
+@@ -89,6 +89,7 @@
+ 	    && (securelevel_gt(td->td_ucred, 0) == 0)) {
+ 		(*random_systat.reseed)();
+ 		random_systat.seeded = 1;
++		arc4rand(NULL, 0, 1);	/* Reseed arc4random as well. */
+ 	}
+ 
+ 	return (0);
+Index: sys/dev/random/randomdev_soft.c
+===================================================================
+--- sys/dev/random/randomdev_soft.c	(revision 185214)
++++ sys/dev/random/randomdev_soft.c	(working copy)
+@@ -61,6 +61,7 @@
+     u_int, u_int, enum esource);
+ static int random_yarrow_poll(int event,struct thread *td);
+ static int random_yarrow_block(int flag);
++static void random_yarrow_flush_reseed(void);
+ 
+ struct random_systat random_yarrow = {
+ 	.ident = "Software, Yarrow",
+@@ -70,7 +71,7 @@
+ 	.read = random_yarrow_read,
+ 	.write = random_yarrow_write,
+ 	.poll = random_yarrow_poll,
+-	.reseed = random_yarrow_reseed,
++	.reseed = random_yarrow_flush_reseed,
+ 	.seeded = 1,
+ };
+ 
+@@ -96,7 +97,7 @@
+ /* Harvested entropy */
+ static struct entropyfifo harvestfifo[ENTROPYSOURCE];
+ 
+-/* <0 to end the kthread, 0 to let it run */
++/* <0 to end the kthread, 0 to let it run, 1 to flush the harvest queues */
+ static int random_kthread_control = 0;
+ 
+ static struct proc *random_kthread_proc;
+@@ -247,7 +248,7 @@
+ 	local_count = 0;
+ 
+ 	/* Process until told to stop */
+-	for (; random_kthread_control == 0;) {
++	for (; random_kthread_control >= 0;) {
+ 
+ 		active = 0;
+ 
+@@ -282,6 +283,13 @@
+ 		KASSERT(local_count == 0, ("random_kthread: local_count %d",
+ 		    local_count));
+ 
++		/*
++		 * If a queue flush was commanded, it has now happened,
++		 * and we can mark this by resetting the command.
++		 */
++		if (random_kthread_control == 1)
++			random_kthread_control = 0;
++
+ 		/* Found nothing, so don't belabour the issue */
+ 		if (!active)
+ 			tsleep(&harvestfifo, 0, "-", hz / 10);
+@@ -406,3 +414,15 @@
+ 
+ 	return error;
+ }	
++
++/* Helper routine to perform explicit reseeds */
++static void
++random_yarrow_flush_reseed(void)
++{
++	/* Command a entropy queue flush and wait for it to finish */
++	random_kthread_control = 1;
++	while (random_kthread_control)
++		tsleep(&harvestfifo, 0, "-", hz / 10);
++
++	random_yarrow_reseed();
++}

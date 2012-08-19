@@ -1,0 +1,85 @@
+Index: lib/libpthread/sys/lock.c
+===================================================================
+RCS file: /home/ncvs/src/lib/libpthread/sys/Attic/lock.c,v
+retrieving revision 1.9.2.1
+diff -u -r1.9.2.1 lock.c
+--- lib/libpthread/sys/lock.c	5 Aug 2005 19:43:56 -0000	1.9.2.1
++++ lib/libpthread/sys/lock.c	12 Mar 2008 19:18:47 -0000
+@@ -117,14 +117,23 @@
+ {
+ 	if (lu == NULL)
+ 		return (-1);
+-	/*
+-	 * All lockusers keep their watch request and drop their
+-	 * own (lu_myreq) request.  Their own request is either
+-	 * some other lockuser's watch request or is the head of
+-	 * the lock.
+-	 */
+-	lu->lu_myreq = lu->lu_watchreq;
+-	if (lu->lu_myreq == NULL)
++
++	if (lu->lu_watchreq != NULL) {
++		/*
++		 * In this case the lock is active.  All lockusers
++		 * keep their watch request and drop their own
++		 * (lu_myreq) request.  Their own request is either
++		 * some other lockuser's watch request or is the
++		 * head of the lock.
++		 */
++		lu->lu_myreq = lu->lu_watchreq;
++		lu->lu_watchreq = NULL;
++       }
++       if (lu->lu_myreq == NULL)
++		/*
++		 * Oops, something isn't quite right.  Try to
++		 * allocate one.
++		 */
+ 		return (_lockuser_init(lu, priv));
+ 	else {
+ 		lu->lu_myreq->lr_locked = 1;
+Index: lib/libpthread/thread/thr_kern.c
+===================================================================
+RCS file: /home/ncvs/src/lib/libpthread/thread/Attic/thr_kern.c,v
+retrieving revision 1.116.2.1
+diff -u -r1.116.2.1 thr_kern.c
+--- lib/libpthread/thread/thr_kern.c	16 Mar 2006 23:29:07 -0000	1.116.2.1
++++ lib/libpthread/thread/thr_kern.c	12 Mar 2008 19:19:05 -0000
+@@ -345,6 +345,17 @@
+ 		_LCK_SET_PRIVATE2(&curthread->kse->k_lockusers[i], NULL);
+ 	}
+ 	curthread->kse->k_locklevel = 0;
++
++	/*
++	 * Reinitialize the thread and signal locks so that
++	 * sigaction() will work after a fork().
++	 */
++	_lock_reinit(&curthread->lock, LCK_ADAPTIVE, _thr_lock_wait,
++	    _thr_lock_wakeup);
++	_lock_reinit(&_thread_signal_lock, LCK_ADAPTIVE, _kse_lock_wait,
++	    _kse_lock_wakeup);
++
++ 
+ 	_thr_spinlock_init();
+ 	if (__isthreaded) {
+ 		_thr_rtld_fini();
+@@ -354,6 +365,20 @@
+ 	curthread->kse->k_kcb->kcb_kmbx.km_curthread = NULL;
+ 	curthread->attr.flags |= PTHREAD_SCOPE_SYSTEM;
+ 
++	/*
++	 * After a fork, it is possible that an upcall occurs in
++	 * the parent KSE that fork()'d before the child process
++	 * is fully created and before its vm space is copied.
++	 * During the upcall, the tcb is set to null or to another
++	 * thread, and this is what gets copied in the child process
++	 * when the vm space is cloned sometime after the upcall
++	 * occurs.  Note that we shouldn't have to set the kcb, but
++	 * we do it for completeness.
++	 */
++	_kcb_set(curthread->kse->k_kcb);
++	_tcb_set(curthread->kse->k_kcb, curthread->tcb);
++ 
++
+ 	/* After a fork(), there child should have no pending signals. */
+ 	sigemptyset(&curthread->sigpend);
+ 
