@@ -76,10 +76,10 @@ parameters.  Changing them will result in rendering errors.
 
 		  &header2.searchnav;
 
-		<div id="SEARCH">
+		<div id="search">
 		  <form action="&cgibase;/search.cgi" method="get">
 		    <div>
-		      <h2 class="blockhide"><label for="WORDS">&header2.word.search;</label></h2>
+		      <h2 class="blockhide"><label for="words">&header2.word.search;</label></h2>
 
 		      &header2.searchinputs;
 		    </div>
