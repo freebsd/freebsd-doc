@@ -1,0 +1,122 @@
+Index: sys/netinet/ip_fw.c
+===================================================================
+RCS file: /usr/home/ncvs/src/sys/netinet/ip_fw.c,v
+retrieving revision 1.103.2.12
+retrieving revision 1.103.2.13
+diff -u -r1.103.2.12 -r1.103.2.13
+--- sys/netinet/ip_fw.c	2000/05/12 07:22:57	1.103.2.12
++++ sys/netinet/ip_fw.c	2001/01/13 02:44:21	1.103.2.13
+@@ -246,10 +246,16 @@
+ tcpflg_match(struct tcphdr *tcp, struct ip_fw *f)
+ {
+ 	u_char		flg_set, flg_clr;
+-	
+-	if ((f->fw_tcpf & IP_FW_TCPF_ESTAB) &&
+-	    (tcp->th_flags & (IP_FW_TCPF_RST | IP_FW_TCPF_ACK)))
+-		return 1;
++
++	/*
++	 * If an established connection is required, reject packets that
++	 * have only SYN of RST|ACK|SYN set.  Otherwise, fall through to
++	 * other flag requirements.
++	 */
++	if ((f->fw_ipflg & IP_FW_IF_TCPEST) &&
++	    ((tcp->th_flags & (IP_FW_TCPF_RST | IP_FW_TCPF_ACK |
++	    IP_FW_TCPF_SYN)) == IP_FW_TCPF_SYN))
++		return 0;
+ 
+ 	flg_set = tcp->th_flags & f->fw_tcpf;
+ 	flg_clr = tcp->th_flags & f->fw_tcpnf;
+@@ -1171,7 +1177,9 @@
+ 				break;
+ 			}
+ 			tcp = (struct tcphdr *) ((u_int32_t *)ip + ip->ip_hl);
+-			if (f->fw_tcpf != f->fw_tcpnf && !tcpflg_match(tcp, f))
++			if (((f->fw_tcpf != f->fw_tcpnf) ||
++			    (f->fw_ipflg & IP_FW_IF_TCPEST)) &&
++			    !tcpflg_match(tcp, f))
+ 				continue;
+ 			goto check_ports;
+ 		    }
+Index: sys/netinet/ip_fw.h
+===================================================================
+RCS file: /usr/home/ncvs/src/sys/netinet/ip_fw.h,v
+retrieving revision 1.36.2.5
+retrieving revision 1.36.2.6
+diff -u -r1.36.2.5 -r1.36.2.6
+--- sys/netinet/ip_fw.h	2000/02/13 12:18:36	1.36.2.5
++++ sys/netinet/ip_fw.h	2001/01/13 02:44:21	1.36.2.6
+@@ -63,6 +63,7 @@
+ #define IP_FW_ICMPTYPES_DIM	(IP_FW_ICMPTYPES_MAX / (sizeof(unsigned) * 8))
+ 	unsigned fw_icmptypes[IP_FW_ICMPTYPES_DIM]; /* ICMP types bitmap */
+ 	} fw_uar;
++    u_char fw_ipflg;			/* IP flags word */
+     u_char fw_ipopt,fw_ipnopt;		/* IP options set/unset */
+     u_char fw_tcpf,fw_tcpnf;		/* TCP flags set/unset */
+     long timestamp;			/* timestamp (tv_sec) of last match */
+@@ -207,6 +208,12 @@
+ #define IP_FW_F_MASK	0x1FFFFFFF	/* All possible flag bits mask		*/
+ 
+ /*
++ * Flags for the 'fw_ipflg' field, for comparing values of IP and its protocols
++ */
++#define	IP_FW_IF_TCPEST	0x00000020	/* established TCP connection */
++#define	IP_FW_IF_TCPMSK	0x00000020	/* mask of all TCP values */
++
++/*
+  * For backwards compatibility with rules specifying "via iface" but
+  * not restricted to only "in" or "out" packets, we define this combination
+  * of bits to represent this configuration.
+@@ -237,7 +244,6 @@
+ #define IP_FW_TCPF_PSH		TH_PUSH
+ #define IP_FW_TCPF_ACK		TH_ACK
+ #define IP_FW_TCPF_URG		TH_URG
+-#define IP_FW_TCPF_ESTAB	0x40
+ 
+ /*
+  * Main firewall chains definitions and global var's definitions.
+Index: sys/netinet/tcp.h
+===================================================================
+RCS file: /usr/home/ncvs/src/sys/netinet/tcp.h,v
+retrieving revision 1.10.2.1
+retrieving revision 1.10.2.2
+diff -u -r1.10.2.1 -r1.10.2.2
+--- sys/netinet/tcp.h	1999/08/29 16:29:52	1.10.2.1
++++ sys/netinet/tcp.h	2001/01/13 02:44:21	1.10.2.2
+@@ -64,7 +64,9 @@
+ #define	TH_PUSH	0x08
+ #define	TH_ACK	0x10
+ #define	TH_URG	0x20
+-#define TH_FLAGS (TH_FIN|TH_SYN|TH_RST|TH_ACK|TH_URG)
++#define	TH_ECE	0x40
++#define	TH_CWR	0x80
++#define	TH_FLAGS	(TH_FIN|TH_SYN|TH_RST|TH_ACK|TH_URG|TH_ECE|TH_CWR)
+ 
+ 	u_short	th_win;			/* window */
+ 	u_short	th_sum;			/* checksum */
+Index: sbin/ipfw/ipfw.c
+===================================================================
+RCS file: /usr/home/ncvs/src/sbin/ipfw/ipfw.c,v
+retrieving revision 1.64.2.12
+retrieving revision 1.64.2.13
+diff -u -r1.64.2.12 -r1.64.2.13
+--- sbin/ipfw/ipfw.c	2000/02/13 12:19:54	1.64.2.12
++++ sbin/ipfw/ipfw.c	2001/01/13 02:44:21	1.64.2.13
+@@ -424,7 +424,7 @@
+ 		if (chain->fw_ipnopt & IP_FW_IPOPT_TS)   PRINTOPT("!ts");
+ 	} 
+ 
+-	if (chain->fw_tcpf & IP_FW_TCPF_ESTAB) 
++	if (chain->fw_ipflg & IP_FW_IF_TCPEST)
+ 		printf(" established");
+ 	else if (chain->fw_tcpf == IP_FW_TCPF_SYN &&
+ 	    chain->fw_tcpnf == IP_FW_TCPF_ACK)
+@@ -1628,7 +1628,7 @@
+ 		}
+ 		if (rule.fw_prot == IPPROTO_TCP) {
+ 			if (!strncmp(*av,"established",strlen(*av))) { 
+-				rule.fw_tcpf  |= IP_FW_TCPF_ESTAB;
++				rule.fw_ipflg |= IP_FW_IF_TCPEST;
+ 				av++; ac--; continue;
+ 			}
+ 			if (!strncmp(*av,"setup",strlen(*av))) { 

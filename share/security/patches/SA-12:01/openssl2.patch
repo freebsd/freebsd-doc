@@ -1,0 +1,502 @@
+Index: crypto/openssl/crypto/buffer/buffer.c
+===================================================================
+--- crypto/openssl/crypto/buffer/buffer.c	(revision 234953)
++++ crypto/openssl/crypto/buffer/buffer.c	(working copy)
+@@ -60,6 +60,11 @@
+ #include "cryptlib.h"
+ #include <openssl/buffer.h>
+ 
++/* LIMIT_BEFORE_EXPANSION is the maximum n such that (n+3)/3*4 < 2**31. That
++ * function is applied in several functions in this file and this limit ensures
++ * that the result fits in an int. */
++#define LIMIT_BEFORE_EXPANSION 0x5ffffffc
++
+ BUF_MEM *BUF_MEM_new(void)
+ 	{
+ 	BUF_MEM *ret;
+@@ -94,6 +99,11 @@
+ 	char *ret;
+ 	unsigned int n;
+ 
++	if (len < 0)
++		{
++		BUFerr(BUF_F_BUF_MEM_GROW,ERR_R_MALLOC_FAILURE);
++		return 0;
++		}
+ 	if (str->length >= len)
+ 		{
+ 		str->length=len;
+@@ -105,6 +115,12 @@
+ 		str->length=len;
+ 		return(len);
+ 		}
++	/* This limit is sufficient to ensure (len+3)/3*4 < 2**31 */
++	if (len > LIMIT_BEFORE_EXPANSION)
++		{
++		BUFerr(BUF_F_BUF_MEM_GROW,ERR_R_MALLOC_FAILURE);
++		return 0;
++		}
+ 	n=(len+3)/3*4;
+ 	if (str->data == NULL)
+ 		ret=OPENSSL_malloc(n);
+@@ -130,6 +146,11 @@
+ 	char *ret;
+ 	unsigned int n;
+ 
++	if (len < 0)
++		{
++		BUFerr(BUF_F_BUF_MEM_GROW_CLEAN,ERR_R_MALLOC_FAILURE);
++		return 0;
++		}
+ 	if (str->length >= len)
+ 		{
+ 		memset(&str->data[len],0,str->length-len);
+@@ -142,6 +163,12 @@
+ 		str->length=len;
+ 		return(len);
+ 		}
++	/* This limit is sufficient to ensure (len+3)/3*4 < 2**31 */
++	if (len > LIMIT_BEFORE_EXPANSION)
++		{
++		BUFerr(BUF_F_BUF_MEM_GROW_CLEAN,ERR_R_MALLOC_FAILURE);
++		return 0;
++		}
+ 	n=(len+3)/3*4;
+ 	if (str->data == NULL)
+ 		ret=OPENSSL_malloc(n);
+Index: crypto/openssl/crypto/pkcs7/pk7_doit.c
+===================================================================
+--- crypto/openssl/crypto/pkcs7/pk7_doit.c	(revision 234953)
++++ crypto/openssl/crypto/pkcs7/pk7_doit.c	(working copy)
+@@ -420,6 +420,8 @@
+ 		int max;
+ 		X509_OBJECT ret;
+ #endif
++		unsigned char *tkey = NULL;
++		int tkeylen;
+ 		int jj;
+ 
+ 		if ((etmp=BIO_new(BIO_f_cipher())) == NULL)
+@@ -461,36 +463,42 @@
+ 
+ 		if (pcert == NULL)
+ 			{
++			/* Temporary storage in case EVP_PKEY_decrypt
++			 * overwrites output buffer on error.
++			 */
++			unsigned char *tmp2;
++			tmp2 = OPENSSL_malloc(jj);
++			if (!tmp2)
++				goto err;
++			jj = -1;
++			/* Always attempt to decrypt all cases to avoid
++			 * leaking timing information about a successful
++			 * decrypt.
++			 */
+ 			for (i=0; i<sk_PKCS7_RECIP_INFO_num(rsk); i++)
+ 				{
++				int tret;
+ 				ri=sk_PKCS7_RECIP_INFO_value(rsk,i);
+-				jj=EVP_PKEY_decrypt(tmp,
++				tret=EVP_PKEY_decrypt(tmp2,
+ 					M_ASN1_STRING_data(ri->enc_key),
+ 					M_ASN1_STRING_length(ri->enc_key),
+ 						pkey);
+-				if (jj > 0)
+-					break;
++				if (tret > 0)
++					{
++					memcpy(tmp, tmp2, tret);
++					OPENSSL_cleanse(tmp2, tret);
++					jj = tret;
++					}
+ 				ERR_clear_error();
+-				ri = NULL;
+ 				}
+-			if (ri == NULL)
+-				{
+-				PKCS7err(PKCS7_F_PKCS7_DATADECODE,
+-				      PKCS7_R_NO_RECIPIENT_MATCHES_KEY);
+-				goto err;
+-				}
++			OPENSSL_free(tmp2);
+ 			}
+ 		else
+ 			{
+ 			jj=EVP_PKEY_decrypt(tmp,
+ 				M_ASN1_STRING_data(ri->enc_key),
+ 				M_ASN1_STRING_length(ri->enc_key), pkey);
+-			if (jj <= 0)
+-				{
+-				PKCS7err(PKCS7_F_PKCS7_DATADECODE,
+-								ERR_R_EVP_LIB);
+-				goto err;
+-				}
++			ERR_clear_error();
+ 			}
+ 
+ 		evp_ctx=NULL;
+@@ -499,24 +507,49 @@
+ 			goto err;
+ 		if (EVP_CIPHER_asn1_to_param(evp_ctx,enc_alg->parameter) < 0)
+ 			goto err;
++		/* Generate random key to counter MMA */
++		tkeylen = EVP_CIPHER_CTX_key_length(evp_ctx);
++		tkey = OPENSSL_malloc(tkeylen);
++		if (!tkey)
++			goto err;
++		if (EVP_CIPHER_CTX_rand_key(evp_ctx, tkey) <= 0)
++			goto err;
++		/* If we have no key use random key */
++		if (jj <= 0)
++			{
++			OPENSSL_free(tmp);
++			jj = tkeylen;
++			tmp = tkey;
++			tkey = NULL;
++			}
+ 
+-		if (jj != EVP_CIPHER_CTX_key_length(evp_ctx)) {
++		if (jj != tkeylen) {
+ 			/* Some S/MIME clients don't use the same key
+ 			 * and effective key length. The key length is
+ 			 * determined by the size of the decrypted RSA key.
+ 			 */
+ 			if(!EVP_CIPHER_CTX_set_key_length(evp_ctx, jj))
+ 				{
+-				PKCS7err(PKCS7_F_PKCS7_DATADECODE,
+-					PKCS7_R_DECRYPTED_KEY_IS_WRONG_LENGTH);
+-				goto err;
++				/* As MMA defence use random key instead */
++				OPENSSL_cleanse(tmp, jj);
++				OPENSSL_free(tmp);
++				jj = tkeylen;
++				tmp = tkey;
++				tkey = NULL;
+ 				}
+ 		} 
++		ERR_clear_error();
+ 		if (EVP_CipherInit_ex(evp_ctx,NULL,NULL,tmp,NULL,0) <= 0)
+ 			goto err;
+ 
+ 		OPENSSL_cleanse(tmp,jj);
+ 
++		if (tkey)
++			{
++			OPENSSL_cleanse(tkey, tkeylen);
++			OPENSSL_free(tkey);
++			}
++
+ 		if (out == NULL)
+ 			out=etmp;
+ 		else
+Index: crypto/openssl/crypto/mem.c
+===================================================================
+--- crypto/openssl/crypto/mem.c	(revision 234953)
++++ crypto/openssl/crypto/mem.c	(working copy)
+@@ -372,6 +372,10 @@
+ 
+ 	if (num <= 0) return NULL;
+ 
++	/* We don't support shrinking the buffer. Note the memcpy that copies
++	 * |old_len| bytes to the new buffer, below. */
++	if (num < old_len) return NULL;
++
+ 	if (realloc_debug_func != NULL)
+ 		realloc_debug_func(str, NULL, num, file, line, 0);
+ 	ret=malloc_ex_func(num,file,line);
+Index: crypto/openssl/crypto/x509v3/pcy_map.c
+===================================================================
+--- crypto/openssl/crypto/x509v3/pcy_map.c	(revision 234953)
++++ crypto/openssl/crypto/x509v3/pcy_map.c	(working copy)
+@@ -70,8 +70,6 @@
+ 
+ static void policy_map_free(X509_POLICY_REF *map)
+ 	{
+-	if (map->subjectDomainPolicy)
+-		ASN1_OBJECT_free(map->subjectDomainPolicy);
+ 	OPENSSL_free(map);
+ 	}
+ 
+@@ -95,6 +93,7 @@
+ 	{
+ 	POLICY_MAPPING *map;
+ 	X509_POLICY_REF *ref = NULL;
++	ASN1_OBJECT *subjectDomainPolicyRef;
+ 	X509_POLICY_DATA *data;
+ 	X509_POLICY_CACHE *cache = x->policy_cache;
+ 	int i;
+@@ -153,13 +152,16 @@
+ 		if (!sk_ASN1_OBJECT_push(data->expected_policy_set, 
+ 						map->subjectDomainPolicy))
+ 			goto bad_mapping;
++                /* map->subjectDomainPolicy will be freed when
++                 * cache->data is freed. Set it to NULL to avoid double-free. */
++                subjectDomainPolicyRef = map->subjectDomainPolicy;
++                map->subjectDomainPolicy = NULL;
+ 		
+ 		ref = OPENSSL_malloc(sizeof(X509_POLICY_REF));
+ 		if (!ref)
+ 			goto bad_mapping;
+ 
+-		ref->subjectDomainPolicy = map->subjectDomainPolicy;
+-		map->subjectDomainPolicy = NULL;
++		ref->subjectDomainPolicy = subjectDomainPolicyRef;
+ 		ref->data = data;
+ 
+ 		if (!sk_X509_POLICY_REF_push(cache->maps, ref))
+Index: crypto/openssl/crypto/x509v3/pcy_tree.c
+===================================================================
+--- crypto/openssl/crypto/x509v3/pcy_tree.c	(revision 234953)
++++ crypto/openssl/crypto/x509v3/pcy_tree.c	(working copy)
+@@ -612,6 +612,10 @@
+ 		case 2:
+ 		return 1;
+ 
++                /* Some internal error */
++		case -1:
++		return -1;
++
+ 		/* Some internal error */
+ 		case 0:
+ 		return 0;
+@@ -691,4 +695,3 @@
+ 	return 0;
+ 
+ 	}
+-
+Index: crypto/openssl/crypto/asn1/a_d2i_fp.c
+===================================================================
+--- crypto/openssl/crypto/asn1/a_d2i_fp.c	(revision 234953)
++++ crypto/openssl/crypto/asn1/a_d2i_fp.c	(working copy)
+@@ -57,6 +57,7 @@
+  */
+ 
+ #include <stdio.h>
++#include <limits.h>
+ #include "cryptlib.h"
+ #include <openssl/buffer.h>
+ #include <openssl/asn1_mac.h>
+@@ -143,17 +144,11 @@
+ 	BUF_MEM *b;
+ 	unsigned char *p;
+ 	int i;
+-	int ret=-1;
+ 	ASN1_const_CTX c;
+-	int want=HEADER_SIZE;
++	size_t want=HEADER_SIZE;
+ 	int eos=0;
+-#if defined(__GNUC__) && defined(__ia64)
+-	/* pathetic compiler bug in all known versions as of Nov. 2002 */
+-	long off=0;
+-#else
+-	int off=0;
+-#endif
+-	int len=0;
++	size_t off=0;
++	size_t len=0;
+ 
+ 	b=BUF_MEM_new();
+ 	if (b == NULL)
+@@ -169,7 +164,7 @@
+ 			{
+ 			want-=(len-off);
+ 
+-			if (!BUF_MEM_grow_clean(b,len+want))
++			if (len + want < len || !BUF_MEM_grow_clean(b,len+want))
+ 				{
+ 				ASN1err(ASN1_F_ASN1_D2I_READ_BIO,ERR_R_MALLOC_FAILURE);
+ 				goto err;
+@@ -181,7 +176,14 @@
+ 				goto err;
+ 				}
+ 			if (i > 0)
++				{
++				if (len+i < len)
++					{
++					ASN1err(ASN1_F_ASN1_D2I_READ_BIO,ASN1_R_TOO_LONG);
++					goto err;
++					}
+ 				len+=i;
++				}
+ 			}
+ 		/* else data already loaded */
+ 
+@@ -206,6 +208,11 @@
+ 			{
+ 			/* no data body so go round again */
+ 			eos++;
++			if (eos < 0)
++				{
++				ASN1err(ASN1_F_ASN1_D2I_READ_BIO,ASN1_R_HEADER_TOO_LONG);
++				goto err;
++				}
+ 			want=HEADER_SIZE;
+ 			}
+ 		else if (eos && (c.slen == 0) && (c.tag == V_ASN1_EOC))
+@@ -220,10 +227,16 @@
+ 		else 
+ 			{
+ 			/* suck in c.slen bytes of data */
+-			want=(int)c.slen;
++			want=c.slen;
+ 			if (want > (len-off))
+ 				{
+ 				want-=(len-off);
++				if (want > INT_MAX /* BIO_read takes an int length */ ||
++					len+want < len)
++						{
++						ASN1err(ASN1_F_ASN1_D2I_READ_BIO,ASN1_R_TOO_LONG);
++						goto err;
++						}
+ 				if (!BUF_MEM_grow_clean(b,len+want))
+ 					{
+ 					ASN1err(ASN1_F_ASN1_D2I_READ_BIO,ERR_R_MALLOC_FAILURE);
+@@ -238,11 +251,18 @@
+ 						    ASN1_R_NOT_ENOUGH_DATA);
+ 						goto err;
+ 						}
++					/* This can't overflow because
++					 * |len+want| didn't overflow. */
+ 					len+=i;
+-					want -= i;
++					want-=i;
+ 					}
+ 				}
+-			off+=(int)c.slen;
++			if (off + c.slen < off)
++				{
++				ASN1err(ASN1_F_ASN1_D2I_READ_BIO,ASN1_R_TOO_LONG);
++				goto err;
++				}
++			off+=c.slen;
+ 			if (eos <= 0)
+ 				{
+ 				break;
+@@ -252,9 +272,15 @@
+ 			}
+ 		}
+ 
++	if (off > INT_MAX)
++		{
++		ASN1err(ASN1_F_ASN1_D2I_READ_BIO,ASN1_R_TOO_LONG);
++		goto err;
++		}
++
+ 	*pb = b;
+ 	return off;
+ err:
+ 	if (b != NULL) BUF_MEM_free(b);
+-	return(ret);
++	return -1;
+ 	}
+Index: crypto/openssl/ssl/ssl.h
+===================================================================
+--- crypto/openssl/ssl/ssl.h	(revision 234953)
++++ crypto/openssl/ssl/ssl.h	(working copy)
+@@ -1739,6 +1739,7 @@
+ #define SSL_F_SSL3_CALLBACK_CTRL			 233
+ #define SSL_F_SSL3_CHANGE_CIPHER_STATE			 129
+ #define SSL_F_SSL3_CHECK_CERT_AND_ALGORITHM		 130
++#define SSL_F_SSL3_CHECK_CLIENT_HELLO			 292
+ #define SSL_F_SSL3_CLIENT_HELLO				 131
+ #define SSL_F_SSL3_CONNECT				 132
+ #define SSL_F_SSL3_CTRL					 213
+@@ -1974,6 +1975,7 @@
+ #define SSL_R_MISSING_TMP_RSA_KEY			 172
+ #define SSL_R_MISSING_TMP_RSA_PKEY			 173
+ #define SSL_R_MISSING_VERIFY_MESSAGE			 174
++#define SSL_R_MULTIPLE_SGC_RESTARTS			 325
+ #define SSL_R_NON_SSLV2_INITIAL_PACKET			 175
+ #define SSL_R_NO_CERTIFICATES_RETURNED			 176
+ #define SSL_R_NO_CERTIFICATE_ASSIGNED			 177
+Index: crypto/openssl/ssl/ssl_err.c
+===================================================================
+--- crypto/openssl/ssl/ssl_err.c	(revision 234953)
++++ crypto/openssl/ssl/ssl_err.c	(working copy)
+@@ -137,6 +137,7 @@
+ {ERR_FUNC(SSL_F_SSL3_CALLBACK_CTRL),	"SSL3_CALLBACK_CTRL"},
+ {ERR_FUNC(SSL_F_SSL3_CHANGE_CIPHER_STATE),	"SSL3_CHANGE_CIPHER_STATE"},
+ {ERR_FUNC(SSL_F_SSL3_CHECK_CERT_AND_ALGORITHM),	"SSL3_CHECK_CERT_AND_ALGORITHM"},
++{ERR_FUNC(SSL_F_SSL3_CHECK_CLIENT_HELLO),	"SSL3_CHECK_CLIENT_HELLO"},
+ {ERR_FUNC(SSL_F_SSL3_CLIENT_HELLO),	"SSL3_CLIENT_HELLO"},
+ {ERR_FUNC(SSL_F_SSL3_CONNECT),	"SSL3_CONNECT"},
+ {ERR_FUNC(SSL_F_SSL3_CTRL),	"SSL3_CTRL"},
+@@ -375,6 +376,7 @@
+ {ERR_REASON(SSL_R_MISSING_TMP_RSA_KEY)   ,"missing tmp rsa key"},
+ {ERR_REASON(SSL_R_MISSING_TMP_RSA_PKEY)  ,"missing tmp rsa pkey"},
+ {ERR_REASON(SSL_R_MISSING_VERIFY_MESSAGE),"missing verify message"},
++{ERR_REASON(SSL_R_MULTIPLE_SGC_RESTARTS) ,"multiple sgc restarts"},
+ {ERR_REASON(SSL_R_NON_SSLV2_INITIAL_PACKET),"non sslv2 initial packet"},
+ {ERR_REASON(SSL_R_NO_CERTIFICATES_RETURNED),"no certificates returned"},
+ {ERR_REASON(SSL_R_NO_CERTIFICATE_ASSIGNED),"no certificate assigned"},
+Index: crypto/openssl/ssl/s3_enc.c
+===================================================================
+--- crypto/openssl/ssl/s3_enc.c	(revision 234953)
++++ crypto/openssl/ssl/s3_enc.c	(working copy)
+@@ -479,6 +479,9 @@
+ 
+ 			/* we need to add 'i-1' padding bytes */
+ 			l+=i;
++			/* the last of these zero bytes will be overwritten
++			 * with the padding length. */
++			memset(&rec->input[rec->length], 0, i);
+ 			rec->length+=i;
+ 			rec->input[l-1]=(i-1);
+ 			}
+Index: crypto/openssl/ssl/s3_srvr.c
+===================================================================
+--- crypto/openssl/ssl/s3_srvr.c	(revision 234953)
++++ crypto/openssl/ssl/s3_srvr.c	(working copy)
+@@ -235,6 +235,7 @@
+ 				}
+ 
+ 			s->init_num=0;
++			s->s3->flags &= ~SSL3_FLAGS_SGC_RESTART_DONE;
+ 
+ 			if (s->state != SSL_ST_RENEGOTIATE)
+ 				{
+@@ -709,6 +710,13 @@
+ 	s->s3->tmp.reuse_message = 1;
+ 	if (s->s3->tmp.message_type == SSL3_MT_CLIENT_HELLO)
+ 		{
++		/* We only allow the client to restart the handshake once per
++		 * negotiation. */
++		if (s->s3->flags & SSL3_FLAGS_SGC_RESTART_DONE)
++			{
++			SSLerr(SSL_F_SSL3_CHECK_CLIENT_HELLO, SSL_R_MULTIPLE_SGC_RESTARTS);
++			return -1;
++			}
+ 		/* Throw away what we have done so far in the current handshake,
+ 		 * which will now be aborted. (A full SSL_clear would be too much.) */
+ #ifndef OPENSSL_NO_DH
+@@ -725,6 +733,7 @@
+ 			s->s3->tmp.ecdh = NULL;
+ 			}
+ #endif
++		s->s3->flags |= SSL3_FLAGS_SGC_RESTART_DONE;
+ 		return 2;
+ 		}
+ 	return 1;
+Index: crypto/openssl/ssl/ssl3.h
+===================================================================
+--- crypto/openssl/ssl/ssl3.h	(revision 234953)
++++ crypto/openssl/ssl/ssl3.h	(working copy)
+@@ -333,6 +333,17 @@
+ #define SSL3_FLAGS_DELAY_CLIENT_FINISHED	0x0002
+ #define SSL3_FLAGS_POP_BUFFER			0x0004
+ #define TLS1_FLAGS_TLS_PADDING_BUG		0x0008
++ 
++/* SSL3_FLAGS_SGC_RESTART_DONE is set when we
++ * restart a handshake because of MS SGC and so prevents us
++ * from restarting the handshake in a loop. It's reset on a
++ * renegotiation, so effectively limits the client to one restart
++ * per negotiation. This limits the possibility of a DDoS
++ * attack where the client handshakes in a loop using SGC to
++ * restart. Servers which permit renegotiation can still be
++ * effected, but we can't prevent that.
++ */
++#define SSL3_FLAGS_SGC_RESTART_DONE		0x0040
+ 
+ typedef struct ssl3_state_st
+ 	{

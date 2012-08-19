@@ -1,0 +1,630 @@
+Index: contrib/cvs/lib/xsize.h
+===================================================================
+RCS file: contrib/cvs/lib/xsize.h
+diff -N contrib/cvs/lib/xsize.h
+*** /dev/null	1 Jan 1970 00:00:00 -0000
+--- contrib/cvs/lib/xsize.h	19 Sep 2004 19:29:43 -0000
+***************
+*** 0 ****
+--- 1,110 ----
++ /* xsize.h -- Checked size_t computations.
++ 
++    Copyright (C) 2003 Free Software Foundation, Inc.
++ 
++    This program is free software; you can redistribute it and/or modify
++    it under the terms of the GNU General Public License as published by
++    the Free Software Foundation; either version 2, or (at your option)
++    any later version.
++ 
++    This program is distributed in the hope that it will be useful,
++    but WITHOUT ANY WARRANTY; without even the implied warranty of
++    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++    GNU General Public License for more details.
++ 
++    You should have received a copy of the GNU General Public License
++    along with this program; if not, write to the Free Software Foundation,
++    Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.  */
++ 
++ #ifndef _XSIZE_H
++ #define _XSIZE_H
++ 
++ /* Get size_t.  */
++ #include <stddef.h>
++ 
++ /* Get SIZE_MAX.  */
++ #include <limits.h>
++ #if HAVE_STDINT_H
++ # include <stdint.h>
++ #else
++ #define SIZE_MAX UINT_MAX /* XXX */
++ #endif
++ 
++ /* The size of memory objects is often computed through expressions of
++    type size_t. Example:
++       void* p = malloc (header_size + n * element_size).
++    These computations can lead to overflow.  When this happens, malloc()
++    returns a piece of memory that is way too small, and the program then
++    crashes while attempting to fill the memory.
++    To avoid this, the functions and macros in this file check for overflow.
++    The convention is that SIZE_MAX represents overflow.
++    malloc (SIZE_MAX) is not guaranteed to fail -- think of a malloc
++    implementation that uses mmap --, it's recommended to use size_overflow_p()
++    or size_in_bounds_p() before invoking malloc().
++    The example thus becomes:
++       size_t size = xsum (header_size, xtimes (n, element_size));
++       void *p = (size_in_bounds_p (size) ? malloc (size) : NULL);
++ */
++ 
++ /* Convert an arbitrary value >= 0 to type size_t.  */
++ #define xcast_size_t(N) \
++   ((N) <= SIZE_MAX ? (size_t) (N) : SIZE_MAX)
++ 
++ /* Sum of two sizes, with overflow check.  */
++ static inline size_t
++ #if __GNUC__ >= 3
++ __attribute__ ((__pure__))
++ #endif
++ xsum (size_t size1, size_t size2)
++ {
++   size_t sum = size1 + size2;
++   return (sum >= size1 ? sum : SIZE_MAX);
++ }
++ 
++ /* Sum of three sizes, with overflow check.  */
++ static inline size_t
++ #if __GNUC__ >= 3
++ __attribute__ ((__pure__))
++ #endif
++ xsum3 (size_t size1, size_t size2, size_t size3)
++ {
++   return xsum (xsum (size1, size2), size3);
++ }
++ 
++ /* Sum of four sizes, with overflow check.  */
++ static inline size_t
++ #if __GNUC__ >= 3
++ __attribute__ ((__pure__))
++ #endif
++ xsum4 (size_t size1, size_t size2, size_t size3, size_t size4)
++ {
++   return xsum (xsum (xsum (size1, size2), size3), size4);
++ }
++ 
++ /* Maximum of two sizes, with overflow check.  */
++ static inline size_t
++ #if __GNUC__ >= 3
++ __attribute__ ((__pure__))
++ #endif
++ xmax (size_t size1, size_t size2)
++ {
++   /* No explicit check is needed here, because for any n:
++      max (SIZE_MAX, n) == SIZE_MAX and max (n, SIZE_MAX) == SIZE_MAX.  */
++   return (size1 >= size2 ? size1 : size2);
++ }
++ 
++ /* Multiplication of a count with an element size, with overflow check.
++    The count must be >= 0 and the element size must be > 0.
++    This is a macro, not an inline function, so that it works correctly even
++    when N is of a wider tupe and N > SIZE_MAX.  */
++ #define xtimes(N, ELSIZE) \
++   ((N) <= SIZE_MAX / (ELSIZE) ? (size_t) (N) * (ELSIZE) : SIZE_MAX)
++ 
++ /* Check for overflow.  */
++ #define size_overflow_p(SIZE) \
++   ((SIZE) == SIZE_MAX)
++ /* Check against overflow.  */
++ #define size_in_bounds_p(SIZE) \
++   ((SIZE) != SIZE_MAX)
++ 
++ #endif /* _XSIZE_H */
+Index: contrib/cvs/src/commit.c
+===================================================================
+RCS file: /home/ncvs/src/contrib/cvs/src/commit.c,v
+retrieving revision 1.8.2.5
+diff -c -r1.8.2.5 commit.c
+*** contrib/cvs/src/commit.c	21 Jan 2003 22:26:44 -0000	1.8.2.5
+--- contrib/cvs/src/commit.c	19 Sep 2004 19:28:43 -0000
+***************
+*** 481,487 ****
+  	   operate on, and only work with those files in the future.
+  	   This saves time--we don't want to search the file system
+  	   of the working directory twice.  */
+! 	find_args.argv = (char **) xmalloc (find_args.argc * sizeof (char **));
+  	find_args.argc = 0;
+  	walklist (find_args.ulist, copy_ulist, &find_args);
+  
+--- 481,492 ----
+  	   operate on, and only work with those files in the future.
+  	   This saves time--we don't want to search the file system
+  	   of the working directory twice.  */
+! 	if (size_overflow_p (xtimes (find_args.argc, sizeof (char **))))
+! 	{
+! 	    find_args.argc = 0;
+! 	    return 0;
+! 	}
+! 	find_args.argv = xmalloc (xtimes (find_args.argc, sizeof (char **)));
+  	find_args.argc = 0;
+  	walklist (find_args.ulist, copy_ulist, &find_args);
+  
+Index: contrib/cvs/src/cvs.h
+===================================================================
+RCS file: /home/ncvs/src/contrib/cvs/src/cvs.h,v
+retrieving revision 1.11.2.6
+diff -c -r1.11.2.6 cvs.h
+*** contrib/cvs/src/cvs.h	21 Jan 2003 22:26:44 -0000	1.11.2.6
+--- contrib/cvs/src/cvs.h	19 Sep 2004 19:31:05 -0000
+***************
+*** 41,46 ****
+--- 41,50 ----
+  #include "popen.h"
+  #endif
+  
++ /* Begin GNULIB headers.  */
++ #include "xsize.h"
++ /* End GNULIB headers.  */
++ 
+  #ifdef STDC_HEADERS
+  #include <stdlib.h>
+  #else
+Index: contrib/cvs/src/filesubr.c
+===================================================================
+RCS file: /home/ncvs/src/contrib/cvs/src/filesubr.c,v
+retrieving revision 1.6.2.4
+diff -c -r1.6.2.4 filesubr.c
+*** contrib/cvs/src/filesubr.c	19 Dec 2002 21:17:56 -0000	1.6.2.4
+--- contrib/cvs/src/filesubr.c	19 Sep 2004 19:28:43 -0000
+***************
+*** 988,995 ****
+      char ***pargv;
+  {
+      int i;
+      *pargc = argc;
+!     *pargv = (char **) xmalloc (argc * sizeof (char *));
+      for (i = 0; i < argc; ++i)
+  	(*pargv)[i] = xstrdup (argv[i]);
+  }
+--- 988,1001 ----
+      char ***pargv;
+  {
+      int i;
++     if (size_overflow_p (xtimes (argc, sizeof (char *)))) {
++ 	*pargc = 0;
++ 	*pargv = NULL;
++ 	error (0, 0, "expand_wild: too many arguments");
++ 	return;
++     }
+      *pargc = argc;
+!     *pargv = xmalloc (xtimes (argc, sizeof (char *)));
+      for (i = 0; i < argc; ++i)
+  	(*pargv)[i] = xstrdup (argv[i]);
+  }
+Index: contrib/cvs/src/history.c
+===================================================================
+RCS file: /home/ncvs/src/contrib/cvs/src/history.c,v
+retrieving revision 1.1.1.6.2.4
+diff -c -r1.1.1.6.2.4 history.c
+*** contrib/cvs/src/history.c	19 Dec 2002 21:17:56 -0000	1.1.1.6.2.4
+--- contrib/cvs/src/history.c	19 Sep 2004 19:28:43 -0000
+***************
+*** 414,421 ****
+--- 414,424 ----
+  		working = 1;
+  		break;
+  	    case 'X':			/* Undocumented debugging flag */
++ #ifdef DEBUG
+  		histfile = optarg;
++ #endif
+  		break;
++ 
+  	    case 'D':			/* Since specified date */
+  		if (*since_rev || *since_tag || *backto)
+  		{
+***************
+*** 890,898 ****
+  {
+      if (user_count == user_max)
+      {
+! 	user_max += USER_INCREMENT;
+! 	user_list = (char **) xrealloc ((char *) user_list,
+! 					(int) user_max * sizeof (char *));
+      }
+      user_list[user_count++] = xstrdup (name);
+  }
+--- 893,905 ----
+  {
+      if (user_count == user_max)
+      {
+! 	user_max = xsum (user_max, USER_INCREMENT);
+! 	if (size_overflow_p (xtimes (user_max, sizeof (char *))))
+! 	{
+! 	    error (0, 0, "save_user: too many users");
+! 	    return;
+! 	}
+! 	user_list = xrealloc (user_list, xtimes (user_max, sizeof (char *)));
+      }
+      user_list[user_count++] = xstrdup (name);
+  }
+***************
+*** 920,928 ****
+  
+      if (file_count == file_max)
+      {
+! 	file_max += FILE_INCREMENT;
+! 	file_list = (struct file_list_str *) xrealloc ((char *) file_list,
+! 						   file_max * sizeof (*fl));
+      }
+      fl = &file_list[file_count++];
+      fl->l_file = cp = xmalloc (strlen (dir) + strlen (name) + 2);
+--- 927,939 ----
+  
+      if (file_count == file_max)
+      {
+! 	file_max = xsum (file_max, FILE_INCREMENT);
+! 	if (size_overflow_p (xtimes (file_max, sizeof (*fl))))
+! 	{
+! 	    error (0, 0, "save_file: too many files");
+! 	    return;
+! 	}
+! 	file_list = xrealloc (file_list, xtimes (file_max, sizeof (*fl)));
+      }
+      fl = &file_list[file_count++];
+      fl->l_file = cp = xmalloc (strlen (dir) + strlen (name) + 2);
+***************
+*** 961,969 ****
+  {
+      if (mod_count == mod_max)
+      {
+! 	mod_max += MODULE_INCREMENT;
+! 	mod_list = (char **) xrealloc ((char *) mod_list,
+! 				       mod_max * sizeof (char *));
+      }
+      mod_list[mod_count++] = xstrdup (module);
+  }
+--- 972,984 ----
+  {
+      if (mod_count == mod_max)
+      {
+! 	mod_max = xsum (mod_max, MODULE_INCREMENT);
+! 	if (size_overflow_p (xtimes (mod_max, sizeof (char *))))
+! 	{
+! 	    error (0, 0, "save_module: too many modules");
+! 	    return;
+! 	}
+! 	mod_list = xrealloc (mod_list, xtimes (mod_max, sizeof (char *)));
+      }
+      mod_list[mod_count++] = xstrdup (module);
+  }
+Index: contrib/cvs/src/modules.c
+===================================================================
+RCS file: /home/ncvs/src/contrib/cvs/src/modules.c,v
+retrieving revision 1.1.1.5.2.3.4.1
+diff -c -r1.1.1.5.2.3.4.1 modules.c
+*** contrib/cvs/src/modules.c	15 Apr 2004 15:59:05 -0000	1.1.1.5.2.3.4.1
+--- contrib/cvs/src/modules.c	19 Sep 2004 19:28:43 -0000
+***************
+*** 167,172 ****
+--- 167,190 ----
+  		mname);
+  
+  
++     /* Don't process absolute directories.  Anything else could be a security
++      * problem.  Before this check was put in place:
++      *
++      *   $ cvs -d:fork:/cvsroot co /foo
++      *   cvs server: warning: cannot make directory CVS in /: Permission denied
++      *   cvs [server aborted]: cannot make directory /foo: Permission denied
++      *   $
++      */
++     if (isabsolute (mname))
++ 	error (1, 0, "Absolute module reference invalid: `%s'", mname);
++ 
++     /* Similarly for directories that attempt to step above the root of the
++      * repository.
++      */
++     if (pathname_levels (mname) > 0)
++ 	error (1, 0, "up-level in module reference (`..') invalid: `%s'.",
++ 		mname);
++ 
+      /* if this is a directory to ignore, add it to that list */
+      if (mname[0] == '!' && mname[1] != '\0')
+      {
+Index: contrib/cvs/src/server.c
+===================================================================
+RCS file: /home/ncvs/src/contrib/cvs/src/server.c,v
+retrieving revision 1.13.2.5.4.2
+diff -c -r1.13.2.5.4.2 server.c
+*** contrib/cvs/src/server.c	20 May 2004 13:18:08 -0000	1.13.2.5.4.2
+--- contrib/cvs/src/server.c	19 Sep 2004 19:28:43 -0000
+***************
+*** 927,933 ****
+      int i;
+      char *p;
+  
+!     if (lim < 0)
+  	return;
+      p = xmalloc (strlen (server_temp_dir) + 2 * lim + 10);
+      if (p == NULL)
+--- 927,933 ----
+      int i;
+      char *p;
+  
+!     if (lim < 0 || lim > 10000)
+  	return;
+      p = xmalloc (strlen (server_temp_dir) + 2 * lim + 10);
+      if (p == NULL)
+***************
+*** 1647,1653 ****
+  	    && strlen (arg) == cp - name
+  	    && strncmp (arg, name, cp - name) == 0)
+  	{
+! 	    timefield = strchr (cp + 1, '/') + 1;
+  	    /* If the time field is not currently empty, then one of
+  	     * serve_modified, serve_is_modified, & serve_unchanged were
+  	     * already called for this file.  We would like to ignore the
+--- 1647,1662 ----
+  	    && strlen (arg) == cp - name
+  	    && strncmp (arg, name, cp - name) == 0)
+  	{
+! 	    if (!(timefield = strchr (cp + 1, '/')) || *++timefield == '\0')
+! 	    {
+! 		/* We didn't find the record separator or it is followed by
+! 		 * the end of the string, so just exit.
+! 		 */
+! 		if (alloc_pending (80))
+! 		    sprintf (pending_error_text,
+! 		             "E Malformed Entry encountered.");
+! 		return;
+! 	    }
+  	    /* If the time field is not currently empty, then one of
+  	     * serve_modified, serve_is_modified, & serve_unchanged were
+  	     * already called for this file.  We would like to ignore the
+***************
+*** 1710,1716 ****
+  	    && strlen (arg) == cp - name
+  	    && strncmp (arg, name, cp - name) == 0)
+  	{
+! 	    timefield = strchr (cp + 1, '/') + 1;
+  	    /* If the time field is not currently empty, then one of
+  	     * serve_modified, serve_is_modified, & serve_unchanged were
+  	     * already called for this file.  We would like to ignore the
+--- 1719,1734 ----
+  	    && strlen (arg) == cp - name
+  	    && strncmp (arg, name, cp - name) == 0)
+  	{
+! 	    if (!(timefield = strchr (cp + 1, '/')) || *++timefield == '\0')
+! 	    {
+! 		/* We didn't find the record separator or it is followed by
+! 		 * the end of the string, so just exit.
+! 		 */
+! 		if (alloc_pending (80))
+! 		    sprintf (pending_error_text,
+! 		             "E Malformed Entry encountered.");
+! 		return;
+! 	    }
+  	    /* If the time field is not currently empty, then one of
+  	     * serve_modified, serve_is_modified, & serve_unchanged were
+  	     * already called for this file.  We would like to ignore the
+***************
+*** 1795,1802 ****
+  {
+      struct an_entry *p;
+      char *cp;
+      if (error_pending()) return;
+!     p = (struct an_entry *) xmalloc (sizeof (struct an_entry));
+      if (p == NULL)
+      {
+  	pending_error = ENOMEM;
+--- 1813,1841 ----
+  {
+      struct an_entry *p;
+      char *cp;
++     int i = 0;
+      if (error_pending()) return;
+! 
+!     /* Verify that the entry is well-formed.  This can avoid problems later.
+!      * At the moment we only check that the Entry contains five slashes in
+!      * approximately the correct locations since some of the code makes
+!      * assumptions about this.
+!      */
+!     cp = arg;
+!     if (*cp == 'D') cp++;
+!     while (i++ < 5)
+!     {
+! 	if (!cp || *cp != '/')
+! 	{
+! 	    if (alloc_pending (80))
+! 		sprintf (pending_error_text,
+! 			 "E protocol error: Malformed Entry");
+! 	    return;
+! 	}
+! 	cp = strchr (cp + 1, '/');
+!     }
+! 
+!     p = xmalloc (sizeof (struct an_entry));
+      if (p == NULL)
+      {
+  	pending_error = ENOMEM;
+***************
+*** 2028,2033 ****
+--- 2067,2075 ----
+      {
+  	char *cp;
+  
++ 	if (!data[0])
++ 	    goto error;
++ 
+  	if (strchr (data, '+'))
+  	    goto error;
+  
+***************
+*** 2160,2165 ****
+--- 2202,2215 ----
+  
+      if (error_pending()) return;
+  
++     if (argument_count >= 10000)
++     {
++ 	if (alloc_pending (80))
++ 	    sprintf (pending_error_text, 
++ 		     "E Protocol error: too many arguments");
++ 	return;
++     }
++ 
+      if (argument_vector_size <= argument_count)
+      {
+  	argument_vector_size *= 2;
+***************
+*** 2190,2195 ****
+--- 2240,2253 ----
+  
+      if (error_pending()) return;
+  
++     if (argument_count <= 1) 
++     {
++ 	if (alloc_pending (80))
++ 	    sprintf (pending_error_text,
++ 		     "E Protocol error: called argumentx without prior call to argument");
++ 	return;
++     }
++ 
+      p = argument_vector[argument_count - 1];
+      p = xrealloc (p, strlen (p) + 1 + strlen (arg) + 1);
+      if (p == NULL)
+***************
+*** 2546,2552 ****
+                      save some code here...  -kff */
+  
+                   /* Chop newline by hand, for strcmp()'s sake. */
+!                  if (linebuf[num_red - 1] == '\n')
+                       linebuf[num_red - 1] = '\0';
+  
+                   if (strcmp (linebuf, CVS_Username) == 0)
+--- 2604,2610 ----
+                      save some code here...  -kff */
+  
+                   /* Chop newline by hand, for strcmp()'s sake. */
+!                  if (num_red > 0 && linebuf[num_red - 1] == '\n')
+                       linebuf[num_red - 1] = '\0';
+  
+                   if (strcmp (linebuf, CVS_Username) == 0)
+***************
+*** 2601,2607 ****
+           while ((num_red = getline (&linebuf, &linebuf_len, fp)) >= 0)
+           {
+               /* Chop newline by hand, for strcmp()'s sake. */
+!              if (linebuf[num_red - 1] == '\n')
+                   linebuf[num_red - 1] = '\0';
+  
+               if (strcmp (linebuf, CVS_Username) == 0)
+--- 2659,2665 ----
+           while ((num_red = getline (&linebuf, &linebuf_len, fp)) >= 0)
+           {
+               /* Chop newline by hand, for strcmp()'s sake. */
+!              if (num_red > 0 && linebuf[num_red - 1] == '\n')
+                   linebuf[num_red - 1] = '\0';
+  
+               if (strcmp (linebuf, CVS_Username) == 0)
+Index: contrib/cvs/src/wrapper.c
+===================================================================
+RCS file: /home/ncvs/src/contrib/cvs/src/wrapper.c,v
+retrieving revision 1.1.1.7.2.3
+diff -c -r1.1.1.7.2.3 wrapper.c
+*** contrib/cvs/src/wrapper.c	19 Dec 2002 21:17:59 -0000	1.1.1.7.2.3
+--- contrib/cvs/src/wrapper.c	19 Sep 2004 19:28:43 -0000
+***************
+*** 239,244 ****
+--- 239,268 ----
+  #endif /* SERVER_SUPPORT || CLIENT_SUPPORT */
+  
+  /*
++  * Remove fmt str specifier other than %% or %s. And allow
++  * only max_s %s specifiers
++  */
++ wrap_clean_fmt_str(char *fmt, int max_s)
++ {
++     while (*fmt) {
++ 	if (fmt[0] == '%' && fmt[1])
++ 	{
++ 	    if (fmt[1] == '%') 
++ 		fmt++;
++ 	    else
++ 		if (fmt[1] == 's' && max_s > 0)
++ 		{
++ 		    max_s--;
++ 		    fmt++;
++ 		} else 
++ 		    *fmt = ' ';
++ 	}
++ 	fmt++;
++     }
++     return;
++ }
++ 
++ /*
+   * Open a file and read lines, feeding each line to a line parser. Arrange
+   * for keeping a temporary list of wrappers at the end, if the "temp"
+   * argument is set.
+***************
+*** 558,566 ****
+      args = xmalloc (strlen (e->tocvsFilter)
+  		    + strlen (fileName)
+  		    + strlen (buf));
+!     /* FIXME: sprintf will blow up if the format string contains items other
+!        than %s, or contains too many %s's.  We should instead be parsing
+!        e->tocvsFilter ourselves and giving a real error.  */
+      sprintf (args, e->tocvsFilter, fileName, buf);
+      run_setup (args);
+      run_exec(RUN_TTY, RUN_TTY, RUN_TTY, RUN_NORMAL|RUN_REALLY );
+--- 582,589 ----
+      args = xmalloc (strlen (e->tocvsFilter)
+  		    + strlen (fileName)
+  		    + strlen (buf));
+! 
+!     wrap_clean_fmt_str(e->tocvsFilter, 2);
+      sprintf (args, e->tocvsFilter, fileName, buf);
+      run_setup (args);
+      run_exec(RUN_TTY, RUN_TTY, RUN_TTY, RUN_NORMAL|RUN_REALLY );
+***************
+*** 592,600 ****
+  
+      args = xmalloc (strlen (e->fromcvsFilter)
+  		    + strlen (fileName));
+!     /* FIXME: sprintf will blow up if the format string contains items other
+!        than %s, or contains too many %s's.  We should instead be parsing
+!        e->fromcvsFilter ourselves and giving a real error.  */
+      sprintf (args, e->fromcvsFilter, fileName);
+      run_setup (args);
+      run_exec(RUN_TTY, RUN_TTY, RUN_TTY, RUN_NORMAL );
+--- 615,622 ----
+  
+      args = xmalloc (strlen (e->fromcvsFilter)
+  		    + strlen (fileName));
+! 
+!     wrap_clean_fmt_str(e->fromcvsFilter, 1);
+      sprintf (args, e->fromcvsFilter, fileName);
+      run_setup (args);
+      run_exec(RUN_TTY, RUN_TTY, RUN_TTY, RUN_NORMAL );
+Index: gnu/usr.bin/cvs/lib/config.h.proto
+===================================================================
+RCS file: /home/ncvs/src/gnu/usr.bin/cvs/lib/config.h.proto,v
+retrieving revision 1.16.2.1
+diff -c -r1.16.2.1 config.h.proto
+*** gnu/usr.bin/cvs/lib/config.h.proto	21 Jan 2003 23:06:52 -0000	1.16.2.1
+--- gnu/usr.bin/cvs/lib/config.h.proto	19 Sep 2004 18:09:28 -0000
+***************
+*** 248,254 ****
+  #define HAVE_SIGVEC 1
+  
+  /* Define to 1 if you have the <stdint.h> header file. */
+! #define HAVE_STDINT_H 1
+  
+  /* Define to 1 if you have the <stdlib.h> header file. */
+  #define HAVE_STDLIB_H 1
+--- 248,254 ----
+  #define HAVE_SIGVEC 1
+  
+  /* Define to 1 if you have the <stdint.h> header file. */
+! /* #undef HAVE_STDINT_H */
+  
+  /* Define to 1 if you have the <stdlib.h> header file. */
+  #define HAVE_STDLIB_H 1

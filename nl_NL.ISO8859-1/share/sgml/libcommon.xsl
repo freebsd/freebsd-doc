@@ -3,7 +3,7 @@
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
 <!-- $FreeBSD$
      %SOURCE%	share/sgml/libcommon.xsl
-     %SRCID%	38826
+     %SRCID%	39141
  -->
 <xsl:stylesheet version="1.0"
   xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
@@ -64,7 +64,8 @@
       <a href="&enbase;/news/1999/index.html">1999</a>,
       <a href="&enbase;/news/1998/index.html">1998</a>,
       <a href="&enbase;/news/1997/index.html">1997</a>,
-      <a href="&enbase;/news/1996/index.html">1996</a></p>
+      <a href="&enbase;/news/1996/index.html">1996</a>,
+      <a href="&enbase;/news/1993/index.html">1993</a></p>
   </xsl:template>
 
   <!-- template: "html-press-make-olditems-list" -->

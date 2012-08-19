@@ -148,12 +148,16 @@ $sectionpath = {
 
     'CentOS Linux/i386 3.9' => { 'path' => '1:2:3:3p:4:5:6:7:8:9:n', },
     'CentOS Linux/i386 4.8' => { 'path' => '1:1p:2:3:3p:4:5:6:7:8:9:n:0p', },
-    'CentOS Linux/i386 5.4' => {
-        'path' => '0p:1:1p:1x:2:2x:3:3p:3x:4:4x:5:5x:6:6x:7:7x:8:8x:9:9x:l:n',
-    },
-    'CentOS Linux/i386 5.5' => {
-        'path' => '0p:1:1p:1x:2:2x:3:3p:3x:4:4x:5:5x:6:6x:7:7x:8:8x:9:9x:l:n',
-    },
+    'CentOS Linux/i386 5.3' => { 'path' => '0p:1:1p:1x:2:2x:3:3p:3x:4:4x:5:5x:6:6x:7:7x:8:8x:9:9x:l:n' },
+    'CentOS Linux/i386 5.4' => { 'path' => '0p:1:1p:1x:2:2x:3:3p:3x:4:4x:5:5x:6:6x:7:7x:8:8x:9:9x:l:n' },
+    'CentOS Linux/i386 5.5' => { 'path' => '0p:1:1p:1x:2:2x:3:3p:3x:4:4x:5:5x:6:6x:7:7x:8:8x:9:9x:l:n' },
+    'CentOS Linux/amd64 5.6' => { 'path' => '0p:1:1p:1x:2:2x:3:3p:3x:4:4x:5:5x:6:6x:7:7x:8:8x:9:9x:l:n' },
+    'CentOS Linux/amd64 5.7' => { 'path' => '0p:1:1p:1x:2:2x:3:3p:3x:4:4x:5:5x:6:6x:7:7x:8:8x:9:9x:l:n' },
+    'CentOS Linux/amd64 5.8' => { 'path' => '0p:1:1p:1x:2:2x:3:3p:3x:4:4x:5:5x:6:6x:7:7x:8:8x:9:9x:l:n' },
+    'CentOS Linux/amd64 6.0' => { 'path' => '0p:1:1p:1x:2:2x:3:3p:3x:4:4x:5:5x:6:6x:7:7x:8:8x:9:9x:l:n' },
+    'CentOS Linux/amd64 6.1' => { 'path' => '0p:1:1p:1x:2:2x:3:3p:3x:4:4x:5:5x:6:6x:7:7x:8:8x:9:9x:l:n' },
+    'CentOS Linux/amd64 6.2' => { 'path' => '0p:1:1p:1x:2:2x:3:3p:3x:4:4x:5:5x:6:6x:7:7x:8:8x:9:9x:l:n' },
+    'CentOS Linux/amd64 6.3' => { 'path' => '0p:1:1p:1x:2:2x:3:3p:3x:4:4x:5:5x:6:6x:7:7x:8:8x:9:9x:l:n' },
 
     'SuSE Linux/i386 4.3'  => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
     'SuSE Linux/i386 5.0'  => { 'path' => '0p:1:1p:2:3:3p:4:5:6:7:8:9:n:s', },
@@ -429,6 +433,13 @@ $manPathDefault = 'FreeBSD 9.0-RELEASE';
     'CentOS Linux/i386 4.8', "$manLocalDir/CentOS-4.8",
     'CentOS Linux/i386 5.4', "$manLocalDir/CentOS-5.4",
     'CentOS Linux/i386 5.5', "$manLocalDir/CentOS-5.5",
+    'CentOS Linux/amd64 5.6', "$manLocalDir/CentOS-5.6",
+    'CentOS Linux/amd64 5.7', "$manLocalDir/CentOS-5.7",
+    'CentOS Linux/amd64 5.8', "$manLocalDir/CentOS-5.8",
+    'CentOS Linux/amd64 6.0', "$manLocalDir/CentOS-6.0",
+    'CentOS Linux/amd64 6.1', "$manLocalDir/CentOS-6.1",
+    'CentOS Linux/amd64 6.2', "$manLocalDir/CentOS-6.2",
+    'CentOS Linux/amd64 6.3', "$manLocalDir/CentOS-6.3",
 
     'SuSE Linux/i386 4.3',  "$manLocalDir/SuSE-4.3-i386",
     'SuSE Linux/i386 5.0',  "$manLocalDir/SuSE-5.0-i386",
@@ -605,7 +616,7 @@ while ( ( $key, $val ) = each %manPath ) {
 
     'slackware',  'Linux Slackware 3.1',
     'redhat',     'Red Hat Linux/i386 9',
-    'centos',     'CentOS Linux/i386 5.5',
+    'centos',     'CentOS Linux/amd64 6.3',
     'suse',       'SuSE Linux/i386 11.3',
     'linux',      'SuSE Linux/i386 11.3',
     'darwin',     'Darwin 8.0.1/ppc',

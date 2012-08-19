@@ -1,0 +1,137 @@
+Index: tcp_input.c
+===================================================================
+RCS file: /home/ncvs/src/sys/netinet/tcp_input.c,v
+retrieving revision 1.107.2.39
+diff -u -p -r1.107.2.39 tcp_input.c
+--- sys/netinet/tcp_input.c	14 Feb 2004 22:23:22 -0000	1.107.2.39
++++ sys/netinet/tcp_input.c	1 Mar 2004 16:38:05 -0000
+@@ -126,6 +126,24 @@ SYSCTL_INT(_net_inet_tcp, OID_AUTO, drop
+     &drop_synfin, 0, "Drop TCP packets with SYN+FIN set");
+ #endif
+ 
++SYSCTL_NODE(_net_inet_tcp, OID_AUTO, reass, CTLFLAG_RW, 0,
++    "TCP Segment Reassembly Queue");
++
++int tcp_reass_maxseg = 0;
++SYSCTL_INT(_net_inet_tcp_reass, OID_AUTO, maxsegments, CTLFLAG_RD,
++    &tcp_reass_maxseg, 0,
++    "Global maximum number of TCP Segments in Reassembly Queue");
++
++int tcp_reass_qsize = 0;
++SYSCTL_INT(_net_inet_tcp_reass, OID_AUTO, cursegments, CTLFLAG_RD,
++    &tcp_reass_qsize, 0,
++    "Global number of TCP Segments currently in Reassembly Queue");
++
++static int tcp_reass_overflows = 0;
++SYSCTL_INT(_net_inet_tcp_reass, OID_AUTO, overflows, CTLFLAG_RD,
++    &tcp_reass_overflows, 0,
++    "Global number of TCP Segment Reassembly Queue Overflows");
++
+ struct inpcbhead tcb;
+ #define	tcb6	tcb  /* for KAME src sync over BSD*'s */
+ struct inpcbinfo tcbinfo;
+@@ -183,6 +201,21 @@ tcp_reass(tp, th, tlenp, m)
+ 	if (th == 0)
+ 		goto present;
+ 
++	/*
++	 * Limit the number of segments in the reassembly queue to prevent
++	 * holding on to too many segments (and thus running out of mbufs).
++	 * Make sure to let the missing segment through which caused this
++	 * queue.  Always keep one global queue entry spare to be able to
++	 * process the missing segment.
++	 */
++	if (th->th_seq != tp->rcv_nxt &&
++	    tcp_reass_qsize + 1 >= tcp_reass_maxseg) {
++		tcp_reass_overflows++;
++		tcpstat.tcps_rcvmemdrop++;
++		m_freem(m);
++		return (0);
++	}
++
+ 	/* Allocate a new queue entry. If we can't, just drop the pkt. XXX */
+ 	MALLOC(te, struct tseg_qent *, sizeof(struct tseg_qent), M_TSEGQ,
+ 	       M_NOWAIT);
+@@ -191,6 +224,7 @@ tcp_reass(tp, th, tlenp, m)
+ 		m_freem(m);
+ 		return (0);
+ 	}
++	tcp_reass_qsize++;
+ 
+ 	/*
+ 	 * Find a segment which begins after this one does.
+@@ -216,6 +250,7 @@ tcp_reass(tp, th, tlenp, m)
+ 				tcpstat.tcps_rcvdupbyte += *tlenp;
+ 				m_freem(m);
+ 				free(te, M_TSEGQ);
++				tcp_reass_qsize--;
+ 				/*
+ 				 * Try to present any queued data
+ 				 * at the left window edge to the user.
+@@ -251,6 +286,7 @@ tcp_reass(tp, th, tlenp, m)
+ 		LIST_REMOVE(q, tqe_q);
+ 		m_freem(q->tqe_m);
+ 		free(q, M_TSEGQ);
++		tcp_reass_qsize--;
+ 		q = nq;
+ 	}
+ 
+@@ -285,6 +321,7 @@ present:
+ 		else
+ 			sbappend(&so->so_rcv, q->tqe_m);
+ 		free(q, M_TSEGQ);
++		tcp_reass_qsize--;
+ 		q = nq;
+ 	} while (q && q->tqe_th->th_seq == tp->rcv_nxt);
+ 	ND6_HINT(tp);
+Index: tcp_subr.c
+===================================================================
+RCS file: /home/ncvs/src/sys/netinet/tcp_subr.c,v
+retrieving revision 1.73.2.32
+diff -u -p -r1.73.2.32 tcp_subr.c
+--- sys/netinet/tcp_subr.c	14 Feb 2004 22:23:23 -0000	1.73.2.32
++++ sys/netinet/tcp_subr.c	1 Mar 2004 16:38:05 -0000
+@@ -248,6 +248,11 @@ tcp_init()
+ 					&tcbinfo.porthashmask);
+ 	tcbinfo.ipi_zone = zinit("tcpcb", sizeof(struct inp_tp), maxsockets,
+ 				 ZONE_INTERRUPT, 0);
++
++	tcp_reass_maxseg = nmbclusters / 16;
++	TUNABLE_INT_FETCH("net.inet.tcp.reass.maxsegments",
++	    &tcp_reass_maxseg);
++
+ #ifdef INET6
+ #define TCP_MINPROTOHDR (sizeof(struct ip6_hdr) + sizeof(struct tcphdr))
+ #else /* INET6 */
+@@ -752,6 +757,7 @@ tcp_close(tp)
+ 		LIST_REMOVE(q, tqe_q);
+ 		m_freem(q->tqe_m);
+ 		FREE(q, M_TSEGQ);
++		tcp_reass_qsize--;
+ 	}
+ 	inp->inp_ppcb = NULL;
+ 	soisdisconnected(so);
+@@ -789,6 +795,7 @@ tcp_drain()
+ 					LIST_REMOVE(te, tqe_q);
+ 					m_freem(te->tqe_m);
+ 					FREE(te, M_TSEGQ);
++					tcp_reass_qsize--;
+ 				}
+ 			}
+ 		}
+Index: tcp_var.h
+===================================================================
+RCS file: /home/ncvs/src/sys/netinet/tcp_var.h,v
+retrieving revision 1.56.2.14
+diff -u -p -r1.56.2.14 tcp_var.h
+--- sys/netinet/tcp_var.h	14 Feb 2004 22:23:23 -0000	1.56.2.14
++++ sys/netinet/tcp_var.h	1 Mar 2004 16:38:05 -0000
+@@ -53,6 +53,8 @@ struct tseg_qent {
+ 	struct	mbuf	*tqe_m;		/* mbuf contains packet */
+ };
+ LIST_HEAD(tsegqe_head, tseg_qent);
++extern int	tcp_reass_maxseg;
++extern int	tcp_reass_qsize;
+ #ifdef MALLOC_DECLARE
+ MALLOC_DECLARE(M_TSEGQ);
+ #endif
