@@ -27,7 +27,7 @@
 
   <xsl:template name="process.contentwrap">
 	      <p>&os; wird von einer aktiven Gemeinschaft
-		unterst&uuml;tzt.</p>
+		unterstützt.</p>
 
 	      <p>Es gibt mehr als 100 <a
 		href="&base;/community/mailinglists.html">
@@ -39,18 +39,18 @@
 		select="count(document($usergroups.xml)//entry)"
 		/><xsl:text> </xsl:text>--> <a
 		href="&enbase;/usergroups.html">User Groups</a> in
-		36 L&#228;ndern. <!--<xsl:value-of
+		36 Ländern. <!--<xsl:value-of
 		select="count(document($usergroups.xml)//country)" />-->
-		Zus&#228;tzlich existiert eine aktive <a
+		Zusätzlich existiert eine aktive <a
 		href="&base;/community/irc.html">IRC</a>-Gemeinde.
 		Viele Entwickler betreiben auch <a
 		href="http://planet.freebsdish.org">Blogs</a>, in denen
-		sie &#252;ber ihre Arbeit an FreeBSD berichten.
-		Au&#223;erdem betreiben die &os;-Entwickler gemeinsam mit
-		einigen der wichtigsten Unterst&#252;tzer ein <a
+		sie über ihre Arbeit an FreeBSD berichten.
+		Außerdem betreiben die &os;-Entwickler gemeinsam mit
+		einigen der wichtigsten Unterstützer ein <a
 		href="http://wiki.FreeBSD.org/">Wiki</a>, das Informationen
 		zur &os;-Entwicklung und zu diversen Projekten
-		enth&#228;lt.  Weiters ist &os; auch in verschiedenen <a
+		enthält.  Weiters ist &os; auch in verschiedenen <a
 		href="&enbase;/community/social.html">Sozialen
 		Netzwerken</a> vertreten.</p>
 
@@ -61,13 +61,13 @@
 		select="count(/events/event[(number(enddate/year) =
 		(number($curdate.year) -1)) and (generate-id() =
 		generate-id(key('last-year-event-by-country',
-		location/country)[1]))])" />--> verschiedenen L&#228;ndern.
+		location/country)[1]))])" />--> verschiedenen Ländern.
 		Ein <a href="&enbase;/events/events.ics">Kalender</a> sowie
 		ein <a href="&enbase;/events/rss.xml">RSS Feed</a> zu
 		bevorstehenden FreeBSD-spezifischen Veranstaltungen sind
 		auf der Seite <a
 		href="&enbase;/events/events.html">Veranstaltungen</a>
-		verf&#252;gbar.  Und nicht zuletzt gibt es dutzende
+		verfügbar.  Und nicht zuletzt gibt es dutzende
 		Videos im Youtube-Channel <a
 		href="http://www.youtube.com/bsdconferences">BSD
 		Conferences</a>.</p>

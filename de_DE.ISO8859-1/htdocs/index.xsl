@@ -41,27 +41,27 @@
 				<h1>
 				  Auf BSD UNIX&reg; basierend
 				</h1>
-				<p>FreeBSD&reg; ist ein modernes Betriebssystem f&#252;r
+				<p>FreeBSD&reg; ist ein modernes Betriebssystem für
 				  Server, Desktops und eingebettete Systeme, das auf
 				  zahlreichen <a
 				  href="&base;/platforms/index.html">Plattformen</a>
-				  l&#228;uft.  Der Quellcode von FreeBSD wird seit
+				  läuft.  Der Quellcode von FreeBSD wird seit
 				  mehr als 30 Jahren kontinuierlich weiterentwickelt,
 				  verbessert und optimiert.  Das System wird
 				  von einer <a
 				  href="&enbase;/doc/en_US.ISO8859-1/articles/contributors/staff-committers.html">
-				  gro&#223;en Entwicklergruppe</a> gepflegt und erweitert.
-				  FreeBSD bietet Ihnen leistungsf&#228;hige
+				  großen Entwicklergruppe</a> gepflegt und erweitert.
+				  FreeBSD bietet Ihnen leistungsfähige
 				  und beeindruckende Netzwerk- und
 				  Sicherheitsfunktionen und eine exzellente
 				  Performance und wird deswegen beispielsweise von
-				  einigen der gr&#246;&#223;ten <a
+				  einigen der größten <a
 				  href="&enbase;/doc/&url.doc.langcode;/books/handbook/nutshell.html#INTRODUCTION-NUTSHELL-USERS">
 				  Internet-Seiten</a> und von zahlreichen Anbietern
-				  eingebetteter Netzwerk- und Speicherger&#228;te
+				  eingebetteter Netzwerk- und Speichergeräte
 				  eingesetzt.</p>
 
-				  <div id="txtfrontfeaturelink"> &#187;<a
+				  <div id="txtfrontfeaturelink"> »<a
 				    href="&base;/about.html" title="Learn More">Mehr Informationen</a>
 				  </div> <!-- TXTFRONTFEATURELINK -->
 			</div> <!-- FRONTFEATURECONTENT -->
@@ -118,7 +118,7 @@
 					<a href="&enbase;/es/" title="Spanisch">es</a>
 				  </li>
 				  <li>
-					<a href="&enbase;/fr/" title="Franz&#246;sisch">fr</a>
+					<a href="&enbase;/fr/" title="Französisch">fr</a>
 				  </li>
 				  <li>
 					<a href="&enbase;/hu/" title="Ungarisch">hu</a>
@@ -127,7 +127,7 @@
 					<a href="&enbase;/it/" title="Italienisch">it</a>
 				  </li>
 				  <li>
-					<a href="&enbase;/nl/" title="Holl&#228;ndisch">nl</a>
+					<a href="&enbase;/nl/" title="Holländisch">nl</a>
 				  </li>
 				  <li>
 					<a href="&enbase;/ja/" title="Japanisch">ja</a>

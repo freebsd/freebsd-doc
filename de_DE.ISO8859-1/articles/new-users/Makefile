@@ -6,7 +6,7 @@
 #    $FreeBSDde: de-docproj/articles/new-users/Makefile,v 1.2 2005/02/08 00:43:39 mheinen Exp $
 #    basiert auf: 1.11
 #
-# Article: Informationen f&uuml;r &os;- und &unix;-Einsteiger
+# Article: Informationen für &os;- und &unix;-Einsteiger
 
 DOC?= article
 
