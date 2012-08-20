@@ -35,8 +35,8 @@ hostname!= hostname
 DOCS+=	homepage.sgml
 .PHONY: homepage.inc
 
-homepage.inc: homepage.pl
-	${PERL} ${.CURDIR}/homepage.pl > ${.TARGET}
+homepage.inc: ${DOC_PREFIX}/en_US.ISO8859-1/htdocs/internal/homepage.pl
+	${PERL} ${DOC_PREFIX}/en_US.ISO8859-1/htdocs/internal/homepage.pl > ${.TARGET}
 
 homepage.html:  homepage.inc
 CLEANFILES+=	homepage.inc
