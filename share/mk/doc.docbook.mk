@@ -257,7 +257,7 @@ TOUCH?=		/usr/bin/touch
 XARGS?=		/usr/bin/xargs
 
 GROFF?=		groff
-TIDYOPTS?=	-wrap 90 -m -raw -preserve -f /dev/null -asxml ${TIDYFLAGS}
+TIDYOPTS?=	-wrap 90 -m -f /dev/null -asxml ${TIDYFLAGS}
 HTML2TXT?=	${PREFIX}/bin/links
 HTML2TXTOPTS?=	-dump -width 72 ${HTML2TXTFLAGS}
 HTML2PDB?=	${PREFIX}/bin/iSiloBSD
