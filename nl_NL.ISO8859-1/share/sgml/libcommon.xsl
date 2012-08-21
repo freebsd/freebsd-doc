@@ -33,15 +33,15 @@
       <li>Een URL voor de website van de gebruikersgroep.</li>
       <li>Een emailadres voor contact met het leidende persoon, te
 	gebruiken voor uw bezoekers en websitebeheerders.</li>
-      <li>Een korte (&eacute;&eacute;n paragraaf) beschrijving van de
+      <li>Een korte (één paragraaf) beschrijving van de
 	gebruikersgroep.</li>
     </ol>
 
     <p>Inzendingen dienen in HTML te zijn.  Om recht te doen aan de geest
       van &os; verkiezen we gebruikersgroepen die actief zijn en die hun
       zaak publiekelijk bedrijven.  Als u geen groep in uw buurt kunt
-      vinden, overweeg dan alstublieft om andere ge&iuml;nteresseerde
-      individu&euml;n bij u in de buurt te vinden via <a
+      vinden, overweeg dan alstublieft om andere geïnteresseerde
+      individuën bij u in de buurt te vinden via <a
 	href="http://bsd.meetup.com/">http://bsd.meetup.com/</a> en uw
       eigen gebruikersgroep te vormen.</p>
 
