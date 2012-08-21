@@ -30,33 +30,33 @@
 		<div id="frontfeatureleft">
 			<div id="frontfeaturecontent">
 				<h1>
-				  Basato su BSD UNIX&#174;
+				  Basato su BSD UNIX&reg;
 				</h1>				
-				<p>FreeBSD&#174; &#232; un sistema operativo avanzato per architetture
-				compatibili x86 (inclusi Pentium&#174; e Athlon&#8482;), amd64 (inclusi
-				Opteron&#8482;, Athlon 64, e EM64T),
-				UltraSPARC&#174;, IA-64, PC-98 e ARM.
-				&#200; derivato da BSD, la versione di
+				<p>FreeBSD&reg; è un sistema operativo avanzato per architetture
+				compatibili x86 (inclusi Pentium&reg; e Athlon&trade;), amd64 (inclusi
+				Opteron&trade;, Athlon 64, e EM64T),
+				UltraSPARC&reg;, IA-64, PC-98 e ARM.
+				È derivato da BSD, la versione di
 				&unix; sviluppata
-				all'Universit&#224; della California, Berkeley.
-				&#200; sviluppato e mantenuto da <a
+				all'Università della California, Berkeley.
+				È sviluppato e mantenuto da <a
 				href="&enbase;/doc/en_US.ISO8859-1/articles/contributors/staff-committers.html">un
 				grande gruppo di individui</a>.
 				<a href="&base;/platforms/index.html">Piattaforme</a>
 				aggiuntive sono in varie fasi di sviluppo.</p>
 				<div id="txtfrontfeaturelink">
-				&#187;<a href="&base;/about.html" title="Approfondisci">Approfondisci</a>
+				»<a href="&base;/about.html" title="Approfondisci">Approfondisci</a>
 				</div> <!-- TXTFRONTFEATURELINK -->
 			</div> <!-- FRONTFEATURECONTENT -->
 		</div> <!-- FRONTFEATURELEFT -->
 
 		<div id="frontfeaturemiddle">
 			<div class="frontgetroundbox">
-			  <div class="frontgettop"><div>&#160;</div>&#160;</div>
+			  <div class="frontgettop"><div>&nbsp;</div>&nbsp;</div>
 				<div class="frontgetcontent">
 				  <a href="&base;/where.html">Ottieni FreeBSD Ora</a>
 				</div> <!-- frontgetcontent -->
-			  <div class="frontgetbot"><div>&#160;</div>&#160;</div>
+			  <div class="frontgetbot"><div>&nbsp;</div>&nbsp;</div>
 			</div> <!-- frontgetroundbox -->
 			
 			<div id="frontreleases">
@@ -155,11 +155,11 @@
 			</div> <!-- FRONTSHORTCUTS -->
 
 			<div class="frontnewroundbox">
-			  <div class="frontnewtop"><div>&#160;</div>&#160;</div>
+			  <div class="frontnewtop"><div>&nbsp;</div>&nbsp;</div>
 			    <div class="frontnewcontent">
 			      <a href="&enbase;/projects/newbies.html">Neofita di FreeBSD?</a>
 			    </div> <!-- frontnewcontent -->
-			  <div class="frontnewbot"><div>&#160;</div>&#160;</div>
+			  <div class="frontnewbot"><div>&nbsp;</div>&nbsp;</div>
 			</div> <!-- frontnewroundbox -->
 		</div> <!-- FEATURERIGHT -->
 				
