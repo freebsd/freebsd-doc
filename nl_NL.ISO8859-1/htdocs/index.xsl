@@ -58,7 +58,7 @@
 				  embedded netwerk- en opslagapparaten
 				  gebruikt.</p>
 				<div id="txtfrontfeaturelink">
-				&#187;<a href="&base;/about.html" title="Meer weten">Meer weten</a>
+				&raquo;<a href="&base;/about.html" title="Meer weten">Meer weten</a>
 				</div> <!-- TXTFRONTFEATURELINK -->
 			</div> <!-- FRONTFEATURECONTENT -->
 		</div> <!-- FRONTFEATURELEFT -->
