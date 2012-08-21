@@ -1,9 +1,9 @@
-<?xml version="1.0"?>
+<?xml version="1.0" encoding="iso-8859-2"?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD Fragment//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
-<!ENTITY title "Kor&aacute;bbi rendezv&eacute;nyek">
+<!ENTITY title "Korábbi rendezvények">
 <!ENTITY rsslink "&base;/events/rss.xml">
-<!ENTITY rsstitle "K&ouml;zelg&#245; rendezv&eacute;nyek">
+<!ENTITY rsstitle "Közelgő rendezvények">
 ]>
 
 <!-- $FreeBSD$ -->
@@ -166,9 +166,9 @@
 	  </ul>
 	</xsl:for-each>
 
-        <p><a href="events.html">Aktu&aacute;lis rendezv&eacute;nyek</a></p>
+        <p><a href="events.html">Aktuális rendezvények</a></p>
 
-	<p>Az elm&uacute;lt &eacute;vek rendezv&eacute;nyei:</p>
+	<p>Az elmúlt évek rendezvényei:</p>
 
         <ul id="events-past-years">
 	<xsl:for-each select="/events">
@@ -231,7 +231,7 @@
   <xsl:template match="event" mode="upcoming">
     <li>
       <xsl:call-template name="eventbody"/>
-      <p>K&ouml;z&ouml;ss&eacute;gi linkek: <a rel="nofollow">
+      <p>Közösségi linkek: <a rel="nofollow">
         <xsl:attribute name="href">http://upcoming.yahoo.com/search?type=Events&amp;q=<xsl:value-of select="name" />&amp;Search=GO</xsl:attribute>
 upcoming</a></p>
     </li>
@@ -246,7 +246,7 @@ upcoming</a></p>
 
     <li>
       <xsl:call-template name="eventbody"/>
-      <p>K&ouml;z&ouml;ss&eacute;gi linkek: <a rel="nofollow">
+      <p>Közösségi linkek: <a rel="nofollow">
         <xsl:attribute name="href">http://www.flickr.com/search/?w=all&amp;q=<xsl:value-of select="name" />&amp;m=text</xsl:attribute>
       Flickr</a>, <a rel="nofollow">
         <xsl:attribute name="href">http://blogsearch.google.com/blogsearch?q=<xsl:value-of select="name" /></xsl:attribute>Blog Search</a><xsl:if test="contains($lcname, 'meetbsd') or contains($lcname, 'nycbsdcon')">,

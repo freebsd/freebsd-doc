@@ -1,7 +1,7 @@
-<?xml version="1.0"?>
+<?xml version="1.0" encoding="iso-8859-2"?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
-<!ENTITY title "&os; h&iacute;rek">
+<!ENTITY title "&os; hírek">
 <!ENTITY link "http://www.FreeBSD.org/hu/news/">
 <!ENTITY email "freebsd-www">
 <!ENTITY realname "Webmesterek">
@@ -30,7 +30,7 @@
       <channel>
 	<title>&title;</title>
 	<link>&link;</link>
-	<description>H&iacute;rek a &os; Projektr&#245;l</description>
+	<description>Hírek a &os; Projektről</description>
 	<language>hu-hu</language>
 	<webMaster>&email;@FreeBSD.org (&realname;)</webMaster>
 	<managingEditor>&email;@FreeBSD.org (&realname;)</managingEditor>

@@ -1,9 +1,9 @@
-<?xml version="1.0" ?>
+<?xml version="1.0" encoding="iso-8859-2"?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD Fragment//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
-<!ENTITY title "&os; t&eacute;m&aacute;j&uacute; rendezv&eacute;nyek">
+<!ENTITY title "&os; témájú rendezvények">
 <!ENTITY rsslink "&base;/events/rss.xml">
-<!ENTITY rsstitle "K&ouml;zelg&#245; &os; t&eacute;m&aacute;j&uacute; rendezv&eacute;nyek">
+<!ENTITY rsstitle "Közelgő &os; témájú rendezvények">
 ]>
 
 <!-- $FreeBSD$ -->
@@ -115,7 +115,7 @@
 	     upcoming/past events are split incorrectly.
 	-->
 	<xsl:comment>
-	  <xsl:text>A gener&aacute;l&aacute;s d&aacute;tuma: </xsl:text>
+	  <xsl:text>A generálás dátuma: </xsl:text>
 	  <xsl:value-of select="concat($curdate.year,
 	    format-number($curdate.month, '00'),
 	    format-number($curdate.day, '00'))"/>
@@ -147,7 +147,7 @@
 
 	  <h3>
 	    <xsl:attribute name="id">
-	      <xsl:text>d&aacute;tum:</xsl:text>
+	      <xsl:text>dátum:</xsl:text>
 	      <xsl:value-of select="concat(startdate/year,
 		format-number(startdate/month, '00'))"/>
 	    </xsl:attribute>
@@ -210,7 +210,7 @@
 	  </ul>
 	</xsl:for-each>
 
-	<p>A kor&aacute;bbi &eacute;vek rendezv&eacute;nyei:</p>
+	<p>A korábbi évek rendezvényei:</p>
 
         <ul id="events-past-years">
 	<xsl:for-each select="/events">
@@ -272,7 +272,7 @@
   <xsl:template match="event" mode="upcoming">
     <li>
       <xsl:call-template name="eventbody"/>
-      <p>K&ouml;z&ouml;ss&eacute;gi linkek: <a rel="nofollow">
+      <p>Közösségi linkek: <a rel="nofollow">
       <xsl:if test="upcomingurl">
         <xsl:attribute name="href"><xsl:value-of select="upcomingurl" /></xsl:attribute>
       </xsl:if>
@@ -299,7 +299,7 @@
 
     <li>
       <xsl:call-template name="eventbody"/>
-      <p>K&ouml;z&ouml;ss&eacute;gi linkek: <a rel="nofollow">
+      <p>Közösségi linkek: <a rel="nofollow">
         <xsl:attribute name="href">http://www.flickr.com/search/?w=all&amp;q=<xsl:value-of select="name" />&amp;m=text</xsl:attribute>
       Flickr</a>, <a rel="nofollow">
         <xsl:attribute name="href">http://blogsearch.google.com/blogsearch?q=<xsl:value-of select="name" /></xsl:attribute>Blog Search</a><xsl:if test="contains($lcname, 'meetbsd') or contains($lcname, 'nycbsdcon') or contains($lcname, 'dcbsdcon') or contains($lcname, 'asiabsdcon')">,

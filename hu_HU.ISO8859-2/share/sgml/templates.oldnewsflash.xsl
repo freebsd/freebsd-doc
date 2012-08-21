@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="ISO-8859-2" ?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
-<!ENTITY title "&os; h&iacute;rek">
+<!ENTITY title "&os; hírek">
 ]>
 
 <!-- $FreeBSD$ -->
@@ -38,11 +38,11 @@
 
   <xsl:template name="process.contentwrap">
 	<img src="&enbase;/gifs/news.jpg" align="right" border="0" width="193"
-	     height="144" alt="&os; h&iacute;rek"/>
+	     height="144" alt="&os; hírek"/>
 
 	<xsl:apply-templates select="descendant::month"/>
 	
-	<p>A kor&aacute;bbi &eacute;vek h&iacute;rei (2009-t&#245;l
+	<p>A korábbi évek hírei (2009-től
 	  magyarul):
 	  <a href="&base;/news/2009/index.html">2009</a>,
 	  <a href="&enbase;/news/2008/index.html">2008</a>,
@@ -59,7 +59,7 @@
 	  <a href="&enbase;/news/1997/index.html">1997</a>,
 	  <a href="&enbase;/news/1996/index.html">1996</a></p>
 
-	<a href="&base;/news/news.html">H&iacute;rek f&#245;oldal</a>
+	<a href="&base;/news/news.html">Hírek főoldal</a>
   </xsl:template>
 
   <xsl:template match="month">
