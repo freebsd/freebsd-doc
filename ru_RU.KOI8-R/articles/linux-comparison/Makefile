@@ -1,4 +1,4 @@
-# 
+#
 # The FreeBSD Russian Documentation Project
 #
 # $FreeBSDru: frdp/doc/ru_RU.KOI8-R/articles/linux-comparison/Makefile,v 1.2 2005/09/13 10:23:44 gad Exp $

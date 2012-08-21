@@ -12,7 +12,7 @@
 .endif
 
 DOCS+= index-site.sgml
-DOCS+= search.sgml 
+DOCS+= search.sgml
 DOCS+= searchhints.sgml
 DOCS+= search-mid.sgml
 

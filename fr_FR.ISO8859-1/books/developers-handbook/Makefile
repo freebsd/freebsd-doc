@@ -5,11 +5,11 @@
 #    Compilation du Manuel du Developpeur de FreeBSD
 #
 #
-# 
+#
 #    $FreeBSD$
 #    Original revision: 1.25
 #
-# 
+#
 
 MAINTAINER=gioria@FreeBSD.org
 
@@ -20,7 +20,7 @@ FORMATS?= html-split
 INSTALL_COMPRESSED?= gz
 INSTALL_ONLY_COMPRESSED?=
 
-# 
+#
 # SRCS lists the individual SGML files that make up the document. Changes
 # to any of these files will force a rebuild
 #

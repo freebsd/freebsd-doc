@@ -39,14 +39,14 @@
 			<div id="frontfeaturecontent">
 				<h1>
 				  Basado en BSD UNIX&reg;
-				</h1>				
+				</h1>
 				<p>FreeBSD es un avanzado sistema operativo para arquitecturas
 				x86 compatibles (como Pentium&reg; y Athlon&trade;),
 				amd64 compatibles (como Opteron&trade;, Athlon&trade;64 EM64T),
 				UltraSPARC&reg;, IA-64, PC-98 y ARM.
 				FreeBSD es un derivado de BSD, la versión de
 				UNIX&reg; desarrollada en la Universidad
-				de California, Berkeley.  FreeBSD es desarrollado y mantenido 
+				de California, Berkeley.  FreeBSD es desarrollado y mantenido
 				por un
 				<a href="&enbase;/doc/en_US.ISO8859-1/articles/contributors/index.html">
 				numeroso equipo de personas</a>.  El soporte para otras
@@ -66,7 +66,7 @@
 				</div> <!-- frontgetcontent -->
 			  <div class="frontgetbot"><div><b style="display: none">.</b></div></div>
 			</div> <!-- frontgetroundbox -->
-			
+
 			<div id="frontreleases">
 			  <div id="frontreleasescontent" class="txtshortcuts">
 				  <h2><a href="&enbase;/releases/">ÚLTIMAS VERSIONES</a></h2>
@@ -125,7 +125,7 @@
 				  <li class="last-child">
 					<a href="&enbase;/ru/" title="Chino (Simplificado)">zh_CN</a>
 				  </li>
-				</ul>				
+				</ul>
 			</div> <!-- languagenav -->
 
 			<div id="mirror">
@@ -173,7 +173,7 @@
 			  <div class="frontnewbot"><div><b style="display: none">.</b></div></div>
 			</div> <!-- frontnewroundbox -->
 		</div> <!-- featureright -->
-				
+
             </div> <!-- frontfeaturecontainer -->
 
 	    <br class="clearboth" />

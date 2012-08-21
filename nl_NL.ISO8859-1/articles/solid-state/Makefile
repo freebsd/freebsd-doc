@@ -1,4 +1,4 @@
-# 
+#
 # $FreeBSD$
 #
 # %SOURCE%	en_US.ISO8859-1/articles/solid-state/Makefile

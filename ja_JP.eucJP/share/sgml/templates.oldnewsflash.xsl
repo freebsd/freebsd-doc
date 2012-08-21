@@ -34,7 +34,7 @@
 
   <xsl:template name="process.contentwrap">
 	<xsl:apply-templates select="/news/descendant::month"/>
-	
+
 	<p>Other project news:
 	  <a href="&enbase;/news/2009/index.html">2009</a>,
 	  <a href="&enbase;/news/2008/index.html">2008</a>,
@@ -56,7 +56,7 @@
   </xsl:template>
 
   <!-- Everything that follows are templates for the rest of the content -->
-  
+
   <xsl:template match="month">
     <h1>
       <xsl:value-of select="ancestor::year/name"/>

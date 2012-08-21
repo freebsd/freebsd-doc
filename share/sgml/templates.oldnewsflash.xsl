@@ -21,7 +21,7 @@
   </xsl:variable>
 
   <xsl:variable name="title">&title;</xsl:variable>
-  
+
   <xsl:template match="p">
     <xsl:copy-of select="." />
   </xsl:template>
@@ -36,17 +36,17 @@
 	     inside an attribute is "{$variable}".
 
 	     This is just dis-similar enough to Perl and the shell that you
-	     end up writing ${variable} all the time, and then scratch your 
+	     end up writing ${variable} all the time, and then scratch your
 	     head wondering why the stylesheet isn't working.-->
 
 	<!-- Also notice that because this is now XML and not SGML, empty
-             elements, like IMG, must have a trailing "/" just inside the 
+             elements, like IMG, must have a trailing "/" just inside the
    	     closing angle bracket, like this " ... />" -->
 	<img src="&enbase;/gifs/news.jpg" align="right" border="0" width="193"
 	     height="144" alt="FreeBSD News"/>
 
 	<xsl:apply-templates select="descendant::month"/>
-	
+
 	<p>Other project news:
 	  <a href="../2009/index.html">2009</a>,
 	  <a href="../2008/index.html">2008</a>,
@@ -68,7 +68,7 @@
   </xsl:template>
 
   <!-- Everything that follows are templates for the rest of the content -->
-  
+
   <xsl:template match="month">
     <h1>
       <xsl:call-template name="transtable-lookup">

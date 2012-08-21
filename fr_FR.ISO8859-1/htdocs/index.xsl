@@ -83,7 +83,7 @@
 				</div> <!-- frontgetcontent -->
 			  <div class="frontgetbot"><div>&nbsp;</div>&nbsp;</div>
 			</div> <!-- frontgetroundbox -->
-			
+
 			<div id="frontreleases">
 			  <div id="frontreleasescontent" class="txtshortcuts">
 				  <h2><a href="&base;/releases/">DERNIERES VERSIONS</a></h2>
@@ -198,7 +198,7 @@
 			  <div class="frontnewbot"><div>&nbsp;</div>&nbsp;</div>
 			</div> <!-- frontnewroundbox -->
 		</div> <!-- FEATURERIGHT -->
-				
+
             </div> <!-- FRONTFEATURECONTAINER -->
 
 	    <br class="clearboth" />

@@ -1,4 +1,4 @@
-# 
+#
 # $FreeBSD$
 #
 # Article: FreeBSD Release Engineering of Third Party Software Packages

@@ -1,4 +1,4 @@
-# 
+#
 # $FreeBSD$
 #
 # Original revision: 1.4

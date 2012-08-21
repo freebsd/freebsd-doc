@@ -1,4 +1,4 @@
-# 
+#
 # $FreeBSD$
 # $FreeBSDes: doc/es_ES.ISO8859-1/books/handbook/Makefile,v 1.6 2004/10/08 22:36:28 jesusr Exp $
 #
@@ -18,13 +18,13 @@
 #			fingerprints by default.  If you would like for the
 #			entire key to be displayed, then set this variable.
 #			This option has no affect on the HTML formats.
-#			
+#
 # Handbook-specific targets
 #
 #       pgpkeyring      This target will read the contents of
 #                       pgpkeys/chapter.sgml and will extract all of
 #                       the pgpkeys to standard out.  This output can then
-#                       be redirected into a file and distributed as a 
+#                       be redirected into a file and distributed as a
 #                       public keyring of FreeBSD developers that can
 #                       easily be imported into PGP/GPG.
 #
@@ -150,7 +150,7 @@ IMAGES_LIB+= callouts/8.png
 IMAGES_LIB+= callouts/9.png
 IMAGES_LIB+= callouts/10.png
 
-# 
+#
 # SRCS lists the individual SGML files that make up the document. Changes
 # to any of these files will force a rebuild
 #
@@ -195,7 +195,7 @@ SRCS+= virtualization/chapter.sgml
 SRCS+= x11/chapter.sgml
 
 # Entities
-SRCS+= chapters.ent 
+SRCS+= chapters.ent
 
 SYMLINKS=	${DESTDIR} index.html handbook.html
 

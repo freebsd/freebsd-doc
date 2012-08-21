@@ -6,11 +6,11 @@
 
 <!-- $FreeBSD$ -->
 
-<!-- 
+<!--
    The FreeBSD French Documentation Project
    Original revision: 1.5
-   
-   Version francaise : Stephane Legrand <stephane@freebsd-fr.org> 
+
+   Version francaise : Stephane Legrand <stephane@freebsd-fr.org>
 -->
 
 <!-- Standard header material -->
@@ -65,11 +65,11 @@
 	</xsl:apply-templates>
 
 	<!-- Standard footer -->
-	<a href="../news.html">News Home</a> | <a href="status.html">Status Home</a> 
+	<a href="../news.html">News Home</a> | <a href="status.html">Status Home</a>
   </xsl:template>
 
   <!-- Everything that follows are templates for the rest of the content -->
-  
+
   <!-- A section creates a header, and copies in all the <p> elements from
        itself -->
   <xsl:template match="section">

@@ -22,7 +22,7 @@
 #       pgpkeyring      This target will read the contents of
 #                       pgpkeys/chapter.sgml and will extract all of
 #                       the pgpkeys to standard out.  This output can then
-#                       be redirected into a file and distributed as a 
+#                       be redirected into a file and distributed as a
 #                       public keyring of FreeBSD developers that can
 #                       easily be imported into PGP/GPG.
 #

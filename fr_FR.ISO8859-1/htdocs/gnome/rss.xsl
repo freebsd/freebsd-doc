@@ -3,11 +3,11 @@
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
 <!-- $FreeBSD$ -->
 
-<!-- 
+<!--
   The FreeBSD French Documentation Project
   Original revision: 1.4
 
-  Version francaise : Stephane Legrand <stephane@freebsd-fr.org> 
+  Version francaise : Stephane Legrand <stephane@freebsd-fr.org>
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"

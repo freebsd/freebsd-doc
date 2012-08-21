@@ -46,7 +46,7 @@
       <xsl:attribute name="href">
         <xsl:value-of select="$link" /><xsl:text>rss.xml</xsl:text>
       </xsl:attribute>
-    </atom:link> 
+    </atom:link>
   </xsl:template>
 
   <!-- template: "rss-java-news-items"

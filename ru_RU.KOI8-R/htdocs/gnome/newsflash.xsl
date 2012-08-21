@@ -20,19 +20,19 @@
 
   <xsl:variable name="base" select="'../..'"/>
   <xsl:variable name="title" select="'Последние новости FreeBSD GNOME'"/>
-  
+
   <xsl:template name="process.content">
     <div id="contentwrap">
 
 	<xsl:apply-templates select="/events/descendant::month"/>
-	
+
 	<xsl:copy-of select="$newshome"/>
 
 	  	</div> <!-- contentwrap -->
   </xsl:template>
 
   <!-- Everything that follows are templates for the rest of the content -->
-  
+
   <xsl:template match="month">
     <h1><xsl:value-of select="name"/>
       <xsl:text> </xsl:text>
@@ -56,7 +56,7 @@
 
 	<b><xsl:value-of select="ancestor::day/name"/>
 	  <xsl:text> </xsl:text>
-	  <xsl:value-of select="ancestor::month/name"/>, 
+	  <xsl:value-of select="ancestor::month/name"/>,
 	  <xsl:value-of select="ancestor::year/name"/>:</b><xsl:text> </xsl:text>
 	<xsl:copy-of select="p"/>
 	</p>

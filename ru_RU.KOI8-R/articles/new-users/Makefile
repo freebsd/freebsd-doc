@@ -5,7 +5,7 @@
 # $FreeBSDru: frdp/doc/ru_RU.KOI8-R/articles/new-users/Makefile,v 1.2 2005/10/28 17:39:43 gad Exp $
 #
 # Original revision: r21827
-# 
+#
 # Article: For People New to Both FreeBSD and Unix
 
 DOC?= article

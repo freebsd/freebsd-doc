@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
 <!-- The FreeBSD Dutch Documentation Project
-     $FreeBSD$ 
+     $FreeBSD$
      %SOURCE%	share/sgml/mirrors-local.xsl
      %SRCID%	38826
 -->

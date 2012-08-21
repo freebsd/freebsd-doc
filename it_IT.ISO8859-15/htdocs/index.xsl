@@ -31,7 +31,7 @@
 			<div id="frontfeaturecontent">
 				<h1>
 				  Basato su BSD UNIX&reg;
-				</h1>				
+				</h1>
 				<p>FreeBSD&reg; è un sistema operativo avanzato per architetture
 				compatibili x86 (inclusi Pentium&reg; e Athlon&trade;), amd64 (inclusi
 				Opteron&trade;, Athlon 64, e EM64T),
@@ -58,7 +58,7 @@
 				</div> <!-- frontgetcontent -->
 			  <div class="frontgetbot"><div>&nbsp;</div>&nbsp;</div>
 			</div> <!-- frontgetroundbox -->
-			
+
 			<div id="frontreleases">
 			  <div id="frontreleasescontent" class="txtshortcuts">
 				  <h2><a href="&base;/releases/">ULTIME RELEASE</a></h2>
@@ -162,7 +162,7 @@
 			  <div class="frontnewbot"><div>&nbsp;</div>&nbsp;</div>
 			</div> <!-- frontnewroundbox -->
 		</div> <!-- FEATURERIGHT -->
-				
+
             </div> <!-- FRONTFEATURECONTAINER -->
 
 	    <br class="clearboth" />

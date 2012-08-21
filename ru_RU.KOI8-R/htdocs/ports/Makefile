@@ -31,7 +31,7 @@ ${INDEX}:
 	${BUNZIP2} ${INDEX}.bz2
 .endif
 
-# build the list of available packages only on the 
+# build the list of available packages only on the
 # main FreeBSD machines
 hostname!= hostname
 

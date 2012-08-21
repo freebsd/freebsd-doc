@@ -14,7 +14,7 @@ INSTALL_ONLY_COMPRESSED?=
 
 WITH_ARTICLE_TOC?=YES
 
-# 
+#
 # SRCS lists the individual SGML files that make up the document. Changes
 # to any of these files will force a rebuild
 #

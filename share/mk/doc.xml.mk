@@ -206,7 +206,7 @@ _DEPENDSET.commercial=	${XML_COMMERCIAL_CONSULT} \
 			${XML_COMMERCIAL_SOFTWARE} \
 			${XSL_ENTRIES} \
 			${XML_INCLUDES}
-_PARAMS.commercial=	
+_PARAMS.commercial=
 XML_COMMERCIAL_CONSULT=	${DOC_PREFIX}/share/sgml/commercial.consult.xml
 XML_COMMERCIAL_HARDWARE=${DOC_PREFIX}/share/sgml/commercial.hardware.xml
 XML_COMMERCIAL_ISP=	${DOC_PREFIX}/share/sgml/commercial.isp.xml

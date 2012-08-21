@@ -485,7 +485,7 @@
   <!-- template: "html-news-list-press-preface" -->
   <xsl:template name="html-news-list-press-preface">
     <p>If you know of any news stories featuring FreeBSD that we have not
-      listed here, please send details to 
+      listed here, please send details to
       <a href="mailto:www@FreeBSD.org">www@FreeBSD.org</a> so that we can
       include them.</p>
   </xsl:template>
@@ -1050,7 +1050,7 @@
       <xsl:attribute name="href">
         <xsl:value-of select="$link" /><xsl:text>rss.xml</xsl:text>
       </xsl:attribute>
-    </atom:link> 
+    </atom:link>
   </xsl:template>
 
   <!-- template: "rss-security-advisories-items"
@@ -1130,7 +1130,7 @@
       <xsl:attribute name="href">
         <xsl:value-of select="$link" /><xsl:text>rss.xml</xsl:text>
       </xsl:attribute>
-    </atom:link> 
+    </atom:link>
   </xsl:template>
 
   <!-- template: "rss-errata-notices-items"
@@ -1302,7 +1302,7 @@
 	//descendant::year[name = $year]
 	/month[name = $month]
 	/story[url = $url]" />
-      
+
       <p>
       <span class="txtdate">
 	<xsl:value-of select='
@@ -1330,7 +1330,7 @@
 	  </xsl:otherwise>
 	</xsl:choose>
       </a></p>
-      
+
     </xsl:for-each>
   </xsl:template>
 
@@ -1395,7 +1395,7 @@
       </xsl:attribute>
       <xsl:value-of select="@name"/></a><br/>
   </xsl:template>
-  
+
  <!-- template: "html-index-events-items"
        pulls in the 5 most recent events items -->
 

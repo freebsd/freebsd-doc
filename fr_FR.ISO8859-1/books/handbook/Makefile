@@ -15,7 +15,7 @@
 #			fingerprints by default.  If you would like for the
 #			entire key to be displayed, then set this variable.
 #			This option has no affect on the HTML formats.
-#			
+#
 # Handbook-specific targets
 #
 #       pgpkeyring      This target will read the contents of

@@ -10,7 +10,7 @@
 .if exists(../Makefile.inc)
 .include "../Makefile.inc"
 .endif
- 
+
 DOCS=	index.sgml
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"

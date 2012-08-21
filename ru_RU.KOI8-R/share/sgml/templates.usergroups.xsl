@@ -21,7 +21,7 @@
       <a href="http://www.freebsd.org/send-pr.html">сообщение о проблеме</a>
       для категории www.  Посылаемое сообщение должны быть в формате HTML и содержать
       краткое описание.</p>
-    
+
     <h3>Регионы</h3>
   </xsl:template>
 </xsl:stylesheet>

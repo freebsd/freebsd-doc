@@ -41,7 +41,7 @@
 	     height="144" alt="&os; hírek"/>
 
 	<xsl:apply-templates select="descendant::month"/>
-	
+
 	<p>A korábbi évek hírei (2009-tõl
 	  magyarul):
 	  <a href="&base;/news/2009/index.html">2009</a>,

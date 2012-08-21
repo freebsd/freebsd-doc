@@ -2,7 +2,7 @@
 # $FreeBSD$
 #
 # Article: Implementing UFS journaling on a desktop PC
-# 
+#
 # %SOURCE%	en_US.ISO8859-1/articles/gjournal-desktop/Makefile
 # %SRCID%	1.1
 #

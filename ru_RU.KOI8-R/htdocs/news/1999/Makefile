@@ -10,7 +10,7 @@
 .if exists(../Makefile.inc)
 .include "../Makefile.inc"
 .endif
- 
+
 DOCS=	index.sgml
 
 XMLDOCS+=	press:${XSL_NEWS_PRESS_OLD}::
