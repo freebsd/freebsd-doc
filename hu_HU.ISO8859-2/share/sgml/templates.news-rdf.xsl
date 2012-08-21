@@ -1,4 +1,4 @@
-<?xml version="1.0"?>
+<?xml version="1.0" encoding="iso-8859-2"?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
 
@@ -23,9 +23,9 @@
 	     xmlns="http://my.netscape.com/rdf/simple/0.9/">
 
       <channel>
-	<title>A &os; Projekt h&iacute;rei</title>
+	<title>A &os; Projekt hírei</title>
 	<link>http://www.FreeBSD.org/hu/news/</link>
-	<description>H&iacute;rek a &os; Projektr&#245;l</description>
+	<description>Hírek a &os; Projektről</description>
       </channel>
 
       <!-- Only include the last 10 events -->

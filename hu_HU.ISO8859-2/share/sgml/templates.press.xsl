@@ -1,7 +1,7 @@
-<?xml version="1.0"?>
+<?xml version="1.0" encoding="iso-8859-2"?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
-<!ENTITY title "&os; a sajt&oacute;ban">
+<!ENTITY title "&os; a sajtóban">
 <!ENTITY rsslink "press-rss.xml">
 <!ENTITY rsstitle "&title;">
 ]>

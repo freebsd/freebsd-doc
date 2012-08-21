@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="ISO-8859-2" ?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
-<!ENTITY title "&os; a sajt&oacute;ban">
+<!ENTITY title "&os; a sajtóban">
 ]>
 
 <!-- $FreeBSD$ -->
@@ -35,8 +35,8 @@
   <xsl:template name="process.contentwrap">
 	<xsl:apply-templates select="//month"/>
 	
-	<p>A kor&aacute;bbi &eacute;vek sajt&oacute;kiadv&aacute;nyai
-	  (2008-t&oacute;l magyarul):
+	<p>A korábbi évek sajtókiadványai
+	  (2008-tól magyarul):
 	  <a href="&base;/news/2008/press.html">2008</a>,
 	  <a href="&enbase;/news/2007/press.html">2007</a>,
 	  <a href="&enbase;/news/2006/press.html">2006</a>,
@@ -49,7 +49,7 @@
 	  <a href="&enbase;/news/1999/press.html">1999</a>,
 	  <a href="&enbase;/news/1998/press.html">1998-1996</a></p>
 
-	<a href="&base;/news/news.html">H&iacute;rek f&#245;oldal</a>
+	<a href="&base;/news/news.html">Hírek főoldal</a>
   </xsl:template>
 
   <xsl:template match="month">
