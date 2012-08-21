@@ -15,7 +15,7 @@ DOCS+=	doc-set.sgml
 DOCS+=	hungarian.sgml
 DOCS+=  sgml.sgml
 DOCS+=  submitting.sgml
-DOCS+=  who.sgml 
+DOCS+=  who.sgml
 DOCS+=	docproj.sgml
 
 INDEXLINK= docproj.html

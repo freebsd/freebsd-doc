@@ -281,7 +281,7 @@ upcoming</a></p>
           <li><a>
 	    <xsl:attribute name="href">events<xsl:value-of select="$first"/>.html</xsl:attribute>
             <xsl:value-of select="$first" />
-          </a></li>    
+          </a></li>
         </xsl:if>
         <xsl:call-template name="split-string">
           <xsl:with-param name="text" select="substring-after($text,$seperator)"/>

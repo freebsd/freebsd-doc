@@ -1,6 +1,6 @@
 #
 # The FreeBSD Russian Documentation Project
-# 
+#
 # $FreeBSD$
 # $FreeBSDru: frdp/doc/ru_RU.KOI8-R/articles/multi-os/Makefile,v 1.1 2005/05/19 15:55:28 gad Exp $
 #

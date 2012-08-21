@@ -10,15 +10,15 @@
 <!ENTITY % freebsd.l10n PUBLIC "-//FreeBSD//ENTITIES DocBook Language Specific Entities//EN">
 %freebsd.l10n;
 
-<!ENTITY % output.html  "IGNORE"> 
+<!ENTITY % output.html  "IGNORE">
 <!ENTITY % output.print "IGNORE">
 ]>
 
 <style-sheet>
   <style-specification use="docbook">
     <style-specification-body>
- 
-      <![ %output.html; [ 
+
+      <![ %output.html; [
 
 	(define ($email-footer$)
           (make sequence

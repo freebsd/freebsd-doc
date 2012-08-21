@@ -1,4 +1,4 @@
-# 
+#
 # $FreeBSD$
 #
 # BSDL vs GPL article.

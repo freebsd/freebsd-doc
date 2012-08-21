@@ -1,4 +1,4 @@
-# 
+#
 # $FreeBSD$
 #
 # Perforce in FreeBSD Development article.

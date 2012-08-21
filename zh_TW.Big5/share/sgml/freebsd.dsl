@@ -3,14 +3,14 @@
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
 <!ENTITY freebsd.dsl PUBLIC "-//FreeBSD//DOCUMENT DocBook Language Neutral Stylesheet//EN" CDATA DSSSL>
 
-<!ENTITY % output.html  "IGNORE"> 
+<!ENTITY % output.html  "IGNORE">
 <!ENTITY % output.print "IGNORE">
 ]>
 
 <style-sheet>
   <style-specification use="docbook">
     <style-specification-body>
-      <![ %output.html; [ 
+      <![ %output.html; [
 
 	(define ($email-footer$)
           (make sequence
@@ -24,7 +24,7 @@
                 (literal "。")))
             (make element gi: "p"
                   attributes: (list (list "align" "center"))
-              (make element gi: "small"  
+              (make element gi: "small"
                 (literal "若有 FreeBSD 方面疑問，請先閱讀 ")
 		(create-link
 		  (list (list "HREF" "http://www.FreeBSD.org/docs.html"))
@@ -57,6 +57,6 @@
       ]]>
     </style-specification-body>
   </style-specification>
-    
+
   <external-specification id="docbook" document="freebsd.dsl">
 </style-sheet>

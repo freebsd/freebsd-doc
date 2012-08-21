@@ -76,7 +76,7 @@
 		  YouTube の
 		  <a href="http://www.youtube.com/bsdconferences">BSD
 		    Conferences</a> チャネルで公開されています。</p>
-		
+
 <!-- The Latest Videos section is placed inside an invisible block, which
      is only made visible if the browser supports Javascript. -->
 

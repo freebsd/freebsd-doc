@@ -5,11 +5,11 @@
 #    Compilation du Manuel PPP
 #
 #
-# 
+#
 #    $FreeBSD$
 #    Original revision: 1.1
 #    $Id: Makefile,v 1.1 2002-02-14 14:52:21 gioria Exp $
-# 
+#
 #    Build the PPP PrimerQ
 #
 
@@ -22,13 +22,13 @@ FORMATS?= html-split html
 INSTALL_COMPRESSED?= gz
 INSTALL_ONLY_COMPRESSED?=
 
-# 
+#
 # SRCS lists the individual SGML files that make up the document. Changes
 # to any of these files will force a rebuild
 #
 
 # SGML content
-SRCS=  book.sgml 
+SRCS=  book.sgml
 
 DOC_PREFIX?= ${.CURDIR}/../../..
 

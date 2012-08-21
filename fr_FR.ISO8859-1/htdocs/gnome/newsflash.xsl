@@ -6,7 +6,7 @@
 
 <!-- $FreeBSD$ -->
 
-<!-- 
+<!--
      The FreeBSD French Documentation Project
      Original revision: 1.8
 

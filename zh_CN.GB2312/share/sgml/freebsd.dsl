@@ -246,8 +246,8 @@
 	      (element-title-sosofo component))
 	    (make sequence
 	      ;; Special case.  This is a bit of a hack.
-	      ;; I need to revisit this aspect of 
-	      ;; appendixes. 
+	      ;; I need to revisit this aspect of
+	      ;; appendixes.
 	      (if (and (equal? (gi component) (normalize "appendix"))
 		       (or (equal? (gi elemnode) (normalize "sect1"))
 			   (equal? (gi elemnode) (normalize "section")))
@@ -277,7 +277,7 @@
 -->
 
 (define ($paragraph$ #!optional (para-wrapper "P"))
-  (let ((footnotes (select-elements (descendants (current-node)) 
+  (let ((footnotes (select-elements (descendants (current-node))
 				    (normalize "footnote")))
 	(tgroup (have-ancestor? (normalize "tgroup"))))
     (make sequence
@@ -348,7 +348,7 @@
 		 (select-elements (children (current-node)) (normalize "docinfo")))
 		((equal? (gi) (normalize "chapter"))
 		 (select-elements (children (current-node)) (normalize "docinfo")))
-		((equal? (gi) (normalize "dedication")) 
+		((equal? (gi) (normalize "dedication"))
 		 (empty-node-list))
 		((equal? (gi) (normalize "glossary"))
 		 (select-elements (children (current-node)) (normalize "docinfo")))
@@ -364,15 +364,15 @@
 		 (empty-node-list))))
 	 (exp-children (if (node-list-empty? info)
 			   (empty-node-list)
-			   (expand-children (children info) 
-					    (list (normalize "bookbiblio") 
+			   (expand-children (children info)
+					    (list (normalize "bookbiblio")
 						  (normalize "bibliomisc")
 						  (normalize "biblioset")))))
 	 (parent-titles (select-elements (children (current-node)) (normalize "title")))
 	 (titles	(if (node-list-empty? parent-titles)
 			    (select-elements exp-children (normalize "title"))
 			    parent-titles))
-	 (parent-subttl (select-elements (children (current-node)) (normalize "subtitle")))	    
+	 (parent-subttl (select-elements (children (current-node)) (normalize "subtitle")))
 	 (subtitles	(if (node-list-empty? parent-subttl)
 			    (select-elements exp-children (normalize "subtitle"))
 			    parent-subttl)))
@@ -461,7 +461,7 @@
 
 (mode hf-mode
   (element title
-    (let* ((component (ancestor-member (current-node) 
+    (let* ((component (ancestor-member (current-node)
 				       (component-element-list)))
 	   (chaporapp (or (equal? (gi component) (normalize "chapter"))
 			  (equal? (gi component) (normalize "appendix")))))
@@ -658,7 +658,7 @@
   )
 )
 
-(define %title-font-family% 
+(define %title-font-family%
   (cond
     (rtf-backend "AR PL New Sung")
     (else "Arial")
@@ -672,14 +672,14 @@
   )
 )
 
-(define %mono-font-family% 
+(define %mono-font-family%
   (cond
     (rtf-backend "AR PL New Sung")
     (else "Courier New")
   )
 )
 
-(define %admon-font-family% 
+(define %admon-font-family%
   (cond
     (rtf-backend "AR PL New Sung")
     (else "Arial")

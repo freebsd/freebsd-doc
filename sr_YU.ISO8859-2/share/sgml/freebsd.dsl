@@ -2,7 +2,7 @@
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
 <!ENTITY freebsd.dsl PUBLIC "-//FreeBSD//DOCUMENT DocBook Language Neutral Stylesheet//EN" CDATA DSSSL>
-<!ENTITY % output.html  "IGNORE"> 
+<!ENTITY % output.html  "IGNORE">
 <!ENTITY % output.print "IGNORE">
 <!ENTITY % lang.sr.dsssl "IGNORE">
 ]>
@@ -10,12 +10,12 @@
 <style-sheet>
   <style-specification use="docbook">
     <style-specification-body>
-      
+
       <![ %lang.sr.dsssl; [
         (define %gentext-language% "sr")
       ]]>
-      
-      <![ %output.html; [ 
+
+      <![ %output.html; [
 	(define ($email-footer$)
           (make sequence
 	    (make element gi: "p"
@@ -28,7 +28,7 @@
                 (literal ".")))
             (make element gi: "p"
                   attributes: (list (list "align" "center"))
-              (make element gi: "small"  
+              (make element gi: "small"
                 (literal "For questions about FreeBSD, read the ")
                 (make element gi: "a"
                       attributes: (list (list "href" "http://www.freebsd.org/docs.html"))

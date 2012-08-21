@@ -18,17 +18,17 @@ DOCS+= art.sgml
 DOCS+= auditors.sgml
 DOCS+= availability.sgml
 DOCS+= community.sgml
-DOCS+= docs.sgml 
+DOCS+= docs.sgml
 DOCS+= features.sgml
-DOCS+= internet.sgml 
+DOCS+= internet.sgml
 DOCS+= logo.sgml
-DOCS+= mailto.sgml 
+DOCS+= mailto.sgml
 DOCS+= publish.sgml
 DOCS+= relnotes.sgml
 DOCS+= send-pr.sgml
 DOCS+= support.sgml
-DOCS+= where.sgml 
-DOCS+= y2kbug.sgml 
+DOCS+= where.sgml
+DOCS+= y2kbug.sgml
 
 # These will be directly installed.
 

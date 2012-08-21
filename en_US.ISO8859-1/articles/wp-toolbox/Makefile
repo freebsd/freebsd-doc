@@ -1,4 +1,4 @@
-# 
+#
 # $FreeBSD$
 #
 # Article: Casestudy about FreeBSD as a Software Testing Toolbox

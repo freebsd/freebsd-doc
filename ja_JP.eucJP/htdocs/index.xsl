@@ -52,7 +52,7 @@
 			  が開発・保守をおこなっています。
 			  FreeBSD は高度なネットワーク、堅固なセキュリティ機能、
 			  世界最大クラスのパフォーマンスを提供し、
-			  世界最大規模の <a	
+			  世界最大規模の <a
 			  href = "&enbase;/doc/ja_JP.eucJP/books/handbook/nutshell.html#INTRODUCTION-NUTSHELL-USERS">ウェブサイト</a> や、
 			  広く普及している組み込みネットワーク機器、
 			  ストレージデバイスで利用されています。

@@ -23,11 +23,11 @@
   <xsl:param name="callout.graphics.path" select="'./imagelib/callouts/'"/>
 
   <xsl:template name="user.footer.content">
-    <p align="center"><small>This, and other documents, can be downloaded 
+    <p align="center"><small>This, and other documents, can be downloaded
     from <a href="ftp://ftp.FreeBSD.org/pub/FreeBSD/doc/">ftp://ftp.FreeBSD.org/pub/FreeBSD/doc/</a></small></p>
 
-    <p align="center"><small>For questions about FreeBSD, read the 
-    <a href="http://www.FreeBSD.org/docs.html">documentation</a> before 
+    <p align="center"><small>For questions about FreeBSD, read the
+    <a href="http://www.FreeBSD.org/docs.html">documentation</a> before
     contacting &lt;<a href="mailto:questions@FreeBSD.org">questions@FreeBSD.org</a>&gt;.<br/>
     For questions about this documentation, e-mail &lt;<a href="mailto:doc@FreeBSD.org">doc@FreeBSD.org</a>&gt;.</small></p>
   </xsl:template>

@@ -1,4 +1,4 @@
-# 
+#
 # $FreeBSD$
 #
 # Article: LDAP Authentication

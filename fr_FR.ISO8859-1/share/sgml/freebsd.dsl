@@ -18,8 +18,8 @@
 <style-sheet>
   <style-specification use="docbook">
     <style-specification-body>
- 
-      <![ %output.html; [ 
+
+      <![ %output.html; [
 
         <!-- Fix a problem with the French localisation.  This should really
              be a patch to the dsssl-docbook-modular port, but this gets it
@@ -40,7 +40,7 @@
                 (literal ".")))
             (make element gi: "p"
                   attributes: (list (list "align" "center"))
-              (make element gi: "small"  
+              (make element gi: "small"
                 (literal "Pour toutes questions à propos de FreeBSD, lisez la ")
                 (make element gi: "a"
                       attributes: (list (list "href" "http://www.freebsd.org/docs.html"))

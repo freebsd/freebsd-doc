@@ -97,7 +97,7 @@
       </pubDate>
     </item>
   </xsl:template>
-  
+
   <xsl:template match="name | date"/>
 
 </xsl:stylesheet>

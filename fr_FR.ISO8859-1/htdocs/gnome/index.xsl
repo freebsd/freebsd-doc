@@ -5,10 +5,10 @@
 ]>
 <!-- $FreeBSD$ -->
 
-<!-- 
-   The FreeBSD French Documentation Project 
+<!--
+   The FreeBSD French Documentation Project
    Original revision: 1.87
-   
+
    Version francaise : Stephane Legrand <stephane@freebsd-fr.org>
 -->
 

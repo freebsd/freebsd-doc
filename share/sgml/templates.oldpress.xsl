@@ -28,7 +28,7 @@
 
   <xsl:template name="process.content">
 	<xsl:apply-templates select="//month"/>
-	
+
 	<p>Other press publications:
 	  <a href="../2009/press.html">2009</a>,
 	  <a href="../2008/press.html">2008</a>,
@@ -47,7 +47,7 @@
   </xsl:template>
 
   <!-- Everything that follows are templates for the rest of the content -->
-  
+
   <xsl:template match="month">
     <h1>
       <xsl:call-template name="transtable-lookup">
@@ -78,7 +78,7 @@
 
       <p><a href="{$url}"><b><xsl:value-of
       select="name"/></b></a><br/>
-	  
+
 	<a href="{$site-url}"><xsl:value-of
 	select="site-name"/></a>, <xsl:value-of select="author"/><br/>
 	<xsl:apply-templates select="p/child::node()" mode="copy.html"/>

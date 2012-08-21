@@ -6,7 +6,7 @@
 #
 # Original revision: 1.18
 #
- 
+
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
 .endif

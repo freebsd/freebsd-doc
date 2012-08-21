@@ -66,11 +66,11 @@
 	</xsl:apply-templates>
 
 	<!-- Standard footer -->
-	<a href="../news.html">News Home</a> | <a href="status.html">Status Home</a> 
+	<a href="../news.html">News Home</a> | <a href="status.html">Status Home</a>
   </xsl:template>
 
   <!-- Everything that follows are templates for the rest of the content -->
-  
+
   <!-- A section creates a header, and copies in all the <p> elements from
        itself -->
   <xsl:template match="section">
@@ -138,6 +138,6 @@
       <xsl:for-each select="task">
 	<li><xsl:apply-templates select="child::node()" mode="copy.html"/></li>
       </xsl:for-each>
-    </ol>    
+    </ol>
   </xsl:template>
 </xsl:stylesheet>

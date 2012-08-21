@@ -13,7 +13,7 @@
 		xmlns:rdf1="http://my.netscape.com/rdf/simple/0.9/"
 		xmlns="http://www.w3.org/1999/xhtml"
 		exclude-result-prefixes="rdf rdf1" version="1.0">
-  
+
   <xsl:import href="../includes.xsl"/>
   <xsl:import href="includes.xsl"/>
   <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/xhtml.xsl"/>
@@ -150,10 +150,10 @@
                            bgcolor="#ffcc66" width="100%">
                       <tr>
                         <td valign="top">
-                        
+
                         <p><font size="+1" color="#990000"><b>FreeBSD GNOME News</b></font><br/>
                           <font size="-1">
-                            Latest update: 
+                            Latest update:
                             <xsl:value-of
                               select="descendant::month[position() = 1]/name"/>
                             <xsl:text> </xsl:text>
@@ -181,7 +181,7 @@
                             </xsl:for-each>
                             <a href="newsflash.html">More...</a>
                           </font></p>
-                          
+
                           <p><font size="+1" color="#990000"><b>GNOME Project News</b></font><br/>
                             <font size="-1">
                               <xsl:for-each select="document('http://gnomedesktop.org/backend.php')/rss/channel/*[name() = 'item'][position() &lt; 10]">

@@ -34,7 +34,7 @@
 
   <xsl:template name="process.contentwrap">
 	<xsl:apply-templates select="//month"/>
-	
+
 	<p>A korábbi évek sajtókiadványai
 	  (2008-tól magyarul):
 	  <a href="&base;/news/2008/press.html">2008</a>,
@@ -82,7 +82,7 @@
 
       <p><a href="{$url}"><b><xsl:value-of
       select="name"/></b></a><br/>
-	  
+
 	<a href="{$site-url}"><xsl:value-of
 	select="site-name"/></a>, <xsl:value-of select="author"/><br/>
 	<xsl:apply-templates select="p/child::node()" mode="copy.html"/>

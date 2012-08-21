@@ -22,7 +22,7 @@ example, the contents of <filename> tags should not be spellchecked.
   <style-specification use="docbook">
     <style-specification-body>
 
-      <![ %output.html; [ 
+      <![ %output.html; [
 
 
 <!--

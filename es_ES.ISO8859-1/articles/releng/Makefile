@@ -1,4 +1,4 @@
-# 
+#
 # $FreeBSD$
 # $FreeBSDes: doc/es_ES.ISO8859-1/articles/releng/Makefile,v 1.1 2004/10/15 01:30:12 carvay Exp $
 # Version: 1.14

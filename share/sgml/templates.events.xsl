@@ -273,7 +273,7 @@
         <xsl:attribute name="href"><xsl:value-of select="upcomingurl" /></xsl:attribute>
       </xsl:if>
       <xsl:if test="not(upcomingurl)">
-        <xsl:attribute name="href">http://upcoming.yahoo.com/search?type=Events&amp;q=<xsl:value-of select="name" />&amp;Search=GO</xsl:attribute>        
+        <xsl:attribute name="href">http://upcoming.yahoo.com/search?type=Events&amp;q=<xsl:value-of select="name" />&amp;Search=GO</xsl:attribute>
       </xsl:if>
       upcoming</a></p>
     </li>
@@ -334,7 +334,7 @@
           <li><a>
 	    <xsl:attribute name="href">events<xsl:value-of select="$first"/>.html</xsl:attribute>
             <xsl:value-of select="$first" />
-          </a></li>    
+          </a></li>
         </xsl:if>
         <xsl:call-template name="split-string">
           <xsl:with-param name="text" select="substring-after($text,$seperator)"/>

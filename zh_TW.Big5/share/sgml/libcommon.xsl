@@ -34,10 +34,10 @@
       <li><a href="http://freebsd.kde.org/">FreeBSD 上的 KDE</a></li>
       <li><a href="&enbase;/gnome/newsflash.html">FreeBSD 上的 GNOME</a></li>
     </ul>
-	  
+
     <p>更詳細的描述、介紹、和未來的發行版本，請看 <strong><a
 	  href="&enbase;/releases/index.html">Release 資訊</a></strong>這頁。</p>
-	
+
     <p>對於 FreeBSD 的安全公告， 請查閱 <a href="&base;/security/#adv">安全資訊</a> 頁面。</p>
   </xsl:template>
 
