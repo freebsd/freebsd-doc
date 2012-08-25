@@ -6,7 +6,8 @@
 #    Original revision: 1.3
 #
 
-SUBDIR = committers-guide
+SUBDIR = building-products
+SUBDIR+= committers-guide
 SUBDIR+= contributing
 SUBDIR+= contributing-ports
 SUBDIR+= contributors
