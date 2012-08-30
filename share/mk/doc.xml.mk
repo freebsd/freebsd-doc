@@ -50,7 +50,7 @@ ${.OBJDIR}/autogen.ent:
 .if ${LANGCODE} != en_US.ISO8859-1
 	${ECHO_CMD} '<!ENTITY enbase "${DOC_PREFIX_REL}/..">' > ${.TARGET}
 .endif
-	${ECHO_CMD} '<!ENTITY base "${DOC_PREFIX_REL}">' > ${.TARGET}
+	${ECHO_CMD} '<!ENTITY base "${DOC_PREFIX_REL}">' >> ${.TARGET}
 
 DEPENDSET.DEFAULT+=	wwwstd
 
