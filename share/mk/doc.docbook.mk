@@ -260,7 +260,7 @@ GROFF?=		groff
 .if empty(LANGCODE:S/./ . /g:MISO8859-1)
 TIDYOPTS?=	-wrap 90 -m -raw -preserve -f /dev/null -asxml ${TIDYFLAGS}
 .else
-TIDYOPTS?=	-wrap 90 -m -f /dev/null -asxml ${TIDYFLAGS
+TIDYOPTS?=	-wrap 90 -m -f /dev/null -asxml ${TIDYFLAGS}
 .endif
 HTML2TXT?=	${PREFIX}/bin/links
 HTML2TXTOPTS?=	-dump -width 72 ${HTML2TXTFLAGS}
