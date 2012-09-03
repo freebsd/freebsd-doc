@@ -257,10 +257,11 @@ TOUCH?=		/usr/bin/touch
 XARGS?=		/usr/bin/xargs
 
 GROFF?=		groff
-.if empty(LANGCODE:S/./ . /g:MISO8859-1)
-TIDYOPTS?=	-wrap 90 -m -raw -preserve -f /dev/null -asxml ${TIDYFLAGS}
+TIDY_VER!=	${TIDY} -v
+.if ${TIDY_VER} == "HTML Tidy for FreeBSD released on 7 December 2008"
+TIDYOPTS?=	-wrap 90 -m -raw --preserve-entities yes -f /dev/null -asxml ${TIDYFLAGS}
 .else
-TIDYOPTS?=	-wrap 90 -m -f /dev/null -asxml ${TIDYFLAGS}
+TIDYOPTS?=	-wrap 90 -m -raw -preserve -f /dev/null -asxml ${TIDYFLAGS}
 .endif
 HTML2TXT?=	${PREFIX}/bin/links
 HTML2TXTOPTS?=	-dump -width 72 ${HTML2TXTFLAGS}
