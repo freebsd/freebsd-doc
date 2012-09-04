@@ -1,11 +1,12 @@
 #!/usr/bin/perl
 
-$passwd = '/etc/passwd';
+# $FreeBSD$
+
 $homepagedir = 'public_html';
 @index = ('index.html', 'index.cgi');
 $noindex = '.noindex';
 
-open(P, 'ypcat passwd |') || die "open $passwd: $!\n";
+open(P, 'getent passwd |') || die "getent passwd: $!\n";
 undef @pages;
 while(<P>) {
 	($login,$password,$uid,$gid,$gcos,$home,$shell) = split(/:/);
@@ -14,7 +15,7 @@ while(<P>) {
 	$gcos =~ s/,.*//;
 
 	# disable daemons
-	next if $uid <= 100;
+	next if $uid < 500;
 	next if $login eq 'nobody';
 	next if $shell =~ ~ m%/(pppd|sliplogin|nologin|nonexistent)$%;
 
