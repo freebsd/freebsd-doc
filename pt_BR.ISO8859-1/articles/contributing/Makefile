@@ -1,16 +1,14 @@
 # $FreeBSD$
 #
-# Build the FreeBSD FAQ
-#
 # The FreeBSD Documentation Project
 # The FreeBSD Brazilian Portuguese Documentation Project
 #
-# Original revision: 1.4
+# Original revision: r38826
 #
 
 DOC?= article
 
-FORMATS?= html
+FORMATS?= html html-split
 
 INSTALL_COMPRESSED?=gz
 INSTALL_ONLY_COMPRESSED?=
