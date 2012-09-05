@@ -2,7 +2,7 @@
 # The FreeBSD Documentation Project
 # The FreeBSD Brazilian Portuguese Documentation Project
 #
-# Original revision: 1.4
+# Original revision: r38826
 # 
 # $FreeBSD$
 #
