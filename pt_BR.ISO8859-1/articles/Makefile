@@ -11,6 +11,7 @@
 SUBDIR =
 SUBDIR+= contributing
 SUBDIR+= explaining-bsd
+SUBDIR+= freebsd-questions
 SUBDIR+= linux-users
 SUBDIR+= problem-reports
 
