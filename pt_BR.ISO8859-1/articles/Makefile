@@ -14,6 +14,7 @@ SUBDIR+= contributing-ports
 SUBDIR+= explaining-bsd
 SUBDIR+= freebsd-questions
 SUBDIR+= linux-users
+SUBDIR+= new-users
 SUBDIR+= problem-reports
 
 DOC_PREFIX?= ${.CURDIR}/../..
