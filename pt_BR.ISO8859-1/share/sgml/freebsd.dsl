@@ -2,7 +2,7 @@
      The FreeBSD Documentation Project
      The FreeBSD Brazilian Portuguese Documentation Project
 
-     Original revision: 1.14
+     Original revision: r38826
      $FreeBSD$
 -->
 
@@ -55,6 +55,17 @@
 		(create-link (list (list "HREF" "mailto:doc@FreeBSD.org"))
                   (literal "doc@FreeBSD.org"))
 	        (literal ">.")))))
+	(define (local-ptbr-label-title-sep)
+	  (list
+	    (list (normalize "warning")           ": ")
+	    (list (normalize "caution")           ": ")
+	    (list (normalize "chapter")           "  ")
+	    (list (normalize "sect1")             "  ")
+	    (list (normalize "sect2")             "  ")
+	    (list (normalize "sect3")             "  ")
+	    (list (normalize "sect4")             "  ")
+	    (list (normalize "sect5")             "  ")
+	))
      ]]>
     </style-specification-body>
   </style-specification>
