@@ -10,6 +10,7 @@
 
 SUBDIR =
 SUBDIR+= contributing
+SUBDIR+= explaining-bsd
 SUBDIR+= linux-users
 SUBDIR+= problem-reports
 
