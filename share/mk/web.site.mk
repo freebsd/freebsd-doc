@@ -19,12 +19,23 @@ WEBDIR?=	${.CURDIR:T}
 CGIDIR?=	${.CURDIR:T}
 DESTDIR?=	${HOME}/public_html
 
+_ID?=		/usr/bin/id
+_UID!=		${_ID} -u
+
 WEBOWN?=	${USER}
+.if (${_UID} > 0)
+WEBGRP?=	${USER}
+.else
 WEBGRP?=	www
+.endif
 WEBMODE?=	664
 
 CGIOWN?=	${USER}
+.if (${_UID} > 0)
+CGIGRP?=	${USER}
+.else
 CGIGRP?=	www
+.endif
 CGIMODE?=	775
 
 BUNZIP2?=	/usr/bin/bunzip2
