@@ -33,7 +33,7 @@
 	<xsl:apply-templates select="/news/descendant::month"/>
 
 	<xsl:for-each select="/news">
-	<xsl:call-templates name="html-news-list-homelink" />
+	<xsl:call-template name="html-news-list-homelink" />
 	</xsl:for-each>
   </xsl:template>
 
