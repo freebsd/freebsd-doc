@@ -5,7 +5,7 @@
 # $FreeBSDru: frdp/doc/ru_RU.KOI8-R/articles/mh/Makefile,v 1.3 2005/10/28 17:42:40 gad Exp $
 #
 # Original revision: r20561
-# 
+#
 # Article: An MH Primer
 
 DOC?= article

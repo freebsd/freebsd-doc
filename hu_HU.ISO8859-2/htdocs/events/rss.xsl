@@ -1,9 +1,7 @@
-<?xml version="1.0"?>
+<?xml version="1.0" encoding="iso-8859-2"?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD Fragment//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
-<!ENTITY title "&os; k&ouml;zpont&uacute; rendezv&eacute;nyek">
-<!ENTITY email "freebsd-www">
-<!ENTITY % navinclude.about "INCLUDE">
+<!ENTITY title "&os; központú rendezvények">
 ]>
 
 <!-- $FreeBSD$ -->
@@ -49,10 +47,6 @@
 
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
 
-  <xsl:variable name="date">
-    <xsl:value-of select="//cvs:keyword[@name='freebsd']"/>
-  </xsl:variable>
-
   <xsl:output method="xml" indent="yes"/>
 
   <xsl:key name="event-by-month" match="event"
@@ -60,19 +54,19 @@
 
   <!-- Template: events -->
   <xsl:template match="events">
-    <xsl:variable name="title">A &os; Projekttel kapcsolatos k&ouml;zelg&#245;
-      rendezv&eacute;nyek</xsl:variable>
+    <xsl:variable name="title">A &os; Projekttel kapcsolatos közelgő
+      rendezvények</xsl:variable>
     <xsl:variable name="link">http://www.FreeBSD.org/hu/events/</xsl:variable>
 
     <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
       <channel>
         <title><xsl:value-of select="$title" /></title>
         <link><xsl:value-of select="$link" /></link>
-	<description>A k&ouml;zelj&ouml;v&#245;ben megrendez&eacute;sre
-	  ker&uuml;l&#245;, k&uuml;l&ouml;nb&ouml;z&#245; &os;
-	  t&eacute;m&aacute;j&uacute; konferenci&aacute;k,
-	  gy&#251;l&eacute;sek, kurzusok &eacute;s egy&eacute;b fontos
-	  rendezv&eacute;nyek.</description>
+	<description>A közeljövőben megrendezésre
+	  kerülő, különböző &os;
+	  témájú konferenciák,
+	  gyűlések, kurzusok és egyéb fontos
+	  rendezvények.</description>
 	<language>hu-hu</language>
         <webMaster>freebsd-www@FreeBSD.org (Webmesterek)</webMaster>
         <managingEditor>freebsd-www@FreeBSD.org (Webmesterek)</managingEditor>

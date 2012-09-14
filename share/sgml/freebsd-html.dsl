@@ -28,7 +28,7 @@
 	  Redefine $user-html-header$ to put </script> in a single line.
 	  This is an ugly hack but it should work.
 	-->
-	(define ($user-html-header$ #!optional 
+	(define ($user-html-header$ #!optional
 	                            (home (empty-node-list))
 	                            (up (empty-node-list))
 	                            (prev (empty-node-list))

@@ -3,7 +3,7 @@
 #
 # $FreeBSD$
 # $FreeBSDde: de-www/projects/Makefile,v 1.3 2007/08/29 08:47:34 as Exp $
-# basiert auf: 1.31 
+# basiert auf: 1.31
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"

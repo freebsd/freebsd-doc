@@ -104,7 +104,7 @@ $i_topbar = qq`
 
           <h2 class="blockhide">Site Navigation</h2>
 
-	  <div id="MENU">
+	  <div id="menu">
 	    <ul class="first">
 	      <li><a href="$hsty_base/">Home</a></li>
 	    </ul>

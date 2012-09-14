@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
      The FreeBSD Mongolian Documentation Project
-     
+
      $FreeBSD$
 
      Original revision 1.3
@@ -21,7 +21,7 @@
   <xsl:template name="mirrors-docbook-contact">
     <xsl:param name="email" select="'someone@somewhere'"/>
 
-    <para>Асуудлууд гарвал энэ домэйны администратор 
+    <para>Асуудлууд гарвал энэ домэйны администратор
       <email><xsl:value-of select="$email" /></email>-т хандана уу.</para>
   </xsl:template>
 

@@ -7,9 +7,6 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS=	machines.sgml refs.sgml
-
-XMLDOCS=	index::news.xml:
-XMLDOCS+=	todo::news.xml:
+DOCS=	index.sgml machines.sgml refs.sgml todo.sgml
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"

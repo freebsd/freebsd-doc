@@ -13,7 +13,4 @@ DOCS=	announce.sgml
 DOCS+=	install-media.sgml
 DOCS+=	notes.sgml
 
-### Revision checking
-REVCHECK=	YES
-
 .include "${DOC_PREFIX}/share/mk/web.site.mk"

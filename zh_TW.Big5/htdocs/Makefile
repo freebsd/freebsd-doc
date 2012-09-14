@@ -1,5 +1,5 @@
 # $FreeBSD$
-# Original revision: 
+# Original revision:
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"

@@ -1,7 +1,7 @@
-# 
+#
 # $FreeBSD$
 #
-# Articulo: Estudio de caso de Argentina.com 
+# Articulo: Estudio de caso de Argentina.com
 
 DOC?= article
 

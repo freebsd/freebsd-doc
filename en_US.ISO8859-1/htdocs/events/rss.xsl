@@ -1,10 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD Fragment//EN"
-				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
-<!ENTITY title "FreeBSD Events">
-<!ENTITY email "freebsd-www">
-<!ENTITY % navinclude.about "INCLUDE">
-]>
+				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
 
 <!-- $FreeBSD$ -->
 
@@ -42,10 +38,6 @@
   exclude-result-prefixes="cvs">
 
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
-
-  <xsl:variable name="date">
-    <xsl:value-of select="//cvs:keyword[@name='freebsd']"/>
-  </xsl:variable>
 
   <xsl:output method="xml" indent="yes"/>
 

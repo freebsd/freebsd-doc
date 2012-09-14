@@ -10,6 +10,6 @@
 .include "../Makefile.inc"
 .endif
 
-DATA=   index.html 
+DATA=   index.html
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"

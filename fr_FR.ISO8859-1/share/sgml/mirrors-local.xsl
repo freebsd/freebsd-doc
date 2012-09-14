@@ -22,14 +22,14 @@
   <xsl:template name="mirrors-docbook-contact">
     <xsl:param name="email" select="'someone@somewhere'"/>
 
-    <para>En cas de probl&#232;mes, merci de contacter le hostmaster
+    <para>En cas de problèmes, merci de contacter le hostmaster
       <email><xsl:value-of select="$email" /></email> pour ce domaine.</para>
   </xsl:template>
 
   <!-- template: "mirrors-lastmodified" -->
 
   <xsl:template name="mirrors-lastmodified">
-    <xsl:text>mis &#224; jour le </xsl:text>
+    <xsl:text>mis à jour le </xsl:text>
     <xsl:call-template name="mirrors-lastmodified-utc" />
   </xsl:template>
 

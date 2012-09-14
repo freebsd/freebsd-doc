@@ -1,9 +1,7 @@
 <?xml version="1.0" encoding="ISO-8859-2" ?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
-<!ENTITY title "&os; a sajt&oacute;ban">
-<!ENTITY email "freebsd-www">
-<!ENTITY % navinclude.about "INCLUDE">
+<!ENTITY title "&os; a sajtóban">
 ]>
 
 <!-- $FreeBSD$ -->
@@ -14,46 +12,31 @@
      %SRCID%	1.7
 -->
 
-<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
-  xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
+<xsl:stylesheet version="1.0"
+  xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+  xmlns="http://www.w3.org/1999/xhtml">
 
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
+  <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/xhtml.xsl"/>
+
+  <!-- Do not add last modified date for old news/press -->
+  <xsl:variable name="date"/>
+
+  <xsl:variable name="title">&title;</xsl:variable>
 
   <xsl:variable name="year">
     <xsl:value-of select="descendant::year/name"/>
   </xsl:variable>
 
-  <xsl:variable name="date">
-    <xsl:value-of select="//cvs:keyword[@name='freebsd']"/>
-  </xsl:variable>
-  
-  <xsl:output type="html" encoding="&xml.encoding;"/>
+  <xsl:template name="process.sidewrap">
+    &nav.about;
+  </xsl:template>
 
-  <xsl:template match="press">
-    <html>
-      
-      &header1;
-
-      <body>
-
-	<div id="CONTAINERWRAP">
-	<div id="CONTAINER">
-
-	  &header2;
-
-	<div id="CONTENT">
-	<div id="SIDEWRAP">
-	  &nav;
-	</div> <!-- SIDEWRAP -->
-
-	<div id="CONTENTWRAP">
-
-	  &header3;
-
+  <xsl:template name="process.contentwrap">
 	<xsl:apply-templates select="//month"/>
-	
-	<p>A kor&aacute;bbi &eacute;vek sajt&oacute;kiadv&aacute;nyai
-	  (2008-t&oacute;l magyarul):
+
+	<p>A korábbi évek sajtókiadványai
+	  (2008-tól magyarul):
 	  <a href="&base;/news/2008/press.html">2008</a>,
 	  <a href="&enbase;/news/2007/press.html">2007</a>,
 	  <a href="&enbase;/news/2006/press.html">2006</a>,
@@ -66,22 +49,7 @@
 	  <a href="&enbase;/news/1999/press.html">1999</a>,
 	  <a href="&enbase;/news/1998/press.html">1998-1996</a></p>
 
-	<a href="&base;/news/news.html">H&iacute;rek f&#245;oldal</a>
-	</div> <!-- CONTENTWRAP -->
-	<br class="clearboth" />
-
-	</div> <!-- CONTENT -->
-
-            <div id="FOOTER">
-               &copyright;<br />
-               &date;
-            </div> <!-- FOOTER -->
-
-	</div> <!-- CONTAINER -->
-	</div> <!-- CONTAINERWRAP -->
-
-      </body>
-    </html>
+	<a href="&base;/news/news.html">Hírek főoldal</a>
   </xsl:template>
 
   <xsl:template match="month">
@@ -114,10 +82,10 @@
 
       <p><a href="{$url}"><b><xsl:value-of
       select="name"/></b></a><br/>
-	  
+
 	<a href="{$site-url}"><xsl:value-of
 	select="site-name"/></a>, <xsl:value-of select="author"/><br/>
-	<xsl:copy-of select="p/child::node()"/>
+	<xsl:apply-templates select="p/child::node()" mode="copy.html"/>
       </p>
     </li>
   </xsl:template>

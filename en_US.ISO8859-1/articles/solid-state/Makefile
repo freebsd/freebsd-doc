@@ -1,4 +1,4 @@
-# 
+#
 # $FreeBSD$
 #
 # Article: FreeBSD and Solid State Devices

@@ -1,4 +1,4 @@
-# 
+#
 # $FreeBSD$
 # $FreeBSDru: frdp/doc/ru_RU.KOI8-R/articles/dialup-firewall/Makefile,v 1.2 2001/07/25 10:26:31 phantom Exp $
 #
@@ -14,7 +14,7 @@ FORMATS?= html
 INSTALL_COMPRESSED?= gz
 INSTALL_ONLY_COMPRESSED?=
 
-# 
+#
 # SRCS lists the individual SGML files that make up the document. Changes
 # to any of these files will force a rebuild
 #

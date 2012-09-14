@@ -1,4 +1,4 @@
-# 
+#
 # $FreeBSD$
 #
 # Articulo sobre el uso de Perforce en el desarrollo en FreeBSD.

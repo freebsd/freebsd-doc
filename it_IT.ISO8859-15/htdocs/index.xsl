@@ -11,80 +11,58 @@
      Original revision: 1.138
 -->
 
-<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
+<xsl:stylesheet version="1.0"
+  xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+  xmlns="http://www.w3.org/1999/xhtml">
+
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl" />
+  <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/xhtml.xsl"/>
 
-  <xsl:output type="html" encoding="&xml.encoding;"
-              doctype-public="-//W3C//DTD HTML 4.01 Transitional//EN"/>
+  <xsl:variable name="svnKeyword">$FreeBSD$</xsl:variable>
 
-  <xsl:template match="/">
-    <html>
-      <head>
-	<title>&title;</title>
-	<meta name="description" content="The FreeBSD Project"/>
-	<meta name="keywords" content="FreeBSD, BSD, UNIX, Support, Ports,
-	      Release, Application, Software, Handbook, FAQ, Tutorials, Bugs,
-	      CVS, CVSup, News, Commercial Vendors, homepage, CTM, Unix"/>
-	<link rel="shortcut icon" href="&enbase;/favicon.ico" type="image/x-icon"/>
-	<link rel="icon" href="&enbase;/favicon.ico" type="image/x-icon"/>
-	<link rel="stylesheet" media="screen" href="&enbase;/layout/css/fixed.css" type="text/css" title="Normal Text" />
-	<link rel="alternate stylesheet" media="screen" href="&enbase;/layout/css/fixed_large.css" type="text/css" title="Large Text" />
-	<script type="text/javascript" src="&enbase;/layout/js/styleswitcher.js"></script>
-	<link rel="alternate" type="application/rss+xml"
-	  title="FreeBSD Project News" href="&enbase;/news/news.rdf" />
-	<link rel="alternate" type="application/rss+xml"
-	  title="FreeBSD Security Advisories" href="&enbase;/security/advisories.rdf" />
-	<link rel="alternate" type="application/rss+xml"
-	  title="FreeBSD GNOME Project News" href="&enbase;/gnome/news.rdf" />
-      </head>
+  <xsl:variable name="title">&title;</xsl:variable>
 
-      <body>
+  <xsl:template name="process.content">
+        <div id="frontcontainer">
+          <div id="frontmain">
+            <div id="frontfeaturecontainer">
 
-   <div id="CONTAINERWRAP">
-    <div id="CONTAINER">
-      &header2;
-      <div id="CONTENT">
-
-        <div id="FRONTCONTAINER">
-          <div id="FRONTMAIN">
-            <div id="FRONTFEATURECONTAINER">
-
-		<div id="FRONTFEATURELEFT">
-			<div id="FRONTFEATURECONTENT">
+		<div id="frontfeatureleft">
+			<div id="frontfeaturecontent">
 				<h1>
-				  Basato su BSD UNIX&#174;
-				</h1>				
-				<p>FreeBSD&#174; &#232; un sistema operativo avanzato per architetture
-				compatibili x86 (inclusi Pentium&#174; e Athlon&#8482;), amd64 (inclusi
-				Opteron&#8482;, Athlon 64, e EM64T),
-				UltraSPARC&#174;, IA-64, PC-98 e ARM.
-				&#200; derivato da BSD, la versione di
+				  Basato su BSD UNIX&reg;
+				</h1>
+				<p>FreeBSD&reg; è un sistema operativo avanzato per architetture
+				compatibili x86 (inclusi Pentium&reg; e Athlon&trade;), amd64 (inclusi
+				Opteron&trade;, Athlon 64, e EM64T),
+				UltraSPARC&reg;, IA-64, PC-98 e ARM.
+				È derivato da BSD, la versione di
 				&unix; sviluppata
-				all'Universit&#224; della California, Berkeley.
-				&#200; sviluppato e mantenuto da <a
+				all'Università della California, Berkeley.
+				È sviluppato e mantenuto da <a
 				href="&enbase;/doc/en_US.ISO8859-1/articles/contributors/staff-committers.html">un
 				grande gruppo di individui</a>.
 				<a href="&base;/platforms/index.html">Piattaforme</a>
 				aggiuntive sono in varie fasi di sviluppo.</p>
-				<div id="TXTFRONTFEATURELINK">
-				&#187;<a href="&base;/about.html" title="Approfondisci">Approfondisci</a>
+				<div id="txtfrontfeaturelink">
+				»<a href="&base;/about.html" title="Approfondisci">Approfondisci</a>
 				</div> <!-- TXTFRONTFEATURELINK -->
 			</div> <!-- FRONTFEATURECONTENT -->
 		</div> <!-- FRONTFEATURELEFT -->
 
-		<div id="FRONTFEATUREMIDDLE">
+		<div id="frontfeaturemiddle">
 			<div class="frontgetroundbox">
-			  <div class="frontgettop"><div>&#160;</div>&#160;</div>
+			  <div class="frontgettop"><div>&nbsp;</div>&nbsp;</div>
 				<div class="frontgetcontent">
 				  <a href="&base;/where.html">Ottieni FreeBSD Ora</a>
 				</div> <!-- frontgetcontent -->
-			  <div class="frontgetbot"><div>&#160;</div>&#160;</div>
+			  <div class="frontgetbot"><div>&nbsp;</div>&nbsp;</div>
 			</div> <!-- frontgetroundbox -->
-			
-			<div id="FRONTRELEASES">
-			  <div id="FRONTRELEASESCONTENT" class="txtshortcuts">
+
+			<div id="frontreleases">
+			  <div id="frontreleasescontent" class="txtshortcuts">
 				  <h2><a href="&base;/releases/">ULTIME RELEASE</a></h2>
-				  <ul id="FRONTRELEASESLIST">
+				  <ul id="frontreleaseslist">
 					<li>
 					  <a href="&u.rel.announce;">Release di Produzione &rel.current;</a>
 					</li>
@@ -108,10 +86,10 @@
 			</div> <!-- FRONTRELEASES -->
 		</div> <!-- FRONTFEATUREMIDDLE -->
 
-		<div id="FRONTFEATURERIGHT">
+		<div id="frontfeatureright">
 			<h2 class="blockhide">Language Links</h2>
-			<div id="LANGUAGENAV">
-				<ul id="LANGUAGENAVLIST">
+			<div id="languagenav">
+				<ul id="languagenavlist">
 				  <li>
 					<a href="&enbase;/de/" title="Tedesco">de</a>
 				  </li>
@@ -136,11 +114,11 @@
 				</ul>
 			</div> <!-- LANGUAGENAV -->
 
-			<div id="MIRROR">
+			<div id="mirror">
 			  <form action="&cgibase;/mirror.cgi" method="get">
 				<div>
 				  <h2 class="blockhide"><label for="MIRRORSEL">Mirror</label></h2>
-				  <select id="MIRRORSEL" name="goto">
+				  <select id="mirrorsel" name="goto">
 					  <xsl:call-template name="html-index-mirrors-options-list">
 					    <xsl:with-param name="mirrors.xml" select="$mirrors.xml" />
 					  </xsl:call-template>
@@ -150,10 +128,10 @@
 			  </form>
 			</div> <!-- MIRROR -->
 
-			<div id="FRONTSHORTCUTS">
-			  <div id="FRONTSHORTCUTSCONTENT" class="txtshortcuts">
+			<div id="frontshortcuts">
+			  <div id="frontshortcutscontent" class="txtshortcuts">
 				  <h2>SCORCIATOIE</h2>
-				  <ul id="FRONTSHORTCUTSLIST">
+				  <ul id="frontshortcutslist">
 					<li>
 					  <a href="&enbase;/community/mailinglists.html" title="Mailing Lists">Mailing Lists</a>
 					</li>
@@ -177,20 +155,20 @@
 			</div> <!-- FRONTSHORTCUTS -->
 
 			<div class="frontnewroundbox">
-			  <div class="frontnewtop"><div>&#160;</div>&#160;</div>
+			  <div class="frontnewtop"><div>&nbsp;</div>&nbsp;</div>
 			    <div class="frontnewcontent">
 			      <a href="&enbase;/projects/newbies.html">Neofita di FreeBSD?</a>
 			    </div> <!-- frontnewcontent -->
-			  <div class="frontnewbot"><div>&#160;</div>&#160;</div>
+			  <div class="frontnewbot"><div>&nbsp;</div>&nbsp;</div>
 			</div> <!-- frontnewroundbox -->
 		</div> <!-- FEATURERIGHT -->
-				
+
             </div> <!-- FRONTFEATURECONTAINER -->
 
 	    <br class="clearboth" />
-            <div id="FRONTNEMSCONTAINER">
-            	<div id="FRONTNEWS">
-            	   <div id="FRONTNEWSCONTENT" class="txtnewsevent">
+            <div id="frontnemscontainer">
+            	<div id="frontnews">
+            	   <div id="frontnewscontent" class="txtnewsevent">
 			<h2>ULTIME NOTIZIE</h2>
 			<div class="newseventswrap">
 
@@ -214,8 +192,8 @@
             	   </div> <!-- FRONTNEWSCONTENT -->
             	</div> <!-- FRONTNEWS -->
             	<div class="frontseparator"><b style="display: none">.</b></div>
-            	<div id="FRONTEVENTS">
-		   <div id="FRONTEVENTSCONTENT" class="txtnewsevent">
+            	<div id="frontevents">
+		   <div id="fronteventscontent" class="txtnewsevent">
 
 			<h2>PROSSIMI EVENTI</h2>
 			<div class="newseventswrap">
@@ -237,8 +215,8 @@
 		   </div> <!-- FRONTNEWSEVENTS -->
             	</div> <!-- FRONTEVENTS -->
             	<div class="frontseparator"><b style="display: none">.</b></div>
-            	<div id="FRONTMEDIA">
-		   <div id="FRONTMEDIACONTENT" class="txtnewsevent">
+            	<div id="frontmedia">
+		   <div id="frontmediacontent" class="txtnewsevent">
 
 			<h2>SUI MEDIA</h2>
 			<div class="newseventswrap">
@@ -260,8 +238,8 @@
 		   </div> <!-- FRONTMEDIACONTENT -->
             	</div> <!-- FRONTMEDIA -->
 		<div class="frontseparator"><b style="display: none">.</b></div>
-		<div id="FRONTSECURITY">
-		   <div id="FRONTSECURITYCONTENT" class="txtnewsevent">
+		<div id="frontsecurity">
+		   <div id="frontsecuritycontent" class="txtnewsevent">
 
 			<h2>AVVISI DI SICUREZZA</h2>
 			<div class="newseventswrap">
@@ -302,30 +280,5 @@
             </div> <!-- FRONTNEMSCONTAINER -->
           </div> <!-- FRONTMAIN -->
         </div> <!-- FRONTCONTAINER -->
-
-      </div> <!-- CONTENT -->
-      <div id="FOOTER">
-        &copyright;
-
-	FreeBSD &#232; un marchio registrato della FreeBSD Foundation ed &#232;
-	usato dal FreeBSD Project con il permesso della <a
-	  href="http://www.freebsdfoundation.org/legal/guidelines.shtml">FreeBSD
-	  Foundation</a>.
-
-      </div> <!-- FOOTER -->
-    </div> <!-- CONTAINER -->
-   </div> <!-- CONTAINERWRAP -->
-
-      </body>
-    </html>
   </xsl:template>
 </xsl:stylesheet>
-
-<!--
-     Local Variables:
-     mode: xml
-     sgml-indent-data: t
-     sgml-omittag: nil
-     sgml-always-quote-attributes: t
-     End:
--->

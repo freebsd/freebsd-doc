@@ -51,6 +51,4 @@ XMLDOCS=		index:xsl:${XML_NEWS_NEWS}:
 DEPENDSET.index=	transtable mirrors news press events \
 			advisories notices
 
-DATESUBST=	's/<!ENTITY date[ \t]*"$$Free[B]SD. .* \(.* .*\) .* .* $$">/<!ENTITY date	"\&Uacute\;ltima modificaci\&oacute\;n: \1">/'
-
 .include "${DOC_PREFIX}/share/mk/web.site.mk"

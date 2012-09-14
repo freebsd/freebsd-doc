@@ -7,10 +7,20 @@
   version="1.0"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS"
   xmlns:date="http://exslt.org/dates-and-times"
-  extension-element-prefixes="date"
+  xmlns:str="http://exslt.org/strings"
+  extension-element-prefixes="date str"
+  xmlns="http://www.w3.org/1999/xhtml"
   exclude-result-prefixes="date cvs">
 
   <xsl:import href="./transtable-common.xsl" />
+
+  <xsl:variable name="svnKeyword">
+    <xsl:value-of select="normalize-space(//cvs:keyword[1])"/>
+  </xsl:variable>
+
+  <xsl:variable name="date">
+    <xsl:value-of select="str:split($svnKeyword, ' ')[4]"/>
+  </xsl:variable>
 
   <!-- default format for date string -->
   <xsl:param name="param-l10n-date-format-YMD"
@@ -25,6 +35,16 @@
   <xsl:variable name="curdate.year" select="date:year()"/>
   <xsl:variable name="curdate.month" select="date:month-in-year()"/>
   <xsl:variable name="curdate.day" select="date:day-in-month()"/>
+
+  <!--
+     Used to copy HTML chunks to the output.
+  -->
+  <xsl:template match="*" mode="copy.html">
+    <xsl:element name="{local-name()}" namespace="http://www.w3.org/1999/xhtml">
+      <xsl:copy-of select="attribute::*"/>
+      <xsl:apply-templates select="child::node()" mode="copy.html"/>
+    </xsl:element>
+  </xsl:template>
 
   <!--
      template name                               used in
@@ -193,15 +213,15 @@
 		  [count(.|key('html-usergroups-id-key', string($id)))
 		  = count(key('html-usergroups-id-key', string($id)))]
 		  ">
-		  <xsl:copy-of select="
+		  <xsl:apply-templates select="
 		    key('html-usergroups-regions-key', string($continent))
 		    [count(.|key('html-usergroups-id-key', string($id)))
 		    = count(key('html-usergroups-id-key', string($id)))]/description/node()
-		    " />
+		    " mode="copy.html"/>
 		</xsl:when>
 		<xsl:otherwise>
 		  <xsl:for-each select="document($usergroups.xml)">
-		    <xsl:copy-of select="key('html-usergroups-id-key', string($id))/description/node()" />
+		    <xsl:apply-templates select="key('html-usergroups-id-key', string($id))/description/node()" mode="copy.html"/>
 		  </xsl:for-each>
 		</xsl:otherwise>
 	      </xsl:choose>
@@ -465,7 +485,7 @@
   <!-- template: "html-news-list-press-preface" -->
   <xsl:template name="html-news-list-press-preface">
     <p>If you know of any news stories featuring FreeBSD that we have not
-      listed here, please send details to 
+      listed here, please send details to
       <a href="mailto:www@FreeBSD.org">www@FreeBSD.org</a> so that we can
       include them.</p>
   </xsl:template>
@@ -567,7 +587,7 @@
 		      <xsl:text> </xsl:text>
 		      <xsl:for-each select="p">
 		      <xsl:if test="position() &gt; 1"><br /><br /></xsl:if>
-		      <xsl:copy-of select="child::node()" />
+		      <xsl:apply-templates select="child::node()" mode="copy.html"/>
 		      </xsl:for-each>
 		    </p>
 		  </li>
@@ -603,7 +623,7 @@
 		      <xsl:text> </xsl:text>
 		      <xsl:for-each select="p">
 		      <xsl:if test="position() &gt; 1"><br /><br /></xsl:if>
-		      <xsl:copy-of select="child::node()" />
+		      <xsl:apply-templates select="child::node()" mode="copy.html"/>
 		      </xsl:for-each>
 		    </p>
 		  </li>
@@ -664,7 +684,7 @@
 		      <a href="{$url}"><b><xsl:value-of select="name"/></b></a><br/>
 		      <a href="{$site-url}"><xsl:value-of select="site-name"/></a>,
 		      <xsl:value-of select="author"/><br/>
-		      <xsl:copy-of select="p/child::node()"/>
+		      <xsl:apply-templates select="p/child::node()" mode="copy.html"/>
 		    </p>
 		  </li>
 		</xsl:for-each>
@@ -685,7 +705,7 @@
 		      <a href="{$url}"><b><xsl:value-of select="name"/></b></a><br/>
 		      <a href="{$site-url}"><xsl:value-of select="site-name"/></a>,
 		      <xsl:value-of select="author"/><br/>
-		      <xsl:copy-of select="p/child::node()"/>
+		      <xsl:apply-templates select="p/child::node()" mode="copy.html"/>
 		    </p>
 		  </li>
 		</xsl:for-each>
@@ -1030,7 +1050,7 @@
       <xsl:attribute name="href">
         <xsl:value-of select="$link" /><xsl:text>rss.xml</xsl:text>
       </xsl:attribute>
-    </atom:link> 
+    </atom:link>
   </xsl:template>
 
   <!-- template: "rss-security-advisories-items"
@@ -1110,7 +1130,7 @@
       <xsl:attribute name="href">
         <xsl:value-of select="$link" /><xsl:text>rss.xml</xsl:text>
       </xsl:attribute>
-    </atom:link> 
+    </atom:link>
   </xsl:template>
 
   <!-- template: "rss-errata-notices-items"
@@ -1282,7 +1302,7 @@
 	//descendant::year[name = $year]
 	/month[name = $month]
 	/story[url = $url]" />
-      
+
       <p>
       <span class="txtdate">
 	<xsl:value-of select='
@@ -1310,7 +1330,7 @@
 	  </xsl:otherwise>
 	</xsl:choose>
       </a></p>
-      
+
     </xsl:for-each>
   </xsl:template>
 
@@ -1364,7 +1384,7 @@
 
   <!-- template: "link" generates links inside of category -->
   <xsl:template match="link">
-    <xsl:value-of select="$leadingmark" />
+    &leadingmark;
     <a>
       <xsl:attribute name="href">
 	<xsl:choose>
@@ -1375,7 +1395,7 @@
       </xsl:attribute>
       <xsl:value-of select="@name"/></a><br/>
   </xsl:template>
-  
+
  <!-- template: "html-index-events-items"
        pulls in the 5 most recent events items -->
 
@@ -1582,5 +1602,108 @@
 
     <xsl:text>, </xsl:text>
     <xsl:value-of select="enddate/year"/>
+  </xsl:template>
+
+  <!-- Generate sitemap -->
+  <xsl:template name="html-sitemap">
+    <!--
+          We iterate over all categories and list all the sitemap
+          items that are enumerated for that category.
+          Listing is not done in alphabetical order but in
+          document order so that items can be arranged in a
+          logical order.
+    -->
+
+    <dl>
+      <xsl:for-each select="/sitemap/category">
+        <dt><strong><xsl:value-of select="@name"/></strong></dt>
+
+        <dd>
+          <xsl:for-each select="item">
+            <a>
+              <xsl:attribute name="href">
+                <xsl:value-of select="destination"/>
+              </xsl:attribute>
+
+              <xsl:value-of select="text"/>
+            </a>
+          </xsl:for-each>
+        </dd>
+      </xsl:for-each>
+    </dl>
+  </xsl:template>
+
+  <xsl:variable name="lowercase" select="'abcdefghijklmnopqrstuvwxyz'"/>
+  <xsl:variable name="uppercase" select="'ABCDEFGHIJKLMNOPQRSTUVWXYZ'"/>
+
+  <!-- Generate index toc -->
+  <xsl:template name="html-index-toc">
+    <!--
+          First we make a toc by iterating over the index terms.
+          We need one entry per initial letter so this is done
+          by using a key and only processing the first term for
+          each initial letter.  For each initial letter, we emit
+          a link that will point to entries beginning with that letter.
+    -->
+
+    <a name="toc"></a>
+
+    <table border="4">
+      <tr>
+        <xsl:for-each select="/sitemap/term">
+          <xsl:sort select="text"/>
+
+          <xsl:variable name="firstLetter" select="translate(substring(text, 1, 1), $lowercase, $uppercase)"/>
+
+          <xsl:if test="generate-id(.) = generate-id(key('indexLetter', $firstLetter)[1])">
+            <td><a>
+              <xsl:attribute name="href">
+                <xsl:value-of select="concat('#', $firstLetter)"/>
+              </xsl:attribute>
+
+              <xsl:value-of select="$firstLetter"/>
+            </a></td>
+          </xsl:if>
+        </xsl:for-each>
+      </tr>
+    </table>
+  </xsl:template>
+
+  <!-- Generate index -->
+  <xsl:template name="html-index">
+    <!--
+          Then we need to generate the actual entries but grouped by their
+          initial letter.  The same method is used here as above:
+          take the first entry of each initial letter; it gives us the
+          letter.  And then, we do another iteration but only process
+          those terms that begin with the current letter and emit
+          an unordered list of them.
+    -->
+
+    <xsl:for-each select="/sitemap/term">
+      <xsl:sort select="text"/>
+
+      <xsl:variable name="firstLetter" select="translate(substring(text, 1, 1), $lowercase, $uppercase)"/>
+
+      <xsl:if test="generate-id(.) = generate-id(key('indexLetter', $firstLetter)[1])">
+        <h2><a href="#toc" name="{$firstLetter}">
+          <xsl:value-of select="$firstLetter"/>
+        </a></h2>
+
+        <ul>
+          <xsl:for-each select="/sitemap/term[translate(substring(text, 1, 1), $lowercase, $uppercase) = $firstLetter]">
+            <xsl:sort select="text"/>
+
+            <li><a>
+              <xsl:attribute name="href">
+                <xsl:value-of select="destination"/>
+              </xsl:attribute>
+
+              <xsl:value-of select="text"/>
+            </a></li>
+          </xsl:for-each>
+        </ul>
+      </xsl:if>
+    </xsl:for-each>
   </xsl:template>
 </xsl:stylesheet>

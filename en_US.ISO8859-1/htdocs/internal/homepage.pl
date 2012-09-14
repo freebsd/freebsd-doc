@@ -42,10 +42,11 @@ if ($#pages < 0) {
 	die "No users found!\n";
 }
 
+print "<?xml version='1.0' encoding='iso-8859-1'?>\n";
 foreach (sort @pages) {
 	($gcos, $login) = split(/:/);
 	($firstgecos, @gecos) = split(/,/, $gcos);
-	print qq{<LI><A HREF="http://people.FreeBSD.org/~$login/">},
-	      $firstgecos, "</A> ", join(', ', @gecos), "</LI>\n";
+	print qq{<li><a href="http://people.FreeBSD.org/~$login/">},
+	      $firstgecos, "</a> ", join(', ', @gecos), "</li>\n";
 }
 

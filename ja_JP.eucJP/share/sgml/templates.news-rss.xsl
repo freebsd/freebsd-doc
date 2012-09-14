@@ -16,7 +16,7 @@
   exclude-result-prefixes="cvs">
 
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
-  
+
   <xsl:output method="xml" indent="yes" encoding="&xml.encoding;"/>
 
   <xsl:variable name="date">
@@ -97,7 +97,7 @@
       </pubDate>
     </item>
   </xsl:template>
-  
+
   <xsl:template match="name | date"/>
 
 </xsl:stylesheet>

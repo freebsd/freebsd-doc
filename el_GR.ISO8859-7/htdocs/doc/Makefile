@@ -1,7 +1,7 @@
 #
 # $FreeBSD$
 #
-# 
+#
 # The FreeBSD Greek Documentation Project
 #
 # Build the FreeBSD documentation *outside* of the www tree, and install it

@@ -15,7 +15,7 @@ COOKIE=		${INDEX} Makefile.gen
 
 CLEANFILES+=	${INDEX} ${INDEX}.bz2
 CLEANFILES+=	packages.exists.temp  packages.exists
-CLEANFILES+= 	${DOCS} 
+CLEANFILES+= 	${DOCS}
 CLEANFILES+=	Makefile.gen
 
 _ALLINSTALL= packages.exists ${INDEX} categories

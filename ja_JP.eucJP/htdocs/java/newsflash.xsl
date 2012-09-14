@@ -1,13 +1,9 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
-<!ENTITY base "..">
 <!ENTITY rsslink "&base;/java/rss.xml">
 <!ENTITY title "FreeBSD &java; Project: Newsflash">
 <!ENTITY rsstitle "FreeBSD Java Project News">
-<!ENTITY email "freebsd-java">
-<!ENTITY % navinclude.developers "INCLUDE">
-<!ENTITY % header.rss "INCLUDE">
 ]>
 
 <!-- $FreeBSD$ -->
@@ -15,30 +11,23 @@
 <!-- Original revision: 1.2 -->
 
 
-<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
-  xmlns:cvs="http://www.FreeBSD.org/XML/CVS" exclude-result-prefixes="cvs">
+<xsl:stylesheet version="1.0"
+  xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+  xmlns="http://www.w3.org/1999/xhtml">
 
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
+  <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/xhtml.xsl"/>
 
-  <xsl:variable name="date">
-    <xsl:value-of select="//cvs:keyword[@name='freebsd']"/>
-  </xsl:variable>
+  <xsl:variable name="title">&title;</xsl:variable>
 
-  <xsl:output type="html" encoding="&xml.encoding;"/>
+  <xsl:variable name="rsstitle">&rsstitle;</xsl:variable>
 
-  <xsl:template match="news">
-    <html>
-      &header1;
-      <body>
+  <xsl:variable name="rsslink">&rsslink;</xsl:variable>
 
-	<div id="CONTAINERWRAP">
-	  <div id="CONTAINER">
-	    &header2;
-
-	    <div id="CONTENT">
-              <div id="SIDEWRAP">
-                &nav;
-                <div id="FEEDLINKS">
+  <xsl:template name="process.content">
+              <div id="sidewrap">
+                &nav.developers;
+                <div id="feedlinks">
                   <ul>
                     <li>
                       <a href="&rsslink;" title="&rsstitle;">
@@ -49,30 +38,20 @@
                 </div> <!-- FEEDLINKS -->
               </div> <!-- SIDEWRAP -->
 
-	      <div id="CONTENTWRAP">
-		&header3;
+	      <div id="contentwrap">
+		<h1>&title;</h1>
 
 		<img src="&enbase;/gifs/news.jpg" align="right" border="0" width="193"
 		  height="144" alt="FreeBSD Java News"/>
 
-		<xsl:apply-templates select="descendant::month"/>
+		<xsl:apply-templates select="events/descendant::month"/>
 
+		<xsl:for-each select="/events">
 	        <xsl:call-template
 		  name="html-news-list-newsflash-homelink" />
+		</xsl:for-each>
 
 	      </div> <!-- contentwrap -->
-
-	      <br class="clearboth" />
-	    </div> <!-- content -->
-
-            <div id="FOOTER">
-	      &copyright;<br />
-	      &date;
-            </div> <!-- FOOTER -->
-	  </div> <!-- container -->
-	</div> <!-- containerwrap -->
-      </body>
-    </html>
   </xsl:template>
 
   <!-- Everything that follows are templates for the rest of the content -->

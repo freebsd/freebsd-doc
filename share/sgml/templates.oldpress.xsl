@@ -2,50 +2,33 @@
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
 <!ENTITY title "FreeBSD in the Press">
-<!ENTITY email "freebsd-www">
-<!ENTITY % navinclude.about "INCLUDE">
 ]>
 
 <!-- $FreeBSD$ -->
 
-<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
-  xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
+<xsl:stylesheet version="1.0"
+  xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+  xmlns="http://www.w3.org/1999/xhtml">
 
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
+  <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/xhtml.xsl"/>
+
+  <!-- Do not add last modified date for old news/press -->
+  <xsl:variable name="date"/>
+
+  <xsl:variable name="title">&title;</xsl:variable>
 
   <xsl:variable name="year">
     <xsl:value-of select="descendant::year/name"/>
   </xsl:variable>
 
-  <xsl:variable name="date">
-    <xsl:value-of select="//cvs:keyword[@name='freebsd']"/>
-  </xsl:variable>
-  
-  <xsl:output type="html" encoding="&xml.encoding;"/>
+  <xsl:template name="process.sidewrap">
+    &nav.about;
+  </xsl:template>
 
-  <xsl:template match="press">
-    <html>
-      
-      &header1;
-
-      <body>
-
-	<div id="CONTAINERWRAP">
-	<div id="CONTAINER">
-
-	  &header2;
-
-	<div id="CONTENT">
-	<div id="SIDEWRAP">
-	  &nav;
-	</div> <!-- SIDEWRAP -->
-
-	<div id="CONTENTWRAP">
-
-	  &header3;
-
+  <xsl:template name="process.content">
 	<xsl:apply-templates select="//month"/>
-	
+
 	<p>Other press publications:
 	  <a href="../2009/press.html">2009</a>,
 	  <a href="../2008/press.html">2008</a>,
@@ -61,25 +44,10 @@
 	  <a href="../1998/press.html">1998-1996</a></p>
 
 	<a href="&base;/news/news.html">News Home</a>
-	</div> <!-- CONTENTWRAP -->
-	<br class="clearboth" />
-
-	</div> <!-- CONTENT -->
-
-            <div id="FOOTER">
-               &copyright;<br />
-               &date;
-            </div> <!-- FOOTER -->
-
-	</div> <!-- CONTAINER -->
-	</div> <!-- CONTAINERWRAP -->
-
-      </body>
-    </html>
   </xsl:template>
 
   <!-- Everything that follows are templates for the rest of the content -->
-  
+
   <xsl:template match="month">
     <h1>
       <xsl:call-template name="transtable-lookup">
@@ -110,10 +78,10 @@
 
       <p><a href="{$url}"><b><xsl:value-of
       select="name"/></b></a><br/>
-	  
+
 	<a href="{$site-url}"><xsl:value-of
 	select="site-name"/></a>, <xsl:value-of select="author"/><br/>
-	<xsl:copy-of select="p/child::node()"/>
+	<xsl:apply-templates select="p/child::node()" mode="copy.html"/>
       </p>
     </li>
   </xsl:template>

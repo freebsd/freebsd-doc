@@ -1,6 +1,6 @@
 #
 # The FreeBSD Russian Documentation Project
-# 
+#
 # $FreeBSD$
 # $FreeBSDru: frdp/doc/ru_RU.KOI8-R/articles/portbuild/Makefile,v 1.1 2004/07/10 09:56:33 marck Exp $
 #

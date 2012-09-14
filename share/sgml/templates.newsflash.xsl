@@ -2,41 +2,32 @@
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
 <!ENTITY title "FreeBSD News Flash">
-<!ENTITY email "freebsd-www">
 <!ENTITY rsslink "rss.xml">
 <!ENTITY rsstitle "&title;">
-<!ENTITY % navinclude.about "INCLUDE">
-<!ENTITY % header.rss "INCLUDE">
 ]>
 
 <!-- $FreeBSD$ -->
 
-<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
-  xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
-  <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
+<xsl:stylesheet version="1.0"
+  xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+  xmlns="http://www.w3.org/1999/xhtml">
 
-  <xsl:variable name="date">
-    <xsl:value-of select="//cvs:keyword[@name='freebsd']"/>
-  </xsl:variable>
+  <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
+  <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/xhtml.xsl"/>
 
   <xsl:param name="news.project.xml-master" select="'none'" />
   <xsl:param name="news.project.xml" select="'none'" />
 
-  <xsl:output type="html" encoding="&xml.encoding;"/>
+  <xsl:variable name="title">&title;</xsl:variable>
 
-  <xsl:template match="news">
-    <html>
-      &header1;
-      <body>
+  <xsl:variable name="rsstitle">&rsstitle;</xsl:variable>
 
-	<div id="CONTAINERWRAP">
-	  <div id="CONTAINER">
-	    &header2;
+  <xsl:variable name="rsslink">&rsslink;</xsl:variable>
 
-	    <div id="CONTENT">
-              <div id="SIDEWRAP">
-                &nav;
-                <div id="FEEDLINKS">
+  <xsl:template name="process.content">
+              <div id="sidewrap">
+                &nav.about;
+                <div id="feedlinks">
                   <ul>
                     <li>
                       <a href="rss.xml" title="FreeBSD RSS 2.0 Feed">
@@ -52,9 +43,10 @@
                 </div> <!-- FEEDLINKS -->
               </div> <!-- SIDEWRAP -->
 
-	      <div id="CONTENTWRAP">
-		&header3;
+	      <div id="contentwrap">
+		<h1>&title;</h1>
 
+		<xsl:for-each select="/news">
 		<xsl:call-template name="html-news-list-newsflash-preface" />
 
 		<xsl:call-template name="html-news-list-newsflash">
@@ -65,19 +57,9 @@
 		<xsl:call-template name="html-news-make-olditems-list" />
 
 		<xsl:call-template name="html-news-list-newsflash-homelink" />
+		</xsl:for-each>
 
 	      </div> <!-- CONTENTWRAP -->
 	      <br class="clearboth" />
-	    </div> <!-- CONTENT -->
-
-            <div id="FOOTER">
-               &copyright;<br />
-               &date;
-            </div> <!-- FOOTER -->
-        </div> <!-- CONTAINER -->
-   </div> <!-- CONTAINERWRAP -->
-
-      </body>
-    </html>
   </xsl:template>
 </xsl:stylesheet>

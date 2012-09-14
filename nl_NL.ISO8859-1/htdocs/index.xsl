@@ -10,8 +10,12 @@
 
 <!-- $FreeBSD$ -->
 
-<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
+<xsl:stylesheet version="1.0"
+  xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+  xmlns="http://www.w3.org/1999/xhtml">
+
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
+  <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/xhtml.xsl"/>
 
   <!-- these params should be externally bound. The values
        here are not used actually -->
@@ -26,58 +30,13 @@
   <xsl:param name="events.xml" select="'none'"/>
   <xsl:param name="html.header.script.google" select="'IGNORE'"/>
 
-  <xsl:output type="html" encoding="&xml.encoding;"
-              doctype-public="-//W3C//DTD HTML 4.01 Transitional//EN"/>
+  <xsl:template name="process.content">
+	<div id="frontcontainer">
+	  <div id="frontmain">
+	    <div id="frontfeaturecontainer">
 
-  <xsl:template match="/">
-    <html>
-      <head>
-	<title>&title;</title>
-	<meta name="description" content="Het &os; Project"/>
-	<meta name="keywords" content="&os;, BSD, UNIX, Ondersteuning, Ports,
-	      Release, Applicatie, Software, Handboek, FAQ, Tutorials, Bugs,
-	      CVS, CVSup, Nieuws, Commerciele Leveranciers, homepage, CTM, Unix"/>
-	<link rel="shortcut icon" href="&enbase;/favicon.ico" type="image/x-icon"/>
-	<link rel="icon" href="&enbase;/favicon.ico" type="image/x-icon"/>
-<!--
-	VOOR VERTALERS:
-
-	Vertaal de attributen "Normal Text" en "Large Text" in de volgende twee regels niet.
-	Ze zijn geen letterlijke tekst maar JavaScript-parameters.  Als ze veranderd worden
-	resulteert dit in opmaakfouten.
--->
-	<link rel="stylesheet" media="screen" href="&enbase;/layout/css/fixed.css?20060509" type="text/css" title="Normal Text" />
-	<link rel="alternate stylesheet" media="screen" href="&enbase;/layout/css/fixed_large.css" type="text/css" title="Large Text" />
-	<xsl:if test="$html.header.script.google != 'IGNORE'">
-	  <script type="text/javascript" src="&enbase;/layout/js/google.js"></script>
-	</xsl:if>
-	<link rel="alternate" type="application/rss+xml"
-	  title="&os; Projectnieuws" href="&enbase;/news/rss.xml" />
-	<link rel="alternate" type="application/rss+xml"
-	  title="&os; Beveiliging" href="&enbase;/security/rss.xml" />
-	<link rel="alternate" type="application/rss+xml"
-	  title="&os; GNOME Projectnieuws" href="&enbase;/gnome/rss.xml" />
-
-	<!-- Formatted to be easy to spam harvest, please do not reformat. -->
-	<xsl:comment>
-	Spamval, niet emailen:
-	&lt;a href="mailto:bruscar@freebsd.org"&gt;bruscar@freebsd.org&lt;/a&gt;
-	</xsl:comment>
-      </head>
-
-      <body>
-
-   <div id="CONTAINERWRAP">
-    <div id="CONTAINER">
-      &header2;
-      <div id="CONTENT">
-
-	<div id="FRONTCONTAINER">
-	  <div id="FRONTMAIN">
-	    <div id="FRONTFEATURECONTAINER">
-
-		<div id="FRONTFEATURELEFT">
-			<div id="FRONTFEATURECONTENT">
+		<div id="frontfeatureleft">
+			<div id="frontfeaturecontent">
 				<h1>
 				  Gebaseerd op BSD &unix;
 				</h1>
@@ -98,13 +57,13 @@
 				    websites</a> en de meest voorkomende
 				  embedded netwerk- en opslagapparaten
 				  gebruikt.</p>
-				<div id="TXTFRONTFEATURELINK">
-				&#187;<a href="&base;/about.html" title="Meer weten">Meer weten</a>
+				<div id="txtfrontfeaturelink">
+				&raquo;<a href="&base;/about.html" title="Meer weten">Meer weten</a>
 				</div> <!-- TXTFRONTFEATURELINK -->
 			</div> <!-- FRONTFEATURECONTENT -->
 		</div> <!-- FRONTFEATURELEFT -->
 
-		<div id="FRONTFEATUREMIDDLE">
+		<div id="frontfeaturemiddle">
 			<div class="frontgetroundbox">
 			  <div class="frontgettop"><div><b style="display: none">.</b></div></div>
 				<div class="frontgetcontent">
@@ -113,10 +72,10 @@
 			  <div class="frontgetbot"><div><b style="display: none">.</b></div></div>
 			</div> <!-- frontgetroundbox -->
 
-			<div id="FRONTRELEASES">
-			  <div id="FRONTRELEASESCONTENT" class="txtshortcuts">
+			<div id="frontreleases">
+			  <div id="frontreleasescontent" class="txtshortcuts">
 				  <h2><a href="&enbase;/releases/">NIEUWSTE UITGAVEN</a></h2>
-				  <ul id="FRONTRELEASESLIST">
+				  <ul id="frontreleaseslist">
 				    <li>Productie:&nbsp;<a
 				href="&u.rel.announce;">&rel.current;</a>,&nbsp;<a
 				href="&u.rel2.announce;">&rel2.current;</a></li>
@@ -139,10 +98,10 @@
 			</div> <!-- FRONTRELEASES -->
 		</div> <!-- FRONTFEATUREMIDDLE -->
 
-		<div id="FRONTFEATURERIGHT">
+		<div id="frontfeatureright">
 			<h2 class="blockhide">Talen</h2>
-			<div id="LANGUAGENAV">
-				<ul id="LANGUAGENAVLIST">
+			<div id="languagenav">
+				<ul id="languagenavlist">
 				  <li>
 					<a href="&enbase;/de/" title="Duits">de</a>
 				  </li>
@@ -176,11 +135,11 @@
 				</ul>
 			</div> <!-- LANGUAGENAV -->
 
-			<div id="MIRROR">
+			<div id="mirror">
 			  <form action="&cgibase;/mirror.cgi" method="get">
 				<div>
 				  <h2 class="blockhide"><label for="MIRRORSEL">Mirror</label></h2>
-				  <select id="MIRRORSEL" name="goto">
+				  <select id="mirrorsel" name="goto">
 					  <xsl:call-template name="html-index-mirrors-options-list">
 					    <xsl:with-param name="mirrors.xml" select="$mirrors.xml" />
 					  </xsl:call-template>
@@ -190,10 +149,10 @@
 			  </form>
 			</div> <!-- MIRROR -->
 
-			<div id="FRONTSHORTCUTS">
-			  <div id="FRONTSHORTCUTSCONTENT" class="txtshortcuts">
+			<div id="frontshortcuts">
+			  <div id="frontshortcutscontent" class="txtshortcuts">
 				  <h2>SNELKEUZE</h2>
-				  <ul id="FRONTSHORTCUTSLIST">
+				  <ul id="frontshortcutslist">
 					<li>
 					  <a href="&enbase;/community/mailinglists.html" title="Mailinglijsten">Mailinglijsten</a>
 					</li>
@@ -226,9 +185,9 @@
 	    </div> <!-- FRONTFEATURECONTAINER -->
 
 	    <br class="clearboth" />
-	    <div id="FRONTNEMSCONTAINER">
-	      <div id="FRONTNEWS">
-		<div id="FRONTNEWSCONTENT" class="txtnewsevent">
+	    <div id="frontnemscontainer">
+	      <div id="frontnews">
+		<div id="frontnewscontent" class="txtnewsevent">
 			<h2>LAATSTE NIEUWS</h2>
 			<div class="newseventswrap">
 
@@ -252,8 +211,8 @@
 		  </div> <!-- FRONTNEWSCONTENT -->
 		</div> <!-- FRONTNEWS -->
 		<div class="frontseparator"><b style="display: none">.</b></div>
-		<div id="FRONTEVENTS">
-		   <div id="FRONTEVENTSCONTENT" class="txtnewsevent">
+		<div id="frontevents">
+		   <div id="fronteventscontent" class="txtnewsevent">
 
 			<h2>EVENEMENTEN</h2>
 			<div class="newseventswrap">
@@ -275,8 +234,8 @@
 		   </div> <!-- FRONTEVENTSCONTENT -->
 		</div> <!-- FRONTEVENTS -->
 		<div class="frontseparator"><b style="display: none">.</b></div>
-		<div id="FRONTMEDIA">
-		   <div id="FRONTMEDIACONTENT" class="txtnewsevent">
+		<div id="frontmedia">
+		   <div id="frontmediacontent" class="txtnewsevent">
 
 			<h2>IN DE MEDIA</h2>
 			<div class="newseventswrap">
@@ -298,8 +257,8 @@
 		   </div> <!-- FRONTMEDIACONTENT -->
 		</div> <!-- FRONTMEDIA -->
 		<div class="frontseparator"><b style="display: none">.</b></div>
-		<div id="FRONTSECURITY">
-		   <div id="FRONTSECURITYCONTENT" class="txtnewsevent">
+		<div id="frontsecurity">
+		   <div id="frontsecuritycontent" class="txtnewsevent">
 
 			<h2>BEVEILIGING</h2>
 			<div class="newseventswrap">
@@ -350,28 +309,5 @@
 	    </div> <!-- FRONTNEMSCONTAINER -->
 	  </div> <!-- FRONTMAIN -->
 	</div> <!-- FRONTCONTAINER -->
-
-      </div> <!-- CONTENT -->
-      <div id="FOOTER">
-	&copyright;
-
-	Het merk &os; is een geregistreerd handelsmerk van The &os;
-	Foundation en is door Het &os; Project gebruikt met toestemming van
-	<a href="http://www.freebsdfoundation.org/documents/Guidelines.shtml">The &os; Foundation</a>.
-      </div> <!-- FOOTER -->
-    </div> <!-- CONTAINER -->
-   </div> <!-- CONTAINERWRAP -->
-
-      </body>
-    </html>
   </xsl:template>
 </xsl:stylesheet>
-
-<!--
-     Local Variables:
-     mode: xml
-     sgml-indent-data: t
-     sgml-omittag: nil
-     sgml-always-quote-attributes: t
-     End:
--->

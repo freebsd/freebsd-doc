@@ -9,8 +9,12 @@
      basiert auf: 1.178
 -->
 
-<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
+<xsl:stylesheet version="1.0"
+  xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+  xmlns="http://www.w3.org/1999/xhtml">
+
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
+    <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/xhtml.xsl"/>
 
   <!-- these params should be externally bound. The values
        here are not used actually -->
@@ -25,94 +29,45 @@
   <xsl:param name="events.xml" select="'none'"/>
   <xsl:param name="html.header.script.google" select="'IGNORE'"/>
 
-  <xsl:output type="html" encoding="iso-8859-1"
-              doctype-public="-//W3C//DTD HTML 4.01 Transitional//EN"/>
+  <xsl:variable name="title">&title;</xsl:variable>
 
-  <xsl:template match="/">
-    <html>
-      <head>
-	<title>&title;</title>
+  <xsl:template name="process.content">
+        <div id="frontcontainer">
+          <div id="frontmain">
+            <div id="frontfeaturecontainer">
 
-	<meta name="description" content="The FreeBSD Project"/>
-	<meta name="keywords" content="FreeBSD, BSD, UNIX, Support, Ports,
-	      Release, Application, Software, Handbook, FAQ, Tutorials, Bugs,
-	      CVS, CVSup, News, Commercial Vendors, homepage, CTM, Unix"/>
-	<link rel="shortcut icon" href="&enbase;/favicon.ico" type="image/x-icon"/>
-	<link rel="icon" href="&enbase;/favicon.ico" type="image/x-icon"/>
-
-<!--
-FUER UEBERSETZER - ACHTUNG:
-
-Die zwei Attribute "Normal Text" und "Large Text" in den beiden naechsten
-Zeilen NICHT uebersetzen!  Es handelt sich dabei nicht um Text, sondern um
-JavaScript-Parameter.  Eine Uebersetzung dieser Parameter fuehrt zu
-Problemen bei der Darstellung der Webseiten.
--->
-
-	<link rel="stylesheet" media="screen" href="&enbase;/layout/css/fixed.css?20060509" type="text/css" title="Normal Text" />
-	<link rel="alternate stylesheet" media="screen" href="&enbase;/layout/css/fixed_large.css" type="text/css" title="Large Text" />
-	<script type="text/javascript" src="&enbase;/layout/js/styleswitcher.js"></script>
-	<xsl:if test="$html.header.script.google != 'IGNORE'">
-	  <script type="text/javascript" src="&base;/layout/js/google.js"></script>
-	</xsl:if>
-	<link rel="alternate" type="application/rss+xml"
-	  title="FreeBSD Ank&#252;ndigungen" href="&enbase;/news/news.rdf" />
-	<link rel="alternate" type="application/rss+xml"
-	  title="FreeBSD Sicherheits-Hinweise" href="&enbase;/security/advisories.rdf" />
-	<link rel="alternate" type="application/rss+xml"
-	  title="Ank&#252;ndigungen des FreeBSD GNOME Projects"
-	  href="&enbase;/gnome/news.rdf" />
-
-	<!-- Formatted to be easy to spam harvest, please do not reformat. -->
-	<xsl:comment>
-	  Spamtrap, do not email:
-	  &lt;a href="mailto:bruscar@freebsd.org"&gt;bruscar@freebsd.org&lt;/a&gt;
-	</xsl:comment>
-      </head>
-
-      <body>
-
-   <div id="CONTAINERWRAP">
-    <div id="CONTAINER">
-      &header2;
-      <div id="CONTENT">
-
-        <div id="FRONTCONTAINER">
-          <div id="FRONTMAIN">
-            <div id="FRONTFEATURECONTAINER">
-
-		<div id="FRONTFEATURELEFT">
-			<div id="FRONTFEATURECONTENT">
+		<div id="frontfeatureleft">
+			<div id="frontfeaturecontent">
 				<h1>
 				  Auf BSD UNIX&reg; basierend
 				</h1>
-				<p>FreeBSD&reg; ist ein modernes Betriebssystem f&#252;r
+				<p>FreeBSD&reg; ist ein modernes Betriebssystem für
 				  Server, Desktops und eingebettete Systeme, das auf
 				  zahlreichen <a
 				  href="&base;/platforms/index.html">Plattformen</a>
-				  l&#228;uft.  Der Quellcode von FreeBSD wird seit
+				  läuft.  Der Quellcode von FreeBSD wird seit
 				  mehr als 30 Jahren kontinuierlich weiterentwickelt,
 				  verbessert und optimiert.  Das System wird
 				  von einer <a
 				  href="&enbase;/doc/en_US.ISO8859-1/articles/contributors/staff-committers.html">
-				  gro&#223;en Entwicklergruppe</a> gepflegt und erweitert.
-				  FreeBSD bietet Ihnen leistungsf&#228;hige
+				  großen Entwicklergruppe</a> gepflegt und erweitert.
+				  FreeBSD bietet Ihnen leistungsfähige
 				  und beeindruckende Netzwerk- und
 				  Sicherheitsfunktionen und eine exzellente
 				  Performance und wird deswegen beispielsweise von
-				  einigen der gr&#246;&#223;ten <a
+				  einigen der größten <a
 				  href="&enbase;/doc/&url.doc.langcode;/books/handbook/nutshell.html#INTRODUCTION-NUTSHELL-USERS">
 				  Internet-Seiten</a> und von zahlreichen Anbietern
-				  eingebetteter Netzwerk- und Speicherger&#228;te
+				  eingebetteter Netzwerk- und Speichergeräte
 				  eingesetzt.</p>
 
-				  <div id="TXTFRONTFEATURELINK"> &#187;<a
+				  <div id="txtfrontfeaturelink"> »<a
 				    href="&base;/about.html" title="Learn More">Mehr Informationen</a>
 				  </div> <!-- TXTFRONTFEATURELINK -->
 			</div> <!-- FRONTFEATURECONTENT -->
 		</div> <!-- FRONTFEATURELEFT -->
 
-		<div id="FRONTFEATUREMIDDLE">
+		<div id="frontfeaturemiddle">
 			<div class="frontgetroundbox">
 			  <div class="frontgettop"><div>&nbsp;</div>&nbsp;</div>
 				<div class="frontgetcontent">
@@ -121,10 +76,10 @@ Problemen bei der Darstellung der Webseiten.
 			  <div class="frontgetbot"><div>&nbsp;</div>&nbsp;</div>
 			</div> <!-- frontgetroundbox -->
 
-			<div id="FRONTRELEASES">
-			  <div id="FRONTRELEASESCONTENT" class="txtshortcuts">
+			<div id="frontreleases">
+			  <div id="frontreleasescontent" class="txtshortcuts">
 				  <h2><a href="&base;/releases/">AKTUELLE VERSIONEN</a></h2>
-				  <ul id="FRONTRELEASESLIST">
+				  <ul id="frontreleaseslist">
 					<li>
 					  Produktion:&nbsp;<a href="&u.rel.announce;">&rel.current;</a>,&nbsp;
 					  <a href="&u.rel2.announce;">&nbsp;&rel2.current;</a>
@@ -149,10 +104,10 @@ Problemen bei der Darstellung der Webseiten.
 			</div> <!-- FRONTRELEASES -->
 		</div> <!-- FRONTFEATUREMIDDLE -->
 
-		<div id="FRONTFEATURERIGHT">
+		<div id="frontfeatureright">
 			<h2 class="blockhide">Sprachauswahl</h2>
-			<div id="LANGUAGENAV">
-				<ul id="LANGUAGENAVLIST">
+			<div id="languagenav">
+				<ul id="languagenavlist">
 				  <li>
 					<a href="&enbase;/de/" title="Deutsch">de</a>
 				  </li>
@@ -163,7 +118,7 @@ Problemen bei der Darstellung der Webseiten.
 					<a href="&enbase;/es/" title="Spanisch">es</a>
 				  </li>
 				  <li>
-					<a href="&enbase;/fr/" title="Franz&#246;sisch">fr</a>
+					<a href="&enbase;/fr/" title="Französisch">fr</a>
 				  </li>
 				  <li>
 					<a href="&enbase;/hu/" title="Ungarisch">hu</a>
@@ -172,7 +127,7 @@ Problemen bei der Darstellung der Webseiten.
 					<a href="&enbase;/it/" title="Italienisch">it</a>
 				  </li>
 				  <li>
-					<a href="&enbase;/nl/" title="Holl&#228;ndisch">nl</a>
+					<a href="&enbase;/nl/" title="Holländisch">nl</a>
 				  </li>
 				  <li>
 					<a href="&enbase;/ja/" title="Japanisch">ja</a>
@@ -186,11 +141,11 @@ Problemen bei der Darstellung der Webseiten.
 				</ul>
 			</div> <!-- LANGUAGENAV -->
 
-			<div id="MIRROR">
+			<div id="mirror">
 			  <form action="&cgibase;/mirror.cgi" method="get">
 				<div>
 				  <h2 class="blockhide"><label for="MIRRORSEL">Mirror</label></h2>
-				  <select id="MIRRORSEL" name="goto">
+				  <select id="mirrorsel" name="goto">
 					  <xsl:call-template name="html-index-mirrors-options-list">
 					    <xsl:with-param name="mirrors.xml" select="$mirrors.xml" />
 					  </xsl:call-template>
@@ -200,10 +155,10 @@ Problemen bei der Darstellung der Webseiten.
 			  </form>
 			</div> <!-- MIRROR -->
 
-			<div id="FRONTSHORTCUTS">
-			  <div id="FRONTSHORTCUTSCONTENT" class="txtshortcuts">
+			<div id="frontshortcuts">
+			  <div id="frontshortcutscontent" class="txtshortcuts">
 				  <h2>SHORTCUTS</h2>
-				  <ul id="FRONTSHORTCUTSLIST">
+				  <ul id="frontshortcutslist">
 					<li>
 					  <a href="&base;/community/mailinglists.html" title="Mailinglisten">Mailinglisten</a>
 					</li>
@@ -236,9 +191,9 @@ Problemen bei der Darstellung der Webseiten.
             </div> <!-- FRONTFEATURECONTAINER -->
 
 	    <br class="clearboth" />
-            <div id="FRONTNEMSCONTAINER">
-            	<div id="FRONTNEWS">
-            	   <div id="FRONTNEWSCONTENT" class="txtnewsevent">
+            <div id="frontnemscontainer">
+            	<div id="frontnews">
+            	   <div id="frontnewscontent" class="txtnewsevent">
 			<h2>NEUIGKEITEN</h2>
 			<div class="newseventswrap">
 
@@ -262,8 +217,8 @@ Problemen bei der Darstellung der Webseiten.
             	   </div> <!-- FRONTNEWSCONTENT -->
             	</div> <!-- FRONTNEWS -->
             	<div class="frontseparator"><b style="display: none">.</b></div>
-            	<div id="FRONTEVENTS">
-		   <div id="FRONTEVENTSCONTENT" class="txtnewsevent">
+            	<div id="frontevents">
+		   <div id="fronteventscontent" class="txtnewsevent">
 
 			<h2>VERANSTALTUNGEN</h2>
 			<div class="newseventswrap">
@@ -285,8 +240,8 @@ Problemen bei der Darstellung der Webseiten.
 		   </div> <!-- FRONTEVENTSCONTENT -->
             	</div> <!-- FRONTEVENTS -->
             	<div class="frontseparator"><b style="display: none">.</b></div>
-            	<div id="FRONTMEDIA">
-		   <div id="FRONTMEDIACONTENT" class="txtnewsevent">
+            	<div id="frontmedia">
+		   <div id="frontmediacontent" class="txtnewsevent">
 
 			<h2>AUS DER PRESSE</h2>
 			<div class="newseventswrap">
@@ -308,8 +263,8 @@ Problemen bei der Darstellung der Webseiten.
 		   </div> <!-- FRONTMEDIACONTENT -->
             	</div> <!-- FRONTMEDIA -->
 		<div class="frontseparator"><b style="display: none">.</b></div>
-		<div id="FRONTSECURITY">
-		   <div id="FRONTSECURITYCONTENT" class="txtnewsevent">
+		<div id="frontsecurity">
+		   <div id="frontsecuritycontent" class="txtnewsevent">
 
 			<h2>SICHERHEITS-HINWEISE</h2>
 			<div class="newseventswrap">
@@ -362,31 +317,5 @@ Problemen bei der Darstellung der Webseiten.
             </div> <!-- FRONTNEMSCONTAINER -->
           </div> <!-- FRONTMAIN -->
         </div> <!-- FRONTCONTAINER -->
-
-      </div> <!-- CONTENT -->
-      <div id="footer">
-        &copyright;
-
-	Die Marke FreeBSD ist ein registriertes Warenzeichen der
-	FreeBSD Foundation und wird vom FreeBSD Project mit Erlaubnis
-	der <a
-	href="http://www.freebsdfoundation.org/documents/Guidelines.shtml">
-	FreeBSD Foundation</a> verwendet.
-
-      </div> <!-- footer -->
-    </div> <!-- CONTAINER -->
-   </div> <!-- CONTAINERWRAP -->
-
-      </body>
-    </html>
   </xsl:template>
 </xsl:stylesheet>
-
-<!--
-     Local Variables:
-     mode: xml
-     sgml-indent-data: t
-     sgml-omittag: nil
-     sgml-always-quote-attributes: t
-     End:
--->

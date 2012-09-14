@@ -6,7 +6,7 @@
 <!ENTITY % freebsd.l10n PUBLIC "-//FreeBSD//ENTITIES DocBook Language Specific Entities//EN">
 %freebsd.l10n;
 
-<!ENTITY % output.html  "IGNORE"> 
+<!ENTITY % output.html  "IGNORE">
 <!ENTITY % output.print "IGNORE">
 ]>
 
@@ -26,7 +26,7 @@
                 (literal " からダウンロードできます。")))
             (make element gi: "p"
                   attributes: (list (list "align" "center"))
-              (make element gi: "small"  
+              (make element gi: "small"
                 (literal "FreeBSD に関する質問がある場合には、")
 		(create-link
 		  (list (list "HREF" "http://www.FreeBSD.org/ja/docs.html"))
@@ -44,6 +44,6 @@
       ]]>
     </style-specification-body>
   </style-specification>
-    
+
   <external-specification id="docbook" document="freebsd.dsl">
 </style-sheet>

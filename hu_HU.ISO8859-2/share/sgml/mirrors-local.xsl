@@ -7,7 +7,20 @@
      %SRCID%	1.6
 -->
 
-<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
+<xsl:stylesheet version="1.0"
+  xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+  xmlns:str="http://exslt.org/strings"
+  xmlns:cvs="http://www.FreeBSD.org/XML/CVS"
+  exclude-result-prefixes="cvs"
+  extension-element-prefixes="str">
+
+  <xsl:variable name="svnKeyword">
+    <xsl:value-of select="normalize-space(//cvs:keyword[1])"/>
+  </xsl:variable>
+
+  <xsl:variable name="date">
+    <xsl:value-of select="str:split($svnKeyword, ' ')[4]"/>
+  </xsl:variable>
 
   <xsl:output type="xml" encoding="iso-8859-2"
 	      omit-xml-declaration="yes"
@@ -20,11 +33,6 @@
   <xsl:param name="target" select="''" />
 
   <xsl:param name="mirrors-docbook-country-anchor-id" select="translate($target, '/.', '--')" />
-
-  <xsl:variable name="date">
-    <xsl:value-of xmlns:cvs="http://www.FreeBSD.org/XML/CVS"
-                  select="normalize-space(//cvs:keyword[@name='freebsd'])"/>
-  </xsl:variable>
 
   <!--
      templates available:

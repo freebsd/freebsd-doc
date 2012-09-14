@@ -3,7 +3,7 @@
 # The FreeBSD Brazilian Portuguese Documentation Project
 #
 # Original revision: r38826
-# 
+#
 # $FreeBSD$
 #
 

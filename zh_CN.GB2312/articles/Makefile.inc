@@ -1,4 +1,4 @@
-# 
+#
 # The FreeBSD Simplified Chinese Project
 # Original Revision: 1.4
 #

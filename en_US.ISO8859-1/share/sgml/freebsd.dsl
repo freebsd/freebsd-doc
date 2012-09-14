@@ -6,7 +6,7 @@
 <!ENTITY % freebsd.l10n PUBLIC "-//FreeBSD//ENTITIES DocBook Language Specific Entities//EN">
 %freebsd.l10n;
 
-<!ENTITY % output.html  "IGNORE"> 
+<!ENTITY % output.html  "IGNORE">
 <!ENTITY % output.print "IGNORE">
 <!ENTITY % output.print.niceheaders "IGNORE">
 ]>
@@ -16,6 +16,6 @@
     <style-specification-body>
     </style-specification-body>
   </style-specification>
-    
+
   <external-specification id="docbook" document="freebsd.dsl">
 </style-sheet>

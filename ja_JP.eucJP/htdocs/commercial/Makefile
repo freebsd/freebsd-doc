@@ -43,7 +43,4 @@ PARAMS.software_bycat=\
 		--param basename "'software.html'" \
 		--param sort "'bycat'"
 
-### Revision checking
-REVCHECK=	yes
-
 .include "${DOC_PREFIX}/share/mk/web.site.mk"
