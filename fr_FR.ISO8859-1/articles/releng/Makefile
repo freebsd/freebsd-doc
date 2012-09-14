@@ -1,4 +1,4 @@
-# 
+#
 #    The FreeBSD Documentation Project
 #    The FreeBSD French Documentation Project
 #

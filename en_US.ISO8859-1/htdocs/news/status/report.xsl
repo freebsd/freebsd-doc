@@ -1,61 +1,38 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
-<!ENTITY base "../..">
 <!ENTITY title "FreeBSD Quarterly Status Report">
-<!ENTITY email "freebsd-www">
-<!ENTITY % navinclude.about "INCLUDE">
 ]>
 
 <!-- $FreeBSD$ -->
 
 <!-- Standard header material -->
-<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
-  xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
+<xsl:stylesheet version="1.0"
+  xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+  xmlns="http://www.w3.org/1999/xhtml">
 
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
+  <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/xhtml.xsl"/>
 
-  <xsl:variable name="date">
-    <xsl:value-of select="//cvs:keyword[@name='freebsd']"/>
-  </xsl:variable>
+  <xsl:variable name="title">&title;</xsl:variable>
 
-  <xsl:variable name="ucletters"
-    select="'ABCDEFGHIJKLMNOPQRSTUVWXYZ'"/>
-  <xsl:variable name="lcletters"
-    select="'abcdefghijklmnopqrstuvwxyz'"/>
-  
-  <xsl:output type="html" encoding="iso-8859-1"/>
+  <xsl:template name="process.sidewrap">
+    &nav.about;
+  </xsl:template>
 
-  <xsl:template match="report">
-    <html>
-      &header1;
-
-      <body>
-
-	<div id="containerwrap">
-	  <div id="container">
-            &header2;
-
-	<div id="content">
-              <div id="SIDEWRAP">
-                &nav;
-              </div> <!-- SIDEWRAP -->
-
-	      <div id="contentwrap">
-                &header3;
-
+  <xsl:template name="process.contentwrap">
 	<!-- Process all the <sections>, in order -->
-	<xsl:apply-templates select="section"/>
+	<xsl:apply-templates select="report/section"/>
 
 	<hr/>
 
 	<!-- Generate a table of contents, sorted -->
-	<xsl:for-each select="category">
+	<xsl:for-each select="report/category">
 	  <h3><xsl:value-of select="description"/></h3>
 	  <xsl:variable name="cat-short" select="name"/>
 	  <ul>
 	    <xsl:for-each select="//project[@cat=$cat-short and @summary]">
-  	      <xsl:sort select="translate(title, $lcletters, $ucletters)"/>
+  	      <xsl:sort select="translate(title, $lowercase, $uppercase)"/>
 	      <li><a><xsl:attribute name="href">#<xsl:value-of
 	      select="translate(title, ' ',
 	      '-')"/></xsl:attribute><xsl:value-of select="title"/></a>
@@ -63,7 +40,7 @@
 	    </xsl:for-each>
 
 	    <xsl:for-each select="//project[@cat=$cat-short and not(@summary)]">
-  	      <xsl:sort select="translate(title, $lcletters, $ucletters)"/>
+  	      <xsl:sort select="translate(title, $lowercase, $uppercase)"/>
 	      <li><a><xsl:attribute name="href">#<xsl:value-of
 	      select="translate(title, ' ',
 	      '-')"/></xsl:attribute><xsl:value-of select="title"/></a>
@@ -73,7 +50,7 @@
 	</xsl:for-each>
 	<ul>
 	  <xsl:for-each select="//project[not(@cat)]">
-  	    <xsl:sort select="translate(title, $lcletters, $ucletters)"/>
+  	    <xsl:sort select="translate(title, $lowercase, $uppercase)"/>
 	    <li><a><xsl:attribute name="href">#<xsl:value-of
 	    select="translate(title, ' ',
 	    '-')"/></xsl:attribute><xsl:value-of select="title"/></a>
@@ -84,34 +61,22 @@
 	<hr/>
 
 	<!-- Process each project, sorted -->
-	<xsl:apply-templates select="project">
-	  <xsl:sort select="translate(title, $lcletters, $ucletters)"/>
+	<xsl:apply-templates select="report/project">
+	  <xsl:sort select="translate(title, $lowercase, $uppercase)"/>
 	</xsl:apply-templates>
 
 	<!-- Standard footer -->
-	<a href="../news.html">News Home</a> | <a href="status.html">Status Home</a> 
-	      </div> <!-- contentwrap -->
-
-	      <br class="clearboth" />
-	    </div> <!-- content -->
-            <div id="FOOTER">
-               &copyright;<br />
-               &date;
-            </div> <!-- FOOTER -->
-	  </div> <!-- container -->
-	</div> <!-- containerwrap -->
-      </body>
-    </html>
+	<a href="../news.html">News Home</a> | <a href="status.html">Status Home</a>
   </xsl:template>
 
   <!-- Everything that follows are templates for the rest of the content -->
-  
+
   <!-- A section creates a header, and copies in all the <p> elements from
        itself -->
   <xsl:template match="section">
     <h1><xsl:value-of select="title"/></h1>
 
-    <xsl:copy-of select="p"/>
+    <xsl:apply-templates select="p" mode="copy.html"/>
   </xsl:template>
 
   <!-- A project creates a header, and then process the three components of
@@ -164,15 +129,15 @@
   <!-- Body is a doddle.  Since it contains HTML we just copy in all the
        child elements. -->
   <xsl:template match="body">
-    <xsl:copy-of select="child::node()"/>
+    <xsl:apply-templates select="child::node()" mode="copy.html"/>
   </xsl:template>
 
   <xsl:template match="help">
     <h3>Open tasks:</h3>
     <ol>
       <xsl:for-each select="task">
-	<li><xsl:copy-of select="child::node()"/></li>
+	<li><xsl:apply-templates select="child::node()" mode="copy.html"/></li>
       </xsl:for-each>
-    </ol>    
+    </ol>
   </xsl:template>
 </xsl:stylesheet>

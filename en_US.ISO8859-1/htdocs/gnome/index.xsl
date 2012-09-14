@@ -1,36 +1,28 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
 <!ENTITY base "..">
 <!ENTITY title "The FreeBSD GNOME Project">
-<!ENTITY % navinclude.gnome "INCLUDE">
 ]>
 <!-- $FreeBSD$ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
 		xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
 		xmlns:rdf1="http://my.netscape.com/rdf/simple/0.9/"
+		xmlns="http://www.w3.org/1999/xhtml"
 		exclude-result-prefixes="rdf rdf1" version="1.0">
 
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
+  <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/xhtml.xsl"/>
 
-  <xsl:output type="html" encoding="&xml.encoding;"
-              doctype-public="-//W3C//DTD HTML 4.01 Transitional//EN"/>
+  <xsl:variable name="title">&title;</xsl:variable>
 
-  <xsl:template match="/">
-    <html>
-      &header1;
-      <body>
-
-	<div id="CONTAINERWRAP">
-	  <div id="CONTAINER">
-	    &header2;
-
-	    <div id="CONTENT">
-              <div id="SIDEWRAP">
-                &nav;
+  <xsl:template name="process.content">
+              <div id="sidewrap">
+                &nav.gnome;
               </div> <!-- SIDEWRAP -->
 
-	      <div id="CONTENTWRAP">
+	      <div id="contentwrap">
 		<div id="rightwrap">
 		  <div class="rightnav">
 
@@ -58,7 +50,7 @@
 				<xsl:value-of select="title"/><br/>
 			      </xsl:when>
 			      <xsl:otherwise>
-				<xsl:value-of select="p"/><br/>
+				<xsl:apply-templates select="p" mode="copy.html"/><br/>
 			      </xsl:otherwise>
 			    </xsl:choose>
 			  </a></li>
@@ -72,6 +64,9 @@
 		  <div class="rightnav">
 
 		    <h2>GNOME Project News</h2>
+<!-- XXX: (1) does not work at the moment
+          (2) should we really copy over GNOME news?
+
 		    <ul>
 		      <xsl:for-each select="document('http://gnomedesktop.org/node/feed')/rss/channel/*[name() = 'item'][position() &lt; 10]">
 			<li><a>
@@ -89,10 +84,11 @@
 			  </xsl:for-each>
 			</a></li>
 		    </ul>
+-->
                   </div> <!-- rightnav -->
                 </div> <!-- rightwrap -->
 
-		&header3;
+		<h1>&title;</h1>
 
 		<h2>What is GNOME?</h2>
 
@@ -176,14 +172,5 @@
 	  	</div> <!-- contentwrap -->
 
 	      <br class="clearboth" />
-	    </div> <!-- content -->
-            <div id="FOOTER">
-	      &copyright;<br />
-	      &date;
-            </div> <!-- FOOTER -->
-	  </div> <!-- container -->
-	</div> <!-- containerwrap -->
-      </body>
-    </html>
   </xsl:template>
 </xsl:stylesheet>

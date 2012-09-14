@@ -2,65 +2,32 @@
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
 <!ENTITY title "Commercial Vendors">
-<!ENTITY email "freebsd-www">
-<!ENTITY % navinclude.support "INCLUDE">
 ]>
 
 <!-- $FreeBSD$ -->
 
-<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
-  xmlns:cvs="http://www.FreeBSD.org/XML/CVS"
-  exclude-result-prefixes="cvs">
+<xsl:stylesheet version="1.0"
+  xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+  xmlns="http://www.w3.org/1999/xhtml">
 
-  <xsl:variable name="date">
-    <xsl:value-of select="//cvs:keyword[@name='freebsd']"/>
-  </xsl:variable>
+  <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/libcommon.xsl"/>
+  <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/xhtml.xsl"/>
 
   <xsl:param name="basename" select="'none'" />
   <xsl:param name="sort" select="'none'" />
 
-  <xsl:variable name="uc" select="'ABCDEFGHIJKLMNOPQRSTUVWXYZ'"/>
-  <xsl:variable name="lc" select="'abcdefghijklmnopqrstuvwxyz'"/>
+  <xsl:variable name="title">&title;</xsl:variable>
 
-  <xsl:output method="xml" encoding="&xml.encoding;"
-    doctype-system="http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"
-    doctype-public="-//W3C//DTD XHTML 1.0 Transitional//EN"/>
+  <xsl:template name="process.sidewrap">
+    &nav.support;
+  </xsl:template>
 
-  <xsl:template match="/entries">
-    <html>
-      &header1;
-      <body>
-	<div id="containerwrap">
-	  <div id="container">
-	    &header2;
-
-	    <div id="content">
-              <div id="SIDEWRAP">
-                &nav;
-              </div> <!-- SIDEWRAP -->
-
-	      <div id="contentwrap">
-		&header3;
-
+  <xsl:template name="process.contentwrap">
+		<xsl:for-each select="/entries">
 		<xsl:call-template name="html-commercial-preface" />
 
 		<xsl:call-template name="html-commercial-listing" />
-
-	      </div> <!-- contentwrap -->
-
-	      <br class="clearboth" />
-
-	    </div> <!-- content -->
-
-            <div id="FOOTER">
-	      &copyright;<br />
-	      &date;
-            </div> <!-- FOOTER -->
-
-	  </div> <!-- container -->
-	</div> <!-- containerwrap -->
-      </body>
-    </html>
+		</xsl:for-each>
   </xsl:template>
 
   <xsl:template name="html-commercial-preface">
@@ -124,7 +91,7 @@
       <xsl:otherwise>
 	<dl>
 	  <xsl:for-each select="/entries/entry">
-	    <xsl:sort select="translate(name, $uc, $lc)" order="ascending"/>
+	    <xsl:sort select="translate(name, $uppercase, $lowercase)" order="ascending"/>
 
 	    <dt><xsl:element name="a">
 		<xsl:attribute name="name">
@@ -138,7 +105,7 @@
 		<xsl:value-of select="name"/>
 	      </xsl:element></dt>
 
-	    <dd><xsl:copy-of select="description/child::node()" /></dd>
+	    <dd><xsl:apply-templates select="description/child::node()" mode="copy.html"/></dd>
 	  </xsl:for-each>
 	</dl>
       </xsl:otherwise>

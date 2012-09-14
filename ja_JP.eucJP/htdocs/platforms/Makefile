@@ -25,7 +25,4 @@ DOCS+=	x86-64.sgml
 
 SUBDIR=	ia64
 
-### Revision checking
-REVCHECK=	yes
-
 .include "${DOC_PREFIX}/share/mk/web.site.mk"

@@ -1,4 +1,4 @@
-# 
+#
 # $FreeBSD$
 #
 # Build the FreeBSD FAQ
@@ -17,13 +17,13 @@ INSTALL_ONLY_COMPRESSED?=
 
 WITH_BIBLIOXREF_TITLE?=YES
 
-# 
+#
 # SRCS lists the individual SGML files that make up the document. Changes
 # to any of these files will force a rebuild
 #
 
 # SGML content
-SRCS=  book.sgml 
+SRCS=  book.sgml
 
 DOC_PREFIX?= ${.CURDIR}/../../..
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"

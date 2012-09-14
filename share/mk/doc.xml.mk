@@ -47,7 +47,10 @@ ${.OBJDIR}/catalog-cwd.xml: ${XML_CATALOG_CWD}
 XML_INCLUDES+=	${.OBJDIR}/autogen.ent
 CLEANFILES+=	${.OBJDIR}/autogen.ent
 ${.OBJDIR}/autogen.ent:
-	${ECHO_CMD} '<!ENTITY base "${DOC_PREFIX_REL}">' > ${.TARGET}
+.if ${LANGCODE} != en_US.ISO8859-1
+	${ECHO_CMD} '<!ENTITY enbase "${DOC_PREFIX_REL}/..">' > ${.TARGET}
+.endif
+	${ECHO_CMD} '<!ENTITY base "${DOC_PREFIX_REL}">' >> ${.TARGET}
 
 DEPENDSET.DEFAULT+=	wwwstd
 
@@ -203,7 +206,7 @@ _DEPENDSET.commercial=	${XML_COMMERCIAL_CONSULT} \
 			${XML_COMMERCIAL_SOFTWARE} \
 			${XSL_ENTRIES} \
 			${XML_INCLUDES}
-_PARAMS.commercial=	
+_PARAMS.commercial=
 XML_COMMERCIAL_CONSULT=	${DOC_PREFIX}/share/sgml/commercial.consult.xml
 XML_COMMERCIAL_HARDWARE=${DOC_PREFIX}/share/sgml/commercial.hardware.xml
 XML_COMMERCIAL_ISP=	${DOC_PREFIX}/share/sgml/commercial.isp.xml
@@ -269,10 +272,6 @@ XML_NOTICES=		${DOC_PREFIX}/share/sgml/notices.xml
 #   The ${TARGET.<id>} file will not be listed in $DATA if defined.
 #   NO_DATA.DEFAULT is the setting for all <id>s.
 #
-# NO_TIDY.<id>
-#   The ${TARGET.<id>} file will not be processed by tidy if defined.
-#   NO_TIDY.DEFAULT is the setting for all <id>s.
-#
 XSLTPROC_ENV+=	SGML_CATALOG_FILES=
 XSLTPROC_ENV+=	XML_CATALOG_FILES="${XML_CATALOG_FILES}"
 
@@ -334,13 +333,6 @@ DEPENDSET.${_ID}=	${DEPENDSET.DEFAULT}
 DEPENDSET.${_ID}=
 .endif
 .endif
-.if !defined(NO_TIDY.${_ID}) || empty(NO_TIDY.${_ID})
-.if defined(NO_TIDY.DEFAULT)
-NO_TIDY.${_ID}=	${NO_TIDY.DEFAULT}
-.else
-NO_TIDY.${_ID}=
-.endif
-.endif
 .if !defined(NO_DATA.${_ID}) || empty(NO_DATA.${_ID})
 .if defined(NO_DATA.DEFAULT)
 NO_DATA.${_ID}=	${NO_DATA.DEFAULT}
@@ -380,12 +372,6 @@ ${TARGET.${_ID}}: ${XML.${_ID}} ${DEPENDS.${_ID}}
 	${XSLTPROC} ${XSLTPROCOPTS.${_ID}} \
 		-o ${.TARGET} ${PARAMS.${_ID}} \
 		${XSLT.${_ID}} ${XML.${_ID}}
-. if !defined(NO_TIDY) || empty(NO_TIDY)
-.  if !defined(NO_TIDY.${_ID}) || empty(NO_TIDY.${_ID})
-	${REINPLACE_TABS_CMD} ${.TARGET}
-	-${TIDY} ${TIDYOPTS} ${.TARGET}
-.  endif
-. endif
 
 VALIDATE_DOCS+=	VALIDATE.${_ID}
 VALIDATE.${_ID}:

@@ -22,7 +22,7 @@
              select="'0'"/>
 
   <!-- Include the common stylesheets -->
-  
+
   <xsl:include href="freebsd-common.xsl"/>
 
   <!-- FO specific customisation goes here -->

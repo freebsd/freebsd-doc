@@ -1,10 +1,7 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
-				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
-<!ENTITY base "..">
-<!ENTITY title "">
-]>
-<!-- $FreeBSD -->
+				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
+<!-- $FreeBSD$ -->
 <!-- The FreeBSD Japanese Documentation Project -->
 <!-- Original revision: 1.2 -->
 
@@ -15,10 +12,6 @@
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
 
   <xsl:output method="xml" indent="yes" encoding="&xml.encoding;"/>
-
-  <xsl:variable name="date">
-    <xsl:value-of select="//cvs:keyword[@name='freebsd']"/>
-  </xsl:variable>
 
   <xsl:template match="/">
     <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
@@ -55,7 +48,7 @@
       <xsl:attribute name="href">
         <xsl:value-of select="$link" /><xsl:text>rss.xml</xsl:text>
       </xsl:attribute>
-    </atom:link> 
+    </atom:link>
   </xsl:template>
 
   <!-- template: "rss-java-news-items"

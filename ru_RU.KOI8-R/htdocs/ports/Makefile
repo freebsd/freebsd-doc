@@ -31,7 +31,7 @@ ${INDEX}:
 	${BUNZIP2} ${INDEX}.bz2
 .endif
 
-# build the list of available packages only on the 
+# build the list of available packages only on the
 # main FreeBSD machines
 hostname!= hostname
 
@@ -62,9 +62,7 @@ packages.exists:
 .endif
 
 Makefile.gen: index.sgml .NOTMAIN
-	(	${ECHO_CMD} TIDY=${PERL};\
-		${ECHO_CMD} TIDYOPTS="-i'' -npe 's,\"-//FreeBSD//DTD HTML 4.01 Transitional-Based Extension//EN\",\"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\",'";\
-		${ECHO_CMD} DOCS= *.sgml;\
+	(	${ECHO_CMD} DOCS= *.sgml;\
 		${ECHO_CMD} -n "DYNAMIC_DOCS= ";\
 		${ECHO_CMD} -n " master-index.sgml";\
 		${ECHO_CMD} -n " index.sgml";\
@@ -72,9 +70,6 @@ Makefile.gen: index.sgml .NOTMAIN
 	for categoryfile in ${CATEGORYLIST}; do \
 		${ECHO_CMD} -n " $$categoryfile.sgml" >> Makefile.gen; \
 	done
-.if defined(NO_TIDY)
-	${ECHO_CMD} NO_TIDY=${NO_TIDY} >> Makefile.gen
-.endif
 
 index.sgml: ${INDEX} categories packages.exists portindex ports.inc .NOTMAIN
 	${RM} -f *.sgml

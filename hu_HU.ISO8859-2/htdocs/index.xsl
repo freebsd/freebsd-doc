@@ -12,8 +12,12 @@
      %SRCID%	1.169
 -->
 
-<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
+<xsl:stylesheet version="1.0"
+  xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+  xmlns="http://www.w3.org/1999/xhtml">
+
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
+  <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/xhtml.xsl"/>
 
   <!-- these params should be externally bound. The values
        here are not used actually -->
@@ -27,113 +31,83 @@
   <xsl:param name="events.xml-master" select="'none'"/>
   <xsl:param name="events.xml" select="'none'"/>
 
-  <xsl:output type="html" encoding="&xml.encoding;"
-              doctype-public="-//W3C//DTD HTML 4.01 Transitional//EN"/>
+  <xsl:variable name="svnKeyword">$FreeBSD$</xsl:variable>
 
-  <xsl:template match="/">
-    <html>
-      <head>
-	<title>&title;</title>
-	<meta name="description" content="A FreeBSD Projekt"/>
-	<meta name="keywords" content="FreeBSD, BSD, UNIX, Support, Ports,
-	      Release, Application, Software, Handbook, FAQ, Tutorials, Bugs,
-	      CVS, CVSup, News, Commercial Vendors, homepage, CTM, Unix"/>
-	<link rel="shortcut icon" href="&enbase;/favicon.ico" type="image/x-icon"/>
-	<link rel="icon" href="&enbase;/favicon.ico" type="image/x-icon"/>
-    <link rel="stylesheet" media="screen" href="&enbase;/layout/css/fixed.css?20060509" type="text/css" title="Normal Text" />
-    <link rel="alternate stylesheet" media="screen" href="&enbase;/layout/css/fixed_large.css" type="text/css" title="Large Text" />
-    <script type="text/javascript" src="&enbase;/layout/js/styleswitcher.js"></script>
-	<link rel="alternate" type="application/rss+xml"
-	  title="A &os; Projekt h&iacute;rei" href="&base;/news/rss.xml" />
-	<link rel="alternate" type="application/rss+xml"
-	  title="A &os; Projekt biztons&aacute;gi figyelmeztet&eacute;sei" href="&base;/security/rss.xml" />
-	
-	<!-- Formatted to be easy to spam harvest, please do not reformat. -->
-	<xsl:comment>
-        Spamtrap, do not email:
-        &lt;a href="mailto:bruscar@freebsd.org"&gt;bruscar@freebsd.org&lt;/a&gt;
-	</xsl:comment>
-      </head>
+  <xsl:variable name="title">&title;</xsl:variable>
 
-      <body>
+  <xsl:template name="process.content">
+        <div id="frontcontainer">
+          <div id="frontmain">
+            <div id="frontfeaturecontainer">
 
-   <div id="CONTAINERWRAP">
-    <div id="CONTAINER">
-      &header2;
-      <div id="CONTENT">
-
-        <div id="FRONTCONTAINER">
-          <div id="FRONTMAIN">
-            <div id="FRONTFEATURECONTAINER">
-
-		<div id="FRONTFEATURELEFT">
-			<div id="FRONTFEATURECONTENT">
+		<div id="frontfeatureleft">
+			<div id="frontfeaturecontent">
 				<h1>A BSD &unix; alapjain</h1>
 
 				<p>A &os;&reg; napjaink szerver, asztali
-				  &eacute;s be&aacute;gyazott <a
-				  href="&base;/platforms/">sz&aacute;m&iacute;t&oacute;g&eacute;peinek</a>
-				  oper&aacute;ci&oacute;s rendszere.  A
-				  &os; k&oacute;db&aacute;zisa t&ouml;bb
-				  mint harminc &eacute;v folyamatos
-				  fejleszt&eacute;s&eacute;nek,
-				  munk&aacute;j&aacute;nak &eacute;s
-				  optimaliz&aacute;l&aacute;s&aacute;nak
-				  eredm&eacute;nye.  Jelenleg <a
+				  és beágyazott <a
+				  href="&base;/platforms/">számítógépeinek</a>
+				  operációs rendszere.  A
+				  &os; kódbázisa több
+				  mint harminc év folyamatos
+				  fejlesztésének,
+				  munkájának és
+				  optimalizálásának
+				  eredménye.  Jelenleg <a
 				    href="&enbase;/doc/en/articles/contributors/article.html#STAFF-COMMITTERS">egyéni
-				    fejleszt&#337;k egy nagyobb csoportja</a>
+				    fejlesztõk egy nagyobb csoportja</a>
 				  tartja karban.  A &os; legfontosabb
-				  jellemz&#337;i t&ouml;bbek k&ouml;zt a
+				  jellemzõi többek közt a
 				  fejlett
-				  h&aacute;l&oacute;zatkezel&eacute;s, a
-				  kifinomult biztons&aacute;gi
-				  lehet&#337;s&eacute;gek &eacute;s a
-				  vil&aacute;gsz&iacute;nvonal&uacute;
-				  teljes&iacute;tm&eacute;ny, amelyet a
-				  vil&aacute;gban <a
-				    href="&enbase;/doc/hu/books/handbook/nutshell.html/#INTRODUCTION-NUTSHELL-USERS">sz&aacute;mos forgalmasabb kiszolg&aacute;l&oacute;</a>,
-				  hat&eacute;kony be&aacute;gyazott
-				  rendszer &eacute;s
-				  t&aacute;rol&oacute;eszk&ouml;z
-				  haszn&aacute;l.</p>
+				  hálózatkezelés, a
+				  kifinomult biztonsági
+				  lehetõségek és a
+				  világszínvonalú
+				  teljesítmény, amelyet a
+				  világban <a
+				    href="&enbase;/doc/hu/books/handbook/nutshell.html/#INTRODUCTION-NUTSHELL-USERS">számos forgalmasabb kiszolgáló</a>,
+				  hatékony beágyazott
+				  rendszer és
+				  tárolóeszköz
+				  használ.</p>
 
-				<div id="TXTFRONTFEATURELINK"> &#187;
-				  <a href="&base;/about.html" title="Tov&aacute;bb">Tov&aacute;bb</a>
+				<div id="txtfrontfeaturelink"> &raquo;
+				  <a href="&base;/about.html" title="Tovább">Tovább</a>
 				</div> <!-- TXTFRONTFEATURELINK -->
 			</div> <!-- FRONTFEATURECONTENT -->
 		</div> <!-- FRONTFEATURELEFT -->
 
-		<div id="FRONTFEATUREMIDDLE">
+		<div id="frontfeaturemiddle">
 			<div class="frontgetroundbox">
 			  <div class="frontgettop"><div><b style="display: none">.</b></div></div>
 				<div class="frontgetcontent">
-				  <a href="&base;/where.html">Let&ouml;lt&eacute;s</a>
+				  <a href="&base;/where.html">Letöltés</a>
 				</div> <!-- frontgetcontent -->
 			  <div class="frontgetbot"><div><b style="display: none">.</b></div></div>
 			</div> <!-- frontgetroundbox -->
 
-			<div id="FRONTRELEASES">
-			  <div id="FRONTRELEASESCONTENT" class="txtshortcuts">
-				  <h2><a href="&enbase;/releases/">FRISS KIAD&Aacute;SOK</a></h2>
-				  <ul id="FRONTRELEASESLIST">
+			<div id="frontreleases">
+			  <div id="frontreleasescontent" class="txtshortcuts">
+				  <h2><a href="&enbase;/releases/">FRISS KIADÁSOK</a></h2>
+				  <ul id="frontreleaseslist">
 					<li>
 					  <a
-					    href="&u.rel.announce;">Stabil kiad&aacute;s: &rel.current;</a>
+					    href="&u.rel.announce;">Stabil kiadás: &rel.current;</a>
 					</li>
 					<li>
 					  <a
-					    href="&u.rel2.announce;">Stabil (kifut&oacute;) kiad&aacute;s: &rel2.current;</a>
+					    href="&u.rel2.announce;">Stabil (kifutó) kiadás: &rel2.current;</a>
 					</li>
 			    <xsl:if test="'&beta.testing;' != 'IGNORE'">
 					<li>
 					  <a
-					    href="&base;/where.html#helptest">K&ouml;vetkez&#337; kiad&aacute;s: &betarel.current; - &betarel.vers;</a>
+					    href="&base;/where.html#helptest">Következõ kiadás: &betarel.current; - &betarel.vers;</a>
 					</li>
 			    </xsl:if>
 			    <xsl:if test="'&beta2.testing;' != 'IGNORE'">
 					<li>
 					  <a
-					    href="&base;/where.html#helptest">K&ouml;vetkez&#337; kiad&aacute;s: &betarel2.current; - &betarel2.vers;</a>
+					    href="&base;/where.html#helptest">Következõ kiadás: &betarel2.current; - &betarel2.vers;</a>
 					</li>
 			    </xsl:if>
 				  </ul>
@@ -141,12 +115,12 @@
 			</div> <!-- FRONTRELEASES -->
 		</div> <!-- FRONTFEATUREMIDDLE -->
 
-		<div id="FRONTFEATURERIGHT">
+		<div id="frontfeatureright">
 			<h2 class="blockhide">Nyelvek</h2>
-			<div id="LANGUAGENAV">
-				<ul id="LANGUAGENAVLIST">
+			<div id="languagenav">
+				<ul id="languagenavlist">
 				  <li>
-					<a href="&enbase;/de/" title="N&eacute;met">de</a>
+					<a href="&enbase;/de/" title="Német">de</a>
 				  </li>
 				  <li>
 					<a href="&enbase;/" title="Angol">en</a>
@@ -164,7 +138,7 @@
 					<a href="&enbase;/it/" title="Olasz">it</a>
 				  </li>
 				  <li>
-					<a href="&enbase;/ja/" title="Jap&aacute;n">ja</a>
+					<a href="&enbase;/ja/" title="Japán">ja</a>
 				  </li>
 				  <li>
 					<a href="&enbase;/nl/" title="Holland">nl</a>
@@ -173,16 +147,16 @@
 					<a href="&enbase;/ru/" title="Orosz">ru</a>
 				  </li>
 				  <li class="last-child">
-					<a href="&enbase;/zh_CN/" title="K&iacute;nai (Egyszer&#251;s&iacute;tett)">zh_CN</a>
+					<a href="&enbase;/zh_CN/" title="Kínai (Egyszerûsített)">zh_CN</a>
 				  </li>
 				</ul>
 			</div> <!-- LANGUAGENAV -->
 
-			<div id="MIRROR">
+			<div id="mirror">
 			  <form action="&cgibase;/mirror.cgi" method="get">
 				<div>
-				  <h2 class="blockhide"><label for="MIRRORSEL">T&uuml;kr&ouml;z&eacute;sek</label></h2>
-				  <select id="MIRRORSEL" name="goto">
+				  <h2 class="blockhide"><label for="MIRRORSEL">Tükrözések</label></h2>
+				  <select id="mirrorsel" name="goto">
 					  <xsl:call-template name="html-index-mirrors-options-list">
 					    <xsl:with-param name="mirrors.xml" select="$mirrors.xml" />
 					  </xsl:call-template>
@@ -192,17 +166,17 @@
 			  </form>
 			</div> <!-- MIRROR -->
 
-			<div id="FRONTSHORTCUTS">
-			  <div id="FRONTSHORTCUTSCONTENT" class="txtshortcuts">
-				  <h2>GYORSMEN&Uuml;</h2>
-				  <ul id="FRONTSHORTCUTSLIST">
+			<div id="frontshortcuts">
+			  <div id="frontshortcutscontent" class="txtshortcuts">
+				  <h2>GYORSMENÜ</h2>
+				  <ul id="frontshortcutslist">
 					<li>
 					  <a
-					    href="&base;/community/mailinglists.html" title="Levelez&eacute;si list&aacute;k">Levelez&eacute;si list&aacute;k</a>
+					    href="&base;/community/mailinglists.html" title="Levelezési listák">Levelezési listák</a>
 					</li>
 					<li>
 					  <a
-					    href="&base;/support/bugreports.html" title="Hibajelent&eacute;sek">Hibajelent&eacute;sek</a>
+					    href="&base;/support/bugreports.html" title="Hibajelentések">Hibajelentések</a>
 					</li>
 					<li>
 					  <a
@@ -210,7 +184,7 @@
 					</li>
 					<li>
 					  <a
-					    href="&enbase;/doc/hu/books/handbook/index.html" title="K&eacute;zik&ouml;nyv">K&eacute;zik&ouml;nyv</a>
+					    href="&enbase;/doc/hu/books/handbook/index.html" title="Kézikönyv">Kézikönyv</a>
 					</li>
 					<li>
 					  <a
@@ -225,7 +199,7 @@
 			  <div class="frontnewtop"><div><b style="display: none">.</b></div></div>
 			    <div class="frontnewcontent">
 			      <a
-				href="&enbase;/projects/newbies.html">&Uacute;j felhaszn&aacute;l&oacute;?</a>
+				href="&enbase;/projects/newbies.html">Új felhasználó?</a>
 			    </div> <!-- frontnewcontent -->
 			  <div class="frontnewbot"><div><b style="display: none">.</b></div></div>
 			</div> <!-- frontnewroundbox -->
@@ -234,10 +208,10 @@
             </div> <!-- FRONTFEATURECONTAINER -->
 
 	    <br class="clearboth" />
-            <div id="FRONTNEMSCONTAINER">
-            	<div id="FRONTNEWS">
-            	   <div id="FRONTNEWSCONTENT" class="txtnewsevent">
-			<h2>FRISS H&Iacute;REK</h2>
+            <div id="frontnemscontainer">
+            	<div id="frontnews">
+            	   <div id="frontnewscontent" class="txtnewsevent">
+			<h2>FRISS HÍREK</h2>
 			<div class="newseventswrap">
 
 			<xsl:call-template name="html-index-news-project-items">
@@ -249,11 +223,11 @@
 				<ul class="newseventslist">
 				  <li class="first-child">
 					<a
-					  href="&base;/news/newsflash.html" title="Tov&aacute;bbi h&iacute;rek">Tov&aacute;bbi h&iacute;rek</a>
+					  href="&base;/news/newsflash.html" title="További hírek">További hírek</a>
 				  </li>
 				  <li class="last-child">
 					<a
-					  href="&base;/news/rss.xml" title="H&iacute;rek RSS Feed"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="H&iacute;rek RSS feedben" /></a>
+					  href="&base;/news/rss.xml" title="Hírek RSS Feed"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="Hírek RSS feedben" /></a>
 				  </li>
 				</ul>
 			  </div> <!-- unnamed -->
@@ -262,10 +236,10 @@
             	   </div> <!-- FRONTNEWSCONTENT -->
             	</div> <!-- FRONTNEWS -->
             	<div class="frontseparator"><b style="display: none">.</b></div>
-            	<div id="FRONTEVENTS">
-		   <div id="FRONTEVENTSCONTENT" class="txtnewsevent">
+            	<div id="frontevents">
+		   <div id="fronteventscontent" class="txtnewsevent">
 
-			<h2>RENDEZV&Eacute;NYEK</h2>
+			<h2>RENDEZVÉNYEK</h2>
 			<div class="newseventswrap">
 
 			<xsl:call-template name="html-index-events-items">
@@ -277,7 +251,7 @@
 				<ul class="newseventslist">
 				  <li class="only-child">
 					<a
-					  href="&base;/events/" title="Tov&aacute;bbi rendezv&eacute;nyek">Tov&aacute;bbi rendezv&eacute;nyek</a>
+					  href="&base;/events/" title="További rendezvények">További rendezvények</a>
 				  </li>
 				</ul>
 			  </div> <!-- unnamed -->
@@ -286,10 +260,10 @@
 		   </div> <!-- FRONTEVENTSCONTENT -->
             	</div> <!-- FRONTEVENTS -->
             	<div class="frontseparator"><b style="display: none">.</b></div>
-            	<div id="FRONTMEDIA">
-		   <div id="FRONTMEDIACONTENT" class="txtnewsevent">
+            	<div id="frontmedia">
+		   <div id="frontmediacontent" class="txtnewsevent">
 
-			<h2>A M&Eacute;DI&Aacute;BAN</h2>
+			<h2>A MÉDIÁBAN</h2>
 			<div class="newseventswrap">
 
 			<xsl:call-template name="html-index-news-press-items">
@@ -301,7 +275,7 @@
 				<ul class="newseventslist">
 				  <li class="only-child">
 					<a
-					  href="&base;/news/press.html" title="Tov&aacute;bb esem&eacute;nyek a m&eacute;di&aacute;ban">Tov&aacute;bb</a>
+					  href="&base;/news/press.html" title="Tovább események a médiában">Tovább</a>
 				  </li>
 				</ul>
 			  </div> <!-- unnamed -->
@@ -310,11 +284,11 @@
 		   </div> <!-- FRONTMEDIACONTENT -->
             	</div> <!-- FRONTMEDIA -->
 		<div class="frontseparator"><b style="display: none">.</b></div>
-		<div id="FRONTSECURITY">
-		   <div id="FRONTSECURITYCONTENT" class="txtnewsevent">
+		<div id="frontsecurity">
+		   <div id="frontsecuritycontent" class="txtnewsevent">
 
-			<h2>BIZTONS&Aacute;GI
-			  FIGYELMEZTET&Eacute;SEK</h2>
+			<h2>BIZTONSÁGI
+			  FIGYELMEZTETÉSEK</h2>
 			<div class="newseventswrap">
 
 			<xsl:call-template name="html-index-advisories-items">
@@ -326,18 +300,18 @@
 				<ul class="newseventslist">
 				  <li class="first-child">
 					<a
-					  href="&base;/security/advisories.html" title="Tov&aacute;bbi biztons&aacute;gi figyelmeztet&eacute;sek">Tov&aacute;bb</a>
+					  href="&base;/security/advisories.html" title="További biztonsági figyelmeztetések">Tovább</a>
 				  </li>
 				  <li class="last-child">
 					<a
-					  href="&base;/security/rss.xml" title="Biztons&aacute;gi figyelmeztet&eacute;sek RSS Feed"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="Biztons&aacute;gi figyelmeztet&eacute;sek RSS feedben" /></a>
+					  href="&base;/security/rss.xml" title="Biztonsági figyelmeztetések RSS Feed"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="Biztonsági figyelmeztetések RSS feedben" /></a>
 				  </li>
 				</ul>
 			  </div> <!-- unnamed -->
 			</div> <!-- newseventswrap -->
 
 			<br />
-			<h2>HIBAJEGYZ&Eacute;K</h2>
+			<h2>HIBAJEGYZÉK</h2>
 			<div class="newseventswrap">
 
 			<xsl:call-template name="html-index-advisories-items">
@@ -349,11 +323,11 @@
 			    <ul class="newseventslist">
 			      <li class="first-child">
 				<a
-				  href="&base;/security/" title="M&eacute;g t&ouml;bb sajt&oacute;hiba mutat&aacute;sa">Tov&aacute;bb</a>
+				  href="&base;/security/" title="Még több sajtóhiba mutatása">Tovább</a>
 			      </li>
 			      <li class="last-child">
 				<a
-				  href="&base;/security/errata.xml" title="Sajt&oacute;hib&aacute;k RSS Feed"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="Sajt&oacute;hib&aacute;k RSS feedben"/></a>
+				  href="&base;/security/errata.xml" title="Sajtóhibák RSS Feed"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="Sajtóhibák RSS feedben"/></a>
 			      </li>
 			    </ul>
 			  </div> <!-- unnamed -->
@@ -367,30 +341,5 @@
             </div> <!-- FRONTNEMSCONTAINER -->
           </div> <!-- FRONTMAIN -->
         </div> <!-- FRONTCONTAINER -->
-
-      </div> <!-- CONTENT -->
-      <div id="FOOTER">
-	&copyright;
-
-	A &os; m&aacute;rkan&eacute;v a &os; Alap&iacute;tv&aacute;ny
-	tulajdona, a &os; Projekt <a
-	  href="http://www.freebsdfoundation.org/legal/guidelines.shtml">A &os; Alap&iacute;tv&aacute;ny</a>
-	enged&eacute;ly&eacute;vel haszn&aacute;lja azt.
-
-      </div> <!-- FOOTER -->
-    </div> <!-- CONTAINER -->
-   </div> <!-- CONTAINERWRAP -->
-
-      </body>
-    </html>
   </xsl:template>
 </xsl:stylesheet>
-
-<!--
-     Local Variables:
-     mode: xml
-     sgml-indent-data: t
-     sgml-omittag: nil
-     sgml-always-quote-attributes: t
-     End:
--->

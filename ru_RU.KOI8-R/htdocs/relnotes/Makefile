@@ -11,7 +11,7 @@
 # $FreeBSDru: frdp/www/ru/relnotes/Makefile,v 1.2 2004/09/10 14:21:53 den Exp $
 # $FreeBSD$
 #
-# Original revision: 1.6 
+# Original revision: 1.6
 #
 .if exists(../Makefile.inc)
 .include "../Makefile.inc"

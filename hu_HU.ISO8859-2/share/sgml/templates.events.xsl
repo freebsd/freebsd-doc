@@ -1,12 +1,9 @@
-<?xml version="1.0" ?>
+<?xml version="1.0" encoding="iso-8859-2"?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD Fragment//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
-<!ENTITY title "&os; t&eacute;m&aacute;j&uacute; rendezv&eacute;nyek">
-<!ENTITY email "freebsd-www">
+<!ENTITY title "&os; témájú rendezvények">
 <!ENTITY rsslink "&base;/events/rss.xml">
-<!ENTITY rsstitle "K&ouml;zelg&#245; &os; t&eacute;m&aacute;j&uacute; rendezv&eacute;nyek">
-<!ENTITY % navinclude.community "INCLUDE">
-<!ENTITY % header.rss "INCLUDE">
+<!ENTITY rsstitle "Közelgő &os; témájú rendezvények">
 ]>
 
 <!-- $FreeBSD$ -->
@@ -44,20 +41,12 @@
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
-  xmlns:cvs="http://www.FreeBSD.org/XML/CVS"
   xmlns:date="http://exslt.org/dates-and-times"
-  extension-element-prefixes="date"
-  exclude-result-prefixes="cvs">
+  xmlns="http://www.w3.org/1999/xhtml"
+  extension-element-prefixes="date">
 
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
-
-  <xsl:variable name="date">
-    <xsl:value-of select="//cvs:keyword[@name='freebsd']"/>
-  </xsl:variable>
-
-  <xsl:output method="xml" encoding="&xml.encoding;"
-    doctype-system="http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"
-    doctype-public="-//W3C//DTD XHTML 1.0 Transitional//EN"/>
+  <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/xhtml.xsl"/>
 
   <xsl:param name="startyear">2009</xsl:param>
   <xsl:param name="pastyears">2008 2007 2006 2005 2004 2003</xsl:param>
@@ -78,10 +67,15 @@
 
   <xsl:variable name="charturl" select="'http://chart.apis.google.com/chart?cht=t&amp;chs=400x200&amp;chtm=world&amp;chco=ffffff,ffbe38,600000&amp;chf=bg,s,4D89F9'" />
 
-  <!-- Template: events -->
-  <xsl:template match="events">
+  <xsl:variable name="title">&title;</xsl:variable>
+
+  <xsl:variable name="rsstitle">&rsstitle;</xsl:variable>
+
+  <xsl:variable name="rsslink">&rsslink;</xsl:variable>
+
+  <xsl:template name="process.content">
   <xsl:variable name="chart-countries">
-    <xsl:for-each select="event[
+    <xsl:for-each select="/events/event[
 	generate-id() =
 	generate-id(key('event-by-country', location/country/@code)[1])]">
       <xsl:sort select="format-number(count(key('event-by-country', location/country/@code)), '000')" order="descending"/>
@@ -90,7 +84,7 @@
   </xsl:variable>
 
   <xsl:variable name="chart-country-counts">
-    <xsl:for-each select="event[
+    <xsl:for-each select="/events/event[
 	generate-id() =
 	generate-id(key('event-by-country', location/country/@code)[1])]">
       <xsl:sort select="format-number(count(key('event-by-country', location/country/@code)), '000')" order="descending"/>
@@ -101,19 +95,9 @@
 
   <xsl:variable name="imageurl"><xsl:value-of select="$charturl"/>&amp;chd=t:<xsl:value-of select="$chart-country-counts"/>&amp;chld=<xsl:value-of select="$chart-countries"/></xsl:variable>
 
-    <html>
-      &header1;
-
-      <body>
-
-	<div id="containerwrap">
-	  <div id="container">
-	  &header2;
-
-	    <div id="content">
-              <div id="SIDEWRAP">
-                &nav;
-                <div id="FEEDLINKS">
+              <div id="sidewrap">
+                &nav.community;
+                <div id="feedlinks">
                   <ul>
                     <li>
                       <a href="&rsslink;" title="&rsstitle;">
@@ -125,18 +109,19 @@
               </div> <!-- SIDEWRAP -->
 
 	      <div id="contentwrap">
-		&header3;
+		<h1>&title;</h1>
  	<!--
 	     Note the current date to have a reference, if the
 	     upcoming/past events are split incorrectly.
 	-->
 	<xsl:comment>
-	  <xsl:text>A gener&aacute;l&aacute;s d&aacute;tuma: </xsl:text>
+	  <xsl:text>A generálás dátuma: </xsl:text>
 	  <xsl:value-of select="concat($curdate.year,
 	    format-number($curdate.month, '00'),
 	    format-number($curdate.day, '00'))"/>
 	</xsl:comment>
 
+	<xsl:for-each select="/events">
 		<xsl:call-template name="html-events-list-preface" />
 
 		<xsl:call-template name="html-events-map">
@@ -144,8 +129,9 @@
 		</xsl:call-template>
 
 		<xsl:call-template name="html-events-list-upcoming-heading" />
+	</xsl:for-each>
 
-	<xsl:for-each select="event[generate-id() =
+	<xsl:for-each select="/events/event[generate-id() =
           generate-id(key('event-by-month',
 	    concat(startdate/year, format-number(startdate/month, '00')))[1])
 	  and ((number(enddate/year) &gt; number($curdate.year)) or
@@ -161,7 +147,7 @@
 
 	  <h3>
 	    <xsl:attribute name="id">
-	      <xsl:text>d&aacute;tum:</xsl:text>
+	      <xsl:text>dátum:</xsl:text>
 	      <xsl:value-of select="concat(startdate/year,
 		format-number(startdate/month, '00'))"/>
 	    </xsl:attribute>
@@ -182,9 +168,11 @@
 	  </ul>
 	</xsl:for-each>
 
+	<xsl:for-each select="/events">
 		<xsl:call-template name="html-events-list-past-heading" />
+	</xsl:for-each>
 
-	<xsl:for-each select="event[generate-id() =
+	<xsl:for-each select="/events/event[generate-id() =
 	  generate-id(key('event-by-month', concat(startdate/year,
 	    format-number(startdate/month, '00')))[1])
 	  and ((number(enddate/year) &gt;= $startyear)) and
@@ -222,27 +210,17 @@
 	  </ul>
 	</xsl:for-each>
 
-	<p>A kor&aacute;bbi &eacute;vek rendezv&eacute;nyei:</p>
+	<p>A korábbi évek rendezvényei:</p>
 
         <ul id="events-past-years">
+	<xsl:for-each select="/events">
 	<xsl:call-template name="split-string">
           <xsl:with-param name="seperator" select="' '"/>
           <xsl:with-param name="text" select="$pastyears"/>
         </xsl:call-template>
+	</xsl:for-each>
         </ul>
 	      </div> <!-- contentwrap -->
-
-	      <br class="clearboth" />
-	    </div> <!-- content -->
-
-            <div id="FOOTER">
-               &copyright;<br />
-               &date;
-            </div> <!-- FOOTER -->
-	  </div> <!-- container -->
-	</div> <!-- containerwrap -->
-      </body>
-    </html>
   </xsl:template>
 
   <!-- Template: event -->
@@ -283,7 +261,7 @@
 	    <xsl:with-param name="enddate" select="enddate" />
 	  </xsl:call-template>
 	</em><br/>
-	<xsl:copy-of select="description/child::node()"/>
+	<xsl:apply-templates select="description/child::node()" mode="copy.html"/>
       </p>
       <xsl:if test="link">
 	<p><xsl:apply-templates select="link"/></p>
@@ -294,12 +272,12 @@
   <xsl:template match="event" mode="upcoming">
     <li>
       <xsl:call-template name="eventbody"/>
-      <p>K&ouml;z&ouml;ss&eacute;gi linkek: <a rel="nofollow">
+      <p>Közösségi linkek: <a rel="nofollow">
       <xsl:if test="upcomingurl">
         <xsl:attribute name="href"><xsl:value-of select="upcomingurl" /></xsl:attribute>
       </xsl:if>
       <xsl:if test="not(upcomingurl)">
-        <xsl:attribute name="href">http://upcoming.yahoo.com/search?type=Events&amp;q=<xsl:value-of select="name" />&amp;Search=GO</xsl:attribute>        
+        <xsl:attribute name="href">http://upcoming.yahoo.com/search?type=Events&amp;q=<xsl:value-of select="name" />&amp;Search=GO</xsl:attribute>
       </xsl:if>
       upcoming</a></p>
     </li>
@@ -321,7 +299,7 @@
 
     <li>
       <xsl:call-template name="eventbody"/>
-      <p>K&ouml;z&ouml;ss&eacute;gi linkek: <a rel="nofollow">
+      <p>Közösségi linkek: <a rel="nofollow">
         <xsl:attribute name="href">http://www.flickr.com/search/?w=all&amp;q=<xsl:value-of select="name" />&amp;m=text</xsl:attribute>
       Flickr</a>, <a rel="nofollow">
         <xsl:attribute name="href">http://blogsearch.google.com/blogsearch?q=<xsl:value-of select="name" /></xsl:attribute>Blog Search</a><xsl:if test="contains($lcname, 'meetbsd') or contains($lcname, 'nycbsdcon') or contains($lcname, 'dcbsdcon') or contains($lcname, 'asiabsdcon')">,
@@ -359,7 +337,7 @@
           <li><a>
 	    <xsl:attribute name="href">events<xsl:value-of select="$first"/>.html</xsl:attribute>
             <xsl:value-of select="$first" />
-          </a></li>    
+          </a></li>
         </xsl:if>
         <xsl:call-template name="split-string">
           <xsl:with-param name="text" select="substring-after($text,$seperator)"/>

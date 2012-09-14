@@ -8,8 +8,12 @@
 <!-- Original revision: 1.160 -->
 <!-- $FreeBSD$ -->
 
-<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
+<xsl:stylesheet version="1.0"
+  xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+  xmlns="http://www.w3.org/1999/xhtml">
+
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
+  <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/xhtml.xsl"/>
 
   <!-- these params should be externally bound. The values
        here are not used actually -->
@@ -23,49 +27,17 @@
   <xsl:param name="events.xml-master" select="'none'"/>
   <xsl:param name="events.xml" select="'none'"/>
 
-  <xsl:output type="html" encoding="&xml.encoding;"
-              doctype-public="-//W3C//DTD HTML 4.01 Transitional//EN"/>
+  <xsl:variable name="svnKeyword">$FreeBSD$</xsl:variable>
 
-  <xsl:template match="/">
-    <html>
-      <head>
-	<title>&title;</title>
-	<meta name="description" content="The FreeBSD Project"/>
-	<meta name="keywords" content="FreeBSD, BSD, UNIX, 支持, 案例,
-	      发行版, 应用, 软件, 手册, FAQ, 教程, Bugs,
-	      CVS, CVSup, 新闻, 商业发行商, 主页, CTM, Unix"/>
-	<link rel="shortcut icon" href="&enbase;/favicon.ico" type="image/x-icon"/>
-	<link rel="icon" href="&enbase;/favicon.ico" type="image/x-icon"/>
-    <link rel="stylesheet" media="screen" href="&base;/layout/css/fixed.css" type="text/css" title="Normal Text" />
-    <link rel="alternate stylesheet" media="screen" href="&base;/layout/css/fixed_large.css" type="text/css" title="Large Text" />
-    <script type="text/javascript" src="&enbase;/layout/js/styleswitcher.js"></script>
-	<link rel="alternate" type="application/rss+xml"
-	  title="FreeBSD Project 新闻" href="&base;/news/news.rdf" />
-	<link rel="alternate" type="application/rss+xml"
-	  title="FreeBSD 安全公告" href="&enbase;/security/advisories.rdf" />
-	<link rel="alternate" type="application/rss+xml"
-	  title="FreeBSD GNOME Project 新闻" href="&enbase;/gnome/news.rdf" />
+  <xsl:variable name="title">&title;</xsl:variable>
 
-	<!-- Formatted to be easy to spam harvest, please do not reformat. -->
-	<xsl:comment>
-        Spamtrap, do not email:
-        &lt;a href="mailto:bruscar@freebsd.org"&gt;bruscar@freebsd.org&lt;/a&gt;
-	</xsl:comment>
-      </head>
+  <xsl:template name="process.content">
+        <div id="frontcontainer">
+          <div id="frontmain">
+            <div id="frontfeaturecontainer">
 
-      <body>
-
-   <div id="CONTAINERWRAP">
-    <div id="CONTAINER">
-      &header2;
-      <div id="CONTENT">
-
-        <div id="FRONTCONTAINER">
-          <div id="FRONTMAIN">
-            <div id="FRONTFEATURECONTAINER">
-
-		<div id="FRONTFEATURELEFT">
-			<div id="FRONTFEATURECONTENT">
+		<div id="frontfeatureleft">
+			<div id="frontfeaturecontent">
 				<h1>
 				  基于 BSD &unix;
 				</h1>
@@ -79,13 +51,13 @@
 				  对于一些其它的 <a href="&base;/platforms/">硬件平台</a> 的支持，
 				  也正处于不同的开发阶段。
 				</p>
-				<div id="TXTFRONTFEATURELINK">
+				<div id="txtfrontfeaturelink">
 				&#187;<a href="&base;/about.html" title="了解更多">了解更多</a>
 				</div> <!-- TXTFRONTFEATURELINK -->
 			</div> <!-- FRONTFEATURECONTENT -->
 		</div> <!-- FRONTFEATURELEFT -->
 
-		<div id="FRONTFEATUREMIDDLE">
+		<div id="frontfeaturemiddle">
 			<div class="frontgetroundbox">
 			  <div class="frontgettop"><div><b style="display: none">.</b></div></div>
 				<div class="frontgetcontent">
@@ -94,10 +66,10 @@
 			  <div class="frontgetbot"><div><b style="display: none">.</b></div></div>
 			</div> <!-- frontgetroundbox -->
 
-			<div id="FRONTRELEASES">
-			  <div id="FRONTRELEASESCONTENT" class="txtshortcuts">
+			<div id="frontreleases">
+			  <div id="frontreleasescontent" class="txtshortcuts">
 				  <h2><a href="&base;/releases/"> 最新版本 </a></h2>
-				  <ul id="FRONTRELEASESLIST">
+				  <ul id="frontreleaseslist">
 					<li>
 					  <a href="&enbase;/&u.rel.announce;">生产适用版 &rel.current;</a>
 					</li>
@@ -121,10 +93,10 @@
 			</div> <!-- FRONTRELEASES -->
 		</div> <!-- FRONTFEATUREMIDDLE -->
 
-		<div id="FRONTFEATURERIGHT">
+		<div id="frontfeatureright">
 			<h2 class="blockhide">语言</h2>
-			<div id="LANGUAGENAV">
-				<ul id="LANGUAGENAVLIST">
+			<div id="languagenav">
+				<ul id="languagenavlist">
 				  <li>
 					<a href="&enbase;/de/" title="德语">de</a>
 				  </li>
@@ -155,11 +127,11 @@
 				</ul>
 			</div> <!-- LANGUAGENAV -->
 
-			<div id="MIRROR">
+			<div id="mirror">
 			  <form action="&cgibase;/mirror.cgi" method="get">
 				<div>
 				  <h2 class="blockhide"><label for="MIRRORSEL">镜像</label></h2>
-				  <select id="MIRRORSEL" name="goto">
+				  <select id="mirrorsel" name="goto">
 					  <xsl:call-template name="html-index-mirrors-options-list">
 					    <xsl:with-param name="mirrors.xml" select="$mirrors.xml" />
 					  </xsl:call-template>
@@ -169,10 +141,10 @@
 			  </form>
 			</div> <!-- MIRROR -->
 
-			<div id="FRONTSHORTCUTS">
-			  <div id="FRONTSHORTCUTSCONTENT" class="txtshortcuts">
+			<div id="frontshortcuts">
+			  <div id="frontshortcutscontent" class="txtshortcuts">
 				  <h2>常用链接</h2>
-				  <ul id="FRONTSHORTCUTSLIST">
+				  <ul id="frontshortcutslist">
 					<li>
 					  <a href="&enbase;/community/mailinglists.html" title="邮件列表">邮件列表</a>
 					</li>
@@ -205,9 +177,9 @@
             </div> <!-- FRONTFEATURECONTAINER -->
 
 	    <br class="clearboth" />
-            <div id="FRONTNEMSCONTAINER">
-            	<div id="FRONTNEWS">
-            	   <div id="FRONTNEWSCONTENT" class="txtnewsevent">
+            <div id="frontnemscontainer">
+            	<div id="frontnews">
+            	   <div id="frontnewscontent" class="txtnewsevent">
 			<h2>新闻</h2>
 			<div class="newseventswrap">
 
@@ -231,8 +203,8 @@
             	   </div> <!-- FRONTNEWSCONTENT -->
             	</div> <!-- FRONTNEWS -->
             	<div class="frontseparator"><b style="display: none">.</b></div>
-            	<div id="FRONTEVENTS">
-		   <div id="FRONTEVENTSCONTENT" class="txtnewsevent">
+            	<div id="frontevents">
+		   <div id="fronteventscontent" class="txtnewsevent">
 
 			<h2>近期活动</h2>
 			<div class="newseventswrap">
@@ -254,8 +226,8 @@
 		   </div> <!-- FRONTEVENTSCONTENT -->
             	</div> <!-- FRONTEVENTS -->
             	<div class="frontseparator"><b style="display: none">.</b></div>
-            	<div id="FRONTMEDIA">
-		   <div id="FRONTMEDIACONTENT" class="txtnewsevent">
+            	<div id="frontmedia">
+		   <div id="frontmediacontent" class="txtnewsevent">
 
 			<h2>媒体报道</h2>
 			<div class="newseventswrap">
@@ -277,8 +249,8 @@
 		   </div> <!-- FRONTMEDIACONTENT -->
             	</div> <!-- FRONTMEDIA -->
 		<div class="frontseparator"><b style="display: none">.</b></div>
-		<div id="FRONTSECURITY">
-		   <div id="FRONTSECURITYCONTENT" class="txtnewsevent">
+		<div id="frontsecurity">
+		   <div id="frontsecuritycontent" class="txtnewsevent">
 
 			<h2>安全公告</h2>
 			<div class="newseventswrap">
@@ -319,30 +291,5 @@
             </div> <!-- FRONTNEMSCONTAINER -->
           </div> <!-- FRONTMAIN -->
         </div> <!-- FRONTCONTAINER -->
-
-      </div> <!-- CONTENT -->
-      <div id="FOOTER">
-	&copyright;
-
-	FreeBSD 标志是 FreeBSD
-	基金会的注册商标。 FreeBSD Project 使用此商标得到了 <a
-	  href="http://www.freebsdfoundation.org/documents/Guidelines.shtml">FreeBSD 基金会</a>
-	的许可。
-
-      </div> <!-- FOOTER -->
-    </div> <!-- CONTAINER -->
-   </div> <!-- CONTAINERWRAP -->
-
-      </body>
-    </html>
   </xsl:template>
 </xsl:stylesheet>
-
-<!--
-     Local Variables:
-     mode: xml
-     sgml-indent-data: t
-     sgml-omittag: nil
-     sgml-always-quote-attributes: t
-     End:
--->

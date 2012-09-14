@@ -10,7 +10,7 @@
 .if exists(../Makefile.inc)
 .include "../Makefile.inc"
 .endif
- 
+
 DOCS =	10.sgml
 DOCS+=	11.sgml
 DOCS+=	12.sgml

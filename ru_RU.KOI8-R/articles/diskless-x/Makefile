@@ -1,6 +1,6 @@
-# 
+#
 # The FreeBSD Russian Documentation Project
-# 
+#
 # $FreeBSD$
 # $FreeBSDru: frdp/doc/ru_RU.KOI8-R/articles/diskless-x/Makefile,v 1.4 2005/06/12 07:19:45 gad Exp $
 #

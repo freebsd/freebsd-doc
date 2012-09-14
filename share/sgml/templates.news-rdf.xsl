@@ -1,9 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
-				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
-<!ENTITY title "FreeBSD News Flash RDF">
-<!ENTITY email "freebsd-www">
-]>
+				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
 
 <!-- $FreeBSD$ -->
 
@@ -11,12 +8,8 @@
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
 
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
-  
-  <xsl:output method="xml" indent="yes" encoding="&xml.encoding;"/>
 
-  <xsl:variable name="date">
-    <xsl:value-of select="//cvs:keyword[@name='freebsd']"/>
-  </xsl:variable>
+  <xsl:output method="xml" indent="yes" encoding="&xml.encoding;"/>
 
   <!-- Generate the main body of the RDF file -->
   <xsl:template match="news">
@@ -70,6 +63,6 @@
       </link>
     </item>
   </xsl:template>
-  
+
   <xsl:template match="name | date"/>
 </xsl:stylesheet>

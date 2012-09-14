@@ -1,4 +1,4 @@
-<!-- 
+<!--
 Stylesheet to convert DocBook Slides XML files into OpenOffice presentations.
 
 Copyright(c) 2005 Murray Stokely.  All rights reserved.
@@ -325,7 +325,7 @@ xlink:show="replace" xlink:actuate="onRequest">
 </office:body>
 </office:document-content>
 
-</xsl:template>    
+</xsl:template>
 
 <xsl:template match="slidesinfo">
 
@@ -525,12 +525,3 @@ xlink:show="replace" xlink:actuate="onRequest">
 </xsl:template>
 
 </xsl:stylesheet>
-
-<!-- 
-     Local Variables:
-     mode: xml
-     sgml-indent-data: t
-     sgml-omittag: nil
-     sgml-always-quote-attributes: t
-     End:
--->

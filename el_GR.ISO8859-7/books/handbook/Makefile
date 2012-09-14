@@ -22,7 +22,7 @@
 #       pgpkeyring      This target will read the contents of
 #                       pgpkeys/chapter.sgml and will extract all of
 #                       the pgpkeys to standard out.  This output can then
-#                       be redirected into a file and distributed as a 
+#                       be redirected into a file and distributed as a
 #                       public keyring of FreeBSD developers that can
 #                       easily be imported into PGP/GPG.
 #
@@ -256,7 +256,6 @@ SRCS+= book.sgml
 SRCS+= bsdinstall/chapter.sgml
 SRCS+= colophon.sgml
 SRCS+= dtrace/chapter.sgml
-SRCS+= freebsd-glossary.sgml
 SRCS+= advanced-networking/chapter.sgml
 SRCS+= basics/chapter.sgml
 SRCS+= bibliography/chapter.sgml
@@ -319,9 +318,9 @@ DOC_PREFIX?=	${.CURDIR}/../../..
 #
 # rules generating lists of mirror site from XML database.
 #
-XMLDOCS=	mirrors-ftp:::mirrors.sgml.ftp.inc.tmp \
-		mirrors-cvsup:::mirrors.sgml.cvsup.inc.tmp \
-		eresources:::eresources.sgml.www.inc.tmp
+XMLDOCS=	mirrors-ftp:::mirrors.sgml.ftp.inc \
+		mirrors-cvsup:::mirrors.sgml.cvsup.inc \
+		eresources:::eresources.sgml.www.inc
 DEPENDSET.DEFAULT=	transtable mirror
 XSLT.DEFAULT=		${XSL_MIRRORS}
 XML.DEFAULT=		${XML_MIRRORS}
@@ -341,23 +340,8 @@ SRCS+=		mirrors.sgml.ftp.inc \
 		mirrors.sgml.cvsup.inc \
 		eresources.sgml.www.inc
 
-CLEANFILES+=	mirrors.sgml.ftp.inc mirrors.sgml.ftp.inc.tmp \
-		mirrors.sgml.cvsup.inc mirrors.sgml.cvsup.inc.tmp \
-		eresources.sgml.www.inc eresources.sgml.www.inc.tmp
+CLEANFILES+=	mirrors.sgml.ftp.inc \
+		mirrors.sgml.cvsup.inc \
+		eresources.sgml.www.inc
 
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"
-
-.for p in ftp cvsup
-mirrors.sgml.${p}.inc: mirrors.sgml.${p}.inc.tmp
-	${SED} -e 's,<\([^ >]*\)\([^>]*\)/>,<\1\2></\1>,;s,</anchor>,,'\
-	    < $@.tmp > $@ || (${RM} -f $@ && false)
-.endfor
-
-eresources.sgml.www.inc: eresources.sgml.www.inc.tmp
-	${SED} -e 's,<\([^ >]*\)\([^>]*\)/>,<\1\2></\1>,;s,</anchor>,,'\
-	    < $@.tmp > $@ || (${RM} -f $@ && false)
-
-# Local variables:
-# mode: makefile-bsdmake
-# coding: iso-8859-7
-# End:

@@ -1,4 +1,4 @@
-# 
+#
 # $FreeBSD$
 # Original Revision: 1.2
 # Article: Practical rc.d scripting in BSD

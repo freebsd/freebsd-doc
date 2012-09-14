@@ -4,38 +4,27 @@
 <!ENTITY base "..">
 <!ENTITY title "FreeBSD GNOME News Flash">
 <!ENTITY rsslink "&base;/gnome/rss.xml">
-<!ENTITY rsstitle "&title;">
-<!ENTITY email "freebsd-gnome">
-<!ENTITY % navinclude.gnome "INCLUDE">
-<!ENTITY % header.rss "INCLUDE">
 ]>
 
 <!-- $FreeBSD$ -->
 
-<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
-  xmlns:cvs="http://www.FreeBSD.org/XML/CVS" exclude-result-prefixes="cvs">
+<xsl:stylesheet version="1.0"
+  xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+  xmlns="http://www.w3.org/1999/xhtml">
 
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
+  <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/xhtml.xsl"/>
 
-  <xsl:variable name="date">
-    <xsl:value-of select="//cvs:keyword[@name='freebsd']"/>
-  </xsl:variable>
+  <xsl:variable name="title">&title;</xsl:variable>
 
-  <xsl:output type="html" encoding="&xml.encoding;"/>
+  <xsl:variable name="rsstitle">&title;</xsl:variable>
 
-  <xsl:template match="news">
-    <html>
-      &header1;
-      <body>
+  <xsl:variable name="rsslink">&rsslink;</xsl:variable>
 
-	<div id="CONTAINERWRAP">
-	  <div id="CONTAINER">
-	    &header2;
-
-	    <div id="CONTENT">
-              <div id="SIDEWRAP">
-                &nav;
-                <div id="FEEDLINKS">
+  <xsl:template name="process.content">
+              <div id="sidewrap">
+                &nav.gnome;
+                <div id="feedlinks">
                   <ul>
                     <li>
                       <a href="&rsslink;" title="GNOME RSS 2.0 Feed">
@@ -52,30 +41,22 @@
 
               </div> <!-- SIDEWRAP -->
 
-	      <div id="CONTENTWRAP">
-		&header3;
+	      <div id="contentwrap">
+		<h1>&title;</h1>
 
 		<img src="&base;/gifs/news.jpg" align="right" border="0" width="193"
 		  height="144" alt="FreeBSD GNOME News"/>
 
-		<xsl:apply-templates select="descendant::month"/>
+		<xsl:apply-templates select="/news/descendant::month"/>
 
+		<xsl:for-each select="/news">
 	        <xsl:call-template
 		  name="html-news-list-newsflash-homelink" />
+		</xsl:for-each>
 
 	      </div> <!-- contentwrap -->
 
 	      <br class="clearboth" />
-	    </div> <!-- content -->
-
-            <div id="FOOTER">
-	      &copyright;<br />
-	      &date;
-            </div> <!-- FOOTER -->
-	  </div> <!-- container -->
-	</div> <!-- containerwrap -->
-      </body>
-    </html>
   </xsl:template>
 
   <!-- Everything that follows are templates for the rest of the content -->
@@ -105,7 +86,7 @@
 	  <xsl:text> </xsl:text>
 	  <xsl:value-of select="ancestor::month/name"/>,
 	  <xsl:value-of select="ancestor::year/name"/>:</b><xsl:text> </xsl:text>
-	<xsl:copy-of select="p"/>
+	<xsl:apply-templates select="p" mode="copy.html"/>
 	</p>
 
     </li>

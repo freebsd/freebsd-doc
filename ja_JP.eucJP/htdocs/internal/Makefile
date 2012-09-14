@@ -19,7 +19,7 @@ DOCS+=	developer.sgml
 #DOCS+=	fortunes.sgml
 #DOCS+=	hats.sgml
 #DOCS+=	i18n.sgml
-DOCS+=  internal.sgml   
+DOCS+=  internal.sgml
 DOCS+=  machines.sgml
 DOCS+=  mirror.sgml
 #DOCS+=	new-account.sgml
@@ -30,7 +30,7 @@ DOCS+=	statistic.sgml
 
 INDEXLINK=	internal.html
 
-# build the list of personal homepages of FreeBSD developers only 
+# build the list of personal homepages of FreeBSD developers only
 # on the main FreeBSD machines
 #hostname!= hostname
 #.if ${hostname} == "hub.freebsd.org" || ${hostname} == "freefall.freebsd.org" || ${hostname} == "www.freebsd.org"
@@ -47,8 +47,5 @@ INDEXLINK=	internal.html
 #.endif
 #
 #DATA+=	README.mirror ssh-keys.asc
-
-### Revision checking
-REVCHECK=	yes
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"

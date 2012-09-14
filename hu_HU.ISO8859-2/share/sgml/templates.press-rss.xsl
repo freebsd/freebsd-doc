@@ -1,7 +1,7 @@
-<?xml version="1.0"?>
+<?xml version="1.0" encoding="iso-8859-2"?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
-<!ENTITY title "&os; a sajt&oacute;ban">
+<!ENTITY title "&os; a sajtóban">
 <!ENTITY link "http://www.FreeBSD.org/hu/news/press.html">
 <!ENTITY email "freebsd-www">
 <!ENTITY realname "Webmesterek">
@@ -46,12 +46,8 @@
   exclude-result-prefixes="cvs">
 
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
-  
-  <xsl:output method="xml" indent="yes" encoding="&xml.encoding;"/>
 
-  <xsl:variable name="date">
-    <xsl:value-of select="//cvs:keyword[@name='freebsd']"/>
-  </xsl:variable>
+  <xsl:output method="xml" indent="yes" encoding="&xml.encoding;"/>
 
   <!-- Generate the main body of the RSS file -->
   <xsl:template match="press">
@@ -60,8 +56,8 @@
       <channel>
 	<title>&title;</title>
 	<link>&link;</link>
-	<description>&os; t&eacute;m&aacute;j&uacute;
-	  sajt&oacute;kiadv&aacute;nyok</description>
+	<description>&os; témájú
+	  sajtókiadványok</description>
 	<language>hu-hu</language>
 	<webMaster>&email;@FreeBSD.org (&realname;)</webMaster>
 	<managingEditor>&email;@FreeBSD.org (&realname;)</managingEditor>
@@ -128,7 +124,7 @@
       </pubDate>
     </item>
   </xsl:template>
-  
+
   <xsl:template match="name | date"/>
 
 </xsl:stylesheet>

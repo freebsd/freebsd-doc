@@ -1,16 +1,13 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
-				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
-<!ENTITY base "..">
-<!ENTITY title "Syst&#232;me de nouvelles du Projet GNOME pour FreeBSD">
-]>
+				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
 <!-- $FreeBSD$ -->
 
-<!-- 
+<!--
   The FreeBSD French Documentation Project
   Original revision: 1.4
 
-  Version francaise : Stephane Legrand <stephane@freebsd-fr.org> 
+  Version francaise : Stephane Legrand <stephane@freebsd-fr.org>
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
@@ -19,7 +16,7 @@
 
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
 
-  <xsl:variable name="date" select="'$FreeBSD$'"/>
+  <xsl:variable name="svnKeyword" select="'$FreeBSD$'"/>
 
   <xsl:output type="xml" />
 
@@ -31,7 +28,7 @@
       <channel>
         <title>Nouvelles du Projet GNOME pour FreeBSD</title>
 	<link>http://www.FreeBSD.org/gnome</link>
-	<description>Syst&#232;me de nouvelles pour GNOME sous FreeBSD</description>
+	<description>Système de nouvelles pour GNOME sous FreeBSD</description>
       </channel>
 
       <xsl:for-each select="descendant::event[position() &lt;= 10]">

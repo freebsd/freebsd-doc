@@ -10,13 +10,13 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS=   current.sgml 
+DOCS=   current.sgml
 DOCS+=	doc-set.sgml
 DOCS+=  handbook.sgml
 DOCS+=  handbook3.sgml
 DOCS+=  sgml.sgml
 DOCS+=  submitting.sgml
-DOCS+=  who.sgml 
+DOCS+=  who.sgml
 DOCS+=  translations.sgml
 DOCS+=	docproj.sgml
 

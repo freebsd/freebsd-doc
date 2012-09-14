@@ -1,4 +1,4 @@
-# 
+#
 # $FreeBSD$
 #
 
@@ -13,9 +13,9 @@ WITH_ARTICLE_TOC?=YES
 INSTALL_COMPRESSED?= gz
 INSTALL_ONLY_COMPRESSED?=
 
-# SRCS incluye todos y cada uno de los ficheros SGML que conforman el 
-# documento. Cualquier cambio en cualquiera de ellos implica volver a 
-# generar el documento.  
+# SRCS incluye todos y cada uno de los ficheros SGML que conforman el
+# documento. Cualquier cambio en cualquiera de ellos implica volver a
+# generar el documento.
 #
 
 # SGML content

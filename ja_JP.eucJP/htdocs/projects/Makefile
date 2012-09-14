@@ -32,9 +32,6 @@ DOCS+=	cvsweb.sgml
 INDEXLINK= projects.html
 
 #SUBDIR=	 acpi busdma c99 ideas mips bigdisk netperf
-SUBDIR=	mips 
-
-### Revision checking
-REVCHECK=	yes
+SUBDIR=	mips
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"

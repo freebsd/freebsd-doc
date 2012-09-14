@@ -10,8 +10,8 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS=	photos.sgml	
-DOCS+=	internal.sgml	
+DOCS=	photos.sgml
+DOCS+=	internal.sgml
 DOCS+= 	about.sgml
 DOCS+= 	machines.sgml
 DOCS+= 	mirror.sgml
@@ -28,15 +28,15 @@ DOCS+=	core-vote.sgml
 
 INDEXLINK=	internal.html
 
-# build the list of personal homepages of FreeBSD developers only 
+# build the list of personal homepages of FreeBSD developers only
 # on the main FreeBSD machines
 hostname!= hostname
 .if ${hostname} == "hub.freebsd.org" || ${hostname} == "freefall.freebsd.org" || ${hostname} == "www.freebsd.org"
 DOCS+=	homepage.sgml
 .PHONY: homepage.inc
 
-homepage.inc: homepage.pl
-	${PERL} ${.CURDIR}/homepage.pl > ${.TARGET}
+homepage.inc: ${DOC_PREFIX}/en_US.ISO8859-1/htdocs/internal/homepage.pl
+	${PERL} ${DOC_PREFIX}/en_US.ISO8859-1/htdocs/internal/homepage.pl > ${.TARGET}
 
 homepage.html:  homepage.inc
 CLEANFILES+=	homepage.inc

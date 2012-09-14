@@ -30,13 +30,8 @@
 #
 # Variables used by both users and documents:
 #
-#	TIDYFLAGS	Additional flags to pass to Tidy.  Typically
-#			used to set "-raw" flag to handle 8bit characters.
-#
 #	EXTRA_CATALOGS	Additional catalog files that should be used by
 #			any SGML processing applications.
-#
-#	NO_TIDY		If you do not want to use tidy, set this to "YES".
 #
 # Documents should use the += format to access these.
 #
@@ -63,7 +58,6 @@ PKG_CREATE?=	/usr/sbin/pkg_create
 TAR?=		/usr/bin/tar
 XARGS?=		/usr/bin/xargs
 
-TIDYOPTS?=	-wrap 90 -m -raw -preserve -f /dev/null -asxml ${TIDYFLAGS}
 HTML2PDB?=	${PREFIX}/bin/iSiloBSD
 HTML2PDBOPTS?=	-y -d0 -Idef ${HTML2PDBFLAGS}
 
@@ -143,10 +137,6 @@ all: ${_docs}
 
 ${DOC}.html: ${SRCS} ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} ${LOCAL_CSS_SHEET}
 	${SGMLNORM} -c ${HTMLCATALOG} ${SRCS:S|^|${.CURDIR}/|} > ${.TARGET}
-.if !defined(NO_TIDY)
-	${REINPLACE_TABS_CMD} ${.TARGET}
-	-${TIDY} ${TIDYOPTS} ${.TARGET}
-.endif
 
 ${DOC}.txt: ${DOC}.html
 	${HTML2TXT} ${HTML2TXTOPTS} ${.ALLSRC} > ${.TARGET}

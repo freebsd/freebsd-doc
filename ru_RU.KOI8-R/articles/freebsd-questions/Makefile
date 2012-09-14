@@ -1,6 +1,6 @@
 #
 # The FreeBSD Russian Documentation Project
-# 
+#
 # $FreeBSD$
 # $FreeBSDru: frdp/doc/ru_RU.KOI8-R/articles/freebsd-questions/Makefile,v 1.4 2005/10/28 17:35:48 gad Exp $
 #

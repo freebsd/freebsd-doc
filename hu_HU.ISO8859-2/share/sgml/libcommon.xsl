@@ -9,7 +9,10 @@
      %SRCID%	1.31
 -->
 
-<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
+<xsl:stylesheet version="1.0"
+  xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+  xmlns="http://www.w3.org/1999/xhtml">
+
   <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/libcommon.xsl"/>
 
   <xsl:param name="param-l10n-date-format-YMD"
@@ -22,69 +25,69 @@
              select="'%Y %m %D 00:00:00 CET, %W'" />
 
   <xsl:template name="html-usergroups-list-header">
-    <p>A &os; n&eacute;pszer&#251;s&eacute;ge nyom&aacute;n a
-      vil&aacute;gban l&eacute;trej&ouml;tt sz&aacute;mos
-      felhaszn&aacute;l&oacute;i csoport.</p>
+    <p>A &os; népszerûsége nyomán a
+      világban létrejött számos
+      felhasználói csoport.</p>
 
-    <p>Ha tudom&aacute;sunk van olyan tov&aacute;bbi &os;
-      felhaszn&aacute;l&oacute;i csoportokr&oacute;l, amelyek az
-      al&aacute;bbi felsorol&aacute;sban m&eacute;g nem szerepelnek,
-      k&uuml;ldj&uuml;nk egy <a
-	href="http://www.freebsd.org/hu/send-pr.html">hibajelent&eacute;st</a>
-      a <q>www</q> kateg&oacute;ri&aacute;ban a k&ouml;vetkez&#245;
-      adatok megad&aacute;s&aacute;val:</p>
+    <p>Ha tudomásunk van olyan további &os;
+      felhasználói csoportokról, amelyek az
+      alábbi felsorolásban még nem szerepelnek,
+      küldjünk egy <a
+	href="http://www.freebsd.org/hu/send-pr.html">hibajelentést</a>
+      a <q>www</q> kategóriában a következõ
+      adatok megadásával:</p>
 
     <ol>
-      <li>A felhaszn&aacute;l&oacute;i csoport honlapj&aacute;nak
-	c&iacute;me.</li>
+      <li>A felhasználói csoport honlapjának
+	címe.</li>
 
-      <li>Egy kapcsolattart&oacute; szem&eacute;ly e-mail c&iacute;me a
-	l&aacute;togat&oacute;ink &eacute;s a honlapunk
-	karbantart&oacute;inak sz&aacute;m&aacute;ra.</li>
+      <li>Egy kapcsolattartó személy e-mail címe a
+	látogatóink és a honlapunk
+	karbantartóinak számára.</li>
 
-      <li>A felhaszn&aacute;l&oacute;i csoport t&ouml;m&ouml;r (egy
-	bekezd&eacute;snyi) bemutat&aacute;sa.</li>
+      <li>A felhasználói csoport tömör (egy
+	bekezdésnyi) bemutatása.</li>
     </ol>
 
-    <p>Az el&#245;bb felsorolt inform&aacute;ci&oacute;kat
-      k&eacute;rj&uuml;k HTML form&aacute;tumban bek&uuml;ldeni.  A &os;
-      lend&uuml;let&eacute;nek meg&#245;rz&eacute;s&eacute;nek
-      szellem&eacute;ben els&#245;sorban olyan
-      felhaszn&aacute;l&oacute;i csoportok jelentkez&eacute;s&eacute;t
-      v&aacute;rjuk, amelyek akt&iacute;vak &eacute;s
-      tev&eacute;kenys&eacute;g&uuml;k nyilv&aacute;nos.  Ha m&eacute;g
-      nem lenne a k&ouml;rny&eacute;k&uuml;nk&ouml;n ilyen csoport,
-      akkor javasoljuk, hogy kutassunk fel &eacute;s vegy&uuml;nk fel
-      kapcsolatot a k&ouml;zel&uuml;nkben &eacute;l&#245;
-      &eacute;rdekl&#245;d&#245;kkel, p&eacute;ld&aacute;ul a <a
-	href="http://bsd.meetup.com/"></a> oldalon kereszt&uuml;l,
-      &eacute;s alap&iacute;tsunk egy saj&aacute;t
-      felhaszn&aacute;l&oacute;i csoportot.</p>
+    <p>Az elõbb felsorolt információkat
+      kérjük HTML formátumban beküldeni.  A &os;
+      lendületének megõrzésének
+      szellemében elsõsorban olyan
+      felhasználói csoportok jelentkezését
+      várjuk, amelyek aktívak és
+      tevékenységük nyilvános.  Ha még
+      nem lenne a környékünkön ilyen csoport,
+      akkor javasoljuk, hogy kutassunk fel és vegyünk fel
+      kapcsolatot a közelünkben élõ
+      érdeklõdõkkel, például a <a
+	href="http://bsd.meetup.com/"></a> oldalon keresztül,
+      és alapítsunk egy saját
+      felhasználói csoportot.</p>
 
-    <h3>R&eacute;gi&oacute;k:</h3>
+    <h3>Régiók:</h3>
   </xsl:template>
 
   <xsl:template name="html-news-list-newsflash-preface">
     <img src="&enbase;/gifs/news.jpg" align="right" border="0" width="193"
-      height="144" alt="&os; h&iacute;rek"/>
+      height="144" alt="&os; hírek"/>
 
-    <p>A &os; oper&aacute;ci&oacute;s rendszer dinamikusan &eacute;s
-      gyorsan fejl&#245;dik, ez&eacute;rt a legfrissebb
-      fejleszt&eacute;sek nyomonk&ouml;vet&eacute;se nem mindig
-      k&ouml;nny&#251; feladat.  Ha k&iacute;v&aacute;ncsiak vagyunk a
-      rendszerrel kapcsolatos leg&uacute;jabb
-      inform&aacute;ci&oacute;kra, t&eacute;rj&uuml;nk vissza erre az
-      oldalra gyakran.  Emellett &eacute;rdemes lehet m&eacute;g
+    <p>A &os; operációs rendszer dinamikusan és
+      gyorsan fejlõdik, ezért a legfrissebb
+      fejlesztések nyomonkövetése nem mindig
+      könnyû feladat.  Ha kíváncsiak vagyunk a
+      rendszerrel kapcsolatos legújabb
+      információkra, térjünk vissza erre az
+      oldalra gyakran.  Emellett érdemes lehet még
       feliratkoznunk a <a
 	href="&base;/doc/hu/books/handbook/eresources.html#ERESOURCES-MAIL">freebsd-announce
-	levelez&eacute;si list&aacute;ra</a>, vagy a
-	hozz&aacute; tartoz&oacute; <a href="rss.xml">RSS feed</a>re.</p>
+	levelezési listára</a>, vagy a
+	hozzá tartozó <a href="rss.xml">RSS feed</a>re.</p>
 
-    <p>Tov&aacute;bb&aacute; az al&aacute;bbi projektek rendelkeznek
-      saj&aacute;t k&uuml;l&ouml;n h&iacute;roldallal, amelyek figyelemmel
-      k&iacute;s&eacute;r&eacute;s&eacute;vel pedig az adott projektben
-      v&eacute;gzett munk&aacute;r&oacute;l tudhatunk meg
-      t&ouml;bbet.</p>
+    <p>Továbbá az alábbi projektek rendelkeznek
+      saját külön híroldallal, amelyek figyelemmel
+      kísérésével pedig az adott projektben
+      végzett munkáról tudhatunk meg
+      többet.</p>
 
     <ul>
       <li><a href="&enbase;/java/newsflash.html">&os; &java;</a></li>
@@ -94,21 +97,21 @@
       <li><a href="&enbase;/gnome/newsflash.html">&os; GNOME</a></li>
     </ul>
 
-    <p>A kor&aacute;bbi, a jelenlegi &eacute;s a j&ouml;v&#245;beni
-      kiad&aacute;sokr&oacute;l b&#245;vebben a <a
-	href="&enbase;/releases/index.html">kiad&aacute;sok
-	inform&aacute;ci&oacute;s oldal&aacute;n</a>
+    <p>A korábbi, a jelenlegi és a jövõbeni
+      kiadásokról bõvebben a <a
+	href="&enbase;/releases/index.html">kiadások
+	információs oldalán</a>
       olvashatunk.</p>
 
-    <p>A &os; Projekt biztons&aacute;g&aacute;val kapcsolatos
-      inform&aacute;ci&oacute;kat &eacute;s a biztons&aacute;gi
-      figyelmeztet&eacute;seket &ouml;sszefoglal&oacute; list&aacute;t a
-      <a href="&base;/security/#adv">biztons&aacute;gi inform&aacute;ci&oacute;k</a>
-      oldalon tal&aacute;ljuk meg.</p>
+    <p>A &os; Projekt biztonságával kapcsolatos
+      információkat és a biztonsági
+      figyelmeztetéseket összefoglaló listát a
+      <a href="&base;/security/#adv">biztonsági információk</a>
+      oldalon találjuk meg.</p>
   </xsl:template>
 
   <xsl:template name="html-news-make-olditems-list">
-    <p>A kor&aacute;bbi &eacute;vek h&iacute;rei (2009-t&#245;l
+    <p>A korábbi évek hírei (2009-tõl
       magyarul):
       <a href="&base;/news/2009/index.html">2009</a>,
       <a href="&enbase;/news/2008/index.html">2008</a>,
@@ -127,12 +130,12 @@
   </xsl:template>
 
   <xsl:template name="html-news-list-newsflash-homelink">
-    <a href="&base;/news/news.html">H&iacute;rek f&#245;oldal</a>
+    <a href="&base;/news/news.html">Hírek fõoldal</a>
   </xsl:template>
 
   <xsl:template name="html-press-make-olditems-list">
-    <p>A kor&aacute;bbi &eacute;vek sajt&oacute;kiadv&aacute;nyai
-      (2008-t&oacute;l magyarul):
+    <p>A korábbi évek sajtókiadványai
+      (2008-tól magyarul):
       <a href="&base;/news/2008/press.html">2008</a>,
       <a href="&enbase;/news/2007/press.html">2007</a>,
       <a href="&enbase;/news/2006/press.html">2006</a>,
@@ -147,27 +150,27 @@
   </xsl:template>
 
   <xsl:template name="html-news-list-press-preface">
-    <p>Ha tudunk b&aacute;rmilyen olyan &os; t&eacute;m&aacute;j&uacute;
-      h&iacute;rr&#245;l vagy egy&eacute;b &iacute;r&aacute;sr&oacute;l,
-      amely nem szerepel az itteniek k&ouml;z&ouml;tt, &iacute;rjunk egy
+    <p>Ha tudunk bármilyen olyan &os; témájú
+      hírrõl vagy egyéb írásról,
+      amely nem szerepel az itteniek között, írjunk egy
       levelet a <a href="mailto:www@FreeBSD.org">www@FreeBSD.org</a>
-      c&iacute;mre, hogy fel tudjuk ide is tenni.</p>
+      címre, hogy fel tudjuk ide is tenni.</p>
   </xsl:template>
 
   <xsl:template name="html-events-map">
     <xsl:param name="mapurl" select="'none'" />
 
-    <p>A lentebb l&aacute;that&oacute; t&eacute;rk&eacute;pen
-      s&ouml;t&eacute;t pirossal jel&ouml;lt&uuml;k azokat az
-      orsz&aacute;gokat &eacute;s r&eacute;gi&oacute;kat, ahol a
-      k&ouml;zelj&ouml;v&#245;ben valamilyen nagyobb &os;
-      t&eacute;m&aacute;j&uacute; rendezv&eacute;ny v&aacute;rhat&oacute;.
-      S&aacute;rg&aacute;val &eacute;s narancss&aacute;rg&aacute;val
-      jel&ouml;lt&uuml;k azokat az orsz&aacute;gokat, ahol
-      kor&aacute;bban m&aacute;r lezajlott valamilyen &os;
-      t&eacute;m&aacute;j&uacute; rendezv&eacute;ny.  Itt a sz&iacute;nek
-      az rendezv&eacute;nyek sz&aacute;m&aacute;val egyre
-      s&ouml;t&eacute;tednek.</p>
+    <p>A lentebb látható térképen
+      sötét pirossal jelöltük azokat az
+      országokat és régiókat, ahol a
+      közeljövõben valamilyen nagyobb &os;
+      témájú rendezvény várható.
+      Sárgával és narancssárgával
+      jelöltük azokat az országokat, ahol
+      korábban már lezajlott valamilyen &os;
+      témájú rendezvény.  Itt a színek
+      az rendezvények számával egyre
+      sötétednek.</p>
 
     <img>
       <xsl:attribute name="src">
@@ -177,28 +180,28 @@
   </xsl:template>
 
   <xsl:template name="html-events-list-preface">
-    <p>Ha tudunk valamilyen olyan &os; t&eacute;m&aacute;j&uacute;
-      rendezv&eacute;nyr&#245;l vagy rendezv&eacute;nyekr&#245;l, amelyek a
-      t&ouml;bbi &os; felhaszn&aacute;l&oacute; sz&aacute;m&aacute;ra is
-      &eacute;rdekesek lehetnek, de m&eacute;g nem szerepelnek az
-      oldalon tal&aacute;lhat&oacute; list&aacute;ban, &iacute;rjuk meg
+    <p>Ha tudunk valamilyen olyan &os; témájú
+      rendezvényrõl vagy rendezvényekrõl, amelyek a
+      többi &os; felhasználó számára is
+      érdekesek lehetnek, de még nem szerepelnek az
+      oldalon található listában, írjuk meg
       a <a href="mailto:www@FreeBSD.org">www@FreeBSD.org</a>
-      c&iacute;mre, hogy fel tudjuk tenni.</p>
+      címre, hogy fel tudjuk tenni.</p>
 
-    <p>Az iCalendar form&aacute;tumot ismer&#245; programokkal
-      dolgoz&oacute; felhaszn&aacute;l&oacute;k az oldalon szerepl&#245;
-      &ouml;sszes rendezv&eacute;nyt el&eacute;rhetik a <a
-	href="&base;/events/events.ics">kalend&aacute;riumk&eacute;nt</a>
+    <p>Az iCalendar formátumot ismerõ programokkal
+      dolgozó felhasználók az oldalon szereplõ
+      összes rendezvényt elérhetik a <a
+	href="&base;/events/events.ics">kalendáriumként</a>
       is.</p>
   </xsl:template>
 
   <xsl:template name="html-events-list-upcoming-heading">
-    <h2 id="upcoming">Aktu&aacute;lis/k&ouml;zelg&#245;
-      rendezv&eacute;nyek:</h2>
+    <h2 id="upcoming">Aktuális/közelgõ
+      rendezvények:</h2>
   </xsl:template>
 
   <xsl:template name="html-events-list-past-heading">
-    <h2 id="past">Kor&aacute;bbi rendezv&eacute;nyek:</h2>
+    <h2 id="past">Korábbi rendezvények:</h2>
   </xsl:template>
 
   <xsl:template name="html-list-advisories-release-label">
@@ -210,10 +213,10 @@
   <xsl:template name="rdf-security-advisories-title"
                 xmlns="http://my.netscape.com/rdf/simple/0.9/">
     <channel>
-      <title>&os; biztons&aacute;gi figyelmeztet&eacute;sek</title>
+      <title>&os; biztonsági figyelmeztetések</title>
       <link>http://www.FreeBSD.org/security/</link>
-      <description>A &os; Projekt &aacute;ltal megjelentetett
-	biztons&aacute;gi figyelmeztet&eacute;sek</description>
+      <description>A &os; Projekt által megjelentetett
+	biztonsági figyelmeztetések</description>
     </channel>
   </xsl:template>
 
@@ -221,13 +224,13 @@
                 xmlns:atom="http://www.w3.org/2005/Atom">
     <xsl:param name="advisories.xml" select="''" />
 
-    <xsl:variable name="title">&os; biztons&aacute;gi figyelmeztet&eacute;sek</xsl:variable>
+    <xsl:variable name="title">&os; biztonsági figyelmeztetések</xsl:variable>
     <xsl:variable name="link">http://www.FreeBSD.org/security/</xsl:variable>
 
     <title><xsl:value-of select="$title" /></title>
     <link><xsl:value-of select="$link" /></link>
-    <description>A &os; Projekt &aacute;ltal megjelentetett
-      biztons&aacute;gi figyelmeztet&eacute;sek</description>
+    <description>A &os; Projekt által megjelentetett
+      biztonsági figyelmeztetések</description>
     <language>en-us</language>
     <webMaster>secteam@FreeBSD.org (&os; Security Team)</webMaster>
     <managingEditor>secteam@FreeBSD.org (&os; Security Team)</managingEditor>
@@ -249,13 +252,13 @@
                 xmlns:atom="http://www.w3.org/2005/Atom">
     <xsl:param name="notices.xml" select="''" />
 
-    <xsl:variable name="title">&os; sajt&oacute;hib&aacute;k</xsl:variable>
+    <xsl:variable name="title">&os; sajtóhibák</xsl:variable>
     <xsl:variable name="link">http://www.FreeBSD.org/security/</xsl:variable>
 
     <title><xsl:value-of select="$title" /></title>
     <link><xsl:value-of select="$link" /></link>
-    <description>A &os; Projekt &aacute;ltal megjelentetett
-      sajt&oacute;hib&aacute;k</description>
+    <description>A &os; Projekt által megjelentetett
+      sajtóhibák</description>
     <language>en-us</language>
     <webMaster>secteam@FreeBSD.org (FreeBSD Security Team)</webMaster>
     <managingEditor>secteam@FreeBSD.org (FreeBSD Security Team)</managingEditor>
@@ -270,7 +273,7 @@
       <xsl:attribute name="href">
         <xsl:value-of select="$link" /><xsl:text>rss.xml</xsl:text>
       </xsl:attribute>
-    </atom:link> 
+    </atom:link>
   </xsl:template>
 
   <xsl:template name="html-index-advisories-items-lastmodified">
@@ -312,7 +315,7 @@
 
     <xsl:if test="$items">
       <table>
-        <tr><th>D&aacute;tum</th><th>Figyelmeztet&eacute;s</th></tr>
+        <tr><th>Dátum</th><th>Figyelmeztetés</th></tr>
         <xsl:for-each select="$items">
           <xsl:variable name="year" select="../../../name" />
           <xsl:variable name="month" select="../../name" />
@@ -382,19 +385,19 @@
     <xsl:param name="nummonth"/>
     <xsl:variable name="month" select="number($nummonth)"/>
     <xsl:choose>
-      <xsl:when test="$month=1">janu&aacute;r</xsl:when>
-      <xsl:when test="$month=2">febru&aacute;r</xsl:when>
-      <xsl:when test="$month=3">m&aacute;rcius</xsl:when>
-      <xsl:when test="$month=4">&aacute;prilis</xsl:when>
-      <xsl:when test="$month=5">m&aacute;jus</xsl:when>
-      <xsl:when test="$month=6">j&uacute;nius</xsl:when>
-      <xsl:when test="$month=7">j&uacute;lius</xsl:when>
+      <xsl:when test="$month=1">január</xsl:when>
+      <xsl:when test="$month=2">február</xsl:when>
+      <xsl:when test="$month=3">március</xsl:when>
+      <xsl:when test="$month=4">április</xsl:when>
+      <xsl:when test="$month=5">május</xsl:when>
+      <xsl:when test="$month=6">június</xsl:when>
+      <xsl:when test="$month=7">július</xsl:when>
       <xsl:when test="$month=8">augusztus</xsl:when>
       <xsl:when test="$month=9">szeptember</xsl:when>
-      <xsl:when test="$month=10">okt&oacute;ber</xsl:when>
+      <xsl:when test="$month=10">október</xsl:when>
       <xsl:when test="$month=11">november</xsl:when>
       <xsl:when test="$month=12">december</xsl:when>
-      <xsl:otherwise>&eacute;rv&eacute;nytelen h&oacute;nap</xsl:otherwise>
+      <xsl:otherwise>érvénytelen hónap</xsl:otherwise>
     </xsl:choose>
   </xsl:template>
 
@@ -405,17 +408,17 @@
     <xsl:choose>
       <xsl:when test="$month=1">jan</xsl:when>
       <xsl:when test="$month=2">feb</xsl:when>
-      <xsl:when test="$month=3">m&aacute;r</xsl:when>
-      <xsl:when test="$month=4">&aacute;pr</xsl:when>
-      <xsl:when test="$month=5">m&aacute;j</xsl:when>
-      <xsl:when test="$month=6">j&uacute;n</xsl:when>
-      <xsl:when test="$month=7">j&uacute;l</xsl:when>
+      <xsl:when test="$month=3">már</xsl:when>
+      <xsl:when test="$month=4">ápr</xsl:when>
+      <xsl:when test="$month=5">máj</xsl:when>
+      <xsl:when test="$month=6">jún</xsl:when>
+      <xsl:when test="$month=7">júl</xsl:when>
       <xsl:when test="$month=8">aug</xsl:when>
       <xsl:when test="$month=9">szep</xsl:when>
       <xsl:when test="$month=10">okt</xsl:when>
       <xsl:when test="$month=11">nov</xsl:when>
       <xsl:when test="$month=12">dec</xsl:when>
-      <xsl:otherwise>&eacute;rv&eacute;nytelen h&oacute;nap</xsl:otherwise>
+      <xsl:otherwise>érvénytelen hónap</xsl:otherwise>
     </xsl:choose>
   </xsl:template>
 
