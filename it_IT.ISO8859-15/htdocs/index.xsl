@@ -8,7 +8,7 @@
      The FreeBSD Italian Documentation Project
 
      $FreeBSD$
-     Original revision: 1.138
+     Original revision: 39534
 -->
 
 <xsl:stylesheet version="1.0"
@@ -30,22 +30,31 @@
 		<div id="frontfeatureleft">
 			<div id="frontfeaturecontent">
 				<h1>
-				  Basato su BSD UNIX&reg;
+				  Basato su BSD &unix;
 				</h1>
-				<p>FreeBSD&reg; è un sistema operativo avanzato per architetture
-				compatibili x86 (inclusi Pentium&reg; e Athlon&trade;), amd64 (inclusi
-				Opteron&trade;, Athlon 64, e EM64T),
-				UltraSPARC&reg;, IA-64, PC-98 e ARM.
-				È derivato da BSD, la versione di
-				&unix; sviluppata
-				all'Università della California, Berkeley.
-				È sviluppato e mantenuto da <a
-				href="&enbase;/doc/en_US.ISO8859-1/articles/contributors/staff-committers.html">un
-				grande gruppo di individui</a>.
-				<a href="&base;/platforms/index.html">Piattaforme</a>
-				aggiuntive sono in varie fasi di sviluppo.</p>
+
+				<p>FreeBSD&reg; è un avanzato sistema
+				  operativo per moderne <a
+				  href="&base;/platforms/">piattaforme</a>
+				  server, desktop, ed embedded.
+				  Il codice di FreeBSD ha subito più di
+				  trent'anni di continui sviluppi,
+				  miglioramenti, e ottimizzazioni.
+				  È sviluppato e mantenuto da <a
+				  href="&enbase;/doc/en_US.ISO8859-1/articles/contributors/staff-committers.html">un
+				  grande gruppo di individui</a>.
+				  FreeBSD fornisce funzionalità di rete
+				  avanzate, caratteristiche di sicurezza
+				  impressionanti, e prestazioni di prima
+				  categoria ed è utilizzato da alcuni
+				  dei <a
+				  href="&enbase;/doc/en_US.ISO8859-1/books/handbook/nutshell.html#INTRODUCTION-NUTSHELL-USERS">siti
+				  web più trafficati</a> e dai più
+				  pervasivi dispositivi embedded di rete e
+				  di storage.</p>
+
 				<div id="txtfrontfeaturelink">
-				»<a href="&base;/about.html" title="Approfondisci">Approfondisci</a>
+				  &#187;<a href="&base;/about.html" title="Approfondisci">Approfondisci</a>
 				</div> <!-- TXTFRONTFEATURELINK -->
 			</div> <!-- FRONTFEATURECONTENT -->
 		</div> <!-- FRONTFEATURELEFT -->
@@ -63,23 +72,17 @@
 			  <div id="frontreleasescontent" class="txtshortcuts">
 				  <h2><a href="&base;/releases/">ULTIME RELEASE</a></h2>
 				  <ul id="frontreleaseslist">
-					<li>
-					  <a href="&u.rel.announce;">Release di Produzione &rel.current;</a>
-					</li>
-					<li>
-					  <a href="&u.rel2.announce;">Release di Produzione (Legacy) &rel2.current;</a>
-					</li>
+					<li>Produzione:&nbsp;<a
+				href="&u.rel.announce;">&rel.current;</a>,&nbsp;<a href="&u.rel2.announce;">&rel2.current;</a></li>
+					<li>Legacy: <a
+				href="&u.rel3.announce;">&rel3.current;</a></li>
 			    <xsl:if test="'&beta.testing;' != 'IGNORE'">
-					<li>
-					  <a href="&base;/where.html#helptest">Prossima Release
-					    &betarel.current; - &betarel.vers;</a>
-					</li>
+					<li>Prossima: <a
+				href="&base;/where.html#helptest">&betarel.current;-&betarel.vers;</a></li>
 			    </xsl:if>
 			    <xsl:if test="'&beta2.testing;' != 'IGNORE'">
-					<li>
-					  <a href="&base;/where.html#helptest">Prossima Release
-					    &betarel2.current; - &betarel2.vers;</a>
-					</li>
+					<li>Prossima: <a
+				href="&base;/where.html#helptest">&betarel2.current;-&betarel2.vers;</a></li>
 			    </xsl:if>
 				  </ul>
 			  </div> <!-- FRONTRELEASESCONTENT -->
@@ -103,13 +106,22 @@
 					<a href="&enbase;/fr/" title="Francese">fr</a>
 				  </li>
 				  <li>
+					<a href="&enbase;/hu/" title="Ungherese">hu</a>
+				  </li>
+				  <li>
 					<a href="&enbase;/it/" title="Italiano">it</a>
 				  </li>
 				  <li>
 					<a href="&enbase;/ja/" title="Giapponese">ja</a>
 				  </li>
-				  <li class="last-child">
+				  <li>
+					<a href="&enbase;/nl/" title="Olandese">nl</a>
+				  </li>
+				  <li>
 					<a href="&enbase;/ru/" title="Russo">ru</a>
+				  </li>
+				  <li class="last-child">
+					<a href="&enbase;/zh_CN/" title="Cinese (Semplificato)">zh_CN</a>
 				  </li>
 				</ul>
 			</div> <!-- LANGUAGENAV -->
@@ -143,9 +155,6 @@
 					</li>
 					<li>
 					  <a href="&enbase;/doc/it_IT.ISO8859-15/books/handbook/index.html" title="Manuale">Manuale</a>
-					</li>
-					<li>
-					  <a href="http://www.freebsdfoundation.org/" title="Fondazione">Fondazione</a>
 					</li>
 					<li>
 					  <a href="&base;/ports/index.html" title="Port">Port</a>
@@ -183,7 +192,7 @@
 					<a href="&enbase;/news/newsflash.html" title="Altre Notizie">Altre Notizie</a>
 				  </li>
 				  <li class="last-child">
-					<a href="&enbase;/news/news.rdf" title="News RSS Feed"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="News RSS Feed" /></a>
+					<a href="&enbase;/news/rss.xml" title="Feed RSS per le Notizie"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="Feed RSS per le Notizie" /></a>
 				  </li>
 				</ul>
 			  </div> <!-- unnamed -->
@@ -212,7 +221,7 @@
 			  </div> <!-- unnamed -->
 			</div> <!-- newseventswrap -->
 
-		   </div> <!-- FRONTNEWSEVENTS -->
+		   </div> <!-- FRONTEVENTSCONTENT -->
             	</div> <!-- FRONTEVENTS -->
             	<div class="frontseparator"><b style="display: none">.</b></div>
             	<div id="frontmedia">
@@ -255,7 +264,7 @@
 					<a href="&enbase;/security/" title="Altri Avvisi di Sicurezza">Altri</a>
 				  </li>
 				  <li class="last-child">
-					<a href="&enbase;/security/advisories.rdf" title="Security Advisories RSS Feed"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="News RSS Feed" /></a>
+					<a href="&enbase;/security/rss.xml" title="Feed RSS per gli Avvisi di Sicurezza"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="Feed RSS per le Notizie" /></a>
 				  </li>
 				</ul>
 			  </div> <!-- unnamed -->
@@ -270,6 +279,16 @@
 				<xsl:with-param name="type" select="'notice'" />
 			</xsl:call-template>
 
+			  <div>
+			    	<ul class="newseventslist">
+				  <li class="first-child">
+				    <a href="&enbase;/security/notices.html" title="Altri Errata Corrige">Altri</a>
+				  </li>
+				  <li class="last-child">
+				    <a href="&enbase;/security/errata.xml" title="Feed RSS per gli Errata Corrige"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="Feed RSS per gli Errata Corrige" /></a>
+				  </li>
+				</ul>
+			  </div> <!-- unnamed -->
 			</div> <!-- newseventswrap -->
 
 		   </div> <!-- FRONTSECURITYCONTENT -->
@@ -280,5 +299,14 @@
             </div> <!-- FRONTNEMSCONTAINER -->
           </div> <!-- FRONTMAIN -->
         </div> <!-- FRONTCONTAINER -->
+  </xsl:template>
+
+  <xsl:template name="process.footer">
+	&copyright;
+ 
+	FreeBSD è un marchio registrato di The FreeBSD Foundation ed è
+	usato da The FreeBSD Project con il permesso di <a
+	  href="http://www.freebsdfoundation.org/documents/Guidelines.shtml">The
+	FreeBSD Foundation</a>.
   </xsl:template>
 </xsl:stylesheet>
