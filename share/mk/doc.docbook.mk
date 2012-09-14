@@ -257,7 +257,7 @@ TOUCH?=		/usr/bin/touch
 XARGS?=		/usr/bin/xargs
 
 GROFF?=		groff
-TIDY_VER!=	${TIDY} -v
+TIDY_VER!=	${TIDY} -v 2>&1
 .if ${TIDY_VER} == "HTML Tidy for FreeBSD released on 7 December 2008"
 TIDYOPTS?=	-wrap 90 -m -raw --preserve-entities yes -f /dev/null -asxml ${TIDYFLAGS}
 .else
