@@ -300,7 +300,7 @@ SGMLFLAGS+= ${CHAPTERS:S/\/chapter.sgml//:S/^/-i chap./}
 SGMLFLAGS+= -i chap.freebsd-glossary
 
 pgpkeyring: pgpkeys/chapter.sgml
-	@${JADE} -V nochunks ${OTHERFLAGS} ${JADEOPTS} -d ${DSLPGP} -t sgml ${MASTERDOC}
+	${JADE} -V nochunks ${OTHERFLAGS} ${JADEOPTS} -d ${DSLPGP} -t sgml ${XMLDECL} ${MASTERDOC}
 
 #
 # Handbook-specific variables
