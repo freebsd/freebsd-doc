@@ -1,9 +1,9 @@
 #
 # The FreeBSD Russian Documentation Project
-# 
+#
 # $FreeBSDru: frdp/doc/ru_RU.KOI8-R/articles/version-guide/Makefile,v 1.1 2005/10/09 16:19:35 gad Exp $
 # $FreeBSD$
-# 
+#
 # Original revision: r25395
 #
 # Article: FreeBSD Version Guide

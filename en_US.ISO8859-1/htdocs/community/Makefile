@@ -7,8 +7,6 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS=   irc.sgml mailinglists.sgml newsgroups.sgml webresources.sgml
-
-XMLDOCS+=	social::${XML_EVENTS_EVENTS}:
+DOCS=   irc.sgml mailinglists.sgml newsgroups.sgml social.sgml webresources.sgml
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"

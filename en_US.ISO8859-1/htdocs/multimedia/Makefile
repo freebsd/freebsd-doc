@@ -26,7 +26,7 @@ TEMPLATES=	multimedia.sgml.intro \
 		multimedia-input.xml
 
 clean:
-	${RM} -rf output
+	${RM} -rf output ${CLEANFILES}
 
 build:
 	${MKDIR} -p output && \

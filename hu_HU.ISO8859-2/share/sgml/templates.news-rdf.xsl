@@ -1,9 +1,6 @@
-<?xml version="1.0"?>
+<?xml version="1.0" encoding="iso-8859-2"?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
-				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
-<!ENTITY title "RDF &os; h&iacute;rek">
-<!ENTITY email "freebsd-www">
-]>
+				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
 
 <!-- $FreeBSD$ -->
 
@@ -17,12 +14,8 @@
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
 
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
-  
-  <xsl:output method="xml" indent="yes" encoding="&xml.encoding;"/>
 
-  <xsl:variable name="date">
-    <xsl:value-of select="//cvs:keyword[@name='freebsd']"/>
-  </xsl:variable>
+  <xsl:output method="xml" indent="yes" encoding="&xml.encoding;"/>
 
   <!-- Generate the main body of the RDF file -->
   <xsl:template match="news">
@@ -30,9 +23,9 @@
 	     xmlns="http://my.netscape.com/rdf/simple/0.9/">
 
       <channel>
-	<title>A &os; Projekt h&iacute;rei</title>
+	<title>A &os; Projekt hírei</title>
 	<link>http://www.FreeBSD.org/hu/news/</link>
-	<description>H&iacute;rek a &os; Projektr&#245;l</description>
+	<description>Hírek a &os; Projektről</description>
       </channel>
 
       <!-- Only include the last 10 events -->
@@ -76,6 +69,6 @@
       </link>
     </item>
   </xsl:template>
-  
+
   <xsl:template match="name | date"/>
 </xsl:stylesheet>

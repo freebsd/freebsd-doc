@@ -129,16 +129,16 @@ STYLESHEET_TYPE?=	dsssl
 DSLHTML?= ${DOC_PREFIX}/share/sgml/spellcheck.dsl
 .endif
 
+XMLLINT?=	/usr/local/bin/xmllint
+XMLDECL?=	/usr/local/share/sgml/docbook/dsssl/modular/dtds/decls/xml.dcl
+
 .if exists(${PREFIX}/bin/jade) && !defined(OPENJADE)
 JADE?=		${PREFIX}/bin/jade
 JADECATALOG?=	${PREFIX}/share/sgml/jade/catalog
-NSGMLS?=	${PREFIX}/bin/nsgmls
-NSGMLSWARNINGS=	-wempty -wunclosed
 SX?=		${PREFIX}/bin/sx
 .else
 JADE?=		${PREFIX}/bin/openjade
 JADECATALOG?=	${PREFIX}/share/sgml/openjade/catalog
-NSGMLS?=	${PREFIX}/bin/onsgmls
 JADEFLAGS+=	-V openjade
 SX?=		${PREFIX}/bin/osx
 .endif
@@ -257,7 +257,12 @@ TOUCH?=		/usr/bin/touch
 XARGS?=		/usr/bin/xargs
 
 GROFF?=		groff
+TIDY_VER!=	${TIDY} -v
+.if ${TIDY_VER} == "HTML Tidy for FreeBSD released on 7 December 2008"
+TIDYOPTS?=	-wrap 90 -m -raw --preserve-entities yes -f /dev/null -asxml ${TIDYFLAGS}
+.else
 TIDYOPTS?=	-wrap 90 -m -raw -preserve -f /dev/null -asxml ${TIDYFLAGS}
+.endif
 HTML2TXT?=	${PREFIX}/bin/links
 HTML2TXTOPTS?=	-dump -width 72 ${HTML2TXTFLAGS}
 HTML2PDB?=	${PREFIX}/bin/iSiloBSD
@@ -519,7 +524,7 @@ index.html HTML.manifest: ${SRCS} ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} \
 			  ${LOCAL_IMAGES_TXT} ${HTML_SPLIT_INDEX} ${LOCAL_CSS_SHEET}
 	${GEN_INDEX_SGML_CMD}
 	${JADE_CMD} -V html-manifest ${HTMLOPTS} -ioutput.html.images \
-		${JADEOPTS} -t sgml ${MASTERDOC}
+		${JADEOPTS} -t sgml ${XMLDECL} ${MASTERDOC}
 .elif ${STYLESHEET_TYPE} == "xsl"
 index.html: ${DOC}.xml ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} \
 	${HTML_SPLIT_INDEX} ${LOCAL_CSS_SHEET}
@@ -539,7 +544,7 @@ ${DOC}.html: ${SRCS} ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} \
 	     ${LOCAL_IMAGES_TXT} ${HTML_INDEX} ${LOCAL_CSS_SHEET}
 	${GEN_INDEX_SGML_CMD}
 	${JADE_CMD} -V nochunks ${HTMLOPTS} -ioutput.html.images \
-		${JADEOPTS} -t sgml ${MASTERDOC} > ${.TARGET} || \
+		${JADEOPTS} -t sgml ${XMLDECL} ${MASTERDOC} > ${.TARGET} || \
 		(${RM} -f ${.TARGET} && false)
 .elif ${STYLESHEET_TYPE} == "xsl"
 ${DOC}.html: ${DOC}.xml ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} \
@@ -560,7 +565,7 @@ ${DOC}.html: ${DOC}.xml ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} \
 ${DOC}.html-text: ${SRCS} ${HTML_INDEX} ${LOCAL_IMAGES_TXT}
 	${GEN_INDEX_SGML_CMD}
 	${JADE_CMD} -V nochunks ${HTMLTXTOPTS} \
-		${JADEOPTS} -t sgml ${MASTERDOC} > ${.TARGET} || \
+		${JADEOPTS} -t sgml ${XMLDECL} ${MASTERDOC} > ${.TARGET} || \
 		(${RM} -f ${.TARGET} && false)
 .elif ${STYLESHEET_TYPE} == "xsl"
 ${DOC}.html-text: ${DOC}.xml ${HTML_INDEX}
@@ -620,7 +625,7 @@ ${DOC}.rtf: ${SRCS} ${LOCAL_IMAGES_EPS} ${PRINT_INDEX} \
 		${LOCAL_IMAGES_TXT} ${LOCAL_IMAGES_PNG}
 	${GEN_INDEX_SGML_CMD}
 	${JADE_CMD} -V rtf-backend ${PRINTOPTS} -ioutput.rtf.images \
-		${JADEOPTS} -t rtf -o ${.TARGET}-nopng ${MASTERDOC}
+		${JADEOPTS} -t rtf -o ${.TARGET}-nopng ${XMLDECL} ${MASTERDOC}
 	${FIXRTF} ${FIXRTFOPTS} < ${.TARGET}-nopng > ${.TARGET}
 .else
 ${DOC}.rtf:
@@ -642,7 +647,7 @@ ${DOC}.tex: ${SRCS} ${LOCAL_IMAGES_EPS} ${PRINT_INDEX} \
 		${LOCAL_IMAGES_TXT} ${LOCAL_IMAGES_EN}
 	${GEN_INDEX_SGML_CMD}
 	${JADE_CMD} -V tex-backend ${PRINTOPTS} \
-		${JADEOPTS} -t tex -o ${.TARGET} ${MASTERDOC}
+		${JADEOPTS} -t tex -o ${.TARGET} ${XMLDECL} ${MASTERDOC}
 
 ${DOC}.tex-ps: ${DOC}.tex
 	${LN} -f ${.ALLSRC} ${.TARGET}
@@ -654,7 +659,7 @@ ${DOC}.tex-pdf: ${SRCS} ${IMAGES_PDF} ${PRINT_INDEX} \
 	${RM} -f ${.TARGET}
 	${CAT} ${PDFTEX_DEF} > ${.TARGET}
 	${JADE_CMD} -V tex-backend ${PRINTOPTS} -ioutput.print.pdf \
-		${JADEOPTS} -t tex -o /dev/stdout ${MASTERDOC} >> ${.TARGET}
+		${JADEOPTS} -t tex -o /dev/stdout ${XMLDECL} ${MASTERDOC} >> ${.TARGET}
 .endif
 
 .if !target(${DOC}.dvi)
@@ -735,8 +740,7 @@ ${DOC}.${_curformat}:
 #
 
 lint validate:
-	${NSGMLS} ${NSGMLSWARNINGS} -s ${NSGMLSFLAGS} ${SGMLFLAGS} ${CATALOGS} ${MASTERDOC}
-
+	@${XMLLINT} --nonet --noout --noent --valid ${MASTERDOC}
 
 # ------------------------------------------------------------------------
 #
@@ -754,12 +758,12 @@ lint validate:
 ${HTML_INDEX}: ${SRCS} ${LOCAL_IMAGES_TXT}
 	${INIT_INDEX_SGML_CMD}
 	${JADE_CMD} -V html-index -V nochunks ${HTMLOPTS} -ioutput.html.images \
-		${JADEOPTS} -t sgml ${MASTERDOC} > /dev/null
+		${JADEOPTS} -t sgml ${XMLDECL} ${MASTERDOC} > /dev/null
 
 ${HTML_SPLIT_INDEX}: ${SRCS} ${LOCAL_IMAGES_TXT}
 	${INIT_INDEX_SGML_CMD}
 	${JADE_CMD} -V html-index ${HTMLOPTS} -ioutput.html.images \
-		${JADEOPTS} -t sgml ${MASTERDOC} > /dev/null
+		${JADEOPTS} -t sgml ${XMLDECL} ${MASTERDOC} > /dev/null
 
 .if !target(${PRINT_INDEX})
 ${PRINT_INDEX}: ${HTML_INDEX}

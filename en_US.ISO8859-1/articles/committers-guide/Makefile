@@ -1,4 +1,4 @@
-# 
+#
 # $FreeBSD$
 #
 # Article: The FreeBSD Committers Guide

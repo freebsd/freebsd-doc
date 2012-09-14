@@ -1,7 +1,7 @@
 #
 # $FreeBSD$
 #
-# Articolo: Installazione e Utilizzo di FreeBSD con altri Sistemi Operativi 
+# Articolo: Installazione e Utilizzo di FreeBSD con altri Sistemi Operativi
 
 DOC?= article
 

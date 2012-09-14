@@ -1,15 +1,14 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
-<!ENTITY base "..">
 <!ENTITY title "Projet GNOME pour FreeBSD">
-<!ENTITY % navinclude.gnome "INCLUDE">
 ]>
 <!-- $FreeBSD$ -->
 
-<!-- 
-   The FreeBSD French Documentation Project 
+<!--
+   The FreeBSD French Documentation Project
    Original revision: 1.87
-   
+
    Version francaise : Stephane Legrand <stephane@freebsd-fr.org>
 -->
 
@@ -19,34 +18,24 @@
 		exclude-result-prefixes="rdf rdf1" version="1.0">
 
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
+  <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/xhtml.xsl"/>
 
-  <xsl:variable name="date" select="'$FreeBSD$'"/>
-  <xsl:variable name="title" select="''"/>
+  <xsl:variable name="svnKeyword" select="'$FreeBSD$'"/>
 
-  <xsl:output type="html" encoding="iso-8859-1"
-              doctype-public="-//W3C//DTD HTML 4.01 Transitional//EN"/>
+  <xsl:variable name="title">&title;</xsl:variable>
 
-  <xsl:template match="/">
-    <html>
-      &header1;
-      <body>
-
-	<div id="CONTAINERWRAP">
-	  <div id="CONTAINER">
-	    &header2;
-
-	    <div id="CONTENT">
-              <div id="SIDEWRAP">
-                &nav;
+  <xsl:template names="process.content">
+              <div id="sidewrap">
+                &nav.gnome;
               </div> <!-- SIDEWRAP -->
 
-	      <div id="CONTENTWRAP">
+	      <div id="contentwrap">
 		<div id="rightwrap">
 		  <div class="rightnav">
 
 		    <h2>Nouvelles de GNOME pour FreeBSD</h2>
 
-		    <p>Derni&#232;re mise &#224; jour :
+		    <p>Dernière mise à jour :
 		      <xsl:value-of
 			select="descendant::month[position() = 1]/name"/>
 		      <xsl:text> </xsl:text>
@@ -82,6 +71,9 @@
 		  <div class="rightnav">
 
 		    <h2>Nouvelles du Projet GNOME</h2>
+<!-- XXX: (1) does not work at the moment
+          (2) should we really copy over GNOME news?
+
 		    <ul>
 		      <xsl:for-each select="document('http://gnomedesktop.org/backend.php')/rss/channel/*[name() = 'item'][position() &lt; 10]">
 			<li><a>
@@ -99,10 +91,11 @@
 			  </xsl:for-each>
 			</a></li>
 		    </ul>
+-->
                   </div> <!-- rightnav -->
                 </div> <!-- rightwrap -->
 
-		&header3;
+		<h1>&title;</h1>
 
 		<h2>Qu'est-ce que GNOME ?</h2>
 
@@ -110,41 +103,41 @@
                    border="0" alt="GNOME Logo"/>
 
 	       		<p>GNOME est un environnement de travail complet, et une
-			   suite d'applications int&#233;gr&#233;es. Avec GNOME,
-			   tout devient facile &#224; utiliser, attrayant, puissant,
-			   et marche de la fa&#231;on dont vous vous attendez.</p>
+			   suite d'applications intégrées. Avec GNOME,
+			   tout devient facile à utiliser, attrayant, puissant,
+			   et marche de la façon dont vous vous attendez.</p>
 
 		       <p>Les composants principaux de GNOME sont le
 			  <a href="http://www.gnome.org">bureau GNOME</a>, un
 			  environnement de travail graphique simple, et la
-			  <a href="http://developer.gnome.org">plateforme de d&#233;veloppement
-			  GNOME</a>, une collection d'outils de d&#233;veloppement
-		          d'applications et de biblioth&#232;ques.</p>
+			  <a href="http://developer.gnome.org">plateforme de développement
+			  GNOME</a>, une collection d'outils de développement
+		          d'applications et de bibliothèques.</p>
 
-		       <p>Le Projet FreeBSD GNOME est une &#233;quipe de committers
-			  et d'utilisateurs d&#233;vou&#233;s qui g&#232;rent l'int&#233;gration
+		       <p>Le Projet FreeBSD GNOME est une équipe de committers
+			  et d'utilisateurs dévoués qui gèrent l'intégration
 			  de GNOME et de FreeBSD.</p>
 
-		<h2>Mise &#224; jour vers GNOME 2.14 ?</h2>
+		<h2>Mise à jour vers GNOME 2.14 ?</h2>
 
-		<p>Si vous mettez &#224; jour de GNOME 2.12 &#224; GNOME 2.14, lisez
-		  <a href="&enbase;/gnome/docs/faq214.html">la FAQ de mise &#224; jour</a> pour des instructions
-		  de mise &#224; jour.</p>
+		<p>Si vous mettez à jour de GNOME 2.12 à GNOME 2.14, lisez
+		  <a href="&enbase;/gnome/docs/faq214.html">la FAQ de mise à jour</a> pour des instructions
+		  de mise à jour.</p>
 
               <h2>Statut du port</h2>
 
-	      <p>GNOME pour FreeBSD est actuellement support&#233; sur
+	      <p>GNOME pour FreeBSD est actuellement supporté sur
 		5-STABLE, 6-STABLE, 7-CURRENT, 5.4, 6.0, et 6.1.
-		La plupart de GNOME a &#233;t&#233; port&#233; sous FreeBSD, mais il reste toujours
-		<a href="docs/volunteer.html">des choses &#224; faire</a>!</p>
+		La plupart de GNOME a été porté sous FreeBSD, mais il reste toujours
+		<a href="docs/volunteer.html">des choses à faire</a>!</p>
 
-              <h2>Des solutions simples pour les probl&#232;mes de compilation - rapidement !</h2>
+              <h2>Des solutions simples pour les problèmes de compilation - rapidement !</h2>
 
-	      <p>GNOME est simple et facile &#224; compiler en utilisant les ports FreeBSD, mais
+	      <p>GNOME est simple et facile à compiler en utilisant les ports FreeBSD, mais
 	        parfois les choses tournent mal. Si GNOME -- ou quelque chose qui utilise
-		les biblioth&#232;ques GNOME -- ne se compile pas comme il devrait, ex&#233;cutez simplement l'outil
+		les bibliothèques GNOME -- ne se compile pas comme il devrait, exécutez simplement l'outil
 		<a href="&enbase;/gnome/gnomelogalyzer.sh">gnomelogalyzer.sh</a>
-		depuis le r&#233;pertoire du port r&#233;calcitrant, et laissez le gnomelogalyzer
+		depuis le répertoire du port récalcitrant, et laissez le gnomelogalyzer
 		trouver ce qui va mal et le corriger !</p>
 
 		<h2>Ressources</h2>
@@ -174,16 +167,5 @@
 		</form>
 
 	  	</div> <!-- contentwrap -->
-
-	      <br class="clearboth" />
-	    </div> <!-- content -->
-            <div id="FOOTER">
-	      &copyright;<br />
-	      &date;
-            </div> <!-- FOOTER -->
-	  </div> <!-- container -->
-	</div> <!-- containerwrap -->
-      </body>
-    </html>
   </xsl:template>
 </xsl:stylesheet>

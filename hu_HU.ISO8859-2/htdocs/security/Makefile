@@ -26,7 +26,6 @@ XML.DEFAULT=		${XML_ADVISORIES}
 
 XMLDOCS=	advisories:mkindex.xsl::advisories.html.inc
 NO_DATA.advisories=	yes
-NO_TIDY.advisories=	yes
 
 XMLDOCS+=	advisories-rdf:security-rdf.xsl::advisories.rdf
 XMLDOCS+=	advisories-rss:security-rss.xsl::rss.xml

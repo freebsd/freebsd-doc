@@ -4,7 +4,10 @@
 <!-- $FreeBSD$ -->
 <!-- Original Revision: 1.7 -->
 
-<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
+<xsl:stylesheet version="1.0"
+  xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+  xmlns="http://www.w3.org/1999/xhtml">
+
   <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/libcommon.xsl"/>
 
   <!-- Language-specific definitions should be put below this line -->
@@ -32,10 +35,10 @@
       <li><a href="http://freebsd.kde.org/">FreeBSD 上的 KDE</a></li>
       <li><a href="&enbase;/gnome/newsflash.html">FreeBSD 上的 GNOME</a></li>
     </ul>
-	  
+
     <p>更详细的描述，介绍，和将来的发行版本，请看<strong><a
 	  href="&base;/releases/index.html">版本信息</a></strong>页面。</p>
-	
+
     <p>对于 FreeBSD 的安全公告， 请访问 <a href="&base;/security/#adv">安全信息</a> 页面。</p>
   </xsl:template>
 

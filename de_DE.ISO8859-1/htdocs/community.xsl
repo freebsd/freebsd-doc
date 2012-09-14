@@ -2,7 +2,6 @@
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
 <!ENTITY title "Die FreeBSD-Gemeinde">
-<!ENTITY email "freebsd-www">
 <!ENTITY % navinclude.community "INCLUDE">
 ]>
 
@@ -10,42 +9,25 @@
 <!-- $FreeBSDde: de-www/community.xsl,v 1.7 2011/08/01 09:27:32 jkois Exp $ -->
 <!-- basiert auf: 1.9 -->
 
-<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"
-  xmlns:cvs="http://www.FreeBSD.org/XML/CVS">
+<xsl:stylesheet version="1.0"
+  xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+  xmlns="http://www.w3.org/1999/xhtml">
+
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
-
-  <xsl:variable name="date">
-    <xsl:value-of select="//cvs:keyword[@name='freebsd']"/>
-  </xsl:variable>
-
-  <xsl:output method="xml" encoding="&xml.encoding;"
-    doctype-system="http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"
-    doctype-public="-//W3C//DTD XHTML 1.0 Transitional//EN"/>
+  <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/xhtml.xsl"/>
 
   <xsl:key name="last-year-event-by-country" match="event[number(enddate/year) = (number($curdate.year) - 1)]"
     use="location/country" />
 
   <xsl:key name="event-by-year" match="event" use="enddate/year" />
 
-  <xsl:template match="events">
-    <html>
-      &header1;
-      <body>
+  <xsl:template name="process.sidewrap">
+    &nav.community;
+  </xsl:template>
 
-	<div id="CONTAINERWRAP">
-	  <div id="CONTAINER">
-	    &header2;
-
-	    <div id="CONTENT">
-              <div id="SIDEWRAP">
-                &nav;
-              </div> <!-- SIDEWRAP -->
-
-	      <div id="CONTENTWRAP">
-		&header3;
-
+  <xsl:template name="process.contentwrap">
 	      <p>&os; wird von einer aktiven Gemeinschaft
-		unterst&uuml;tzt.</p>
+		unterstützt.</p>
 
 	      <p>Es gibt mehr als 100 <a
 		href="&base;/community/mailinglists.html">
@@ -57,35 +39,35 @@
 		select="count(document($usergroups.xml)//entry)"
 		/><xsl:text> </xsl:text>--> <a
 		href="&enbase;/usergroups.html">User Groups</a> in
-		36 L&#228;ndern. <!--<xsl:value-of
+		36 Ländern. <!--<xsl:value-of
 		select="count(document($usergroups.xml)//country)" />-->
-		Zus&#228;tzlich existiert eine aktive <a
+		Zusätzlich existiert eine aktive <a
 		href="&base;/community/irc.html">IRC</a>-Gemeinde.
 		Viele Entwickler betreiben auch <a
 		href="http://planet.freebsdish.org">Blogs</a>, in denen
-		sie &#252;ber ihre Arbeit an FreeBSD berichten.
-		Au&#223;erdem betreiben die &os;-Entwickler gemeinsam mit
-		einigen der wichtigsten Unterst&#252;tzer ein <a
+		sie über ihre Arbeit an FreeBSD berichten.
+		Außerdem betreiben die &os;-Entwickler gemeinsam mit
+		einigen der wichtigsten Unterstützer ein <a
 		href="http://wiki.FreeBSD.org/">Wiki</a>, das Informationen
 		zur &os;-Entwicklung und zu diversen Projekten
-		enth&#228;lt.  Weiters ist &os; auch in verschiedenen <a
+		enthält.  Weiters ist &os; auch in verschiedenen <a
 		href="&enbase;/community/social.html">Sozialen
 		Netzwerken</a> vertreten.</p>
 
 	      <p>Letztes Jahr gab es insgesamt 19 <!-- <xsl:value-of
-	        select="count(event[number(enddate/year) =
+	        select="count(/events/event[number(enddate/year) =
 	        (number($curdate.year) -1)])" />-->
 		&os;-Veranstaltungen in 12 <!--<xsl:value-of
-		select="count(event[(number(enddate/year) =
+		select="count(/events/event[(number(enddate/year) =
 		(number($curdate.year) -1)) and (generate-id() =
 		generate-id(key('last-year-event-by-country',
-		location/country)[1]))])" />--> verschiedenen L&#228;ndern.
+		location/country)[1]))])" />--> verschiedenen Ländern.
 		Ein <a href="&enbase;/events/events.ics">Kalender</a> sowie
 		ein <a href="&enbase;/events/rss.xml">RSS Feed</a> zu
 		bevorstehenden FreeBSD-spezifischen Veranstaltungen sind
 		auf der Seite <a
 		href="&enbase;/events/events.html">Veranstaltungen</a>
-		verf&#252;gbar.  Und nicht zuletzt gibt es dutzende
+		verfügbar.  Und nicht zuletzt gibt es dutzende
 		Videos im Youtube-Channel <a
 		href="http://www.youtube.com/bsdconferences">BSD
 		Conferences</a>.</p>
@@ -148,18 +130,5 @@
   </script>
 
 	      </div> <!-- Latest Videos -->
-	      </div> <!-- CONTENTWRAP -->
-	      <br class="clearboth" />
-	    </div> <!-- CONTENT -->
-
-            <div id="FOOTER">
-               &copyright;<br />
-               &date;
-            </div> <!-- FOOTER -->
-        </div> <!-- CONTAINER -->
-   </div> <!-- CONTAINERWRAP -->
-
-      </body>
-</html>
   </xsl:template>
 </xsl:stylesheet>

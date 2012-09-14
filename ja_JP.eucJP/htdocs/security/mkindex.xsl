@@ -1,16 +1,13 @@
 <?xml version="1.0" encoding="EUC-JP" ?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
-				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
-<!ENTITY base ".">
-<!ENTITY title "">
-]>
+				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
 
 <!-- $FreeBSD$ -->
 <!-- Original revision: 1.7 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
-  
+
   <xsl:output type="xml" encoding="&xml.encoding;"
               omit-xml-declaration="yes" />
 

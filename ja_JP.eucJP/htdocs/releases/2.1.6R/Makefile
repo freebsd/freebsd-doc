@@ -14,7 +14,4 @@
 DOCS=	notes.sgml
 DOCS+=	security.sgml
 
-### Revision checking
-REVCHECK=	YES
-
 .include "${DOC_PREFIX}/share/mk/web.site.mk"

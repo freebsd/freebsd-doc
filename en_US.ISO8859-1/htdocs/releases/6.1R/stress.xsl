@@ -2,11 +2,11 @@
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
 xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
-xmlns:cvs="http://www.FreeBSD.org/XML/CVS"
-exclude-result-prefixes="rdf cvs"
+xmlns="http://www.w3.org/1999/xhtml"
+exclude-result-prefixes="rdf"
  version="1.0">
 
-<xsl:output 
+<xsl:output
  method="html"
  indent="no"
  encoding="utf-8"/>

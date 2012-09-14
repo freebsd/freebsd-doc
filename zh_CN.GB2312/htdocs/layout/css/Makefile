@@ -11,6 +11,6 @@
 .include "../Makefile.inc"
 .endif
 
-DATA=   fixed.css fixed_large.css global.css iefixes.css layout.css navigation.css table.css text.css query-pr.css
+DATA=   fixed.css fixed_large.css global.css layout.css navigation.css text.css
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"

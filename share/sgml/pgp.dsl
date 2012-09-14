@@ -21,6 +21,6 @@
 
     </style-specification-body>
   </style-specification>
-      
+
   <external-specification id="docbook" document="docbook.dsl">
 </style-sheet>

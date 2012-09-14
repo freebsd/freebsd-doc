@@ -7,10 +7,12 @@
 <!-- The FreeBSD Spanish Documentation Project
      Original Revision: r1.163			-->
 
-<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
-  <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
+<xsl:stylesheet version="1.0"
+  xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+  xmlns="http://www.w3.org/1999/xhtml">
 
-  <xsl:variable name="date" select="'$FreeBSD$'"/>
+  <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/sgml/libcommon.xsl"/>
+  <xsl:import href="http://www.FreeBSD.org/XML/www/share/sgml/xhtml.xsl"/>
 
   <!-- these params should be externally bound. The values
        here are not used actually -->
@@ -24,71 +26,39 @@
   <xsl:param name="events.xml-master" select="'none'"/>
   <xsl:param name="events.xml" select="'none'"/>
 
-  <xsl:output type="html" encoding="&xml.encoding;"
-              doctype-public="-//W3C//DTD HTML 4.01 Transitional//EN"/>
+  <xsl:variable name="svnKeyword" select="'$FreeBSD$'"/>
 
-<xsl:template match="/">
-    <html>
-      <head>
-	<title>&title;</title>
-	<meta name="description" content="El Proyecto FreeBSD"/>
-	<meta name="keywords" content="FreeBSD, BSD, UNIX, Support, Ports,
-	      Release, Application, Software, Handbook, FAQ, Tutorials, Bugs,
-	      CVS, CVSup, News, Commercial Vendors, homepage, CTM, Unix"/>
-	<link rel="shortcut icon" href="&enbase;/favicon.ico" type="image/x-icon"/>
-	<link rel="icon" href="&enbase;/favicon.ico" type="image/x-icon"/>
-    <link rel="stylesheet" media="screen" href="&enbase;/layout/css/fixed.css" type="text/css" title="Normal Text" />
-    <link rel="alternate stylesheet" media="screen" href="&enbase;/layout/css/fixed_large.css" type="text/css" title="Large Text" />
-    <script type="text/javascript" src="&enbase;/layout/js/styleswitcher.js"></script>
-	<link rel="alternate" type="application/rss+xml"
-	  title="Noticias del proyecto FreeBSD" href="&enbase;/news/rss.xml" />
-	<link rel="alternate" type="application/rss+xml"
-	  title="Avisos de seguridad de FreeBSD" href="&enbase;/security/rss.xml" />
-	<link rel="alternate" type="application/rss+xml"
-	  title="Noticias del proyecto GNOME para FreeBSD" href="&enbase;/gnome/rss.xml" />
-	
-	<!-- Formatted to be easy to spam harvest, please do not reformat. -->
-	<xsl:comment>
-        Spamtrap, do not email:
-        &lt;a href="mailto:bruscar@freebsd.org"&gt;bruscar@freebsd.org&lt;/a&gt;
-	</xsl:comment>
-      </head>
+  <xsl:variable name="title">&title;</xsl:variable>
 
-      <body>
+<xsl:template name="process.content">
+        <div id="frontcontainer">
+          <div id="frontmain">
+            <div id="frontfeaturecontainer">
 
-   <div id="CONTAINERWRAP">
-    <div id="CONTAINER">
-      &header2;
-      <div id="CONTENT">
-
-        <div id="FRONTCONTAINER">
-          <div id="FRONTMAIN">
-            <div id="FRONTFEATURECONTAINER">
-
-		<div id="FRONTFEATURELEFT">
-			<div id="FRONTFEATURECONTENT">
+		<div id="frontfeatureleft">
+			<div id="frontfeaturecontent">
 				<h1>
 				  Basado en BSD UNIX&reg;
-				</h1>				
+				</h1>
 				<p>FreeBSD es un avanzado sistema operativo para arquitecturas
 				x86 compatibles (como Pentium&reg; y Athlon&trade;),
 				amd64 compatibles (como Opteron&trade;, Athlon&trade;64 EM64T),
 				UltraSPARC&reg;, IA-64, PC-98 y ARM.
-				FreeBSD es un derivado de BSD, la versi&oacute;n de
+				FreeBSD es un derivado de BSD, la versión de
 				UNIX&reg; desarrollada en la Universidad
-				de California, Berkeley.  FreeBSD es desarrollado y mantenido 
+				de California, Berkeley.  FreeBSD es desarrollado y mantenido
 				por un
 				<a href="&enbase;/doc/en_US.ISO8859-1/articles/contributors/index.html">
 				numeroso equipo de personas</a>.  El soporte para otras
 				<a href="&base;/platforms/index.html">arquitecturas</a>
-				est&aacute; en diferentes fases de desarrollo.</p>
+				está en diferentes fases de desarrollo.</p>
 				<div id="txtfrontfeaturelink">
-				&raquo;<a href="&base;/about.html" title="M&aacute;s Informaci&oacute;n">M&aacute;s Informaci&oacute;n</a>
+				»<a href="&base;/about.html" title="Más Información">Más Información</a>
 				</div> <!-- txtfrontfeaturelink -->
 			</div> <!-- frontfeaturecontent -->
 		</div> <!-- frontfeatureleft -->
 
-		<div id="FRONTFEATUREMIDDLE">
+		<div id="frontfeaturemiddle">
 			<div class="frontgetroundbox">
 			  <div class="frontgettop"><div><b style="display: none">.</b></div></div>
 				<div class="frontgetcontent">
@@ -96,10 +66,10 @@
 				</div> <!-- frontgetcontent -->
 			  <div class="frontgetbot"><div><b style="display: none">.</b></div></div>
 			</div> <!-- frontgetroundbox -->
-			
-			<div id="FRONTRELEASES">
-			  <div id="FRONTRELEASESCONTENT" class="txtshortcuts">
-				  <h2><a href="&enbase;/releases/">&Uacute;LTIMAS VERSIONES</a></h2>
+
+			<div id="frontreleases">
+			  <div id="frontreleasescontent" class="txtshortcuts">
+				  <h2><a href="&enbase;/releases/">ÚLTIMAS VERSIONES</a></h2>
 				  <ul id="FRONTRELEASELIST">
 					<li>
 					  <a href="&u.rel.announce;">Release estable: &rel.current;</a>
@@ -109,13 +79,13 @@
 					</li>
 			    <xsl:if test="'&beta.testing;' != 'IGNORE'">
 				    <li>
-				      <a href="&enbase;/where.html#helptest">Pr&oacute;xima Release
+				      <a href="&enbase;/where.html#helptest">Próxima Release
 					&betarel.current; - &betarel.vers;</a>
 				    </li>
 				</xsl:if>
 			    <xsl:if test="'&beta2.testing;' != 'IGNORE'">
 				    <li>
-				      <a href="&enbase;/where.html#helptest">Pr&oacute;xima Release
+				      <a href="&enbase;/where.html#helptest">Próxima Release
 					&betarel2.current; - &betarel2.vers;</a>
 				    </li>
 				</xsl:if>
@@ -124,30 +94,30 @@
 			</div> <!-- frontreleases -->
 		</div> <!-- frontfeaturemiddle -->
 
-		<div id="FRONTFEATURERIGHT">
+		<div id="frontfeatureright">
 			<h2 class="blockhide">Enlaces de idiomas</h2>
-			<div id="LANGUAGENAV">
-				<ul id="LANGUAGENAVLIST">
+			<div id="languagenav">
+				<ul id="languagenavlist">
 				  <li>
-					<a href="&enbase;/de/" title="Alem&aacute;n">de</a>
+					<a href="&enbase;/de/" title="Alemán">de</a>
 				  </li>
 				  <li>
-					<a href="&enbase;/" title="Ingl&eacute;s">en</a>
+					<a href="&enbase;/" title="Inglés">en</a>
 				  </li>
 				  <li>
-					<a href="&enbase;/es/" title="Espa&ntilde;ol">es</a>
+					<a href="&enbase;/es/" title="Español">es</a>
 				  </li>
 				  <li>
-					<a href="&enbase;/fr/" title="Franc&eacute;s">fr</a>
+					<a href="&enbase;/fr/" title="Francés">fr</a>
 				  </li>
 				  <li>
-					<a href="&enbase;/hu/" title="H&uacute;ngaro">hu</a>
+					<a href="&enbase;/hu/" title="Húngaro">hu</a>
 				  </li>
 				  <li>
 					<a href="&enbase;/it/" title="Italiano">it</a>
 				  </li>
 				  <li>
-					<a href="&enbase;/ja/" title="Japon&eacute;s">ja</a>
+					<a href="&enbase;/ja/" title="Japonés">ja</a>
 				  </li>
 				  <li>
 					<a href="&enbase;/ru/" title="Ruso">ru</a>
@@ -155,14 +125,14 @@
 				  <li class="last-child">
 					<a href="&enbase;/ru/" title="Chino (Simplificado)">zh_CN</a>
 				  </li>
-				</ul>				
+				</ul>
 			</div> <!-- languagenav -->
 
-			<div id="MIRROR">
+			<div id="mirror">
 			  <form action="&enbase;/cgi/mirror.cgi" method="get">
 				<div>
-				  <h2 class="blockhide"><label for="mirrorsel">R&eacute;plicas</label></h2>
-				  <select id="MIRRORSEL" name="goto">
+				  <h2 class="blockhide"><label for="mirrorsel">Réplicas</label></h2>
+				  <select id="mirrorsel" name="goto">
 					  <xsl:call-template name="html-index-mirrors-options-list">
 					    <xsl:with-param name="mirrors.xml" select="$mirrors.xml" />
 					  </xsl:call-template>
@@ -172,12 +142,12 @@
 			  </form>
 			</div> <!-- mirror -->
 
-			<div id="FRONTSHORTCUTS">
-			  <div id="FRONTSHORTCUTSCONTENT" class="txtshortcuts">
-				  <h2>ENLACES R&Aacute;PIDOS</h2>
+			<div id="frontshortcuts">
+			  <div id="frontshortcutscontent" class="txtshortcuts">
+				  <h2>ENLACES RÁPIDOS</h2>
 				  <ul id="FRONTSHORTCUTLIST">
 					<li>
-					  <a href="&base;/support.html#mailing-list" title="Listas de distribuci&oacute;n">Listas de distribuci&oacute;n</a>
+					  <a href="&base;/support.html#mailing-list" title="Listas de distribución">Listas de distribución</a>
 					</li>
 					<li>
 					  <a href="&base;/support/bugreports.html" title="Reporte un Fallo">Reporte un Fallo</a>
@@ -198,19 +168,19 @@
 			<div class="frontnewroundbox">
 			  <div class="frontnewtop"><div><b style="display: none">.</b></div></div>
 			    <div class="frontnewcontent">
-			      <a href="&base;/projects/newbies.html">&iquest;Nuevo en FreeBSD?</a>
+			      <a href="&base;/projects/newbies.html">?Nuevo en FreeBSD?</a>
 			    </div> <!-- frontnewcontent -->
 			  <div class="frontnewbot"><div><b style="display: none">.</b></div></div>
 			</div> <!-- frontnewroundbox -->
 		</div> <!-- featureright -->
-				
+
             </div> <!-- frontfeaturecontainer -->
 
 	    <br class="clearboth" />
             <div id="FRONTNEWSCONTAINER">
-            	<div id="FRONTNEWS">
-            	   <div id="FRONTNEWSCONTENT" class="txtnewsevent">
-			<h2>&Uacute;LTIMAS NOTICIAS</h2>
+            	<div id="frontnews">
+            	   <div id="frontnewscontent" class="txtnewsevent">
+			<h2>ÚLTIMAS NOTICIAS</h2>
 			<div class="newseventswrap">
 
 			<xsl:call-template name="html-index-news-project-items">
@@ -221,7 +191,7 @@
 			  <div>
 				<ul class="newseventslist">
 				  <li class="first-child">
-					<a href="&base;/news/newsflash.html" title="M&aacute;s Noticias">M&aacute;s Noticias</a>
+					<a href="&base;/news/newsflash.html" title="Más Noticias">Más Noticias</a>
 				  </li>
 				  <li class="last-child">
 					<a href="&enbase;/news/rss.xml" title="News RSS Feed"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="News RSS Feed" /></a>
@@ -236,7 +206,7 @@
             	<div id="frontevents">
 		   <div id="fronteventscontent" class="txtnewsevent">
 
-			<h2>PR&Oacute;XIMOS EVENTOS</h2>
+			<h2>PRÓXIMOS EVENTOS</h2>
 			<div class="newseventswrap">
 
 			<xsl:call-template name="html-index-events-items">
@@ -247,7 +217,7 @@
 			  <div>
 				<ul class="newseventslist">
 				  <li class="only-child">
-					<a href="&enbase;/events/" title="M&aacute;s Eventos">M&aacute;s Eventos</a>
+					<a href="&enbase;/events/" title="Más Eventos">Más Eventos</a>
 				  </li>
 				</ul>
 			  </div> <!-- unnamed -->
@@ -270,7 +240,7 @@
 			  <div>
 				<ul class="newseventslist">
 				  <li class="only-child">
-					<a href="&base;/news/press.html" title="M&aacute;s medios">M&aacute;s medios</a>
+					<a href="&base;/news/press.html" title="Más medios">Más medios</a>
 				  </li>
 				</ul>
 			  </div> <!-- unnamed -->
@@ -279,8 +249,8 @@
 		   </div> <!-- frontmediacontent -->
             	</div> <!-- frontmedia -->
 		<div class="frontseparator"><b style="display: none">.</b></div>
-		<div id="FRONTSECURITY">
-		   <div id="FRONTSECURITYCONTENT" class="txtnewsevent">
+		<div id="frontsecurity">
+		   <div id="frontsecuritycontent" class="txtnewsevent">
 
 			<h2>AVISOS DE SEGURIDAD</h2>
 			<div class="newseventswrap">
@@ -293,7 +263,7 @@
 			  <div>
 				<ul class="newseventslist">
 				  <li class="first-child">
-					<a href="&base;/security/" title="M&aacute;s Avisos de Seguridad">M&aacute;s</a>
+					<a href="&base;/security/" title="Más Avisos de Seguridad">Más</a>
 				  </li>
 				  <li class="last-child">
 					<a href="&enbase;/security/advisories.rdf" title="Fuente RSS de avisos de seguridad"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="Fuente RSS de noticias" /></a>
@@ -321,30 +291,5 @@
             </div> <!-- frontnemscontainer -->
           </div> <!-- frontmain -->
         </div> <!-- frontcontainer -->
-
-      </div> <!-- CONTENT -->
-      <div id="FOOTER">
-	&copyright;
-
-	La marca FreeBSD es una marca registrada de la Fundaci&oacute;n
-	FreeBSD y el proyecto FreeBSD la usa con permiso de la <a
-	  href="http://www.freebsdfoundation.org/documents/Guidelines.shtml">Fundaci&oacute;n
-	FreeBSD</a> 
-
-      </div> <!-- FOOTER -->
-    </div> <!-- CONTAINER -->
-   </div> <!-- CONTAINERWRAP -->
-
-      </body>
-    </html>
   </xsl:template>
 </xsl:stylesheet>
-
-<!--
-     Local Variables:
-     mode: xml
-     sgml-indent-data: t
-     sgml-omittag: nil
-     sgml-always-quote-attributes: t
-     End:
--->

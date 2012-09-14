@@ -7,8 +7,8 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS=	photos.sgml	
-DOCS+=	internal.sgml	
+DOCS=	photos.sgml
+DOCS+=	internal.sgml
 DOCS+= 	about.sgml
 DOCS+= 	machines.sgml
 DOCS+= 	mirror.sgml

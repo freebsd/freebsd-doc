@@ -1,4 +1,4 @@
-# 
+#
 # $FreeBSD$
 #
 # Build the FreeBSD Handbook (Japanese).
@@ -20,7 +20,7 @@
 #       pgpkeyring      This target will read the contents of
 #                       pgpkeys/chapter.sgml and will extract all of
 #                       the pgpkeys to standard out.  This output can then
-#                       be redirected into a file and distributed as a 
+#                       be redirected into a file and distributed as a
 #                       public keyring of FreeBSD developers that can
 #                       easily be imported into PGP/GPG.
 #
@@ -243,7 +243,7 @@ IMAGES_LIB+= callouts/13.png
 IMAGES_LIB+= callouts/14.png
 IMAGES_LIB+= callouts/15.png
 
-# 
+#
 # SRCS lists the individual SGML files that make up the document. Changes
 # to any of these files will force a rebuild
 #
@@ -291,7 +291,7 @@ SRCS+= users/chapter.sgml
 SRCS+= x11/chapter.sgml
 
 # Entities
-SRCS+= chapters.ent 
+SRCS+= chapters.ent
 
 # Japanese only
 SRCS+=	jcontrib/chapter.sgml
@@ -350,10 +350,12 @@ CLEANFILES+=	mirrors.sgml.ftp.inc mirrors.sgml.ftp.inc.tmp \
 
 .for p in ftp cvsup
 mirrors.sgml.${p}.inc: mirrors.sgml.${p}.inc.tmp
-	${SED} -e 's,<\([^ >]*\)\([^>]*\)/>,<\1\2></\1>,;s,</anchor>,,'\
-	    < $@.tmp > $@ || (${RM} -f $@ && false)
+	${CP} ${.ALLSRC} ${.TARGET}
+#	${SED} -e 's,<\([^ >]*\)\([^>]*\)/>,<\1\2></\1>,;s,</anchor>,,'\
+#	    < $@.tmp > $@ || (${RM} -f $@ && false)
 .endfor
 
 eresources.sgml.www.inc: eresources.sgml.www.inc.tmp
-	${SED} -e 's,<\([^ >]*\)\([^>]*\)/>,<\1\2></\1>,;s,</anchor>,,'\
-	    < $@.tmp > $@ || (${RM} -f $@ && false)
+	${CP} ${.ALLSRC} ${.TARGET}
+#	${SED} -e 's,<\([^ >]*\)\([^>]*\)/>,<\1\2></\1>,;s,</anchor>,,'\
+#	    < $@.tmp > $@ || (${RM} -f $@ && false)

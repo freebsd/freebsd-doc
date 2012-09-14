@@ -1,3 +1,4 @@
+# $FreeBSD$
 #
 # Build the FreeBSD FAQ
 #
@@ -11,13 +12,13 @@ FORMATS?= html-split html
 INSTALL_COMPRESSED?= gz
 INSTALL_ONLY_COMPRESSED?=
 
-# 
+#
 # SRCS lists the individual SGML files that make up the document. Changes
 # to any of these files will force a rebuild
 #
 
 # SGML content
-SRCS=  book.sgml 
+SRCS=  book.sgml
 
 DOC_PREFIX?= ${.CURDIR}/../../..
 

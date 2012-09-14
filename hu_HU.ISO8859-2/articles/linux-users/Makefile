@@ -1,4 +1,4 @@
-# 
+#
 # $FreeBSD$
 #
 # Article: FreeBSD Quickstart for Linux Users

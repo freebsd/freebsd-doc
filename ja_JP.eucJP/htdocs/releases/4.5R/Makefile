@@ -24,7 +24,4 @@ DATA+=	relnotes-i386.html
 
 #DATA+=  cd1.txt cd2.txt cd3.txt cd4.txt
 
-### Revision checking
-REVCHECK=       YES
-
 .include "${DOC_PREFIX}/share/mk/web.site.mk"

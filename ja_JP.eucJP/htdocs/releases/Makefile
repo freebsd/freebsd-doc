@@ -28,7 +28,4 @@ SUBDIR+=	9.0R
 SUBDIR=
 .endif
 
-### Revision checking
-REVCHECK=	YES
-
 .include "${DOC_PREFIX}/share/mk/web.site.mk"

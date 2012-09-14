@@ -193,79 +193,79 @@
 
 
 			    <small><br/>
-			      &#183; <a href="&enbase;/news/newsflash.html">Anonslar</a><br/>
-			      &#183; <a href="&enbase;/news/press.html">Basýn</a><br/>
-			      &#183; <a href="&enbase;/news/index.html">Diðerleri ...</a>
+			      &middot; <a href="&enbase;/news/newsflash.html">Anonslar</a><br/>
+			      &middot; <a href="&enbase;/news/press.html">Basýn</a><br/>
+			      &middot; <a href="&enbase;/news/index.html">Diðerleri ...</a>
 			    </small></p>
 
 			  <p><font size="+1" color="#990000"><b>Yazýlým</b></font>
 			    <small><br/>
-			      &#183; <a href="&enbase;/doc/en_US.ISO8859-1/books/handbook/mirrors.html">Nereden Bulabilirim?</a><br/>
-			      &#183; <a href="&enbase;/releases/index.html">Sürüm Bilgileri</a><br/>
-			      &#183; <a href="&enbase;/ports/index.html">Ports Uygulamalarý</a><br/>
+			      &middot; <a href="&enbase;/doc/en_US.ISO8859-1/books/handbook/mirrors.html">Nereden Bulabilirim?</a><br/>
+			      &middot; <a href="&enbase;/releases/index.html">Sürüm Bilgileri</a><br/>
+			      &middot; <a href="&enbase;/ports/index.html">Ports Uygulamalarý</a><br/>
 			    </small></p>
 
 			  <p><font size="+1" color="#990000"><b>Dokümantasyon</b></font>
 
 			    <small><br/>
-			      &#183; <a href="&enbase;/projects/newbies.html">Yeniler Ýçin</a><br/>
-			      &#183; <a href="&enbase;/doc/en_US.ISO8859-1/books/handbook/index.html">El Kitabý</a><br/>
-			      &#183; <a href="&enbase;/doc/en_US.ISO8859-1/books/faq/index.html">SSS</a><br/>
-			      &#183; <a href="http://www.FreeBSD.org/cgi/man.cgi">Klavuz Sayfalarý</a><br/>
-			      &#183; <a href="&enbase;/docproj/index.html">Dokümantasyon Proj.</a><br/>
-			      &#183; <a href="docs.html">Diðerleri...</a><br/>
+			      &middot; <a href="&enbase;/projects/newbies.html">Yeniler Ýçin</a><br/>
+			      &middot; <a href="&enbase;/doc/en_US.ISO8859-1/books/handbook/index.html">El Kitabý</a><br/>
+			      &middot; <a href="&enbase;/doc/en_US.ISO8859-1/books/faq/index.html">SSS</a><br/>
+			      &middot; <a href="http://www.FreeBSD.org/cgi/man.cgi">Klavuz Sayfalarý</a><br/>
+			      &middot; <a href="&enbase;/docproj/index.html">Dokümantasyon Proj.</a><br/>
+			      &middot; <a href="docs.html">Diðerleri...</a><br/>
 			    </small></p>
 
 			  <p><font size="+1" color="#990000"><b>Destek</b></font>
 
 			    <small><br/>
-			      &#183; <a href="&enbase;/support.html#mailing-list">Mail listeleri</a><br/>
-			      &#183; <a href="&enbase;/support.html#newsgroups">Haber Gruplarý</a><br/>
-			      &#183; <a href="&enbase;/support.html#user">Kullanýcý Gruplarý</a><br/>
-			      &#183; <a href="&enbase;/support.html#web">Web Kaynaklarý</a><br/>
-			      &#183; <a href="&enbase;/security/index.html">Güvenlik</a><br/>
-			      &#183; <a href="&enbase;/support.html">Diðerleri...</a>
+			      &middot; <a href="&enbase;/support.html#mailing-list">Mail listeleri</a><br/>
+			      &middot; <a href="&enbase;/support.html#newsgroups">Haber Gruplarý</a><br/>
+			      &middot; <a href="&enbase;/support.html#user">Kullanýcý Gruplarý</a><br/>
+			      &middot; <a href="&enbase;/support.html#web">Web Kaynaklarý</a><br/>
+			      &middot; <a href="&enbase;/security/index.html">Güvenlik</a><br/>
+			      &middot; <a href="&enbase;/support.html">Diðerleri...</a>
 			    </small></p>
 
 			  <p><font size="+1" color="#990000"><b>Hata Bildirimi</b></font>
 			    <small><br/>
-			      &#183; <a href="&enbase;/send-pr.html">Hata Bildirimi Gönder</a><br/>
-			      &#183; <a href="http://www.FreeBSD.org/cgi/query-pr-summary.cgi">Hata Sorgulama</a><br/>
-			      &#183; <a href="http://www.FreeBSD.org/cgi/query-pr.cgi">Hata ID'sine Göre Ara</a><br/>
-			      &#183; <a href="&enbase;/support.html#gnats">Diðerleri...</a><br/>
+			      &middot; <a href="&enbase;/send-pr.html">Hata Bildirimi Gönder</a><br/>
+			      &middot; <a href="http://www.FreeBSD.org/cgi/query-pr-summary.cgi">Hata Sorgulama</a><br/>
+			      &middot; <a href="http://www.FreeBSD.org/cgi/query-pr.cgi">Hata ID'sine Göre Ara</a><br/>
+			      &middot; <a href="&enbase;/support.html#gnats">Diðerleri...</a><br/>
 			    </small></p>
 
 
 			  <p><font size="+1" color="#990000"><b>Geliþtirim</b></font>
 
 			    <small><br/>
-			      &#183; <a href="&enbase;/projects/index.html">Projeler</a><br/>
-			      &#183; <a href="&enbase;/releng/index.html">Sürüm Mühendisliði</a><br/>
-			      &#183; <a href="&enbase;/support.html#cvs">CVS Deposu</a><br/>
+			      &middot; <a href="&enbase;/projects/index.html">Projeler</a><br/>
+			      &middot; <a href="&enbase;/releng/index.html">Sürüm Mühendisliði</a><br/>
+			      &middot; <a href="&enbase;/support.html#cvs">CVS Deposu</a><br/>
 			    </small></p>
 
 			  <p><font size="+1" color="#990000"><b>Satýn Alma</b></font>
 
 			    <small><br/>
-			      &#183; <a href="&enbase;/commercial/software_bycat.html">Yazýlým</a><br/>
-			      &#183; <a href="&enbase;/commercial/hardware.html">Donaným</a><br/>
-			      &#183; <a href="&enbase;/commercial/consulting_bycat.html">Danýþmanlýk</a><br/>
-			      &#183; <a href="&enbase;/commercial/misc.html">Diðer</a><br/>
+			      &middot; <a href="&enbase;/commercial/software_bycat.html">Yazýlým</a><br/>
+			      &middot; <a href="&enbase;/commercial/hardware.html">Donaným</a><br/>
+			      &middot; <a href="&enbase;/commercial/consulting_bycat.html">Danýþmanlýk</a><br/>
+			      &middot; <a href="&enbase;/commercial/misc.html">Diðer</a><br/>
 			    </small></p>
 
 			  <p><font size="+1" color="#990000"><b>Baðýþlar</b></font>
 			    <small><br/>
-			      &#183; <a href="&enbase;/donations/index.html">Baðýs Kurumu</a><br/>
-			      &#183; <a href="&enbase;/donations/donors.html">Yapýlan Baðýþlar</a><br/>
-			      &#183; <a href="&enbase;/donations/wantlist.html">Ýhtiyaç Listesi</a><br/>
+			      &middot; <a href="&enbase;/donations/index.html">Baðýs Kurumu</a><br/>
+			      &middot; <a href="&enbase;/donations/donors.html">Yapýlan Baðýþlar</a><br/>
+			      &middot; <a href="&enbase;/donations/wantlist.html">Ýhtiyaç Listesi</a><br/>
 			    </small></p>
 
 			  <p><font size="+1" color="#990000"><b>Site içi</b></font>
 
 			    <small><br/>
-			      &#183; <a href="&enbase;/search/index-site.html">Site Haritasý</a><br/>
-			      &#183; <a href="&enbase;/search/search.html">Arama</a><br/>
-			      &#183; <a href="&enbase;/internal/index.html">Diðer ...</a><br/>
+			      &middot; <a href="&enbase;/search/index-site.html">Site Haritasý</a><br/>
+			      &middot; <a href="&enbase;/search/search.html">Arama</a><br/>
+			      &middot; <a href="&enbase;/internal/index.html">Diðer ...</a><br/>
 
 			    </small></p>
 
@@ -291,7 +291,7 @@
 	      <h2><font color="#990000">FreeBSD Nedir?</font></h2>
 
 	      <p>FreeBSD x86 Uyumlu, DEC Alpha, IA-64, PC-98 ve
-		UltraSPARC&#174; mimarileri için ileri seviye bir
+		UltraSPARC&reg; mimarileri için ileri seviye bir
 		iþletim sistemidir.  Berkeleydeki Kaliforniya
 		Üniversitesinde geliþtirilmiþ
 		&unix; türevi olan BSD 'yi
@@ -344,7 +344,7 @@
 	      <h2><font color="#990000">Kolay Kurulum</font></h2>
 
 	      <p>FreeBSD CD-ROM, DVD-ROM, flopi disk, manyetik teyp, ve
-		MS-DOS&#174; disk bölümünden ya da bir
+		MS-DOS&reg; disk bölümünden ya da bir
 		að baðlantýnýz mevcutsa <i>direk</i>
 		anonim FTP ya da NFS ile kurulabilir. Bütün
 		ihtiyacýnýz bir çift 1.44MB flopi ve
@@ -419,21 +419,21 @@
 			<td valign="top"><p><font size="+1" color="#990000"><b>Yeni Teknololi Sürümü:
 			    &rel.current;</b></font><br/>
 
-			    <small>&#183; <a href="&u.rel.announce;">Duyuru</a><br/>
-			      &#183; <a href="&enbase;/doc/en_US.ISO8859-1/books/handbook/install.html">Kurulum Klavuzu</a><br/>
-			      &#183; <a href="&u.rel.notes;">Sürüm Bilgileri</a><br/>
-			      &#183; <a href="&u.rel.hardware;">Desteklenen Donanýmlar</a><br/>
-			      &#183; <a href="&u.rel.errata;">Düzeltilen Hatalar</a><br/>
-			      &#183; <a href="&u.rel.early;">Erken Adaptasyon Klavuzu</a></small></p>
+			    <small>&middot; <a href="&u.rel.announce;">Duyuru</a><br/>
+			      &middot; <a href="&enbase;/doc/en_US.ISO8859-1/books/handbook/install.html">Kurulum Klavuzu</a><br/>
+			      &middot; <a href="&u.rel.notes;">Sürüm Bilgileri</a><br/>
+			      &middot; <a href="&u.rel.hardware;">Desteklenen Donanýmlar</a><br/>
+			      &middot; <a href="&u.rel.errata;">Düzeltilen Hatalar</a><br/>
+			      &middot; <a href="&u.rel.early;">Erken Adaptasyon Klavuzu</a></small></p>
 
 			  <p><font size="+1" color="#990000"><b>Kararlý Sürüm:
 				&rel2.current;</b></font><br/>
 
-			    <small>&#183; <a href="&u.rel2.announce;">Duyuru</a><br/>
-			      &#183; <a href="&enbase;/doc/en_US.ISO8859-1/books/handbook/install.html">Kurulum Klavuzu</a><br/>
-			      &#183; <a href="&u.rel2.notes;">Sürüm Bilgileri</a><br/>
-			      &#183; <a href="&u.rel2.hardware;">Desteklenen Donanýmlar</a><br/>
-			      &#183; <a href="&u.rel2.errata;">Düzeltilen Hatalar</a></small></p>
+			    <small>&middot; <a href="&u.rel2.announce;">Duyuru</a><br/>
+			      &middot; <a href="&enbase;/doc/en_US.ISO8859-1/books/handbook/install.html">Kurulum Klavuzu</a><br/>
+			      &middot; <a href="&u.rel2.notes;">Sürüm Bilgileri</a><br/>
+			      &middot; <a href="&u.rel2.hardware;">Desteklenen Donanýmlar</a><br/>
+			      &middot; <a href="&u.rel2.errata;">Düzeltilen Hatalar</a></small></p>
 
 			  <p><font size="+1" color="#990000"><b>Proje Haberleri</b></font></p>
 
@@ -532,12 +532,3 @@
     </html>
   </xsl:template>
 </xsl:stylesheet>
-
-<!--
-     Local Variables:
-     mode: xml
-     sgml-indent-data: t
-     sgml-omittag: nil
-     sgml-always-quote-attributes: t
-     End:
--->

@@ -2,7 +2,7 @@
 # $FreeBSD$
 #
 # Articolo: Per chi e' alle Prime Armi sia con FreeBSD che con Unix
- 
+
 DOC?= article
 
 FORMATS?= html

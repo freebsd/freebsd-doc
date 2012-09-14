@@ -23,9 +23,9 @@
        2.5
   </xsl:variable>
 
-  <xsl:variable name="author">                                                  
-    <a>                                                                         
-      <xsl:attribute name="href">                                               
+  <xsl:variable name="author">
+    <a>
+      <xsl:attribute name="href">
         <xsl:value-of select="concat($base, '/ru/gnome/contact.html')"/>
       </xsl:attribute>
       <xsl:value-of select="'freebsd-gnome'"/>@FreeBSD.org</a><br/><xsl:copy-of select="$copyright"/>

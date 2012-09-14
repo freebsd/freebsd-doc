@@ -9,12 +9,12 @@
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
 <!ENTITY freebsd.dsl PUBLIC "-//FreeBSD//DOCUMENT DocBook Language Neutral Stylesheet//EN" CDATA DSSSL>
-<!ENTITY % lang.ru.dsssl "IGNORE">                                             
+<!ENTITY % lang.ru.dsssl "IGNORE">
 
 <!ENTITY % freebsd.l10n PUBLIC "-//FreeBSD//ENTITIES DocBook Language Specific Entities//EN">
 %freebsd.l10n;
 
-<!ENTITY % output.html  "IGNORE"> 
+<!ENTITY % output.html  "IGNORE">
 <!ENTITY % output.print "IGNORE">
 ]>
 
@@ -22,7 +22,7 @@
   <style-specification use="docbook">
     <style-specification-body>
 
-      <![ %output.html; [ 
+      <![ %output.html; [
 
       <![ %lang.ru.dsssl; [
         (define %gentext-language% "ru")
@@ -40,7 +40,7 @@
                 (literal ".")))
             (make element gi: "p"
                   attributes: (list (list "align" "center"))
-              (make element gi: "small"  
+              (make element gi: "small"
                 (literal "По вопросам, связанным с FreeBSD, прочитайте ")
 		(create-link
 		  (list (list "HREF" "http://www.FreeBSD.org/ru/docs.html"))
@@ -88,19 +88,19 @@
 (define (author-list-string #!optional (author (current-node)))
 
   (let* ((author-node-list (select-elements
-			    (descendants 
+			    (descendants
 			     (ancestor (normalize "authorgroup") author))
 			    (normalize "author")))
 	 (corpauthor-node-list (select-elements
-				(descendants 
+				(descendants
 				 (ancestor (normalize "authorgroup") author))
 				(normalize "corpauthor")))
 	 (othercredit-node-list (select-elements
-				 (descendants 
+				 (descendants
 				  (ancestor (normalize "authorgroup") author))
 				 (normalize "othercredit")))
 	 (editor-node-list (select-elements
-			    (descendants 
+			    (descendants
 			     (ancestor (normalize "authorgroup")))
 			    (normalize "editor")))
 	 (author-count (if (have-ancestor? (normalize "authorgroup") author)
@@ -130,6 +130,6 @@
 
     </style-specification-body>
   </style-specification>
-    
+
   <external-specification id="docbook" document="freebsd.dsl">
 </style-sheet>

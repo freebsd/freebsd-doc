@@ -1,4 +1,4 @@
-# 
+#
 # $FreeBSD$
 #
 # Article: Writing a GEOM Class

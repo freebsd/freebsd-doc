@@ -5,7 +5,7 @@
 #
 
 SUBDIR = articles
-SUBDIR+= books 
+SUBDIR+= books
 
 COMPAT_SYMLINK = nl
 

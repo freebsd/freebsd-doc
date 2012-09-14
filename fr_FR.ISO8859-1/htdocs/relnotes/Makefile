@@ -8,7 +8,7 @@
 # path to that relnotes set.
 #
 # $FreeBSD$
-# Original Revision: 1.5 
+# Original Revision: 1.5
 #
 .if exists(../Makefile.inc)
 .include "../Makefile.inc"

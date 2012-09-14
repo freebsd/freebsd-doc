@@ -1,7 +1,7 @@
 #
 #	The FreeBSD Documentation Project
 #	The FreeBSD German Documentation Project
-# 
+#
 #	$FreeBSD$
 #	$FreeBSDde: de-docproj/articles/solid-state/Makefile,v 1.2 2011/12/31 12:33:27 bcr Exp $
 #	basiert auf: 1.5

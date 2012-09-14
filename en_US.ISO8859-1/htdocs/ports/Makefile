@@ -46,9 +46,7 @@ packages.exists:
 Makefile.gen: categories-alpha.sgml categories-grouped.sgml index.sgml \
 	installing.sgml master-index.sgml references.sgml searching.sgml \
 	statistics.ent updating.sgml .NOTMAIN
-	(	${ECHO_CMD} TIDY=${PERL};\
-		${ECHO_CMD} TIDYOPTS="-i'' -npe 's,\"-//FreeBSD//DTD HTML 4.01 Transitional-Based Extension//EN\",\"-//W3C//DTD HTML 4.01 Transitional//EN\" \"http://www.w3.org/TR/html4/loose.dtd\",'";\
-		${ECHO_CMD} DOCS= *.sgml;\
+	(	${ECHO_CMD} DOCS= *.sgml;\
 		${ECHO_CMD} -n "DYNAMIC_DOCS= ";\
 		${ECHO_CMD} -n " categories-alpha.sgml";\
 		${ECHO_CMD} -n " categories-grouped.sgml";\
@@ -59,9 +57,6 @@ Makefile.gen: categories-alpha.sgml categories-grouped.sgml index.sgml \
 		${ECHO_CMD} -n " $$categoryfile.sgml" >> Makefile.gen; \
 	done
 	${ECHO_CMD} >> Makefile.gen
-.if defined(NO_TIDY)
-	${ECHO_CMD} NO_TIDY=${NO_TIDY} >> Makefile.gen
-.endif
 
 .if defined(CLUSTER_MACHINE)
 PORTS_TARGZ_URL?= ftp://ftp-master.FreeBSD.org/pub/FreeBSD/ports/ports/ports.tar.gz
