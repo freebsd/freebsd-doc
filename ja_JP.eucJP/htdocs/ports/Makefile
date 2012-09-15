@@ -1,6 +1,6 @@
 # $FreeBSD$
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.50
+# Original revision: r39545
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -103,8 +103,8 @@ all install clean:
 beforeinstall:
 .else
 beforeinstall:
-	${SED} -i "" -e 's,HREF="growth,href="http://www.FreeBSD.org/ports/growth,' index.html
-	${SED} -i "" -e 's,HREF="growth,href="http://www.FreeBSD.org/ports/growth,' references.html
+	${SED} -i "" -e 's,href="growth,href="http://www.FreeBSD.org/ports/growth,' index.html
+	${SED} -i "" -e 's,href="growth,href="http://www.FreeBSD.org/ports/growth,' references.html
 .endif
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"
