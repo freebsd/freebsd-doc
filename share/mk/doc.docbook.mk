@@ -424,7 +424,7 @@ CLEANFILES+= ${LOCAL_CSS_SHEET}
 .if !defined(WITH_INLINE_LEGALNOTICE) || empty(WITH_INLINE_LEGALNOTICE) && \
     (${_cf} == "html-split" || ${_cf} == "html-split.tar" || \
      ${_cf} == "html" || ${_cf} == "html.tar" || ${_cf} == "txt")
-CLEANFILES+= LEGALNOTICE.html TRADEMARKS.html
+CLEANFILES+= LEGALNOTICE.html trademarks.html
 .endif
 
 .endfor		# _curformat in ${FORMATS} #
@@ -937,8 +937,8 @@ install-${_curformat}: ${DOC}.${_curformat}
 	@if [ -f LEGALNOTICE.html ]; then \
 		${INSTALL_DOCS} LEGALNOTICE.html ${DESTDIR}; \
 	fi
-	@if [ -f TRADEMARKS.html ]; then \
-		${INSTALL_DOCS} TRADEMARKS.html ${DESTDIR}; \
+	@if [ -f trademarks.html ]; then \
+		${INSTALL_DOCS} trademarks.html ${DESTDIR}; \
 	fi
 	@if [ -f ${.OBJDIR}/${DOC}.ln ]; then \
 		cd ${DESTDIR}; sh ${.OBJDIR}/${DOC}.ln; \
