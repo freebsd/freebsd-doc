@@ -322,14 +322,22 @@ INSTALL_CGI?=	\
 _ALLINSTALL+=	${GENDOCS} ${DATA}
 
 realinstall: ${COOKIE} ${_ALLINSTALL} ${CGI} _PROGSUBDIR
-.if !empty(_ALLINSTALL)
+.if !empty(_ALLINSTALL) || !empty(BULKDATADIRS)
 	@${MKDIR} -p ${DOCINSTALLDIR}
+.for entry in ${BULKDATADIRS}
+	@(cd ${entry} && \
+	${FIND} * -type d -exec ${MKDIR} -p ${DOCINSTALLDIR}/{} \; )
+.endfor
 .for entry in ${_ALLINSTALL}
 .if exists(${.CURDIR}/${entry})
 	${INSTALL_WEB} ${.CURDIR}/${entry} ${DOCINSTALLDIR}
 .else
 	${INSTALL_WEB} ${entry} ${DOCINSTALLDIR}
 .endif
+.endfor
+.for entry in ${BULKDATADIRS}
+	@(cd ${entry} && \
+	${FIND} * -type f -exec ${INSTALL_WEB} ${entry}/{} ${DOCINSTALLDIR}/{} \; )
 .endfor
 .if defined(INDEXLINK) && !empty(INDEXLINK)
 	cd ${DOCINSTALLDIR}; ${LN} -fs ${INDEXLINK} index.html
@@ -342,9 +350,25 @@ realinstall: ${COOKIE} ${_ALLINSTALL} ${CGI} _PROGSUBDIR
 .endfor
 .endif
 
+_installlinks:
+.if defined(SYMLINKS) && !empty(SYMLINKS)
+	@(${ECHO_CMD} "====> Creating symlinks in ${DOCINSTALLDIR}" && \
+	cd ${DOCINSTALLDIR} && \
+	set ${SYMLINKS}; \
+	while test $$# -ge 2; do \
+		l=$$1; \
+		shift; \
+		t=$$1; \
+		shift; \
+		${ECHO_CMD} $$t -\> $$l; \
+		${LN} -fs $$l $$t; \
+	done )
+.endif
+
 # Set up install dependencies so they happen in the correct order.
 install: afterinstall
-afterinstall: realinstall2
+afterinstall: _installlinks
+_installlinks: realinstall2
 realinstall: beforeinstall
 realinstall2: realinstall
 .endif 

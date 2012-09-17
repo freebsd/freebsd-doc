@@ -7,6 +7,9 @@
 .include "../Makefile.inc"
 .endif
 
+SUBDIR=		advisories
+SUBDIR+=	patches
+
 DATA=	so_public_key.asc
 DOCS=	charter.sgml
 DOCS+=	security.sgml
