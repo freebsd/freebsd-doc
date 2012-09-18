@@ -1,6 +1,6 @@
 # $FreeBSD$
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.18
+# Original revision: r39569
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -8,6 +8,9 @@
 .if exists(../Makefile.inc)
 .include "../Makefile.inc"
 .endif
+
+#+SUBDIR=	advisories
+#+SUBDIR+=	patches
 
 #DATA=	so_public_key.asc
 #DOCS=	charter.sgml
