@@ -13,6 +13,7 @@ SUBDIR+= contributing
 SUBDIR+= contributing-ports
 SUBDIR+= explaining-bsd
 SUBDIR+= freebsd-questions
+SUBDIR+= hubs
 SUBDIR+= linux-users
 SUBDIR+= new-users
 SUBDIR+= problem-reports
