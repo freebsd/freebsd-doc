@@ -25,6 +25,7 @@ DOCS+=	policies.sgml
 DOCS+=  releng.sgml
 DOCS+=  resources.sgml
 DOCS+=	statistic.sgml
+DOCS+=	working-with-hats.sgml
 
 INDEXLINK=	internal.html
 
