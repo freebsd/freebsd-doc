@@ -28,7 +28,6 @@ SUBDIR+= freebsd-questions
 SUBDIR+= freebsd-update-server
 SUBDIR+= geom-class
 SUBDIR+= gjournal-desktop
-SUBDIR+= hats
 SUBDIR+= hubs
 SUBDIR+= ipsec-must
 SUBDIR+= laptop
