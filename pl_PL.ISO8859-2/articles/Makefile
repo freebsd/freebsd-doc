@@ -1,7 +1,6 @@
 # $FreeBSD$
 
 SUBDIR =
-SUBDIR+= dialup-firewall
 SUBDIR+= filtering-bridges
 SUBDIR+= new-users
 

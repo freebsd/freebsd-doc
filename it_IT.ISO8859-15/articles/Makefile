@@ -2,10 +2,8 @@
 
 SUBDIR =
 SUBDIR+= committers-guide
-SUBDIR+= euro
 SUBDIR+= explaining-bsd
 SUBDIR+= filtering-bridges
-SUBDIR+= multi-os
 SUBDIR+= new-users
 SUBDIR+= vm-design
 

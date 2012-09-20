@@ -8,8 +8,6 @@
 #
 
 SUBDIR =
-SUBDIR+= 5-roadmap
-SUBDIR+= checkpoint
 SUBDIR+= committers-guide
 SUBDIR+= console-server
 SUBDIR+= contributing
@@ -18,25 +16,19 @@ SUBDIR+= cups
 SUBDIR+= custom-gcc
 SUBDIR+= cvs-freebsd
 SUBDIR+= cvsup-advanced
-SUBDIR+= dialup-firewall
-SUBDIR+= diskless-x
-SUBDIR+= euro
 SUBDIR+= explaining-bsd
 SUBDIR+= fbsd-from-scratch
 #SUBDIR+= filtering-bridges
 SUBDIR+= fonts
-SUBDIR+= formatting-media
 SUBDIR+= freebsd-questions
 SUBDIR+= geom-class
 SUBDIR+= gjournal-desktop
-SUBDIR+= hats
 SUBDIR+= hubs
 SUBDIR+= ipsec-must
 SUBDIR+= laptop
 SUBDIR+= linux-comparison
 SUBDIR+= mailing-list-faq
 SUBDIR+= mh
-SUBDIR+= multi-os
 SUBDIR+= new-users
 SUBDIR+= pam
 SUBDIR+= portbuild
@@ -47,11 +39,8 @@ SUBDIR+= releng
 SUBDIR+= releng-packages
 #SUBDIR+= serial-uart
 SUBDIR+= solid-state
-#SUBDIR+= storage-devices
 #SUBDIR+= vinum
-SUBDIR+= version-guide
 SUBDIR+= vm-design
-SUBDIR+= zip-drive
 
 # ROOT_SYMLINKS+= new-users
 
