@@ -13,7 +13,6 @@ SUBDIR+= laptop
 SUBDIR+= linux-comparison
 SUBDIR+= new-users
 SUBDIR+= solid-state
-SUBDIR+= version-guide
 
 # ROOT_SYMLINKS+= new-users
 

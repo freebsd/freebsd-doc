@@ -1,6 +1,5 @@
 # $FreeBSD$
 
-SUBDIR = euro
 SUBDIR+= ipsec-must
 SUBDIR+= pxe
 
