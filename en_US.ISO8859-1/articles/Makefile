@@ -1,11 +1,9 @@
 # $FreeBSD$
 
 SUBDIR =
-SUBDIR+= 5-roadmap
 SUBDIR+= bsdl-gpl
 SUBDIR+= building-products
 SUBDIR+= casestudy-argentina.com
-SUBDIR+= checkpoint
 SUBDIR+= committers-guide
 SUBDIR+= compiz-fusion
 SUBDIR+= console-server
@@ -16,14 +14,10 @@ SUBDIR+= cups
 SUBDIR+= custom-gcc
 SUBDIR+= cvs-freebsd
 SUBDIR+= cvsup-advanced
-SUBDIR+= dialup-firewall
-SUBDIR+= diskless-x
-SUBDIR+= euro
 SUBDIR+= explaining-bsd
 SUBDIR+= fbsd-from-scratch
 SUBDIR+= filtering-bridges
 SUBDIR+= fonts
-SUBDIR+= formatting-media
 SUBDIR+= freebsd-questions
 SUBDIR+= freebsd-update-server
 SUBDIR+= geom-class
@@ -37,7 +31,6 @@ SUBDIR+= linux-emulation
 SUBDIR+= linux-users
 SUBDIR+= mailing-list-faq
 SUBDIR+= mh
-SUBDIR+= multi-os
 SUBDIR+= nanobsd
 SUBDIR+= new-users
 SUBDIR+= p4-primer
@@ -53,12 +46,8 @@ SUBDIR+= releng-packages
 SUBDIR+= remote-install
 SUBDIR+= serial-uart
 SUBDIR+= solid-state
-SUBDIR+= storage-devices
-SUBDIR+= version-guide
-SUBDIR+= vinum
 SUBDIR+= vm-design
 SUBDIR+= wp-toolbox
-SUBDIR+= zip-drive
 
 # ROOT_SYMLINKS+= new-users
 
