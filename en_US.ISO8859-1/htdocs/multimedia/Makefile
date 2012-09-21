@@ -10,30 +10,11 @@
 .include "Makefile.inc"
 .endif
 
-#all: build
-all: build
-	cd output && make all DIRPRFX=multimedia/output/
+XMLDOCS=	multimedia:xsl:multimedia-input.xml:
+XMLDOCS+=	multimedia-rss:xsl:multimedia-input.xml:multimedia.xml
+XMLDOCS+=	sources:xsl:multimedia-input.xml:
+XMLDOCS+=	tags:xsl:multimedia-input.xml:
 
-install:
-	cd output && make install DIRPRFX=multimedia/output/
-
-TEMPLATES=	multimedia.sgml.intro \
-		multimedia.sgml.post \
-		multimedia.sgml.pre \
-		multimedia.html.intro \
-		multimedia.html.post \
-		multimedia.html.pre \
-		multimedia-input.xml
-
-clean:
-	${RM} -rf output ${CLEANFILES}
-
-build:
-	${MKDIR} -p output && \
-	cd output && \
-	${LN} -fs ../Makefile.output Makefile && \
-	( for f in ${TEMPLATES}; do ${LN} -fs ../$$f $$f; done ) && \
-	${PERL} -Tw ../multimedia.pl && \
-	${RM} -f *.html
+INDEXLINK=	multimedia.html
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"
