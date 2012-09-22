@@ -27,7 +27,6 @@ DOCS+= relnotes.sgml
 DOCS+= send-pr.sgml
 DOCS+= support.sgml
 DOCS+= where.sgml
-DOCS+= y2kbug.sgml
 
 # Japanese-only file
 DOCS+= jabout.sgml
@@ -80,7 +79,6 @@ SUBDIR+= releases
 #SUBDIR+= releng
 SUBDIR+= search
 SUBDIR+= security
-SUBDIR+= smp
 SUBDIR+= snapshots
 SUBDIR+= support
 SUBDIR+= tutorials
