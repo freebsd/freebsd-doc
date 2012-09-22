@@ -19,7 +19,7 @@
 
   <xsl:variable name="date" select="'$FreeBSD$'"/>
 
-  <xsl:output type="xml" encoding="KOI8-R"
+  <xsl:output type="xml" encoding="koi8-r"
               omit-xml-declaration="yes" />
 
   <xsl:template match="/">

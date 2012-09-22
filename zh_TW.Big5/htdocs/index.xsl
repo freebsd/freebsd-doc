@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="Big5"?>
+<?xml version="1.0" encoding="big5"?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
 <!ENTITY title "The FreeBSD Project">
