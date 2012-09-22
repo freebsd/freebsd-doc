@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="KOI8-R" ?>
+<?xml version="1.0" encoding="koi8-r" ?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD Fragment//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
 
