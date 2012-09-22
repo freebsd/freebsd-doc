@@ -7,12 +7,7 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS =	10.sgml
-DOCS+=	11.sgml
-DOCS+=	12.sgml
-DOCS+=	13.sgml
-DOCS+=	14.sgml
-DOCS+=	15.sgml
+DOCS=	15.sgml
 DOCS+=	16.sgml
 DOCS+=	17.sgml
 DOCS+=	index.sgml
