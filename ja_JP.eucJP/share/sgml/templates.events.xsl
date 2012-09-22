@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="EUC-JP" ?>
+<?xml version="1.0" encoding="euc-jp" ?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD Fragment//EN"
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd" [
 <!ENTITY title "FreeBSD 関連イベント">

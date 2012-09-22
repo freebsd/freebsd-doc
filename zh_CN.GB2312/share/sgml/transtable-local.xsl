@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="GB2312"?>
+<?xml version="1.0" encoding="gb2312"?>
 <!-- Original Revision: 1.2 -->
 <!-- $FreeBSD$ -->
 
@@ -7,7 +7,7 @@
   <!-- must point to master copy, doc/share/sgml/transtable-master.xsl -->
   <xsl:import href="../../../share/sgml/transtable-master.xsl" />
 
-  <xsl:output type="xml" encoding="GB2312"
+  <xsl:output type="xml" encoding="gb2312"
 	      indent="yes"/>
 
   <!-- these params should be externally bound. The values
