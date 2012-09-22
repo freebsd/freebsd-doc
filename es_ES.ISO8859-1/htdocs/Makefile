@@ -21,7 +21,6 @@ DOCS+= publish.sgml
 DOCS+= send-pr.sgml
 DOCS+= support.sgml
 DOCS+= where.sgml
-DOCS+= y2kbug.sgml
 
 CLEANFILES+=atoz.sgml site.sgml
 

@@ -28,7 +28,6 @@ DOCS+= relnotes.sgml
 DOCS+= send-pr.sgml
 DOCS+= support.sgml
 DOCS+= where.sgml
-DOCS+= y2kbug.sgml
 
 # These will be directly installed.
 
@@ -61,10 +60,8 @@ SUBDIR+= prstats
 SUBDIR+= platforms
 SUBDIR+= releases
 SUBDIR+= releng
-SUBDIR+= smp
 SUBDIR+= snapshots
 SUBDIR+= support
-SUBDIR+= kse
 SUBDIR+= gnome
 SUBDIR+= donations
 .if !defined(WEB_ONLY) || empty(WEB_ONLY)
