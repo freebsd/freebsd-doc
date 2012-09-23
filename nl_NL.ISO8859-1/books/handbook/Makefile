@@ -2,7 +2,7 @@
 # $FreeBSD$
 #
 # %SOURCE%	en_US.ISO8859-1/books/handbook/Makefile
-# %SRCID%	39534
+# %SRCID%	39537
 #
 # Bouw het Nederlandse FreeBSD Handboek.
 #
@@ -228,7 +228,7 @@ IMAGES_EN+= virtualization/vmware-freebsd10.png
 IMAGES_EN+= virtualization/vmware-freebsd11.png
 IMAGES_EN+= virtualization/vmware-freebsd12.png
 
-# Images from the cross-document image library
+# Afbeeldingen van de afbeeldingenbibliotheek
 IMAGES_LIB=  callouts/1.png
 IMAGES_LIB+= callouts/2.png
 IMAGES_LIB+= callouts/3.png
@@ -246,11 +246,11 @@ IMAGES_LIB+= callouts/14.png
 IMAGES_LIB+= callouts/15.png
 
 #
-# SRCS lists the individual SGML files that make up the document. Changes
-# to any of these files will force a rebuild
+# SRCS-lijsten van de individuele SGML-bestanden die het document vormen.
+# Veranderingen aan een van deze bestanden zal een nieuwe build afdwingen
 #
 
-# SGML content
+# SGML-inhoud
 SRCS+= audit/chapter.sgml
 SRCS+= book.sgml
 SRCS+= bsdinstall/chapter.sgml
@@ -291,22 +291,22 @@ SRCS+= vinum/chapter.sgml
 SRCS+= virtualization/chapter.sgml
 SRCS+= x11/chapter.sgml
 
-# Entities
+# Entiteiten
 SRCS+= chapters.ent
 
 SYMLINKS=	${DESTDIR} index.html handbook.html
 
-# Turn on all the chapters.
+# Neem alle hoofdstukken mee.
 CHAPTERS?= ${SRCS:M*chapter.sgml}
 
 SGMLFLAGS+= ${CHAPTERS:S/\/chapter.sgml//:S/^/-i chap./}
 SGMLFLAGS+= -i chap.freebsd-glossary
 
 pgpkeyring: pgpkeys/chapter.sgml
-	@${JADE} -V nochunks ${OTHERFLAGS} ${JADEOPTS} -d ${DSLPGP} -t sgml ${MASTERDOC}
+	${JADE} -V nochunks ${OTHERFLAGS} ${JADEOPTS} -d ${DSLPGP} -t sgml ${XMLDECL} ${MASTERDOC}
 
 #
-# Handbook-specific variables
+# Handboekspecifieke variablen
 #
 .if defined(WITH_PGPKEYS)
 JADEFLAGS+=	-V withpgpkeys
@@ -316,7 +316,7 @@ URL_RELPREFIX?=	../../../..
 DOC_PREFIX?=	${.CURDIR}/../../..
 
 #
-# rules generating lists of mirror site from XML database.
+# regels die lijsten met mirrors vanuit de XML-database genereren.
 #
 XMLDOCS=	mirrors-ftp:::mirrors.sgml.ftp.inc \
 		mirrors-cvsup:::mirrors.sgml.cvsup.inc \
