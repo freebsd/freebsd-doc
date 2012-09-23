@@ -3,7 +3,7 @@
 				"http://www.FreeBSD.org/XML/www/share/sgml/xslt10-freebsd.dtd">
 <!-- $FreeBSD$
      %SOURCE%	share/sgml/libcommon.xsl
-     %SRCID%	39141
+     %SRCID%	39595
  -->
 <xsl:stylesheet version="1.0"
   xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
