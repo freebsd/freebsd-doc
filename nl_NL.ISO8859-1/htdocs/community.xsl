@@ -6,7 +6,7 @@
 <!-- $FreeBSD$
      Vertaald door: Rene Ladan
      %SOURCE%	en_US.ISO8859-1/htdocs/community.xsl
-     %SRCID%	38826
+     %SRCID%	39595
 -->
 
 <xsl:stylesheet version="1.0"
