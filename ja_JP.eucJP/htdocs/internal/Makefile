@@ -1,6 +1,6 @@
 # $FreeBSD$
 # The FreeBSD Japanese Documentation Project
-# Original revision: r39133
+# Original revision: r39584
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -9,24 +9,25 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS+=  about.sgml
+DOCS= 	about.sgml
 #DOCS+=	bylaws.sgml
 #DOCS+=	core-vote.sgml
 #DOCS+= 	data.sgml
-DOCS+=	developer.sgml
+DOCS+= 	developer.sgml
 #DOCS+=	doceng.sgml
 #DOCS+=	expire-bits.sgml
 #DOCS+=	fortunes.sgml
 #DOCS+=	hats.sgml
 #DOCS+=	i18n.sgml
-DOCS+=  internal.sgml
-DOCS+=  machines.sgml
-DOCS+=  mirror.sgml
+DOCS+=	internal.sgml
+DOCS+= 	machines.sgml
+DOCS+= 	mirror.sgml
 #DOCS+=	new-account.sgml
 #DOCS+=	policies.sgml
 #DOCS+=	releng.sgml
 #DOCS+=  resources.sgml
 DOCS+=	statistic.sgml
+#DOCS+=	working-with-hats.sgml
 
 INDEXLINK=	internal.html
 
