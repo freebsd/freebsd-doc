@@ -1,6 +1,6 @@
 # $FreeBSD$
 # %SOURCE%	en_US.ISO8859-1/htdocs/Makefile
-# %SRCID%	38828
+# %SRCID%	39534
 
 .if exists(Makefile.conf)
 .include "Makefile.conf"
@@ -27,7 +27,6 @@ DOCS+= relnotes.sgml
 DOCS+= send-pr.sgml
 DOCS+= support.sgml
 DOCS+= where.sgml
-#DOCS+= y2kbug.sgml
 
 XMLDOCS=	index:xsl:${XML_NEWS_NEWS}:
 DEPENDSET.index=transtable mirrors news press events \
@@ -65,7 +64,6 @@ DATA+=	vendors.html
 #SUBDIR+= internal
 #SUBDIR+= ipv6
 #SUBDIR+= java
-#SUBDIR+= kse
 #SUBDIR+= marketing
 #SUBDIR+= multimedia
 #SUBDIR+= news
@@ -77,7 +75,6 @@ DATA+=	vendors.html
 #SUBDIR+= releng
 #SUBDIR+= search
 #SUBDIR+= security
-#SUBDIR+= smp
 #SUBDIR+= snapshots
 #SUBDIR+= support
 #SUBDIR+= tutorials
