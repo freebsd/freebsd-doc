@@ -271,7 +271,6 @@ SRCS+= x11/chapter.sgml
 
 # Entities
 SRCS+= chapters.ent
-SRCS+= newsgroups.ent
 
 # alle Kapitel bauen
 CHAPTERS?= ${SRCS:M*chapter.sgml}
