@@ -9,6 +9,7 @@
 # $FreeBSD$
 
 SUBDIR =
+SUBDIR+= building-products
 SUBDIR+= contributing
 SUBDIR+= contributing-ports
 SUBDIR+= explaining-bsd
