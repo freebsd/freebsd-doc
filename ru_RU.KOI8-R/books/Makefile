@@ -8,7 +8,6 @@
 SUBDIR = faq
 SUBDIR+= handbook
 SUBDIR+= porters-handbook
-SUBDIR+= ppp-primer
 
 ROOT_SYMLINKS = faq handbook
 
