@@ -138,7 +138,6 @@ SRCS+= ppp-and-slip/chapter.sgml
 SRCS+= printing/chapter.sgml
 SRCS+= security/chapter.sgml
 SRCS+= serialcomms/chapter.sgml
-SRCS+= sound/chapter.sgml
 SRCS+= users/chapter.sgml
 SRCS+= x11/chapter.sgml
 SRCS+= ports/chapter.sgml
