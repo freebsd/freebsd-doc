@@ -14,6 +14,7 @@ SUBDIR+= contributing
 SUBDIR+= contributing-ports
 SUBDIR+= explaining-bsd
 SUBDIR+= freebsd-questions
+SUBDIR+= freebsd-update-server
 SUBDIR+= hubs
 SUBDIR+= linux-users
 SUBDIR+= new-users
