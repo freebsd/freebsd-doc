@@ -2,7 +2,7 @@
 <!-- The FreeBSD Dutch Documentation Project
      $FreeBSD$
      %SOURCE%	share/sgml/mirrors-local.xsl
-     %SRCID%	39534
+     %SRCID%	38826
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
