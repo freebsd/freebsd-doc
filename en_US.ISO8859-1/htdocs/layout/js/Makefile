@@ -7,7 +7,6 @@
 .include "../Makefile.inc"
 .endif
 
-DATA=   google.js \
-	styleswitcher.js
+DATA=   google.js
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"
