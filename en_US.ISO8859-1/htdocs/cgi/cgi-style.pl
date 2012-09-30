@@ -66,14 +66,6 @@ $i_topbar = qq`
 
               <div id="searchnav">
                 <ul id="searchnavlist">
-                  <li>Text Size: <a href="#"
-                  onkeypress="return false;"
-                  onclick="setActiveStyleSheet('Normal Text'); return false;"
-                   title="Normal Text Size">Normal</a> / <a
-                  href="#" onkeypress="return false;"
-                  onclick="setActiveStyleSheet('Large Text'); return false;"
-                   title="Large Text Size">Large</a></li>
-
                   <li><a href="$hsty_base/donations/"
                   title="Donate">Donate</a></li>
 
@@ -227,8 +219,6 @@ $html
     <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
     <link rel="apple-touch-icon" href="/favicon.ico" type="image/x-icon" />
 $csshack
-<script type="text/javascript" src="$hsty_base/layout/js/styleswitcher.js">
-</script>
 <script type="text/javascript" src="$hsty_base/layout/js/google.js">
 </script>
 $t_style

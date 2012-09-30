@@ -41,19 +41,10 @@
 	<meta name="MSSmartTagsPreventParsing" content="TRUE" />
 	<xsl:copy-of select="/xhtml:html/xhtml:head/xhtml:meta"/>
 	<link rel="shortcut icon" href="&enbase;/favicon.ico" type="image/x-icon" />
+	<link rel="stylesheet" media="screen" href="&stylesheet;" type="text/css"/>
 	<link rel="icon" href="&enbase;/favicon.ico" type="image/x-icon" />
-<!--
-FOR TRANSLATORS:
-
-Do not translate the "Normal Text" and "Large Text" attributes in the
-following two lines.  They are not literal texts but JavaScript
-parameters.  Changing them will result in rendering errors.
--->
-	<link rel="stylesheet" media="screen" href="&stylesheet;" type="text/css" title="Normal Text" />
-	<link rel="alternate stylesheet" media="screen" href="&stylesheetlarge;" type="text/css" title="Large Text" />
 	<xsl:copy-of select="/xhtml:html/xhtml:head/xhtml:link"/>
 	<xsl:call-template name="process.rss.link"/>
-	<script type="text/javascript" src="&enbase;/layout/js/styleswitcher.js"></script>
 	&header1.googlejs;
       </head>
 
