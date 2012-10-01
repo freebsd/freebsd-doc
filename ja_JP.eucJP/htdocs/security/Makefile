@@ -13,14 +13,14 @@
 #+SUBDIR+=	patches
 
 #DATA=	so_public_key.asc
-#DOCS=	charter.sgml
-DOCS+=	security.sgml
-#DOCS+=	advisories.sgml
-#DOCS+=  notices.sgml
+#DOCS=	charter.xml
+DOCS+=	security.xml
+#DOCS+=	advisories.xml
+#DOCS+=  notices.xml
 
-#advisories.sgml: advisories.html.inc
+#advisories.xml: advisories.html.inc
 
-#notices.sgml: notices.html.inc
+#notices.xml: notices.html.inc
 
 INDEXLINK=	security.html
 

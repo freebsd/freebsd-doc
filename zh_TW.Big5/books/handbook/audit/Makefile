@@ -5,7 +5,7 @@
 # Original revision: 1.1
 #
 
-CHAPTERS= 	audit/chapter.sgml
+CHAPTERS= 	audit/chapter.xml
 
 VPATH=		..
 

@@ -11,10 +11,10 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS =	faq.sgml
-DOCS+=	howtoports.sgml
-DOCS+=	newbies.sgml
-DOCS+=	performance.sgml
-DOCS+=	tutorials.sgml
+DOCS =	faq.xml
+DOCS+=	howtoports.xml
+DOCS+=	newbies.xml
+DOCS+=	performance.xml
+DOCS+=	tutorials.xml
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"

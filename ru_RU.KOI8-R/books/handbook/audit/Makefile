@@ -6,7 +6,7 @@
 #
 # Original revision: r25313
 
-CHAPTERS= 	audit/chapter.sgml
+CHAPTERS= 	audit/chapter.xml
 
 VPATH=		..
 

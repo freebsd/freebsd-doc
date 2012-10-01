@@ -7,7 +7,7 @@
 # $FreeBSD$
 #
 
-CHAPTERS= 	audit/chapter.sgml
+CHAPTERS= 	audit/chapter.xml
 
 VPATH=		..
 

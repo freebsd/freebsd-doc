@@ -20,7 +20,7 @@ IMAGES_LIB+= callouts/2.png
 IMAGES_LIB+= callouts/3.png
 IMAGES_LIB+= callouts/4.png
 
-SRCS=	article.sgml
+SRCS=	article.xml
 
 URL_RELPREFIX?=	../../../..
 DOC_PREFIX?=	${.CURDIR}/../../..

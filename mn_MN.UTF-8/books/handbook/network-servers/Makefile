@@ -7,7 +7,7 @@
 # Build the Handbook with just the content from this chapter.
 #
 
-CHAPTERS= 	network-servers/chapter.sgml
+CHAPTERS= 	network-servers/chapter.xml
 
 VPATH=		..
 

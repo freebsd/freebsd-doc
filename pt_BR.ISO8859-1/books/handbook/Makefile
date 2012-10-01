@@ -21,7 +21,7 @@
 # Handbook-specific targets
 #
 #       pgpkeyring      This target will read the contents of
-#                       pgpkeys/chapter.sgml and will extract all of
+#                       pgpkeys/chapter.xml and will extract all of
 #                       the pgpkeys to standard out.  This output can then
 #                       be redirected into a file and distributed as a
 #                       public keyring of FreeBSD developers that can
@@ -117,32 +117,32 @@ INSTALL_ONLY_COMPRESSED?=
 #
 
 # SGML content
-SRCS=  book.sgml
-SRCS+= advanced-networking/chapter.sgml
-SRCS+= basics/chapter.sgml
-SRCS+= bibliography/chapter.sgml
-SRCS+= config/chapter.sgml
-SRCS+= boot/chapter.sgml
-SRCS+= cutting-edge/chapter.sgml
-SRCS+= disks/chapter.sgml
-SRCS+= eresources/chapter.sgml
-SRCS+= install/chapter.sgml
-SRCS+= introduction/chapter.sgml
-SRCS+= kernelconfig/chapter.sgml
-SRCS+= l10n/chapter.sgml
-SRCS+= linuxemu/chapter.sgml
-SRCS+= mail/chapter.sgml
-SRCS+= mirrors/chapter.sgml
-SRCS+= pgpkeys/chapter.sgml
-SRCS+= ppp-and-slip/chapter.sgml
-SRCS+= printing/chapter.sgml
-SRCS+= security/chapter.sgml
-SRCS+= serialcomms/chapter.sgml
-SRCS+= users/chapter.sgml
-SRCS+= x11/chapter.sgml
-SRCS+= ports/chapter.sgml
-SRCS+= preface/preface.sgml
-SRCS+= colophon.sgml
+SRCS=  book.xml
+SRCS+= advanced-networking/chapter.xml
+SRCS+= basics/chapter.xml
+SRCS+= bibliography/chapter.xml
+SRCS+= config/chapter.xml
+SRCS+= boot/chapter.xml
+SRCS+= cutting-edge/chapter.xml
+SRCS+= disks/chapter.xml
+SRCS+= eresources/chapter.xml
+SRCS+= install/chapter.xml
+SRCS+= introduction/chapter.xml
+SRCS+= kernelconfig/chapter.xml
+SRCS+= l10n/chapter.xml
+SRCS+= linuxemu/chapter.xml
+SRCS+= mail/chapter.xml
+SRCS+= mirrors/chapter.xml
+SRCS+= pgpkeys/chapter.xml
+SRCS+= ppp-and-slip/chapter.xml
+SRCS+= printing/chapter.xml
+SRCS+= security/chapter.xml
+SRCS+= serialcomms/chapter.xml
+SRCS+= users/chapter.xml
+SRCS+= x11/chapter.xml
+SRCS+= ports/chapter.xml
+SRCS+= preface/preface.xml
+SRCS+= colophon.xml
 
 # Entities
 SRCS+= chapters.ent
@@ -150,11 +150,11 @@ SRCS+= chapters.ent
 SYMLINKS=	${DESTDIR} index.html handbook.html
 
 # Turn on all the chapters.
-CHAPTERS?= ${SRCS:M*chapter.sgml}
+CHAPTERS?= ${SRCS:M*chapter.xml}
 
-SGMLFLAGS+= ${CHAPTERS:S/\/chapter.sgml//:S/^/-i chap./}
+SGMLFLAGS+= ${CHAPTERS:S/\/chapter.xml//:S/^/-i chap./}
 
-pgpkeyring: pgpkeys/chapter.sgml
+pgpkeyring: pgpkeys/chapter.xml
 	@${JADE} -V nochunks ${JADEOPTS} -d ${DSLPGP} -t sgml ${MASTERDOC}
 
 DOC_PREFIX?= ${.CURDIR}/../../..

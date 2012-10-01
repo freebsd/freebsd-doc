@@ -4,7 +4,7 @@
 # $FreeBSD$
 #
 
-CHAPTERS= 	virtualization/chapter.sgml
+CHAPTERS= 	virtualization/chapter.xml
 
 VPATH=		..
 

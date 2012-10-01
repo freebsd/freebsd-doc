@@ -21,23 +21,23 @@ INSTALL_ONLY_COMPRESSED?=
 #
 
 # SGML content
-SRCS=  book.sgml
-SRCS+= boot/chapter.sgml
-SRCS+= driverbasics/chapter.sgml
-SRCS+= isa/chapter.sgml
-SRCS+= jail/chapter.sgml
-SRCS+= kobj/chapter.sgml
-SRCS+= locking/chapter.sgml
-SRCS+= mac/chapter.sgml
-SRCS+= newbus/chapter.sgml
-SRCS+= pci/chapter.sgml
-SRCS+= scsi/chapter.sgml
-SRCS+= smp/chapter.sgml
-SRCS+= sound/chapter.sgml
-SRCS+= pccard/chapter.sgml
-SRCS+= sysinit/chapter.sgml
-SRCS+= usb/chapter.sgml
-SRCS+= vm/chapter.sgml
+SRCS=  book.xml
+SRCS+= boot/chapter.xml
+SRCS+= driverbasics/chapter.xml
+SRCS+= isa/chapter.xml
+SRCS+= jail/chapter.xml
+SRCS+= kobj/chapter.xml
+SRCS+= locking/chapter.xml
+SRCS+= mac/chapter.xml
+SRCS+= newbus/chapter.xml
+SRCS+= pci/chapter.xml
+SRCS+= scsi/chapter.xml
+SRCS+= smp/chapter.xml
+SRCS+= sound/chapter.xml
+SRCS+= pccard/chapter.xml
+SRCS+= sysinit/chapter.xml
+SRCS+= usb/chapter.xml
+SRCS+= vm/chapter.xml
 
 # Images from the cross-document image library
 IMAGES_LIB=  callouts/1.png

@@ -10,7 +10,7 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS=	status.sgml
+DOCS=	status.xml
 
 INDEXLINK=	status.html
 

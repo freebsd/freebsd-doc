@@ -6,7 +6,7 @@
 # basiert auf: 1.1
 #
 
-CHAPTERS= 	policies/chapter.sgml
+CHAPTERS= 	policies/chapter.xml
 
 VPATH=		..
 

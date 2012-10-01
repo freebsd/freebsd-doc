@@ -8,7 +8,7 @@ DOC?= article
 FORMATS?= html
 WITH_ARTICLE_TOC?= YES
 
-SRCS=		article.sgml
+SRCS=		article.xml
 IMAGES_EN =	fig1.eps
 IMAGES_EN+=	fig2.eps
 IMAGES_EN+=	fig3.eps

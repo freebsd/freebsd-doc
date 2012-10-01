@@ -7,7 +7,7 @@
 # %SRCID%	38826
 #
 
-CHAPTERS= 	install/chapter.sgml
+CHAPTERS= 	install/chapter.xml
 
 VPATH=		..
 

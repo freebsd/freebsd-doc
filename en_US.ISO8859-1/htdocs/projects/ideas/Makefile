@@ -13,6 +13,6 @@ MAINTAINER=	joel
 
 DATA=	style.css
 
-DOCS=	ideas.sgml
+DOCS=	ideas.xml
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"

@@ -10,21 +10,21 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS=	photos.sgml
-DOCS+=	internal.sgml
-DOCS+= 	about.sgml
-DOCS+= 	machines.sgml
-DOCS+= 	mirror.sgml
-DOCS+=	new-account.sgml
-DOCS+=	statistic.sgml
-DOCS+= 	developer.sgml
-DOCS+=	bylaws.sgml
-DOCS+=  releng.sgml
-DOCS+=	expire-bits.sgml
-DOCS+=	core-vote.sgml
-# DOCS+=	trb-dispute.sgml
-# DOCS+=	doceng.sgml
-# DOCS+=	rtp.sgml
+DOCS=	photos.xml
+DOCS+=	internal.xml
+DOCS+= 	about.xml
+DOCS+= 	machines.xml
+DOCS+= 	mirror.xml
+DOCS+=	new-account.xml
+DOCS+=	statistic.xml
+DOCS+= 	developer.xml
+DOCS+=	bylaws.xml
+DOCS+=  releng.xml
+DOCS+=	expire-bits.xml
+DOCS+=	core-vote.xml
+# DOCS+=	trb-dispute.xml
+# DOCS+=	doceng.xml
+# DOCS+=	rtp.xml
 
 INDEXLINK=	internal.html
 
@@ -32,7 +32,7 @@ INDEXLINK=	internal.html
 # on the main FreeBSD machines
 hostname!= hostname
 .if ${hostname} == "hub.freebsd.org" || ${hostname} == "freefall.freebsd.org" || ${hostname} == "www.freebsd.org"
-DOCS+=	homepage.sgml
+DOCS+=	homepage.xml
 .PHONY: homepage.inc
 
 homepage.inc: ${DOC_PREFIX}/en_US.ISO8859-1/htdocs/internal/homepage.pl

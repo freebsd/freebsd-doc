@@ -5,7 +5,7 @@
 #
 # Original revision: 1.1
 
-CHAPTERS= 	printing/chapter.sgml
+CHAPTERS= 	printing/chapter.xml
 
 VPATH=		..
 

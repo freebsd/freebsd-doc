@@ -7,7 +7,7 @@
 # $FreeBSD$
 #
 
-CHAPTERS= 	firewalls/chapter.sgml
+CHAPTERS= 	firewalls/chapter.xml
 
 VPATH=		..
 

@@ -6,7 +6,7 @@
 # Original revision: r9773
 #
 
-CHAPTERS= 	ports/chapter.sgml
+CHAPTERS= 	ports/chapter.xml
 
 VPATH=		..
 

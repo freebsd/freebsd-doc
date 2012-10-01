@@ -6,7 +6,7 @@
 # Original revision: r9773
 #
 
-CHAPTERS= 	x11/chapter.sgml
+CHAPTERS= 	x11/chapter.xml
 
 VPATH=		..
 

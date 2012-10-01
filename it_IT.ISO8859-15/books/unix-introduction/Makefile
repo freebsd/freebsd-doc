@@ -19,21 +19,21 @@ INSTALL_ONLY_COMPRESSED?=
 #
 
 # Contenuto SGML
-SRCS = book.sgml
-SRCS+= bibliography/chapter.sgml
-SRCS+= command-summary/chapter.sgml
-SRCS+= commands/chapter.sgml
-SRCS+= editors/chapter.sgml
-SRCS+= getting-started/chapter.sgml
-SRCS+= glossary/chapter.sgml
-SRCS+= history/chapter.sgml
-SRCS+= preface/chapter.sgml
-SRCS+= shell-programming/chapter.sgml
-SRCS+= shells/chapter.sgml
-SRCS+= special-features/chapter.sgml
-SRCS+= structure/chapter.sgml
-SRCS+= system-resource/chapter.sgml
-SRCS+= text-processing/chapter.sgml
+SRCS = book.xml
+SRCS+= bibliography/chapter.xml
+SRCS+= command-summary/chapter.xml
+SRCS+= commands/chapter.xml
+SRCS+= editors/chapter.xml
+SRCS+= getting-started/chapter.xml
+SRCS+= glossary/chapter.xml
+SRCS+= history/chapter.xml
+SRCS+= preface/chapter.xml
+SRCS+= shell-programming/chapter.xml
+SRCS+= shells/chapter.xml
+SRCS+= special-features/chapter.xml
+SRCS+= structure/chapter.xml
+SRCS+= system-resource/chapter.xml
+SRCS+= text-processing/chapter.xml
 
 # Entities
 SRCS+= chapters.ent

@@ -7,14 +7,14 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS=	projects.sgml
-DOCS+=	newbies.sgml
-DOCS+=	cvsweb.sgml
-DOCS+=	summerofcode.sgml
-DOCS+=	summerofcode-2005.sgml
-DOCS+=	summerofcode-2006.sgml
-DOCS+=	summerofcode-2007.sgml
-DOCS+=	summerofcode-2008.sgml
+DOCS=	projects.xml
+DOCS+=	newbies.xml
+DOCS+=	cvsweb.xml
+DOCS+=	summerofcode.xml
+DOCS+=	summerofcode-2005.xml
+DOCS+=	summerofcode-2006.xml
+DOCS+=	summerofcode-2007.xml
+DOCS+=	summerofcode-2008.xml
 
 DATA=	2009-freebsd-gsoc-thumbnail.jpg
 DATA+=	2009-freebsd-gsoc.pdf

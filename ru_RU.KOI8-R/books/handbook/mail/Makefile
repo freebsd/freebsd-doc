@@ -6,7 +6,7 @@
 # Original revision: r9773
 #
 
-CHAPTERS= 	mail/chapter.sgml
+CHAPTERS= 	mail/chapter.xml
 
 VPATH=		..
 

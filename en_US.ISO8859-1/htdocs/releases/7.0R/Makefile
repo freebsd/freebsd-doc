@@ -7,7 +7,7 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS=	announce.sgml todo.sgml schedule.sgml approvals.sgml
+DOCS=	announce.xml todo.xml schedule.xml approvals.xml
 
 FETCHFILE= http://people.freebsd.org/~pho/stress/log/news.rss
 FETCHCMD=  /usr/bin/fetch

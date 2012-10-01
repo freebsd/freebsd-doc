@@ -11,13 +11,13 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS = 	commercial.sgml
-# DOCS+=  consulting.sgml
-# DOCS+=  consulting_bycat.sgml
-# DOCS+=  hardware.sgml
-# DOCS+=  misc.sgml
-# DOCS+=  software.sgml
-# DOCS+=  software_bycat.sgml
+DOCS = 	commercial.xml
+# DOCS+=  consulting.xml
+# DOCS+=  consulting_bycat.xml
+# DOCS+=  hardware.xml
+# DOCS+=  misc.xml
+# DOCS+=  software.xml
+# DOCS+=  software_bycat.xml
 
 INDEXLINK=commercial.html
 

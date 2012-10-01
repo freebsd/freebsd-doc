@@ -7,7 +7,7 @@
 # Original revision: r9773
 #
 
-CHAPTERS= 	serialcomms/chapter.sgml
+CHAPTERS= 	serialcomms/chapter.xml
 
 VPATH=		..
 

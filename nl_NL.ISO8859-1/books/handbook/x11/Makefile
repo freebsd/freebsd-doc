@@ -7,7 +7,7 @@
 # %SRCID%	38826
 #
 
-CHAPTERS= 	x11/chapter.sgml
+CHAPTERS= 	x11/chapter.xml
 
 VPATH=		..
 

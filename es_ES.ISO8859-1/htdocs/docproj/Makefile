@@ -7,13 +7,13 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS=   current.sgml
-DOCS+=	doc-set.sgml
-DOCS+=  sgml.sgml
-DOCS+=  submitting.sgml
-DOCS+=  who.sgml
-DOCS+=  translations.sgml
-DOCS+=	docproj.sgml
+DOCS=   current.xml
+DOCS+=	doc-set.xml
+DOCS+=  sgml.xml
+DOCS+=  submitting.xml
+DOCS+=  who.xml
+DOCS+=  translations.xml
+DOCS+=	docproj.xml
 
 INDEXLINK= docproj.html
 

@@ -7,7 +7,7 @@
 # $FreeBSD$
 #
 
-CHAPTERS= 	desktop/chapter.sgml
+CHAPTERS= 	desktop/chapter.xml
 
 VPATH=		..
 

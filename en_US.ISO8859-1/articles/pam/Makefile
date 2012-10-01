@@ -17,7 +17,7 @@ EXTRAS+=	pam_conv.c
 EXTRAS+=	pam_module.c
 CLEANFILES+=	${EXTRAS}
 
-SRCS=	article.sgml
+SRCS=	article.xml
 SRCS+=	${EXTRAS}
 
 pam_app.c: su.c

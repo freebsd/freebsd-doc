@@ -24,7 +24,7 @@ WITH_BIBLIOXREF_TITLE?=YES
 #
 
 # SGML content
-SRCS=  book.sgml
+SRCS=  book.xml
 
 URL_RELPREFIX?=	../../../..
 DOC_PREFIX?=	${.CURDIR}/../../..

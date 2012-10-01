@@ -9,7 +9,7 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS+=		index.sgml
+DOCS+=		index.xml
 
 #DATA+=		../../en/ipv6/IPv6-badge-blue-256-trans.png	\
 #		../../en/ipv6/IPv6-badge-blue-128-trans.png

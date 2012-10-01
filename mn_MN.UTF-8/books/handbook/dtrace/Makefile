@@ -7,7 +7,7 @@
 #
 # $FreeBSD$
 
-CHAPTERS= 	dtrace/chapter.sgml
+CHAPTERS= 	dtrace/chapter.xml
 
 VPATH=		..
 

@@ -7,7 +7,7 @@
 # %SRCID%	38826
 #
 
-CHAPTERS= 	security/chapter.sgml
+CHAPTERS= 	security/chapter.xml
 
 VPATH=		..
 

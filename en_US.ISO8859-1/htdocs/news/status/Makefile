@@ -7,7 +7,7 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS=	status.sgml
+DOCS=	status.xml
 
 XMLDOCS=	report-2001-06
 XMLDOCS+=	report-2001-07

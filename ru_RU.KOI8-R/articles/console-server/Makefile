@@ -17,7 +17,7 @@ WITH_ARTICLE_TOC?= YES
 INSTALL_COMPRESSED?= gz
 INSTALL_ONLY_COMPRESSED?=
 
-SRCS=		article.sgml
+SRCS=		article.xml
 IMAGES_EN=	tk0231-9-1.png
 
 URL_RELPREFIX?=        ../../../..

@@ -5,7 +5,7 @@
 #
 # Original revision: 1.1
 
-CHAPTERS= 	l10n/chapter.sgml
+CHAPTERS= 	l10n/chapter.xml
 
 VPATH=		..
 

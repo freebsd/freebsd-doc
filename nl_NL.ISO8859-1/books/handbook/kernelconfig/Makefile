@@ -7,7 +7,7 @@
 # %SRCID%	38826
 #
 
-CHAPTERS= 	kernelconfig/chapter.sgml
+CHAPTERS= 	kernelconfig/chapter.xml
 
 VPATH=		..
 

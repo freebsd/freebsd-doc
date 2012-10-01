@@ -9,16 +9,16 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS=	alpha.sgml
-DOCS+=	arm.sgml
-DOCS+=	amd64.sgml
-DOCS+=	i386.sgml
-DOCS+=	index.sgml
-DOCS+=	mips.sgml
-DOCS+=	pc98.sgml
-DOCS+=	sparc.sgml
-DOCS+=	sun4v.sgml
-DOCS+=	xbox.sgml
+DOCS=	alpha.xml
+DOCS+=	arm.xml
+DOCS+=	amd64.xml
+DOCS+=	i386.xml
+DOCS+=	index.xml
+DOCS+=	mips.xml
+DOCS+=	pc98.xml
+DOCS+=	sparc.xml
+DOCS+=	sun4v.xml
+DOCS+=	xbox.xml
 
 SUBDIR=	ia64
 

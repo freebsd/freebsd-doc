@@ -5,7 +5,7 @@
 #
 # Original revision: 1.1
 
-CHAPTERS= 	introduction/chapter.sgml
+CHAPTERS= 	introduction/chapter.xml
 
 VPATH=		..
 

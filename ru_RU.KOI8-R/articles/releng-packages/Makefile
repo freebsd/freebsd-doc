@@ -14,7 +14,7 @@ FORMATS?= html
 INSTALL_COMPRESSED?= gz
 INSTALL_ONLY_COMPRESSED?=
 
-SRCS=  article.sgml
+SRCS=  article.xml
 
 CSS_SHEET_ADDITIONS= extra.css
 

@@ -12,6 +12,6 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS=	index.sgml machines.sgml refs.sgml todo.sgml
+DOCS=	index.xml machines.xml refs.xml todo.xml
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"

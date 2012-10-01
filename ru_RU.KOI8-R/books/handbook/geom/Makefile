@@ -6,7 +6,7 @@
 # Original revision: r25313
 #
 
-CHAPTERS= 	geom/chapter.sgml
+CHAPTERS= 	geom/chapter.xml
 
 VPATH=		..
 

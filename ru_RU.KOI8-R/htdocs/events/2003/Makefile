@@ -14,6 +14,6 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS?=	bsdcon-devsummit.sgml
+DOCS?=	bsdcon-devsummit.xml
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"

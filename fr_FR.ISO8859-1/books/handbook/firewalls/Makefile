@@ -5,7 +5,7 @@
 # Original revision: 1.1
 #
 
-CHAPTERS= 	firewalls/chapter.sgml
+CHAPTERS= 	firewalls/chapter.xml
 
 VPATH=		..
 

@@ -7,7 +7,7 @@
 # Build the Handbook with just the content from this chapter.
 #
 
-CHAPTERS= 	firewalls/chapter.sgml
+CHAPTERS= 	firewalls/chapter.xml
 
 VPATH=		..
 

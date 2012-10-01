@@ -7,7 +7,7 @@
 # Build the Handbook with just the content from this chapter.
 #
 
-CHAPTERS= 	l10n/chapter.sgml
+CHAPTERS= 	l10n/chapter.xml
 
 VPATH=		..
 

@@ -1,0 +1,5102 @@
+<?xml version="1.0" encoding="iso-8859-1" standalone="no"?>
+<!--
+     The FreeBSD Documentation Project
+     The FreeBSD French Documentation Project
+
+     $FreeBSD$
+     Original revision: 1.380
+-->
+
+<chapter id="advanced-networking">
+  <title>Administration réseau avancée</title>
+  &trans.a.fonvieille;
+
+  <sect1 id="advanced-networking-synopsis">
+    <title>Synopsis</title>
+
+    <para>Ce chapitre abordera certains nombre de sujets réseau
+      avancés.</para>
+
+    <para>Après la lecture de ce chapitre, vous
+      connaîtrez:</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>Les bases sur les passerelles et les routes.</para>
+      </listitem>
+
+      <listitem>
+	<para>Comment configurer les périphériques IEEE
+	  802.11 et &bluetooth;.</para>
+      </listitem>
+
+      <listitem>
+	<para>Comment utiliser &os; en tant que pont
+	  (&ldquo;bridge&rdquo;).</para>
+      </listitem>
+
+      <listitem>
+	<para>Comment configurer le démarrage via le
+	  réseau pour une machine sans disque dur.</para>
+      </listitem>
+
+      <listitem>
+	<para>Comment configurer la translation d'adresse
+	  réseau.</para>
+      </listitem>
+
+      <listitem>
+	<para>Comment connecter deux ordinateurs via PLIP.</para>
+      </listitem>
+
+      <listitem>
+	<para>Comment configurer l'IPv6 sur une machine &os;.</para>
+      </listitem>
+
+      <listitem>
+	<para>Comment configurer ATM.</para>
+      </listitem>
+    </itemizedlist>
+
+    <para>Avant de lire ce chapitre, vous devrez:</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>Comprendre les bases des procédures
+	  <filename>/etc/rc</filename>.</para>
+      </listitem>
+
+      <listitem>
+	<para>Etre familier avec la terminologie réseau de
+	  base.</para>
+      </listitem>
+
+      <listitem>
+	<para>Savoir comment configurer et installer un nouveau noyau
+	  &os; (<xref linkend="kernelconfig"/>).</para>
+      </listitem>
+
+      <listitem>
+	<para>Savoir comment installer des logiciels tierce-partie
+	  (<xref linkend="ports"/>).</para>
+      </listitem>
+    </itemizedlist>
+  </sect1>
+
+  <sect1 id="network-routing">
+    <sect1info>
+      <authorgroup>
+	<author>
+	  <firstname>Coranth</firstname>
+	  <surname>Gryphon</surname>
+	  <contrib>Contribution de </contrib>
+	</author>
+      </authorgroup>
+    </sect1info>
+    <title>Passerelles et routes</title>
+
+    <indexterm><primary>routage</primary></indexterm>
+    <indexterm><primary>passerelles</primary></indexterm>
+    <indexterm><primary>sous-réseau</primary></indexterm>
+    <para>Pour qu'une machine soit en mesure d'en contacter une autre,
+      il faut que soit mis en place un mécanisme qui
+      décrive comment aller de l'une &agrave; l'autre.  C'est ce
+      que l'on appelle le <firstterm>routage</firstterm>.  Une
+      &ldquo;route&rdquo; est définie par une paire d'adresses:
+      une &ldquo;destination&rdquo; et une &ldquo;passerelle&rdquo;.
+      Cette paire signifie que pour atteindre cette
+      <emphasis>destination</emphasis>, vous devez passer par cette
+      <emphasis>passerelle</emphasis>.  Il y a trois sortes de
+      destination: les machines individuelles, les sous-réseaux,
+      et &ldquo;default&rdquo;&mdash;la destination par défaut.
+      La route par défaut (&ldquo;default route&rdquo;) est
+      utilisée lorsqu'aucune autre route n'est applicable.  Nous
+      parlerons un peu plus des routes par défaut par la suite.
+      Il existe également trois sortes de passerelles: les
+      machines individuelles, les interfaces (aussi appelées
+      &ldquo;liens&rdquo;), et les adresses Ethernet matérielles
+      (adresses MAC).</para>
+
+    <sect2>
+      <title>Un exemple</title>
+
+      <para>Pour illustrer différents aspects du routage,
+	nous utiliserons l'exemple suivant, qui est produit par la
+	commande <command>netstat</command>:</para>
+
+      <screen>&prompt.user; <userinput>netstat -r</userinput>
+Routing tables
+
+Destination      Gateway            Flags     Refs     Use     Netif Expire
+
+default          outside-gw         UGSc       37      418      ppp0
+localhost        localhost          UH          0      181       lo0
+test0            0:e0:b5:36:cf:4f   UHLW        5    63288       ed0     77
+10.20.30.255     link#1             UHLW        1     2421
+example.com      link#1             UC          0        0
+host1            0:e0:a8:37:8:1e    UHLW        3     4601       lo0
+host2            0:e0:a8:37:8:1e    UHLW        0        5       lo0 =>
+host2.example.com link#1             UC          0        0
+224              link#1             UC          0        0</screen>
+
+      <indexterm><primary>route par défaut</primary></indexterm>
+      <para>Les deux premières lignes définissent la
+	route par défaut (dont nous parlerons dans la <link
+	linkend="network-routing-default">section suivante</link>) et la
+	route <hostid>localhost</hostid>.</para>
+
+      <indexterm><primary>interface en boucle</primary></indexterm>
+      <para>L'interface (colonne <literal>Netif</literal>) qu'il est
+	indiqué d'utiliser pour <literal>localhost</literal> est
+	<devicename>lo0</devicename>, aussi appelée interface
+	&ldquo;loopback&rdquo;&mdash;en boucle.  Ce qui veut dire que
+	tout le trafic vers cette destination doit rester interne, au
+	lieu d'être envoyé sur le réseau local,
+	puisqu'il reviendra de toute façon &agrave; son point de
+	départ.</para>
+
+      <indexterm>
+	<primary>Ethernet</primary>
+	<secondary>adresse MAC</secondary>
+      </indexterm>
+      <para>Ce qui se remarque ensuite, ce sont les adresses
+	commençant par <hostid role="mac">0:e0:</hostid>.  Ce
+	sont les adresses Ethernet matérielles, qui sont
+	également connues sous le nom d'adresses MAC.  &os;
+	reconnaîtra automatiquement toute machine
+	(<hostid>test0</hostid> dans l'exemple) sur le réseau
+	local Ethernet et ajoutera une route vers cette machine,
+	directement via l'interface Ethernet
+	<devicename>ed0</devicename>.  Il y a aussi un délai
+	(colonne <literal>Expire</literal>) associé &agrave; ce
+	type de route, qui est utilisé si l'on entend plus parler
+	de cette machine pendant un laps de temps précis.  Quand
+	cela arrive, la route vers cette machine est automatiquement
+	supprimée.  Ces machines sont identifiées par un
+	mécanisme appelé RIP (&ldquo;Routing Information
+	Protocol&rdquo;&mdash;protocole d'information de routage), qui
+	met en place des routes vers les machines locales en
+	déterminant le chemin le plus court.</para>
+
+      <indexterm><primary>sous-réseau</primary></indexterm>
+      <para>&os; ajoutera également des routes de
+	sous-réseau pour le sous-réseau local (<hostid
+	role="ipaddr">10.20.30.255</hostid> est l'adresse de diffusion
+	pour le sous-réseau <hostid
+	role="ipaddr">10.20.30</hostid>, et <hostid
+	role="domainname">example.com</hostid> est le nom de domaine
+	associé &agrave; ce sous-réseau).  La
+	dénomination <literal>link#1</literal> fait
+	référence &agrave; la première carte
+	Ethernet de la machine.  Vous constaterez qu'il n'y a pas
+	d'autre interface associée &agrave; ces routes.</para>
+
+      <para>Ces deux types de routes (vers les machines du
+	réseau local et les sous-réseaux locaux) sont
+	automatiquement configurés par un &ldquo;daemon&rdquo;
+	appelé <application>routed</application>.  S'il ne
+	tourne pas, alors seules les routes définies comme
+	statiques (i.e. explicitement définies)
+	existeront.</para>
+
+      <para>La ligne <literal>host1</literal> fait
+	référence &agrave; votre machine, qui est
+	identifiée par l'adresse Ethernet.  Puisque nous sommes
+	l'émetteur, &os; sait qu'il faut utiliser l'interface
+	en &ldquo;boucle&rdquo; (<devicename>lo0</devicename>)
+	plutôt que d'envoyer les données sur l'interface
+	Ethernet.</para>
+
+      <para>Les deux lignes <literal>host2</literal> montrent ce qui
+	se passe quand on utilise un alias avec &man.ifconfig.8;
+	(lisez la section sur l'Ethernet pour savoir pour quelles
+	raisons on peut vouloir cela).  Le symbole
+	<literal>=&gt;</literal> qui suit l'interface
+	<devicename>lo0</devicename> indique que non seulement nous
+	utilisons l'interface en &ldquo;boucle&rdquo; (puisque cette
+	adresse correspond également &agrave; la machine
+	locale), mais que c'est plus spécifiquement un alias.
+	Ce type de route n'apparaît que sur la machine pour
+	laquelle est défini l'alias; sur toutes les autres
+	machines du réseau local il n'y aura q'une ligne
+	<literal>link#1</literal> pour cette machine.</para>
+
+      <para>La dernière ligne (le sous-réseau
+	destinataire <hostid role="ipaddr">224</hostid>) concerne le
+	multicasting (diffusion pour plusieurs destinataires), qui
+	sera abordé dans une autre section.</para>
+
+      <para>Et enfin, diverses caractéristiques de chaque route
+	sont indiquées dans la colonne <literal>Flags</literal>
+	(indicateurs).  Ci-dessous, une courte table présente
+	certains de ces indicateurs et leur signification:</para>
+
+      <informaltable frame="none" pgwide="1">
+	<tgroup cols="2">
+	  <colspec colwidth="1*"/>
+	  <colspec colwidth="4*"/>
+
+	  <tbody>
+	    <row>
+	      <entry>U</entry>
+	      <entry>Active (&ldquo;Up&rdquo;): la route est
+		active.</entry>
+	    </row>
+
+	    <row>
+	      <entry>H</entry>
+	      <entry>Machine (&ldquo;Host&rdquo;): la destination de
+		la route est une machine.</entry>
+	    </row>
+
+	    <row>
+	      <entry>G</entry>
+	      <entry>Passerelle (&ldquo;Gateway&rdquo;): envoyer tout
+		ce qui concerne cette destination sur la machine
+		distante indiquée, qui déterminera
+		&agrave; qui transmettre ensuite.</entry>
+	    </row>
+
+	    <row>
+	      <entry>S</entry>
+	      <entry>Statique (&ldquo;Static&rdquo;): cette route a
+		été configurée manuellement et non
+		pas générée automatiquement par le
+		système.</entry>
+	    </row>
+
+	    <row>
+	      <entry>C</entry>
+	      <entry>Clone: génère une nouvelle route
+		sur la base de celle-ci pour les machines auxquelles
+		nous nous connectons.  Ce type de route est normalement
+		utilisé pour les réseaux locaux.</entry>
+	    </row>
+
+	    <row>
+	      <entry>W</entry>
+	      <entry>Clonée (&ldquo;WasCloned&rdquo;): cette
+		route a été auto-configurée (Clone)
+		&agrave; partir d'une route pour le réseau
+		local.</entry>
+	    </row>
+
+	    <row>
+	      <entry>L</entry>
+	      <entry>Lien (&ldquo;Link&rdquo;): la route fait
+		référence &agrave; une adresse
+		matérielle Ethernet.</entry>
+	    </row>
+	  </tbody>
+	</tgroup>
+      </informaltable>
+    </sect2>
+
+    <sect2 id="network-routing-default">
+      <title>Routes par défaut</title>
+
+      <indexterm><primary>route par défaut</primary></indexterm>
+      <para>Quand le système local doit établir une
+	connexion avec une machine distante, il consulte la table de
+	routage pour voir s'il existe déj&agrave; une route
+	connue.  Si la machine distante appartient &agrave; un
+	sous-réseau auquel le système sait se connecter
+	(routes clonées), alors le système vérifie
+	s'il peut se connecter via cette interface.</para>
+
+      <para>Si toutes les routes connues échouent, il reste
+	alors au système une dernière option: la route
+	par &ldquo;défaut&rdquo;.  Cette route est un type
+	particulier de route passerelle (c'est
+	généralement la seule du système), et est
+	toujours marquée avec un <literal>c</literal> dans le
+	champ des indicateurs.  Pour les machines du réseau
+	local, cette passerelle est définie avec la machine qui
+	est directement connectée au monde extérieur
+	(que ce soit par une liaison PPP, DSL, cable, T1, ou toute
+	autre interface réseau).</para>
+
+      <para>Si vous configurez la route par défaut sur une
+	machine qui fonctionne comme passerelle vers le monde
+	extérieur, alors la route par défaut sera la
+	passerelle de votre Fournisseur d'Accès &agrave;
+	Internet (FAI).</para>
+
+      <para>Examinons un exemple de route par défaut.  Voici
+	une configuration classique:</para>
+
+      <mediaobject>
+	<imageobject>
+	  <imagedata fileref="advanced-networking/net-routing"/>
+	</imageobject>
+
+	<textobject>
+	  <literallayout class="monospaced">
+[Local2]  &lt;--ether--&gt;  [Local1]  &lt;--PPP--&gt; [FAI-Serv]  &lt;--ether--&gt;  [T1-GW]
+      </literallayout>
+	</textobject>
+      </mediaobject>
+
+      <para>Les machines <hostid>Local1</hostid> et
+	<hostid>Local2</hostid> sont sur votre site.
+	<hostid>Local1</hostid> est connectée au serveur du FAI
+	via une liaison PPP par modem.  Ce serveur PPP est
+	connecté par l'intermédiaire d'un réseau
+	local &agrave; un autre ordinateur passerelle relié au
+	point d'entrée Internet du FAI.</para>
+
+      <para>Les routes par défaut sur chacune de vos machines
+	seront:</para>
+
+      <informaltable frame="none" pgwide="1">
+	<tgroup cols="3">
+	  <thead>
+	    <row>
+	      <entry>Machine</entry>
+	      <entry>Passerelle par défaut</entry>
+	      <entry>Interface</entry>
+	    </row>
+	  </thead>
+
+	  <tbody>
+	    <row>
+	      <entry>Local2</entry>
+	      <entry>Local1</entry>
+	      <entry>Ethernet</entry>
+	    </row>
+
+	    <row>
+	      <entry>Local1</entry>
+	      <entry>T1-GW</entry>
+	      <entry>PPP</entry>
+	    </row>
+	  </tbody>
+	</tgroup>
+      </informaltable>
+
+      <para>Une question qui revient souvent est &ldquo;Pourquoi
+	(ou comment) définir <hostid>T1-GW</hostid> comme
+	passerelle par défaut pour <hostid>Local1</hostid>,
+	plutôt que le serveur du FAI auquel elle est
+	connectée?&ldquo;.</para>
+
+      <para>Rappelez-vous, puisque l'interface PPP utilise, de votre
+	côté de la connexion, une adresse IP du
+	réseau local du FAI, les routes vers toute autre
+	machine du réseau local du FAI seront automatiquement
+	générées.  Par conséquent vous
+	savez déj&agrave; comment atteindre la machine
+	<hostid>T1-GW</hostid>, il n'y a donc pas besoin
+	d'étape intermédiaire qui passe par le serveur
+	du FAI.</para>
+
+      <para>Il est habituel d'attribuer l'adresse <hostid
+	role="ipaddr">X.X.X.1</hostid> &agrave; la passerelle sur
+	votre réseau local.  Donc (dans notre exemple), si
+	votre espace d'adresse de classe C local était <hostid
+	role="ipaddr">10.20.30</hostid> et que votre FAI utilisait
+	l'espace <hostid role="ipaddr">10.9.9</hostid>, alors les
+	routes par défaut seraient:</para>
+
+      <informaltable frame="none" pgwide="1">
+	<tgroup cols="2">
+	  <thead>
+	    <row>
+	      <entry>Machine</entry>
+	      <entry>Route par défaut</entry>
+	    </row>
+	  </thead>
+	  <tbody>
+	    <row>
+	      <entry>Local2 (10.20.30.2)</entry>
+	      <entry>Local1 (10.20.30.1)</entry>
+	    </row>
+	    <row>
+	      <entry>Local1 (10.20.30.1, 10.9.9.30)</entry>
+	      <entry>T1-GW (10.9.9.1)</entry>
+	    </row>
+	  </tbody>
+	</tgroup>
+      </informaltable>
+
+      <para>Vous pouvez aisément définir la route par
+	défaut via le fichier
+	<filename>/etc/rc.conf</filename>.  Dans notre exemple, sur la
+	machine <hostid>Local2</hostid>, nous avons ajouté la
+	ligne suivante dans <filename>/etc/rc.conf</filename>:</para>
+
+      <programlisting>defaultrouter="10.20.30.1"</programlisting>
+
+      <para>Il est également possible de faire directement cela
+	&agrave; partir de la ligne de commande avec la commande
+	&man.route.8;:</para>
+
+      <screen>&prompt.root; <userinput>route add default 10.20.30.1</userinput></screen>
+
+      <para>Pour plus d'informations sur la manipulation &agrave; la
+	main des tables de routage réseau, consultez la page de
+	manuel &man.route.8;.</para>
+    </sect2>
+
+    <sect2>
+      <title>Machines sur deux réseaux</title>
+
+      <indexterm><primary>machines sur deux réseaux</primary></indexterm>
+      <para>Il y a un autre type de configuration dont il faut parler,
+	c'est celle d'une machine qui est connectée &agrave; deux
+	réseaux différents.  Techniquement, toute machine
+	servant de passerelle (comme dans l'exemple ci-dessus, en
+	utilisant une connexion PPP) est une machine sur deux
+	réseaux.  Mais ce terme n'est normalement utilisé
+	que pour faire référence &agrave; une machine qui
+	est sur deux réseaux locaux différents.</para>
+
+      <para>Selon le cas, la machine dispose de deux cartes Ethernet,
+	ayant chacune une adresse sur des sous-réseaux
+	séparés.  Alternativement, la machine peut ne
+	disposer que d'une seule carte Ethernet, et utiliser des alias
+	avec &man.ifconfig.8;.  Le premier cas correspond &agrave;
+	l'utilisation de deux réseaux Ethernet physiquement
+	séparés, le deuxième cas est
+	employé s'il n'y a qu'un seul réseau physique
+	mais deux sous-réseaux logiquement distincts.</para>
+
+      <para>Dans les deux cas, les tables de routage sont
+	définies de telle sorte que chaque sous-réseau
+	sache que cette machine est la passerelle (route entrante)
+	vers l'autre sous-réseau.  Cette configuration,
+	où la machine sert de routeur entre les deux
+	sous-réseaux, est souvent utilisée quand il faut
+	mettre en place un dispositif de sécurité:
+	filtrage de paquets ou coupe-feu, dans l'une ou dans les deux
+	directions.</para>
+
+      <para>Si vous voulez que cette machine transmette
+	réellement les paquets entre les deux interfaces, vous
+	devez demander &agrave; &os; d'activer cette
+	fonctionnalité.  Lisez la section suivante pour plus de
+	détails sur comment faire cela.</para>
+    </sect2>
+
+    <sect2 id="network-dedicated-router">
+      <title>Mettre en place un routeur</title>
+
+      <indexterm><primary>routeur</primary></indexterm>
+
+      <para>Un routeur est un système qui transmet les paquets
+	d'une interface &agrave; une autre.  Les standards de
+	l'Internet et de bons principes d'ingénierie
+	empêchent le projet &os; d'activer cette fonction par
+	défaut sous &os;.  Vous pouvez l'activer en
+	positionnant &agrave; <literal>YES</literal> la variable
+	suivante du fichier &man.rc.conf.5;:</para>
+
+      <programlisting>gateway_enable=YES          # Set to YES if this host will be a gateway</programlisting>
+
+      <para>Cette option fixera la variable &man.sysctl.8;
+	<varname>net.inet.ip.forwarding</varname> &agrave; la valeur
+	<literal>1</literal>.  Si vous devez arrêter
+	temporairement le routage, vous pouvez positionner la variable
+	momentanément &agrave; <literal>0</literal>.</para>
+
+      <para>Votre nouveau routeur aura besoin de route pour savoir
+	où envoyer le trafic.  Si votre réseau est
+	suffisamment simple vous pouvez utiliser des routes statiques.
+	&os; est également fourni avec le &ldquo;daemon&rdquo;
+	de routage BSD standard &man.routed.8;, qui comprend et
+	utilise les protocoles RIP (version 1 est 2) et IRDP.  Le
+	support de BGP v4, OSPF v2, et d'autres protocoles de routage
+	sophistiqué est disponible avec le logiciel <filename
+	role="package">net/zebra</filename>.  Des produits commerciaux
+	comme <application>&gated;</application> sont également
+	disponibles comme solutions avancées de routage.</para>
+
+<indexterm><primary>BGP</primary></indexterm>
+<indexterm><primary>RIP</primary></indexterm>
+<indexterm><primary>OSPF</primary></indexterm>
+    </sect2>
+
+    <sect2>
+      <sect2info>
+	<authorgroup>
+	  <author>
+	    <firstname>Al</firstname>
+	    <surname>Hoang</surname>
+	    <contrib>Contribution de </contrib>
+	  </author>
+	</authorgroup>
+      </sect2info>
+      <!-- Feb 2004 -->
+      <title>Configurarion des routes statiques</title>
+
+      <sect3>
+	<title>Configuration manuelle</title>
+
+	<para>Supposons que nous avons un réseau comme
+	  celui-ci:</para>
+
+	<mediaobject>
+	  <imageobject>
+	    <imagedata fileref="advanced-networking/static-routes"/>
+	  </imageobject>
+
+	  <textobject>
+	<literallayout class="monospaced">
+    INTERNET
+      | (10.0.0.1/24) Routeur Internet
+      |
+      |Interface xl0
+      |10.0.0.10/24
+   +------+
+   |      | RouteurA
+   |      | (passerelle FreeBSD)
+   +------+
+      | Interface xl1
+      | 192.168.1.1/24
+      |
+  +--------------------------------+
+   Réseau interne 1    | 192.168.1.2/24
+                       |
+                   +------+
+                   |      | RouteurB
+                   |      |
+                   +------+
+                       | 192.168.2.1/24
+                       |
+                     Réseau interne 2
+	</literallayout>
+	  </textobject>
+	</mediaobject>
+
+	<para>Dans ce scénario, <hostid>RouteurA</hostid> est
+	  notre machine &os; qui joue le rôle de routeur pour
+	  l'Internet.  Elle a une route par défaut vers <hostid
+	  role="ipaddr">10.0.0.1</hostid> qui permet de se connecter
+	  au reste du monde extérieur.  Nous supposerons que la
+	  machine <hostid>RouteurB</hostid> est correctement
+	  configurée et sait comment transmettre vers n'importe
+	  quelle destination (D'après notre schéma c'est
+	  relativement simple.  Ajoutez juste une route par
+	  défaut sur <hostid>RouteurB</hostid> en utilisant
+	  <hostid role="ipaddr">192.168.1.1</hostid> comme
+	  passerelle).</para>
+
+	<para>Si nous regardons la table de routage de
+	  <hostid>RouteurA</hostid> nous verrions quelque chose
+	  comme:</para>
+
+	<screen>&prompt.user; <userinput>netstat -nr</userinput>
+Routing tables
+
+Internet:
+Destination        Gateway            Flags    Refs      Use  Netif  Expire
+default            10.0.0.1           UGS         0    49378    xl0
+127.0.0.1          127.0.0.1          UH          0        6    lo0
+10.0.0/24          link#1             UC          0        0    xl0
+192.168.1/24       link#2             UC          0        0    xl1</screen>
+
+	<para>Avec la table de routage actuelle,
+	  <hostid>RouteurA</hostid> ne sera pas en mesure d'atteindre
+	  notre réseau interne 2.  Elle ne dispose pas de route
+	  pour <hostid role="ipaddr">192.168.2.0/24</hostid>.  Une
+	  manière de résoudre cela est d'ajouter
+	  manuellement la route.  La commande suivante ajouterait le
+	  réseau interne 2 &agrave; la table de routage de
+	  <hostid>RouteurA</hostid> en utilisant <hostid
+	  role="ipaddr">192.168.1.2</hostid> comme point
+	  intermédiaire:</para>
+
+	<screen>&prompt.root; <userinput>route add -net 192.168.2.0/24 192.168.1.2</userinput></screen>
+
+	<para>Maintenant <hostid>RouteurA</hostid> peut joindre
+	  n'importe quelle machine du réseau <hostid
+	  role="ipaddr">192.168.2.0/24</hostid>.</para>
+      </sect3>
+
+      <sect3>
+	<title>Configuration persistante</title>
+
+	<para>L'exemple précédent est parfait pour
+	  configurer une route statique sur un système en
+	  fonctionnement.  Cependant, le problème est que
+	  l'information de routage ne sera pas conservée si
+	  vous redémarrez votre machine &os;.  L'addition d'une
+	  route statique doit se faire dans votre fichier
+	  <filename>/etc/rc.conf</filename>:</para>
+
+	<programlisting># Add Internal Net 2 as a static route
+static_routes="internalnet2"
+route_internalnet2="-net 192.168.2.0/24 192.168.1.2"</programlisting>
+
+	<para>La variable <literal>static_routes</literal> est une
+	  liste de chaîne de caractères
+	  séparées par une espace.  Chaque chaîne
+	  fait référence &agrave; un nom de route.  Dans
+	  notre exemple nous avons qu'une seule chaîne dans
+	  <literal>static_routes</literal>.  Cette chaîne est
+	  <replaceable>internalnet2</replaceable>.  Nous ajoutons
+	  ensuite une variable de configuration appelée
+	  <literal>route_<replaceable>internalnet2</replaceable></literal>
+	  dans laquelle nous mettons tous les paramètres de
+	  configuration que nous passerions &agrave; la commande
+	  &man.route.8;.  Pour nous exemple précédent
+	  nous aurions utilisé la commande:</para>
+
+	  <screen>&prompt.root; <userinput>route add -net 192.168.2.0/24 192.168.1.2</userinput></screen>
+
+	  <para>nous avons donc besoin de <literal>"-net 192.168.2.0/24
+	    192.168.1.2"</literal>.</para>
+
+	<para>Comme cela a été précisé,
+	  nous pouvons avoir plus d'une chaîne dans la variable
+	  <literal>static_routes</literal>.  Cela nous permet de
+	  créer plusieurs routes statiques.  Les lignes
+	  suivantes donnent un exemple d'ajout de routes statiques
+	  pour les réseaux <hostid
+	  role="ipaddr">192.168.0.0/24</hostid> et <hostid
+	  role="ipaddr">192.168.1.0/24</hostid> sur un routeur
+	  imaginaire:</para>
+
+        <programlisting>static_routes="net1 net2"
+route_net1="-net 192.168.0.0/24 192.168.0.1"
+route_net2="-net 192.168.1.0/24 192.168.1.1"</programlisting>
+      </sect3>
+    </sect2>
+
+    <sect2>
+      <title>Propagation de route</title>
+      <indexterm><primary>propagation de route</primary></indexterm>
+
+      <para>Nous avons déj&agrave; expliqué comment
+	définir nos routes vers le monde extérieur, mais
+	pas comment le monde extérieur apprend &agrave; nous
+	localiser.</para>
+
+      <para>Nous savons déj&agrave; que les tables de routages
+	peuvent être renseignées pour que tout le trafic
+	pour un espace d'adresses donné (dans nos exemples, un
+	sous-réseau de classe C) soit envoyé &agrave;
+	une machine précise de ce réseau, qui
+	transmettra les paquets entrants.</para>
+
+      <para>Lorsqu'il attribue un espace d'adresses &agrave; votre
+	site, votre fournisseur d'accès définira ses
+	tables de routage de sorte que tout le trafic destiné
+	&agrave; votre sous-réseau vous soit envoyé sur
+	votre liaison PPP.  Mais comment les sites &agrave; l'autre
+	bout du pays savent-ils qu'ils doivent passer par votre
+	fournisseur d'accès?</para>
+
+      <para>Il existe un mécanisme (assez semblable au
+	système d'information distribué du DNS) qui
+	conserve un enregistrement de tous les espaces d'adresses
+	affectés, et définit leur point de connexion
+	&agrave; la dorsale Internet (&ldquo;backbone&rdquo;).  La
+	&ldquo;dorsale&rdquo; comprend les liaisons principales qui
+	véhiculent le trafic Internet &agrave; travers le pays
+	et le monde entier.  Chaque machine de la dorsale dispose
+	d'une copie de l'ensemble des tables maîtresses qui
+	aiguillent le trafic pour un réseau donné vers
+	le transporteur correspondant de la dorsale, et de l&agrave;
+	par l'intermédiaire de fournisseurs d'accès
+	successifs, jusqu'&agrave; atteindre votre
+	réseau.</para>
+
+      <para>C'est le rôle de votre fournisseur d'accès
+	d'annoncer aux sites de la dorsale qu'il est le point de
+	connexion (et par conséquent la route entrante) pour
+	votre site.  C'est ce que l'on appelle la propagation de
+	route.</para>
+    </sect2>
+
+    <sect2>
+      <title>En cas de problème</title>
+      <indexterm>
+	<primary><command>traceroute</command></primary>
+      </indexterm>
+      <para>Il se peut qu'il y ait parfois un problème avec la
+	propagation de route et que certains sites ne puissent vous
+	atteindre.  La commande probablement la plus utile pour
+	déterminer où une route est défaillante est
+	la commande &man.traceroute.8;.  Elle est également utile
+	si vous n'arrivez pas &agrave; vous connecter &agrave; une
+	machine distante (i.e.  lorsque &man.ping.8;
+	échoue).</para>
+
+      <para>La commande &man.traceroute.8; prend comme
+	paramètre le nom de la machine distante avec laquelle
+	vous essayez d'établir une connexion.  Elle vous
+	donnera la liste de passerelles intermédiaires
+	jusqu'&agrave; la machine cible, ou jusqu'&agrave; ce qu'il
+	n'y ait plus de connexion.</para>
+
+      <para>Pour plus d'informations, consultez la page de manuel de
+	&man.traceroute.8;.</para>
+    </sect2>
+
+    <sect2>
+      <title>Routage multicast</title>
+      <indexterm>
+	<primary>routage multicast</primary>
+      </indexterm>
+      <indexterm>
+	<primary>options du noyau</primary>
+	<secondary>MROUTING</secondary>
+      </indexterm>
+      <para>&os; supporte nativement les applications et le routage
+	multicast (diffusion pour plusieurs destinataires).  Les
+	applications multicast ne nécessitent pas de
+	configuration spécifique de &os;,
+	généralement, elles fonctionneront directement.
+	Le routage multicast demande &agrave; ce que le support soit
+	compilé dans le noyau:</para>
+
+      <programlisting>options MROUTING</programlisting>
+
+      <para>De plus, le &ldquo;daemon&rdquo; de routage multicast,
+	&man.mrouted.8; doit être configuré par
+	l'intermédiaire du fichier
+	<filename>/etc/mrouted.conf</filename> pour mettre en place
+	des tunnels et le protocole <acronym>DVMRP</acronym>.  Plus de détails sur
+	la configuration du routage multicast peuvent être
+	trouvés dans la page de manuel de
+	&man.mrouted.8;.</para>
+    </sect2>
+  </sect1>
+
+  <sect1 id="network-wireless">
+    <sect1info>
+      <authorgroup>
+	<author>
+	  <firstname>Eric</firstname>
+	  <surname>Anderson</surname>
+	  <contrib>Ecrit par </contrib>
+	</author>
+      </authorgroup>
+    </sect1info>
+    <title>Réseau sans fil</title>
+
+    <indexterm><primary>réseau sans fil</primary></indexterm>
+    <indexterm>
+      <primary>802.11</primary>
+      <see>réseau sans fil</see>
+    </indexterm>
+
+    <sect2>
+      <title>Introduction</title>
+
+      <para>Il peut être très utile de pouvoir utiliser
+	un micro-ordinateur sans le désagrément
+	d'être constamment relié &agrave; un câble
+	réseau.  &os; peut être utilisé comme
+	client sans fil, et même comme &ldquo;point
+	d'accès&rdquo; sans fil.</para>
+    </sect2>
+
+    <sect2>
+      <title>Modes de fonctionnement des systèmes sans
+	fils</title>
+
+      <para>Il existe deux manières différentes de
+	configurer les périphériques sans fil 802.11:
+	les modes BSS et IBSS.</para>
+
+      <sect3>
+	<title>Mode BSS</title>
+
+	<para>Le mode BSS est le mode généralement
+	  utilisé.  Le mode BSS est également
+	  appelé mode infrastructure.  Dans ce mode, plusieurs
+	  points d'accès sans fils sont connectés
+	  &agrave; un réseau câblé.  Chaque
+	  réseau sans fil possède son propre nom.  Ce
+	  nom est ce que l'on appelle le &ldquo;SSID&rdquo; du
+	  réseau.</para>
+
+	<para>Les clients sans fils se connectent &agrave; ces points
+	  d'accès sans fils.  La norme IEEE 802.11
+	  définie le protocole que les réseaux sans fils
+	  utilisent pour les connexions.  Un client sans fil peut
+	  être attaché &agrave; un réseau
+	  particulier quand un SSID est fixé.  Un client peut
+	  s'attacher &agrave; n'importe quel réseau en ne
+	  définissant pas explicitement de SSID.</para>
+      </sect3>
+
+      <sect3>
+	<title>Mode IBSS</title>
+
+	<para>Le mode IBSS, également appelé mode
+	  &ldquo;ad-hoc&rdquo;, est conçu pour les connexions
+	  point &agrave; point.  Il existe en fait deux types de mode
+	  ad-hoc.  Le premier est le mode IBSS, également
+	  appelé mode ad-hoc ou IEEE ad-hoc.  Ce mode est
+	  défini par les normes IEEE 802.11.  Le
+	  deuxième mode est appelé ad-hoc démo ou
+	  encore mode ad-hoc Lucent (et parfois, ce qui prête
+	  &agrave; confusion, mode ad-hoc).  C'est l'ancien mode
+	  ad-hoc pré-standard 802.11 et ne devrait être
+	  utilisé qu'avec d'anciennes installations.  Nous ne
+	  parlerons pas des modes ad-hoc dans ce qui suit.</para>
+      </sect3>
+    </sect2>
+
+    <sect2>
+      <title>Mode infrastructure</title>
+
+      <sect3>
+	<title>Points d'accès</title>
+
+	<para>Un point d'accès est un
+	  périphérique sans fil qui permet &agrave; un
+	  ou plusieurs clients sans fils d'utiliser ce
+	  périphérique comme un hub.  Quand ils
+	  utilisent un point d'accès, tous les clients
+	  communiquent par l'intermédiaire de ce point
+	  d'accès.  Plusieurs points d'accès sont
+	  souvent utilisés pour couvrir
+	  l'intégralité d'une zone géographique
+	  comme une maison, une entreprise, ou un parc avec un
+	  réseau sans fil.</para>
+
+	<para>Les points d'accès ont généralement
+	  plusieurs connexions réseaux: la carte réseaux
+	  sans fil, et une ou plusieurs cartes réseaux Ethernet
+	  pour les connexions avec le reste du réseau.</para>
+
+	<para>Les points d'accès peuvent être
+	  achetés tout fait, ou vous pouvez construire le votre
+	  avec &os; et une carte réseau sans fil
+	  supportée.  De nombreux constructeurs proposent des
+	  points d'accès et des cartes réseaux sans fils
+	  avec diverses fonctionnalités.</para>
+      </sect3>
+
+      <sect3>
+	<title>Construire un point d'accès avec &os;</title>
+	<indexterm>
+	  <primary>réseau sans fil</primary>
+	  <secondary>point d'accès</secondary>
+	</indexterm>
+
+	<sect4>
+	  <title>Pré-requis</title>
+
+	  <para>En vue de mettre en place un point d'accès sans
+	    fil sous &os;, vous avez besoin d'une carte réseau
+	    sans fil compatible.  Actuellement seule les cartes
+	    basées sur le circuit Prism sont supportées.
+	    Vous aurez également besoin d'une carte
+	    réseau câblée supportée par
+	    &os; (cela ne devrait pas être difficile &agrave;
+	    trouver, &os; supporte de nombreuses cartes).  Dans le
+	    cadre de cette section, nous supposerons que le trafic
+	    passera par un pont entre la carte sans fil et le
+	    réseau relié &agrave; la carte réseau
+	    classique.</para>
+
+	  <para>Le mode point d'accès implémenté
+	    par &os; fonctionne mieux avec certaines versions de
+	    firmware.  Les cartes utilisant un circuit Prism 2
+	    devraient utiliser un firmware 1.3.4 ou plus
+	    récent.  Les cartes Prism 2.5 et Prism 3 devraient
+	    utiliser la version 1.4.9.  Des versions de firmware plus
+	    anciennes pourront ne pas fonctionner correctement.
+	    Actuellement, la seule manière de mettre &agrave;
+	    jour vos cartes est d'utiliser les outils de mise &agrave;
+	    jour du firmware pour &windows; disponibles auprès
+	    du constructeur de votre carte.</para>
+	</sect4>
+
+	<sect4>
+	  <title>Configuration</title>
+
+	  <para>Assurez-vous tout d'abord que votre système
+	    voit la carte réseau sans fil:</para>
+
+	  <screen>&prompt.root; <userinput>ifconfig -a</userinput>
+wi0: flags=8843&lt;UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST&gt; mtu 1500
+	inet6 fe80::202:2dff:fe2d:c938%wi0 prefixlen 64 scopeid 0x7
+	inet 0.0.0.0 netmask 0xff000000 broadcast 255.255.255.255
+	ether 00:09:2d:2d:c9:50
+	media: IEEE 802.11 Wireless Ethernet autoselect (DS/2Mbps)
+	status: no carrier
+	ssid ""
+	stationname "FreeBSD Wireless node"
+	channel 10 authmode OPEN powersavemode OFF powersavesleep 100
+	wepmode OFF weptxkey 1</screen>
+
+	  <para>Ne vous préoccupez pas des détails,
+	    verifiez juste que s'affiche quelque chose qui vous
+	    indique qu'une carte réseau sans fil est
+	    installée.  Si vous avez des problèmes
+	    &agrave; voir l'interface réseau sans fil
+	    correspondante, et que vous utilisez une carte de type PC
+	    Card, vous devriez consultez les pages de manuel
+	    &man.pccardc.8; et &man.pccardd.8; pour plus
+	    d'information.</para>
+
+	  <para>Ensuite, vous devrez charger un module afin de mettre
+	    en place la partie de &os; faisant office de pont pour le
+	    point d'accès.  Pour charger le module
+	    &man.bridge.4;, exécutez la commande
+	    suivante:</para>
+
+	  <screen>&prompt.root; <userinput>kldload bridge</userinput></screen>
+
+	  <para>Vous ne devriez pas voir apparaître de message
+	    d'erreur lors du chargement du module.  Si ce n'est pas le
+	    cas, vous devrez peut-être compiler le support
+	    &man.bridge.4; dans votre noyau.  La section sur le <link
+	    linkend="network-bridging">Bridging</link> de ce manuel
+	    devrait pouvoir vous aider dans cette tâche.</para>
+
+	  <para>Maintenant que cette partie est assurée, nous
+	    devons dire &agrave; &os; entre quelles interface le pont
+	    doit être installé.  Nous effectuons cette
+	    configuration en utilisant &man.sysctl.8;:</para>
+
+	  <screen>&prompt.root; <userinput>sysctl net.link.ether.bridge.enable=1</userinput>
+&prompt.root; <userinput>sysctl net.link.ether.bridge.config="wi0 xl0"</userinput>
+&prompt.root; <userinput>sysctl net.inet.ip.forwarding=1</userinput></screen>
+
+	  <para>Sous les versions antérieures &agrave; la 5.2,
+	    vous devez utiliser &agrave; la place les options
+	    suivantes:</para>
+
+	  <screen>&prompt.root; <userinput>sysctl net.link.ether.bridge=1</userinput>
+&prompt.root; <userinput>sysctl net.link.ether.bridge_cfg="wi0,xl0"</userinput>
+&prompt.root; <userinput>sysctl net.inet.ip.forwarding=1</userinput></screen>
+
+	  <para>Il est maintenant possible de configurer la carte.  La
+	    commande suivante positionnera la carte en mode point
+	    d'accès:</para>
+
+	  <screen>&prompt.root; <userinput>ifconfig wi0 ssid <replaceable>my_net</replaceable> channel 11 media DS/11Mbps mediaopt hostap up stationname "<replaceable>FreeBSD AP</replaceable>"</userinput></screen>
+
+	  <para>La ligne &man.ifconfig.8; active l'interface
+	    <devicename>wi0</devicename>, fixe son paramètre
+	    SSID &agrave; la valeur <replaceable>my_net</replaceable>,
+	    et fixe le nom de station &agrave; <replaceable>FreeBSD
+	    AP</replaceable>.  L'option <option>media
+	    DS/11Mbps</option> positionne la carte dans le mode 11Mbps
+	    et est nécessaire pour que le paramètre
+	    <option>mediaopt</option> soit pris en compte.  L'option
+	    <option>mediaopt hostap</option> place l'interface dans le
+	    mode point d'accès.  L'option <option>channel
+	    11</option> fixe le canal 802.11b &agrave; employer.  La
+	    page de manuel &man.wicontrol.8; donne les options de
+	    canaux valides en fonction de votre zone
+	    géographique.</para>
+
+	  <para>Vous devez maintenant disposer d'un point
+	    d'accès opérationnel et en fonctionnement.
+	    Vous êtes encouragés &agrave; lire les pages
+	    de manuel &man.wicontrol.8;, &man.ifconfig.8;, et
+	    &man.wi.4; pour plus d'amples informations.</para>
+
+	  <para>Il est également conseillé de lire la
+	    section qui suit sur le chiffrage.</para>
+	</sect4>
+
+	<sect4>
+	  <title>Information d'état</title>
+
+	  <para>Une fois que le point d'accès est
+	    configuré et opérationnel, les
+	    opérateurs voudront voir quels clients sont
+	    associés avec le point d'accès.  A n'importe
+	    quel instant, l'opérateur pourra taper:</para>
+
+	  <screen>&prompt.root; <userinput>wicontrol -l</userinput>
+1 station:
+00:09:b7:7b:9d:16  asid=04c0, flags=3&lt;ASSOC,AUTH&gt;, caps=1&lt;ESS&gt;, rates=f&lt;1M,2M,5.5M,11M&gt;, sig=38/15</screen>
+
+	  <para>Ceci nous montre qu'une station est associée,
+	    ainsi que son paramétrage.  Les informations
+	    indiquées concernant le signal devraient être
+	    utilisées uniquement comme une indication relative
+	    sur sa puissance.  Sa conversion en dBm ou tout autre
+	    unité varie en fonction des différentes
+	    versions de firmware.</para>
+	</sect4>
+      </sect3>
+
+      <sect3>
+	<title>Clients</title>
+
+	<para>Un client sans fil est un système qui se connecte
+	  &agrave; un point d'accès ou un autre client
+	  directement.</para>
+
+	<para>Typiquement, les clients sans fils disposent d'une seule
+	  interface réseau, la carte réseau sans
+	  fil.</para>
+
+	<para>Il existe quelques manières différentes de
+	  configurer un client sans fil.  Elles sont basées sur
+	  les différents modes sans fils,
+	  généralement les modes BSS (mode
+	  infrastructure, qui nécessite un point
+	  d'accès), et IBSS (mode ad-hoc, ou mode point
+	  &agrave; point).  Dans notre exemple, nous utiliserons le
+	  plus populaire des deux, le mode BSS, pour discuter avec un
+	  point d'accès.</para>
+
+	<sect4>
+	  <title>Pré-requis</title>
+
+	  <para>Il n'y a qu'un seul pré-requis pour configurer
+	    &os; comme client sans fil.  Vous aurez besoin d'une carte
+	    sans fil supportée par &os;.</para>
+	</sect4>
+
+	<sect4>
+	  <title>Configurer un client sans fil &os;</title>
+
+	  <para>Avant de commencer, vous aurez besoin de
+	    connaître certaines choses concernant le
+	    réseau sans fil auquel vous désirez vous
+	    connecter.  Dans cet exemple, nous rejoignons un
+	    réseau ayant pour nom
+	    <replaceable>my_net</replaceable>, et avec le chiffrage
+	    des liaisons désactivé.</para>
+
+	  <note>
+	    <para>Dans cet exemple, nous n'utilisons pas le chiffrage
+	      des liaisons, ce qui est une situation dangereuse.  Dans
+	      la section suivante, nous verrons comment activer le
+	      chiffrage, pourquoi il est important de le faire, et
+	      pourquoi certaines technologies de chiffrage ne vous
+	      protégerons pas complètement.</para>
+	  </note>
+
+	  <para>Assurez-vous que votre carte est reconnue par
+	    &os;:</para>
+
+	  <screen>&prompt.root; <userinput>ifconfig -a</userinput>
+wi0: flags=8843&lt;UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST&gt; mtu 1500
+	inet6 fe80::202:2dff:fe2d:c938%wi0 prefixlen 64 scopeid 0x7
+	inet 0.0.0.0 netmask 0xff000000 broadcast 255.255.255.255
+	ether 00:09:2d:2d:c9:50
+	media: IEEE 802.11 Wireless Ethernet autoselect (DS/2Mbps)
+	status: no carrier
+	ssid ""
+	stationname "FreeBSD Wireless node"
+	channel 10 authmode OPEN powersavemode OFF powersavesleep 100
+	wepmode OFF weptxkey 1</screen>
+
+	  <para>Maintenant, nous pouvons configurer la carte suivant
+	    les paramètres de notre réseau:</para>
+
+	  <screen>&prompt.root; <userinput>ifconfig wi0 inet <replaceable>192.168.0.20</replaceable> netmask <replaceable>255.255.255.0</replaceable> ssid <replaceable>my_net</replaceable></userinput></screen>
+
+	  <para>Remplacez <hostid role="ipaddr">192.168.0.20</hostid>
+	    et <hostid role="netmask">255.255.255.0</hostid> avec une
+	    adresse IP ainsi qu'un masque de sous-réseau
+	    valides de votre réseau câblé.
+	    Rappelez-vous, notre point d'accès joue le
+	    rôle de pont entre le réseau sans fil et le
+	    réseau câblé, il apparaîtra aux
+	    autres cartes sur votre réseau que vous êtes
+	    sur le même réseau câblé.</para>
+
+	  <para>Une fois cela effectué, vous devriez être
+	    en mesure d'utiliser &man.ping.8; pour atteindre les
+	    machines sur le réseau câblé de la
+	    même façon que si vous étiez
+	    connecté en utilisant un câble réseau
+	    standard.</para>
+
+	  <para>Si vous rencontrez des problèmes avec votre
+	    connexion sans fil, vérifiez que vous êtes
+	    associé&mdash;&ldquo;associated&rdquo;
+	    (connecté) avec le point d'accès:</para>
+
+	  <screen>&prompt.root; <userinput>ifconfig wi0</userinput></screen>
+
+	  <para>devrait retourner un certain nombre d'information; et
+	    vous devriez voir s'afficher:</para>
+
+	  <screen>status: associated</screen>
+
+	  <para>Si <literal>associated</literal> n'est pas
+	    affiché, alors il se peut que vous soyez hors de
+	    portée du point d'accès, que vous ayez le
+	    chiffrage activé, ou peut-être que vous ayez
+	    un problème de configuration.</para>
+	</sect4>
+      </sect3>
+
+      <sect3>
+	<title>Chiffrement</title>
+	<indexterm>
+	  <primary>réseau sans fil</primary>
+	  <secondary>chiffrement</secondary>
+	</indexterm>
+
+	<para>L'utilisation du chiffrement sur un réseau sans
+	  fil est important parce que vous n'avez plus la
+	  possibilité de conserver le réseau dans une
+	  zone protégée.  Vos données sans fil
+	  seront diffusées dans tout le voisinage, et toute
+	  personne désirant y accéder pourra le faire.
+	  C'est ici que le chiffrement entre en jeu.  En chiffrant les
+	  données qui sont envoyées par les ondes, vous
+	  rendez plus difficile l'interception de celles-ci par
+	  quiconque d'intéressé.</para>
+
+	<para>Les deux méthodes les plus courantes de chiffrage
+	  des données entre un client et un point
+	  d'accès sont le protocol WEP et &man.ipsec.4;.</para>
+
+	<sect4>
+	  <title>WEP</title>
+	  <indexterm><primary>WEP</primary></indexterm>
+
+	  <para>WEP est l'abbrévation de &ldquo;Wired
+	    Equivalency Protocol&ldquo;.  Le protocole de chiffrage
+	    WEP est une tentative de rendre les réseaux sans fils
+	    aussi sûrs et sécurisés qu'un
+	    réseau filaire.  Malheureusement, il a
+	    été craqué, et est relativement
+	    simple &agrave; déjouer.  Cela signifie que l'on ne
+	    doit pas lui faire confiance quand il est
+	    nécessaire de chiffrer des données
+	    sensibles.</para>
+
+	  <para>Cela reste mieux que rien du tout, utilisez ce qui
+	    suit pour activer WEP sur votre nouveau point
+	    d'accès &os;:</para>
+
+	  <screen>&prompt.root; <userinput>ifconfig wi0 inet up ssid <replaceable>my_net</replaceable> wepmode on wepkey <replaceable>0x1234567890</replaceable> media DS/11Mbps mediaopt hostap</userinput></screen>
+
+	  <para>Et vous pouvez activer WEP sur un client avec la
+	    commande:</para>
+
+	  <screen>&prompt.root; <userinput>ifconfig wi0 inet <replaceable>192.168.0.20</replaceable> netmask <replaceable>255.255.255.0</replaceable> ssid <replaceable>my_net</replaceable> wepmode on wepkey <replaceable>0x1234567890</replaceable></userinput></screen>
+
+	  <para>Notez que vous devriez remplacer
+	    <replaceable>0x1234567890</replaceable> par une clé
+	    plus personnelle.</para>
+	</sect4>
+
+	<sect4>
+	  <title>IPsec</title>
+
+	  <para>&man.ipsec.4; est un outil bien plus puissant et
+	    robuste pour chiffrer des données sur un
+	    réseau.  C'est la méthode &agrave;
+	    préférer pour chiffrer les données sur un
+	    réseau sans fil.  Vous pouvez obtenir plus de
+	    détails concernant &man.ipsec.4; et comment
+	    l'implémenter dans la section <link
+	    linkend="ipsec">IPsec</link> de ce manuel.</para>
+	</sect4>
+      </sect3>
+
+      <sect3>
+	<title>Outils</title>
+
+	<para>Il existe un petit nombre d'outils disponibles pour le
+	  débogage et la configuration d'un réseau sans
+	  fil, et nous tenterons ici d'en décrire certains
+	  ainsi que leurs fonctionnalités.</para>
+
+	<sect4>
+	  <title>La suite
+	    <application>bsd-airtools</application></title>
+
+	  <para>La suite <application>bsd-airtools</application> est
+	    une trousse &agrave; outils complète qui comprend
+	    des outils d'audit sans fil pour le craquage du
+	    système WEP, la détection de points
+	    d'accès, etc.</para>
+
+	  <para>Les utilitaires
+	    <application>bsd-airtools</application> peuvent être
+	    installés &agrave; partir du logiciel porté
+	    <filename role="package">net-mgmt/bsd-airtools</filename>.  Des
+	    instructions sur l'installation des logiciels
+	    portés peuvent être trouvées dans le
+	    <xref linkend="ports"/> de ce manuel.</para>
+
+	  <para>Le programme <command>dstumbler</command> est l'outil
+	    qui permet la recherche de points d'accès et la
+	    mesure du rapport signal sur bruit.  Si vous avez des
+	    difficultés &agrave; mettre en place et &agrave;
+	    faire fonctionner votre point d'accès,
+	    <command>dstumbler</command> pourra vous aider dans ce
+	    sens.</para>
+
+	  <para>Pour tester la sécurité de votre
+	    réseau sans fil, vous pouvez choisir d'employer les
+	    outils &ldquo;dweputils&rdquo;
+	    (<command>dwepcrack</command>, <command>dwepdump</command>
+	    et <command>dwepkeygen</command>) pour vous aider &agrave;
+	    déterminer si WEP répond &agrave; vos
+	    besoins en matière de sécurité au
+	    niveau de votre réseau sans fil.</para>
+	</sect4>
+
+	<sect4>
+	  <title>Les utilitaires <command>wicontrol</command>,
+	    <command>ancontrol</command> et
+	    <command>raycontrol</command></title>
+
+	  <para>Il existe des outils que vous pouvez utiliser pour
+	    contrôler le comportement de votre carte
+	    réseau sans fil sur le réseau sans fil.
+	    Dans les exemples précédents, nous avons
+	    choisi d'employer &man.wicontrol.8; puisque notre carte
+	    sans fil utilise l'interface <devicename>wi0</devicename>.
+	    Si vous avez une carte sans fil Cisco, elle
+	    apparaîtrait comme <devicename>an0</devicename>, et
+	    vous utiliseriez alors le programme
+	    &man.ancontrol.8;.</para>
+	</sect4>
+
+	<sect4>
+	  <title>La commande <command>ifconfig</command></title>
+	  <indexterm><primary>ifconfig</primary></indexterm>
+
+	  <para>La commande &man.ifconfig.8; propose plusieurs options
+	    identiques &agrave; celles de &man.wicontrol.8;, cependant
+	    il manque quelques options.  Consultez la page de manuel
+	    d'&man.ifconfig.8; pour les différents
+	    paramètres et options en ligne de commande.</para>
+	</sect4>
+      </sect3>
+
+      <sect3>
+	<title>Cartes supportées</title>
+
+	<sect4>
+	  <title>Points d'accès</title>
+
+	  <para>Les seules cartes actuellement supportées pour
+	    le mode BSS (points d'accès) sont celles
+	    basées sur les circuits Prism 2, 2.5, ou 3.  Pour
+	    une liste complète, consultez la page de manuel de
+	    &man.wi.4;.</para>
+	</sect4>
+
+	<sect4>
+	  <title>Clients 802.11b</title>
+
+	  <para>Presque toutes les cartes réseaux sans fil
+	    802.11b sont supportées sous &os;.  La plupart des
+	    cartes basées sur les circuits Prism, Spectrum24,
+	    Hermes, Aironet, et Raylink fonctionneront dans le mode
+	    IBSS (ad-hoc, point &agrave; point, et BSS).</para>
+	</sect4>
+
+	<sect4>
+	  <title>Clients 802.11a &amp; 802.11g</title>
+
+	  <para>Le pilote de périphérique &man.ath.4;
+	    supporte les normes 802.11a et 802.11g.  Si votre carte
+	    est basée sur un circuit Atheros, vous devriez
+	    être en mesure d'utiliser ce pilote.</para>
+
+	  <para>Malheureusement il y a toujours de nombreux fabricants
+	    qui ne fournissent pas &agrave; la communauté des
+	    logiciels libres les informations concernant les pilotes
+	    pour leurs cartes considérant de telles
+	    informations comme des secrets industriels.  Par
+	    conséquent, il ne reste aux développeurs de
+	    &os; et d'autres systèmes d'exploitation libres que
+	    deux choix: développer les pilotes en passant par
+	    un long et pénible processus de <quote>reverse
+	    engineering</quote> ou utiliser les pilotes binaires
+	    existants disponibles pour la plateforme
+	    &microsoft.windows;.  La plupart des développeurs,
+	    y compris ceux impliqués dans &os;, ont choisi
+	    cette dernière approche.</para>
+
+	  <para>Grâce aux contributions de Bill Paul (wpaul),
+	    depuis &os;&nbsp;5.3-RELEASE, il existe un support
+	    <quote>natif</quote> pour la spécification
+	    d'interface des pilotes de périphérique
+	    réseau (Network Driver Interface
+	    Specification&mdash;NDIS).  Le NDISulator &os; (connu
+	    également sous le nom de Project Evil) prend un
+	    pilote binaire réseau &windows; et lui fait penser
+	    qu'il est en train de tourner sous &windows;.  Cette
+	    fonctionnalité est relativement nouvelle, mais
+	    semble fonctionner correctement dans la plupart des
+	    tests.</para>
+
+	  <indexterm><primary>NDIS</primary></indexterm>
+	  <indexterm><primary>NDISulator</primary></indexterm>
+	  <indexterm><primary>pilotes de périphériques
+	    &windows;</primary></indexterm>
+	  <indexterm><primary>Microsoft Windows</primary></indexterm>
+	  <indexterm><primary>Microsoft Windows</primary>
+	    <secondary>pilotes de
+	      périphériques</secondary></indexterm>
+	  <indexterm><primary>KLD (kernel loadable
+	    object)</primary></indexterm>
+<!-- We should probably omit the expanded name, and add a <see> entry
+for it.  Whatever is done must also be done to the same indexterm in
+linuxemu/chapter.xml -->
+
+	  <para>Pour utiliser le NDISulator, vous avez besoin de trois
+	    choses:</para>
+
+	  <orderedlist>
+	    <listitem>
+	      <para>les sources du noyau;</para>
+	    </listitem>
+	    <listitem>
+	      <para>le pilote binaire &windowsxp;
+		(extension <filename>.SYS</filename>);</para>
+	    </listitem>
+	    <listitem>
+	      <para>le fichier de configuration du pilote &windowsxp;
+		(extension <filename>.INF</filename>).</para>
+	    </listitem>
+	  </orderedlist>
+
+	  <para>Vous aurez besoin de compiler le module d'interface du
+	    mini-pilote &man.ndis.4;.  En tant que
+	    <username>root</username>:</para>
+
+	  <screen>&prompt.root; <userinput>cd /usr/src/sys/modules/ndis</userinput>
+&prompt.root; <userinput>make &amp;&amp; make install</userinput></screen>
+
+	  <para>Recherchez les fichiers spécifiques &agrave;
+	    votre carte.  Généralement, ils peuvent
+	    être trouvés sur les CDs livrés avec
+	    la carte ou sur le site du fabricant.  Dans les exemples
+	    qui suivent nous utiliseront les fichiers
+	    <filename>W32DRIVER.SYS</filename> et
+	    <filename>W32DRIVER.INF</filename>.</para>
+
+	  <para>L'étape suivante est de compiler le pilote
+	    binaire dans un module chargeable du noyau.  Pour
+	    effectuer cela, en tant que <username>root</username>,
+	    rendez vous dans le répertoire du module
+	    <filename>if_ndis</filename> et copiez-y les fichiers du
+	    pilote &windows;:</para>
+
+	  <screen>&prompt.root; <userinput>cd /usr/src/sys/modules/if_ndis</userinput>
+&prompt.root; <userinput>cp <replaceable>/path/to/driver/W32DRIVER.SYS</replaceable> ./</userinput>
+&prompt.root; <userinput>cp <replaceable>/path/to/driver/W32DRIVER.INF</replaceable> ./</userinput></screen>
+
+	  <para>Nous utiliserons maintenant l'utilitaire
+	    <command>ndiscvt</command> pour générer le
+	    fichier d'entête
+	    <filename>ndis_driver_data.h</filename> du pilote pour la
+	    compilation du module:</para>
+
+	  <screen>&prompt.root; <userinput>ndiscvt -i <replaceable>W32DRIVER.INF</replaceable> -s <replaceable>W32DRIVER.SYS</replaceable> -o ndis_driver_data.h</userinput></screen>
+
+	  <para>Les options <option>-i</option> et <option>-s</option>
+	    précisent respectivement le fichier de
+	    configuration et le fichier binaire.  Nous utilisons
+	    l'option <option>-o ndis_driver_data.h</option> car le
+	    <filename>Makefile</filename> recherchera ce fichier lors
+	    de la compilation du module.</para>
+
+	  <note>
+	    <para>Certains pilotes &windows; nécessitent des
+	      fichiers supplémentaires pour fonctionner.  Vous
+	      pouvez les ajouter avec <command>ndiscvt</command> en
+	      utilisant l'option <option>-f</option>.  Consultez la page
+	      de manuel &man.ndiscvt.8; pour plus d'information.</para>
+	  </note>
+
+	  <para>Nous pouvons enfin compiler et installer le module du
+	    pilote:</para>
+
+	  <screen>&prompt.root; <userinput>make && make install</userinput></screen>
+
+	  <para>Pour utiliser le pilote, vous devez charger les
+	    modules appropriés:</para>
+
+	  <screen>&prompt.root; <userinput>kldload ndis</userinput>
+&prompt.root; <userinput>kldload if_ndis</userinput></screen>
+
+	  <para>La première commande charge le pilote
+	    d'interface NDIS, la seconde charge l'interface
+	    réseau.  Contrôlez la sortie de &man.dmesg.8;
+	    &agrave; la recherche d'une quelconque erreur au
+	    chargement.  Si tout s'est bien passé, vous devriez
+	    obtenir une sortie ressemblant &agrave; ce qui
+	    suit:</para>
+
+	  <screen>ndis0: &lt;Wireless-G PCI Adapter&gt; mem 0xf4100000-0xf4101fff irq 3 at device 8.0 on pci1
+      ndis0: NDIS API version: 5.0
+      ndis0: Ethernet address: 0a:b1:2c:d3:4e:f5
+      ndis0: 11b rates: 1Mbps 2Mbps 5.5Mbps 11Mbps
+      ndis0: 11g rates: 6Mbps 9Mbps 12Mbps 18Mbps 36Mbps 48Mbps 54Mbps</screen>
+
+	  <para>A partir de l&agrave;, vous pouvez traiter le
+	    périphérique <devicename>ndis0</devicename>
+	    comme n'importe quel périphérique sans fil
+	    (e.g. <devicename>wi0</devicename>) et consulter les
+	    premières sections de ce chapitre.</para>
+	</sect4>
+      </sect3>
+    </sect2>
+  </sect1>
+
+  <sect1 id="network-bluetooth">
+    <sect1info>
+      <authorgroup>
+	<author>
+	  <firstname>Pav</firstname>
+	  <surname>Lucistnik</surname>
+	  <contrib>Ecrit par </contrib>
+	  <affiliation>
+	    <address><email>pav@FreeBSD.org</email></address>
+	  </affiliation>
+	</author>
+      </authorgroup>
+    </sect1info>
+    <title>Bluetooth</title>
+
+    <indexterm><primary>Bluetooth</primary></indexterm>
+    <sect2>
+      <title>Introduction</title>
+
+      <para>&bluetooth; est une technologie sans fil pour créer
+	des réseaux personnels sans fils fonctionnant dans la
+	bande 2.4 GHz ne nécessitant pas d'autorisation, avec
+	une portée de 10 mètres.  Les réseaux
+	étant généralement composés de
+	périphériques nomades comme les
+	téléphones portables, les assistants personnels
+	et les ordinateurs portables.  Contrairement &agrave; l'autre
+	technologie sans fil, Wi-Fi, &bluetooth; offre un niveau plus
+	élevé de profils de service, par exemple des
+	serveurs de fichiers semblables &agrave; FTP, &ldquo;file
+	pushing&rdquo;, transport de la voix, émulation de
+	lignes séries, et bien plus.</para>
+
+      <para>La pile &bluetooth; sous &os; utilise le système
+	Netgraph (voir &man.netgraph.4;).  Une large gamme
+	d'adaptateurs USB &bluetooth; sont supportés par le
+	pilote &man.ng.ubt.4;.  Les périphériques
+	&bluetooth; basés sur le circuit Broadcom BCM2033 sont
+	supportés par les pilotes &man.ubtbcmfw.4; et
+	&man.ng.ubt.4;.  La carte 3Com &bluetooth; PC Card 3CRWB60-A
+	demande le pilote &man.ng.bt3c.4;.  Les
+	périphériques &bluetooth; de type série
+	et UART sont supportés via les pilotes &man.sio.4;,
+	&man.ng.h4.4; et &man.hcseriald.8;.  Cette section
+	décrit l'utilisation d'un adaptateur USB &bluetooth;.
+	Le support &bluetooth; est disponible sur les systèmes
+	5.0 et suivants.</para>
+    </sect2>
+
+    <sect2>
+      <title>Branchement du périphérique</title>
+
+      <para>Par défaut les pilotes de
+	périphériques &bluetooth; sont disponibles sous
+	la forme de modules du noyau.  Avant de brancher le
+	périphérique, vous devrez charger le pilote dans
+	le noyau:</para>
+
+      <screen>&prompt.root; <userinput>kldload ng_ubt</userinput></screen>
+
+      <para>Si le périphérique &bluetooth; est
+	présent au démarrage du système, chargez
+	le module &agrave; partir de
+	<filename>/boot/loader.conf</filename>:</para>
+
+      <programlisting>ng_ubt_load="YES"</programlisting>
+
+      <para>Branchez votre clé USB.  Une sortie semblable
+	&agrave; celle-ci devrait s'afficher sur la console (ou dans
+	les journaux du système):</para>
+
+      <screen>ubt0: vendor 0x0a12 product 0x0001, rev 1.10/5.25, addr 2
+ubt0: Interface 0 endpoints: interrupt=0x81, bulk-in=0x82, bulk-out=0x2
+ubt0: Interface 1 (alt.config 5) endpoints: isoc-in=0x83, isoc-out=0x3,
+      wMaxPacketSize=49, nframes=6, buffer size=294</screen>
+
+      <note>
+	<para>La pile Bluetooth doit être lancée
+	  manuellement sous &os;&nbsp;6.0, et sous les versions 5.0
+	  antérieures &agrave; la 5.5.  Ce lancement est
+	  automatique &agrave; partir de &man.devd.8; sous
+	  &os;&nbsp;5.5, 6.1 et versions suivantes.</para>
+
+      <para>Copiez
+	<filename>/usr/share/examples/netgraph/bluetooth/rc.bluetooth</filename>
+	&agrave; un emplacement adapté, comme
+	<filename>/etc/rc.bluetooth</filename>.  Cette
+	procédure est utilisée pour démarrer et
+	arrêter la pile &bluetooth;.  C'est une bonne
+	idée d'arrêter la pile avant de débrancher
+	le périphérique, mais ce n'est pas
+	(généralement) fatal.  Quand la pile
+	démarre, vous devriez avoir des messages similaires aux
+	suivants:</para>
+
+      <screen>&prompt.root; <userinput>/etc/rc.bluetooth start ubt0</userinput>
+BD_ADDR: 00:02:72:00:d4:1a
+Features: 0xff 0xff 0xf 00 00 00 00 00
+&lt;3-Slot&gt; &lt;5-Slot&gt; &lt;Encryption&gt; &lt;Slot offset&gt;
+&lt;Timing accuracy&gt; &lt;Switch&gt; &lt;Hold mode&gt; &lt;Sniff mode&gt;
+&lt;Park mode&gt; &lt;RSSI&gt; &lt;Channel quality&gt; &lt;SCO link&gt;
+&lt;HV2 packets&gt; &lt;HV3 packets&gt; &lt;u-law log&gt; &lt;A-law log&gt; &lt;CVSD&gt;
+&lt;Paging scheme&gt; &lt;Power control&gt; &lt;Transparent SCO data&gt;
+Max. ACL packet size: 192 bytes
+Number of ACL packets: 8
+Max. SCO packet size: 64 bytes
+Number of SCO packets: 8</screen>
+      </note>
+    </sect2>
+
+    <sect2>
+      <title>Interface de contrôle de l'hôte (HCI)</title>
+
+      <indexterm><primary>HCI</primary></indexterm>
+
+      <para>L'interface de contrôle de l'hôte (HCI)
+	fournit une interface de commande pour le contrôleur de
+	la bande de base et le gestionnaire de liaisons, et
+	l'accès &agrave; l'état du matériel et
+	aux registres de contrôle.  Cette interface offre une
+	méthode uniforme d'accès aux fonctions de la
+	bande de base &bluetooth;.  La couche HCI de l'hôte
+	échange des données et des commandes avec le
+	firmware HCI du matériel &bluetooth;.  Le pilote de la
+	couche de transport du contrôleur d'hôte (i.e.  le
+	bus physique) fournit aux deux couches HCI la
+	possibilité d'échanger des informations entre
+	elles.</para>
+
+      <para>Un seul noeud Netgraph de type <emphasis>hci</emphasis>
+	est créé pour un périphérique
+	&bluetooth;.  Le noeud HCI est normalement connecté au
+	noeud du pilote &bluetooth; (flux descendant) et au noeud
+	L2CAP (flux montant).  Toutes les opérations HCI
+	doivent être effectuées sur le noeud HCI et non
+	pas sur le noeud du pilote de périphérique.  Le
+	nom par défaut pour le noeud HCI est
+	&ldquo;devicehci&rdquo;.  Pour plus de détails
+	consultez la page de manuel &man.ng.hci.4;.</para>
+
+      <para>Une des tâches les plus courantes est la recherche
+	de périphériques &bluetooth; dans le voisinage
+	hertzien.  Cette opération est appelée
+	<emphasis>inquiry</emphasis> (enquête, recherche).
+	Cette recherche et les autres opérations relatives
+	&agrave; HCI sont effectuées par l'utilitaire
+	&man.hccontrol.8;.  L'exemple ci-dessous montre comment
+	déterminer quels périphériques
+	&bluetooth; sont dans le voisinage.  Vous devriez obtenir une
+	listes de périphériques au bout de quelques
+	secondes.  Notez qu'un périphérique distant ne
+	répondra &agrave; la recherche que s'il est
+	placé dans le mode <emphasis>discoverable</emphasis>.</para>
+
+      <screen>&prompt.user; <userinput>hccontrol -n ubt0hci inquiry</userinput>
+Inquiry result, num_responses=1
+Inquiry result #0
+       BD_ADDR: 00:80:37:29:19:a4
+       Page Scan Rep. Mode: 0x1
+       Page Scan Period Mode: 00
+       Page Scan Mode: 00
+       Class: 52:02:04
+       Clock offset: 0x78ef
+Inquiry complete. Status: No error [00]</screen>
+
+      <para><literal>BD_ADDR</literal> est l'adresse unique d'un
+	périphérique &bluetooth;, similaire &agrave;
+	l'adresse MAC d'une carte réseau.  Cette adresse est
+	nécessaire pour communiquer avec un
+	périphérique.  Il est possible d'assigner un nom
+	humainement compréhensible &agrave; l'adresse BD_ADDR.
+	Le fichier <filename>/etc/bluetooth/hosts</filename> contient
+	des informations concernant les hôtes &bluetooth;
+	connus.  L'exemple suivant montre comment obtenir le nom qui a
+	été assigné au périphérique
+	distant:</para>
+
+      <screen>&prompt.user; <userinput>hccontrol -n ubt0hci remote_name_request 00:80:37:29:19:a4</userinput>
+BD_ADDR: 00:80:37:29:19:a4
+Name: Pav's T39</screen>
+
+      <para>Si vous effectuez une recherche sur un
+	périphérique &bluetooth; distant, vous devriez
+	trouver votre ordinateur en tant que &ldquo;votre.machine.nom
+	(ubt0)&rdquo;.  Le nom affecté au
+	périphérique local peut être
+	modifié &agrave; tout moment.</para>
+
+      <para>Le système &bluetooth; fournit une connexion point
+	&agrave; point (seules deux matériels &bluetooth; sont
+	concernés), ou une connexion point &agrave;
+	multipoints.  Dans le cas d'une connexion point &agrave;
+	multipoints, la connexion est partagés entre plusieurs
+	périphériques &bluetooth;.  L'exemple suivant
+	montre comment obtenir la liste des connexions en bande de
+	base actives pour le périphérique local:</para>
+
+      <screen>&prompt.user; <userinput>hccontrol -n ubt0hci read_connection_list</userinput>
+Remote BD_ADDR    Handle Type Mode Role Encrypt Pending Queue State
+00:80:37:29:19:a4     41  ACL    0 MAST    NONE       0     0 OPEN</screen>
+
+      <para>Une <emphasis>manipulation de la connexion</emphasis> est
+	utile quand la fin d'une connexion en bande de base est
+	nécessaire.  Notez qu'il n'est normalement pas
+	nécessaire de le faire &agrave; la main.  La pile
+	mettra fin automatiquement aux connexions en bande de base
+	inactives.</para>
+
+      <screen>&prompt.root; <userinput>hccontrol -n ubt0hci disconnect 41</userinput>
+Connection handle: 41
+Reason: Connection terminated by local host [0x16]</screen>
+
+      <para>Référez-vous &agrave; la commande
+	<command>hccontrol help</command> pour une liste
+	complète des commandes HCI disponibles.  La plupart des
+	commandes HCI ne nécessitent pas les privilèges
+	du super-utilisateur.</para>
+    </sect2>
+
+    <sect2>
+      <title>Protocole d'adaptation et de contrôle de lien
+	logique (L2CAP)</title>
+
+      <indexterm><primary>L2CAP</primary></indexterm>
+
+      <para>Le protocole d'adaptation et de contrôle de lien
+	logique (L2CAP) fournit des services orientés connexion
+	ou non aux protocoles de niveaux supérieurs, et cela
+	avec des possibilités de multiplexage de protocoles, de
+	segmentation et de réassemblage.  L2CAP permet aux
+	applications et aux protocoles de niveaux supérieurs de
+	transmettre et recevoir des paquets L2CAP d'une taille allant
+	jusqu'&agrave; 64 Ko.</para>
+
+      <para>L2CAP est basé sur le concept de
+	<emphasis>canaux</emphasis>.  Un canal est une connexion
+	logique au sommet de la connexion en bande de base.  Chaque
+	canal est attaché &agrave; un protocole suivant le
+	schéma plusieurs-vers-un.  Plusieurs canaux peuvent
+	être attachés au même protocole, mais un
+	canal ne peut être attachés &agrave; plusieurs
+	protocoles.  Chaque paquet L2CAP reçu sur un canal est
+	dirigé vers le protocole de niveau supérieur
+	approprié.  Plusieurs canaux peuvent partager la
+	même connexion en bande de base.</para>
+
+      <para>Un seul noeud Netgraph de type <emphasis>l2cap</emphasis>
+	est créé pour un périphérique
+	&bluetooth;.  Le noeud L2CAP est normalement connecté
+	au noeud HCI &bluetooth; (flux descendant) et aux noeuds des
+	&ldquo;sockets&rdquo; &bluetooth; (flux montant).  Le nom par
+	défaut pour le noeud L2CAP est
+	&ldquo;device2cap&rdquo;.  Pour plus de détails
+	consultez la page de manuel &man.ng.l2cap.4;.</para>
+
+      <para>Une commande utile est &man.l2ping.8;, qui peut être
+	utilisée pour &ldquo;pinguer&rdquo; les autres
+	périphériques.  Certaines implémentations
+	de &bluetooth; peuvent ne pas renvoyer toutes les
+	données qui leur sont envoyées, aussi <literal>0
+	bytes</literal> dans ce qui suit est normal.</para>
+
+      <screen>&prompt.root; <userinput>l2ping -a 00:80:37:29:19:a4</userinput>
+0 bytes from 0:80:37:29:19:a4 seq_no=0 time=48.633 ms result=0
+0 bytes from 0:80:37:29:19:a4 seq_no=1 time=37.551 ms result=0
+0 bytes from 0:80:37:29:19:a4 seq_no=2 time=28.324 ms result=0
+0 bytes from 0:80:37:29:19:a4 seq_no=3 time=46.150 ms result=0</screen>
+
+      <para>L'utilitaire &man.l2control.8; est employé pour
+	effectuer diverses opérations sur les noeuds L2CAP.
+	Cet exemple montre comment obtenir la liste des connexions
+	logiques (canaux) et la liste des connexions en bande de base
+	pour le périphérique local:</para>
+
+      <screen>&prompt.user; <userinput>l2control -a 00:02:72:00:d4:1a read_channel_list</userinput>
+L2CAP channels:
+Remote BD_ADDR     SCID/ DCID   PSM  IMTU/ OMTU State
+00:07:e0:00:0b:ca    66/   64     3   132/  672 OPEN
+&prompt.user; <userinput>l2control -a 00:02:72:00:d4:1a read_connection_list</userinput>
+L2CAP connections:
+Remote BD_ADDR    Handle Flags Pending State
+00:07:e0:00:0b:ca     41 O           0 OPEN</screen>
+
+      <para>Un autre outil de diagnostic est &man.btsockstat.1;.  Il
+	effectue un travail similaire &agrave; celui de
+	&man.netstat.1;, mais relatif aux structures de données
+	réseau &bluetooth;.  L'exemple ci-dessous montre la
+	même connexion logique que &man.l2control.8;
+	ci-dessus.</para>
+
+      <screen>&prompt.user; <userinput>btsockstat</userinput>
+Active L2CAP sockets
+PCB      Recv-Q Send-Q Local address/PSM       Foreign address   CID   State
+c2afe900      0      0 00:02:72:00:d4:1a/3     00:07:e0:00:0b:ca 66    OPEN
+Active RFCOMM sessions
+L2PCB    PCB      Flag MTU   Out-Q DLCs State
+c2afe900 c2b53380 1    127   0     Yes  OPEN
+Active RFCOMM sockets
+PCB      Recv-Q Send-Q Local address     Foreign address   Chan DLCI State
+c2e8bc80      0    250 00:02:72:00:d4:1a 00:07:e0:00:0b:ca 3    6    OPEN</screen>
+    </sect2>
+
+    <sect2>
+      <title>Protocole RFCOMM</title>
+
+      <indexterm><primary>RFCOMM</primary></indexterm>
+
+      <para>Le protocole RFCOMM permet l'émulation du port
+	série au-dessus du protocole L2CAP.  Le protocole est
+	basé sur la norme ETSI TS 07.10.  RFCOMM est un
+	protocole de transport simple, avec les dispositions
+	supplémentaires pour émuler les 9 circuits
+	(signaux) d'un port série RS232 (EIATIA-232-E).  Le
+	protocole RFCOMM supporte jusqu'&agrave; 60 connexions
+	simultanées (canaux RFCOMM) entre deux
+	périphériques &bluetooth;.</para>
+
+      <para>Dans le cas de RFCOMM, l'établissement d'une
+	communication implique deux applications tournant sur des
+	périphériques différents (les
+	extrémités de la communication) avec un segment
+	de communication entre eux.  RFCOMM est prévu pour
+	couvrir les applications faisant usage des ports séries
+	des périphériques sur lesquels elles
+	résident.  Le segment de communication est une liaison
+	&bluetooth; d'un périphérique vers un autre
+	(connexion directe).</para>
+
+      <para>RFCOMM est seulement concerné par la connexion
+	entre périphériques dans le cas d'un
+	raccordement direct, ou entre le périphérique et
+	un modem dans le cas d'un réseau.  RFCOMM peut
+	supporter d'autres configurations, comme les modules qui
+	communiquent par l'intermédiaire de la technologie sans
+	fil &bluetooth; d'un côté et utilise une
+	interface câblée de l'autre
+	côté.</para>
+
+      <para>Sous &os;, le protocole RFCOMM est
+	implémenté au niveau de la couche des
+	&ldquo;sockets&rdquo; &bluetooth;.</para>
+    </sect2>
+
+    <sect2>
+      <title>Couplage des périphériques</title>
+
+      <indexterm><primary>couplage</primary></indexterm>
+
+      <para>Par défaut, une communication &bluetooth; n'est pas
+	authentifiée, et n'importe quel
+	périphérique peut parler avec n'importe quel
+	autre périphérique.  Un
+	périphérique &bluetooth; (par exemple un
+	téléphone portable) peut choisir de demander une
+	authentification pour fournir un service particulier (par
+	exemple un service de connexion téléphonique).
+	L'authentification &bluetooth; est généralement
+	effectuée avec des <emphasis>codes PIN</emphasis>.  Un
+	code PIN est une chaîne ASCII d'une longueur de 16
+	caractères.  L'utilisateur doit entrer le même
+	code PIN sur les deux périphériques.  Une fois
+	que l'utilisateur a entré le code PIN, les deux
+	périphériques génèrent une
+	<emphasis>clé de liaison</emphasis> (link key).
+	Ensuite la clé peut être enregistrée soit
+	dans les périphériques eux-mêmes ou sur un
+	moyen de stockage non-volatile.  La fois suivante les deux
+	périphériques utiliseront la clé
+	précédemment générée.  La
+	procédure décrite est appelée
+	<emphasis>couplage</emphasis>.  Si la clé de liaison
+	est perdue par un des périphériques alors
+	l'opération de couplage doit être
+	répétée.</para>
+
+      <para>Le &ldquo;daemon&rdquo; &man.hcsecd.8; est responsable de
+	la gestion de toutes les requêtes d'authentification
+	&bluetooth;.  Le fichier de configuration par défaut
+	est <filename>/etc/bluetooth/hcsecd.conf</filename>.  Un
+	exemple de section pour un téléphone portable
+	avec un code PIN arbitraire de &ldquo;1234&rdquo; est
+	donné ci-dessous:</para>
+
+      <programlisting>device {
+        bdaddr  00:80:37:29:19:a4;
+        name    "Pav's T39";
+        key     nokey;
+        pin     "1234";
+      }</programlisting>
+
+      <para>Il n'y pas de limitation sur les codes PIN (en dehors de
+	la longueur).  Certains périphériques (comme les
+	casques-micro &bluetooth;) peuvent avoir un code PIN
+	définitivement fixé.  Le paramètre
+	<option>-d</option> force le &ldquo;daemon&rdquo;
+	&man.hcsecd.8; &agrave; rester en tâche de fond, il est
+	donc aisé de voir ce qu'il se passe.  Configurez le
+	périphérique distant pour recevoir le couplage
+	et initier la connexion &bluetooth; vers le
+	périphérique distant.  Le
+	périphérique distant devrait annoncer que le
+	couplage a été accepté, et demander le
+	code PIN.  Entrez le même code PIN que celui que vous
+	avez dans le fichier <filename>hcsecd.conf</filename>.
+	Maintenant votre PC et le périphérique distant
+	sont couplés.  Alternativement, vous pouvez initier le
+	couplage sur le périphérique distant.</para>
+
+      <para>Sous &os; 5.5, 6.1 et versions suivantes, la ligne
+	suivante peut être ajoutée au fichier
+	<filename>/etc/rc.conf</filename> pour obtenir un lancement
+	automatique de <application>hcsecd</application> au
+	démarrage du système:</para>
+
+      <programlisting>hcsecd_enable="YES"</programlisting>
+
+      <para>Ce qui
+	suit est une partie de la sortie du &ldquo;daemon&rdquo;
+	<application>hcsecd</application>:</para>
+
+<programlisting>hcsecd[16484]: Got Link_Key_Request event from 'ubt0hci', remote bdaddr 0:80:37:29:19:a4
+hcsecd[16484]: Found matching entry, remote bdaddr 0:80:37:29:19:a4, name 'Pav's T39', link key doesn't exist
+hcsecd[16484]: Sending Link_Key_Negative_Reply to 'ubt0hci' for remote bdaddr 0:80:37:29:19:a4
+hcsecd[16484]: Got PIN_Code_Request event from 'ubt0hci', remote bdaddr 0:80:37:29:19:a4
+hcsecd[16484]: Found matching entry, remote bdaddr 0:80:37:29:19:a4, name 'Pav's T39', PIN code exists
+hcsecd[16484]: Sending PIN_Code_Reply to 'ubt0hci' for remote bdaddr 0:80:37:29:19:a4</programlisting>
+    </sect2>
+
+    <sect2>
+      <title>Le protocole de découverte de service
+	(SDP)</title>
+
+      <indexterm><primary>SDP</primary></indexterm>
+
+      <para>Le protocole de découverte de service (SDP) offre
+	aux applications clientes les moyens de découvrir
+	l'existence des services fournis par les applications serveurs
+	ainsi que les propriétés (attributs) de ces
+	services.  Les attributs d'un service comprennent le type ou
+	la classe du service offert et le mécanisme ou
+	l'information sur le protocole nécessaire pour utiliser
+	le service.</para>
+
+      <para>Le SDP implique la communication entre un serveur SDP et
+	un client SDP.  Le serveur maintient une liste
+	d'enregistrements de services qui décrit les
+	caractéristiques des services associés avec le
+	serveur.  Chaque enregistrement de service contient
+	l'information sur un seul serveur.  Un client peut
+	récupérer l'information &agrave; partir d'un
+	enregistrement de service maintenu par le serveur SDP en
+	émettant une requête SDP.  Si le client, ou une
+	application associée avec le client, décide
+	d'utiliser un service, il doit ouvrir une connexion
+	séparée avec le fournisseur du service afin
+	d'utiliser ce service.  Le SDP fournit un mécanisme
+	pour découvrir les services et leur attributs, mais
+	n'offre pas de mécanisme pour utiliser ces
+	services.</para>
+
+      <para>Généralement, un client SDP recherche les
+	services sur la base de caractéristiques de services
+	désirées.  Cependant, il est parfois
+	désirable de découvrir quel type de services
+	sont décrits par les enregistrements de services d'un
+	serveur SDP sans aucune information préalable sur les
+	services.  Ce processus de recherche des services offerts est
+	appelé <emphasis>navigation</emphasis>
+	(&ldquo;browsing&rdquo;).</para>
+
+      <para>Le serveur SDP &bluetooth; &man.sdpd.8; et le client en
+	ligne de commande &man.sdpcontrol.8; font partie de
+	l'installation &os; standard.  L'exemple suivant montre
+	comment effectuer un requête de navigation
+	(&ldquo;browse&rdquo;) SDP:</para>
+
+      <screen>&prompt.user; <userinput>sdpcontrol -a 00:01:03:fc:6e:ec browse</userinput>
+Record Handle: 00000000
+Service Class ID List:
+        Service Discovery Server (0x1000)
+Protocol Descriptor List:
+        L2CAP (0x0100)
+                Protocol specific parameter #1: u/int/uuid16 1
+                Protocol specific parameter #2: u/int/uuid16 1
+
+Record Handle: 0x00000001
+Service Class ID List:
+        Browse Group Descriptor (0x1001)
+
+Record Handle: 0x00000002
+Service Class ID List:
+        LAN Access Using PPP (0x1102)
+Protocol Descriptor List:
+        L2CAP (0x0100)
+        RFCOMM (0x0003)
+                Protocol specific parameter #1: u/int8/bool 1
+Bluetooth Profile Descriptor List:
+        LAN Access Using PPP (0x1102) ver. 1.0
+</screen>
+
+      <para>... et ainsi de suite.  Remarquez que chaque service a une
+	liste d'attributs (canal RFCOMM par exemple).  En fonction du
+	service vous pourrez avoir besoin de prendre note de certains
+	de ces attributs.  Certaines implémentations
+	&bluetooth; ne supportent pas les requêtes de navigation
+	et peuvent renvoyer une liste vide.  Dans ce cas il est
+	possible de chercher un service spécifique.  L'exemple
+	ci-dessous montre comment chercher le service OBEX Object Push
+	(OPUSH):</para>
+
+      <screen>&prompt.user; <userinput>sdpcontrol -a 00:01:03:fc:6e:ec search OPUSH</userinput></screen>
+
+      <para>Offrir des services sous &os; aux clients &bluetooth; se
+	fait &agrave; l'aide du serveur &man.sdpd.8;.  Sous les
+	versions de &os; 5.5, 6.1 et plus récentes, la ligne
+	suivante peut être ajoutée au fichier
+	<filename>/etc/rc.conf</filename>:</para>
+
+      <programlisting>sdpd_enable="YES"</programlisting>
+
+      <para>Ensuite, le <quote>démon</quote>
+	<application>sdpd</application> peut être
+	démarré avec:</para>
+
+      <screen>&prompt.root; <userinput>/etc/rc.d/sdpd start</userinput></screen>
+      <para>Sous &os; 6.0, et sous les versions &os;&nbsp;5.X
+	antérieures &agrave; 5.5, <application>sdpd</application>
+	n'est pas intégré aux procédures de
+	démarrage du système.  Il doit être
+	lancé manuellement:</para>
+
+      <screen>&prompt.root; <userinput>sdpd</userinput></screen>
+
+      <para>L'application serveur locale qui désire offrir un
+	service &bluetooth; &agrave; des clients distants enregistrera
+	le service auprès du &ldquo;daemon&rdquo; SDP local.
+	Un exemple d'une telle application est &man.rfcomm.pppd.8;.
+	Une fois démarré, il enregistrera un service de
+	réseau local &bluetooth; auprès du serveur SDP
+	local.</para>
+
+      <para>La liste des services enregistrés auprès du
+	serveur SDP local peut être obtenue en émettant
+	une requête de navigation (&ldquo;browse&rdquo;) SDP par
+	l'intermédiaire du canal de contrôle:</para>
+
+      <screen>&prompt.root; <userinput>sdpcontrol -l browse</userinput></screen>
+    </sect2>
+
+    <sect2>
+      <title>Les profils Dial-Up Networking (DUN) et accès au
+	réseau local avec PPP (LAN)</title>
+
+      <para>Le profil Dial-Up Networking (DUN) est principalement
+	utilisé avec les modems et les téléphones
+	portables.  Les cas de figure couverts par ce profil sont les
+	suivants:</para>
+
+      <itemizedlist>
+	<listitem>
+	  <para>Utilisation d'un téléphone portable ou
+	    d'un modem par un ordinateur comme modem sans fil pour se
+	    connecter &agrave; un serveur d'accès Internet, ou
+	    pour l'utilisation de services accessibles par
+	    téléphone;</para>
+	</listitem>
+
+	<listitem>
+	  <para>Utilisation d'un téléphone portable ou
+	    d'un modem par un ordinateur pour recevoir des appels avec
+	    transmission de données.</para>
+	</listitem>
+      </itemizedlist>
+
+      <para>Le profil d'accès au réseau local avec PPP
+	(LAN) peut être utilisé dans les situations
+	suivantes:</para>
+
+      <itemizedlist>
+	<listitem>
+	  <para>Accès au réseau local pour un
+	    périphérique &bluetooth;;</para>
+	</listitem>
+
+	<listitem>
+	  <para>Accès au réseau local pour plusieurs
+	    périphériques &bluetooth;;</para>
+	</listitem>
+
+	<listitem>
+	  <para>Liaison PC &agrave; PC (en utilisant le protocole PPP
+	    sur une émulation de câble
+	    série).</para>
+	</listitem>
+      </itemizedlist>
+
+      <para>Sous &os; les deux profils sont implémentés
+	par &man.ppp.8; et &man.rfcomm.pppd.8;&mdash;un
+	&ldquo;wrapper&rdquo; convertit la connexion &bluetooth;
+	RFCOMM en quelque chose d'utilisable par PPP.  Avant qu'un
+	profil ne soit utilisable, un nouveau label doit être
+	créé dans le fichier
+	<filename>/etc/ppp/ppp.conf</filename>.  Consultez la page de
+	manuel &man.rfcomm.pppd.8; pour des exemples.</para>
+
+      <para>Dans l'exemple suivant &man.rfcomm.pppd.8; sera
+	employé pour ouvrir un connexion RFCOMM avec le
+	périphérique distant avec une adresse BD_ADDR
+	00:80:37:29:19:a4 sur un canal DUN RFCOMM.  Le numéro
+	de canal RFCOMM réel sera obtenu du
+	périphérique distant par l'intermédiaire
+	de SDP.  Il est possible de préciser le canal RFCOMM
+	&agrave; la main, dans ce cas &man.rfcomm.pppd.8;
+	n'émettra pas de requête SDP.  Utilisez
+	&man.sdpcontrol.8; pour trouver le canal RFCOMM sur le
+	périphérique distant.</para>
+
+      <screen>&prompt.root; <userinput>rfcomm_pppd -a 00:80:37:29:19:a4 -c -C dun -l rfcomm-dialup</userinput></screen>
+
+      <para>Afin de fournir un service d'accès au réseau
+	local avec PPP, le serveur &man.sdpd.8; doit être en
+	fonctionnement.  Une nouvelle entrée pour les clients
+	du réseau local doit être créée
+	dans le fichier <filename>/etc/ppp/ppp.conf</filename>.
+	Consultez la page de manuel &man.rfcomm.pppd.8; pour des
+	exemples.  Enfin, lancez le serveur RFCOMM PPP sur un
+	numéro de canal RFCOMM valide.  Le serveur RFCOMM PPP
+	enregistrera automatiquement un service &bluetooth; LAN
+	auprès du &ldquo;daemon&rdquo; SDP local.  L'exemple
+	ci-dessous montre comment démarrer le serveur RFCOMM
+	PPP:</para>
+
+      <screen>&prompt.root; <userinput>rfcomm_pppd -s -C 7 -l rfcomm-server</userinput></screen>
+    </sect2>
+
+    <sect2>
+      <title>Le profil OBEX Object Push (OPUSH)</title>
+
+      <indexterm><primary>OBEX</primary></indexterm>
+
+      <para>OBEX (échange d'objets) est un protocole
+	très largement utilisé pour les transferts de
+	fichiers entre périphériques mobiles.  Son
+	utilisation principale se trouve dans les communications par
+	infrarouge, où il est utilisé pour le transfert
+	des fichiers entre ordinateurs portables ou PDAs, et pour
+	envoyer des cartes de visite électronique ou des
+	éléments d'agenda entre téléphones
+	portables et d'autres périphériques disposant
+	d'applications de gestion d'informations personnelles
+	(PIM).</para>
+
+      <para>Le serveur et le client OBEX sont
+	implémentés dans le logiciel tierce-partie
+	<application>obexapp</application>, qui est disponible sous la
+	forme du logiciel porté <filename
+	role="package">comms/obexapp</filename>.</para>
+
+      <para>Le client OBEX est employé pour
+	&ldquo;pousser&rdquo; et/ou &ldquo;tirer&rdquo; des objets du
+	serveur OBEX.  Un objet peut être, par exemple, une
+	carte de visite ou un rendez-vous.  Le client OBEX peut
+	obtenir un numéro de canal RFCOMM d'un
+	périphérique distant par l'intermédiaire
+	de SDP.  Cela peut être fait en spécifiant le nom
+	du service plutôt que le numéro du canal RFCOMM.
+	Les noms de service supportés sont: IrMC, FTRN et
+	OPUSH.  Il est possible de préciser le canal RFCOMM par
+	un nombre.  Un exemple de session OBEX est
+	présenté ci-dessous, où l'objet
+	information du périphérique d'un
+	téléphone portable est
+	récupéré, et un nouvel objet (carte de
+	visite) est envoyé dans le répertoire du
+	téléphone.</para>
+
+      <screen>&prompt.user; <userinput>obexapp -a 00:80:37:29:19:a4 -C IrMC</userinput>
+obex&gt; get telecom/devinfo.txt devinfo-t39.txt
+Success, response: OK, Success (0x20)
+obex&gt; put new.vcf
+Success, response: OK, Success (0x20)
+obex&gt; di
+Success, response: OK, Success (0x20)</screen>
+
+      <para>Afin de fournir le service OBEX Object Push, le serveur
+	&man.sdpd.8; doit tourner.  Un dossier racine où tous
+	les objets entrant seront stockés doit être
+	créé.  Le chemin d'accès par
+	défaut du répertoire racine est <filename
+	role="directory">/var/spool/obex</filename>.  Le serveur OBEX
+	enregistrera automatiquement le service OBEX Object Push
+	auprès du &ldquo;daemon&rdquo; SDP local.  L'exemple
+	ci-dessous montre comment démarrer le serveur
+	OBEX:</para>
+
+      <screen>&prompt.root; <userinput>obexapp -s -C 10</userinput></screen>
+    </sect2>
+
+    <sect2>
+      <title>Le profil port série (SPP)</title>
+
+      <para>Le profil port série (SPP) permet aux
+	périphériques &bluetooth; d'émuler un
+	câble série RS232 (ou similaire).  Ce profil
+	traite avec les applications classiques en utilisant
+	&bluetooth; comme un câble de remplacement, &agrave;
+	travers une abstraction de port série virtuel.</para>
+
+      <para>L'utilitaire &man.rfcomm.sppd.1; implémente le
+	profil port série.  Un pseudo terminal est
+	utilisé comme abstraction de port série virtuel.
+	L'exemple ci-dessous montre comment se connecter &agrave; un
+	service port série d'un périphérique
+	distant.  Notez que vous n'avez pas besoin d'indiquer un canal
+	RFCOMM &mdash; &man.rfcomm.sppd.1; peut l'obtenir
+	auprès du périphérique distant via SDP.
+	Si vous désirez forcer cela, spécifiez un canal
+	RFCOMM sur la ligne de commande.</para>
+
+      <screen>&prompt.root; <userinput>rfcomm_sppd -a 00:07:E0:00:0B:CA -t /dev/ttyp6</userinput>
+rfcomm_sppd[94692]: Starting on /dev/ttyp6...</screen>
+
+      <para>Une fois connecté, le pseudo-terminal peut
+	être utilisé comme un port série:</para>
+
+      <screen>&prompt.root; <userinput>cu -l ttyp6</userinput></screen>
+    </sect2>
+
+    <sect2>
+      <title>Dépannage</title>
+
+      <sect3>
+	<title>Un périphérique distant ne peut pas se
+	  connecter</title>
+
+	<para>Certains anciens périphériques &bluetooth;
+	  ne supportent pas de changement de rôle.  Par
+	  défaut, quand &os; accepte une nouvelle connexion, il
+	  tente d'effectuer un changement de rôle et de devenir
+	  maître.  Les périphériques qui ne
+	  supportent pas cela ne seront pas en mesure de se connecter.
+	  Notez qu'un changement de rôle est effectué
+	  quand une nouvelle connexion est établie, il n'est
+	  donc pas possible de demander au périphérique
+	  distant s'il supporte le changement de rôle.  Il
+	  existe une option HCI pour désactiver le changement
+	  de rôle au niveau local:</para>
+
+	<screen>&prompt.root; <userinput>hccontrol -n ubt0hci write_node_role_switch 0</userinput></screen>
+      </sect3>
+
+      <sect3>
+	<title>Quelque chose ne va pas, puis-je voir ce qui se passe
+	  exactement?</title>
+
+	<para>Bien sûr.  Utilisez le logiciel tierce-partie
+	  <application>hcidump</application> qui est disponible sous
+	  <filename role="package">comms/hcidump</filename> dans le
+	  catalogue des logiciels portés.
+	  L'utilitaire <application>hcidump</application> est
+	  similaire &agrave; &man.tcpdump.1;.  Il peut être
+	  utilisé pour afficher le contenu des paquets
+	  &bluetooth; &agrave; l'écran et les sauvegarder dans
+	  un fichier.</para>
+      </sect3>
+    </sect2>
+  </sect1>
+
+  <sect1 id="network-bridging">
+    <sect1info>
+      <authorgroup>
+	<author>
+	  <firstname>Steve</firstname>
+	  <surname>Peterson</surname>
+	  <contrib>Ecrit par </contrib>
+	</author>
+      </authorgroup>
+    </sect1info>
+    <title>Bridging</title>
+
+    <sect2>
+      <title>Introduction</title>
+      <indexterm><primary>sous-réseau IP</primary></indexterm>
+      <indexterm><primary>bridge/pont</primary></indexterm>
+      <para>Il est parfois utile de diviser un réseau physique
+	(comme un réseau Ethernet) en deux réseaux
+	séparés sans avoir &agrave; créer de
+	sous-réseaux IPs et &agrave; utiliser un routeur pour
+	connecter ces réseaux entre eux.  Le
+	périphérique qui connecte ensemble deux
+	réseaux de cette manière est appelé
+	&ldquo;bridge&rdquo;&mdash;pont.  Un système &os; avec
+	deux cartes réseaux peut faire fonction de pont.</para>
+
+      <para>Le pont apprend les adresses MAC (adresses Ethernet) des
+	périphériques branchés sur chacune de ses
+	interfaces réseaux.  Il transmet le trafic entre deux
+	réseaux uniquement quand la source et la destination
+	sont sur des réseaux différents.</para>
+
+      <para>Sous de nombreux aspects, un pont ressemble &agrave; un
+	switch (commutateur) Ethernet avec très peu de
+	ports.</para>
+    </sect2>
+
+    <sect2>
+      <title>Situations où l'utilisation d'un pont est
+	appropriée</title>
+
+      <para>Il existe deux situations dans lesquelles un pont est de
+	nos jours utilisé.</para>
+
+      <sect3>
+	<title>Trafic important sur un segment</title>
+
+	<para>La première situation apparaît quand un
+	  segment physique d'un réseau est submergé par
+	  le trafic, mais vous ne voulez pas, pour différentes
+	  raisons, subdiviser le réseau et interconnecter les
+	  sous-réseaux &agrave; l'aide d'un routeur.</para>
+
+	<para>Prenons comme exemple un journal où les bureaux
+	  de la rédaction et de la production sont sur le
+	  même sous-réseau.  Les utilisateurs de la
+	  rédaction utilisent tous le serveur de fichiers
+	  <hostid>A</hostid>, et les utilisateurs de la production le
+	  serveur <hostid>B</hostid>.  Un réseau Ethernet est
+	  utilisé pour connecter ensemble les utilisateurs, et
+	  des surcharges du réseau ralentissent les
+	  échanges.</para>
+
+	<para>Si les utilisateurs de la rédaction peuvent
+	  être cantonné sur un segment, et les
+	  utilisateurs de la production sur un autre, les deux
+	  réseaux pourront être connectés par un
+	  pont.  Seul le trafic réseau destiné aux
+	  interfaces réseaux situées de
+	  l'&ldquo;autre&rdquo; côté du pont sera
+	  transmis &agrave; l'autre réseau, réduisant
+	  ainsi les congestions sur chaque segment.</para>
+      </sect3>
+
+      <sect3>
+	<title>Coupe-feu filtrant/régulant le trafic</title>
+	<indexterm><primary>coupe-feu</primary></indexterm>
+	<indexterm><primary>NAT</primary></indexterm>
+
+	<para>La deuxième situation est quand un coupe-feu est
+	  nécessaire mais sans translation d'adresses
+	  (NAT).</para>
+
+	<para>Un exemple est une compagnie qui est connectée
+	  &agrave; son fournisseur d'accès internet par
+	  l'intermédiaire d'une connexion ISDN ou DSL.  Elle
+	  dispose de 13 adresses IP routables fournies par le
+	  fournisseur d'accès et dispose de 10 PCs sur son
+	  réseau.  Dans cette situation, utiliser un
+	  coupe-feu/routeur est complexe en raison des
+	  problèmes de sous-réseaux.</para>
+
+	<indexterm><primary>routeur</primary></indexterm>
+	<indexterm><primary>DSL</primary></indexterm>
+	<indexterm><primary>ISDN</primary></indexterm>
+	<para>Un coupe-feu basé sur un pont peut être
+	  configuré et positionné dans le flux juste en
+	  aval de leur routeur DSL/ISDN sans aucun problème
+	  d'adressage IP.</para>
+      </sect3>
+    </sect2>
+
+    <sect2>
+      <title>Configuration d'un pont</title>
+
+      <sect3>
+	<title>Choix des cartes réseaux</title>
+
+	<para>Un pont nécessite au moins deux cartes
+	  réseaux pour fonctionner.  Malheureusement toutes les
+	  cartes réseaux ne supportent pas le mode bridging.
+	  Lisez la page de manuel &man.bridge.4; pour des
+	  détails sur les cartes supportées.</para>
+
+	<para>Installez et testez les deux cartes réseaux avant
+	  de poursuivre.</para>
+      </sect3>
+
+      <sect3>
+	<title>Modification de la configuration du noyau</title>
+	<indexterm>
+	  <primary>options du noyau</primary>
+	  <secondary>BRIDGE</secondary>
+	</indexterm>
+
+	<para>Pour activer le support nécessaire pour mettre en
+	  place un pont ajouter la ligne suivante:</para>
+
+	<programlisting>options BRIDGE</programlisting>
+
+	<para>&agrave; votre fichier de configuration du noyau, et
+	  recompilez votre noyau.</para>
+      </sect3>
+
+      <sect3>
+	<title>Support du coupe-feu</title>
+
+	<indexterm><primary>coupe-feu</primary></indexterm>
+	<para>Si vous projetez d'utiliser un pont en tant que
+	  coupe-feu, vous devrez également ajouter l'option
+	  <literal>IPFIREWALL</literal>.  Lisez la <xref
+	  linkend="firewalls"/> pour des informations
+	  générales sur la configuration d'un pont en tant
+	  que coupe-feu.</para>
+
+	<para>Si vous avez besoin de permettre le passage &agrave;
+	  travers le pont des paquets non-IP (comme ARP), il existe
+	  une option du coupe-feu qui doit être activée.
+	  Cette option est
+	  <literal>IPFIREWALL_DEFAULT_TO_ACCEPT</literal>.  Prennez
+	  note que cela modifie le fonctionnement par défaut du
+	  coupe-feu, ce dernier acceptera alors tous les paquets.
+	  Assurez-vous de savoir ce que ce changement signifie pour
+	  votre ensemble de règles de filtrage avant de
+	  l'effectuer.</para>
+      </sect3>
+
+      <sect3>
+	<title>Support de la régulation du trafic</title>
+
+	<para>Si vous désirez utiliser le pont comme
+	  régulateur de trafic, vous devrez ajouter l'option
+	  <literal>DUMMYNET</literal> &agrave; votre fichier de
+	  configuration du noyau.  Consultez la page de manuel
+	  &man.dummynet.4; pour plus d'information.</para>
+      </sect3>
+    </sect2>
+
+    <sect2>
+      <title>Activer le pont</title>
+
+      <para>Ajoutez la ligne:</para>
+
+      <programlisting>net.link.ether.bridge.enable=1</programlisting>
+
+      <para>au fichier <filename>/etc/sysctl.conf</filename> pour
+	activer le pont au démarrage, et la ligne:</para>
+
+      <programlisting>net.link.ether.bridge.config=<replaceable>if1</replaceable>,<replaceable>if2</replaceable></programlisting>
+
+      <para>pour activer le mode bridging sur les interfaces
+	spécifiées (remplacez
+	<replaceable>if1</replaceable> et
+	<replaceable>if2</replaceable> par les noms de vos interfaces
+	réseaux).  Si vous désirez que les paquets
+	traversant le pont soient filtrés par &man.ipfw.8;,
+	vous devrez ajouter également la ligne:</para>
+
+      <programlisting>net.link.ether.bridge.ipfw=1</programlisting>
+
+      <para>Pour les versions antérieures &agrave; &os;&nbsp;5.2-RELEASE, utilisez
+	les lignes suivantes:</para>
+
+      <programlisting>net.link.ether.bridge=1
+net.link.ether.bridge_cfg=<replaceable>if1</replaceable>,<replaceable>if2</replaceable>
+net.link.ether.bridge_ipfw=1</programlisting>
+    </sect2>
+
+    <sect2>
+      <title>Informations supplémentaires</title>
+
+      <para>Si vous désirez être en mesure de vous
+	connecter au pont par l'intermédiaire de
+	&man.ssh.1;, il est correct d'ajouter &agrave; l'une des
+	cartes réseaux une adresse IP.  Il existe un consensus
+	sur le fait qu'assigner une adresse aux deux cartes est une
+	mauvaise idée.</para>
+
+      <para>Si vous avez plusieurs ponts sur votre réseau, il
+	ne peut y en avoir plus d'un sur le chemin qui sera
+	emprunté par le trafic entre deux stations de travail.
+	Techniquement, cela signifie qu'il n'y a pas de support pour
+	la gestion du &ldquo;spanning tree&rdquo;.</para>
+
+      <para>Un pont peut ajouter des temps de latence lors de
+	l'utilisation de &man.ping.8;, et tout particulièrement
+	dans le cas du trafic d'un segment vers un autre.</para>
+    </sect2>
+  </sect1>
+
+  <sect1 id="network-diskless">
+    <sect1info>
+      <authorgroup>
+	<author>
+	  <firstname>Jean-François</firstname>
+	  <surname>Dockès</surname>
+	  <contrib>Mis &agrave; jour par </contrib>
+	</author>
+      </authorgroup>
+      <authorgroup>
+	<author>
+	  <firstname>Alex</firstname>
+	  <surname>Dupre</surname>
+	  <contrib>Réorganisé et augmenté
+	    par </contrib>
+	</author>
+      </authorgroup>
+    </sect1info>
+    <title>Système sans disque dur</title>
+
+    <indexterm><primary>station de travail sans disque
+      dur</primary></indexterm>
+    <indexterm><primary>système sans disque
+      dur</primary></indexterm>
+
+    <para>Une machine &os; peut démarrer via le réseau
+      et fonctionner sans disque dur local, en utilisant des
+      systèmes de fichiers montés &agrave; partir d'un
+      serveur <acronym>NFS</acronym>.  Aucune modification du
+      système n'est nécessaire en dehors des fichiers de
+      configuration standards.  Un tel système est facile
+      &agrave; mettre en oeuvre comme tous les éléments
+      sont directement disponibles:</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>Il y a au moins deux méthodes possibles pour
+	  charger un noyau via le réseau:</para>
+
+	<itemizedlist>
+	  <listitem>
+	    <para><acronym>PXE</acronym>: l'environnement
+	      d'exécution préalable au démarrage
+	      d'&intel; (Preboot eXecution Environment) est une sorte de
+	      ROM intelligente présente sur certaines cartes
+	      réseau ou cartes mère.  Consultez la page de
+	      manuel &man.pxeboot.8; pour plus de détails.</para>
+	  </listitem>
+
+	  <listitem>
+	    <para>Le logiciel porté
+	      <application>Etherboot</application> (<filename
+	      role="package">net/etherboot</filename>) produit un code
+	      stockable dans une ROM pour démarrer des noyaux via
+	      le réseau.  Le code peut être soit
+	      implanté dans une PROM de démarrage sur une
+	      carte réseau, soit chargé &agrave; partir
+	      d'une disquette (ou d'un disque dur local), ou &agrave;
+	      partir d'un système &ms-dos; en fonctionnement.  De
+	      nombreuses cartes réseau sont
+	      supportées.</para>
+	  </listitem>
+	</itemizedlist>
+      </listitem>
+
+      <listitem>
+	<para>Une procédure d'exemple
+	  (<filename>/usr/share/examples/diskless/clone_root</filename>)
+	  facilite la création et la maintenance du
+	  système de fichiers racine de la station de travail sur
+	  le serveur.  La procédure demandera sûrement
+	  quelques modifications mais vous permettra de démarrer
+	  rapidement.</para>
+      </listitem>
+
+      <listitem>
+	<para>Des fichiers de démarrage du système
+	  existent dans le répertoire <filename
+	  role="directory">/etc</filename> pour détecter et
+	  supporter le démarrage d'un système sans disque
+	  dur.</para>
+      </listitem>
+
+      <listitem>
+	<para>La pagination, si nécessaire, peut être
+	  faite par l'intermédiaire d'un fichier
+	  <acronym>NFS</acronym> ou sur un disque local.</para>
+      </listitem>
+    </itemizedlist>
+
+    <para>Il existe plusieurs façons de configurer des stations
+      de travail sans disque dur.  Plusieurs éléments
+      entrent en oeuvre, et la plupart peuvent être
+      ajustés en fonction des besoins locaux.  Ce qui suit
+      décrit des variations sur la configuration d'un
+      système complet, mettant en avant le simplicité et
+      la compatibilité avec les procédures standards de
+      démarrage de &os;.  Le système décrit
+      présente les caractéristiques suivantes:</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>Les stations de travail sans disque dur utilisent des
+	  systèmes de fichiers <filename>/</filename> et
+	  <filename>/usr</filename> partagés et en lecture
+	  seule.</para>
+
+	<para>Le système de fichiers racine est une copie d'une
+	  racine &os; standard (généralement celle du
+	  serveur), avec certains fichiers de configuration
+	  remplacés par des versions spécifiques
+	  &agrave; un fonctionnement sans disque dur, et parfois
+	  &agrave; la station de travail auxquels ils
+	  appartiennent.</para>
+
+	<para>Les parties de la racine qui doivent être
+	  inscriptibles sont remplacées par des systèmes
+	  de fichiers &man.mfs.8; (&os;&nbsp;4.X) ou &man.md.4;
+	  (&os;&nbsp;5.X).  Toute modification sera perdue au
+	  redémarrage du système.</para>
+      </listitem>
+
+      <listitem>
+	<para>Le noyau est transféré et chargé
+	  soit &agrave; l'aide d'<application>Etherboot</application>
+	  soit de <acronym>PXE</acronym> comme certaines situations
+	  peuvent exiger l'utilisation de l'une ou l'autre
+	  méthode.</para>
+      </listitem>
+    </itemizedlist>
+
+    <caution>
+      <para>Ainsi décrit, le système n'est pas
+	sécurisé.  Il devrait se trouver dans une partie
+	protégée du réseau, et les autres machines
+	ne devraient pas lui faire confiance aveuglément.</para>
+    </caution>
+
+    <para>Toutes les instructions de cette section ont
+      été testées sous &os;&nbsp;4.9-RELEASE et
+      5.2.1-RELEASE.  Le texte est destiné &agrave; l'origine
+      pour une utilisation sous 4.X.  Des notes on été
+      insérées aux endroits nécessaires pour
+      indiquer les modifications concernant la branche 5.X.</para>
+
+    <sect2>
+      <title>Information de fond</title>
+
+      <para>Mettre en place des stations de travail sans disque dur
+	est &agrave; la fois relativement simple et enclin aux
+	erreurs.  Ces dernières sont parfois difficiles
+	&agrave; diagnostiquer pour de nombreuses raisons.  Par
+	exemple:</para>
+
+      <itemizedlist>
+	<listitem>
+	  <para>Des options de compilation peuvent donner lieu
+	    &agrave; des comportements différents &agrave;
+	    l'exécution.</para>
+	</listitem>
+
+	<listitem>
+	  <para>Les messages d'erreurs sont souvent cachés ou
+	    totalement absents.</para>
+	</listitem>
+      </itemizedlist>
+
+      <para>Dans ce contexte, avoir quelques connaissances des
+	mécanismes sous-jacents impliqués est très
+	utile pour résoudre les problèmes qui peuvent
+	surgir.</para>
+
+      <para>Plusieurs opérations doivent être
+	effectuées pour un amorçage
+	réussi:</para>
+
+      <itemizedlist>
+	<listitem>
+	  <para>La machine doit obtenir des paramètres de base
+	    comme son adresse IP, le nom du fichier exécutable,
+	    le nom du serveur, l'emplacement de la racine.  Ceci est
+	    fait en utilisant le protocole <acronym>DHCP</acronym> ou le
+	    protocole BOOTP.  <acronym>DHCP</acronym> est une extension
+	    compatible de BOOTP, et utilise les mêmes
+	    numéros de ports et son format de paquets
+	    basic.</para>
+
+	  <para>Il est possible de configurer un système pour
+	    n'utiliser que BOOTP.  Le programme serveur &man.bootpd.8;
+	    fait partie du système de base de &os;.</para>
+
+	  <para>Cependant, <acronym>DHCP</acronym> présente
+	    plusieurs avantage sur BOOTP (des fichiers de
+	    configuration plus lisibles, la possibilité
+	    d'utiliser <acronym>PXE</acronym>, plus de nombreux autres
+	    avantages n'ayant pas de relation directe avec les
+	    systèmes sans disque dur), et nous décrirons
+	    principalement une configuration <acronym>DHCP</acronym>,
+	    avec des exemples équivalent utilisant
+	    &man.bootpd.8; quand cela est possible.  L'exemple de
+	    configuration utilisera le logiciel <application>ISC
+	    DHCP</application> (la version 3.0.1.r12 était
+	    installée sur le serveur de test).</para>
+	</listitem>
+
+	<listitem>
+	  <para>La machine a besoin de transférer un ou
+	    plusieurs programmes en mémoire locale.
+	    <acronym>TFTP</acronym> ou <acronym>NFS</acronym> sont
+	    utilisés.  Le choix entre <acronym>TFTP</acronym> et
+	    <acronym>NFS</acronym> est &agrave; de nombreux endroits une
+	    option sélectionnée lors de la compilation.
+	    Une source d'erreur courante est d'indiquer des noms de
+	    fichiers pour le mauvais protocole: <acronym>TFTP</acronym>
+	    transfère généralement tous les
+	    fichiers &agrave; partir d'un seul répertoire sur le
+	    serveur, et attendra des noms de fichiers relatifs &agrave;
+	    ce répertoire.  <acronym>NFS</acronym> a besoin de
+	    chemins d'accès absolus.</para>
+	</listitem>
+
+	<listitem>
+	  <para>Les éventuels programmes d'amorce
+	    intermédiaires et le noyau doivent être
+	    initialisés et exécutés.  Il existe
+	    plusieurs variations &agrave; ce niveau:</para>
+
+	  <itemizedlist>
+	    <listitem>
+	      <para><acronym>PXE</acronym> chargera &man.pxeboot.8;,
+		qui est une version modifiée du chargeur.  Le
+		chargeur (&man.loader.8;) récupérera la
+		plupart des paramètres nécessaires au
+		démarrage du système, et les transmettra
+		au noyau avant de lui abandonner le contrôle du
+		système.  Dans ce cas il est possible d'utiliser
+		un noyau <filename>GENERIC</filename>.</para>
+	    </listitem>
+
+	    <listitem>
+	      <para><application>Etherboot</application>, chargera
+		directement le noyau avec moins de préparation.
+		Vous devrez compiler un noyau avec des options
+		particulières.</para>
+	    </listitem>
+	  </itemizedlist>
+
+	  <para><acronym>PXE</acronym> et
+	    <application>Etherboot</application> fonctionnent aussi
+	    bien l'un que l'autre avec des systèmes 4.X.  Comme
+	    le noyau des systèmes 5.X laisse au chargeur
+	    (&man.loader.8;) un peu plus de travail &agrave;
+	    effectuer, <acronym>PXE</acronym> est
+	    préféré pour les systèmes
+	    5.X.</para>
+
+	  <para>Si votre <acronym>BIOS</acronym> et vos cartes
+	    réseau supportent <acronym>PXE</acronym>, vous
+	    devriez probablement l'utiliser.  Cependant, il est
+	    toujours possible de démarrer un système 5.X
+	    &agrave; l'aide
+	    d'<application>Etherboot</application>.</para>
+	</listitem>
+
+	<listitem>
+	  <para>Et enfin, la machine a besoin d'accéder
+	    &agrave; ses systèmes de fichiers.
+	    <acronym>NFS</acronym> est utilisé dans tous les
+	    cas.</para>
+	</listitem>
+      </itemizedlist>
+
+      <para>Consultez également la page de manuel
+	&man.diskless.8;.</para>
+    </sect2>
+
+    <sect2>
+      <title>Configuration</title>
+
+      <sect3>
+	<title>Configuration utilisant <application>ISC
+	  DHCP</application></title>
+	<indexterm>
+	  <primary>DHCP</primary>
+	  <secondary>système sans disque dur</secondary>
+	</indexterm>
+
+	<para>Le serveur <application>ISC DHCP</application>
+	  peut répondre aux requêtes BOOTP et
+	  <acronym>DHCP</acronym>.</para>
+
+	<para>Avec la version 4.9, <application>ISC DHCP
+	  3.0</application> ne fait pas partie du système de
+	  base.  Vous devrez installer le logiciel porté
+	  <filename role="package">net/isc-dhcp3-server</filename> ou
+	  la version pré-compilée correspondante.</para>
+
+	<para>Une fois <application>ISC DHCP</application>
+	  installé, il nécessite un fichier de
+	  configuration pour fonctionner (normalement appelé
+	  <filename>/usr/local/etc/dhcpd.conf</filename>).  Voici un
+	  exemple commenté, où la machine
+	  <hostid>margaux</hostid> utilise
+	  <application>Etherboot</application> et où la machine
+	  <hostid>corbieres</hostid> emploie
+	  <acronym>PXE</acronym>:</para>
+
+	<programlisting>
+default-lease-time 600;
+max-lease-time 7200;
+authoritative;
+
+option domain-name "example.com";
+option domain-name-servers 192.168.4.1;
+option routers 192.168.4.1;
+
+subnet 192.168.4.0 netmask 255.255.255.0 {
+  use-host-decl-names on; <co id="co-dhcp-host-name"/>
+  option subnet-mask 255.255.255.0;
+  option broadcast-address 192.168.4.255;
+
+  host margaux {
+    hardware ethernet 01:23:45:67:89:ab;
+    fixed-address margaux.example.com;
+    next-server 192.168.4.4; <co id="co-dhcp-next-server"/>
+    filename "/data/misc/kernel.diskless"; <co id="co-dhcp-filename"/>
+    option root-path "192.168.4.4:/data/misc/diskless"; <co id="co-dhcp-root-path"/>
+  }
+  host corbieres {
+    hardware ethernet 00:02:b3:27:62:df;
+    fixed-address corbieres.example.com;
+    next-server 192.168.4.4;
+    filename "pxeboot";
+    option root-path "192.168.4.4:/data/misc/diskless";
+  }
+}
+	</programlisting>
+
+	<calloutlist>
+	  <callout arearefs="co-dhcp-host-name"><para>Cette option dit
+	      &agrave; <application>dhcpd</application> d'envoyer le
+	      paramètre des déclarations
+	      <literal>host</literal> comme nom de machine pour la
+	      machine sans disque dur.  Une autre méthode
+	      aurait été d'ajouter <literal>option
+	      host-name <replaceable>margaux</replaceable></literal>
+	      &agrave; l'intérieur des déclarations
+	      <literal>host</literal>.</para>
+	  </callout>
+
+	  <callout arearefs="co-dhcp-next-server"><para>La directive
+	      <literal>next-server</literal> désigne le serveur
+	      <acronym>TFTP</acronym> ou <acronym>NFS</acronym>
+	      &agrave; utiliser pour télécharger le
+	      chargeur ou le noyau (le comportement par défaut
+	      étant d'utiliser la même machine que le
+	      serveur <acronym>DHCP</acronym>).</para>
+	  </callout>
+
+	  <callout arearefs="co-dhcp-filename"><para>La directive
+	      <literal>filename</literal> précise le fichier
+	      que chargera <application>Etherboot</application> ou
+	      <acronym>PXE</acronym> &agrave; la prochaine
+	      étape.  Il doit être défini en
+	      fonction de la méthode de transfert
+	      utilisée.  <application>Etherboot</application>
+	      peut être compilé pour utiliser
+	      <acronym>NFS</acronym> ou <acronym>TFTP</acronym>.  Le
+	      logiciel porté pour &os; utilisera
+	      <acronym>NFS</acronym> par défaut.
+	      <acronym>PXE</acronym> emploie <acronym>TFTP</acronym>,
+	      c'est pourquoi un chemin d'accès relatif est
+	      utilisé ici (cela peut dépendre de la
+	      configuration du serveur <acronym>TFTP</acronym>, mais
+	      devrait être plutôt classique).  De plus,
+	      <acronym>PXE</acronym> charge
+	      <filename>pxeboot</filename>, et non pas le noyau.  Il
+	      existe d'autres possibilités
+	      intéressantes, comme le chargement de
+	      <filename>pxeboot</filename> &agrave; partir du
+	      répertoire <filename
+	      role="directory">/boot</filename> d'un CD-ROM &os;
+	      (comme &man.pxeboot.8; peut charger un noyau
+	      <filename>GENERIC</filename> cela rend possible
+	      l'utilisation de <acronym>PXE</acronym> pour
+	      démarrer &agrave; partir d'un lecteur de CD-ROM
+	      distant).</para>
+	  </callout>
+
+	  <callout arearefs="co-dhcp-root-path"><para>L'option
+	      <literal>root-path</literal> définie le chemin
+	      d'accès au système de fichiers racine,
+	      suivant la notation classique de <acronym>NFS</acronym>.
+	      En utilisant <acronym>PXE</acronym>, il est possible de
+	      ne pas préciser l'adresse IP de la machine
+	      dès lors que vous n'activez pas l'option BOOTP du
+	      noyau.  Le serveur <acronym>NFS</acronym> sera alors le
+	      même que le serveur
+	      <acronym>TFTP</acronym>.</para>
+	  </callout>
+	</calloutlist>
+      </sect3>
+
+      <sect3>
+	<title>Configuration utilisant BOOTP</title>
+	<indexterm>
+	  <primary>BOOTP</primary>
+	  <secondary>système sans disque dur</secondary>
+	</indexterm>
+
+	<para>Ce qui suit présente une configuration
+	  <application>bootpd</application> équivalente
+	  (réduite &agrave; un seul client).  Elle se
+	  trouverait sous <filename>/etc/bootptab</filename>.</para>
+
+	<para>Veuillez noter qu'<application>Etherboot</application>
+	  doit être compilé avec l'option
+	  <literal>NO_DHCP_SUPPORT</literal> (qui n'est pas
+	  activée par défaut) afin d'utiliser BOOTP et
+	  que <acronym>PXE</acronym>
+	  <emphasis>nécessite</emphasis>
+	  <acronym>DHCP</acronym>.  The seul avantage évident
+	  de <application>bootpd</application> est qu'il est
+	  disponible dans le système de base.</para>
+
+	<programlisting>
+.def100:\
+  :hn:ht=1:sa=192.168.4.4:vm=rfc1048:\
+  :sm=255.255.255.0:\
+  :ds=192.168.4.1:\
+  :gw=192.168.4.1:\
+  :hd="/tftpboot":\
+  :bf="/kernel.diskless":\
+  :rp="192.168.4.4:/data/misc/diskless":
+
+margaux:ha=0123456789ab:tc=.def100
+	</programlisting>
+      </sect3>
+
+      <sect3>
+	<title>Préparation d'un programme de démarrage
+	  avec <application>Etherboot</application></title>
+
+	<indexterm>
+	  <primary>Etherboot</primary>
+	</indexterm>
+
+	<para>Le <ulink url="http://etherboot.sourceforge.net">site
+	  Web d'Etherboot</ulink> propose une <ulink
+	  url="http://etherboot.sourceforge.net/doc/html/userman/t1.html">
+	  documentation importante</ulink> principalement
+	  destinée aux systèmes Linux, mais contenant
+	  néamoins des informations utiles.  Ce qui suit
+	  présente comment vous utiliseriez
+	  <application>Etherboot</application> sur un système
+	  &os;.</para>
+
+	<para>Vous devez tout d'abord installer le logiciel
+	  porté <filename
+	  role="package">net/etherboot</filename> ou sa version
+	  pré-compilée.</para>
+
+	<para>Vous pouvez modifier la configuration
+	  d'<application>Etherboot</application> (i.e. pour utiliser
+	  <acronym>TFTP</acronym> au lieu de <acronym>NFS</acronym>)
+	  en éditant le fichier <filename>Config</filename>
+	  dans le répertoire des sources
+	  d'<application>Etherboot</application>.</para>
+
+	<para>Pour notre configuration nous utiliserons une disquette
+	  de démarrage.  Pour d'autres méthodes (PROM,
+	  ou un programme &ms-dos;), consultez la documentation
+	  d'<application>Etherboot</application>.</para>
+
+	<para>Pour créer une disquette de démarrage,
+	  insérez une disquette dans le lecteur de la machine
+	  où vous avez installé
+	  <application>Etherboot</application>, puis rendez-vous dans
+	  le répertoire <filename
+	  role="directory">src</filename> de l'arborescence
+	  <application>Etherboot</application> et tapez:</para>
+
+	<screen>
+&prompt.root; <userinput>gmake bin32/<replaceable>devicetype</replaceable>.fd0</userinput></screen>
+
+	<para><replaceable>devicetype</replaceable> dépend du
+	  type de carte Ethernet se trouvant dans la station de
+	  travail sans disque dur.  Référez-vous au
+	  fichier <filename>NIC</filename> dans le même
+	  répertoire pour déterminer la valeur
+	  <replaceable>devicetype</replaceable> correcte.</para>
+      </sect3>
+
+      <sect3>
+	<title>Démarrer avec <acronym>PXE</acronym></title>
+
+	<para>Par défaut le chargeur &man.pxeboot.8; charge le
+	  noyau via <acronym>NFS</acronym>.  Il peut être
+	  compilé pour utiliser <acronym>TFTP</acronym>
+	  &agrave; la place en spécifiant l'option
+	  <literal>LOADER_TFTP_SUPPORT</literal> dans le fichier
+	  <filename>/etc/make.conf</filename>.  Lisez les commentaires
+	  dans le fichier <filename>/etc/defaults/make.conf</filename>
+	  (ou <filename>/usr/share/examples/etc/make.conf</filename>
+	  pour les systèmes 5.X) pour plus de
+	  détails.</para>
+
+	<para>Il existe deux autres options de
+	  <filename>make.conf</filename> non-documentées qui
+	  peuvent être utiles pour la configuration d'une
+	  machine faisant fonction de console série sans disque
+	  dur: <literal>BOOT_PXELDR_PROBE_KEYBOARD</literal>, et
+	  <literal>BOOT_PXELDR_ALWAYS_SERIAL</literal> (cette
+	  dernière n'existe que sous &os;&nbsp;5.X).</para>
+
+	<para>Pour utiliser <acronym>PXE</acronym> quand la machine
+	  démarre, vous aurez normalement besoin de
+	  sélectionner l'option <literal>Boot from
+	  network</literal> dans votre <acronym>BIOS</acronym>, ou
+	  d'appuyer sur une touche de fonction lors de
+	  l'initialisation du PC.</para>
+      </sect3>
+
+      <sect3>
+	<title>Configuration des serveurs <acronym>TFTP</acronym> et
+	  <acronym>NFS</acronym></title>
+
+	<indexterm>
+	  <primary>TFTP</primary>
+	  <secondary>système sans disque dur</secondary>
+	</indexterm>
+	<indexterm>
+	  <primary>NFS</primary>
+	  <secondary>système sans disque dur</secondary>
+	</indexterm>
+
+	<para>Si vous utilisez <acronym>PXE</acronym> ou
+	  <application>Etherboot</application> configurés pour
+	  employer <acronym>TFTP</acronym>, vous devez activer
+	  <application>tftpd</application> sur le serveur de
+	  fichier:</para>
+
+	<procedure>
+	  <step>
+	    <para>Créez un répertoire &agrave; partir
+	      duquel <application>tftpd</application> proposera les
+	      fichiers, e.g. <filename
+	      role="directory">/tftpboot</filename>.</para>
+	  </step>
+
+	  <step>
+	    <para>Ajoutez la ligne suivante &agrave; votre fichier
+	      <filename>/etc/inetd.conf</filename>:</para>
+
+	    <programlisting>tftp	dgram	udp	wait	root	/usr/libexec/tftpd	tftpd -l -s /tftpboot</programlisting>
+
+	    <note>
+	      <para>Il apparaît que certaines versions de
+		<acronym>PXE</acronym> veulent la version
+		<acronym>TCP</acronym> de <acronym>TFTP</acronym>.
+		Dans ce cas, ajoutez une seconde ligne, en
+		remplaçant <literal>dgram udp</literal> par
+		<literal>stream tcp</literal>.</para>
+	    </note>
+          </step>
+	  <step>
+	    <para>Demandez &agrave; <application>inetd</application>
+	      de relire son fichier de configuration:</para>
+
+	    <screen>&prompt.root; <userinput>kill -HUP `cat /var/run/inetd.pid`</userinput></screen>
+	  </step>
+        </procedure>
+
+	<para>Le répertoire <filename
+	  role="directory">tftpboot</filename> peut être
+	  placé n'importe où sur le serveur.
+	  Assurez-vous que son emplacement est défini dans les
+	  fichiers <filename>inetd.conf</filename> et
+	  <filename>dhcpd.conf</filename>.</para>
+
+	<para>Dans tous les cas, vous devez également activer
+	  <acronym>NFS</acronym> et exporter le système de
+	  fichiers approprié sur le serveur
+	  <acronym>NFS</acronym>.</para>
+
+	<procedure>
+	  <step>
+	    <para>Ajoutez ce qui suit au fichier
+	      <filename>/etc/rc.conf</filename>:</para>
+
+	    <programlisting>nfs_server_enable="YES"</programlisting>
+	  </step>
+
+	  <step>
+	    <para>Exportez le système de fichiers contenant le
+	      répertoire racine du système sans disque dur
+	      en ajoutant ce qui suit au fichier
+	      <filename>/etc/exports</filename> (ajustez le point de
+	      montage et remplacez <replaceable>margaux
+	      corbieres</replaceable> avec les noms des stations de
+	      travail sans disque dur):</para>
+
+	    <programlisting><replaceable>/data/misc</replaceable> -alldirs -ro <replaceable>margaux corbieres</replaceable></programlisting>
+          </step>
+
+	  <step>
+	    <para>Demandez &agrave; <application>mountd</application>
+	      de relire son fichier de configuration.  Si vous avez eu
+	      besoin d'activer <acronym>NFS</acronym> dans
+	      <filename>/etc/rc.conf</filename> lors du premier point,
+	      vous voudrez probablement plutot redémarrer la
+	      machine.</para>
+
+	    <screen>&prompt.root; <userinput>kill -HUP `cat /var/run/mountd.pid`</userinput></screen>
+	  </step>
+        </procedure>
+      </sect3>
+
+      <sect3>
+	<title>Compilation d'un noyau pour système sans disque
+	  dur</title>
+
+	<indexterm>
+	  <primary>système sans disque dur</primary>
+	  <secondary>configuration du noyau</secondary>
+	</indexterm>
+
+	<para>Si vous utilisez <application>Etherboot</application>,
+	  vous devez créer un fichier de configuration du noyau
+	  pour le client sans disque dur avec les options suivantes
+	  (en plus des options habituelles):</para>
+
+	<programlisting>
+options     BOOTP          # Use BOOTP to obtain IP address/hostname
+options     BOOTP_NFSROOT  # NFS mount root filesystem using BOOTP info
+	</programlisting>
+
+	<para>Vous pouvez vouloir également employer les
+	  options <literal>BOOTP_NFSV3</literal>,
+	  <literal>BOOT_COMPAT</literal> et
+	  <literal>BOOTP_WIRED_TO</literal> (référez-vous au
+	  fichier <filename>LINT</filename> sous 4.X ou
+	  <filename>NOTES</filename> sous 5.X).</para>
+
+	<para>Les noms de ces options sont historiques et
+	  légèrement trompeur comme elles activent
+	  indifférement l'utilisation de
+	  <acronym>DHCP</acronym> et BOOTP dans le noyau (il est
+	  également possible de forcer une utilisation stricte
+	  de BOOTP ou <acronym>DHCP</acronym>).</para>
+
+	<para>Compilez le noyau (voir <xref linkend="kernelconfig"/>),
+	  et copiez-le &agrave; l'emplacement indiqué dans
+	  <filename>dhcpd.conf</filename>.</para>
+
+	<note>
+	  <para>Quand on utilise <acronym>PXE</acronym>, la
+	    compilation d'un noyau avec les options
+	    précédentes n'est pas strictement
+	    nécessaire (bien que conseillé).  Les activer
+	    causera un plus grand nombre de requêtes
+	    <acronym>DHCP</acronym> générées lors
+	    du démarrage du noyau, avec un petit risque
+	    d'inconsistance entre les nouvelles valeurs et celles
+	    récupérées par &man.pxeboot.8; dans
+	    certains cas particuliers.  L'avantage de leur utilisation
+	    est que le nom de la machine sera forcément
+	    défini.  Sinon vous devrez définir le nom de
+	    la machine par une autre méthode, par exemple dans un
+	    fichier <filename>rc.conf</filename> particulier au
+	    client.</para>
+	</note>
+
+	<note>
+	  <para>Afin d'être chargeable par
+	    <application>Etherboot</application>, un noyau 5.X doit
+	    être compilé avec les &ldquo;device
+	    hints&rdquo;.  Vous définirez normalement l'option
+	    suivante dans le fichier de configuration (voir le fichier
+	    de commentaires sur la configuration:
+	    <filename>NOTES</filename>):</para>
+
+	  <programlisting>hints		"GENERIC.hints"</programlisting>
+	</note>
+      </sect3>
+
+      <sect3>
+	<title>Préparer le système de fichiers
+	  racine</title>
+
+	<indexterm>
+	  <primary>système de fichiers racine</primary>
+	  <secondary>système sans disque dur</secondary>
+	</indexterm>
+
+	<para>Vous devez créer un système de fichiers
+	  racine pour les stations de travail sans disque dur,
+	  &agrave; l'emplacement défini par
+	  <literal>root-path</literal> dans le fichier
+	  <filename>dhcpd.conf</filename>.  Les sections suivantes
+	  décrivent deux manières de le faire.</para>
+
+	<sect4>
+	  <title>Utilisation de la procédure
+	    <filename>clone_root</filename></title>
+
+	  <para>C'est la méthode la plus rapide pour
+	    créer un système de fichiers racine, mais
+	    elle est, pour le moment, uniquement supportée sous
+	    &os;&nbsp;4.X..  Cette procédure est située
+	    &agrave; l'emplacement
+	    <filename>/usr/share/examples/diskless/clone_root</filename>
+	    et demande quelques modifications, pour au moins ajuster
+	    l'emplacement du système de fichiers &agrave;
+	    créer (la variable <literal>DEST</literal>).</para>
+
+	  <para>Référez-vous aux commentaires
+	    situés en début de la procédure pour
+	    information.  Ils expliquent comment le système de
+	    fichiers de base est construit, et comment les fichiers
+	    peuvent être remplacés de façon
+	    sélective par des versions spécifiques
+	    &agrave; un fonctionnement sans disque dur, ou &agrave; un
+	    sous-réseau, ou encore &agrave; une station de
+	    travail particulière.  Ils donnent également
+	    des exemples de fichiers <filename>/etc/fstab</filename>
+	    et <filename>/etc/rc.conf</filename> pour un
+	    fonctionnement sans disque dur.</para>
+
+	  <para>Les fichiers <filename>README</filename> dans le
+	    répertoire <filename
+	    role="directory">/usr/share/examples/diskless</filename>
+	    contiennent beaucoup d'information de fond, mais, avec les
+	    autres exemples du répertoire <filename
+	    role="directory">diskless</filename>, ils documentent une
+	    méthode de configuration qui est distincte de celle
+	    utilisée par <filename>clone_root</filename> et les
+	    procédures de démarrage du système de
+	    <filename role="directory">/etc</filename>, ce qui est un
+	    peu &agrave; l'origine de confusions.  Utilisez-les comme
+	    référence uniquement, &agrave; moins que
+	    vous préfériez la méthode qu'ils
+	    décrivent, dans quel cas vous devrez modifier les
+	    procédures <filename>rc</filename>.</para>
+	</sect4>
+
+	<sect4>
+	  <title>Utilisation de la procédure <command>make
+	    world</command> standard</title>
+
+	  <para>Cette méthode s'applique aussi bien &agrave;
+	    &os;&nbsp;4.X qu'&agrave; &os;&nbsp;5.X et installera un
+	    système complet (et non pas uniquement le
+	    système de fichiers racine) dans le
+	    répertoire défini par
+	    <envar>DESTDIR</envar>.  Tout ce dont vous avez besoin de
+	    faire est d'exécuter la procédure
+	    suivante:</para>
+
+	  <programlisting>#!/bin/sh
+export DESTDIR=/data/misc/diskless
+mkdir -p ${DESTDIR}
+cd /usr/src; make world &amp;&amp; make kernel
+cd /usr/src/etc; make distribution</programlisting>
+
+	  <para>Une fois cela terminé, vous devrez personaliser
+	    vos fichiers <filename>/etc/rc.conf</filename> et
+	    <filename>/etc/fstab</filename> situés dans
+	    <envar>DESTDIR</envar> en fonction de vos besoins.</para>
+	</sect4>
+      </sect3>
+
+      <sect3>
+	<title>Configuration de l'espace de pagination</title>
+
+	<para>Si nécessaire, un fichier de pagination
+	  situé sur le serveur peut être utilisé
+	  via <acronym>NFS</acronym>.  Une des méthodes
+	  couramment utilisées pour cela n'est plus
+	  supportée sous 5.X.</para>
+
+	<sect4>
+	  <title>Pagination via <acronym>NFS</acronym> sous
+	    &os;&nbsp;4.X</title>
+
+	  <para>L'emplacement et la taille du fichier de pagination
+	    peuvent être spécifiés avec les
+	    options BOOTP/<acronym>DHCP</acronym> 128 et 129
+	    spécifiques &agrave; &os;.  Des exemples de
+	    fichiers de configuration pour <application>ISC DHCP
+	    3.0</application> ou <application>bootpd</application>
+	    suivent:</para>
+
+	  <procedure>
+	    <step>
+	      <para>Ajoutez les lignes suivantes au fichier
+		<filename>dhcpd.conf</filename>:</para>
+
+	      <programlisting>
+# Global section
+option swap-path code 128 = string;
+option swap-size code 129 = integer 32;
+
+host margaux {
+  ... # Standard lines, see above
+  option swap-path <replaceable>"192.168.4.4:/netswapvolume/netswap"</replaceable>;
+  option swap-size <replaceable>64000</replaceable>;
+}
+	      </programlisting>
+
+	      <para><literal>swap-path</literal> est le chemin
+		d'accès vers un répertoire où les
+		fichiers de pagination sont situés.  Chaque
+		fichier sera nommé
+		<filename>swap.<replaceable>ip-client</replaceable></filename>.</para>
+
+	      <para>Les anciennes version de
+		<application>dhcpd</application> utilisaient une
+		syntaxe du type <literal>option option-128
+		"...</literal>, qui n'est plus
+		supportée.</para>
+
+	      <para><filename>/etc/bootptab</filename> utiliserait la
+		syntaxe suivante &agrave; la place:</para>
+
+	      <programlisting>T128="192.168.4.4:/netswapvolume/netswap":T129=0000fa00</programlisting>
+
+	      <note>
+		<para>Dans le fichier
+		  <filename>/etc/bootptab</filename>, la taille de
+		  l'espace de pagination doit être exprimée
+		  en hexadécimal.</para>
+	      </note>
+	    </step>
+
+	    <step>
+	      <para>Sur le serveur du fichier de pagination
+		par <acronym>NFS</acronym>, créez le(s)
+		fichier(s) de pagination:</para>
+
+	      <screen>
+&prompt.root; <userinput>mkdir <replaceable>/netswapvolume/netswap</replaceable></userinput>
+&prompt.root; <userinput>cd <replaceable>/netswapvolume/netswap</replaceable></userinput>
+&prompt.root; <userinput>dd if=/dev/zero bs=1024 count=<replaceable>64000</replaceable> of=swap.<replaceable>192.168.4.6</replaceable></userinput>
+&prompt.root; <userinput>chmod 0600 swap.<replaceable>192.168.4.6</replaceable></userinput></screen>
+
+	      <para><replaceable>192.168.4.6</replaceable> est
+		l'adresse IP du client sans disque dur.</para>
+	    </step>
+
+	    <step>
+	      <para>Sur le serveur du fichier de pagination par
+		<acronym>NFS</acronym>, ajoutez la ligne suivante au
+		fichier <filename>/etc/exports</filename>:</para>
+
+	      <programlisting>
+<replaceable>/netswapvolume</replaceable>  -maproot=0:10 -alldirs <replaceable>margaux corbieres</replaceable>
+	      </programlisting>
+
+	      <para>Ensuite demandez &agrave;
+		<application>mountd</application> &agrave; relire le
+		fichier <filename>exports</filename>, comme plus
+		haut.</para>
+	    </step>
+	  </procedure>
+	</sect4>
+
+	<sect4>
+	  <title>Pagination via <acronym>NFS</acronym> sous
+	    &os&nbsp;5.X</title>
+
+	  <para>Le noyau ne supporte pas l'activation de la pagination
+	    par <acronym>NFS</acronym> au démarrage.  L'espace
+	    de pagination doit être activé par les
+	    procédures de démarrage, en montant un
+	    système de fichiers accessible en écriture
+	    et en créant et en activant un fichier de
+	    pagination.  Pour créer un fichier de pagination de
+	    la taille appropriée, vous pouvez effectuer ce qui
+	    suit:</para>
+
+	  <screen>&prompt.root; <userinput>dd if=/dev/zero of=<replaceable>/path/to/swapfile</replaceable> bs=1k count=1 oseek=<replaceable>100000</replaceable></userinput></screen>
+
+	  <para>Pour ensuite l'activer, vous devez ajouter la ligne
+	    suivante &agrave; votre fichier
+	    <filename>rc.conf</filename>:</para>
+
+	  <programlisting>swapfile=<replaceable>/path/to/swapfile</replaceable></programlisting>
+        </sect4>
+      </sect3>
+
+      <sect3>
+	<title>Problèmes divers</title>
+
+	<sect4>
+	  <title>Utilisation d'un <filename>/usr</filename> en lecture
+	    seule</title>
+
+	  <indexterm>
+	    <primary>système sans disque dur</primary>
+	    <secondary>/usr en lecture seule</secondary>
+	  </indexterm>
+
+	  <para>Si la station de travail sans disque dur est
+	    configurée pour exécuter X, you devrez
+	    ajuster le fichier de configuration de
+	    <application>XDM</application>, qui envoie le journal
+	    d'erreurs sur <filename role="directory">/usr</filename>
+	    par défaut.</para>
+	</sect4>
+
+	<sect4>
+	  <title>Utilisation d'un serveur non-&os;</title>
+
+	  <para>Quand le serveur pour le système de fichiers
+	    racine ne fait pas tourner &os;, vous devrez créer
+	    le système de fichiers racine sur une machine &os;,
+	    puis le copier vers sa destination en utilisant
+	    <command>tar</command> ou <command>cpio</command>.</para>
+
+	  <para>Dans cette situation, il y a parfois des
+	    problèmes avec les fichiers spéciaux de
+	    périphériques dans <filename
+	    role="directory">/dev</filename>, en raison de
+	    différences de taille sur les entiers.  Une
+	    solution &agrave; ce problème est d'exporter un
+	    répertoire &agrave; partir du serveur non-&os;, de
+	    monter ce répertoire sur une machine &os;, et
+	    exécuter <command>MAKEDEV</command> sur la machine
+	    &os; pour créer les entrées de
+	    périphériques correctes (&os;&nbsp;5.X et
+	    les versions suivantes utilisent &man.devfs.5; pour
+	    l'allocation des fichiers spéciaux de
+	    périphériques de manière transparente
+	    pour l'utilisateur, exécuter
+	    <command>MAKEDEV</command> sur ces versions est
+	    inutile).</para>
+	</sect4>
+      </sect3>
+    </sect2>
+  </sect1>
+
+  <sect1 id="network-isdn">
+    <title>ISDN</title>
+
+    <indexterm>
+      <primary>ISDN&mdash;(RNIS)</primary>
+    </indexterm>
+
+    <para>Une bonne source d'information sur la technologie et le
+      matériel ISDN (RNIS) est <ulink
+      url="http://www.alumni.caltech.edu/~dank/isdn/">la page ISDN de
+      Dan Kegel</ulink>.</para>
+
+    <para>Voici un rapide aperçu &agrave; propos de
+      l'ISDN:</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>Si vous résidez en Europe, vous devriez
+	  étudier la section sur les cartes ISDN.</para>
+      </listitem>
+
+      <listitem>
+	<para>Si vous envisagez d'utiliser l'ISDN avant tout pour vous
+	  connecter &agrave; l'Internet par l'intermédiaire d'un
+	  fournisseur d'accès Internet et d'une ligne
+	  téléphonique non dédiée, vous
+	  devriez vous intéresser aux Adaptateurs Terminaux.
+	  C'est la solution la plus souple, qui vous posera le moins de
+	  problèmes si vous changez de fournisseur
+	  d'accès.</para>
+      </listitem>
+
+      <listitem>
+	<para>Si vous interconnectez deux réseaux locaux, ou si
+	  vous vous connectez &agrave; l'Internet avec une liaison ISDN
+	  dédiée, vous devriez envisager un pont/routeur
+	  autonome.</para>
+      </listitem>
+    </itemizedlist>
+
+    <para>Le coût est un facteur déterminant de la
+      solution que vous choisirez.  Les options suivantes sont
+      listées de la moins chère &agrave; la plus
+      chère.</para>
+
+    <sect2 id="network-isdn-cards">
+      <sect2info>
+	<authorgroup>
+	  <author>
+	    <firstname>Hellmuth</firstname>
+	    <surname>Michaelis</surname>
+	    <contrib>Contribution de </contrib>
+	  </author>
+	</authorgroup>
+      </sect2info>
+      <title>Cartes ISDN</title>
+
+      <indexterm>
+	<primary>ISDN</primary>
+	<secondary>cartes</secondary>
+      </indexterm>
+
+      <para>L'implémentation ISDN de &os; ne supporte que la
+	norme DSS1/Q.931 (ou Euro-ISDN) utilisant des cartes passives.
+	Depuis &os;&nbsp;4.4, quelques cartes actives sont
+	supportées où le firmware supporte
+	également d'autres protocoles au niveau des signaux,
+	cela inclut les premières cartes supportées du
+	type &ldquo;Primary Rate ISDN&rdquo; (PRI).</para>
+
+      <para>Le logiciel <application>isdn4bsd</application> vous
+	permet de vous connecter &agrave; d'autres routeurs ISDN soit
+	en utilisant l'IP sur de l'HDLC de base, soit en utilisant PPP
+	synchrone: en employant PPP intégré au noyau
+	avec <literal>isppp</literal>, une version modifiée du
+	pilote de périphérique &man.sppp.4;, ou en
+	employant &man.ppp.8; en mode utilisateur.  L'utilisation de
+	&man.ppp.8; en mode utilisateur rend possible
+	l'agrégation de deux ou plus canaux ISDN de type B.
+	Une application capable de répondre aux appels
+	téléphoniques est également disponible,
+	tout comme de nombreux utilitaires comme un modem logiciel 300
+	bauds.</para>
+
+      <para>Un nombre croissant de cartes ISDN pour PC sont
+	supportées sous &os; et les retours montrent qu'elles
+	sont utilisées avec succès dans toute l'Europe
+	et dans de nombreuses autres parties du monde.</para>
+
+      <para>Les cartes ISDN passives supportées sont
+	principalement celles avec le circuit ISDN ISAC/HSCX/IPAC
+	d'Infineon (précédemment Siemens), mais
+	également les cartes avec des circuits en provenance de
+	Cologne Chip (cartes ISA uniquement), les cartes PCI avec les
+	circuits Winbond W6692, quelques cartes avec les circuits
+	Tiger300/320/ISAC et quelques cartes avec des circuits
+	spécifiques comme l'AVM Fritz!Card PCI V.1.0 de l'AVM
+	Fritz!Card PnP.</para>
+
+      <para>Actuellement les cartes ISDN actives supportées
+	sont les cartes AVM B1 (ISA et PCI) BRI et les cartes PCI AVM
+	T1 PRI.</para>
+
+      <para>Pour de la documentation sur
+	<application>isdn4bsd</application>, consultez le
+	répertoire <filename
+	role="directory">/usr/share/examples/isdn/</filename> sur
+	votre système &os; ou sur la <ulink
+	url="http://www.freebsd-support.de/i4b/">page web
+	d'isdn4bsd</ulink> qui propose également des astuces,
+	des erratas et bien plus de documentation que le <ulink
+	url="http://people.FreeBSD.org/~hm/">manuel
+	d'isdn4bsd</ulink>.</para>
+
+      <para>Au cas où vous seriez intéressé par
+	l'ajout du support pour un protocole ISDN différent,
+	d'une carte ISDN pour PC non encore supportée ou par
+	l'amélioration d'<application>isdn4bsd</application>,
+	veuillez contacter &a.hm;.</para>
+
+      <para>Pour les questions concernant l'installation, la
+	configuration et le dépannage
+	d'<application>isdn4bsd</application>, une liste de diffusion
+	&a.isdn.name; est disponible.</para>
+    </sect2>
+
+    <sect2>
+      <title>Adaptateurs terminaux ISDN</title>
+
+      <para>Les adaptateurs terminaux&mdash;&ldquo;Terminal adapters
+	(TA)&rdquo;; sont l'équivalent ISDN des modems pour les
+	lignes téléphoniques ordinaires.</para>
+
+      <indexterm><primary>modem</primary></indexterm>
+
+      <para>La plupart des TA utilisent le jeu de commandes standard
+	des modems Hayes, et peuvent être utilisés en
+	remplacement d'un modem.</para>
+
+      <para>Un TA fonctionne essentiellement de la même
+	manière qu'un modem &agrave; la différence que
+	la vitesse de la connexion sera plus élevée
+	qu'avec votre vieux modem.  Vous devrez configurer <link
+	linkend="ppp">PPP</link> de façon exactement identique
+	que pour un modem classique.  Assurez-vous de fixer la vitesse
+	de votre port série la plus haute possible.</para>
+
+      <indexterm><primary>PPP</primary></indexterm>
+
+      <para>Le principal avantage d'utiliser un TA pour vous connecter
+	&agrave; votre fournisseur d'accès Internet est de
+	pouvoir utiliser PPP en mode dynamic.  Comme l'espace
+	d'adressage IP disponible devient de plus en plus restreint,
+	la plupart des fournisseurs d'accès ne désirent
+	plus vous fournir d'adresse IP statique.  La plupart des
+	routeurs autonomes ne peuvent pas fonctionner avec une
+	allocation dynamique d'adresse IP.</para>
+
+      <para>Les fonctionnalités et la stabilité de la
+	connexion des adaptateurs terminaux reposent
+	complètement sur le &ldquo;daemon&rdquo; PPP.  Cela
+	vous permet de passer facilement d'un modem classique &agrave;
+	l'ISDN sur une machine &os;, si vous avez déj&agrave;
+	configuré PPP.  Cependant, les problèmes que
+	vous avez éventuellement rencontrés avec PPP
+	persisteront.</para>
+
+      <para>Si vous désirez un maximum de stabilité,
+	utilisez <link linkend="ppp">PPP intégré au
+	noyau</link>, &agrave; la place du <link linkend="userppp">PPP
+	en mode utilisateur</link>.</para>
+
+      <para>Les adaptateurs suivants sont connus pour fonctionner avec
+	&os;:</para>
+
+      <itemizedlist>
+	<listitem>
+	  <para>Motorola BitSurfer et Bitsurfer Pro</para>
+	</listitem>
+
+	<listitem>
+	  <para>Adtran</para>
+	</listitem>
+      </itemizedlist>
+
+      <para>La plupart des adaptateurs terminaux fonctionneront
+	probablement également, les fabricants de TA font en
+	sorte que leurs produits acceptent la plupart du jeu de
+	commandes AT des modems.</para>
+
+      <para>Le vrai problème avec les adaptateurs terminaux est
+	que comme pour les modems, il vous faudra une bonne interface
+	série dans votre ordinateur.</para>
+
+      <para>Vous devriez lire le document sur <ulink
+	url="&url.articles.serial-uart;/index.html">les ports
+	série sous &os;</ulink> pour comprendre en
+	détail le fonctionnement des
+	périphériques série et les
+	différences entre les ports séries asynchrones
+	et synchrones.</para>
+
+      <para>Un adaptateur terminal sur un port série PC
+	standard (asynchrone) vous limite &agrave; 115.2&nbsp;Kbs,
+	même si vous disposez d'une connexion &agrave;
+	128&nbsp;Kbs.  Pour utiliser complètement les
+	128&nbsp;Kbs offert par l'ISDN, vous devez brancher
+	l'adaptateur sur une carte série synchrone.</para>
+
+      <para>Ne vous imaginez pas qu'il suffit d'acheter un adaptateur
+	terminal interne pour s'affranchir du problème
+	synchrone/asynchrone.  Les adaptateurs internes disposent
+	simplement d'un port série PC standard.  Tout ce que
+	vous y gagnerez sera d'économiser un câble
+	série et de libérer une prise
+	électrique.</para>
+
+      <para>Une carte synchrone avec un adaptateur terminal est au
+	moins aussi rapide qu'un routeur autonome, piloté par
+	une simple machine &os;, et probablement plus souple.</para>
+
+      <para>Le choix entre carte synchrone/adaptateur ou routeur
+	autonome est une question de goût.  Ce sujet a
+	été abordé dans les listes de diffusion.
+	Nous vous suggérons de chercher dans les <ulink
+	url="&url.base;/search/index.html">archives</ulink> pour
+	obtenir l'intégralité de la discussion.</para>
+    </sect2>
+
+    <sect2>
+      <title>Ponts/Routeurs ISDN autonomes</title>
+      <indexterm>
+	<primary>ISDN</primary>
+	<secondary>ponts/routeurs autonomes</secondary>
+      </indexterm>
+
+      <para>Les ponts ou routeurs ISDN ne sont pas spécifiques
+	&agrave; &os; ou &agrave; tout autre système
+	d'exploitation.  Pour une description complète de la
+	technologie du routage et des ponts, veuillez vous reportez
+	&agrave; un ouvrage de référence sur les
+	réseaux.</para>
+
+      <para>Dans le contexte de cette section, les termes de routeur
+	et de pont seront utilisés
+	indifféremment.</para>
+
+      <para>Comme le prix des routeurs/ponts ISDN d'entrée de
+	gamme baissent, il est probable qu'ils deviennent un choix de
+	plus en plus populaire.  Un routeur ISDN est une petite
+	boîte qui se branche directement sur votre réseau
+	Ethernet, et gère sa propre connexion aux autres
+	ponts/routeurs.  Il intègre le logiciel
+	nécessaire au support du protocole PPP et d'autres
+	protocoles.</para>
+
+      <para>Un routeur vous offrira un débit plus
+	élevé qu'un adaptateur terminal standard,
+	puisqu'il utilisera une connexion ISDN synchrone.</para>
+
+      <para>Le principal problème avec les routeurs et ponts
+	ISDN est que l'intéropérabilité entre les
+	matériels des différents constructeurs n'est pas
+	toujours garantie.  Si vous projetez de vous connecter
+	&agrave; un fournisseur d'accès Internet, vous devriez
+	discuter de vos besoins avec ce dernier.</para>
+
+      <para>Si vous envisagez de connecter ensemble deux
+	réseaux locaux, comme le réseau de votre
+	domicile et celui de votre bureau, c'est la solution la plus
+	simple et celle qui demande le moins de maintenance.  Etant
+	donné que vous êtes la personne qui achète
+	les équipements pour les deux extrémités,
+	vous êtes sûr que cela fonctionnera.</para>
+
+      <para>Par exemple pour connecter un ordinateur personnel
+	situé &agrave; son domicile ou le réseau d'une
+	agence &agrave; celui du siège social, la configuration
+	suivante pourra être utilisée:</para>
+
+      <example>
+	<title>Réseau d'agence ou &agrave; domicile</title>
+
+	<indexterm><primary>10 base 2</primary></indexterm>
+	<para>Le réseau utilise une topologie en bus avec une
+	  connectique Ethernet 10 base 2 (&ldquo;thinnet&rdquo;).
+	  Connectez le routeur au réseau &agrave; l'aide d'un
+	  émetteur/récepteur AUI/10BT si
+	  nécessaire.</para>
+
+        <mediaobject>
+	  <imageobject>
+	    <imagedata fileref="advanced-networking/isdn-bus"/>
+	  </imageobject>
+
+	  <textobject>
+	    <literallayout class="monospaced">---Station de travail Sun
+|
+---Machine FreeBSD
+|
+---Windows 95
+|
+Routeur autonome
+   |
+Liaison ISDN BRI</literallayout>
+	  </textobject>
+
+	  <textobject>
+	    <phrase>Ethernet 10 Base 2</phrase>
+	  </textobject>
+	</mediaobject>
+
+	<para>Si votre réseau de domicile/d'agence n'est
+	  constitué que d'un seul ordinateur, vous pouvez
+	  utiliser une paire torsadée croisée pour le
+	  connecter directement au routeur autonome.</para>
+      </example>
+
+      <example>
+	<title>Siège social ou autre réseau</title>
+
+	<indexterm><primary>10 base T</primary></indexterm>
+	<para>Le réseau utilise une topologie en étoile
+	  avec une connectique Ethernet 10 base T (&ldquo;paire
+	  torsadée&rdquo;).</para>
+
+	<mediaobject>
+	  <imageobject>
+	    <imagedata fileref="advanced-networking/isdn-twisted-pair"/>
+	  </imageobject>
+
+	  <textobject>
+	    <literallayout class="monospaced">    -------Serveur Novell
+    | H |
+    |   ---Sun
+    |   |
+    | U ---FreeBSD
+    |   |
+    |   ---Windows 95
+    | B |
+    |___---Routeur autonome
+                |
+        Liaison ISDN BRI</literallayout>
+	  </textobject>
+
+	  <textobject>
+	    <phrase>Architecture du Réseau ISDN</phrase>
+	  </textobject>
+	</mediaobject>
+      </example>
+
+      <para>Un des principaux avantages de la plupart des
+	routeurs/ponts est le fait qu'ils permettent d'avoir deux
+	connexions PPP <emphasis>séparées et
+	indépendantes</emphasis> vers deux sites
+	différents et cela en <emphasis>même</emphasis>
+	temps.  Ceci n'est pas supporté par la plupart des
+	adaptateurs terminaux, en dehors de modèles
+	spécifiques (en général coûteux)
+	qui disposent de deux ports série.  Ne confondez pas
+	cette possibilité avec l'agrégation de canaux,
+	MPP, etc.</para>
+
+      <para>Ceci peut être une fonctionnalité très
+	utile si, par exemple, vous disposez d'une connexion ISDN
+	dédiée au bureau et vous voudriez en profiter
+	mais vous ne voulez pas acquérir une nouvelle ligne
+	ISDN.  Un routeur au bureau peut gérer un canal B
+	dédié (64&nbsp;Kbps) vers l'Internet et utiliser
+	l'autre canal B pour une autre connexion.  Le deuxième
+	canal B peut être utilisé pour les connexions
+	entrantes, sortantes ou pour l'agrégation de canaux
+	(MPP, etc.) avec le premier canal B pour augmenter la bande
+	passante.</para>
+
+      <indexterm><primary>IPX/SPX</primary></indexterm>
+      <para>Un pont Ethernet vous permettra de transmettre autre chose
+	que juste du trafic IP.  Vous pouvez également faire
+	passer de l'IPX/SPX ou tout autre protocole que vous
+	utilisez.</para>
+    </sect2>
+  </sect1>
+
+  <sect1 id="network-natd">
+    <sect1info>
+      <authorgroup>
+	<author>
+	  <firstname>Chern</firstname>
+	  <surname>Lee</surname>
+	  <contrib>Contribution de </contrib>
+	</author>
+      </authorgroup>
+    </sect1info>
+    <title>Translation d'adresses</title>
+
+    <sect2 id="network-natoverview">
+      <title>Généralités</title>
+      <indexterm>
+	<primary><application>natd</application></primary>
+      </indexterm>
+      <para>Le &ldquo;daemon&rdquo; de translation d'adresses
+	(&ldquo;Network Address Translation&rdquo;&mdash;NAT) de &os;,
+	généralement connu sous le nom de &man.natd.8; est
+	un &ldquo;daemon&rdquo; qui accepte les paquets IP entrants,
+	change l'adresse de la source par celle de la machine locale et
+	ré-injecte les paquets dans le flux sortant des paquets
+	IP.  Le programme &man.natd.8; effectue cela en changeant
+	l'adresse IP et le port source de sorte quand les données
+	réponse arrivent il soit en mesure de déterminer
+	la provenance des données d'origine et les
+	transférer &agrave; l'émetteur original.</para>
+
+      <indexterm><primary>Partage de connexion Internet</primary></indexterm>
+      <indexterm><primary>NAT</primary></indexterm>
+
+      <para>L'utilisation classique de NAT est le partage de connexion
+	Internet.</para>
+    </sect2>
+
+    <sect2 id="network-natsetup">
+      <title>Architecture du réseau</title>
+
+      <para>En raison de la diminution du nombre d'adresses IP libres
+	sous IPv4, et de l'augmentation du nombre d'utilisateurs de
+	lignes haut-débit comme le câble ou l'ADSL, le
+	besoin d'utiliser une solution de partage de connexion est
+	donc en constante augmentation.  La possibilité de
+	connecter plusieurs ordinateurs par l'intermédiaire
+	d'une connexion et d'une adresse IP fait de &man.natd.8; une
+	solution de choix.</para>
+
+      <para>Plus généralement, un utilisateur dispose
+	d'une machine connecté sur la câble ou une ligne
+	ADSL avec une adresse IP et désire utiliser cet
+	ordinateur connecté pour fournir un accès
+	Internet &agrave; d'autres machines du réseau
+	local.</para>
+
+      <para>Pour cela, la machine &os; sur Internet doit jouer le
+	rôle de passerelle.  Cette machine passerelle doit avoir
+	deux cartes réseaux&mdash;l'une pour se connecter au
+	routeur Internet, l'autre est connectée au
+	réseau local.  Toutes les machines du réseau
+	local sont connectées par l'intermédiaire d'un
+	hub ou d'un switch.</para>
+
+      <note>
+	<para>Il existe plusieurs manières pour connecter un
+	  réseau local &agrave; l'Internet &agrave; travers une
+	  passerelle &os;.  Cet exemple n'abordera que le cas d'une
+	  passerelle avec au moins deux cartes réseaux.</para>
+      </note>
+
+      <mediaobject>
+	<imageobject>
+	  <imagedata fileref="advanced-networking/natd"/>
+	</imageobject>
+
+	<textobject>
+	  <literallayout class="monospaced">  _______       __________       _________
+ |       |     |          |     |         |
+ |  Hub  |-----| Client B |-----| Routeur |----- Internet
+ |_______|     |__________|     |_________|
+     |
+ ____|_____
+|          |
+| Client A |
+|__________|</literallayout>
+	</textobject>
+
+	<textobject>
+	  <phrase>Organisation du réseau</phrase>
+	</textobject>
+      </mediaobject>
+
+      <para>Une telle configuration est communément
+	utilisée pour partager une connexion Internet.  Une des
+	machines du réseau local est connectée &agrave;
+	Internet.  Le reste des machines accède &agrave;
+	Internet par l'intermédiaire de cette machine
+	&ldquo;passerelle&rdquo;.</para>
+    </sect2>
+
+    <sect2 id="network-natdkernconfiguration">
+      <title>Configuration</title>
+
+      <indexterm>
+	<primary>noyau</primary>
+	<secondary>configuration</secondary>
+      </indexterm>
+
+      <para>Les options suivantes doivent être présentes
+	dans le fichier de configuration du noyau:</para>
+
+      <programlisting>options IPFIREWALL
+options IPDIVERT</programlisting>
+
+      <para>De plus, les options suivantes peuvent également
+	être utiles:</para>
+
+      <programlisting>options IPFIREWALL_DEFAULT_TO_ACCEPT
+options IPFIREWALL_VERBOSE</programlisting>
+
+      <para>Ce qui suit doit figurer dans le fichier
+	<filename>/etc/rc.conf</filename>:</para>
+
+      <programlisting>gateway_enable="YES" <co id="co-natd-gateway-enable"/>
+firewall_enable="YES" <co id="co-natd-firewall-enable"/>
+firewall_type="OPEN" <co id="co-natd-firewall-type"/>
+natd_enable="YES"
+natd_interface="<replaceable>fxp0</replaceable>" <co id="co-natd-natd-interface"/>
+natd_flags="" <co id="co-natd-natd-flags"/></programlisting>
+
+      <calloutlist>
+	<callout arearefs="co-natd-gateway-enable">
+	  <para>Configure la machine comme passerelle.
+	    Exécuter <command>sysctl
+	    net.inet.ip.forwarding=1</command> aurait le même
+	    effet.</para>
+	</callout>
+
+	<callout arearefs="co-natd-firewall-enable">
+	  <para>Active au démarrage les règles du
+	    coupe-feu se trouvant dans le fichier
+	    <filename>/etc/rc.firewall</filename>.</para>
+	</callout>
+
+	<callout arearefs="co-natd-firewall-type">
+	  <para>Cela spécifie un ensemble de règles
+	    prédéfinies pour le coupe-feu qui autorise
+	    tous les paquets entrant.  Consultez le fichier
+	    <filename>/etc/rc.firewall</filename> pour d'autres
+	    ensembles de régles.</para>
+	</callout>
+
+	<callout arearefs="co-natd-natd-interface">
+	  <para>Indique &agrave; travers quelle interface
+	    transférer les paquets (l'interface
+	    connectée &agrave; l'Internet).</para>
+	</callout>
+
+	<callout arearefs="co-natd-natd-flags">
+	  <para>Toutes options de configuration
+	    supplémentaires passées &agrave;
+	    &man.natd.8; au démarrage.</para>
+	</callout>
+      </calloutlist>
+
+      <para>Le fait d'avoir les options précédentes
+	définies dans le fichier
+	<filename>/etc/rc.conf</filename> lancera la commande
+	<filename>/etc/rc.conf</filename> au démarrage.  Cette
+	commande peut être également
+	exécutée &agrave; la main.</para>
+
+      <note>
+	<para>Il est également possible d'utiliser un fichier
+	  de configuration pour &man.natd.8; quand il y a trop d'options
+	  &agrave; passer.  Dans ce cas, le fichier de configuration
+	  doit être défini en ajoutant la ligne suivante au
+	  fichier <filename>/etc/rc.conf</filename>:</para>
+
+	<programlisting>natd_flags="-f /etc/natd.conf"</programlisting>
+
+	<para>Le fichier <filename>/etc/natd.conf</filename>
+	  contiendra une liste d'options de configuration, une par
+	  ligne.  Par exemple le cas de figure de la section suivante
+	  utiliserait le fichier suivant:</para>
+
+	<programlisting>redirect_port tcp 192.168.0.2:6667 6667
+redirect_port tcp 192.168.0.3:80 80</programlisting>
+
+	<para>Pour plus d'information concernant le fichier de
+	  configuration, consultez la page de manuel de &man.natd.8;
+	  au sujet de l'option <option>-f</option>.</para>
+      </note>
+
+      <para>A chaque machine et interface derrière le
+	réseau local doit être assigné une adresse
+	IP de l'espace d'adresses privées comme défini
+	par la <ulink url="ftp://ftp.isi.edu/in-notes/rfc1918.txt">RFC
+	1918</ulink> et doit disposer d'une passerelle par
+	défaut qui est l'adresse IP interne de la machine
+	&man.natd.8;.</para>
+
+      <para>Par exemple, les clients <hostid>A</hostid> et
+	<hostid>B</hostid> du réseau local ont les adresses IP
+	<hostid role="ipaddr">192.168.0.2</hostid> et <hostid
+	role="ipaddr">192.168.0.3</hostid>, tandis que l'interface sur
+	le réseau local de la machine
+	<application>natd</application> a pour adresse IP <hostid
+	role="ipaddr">192.168.0.1</hostid>.  La passerelle par
+	défaut des clients <hostid>A</hostid> et
+	<hostid>B</hostid> doit être l'adresse <hostid
+	role="ipaddr">192.168.0.1</hostid> de la machine
+	<application>natd</application>.  L'interface externe ou
+	Internet de cette dernière ne demande aucune
+	modification spécifique pour que &man.natd.8; puisse
+	fonctionner.</para>
+    </sect2>
+
+    <sect2 id="network-natdport-redirection">
+      <title>Redirection de ports</title>
+
+      <para>L'inconvénient avec &man.natd.8; est que les
+	clients du réseau local ne sont pas accessibles depuis
+	l'Internet.  Les clients sur le réseau local peuvent
+	établir des connexions sortantes vers le monde
+	extérieur mais ne peuvent recevoir de connexions
+	entrantes.  Cela présente un problème si l'on
+	tente de faire tourner des services Internet sur une des
+	machines du réseau local.  Une solution simple &agrave;
+	ce problème est de rediriger les ports Internet
+	sélectionnés de la machine
+	<application>natd</application> vers le client sur le
+	réseau local.</para>
+
+      <para>Par exemple, un serveur IRC tourne sur le client
+	<hostid>A</hostid>, et un serveur web sur le client
+	<hostid>B</hostid>.  Pour que cela fonctionne correctement,
+	les connections reçues sur les ports 6667 (IRC) et 80
+	(web) doivent être redirigées vers les machines
+	correspondantes.</para>
+
+      <para>L'option <option>-redirect_port</option> doit être
+	passée &agrave; &man.natd.8; avec les autres options
+	adéquates.  La syntaxe est la suivante:</para>
+
+      <programlisting>-redirect_port proto targetIP:targetPORT[-targetPORT]
+                 [aliasIP:]aliasPORT[-aliasPORT]
+                 [remoteIP[:remotePORT[-remotePORT]]]</programlisting>
+
+      <para>Dans l'exemple précédent, l'argument
+	passé &agrave; la commande devrait être:</para>
+
+      <programlisting>-redirect_port tcp 192.168.0.2:6667 6667
+-redirect_port tcp 192.168.0.3:80 80</programlisting>
+
+      <para>Cela va rediriger les ports <emphasis>tcp</emphasis>
+	voulus vers les machines du réseau local.</para>
+
+      <para>L'option <option>-redirect_port</option> peut être
+	utilisée pour indiquer une plage de ports plutôt
+	que des ports individuels.  Par exemple <replaceable>tcp
+	192.168.0.2:2000-3000 2000-3000</replaceable> redirigerait
+	toutes les connexions reçues sur les ports 2000
+	&agrave; 3000 vers les ports 2000 &agrave; 3000 du client
+	<hostid>A</hostid>.</para>
+
+      <para>Ces options peuvent être utilisées quand on
+	exécute directement &man.natd.8;, placées dans
+	l'option <literal>natd_flags=""</literal> du fichier
+	<filename>/etc/rc.conf</filename>, ou passées
+	par l'intermédiaire d'un fichier de configuration.</para>
+
+      <para>Pour plus d'éléments et d'options de
+	configuration consultez la page de manuel &man.natd.8;</para>
+    </sect2>
+
+    <sect2 id="network-natdaddress-redirection">
+      <title>Redirection d'adresses</title>
+      <indexterm><primary>redirection d'adresses</primary></indexterm>
+
+      <para>La redirection d'adresses est utile si plusieurs adresses
+	IP sont disponibles mais doivent se trouver sur une seule
+	machine.  Avec cela, &man.natd.8; peut assigner &agrave;
+	chaque client du réseau local sa propre adresse IP
+	externe.  Le programme &man.natd.8; récrit alors les
+	paquets sortant des clients du réseau local avec
+	l'adresse IP externe correcte et redirige tout le trafic
+	entrant sur une adresse IP particulière vers la machine
+	du réseau local correspondante.  Ce principe est
+	également connu sous le nom de translation d'adresses
+	statique.  Par exemple, les adresses IP <hostid
+	role="ipaddr">128.1.1.1</hostid>, <hostid
+	role="ipaddr">128.1.1.2</hostid>, et <hostid
+	role="ipaddr">128.1.1.3</hostid> appartiennent &agrave; la
+	passerelle <application>natd</application>.  L'adresse <hostid
+	role="ipaddr">128.1.1.1</hostid> peut être
+	utilisée comme adresse IP externe de la passerelle
+	<application>natd</application>, tandis que <hostid
+	role="ipaddr">128.1.1.2</hostid> et <hostid
+	role="ipaddr">128.1.1.3</hostid> sont redirigées vers
+	les machines <hostid>A</hostid> et <hostid>B</hostid> du
+	réseau local.</para>
+
+      <para>La syntaxe de l'option <option>-redirect_address</option>
+	est la suivante:</para>
+
+      <programlisting>-redirect_address localIP publicIP</programlisting>
+
+      <informaltable frame="none" pgwide="1">
+	<tgroup cols="2">
+	  <tbody>
+	    <row>
+	      <entry>localIP</entry>
+	      <entry>L'adresse IP interne du client sur le
+		réseau local.</entry>
+	    </row>
+	    <row>
+	      <entry>publicIP</entry>
+	      <entry>L'adresse IP externe correspondant au client sur
+		le réseau local.</entry>
+	    </row>
+	  </tbody>
+	</tgroup>
+      </informaltable>
+
+      <para>Dans l'exemple, les arguments passés &agrave; la
+	commande seraient:</para>
+
+      <programlisting>-redirect_address 192.168.0.2 128.1.1.2
+-redirect_address 192.168.0.3 128.1.1.3</programlisting>
+
+      <para>Comme pour l'option <option>-redirect_port</option>, ces
+	options peuvent être placées dans l'option
+	<literal>natd_flags=""</literal> du fichier
+	<filename>/etc/rc.conf</filename>, ou passées par l'intermédiaire d'un fichier de configuration.  Avec la redirection
+	d'adresse, il n'y a pas besoin de redirection de ports puisque
+	toutes les données reçues sur une IP
+	particulière sont redirigées.</para>
+
+      <para>Les adresses IP sur la machine
+	<application>natd</application> doivent être active et
+	pointer sur l'interface externe.  Consultez la page de manuel
+	&man.rc.conf.5; pour cela.</para>
+    </sect2>
+  </sect1>
+
+  <sect1 id="network-plip">
+    <title>IP sur liaison parallèle (PLIP)</title>
+
+    <indexterm><primary>PLIP</primary></indexterm>
+    <indexterm>
+      <primary>IP sur liaison parallèle</primary>
+      <see>PLIP</see>
+    </indexterm>
+
+    <para>PLIP nous permet d'utiliser le protocole TCP/IP entre ports
+      parallèles.  C'est utile sur des machines sans cartes
+      réseaux, ou pour effectuer une installation sur
+      ordinateur portable.  Dans cette section nous aborderons:</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>La fabrication d'un câble parallèle
+	  (&ldquo;laplink&rdquo;).</para>
+      </listitem>
+
+      <listitem>
+	<para>La connexion de deux ordinateurs via PLIP.</para>
+      </listitem>
+    </itemizedlist>
+
+    <sect2 id="network-create-parallel-cable">
+      <title>Fabriquer un câble parallèle</title>
+
+      <para>Vous pouvez acheter un câble parallèle
+	auprès de la plupart des vendeurs de matériel
+	informatique.  Si ce n'est pas le cas, ou désirez
+	savoir comment est fait un tel câble, le tableau suivant
+	montre comment en faire un &agrave; partir d'un câble
+	parallèle d'imprimante.</para>
+
+      <table frame="none">
+	<title>Câblage d'un câble parallèle pour
+	  réseau</title>
+
+	<tgroup cols="5">
+	  <thead>
+	    <row>
+	      <entry>A-name</entry>
+
+	      <entry>A-End</entry>
+
+	      <entry>B-End</entry>
+
+	      <entry>Descr.</entry>
+
+	      <entry>Post/Bit</entry>
+	    </row>
+	  </thead>
+
+	  <tbody>
+	    <row>
+	      <entry><literallayout>DATA0
+-ERROR</literallayout></entry>
+
+	      <entry><literallayout>2
+15</literallayout></entry>
+
+	      <entry><literallayout>15
+2</literallayout></entry>
+
+	      <entry>Data</entry>
+
+	      <entry><literallayout>0/0x01
+1/0x08</literallayout></entry>
+	    </row>
+
+	    <row>
+	      <entry><literallayout>DATA1
++SLCT</literallayout></entry>
+
+	      <entry><literallayout>3
+13</literallayout></entry>
+
+	      <entry><literallayout>13
+3</literallayout></entry>
+
+	      <entry>Data</entry>
+
+	      <entry><literallayout>0/0x02
+1/0x10</literallayout></entry>
+	    </row>
+
+	    <row>
+	      <entry><literallayout>DATA2
++PE</literallayout></entry>
+
+	      <entry><literallayout>4
+12</literallayout></entry>
+
+	      <entry><literallayout>12
+4</literallayout></entry>
+
+	      <entry>Data</entry>
+
+	      <entry><literallayout>0/0x04
+1/0x20</literallayout></entry>
+	    </row>
+
+	    <row>
+	      <entry><literallayout>DATA3
+-ACK</literallayout></entry>
+
+	      <entry><literallayout>5
+10</literallayout></entry>
+
+	      <entry><literallayout>10
+5</literallayout></entry>
+
+	      <entry>Strobe</entry>
+
+	      <entry><literallayout>0/0x08
+1/0x40</literallayout></entry>
+	    </row>
+
+	    <row>
+	      <entry><literallayout>DATA4
+BUSY</literallayout></entry>
+
+	      <entry><literallayout>6
+11</literallayout></entry>
+
+	      <entry><literallayout>11
+6</literallayout></entry>
+
+	      <entry>Data</entry>
+
+	      <entry><literallayout>0/0x10
+1/0x80</literallayout></entry>
+	    </row>
+
+	    <row>
+	      <entry>GND</entry>
+
+	      <entry>18-25</entry>
+
+	      <entry>18-25</entry>
+
+	      <entry>GND</entry>
+
+	      <entry>-</entry>
+	    </row>
+	  </tbody>
+	</tgroup>
+      </table>
+    </sect2>
+
+    <sect2 id="network-plip-setup">
+      <title>Configurer PLIP</title>
+
+      <para>Tout d'abord procurez-vous un câble
+	&ldquo;laplink&rdquo;.  Vérifiez ensuite que les deux
+	ordinateurs disposent d'un noyau avec le support pour le
+	pilote de périphérique &man.lpt.4;.</para>
+
+      <screen>&prompt.root; <userinput>grep lp /var/run/dmesg.boot</userinput>
+lpt0: &lt;Printer&gt; on ppbus0
+lpt0: Interrupt-driven port</screen>
+
+      <para>Le port parallèle doit fonctionner sous interruption,
+	sous &os;&nbsp;4.X vous devriez avoir une ligne semblable
+	&agrave; la ligne suivante dans le fichier de configuration du
+	noyau:</para>
+
+      <programlisting>device ppc0 at isa? irq 7</programlisting>
+
+      <para>Sous &os;&nbsp;5.X, le fichier
+	<filename>/boot/device.hints</filename> devrait contenir les
+	lignes suivantes:</para>
+
+      <programlisting>hint.ppc.0.at="isa"
+hint.ppc.0.irq="7"</programlisting>
+
+      <para>Ensuite vérifiez si le fichier de configuration du
+	noyau contient une ligne <literal>device plip</literal>
+	ou si le module <filename>plip.ko</filename> est chargé.
+	Dans les deux cas l'interface réseau parallèle
+	devrait apparaître quand vous utilisez la
+	commande &man.ifconfig.8;:</para>
+
+      <screen>&prompt.root; <userinput>ifconfig plip0</userinput>
+plip0: flags=8810&lt;POINTOPOINT,SIMPLEX,MULTICAST&gt; mtu 1500</screen>
+
+      <para>Branchez le câble &ldquo;laplink&rdquo; sur les
+	interfaces parallèles des deux ordinateurs.</para>
+
+      <para>Configurez les paramètres de l'interface
+	réseau des deux côtés en tant que
+	<username>root</username>.  Par exemple, si vous voulez
+	connecter la machine <hostid>host1</hostid>
+	avec la machine <hostid>host2</hostid>:</para>
+
+      <programlisting>                 host1 &lt;-----&gt; host2
+IP Address    10.0.0.1      10.0.0.2</programlisting>
+
+      <para>Configurez l'interface sur <hostid>host1</hostid> en tapant:</para>
+
+      <screen>&prompt.root; <userinput>ifconfig plip0 10.0.0.1 10.0.0.2</userinput></screen>
+
+      <para>Configurez l'interface sur <hostid>host2</hostid> en tapant:</para>
+
+      <screen>&prompt.root; <userinput>ifconfig plip0 10.0.0.2 10.0.0.1</userinput></screen>
+
+      <para>Vous devriez avoir maintenant une connexion qui
+	fonctionne.  Veuillez consulter les pages de manuel &man.lp.4;
+	et &man.lpt.4; pour plus de détails.</para>
+
+      <para>Vous devriez également ajouter les deux noms de
+	machines dans le fichier
+	<filename>/etc/hosts</filename>:</para>
+
+      <programlisting>127.0.0.1               localhost.my.domain localhost
+10.0.0.1                host1.my.domain host1
+10.0.0.2                host2.my.domain</programlisting>
+
+      <para>Pour vérifier le bon fonctionnement de la connexion,
+	aller sur les deux machines et effectuez un &ldquo;ping&rdquo;
+	vers l'autre machine.  Par exemple, sur
+	<hostid>host1</hostid>:</para>
+
+      <screen>&prompt.root; <userinput>ifconfig plip0</userinput>
+plip0: flags=8851&lt;UP,POINTOPOINT,RUNNING,SIMPLEX,MULTICAST&gt; mtu 1500
+        inet 10.0.0.1 --&gt; 10.0.0.2 netmask 0xff000000
+&prompt.root; <userinput>netstat -r</userinput>
+Routing tables
+
+Internet:
+Destination        Gateway          Flags     Refs     Use      Netif Expire
+host2              host1              UH          0       0       plip0
+&prompt.root; <userinput>ping -c 4 host2</userinput>
+PING host2 (10.0.0.2): 56 data bytes
+64 bytes from 10.0.0.2: icmp_seq=0 ttl=255 time=2.774 ms
+64 bytes from 10.0.0.2: icmp_seq=1 ttl=255 time=2.530 ms
+64 bytes from 10.0.0.2: icmp_seq=2 ttl=255 time=2.556 ms
+64 bytes from 10.0.0.2: icmp_seq=3 ttl=255 time=2.714 ms
+
+--- host2 ping statistics ---
+4 packets transmitted, 4 packets received, 0% packet loss
+round-trip min/avg/max/stddev = 2.530/2.643/2.774/0.103 ms</screen>
+    </sect2>
+  </sect1>
+
+  <sect1 id="network-ipv6">
+    <sect1info>
+      <authorgroup>
+	<author>
+	  <firstname>Aaron</firstname>
+	  <surname>Kaplan</surname>
+	  <contrib>Ecrit original de </contrib>
+	</author>
+      </authorgroup>
+      <authorgroup>
+	<author>
+	  <firstname>Tom</firstname>
+	  <surname>Rhodes</surname>
+	  <contrib>Restructuré et ajouté par </contrib>
+	</author>
+      </authorgroup>
+      <authorgroup>
+	<author>
+	  <firstname>Brad</firstname>
+	  <surname>Davis</surname>
+	  <contrib>Complété par </contrib>
+	</author>
+      </authorgroup>
+    </sect1info>
+
+    <title>IPv6</title>
+
+    <para>L'IPv6 (également connu sous le nom de IPng &ldquo;IP
+      nouvelle génération&rdquo;) est la nouvelle
+      version du très célèbre protocole IP (aussi
+      connu sous le nom d'<acronym>IPv4</acronym>).  Comme les autres
+      systèmes BSD, &os; utilise l'implémentation IPv6
+      KAME.  Votre système &os; est donc
+      fourni avec tout ce dont vous aurez besoin pour tester l'IPv6.
+      Cette section se concentre sur la configuration et l'utilisation
+      d'IPv6.</para>
+
+    <para>Au début des années 90, on a pris conscience
+      de la diminution rapide de l'espace d'adresses IPv4.  Etant
+      donné le taux d'expansion de l'Internet, deux
+      problèmes majeurs apparaissaient:</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>Le manque d'adresses.  Aujourd'hui ce n'est plus
+	  vraiment un problème puisque les espaces d'adresses
+	  privées RFC1918 (<hostid role="ipaddr">10.0.0.0/8</hostid>,
+	  <hostid role="ipaddr">172.16.0.0/12</hostid>, et
+	  <hostid role="ipaddr">192.168.0.0/16</hostid>) et la
+	  translation d'adresses (<acronym>NAT</acronym>) sont
+	  utilisés.</para>
+      </listitem>
+
+      <listitem>
+	<para>Les tables des routeurs devenaient trop importantes.
+	  C'est toujours un problème actuellement.</para>
+      </listitem>
+    </itemizedlist>
+
+    <para>L'IPv6 remédie &agrave; ces problèmes
+      et &agrave; de nombreux autres:</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>Espace d'adressage sur 128 bits.  Ou plus
+	  précisément, il y a 340 282 366 920 938 463 463
+	  374 607 431 768 211 456 adresses disponibles.  Cela
+	  équivaut &agrave; approximativement 6.67 * 10^27
+	  adresses IPv6 par kilomètre-carré de surface de
+	  notre planète.</para>
+      </listitem>
+
+      <listitem>
+	<para>Les routeurs ne stockeront que des regroupements
+	  d'adresses dans leurs tables de routage réduisant donc
+	  l'espace moyen d'une table de routage &agrave; 8192
+	  entrées.</para>
+      </listitem>
+    </itemizedlist>
+
+    <para>IPv6 présente également de nombreuses autres
+      intéressantes fonctionnalités telles que:</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>L'autoconfiguration des adresses (<ulink
+	  url="http://www.ietf.org/rfc/rfc2462.txt">RFC2462</ulink>)</para>
+      </listitem>
+
+      <listitem>
+	<para>Adresses unicast (&ldquo;une parmi
+	  plusieurs&rdquo;)</para>
+      </listitem>
+
+      <listitem>
+	<para>Adresses multicast (multidestinataires)
+	  obligatoires</para>
+      </listitem>
+
+      <listitem>
+	<para>IPsec (protocole de sécurité IP)</para>
+      </listitem>
+
+      <listitem>
+	<para>Struture d'entête simplifiée</para>
+      </listitem>
+
+      <listitem>
+	<para><acronym>IP</acronym> mobile</para>
+      </listitem>
+
+      <listitem>
+	<para>Mécanismes de transition IPv6-vers-IPv4</para>
+      </listitem>
+    </itemizedlist>
+
+
+    <para>Pour plus d'informations consultez les
+      références suivantes:</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>Généralités sur l'IPv6 &agrave;
+	  <ulink url="http://playground.sun.com/pub/ipng/html/ipng-main.html">playground.sun.com</ulink></para>
+      </listitem>
+
+      <listitem>
+	<para><ulink url="http://www.kame.net">KAME.net</ulink></para>
+      </listitem>
+
+      <listitem>
+	<para><ulink url="http://www.6bone.net">6bone.net</ulink></para>
+      </listitem>
+    </itemizedlist>
+
+    <sect2>
+      <title>Les adresses IPv6</title>
+
+      <para>Il existe différent types d'adresses IPv6: unicast,
+	anycast et multicast.</para>
+
+      <para>Les adresses unicast (mono-destinataire) sont les adresses
+	classiques.  Un paquet envoyé &agrave; une adresse
+	unicast arrive &agrave; l'interface correspondant &agrave;
+	l'adresse.</para>
+
+      <para>Les adresses anycast ne sont normalement pas distinguables
+	des adresses unicast mais correspondent &agrave; un groupe
+	d'interfaces.  Un paquet destiné &agrave; une adresse
+	anycast arrivera &agrave; l'interface la plus proche (en terme
+	d'unité de distance du protocole de routage).  Les
+	adresses anycast devraient n'être utilisées que
+	par les routeurs.</para>
+
+      <para>Les adresses multicast identifient un groupe d'interfaces.
+	Un paquet destiné &agrave; une adresse multicast
+	arrivera sur toutes les interfaces appartenant au groupe
+	multicast.</para>
+
+	<note>
+	  <para>L'adresse de diffusion IPv4
+	    (généralement <hostid
+	    role="ipaddr">xxx.xxx.xxx.255</hostid>) est exprimée
+	    par des adresses multicast en IPv6.</para>
+	</note>
+
+      <table frame="none">
+	<title>Adresses IPv6 réservées</title>
+
+	<tgroup cols="4">
+	  <thead>
+	    <row>
+	      <entry>Adresse IPv6</entry>
+	      <entry>Longueur du préfixe (bits)</entry>
+	      <entry>Description</entry>
+	      <entry>Notes</entry>
+	    </row>
+	  </thead>
+
+	  <tbody>
+	    <row>
+	      <entry><hostid role="ip6addr">::</hostid></entry>
+	      <entry>128 bits</entry>
+	      <entry>non-spécifiée</entry>
+	      <entry>similaire &agrave; <hostid
+		role="ipaddr">0.0.0.0</hostid> sous IPv4</entry>
+	    </row>
+
+	    <row>
+	      <entry><hostid role="ip6addr">::1</hostid></entry>
+	      <entry>128 bits</entry>
+	      <entry>adresse de boucle</entry>
+	      <entry>similaire &agrave; <hostid
+		role="ipaddr">127.0.0.1</hostid> sous IPv4</entry>
+	    </row>
+
+	    <row>
+	      <entry><hostid
+		role="ip6addr">::00:xx:xx:xx:xx</hostid></entry>
+	      <entry>96 bits</entry>
+	      <entry>IPv4 encapsulé</entry>
+	      <entry>Les 32 bits de poids faible sont l'adresse IPv4.
+		Egalement appelée &ldquo;adresse IPv6 compatible
+		IPv4&rdquo;.</entry>
+	    </row>
+
+	    <row>
+	      <entry><hostid
+		role="ip6addr">::ff:xx:xx:xx:xx</hostid></entry>
+	      <entry>96 bits</entry>
+	      <entry>adresse IPv6 mappée IPv4</entry>
+	      <entry>Les 32 bits de poids faible sont l'adresse IPv4.
+		Destinées aux machines ne supportant pas
+		l'IPv6.</entry>
+	    </row>
+
+	    <row>
+	      <entry><hostid role="ip6addr">fe80::</hostid> - <hostid
+		role="ip6addr">feb::</hostid></entry>
+	      <entry>10 bits</entry>
+	      <entry>lien-local</entry>
+	      <entry>similaire &agrave; l'interface de boucle sous
+		IPv4</entry>
+	    </row>
+
+	    <row>
+	      <entry><hostid role="ip6addr">fec0::</hostid> - <hostid
+		role="ip6addr">fef::</hostid></entry>
+	      <entry>10 bits</entry>
+	      <entry>site-local</entry>
+	      <entry>&nbsp;</entry>
+	    </row>
+
+	    <row>
+	      <entry><hostid role="ip6addr">ff::</hostid></entry>
+	      <entry>8 bits</entry>
+	      <entry>multicast</entry>
+	      <entry>&nbsp;</entry>
+	    </row>
+
+	    <row>
+	      <entry><hostid role="ip6addr">001</hostid> (base
+		2)</entry>
+	      <entry>3 bits</entry>
+	      <entry>unicast globale</entry>
+	      <entry>Toutes les adresses unicast globales sont
+		assignées &agrave; partir de ce pool.  Les trois
+		premiers bits de l'adresse sont
+		&ldquo;001&rdquo;.</entry>
+	    </row>
+	  </tbody>
+	</tgroup>
+      </table>
+    </sect2>
+
+    <sect2>
+      <title>Lecture des adresses IPv6</title>
+
+      <para>La forme canonique est représentée suivant
+	le schéma: <hostid
+	role="ip6addr">x:x:x:x:x:x:x:x</hostid>, où chaque
+	&ldquo;x&rdquo; est une valeur héxadécimale sur
+	16 bits.  Par exemple <hostid
+	role="ip6addr">FEBC:A574:382B:23C1:AA49:4592:4EFE:9982</hostid></para>
+
+      <para>Souvent dans une adresse on aura de longues sous-parties
+	constituées de zéros, une telle
+	sous-partie peut être abrégée par
+	&ldquo;::&rdquo;.  Les trois <quote>0</quote>s de poids fort
+	de chaque quartet hexadécimal peuvent également être omis.
+	Par exemple <hostid
+	role="ip6addr">fe80::1</hostid> correspond &agrave; la forme
+	canonique <hostid
+	role="ip6addr">fe80:0000:0000:0000:0000:0000:0000:0001</hostid>.</para>
+
+      <para>Une troisième forme est d'écrire les
+	derniers 32 bits dans le style IPv4 bien connu
+	(décimal) avec des points &ldquo;.&rdquo; comme
+	séparateurs.  Par exemple <hostid
+	role="ip6addr">2002::10.0.0.1</hostid> correspond &agrave; la
+	représentation canonique (hexadécimale) <hostid
+	role="ip6addr">2002:0000:0000:0000:0000:0000:0a00:0001</hostid>
+	qui est &agrave; son tour équivalente &agrave;
+	l'écriture <hostid
+	role="ip6addr">2002::a00:1</hostid>.</para>
+
+      <para>Maintenant le lecteur devrait être en mesure de
+	comprendre ce qui suit:</para>
+
+      <screen>&prompt.root; <userinput>ifconfig</userinput></screen>
+
+      <programlisting>rl0: flags=8943&lt;UP,BROADCAST,RUNNING,PROMISC,SIMPLEX,MULTICAST&gt; mtu 1500
+         inet 10.0.0.10 netmask 0xffffff00 broadcast 10.0.0.255
+         inet6 fe80::200:21ff:fe03:8e1%rl0 prefixlen 64 scopeid 0x1
+         ether 00:00:21:03:08:e1
+         media: Ethernet autoselect (100baseTX )
+         status: active</programlisting>
+
+      <para><hostid
+	role="ip6addr">fe80::200:21ff:fe03:8e1%rl0</hostid> est une
+	adresse de lien local configurée automatiquement.  Elle
+	est générée &agrave; partir de l'adresse MAC dans le cas de
+	l'autoconfiguration.</para>
+
+      <para>Pour plus d'informations sur la structure des adresses
+	IPv6 consultez la <ulink
+	url="http://www.ietf.org/rfc/rfc3513.txt">RFC3513</ulink>.</para>
+    </sect2>
+
+    <sect2>
+      <title>Se connecter</title>
+
+      <para>Actuellement, il y a quatre façons de se connecter
+	&agrave; des machines et des réseaux utilisant
+	l'IPv6:</para>
+
+      <itemizedlist>
+	<listitem>
+	  <para>Rejoindre le réseau expérimental
+	    6bone</para>
+	</listitem>
+
+	<listitem>
+	  <para>Obtenir un réseau IPv6 auprès de votre
+	  fournisseur d'accès.  Contactez votre fournisseur
+	  d'accès Internet pour plus d'informations.</para>
+	</listitem>
+
+	<listitem>
+	  <para>Utilisation d'un tunnel 6-vers-4 (<ulink
+	    url="http://www.ietf.org/rfc/rfc3068.txt">RFC3068</ulink>)</para>
+	</listitem>
+
+	<listitem>
+	  <para>Utilisation du logiciel porté <filename
+	    role="package">net/freenet6</filename> si vous utilisez
+	    une connexion par modem.</para>
+	</listitem>
+      </itemizedlist>
+
+      <para>Ici nous ne parlerons que de la manière de se
+	connecter au réseau 6bone puisque cela semble
+	être aujourd'hui la méthode de connexion la plus
+	populaire.</para>
+
+      <para>Consultez tout d'abord le site <ulink
+	url="http://www.6bone.net/">6bone</ulink> et recherchez une
+	connexion 6bone proche de vous.  Contactez le responsable et
+	avec un peu de chance on vous donnera les instructions
+	&agrave; suivre pour configurer votre connexion.
+	Généralement cela implique la mise en place d'un
+	tunnel GRE (gif).</para>
+
+      <para>Voici un exemple typique de configuration d'un tunnel
+	&man.gif.4;:</para>
+
+      <screen>&prompt.root; <userinput>ifconfig gif0 create</userinput>
+&prompt.root; <userinput>ifconfig gif0</userinput>
+gif0: flags=8010&lt;POINTOPOINT,MULTICAST&gt; mtu 1280
+&prompt.root; <userinput>ifconfig gif0 tunnel <replaceable>MON_ADR_IPv4 MON_ADR_IPv4_ASSIGNEE_A_LAUTRE_BOUT_DU_TUNNEL</replaceable></userinput>
+&prompt.root; <userinput>ifconfig gif0 inet6 alias <replaceable>MON_ADR_IPv6_ASSIGNEE_A_LEXTREMITE_DU_TUNNEL MON_ADR_IPv6_ASSIGNEE_A_LAUTRE_BOUT_DU_TUNNEL</replaceable></userinput></screen>
+
+      <para>Remplacez les mots en majuscules par les informations que
+	vous avez reçues du point d'accès 6bone.</para>
+
+      <para>Ceci établit le tunnel.  Vérifiez si le
+	tunnel fonctionne en utilisant &man.ping6.8; sur l'adresse
+	<hostid role="ip6addr">ff02::1%gif0</hostid>.  Vous devriez
+	récevoir les réponses aux requêtes
+	ping.</para>
+
+      <note>
+	<para>Au cas où vous seriez intrigué par
+	  l'adresse <hostid role="ip6addr">ff02:1%gif0</hostid>, sachez
+	  que c'est une adresse multicast.  <literal>%gif0</literal>
+	  précise que l'adresse multicast de l'interface
+	  <devicename>gif0</devicename> doit être utilisée.
+	  Puisque nous utilisons <command>ping</command> sur une adresse
+	  multicast, l'autre bout du tunnel devrait également
+	  répondre.</para>
+      </note>
+
+      <para>Désormais, la mise en place d'une route vers votre
+	lien 6bone devrait être relativement directe:</para>
+
+      <screen>&prompt.root; <userinput>route add -inet6 default -interface gif0</userinput>
+&prompt.root; <userinput>ping6 -n <replaceable>MON_LIEN_MONTANT</replaceable></userinput></screen>
+
+      <screen>&prompt.root; <userinput>traceroute6 www.jp.FreeBSD.org</userinput>
+(3ffe:505:2008:1:2a0:24ff:fe57:e561) from 3ffe:8060:100::40:2, 30 hops max, 12 byte packets
+     1  atnet-meta6  14.147 ms  15.499 ms  24.319 ms
+     2  6bone-gw2-ATNET-NT.ipv6.tilab.com  103.408 ms  95.072 ms *
+     3  3ffe:1831:0:ffff::4  138.645 ms  134.437 ms  144.257 ms
+     4  3ffe:1810:0:6:290:27ff:fe79:7677  282.975 ms  278.666 ms  292.811 ms
+     5  3ffe:1800:0:ff00::4  400.131 ms  396.324 ms  394.769 ms
+     6  3ffe:1800:0:3:290:27ff:fe14:cdee  394.712 ms  397.19 ms  394.102 ms</screen>
+
+      <para>La sortie pourra être différente d'une
+	machine &agrave; une autre.  Maintenant vous devriez
+	être en mesure d'atteindre le site IPv6 <ulink
+	url="http://www.kame.net">www.kame.net</ulink> et de voir la
+	tortue dansante &mdash; et cela si vous disposez d'un
+	navigateur supportant l'IPv6 comme <filename
+	role="package">www/mozilla</filename>,
+	<application>Konqueror</application> qui fait partie du
+	logiciel <filename role="package">x11/kdebase3</filename>,
+	ou <filename role="package">www/epiphany</filename>.</para>
+    </sect2>
+
+    <sect2>
+      <title>DNS dans le monde IPv6</title>
+
+      <para>A l'origine, il existait deux types d'enregistrement DNS
+	pour l'IPv6.  L'organisme IETF a déclaré
+	obsolète l'enregistrement A6.  Les enregistrements AAAA
+	sont aujourd'hui le standard.</para>
+
+      <para>L'utilisation des enregistrements AAAA est assez direct.
+	Assignez votre nom de machine &agrave; la nouvelle adresse
+	IPv6 que vous venez d'obtenir en ajoutant:</para>
+
+      <programlisting>MYHOSTNAME           AAAA    MYIPv6ADDR</programlisting>
+
+      <para>&agrave; votre fichier de zone DNS primaire.  Dans le cas
+	où vous ne gérez pas vos propres zones
+	<acronym>DNS</acronym> contactez le responsable de votre
+	<acronym>DNS</acronym>.  Les versions actuelles de
+	<application>bind</application> (version 8.3 et 9) et <filename role="package">dns/djbdns</filename> (avec le correctif IPv6) supportent
+	les enregistrements AAAA.</para>
+    </sect2>
+
+    <sect2>
+      <title>Effectuer les changements nécessaires dans le
+	fichier <filename>/etc/rc.conf</filename></title>
+
+      <sect3>
+	<title>Paramétrage du client IPv6</title>
+
+	<para>Ces paramètres vous permettront de configurer une
+	  machine qui sera sur votre réseau local et sera un
+	  client, non pas un routeur.  Pour que &man.rtsol.8;
+	  configure automatiquement votre interface réseau au
+	  démarrage tout ce dont vous avez besoin d'ajouter
+	  est:</para>
+
+	<programlisting>ipv6_enable="YES"</programlisting>
+
+	<para>Pour assigner une adresse IP statique telle que <hostid
+	  role="ip6addr">2001:471:1f11:251:290:27ff:fee0:2093</hostid>,
+	  &agrave; votre interface <devicename>fxp0</devicename>,
+	  ajoutez:</para>
+
+	<programlisting>ipv6_ifconfig_fxp0="2001:471:1f11:251:290:27ff:fee0:2093"</programlisting>
+
+	<para>Pour assigner le routeur par défaut <hostid
+	  role="ip6addr">2001:471:1f11:251::1</hostid>, ajoutez ce qui
+	  suit au fichier <filename>/etc/rc.conf</filename>:</para>
+
+	<programlisting>ipv6_defaultrouter="2001:471:1f11:251::1"</programlisting>
+      </sect3>
+
+      <sect3>
+	<title>Paramétrage d'un routeur/passerelle IPv6</title>
+
+	<para>Ceci vous aidera &agrave; mettre en oeuvre les
+	  instructions que votre fournisseur de tunnel, tel que <ulink
+	  url="http://www.6bone.net/">6bone</ulink>, vous a
+	  donné et &agrave; les convertir en paramètres
+	  qui seront conservés &agrave; chaque
+	  démarrage.  Pour rétablir votre tunnel au
+	  démarrage, utilisez quelque chose comme ce qui suit
+	  dans le fichier <filename>/etc/rc.conf</filename>:</para>
+
+	<para>Listez les interfaces génériques de tunnel
+	  qui seront configurées, par exemple
+	  <devicename>gif0</devicename>:</para>
+
+	<programlisting>gif_interfaces="gif0"</programlisting>
+
+	<para>Pour configurer l'interface avec une adresse
+	  (extrémité) locale
+	  <replaceable>MY_IPv4_ADDR</replaceable> vers une adresse
+	  (extrémité) distante
+	  <replaceable>REMOTE_IPv4_ADDR</replaceable>:</para>
+
+	<programlisting>gifconfig_gif0="<replaceable>MY_IPv4_ADDR REMOTE_IPv4_ADDR</replaceable>"</programlisting>
+
+	<para>Pour utiliser l'adresse IPv6 que l'on vous a
+	  assigné en vue d'être utilisée pour
+	  votre extrémité du tunnel IPv6,
+	  ajoutez:</para>
+
+	<programlisting>ipv6_ifconfig_gif0="<replaceable>MY_ASSIGNED_IPv6_TUNNEL_ENDPOINT_ADDR</replaceable>"</programlisting>
+
+	<para>Ensuite tout ce qu'il reste &agrave; faire est de
+	  définir la route par défaut pour l'IPv6.
+	  C'est l'autre extrémité du tunnel IPv6:</para>
+
+	<programlisting>ipv6_defaultrouter="<replaceable>MY_IPv6_REMOTE_TUNNEL_ENDPOINT_ADDR</replaceable>"</programlisting>
+      </sect3>
+
+      <sect3>
+	<title>Paramétrage d'un tunnel IPv6</title>
+
+	<para>Si le serveur doit router de l'IPv6 entre votre
+	  réseau et le reste du monde, le paramètre
+	  suivant sera également nécessaire dans votre
+	  fichier <filename>/etc/rc.conf</filename>:</para>
+
+	<programlisting>ipv6_gateway_enable="YES"</programlisting>
+      </sect3>
+    </sect2>
+
+    <sect2>
+      <title>Annonce du routeur et auto-configuration</title>
+
+      <para>Cette section vous aidera &agrave; configurer
+	&man.rtadvd.8; pour l'annonce de la route IPv6 par
+	défaut.</para>
+
+      <para>Pour activer &man.rtadvd.8;, vous devrez ajouter ce qui
+	suit &agrave; votre fichier
+	<filename>/etc/rc.conf</filename>:</para>
+
+      <programlisting>rtadvd_enable="YES"</programlisting>
+
+      <para>Il est important que vous indiquiez l'interface sur
+	laquelle le routeur IPv6 sera sollicité.  Par exemple
+	pour que &man.rtadvd.8; utilise
+	<devicename>fxp0</devicename>:</para>
+
+      <programlisting>rtadvd_interfaces="fxp0"</programlisting>
+
+      <para>Nous devons maintenant créer le fichier de
+	configuration <filename>/etc/rtadvd.conf</filename>.  Voici un
+	exemple:</para>
+
+      <programlisting>fxp0:\
+	:addrs#1:addr="2001:471:1f11:246::":prefixlen#64:tc=ether:</programlisting>
+
+      <para>Remplacez <devicename>fxp0</devicename> avec l'interface
+	que vous allez utiliser.</para>
+
+      <para>Ensuite remplacez <hostid
+	role="ip6addr">2001:471:1f11:246::</hostid> avec votre
+	préfixe.</para>
+
+      <para>Si vous êtes un sous-réseau <hostid
+	role="netmask">/64</hostid> dédié, il ne sera
+	pas nécessaire de modifier quelque chose d'autre.
+	Sinon, vous devrez modifier <literal>prefixlen#</literal> avec
+	la valeur correcte.</para>
+   </sect2>
+  </sect1>
+
+  <sect1 id="network-atm">
+    <sect1info>
+      <authorgroup>
+	<author>
+	  <firstname>Harti</firstname>
+	  <surname>Brandt</surname>
+	  <contrib>Contribution de </contrib>
+	</author>
+      </authorgroup>
+    </sect1info>
+
+    <title>ATM (<quote>Asynchronous Transfer Mode</quote>)</title>
+
+    <sect2>
+      <title>Configuration IP conventionnelle sur ATM (PVCs)</title>
+
+      <para>L'IP conventionnelle sur ATM (&ldquo;Classical IP over
+	ATM&rdquo;&mdash;<acronym>CLIP</acronym>) est la
+	méthode la plus simple pour utiliser ATM
+	(Asynchronous Transfer Mode) avec l'IP.
+	Elle peut être utilisée en mode non
+	connecté (&ldquo;Switched Virtual
+	Connections&rdquo;&mdash;SVCs) et en mode connecté
+	(&ldquo;Permanent Virtual Connections&rdquo;&mdash;PVCs).
+	Cette section décrit comment configurer un
+	réseau basé sur les PVCs.</para>
+
+      <sect3>
+	<title>Configurations en réseau maillé</title>
+
+	<para>La première méthode de configuration
+	  <acronym>CLIP</acronym> avec des PVCs est de connecter entre
+	  elles chaque machine du réseau par
+	  l'intermédiaire d'une PVC dédiée.  Bien
+	  que cela soit simple &agrave; configurer, cela tend &agrave;
+	  devenir impraticable avec un nombre important de machines.
+	  Notre exemple suppose que nous avons quatre machines sur le
+	  réseau, chacune connectée au réseau
+	  <acronym role="Asynchronous Transfer Mode">ATM</acronym>
+	  &agrave; l'aide d'une carte réseau <acronym
+	  role="Asynchronous Transfer Mode">ATM</acronym>.  La
+	  première étape est d'établir le plan
+	  des adresses IP et des connexions <acronym
+	  role="Asynchronous Transfer Mode">ATM</acronym> entre machines.  Nous
+	  utilisons le plan suivant:</para>
+
+	<informaltable frame="none" pgwide="1">
+	  <tgroup cols="2">
+	    <colspec colwidth="1*"/>
+	    <colspec colwidth="1*"/>
+	    <thead>
+	      <row>
+		<entry>Machine</entry>
+		<entry>Adresse IP</entry>
+	      </row>
+	    </thead>
+
+	    <tbody>
+	      <row>
+		<entry><hostid>hostA</hostid></entry>
+		<entry><hostid role="ipaddr">192.168.173.1</hostid></entry>
+	      </row>
+
+	      <row>
+		<entry><hostid>hostB</hostid></entry>
+		<entry><hostid role="ipaddr">192.168.173.2</hostid></entry>
+	      </row>
+
+	      <row>
+		<entry><hostid>hostC</hostid></entry>
+		<entry><hostid role="ipaddr">192.168.173.3</hostid></entry>
+	      </row>
+
+	      <row>
+		<entry><hostid>hostD</hostid></entry>
+		<entry><hostid role="ipaddr">192.168.173.4</hostid></entry>
+	      </row>
+	    </tbody>
+	  </tgroup>
+	</informaltable>
+
+	<para>Pour réaliser un réseau maillé,
+	  nous avons besoin d'une connexion ATM entre chaque paire de
+	  machines:</para>
+
+	<informaltable frame="none" pgwide="1">
+	  <tgroup cols="2">
+	    <colspec colwidth="1*"/>
+	    <colspec colwidth="1*"/>
+	    <thead>
+	      <row>
+		<entry>Machines</entry>
+		<entry>Couple VPI.VCI</entry>
+	      </row>
+	    </thead>
+
+	    <tbody>
+	      <row>
+		<entry><hostid>hostA</hostid> - <hostid>hostB</hostid></entry>
+		<entry>0.100</entry>
+	      </row>
+
+	      <row>
+		<entry><hostid>hostA</hostid> - <hostid>hostC</hostid></entry>
+		<entry>0.101</entry>
+	      </row>
+
+	      <row>
+		<entry><hostid>hostA</hostid> - <hostid>hostD</hostid></entry>
+		<entry>0.102</entry>
+	      </row>
+
+	      <row>
+		<entry><hostid>hostB</hostid> - <hostid>hostC</hostid></entry>
+		<entry>0.103</entry>
+	      </row>
+
+	      <row>
+		<entry><hostid>hostB</hostid> - <hostid>hostD</hostid></entry>
+		<entry>0.104</entry>
+	      </row>
+
+	      <row>
+		<entry><hostid>hostC</hostid> - <hostid>hostD</hostid></entry>
+		<entry>0.105</entry>
+	      </row>
+	    </tbody>
+	  </tgroup>
+	</informaltable>
+
+	<para>Les valeurs VPI et VCI &agrave; chaque
+	  extrémité de la connexion peuvent bien
+	  évidemment être différentes, mais par
+	  souci de simplicité nous supposerons quelles sont
+	  identiques.  Ensuite nous devons configurer les interfaces
+	  ATM sur chaque machine:</para>
+
+	<screen>hostA&prompt.root; <userinput>ifconfig hatm0 192.168.173.1 up</userinput>
+hostB&prompt.root; <userinput>ifconfig hatm0 192.168.173.2 up</userinput>
+hostC&prompt.root; <userinput>ifconfig hatm0 192.168.173.3 up</userinput>
+hostD&prompt.root; <userinput>ifconfig hatm0 192.168.173.4 up</userinput></screen>
+
+	<para>en supposant que l'interface ATM est
+	  <devicename>hatm0</devicename> sur toutes les machines.
+	  Maintenant les PVCs doivent être configurées
+	  sur <hostid>hostA</hostid> (nous supposons qu'elles sont
+	  déj&agrave; configurées sur les switches ATM,
+	  vous devez consulter le manuel du switch sur comment
+	  réaliser cette configuration).</para>
+
+	<screen>hostA&prompt.root; <userinput>atmconfig natm add 192.168.173.2 hatm0 0 100 llc/snap ubr</userinput>
+hostA&prompt.root; <userinput>atmconfig natm add 192.168.173.3 hatm0 0 101 llc/snap ubr</userinput>
+hostA&prompt.root; <userinput>atmconfig natm add 192.168.173.4 hatm0 0 102 llc/snap ubr</userinput>
+
+hostB&prompt.root; <userinput>atmconfig natm add 192.168.173.1 hatm0 0 100 llc/snap ubr</userinput>
+hostB&prompt.root; <userinput>atmconfig natm add 192.168.173.3 hatm0 0 103 llc/snap ubr</userinput>
+hostB&prompt.root; <userinput>atmconfig natm add 192.168.173.4 hatm0 0 104 llc/snap ubr</userinput>
+
+hostC&prompt.root; <userinput>atmconfig natm add 192.168.173.1 hatm0 0 101 llc/snap ubr</userinput>
+hostC&prompt.root; <userinput>atmconfig natm add 192.168.173.2 hatm0 0 103 llc/snap ubr</userinput>
+hostC&prompt.root; <userinput>atmconfig natm add 192.168.173.4 hatm0 0 105 llc/snap ubr</userinput>
+
+hostD&prompt.root; <userinput>atmconfig natm add 192.168.173.1 hatm0 0 102 llc/snap ubr</userinput>
+hostD&prompt.root; <userinput>atmconfig natm add 192.168.173.2 hatm0 0 104 llc/snap ubr</userinput>
+hostD&prompt.root; <userinput>atmconfig natm add 192.168.173.3 hatm0 0 105 llc/snap ubr</userinput></screen>
+
+	<para>Bien évidemment des contrats de trafic autres
+	  qu'UBR (&ldquo;Unspecified Bit Rate&rdquo;) peuvent
+	  être utilisés dès que la carte ATM les
+	  supportent.  Dans ce cas le nom du contrat de trafic est
+	  suivi par les paramètres du trafic.  De l'aide
+	  concernant l'outil &man.atmconfig.8; peut être obtenue
+	  avec:</para>
+
+	<screen>&prompt.root; <userinput>atmconfig help natm add</userinput></screen>
+
+	<para>ou dans la page de manuel de &man.atmconfig.8;.</para>
+
+	<para>La même configuration peut être faite par
+	  l'intermédiaire de <filename>/etc/rc.conf</filename>.
+	  Pour la machine <hostid>hostA</hostid> cela ressemblerait
+	  &agrave;:</para>
+
+<programlisting>network_interfaces="lo0 hatm0"
+ifconfig_hatm0="inet 192.168.173.1 up"
+natm_static_routes="hostB hostC hostD"
+route_hostB="192.168.173.2 hatm0 0 100 llc/snap ubr"
+route_hostC="192.168.173.3 hatm0 0 101 llc/snap ubr"
+route_hostD="192.168.173.4 hatm0 0 102 llc/snap ubr"</programlisting>
+
+	<para>L'état de toutes les routes
+	  <acronym>CLIP</acronym> peut être obtenu avec:</para>
+
+	<screen>hostA&prompt.root; <userinput>atmconfig natm show</userinput></screen>
+      </sect3>
+    </sect2>
+  </sect1>
+</chapter>

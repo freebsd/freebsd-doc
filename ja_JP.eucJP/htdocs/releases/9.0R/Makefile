@@ -9,10 +9,10 @@
 .include "../Makefile.inc"
 .endif
 
-#DOCS=	schedule.sgml \
-#	relnotes.sgml \
-#	announce.sgml
-DOCS=	announce.sgml
+#DOCS=	schedule.xml \
+#	relnotes.xml \
+#	announce.xml
+DOCS=	announce.xml
 
 DATA=	docbook.css \
 #	hardware.html \

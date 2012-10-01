@@ -7,7 +7,7 @@
 # $FreeBSD$
 #
 
-CHAPTERS= 	linuxemu/chapter.sgml
+CHAPTERS= 	linuxemu/chapter.xml
 
 VPATH=		..
 

@@ -7,7 +7,7 @@
 # Build the Handbook with just the content from this chapter.
 #
 
-CHAPTERS= 	cutting-edge/chapter.sgml
+CHAPTERS= 	cutting-edge/chapter.xml
 
 VPATH=		..
 

@@ -9,7 +9,7 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS= bugreports.sgml
-DOCS+= webresources.sgml
+DOCS= bugreports.xml
+DOCS+= webresources.xml
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"

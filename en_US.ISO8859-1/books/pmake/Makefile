@@ -16,13 +16,13 @@ INSTALL_ONLY_COMPRESSED?=
 # Changes to any of these files will force a rebuild.
 
 # SGML content
-SRCS=	book.sgml
-SRCS+=	answers/chapter.sgml
-SRCS+=	basics/chapter.sgml
-SRCS+=	glossary/glossary.sgml
-SRCS+=	gods/chapter.sgml
-SRCS+=	intro/chapter.sgml
-SRCS+=	shortcuts/chapter.sgml
+SRCS=	book.xml
+SRCS+=	answers/chapter.xml
+SRCS+=	basics/chapter.xml
+SRCS+=	glossary/glossary.xml
+SRCS+=	gods/chapter.xml
+SRCS+=	intro/chapter.xml
+SRCS+=	shortcuts/chapter.xml
 
 DOC_PREFIX?= ${.CURDIR}/../../..
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"

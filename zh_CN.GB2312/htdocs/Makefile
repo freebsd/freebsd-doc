@@ -10,21 +10,21 @@
 
 # These are turned into validated, normalized HTML files.
 
-DOCS=  about.sgml
-DOCS+= applications.sgml
-DOCS+= art.sgml
-DOCS+= availability.sgml
-DOCS+= community.sgml
-DOCS+= docs.sgml
-DOCS+= features.sgml
-DOCS+= internet.sgml
-DOCS+= logo.sgml
-DOCS+= mailto.sgml
-# DOCS+= publish.sgml
-DOCS+= relnotes.sgml
-DOCS+= send-pr.sgml
-DOCS+= support.sgml
-DOCS+= where.sgml
+DOCS=  about.xml
+DOCS+= applications.xml
+DOCS+= art.xml
+DOCS+= availability.xml
+DOCS+= community.xml
+DOCS+= docs.xml
+DOCS+= features.xml
+DOCS+= internet.xml
+DOCS+= logo.xml
+DOCS+= mailto.xml
+# DOCS+= publish.xml
+DOCS+= relnotes.xml
+DOCS+= send-pr.xml
+DOCS+= support.xml
+DOCS+= where.xml
 
 XMLDOCS=	index:xsl:${XML_NEWS_NEWS}:
 DEPENDSET.index=transtable mirrors news press events \

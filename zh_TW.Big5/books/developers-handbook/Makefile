@@ -24,17 +24,17 @@ IMAGES_EN= sockets/layers.eps sockets/sain.eps sockets/sainfill.eps sockets/sain
 #
 
 # SGML content
-SRCS=  book.sgml
-SRCS+= introduction/chapter.sgml
-SRCS+= ipv6/chapter.sgml
-SRCS+= kerneldebug/chapter.sgml
-SRCS+= l10n/chapter.sgml
-SRCS+= policies/chapter.sgml
-SRCS+= secure/chapter.sgml
-SRCS+= sockets/chapter.sgml
-SRCS+= testing/chapter.sgml
-SRCS+= tools/chapter.sgml
-SRCS+= x86/chapter.sgml
+SRCS=  book.xml
+SRCS+= introduction/chapter.xml
+SRCS+= ipv6/chapter.xml
+SRCS+= kerneldebug/chapter.xml
+SRCS+= l10n/chapter.xml
+SRCS+= policies/chapter.xml
+SRCS+= secure/chapter.xml
+SRCS+= sockets/chapter.xml
+SRCS+= testing/chapter.xml
+SRCS+= tools/chapter.xml
+SRCS+= x86/chapter.xml
 
 # Entities
 

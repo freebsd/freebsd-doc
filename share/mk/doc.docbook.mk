@@ -13,12 +13,10 @@
 # Document-specific variables
 #
 #	DOC		This should be set to the name of the DocBook
-#			marked-up file, without the .sgml suffix.
+#			marked-up file, without the .xml suffix.
 #			
 #			It also determins the name of the output files -
 #			${DOC}.html.
-#
-#	DOCBOOKSUFFIX	The suffix of your document, defaulting to .sgml
 #
 #	SRCS		The names of all the files that are needed to
 #			build this document - This is useful if any of
@@ -51,9 +49,9 @@
 #	NO_TIDY		If you do not want to use tidy, set this to "YES".
 #
 #       GEN_INDEX       If this document has an index (HAS_INDEX) and this
-#                       variable is defined, then index.sgml will be added 
+#                       variable is defined, then index.xml will be added 
 #                       to the list of dependencies for source files, and 
-#                       collateindex.pl will be run to generate index.sgml.
+#                       collateindex.pl will be run to generate index.xml.
 #
 #	CSS_SHEET	Full path to a CSS stylesheet suitable for DocBook.
 #			Default is ${DOC_PREFIX}/share/misc/docbook.css
@@ -115,9 +113,7 @@
 # Documents should use the += format to access these.
 #
 
-DOCBOOKSUFFIX?= sgml
-
-MASTERDOC?=	${.CURDIR}/${DOC}.${DOCBOOKSUFFIX}
+MASTERDOC?=	${.CURDIR}/${DOC}.xml
 
 # List of supported SP_ENCODINGs
 SP_ENCODING_LIST?=	ISO-8859-2 KOI8-R
@@ -466,7 +462,7 @@ JADEFLAGS+=		-i chap.index
 HTML_SPLIT_INDEX?=	html-split.index
 HTML_INDEX?=		html.index
 PRINT_INDEX?=		print.index
-INDEX_SGML?=		index.sgml
+INDEX_SGML?=		index.xml
 
 CLEANFILES+= 		${INDEX_SGML} ${HTML_SPLIT_INDEX} ${HTML_INDEX} ${PRINT_INDEX}
 
@@ -503,19 +499,6 @@ NO_PLAINTEXT=	yes
 NO_RTF=		yes
 .endif
 .endfor
-
-# XML --------------------------------------------------------------------
-
-# sx generates a lot of (spurious) errors of the form "reference to
-# internal SDATA entity ...".  So dump the errors to separate file, and
-# grep for any other errors to show them to the user.
-#
-# Better approaches to handling this would be most welcome
-
-${DOC}.xml: ${SRCS}
-	echo '<!DOCTYPE book SYSTEM "/usr/local/share/xml/docbook/4.2/docbookx.dtd">' > ${DOC}.xml
-	${SX} -xlower -xndata ${MASTERDOC} 2> .sxerr | tail -n +2 >> ${DOC}.xml 
-	@-grep -v 'reference to internal SDATA entity' .sxerr
 
 # HTML-SPLIT -------------------------------------------------------------
 
@@ -751,7 +734,7 @@ lint validate:
 # Generate a different .index file based on the format name
 #
 # If we're not generating an index (the default) then we need to create
-# an empty index.sgml file so that we can reference index.sgml in book.sgml
+# an empty index.xml file so that we can reference index.xml in book.sgml
 #
 
 
@@ -880,7 +863,7 @@ spellcheck-${_curformat}:
 spellcheck: ${FORMATS:C/^/spellcheck-/}
 
 indexreport:
-.for _entry in ${SRCS:M*.sgml}
+.for _entry in ${SRCS:M*.xml}
 	@echo "indexreport ${_entry}"
 	@${PERL} ${INDEXREPORTSCRIPT} ${.CURDIR}/${_entry}
 .endfor

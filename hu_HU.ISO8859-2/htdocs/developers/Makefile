@@ -11,6 +11,6 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS=   cvs.sgml
+DOCS=   cvs.xml
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"

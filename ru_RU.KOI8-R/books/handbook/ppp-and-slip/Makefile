@@ -7,7 +7,7 @@
 # Original revision: r9773
 #
 
-CHAPTERS= 	ppp-and-slip/chapter.sgml
+CHAPTERS= 	ppp-and-slip/chapter.xml
 
 VPATH=		..
 

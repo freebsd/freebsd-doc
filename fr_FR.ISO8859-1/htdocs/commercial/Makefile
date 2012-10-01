@@ -10,7 +10,7 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS =  commercial.sgml
+DOCS =  commercial.xml
 
 INDEXLINK=commercial.html
 

@@ -7,7 +7,7 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS=	index.sgml
+DOCS=	index.xml
 
 DATA=	docbook.css
 

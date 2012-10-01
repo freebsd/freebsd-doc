@@ -7,7 +7,7 @@
 # %SRCID%	38826
 #
 
-CHAPTERS= 	printing/chapter.sgml
+CHAPTERS= 	printing/chapter.xml
 
 VPATH=		..
 

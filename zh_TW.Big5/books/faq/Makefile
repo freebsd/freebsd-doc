@@ -21,7 +21,7 @@ WITH_BIBLIOXREF_TITLE?=YES
 #
 
 # SGML content
-SRCS=  book.sgml
+SRCS=  book.xml
 
 DOC_PREFIX?= ${.CURDIR}/../../..
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"

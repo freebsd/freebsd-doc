@@ -5,7 +5,7 @@
 #
 # Original revision: 1.1
 
-CHAPTERS= 	kernelconfig/chapter.sgml
+CHAPTERS= 	kernelconfig/chapter.xml
 
 VPATH=		..
 

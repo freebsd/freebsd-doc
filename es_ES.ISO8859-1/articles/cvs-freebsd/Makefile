@@ -17,7 +17,7 @@ INSTALL_ONLY_COMPRESSED?=
 WITH_ARTICLE_TOC?=YES
 
 
-SRCS=	article.sgml
+SRCS=	article.xml
 
 URL_RELPREFIX?=	../../../..
 DOC_PREFIX?= ${.CURDIR}/../../..

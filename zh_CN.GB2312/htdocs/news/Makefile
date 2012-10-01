@@ -10,10 +10,10 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS+= news.sgml
+DOCS+= news.xml
 
 # press releases
-DOCS+= pressreleases.sgml
+DOCS+= pressreleases.xml
 
 INDEXLINK= news.html
 

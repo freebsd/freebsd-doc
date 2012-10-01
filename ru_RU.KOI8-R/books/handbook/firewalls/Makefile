@@ -6,7 +6,7 @@
 # Original revision: r23130
 #
 
-CHAPTERS= 	firewalls/chapter.sgml
+CHAPTERS= 	firewalls/chapter.xml
 
 VPATH=		..
 

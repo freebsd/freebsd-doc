@@ -1,0 +1,1016 @@
+<?xml version="1.0" encoding="iso-8859-2" standalone="no"?>
+<!DOCTYPE article PUBLIC "-//FreeBSD//DTD DocBook XML V4.2-Based Extension//EN"
+	"../../../share/sgml/freebsd42.dtd" [
+<!ENTITY % entities PUBLIC "-//FreeBSD//ENTITIES DocBook FreeBSD Entity Set//HU" "../../share/sgml/entities.ent">
+%entities;
+]>
+
+<!-- $FreeBSD$ -->
+
+<!--
+
+  Implementing UFS Journaling on a desktop PC
+
+  The FreeBSD Documentation Project
+
+-->
+
+<!-- The FreeBSD Hungarian Documentation Project
+     Translated by: PALI, Gabor <pgj@FreeBSD.org>
+     %SOURCE%   en_US.ISO8859-1/articles/gjournal-desktop/article.xml
+     %SRCID%    1.5
+-->
+
+<article lang="hu">
+  <articleinfo>
+    <title>Naplózó UFS használata asztali
+      számítógépeken</title>
+
+    <author>
+      <firstname>Manolis</firstname>
+      <surname>Kiagias</surname>
+      <affiliation>
+	<address><email>manolis@FreeBSD.org</email></address>
+      </affiliation>
+    </author>
+
+    <copyright>
+      <year>2008</year>
+      <holder role="mailto:manolis@FreeBSD.org">Manolis Kiagias</holder>
+    </copyright>
+
+    <pubdate>$FreeBSD$</pubdate>
+
+    <releaseinfo>$FreeBSD$</releaseinfo>
+
+    <legalnotice id="trademarks" role="trademarks">
+      &tm-attrib.freebsd;
+      &tm-attrib.general;
+    </legalnotice>
+
+    <abstract>
+      <para>A naplózó állományrendszerek egy
+	napló segítségével
+	rögzítik az összes bennük lezajlott
+	tranzakciót, ezzel igyekszenek megőrizni egy
+	rendszeromlást vagy áramkimaradást
+	követően a rajtuk tárolt adatok
+	épségét.  Noha még így is
+	előfordulhat, hogy elveszítjük az adott
+	pillanatban el nem mentett változtatásainkat, a
+	naplózás viszont az állományrendszer
+	számára tökéletes védelmet
+	nyújt a rendszer szabálytalan
+	leállása során keletkező
+	sérülések ellen.  Alkalmazása
+	továbbá jelentős mértékben
+	lerövidíti a helyreállításhoz
+	szükséges ellenőrzés idejét.  A
+	&os; alaprendszerben megtalálható UFS
+	állományrendszer önmagában nem
+	tartalmaz naplózást, azonban a
+	&os;&nbsp;7.<replaceable>X</replaceable> változataiban
+	már megjelent egy olyan GEOM-osztály, amellyel az
+	állományrendszertől független
+	módon ezt meg tudjuk valósítani.  Ebben a
+	cikkben bemutatjuk miként alakítsunk ki UFS
+	alapú naplózást egy hétköznapi
+	asztali számítógépen.</para>
+
+      <para><emphasis>Fordította: Páli Gábor,
+	utolsó ellenőrzés:
+	2010.11.28.</emphasis></para>
+    </abstract>
+  </articleinfo>
+
+  <sect1 id="introduction">
+    <title>Bevezetés</title>
+
+    <para>Míg az ipari szervereket általában
+      alaposan felkészítik az esetlegesen
+      bekövetkező váratlan leállásokra,
+      addig egy átlagos asztali
+      számítógép teljesen
+      kiszolgáltatott az áramkimaradások, a
+      véletlen újraindítások és
+      minden más olyan beavatkozás számára,
+      amelyek a rendszer nem szabályos
+      leállását eredményezik.  A Soft
+      Updates ilyen helyzetekben általában
+      hatékonyan védelmezi az
+      állományrendszert, ez azonban a legtöbb esetben
+      egy hosszadalmasabb háttérbeli
+      ellenőrzést von maga után.  Nagyon
+      ritkán viszont az állományrendszer olyan
+      mértékben károsodik, hogy a
+      helyreállításához már
+      felhasználói beavatkozás
+      szükségeltetik és gyakran adatvesztéssel
+      is jár.</para>
+
+    <para>A GEOM alrendszerhez nemrég hozzáadott új
+      naplózási képesség az ilyen
+      szituációkban remekül alkalmazható,
+      és ennek köszönhetően szinte
+      egyáltalán nem igényel időt a
+      sérült állományrendszer
+      ellenőrzése, illetve gondoskodik a legutolsó
+      stabil állapot villámgyors
+      visszaállításáról.</para>
+
+    <para>Ebben a cikkben bemutatunk egy eljárást, amely
+      segítségével UFS
+      állományrendszerekhez tudunk naplózást
+      beállítani hagyományos asztali
+      számítógépeken
+      (feltételezzük, hogy az operációs
+      rendszer és az adatok egyetlen merevlemezen helyezkednek
+      el).  A folyamatot a &os; telepítésén
+      keresztül ismertetjük, és olyan lépesekre
+      bontottuk, hogy lehetőleg kerüljük a bonyolultabb
+      parancssori műveleteket.</para>
+
+    <para>A cikk elolvasása során megismerjük:</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>a &os; telepítése során hogyan
+	  hagyjunk helyet a napló számára;</para>
+      </listitem>
+
+      <listitem>
+	<para>hogyan töltsük be és
+	  engedélyezzük a <literal>geom_journal</literal>
+	  modult (vagy építsük be egy saját
+	  rendszermagba);</para>
+      </listitem>
+
+      <listitem>
+	<para>hogyan alakítsuk át a már
+	  meglevő állományrendszereinket
+	  naplózóvá, az
+	  <filename>/etc/fstab</filename> állományban
+	  milyen beállításokat kell megadnunk a
+	  csatlakoztatásukhoz;</para>
+      </listitem>
+
+      <listitem>
+	<para>hogyan állítsuk be a naplózást
+	  új (üres) partíciókon;</para>
+      </listitem>
+
+      <listitem>
+	<para>hogyan oldjuk meg a naplózással kapcsolatban
+	  leggyakrabban jelentkező problémákat.</para>
+      </listitem>
+    </itemizedlist>
+
+    <para>A cikk elolvasásához ajánlott:</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>a &unix; és a &os; alapvető fogalmainak
+      ismerete;</para>
+      </listitem>
+
+      <listitem>
+	<para>a &os; telepítés menetének és
+	  a <application>sysinstall</application> alkalmazás
+	  ismerete.</para>
+      </listitem>
+    </itemizedlist>
+
+    <warning>
+      <para>Az itt megadott eljárás alapvetően egy
+	új rendszer telepítésének
+	esetére vonatkozik, ahol még semmilyen
+	felhasználói adatot nem tárolunk a lemezen.
+	Természetesen ez a módszer
+	átültethető működő, éles
+	rendszerekre is, azonban ilyenkor mindig
+	készítsünk <emphasis>biztonsági
+	mentést</emphasis> mielőtt nekikezdenénk.
+	Ugyanis amikor ilyen alacsony szinten dolgozunk lemezekkel
+	és partíciókkal, bármilyen hiba
+	könnyedén végzetesnek bizonyulhat az
+	adatainkra nézve.</para>
+    </warning>
+  </sect1>
+
+  <sect1 id="understanding-journaling">
+    <title>Naplózás &os; alatt</title>
+
+    <para>A &os;&nbsp;7.<replaceable>X</replaceable>
+      változataiban a GEOM részéről
+      felkínált naplózási
+      lehetőség (eltérően például
+      a &linux; típusú rendszerekben
+      található ext3
+      állományrendszertől) nem kötődik
+      konkrét állományrendszerhez, de blokkok
+      szintjén üzemel.  Habár ez arra utal, hogy
+      különböző állományrendszerek
+      esetén is használható, a &os; 7.0-RELEASE
+      kiadásában még csak az UFS2 felett
+      működik.</para>
+
+    <para>Ezt a funkciót a <filename>geom_journal.ko</filename>
+      modul betöltésével (vagy rendszermagba
+      építésével) tudjuk aktiválni,
+      majd a <command>gjournal</command> paranccsal érjük el
+      az állományrendszerek
+      konfigurációjához szükséges
+      felületet.  Általában nagyobb
+      állományrendszereken, például a
+      <filename>/usr</filename> partíción érdemes
+      engedélyezni a naplózást.  Nem szabad
+      elfelejtenünk, hogy ehhez azonban fenn kell tartanunk
+      némi szabad területet a lemezen (erről a
+      következő szakaszban lesz szó).</para>
+
+    <para>Amikor egy állományrendszeren bekapcsoljuk a
+      naplózást, magát a naplót is
+      tárolnunk kell valahol a lemezen.  A tényleges
+      adatokat tároló lemezterületet
+      <emphasis>adatterületnek</emphasis>, míg a
+      naplót tároló területet pedig
+      <emphasis>naplóterületnek</emphasis> nevezzük.
+      Ha egy meglevő (nem üres) partícióhoz
+      akarunk naplózást társítani, akkor az
+      adat- és naplóterületeknek külön
+      partíciókon kell lenniük.  Amikor viszont egy
+      teljesen új partícióhoz kapcsolunk
+      naplózást, lehetőségünk van
+      egyetlen területen tárolni az adatokat és a
+      naplót.  Bármelyik esettel is van dolgunk, a
+      <command>gjournal</command> parancs a naplózó
+      állományrendszer véglegesített
+      változatát ezen két fajta terület
+      egyesítéséből hozza létre.
+      Például:</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>A <filename class="devicefile">/dev/ad0s1f</filename>
+	  eszközön található
+	  <filename>/usr</filename> állományrendszeren
+	  szeretnénk naplózást használni
+	  (amely már eleve tartalmaz hasznos adatokat).</para>
+      </listitem>
+
+      <listitem>
+	<para>A partíciók létrehozása
+	  során a <filename
+	    class="devicefile">/dev/ad0s1g</filename> eszközön
+	  lefoglaltunk valamennyi helyet.</para>
+      </listitem>
+
+      <listitem>
+	<para>A <command>gjournal</command> parancs
+	  segítségével készítünk
+	  egy <filename
+	    class="devicefile">/dev/ad0s1f.journal</filename>
+	  eszközt, ahol a <filename
+	  class="devicefile">/dev/ad0s1f</filename> eszközön
+	  tároljuk az adatokat és a <filename
+	  class="devicefile">/dev/ad0s1g</filename> eszközön a
+	  naplót.  A továbbiakban ezt az új
+	  eszközt fogjuk használni.</para>
+      </listitem>
+    </itemizedlist>
+
+    <para>A napló számára fenntartott hely
+      mennyisége nem az adatok méretétől, hanem
+      az állományrendszer
+      terheltségétől függ.
+      Például egy átlagos irodai
+      számítógép esetén a
+      <filename>/usr</filename> állományrendszerhez
+      nagyjából egy 1&nbsp;GB méretű
+      naplózási terület remekül megfelel,
+      viszont egy terheltebb rendszer (amellyel például
+      videoanyagok vágását végezzük)
+      számára ennél több kellhet.  A
+      naplóterület idő előtti
+      kimerülése a rendszermag
+      összeomlásával jár.</para>
+
+    <note>
+      <para>A cikkben javasolt méretek
+	használatával nagyon
+	valószínűtlen, hogy hétköznapi
+	feladataink (böngészés az interneten,
+	szövegszerkesztés, különböző
+	multimédia anyagok lejátszása) közben
+	bármilyen problémát
+	észlelnénk.  Ha viszont a lemezünk
+	tartósabb terhelés alatt van, a
+	következő szabály betartásával
+	érhetjük el a legjobb eredményt: a
+	számítógépünkben levő
+	központi memória teljes tartalmának mindig el
+	kell tudnia férni a naplóterület
+	egyharmadán.  Tehát például ha a
+	rendszerünk 1&nbsp;GB memóriával rendelkezik,
+	akkor egy közel 3,3&nbsp;GB méretű
+	naplóterület ajánlott.
+	(Általánosan: Úgy kapjuk meg a
+	naplóterület méretét, ha megszorozzuk
+	a memória méretet 3,3-mal.)</para>
+    </note>
+
+    <para>A naplózásról részleteiben a
+      &man.gjournal.8; man oldalon olvashatunk.</para>
+  </sect1>
+
+  <sect1 id="reserve-space">
+    <title>A &os; telepítése során
+      elvégzendő lépések</title>
+
+    <sect2>
+      <title>Lemezterület lefoglalása a
+	naplónak</title>
+
+      <para>Az asztali számítógépekben
+	többnyire csupán egyetlen merevlemez
+	található, amelyen maga az operációs
+	rendszer és az adatok helyezkednek el.  A
+	<application>sysinstall</application> által
+	felajánlott alapértelmezett
+	partícionálási séma
+	alkalmassága vitatható: egy asztali gép
+	esetén például nincs
+	szükségünk akkora <filename>/var</filename>
+	partícióra, viszont a <filename>/usr</filename>
+	foglalja el a merevlemez legnagyobb részét, hiszen
+	a felhasználók adatai és a rendszerre
+	telepített csomagok ide fognak kerülni.</para>
+
+      <para>Az alapértelmezés szerinti felosztás
+	(amely a <application>Disklabel</application>
+	partíciószerkesztőben az <keycap>A</keycap>
+	billentyűvel érhető el) nem hagy semennyi
+	lemezterületet szabadon.  Ahány
+	partíciót naplózással akarunk
+	ellátni, annyi további partícióra
+	lesz szükségünk a naplókhoz.  Mivel a
+	<filename>/usr</filename> lesz közülük a
+	legnagyobb, próbáljuk meg ezen
+	partíció méretének
+	csökkentésével helyet csinálni a
+	naplónak.</para>
+
+      <para>A példában most egy 80&nbsp;GB
+	méretű lemezt láthatunk.  Az
+	ábrán most a telepítés közben a
+	<application>Disklabel</application> szerint
+	alapértelmezetten kiosztott partíciókat
+	láthatjuk:</para>
+
+      <mediaobject>
+	<imageobject>
+	  <imagedata fileref="disklabel1.png"/>
+	</imageobject>
+      </mediaobject>
+
+      <para>Amennyiben ez körülbelül megfelelő a
+	számunkra, akkor innen már nagyon egyszerű
+	előkészíteni a napló helyét.  A
+	nyilak használatával válasszuk ki a
+	<filename>/usr</filename> partíciót és a
+	<keycap>D</keycap> billentyű lenyomásával
+	töröljük le.</para>
+
+      <para>Ezután válasszuk ki a képernyő
+	felső részében a lemez nevét, majd a
+	<keycap>C</keycap> billentyű lenyomásával
+	hozzunk létre egy új partíciót a
+	<filename>/usr</filename> számára.  Ez viszont
+	legyen most 1&nbsp;GB-tal (ha napló csak a
+	<filename>/usr</filename> mellé lesz) vagy 2&nbsp;GB-tal
+	(ha egyaránt naplózni akarjuk a
+	<filename>/usr</filename> és <filename>/var</filename>
+	partíciókat is) kisebb.  A felbukkanó
+	ablakban válasszuk az állományrendszer
+	létrehozását és a
+	<filename>/usr</filename> könyvtárat adjuk meg
+	csatlakozási pontként.</para>
+
+      <note>
+	<para>Szükségünk van-e naplóra a
+	  <filename>/var</filename> partícióhoz?  A
+	  naplózásnak alapvetően csak
+	  óriási méretű
+	  partíciók esetében van értelme.
+	  Ennek megfelelően nem kell feltétlenül
+	  engedélyeznünk a naplózást a
+	  <filename>/var</filename> partíción is,
+	  habár egy asztali gép esetében ez sosem
+	  árthat.  Ha ezt az állományrendszert alig
+	  használjuk (ami nagyon valószínű egy
+	  asztali gépnél), kevesebb területet is
+	  rendelhetünk a naplóhoz.</para>
+
+	<para>A példánkban a <filename>/usr</filename>
+	  és <filename>/var</filename> partíciókhoz
+	  is kapcsoltunk naplókat.  Természetesen a
+	  módszer ezen lépése igény szerint
+	  megváltoztatható.</para>
+      </note>
+
+      <para>Mivel továbbra sem szeretnénk
+	elbonyolítani a lépéseket, ezért a
+	naplózás bevezetéséhez
+	szükséges partíciók
+	létrehozását szintén a
+	<application>sysinstall</application>
+	segítésével végezzük.  A
+	telepítés közben a
+	<application>sysinstall</application> feltétlenül
+	ragaszkodik ahhoz, hogy minden létrehozott
+	partícióhoz csatlakozási pontot is
+	megadjunk.  A naplókat tároló
+	partíciókhoz viszont ilyen nem tartozik, sőt,
+	<emphasis>egyáltalán nem is kell</emphasis>.  Ezek
+	ugyanis nem olyan hétköznapi
+	partíciók, amelyeket bármikor is
+	csatlakoztatni fogunk.</para>
+
+      <para>A <application>sysinstall</application> használata
+	során ezt a problémát úgy tudjuk
+	elkerülni, ha a naplózásnak szánt
+	partíciókat lapozóterületként
+	adjuk meg.  A lapozóterületet sem kell soha
+	csatlakoztatni, és a
+	<application>sysinstall</application> ezekből
+	tetszőleges mennyiségűt képes
+	készíteni.  A telepítést
+	követő újraindítás után
+	természetesen majd át kell szerkesztenünk az
+	<filename>/etc/fstab</filename> állományban az
+	így létrehozott partíciók
+	jellemzőit.</para>
+
+      <para>Lapozóterület
+	kialakításához ismét a
+	nyílbillentyűk használatával
+	navigáljunk a <application>Disklabel</application>
+	alkalmazáshoz tartozó képernyő
+	felső részébe és válasszuk ki a
+	lemez nevét.  Ezután nyomjuk le az
+	<keycap>N</keycap> billentyűt, majd adjuk meg a
+	kívánt méretet
+	(<replaceable>1024M</replaceable>) és a
+	következő menüből válasszuk a
+	<quote>swap space</quote> (lapozóterület)
+	típust.  Ismételjük meg az iménti
+	műveletet az összes napló esetén.  A
+	példánkban ezen a módon
+	készítettünk egy naplót a
+	<filename>/usr</filename>, és még egyet a
+	<filename>/var</filename> állományrendszer
+	számára.  A végeredmény a
+	következő képen látható:</para>
+
+      <mediaobject>
+	<imageobject>
+	  <imagedata fileref="disklabel2.png"/>
+	</imageobject>
+      </mediaobject>
+
+      <para>Javasoljuk, ahogy befejeztük a partíciók
+	létrehozását, jegyezzük fel a neveiket
+	és a hozzá tartozó csatlakozási
+	pontokat, így a soron következő
+	konfigurációs lépésekben
+	könnyebben tudunk majd velük dolgozni.  Ez egyben
+	segít mérsékelni a telepítést
+	károsító hibák
+	elkövetésének esélyét.  A
+	következő táblázatban a
+	példában említett
+	konfigurációhoz vettük fel ezeket az
+	adatokat:</para>
+
+      <table pgwide="1">
+	<title>Partíciók és naplók</title>
+
+	<tgroup cols="3">
+	<thead>
+	  <row>
+	    <entry>Partíció</entry>
+	    <entry>Csatlakozási pont</entry>
+	    <entry>Napló</entry>
+	  </row>
+	</thead>
+
+	<tbody>
+	  <row>
+	    <entry>ad0s1d</entry>
+	    <entry>/var</entry>
+	    <entry>ad0s1h</entry>
+	  </row>
+
+	  <row>
+	    <entry>ad0s1f</entry>
+	    <entry>/usr</entry>
+	    <entry>ad0s1g</entry>
+	  </row>
+	</tbody>
+	</tgroup>
+      </table>
+
+      <para>Ezután a megszokott módon folytassuk a
+	telepítést.  Javasoljuk azonban, hogy a
+	külső alkalmazásokat (csomagokat) addig
+	még ne tegyünk fel a rendszerünkre, amíg
+	teljesen be nem fejeztük a naplózás
+	beállítását.</para>
+    </sect2>
+
+    <sect2 id="first-boot">
+      <title>A rendszer első indítása</title>
+
+      <para>A rendszerünk a szokásos módon fog
+	indulni, de a naplók számára
+	hozzáadott plusz lapozóterületekhez
+	tartozó bejegyzéseket el kell
+	távolítanunk az <filename>/etc/fstab</filename>
+	állományból.  A lapozóterületek
+	közül ténylegesen lapozásra
+	általában a <quote>b</quote> (tehát a
+	példánkban az <devicename>ad0s1b</devicename>)
+	partíciót érdemes meghagyni.  Az
+	összes többit egyszerűen töröljük
+	ki, indítsuk újra a rendszerünket és a
+	&os; már nem fogja tovább használni
+	ezeket.</para>
+
+      <para>Ahogy a rendszer újra elindul, készen is
+	állunk a naplózás
+	beállítására.</para>
+    </sect2>
+  </sect1>
+
+  <sect1 id="configure-journal">
+    <title>A naplózás
+      beállítása</title>
+
+    <sect2 id="running-gjournal">
+      <title>A <command>gjournal</command> futtatása</title>
+
+      <para>A naplózást nagyon könnyű lesz
+	beállítani miután már
+	előkészítettük az ehhez
+	szükséges partíciókat.
+	Váltsunk át egyfelhasználós
+	módba, tehát jelentkezzünk be
+	<username>root</username> felhasználóként
+	és gépeljük be:</para>
+
+      <screen>&prompt.root; <userinput>shutdown now</userinput></screen>
+
+      <para>Ezután az <keycap>Enter</keycap> billentyű
+	lenyomásával megkapjuk az alapértelmezett
+	parancsértelmezőt.  Válasszuk le azokat a
+	partíciókat, amelyeken engedélyezni
+	kívánjuk a naplózást.  Ezek a
+	példánkban a <filename>/usr</filename> és
+	<filename>/var</filename> partíciók voltak:</para>
+
+      <screen>&prompt.root; <userinput>umount /usr /var</userinput></screen>
+
+      <para>Töltsük be a naplózáshoz
+	szükséges modult:</para>
+
+      <screen>&prompt.root; <userinput>gjournal load</userinput></screen>
+
+      <para>Most pedig a korábbi feljegyzéseink
+	alapján állapítsuk meg melyik
+	naplóhoz melyik partíciót fogjuk rendelni.
+	A példánkban a <filename>/usr</filename>
+	csatlakozási ponthoz az <filename
+	  class="devicefile">ad0s1f</filename> eszköz tartozik,
+	és ennek a naplója az <filename
+	  class="devicefile">ad0s1g</filename> eszköz lesz,
+	miközben a <filename>/var</filename> ponthoz az <filename
+	  class="devicefile">ad0s1d</filename> eszközt
+	rendeltük, és ezt az <filename
+	  class="devicefile">ad0s1h</filename> eszközön
+	naplózzuk.  Ennek megfelelően a következő
+	parancsokat kell kiadnunk:</para>
+
+      <screen>&prompt.root; <userinput>gjournal label ad0s1f ad0s1g</userinput>
+
+GEOM_JOURNAL: Journal 2948326772: ad0s1f contains data.
+GEOM_JOURNAL: Journal 2948326772: ad0s1g contains journal.
+
+&prompt.root; <userinput>gjournal label ad0s1d ad0s1h</userinput>
+
+GEOM_JOURNAL: Journal 3193218002: ad0s1d contains data.
+GEOM_JOURNAL: Journal 3193218002: ad0s1h contains journal.</screen>
+
+      <note>
+	<para>A <command>gjournal</command> hibát fog jelezni, ha
+	  bármelyik partíció utolsó szektora
+	  már használatban van.  Ilyen helyzetekben az
+	  <option>-f</option> kapcsoló
+	  segítségével
+	  felülírásra tudjuk
+	  kényszeríteni a parancsot, mint
+	  például:</para>
+
+	<screen>&prompt.root; <userinput>gjournal label -f ad0s1d ad0s1h</userinput></screen>
+
+	<para>Mivel most telepítettük a rendszerünket,
+	  elég kicsi a valószínűsége,
+	  hogy így bármit is ténylegesen
+	  felülírnánk.</para>
+      </note>
+
+      <para>Létrejött két új eszköz,
+	név szerint az <filename
+	class="devicefile">ad0s1d.journal</filename> és az
+	<filename class="devicefile">ad0s1f.journal</filename>.  Ezek
+	képviselik azokat a <filename>/var</filename> és
+	<filename>/usr</filename> partíciókat, amelyeket
+	valójában csatlakoztatnunk kell.  A
+	csatlakoztatásuk előtt azonban
+	állítsuk be hozzájuk a
+	naplózást és tiltsuk le a Soft Updates
+	használatát:</para>
+
+      <screen>&prompt.root; <userinput>tunefs -J enable -n disable ad0s1d.journal</userinput>
+
+tunefs: gjournal set
+tunefs: soft updates cleared
+
+&prompt.root; <userinput>tunefs -J enable -n disable ad0s1f.journal</userinput>
+
+tunefs: gjournal set
+tunefs: soft updates cleared</screen>
+
+      <para>Ezt követően parancssorból csatlakoztassuk
+	az új eszközöket a nekik megfelelő pontokra
+	(itt most már használhatjuk az
+	<option>async</option> beállítást):</para>
+
+      <screen>&prompt.root; <userinput>mount -o async /dev/ad0s1d.journal /var</userinput>
+&prompt.root; <userinput>mount -o async /dev/ad0s1f.journal /usr</userinput></screen>
+
+      <para>Nyissuk meg az <filename>/etc/fstab</filename>
+	állományt, és az előbbiek szerint
+	javítsuk ki a <filename>/usr</filename> és a
+	<filename>/var</filename> állományrendszerekhez
+	tartozó bejegyzéseket:</para>
+
+      <programlisting>/dev/ad0s1f.journal     /usr            ufs     rw,async      2       2
+/dev/ad0s1d.journal     /var            ufs     rw,async      2       2</programlisting>
+
+      <warning>
+	<para>Figyelmesen ellenőrizzük a bejegyzéseket,
+	  mert ha hibásan adjuk meg ezeket, akkor az
+	  újraindítás után gondok lehetnek a
+	  rendszer indításával!</para>
+      </warning>
+
+      <para>Végezetül gondoskodjunk róla, hogy a
+	&man.gjournal.8; modul minden egyes indítás
+	során betöltődjön.  Ehhez nyissuk meg a
+	<filename>/boot/loader.conf</filename> állományt
+	és adjuk hozzá a következő sort:</para>
+
+      <programlisting>geom_journal_load="YES"</programlisting>
+
+      <para>Gratulálunk, sikeresen beállítottuk a
+	rendszerünkön a naplózást!  Innen vagy az
+	<userinput>exit</userinput> begépelésével
+	lépjünk vissza a többfelhasználós
+	módba, vagy egy újraindítással
+	próbáljuk ki a konfiguráció
+	eredményét (mi ezt javasoljuk).  A
+	rendszerindítás során a
+	következőhöz hasonló üzeneteket kell
+	majd látnunk:</para>
+
+      <screen>ad0: 76293MB XEC XE800JD-00HBC0 08.02D08 at ata0-master SATA150
+GEOM_JOURNAL: Journal 2948326772: ad0s1g contains journal.
+GEOM_JOURNAL: Journal 3193218002: ad0s1h contains journal.
+GEOM_JOURNAL: Journal 3193218002: ad0s1d contains data.
+GEOM_JOURNAL: Journal ad0s1d clean.
+GEOM_JOURNAL: Journal 2948326772: ad0s1f contains data.
+GEOM_JOURNAL: Journal ad0s1f clean.</screen>
+
+      <para>Szabálytalan leállások esetén az
+	iménti üzenetek némileg változhatnak,
+	például:</para>
+
+      <screen>GEOM_JOURNAL: Journal ad0s1d consistent.</screen>
+
+      <para>Ez általában arra utal, hogy a
+	&man.gjournal.8; a naplóterületen tárolt
+	információk segítségével
+	helyreállította az
+	állományrendszert.</para>
+    </sect2>
+
+    <sect2 id="gjournal-new">
+      <title>A naplózás engedélyezése
+	frissen létrehozott partíciókon</title>
+
+      <para>Míg az előbbiekben tárgyalt
+	megoldást leginkább olyan partíciók
+	esetén alkalmazhatjuk, amelyek már eleve
+	tartalmaznak adatokat, addig egy újonnan
+	létrehozott partíciót némileg
+	könnyebb naplózással ellátni, mivel
+	ilyenkor az adat- és a naplóterület egyazon
+	partíción is kialakítható.
+	Például most tegyük fel, hogy
+	hozzáadtunk egy újabb lemezt a
+	rendszerünkhöz, amelyen
+	készítettünk egy új <filename
+	class="devicefile">/dev/ad1s1d</filename> nevű
+	partíciót.  A napló
+	létrehozása ekkor csupán ennyi:</para>
+
+      <screen>&prompt.root; <userinput>gjournal label ad1s1d</userinput></screen>
+
+      <para>A napló mérete alapértelmezés
+	szerint 1&nbsp;GB lesz, amelyet viszont a <option>-s</option>
+	opció használatával tetszés szerint
+	átállíthatunk.  Az értéket
+	megadhatjuk byte-okban, vagy a <literal>K</literal>,
+	<literal>M</literal>, illetve <literal>G</literal>
+	hozzáfűzésével kilobyte-okban,
+	megabyte-okban, illetve gigabyte-okban is.  Arra azonban
+	figyeljünk, hogy a <command>gjournal</command> nem enged
+	túlságosan kis méretű naplót
+	létrehozni.</para>
+
+      <para>Például egy 2&nbsp;GB méretű
+	napló az alábbi paranccsal hozható
+	létre:</para>
+
+      <screen>&prompt.root; <userinput>gjournal label -s 2G ad1s1d</userinput></screen>
+
+      <para>Mellé hozzunk létre egy
+	állományrendszert az új
+	partíción, ahol a <option>-J</option>
+	kapcsolóval engedélyezzük a
+	naplózást:</para>
+
+      <screen>&prompt.root; <userinput>newfs -J /dev/ad1s1d.journal</userinput></screen>
+    </sect2>
+
+    <sect2 id="configure-kernel">
+      <title>A naplózás támogatásának
+	beépítése a rendszermagba</title>
+
+      <para>Amennyiben nem kívánjuk betölteni a
+	<literal>geom_journal</literal> modult,
+	lehetőségünk van közvetlenül a
+	rendszermagba beépíteni a
+	hozzá tartozó funkcionalitást.  Ehhez
+	nyissunk meg (vagy hozzunk létre) egy saját
+	rendszermag-konfigurációs állományt,
+	és vegyük fel benne a következő két
+	sort:</para>
+
+      <programlisting>options UFS_GJOURNAL # Megjegyzés: Ez része a GENERIC rendszermagnak
+options GEOM_JOURNAL # Ezt se felejtsük ki</programlisting>
+
+      <para>A <ulink url="&url.books.handbook;/kernelconfig.html">&os;
+	kézikönyvben</ulink> szereplő
+	utasítások mentén fordítsuk le
+	és telepítsük az új
+	rendszermagot.</para>
+
+      <para>Ha korábban használtuk volna a modult, akkor
+	ezzel együtt ne felejtsük el kivenni a
+	<filename>/boot/loader.conf</filename>
+	állományból sem a
+	hozzá tartozó sort.</para>
+    </sect2>
+  </sect1>
+
+  <sect1 id="troubleshooting-gjournal">
+    <title>A naplózás használata során
+      felmerülő hibák kezelése</title>
+
+    <para>Ebben a szakaszban a naplózás
+      alkalmazásakor jelentkező gondokra vonatkozó
+      gyakran ismételt kérdéseket foglaljuk
+      össze.</para>
+
+    <qandaset>
+      <qandaentry>
+	<question id="kernel-panic">
+	  <para>A rendszer folyamatosan összeomlik komolyabb
+	    lemezterhelés mellett.  Van ennek valamilyen köze
+	    a naplózáshoz?</para>
+	</question>
+
+	<answer>
+	  <para>A napló ilyenkor valószínűleg
+	    gyorsabban betelik, mint ahogy kiíródhatna a
+	    lemezre.  Nem szabad elfeledkeznünk róla, hogy
+	    a napló méretének sosem az
+	    adatterület méretével kell
+	    arányosnak lennie, hanem a lemez
+	    terheltségével.  Ha tehát a lemezeink
+	    nagyobb terhelés alatt vannak, akkor egy nagyobb
+	    területet kell hozzárendelnünk a
+	    naplóhoz.  Ezzel kapcsolatban lásd a <link
+	      linkend="understanding-journaling">Naplózás
+	    &os; alatt</link> című szakaszt.</para>
+	</answer>
+      </qandaentry>
+
+      <qandaentry>
+	<question id="unable-boot">
+	  <para>Valamit nem sikerült rendesen
+	    beállítani a konfiguráció
+	    során, ezért most nem indul a rendszer.  Meg
+	    lehet valahogy javítani?</para>
+	</question>
+
+	<answer>
+	  <para>Ilyenkor vagy elfelejtettük (vagy netalán
+	    elírtuk) a <filename>/boot/loader.conf</filename>
+	    állományban szükséges
+	    bejegyzést, vagy az <filename>/etc/fstab</filename>
+	    állományunk hibákat tartalmaz.  Az
+	    ilyen jellegű problémákat viszonylag
+	    könnyű helyrehozni.  Az <keycap>Enter</keycap>
+	    billentyű lenyomásával hozzuk elő az
+	    egyfelhasználós módhoz tartozó
+	    parancsértelmezőt.  Ha ez sikerült, akkor
+	    kutassuk fel a probléma okát:</para>
+
+	  <screen>&prompt.root; <userinput>cat /boot/loader.conf</userinput></screen>
+
+	  <para>Ha innen hiányzik vagy nem helyesen szerepel a
+	    <literal>geom_journal_load</literal> bejegyzés, akkor a
+	    naplózás használatához
+	    szükséges eszközök nem fognak
+	    létrejönni.  Töltsük be a modult
+	    manuálisan, csatlakoztassuk az összes
+	    partíciót és folytassuk a
+	    többfelhasználós mód
+	    indítását:</para>
+
+	  <screen>&prompt.root; <userinput>gjournal load</userinput>
+
+GEOM_JOURNAL: Journal 2948326772: ad0s1g contains journal.
+GEOM_JOURNAL: Journal 3193218002: ad0s1h contains journal.
+GEOM_JOURNAL: Journal 3193218002: ad0s1d contains data.
+GEOM_JOURNAL: Journal ad0s1d clean.
+GEOM_JOURNAL: Journal 2948326772: ad0s1f contains data.
+GEOM_JOURNAL: Journal ad0s1f clean.
+
+&prompt.root; <userinput>mount -a</userinput>
+&prompt.root; <userinput>exit</userinput>
+<emphasis>(a rendszerindítás folytatódik)</emphasis></screen>
+
+	  <para>Ha viszont ezzel a bejegyzéssel kapcsolatban
+	    semmilyen hibát nem találtunk, akkor
+	    nézzük meg az <filename>/etc/fstab</filename>
+	    állományt.  Akkor
+	    valószínűleg itt fogunk találni
+	    egy hibásan beírt vagy éppen
+	    hiányzó bejegyzést.  Amennyiben
+	    erről lenne szó, csatlakoztassuk kézzel a
+	    fennmaradó partíciókat és
+	    folytassuk a többfelhasználós mód
+	    indítását.</para>
+	</answer>
+      </qandaentry>
+
+      <qandaentry>
+	<question id="remove-journaling">
+	  <para>Visszavonható a naplózás, vissza
+	    lehet valahogy térni a Soft Updates
+	    használatához?</para>
+	</question>
+
+	<answer>
+	  <para>Hogyne.  A most következő módszer
+	    segítségével megfordítható
+	    az egész folyamat.  Miután
+	    végeztünk, a naplózás
+	    részére korábban kialakított
+	    partíciók tetszés szerint
+	    felhasználhatóak.</para>
+
+	  <para>Jelentkezzük be <username>root</username>
+	    felhasználóként és
+	    váltsunk egyfelhasználós
+	    módba:</para>
+
+	  <screen>&prompt.root; <userinput>shutdown now</userinput></screen>
+
+	  <para>Válasszuk le a naplózást
+	    alkalmazó partíciókat:</para>
+
+	  <screen>&prompt.root; <userinput>umount /usr /var</userinput></screen>
+
+	  <para>Írassuk ki lemezre a naplók
+	    tartalmát:</para>
+
+	  <screen>&prompt.root; <userinput>gjournal sync</userinput></screen>
+
+	  <para>Állítsuk le a
+	    naplózóterületek
+	    használatát:</para>
+
+	  <screen>&prompt.root; <userinput>gjournal stop ad0s1d.journal</userinput>
+&prompt.root; <userinput>gjournal stop ad0s1f.journal</userinput></screen>
+
+	  <para>Töröljük le az eszközökön
+	    tárolt összes naplózási
+	    metainformációt:</para>
+
+	  <screen>&prompt.root; <userinput>gjournal clear ad0s1d</userinput>
+&prompt.root; <userinput>gjournal clear ad0s1f</userinput>
+&prompt.root; <userinput>gjournal clear ad0s1g</userinput>
+&prompt.root; <userinput>gjournal clear ad0s1h</userinput></screen>
+
+	  <para>Tiltsuk le az állományrendszer
+	    naplózását és
+	    állítsuk vissza a Soft Updates
+	    használatát:</para>
+
+	  <screen>&prompt.root; <userinput>tunefs -J disable -n enable ad0s1d</userinput>
+
+tunefs: gjournal cleared
+tunefs: soft updates set
+
+&prompt.root; <userinput>tunefs -J disable -n enable ad0s1f</userinput>
+
+tunefs: gjournal cleared
+tunefs: soft updates set</screen>
+
+	  <para>Manuálisan csatlakoztassuk újra a
+	    régi eszközöket:</para>
+
+	  <screen>&prompt.root; <userinput>mount -o rw /dev/ad0s1d /var</userinput>
+&prompt.root; <userinput>mount -o rw /dev/ad0s1f /usr</userinput></screen>
+
+	  <para>Az <filename>/etc/fstab</filename>
+	    állományban állítsunk vissza
+	    mindent az eredeti állapotába:</para>
+
+	  <programlisting>/dev/ad0s1f     /usr            ufs     rw      2       2
+/dev/ad0s1d     /var            ufs     rw      2       2</programlisting>
+
+	  <para>Végül a
+	    <filename>/boot/loader.conf</filename>
+	    állományból távolítsuk el
+	    a <literal>geom_journal</literal> modul
+	    betöltésére vonatkozó
+	    bejegyzést és indítsuk újra a
+	    rendszert.</para>
+	</answer>
+      </qandaentry>
+    </qandaset>
+  </sect1>
+
+  <sect1 id="further-reading">
+    <title>Ajánlott olvasmányok</title>
+
+    <para>A naplózás még viszonylag
+      újdonságnak számít a &os;
+      esetében, ezért nem feltétlenül
+      találunk róla túlságosan sok
+      dokumentációt.  Ettől függetlenül
+      azonban a következő források elolvasása
+      azért hasznosnak bizonyulhat:</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>A &os; kézikönyv naplózással
+	  foglalkozó <ulink
+	    url="&url.books.handbook;/geom-gjournal.html">szakasza</ulink>.</para>
+      </listitem>
+
+      <listitem>
+	<para>&a.pjd;, a &man.gjournal.8; fejlesztőjének a
+	  &a.current.name; levelezési listára
+	  küldött <ulink
+	    url="http://lists.freebsd.org/pipermail/freebsd-current/2006-June/064043.html">levele</ulink>.</para>
+      </listitem>
+
+      <listitem>
+	<para>&a.ivoras; a &a.questions.name; levelezési
+	  listára küldött <ulink
+	    url="http://lists.freebsd.org/pipermail/freebsd-questions/2008-April/173501.html">levele</ulink>.</para>
+      </listitem>
+
+      <listitem>
+	<para>A &man.gjournal.8; és &man.geom.8; man
+	  oldalak.</para>
+      </listitem>
+    </itemizedlist>
+  </sect1>
+</article>

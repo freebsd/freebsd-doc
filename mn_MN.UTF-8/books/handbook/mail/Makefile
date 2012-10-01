@@ -7,7 +7,7 @@
 # Build the Handbook with just the content from this chapter.
 #
 
-CHAPTERS= 	mail/chapter.sgml
+CHAPTERS= 	mail/chapter.xml
 
 VPATH=		..
 

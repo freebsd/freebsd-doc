@@ -7,7 +7,7 @@
 # %SRCID%	38826
 #
 
-CHAPTERS= 	vinum/chapter.sgml
+CHAPTERS= 	vinum/chapter.xml
 
 VPATH=		..
 

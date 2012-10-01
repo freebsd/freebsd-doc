@@ -7,7 +7,7 @@
 # Original revision: r21084
 #
 
-CHAPTERS= 	advanced-networking/chapter.sgml
+CHAPTERS= 	advanced-networking/chapter.xml
 
 VPATH=		..
 

@@ -7,7 +7,7 @@
 # %SRCID%	38826
 #
 
-CHAPTERS= 	serialcomms/chapter.sgml
+CHAPTERS= 	serialcomms/chapter.xml
 
 VPATH=		..
 

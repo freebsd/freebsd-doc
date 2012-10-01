@@ -12,7 +12,7 @@
 
 .SUFFIXES:	.xml .html
 
-DOCS=	status.sgml
+DOCS=	status.xml
 
 #XMLDOCS=	report-june-2001
 #XMLDOCS+=	report-july-2001

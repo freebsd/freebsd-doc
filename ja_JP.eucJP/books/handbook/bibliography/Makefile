@@ -5,7 +5,7 @@
 #
 # Original revision: 1.1
 
-CHAPTERS= 	bibliography/chapter.sgml
+CHAPTERS= 	bibliography/chapter.xml
 
 VPATH=		..
 

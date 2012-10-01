@@ -9,20 +9,20 @@
 
 # These are turned into validated, normalized HTML files.
 
-DOCS=  about.sgml
-DOCS+= applications.sgml
-DOCS+= availability.sgml
-DOCS+= community.sgml
-DOCS+= docs.sgml
-DOCS+= features.sgml
-DOCS+= internet.sgml
-DOCS+= mailto.sgml
-DOCS+= publish.sgml
-DOCS+= send-pr.sgml
-DOCS+= support.sgml
-DOCS+= where.sgml
+DOCS=  about.xml
+DOCS+= applications.xml
+DOCS+= availability.xml
+DOCS+= community.xml
+DOCS+= docs.xml
+DOCS+= features.xml
+DOCS+= internet.xml
+DOCS+= mailto.xml
+DOCS+= publish.xml
+DOCS+= send-pr.xml
+DOCS+= support.xml
+DOCS+= where.xml
 
-CLEANFILES+=atoz.sgml site.sgml
+CLEANFILES+=atoz.xml site.xml
 
 # Subdirectories
 # SGML

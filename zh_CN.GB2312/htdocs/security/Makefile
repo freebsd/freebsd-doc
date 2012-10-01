@@ -8,8 +8,8 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS=	charter.sgml
-DOCS+=	security.sgml
+DOCS=	charter.xml
+DOCS+=	security.xml
 
 INDEXLINK=	security.html
 
