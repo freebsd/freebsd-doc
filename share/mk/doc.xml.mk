@@ -2,13 +2,13 @@
 # $FreeBSD$
 
 XML_CATALOG_FILES=	file://${.OBJDIR}/catalog-cwd.xml \
-			file://${DOC_PREFIX}/${LANGCODE}/share/sgml/catalog.xml \
-			file://${DOC_PREFIX}/share/sgml/catalog.xml \
-			file://${DOC_PREFIX}/share/sgml/catalog-common.xml \
+			file://${DOC_PREFIX}/${LANGCODE}/share/xml/catalog.xml \
+			file://${DOC_PREFIX}/share/xml/catalog.xml \
+			file://${DOC_PREFIX}/share/xml/catalog-common.xml \
 			file://${LOCALBASE}/share/xml/catalog
 
-.if exists(${DOC_PREFIX}/share/sgml/catalog-cwd.xml)
-XML_CATALOG_CWD=	${DOC_PREFIX}/share/sgml/catalog-cwd.xml
+.if exists(${DOC_PREFIX}/share/xml/catalog-cwd.xml)
+XML_CATALOG_CWD=	${DOC_PREFIX}/share/xml/catalog-cwd.xml
 .endif
 
 # Variables used in DEPENDSET
@@ -29,10 +29,10 @@ _XML_INCLIST=	libcommon.l10n.xsl \
 		l10n.ent \
 		release.ent
 .for F in ${_INCLIST}
-.if exists(${DOC_PREFIX}/${LANGCODE}/share/sgml/${F})
+.if exists(${DOC_PREFIX}/${LANGCODE}/share/xml/${F})
 XML_INCLUDES+=	${F}
 .endif
-.if exists(${DOC_PREFIX}/share/sgml/${F})
+.if exists(${DOC_PREFIX}/share/xml/${F})
 XML_INCLUDES+=	${F}
 .endif
 .endfor
@@ -58,31 +58,31 @@ DEPENDSET.DEFAULT+=	wwwstd
 _DEPENDSET.transtable=	${XML_TRANSTABLE} ${XSL_TRANSTABLE} \
 			${XSL_TRANSTABLE_MASTER} ${XSL_TRANSTABLE_COMMON}
 _PARAMS.transtable=	--param transtable.xml "'${XML_TRANSTABLE}'"
-XSL_TRANSTABLE_MASTER=	${DOC_PREFIX}/share/sgml/transtable-master.xsl
-XSL_TRANSTABLE_COMMON=	${DOC_PREFIX}/share/sgml/transtable-common.xsl
+XSL_TRANSTABLE_MASTER=	${DOC_PREFIX}/share/xml/transtable-master.xsl
+XSL_TRANSTABLE_COMMON=	${DOC_PREFIX}/share/xml/transtable-common.xsl
 
-.if exists(${DOC_PREFIX}/${LANGCODE}/share/sgml/transtable-local.xsl)
-XSL_TRANSTABLE=		${DOC_PREFIX}/${LANGCODE}/share/sgml/transtable-local.xsl
+.if exists(${DOC_PREFIX}/${LANGCODE}/share/xml/transtable-local.xsl)
+XSL_TRANSTABLE=		${DOC_PREFIX}/${LANGCODE}/share/xml/transtable-local.xsl
 .else
-XSL_TRANSTABLE=		${DOC_PREFIX}/share/sgml/transtable-local.xsl
+XSL_TRANSTABLE=		${DOC_PREFIX}/share/xml/transtable-local.xsl
 .endif
 
-.if exists(${DOC_PREFIX}/${LANGCODE}/share/sgml/transtable.xml)
-XML_TRANSTABLE=		${DOC_PREFIX}/${LANGCODE}/share/sgml/transtable.xml
+.if exists(${DOC_PREFIX}/${LANGCODE}/share/xml/transtable.xml)
+XML_TRANSTABLE=		${DOC_PREFIX}/${LANGCODE}/share/xml/transtable.xml
 .else
-XML_TRANSTABLE=		${DOC_PREFIX}/share/sgml/transtable.xml
+XML_TRANSTABLE=		${DOC_PREFIX}/share/xml/transtable.xml
 .endif
 
 # DEPENDSET: mirrors .....................................................
 _DEPENDSET.mirrors=	${XSL_MIRRORS} ${XML_MIRRORS}
 _PARAMS.mirrors=	--param mirrors.xml "'${XML_MIRRORS}'"
-XML_MIRRORS_MASTER=	${DOC_PREFIX}/share/sgml/mirrors.xml
-XML_MIRRORS=		${DOC_PREFIX}/${LANGCODE}/share/sgml/mirrors.xml
-XSL_MIRRORS_MASTER=	${DOC_PREFIX}/share/sgml/mirrors-master.xsl
-.if exists(${DOC_PREFIX}/${LANGCODE}/share/sgml/mirrors-local.xsl)
-XSL_MIRRORS=		${DOC_PREFIX}/${LANGCODE}/share/sgml/mirrors-local.xsl
+XML_MIRRORS_MASTER=	${DOC_PREFIX}/share/xml/mirrors.xml
+XML_MIRRORS=		${DOC_PREFIX}/${LANGCODE}/share/xml/mirrors.xml
+XSL_MIRRORS_MASTER=	${DOC_PREFIX}/share/xml/mirrors-master.xsl
+.if exists(${DOC_PREFIX}/${LANGCODE}/share/xml/mirrors-local.xsl)
+XSL_MIRRORS=		${DOC_PREFIX}/${LANGCODE}/share/xml/mirrors-local.xsl
 .else
-XSL_MIRRORS=		${DOC_PREFIX}/share/sgml/mirrors-local.xsl
+XSL_MIRRORS=		${DOC_PREFIX}/share/xml/mirrors-local.xsl
 .endif
 ${XSL_MIRRORS}: ${XSL_MIRRORS_MASTER} \
 		${XSL_TRANSTABLE_COMMON}
@@ -120,17 +120,17 @@ _DEPENDSET.usergroups=	${XML_USERGROUPS} ${XML_USERGROUPS_LOCAL} \
 			${XML_INCLUDES}
 _PARAMS.usergroups=	--param usergroups.xml "'${XML_USERGROUPS}'" \
 			--param usergroups-local.xml "'${XML_USERGROUPS_LOCAL}'"
-XML_USERGROUPS=		${DOC_PREFIX}/share/sgml/usergroups.xml
-.if exists(${DOC_PREFIX}/${LANGCODE}/share/sgml/usergroups.xml)
-XML_USERGROUPS_LOCAL=	${DOC_PREFIX}/${LANGCODE}/share/sgml/usergroups.xml
+XML_USERGROUPS=		${DOC_PREFIX}/share/xml/usergroups.xml
+.if exists(${DOC_PREFIX}/${LANGCODE}/share/xml/usergroups.xml)
+XML_USERGROUPS_LOCAL=	${DOC_PREFIX}/${LANGCODE}/share/xml/usergroups.xml
 .else
-XML_USERGROUPS_LOCAL=	${DOC_PREFIX}/share/sgml/usergroups.xml
+XML_USERGROUPS_LOCAL=	${DOC_PREFIX}/share/xml/usergroups.xml
 .endif
-XSL_USERGROUPS_MASTER=	${DOC_PREFIX}/share/sgml/templates.usergroups.xsl
-.if exists(${DOC_PREFIX}/${LANGCODE}/share/sgml/templates.usergroups.xsl)
-XSL_USERGROUPS=	${DOC_PREFIX}/${LANGCODE}/share/sgml/templates.usergroups.xsl
+XSL_USERGROUPS_MASTER=	${DOC_PREFIX}/share/xml/templates.usergroups.xsl
+.if exists(${DOC_PREFIX}/${LANGCODE}/share/xml/templates.usergroups.xsl)
+XSL_USERGROUPS=	${DOC_PREFIX}/${LANGCODE}/share/xml/templates.usergroups.xsl
 .else
-XSL_USERGROUPS=	${DOC_PREFIX}/share/sgml/templates.usergroups.xsl
+XSL_USERGROUPS=	${DOC_PREFIX}/share/xml/templates.usergroups.xsl
 .endif
 
 # DEPENDSET: news ............................................................
@@ -141,17 +141,17 @@ _DEPENDSET.news=	${XML_NEWS_NEWS_MASTER} ${XML_NEWS_NEWS} \
 			${XML_INCLUDES}
 _PARAMS.news=		--param news.project.xml-master "'${XML_NEWS_NEWS_MASTER}'" \
 			--param news.project.xml "'${XML_NEWS_NEWS}'"
-XML_NEWS_NEWS_MASTER=	${DOC_PREFIX}/share/sgml/news.xml
-.if exists(${DOC_PREFIX}/${LANGCODE}/share/sgml/news.xml)
-XML_NEWS_NEWS=		${DOC_PREFIX}/${LANGCODE}/share/sgml/news.xml
+XML_NEWS_NEWS_MASTER=	${DOC_PREFIX}/share/xml/news.xml
+.if exists(${DOC_PREFIX}/${LANGCODE}/share/xml/news.xml)
+XML_NEWS_NEWS=		${DOC_PREFIX}/${LANGCODE}/share/xml/news.xml
 .else
-XML_NEWS_NEWS=		${DOC_PREFIX}/share/sgml/news.xml
+XML_NEWS_NEWS=		${DOC_PREFIX}/share/xml/news.xml
 .endif
 
-XSL_NEWS_NEWSFLASH=	${DOC_PREFIX}/share/sgml/templates.newsflash.xsl
-XSL_NEWS_NEWSFLASH_OLD=	${DOC_PREFIX}/share/sgml/templates.oldnewsflash.xsl
-XSL_NEWS_NEWS_RDF=	${DOC_PREFIX}/share/sgml/templates.news-rdf.xsl
-XSL_NEWS_NEWS_RSS=	${DOC_PREFIX}/share/sgml/templates.news-rss.xsl
+XSL_NEWS_NEWSFLASH=	${DOC_PREFIX}/share/xml/templates.newsflash.xsl
+XSL_NEWS_NEWSFLASH_OLD=	${DOC_PREFIX}/share/xml/templates.oldnewsflash.xsl
+XSL_NEWS_NEWS_RDF=	${DOC_PREFIX}/share/xml/templates.news-rdf.xsl
+XSL_NEWS_NEWS_RSS=	${DOC_PREFIX}/share/xml/templates.news-rss.xsl
 
 # DEPENDSET: press  ..........................................................
 _DEPENDSET.press=	${XML_NEWS_PRESS_MASTER} ${XML_NEWS_PRESS} \
@@ -159,15 +159,15 @@ _DEPENDSET.press=	${XML_NEWS_PRESS_MASTER} ${XML_NEWS_PRESS} \
 			${XML_INCLUDES}
 _PARAMS.press=		--param news.press.xml-master "'${XML_NEWS_PRESS_MASTER}'" \
 			--param news.press.xml "'${XML_NEWS_PRESS}'"
-XML_NEWS_PRESS_MASTER=	${DOC_PREFIX}/share/sgml/press.xml
-.if exists(${DOC_PREFIX}/${LANGCODE}/share/sgml/press.xml)
-XML_NEWS_PRESS=		${DOC_PREFIX}/${LANGCODE}/share/sgml/press.xml
+XML_NEWS_PRESS_MASTER=	${DOC_PREFIX}/share/xml/press.xml
+.if exists(${DOC_PREFIX}/${LANGCODE}/share/xml/press.xml)
+XML_NEWS_PRESS=		${DOC_PREFIX}/${LANGCODE}/share/xml/press.xml
 .else
-XML_NEWS_PRESS=		${DOC_PREFIX}/share/sgml/press.xml
+XML_NEWS_PRESS=		${DOC_PREFIX}/share/xml/press.xml
 .endif
-XSL_NEWS_PRESS=		${DOC_PREFIX}/share/sgml/templates.press.xsl
-XSL_NEWS_PRESS_RSS=	${DOC_PREFIX}/share/sgml/templates.press-rss.xsl
-XSL_NEWS_PRESS_OLD=	${DOC_PREFIX}/share/sgml/templates.oldpress.xsl
+XSL_NEWS_PRESS=		${DOC_PREFIX}/share/xml/templates.press.xsl
+XSL_NEWS_PRESS_RSS=	${DOC_PREFIX}/share/xml/templates.press-rss.xsl
+XSL_NEWS_PRESS_OLD=	${DOC_PREFIX}/share/xml/templates.oldpress.xsl
 
 # DEPENDSET: events  ..........................................................
 _DEPENDSET.events=	${XML_EVENTS_EVENTS_MASTER} ${XML_EVENTS_EVENTS} \
@@ -178,25 +178,25 @@ _DEPENDSET.events=	${XML_EVENTS_EVENTS_MASTER} ${XML_EVENTS_EVENTS} \
 			${XML_INCLUDES}
 _PARAMS.events=		--param events.xml-master "'${XML_EVENTS_EVENTS_MASTER}'" \
 			--param events.xml "'${XML_EVENTS_EVENTS}'"
-XML_EVENTS_EVENTS_MASTER=${DOC_PREFIX}/share/sgml/events.xml
+XML_EVENTS_EVENTS_MASTER=${DOC_PREFIX}/share/xml/events.xml
 XML_EVENTS_EVENTS_MASTER_SUBFILES=
 .for Y in 2003 2004 2005 2006 2007 2008 2009 2010 2011 2012 2013
-XML_EVENTS_EVENTS_MASTER_SUBFILES+=	${DOC_PREFIX}/share/sgml/events${Y}.xml
+XML_EVENTS_EVENTS_MASTER_SUBFILES+=	${DOC_PREFIX}/share/xml/events${Y}.xml
 .endfor
-.if exists(${DOC_PREFIX}/${LANGCODE}/share/sgml/events.xml)
-XML_EVENTS_EVENTS=	${DOC_PREFIX}/${LANGCODE}/share/sgml/events.xml
+.if exists(${DOC_PREFIX}/${LANGCODE}/share/xml/events.xml)
+XML_EVENTS_EVENTS=	${DOC_PREFIX}/${LANGCODE}/share/xml/events.xml
 .else
 XML_EVENTS_EVENTS=	${XML_EVENTS_EVENTS_MASTER}
 .endif
 XML_EVENTS_EVENTS_SUBFILES=
 .for Y in 2003 2004 2005 2006 2007 2008 2009 2010 2011 2012 2013
-.if exists(${DOC_PREFIX}/${LANGCODE}/share/sgml/events${Y}.xml)
-XML_EVENTS_EVENTS_SUBFILES+=	${DOC_PREFIX}/${LANGCODE}/share/sgml/events${Y}.xml
+.if exists(${DOC_PREFIX}/${LANGCODE}/share/xml/events${Y}.xml)
+XML_EVENTS_EVENTS_SUBFILES+=	${DOC_PREFIX}/${LANGCODE}/share/xml/events${Y}.xml
 .endif
 .endfor
-XSL_EVENTS=		${DOC_PREFIX}/share/sgml/templates.events.xsl
-XSL_EVENTS_ICS=		${DOC_PREFIX}/share/sgml/templates.events2ics.xsl
-XSL_EVENTS_PAST=	${DOC_PREFIX}/share/sgml/templates.pastevents.xsl
+XSL_EVENTS=		${DOC_PREFIX}/share/xml/templates.events.xsl
+XSL_EVENTS_ICS=		${DOC_PREFIX}/share/xml/templates.events2ics.xsl
+XSL_EVENTS_PAST=	${DOC_PREFIX}/share/xml/templates.pastevents.xsl
 
 # DEPENDSET: commercial ........................................................
 _DEPENDSET.commercial=	${XML_COMMERCIAL_CONSULT} \
@@ -207,23 +207,23 @@ _DEPENDSET.commercial=	${XML_COMMERCIAL_CONSULT} \
 			${XSL_ENTRIES} \
 			${XML_INCLUDES}
 _PARAMS.commercial=
-XML_COMMERCIAL_CONSULT=	${DOC_PREFIX}/share/sgml/commercial.consult.xml
-XML_COMMERCIAL_HARDWARE=${DOC_PREFIX}/share/sgml/commercial.hardware.xml
-XML_COMMERCIAL_ISP=	${DOC_PREFIX}/share/sgml/commercial.isp.xml
-XML_COMMERCIAL_MISC=	${DOC_PREFIX}/share/sgml/commercial.misc.xml
-XML_COMMERCIAL_SOFTWARE=${DOC_PREFIX}/share/sgml/commercial.software.xml
+XML_COMMERCIAL_CONSULT=	${DOC_PREFIX}/share/xml/commercial.consult.xml
+XML_COMMERCIAL_HARDWARE=${DOC_PREFIX}/share/xml/commercial.hardware.xml
+XML_COMMERCIAL_ISP=	${DOC_PREFIX}/share/xml/commercial.isp.xml
+XML_COMMERCIAL_MISC=	${DOC_PREFIX}/share/xml/commercial.misc.xml
+XML_COMMERCIAL_SOFTWARE=${DOC_PREFIX}/share/xml/commercial.software.xml
 
-XSL_ENTRIES=		${DOC_PREFIX}/share/sgml/templates.entries.xsl
+XSL_ENTRIES=		${DOC_PREFIX}/share/xml/templates.entries.xsl
 
 # DEPENDSET: advisories  .....................................................
 _DEPENDSET.advisories=	${XML_ADVISORIES} ${XML_INCLUDES}
 _PARAMS.advisories=	--param advisories.xml "'${XML_ADVISORIES}'"
-XML_ADVISORIES=		${DOC_PREFIX}/share/sgml/advisories.xml
+XML_ADVISORIES=		${DOC_PREFIX}/share/xml/advisories.xml
 
 # DEPENDSET: notices  ........................................................
 _DEPENDSET.notices=	${XML_NOTICES} ${XML_INCLUDES}
 _PARAMS.notices=	--param notices.xml "'${XML_NOTICES}'"
-XML_NOTICES=		${DOC_PREFIX}/share/sgml/notices.xml
+XML_NOTICES=		${DOC_PREFIX}/share/xml/notices.xml
 
 # ---
 # .xml -> .html rendering rule

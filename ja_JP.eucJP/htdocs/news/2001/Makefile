@@ -10,10 +10,10 @@
 .endif
 
 #XMLDOCS+=	index:${XSL_NEWS_NEWSFLASH_OLD}:news.xml:
-XMLDOCS+=	index:${DOC_PREFIX}/${LANGCODE}/share/sgml/templates.oldnewsflash.xsl:news.xml:
+XMLDOCS+=	index:${DOC_PREFIX}/${LANGCODE}/share/xml/templates.oldnewsflash.xsl:news.xml:
 DEPENDSET.index=transtable news
 
-XMLDOCS+=	press:${DOC_PREFIX}/${LANGCODE}/share/sgml/templates.oldpress.xsl::
+XMLDOCS+=	press:${DOC_PREFIX}/${LANGCODE}/share/xml/templates.oldpress.xsl::
 DEPENDSET.press=transtable press
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"

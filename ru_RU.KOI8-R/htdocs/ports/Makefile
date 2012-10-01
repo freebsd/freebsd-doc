@@ -62,7 +62,7 @@ packages.exists:
 .endif
 
 Makefile.gen: index.xml .NOTMAIN
-	(	${ECHO_CMD} DOCS= *.xml;\
+	(	${ECHO_CMD} DOCS= *.xml | ${SED} 's|catalog-cwd\.xml||g';\
 		${ECHO_CMD} -n "DYNAMIC_DOCS= ";\
 		${ECHO_CMD} -n " master-index.xml";\
 		${ECHO_CMD} -n " index.xml";\

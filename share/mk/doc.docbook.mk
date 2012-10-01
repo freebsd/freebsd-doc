@@ -122,7 +122,7 @@ SP_ENCODING_LIST?=	ISO-8859-2 KOI8-R
 STYLESHEET_TYPE?=	dsssl
 
 .if defined(SPELLCHECK)
-DSLHTML?= ${DOC_PREFIX}/share/sgml/spellcheck.dsl
+DSLHTML?= ${DOC_PREFIX}/share/xml/spellcheck.dsl
 .endif
 
 XMLLINT?=	/usr/local/bin/xmllint
@@ -144,11 +144,11 @@ JADE_ENV+=	SP_ENCODING=${SP_ENCODING}
 .endif
 JADE_CMD=	${SETENV} ${JADE_ENV} ${JADE}
 
-DSLHTML?=	${DOC_PREFIX}/share/sgml/default.dsl
-DSLPRINT?=	${DOC_PREFIX}/share/sgml/default.dsl
-DSLPGP?=	${DOC_PREFIX}/share/sgml/pgp.dsl
-FREEBSDCATALOG=	${DOC_PREFIX}/share/sgml/catalog
-LANGUAGECATALOG=${DOC_PREFIX}/${LANGCODE}/share/sgml/catalog
+DSLHTML?=	${DOC_PREFIX}/share/xml/default.dsl
+DSLPRINT?=	${DOC_PREFIX}/share/xml/default.dsl
+DSLPGP?=	${DOC_PREFIX}/share/xml/pgp.dsl
+FREEBSDCATALOG=	${DOC_PREFIX}/share/xml/catalog
+LANGUAGECATALOG=${DOC_PREFIX}/${LANGCODE}/share/xml/catalog
 
 ISO8879CATALOG=	${PREFIX}/share/sgml/iso8879/catalog
 

@@ -15,7 +15,7 @@ WITH_ARTICLE_TOC?= YES
 INSTALL_COMPRESSED?=	gz
 INSTALL_ONLY_COMPRESSED?=
 
-SRCS=			article.sgml
+SRCS=			article.xml
 
 IMAGES_EN=		freebsd-branches.pic freebsd-organization.pic
 

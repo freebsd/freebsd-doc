@@ -99,7 +99,7 @@ config_setiathome:
 
 config_sgml:
 	cp -p /usr/local/share/gmat/sgml/ISO_8879-1986/entities/* \
-	      /usr/local/share/sgml/docbook/4.1
+	      /usr/local/share/xml/docbook/4.1
 
 config_sudo:
 	if ! grep -q schweikh /usr/local/etc/sudoers; then \

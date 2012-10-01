@@ -14,7 +14,7 @@
 # be necessary to run it more than once per section to make sure
 # everything is clean.
 #
-# Used to create doc/share/sgml/man-refs.ent rev. 1.85 (dd, 2001/06/30).
+# Used to create doc/share/xml/man-refs.ent rev. 1.85 (dd, 2001/06/30).
 #
 # Exit codes: 0- okay; 1- something out of order; 2- something else;
 #
