@@ -6,7 +6,7 @@
 # %SOURCE%	en_US.ISO8859-1/books/handbook/basics/Makefile
 # %SRCID%	38826
 
-CHAPTERS= 	basics/chapter.sgml
+CHAPTERS= 	basics/chapter.xml
 
 VPATH=		..
 

@@ -6,7 +6,7 @@
 # Original revision: r9773
 #
 
-CHAPTERS= 	mirrors/chapter.sgml
+CHAPTERS= 	mirrors/chapter.xml
 
 VPATH=		..
 

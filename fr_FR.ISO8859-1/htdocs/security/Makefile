@@ -11,10 +11,10 @@
 .endif
 
 DOCS=
-DOCS+=	security.sgml
-DOCS+=	advisories.sgml
+DOCS+=	security.xml
+DOCS+=	advisories.xml
 
-advisories.sgml: advisories.html.inc
+advisories.xml: advisories.html.inc
 
 INDEXLINK=	security.html
 

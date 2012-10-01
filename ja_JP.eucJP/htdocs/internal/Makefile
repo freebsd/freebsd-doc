@@ -9,25 +9,25 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS= 	about.sgml
-#DOCS+=	bylaws.sgml
-#DOCS+=	core-vote.sgml
-#DOCS+= 	data.sgml
-DOCS+= 	developer.sgml
-#DOCS+=	doceng.sgml
-#DOCS+=	expire-bits.sgml
-#DOCS+=	fortunes.sgml
-#DOCS+=	hats.sgml
-#DOCS+=	i18n.sgml
-DOCS+=	internal.sgml
-DOCS+= 	machines.sgml
-DOCS+= 	mirror.sgml
-#DOCS+=	new-account.sgml
-#DOCS+=	policies.sgml
-#DOCS+=	releng.sgml
-#DOCS+=  resources.sgml
-DOCS+=	statistic.sgml
-#DOCS+=	working-with-hats.sgml
+DOCS+=  about.xml
+#DOCS+=	bylaws.xml
+#DOCS+=	core-vote.xml
+#DOCS+= data.xml
+DOCS+=	developer.xml
+#DOCS+=	doceng.xml
+#DOCS+=	expire-bits.xml
+#DOCS+=	fortunes.xml
+#DOCS+=	hats.xml
+#DOCS+=	i18n.xml
+DOCS+=  internal.xml
+DOCS+=  machines.xml
+DOCS+=  mirror.xml
+#DOCS+=	new-account.xml
+#DOCS+=	policies.xml
+#DOCS+=	releng.xml
+#DOCS+=  resources.xml
+DOCS+=	statistic.xml
+#DOCS+=	working-with-hats.xml
 
 INDEXLINK=	internal.html
 
@@ -35,7 +35,7 @@ INDEXLINK=	internal.html
 # on the main FreeBSD machines
 #hostname!= hostname
 #.if ${hostname} == "hub.freebsd.org" || ${hostname} == "freefall.freebsd.org" || ${hostname} == "www.freebsd.org"
-#DOCS+=	homepage.sgml
+#DOCS+=	homepage.xml
 #
 #.if !make(install)
 #.PHONY: homepage.inc

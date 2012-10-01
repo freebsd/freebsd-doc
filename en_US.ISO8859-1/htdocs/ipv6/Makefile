@@ -7,11 +7,11 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS+=		index.sgml
-DOCS+=		ipv6only.sgml
-DOCS+=		w6d.sgml
-DOCS+=		w6l.sgml
-DOCS+=		w6d-www-stats.sgml
+DOCS+=		index.xml
+DOCS+=		ipv6only.xml
+DOCS+=		w6d.xml
+DOCS+=		w6l.xml
+DOCS+=		w6d-www-stats.xml
 
 DATA+=		IPv6-badge-blue-256-trans.png	\
 		IPv6-badge-blue-128-trans.png

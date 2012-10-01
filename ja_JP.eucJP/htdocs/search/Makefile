@@ -11,10 +11,10 @@
 
 # These are turned into validated, normalized HTML files.
 
-DOCS+= index-site.sgml
-DOCS+= search.sgml
-DOCS+= searchhints.sgml
-DOCS+= search-mid.sgml
+DOCS+= index-site.xml
+DOCS+= search.xml
+DOCS+= searchhints.xml
+DOCS+= search-mid.xml
 
 #SUBDIR+= opensearch
 

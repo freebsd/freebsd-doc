@@ -5,7 +5,7 @@
 #
 # Original revision: 1.1
 
-CHAPTERS= 	desktop/chapter.sgml
+CHAPTERS= 	desktop/chapter.xml
 
 VPATH=		..
 

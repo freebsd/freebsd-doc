@@ -11,12 +11,12 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS+=	doc-set.sgml
-DOCS+=	hungarian.sgml
-DOCS+=  sgml.sgml
-DOCS+=  submitting.sgml
-DOCS+=  who.sgml
-DOCS+=	docproj.sgml
+DOCS+=	doc-set.xml
+DOCS+=	hungarian.xml
+DOCS+=  sgml.xml
+DOCS+=  submitting.xml
+DOCS+=  who.xml
+DOCS+=	docproj.xml
 
 INDEXLINK= docproj.html
 

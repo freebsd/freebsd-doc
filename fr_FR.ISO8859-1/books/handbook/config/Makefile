@@ -6,7 +6,7 @@
 # Original revision: 1.1
 #
 
-CHAPTERS= 	config/chapter.sgml
+CHAPTERS= 	config/chapter.xml
 
 VPATH=		..
 

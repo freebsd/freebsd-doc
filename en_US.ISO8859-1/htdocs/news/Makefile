@@ -7,22 +7,22 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS+= news.sgml
+DOCS+= news.xml
 
 # press releases
-DOCS+= pressreleases.sgml
-DOCS+= press-rel-1.sgml
-DOCS+= press-rel-2.sgml
-DOCS+= press-rel-3.sgml
-DOCS+= press-rel-4.sgml
-DOCS+= press-rel-5.sgml
-DOCS+= press-rel-6.sgml
-DOCS+= press-rel-7.sgml
-DOCS+= press-rel-8.sgml
-DOCS+= press-rel-9.sgml
+DOCS+= pressreleases.xml
+DOCS+= press-rel-1.xml
+DOCS+= press-rel-2.xml
+DOCS+= press-rel-3.xml
+DOCS+= press-rel-4.xml
+DOCS+= press-rel-5.xml
+DOCS+= press-rel-6.xml
+DOCS+= press-rel-7.xml
+DOCS+= press-rel-8.xml
+DOCS+= press-rel-9.xml
 
 # The yearly State of the Union address
-DOCS+= sou1999.sgml
+DOCS+= sou1999.xml
 
 INDEXLINK= news.html
 

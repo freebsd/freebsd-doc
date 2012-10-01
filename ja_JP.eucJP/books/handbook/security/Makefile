@@ -5,7 +5,7 @@
 #
 # Original revision: 1.1
 
-CHAPTERS= 	security/chapter.sgml
+CHAPTERS= 	security/chapter.xml
 
 VPATH=		..
 

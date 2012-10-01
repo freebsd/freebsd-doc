@@ -10,9 +10,9 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS=	relnotes.sgml
-DOCS+=	hardware.sgml
-DOCS+=	installation.sgml
+DOCS=	relnotes.xml
+DOCS+=	hardware.xml
+DOCS+=	installation.xml
 
 DATA+=	errata.html
 DATA+=	migration-guide.html

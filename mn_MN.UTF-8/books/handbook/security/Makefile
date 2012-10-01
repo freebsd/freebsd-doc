@@ -7,7 +7,7 @@
 # Build the Handbook with just the content from this chapter.
 #
 
-CHAPTERS= 	security/chapter.sgml
+CHAPTERS= 	security/chapter.xml
 
 VPATH=		..
 

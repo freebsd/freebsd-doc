@@ -7,7 +7,7 @@
 # %SRCID%	38826
 #
 
-CHAPTERS= 	boot/chapter.sgml
+CHAPTERS= 	boot/chapter.xml
 
 VPATH=		..
 

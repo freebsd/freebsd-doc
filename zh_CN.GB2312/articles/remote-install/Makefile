@@ -11,7 +11,7 @@ WITH_ARTICLE_TOC?= YES
 INSTALL_COMPRESSED?= gz
 INSTALL_ONLY_COMPRESSED?=
 
-SRCS=		article.sgml
+SRCS=		article.xml
 
 # Images from the cross-document image library
 IMAGES_LIB=  callouts/1.png

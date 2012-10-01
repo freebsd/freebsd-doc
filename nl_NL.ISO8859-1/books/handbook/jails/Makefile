@@ -4,7 +4,7 @@
 # $FreeBSD$
 #
 
-CHAPTERS= 	jails/chapter.sgml
+CHAPTERS= 	jails/chapter.xml
 
 VPATH=		..
 

@@ -7,7 +7,7 @@
 # %SRCID%	38826
 #
 
-CHAPTERS= 	linuxemu/chapter.sgml
+CHAPTERS= 	linuxemu/chapter.xml
 
 VPATH=		..
 

@@ -20,7 +20,7 @@ WITH_ARTICLE_TOC?=YES
 #
 
 # SGML content
-SRCS=	article.sgml
+SRCS=	article.xml
 
 URL_RELPREFIX?=	../../../..
 DOC_PREFIX?=	${.CURDIR}/../../..

@@ -7,8 +7,8 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS=	announce.sgml
-DOCS+=	notes.sgml
-DOCS+=	security.sgml
+DOCS=	announce.xml
+DOCS+=	notes.xml
+DOCS+=	security.xml
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"

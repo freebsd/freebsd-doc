@@ -4,7 +4,7 @@
 # $FreeBSD$
 #
 
-CHAPTERS= 	cutting-edge/chapter.sgml
+CHAPTERS= 	cutting-edge/chapter.xml
 
 VPATH=		..
 

@@ -6,7 +6,7 @@
 # Original revision: r21215
 #
 
-CHAPTERS= 	mac/chapter.sgml
+CHAPTERS= 	mac/chapter.xml
 
 VPATH=		..
 

@@ -8,12 +8,12 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS=	copyright.sgml
-DOCS+=	daemon.sgml
-DOCS+=	freebsd-doc-license.sgml
-DOCS+=	freebsd-license.sgml
-DOCS+=	license.sgml
-DOCS+=	trademarks.sgml
+DOCS=	copyright.xml
+DOCS+=	daemon.xml
+DOCS+=	freebsd-doc-license.xml
+DOCS+=	freebsd-license.xml
+DOCS+=	license.xml
+DOCS+=	trademarks.xml
 
 INDEXLINK= copyright.html
 

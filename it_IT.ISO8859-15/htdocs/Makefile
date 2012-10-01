@@ -8,12 +8,12 @@
 
 # These are turned into validated, normalized HTML files.
 
-DOCS=  about.sgml
-DOCS+= community.sgml
-DOCS+= docs.sgml
-DOCS+= mailto.sgml
-DOCS+= support.sgml
-DOCS+= where.sgml
+DOCS=  about.xml
+DOCS+= community.xml
+DOCS+= docs.xml
+DOCS+= mailto.xml
+DOCS+= support.xml
+DOCS+= where.xml
 
 XMLDOCS=	index:xsl:${XML_NEWS_NEWS}:
 DEPENDSET.index=transtable mirrors news press events \

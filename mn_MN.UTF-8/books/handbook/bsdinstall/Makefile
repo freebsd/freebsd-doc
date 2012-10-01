@@ -7,7 +7,7 @@
 # Build the Handbook with just the content from this chapter.
 #
 
-CHAPTERS= 	bsdinstall/chapter.sgml
+CHAPTERS= 	bsdinstall/chapter.xml
 
 VPATH=		..
 

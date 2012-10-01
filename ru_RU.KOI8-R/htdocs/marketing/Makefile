@@ -14,6 +14,6 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS?=	os-comparison.sgml
+DOCS?=	os-comparison.xml
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"

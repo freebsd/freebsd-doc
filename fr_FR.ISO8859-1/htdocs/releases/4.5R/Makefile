@@ -10,9 +10,9 @@
 .include "../Makefile.inc"
 .endif
 
-# DOCS=	hardware.sgml notes.sgml qa.sgml announce.sgml schedule.sgml
-# DOCS+=	contents.sgml
-DOCS= notes.sgml announce.sgml
+# DOCS=	hardware.xml notes.xml qa.xml announce.xml schedule.xml
+# DOCS+=	contents.xml
+DOCS= notes.xml announce.xml
 
 DATA=	docbook.css
 DATA+=	errata.html

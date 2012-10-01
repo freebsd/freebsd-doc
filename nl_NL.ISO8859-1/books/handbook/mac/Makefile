@@ -7,7 +7,7 @@
 # %SRCID%	38826
 #
 
-CHAPTERS= 	mac/chapter.sgml
+CHAPTERS= 	mac/chapter.xml
 
 VPATH=		..
 

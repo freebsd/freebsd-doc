@@ -10,8 +10,8 @@
 SUBDIR=		docs
 SUBDIR+=	images
 
-DOCS=	screenshots.sgml
-DOCS+=	contact.sgml
+DOCS=	screenshots.xml
+DOCS+=	contact.xml
 
 DATA=	gnomelogalyzer.sh
 DATA+=	gnome_prefix.sh

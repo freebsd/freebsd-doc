@@ -32,12 +32,12 @@
 
   <xsl:template match="/">
     <xsl:choose>
-      <xsl:when test="$target = 'handbook/mirrors/chapter.sgml'">
+      <xsl:when test="$target = 'handbook/mirrors/chapter.xml'">
 	<xsl:call-template name="mirrors-docbook-country-index-all" />
 	<para>(<xsl:call-template name="mirrors-lastmodified" />)</para>
 	<xsl:call-template name="mirrors-docbook-variablelist" />
       </xsl:when>
-      <xsl:when test="$target = 'handbook/eresources/chapter.sgml'">
+      <xsl:when test="$target = 'handbook/eresources/chapter.xml'">
 	<xsl:call-template name="mirrors-docbook-country-index-all" />
 	<para>(<xsl:call-template name="mirrors-lastmodified" />)</para>
 	<xsl:call-template name="mirrors-docbook-itemizedlist" />

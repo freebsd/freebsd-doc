@@ -8,7 +8,7 @@
 # basiert auf: 1.1
 #
 
-CHAPTERS= 	kerneldebug/chapter.sgml
+CHAPTERS= 	kerneldebug/chapter.xml
 
 VPATH=		..
 

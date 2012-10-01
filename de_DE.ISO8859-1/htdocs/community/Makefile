@@ -9,9 +9,9 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS=	irc.sgml
-DOCS+=	mailinglists.sgml
-DOCS+=	newsgroups.sgml
-DOCS+=	webresources.sgml
+DOCS=	irc.xml
+DOCS+=	mailinglists.xml
+DOCS+=	newsgroups.xml
+DOCS+=	webresources.xml
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"

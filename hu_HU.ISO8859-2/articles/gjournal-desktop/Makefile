@@ -18,7 +18,7 @@ FORMATS?= html
 INSTALL_COMPRESSED?=gz
 INSTALL_ONLY_COMPRESSED?=
 
-SRCS=	article.sgml
+SRCS=	article.xml
 IMAGES_EN=	disklabel1.png
 IMAGES_EN+=	disklabel2.png
 URL_RELPREFIX?=	../../../..

@@ -7,13 +7,13 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS=	photos.sgml
-DOCS+=	internal.sgml
-DOCS+= 	about.sgml
-DOCS+= 	machines.sgml
-DOCS+= 	mirror.sgml
-DOCS+=	statistic.sgml
-DOCS+=	developer.sgml
+DOCS=	photos.xml
+DOCS+=	internal.xml
+DOCS+= 	about.xml
+DOCS+= 	machines.xml
+DOCS+= 	mirror.xml
+DOCS+=	statistic.xml
+DOCS+=	developer.xml
 
 INDEXLINK=	internal.html
 

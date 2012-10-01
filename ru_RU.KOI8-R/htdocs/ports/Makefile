@@ -61,22 +61,22 @@ packages.exists:
 	${TOUCH} ${.TARGET}
 .endif
 
-Makefile.gen: index.sgml .NOTMAIN
-	(	${ECHO_CMD} DOCS= *.sgml;\
+Makefile.gen: index.xml .NOTMAIN
+	(	${ECHO_CMD} DOCS= *.xml;\
 		${ECHO_CMD} -n "DYNAMIC_DOCS= ";\
-		${ECHO_CMD} -n " master-index.sgml";\
-		${ECHO_CMD} -n " index.sgml";\
+		${ECHO_CMD} -n " master-index.xml";\
+		${ECHO_CMD} -n " index.xml";\
 	) > Makefile.gen
 	for categoryfile in ${CATEGORYLIST}; do \
-		${ECHO_CMD} -n " $$categoryfile.sgml" >> Makefile.gen; \
+		${ECHO_CMD} -n " $$categoryfile.xml" >> Makefile.gen; \
 	done
 
-index.sgml: ${INDEX} categories packages.exists portindex ports.inc .NOTMAIN
-	${RM} -f *.sgml
+index.xml: ${INDEX} categories packages.exists portindex ports.inc .NOTMAIN
+	${RM} -f *.xml
 	${PORTINDEX} ${INDEX} ${.CURDIR}
 
-# this builds: categories-alpha.sgml, categories-grouped.sgml,
-# master-index.sgml, statistics.ent, <category>.sgml
+# this builds: categories-alpha.xml, categories-grouped.xml,
+# master-index.xml, statistics.ent, <category>.xml
 CATEGORYLIST=`grep "^[a-z]" ${DOC_PREFIX}/en_US.ISO8859-1/htdocs/ports/categories | sed -e s"/,.*//"`
 
 install: all beforeinstall

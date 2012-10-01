@@ -12,7 +12,7 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS=   irc.sgml mailinglists.sgml newsgroups.sgml webresources.sgml
+DOCS=   irc.xml mailinglists.xml newsgroups.xml webresources.xml
 
 XMLDOCS+=	social::${XML_EVENTS_EVENTS}:
 

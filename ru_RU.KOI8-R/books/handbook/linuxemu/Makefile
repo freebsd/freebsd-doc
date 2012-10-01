@@ -6,7 +6,7 @@
 # Original revision: r9773
 #
 
-CHAPTERS= 	linuxemu/chapter.sgml
+CHAPTERS= 	linuxemu/chapter.xml
 
 VPATH=		..
 

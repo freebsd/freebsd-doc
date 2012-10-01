@@ -18,7 +18,7 @@ EXTRAS+=	stage_2.conf.default
 EXTRAS+=	stage_2.sh
 EXTRAS+=	stage_3.mk
 
-SRCS=		article.sgml
+SRCS=		article.xml
 SRCS+=		${EXTRAS}
 
 afterinstall:

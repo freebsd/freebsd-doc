@@ -7,7 +7,7 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS?= index.sgml
+DOCS?= index.xml
 
 SUBDIR = 4.10R 4.11R
 SUBDIR+= 5.2R 5.2.1R 5.3R 5.4R

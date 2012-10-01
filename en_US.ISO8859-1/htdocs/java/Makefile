@@ -11,10 +11,10 @@ SUBDIR =	dists
 SUBDIR+=	docs
 SUBDIR+=	links
 
-DOCS =  advocacy.sgml
-DOCS+=  howhelp.sgml
-DOCS+=  index.sgml
-DOCS+=  install.sgml
+DOCS =  advocacy.xml
+DOCS+=  howhelp.xml
+DOCS+=  index.xml
+DOCS+=  install.xml
 
 DATA=	j2j.gif
 

@@ -7,7 +7,7 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS+= 		opensearch.sgml
+DOCS+= 		opensearch.xml
 INDEXLINK=	opensearch.html
 
 DATA=

@@ -26,7 +26,7 @@ INSTALL_ONLY_COMPRESSED?=
 #
 
 # SGML content
-SRCS=  book.sgml
+SRCS=  book.xml
 
 # Entities
 

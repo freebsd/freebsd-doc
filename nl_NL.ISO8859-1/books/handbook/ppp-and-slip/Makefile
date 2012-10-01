@@ -7,7 +7,7 @@
 # %SRCID%	38826
 #
 
-CHAPTERS= 	ppp-and-slip/chapter.sgml
+CHAPTERS= 	ppp-and-slip/chapter.xml
 
 VPATH=		..
 

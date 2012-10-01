@@ -7,13 +7,13 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS?=	index.sgml
-DOCS+=	charter.sgml
-DOCS+=	implementation.sgml
-DOCS+=	policies.sgml
-DOCS+=	policies_committing.sgml
-DOCS+=	policies_contributors.sgml
-DOCS+=	policies_eol.sgml
-DOCS+=	qa.sgml
+DOCS?=	index.xml
+DOCS+=	charter.xml
+DOCS+=	implementation.xml
+DOCS+=	policies.xml
+DOCS+=	policies_committing.xml
+DOCS+=	policies_contributors.xml
+DOCS+=	policies_eol.xml
+DOCS+=	qa.xml
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"

@@ -7,7 +7,7 @@
 # %SRCID%	38826
 #
 
-CHAPTERS= 	bibliography/chapter.sgml
+CHAPTERS= 	bibliography/chapter.xml
 
 VPATH=		..
 

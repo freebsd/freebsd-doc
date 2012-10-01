@@ -4,7 +4,7 @@
 # $FreeBSD$
 #
 
-CHAPTERS= 	printing/chapter.sgml
+CHAPTERS= 	printing/chapter.xml
 
 VPATH=		..
 

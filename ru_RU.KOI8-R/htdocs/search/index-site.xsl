@@ -9,7 +9,7 @@
 <!--
      The FreeBSD Russian Documentation Project
 
-     $FreeBSDru: frdp/www/ru/search/index-site.sgml,v 1.6 2004/04/08 07:08:56 den Exp $
+     $FreeBSDru: frdp/www/ru/search/index-site.xml,v 1.6 2004/04/08 07:08:56 den Exp $
 
      Original revision: 1.25
 -->

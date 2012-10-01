@@ -26,7 +26,7 @@ EXTRAS+=	stage_3.mk
 
 CLEANFILES+= ${EXTRAS}
 
-SRCS=	article.sgml
+SRCS=	article.xml
 SRCS+= 	${EXTRAS}
 
 ${EXTRAS}:

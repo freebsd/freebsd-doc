@@ -4,7 +4,7 @@
 # $FreeBSD$
 #
 
-CHAPTERS= 	serialcomms/chapter.sgml
+CHAPTERS= 	serialcomms/chapter.xml
 
 VPATH=		..
 

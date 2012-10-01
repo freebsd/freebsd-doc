@@ -7,7 +7,7 @@
 # %SRCID%	38826
 #
 
-CHAPTERS= 	geom/chapter.sgml
+CHAPTERS= 	geom/chapter.xml
 
 VPATH=		..
 

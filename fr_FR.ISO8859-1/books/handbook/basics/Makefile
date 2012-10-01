@@ -6,7 +6,7 @@
 # Original revision: 1.1
 #
 
-CHAPTERS= 	basics/chapter.sgml
+CHAPTERS= 	basics/chapter.xml
 
 VPATH=		..
 

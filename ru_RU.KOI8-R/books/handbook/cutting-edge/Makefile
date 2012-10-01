@@ -6,7 +6,7 @@
 # Original revision: r9773
 #
 
-CHAPTERS= 	cutting-edge/chapter.sgml
+CHAPTERS= 	cutting-edge/chapter.xml
 
 VPATH=		..
 

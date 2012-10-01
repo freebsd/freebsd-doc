@@ -24,21 +24,21 @@ INSTALL_ONLY_COMPRESSED?=
 #
 
 # SGML content
-SRCS=  book.sgml
-SRCS+= overview/chapter.sgml
-SRCS+= psgml-mode/chapter.sgml
-SRCS+= see-also/chapter.sgml
-SRCS+= sgml-markup/chapter.sgml
-SRCS+= sgml-primer/chapter.sgml
-SRCS+= stylesheets/chapter.sgml
-SRCS+= structure/chapter.sgml
-SRCS+= doc-build/chapter.sgml
-SRCS+= the-website/chapter.sgml
-SRCS+= tools/chapter.sgml
-SRCS+= translations/chapter.sgml
-SRCS+= writing-style/chapter.sgml
+SRCS=  book.xml
+SRCS+= overview/chapter.xml
+SRCS+= psgml-mode/chapter.xml
+SRCS+= see-also/chapter.xml
+SRCS+= sgml-markup/chapter.xml
+SRCS+= sgml-primer/chapter.xml
+SRCS+= stylesheets/chapter.xml
+SRCS+= structure/chapter.xml
+SRCS+= doc-build/chapter.xml
+SRCS+= the-website/chapter.xml
+SRCS+= tools/chapter.xml
+SRCS+= translations/chapter.xml
+SRCS+= writing-style/chapter.xml
 
-SRCS+= examples/appendix.sgml
+SRCS+= examples/appendix.xml
 
 # Images from the cross-document image library
 #IMAGES_LIB=	callouts/1.png

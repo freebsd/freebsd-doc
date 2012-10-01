@@ -5,7 +5,7 @@
 # $FreeBSD$
 #
 
-CHAPTERS= 	geom/chapter.sgml
+CHAPTERS= 	geom/chapter.xml
 
 VPATH=		..
 

@@ -6,7 +6,7 @@
 # Original revision: r13693
 #
 
-CHAPTERS= 	multimedia/chapter.sgml
+CHAPTERS= 	multimedia/chapter.xml
 
 VPATH=		..
 

@@ -12,8 +12,8 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS=   index.sgml
-DOCS+=	myths.sgml
-# DOCS+=	letter.sgml
+DOCS=   index.xml
+DOCS+=	myths.xml
+# DOCS+=	letter.xml
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"

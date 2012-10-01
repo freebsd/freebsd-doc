@@ -7,7 +7,7 @@
 # %SRCID%	38826
 #
 
-CHAPTERS= 	network-servers/chapter.sgml
+CHAPTERS= 	network-servers/chapter.xml
 
 VPATH=		..
 

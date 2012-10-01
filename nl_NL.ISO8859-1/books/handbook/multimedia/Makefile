@@ -7,7 +7,7 @@
 # %SRCID%	38826
 #
 
-CHAPTERS= 	multimedia/chapter.sgml
+CHAPTERS= 	multimedia/chapter.xml
 
 VPATH=		..
 

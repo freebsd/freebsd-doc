@@ -6,7 +6,7 @@
 # Original revision: r13852
 #
 
-CHAPTERS= 	vinum/chapter.sgml
+CHAPTERS= 	vinum/chapter.xml
 
 VPATH=		..
 
