@@ -42,7 +42,7 @@ KNOWN_FORMATS=	html txt tar pdb
 
 CSS_SHEET?=
 
-HTMLCATALOG=	${PREFIX}/share/sgml/html/catalog
+HTMLCATALOG=	${PREFIX}/share/xml/html/catalog
 
 IMAGES_LIB?=
 

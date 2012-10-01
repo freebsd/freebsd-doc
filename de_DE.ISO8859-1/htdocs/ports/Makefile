@@ -48,7 +48,7 @@ packages.exists:
 Makefile.gen: categories-alpha.xml categories-grouped.xml index.xml \
 	installing.xml master-index.xml references.xml searching.xml \
 	statistics.ent updating.xml .NOTMAIN
-	(	${ECHO_CMD} DOCS= *.xml;\
+	(	${ECHO_CMD} DOCS= *.xml | ${SED} 's|catalog-cwd\.xml||g';\
 		${ECHO_CMD} -n "DYNAMIC_DOCS= ";\
 		${ECHO_CMD} -n " categories-alpha.xml";\
 		${ECHO_CMD} -n " categories-grouped.xml";\

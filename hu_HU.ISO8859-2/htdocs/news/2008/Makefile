@@ -11,7 +11,7 @@
 .include "../Makefile.inc"
 .endif
 
-XMLDOCS+=	press:${DOC_PREFIX}/${LANGCODE}/share/sgml/templates.oldpress.xsl::
+XMLDOCS+=	press:${DOC_PREFIX}/${LANGCODE}/share/xml/templates.oldpress.xsl::
 DEPENDSET.press=transtable press
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"

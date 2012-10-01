@@ -29,7 +29,7 @@
 #
 # ------------------------------------------------------------------------
 
-.PATH: ${.CURDIR}/../../share/sgml/glossary
+.PATH: ${.CURDIR}/../../share/xml/glossary
 
 MAINTAINER=phantom@FreeBSD.org
 

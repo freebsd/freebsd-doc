@@ -31,7 +31,7 @@
 #
 # ------------------------------------------------------------------------
 
-.PATH: ${.CURDIR}/../../share/sgml/glossary
+.PATH: ${.CURDIR}/../../share/xml/glossary
 
 MAINTAINER=	doc@FreeBSD.org
 
