@@ -11,7 +11,7 @@ FORMATS?= html-split html
 INSTALL_COMPRESSED?= gz
 INSTALL_ONLY_COMPRESSED?=
 
-SRCS= book.sgml
+SRCS= book.xml
 
 IMAGES_EN= branches.png
 IMAGES_EN+= freebsd-code-model.png

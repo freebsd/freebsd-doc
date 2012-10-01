@@ -7,9 +7,9 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS=	announce.sgml
-DOCS+=	hardware.sgml
-DOCS+=	relnotes.sgml
+DOCS=	announce.xml
+DOCS+=	hardware.xml
+DOCS+=	relnotes.xml
 
 DATA=	docbook.css
 DATA+=	errata.html

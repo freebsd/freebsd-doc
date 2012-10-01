@@ -10,10 +10,10 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS+= index-site.sgml
-DOCS+= search.sgml
-DOCS+= searchhints.sgml
-DOCS+=	search-mid.sgml
+DOCS+= index-site.xml
+DOCS+= search.xml
+DOCS+= searchhints.xml
+DOCS+=	search-mid.xml
 
 INDEXLINK=	search.html
 

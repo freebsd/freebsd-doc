@@ -5,7 +5,7 @@
 # $FreeBSD$
 #
 
-CHAPTERS= 	security/chapter.sgml
+CHAPTERS= 	security/chapter.xml
 
 VPATH=		..
 

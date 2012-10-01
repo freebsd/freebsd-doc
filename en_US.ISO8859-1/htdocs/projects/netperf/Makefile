@@ -11,8 +11,8 @@ MAINTAINER=	rwatson
 .include "../Makefile.inc"
 .endif
 
-DOCS=	index.sgml
-DOCS+=	cluster.sgml
+DOCS=	index.xml
+DOCS+=	cluster.xml
 DATA=	style.css
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"

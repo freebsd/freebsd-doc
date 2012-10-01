@@ -7,7 +7,7 @@
 # %SRCID%	38826
 #
 
-CHAPTERS= 	advanced-networking/chapter.sgml
+CHAPTERS= 	advanced-networking/chapter.xml
 
 VPATH=		..
 

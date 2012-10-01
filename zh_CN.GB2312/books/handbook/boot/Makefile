@@ -5,7 +5,7 @@
 # $FreeBSD$
 #
 
-CHAPTERS= 	boot/chapter.sgml
+CHAPTERS= 	boot/chapter.xml
 
 VPATH=		..
 

@@ -7,7 +7,7 @@
 # %SRCID%	38826
 #
 
-CHAPTERS= 	desktop/chapter.sgml
+CHAPTERS= 	desktop/chapter.xml
 
 VPATH=		..
 

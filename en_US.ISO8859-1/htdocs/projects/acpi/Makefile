@@ -11,8 +11,8 @@ MAINTAINER=	marks
 .include "../Makefile.inc"
 .endif
 
-DOCS=	index.sgml
-DOCS+=	completed.sgml
+DOCS=	index.xml
+DOCS+=	completed.xml
 DATA=	style.css
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"

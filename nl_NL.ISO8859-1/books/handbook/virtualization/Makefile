@@ -7,7 +7,7 @@
 # %SRCID%	38826
 #
 
-CHAPTERS= 	virtualization/chapter.sgml
+CHAPTERS= 	virtualization/chapter.xml
 
 VPATH=		..
 

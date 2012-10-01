@@ -4,7 +4,7 @@
 # $FreeBSD$
 #
 
-CHAPTERS= 	mac/chapter.sgml
+CHAPTERS= 	mac/chapter.xml
 
 VPATH=		..
 

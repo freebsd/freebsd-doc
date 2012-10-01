@@ -5,7 +5,7 @@
 # Original revision: r32971
 #
 
-CHAPTERS= 	filesystems/chapter.sgml
+CHAPTERS= 	filesystems/chapter.xml
 
 VPATH=		..
 

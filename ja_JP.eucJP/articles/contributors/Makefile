@@ -15,13 +15,13 @@ INSTALL_ONLY_COMPRESSED?=
 
 ORGDIR=	${DOC_PREFIX}/en_US.ISO8859-1/articles/contributors
 
-SRCS=	article.sgml
+SRCS=	article.xml
 SRCS+=	${ORGDIR}/contrib.ent
-SRCS+=	${ORGDIR}/contrib.386bsd.sgml
-SRCS+=	${ORGDIR}/contrib.additional.sgml
-SRCS+=	${ORGDIR}/contrib.committers.sgml
-SRCS+=	${ORGDIR}/contrib.corealumni.sgml
-SRCS+=	${ORGDIR}/contrib.develalumni.sgml
+SRCS+=	${ORGDIR}/contrib.386bsd.xml
+SRCS+=	${ORGDIR}/contrib.additional.xml
+SRCS+=	${ORGDIR}/contrib.committers.xml
+SRCS+=	${ORGDIR}/contrib.corealumni.xml
+SRCS+=	${ORGDIR}/contrib.develalumni.xml
 
 URL_RELPREFIX?=	../../../..
 DOC_PREFIX?=	${.CURDIR}/../../..

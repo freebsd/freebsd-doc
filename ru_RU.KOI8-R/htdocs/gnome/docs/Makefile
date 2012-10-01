@@ -14,15 +14,15 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS=	faq2.sgml
-DOCS+=	gnome_porting.sgml
-DOCS+=	gnome1_porting.sgml
-DOCS+=	gnome2_porting.sgml
-DOCS+=	porting.sgml
-DOCS+=	bugging.sgml
-DOCS+=  volunteer.sgml
-DOCS+=	knownissues.sgml
-DOCS+=	develfaq.sgml
-DOCS+=	example-Makefile.sgml
+DOCS=	faq2.xml
+DOCS+=	gnome_porting.xml
+DOCS+=	gnome1_porting.xml
+DOCS+=	gnome2_porting.xml
+DOCS+=	porting.xml
+DOCS+=	bugging.xml
+DOCS+=  volunteer.xml
+DOCS+=	knownissues.xml
+DOCS+=	develfaq.xml
+DOCS+=	example-Makefile.xml
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"

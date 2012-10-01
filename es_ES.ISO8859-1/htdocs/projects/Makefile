@@ -7,8 +7,8 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS=	projects.sgml
-DOCS+=	newbies.sgml
+DOCS=	projects.xml
+DOCS+=	newbies.xml
 
 INDEXLINK= projects.html
 

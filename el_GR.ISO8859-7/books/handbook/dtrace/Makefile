@@ -7,7 +7,7 @@
 # %SRCID%	1.1
 #
 
-CHAPTERS= 	dtrace/chapter.sgml
+CHAPTERS= 	dtrace/chapter.xml
 
 VPATH=		..
 

@@ -15,8 +15,8 @@
 SUBDIR=		docs
 #SUBDIR+=	images
 
-DOCS=	screenshots.sgml
-DOCS+=	contact.sgml
+DOCS=	screenshots.xml
+DOCS+=	contact.xml
 
 DATA=	index.html newsflash.html news.rdf
 

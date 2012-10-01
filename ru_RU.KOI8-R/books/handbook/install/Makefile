@@ -6,7 +6,7 @@
 # Original revision: r9773
 #
 
-CHAPTERS= 	install/chapter.sgml
+CHAPTERS= 	install/chapter.xml
 
 VPATH=		..
 

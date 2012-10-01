@@ -10,7 +10,7 @@ IMAGES_EN= fig1.eps fig2.eps
 INSTALL_COMPRESSED?=gz
 INSTALL_ONLY_COMPRESSED?=
 
-SRCS= book.sgml
+SRCS= book.xml
 
 # Use the local DSSSL file
 DSLHTML?=       ${.CURDIR}/freebsd.dsl

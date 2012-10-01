@@ -23,19 +23,19 @@ INSTALL_ONLY_COMPRESSED?=
 #
 
 # SGML content
-SRCS=  book.sgml
-SRCS+= overview/chapter.sgml
-SRCS+= psgml-mode/chapter.sgml
-SRCS+= see-also/chapter.sgml
-SRCS+= sgml-markup/chapter.sgml
-SRCS+= sgml-primer/chapter.sgml
-SRCS+= stylesheets/chapter.sgml
-SRCS+= the-faq/chapter.sgml
-SRCS+= the-handbook/chapter.sgml
-SRCS+= the-website/chapter.sgml
-SRCS+= tools/chapter.sgml
-SRCS+= translations/chapter.sgml
-SRCS+= writing-style/chapter.sgml
+SRCS=  book.xml
+SRCS+= overview/chapter.xml
+SRCS+= psgml-mode/chapter.xml
+SRCS+= see-also/chapter.xml
+SRCS+= sgml-markup/chapter.xml
+SRCS+= sgml-primer/chapter.xml
+SRCS+= stylesheets/chapter.xml
+SRCS+= the-faq/chapter.xml
+SRCS+= the-handbook/chapter.xml
+SRCS+= the-website/chapter.xml
+SRCS+= tools/chapter.xml
+SRCS+= translations/chapter.xml
+SRCS+= writing-style/chapter.xml
 
 # Entities
 SRCS+= chapters.ent

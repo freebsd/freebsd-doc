@@ -10,12 +10,12 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS=	faq2.sgml
-DOCS+=	gnome_porting.sgml
-DOCS+=	gnome2_porting.sgml
-DOCS+=	porting.sgml
-DOCS+=	bugging.sgml
-DOCS+=  volunteer.sgml
-# DOCS+=	knownissues.sgml
+DOCS=	faq2.xml
+DOCS+=	gnome_porting.xml
+DOCS+=	gnome2_porting.xml
+DOCS+=	porting.xml
+DOCS+=	bugging.xml
+DOCS+=  volunteer.xml
+# DOCS+=	knownissues.xml
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"

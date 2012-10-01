@@ -4,7 +4,7 @@
 # $FreeBSD$
 #
 
-CHAPTERS= 	l10n/chapter.sgml
+CHAPTERS= 	l10n/chapter.xml
 
 VPATH=		..
 

@@ -14,7 +14,7 @@ INSTALL_ONLY_COMPRESSED?=
 
 JADEFLAGS+=	-V %generate-article-toc%
 
-SRCS= article.sgml
+SRCS= article.xml
 
 DOC_PREFIX?= ${.CURDIR}/../../..
 

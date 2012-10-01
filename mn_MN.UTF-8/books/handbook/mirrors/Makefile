@@ -7,7 +7,7 @@
 # Build the Handbook with just the content from this chapter.
 #
 
-CHAPTERS= 	mirrors/chapter.sgml
+CHAPTERS= 	mirrors/chapter.xml
 
 VPATH=		..
 

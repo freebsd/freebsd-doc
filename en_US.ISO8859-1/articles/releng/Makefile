@@ -11,7 +11,7 @@ WITH_ARTICLE_TOC?= YES
 INSTALL_COMPRESSED?= gz
 INSTALL_ONLY_COMPRESSED?=
 
-SRCS=		article.sgml
+SRCS=		article.xml
 IMAGES_EN=	branches-head.pic
 IMAGES_EN+=	branches-releng3.pic
 IMAGES_EN+=	branches-releng4.pic

@@ -7,7 +7,7 @@
 # Build the Handbook with just the content from this chapter.
 #
 
-CHAPTERS= 	virtualization/chapter.sgml
+CHAPTERS= 	virtualization/chapter.xml
 
 VPATH=		..
 

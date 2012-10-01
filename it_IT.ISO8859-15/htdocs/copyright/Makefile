@@ -7,7 +7,7 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS=  copyright.sgml
+DOCS=  copyright.xml
 
 INDEXLINK= copyright.html
 

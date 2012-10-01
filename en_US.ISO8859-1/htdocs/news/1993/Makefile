@@ -7,7 +7,7 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS=	freebsd-coined.sgml
+DOCS=	freebsd-coined.xml
 
 XMLDOCS+=	index:${XSL_NEWS_NEWSFLASH_OLD}:news.xml:
 DEPENDSET.index=transtable news

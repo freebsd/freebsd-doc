@@ -11,12 +11,12 @@
 #SUBDIR=  DP1
 #SUBDIR+= DP2
 
-DOCS=	announce.sgml
-DOCS+=	hardware.sgml
-DOCS+=	installation.sgml
-DOCS+=	relnotes.sgml
-#DOCS+=	schedule.sgml
-#DOCS+=	todo.sgml
+DOCS=	announce.xml
+DOCS+=	hardware.xml
+DOCS+=	installation.xml
+DOCS+=	relnotes.xml
+#DOCS+=	schedule.xml
+#DOCS+=	todo.xml
 
 DATA=	docbook.css
 DATA+=	errata.html

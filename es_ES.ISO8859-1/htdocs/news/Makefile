@@ -7,15 +7,15 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS+= press.sgml
-DOCS+= newsflash.sgml
-DOCS+= news.sgml
+DOCS+= press.xml
+DOCS+= newsflash.xml
+DOCS+= news.xml
 
 # press releases
-DOCS+= pressreleases.sgml
-DOCS+= press-rel-1.sgml
-DOCS+= press-rel-2.sgml
-DOCS+= press-rel-3.sgml
+DOCS+= pressreleases.xml
+DOCS+= press-rel-1.xml
+DOCS+= press-rel-2.xml
+DOCS+= press-rel-3.xml
 
 INDEXLINK= news.html
 

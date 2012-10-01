@@ -7,7 +7,7 @@
 # Build the Handbook with just the content from this chapter.
 #
 
-CHAPTERS= 	advanced-networking/chapter.sgml
+CHAPTERS= 	advanced-networking/chapter.xml
 
 VPATH=		..
 

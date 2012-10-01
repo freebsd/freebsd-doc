@@ -14,6 +14,6 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS?=	index.sgml charter.sgml policies.sgml qa.sgml
+DOCS?=	index.xml charter.xml policies.xml qa.xml
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"

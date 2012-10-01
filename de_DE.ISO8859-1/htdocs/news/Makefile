@@ -9,7 +9,7 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS+= news.sgml
+DOCS+= news.xml
 
 #Subdirs fuer alte News
 SUBDIR=  2009

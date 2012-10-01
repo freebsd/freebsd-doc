@@ -10,6 +10,6 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS=   books.sgml man.sgml webresources.sgml
+DOCS=   books.xml man.xml webresources.xml
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"

@@ -5,7 +5,7 @@
 # $FreeBSD$
 #
 
-CHAPTERS= 	mirrors/chapter.sgml
+CHAPTERS= 	mirrors/chapter.xml
 
 VPATH=		..
 

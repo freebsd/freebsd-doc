@@ -10,15 +10,15 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS =	freebsd.sgml
-DOCS+=	tools.sgml
-DOCS+=	api.sgml
-DOCS+=	index.sgml
-DOCS+=	tutorials.sgml
-DOCS+=	development.sgml
-DOCS+=	resources.sgml
-DOCS+=	vendor.sgml
-DOCS+=	documentation.sgml
-DOCS+=	servlets.sgml
+DOCS =	freebsd.xml
+DOCS+=	tools.xml
+DOCS+=	api.xml
+DOCS+=	index.xml
+DOCS+=	tutorials.xml
+DOCS+=	development.xml
+DOCS+=	resources.xml
+DOCS+=	vendor.xml
+DOCS+=	documentation.xml
+DOCS+=	servlets.xml
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"

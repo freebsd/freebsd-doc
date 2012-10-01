@@ -7,7 +7,7 @@
 # Build the Handbook with just the content from this chapter.
 #
 
-CHAPTERS= 	desktop/chapter.sgml
+CHAPTERS= 	desktop/chapter.xml
 
 VPATH=		..
 

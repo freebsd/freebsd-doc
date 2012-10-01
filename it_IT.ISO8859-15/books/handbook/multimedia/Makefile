@@ -4,7 +4,7 @@
 # $FreeBSD$
 #
 
-CHAPTERS= 	multimedia/chapter.sgml
+CHAPTERS= 	multimedia/chapter.xml
 
 VPATH=		..
 

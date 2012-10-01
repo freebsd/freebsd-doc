@@ -7,7 +7,7 @@
 # Build the Handbook with just the content from this chapter.
 #
 
-CHAPTERS= 	geom/chapter.sgml
+CHAPTERS= 	geom/chapter.xml
 
 VPATH=		..
 

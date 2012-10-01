@@ -7,7 +7,7 @@
 # $FreeBSD$
 #
 
-CHAPTERS= 	bibliography/chapter.sgml
+CHAPTERS= 	bibliography/chapter.xml
 
 VPATH=		..
 

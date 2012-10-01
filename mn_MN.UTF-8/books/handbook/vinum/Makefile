@@ -7,7 +7,7 @@
 # Build the Handbook with just the content from this chapter.
 #
 
-CHAPTERS= 	vinum/chapter.sgml
+CHAPTERS= 	vinum/chapter.xml
 
 VPATH=		..
 

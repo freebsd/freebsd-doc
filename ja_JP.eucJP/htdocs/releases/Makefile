@@ -9,7 +9,7 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS?=	index.sgml
+DOCS?=	index.xml
 
 #SUBDIR=	1.1 1.1.5 2.0 2.0.5R 2.1R
 SUBDIR=		2.1.5R 2.1.6R 2.1.7R 2.2R

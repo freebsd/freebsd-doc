@@ -54,7 +54,7 @@
 		<select name="goto">
 		  <!--  Only list TRUE mirrrors here! Native language pages
 		        which are not mirrored should be listed in
-		        support.sgml.  -->
+		        support.xml.  -->
 
 		  <option value="http://www2.at.FreeBSD.org/">IPv6 Avusturya</option>
 		  <option value="http://www.dk.FreeBSD.org/">IPv6 Danimarka</option>

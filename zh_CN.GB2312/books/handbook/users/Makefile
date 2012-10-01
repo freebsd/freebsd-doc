@@ -5,7 +5,7 @@
 # $FreeBSD$
 #
 
-CHAPTERS= 	users/chapter.sgml
+CHAPTERS= 	users/chapter.xml
 
 VPATH=		..
 

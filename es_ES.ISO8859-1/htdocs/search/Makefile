@@ -7,9 +7,9 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS+= search.sgml
-DOCS+= searchhints.sgml
-DOCS+=	search-mid.sgml
+DOCS+= search.xml
+DOCS+= searchhints.xml
+DOCS+=	search-mid.xml
 
 INDEXLINK=	search.html
 

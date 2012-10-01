@@ -7,7 +7,7 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS=	security.sgml
+DOCS=	security.xml
 
 INDEXLINK= security.html
 

@@ -43,18 +43,18 @@ packages.exists:
 	${TOUCH} ${.TARGET}
 .endif
 
-Makefile.gen: categories-alpha.sgml categories-grouped.sgml index.sgml \
-	installing.sgml master-index.sgml references.sgml searching.sgml \
-	statistics.ent updating.sgml .NOTMAIN
-	(	${ECHO_CMD} DOCS= *.sgml;\
+Makefile.gen: categories-alpha.xml categories-grouped.xml index.xml \
+	installing.xml master-index.xml references.xml searching.xml \
+	statistics.ent updating.xml .NOTMAIN
+	(	${ECHO_CMD} DOCS= *.xml;\
 		${ECHO_CMD} -n "DYNAMIC_DOCS= ";\
-		${ECHO_CMD} -n " categories-alpha.sgml";\
-		${ECHO_CMD} -n " categories-grouped.sgml";\
-		${ECHO_CMD} -n " master-index.sgml";\
+		${ECHO_CMD} -n " categories-alpha.xml";\
+		${ECHO_CMD} -n " categories-grouped.xml";\
+		${ECHO_CMD} -n " master-index.xml";\
 		${ECHO_CMD} -n " statistics.ent";\
 	) > Makefile.gen
 	for categoryfile in ${CATEGORYLIST}; do \
-		${ECHO_CMD} -n " $$categoryfile.sgml" >> Makefile.gen; \
+		${ECHO_CMD} -n " $$categoryfile.xml" >> Makefile.gen; \
 	done
 	${ECHO_CMD} >> Makefile.gen
 
@@ -72,15 +72,15 @@ ports.size:
 	${FETCH} -s ${PORTS_TARGZ_URL} > ${.TARGET}
 .endif
 
-# this builds: categories-alpha.sgml, categories-grouped.sgml,
-# master-index.sgml, statistics.ent, <category>.sgml
+# this builds: categories-alpha.xml, categories-grouped.xml,
+# master-index.xml, statistics.ent, <category>.xml
 CATEGORYLIST=`grep "^[a-z]" categories | sed -e s"/,.*//"`
-categories-alpha.sgml: ${INDEX} categories categories.descriptions \
+categories-alpha.xml: ${INDEX} categories categories.descriptions \
 	packages.exists portindex ports.ent ports.size .NOTMAIN
-	${RM} -f categories-alpha.sgml categories-grouped.sgml \
-		master-index.sgml statistics.ent
+	${RM} -f categories-alpha.xml categories-grouped.xml \
+		master-index.xml statistics.ent
 	for categoryfile in ${CATEGORYLIST}; do \
-		rm -f "$$categoryfile.sgml"; \
+		rm -f "$$categoryfile.xml"; \
 	done
 	${PORTINDEX} ${INDEX} ${.CURDIR}
 

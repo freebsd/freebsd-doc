@@ -4,7 +4,7 @@
 # $FreeBSD$
 #
 
-CHAPTERS= 	policies/chapter.sgml
+CHAPTERS= 	policies/chapter.xml
 
 VPATH=		..
 

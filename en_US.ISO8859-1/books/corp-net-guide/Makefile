@@ -7,7 +7,7 @@ FORMATS?= html
 INSTALL_COMPRESSED?=gz
 INSTALL_ONLY_COMPRESSED?=
 
-SRCS= book.sgml
+SRCS= book.xml
 
 IMAGES_EN=		08-01.eps
 IMAGES_EN+= 	08-02.eps

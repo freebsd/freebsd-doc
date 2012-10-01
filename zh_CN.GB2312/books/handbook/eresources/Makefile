@@ -5,7 +5,7 @@
 # $FreeBSD$
 #
 
-CHAPTERS= 	eresources/chapter.sgml
+CHAPTERS= 	eresources/chapter.xml
 
 VPATH=		..
 

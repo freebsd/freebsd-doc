@@ -164,13 +164,13 @@ CATALOG+=	${DOC_PREFIX}/share/sgml/catalog
 # Transformation rules
 
 ###
-# file.sgml --> file.html
+# file.xml --> file.html
 #
-# Runs file.sgml through spam to validate and expand some entity
+# Runs file.xml through spam to validate and expand some entity
 # references are expanded.  file.html is added to the list of
 # things to install.
 
-.SUFFIXES:	.sgml .html
+.SUFFIXES:	.xml .html
 .if defined(REVCHECK)
 PREHTML?=	${DOC_PREFIX}/ja_JP.eucJP/htdocs/prehtml
 CANONPREFIX0!=	cd ${DOC_PREFIX}; ${ECHO_CMD} $${PWD};
@@ -187,10 +187,10 @@ PREHTML?=	${SED} -e 's/<!ENTITY base CDATA ".*">/<!ENTITY base CDATA "http:\/\/w
 .endif
 .endif
 
-GENDOCS+=	${DOCS:M*.sgml:S/.sgml$/.html/g}
-ORPHANS:=	${ORPHANS:N*.sgml}
+GENDOCS+=	${DOCS:M*.xml:S/.xml$/.html/g}
+ORPHANS:=	${ORPHANS:N*.xml}
 
-.sgml.html: ${_DEPENDSET.wwwstd} ${DOC_PREFIX}/share/sgml/xhtml.xsl
+.xml.html: ${_DEPENDSET.wwwstd} ${DOC_PREFIX}/share/sgml/xhtml.xsl
 .if defined(PREHTML)
 	${PREHTML} ${PREHTMLOPTS} ${.IMPSRC} > ${.IMPSRC}-tmp
 	${XMLLINT} ${XMLLINTOPTS} ${.IMPSRC}-tmp

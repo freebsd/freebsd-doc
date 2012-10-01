@@ -7,7 +7,7 @@
 # Original revision: r9773
 #
 
-CHAPTERS= 	eresources/chapter.sgml
+CHAPTERS= 	eresources/chapter.xml
 
 VPATH=		..
 

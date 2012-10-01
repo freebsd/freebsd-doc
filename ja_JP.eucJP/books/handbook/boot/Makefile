@@ -5,7 +5,7 @@
 #
 # Original revision: 1.1
 
-CHAPTERS= 	boot/chapter.sgml
+CHAPTERS= 	boot/chapter.xml
 
 VPATH=		..
 

@@ -11,9 +11,9 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS=	hardware.sgml
-DOCS+=	installation.sgml
-DOCS+=	relnotes.sgml
+DOCS=	hardware.xml
+DOCS+=	installation.xml
+DOCS+=	relnotes.xml
 
 DATA=	docbook.css
 DATA+=	errata.html

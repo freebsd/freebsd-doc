@@ -7,10 +7,10 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS=	announce.sgml
-DOCS+=	pressrelease.sgml
-DOCS+=	relnotes.sgml
-DOCS+=	schedule.sgml
+DOCS=	announce.xml
+DOCS+=	pressrelease.xml
+DOCS+=	relnotes.xml
+DOCS+=	schedule.xml
 
 DATA=	docbook.css \
 	errata.html \

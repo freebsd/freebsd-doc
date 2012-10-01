@@ -7,7 +7,7 @@
 # %SRCID%	38826
 #
 
-CHAPTERS= 	firewalls/chapter.sgml
+CHAPTERS= 	firewalls/chapter.xml
 
 VPATH=		..
 

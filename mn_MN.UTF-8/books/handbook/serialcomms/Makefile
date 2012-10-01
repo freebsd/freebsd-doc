@@ -7,7 +7,7 @@
 # Build the Handbook with just the content from this chapter.
 #
 
-CHAPTERS= 	serialcomms/chapter.sgml
+CHAPTERS= 	serialcomms/chapter.xml
 
 VPATH=		..
 

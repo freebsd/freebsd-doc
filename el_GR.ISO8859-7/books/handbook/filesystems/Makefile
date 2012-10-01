@@ -7,7 +7,7 @@
 # %SRCID%	1.1
 #
 
-CHAPTERS= 	filesystems/chapter.sgml
+CHAPTERS= 	filesystems/chapter.xml
 
 VPATH=		..
 

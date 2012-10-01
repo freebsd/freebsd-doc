@@ -7,7 +7,7 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS=	index.sgml
+DOCS=	index.xml
 
 XMLDOCS+=	press:${XSL_NEWS_PRESS_OLD}::
 DEPENDSET.press=transtable press

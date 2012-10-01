@@ -4,7 +4,7 @@
 # $FreeBSD$
 #
 
-CHAPTERS= 	kerneldebug/chapter.sgml
+CHAPTERS= 	kerneldebug/chapter.xml
 
 VPATH=		..
 

@@ -5,7 +5,7 @@
 # $FreeBSD$
 #
 
-CHAPTERS= 	mail/chapter.sgml
+CHAPTERS= 	mail/chapter.xml
 
 VPATH=		..
 

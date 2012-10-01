@@ -14,7 +14,7 @@ WITH_ARTICLE_TOC?=YES
 EXTRAS=		init.txt
 EXTRAS+=	diff.txt
 
-SRCS=		article.sgml
+SRCS=		article.xml
 SRCS+=		${EXTRAS}
 
 IMAGES_LIB=	callouts/1.png

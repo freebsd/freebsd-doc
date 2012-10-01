@@ -10,10 +10,10 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS=	projects.sgml
-DOCS+=	newbies.sgml
-DOCS+=	libh.sgml
-DOCS+=	cvsweb.sgml
+DOCS=	projects.xml
+DOCS+=	newbies.xml
+DOCS+=	libh.xml
+DOCS+=	cvsweb.xml
 
 INDEXLINK= projects.html
 

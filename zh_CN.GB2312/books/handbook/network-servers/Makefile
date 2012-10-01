@@ -5,7 +5,7 @@
 # $FreeBSD$
 #
 
-CHAPTERS= 	network-servers/chapter.sgml
+CHAPTERS= 	network-servers/chapter.xml
 
 VPATH=		..
 

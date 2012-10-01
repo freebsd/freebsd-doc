@@ -6,7 +6,7 @@
 # Original revision: r9773
 #
 
-CHAPTERS= 	disks/chapter.sgml
+CHAPTERS= 	disks/chapter.xml
 
 VPATH=		..
 

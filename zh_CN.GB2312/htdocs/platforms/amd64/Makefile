@@ -9,6 +9,6 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS=	motherboards.sgml
+DOCS=	motherboards.xml
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"

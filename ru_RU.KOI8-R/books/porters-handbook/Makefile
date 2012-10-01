@@ -26,7 +26,7 @@ INSTALL_ONLY_COMPRESSED?=
 #
 
 # SGML content
-SRCS=  book.sgml
+SRCS=  book.xml
 
 # Entities
 #SRCS+= ../../../en_US.ISO8859-1/books/handbook/authors.ent

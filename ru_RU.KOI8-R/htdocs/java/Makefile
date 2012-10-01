@@ -15,12 +15,12 @@ SUBDIR =	dists
 SUBDIR+=	docs
 SUBDIR+=	links
 
-DOCS =  advocacy.sgml
-DOCS+=  howhelp.sgml
-DOCS+=  index.sgml
-DOCS+=  install.sgml
-DOCS+=  newsflash.sgml
-DOCS+=  press.sgml
+DOCS =  advocacy.xml
+DOCS+=  howhelp.xml
+DOCS+=  index.xml
+DOCS+=  install.xml
+DOCS+=  newsflash.xml
+DOCS+=  press.xml
 
 #DATA=	j2j.gif
 

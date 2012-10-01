@@ -7,7 +7,7 @@
 # %SRCID%	38826
 #
 
-CHAPTERS= 	bsdinstall/chapter.sgml
+CHAPTERS= 	bsdinstall/chapter.xml
 
 VPATH=		..
 
