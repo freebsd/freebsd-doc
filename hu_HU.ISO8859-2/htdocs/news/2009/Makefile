@@ -11,7 +11,7 @@
 .include "../Makefile.inc"
 .endif
 
-XMLDOCS+=	index:${DOC_PREFIX}/${LANGCODE}/share/sgml/templates.oldnewsflash.xsl:news.xml:
+XMLDOCS+=	index:${DOC_PREFIX}/${LANGCODE}/share/xml/templates.oldnewsflash.xsl:news.xml:
 DEPENDSET.index=transtable news
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"

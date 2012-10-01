@@ -21,7 +21,7 @@ PASTYEARS= 2009 2008 2007 2006 2005 2004 2003
 DATA=	events.css
 INDEXLINK=	events.html
 
-XMLDOCS+=		events:../../share/sgml/templates.events.xsl:${XML_EVENTS_EVENTS}:
+XMLDOCS+=		events:../../share/xml/templates.events.xsl:${XML_EVENTS_EVENTS}:
 PARAMS.events=		--param startyear ${YEARSTART}
 PARAMS.events+=		--stringparam pastyears '${PASTYEARS}'
 DEPENDSET.events=	events

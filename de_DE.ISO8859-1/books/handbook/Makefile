@@ -14,7 +14,7 @@
 #
 # ------------------------------------------------------------------------
 
-.PATH: ${.CURDIR}/../../share/sgml/glossary
+.PATH: ${.CURDIR}/../../share/xml/glossary
 
 MAINTAINER=de-bsd-translators@de.FreeBSD.org
 

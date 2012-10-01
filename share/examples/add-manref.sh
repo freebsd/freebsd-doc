@@ -14,7 +14,7 @@
 # This is also very ugly, but that's the price of not having Tcl in
 # the base system!
 #
-# Tested with doc/share/sgml/man-refs.ent rev. 1.85 (dd, 2001/06/30).
+# Tested with doc/share/xml/man-refs.ent rev. 1.85 (dd, 2001/06/30).
 #
 # Exit codes: 0- added; 1- exists; 2- something else;
 #

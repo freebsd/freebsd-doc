@@ -36,7 +36,7 @@
 #
 # ------------------------------------------------------------------------
 
-.PATH: ${.CURDIR}/../../share/sgml/glossary
+.PATH: ${.CURDIR}/../../share/xml/glossary
 
 #
 # Tidy messes up iso-8859-2 characters

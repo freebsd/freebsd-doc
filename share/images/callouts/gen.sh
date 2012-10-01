@@ -3,7 +3,7 @@
 # $FreeBSD$
 
 # For more than 30 adjust %callout-graphics-number-limit%
-# in doc/share/sgml/freebsd-html.dsl
+# in doc/share/xml/freebsd-html.dsl
 
 for i in `jot 9 1`
 do

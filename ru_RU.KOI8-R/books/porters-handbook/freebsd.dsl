@@ -12,7 +12,7 @@
      rather than the -questions mailing list. -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
-<!ENTITY freebsd.dsl SYSTEM "../../share/sgml/freebsd.dsl" CDATA DSSSL>
+<!ENTITY freebsd.dsl SYSTEM "../../share/xml/freebsd.dsl" CDATA DSSSL>
 <!ENTITY % output.html  "IGNORE">
 ]>
 
