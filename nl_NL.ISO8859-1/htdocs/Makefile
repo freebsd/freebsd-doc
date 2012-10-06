@@ -48,7 +48,7 @@ DEPENDSET.community=usergroups events
 DATA+=	vendors.html
 
 # Subdirectories
-# SGML
+# XML
 #SUBDIR= FAQ
 #SUBDIR+= advocacy
 #SUBDIR+= commercial

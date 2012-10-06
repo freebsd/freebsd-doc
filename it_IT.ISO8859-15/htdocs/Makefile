@@ -24,7 +24,7 @@ DEPENDSET.usergroups=transtable usergroups
 PARAMS.usergroups=	--param pagename "'FreeBSD User Groups'"
 
 # Subdirectories
-# SGML
+# XML
 SUBDIR=  copyright
 SUBDIR+= docs
 SUBDIR+= platforms

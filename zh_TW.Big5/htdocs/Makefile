@@ -30,14 +30,14 @@ DOCS+= where.xml
 #PARAMS.usergroups=	--param pagename "'FreeBSD User Groups'"
 
 # Subdirectories
-# SGML
+# XML
 SUBDIR+= docs
 
 .if !defined(WEB_ONLY) || empty(WEB_ONLY)
 SUBDIR+=	doc
 .endif
 
-# Non-SGML
+# Non-XML
 SUBDIR+= layout
 
 WEBDIR?=	data/zh_TW

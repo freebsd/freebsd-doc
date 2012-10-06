@@ -246,11 +246,11 @@ IMAGES_LIB+= callouts/14.png
 IMAGES_LIB+= callouts/15.png
 
 #
-# Η λίστα SRCS περιέχει όλα τα SGML αρχεία που αποτελούν μέρη του κειμένου.
+# Η λίστα SRCS περιέχει όλα τα XML αρχεία που αποτελούν μέρη του κειμένου.
 # Αλλαγές σε οποιοδήποτε από αυτά τα αρχεία προκαλούν rebuild.
 #
 
-# SGML content
+# XML content
 SRCS+= audit/chapter.xml
 SRCS+= book.xml
 SRCS+= bsdinstall/chapter.xml
@@ -299,8 +299,8 @@ SYMLINKS=	${DESTDIR} index.html handbook.html
 # Turn on all the chapters.
 CHAPTERS?= ${SRCS:M*chapter.xml}
 
-SGMLFLAGS+= ${CHAPTERS:S/\/chapter.xml//:S/^/-i chap./}
-SGMLFLAGS+= -i chap.freebsd-glossary
+XMLFLAGS+= ${CHAPTERS:S/\/chapter.xml//:S/^/-i chap./}
+XMLFLAGS+= -i chap.freebsd-glossary
 
 pgpkeyring: pgpkeys/chapter.xml
 	@${JADE} -V nochunks ${OTHERFLAGS} ${JADEOPTS} -d ${DSLPGP} -t sgml ${MASTERDOC}
