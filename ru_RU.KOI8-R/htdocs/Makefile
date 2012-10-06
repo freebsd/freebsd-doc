@@ -52,7 +52,7 @@ DEPENDSET.community=usergroups events
 #DATA+=	vendors.html
 
 # Subdirectories
-# SGML
+# XML
 SUBDIR= FAQ
 #SUBDIR+= advocacy
 SUBDIR+= commercial
@@ -89,7 +89,7 @@ SUBDIR+= ports
 #SUBDIR+= relnotes
 .endif
 
-# Non-SGML
+# Non-XML
 #SUBDIR+= cgi
 #SUBDIR+= gifs
 

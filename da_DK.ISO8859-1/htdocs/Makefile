@@ -8,7 +8,7 @@
 .endif
 
 # Subdirectories
-# SGML
+# XML
 .if !defined(WEB_ONLY) || empty(WEB_ONLY)
 SUBDIR=  doc
 .endif

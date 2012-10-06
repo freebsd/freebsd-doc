@@ -16,11 +16,11 @@ INSTALL_COMPRESSED?= gz
 INSTALL_ONLY_COMPRESSED?=
 
 #
-# SRCS lists the individual SGML files that make up the document. Changes
+# SRCS lists the individual XML files that make up the document. Changes
 # to any of these files will force a rebuild
 #
 
-# SGML content
+# XML content
 SRCS=  book.xml
 SRCS+= boot/chapter.xml
 SRCS+= driverbasics/chapter.xml

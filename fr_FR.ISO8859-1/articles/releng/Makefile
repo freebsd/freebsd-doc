@@ -17,7 +17,7 @@ INSTALL_ONLY_COMPRESSED?=
 
 JADEFLAGS+=	-V %generate-article-toc%
 
-# SGML content
+# XML content
 SRCS=  article.xml branches.ascii
 
 # IMAGES

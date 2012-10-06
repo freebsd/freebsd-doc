@@ -27,7 +27,7 @@ DOCS+=	support.xml
 DOCS+=	where.xml
 
 # Subdirectories
-# SGML
+# XML
 SUBDIR+=	advocacy
 SUBDIR+=	community
 SUBDIR+=	copyright
