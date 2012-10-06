@@ -15,7 +15,7 @@
 .endif
 
 # Subdirectories
-# SGML
+# XML
 SUBDIR=	 FAQ
 .if !defined(WEB_ONLY) || empty(WEB_ONLY)
 SUBDIR+= doc

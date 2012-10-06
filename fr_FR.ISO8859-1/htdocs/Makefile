@@ -37,7 +37,7 @@ DATA+=	freebsd.css
 DATA+=  vendors.html
 
 # Subdirectories
-# SGML
+# XML
 SUBDIR=	 security
 SUBDIR+= commercial
 SUBDIR+= community

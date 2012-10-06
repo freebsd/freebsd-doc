@@ -31,7 +31,7 @@
 #
 # Variables used by both users and documents:
 #
-#	SGMLFLAGS	Additional options to pass to various SGML
+#	XMLFLAGS	Additional options to pass to various XML
 #			processors (e.g., jade, nsgmls).  Typically
 #			used to define "IGNORE" entities to "INCLUDE"
 #			 with "-i<entity-name>"
@@ -44,7 +44,7 @@
 #			used to set "-raw" flag to handle 8bit characters.
 #
 #	EXTRA_CATALOGS	Additional catalog files that should be used by
-#			any SGML processing applications.
+#			any XML processing applications.
 #
 #	NO_TIDY		If you do not want to use tidy, set this to "YES".
 #
@@ -176,8 +176,8 @@ IMAGES_LIB?=
 CATALOGS+=	-c ${c}
 .endif
 .endfor
-SGMLFLAGS+=	-D ${IMAGES_EN_DIR}/${DOC}s/${.CURDIR:T} -D ${CANONICALOBJDIR}
-JADEOPTS=	${JADEFLAGS} ${SGMLFLAGS} ${CATALOGS}
+XMLFLAGS+=	-D ${IMAGES_EN_DIR}/${DOC}s/${.CURDIR:T} -D ${CANONICALOBJDIR}
+JADEOPTS=	${JADEFLAGS} ${XMLFLAGS} ${CATALOGS}
 XSLTPROCOPTS=	${XSLTPROCFLAGS}
 
 KNOWN_FORMATS=	html html.tar html-split html-split.tar \

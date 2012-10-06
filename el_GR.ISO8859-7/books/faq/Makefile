@@ -19,11 +19,11 @@ INSTALL_ONLY_COMPRESSED?=
 WITH_BIBLIOXREF_TITLE?=YES
 
 #
-# Η λίστα SRCS περιέχει όλα τα SGML αρχεία που αποτελούν μέρη του κειμένου.
+# Η λίστα SRCS περιέχει όλα τα XML αρχεία που αποτελούν μέρη του κειμένου.
 # Αλλαγές σε οποιοδήποτε από αυτά τα αρχεία προκαλούν rebuild.
 #
 
-# SGML content
+# XML content
 SRCS=  book.xml
 
 URL_RELPREFIX?=	../../../..
