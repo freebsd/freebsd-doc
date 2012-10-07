@@ -2,7 +2,7 @@
 # $FreeBSD$
 #
 # %SOURCE%	en_US.ISO8859-1/articles/explaining-bsd/Makefile
-# %SRCID%	38826
+# %SRCID%	39631
 #
 # Article: Explaining BSD
 

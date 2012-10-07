@@ -2,7 +2,7 @@
 # $FreeBSD$
 #
 # %SOURCE%	en_US.ISO8859-1/books/handbook/Makefile
-# %SRCID%	39537
+# %SRCID%	39665
 #
 # Bouw het Nederlandse FreeBSD Handboek.
 #

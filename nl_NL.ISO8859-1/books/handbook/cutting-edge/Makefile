@@ -4,7 +4,7 @@
 # $FreeBSD$
 #
 # %SOURCE%	en_US.ISO8859-1/books/handbook/cutting-edge/Makefile
-# %SRCID%	38826
+# %SRCID%	39631
 #
 
 CHAPTERS= 	cutting-edge/chapter.xml

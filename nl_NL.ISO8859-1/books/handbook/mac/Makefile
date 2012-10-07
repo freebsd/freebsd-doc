@@ -4,7 +4,7 @@
 # $FreeBSD$
 #
 # %SOURCE%	en_US.ISO8859-1/books/handbook/mac/Makefile
-# %SRCID%	38826
+# %SRCID%	39631
 #
 
 CHAPTERS= 	mac/chapter.xml

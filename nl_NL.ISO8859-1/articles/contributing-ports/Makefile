@@ -2,7 +2,7 @@
 # $FreeBSD$
 #
 # %SOURCE%	en_US.ISO8859-1/articles/contributing-ports/Makefile
-# %SRCID%	38826
+# %SRCID%	39631
 #
 # Article: Contributing to the FreeBSD Ports Collection
 
