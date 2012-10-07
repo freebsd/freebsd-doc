@@ -86,7 +86,6 @@ if ($html_mode) {
 	".a { background-color: #cffafd; }\n" .
 	".f { background-color: #ffc; }\n" .
 	".p { background-color: #d1fbd6; }\n" .
-	".r { background-color: #d6cfc4; }\n" .
 	".s { background-color: #fcccd9; }\n" .
 	".c { background-color: #c1d5db; }\n" .
 	"--></style>";
@@ -176,11 +175,6 @@ Further work requires additional information from the
 p - patched
 A patch has been committed, but some issues (MFC and / or
      confirmation from originator) are still open.
-
-r - repocopy
-The resolution of the problem report is dependent on
-     a repocopy operation within the CVS repository which
-     is awaiting completion.
 
 s - suspended
 The problem is not being worked on, due to lack of information
