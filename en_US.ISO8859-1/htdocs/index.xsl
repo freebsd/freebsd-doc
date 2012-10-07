@@ -54,7 +54,7 @@
 				  impressive security features, and
 				  world class performance and is used
 				  by some of the world's <a
-				  href="&base;/doc/en_US.ISO8859-1/books/handbook/nutshell.html#INTRODUCTION-NUTSHELL-USERS">busiest
+				  href="&base;/doc/en_US.ISO8859-1/books/handbook/nutshell.html#introduction-nutshell-users">busiest
 				  web sites</a> and most pervasive
 				  embedded networking and storage
 				  devices.</p>
