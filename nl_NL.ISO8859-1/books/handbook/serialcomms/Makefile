@@ -4,7 +4,7 @@
 # $FreeBSD$
 #
 # %SOURCE%	en_US.ISO8859-1/books/handbook/serialcomms/Makefile
-# %SRCID%	38826
+# %SRCID%	39631
 #
 
 CHAPTERS= 	serialcomms/chapter.xml
