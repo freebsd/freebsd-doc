@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
 <!-- Vertaald door: Siebrand Mazeland / Rene Ladan
      %SOURCE%	en_US.ISO8859-1/htdocs/index.xsl
-     %SRCID%	39632
+     %SRCID%	39669
 -->
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/xml/xslt10-freebsd.dtd" [
@@ -53,7 +53,7 @@
 				  geavanceerd netwerken, indrukwekkende
 				  beveiligingsmogelijkheden en topprestaties en
 				  wordt door sommige van 's werelds <a
-				    href="&enbase;/doc/nl_NL.ISO8859-1/books/handbook/nutshell.html#INTRODUCTION-NUTSHELL-USERS">drukste
+				    href="&enbase;/doc/nl_NL.ISO8859-1/books/handbook/nutshell.html#introduction-nutshell-users">drukste
 				    websites</a> en de meest voorkomende
 				  embedded netwerk- en opslagapparaten
 				  gebruikt.</p>
