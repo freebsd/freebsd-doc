@@ -79,16 +79,16 @@
 				    <li>Productie:&nbsp;<a
 				href="&u.rel.announce;">&rel.current;</a>,&nbsp;<a
 				href="&u.rel2.announce;">&rel2.current;</a></li>
-				    <li>Ouder: <a
+				    <li>Verouderd: <a
 				href="&u.rel3.announce;">&rel3.current;</a></li>
 				    <xsl:if test="'&beta.testing;' != 'IGNORE'">
-					<li>Aankomend:
+					<li>Aanstaand:
 					  <a href="&base;/where.html#helptest">
 					    &betarel.current;-&betarel.vers;</a>
 					</li>
 				    </xsl:if>
 				    <xsl:if test="'&beta2.testing;' != 'IGNORE'">
-					<li>Aankomend:
+					<li>Aanstaand:
 					  <a href="&base;/where.html#helptest">
 					    &betarel2.current;-&betarel2.vers;</a>
 					</li>
