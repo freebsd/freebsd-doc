@@ -32,7 +32,7 @@ INDEXLINK=	internal.html
 # build the list of personal homepages of FreeBSD developers only
 # on the main FreeBSD machines
 hostname!= hostname
-.if ${hostname} == "hub.freebsd.org" || ${hostname} == "freefall.freebsd.org" || ${hostname} == "www.freebsd.org"
+.if !empty(hostname:M*.freebsd.org)
 DOCS+=	homepage.xml
 
 .if !make(install)
