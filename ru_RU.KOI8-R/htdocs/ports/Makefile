@@ -81,7 +81,7 @@ ports.size:
 
 # this builds: categories-alpha.xml, categories-grouped.xml,
 # master-index.xml, statistics.ent, <category>.xml
-CATEGORYLIST=`grep "^[a-z]" categories | sed -e s"/,.*//"`
+CATEGORYLIST=`grep "^[a-z]" categories | awk -F, '{print $$1}'`
 categories-alpha.xml: ${INDEX} categories categories.descriptions \
 	packages.exists portindex ports.ent ports.size .NOTMAIN
 	${RM} -f categories-alpha.xml categories-grouped.xml \
