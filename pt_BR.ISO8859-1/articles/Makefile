@@ -18,6 +18,7 @@ SUBDIR+= freebsd-update-server
 SUBDIR+= hubs
 SUBDIR+= linux-users
 SUBDIR+= new-users
+SUBDIR+= portbuild
 SUBDIR+= problem-reports
 
 DOC_PREFIX?= ${.CURDIR}/../..
