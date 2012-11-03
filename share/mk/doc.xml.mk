@@ -27,13 +27,14 @@ _XML_INCLIST=	libcommon.l10n.xsl \
 		header.l10n.ent \
 		iso8879.ent \
 		l10n.ent \
-		release.ent
-.for F in ${_INCLIST}
+		release.ent \
+		release.l10n.ent
+.for F in ${_XML_INCLIST}
 .if exists(${DOC_PREFIX}/${LANGCODE}/share/xml/${F})
-XML_INCLUDES+=	${F}
+XML_INCLUDES+=	${DOC_PREFIX}/${LANGCODE}/share/xml/${F}
 .endif
 .if exists(${DOC_PREFIX}/share/xml/${F})
-XML_INCLUDES+=	${F}
+XML_INCLUDES+=	${DOC_PREFIX}/share/xml/${F}
 .endif
 .endfor
 
