@@ -1652,7 +1652,7 @@ macros like `appeared in NetBSD version 1.2' are not supported.</li>
 <li>Some OSs provide only formated manual pages (catpages), e.g. NetBSD
 and OpenBSD. In this case it is not possible to create Postscript
 and troff output.</li>
-<li>The <a href="http://cvsweb.freebsd.org/src/share/misc/bsd-family-tree">
+<li>The <a href="http://svnweb.freebsd.org/base/head/share/misc/bsd-family-tree?view=markup">
 Unix family tree, BSD part</a>.</li>
 <li>The <a href="http://www.freebsd.org/cgi/ports.cgi">
 FreeBSD Ports Changes</a> script.</li>
