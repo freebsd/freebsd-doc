@@ -855,7 +855,7 @@ sub do_man {
         return &man( $1, $2 );
     }
 
-    # download a man hierarchie as gzip'd tar file
+    # download a man hierarchy as gzip'd tar file
     return &download if ( $apropos > 1 );
 
     # empty query
@@ -1649,7 +1649,7 @@ Copyright (c) for man pages by OS vendors.
 <li>Get the <a href="$BASE/source">source</a> of the man.cgi script</li>
 <li>Troff macros works only if defined in FreeBSD/groff. OS specific
 macros like `appeared in NetBSD version 1.2' are not supported.</li>
-<li>Some OSs provide only formated manual pages (catpages), e.g. NetBSD
+<li>Some OSs provide only formatted manual pages (catpages), e.g., NetBSD
 and OpenBSD. In this case it is not possible to create Postscript
 and troff output.</li>
 <li>The <a href="http://svnweb.freebsd.org/base/head/share/misc/bsd-family-tree?view=markup">
