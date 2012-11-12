@@ -39,7 +39,8 @@ while(<P>) {
 
 close P;
 if ($#pages < 0) {
-	die "No users found!\n";
+	#die "No users found!\n";
+	push(@pages, "Disabled:disabled");
 }
 
 print "<?xml version='1.0' encoding='iso-8859-1'?>\n";
