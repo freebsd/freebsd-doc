@@ -2,6 +2,10 @@
 
 # $FreeBSD$
 
+print "<?xml version='1.0' encoding='iso-8859-1'?>\n";
+print "<li><a href=\"http://people.FreeBSD.org/homepage.html\">FreeBSD Developer home page list</a>\n";
+exit 0;
+
 $homepagedir = 'public_html';
 @index = ('index.html', 'index.cgi');
 $noindex = '.noindex';
