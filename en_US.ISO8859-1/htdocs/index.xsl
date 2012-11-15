@@ -64,6 +64,13 @@
 				  href="&base;/about.html"
 				  title="Learn More">Learn More</a>
 
+				<p>The &os; cluster is undergoing
+				  maintenance which may interfere
+				  with some services such as the
+				  GNATS PR system.  We apologize for
+				  any inconvenience this may
+				  cause.</p>
+
 				  </div> <!-- TXTFRONTFEATURELINK -->
 			  </div> <!-- FRONTFEATURECONTENT -->
 		  </div> <!-- FRONTFEATURELEFT -->
