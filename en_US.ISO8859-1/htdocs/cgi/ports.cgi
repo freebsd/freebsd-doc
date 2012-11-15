@@ -370,8 +370,7 @@ sub out {
 qq[<a href="$remotePrefixFtpPackages{$remotePrefixFtpPackagesDefault}/$version.$packageExt">Package</a> <b>:</b>\n];
     }
 
-    print qq[<a href="$l/?view=log">Changes</a> <b>:</b>\n];
-    print qq[<a href="$pathDownload">Download</a><br />\n];
+    print qq[<a href="$l/?view=log">Changes</a> <br />\n];
 
     print qq{<i>Maintained by:</i> <a href="mailto:$email}
       . (
