@@ -114,7 +114,7 @@ sub init_variables {
     $remotePrefixHtml = "$hsty_base/ports";
 
     # CVS Web interface
-    $remotePrefixCvs = 'http://cvsweb.FreeBSD.org/ports';
+    $remotePrefixCvs = 'http://svnweb.FreeBSD.org/ports/head';
 
     # Ports documentation
     $portsDesc = "$hsty_base/ports/";
