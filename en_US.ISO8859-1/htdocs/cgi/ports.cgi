@@ -362,7 +362,6 @@ sub out {
     print qq{<dd>}, &escapeHTML($comment), qq{<br />\n};
 
     print qq[<a href="$l/pkg-descr?revision=HEAD&view=markup">Long description</a> <b>:</b>\n];
-    print qq[<a href="$pds?$pathB">Sources</a> <b>:</b>\n];
 
   # Link package in "default" arch/release. Verify it's existence on ftp-master.
     if ( $packages{"$version.$packageExt"} ) {
