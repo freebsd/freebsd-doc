@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
 <!-- Vertaald door: Siebrand Mazeland / Rene Ladan
      %SOURCE%	en_US.ISO8859-1/htdocs/index.xsl
-     %SRCID%	39669
+     %SRCID%	40001
 -->
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/xml/xslt10-freebsd.dtd" [
@@ -59,6 +59,12 @@
 				  gebruikt.</p>
 				<div id="txtfrontfeaturelink">
 				&raquo;<a href="&base;/about.html" title="Meer weten">Meer weten</a>
+
+				  <p>Op het &os;-cluster zijn momenteel
+				    onderhoudswerkzaamheden gaande die sommige
+				    diensten zoals het GNATS PR-systeem kunnen
+				    verstoren.  Onze excuses voor enig ongemak
+				    dat dit kan veroorzaken.</p>
 				</div> <!-- TXTFRONTFEATURELINK -->
 			</div> <!-- FRONTFEATURECONTENT -->
 		</div> <!-- FRONTFEATURELEFT -->
