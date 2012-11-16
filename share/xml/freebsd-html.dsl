@@ -272,10 +272,10 @@
 	  (let*	((class		(attribute-string (normalize "role"))))
 	    (cond
 	     ((equal? class "package")
-	      (let* ((urlurl	"http://www.FreeBSD.org/cgi/url.cgi")
-		     (href	(string-append urlurl "?ports/"
+	      (let* ((urlurl	"http://svnweb.FreeBSD.org/")
+		     (href	(string-append urlurl "ports/head/"
 					       (data (current-node))
-					       "/pkg-descr")))
+					       "/pkg-descr?revision=HEAD")))
 		(create-link (list (list "HREF" href)) ($mono-seq$))))
 	     (else ($mono-seq$)))))
 
