@@ -24,6 +24,9 @@ DOCS+= press-rel-9.xml
 # The yearly State of the Union address
 DOCS+= sou1999.xml
 
+# Details of the FreeBSD.org 2012 Infrastructure compromise
+DOCS+= 2012-compromise.xml
+
 INDEXLINK= news.html
 
 DEPENDSET.DEFAULT=	transtable news press
