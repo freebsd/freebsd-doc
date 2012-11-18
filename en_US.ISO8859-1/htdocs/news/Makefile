@@ -53,5 +53,6 @@ SUBDIR+= 	2007
 SUBDIR+=	2008
 SUBDIR+=	2009
 SUBDIR+=	status
+SUBDIR+=	2012-compromise
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"
