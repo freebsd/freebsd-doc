@@ -5,7 +5,7 @@
 ]>
 
 <!-- $FreeBSD$ -->
-<!-- Original revision: r39669 -->
+<!-- Original revision: r40054 -->
 
 <xsl:stylesheet version="1.0"
   xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
@@ -61,6 +61,28 @@
 			<div id="txtfrontfeaturelink">
 			  &#187;<a href="&base;/about.html" title="詳しくはこちら">詳しくはこちら</a>
 			</div> <!-- TXTFRONTFEATURELINK -->
+
+			<div
+			  style="width:640px; margin: 16px 16px 16px 32px; auto">
+
+			  <h1>Security Warning</h1>
+
+			  <p align="justify">11 月 11 日 (日)、FreeBSD.org クラスタにある
+			    2 台のマシンにおいて不正侵入が確認されました。
+			    FreeBSD プロジェクトは事態を分析するため、
+			    これらのマシンを停止させてネットワークから切り離しました。
+			    用心のため、FreeBSD
+			    プロジェクトが管理するその他のマシンのほとんども、
+			    同じ措置を行ないました。</p>
+
+			  <p align="justify">FreeBSD
+			    利用者に影響をおよぼすような変更が加えられた形跡は見つかっておらず、
+			    現時点での分析結果からは、FreeBSD
+			    利用者への影響はないと考えていますが、
+			    <a href="&base;/news/2012-compromise.html">報告</a>
+			    を一読いただき、必要な対応をとるようにお願いいたします。
+			    このページは、新しい情報が判明しだい更新されます。</p>
+			</div>
 		    </div> <!-- FRONTFEATURECONTENT -->
 		  </div> <!-- FRONTFEATURELEFT -->
 
