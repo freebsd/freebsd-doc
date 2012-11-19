@@ -62,7 +62,7 @@
 				</div> <!-- TXTFRONTFEATURELINK -->
 
 				<div
-				  style="width:640px; margin: 16px 16px 16px 32ox; auto">
+				  style="width:640px; margin: 16px 16px 16px 32px; auto">
 				  <h1>Beveiligingswaarschuwing</h1>
 
 				  <p align="justify">Op zondag 11 september is
