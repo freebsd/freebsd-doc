@@ -517,9 +517,10 @@ for (my $i = 0; $i < scalar(@CVSrepositories); $i += 2) {
 }
 unless ($rootfound) {
   fatal('500 Internal Error',
-        'No valid CVS roots found!  See <code>@CVSrepositories</code> in ' .
-        'the configuration file (<code>%s</code>).',
-        $config);
+        'No valid CVS roots found!  See <code>@CVSrepositories</code> ' .
+	'<p>Please try the svnweb site: <a href="http://svnweb.freebsd.org">http://svnweb.freebsd.org</a></p>' .
+        #' in the configuration file (<code>%s</code>).', $config);
+	"",)
 }
 undef $rootfound;
 
