@@ -1,0 +1,184 @@
+Index: contrib/bind9/bin/named/query.c
+===================================================================
+--- contrib/bind9/bin/named/query.c	(revision 241362)
++++ contrib/bind9/bin/named/query.c	(working copy)
+@@ -1140,7 +1140,0 @@ query_isduplicate(ns_client_t *client, dns_name_t
+-	/*
+-	 * If the dns_name_t we're looking up is already in the message,
+-	 * we don't want to trigger the caller's name replacement logic.
+-	 */
+-	if (name == mname)
+-		mname = NULL;
+-
+@@ -1341,6 +1334,7 @@ query_addadditional(void *arg, dns_name_t *name, d
+ 	if (dns_rdataset_isassociated(rdataset) &&
+ 	    !query_isduplicate(client, fname, type, &mname)) {
+ 		if (mname != NULL) {
++			INSIST(mname != fname);
+ 			query_releasename(client, &fname);
+ 			fname = mname;
+ 		} else
+@@ -1401,11 +1395,13 @@ query_addadditional(void *arg, dns_name_t *name, d
+ 			mname = NULL;
+ 			if (!query_isduplicate(client, fname,
+ 					       dns_rdatatype_a, &mname)) {
++				if (mname != fname) {
+ 				if (mname != NULL) {
+ 					query_releasename(client, &fname);
+ 					fname = mname;
+ 				} else
+ 					need_addname = ISC_TRUE;
++				}
+ 				ISC_LIST_APPEND(fname->list, rdataset, link);
+ 				added_something = ISC_TRUE;
+ 				if (sigrdataset != NULL &&
+@@ -1444,11 +1440,13 @@ query_addadditional(void *arg, dns_name_t *name, d
+ 			mname = NULL;
+ 			if (!query_isduplicate(client, fname,
+ 					       dns_rdatatype_aaaa, &mname)) {
++				if (mname != fname) {
+ 				if (mname != NULL) {
+ 					query_releasename(client, &fname);
+ 					fname = mname;
+ 				} else
+ 					need_addname = ISC_TRUE;
++				}
+ 				ISC_LIST_APPEND(fname->list, rdataset, link);
+ 				added_something = ISC_TRUE;
+ 				if (sigrdataset != NULL &&
+@@ -1960,6 +1958,7 @@ query_addadditional2(void *arg, dns_name_t *name,
+ 		    crdataset->type == dns_rdatatype_aaaa) {
+ 			if (!query_isduplicate(client, fname, crdataset->type,
+ 					       &mname)) {
++				if (mname != fname) {
+ 				if (mname != NULL) {
+ 					/*
+ 					 * A different type of this name is
+@@ -1976,6 +1975,7 @@ query_addadditional2(void *arg, dns_name_t *name,
+ 					mname0 = mname;
+ 				} else
+ 					need_addname = ISC_TRUE;
++				}
+ 				ISC_LIST_UNLINK(cfname.list, crdataset, link);
+ 				ISC_LIST_APPEND(fname->list, crdataset, link);
+ 				added_something = ISC_TRUE;
+Index: contrib/bind9/lib/dns/include/dns/rdata.h
+===================================================================
+--- contrib/bind9/lib/dns/include/dns/rdata.h	(revision 241362)
++++ contrib/bind9/lib/dns/include/dns/rdata.h	(working copy)
+@@ -147,6 +147,17 @@ struct dns_rdata {
+ 	(((rdata)->flags & ~(DNS_RDATA_UPDATE|DNS_RDATA_OFFLINE)) == 0)
+ 
+ /*
++ * The maximum length of a RDATA that can be sent on the wire.
++ * Max packet size (65535) less header (12), less name (1), type (2),
++ * class (2), ttl(4), length (2).
++ *
++ * None of the defined types that support name compression can exceed
++ * this and all new types are to be sent uncompressed.
++ */
++
++#define DNS_RDATA_MAXLENGTH	65512U
++
++/*
+  * Flags affecting rdata formatting style.  Flags 0xFFFF0000
+  * are used by masterfile-level formatting and defined elsewhere.
+  * See additional comments at dns_rdata_tofmttext().
+Index: contrib/bind9/lib/dns/master.c
+===================================================================
+--- contrib/bind9/lib/dns/master.c	(revision 241362)
++++ contrib/bind9/lib/dns/master.c	(working copy)
+@@ -75,7 +75,7 @@
+ /*%
+  * max message size - header - root - type - class - ttl - rdlen
+  */
+-#define MINTSIZ (65535 - 12 - 1 - 2 - 2 - 4 - 2)
++#define MINTSIZ DNS_RDATA_MAXLENGTH
+ /*%
+  * Size for tokens in the presentation format,
+  * The largest tokens are the base64 blocks in KEY and CERT records,
+Index: contrib/bind9/lib/dns/rdata.c
+===================================================================
+--- contrib/bind9/lib/dns/rdata.c	(revision 241362)
++++ contrib/bind9/lib/dns/rdata.c	(working copy)
+@@ -425,6 +425,7 @@ dns_rdata_fromwire(dns_rdata_t *rdata, dns_rdatacl
+ 	isc_buffer_t st;
+ 	isc_boolean_t use_default = ISC_FALSE;
+ 	isc_uint32_t activelength;
++	size_t length;
+ 
+ 	REQUIRE(dctx != NULL);
+ 	if (rdata != NULL) {
+@@ -455,6 +456,14 @@ dns_rdata_fromwire(dns_rdata_t *rdata, dns_rdatacl
+ 	}
+ 
+ 	/*
++	 * Reject any rdata that expands out to more than DNS_RDATA_MAXLENGTH
++	 * as we cannot transmit it.
++	 */
++	length = isc_buffer_usedlength(target) - isc_buffer_usedlength(&st);
++	if (result == ISC_R_SUCCESS && length > DNS_RDATA_MAXLENGTH)
++		result = DNS_R_FORMERR;
++
++	/*
+ 	 * We should have consumed all of our buffer.
+ 	 */
+ 	if (result == ISC_R_SUCCESS && !buffer_empty(source))
+@@ -462,8 +471,7 @@ dns_rdata_fromwire(dns_rdata_t *rdata, dns_rdatacl
+ 
+ 	if (rdata != NULL && result == ISC_R_SUCCESS) {
+ 		region.base = isc_buffer_used(&st);
+-		region.length = isc_buffer_usedlength(target) -
+-				isc_buffer_usedlength(&st);
++		region.length = length;
+ 		dns_rdata_fromregion(rdata, rdclass, type, &region);
+ 	}
+ 
+@@ -598,6 +606,7 @@ dns_rdata_fromtext(dns_rdata_t *rdata, dns_rdatacl
+ 	unsigned long line;
+ 	void (*callback)(dns_rdatacallbacks_t *, const char *, ...);
+ 	isc_result_t tresult;
++	size_t length;
+ 
+ 	REQUIRE(origin == NULL || dns_name_isabsolute(origin) == ISC_TRUE);
+ 	if (rdata != NULL) {
+@@ -670,10 +679,13 @@ dns_rdata_fromtext(dns_rdata_t *rdata, dns_rdatacl
+ 		}
+ 	} while (1);
+ 
++	length = isc_buffer_usedlength(target) - isc_buffer_usedlength(&st);
++	if (result == ISC_R_SUCCESS && length > DNS_RDATA_MAXLENGTH)
++		result = ISC_R_NOSPACE;
++
+ 	if (rdata != NULL && result == ISC_R_SUCCESS) {
+ 		region.base = isc_buffer_used(&st);
+-		region.length = isc_buffer_usedlength(target) -
+-				isc_buffer_usedlength(&st);
++		region.length = length;
+ 		dns_rdata_fromregion(rdata, rdclass, type, &region);
+ 	}
+ 	if (result != ISC_R_SUCCESS) {
+@@ -781,6 +793,7 @@ dns_rdata_fromstruct(dns_rdata_t *rdata, dns_rdata
+ 	isc_buffer_t st;
+ 	isc_region_t region;
+ 	isc_boolean_t use_default = ISC_FALSE;
++	size_t length;
+ 
+ 	REQUIRE(source != NULL);
+ 	if (rdata != NULL) {
+@@ -795,10 +808,13 @@ dns_rdata_fromstruct(dns_rdata_t *rdata, dns_rdata
+ 	if (use_default)
+ 		(void)NULL;
+ 
++	length = isc_buffer_usedlength(target) - isc_buffer_usedlength(&st);
++	if (result == ISC_R_SUCCESS && length > DNS_RDATA_MAXLENGTH)
++		result = ISC_R_NOSPACE;
++
+ 	if (rdata != NULL && result == ISC_R_SUCCESS) {
+ 		region.base = isc_buffer_used(&st);
+-		region.length = isc_buffer_usedlength(target) -
+-				isc_buffer_usedlength(&st);
++		region.length = length;
+ 		dns_rdata_fromregion(rdata, rdclass, type, &region);
+ 	}
+ 	if (result != ISC_R_SUCCESS)
