@@ -48,13 +48,7 @@
     <para>Most devices in a &unix;-like operating system are accessed
       through device-nodes, sometimes also called special files.
       These files are usually located under the directory
-      <filename>/dev</filename> in the filesystem hierarchy.
-      In releases of FreeBSD older than 5.0-RELEASE, where
-      &man.devfs.5; support is not integrated into FreeBSD,
-      each device node must be
-      created statically and independent of the existence of the
-      associated device driver.  Most device nodes on the system are
-      created by running <command>MAKEDEV</command>.</para>
+      <filename>/dev</filename> in the filesystem hierarchy.</para>
 
     <para>Device drivers can roughly be broken down into two
       categories; character and network device drivers.</para>
@@ -212,20 +206,19 @@ KMOD=skeleton
 
     <example>
       <title>Example of a Sample Echo Pseudo-Device Driver for
-        &os;&nbsp;5.X</title>
+        &os;&nbsp;10.X</title>
 
       <programlisting>/*
- * Simple `echo' pseudo-device KLD
+ * Simple Echo pseudo-device KLD
  *
  * Murray Stokely
- *
- * Converted to 5.X by S&oslash;ren (Xride) Straarup
+ * Søren (Xride) Straarup
+ * Eitan Adler
  */
 
 #include &lt;sys/types.h&gt;
 #include &lt;sys/module.h&gt;
 #include &lt;sys/systm.h&gt;  /* uprintf */
-#include &lt;sys/errno.h&gt;
 #include &lt;sys/param.h&gt;  /* defines used in kernel.h */
 #include &lt;sys/kernel.h&gt; /* types used in module initialization */
 #include &lt;sys/conf.h&gt;   /* cdevsw struct */
@@ -233,7 +226,6 @@ KMOD=skeleton
 #include &lt;sys/malloc.h&gt;
 
 #define BUFFERSIZE 256
-
 
 /* Function prototypes */
 static d_open_t      echo_open;
@@ -251,15 +243,14 @@ static struct cdevsw echo_cdevsw = {
 	.d_name = "echo",
 };
 
-typedef struct s_echo {
+struct s_echo {
 	char msg[BUFFERSIZE];
 	int len;
-} t_echo;
+};
 
 /* vars */
 static struct cdev *echo_dev;
-static int count;
-static t_echo *echomsg;
+static struct s_echo *echomsg;
 
 MALLOC_DECLARE(M_ECHOBUF);
 MALLOC_DEFINE(M_ECHOBUF, "echobuffer", "buffer for echo module");
@@ -270,20 +261,25 @@ MALLOC_DEFINE(M_ECHOBUF, "echobuffer", "buffer for echo module");
  */
 
 static int
-echo_loader(struct module *m, int what, void *arg)
+echo_loader(struct module *m __unused, int what, void *arg __unused)
 {
-	int err = 0;
+	int error = 0;
 
 	switch (what) {
 	case MOD_LOAD:                /* kldload */
-		echo_dev = make_dev(<literal>&amp;</literal>echo_cdevsw,
+		error = make_dev_p(MAKEDEV_CHECKNAME | MAKEDEV_WAITOK,
+		    &amp;echo_dev,
+		    &amp;echo_cdevsw,
 		    0,
 		    UID_ROOT,
 		    GID_WHEEL,
 		    0600,
 		    "echo");
+		if (error != 0)
+			break;
+
 		/* kmalloc memory for use by this driver */
-		echomsg = malloc(sizeof(t_echo), M_ECHOBUF, M_WAITOK);
+		echomsg = malloc(sizeof(*echomsg), M_ECHOBUF, M_WAITOK);
 		printf("Echo device loaded.\n");
 		break;
 	case MOD_UNLOAD:
@@ -292,26 +288,27 @@ echo_loader(struct module *m, int what, void *arg)
 		printf("Echo device unloaded.\n");
 		break;
 	default:
-		err = EOPNOTSUPP;
+		error = EOPNOTSUPP;
 		break;
 	}
-	return(err);
+	return (error);
 }
 
 static int
-echo_open(struct cdev *dev, int oflags, int devtype, struct thread *p)
+echo_open(struct cdev *dev __unused, int oflags __unused, int devtype __unused, struct thread *p __unused)
 {
-	int err = 0;
+	int error = 0;
 
 	uprintf("Opened device \"echo\" successfully.\n");
-	return(err);
+	return (error);
 }
 
 static int
-echo_close(struct cdev *dev, int fflag, int devtype, struct thread *p)
+echo_close(struct cdev *dev __unused, int fflag __unused, int devtype __unused, struct thread *p __unused)
 {
+
 	uprintf("Closing device \"echo.\"\n");
-	return(0);
+	return (0);
 }
 
 /*
@@ -321,21 +318,21 @@ echo_close(struct cdev *dev, int fflag, int devtype, struct thread *p)
  */
 
 static int
-echo_read(struct cdev *dev, struct uio *uio, int ioflag)
+echo_read(struct cdev *dev __unused, struct uio *uio, int ioflag __unused)
 {
-	int err = 0;
-	int amt;
+	int error, amt;
 
 	/*
 	 * How big is this read operation?  Either as big as the user wants,
 	 * or as big as the remaining data
 	 */
-	amt = MIN(uio-&gt;uio_resid, (echomsg-&gt;len - uio-&gt;uio_offset &gt; 0) ?
-	     echomsg-&gt;len - uio-&gt;uio_offset : 0);
-	if ((err = uiomove(echomsg-&gt;msg + uio-&gt;uio_offset, amt, uio)) != 0) {
+
+	amt = MIN(uio-&lt;uio_resid, echomsg-&lt;len - uio-&lt;uio_offset);
+	uio-&lt;uio_offset += amt;
+	if ((error = uiomove(echomsg-&lt;msg, amt, uio)) != 0)
 		uprintf("uiomove failed!\n");
-	}
-	return(err);
+
+	return (error);
 }
 
 /*
@@ -344,23 +341,39 @@ echo_read(struct cdev *dev, struct uio *uio, int ioflag)
  */
 
 static int
-echo_write(struct cdev *dev, struct uio *uio, int ioflag)
+echo_write(struct cdev *dev __unused, struct uio *uio, int ioflag __unused)
 {
-	int err = 0;
+	int error, amt;
 
 	/* Copy the string in from user memory to kernel memory */
-	err = copyin(uio-&gt;uio_iov-&gt;iov_base, echomsg-&gt;msg,
-	    MIN(uio-&gt;uio_iov-&gt;iov_len, BUFFERSIZE - 1));
+
+	if (uio-&lt;uio_offset != 0 && (uio-&lt;uio_offset != echomsg-&lt;len))
+		return (EINVAL);
+
+	/*
+	 * This is new message, reset length
+	 */
+	if (uio-&lt;uio_offset == 0)
+		echomsg-&lt;len = 0;
+
+	/* NULL charcter should be overriden */
+	if (echomsg-&lt;len != 0)
+		echomsg-&lt;len--;
+
+	/* Copy the string in from user memory to kernel memory */
+	amt = MIN(uio-&lt;uio_resid, (BUFFERSIZE - echomsg-&lt;len));
+
+	error = uiomove(echomsg-&lt;msg + uio-&lt;uio_offset, amt, uio);
 
 	/* Now we need to null terminate, then record the length */
-	*(echomsg-&gt;msg + MIN(uio-&gt;uio_iov-&gt;iov_len, BUFFERSIZE - 1)) = 0;
-	echomsg-&gt;len = MIN(uio-&gt;uio_iov-&gt;iov_len, BUFFERSIZE);
+	echomsg-&lt;len += amt + 1;
+	uio-&lt;uio_offset += amt + 1;
+	echomsg-&lt;msg[echomsg-&lt;len - 1] = 0;
+	//echomsg-&lt;msg[BUFFERSIZE - 1] = '\n';
 
-	if (err != 0) {
+	if (error != 0)
 		uprintf("Write failed: bad address!\n");
-	}
-	count++;
-	return(err);
+	return (error);
 }
 
 DEV_MODULE(echo,echo_loader,NULL);</programlisting>
@@ -371,7 +384,9 @@ DEV_MODULE(echo,echo_loader,NULL);</programlisting>
 
     <screen>&prompt.root; <userinput>echo -n "Test Data" &gt; /dev/echo</userinput>
 &prompt.root; <userinput>cat /dev/echo</userinput>
-Test Data</screen>
+Opened device "echo" successfully.
+Test Data
+Closing device "echo."</screen>
 
     <para>Real hardware devices are described in the next chapter.</para>
 
