@@ -68,32 +68,18 @@
 				  <div
 				    style="width:640px; margin: 16px 16px 16px 32px; auto">
 
-				    <h1>Security Warning</h1>
+				    <h2>Security Notice</h2>
 
 				    <p align="justify">On Sunday
 				      11th of November, an intrusion
 				      was detected on two machines
 				      within the FreeBSD.org cluster.
-				      The affected machines were taken
-				      offline for analysis.
-				      Additionally, a large portion of
-				      the remaining infrastructure
-				      machines were also taken offline
-				      as a precaution.</p>
-
-				    <p align="justify">We have found
+				      We have found
 				      no evidence of any modifications
 				      that would put any end user at
-				      risk, and as a result we do not
-				      believe that any end users have
-				      been affected.  However, we do
-				      urge all users to read the <a
+				      risk.  Please read our <a
 					href="&base;/news/2012-compromise.html">
-					report</a> and decide on any
-				      required actions themselves.
-				      We will continue to update that
-				      page as further information
-				      becomes known.</p>
+					report</a> for more details.</p>
 				  </div>
 
 			  </div> <!-- FRONTFEATURECONTENT -->
