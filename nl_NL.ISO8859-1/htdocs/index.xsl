@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
 <!-- Vertaald door: Siebrand Mazeland / Rene Ladan
      %SOURCE%	en_US.ISO8859-1/htdocs/index.xsl
-     %SRCID%	40054
+     %SRCID%	40230
 -->
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/xml/xslt10-freebsd.dtd" [
@@ -63,27 +63,16 @@
 
 				<div
 				  style="width:640px; margin: 16px 16px 16px 32px; auto">
-				  <h1>Beveiligingswaarschuwing</h1>
+				  <h2>Beveiligingsmelding</h2>
 
 				  <p align="justify">Op zondag 11 september is
 				    er een inbraak gedetecteerd op twee machines
-				    binnen het FreeBSD.org-cluster.  De
-				    getroffen machines zijn offline gehaald ter
-				    analyze.  Ook is uit voorzorg een groot deel
-				    van de overgebleven machines in de
-				    infrastructuur offline gehaald.</p>
-
-				  <p align="justify">We hebben geen bewijs
-				    gevonden van wijzigingen die een risico
-				    vormen voor eindgebruikers, en derhalve
-				    zijn we niet van mening dat eindgebruikers
-				    getroffen zijn.  We raden echter alle
-				    gebruikers met spoed aan om het <a
+				    binnen het FreeBSD.org-cluster.  We hebben
+				    geen bewijs gevonden van wijzigingen die een
+ 				    risico vormen voor eindgebruikers.  Lees
+				    alstublieft het <a
 				      href="&enbase;/news/2012-compromise.html">
-				      verslag</a> te lezen en zelf te besluiten
-				    of er stappen moeten worden ondernomen.  We
-				    zullen deze pagina bijwerken als er verdere
-				    informatie beschikbaar komt.</p>
+				      verslag</a> voor meer details.</p>
 				</div>
 			</div> <!-- FRONTFEATURECONTENT -->
 		</div> <!-- FRONTFEATURELEFT -->
