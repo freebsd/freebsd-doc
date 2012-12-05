@@ -8,7 +8,7 @@
 /* Teach jslint the appropriate style rules. */
 /*jslint browser:true*/
 
-var enable_ga = false;
+var enable_ga = true;
 var allow_track = true;
 
 var h = document.location.host;
