@@ -27,6 +27,8 @@ if (enable_ga && allow_track && fbsdregex.test(h)) {
 	_gaq.push(['_setAccount', 'UA-22767463-1']);
 	_gaq.push(['_setDomainName', 'freebsd.org']);
 	_gaq.push(['_setAllowHash', false]);
+	_gaq.push (['_gat._anonymizeIp']);
+
 	/*
 	 * If we ever want to track sites other than FreeBSD.org,
 	 * uncomment the next line.
