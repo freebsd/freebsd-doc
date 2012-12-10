@@ -193,6 +193,14 @@
 			<div class="frontnewroundbox">
 			  <div class="frontnewtop"><div><b style="display: none">.</b></div></div>
 			    <div class="frontnewcontent">
+				<a href="http://www.FreeBSDFoundation.org/donate/">Donate to FreeBSD</a>
+			    </div> <!-- frontnewcontent -->
+			  <div class="frontnewbot"><div><b style="display: none">.</b></div></div>
+			</div> <!-- frontnewroundbox -->
+
+			<div class="frontnewroundbox">
+			  <div class="frontnewtop"><div><b style="display: none">.</b></div></div>
+			    <div class="frontnewcontent">
 			      <a href="&base;/projects/newbies.html">New to FreeBSD?</a>
 			    </div> <!-- frontnewcontent -->
 			  <div class="frontnewbot"><div><b style="display: none">.</b></div></div>
