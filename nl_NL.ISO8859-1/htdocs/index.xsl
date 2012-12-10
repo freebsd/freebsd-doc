@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
 <!-- Vertaald door: Siebrand Mazeland / Rene Ladan
      %SOURCE%	en_US.ISO8859-1/htdocs/index.xsl
-     %SRCID%	40230
+     %SRCID%	40335
 -->
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/xml/xslt10-freebsd.dtd" [
@@ -186,6 +186,14 @@
 				  </ul>
 			  </div> <!-- FRONTSHORTCUTSCONTENT -->
 			</div> <!-- FRONTSHORTCUTS -->
+
+			<div class="frontnewroundbox">
+			  <div class="frontnewtop"><div><b style="display: none">.</b></div></div>
+			    <div class="frontnewcontent">
+			      <a href="http://www.FreeBSDFoundation.org/donate/">Doneer aan &os;</a>
+			    </div> <!-- frontnewcontent -->
+			  <div class="frontnewbot"><div><b style="display: none">.</b></div></div>
+			</div> <!-- frontnewroundbox -->
 
 			<div class="frontnewroundbox">
 			  <div class="frontnewtop"><div><b style="display: none">.</b></div></div>
