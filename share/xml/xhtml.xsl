@@ -63,6 +63,8 @@
 		</div> <!-- HEADERLOGOLEFT -->
 
 		<div id="headerlogoright">
+		  &header2.donatebutton;
+
 		  &header2.searchnav.label;
 
 		  &header2.searchnav;
