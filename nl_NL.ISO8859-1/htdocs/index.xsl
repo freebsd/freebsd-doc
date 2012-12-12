@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
 <!-- Vertaald door: Siebrand Mazeland / Rene Ladan
      %SOURCE%	en_US.ISO8859-1/htdocs/index.xsl
-     %SRCID%	40335
+     %SRCID%	40361
 -->
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/xml/xslt10-freebsd.dtd" [
@@ -190,14 +190,6 @@
 			<div class="frontnewroundbox">
 			  <div class="frontnewtop"><div><b style="display: none">.</b></div></div>
 			    <div class="frontnewcontent">
-			      <a href="http://www.FreeBSDFoundation.org/donate/">Doneer aan &os;</a>
-			    </div> <!-- frontnewcontent -->
-			  <div class="frontnewbot"><div><b style="display: none">.</b></div></div>
-			</div> <!-- frontnewroundbox -->
-
-			<div class="frontnewroundbox">
-			  <div class="frontnewtop"><div><b style="display: none">.</b></div></div>
-			    <div class="frontnewcontent">
 			      <a href="&enbase;/projects/newbies.html">Nieuw bij &os;?</a>
 			    </div> <!-- frontnewcontent -->
 			  <div class="frontnewbot"><div><b style="display: none">.</b></div></div>
@@ -331,5 +323,15 @@
 	    </div> <!-- FRONTNEMSCONTAINER -->
 	  </div> <!-- FRONTMAIN -->
 	</div> <!-- FRONTCONTAINER -->
+  </xsl:template>
+
+  <xsl:template name="process.footer">
+	&copyright;
+
+	Het merk &os; is een geregistreerd handelsmerk van de &os; Foundation
+	en wordt gebruikt door The &os; Project met toestemming van <a
+	  href="http://www.freebsdfoundation.org/documents/Guidelines.shtml">The
+	  &os; Foundation</a>.
+	<a href="&base;/mailto.html" title="&header2.word.contact;">&header2.word.contact;</a>
   </xsl:template>
 </xsl:stylesheet>
