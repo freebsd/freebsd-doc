@@ -5,7 +5,7 @@
 ]>
 
 <!-- $FreeBSD$ -->
-<!-- Original revision: r40335 -->
+<!-- Original revision: r40361 -->
 
 <xsl:stylesheet version="1.0"
   xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
@@ -63,7 +63,7 @@
 			</div> <!-- TXTFRONTFEATURELINK -->
 
 			<div
-			  style="width:550px; margin: 16px 16px 16px 32px; auto">
+			  style="width:640px; margin: 16px 16px 16px 32px; auto">
 
 			  <h1>Security Notice</h1>
 
@@ -186,14 +186,6 @@
 
 		      <div class="frontnewroundbox">
 			<div class="frontnewtop"><div>&#160;</div>&#160;</div>
-			<div class="frontnewcontent">
-			  <a href="http://www.FreeBSDFoundation.org/donate/">FreeBSD への寄附</a>
-			</div> <!-- frontnewcontent -->
-			<div class="frontnewbot"><div><b style="display: none">.</b></div></div>
-		      </div> <!-- frontnewroundbox -->
-
-		      <div class="frontnewroundbox">
-			<div class="frontnewtop"><div><b style="display: none">.</b></div></div>
 			<div class="frontnewcontent">
 			  <a href="&base;/projects/newbies.html">FreeBSD が初めてという方は、こちらへどうぞ</a>
 			</div> <!-- frontnewcontent -->
@@ -331,5 +323,16 @@
 		  </div> <!-- FRONTNEMSCONTAINER -->
 		</div> <!-- FRONTMAIN -->
 	      </div> <!-- FRONTCONTAINER -->
+  </xsl:template>
+
+  <xsl:template name="process.footer">
+	&copyright;
+
+	The mark FreeBSD is a registered trademark of The FreeBSD
+	Foundation and is used by The FreeBSD Project with the
+	permission of <a
+	  href="http://www.freebsdfoundation.org/documents/Guidelines.shtml">The
+	FreeBSD Foundation</a>.
+	<a href="&base;/mailto.html" title="&header2.word.contact;">&header2.word.contact;</a>
   </xsl:template>
 </xsl:stylesheet>
