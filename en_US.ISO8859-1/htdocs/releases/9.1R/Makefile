@@ -9,7 +9,7 @@
 
 DOCS=	schedule.xml
 
-DATA=	docbook.css
+DATA=	docbook.css \
         hardware.html \
         readme.html \
         installation.html
