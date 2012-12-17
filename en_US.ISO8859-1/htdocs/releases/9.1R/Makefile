@@ -10,8 +10,8 @@
 DOCS=	schedule.xml
 
 DATA=	docbook.css \
-        hardware.html \
-        readme.html \
-        installation.html
+	hardware.html \
+	readme.html \
+	installation.html
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"
