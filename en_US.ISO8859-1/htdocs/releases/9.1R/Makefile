@@ -10,6 +10,7 @@
 DOCS=	schedule.xml
 
 DATA=	docbook.css \
+	errata.html \
 	hardware.html \
 	readme.html \
 	installation.html
