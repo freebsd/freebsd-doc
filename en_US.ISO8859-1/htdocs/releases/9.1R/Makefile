@@ -13,6 +13,7 @@ DATA=	docbook.css \
 	errata.html \
 	hardware.html \
 	readme.html \
+	relnotes-detailed.html \
 	installation.html
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"
