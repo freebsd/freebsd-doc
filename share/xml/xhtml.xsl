@@ -37,6 +37,7 @@
     <html xmlns="http://www.w3.org/1999/xhtml">
       <head>
 	<title><xsl:value-of select="$title" /></title>
+	<xsl:copy-of select="/xhtml:html/xhtml:head/xhtml:base" />
 	<meta http-equiv="Content-Type" content="text/html; charset=&xml.encoding;" />
 	<meta name="MSSmartTagsPreventParsing" content="TRUE" />
 	<xsl:copy-of select="/xhtml:html/xhtml:head/xhtml:meta"/>
