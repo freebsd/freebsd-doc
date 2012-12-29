@@ -65,23 +65,6 @@
 				  title="Learn More">Learn More</a>
 				  </div> <!-- TXTFRONTFEATURELINK -->
 
-				  <div
-				    style="width:640px; margin: 16px 16px 16px 32px; auto">
-
-				    <h2>Security Notice</h2>
-
-				    <p align="justify">On Sunday
-				      11th of November, an intrusion
-				      was detected on two machines
-				      within the FreeBSD.org cluster.
-				      We have found
-				      no evidence of any modifications
-				      that would put any end user at
-				      risk.  Please read our <a
-					href="&base;/news/2012-compromise.html">
-					report</a> for more details.</p>
-				  </div>
-
 			  </div> <!-- FRONTFEATURECONTENT -->
 		  </div> <!-- FRONTFEATURELEFT -->
 
