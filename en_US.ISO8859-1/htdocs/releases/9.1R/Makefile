@@ -7,7 +7,8 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS=	relnotes.xml \
+DOCS=	announce.xml \
+	relnotes.xml \
 	schedule.xml
 
 DATA=	docbook.css \
