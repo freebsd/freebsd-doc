@@ -18,7 +18,7 @@
 
   <xsl:variable name="title">&title;</xsl:variable>
 
-  <xsl:key name="indexLetter" match="term" use="translate(substring(text, 1, 1), $lowercase, $uppercase)"/>
+  <xsl:key name="indexLetter" match="term" use="translate(substring(text, 1, 1), 'aábcdeéfghiíjklmnoóöõpqrstuúüûvwxyz', 'AÁBCDEÉFGHIÍJKLMNOÓÖÕPQRSTUÚÜÛVWXYZ')"/>
 
   <xsl:template name="process.contentwrap">
     <xsl:call-template name="html-sitemap"/>
