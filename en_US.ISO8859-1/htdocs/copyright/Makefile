@@ -16,11 +16,6 @@ DOCS+=	trademarks.xml
 
 INDEXLINK= copyright.html
 
-DATA+= COPYING COPYING.LIB LEGAL
-
-CLEANFILES+= LEGAL
-
-LEGAL:
-	${FETCH} http://svn.freebsd.org/ports/head/LEGAL
+DATA+= COPYING COPYING.LIB
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"
