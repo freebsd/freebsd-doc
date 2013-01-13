@@ -12,6 +12,7 @@ SUBDIR+= explaining-bsd
 SUBDIR+= laptop
 SUBDIR+= linux-comparison
 SUBDIR+= new-users
+SUBDIR+= port-mentor-guidelines
 SUBDIR+= solid-state
 
 # ROOT_SYMLINKS+= new-users
