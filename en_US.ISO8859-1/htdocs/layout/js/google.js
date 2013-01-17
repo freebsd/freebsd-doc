@@ -16,7 +16,7 @@ var h = document.location.host;
  * Check that the hosting domain is actually a FreeBSD.org domain, so
  * we don't accidentally obtain data from mirrors.
  */
-var fbsdregex = /(docs|security|svnweb|wiki|www)\.freebsd\.org/i;
+var fbsdregex = /((docs|security|svnweb|wiki|www)\.freebsd\.org|google\.com)/i;
 
 if (window.navigator.doNotTrack === "yes") {
 	allow_track = false;
@@ -45,6 +45,7 @@ if (enable_ga && allow_track && fbsdregex.test(h)) {
 		ga.src = 'https://ssl.google-analytics.com/ga.js';
 		var s = document.getElementsByTagName('script')[0];
 		s.parentNode.insertBefore(ga, s);
+
 	})();
 
 }
