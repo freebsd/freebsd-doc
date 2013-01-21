@@ -723,7 +723,7 @@ ${DOC}.${_curformat}:
 #
 
 lint validate:
-	@${XMLLINT} --nonet --noout --noent --valid ${MASTERDOC}
+	${XMLLINT} --catalogs --nonet --noout --noent --valid ${MASTERDOC}
 
 # ------------------------------------------------------------------------
 #

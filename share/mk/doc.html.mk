@@ -180,8 +180,7 @@ ${DOC}.${_curformat}:
 #
 
 lint validate:
-	${NSGMLS} -s -c ${HTMLCATALOG} ${MASTERDOC}
-
+	${XMLLINT} --catalogs --nonet --noout --noent --valid ${MASTERDOC}
 
 # ------------------------------------------------------------------------
 #
