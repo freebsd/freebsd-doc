@@ -8,7 +8,11 @@
                 exclude-result-prefixes="#default">
 
   <!-- Pull in the base stylesheets -->
-  <xsl:import href="/usr/local/share/xsl/docbook/html/docbook.xsl"/>
+  <!-- XXX hardcoded path.  Very bad.  Should be turned in to a paramater -->
+  <xsl:import href="/usr/local/share/xml/docbook/xsl/modular/html/docbook.xsl"/>
+
+  <!-- Include the common customizations -->
+  <xsl:include href="freebsd-common.xsl"/>
 
   <!-- Redefine variables, and replace templates as necessary here -->
   <xsl:param name="freebsd.output.html" select="'0'"/>
@@ -31,5 +35,8 @@
     contacting &lt;<a href="mailto:questions@FreeBSD.org">questions@FreeBSD.org</a>&gt;.<br/>
     For questions about this documentation, e-mail &lt;<a href="mailto:doc@FreeBSD.org">doc@FreeBSD.org</a>&gt;.</small></p>
   </xsl:template>
-</xsl:stylesheet>
 
+  <xsl:template match="hostid|username|groupname|devicename|maketarget|makevar">
+    <xsl:call-template name="inline.monoseq"/>
+  </xsl:template>
+</xsl:stylesheet>

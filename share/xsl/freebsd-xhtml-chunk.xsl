@@ -8,9 +8,9 @@
                 exclude-result-prefixes="#default">
 
   <!-- Pull in the base stylesheets -->
-  <xsl:import href="freebsd.xsl"/>
+  <xsl:import href="/usr/local/share/xsl/docbook/xhtml/chunk.xsl"/>
 
-  <!-- Redefine variables, and replace templates as necessary here -->
-
+  <!-- Pull in common XHTML customizations -->
+  <xsl:include href="freebsd-xhtml-common.xsl"/>
 </xsl:stylesheet>
 
