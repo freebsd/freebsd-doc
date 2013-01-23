@@ -11,6 +11,9 @@
   <!-- Pull in the base stylesheets -->
   <xsl:import href="/usr/local/share/xsl/docbook/fo/docbook.xsl"/>
 
+  <!-- Include the common customizations -->
+  <xsl:include href="freebsd-common.xsl"/>
+
   <!-- Redefine variables, and replace templates as necessary here -->
 
   <xsl:param name="freebsd.output.print"
@@ -21,10 +24,6 @@
              select="'0'"/>
   <xsl:param name="freebsd.output.print.twoside"
              select="'0'"/>
-
-  <!-- Include the common stylesheets -->
-
-  <xsl:include href="freebsd-common.xsl"/>
 
   <!-- FO specific customisation goes here -->
 
