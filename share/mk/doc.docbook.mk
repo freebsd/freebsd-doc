@@ -149,7 +149,7 @@ DSSSLCATALOG=	${PREFIX}/share/sgml/docbook/dsssl/modular/catalog
 
 COLLATEINDEX=	${PREFIX}/share/sgml/docbook/dsssl/modular/bin/collateindex.pl
 
-XSLTPROCFLAGS?=	--nonet
+XSLTPROCFLAGS?=	--nonet --xinclude
 XSLXHTML?=	${DOC_PREFIX}/share/xsl/freebsd-xhtml.xsl
 XSLXHTMLCHUNK?=	${DOC_PREFIX}/share/xsl/freebsd-xhtml-chunk.xsl
 XSLEPUB?=	${DOC_PREFIX}/share/xsl/freebsd-epub.xsl
