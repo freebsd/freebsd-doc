@@ -152,6 +152,7 @@ COLLATEINDEX=	${PREFIX}/share/sgml/docbook/dsssl/modular/bin/collateindex.pl
 XSLTPROCFLAGS?=	--nonet
 XSLXHTML?=	${DOC_PREFIX}/share/xsl/freebsd-xhtml.xsl
 XSLXHTMLCHUNK?=	${DOC_PREFIX}/share/xsl/freebsd-xhtml-chunk.xsl
+XSLEPUB?=	${DOC_PREFIX}/share/xsl/freebsd-epub.xsl
 XSLFO?=		${DOC_PREFIX}/share/xsl/freebsd-fo.xsl
 INDEXREPORTSCRIPT= ${DOC_PREFIX}/share/misc/indexreport.pl
 
@@ -349,6 +350,10 @@ CLEANFILES+= PLIST.${_curformat}
 CLEANFILES+= $$([ -f HTML.manifest ] && ${XARGS} < HTML.manifest) \
 		HTML.manifest ln*.html
 
+.elif ${_cf} == "epub"
+CLEANFILES+= ${DOC}.epub mimetype
+CLEANDIRS+= META-INF OEBPS
+
 .elif ${_cf} == "html.tar"
 CLEANFILES+= ${DOC}.html
 
@@ -413,7 +418,7 @@ CLEANFILES+= ${LOCAL_CSS_SHEET}
 _cf=${_curformat}
 .for _curcomp in ${INSTALL_COMPRESSED}
 
-.if ${_cf} != "html-split" && ${_cf} != "html"
+.if ${_cf} != "html-split" && ${_cf} != "html" && ${_cf} != "epub"
 _curinst+= install-${_curformat}.${_curcomp}
 _docs+= ${DOC}.${_curformat}.${_curcomp}
 CLEANFILES+= ${DOC}.${_curformat}.${_curcomp}
@@ -502,6 +507,17 @@ ${DOC}.html.tar: ${DOC}.html ${LOCAL_IMAGES_LIB} \
 .for _curimage in ${IMAGES_PNG:M*share*}
 	${TAR} rf ${.TARGET} -C ${IMAGES_EN_DIR}/${DOC}s/${.CURDIR:T} ${_curimage:S|${IMAGES_EN_DIR}/${DOC}s/${.CURDIR:T}/||}
 .endfor
+
+# EPUB -------------------------------------------------------------
+
+${DOC}.epub: ${DOC}.xml ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} \
+	${CSS_SHEET}
+	${XSLTPROC} ${XSLTPROCOPTS} ${XSLEPUB} ${DOC}.xml
+	${ECHO} "application/epub+zip" > mimetype
+	${CP} ${CSS_SHEET} OEBPS/
+	zip -0Xq  ${DOC}.epub mimetype
+	zip -Xr9D ${DOC}.epub OEBPS META-INF
+	
 
 # TXT --------------------------------------------------------------------
 
