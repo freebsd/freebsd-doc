@@ -7,10 +7,6 @@
                 xmlns="http://www.w3.org/TR/xhtml1/transitional"
                 exclude-result-prefixes="#default">
 
-  <!-- Pull in the base stylesheets -->
-  <!-- XXX hardcoded path.  Very bad.  Should be turned in to a paramater -->
-  <xsl:import href="/usr/local/share/xml/docbook/xsl/modular/html/docbook.xsl"/>
-
   <!-- Include the common customizations -->
   <xsl:include href="freebsd-common.xsl"/>
 
@@ -22,7 +18,6 @@
 
   <xsl:param name="html.stylesheet" select="'docbook.css'"/>
   <xsl:param name="user.id.as.filename" select="'1'"/>
-  <xsl:param name="generate.legalnotice.link" select="'1'"/>
   <xsl:param name="link.mailto.url" select="'doc@FreeBSD.org'"/>
   <xsl:param name="callout.graphics.path" select="'./imagelib/callouts/'"/>
 
