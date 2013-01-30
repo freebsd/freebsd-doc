@@ -40,13 +40,8 @@
 #			used to set additional variables, such as
 #			"%generate-article-toc%".
 #
-#	TIDYFLAGS	Additional flags to pass to Tidy.  Typically
-#			used to set "-raw" flag to handle 8bit characters.
-#
 #	EXTRA_CATALOGS	Additional catalog files that should be used by
 #			any SGML processing applications.
-#
-#	NO_TIDY		If you do not want to use tidy, set this to "YES".
 #
 #       GEN_INDEX       If this document has an index (HAS_INDEX) and this
 #                       variable is defined, then index.xml will be added 
@@ -118,9 +113,6 @@ MASTERDOC?=	${.CURDIR}/${DOC}.xml
 # List of supported SP_ENCODINGs
 SP_ENCODING_LIST?=	ISO-8859-2 KOI8-R
 
-# Which stylesheet type to use.  'dsssl' or 'xsl'
-STYLESHEET_TYPE?=	dsssl
-
 .if defined(SPELLCHECK)
 DSLHTML?= ${DOC_PREFIX}/share/xml/spellcheck.dsl
 .endif
@@ -147,25 +139,19 @@ JADE_CMD=	${SETENV} ${JADE_ENV} ${JADE}
 DSLHTML?=	${DOC_PREFIX}/share/xml/default.dsl
 DSLPRINT?=	${DOC_PREFIX}/share/xml/default.dsl
 DSLPGP?=	${DOC_PREFIX}/share/xml/pgp.dsl
+
 FREEBSDCATALOG=	${DOC_PREFIX}/share/xml/catalog
 LANGUAGECATALOG=${DOC_PREFIX}/${LANGCODE}/share/xml/catalog
-
 ISO8879CATALOG=	${PREFIX}/share/sgml/iso8879/catalog
-
-.if ${STYLESHEET_TYPE} == "dsssl"
-DOCBOOKCATALOG=	${PREFIX}/share/sgml/docbook/catalog
-.elif ${STYLESHEET_TYPE} == "xsl"
 DOCBOOKCATALOG= ${PREFIX}/share/xml/docbook/catalog
-.endif
-
 CATALOG_PORTS_SGML=	${PREFIX}/share/sgml/catalog.ports
-
 DSSSLCATALOG=	${PREFIX}/share/sgml/docbook/dsssl/modular/catalog
+
 COLLATEINDEX=	${PREFIX}/share/sgml/docbook/dsssl/modular/bin/collateindex.pl
 
 XSLTPROCFLAGS?=	--nonet
-XSLHTML?=	${DOC_PREFIX}/share/xsl/freebsd-html.xsl
-XSLHTMLCHUNK?=	${DOC_PREFIX}/share/xsl/freebsd-html-chunk.xsl
+XSLXHTML?=	${DOC_PREFIX}/share/xsl/freebsd-xhtml.xsl
+XSLXHTMLCHUNK?=	${DOC_PREFIX}/share/xsl/freebsd-xhtml-chunk.xsl
 XSLFO?=		${DOC_PREFIX}/share/xsl/freebsd-fo.xsl
 INDEXREPORTSCRIPT= ${DOC_PREFIX}/share/misc/indexreport.pl
 
@@ -253,12 +239,6 @@ TOUCH?=		/usr/bin/touch
 XARGS?=		/usr/bin/xargs
 
 GROFF?=		groff
-TIDY_VER!=	${TIDY} -v 2>&1
-.if ${TIDY_VER} == "HTML Tidy for FreeBSD released on 7 December 2008"
-TIDYOPTS?=	-wrap 90 -m -raw --preserve-entities yes -f /dev/null -asxml ${TIDYFLAGS}
-.else
-TIDYOPTS?=	-wrap 90 -m -raw -preserve -f /dev/null -asxml ${TIDYFLAGS}
-.endif
 HTML2TXT?=	${PREFIX}/bin/links
 HTML2TXTOPTS?=	-dump -width 72 ${HTML2TXTFLAGS}
 HTML2PDB?=	${PREFIX}/bin/iSiloBSD
@@ -407,10 +387,6 @@ CLEANFILES+= ${.CURDIR:T}.pdb
 .endif
 .endif
 
-.if (${STYLESHEET_TYPE} == "xsl")
-CLEANFILES+= ${DOC}.xml .sxerr
-.endif
-
 .if (${LOCAL_CSS_SHEET} != ${CSS_SHEET}) && \
     (${_cf} == "html-split" || ${_cf} == "html-split.tar" || \
      ${_cf} == "html" || ${_cf} == "html.tar" || ${_cf} == "txt")
@@ -420,7 +396,6 @@ CLEANFILES+= ${LOCAL_CSS_SHEET}
 .if !defined(WITH_INLINE_LEGALNOTICE) || empty(WITH_INLINE_LEGALNOTICE) && \
     (${_cf} == "html-split" || ${_cf} == "html-split.tar" || \
      ${_cf} == "html" || ${_cf} == "html.tar" || ${_cf} == "txt")
-CLEANFILES+= LEGALNOTICE.html trademarks.html
 .endif
 
 .endfor		# _curformat in ${FORMATS} #
@@ -500,62 +475,17 @@ NO_RTF=		yes
 .endif
 .endfor
 
-# HTML-SPLIT -------------------------------------------------------------
+# XHTML -------------------------------------------------------------
 
-.if ${STYLESHEET_TYPE} == "dsssl"
-index.html HTML.manifest: ${SRCS} ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} \
-			  ${LOCAL_IMAGES_TXT} ${HTML_SPLIT_INDEX} ${LOCAL_CSS_SHEET}
-	${GEN_INDEX_SGML_CMD}
-	${JADE_CMD} -V html-manifest ${HTMLOPTS} -ioutput.html.images \
-		${JADEOPTS} -t sgml ${XMLDECL} ${MASTERDOC}
-.elif ${STYLESHEET_TYPE} == "xsl"
 index.html: ${DOC}.xml ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} \
 	${HTML_SPLIT_INDEX} ${LOCAL_CSS_SHEET}
 	${GEN_INDEX_SGML_CMD}
-	${XSLTPROC} ${XSLTPROCOPTS} --param freebsd.output.html.images "'1'" ${XSLHTMLCHUNK} \
-		${DOC}.xml
-.endif
-.if !defined(NO_TIDY)
-	${REINPLACE_TABS_CMD} $$(${XARGS} < HTML.manifest)
-	-${TIDY} ${TIDYOPTS} $$(${XARGS} < HTML.manifest)
-.endif
+	${XSLTPROC} ${XSLTPROCOPTS} ${XSLXHTMLCHUNK} ${DOC}.xml
 
-# HTML -------------------------------------------------------------------
-
-.if ${STYLESHEET_TYPE} == "dsssl"
-${DOC}.html: ${SRCS} ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} \
-	     ${LOCAL_IMAGES_TXT} ${HTML_INDEX} ${LOCAL_CSS_SHEET}
-	${GEN_INDEX_SGML_CMD}
-	${JADE_CMD} -V nochunks ${HTMLOPTS} -ioutput.html.images \
-		${JADEOPTS} -t sgml ${XMLDECL} ${MASTERDOC} > ${.TARGET} || \
-		(${RM} -f ${.TARGET} && false)
-.elif ${STYLESHEET_TYPE} == "xsl"
 ${DOC}.html: ${DOC}.xml ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} \
 	${LOCAL_CSS_SHEET}     
 	${GEN_INDEX_SGML_CMD}
-	${XSLTPROC} ${XSLTPROCOPTS} --param freebsd.output.html.images "'1'" ${XSLHTML} \
-		${DOC}.xml > ${.TARGET}
-.endif
-.if !defined(NO_TIDY)
-	${REINPLACE_TABS_CMD} ${.TARGET}
-	-${TIDY} ${TIDYOPTS} ${.TARGET}
-.endif
-
-# HTML-TEXT --------------------------------------------------------------
-
-# Special target to produce HTML with no images in it.
-.if ${STYLESHEET_TYPE} == "dsssl"
-${DOC}.html-text: ${SRCS} ${HTML_INDEX} ${LOCAL_IMAGES_TXT}
-	${GEN_INDEX_SGML_CMD}
-	${JADE_CMD} -V nochunks ${HTMLTXTOPTS} \
-		${JADEOPTS} -t sgml ${XMLDECL} ${MASTERDOC} > ${.TARGET} || \
-		(${RM} -f ${.TARGET} && false)
-.elif ${STYLESHEET_TYPE} == "xsl"
-${DOC}.html-text: ${DOC}.xml ${HTML_INDEX}
-	${GEN_INDEX_SGML_CMD}
-	${XSLTPROC} ${XSLTPROCOPTS} --param freebsd.output.html.images "'0'" ${XSLHTML} \
-		${DOC}.xml > ${.TARGET}
-.endif
+	${XSLTPROC} ${XSLTPROCOPTS} ${XSLXHTML} ${DOC}.xml > ${.TARGET}
 
 ${DOC}.html-split.tar: HTML.manifest ${LOCAL_IMAGES_LIB} \
 		       ${LOCAL_IMAGES_PNG} ${LOCAL_CSS_SHEET}
@@ -577,7 +507,7 @@ ${DOC}.html.tar: ${DOC}.html ${LOCAL_IMAGES_LIB} \
 
 .if !target(${DOC}.txt)
 .if !defined(NO_PLAINTEXT)
-${DOC}.txt: ${DOC}.html-text
+${DOC}.txt: ${DOC}.html
 	${HTML2TXT} ${HTML2TXTOPTS} ${.ALLSRC} > ${.TARGET}
 .else
 ${DOC}.txt:
