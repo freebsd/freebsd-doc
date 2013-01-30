@@ -13,4 +13,3 @@
   <!-- Pull in common XHTML customizations -->
   <xsl:include href="freebsd-xhtml-common.xsl"/>
 </xsl:stylesheet>
-
