@@ -454,7 +454,7 @@ GEN_INDEX_SGML_CMD?=	@${ECHO} "Index is disabled or no index to generate."
 
 .MAIN: all
 
-all: ${_docs}
+all: ${SRCS} ${_docs}
 
 # put languages which have a problem on rendering printable formats
 # by using TeX to NO_TEX_LANG.
@@ -668,7 +668,7 @@ ${DOC}.${_curformat}:
 # having to convert it to any other formats
 #
 
-lint validate:
+lint validate: ${SRCS}
 	${XMLLINT} --catalogs --nonet --noout --noent --valid ${MASTERDOC}
 
 # ------------------------------------------------------------------------
