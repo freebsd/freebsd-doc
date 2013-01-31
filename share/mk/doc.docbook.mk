@@ -168,7 +168,7 @@ JADEOPTS=	${JADEFLAGS} ${SGMLFLAGS} ${CATALOGS}
 XSLTPROCOPTS=	${XSLTPROCFLAGS}
 
 KNOWN_FORMATS=	html html.tar html-split html-split.tar \
-		txt rtf ps pdf tex dvi tar pdb
+		epub txt rtf ps pdf tex dvi tar pdb
 
 CSS_SHEET?=	${DOC_PREFIX}/share/misc/docbook.css
 PDFTEX_DEF?=	${DOC_PREFIX}/share/web2c/pdftex.def
