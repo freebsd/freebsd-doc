@@ -326,16 +326,5 @@ SRCS+=		mirrors.lastmod.inc \
 		mirrors.xml.cvsup.index.inc \
 		eresources.xml.www.inc \
 		eresources.xml.www.index.inc
-CLEANFILES+=	mirrors.lastmod.inc \
-		mirrors.xml.ftp.inc \
-		mirrors.xml.ftp.index.inc \
-		mirrors.xml.cvsup.inc \
-		mirrors.xml.cvsup.index.inc \
-		eresources.xml.www.inc \
-		eresources.xml.www.index.inc
-
-lint: mirrors.lastmod.inc mirrors.xml.ftp.inc mirrors.xml.ftp.index.inc \
-	mirrors.xml.cvsup.inc mirrors.xml.cvsup.index.inc \
-	eresources.xml.www.inc eresources.xml.www.index.inc
 
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"
