@@ -12,6 +12,8 @@
     <xsl:call-template name="inline.monoseq"/>
   </xsl:template>
 
+  <xsl:template match="pubdate"/>
+
   <xsl:param name="toc.section.depth" select="1"/>
   <xsl:param name="section.autolabel" select="1"/>
   <xsl:param name="section.label.includes.component.label" select="1"/>
