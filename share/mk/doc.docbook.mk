@@ -113,6 +113,9 @@ MASTERDOC?=	${.CURDIR}/${DOC}.xml
 # List of supported SP_ENCODINGs
 SP_ENCODING_LIST?=	ISO-8859-2 KOI8-R
 
+# Either jade or fop
+PDFENGINE?=	jade
+
 .if defined(SPELLCHECK)
 DSLHTML?= ${DOC_PREFIX}/share/xml/spellcheck.dsl
 .endif
@@ -135,6 +138,9 @@ SX?=		${PREFIX}/bin/osx
 JADE_ENV+=	SP_ENCODING=${SP_ENCODING}
 .endif
 JADE_CMD=	${SETENV} ${JADE_ENV} ${JADE}
+
+FOP?=		${PREFIX}/bin/fop
+FOPOPTS?=
 
 DSLHTML?=	${DOC_PREFIX}/share/xml/default.dsl
 DSLPRINT?=	${DOC_PREFIX}/share/xml/default.dsl
@@ -370,14 +376,15 @@ CLEANFILES+= ${DOC}.rtf-nopng
 CLEANFILES+= ${DOC}.aux ${DOC}.log
 
 .elif ${_cf} == "ps"
-CLEANFILES+= ${DOC}.aux ${DOC}.dvi ${DOC}.log ${DOC}.out ${DOC}.tex-ps ${DOC}.tex ${DOC}.tex-tmp
+CLEANFILES+= ${DOC}.aux ${DOC}.dvi ${DOC}.log ${DOC}.out ${DOC}.tex-ps \
+	${DOC}.tex ${DOC}.tex-tmp ${DOC}.fo
 .for _curimage in ${LOCAL_IMAGES_EPS:M*share*}
 CLEANFILES+= ${_curimage:T} ${_curimage:H:T}/${_curimage:T}
 .endfor
 
 .elif ${_cf} == "pdf"
 CLEANFILES+= ${DOC}.aux ${DOC}.dvi ${DOC}.log ${DOC}.out ${DOC}.tex-pdf ${DOC}.tex-pdf-tmp \
-		${DOC}.tex
+		${DOC}.tex ${DOC}.fo
 .for _curimage in ${IMAGES_PDF:M*share*}
 CLEANFILES+= ${_curimage:T} ${_curimage:H:T}/${_curimage:T}
 .endfor
@@ -564,6 +571,7 @@ ${DOC}.rtf:
 
 # PS/PDF -----------------------------------------------------------------
 
+.if ${PDFENGINE} == "jade"
 .if !defined(NO_TEX)
 #
 # This sucks, but there's no way round it.  The PS and PDF formats need
@@ -641,6 +649,19 @@ ${DOC}.pdf:
 ${DOC}.tex-pdf:
 	${TOUCH} ${.TARGET}
 .endif
+.endif
+
+.elif ${PDFENGINE} == "fop"
+${DOC}.fo: ${DOC}.xml ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG}
+	${GEN_INDEX_SGML_CMD}
+	${XSLTPROC} ${XSLTPROCOPTS} ${XSLFO} ${DOC}.xml > ${.TARGET}
+
+${DOC}.pdf: ${DOC}.fo ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG}
+	${FOP} ${FOPOPTS} ${DOC}.fo ${.TARGET}
+
+${DOC}.ps: ${DOC}.fo ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG}
+	${FOP} ${FOPOPTS} ${DOC}.fo ${.TARGET}
+	
 .endif
 
 ${DOC}.tar: ${SRCS} ${LOCAL_IMAGES} ${LOCAL_CSS_SHEET}
