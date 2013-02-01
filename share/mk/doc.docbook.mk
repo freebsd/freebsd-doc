@@ -114,7 +114,7 @@ MASTERDOC?=	${.CURDIR}/${DOC}.xml
 SP_ENCODING_LIST?=	ISO-8859-2 KOI8-R
 
 # Either jade or fop
-PDFENGINE?=	jade
+RENDERENGINE?=	jade
 
 .if defined(SPELLCHECK)
 DSLHTML?= ${DOC_PREFIX}/share/xml/spellcheck.dsl
@@ -336,6 +336,8 @@ LOCAL_CSS_SHEET= ${.OBJDIR}/${CSS_SHEET:T}
 LOCAL_CSS_SHEET= ${CSS_SHEET:T}
 .endif
 
+CLEANFILES+= ${DOC}.parsed.xml
+
 .for _curformat in ${FORMATS}
 _cf=${_curformat}
 
@@ -375,14 +377,14 @@ CLEANFILES+= ${DOC}.aux ${DOC}.log
 
 .elif ${_cf} == "ps"
 CLEANFILES+= ${DOC}.aux ${DOC}.dvi ${DOC}.log ${DOC}.out ${DOC}.tex-ps \
-	${DOC}.tex ${DOC}.tex-tmp ${DOC}.fo ${DOC}.parsed.xml
+	${DOC}.tex ${DOC}.tex-tmp ${DOC}.fo
 .for _curimage in ${LOCAL_IMAGES_EPS:M*share*}
 CLEANFILES+= ${_curimage:T} ${_curimage:H:T}/${_curimage:T}
 .endfor
 
 .elif ${_cf} == "pdf"
 CLEANFILES+= ${DOC}.aux ${DOC}.dvi ${DOC}.log ${DOC}.out ${DOC}.tex-pdf ${DOC}.tex-pdf-tmp \
-		${DOC}.tex ${DOC}.fo ${DOC}.parsed.xml
+		${DOC}.tex ${DOC}.fo
 .for _curimage in ${IMAGES_PDF:M*share*}
 CLEANFILES+= ${_curimage:T} ${_curimage:H:T}/${_curimage:T}
 .endfor
@@ -485,17 +487,22 @@ NO_RTF=		yes
 .endif
 .endfor
 
+# Parsed XML  -------------------------------------------------------
+
+${DOC}.parsed.xml: ${SRCS}
+	${XMLLINT} --nonet --noent --valid --dropdtd ${MASTERDOC} > ${.TARGET}
+
 # XHTML -------------------------------------------------------------
 
-index.html: ${DOC}.xml ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} \
+index.html: ${DOC}.parsed.xml ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} \
 	${HTML_SPLIT_INDEX} ${LOCAL_CSS_SHEET}
 	${GEN_INDEX_SGML_CMD}
-	${XSLTPROC} ${XSLTPROCOPTS} ${XSLXHTMLCHUNK} ${DOC}.xml
+	${XSLTPROC} ${XSLTPROCOPTS} ${XSLXHTMLCHUNK} ${DOC}.parsed.xml
 
-${DOC}.html: ${DOC}.xml ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} \
+${DOC}.html: ${DOC}.parsed.xml ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} \
 	${LOCAL_CSS_SHEET}     
 	${GEN_INDEX_SGML_CMD}
-	${XSLTPROC} ${XSLTPROCOPTS} ${XSLXHTML} ${DOC}.xml > ${.TARGET}
+	${XSLTPROC} ${XSLTPROCOPTS} ${XSLXHTML} ${DOC}.parsed.xml > ${.TARGET}
 
 ${DOC}.html-split.tar: HTML.manifest ${LOCAL_IMAGES_LIB} \
 		       ${LOCAL_IMAGES_PNG} ${LOCAL_CSS_SHEET}
@@ -515,9 +522,9 @@ ${DOC}.html.tar: ${DOC}.html ${LOCAL_IMAGES_LIB} \
 
 # EPUB -------------------------------------------------------------
 
-${DOC}.epub: ${DOC}.xml ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} \
+${DOC}.epub: ${DOC}.parsed.xml ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} \
 	${CSS_SHEET}
-	${XSLTPROC} ${XSLTPROCOPTS} ${XSLEPUB} ${DOC}.xml
+	${XSLTPROC} ${XSLTPROCOPTS} ${XSLEPUB} ${DOC}.parsed.xml
 	${ECHO} "application/epub+zip" > mimetype
 	${CP} ${CSS_SHEET} OEBPS/
 	zip -0Xq  ${DOC}.epub mimetype
@@ -555,11 +562,12 @@ ${.CURDIR:T}.pdb.${_curcomp}: ${DOC}.pdb.${_curcomp}
 
 .if !target(${DOC}.rtf)
 .if !defined(NO_RTF)
-${DOC}.rtf: ${SRCS} ${LOCAL_IMAGES_EPS} ${PRINT_INDEX} \
+${DOC}.rtf: ${DOC}.parsed.xml ${LOCAL_IMAGES_EPS} ${PRINT_INDEX} \
 		${LOCAL_IMAGES_TXT} ${LOCAL_IMAGES_PNG}
 	${GEN_INDEX_SGML_CMD}
 	${JADE_CMD} -V rtf-backend ${PRINTOPTS} -ioutput.rtf.images \
-		${JADEOPTS} -t rtf -o ${.TARGET}-nopng ${XMLDECL} ${MASTERDOC}
+		${JADEOPTS} -t rtf -o ${.TARGET}-nopng ${XMLDECL} \
+		${DOC}.parsed.xml
 	${FIXRTF} ${FIXRTFOPTS} < ${.TARGET}-nopng > ${.TARGET}
 .else
 ${DOC}.rtf:
@@ -569,11 +577,7 @@ ${DOC}.rtf:
 
 # PS/PDF -----------------------------------------------------------------
 
-.if ${PDFENGINE} == "jade"
-
-${DOC}.parsed.xml: ${SRCS}
-	${XMLLINT} --nonet --noent --valid --dropdtd ${MASTERDOC} > ${.TARGET}
-
+.if ${RENDERENGINE} == "jade"
 .if !defined(NO_TEX)
 #
 # This sucks, but there's no way round it.  The PS and PDF formats need
@@ -654,17 +658,20 @@ ${DOC}.tex-pdf:
 .endif
 .endif
 
-.elif ${PDFENGINE} == "fop"
+.elif ${RENDERENGINE} == "fop"
 ${DOC}.fo: ${DOC}.xml ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG}
 	${GEN_INDEX_SGML_CMD}
-	${XSLTPROC} ${XSLTPROCOPTS} ${XSLFO} ${DOC}.xml > ${.TARGET}
+	${XSLTPROC} ${XSLTPROCOPTS} ${XSLFO} ${DOC}.parsed.xml > ${.TARGET}
 
 ${DOC}.pdf: ${DOC}.fo ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG}
 	${FOP} ${FOPOPTS} ${DOC}.fo ${.TARGET}
 
 ${DOC}.ps: ${DOC}.fo ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG}
 	${FOP} ${FOPOPTS} ${DOC}.fo ${.TARGET}
-	
+
+${DOC}.rtf: ${DOC}.fo ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG}
+	${FOP} ${FOPOPTS} ${DOC}.fo ${.TARGET}
+
 .endif
 
 ${DOC}.tar: ${SRCS} ${LOCAL_IMAGES} ${LOCAL_CSS_SHEET}
@@ -708,15 +715,15 @@ lint validate: ${SRCS}
 #
 
 
-${HTML_INDEX}: ${SRCS} ${LOCAL_IMAGES_TXT}
+${HTML_INDEX}: ${DOC}.parsed.xml ${LOCAL_IMAGES_TXT}
 	${INIT_INDEX_SGML_CMD}
 	${JADE_CMD} -V html-index -V nochunks ${HTMLOPTS} -ioutput.html.images \
-		${JADEOPTS} -t sgml ${XMLDECL} ${MASTERDOC} > /dev/null
+		${JADEOPTS} -t sgml ${XMLDECL} ${DOC}.parsed.xml > /dev/null
 
 ${HTML_SPLIT_INDEX}: ${SRCS} ${LOCAL_IMAGES_TXT}
 	${INIT_INDEX_SGML_CMD}
 	${JADE_CMD} -V html-index ${HTMLOPTS} -ioutput.html.images \
-		${JADEOPTS} -t sgml ${XMLDECL} ${MASTERDOC} > /dev/null
+		${JADEOPTS} -t sgml ${XMLDECL} ${DOC}.parsed.xml > /dev/null
 
 .if !target(${PRINT_INDEX})
 ${PRINT_INDEX}: ${HTML_INDEX}
