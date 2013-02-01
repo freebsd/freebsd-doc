@@ -170,7 +170,7 @@ CATALOGS+=	-c ${c}
 .endif
 .endfor
 SGMLFLAGS+=	-D ${IMAGES_EN_DIR}/${DOC}s/${.CURDIR:T} -D ${CANONICALOBJDIR}
-JADEOPTS=	${JADEFLAGS} ${SGMLFLAGS} ${CATALOGS}
+JADEOPTS=	-w no-valid ${JADEFLAGS} ${SGMLFLAGS}
 XSLTPROCOPTS=	${XSLTPROCFLAGS}
 
 KNOWN_FORMATS=	html html.tar html-split html-split.tar \
@@ -377,14 +377,14 @@ CLEANFILES+= ${DOC}.aux ${DOC}.log
 
 .elif ${_cf} == "ps"
 CLEANFILES+= ${DOC}.aux ${DOC}.dvi ${DOC}.log ${DOC}.out ${DOC}.tex-ps \
-	${DOC}.tex ${DOC}.tex-tmp ${DOC}.fo
+	${DOC}.tex ${DOC}.tex-tmp ${DOC}.fo ${DOC}.parsed.xml
 .for _curimage in ${LOCAL_IMAGES_EPS:M*share*}
 CLEANFILES+= ${_curimage:T} ${_curimage:H:T}/${_curimage:T}
 .endfor
 
 .elif ${_cf} == "pdf"
 CLEANFILES+= ${DOC}.aux ${DOC}.dvi ${DOC}.log ${DOC}.out ${DOC}.tex-pdf ${DOC}.tex-pdf-tmp \
-		${DOC}.tex ${DOC}.fo
+		${DOC}.tex ${DOC}.fo ${DOC}.parsed.xml
 .for _curimage in ${IMAGES_PDF:M*share*}
 CLEANFILES+= ${_curimage:T} ${_curimage:H:T}/${_curimage:T}
 .endfor
@@ -572,6 +572,10 @@ ${DOC}.rtf:
 # PS/PDF -----------------------------------------------------------------
 
 .if ${PDFENGINE} == "jade"
+
+${DOC}.parsed.xml: ${SRCS}
+	${XMLLINT} --catalogs --nonet --noent --valid --dropdtd ${MASTERDOC} > ${.TARGET}
+
 .if !defined(NO_TEX)
 #
 # This sucks, but there's no way round it.  The PS and PDF formats need
@@ -581,22 +585,23 @@ ${DOC}.rtf:
 #
 
 ${DOC}.tex: ${SRCS} ${LOCAL_IMAGES_EPS} ${PRINT_INDEX} \
-		${LOCAL_IMAGES_TXT} ${LOCAL_IMAGES_EN}
+		${LOCAL_IMAGES_TXT} ${LOCAL_IMAGES_EN} \
+		${DOC}.parsed.xml
 	${GEN_INDEX_SGML_CMD}
 	${JADE_CMD} -V tex-backend ${PRINTOPTS} \
-		${JADEOPTS} -t tex -o ${.TARGET} ${XMLDECL} ${MASTERDOC}
+		${JADEOPTS} -t tex -o ${.TARGET} ${XMLDECL} ${DOC}.parsed.xml
 
 ${DOC}.tex-ps: ${DOC}.tex
 	${LN} -f ${.ALLSRC} ${.TARGET}
 
 .if !target(${DOC}.tex-pdf)
 ${DOC}.tex-pdf: ${SRCS} ${IMAGES_PDF} ${PRINT_INDEX} \
-		${LOCAL_IMAGES_TXT}
+		${LOCAL_IMAGES_TXT} ${DOC}.parsed.xml
 	${GEN_INDEX_SGML_CMD}
 	${RM} -f ${.TARGET}
 	${CAT} ${PDFTEX_DEF} > ${.TARGET}
 	${JADE_CMD} -V tex-backend ${PRINTOPTS} -ioutput.print.pdf \
-		${JADEOPTS} -t tex -o /dev/stdout ${XMLDECL} ${MASTERDOC} >> ${.TARGET}
+		${JADEOPTS} -t tex -o /dev/stdout ${XMLDECL} ${DOC}.parsed.xml >> ${.TARGET}
 .endif
 
 .if !target(${DOC}.dvi)
