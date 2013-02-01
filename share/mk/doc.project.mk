@@ -92,7 +92,6 @@ PERL?=		perl
 REALPATH?=	/bin/realpath
 SETENV?=	/usr/bin/env
 XSLTPROC?=	${PREFIX}/bin/xsltproc
-TIDY?=		${PREFIX}/bin/tidy
 XMLLINT?=	${PREFIX}/bin/xmllint
 #
 # In teTeX 3.0 and later, pdfetex(1) is used as the default TeX
