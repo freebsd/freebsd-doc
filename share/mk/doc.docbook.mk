@@ -57,45 +57,6 @@
 #			spellchecker.  For example, PGP keys and filenames
 #			will be omitted from this output.
 #
-# Print-output options :
-#
-#       NICE_HEADERS    If defined, customized chapter headers will be created
-#			that you may find more aesthetically pleasing.	Note
-#			that this option only effects print output formats for
-#			English language books.
-#
-#       MIN_SECT_LABELS If defined, do not display the section number for 4th
-#                       and 5th level section titles.  This would change 
-#                       "N.N.N.N Section title" into "Section Title" while
-#                       higher level sections are still printed with numbers.
-#
-#       TRACE={1,2}     Trace TeX's memory usage.  Set this to 1 for minimal
-#                       tracing or 2 for maximum tracing.  TeX memory 
-#                       statistics will be written out to <filename>.log.
-#                       For more information see the TeXbook, p301.
-#
-#       TWO_SIDE        If defined, two sided output will be created.  This 
-#                       means that new chapters will only start on odd 
-#                       numbered (aka right side, aka recto) pages and the 
-#                       headers and footers will be aligned appropriately 
-#                       for double sided paper.  Blank pages may be added as
-#                       needed.
-#
-#       JUSTIFY         If defined, text will be right justified so that the
-#                       right edge is smooth.  Words may be hyphenated using
-#                       the default TeX hyphenation rules for this purpose.
-#
-#       BOOK_OUTPUT     A collection of options are set suitable for printing
-#                       a book.  This option may be an order of magnitude more
-#                       CPU intensive than the default build.
-#
-#       RLE             Use Run-Length Encoding for EPS files, this will
-#                       result in significantly smaller PostScript files, 
-#                       but may take longer for a printer to process.
-#
-#       GREYSCALE_IMAGES Convert the screenshots to greyscale before
-#                        embedding them into the PostScript output.
-#
 # Package building options:
 # 
 #       BZIP2_PACKAGE  Use bzip2(1) utility to compress package tarball
@@ -157,38 +118,9 @@ PDFTEX_DEF?=	${DOC_PREFIX}/share/web2c/pdftex.def
 
 PRINTOPTS?=	-ioutput.print -d ${DSLPRINT} ${PRINTFLAGS}
 
-.if defined(BOOK_OUTPUT)
-NICE_HEADERS=1
-MIN_SECT_LABELS=1
-TWO_SIDE=1
-JUSTIFY=1
-#WITH_FOOTNOTES=1
-#GEN_INDEX=1
-.endif
-.if defined(JUSTIFY)
-TEX_CMDSEQ+=	\RequirePackage{url}
-PRINTOPTS+=	-ioutput.print.justify
-.endif
-.if defined(TWO_SIDE)
-PRINTOPTS+=	-V %two-side% -ioutput.print.twoside
-TEX_CMDSEQ+=	\def\PageTwoSide{1}
-.endif
-.if defined(NICE_HEADERS)
-PRINTOPTS+=    -ioutput.print.niceheaders
-.endif
-.if defined(MIN_SECT_LABELS)
-PRINTOPTS+=    -V minimal-section-labels
-.endif
-.if defined(TRACE)
-TEX_CMDSEQ+=	\tracingstats=${TRACE}
-.endif
-.if defined(RLE)
-PNMTOPSFLAGS+=	-rle
-.endif
 .if defined(WWWFREEBSDORG)
 HTMLFLAGS+=	-V %html-header-script%
 .endif
-
 .if !defined(WITH_INLINE_LEGALNOTICE) || empty(WITH_INLINE_LEGALNOTICE)
 HTMLFLAGS+=	-V %generate-legalnotice-link%
 .endif
