@@ -139,13 +139,10 @@ DSLHTML?=	${DOC_PREFIX}/share/xml/default.dsl
 DSLPRINT?=	${DOC_PREFIX}/share/xml/default.dsl
 DSLPGP?=	${DOC_PREFIX}/share/xml/pgp.dsl
 
-COLLATEINDEX=	${PREFIX}/share/sgml/docbook/dsssl/modular/bin/collateindex.pl
-
 XSLXHTML?=	${DOC_PREFIX}/share/xsl/freebsd-xhtml.xsl
 XSLXHTMLCHUNK?=	${DOC_PREFIX}/share/xsl/freebsd-xhtml-chunk.xsl
 XSLEPUB?=	${DOC_PREFIX}/share/xsl/freebsd-epub.xsl
 XSLFO?=		${DOC_PREFIX}/share/xsl/freebsd-fo.xsl
-INDEXREPORTSCRIPT= ${DOC_PREFIX}/share/misc/indexreport.pl
 
 IMAGES_LIB?=
 
@@ -157,10 +154,6 @@ KNOWN_FORMATS=	html html.tar html-split html-split.tar \
 
 CSS_SHEET?=	${DOC_PREFIX}/share/misc/docbook.css
 PDFTEX_DEF?=	${DOC_PREFIX}/share/web2c/pdftex.def
-
-HTMLOPTS?=	-ioutput.html -d ${DSLHTML} ${HTMLFLAGS}
-
-HTMLTXTOPTS?=	-ioutput.html -d ${DSLHTML} ${HTMLTXTFLAGS}
 
 PRINTOPTS?=	-ioutput.print -d ${DSLPRINT} ${PRINTFLAGS}
 
@@ -268,6 +261,13 @@ ZIP_CMD?=	${PREFIX}/bin/zip -j ${ZIP}
 #
 NO_SUBDIR=      YES
 
+#
+# Index generation
+#
+
+.if defined(GEN_INDEX)
+XSLTPROCOPTS+= --param generate.index "1"
+.endif
 
 # ------------------------------------------------------------------------
 #
@@ -421,25 +421,6 @@ CLEANFILES+= ${.CURDIR:T}.${_curformat}.${_curcomp}
 .endfor
 .endif
 
-#
-# Index generation
-#
-
-.if defined(GEN_INDEX) && defined(HAS_INDEX)
-JADEFLAGS+=		-i chap.index
-HTML_SPLIT_INDEX?=	html-split.index
-HTML_INDEX?=		html.index
-PRINT_INDEX?=		print.index
-INDEX_SGML?=		index.xml
-
-CLEANFILES+= 		${INDEX_SGML} ${HTML_SPLIT_INDEX} ${HTML_INDEX} ${PRINT_INDEX}
-
-INIT_INDEX_SGML_CMD?=	${PERL} ${COLLATEINDEX} -i doc-index -N -o ${INDEX_SGML}
-GEN_INDEX_SGML_CMD?=	${PERL} ${COLLATEINDEX} -i doc-index -g -o ${INDEX_SGML} ${.ALLSRC:M*.index}
-.else
-GEN_INDEX_SGML_CMD?=	@${ECHO} "Index is disabled or no index to generate."
-.endif
-
 .MAIN: all
 
 all: ${SRCS} ${_docs}
@@ -477,12 +458,10 @@ ${DOC}.parsed.xml: ${SRCS}
 
 index.html: ${DOC}.parsed.xml ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} \
 	${HTML_SPLIT_INDEX} ${LOCAL_CSS_SHEET}
-	${GEN_INDEX_SGML_CMD}
 	${XSLTPROC} ${XSLTPROCOPTS} ${XSLXHTMLCHUNK} ${DOC}.parsed.xml
 
 ${DOC}.html: ${DOC}.parsed.xml ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} \
 	${LOCAL_CSS_SHEET}     
-	${GEN_INDEX_SGML_CMD}
 	${XSLTPROC} ${XSLTPROCOPTS} ${XSLXHTML} ${DOC}.parsed.xml > ${.TARGET}
 
 ${DOC}.html-split.tar: HTML.manifest ${LOCAL_IMAGES_LIB} \
@@ -545,7 +524,6 @@ ${.CURDIR:T}.pdb.${_curcomp}: ${DOC}.pdb.${_curcomp}
 .if !defined(NO_RTF)
 ${DOC}.rtf: ${DOC}.parsed.xml ${LOCAL_IMAGES_EPS} ${PRINT_INDEX} \
 		${LOCAL_IMAGES_TXT} ${LOCAL_IMAGES_PNG}
-	${GEN_INDEX_SGML_CMD}
 	${JADE_CMD} -V rtf-backend ${PRINTOPTS} -ioutput.rtf.images \
 		${JADEOPTS} -t rtf -o ${.TARGET}-nopng ${XMLDECL} \
 		${DOC}.parsed.xml
@@ -570,7 +548,6 @@ ${DOC}.rtf:
 ${DOC}.tex: ${SRCS} ${LOCAL_IMAGES_EPS} ${PRINT_INDEX} \
 		${LOCAL_IMAGES_TXT} ${LOCAL_IMAGES_EN} \
 		${DOC}.parsed.xml
-	${GEN_INDEX_SGML_CMD}
 	${JADE_CMD} -V tex-backend ${PRINTOPTS} \
 		${JADEOPTS} -t tex -o ${.TARGET} ${XMLDECL} ${DOC}.parsed.xml
 
@@ -580,7 +557,6 @@ ${DOC}.tex-ps: ${DOC}.tex
 .if !target(${DOC}.tex-pdf)
 ${DOC}.tex-pdf: ${SRCS} ${IMAGES_PDF} ${PRINT_INDEX} \
 		${LOCAL_IMAGES_TXT} ${DOC}.parsed.xml
-	${GEN_INDEX_SGML_CMD}
 	${RM} -f ${.TARGET}
 	${CAT} ${PDFTEX_DEF} > ${.TARGET}
 	${JADE_CMD} -V tex-backend ${PRINTOPTS} -ioutput.print.pdf \
@@ -641,7 +617,6 @@ ${DOC}.tex-pdf:
 
 .elif ${RENDERENGINE} == "fop"
 ${DOC}.fo: ${DOC}.xml ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG}
-	${GEN_INDEX_SGML_CMD}
 	${XSLTPROC} ${XSLTPROCOPTS} ${XSLFO} ${DOC}.parsed.xml > ${.TARGET}
 
 ${DOC}.pdf: ${DOC}.fo ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG}
@@ -683,35 +658,6 @@ ${DOC}.${_curformat}:
 lint validate: ${SRCS}
 	${XMLLINT} --nonet --noout --noent --valid ${MASTERDOC}
 	@${RM} -rf ${CLEANFILES} ${CLEANDIRS}
-
-# ------------------------------------------------------------------------
-#
-# Index targets
-#
-
-#
-# Generate a different .index file based on the format name
-#
-# If we're not generating an index (the default) then we need to create
-# an empty index.xml file so that we can reference index.xml in book.sgml
-#
-
-
-${HTML_INDEX}: ${DOC}.parsed.xml ${LOCAL_IMAGES_TXT}
-	${INIT_INDEX_SGML_CMD}
-	${JADE_CMD} -V html-index -V nochunks ${HTMLOPTS} -ioutput.html.images \
-		${JADEOPTS} -t sgml ${XMLDECL} ${DOC}.parsed.xml > /dev/null
-
-${HTML_SPLIT_INDEX}: ${SRCS} ${LOCAL_IMAGES_TXT}
-	${INIT_INDEX_SGML_CMD}
-	${JADE_CMD} -V html-index ${HTMLOPTS} -ioutput.html.images \
-		${JADEOPTS} -t sgml ${XMLDECL} ${DOC}.parsed.xml > /dev/null
-
-.if !target(${PRINT_INDEX})
-${PRINT_INDEX}: ${HTML_INDEX}
-	${CP} -p ${HTML_INDEX} ${.TARGET}
-.endif	
-
 
 # ------------------------------------------------------------------------
 #
@@ -820,12 +766,6 @@ spellcheck-${_curformat}:
 .endfor
 
 spellcheck: ${FORMATS:C/^/spellcheck-/}
-
-indexreport:
-.for _entry in ${SRCS:M*.xml}
-	@echo "indexreport ${_entry}"
-	@${PERL} ${INDEXREPORTSCRIPT} ${.CURDIR}/${_entry}
-.endfor
 
 #
 # Build a list of install-format targets to be installed. These will be
