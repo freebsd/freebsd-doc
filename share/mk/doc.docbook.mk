@@ -146,8 +146,6 @@ DSLHTML?=	${DOC_PREFIX}/share/xml/default.dsl
 DSLPRINT?=	${DOC_PREFIX}/share/xml/default.dsl
 DSLPGP?=	${DOC_PREFIX}/share/xml/pgp.dsl
 
-FREEBSDCATALOG=	${DOC_PREFIX}/share/xml/catalog
-LANGUAGECATALOG=${DOC_PREFIX}/${LANGCODE}/share/xml/catalog
 ISO8879CATALOG=	${PREFIX}/share/sgml/iso8879/catalog
 DOCBOOKCATALOG= ${PREFIX}/share/xml/docbook/catalog
 CATALOG_PORTS_SGML=	${PREFIX}/share/sgml/catalog.ports
@@ -574,7 +572,7 @@ ${DOC}.rtf:
 .if ${PDFENGINE} == "jade"
 
 ${DOC}.parsed.xml: ${SRCS}
-	${XMLLINT} --catalogs --nonet --noent --valid --dropdtd ${MASTERDOC} > ${.TARGET}
+	${XMLLINT} --nonet --noent --valid --dropdtd ${MASTERDOC} > ${.TARGET}
 
 .if !defined(NO_TEX)
 #
@@ -695,7 +693,7 @@ ${DOC}.${_curformat}:
 #
 
 lint validate: ${SRCS}
-	${XMLLINT} --catalogs --nonet --noout --noent --valid ${MASTERDOC}
+	${XMLLINT} --nonet --noout --noent --valid ${MASTERDOC}
 
 # ------------------------------------------------------------------------
 #
