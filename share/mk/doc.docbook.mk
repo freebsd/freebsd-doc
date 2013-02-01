@@ -125,18 +125,11 @@ XMLDECL?=	/usr/local/share/sgml/docbook/dsssl/modular/dtds/decls/xml.dcl
 
 .if exists(${PREFIX}/bin/jade) && !defined(OPENJADE)
 JADE?=		${PREFIX}/bin/jade
-JADECATALOG?=	${PREFIX}/share/sgml/jade/catalog
-SX?=		${PREFIX}/bin/sx
 .else
 JADE?=		${PREFIX}/bin/openjade
-JADECATALOG?=	${PREFIX}/share/sgml/openjade/catalog
 JADEFLAGS+=	-V openjade
-SX?=		${PREFIX}/bin/osx
 .endif
 
-.if defined(SP_ENCODING)
-JADE_ENV+=	SP_ENCODING=${SP_ENCODING}
-.endif
 JADE_CMD=	${SETENV} ${JADE_ENV} ${JADE}
 
 FOP?=		${PREFIX}/bin/fop
@@ -146,14 +139,8 @@ DSLHTML?=	${DOC_PREFIX}/share/xml/default.dsl
 DSLPRINT?=	${DOC_PREFIX}/share/xml/default.dsl
 DSLPGP?=	${DOC_PREFIX}/share/xml/pgp.dsl
 
-ISO8879CATALOG=	${PREFIX}/share/sgml/iso8879/catalog
-DOCBOOKCATALOG= ${PREFIX}/share/xml/docbook/catalog
-CATALOG_PORTS_SGML=	${PREFIX}/share/sgml/catalog.ports
-DSSSLCATALOG=	${PREFIX}/share/sgml/docbook/dsssl/modular/catalog
-
 COLLATEINDEX=	${PREFIX}/share/sgml/docbook/dsssl/modular/bin/collateindex.pl
 
-XSLTPROCFLAGS?=	--nonet
 XSLXHTML?=	${DOC_PREFIX}/share/xsl/freebsd-xhtml.xsl
 XSLXHTMLCHUNK?=	${DOC_PREFIX}/share/xsl/freebsd-xhtml-chunk.xsl
 XSLEPUB?=	${DOC_PREFIX}/share/xsl/freebsd-epub.xsl
@@ -162,14 +149,8 @@ INDEXREPORTSCRIPT= ${DOC_PREFIX}/share/misc/indexreport.pl
 
 IMAGES_LIB?=
 
-.for c in ${LANGUAGECATALOG} ${FREEBSDCATALOG} ${DSSSLCATALOG} ${ISO8879CATALOG} ${DOCBOOKCATALOG} ${JADECATALOG} ${EXTRA_CATALOGS} ${CATALOG_PORTS_SGML}
-.if exists(${c})
-CATALOGS+=	-c ${c}
-.endif
-.endfor
-SGMLFLAGS+=	-D ${IMAGES_EN_DIR}/${DOC}s/${.CURDIR:T} -D ${CANONICALOBJDIR}
-JADEOPTS=	-w no-valid ${JADEFLAGS} ${SGMLFLAGS}
-XSLTPROCOPTS=	${XSLTPROCFLAGS}
+JADEOPTS?=	-w no-valid ${JADEFLAGS} -D ${IMAGES_EN_DIR}/${DOC}s/${.CURDIR:T} -D ${CANONICALOBJDIR}
+XSLTPROCOPTS?=	--nonet
 
 KNOWN_FORMATS=	html html.tar html-split html-split.tar \
 		epub txt rtf ps pdf tex dvi tar pdb
