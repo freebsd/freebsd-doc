@@ -701,6 +701,7 @@ ${DOC}.${_curformat}:
 
 lint validate: ${SRCS}
 	${XMLLINT} --nonet --noout --noent --valid ${MASTERDOC}
+	@${RM} -rf ${CLEANFILES} ${CLEANDIRS}
 
 # ------------------------------------------------------------------------
 #
