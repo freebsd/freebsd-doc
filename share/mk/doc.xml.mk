@@ -272,7 +272,6 @@ XML_NOTICES=		${DOC_PREFIX}/share/xml/notices.xml
 #   The ${TARGET.<id>} file will not be listed in $DATA if defined.
 #   NO_DATA.DEFAULT is the setting for all <id>s.
 #
-XSLTPROC_ENV+=	SGML_CATALOG_FILES=
 XSLTPROC_ENV+=	XML_CATALOG_FILES="${XML_CATALOG_FILES}"
 
 XSLTPROCOPTS=	${XSLTPROCFLAGS}
