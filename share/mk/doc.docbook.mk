@@ -490,7 +490,7 @@ NO_RTF=		yes
 # Parsed XML  -------------------------------------------------------
 
 ${DOC}.parsed.xml: ${SRCS}
-	${XMLLINT} --nonet --noent --valid --dropdtd ${MASTERDOC} > ${.TARGET}
+	${XMLLINT} --nonet --noent --valid --xinclude --dropdtd ${MASTERDOC} > ${.TARGET}
 
 # XHTML -------------------------------------------------------------
 
