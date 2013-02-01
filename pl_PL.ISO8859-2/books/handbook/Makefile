@@ -226,7 +226,6 @@ XMLDOCS=	lastmod:::mirrors.lastmod.inc \
 DEPENDSET.DEFAULT=	transtable mirror
 XSLT.DEFAULT=		${XSL_MIRRORS}
 XML.DEFAULT=		${XML_MIRRORS}
-NO_TIDY.DEFAULT=	yes
 
 PARAMS.lastmod+=	--param 'target' "'lastmod'"
 PARAMS.mirrors-ftp-index+=	--param 'type' "'ftp'" \
