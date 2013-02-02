@@ -38,51 +38,11 @@ CGIGRP?=	www
 .endif
 CGIMODE?=	775
 
-BUNZIP2?=	/usr/bin/bunzip2
-CP?=		/bin/cp
-CVS?=		/usr/bin/cvs
-ECHO_CMD?=	echo
-FETCH?=		/usr/bin/fetch
-FIND?=		/usr/bin/find
-SETENV?=	/usr/bin/env
-LN?=		/bin/ln
-MKDIR?=		/bin/mkdir
-MV?=		/bin/mv
-PERL?=		/usr/bin/perl5
-.if !exists(${PERL}) && exists(/usr/local/bin/perl5)
-PERL=		/usr/local/bin/perl5
-.endif
-RM?=		/bin/rm
-SED?=		/usr/bin/sed
-SH?=		/bin/sh
-SORT?=		/usr/bin/sort
-TOUCH?=		/usr/bin/touch
-TRUE?=		/usr/bin/true
-
 LOCALBASE?=	/usr/local
 PREFIX?=	${LOCALBASE}
 
-.if exists(${PREFIX}/bin/sgmlnorm) && !defined(OPENJADE)
-SGMLNORM?=	${PREFIX}/bin/sgmlnorm
-.else
-SGMLNORM?=	${PREFIX}/bin/osgmlnorm
-.endif
-SGMLNORMOPTS?=	-d ${SGMLNORMFLAGS} ${CATALOG:S,^,-c ,} -D ${.CURDIR}
-
-XSLTPROC?=	${PREFIX}/bin/xsltproc
 XSLTPROCOPTS?=	${XSLTPROCFLAGS}
-
-XMLLINT?=	${PREFIX}/bin/xmllint
 XMLLINTOPTS?=	${XMLLINTFLAGS}
-
-HTML2TXT?=	${PREFIX}/bin/w3m
-HTML2TXTOPTS?=	-dump ${HTML2TXTFLAGS}
-ISPELL?=	ispell
-ISPELLOPTS?=	-l -p /usr/share/dict/freebsd ${ISPELLFLAGS}
-
-.if defined(WWWFREEBSDORG)
-SGMLNORMOPTS+=	-i html.header.script.google
-.endif
 
 WEBCHECK?=	${PREFIX}/bin/webcheck
 WEBCHECKOPTS?=	-ab ${WEBCHECKFLAGS}

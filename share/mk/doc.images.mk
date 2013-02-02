@@ -109,42 +109,6 @@ EPS2PNM_RES?=	100
 # shared image directory.
 IMAGES_PDF= ${IMAGES_GEN_PDF} ${_IMAGES_PNG}
 
-SCR2PNG?=	${PREFIX}/bin/scr2png
-SCR2PNGOPTS?=	${SCR2PNGFLAGS}
-SCR2TXT?=	${PREFIX}/bin/scr2txt
-SCR2TXTOPTS?=	-l ${SCR2TXTFLAGS}
-SED?=		/usr/bin/sed
-EPS2PNM?=	${PREFIX}/bin/gs
-EPS2PNMOPTS?=	-q -dBATCH -dGraphicsAlphaBits=4 -dTextAlphaBits=4 \
-		-dEPSCrop -r${EPS2PNM_RES}x${EPS2PNM_RES} \
-		-dNOPAUSE -dSAFER -sDEVICE=pnm -sOutputFile=-
-#
-# epsgeom is a perl script for 1) extracting geometry information
-# from a .eps file and 2) arrange it for ghostscript's pnm driver.
-#
-EPSGEOM?=	${PERL} ${DOC_PREFIX}/share/misc/epsgeom
-EPSGEOMOPTS?=	${EPS2PNM_RES} ${EPS2PNM_RES}
-PNMTOPNG?=	${PREFIX}/bin/pnmtopng
-PNMTOPNGOPTS?=	${PNGTOPNGFLAGS}
-PNGTOPNM?=	${PREFIX}/bin/pngtopnm
-PNGTOPNMOPTS?=	${PNGTOPNMFLAGS}
-PPMTOPGM?=	${PREFIX}/bin/ppmtopgm
-PPMTOPGMOPTS?=	${PPMTOPGMFLAGS}
-PNMTOPS?=	${PREFIX}/bin/pnmtops
-PNMTOPSOPTS?=	-noturn ${PNMTOPSFLAGS}
-EPSTOPDF?=	${PREFIX}/bin/epstopdf
-EPSTOPDFOPTS?=	${EPSTOPDFFLAGS}
-#
-PIC2PS?=	${GROFF} -p -S -Wall -mtty-char -man
-#
-PS2EPS?=	${PREFIX}/bin/gs
-PS2EPSOPTS?=	-q -dNOPAUSE -dSAFER -dDELAYSAFER \
-		-sPAPERSIZE=letter -r72 -sDEVICE=bit \
-		-sOutputFile=/dev/null ${PS2EPSFLAGS} ps2epsi.ps
-PS2BBOX?=	${PREFIX}/bin/gs
-PS2BBOXOPTS?=	-q -dNOPAUSE -dBATCH -dSAFER -dDELAYSAFER \
-		-sPAPERSIZE=letter -r72 -sDEVICE=bbox \
-		-sOutputFile=/dev/null ${PS2BBOXFLAGS}
 #
 # Use suffix rules to convert .scr files to other formats
 .SUFFIXES:	.scr .pic .png .ps .eps .txt

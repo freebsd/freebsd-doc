@@ -81,20 +81,7 @@ RENDERENGINE?=	jade
 DSLHTML?= ${DOC_PREFIX}/share/xml/spellcheck.dsl
 .endif
 
-XMLLINT?=	/usr/local/bin/xmllint
 XMLDECL?=	/usr/local/share/sgml/docbook/dsssl/modular/dtds/decls/xml.dcl
-
-.if exists(${PREFIX}/bin/jade) && !defined(OPENJADE)
-JADE?=		${PREFIX}/bin/jade
-.else
-JADE?=		${PREFIX}/bin/openjade
-JADEFLAGS+=	-V openjade
-.endif
-
-JADE_CMD=	${SETENV} ${JADE_ENV} ${JADE}
-
-FOP?=		${PREFIX}/bin/fop
-FOPOPTS?=
 
 DSLHTML?=	${DOC_PREFIX}/share/xml/default.dsl
 DSLPRINT?=	${DOC_PREFIX}/share/xml/default.dsl
@@ -141,51 +128,6 @@ HTMLFLAGS+=	-V %generate-docformat-navi-link%
 HTMLFLAGS+=	-V %show-all-trademark-symbols%
 PRINTFLAGS+=	-V %show-all-trademark-symbols%
 .endif
-
-PERL?=		/usr/bin/perl
-PKG_CREATE?=	/usr/sbin/pkg_create
-SORT?=		/usr/bin/sort
-TAR?=		/usr/bin/tar
-TOUCH?=		/usr/bin/touch
-XARGS?=		/usr/bin/xargs
-
-GROFF?=		groff
-HTML2TXT?=	${PREFIX}/bin/links
-HTML2TXTOPTS?=	-dump -width 72 ${HTML2TXTFLAGS}
-HTML2PDB?=	${PREFIX}/bin/iSiloBSD
-HTML2PDBOPTS?=	-y -d0 -Idef ${HTML2PDBFLAGS}
-DVIPS?=		${PREFIX}/bin/dvips
-.if defined(PAPERSIZE)
-DVIPSOPTS?=	-t ${PAPERSIZE:L}
-.endif
-DVIPSOPTS+=	${DVIPSFLAGS}
-
-#
-# Currently, we have to use the FixRTF utility available as textproc/fixrtf
-# to apply several RTF fixups:
-#
-# 1. Embed PNGs into RTF. (Option: -p)
-# 2. Embed FreeBSD-specific information into RTF, such as organization name,
-#    building time. But unfortunately, so far only Microsoft Word can read
-#    them. In contrast, Microsoft Word Viewer and OpenOffice even cannot read
-#    this kind of information from RTF created by Microsoft Word and
-#    OpenOffice. (Option: -i)
-# 3. Do some locale-specific fixing. (Option: -e <encoding>)
-# 
-# This is a transitional solution before Jade/OpenJade provides these features.
-#
-FIXRTF?=	${PREFIX}/bin/fixrtf
-FIXRTFOPTS?=	-i -p
-.if defined(SP_ENCODING)
-FIXRTFOPTS+=	-e ${SP_ENCODING}
-.endif
-
-GZIP?=	-9
-GZIP_CMD?=	gzip -qf ${GZIP}
-BZIP2?=	-9
-BZIP2_CMD?=	bzip2 -qf ${BZIP2}
-ZIP?=	-9
-ZIP_CMD?=	${PREFIX}/bin/zip -j ${ZIP}
 
 #
 # Instruction for bsd.subdir.mk to not to process SUBDIR directive.
@@ -456,7 +398,7 @@ ${.CURDIR:T}.pdb.${_curcomp}: ${DOC}.pdb.${_curcomp}
 .if !defined(NO_RTF)
 ${DOC}.rtf: ${DOC}.parsed.xml ${LOCAL_IMAGES_EPS} ${PRINT_INDEX} \
 		${LOCAL_IMAGES_TXT} ${LOCAL_IMAGES_PNG}
-	${JADE_CMD} -V rtf-backend ${PRINTOPTS} -ioutput.rtf.images \
+	${JADE} -V rtf-backend ${PRINTOPTS} -ioutput.rtf.images \
 		${JADEOPTS} -t rtf -o ${.TARGET}-nopng ${XMLDECL} \
 		${DOC}.parsed.xml
 	${FIXRTF} ${FIXRTFOPTS} < ${.TARGET}-nopng > ${.TARGET}
@@ -480,7 +422,7 @@ ${DOC}.rtf:
 ${DOC}.tex: ${SRCS} ${LOCAL_IMAGES_EPS} ${PRINT_INDEX} \
 		${LOCAL_IMAGES_TXT} ${LOCAL_IMAGES_EN} \
 		${DOC}.parsed.xml
-	${JADE_CMD} -V tex-backend ${PRINTOPTS} \
+	${JADE} -V tex-backend ${PRINTOPTS} \
 		${JADEOPTS} -t tex -o ${.TARGET} ${XMLDECL} ${DOC}.parsed.xml
 
 ${DOC}.tex-ps: ${DOC}.tex
@@ -491,7 +433,7 @@ ${DOC}.tex-pdf: ${SRCS} ${IMAGES_PDF} ${PRINT_INDEX} \
 		${LOCAL_IMAGES_TXT} ${DOC}.parsed.xml
 	${RM} -f ${.TARGET}
 	${CAT} ${PDFTEX_DEF} > ${.TARGET}
-	${JADE_CMD} -V tex-backend ${PRINTOPTS} -ioutput.print.pdf \
+	${JADE} -V tex-backend ${PRINTOPTS} -ioutput.print.pdf \
 		${JADEOPTS} -t tex -o /dev/stdout ${XMLDECL} ${DOC}.parsed.xml >> ${.TARGET}
 .endif
 
@@ -612,13 +554,13 @@ KNOWN_COMPRESS=	gz bz2 zip
 #
 
 _PROG_COMPRESS_gz: .USE
-	${GZIP_CMD} < ${.ALLSRC} > ${.TARGET}
+	${GZIP} ${GZIPOPTS} < ${.ALLSRC} > ${.TARGET}
 
 _PROG_COMPRESS_bz2: .USE
-	${BZIP2_CMD} < ${.ALLSRC} > ${.TARGET}
+	${BZIP2} ${BZIP2OPTS} < ${.ALLSRC} > ${.TARGET}
 
 _PROG_COMPRESS_zip: .USE
-	${ZIP_CMD} ${.TARGET} ${.ALLSRC}
+	${ZIP} ${ZIPOPTS} ${.TARGET} ${.ALLSRC}
 
 #
 # Build a list of targets for each compression scheme and output format.

@@ -5,14 +5,6 @@
 # documents commonly used in doc/ and www/ tree.
 #
 
-AWK?=		/usr/bin/awk
-GREP?=		/usr/bin/grep
-REALPATH?=	/bin/realpath
-SED?=		/usr/bin/sed
-# a hack to keep tidy from converting tabs to spaces
-# replace them with &#09; before calling tidy
-REINPLACE_TABS_CMD?=	${SED} -i "" -e 's/	/\&\#09;/g'
-
 # ------------------------------------------------------------------------
 #
 # Work out the language and encoding used for this document.
