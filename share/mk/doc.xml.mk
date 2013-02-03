@@ -279,7 +279,7 @@ XSLTPROCOPTS+=	--xinclude
 XSLTPROCOPTS+=	--stringparam LOCALBASE ${LOCALBASE}
 XSLTPROCOPTS+=	--stringparam DOC_PREFIX ${DOC_PREFIX}
 .if defined(XML_CATALOG_FILES) && !empty(XML_CATALOG_FILES)
-XSLTPROCOPTS+=	--nonet --catalogs
+XSLTPROCOPTS+=	--nonet
 .endif
 .if defined(WWWFREEBSDORG)
 XSLTPROCOPTS+=	--param "html.header.script.google" "'INCLUDE'"
@@ -289,7 +289,7 @@ XSLTPROC=	env ${XSLTPROC_ENV} ${LOCALBASE}/bin/xsltproc
 XMLLINTOPTS=	${XMLLINTFLAGS}
 XMLLINTOPTS+=	--xinclude --valid --noout
 .if defined(XML_CATALOG_FILES) && !empty(XML_CATALOG_FILES)
-XMLLINTOPTS+=	--nonet --catalogs
+XMLLINTOPTS+=	--nonet
 .endif
 XMLLINT=	env ${XSLTPROC_ENV} ${PREFIX}/bin/xmllint
 
