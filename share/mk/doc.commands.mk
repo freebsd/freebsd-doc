@@ -2,15 +2,21 @@
 # $FreeBSD$
 #
 
+#
+# General commands
+#
+
+AWK?=		/usr/bin/awk
 CP?=		/bin/cp
 CAT?=		/bin/cat
 ECHO_CMD?=	echo
+FETCH?=		/usr/bin/fetch
+FIND?=		/usr/bin/find
+GREP?=		/usr/bin/grep
 LN?=		/bin/ln
 MKDIR?=		/bin/mkdir
-RM?=		/bin/rm
 MV?=		/bin/mv
-HTML2TXT?=	${PREFIX}/bin/w3m
-HTML2TXTOPTS?=	-dump ${HTML2TXTFLAGS}
+RM?=		/bin/rm
 ISPELL?=	ispell
 ISPELLOPTS?=	-l -p /usr/share/dict/freebsd ${ISPELLFLAGS}
 .if exists(/usr/bin/perl)
@@ -20,34 +26,48 @@ PERL?=		/usr/local/bin/perl
 .else
 PERL?=		perl
 .endif
+PKG_CREATE?=	/usr/sbin/pkg_create
 REALPATH?=	/bin/realpath
+SED?=		/usr/bin/sed
 SETENV?=	/usr/bin/env
-XSLTPROC?=	${PREFIX}/bin/xsltproc
-XMLLINT?=	${PREFIX}/bin/xmllint
-
-BUNZIP2?=	/usr/bin/bunzip2
-FETCH?=		/usr/bin/fetch
-FIND?=		/usr/bin/find
-LN?=		/bin/ln
 SH?=		/bin/sh
 SORT?=		/usr/bin/sort
-TRUE?=		/usr/bin/true
-
-AWK?=		/usr/bin/awk
-GREP?=		/usr/bin/grep
-SED?=		/usr/bin/sed
-
-PKG_CREATE?=	/usr/sbin/pkg_create
-TAR?=		/usr/bin/tar
 TOUCH?=		/usr/bin/touch
+TRUE?=		/usr/bin/true
 XARGS?=		/usr/bin/xargs
 
+#
+# Compession and decompression
+#
+
+BUNZIP2?=	/usr/bin/bunzip2
 BZIP2?=		bzip2
 BZIPOPTS?=	-qf9
 GZIP?=		gzip
 GZIPOPTS?=	-qf9
+TAR?=		/usr/bin/tar
 ZIP?=		${PREFIX}/bin/zip
 ZIPOPTS?=	-j9
+
+#
+# Rendering and format conversion
+#
+
+DVIPS?=		${PREFIX}/bin/dvips
+.if defined(PAPERSIZE)
+DVIPSOPTS?=	-t ${PAPERSIZE:L}
+.endif
+DVIPSOPTS+=	${DVIPSFLAGS}
+
+FOP?=		${PREFIX}/bin/fop
+FOPOPTS?=
+
+GROFF?=		groff
+
+HTML2PDB?=	${PREFIX}/bin/iSiloBSD
+HTML2PDBOPTS?=	-y -d0 -Idef ${HTML2PDBFLAGS}
+HTML2TXT?=	${PREFIX}/bin/w3m
+HTML2TXTOPTS?=	-dump ${HTML2TXTFLAGS}
 
 .if exists(${PREFIX}/bin/jade) && !defined(OPENJADE)
 JADE?=		${PREFIX}/bin/jade
@@ -56,17 +76,8 @@ JADE?=		${PREFIX}/bin/openjade
 JADEFLAGS+=	-V openjade
 .endif
 
-FOP?=		${PREFIX}/bin/fop
-FOPOPTS?=
-
-GROFF?=		groff
-HTML2PDB?=	${PREFIX}/bin/iSiloBSD
-HTML2PDBOPTS?=	-y -d0 -Idef ${HTML2PDBFLAGS}
-DVIPS?=		${PREFIX}/bin/dvips
-.if defined(PAPERSIZE)
-DVIPSOPTS?=	-t ${PAPERSIZE:L}
-.endif
-DVIPSOPTS+=	${DVIPSFLAGS}
+XMLLINT?=	${PREFIX}/bin/xmllint
+XSLTPROC?=	${PREFIX}/bin/xsltproc
 
 #
 # In teTeX 3.0 and later, pdfetex(1) is used as the default TeX
@@ -112,6 +123,10 @@ FIXRTFOPTS?=	-i -p
 FIXRTFOPTS+=	-e ${SP_ENCODING}
 .endif
 
+#
+# Image processing
+#
+
 SCR2PNG?=	${PREFIX}/bin/scr2png
 SCR2PNGOPTS?=	${SCR2PNGFLAGS}
 SCR2TXT?=	${PREFIX}/bin/scr2txt
@@ -147,3 +162,10 @@ PS2BBOX?=	${PREFIX}/bin/gs
 PS2BBOXOPTS?=	-q -dNOPAUSE -dBATCH -dSAFER -dDELAYSAFER \
 		-sPAPERSIZE=letter -r72 -sDEVICE=bbox \
 		-sOutputFile=/dev/null ${PS2BBOXFLAGS}
+
+#
+# Spell checking
+#
+
+ISPELL?=	ispell
+ISPELLOPTS?=	-l -p /usr/share/dict/freebsd ${ISPELLFLAGS}
