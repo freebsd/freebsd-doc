@@ -275,22 +275,14 @@ XML_NOTICES=		${DOC_PREFIX}/share/xml/notices.xml
 XSLTPROC_ENV+=	XML_CATALOG_FILES="${XML_CATALOG_FILES}"
 
 XSLTPROCOPTS=	${XSLTPROCFLAGS}
-XSLTPROCOPTS+=	--xinclude
-XSLTPROCOPTS+=	--stringparam LOCALBASE ${LOCALBASE}
-XSLTPROCOPTS+=	--stringparam DOC_PREFIX ${DOC_PREFIX}
-.if defined(XML_CATALOG_FILES) && !empty(XML_CATALOG_FILES)
-XSLTPROCOPTS+=	--nonet
-.endif
+XSLTPROCOPTS+=	--xinclude --nonet
 .if defined(WWWFREEBSDORG)
 XSLTPROCOPTS+=	--param "html.header.script.google" "'INCLUDE'"
 .endif
 XSLTPROC=	env ${XSLTPROC_ENV} ${LOCALBASE}/bin/xsltproc
 
 XMLLINTOPTS=	${XMLLINTFLAGS}
-XMLLINTOPTS+=	--xinclude --valid --noout
-.if defined(XML_CATALOG_FILES) && !empty(XML_CATALOG_FILES)
-XMLLINTOPTS+=	--nonet
-.endif
+XMLLINTOPTS+=	--xinclude --valid --noout --nonet
 XMLLINT=	env ${XSLTPROC_ENV} ${PREFIX}/bin/xmllint
 
 .for D in ${XMLDOCS}
