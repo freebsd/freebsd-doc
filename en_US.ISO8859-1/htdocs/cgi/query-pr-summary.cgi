@@ -86,7 +86,6 @@ if ($html_mode) {
 	".a { background-color: #cffafd; }\n" .
 	".f { background-color: #ffc; }\n" .
 	".p { background-color: #d1fbd6; }\n" .
-	".r { background-color: #d6cfc4; }\n" .
 	".s { background-color: #fcccd9; }\n" .
 	".c { background-color: #c1d5db; }\n" .
 	"--></style>";
@@ -137,16 +136,12 @@ performed.</dd>
 
 <dt class='f'><strong>f - feedback</strong></dt>
 <dd>Further work requires additional information from the originator
-or the community - possibly confirmation of the effectiveness of a
+or the community&mdash;possibly confirmation of the effectiveness of a
 proposed solution.</dd>
 
 <dt class='p'><strong>p - patched</strong></dt>
 <dd>A patch has been committed, but some issues (MFC and / or
 confirmation from originator) are still open.</dd>
-
-<dt class='r'><strong>r - repocopy</strong></dt>
-<dd>The resolution of the problem report is dependent on a repocopy
-operation within the CVS repository which is awaiting completion.</dd>
 
 <dt class='s'><strong>s - suspended</strong></dt>
 <dd>The problem is not being worked on, due to lack of information or
@@ -156,7 +151,7 @@ closed, rather than suspended.</dd>
 
 <dt class='c'><strong>c - closed</strong></dt>
 <dd>A problem report is closed when any changes have been integrated,
-documented, and tested -- or when fixing the problem is abandoned.</dd>
+documented, and tested&mdash;or when fixing the problem is abandoned.</dd>
 </dl>
 EOM
 
@@ -180,11 +175,6 @@ Further work requires additional information from the
 p - patched
 A patch has been committed, but some issues (MFC and / or
      confirmation from originator) are still open.
-
-r - repocopy
-The resolution of the problem report is dependent on
-     a repocopy operation within the CVS repository which
-     is awaiting completion.
 
 s - suspended
 The problem is not being worked on, due to lack of information

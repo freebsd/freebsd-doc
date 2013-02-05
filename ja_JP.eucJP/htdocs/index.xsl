@@ -5,7 +5,7 @@
 ]>
 
 <!-- $FreeBSD$ -->
-<!-- Original revision: 1.178 -->
+<!-- Original revision: r40504 -->
 
 <xsl:stylesheet version="1.0"
   xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
@@ -53,7 +53,7 @@
 			  FreeBSD は高度なネットワーク、堅固なセキュリティ機能、
 			  世界最大クラスのパフォーマンスを提供し、
 			  世界最大規模の <a
-			  href = "&enbase;/doc/ja_JP.eucJP/books/handbook/nutshell.html#INTRODUCTION-NUTSHELL-USERS">ウェブサイト</a> や、
+			  href = "&enbase;/doc/ja_JP.eucJP/books/handbook/nutshell.html#introduction-nutshell-users">ウェブサイト</a> や、
 			  広く普及している組み込みネットワーク機器、
 			  ストレージデバイスで利用されています。
 			</p>
@@ -310,5 +310,16 @@
 		  </div> <!-- FRONTNEMSCONTAINER -->
 		</div> <!-- FRONTMAIN -->
 	      </div> <!-- FRONTCONTAINER -->
+  </xsl:template>
+
+  <xsl:template name="process.footer">
+	&copyright;
+
+	The mark FreeBSD is a registered trademark of The FreeBSD
+	Foundation and is used by The FreeBSD Project with the
+	permission of <a
+	  href="http://www.freebsdfoundation.org/documents/Guidelines.shtml">The
+	FreeBSD Foundation</a>.
+	<a href="&base;/mailto.html" title="&header2.word.contact;">&header2.word.contact;</a>
   </xsl:template>
 </xsl:stylesheet>

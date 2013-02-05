@@ -3,6 +3,10 @@
 #
 # $FreeBSD$
 #
+# %SOURCE%	en_US.ISO8859-1/books/handbook/jails/Makefile
+# %SRCID%	39829
+#
+#
 
 CHAPTERS= 	jails/chapter.xml
 

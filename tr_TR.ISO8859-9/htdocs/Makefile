@@ -27,7 +27,7 @@ DEPENDSET.index=transtable mirrors news press events \
 #DATA+=  vendors.html
 
 # Subdirectories
-# SGML
+# XML
 #SUBDIR= security
 #SUBDIR+= commercial
 #SUBDIR+= docproj
@@ -62,7 +62,7 @@ SUBDIR= doc
 #SUBDIR+= tutorials
 #.endif
 
-# Non-SGML
+# Non-XML
 #SUBDIR+= gifs
 #SUBDIR+= cgi
 

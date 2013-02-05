@@ -6,17 +6,19 @@
 ]>
 
 <!-- $FreeBSD$ -->
-<!-- $FreeBSDde: de-www/community.xsl,v 1.7 2011/08/01 09:27:32 jkois Exp $ -->
-<!-- basiert auf: 1.9 -->
+<!-- $FreeBSDde$ -->
+<!-- basiert auf: r40558 -->
 
 <xsl:stylesheet version="1.0"
   xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
-  xmlns="http://www.w3.org/1999/xhtml">
+  xmlns:date="http://exslt.org/dates-and-times"
+  xmlns="http://www.w3.org/1999/xhtml"
+  extension-element-prefixes="date">
 
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/xml/libcommon.xsl"/>
   <xsl:import href="http://www.FreeBSD.org/XML/www/share/xml/xhtml.xsl"/>
 
-  <xsl:key name="last-year-event-by-country" match="event[number(enddate/year) = (number($curdate.year) - 1)]"
+  <xsl:key name="last-year-event-by-country" match="event[number(enddate/year) = (number(date:year()) - 1)]"
     use="location/country" />
 
   <xsl:key name="event-by-year" match="event" use="enddate/year" />
@@ -39,7 +41,7 @@
 		select="count(document($usergroups.xml)//entry)"
 		/><xsl:text> </xsl:text>--> <a
 		href="&enbase;/usergroups.html">User Groups</a> in
-		36 Ländern. <!--<xsl:value-of
+		38 Ländern. <!--<xsl:value-of
 		select="count(document($usergroups.xml)//country)" />-->
 		Zusätzlich existiert eine aktive <a
 		href="&base;/community/irc.html">IRC</a>-Gemeinde.
@@ -54,10 +56,10 @@
 		href="&enbase;/community/social.html">Sozialen
 		Netzwerken</a> vertreten.</p>
 
-	      <p>Letztes Jahr gab es insgesamt 19 <!-- <xsl:value-of
+	      <p>Letztes Jahr gab es insgesamt 9 <!-- <xsl:value-of
 	        select="count(/events/event[number(enddate/year) =
 	        (number($curdate.year) -1)])" />-->
-		&os;-Veranstaltungen in 12 <!--<xsl:value-of
+		&os;-Veranstaltungen in 9 <!--<xsl:value-of
 		select="count(/events/event[(number(enddate/year) =
 		(number($curdate.year) -1)) and (generate-id() =
 		generate-id(key('last-year-event-by-country',

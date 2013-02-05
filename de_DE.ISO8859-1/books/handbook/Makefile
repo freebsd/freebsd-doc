@@ -224,11 +224,11 @@ IMAGES_LIB+= callouts/14.png
 IMAGES_LIB+= callouts/15.png
 
 #
-# SRCS lists the individual SGML files that make up the document. Changes
+# SRCS lists the individual XML files that make up the document. Changes
 # to any of these files will force a rebuild
 #
 
-# SGML content
+# XML content
 SRCS+= audit/chapter.xml
 SRCS+= book.xml
 SRCS+= bsdinstall/chapter.xml
@@ -275,8 +275,8 @@ SRCS+= chapters.ent
 # alle Kapitel bauen
 CHAPTERS?= ${SRCS:M*chapter.xml}
 
-SGMLFLAGS+= ${CHAPTERS:S/\/chapter.xml//:S/^/-i chap./}
-SGMLFLAGS+= -i chap.freebsd-glossary
+XMLFLAGS+= ${CHAPTERS:S/\/chapter.xml//:S/^/-i chap./}
+XMLFLAGS+= -i chap.freebsd-glossary
 
 pgpkeyring: pgpkeys/chapter.xml
 	@${JADE} -V nochunks ${OTHERFLAGS} ${JADEOPTS} -d ${DSLPGP} -t sgml ${MASTERDOC}

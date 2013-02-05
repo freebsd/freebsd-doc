@@ -48,13 +48,7 @@
     <para>Most devices in a &unix;-like operating system are accessed
       through device-nodes, sometimes also called special files.
       These files are usually located under the directory
-      <filename>/dev</filename> in the filesystem hierarchy.
-      In releases of FreeBSD older than 5.0-RELEASE, where
-      &man.devfs.5; support is not integrated into FreeBSD,
-      each device node must be
-      created statically and independent of the existence of the
-      associated device driver.  Most device nodes on the system are
-      created by running <command>MAKEDEV</command>.</para>
+      <filename>/dev</filename> in the filesystem hierarchy.</para>
 
     <para>Device drivers can roughly be broken down into two
       categories; character and network device drivers.</para>
@@ -208,25 +202,23 @@ KMOD=skeleton
 
     <para>This simple example pseudo-device remembers whatever values
       you write to it and can then supply them back to you when you
-      read from it.  Two versions are shown, one for &os;&nbsp;4.X and
-      one for &os;&nbsp;5.X.</para>
+      read from it.</para>
 
     <example>
       <title>Example of a Sample Echo Pseudo-Device Driver for
-        &os;&nbsp;4.X</title>
+        &os;&nbsp;10.X</title>
 
       <programlisting>/*
- * Simple `echo' pseudo-device KLD
+ * Simple Echo pseudo-device KLD
  *
  * Murray Stokely
+ * Søren (Xride) Straarup
+ * Eitan Adler
  */
-
-#define MIN(a,b) (((a) &lt; (b)) ? (a) : (b))
 
 #include &lt;sys/types.h&gt;
 #include &lt;sys/module.h&gt;
 #include &lt;sys/systm.h&gt;  /* uprintf */
-#include &lt;sys/errno.h&gt;
 #include &lt;sys/param.h&gt;  /* defines used in kernel.h */
 #include &lt;sys/kernel.h&gt; /* types used in module initialization */
 #include &lt;sys/conf.h&gt;   /* cdevsw struct */
@@ -234,170 +226,6 @@ KMOD=skeleton
 #include &lt;sys/malloc.h&gt;
 
 #define BUFFERSIZE 256
-
-/* Function prototypes */
-d_open_t	echo_open;
-d_close_t	echo_close;
-d_read_t	echo_read;
-d_write_t	echo_write;
-
-/* Character device entry points */
-static struct cdevsw echo_cdevsw = {
-	echo_open,
-	echo_close,
-	echo_read,
-	echo_write,
-	noioctl,
-	nopoll,
-	nommap,
-	nostrategy,
-	"echo",
-	33,              /* reserved for lkms - /usr/src/sys/conf/majors */
-	nodump,
-	nopsize,
-	D_TTY,
-	-1
-};
-
-typedef struct s_echo {
-	char msg[BUFFERSIZE];
-	int len;
-} t_echo;
-
-/* vars */
-static dev_t sdev;
-static int count;
-static t_echo *echomsg;
-
-MALLOC_DECLARE(M_ECHOBUF);
-MALLOC_DEFINE(M_ECHOBUF, "echobuffer", "buffer for echo module");
-
-/*
- * This function is called by the kld[un]load(2) system calls to
- * determine what actions to take when a module is loaded or unloaded.
- */
-
-static int
-echo_loader(struct module *m, int what, void *arg)
-{
-	int err = 0;
-
-	switch (what) {
-	case MOD_LOAD:                /* kldload */
-		sdev = make_dev(<literal>&amp;</literal>echo_cdevsw,
-		    0,
-		    UID_ROOT,
-		    GID_WHEEL,
-		    0600,
-		    "echo");
-		/* kmalloc memory for use by this driver */
-		MALLOC(echomsg, t_echo *, sizeof(t_echo), M_ECHOBUF, M_WAITOK);
-		printf("Echo device loaded.\n");
-		break;
-	case MOD_UNLOAD:
-		destroy_dev(sdev);
-		FREE(echomsg,M_ECHOBUF);
-		printf("Echo device unloaded.\n");
-		break;
-	default:
-		err = EOPNOTSUPP;
-		break;
-	}
-	return(err);
-}
-
-int
-echo_open(dev_t dev, int oflags, int devtype, struct proc *p)
-{
-	int err = 0;
-
-	uprintf("Opened device \"echo\" successfully.\n");
-	return(err);
-}
-
-int
-echo_close(dev_t dev, int fflag, int devtype, struct proc *p)
-{
-	uprintf("Closing device \"echo.\"\n");
-	return(0);
-}
-
-/*
- * The read function just takes the buf that was saved via
- * echo_write() and returns it to userland for accessing.
- * uio(9)
- */
-
-int
-echo_read(dev_t dev, struct uio *uio, int ioflag)
-{
-	int err = 0;
-	int amt;
-
-	/*
-	 * How big is this read operation?  Either as big as the user wants,
-	 * or as big as the remaining data
-	 */
-	amt = MIN(uio-&gt;uio_resid, (echomsg-&gt;len - uio-&gt;uio_offset &gt; 0) ?
-	    echomsg-&gt;len - uio-&gt;uio_offset : 0);
-	if ((err = uiomove(echomsg-&gt;msg + uio-&gt;uio_offset,amt,uio)) != 0) {
-		uprintf("uiomove failed!\n");
-	}
-	return(err);
-}
-
-/*
- * echo_write takes in a character string and saves it
- * to buf for later accessing.
- */
-
-int
-echo_write(dev_t dev, struct uio *uio, int ioflag)
-{
-	int err = 0;
-
-	/* Copy the string in from user memory to kernel memory */
-	err = copyin(uio-&gt;uio_iov-&gt;iov_base, echomsg-&gt;msg,
-	    MIN(uio-&gt;uio_iov-&gt;iov_len, BUFFERSIZE - 1));
-
-	/* Now we need to null terminate, then record the length */
-	*(echomsg-&gt;msg + MIN(uio-&gt;uio_iov-&gt;iov_len, BUFFERSIZE - 1)) = 0;
-	echomsg-&gt;len = MIN(uio-&gt;uio_iov-&gt;iov_len, BUFFERSIZE);
-
-	if (err != 0) {
-		uprintf("Write failed: bad address!\n");
-	}
-	count++;
-	return(err);
-}
-
-DEV_MODULE(echo,echo_loader,NULL);</programlisting>
-    </example>
-
-    <example>
-      <title>Example of a Sample Echo Pseudo-Device Driver for
-        &os;&nbsp;5.X</title>
-
-      <programlisting>/*
- * Simple `echo' pseudo-device KLD
- *
- * Murray Stokely
- *
- * Converted to 5.X by S&oslash;ren (Xride) Straarup
- */
-
-#include &lt;sys/types.h&gt;
-#include &lt;sys/module.h&gt;
-#include &lt;sys/systm.h&gt;  /* uprintf */
-#include &lt;sys/errno.h&gt;
-#include &lt;sys/param.h&gt;  /* defines used in kernel.h */
-#include &lt;sys/kernel.h&gt; /* types used in module initialization */
-#include &lt;sys/conf.h&gt;   /* cdevsw struct */
-#include &lt;sys/uio.h&gt;    /* uio struct */
-#include &lt;sys/malloc.h&gt;
-
-#define BUFFERSIZE 256
-
 
 /* Function prototypes */
 static d_open_t      echo_open;
@@ -415,15 +243,14 @@ static struct cdevsw echo_cdevsw = {
 	.d_name = "echo",
 };
 
-typedef struct s_echo {
+struct s_echo {
 	char msg[BUFFERSIZE];
 	int len;
-} t_echo;
+};
 
 /* vars */
 static struct cdev *echo_dev;
-static int count;
-static t_echo *echomsg;
+static struct s_echo *echomsg;
 
 MALLOC_DECLARE(M_ECHOBUF);
 MALLOC_DEFINE(M_ECHOBUF, "echobuffer", "buffer for echo module");
@@ -434,20 +261,25 @@ MALLOC_DEFINE(M_ECHOBUF, "echobuffer", "buffer for echo module");
  */
 
 static int
-echo_loader(struct module *m, int what, void *arg)
+echo_loader(struct module *m __unused, int what, void *arg __unused)
 {
-	int err = 0;
+	int error = 0;
 
 	switch (what) {
 	case MOD_LOAD:                /* kldload */
-		echo_dev = make_dev(<literal>&amp;</literal>echo_cdevsw,
+		error = make_dev_p(MAKEDEV_CHECKNAME | MAKEDEV_WAITOK,
+		    &amp;echo_dev,
+		    &amp;echo_cdevsw,
 		    0,
 		    UID_ROOT,
 		    GID_WHEEL,
 		    0600,
 		    "echo");
+		if (error != 0)
+			break;
+
 		/* kmalloc memory for use by this driver */
-		echomsg = malloc(sizeof(t_echo), M_ECHOBUF, M_WAITOK);
+		echomsg = malloc(sizeof(*echomsg), M_ECHOBUF, M_WAITOK);
 		printf("Echo device loaded.\n");
 		break;
 	case MOD_UNLOAD:
@@ -456,26 +288,27 @@ echo_loader(struct module *m, int what, void *arg)
 		printf("Echo device unloaded.\n");
 		break;
 	default:
-		err = EOPNOTSUPP;
+		error = EOPNOTSUPP;
 		break;
 	}
-	return(err);
+	return (error);
 }
 
 static int
-echo_open(struct cdev *dev, int oflags, int devtype, struct thread *p)
+echo_open(struct cdev *dev __unused, int oflags __unused, int devtype __unused, struct thread *p __unused)
 {
-	int err = 0;
+	int error = 0;
 
 	uprintf("Opened device \"echo\" successfully.\n");
-	return(err);
+	return (error);
 }
 
 static int
-echo_close(struct cdev *dev, int fflag, int devtype, struct thread *p)
+echo_close(struct cdev *dev __unused, int fflag __unused, int devtype __unused, struct thread *p __unused)
 {
-	uprintf("Closing device \"echo.\"\n");
-	return(0);
+
+	uprintf("Closing device \"echo\".\n");
+	return (0);
 }
 
 /*
@@ -485,21 +318,21 @@ echo_close(struct cdev *dev, int fflag, int devtype, struct thread *p)
  */
 
 static int
-echo_read(struct cdev *dev, struct uio *uio, int ioflag)
+echo_read(struct cdev *dev __unused, struct uio *uio, int ioflag __unused)
 {
-	int err = 0;
-	int amt;
+	int error, amt;
 
 	/*
 	 * How big is this read operation?  Either as big as the user wants,
 	 * or as big as the remaining data
 	 */
-	amt = MIN(uio-&gt;uio_resid, (echomsg-&gt;len - uio-&gt;uio_offset &gt; 0) ?
-	     echomsg-&gt;len - uio-&gt;uio_offset : 0);
-	if ((err = uiomove(echomsg-&gt;msg + uio-&gt;uio_offset, amt, uio)) != 0) {
+
+	amt = MIN(uio-&gt;uio_resid, echomsg-&gt;len - uio-&gt;uio_offset);
+	uio-&gt;uio_offset += amt;
+	if ((error = uiomove(echomsg-&gt;msg, amt, uio)) != 0)
 		uprintf("uiomove failed!\n");
-	}
-	return(err);
+
+	return (error);
 }
 
 /*
@@ -508,55 +341,57 @@ echo_read(struct cdev *dev, struct uio *uio, int ioflag)
  */
 
 static int
-echo_write(struct cdev *dev, struct uio *uio, int ioflag)
+echo_write(struct cdev *dev __unused, struct uio *uio, int ioflag __unused)
 {
-	int err = 0;
+	int error, amt;
 
 	/* Copy the string in from user memory to kernel memory */
-	err = copyin(uio-&gt;uio_iov-&gt;iov_base, echomsg-&gt;msg,
-	    MIN(uio-&gt;uio_iov-&gt;iov_len, BUFFERSIZE - 1));
+
+	/*
+	 * We either write from the beginning or are appending -- do
+	 * not allow random access.
+	 */
+	if (uio-&gt;uio_offset != 0 &amp;&amp; (uio-&gt;uio_offset != echomsg-&gt;len))
+		return (EINVAL);
+
+	/*
+	 * This is new message, reset length
+	 */
+	if (uio-&gt;uio_offset == 0)
+		echomsg-&gt;len = 0;
+
+	/* NULL character should be overridden */
+	if (echomsg-&gt;len != 0)
+		echomsg-&gt;len--;
+
+	/* Copy the string in from user memory to kernel memory */
+	amt = MIN(uio-&gt;uio_resid, (BUFFERSIZE - echomsg-&gt;len));
+
+	error = uiomove(echomsg-&gt;msg + uio-&gt;uio_offset, amt, uio);
 
 	/* Now we need to null terminate, then record the length */
-	*(echomsg-&gt;msg + MIN(uio-&gt;uio_iov-&gt;iov_len, BUFFERSIZE - 1)) = 0;
-	echomsg-&gt;len = MIN(uio-&gt;uio_iov-&gt;iov_len, BUFFERSIZE);
+	echomsg-&gt;len += amt + 1;
+	uio-&gt;uio_offset += amt + 1;
+	echomsg-&gt;msg[echomsg-&gt;len - 1] = 0;
 
-	if (err != 0) {
+	if (error != 0)
 		uprintf("Write failed: bad address!\n");
-	}
-	count++;
-	return(err);
+	return (error);
 }
 
 DEV_MODULE(echo,echo_loader,NULL);</programlisting>
     </example>
-
-    <para>To install this driver on &os;&nbsp;4.X you will first need to
-      make a node on your filesystem with a command such as:</para>
-
-    <screen>&prompt.root; <userinput>mknod /dev/echo c 33 0</userinput></screen>
 
     <para>With this driver loaded you should now be able to type
       something like:</para>
 
     <screen>&prompt.root; <userinput>echo -n "Test Data" &gt; /dev/echo</userinput>
 &prompt.root; <userinput>cat /dev/echo</userinput>
-Test Data</screen>
+Opened device "echo" successfully.
+Test Data
+Closing device "echo".</screen>
 
     <para>Real hardware devices are described in the next chapter.</para>
-
-    <para>Additional Resources
-    <itemizedlist>
-      <listitem><simpara><ulink
-	url="http://ezine.daemonnews.org/200010/blueprints.html">Dynamic
-	Kernel Linker (KLD) Facility Programming Tutorial</ulink> -
-	<ulink url="http://www.daemonnews.org/">Daemonnews</ulink> October 2000</simpara></listitem>
-      <listitem><simpara><ulink
-	url="http://ezine.daemonnews.org/200007/newbus-intro.html">How
-	to Write Kernel Drivers with NEWBUS</ulink> - <ulink
-	url="http://www.daemonnews.org/">Daemonnews</ulink> July
-	2000</simpara></listitem>
-    </itemizedlist>
-    </para>
   </sect1>
 
   <sect1 id="driverbasics-block">

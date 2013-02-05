@@ -4,7 +4,7 @@
 # $FreeBSD$
 # $FreeBSDru: frdp/www/ru/ports/Makefile.inc,v 1.3 2004/01/06 17:28:41 andy Exp $
 #
-#  Original revision: 1.6
+#  Original revision: r39534
 #
 
 PORTINDEX=	${PERL} ${.CURDIR}/portindex
@@ -15,8 +15,9 @@ COOKIE=		${INDEX} Makefile.gen
 
 CLEANFILES+=	${INDEX} ${INDEX}.bz2
 CLEANFILES+=	packages.exists.temp  packages.exists
-CLEANFILES+= 	${DOCS}
+CLEANFILES+= 	${DYNAMIC_DOCS}
 CLEANFILES+=	Makefile.gen
+CLEANFILES+=	ports.count ports.size
 
-_ALLINSTALL= packages.exists ${INDEX} categories
+_ALLINSTALL= packages.exists categories
 

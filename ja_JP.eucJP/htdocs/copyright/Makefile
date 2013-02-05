@@ -1,6 +1,6 @@
 # $FreeBSD$
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.15
+# Original revision: r40529
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -15,6 +15,8 @@ DOCS+=	daemon.xml
 DOCS+=	freebsd-license.xml
 DOCS+=	license.xml
 DOCS+=	trademarks.xml
+
+#DATA+= COPYING COPYING.LIB
 
 INDEXLINK= copyright.html
 

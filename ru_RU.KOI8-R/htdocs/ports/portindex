@@ -1,8 +1,8 @@
-#!/usr/bin/perl
+#!/usr/bin/perl -w
 
-# convert a ports INDEX file to HTML
+# convert a ports INDEX file to XML files
 #
-# by John Fieber <jfieber@freebsd.org>
+# by John Fieber <jfieber@FreeBSD.org>
 # Mon May 13 10:31:58 EST 1996
 
 #
@@ -11,85 +11,116 @@
 # $FreeBSD$
 # $FreeBSDru: frdp/www/ru/ports/portindex,v 1.14 2004/03/23 21:10:07 phantom Exp $
 #
-# Original revision: 1.49
+# Original revision: r39632
 #
 
 ############################################################
+
+use strict;
+use POSIX;
+use IO::File;
+
+my $base = "";
+my $baseHTTP = "";
+my $urlcgi = "";
+my $packagesURL = "";
+my $today = getdate();
+my %p = ();
 
 # Load local config file. You can override in portindex.conf
 # the variables for the default web and the ftp server. This
 # make it easy to maintain a local web mirror and let the
 # URL point to yourself and not to the standard FreeBSD FTP server.
-$config = $0 . '.' . 'conf';
+
+my $config = $0 . '.' . 'conf';
 do $config if -f $config;
 
 # This is the base of where we ftp stuff from
+my $ftpserver;
 if ($ENV{'MASTER_FTP_SERVER'}) {
     $ftpserver = $ENV{'MASTER_FTP_SERVER'};
 } else {
     $ftpserver = 'ftp://ftp.FreeBSD.org' if !$ftpserver;
 }
-$base = "" if !$base;
 $baseHTTP = $base if !$baseHTTP;
-$baseFTP = "$ftpserver/pub/FreeBSD/ports/ports";
-$baseCVSWEB = 'http://www.FreeBSD.org/cgi/cvsweb.cgi/';
-$urlcgi = 'http://www.freebsd.org/cgi/url.cgi' if !$urlcgi;
+my $baseFTP = "$ftpserver/pub/FreeBSD/ports/ports";
+my $baseCVSWEB = 'http://www.FreeBSD.org/cgi/cvsweb.cgi/';
+$urlcgi = 'http://www.FreeBSD.org/cgi/url.cgi' if !$urlcgi;
 $packagesURL = "$ftpserver/pub/FreeBSD/ports/i386/packages-stable/All/"
     if !$packagesURL;
 # support tar on the fly or gzip'ed tar on the fly
-$ftparchive = '';
+my $ftparchive = '';
 $ftparchive = 'tar' if !defined $ftparchive;
 
 
 # ports download sources script
-$pds = 'http://www.FreeBSD.org/cgi/pds.cgi';
+my $pds = 'http://www.FreeBSD.org/cgi/pds.cgi';
 
 # better layout and link to the sources
 if ($urlcgi) {
     $baseHTTP = $urlcgi . '?' . $baseHTTP;
 }
 
-$today = &getdate;
-
-&packages_exist('packages.exists', *packages);
-&category_description(($ARGV[1] || '.') . '/categories', *category_description);
-&main;
+my %packages = ();
+my %category_description = ();
+my @category_groups = ();
+my %category_groups = ();
+packages_exist('packages.exists');
+category_description(($ARGV[1] || '.') . '/categories' );
+category_groups(($ARGV[1] || '.') . '/categories.descriptions' );
+main();
 
 sub getdate {
-    @months = ("Января", "Февраля", "Марта", "Апреля", "Мая","Июня",
-	       "Июля", "Августа", "Сентября", "Октября", "Ноября", "Декабря");
-    ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
-    $year += 1900;
-    return "$mday $months[$mon], $year";
+    return POSIX::strftime("%d-%B-%Y", localtime);
 }
 
 sub header {
-    local ($fh, $htext) = @_;
-    print $fh "<?xml version=\"1.0\" encoding=\"koi8-r\"?>\n";
-    print $fh "<!DOCTYPE html PUBLIC \"-//FreeBSD//DTD XHTML 1.0 Transitional-Based Extension//EN\"\n";
-    print $fh "\"http://www.FreeBSD.org/XML/doc/share/xml/xhtml10-freebsd.dtd\" [\n";
-    print $fh "<!ENTITY base '..'>\n";
-    print $fh "<!ENTITY blurb  SYSTEM \"ports.inc\">\n";
-    print $fh "<!ENTITY % navinclude.ports \"INCLUDE\">\n";
-    print $fh "<!ENTITY email 'ports'>\n";
-    print $fh "]>\n";
+    my $fh = shift;
+    my $htext = shift;
+    #local($fh, $htext) = @_;
+    print $fh <<EOF;
+<?xml version="1.0" encoding="koi8-r"?>
+<!DOCTYPE html PUBLIC "-//FreeBSD//DTD XHTML 1.0 Transitional-Based Extension//EN"
+"http://www.FreeBSD.org/XML/doc/share/xml/xhtml10-freebsd.dtd" [
+<!ENTITY base '..'>
+<!ENTITY % navinclude.ports "INCLUDE">
+<!ENTITY % ports.ent SYSTEM "ports.ent">
+%ports.ent;
+<!ENTITY email 'ports'>
+%statistics.ent;
+]>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>$htext</title>
 
-    print $fh "<html xmlns=\"http://www.w3.org/1999/xhtml\">";
-    print $fh "<head><title>$htext</title>";
-    print $fh "<cvs:keyword xmlns:cvs=\"http://www.FreeBSD.org/XML/CVS\">x x x $today x x x</cvs:keyword>";
-    print $fh "</head>";
+    <cvs:keyword xmlns:cvs=\"http://www.FreeBSD.org/XML/CVS\">x x x $today x x x</cvs:keyword>
+  </head>
 
-    print $fh "<body class=\"navinclude.about\">";
+  <body class="navinclude.port">
+
+&searchform;
+
+<hr/>
+
+EOF
 }
 
 sub footer {
-    local ($fh, $ftext) = @_;
-    print $fh "\n$ftext\n";
-    print $fh "</body>\n</html>\n";
+    my $fh = shift;
+    my $ftext = shift;
+    #local ($fh, $ftext) = @_;
+print $fh <<EOF;
+
+$ftext
+</body>
+</html>
+EOF
 }
 
 sub packages_exist {
-    local($file, *p) = @_;
+    my $file=shift;
+    my %p;
+    #local($file, *p) = @_;
 
     open(P, $file) || do {
 	warn "open $file: $!\n";
@@ -99,14 +130,13 @@ sub packages_exist {
 
     while(<P>) {
 	chop;
-	$p{$_} = 1;
+	$packages{$_} = 1;
     }
     close P;
-    return 0;
 }
 
 sub category_description {
-    local($file, *p) = @_;
+    my $file = shift;
 
     open(P, $file) || do {
 	warn "open $file: $!\n";
@@ -114,23 +144,53 @@ sub category_description {
 	return 1;
     };
 
-    local($category, $description);
     while(<P>) {
 	# ignore comments
 	next if /^\s*#/;
-
-       ($category, $description) = /^\s*"([^"]+)",\s*"([^"]+)/;
-	$p{$category} = $description;
+	if (/^\s*([^,]+),\s*"([^"]+)",\s*([A-Z]+)/) {
+	    $category_description{$1}{desc}=$2;
+	    $category_description{$1}{group}=$3;
+	}
     }
     close P;
-    return 0;
+}
+
+sub category_groups {
+    my $file = shift;
+
+    open(P, $file) || do {
+	warn "open $file: $!\n";
+	warn "Cannot find category groups\n";
+	return 1;
+    };
+
+    while(<P>) {
+	# ignore comments
+	next if /^\s*#/;
+	if (/^\s*([^,]+),\s*(.+)/) {
+	    $category_groups{$1}=$2;
+	    push(@category_groups,$1);
+	}
+    }
+    close P;
 }
 
 sub main {
+    my @master=();
+    my %stats;
+    my %catkey;
+    my %data;
+    my $portnumber = 0;
 
-    $sep = "<b>:</b>";
+    my $sep = "<B>:</B>";
+
+    my $moutf = new IO::File;
+    my $outf = new IO::File;
+    my $mindex = new IO::File;
+    my $statistics = new IO::File;
 
     open(INDEX, $ARGV[0]);
+    $portnumber = "0";
     while (<INDEX>) {
 	chop;
 	s/&/&amp;/g;
@@ -138,29 +198,28 @@ sub main {
     	s/>/&gt;/g;
 
     	# Read a record
-	($name, $loc, $prefix, $desc, $ldesc, $owner, $cats, 
+	my ($name, $loc, $prefix, $desc, $ldesc, $owner, $cats, 
 	    $bdep, $rdep, $www) = split('\|');
 
 	# Check for double hyphens in the name (--).
 	$name =~ s/--/-/g;
 
     	# Split the categories into an array
-	@cat = split("[ \t]+", $cats);
+	my @cat = split("[ \t]+", $cats);
 
     	$catkey{$name} = $cat[0];
 
-	local($sourcepath) = $loc;
+	my $sourcepath = $loc;
 	$sourcepath =~ s%/usr/%%;
-
-	foreach $i (@cat) {
-
+	
+	foreach my $i (sort(@cat)) {
 	    $stats{$i}++;
 
-    	    # figure out the FTP url
+	    # figure out the FTP url
 	    $loc =~ s/\/usr\//$baseCVSWEB/;
-	    $ldesc =~ s/\/usr/$baseHTTP/;
+	    $ldesc =~ s/\/usr\//$baseHTTP/;
 
-    	    # The name description and maintainer
+	    # The name description and maintainer
 	    $name =~ s/,.*//g;
 	    $name =~ s/\++//g;
 	    $data{$i} .= "<dt><b><a name=\"$name\"></a><a href=\"$loc$ftparchive\">$name</a></b></dt>";
@@ -175,54 +234,54 @@ sub main {
 
 	    $data{$i} .= qq{ | <a href="$pds?$sourcepath">Исходные тексты</a>};
 
-            if ($www ne "") {
+	    if ($www ne "") {
 		$data{$i} .= qq{ | <a href="$www">Основной Web сайт</a>};
-            }
+	    }
 
-    	    $ownerurl = $owner;
-    	    $ownerurl =~ s/&lt;/</g;
-    	    $owenrurl =~ s/&gt;/>/g;
+	    my $ownerurl = $owner;
+	    $ownerurl =~ s/&lt;/</g;
+	    $ownerurl =~ s/&gt;/>/g;
 	    $data{$i} .= 
 		"<br/><i>Поддержкой занимается:</i> <a href=\"mailto:$ownerurl\">$owner</a>";
 
-    	    # If there are any dependencies, list them
-    	    if ($bdep ne "" || $rdep ne "") {
-    	    	$data{$i} .= "<br/><i>Требует:</i> ";
-    	    	@dep = split(/ /, "$bdep $rdep");
-		local($last) = '';
-    	    	foreach $j (sort @dep) {
+	    # If there are any dependencies, list them
+	    if ($bdep ne "" || $rdep ne "") {
+		$data{$i} .= "<br/><i>Требует:</i> ";
+		my @dep = split(/ /, "$bdep $rdep");
+		my $last = '';
+		foreach my $j (sort @dep) {
 		    next if $j eq $last;
 		    $last = $j;
-    	    	    $data{$i} .= " <a href=\"##$j##.html#$j\">$j</a>,";
-    	    	}
-    	    	# remove the trailing comma
-    	    	chop $data{$i};
-    	    }
+		    $data{$i} .= " <a href=\"##$j##.html#$j\">$j</a>,";
+		}
+		# remove the trailing comma
+		chop $data{$i};
+	    }
 
-    	    # If the port is listed in more than one category, throw
-    	    # in some cross references
-    	    if ($#cat > 0) {
-    	    	$data{$i} .= "<br/><em>Также присутствует в:</em> ";
-    	    	foreach $j (@cat) {
-    	    	    if ($j ne $i) {
+	    # If the port is listed in more than one category, throw
+	    # in some cross references
+	    if ($#cat > 0) {
+		$data{$i} .= "<br/><em>Также присутствует в:</em> ";
+		foreach my $j (@cat) {
+		    if ($j ne $i) {
 			if ($j eq $cat[0]) {
 			    $data{$i} .= " <strong><a href=\"$j.html#$name\">\u$j</a></strong>,";
 			}
 			else {
 			    $data{$i} .= " <a href=\"$j.html#$name\">\u$j</a>,";
 			}
-    	    	    }
-    	    	}
-    	    	# remove the trailing comma
-    	    	chop($data{$i});
-    	    }
-    	    $data{$i} .= "<p></p></dd>\n"
+		    }
+		}
+		# remove the trailing comma
+		chop($data{$i});
+	    }
+	    $data{$i} .= "<p></p></dd>\n"
 	}
 
-        # Add an entry to the master index
+    	# Add an entry to the master index
 
-        # workaround for SGML bug, `--' is not allowed in comments
-	local ($sname) = $name; 
+	# workaround XML syntax, `--' is not allowed in comments
+	my $sname = $name; 
 	$sname =~ s/--/-=/g;
     	$master[$portnumber] = 
     	    "<!-- $sname --><strong><a href=\"$cat[0].html#$name\">$name</a></strong> " .
@@ -230,67 +289,113 @@ sub main {
 	$portnumber++;
     }
 
-    open(MOUTF, ">index.sgml");
+    # create categories-grouped.xml and <category>.xml
 
-    &header(MOUTF, "Порты FreeBSD");
-#    print MOUTF "<!--#include virtual=\"./ports.inc\" -->\n";
-    print MOUTF "&blurb;";
-    print MOUTF "<hr/><p>В списке Коллекции Портов FreeBSD на данный момент
-присутствуют $portnumber портированных на FreeBSD программ.<br/>
-<a href=\"$baseFTP/ports.tar.gz\">Сгрузите gzip-архив, содержащий все
-$portnumber портов</a> (около 21 Мбайта) или просмотрите следующие
-категории:</p>\n";
+    $moutf->open(">categories-grouped.xml");
+    header($moutf, "Категории Портов FreeBSD по группам");
 
-    print MOUTF "<ul>\n";
+    print $moutf <<EOF;
+<a name=\"top\"></a>
+EOF
 
-    @foos = sort(keys %stats);
-    foreach $key  (@foos) {
-	# For the master file...
-	print MOUTF 
-	    "<li><a href=\"$key.html\">\u$key</a> <em>($stats{$key})</em>";
-	if ($category_description{$key}) {
-	    print MOUTF " -- " . $category_description{$key};
+    if ($portnumber eq '0') {
+      print $moutf "<p>ничего не найдено</p>\n";
+    } else {
+    foreach my $cg (@category_groups) {
+	print $moutf "<h3>",$category_groups{$cg},"</h3>\n";
+	print $moutf "<ul>\n";
+	foreach my $key (sort(keys(%stats))) {
+	    next if ($category_description{$key}{group} ne $cg);
+	    # For the master file...
+	    print $moutf 
+		"<li><a href=\"$key.html\">\u$key</a> <em>($stats{$key})</em>";
+	    if ($category_description{$key}{desc}) {
+		print $moutf " -- " . $category_description{$key}{desc};
+	    }
+
+	    # Someone forgot to add a category to the description file
+	    # or there is a typo in the category field.
+	    else {
+		warn "No description found for category: ``$key''!\n";
+		warn "Please fix me or send an E-Mail to doc\@FreeBSD.org\a\n";
+		sleep(3);
+	    }
+	    print $moutf "</li>\n";
+
+	    # Create the category file
+	    $outf->open(">$key.xml");
+	    header($outf, "Порты FreeBSD: \u$key");
+	    if ($category_description{$key}{desc}) {
+		print $outf "<h3>", $category_description{$key}{desc}, "</h3>\n";
+	    }
+	    print $outf "<dl>\n";
+	    my $d = join("\n", sort(split(/\n/, $data{$key})));
+	    $d =~ s/##([^#]*)##/$catkey{$1}/g;
+	    print $outf $d;
+	    print $outf "</dl>\n";
+	    footer($outf, "<p></p><a href=\"#top\">top</a>" .
+		" -- <a href=\"master-index.html\">Index</a>");
+	    $outf->close;
 	}
-
-	# Someone forgot to add a category to the description file
-	# or there is a typo in the category field.
-	else {
-	   warn "No description found for category: ``$key''!\n";
-	   warn "Please fix me or send an E-Mail to doc\@FreeBSD.org\a\n";
-	   sleep(3);
-	}
- 
-	print MOUTF "</li>\n";
-
-	# Create the category file
-	open(OUTF, ">$key.sgml");
-	&header(OUTF, "Порты FreeBSD: \u$key");
-	if ($category_description{$key}) {
-	    print OUTF "<h3>", $category_description{$key}, "</h3>\n";
-	}
-	print OUTF "<dl>\n";
-	$d = join("\n", sort(split(/\n/, $data{$key})));
-    	$d =~ s/##([^#]*)##/$catkey{$1}/g;
-	print OUTF $d;
-	print OUTF "</dl>\n";
-	&footer(OUTF, "<p></p><a href=\"index.html\">Категории Портов</a>" .
-	    " -- <a href=\"master-index.html\">Индекс</a>");
-	close(OUTF);
-
+	print $moutf "</ul>\n";
     }
-    print MOUTF "</ul>\n";
-    print MOUTF 
-    	"<ul><li><a href=\"master-index.html\">Алфавитный список всех $portnumber портов</a></li></ul>\n";
-    &footer(MOUTF, "");
-    close(MOUTF);
+    }
 
-    # Create the master index file
-    open(MINDEX, ">master-index.sgml");
-    &header(MINDEX, "Индекс Коллекции Портов FreeBSD");
-    print MINDEX "<p>\n";
-    print MINDEX sort @master;
-    print MINDEX "</p>";
-    &footer(MINDEX, "<a href=\"index.html\">Категории Портов</a>");
-    close(MINDEX);
+    footer($moutf, "");
+    $moutf->close;
+
+    # create categories-alpha.xml
+
+    $moutf->open(">categories-alpha.xml");
+    header($moutf, "Категории Портов FreeBSD в алфавитном порядке");
+
+    print $moutf <<EOF;
+<a name=\"top\"></a>
+EOF
+
+    if ($portnumber eq '0') {
+      print $moutf "<p>ничего не найдено</p>\n";
+    } else {
+      print $moutf "<ul>\n";
+      foreach my $key (sort(keys(%stats))) {
+	print $moutf
+	  "<li><a href=\"$key.html\">\u$key</a> <em>($stats{$key})</em>";
+	if ($category_description{$key}{desc}) {
+	  print $moutf " -- " . $category_description{$key}{desc};
+	print $moutf "</li>\n";
+	}
+      }
+      print $moutf "</ul>\n";
+    }
+
+    footer($moutf, "");
+    $moutf->close;
+
+    # Create master-index.xml
+
+    $mindex->open(">master-index.xml");
+    header($mindex, "Индекс Коллекции Портов FreeBSD");
+    print $mindex "<p>\n";
+    print $mindex sort @master;
+    print $mindex "</p>";
+    footer($mindex, "<a href=\"#top\">top</a>");
+    $mindex->close;
+
+    # Create statistics.ent
+
+    $statistics->open(">statistics.ent");
+    print $statistics "<?xml version=\"1.0\" encoding=\"koi8-r\"?>\n";
+
+    my $ptgzsize = `cat ports.size 2>/dev/null` || "";
+    if ($ptgzsize =~ /^\d+$/) {
+       $ptgzsize = sprintf("%.0f", $ptgzsize/(1024*1024));
+       print $statistics "<!ENTITY ports.size '$ptgzsize мегабайт'>\n";
+    } else {
+       warn "Unknown size for ports.tar.gz\n";
+       print $statistics "<!ENTITY ports.size 'несколько десятков мегабайт'>\n";
+    }
+    print $statistics "<!ENTITY ports.count '$portnumber'>\n";
+
+    $statistics->close;
     close(INDEX);
 }

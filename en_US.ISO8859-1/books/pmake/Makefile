@@ -1,7 +1,7 @@
 #
 # $FreeBSD$
 #
-# This is an SGML version of the pmake tutorial by Adam de Boor that is
+# This is an XML version of the pmake tutorial by Adam de Boor that is
 # also part of the src/share/doc/psd collection of docs.
 #
 
@@ -12,10 +12,10 @@ FORMATS?= html-split
 INSTALL_COMPRESSED?= gz
 INSTALL_ONLY_COMPRESSED?=
 
-# SRCS lists the individual SGML files that make up the document.
+# SRCS lists the individual XML files that make up the document.
 # Changes to any of these files will force a rebuild.
 
-# SGML content
+# XML content
 SRCS=	book.xml
 SRCS+=	answers/chapter.xml
 SRCS+=	basics/chapter.xml

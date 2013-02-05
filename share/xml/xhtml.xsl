@@ -37,12 +37,11 @@
     <html xmlns="http://www.w3.org/1999/xhtml">
       <head>
 	<title><xsl:value-of select="$title" /></title>
+	<xsl:copy-of select="/xhtml:html/xhtml:head/xhtml:base" />
 	<meta http-equiv="Content-Type" content="text/html; charset=&xml.encoding;" />
-	<meta name="MSSmartTagsPreventParsing" content="TRUE" />
 	<xsl:copy-of select="/xhtml:html/xhtml:head/xhtml:meta"/>
 	<link rel="shortcut icon" href="&enbase;/favicon.ico" type="image/x-icon" />
 	<link rel="stylesheet" media="screen" href="&stylesheet;" type="text/css"/>
-	<link rel="icon" href="&enbase;/favicon.ico" type="image/x-icon" />
 	<xsl:copy-of select="/xhtml:html/xhtml:head/xhtml:link"/>
 	<xsl:call-template name="process.rss.link"/>
 	&header1.googlejs;
@@ -63,6 +62,8 @@
 		</div> <!-- HEADERLOGOLEFT -->
 
 		<div id="headerlogoright">
+		  &header2.donatebutton;
+
 		  &header2.searchnav.label;
 
 		  &header2.searchnav;

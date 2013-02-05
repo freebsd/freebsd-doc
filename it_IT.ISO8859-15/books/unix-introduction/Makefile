@@ -14,11 +14,11 @@ INSTALL_COMPRESSED?= gz
 INSTALL_ONLY_COMPRESSED?=
 
 #
-# SRCS lista i singoli files SGML che compongono il documento. Modifiche
+# SRCS lista i singoli files XML che compongono il documento. Modifiche
 # a qualunque di questi files obbligano la ricreazione
 #
 
-# Contenuto SGML
+# Contenuto XML
 SRCS = book.xml
 SRCS+= bibliography/chapter.xml
 SRCS+= command-summary/chapter.xml

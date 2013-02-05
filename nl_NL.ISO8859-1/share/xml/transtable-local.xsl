@@ -5,7 +5,7 @@
      $FreeBSD$
 
      %SOURCE%	share/xml/transtable-local.xsl
-     %SRCID%	38826
+     %SRCID%	39632
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
