@@ -16,6 +16,7 @@
 
   <!-- HTML specific customisation goes here -->
 
+  <xsl:param name="use.id.as.filename" select="1"/>
   <xsl:param name="html.stylesheet" select="'docbook.css'"/>
   <xsl:param name="user.id.as.filename" select="'1'"/>
   <xsl:param name="link.mailto.url" select="'doc@FreeBSD.org'"/>
