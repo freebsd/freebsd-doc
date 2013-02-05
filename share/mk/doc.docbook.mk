@@ -361,6 +361,9 @@ ${DOC}.epub: ${DOC}.parsed.xml ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} \
 	${XSLTPROC} ${XSLTPROCOPTS} ${XSLEPUB} ${DOC}.parsed.xml
 	${ECHO} "application/epub+zip" > mimetype
 	${CP} ${CSS_SHEET} OEBPS/
+.if defined(LOCAL_IMAGES_LIB) || defined(LOCAL_IMAGES_PNG)
+	${CP} ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} OEBPS/
+.endif
 	${ZIP} ${ZIPOPTS} ${DOC}.epub mimetype OEBPS META-INF
 
 # TXT --------------------------------------------------------------------
