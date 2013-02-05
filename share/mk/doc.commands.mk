@@ -46,8 +46,8 @@ BZIPOPTS?=	-qf9
 GZIP?=		gzip
 GZIPOPTS?=	-qf9
 TAR?=		/usr/bin/tar
-ZIP?=		${TAR}
-ZIPOPTS?=	-c --format=zip --options zip:compression=deflate -f
+ZIP?=		${PREFIX}/bin/zip
+ZIPOPTS?=	-9X
 
 #
 # Rendering and format conversion
