@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
 <!-- Vertaald door: Siebrand Mazeland / Rene Ladan
      %SOURCE%	en_US.ISO8859-1/htdocs/index.xsl
-     %SRCID%	39595
+     %SRCID%	40573
 -->
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/xml/xslt10-freebsd.dtd" [
@@ -53,7 +53,7 @@
 				  geavanceerd netwerken, indrukwekkende
 				  beveiligingsmogelijkheden en topprestaties en
 				  wordt door sommige van 's werelds <a
-				    href="&enbase;/doc/nl_NL.ISO8859-1/books/handbook/nutshell.html#INTRODUCTION-NUTSHELL-USERS">drukste
+				    href="&enbase;/doc/nl_NL.ISO8859-1/books/handbook/nutshell.html#introduction-nutshell-users">drukste
 				    websites</a> en de meest voorkomende
 				  embedded netwerk- en opslagapparaten
 				  gebruikt.</p>
@@ -79,16 +79,16 @@
 				    <li>Productie:&nbsp;<a
 				href="&u.rel.announce;">&rel.current;</a>,&nbsp;<a
 				href="&u.rel2.announce;">&rel2.current;</a></li>
-				    <li>Ouder: <a
+				    <li>Verouderd: <a
 				href="&u.rel3.announce;">&rel3.current;</a></li>
 				    <xsl:if test="'&beta.testing;' != 'IGNORE'">
-					<li>Aankomend:
+					<li>Aanstaand:
 					  <a href="&base;/where.html#helptest">
 					    &betarel.current;-&betarel.vers;</a>
 					</li>
 				    </xsl:if>
 				    <xsl:if test="'&beta2.testing;' != 'IGNORE'">
-					<li>Aankomend:
+					<li>Aanstaand:
 					  <a href="&base;/where.html#helptest">
 					    &betarel2.current;-&betarel2.vers;</a>
 					</li>
@@ -309,5 +309,15 @@
 	    </div> <!-- FRONTNEMSCONTAINER -->
 	  </div> <!-- FRONTMAIN -->
 	</div> <!-- FRONTCONTAINER -->
+  </xsl:template>
+
+  <xsl:template name="process.footer">
+	&copyright;
+
+	Het merk &os; is een geregistreerd handelsmerk van de &os; Foundation
+	en wordt gebruikt door The &os; Project met toestemming van <a
+	  href="http://www.freebsdfoundation.org/documents/Guidelines.shtml">The
+	  &os; Foundation</a>.
+	<a href="&base;/mailto.html" title="&header2.word.contact;">&header2.word.contact;</a>
   </xsl:template>
 </xsl:stylesheet>

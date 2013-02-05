@@ -54,7 +54,7 @@
 				  impressive security features, and
 				  world class performance and is used
 				  by some of the world's <a
-				  href="&base;/doc/en_US.ISO8859-1/books/handbook/nutshell.html#INTRODUCTION-NUTSHELL-USERS">busiest
+				  href="&base;/doc/en_US.ISO8859-1/books/handbook/nutshell.html#introduction-nutshell-users">busiest
 				  web sites</a> and most pervasive
 				  embedded networking and storage
 				  devices.</p>
@@ -63,8 +63,8 @@
 				  id="txtfrontfeaturelink"> &#187;<a
 				  href="&base;/about.html"
 				  title="Learn More">Learn More</a>
-
 				  </div> <!-- TXTFRONTFEATURELINK -->
+
 			  </div> <!-- FRONTFEATURECONTENT -->
 		  </div> <!-- FRONTFEATURELEFT -->
 
@@ -319,5 +319,6 @@
 	permission of <a
 	  href="http://www.freebsdfoundation.org/documents/Guidelines.shtml">The
 	FreeBSD Foundation</a>.
+	<a href="&base;/mailto.html" title="&header2.word.contact;">&header2.word.contact;</a>
   </xsl:template>
 </xsl:stylesheet>

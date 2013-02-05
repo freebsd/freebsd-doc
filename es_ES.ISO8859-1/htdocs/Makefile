@@ -25,7 +25,7 @@ DOCS+= where.xml
 CLEANFILES+=atoz.xml site.xml
 
 # Subdirectories
-# SGML
+# XML
 SUBDIR=  security
 SUBDIR+= docproj
 SUBDIR+= news

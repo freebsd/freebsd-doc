@@ -31,7 +31,7 @@
 #
 # Variables used by both users and documents:
 #
-#	SGMLFLAGS	Additional options to pass to various SGML
+#	XMLFLAGS	Additional options to pass to various XML
 #			processors (e.g., jade, nsgmls).  Typically
 #			used to define "IGNORE" entities to "INCLUDE"
 #			 with "-i<entity-name>"
@@ -41,7 +41,7 @@
 #			"%generate-article-toc%".
 #
 #	EXTRA_CATALOGS	Additional catalog files that should be used by
-#			any SGML processing applications.
+#			any XML processing applications.
 #
 #       GEN_INDEX       If this document has an index (HAS_INDEX) and this
 #                       variable is defined, then index.xml will be added 

@@ -25,6 +25,7 @@ DOCS+= relnotes.xml
 DOCS+= send-pr.xml
 DOCS+= support.xml
 DOCS+= where.xml
+DOCS+= 4xx.xml
 
 XMLDOCS=	index:xsl:${XML_NEWS_NEWS}:
 DEPENDSET.index=transtable mirrors news press events \
@@ -41,12 +42,13 @@ DEPENDSET.community=usergroups events
 
 DATA=	favicon.ico
 DATA+=	freebsd.css
+DATA+=	google6bb24ed0b804d5e9.html
 DATA+=	index.css
 DATA+=	robots.txt
 DATA+=	vendors.html
 
 # Subdirectories
-# SGML
+# XML
 SUBDIR= FAQ
 SUBDIR+= advocacy
 SUBDIR+= commercial
@@ -84,7 +86,7 @@ SUBDIR+= ports
 SUBDIR+= relnotes
 .endif
 
-# Non-SGML
+# Non-XML
 SUBDIR+= cgi
 SUBDIR+= gifs
 SUBDIR+= layout

@@ -1,6 +1,8 @@
 # $FreeBSD$
 # %SOURCE%	en_US.ISO8859-1/htdocs/Makefile
-# %SRCID%	39594
+# %SRCID%	40439
+
+# XXX rene r40275 (Google Analytics) not merged in (yet)
 
 .if exists(Makefile.conf)
 .include "Makefile.conf"
@@ -27,6 +29,7 @@ DOCS+= relnotes.xml
 DOCS+= send-pr.xml
 DOCS+= support.xml
 DOCS+= where.xml
+DOCS+= 4xx.xml
 
 XMLDOCS=	index:xsl:${XML_NEWS_NEWS}:
 DEPENDSET.index=transtable mirrors news press events \
@@ -48,7 +51,7 @@ DEPENDSET.community=usergroups events
 DATA+=	vendors.html
 
 # Subdirectories
-# SGML
+# XML
 #SUBDIR= FAQ
 #SUBDIR+= advocacy
 #SUBDIR+= commercial

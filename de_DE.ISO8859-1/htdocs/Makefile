@@ -36,7 +36,7 @@ DOCS+= where.xml
 #DATA+=	vendors.html
 
 # Subdirectories
-# SGML
+# XML
 SUBDIR= community
 SUBDIR+= developers
 SUBDIR+= docproj
@@ -61,7 +61,7 @@ SUBDIR+= doc
 SUBDIR+= relnotes
 .endif
 
-# Non-SGML
+# Non-XML
 SUBDIR+= gifs
 
 WEBDIR?=	data/de

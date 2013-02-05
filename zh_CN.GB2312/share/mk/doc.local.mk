@@ -32,4 +32,4 @@ JADETEX_PREPROCESS=	${CJKTEXSTY} ${CJKTEXSTY_TEX_FLAGS}
 print.index: ${SRCS} ${LOCAL_IMAGES_TXT}
 	${INIT_INDEX_SGML_CMD}
 	${JADE_CMD} -V html-index -V nochunks ${HTMLOPTS} -ioutput.html.images \
-		-ioutput.for.print ${JADEOPTS} -t sgml ${MASTERDOC} > /dev/null
+		-ioutput.for.print ${JADEOPTS} -t sgml ${XMLDECL} ${MASTERDOC} > /dev/null

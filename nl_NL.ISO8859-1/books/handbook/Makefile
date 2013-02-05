@@ -2,7 +2,7 @@
 # $FreeBSD$
 #
 # %SOURCE%	en_US.ISO8859-1/books/handbook/Makefile
-# %SRCID%	39537
+# %SRCID%	39665
 #
 # Bouw het Nederlandse FreeBSD Handboek.
 #
@@ -246,11 +246,11 @@ IMAGES_LIB+= callouts/14.png
 IMAGES_LIB+= callouts/15.png
 
 #
-# SRCS-lijsten van de individuele SGML-bestanden die het document vormen.
+# SRCS-lijsten van de individuele XML-bestanden die het document vormen.
 # Veranderingen aan een van deze bestanden zal een nieuwe build afdwingen
 #
 
-# SGML-inhoud
+# XML-inhoud
 SRCS+= audit/chapter.xml
 SRCS+= book.xml
 SRCS+= bsdinstall/chapter.xml
@@ -299,8 +299,8 @@ SYMLINKS=	${DESTDIR} index.html handbook.html
 # Neem alle hoofdstukken mee.
 CHAPTERS?= ${SRCS:M*chapter.xml}
 
-SGMLFLAGS+= ${CHAPTERS:S/\/chapter.xml//:S/^/-i chap./}
-SGMLFLAGS+= -i chap.freebsd-glossary
+XMLFLAGS+= ${CHAPTERS:S/\/chapter.xml//:S/^/-i chap./}
+XMLFLAGS+= -i chap.freebsd-glossary
 
 pgpkeyring: pgpkeys/chapter.xml
 	${JADE} -V nochunks ${OTHERFLAGS} ${JADEOPTS} -d ${DSLPGP} -t sgml ${XMLDECL} ${MASTERDOC}

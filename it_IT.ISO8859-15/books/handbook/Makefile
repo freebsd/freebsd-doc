@@ -179,11 +179,11 @@ IMAGES_LIB+= callouts/14.png
 IMAGES_LIB+= callouts/15.png
 
 #
-# SRCS lista i singoli files SGML che compongono il documento. Modifiche
+# SRCS lista i singoli files XML che compongono il documento. Modifiche
 # a qualunque di questi files obbligano la ricreazione
 #
 
-# Contenuto SGML
+# Contenuto XML
 SRCS = book.xml
 SRCS+= colophon.xml
 SRCS+= advanced-networking/chapter.xml
@@ -229,8 +229,8 @@ SYMLINKS=	${DESTDIR} index.html handbook.html
 # Attiva tutti i capitoli.
 CHAPTERS?= ${SRCS:M*chapter.xml}
 
-SGMLFLAGS+= ${CHAPTERS:S/\/chapter.xml//:S/^/-i chap./}
-SGMLFLAGS+= -i chap.freebsd-glossary
+XMLFLAGS+= ${CHAPTERS:S/\/chapter.xml//:S/^/-i chap./}
+XMLFLAGS+= -i chap.freebsd-glossary
 
 pgpkeyring: pgpkeys/chapter.xml
 	@${JADE} -V nochunks ${OTHERFLAGS} ${JADEOPTS} -d ${DSLPGP} -t sgml ${MASTERDOC}

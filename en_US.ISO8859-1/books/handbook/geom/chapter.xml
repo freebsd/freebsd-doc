@@ -234,210 +234,598 @@ Done.</screen>
     <indexterm>
       <primary>Disk Mirroring</primary>
     </indexterm>
+    <indexterm>
+      <primary>RAID1</primary>
+    </indexterm>
 
-    <para>Mirroring is a technology used by many corporations and home
-      users to back up data without interruption.  When a mirror
-      exists, it simply means that diskB replicates diskA.  Or,
-      perhaps diskC+D replicates diskA+B.  Regardless of the disk
-      configuration, the important aspect is that information on one
-      disk or partition is being replicated.  Later, that information
-      could be more easily restored, backed up without causing service
-      or access interruption, and even be physically stored in a data
-      safe.</para>
+    <para><acronym>RAID1</acronym>, or
+      <firstterm>mirroring</firstterm>, is the technique of writing
+      the same data to more than one disk drive.  Mirrors are usually
+      used to guard against data loss due to drive failure.  Each
+      drive in a mirror contains an identical copy of the data.  When
+      an individual drive fails, the mirror continues to work,
+      providing data from the drives that are still functioning.  The
+      computer keeps running, and the administrator has time to
+      replace the failed drive without user interruption.</para>
 
-    <para>To begin, ensure the system has two disk drives of equal
-      size, these exercises assume they are direct access (&man.da.4;)
-      <acronym>SCSI</acronym> disks.</para>
+    <para>Two common situations are illustrated in these examples.
+      The first is creating a mirror out of two new drives and using
+      it as a replacement for an existing single drive.  The second
+      example creates a mirror on a single new drive, copies the old
+      drive's data to it, then inserts the old drive into the
+      mirror.  While this procedure is slightly more complicated, it
+      only requires one new drive.</para>
 
-    <sect2>
-      <title>Mirroring Primary Disks</title>
+    <para>Traditionally, the two drives in a mirror are identical in
+      model and capacity, but &man.gmirror.8; does not require that.
+      Mirrors created with dissimilar drives will have a capacity
+      equal to that of the smallest drive in the mirror.  Extra space
+      on larger drives will be unused.  Drives inserted into the
+      mirror later must have at least as much capacity as the smallest
+      drive already in the mirror.</para>
 
-      <para>Assuming &os; has been installed on the first,
-	<devicename>da0</devicename> disk device, &man.gmirror.8;
-	should be told to store its primary data there.</para>
+    <warning>
+      <para>The mirroring procedures shown here are non-destructive,
+	but as with any major disk operation, make a full backup
+	first.</para>
+    </warning>
 
-      <para>Before building the mirror, enable additional debugging
-	information and opening access to the device by setting the
-	<varname>kern.geom.debugflags</varname> &man.sysctl.8; option
-	to the following value:</para>
+    <sect2 id="GEOM-mirror-metadata">
+      <title>Metadata Issues</title>
 
-      <screen>&prompt.root; <userinput>sysctl kern.geom.debugflags=17</userinput></screen>
+      <para>Many disk systems store metadata at the end of each disk.
+	Old metadata should be erased before reusing the disk for a
+	mirror.  Most problems are caused by two particular types of
+	leftover metadata: GPT partition tables, and old
+	&man.gmirror.8; metadata from a previous mirror.</para>
 
-      <para>Now create the mirror.  Begin the process by storing
-	meta-data information on the primary disk device,
-	effectively creating the
-	<filename class="devicefile">/dev/mirror/gm</filename> device
-	using the following command:</para>
+      <para>GPT metadata can be erased with &man.gpart.8;.  This
+	example erases both primary and backup GPT partition tables
+	from disk <devicename>ada8</devicename>:</para>
 
-      <warning>
-	<para>Creating a mirror out of the boot drive may result in
-	  data loss if any data has been stored on the last sector of
-	  the disk.  This risk is reduced if creating the mirror is
-	  done promptly after a fresh install of &os;.  The following
-	  procedure is also incompatible with the default installation
-	  settings of &os;&nbsp;9.<replaceable>X</replaceable> which
-	  use the new <acronym>GPT</acronym> partition scheme.  GEOM
-	  will overwrite <acronym>GPT</acronym> metadata, causing data
-	  loss and possibly an unbootable system.</para>
-      </warning>
+      <screen>&prompt.root; <userinput>gpart destroy -F ada8</userinput></screen>
 
-      <screen>&prompt.root; <userinput>gmirror label -vb round-robin gm0 /dev/da0</userinput></screen>
+      <para>&man.gmirror.8; can remove a disk from an active mirror
+	and erase the metadata in one step.  Here, the example disk
+	<devicename>ada8</devicename> is removed from the active
+	mirror <devicename>gm4</devicename>:</para>
 
-      <para>The system should respond with:</para>
+      <screen>&prompt.root; <userinput>gmirror remove gm4 ada8</userinput></screen>
 
-      <screen>Metadata value stored on /dev/da0.
-Done.</screen>
+      <para>If the mirror is not running but old mirror metadata is
+	still on the disk, use <command>gmirror clear</command> to
+	remove it:</para>
 
-      <para>Initialize GEOM, this will load the
-	<filename>/boot/kernel/geom_mirror.ko</filename> kernel
-	module:</para>
+      <screen>&prompt.root; <userinput>gmirror clear ada8</userinput></screen>
 
-      <screen>&prompt.root; <userinput>gmirror load</userinput></screen>
-
-      <note>
-	<para>When this command completes successfully, it creates the
-	  <devicename>gm0</devicename> device node under the
-	  <filename class="directory">/dev/mirror</filename>
-	  directory.</para>
-      </note>
-
-      <para>Enable loading of the <filename>geom_mirror.ko</filename>
-	kernel module during system initialization:</para>
-
-      <screen>&prompt.root; <userinput>echo 'geom_mirror_load="YES"' &gt;&gt; /boot/loader.conf</userinput></screen>
-
-      <para>Edit the <filename>/etc/fstab</filename> file, replacing
-	references to the old <devicename>da0</devicename> with the
-	new device nodes of the <devicename>gm0</devicename> mirror
-	device.</para>
-
-      <note>
-	<para>If &man.vi.1; is your preferred editor, the following is
-	  an easy way to accomplish this task:</para>
-
-	<screen>&prompt.root; <userinput>vi /etc/fstab</userinput></screen>
-
-	<para>In &man.vi.1; back up the current contents of
-	  <filename>fstab</filename> by typing
-	  <userinput>:w /etc/fstab.bak</userinput>.  Then
-	  replace all old <devicename>da0</devicename> references
-	  with <devicename>gm0</devicename> by typing
-	  <userinput>:%s/da/mirror\/gm/g</userinput>.</para>
-      </note>
-
-      <para>The resulting <filename>fstab</filename> file should look
-	similar to the following.  It does not matter if the disk
-	drives are <acronym>SCSI</acronym> or <acronym>ATA</acronym>,
-	the <acronym>RAID</acronym> device will be
-	<devicename>gm</devicename> regardless.</para>
-
-      <programlisting># Device		Mountpoint	FStype	Options		Dump	Pass#
-/dev/mirror/gm0s1b	none		swap	sw		0	0
-/dev/mirror/gm0s1a	/		ufs	rw		1	1
-/dev/mirror/gm0s1d	/usr		ufs	rw		0	0
-/dev/mirror/gm0s1f	/home		ufs	rw		2	2
-#/dev/mirror/gm0s2d	/store		ufs	rw		2	2
-/dev/mirror/gm0s1e	/var		ufs	rw		2       2
-/dev/acd0		/cdrom		cd9660	ro,noauto	0	0</programlisting>
-
-      <para>Reboot the system:</para>
-
-      <screen>&prompt.root; <userinput>shutdown -r now</userinput></screen>
-
-      <para>During system initialization, the
-	<devicename>gm0</devicename> should be used in place of the
-	<devicename>da0</devicename> device.  Once fully initialized,
-	this may be checked by visually inspecting the output from
-	the <command>mount</command> command:</para>
-
-      <screen>&prompt.root; <userinput>mount</userinput>
-Filesystem         1K-blocks    Used    Avail Capacity  Mounted on
-/dev/mirror/gm0s1a   1012974  224604   707334    24%    /
-devfs                      1       1        0   100%    /dev
-/dev/mirror/gm0s1f  45970182   28596 42263972     0%    /home
-/dev/mirror/gm0s1d   6090094 1348356  4254532    24%    /usr
-/dev/mirror/gm0s1e   3045006 2241420   559986    80%    /var
-devfs                      1       1        0   100%    /var/named/dev</screen>
-
-      <para>The output looks good, as expected.  Finally, to begin
-	synchronization, insert the <devicename>da1</devicename> disk
-	into the mirror using the following command:</para>
-
-      <screen>&prompt.root; <userinput>gmirror insert gm0 /dev/da1</userinput></screen>
-
-      <para>As the mirror is built the status may be checked using
-	the following command:</para>
-
-      <screen>&prompt.root; <userinput>gmirror status</userinput></screen>
-
-      <para>Once the mirror has been built and all current data
-	has been synchronized, the output from the above command
-	should look like:</para>
-
-      <screen>      Name    Status  Components
-mirror/gm0  COMPLETE  da0
-                      da1</screen>
-
-      <para>If there are any issues, or the mirror is still
-	completing the build process, the example will show
-	<literal>DEGRADED</literal> in place of
-	<literal>COMPLETE</literal>.</para>
+      <para>&man.gmirror.8; stores one block of metadata at the end of
+	the disk.  Because GPT partition schemes also store metadata
+	at the end of the disk, mirroring full GPT disks with
+	&man.gmirror.8; is not recommended.  MBR partitioning is used
+	here because it only stores a partition table at the start of
+	the disk and does not conflict with &man.gmirror.8;.</para>
     </sect2>
 
     <sect2>
+      <title>Creating a Mirror with Two New Disks</title>
+
+      <para>In this example, &os; has already been installed on a
+	single disk, <devicename>ada0</devicename>.  Two new disks,
+	<devicename>ada1</devicename> and
+	<devicename>ada2</devicename>, have been connected to the
+	system.  A new mirror will be created on these two disks and
+	used to replace the old single disk.</para>
+
+      <para>&man.gmirror.8; requires a kernel module,
+	<filename>geom_mirror.ko</filename>, either built into the
+	kernel or loaded at boot- or run-time.  Manually load the
+	kernel module now:</para>
+
+      <screen>&prompt.root; <userinput>gmirror load</userinput></screen>
+
+      <para>Create the mirror with the two new drives.</para>
+
+      <screen>&prompt.root; <userinput>gmirror label -v gm0 /dev/ada1 /dev/ada2</userinput></screen>
+
+      <para><devicename>gm0</devicename> is a user-chosen device name
+	assigned to the new mirror.  After the mirror has been
+	started, this device name will appear in the
+	<filename>/dev/mirror/</filename> directory.</para>
+
+      <para>MBR and bsdlabel partition tables can now be created on
+	the mirror with &man.gpart.8;.  Here we show a traditional
+	split-filesystem layout, with partitions for
+	<filename>/</filename>, swap, <filename>/var</filename>,
+	<filename>/tmp</filename>, and <filename>/usr</filename>.  A
+	single <filename>/</filename> filesystem and a swap partition
+	will also work.</para>
+
+      <para>Partitions on the mirror do not have to be the same size
+	as those on the existing disk, but they must be large enough
+	to hold all the data already present on
+	<devicename>ada0</devicename>.</para>
+
+      <screen>&prompt.root; <userinput>gpart create -s MBR mirror/gm0</userinput>
+&prompt.root; <userinput>gpart add -t freebsd -a 4k mirror/gm0</userinput>
+&prompt.root; <userinput>gpart show mirror/gm0</userinput>
+=>       63  156301423  mirror/gm0  MBR  (74G)
+         63         63                    - free -  (31k)
+        126  156301299                 1  freebsd  (74G)
+  156301425         61                    - free -  (30k)</screen>
+
+      <screen>&prompt.root; <userinput>gpart create -s BSD mirror/gm0s1</userinput>
+&prompt.root; <userinput>gpart add -t freebsd-ufs  -a 4k -s 2g mirror/gm0s1</userinput>
+&prompt.root; <userinput>gpart add -t freebsd-swap -a 4k -s 4g mirror/gm0s1</userinput>
+&prompt.root; <userinput>gpart add -t freebsd-ufs  -a 4k -s 2g mirror/gm0s1</userinput>
+&prompt.root; <userinput>gpart add -t freebsd-ufs  -a 4k -s 1g mirror/gm0s1</userinput>
+&prompt.root; <userinput>gpart add -t freebsd-ufs  -a 4k       mirror/gm0s1</userinput>
+&prompt.root; <userinput>gpart show mirror/gm0s1</userinput>
+=>        0  156301299  mirror/gm0s1  BSD  (74G)
+          0          2                      - free -  (1.0k)
+          2    4194304                   1  freebsd-ufs  (2.0G)
+    4194306    8388608                   2  freebsd-swap  (4.0G)
+   12582914    4194304                   4  freebsd-ufs  (2.0G)
+   16777218    2097152                   5  freebsd-ufs  (1.0G)
+   18874370  137426928                   6  freebsd-ufs  (65G)
+  156301298          1                      - free -  (512B)</screen>
+
+      <para>Make the mirror bootable by installing bootcode in the MBR
+	and bsdlabel and setting the active slice:</para>
+
+      <screen>&prompt.root; <userinput>gpart bootcode -b /boot/mbr mirror/gm0</userinput>
+&prompt.root; <userinput>gpart set -a active -i 1 mirror/gm0</userinput>
+&prompt.root; <userinput>gpart bootcode -b /boot/boot mirror/gm0s1</userinput></screen>
+
+      <para>Format the filesystems on the new mirror, enabling
+	soft-updates.</para>
+
+      <screen>&prompt.root; <userinput>newfs -U /dev/mirror/gm0s1a</userinput>
+&prompt.root; <userinput>newfs -U /dev/mirror/gm0s1d</userinput>
+&prompt.root; <userinput>newfs -U /dev/mirror/gm0s1e</userinput>
+&prompt.root; <userinput>newfs -U /dev/mirror/gm0s1f</userinput></screen>
+
+      <para>Filesystems from the original disk
+	(<devicename>ada0</devicename>) can now be copied onto the
+	mirror with &man.dump.8; and &man.restore.8;.</para>
+
+      <screen>&prompt.root; <userinput>mount /dev/mirror/gm0s1a /mnt</userinput>
+&prompt.root; <userinput>dump -C16 -b64 -0aL -f - / | (cd /mnt &amp;&amp; restore -rf -)</userinput>
+&prompt.root; <userinput>mount /dev/mirror/gm0s1d /mnt/var</userinput>
+&prompt.root; <userinput>mount /dev/mirror/gm0s1e /mnt/tmp</userinput>
+&prompt.root; <userinput>mount /dev/mirror/gm0s1f /mnt/usr</userinput>
+&prompt.root; <userinput>dump -C16 -b64 -0aL -f - /var | (cd /mnt/var &amp;&amp; restore -rf -)</userinput>
+&prompt.root; <userinput>dump -C16 -b64 -0aL -f - /tmp | (cd /mnt/tmp &amp;&amp; restore -rf -)</userinput>
+&prompt.root; <userinput>dump -C16 -b64 -0aL -f - /usr | (cd /mnt/usr &amp;&amp; restore -rf -)</userinput></screen>
+
+      <para><filename>/mnt/etc/fstab</filename> must be edited to
+	point to the new mirror filesystems:</para>
+
+      <programlisting># Device		Mountpoint	FStype	Options	Dump	Pass#
+/dev/mirror/gm0s1a	/		ufs	rw	1	1
+/dev/mirror/gm0s1b	none		swap	sw	0	0
+/dev/mirror/gm0s1d	/var		ufs	rw	2	2
+/dev/mirror/gm0s1e	/tmp		ufs	rw	2	2
+/dev/mirror/gm0s1f	/usr		ufs	rw	2	2</programlisting>
+
+      <para>If the &man.gmirror.8; kernel module has not been built
+	into the kernel, <filename>/mnt/boot/loader.conf</filename> is
+	edited to load the module at boot:</para>
+
+      <programlisting>geom_mirror_load="YES"</programlisting>
+
+      <para>Reboot the system to test the new mirror and verify that
+	all data has been copied.  The BIOS will see the mirror as two
+	individual drives rather than a mirror.  Because the drives
+	are identical, it does not matter which is selected to
+	boot.</para>
+
+      <para>See the
+	<link linkend="gmirror-troubleshooting">Troubleshooting</link>
+	section if there are problems booting.  Powering down and
+	disconnecting the original <devicename>ada0</devicename> disk
+	will allow it to be kept as an offline backup.</para>
+
+      <para>In use, the mirror will behave just like the original
+	single drive.</para>
+    </sect2>
+
+    <sect2>
+      <title>Creating a Mirror with an Existing Drive</title>
+
+      <para>In this example, &os; has already been installed on a
+	single disk, <devicename>ada0</devicename>.  A new disk,
+	<devicename>ada1</devicename>, has been connected to the
+	system.  A one-disk mirror will be created on the new disk,
+	the existing system copied onto it, and then the old disk will be
+	inserted into the mirror.  This slightly complex procedure is
+	required because &man.gmirror.8; needs to put a 512-byte block
+	of metadata at the end of each disk, and the existing
+	<devicename>ada0</devicename> has usually had all of its space
+	already allocated.</para>
+
+      <para>Load the &man.gmirror.8; kernel module.</para>
+
+      <screen>&prompt.root; <userinput>gmirror load</userinput></screen>
+
+      <para>Check the media size of the original disk with
+	&man.diskinfo.8;.</para>
+
+      <screen>&prompt.root; <userinput>diskinfo -v ada0 | head -n3</userinput>
+/dev/ada0
+	512             # sectorsize
+	1000204821504   # mediasize in bytes (931G)</screen>
+
+      <para>Create a mirror on the new disk.  To make certain that the
+	mirror capacity is not any larger than the original drive,
+	&man.gnop.8; is used to create a fake drive of the exact same
+	size.  This drive does not store any data, but is used only to
+	limit the size of the mirror.  When &man.gmirror.8; creates
+	the mirror, it will restrict the capacity to the size of
+	<devicename>gzero.nop</devicename> even if the new drive
+	(<devicename>ada1</devicename>) has more space.  Note that the
+	<replaceable>1000204821504</replaceable> in the second line
+	should be equal to <devicename>ada0</devicename>'s media size
+	as shown by &man.diskinfo.8; above.</para>
+
+      <screen>&prompt.root; <userinput>geom zero load</userinput>
+&prompt.root; <userinput>gnop create -s 1000204821504 gzero</userinput>
+&prompt.root; <userinput>gmirror label -v gm0 gzero.nop ada1</userinput>
+&prompt.root; <userinput>gmirror forget gm0</userinput></screen>
+
+      <para><devicename>gzero.nop</devicename> does not store any
+	data, so the mirror does not see it as connected.  The mirror
+	is told to <quote>forget</quote> unconnected components,
+	removing references to <devicename>gzero.nop</devicename>.
+	The result is a mirror device containing only a single disk,
+	<devicename>ada1</devicename>.</para>
+
+      <para>After creating <devicename>gm0</devicename>, view the
+	partition table on <devicename>ada0</devicename>.</para>
+
+      <para>This output is from a 1&nbsp;TB drive.  If there is some
+	unallocated space at the end of the drive, the contents may be
+	copied directly from <devicename>ada0</devicename> to the new
+	mirror.</para>
+
+      <para>However, if the output shows that all of the space on the
+	disk is allocated like the following listing, there is no
+	space available for the 512-byte &man.gmirror.8; metadata at
+	the end of the disk.</para>
+
+      <screen>&prompt.root; <userinput>gpart show ada0</userinput>
+=>        63  1953525105        ada0  MBR  (931G)
+          63  1953525105           1  freebsd  [active]  (931G)</screen>
+
+      <para>In this case, the partition table must be edited to reduce
+	the capacity by one sector on
+	<devicename>mirror/gm0</devicename>.  The procedure will
+	be explained later.</para>
+
+      <para>In either case, partition tables on the primary disk
+	should be copied first.  It can be done by using &man.gpart.8;
+	<command>backup</command> and <command>restore</command>
+	subcommands.</para>
+
+      <screen>&prompt.root; <userinput>gpart backup ada0 &gt; table.ada0</userinput>
+&prompt.root; <userinput>gpart backup ada0s1 &gt; table.ada0s1</userinput></screen>
+
+      <para>These commands create two files,
+	<filename>table.ada0</filename> and
+	<filename>table.ada0s1</filename>.  This example is from a
+	1&nbsp;TB drive:</para>
+
+      <screen>&prompt.root; <userinput>cat table.ada0</userinput>
+MBR 4
+1 freebsd         63 1953525105   [active]</screen>
+
+      <screen>&prompt.root; <userinput>cat table.ada0s1</userinput>
+BSD 8
+1  freebsd-ufs          0    4194304
+2 freebsd-swap    4194304   33554432
+4  freebsd-ufs   37748736   50331648
+5  freebsd-ufs   88080384   41943040
+6  freebsd-ufs  130023424  838860800
+7  freebsd-ufs  968884224  984640881</screen>
+
+      <para>If the whole disk was used in the output of &man.gpart.8;
+	<command>show</command>, the capacity in these partition
+	tables must be reduced by one sector.  Edit the two files,
+	reducing the size of both the slice and last partition by one.
+	These are the last numbers in each listing.</para>
+
+      <screen>&prompt.root; <userinput>cat table.ada0</userinput>
+MBR 4
+1 freebsd         63 <emphasis>1953525104</emphasis>   [active]</screen>
+
+      <screen>&prompt.root; <userinput>cat table.ada0s1</userinput>
+BSD 8
+1  freebsd-ufs          0    4194304
+2 freebsd-swap    4194304   33554432
+4  freebsd-ufs   37748736   50331648
+5  freebsd-ufs   88080384   41943040
+6  freebsd-ufs  130023424  838860800
+7  freebsd-ufs  968884224  <emphasis>984640880</emphasis></screen>
+
+      <para>If at least one sector was unallocated at the end of the
+	disk, these two files can be used without modification.</para>
+
+      <para>Now restore the partition table into
+	<devicename>mirror/gm0</devicename>.</para>
+
+      <screen>&prompt.root; <userinput>gpart restore mirror/gm0 &lt; table.ada0</userinput>
+&prompt.root; <userinput>gpart restore mirror/gm0s1 &lt; table.ada0s1</userinput></screen>
+
+      <para>Check the partition table with the &man.gpart.8;
+	<command>show</command>.  This example has
+	<devicename>gm0s1a</devicename> for <filename>/</filename>,
+	<devicename>gm0s1d</devicename> for <filename>/var</filename>,
+	<devicename>gm0s1e</devicename> for <filename>/usr</filename>,
+	<devicename>gm0s1f</devicename> for
+	<filename>/data1</filename>, and
+	<devicename>gm0s1g</devicename> for
+	<filename>/data2</filename>.</para>
+
+      <screen>&prompt.root; <userinput>gpart show mirror/gm0</userinput>
+=>        63  1953525104  mirror/gm0  MBR  (931G)
+          63  1953525042           1  freebsd  [active]  (931G)
+  1953525105          62              - free -  (31k)
+
+&prompt.root; <userinput>gpart show mirror/gm0s1</userinput>
+=>         0  1953525042  mirror/gm0s1  BSD  (931G)
+           0     2097152             1  freebsd-ufs  (1.0G)
+     2097152    16777216             2  freebsd-swap  (8.0G)
+    18874368    41943040             4  freebsd-ufs  (20G)
+    60817408    20971520             5  freebsd-ufs  (10G)
+    81788928   629145600             6  freebsd-ufs  (300G)
+   710934528  1242590514             7  freebsd-ufs  (592G)
+  1953525042          63                - free -  (31k)</screen>
+
+      <para>Both the slice and the last partition should have some
+	free space at the end of each disk.</para>
+
+      <para>Create filesystems on these new partitions.  The
+	number of partitions will vary, matching the partitions on the
+	original disk, <devicename>ada0</devicename>.</para>
+
+      <screen>&prompt.root; <userinput>newfs -U /dev/mirror/gm0s1a</userinput>
+&prompt.root; <userinput>newfs -U /dev/mirror/gm0s1d</userinput>
+&prompt.root; <userinput>newfs -U /dev/mirror/gm0s1e</userinput>
+&prompt.root; <userinput>newfs -U /dev/mirror/gm0s1f</userinput>
+&prompt.root; <userinput>newfs -U /dev/mirror/gm0s1g</userinput></screen>
+
+      <para>Make the mirror bootable by installing bootcode in the MBR
+	and bsdlabel and setting the active slice:</para>
+
+      <screen>&prompt.root; <userinput>gpart bootcode -b /boot/mbr mirror/gm0</userinput>
+&prompt.root; <userinput>gpart set -a active -i 1 mirror/gm0</userinput>
+&prompt.root; <userinput>gpart bootcode -b /boot/boot mirror/gm0s1</userinput></screen>
+
+      <para>Adjust <filename>/etc/fstab</filename> to use the
+	new partitions on the mirror.  Back up this file first by
+	copying it to <filename>/etc/fstab.orig</filename>.</para>
+
+      <screen>&prompt.root; <userinput>cp /etc/fstab /etc/fstab.orig</userinput></screen>
+
+      <para>Edit <filename>/etc/fstab</filename>, replacing
+	<devicename>/dev/ada0</devicename> with
+	<devicename>mirror/gm0</devicename>.</para>
+
+      <programlisting># Device		Mountpoint	FStype	Options	Dump	Pass#
+/dev/mirror/gm0s1a	/		ufs	rw	1	1
+/dev/mirror/gm0s1b	none		swap	sw	0	0
+/dev/mirror/gm0s1d	/var		ufs	rw	2	2
+/dev/mirror/gm0s1e	/usr		ufs	rw	2	2
+/dev/mirror/gm0s1f	/data1		ufs	rw	2	2
+/dev/mirror/gm0s1g	/data2		ufs	rw	2	2</programlisting>
+
+      <para>If the &man.gmirror.8; kernel module has not been built
+	into the kernel, edit <filename>/boot/loader.conf</filename>
+	to load it:</para>
+
+      <programlisting>geom_mirror_load="YES"</programlisting>
+
+      <para>Filesystems from the original disk can now be copied onto
+	the mirror with &man.dump.8; and &man.restore.8;.  Note that
+	it may take some time to create a snapshot for each filesystem
+	dumped with <command>dump -L</command>.</para>
+
+      <screen>&prompt.root; <userinput>mount /dev/mirror/gm0s1a /mnt</userinput>
+&prompt.root; <userinput>dump -C16 -b64 -0aL -f - /    | (cd /mnt &amp;&amp; restore -rf -)</userinput>
+&prompt.root; <userinput>mount /dev/mirror/gm0s1d /mnt/var</userinput>
+&prompt.root; <userinput>mount /dev/mirror/gm0s1e /mnt/usr</userinput>
+&prompt.root; <userinput>mount /dev/mirror/gm0s1f /mnt/data1</userinput>
+&prompt.root; <userinput>mount /dev/mirror/gm0s1g /mnt/data2</userinput>
+&prompt.root; <userinput>dump -C16 -b64 -0aL -f - /usr | (cd /mnt/usr &amp;&amp; restore -rf -)</userinput>
+&prompt.root; <userinput>dump -C16 -b64 -0aL -f - /var | (cd /mnt/var &amp;&amp; restore -rf -)</userinput>
+&prompt.root; <userinput>dump -C16 -b64 -0aL -f - /data1 | (cd /mnt/data1 &amp;&amp; restore -rf -)</userinput>
+&prompt.root; <userinput>dump -C16 -b64 -0aL -f - /data2 | (cd /mnt/data2 &amp;&amp; restore -rf -)</userinput></screen>
+
+      <para>Restart the system, booting from
+	<devicename>ada1</devicename>.  If everything is working, the
+	system will boot from <devicename>mirror/gm0</devicename>,
+	which now contains the same data as
+	<devicename>ada0</devicename> had previously.  See the
+	<link linkend="gmirror-troubleshooting">Troubleshooting</link>
+	section if there are problems booting.</para>
+
+      <para>At this point, the mirror still consists of only the
+	single <devicename>ada1</devicename> disk.</para>
+
+      <para>After booting from <devicename>mirror/gm0</devicename>
+	successfully, the final step is inserting
+	<devicename>ada0</devicename> into the mirror.</para>
+
+      <important>
+	<para>When <devicename>ada0</devicename> is inserted into the
+	  mirror, its former contents will be overwritten by data on
+	  the mirror.  Make certain that
+	  <devicename>mirror/gm0</devicename> has the same contents as
+	  <devicename>ada0</devicename> before adding
+	  <devicename>ada0</devicename> to the mirror.  If there is
+	  something wrong with the contents copied by &man.dump.8; and
+	  &man.restore.8;, revert <filename>/etc/fstab</filename> to
+	  mount the filesystems on <devicename>ada0</devicename>,
+	  reboot, and try the whole procedure again.</para>
+      </important>
+
+      <screen>&prompt.root; <userinput>gmirror insert gm0 ada0</userinput>
+GEOM_MIRROR: Device gm0: rebuilding provider ada0</screen>
+
+      <para>Synchronization between the two disks will start
+	immediately.  &man.gmirror.8; <command>status</command>
+	shows the progress.</para>
+
+      <screen>&prompt.root; <userinput>gmirror status</userinput>
+      Name    Status  Components
+mirror/gm0  DEGRADED  ada1 (ACTIVE)
+                      ada0 (SYNCHRONIZING, 64%)</screen>
+
+      <para>After a while, synchronization will finish.</para>
+
+      <screen>GEOM_MIRROR: Device gm0: rebuilding provider ada0 finished.
+&prompt.root; <userinput>gmirror status</userinput>
+      Name    Status  Components
+mirror/gm0  COMPLETE  ada1 (ACTIVE)
+                      ada0 (ACTIVE)</screen>
+
+      <para><devicename>mirror/gm0</devicename> now consists of
+	the two disks <devicename>ada0</devicename> and
+	<devicename>ada1</devicename>, and the contents are
+	automatically synchronized with each other.  In use,
+	<devicename>mirror/gm0</devicename> will behave just like the
+	original single drive.</para>
+    </sect2>
+
+    <sect2 id="gmirror-troubleshooting">
       <title>Troubleshooting</title>
 
       <sect3>
-	<title>System Refuses to Boot</title>
+	<title>Problems with Booting</title>
 
-	<para>If the system boots up to a prompt similar to:</para>
+	<sect4>
+	  <title>BIOS Settings</title>
 
-	<programlisting>ffs_mountroot: can't find rootvp
-Root mount failed: 6
-mountroot></programlisting>
+	  <para>BIOS settings may have to be changed to boot from one
+	    of the new mirrored drives.  Either mirror drive can be
+	    used for booting.  As components of a mirror, they contain
+	    identical data.</para>
+	</sect4>
 
-	<para>Reboot the machine using the power or reset button.  At
-	  the boot menu, select option six (6).  This will drop the
-	  system to a &man.loader.8; prompt.  Load the kernel module
-	  manually:</para>
+	<sect4>
+	  <title>Boot Problems</title>
 
-	<screen>OK? <userinput>load geom_mirror</userinput>
-OK? <userinput>boot</userinput></screen>
+	  <para>If the boot stopped with this message, something is
+	    wrong with the mirror device:</para>
 
-	<para>If this works then for whatever reason the module was
-	  not being loaded properly.  Check whether the relevant entry
-	  in <filename>/boot/loader.conf</filename> is correct.  If
-	  the problem persists, place:</para>
+	  <screen>Mounting from ufs:/dev/mirror/gm0s1a failed with error 19.
 
-	<programlisting>options	GEOM_MIRROR</programlisting>
+Loader variables:
+  vfs.root.mountfrom=ufs:/dev/mirror/gm0s1a
+  vfs.root.mountfrom.options=rw
 
-	<para>in the kernel configuration file, rebuild and reinstall.
-	  That should remedy this issue.</para>
+Manual root filesystem specification:
+  &lt;fstype&gt;:&lt;device&gt; [options]
+      Mount &lt;device&gt; using filesystem &lt;fstype&gt;
+      and with the specified (optional) option list.
+
+    eg. ufs:/dev/da0s1a
+        zfs:tank
+        cd9660:/dev/acd0 ro
+          (which is equivalent to: mount -t cd9660 -o ro /dev/acd0 /)
+
+  ?               List valid disk boot devices
+  .               Yield 1 second (for background tasks)
+  &lt;empty line&gt;    Abort manual input
+
+mountroot&gt;</screen>
+
+	  <para>Forgetting to load the
+	    <filename>geom_mirror</filename> module in
+	    <filename>/boot/loader.conf</filename> can cause this
+	    problem.  To fix it, boot from a &os;-9 or later CD or USB
+	    stick and choose <literal>Shell</literal> at the first
+	    prompt.  Then load the mirror module and mount the mirror
+	    device:</para>
+
+	  <screen>&prompt.root; <userinput>gmirror load</userinput>
+&prompt.root; <userinput>mount /dev/mirror/gm0s1a /mnt</userinput></screen>
+
+	  <para>Edit <filename>/mnt/boot/loader.conf</filename>,
+	    adding a line to load the mirror module:</para>
+
+	  <programlisting>geom_mirror_load="YES"</programlisting>
+
+	  <para>Save the file and reboot.</para>
+
+	  <para>Other problems that cause <literal>error 19</literal>
+	    require more effort to fix.  Enter
+	    <literal>ufs:/dev/ada0s1a</literal> at the prompt.
+	    Although the system should boot from
+	    <devicename>ada0</devicename>, another prompt to select a
+	    shell appears because <filename>/etc/fstab</filename> is
+	    incorrect.  Press the Enter key at the prompt.  Undo the
+	    modifications so far by reverting
+	    <filename>/etc/fstab</filename>, mounting filesystems from
+	    the original disk (<devicename>ada0</devicename>) instead
+	    of the mirror.  Reboot the system and try the procedure
+	    again.</para>
+
+	  <screen>Enter full pathname of shell or RETURN for /bin/sh:
+&prompt.root; <userinput>cp /etc/fstab.orig /etc/fstab</userinput>
+&prompt.root; <userinput>reboot</userinput></screen>
+	</sect4>
       </sect3>
     </sect2>
 
     <sect2>
       <title>Recovering from Disk Failure</title>
 
-      <para>The wonderful part about disk mirroring is that when a
-	disk fails, it may be replaced, presumably, without losing
+      <para>The wonderful part about disk mirroring is that an
+	individual disk can fail without causing the mirror to lose
 	any data.</para>
 
-      <para>Considering the previous <acronym>RAID</acronym>1
-	configuration, assume that <devicename>da1</devicename>
-	has failed and now needs to be replaced.  To replace it,
-	determine which disk has failed and power down the system.
-	At this point, the disk may be swapped with a new one and
-	the system brought back up.  After the system has restarted,
-	the following commands may be used to replace the disk:</para>
+      <para><devicename>ada0</devicename> is one of two drives making
+	up the mirror in the previous example.  If
+	<devicename>ada0</devicename> fails, the mirror will continue
+	to work, providing data from the remaining working drive,
+	<devicename>ada1</devicename>.</para>
+
+      <para>To replace the failed drive, the computer is shut down and
+	the failed drive is physically replaced with a new drive of
+	equal or greater capacity.  Manufacturers use somewhat
+	arbitrary values when rating drives in gigabytes, and the
+	only way to really be sure is to compare the total count of
+	sectors shown by <command>diskinfo -v</command>.  A drive with
+	larger capacity than the mirror will work, although the extra
+	space on the new drive will not be used.</para>
+
+      <para>After the computer is powered back up, the mirror will be
+	running in a <quote>degraded</quote> mode with only one drive.
+	The mirror is told to forget drives that are not currently
+	connected:</para>
 
       <screen>&prompt.root; <userinput>gmirror forget gm0</userinput></screen>
 
-      <screen>&prompt.root; <userinput>gmirror insert gm0 /dev/da1</userinput></screen>
+      <para>Any old metadata should be <link
+	  linkend="GEOM-mirror-metadata">cleared from the replacement
+	  disk</link>.  Then the disk, <devicename>ada4</devicename>
+	for this example, is inserted into the mirror:</para>
 
-      <para>Use the <command>gmirror</command> <option>status</option>
-	command to monitor the progress of the rebuild.  It is that
-	simple.</para>
+      <screen>&prompt.root; <userinput>gmirror insert gm0 /dev/ada4</userinput></screen>
+
+      <para>Resynchronization begins when the new drive is inserted
+	into the mirror.  This process of copying mirror data to a new
+	drive can take a while.  Performance of the mirror will be
+	greatly reduced during the copy, so inserting new drives is
+	best done when there is low demand on the computer.</para>
+
+      <para>Progress can be monitored with <command>gmirror
+	  status</command>, which shows drives that are being
+	synchronized and the percentage of completion.  During
+	resynchronization, the status will be
+	<computeroutput>DEGRADED</computeroutput>, changing to
+	<computeroutput>COMPLETE</computeroutput> when the process is
+	finished.</para>
     </sect2>
   </sect1>
 
@@ -467,8 +855,8 @@ OK? <userinput>boot</userinput></screen>
       </authorgroup>
     </sect1info>
 
-    <title><acronym>RAID</acronym>3 - Byte-level Striping with Dedicated
-      Parity</title>
+    <title><acronym>RAID</acronym>3 - Byte-level Striping with
+      Dedicated Parity</title>
 
     <indexterm>
       <primary>GEOM</primary>
@@ -486,10 +874,10 @@ OK? <userinput>boot</userinput></screen>
       <acronym>RAID</acronym>3 implementation will access all disks in
       the array.  Performance can be enhanced by using multiple
       disk controllers.  The <acronym>RAID</acronym>3 array provides a
-      fault tolerance of 1 drive, while providing a capacity of 1 - 1/n
-      times the total capacity of all drives in the array, where n is the
-      number of hard drives in the array.  Such a configuration is
-      mostly suitable for storing data of larger sizes, e.g.
+      fault tolerance of 1 drive, while providing a capacity of 1 -
+      1/n times the total capacity of all drives in the array, where n
+      is the number of hard drives in the array.  Such a configuration
+      is mostly suitable for storing data of larger sizes, e.g.,
       multimedia files.</para>
 
     <para>At least 3 physical hard drives are required to build a
@@ -500,7 +888,8 @@ OK? <userinput>boot</userinput></screen>
       equal to 3, 5, 9, 17, etc. (2^n + 1).</para>
 
     <sect2>
-      <title>Creating a Dedicated <acronym>RAID</acronym>3 Array</title>
+      <title>Creating a Dedicated <acronym>RAID</acronym>3
+	Array</title>
 
       <para>In &os;, support for <acronym>RAID</acronym>3 is
 	implemented by the &man.graid3.8; <acronym>GEOM</acronym>
@@ -542,7 +931,8 @@ OK? <userinput>boot</userinput></screen>
 	    example uses three unpartitioned
 	    <acronym>ATA</acronym> drives:
 	    <devicename><replaceable>ada1</replaceable></devicename>
-	    and <devicename><replaceable>ada2</replaceable></devicename>
+	    and
+	    <devicename><replaceable>ada2</replaceable></devicename>
 	    for data, and
 	    <devicename><replaceable>ada3</replaceable></devicename>
 	    for parity.</para>
@@ -585,8 +975,8 @@ Done.</screen>
 	<step>
 	  <para>The <filename>geom_raid3.ko</filename> module must be
 	    loaded before the array can be mounted.  To automatically
-	    load the kernel module during the system initialization, add
-	    the following line to the
+	    load the kernel module during the system initialization,
+	    add the following line to the
 	    <filename>/boot/loader.conf</filename> file:</para>
 
 	  <programlisting>geom_raid3_load="YES"</programlisting>

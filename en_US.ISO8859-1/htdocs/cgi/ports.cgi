@@ -114,7 +114,7 @@ sub init_variables {
     $remotePrefixHtml = "$hsty_base/ports";
 
     # CVS Web interface
-    $remotePrefixCvs = 'http://cvsweb.FreeBSD.org/ports';
+    $remotePrefixCvs = 'http://svnweb.FreeBSD.org/ports/head';
 
     # Ports documentation
     $portsDesc = "$hsty_base/ports/";
@@ -361,8 +361,7 @@ sub out {
       qq{<dt><b><a name="$version"></a><a href="$l">$version</a></b></dt>\n};
     print qq{<dd>}, &escapeHTML($comment), qq{<br />\n};
 
-    print qq[<a href="$url?$descfile">Long description</a> <b>:</b>\n];
-    print qq[<a href="$pds?$pathB">Sources</a> <b>:</b>\n];
+    print qq[<a href="$l/pkg-descr?revision=HEAD">Long description</a> <b>:</b>\n];
 
   # Link package in "default" arch/release. Verify it's existence on ftp-master.
     if ( $packages{"$version.$packageExt"} ) {
@@ -370,8 +369,7 @@ sub out {
 qq[<a href="$remotePrefixFtpPackages{$remotePrefixFtpPackagesDefault}/$version.$packageExt">Package</a> <b>:</b>\n];
     }
 
-    print qq[<a href="$l">Changes</a> <b>:</b>\n];
-    print qq[<a href="$pathDownload">Download</a><br />\n];
+    print qq[<a href="$l/?view=log">Changes</a> <br />\n];
 
     print qq{<i>Maintained by:</i> <a href="mailto:$email}
       . (

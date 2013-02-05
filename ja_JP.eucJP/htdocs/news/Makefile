@@ -1,6 +1,6 @@
 # $FreeBSD$
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.53
+# Original revision: r40052
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -25,6 +25,9 @@ DOCS+= press-rel-5.xml
 
 # The yearly State of the Union address
 #DOCS+=	sou1999.xml
+
+# Details of the FreeBSD.org 2012 Infrastructure compromise
+DOCS+=	2012-compromise.xml
 
 INDEXLINK= news.html
 

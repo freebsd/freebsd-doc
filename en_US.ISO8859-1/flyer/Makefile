@@ -2,7 +2,7 @@
 #
 
 pdf: dvi ps
-	ps2pdf13 -sPAPERSIZE=a4 flyer.ps
+	ps2pdf -sPAPERSIZE=a4 flyer.ps
 
 ps: dvi
 	dvips -t a4 flyer.dvi -o

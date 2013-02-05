@@ -112,11 +112,11 @@ INSTALL_ONLY_COMPRESSED?=
 #IMAGES_LIB+= callouts/5.png
 
 #
-# SRCS lists the individual SGML files that make up the document. Changes
+# SRCS lists the individual XML files that make up the document. Changes
 # to any of these files will force a rebuild
 #
 
-# SGML content
+# XML content
 SRCS=  book.xml
 SRCS+= advanced-networking/chapter.xml
 SRCS+= basics/chapter.xml
@@ -152,7 +152,7 @@ SYMLINKS=	${DESTDIR} index.html handbook.html
 # Turn on all the chapters.
 CHAPTERS?= ${SRCS:M*chapter.xml}
 
-SGMLFLAGS+= ${CHAPTERS:S/\/chapter.xml//:S/^/-i chap./}
+XMLFLAGS+= ${CHAPTERS:S/\/chapter.xml//:S/^/-i chap./}
 
 pgpkeyring: pgpkeys/chapter.xml
 	@${JADE} -V nochunks ${JADEOPTS} -d ${DSLPGP} -t sgml ${MASTERDOC}

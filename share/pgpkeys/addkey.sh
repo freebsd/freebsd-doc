@@ -72,9 +72,9 @@ mv pgpkeys.ent pgpkeys.ent.orig || exit 1
 
 echo
 echo "Unless you are already listed there, you should now add the"
-echo "following text to pgpkeys-developers.sgml (unless this is a"
+echo "following text to pgpkeys-developers.xml (unless this is a"
 echo "role key or you are a core member. In that case add to"
-echo "pgpkeys-officers.sgml or pgpkeys-core.sgml)."
+echo "pgpkeys-officers.xml or pgpkeys-core.xml)."
 echo "Remember to keep the list sorted by last name!"
 echo
 echo "    <sect2 id=\"pgpkey-${me}\">"
@@ -85,5 +85,5 @@ echo
 echo "If this is a new entry, don't forget to 'svn add ${keyfile}'"
 echo "and 'svn propset svn:keywords \"FreeBSD=%H\" ${keyfile}'"
 echo "and commit each of ${keyfile}, pgpkeys.ent and"
-echo "pgpkeys-developers.sgml, pgpkeys-officers.sgml, or"
-echo "pgpkeys-core.sgml as required."
+echo "pgpkeys-developers.xml, pgpkeys-officers.xml, or"
+echo "pgpkeys-core.xml as required."
