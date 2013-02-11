@@ -49,7 +49,6 @@ DATA+=	vendors.html
 
 # Subdirectories
 # XML
-SUBDIR= FAQ
 SUBDIR+= advocacy
 SUBDIR+= commercial
 SUBDIR+= community
