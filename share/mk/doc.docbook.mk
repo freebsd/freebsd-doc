@@ -71,9 +71,6 @@
 
 MASTERDOC?=	${.CURDIR}/${DOC}.xml
 
-# List of supported SP_ENCODINGs
-SP_ENCODING_LIST?=	ISO-8859-2 KOI8-R
-
 # Either jade or fop
 RENDERENGINE?=	jade
 
@@ -94,7 +91,8 @@ XSLFO?=		${DOC_PREFIX}/share/xsl/freebsd-fo.xsl
 
 IMAGES_LIB?=
 
-JADEOPTS?=	-w no-valid ${JADEFLAGS} -D ${IMAGES_EN_DIR}/${DOC}s/${.CURDIR:T} -D ${CANONICALOBJDIR}
+JADEOPTS?=	-ijade.compat -w no-valid ${JADEFLAGS} \
+		-D ${IMAGES_EN_DIR}/${DOC}s/${.CURDIR:T} -D ${CANONICALOBJDIR}
 XSLTPROCOPTS?=	--nonet
 
 KNOWN_FORMATS=	html html.tar html-split html-split.tar \
@@ -326,7 +324,14 @@ NO_RTF=		yes
 # Parsed XML  -------------------------------------------------------
 
 ${DOC}.parsed.xml: ${SRCS}
-	${XMLLINT} --nonet --noent --valid --xinclude --dropdtd ${MASTERDOC} > ${.TARGET}
+	${GREP} '^<?xml version=.*?>' ${DOC}.xml > ${.TARGET}
+.if ${DOC} == "book"
+	${ECHO_CMD} '<!DOCTYPE book PUBLIC "-//FreeBSD//DTD DocBook XML V4.5-Based Extension//EN" "../../../share/xml/freebsd45.dtd">' >> ${.TARGET}
+.else
+	${ECHO_CMD} '<!DOCTYPE article PUBLIC "-//FreeBSD//DTD DocBook XML V4.5-Based Extension//EN" "../../../share/xml/freebsd45.dtd">' >> ${.TARGET}
+.endif
+	${XMLLINT} --nonet --noent --valid --xinclude --dropdtd ${MASTERDOC} | \
+	${GREP} -v '^<?xml version=.*?>' >> ${.TARGET}
 
 # XHTML -------------------------------------------------------------
 
