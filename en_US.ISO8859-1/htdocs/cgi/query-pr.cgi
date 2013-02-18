@@ -198,6 +198,7 @@ sub main
 			$patch->filename;
 
 		print $patch->data;
+		print "\n";
 
 		Exit();
 	}
