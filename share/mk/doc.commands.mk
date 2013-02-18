@@ -70,9 +70,9 @@ HTML2TXT?=	${PREFIX}/bin/w3m
 HTML2TXTOPTS?=	-dump ${HTML2TXTFLAGS}
 
 .if exists(${PREFIX}/bin/jade) && !defined(OPENJADE)
-JADE?=		${PREFIX}/bin/jade
+JADE?=		${ENV} SP_ENCODING=XML ${PREFIX}/bin/jade
 .else
-JADE?=		${PREFIX}/bin/openjade
+JADE?=		${ENV} SP_ENCODING=XML ${PREFIX}/bin/openjade
 JADEFLAGS+=	-V openjade
 .endif
 
@@ -93,7 +93,7 @@ TEX_CMD?=	${PREFIX}/bin/tex
 PDFTEX_CMD?=	${PREFIX}/bin/pdftex
 .endif
 LATEX_CMD?=	${PREFIX}/bin/latex
-JADETEX_CMD?=	${TEX_CMD} "&jadetex"
+JADETEX_CMD?=	${PDFTEX_CMD} "&jadetex"
 JADETEX_PREPROCESS?=	/bin/cat
 PDFJADETEX_CMD?=${PDFTEX_CMD} "&pdfjadetex"
 PDFJADETEX_PREPROCESS?= /bin/cat
