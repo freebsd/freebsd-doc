@@ -7,11 +7,6 @@
 <!ENTITY % output.print.justify	"IGNORE">
 <!ENTITY % output.print.twoside	"IGNORE">
 <!ENTITY % output.print.niceheaders	"IGNORE">
-
-<!ENTITY % freebsd.l10n PUBLIC "-//FreeBSD//ENTITIES DocBook Language Specific Entities//EN">
-%freebsd.l10n;
-<!ENTITY % freebsd.l10n-common PUBLIC "-//FreeBSD//ENTITIES DocBook Language Neutral Entities//EN">
-%freebsd.l10n-common;
 ]>
 
 <style-sheet>
