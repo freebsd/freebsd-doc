@@ -74,13 +74,9 @@ MASTERDOC?=	${.CURDIR}/${DOC}.xml
 # Either jade or fop
 RENDERENGINE?=	jade
 
-.if defined(SPELLCHECK)
-DSLHTML?= ${DOC_PREFIX}/share/xml/spellcheck.dsl
-.endif
-
 XMLDECL?=	/usr/local/share/sgml/docbook/dsssl/modular/dtds/decls/xml.dcl
 
-DSLHTML?=	${DOC_PREFIX}/share/xml/default.dsl
+DSLHTML?=	${DOC_PREFIX}/share/xml/spellcheck.dsl
 DSLPRINT?=	${DOC_PREFIX}/share/xml/default.dsl
 DSLPGP?=	${DOC_PREFIX}/share/xml/pgp.dsl
 
@@ -91,8 +87,23 @@ XSLFO?=		${DOC_PREFIX}/share/xsl/freebsd-fo.xsl
 
 IMAGES_LIB?=
 
+.if exists(${PREFIX}/bin/jade) && !defined(OPENJADE)
+JADECATALOG?=	${PREFIX}/share/sgml/jade/catalog
+.else
+JADECATALOG?=	${PREFIX}/share/sgml/openjade/catalog
+.endif
+FREEBSDCATALOG=	${DOC_PREFIX}/share/xml/catalog
+LANGUAGECATALOG=${DOC_PREFIX}/${LANGCODE}/share/xml/catalog
+DSSSLCATALOG=	${PREFIX}/share/sgml/docbook/dsssl/modular/catalog
+.for c in ${LANGUAGECATALOG} ${FREEBSDCATALOG} ${DSSSLCATALOG} ${JADECATALOG}
+.if exists(${c})
+CATALOGS+=	-c ${c}
+.endif
+.endfor
+
 JADEOPTS?=	-ijade.compat -w no-valid ${JADEFLAGS} \
-		-D ${IMAGES_EN_DIR}/${DOC}s/${.CURDIR:T} -D ${CANONICALOBJDIR}
+		-D ${IMAGES_EN_DIR}/${DOC}s/${.CURDIR:T} -D ${CANONICALOBJDIR} \
+		${CATALOGS}
 XSLTPROCOPTS?=	--nonet
 
 KNOWN_FORMATS=	html html.tar html-split html-split.tar \
