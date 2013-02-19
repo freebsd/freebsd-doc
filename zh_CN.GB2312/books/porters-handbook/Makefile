@@ -26,7 +26,6 @@ INSTALL_ONLY_COMPRESSED?=
 SRCS=  book.xml
 
 # Use the local DSSSL file
-DSLHTML?= 	${.CURDIR}/freebsd.dsl
 DSLPRINT?= 	${.CURDIR}/freebsd.dsl
 
 # Images from the cross-document image library
