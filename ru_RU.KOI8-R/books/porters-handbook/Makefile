@@ -32,7 +32,6 @@ SRCS=  book.xml
 #SRCS+= ../../../en_US.ISO8859-1/books/handbook/authors.ent
 
 # Use the local DSSSL file
-DSLHTML?= 	${.CURDIR}/freebsd.dsl
 DSLPRINT?= 	${.CURDIR}/freebsd.dsl
 
 DOC_PREFIX?= ${.CURDIR}/../../..
