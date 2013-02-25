@@ -698,7 +698,11 @@ install-${_curformat}: ${DOC}.${_curformat}
 .endif
 	@[ -d ${DESTDIR} ] || ${MKDIR} -p ${DESTDIR}
 .if ${_cf} == "html-split"
-	${INSTALL_DOCS} $$(${XARGS} < HTML.manifest) ${DESTDIR}
+.for f in ${_html_docs}
+.if exists(${f})
+	${INSTALL_DOCS} ${f} ${DESTDIR}
+.endif
+.endfor
 .else
 	${INSTALL_DOCS} ${.ALLSRC} ${DESTDIR}
 .endif
