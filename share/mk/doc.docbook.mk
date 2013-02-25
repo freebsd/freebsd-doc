@@ -80,10 +80,10 @@ DSLHTML?=	${DOC_PREFIX}/share/xml/spellcheck.dsl
 DSLPRINT?=	${DOC_PREFIX}/share/xml/default.dsl
 DSLPGP?=	${DOC_PREFIX}/share/xml/pgp.dsl
 
-XSLXHTML?=	${DOC_PREFIX}/share/xsl/freebsd-xhtml.xsl
-XSLXHTMLCHUNK?=	${DOC_PREFIX}/share/xsl/freebsd-xhtml-chunk.xsl
-XSLEPUB?=	${DOC_PREFIX}/share/xsl/freebsd-epub.xsl
-XSLFO?=		${DOC_PREFIX}/share/xsl/freebsd-fo.xsl
+XSLXHTML?=	${DOC_PREFIX}/${LANGCODE}/share/xsl/freebsd-xhtml.xsl
+XSLXHTMLCHUNK?=	${DOC_PREFIX}/${LANGCODE}/share/xsl/freebsd-xhtml-chunk.xsl
+XSLEPUB?=	${DOC_PREFIX}/${LANGCODE}/share/xsl/freebsd-epub.xsl
+XSLFO?=		${DOC_PREFIX}/${LANGCODE}/share/xsl/freebsd-fo.xsl
 
 IMAGES_LIB?=
 
