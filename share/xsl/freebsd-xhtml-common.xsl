@@ -11,14 +11,9 @@
   <xsl:include href="freebsd-common.xsl"/>
 
   <!-- Redefine variables, and replace templates as necessary here -->
-  <xsl:param name="freebsd.output.html" select="'0'"/>
-  <xsl:param name="freebsd.output.html.images" select="'0'"/>
-
-  <!-- HTML specific customisation goes here -->
 
   <xsl:param name="use.id.as.filename" select="1"/>
   <xsl:param name="html.stylesheet" select="'docbook.css'"/>
-  <xsl:param name="user.id.as.filename" select="'1'"/>
   <xsl:param name="link.mailto.url" select="'doc@FreeBSD.org'"/>
   <xsl:param name="callout.graphics.path" select="'./imagelib/callouts/'"/>
 
