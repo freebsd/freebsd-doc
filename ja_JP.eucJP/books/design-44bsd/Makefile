@@ -12,9 +12,6 @@ INSTALL_ONLY_COMPRESSED?=
 
 SRCS= book.xml
 
-# Use the local DSSSL file
-DSLPRINT?=      ${.CURDIR}/freebsd.dsl
-
 DOC_PREFIX?= ${.CURDIR}/../../..
 
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"

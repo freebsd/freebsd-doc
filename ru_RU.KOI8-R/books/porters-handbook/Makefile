@@ -31,8 +31,5 @@ SRCS=  book.xml
 # Entities
 #SRCS+= ../../../en_US.ISO8859-1/books/handbook/authors.ent
 
-# Use the local DSSSL file
-DSLPRINT?= 	${.CURDIR}/freebsd.dsl
-
 DOC_PREFIX?= ${.CURDIR}/../../..
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"
