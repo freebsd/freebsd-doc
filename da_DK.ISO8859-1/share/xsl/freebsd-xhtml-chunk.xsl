@@ -9,4 +9,10 @@
 
   <!-- Pull in the language-independent stylesheet -->
   <xsl:import href="http://www.FreeBSD.org/XML/doc/share/xsl/freebsd-xhtml-chunk.xsl"/>
+
+  <!-- Language-specific general customizations -->
+  <xsl:import href="freebsd-common.xsl"/>
+
+  <!-- Language-specific common XHTML customizations -->
+  <xsl:import href="freebsd-xhtml-common.xsl"/>
 </xsl:stylesheet>

@@ -9,4 +9,7 @@
 
   <!-- Pull in the language-independent stylesheet -->
   <xsl:import href="http://www.FreeBSD.org/XML/doc/share/xsl/freebsd-epub.xsl"/>
+
+  <!-- Language-specific general customizations -->
+  <xsl:import href="freebsd-common.xsl"/>
 </xsl:stylesheet>
