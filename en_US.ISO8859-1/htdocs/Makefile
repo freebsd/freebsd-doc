@@ -13,7 +13,6 @@ DOCS=  about.xml
 DOCS+= administration.xml
 DOCS+= applications.xml
 DOCS+= art.xml
-DOCS+= availability.xml
 DOCS+= docs.xml
 DOCS+= features.xml
 DOCS+= internet.xml
@@ -45,7 +44,6 @@ DATA+=	freebsd.css
 DATA+=	google6bb24ed0b804d5e9.html
 DATA+=	index.css
 DATA+=	robots.txt
-DATA+=	vendors.html
 
 # Subdirectories
 # XML
@@ -76,7 +74,6 @@ SUBDIR+= search
 SUBDIR+= security
 SUBDIR+= snapshots
 SUBDIR+= support
-SUBDIR+= tutorials
 .if !defined(WEB_ONLY) || empty(WEB_ONLY)
 SUBDIR+= doc
 SUBDIR+= ports
