@@ -16,6 +16,7 @@
   <xsl:param name="html.stylesheet" select="'docbook.css'"/>
   <xsl:param name="link.mailto.url" select="'doc@FreeBSD.org'"/>
   <xsl:param name="callout.graphics.path" select="'./imagelib/callouts/'"/>
+  <xsl:param name="citerefentry.link" select="1"/>
 
   <xsl:template name="user.footer.content">
     <p align="center"><small>This, and other documents, can be downloaded
@@ -29,5 +30,12 @@
 
   <xsl:template match="hostid|username|groupname|devicename|maketarget|makevar">
     <xsl:call-template name="inline.monoseq"/>
+  </xsl:template>
+
+  <xsl:template name="generate.citerefentry.link">
+    <xsl:text>http://www.FreeBSD.org/cgi/man.cgi?query=</xsl:text>
+    <xsl:value-of select="refentrytitle"/>
+    <xsl:text>&#38;amp;sektion=</xsl:text>
+    <xsl:value-of select="manvolnum"/>
   </xsl:template>
 </xsl:stylesheet>
