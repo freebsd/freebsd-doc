@@ -130,8 +130,8 @@
               <h2>State of the port</h2>
 
 	      <p>GNOME for FreeBSD is currently fully supported on
-		8.1, 8.2, 8-STABLE, 9.0, and 9-STABLE, while 7.3, 7.4, 7-STABLE,
-                and 10.0-CURRENT are provided on a best effort basis.
+		8.3, 8-STABLE, 9.0, 9.1, and 9-STABLE, while
+                10.0-CURRENT is provided on a best effort basis.
 		Most of GNOME has been ported to FreeBSD, but there is still
 		<a href="docs/volunteer.html">plenty left to be done</a>!</p>
 
