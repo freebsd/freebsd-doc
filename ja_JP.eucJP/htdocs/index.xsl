@@ -5,7 +5,7 @@
 ]>
 
 <!-- $FreeBSD$ -->
-<!-- Original revision: r40504 -->
+<!-- Original revision: r41116 -->
 
 <xsl:stylesheet version="1.0"
   xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
@@ -80,9 +80,9 @@
 			  <h2><a href="&base;/releases/">最新リリース</a></h2>
 			  <ul id="frontreleaseslist">
 			    <li>プロダクション:&nbsp;<a
-				href="&u.rel.announce;">&rel.current;</a>,&nbsp;<a href="&u.rel2.announce;">&rel2.current;</a></li>
+				href="&u.rel.announce;">&rel.current;</a></li>
 			    <li>レガシー: <a
-				href="&u.rel3.announce;">&rel3.current;</a></li>
+				href="&u.rel2.announce;">&rel2.current;</a></li>
 			    <xsl:if test="'&beta.testing;' != 'IGNORE'">
 			    <li>次回予定: <a
 				href="&base;/where.html#helptest">&betarel.current;-&betarel.vers;</a></li>
