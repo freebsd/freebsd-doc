@@ -29,8 +29,17 @@
     For questions about this documentation, e-mail &lt;<a href="mailto:doc@FreeBSD.org">doc@FreeBSD.org</a>&gt;.</small></p>
   </xsl:template>
 
-  <xsl:template match="hostid|username|groupname|devicename|maketarget|makevar">
-    <xsl:call-template name="inline.monoseq"/>
+  <xsl:template match="svnref">
+    <a>
+      <xsl:attribute name="href">
+	<xsl:text>http://svnweb.freebsd.org/base?view=revision&amp;revision=</xsl:text>
+	<xsl:value-of select="."/>
+      </xsl:attribute>
+
+      <span class="svnref">
+	<xsl:value-of select="."/>
+      </span>
+    </a>
   </xsl:template>
 
   <xsl:template name="generate.citerefentry.link">
