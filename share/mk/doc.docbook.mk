@@ -85,7 +85,11 @@ XSLXHTMLCHUNK?=	${DOC_PREFIX}/${LANGCODE}/share/xsl/freebsd-xhtml-chunk.xsl
 XSLEPUB?=	${DOC_PREFIX}/${LANGCODE}/share/xsl/freebsd-epub.xsl
 XSLFO?=		${DOC_PREFIX}/${LANGCODE}/share/xsl/freebsd-fo.xsl
 
+XSLSCH?=	/usr/local/share/xsl/iso-schematron/xslt1/iso_schematron_skeleton_for_xslt1.xsl
+
 IMAGES_LIB?=
+
+SCHEMATRONS?=	${DOC_PREFIX}/share/xml/freebsd.sch
 
 .if exists(${PREFIX}/bin/jade) && !defined(OPENJADE)
 JADECATALOG?=	${PREFIX}/share/sgml/jade/catalog
@@ -332,6 +336,15 @@ NO_RTF=		yes
 .endif
 .endfor
 
+.if defined(SCHEMATRONS)
+.for sch in ${SCHEMATRONS}
+schxslts+=	${sch}.xsl
+
+${sch}.xsl: ${sch}
+	${XSLTPROC} ${XSLSCH} ${.ALLSRC} > ${.TARGET}
+.endfor
+.endif
+
 # Parsed XML  -------------------------------------------------------
 
 ${DOC}.parsed.xml: ${SRCS}
@@ -341,6 +354,7 @@ ${DOC}.parsed.xml: ${SRCS}
 .else
 	${ECHO_CMD} '<!DOCTYPE article PUBLIC "-//FreeBSD//DTD DocBook XML V4.5-Based Extension//EN" "../../../share/xml/freebsd45.dtd">' >> ${.TARGET}
 .endif
+	@${ECHO} "==> Basic validation"
 	${XMLLINT} --nonet --noent --valid --xinclude --dropdtd ${MASTERDOC} | \
 	${GREP} -v '^<?xml version=.*?>' >> ${.TARGET}
 
@@ -547,9 +561,29 @@ ${DOC}.${_curformat}:
 # having to convert it to any other formats
 #
 
-lint validate: ${SRCS}
-	${XMLLINT} --nonet --noout --noent --valid ${MASTERDOC}
-	@${RM} -rf ${CLEANFILES} ${CLEANDIRS}
+#
+# XXX: There is duplicated code below. In general, we want to see what
+# is actually run but when validation is executed, it is better to
+# silence the command invocation so that only error messages appear.
+#
+
+lint validate: ${SRCS} ${schxslts}
+	@${GREP} '^<?xml version=.*?>' ${DOC}.xml > ${DOC}.parsed.xml
+.if ${DOC} == "book"
+	@${ECHO_CMD} '<!DOCTYPE book PUBLIC "-//FreeBSD//DTD DocBook XML V4.5-Based Extension//EN" "../../../share/xml/freebsd45.dtd">' >> ${DOC}.parsed.xml
+.else
+	@${ECHO_CMD} '<!DOCTYPE article PUBLIC "-//FreeBSD//DTD DocBook XML V4.5-Based Extension//EN" "../../../share/xml/freebsd45.dtd">' >> ${DOC}.parsed.xml
+.endif
+	@${ECHO} "==> Basic validation"
+	@${XMLLINT} --nonet --noent --valid --xinclude --dropdtd ${MASTERDOC} | \
+	${GREP} -v '^<?xml version=.*?>' >>${DOC}.parsed.xml
+.if defined(schxslts)
+	@${ECHO} "==> Validating with Schematron constraints"
+.for sch in ${schxslts}
+	@${XSLTPROC} ${sch} ${DOC}.parsed.xml
+.endfor
+.endif
+	@${RM} -rf ${CLEANFILES} ${CLEANDIRS} ${DOC}.parsed.xml
 
 # ------------------------------------------------------------------------
 #
