@@ -582,7 +582,7 @@ lint validate: ${SRCS} ${schxslts}
 .for sch in ${schxslts}
 	@( out=`${XSLTPROC} ${sch} ${DOC}.parsed.xml`; \
 	  if [ -n "$${out}" ]; then \
-		echo "$${out}"; \
+		echo "$${out}" | ${GREP} -v '^<?xml'; \
 		false; \
 	  fi )
 .endfor
