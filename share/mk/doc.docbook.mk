@@ -80,6 +80,7 @@ DSLHTML?=	${DOC_PREFIX}/share/xml/spellcheck.dsl
 DSLPRINT?=	${DOC_PREFIX}/share/xml/default.dsl
 DSLPGP?=	${DOC_PREFIX}/share/xml/pgp.dsl
 
+XSLPROF?=	/usr/local/share/xsl/docbook/profiling/profile.xsl
 XSLXHTML?=	${DOC_PREFIX}/${LANGCODE}/share/xsl/freebsd-xhtml.xsl
 XSLXHTMLCHUNK?=	${DOC_PREFIX}/${LANGCODE}/share/xsl/freebsd-xhtml-chunk.xsl
 XSLEPUB?=	${DOC_PREFIX}/${LANGCODE}/share/xsl/freebsd-epub.xsl
@@ -348,15 +349,22 @@ ${sch}.xsl: ${sch}
 # Parsed XML  -------------------------------------------------------
 
 ${DOC}.parsed.xml: ${SRCS}
-	${GREP} '^<?xml version=.*?>' ${DOC}.xml > ${.TARGET}
+	${GREP} '^<?xml version=.*?>' ${DOC}.xml > ${.TARGET}.tmp
 .if ${DOC} == "book"
-	${ECHO_CMD} '<!DOCTYPE book PUBLIC "-//FreeBSD//DTD DocBook XML V4.5-Based Extension//EN" "../../../share/xml/freebsd45.dtd">' >> ${.TARGET}
+	${ECHO_CMD} '<!DOCTYPE book PUBLIC "-//FreeBSD//DTD DocBook XML V4.5-Based Extension//EN" "../../../share/xml/freebsd45.dtd">' >> ${.TARGET}.tmp
 .else
-	${ECHO_CMD} '<!DOCTYPE article PUBLIC "-//FreeBSD//DTD DocBook XML V4.5-Based Extension//EN" "../../../share/xml/freebsd45.dtd">' >> ${.TARGET}
+	${ECHO_CMD} '<!DOCTYPE article PUBLIC "-//FreeBSD//DTD DocBook XML V4.5-Based Extension//EN" "../../../share/xml/freebsd45.dtd">' >> ${.TARGET}.tmp
 .endif
 	@${ECHO} "==> Basic validation"
 	${XMLLINT} --nonet --noent --valid --xinclude --dropdtd ${MASTERDOC} | \
-	${GREP} -v '^<?xml version=.*?>' >> ${.TARGET}
+	${GREP} -v '^<?xml version=.*?>' >> ${.TARGET}.tmp
+.if defined(PROFILING)
+	@${ECHO} "==> Profiling"
+	${XSLTPROC} ${PROFILING} ${XSLPROF} ${.TARGET}.tmp > ${.TARGET}
+	${RM} ${.TARGET}.tmp
+.else
+	${MV} ${.TARGET}.tmp ${.TARGET}
+.endif
 
 # XHTML -------------------------------------------------------------
 
