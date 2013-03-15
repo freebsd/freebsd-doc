@@ -7,7 +7,7 @@
                 xmlns="http://www.w3.org/TR/xhtml1/transitional"
                 exclude-result-prefixes="#default">
 
-  <xsl:template name="user.footer.content">
+  <xsl:template name="user.footer.navigation">
     <p align="center"><small>Ha kérdése van a FreeBSD-vel kapcsolatban, a
     következõ címre írhat (angolul):
     &lt;<a href="mailto:questions@FreeBSD.org">questions@FreeBSD.org</a>&gt;.<br/>

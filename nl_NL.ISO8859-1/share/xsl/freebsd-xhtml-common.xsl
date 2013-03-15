@@ -7,5 +7,5 @@
                 xmlns="http://www.w3.org/TR/xhtml1/transitional"
                 exclude-result-prefixes="#default">
 
-  <xsl:template name="user.footer.content"/>
+  <xsl:template name="user.footer.navigation"/>
 </xsl:stylesheet>
