@@ -11,9 +11,9 @@
 
   <pattern name="Check callout validity">
     <rule context="/">
-      <assert test="//screenco">Callouts with screenco are not supported; use screen and co instead.</assert>
-      <assert test="//programlistingco">Callouts with programlistingco are not supported; use programlisting and co instead.</assert>
-      <assert test="//graphicco">Callouts on graphics are not supported.</assert>
+      <report test="//screenco">Callouts with screenco are not supported; use screen and co instead.</report>
+      <report test="//programlistingco">Callouts with programlistingco are not supported; use programlisting and co instead.</report>
+      <report test="//graphicco">Callouts on graphics are not supported.</report>
     </rule>
   </pattern>
 </schema>
