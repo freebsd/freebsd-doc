@@ -16,4 +16,13 @@
       <report test="//graphicco">Callouts on graphics are not supported.</report>
     </rule>
   </pattern>
+
+  <pattern name="Check profiling attributes">
+    <rule context="//*/@edition">
+      <assert test="(. = 'online') or (. = 'print')">The edition attribute can only be set to 'online' or "print".</assert>
+    </rule>
+    <rule context="//*/@os">
+      <assert test="(. = 'freebsd8') or (. = 'freebsd9') or (. = 'freebsd10')">The os attribute can only be set to 'freebsd8', 'freebsd9' or 'freebsd10'.</assert>
+    </rule>
+  </pattern>
 </schema>
