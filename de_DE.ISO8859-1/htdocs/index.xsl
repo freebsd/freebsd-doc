@@ -5,8 +5,8 @@
 ]>
 <!--
      $FreeBSD$
-     $FreeBSDde: de-www/index.xsl,v 1.94 2012/02/23 17:35:11 jkois Exp $
-     basiert auf: 1.178
+     $FreeBSDde$
+     basiert auf: 38826
 -->
 
 <xsl:stylesheet version="1.0"
@@ -317,5 +317,16 @@
             </div> <!-- FRONTNEMSCONTAINER -->
           </div> <!-- FRONTMAIN -->
         </div> <!-- FRONTCONTAINER -->
+  </xsl:template>
+
+  <xsl:template name="process.footer">
+	&copyright;
+
+	Die Marke FreeBSD ist eine eingetragene Marke der FreeBSD
+	Foundation und wird vom FreeBSD Project mit freundlicher Genehmigung
+	durch die <a
+	href="http://www.freebsdfoundation.org/documents/Guidelines.shtml">
+	FreeBSD Foundation</a> verwendet.
+	<a href="&base;/mailto.html" title="&header2.word.contact;">&header2.word.contact;</a>
   </xsl:template>
 </xsl:stylesheet>
