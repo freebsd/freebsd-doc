@@ -19,7 +19,7 @@
   <xsl:param name="citerefentry.link" select="1"/>
   <xsl:param name="admon.style"/>
 
-  <xsl:template name="user.footer.content">
+  <xsl:template name="user.footer.navigation">
     <p align="center"><small>This, and other documents, can be downloaded
     from <a href="ftp://ftp.FreeBSD.org/pub/FreeBSD/doc/">ftp://ftp.FreeBSD.org/pub/FreeBSD/doc/</a></small></p>
 

@@ -7,7 +7,7 @@
                 xmlns="http://www.w3.org/TR/xhtml1/transitional"
                 exclude-result-prefixes="#default">
 
-  <xsl:template name="user.footer.content">
+  <xsl:template name="user.footer.navigation">
     <p align="center"><small>本文档和其它文档可从这里下载：
     <a href="ftp://ftp.FreeBSD.org/pub/FreeBSD/doc/">ftp://ftp.FreeBSD.org/pub/FreeBSD/doc/</a>.</small></p>
 
