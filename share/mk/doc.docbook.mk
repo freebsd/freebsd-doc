@@ -580,7 +580,11 @@ lint validate: ${SRCS} ${schxslts}
 .if defined(schxslts)
 	@${ECHO} "==> Validating with Schematron constraints"
 .for sch in ${schxslts}
-	@${XSLTPROC} ${sch} ${DOC}.parsed.xml
+	@( out=`${XSLTPROC} ${sch} ${DOC}.parsed.xml`; \
+	  if [ -n "$${out}" ]; then \
+		echo "$${out}"; \
+		false; \
+	  fi )
 .endfor
 .endif
 	@${RM} -rf ${CLEANFILES} ${CLEANDIRS} ${DOC}.parsed.xml
