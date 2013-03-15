@@ -6,7 +6,7 @@
 <!--
      $FreeBSD$
      $FreeBSDde$
-     basiert auf: 38826
+     basiert auf: 41116
 -->
 
 <xsl:stylesheet version="1.0"
@@ -56,7 +56,7 @@
 				  Sicherheitsfunktionen und eine exzellente
 				  Performance und wird deswegen beispielsweise von
 				  einigen der größten <a
-				  href="&enbase;/doc/&url.doc.langcode;/books/handbook/nutshell.html#INTRODUCTION-NUTSHELL-USERS">
+				  href="&enbase;/doc/&url.doc.langcode;/books/handbook/nutshell.html#introduction-nutshell-users">
 				  Internet-Seiten</a> und von zahlreichen Anbietern
 				  eingebetteter Netzwerk- und Speichergeräte
 				  eingesetzt.</p>
@@ -81,11 +81,10 @@
 				  <h2><a href="&base;/releases/">AKTUELLE VERSIONEN</a></h2>
 				  <ul id="frontreleaseslist">
 					<li>
-					  Produktion:&nbsp;<a href="&u.rel.announce;">&rel.current;</a>,&nbsp;
-					  <a href="&u.rel2.announce;">&nbsp;&rel2.current;</a>
+					  Produktion:&nbsp;<a href="&u.rel.announce;">&rel.current;</a>
 					</li>
 					<li>
-					  Produktion (alt):&nbsp;<a href="&u.rel3.announce;">&rel3.current;</a>
+					  Produktion (alt):&nbsp;<a href="&u.rel2.announce;">&rel2.current;</a>
 					</li>
 			    <xsl:if test="'&beta.testing;' != 'IGNORE'">
 					  <li>
@@ -324,7 +323,7 @@
 
 	Die Marke FreeBSD ist eine eingetragene Marke der FreeBSD
 	Foundation und wird vom FreeBSD Project mit freundlicher Genehmigung
-	durch die <a
+	der <a
 	href="http://www.freebsdfoundation.org/documents/Guidelines.shtml">
 	FreeBSD Foundation</a> verwendet.
 	<a href="&base;/mailto.html" title="&header2.word.contact;">&header2.word.contact;</a>
