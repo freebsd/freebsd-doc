@@ -1,8 +1,4 @@
-#
 # $FreeBSD$
-#
-# Build the FreeBSD tutorials/articles outside of the www tree, and then
-# install them in to the right place.
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -11,6 +7,8 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS = index.xml
+DOCS+=	schedule.xml
+
+DATA=	docbook.css
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"

@@ -22,6 +22,7 @@ DOCS+= 	machines.xml
 DOCS+= 	mirror.xml
 DOCS+=	new-account.xml
 DOCS+=	policies.xml
+DOCS+=	proposing-committers.xml
 DOCS+=  releng.xml
 DOCS+=  resources.xml
 DOCS+=	statistic.xml

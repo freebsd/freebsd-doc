@@ -20,6 +20,7 @@ INSTALL_ONLY_COMPRESSED?=
 
 # XML content
 SRCS=  book.xml
+SRCS+= uses.xml
 
 # Images from the cross-document image library
 IMAGES_LIB+=	callouts/1.png

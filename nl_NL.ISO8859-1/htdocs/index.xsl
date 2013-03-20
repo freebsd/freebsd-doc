@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
 <!-- Vertaald door: Siebrand Mazeland / Rene Ladan
      %SOURCE%	en_US.ISO8859-1/htdocs/index.xsl
-     %SRCID%	40573
+     %SRCID%	41116
 -->
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
 				"http://www.FreeBSD.org/XML/www/share/xml/xslt10-freebsd.dtd" [
@@ -77,10 +77,9 @@
 				  <h2><a href="&enbase;/releases/">NIEUWSTE UITGAVEN</a></h2>
 				  <ul id="frontreleaseslist">
 				    <li>Productie:&nbsp;<a
-				href="&u.rel.announce;">&rel.current;</a>,&nbsp;<a
-				href="&u.rel2.announce;">&rel2.current;</a></li>
+				href="&u.rel.announce;">&rel.current;</a></li>
 				    <li>Verouderd: <a
-				href="&u.rel3.announce;">&rel3.current;</a></li>
+				href="&u.rel2.announce;">&rel2.current;</a></li>
 				    <xsl:if test="'&beta.testing;' != 'IGNORE'">
 					<li>Aanstaand:
 					  <a href="&base;/where.html#helptest">
