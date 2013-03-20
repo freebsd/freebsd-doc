@@ -1,6 +1,6 @@
 # $FreeBSD$
 # %SOURCE%	en_US.ISO8859-1/htdocs/Makefile
-# %SRCID%	40439
+# %SRCID%	41060
 
 # XXX rene r40275 (Google Analytics) not merged in (yet)
 
@@ -17,7 +17,6 @@ DOCS=  about.xml
 DOCS+= administration.xml
 DOCS+= applications.xml
 DOCS+= art.xml
-DOCS+= availability.xml
 DOCS+= docs.xml
 DOCS+= features.xml
 DOCS+= internet.xml
@@ -48,11 +47,9 @@ DEPENDSET.community=usergroups events
 #DATA+=	freebsd.css
 #DATA+=	index.css
 #DATA+=	robots.txt
-DATA+=	vendors.html
 
 # Subdirectories
 # XML
-#SUBDIR= FAQ
 #SUBDIR+= advocacy
 #SUBDIR+= commercial
 #SUBDIR+= community
@@ -80,7 +77,6 @@ DATA+=	vendors.html
 #SUBDIR+= security
 #SUBDIR+= snapshots
 #SUBDIR+= support
-#SUBDIR+= tutorials
 .if !defined(WEB_ONLY) || empty(WEB_ONLY)
 SUBDIR+= doc
 #SUBDIR+= ports

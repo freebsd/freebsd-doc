@@ -188,7 +188,7 @@ KMOD=skeleton
 #include &lt;sys/uio.h&gt;    /* uio struct */
 #include &lt;sys/malloc.h&gt;
 
-#define BUFFERSIZE 256
+#define BUFFERSIZE 255
 
 /* Function prototypes */
 static d_open_t      echo_open;
@@ -207,7 +207,7 @@ static struct cdevsw echo_cdevsw = {
 };
 
 struct s_echo {
-	char msg[BUFFERSIZE];
+	char msg[BUFFERSIZE + 1];
 	int len;
 };
 
@@ -222,7 +222,6 @@ MALLOC_DEFINE(M_ECHOBUF, "echobuffer", "buffer for echo module");
  * This function is called by the kld[un]load(2) system calls to
  * determine what actions to take when a module is loaded or unloaded.
  */
-
 static int
 echo_loader(struct module *m __unused, int what, void *arg __unused)
 {
@@ -241,8 +240,8 @@ echo_loader(struct module *m __unused, int what, void *arg __unused)
 		if (error != 0)
 			break;
 
-		/* kmalloc memory for use by this driver */
-		echomsg = malloc(sizeof(*echomsg), M_ECHOBUF, M_WAITOK);
+		echomsg = malloc(sizeof(*echomsg), M_ECHOBUF, M_WAITOK |
+		    M_ZERO);
 		printf("Echo device loaded.\n");
 		break;
 	case MOD_UNLOAD:
@@ -258,7 +257,8 @@ echo_loader(struct module *m __unused, int what, void *arg __unused)
 }
 
 static int
-echo_open(struct cdev *dev __unused, int oflags __unused, int devtype __unused, struct thread *p __unused)
+echo_open(struct cdev *dev __unused, int oflags __unused, int devtype __unused,
+    struct thread *td __unused)
 {
 	int error = 0;
 
@@ -267,7 +267,8 @@ echo_open(struct cdev *dev __unused, int oflags __unused, int devtype __unused, 
 }
 
 static int
-echo_close(struct cdev *dev __unused, int fflag __unused, int devtype __unused, struct thread *p __unused)
+echo_close(struct cdev *dev __unused, int fflag __unused, int devtype __unused,
+    struct thread *td __unused)
 {
 
 	uprintf("Closing device \"echo\".\n");
@@ -279,19 +280,20 @@ echo_close(struct cdev *dev __unused, int fflag __unused, int devtype __unused, 
  * echo_write() and returns it to userland for accessing.
  * uio(9)
  */
-
 static int
 echo_read(struct cdev *dev __unused, struct uio *uio, int ioflag __unused)
 {
-	int error, amt;
+	size_t amt;
+	int error;
 
 	/*
 	 * How big is this read operation?  Either as big as the user wants,
-	 * or as big as the remaining data
+	 * or as big as the remaining data.  Note that the 'len' does not
+	 * include the trailing null character.
 	 */
+	amt = MIN(uio-&gt;uio_resid, uio-&gt;uio_offset &gt;= echomsg-&gt;len + 1 ? 0 :
+	    echomsg-&gt;len + 1 - uio-&gt;uio_offset);
 
-	amt = MIN(uio-&gt;uio_resid, echomsg-&gt;len - uio-&gt;uio_offset);
-	uio-&gt;uio_offset += amt;
 	if ((error = uiomove(echomsg-&gt;msg, amt, uio)) != 0)
 		uprintf("uiomove failed!\n");
 
@@ -302,13 +304,11 @@ echo_read(struct cdev *dev __unused, struct uio *uio, int ioflag __unused)
  * echo_write takes in a character string and saves it
  * to buf for later accessing.
  */
-
 static int
 echo_write(struct cdev *dev __unused, struct uio *uio, int ioflag __unused)
 {
-	int error, amt;
-
-	/* Copy the string in from user memory to kernel memory */
+	size_t amt;
+	int error;
 
 	/*
 	 * We either write from the beginning or are appending -- do
@@ -317,32 +317,25 @@ echo_write(struct cdev *dev __unused, struct uio *uio, int ioflag __unused)
 	if (uio-&gt;uio_offset != 0 &amp;&amp; (uio-&gt;uio_offset != echomsg-&gt;len))
 		return (EINVAL);
 
-	/*
-	 * This is new message, reset length
-	 */
+	/* This is a new message, reset length */
 	if (uio-&gt;uio_offset == 0)
 		echomsg-&gt;len = 0;
-
-	/* NULL character should be overridden */
-	if (echomsg-&gt;len != 0)
-		echomsg-&gt;len--;
 
 	/* Copy the string in from user memory to kernel memory */
 	amt = MIN(uio-&gt;uio_resid, (BUFFERSIZE - echomsg-&gt;len));
 
 	error = uiomove(echomsg-&gt;msg + uio-&gt;uio_offset, amt, uio);
 
-	/* Now we need to null terminate, then record the length */
-	echomsg-&gt;len += amt + 1;
-	uio-&gt;uio_offset += amt + 1;
-	echomsg-&gt;msg[echomsg-&gt;len - 1] = 0;
+	/* Now we need to null terminate and record the length */
+	echomsg-&gt;len = uio-&gt;uio_offset;
+	echomsg-&gt;msg[echomsg-&gt;len] = 0;
 
 	if (error != 0)
 		uprintf("Write failed: bad address!\n");
 	return (error);
 }
 
-DEV_MODULE(echo,echo_loader,NULL);</programlisting>
+DEV_MODULE(echo, echo_loader, NULL);</programlisting>
     </example>
 
     <para>With this driver loaded try:</para>
