@@ -10,6 +10,9 @@
   <!-- Include the common customizations -->
   <xsl:include href="freebsd-common.xsl"/>
 
+  <!-- Include customized XHTML titlepage -->
+  <xsl:include href="freebsd-xhtml-titlepage.xsl"/>
+
   <!-- Redefine variables, and replace templates as necessary here -->
 
   <xsl:param name="use.id.as.filename" select="1"/>
@@ -70,5 +73,46 @@
 
       <xsl:apply-templates/>
     </div>
+  </xsl:template>
+
+  <xsl:template name="chapter.authorgroup">
+    <span class="authorgroup">
+
+      <!-- XXX: our docs use a quirky semantics for this -->
+      <xsl:if test="(contrib|author/contrib)[1]">
+	<xsl:apply-templates select="(contrib|author/contrib)[1]"/>
+      </xsl:if>
+
+      <xsl:for-each select="author">
+	<xsl:apply-templates select="."/>
+
+	<xsl:choose>
+	  <xsl:when test="position() &lt; (last() - 1)">
+	    <xsl:text>, </xsl:text>
+	  </xsl:when>
+
+	  <xsl:when test="position() = (last() - 1)">
+	    <xsl:call-template name="gentext.space"/>
+	    <xsl:call-template name="gentext">
+	      <xsl:with-param name="key" select="'and'"/>
+	    </xsl:call-template>
+	    <xsl:call-template name="gentext.space"/>
+	  </xsl:when>
+	</xsl:choose>
+      </xsl:for-each>
+      <xsl:text>. </xsl:text>
+    </span>
+  </xsl:template>
+
+  <xsl:template match="contrib">
+    <xsl:apply-templates/>
+  </xsl:template>
+
+  <xsl:template name="chapter.author">
+    <xsl:if test="contrib">
+      <xsl:apply-templates select="contrib"/>
+      <xsl:text> </xsl:text>
+    </xsl:if>
+    <xsl:apply-templates select="*[not(self::contrib)]"/>
   </xsl:template>
 </xsl:stylesheet>
