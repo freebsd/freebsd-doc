@@ -3,7 +3,6 @@
 #    The FreeBSD German Documentation Project
 #
 #       $FreeBSD$
-#       $FreeBSDde: de-docproj/articles/Makefile,v 1.7 2010/09/18 13:58:33 bcr Exp $
 #       basiert auf:  1.42
 
 SUBDIR = contributing
@@ -11,6 +10,7 @@ SUBDIR+= contributing-ports
 SUBDIR+= explaining-bsd
 SUBDIR+= laptop
 SUBDIR+= linux-comparison
+SUBDIR+= nanobsd
 SUBDIR+= new-users
 SUBDIR+= port-mentor-guidelines
 SUBDIR+= solid-state
