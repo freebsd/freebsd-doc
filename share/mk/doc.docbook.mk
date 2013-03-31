@@ -115,7 +115,6 @@ KNOWN_FORMATS=	html html.tar html-split html-split.tar \
 		epub txt rtf ps pdf tex dvi tar pdb
 
 CSS_SHEET?=	${DOC_PREFIX}/share/misc/docbook.css
-PDFTEX_DEF?=	${DOC_PREFIX}/share/web2c/pdftex.def
 
 PRINTOPTS?=	-ioutput.print -d ${DSLPRINT} ${PRINTFLAGS}
 
@@ -254,9 +253,6 @@ CLEANFILES+= ${_curimage:T} ${_curimage:H:T}/${_curimage:T}
 .elif ${_cf} == "pdf"
 CLEANFILES+= ${DOC}.aux ${DOC}.dvi ${DOC}.log ${DOC}.out ${DOC}.tex-pdf ${DOC}.tex-pdf-tmp \
 		${DOC}.tex ${DOC}.fo
-.for _curimage in ${IMAGES_PDF:M*share*}
-CLEANFILES+= ${_curimage:T} ${_curimage:H:T}/${_curimage:T}
-.endfor
 .for _curimage in ${LOCAL_IMAGES_EPS:M*share*}
 CLEANFILES+= ${_curimage:T} ${_curimage:H:T}/${_curimage:T}
 .endfor
@@ -474,9 +470,6 @@ ${DOC}.dvi: ${DOC}.tex ${LOCAL_IMAGES_EPS}
 
 .if !target(${DOC}.pdf)
 ${DOC}.pdf: ${DOC}.ps ${IMAGES_PDF}
-#.for _curimage in ${IMAGES_PDF:M*share*}
-#	${CP} -p ${_curimage} ${.CURDIR:H:H}/${_curimage:H:S|${IMAGES_EN_DIR}/||:S|${.CURDIR}||}
-#.endfor
 	${PS2PDF} ${DOC}.ps ${.TARGET}
 .endif
 

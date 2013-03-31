@@ -71,43 +71,26 @@ _IMAGES_TXT+= ${LOCAL_IMAGES_EN:M*.txt}
 _IMAGES_PIC= ${IMAGES:M*.pic}
 _IMAGES_PIC+= ${LOCAL_IMAGES_EN:M*.pic}
 
-IMAGES_GEN_PNG= ${_IMAGES_EPS:S/.eps$/.png/}
-IMAGES_GEN_EPS= ${_IMAGES_PNG:S/.png$/.eps/}
-IMAGES_GEN_PDF= ${_IMAGES_EPS:S/.eps$/.pdf/}
-IMAGES_SCR_PNG= ${_IMAGES_SCR:S/.scr$/.png/}
-IMAGES_SCR_EPS= ${_IMAGES_SCR:S/.scr$/.eps/}
-IMAGES_SCR_PDF= ${_IMAGES_SCR:S/.scr$/.pdf/}
-IMAGES_SCR_TXT= ${_IMAGES_SCR:S/.scr$/.txt/}
-IMAGES_PIC_PNG= ${_IMAGES_PIC:S/.pic$/.png/}
-IMAGES_PIC_EPS= ${_IMAGES_PIC:S/.pic$/.eps/}
-IMAGES_PIC_PDF= ${_IMAGES_PIC:S/.pic$/.pdf/}
-IMAGES_GEN_PDF+= ${IMAGES_PIC_PDF} ${IMAGES_SCR_PDF}
+IMAGES_GEN_PNG= ${_IMAGES_EPS:S/.eps$/.png/} ${_IMAGES_SCR:S/.scr$/.png/} ${_IMAGES_PIC:S/.pic$/.png/}
+IMAGES_GEN_EPS= ${_IMAGES_PNG:S/.png$/.eps/} ${_IMAGES_SCR:S/.scr$/.eps/} ${_IMAGES_PIC:S/.pic$/.eps/}
 
-CLEANFILES+= ${IMAGES_GEN_PNG} ${IMAGES_GEN_EPS} ${IMAGES_GEN_PDF}
-CLEANFILES+= ${IMAGES_SCR_PNG} ${IMAGES_SCR_EPS} ${IMAGES_SCR_TXT}
-CLEANFILES+= ${IMAGES_PIC_PNG} ${IMAGES_PIC_EPS} ${_IMAGES_PIC:S/.pic$/.ps/}
+CLEANFILES+= ${IMAGES_GEN_PNG} ${IMAGES_GEN_EPS}
 
-IMAGES_PNG= ${_IMAGES_PNG} ${IMAGES_GEN_PNG} ${IMAGES_SCR_PNG} ${IMAGES_PIC_PNG}
-IMAGES_EPS= ${_IMAGES_EPS} ${IMAGES_GEN_EPS} ${IMAGES_SCR_EPS} ${IMAGES_PIC_EPS}
-IMAGES_TXT= ${_IMAGES_TXT} ${IMAGES_SCR_TXT}
+IMAGES_PNG= ${_IMAGES_PNG} ${IMAGES_GEN_PNG}
+IMAGES_EPS= ${_IMAGES_EPS} ${IMAGES_GEN_EPS}
 
 LOCAL_IMAGES= ${IMAGES}
 LOCAL_IMAGES_PNG= ${_IMAGES_PNG}
 LOCAL_IMAGES_EPS= ${_IMAGES_EPS}
 LOCAL_IMAGES_TXT= ${_IMAGES_TXT}
-LOCAL_IMAGES_PNG+= ${IMAGES_GEN_PNG} ${IMAGES_SCR_PNG} ${IMAGES_PIC_PNG}
-LOCAL_IMAGES_EPS+= ${IMAGES_GEN_EPS} ${IMAGES_SCR_EPS} ${IMAGES_PIC_EPS}
-LOCAL_IMAGES_TXT+= ${IMAGES_SCR_TXT}
+LOCAL_IMAGES_PNG+= ${IMAGES_GEN_PNG}
+LOCAL_IMAGES_EPS+= ${IMAGES_GEN_EPS}
 
 # The default resolution eps2png (82) assumes a 640x480 monitor, and is too
 # low for the typical monitor in use today. The resolution of 100 looks
 # much better on these monitors without making the image too large for
 # a 640x480 monitor.
 EPS2PNM_RES?=	100
-
-# We need to list ${_IMAGES_PNG} here since the images might be in a
-# shared image directory.
-IMAGES_PDF= ${IMAGES_GEN_PDF} ${_IMAGES_PNG}
 
 #
 # Use suffix rules to convert .scr files to other formats
@@ -142,9 +125,6 @@ IMAGES_PDF= ${IMAGES_GEN_PDF} ${_IMAGES_PNG}
 		-g`${EPSGEOM} -geom ${EPSGEOMOPTS} ${.TARGET:S/.png$/.eps/}` - \
 		| ${PNMTOPNG} > ${.TARGET}
 
-.pic.ps:
-	${PIC2PS} ${.ALLSRC} > ${.TARGET}
-
 # When ghostscript built with A4=yes is used, ps2epsi's paper size also
 # becomes the A4 size.  However, the ps2epsi fails to convert grops(1)
 # outputs, which is the letter size, and we cannot change ps2epsi's paper size
@@ -178,23 +158,18 @@ IMAGES_PDF= ${IMAGES_GEN_PDF} ${_IMAGES_PNG}
 # vice versa, leading to a loop in the dependency graph.  Instead, build
 # the targets on the fly.
 
-.for _curimage in ${IMAGES_GEN_PNG}
-${_curimage}: ${_curimage:S/.png$/.eps/}
+.for _curimage in ${_IMAGES_EPS:S/.eps$/.png/}
+${_curimage}: ${_curimage:S/.png/.eps/}
 	${EPSGEOM} -offset ${EPSGEOMOPTS} ${.ALLSRC} \
 		| ${EPS2PNM} ${EPS2PNMOPTS} \
 		-g`${EPSGEOM} -geom ${EPSGEOMOPTS} ${.ALLSRC}` - \
 		| ${PNMTOPNG} > ${.TARGET}
 .endfor
 
-.for _curimage in ${IMAGES_GEN_EPS}
+.for _curimage in ${_IMAGES_EPS:S/.png$/.eps/}
 ${_curimage}: ${_curimage:S/.eps$/.png/}
 	${PNGTOPNM} ${PNGTOPNMOPTS} ${.ALLSRC} | \
 		${PNMTOPS} ${PNMTOPSOPTS} > ${.TARGET}
-.endfor
-
-.for _curimage in ${IMAGES_GEN_PDF}
-${_curimage}: ${_curimage:S/.pdf$/.eps/}
-	${EPSTOPDF} ${EPSTOPDFOPTS} --outfile=${.TARGET} ${.ALLSRC}
 .endfor
 
 .if ${.OBJDIR} != ${.CURDIR}
