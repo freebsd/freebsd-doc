@@ -44,7 +44,6 @@ DOC?=		book
 FORMATS?=	html-split
 
 HAS_INDEX=	true
-USE_PS2PDF=	yes
 
 INSTALL_COMPRESSED?= gz
 INSTALL_ONLY_COMPRESSED?=
