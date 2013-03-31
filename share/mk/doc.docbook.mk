@@ -452,30 +452,11 @@ ${DOC}.rtf:
 
 .if ${RENDERENGINE} == "jade"
 .if !defined(NO_TEX)
-#
-# This sucks, but there's no way round it.  The PS and PDF formats need
-# to use different image formats, which are chosen at the .tex stage.  So,
-# we need to create a different .tex file depending on our eventual output
-# format, which will then lead on to a different .dvi file as well.
-#
-
 ${DOC}.tex: ${SRCS} ${LOCAL_IMAGES_EPS} ${PRINT_INDEX} \
 		${LOCAL_IMAGES_TXT} ${LOCAL_IMAGES_EN} \
 		${DOC}.parsed.xml
 	${JADE} -V tex-backend ${PRINTOPTS} \
 		${JADEOPTS} -t tex -o ${.TARGET} ${XMLDECL} ${DOC}.parsed.xml
-
-${DOC}.tex-ps: ${DOC}.tex
-	${LN} -f ${.ALLSRC} ${.TARGET}
-
-.if !target(${DOC}.tex-pdf)
-${DOC}.tex-pdf: ${SRCS} ${IMAGES_PDF} ${PRINT_INDEX} \
-		${LOCAL_IMAGES_TXT} ${DOC}.parsed.xml
-	${RM} -f ${.TARGET}
-	${CAT} ${PDFTEX_DEF} > ${.TARGET}
-	${JADE} -V tex-backend ${PRINTOPTS} -ioutput.print.pdf \
-		${JADEOPTS} -t tex -o /dev/stdout ${XMLDECL} ${DOC}.parsed.xml >> ${.TARGET}
-.endif
 
 .if !target(${DOC}.dvi)
 ${DOC}.dvi: ${DOC}.tex ${LOCAL_IMAGES_EPS}
@@ -492,39 +473,21 @@ ${DOC}.dvi: ${DOC}.tex ${LOCAL_IMAGES_EPS}
 .endif
 
 .if !target(${DOC}.pdf)
-.if !defined(USE_PS2PDF)
-${DOC}.pdf: ${DOC}.tex-pdf ${IMAGES_PDF}
-.else
 ${DOC}.pdf: ${DOC}.ps ${IMAGES_PDF}
-.endif
-.for _curimage in ${IMAGES_PDF:M*share*}
-	${CP} -p ${_curimage} ${.CURDIR:H:H}/${_curimage:H:S|${IMAGES_EN_DIR}/||:S|${.CURDIR}||}
-.endfor
-.if !defined(USE_PS2PDF)
-	${PDFJADETEX_PREPROCESS} < ${DOC}.tex-pdf > ${DOC}.tex-pdf-tmp
-	@${ECHO} "==> PDFTeX pass 1/3"
-	-${PDFJADETEX_CMD} '${TEX_CMDSEQ} \nonstopmode\input{${DOC}.tex-pdf-tmp}'
-	@${ECHO} "==> PDFTeX pass 2/3"
-	-${PDFJADETEX_CMD} '${TEX_CMDSEQ} \nonstopmode\input{${DOC}.tex-pdf-tmp}'
-	@${ECHO} "==> PDFTeX pass 3/3"
-	-${PDFJADETEX_CMD} '${TEX_CMDSEQ} \nonstopmode\input{${DOC}.tex-pdf-tmp}'
-.else
+#.for _curimage in ${IMAGES_PDF:M*share*}
+#	${CP} -p ${_curimage} ${.CURDIR:H:H}/${_curimage:H:S|${IMAGES_EN_DIR}/||:S|${.CURDIR}||}
+#.endfor
 	${PS2PDF} ${DOC}.ps ${.TARGET}
-.endif
 .endif
 
 ${DOC}.ps: ${DOC}.dvi
 	${DVIPS} ${DVIPSOPTS} -o ${.TARGET} ${.ALLSRC}
 .else
 #  NO_TEX
-${DOC}.tex ${DOC}.tex-ps ${DOC}.dvi ${DOC}.ps:
+${DOC}.tex ${DOC}.dvi ${DOC}.ps:
 	${TOUCH} ${.TARGET}
 .if !target(${DOC}.pdf)
 ${DOC}.pdf:
-	${TOUCH} ${.TARGET}
-.endif
-.if !target(${DOC}.tex-pdf)
-${DOC}.tex-pdf:
 	${TOUCH} ${.TARGET}
 .endif
 .endif
