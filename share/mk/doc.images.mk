@@ -125,6 +125,9 @@ EPS2PNM_RES?=	100
 		-g`${EPSGEOM} -geom ${EPSGEOMOPTS} ${.TARGET:S/.png$/.eps/}` - \
 		| ${PNMTOPNG} > ${.TARGET}
 
+.pic.ps:
+	${PIC2PS} ${.ALLSRC} > ${.TARGET}
+
 # When ghostscript built with A4=yes is used, ps2epsi's paper size also
 # becomes the A4 size.  However, the ps2epsi fails to convert grops(1)
 # outputs, which is the letter size, and we cannot change ps2epsi's paper size
@@ -166,7 +169,7 @@ ${_curimage}: ${_curimage:S/.png/.eps/}
 		| ${PNMTOPNG} > ${.TARGET}
 .endfor
 
-.for _curimage in ${_IMAGES_EPS:S/.png$/.eps/}
+.for _curimage in ${_IMAGES_PNG:S/.png$/.eps/}
 ${_curimage}: ${_curimage:S/.eps$/.png/}
 	${PNGTOPNM} ${PNGTOPNMOPTS} ${.ALLSRC} | \
 		${PNMTOPS} ${PNMTOPSOPTS} > ${.TARGET}

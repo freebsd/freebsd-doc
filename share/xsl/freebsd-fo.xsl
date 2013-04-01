@@ -16,15 +16,6 @@
 
   <!-- Redefine variables, and replace templates as necessary here -->
 
-  <xsl:param name="freebsd.output.print"
-             select="'0'"/>
-  <xsl:param name="freebsd.output.print.pdf"
-             select="'0'"/>
-  <xsl:param name="freebsd.output.print.justify"
-             select="'0'"/>
-  <xsl:param name="freebsd.output.print.twoside"
-             select="'0'"/>
-
   <!-- FO specific customisation goes here -->
 
   <xsl:param name="use.extensions" select="1"/>
