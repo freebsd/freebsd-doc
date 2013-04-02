@@ -4,8 +4,9 @@
 
 <schema xmlns="http://purl.oclc.org/dsdl/schematron">
   <pattern name="Check file reference validity">
-    <rule context="//*/@fileref">
-      <assert test="contains(., '.')">File reference does not have an extension.</assert>
+    <rule context="//imagedata|//graphic">
+      <report test="contains(@fileref, '.')">Image references cannot have an extension; the proper format is inferred by the output type to generate.</report>
+      <report test="@format">Image format must not be specified; it is inferred by the output type to generate.</report>
     </rule>
   </pattern>
 
