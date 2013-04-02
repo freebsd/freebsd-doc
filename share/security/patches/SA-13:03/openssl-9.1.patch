@@ -1,0 +1,3891 @@
+Index: crypto/openssl/CHANGES
+===================================================================
+--- crypto/openssl/CHANGES	(revision 248771)
++++ crypto/openssl/CHANGES	(working copy)
+@@ -2,6 +2,35 @@
+  OpenSSL CHANGES
+  _______________
+ 
++ Changes between 0.9.8x and 0.9.8y [5 Feb 2013]
++
++  *) Make the decoding of SSLv3, TLS and DTLS CBC records constant time.
++
++     This addresses the flaw in CBC record processing discovered by 
++     Nadhem Alfardan and Kenny Paterson. Details of this attack can be found
++     at: http://www.isg.rhul.ac.uk/tls/     
++
++     Thanks go to Nadhem Alfardan and Kenny Paterson of the Information
++     Security Group at Royal Holloway, University of London
++     (www.isg.rhul.ac.uk) for discovering this flaw and Adam Langley and
++     Emilia Käsper for the initial patch.
++     (CVE-2013-0169)
++     [Emilia Käsper, Adam Langley, Ben Laurie, Andy Polyakov, Steve Henson]
++
++  *) Return an error when checking OCSP signatures when key is NULL.
++     This fixes a DoS attack. (CVE-2013-0166)
++     [Steve Henson]
++
++  *) Call OCSP Stapling callback after ciphersuite has been chosen, so
++     the right response is stapled. Also change SSL_get_certificate()
++     so it returns the certificate actually sent.
++     See http://rt.openssl.org/Ticket/Display.html?id=2836.
++     (This is a backport)
++     [Rob Stradling <rob.stradling@comodo.com>]
++
++  *) Fix possible deadlock when decoding public keys.
++     [Steve Henson]
++
+  Changes between 0.9.8w and 0.9.8x [10 May 2012]
+ 
+   *) Sanity check record length before skipping explicit IV in DTLS
+Index: crypto/openssl/Configure
+===================================================================
+--- crypto/openssl/Configure	(revision 248771)
++++ crypto/openssl/Configure	(working copy)
+@@ -162,6 +162,7 @@ my %table=(
+ "debug-ben-openbsd","gcc:-DBN_DEBUG -DREF_CHECK -DCONF_DEBUG -DBN_CTX_DEBUG -DCRYPTO_MDEBUG -DPEDANTIC -DDEBUG_SAFESTACK -DOPENSSL_OPENBSD_DEV_CRYPTO -DOPENSSL_NO_ASM -O2 -pedantic -Wall -Wshadow -Werror -pipe::(unknown)::::",
+ "debug-ben-openbsd-debug","gcc:-DBN_DEBUG -DREF_CHECK -DCONF_DEBUG -DBN_CTX_DEBUG -DCRYPTO_MDEBUG -DPEDANTIC -DDEBUG_SAFESTACK -DOPENSSL_OPENBSD_DEV_CRYPTO -DOPENSSL_NO_ASM -g3 -O2 -pedantic -Wall -Wshadow -Werror -pipe::(unknown)::::",
+ "debug-ben-debug",	"gcc:$gcc_devteam_warn -DBN_DEBUG -DREF_CHECK -DCONF_DEBUG  -DDEBUG_SAFESTACK -ggdb3 -O2 -pipe::(unknown)::::::",
++"debug-ben-debug-64",	"gcc:$gcc_devteam_warn -DBN_DEBUG -DCONF_DEBUG -DDEBUG_SAFESTACK -DDEBUG_UNUSED -g3 -O3 -pipe::${BSDthreads}:::SIXTY_FOUR_BIT_LONG RC4_CHUNK DES_INT DES_UNROLL:${x86_64_asm}:elf:dlfcn:bsd-gcc-shared:-fPIC::.so.\$(SHLIB_MAJOR).\$(SHLIB_MINOR)",
+ "debug-ben-debug-noopt",	"gcc:$gcc_devteam_warn -DBN_DEBUG -DREF_CHECK -DCONF_DEBUG  -DDEBUG_SAFESTACK -ggdb3 -pipe::(unknown)::::::",
+ "debug-ben-strict",	"gcc:-DBN_DEBUG -DREF_CHECK -DCONF_DEBUG -DBN_CTX_DEBUG -DCRYPTO_MDEBUG -DCONST_STRICT -O2 -Wall -Wshadow -Werror -Wpointer-arith -Wcast-qual -Wwrite-strings -pipe::(unknown)::::::",
+ "debug-rse","cc:-DTERMIOS -DL_ENDIAN -pipe -O -g -ggdb3 -Wall::(unknown):::BN_LLONG ${x86_gcc_des} ${x86_gcc_opts}:${x86_elf_asm}",
+@@ -172,10 +173,10 @@ my %table=(
+ "debug-steve-opt", "gcc:$gcc_devteam_warn -m64 -O3 -DL_ENDIAN -DTERMIO -DCONF_DEBUG -DDEBUG_SAFESTACK -g -DMD32_REG_T=int::-D_REENTRANT::-ldl:SIXTY_FOUR_BIT_LONG RC4_CHUNK DES_INT DES_UNROLL:${x86_64_asm}:dlfcn:linux-shared:-fPIC:-m64:.so.\$(SHLIB_MAJOR).\$(SHLIB_MINOR)",
+ "debug-steve",	"gcc:-DL_ENDIAN -DREF_CHECK -DCONF_DEBUG -DDEBUG_SAFESTACK -DCRYPTO_MDEBUG_ALL -DPEDANTIC -m32 -g -pedantic -Wno-long-long -Wall -Werror -Wshadow -pipe::-D_REENTRANT::-rdynamic -ldl:BN_LLONG ${x86_gcc_des} ${x86_gcc_opts}:${x86_elf_asm}:dlfcn:linux-shared",
+ "debug-steve-linux-pseudo64",	"gcc:-DL_ENDIAN -DREF_CHECK -DCONF_DEBUG -DBN_CTX_DEBUG -DDEBUG_SAFESTACK -DCRYPTO_MDEBUG_ALL -DOPENSSL_NO_ASM -g -mcpu=i486 -Wall -Werror -Wshadow -pipe::-D_REENTRANT::-rdynamic -ldl:SIXTY_FOUR_BIT:${no_asm}:dlfcn:linux-shared",
+-"debug-levitte-linux-elf","gcc:-DLEVITTE_DEBUG -DREF_CHECK -DCONF_DEBUG -DBN_DEBUG -DBN_DEBUG_RAND -DCRYPTO_MDEBUG -DENGINE_CONF_DEBUG -DL_ENDIAN -DTERMIO -D_POSIX_SOURCE -DPEDANTIC -ggdb -g3 -mcpu=i486 -pedantic -ansi -Wall -Wshadow -Wcast-align -Wstrict-prototypes -Wmissing-prototypes -Wno-long-long -Wundef -Wconversion -pipe::-D_REENTRANT::-ldl:BN_LLONG ${x86_gcc_des} ${x86_gcc_opts}:${x86_elf_asm}:dlfcn:linux-shared:-fPIC::.so.\$(SHLIB_MAJOR).\$(SHLIB_MINOR)",
+-"debug-levitte-linux-noasm","gcc:-DLEVITTE_DEBUG -DREF_CHECK -DCONF_DEBUG -DBN_DEBUG -DBN_DEBUG_RAND -DCRYPTO_MDEBUG -DENGINE_CONF_DEBUG -DOPENSSL_NO_ASM -DL_ENDIAN -DTERMIO -D_POSIX_SOURCE -DPEDANTIC -ggdb -g3 -mcpu=i486 -pedantic -ansi -Wall -Wshadow -Wcast-align -Wstrict-prototypes -Wmissing-prototypes -Wno-long-long -Wundef -Wconversion -pipe::-D_REENTRANT::-ldl:BN_LLONG ${x86_gcc_des} ${x86_gcc_opts}:${no_asm}:dlfcn:linux-shared:-fPIC::.so.\$(SHLIB_MAJOR).\$(SHLIB_MINOR)",
+-"debug-levitte-linux-elf-extreme","gcc:-DLEVITTE_DEBUG -DREF_CHECK -DCONF_DEBUG -DBN_DEBUG -DBN_DEBUG_RAND -DCRYPTO_MDEBUG -DENGINE_CONF_DEBUG -DL_ENDIAN -DTERMIO -D_POSIX_SOURCE -DPEDANTIC -ggdb -g3 -mcpu=i486 -pedantic -ansi -Wall -W -Wundef -Wshadow -Wcast-align -Wstrict-prototypes -Wmissing-prototypes -Wno-long-long -Wundef -Wconversion -pipe::-D_REENTRANT::-ldl:BN_LLONG ${x86_gcc_des} ${x86_gcc_opts}:${x86_elf_asm}:dlfcn:linux-shared:-fPIC::.so.\$(SHLIB_MAJOR).\$(SHLIB_MINOR)",
+-"debug-levitte-linux-noasm-extreme","gcc:-DLEVITTE_DEBUG -DREF_CHECK -DCONF_DEBUG -DBN_DEBUG -DBN_DEBUG_RAND -DCRYPTO_MDEBUG -DENGINE_CONF_DEBUG -DOPENSSL_NO_ASM -DL_ENDIAN -DTERMIO -D_POSIX_SOURCE -DPEDANTIC -ggdb -g3 -mcpu=i486 -pedantic -ansi -Wall -W -Wundef -Wshadow -Wcast-align -Wstrict-prototypes -Wmissing-prototypes -Wno-long-long -Wundef -Wconversion -pipe::-D_REENTRANT::-ldl:BN_LLONG ${x86_gcc_des} ${x86_gcc_opts}:${no_asm}:dlfcn:linux-shared:-fPIC::.so.\$(SHLIB_MAJOR).\$(SHLIB_MINOR)",
++"debug-levitte-linux-elf","gcc:-DLEVITTE_DEBUG -DBN_DEBUG -DREF_CHECK -DCONF_DEBUG -DCRYPTO_MDEBUG -DL_ENDIAN -ggdb -g3 -Wall::-D_REENTRANT::-ldl:BN_LLONG ${x86_gcc_des} ${x86_gcc_opts}:${x86_elf_asm}:dlfcn:linux-shared:-fPIC::.so.\$(SHLIB_MAJOR).\$(SHLIB_MINOR)",
++"debug-levitte-linux-noasm","gcc:-DLEVITTE_DEBUG -DBN_DEBUG -DREF_CHECK -DCONF_DEBUG -DCRYPTO_MDEBUG -DOPENSSL_NO_ASM -DL_ENDIAN -ggdb -g3 -Wall::-D_REENTRANT::-ldl:BN_LLONG ${x86_gcc_des} ${x86_gcc_opts}:${no_asm}:dlfcn:linux-shared:-fPIC::.so.\$(SHLIB_MAJOR).\$(SHLIB_MINOR)",
++"debug-levitte-linux-elf-extreme","gcc:-DLEVITTE_DEBUG -DREF_CHECK -DCONF_DEBUG -DBN_DEBUG -DBN_DEBUG_RAND -DCRYPTO_MDEBUG -DENGINE_CONF_DEBUG -DL_ENDIAN -DTERMIO -DPEDANTIC -ggdb -g3 -pedantic -ansi -Wall -W -Wundef -Wshadow -Wcast-align -Wstrict-prototypes -Wmissing-prototypes -Wno-long-long -Wundef -Wconversion -pipe::-D_REENTRANT::-ldl:BN_LLONG ${x86_gcc_des} ${x86_gcc_opts}:${x86_elf_asm}:dlfcn:linux-shared:-fPIC::.so.\$(SHLIB_MAJOR).\$(SHLIB_MINOR)",
++"debug-levitte-linux-noasm-extreme","gcc:-DLEVITTE_DEBUG -DREF_CHECK -DCONF_DEBUG -DBN_DEBUG -DBN_DEBUG_RAND -DCRYPTO_MDEBUG -DENGINE_CONF_DEBUG -DOPENSSL_NO_ASM -DL_ENDIAN -DTERMIO -DPEDANTIC -ggdb -g3 -pedantic -ansi -Wall -W -Wundef -Wshadow -Wcast-align -Wstrict-prototypes -Wmissing-prototypes -Wno-long-long -Wundef -Wconversion -pipe::-D_REENTRANT::-ldl:BN_LLONG ${x86_gcc_des} ${x86_gcc_opts}:${no_asm}:dlfcn:linux-shared:-fPIC::.so.\$(SHLIB_MAJOR).\$(SHLIB_MINOR)",
+ "debug-geoff","gcc:-DBN_DEBUG -DBN_DEBUG_RAND -DBN_STRICT -DPURIFY -DOPENSSL_NO_DEPRECATED -DOPENSSL_NO_ASM -DOPENSSL_NO_INLINE_ASM -DL_ENDIAN -DTERMIO -DPEDANTIC -O1 -ggdb2 -Wall -Werror -Wundef -pedantic -Wshadow -Wpointer-arith -Wbad-function-cast -Wcast-align -Wsign-compare -Wmissing-prototypes -Wmissing-declarations -Wno-long-long::-D_REENTRANT::-ldl:BN_LLONG ${x86_gcc_des} ${x86_gcc_opts}:${no_asm}:dlfcn:linux-shared:-fPIC::.so.\$(SHLIB_MAJOR).\$(SHLIB_MINOR)",
+ "debug-linux-pentium","gcc:-DBN_DEBUG -DREF_CHECK -DCONF_DEBUG -DCRYPTO_MDEBUG -DL_ENDIAN -DTERMIO -g -mcpu=pentium -Wall::-D_REENTRANT::-ldl:BN_LLONG ${x86_gcc_des} ${x86_gcc_opts}:${x86_elf_asm}:dlfcn",
+ "debug-linux-ppro","gcc:-DBN_DEBUG -DREF_CHECK -DCONF_DEBUG -DCRYPTO_MDEBUG -DL_ENDIAN -DTERMIO -g -mcpu=pentiumpro -Wall::-D_REENTRANT::-ldl:BN_LLONG ${x86_gcc_des} ${x86_gcc_opts}:${x86_elf_asm}:dlfcn",
+@@ -428,8 +429,8 @@ my %table=(
+ "aix64-gcc","gcc:-maix64 -O -DB_ENDIAN::-pthread:AIX::SIXTY_FOUR_BIT_LONG RC4_CHAR::aix_ppc64.o::::::::::dlfcn:aix-shared::-maix64 -shared -Wl,-G:.so.\$(SHLIB_MAJOR).\$(SHLIB_MINOR)::-X64",
+ # Below targets assume AIX 5. Idea is to effectively disregard $OBJECT_MODE
+ # at build time. $OBJECT_MODE is respected at ./config stage!
+-"aix-cc",   "cc:-q32 -O -DB_ENDIAN -qmaxmem=16384 -qro -qroconst::-qthreaded:AIX::BN_LLONG RC4_CHAR::aix_ppc32.o::::::::::dlfcn:aix-shared::-q32 -G:.so.\$(SHLIB_MAJOR).\$(SHLIB_MINOR)::-X 32",
+-"aix64-cc", "cc:-q64 -O -DB_ENDIAN -qmaxmem=16384 -qro -qroconst::-qthreaded:AIX::SIXTY_FOUR_BIT_LONG RC4_CHAR::aix_ppc64.o::::::::::dlfcn:aix-shared::-q64 -G:.so.\$(SHLIB_MAJOR).\$(SHLIB_MINOR)::-X 64",
++"aix-cc",   "cc:-q32 -O -DB_ENDIAN -qmaxmem=16384 -qro -qroconst::-qthreaded -D_THREAD_SAFE:AIX::BN_LLONG RC4_CHAR::aix_ppc32.o::::::::::dlfcn:aix-shared::-q32 -G:.so.\$(SHLIB_MAJOR).\$(SHLIB_MINOR)::-X 32",
++"aix64-cc", "cc:-q64 -O -DB_ENDIAN -qmaxmem=16384 -qro -qroconst::-qthreaded -D_THREAD_SAFE:AIX::SIXTY_FOUR_BIT_LONG RC4_CHAR::aix_ppc64.o::::::::::dlfcn:aix-shared::-q64 -G:.so.\$(SHLIB_MAJOR).\$(SHLIB_MINOR)::-X 64",
+ 
+ #
+ # Cray T90 and similar (SDSC)
+Index: crypto/openssl/FAQ
+===================================================================
+--- crypto/openssl/FAQ	(revision 248771)
++++ crypto/openssl/FAQ	(working copy)
+@@ -83,7 +83,7 @@ OpenSSL  -  Frequently Asked Questions
+ * Which is the current version of OpenSSL?
+ 
+ The current version is available from <URL: http://www.openssl.org>.
+-OpenSSL 1.0.1c was released on May 10th, 2012.
++OpenSSL 1.0.1d was released on Feb 5th, 2013.
+ 
+ In addition to the current stable release, you can also access daily
+ snapshots of the OpenSSL development version at <URL:
+Index: crypto/openssl/Makefile
+===================================================================
+--- crypto/openssl/Makefile	(revision 248771)
++++ crypto/openssl/Makefile	(working copy)
+@@ -4,7 +4,7 @@
+ ## Makefile for OpenSSL
+ ##
+ 
+-VERSION=0.9.8x
++VERSION=0.9.8y
+ MAJOR=0
+ MINOR=9.8
+ SHLIB_VERSION_NUMBER=0.9.8
+Index: crypto/openssl/NEWS
+===================================================================
+--- crypto/openssl/NEWS	(revision 248771)
++++ crypto/openssl/NEWS	(working copy)
+@@ -5,6 +5,11 @@
+   This file gives a brief overview of the major changes between each OpenSSL
+   release. For more details please read the CHANGES file.
+ 
++  Major changes between OpenSSL 0.9.8x and OpenSSL 0.9.8y:
++
++      o Fix for SSL/TLS/DTLS CBC plaintext recovery attack CVE-2013-0169
++      o Fix OCSP bad key DoS attack CVE-2013-0166
++
+   Major changes between OpenSSL 0.9.8w and OpenSSL 0.9.8x:
+ 
+       o Fix DTLS record length checking bug CVE-2012-2333
+Index: crypto/openssl/README
+===================================================================
+--- crypto/openssl/README	(revision 248771)
++++ crypto/openssl/README	(working copy)
+@@ -1,5 +1,5 @@
+ 
+- OpenSSL 0.9.8x 10 May 2012
++ OpenSSL 0.9.8y 5 Feb 2013
+ 
+  Copyright (c) 1998-2011 The OpenSSL Project
+  Copyright (c) 1995-1998 Eric A. Young, Tim J. Hudson
+Index: crypto/openssl/apps/Makefile
+===================================================================
+--- crypto/openssl/apps/Makefile	(revision 248771)
++++ crypto/openssl/apps/Makefile	(working copy)
+@@ -176,703 +176,720 @@ progs.h: progs.pl
+ app_rand.o: ../e_os.h ../include/openssl/asn1.h ../include/openssl/bio.h
+ app_rand.o: ../include/openssl/buffer.h ../include/openssl/conf.h
+ app_rand.o: ../include/openssl/crypto.h ../include/openssl/e_os2.h
+-app_rand.o: ../include/openssl/ec.h ../include/openssl/ecdsa.h
+-app_rand.o: ../include/openssl/engine.h ../include/openssl/evp.h
+-app_rand.o: ../include/openssl/fips.h ../include/openssl/lhash.h
+-app_rand.o: ../include/openssl/obj_mac.h ../include/openssl/objects.h
+-app_rand.o: ../include/openssl/ocsp.h ../include/openssl/opensslconf.h
+-app_rand.o: ../include/openssl/opensslv.h ../include/openssl/ossl_typ.h
+-app_rand.o: ../include/openssl/pkcs7.h ../include/openssl/rand.h
+-app_rand.o: ../include/openssl/safestack.h ../include/openssl/sha.h
+-app_rand.o: ../include/openssl/stack.h ../include/openssl/symhacks.h
+-app_rand.o: ../include/openssl/txt_db.h ../include/openssl/x509.h
+-app_rand.o: ../include/openssl/x509_vfy.h ../include/openssl/x509v3.h
+-app_rand.o: app_rand.c apps.h
++app_rand.o: ../include/openssl/ec.h ../include/openssl/ecdh.h
++app_rand.o: ../include/openssl/ecdsa.h ../include/openssl/engine.h
++app_rand.o: ../include/openssl/evp.h ../include/openssl/fips.h
++app_rand.o: ../include/openssl/lhash.h ../include/openssl/obj_mac.h
++app_rand.o: ../include/openssl/objects.h ../include/openssl/ocsp.h
++app_rand.o: ../include/openssl/opensslconf.h ../include/openssl/opensslv.h
++app_rand.o: ../include/openssl/ossl_typ.h ../include/openssl/pkcs7.h
++app_rand.o: ../include/openssl/rand.h ../include/openssl/safestack.h
++app_rand.o: ../include/openssl/sha.h ../include/openssl/stack.h
++app_rand.o: ../include/openssl/symhacks.h ../include/openssl/txt_db.h
++app_rand.o: ../include/openssl/x509.h ../include/openssl/x509_vfy.h
++app_rand.o: ../include/openssl/x509v3.h app_rand.c apps.h
+ apps.o: ../e_os.h ../include/openssl/asn1.h ../include/openssl/bio.h
+ apps.o: ../include/openssl/bn.h ../include/openssl/buffer.h
+ apps.o: ../include/openssl/conf.h ../include/openssl/crypto.h
+ apps.o: ../include/openssl/e_os2.h ../include/openssl/ec.h
+-apps.o: ../include/openssl/ecdsa.h ../include/openssl/engine.h
+-apps.o: ../include/openssl/err.h ../include/openssl/evp.h
+-apps.o: ../include/openssl/fips.h ../include/openssl/lhash.h
+-apps.o: ../include/openssl/obj_mac.h ../include/openssl/objects.h
+-apps.o: ../include/openssl/ocsp.h ../include/openssl/opensslconf.h
+-apps.o: ../include/openssl/opensslv.h ../include/openssl/ossl_typ.h
+-apps.o: ../include/openssl/pem.h ../include/openssl/pem2.h
+-apps.o: ../include/openssl/pkcs12.h ../include/openssl/pkcs7.h
+-apps.o: ../include/openssl/rsa.h ../include/openssl/safestack.h
+-apps.o: ../include/openssl/sha.h ../include/openssl/stack.h
+-apps.o: ../include/openssl/symhacks.h ../include/openssl/txt_db.h
+-apps.o: ../include/openssl/ui.h ../include/openssl/x509.h
+-apps.o: ../include/openssl/x509_vfy.h ../include/openssl/x509v3.h apps.c apps.h
++apps.o: ../include/openssl/ecdh.h ../include/openssl/ecdsa.h
++apps.o: ../include/openssl/engine.h ../include/openssl/err.h
++apps.o: ../include/openssl/evp.h ../include/openssl/fips.h
++apps.o: ../include/openssl/lhash.h ../include/openssl/obj_mac.h
++apps.o: ../include/openssl/objects.h ../include/openssl/ocsp.h
++apps.o: ../include/openssl/opensslconf.h ../include/openssl/opensslv.h
++apps.o: ../include/openssl/ossl_typ.h ../include/openssl/pem.h
++apps.o: ../include/openssl/pem2.h ../include/openssl/pkcs12.h
++apps.o: ../include/openssl/pkcs7.h ../include/openssl/rsa.h
++apps.o: ../include/openssl/safestack.h ../include/openssl/sha.h
++apps.o: ../include/openssl/stack.h ../include/openssl/symhacks.h
++apps.o: ../include/openssl/txt_db.h ../include/openssl/ui.h
++apps.o: ../include/openssl/x509.h ../include/openssl/x509_vfy.h
++apps.o: ../include/openssl/x509v3.h apps.c apps.h
+ asn1pars.o: ../e_os.h ../include/openssl/asn1.h ../include/openssl/bio.h
+ asn1pars.o: ../include/openssl/buffer.h ../include/openssl/conf.h
+ asn1pars.o: ../include/openssl/crypto.h ../include/openssl/e_os2.h
+-asn1pars.o: ../include/openssl/ec.h ../include/openssl/ecdsa.h
+-asn1pars.o: ../include/openssl/engine.h ../include/openssl/err.h
+-asn1pars.o: ../include/openssl/evp.h ../include/openssl/fips.h
+-asn1pars.o: ../include/openssl/lhash.h ../include/openssl/obj_mac.h
+-asn1pars.o: ../include/openssl/objects.h ../include/openssl/ocsp.h
+-asn1pars.o: ../include/openssl/opensslconf.h ../include/openssl/opensslv.h
+-asn1pars.o: ../include/openssl/ossl_typ.h ../include/openssl/pem.h
+-asn1pars.o: ../include/openssl/pem2.h ../include/openssl/pkcs7.h
+-asn1pars.o: ../include/openssl/safestack.h ../include/openssl/sha.h
+-asn1pars.o: ../include/openssl/stack.h ../include/openssl/symhacks.h
+-asn1pars.o: ../include/openssl/txt_db.h ../include/openssl/x509.h
+-asn1pars.o: ../include/openssl/x509_vfy.h ../include/openssl/x509v3.h apps.h
+-asn1pars.o: asn1pars.c
++asn1pars.o: ../include/openssl/ec.h ../include/openssl/ecdh.h
++asn1pars.o: ../include/openssl/ecdsa.h ../include/openssl/engine.h
++asn1pars.o: ../include/openssl/err.h ../include/openssl/evp.h
++asn1pars.o: ../include/openssl/fips.h ../include/openssl/lhash.h
++asn1pars.o: ../include/openssl/obj_mac.h ../include/openssl/objects.h
++asn1pars.o: ../include/openssl/ocsp.h ../include/openssl/opensslconf.h
++asn1pars.o: ../include/openssl/opensslv.h ../include/openssl/ossl_typ.h
++asn1pars.o: ../include/openssl/pem.h ../include/openssl/pem2.h
++asn1pars.o: ../include/openssl/pkcs7.h ../include/openssl/safestack.h
++asn1pars.o: ../include/openssl/sha.h ../include/openssl/stack.h
++asn1pars.o: ../include/openssl/symhacks.h ../include/openssl/txt_db.h
++asn1pars.o: ../include/openssl/x509.h ../include/openssl/x509_vfy.h
++asn1pars.o: ../include/openssl/x509v3.h apps.h asn1pars.c
+ ca.o: ../e_os.h ../include/openssl/asn1.h ../include/openssl/bio.h
+ ca.o: ../include/openssl/bn.h ../include/openssl/buffer.h
+ ca.o: ../include/openssl/conf.h ../include/openssl/crypto.h
+ ca.o: ../include/openssl/e_os2.h ../include/openssl/ec.h
+-ca.o: ../include/openssl/ecdsa.h ../include/openssl/engine.h
+-ca.o: ../include/openssl/err.h ../include/openssl/evp.h
+-ca.o: ../include/openssl/fips.h ../include/openssl/lhash.h
+-ca.o: ../include/openssl/obj_mac.h ../include/openssl/objects.h
+-ca.o: ../include/openssl/ocsp.h ../include/openssl/opensslconf.h
+-ca.o: ../include/openssl/opensslv.h ../include/openssl/ossl_typ.h
+-ca.o: ../include/openssl/pem.h ../include/openssl/pem2.h
+-ca.o: ../include/openssl/pkcs7.h ../include/openssl/safestack.h
+-ca.o: ../include/openssl/sha.h ../include/openssl/stack.h
+-ca.o: ../include/openssl/symhacks.h ../include/openssl/txt_db.h
+-ca.o: ../include/openssl/x509.h ../include/openssl/x509_vfy.h
+-ca.o: ../include/openssl/x509v3.h apps.h ca.c
++ca.o: ../include/openssl/ecdh.h ../include/openssl/ecdsa.h
++ca.o: ../include/openssl/engine.h ../include/openssl/err.h
++ca.o: ../include/openssl/evp.h ../include/openssl/fips.h
++ca.o: ../include/openssl/lhash.h ../include/openssl/obj_mac.h
++ca.o: ../include/openssl/objects.h ../include/openssl/ocsp.h
++ca.o: ../include/openssl/opensslconf.h ../include/openssl/opensslv.h
++ca.o: ../include/openssl/ossl_typ.h ../include/openssl/pem.h
++ca.o: ../include/openssl/pem2.h ../include/openssl/pkcs7.h
++ca.o: ../include/openssl/safestack.h ../include/openssl/sha.h
++ca.o: ../include/openssl/stack.h ../include/openssl/symhacks.h
++ca.o: ../include/openssl/txt_db.h ../include/openssl/x509.h
++ca.o: ../include/openssl/x509_vfy.h ../include/openssl/x509v3.h apps.h ca.c
+ ciphers.o: ../e_os.h ../include/openssl/asn1.h ../include/openssl/bio.h
+ ciphers.o: ../include/openssl/bn.h ../include/openssl/buffer.h
+ ciphers.o: ../include/openssl/comp.h ../include/openssl/conf.h
+ ciphers.o: ../include/openssl/crypto.h ../include/openssl/dtls1.h
+ ciphers.o: ../include/openssl/e_os2.h ../include/openssl/ec.h
+-ciphers.o: ../include/openssl/ecdsa.h ../include/openssl/engine.h
+-ciphers.o: ../include/openssl/err.h ../include/openssl/evp.h
+-ciphers.o: ../include/openssl/fips.h ../include/openssl/hmac.h
+-ciphers.o: ../include/openssl/kssl.h ../include/openssl/lhash.h
+-ciphers.o: ../include/openssl/obj_mac.h ../include/openssl/objects.h
+-ciphers.o: ../include/openssl/ocsp.h ../include/openssl/opensslconf.h
+-ciphers.o: ../include/openssl/opensslv.h ../include/openssl/ossl_typ.h
+-ciphers.o: ../include/openssl/pem.h ../include/openssl/pem2.h
+-ciphers.o: ../include/openssl/pkcs7.h ../include/openssl/pq_compat.h
+-ciphers.o: ../include/openssl/pqueue.h ../include/openssl/safestack.h
+-ciphers.o: ../include/openssl/sha.h ../include/openssl/ssl.h
+-ciphers.o: ../include/openssl/ssl2.h ../include/openssl/ssl23.h
+-ciphers.o: ../include/openssl/ssl3.h ../include/openssl/stack.h
+-ciphers.o: ../include/openssl/symhacks.h ../include/openssl/tls1.h
+-ciphers.o: ../include/openssl/txt_db.h ../include/openssl/x509.h
+-ciphers.o: ../include/openssl/x509_vfy.h ../include/openssl/x509v3.h apps.h
+-ciphers.o: ciphers.c
++ciphers.o: ../include/openssl/ecdh.h ../include/openssl/ecdsa.h
++ciphers.o: ../include/openssl/engine.h ../include/openssl/err.h
++ciphers.o: ../include/openssl/evp.h ../include/openssl/fips.h
++ciphers.o: ../include/openssl/hmac.h ../include/openssl/kssl.h
++ciphers.o: ../include/openssl/lhash.h ../include/openssl/obj_mac.h
++ciphers.o: ../include/openssl/objects.h ../include/openssl/ocsp.h
++ciphers.o: ../include/openssl/opensslconf.h ../include/openssl/opensslv.h
++ciphers.o: ../include/openssl/ossl_typ.h ../include/openssl/pem.h
++ciphers.o: ../include/openssl/pem2.h ../include/openssl/pkcs7.h
++ciphers.o: ../include/openssl/pq_compat.h ../include/openssl/pqueue.h
++ciphers.o: ../include/openssl/safestack.h ../include/openssl/sha.h
++ciphers.o: ../include/openssl/ssl.h ../include/openssl/ssl2.h
++ciphers.o: ../include/openssl/ssl23.h ../include/openssl/ssl3.h
++ciphers.o: ../include/openssl/stack.h ../include/openssl/symhacks.h
++ciphers.o: ../include/openssl/tls1.h ../include/openssl/txt_db.h
++ciphers.o: ../include/openssl/x509.h ../include/openssl/x509_vfy.h
++ciphers.o: ../include/openssl/x509v3.h apps.h ciphers.c
+ cms.o: ../e_os.h ../include/openssl/asn1.h ../include/openssl/bio.h
+ cms.o: ../include/openssl/buffer.h ../include/openssl/conf.h
+ cms.o: ../include/openssl/crypto.h ../include/openssl/e_os2.h
+-cms.o: ../include/openssl/ec.h ../include/openssl/ecdsa.h
+-cms.o: ../include/openssl/engine.h ../include/openssl/evp.h
+-cms.o: ../include/openssl/fips.h ../include/openssl/lhash.h
+-cms.o: ../include/openssl/obj_mac.h ../include/openssl/objects.h
+-cms.o: ../include/openssl/ocsp.h ../include/openssl/opensslconf.h
+-cms.o: ../include/openssl/opensslv.h ../include/openssl/ossl_typ.h
+-cms.o: ../include/openssl/pkcs7.h ../include/openssl/safestack.h
+-cms.o: ../include/openssl/sha.h ../include/openssl/stack.h
+-cms.o: ../include/openssl/symhacks.h ../include/openssl/txt_db.h
+-cms.o: ../include/openssl/x509.h ../include/openssl/x509_vfy.h
+-cms.o: ../include/openssl/x509v3.h apps.h cms.c
++cms.o: ../include/openssl/ec.h ../include/openssl/ecdh.h
++cms.o: ../include/openssl/ecdsa.h ../include/openssl/engine.h
++cms.o: ../include/openssl/evp.h ../include/openssl/fips.h
++cms.o: ../include/openssl/lhash.h ../include/openssl/obj_mac.h
++cms.o: ../include/openssl/objects.h ../include/openssl/ocsp.h
++cms.o: ../include/openssl/opensslconf.h ../include/openssl/opensslv.h
++cms.o: ../include/openssl/ossl_typ.h ../include/openssl/pkcs7.h
++cms.o: ../include/openssl/safestack.h ../include/openssl/sha.h
++cms.o: ../include/openssl/stack.h ../include/openssl/symhacks.h
++cms.o: ../include/openssl/txt_db.h ../include/openssl/x509.h
++cms.o: ../include/openssl/x509_vfy.h ../include/openssl/x509v3.h apps.h cms.c
+ crl.o: ../e_os.h ../include/openssl/asn1.h ../include/openssl/bio.h
+ crl.o: ../include/openssl/buffer.h ../include/openssl/conf.h
+ crl.o: ../include/openssl/crypto.h ../include/openssl/e_os2.h
+-crl.o: ../include/openssl/ec.h ../include/openssl/ecdsa.h
+-crl.o: ../include/openssl/engine.h ../include/openssl/err.h
+-crl.o: ../include/openssl/evp.h ../include/openssl/fips.h
+-crl.o: ../include/openssl/lhash.h ../include/openssl/obj_mac.h
+-crl.o: ../include/openssl/objects.h ../include/openssl/ocsp.h
+-crl.o: ../include/openssl/opensslconf.h ../include/openssl/opensslv.h
+-crl.o: ../include/openssl/ossl_typ.h ../include/openssl/pem.h
+-crl.o: ../include/openssl/pem2.h ../include/openssl/pkcs7.h
+-crl.o: ../include/openssl/safestack.h ../include/openssl/sha.h
+-crl.o: ../include/openssl/stack.h ../include/openssl/symhacks.h
+-crl.o: ../include/openssl/txt_db.h ../include/openssl/x509.h
+-crl.o: ../include/openssl/x509_vfy.h ../include/openssl/x509v3.h apps.h crl.c
++crl.o: ../include/openssl/ec.h ../include/openssl/ecdh.h
++crl.o: ../include/openssl/ecdsa.h ../include/openssl/engine.h
++crl.o: ../include/openssl/err.h ../include/openssl/evp.h
++crl.o: ../include/openssl/fips.h ../include/openssl/lhash.h
++crl.o: ../include/openssl/obj_mac.h ../include/openssl/objects.h
++crl.o: ../include/openssl/ocsp.h ../include/openssl/opensslconf.h
++crl.o: ../include/openssl/opensslv.h ../include/openssl/ossl_typ.h
++crl.o: ../include/openssl/pem.h ../include/openssl/pem2.h
++crl.o: ../include/openssl/pkcs7.h ../include/openssl/safestack.h
++crl.o: ../include/openssl/sha.h ../include/openssl/stack.h
++crl.o: ../include/openssl/symhacks.h ../include/openssl/txt_db.h
++crl.o: ../include/openssl/x509.h ../include/openssl/x509_vfy.h
++crl.o: ../include/openssl/x509v3.h apps.h crl.c
+ crl2p7.o: ../e_os.h ../include/openssl/asn1.h ../include/openssl/bio.h
+ crl2p7.o: ../include/openssl/buffer.h ../include/openssl/conf.h
+ crl2p7.o: ../include/openssl/crypto.h ../include/openssl/e_os2.h
+-crl2p7.o: ../include/openssl/ec.h ../include/openssl/ecdsa.h
+-crl2p7.o: ../include/openssl/engine.h ../include/openssl/err.h
+-crl2p7.o: ../include/openssl/evp.h ../include/openssl/fips.h
+-crl2p7.o: ../include/openssl/lhash.h ../include/openssl/obj_mac.h
+-crl2p7.o: ../include/openssl/objects.h ../include/openssl/ocsp.h
+-crl2p7.o: ../include/openssl/opensslconf.h ../include/openssl/opensslv.h
+-crl2p7.o: ../include/openssl/ossl_typ.h ../include/openssl/pem.h
+-crl2p7.o: ../include/openssl/pem2.h ../include/openssl/pkcs7.h
+-crl2p7.o: ../include/openssl/safestack.h ../include/openssl/sha.h
+-crl2p7.o: ../include/openssl/stack.h ../include/openssl/symhacks.h
+-crl2p7.o: ../include/openssl/txt_db.h ../include/openssl/x509.h
+-crl2p7.o: ../include/openssl/x509_vfy.h ../include/openssl/x509v3.h apps.h
+-crl2p7.o: crl2p7.c
++crl2p7.o: ../include/openssl/ec.h ../include/openssl/ecdh.h
++crl2p7.o: ../include/openssl/ecdsa.h ../include/openssl/engine.h
++crl2p7.o: ../include/openssl/err.h ../include/openssl/evp.h
++crl2p7.o: ../include/openssl/fips.h ../include/openssl/lhash.h
++crl2p7.o: ../include/openssl/obj_mac.h ../include/openssl/objects.h
++crl2p7.o: ../include/openssl/ocsp.h ../include/openssl/opensslconf.h
++crl2p7.o: ../include/openssl/opensslv.h ../include/openssl/ossl_typ.h
++crl2p7.o: ../include/openssl/pem.h ../include/openssl/pem2.h
++crl2p7.o: ../include/openssl/pkcs7.h ../include/openssl/safestack.h
++crl2p7.o: ../include/openssl/sha.h ../include/openssl/stack.h
++crl2p7.o: ../include/openssl/symhacks.h ../include/openssl/txt_db.h
++crl2p7.o: ../include/openssl/x509.h ../include/openssl/x509_vfy.h
++crl2p7.o: ../include/openssl/x509v3.h apps.h crl2p7.c
+ dgst.o: ../e_os.h ../include/openssl/asn1.h ../include/openssl/bio.h
+ dgst.o: ../include/openssl/buffer.h ../include/openssl/conf.h
+ dgst.o: ../include/openssl/crypto.h ../include/openssl/e_os2.h
+-dgst.o: ../include/openssl/ec.h ../include/openssl/ecdsa.h
+-dgst.o: ../include/openssl/engine.h ../include/openssl/err.h
+-dgst.o: ../include/openssl/evp.h ../include/openssl/fips.h
+-dgst.o: ../include/openssl/hmac.h ../include/openssl/lhash.h
+-dgst.o: ../include/openssl/obj_mac.h ../include/openssl/objects.h
+-dgst.o: ../include/openssl/ocsp.h ../include/openssl/opensslconf.h
+-dgst.o: ../include/openssl/opensslv.h ../include/openssl/ossl_typ.h
+-dgst.o: ../include/openssl/pem.h ../include/openssl/pem2.h
+-dgst.o: ../include/openssl/pkcs7.h ../include/openssl/safestack.h
+-dgst.o: ../include/openssl/sha.h ../include/openssl/stack.h
+-dgst.o: ../include/openssl/symhacks.h ../include/openssl/txt_db.h
+-dgst.o: ../include/openssl/x509.h ../include/openssl/x509_vfy.h
+-dgst.o: ../include/openssl/x509v3.h apps.h dgst.c
++dgst.o: ../include/openssl/ec.h ../include/openssl/ecdh.h
++dgst.o: ../include/openssl/ecdsa.h ../include/openssl/engine.h
++dgst.o: ../include/openssl/err.h ../include/openssl/evp.h
++dgst.o: ../include/openssl/fips.h ../include/openssl/hmac.h
++dgst.o: ../include/openssl/lhash.h ../include/openssl/obj_mac.h
++dgst.o: ../include/openssl/objects.h ../include/openssl/ocsp.h
++dgst.o: ../include/openssl/opensslconf.h ../include/openssl/opensslv.h
++dgst.o: ../include/openssl/ossl_typ.h ../include/openssl/pem.h
++dgst.o: ../include/openssl/pem2.h ../include/openssl/pkcs7.h
++dgst.o: ../include/openssl/safestack.h ../include/openssl/sha.h
++dgst.o: ../include/openssl/stack.h ../include/openssl/symhacks.h
++dgst.o: ../include/openssl/txt_db.h ../include/openssl/x509.h
++dgst.o: ../include/openssl/x509_vfy.h ../include/openssl/x509v3.h apps.h dgst.c
+ dh.o: ../e_os.h ../include/openssl/asn1.h ../include/openssl/bio.h
+ dh.o: ../include/openssl/bn.h ../include/openssl/buffer.h
+ dh.o: ../include/openssl/conf.h ../include/openssl/crypto.h
+ dh.o: ../include/openssl/dh.h ../include/openssl/e_os2.h
+-dh.o: ../include/openssl/ec.h ../include/openssl/ecdsa.h
+-dh.o: ../include/openssl/engine.h ../include/openssl/err.h
+-dh.o: ../include/openssl/evp.h ../include/openssl/fips.h
+-dh.o: ../include/openssl/lhash.h ../include/openssl/obj_mac.h
+-dh.o: ../include/openssl/objects.h ../include/openssl/ocsp.h
+-dh.o: ../include/openssl/opensslconf.h ../include/openssl/opensslv.h
+-dh.o: ../include/openssl/ossl_typ.h ../include/openssl/pem.h
+-dh.o: ../include/openssl/pem2.h ../include/openssl/pkcs7.h
+-dh.o: ../include/openssl/safestack.h ../include/openssl/sha.h
+-dh.o: ../include/openssl/stack.h ../include/openssl/symhacks.h
+-dh.o: ../include/openssl/txt_db.h ../include/openssl/x509.h
+-dh.o: ../include/openssl/x509_vfy.h ../include/openssl/x509v3.h apps.h dh.c
++dh.o: ../include/openssl/ec.h ../include/openssl/ecdh.h
++dh.o: ../include/openssl/ecdsa.h ../include/openssl/engine.h
++dh.o: ../include/openssl/err.h ../include/openssl/evp.h
++dh.o: ../include/openssl/fips.h ../include/openssl/lhash.h
++dh.o: ../include/openssl/obj_mac.h ../include/openssl/objects.h
++dh.o: ../include/openssl/ocsp.h ../include/openssl/opensslconf.h
++dh.o: ../include/openssl/opensslv.h ../include/openssl/ossl_typ.h
++dh.o: ../include/openssl/pem.h ../include/openssl/pem2.h
++dh.o: ../include/openssl/pkcs7.h ../include/openssl/safestack.h
++dh.o: ../include/openssl/sha.h ../include/openssl/stack.h
++dh.o: ../include/openssl/symhacks.h ../include/openssl/txt_db.h
++dh.o: ../include/openssl/x509.h ../include/openssl/x509_vfy.h
++dh.o: ../include/openssl/x509v3.h apps.h dh.c
+ dsa.o: ../e_os.h ../include/openssl/asn1.h ../include/openssl/bio.h
+ dsa.o: ../include/openssl/bn.h ../include/openssl/buffer.h
+ dsa.o: ../include/openssl/conf.h ../include/openssl/crypto.h
+ dsa.o: ../include/openssl/dsa.h ../include/openssl/e_os2.h
+-dsa.o: ../include/openssl/ec.h ../include/openssl/ecdsa.h
+-dsa.o: ../include/openssl/engine.h ../include/openssl/err.h
+-dsa.o: ../include/openssl/evp.h ../include/openssl/fips.h
+-dsa.o: ../include/openssl/lhash.h ../include/openssl/obj_mac.h
+-dsa.o: ../include/openssl/objects.h ../include/openssl/ocsp.h
+-dsa.o: ../include/openssl/opensslconf.h ../include/openssl/opensslv.h
+-dsa.o: ../include/openssl/ossl_typ.h ../include/openssl/pem.h
+-dsa.o: ../include/openssl/pem2.h ../include/openssl/pkcs7.h
+-dsa.o: ../include/openssl/safestack.h ../include/openssl/sha.h
+-dsa.o: ../include/openssl/stack.h ../include/openssl/symhacks.h
+-dsa.o: ../include/openssl/txt_db.h ../include/openssl/x509.h
+-dsa.o: ../include/openssl/x509_vfy.h ../include/openssl/x509v3.h apps.h dsa.c
++dsa.o: ../include/openssl/ec.h ../include/openssl/ecdh.h
++dsa.o: ../include/openssl/ecdsa.h ../include/openssl/engine.h
++dsa.o: ../include/openssl/err.h ../include/openssl/evp.h
++dsa.o: ../include/openssl/fips.h ../include/openssl/lhash.h
++dsa.o: ../include/openssl/obj_mac.h ../include/openssl/objects.h
++dsa.o: ../include/openssl/ocsp.h ../include/openssl/opensslconf.h
++dsa.o: ../include/openssl/opensslv.h ../include/openssl/ossl_typ.h
++dsa.o: ../include/openssl/pem.h ../include/openssl/pem2.h
++dsa.o: ../include/openssl/pkcs7.h ../include/openssl/safestack.h
++dsa.o: ../include/openssl/sha.h ../include/openssl/stack.h
++dsa.o: ../include/openssl/symhacks.h ../include/openssl/txt_db.h
++dsa.o: ../include/openssl/x509.h ../include/openssl/x509_vfy.h
++dsa.o: ../include/openssl/x509v3.h apps.h dsa.c
+ dsaparam.o: ../e_os.h ../include/openssl/asn1.h ../include/openssl/bio.h
+ dsaparam.o: ../include/openssl/bn.h ../include/openssl/buffer.h
+ dsaparam.o: ../include/openssl/conf.h ../include/openssl/crypto.h
+ dsaparam.o: ../include/openssl/dh.h ../include/openssl/dsa.h
+ dsaparam.o: ../include/openssl/e_os2.h ../include/openssl/ec.h
+-dsaparam.o: ../include/openssl/ecdsa.h ../include/openssl/engine.h
+-dsaparam.o: ../include/openssl/err.h ../include/openssl/evp.h
+-dsaparam.o: ../include/openssl/fips.h ../include/openssl/lhash.h
+-dsaparam.o: ../include/openssl/obj_mac.h ../include/openssl/objects.h
+-dsaparam.o: ../include/openssl/ocsp.h ../include/openssl/opensslconf.h
+-dsaparam.o: ../include/openssl/opensslv.h ../include/openssl/ossl_typ.h
+-dsaparam.o: ../include/openssl/pem.h ../include/openssl/pem2.h
+-dsaparam.o: ../include/openssl/pkcs7.h ../include/openssl/rand.h
+-dsaparam.o: ../include/openssl/rsa.h ../include/openssl/safestack.h
+-dsaparam.o: ../include/openssl/sha.h ../include/openssl/stack.h
+-dsaparam.o: ../include/openssl/store.h ../include/openssl/symhacks.h
+-dsaparam.o: ../include/openssl/txt_db.h ../include/openssl/ui.h
+-dsaparam.o: ../include/openssl/x509.h ../include/openssl/x509_vfy.h
+-dsaparam.o: ../include/openssl/x509v3.h apps.h dsaparam.c
++dsaparam.o: ../include/openssl/ecdh.h ../include/openssl/ecdsa.h
++dsaparam.o: ../include/openssl/engine.h ../include/openssl/err.h
++dsaparam.o: ../include/openssl/evp.h ../include/openssl/fips.h
++dsaparam.o: ../include/openssl/lhash.h ../include/openssl/obj_mac.h
++dsaparam.o: ../include/openssl/objects.h ../include/openssl/ocsp.h
++dsaparam.o: ../include/openssl/opensslconf.h ../include/openssl/opensslv.h
++dsaparam.o: ../include/openssl/ossl_typ.h ../include/openssl/pem.h
++dsaparam.o: ../include/openssl/pem2.h ../include/openssl/pkcs7.h
++dsaparam.o: ../include/openssl/rand.h ../include/openssl/rsa.h
++dsaparam.o: ../include/openssl/safestack.h ../include/openssl/sha.h
++dsaparam.o: ../include/openssl/stack.h ../include/openssl/store.h
++dsaparam.o: ../include/openssl/symhacks.h ../include/openssl/txt_db.h
++dsaparam.o: ../include/openssl/ui.h ../include/openssl/x509.h
++dsaparam.o: ../include/openssl/x509_vfy.h ../include/openssl/x509v3.h apps.h
++dsaparam.o: dsaparam.c
+ ec.o: ../e_os.h ../include/openssl/asn1.h ../include/openssl/bio.h
+ ec.o: ../include/openssl/buffer.h ../include/openssl/conf.h
+ ec.o: ../include/openssl/crypto.h ../include/openssl/e_os2.h
+-ec.o: ../include/openssl/ec.h ../include/openssl/ecdsa.h
+-ec.o: ../include/openssl/engine.h ../include/openssl/err.h
+-ec.o: ../include/openssl/evp.h ../include/openssl/fips.h
+-ec.o: ../include/openssl/lhash.h ../include/openssl/obj_mac.h
+-ec.o: ../include/openssl/objects.h ../include/openssl/ocsp.h
+-ec.o: ../include/openssl/opensslconf.h ../include/openssl/opensslv.h
+-ec.o: ../include/openssl/ossl_typ.h ../include/openssl/pem.h
+-ec.o: ../include/openssl/pem2.h ../include/openssl/pkcs7.h
+-ec.o: ../include/openssl/safestack.h ../include/openssl/sha.h
+-ec.o: ../include/openssl/stack.h ../include/openssl/symhacks.h
+-ec.o: ../include/openssl/txt_db.h ../include/openssl/x509.h
+-ec.o: ../include/openssl/x509_vfy.h ../include/openssl/x509v3.h apps.h ec.c
++ec.o: ../include/openssl/ec.h ../include/openssl/ecdh.h
++ec.o: ../include/openssl/ecdsa.h ../include/openssl/engine.h
++ec.o: ../include/openssl/err.h ../include/openssl/evp.h
++ec.o: ../include/openssl/fips.h ../include/openssl/lhash.h
++ec.o: ../include/openssl/obj_mac.h ../include/openssl/objects.h
++ec.o: ../include/openssl/ocsp.h ../include/openssl/opensslconf.h
++ec.o: ../include/openssl/opensslv.h ../include/openssl/ossl_typ.h
++ec.o: ../include/openssl/pem.h ../include/openssl/pem2.h
++ec.o: ../include/openssl/pkcs7.h ../include/openssl/safestack.h
++ec.o: ../include/openssl/sha.h ../include/openssl/stack.h
++ec.o: ../include/openssl/symhacks.h ../include/openssl/txt_db.h
++ec.o: ../include/openssl/x509.h ../include/openssl/x509_vfy.h
++ec.o: ../include/openssl/x509v3.h apps.h ec.c
+ ecparam.o: ../e_os.h ../include/openssl/asn1.h ../include/openssl/bio.h
+ ecparam.o: ../include/openssl/bn.h ../include/openssl/buffer.h
+ ecparam.o: ../include/openssl/conf.h ../include/openssl/crypto.h
+ ecparam.o: ../include/openssl/e_os2.h ../include/openssl/ec.h
+-ecparam.o: ../include/openssl/ecdsa.h ../include/openssl/engine.h
+-ecparam.o: ../include/openssl/err.h ../include/openssl/evp.h
+-ecparam.o: ../include/openssl/fips.h ../include/openssl/lhash.h
+-ecparam.o: ../include/openssl/obj_mac.h ../include/openssl/objects.h
+-ecparam.o: ../include/openssl/ocsp.h ../include/openssl/opensslconf.h
+-ecparam.o: ../include/openssl/opensslv.h ../include/openssl/ossl_typ.h
+-ecparam.o: ../include/openssl/pem.h ../include/openssl/pem2.h
+-ecparam.o: ../include/openssl/pkcs7.h ../include/openssl/safestack.h
+-ecparam.o: ../include/openssl/sha.h ../include/openssl/stack.h
+-ecparam.o: ../include/openssl/symhacks.h ../include/openssl/txt_db.h
+-ecparam.o: ../include/openssl/x509.h ../include/openssl/x509_vfy.h
+-ecparam.o: ../include/openssl/x509v3.h apps.h ecparam.c
++ecparam.o: ../include/openssl/ecdh.h ../include/openssl/ecdsa.h
++ecparam.o: ../include/openssl/engine.h ../include/openssl/err.h
++ecparam.o: ../include/openssl/evp.h ../include/openssl/fips.h
++ecparam.o: ../include/openssl/lhash.h ../include/openssl/obj_mac.h
++ecparam.o: ../include/openssl/objects.h ../include/openssl/ocsp.h
++ecparam.o: ../include/openssl/opensslconf.h ../include/openssl/opensslv.h
++ecparam.o: ../include/openssl/ossl_typ.h ../include/openssl/pem.h
++ecparam.o: ../include/openssl/pem2.h ../include/openssl/pkcs7.h
++ecparam.o: ../include/openssl/safestack.h ../include/openssl/sha.h
++ecparam.o: ../include/openssl/stack.h ../include/openssl/symhacks.h
++ecparam.o: ../include/openssl/txt_db.h ../include/openssl/x509.h
++ecparam.o: ../include/openssl/x509_vfy.h ../include/openssl/x509v3.h apps.h
++ecparam.o: ecparam.c
+ enc.o: ../e_os.h ../include/openssl/asn1.h ../include/openssl/bio.h
+ enc.o: ../include/openssl/buffer.h ../include/openssl/conf.h
+ enc.o: ../include/openssl/crypto.h ../include/openssl/e_os2.h
+-enc.o: ../include/openssl/ec.h ../include/openssl/ecdsa.h
+-enc.o: ../include/openssl/engine.h ../include/openssl/err.h
+-enc.o: ../include/openssl/evp.h ../include/openssl/fips.h
+-enc.o: ../include/openssl/lhash.h ../include/openssl/obj_mac.h
+-enc.o: ../include/openssl/objects.h ../include/openssl/ocsp.h
+-enc.o: ../include/openssl/opensslconf.h ../include/openssl/opensslv.h
+-enc.o: ../include/openssl/ossl_typ.h ../include/openssl/pem.h
+-enc.o: ../include/openssl/pem2.h ../include/openssl/pkcs7.h
+-enc.o: ../include/openssl/rand.h ../include/openssl/safestack.h
+-enc.o: ../include/openssl/sha.h ../include/openssl/stack.h
+-enc.o: ../include/openssl/symhacks.h ../include/openssl/txt_db.h
+-enc.o: ../include/openssl/x509.h ../include/openssl/x509_vfy.h
+-enc.o: ../include/openssl/x509v3.h apps.h enc.c
++enc.o: ../include/openssl/ec.h ../include/openssl/ecdh.h
++enc.o: ../include/openssl/ecdsa.h ../include/openssl/engine.h
++enc.o: ../include/openssl/err.h ../include/openssl/evp.h
++enc.o: ../include/openssl/fips.h ../include/openssl/lhash.h
++enc.o: ../include/openssl/obj_mac.h ../include/openssl/objects.h
++enc.o: ../include/openssl/ocsp.h ../include/openssl/opensslconf.h
++enc.o: ../include/openssl/opensslv.h ../include/openssl/ossl_typ.h
++enc.o: ../include/openssl/pem.h ../include/openssl/pem2.h
++enc.o: ../include/openssl/pkcs7.h ../include/openssl/rand.h
++enc.o: ../include/openssl/safestack.h ../include/openssl/sha.h
++enc.o: ../include/openssl/stack.h ../include/openssl/symhacks.h
++enc.o: ../include/openssl/txt_db.h ../include/openssl/x509.h
++enc.o: ../include/openssl/x509_vfy.h ../include/openssl/x509v3.h apps.h enc.c
+ engine.o: ../e_os.h ../include/openssl/asn1.h ../include/openssl/bio.h
+ engine.o: ../include/openssl/bn.h ../include/openssl/buffer.h
+ engine.o: ../include/openssl/comp.h ../include/openssl/conf.h
+ engine.o: ../include/openssl/crypto.h ../include/openssl/dtls1.h
+ engine.o: ../include/openssl/e_os2.h ../include/openssl/ec.h
+-engine.o: ../include/openssl/ecdsa.h ../include/openssl/engine.h
+-engine.o: ../include/openssl/err.h ../include/openssl/evp.h
+-engine.o: ../include/openssl/fips.h ../include/openssl/hmac.h
+-engine.o: ../include/openssl/kssl.h ../include/openssl/lhash.h
+-engine.o: ../include/openssl/obj_mac.h ../include/openssl/objects.h
+-engine.o: ../include/openssl/ocsp.h ../include/openssl/opensslconf.h
+-engine.o: ../include/openssl/opensslv.h ../include/openssl/ossl_typ.h
+-engine.o: ../include/openssl/pem.h ../include/openssl/pem2.h
+-engine.o: ../include/openssl/pkcs7.h ../include/openssl/pq_compat.h
+-engine.o: ../include/openssl/pqueue.h ../include/openssl/safestack.h
+-engine.o: ../include/openssl/sha.h ../include/openssl/ssl.h
+-engine.o: ../include/openssl/ssl2.h ../include/openssl/ssl23.h
+-engine.o: ../include/openssl/ssl3.h ../include/openssl/stack.h
+-engine.o: ../include/openssl/symhacks.h ../include/openssl/tls1.h
+-engine.o: ../include/openssl/txt_db.h ../include/openssl/x509.h
+-engine.o: ../include/openssl/x509_vfy.h ../include/openssl/x509v3.h apps.h
+-engine.o: engine.c
++engine.o: ../include/openssl/ecdh.h ../include/openssl/ecdsa.h
++engine.o: ../include/openssl/engine.h ../include/openssl/err.h
++engine.o: ../include/openssl/evp.h ../include/openssl/fips.h
++engine.o: ../include/openssl/hmac.h ../include/openssl/kssl.h
++engine.o: ../include/openssl/lhash.h ../include/openssl/obj_mac.h
++engine.o: ../include/openssl/objects.h ../include/openssl/ocsp.h
++engine.o: ../include/openssl/opensslconf.h ../include/openssl/opensslv.h
++engine.o: ../include/openssl/ossl_typ.h ../include/openssl/pem.h
++engine.o: ../include/openssl/pem2.h ../include/openssl/pkcs7.h
++engine.o: ../include/openssl/pq_compat.h ../include/openssl/pqueue.h
++engine.o: ../include/openssl/safestack.h ../include/openssl/sha.h
++engine.o: ../include/openssl/ssl.h ../include/openssl/ssl2.h
++engine.o: ../include/openssl/ssl23.h ../include/openssl/ssl3.h
++engine.o: ../include/openssl/stack.h ../include/openssl/symhacks.h
++engine.o: ../include/openssl/tls1.h ../include/openssl/txt_db.h
++engine.o: ../include/openssl/x509.h ../include/openssl/x509_vfy.h
++engine.o: ../include/openssl/x509v3.h apps.h engine.c
+ errstr.o: ../e_os.h ../include/openssl/asn1.h ../include/openssl/bio.h
+ errstr.o: ../include/openssl/bn.h ../include/openssl/buffer.h
+ errstr.o: ../include/openssl/comp.h ../include/openssl/conf.h
+ errstr.o: ../include/openssl/crypto.h ../include/openssl/dtls1.h
+ errstr.o: ../include/openssl/e_os2.h ../include/openssl/ec.h
+-errstr.o: ../include/openssl/ecdsa.h ../include/openssl/engine.h
+-errstr.o: ../include/openssl/err.h ../include/openssl/evp.h
+-errstr.o: ../include/openssl/fips.h ../include/openssl/hmac.h
+-errstr.o: ../include/openssl/kssl.h ../include/openssl/lhash.h
+-errstr.o: ../include/openssl/obj_mac.h ../include/openssl/objects.h
+-errstr.o: ../include/openssl/ocsp.h ../include/openssl/opensslconf.h
+-errstr.o: ../include/openssl/opensslv.h ../include/openssl/ossl_typ.h
+-errstr.o: ../include/openssl/pem.h ../include/openssl/pem2.h
+-errstr.o: ../include/openssl/pkcs7.h ../include/openssl/pq_compat.h
+-errstr.o: ../include/openssl/pqueue.h ../include/openssl/safestack.h
+-errstr.o: ../include/openssl/sha.h ../include/openssl/ssl.h
+-errstr.o: ../include/openssl/ssl2.h ../include/openssl/ssl23.h
+-errstr.o: ../include/openssl/ssl3.h ../include/openssl/stack.h
+-errstr.o: ../include/openssl/symhacks.h ../include/openssl/tls1.h
+-errstr.o: ../include/openssl/txt_db.h ../include/openssl/x509.h
+-errstr.o: ../include/openssl/x509_vfy.h ../include/openssl/x509v3.h apps.h
+-errstr.o: errstr.c
++errstr.o: ../include/openssl/ecdh.h ../include/openssl/ecdsa.h
++errstr.o: ../include/openssl/engine.h ../include/openssl/err.h
++errstr.o: ../include/openssl/evp.h ../include/openssl/fips.h
++errstr.o: ../include/openssl/hmac.h ../include/openssl/kssl.h
++errstr.o: ../include/openssl/lhash.h ../include/openssl/obj_mac.h
++errstr.o: ../include/openssl/objects.h ../include/openssl/ocsp.h
++errstr.o: ../include/openssl/opensslconf.h ../include/openssl/opensslv.h
++errstr.o: ../include/openssl/ossl_typ.h ../include/openssl/pem.h
++errstr.o: ../include/openssl/pem2.h ../include/openssl/pkcs7.h
++errstr.o: ../include/openssl/pq_compat.h ../include/openssl/pqueue.h
++errstr.o: ../include/openssl/safestack.h ../include/openssl/sha.h
++errstr.o: ../include/openssl/ssl.h ../include/openssl/ssl2.h
++errstr.o: ../include/openssl/ssl23.h ../include/openssl/ssl3.h
++errstr.o: ../include/openssl/stack.h ../include/openssl/symhacks.h
++errstr.o: ../include/openssl/tls1.h ../include/openssl/txt_db.h
++errstr.o: ../include/openssl/x509.h ../include/openssl/x509_vfy.h
++errstr.o: ../include/openssl/x509v3.h apps.h errstr.c
+ gendh.o: ../e_os.h ../include/openssl/asn1.h ../include/openssl/bio.h
+ gendh.o: ../include/openssl/bn.h ../include/openssl/buffer.h
+ gendh.o: ../include/openssl/conf.h ../include/openssl/crypto.h
+ gendh.o: ../include/openssl/dh.h ../include/openssl/dsa.h
+ gendh.o: ../include/openssl/e_os2.h ../include/openssl/ec.h
+-gendh.o: ../include/openssl/ecdsa.h ../include/openssl/engine.h
+-gendh.o: ../include/openssl/err.h ../include/openssl/evp.h
+-gendh.o: ../include/openssl/fips.h ../include/openssl/lhash.h
+-gendh.o: ../include/openssl/obj_mac.h ../include/openssl/objects.h
+-gendh.o: ../include/openssl/ocsp.h ../include/openssl/opensslconf.h
+-gendh.o: ../include/openssl/opensslv.h ../include/openssl/ossl_typ.h
+-gendh.o: ../include/openssl/pem.h ../include/openssl/pem2.h
+-gendh.o: ../include/openssl/pkcs7.h ../include/openssl/rand.h
+-gendh.o: ../include/openssl/rsa.h ../include/openssl/safestack.h
+-gendh.o: ../include/openssl/sha.h ../include/openssl/stack.h
+-gendh.o: ../include/openssl/store.h ../include/openssl/symhacks.h
+-gendh.o: ../include/openssl/txt_db.h ../include/openssl/ui.h
+-gendh.o: ../include/openssl/x509.h ../include/openssl/x509_vfy.h
+-gendh.o: ../include/openssl/x509v3.h apps.h gendh.c
++gendh.o: ../include/openssl/ecdh.h ../include/openssl/ecdsa.h
++gendh.o: ../include/openssl/engine.h ../include/openssl/err.h
++gendh.o: ../include/openssl/evp.h ../include/openssl/fips.h
++gendh.o: ../include/openssl/lhash.h ../include/openssl/obj_mac.h
++gendh.o: ../include/openssl/objects.h ../include/openssl/ocsp.h
++gendh.o: ../include/openssl/opensslconf.h ../include/openssl/opensslv.h
++gendh.o: ../include/openssl/ossl_typ.h ../include/openssl/pem.h
++gendh.o: ../include/openssl/pem2.h ../include/openssl/pkcs7.h
++gendh.o: ../include/openssl/rand.h ../include/openssl/rsa.h
++gendh.o: ../include/openssl/safestack.h ../include/openssl/sha.h
++gendh.o: ../include/openssl/stack.h ../include/openssl/store.h
++gendh.o: ../include/openssl/symhacks.h ../include/openssl/txt_db.h
++gendh.o: ../include/openssl/ui.h ../include/openssl/x509.h
++gendh.o: ../include/openssl/x509_vfy.h ../include/openssl/x509v3.h apps.h
++gendh.o: gendh.c
+ gendsa.o: ../e_os.h ../include/openssl/asn1.h ../include/openssl/bio.h
+ gendsa.o: ../include/openssl/bn.h ../include/openssl/buffer.h
+ gendsa.o: ../include/openssl/conf.h ../include/openssl/crypto.h
+ gendsa.o: ../include/openssl/dsa.h ../include/openssl/e_os2.h
+-gendsa.o: ../include/openssl/ec.h ../include/openssl/ecdsa.h
+-gendsa.o: ../include/openssl/engine.h ../include/openssl/err.h
+-gendsa.o: ../include/openssl/evp.h ../include/openssl/fips.h
+-gendsa.o: ../include/openssl/lhash.h ../include/openssl/obj_mac.h
+-gendsa.o: ../include/openssl/objects.h ../include/openssl/ocsp.h
+-gendsa.o: ../include/openssl/opensslconf.h ../include/openssl/opensslv.h
+-gendsa.o: ../include/openssl/ossl_typ.h ../include/openssl/pem.h
+-gendsa.o: ../include/openssl/pem2.h ../include/openssl/pkcs7.h
+-gendsa.o: ../include/openssl/safestack.h ../include/openssl/sha.h
+-gendsa.o: ../include/openssl/stack.h ../include/openssl/symhacks.h
+-gendsa.o: ../include/openssl/txt_db.h ../include/openssl/x509.h
+-gendsa.o: ../include/openssl/x509_vfy.h ../include/openssl/x509v3.h apps.h
+-gendsa.o: gendsa.c
++gendsa.o: ../include/openssl/ec.h ../include/openssl/ecdh.h
++gendsa.o: ../include/openssl/ecdsa.h ../include/openssl/engine.h
++gendsa.o: ../include/openssl/err.h ../include/openssl/evp.h
++gendsa.o: ../include/openssl/fips.h ../include/openssl/lhash.h
++gendsa.o: ../include/openssl/obj_mac.h ../include/openssl/objects.h
++gendsa.o: ../include/openssl/ocsp.h ../include/openssl/opensslconf.h
++gendsa.o: ../include/openssl/opensslv.h ../include/openssl/ossl_typ.h
++gendsa.o: ../include/openssl/pem.h ../include/openssl/pem2.h
++gendsa.o: ../include/openssl/pkcs7.h ../include/openssl/safestack.h
++gendsa.o: ../include/openssl/sha.h ../include/openssl/stack.h
++gendsa.o: ../include/openssl/symhacks.h ../include/openssl/txt_db.h
++gendsa.o: ../include/openssl/x509.h ../include/openssl/x509_vfy.h
++gendsa.o: ../include/openssl/x509v3.h apps.h gendsa.c
+ genrsa.o: ../e_os.h ../include/openssl/asn1.h ../include/openssl/bio.h
+ genrsa.o: ../include/openssl/bn.h ../include/openssl/buffer.h
+ genrsa.o: ../include/openssl/conf.h ../include/openssl/crypto.h
+ genrsa.o: ../include/openssl/dh.h ../include/openssl/dsa.h
+ genrsa.o: ../include/openssl/e_os2.h ../include/openssl/ec.h
+-genrsa.o: ../include/openssl/ecdsa.h ../include/openssl/engine.h
+-genrsa.o: ../include/openssl/err.h ../include/openssl/evp.h
+-genrsa.o: ../include/openssl/fips.h ../include/openssl/lhash.h
+-genrsa.o: ../include/openssl/obj_mac.h ../include/openssl/objects.h
+-genrsa.o: ../include/openssl/ocsp.h ../include/openssl/opensslconf.h
+-genrsa.o: ../include/openssl/opensslv.h ../include/openssl/ossl_typ.h
+-genrsa.o: ../include/openssl/pem.h ../include/openssl/pem2.h
+-genrsa.o: ../include/openssl/pkcs7.h ../include/openssl/rand.h
+-genrsa.o: ../include/openssl/rsa.h ../include/openssl/safestack.h
+-genrsa.o: ../include/openssl/sha.h ../include/openssl/stack.h
+-genrsa.o: ../include/openssl/store.h ../include/openssl/symhacks.h
+-genrsa.o: ../include/openssl/txt_db.h ../include/openssl/ui.h
+-genrsa.o: ../include/openssl/x509.h ../include/openssl/x509_vfy.h
+-genrsa.o: ../include/openssl/x509v3.h apps.h genrsa.c
++genrsa.o: ../include/openssl/ecdh.h ../include/openssl/ecdsa.h
++genrsa.o: ../include/openssl/engine.h ../include/openssl/err.h
++genrsa.o: ../include/openssl/evp.h ../include/openssl/fips.h
++genrsa.o: ../include/openssl/lhash.h ../include/openssl/obj_mac.h
++genrsa.o: ../include/openssl/objects.h ../include/openssl/ocsp.h
++genrsa.o: ../include/openssl/opensslconf.h ../include/openssl/opensslv.h
++genrsa.o: ../include/openssl/ossl_typ.h ../include/openssl/pem.h
++genrsa.o: ../include/openssl/pem2.h ../include/openssl/pkcs7.h
++genrsa.o: ../include/openssl/rand.h ../include/openssl/rsa.h
++genrsa.o: ../include/openssl/safestack.h ../include/openssl/sha.h
++genrsa.o: ../include/openssl/stack.h ../include/openssl/store.h
++genrsa.o: ../include/openssl/symhacks.h ../include/openssl/txt_db.h
++genrsa.o: ../include/openssl/ui.h ../include/openssl/x509.h
++genrsa.o: ../include/openssl/x509_vfy.h ../include/openssl/x509v3.h apps.h
++genrsa.o: genrsa.c
+ nseq.o: ../e_os.h ../include/openssl/asn1.h ../include/openssl/bio.h
+ nseq.o: ../include/openssl/buffer.h ../include/openssl/conf.h
+ nseq.o: ../include/openssl/crypto.h ../include/openssl/e_os2.h
+-nseq.o: ../include/openssl/ec.h ../include/openssl/ecdsa.h
+-nseq.o: ../include/openssl/engine.h ../include/openssl/err.h
+-nseq.o: ../include/openssl/evp.h ../include/openssl/fips.h
+-nseq.o: ../include/openssl/lhash.h ../include/openssl/obj_mac.h
+-nseq.o: ../include/openssl/objects.h ../include/openssl/ocsp.h
+-nseq.o: ../include/openssl/opensslconf.h ../include/openssl/opensslv.h
+-nseq.o: ../include/openssl/ossl_typ.h ../include/openssl/pem.h
+-nseq.o: ../include/openssl/pem2.h ../include/openssl/pkcs7.h
+-nseq.o: ../include/openssl/safestack.h ../include/openssl/sha.h
+-nseq.o: ../include/openssl/stack.h ../include/openssl/symhacks.h
+-nseq.o: ../include/openssl/txt_db.h ../include/openssl/x509.h
+-nseq.o: ../include/openssl/x509_vfy.h ../include/openssl/x509v3.h apps.h nseq.c
++nseq.o: ../include/openssl/ec.h ../include/openssl/ecdh.h
++nseq.o: ../include/openssl/ecdsa.h ../include/openssl/engine.h
++nseq.o: ../include/openssl/err.h ../include/openssl/evp.h
++nseq.o: ../include/openssl/fips.h ../include/openssl/lhash.h
++nseq.o: ../include/openssl/obj_mac.h ../include/openssl/objects.h
++nseq.o: ../include/openssl/ocsp.h ../include/openssl/opensslconf.h
++nseq.o: ../include/openssl/opensslv.h ../include/openssl/ossl_typ.h
++nseq.o: ../include/openssl/pem.h ../include/openssl/pem2.h
++nseq.o: ../include/openssl/pkcs7.h ../include/openssl/safestack.h
++nseq.o: ../include/openssl/sha.h ../include/openssl/stack.h
++nseq.o: ../include/openssl/symhacks.h ../include/openssl/txt_db.h
++nseq.o: ../include/openssl/x509.h ../include/openssl/x509_vfy.h
++nseq.o: ../include/openssl/x509v3.h apps.h nseq.c
+ ocsp.o: ../e_os.h ../include/openssl/asn1.h ../include/openssl/bio.h
+ ocsp.o: ../include/openssl/bn.h ../include/openssl/buffer.h
+ ocsp.o: ../include/openssl/comp.h ../include/openssl/conf.h
+ ocsp.o: ../include/openssl/crypto.h ../include/openssl/dtls1.h
+ ocsp.o: ../include/openssl/e_os2.h ../include/openssl/ec.h
+-ocsp.o: ../include/openssl/ecdsa.h ../include/openssl/engine.h
+-ocsp.o: ../include/openssl/err.h ../include/openssl/evp.h
+-ocsp.o: ../include/openssl/fips.h ../include/openssl/hmac.h
+-ocsp.o: ../include/openssl/kssl.h ../include/openssl/lhash.h
+-ocsp.o: ../include/openssl/obj_mac.h ../include/openssl/objects.h
+-ocsp.o: ../include/openssl/ocsp.h ../include/openssl/opensslconf.h
+-ocsp.o: ../include/openssl/opensslv.h ../include/openssl/ossl_typ.h
+-ocsp.o: ../include/openssl/pem.h ../include/openssl/pem2.h
+-ocsp.o: ../include/openssl/pkcs7.h ../include/openssl/pq_compat.h
+-ocsp.o: ../include/openssl/pqueue.h ../include/openssl/safestack.h
+-ocsp.o: ../include/openssl/sha.h ../include/openssl/ssl.h
+-ocsp.o: ../include/openssl/ssl2.h ../include/openssl/ssl23.h
+-ocsp.o: ../include/openssl/ssl3.h ../include/openssl/stack.h
+-ocsp.o: ../include/openssl/symhacks.h ../include/openssl/tls1.h
+-ocsp.o: ../include/openssl/txt_db.h ../include/openssl/x509.h
+-ocsp.o: ../include/openssl/x509_vfy.h ../include/openssl/x509v3.h apps.h ocsp.c
++ocsp.o: ../include/openssl/ecdh.h ../include/openssl/ecdsa.h
++ocsp.o: ../include/openssl/engine.h ../include/openssl/err.h
++ocsp.o: ../include/openssl/evp.h ../include/openssl/fips.h
++ocsp.o: ../include/openssl/hmac.h ../include/openssl/kssl.h
++ocsp.o: ../include/openssl/lhash.h ../include/openssl/obj_mac.h
++ocsp.o: ../include/openssl/objects.h ../include/openssl/ocsp.h
++ocsp.o: ../include/openssl/opensslconf.h ../include/openssl/opensslv.h
++ocsp.o: ../include/openssl/ossl_typ.h ../include/openssl/pem.h
++ocsp.o: ../include/openssl/pem2.h ../include/openssl/pkcs7.h
++ocsp.o: ../include/openssl/pq_compat.h ../include/openssl/pqueue.h
++ocsp.o: ../include/openssl/safestack.h ../include/openssl/sha.h
++ocsp.o: ../include/openssl/ssl.h ../include/openssl/ssl2.h
++ocsp.o: ../include/openssl/ssl23.h ../include/openssl/ssl3.h
++ocsp.o: ../include/openssl/stack.h ../include/openssl/symhacks.h
++ocsp.o: ../include/openssl/tls1.h ../include/openssl/txt_db.h
++ocsp.o: ../include/openssl/x509.h ../include/openssl/x509_vfy.h
++ocsp.o: ../include/openssl/x509v3.h apps.h ocsp.c
+ openssl.o: ../e_os.h ../include/openssl/asn1.h ../include/openssl/bio.h
+ openssl.o: ../include/openssl/bn.h ../include/openssl/buffer.h
+ openssl.o: ../include/openssl/comp.h ../include/openssl/conf.h
+ openssl.o: ../include/openssl/crypto.h ../include/openssl/dtls1.h
+ openssl.o: ../include/openssl/e_os2.h ../include/openssl/ec.h
+-openssl.o: ../include/openssl/ecdsa.h ../include/openssl/engine.h
+-openssl.o: ../include/openssl/err.h ../include/openssl/evp.h
+-openssl.o: ../include/openssl/fips.h ../include/openssl/hmac.h
+-openssl.o: ../include/openssl/kssl.h ../include/openssl/lhash.h
+-openssl.o: ../include/openssl/obj_mac.h ../include/openssl/objects.h
+-openssl.o: ../include/openssl/ocsp.h ../include/openssl/opensslconf.h
+-openssl.o: ../include/openssl/opensslv.h ../include/openssl/ossl_typ.h
+-openssl.o: ../include/openssl/pem.h ../include/openssl/pem2.h
+-openssl.o: ../include/openssl/pkcs7.h ../include/openssl/pq_compat.h
+-openssl.o: ../include/openssl/pqueue.h ../include/openssl/safestack.h
+-openssl.o: ../include/openssl/sha.h ../include/openssl/ssl.h
+-openssl.o: ../include/openssl/ssl2.h ../include/openssl/ssl23.h
+-openssl.o: ../include/openssl/ssl3.h ../include/openssl/stack.h
+-openssl.o: ../include/openssl/symhacks.h ../include/openssl/tls1.h
+-openssl.o: ../include/openssl/txt_db.h ../include/openssl/x509.h
+-openssl.o: ../include/openssl/x509_vfy.h ../include/openssl/x509v3.h apps.h
+-openssl.o: openssl.c progs.h s_apps.h
++openssl.o: ../include/openssl/ecdh.h ../include/openssl/ecdsa.h
++openssl.o: ../include/openssl/engine.h ../include/openssl/err.h
++openssl.o: ../include/openssl/evp.h ../include/openssl/fips.h
++openssl.o: ../include/openssl/hmac.h ../include/openssl/kssl.h
++openssl.o: ../include/openssl/lhash.h ../include/openssl/obj_mac.h
++openssl.o: ../include/openssl/objects.h ../include/openssl/ocsp.h
++openssl.o: ../include/openssl/opensslconf.h ../include/openssl/opensslv.h
++openssl.o: ../include/openssl/ossl_typ.h ../include/openssl/pem.h
++openssl.o: ../include/openssl/pem2.h ../include/openssl/pkcs7.h
++openssl.o: ../include/openssl/pq_compat.h ../include/openssl/pqueue.h
++openssl.o: ../include/openssl/safestack.h ../include/openssl/sha.h
++openssl.o: ../include/openssl/ssl.h ../include/openssl/ssl2.h
++openssl.o: ../include/openssl/ssl23.h ../include/openssl/ssl3.h
++openssl.o: ../include/openssl/stack.h ../include/openssl/symhacks.h
++openssl.o: ../include/openssl/tls1.h ../include/openssl/txt_db.h
++openssl.o: ../include/openssl/x509.h ../include/openssl/x509_vfy.h
++openssl.o: ../include/openssl/x509v3.h apps.h openssl.c progs.h s_apps.h
+ passwd.o: ../e_os.h ../include/openssl/asn1.h ../include/openssl/bio.h
+ passwd.o: ../include/openssl/buffer.h ../include/openssl/conf.h
+ passwd.o: ../include/openssl/crypto.h ../include/openssl/des.h
+ passwd.o: ../include/openssl/des_old.h ../include/openssl/e_os2.h
+-passwd.o: ../include/openssl/ec.h ../include/openssl/ecdsa.h
+-passwd.o: ../include/openssl/engine.h ../include/openssl/err.h
+-passwd.o: ../include/openssl/evp.h ../include/openssl/fips.h
+-passwd.o: ../include/openssl/lhash.h ../include/openssl/md5.h
+-passwd.o: ../include/openssl/obj_mac.h ../include/openssl/objects.h
+-passwd.o: ../include/openssl/ocsp.h ../include/openssl/opensslconf.h
+-passwd.o: ../include/openssl/opensslv.h ../include/openssl/ossl_typ.h
+-passwd.o: ../include/openssl/pkcs7.h ../include/openssl/rand.h
+-passwd.o: ../include/openssl/safestack.h ../include/openssl/sha.h
+-passwd.o: ../include/openssl/stack.h ../include/openssl/symhacks.h
+-passwd.o: ../include/openssl/txt_db.h ../include/openssl/ui.h
+-passwd.o: ../include/openssl/ui_compat.h ../include/openssl/x509.h
+-passwd.o: ../include/openssl/x509_vfy.h ../include/openssl/x509v3.h apps.h
+-passwd.o: passwd.c
++passwd.o: ../include/openssl/ec.h ../include/openssl/ecdh.h
++passwd.o: ../include/openssl/ecdsa.h ../include/openssl/engine.h
++passwd.o: ../include/openssl/err.h ../include/openssl/evp.h
++passwd.o: ../include/openssl/fips.h ../include/openssl/lhash.h
++passwd.o: ../include/openssl/md5.h ../include/openssl/obj_mac.h
++passwd.o: ../include/openssl/objects.h ../include/openssl/ocsp.h
++passwd.o: ../include/openssl/opensslconf.h ../include/openssl/opensslv.h
++passwd.o: ../include/openssl/ossl_typ.h ../include/openssl/pkcs7.h
++passwd.o: ../include/openssl/rand.h ../include/openssl/safestack.h
++passwd.o: ../include/openssl/sha.h ../include/openssl/stack.h
++passwd.o: ../include/openssl/symhacks.h ../include/openssl/txt_db.h
++passwd.o: ../include/openssl/ui.h ../include/openssl/ui_compat.h
++passwd.o: ../include/openssl/x509.h ../include/openssl/x509_vfy.h
++passwd.o: ../include/openssl/x509v3.h apps.h passwd.c
+ pkcs12.o: ../e_os.h ../include/openssl/asn1.h ../include/openssl/bio.h
+ pkcs12.o: ../include/openssl/buffer.h ../include/openssl/conf.h
+ pkcs12.o: ../include/openssl/crypto.h ../include/openssl/e_os2.h
+-pkcs12.o: ../include/openssl/ec.h ../include/openssl/ecdsa.h
+-pkcs12.o: ../include/openssl/engine.h ../include/openssl/err.h
+-pkcs12.o: ../include/openssl/evp.h ../include/openssl/fips.h
+-pkcs12.o: ../include/openssl/lhash.h ../include/openssl/obj_mac.h
+-pkcs12.o: ../include/openssl/objects.h ../include/openssl/ocsp.h
+-pkcs12.o: ../include/openssl/opensslconf.h ../include/openssl/opensslv.h
+-pkcs12.o: ../include/openssl/ossl_typ.h ../include/openssl/pem.h
+-pkcs12.o: ../include/openssl/pem2.h ../include/openssl/pkcs12.h
+-pkcs12.o: ../include/openssl/pkcs7.h ../include/openssl/safestack.h
+-pkcs12.o: ../include/openssl/sha.h ../include/openssl/stack.h
+-pkcs12.o: ../include/openssl/symhacks.h ../include/openssl/txt_db.h
+-pkcs12.o: ../include/openssl/x509.h ../include/openssl/x509_vfy.h
+-pkcs12.o: ../include/openssl/x509v3.h apps.h pkcs12.c
++pkcs12.o: ../include/openssl/ec.h ../include/openssl/ecdh.h
++pkcs12.o: ../include/openssl/ecdsa.h ../include/openssl/engine.h
++pkcs12.o: ../include/openssl/err.h ../include/openssl/evp.h
++pkcs12.o: ../include/openssl/fips.h ../include/openssl/lhash.h
++pkcs12.o: ../include/openssl/obj_mac.h ../include/openssl/objects.h
++pkcs12.o: ../include/openssl/ocsp.h ../include/openssl/opensslconf.h
++pkcs12.o: ../include/openssl/opensslv.h ../include/openssl/ossl_typ.h
++pkcs12.o: ../include/openssl/pem.h ../include/openssl/pem2.h
++pkcs12.o: ../include/openssl/pkcs12.h ../include/openssl/pkcs7.h
++pkcs12.o: ../include/openssl/safestack.h ../include/openssl/sha.h
++pkcs12.o: ../include/openssl/stack.h ../include/openssl/symhacks.h
++pkcs12.o: ../include/openssl/txt_db.h ../include/openssl/x509.h
++pkcs12.o: ../include/openssl/x509_vfy.h ../include/openssl/x509v3.h apps.h
++pkcs12.o: pkcs12.c
+ pkcs7.o: ../e_os.h ../include/openssl/asn1.h ../include/openssl/bio.h
+ pkcs7.o: ../include/openssl/buffer.h ../include/openssl/conf.h
+ pkcs7.o: ../include/openssl/crypto.h ../include/openssl/e_os2.h
+-pkcs7.o: ../include/openssl/ec.h ../include/openssl/ecdsa.h
+-pkcs7.o: ../include/openssl/engine.h ../include/openssl/err.h
+-pkcs7.o: ../include/openssl/evp.h ../include/openssl/fips.h
+-pkcs7.o: ../include/openssl/lhash.h ../include/openssl/obj_mac.h
+-pkcs7.o: ../include/openssl/objects.h ../include/openssl/ocsp.h
+-pkcs7.o: ../include/openssl/opensslconf.h ../include/openssl/opensslv.h
+-pkcs7.o: ../include/openssl/ossl_typ.h ../include/openssl/pem.h
+-pkcs7.o: ../include/openssl/pem2.h ../include/openssl/pkcs7.h
+-pkcs7.o: ../include/openssl/safestack.h ../include/openssl/sha.h
+-pkcs7.o: ../include/openssl/stack.h ../include/openssl/symhacks.h
+-pkcs7.o: ../include/openssl/txt_db.h ../include/openssl/x509.h
+-pkcs7.o: ../include/openssl/x509_vfy.h ../include/openssl/x509v3.h apps.h
+-pkcs7.o: pkcs7.c
++pkcs7.o: ../include/openssl/ec.h ../include/openssl/ecdh.h
++pkcs7.o: ../include/openssl/ecdsa.h ../include/openssl/engine.h
++pkcs7.o: ../include/openssl/err.h ../include/openssl/evp.h
++pkcs7.o: ../include/openssl/fips.h ../include/openssl/lhash.h
++pkcs7.o: ../include/openssl/obj_mac.h ../include/openssl/objects.h
++pkcs7.o: ../include/openssl/ocsp.h ../include/openssl/opensslconf.h
++pkcs7.o: ../include/openssl/opensslv.h ../include/openssl/ossl_typ.h
++pkcs7.o: ../include/openssl/pem.h ../include/openssl/pem2.h
++pkcs7.o: ../include/openssl/pkcs7.h ../include/openssl/safestack.h
++pkcs7.o: ../include/openssl/sha.h ../include/openssl/stack.h
++pkcs7.o: ../include/openssl/symhacks.h ../include/openssl/txt_db.h
++pkcs7.o: ../include/openssl/x509.h ../include/openssl/x509_vfy.h
++pkcs7.o: ../include/openssl/x509v3.h apps.h pkcs7.c
+ pkcs8.o: ../e_os.h ../include/openssl/asn1.h ../include/openssl/bio.h
+ pkcs8.o: ../include/openssl/buffer.h ../include/openssl/conf.h
+ pkcs8.o: ../include/openssl/crypto.h ../include/openssl/e_os2.h
+-pkcs8.o: ../include/openssl/ec.h ../include/openssl/ecdsa.h
+-pkcs8.o: ../include/openssl/engine.h ../include/openssl/err.h
+-pkcs8.o: ../include/openssl/evp.h ../include/openssl/fips.h
+-pkcs8.o: ../include/openssl/lhash.h ../include/openssl/obj_mac.h
+-pkcs8.o: ../include/openssl/objects.h ../include/openssl/ocsp.h
+-pkcs8.o: ../include/openssl/opensslconf.h ../include/openssl/opensslv.h
+-pkcs8.o: ../include/openssl/ossl_typ.h ../include/openssl/pem.h
+-pkcs8.o: ../include/openssl/pem2.h ../include/openssl/pkcs12.h
+-pkcs8.o: ../include/openssl/pkcs7.h ../include/openssl/safestack.h
+-pkcs8.o: ../include/openssl/sha.h ../include/openssl/stack.h
+-pkcs8.o: ../include/openssl/symhacks.h ../include/openssl/txt_db.h
+-pkcs8.o: ../include/openssl/x509.h ../include/openssl/x509_vfy.h
+-pkcs8.o: ../include/openssl/x509v3.h apps.h pkcs8.c
++pkcs8.o: ../include/openssl/ec.h ../include/openssl/ecdh.h
++pkcs8.o: ../include/openssl/ecdsa.h ../include/openssl/engine.h
++pkcs8.o: ../include/openssl/err.h ../include/openssl/evp.h
++pkcs8.o: ../include/openssl/fips.h ../include/openssl/lhash.h
++pkcs8.o: ../include/openssl/obj_mac.h ../include/openssl/objects.h
++pkcs8.o: ../include/openssl/ocsp.h ../include/openssl/opensslconf.h
++pkcs8.o: ../include/openssl/opensslv.h ../include/openssl/ossl_typ.h
++pkcs8.o: ../include/openssl/pem.h ../include/openssl/pem2.h
++pkcs8.o: ../include/openssl/pkcs12.h ../include/openssl/pkcs7.h
++pkcs8.o: ../include/openssl/safestack.h ../include/openssl/sha.h
++pkcs8.o: ../include/openssl/stack.h ../include/openssl/symhacks.h
++pkcs8.o: ../include/openssl/txt_db.h ../include/openssl/x509.h
++pkcs8.o: ../include/openssl/x509_vfy.h ../include/openssl/x509v3.h apps.h
++pkcs8.o: pkcs8.c
+ prime.o: ../e_os.h ../include/openssl/asn1.h ../include/openssl/bio.h
+ prime.o: ../include/openssl/bn.h ../include/openssl/buffer.h
+ prime.o: ../include/openssl/conf.h ../include/openssl/crypto.h
+ prime.o: ../include/openssl/e_os2.h ../include/openssl/ec.h
+-prime.o: ../include/openssl/ecdsa.h ../include/openssl/engine.h
+-prime.o: ../include/openssl/evp.h ../include/openssl/fips.h
+-prime.o: ../include/openssl/lhash.h ../include/openssl/obj_mac.h
+-prime.o: ../include/openssl/objects.h ../include/openssl/ocsp.h
+-prime.o: ../include/openssl/opensslconf.h ../include/openssl/opensslv.h
+-prime.o: ../include/openssl/ossl_typ.h ../include/openssl/pkcs7.h
+-prime.o: ../include/openssl/safestack.h ../include/openssl/sha.h
+-prime.o: ../include/openssl/stack.h ../include/openssl/symhacks.h
+-prime.o: ../include/openssl/txt_db.h ../include/openssl/x509.h
+-prime.o: ../include/openssl/x509_vfy.h ../include/openssl/x509v3.h apps.h
+-prime.o: prime.c
++prime.o: ../include/openssl/ecdh.h ../include/openssl/ecdsa.h
++prime.o: ../include/openssl/engine.h ../include/openssl/evp.h
++prime.o: ../include/openssl/fips.h ../include/openssl/lhash.h
++prime.o: ../include/openssl/obj_mac.h ../include/openssl/objects.h
++prime.o: ../include/openssl/ocsp.h ../include/openssl/opensslconf.h
++prime.o: ../include/openssl/opensslv.h ../include/openssl/ossl_typ.h
++prime.o: ../include/openssl/pkcs7.h ../include/openssl/safestack.h
++prime.o: ../include/openssl/sha.h ../include/openssl/stack.h
++prime.o: ../include/openssl/symhacks.h ../include/openssl/txt_db.h
++prime.o: ../include/openssl/x509.h ../include/openssl/x509_vfy.h
++prime.o: ../include/openssl/x509v3.h apps.h prime.c
+ rand.o: ../e_os.h ../include/openssl/asn1.h ../include/openssl/bio.h
+ rand.o: ../include/openssl/buffer.h ../include/openssl/conf.h
+ rand.o: ../include/openssl/crypto.h ../include/openssl/e_os2.h
+-rand.o: ../include/openssl/ec.h ../include/openssl/ecdsa.h
+-rand.o: ../include/openssl/engine.h ../include/openssl/err.h
+-rand.o: ../include/openssl/evp.h ../include/openssl/fips.h
+-rand.o: ../include/openssl/lhash.h ../include/openssl/obj_mac.h
+-rand.o: ../include/openssl/objects.h ../include/openssl/ocsp.h
+-rand.o: ../include/openssl/opensslconf.h ../include/openssl/opensslv.h
+-rand.o: ../include/openssl/ossl_typ.h ../include/openssl/pkcs7.h
+-rand.o: ../include/openssl/rand.h ../include/openssl/safestack.h
+-rand.o: ../include/openssl/sha.h ../include/openssl/stack.h
+-rand.o: ../include/openssl/symhacks.h ../include/openssl/txt_db.h
+-rand.o: ../include/openssl/x509.h ../include/openssl/x509_vfy.h
+-rand.o: ../include/openssl/x509v3.h apps.h rand.c
++rand.o: ../include/openssl/ec.h ../include/openssl/ecdh.h
++rand.o: ../include/openssl/ecdsa.h ../include/openssl/engine.h
++rand.o: ../include/openssl/err.h ../include/openssl/evp.h
++rand.o: ../include/openssl/fips.h ../include/openssl/lhash.h
++rand.o: ../include/openssl/obj_mac.h ../include/openssl/objects.h
++rand.o: ../include/openssl/ocsp.h ../include/openssl/opensslconf.h
++rand.o: ../include/openssl/opensslv.h ../include/openssl/ossl_typ.h
++rand.o: ../include/openssl/pkcs7.h ../include/openssl/rand.h
++rand.o: ../include/openssl/safestack.h ../include/openssl/sha.h
++rand.o: ../include/openssl/stack.h ../include/openssl/symhacks.h
++rand.o: ../include/openssl/txt_db.h ../include/openssl/x509.h
++rand.o: ../include/openssl/x509_vfy.h ../include/openssl/x509v3.h apps.h rand.c
+ req.o: ../e_os.h ../include/openssl/asn1.h ../include/openssl/bio.h
+ req.o: ../include/openssl/bn.h ../include/openssl/buffer.h
+ req.o: ../include/openssl/conf.h ../include/openssl/crypto.h
+ req.o: ../include/openssl/dh.h ../include/openssl/dsa.h
+ req.o: ../include/openssl/e_os2.h ../include/openssl/ec.h
+-req.o: ../include/openssl/ecdsa.h ../include/openssl/engine.h
+-req.o: ../include/openssl/err.h ../include/openssl/evp.h
+-req.o: ../include/openssl/fips.h ../include/openssl/lhash.h
+-req.o: ../include/openssl/obj_mac.h ../include/openssl/objects.h
+-req.o: ../include/openssl/ocsp.h ../include/openssl/opensslconf.h
+-req.o: ../include/openssl/opensslv.h ../include/openssl/ossl_typ.h
+-req.o: ../include/openssl/pem.h ../include/openssl/pem2.h
+-req.o: ../include/openssl/pkcs7.h ../include/openssl/rand.h
+-req.o: ../include/openssl/rsa.h ../include/openssl/safestack.h
+-req.o: ../include/openssl/sha.h ../include/openssl/stack.h
+-req.o: ../include/openssl/store.h ../include/openssl/symhacks.h
+-req.o: ../include/openssl/txt_db.h ../include/openssl/ui.h
+-req.o: ../include/openssl/x509.h ../include/openssl/x509_vfy.h
+-req.o: ../include/openssl/x509v3.h apps.h req.c
++req.o: ../include/openssl/ecdh.h ../include/openssl/ecdsa.h
++req.o: ../include/openssl/engine.h ../include/openssl/err.h
++req.o: ../include/openssl/evp.h ../include/openssl/fips.h
++req.o: ../include/openssl/lhash.h ../include/openssl/obj_mac.h
++req.o: ../include/openssl/objects.h ../include/openssl/ocsp.h
++req.o: ../include/openssl/opensslconf.h ../include/openssl/opensslv.h
++req.o: ../include/openssl/ossl_typ.h ../include/openssl/pem.h
++req.o: ../include/openssl/pem2.h ../include/openssl/pkcs7.h
++req.o: ../include/openssl/rand.h ../include/openssl/rsa.h
++req.o: ../include/openssl/safestack.h ../include/openssl/sha.h
++req.o: ../include/openssl/stack.h ../include/openssl/store.h
++req.o: ../include/openssl/symhacks.h ../include/openssl/txt_db.h
++req.o: ../include/openssl/ui.h ../include/openssl/x509.h
++req.o: ../include/openssl/x509_vfy.h ../include/openssl/x509v3.h apps.h req.c
+ rsa.o: ../e_os.h ../include/openssl/asn1.h ../include/openssl/bio.h
+ rsa.o: ../include/openssl/bn.h ../include/openssl/buffer.h
+ rsa.o: ../include/openssl/conf.h ../include/openssl/crypto.h
+ rsa.o: ../include/openssl/e_os2.h ../include/openssl/ec.h
+-rsa.o: ../include/openssl/ecdsa.h ../include/openssl/engine.h
+-rsa.o: ../include/openssl/err.h ../include/openssl/evp.h
+-rsa.o: ../include/openssl/fips.h ../include/openssl/lhash.h
+-rsa.o: ../include/openssl/obj_mac.h ../include/openssl/objects.h
+-rsa.o: ../include/openssl/ocsp.h ../include/openssl/opensslconf.h
+-rsa.o: ../include/openssl/opensslv.h ../include/openssl/ossl_typ.h
+-rsa.o: ../include/openssl/pem.h ../include/openssl/pem2.h
+-rsa.o: ../include/openssl/pkcs7.h ../include/openssl/rsa.h
+-rsa.o: ../include/openssl/safestack.h ../include/openssl/sha.h
+-rsa.o: ../include/openssl/stack.h ../include/openssl/symhacks.h
+-rsa.o: ../include/openssl/txt_db.h ../include/openssl/x509.h
+-rsa.o: ../include/openssl/x509_vfy.h ../include/openssl/x509v3.h apps.h rsa.c
++rsa.o: ../include/openssl/ecdh.h ../include/openssl/ecdsa.h
++rsa.o: ../include/openssl/engine.h ../include/openssl/err.h
++rsa.o: ../include/openssl/evp.h ../include/openssl/fips.h
++rsa.o: ../include/openssl/lhash.h ../include/openssl/obj_mac.h
++rsa.o: ../include/openssl/objects.h ../include/openssl/ocsp.h
++rsa.o: ../include/openssl/opensslconf.h ../include/openssl/opensslv.h
++rsa.o: ../include/openssl/ossl_typ.h ../include/openssl/pem.h
++rsa.o: ../include/openssl/pem2.h ../include/openssl/pkcs7.h
++rsa.o: ../include/openssl/rsa.h ../include/openssl/safestack.h
++rsa.o: ../include/openssl/sha.h ../include/openssl/stack.h
++rsa.o: ../include/openssl/symhacks.h ../include/openssl/txt_db.h
++rsa.o: ../include/openssl/x509.h ../include/openssl/x509_vfy.h
++rsa.o: ../include/openssl/x509v3.h apps.h rsa.c
+ rsautl.o: ../e_os.h ../include/openssl/asn1.h ../include/openssl/bio.h
+ rsautl.o: ../include/openssl/buffer.h ../include/openssl/conf.h
+ rsautl.o: ../include/openssl/crypto.h ../include/openssl/e_os2.h
+-rsautl.o: ../include/openssl/ec.h ../include/openssl/ecdsa.h
+-rsautl.o: ../include/openssl/engine.h ../include/openssl/err.h
+-rsautl.o: ../include/openssl/evp.h ../include/openssl/fips.h
+-rsautl.o: ../include/openssl/lhash.h ../include/openssl/obj_mac.h
+-rsautl.o: ../include/openssl/objects.h ../include/openssl/ocsp.h
+-rsautl.o: ../include/openssl/opensslconf.h ../include/openssl/opensslv.h
+-rsautl.o: ../include/openssl/ossl_typ.h ../include/openssl/pem.h
+-rsautl.o: ../include/openssl/pem2.h ../include/openssl/pkcs7.h
+-rsautl.o: ../include/openssl/rsa.h ../include/openssl/safestack.h
+-rsautl.o: ../include/openssl/sha.h ../include/openssl/stack.h
+-rsautl.o: ../include/openssl/symhacks.h ../include/openssl/txt_db.h
+-rsautl.o: ../include/openssl/x509.h ../include/openssl/x509_vfy.h
+-rsautl.o: ../include/openssl/x509v3.h apps.h rsautl.c
++rsautl.o: ../include/openssl/ec.h ../include/openssl/ecdh.h
++rsautl.o: ../include/openssl/ecdsa.h ../include/openssl/engine.h
++rsautl.o: ../include/openssl/err.h ../include/openssl/evp.h
++rsautl.o: ../include/openssl/fips.h ../include/openssl/lhash.h
++rsautl.o: ../include/openssl/obj_mac.h ../include/openssl/objects.h
++rsautl.o: ../include/openssl/ocsp.h ../include/openssl/opensslconf.h
++rsautl.o: ../include/openssl/opensslv.h ../include/openssl/ossl_typ.h
++rsautl.o: ../include/openssl/pem.h ../include/openssl/pem2.h
++rsautl.o: ../include/openssl/pkcs7.h ../include/openssl/rsa.h
++rsautl.o: ../include/openssl/safestack.h ../include/openssl/sha.h
++rsautl.o: ../include/openssl/stack.h ../include/openssl/symhacks.h
++rsautl.o: ../include/openssl/txt_db.h ../include/openssl/x509.h
++rsautl.o: ../include/openssl/x509_vfy.h ../include/openssl/x509v3.h apps.h
++rsautl.o: rsautl.c
+ s_cb.o: ../e_os.h ../include/openssl/asn1.h ../include/openssl/bio.h
+ s_cb.o: ../include/openssl/bn.h ../include/openssl/buffer.h
+ s_cb.o: ../include/openssl/comp.h ../include/openssl/conf.h
+ s_cb.o: ../include/openssl/crypto.h ../include/openssl/dtls1.h
+ s_cb.o: ../include/openssl/e_os2.h ../include/openssl/ec.h
+-s_cb.o: ../include/openssl/ecdsa.h ../include/openssl/engine.h
+-s_cb.o: ../include/openssl/err.h ../include/openssl/evp.h
+-s_cb.o: ../include/openssl/fips.h ../include/openssl/hmac.h
+-s_cb.o: ../include/openssl/kssl.h ../include/openssl/lhash.h
+-s_cb.o: ../include/openssl/obj_mac.h ../include/openssl/objects.h
+-s_cb.o: ../include/openssl/ocsp.h ../include/openssl/opensslconf.h
+-s_cb.o: ../include/openssl/opensslv.h ../include/openssl/ossl_typ.h
+-s_cb.o: ../include/openssl/pem.h ../include/openssl/pem2.h
+-s_cb.o: ../include/openssl/pkcs7.h ../include/openssl/pq_compat.h
+-s_cb.o: ../include/openssl/pqueue.h ../include/openssl/rand.h
+-s_cb.o: ../include/openssl/safestack.h ../include/openssl/sha.h
+-s_cb.o: ../include/openssl/ssl.h ../include/openssl/ssl2.h
+-s_cb.o: ../include/openssl/ssl23.h ../include/openssl/ssl3.h
+-s_cb.o: ../include/openssl/stack.h ../include/openssl/symhacks.h
+-s_cb.o: ../include/openssl/tls1.h ../include/openssl/txt_db.h
+-s_cb.o: ../include/openssl/x509.h ../include/openssl/x509_vfy.h
+-s_cb.o: ../include/openssl/x509v3.h apps.h s_apps.h s_cb.c
++s_cb.o: ../include/openssl/ecdh.h ../include/openssl/ecdsa.h
++s_cb.o: ../include/openssl/engine.h ../include/openssl/err.h
++s_cb.o: ../include/openssl/evp.h ../include/openssl/fips.h
++s_cb.o: ../include/openssl/hmac.h ../include/openssl/kssl.h
++s_cb.o: ../include/openssl/lhash.h ../include/openssl/obj_mac.h
++s_cb.o: ../include/openssl/objects.h ../include/openssl/ocsp.h
++s_cb.o: ../include/openssl/opensslconf.h ../include/openssl/opensslv.h
++s_cb.o: ../include/openssl/ossl_typ.h ../include/openssl/pem.h
++s_cb.o: ../include/openssl/pem2.h ../include/openssl/pkcs7.h
++s_cb.o: ../include/openssl/pq_compat.h ../include/openssl/pqueue.h
++s_cb.o: ../include/openssl/rand.h ../include/openssl/safestack.h
++s_cb.o: ../include/openssl/sha.h ../include/openssl/ssl.h
++s_cb.o: ../include/openssl/ssl2.h ../include/openssl/ssl23.h
++s_cb.o: ../include/openssl/ssl3.h ../include/openssl/stack.h
++s_cb.o: ../include/openssl/symhacks.h ../include/openssl/tls1.h
++s_cb.o: ../include/openssl/txt_db.h ../include/openssl/x509.h
++s_cb.o: ../include/openssl/x509_vfy.h ../include/openssl/x509v3.h apps.h
++s_cb.o: s_apps.h s_cb.c
+ s_client.o: ../e_os.h ../include/openssl/asn1.h ../include/openssl/bio.h
+ s_client.o: ../include/openssl/bn.h ../include/openssl/buffer.h
+ s_client.o: ../include/openssl/comp.h ../include/openssl/conf.h
+ s_client.o: ../include/openssl/crypto.h ../include/openssl/dtls1.h
+ s_client.o: ../include/openssl/e_os2.h ../include/openssl/ec.h
+-s_client.o: ../include/openssl/ecdsa.h ../include/openssl/engine.h
+-s_client.o: ../include/openssl/err.h ../include/openssl/evp.h
+-s_client.o: ../include/openssl/fips.h ../include/openssl/hmac.h
+-s_client.o: ../include/openssl/kssl.h ../include/openssl/lhash.h
+-s_client.o: ../include/openssl/obj_mac.h ../include/openssl/objects.h
+-s_client.o: ../include/openssl/ocsp.h ../include/openssl/opensslconf.h
+-s_client.o: ../include/openssl/opensslv.h ../include/openssl/ossl_typ.h
+-s_client.o: ../include/openssl/pem.h ../include/openssl/pem2.h
+-s_client.o: ../include/openssl/pkcs7.h ../include/openssl/pq_compat.h
+-s_client.o: ../include/openssl/pqueue.h ../include/openssl/rand.h
+-s_client.o: ../include/openssl/safestack.h ../include/openssl/sha.h
+-s_client.o: ../include/openssl/ssl.h ../include/openssl/ssl2.h
+-s_client.o: ../include/openssl/ssl23.h ../include/openssl/ssl3.h
+-s_client.o: ../include/openssl/stack.h ../include/openssl/symhacks.h
+-s_client.o: ../include/openssl/tls1.h ../include/openssl/txt_db.h
+-s_client.o: ../include/openssl/x509.h ../include/openssl/x509_vfy.h
+-s_client.o: ../include/openssl/x509v3.h apps.h s_apps.h s_client.c timeouts.h
++s_client.o: ../include/openssl/ecdh.h ../include/openssl/ecdsa.h
++s_client.o: ../include/openssl/engine.h ../include/openssl/err.h
++s_client.o: ../include/openssl/evp.h ../include/openssl/fips.h
++s_client.o: ../include/openssl/hmac.h ../include/openssl/kssl.h
++s_client.o: ../include/openssl/lhash.h ../include/openssl/obj_mac.h
++s_client.o: ../include/openssl/objects.h ../include/openssl/ocsp.h
++s_client.o: ../include/openssl/opensslconf.h ../include/openssl/opensslv.h
++s_client.o: ../include/openssl/ossl_typ.h ../include/openssl/pem.h
++s_client.o: ../include/openssl/pem2.h ../include/openssl/pkcs7.h
++s_client.o: ../include/openssl/pq_compat.h ../include/openssl/pqueue.h
++s_client.o: ../include/openssl/rand.h ../include/openssl/safestack.h
++s_client.o: ../include/openssl/sha.h ../include/openssl/ssl.h
++s_client.o: ../include/openssl/ssl2.h ../include/openssl/ssl23.h
++s_client.o: ../include/openssl/ssl3.h ../include/openssl/stack.h
++s_client.o: ../include/openssl/symhacks.h ../include/openssl/tls1.h
++s_client.o: ../include/openssl/txt_db.h ../include/openssl/x509.h
++s_client.o: ../include/openssl/x509_vfy.h ../include/openssl/x509v3.h apps.h
++s_client.o: s_apps.h s_client.c timeouts.h
+ s_server.o: ../e_os.h ../include/openssl/asn1.h ../include/openssl/bio.h
+ s_server.o: ../include/openssl/bn.h ../include/openssl/buffer.h
+ s_server.o: ../include/openssl/comp.h ../include/openssl/conf.h
+ s_server.o: ../include/openssl/crypto.h ../include/openssl/dh.h
+ s_server.o: ../include/openssl/dsa.h ../include/openssl/dtls1.h
+ s_server.o: ../include/openssl/e_os2.h ../include/openssl/ec.h
+-s_server.o: ../include/openssl/ecdsa.h ../include/openssl/engine.h
+-s_server.o: ../include/openssl/err.h ../include/openssl/evp.h
+-s_server.o: ../include/openssl/fips.h ../include/openssl/hmac.h
+-s_server.o: ../include/openssl/kssl.h ../include/openssl/lhash.h
+-s_server.o: ../include/openssl/obj_mac.h ../include/openssl/objects.h
+-s_server.o: ../include/openssl/ocsp.h ../include/openssl/opensslconf.h
+-s_server.o: ../include/openssl/opensslv.h ../include/openssl/ossl_typ.h
+-s_server.o: ../include/openssl/pem.h ../include/openssl/pem2.h
+-s_server.o: ../include/openssl/pkcs7.h ../include/openssl/pq_compat.h
+-s_server.o: ../include/openssl/pqueue.h ../include/openssl/rand.h
+-s_server.o: ../include/openssl/rsa.h ../include/openssl/safestack.h
+-s_server.o: ../include/openssl/sha.h ../include/openssl/ssl.h
+-s_server.o: ../include/openssl/ssl2.h ../include/openssl/ssl23.h
+-s_server.o: ../include/openssl/ssl3.h ../include/openssl/stack.h
+-s_server.o: ../include/openssl/store.h ../include/openssl/symhacks.h
+-s_server.o: ../include/openssl/tls1.h ../include/openssl/txt_db.h
+-s_server.o: ../include/openssl/ui.h ../include/openssl/x509.h
+-s_server.o: ../include/openssl/x509_vfy.h ../include/openssl/x509v3.h apps.h
+-s_server.o: s_apps.h s_server.c timeouts.h
++s_server.o: ../include/openssl/ecdh.h ../include/openssl/ecdsa.h
++s_server.o: ../include/openssl/engine.h ../include/openssl/err.h
++s_server.o: ../include/openssl/evp.h ../include/openssl/fips.h
++s_server.o: ../include/openssl/hmac.h ../include/openssl/kssl.h
++s_server.o: ../include/openssl/lhash.h ../include/openssl/obj_mac.h
++s_server.o: ../include/openssl/objects.h ../include/openssl/ocsp.h
++s_server.o: ../include/openssl/opensslconf.h ../include/openssl/opensslv.h
++s_server.o: ../include/openssl/ossl_typ.h ../include/openssl/pem.h
++s_server.o: ../include/openssl/pem2.h ../include/openssl/pkcs7.h
++s_server.o: ../include/openssl/pq_compat.h ../include/openssl/pqueue.h
++s_server.o: ../include/openssl/rand.h ../include/openssl/rsa.h
++s_server.o: ../include/openssl/safestack.h ../include/openssl/sha.h
++s_server.o: ../include/openssl/ssl.h ../include/openssl/ssl2.h
++s_server.o: ../include/openssl/ssl23.h ../include/openssl/ssl3.h
++s_server.o: ../include/openssl/stack.h ../include/openssl/store.h
++s_server.o: ../include/openssl/symhacks.h ../include/openssl/tls1.h
++s_server.o: ../include/openssl/txt_db.h ../include/openssl/ui.h
++s_server.o: ../include/openssl/x509.h ../include/openssl/x509_vfy.h
++s_server.o: ../include/openssl/x509v3.h apps.h s_apps.h s_server.c timeouts.h
+ s_socket.o: ../e_os.h ../e_os2.h ../include/openssl/asn1.h
+ s_socket.o: ../include/openssl/bio.h ../include/openssl/bn.h
+ s_socket.o: ../include/openssl/buffer.h ../include/openssl/comp.h
+ s_socket.o: ../include/openssl/conf.h ../include/openssl/crypto.h
+ s_socket.o: ../include/openssl/dtls1.h ../include/openssl/e_os2.h
+-s_socket.o: ../include/openssl/ec.h ../include/openssl/ecdsa.h
+-s_socket.o: ../include/openssl/engine.h ../include/openssl/evp.h
+-s_socket.o: ../include/openssl/fips.h ../include/openssl/hmac.h
+-s_socket.o: ../include/openssl/kssl.h ../include/openssl/lhash.h
+-s_socket.o: ../include/openssl/obj_mac.h ../include/openssl/objects.h
+-s_socket.o: ../include/openssl/ocsp.h ../include/openssl/opensslconf.h
+-s_socket.o: ../include/openssl/opensslv.h ../include/openssl/ossl_typ.h
+-s_socket.o: ../include/openssl/pem.h ../include/openssl/pem2.h
+-s_socket.o: ../include/openssl/pkcs7.h ../include/openssl/pq_compat.h
+-s_socket.o: ../include/openssl/pqueue.h ../include/openssl/safestack.h
+-s_socket.o: ../include/openssl/sha.h ../include/openssl/ssl.h
+-s_socket.o: ../include/openssl/ssl2.h ../include/openssl/ssl23.h
+-s_socket.o: ../include/openssl/ssl3.h ../include/openssl/stack.h
+-s_socket.o: ../include/openssl/symhacks.h ../include/openssl/tls1.h
+-s_socket.o: ../include/openssl/txt_db.h ../include/openssl/x509.h
+-s_socket.o: ../include/openssl/x509_vfy.h ../include/openssl/x509v3.h apps.h
+-s_socket.o: s_apps.h s_socket.c
++s_socket.o: ../include/openssl/ec.h ../include/openssl/ecdh.h
++s_socket.o: ../include/openssl/ecdsa.h ../include/openssl/engine.h
++s_socket.o: ../include/openssl/evp.h ../include/openssl/fips.h
++s_socket.o: ../include/openssl/hmac.h ../include/openssl/kssl.h
++s_socket.o: ../include/openssl/lhash.h ../include/openssl/obj_mac.h
++s_socket.o: ../include/openssl/objects.h ../include/openssl/ocsp.h
++s_socket.o: ../include/openssl/opensslconf.h ../include/openssl/opensslv.h
++s_socket.o: ../include/openssl/ossl_typ.h ../include/openssl/pem.h
++s_socket.o: ../include/openssl/pem2.h ../include/openssl/pkcs7.h
++s_socket.o: ../include/openssl/pq_compat.h ../include/openssl/pqueue.h
++s_socket.o: ../include/openssl/safestack.h ../include/openssl/sha.h
++s_socket.o: ../include/openssl/ssl.h ../include/openssl/ssl2.h
++s_socket.o: ../include/openssl/ssl23.h ../include/openssl/ssl3.h
++s_socket.o: ../include/openssl/stack.h ../include/openssl/symhacks.h
++s_socket.o: ../include/openssl/tls1.h ../include/openssl/txt_db.h
++s_socket.o: ../include/openssl/x509.h ../include/openssl/x509_vfy.h
++s_socket.o: ../include/openssl/x509v3.h apps.h s_apps.h s_socket.c
+ s_time.o: ../e_os.h ../include/openssl/asn1.h ../include/openssl/bio.h
+ s_time.o: ../include/openssl/bn.h ../include/openssl/buffer.h
+ s_time.o: ../include/openssl/comp.h ../include/openssl/conf.h
+ s_time.o: ../include/openssl/crypto.h ../include/openssl/dtls1.h
+ s_time.o: ../include/openssl/e_os2.h ../include/openssl/ec.h
+-s_time.o: ../include/openssl/ecdsa.h ../include/openssl/engine.h
+-s_time.o: ../include/openssl/err.h ../include/openssl/evp.h
+-s_time.o: ../include/openssl/fips.h ../include/openssl/hmac.h
+-s_time.o: ../include/openssl/kssl.h ../include/openssl/lhash.h
+-s_time.o: ../include/openssl/obj_mac.h ../include/openssl/objects.h
+-s_time.o: ../include/openssl/ocsp.h ../include/openssl/opensslconf.h
+-s_time.o: ../include/openssl/opensslv.h ../include/openssl/ossl_typ.h
+-s_time.o: ../include/openssl/pem.h ../include/openssl/pem2.h
+-s_time.o: ../include/openssl/pkcs7.h ../include/openssl/pq_compat.h
+-s_time.o: ../include/openssl/pqueue.h ../include/openssl/safestack.h
+-s_time.o: ../include/openssl/sha.h ../include/openssl/ssl.h
+-s_time.o: ../include/openssl/ssl2.h ../include/openssl/ssl23.h
+-s_time.o: ../include/openssl/ssl3.h ../include/openssl/stack.h
+-s_time.o: ../include/openssl/symhacks.h ../include/openssl/tls1.h
+-s_time.o: ../include/openssl/txt_db.h ../include/openssl/x509.h
+-s_time.o: ../include/openssl/x509_vfy.h ../include/openssl/x509v3.h apps.h
+-s_time.o: s_apps.h s_time.c
++s_time.o: ../include/openssl/ecdh.h ../include/openssl/ecdsa.h
++s_time.o: ../include/openssl/engine.h ../include/openssl/err.h
++s_time.o: ../include/openssl/evp.h ../include/openssl/fips.h
++s_time.o: ../include/openssl/hmac.h ../include/openssl/kssl.h
++s_time.o: ../include/openssl/lhash.h ../include/openssl/obj_mac.h
++s_time.o: ../include/openssl/objects.h ../include/openssl/ocsp.h
++s_time.o: ../include/openssl/opensslconf.h ../include/openssl/opensslv.h
++s_time.o: ../include/openssl/ossl_typ.h ../include/openssl/pem.h
++s_time.o: ../include/openssl/pem2.h ../include/openssl/pkcs7.h
++s_time.o: ../include/openssl/pq_compat.h ../include/openssl/pqueue.h
++s_time.o: ../include/openssl/safestack.h ../include/openssl/sha.h
++s_time.o: ../include/openssl/ssl.h ../include/openssl/ssl2.h
++s_time.o: ../include/openssl/ssl23.h ../include/openssl/ssl3.h
++s_time.o: ../include/openssl/stack.h ../include/openssl/symhacks.h
++s_time.o: ../include/openssl/tls1.h ../include/openssl/txt_db.h
++s_time.o: ../include/openssl/x509.h ../include/openssl/x509_vfy.h
++s_time.o: ../include/openssl/x509v3.h apps.h s_apps.h s_time.c
+ sess_id.o: ../e_os.h ../include/openssl/asn1.h ../include/openssl/bio.h
+ sess_id.o: ../include/openssl/bn.h ../include/openssl/buffer.h
+ sess_id.o: ../include/openssl/comp.h ../include/openssl/conf.h
+ sess_id.o: ../include/openssl/crypto.h ../include/openssl/dtls1.h
+ sess_id.o: ../include/openssl/e_os2.h ../include/openssl/ec.h
+-sess_id.o: ../include/openssl/ecdsa.h ../include/openssl/engine.h
+-sess_id.o: ../include/openssl/err.h ../include/openssl/evp.h
+-sess_id.o: ../include/openssl/fips.h ../include/openssl/hmac.h
+-sess_id.o: ../include/openssl/kssl.h ../include/openssl/lhash.h
+-sess_id.o: ../include/openssl/obj_mac.h ../include/openssl/objects.h
+-sess_id.o: ../include/openssl/ocsp.h ../include/openssl/opensslconf.h
+-sess_id.o: ../include/openssl/opensslv.h ../include/openssl/ossl_typ.h
+-sess_id.o: ../include/openssl/pem.h ../include/openssl/pem2.h
+-sess_id.o: ../include/openssl/pkcs7.h ../include/openssl/pq_compat.h
+-sess_id.o: ../include/openssl/pqueue.h ../include/openssl/safestack.h
+-sess_id.o: ../include/openssl/sha.h ../include/openssl/ssl.h
+-sess_id.o: ../include/openssl/ssl2.h ../include/openssl/ssl23.h
+-sess_id.o: ../include/openssl/ssl3.h ../include/openssl/stack.h
+-sess_id.o: ../include/openssl/symhacks.h ../include/openssl/tls1.h
+-sess_id.o: ../include/openssl/txt_db.h ../include/openssl/x509.h
+-sess_id.o: ../include/openssl/x509_vfy.h ../include/openssl/x509v3.h apps.h
+-sess_id.o: sess_id.c
++sess_id.o: ../include/openssl/ecdh.h ../include/openssl/ecdsa.h
++sess_id.o: ../include/openssl/engine.h ../include/openssl/err.h
++sess_id.o: ../include/openssl/evp.h ../include/openssl/fips.h
++sess_id.o: ../include/openssl/hmac.h ../include/openssl/kssl.h
++sess_id.o: ../include/openssl/lhash.h ../include/openssl/obj_mac.h
++sess_id.o: ../include/openssl/objects.h ../include/openssl/ocsp.h
++sess_id.o: ../include/openssl/opensslconf.h ../include/openssl/opensslv.h
++sess_id.o: ../include/openssl/ossl_typ.h ../include/openssl/pem.h
++sess_id.o: ../include/openssl/pem2.h ../include/openssl/pkcs7.h
++sess_id.o: ../include/openssl/pq_compat.h ../include/openssl/pqueue.h
++sess_id.o: ../include/openssl/safestack.h ../include/openssl/sha.h
++sess_id.o: ../include/openssl/ssl.h ../include/openssl/ssl2.h
++sess_id.o: ../include/openssl/ssl23.h ../include/openssl/ssl3.h
++sess_id.o: ../include/openssl/stack.h ../include/openssl/symhacks.h
++sess_id.o: ../include/openssl/tls1.h ../include/openssl/txt_db.h
++sess_id.o: ../include/openssl/x509.h ../include/openssl/x509_vfy.h
++sess_id.o: ../include/openssl/x509v3.h apps.h sess_id.c
+ smime.o: ../e_os.h ../include/openssl/asn1.h ../include/openssl/bio.h
+ smime.o: ../include/openssl/buffer.h ../include/openssl/conf.h
+ smime.o: ../include/openssl/crypto.h ../include/openssl/e_os2.h
+-smime.o: ../include/openssl/ec.h ../include/openssl/ecdsa.h
+-smime.o: ../include/openssl/engine.h ../include/openssl/err.h
+-smime.o: ../include/openssl/evp.h ../include/openssl/fips.h
+-smime.o: ../include/openssl/lhash.h ../include/openssl/obj_mac.h
+-smime.o: ../include/openssl/objects.h ../include/openssl/ocsp.h
+-smime.o: ../include/openssl/opensslconf.h ../include/openssl/opensslv.h
+-smime.o: ../include/openssl/ossl_typ.h ../include/openssl/pem.h
+-smime.o: ../include/openssl/pem2.h ../include/openssl/pkcs7.h
+-smime.o: ../include/openssl/safestack.h ../include/openssl/sha.h
+-smime.o: ../include/openssl/stack.h ../include/openssl/symhacks.h
+-smime.o: ../include/openssl/txt_db.h ../include/openssl/x509.h
+-smime.o: ../include/openssl/x509_vfy.h ../include/openssl/x509v3.h apps.h
+-smime.o: smime.c
++smime.o: ../include/openssl/ec.h ../include/openssl/ecdh.h
++smime.o: ../include/openssl/ecdsa.h ../include/openssl/engine.h
++smime.o: ../include/openssl/err.h ../include/openssl/evp.h
++smime.o: ../include/openssl/fips.h ../include/openssl/lhash.h
++smime.o: ../include/openssl/obj_mac.h ../include/openssl/objects.h
++smime.o: ../include/openssl/ocsp.h ../include/openssl/opensslconf.h
++smime.o: ../include/openssl/opensslv.h ../include/openssl/ossl_typ.h
++smime.o: ../include/openssl/pem.h ../include/openssl/pem2.h
++smime.o: ../include/openssl/pkcs7.h ../include/openssl/safestack.h
++smime.o: ../include/openssl/sha.h ../include/openssl/stack.h
++smime.o: ../include/openssl/symhacks.h ../include/openssl/txt_db.h
++smime.o: ../include/openssl/x509.h ../include/openssl/x509_vfy.h
++smime.o: ../include/openssl/x509v3.h apps.h smime.c
+ speed.o: ../e_os.h ../include/openssl/aes.h ../include/openssl/asn1.h
+ speed.o: ../include/openssl/bio.h ../include/openssl/blowfish.h
+ speed.o: ../include/openssl/bn.h ../include/openssl/buffer.h
+@@ -880,88 +897,89 @@ speed.o: ../include/openssl/cast.h ../include/open
+ speed.o: ../include/openssl/crypto.h ../include/openssl/des.h
+ speed.o: ../include/openssl/des_old.h ../include/openssl/dsa.h
+ speed.o: ../include/openssl/e_os2.h ../include/openssl/ec.h
+-speed.o: ../include/openssl/ecdsa.h ../include/openssl/engine.h
+-speed.o: ../include/openssl/err.h ../include/openssl/evp.h
+-speed.o: ../include/openssl/fips.h ../include/openssl/hmac.h
+-speed.o: ../include/openssl/idea.h ../include/openssl/lhash.h
+-speed.o: ../include/openssl/md2.h ../include/openssl/md4.h
+-speed.o: ../include/openssl/md5.h ../include/openssl/obj_mac.h
+-speed.o: ../include/openssl/objects.h ../include/openssl/ocsp.h
+-speed.o: ../include/openssl/opensslconf.h ../include/openssl/opensslv.h
+-speed.o: ../include/openssl/ossl_typ.h ../include/openssl/pkcs7.h
+-speed.o: ../include/openssl/rand.h ../include/openssl/rc2.h
+-speed.o: ../include/openssl/rc4.h ../include/openssl/ripemd.h
+-speed.o: ../include/openssl/rsa.h ../include/openssl/safestack.h
+-speed.o: ../include/openssl/sha.h ../include/openssl/stack.h
+-speed.o: ../include/openssl/symhacks.h ../include/openssl/txt_db.h
+-speed.o: ../include/openssl/ui.h ../include/openssl/ui_compat.h
+-speed.o: ../include/openssl/x509.h ../include/openssl/x509_vfy.h
+-speed.o: ../include/openssl/x509v3.h apps.h speed.c testdsa.h testrsa.h
++speed.o: ../include/openssl/ecdh.h ../include/openssl/ecdsa.h
++speed.o: ../include/openssl/engine.h ../include/openssl/err.h
++speed.o: ../include/openssl/evp.h ../include/openssl/fips.h
++speed.o: ../include/openssl/hmac.h ../include/openssl/idea.h
++speed.o: ../include/openssl/lhash.h ../include/openssl/md2.h
++speed.o: ../include/openssl/md4.h ../include/openssl/md5.h
++speed.o: ../include/openssl/obj_mac.h ../include/openssl/objects.h
++speed.o: ../include/openssl/ocsp.h ../include/openssl/opensslconf.h
++speed.o: ../include/openssl/opensslv.h ../include/openssl/ossl_typ.h
++speed.o: ../include/openssl/pkcs7.h ../include/openssl/rand.h
++speed.o: ../include/openssl/rc2.h ../include/openssl/rc4.h
++speed.o: ../include/openssl/ripemd.h ../include/openssl/rsa.h
++speed.o: ../include/openssl/safestack.h ../include/openssl/sha.h
++speed.o: ../include/openssl/stack.h ../include/openssl/symhacks.h
++speed.o: ../include/openssl/txt_db.h ../include/openssl/ui.h
++speed.o: ../include/openssl/ui_compat.h ../include/openssl/x509.h
++speed.o: ../include/openssl/x509_vfy.h ../include/openssl/x509v3.h apps.h
++speed.o: speed.c testdsa.h testrsa.h
+ spkac.o: ../e_os.h ../include/openssl/asn1.h ../include/openssl/bio.h
+ spkac.o: ../include/openssl/buffer.h ../include/openssl/conf.h
+ spkac.o: ../include/openssl/crypto.h ../include/openssl/e_os2.h
+-spkac.o: ../include/openssl/ec.h ../include/openssl/ecdsa.h
+-spkac.o: ../include/openssl/engine.h ../include/openssl/err.h
+-spkac.o: ../include/openssl/evp.h ../include/openssl/fips.h
+-spkac.o: ../include/openssl/lhash.h ../include/openssl/obj_mac.h
+-spkac.o: ../include/openssl/objects.h ../include/openssl/ocsp.h
+-spkac.o: ../include/openssl/opensslconf.h ../include/openssl/opensslv.h
+-spkac.o: ../include/openssl/ossl_typ.h ../include/openssl/pem.h
+-spkac.o: ../include/openssl/pem2.h ../include/openssl/pkcs7.h
+-spkac.o: ../include/openssl/safestack.h ../include/openssl/sha.h
+-spkac.o: ../include/openssl/stack.h ../include/openssl/symhacks.h
+-spkac.o: ../include/openssl/txt_db.h ../include/openssl/x509.h
+-spkac.o: ../include/openssl/x509_vfy.h ../include/openssl/x509v3.h apps.h
+-spkac.o: spkac.c
++spkac.o: ../include/openssl/ec.h ../include/openssl/ecdh.h
++spkac.o: ../include/openssl/ecdsa.h ../include/openssl/engine.h
++spkac.o: ../include/openssl/err.h ../include/openssl/evp.h
++spkac.o: ../include/openssl/fips.h ../include/openssl/lhash.h
++spkac.o: ../include/openssl/obj_mac.h ../include/openssl/objects.h
++spkac.o: ../include/openssl/ocsp.h ../include/openssl/opensslconf.h
++spkac.o: ../include/openssl/opensslv.h ../include/openssl/ossl_typ.h
++spkac.o: ../include/openssl/pem.h ../include/openssl/pem2.h
++spkac.o: ../include/openssl/pkcs7.h ../include/openssl/safestack.h
++spkac.o: ../include/openssl/sha.h ../include/openssl/stack.h
++spkac.o: ../include/openssl/symhacks.h ../include/openssl/txt_db.h
++spkac.o: ../include/openssl/x509.h ../include/openssl/x509_vfy.h
++spkac.o: ../include/openssl/x509v3.h apps.h spkac.c
+ verify.o: ../e_os.h ../include/openssl/asn1.h ../include/openssl/bio.h
+ verify.o: ../include/openssl/buffer.h ../include/openssl/conf.h
+ verify.o: ../include/openssl/crypto.h ../include/openssl/e_os2.h
+-verify.o: ../include/openssl/ec.h ../include/openssl/ecdsa.h
+-verify.o: ../include/openssl/engine.h ../include/openssl/err.h
+-verify.o: ../include/openssl/evp.h ../include/openssl/fips.h
+-verify.o: ../include/openssl/lhash.h ../include/openssl/obj_mac.h
+-verify.o: ../include/openssl/objects.h ../include/openssl/ocsp.h
+-verify.o: ../include/openssl/opensslconf.h ../include/openssl/opensslv.h
+-verify.o: ../include/openssl/ossl_typ.h ../include/openssl/pem.h
+-verify.o: ../include/openssl/pem2.h ../include/openssl/pkcs7.h
+-verify.o: ../include/openssl/safestack.h ../include/openssl/sha.h
+-verify.o: ../include/openssl/stack.h ../include/openssl/symhacks.h
+-verify.o: ../include/openssl/txt_db.h ../include/openssl/x509.h
+-verify.o: ../include/openssl/x509_vfy.h ../include/openssl/x509v3.h apps.h
+-verify.o: verify.c
++verify.o: ../include/openssl/ec.h ../include/openssl/ecdh.h
++verify.o: ../include/openssl/ecdsa.h ../include/openssl/engine.h
++verify.o: ../include/openssl/err.h ../include/openssl/evp.h
++verify.o: ../include/openssl/fips.h ../include/openssl/lhash.h
++verify.o: ../include/openssl/obj_mac.h ../include/openssl/objects.h
++verify.o: ../include/openssl/ocsp.h ../include/openssl/opensslconf.h
++verify.o: ../include/openssl/opensslv.h ../include/openssl/ossl_typ.h
++verify.o: ../include/openssl/pem.h ../include/openssl/pem2.h
++verify.o: ../include/openssl/pkcs7.h ../include/openssl/safestack.h
++verify.o: ../include/openssl/sha.h ../include/openssl/stack.h
++verify.o: ../include/openssl/symhacks.h ../include/openssl/txt_db.h
++verify.o: ../include/openssl/x509.h ../include/openssl/x509_vfy.h
++verify.o: ../include/openssl/x509v3.h apps.h verify.c
+ version.o: ../e_os.h ../include/openssl/asn1.h ../include/openssl/bio.h
+ version.o: ../include/openssl/blowfish.h ../include/openssl/bn.h
+ version.o: ../include/openssl/buffer.h ../include/openssl/conf.h
+ version.o: ../include/openssl/crypto.h ../include/openssl/des.h
+ version.o: ../include/openssl/des_old.h ../include/openssl/e_os2.h
+-version.o: ../include/openssl/ec.h ../include/openssl/ecdsa.h
+-version.o: ../include/openssl/engine.h ../include/openssl/evp.h
+-version.o: ../include/openssl/fips.h ../include/openssl/idea.h
+-version.o: ../include/openssl/lhash.h ../include/openssl/md2.h
+-version.o: ../include/openssl/obj_mac.h ../include/openssl/objects.h
+-version.o: ../include/openssl/ocsp.h ../include/openssl/opensslconf.h
+-version.o: ../include/openssl/opensslv.h ../include/openssl/ossl_typ.h
+-version.o: ../include/openssl/pkcs7.h ../include/openssl/rc4.h
+-version.o: ../include/openssl/safestack.h ../include/openssl/sha.h
+-version.o: ../include/openssl/stack.h ../include/openssl/symhacks.h
+-version.o: ../include/openssl/txt_db.h ../include/openssl/ui.h
+-version.o: ../include/openssl/ui_compat.h ../include/openssl/x509.h
+-version.o: ../include/openssl/x509_vfy.h ../include/openssl/x509v3.h apps.h
+-version.o: version.c
++version.o: ../include/openssl/ec.h ../include/openssl/ecdh.h
++version.o: ../include/openssl/ecdsa.h ../include/openssl/engine.h
++version.o: ../include/openssl/evp.h ../include/openssl/fips.h
++version.o: ../include/openssl/idea.h ../include/openssl/lhash.h
++version.o: ../include/openssl/md2.h ../include/openssl/obj_mac.h
++version.o: ../include/openssl/objects.h ../include/openssl/ocsp.h
++version.o: ../include/openssl/opensslconf.h ../include/openssl/opensslv.h
++version.o: ../include/openssl/ossl_typ.h ../include/openssl/pkcs7.h
++version.o: ../include/openssl/rc4.h ../include/openssl/safestack.h
++version.o: ../include/openssl/sha.h ../include/openssl/stack.h
++version.o: ../include/openssl/symhacks.h ../include/openssl/txt_db.h
++version.o: ../include/openssl/ui.h ../include/openssl/ui_compat.h
++version.o: ../include/openssl/x509.h ../include/openssl/x509_vfy.h
++version.o: ../include/openssl/x509v3.h apps.h version.c
+ x509.o: ../e_os.h ../include/openssl/asn1.h ../include/openssl/bio.h
+ x509.o: ../include/openssl/bn.h ../include/openssl/buffer.h
+ x509.o: ../include/openssl/conf.h ../include/openssl/crypto.h
+ x509.o: ../include/openssl/dsa.h ../include/openssl/e_os2.h
+-x509.o: ../include/openssl/ec.h ../include/openssl/ecdsa.h
+-x509.o: ../include/openssl/engine.h ../include/openssl/err.h
+-x509.o: ../include/openssl/evp.h ../include/openssl/fips.h
+-x509.o: ../include/openssl/lhash.h ../include/openssl/obj_mac.h
+-x509.o: ../include/openssl/objects.h ../include/openssl/ocsp.h
+-x509.o: ../include/openssl/opensslconf.h ../include/openssl/opensslv.h
+-x509.o: ../include/openssl/ossl_typ.h ../include/openssl/pem.h
+-x509.o: ../include/openssl/pem2.h ../include/openssl/pkcs7.h
+-x509.o: ../include/openssl/rsa.h ../include/openssl/safestack.h
+-x509.o: ../include/openssl/sha.h ../include/openssl/stack.h
+-x509.o: ../include/openssl/symhacks.h ../include/openssl/txt_db.h
+-x509.o: ../include/openssl/x509.h ../include/openssl/x509_vfy.h
+-x509.o: ../include/openssl/x509v3.h apps.h x509.c
++x509.o: ../include/openssl/ec.h ../include/openssl/ecdh.h
++x509.o: ../include/openssl/ecdsa.h ../include/openssl/engine.h
++x509.o: ../include/openssl/err.h ../include/openssl/evp.h
++x509.o: ../include/openssl/fips.h ../include/openssl/lhash.h
++x509.o: ../include/openssl/obj_mac.h ../include/openssl/objects.h
++x509.o: ../include/openssl/ocsp.h ../include/openssl/opensslconf.h
++x509.o: ../include/openssl/opensslv.h ../include/openssl/ossl_typ.h
++x509.o: ../include/openssl/pem.h ../include/openssl/pem2.h
++x509.o: ../include/openssl/pkcs7.h ../include/openssl/rsa.h
++x509.o: ../include/openssl/safestack.h ../include/openssl/sha.h
++x509.o: ../include/openssl/stack.h ../include/openssl/symhacks.h
++x509.o: ../include/openssl/txt_db.h ../include/openssl/x509.h
++x509.o: ../include/openssl/x509_vfy.h ../include/openssl/x509v3.h apps.h x509.c
+Index: crypto/openssl/apps/apps.c
+===================================================================
+--- crypto/openssl/apps/apps.c	(revision 248771)
++++ crypto/openssl/apps/apps.c	(working copy)
+@@ -2052,7 +2052,7 @@ X509_NAME *parse_name(char *subject, long chtype,
+ 	X509_NAME *n = NULL;
+ 	int nid;
+ 
+-	if (!buf || !ne_types || !ne_values)
++	if (!buf || !ne_types || !ne_values || !mval)
+ 		{
+ 		BIO_printf(bio_err, "malloc error\n");
+ 		goto error;
+@@ -2156,6 +2156,7 @@ X509_NAME *parse_name(char *subject, long chtype,
+ 	OPENSSL_free(ne_values);
+ 	OPENSSL_free(ne_types);
+ 	OPENSSL_free(buf);
++	OPENSSL_free(mval);
+ 	return n;
+ 
+ error:
+@@ -2164,6 +2165,8 @@ error:
+ 		OPENSSL_free(ne_values);
+ 	if (ne_types)
+ 		OPENSSL_free(ne_types);
++	if (mval)
++		OPENSSL_free(mval);
+ 	if (buf)
+ 		OPENSSL_free(buf);
+ 	return NULL;
+Index: crypto/openssl/apps/dhparam.c
+===================================================================
+--- crypto/openssl/apps/dhparam.c	(revision 248771)
++++ crypto/openssl/apps/dhparam.c	(working copy)
+@@ -332,7 +332,6 @@ bad:
+ 			BIO_printf(bio_err,"This is going to take a long time\n");
+ 			if(!dh || !DH_generate_parameters_ex(dh, num, g, &cb))
+ 				{
+-				if(dh) DH_free(dh);
+ 				ERR_print_errors(bio_err);
+ 				goto end;
+ 				}
+Index: crypto/openssl/apps/s_server.c
+===================================================================
+--- crypto/openssl/apps/s_server.c	(revision 248771)
++++ crypto/openssl/apps/s_server.c	(working copy)
+@@ -1550,6 +1550,12 @@ end:
+ 	if (dpass)
+ 		OPENSSL_free(dpass);
+ #ifndef OPENSSL_NO_TLSEXT
++	if (tlscstatp.host)
++		OPENSSL_free(tlscstatp.host);
++	if (tlscstatp.port)
++		OPENSSL_free(tlscstatp.port);
++	if (tlscstatp.path)
++		OPENSSL_free(tlscstatp.path);
+ 	if (ctx2 != NULL) SSL_CTX_free(ctx2);
+ 	if (s_cert2)
+ 		X509_free(s_cert2);
+Index: crypto/openssl/crypto/asn1/a_strex.c
+===================================================================
+--- crypto/openssl/crypto/asn1/a_strex.c	(revision 248771)
++++ crypto/openssl/crypto/asn1/a_strex.c	(working copy)
+@@ -567,6 +567,7 @@ int ASN1_STRING_to_UTF8(unsigned char **out, ASN1_
+ 	if(mbflag == -1) return -1;
+ 	mbflag |= MBSTRING_FLAG;
+ 	stmp.data = NULL;
++	stmp.length = 0;
+ 	ret = ASN1_mbstring_copy(&str, in->data, in->length, mbflag, B_ASN1_UTF8STRING);
+ 	if(ret < 0) return ret;
+ 	*out = stmp.data;
+Index: crypto/openssl/crypto/asn1/a_verify.c
+===================================================================
+--- crypto/openssl/crypto/asn1/a_verify.c	(revision 248771)
++++ crypto/openssl/crypto/asn1/a_verify.c	(working copy)
+@@ -138,6 +138,12 @@ int ASN1_item_verify(const ASN1_ITEM *it, X509_ALG
+ 	unsigned char *buf_in=NULL;
+ 	int ret= -1,i,inl;
+ 
++	if (!pkey)
++		{
++		ASN1err(ASN1_F_ASN1_ITEM_VERIFY, ERR_R_PASSED_NULL_PARAMETER);
++		return -1;
++		}
++
+ 	EVP_MD_CTX_init(&ctx);
+ 	i=OBJ_obj2nid(a->algorithm);
+ 	type=EVP_get_digestbyname(OBJ_nid2sn(i));
+Index: crypto/openssl/crypto/asn1/x_pubkey.c
+===================================================================
+--- crypto/openssl/crypto/asn1/x_pubkey.c	(revision 248771)
++++ crypto/openssl/crypto/asn1/x_pubkey.c	(working copy)
+@@ -371,12 +371,15 @@ EVP_PKEY *X509_PUBKEY_get(X509_PUBKEY *key)
+ 	CRYPTO_w_lock(CRYPTO_LOCK_EVP_PKEY);
+ 	if (key->pkey)
+ 		{
++		CRYPTO_w_unlock(CRYPTO_LOCK_EVP_PKEY);
+ 		EVP_PKEY_free(ret);
+ 		ret = key->pkey;
+ 		}
+ 	else
++		{
+ 		key->pkey = ret;
+-	CRYPTO_w_unlock(CRYPTO_LOCK_EVP_PKEY);
++		CRYPTO_w_unlock(CRYPTO_LOCK_EVP_PKEY);
++		}
+ 	CRYPTO_add(&ret->references, 1, CRYPTO_LOCK_EVP_PKEY);
+ 	return(ret);
+ err:
+Index: crypto/openssl/crypto/bn/bn_word.c
+===================================================================
+--- crypto/openssl/crypto/bn/bn_word.c	(revision 248771)
++++ crypto/openssl/crypto/bn/bn_word.c	(working copy)
+@@ -144,26 +144,17 @@ int BN_add_word(BIGNUM *a, BN_ULONG w)
+ 			a->neg=!(a->neg);
+ 		return(i);
+ 		}
+-	/* Only expand (and risk failing) if it's possibly necessary */
+-	if (((BN_ULONG)(a->d[a->top - 1] + 1) == 0) &&
+-			(bn_wexpand(a,a->top+1) == NULL))
+-		return(0);
+-	i=0;
+-	for (;;)
++	for (i=0;w!=0 && i<a->top;i++)
+ 		{
+-		if (i >= a->top)
+-			l=w;
+-		else
+-			l=(a->d[i]+w)&BN_MASK2;
+-		a->d[i]=l;
+-		if (w > l)
+-			w=1;
+-		else
+-			break;
+-		i++;
++		a->d[i] = l = (a->d[i]+w)&BN_MASK2;
++		w = (w>l)?1:0;
+ 		}
+-	if (i >= a->top)
++	if (w && i==a->top)
++		{
++		if (bn_wexpand(a,a->top+1) == NULL) return 0;
+ 		a->top++;
++		a->d[i]=w;
++		}
+ 	bn_check_top(a);
+ 	return(1);
+ 	}
+Index: crypto/openssl/crypto/cryptlib.c
+===================================================================
+--- crypto/openssl/crypto/cryptlib.c	(revision 248771)
++++ crypto/openssl/crypto/cryptlib.c	(working copy)
+@@ -542,3 +542,19 @@ void OpenSSLDie(const char *file,int line,const ch
+ 	}
+ 
+ void *OPENSSL_stderr(void)	{ return stderr; }
++
++#ifndef OPENSSL_FIPS
++
++int CRYPTO_memcmp(const void *in_a, const void *in_b, size_t len)
++	{
++	size_t i;
++	const unsigned char *a = in_a;
++	const unsigned char *b = in_b;
++	unsigned char x = 0;
++
++	for (i = 0; i < len; i++)
++		x |= a[i] ^ b[i];
++
++	return x;
++	}
++#endif
+Index: crypto/openssl/crypto/crypto.h
+===================================================================
+--- crypto/openssl/crypto/crypto.h	(revision 248771)
++++ crypto/openssl/crypto/crypto.h	(working copy)
+@@ -591,6 +591,13 @@ int OPENSSL_isservice(void);
+ #define OPENSSL_HAVE_INIT	1
+ void OPENSSL_init(void);
+ 
++/* CRYPTO_memcmp returns zero iff the |len| bytes at |a| and |b| are equal. It
++ * takes an amount of time dependent on |len|, but independent of the contents
++ * of |a| and |b|. Unlike memcmp, it cannot be used to put elements into a
++ * defined order as the return value when a != b is undefined, other than to be
++ * non-zero. */
++int CRYPTO_memcmp(const void *a, const void *b, size_t len);
++
+ /* BEGIN ERROR CODES */
+ /* The following lines are auto generated by the script mkerr.pl. Any changes
+  * made after this point may be overwritten when the script is next run.
+Index: crypto/openssl/crypto/o_init.c
+===================================================================
+--- crypto/openssl/crypto/o_init.c	(revision 248771)
++++ crypto/openssl/crypto/o_init.c	(working copy)
+@@ -93,4 +93,18 @@ void OPENSSL_init(void)
+ #endif
+ 	}
+ 		
++#ifdef OPENSSL_FIPS
+ 
++int CRYPTO_memcmp(const void *in_a, const void *in_b, size_t len)
++	{
++	size_t i;
++	const unsigned char *a = in_a;
++	const unsigned char *b = in_b;
++	unsigned char x = 0;
++
++	for (i = 0; i < len; i++)
++		x |= a[i] ^ b[i];
++
++	return x;
++	}
++#endif
+Index: crypto/openssl/crypto/ocsp/ocsp_vfy.c
+===================================================================
+--- crypto/openssl/crypto/ocsp/ocsp_vfy.c	(revision 248771)
++++ crypto/openssl/crypto/ocsp/ocsp_vfy.c	(working copy)
+@@ -91,10 +91,13 @@ int OCSP_basic_verify(OCSP_BASICRESP *bs, STACK_OF
+ 		{
+ 		EVP_PKEY *skey;
+ 		skey = X509_get_pubkey(signer);
+-		ret = OCSP_BASICRESP_verify(bs, skey, 0);
+-		EVP_PKEY_free(skey);
+-		if(ret <= 0)
++		if (skey)
+ 			{
++			ret = OCSP_BASICRESP_verify(bs, skey, 0);
++			EVP_PKEY_free(skey);
++			}
++		if(!skey || ret <= 0)
++			{
+ 			OCSPerr(OCSP_F_OCSP_BASIC_VERIFY, OCSP_R_SIGNATURE_FAILURE);
+ 			goto end;
+ 			}
+@@ -108,6 +111,7 @@ int OCSP_basic_verify(OCSP_BASICRESP *bs, STACK_OF
+ 			init_res = X509_STORE_CTX_init(&ctx, st, signer, bs->certs);
+ 		if(!init_res)
+ 			{
++			ret = -1;
+ 			OCSPerr(OCSP_F_OCSP_BASIC_VERIFY,ERR_R_X509_LIB);
+ 			goto end;
+ 			}
+Index: crypto/openssl/crypto/opensslv.h
+===================================================================
+--- crypto/openssl/crypto/opensslv.h	(revision 248771)
++++ crypto/openssl/crypto/opensslv.h	(working copy)
+@@ -25,11 +25,11 @@
+  * (Prior to 0.9.5a beta1, a different scheme was used: MMNNFFRBB for
+  *  major minor fix final patch/beta)
+  */
+-#define OPENSSL_VERSION_NUMBER	0x0090818fL
++#define OPENSSL_VERSION_NUMBER	0x0090819fL
+ #ifdef OPENSSL_FIPS
+-#define OPENSSL_VERSION_TEXT	"OpenSSL 0.9.8x-fips 10 May 2012"
++#define OPENSSL_VERSION_TEXT	"OpenSSL 0.9.8y-fips 5 Feb 2013"
+ #else
+-#define OPENSSL_VERSION_TEXT	"OpenSSL 0.9.8x 10 May 2012"
++#define OPENSSL_VERSION_TEXT	"OpenSSL 0.9.8y 5 Feb 2013"
+ #endif
+ #define OPENSSL_VERSION_PTEXT	" part of " OPENSSL_VERSION_TEXT
+ 
+Index: crypto/openssl/crypto/rsa/rsa_oaep.c
+===================================================================
+--- crypto/openssl/crypto/rsa/rsa_oaep.c	(revision 248771)
++++ crypto/openssl/crypto/rsa/rsa_oaep.c	(working copy)
+@@ -143,7 +143,7 @@ int RSA_padding_check_PKCS1_OAEP(unsigned char *to
+ 
+ 	EVP_Digest((void *)param, plen, phash, NULL, EVP_sha1(), NULL);
+ 
+-	if (memcmp(db, phash, SHA_DIGEST_LENGTH) != 0 || bad)
++	if (CRYPTO_memcmp(db, phash, SHA_DIGEST_LENGTH) != 0 || bad)
+ 		goto decoding_err;
+ 	else
+ 		{
+Index: crypto/openssl/crypto/symhacks.h
+===================================================================
+--- crypto/openssl/crypto/symhacks.h	(revision 248771)
++++ crypto/openssl/crypto/symhacks.h	(working copy)
+@@ -252,15 +252,15 @@
+ #define EC_POINT_set_compressed_coordinates_GF2m \
+                                                 EC_POINT_set_compr_coords_GF2m
+ #undef ec_GF2m_simple_group_clear_finish
+-#define ec_GF2m_simple_group_clear_finish        ec_GF2m_simple_grp_clr_finish
++#define ec_GF2m_simple_group_clear_finish       ec_GF2m_simple_grp_clr_finish
+ #undef ec_GF2m_simple_group_check_discriminant
+ #define ec_GF2m_simple_group_check_discriminant	ec_GF2m_simple_grp_chk_discrim
+ #undef ec_GF2m_simple_point_clear_finish
+-#define ec_GF2m_simple_point_clear_finish        ec_GF2m_simple_pt_clr_finish
++#define ec_GF2m_simple_point_clear_finish       ec_GF2m_simple_pt_clr_finish
+ #undef ec_GF2m_simple_point_set_to_infinity
+-#define ec_GF2m_simple_point_set_to_infinity     ec_GF2m_simple_pt_set_to_inf
++#define ec_GF2m_simple_point_set_to_infinity    ec_GF2m_simple_pt_set_to_inf
+ #undef ec_GF2m_simple_points_make_affine
+-#define ec_GF2m_simple_points_make_affine        ec_GF2m_simple_pts_make_affine
++#define ec_GF2m_simple_points_make_affine       ec_GF2m_simple_pts_make_affine
+ #undef ec_GF2m_simple_point_set_affine_coordinates
+ #define ec_GF2m_simple_point_set_affine_coordinates \
+                                                 ec_GF2m_smp_pt_set_af_coords
+@@ -288,8 +288,6 @@
+ #define ec_GFp_simple_point_set_to_infinity     ec_GFp_simple_pt_set_to_inf
+ #undef ec_GFp_simple_points_make_affine
+ #define ec_GFp_simple_points_make_affine        ec_GFp_simple_pts_make_affine
+-#undef ec_GFp_simple_group_get_curve_GFp
+-#define ec_GFp_simple_group_get_curve_GFp       ec_GFp_simple_grp_get_curve_GFp
+ #undef ec_GFp_simple_set_Jprojective_coordinates_GFp
+ #define ec_GFp_simple_set_Jprojective_coordinates_GFp \
+                                                 ec_GFp_smp_set_Jproj_coords_GFp
+Index: crypto/openssl/doc/apps/CA.pl.pod
+===================================================================
+--- crypto/openssl/doc/apps/CA.pl.pod	(revision 248771)
++++ crypto/openssl/doc/apps/CA.pl.pod	(working copy)
+@@ -39,13 +39,13 @@ prints a usage message.
+ 
+ =item B<-newcert>
+ 
+-creates a new self signed certificate. The private key and certificate are
+-written to the file "newreq.pem".
++creates a new self signed certificate. The private key is written to the file
++"newkey.pem" and the request written to the file "newreq.pem".
+ 
+ =item B<-newreq>
+ 
+-creates a new certificate request. The private key and request are
+-written to the file "newreq.pem".
++creates a new certificate request. The private key is written to the file
++"newkey.pem" and the request written to the file "newreq.pem".
+ 
+ =item B<-newreq-nodes>
+ 
+Index: crypto/openssl/engines/e_capi.c
+===================================================================
+--- crypto/openssl/engines/e_capi.c	(revision 248771)
++++ crypto/openssl/engines/e_capi.c	(working copy)
+@@ -1409,10 +1409,13 @@ static PCCERT_CONTEXT capi_find_cert(CAPI_CTX *ctx
+ static CAPI_KEY *capi_get_key(CAPI_CTX *ctx, const char *contname, char *provname, DWORD ptype, DWORD keyspec)
+ 	{
+ 	CAPI_KEY *key;
++    DWORD dwFlags = 0; 
+ 	key = OPENSSL_malloc(sizeof(CAPI_KEY));
+ 	CAPI_trace(ctx, "capi_get_key, contname=%s, provname=%s, type=%d\n", 
+ 						contname, provname, ptype);
+-	if (!CryptAcquireContextA(&key->hprov, contname, provname, ptype, 0))
++    if(ctx->store_flags & CERT_SYSTEM_STORE_LOCAL_MACHINE)
++        dwFlags = CRYPT_MACHINE_KEYSET;
++    if (!CryptAcquireContextA(&key->hprov, contname, provname, ptype, dwFlags)) 
+ 		{
+ 		CAPIerr(CAPI_F_CAPI_GET_KEY, CAPI_R_CRYPTACQUIRECONTEXT_ERROR);
+ 		capi_addlasterror();
+Index: crypto/openssl/openssl.spec
+===================================================================
+--- crypto/openssl/openssl.spec	(revision 248771)
++++ crypto/openssl/openssl.spec	(working copy)
+@@ -2,7 +2,7 @@
+ %define libmaj 0
+ %define libmin 9
+ %define librel 8
+-%define librev x
++%define librev y
+ Release: 1
+ 
+ %define openssldir /var/ssl
+Index: crypto/openssl/ssl/Makefile
+===================================================================
+--- crypto/openssl/ssl/Makefile	(revision 248771)
++++ crypto/openssl/ssl/Makefile	(working copy)
+@@ -22,7 +22,7 @@ LIB=$(TOP)/libssl.a
+ SHARED_LIB= libssl$(SHLIB_EXT)
+ LIBSRC=	\
+ 	s2_meth.c   s2_srvr.c s2_clnt.c  s2_lib.c  s2_enc.c s2_pkt.c \
+-	s3_meth.c   s3_srvr.c s3_clnt.c  s3_lib.c  s3_enc.c s3_pkt.c s3_both.c \
++	s3_meth.c   s3_srvr.c s3_clnt.c  s3_lib.c  s3_enc.c s3_pkt.c s3_both.c s3_cbc.c \
+ 	s23_meth.c s23_srvr.c s23_clnt.c s23_lib.c          s23_pkt.c \
+ 	t1_meth.c   t1_srvr.c t1_clnt.c  t1_lib.c  t1_enc.c \
+ 	d1_meth.c   d1_srvr.c d1_clnt.c  d1_lib.c  d1_pkt.c \
+@@ -33,7 +33,7 @@ LIBSRC=	\
+ 	bio_ssl.c ssl_err.c kssl.c t1_reneg.c
+ LIBOBJ= \
+ 	s2_meth.o  s2_srvr.o  s2_clnt.o  s2_lib.o  s2_enc.o s2_pkt.o \
+-	s3_meth.o  s3_srvr.o  s3_clnt.o  s3_lib.o  s3_enc.o s3_pkt.o s3_both.o \
++	s3_meth.o  s3_srvr.o  s3_clnt.o  s3_lib.o  s3_enc.o s3_pkt.o s3_both.o s3_cbc.o \
+ 	s23_meth.o s23_srvr.o s23_clnt.o s23_lib.o          s23_pkt.o \
+ 	t1_meth.o   t1_srvr.o t1_clnt.o  t1_lib.o  t1_enc.o \
+ 	d1_meth.o   d1_srvr.o d1_clnt.o  d1_lib.o  d1_pkt.o \
+@@ -545,6 +545,27 @@ s3_both.o: ../include/openssl/ssl23.h ../include/o
+ s3_both.o: ../include/openssl/stack.h ../include/openssl/symhacks.h
+ s3_both.o: ../include/openssl/tls1.h ../include/openssl/x509.h
+ s3_both.o: ../include/openssl/x509_vfy.h s3_both.c ssl_locl.h
++s3_cbc.o: ../e_os.h ../include/openssl/asn1.h ../include/openssl/bio.h
++s3_cbc.o: ../include/openssl/bn.h ../include/openssl/buffer.h
++s3_cbc.o: ../include/openssl/comp.h ../include/openssl/crypto.h
++s3_cbc.o: ../include/openssl/dsa.h ../include/openssl/dtls1.h
++s3_cbc.o: ../include/openssl/e_os2.h ../include/openssl/ec.h
++s3_cbc.o: ../include/openssl/ecdh.h ../include/openssl/ecdsa.h
++s3_cbc.o: ../include/openssl/err.h ../include/openssl/evp.h
++s3_cbc.o: ../include/openssl/fips.h ../include/openssl/hmac.h
++s3_cbc.o: ../include/openssl/kssl.h ../include/openssl/lhash.h
++s3_cbc.o: ../include/openssl/md5.h ../include/openssl/obj_mac.h
++s3_cbc.o: ../include/openssl/objects.h ../include/openssl/opensslconf.h
++s3_cbc.o: ../include/openssl/opensslv.h ../include/openssl/ossl_typ.h
++s3_cbc.o: ../include/openssl/pem.h ../include/openssl/pem2.h
++s3_cbc.o: ../include/openssl/pkcs7.h ../include/openssl/pq_compat.h
++s3_cbc.o: ../include/openssl/pqueue.h ../include/openssl/rsa.h
++s3_cbc.o: ../include/openssl/safestack.h ../include/openssl/sha.h
++s3_cbc.o: ../include/openssl/ssl.h ../include/openssl/ssl2.h
++s3_cbc.o: ../include/openssl/ssl23.h ../include/openssl/ssl3.h
++s3_cbc.o: ../include/openssl/stack.h ../include/openssl/symhacks.h
++s3_cbc.o: ../include/openssl/tls1.h ../include/openssl/x509.h
++s3_cbc.o: ../include/openssl/x509_vfy.h s3_cbc.c ssl_locl.h
+ s3_clnt.o: ../e_os.h ../include/openssl/asn1.h ../include/openssl/bio.h
+ s3_clnt.o: ../include/openssl/bn.h ../include/openssl/buffer.h
+ s3_clnt.o: ../include/openssl/comp.h ../include/openssl/crypto.h
+Index: crypto/openssl/ssl/d1_enc.c
+===================================================================
+--- crypto/openssl/ssl/d1_enc.c	(revision 248771)
++++ crypto/openssl/ssl/d1_enc.c	(working copy)
+@@ -126,16 +126,30 @@
+ #include <openssl/des.h>
+ #endif
+ 
++/* dtls1_enc encrypts/decrypts the record in |s->wrec| / |s->rrec|, respectively.
++ *
++ * Returns:
++ *   0: (in non-constant time) if the record is publically invalid (i.e. too
++ *       short etc).
++ *   1: if the record's padding is valid / the encryption was successful.
++ *   -1: if the record's padding/AEAD-authenticator is invalid or, if sending,
++ *       an internal error occured. */
+ int dtls1_enc(SSL *s, int send)
+ 	{
+ 	SSL3_RECORD *rec;
+ 	EVP_CIPHER_CTX *ds;
+ 	unsigned long l;
+-	int bs,i,ii,j,k;
++	int bs,i,j,k,mac_size=0;
+ 	const EVP_CIPHER *enc;
+ 
+ 	if (send)
+ 		{
++		if (s->write_hash)
++			{
++			mac_size=EVP_MD_size(s->write_hash);
++			if (mac_size < 0)
++				return -1;
++			}
+ 		ds=s->enc_write_ctx;
+ 		rec= &(s->s3->wrec);
+ 		if (s->enc_write_ctx == NULL)
+@@ -156,6 +170,11 @@ int dtls1_enc(SSL *s, int send)
+ 		}
+ 	else
+ 		{
++		if (s->read_hash)
++			{
++			mac_size=EVP_MD_size(s->read_hash);
++			OPENSSL_assert(mac_size >= 0);
++			}
+ 		ds=s->enc_read_ctx;
+ 		rec= &(s->s3->rrec);
+ 		if (s->enc_read_ctx == NULL)
+@@ -220,7 +239,7 @@ int dtls1_enc(SSL *s, int send)
+ 		if (!send)
+ 			{
+ 			if (l == 0 || l%bs != 0)
+-				return -1;
++				return 0;
+ 			}
+ 		
+ 		EVP_Cipher(ds,rec->data,rec->input,l);
+@@ -235,43 +254,7 @@ int dtls1_enc(SSL *s, int send)
+ #endif	/* KSSL_DEBUG */
+ 
+ 		if ((bs != 1) && !send)
+-			{
+-			ii=i=rec->data[l-1]; /* padding_length */
+-			i++;
+-			if (s->options&SSL_OP_TLS_BLOCK_PADDING_BUG)
+-				{
+-				/* First packet is even in size, so check */
+-				if ((memcmp(s->s3->read_sequence,
+-					"\0\0\0\0\0\0\0\0",8) == 0) && !(ii & 1))
+-					s->s3->flags|=TLS1_FLAGS_TLS_PADDING_BUG;
+-				if (s->s3->flags & TLS1_FLAGS_TLS_PADDING_BUG)
+-					i--;
+-				}
+-			/* TLS 1.0 does not bound the number of padding bytes by the block size.
+-			 * All of them must have value 'padding_length'. */
+-			if (i + bs > (int)rec->length)
+-				{
+-				/* Incorrect padding. SSLerr() and ssl3_alert are done
+-				 * by caller: we don't want to reveal whether this is
+-				 * a decryption error or a MAC verification failure
+-				 * (see http://www.openssl.org/~bodo/tls-cbc.txt) 
+-				 */
+-				return -1;
+-				}
+-			for (j=(int)(l-i); j<(int)l; j++)
+-				{
+-				if (rec->data[j] != ii)
+-					{
+-					/* Incorrect padding */
+-					return -1;
+-					}
+-				}
+-			rec->length-=i;
+-
+-			rec->data += bs;    /* skip the implicit IV */
+-			rec->input += bs;
+-			rec->length -= bs;
+-			}
++			return tls1_cbc_remove_padding(s, rec, bs, mac_size);
+ 		}
+ 	return(1);
+ 	}
+Index: crypto/openssl/ssl/d1_pkt.c
+===================================================================
+--- crypto/openssl/ssl/d1_pkt.c	(revision 248771)
++++ crypto/openssl/ssl/d1_pkt.c	(working copy)
+@@ -327,17 +327,13 @@ dtls1_get_buffered_record(SSL *s)
+ static int
+ dtls1_process_record(SSL *s)
+ {
+-    int al;
+-	int clear=0;
+-    int enc_err;
++	int i,al;
++	int enc_err;
+ 	SSL_SESSION *sess;
+-    SSL3_RECORD *rr;
+-	unsigned int mac_size;
++	SSL3_RECORD *rr;
++	unsigned int mac_size, orig_len;
+ 	unsigned char md[EVP_MAX_MD_SIZE];
+-	int decryption_failed_or_bad_record_mac = 0;
+-	unsigned char *mac = NULL;
+ 
+-
+ 	rr= &(s->s3->rrec);
+     sess = s->session;
+ 
+@@ -366,14 +362,19 @@ dtls1_process_record(SSL *s)
+ 
+ 	/* decrypt in place in 'rr->input' */
+ 	rr->data=rr->input;
++	orig_len=rr->length;
+ 
+ 	enc_err = s->method->ssl3_enc->enc(s,0);
+-	if (enc_err <= 0)
++	/* enc_err is:
++	 *    0: (in non-constant time) if the record is publically invalid.
++	 *    1: if the padding is valid
++	 *    -1: if the padding is invalid */
++	if (enc_err == 0)
+ 		{
+-		/* To minimize information leaked via timing, we will always
+-		 * perform all computations before discarding the message.
+-		 */
+-		decryption_failed_or_bad_record_mac = 1;
++		/* For DTLS we simply ignore bad packets. */
++		rr->length = 0;
++		s->packet_length = 0;
++		goto err;
+ 		}
+ 
+ #ifdef TLS_DEBUG
+@@ -383,41 +384,59 @@ printf("\n");
+ #endif
+ 
+ 	/* r->length is now the compressed data plus mac */
+-if (	(sess == NULL) ||
+-		(s->enc_read_ctx == NULL) ||
+-		(s->read_hash == NULL))
+-    clear=1;
+-
+-	if (!clear)
++	if ((sess != NULL) &&
++	    (s->enc_read_ctx != NULL) &&
++	    (s->read_hash != NULL))
+ 		{
++		/* s->read_hash != NULL => mac_size != -1 */
++		unsigned char *mac = NULL;
++		unsigned char mac_tmp[EVP_MAX_MD_SIZE];
+ 		mac_size=EVP_MD_size(s->read_hash);
++		OPENSSL_assert(mac_size <= EVP_MAX_MD_SIZE);
+ 
+-		if (rr->length > SSL3_RT_MAX_COMPRESSED_LENGTH+mac_size)
++		/* orig_len is the length of the record before any padding was
++		 * removed. This is public information, as is the MAC in use,
++		 * therefore we can safely process the record in a different
++		 * amount of time if it's too short to possibly contain a MAC.
++		 */
++		if (orig_len < mac_size ||
++		    /* CBC records must have a padding length byte too. */
++		    (EVP_CIPHER_CTX_mode(s->enc_read_ctx) == EVP_CIPH_CBC_MODE &&
++		     orig_len < mac_size+1))
+ 			{
+-#if 0 /* OK only for stream ciphers (then rr->length is visible from ciphertext anyway) */
+-			al=SSL_AD_RECORD_OVERFLOW;
+-			SSLerr(SSL_F_DTLS1_PROCESS_RECORD,SSL_R_PRE_MAC_LENGTH_TOO_LONG);
++			al=SSL_AD_DECODE_ERROR;
++			SSLerr(SSL_F_DTLS1_PROCESS_RECORD,SSL_R_LENGTH_TOO_SHORT);
+ 			goto f_err;
+-#else
+-			decryption_failed_or_bad_record_mac = 1;
+-#endif			
+ 			}
+-		/* check the MAC for rr->input (it's in mac_size bytes at the tail) */
+-		if (rr->length >= mac_size)
++
++		if (EVP_CIPHER_CTX_mode(s->enc_read_ctx) == EVP_CIPH_CBC_MODE)
+ 			{
++			/* We update the length so that the TLS header bytes
++			 * can be constructed correctly but we need to extract
++			 * the MAC in constant time from within the record,
++			 * without leaking the contents of the padding bytes.
++			 * */
++			mac = mac_tmp;
++			ssl3_cbc_copy_mac(mac_tmp, rr, mac_size, orig_len);
+ 			rr->length -= mac_size;
+-			mac = &rr->data[rr->length];
+ 			}
+ 		else
+-			rr->length = 0;
+-		s->method->ssl3_enc->mac(s,md,0);
+-		if (mac == NULL || memcmp(md, mac, mac_size) != 0)
+ 			{
+-			decryption_failed_or_bad_record_mac = 1;
++			/* In this case there's no padding, so |orig_len|
++			 * equals |rec->length| and we checked that there's
++			 * enough bytes for |mac_size| above. */
++			rr->length -= mac_size;
++			mac = &rr->data[rr->length];
+ 			}
++
++		i=s->method->ssl3_enc->mac(s,md,0 /* not send */);
++		if (i < 0 || mac == NULL || CRYPTO_memcmp(md, mac, (size_t)mac_size) != 0)
++			enc_err = -1;
++		if (rr->length > SSL3_RT_MAX_COMPRESSED_LENGTH+mac_size)
++			enc_err = -1;
+ 		}
+ 
+-	if (decryption_failed_or_bad_record_mac)
++	if (enc_err < 0)
+ 		{
+ 		/* decryption failed, silently discard message */
+ 		rr->length = 0;
+Index: crypto/openssl/ssl/s2_clnt.c
+===================================================================
+--- crypto/openssl/ssl/s2_clnt.c	(revision 248771)
++++ crypto/openssl/ssl/s2_clnt.c	(working copy)
+@@ -935,7 +935,7 @@ static int get_server_verify(SSL *s)
+ 		s->msg_callback(0, s->version, 0, p, len, s, s->msg_callback_arg); /* SERVER-VERIFY */
+ 	p += 1;
+ 
+-	if (memcmp(p,s->s2->challenge,s->s2->challenge_length) != 0)
++	if (CRYPTO_memcmp(p,s->s2->challenge,s->s2->challenge_length) != 0)
+ 		{
+ 		ssl2_return_error(s,SSL2_PE_UNDEFINED_ERROR);
+ 		SSLerr(SSL_F_GET_SERVER_VERIFY,SSL_R_CHALLENGE_IS_DIFFERENT);
+Index: crypto/openssl/ssl/s2_pkt.c
+===================================================================
+--- crypto/openssl/ssl/s2_pkt.c	(revision 248771)
++++ crypto/openssl/ssl/s2_pkt.c	(working copy)
+@@ -267,8 +267,7 @@ static int ssl2_read_internal(SSL *s, void *buf, i
+ 			s->s2->ract_data_length-=mac_size;
+ 			ssl2_mac(s,mac,0);
+ 			s->s2->ract_data_length-=s->s2->padding;
+-			if (	(memcmp(mac,s->s2->mac_data,
+-				(unsigned int)mac_size) != 0) ||
++			if (	(CRYPTO_memcmp(mac,s->s2->mac_data,mac_size) != 0) ||
+ 				(s->s2->rlength%EVP_CIPHER_CTX_block_size(s->enc_read_ctx) != 0))
+ 				{
+ 				SSLerr(SSL_F_SSL2_READ_INTERNAL,SSL_R_BAD_MAC_DECODE);
+Index: crypto/openssl/ssl/s3_both.c
+===================================================================
+--- crypto/openssl/ssl/s3_both.c	(revision 248771)
++++ crypto/openssl/ssl/s3_both.c	(working copy)
+@@ -242,7 +242,7 @@ int ssl3_get_finished(SSL *s, int a, int b)
+ 		goto f_err;
+ 		}
+ 
+-	if (memcmp(p, s->s3->tmp.peer_finish_md, i) != 0)
++	if (CRYPTO_memcmp(p, s->s3->tmp.peer_finish_md, i) != 0)
+ 		{
+ 		al=SSL_AD_DECRYPT_ERROR;
+ 		SSLerr(SSL_F_SSL3_GET_FINISHED,SSL_R_DIGEST_CHECK_FAILED);
+Index: crypto/openssl/ssl/s3_cbc.c
+===================================================================
+--- crypto/openssl/ssl/s3_cbc.c	(revision 0)
++++ crypto/openssl/ssl/s3_cbc.c	(working copy)
+@@ -0,0 +1,762 @@
++/* ssl/s3_cbc.c */
++/* ====================================================================
++ * Copyright (c) 2012 The OpenSSL Project.  All rights reserved.
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions
++ * are met:
++ *
++ * 1. Redistributions of source code must retain the above copyright
++ *    notice, this list of conditions and the following disclaimer.
++ *
++ * 2. Redistributions in binary form must reproduce the above copyright
++ *    notice, this list of conditions and the following disclaimer in
++ *    the documentation and/or other materials provided with the
++ *    distribution.
++ *
++ * 3. All advertising materials mentioning features or use of this
++ *    software must display the following acknowledgment:
++ *    "This product includes software developed by the OpenSSL Project
++ *    for use in the OpenSSL Toolkit. (http://www.openssl.org/)"
++ *
++ * 4. The names "OpenSSL Toolkit" and "OpenSSL Project" must not be used to
++ *    endorse or promote products derived from this software without
++ *    prior written permission. For written permission, please contact
++ *    openssl-core@openssl.org.
++ *
++ * 5. Products derived from this software may not be called "OpenSSL"
++ *    nor may "OpenSSL" appear in their names without prior written
++ *    permission of the OpenSSL Project.
++ *
++ * 6. Redistributions of any form whatsoever must retain the following
++ *    acknowledgment:
++ *    "This product includes software developed by the OpenSSL Project
++ *    for use in the OpenSSL Toolkit (http://www.openssl.org/)"
++ *
++ * THIS SOFTWARE IS PROVIDED BY THE OpenSSL PROJECT ``AS IS'' AND ANY
++ * EXPRESSED OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
++ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
++ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE OpenSSL PROJECT OR
++ * ITS CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
++ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
++ * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
++ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
++ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
++ * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
++ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
++ * OF THE POSSIBILITY OF SUCH DAMAGE.
++ * ====================================================================
++ *
++ * This product includes cryptographic software written by Eric Young
++ * (eay@cryptsoft.com).  This product includes software written by Tim
++ * Hudson (tjh@cryptsoft.com).
++ *
++ */
++
++#include "ssl_locl.h"
++
++#include <openssl/md5.h>
++#include <openssl/sha.h>
++
++/* MAX_HASH_BIT_COUNT_BYTES is the maximum number of bytes in the hash's length
++ * field. (SHA-384/512 have 128-bit length.) */
++#define MAX_HASH_BIT_COUNT_BYTES 16
++
++/* MAX_HASH_BLOCK_SIZE is the maximum hash block size that we'll support.
++ * Currently SHA-384/512 has a 128-byte block size and that's the largest
++ * supported by TLS.) */
++#define MAX_HASH_BLOCK_SIZE 128
++
++/* Some utility functions are needed:
++ *
++ * These macros return the given value with the MSB copied to all the other
++ * bits. They use the fact that arithmetic shift shifts-in the sign bit.
++ * However, this is not ensured by the C standard so you may need to replace
++ * them with something else on odd CPUs. */
++#define DUPLICATE_MSB_TO_ALL(x) ( (unsigned)( (int)(x) >> (sizeof(int)*8-1) ) )
++#define DUPLICATE_MSB_TO_ALL_8(x) ((unsigned char)(DUPLICATE_MSB_TO_ALL(x)))
++
++/* constant_time_ge returns 0xff if a>=b and 0x00 otherwise. */
++static unsigned constant_time_ge(unsigned a, unsigned b)
++	{
++	a -= b;
++	return DUPLICATE_MSB_TO_ALL(~a);
++	}
++
++/* constant_time_eq_8 returns 0xff if a==b and 0x00 otherwise. */
++static unsigned char constant_time_eq_8(unsigned char a, unsigned char b)
++	{
++	unsigned c = a ^ b;
++	c--;
++	return DUPLICATE_MSB_TO_ALL_8(c);
++	}
++
++/* ssl3_cbc_remove_padding removes padding from the decrypted, SSLv3, CBC
++ * record in |rec| by updating |rec->length| in constant time.
++ *
++ * block_size: the block size of the cipher used to encrypt the record.
++ * returns:
++ *   0: (in non-constant time) if the record is publicly invalid.
++ *   1: if the padding was valid
++ *  -1: otherwise. */
++int ssl3_cbc_remove_padding(const SSL* s,
++			    SSL3_RECORD *rec,
++			    unsigned block_size,
++			    unsigned mac_size)
++	{
++	unsigned padding_length, good;
++	const unsigned overhead = 1 /* padding length byte */ + mac_size;
++
++	/* These lengths are all public so we can test them in non-constant
++	 * time. */
++	if (overhead > rec->length)
++		return 0;
++
++	padding_length = rec->data[rec->length-1];
++	good = constant_time_ge(rec->length, padding_length+overhead);
++	/* SSLv3 requires that the padding is minimal. */
++	good &= constant_time_ge(block_size, padding_length+1);
++	padding_length = good & (padding_length+1);
++	rec->length -= padding_length;
++	rec->type |= padding_length<<8;	/* kludge: pass padding length */
++	return (int)((good & 1) | (~good & -1));
++}
++
++/* tls1_cbc_remove_padding removes the CBC padding from the decrypted, TLS, CBC
++ * record in |rec| in constant time and returns 1 if the padding is valid and
++ * -1 otherwise. It also removes any explicit IV from the start of the record
++ * without leaking any timing about whether there was enough space after the
++ * padding was removed.
++ *
++ * block_size: the block size of the cipher used to encrypt the record.
++ * returns:
++ *   0: (in non-constant time) if the record is publicly invalid.
++ *   1: if the padding was valid
++ *  -1: otherwise. */
++int tls1_cbc_remove_padding(const SSL* s,
++			    SSL3_RECORD *rec,
++			    unsigned block_size,
++			    unsigned mac_size)
++	{
++	unsigned padding_length, good, to_check, i;
++	const char has_explicit_iv = s->version == DTLS1_VERSION;
++	const unsigned overhead = 1 /* padding length byte */ +
++				  mac_size +
++				  (has_explicit_iv ? block_size : 0);
++
++	/* These lengths are all public so we can test them in non-constant
++	 * time. */
++	if (overhead > rec->length)
++		return 0;
++
++	padding_length = rec->data[rec->length-1];
++
++	/* NB: if compression is in operation the first packet may not be of
++	 * even length so the padding bug check cannot be performed. This bug
++	 * workaround has been around since SSLeay so hopefully it is either
++	 * fixed now or no buggy implementation supports compression [steve]
++	 */
++	if ( (s->options&SSL_OP_TLS_BLOCK_PADDING_BUG) && !s->expand)
++		{
++		/* First packet is even in size, so check */
++		if ((memcmp(s->s3->read_sequence, "\0\0\0\0\0\0\0\0",8) == 0) &&
++		    !(padding_length & 1))
++			{
++			s->s3->flags|=TLS1_FLAGS_TLS_PADDING_BUG;
++			}
++		if ((s->s3->flags & TLS1_FLAGS_TLS_PADDING_BUG) &&
++		    padding_length > 0)
++			{
++			padding_length--;
++			}
++		}
++
++	good = constant_time_ge(rec->length, overhead+padding_length);
++	/* The padding consists of a length byte at the end of the record and
++	 * then that many bytes of padding, all with the same value as the
++	 * length byte. Thus, with the length byte included, there are i+1
++	 * bytes of padding.
++	 *
++	 * We can't check just |padding_length+1| bytes because that leaks
++	 * decrypted information. Therefore we always have to check the maximum
++	 * amount of padding possible. (Again, the length of the record is
++	 * public information so we can use it.) */
++	to_check = 255; /* maximum amount of padding. */
++	if (to_check > rec->length-1)
++		to_check = rec->length-1;
++
++	for (i = 0; i < to_check; i++)
++		{
++		unsigned char mask = constant_time_ge(padding_length, i);
++		unsigned char b = rec->data[rec->length-1-i];
++		/* The final |padding_length+1| bytes should all have the value
++		 * |padding_length|. Therefore the XOR should be zero. */
++		good &= ~(mask&(padding_length ^ b));
++		}
++
++	/* If any of the final |padding_length+1| bytes had the wrong value,
++	 * one or more of the lower eight bits of |good| will be cleared. We
++	 * AND the bottom 8 bits together and duplicate the result to all the
++	 * bits. */
++	good &= good >> 4;
++	good &= good >> 2;
++	good &= good >> 1;
++	good <<= sizeof(good)*8-1;
++	good = DUPLICATE_MSB_TO_ALL(good);
++
++	padding_length = good & (padding_length+1);
++	rec->length -= padding_length;
++	rec->type |= padding_length<<8;	/* kludge: pass padding length */
++
++	/* We can always safely skip the explicit IV. We check at the beginning
++	 * of this function that the record has at least enough space for the
++	 * IV, MAC and padding length byte. (These can be checked in
++	 * non-constant time because it's all public information.) So, if the
++	 * padding was invalid, then we didn't change |rec->length| and this is
++	 * safe. If the padding was valid then we know that we have at least
++	 * overhead+padding_length bytes of space and so this is still safe
++	 * because overhead accounts for the explicit IV. */
++	if (has_explicit_iv)
++		{
++		rec->data += block_size;
++		rec->input += block_size;
++		rec->length -= block_size;
++		}
++
++	return (int)((good & 1) | (~good & -1));
++	}
++
++#if defined(_M_AMD64) || defined(__x86_64__)
++#define CBC_MAC_ROTATE_IN_PLACE
++#endif
++
++/* ssl3_cbc_copy_mac copies |md_size| bytes from the end of |rec| to |out| in
++ * constant time (independent of the concrete value of rec->length, which may
++ * vary within a 256-byte window).
++ *
++ * ssl3_cbc_remove_padding or tls1_cbc_remove_padding must be called prior to
++ * this function.
++ *
++ * On entry:
++ *   rec->orig_len >= md_size
++ *   md_size <= EVP_MAX_MD_SIZE
++ *
++ * If CBC_MAC_ROTATE_IN_PLACE is defined then the rotation is performed with
++ * variable accesses in a 64-byte-aligned buffer. Assuming that this fits into
++ * a single cache-line, then the variable memory accesses don't actually affect
++ * the timing. This has been tested to be true on Intel amd64 chips.
++ */
++void ssl3_cbc_copy_mac(unsigned char* out,
++		       const SSL3_RECORD *rec,
++		       unsigned md_size,unsigned orig_len)
++	{
++#if defined(CBC_MAC_ROTATE_IN_PLACE)
++	unsigned char rotated_mac_buf[EVP_MAX_MD_SIZE*2];
++	unsigned char *rotated_mac;
++#else
++	unsigned char rotated_mac[EVP_MAX_MD_SIZE];
++#endif
++
++	/* mac_end is the index of |rec->data| just after the end of the MAC. */
++	unsigned mac_end = rec->length;
++	unsigned mac_start = mac_end - md_size;
++	/* scan_start contains the number of bytes that we can ignore because
++	 * the MAC's position can only vary by 255 bytes. */
++	unsigned scan_start = 0;
++	unsigned i, j;
++	unsigned div_spoiler;
++	unsigned rotate_offset;
++
++	OPENSSL_assert(orig_len >= md_size);
++	OPENSSL_assert(md_size <= EVP_MAX_MD_SIZE);
++
++#if defined(CBC_MAC_ROTATE_IN_PLACE)
++	rotated_mac = (unsigned char*) (((intptr_t)(rotated_mac_buf + 64)) & ~63);
++#endif
++
++	/* This information is public so it's safe to branch based on it. */
++	if (orig_len > md_size + 255 + 1)
++		scan_start = orig_len - (md_size + 255 + 1);
++	/* div_spoiler contains a multiple of md_size that is used to cause the
++	 * modulo operation to be constant time. Without this, the time varies
++	 * based on the amount of padding when running on Intel chips at least.
++	 *
++	 * The aim of right-shifting md_size is so that the compiler doesn't
++	 * figure out that it can remove div_spoiler as that would require it
++	 * to prove that md_size is always even, which I hope is beyond it. */
++	div_spoiler = md_size >> 1;
++	div_spoiler <<= (sizeof(div_spoiler)-1)*8;
++	rotate_offset = (div_spoiler + mac_start - scan_start) % md_size;
++
++	memset(rotated_mac, 0, md_size);
++	for (i = scan_start; i < orig_len;)
++		{
++		for (j = 0; j < md_size && i < orig_len; i++, j++)
++			{
++			unsigned char mac_started = constant_time_ge(i, mac_start);
++			unsigned char mac_ended = constant_time_ge(i, mac_end);
++			unsigned char b = 0;
++			b = rec->data[i];
++			rotated_mac[j] |= b & mac_started & ~mac_ended;
++			}
++		}
++
++	/* Now rotate the MAC */
++#if defined(CBC_MAC_ROTATE_IN_PLACE)
++	j = 0;
++	for (i = 0; i < md_size; i++)
++		{
++		unsigned char offset = (div_spoiler + rotate_offset + i) % md_size;
++		out[j++] = rotated_mac[offset];
++		}
++#else
++	memset(out, 0, md_size);
++	for (i = 0; i < md_size; i++)
++		{
++		unsigned char offset = (div_spoiler + md_size - rotate_offset + i) % md_size;
++		for (j = 0; j < md_size; j++)
++			out[j] |= rotated_mac[i] & constant_time_eq_8(j, offset);
++		}
++#endif
++	}
++
++/* These functions serialize the state of a hash and thus perform the standard
++ * "final" operation without adding the padding and length that such a function
++ * typically does. */
++static void tls1_md5_final_raw(void* ctx, unsigned char *md_out)
++	{
++	MD5_CTX *md5 = ctx;
++	l2n(md5->A, md_out);
++	l2n(md5->B, md_out);
++	l2n(md5->C, md_out);
++	l2n(md5->D, md_out);
++	}
++
++static void tls1_sha1_final_raw(void* ctx, unsigned char *md_out)
++	{
++	SHA_CTX *sha1 = ctx;
++	l2n(sha1->h0, md_out);
++	l2n(sha1->h1, md_out);
++	l2n(sha1->h2, md_out);
++	l2n(sha1->h3, md_out);
++	l2n(sha1->h4, md_out);
++	}
++#define LARGEST_DIGEST_CTX SHA_CTX
++
++#ifndef OPENSSL_NO_SHA256
++static void tls1_sha256_final_raw(void* ctx, unsigned char *md_out)
++	{
++	SHA256_CTX *sha256 = ctx;
++	unsigned i;
++
++	for (i = 0; i < 8; i++)
++		{
++		l2n(sha256->h[i], md_out);
++		}
++	}
++#undef  LARGEST_DIGEST_CTX
++#define LARGEST_DIGEST_CTX SHA256_CTX
++#endif
++
++#ifndef OPENSSL_NO_SHA512
++static void tls1_sha512_final_raw(void* ctx, unsigned char *md_out)
++	{
++	SHA512_CTX *sha512 = ctx;
++	unsigned i;
++
++	for (i = 0; i < 8; i++)
++		{
++		l2n8(sha512->h[i], md_out);
++		}
++	}
++#undef  LARGEST_DIGEST_CTX
++#define LARGEST_DIGEST_CTX SHA512_CTX
++#endif
++
++/* ssl3_cbc_record_digest_supported returns 1 iff |ctx| uses a hash function
++ * which ssl3_cbc_digest_record supports. */
++char ssl3_cbc_record_digest_supported(const EVP_MD *digest)
++	{
++#ifdef OPENSSL_FIPS
++	if (FIPS_mode())
++		return 0;
++#endif
++	switch (EVP_MD_type(digest))
++		{
++		case NID_md5:
++		case NID_sha1:
++#ifndef OPENSSL_NO_SHA256
++		case NID_sha224:
++		case NID_sha256:
++#endif
++#ifndef OPENSSL_NO_SHA512
++		case NID_sha384:
++		case NID_sha512:
++#endif
++			return 1;
++		default:
++			return 0;
++		}
++	}
++
++/* ssl3_cbc_digest_record computes the MAC of a decrypted, padded SSLv3/TLS
++ * record.
++ *
++ *   ctx: the EVP_MD_CTX from which we take the hash function.
++ *     ssl3_cbc_record_digest_supported must return true for this EVP_MD_CTX.
++ *   md_out: the digest output. At most EVP_MAX_MD_SIZE bytes will be written.
++ *   md_out_size: if non-NULL, the number of output bytes is written here.
++ *   header: the 13-byte, TLS record header.
++ *   data: the record data itself, less any preceeding explicit IV.
++ *   data_plus_mac_size: the secret, reported length of the data and MAC
++ *     once the padding has been removed.
++ *   data_plus_mac_plus_padding_size: the public length of the whole
++ *     record, including padding.
++ *   is_sslv3: non-zero if we are to use SSLv3. Otherwise, TLS.
++ *
++ * On entry: by virtue of having been through one of the remove_padding
++ * functions, above, we know that data_plus_mac_size is large enough to contain
++ * a padding byte and MAC. (If the padding was invalid, it might contain the
++ * padding too. ) */
++void ssl3_cbc_digest_record(
++	const EVP_MD *digest,
++	unsigned char* md_out,
++	size_t* md_out_size,
++	const unsigned char header[13],
++	const unsigned char *data,
++	size_t data_plus_mac_size,
++	size_t data_plus_mac_plus_padding_size,
++	const unsigned char *mac_secret,
++	unsigned mac_secret_length,
++	char is_sslv3)
++	{
++	union {	double align;
++		unsigned char c[sizeof(LARGEST_DIGEST_CTX)]; } md_state;
++	void (*md_final_raw)(void *ctx, unsigned char *md_out);
++	void (*md_transform)(void *ctx, const unsigned char *block);
++	unsigned md_size, md_block_size = 64;
++	unsigned sslv3_pad_length = 40, header_length, variance_blocks,
++		 len, max_mac_bytes, num_blocks,
++		 num_starting_blocks, k, mac_end_offset, c, index_a, index_b;
++	unsigned int bits;	/* at most 18 bits */
++	unsigned char length_bytes[MAX_HASH_BIT_COUNT_BYTES];
++	/* hmac_pad is the masked HMAC key. */
++	unsigned char hmac_pad[MAX_HASH_BLOCK_SIZE];
++	unsigned char first_block[MAX_HASH_BLOCK_SIZE];
++	unsigned char mac_out[EVP_MAX_MD_SIZE];
++	unsigned i, j, md_out_size_u;
++	EVP_MD_CTX md_ctx;
++	/* mdLengthSize is the number of bytes in the length field that terminates
++	* the hash. */
++	unsigned md_length_size = 8;
++
++	/* This is a, hopefully redundant, check that allows us to forget about
++	 * many possible overflows later in this function. */
++	OPENSSL_assert(data_plus_mac_plus_padding_size < 1024*1024);
++
++	switch (EVP_MD_type(digest))
++		{
++		case NID_md5:
++			MD5_Init((MD5_CTX*)md_state.c);
++			md_final_raw = tls1_md5_final_raw;
++			md_transform = (void(*)(void *ctx, const unsigned char *block)) MD5_Transform;
++			md_size = 16;
++			sslv3_pad_length = 48;
++			break;
++		case NID_sha1:
++			SHA1_Init((SHA_CTX*)md_state.c);
++			md_final_raw = tls1_sha1_final_raw;
++			md_transform = (void(*)(void *ctx, const unsigned char *block)) SHA1_Transform;
++			md_size = 20;
++			break;
++#ifndef OPENSSL_NO_SHA256
++		case NID_sha224:
++			SHA224_Init((SHA256_CTX*)md_state.c);
++			md_final_raw = tls1_sha256_final_raw;
++			md_transform = (void(*)(void *ctx, const unsigned char *block)) SHA256_Transform;
++			md_size = 224/8;
++			break;
++		case NID_sha256:
++			SHA256_Init((SHA256_CTX*)md_state.c);
++			md_final_raw = tls1_sha256_final_raw;
++			md_transform = (void(*)(void *ctx, const unsigned char *block)) SHA256_Transform;
++			md_size = 32;
++			break;
++#endif
++#ifndef OPENSSL_NO_SHA512
++		case NID_sha384:
++			SHA384_Init((SHA512_CTX*)md_state.c);
++			md_final_raw = tls1_sha512_final_raw;
++			md_transform = (void(*)(void *ctx, const unsigned char *block)) SHA512_Transform;
++			md_size = 384/8;
++			md_block_size = 128;
++			md_length_size = 16;
++			break;
++		case NID_sha512:
++			SHA512_Init((SHA512_CTX*)md_state.c);
++			md_final_raw = tls1_sha512_final_raw;
++			md_transform = (void(*)(void *ctx, const unsigned char *block)) SHA512_Transform;
++			md_size = 64;
++			md_block_size = 128;
++			md_length_size = 16;
++			break;
++#endif
++		default:
++			/* ssl3_cbc_record_digest_supported should have been
++			 * called first to check that the hash function is
++			 * supported. */
++			OPENSSL_assert(0);
++			if (md_out_size)
++				*md_out_size = -1;
++			return;
++		}
++
++	OPENSSL_assert(md_length_size <= MAX_HASH_BIT_COUNT_BYTES);
++	OPENSSL_assert(md_block_size <= MAX_HASH_BLOCK_SIZE);
++	OPENSSL_assert(md_size <= EVP_MAX_MD_SIZE);
++
++	header_length = 13;
++	if (is_sslv3)
++		{
++		header_length =
++			mac_secret_length +
++			sslv3_pad_length +
++			8 /* sequence number */ +
++			1 /* record type */ +
++			2 /* record length */;
++		}
++
++	/* variance_blocks is the number of blocks of the hash that we have to
++	 * calculate in constant time because they could be altered by the
++	 * padding value.
++	 *
++	 * In SSLv3, the padding must be minimal so the end of the plaintext
++	 * varies by, at most, 15+20 = 35 bytes. (We conservatively assume that
++	 * the MAC size varies from 0..20 bytes.) In case the 9 bytes of hash
++	 * termination (0x80 + 64-bit length) don't fit in the final block, we
++	 * say that the final two blocks can vary based on the padding.
++	 *
++	 * TLSv1 has MACs up to 48 bytes long (SHA-384) and the padding is not
++	 * required to be minimal. Therefore we say that the final six blocks
++	 * can vary based on the padding.
++	 *
++	 * Later in the function, if the message is short and there obviously
++	 * cannot be this many blocks then variance_blocks can be reduced. */
++	variance_blocks = is_sslv3 ? 2 : 6;
++	/* From now on we're dealing with the MAC, which conceptually has 13
++	 * bytes of `header' before the start of the data (TLS) or 71/75 bytes
++	 * (SSLv3) */
++	len = data_plus_mac_plus_padding_size + header_length;
++	/* max_mac_bytes contains the maximum bytes of bytes in the MAC, including
++	* |header|, assuming that there's no padding. */
++	max_mac_bytes = len - md_size - 1;
++	/* num_blocks is the maximum number of hash blocks. */
++	num_blocks = (max_mac_bytes + 1 + md_length_size + md_block_size - 1) / md_block_size;
++	/* In order to calculate the MAC in constant time we have to handle
++	 * the final blocks specially because the padding value could cause the
++	 * end to appear somewhere in the final |variance_blocks| blocks and we
++	 * can't leak where. However, |num_starting_blocks| worth of data can
++	 * be hashed right away because no padding value can affect whether
++	 * they are plaintext. */
++	num_starting_blocks = 0;
++	/* k is the starting byte offset into the conceptual header||data where
++	 * we start processing. */
++	k = 0;
++	/* mac_end_offset is the index just past the end of the data to be
++	 * MACed. */
++	mac_end_offset = data_plus_mac_size + header_length - md_size;
++	/* c is the index of the 0x80 byte in the final hash block that
++	 * contains application data. */
++	c = mac_end_offset % md_block_size;
++	/* index_a is the hash block number that contains the 0x80 terminating
++	 * value. */
++	index_a = mac_end_offset / md_block_size;
++	/* index_b is the hash block number that contains the 64-bit hash
++	 * length, in bits. */
++	index_b = (mac_end_offset + md_length_size) / md_block_size;
++	/* bits is the hash-length in bits. It includes the additional hash
++	 * block for the masked HMAC key, or whole of |header| in the case of
++	 * SSLv3. */
++
++	/* For SSLv3, if we're going to have any starting blocks then we need
++	 * at least two because the header is larger than a single block. */
++	if (num_blocks > variance_blocks + (is_sslv3 ? 1 : 0))
++		{
++		num_starting_blocks = num_blocks - variance_blocks;
++		k = md_block_size*num_starting_blocks;
++		}
++
++	bits = 8*mac_end_offset;
++	if (!is_sslv3)
++		{
++		/* Compute the initial HMAC block. For SSLv3, the padding and
++		 * secret bytes are included in |header| because they take more
++		 * than a single block. */
++		bits += 8*md_block_size;
++		memset(hmac_pad, 0, md_block_size);
++		OPENSSL_assert(mac_secret_length <= sizeof(hmac_pad));
++		memcpy(hmac_pad, mac_secret, mac_secret_length);
++		for (i = 0; i < md_block_size; i++)
++			hmac_pad[i] ^= 0x36;
++
++		md_transform(md_state.c, hmac_pad);
++		}
++
++	memset(length_bytes,0,md_length_size-4);
++	length_bytes[md_length_size-4] = (unsigned char)(bits>>24);
++	length_bytes[md_length_size-3] = (unsigned char)(bits>>16);
++	length_bytes[md_length_size-2] = (unsigned char)(bits>>8);
++	length_bytes[md_length_size-1] = (unsigned char)bits;
++
++	if (k > 0)
++		{
++		if (is_sslv3)
++			{
++			/* The SSLv3 header is larger than a single block.
++			 * overhang is the number of bytes beyond a single
++			 * block that the header consumes: either 7 bytes
++			 * (SHA1) or 11 bytes (MD5). */
++			unsigned overhang = header_length-md_block_size;
++			md_transform(md_state.c, header);
++			memcpy(first_block, header + md_block_size, overhang);
++			memcpy(first_block + overhang, data, md_block_size-overhang);
++			md_transform(md_state.c, first_block);
++			for (i = 1; i < k/md_block_size - 1; i++)
++				md_transform(md_state.c, data + md_block_size*i - overhang);
++			}
++		else
++			{
++			/* k is a multiple of md_block_size. */
++			memcpy(first_block, header, 13);
++			memcpy(first_block+13, data, md_block_size-13);
++			md_transform(md_state.c, first_block);
++			for (i = 1; i < k/md_block_size; i++)
++				md_transform(md_state.c, data + md_block_size*i - 13);
++			}
++		}
++
++	memset(mac_out, 0, sizeof(mac_out));
++
++	/* We now process the final hash blocks. For each block, we construct
++	 * it in constant time. If the |i==index_a| then we'll include the 0x80
++	 * bytes and zero pad etc. For each block we selectively copy it, in
++	 * constant time, to |mac_out|. */
++	for (i = num_starting_blocks; i <= num_starting_blocks+variance_blocks; i++)
++		{
++		unsigned char block[MAX_HASH_BLOCK_SIZE];
++		unsigned char is_block_a = constant_time_eq_8(i, index_a);
++		unsigned char is_block_b = constant_time_eq_8(i, index_b);
++		for (j = 0; j < md_block_size; j++)
++			{
++			unsigned char b = 0, is_past_c, is_past_cp1;
++			if (k < header_length)
++				b = header[k];
++			else if (k < data_plus_mac_plus_padding_size + header_length)
++				b = data[k-header_length];
++			k++;
++
++			is_past_c = is_block_a & constant_time_ge(j, c);
++			is_past_cp1 = is_block_a & constant_time_ge(j, c+1);
++			/* If this is the block containing the end of the
++			 * application data, and we are at the offset for the
++			 * 0x80 value, then overwrite b with 0x80. */
++			b = (b&~is_past_c) | (0x80&is_past_c);
++			/* If this the the block containing the end of the
++			 * application data and we're past the 0x80 value then
++			 * just write zero. */
++			b = b&~is_past_cp1;
++			/* If this is index_b (the final block), but not
++			 * index_a (the end of the data), then the 64-bit
++			 * length didn't fit into index_a and we're having to
++			 * add an extra block of zeros. */
++			b &= ~is_block_b | is_block_a;
++
++			/* The final bytes of one of the blocks contains the
++			 * length. */
++			if (j >= md_block_size - md_length_size)
++				{
++				/* If this is index_b, write a length byte. */
++				b = (b&~is_block_b) | (is_block_b&length_bytes[j-(md_block_size-md_length_size)]);
++				}
++			block[j] = b;
++			}
++
++		md_transform(md_state.c, block);
++		md_final_raw(md_state.c, block);
++		/* If this is index_b, copy the hash value to |mac_out|. */
++		for (j = 0; j < md_size; j++)
++			mac_out[j] |= block[j]&is_block_b;
++		}
++
++	EVP_MD_CTX_init(&md_ctx);
++	EVP_DigestInit_ex(&md_ctx, digest, NULL /* engine */);
++	if (is_sslv3)
++		{
++		/* We repurpose |hmac_pad| to contain the SSLv3 pad2 block. */
++		memset(hmac_pad, 0x5c, sslv3_pad_length);
++
++		EVP_DigestUpdate(&md_ctx, mac_secret, mac_secret_length);
++		EVP_DigestUpdate(&md_ctx, hmac_pad, sslv3_pad_length);
++		EVP_DigestUpdate(&md_ctx, mac_out, md_size);
++		}
++	else
++		{
++		/* Complete the HMAC in the standard manner. */
++		for (i = 0; i < md_block_size; i++)
++			hmac_pad[i] ^= 0x6a;
++
++		EVP_DigestUpdate(&md_ctx, hmac_pad, md_block_size);
++		EVP_DigestUpdate(&md_ctx, mac_out, md_size);
++		}
++	EVP_DigestFinal(&md_ctx, md_out, &md_out_size_u);
++	if (md_out_size)
++		*md_out_size = md_out_size_u;
++	EVP_MD_CTX_cleanup(&md_ctx);
++	}
++
++#ifdef OPENSSL_FIPS
++
++/* Due to the need to use EVP in FIPS mode we can't reimplement digests but
++ * we can ensure the number of blocks processed is equal for all cases
++ * by digesting additional data.
++ */
++
++void tls_fips_digest_extra(
++	const EVP_CIPHER_CTX *cipher_ctx, const EVP_MD *hash, HMAC_CTX *hctx,
++	const unsigned char *data, size_t data_len, size_t orig_len)
++	{
++	size_t block_size, digest_pad, blocks_data, blocks_orig;
++	if (EVP_CIPHER_CTX_mode(cipher_ctx) != EVP_CIPH_CBC_MODE)
++		return;
++	block_size = EVP_MD_block_size(hash);
++	/* We are in FIPS mode if we get this far so we know we have only SHA*
++	 * digests and TLS to deal with.
++	 * Minimum digest padding length is 17 for SHA384/SHA512 and 9
++	 * otherwise.
++	 * Additional header is 13 bytes. To get the number of digest blocks
++	 * processed round up the amount of data plus padding to the nearest
++	 * block length. Block length is 128 for SHA384/SHA512 and 64 otherwise.
++	 * So we have:
++	 * blocks = (payload_len + digest_pad + 13 + block_size - 1)/block_size
++	 * equivalently:
++	 * blocks = (payload_len + digest_pad + 12)/block_size + 1
++	 * HMAC adds a constant overhead.
++	 * We're ultimately only interested in differences so this becomes
++	 * blocks = (payload_len + 29)/128
++	 * for SHA384/SHA512 and
++	 * blocks = (payload_len + 21)/64
++	 * otherwise.
++	 */
++	digest_pad = block_size == 64 ? 21 : 29;
++	blocks_orig = (orig_len + digest_pad)/block_size;
++	blocks_data = (data_len + digest_pad)/block_size;
++	/* MAC enough blocks to make up the difference between the original
++	 * and actual lengths plus one extra block to ensure this is never a
++	 * no op. The "data" pointer should always have enough space to
++	 * perform this operation as it is large enough for a maximum
++	 * length TLS buffer. 
++	 */
++	HMAC_Update(hctx, data,
++				(blocks_orig - blocks_data + 1) * block_size);
++	}
++#endif
+Index: crypto/openssl/ssl/s3_clnt.c
+===================================================================
+--- crypto/openssl/ssl/s3_clnt.c	(revision 248771)
++++ crypto/openssl/ssl/s3_clnt.c	(working copy)
+@@ -262,7 +262,16 @@ int ssl3_connect(SSL *s)
+ 			ret=ssl3_get_server_hello(s);
+ 			if (ret <= 0) goto end;
+ 			if (s->hit)
++				{
+ 				s->state=SSL3_ST_CR_FINISHED_A;
++#ifndef OPENSSL_NO_TLSEXT
++				if (s->tlsext_ticket_expected)
++					{
++					/* receive renewed session ticket */
++					s->state=SSL3_ST_CR_SESSION_TICKET_A;
++					}
++#endif
++				}
+ 			else
+ 				s->state=SSL3_ST_CR_CERT_A;
+ 			s->init_num=0;
+Index: crypto/openssl/ssl/s3_enc.c
+===================================================================
+--- crypto/openssl/ssl/s3_enc.c	(revision 248771)
++++ crypto/openssl/ssl/s3_enc.c	(working copy)
+@@ -433,12 +433,21 @@ void ssl3_cleanup_key_block(SSL *s)
+ 	s->s3->tmp.key_block_length=0;
+ 	}
+ 
++/* ssl3_enc encrypts/decrypts the record in |s->wrec| / |s->rrec|, respectively.
++ *
++ * Returns:
++ *   0: (in non-constant time) if the record is publically invalid (i.e. too
++ *       short etc).
++ *   1: if the record's padding is valid / the encryption was successful.
++ *   -1: if the record's padding is invalid or, if sending, an internal error
++ *       occured.
++ */
+ int ssl3_enc(SSL *s, int send)
+ 	{
+ 	SSL3_RECORD *rec;
+ 	EVP_CIPHER_CTX *ds;
+ 	unsigned long l;
+-	int bs,i;
++	int bs,i,mac_size=0;
+ 	const EVP_CIPHER *enc;
+ 
+ 	if (send)
+@@ -489,32 +498,17 @@ int ssl3_enc(SSL *s, int send)
+ 		if (!send)
+ 			{
+ 			if (l == 0 || l%bs != 0)
+-				{
+-				SSLerr(SSL_F_SSL3_ENC,SSL_R_BLOCK_CIPHER_PAD_IS_WRONG);
+-				ssl3_send_alert(s,SSL3_AL_FATAL,SSL_AD_DECRYPTION_FAILED);
+ 				return 0;
+-				}
+ 			/* otherwise, rec->length >= bs */
+ 			}
+ 		
+ 		EVP_Cipher(ds,rec->data,rec->input,l);
+ 
++		if (s->read_hash != NULL)
++			mac_size = EVP_MD_size(s->read_hash);
++
+ 		if ((bs != 1) && !send)
+-			{
+-			i=rec->data[l-1]+1;
+-			/* SSL 3.0 bounds the number of padding bytes by the block size;
+-			 * padding bytes (except the last one) are arbitrary */
+-			if (i > bs)
+-				{
+-				/* Incorrect padding. SSLerr() and ssl3_alert are done
+-				 * by caller: we don't want to reveal whether this is
+-				 * a decryption error or a MAC verification failure
+-				 * (see http://www.openssl.org/~bodo/tls-cbc.txt) */
+-				return -1;
+-				}
+-			/* now i <= bs <= rec->length */
+-			rec->length-=i;
+-			}
++			return ssl3_cbc_remove_padding(s, rec, bs, mac_size);
+ 		}
+ 	return(1);
+ 	}
+@@ -591,7 +585,7 @@ int ssl3_mac(SSL *ssl, unsigned char *md, int send
+ 	EVP_MD_CTX md_ctx;
+ 	const EVP_MD *hash;
+ 	unsigned char *p,rec_char;
+-	unsigned int md_size;
++	size_t md_size, orig_len;
+ 	int npad;
+ 
+ 	if (send)
+@@ -612,29 +606,73 @@ int ssl3_mac(SSL *ssl, unsigned char *md, int send
+ 	md_size=EVP_MD_size(hash);
+ 	npad=(48/md_size)*md_size;
+ 
+-	/* Chop the digest off the end :-) */
+-	EVP_MD_CTX_init(&md_ctx);
++	/* kludge: ssl3_cbc_remove_padding passes padding length in rec->type */
++	orig_len = rec->length+md_size+((unsigned int)rec->type>>8);
++	rec->type &= 0xff;
+ 
+-	EVP_DigestInit_ex(  &md_ctx,hash, NULL);
+-	EVP_DigestUpdate(&md_ctx,mac_sec,md_size);
+-	EVP_DigestUpdate(&md_ctx,ssl3_pad_1,npad);
+-	EVP_DigestUpdate(&md_ctx,seq,8);
+-	rec_char=rec->type;
+-	EVP_DigestUpdate(&md_ctx,&rec_char,1);
+-	p=md;
+-	s2n(rec->length,p);
+-	EVP_DigestUpdate(&md_ctx,md,2);
+-	EVP_DigestUpdate(&md_ctx,rec->input,rec->length);
+-	EVP_DigestFinal_ex( &md_ctx,md,NULL);
++	if (!send &&
++	    EVP_CIPHER_CTX_mode(ssl->enc_read_ctx) == EVP_CIPH_CBC_MODE &&
++	    ssl3_cbc_record_digest_supported(hash))
++		{
++		/* This is a CBC-encrypted record. We must avoid leaking any
++		 * timing-side channel information about how many blocks of
++		 * data we are hashing because that gives an attacker a
++		 * timing-oracle. */
+ 
+-	EVP_DigestInit_ex(  &md_ctx,hash, NULL);
+-	EVP_DigestUpdate(&md_ctx,mac_sec,md_size);
+-	EVP_DigestUpdate(&md_ctx,ssl3_pad_2,npad);
+-	EVP_DigestUpdate(&md_ctx,md,md_size);
+-	EVP_DigestFinal_ex( &md_ctx,md,&md_size);
++		/* npad is, at most, 48 bytes and that's with MD5:
++		 *   16 + 48 + 8 (sequence bytes) + 1 + 2 = 75.
++		 *
++		 * With SHA-1 (the largest hash speced for SSLv3) the hash size
++		 * goes up 4, but npad goes down by 8, resulting in a smaller
++		 * total size. */
++		unsigned char header[75];
++		unsigned j = 0;
++		memcpy(header+j, mac_sec, md_size);
++		j += md_size;
++		memcpy(header+j, ssl3_pad_1, npad);
++		j += npad;
++		memcpy(header+j, seq, 8);
++		j += 8;
++		header[j++] = rec->type;
++		header[j++] = rec->length >> 8;
++		header[j++] = rec->length & 0xff;
+ 
+-	EVP_MD_CTX_cleanup(&md_ctx);
++		ssl3_cbc_digest_record(
++			hash,
++			md, &md_size,
++			header, rec->input,
++			rec->length + md_size, orig_len,
++			mac_sec, md_size,
++			1 /* is SSLv3 */);
++		}
++	else
++		{
++		unsigned int md_size_u;
++		/* Chop the digest off the end :-) */
++		EVP_MD_CTX_init(&md_ctx);
+ 
++		EVP_DigestInit_ex( &md_ctx,hash, NULL);
++		EVP_DigestUpdate(&md_ctx,mac_sec,md_size);
++		EVP_DigestUpdate(&md_ctx,ssl3_pad_1,npad);
++		EVP_DigestUpdate(&md_ctx,seq,8);
++		rec_char=rec->type;
++		EVP_DigestUpdate(&md_ctx,&rec_char,1);
++		p=md;
++		s2n(rec->length,p);
++		EVP_DigestUpdate(&md_ctx,md,2);
++		EVP_DigestUpdate(&md_ctx,rec->input,rec->length);
++		EVP_DigestFinal_ex( &md_ctx,md,NULL);
++
++		EVP_DigestInit_ex( &md_ctx,hash, NULL);
++		EVP_DigestUpdate(&md_ctx,mac_sec,md_size);
++		EVP_DigestUpdate(&md_ctx,ssl3_pad_2,npad);
++		EVP_DigestUpdate(&md_ctx,md,md_size);
++		EVP_DigestFinal_ex( &md_ctx,md,&md_size_u);
++		md_size = md_size_u;
++
++		EVP_MD_CTX_cleanup(&md_ctx);
++	}
++
+ 	ssl3_record_sequence_update(seq);
+ 	return(md_size);
+ 	}
+Index: crypto/openssl/ssl/s3_pkt.c
+===================================================================
+--- crypto/openssl/ssl/s3_pkt.c	(revision 248771)
++++ crypto/openssl/ssl/s3_pkt.c	(working copy)
+@@ -246,11 +246,8 @@ static int ssl3_get_record(SSL *s)
+ 	unsigned char *p;
+ 	unsigned char md[EVP_MAX_MD_SIZE];
+ 	short version;
+-	unsigned int mac_size;
+-	int clear=0;
++	unsigned mac_size, orig_len;
+ 	size_t extra;
+-	int decryption_failed_or_bad_record_mac = 0;
+-	unsigned char *mac = NULL;
+ 
+ 	rr= &(s->s3->rrec);
+ 	sess=s->session;
+@@ -354,19 +351,18 @@ again:
+ 
+ 	/* decrypt in place in 'rr->input' */
+ 	rr->data=rr->input;
++	orig_len=rr->length;
+ 
+ 	enc_err = s->method->ssl3_enc->enc(s,0);
+-	if (enc_err <= 0)
++	/* enc_err is:
++	 *    0: (in non-constant time) if the record is publically invalid.
++	 *    1: if the padding is valid
++	 *    -1: if the padding is invalid */
++	if (enc_err == 0)
+ 		{
+-		if (enc_err == 0)
+-			/* SSLerr() and ssl3_send_alert() have been called */
+-			goto err;
+-
+-		/* Otherwise enc_err == -1, which indicates bad padding
+-		 * (rec->length has not been changed in this case).
+-		 * To minimize information leaked via timing, we will perform
+-		 * the MAC computation anyway. */
+-		decryption_failed_or_bad_record_mac = 1;
++		al=SSL_AD_DECRYPTION_FAILED;
++		SSLerr(SSL_F_SSL3_GET_RECORD,SSL_R_BLOCK_CIPHER_PAD_IS_WRONG);
++		goto f_err;
+ 		}
+ 
+ #ifdef TLS_DEBUG
+@@ -376,51 +372,59 @@ printf("\n");
+ #endif
+ 
+ 	/* r->length is now the compressed data plus mac */
+-	if (	(sess == NULL) ||
+-		(s->enc_read_ctx == NULL) ||
+-		(s->read_hash == NULL))
+-		clear=1;
+-
+-	if (!clear)
++	if ((sess != NULL) &&
++	    (s->enc_read_ctx != NULL) &&
++	    (s->read_hash != NULL))
+ 		{
++		/* s->read_hash != NULL => mac_size != -1 */
++		unsigned char *mac = NULL;
++		unsigned char mac_tmp[EVP_MAX_MD_SIZE];
+ 		mac_size=EVP_MD_size(s->read_hash);
++		OPENSSL_assert(mac_size <= EVP_MAX_MD_SIZE);
+ 
+-		if (rr->length > SSL3_RT_MAX_COMPRESSED_LENGTH+extra+mac_size)
++		/* orig_len is the length of the record before any padding was
++		 * removed. This is public information, as is the MAC in use,
++		 * therefore we can safely process the record in a different
++		 * amount of time if it's too short to possibly contain a MAC.
++		 */
++		if (orig_len < mac_size ||
++		    /* CBC records must have a padding length byte too. */
++		    (EVP_CIPHER_CTX_mode(s->enc_read_ctx) == EVP_CIPH_CBC_MODE &&
++		     orig_len < mac_size+1))
+ 			{
+-#if 0 /* OK only for stream ciphers (then rr->length is visible from ciphertext anyway) */
+-			al=SSL_AD_RECORD_OVERFLOW;
+-			SSLerr(SSL_F_SSL3_GET_RECORD,SSL_R_PRE_MAC_LENGTH_TOO_LONG);
++			al=SSL_AD_DECODE_ERROR;
++			SSLerr(SSL_F_SSL3_GET_RECORD,SSL_R_LENGTH_TOO_SHORT);
+ 			goto f_err;
+-#else
+-			decryption_failed_or_bad_record_mac = 1;
+-#endif			
+ 			}
+-		/* check the MAC for rr->input (it's in mac_size bytes at the tail) */
+-		if (rr->length >= mac_size)
++
++		if (EVP_CIPHER_CTX_mode(s->enc_read_ctx) == EVP_CIPH_CBC_MODE)
+ 			{
++			/* We update the length so that the TLS header bytes
++			 * can be constructed correctly but we need to extract
++			 * the MAC in constant time from within the record,
++			 * without leaking the contents of the padding bytes.
++			 * */
++			mac = mac_tmp;
++			ssl3_cbc_copy_mac(mac_tmp, rr, mac_size, orig_len);
+ 			rr->length -= mac_size;
+-			mac = &rr->data[rr->length];
+ 			}
+ 		else
+ 			{
+-			/* record (minus padding) is too short to contain a MAC */
+-#if 0 /* OK only for stream ciphers */
+-			al=SSL_AD_DECODE_ERROR;
+-			SSLerr(SSL_F_SSL3_GET_RECORD,SSL_R_LENGTH_TOO_SHORT);
+-			goto f_err;
+-#else
+-			decryption_failed_or_bad_record_mac = 1;
+-			rr->length = 0;
+-#endif
++			/* In this case there's no padding, so |orig_len|
++			 * equals |rec->length| and we checked that there's
++			 * enough bytes for |mac_size| above. */
++			rr->length -= mac_size;
++			mac = &rr->data[rr->length];
+ 			}
+-		i=s->method->ssl3_enc->mac(s,md,0);
+-		if (mac == NULL || memcmp(md, mac, mac_size) != 0)
+-			{
+-			decryption_failed_or_bad_record_mac = 1;
+-			}
++
++		i=s->method->ssl3_enc->mac(s,md,0 /* not send */);
++		if (i < 0 || mac == NULL || CRYPTO_memcmp(md, mac, (size_t)mac_size) != 0)
++			enc_err = -1;
++		if (rr->length > SSL3_RT_MAX_COMPRESSED_LENGTH+extra+mac_size)
++			enc_err = -1;
+ 		}
+ 
+-	if (decryption_failed_or_bad_record_mac)
++	if (enc_err < 0)
+ 		{
+ 		/* A separate 'decryption_failed' alert was introduced with TLS 1.0,
+ 		 * SSL 3.0 only has 'bad_record_mac'.  But unless a decryption
+Index: crypto/openssl/ssl/s3_srvr.c
+===================================================================
+--- crypto/openssl/ssl/s3_srvr.c	(revision 248771)
++++ crypto/openssl/ssl/s3_srvr.c	(working copy)
+@@ -1005,7 +1005,7 @@ int ssl3_get_client_hello(SSL *s)
+ 			goto f_err;
+ 			}
+ 		}
+-		if (ssl_check_clienthello_tlsext(s) <= 0) {
++		if (ssl_check_clienthello_tlsext_early(s) <= 0) {
+ 			SSLerr(SSL_F_SSL3_GET_CLIENT_HELLO,SSL_R_CLIENTHELLO_TLSEXT);
+ 			goto err;
+ 		}
+@@ -1131,6 +1131,16 @@ int ssl3_get_client_hello(SSL *s)
+ 	 * s->tmp.new_cipher	- the new cipher to use.
+ 	 */
+ 
++	/* Handles TLS extensions that we couldn't check earlier */
++	if (s->version >= SSL3_VERSION)
++		{
++		if (ssl_check_clienthello_tlsext_late(s) <= 0)
++			{
++			SSLerr(SSL_F_SSL3_GET_CLIENT_HELLO,SSL_R_CLIENTHELLO_TLSEXT);
++			goto err;
++			}
++		}
++
+ 	if (ret < 0) ret=1;
+ 	if (0)
+ 		{
+Index: crypto/openssl/ssl/ssl.h
+===================================================================
+--- crypto/openssl/ssl/ssl.h	(revision 248771)
++++ crypto/openssl/ssl/ssl.h	(working copy)
+@@ -1820,6 +1820,7 @@ void ERR_load_SSL_strings(void);
+ #define SSL_F_SSL_GET_NEW_SESSION			 181
+ #define SSL_F_SSL_GET_PREV_SESSION			 217
+ #define SSL_F_SSL_GET_SERVER_SEND_CERT			 182
++#define SSL_F_SSL_GET_SERVER_SEND_PKEY			 317
+ #define SSL_F_SSL_GET_SIGN_PKEY				 183
+ #define SSL_F_SSL_INIT_WBIO_BUFFER			 184
+ #define SSL_F_SSL_LOAD_CLIENT_CA_FILE			 185
+Index: crypto/openssl/ssl/ssl_err.c
+===================================================================
+--- crypto/openssl/ssl/ssl_err.c	(revision 248771)
++++ crypto/openssl/ssl/ssl_err.c	(working copy)
+@@ -218,6 +218,7 @@ static ERR_STRING_DATA SSL_str_functs[]=
+ {ERR_FUNC(SSL_F_SSL_GET_NEW_SESSION),	"SSL_GET_NEW_SESSION"},
+ {ERR_FUNC(SSL_F_SSL_GET_PREV_SESSION),	"SSL_GET_PREV_SESSION"},
+ {ERR_FUNC(SSL_F_SSL_GET_SERVER_SEND_CERT),	"SSL_GET_SERVER_SEND_CERT"},
++{ERR_FUNC(SSL_F_SSL_GET_SERVER_SEND_PKEY),	"SSL_GET_SERVER_SEND_PKEY"},
+ {ERR_FUNC(SSL_F_SSL_GET_SIGN_PKEY),	"SSL_GET_SIGN_PKEY"},
+ {ERR_FUNC(SSL_F_SSL_INIT_WBIO_BUFFER),	"SSL_INIT_WBIO_BUFFER"},
+ {ERR_FUNC(SSL_F_SSL_LOAD_CLIENT_CA_FILE),	"SSL_load_client_CA_file"},
+Index: crypto/openssl/ssl/ssl_lib.c
+===================================================================
+--- crypto/openssl/ssl/ssl_lib.c	(revision 248771)
++++ crypto/openssl/ssl/ssl_lib.c	(working copy)
+@@ -1943,7 +1943,7 @@ int check_srvr_ecc_cert_and_alg(X509 *x, SSL_CIPHE
+ 	}
+ 
+ /* THIS NEEDS CLEANING UP */
+-X509 *ssl_get_server_send_cert(SSL *s)
++CERT_PKEY *ssl_get_server_send_pkey(const SSL *s)
+ 	{
+ 	unsigned long alg,kalg;
+ 	CERT *c;
+@@ -1993,14 +1993,22 @@ int check_srvr_ecc_cert_and_alg(X509 *x, SSL_CIPHE
+ 		}
+ 	else /* if (kalg & SSL_aNULL) */
+ 		{
+-		SSLerr(SSL_F_SSL_GET_SERVER_SEND_CERT,ERR_R_INTERNAL_ERROR);
++		SSLerr(SSL_F_SSL_GET_SERVER_SEND_PKEY,ERR_R_INTERNAL_ERROR);
+ 		return(NULL);
+ 		}
+-	if (c->pkeys[i].x509 == NULL) return(NULL);
+ 
+-	return(c->pkeys[i].x509);
++	return c->pkeys + i;
+ 	}
+ 
++X509 *ssl_get_server_send_cert(const SSL *s)
++	{
++	CERT_PKEY *cpk;
++	cpk = ssl_get_server_send_pkey(s);
++	if (!cpk)
++		return NULL;
++	return cpk->x509;
++	}
++
+ EVP_PKEY *ssl_get_sign_pkey(SSL *s,SSL_CIPHER *cipher)
+ 	{
+ 	unsigned long alg;
+@@ -2420,7 +2428,9 @@ void ssl_clear_cipher_ctx(SSL *s)
+ /* Fix this function so that it takes an optional type parameter */
+ X509 *SSL_get_certificate(const SSL *s)
+ 	{
+-	if (s->cert != NULL)
++	if (s->server)
++		return(ssl_get_server_send_cert(s));
++	else if (s->cert != NULL)
+ 		return(s->cert->key->x509);
+ 	else
+ 		return(NULL);
+Index: crypto/openssl/ssl/ssl_locl.h
+===================================================================
+--- crypto/openssl/ssl/ssl_locl.h	(revision 248771)
++++ crypto/openssl/ssl/ssl_locl.h	(working copy)
+@@ -189,6 +189,15 @@
+ 			 *((c)++)=(unsigned char)(((l)>> 8)&0xff), \
+ 			 *((c)++)=(unsigned char)(((l)    )&0xff))
+ 
++#define l2n8(l,c)	(*((c)++)=(unsigned char)(((l)>>56)&0xff), \
++			 *((c)++)=(unsigned char)(((l)>>48)&0xff), \
++			 *((c)++)=(unsigned char)(((l)>>40)&0xff), \
++			 *((c)++)=(unsigned char)(((l)>>32)&0xff), \
++			 *((c)++)=(unsigned char)(((l)>>24)&0xff), \
++			 *((c)++)=(unsigned char)(((l)>>16)&0xff), \
++			 *((c)++)=(unsigned char)(((l)>> 8)&0xff), \
++			 *((c)++)=(unsigned char)(((l)    )&0xff))
++
+ #define n2l6(c,l)	(l =((BN_ULLONG)(*((c)++)))<<40, \
+ 			 l|=((BN_ULLONG)(*((c)++)))<<32, \
+ 			 l|=((BN_ULLONG)(*((c)++)))<<24, \
+@@ -740,7 +749,8 @@ int ssl_verify_cert_chain(SSL *s,STACK_OF(X509) *s
+ int ssl_undefined_function(SSL *s);
+ int ssl_undefined_void_function(void);
+ int ssl_undefined_const_function(const SSL *s);
+-X509 *ssl_get_server_send_cert(SSL *);
++CERT_PKEY *ssl_get_server_send_pkey(const SSL *s);
++X509 *ssl_get_server_send_cert(const SSL *);
+ EVP_PKEY *ssl_get_sign_pkey(SSL *,SSL_CIPHER *);
+ int ssl_cert_type(X509 *x,EVP_PKEY *pkey);
+ void ssl_set_cert_masks(CERT *c, SSL_CIPHER *cipher);
+@@ -979,7 +989,8 @@ int ssl_parse_clienthello_tlsext(SSL *s, unsigned
+ int ssl_parse_serverhello_tlsext(SSL *s, unsigned char **data, unsigned char *d, int n, int *al);
+ int ssl_prepare_clienthello_tlsext(SSL *s);
+ int ssl_prepare_serverhello_tlsext(SSL *s);
+-int ssl_check_clienthello_tlsext(SSL *s);
++int ssl_check_clienthello_tlsext_early(SSL *s);
++int ssl_check_clienthello_tlsext_late(SSL *s);
+ int ssl_check_serverhello_tlsext(SSL *s);
+ 
+ #ifdef OPENSSL_NO_SHA256
+@@ -1001,5 +1012,33 @@ int ssl_add_clienthello_renegotiate_ext(SSL *s, un
+ int ssl_parse_clienthello_renegotiate_ext(SSL *s, unsigned char *d, int len,
+ 					  int *al);
+ #endif
++/* s3_cbc.c */
++void ssl3_cbc_copy_mac(unsigned char* out,
++		       const SSL3_RECORD *rec,
++		       unsigned md_size,unsigned orig_len);
++int ssl3_cbc_remove_padding(const SSL* s,
++			    SSL3_RECORD *rec,
++			    unsigned block_size,
++			    unsigned mac_size);
++int tls1_cbc_remove_padding(const SSL* s,
++			    SSL3_RECORD *rec,
++			    unsigned block_size,
++			    unsigned mac_size);
++char ssl3_cbc_record_digest_supported(const EVP_MD *hash);
++void ssl3_cbc_digest_record(
++	const EVP_MD *hash,
++	unsigned char* md_out,
++	size_t* md_out_size,
++	const unsigned char header[13],
++	const unsigned char *data,
++	size_t data_plus_mac_size,
++	size_t data_plus_mac_plus_padding_size,
++	const unsigned char *mac_secret,
++	unsigned mac_secret_length,
++	char is_sslv3);
+ 
++void tls_fips_digest_extra(
++	const EVP_CIPHER_CTX *cipher_ctx, const EVP_MD *hash, HMAC_CTX *hctx,
++	const unsigned char *data, size_t data_len, size_t orig_len);
++
+ #endif
+Index: crypto/openssl/ssl/t1_enc.c
+===================================================================
+--- crypto/openssl/ssl/t1_enc.c	(revision 248771)
++++ crypto/openssl/ssl/t1_enc.c	(working copy)
+@@ -264,7 +264,7 @@ int tls1_change_cipher_state(SSL *s, int which)
+ 	{
+         int ki;
+         for (ki=0; ki<s->s3->tmp.key_block_length; ki++)
+-		printf("%02x", key_block[ki]);  printf("\n");
++		printf("%02x", s->s3->tmp.key_block[ki]);  printf("\n");
+         }
+ #endif	/* KSSL_DEBUG */
+ 
+@@ -528,12 +528,21 @@ err:
+ 	return(0);
+ 	}
+ 
++/* tls1_enc encrypts/decrypts the record in |s->wrec| / |s->rrec|, respectively.
++ *
++ * Returns:
++ *   0: (in non-constant time) if the record is publically invalid (i.e. too
++ *       short etc).
++ *   1: if the record's padding is valid / the encryption was successful.
++ *   -1: if the record's padding/AEAD-authenticator is invalid or, if sending,
++ *       an internal error occured.
++ */
+ int tls1_enc(SSL *s, int send)
+ 	{
+ 	SSL3_RECORD *rec;
+ 	EVP_CIPHER_CTX *ds;
+ 	unsigned long l;
+-	int bs,i,ii,j,k;
++	int bs,i,j,k,pad=0,ret,mac_size=0;
+ 	const EVP_CIPHER *enc;
+ 
+ 	if (send)
+@@ -559,11 +568,11 @@ int tls1_enc(SSL *s, int send)
+ 	printf("tls1_enc(%d)\n", send);
+ #endif    /* KSSL_DEBUG */
+ 
+-	if ((s->session == NULL) || (ds == NULL) ||
+-		(enc == NULL))
++	if ((s->session == NULL) || (ds == NULL) || (enc == NULL))
+ 		{
+ 		memmove(rec->data,rec->input,rec->length);
+ 		rec->input=rec->data;
++		ret = 1;
+ 		}
+ 	else
+ 		{
+@@ -591,14 +600,13 @@ int tls1_enc(SSL *s, int send)
+ 
+ #ifdef KSSL_DEBUG
+ 		{
+-                unsigned long ui;
++		unsigned long ui;
+ 		printf("EVP_Cipher(ds=%p,rec->data=%p,rec->input=%p,l=%ld) ==>\n",
+-                        (void *)ds,rec->data,rec->input,l);
+-		printf("\tEVP_CIPHER_CTX: %d buf_len, %d key_len [%ld %ld], %d iv_len\n",
+-                        ds->buf_len, ds->cipher->key_len,
+-                        (unsigned long)DES_KEY_SZ,
+-			(unsigned long)DES_SCHEDULE_SZ,
+-                        ds->cipher->iv_len);
++			ds,rec->data,rec->input,l);
++		printf("\tEVP_CIPHER_CTX: %d buf_len, %d key_len [%d %d], %d iv_len\n",
++			ds->buf_len, ds->cipher->key_len,
++			DES_KEY_SZ, DES_SCHEDULE_SZ,
++			ds->cipher->iv_len);
+ 		printf("\t\tIV: ");
+ 		for (i=0; i<ds->cipher->iv_len; i++) printf("%02X", ds->iv[i]);
+ 		printf("\n");
+@@ -611,11 +619,7 @@ int tls1_enc(SSL *s, int send)
+ 		if (!send)
+ 			{
+ 			if (l == 0 || l%bs != 0)
+-				{
+-				SSLerr(SSL_F_TLS1_ENC,SSL_R_BLOCK_CIPHER_PAD_IS_WRONG);
+-				ssl3_send_alert(s,SSL3_AL_FATAL,SSL_AD_DECRYPTION_FAILED);
+ 				return 0;
+-				}
+ 			}
+ 		
+ 		EVP_Cipher(ds,rec->data,rec->input,l);
+@@ -629,49 +633,15 @@ int tls1_enc(SSL *s, int send)
+                 }
+ #endif	/* KSSL_DEBUG */
+ 
++		ret = 1;
++		if (s->read_hash != NULL)
++			mac_size = EVP_MD_size(s->read_hash);
+ 		if ((bs != 1) && !send)
+-			{
+-			ii=i=rec->data[l-1]; /* padding_length */
+-			i++;
+-			/* NB: if compression is in operation the first packet
+-			 * may not be of even length so the padding bug check
+-			 * cannot be performed. This bug workaround has been
+-			 * around since SSLeay so hopefully it is either fixed
+-			 * now or no buggy implementation supports compression 
+-			 * [steve]
+-			 */
+-			if ( (s->options&SSL_OP_TLS_BLOCK_PADDING_BUG)
+-				&& !s->expand)
+-				{
+-				/* First packet is even in size, so check */
+-				if ((memcmp(s->s3->read_sequence,
+-					"\0\0\0\0\0\0\0\0",8) == 0) && !(ii & 1))
+-					s->s3->flags|=TLS1_FLAGS_TLS_PADDING_BUG;
+-				if (s->s3->flags & TLS1_FLAGS_TLS_PADDING_BUG)
+-					i--;
+-				}
+-			/* TLS 1.0 does not bound the number of padding bytes by the block size.
+-			 * All of them must have value 'padding_length'. */
+-			if (i > (int)rec->length)
+-				{
+-				/* Incorrect padding. SSLerr() and ssl3_alert are done
+-				 * by caller: we don't want to reveal whether this is
+-				 * a decryption error or a MAC verification failure
+-				 * (see http://www.openssl.org/~bodo/tls-cbc.txt) */
+-				return -1;
+-				}
+-			for (j=(int)(l-i); j<(int)l; j++)
+-				{
+-				if (rec->data[j] != ii)
+-					{
+-					/* Incorrect padding */
+-					return -1;
+-					}
+-				}
+-			rec->length-=i;
+-			}
++			ret = tls1_cbc_remove_padding(s, rec, bs, mac_size);
++		if (pad && !send)
++			rec->length -= pad;
+ 		}
+-	return(1);
++	return ret;
+ 	}
+ 
+ int tls1_cert_verify_mac(SSL *s, EVP_MD_CTX *in_ctx, unsigned char *out)
+@@ -719,10 +689,10 @@ int tls1_mac(SSL *ssl, unsigned char *md, int send
+ 	SSL3_RECORD *rec;
+ 	unsigned char *mac_sec,*seq;
+ 	const EVP_MD *hash;
+-	unsigned int md_size;
++	size_t md_size, orig_len;
+ 	int i;
+ 	HMAC_CTX hmac;
+-	unsigned char buf[5]; 
++	unsigned char header[13];
+ 
+ 	if (send)
+ 		{
+@@ -741,20 +711,6 @@ int tls1_mac(SSL *ssl, unsigned char *md, int send
+ 
+ 	md_size=EVP_MD_size(hash);
+ 
+-	buf[0]=rec->type;
+-	if (ssl->version == DTLS1_VERSION && ssl->client_version == DTLS1_BAD_VER)
+-		{
+-		buf[1]=TLS1_VERSION_MAJOR;
+-		buf[2]=TLS1_VERSION_MINOR;
+-		}
+-	else	{
+-		buf[1]=(unsigned char)(ssl->version>>8);
+-		buf[2]=(unsigned char)(ssl->version);
+-		}
+-
+-	buf[3]=rec->length>>8;
+-	buf[4]=rec->length&0xff;
+-
+ 	/* I should fix this up TLS TLS TLS TLS TLS XXXXXXXX */
+ 	HMAC_CTX_init(&hmac);
+ 	HMAC_Init_ex(&hmac,mac_sec,EVP_MD_size(hash),hash,NULL);
+@@ -766,16 +722,57 @@ int tls1_mac(SSL *ssl, unsigned char *md, int send
+ 		s2n(send?ssl->d1->w_epoch:ssl->d1->r_epoch, p);
+ 		memcpy (p,&seq[2],6);
+ 
+-		HMAC_Update(&hmac,dtlsseq,8);
++		memcpy(header, dtlsseq, 8);
+ 		}
+ 	else
+-		HMAC_Update(&hmac,seq,8);
++		memcpy(header, seq, 8);
+ 
+-	HMAC_Update(&hmac,buf,5);
+-	HMAC_Update(&hmac,rec->input,rec->length);
+-	HMAC_Final(&hmac,md,&md_size);
++	/* kludge: tls1_cbc_remove_padding passes padding length in rec->type */
++	orig_len = rec->length+md_size+((unsigned int)rec->type>>8);
++	rec->type &= 0xff;
++
++	header[8]=rec->type;
++	header[9]=(unsigned char)(ssl->version>>8);
++	header[10]=(unsigned char)(ssl->version);
++	header[11]=(rec->length)>>8;
++	header[12]=(rec->length)&0xff;
++
++	if (!send &&
++	    EVP_CIPHER_CTX_mode(ssl->enc_read_ctx) == EVP_CIPH_CBC_MODE &&
++	    ssl3_cbc_record_digest_supported(hash))
++		{
++		/* This is a CBC-encrypted record. We must avoid leaking any
++		 * timing-side channel information about how many blocks of
++		 * data we are hashing because that gives an attacker a
++		 * timing-oracle. */
++		ssl3_cbc_digest_record(
++		        hash,
++			md, &md_size,
++			header, rec->input,
++			rec->length + md_size, orig_len,
++			ssl->s3->read_mac_secret,
++			EVP_MD_size(ssl->read_hash),
++			0 /* not SSLv3 */);
++		}
++	else
++		{
++		unsigned mds;
++
++		HMAC_Update(&hmac,header,sizeof(header));
++		HMAC_Update(&hmac,rec->input,rec->length);
++		HMAC_Final(&hmac,md,&mds);
++		md_size = mds;
++#ifdef OPENSSL_FIPS
++		if (!send && FIPS_mode())
++			tls_fips_digest_extra(
++	    				ssl->enc_read_ctx,
++					hash,
++					&hmac, rec->input,
++					rec->length, orig_len);
++#endif
++		}
++		
+ 	HMAC_CTX_cleanup(&hmac);
+-
+ #ifdef TLS_DEBUG
+ printf("sec=");
+ {unsigned int z; for (z=0; z<md_size; z++) printf("%02X ",mac_sec[z]); printf("\n"); }
+Index: crypto/openssl/ssl/t1_lib.c
+===================================================================
+--- crypto/openssl/ssl/t1_lib.c	(revision 248771)
++++ crypto/openssl/ssl/t1_lib.c	(working copy)
+@@ -745,7 +745,7 @@ int ssl_parse_serverhello_tlsext(SSL *s, unsigned
+ 	return 1;
+ 	}
+ 
+-int ssl_check_clienthello_tlsext(SSL *s)
++int ssl_check_clienthello_tlsext_early(SSL *s)
+ 	{
+ 	int ret=SSL_TLSEXT_ERR_NOACK;
+ 	int al = SSL_AD_UNRECOGNIZED_NAME;
+@@ -755,13 +755,49 @@ int ssl_parse_serverhello_tlsext(SSL *s, unsigned
+ 	else if (s->initial_ctx != NULL && s->initial_ctx->tlsext_servername_callback != 0) 		
+ 		ret = s->initial_ctx->tlsext_servername_callback(s, &al, s->initial_ctx->tlsext_servername_arg);
+ 
++	switch (ret)
++		{
++		case SSL_TLSEXT_ERR_ALERT_FATAL:
++			ssl3_send_alert(s, SSL3_AL_FATAL, al); 
++			return -1;
++
++		case SSL_TLSEXT_ERR_ALERT_WARNING:
++			ssl3_send_alert(s, SSL3_AL_WARNING, al);
++			return 1; 
++					
++		case SSL_TLSEXT_ERR_NOACK:
++			s->servername_done = 0;
++
++		default:
++			return 1;
++		}
++	}
++
++int ssl_check_clienthello_tlsext_late(SSL *s)
++	{
++	int ret = SSL_TLSEXT_ERR_OK;
++	int al;
++
+ 	/* If status request then ask callback what to do.
+  	 * Note: this must be called after servername callbacks in case 
+- 	 * the certificate has changed.
++ 	 * the certificate has changed, and must be called after the cipher
++	 * has been chosen because this may influence which certificate is sent
+  	 */
+-	if ((s->tlsext_status_type != -1) && s->ctx->tlsext_status_cb)
++	if (s->tlsext_status_type != -1 && s->ctx && s->ctx->tlsext_status_cb)
+ 		{
+ 		int r;
++		CERT_PKEY *certpkey;
++		certpkey = ssl_get_server_send_pkey(s);
++		/* If no certificate can't return certificate status */
++		if (certpkey == NULL)
++			{
++			s->tlsext_status_expected = 0;
++			return 1;
++			}
++		/* Set current certificate to one we will use so
++		 * SSL_get_certificate et al can pick it up.
++		 */
++		s->cert->key = certpkey;
+ 		r = s->ctx->tlsext_status_cb(s, s->ctx->tlsext_status_arg);
+ 		switch (r)
+ 			{
+@@ -785,7 +821,8 @@ int ssl_parse_serverhello_tlsext(SSL *s, unsigned
+ 		}
+ 	else
+ 		s->tlsext_status_expected = 0;
+-	err:
++
++ err:
+ 	switch (ret)
+ 		{
+ 		case SSL_TLSEXT_ERR_ALERT_FATAL:
+@@ -795,11 +832,9 @@ int ssl_parse_serverhello_tlsext(SSL *s, unsigned
+ 		case SSL_TLSEXT_ERR_ALERT_WARNING:
+ 			ssl3_send_alert(s,SSL3_AL_WARNING,al);
+ 			return 1; 
+-					
+-		case SSL_TLSEXT_ERR_NOACK:
+-			s->servername_done=0;
+-			default:
+-		return 1;
++
++		default:
++			return 1;
+ 		}
+ 	}
+ 
+@@ -977,7 +1012,7 @@ static int tls_decrypt_ticket(SSL *s, const unsign
+ 	HMAC_Update(&hctx, etick, eticklen);
+ 	HMAC_Final(&hctx, tick_hmac, NULL);
+ 	HMAC_CTX_cleanup(&hctx);
+-	if (memcmp(tick_hmac, etick + eticklen, mlen))
++	if (CRYPTO_memcmp(tick_hmac, etick + eticklen, mlen))
+ 		goto tickerr;
+ 	/* Attempt to decrypt session data */
+ 	/* Move p after IV to start of encrypted ticket, update length */
+Index: crypto/openssl/util/libeay.num
+===================================================================
+--- crypto/openssl/util/libeay.num	(revision 248771)
++++ crypto/openssl/util/libeay.num	(working copy)
+@@ -3510,6 +3510,7 @@ BIO_get_callback_arg                    3902	EXIST
+ BIO_set_callback                        3903	EXIST::FUNCTION:
+ d2i_ASIdOrRange                         3904	EXIST::FUNCTION:RFC3779
+ i2d_ASIdentifiers                       3905	EXIST::FUNCTION:RFC3779
++CRYPTO_memcmp                           3906	EXIST::FUNCTION:
+ SEED_decrypt                            3908	EXIST::FUNCTION:SEED
+ SEED_encrypt                            3909	EXIST::FUNCTION:SEED
+ SEED_cbc_encrypt                        3910	EXIST::FUNCTION:SEED
+Index: secure/lib/libcrypto/Makefile.inc
+===================================================================
+--- secure/lib/libcrypto/Makefile.inc	(revision 248771)
++++ secure/lib/libcrypto/Makefile.inc	(working copy)
+@@ -3,8 +3,8 @@
+ .include <bsd.own.mk>
+ 
+ # OpenSSL version used for manual page generation
+-OPENSSL_VER=	0.9.8x
+-OPENSSL_DATE=	2012-05-10
++OPENSSL_VER=	0.9.8y
++OPENSSL_DATE=	2013-02-05
+ 
+ LCRYPTO_SRC=	${.CURDIR}/../../../crypto/openssl
+ LCRYPTO_DOC=	${.CURDIR}/../../../crypto/openssl/doc
+Index: secure/lib/libssl/Makefile
+===================================================================
+--- secure/lib/libssl/Makefile	(revision 248771)
++++ secure/lib/libssl/Makefile	(working copy)
+@@ -14,7 +14,8 @@ SRCS=	bio_ssl.c d1_meth.c d1_srvr.c d1_clnt.c d1_l
+ 	d1_both.c d1_enc.c \
+ 	s23_clnt.c s23_lib.c s23_meth.c s23_pkt.c s23_srvr.c \
+ 	s2_clnt.c s2_enc.c s2_lib.c s2_meth.c s2_pkt.c s2_srvr.c \
+-	s3_both.c s3_clnt.c s3_enc.c s3_lib.c s3_meth.c s3_pkt.c \
++	s3_both.c s3_cbc.c s3_clnt.c s3_enc.c s3_lib.c s3_meth.c \
++	s3_pkt.c \
+ 	s3_srvr.c ssl_algs.c ssl_asn1.c ssl_cert.c ssl_ciph.c \
+ 	ssl_err.c ssl_err2.c ssl_lib.c ssl_rsa.c ssl_sess.c ssl_stat.c \
+ 	ssl_txt.c t1_clnt.c t1_enc.c t1_lib.c t1_meth.c t1_reneg.c t1_srvr.c
