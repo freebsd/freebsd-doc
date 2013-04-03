@@ -338,7 +338,7 @@ NO_RTF=		yes
 schxslts+=	${sch}.xsl
 
 ${sch}.xsl: ${sch}
-	${XSLTPROC} ${XSLSCH} ${.ALLSRC} > ${.TARGET}
+	${XSLTPROC} --param allow-foreign "true" ${XSLSCH} ${.ALLSRC} > ${.TARGET}
 .endfor
 .endif
 
