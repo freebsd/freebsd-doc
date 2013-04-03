@@ -20,6 +20,7 @@ INSTALL_ONLY_COMPRESSED?=
 
 # XML content
 SRCS=  book.xml
+SRCS+= uses.xml
 
 # Use the local DSSSL file
 DSLHTML?= 	${.CURDIR}/freebsd.dsl
