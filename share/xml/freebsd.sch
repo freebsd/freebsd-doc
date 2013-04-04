@@ -10,6 +10,12 @@
     </rule>
   </pattern>
 
+  <pattern name="Check filenames">
+    <rule context="//filename">
+      <report test="@role = 'directory'">Filename (<xsl:value-of select="."/>) has role="directory"; use class="directory"</report>
+    </rule>
+  </pattern>
+
   <pattern name="Check cross-reference validity">
     <rule context="//link">
       <assert test="* or normalize-space()">Link (<xsl:value-of select="@linkend"/>) element must have a content; or use xref to auto-generate the linking text.</assert>
