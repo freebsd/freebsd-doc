@@ -75,7 +75,7 @@
     </div>
   </xsl:template>
 
-  <xsl:template name="chapter.authorgroup">
+  <xsl:template name="freebsd.authorgroup">
     <span class="authorgroup">
 
       <!-- XXX: our docs use a quirky semantics for this -->
@@ -108,11 +108,27 @@
     <xsl:apply-templates/>
   </xsl:template>
 
-  <xsl:template name="chapter.author">
+  <xsl:template name="freebsd.author">
     <xsl:if test="contrib">
       <xsl:apply-templates select="contrib"/>
       <xsl:text> </xsl:text>
     </xsl:if>
     <xsl:apply-templates select="*[not(self::contrib)]"/>
+  </xsl:template>
+
+  <xsl:template name="chapter.authorgroup">
+    <xsl:call-template name="freebsd.authorgroup"/>
+  </xsl:template>
+
+  <xsl:template name="section.authorgroup">
+    <xsl:call-template name="freebsd.authorgroup"/>
+  </xsl:template>
+
+  <xsl:template name="chapter.author">
+    <xsl:call-template name="freebsd.author"/>
+  </xsl:template>
+
+  <xsl:template name="section.author">
+    <xsl:call-template name="freebsd.author"/>
   </xsl:template>
 </xsl:stylesheet>

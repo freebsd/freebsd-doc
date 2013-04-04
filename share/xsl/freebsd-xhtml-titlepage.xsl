@@ -2159,13 +2159,15 @@
 
 <xsl:template match="authorgroup" mode="section.titlepage.recto.auto.mode">
 <div xsl:use-attribute-sets="section.titlepage.recto.style">
-<xsl:apply-templates select="." mode="section.titlepage.recto.mode"/>
+<xsl:call-template name="section.authorgroup">
+</xsl:call-template>
 </div>
 </xsl:template>
 
 <xsl:template match="author" mode="section.titlepage.recto.auto.mode">
 <div xsl:use-attribute-sets="section.titlepage.recto.style">
-<xsl:apply-templates select="." mode="section.titlepage.recto.mode"/>
+<xsl:call-template name="section.author">
+</xsl:call-template>
 </div>
 </xsl:template>
 
@@ -2346,13 +2348,15 @@
 
 <xsl:template match="authorgroup" mode="sect1.titlepage.recto.auto.mode">
 <div xsl:use-attribute-sets="sect1.titlepage.recto.style">
-<xsl:apply-templates select="." mode="sect1.titlepage.recto.mode"/>
+<xsl:call-template name="section.authorgroup">
+</xsl:call-template>
 </div>
 </xsl:template>
 
 <xsl:template match="author" mode="sect1.titlepage.recto.auto.mode">
 <div xsl:use-attribute-sets="sect1.titlepage.recto.style">
-<xsl:apply-templates select="." mode="sect1.titlepage.recto.mode"/>
+<xsl:call-template name="section.author">
+</xsl:call-template>
 </div>
 </xsl:template>
 
@@ -2533,13 +2537,15 @@
 
 <xsl:template match="authorgroup" mode="sect2.titlepage.recto.auto.mode">
 <div xsl:use-attribute-sets="sect2.titlepage.recto.style">
-<xsl:apply-templates select="." mode="sect2.titlepage.recto.mode"/>
+<xsl:call-template name="section.authorgroup">
+</xsl:call-template>
 </div>
 </xsl:template>
 
 <xsl:template match="author" mode="sect2.titlepage.recto.auto.mode">
 <div xsl:use-attribute-sets="sect2.titlepage.recto.style">
-<xsl:apply-templates select="." mode="sect2.titlepage.recto.mode"/>
+<xsl:call-template name="section.author">
+</xsl:call-template>
 </div>
 </xsl:template>
 
@@ -2720,13 +2726,15 @@
 
 <xsl:template match="authorgroup" mode="sect3.titlepage.recto.auto.mode">
 <div xsl:use-attribute-sets="sect3.titlepage.recto.style">
-<xsl:apply-templates select="." mode="sect3.titlepage.recto.mode"/>
+<xsl:call-template name="section.authorgroup">
+</xsl:call-template>
 </div>
 </xsl:template>
 
 <xsl:template match="author" mode="sect3.titlepage.recto.auto.mode">
 <div xsl:use-attribute-sets="sect3.titlepage.recto.style">
-<xsl:apply-templates select="." mode="sect3.titlepage.recto.mode"/>
+<xsl:call-template name="section.author">
+</xsl:call-template>
 </div>
 </xsl:template>
 
@@ -2907,13 +2915,15 @@
 
 <xsl:template match="authorgroup" mode="sect4.titlepage.recto.auto.mode">
 <div xsl:use-attribute-sets="sect4.titlepage.recto.style">
-<xsl:apply-templates select="." mode="sect4.titlepage.recto.mode"/>
+<xsl:call-template name="section.authorgroup">
+</xsl:call-template>
 </div>
 </xsl:template>
 
 <xsl:template match="author" mode="sect4.titlepage.recto.auto.mode">
 <div xsl:use-attribute-sets="sect4.titlepage.recto.style">
-<xsl:apply-templates select="." mode="sect4.titlepage.recto.mode"/>
+<xsl:call-template name="section.author">
+</xsl:call-template>
 </div>
 </xsl:template>
 
@@ -3094,13 +3104,15 @@
 
 <xsl:template match="authorgroup" mode="sect5.titlepage.recto.auto.mode">
 <div xsl:use-attribute-sets="sect5.titlepage.recto.style">
-<xsl:apply-templates select="." mode="sect5.titlepage.recto.mode"/>
+<xsl:call-template name="section.authorgroup">
+</xsl:call-template>
 </div>
 </xsl:template>
 
 <xsl:template match="author" mode="sect5.titlepage.recto.auto.mode">
 <div xsl:use-attribute-sets="sect5.titlepage.recto.style">
-<xsl:apply-templates select="." mode="sect5.titlepage.recto.mode"/>
+<xsl:call-template name="section.author">
+</xsl:call-template>
 </div>
 </xsl:template>
 
@@ -3298,13 +3310,15 @@
 
 <xsl:template match="authorgroup" mode="simplesect.titlepage.recto.auto.mode">
 <div xsl:use-attribute-sets="simplesect.titlepage.recto.style">
-<xsl:apply-templates select="." mode="simplesect.titlepage.recto.mode"/>
+<xsl:call-template name="section.authorgroup">
+</xsl:call-template>
 </div>
 </xsl:template>
 
 <xsl:template match="author" mode="simplesect.titlepage.recto.auto.mode">
 <div xsl:use-attribute-sets="simplesect.titlepage.recto.style">
-<xsl:apply-templates select="." mode="simplesect.titlepage.recto.mode"/>
+<xsl:call-template name="section.author">
+</xsl:call-template>
 </div>
 </xsl:template>
 
