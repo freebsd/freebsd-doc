@@ -12,7 +12,13 @@
     <xsl:call-template name="inline.monoseq"/>
   </xsl:template>
 
-  <xsl:template match="pubdate"/>
+  <xsl:template name="svnweb.link">
+    <xsl:param name="repo" select="'base'"/>
+    <xsl:param name="rev"/>
+
+    <xsl:value-of select="concat('http://svnweb.freebsd.org/', $repo,
+      '?view=revision&amp;revision=', $rev)"/>
+  </xsl:template>
 
   <xsl:param name="toc.section.depth" select="1"/>
   <xsl:param name="section.autolabel" select="1"/>

@@ -5,6 +5,8 @@
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
                 version='1.0'
                 xmlns="http://www.w3.org/TR/xhtml1/transitional"
+		xmlns:str="http://exslt.org/strings"
+		extension-element-prefixes="str"
                 exclude-result-prefixes="#default">
 
   <!-- Include the common customizations -->
@@ -21,6 +23,11 @@
   <xsl:param name="callout.graphics.path" select="'./imagelib/callouts/'"/>
   <xsl:param name="citerefentry.link" select="1"/>
   <xsl:param name="admon.style"/>
+  <xsl:param name="make.year.ranges" select="1"/>
+  <xsl:param name="make.single.year.ranges" select="1"/>
+
+  <xsl:param name="make.valid.html" select="1"/>
+  <xsl:param name="html.cleanup" select="1"/>
 
   <xsl:template name="user.footer.navigation">
     <p align="center"><small>This, and other documents, can be downloaded
@@ -32,17 +39,26 @@
     For questions about this documentation, e-mail &lt;<a href="mailto:doc@FreeBSD.org">doc@FreeBSD.org</a>&gt;.</small></p>
   </xsl:template>
 
-  <xsl:template match="svnref">
+  <xsl:template name="svnref.genlink">
+    <xsl:param name="rev" select="."/>
+    <xsl:param name="repo" select="'base'"/>
+
     <a>
       <xsl:attribute name="href">
-	<xsl:text>http://svnweb.freebsd.org/base?view=revision&amp;revision=</xsl:text>
-	<xsl:value-of select="."/>
+	<xsl:call-template name="svnweb.link">
+	  <xsl:with-param name="repo" select="$repo"/>
+	  <xsl:with-param name="rev" select="$rev"/>
+	</xsl:call-template>
       </xsl:attribute>
 
       <span class="svnref">
-	<xsl:value-of select="."/>
+	<xsl:value-of select="$rev"/>
       </span>
     </a>
+  </xsl:template>
+
+  <xsl:template match="svnref">
+    <xsl:call-template name="svnref.genlink"/>
   </xsl:template>
 
   <xsl:template name="generate.citerefentry.link">
@@ -130,5 +146,30 @@
 
   <xsl:template name="section.author">
     <xsl:call-template name="freebsd.author"/>
+  </xsl:template>
+
+  <xsl:template name="titlepage.releaseinfo">
+    <xsl:variable name="rev" select="str:split(., ' ')[3]"/>
+
+    Current Revision:
+    <xsl:call-template name="svnref.genlink">
+      <xsl:with-param name="repo" select="'doc'"/>
+      <xsl:with-param name="rev" select="$rev"/>
+    </xsl:call-template>
+  </xsl:template>
+
+  <xsl:template name="titlepage.pubdate">
+    <xsl:variable name="pubdate">
+      <xsl:choose>
+	<xsl:when test="contains(., '$FreeBSD')">
+	  <xsl:value-of select="str:split(., ' ')[4]"/> by <xsl:value-of select="str:split(., ' ')[6]"/>
+	</xsl:when>
+
+	<xsl:otherwise>
+	  <xsl:value-of select="."/>
+	</xsl:otherwise>
+      </xsl:choose>
+    </xsl:variable>
+    Last modified on <xsl:value-of select="$pubdate"/>.
   </xsl:template>
 </xsl:stylesheet>
