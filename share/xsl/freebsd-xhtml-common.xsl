@@ -29,6 +29,14 @@
   <xsl:param name="make.valid.html" select="1"/>
   <xsl:param name="html.cleanup" select="1"/>
 
+  <xsl:param name="local.l10n.xml" select="document('')"/>
+  <i18n xmlns="http://docbook.sourceforge.net/xmlns/l10n/1.0">
+    <l:l10n xmlns:l="http://docbook.sourceforge.net/xmlns/l10n/1.0" language="en">
+      <l:gentext key="Lastmodified" text="Last modified"/>
+      <l:gentext key="on" text="on"/>
+    </l:l10n>
+  </i18n>
+
   <xsl:template name="user.footer.navigation">
     <p align="center"><small>This, and other documents, can be downloaded
     from <a href="ftp://ftp.FreeBSD.org/pub/FreeBSD/doc/">ftp://ftp.FreeBSD.org/pub/FreeBSD/doc/</a></small></p>
@@ -151,7 +159,11 @@
   <xsl:template name="titlepage.releaseinfo">
     <xsl:variable name="rev" select="str:split(., ' ')[3]"/>
 
-    Current Revision:
+    <xsl:call-template name="gentext">
+      <xsl:with-param name="key" select="'Revision'"/>
+    </xsl:call-template>
+    <xsl:text>:</xsl:text>
+    <xsl:call-template name="gentext.space"/>
     <xsl:call-template name="svnref.genlink">
       <xsl:with-param name="repo" select="'doc'"/>
       <xsl:with-param name="rev" select="$rev"/>
@@ -162,7 +174,7 @@
     <xsl:variable name="pubdate">
       <xsl:choose>
 	<xsl:when test="contains(., '$FreeBSD')">
-	  <xsl:value-of select="str:split(., ' ')[4]"/> by <xsl:value-of select="str:split(., ' ')[6]"/>
+	  <xsl:value-of select="str:split(., ' ')[4]"/>
 	</xsl:when>
 
 	<xsl:otherwise>
@@ -170,6 +182,30 @@
 	</xsl:otherwise>
       </xsl:choose>
     </xsl:variable>
-    Last modified on <xsl:value-of select="$pubdate"/>.
+
+    <xsl:variable name="committer">
+      <xsl:if test="contains(., '$FreeBSD')">
+	 <xsl:value-of select="str:split(., ' ')[6]"/>
+      </xsl:if>
+    </xsl:variable>
+
+    <xsl:call-template name="gentext">
+      <xsl:with-param name="key" select="'Lastmodified'"/>
+    </xsl:call-template>
+    <xsl:call-template name="gentext.space"/>
+    <xsl:call-template name="gentext">
+      <xsl:with-param name="key" select="'on'"/>
+    </xsl:call-template>
+    <xsl:call-template name="gentext.space"/>
+    Last modified on <xsl:value-of select="$pubdate"/>
+    <xsl:if test="$committer">
+      <xsl:call-template name="gentext.space"/>
+      <xsl:value-of select="$committer"/>
+      <xsl:call-template name="gentext.space"/>
+      <xsl:call-template name="gentext">
+	<xsl:with-param name="key" select="'by'"/>
+      </xsl:call-template>
+    </xsl:if>
+    <xsl:text>.</xsl:text>
   </xsl:template>
 </xsl:stylesheet>
