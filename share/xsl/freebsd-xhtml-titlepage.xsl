@@ -168,7 +168,8 @@
 
 <xsl:template match="releaseinfo" mode="article.titlepage.recto.auto.mode">
 <div xsl:use-attribute-sets="article.titlepage.recto.style">
-<xsl:apply-templates select="." mode="article.titlepage.recto.mode"/>
+<xsl:call-template name="titlepage.releaseinfo">
+</xsl:call-template>
 </div>
 </xsl:template>
 
@@ -186,7 +187,8 @@
 
 <xsl:template match="pubdate" mode="article.titlepage.recto.auto.mode">
 <div xsl:use-attribute-sets="article.titlepage.recto.style">
-<xsl:apply-templates select="." mode="article.titlepage.recto.mode"/>
+<xsl:call-template name="titlepage.pubdate">
+</xsl:call-template>
 </div>
 </xsl:template>
 
@@ -355,7 +357,8 @@
 
 <xsl:template match="releaseinfo" mode="set.titlepage.recto.auto.mode">
 <div xsl:use-attribute-sets="set.titlepage.recto.style">
-<xsl:apply-templates select="." mode="set.titlepage.recto.mode"/>
+<xsl:call-template name="titlepage.releaseinfo">
+</xsl:call-template>
 </div>
 </xsl:template>
 
@@ -373,7 +376,8 @@
 
 <xsl:template match="pubdate" mode="set.titlepage.recto.auto.mode">
 <div xsl:use-attribute-sets="set.titlepage.recto.style">
-<xsl:apply-templates select="." mode="set.titlepage.recto.mode"/>
+<xsl:call-template name="titlepage.pubdate">
+</xsl:call-template>
 </div>
 </xsl:template>
 
@@ -542,7 +546,8 @@
 
 <xsl:template match="releaseinfo" mode="book.titlepage.recto.auto.mode">
 <div xsl:use-attribute-sets="book.titlepage.recto.style">
-<xsl:apply-templates select="." mode="book.titlepage.recto.mode"/>
+<xsl:call-template name="titlepage.releaseinfo">
+</xsl:call-template>
 </div>
 </xsl:template>
 
@@ -560,7 +565,8 @@
 
 <xsl:template match="pubdate" mode="book.titlepage.recto.auto.mode">
 <div xsl:use-attribute-sets="book.titlepage.recto.style">
-<xsl:apply-templates select="." mode="book.titlepage.recto.mode"/>
+<xsl:call-template name="titlepage.pubdate">
+</xsl:call-template>
 </div>
 </xsl:template>
 
@@ -729,7 +735,8 @@
 
 <xsl:template match="releaseinfo" mode="part.titlepage.recto.auto.mode">
 <div xsl:use-attribute-sets="part.titlepage.recto.style">
-<xsl:apply-templates select="." mode="part.titlepage.recto.mode"/>
+<xsl:call-template name="titlepage.releaseinfo">
+</xsl:call-template>
 </div>
 </xsl:template>
 
@@ -747,7 +754,8 @@
 
 <xsl:template match="pubdate" mode="part.titlepage.recto.auto.mode">
 <div xsl:use-attribute-sets="part.titlepage.recto.style">
-<xsl:apply-templates select="." mode="part.titlepage.recto.mode"/>
+<xsl:call-template name="titlepage.pubdate">
+</xsl:call-template>
 </div>
 </xsl:template>
 
@@ -933,7 +941,8 @@
 
 <xsl:template match="releaseinfo" mode="partintro.titlepage.recto.auto.mode">
 <div xsl:use-attribute-sets="partintro.titlepage.recto.style">
-<xsl:apply-templates select="." mode="partintro.titlepage.recto.mode"/>
+<xsl:call-template name="titlepage.releaseinfo">
+</xsl:call-template>
 </div>
 </xsl:template>
 
@@ -951,7 +960,8 @@
 
 <xsl:template match="pubdate" mode="partintro.titlepage.recto.auto.mode">
 <div xsl:use-attribute-sets="partintro.titlepage.recto.style">
-<xsl:apply-templates select="." mode="partintro.titlepage.recto.mode"/>
+<xsl:call-template name="titlepage.pubdate">
+</xsl:call-template>
 </div>
 </xsl:template>
 
@@ -1137,7 +1147,8 @@
 
 <xsl:template match="releaseinfo" mode="reference.titlepage.recto.auto.mode">
 <div xsl:use-attribute-sets="reference.titlepage.recto.style">
-<xsl:apply-templates select="." mode="reference.titlepage.recto.mode"/>
+<xsl:call-template name="titlepage.releaseinfo">
+</xsl:call-template>
 </div>
 </xsl:template>
 
@@ -1155,7 +1166,8 @@
 
 <xsl:template match="pubdate" mode="reference.titlepage.recto.auto.mode">
 <div xsl:use-attribute-sets="reference.titlepage.recto.style">
-<xsl:apply-templates select="." mode="reference.titlepage.recto.mode"/>
+<xsl:call-template name="titlepage.pubdate">
+</xsl:call-template>
 </div>
 </xsl:template>
 
@@ -1580,7 +1592,8 @@
 
 <xsl:template match="releaseinfo" mode="preface.titlepage.recto.auto.mode">
 <div xsl:use-attribute-sets="preface.titlepage.recto.style">
-<xsl:apply-templates select="." mode="preface.titlepage.recto.mode"/>
+<xsl:call-template name="titlepage.releaseinfo">
+</xsl:call-template>
 </div>
 </xsl:template>
 
@@ -1598,7 +1611,8 @@
 
 <xsl:template match="pubdate" mode="preface.titlepage.recto.auto.mode">
 <div xsl:use-attribute-sets="preface.titlepage.recto.style">
-<xsl:apply-templates select="." mode="preface.titlepage.recto.mode"/>
+<xsl:call-template name="titlepage.pubdate">
+</xsl:call-template>
 </div>
 </xsl:template>
 
@@ -1786,7 +1800,8 @@
 
 <xsl:template match="releaseinfo" mode="chapter.titlepage.recto.auto.mode">
 <div xsl:use-attribute-sets="chapter.titlepage.recto.style">
-<xsl:apply-templates select="." mode="chapter.titlepage.recto.mode"/>
+<xsl:call-template name="titlepage.releaseinfo">
+</xsl:call-template>
 </div>
 </xsl:template>
 
@@ -1804,7 +1819,8 @@
 
 <xsl:template match="pubdate" mode="chapter.titlepage.recto.auto.mode">
 <div xsl:use-attribute-sets="chapter.titlepage.recto.style">
-<xsl:apply-templates select="." mode="chapter.titlepage.recto.mode"/>
+<xsl:call-template name="titlepage.pubdate">
+</xsl:call-template>
 </div>
 </xsl:template>
 
@@ -1990,7 +2006,8 @@
 
 <xsl:template match="releaseinfo" mode="appendix.titlepage.recto.auto.mode">
 <div xsl:use-attribute-sets="appendix.titlepage.recto.style">
-<xsl:apply-templates select="." mode="appendix.titlepage.recto.mode"/>
+<xsl:call-template name="titlepage.releaseinfo">
+</xsl:call-template>
 </div>
 </xsl:template>
 
@@ -2008,7 +2025,8 @@
 
 <xsl:template match="pubdate" mode="appendix.titlepage.recto.auto.mode">
 <div xsl:use-attribute-sets="appendix.titlepage.recto.style">
-<xsl:apply-templates select="." mode="appendix.titlepage.recto.mode"/>
+<xsl:call-template name="titlepage.pubdate">
+</xsl:call-template>
 </div>
 </xsl:template>
 
@@ -2179,7 +2197,8 @@
 
 <xsl:template match="releaseinfo" mode="section.titlepage.recto.auto.mode">
 <div xsl:use-attribute-sets="section.titlepage.recto.style">
-<xsl:apply-templates select="." mode="section.titlepage.recto.mode"/>
+<xsl:call-template name="titlepage.releaseinfo">
+</xsl:call-template>
 </div>
 </xsl:template>
 
@@ -2197,7 +2216,8 @@
 
 <xsl:template match="pubdate" mode="section.titlepage.recto.auto.mode">
 <div xsl:use-attribute-sets="section.titlepage.recto.style">
-<xsl:apply-templates select="." mode="section.titlepage.recto.mode"/>
+<xsl:call-template name="titlepage.pubdate">
+</xsl:call-template>
 </div>
 </xsl:template>
 
@@ -2368,7 +2388,8 @@
 
 <xsl:template match="releaseinfo" mode="sect1.titlepage.recto.auto.mode">
 <div xsl:use-attribute-sets="sect1.titlepage.recto.style">
-<xsl:apply-templates select="." mode="sect1.titlepage.recto.mode"/>
+<xsl:call-template name="titlepage.releaseinfo">
+</xsl:call-template>
 </div>
 </xsl:template>
 
@@ -2386,7 +2407,8 @@
 
 <xsl:template match="pubdate" mode="sect1.titlepage.recto.auto.mode">
 <div xsl:use-attribute-sets="sect1.titlepage.recto.style">
-<xsl:apply-templates select="." mode="sect1.titlepage.recto.mode"/>
+<xsl:call-template name="titlepage.pubdate">
+</xsl:call-template>
 </div>
 </xsl:template>
 
@@ -2557,7 +2579,8 @@
 
 <xsl:template match="releaseinfo" mode="sect2.titlepage.recto.auto.mode">
 <div xsl:use-attribute-sets="sect2.titlepage.recto.style">
-<xsl:apply-templates select="." mode="sect2.titlepage.recto.mode"/>
+<xsl:call-template name="titlepage.releaseinfo">
+</xsl:call-template>
 </div>
 </xsl:template>
 
@@ -2575,7 +2598,8 @@
 
 <xsl:template match="pubdate" mode="sect2.titlepage.recto.auto.mode">
 <div xsl:use-attribute-sets="sect2.titlepage.recto.style">
-<xsl:apply-templates select="." mode="sect2.titlepage.recto.mode"/>
+<xsl:call-template name="titlepage.pubdate">
+</xsl:call-template>
 </div>
 </xsl:template>
 
@@ -2746,7 +2770,8 @@
 
 <xsl:template match="releaseinfo" mode="sect3.titlepage.recto.auto.mode">
 <div xsl:use-attribute-sets="sect3.titlepage.recto.style">
-<xsl:apply-templates select="." mode="sect3.titlepage.recto.mode"/>
+<xsl:call-template name="titlepage.releaseinfo">
+</xsl:call-template>
 </div>
 </xsl:template>
 
@@ -2764,7 +2789,8 @@
 
 <xsl:template match="pubdate" mode="sect3.titlepage.recto.auto.mode">
 <div xsl:use-attribute-sets="sect3.titlepage.recto.style">
-<xsl:apply-templates select="." mode="sect3.titlepage.recto.mode"/>
+<xsl:call-template name="titlepage.pubdate">
+</xsl:call-template>
 </div>
 </xsl:template>
 
@@ -2935,7 +2961,8 @@
 
 <xsl:template match="releaseinfo" mode="sect4.titlepage.recto.auto.mode">
 <div xsl:use-attribute-sets="sect4.titlepage.recto.style">
-<xsl:apply-templates select="." mode="sect4.titlepage.recto.mode"/>
+<xsl:call-template name="titlepage.releaseinfo">
+</xsl:call-template>
 </div>
 </xsl:template>
 
@@ -2953,7 +2980,8 @@
 
 <xsl:template match="pubdate" mode="sect4.titlepage.recto.auto.mode">
 <div xsl:use-attribute-sets="sect4.titlepage.recto.style">
-<xsl:apply-templates select="." mode="sect4.titlepage.recto.mode"/>
+<xsl:call-template name="titlepage.pubdate">
+</xsl:call-template>
 </div>
 </xsl:template>
 
@@ -3124,7 +3152,8 @@
 
 <xsl:template match="releaseinfo" mode="sect5.titlepage.recto.auto.mode">
 <div xsl:use-attribute-sets="sect5.titlepage.recto.style">
-<xsl:apply-templates select="." mode="sect5.titlepage.recto.mode"/>
+<xsl:call-template name="titlepage.releaseinfo">
+</xsl:call-template>
 </div>
 </xsl:template>
 
@@ -3142,7 +3171,8 @@
 
 <xsl:template match="pubdate" mode="sect5.titlepage.recto.auto.mode">
 <div xsl:use-attribute-sets="sect5.titlepage.recto.style">
-<xsl:apply-templates select="." mode="sect5.titlepage.recto.mode"/>
+<xsl:call-template name="titlepage.pubdate">
+</xsl:call-template>
 </div>
 </xsl:template>
 
@@ -3330,7 +3360,8 @@
 
 <xsl:template match="releaseinfo" mode="simplesect.titlepage.recto.auto.mode">
 <div xsl:use-attribute-sets="simplesect.titlepage.recto.style">
-<xsl:apply-templates select="." mode="simplesect.titlepage.recto.mode"/>
+<xsl:call-template name="titlepage.releaseinfo">
+</xsl:call-template>
 </div>
 </xsl:template>
 
@@ -3348,7 +3379,8 @@
 
 <xsl:template match="pubdate" mode="simplesect.titlepage.recto.auto.mode">
 <div xsl:use-attribute-sets="simplesect.titlepage.recto.style">
-<xsl:apply-templates select="." mode="simplesect.titlepage.recto.mode"/>
+<xsl:call-template name="titlepage.pubdate">
+</xsl:call-template>
 </div>
 </xsl:template>
 
