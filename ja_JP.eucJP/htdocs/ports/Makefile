@@ -27,7 +27,7 @@ ${INDEX}:
 .endif
 
 HOSTNAME!= hostname
-.if ${HOSTNAME} == "hub.freebsd.org" || ${HOSTNAME} == "freefall.freebsd.org" || ${HOSTNAME} == "www.freebsd.org"
+.if ${HOSTNAME} == "hub.freebsd.org" || ${HOSTNAME} == "freefall.freebsd.org" || ${HOSTNAME} == "www.freebsd.org" || ${HOSTNAME} == "build-web.stream.FreeBSD.org"
 CLUSTER_MACHINE=	YES
 .endif
 
