@@ -48,6 +48,14 @@
     For questions about this documentation, e-mail &lt;<a href="mailto:doc@FreeBSD.org">doc@FreeBSD.org</a>&gt;.</small></p>
   </xsl:template>
 
+  <xsl:template match="citerefentry" mode="no.anchor.mode">
+    <xsl:apply-templates select="*" mode="no.anchor.mode"/>
+  </xsl:template>
+
+  <xsl:template match="refentrytitle" mode="no.anchor.mode">
+    <xsl:value-of select="."/>
+  </xsl:template>
+
   <!-- Add title class to emitted hX -->
   <xsl:template match="bridgehead">
     <xsl:variable name="container" select="(ancestor::appendix|ancestor::article|ancestor::bibliography|
