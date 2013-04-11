@@ -28,6 +28,7 @@
 
   <xsl:param name="make.valid.html" select="1"/>
   <xsl:param name="html.cleanup" select="1"/>
+  <xsl:param name="make.clean.html" select="1"/>
 
   <xsl:param name="local.l10n.xml" select="document('')"/>
   <i18n xmlns="http://docbook.sourceforge.net/xmlns/l10n/1.0">
