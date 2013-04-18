@@ -4,12 +4,12 @@
 
   $FreeBSD$
   $FreeBSDru: frdp/doc/ru_RU.KOI8-R/books/design-44bsd/freebsd.dsl,v 1.1 2001/07/11 19:27:16 phantom Exp $
-  Original revision: r9530
+  Original revision: r38826
 
 -->
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
-<!ENTITY freebsd.dsl SYSTEM "../../share/xml/freebsd.dsl" CDATA DSSSL>
+<!ENTITY freebsd.dsl PUBLIC "-//FreeBSD//DOCUMENT DocBook Stylesheet//EN" CDATA DSSSL>
 ]>
 
 <style-sheet>
