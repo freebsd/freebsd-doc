@@ -8,6 +8,7 @@
 SUBDIR = contributing
 SUBDIR+= contributing-ports
 SUBDIR+= explaining-bsd
+SUBDIR+= freebsd-update-server
 SUBDIR+= laptop
 SUBDIR+= linux-comparison
 SUBDIR+= nanobsd
