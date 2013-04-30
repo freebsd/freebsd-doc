@@ -20,8 +20,10 @@ DATA=	2009-freebsd-gsoc-thumbnail.jpg
 DATA+=	2009-freebsd-gsoc.pdf
 DATA+=	2010-freebsd-gsoc-thumbnail.jpg
 DATA+=	2010-freebsd-gsoc.pdf
-#DATA+=	2011-freebsd-gsoc-thumbnail.jpg
+DATA+=	2011-freebsd-gsoc-thumbnail.jpg
 DATA+=	2011-freebsd-gsoc.pdf
+DATA+=	2013-freebsd-gsoc-thumbnail.jpg
+DATA+=	2013-freebsd-gsoc.pdf
 
 INDEXLINK= projects.html
 
