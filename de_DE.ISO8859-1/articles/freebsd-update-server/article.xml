@@ -1,0 +1,862 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE article PUBLIC "-//FreeBSD//DTD DocBook XML V4.5-Based Extension//EN"
+        "../../../share/xml/freebsd45.dtd" [
+<!ENTITY fbus.ap "<application>FreeBSD Update Server</application>">
+]>
+
+<!-- The FreeBSD Documentation Project
+     The FreeBSD German Documentation Project
+
+     $FreeBSD$
+     basiert auf: r41395
+-->
+
+<article lang="de">
+  <articleinfo>
+    <title>Einen eigenen &os; Update Server bauen</title>
+
+    <author>
+      <firstname>Jason</firstname>
+      <surname>Helfman</surname>
+      <affiliation>
+	<address>&a.jgh;</address>
+      </affiliation>
+    </author>
+
+    <copyright>
+      <year>2009</year>
+      <year>2010</year>
+      <year>2011</year>
+      <year>2013</year>
+      <holder role="mailto:jgh@FreeBSD.org">Jason Helfman</holder>
+    </copyright>
+
+    <legalnotice id="trademarks" role="trademarks">
+      &tm-attrib.freebsd;
+      &tm-attrib.general;
+      &tm-attrib.intel;
+      &tm-attrib.amd;
+    </legalnotice>
+
+    <pubdate>$FreeBSD$</pubdate>
+
+    <releaseinfo>$FreeBSD$</releaseinfo>
+  </articleinfo>
+
+  <abstract>
+    <para>Dieser Artikel beschreibt den Bau eines internen &fbus.ap;.
+      Die <ulink
+	url="http://svnweb.freebsd.org/base/user/cperciva/freebsd-update-build/">freebsd-update-server</ulink>
+      Software wurde von &a.cperciva;, emeritierter Security Officer
+      von &os;, geschrieben.  Benutzer, die es als vorteilhaft ansehen
+      ihre Systeme über einen offiziellen Update-Server zu
+      aktualisieren, können mit Hilfe eines selbst erstellten
+      &fbus.ap; die Funktionalität über manuell optimierte &os;
+      Releases oder über Bereitstellung eines lokalen Mirror, welcher
+      schnellere Updates ermöglicht, erweitern.</para>
+  </abstract>
+
+  <para><emphasis>&Uuml;bersetzt von Björn
+    Heidotting</emphasis>.</para>
+
+  <sect1 id="acknowledgments">
+    <title>Danksagung</title>
+      <para>Dieser Artikel wurde anschließend im <ulink
+	  url="http://bsdmag.org/magazine/1021-bsd-as-a-desktop">BSD
+	  Magazine</ulink> gedruckt.</para>
+  </sect1>
+
+  <sect1 id="introduction">
+    <title>Einführung</title>
+
+    <para>Erfahrene Benutzer oder Administratoren sind häufig für
+      etliche Maschinen oder Umgebungen verantwortlich.  Sie verstehen
+      die schwierigen Anforderungen und Herausforderungen der
+      Aufrechterhaltung einer solchen Infrastruktur.  Ein &fbus.ap;
+      macht es einfacher, Sicherheits- und Software-Korrekturen für
+      ausgewählte Test-Maschinen bereitzustellen, bevor diese dann auf
+      den Produktionssystemen ausgerollt werden.  Es bedeutet auch,
+      dass eine Reihe von Systemen über das lokale Netzwerk, anstatt
+      über eine langsame Internet-Verbindung, aktualisiert werden
+      können.  Dieser Artikel beschreibt die Vorgehensweise zum
+      Erstellen eines eigenen &fbus.ap;.</para>
+  </sect1>
+
+  <sect1 id="prerequisites">
+    <title>Voraussetzungen</title>
+
+    <para>Für den Bau eines internen &fbus.ap; sollten einige
+      Anforderungen erfüllt werden.</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>Ein laufendes &os; System.</para>
+
+	<note>
+	  <para>Als Minimum, muss das zu verteilende Ziel-Release auf
+	    einer gleichen, oder höheren &os; Version gebaut
+	    werden.</para>
+	</note>
+      </listitem>
+
+      <listitem>
+	<para>Ein Benutzerkonto mit mindestens 4&nbsp;GB freiem
+	  Speicherplatz.  Dies erlaubt die Erstellung der Updates für
+	  7.1 und 7.2.  Der genaue Platzbedarf kann sich aber von
+	  Version zu Version ändern.</para>
+      </listitem>
+
+      <listitem>
+	<para>Ein &man.ssh.1; Konto auf einem entfernten System, um
+	  die später zu verteilenden Updates hochzuladen.</para>
+      </listitem>
+
+      <listitem>
+	<para>Einen Webserver, wie <ulink
+	    url="&url.books.handbook;/network-apache.html">Apache</ulink>,
+	  wobei über die Hälfte des Platzes für den Bau benötigt wird.
+	  Als Beispiel benötigt der Bau von 7.1 und 7.2 insgesamt
+	  4&nbsp;GB.  Der Speicherplatz, den der Webserver für die
+	  Verteilung dieser Updates benötigt, würde 2.6&nbsp;GB
+	  betragen.</para>
+      </listitem>
+
+      <listitem>
+	<para>Grundlegende Kenntnisse im Shell Skripting
+          mit der Bourne Shell, &man.sh.1;.</para>
+      </listitem>
+    </itemizedlist>
+  </sect1>
+
+  <sect1 id="Configuration">
+    <title>Konfiguration: Installation &amp; Setup</title>
+
+    <para>Laden Sie die<ulink
+	url="http://svnweb.freebsd.org/base/user/cperciva/freebsd-update-build/">
+	freebsd-update-server</ulink> Software durch die Installation
+      von <filename role="package">devel/subversion </filename>, und
+      starten Sie:</para>
+
+    <screen>&prompt.user; <userinput>svn co http://svn.freebsd.org/base/user/cperciva/freebsd-update-build freebsd-update-server</userinput></screen>
+
+    <para>Passen Sie <filename>scripts/build.conf</filename> an Ihre
+      Bedürfnisse an.  Diese Datei wird bei jedem Bau mit
+      einbezogen.</para>
+
+    <para>Hier ist die Standardeinstellung für
+      <filename>build.conf</filename>, welche Sie für Ihre Umgebung
+      anpassen sollten.</para>
+
+    <informalexample>
+      <programlisting>
+
+# Main configuration file for FreeBSD Update builds.  The
+# release-specific configuration data is lower down in
+# the scripts tree.
+
+# Location from which to fetch releases
+export FTP=ftp://ftp2.freebsd.org/pub/FreeBSD/releases<co id="ftp-id"/>
+
+# Host platform
+export HOSTPLATFORM=`uname -m`
+
+# Host name to use inside jails
+export BUILDHOSTNAME=${HOSTPLATFORM}-builder.daemonology.net<co id="buildhost-id"/>
+
+# Location of SSH key
+export SSHKEY=/root/.ssh/id_dsa<co id="sshkey-id"/>
+
+# SSH account into which files are uploaded
+MASTERACCT=builder@wadham.daemonology.net<co id="mstacct-id"/>
+
+# Directory into which files are uploaded
+MASTERDIR=update-master.freebsd.org<co id="mstdir-id"/></programlisting>
+    </informalexample>
+
+    <para>Parameter, die zu berücksichtigen sind:</para>
+
+    <calloutlist>
+      <callout arearefs="ftp-id">
+	  <para>Dies ist der Ort, von dem die ISO Abbilder (über die
+	    <function>fetchiso()</function> in
+	    <filename>scripts/build.subr</filename>) heruntergeladen
+	    werden.  Der Ort ist nicht auf FTP URIs beschränkt.  Jedes
+	    URI-Schema, welches von &man.fetch.1; unterstützt wird,
+	    sollte hier gut funktionieren.</para>
+
+	  <para>Anpassungen am <function>fetchiso()</function> Code
+	    können Sie vornehmen, indem Sie das Standardskript
+	    <filename>build.subr</filename> in den Release- und
+	    Architektur-spezifischen Bereich in
+	    <filename>scripts/RELEASE/ARCHITECTURE/build.subr</filename>
+	    kopieren und dort lokale Änderungen vornehmen.</para>
+      </callout>
+
+      <callout arearefs="buildhost-id">
+	  <para>Der Name des Build-Hosts.  Auf aktualisierten Systemen
+	    können Sie diese Information wie folgt ausgeben:</para>
+
+	  <screen>&prompt.user; <userinput>uname -v</userinput></screen>
+      </callout>
+
+      <callout arearefs="sshkey-id">
+	  <para>Der <application>SSH</application>  Schlüssel für das
+	    Hochladen der Dateien auf den Update Server.  Ein
+	    Schlüsselpaar kann durch die Eingabe von
+	    <command>ssh-keygen -t dsa</command> erstellt werden.
+	    Dieser Parameter ist jedoch optional; Standard Password
+	    Authentifizierung wird als Fallback-Methode benutzt wenn
+	    <literal>SSHKEY</literal> nicht definiert ist.</para>
+
+	  <para>Die &man.ssh-keygen.1; Manualpage enthält detaillierte
+	    Informationen zu <application>SSH</application> und die
+	    entsprechenden Schritte zur Erstellung und Verwendung von
+	    Schlüsseln.</para>
+      </callout>
+
+      <callout arearefs="mstacct-id">
+	  <para>Benutzerkonto zum Hochladen von Dateien auf den
+	    Update-Server.</para>
+      </callout>
+
+      <callout arearefs="mstdir-id">
+	  <para>Verzeichnis auf dem Update-Server, in welches die
+	    Dateien hochgeladen werden.</para>
+      </callout>
+    </calloutlist>
+
+    <para>Die Standard <filename>build.conf</filename>, die mit den
+      <application>freebsd-update-server</application> Quellen
+      ausgeliefert wird ist geeignet um  &arch.i386; Releases von &os;
+      zu bauen.  Als Beispiel für den Aufbau eines Update-Servers für
+      andere Architekturen beschreiben die folgenden Schritte die
+      Konfiguration für &arch.amd64;:</para>
+
+    <procedure>
+      <step>
+	<para>Erstellen Sie eine Bau-Umgebung für &arch.amd64;:</para>
+
+	<informalexample>
+	  <screen>&prompt.user; <userinput>mkdir -p /usr/local/freebsd-update-server/scripts/7.2-RELEASE/amd64</userinput></screen>
+	</informalexample>
+      </step>
+
+      <step>
+	<para>Installieren Sie eine <filename>build.conf</filename> in
+	  das neu erstellte Verzeichnis.  Die Konfigurationsoptionen
+	  für &os; 7.2-RELEASE auf &arch.amd64; sollten ähnlich wie
+	  die folgenden sein:</para>
+
+	<informalexample>
+	<programlisting># SHA256 hash of RELEASE disc1.iso image.
+export RELH=1ea1f6f652d7c5f5eab7ef9f8edbed50cb664b08ed761850f95f48e86cc71ef5<co id="sha256-id"/>
+
+# Components of the world, source, and kernels
+export WORLDPARTS="base catpages dict doc games info manpages proflibs lib32"
+export SOURCEPARTS="base bin contrib crypto etc games gnu include krb5  \
+                lib libexec release rescue sbin secure share sys tools  \
+                ubin usbin cddl"
+export KERNELPARTS="generic"
+
+# EOL date
+export EOL=1275289200<co id="eol-id"/></programlisting>
+	</informalexample>
+
+	<calloutlist>
+	  <callout arearefs="sha256-id">
+	    <para>Der &man.sha256.1; Fingerabdruck für die gewünschte
+	      Version wird innerhalb der jeweiligen <ulink
+		url="&url.base;/releases/">Release-Ankündigung</ulink>
+	      veröffentlicht.</para>
+	  </callout>
+
+	  <callout arearefs="eol-id">
+	  <para>Um die "End of Life" Nummer für die
+	    <filename>build.conf</filename>zu generieren, beziehen Sie
+	    sich bitte auf "Estimated EOL" auf der <ulink
+	      url="&url.base;/security/security.html">&os; Security
+	      Webseite</ulink>.  Der Wert für <literal>EOL</literal>
+	    kann aus dem Datum, das auf der Webseite veröffentlicht
+	    ist, abgeleitet werden.  Benutzen Sie dafür das Werkzeug
+	    &man.date.1;.  Dazu ein Beispiel:</para>
+
+	  <screen>&prompt.user; <userinput>date -j -f '%Y%m%d-%H%M%S' '20090401-000000' '+%s'</userinput></screen>
+	  </callout>
+	</calloutlist>
+      </step>
+    </procedure>
+  </sect1>
+
+  <sect1 id="build">
+    <title>Den Update Code bauen</title>
+
+    <para>Der erste Schritt ist das Ausführen von
+      <filename>scripts/make.sh</filename>.  Dieses Skript baut einige
+      Binärdateien, erstellt Verzeichnisse und einen RSA
+      Signaturschlüssel für die Genehmigung des Bau.  In diesem
+      Schritt müssen Sie auch eine Passphrase für die Erstellung des
+      Signaturschlüssels angeben.</para>
+
+    <screen>&prompt.root; <userinput>sh scripts/make.sh</userinput>
+cc -O2 -fno-strict-aliasing -pipe   findstamps.c  -o findstamps
+findstamps.c: In function 'usage':
+findstamps.c:45: warning: incompatible implicit declaration of built-in function 'exit'
+cc -O2 -fno-strict-aliasing -pipe   unstamp.c  -o unstamp
+install findstamps ../bin
+install unstamp ../bin
+rm -f findstamps unstamp
+Generating RSA private key, 4096 bit long modulus
+................................................................................++
+...................++
+e is 65537 (0x10001)
+
+Public key fingerprint:
+27ef53e48dc869eea6c3136091cc6ab8589f967559824779e855d58a2294de9e
+
+Encrypting signing key for root
+enter aes-256-cbc encryption password:
+Verifying - enter aes-256-cbc encryption password:</screen>
+
+    <note>
+      <para>Notieren Sie sich den Fingerabdruck des erzeugten
+	Schlüssels.  Dieser Wert wird in
+	<filename>/etc/freebsd-update.conf</filename> für die binären
+	Updates benötigt.</para>
+    </note>
+
+    <para>An dieser Stelle sind wir bereit, den Bauprozess zu starten.</para>
+
+    <informalexample>
+      <screen>&prompt.root; <userinput>cd /usr/local/freebsd-update-server</userinput>
+&prompt.root; <userinput>sh scripts/init.sh <replaceable>amd64 7.2-RELEASE</replaceable></userinput></screen>
+    </informalexample>
+
+    <para>Hier folgt ein Beispiel für einen
+      <emphasis>ersten</emphasis> Bauprozess.</para>
+
+    <screen>&prompt.root; <userinput>sh scripts/init.sh amd64 7.2-RELEASE</userinput>
+Mon Aug 24 16:04:36 PDT 2009 Starting fetch for FreeBSD/amd64 7.2-RELEASE
+/usr/local/freebsd-update-server/work/7.2-RELE100% of  588 MB  359 kBps 00m00s
+Mon Aug 24 16:32:38 PDT 2009 Verifying disc1 hash for FreeBSD/amd64 7.2-RELEASE
+Mon Aug 24 16:32:44 PDT 2009 Extracting components for FreeBSD/amd64 7.2-RELEASE
+Mon Aug 24 16:34:05 PDT 2009 Constructing world+src image for FreeBSD/amd64 7.2-RELEASE
+Mon Aug 24 16:35:57 PDT 2009 Extracting world+src for FreeBSD/amd64 7.2-RELEASE
+Mon Aug 24 23:36:24 UTC 2009 Building world for FreeBSD/amd64 7.2-RELEASE
+Tue Aug 25 00:31:29 UTC 2009 Distributing world for FreeBSD/amd64 7.2-RELEASE
+Tue Aug 25 00:32:36 UTC 2009 Building and distributing kernels for FreeBSD/amd64 7.2-RELEASE
+Tue Aug 25 00:44:44 UTC 2009 Constructing world components for FreeBSD/amd64 7.2-RELEASE
+Tue Aug 25 00:44:56 UTC 2009 Distributing source for FreeBSD/amd64 7.2-RELEASE
+Mon Aug 24 17:46:18 PDT 2009 Moving components into staging area for FreeBSD/amd64 7.2-RELEASE
+Mon Aug 24 17:46:33 PDT 2009 Identifying extra documentation for FreeBSD/amd64 7.2-RELEASE
+Mon Aug 24 17:47:13 PDT 2009 Extracting extra docs for FreeBSD/amd64 7.2-RELEASE
+Mon Aug 24 17:47:18 PDT 2009 Indexing release for FreeBSD/amd64 7.2-RELEASE
+Mon Aug 24 17:50:44 PDT 2009 Indexing world0 for FreeBSD/amd64 7.2-RELEASE
+
+Files built but not released:
+Files released but not built:
+Files which differ by more than contents:
+Files which differ between release and build:
+kernel|generic|/GENERIC/hptrr.ko
+kernel|generic|/GENERIC/kernel
+src|sys|/sys/conf/newvers.sh
+world|base|/boot/loader
+world|base|/boot/pxeboot
+world|base|/etc/mail/freebsd.cf
+world|base|/etc/mail/freebsd.submit.cf
+world|base|/etc/mail/sendmail.cf
+world|base|/etc/mail/submit.cf
+world|base|/lib/libcrypto.so.5
+world|base|/usr/bin/ntpq
+world|base|/usr/lib/libalias.a
+world|base|/usr/lib/libalias_cuseeme.a
+world|base|/usr/lib/libalias_dummy.a
+world|base|/usr/lib/libalias_ftp.a
+...</screen>
+
+    <para>Anschließend wird das Basissystem mit den dazugehörigen
+      Patches erneut gebaut.  Eine detaillierte Erklärung dazu finden
+      Sie in <filename>scripts/build.subr</filename>.</para>
+
+    <warning>
+      <para>Während der zweiten Bauphase wird der Network Time
+	Protocol Dienst, &man.ntpd.8;, ausgeschaltet.  Per
+	&a.cperciva;, emeritierter Security Officer von &os;, "Der
+	<ulink
+	  url="http://svnweb.freebsd.org/base/user/cperciva/freebsd-update-build/">freebsd-update-server</ulink>
+	Code muss Zeitstempel, welche in Dateien gespeichert sind,
+	identifizieren, sodass festgestellt werden kann, welche
+	Dateien aktualisiert werden müssen.  Dies geschieht, indem
+	zwei Builds erstellt werden die 400 Tage auseinander liegen
+	und anschließend die Ergebnisse verglichen werden."</para>
+    </warning>
+
+    <screen>Mon Aug 24 17:54:07 PDT 2009 Extracting world+src for FreeBSD/amd64 7.2-RELEASE
+Wed Sep 29 00:54:34 UTC 2010 Building world for FreeBSD/amd64 7.2-RELEASE
+Wed Sep 29 01:49:42 UTC 2010 Distributing world for FreeBSD/amd64 7.2-RELEASE
+Wed Sep 29 01:50:50 UTC 2010 Building and distributing kernels for FreeBSD/amd64 7.2-RELEASE
+Wed Sep 29 02:02:56 UTC 2010 Constructing world components for FreeBSD/amd64 7.2-RELEASE
+Wed Sep 29 02:03:08 UTC 2010 Distributing source for FreeBSD/amd64 7.2-RELEASE
+Tue Sep 28 19:04:31 PDT 2010 Moving components into staging area for FreeBSD/amd64 7.2-RELEASE
+Mon Aug 24 19:04:46 PDT 2009 Extracting extra docs for FreeBSD/amd64 7.2-RELEASE
+Mon Aug 24 19:04:51 PDT 2009 Indexing world1 for FreeBSD/amd64 7.2-RELEASE
+Mon Aug 24 19:08:04 PDT 2009 Locating build stamps for FreeBSD/amd64 7.2-RELEASE
+Mon Aug 24 19:10:19 PDT 2009 Cleaning staging area for FreeBSD/amd64 7.2-RELEASE
+Mon Aug 24 19:10:19 PDT 2009 Preparing to copy files into staging area for FreeBSD/amd64 7.2-RELEASE
+Mon Aug 24 19:10:20 PDT 2009 Copying data files into staging area for FreeBSD/amd64 7.2-RELEASE
+Mon Aug 24 12:16:57 PDT 2009 Copying metadata files into staging area for FreeBSD/amd64 7.2-RELEASE
+Mon Aug 24 12:16:59 PDT 2009 Constructing metadata index and tag for FreeBSD/amd64 7.2-RELEASE
+
+Files found which include build stamps:
+kernel|generic|/GENERIC/hptrr.ko
+kernel|generic|/GENERIC/kernel
+world|base|/boot/loader
+world|base|/boot/pxeboot
+world|base|/etc/mail/freebsd.cf
+world|base|/etc/mail/freebsd.submit.cf
+world|base|/etc/mail/sendmail.cf
+world|base|/etc/mail/submit.cf
+world|base|/lib/libcrypto.so.5
+world|base|/usr/bin/ntpq
+world|base|/usr/include/osreldate.h
+world|base|/usr/lib/libalias.a
+world|base|/usr/lib/libalias_cuseeme.a
+world|base|/usr/lib/libalias_dummy.a
+world|base|/usr/lib/libalias_ftp.a
+...</screen>
+
+    <para>Schlussendlich wird der Bauprozess fertiggestellt.</para>
+
+    <screen>Values of build stamps, excluding library archive headers:
+v1.2 (Aug 25 2009 00:40:36)
+v1.2 (Aug 25 2009 00:38:22)
+@(#)FreeBSD 7.2-RELEASE #0: Tue Aug 25 00:38:29 UTC 2009
+FreeBSD 7.2-RELEASE #0: Tue Aug 25 00:38:29 UTC 2009
+    root@server.myhost.com:/usr/obj/usr/src/sys/GENERIC
+7.2-RELEASE
+Mon Aug 24 23:55:25 UTC 2009
+Mon Aug 24 23:55:25 UTC 2009
+##### built by root@server.myhost.com on Tue Aug 25 00:16:15 UTC 2009
+##### built by root@server.myhost.com on Tue Aug 25 00:16:15 UTC 2009
+##### built by root@server.myhost.com on Tue Aug 25 00:16:15 UTC 2009
+##### built by root@server.myhost.com on Tue Aug 25 00:16:15 UTC 2009
+Mon Aug 24 23:46:47 UTC 2009
+ntpq 4.2.4p5-a Mon Aug 24 23:55:53 UTC 2009 (1)
+ * Copyright (c) 1992-2009 The FreeBSD Project.
+Mon Aug 24 23:46:47 UTC 2009
+Mon Aug 24 23:55:40 UTC 2009
+Aug 25 2009
+ntpd 4.2.4p5-a Mon Aug 24 23:55:52 UTC 2009 (1)
+ntpdate 4.2.4p5-a Mon Aug 24 23:55:53 UTC 2009 (1)
+ntpdc 4.2.4p5-a Mon Aug 24 23:55:53 UTC 2009 (1)
+Tue Aug 25 00:21:21 UTC 2009
+Tue Aug 25 00:21:21 UTC 2009
+Tue Aug 25 00:21:21 UTC 2009
+Mon Aug 24 23:46:47 UTC 2009
+
+FreeBSD/amd64 7.2-RELEASE initialization build complete.  Please
+review the list of build stamps printed above to confirm that
+they look sensible, then run
+# sh -e approve.sh amd64 7.2-RELEASE
+to sign the release.</screen>
+
+    <para>Genehmigen Sie den Bau, wenn alles korrekt ist.  Weitere
+      Informationen zur korrekten Bestimmung finden Sie in der
+      Quelldatei namens <filename>USAGE</filename>.  Führen Sie, wie
+      angegeben <filename>scripts/approve.sh</filename> aus.  Dieser
+      Schritt unterschreibt das Release und verschiebt die Komponenten
+      an einen Sammelpunkt, wo sie für den Upload verwendet werden
+      können.</para>
+
+    <informalexample>
+      <screen>&prompt.root; <userinput>cd /usr/local/freebsd-update-server</userinput>
+&prompt.root; <userinput>sh scripts/mountkey.sh</userinput></screen>
+    </informalexample>
+
+    <screen>&prompt.root; <userinput>sh -e scripts/approve.sh amd64 7.2-RELEASE</userinput>
+Wed Aug 26 12:50:06 PDT 2009 Signing build for FreeBSD/amd64 7.2-RELEASE
+Wed Aug 26 12:50:06 PDT 2009 Copying files to patch source directories for FreeBSD/amd64 7.2-RELEASE
+Wed Aug 26 12:50:06 PDT 2009 Copying files to upload staging area for FreeBSD/amd64 7.2-RELEASE
+Wed Aug 26 12:50:07 PDT 2009 Updating databases for FreeBSD/amd64 7.2-RELEASE
+Wed Aug 26 12:50:07 PDT 2009 Cleaning staging area for FreeBSD/amd64 7.2-RELEASE</screen>
+
+    <para>Nachdem der Genehmigungsprozess abgeschlossen ist, kann der
+      Upload gestartet werden.</para>
+
+    <informalexample>
+      <screen>&prompt.root; <userinput>cd /usr/local/freebsd-update-server</userinput>
+&prompt.root; <userinput>sh scripts/upload.sh <replaceable>amd64 7.2-RELEASE</replaceable></userinput></screen>
+    </informalexample>
+
+    <note>
+      <para>Wenn der Update-Code erneut hochgeladen werden muss, kann
+	dies durch die Änderung des öffentlichen
+	Distributionsverzeichnisses für das Ziel-Release und der
+	Aktualisierung der Attribute für die
+	<emphasis>hochgeladene</emphasis> Datei geschehen.</para>
+
+      <informalexample>
+	<screen>&prompt.root; <userinput>cd /usr/local/freebsd-update-server/pub/<replaceable>7.2-RELEASE/amd64</replaceable></userinput>
+&prompt.root; <userinput>touch -t <replaceable>200801010101.01</replaceable> uploaded</userinput></screen>
+      </informalexample>
+    </note>
+
+    <!-- If freebsd-update works with other http servers too, we should
+	 avoid making the instructions Apache-specific here. -->
+
+<!-- there are specific web instructions in the uploaded code that pertain to Apache. I believe it is worded fine here, now, and if others choose to use another web server, that is their choice to figure out -->
+    <para>Um die Updates zu verteilen, müssen die hochgeladenen
+      Dateien im Document Root des Webservers liegen.  Die genaue
+      Konfiguration hängt von dem verwendeten Webserver ab.  Für den
+      <application>Apache</application> Webserver, beziehen Sie sich
+      bitte auf das Kapitel <ulink
+	url="&url.books.handbook;/network-apache.html">Konfiguration
+	des Apache Servers</ulink> im Handbuch.</para>
+
+    <!-- This note seems either out of place.  I find it hard to read and it
+	 is a bit difficult to understand why it is related to the rest of
+	 this section.  It looks like something that would fit nicely in an
+	 introductory section about the way a freebsd-update server works. -->
+    <!-- Agreed, it does not suite very well here.  But it is now included
+         above.  I think it can be removed now.  gabor -->
+    <!-- Taken out until we decide what to do with it -->
+
+<!-- Agreed. However, I believe the placement of this works fine as it is.
+    <note>
+      <para>Updates for the current release of the &os; system you are
+	updating, and what you want to upgrade <emphasis>to</emphasis> need
+	to be built in order for &os; Update Server to work properly.  This
+	is necessary for merging of files between releases.  For example, if
+	you are updating a system from &os; 7.1 to &os; 7.2, you will need
+	to have update code built for &os; 7.1-RELEASE and
+	&os; 7.2-RELEASE.</para>
+    </note> -->
+
+    <!-- What is a 'KeyPrint'? -->
+    <para>Aktualisieren Sie <literal>KeyPrint</literal> und
+      <literal>ServerName</literal> in der
+      <filename>/etc/freebsd-update.conf</filename> des Clients und
+      führen Sie das Update, wie im Kapitel <ulink
+	url="&url.books.handbook;/updating-upgrading-freebsdupdate.html">&os;
+	Update</ulink> des Handbuchs beschrieben, aus.</para>
+      <!-- One sentence, two instances of 'in'.  We can probably reword this
+	   part to avoid repetition. -->
+      <!-- What about "place client's new keyprint and servername values to
+	   freebsd-update.conf, ..."?  gabor -->
+
+<!-- Sorry folks, but I disagree here. I believe it is worded fine. If anything, drop everything after "perform" and change "updates" to "FreeBSD Updates" and link that to the handbook -->
+
+    <important>
+      <para>Damit &fbus.ap; ordnungsgemäß funktioniert, muss sowohl
+	das <emphasis>current</emphasis> Release als auch das Release
+	<emphasis>auf welches Sie aktualisieren wollen</emphasis> neu
+	gebaut werden.  Dies ist notwendig, um die Unterschiede von
+	Dateien zwischen den beiden Releases bestimmen zu können.  Zum
+	Beispiel beim Upgrade eines &os; Systems von 7.1-RELEASE auf
+	7.2-RELEASE, müssen für beide Versionen Updates gebaut und auf
+	den Webserver hochgeladen werden.</para>
+    </important>
+
+    <para>Als Referenz wird der gesamte Verlauf von <ulink
+	url="init.txt"><filename>init.sh</filename></ulink>
+      beigefügt.</para>
+  </sect1>
+
+  <sect1 id="patch">
+    <title>Eine Fehlerkorrektur erstellen</title>
+
+    <para>Jedes Mal, wenn ein <ulink
+	url="&url.base;/security/advisories.html">Sicherheits-Hinweis</ulink>
+      oder ein <ulink
+	url="&url.base;/security/notices.html">Fehler-Hinweis</ulink>
+      angekündigt wird, kann eine Fehlerkorrektur gebaut
+      werden.</para>
+
+    <para>Für dieses Beispiel wird 7.1-RELEASE benutzt.</para>
+
+    <para>Für den Bau eines anderen Release werden ein paar Annahmen
+      getroffen:</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>Richten Sie die korrekte Verzeichnisstruktur für den
+	  ersten Bau ein.</para>
+      </listitem>
+
+      <listitem>
+	<para>Führen Sie einen ersten Bau für 7.1-RELEASE aus.</para>
+      </listitem>
+    </itemizedlist>
+
+    <para>Erstellen Sie das Korrekturverzeichnis des jeweiligen
+      Releases unter <filename
+	class="directory">/usr/local/freebsd-update-server/patches/</filename>.</para>
+
+    <informalexample>
+      <screen>&prompt.user; <userinput>mkdir -p /usr/local/freebsd-update-server/patches/7.1-RELEASE/</userinput>
+&prompt.user; <userinput>cd /usr/local/freebsd-update-server/patches/7.1-RELEASE</userinput></screen>
+    </informalexample>
+
+    <para>Als Beispiel nehmen Sie die Korrektur für &man.named.8;.
+      Lesen Sie den Hinweis und laden Sie die erforderliche Datei von
+      <ulink url="&url.base;/security/advisories.html">&os;
+	Sicherheits-Hinweise</ulink> herunter.  Weitere Informationen
+      zur Interpretation der Sicherheitshinweise finden Sie im <ulink
+	url="&url.books.handbook;/security-advisories.html">&os;
+	Handbuch</ulink>.</para>
+
+    <para>In der <ulink
+	url="http://security.freebsd.org/advisories/FreeBSD-SA-09:12.bind.asc">Sicherheits
+	Anweisung</ulink>, nennt sich dieser Hinweis
+      <literal>SA-09:12.bind</literal>.  Nach dem Herunterladen der
+      Datei, ist es erforderlich, die Datei auf einen geeigneten
+      Patch-Level umzubenennen.  Es steht Ihnen frei den Namen frei zu
+      wählen, es wird jedoch nahegelegt, diesen im Einklang mit dem
+      offiziellen &os; Patch-Level zu halten.  Für diesen Bau folgen
+      wir der derzeit gängigen Praxis von &os; und benennen sie
+      <literal>p7</literal>.  Benennen Sie die Datei um:</para>
+
+    <informalexample>
+      <screen>&prompt.user; <userinput>cd /usr/local/freebsd-update-server/patches/7.1-RELEASE/; mv bind.patch 7-SA-09:12.bind </userinput></screen>
+    </informalexample>
+
+    <note>
+      <para>Wenn ein Patch-Level gebaut wird, wird davon ausgegangen,
+	dass die bisherigen Korrekturen bereits vorhanden sind.  Wenn
+	der Bau läuft, werden alle Korrekturen aus dem
+	Patchverzeichnis mit gebaut.</para>
+
+      <para>Es können auch selbsterstellte Korrekturen zum Bau
+	hinzugefügt werden.  Benutzen Sie die Zahl Null, oder jede
+	andere Zahl.</para>
+    </note>
+
+    <warning>
+      <para>Es liegt in der Verantwortung des Administrators des
+	&fbus.ap; geeignete Maßnahmen zu treffen, um die Authentizität
+	jeder Fehlerkorrektur zu überprüfen.</para>
+    </warning>
+
+    <para>An dieser Stelle sind wir bereit, einen
+      <emphasis>Diff</emphasis> zu bauen.  Die Software prüft
+      zunächst, ob <filename>scripts/init.sh</filename> für das
+      jeweilige Release gelaufen ist, bevor mit dem Bau des Diff
+      begonnen wird.</para>
+
+    <informalexample>
+      <screen>&prompt.root; <userinput>cd /usr/local/freebsd-update-server</userinput>
+&prompt.root; <userinput>sh scripts/diff.sh <replaceable>amd64 7.1-RELEASE 7</replaceable></userinput></screen>
+    </informalexample>
+
+    <para>Es folgt ein Beispiel für einen <emphasis>Diff</emphasis>
+      Bauprozess.</para>
+
+    <screen>&prompt.root; <userinput>sh -e scripts/diff.sh amd64 7.1-RELEASE 7</userinput>
+Wed Aug 26 10:09:59 PDT 2009 Extracting world+src for FreeBSD/amd64 7.1-RELEASE-p7
+Wed Aug 26 17:10:25 UTC 2009 Building world for FreeBSD/amd64 7.1-RELEASE-p7
+Wed Aug 26 18:05:11 UTC 2009 Distributing world for FreeBSD/amd64 7.1-RELEASE-p7
+Wed Aug 26 18:06:16 UTC 2009 Building and distributing kernels for FreeBSD/amd64 7.1-RELEASE-p7
+Wed Aug 26 18:17:50 UTC 2009 Constructing world components for FreeBSD/amd64 7.1-RELEASE-p7
+Wed Aug 26 18:18:02 UTC 2009 Distributing source for FreeBSD/amd64 7.1-RELEASE-p7
+Wed Aug 26 11:19:23 PDT 2009 Moving components into staging area for FreeBSD/amd64 7.1-RELEASE-p7
+Wed Aug 26 11:19:37 PDT 2009 Extracting extra docs for FreeBSD/amd64 7.1-RELEASE-p7
+Wed Aug 26 11:19:42 PDT 2009 Indexing world0 for FreeBSD/amd64 7.1-RELEASE-p7
+Wed Aug 26 11:23:02 PDT 2009 Extracting world+src for FreeBSD/amd64 7.1-RELEASE-p7
+Thu Sep 30 18:23:29 UTC 2010 Building world for FreeBSD/amd64 7.1-RELEASE-p7
+Thu Sep 30 19:18:15 UTC 2010 Distributing world for FreeBSD/amd64 7.1-RELEASE-p7
+Thu Sep 30 19:19:18 UTC 2010 Building and distributing kernels for FreeBSD/amd64 7.1-RELEASE-p7
+Thu Sep 30 19:30:52 UTC 2010 Constructing world components for FreeBSD/amd64 7.1-RELEASE-p7
+Thu Sep 30 19:31:03 UTC 2010 Distributing source for FreeBSD/amd64 7.1-RELEASE-p7
+Thu Sep 30 12:32:25 PDT 2010 Moving components into staging area for FreeBSD/amd64 7.1-RELEASE-p7
+Wed Aug 26 12:32:39 PDT 2009 Extracting extra docs for FreeBSD/amd64 7.1-RELEASE-p7
+Wed Aug 26 12:32:43 PDT 2009 Indexing world1 for FreeBSD/amd64 7.1-RELEASE-p7
+Wed Aug 26 12:35:54 PDT 2009 Locating build stamps for FreeBSD/amd64 7.1-RELEASE-p7
+Wed Aug 26 12:36:58 PDT 2009 Reverting changes due to build stamps for FreeBSD/amd64 7.1-RELEASE-p7
+Wed Aug 26 12:37:14 PDT 2009 Cleaning staging area for FreeBSD/amd64 7.1-RELEASE-p7
+Wed Aug 26 12:37:14 PDT 2009 Preparing to copy files into staging area for FreeBSD/amd64 7.1-RELEASE-p7
+Wed Aug 26 12:37:15 PDT 2009 Copying data files into staging area for FreeBSD/amd64 7.1-RELEASE-p7
+Wed Aug 26 12:43:23 PDT 2009 Copying metadata files into staging area for FreeBSD/amd64 7.1-RELEASE-p7
+Wed Aug 26 12:43:25 PDT 2009 Constructing metadata index and tag for FreeBSD/amd64 7.1-RELEASE-p7
+...
+Files found which include build stamps:
+kernel|generic|/GENERIC/hptrr.ko
+kernel|generic|/GENERIC/kernel
+world|base|/boot/loader
+world|base|/boot/pxeboot
+world|base|/etc/mail/freebsd.cf
+world|base|/etc/mail/freebsd.submit.cf
+world|base|/etc/mail/sendmail.cf
+world|base|/etc/mail/submit.cf
+world|base|/lib/libcrypto.so.5
+world|base|/usr/bin/ntpq
+world|base|/usr/include/osreldate.h
+world|base|/usr/lib/libalias.a
+world|base|/usr/lib/libalias_cuseeme.a
+world|base|/usr/lib/libalias_dummy.a
+world|base|/usr/lib/libalias_ftp.a
+...
+Values of build stamps, excluding library archive headers:
+v1.2 (Aug 26 2009 18:13:46)
+v1.2 (Aug 26 2009 18:11:44)
+@(#)FreeBSD 7.1-RELEASE-p7 #0: Wed Aug 26 18:11:50 UTC 2009
+FreeBSD 7.1-RELEASE-p7 #0: Wed Aug 26 18:11:50 UTC 2009
+    root@server.myhost.com:/usr/obj/usr/src/sys/GENERIC
+7.1-RELEASE-p7
+Wed Aug 26 17:29:15 UTC 2009
+Wed Aug 26 17:29:15 UTC 2009
+##### built by root@server.myhost.com on Wed Aug 26 17:49:58 UTC 2009
+##### built by root@server.myhost.com on Wed Aug 26 17:49:58 UTC 2009
+##### built by root@server.myhost.com on Wed Aug 26 17:49:58 UTC 2009
+##### built by root@server.myhost.com on Wed Aug 26 17:49:58 UTC 2009
+Wed Aug 26 17:20:39 UTC 2009
+ntpq 4.2.4p5-a Wed Aug 26 17:29:42 UTC 2009 (1)
+ * Copyright (c) 1992-2009 The FreeBSD Project.
+Wed Aug 26 17:20:39 UTC 2009
+Wed Aug 26 17:29:30 UTC 2009
+Aug 26 2009
+ntpd 4.2.4p5-a Wed Aug 26 17:29:41 UTC 2009 (1)
+ntpdate 4.2.4p5-a Wed Aug 26 17:29:42 UTC 2009 (1)
+ntpdc 4.2.4p5-a Wed Aug 26 17:29:42 UTC 2009 (1)
+Wed Aug 26 17:55:02 UTC 2009
+Wed Aug 26 17:55:02 UTC 2009
+Wed Aug 26 17:55:02 UTC 2009
+Wed Aug 26 17:20:39 UTC 2009
+...</screen>
+
+    <para>Die Updates werden angezeigt und warten auf
+      Genehmigung.</para>
+
+    <screen>New updates:
+kernel|generic|/GENERIC/kernel.symbols|f|0|0|0555|0|7c8dc176763f96ced0a57fc04e7c1b8d793f27e006dd13e0b499e1474ac47e10|
+kernel|generic|/GENERIC/kernel|f|0|0|0555|0|33197e8cf15bbbac263d17f39c153c9d489348c2c534f7ca1120a1183dec67b1|
+kernel|generic|/|d|0|0|0755|0||
+src|base|/|d|0|0|0755|0||
+src|bin|/|d|0|0|0755|0||
+src|cddl|/|d|0|0|0755|0||
+src|contrib|/contrib/bind9/bin/named/update.c|f|0|10000|0644|0|4d434abf0983df9bc47435670d307fa882ef4b348ed8ca90928d250f42ea0757|
+src|contrib|/contrib/bind9/lib/dns/openssldsa_link.c|f|0|10000|0644|0|c6805c39f3da2a06dd3f163f26c314a4692d4cd9a2d929c0acc88d736324f550|
+src|contrib|/contrib/bind9/lib/dns/opensslrsa_link.c|f|0|10000|0644|0|fa0f7417ee9da42cc8d0fd96ad24e7a34125e05b5ae075bd6e3238f1c022a712|
+...
+FreeBSD/amd64 7.1-RELEASE update build complete.  Please review
+the list of build stamps printed above and the list of updated
+files to confirm that they look sensible, then run
+# sh -e approve.sh amd64 7.1-RELEASE
+to sign the build.</screen>
+
+    <para>Folgen Sie dem zuvor erwähnten Verfahren für die Genehmigung
+      des Bauprozesses:</para>
+
+    <screen>&prompt.root; <userinput>sh -e scripts/approve.sh amd64 7.1-RELEASE</userinput>
+Wed Aug 26 12:50:06 PDT 2009 Signing build for FreeBSD/amd64 7.1-RELEASE
+Wed Aug 26 12:50:06 PDT 2009 Copying files to patch source directories for FreeBSD/amd64 7.1-RELEASE
+Wed Aug 26 12:50:06 PDT 2009 Copying files to upload staging area for FreeBSD/amd64 7.1-RELEASE
+Wed Aug 26 12:50:07 PDT 2009 Updating databases for FreeBSD/amd64 7.1-RELEASE
+Wed Aug 26 12:50:07 PDT 2009 Cleaning staging area for FreeBSD/amd64 7.1-RELEASE
+
+The FreeBSD/amd64 7.1-RELEASE update build has been signed and is
+ready to be uploaded.  Remember to run
+# sh -e umountkey.sh
+to unmount the decrypted key once you have finished signing all
+the new builds.</screen>
+
+    <para>Nachdem Sie den Bau genehmigt haben, starten Sie den Upload
+      der Software:</para>
+
+    <informalexample>
+      <screen>&prompt.root; <userinput>cd /usr/local/freebsd-update-server</userinput>
+&prompt.root; <userinput>sh scripts/upload.sh <replaceable>amd64 7.1-RELEASE</replaceable></userinput></screen>
+    </informalexample>
+
+    <para>Als Referenz wird der gesamte Verlauf von <ulink
+	url="diff.txt"><filename>diff.sh</filename></ulink>
+      beigefügt.</para>
+  </sect1>
+
+  <sect1 id="tips">
+    <title>Tipps</title>
+
+    <!-- These are nice tips, but there are only a few of them and they need a
+	 bit of rewording to make sense.  I'd like to see something that
+	 explains at least the following for every tip:
+
+	 * Why is this tip necessary?  What is the original problem it tries
+	   to solve?
+	 * How to install the changes of the tip, preferably in a <procedure>
+	   element, with clearly separated steps.
+	 * How to check that the changes of the tip had a measurable and
+	   noticeable effect.
+
+	 We can do this in a followup commit.  It doesn't have to be completed
+	 *before* we commit this to CVS. -->
+
+<!-- thank you, i just learned these in the process, and thought I would share. They are "tips" and not necessary, so I do see your point, and I would suggest maybe even renaming the section to something more appropriate. Nothing really comes to mind now, though. -->
+
+<!-- this tip will allow you to maintain a custom release and custom kernel, and update it like any other binary update -->
+    <itemizedlist>
+      <listitem>
+	<para>Wenn Sie ein selbst erstelltes Release über die native
+	  <command>make release</command> <ulink
+	    url="&url.articles.releng;/release-build.html">Prozedur</ulink>
+	  bauen, wir der
+	  <application>freebsd-update-server</application> Code Ihr
+	  Release unterstützen.  Als Beispiel können Sie ein Release
+	  ohne Ports oder Dokumentation bauen, indem Sie betreffende
+	  Funktionalität der Subroutinen <function> findextradocs
+	    ()</function>, <function>addextradocs ()</function>
+	  entfernen und eine Veränderung des Download-Verzeichnisses
+	  in <function>fetchiso ()</function>, in
+	  <filename>scripts/build.subr</filename>.  Als letzten
+	  Schritt ändern Sie den &man.sha256.1; Hash in
+	  <filename>build.conf</filename> für Ihr jeweiliges Release
+	  und Architektur damit Sie bereit sind, Ihr
+	  benutzerdefiniertes Release zu bauen.</para>
+
+	<screen># Compare ${WORKDIR}/release and ${WORKDIR}/$1, identify which parts
+	# of the world|doc subcomponent are missing from the latter, and
+	# build a tarball out of them.
+	findextradocs () {
+	}
+
+	# Add extra docs to ${WORKDIR}/$1
+	addextradocs () {
+	}
+	</screen>
+      </listitem>
+      <listitem>
+	<para>Durch das Hinzufügen von <option>-j
+	    <replaceable>NUMMER</replaceable></option> zu den
+	  <maketarget>buildworld</maketarget> und
+	  <maketarget>obj</maketarget> Zielen in
+	  <filename>scripts/build.subr</filename> kann die
+	  Verarbeitung, abhängig von der eingesetzten Hardware,
+	  beschleunigt werden. Die Benutzung dieser Optionen auf
+	  andere Ziele wird jedoch nicht empfohlen, da sie den Bau
+	  unzuverlässig machen können.</para>
+
+	<screen>               # Build the world
+		   log "Building world"
+		   cd /usr/src &amp;&amp;
+		   make -j 2 ${COMPATFLAGS} buildworld 2&gt;&amp;1
+
+		# Distribute the world
+		   log "Distributing world"
+		   cd /usr/src/release &amp;&amp;
+		   make -j 2 obj &amp;&amp;
+		   make ${COMPATFLAGS} release.1 release.2 2&gt;&amp;1</screen>
+      </listitem>
+
+      <listitem>
+	<para>Erstellen Sie einen geeigneten <ulink
+	    url="&url.books.handbook;/network-dns.html">DNS</ulink>
+	  SRV Datensatz für den Update-Server, und fügen Sie weitere
+	  Server mit verschiedenen Gewichtungen hinzu.  Sie können
+	  diese Möglichkeit nutzen um Update-Mirror hinzuzufügen.
+	  Dieser Tipp ist jedoch nicht notwendig solange Sie keinen
+	  redundanten Service anbieten möchten.</para>
+
+	<screen> _http._tcp.update.myserver.com.                  IN SRV   0 2 80   host1.myserver.com.
+							     SRV   0 1 80   host2.myserver.com.
+							     SRV   0 0 80   host3.myserver.com.</screen>
+      </listitem>
+    </itemizedlist>
+  </sect1>
+</article>

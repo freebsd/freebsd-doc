@@ -9,6 +9,7 @@
 
 DOCS= 	about.xml
 DOCS+=	bylaws.xml
+DOCS+=	clusteradm.xml
 DOCS+=	core-vote.xml
 DOCS+= 	data.xml
 DOCS+= 	developer.xml

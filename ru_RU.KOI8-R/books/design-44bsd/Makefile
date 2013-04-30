@@ -3,7 +3,7 @@
 # $FreeBSD$
 # $FreeBSDru: frdp/doc/ru_RU.KOI8-R/books/design-44bsd/Makefile,v 1.4 2003/12/18 07:09:48 phantom Exp $
 #
-# Original revision: r16655
+# Original revision: r39631
 
 DOC?= book
 
