@@ -24,7 +24,7 @@ sub xml
 
 	my($Tag, $Etc) = split(' ', $TagEtc, 2);
 
-	my $Spaces = " " x ($Indent*3);
+	my $Spaces = " " x ($Indent*2);
 	if (!@Text)
 	{
 		# No text in the tag
