@@ -28,7 +28,7 @@ sub xml
 	if (!@Text)
 	{
 		# No text in the tag
-		return ("$Spaces<$TagEtc >\n");
+		return ("$Spaces<$TagEtc />\n");
 	}
 	elsif (@Text == 1)
 	{
