@@ -147,6 +147,7 @@ $sectionpath = {
     'OpenBSD 5.0' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
     'OpenBSD 5.1' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
     'OpenBSD 5.2' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
+    'OpenBSD 5.3' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
 
     'CentOS Linux/i386 3.9' => { 'path' => '1:2:3:3p:4:5:6:7:8:9:n', },
     'CentOS Linux/i386 4.8' => { 'path' => '1:1p:2:3:3p:4:5:6:7:8:9:n:0p', },
@@ -381,6 +382,7 @@ $manPathDefault = 'FreeBSD 9.1-RELEASE';
     'OpenBSD 5.0', "$manLocalDir/OpenBSD-5.0",
     'OpenBSD 5.1', "$manLocalDir/OpenBSD-5.1",
     'OpenBSD 5.2', "$manLocalDir/OpenBSD-5.2",
+    'OpenBSD 5.3', "$manLocalDir/OpenBSD-5.3",
 
     #'NetBSD 0.9',            "$manLocalDir/NetBSD-0.9",
     'NetBSD 1.0',   "$manLocalDir/NetBSD-1.0",
@@ -594,6 +596,7 @@ my %arch = (
 'OpenBSD 5.0' => { 'arch' => [qw/alpha amd64 armish aviion hp300 hppa hppa64 i386 landisk loongson luna88k mac68k macppc mvme68k mvme88k mvmeppc palm sgi socppc sparc sparc64 vax zaurus/] }, 
 'OpenBSD 5.1' => { 'arch' => [qw/alpha amd64 armish aviion hp300 hppa hppa64 i386 landisk loongson luna88k mac68k macppc mvme68k mvme88k mvmeppc palm sgi socppc sparc sparc64 vax zaurus/] }, 
 'OpenBSD 5.2' => { 'arch' => [qw/alpha amd64 armish aviion hp300 hppa hppa64 i386 landisk loongson luna88k mac68k macppc mvme68k mvme88k mvmeppc palm sgi socppc sparc sparc64 vax zaurus/] }, 
+'OpenBSD 5.3' => { 'arch' => [qw/alpha amd64 armish aviion hp300 hppa hppa64 i386 landisk loongson luna88k mac68k macppc mvme68k mvme88k mvmeppc palm sgi socppc sparc sparc64 vax zaurus/] }, 
 );
 
 # delete not existing releases
@@ -636,7 +639,7 @@ while ( ( $key, $val ) = each %manPath ) {
     'macosx',     'Darwin 8.0.1/ppc',
 
     'netbsd',        'NetBSD 6.0',
-    'openbsd',       'OpenBSD 5.2',
+    'openbsd',       'OpenBSD 5.3',
     'v7',            'Unix Seventh Edition',
     'v7man',         'Unix Seventh Edition',
     'x11',           'X11R7.4',
