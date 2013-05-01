@@ -11,7 +11,6 @@ SUBDIR+= committers-guide
 SUBDIR+= contributing
 SUBDIR+= contributing-ports
 SUBDIR+= contributors
-SUBDIR+= cvsup-advanced
 SUBDIR+= explaining-bsd
 SUBDIR+= filtering-bridges
 SUBDIR+= fonts
