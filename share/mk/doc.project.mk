@@ -108,7 +108,11 @@ TEX_CMD?=	${PREFIX}/bin/tex
 PDFTEX_CMD?=	${PREFIX}/bin/pdftex
 .endif
 LATEX_CMD?=	${PREFIX}/bin/latex
+.if exists(${PREFIX}/share/texmf-dist/README)
+JADETEX_CMD?=	${PDFTEX_CMD} "&jadetex"
+.else
 JADETEX_CMD?=	${TEX_CMD} "&jadetex"
+.endif
 JADETEX_PREPROCESS?=	/bin/cat
 PDFJADETEX_CMD?=${PDFTEX_CMD} "&pdfjadetex"
 PDFJADETEX_PREPROCESS?=	/bin/cat
