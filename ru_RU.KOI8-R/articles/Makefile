@@ -15,7 +15,6 @@ SUBDIR+= contributing
 SUBDIR+= cups
 SUBDIR+= custom-gcc
 SUBDIR+= cvs-freebsd
-SUBDIR+= cvsup-advanced
 SUBDIR+= explaining-bsd
 SUBDIR+= fbsd-from-scratch
 #SUBDIR+= filtering-bridges

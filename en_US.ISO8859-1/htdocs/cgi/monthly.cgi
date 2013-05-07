@@ -1,4 +1,5 @@
 #!/usr/bin/perl -w
+# $FreeBSD$
 
 require "./cgi-style.pl";
 
@@ -23,11 +24,11 @@ sub xml
 
 	my($Tag, $Etc) = split(' ', $TagEtc, 2);
 
-	my $Spaces = " " x ($Indent*3);
+	my $Spaces = " " x ($Indent*2);
 	if (!@Text)
 	{
 		# No text in the tag
-		return ("$Spaces<$TagEtc >\n");
+		return ("$Spaces<$TagEtc />\n");
 	}
 	elsif (@Text == 1)
 	{
@@ -137,6 +138,7 @@ if ($Submit)
 	my @info = split("\n", $info);
 
 	my $title = "FreeBSD project submission output";
+	my $tasks = xml(1, "help", "", @tasks) if @tasks;
 
 	my @contents = xml(0, "project cat=\'$Category\'",
 	    xml(1, "title", $Project),
@@ -148,11 +150,11 @@ if ($Submit)
             xml(1, "body",
                 xml(2, "p", "", xmltext(3, @info))),
             "\n",
-            xml(1, "help", "", @tasks),
+            $tasks,
         );
 	my $contents = join('', @contents);
 
-	$contents = "<!-- Mail to: monthly\@freebsd.org -->\n$contents";
+	$contents = "<!-- Mail as an attachment to: monthly\@freebsd.org -->\n$contents";
 
 	if (!$errors)
 	{
