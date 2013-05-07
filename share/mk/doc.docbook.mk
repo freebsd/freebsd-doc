@@ -204,7 +204,7 @@ LOCAL_CSS_SHEET= ${.OBJDIR}/${CSS_SHEET:T}
 LOCAL_CSS_SHEET= ${CSS_SHEET:T}
 .endif
 
-CLEANFILES+= ${DOC}.parsed.xml
+CLEANFILES+= ${DOC}.parsed.xml ${DOC}.parsed.print.xml
 
 .for _curformat in ${FORMATS}
 _cf=${_curformat}
@@ -360,6 +360,8 @@ ${DOC}.parsed.xml: ${SRCS}
 	${RM} ${.TARGET}.tmp
 .else
 	${MV} ${.TARGET}.tmp ${.TARGET}
+	${SED} 's|@@URL_RELPREFIX@@|http://www.FreeBSD.org|g' < ${.TARGET} > ${DOC}.parsed.print.xml
+	${SED} -i '' 's|@@URL_RELPREFIX@@|../../../..|g' ${.TARGET}
 .endif
 
 # XHTML -------------------------------------------------------------
@@ -452,7 +454,7 @@ ${DOC}.tex: ${SRCS} ${LOCAL_IMAGES_EPS} ${PRINT_INDEX} \
 		${LOCAL_IMAGES_TXT} ${LOCAL_IMAGES_EN} \
 		${DOC}.parsed.xml
 	${JADE} -V tex-backend ${PRINTOPTS} \
-		${JADEOPTS} -t tex -o ${.TARGET} ${XMLDECL} ${DOC}.parsed.xml
+		${JADEOPTS} -t tex -o ${.TARGET} ${XMLDECL} ${DOC}.parsed.print.xml
 	${SED} -i '' -e 's|{1}\\def\\ScaleY%|{0.5}\\def\\ScaleY%|g' \
 		-e 's|{1}\\def\\EntitySystemId%|{0.5}\\def\\EntitySystemId%|g' \
 		${.TARGET}
@@ -489,8 +491,8 @@ ${DOC}.pdf:
 .endif
 
 .elif ${RENDERENGINE} == "fop"
-${DOC}.fo: ${DOC}.xml ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG}
-	${XSLTPROC} ${XSLTPROCOPTS} ${XSLFO} ${DOC}.parsed.xml > ${.TARGET}
+${DOC}.fo: ${DOC}.xml ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} ${DOC}.parsed.xml
+	${XSLTPROC} ${XSLTPROCOPTS} ${XSLFO} ${DOC}.parsed.print.xml > ${.TARGET}
 
 ${DOC}.pdf: ${DOC}.fo ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG}
 	${FOP} ${FOPOPTS} ${DOC}.fo ${.TARGET}
