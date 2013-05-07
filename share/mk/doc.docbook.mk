@@ -453,6 +453,9 @@ ${DOC}.tex: ${SRCS} ${LOCAL_IMAGES_EPS} ${PRINT_INDEX} \
 		${DOC}.parsed.xml
 	${JADE} -V tex-backend ${PRINTOPTS} \
 		${JADEOPTS} -t tex -o ${.TARGET} ${XMLDECL} ${DOC}.parsed.xml
+	${SED} -i '' -e 's|{1}\\def\\ScaleY%|{0.5}\\def\\ScaleY%|g' \
+		-e 's|{1}\\def\\EntitySystemId%|{0.5}\\def\\EntitySystemId%|g' \
+		${.TARGET}
 
 .if !target(${DOC}.dvi)
 ${DOC}.dvi: ${DOC}.tex ${LOCAL_IMAGES_EPS}
