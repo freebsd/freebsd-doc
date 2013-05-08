@@ -279,6 +279,7 @@
       <xsl:call-template name="gentext">
 	<xsl:with-param name="key" select="'by'"/>
       </xsl:call-template>
+      <xsl:call-template name="gentext.space"/>
       <xsl:value-of select="$committer"/>
     </xsl:if>
     <xsl:text>.</xsl:text>
