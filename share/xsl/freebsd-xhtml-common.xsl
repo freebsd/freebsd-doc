@@ -25,6 +25,7 @@
   <xsl:param name="admon.style"/>
   <xsl:param name="make.year.ranges" select="1"/>
   <xsl:param name="make.single.year.ranges" select="1"/>
+  <xsl:param name="docbook.css.source" select="''"/>
 
   <xsl:param name="make.valid.html" select="1"/>
   <xsl:param name="html.cleanup" select="1"/>
@@ -272,14 +273,13 @@
       <xsl:with-param name="key" select="'on'"/>
     </xsl:call-template>
     <xsl:call-template name="gentext.space"/>
-    Last modified on <xsl:value-of select="$pubdate"/>
+    <xsl:value-of select="$pubdate"/>
     <xsl:if test="$committer">
-      <xsl:call-template name="gentext.space"/>
-      <xsl:value-of select="$committer"/>
       <xsl:call-template name="gentext.space"/>
       <xsl:call-template name="gentext">
 	<xsl:with-param name="key" select="'by'"/>
       </xsl:call-template>
+      <xsl:value-of select="$committer"/>
     </xsl:if>
     <xsl:text>.</xsl:text>
   </xsl:template>
