@@ -12,6 +12,10 @@
     <xsl:call-template name="inline.monoseq"/>
   </xsl:template>
 
+  <xsl:template match="userinput">
+    <xsl:call-template name="inline.monoseq"/>
+  </xsl:template>
+
   <xsl:template name="svnweb.link">
     <xsl:param name="repo" select="'base'"/>
     <xsl:param name="rev"/>
