@@ -10,10 +10,10 @@
                 exclude-result-prefixes="#default">
 
   <!-- Include the common customizations -->
-  <xsl:include href="freebsd-common.xsl"/>
+  <xsl:import href="freebsd-common.xsl"/>
 
   <!-- Include customized XHTML titlepage -->
-  <xsl:include href="freebsd-xhtml-titlepage.xsl"/>
+  <xsl:import href="freebsd-xhtml-titlepage.xsl"/>
 
   <!-- Redefine variables, and replace templates as necessary here -->
 
@@ -47,6 +47,20 @@
     <a href="http://www.FreeBSD.org/docs.html">documentation</a> before
     contacting &lt;<a href="mailto:questions@FreeBSD.org">questions@FreeBSD.org</a>&gt;.<br/>
     For questions about this documentation, e-mail &lt;<a href="mailto:doc@FreeBSD.org">doc@FreeBSD.org</a>&gt;.</small></p>
+  </xsl:template>
+
+  <xsl:template name="docformatnav">
+    <xsl:variable name="single.fname">
+      <xsl:choose>
+        <xsl:when test="/book">book.html</xsl:when>
+        <xsl:when test="/article">article.html</xsl:when>
+      </xsl:choose>
+    </xsl:variable>
+
+    <div class="docformatnavi">
+      [ <a href="index.html">Split HTML</a> /
+      <a href="{$single.fname}">Single HTML</a> ]
+    </div>
   </xsl:template>
 
   <xsl:template match="citerefentry" mode="no.anchor.mode">
@@ -283,5 +297,12 @@
       <xsl:value-of select="$committer"/>
     </xsl:if>
     <xsl:text>.</xsl:text>
+  </xsl:template>
+
+  <!-- Hook in format navigation at the end of the titlepage -->
+  <xsl:template name="book.titlepage.separator">
+    <xsl:call-template name="docformatnav"/>
+
+    <hr/>
   </xsl:template>
 </xsl:stylesheet>
