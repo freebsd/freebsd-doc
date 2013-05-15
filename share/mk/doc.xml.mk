@@ -6,6 +6,9 @@ XML_CATALOG_FILES=	file://${.OBJDIR}/catalog-cwd.xml \
 			file://${DOC_PREFIX}/share/xml/catalog.xml \
 			file://${DOC_PREFIX}/share/xml/catalog-common.xml \
 			file://${LOCALBASE}/share/xml/catalog
+.if defined(EXTRA_CATALOGS)
+XML_CATALOG_FILES+=	${EXTRA_CATALOGS}
+.endif
 
 .if exists(${DOC_PREFIX}/share/xml/catalog-cwd.xml)
 XML_CATALOG_CWD=	${DOC_PREFIX}/share/xml/catalog-cwd.xml
