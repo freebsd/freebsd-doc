@@ -298,8 +298,8 @@ CHAPTERS?= ${SRCS:M*chapter.xml}
 XMLFLAGS+= ${CHAPTERS:S/\/chapter.xml//:S/^/-i chap./}
 XMLFLAGS+= -i chap.freebsd-glossary
 
-pgpkeyring: pgpkeys/chapter.xml
-	${JADE} -V nochunks ${OTHERFLAGS} ${JADEOPTS} -d ${DSLPGP} -t sgml ${XMLDECL} ${MASTERDOC}
+pgpkeyring: pgpkeys/chapter.xml ${DOC}.parsed.xml
+	${JADE} -V nochunks ${JADEOPTS} -d ${DSLPGP} -t xml ${XMLDECL} ${DOC}.parsed.print.xml
 
 #
 # Handbook-specific variables
