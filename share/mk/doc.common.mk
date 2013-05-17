@@ -20,7 +20,7 @@ DOC_PREFIX_NAME?=	head
 .endif
 
 .if (!defined(LANGCODE) || empty(LANGCODE))
-LANGCODE!=	echo ${.CURDIR} | grep -o '[a-z]*_[A-Z]*\.[-A-Za-z0-9]*' || true
+LANGCODE!=	echo ${.CURDIR} | grep -o '[a-z]*_[A-Z]*\.[-A-Za-z0-9]*' || echo "."
 .endif
 
 # normalize DOC_PREFIX
