@@ -299,7 +299,7 @@ XMLFLAGS+= ${CHAPTERS:S/\/chapter.xml//:S/^/-i chap./}
 XMLFLAGS+= -i chap.freebsd-glossary
 
 pgpkeyring: pgpkeys/chapter.xml ${DOC}.parsed.xml
-	${JADE} -V nochunks ${JADEOPTS} -d ${DSLPGP} -t xml ${XMLDECL} ${DOC}.parsed.print.xml
+	@${JADE} -V nochunks ${JADEOPTS} -d ${DSLPGP} -t xml ${XMLDECL} ${DOC}.parsed.print.xml
 
 #
 # Handbook-specific variables
