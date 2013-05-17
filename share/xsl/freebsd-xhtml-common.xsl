@@ -26,6 +26,8 @@
   <xsl:param name="make.year.ranges" select="1"/>
   <xsl:param name="make.single.year.ranges" select="1"/>
   <xsl:param name="docbook.css.source" select="''"/>
+  <xsl:param name="generate.manifest" select="1"/>
+  <xsl:param name="html.longdesc" select="0"/>
 
   <xsl:param name="make.valid.html" select="1"/>
   <xsl:param name="html.cleanup" select="1"/>

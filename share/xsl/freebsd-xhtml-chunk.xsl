@@ -13,7 +13,6 @@
   <!-- Pull in common XHTML customizations -->
   <xsl:include href="freebsd-xhtml-common.xsl"/>
 
-  <xsl:param name="generate.manifest" select="'1'"/>
   <xsl:param name="generate.legalnotice.link" select="'1'"/>
 </xsl:stylesheet>
 
