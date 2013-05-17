@@ -38,7 +38,6 @@ DOC?= book
 FORMATS?= html-split
 
 #HAS_INDEX= true
-USE_PS2PDF=	yes
 
 INSTALL_COMPRESSED?= gz
 INSTALL_ONLY_COMPRESSED?=
@@ -269,30 +268,43 @@ DOC_PREFIX?=	${.CURDIR}/../../..
 #
 # rules generating lists of mirror site from XML database.
 #
-XMLDOCS=	mirrors-ftp:::mirrors.xml.ftp.inc \
+XMLDOCS=	lastmod:::mirrors.lastmod.inc \
+		mirrors-ftp-index:::mirrors.xml.ftp.index.inc \
+		mirrors-ftp:::mirrors.xml.ftp.inc \
+		mirrors-cvsup-index:::mirrors.xml.cvsup.index.inc \
 		mirrors-cvsup:::mirrors.xml.cvsup.inc \
+		eresources-index:::eresources.xml.www.index.inc \
 		eresources:::eresources.xml.www.inc
 DEPENDSET.DEFAULT=	transtable mirror
 XSLT.DEFAULT=		${XSL_MIRRORS}
 XML.DEFAULT=		${XML_MIRRORS}
-NO_TIDY.DEFAULT=	yes
 
+PARAMS.lastmod+=	--param 'target' "'lastmod'"
+PARAMS.mirrors-ftp-index+=	--param 'type' "'ftp'" \
+				--param 'proto' "'ftp'" \
+				--param 'target' "'index'"
 PARAMS.mirrors-ftp+=	--param 'type' "'ftp'" \
 			--param 'proto' "'ftp'" \
 			--param 'target' "'handbook/mirrors/chapter.xml'"
+PARAMS.mirrors-cvsup-index+=	--param 'type' "'cvsup'" \
+				--param 'proto' "'cvsup'" \
+				--param 'target' "'index'"
 PARAMS.mirrors-cvsup+=	--param 'type' "'cvsup'" \
 			--param 'proto' "'cvsup'" \
 			--param 'target' "'handbook/mirrors/chapter.xml'"
+PARAMS.eresources-index+=	--param 'type' "'www'" \
+				--param 'proto' "'http'" \
+				--param 'target' "'index'"
 PARAMS.eresources+=	--param 'type' "'www'" \
 			--param 'proto' "'http'" \
 			--param 'target' "'handbook/eresources/chapter.xml'"
 
-SRCS+=		mirrors.xml.ftp.inc \
+SRCS+=		mirrors.lastmod.inc \
+		mirrors.xml.ftp.inc \
+		mirrors.xml.ftp.index.inc \
 		mirrors.xml.cvsup.inc \
-		eresources.xml.www.inc
-
-CLEANFILES+=	mirrors.xml.ftp.inc \
-		mirrors.xml.cvsup.inc \
-		eresources.xml.www.inc
+		mirrors.xml.cvsup.index.inc \
+		eresources.xml.www.inc \
+		eresources.xml.www.index.inc
 
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"
