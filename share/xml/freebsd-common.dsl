@@ -1,14 +1,6 @@
 <!-- $FreeBSD$ -->
 
-<!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
-<!ENTITY % freebsd.l10n PUBLIC "-//FreeBSD//ENTITIES DocBook Language Specific Entities//EN">
-%freebsd.l10n;
-<!ENTITY % freebsd.l10n-common PUBLIC "-//FreeBSD//ENTITIES DocBook Language Neutral Entities//EN">
-%freebsd.l10n-common;
-
-<!ENTITY % output.html  "IGNORE">
-<!ENTITY % output.print "IGNORE">
-]>
+<!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN">
 
 <style-sheet>
   <style-specification>
@@ -153,9 +145,7 @@
 
       (element errorname
         (make sequence
-          <![ %output.html;  [ (literal "&#8220;") ]]>
           ($mono-seq$ (process-children))
-          <![ %output.html;  [ (literal "&#8221;") ]]>
           ))
 
       <!-- John Fieber's 'instant' translation specification had

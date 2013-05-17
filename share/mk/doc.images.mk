@@ -71,33 +71,20 @@ _IMAGES_TXT+= ${LOCAL_IMAGES_EN:M*.txt}
 _IMAGES_PIC= ${IMAGES:M*.pic}
 _IMAGES_PIC+= ${LOCAL_IMAGES_EN:M*.pic}
 
-IMAGES_GEN_PNG= ${_IMAGES_EPS:S/.eps$/.png/}
-IMAGES_GEN_EPS= ${_IMAGES_PNG:S/.png$/.eps/}
-IMAGES_GEN_PDF= ${_IMAGES_EPS:S/.eps$/.pdf/}
-IMAGES_SCR_PNG= ${_IMAGES_SCR:S/.scr$/.png/}
-IMAGES_SCR_EPS= ${_IMAGES_SCR:S/.scr$/.eps/}
-IMAGES_SCR_PDF= ${_IMAGES_SCR:S/.scr$/.pdf/}
-IMAGES_SCR_TXT= ${_IMAGES_SCR:S/.scr$/.txt/}
-IMAGES_PIC_PNG= ${_IMAGES_PIC:S/.pic$/.png/}
-IMAGES_PIC_EPS= ${_IMAGES_PIC:S/.pic$/.eps/}
-IMAGES_PIC_PDF= ${_IMAGES_PIC:S/.pic$/.pdf/}
-IMAGES_GEN_PDF+= ${IMAGES_PIC_PDF} ${IMAGES_SCR_PDF}
+IMAGES_GEN_PNG= ${_IMAGES_EPS:S/.eps$/.png/} ${_IMAGES_SCR:S/.scr$/.png/} ${_IMAGES_PIC:S/.pic$/.png/}
+IMAGES_GEN_EPS= ${_IMAGES_PNG:S/.png$/.eps/} ${_IMAGES_SCR:S/.scr$/.eps/} ${_IMAGES_PIC:S/.pic$/.eps/}
 
-CLEANFILES+= ${IMAGES_GEN_PNG} ${IMAGES_GEN_EPS} ${IMAGES_GEN_PDF}
-CLEANFILES+= ${IMAGES_SCR_PNG} ${IMAGES_SCR_EPS} ${IMAGES_SCR_TXT}
-CLEANFILES+= ${IMAGES_PIC_PNG} ${IMAGES_PIC_EPS} ${_IMAGES_PIC:S/.pic$/.ps/}
+CLEANFILES+= ${IMAGES_GEN_PNG} ${IMAGES_GEN_EPS}
 
-IMAGES_PNG= ${_IMAGES_PNG} ${IMAGES_GEN_PNG} ${IMAGES_SCR_PNG} ${IMAGES_PIC_PNG}
-IMAGES_EPS= ${_IMAGES_EPS} ${IMAGES_GEN_EPS} ${IMAGES_SCR_EPS} ${IMAGES_PIC_EPS}
-IMAGES_TXT= ${_IMAGES_TXT} ${IMAGES_SCR_TXT}
+IMAGES_PNG= ${_IMAGES_PNG} ${IMAGES_GEN_PNG}
+IMAGES_EPS= ${_IMAGES_EPS} ${IMAGES_GEN_EPS}
 
 LOCAL_IMAGES= ${IMAGES}
 LOCAL_IMAGES_PNG= ${_IMAGES_PNG}
 LOCAL_IMAGES_EPS= ${_IMAGES_EPS}
 LOCAL_IMAGES_TXT= ${_IMAGES_TXT}
-LOCAL_IMAGES_PNG+= ${IMAGES_GEN_PNG} ${IMAGES_SCR_PNG} ${IMAGES_PIC_PNG}
-LOCAL_IMAGES_EPS+= ${IMAGES_GEN_EPS} ${IMAGES_SCR_EPS} ${IMAGES_PIC_EPS}
-LOCAL_IMAGES_TXT+= ${IMAGES_SCR_TXT}
+LOCAL_IMAGES_PNG+= ${IMAGES_GEN_PNG}
+LOCAL_IMAGES_EPS+= ${IMAGES_GEN_EPS}
 
 # The default resolution eps2png (82) assumes a 640x480 monitor, and is too
 # low for the typical monitor in use today. The resolution of 100 looks
@@ -105,46 +92,6 @@ LOCAL_IMAGES_TXT+= ${IMAGES_SCR_TXT}
 # a 640x480 monitor.
 EPS2PNM_RES?=	100
 
-# We need to list ${_IMAGES_PNG} here since the images might be in a
-# shared image directory.
-IMAGES_PDF= ${IMAGES_GEN_PDF} ${_IMAGES_PNG}
-
-SCR2PNG?=	${PREFIX}/bin/scr2png
-SCR2PNGOPTS?=	${SCR2PNGFLAGS}
-SCR2TXT?=	${PREFIX}/bin/scr2txt
-SCR2TXTOPTS?=	-l ${SCR2TXTFLAGS}
-SED?=		/usr/bin/sed
-EPS2PNM?=	${PREFIX}/bin/gs
-EPS2PNMOPTS?=	-q -dBATCH -dGraphicsAlphaBits=4 -dTextAlphaBits=4 \
-		-dEPSCrop -r${EPS2PNM_RES}x${EPS2PNM_RES} \
-		-dNOPAUSE -dSAFER -sDEVICE=pnm -sOutputFile=-
-#
-# epsgeom is a perl script for 1) extracting geometry information
-# from a .eps file and 2) arrange it for ghostscript's pnm driver.
-#
-EPSGEOM?=	${PERL} ${DOC_PREFIX}/share/misc/epsgeom
-EPSGEOMOPTS?=	${EPS2PNM_RES} ${EPS2PNM_RES}
-PNMTOPNG?=	${PREFIX}/bin/pnmtopng
-PNMTOPNGOPTS?=	${PNGTOPNGFLAGS}
-PNGTOPNM?=	${PREFIX}/bin/pngtopnm
-PNGTOPNMOPTS?=	${PNGTOPNMFLAGS}
-PPMTOPGM?=	${PREFIX}/bin/ppmtopgm
-PPMTOPGMOPTS?=	${PPMTOPGMFLAGS}
-PNMTOPS?=	${PREFIX}/bin/pnmtops
-PNMTOPSOPTS?=	-noturn ${PNMTOPSFLAGS}
-EPSTOPDF?=	${PREFIX}/bin/epstopdf
-EPSTOPDFOPTS?=	${EPSTOPDFFLAGS}
-#
-PIC2PS?=	${GROFF} -p -S -Wall -mtty-char -man
-#
-PS2EPS?=	${PREFIX}/bin/gs
-PS2EPSOPTS?=	-q -dNOPAUSE -dSAFER -dDELAYSAFER \
-		-sPAPERSIZE=letter -r72 -sDEVICE=bit \
-		-sOutputFile=/dev/null ${PS2EPSFLAGS} ps2epsi.ps
-PS2BBOX?=	${PREFIX}/bin/gs
-PS2BBOXOPTS?=	-q -dNOPAUSE -dBATCH -dSAFER -dDELAYSAFER \
-		-sPAPERSIZE=letter -r72 -sDEVICE=bbox \
-		-sOutputFile=/dev/null ${PS2BBOXFLAGS}
 #
 # Use suffix rules to convert .scr files to other formats
 .SUFFIXES:	.scr .pic .png .ps .eps .txt
@@ -214,23 +161,18 @@ PS2BBOXOPTS?=	-q -dNOPAUSE -dBATCH -dSAFER -dDELAYSAFER \
 # vice versa, leading to a loop in the dependency graph.  Instead, build
 # the targets on the fly.
 
-.for _curimage in ${IMAGES_GEN_PNG}
-${_curimage}: ${_curimage:S/.png$/.eps/}
+.for _curimage in ${_IMAGES_EPS:S/.eps$/.png/}
+${_curimage}: ${_curimage:S/.png/.eps/}
 	${EPSGEOM} -offset ${EPSGEOMOPTS} ${.ALLSRC} \
 		| ${EPS2PNM} ${EPS2PNMOPTS} \
 		-g`${EPSGEOM} -geom ${EPSGEOMOPTS} ${.ALLSRC}` - \
 		| ${PNMTOPNG} > ${.TARGET}
 .endfor
 
-.for _curimage in ${IMAGES_GEN_EPS}
+.for _curimage in ${_IMAGES_PNG:S/.png$/.eps/}
 ${_curimage}: ${_curimage:S/.eps$/.png/}
 	${PNGTOPNM} ${PNGTOPNMOPTS} ${.ALLSRC} | \
 		${PNMTOPS} ${PNMTOPSOPTS} > ${.TARGET}
-.endfor
-
-.for _curimage in ${IMAGES_GEN_PDF}
-${_curimage}: ${_curimage:S/.pdf$/.eps/}
-	${EPSTOPDF} ${EPSTOPDFOPTS} --outfile=${.TARGET} ${.ALLSRC}
 .endfor
 
 .if ${.OBJDIR} != ${.CURDIR}

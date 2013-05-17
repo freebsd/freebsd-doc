@@ -8,8 +8,6 @@
 
 MAINTAINER=doc@FreeBSD.org
 
-NO_TIDY = yes
-
 DOC?= book
 
 FORMATS?= html-split html
