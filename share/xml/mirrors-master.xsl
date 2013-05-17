@@ -4,7 +4,6 @@
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
   <xsl:output type="xml" encoding="iso-8859-1"
-	      omit-xml-declaration="yes"
 	      indent="yes"/>
 
   <!-- these params should be externally bound. The values
@@ -12,8 +11,6 @@
   <xsl:param name="type" select="''" />
   <xsl:param name="proto" select="''" />
   <xsl:param name="target" select="''" />
-
-  <xsl:param name="mirrors-docbook-country-anchor-id" select="translate($target, '/.', '--')" />
 
   <xsl:variable name="date">
     <xsl:value-of xmlns:cvs="http://www.FreeBSD.org/XML/CVS"
@@ -32,16 +29,22 @@
 
   <xsl:template match="/">
     <xsl:choose>
-      <xsl:when test="$target = 'handbook/mirrors/chapter.xml'">
-	<xsl:call-template name="mirrors-docbook-country-index-all" />
+      <xsl:when test="$target = 'lastmod'">
 	<para>(<xsl:call-template name="mirrors-lastmodified" />)</para>
+      </xsl:when>
+
+      <xsl:when test="$target = 'index'">
+	<xsl:call-template name="mirrors-docbook-country-index-all" />
+      </xsl:when>
+
+      <xsl:when test="$target = 'handbook/mirrors/chapter.xml'">
 	<xsl:call-template name="mirrors-docbook-variablelist" />
       </xsl:when>
+
       <xsl:when test="$target = 'handbook/eresources/chapter.xml'">
-	<xsl:call-template name="mirrors-docbook-country-index-all" />
-	<para>(<xsl:call-template name="mirrors-lastmodified" />)</para>
 	<xsl:call-template name="mirrors-docbook-itemizedlist" />
       </xsl:when>
+
       <xsl:otherwise>
 	<xsl:value-of select="'*** processing error ***'" />
       </xsl:otherwise>
@@ -91,7 +94,7 @@
     <xsl:param name="mirrors-docbook-country-index-without-period" />
     <link>
       <xsl:attribute name="linkend">
-	<xsl:value-of select="concat($mirrors-docbook-country-anchor-id, '-', @id, '-', $type)" />
+	<xsl:value-of select="concat(@id, '-', $type)" />
       </xsl:attribute>
       <xsl:value-of select="country" />
     </link>
@@ -126,7 +129,7 @@
       <term>
 	<anchor>
 	  <xsl:attribute name="id">
-	    <xsl:value-of select="concat($mirrors-docbook-country-anchor-id, '-', @id, '-', $type)" />
+	    <xsl:value-of select="concat(@id, '-', $type)" />
 	  </xsl:attribute>
 	</anchor>
 	<xsl:value-of select="country" />
@@ -211,7 +214,7 @@
     <listitem>
       <anchor>
 	<xsl:attribute name="id">
-	  <xsl:value-of select="concat($mirrors-docbook-country-anchor-id, '-', @id, '-', $type)" />
+	  <xsl:value-of select="concat(@id, '-', $type)" />
 	</xsl:attribute>
       </anchor>
 

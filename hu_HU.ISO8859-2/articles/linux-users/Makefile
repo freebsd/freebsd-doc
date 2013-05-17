@@ -7,12 +7,6 @@
 # %SRCID%     1.1
 #
 
-#
-# Tidy messes up iso-8859-2 characters
-#
-
-NO_TIDY = yes
-
 MAINTAINER = doc@FreeBSD.org
 
 DOC?= article
