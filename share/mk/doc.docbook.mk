@@ -78,13 +78,13 @@ XMLDECL?=	/usr/local/share/sgml/docbook/dsssl/modular/dtds/decls/xml.dcl
 
 DSLHTML?=	${DOC_PREFIX}/share/xml/spellcheck.dsl
 DSLPRINT?=	${DOC_PREFIX}/share/xml/default.dsl
-DSLPGP?=	${DOC_PREFIX}/share/xml/pgp.dsl
 
 XSLPROF?=	/usr/local/share/xsl/docbook/profiling/profile.xsl
 XSLXHTML?=	${DOC_PREFIX}/${LANGCODE}/share/xsl/freebsd-xhtml.xsl
 XSLXHTMLCHUNK?=	${DOC_PREFIX}/${LANGCODE}/share/xsl/freebsd-xhtml-chunk.xsl
 XSLEPUB?=	${DOC_PREFIX}/${LANGCODE}/share/xsl/freebsd-epub.xsl
 XSLFO?=		${DOC_PREFIX}/${LANGCODE}/share/xsl/freebsd-fo.xsl
+XSLPGP?=	${DOC_PREFIX}/share/xsl/freebsd-pgpkeyring.xsl
 
 XSLSCH?=	/usr/local/share/xsl/iso-schematron/xslt1/iso_schematron_skeleton_for_xslt1.xsl
 
