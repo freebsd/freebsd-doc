@@ -3,7 +3,7 @@
 #
 # Build the FreeBSD Handbook (Japanese).
 #
-# Original revision: 1.119
+# Original revision: r41710
 #
 
 # ------------------------------------------------------------------------
@@ -50,6 +50,7 @@ IMAGES_EN = advanced-networking/isdn-bus.eps
 IMAGES_EN+= advanced-networking/isdn-twisted-pair.eps
 IMAGES_EN+= advanced-networking/natd.eps
 IMAGES_EN+= advanced-networking/net-routing.pic
+#IMAGES_EN+= advanced-networking/pxe-nfs.png
 IMAGES_EN+= advanced-networking/static-routes.pic
 IMAGES_EN+= bsdinstall/bsdinstall-adduser1.png
 IMAGES_EN+= bsdinstall/bsdinstall-adduser2.png
@@ -303,8 +304,8 @@ CHAPTERS?= ${SRCS:M*chapter.xml}
 XMLFLAGS+= ${CHAPTERS:S/\/chapter.xml//:S/^/-i chap./}
 XMLFLAGS+= -i chap.freebsd-glossary
 
-pgpkeyring: pgpkeys/chapter.xml
-	@${JADE} -V nochunks ${OTHERFLAGS} ${JADEOPTS} -d ${DSLPGP} -t sgml ${MASTERDOC}
+pgpkeyring: pgpkeys/chapter.xml ${DOC}.parsed.xml
+	@${XSLTPROC} ${XSLPGP} ${DOC}.parsed.xml
 
 #
 # Handbook-specific variables
@@ -329,7 +330,6 @@ XMLDOCS=	lastmod:::mirrors.lastmod.inc \
 DEPENDSET.DEFAULT=	transtable mirror
 XSLT.DEFAULT=		${XSL_MIRRORS}
 XML.DEFAULT=		${XML_MIRRORS}
-
 
 PARAMS.lastmod+=	--param 'target' "'lastmod'"
 PARAMS.mirrors-ftp-index+=	--param 'type' "'ftp'" \
