@@ -31,15 +31,6 @@
 #
 # Variables used by both users and documents:
 #
-#	XMLFLAGS	Additional options to pass to various XML
-#			processors (e.g., jade, nsgmls).  Typically
-#			used to define "IGNORE" entities to "INCLUDE"
-#			 with "-i<entity-name>"
-#
-#	JADEFLAGS	Additional options to pass to Jade.  Typically
-#			used to set additional variables, such as
-#			"%generate-article-toc%".
-#
 #	EXTRA_CATALOGS	Additional catalog files that should be used by
 #			any XML processing applications.
 #
@@ -65,9 +56,6 @@
 
 MASTERDOC?=	${.CURDIR}/${DOC}.xml
 
-# Either jade or fop
-RENDERENGINE?=	jade
-
 XMLDECL?=	/usr/local/share/sgml/docbook/dsssl/modular/dtds/decls/xml.dcl
 
 XSLPROF?=	/usr/local/share/xsl/docbook/profiling/profile.xsl
@@ -82,54 +70,12 @@ XSLSCH?=	/usr/local/share/xsl/iso-schematron/xslt1/iso_schematron_skeleton_for_x
 IMAGES_LIB?=
 
 SCHEMATRONS?=	${DOC_PREFIX}/share/xml/freebsd.sch
-
-.if exists(${PREFIX}/bin/jade) && !defined(OPENJADE)
-JADECATALOG?=	${PREFIX}/share/sgml/jade/catalog
-.else
-JADECATALOG?=	${PREFIX}/share/sgml/openjade/catalog
-.endif
-FREEBSDCATALOG=	${DOC_PREFIX}/share/xml/catalog
-LANGUAGECATALOG=${DOC_PREFIX}/${LANGCODE}/share/xml/catalog
-DSSSLCATALOG=	${PREFIX}/share/sgml/docbook/dsssl/modular/catalog
-.for c in ${LANGUAGECATALOG} ${FREEBSDCATALOG} ${DSSSLCATALOG} ${JADECATALOG}
-.if exists(${c})
-CATALOGS+=	-c ${c}
-.endif
-.endfor
-
-JADEOPTS?=	-ijade.compat -w no-valid ${JADEFLAGS} \
-		-D ${IMAGES_EN_DIR}/${DOC}s/${.CURDIR:T} -D ${CANONICALOBJDIR} \
-		${CATALOGS}
 XSLTPROCOPTS?=	--nonet
 
 KNOWN_FORMATS=	html html.tar html-split html-split.tar \
 		epub txt rtf ps pdf tex dvi tar pdb
 
 CSS_SHEET?=	${DOC_PREFIX}/share/misc/docbook.css
-
-.if defined(WWWFREEBSDORG)
-HTMLFLAGS+=	-V %html-header-script%
-.endif
-.if !defined(WITH_INLINE_LEGALNOTICE) || empty(WITH_INLINE_LEGALNOTICE)
-HTMLFLAGS+=	-V %generate-legalnotice-link%
-.endif
-.if defined(WITH_ARTICLE_TOC) && !empty(WITH_ARTICLE_TOC)
-HTMLFLAGS+=	-V %generate-article-toc%
-PRINTFLAGS+=	-V %generate-article-toc%
-.endif
-.if defined(WITH_BIBLIOXREF_TITLE) && !empty(WITH_BIBLIOXREF_TITLE)
-HTMLFLAGS+=	-V biblio-xref-title
-PRINTFLAGS+=	-V biblio-xref-title
-.endif
-.if defined(WITH_DOCFORMAT_NAVI_LINK) && !empty(WITH_DOCFORMAT_NAVI_LINK)
-HTMLFLAGS+=	-V %generate-docformat-navi-link%
-.elif (${FORMATS:Mhtml} == "html") && (${FORMATS:Mhtml-split} == "html-split")
-HTMLFLAGS+=	-V %generate-docformat-navi-link%
-.endif
-.if defined(WITH_ALL_TRADEMARK_SYMBOLS) && !empty(WITH_ALL_TRADEMARK_SYMBOLS)
-HTMLFLAGS+=	-V %show-all-trademark-symbols%
-PRINTFLAGS+=	-V %show-all-trademark-symbols%
-.endif
 
 #
 # Instruction for bsd.subdir.mk to not to process SUBDIR directive.
@@ -298,30 +244,6 @@ CLEANFILES+= ${.CURDIR:T}.${_curformat}.${_curcomp}
 
 all: ${SRCS} ${_docs}
 
-# put languages which have a problem on rendering printable formats
-# by using TeX to NO_TEX_LANG.
-NO_TEX_LANG?=	ja_JP.eucJP ru_RU.KOI8-R
-
-# put languages which have a problem on rendering the plain text format
-# by using links1 to NO_PLAINTEXT_LANG.
-NO_PLAINTEXT_LANG?=	ja_JP.eucJP
-
-# put languages which have a problem on rendering the rtf format
-# by using jade to NO_RTF_LANG.
-NO_RTF_LANG?=
-
-.for _L in ${LANGCODE}
-.if ${NO_TEX_LANG:M${_L}} != ""
-NO_TEX=		yes
-.endif
-.if ${NO_PLAINTEXT_LANG:M${_L}} != ""
-NO_PLAINTEXT=	yes
-.endif
-.if ${NO_RTF_LANG:M${_L}} != ""
-NO_RTF=		yes
-.endif
-.endfor
-
 .if defined(SCHEMATRONS)
 .for sch in ${SCHEMATRONS}
 schxslts+=	${sch}.xsl
@@ -419,67 +341,8 @@ ${.CURDIR:T}.pdb.${_curcomp}: ${DOC}.pdb.${_curcomp}
 .endfor
 .endif
 
-# RTF --------------------------------------------------------------------
+# PS/PDF/RTF -----------------------------------------------------------------
 
-.if !target(${DOC}.rtf)
-.if !defined(NO_RTF)
-${DOC}.rtf: ${DOC}.parsed.xml ${LOCAL_IMAGES_EPS} ${PRINT_INDEX} \
-		${LOCAL_IMAGES_TXT} ${LOCAL_IMAGES_PNG}
-	${JADE} -V rtf-backend ${PRINTOPTS} -ioutput.rtf.images \
-		${JADEOPTS} -t rtf -o ${.TARGET}-nopng ${XMLDECL} \
-		${DOC}.parsed.xml
-	${FIXRTF} ${FIXRTFOPTS} < ${.TARGET}-nopng > ${.TARGET}
-.else
-${DOC}.rtf:
-	${TOUCH} ${.TARGET}
-.endif
-.endif
-
-# PS/PDF -----------------------------------------------------------------
-
-.if ${RENDERENGINE} == "jade"
-.if !defined(NO_TEX)
-${DOC}.tex: ${SRCS} ${LOCAL_IMAGES_EPS} ${PRINT_INDEX} \
-		${LOCAL_IMAGES_TXT} ${LOCAL_IMAGES_EN} \
-		${DOC}.parsed.xml
-	${JADE} -V tex-backend ${PRINTOPTS} \
-		${JADEOPTS} -t tex -o ${.TARGET} ${XMLDECL} ${DOC}.parsed.print.xml
-	${SED} -i '' -e 's|{1}\\def\\ScaleY%|{0.5}\\def\\ScaleY%|g' \
-		-e 's|{1}\\def\\EntitySystemId%|{0.5}\\def\\EntitySystemId%|g' \
-		${.TARGET}
-
-.if !target(${DOC}.dvi)
-${DOC}.dvi: ${DOC}.tex ${LOCAL_IMAGES_EPS}
-.for _curimage in ${LOCAL_IMAGES_EPS:M*share*}
-	${CP} -p ${_curimage} ${.CURDIR:H:H}/${_curimage:H:S|${IMAGES_EN_DIR}/||:S|${.CURDIR}||}
-.endfor
-	${JADETEX_PREPROCESS} < ${DOC}.tex > ${DOC}.tex-tmp
-	@${ECHO} "==> TeX pass 1/3"
-	-${JADETEX_CMD} '${TEX_CMDSEQ} \nonstopmode\input{${DOC}.tex-tmp}'
-	@${ECHO} "==> TeX pass 2/3"
-	-${JADETEX_CMD} '${TEX_CMDSEQ} \nonstopmode\input{${DOC}.tex-tmp}'
-	@${ECHO} "==> TeX pass 3/3"
-	-${JADETEX_CMD} '${TEX_CMDSEQ} \nonstopmode\input{${DOC}.tex-tmp}'
-.endif
-
-.if !target(${DOC}.pdf)
-${DOC}.pdf: ${DOC}.ps ${IMAGES_PDF}
-	${PS2PDF} ${DOC}.ps ${.TARGET}
-.endif
-
-${DOC}.ps: ${DOC}.dvi
-	${DVIPS} ${DVIPSOPTS} -o ${.TARGET} ${.ALLSRC}
-.else
-#  NO_TEX
-${DOC}.tex ${DOC}.dvi ${DOC}.ps:
-	${TOUCH} ${.TARGET}
-.if !target(${DOC}.pdf)
-${DOC}.pdf:
-	${TOUCH} ${.TARGET}
-.endif
-.endif
-
-.elif ${RENDERENGINE} == "fop"
 ${DOC}.fo: ${DOC}.xml ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} ${DOC}.parsed.xml
 	${XSLTPROC} ${XSLTPROCOPTS} ${XSLFO} ${DOC}.parsed.print.xml > ${.TARGET}
 
@@ -491,8 +354,6 @@ ${DOC}.ps: ${DOC}.fo ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG}
 
 ${DOC}.rtf: ${DOC}.fo ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG}
 	${FOP} ${FOPOPTS} ${DOC}.fo ${.TARGET}
-
-.endif
 
 ${DOC}.tar: ${SRCS} ${LOCAL_IMAGES} ${LOCAL_CSS_SHEET}
 	${TAR} cf ${.TARGET} -C ${.CURDIR} ${SRCS} \
