@@ -51,12 +51,6 @@
 #	CSS_SHEET	Full path to a CSS stylesheet suitable for DocBook.
 #			Default is ${DOC_PREFIX}/share/misc/docbook.css
 #
-#
-#	SPELLCHECK	Use the special spellcheck.dsl stylesheet to render
-#			HTML that is suitable for processing through a 
-#			spellchecker.  For example, PGP keys and filenames
-#			will be omitted from this output.
-#
 # Package building options:
 # 
 #       BZIP2_PACKAGE  Use bzip2(1) utility to compress package tarball
@@ -75,9 +69,6 @@ MASTERDOC?=	${.CURDIR}/${DOC}.xml
 RENDERENGINE?=	jade
 
 XMLDECL?=	/usr/local/share/sgml/docbook/dsssl/modular/dtds/decls/xml.dcl
-
-DSLHTML?=	${DOC_PREFIX}/share/xml/spellcheck.dsl
-DSLPRINT?=	${DOC_PREFIX}/share/xml/default.dsl
 
 XSLPROF?=	/usr/local/share/xsl/docbook/profiling/profile.xsl
 XSLXHTML?=	${DOC_PREFIX}/${LANGCODE}/share/xsl/freebsd-xhtml.xsl
@@ -115,8 +106,6 @@ KNOWN_FORMATS=	html html.tar html-split html-split.tar \
 		epub txt rtf ps pdf tex dvi tar pdb
 
 CSS_SHEET?=	${DOC_PREFIX}/share/misc/docbook.css
-
-PRINTOPTS?=	-ioutput.print -d ${DSLPRINT} ${PRINTFLAGS}
 
 .if defined(WWWFREEBSDORG)
 HTMLFLAGS+=	-V %html-header-script%
