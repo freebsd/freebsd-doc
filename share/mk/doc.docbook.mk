@@ -56,9 +56,7 @@
 
 MASTERDOC?=	${.CURDIR}/${DOC}.xml
 
-XMLDECL?=	/usr/local/share/sgml/docbook/dsssl/modular/dtds/decls/xml.dcl
-
-XSLPROF?=	/usr/local/share/xsl/docbook/profiling/profile.xsl
+XSLPROF?=	/usr/local/share/xsl/docbook-ns/profiling/profile.xsl
 XSLXHTML?=	${DOC_PREFIX}/${LANGCODE}/share/xsl/freebsd-xhtml.xsl
 XSLXHTMLCHUNK?=	${DOC_PREFIX}/${LANGCODE}/share/xsl/freebsd-xhtml-chunk.xsl
 XSLEPUB?=	${DOC_PREFIX}/${LANGCODE}/share/xsl/freebsd-epub.xsl
