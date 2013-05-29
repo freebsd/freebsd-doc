@@ -9,7 +9,7 @@
                 exclude-result-prefixes="#default">
 
   <!-- Pull in the base stylesheets -->
-  <xsl:import href="/usr/local/share/xsl/docbook/fo/docbook.xsl"/>
+  <xsl:import href="/usr/local/share/xsl/docbook-ns/fo/docbook.xsl"/>
 
   <!-- Include the common customizations -->
   <xsl:include href="freebsd-common.xsl"/>

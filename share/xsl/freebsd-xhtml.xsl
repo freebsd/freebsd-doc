@@ -8,7 +8,7 @@
                 exclude-result-prefixes="#default">
 
   <!-- Pull in the base stylesheets -->
-  <xsl:import href="/usr/local/share/xsl/docbook/xhtml/docbook.xsl"/>
+  <xsl:import href="/usr/local/share/xsl/docbook-ns/xhtml/docbook.xsl"/>
 
   <!-- Pull in common XHTML customizations -->
   <xsl:include href="freebsd-xhtml-common.xsl"/>
