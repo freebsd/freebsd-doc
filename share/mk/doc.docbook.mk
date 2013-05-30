@@ -254,21 +254,11 @@ ${sch}.xsl: ${sch}
 # Parsed XML  -------------------------------------------------------
 
 ${DOC}.parsed.xml: ${SRCS}
-	${GREP} '^<?xml version=.*?>' ${DOC}.xml > ${.TARGET}.tmp
-.if ${DOC} == "book"
-	${ECHO_CMD} '<!DOCTYPE book PUBLIC "-//FreeBSD//DTD DocBook XML V4.5-Based Extension//EN" "../../../share/xml/freebsd45.dtd">' >> ${.TARGET}.tmp
-.else
-	${ECHO_CMD} '<!DOCTYPE article PUBLIC "-//FreeBSD//DTD DocBook XML V4.5-Based Extension//EN" "../../../share/xml/freebsd45.dtd">' >> ${.TARGET}.tmp
-.endif
-	@${ECHO} "==> Basic validation"
-	${XMLLINT} --nonet --noent --valid --xinclude --dropdtd ${MASTERDOC} | \
-	${GREP} -v '^<?xml version=.*?>' >> ${.TARGET}.tmp
+	${XMLLINT} --nonet --noent --valid --xinclude ${MASTERDOC} > ${.TARGET}
 .if defined(PROFILING)
 	@${ECHO} "==> Profiling"
 	${XSLTPROC} ${PROFILING} ${XSLPROF} ${.TARGET}.tmp > ${.TARGET}
-	${RM} ${.TARGET}.tmp
 .else
-	${MV} ${.TARGET}.tmp ${.TARGET}
 	${SED} 's|@@URL_RELPREFIX@@|http://www.FreeBSD.org|g' < ${.TARGET} > ${DOC}.parsed.print.xml
 	${SED} -i '' 's|@@URL_RELPREFIX@@|../../../..|g' ${.TARGET}
 .endif
@@ -385,15 +375,8 @@ ${DOC}.${_curformat}:
 #
 
 lint validate: ${SRCS} ${schxslts}
-	@${GREP} '^<?xml version=.*?>' ${DOC}.xml > ${DOC}.parsed.xml
-.if ${DOC} == "book"
-	@${ECHO_CMD} '<!DOCTYPE book PUBLIC "-//FreeBSD//DTD DocBook XML V4.5-Based Extension//EN" "../../../share/xml/freebsd45.dtd">' >> ${DOC}.parsed.xml
-.else
-	@${ECHO_CMD} '<!DOCTYPE article PUBLIC "-//FreeBSD//DTD DocBook XML V4.5-Based Extension//EN" "../../../share/xml/freebsd45.dtd">' >> ${DOC}.parsed.xml
-.endif
 	@${ECHO} "==> Basic validation"
-	@${XMLLINT} --nonet --noent --valid --xinclude --dropdtd ${MASTERDOC} | \
-	${GREP} -v '^<?xml version=.*?>' >>${DOC}.parsed.xml
+	@${XMLLINT} --nonet --noent --valid --xinclude ${MASTERDOC} > ${DOC}.parsed.xml
 .if defined(schxslts)
 	@${ECHO} "==> Validating with Schematron constraints"
 .for sch in ${schxslts}
