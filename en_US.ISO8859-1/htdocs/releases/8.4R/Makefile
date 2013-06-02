@@ -9,6 +9,11 @@
 
 DOCS+=	schedule.xml
 
-DATA=	docbook.css
+DATA=	docbook.css \
+	errata.html \
+	hardware.html \
+	installation.html \
+	readme.html \
+	relnotes-detailed.html
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"
