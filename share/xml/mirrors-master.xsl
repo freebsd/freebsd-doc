@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
 <!-- $FreeBSD$ -->
 
-<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
+<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+		xmlns:xlink="http://www.w3.org/1999/xlink"
+		version="1.0">
 
   <xsl:output type="xml" encoding="iso-8859-1"
 	      indent="yes"/>
@@ -128,7 +130,7 @@
     <varlistentry>
       <term>
 	<anchor>
-	  <xsl:attribute name="id">
+	  <xsl:attribute name="xml:id">
 	    <xsl:value-of select="concat(@id, '-', $type)" />
 	  </xsl:attribute>
 	</anchor>
@@ -149,10 +151,10 @@
 		<xsl:choose>
 		  <xsl:when test="url[@proto = $proto]">
 		    <xsl:for-each select="url[@proto = $proto]">
-		      <ulink>
-			<xsl:attribute name="url"><xsl:value-of select="." /></xsl:attribute>
-			<xsl:value-of select="name" />
-		      </ulink>
+		      <link>
+			<xsl:attribute name="xlink:href"><xsl:value-of select="." /></xsl:attribute>
+			<xsl:value-of select="."/>
+		      </link>
 		    </xsl:for-each>
 
 		    <xsl:value-of select="' (ftp'" />
@@ -163,10 +165,10 @@
 			  <xsl:value-of select="' / '" />
 			  <xsl:choose>
 			    <xsl:when test=". != ''">
-			      <ulink>
-				<xsl:attribute name="url"><xsl:value-of select="." /></xsl:attribute>
-				<xsl:value-of select="@proto" />
-			      </ulink>
+			      <link>
+				<xsl:attribute name="xlink:href"><xsl:value-of select="." /></xsl:attribute>
+				<xsl:value-of select="." />
+			      </link>
 			    </xsl:when>
 			    <xsl:otherwise>
 			      <xsl:value-of select="@proto" />
@@ -213,7 +215,7 @@
   <xsl:template name="mirrors-docbook-itemizedlist-listitem">
     <listitem>
       <anchor>
-	<xsl:attribute name="id">
+	<xsl:attribute name="xml:id">
 	  <xsl:value-of select="concat(@id, '-', $type)" />
 	</xsl:attribute>
       </anchor>
@@ -227,10 +229,10 @@
 	      <xsl:choose>
 		<xsl:when test="url[@proto = $proto]">
 		  <xsl:for-each select="url[@proto = $proto]">
-		    <ulink>
-		      <xsl:attribute name="url"><xsl:value-of select="." /></xsl:attribute>
-		      <xsl:value-of select="name" />
-		    </ulink>
+		    <link>
+		      <xsl:attribute name="xlink:href"><xsl:value-of select="." /></xsl:attribute>
+		      <xsl:value-of select="."/>
+		    </link>
 		  </xsl:for-each>
 
 		  <xsl:if test="url[
