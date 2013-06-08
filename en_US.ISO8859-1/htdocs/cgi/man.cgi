@@ -212,6 +212,8 @@ $manPathDefault = 'FreeBSD 9.1-RELEASE';
 %manPath = (
     'FreeBSD 9.0-RELEASE and Ports',
 "$manLocalDir/FreeBSD-9.0-RELEASE/man:$manLocalDir/FreeBSD-9.0-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-9.0-RELEASE/man:$manLocalDir/FreeBSD-ports-9.0-RELEASE/lib-perl5-perl-5.12.4-man:$manLocalDir/FreeBSD-ports-9.0-RELEASE/misc",
+    'FreeBSD 8.4-RELEASE and Ports',
+"$manLocalDir/FreeBSD-8.4-RELEASE/man:$manLocalDir/FreeBSD-8.4-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-8.4-RELEASE",
     'FreeBSD 8.3-RELEASE and Ports',
 "$manLocalDir/FreeBSD-8.3-RELEASE/man:$manLocalDir/FreeBSD-8.3-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-8.3-RELEASE",
     'FreeBSD 8.2-RELEASE and Ports',
@@ -239,8 +241,10 @@ $manPathDefault = 'FreeBSD 9.1-RELEASE';
 "$manLocalDir/FreeBSD-9.0-RELEASE/man:$manLocalDir/FreeBSD-9.0-RELEASE/openssl/man",
     'FreeBSD Ports 9.0-RELEASE', "$manLocalDir/FreeBSD-ports-9.0-RELEASE/man:$manLocalDir/FreeBSD-ports-9.0-RELEASE/lib-perl5-perl-5.12.4-man:$manLocalDir/FreeBSD-ports-9.0-RELEASE/misc",
 
-    'FreeBSD 8.3-stable',
-"$manLocalDir/FreeBSD-8.3-stable/man:$manLocalDir/FreeBSD-8.3-stable/openssl/man",
+    'FreeBSD 8.4-stable',
+"$manLocalDir/FreeBSD-8.4-stable/man:$manLocalDir/FreeBSD-8.4-stable/openssl/man",
+    'FreeBSD 8.4-RELEASE',
+"$manLocalDir/FreeBSD-8.4-RELEASE/man:$manLocalDir/FreeBSD-8.4-RELEASE/openssl/man",
     'FreeBSD 8.3-RELEASE',
 "$manLocalDir/FreeBSD-8.3-RELEASE/man:$manLocalDir/FreeBSD-8.3-RELEASE/openssl/man",
     'FreeBSD 8.2-RELEASE',
