@@ -18,7 +18,7 @@ var h = document.location.host;
  */
 var fbsdregex = /((docs|security|svnweb|wiki|www)\.freebsd\.org|google\.com)/i;
 
-if (window.navigator.doNotTrack == true) {
+if (navigator.doNotTrack == "yes" || navigator.doNotTrack == "1") {
 	allow_track = false;
 }
 
