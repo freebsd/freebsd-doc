@@ -14,7 +14,7 @@ DOCS?=	index.xml
 SUBDIR=		4.6.2R 4.7R 4.8R 4.9R 4.11R
 SUBDIR+=	5.0R 5.1R 5.2R 5.3R
 
-.if defined($(NEW_BUILD))
+.if defined(NEW_BUILD)
 SUBDIR=
 .endif
 
