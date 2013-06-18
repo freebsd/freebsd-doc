@@ -19,7 +19,7 @@ SUBDIR+=	7.0R 7.1R 7.2R 7.3R 7.4R
 SUBDIR+=	8.0R 8.1R 8.2R 8.3R 8.4R
 SUBDIR+=	9.0R 9.1R
 
-.if defined($(NEW_BUILD))
+.if defined(NEW_BUILD)
 SUBDIR=
 .endif
 
