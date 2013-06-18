@@ -37,7 +37,7 @@ SUBDIR+=	4.7R
 SUBDIR+=	5.0R
 SUBDIR+=	5.1R
 
-.if defined($(NEW_BUILD))
+.if defined(NEW_BUILD)
 SUBDIR=
 .endif
 
