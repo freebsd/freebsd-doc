@@ -55,10 +55,10 @@ echo "Generating ${keyfile}..."
     echo '<!--'
     echo "sh $0 ${me} ${id};"
     echo '-->'
-    echo '<programlisting role="pgpfingerprint"><![CDATA['
+    echo '<programlisting xmlns="http://docbook.org/ns/docbook" role="pgpfingerprint"><![CDATA['
     echo "${fp}"
     echo ']]></programlisting>'
-    echo '<programlisting role="pgpkey"><![CDATA['
+    echo '<programlisting xmlns="http://docbook.org/ns/docbook" role="pgpkey"><![CDATA['
     echo "${key}"
     echo ']]></programlisting>'
 ) >"${keyfile}"
@@ -77,7 +77,7 @@ echo "role key or you are a core member. In that case add to"
 echo "pgpkeys-officers.xml or pgpkeys-core.xml)."
 echo "Remember to keep the list sorted by last name!"
 echo
-echo "    <sect2 id=\"pgpkey-${me}\">"
+echo "    <sect2 xmlns="http://docbook.org/ns/docbook" xml:id=\"pgpkey-${me}\">"
 echo "      <title>&a.${me};</title>"
 echo "      &pgpkey.${me};"
 echo "    </sect2>"
