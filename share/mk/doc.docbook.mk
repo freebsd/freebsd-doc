@@ -244,10 +244,10 @@ all: ${SRCS} ${_docs}
 
 .if defined(SCHEMATRONS)
 .for sch in ${SCHEMATRONS}
-schxslts+=	${sch:C@.*/@@}.xsl
-CLEANFILES+=	${sch:C@.*/@@}.xsl
+schxslts+=	${sch:T}.xsl
+CLEANFILES+=	${sch:T}.xsl
 
-${sch:C@.*/@@}.xsl: ${sch}
+${sch:T}.xsl: ${sch}
 	${XSLTPROC} --param allow-foreign "true" ${XSLSCH} ${.ALLSRC} > ${.TARGET}
 .endfor
 .endif
