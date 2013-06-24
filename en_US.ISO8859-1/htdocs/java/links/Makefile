@@ -15,7 +15,6 @@ DOCS+=	tutorials.xml
 DOCS+=	development.xml
 DOCS+=	resources.xml
 DOCS+=	vendor.xml
-DOCS+=	documentation.xml
 DOCS+=	servlets.xml
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"
