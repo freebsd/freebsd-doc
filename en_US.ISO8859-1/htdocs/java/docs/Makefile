@@ -10,7 +10,6 @@
 DOCS =	faq.xml
 DOCS+=	howtoports.xml
 DOCS+=	newbies.xml
-DOCS+=	tutorials.xml
 DOCS+=	performance.xml
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"
