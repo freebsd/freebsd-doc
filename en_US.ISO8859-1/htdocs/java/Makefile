@@ -8,7 +8,6 @@
 .endif
 
 SUBDIR =	dists
-SUBDIR+=	docs
 
 DOCS =  advocacy.xml
 DOCS+=  howhelp.xml
