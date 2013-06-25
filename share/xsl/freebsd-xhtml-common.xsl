@@ -44,7 +44,7 @@
 
   <xsl:template name="user.footer.navigation">
     <p align="center"><small>This, and other documents, can be downloaded
-    from <a href="ftp://ftp.FreeBSD.org/pub/FreeBSD/doc/">ftp://ftp.FreeBSD.org/pub/FreeBSD/doc/</a></small></p>
+    from <a href="http://ftp.FreeBSD.org/pub/FreeBSD/doc/">http://ftp.FreeBSD.org/pub/FreeBSD/doc/</a></small></p>
 
     <p align="center"><small>For questions about FreeBSD, read the
     <a href="http://www.FreeBSD.org/docs.html">documentation</a> before
