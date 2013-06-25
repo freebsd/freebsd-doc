@@ -9,7 +9,6 @@
 
 DOCS =	freebsd.xml
 DOCS+=	tools.xml
-DOCS+=	api.xml
 DOCS+=	index.xml
 DOCS+=	tutorials.xml
 DOCS+=	development.xml
