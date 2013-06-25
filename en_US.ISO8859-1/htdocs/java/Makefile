@@ -9,7 +9,6 @@
 
 SUBDIR =	dists
 
-DOCS =  advocacy.xml
 DOCS+=  howhelp.xml
 DOCS+=  index.xml
 DOCS+=  install.xml
