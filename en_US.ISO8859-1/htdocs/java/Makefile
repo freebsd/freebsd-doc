@@ -9,12 +9,12 @@
 
 SUBDIR =	dists
 SUBDIR+=	docs
-SUBDIR+=	links
 
 DOCS =  advocacy.xml
 DOCS+=  howhelp.xml
 DOCS+=  index.xml
 DOCS+=  install.xml
+DOCS+=	links.xml
 
 DATA=	j2j.gif
 
