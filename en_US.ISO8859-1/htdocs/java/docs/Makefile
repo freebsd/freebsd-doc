@@ -8,6 +8,5 @@
 .endif
 
 DOCS =	faq.xml
-DOCS+=	howtoports.xml
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"
