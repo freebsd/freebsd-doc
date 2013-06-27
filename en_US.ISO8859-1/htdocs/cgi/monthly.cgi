@@ -138,7 +138,6 @@ if ($Submit)
 	my @info = split("\n", $info);
 
 	my $title = "FreeBSD project submission output";
-	my $tasks = xml(1, "help", "", @tasks) if @tasks;
 
 	my @contents = xml(0, "project cat=\'$Category\'",
 	    xml(1, "title", $Project),
@@ -150,7 +149,7 @@ if ($Submit)
             xml(1, "body",
                 xml(2, "p", "", xmltext(3, @info))),
             "\n",
-            $tasks,
+            xml(1, "help", "", @tasks),
         );
 	my $contents = join('', @contents);
 
