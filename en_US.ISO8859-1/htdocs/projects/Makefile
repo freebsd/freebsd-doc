@@ -27,6 +27,6 @@ DATA+=	2013-freebsd-gsoc.pdf
 
 INDEXLINK= projects.html
 
-SUBDIR=	 acpi busdma c99 ideas mips bigdisk netperf
+SUBDIR=	 acpi busdma c99 ideas mips netperf
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"
