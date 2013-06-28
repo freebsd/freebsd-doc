@@ -1,6 +1,6 @@
 # $FreeBSD$
 # The FreeBSD Japanese Documentation Project
-# Original revision: r41021
+# Original revision: r42016
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -22,7 +22,7 @@ SUBDIR+=	5.0R 5.1R 5.2R 5.2.1R 5.3R 5.4R
 #SUBDIR+=	7.0R 7.1R 7.2R 7.3R 7.4R
 #SUBDIR+=	8.0R 8.1R
 SUBDIR+=	8.2R 8.3R 8.4R
-#SUBDIR+=	9.0R 9.1R
+#SUBDIR+=	9.0R 9.1R 9.2R
 SUBDIR+=	9.0R
 
 .if defined(NEW_BUILD)
