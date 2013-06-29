@@ -9,16 +9,13 @@
 
   <xsl:template name="user.footer.navigation">
     <p align="center"><small>Этот, и другие документы, могут быть скачаны с
-    <a href="ftp://ftp.FreeBSD.org/pub/FreeBSD/doc/">ftp://ftp.FreeBSD.org/pub/FreeBSD/doc/</a>.</small></p>
+    <a href="http://ftp.FreeBSD.org/pub/FreeBSD/doc/">http://ftp.FreeBSD.org/pub/FreeBSD/doc/</a>.</small></p>
 
     <p align="center"><small>По вопросам, связанным с FreeBSD, прочитайте
     <a href="http://www.FreeBSD.org/ru/docs.html">документацию</a> прежде чем писать в
     &lt;<a href="mailto:questions@FreeBSD.org">questions@FreeBSD.org</a>&gt;.<br/>
-    По вопросам, связанным с этой документацией, пишите
+    По вопросам, связанным с этой документацией, пишите в рассылку
     &lt;<a href="mailto:doc@FreeBSD.org">doc@FreeBSD.org</a>&gt;.<br/>
-    По вопросам, связанным с русским переводом документации, пишите в рассылку
-    &lt;<a href="mailto:frdp@FreeBSD.org.ua">frdp@FreeBSD.org.ua</a>&gt;.<br/>
-    Информация по подписке на эту рассылку находится на
-    <a href="http://www.freebsd.org.ua/resources.html">сайте проекта перевода</a>.</small></p>
+    </small></p>
   </xsl:template>
 </xsl:stylesheet>
