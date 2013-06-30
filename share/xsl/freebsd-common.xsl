@@ -3,12 +3,14 @@
 <!-- $FreeBSD$ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+                xmlns:db="http://docbook.org/ns/docbook"
+                exclude-result-prefixes="db"
                 version='1.0'>
 
   <!-- Global customisation -->
 
   <!-- Redefine variables, and replace templates as necessary here -->
-  <xsl:template match="buildtarget|command|userinput">
+  <xsl:template match="db:buildtarget|db:command|db:userinput">
     <xsl:call-template name="inline.monoseq"/>
   </xsl:template>
 

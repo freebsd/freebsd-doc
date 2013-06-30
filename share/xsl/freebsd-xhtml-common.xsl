@@ -4,10 +4,10 @@
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
                 version='1.0'
-                xmlns="http://www.w3.org/TR/xhtml1/transitional"
 		xmlns:str="http://exslt.org/strings"
-		extension-element-prefixes="str"
-                exclude-result-prefixes="#default">
+                xmlns:db="http://docbook.org/ns/docbook"
+                exclude-result-prefixes="db"
+		extension-element-prefixes="str">
 
   <!-- Include the common customizations -->
   <xsl:import href="freebsd-common.xsl"/>
@@ -65,16 +65,16 @@
     </div>
   </xsl:template>
 
-  <xsl:template match="citerefentry" mode="no.anchor.mode">
+  <xsl:template match="db:citerefentry" mode="no.anchor.mode">
     <xsl:apply-templates select="*" mode="no.anchor.mode"/>
   </xsl:template>
 
-  <xsl:template match="refentrytitle" mode="no.anchor.mode">
+  <xsl:template match="db:refentrytitle" mode="no.anchor.mode">
     <xsl:value-of select="."/>
   </xsl:template>
 
   <!-- Add title class to emitted hX -->
-  <xsl:template match="bridgehead">
+  <xsl:template match="db:bridgehead">
     <xsl:variable name="container" select="(ancestor::appendix|ancestor::article|ancestor::bibliography|
       ancestor::chapter|ancestor::glossary|ancestor::glossdiv|ancestor::index|ancestor::partintro|
       ancestor::preface|ancestor::refsect1|ancestor::refsect2|ancestor::refsect3|ancestor::sect1|
@@ -157,7 +157,7 @@
     </a>
   </xsl:template>
 
-  <xsl:template match="svnref">
+  <xsl:template match="db:svnref">
     <xsl:call-template name="svnref.genlink"/>
   </xsl:template>
 
@@ -220,7 +220,7 @@
     </span>
   </xsl:template>
 
-  <xsl:template match="contrib">
+  <xsl:template match="db:contrib">
     <xsl:apply-templates/>
   </xsl:template>
 

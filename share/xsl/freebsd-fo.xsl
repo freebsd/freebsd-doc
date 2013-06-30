@@ -4,9 +4,9 @@
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
 		xmlns:fo="http://www.w3.org/1999/XSL/Format"
-		xmlns="http://www.w3.org/TR/xhtml1/transitional"
-                version='1.0'
-                exclude-result-prefixes="#default">
+                xmlns:db="http://docbook.org/ns/docbook"
+                exclude-result-prefixes="db"
+                version="1.0">
 
   <!-- Pull in the base stylesheets -->
   <xsl:import href="/usr/local/share/xsl/docbook-ns/fo/docbook.xsl"/>
@@ -69,7 +69,7 @@
 </xsl:template>
 -->
 
-<xsl:template match="abstract" mode="article.titlepage.recto.auto.mode">
+<xsl:template match="db:abstract" mode="article.titlepage.recto.auto.mode">
 <fo:block xmlns:fo="http://www.w3.org/1999/XSL/Format" xsl:use-attribute-sets="article.titlepage.recto.style" space-before="0.5em" text-align="start" margin-left="0.5in" margin-right="0.5in" font-family="{$body.fontset}">
 <xsl:apply-templates select="." mode="article.titlepage.recto.mode"/>
 </fo:block>
