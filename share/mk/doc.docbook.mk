@@ -255,7 +255,7 @@ ${sch:T}.xsl: ${sch}
 # Parsed XML  -------------------------------------------------------
 
 ${DOC}.parsed.xml: ${SRCS}
-	${XMLLINT} --nonet --noent --valid --xinclude ${MASTERDOC} > ${.TARGET}
+	${XMLLINT} --nonet --noent --valid --dropdtd --xinclude ${MASTERDOC} > ${.TARGET}
 .if defined(PROFILING)
 	@${ECHO} "==> Profiling"
 	${XSLTPROC} ${PROFILING} ${XSLPROF} ${.TARGET}.tmp > ${.TARGET}
@@ -377,7 +377,7 @@ ${DOC}.${_curformat}:
 
 lint validate: ${SRCS} ${schxslts}
 	@${ECHO} "==> Basic validation"
-	@${XMLLINT} --nonet --noent --valid --xinclude ${MASTERDOC} > ${DOC}.parsed.xml
+	@${XMLLINT} --nonet --noent --valid --dropdtd --xinclude ${MASTERDOC} > ${DOC}.parsed.xml
 .if defined(schxslts)
 	@${ECHO} "==> Validating with Schematron constraints"
 .for sch in ${schxslts}
