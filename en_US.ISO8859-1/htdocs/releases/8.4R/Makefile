@@ -7,8 +7,15 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS+=	schedule.xml
+DOCS+=	announce.xml \
+	relnotes.xml \
+	schedule.xml
 
-DATA=	docbook.css
+DATA=	docbook.css \
+	errata.html \
+	hardware.html \
+	installation.html \
+	readme.html \
+	relnotes-detailed.html
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"

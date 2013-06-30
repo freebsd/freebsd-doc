@@ -8,7 +8,6 @@
   <xsl:import href="../../../share/xml/mirrors-master.xsl" />
 
   <xsl:output type="xml" encoding="gb2312"
-	      omit-xml-declaration="yes"
 	      indent="yes"/>
 
   <!-- template: "mirrors-docbook-contact" -->

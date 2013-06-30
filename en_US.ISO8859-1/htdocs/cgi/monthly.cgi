@@ -1,4 +1,5 @@
 #!/usr/bin/perl -w
+# $FreeBSD$
 
 require "./cgi-style.pl";
 
@@ -23,11 +24,11 @@ sub xml
 
 	my($Tag, $Etc) = split(' ', $TagEtc, 2);
 
-	my $Spaces = " " x ($Indent*3);
+	my $Spaces = " " x ($Indent*2);
 	if (!@Text)
 	{
 		# No text in the tag
-		return ("$Spaces<$TagEtc >\n");
+		return ("$Spaces<$TagEtc />\n");
 	}
 	elsif (@Text == 1)
 	{
@@ -152,7 +153,7 @@ if ($Submit)
         );
 	my $contents = join('', @contents);
 
-	$contents = "<!-- Mail to: monthly\@freebsd.org -->\n$contents";
+	$contents = "<!-- Mail as an attachment to: monthly\@freebsd.org -->\n$contents";
 
 	if (!$errors)
 	{

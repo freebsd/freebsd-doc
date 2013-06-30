@@ -1,13 +1,9 @@
 #
 # $FreeBSD$
-# Original revision: 1.9
+# Original revision: r40713
 #
-# Build the FreeBSD documentation *outside* of the www tree, and install it
+# Build the FreeBSD documentation *outside* of the doc/ tree, and install it
 # in to the right place as necessary.
-#
-# This assumes that you have the www/ and doc/ trees checked out beside
-# one another -- this was always the case anyway, so there are no extra
-# requirements here.
 #
 
 .if exists(../Makefile.conf)

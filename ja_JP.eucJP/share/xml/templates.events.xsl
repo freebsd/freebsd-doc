@@ -53,12 +53,12 @@
   <xsl:key name="event-by-country" match="event"
     use="location/country" />
 
-  <xsl:key name="upcoming-event-by-country" match="event[((number(enddate/year) &gt; number($curdate.year)) or
-	    (number(enddate/year) = number($curdate.year) and
-	     number(enddate/month) &gt; number($curdate.month)) or
-	    (number(enddate/year) = number($curdate.year) and
-	     number(enddate/month) = number($curdate.month) and
-	     enddate/day &gt;= $curdate.day))]"
+  <xsl:key name="upcoming-event-by-country" match="event[((number(enddate/year) &gt; number(date:year())) or
+	    (number(enddate/year) = number(date:year()) and
+	     number(enddate/month) &gt; number(date:month-in-year())) or
+	    (number(enddate/year) = number(date:year()) and
+	     number(enddate/month) = number(date:month-in-year()) and
+	     enddate/day &gt;= date:day-in-month()))]"
     use="location/country" />
 
   <xsl:variable name="charturl" select="'http://chart.apis.google.com/chart?cht=t&amp;chs=400x200&amp;chtm=world&amp;chco=ffffff,ffbe38,600000&amp;chf=bg,s,4D89F9'" />

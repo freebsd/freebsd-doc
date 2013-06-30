@@ -14,7 +14,6 @@
   <xsl:import href="../../../share/xml/mirrors-master.xsl" />
 
   <xsl:output type="xml" encoding="koi8-r"
-	      omit-xml-declaration="yes"
 	      indent="yes"/>
 
   <!-- template: "mirrors-docbook-contact" -->

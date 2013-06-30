@@ -11,7 +11,6 @@
   <xsl:import href="../../../share/xml/mirrors-master.xsl" />
 
   <xsl:output type="xml" encoding="iso-8859-1"
-	      omit-xml-declaration="yes"
 	      indent="yes"/>
 
   <!-- these params should be externally bound. The values

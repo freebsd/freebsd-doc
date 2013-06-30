@@ -7,8 +7,6 @@
 # Build the FreeBSD Documentation Project Primer.
 #
 
-NO_TIDY=yes
-
 MAINTAINER=doc@FreeBSD.org
 
 DOC?= book

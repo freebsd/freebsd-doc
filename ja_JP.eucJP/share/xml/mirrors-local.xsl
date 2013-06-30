@@ -7,7 +7,6 @@
   <xsl:import href="../../../share/xml/mirrors-master.xsl" />
 
   <xsl:output type="xml" encoding="euc-jp"
-	      omit-xml-declaration="yes"
 	      indent="yes"/>
 
   <!-- template: "mirrors-docbook-contact" -->

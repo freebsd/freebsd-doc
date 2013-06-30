@@ -6,6 +6,9 @@ XML_CATALOG_FILES=	file://${.OBJDIR}/catalog-cwd.xml \
 			file://${DOC_PREFIX}/share/xml/catalog.xml \
 			file://${DOC_PREFIX}/share/xml/catalog-common.xml \
 			file://${LOCALBASE}/share/xml/catalog
+.if defined(EXTRA_CATALOGS)
+XML_CATALOG_FILES+=	${EXTRA_CATALOGS}
+.endif
 
 .if exists(${DOC_PREFIX}/share/xml/catalog-cwd.xml)
 XML_CATALOG_CWD=	${DOC_PREFIX}/share/xml/catalog-cwd.xml
@@ -273,26 +276,17 @@ XML_NOTICES=		${DOC_PREFIX}/share/xml/notices.xml
 #   The ${TARGET.<id>} file will not be listed in $DATA if defined.
 #   NO_DATA.DEFAULT is the setting for all <id>s.
 #
-XSLTPROC_ENV+=	SGML_CATALOG_FILES=
 XSLTPROC_ENV+=	XML_CATALOG_FILES="${XML_CATALOG_FILES}"
 
 XSLTPROCOPTS=	${XSLTPROCFLAGS}
-XSLTPROCOPTS+=	--xinclude
-XSLTPROCOPTS+=	--stringparam LOCALBASE ${LOCALBASE}
-XSLTPROCOPTS+=	--stringparam DOC_PREFIX ${DOC_PREFIX}
-.if defined(XML_CATALOG_FILES) && !empty(XML_CATALOG_FILES)
-XSLTPROCOPTS+=	--nonet --catalogs
-.endif
+XSLTPROCOPTS+=	--xinclude --nonet
 .if defined(WWWFREEBSDORG)
 XSLTPROCOPTS+=	--param "html.header.script.google" "'INCLUDE'"
 .endif
 XSLTPROC=	env ${XSLTPROC_ENV} ${LOCALBASE}/bin/xsltproc
 
 XMLLINTOPTS=	${XMLLINTFLAGS}
-XMLLINTOPTS+=	--xinclude --valid --noout
-.if defined(XML_CATALOG_FILES) && !empty(XML_CATALOG_FILES)
-XMLLINTOPTS+=	--nonet --catalogs
-.endif
+XMLLINTOPTS+=	--xinclude --valid --noout --nonet
 XMLLINT=	env ${XSLTPROC_ENV} ${PREFIX}/bin/xmllint
 
 .for D in ${XMLDOCS}

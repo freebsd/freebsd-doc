@@ -20,7 +20,6 @@ DATA+=	query-pr.xml
 DATA+=	web.xml
 DATA+=	web-all.xml
 DATA+=	message-id.xml
-DATA+=	cvsweb.xml
 
 # external sites
 DATA+=	markmail.xml

@@ -3,7 +3,7 @@
 #
 # Build the FreeBSD Handbook (Japanese).
 #
-# Original revision: 1.119
+# Original revision: r41710
 #
 
 # ------------------------------------------------------------------------
@@ -42,7 +42,6 @@ DOC?= book
 FORMATS?= html-split
 
 HAS_INDEX= true
-USE_PS2PDF=	yes
 
 INSTALL_COMPRESSED?= gz
 INSTALL_ONLY_COMPRESSED?=
@@ -51,6 +50,7 @@ IMAGES_EN = advanced-networking/isdn-bus.eps
 IMAGES_EN+= advanced-networking/isdn-twisted-pair.eps
 IMAGES_EN+= advanced-networking/natd.eps
 IMAGES_EN+= advanced-networking/net-routing.pic
+#IMAGES_EN+= advanced-networking/pxe-nfs.png
 IMAGES_EN+= advanced-networking/static-routes.pic
 IMAGES_EN+= bsdinstall/bsdinstall-adduser1.png
 IMAGES_EN+= bsdinstall/bsdinstall-adduser2.png
@@ -304,8 +304,8 @@ CHAPTERS?= ${SRCS:M*chapter.xml}
 XMLFLAGS+= ${CHAPTERS:S/\/chapter.xml//:S/^/-i chap./}
 XMLFLAGS+= -i chap.freebsd-glossary
 
-pgpkeyring: pgpkeys/chapter.xml
-	@${JADE} -V nochunks ${OTHERFLAGS} ${JADEOPTS} -d ${DSLPGP} -t sgml ${MASTERDOC}
+pgpkeyring: pgpkeys/chapter.xml ${DOC}.parsed.xml
+	@${XSLTPROC} ${XSLPGP} ${DOC}.parsed.xml
 
 #
 # Handbook-specific variables
@@ -320,42 +320,43 @@ DOC_PREFIX?=	${.CURDIR}/../../..
 #
 # rules generating lists of mirror site from XML database.
 #
-XMLDOCS=	mirrors-ftp:::mirrors.xml.ftp.inc.tmp \
-		mirrors-cvsup:::mirrors.xml.cvsup.inc.tmp \
-		eresources:::eresources.xml.www.inc.tmp
+XMLDOCS=	lastmod:::mirrors.lastmod.inc \
+		mirrors-ftp-index:::mirrors.xml.ftp.index.inc \
+		mirrors-ftp:::mirrors.xml.ftp.inc \
+		mirrors-cvsup-index:::mirrors.xml.cvsup.index.inc \
+		mirrors-cvsup:::mirrors.xml.cvsup.inc \
+		eresources-index:::eresources.xml.www.index.inc \
+		eresources:::eresources.xml.www.inc
 DEPENDSET.DEFAULT=	transtable mirror
 XSLT.DEFAULT=		${XSL_MIRRORS}
 XML.DEFAULT=		${XML_MIRRORS}
-NO_TIDY.DEFAULT=	yes
 
+PARAMS.lastmod+=	--param 'target' "'lastmod'"
+PARAMS.mirrors-ftp-index+=	--param 'type' "'ftp'" \
+				--param 'proto' "'ftp'" \
+				--param 'target' "'index'"
 PARAMS.mirrors-ftp+=	--param 'type' "'ftp'" \
 			--param 'proto' "'ftp'" \
 			--param 'target' "'handbook/mirrors/chapter.xml'"
+PARAMS.mirrors-cvsup-index+=	--param 'type' "'cvsup'" \
+				--param 'proto' "'cvsup'" \
+				--param 'target' "'index'"
 PARAMS.mirrors-cvsup+=	--param 'type' "'cvsup'" \
 			--param 'proto' "'cvsup'" \
 			--param 'target' "'handbook/mirrors/chapter.xml'"
+PARAMS.eresources-index+=	--param 'type' "'www'" \
+				--param 'proto' "'http'" \
+				--param 'target' "'index'"
 PARAMS.eresources+=	--param 'type' "'www'" \
 			--param 'proto' "'http'" \
 			--param 'target' "'handbook/eresources/chapter.xml'"
 
-SRCS+=		mirrors.xml.ftp.inc \
+SRCS+=		mirrors.lastmod.inc \
+		mirrors.xml.ftp.inc \
+		mirrors.xml.ftp.index.inc \
 		mirrors.xml.cvsup.inc \
-		eresources.xml.www.inc
-
-CLEANFILES+=	mirrors.xml.ftp.inc mirrors.xml.ftp.inc.tmp \
-		mirrors.xml.cvsup.inc mirrors.xml.cvsup.inc.tmp \
-		eresources.xml.www.inc eresources.xml.www.inc.tmp
+		mirrors.xml.cvsup.index.inc \
+		eresources.xml.www.inc \
+		eresources.xml.www.index.inc
 
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"
-
-.for p in ftp cvsup
-mirrors.xml.${p}.inc: mirrors.xml.${p}.inc.tmp
-	${CP} ${.ALLSRC} ${.TARGET}
-#	${SED} -e 's,<\([^ >]*\)\([^>]*\)/>,<\1\2></\1>,;s,</anchor>,,'\
-#	    < $@.tmp > $@ || (${RM} -f $@ && false)
-.endfor
-
-eresources.xml.www.inc: eresources.xml.www.inc.tmp
-	${CP} ${.ALLSRC} ${.TARGET}
-#	${SED} -e 's,<\([^ >]*\)\([^>]*\)/>,<\1\2></\1>,;s,</anchor>,,'\
-#	    < $@.tmp > $@ || (${RM} -f $@ && false)

@@ -7,7 +7,6 @@
   <xsl:import href="./mirrors-master.xsl" />
 
   <xsl:output type="xml" encoding="iso-8859-1"
-	      omit-xml-declaration="yes"
 	      indent="yes"/>
 
 </xsl:stylesheet>

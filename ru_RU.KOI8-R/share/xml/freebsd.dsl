@@ -9,64 +9,11 @@
 
 <!DOCTYPE style-sheet PUBLIC "-//James Clark//DTD DSSSL Style Sheet//EN" [
 <!ENTITY freebsd.dsl PUBLIC "-//FreeBSD//DOCUMENT DocBook Language Neutral Stylesheet//EN" CDATA DSSSL>
-<!ENTITY % lang.ru.dsssl "IGNORE">
-
-<!ENTITY % freebsd.l10n PUBLIC "-//FreeBSD//ENTITIES DocBook Language Specific Entities//EN">
-%freebsd.l10n;
-
-<!ENTITY % output.html  "IGNORE">
-<!ENTITY % output.print "IGNORE">
 ]>
 
 <style-sheet>
   <style-specification use="docbook">
     <style-specification-body>
-
-      <![ %output.html; [
-
-      <![ %lang.ru.dsssl; [
-        (define %gentext-language% "ru")
-      ]]>
-
-	(define ($email-footer$)
-          (make sequence
-	    (make element gi: "p"
-                  attributes: (list (list "align" "center"))
-              (make element gi: "small"
-                (literal "Этот, и другие документы, могут быть скачаны с ")
-		(create-link
-		  (list (list "HREF" "ftp://ftp.FreeBSD.org/pub/FreeBSD/doc/"))
-                  (literal "ftp://ftp.FreeBSD.org/pub/FreeBSD/doc/"))
-                (literal ".")))
-            (make element gi: "p"
-                  attributes: (list (list "align" "center"))
-              (make element gi: "small"
-                (literal "По вопросам, связанным с FreeBSD, прочитайте ")
-		(create-link
-		  (list (list "HREF" "http://www.FreeBSD.org/ru/docs.html"))
-                  (literal "документацию"))
-                (literal " прежде чем писать в <")
-		(create-link
-		  (list (list "HREF" "mailto:questions@FreeBSD.org"))
-                  (literal "questions@FreeBSD.org"))
-                (literal ">.")
-                (make empty-element gi: "br")
-                (literal "По вопросам, связанным с этой документацией, пишите <")
-		(create-link (list (list "HREF" "mailto:doc@FreeBSD.org"))
-                  (literal "doc@FreeBSD.org"))
-	        (literal ">.")
-                (make empty-element gi: "br")
-                (literal "По вопросам, связанным с русским переводом документации, пишите в рассылку <")
-		(create-link (list (list "HREF" "mailto:frdp@FreeBSD.org.ua"))
-                  (literal "frdp@FreeBSD.org.ua"))
-	        (literal ">.")
-                (make empty-element gi: "br")
-                (literal "Информация по подписке на эту рассылку находится на ")
-		(create-link
-		  (list (list "HREF" "http://www.FreeBSD.org.ua/resources.html"))
-                  (literal "сайте проекта перевода"))
-                (literal ".")))))
-      ]]>
 
       <!-- Convert " ... " to '' ... '' in the HTML output. -->
       (element quote

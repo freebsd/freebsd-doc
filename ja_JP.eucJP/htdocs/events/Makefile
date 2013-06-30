@@ -13,9 +13,9 @@
 #SUBDIR+= 2003
 
 # The year the top level events.html file starts from:
-YEARSTART= 2012
+YEARSTART= 2013
 # Years to generate past events pages for and link from top level:
-PASTYEARS= 2011 2010 2009 2008 2007 2006 2005 2004 2003
+PASTYEARS= 2012 2011 2010 2009 2008 2007 2006 2005 2004 2003
 
 DATA=	events.css
 INDEXLINK=	events.html

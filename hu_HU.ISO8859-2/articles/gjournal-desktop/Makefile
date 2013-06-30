@@ -7,8 +7,6 @@
 # %SRCID%   1.1
 #
 
-NO_TIDY= yes
-
 MAINTAINER= doc@FreeBSD.org
 
 DOC?= article

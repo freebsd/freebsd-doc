@@ -5,14 +5,6 @@
 # documents commonly used in doc/ and www/ tree.
 #
 
-AWK?=		/usr/bin/awk
-GREP?=		/usr/bin/grep
-REALPATH?=	/bin/realpath
-SED?=		/usr/bin/sed
-# a hack to keep tidy from converting tabs to spaces
-# replace them with &#09; before calling tidy
-REINPLACE_TABS_CMD?=	${SED} -i "" -e 's/	/\&\#09;/g'
-
 # ------------------------------------------------------------------------
 #
 # Work out the language and encoding used for this document.
@@ -28,20 +20,8 @@ DOC_PREFIX_NAME?=	head
 .endif
 
 .if (!defined(LANGCODE) || empty(LANGCODE))
-# Calculate _LANGCODE.
-_LANGCODE:=	${.CURDIR}
-. for _ in 1 2 3 4 5 6 7 8 9 10
-.  if !(${_LANGCODE:H:T} == ${DOC_PREFIX_NAME})
-_LANGCODE:=	${_LANGCODE:H}
-.  endif
-. endfor
-_LANGCODE:=	${_LANGCODE:T}
-.else # (!defined(LANGCODE) || empty(LANGCODE))
-# when LANGCODE is defined, use the value.
-_LANGCODE?=	${LANGCODE}
-.endif # (!defined(LANGCODE) || empty(LANGCODE))
-
-LANGCODE?=	${_LANGCODE}
+LANGCODE!=	echo ${.CURDIR} | grep -o '[a-z]*_[A-Z]*\.[-A-Za-z0-9]*' || echo "."
+.endif
 
 # normalize DOC_PREFIX
 DOC_PREFIX!=	${REALPATH} ${DOC_PREFIX}

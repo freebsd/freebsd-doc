@@ -1,6 +1,6 @@
 # $FreeBSD$
 # The FreeBSD Japanese Documentation Project
-# Original revision: r39569
+# Original revision: r41455
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -17,6 +17,8 @@
 DOCS+=	security.xml
 #DOCS+=	advisories.xml
 #DOCS+=  notices.xml
+DOCS+=  reporting.xml
+DOCS+=  unsupported.xml
 
 #advisories.xml: advisories.html.inc
 

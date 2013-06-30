@@ -21,7 +21,7 @@
   <xsl:import href="http://www.FreeBSD.org/XML/www/share/xml/libcommon.xsl"/>
   <xsl:import href="http://www.FreeBSD.org/XML/www/share/xml/xhtml.xsl"/>
 
-  <xsl:key name="indexLetter" match="term" use="translate(substring(text, 1, 1), $lowercase, $uppercase)"/>
+  <xsl:key name="indexLetter" match="term" use="translate(substring(text, 1, 1), 'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ')"/>
 
   <xsl:variable name="title">&title;</xsl:variable>
 

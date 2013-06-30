@@ -3,7 +3,7 @@
 #
 # Build the FreeBSD Handbook (Simplified Chinese).
 #
-# Original revision: 1.113
+# Original revision: r38039
 
 # ------------------------------------------------------------------------
 #
@@ -41,7 +41,6 @@ DOC?= book
 FORMATS?= html-split
 
 HAS_INDEX= true
-USE_PS2PDF=	yes
 
 INSTALL_COMPRESSED?= gz
 INSTALL_ONLY_COMPRESSED?=
@@ -51,6 +50,50 @@ IMAGES_EN+= advanced-networking/isdn-twisted-pair.eps
 IMAGES_EN+= advanced-networking/natd.eps
 IMAGES_EN+= advanced-networking/net-routing.pic
 IMAGES_EN+= advanced-networking/static-routes.pic
+IMAGES_EN+= bsdinstall/bsdinstall-adduser1.png
+IMAGES_EN+= bsdinstall/bsdinstall-adduser2.png
+IMAGES_EN+= bsdinstall/bsdinstall-adduser3.png
+IMAGES_EN+= bsdinstall/bsdinstall-boot-loader-menu.png
+IMAGES_EN+= bsdinstall/bsdinstall-choose-mode.png
+IMAGES_EN+= bsdinstall/bsdinstall-config-components.png
+IMAGES_EN+= bsdinstall/bsdinstall-config-hostname.png
+IMAGES_EN+= bsdinstall/bsdinstall-config-keymap.png
+IMAGES_EN+= bsdinstall/bsdinstall-config-services.png
+IMAGES_EN+= bsdinstall/bsdinstall-config-crashdump.png
+IMAGES_EN+= bsdinstall/bsdinstall-configure-network-interface-ipv4-dhcp.png
+IMAGES_EN+= bsdinstall/bsdinstall-configure-network-interface-ipv4.png
+IMAGES_EN+= bsdinstall/bsdinstall-configure-network-interface-ipv4-static.png
+IMAGES_EN+= bsdinstall/bsdinstall-configure-network-interface-ipv6.png
+IMAGES_EN+= bsdinstall/bsdinstall-configure-network-interface-ipv6-static.png
+IMAGES_EN+= bsdinstall/bsdinstall-configure-network-interface-slaac.png
+IMAGES_EN+= bsdinstall/bsdinstall-configure-network-interface.png
+IMAGES_EN+= bsdinstall/bsdinstall-configure-network-ipv4-dns.png
+IMAGES_EN+= bsdinstall/bsdinstall-configure-wireless-accesspoints.png
+IMAGES_EN+= bsdinstall/bsdinstall-configure-wireless-scan.png
+IMAGES_EN+= bsdinstall/bsdinstall-configure-wireless-wpa2setup.png
+IMAGES_EN+= bsdinstall/bsdinstall-distfile-extracting.png
+IMAGES_EN+= bsdinstall/bsdinstall-distfile-fetching.png
+IMAGES_EN+= bsdinstall/bsdinstall-distfile-verifying.png
+IMAGES_EN+= bsdinstall/bsdinstall-final-confirmation.png
+IMAGES_EN+= bsdinstall/bsdinstall-finalconfiguration.png
+IMAGES_EN+= bsdinstall/bsdinstall-final-modification-shell.png
+IMAGES_EN+= bsdinstall/bsdinstall-keymap-select-default.png
+IMAGES_EN+= bsdinstall/bsdinstall-mainexit.png
+IMAGES_EN+= bsdinstall/bsdinstall-netinstall-files.png
+IMAGES_EN+= bsdinstall/bsdinstall-netinstall-mirrorselect.png
+IMAGES_EN+= bsdinstall/bsdinstall-part-entire-part.png
+IMAGES_EN+= bsdinstall/bsdinstall-part-guided-disk.png
+IMAGES_EN+= bsdinstall/bsdinstall-part-guided-manual.png
+IMAGES_EN+= bsdinstall/bsdinstall-part-manual-addpart.png
+IMAGES_EN+= bsdinstall/bsdinstall-part-manual-create.png
+IMAGES_EN+= bsdinstall/bsdinstall-part-manual-partscheme.png
+IMAGES_EN+= bsdinstall/bsdinstall-part-review.png
+IMAGES_EN+= bsdinstall/bsdinstall-post-root-passwd.png
+IMAGES_EN+= bsdinstall/bsdinstall-set-clock-local-utc.png
+IMAGES_EN+= bsdinstall/bsdinstall-timezone-confirm.png
+IMAGES_EN+= bsdinstall/bsdinstall-timezone-country.png
+IMAGES_EN+= bsdinstall/bsdinstall-timezone-region.png
+IMAGES_EN+= bsdinstall/bsdinstall-timezone-zone.png
 IMAGES_EN+= geom/striping.pic
 IMAGES_EN+= install/adduser1.scr
 IMAGES_EN+= install/adduser2.scr
@@ -206,6 +249,7 @@ IMAGES_LIB+= callouts/15.png
 # XML content
 SRCS+= audit/chapter.xml
 SRCS+= book.xml
+SRCS+= bsdinstall/chapter.xml
 SRCS+= colophon.xml
 SRCS+= dtrace/chapter.xml
 SRCS+= advanced-networking/chapter.xml
@@ -272,30 +316,43 @@ DOC_PREFIX?=	${.CURDIR}/../../..
 #
 # rules generating lists of mirror site from XML database.
 #
-XMLDOCS=	mirrors-ftp:::mirrors.xml.ftp.inc \
+XMLDOCS=	lastmod:::mirrors.lastmod.inc \
+		mirrors-ftp-index:::mirrors.xml.ftp.index.inc \
+		mirrors-ftp:::mirrors.xml.ftp.inc \
+		mirrors-cvsup-index:::mirrors.xml.cvsup.index.inc \
 		mirrors-cvsup:::mirrors.xml.cvsup.inc \
+		eresources-index:::eresources.xml.www.index.inc \
 		eresources:::eresources.xml.www.inc
 DEPENDSET.DEFAULT=	transtable mirror
 XSLT.DEFAULT=		${XSL_MIRRORS}
 XML.DEFAULT=		${XML_MIRRORS}
-NO_TIDY.DEFAULT=	yes
 
+PARAMS.lastmod+=	--param 'target' "'lastmod'"
+PARAMS.mirrors-ftp-index+=	--param 'type' "'ftp'" \
+				--param 'proto' "'ftp'" \
+				--param 'target' "'index'"
 PARAMS.mirrors-ftp+=	--param 'type' "'ftp'" \
 			--param 'proto' "'ftp'" \
 			--param 'target' "'handbook/mirrors/chapter.xml'"
+PARAMS.mirrors-cvsup-index+=	--param 'type' "'cvsup'" \
+				--param 'proto' "'cvsup'" \
+				--param 'target' "'index'"
 PARAMS.mirrors-cvsup+=	--param 'type' "'cvsup'" \
 			--param 'proto' "'cvsup'" \
 			--param 'target' "'handbook/mirrors/chapter.xml'"
+PARAMS.eresources-index+=	--param 'type' "'www'" \
+				--param 'proto' "'http'" \
+				--param 'target' "'index'"
 PARAMS.eresources+=	--param 'type' "'www'" \
 			--param 'proto' "'http'" \
 			--param 'target' "'handbook/eresources/chapter.xml'"
 
-SRCS+=		mirrors.xml.ftp.inc \
+SRCS+=		mirrors.lastmod.inc \
+		mirrors.xml.ftp.inc \
+		mirrors.xml.ftp.index.inc \
 		mirrors.xml.cvsup.inc \
-		eresources.xml.www.inc
-
-CLEANFILES+=	mirrors.xml.ftp.inc \
-		mirrors.xml.cvsup.inc \
-		eresources.xml.www.inc
+		mirrors.xml.cvsup.index.inc \
+		eresources.xml.www.inc \
+		eresources.xml.www.index.inc
 
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"

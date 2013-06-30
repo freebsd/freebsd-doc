@@ -15,6 +15,8 @@ DOCS=	charter.xml
 DOCS+=	security.xml
 DOCS+=	advisories.xml
 DOCS+=  notices.xml
+DOCS+=  reporting.xml
+DOCS+=  unsupported.xml
 
 advisories.xml: advisories.html.inc
 

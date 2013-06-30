@@ -6,17 +6,19 @@
 <!-- $FreeBSD$
      Vertaald door: Rene Ladan
      %SOURCE%	en_US.ISO8859-1/htdocs/community.xsl
-     %SRCID%	39632
+     %SRCID%	40558
 -->
 
 <xsl:stylesheet version="1.0"
   xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
-  xmlns="http://www.w3.org/1999/xhtml">
+  xmlns:date="http://exslt.org/dates-and-times"
+  xmlns="http://www.w3.org/1999/xhtml"
+  extension-element-prefixes="date">
 
   <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/xml/libcommon.xsl"/>
   <xsl:import href="http://www.FreeBSD.org/XML/www/share/xml/xhtml.xsl"/>
 
-  <xsl:key name="last-year-event-by-country" match="event[number(enddate/year) = (number($curdate.year) - 1)]"
+  <xsl:key name="last-year-event-by-country" match="event[number(enddate/year) = (number(date:year()) - 1)]"
     use="location/country" />
 
   <xsl:key name="event-by-year" match="event" use="enddate/year" />
