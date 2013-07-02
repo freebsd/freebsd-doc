@@ -44,6 +44,13 @@
     </rule>
   </pattern>
 
+  <pattern name="Check titles">
+    <rule context="//db:book|//db:article|//db:chapter|//db:section|//db:sect1|//db:sect2|//db:sect3|//db:sect4|//db:sect5">
+      <assert test="db:title or db:info/db:title">There must be a title either in the the doc component (<xsl:value-of select="@id"/>) or in the info element.</assert>
+      <report test="db:title and db:info/db:title">There must be exactly one title for a doc component (<xsl:value-of select="@id"/>).</report>
+    </rule>
+  </pattern>
+
   <!-- DB 5.0 constraints -->
 
   <pattern name="Glossary 'firstterm' type constraint">
