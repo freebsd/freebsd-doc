@@ -39,6 +39,33 @@
     </rule>
   </pattern>
 
+  <pattern name="Check title">
+    <rule context="//book">
+      <assert test="title or bookinfo/title">There must be a title either in book or in bookinfo.</assert>
+    </rule>
+    <rule context="//article">
+      <assert test="title or articleinfo/title">There must be a title either in article or in articleinfo.</assert>
+    </rule>
+    <rule context="//chapter">
+      <assert test="title or chapterinfo/title">There must be a title either in chapter (<xsl:value-of select="@id"/>) or in chapterinfo.</assert>
+    </rule>
+    <rule context="//sect1">
+      <assert test="title or sect1info/title">There must be a title either in sect1 (<xsl:value-of select="@id"/>) or in sect1info.</assert>
+    </rule>
+    <rule context="//sect2">
+      <assert test="title or sect2info/title">There must be a title either in sect2 (<xsl:value-of select="@id"/>) or in sect2info.</assert>
+    </rule>
+    <rule context="//sect3">
+      <assert test="title or sect3info/title">There must be a title either in sect3 (<xsl:value-of select="@id"/>) or in sect3info.</assert>
+    </rule>
+  </pattern>
+
+  <pattern name="Check table entries">
+    <rule context="//entry">
+      <report test="@colname and @spanname">You cannot use both colname and spanname attributes on table entries.</report>
+    </rule>
+  </pattern>
+
 <!--
 	Backported constraints from DocBook 5.0
 -->
