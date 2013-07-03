@@ -50,6 +50,9 @@
 #                      provides better compression, but requires longer
 #                      time and utilizes more CPU resources than gzip(1).
 
+# Either dblatex or fop
+RENDERENGINE?=	dblatex
+
 #
 # Documents should use the += format to access these.
 #
@@ -71,6 +74,8 @@ IMAGES_LIB?=
 
 SCHEMATRONS?=	${DOC_PREFIX}/share/xml/freebsd.sch
 XSLTPROCOPTS?=	--nonet
+
+DBLATEXOPTS?=	-I ${IMAGES_EN_DIR}/${DOC}s/${.CURDIR:T} -T simple -d
 
 KNOWN_FORMATS=	html html.tar html-split html-split.tar \
 		epub txt rtf ps pdf tex dvi tar pdb
@@ -337,6 +342,7 @@ ${.CURDIR:T}.pdb.${_curcomp}: ${DOC}.pdb.${_curcomp}
 ${DOC}.fo: ${DOC}.xml ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} ${DOC}.parsed.xml
 	${XSLTPROC} ${XSLTPROCOPTS} ${XSLFO} ${DOC}.parsed.print.xml > ${.TARGET}
 
+.if ${RENDERENGINE} == "fop"
 ${DOC}.pdf: ${DOC}.fo ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG}
 	${FOP} ${FOPOPTS} ${DOC}.fo ${.TARGET}
 
@@ -345,6 +351,15 @@ ${DOC}.ps: ${DOC}.fo ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG}
 
 ${DOC}.rtf: ${DOC}.fo ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG}
 	${FOP} ${FOPOPTS} ${DOC}.fo ${.TARGET}
+.else
+# Default is dblatex
+${DOC}.pdf: ${DOC}.parsed.xml ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG}
+	${DBLATEX} ${DOC}.parsed.print.xml ${DBLATEXOPTS} -o ${.TARGET}
+
+${DOC}.ps: ${DOC}.parsed.xml ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG}
+	${DBLATEX} ${DOC}.parsed.print.xml ${DBLATEXOPTS} -o ${.TARGET}
+.endif
+	
 
 ${DOC}.tar: ${SRCS} ${LOCAL_IMAGES} ${LOCAL_CSS_SHEET}
 	${TAR} cf ${.TARGET} -C ${.CURDIR} ${SRCS} \
