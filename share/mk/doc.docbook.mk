@@ -56,6 +56,8 @@
 
 MASTERDOC?=	${.CURDIR}/${DOC}.xml
 
+DB5RNC?=	${DOC_PREFIX}/share/xml/freebsd50.rnc
+
 XSLPROF?=	/usr/local/share/xsl/docbook-ns/profiling/profile.xsl
 XSLXHTML?=	${DOC_PREFIX}/${LANGCODE}/share/xsl/freebsd-xhtml.xsl
 XSLXHTMLCHUNK?=	${DOC_PREFIX}/${LANGCODE}/share/xsl/freebsd-xhtml-chunk.xsl
@@ -387,6 +389,10 @@ lint validate: ${SRCS} ${schxslts}
 		false; \
 	  fi )
 .endfor
+.endif
+.if exists(${JING})
+	@${ECHO} "==> Validating with RELAX NG"
+	@${JING} -c ${DB5RNC} ${DOC}.parsed.xml
 .endif
 	@${RM} -rf ${CLEANFILES} ${CLEANDIRS} ${DOC}.parsed.xml
 
