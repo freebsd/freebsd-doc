@@ -1,6 +1,6 @@
 # $FreeBSD$
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.8
+# Original revision: r42025
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -9,7 +9,6 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS=	15.xml
 #DOCS+=	16.xml
 #DOCS+=	17.xml
 DOCS+=	index.xml

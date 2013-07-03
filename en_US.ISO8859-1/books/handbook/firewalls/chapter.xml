@@ -361,11 +361,6 @@ pflog_flags=""                  # additional flags for pflogd startup</programli
 	configuring and running the <acronym>PF</acronym> firewall.
 	Do not forget to check the mailing list archives before asking
 	questions.</para>
-    </sect2>
-
-    <sect2>
-      <title>Working with PF</title>
-
       <para>To control <acronym>PF</acronym>, use &man.pfctl.8;.
 	Below are some useful options to this command.  Review
 	&man.pfctl.8; for a description of all available
@@ -477,6 +472,1468 @@ options         ALTQ_NOPCC      # Required for SMP build</programlisting>
 	<acronym>SMP</acronym> support for <acronym>ALTQ</acronym>.
 	This option is required on <acronym>SMP</acronym>
 	systems.</para>
+    </sect2>
+
+    <sect2 id="pf-tutorial">
+      <sect2info>
+	<authorgroup>
+	  <author>
+	    <firstname>Peter</firstname>
+	    <surname>Hansteen</surname>
+	    <othername>N. M.</othername>
+	    <contrib>Contributed by </contrib>
+	  </author>
+	</authorgroup>
+      </sect2info>
+
+      <title><acronym>PF</acronym> Rule Sets and Tools</title>
+
+      <para>This section demonstrates some useful
+	<acronym>PF</acronym> features and <acronym>PF</acronym>
+	related tools in a series of examples.  A more thorough
+	tutorial is available at <ulink
+	  url="http://home.nuug.no/~peter/pf/">http://home.nuug.no/~peter/pf/</ulink>.</para>
+
+      <tip>
+	<para><filename role="package">security/sudo</filename> is
+	  useful for running commands like <command>pfctl</command>
+	  that require elevated privileges.  It can be installed from
+	  the Ports Collection.</para>
+      </tip>
+
+      <sect3 id="pftut-simplest">
+	<title>The Simplest Rule Set Ever</title>
+
+	<para>The simplest possible setup is for a single machine
+	  which will not run any services, and which will talk to one
+	  network which may be the Internet.  A minimal
+	  <filename>/etc/pf.conf</filename> looks like this:</para>
+
+	<programlisting>block in all
+pass out all keep state</programlisting>
+
+	<para>Here we deny any incoming traffic, allow traffic we make
+	  ourselves to pass, and retain state information on our
+	  connections.  Keeping state information allows return
+	  traffic for all connections we have initiated to pass back
+	  to us.  This rule set is used on machines that can be
+	  trusted.  The rule set can be loaded with</para>
+
+	<screen>&prompt.root; <userinput>pfctl -e ; pfctl -f /etc/pf.conf</userinput></screen>
+      </sect3>
+
+      <sect3>
+	<title>Tighter and More Elegant</title>
+
+	<para>For a slightly more structured and complete setup, we
+	  start by denying everything and then allowing only those
+	  things we know that we need
+	  <footnote><para>Why write the rule set to default deny?  The
+	      short answer is, it gives better control at the expense
+	      of some thinking.  The point of packet filtering is to
+	      take control, not to run catch-up with what the bad guys
+	      do.  Marcus Ranum has written a very entertaining and
+	      informative article about this, <ulink
+		url="http://www.ranum.com/security/computer_security/editorials/dumb/index.html">The
+		Six Dumbest Ideas in Computer Security</ulink>, and
+	      it is well written too.</para></footnote>.  This gives
+	  us the opportunity to introduce two of the features which
+	  make <acronym>PF</acronym> such a wonderful tool:
+	  <firstterm>lists</firstterm> and
+	  <firstterm>macros</firstterm>.</para>
+
+	<para>We will make some changes to
+	  <filename>/etc/pf.conf</filename>, starting with</para>
+
+	<programlisting>block all</programlisting>
+
+	<para>Then we back up a little.  Macros need to be defined
+	  before use, so at the very top of the file, we add:</para>
+
+	<programlisting>tcp_services = "{ ssh, smtp, domain, www, pop3, auth, pop3s }"
+udp_services = "{ domain }"</programlisting>
+
+	<para>Now we have demonstrated several things at once - what
+	  macros look like, that macros may be lists, and that
+	  <acronym>PF</acronym> understands rules using port names
+	  equally well as it does port numbers.  The names are the
+	  ones listed in <filename>/etc/services</filename>.  This
+	  gives us something to put in our rules, which we edit
+	  slightly to look like this:</para>
+
+	<programlisting>block all
+pass out proto tcp to any port $tcp_services keep state
+pass proto udp to any port $udp_services keep state</programlisting>
+
+	<para>At this point some of us will point out that UDP is
+	  stateless, but <acronym>PF</acronym> actually manages to
+	  maintain state information despite this.  Keeping state for
+	  a UDP connection means that for example when you ask a name
+	  server about a domain name, you will be able to receive its
+	  answer.</para>
+
+	<para>Since we have made changes to our
+	  <filename>pf.conf</filename>, we load the new
+	  rules:</para>
+
+	<screen>&prompt.root; <userinput>pfctl -f /etc/pf.conf</userinput></screen>
+
+	<para>and the new rules are applied.  If there are no syntax
+	  errors, <command>pfctl</command> will not output any
+	  messages during the rule load.  The <option>-v</option> flag
+	  will produce more verbose <command>pfctl</command>
+	  output.</para>
+
+	<para>If there have been extensive changes to the rule set,
+	  the rules can be tested before attempting to load them.  The
+	  command to do this is</para>
+
+	<screen>&prompt.root; <userinput>pfctl -nf /etc/pf.conf</userinput></screen>
+
+	<para><option>-n</option> causes the rules to be interpreted
+	  only, but does not load them.  This provides an opportunity
+	  to correct any errors.  Under any circumstances, the last
+	  valid rule set loaded will be in force until
+	  <acronym>PF</acronym> is disabled or a new rule set is
+	  loaded.</para>
+
+	<tip>
+	  <title>Use <command>pfctl -v</command> to Show the Parsed
+	    Rule Set</title>
+
+	  <para>Adding the <option>-v</option> to a
+	    <command>pfctl</command> ruleset load (even a dry run with
+	    <option>-n</option>) will display the fully parsed rules
+	    exactly the way they will be loaded.  This is extremely
+	    useful when debugging rules.</para>
+	</tip>
+      </sect3>
+
+      <sect3 id="pftut-gateway">
+	<title>A Simple Gateway with NAT</title>
+
+	<para>To most users, a single machine setup will be of limited
+	  interest, and at this point we move on to more realistic or
+	  at least more common setups, concentrating on a machine
+	  which is running <acronym>PF</acronym> and also acts as a
+	  gateway for at least one other machine.</para>
+
+	<sect4 id="pftut-gwpitfalls">
+	  <title>Gateways and the Pitfalls of <literal>in</literal>,
+	    <literal>out</literal> and <literal>on</literal></title>
+
+	  <para>In the single machine setup, life is relatively
+	    simple.  Traffic created on it should either pass out to
+	    the rest of the world or not, and the administrator
+	    decides what to let in from elsewhere.</para>
+
+	  <para>On a gateway, the perspective changes from
+	    <quote>me versus the network out there</quote> to
+	    <quote>I am the one who decides what to pass to or from
+	      all the networks I am connected to</quote>.  The machine
+	    has at least two network interfaces, each connected to a
+	    separate net.</para>
+
+	  <para>It is very reasonable to think that for traffic to
+	    pass from the network connected to
+	    <devicename>xl1</devicename> to hosts on the network
+	    connected to <devicename>xl0</devicename>, a rule like
+	    this is needed:</para>
+
+	  <programlisting>pass in on xl1 from xl1:network to xl0:network port $ports keep state</programlisting>
+
+	  <para>This rule keeps track of states as well.</para>
+
+	  <para>However, one of the most common and most
+	    complained-about mistakes in firewall configuration is not
+	    realizing that the <quote>to</quote> keyword does not in
+	    itself guarantee passage all the way there.  The rule we
+	    just wrote only lets the traffic pass in to the gateway on
+	    the internal interface.  To let the packets get a bit
+	    further, a matching rule is needed which says</para>
+
+	  <programlisting>pass out on xl0 from xl1:network to xl0:network port $ports keep state</programlisting>
+
+	  <para>These rules will work, but they will not necessarily
+	    achieve the desired effect.</para>
+
+	  <para>Rules this specific are rarely needed.  For the basic
+	    gateway configurations we will be dealing with here, a
+	    better rule says</para>
+
+	  <programlisting>pass from xl1:network to any port $ports keep state</programlisting>
+
+	  <para>This provides local net access to the Internet and
+	    leaves the detective work to the
+	    <firstterm>antispoof</firstterm> and
+	    <firstterm>scrub</firstterm> code.  They are both pretty
+	    good these days, and we will get back to them later.  For
+	    now we just accept the fact that for simple setups,
+	    interface-bound rules with in/out rules tend to add more
+	    clutter than they are worth to rule sets.</para>
+
+	  <para>For a busy network admin, a readable rule set is a
+	    safer rule set.</para>
+
+	  <para>For the remainder of this section, with some
+	    exceptions, we will keep the rules as simple as possible
+	    for readability.</para>
+	</sect4>
+
+	<sect4 id="pftut-whatsthelocalnet">
+	  <title>What is the Local Network, Anyway?</title>
+
+	  <para>Above, we introduced the
+	    <literal>interface:network</literal> notation.  That is a
+	    nice piece of shorthand, but the rule set can be made even
+	    more readable and maintainable by taking the macro use a
+	    tiny bit further.</para>
+
+	  <para>For example, a <literal>$localnet</literal> macro
+	    could be defined as the network directly attached to your
+	    internal interface (<literal>$xl1:network</literal> in the
+	    examples above).</para>
+
+	  <para>Alternatively, the definition of
+	    <literal>$localnet</literal> could be changed to an
+	    <emphasis>IP address/netmask</emphasis> notation to denote
+	    a network, such as <literal>192.168.100.1/24</literal> for
+	    a subnet of private addresses.</para>
+
+	  <para>If required, <literal>$localnet</literal> could even
+	    be defined as a list of networks.  Whatever the specific
+	    needs, a sensible <literal>$localnet</literal> definition
+	    and a typical pass rule of the type</para>
+
+	  <programlisting>pass from $localnet to any port $ports keep state</programlisting>
+
+	  <para>could end up saving you a few headaches.  We will
+	    stick to that convention from here on.</para>
+	</sect4>
+
+	<sect4 id="pftut-gwsimplesetup">
+	  <title>Setting Up</title>
+
+	  <para>We assume that the machine has acquired another
+	    network card or at any rate there is a network
+	    connection from the local network, via PPP or other
+	    means.  We will not consider the specific interface
+	    configurations.</para>
+
+	  <para>For the discussion and examples below, only the
+	    interface names will differ between a PPP setup and an
+	    Ethernet one, and we will do our best to get rid of the
+	    actual interface names as quickly as possible.</para>
+
+	  <para>First, we need to turn on gatewaying in order to let
+	    the machine forward the network traffic it receives on one
+	    interface to other networks via a separate interface.
+	    Initially we will do this on the command line with
+	    &man.sysctl.8;, for traditional
+	    <emphasis>IP version four</emphasis>.</para>
+
+	  <screen>&prompt.root; <userinput>sysctl net.inet.ip.forwarding=1</userinput></screen>
+
+	  <para>If we need to forward <emphasis>IP version
+	      six</emphasis> traffic, the command is</para>
+
+	  <screen>&prompt.root; <userinput>sysctl net.inet6.ip6.forwarding=1</userinput></screen>
+
+	  <para>In order for this to continue working after the
+	    computer has been restarted at some time in the future,
+	    enter these settings into
+	    <filename>/etc/rc.conf</filename>:</para>
+
+	  <programlisting>gateway_enable="YES"		#for ipv4
+ipv6_gateway_enable="YES"	#for ipv6</programlisting>
+
+	  <para>Use <command>ifconfig -a</command>, or
+	    <command>ifconfig
+	      <replaceable>interface_name</replaceable></command> to
+	    find out if both of the interfaces to be used are up and
+	    running.</para>
+
+	  <para>If all traffic initiated by machines on the inside is
+	    to be allowed, <filename>/etc/pf.conf</filename> could
+	    look roughly like this
+	    <footnote>
+	      <para>For dialup users, the external interface is the
+		<filename>tun0</filename> pseudo-device.  Broadband
+		users such as ADSL subscribers tend to have an
+		Ethernet interface to play with, however for a
+		significant subset of ADSL users, specifically those
+		using PPP over Ethernet (PPPoE), the correct external
+		interface will be the <filename>tun0</filename>
+		pseudo-device, not the physical Ethernet
+		interface.</para>
+	      </footnote>:</para>
+
+	  <programlisting>ext_if = "xl0"	# macro for external interface - use tun0 for PPPoE
+int_if = "xl1"	# macro for internal interface
+localnet = $int_if:network
+# ext_if IP address could be dynamic, hence ($ext_if)
+nat on $ext_if from $localnet to any -&gt; ($ext_if)
+block all
+pass from { lo0, $localnet } to any keep state</programlisting>
+
+	  <para>Note the use of macros to assign logical names to the
+	    network interfaces.  Here 3Com cards are used, but this is
+	    the last time during this tutorial we will find this of
+	    any interest whatsoever.  In truly simple setups like this
+	    one, we may not gain very much by using macros like these,
+	    but once the rule sets grow somewhat larger, you will
+	    learn to appreciate the readability this provides.</para>
+
+	  <para>Also note the <literal>nat</literal> rule.  This is
+	    where we handle the network address translation from the
+	    non-routable address inside the local net to the sole
+	    official address we assume has been assigned.</para>
+
+	  <para>The parentheses surrounding the last part of the nat
+	    rule <literal>($ext_if)</literal> are there to compensate
+	    for the possibility that the IP address of the external
+	    interface may be dynamically assigned.  This detail will
+	    ensure that network traffic runs without serious
+	    interruptions even if the external IP address
+	    changes.</para>
+
+	  <para>On the other hand, this rule set probably allows more
+	    traffic to pass out of the network than actually desired.
+	    One reasonable setup could contain the macro</para>
+
+	  <programlisting>client_out = "{ ftp-data, ftp, ssh, domain, pop3, auth, nntp, http, \
+    https, cvspserver, 2628, 5999, 8000, 8080 }"</programlisting>
+
+	  <para>and the main pass rule</para>
+
+	  <programlisting>pass inet proto tcp from $localnet to any port $client_out \
+    flags S/SA keep state</programlisting>
+
+	  <para>This may be a somewhat peculiar selection of ports,
+	    but it is based on a real life example.  Individual needs
+	    probably differ at least in some specifics, but this
+	    should cover at least some of the more useful
+	    services.</para>
+
+	  <para>In addition, we have a few other pass rules.  We will
+	    be returning to some of the more interesting ones rather
+	    soon.  One pass rule which is useful to those of us who
+	    want the ability to administer our machines from elsewhere
+	    is</para>
+
+	  <programlisting>pass in inet proto tcp to port ssh</programlisting>
+
+	  <para>or for that matter</para>
+
+	  <programlisting>pass in inet proto tcp to $ext_if port ssh</programlisting>
+
+	  <para>whichever is preferred.  Lastly we need to make the
+	    name service work for our clients:</para>
+
+	  <programlisting>udp_services = "{ domain, ntp }"</programlisting>
+
+	  <para>This is supplemented with a rule which passes the
+	    traffic we want through our firewall:</para>
+
+	  <programlisting>pass quick inet proto { tcp, udp } to any port $udp_services keep state</programlisting>
+
+	  <para>Note the <literal>quick</literal> keyword in this
+	    rule.  We have started writing rule sets which consist of
+	    several rules, and it is time to take a look at the
+	    relationships between the rules in a rule set.  The rules
+	    are evaluated from top to bottom, in the sequence they are
+	    written in the configuration file.  For each packet or
+	    connection evaluated by <acronym>PF</acronym>,
+	    <emphasis>the last matching rule</emphasis> in the rule
+	    set is the one which is applied.  The
+	    <literal>quick</literal> keyword offers an escape from the
+	    ordinary sequence.  When a packet matches a quick rule,
+	    the packet is treated according to the present rule.  The
+	    rule processing stops without considering any further
+	    rules which might have matched the packet.  This is very
+	    useful when a few isolated exceptions to the general rules
+	    are needed.</para>
+
+	  <para>This rule also takes care of <acronym>NTP</acronym>,
+	    which is used for time synchronization.  One thing common
+	    to both protocols is that they may under certain
+	    circumstances communicate alternately over TCP and
+	    UDP.</para>
+	</sect4>
+      </sect3>
+
+      <sect3 id="pftut-ftp">
+	<title>That Sad Old <acronym>FTP</acronym> Thing</title>
+
+	<para>The short list of real life <acronym>TCP</acronym> ports
+	  above contained, among other things, <acronym>FTP</acronym>.
+	  <acronym>FTP</acronym> is a sad old thing and a problem
+	  child, emphatically so for anyone trying to combine
+	  <acronym>FTP</acronym> and firewalls.
+	  <acronym>FTP</acronym> is an old and weird protocol, with a
+	  lot to not like.  The most common points against it
+	  are</para>
+
+	<itemizedlist>
+	  <listitem>
+	    <para>Passwords are transferred in the clear</para>
+	  </listitem>
+
+	  <listitem>
+	    <para>The protocol demands the use of at least two
+	      <acronym>TCP</acronym> connections (control and data) on
+	      separate ports</para>
+	  </listitem>
+
+	  <listitem>
+	    <para>When a session is established, data is communicated
+	      via ports selected at random</para>
+	  </listitem>
+	</itemizedlist>
+
+	<para>All of these points make for challenges security-wise,
+	  even before considering any potential weaknesses in client
+	  or server software which may lead to security issues.  These
+	  things have tended to happen.</para>
+
+	<para>Under any circumstances, other more modern and more
+	  secure options for file transfer exist, such as &man.sftp.1;
+	  or &man.scp.1;, which feature both authentication and data
+	  transfer via encrypted connections.  Competent
+	  <acronym>IT</acronym> professionals should have a preference
+	  for some other form of file transfer than
+	  <acronym>FTP</acronym>.</para>
+
+	<para>Regardless of our professionalism and preferences, we
+	  are all too aware that at times we will need to handle
+	  things we would prefer not to.  In the case of
+	  <acronym>FTP</acronym> through firewalls, the main part of
+	  our handling consists of redirecting the traffic to a small
+	  program which is written specifically for this
+	  purpose.</para>
+
+	<sect4 id="pftut-ftp-proxy">
+	  <title><acronym>FTP</acronym> Via Redirect:
+	    <application>ftp-proxy</application></title>
+
+	  <para>Enabling <acronym>FTP</acronym> transfers through your
+	    gateway is amazingly simple, thanks to the
+	    <acronym>FTP</acronym> proxy program (called
+	    &man.ftp-proxy.8;) included in the base system on &os; and
+	    other systems which offer <acronym>PF</acronym>. </para>
+
+	  <para>The <acronym>FTP</acronym> protocol being what it is,
+	    the proxy needs to dynamically insert rules in your rule
+	    set.  &man.ftp-proxy.8; interacts with your configuration
+	    via a set of anchors where the proxy inserts and deletes
+	    the rules it constructs to handle your
+	    <acronym>FTP</acronym> traffic.</para>
+
+	  <para>To enable &man.ftp-proxy.8;, add this line to
+	    <filename>/etc/rc.conf</filename>:</para>
+
+	  <programlisting>ftpproxy_flags=""</programlisting>
+
+	  <para>Starting the proxy manually by running
+	    <command>/usr/sbin/ftp-proxy</command> allows testing of
+	    the <acronym>PF</acronym> configuration changes we are
+	    about to make.</para>
+
+	  <para>For a basic configuration, only three elements need to
+	    be added to <filename>/etc/pf.conf</filename>.  First, the
+	    anchors:</para>
+
+	  <programlisting>nat-anchor "ftp-proxy/*"
+rdr-anchor "ftp-proxy/*"</programlisting>
+
+	  <para>The proxy will insert the rules it generates for the
+	    <acronym>FTP</acronym> sessions here.  A pass rule is
+	    needed to let <acronym>FTP</acronym> traffic in to the
+	    proxy.</para>
+
+	  <para>Now for the actual redirection.  Redirection rules and
+	    <acronym>NAT</acronym> rules fall into the same rule
+	    class.  These rules may be referenced directly by other
+	    rules, and filtering rules may depend on these rules.
+	    Logically, <literal>rdr</literal> and
+	    <literal>nat</literal> rules need to be defined before the
+	    filtering rules.</para>
+
+	  <para>We insert our <literal>rdr</literal> rule immediately
+	    after the <literal>nat</literal> rule in
+	    <filename>/etc/pf.conf</filename></para>
+
+	  <programlisting>rdr pass on $int_if proto tcp from any to any port ftp -> 127.0.0.1 port 8021</programlisting>
+
+	  <para>In addition, the redirected traffic must be allowed to
+	    pass.  We achieve this with</para>
+
+	  <programlisting>pass out proto tcp from $proxy to any port ftp</programlisting>
+
+	  <para>where <literal>$proxy</literal> expands to the address
+	    the proxy daemon is bound to.</para>
+
+	  <para>Save <filename>pf.conf</filename>, then load the new
+	    rules with</para>
+
+	  <screen>&prompt.root; <userinput>pfctl -f /etc/pf.conf</userinput></screen>
+
+	  <para>At this point, users will probably begin noticing
+	    that <acronym>FTP</acronym> works before they have been
+	    told.</para>
+
+	  <para>This example covers a basic setup where the clients in
+	    the local net need to contact <acronym>FTP</acronym>
+	    servers elsewhere.  The basic configuration here should
+	    work well with most combinations of <acronym>FTP</acronym>
+	    clients and servers.  As shown in the man page, the
+	    proxy's behavior can be changed in various ways by adding
+	    options to the <literal>ftpproxy_flags=</literal> line.
+	    Some clients or servers may have specific quirks that must
+	    be compensated for in the configuration, or there may be a
+	    need to integrate the proxy in specific ways such as
+	    assigning <acronym>FTP</acronym> traffic to a specific
+	    queue.  For these and other finer points of
+	    &man.ftp-proxy.8; configuration, start by studying the man
+	    page.</para>
+
+	  <para>For ways to run an <acronym>FTP</acronym> server
+	    protected by <acronym>PF</acronym> and &man.ftp-proxy.8;,
+	    look into running a separate <command>ftp-proxy</command>
+	    in reverse mode (using <option>-R</option>), on a separate
+	    port with its own redirecting pass rule.</para>
+	</sect4>
+      </sect3>
+
+      <sect3 id="pftut-icmp">
+	<title>Easing Troubleshooting</title>
+
+	<para>Making network troubleshooting friendly is a potentially
+	  large subject.  At most times, the debugging or
+	  troubleshooting friendliness of a <acronym>TCP/IP</acronym>
+	  network depends on treatment of the Internet protocol which
+	  was designed specifically with debugging in mind, the
+	  <emphasis>Internet Control Message Protocol</emphasis>, or
+	  <acronym>ICMP</acronym> as it is usually abbreviated.</para>
+
+	<para><acronym>ICMP</acronym> is the protocol for sending and
+	  receiving <emphasis>control messages</emphasis> between
+	  hosts and gateways, mainly to provide feedback to a sender
+	  about any unusual or difficult conditions enroute to the
+	  target host.</para>
+
+	<para>There is a lot of <acronym>ICMP</acronym> traffic which
+	  usually just happens in the background while users are
+	  surfing the web, reading mail or transferring files.
+	  Routers use <acronym>ICMP</acronym> to negotiate packet
+	  sizes and other transmission parameters in a process often
+	  referred to as <emphasis>path <acronym>MTU</acronym>
+	    discovery</emphasis>.</para>
+
+	<para>Some admins refer to <acronym>ICMP</acronym> as either
+	  <quote>just evil</quote>, or, if their understanding runs a
+	  little deeper, <quote>a necessary evil</quote>.  The reason
+	  for this attitude is purely historical.  The reason can be
+	  found a few years back when it was discovered that several
+	  operating systems contained code in their networking stack
+	  which could make a machine running one of the affected
+	  systems crash and fall over, or in some cases just do really
+	  strange things, with a sufficiently large
+	  <acronym>ICMP</acronym> request.</para>
+
+	<para>One of the companies which was hit hard was Microsoft,
+	  and you can find rather a lot of material on the
+	  <quote>ping of death</quote> bug by using your favorite
+	  search engine.  This all happened in the second half of the
+	  1990s, and all modern operating systems, at least the ones
+	  we can read, have thoroughly sanitized their network code
+	  since then.  At least that is what we are led to
+	  believe.</para>
+
+	<para>One of the early workarounds was to simply block either
+	  all <acronym>ICMP</acronym> traffic or at least
+	  <acronym>ICMP</acronym> ECHO, which is what ping uses.  Now
+	  these rule sets have been around for roughly fifteen years,
+	  and the people who put them there are still scared.</para>
+
+	<sect4 id="pftut-dowepass">
+	  <title>Then, Do We Let it All Through?</title>
+
+	  <para>The obvious question then becomes, if
+	    <acronym>ICMP</acronym> is such a good and useful thing,
+	    should we not let it all through, all the time?  The
+	    answer is <quote>It depends</quote>.</para>
+
+	  <para>Letting diagnostic traffic pass unconditionally of
+	    course makes debugging easier, but also makes it
+	    relatively easy for others to extract information about
+	    your network.  That means that a rule like</para>
+
+	  <programlisting>pass inet proto icmp from any to any</programlisting>
+
+	  <para>might not be optimal if the internal workings of the
+	    local network should be cloaked in a bit of mystery.  In
+	    all fairness it should also be said that some
+	    <acronym>ICMP</acronym> traffic might be found quite
+	    harmlessly riding piggyback on
+	    <literal>keep state</literal> rules.</para>
+	</sect4>
+
+	<sect4 id="pftut-icmpstopatgw">
+	  <title>The Easy Way Out: the Buck Stops Here</title>
+
+	  <para>The easiest solution could very well be to let all
+	    <acronym>ICMP</acronym> traffic from the local net through
+	    and stop probes from elsewhere at the gateway:</para>
+
+	  <programlisting>pass inet proto icmp from $localnet to any keep state
+pass inet proto icmp from any to $ext_if keep state</programlisting>
+
+	  <para>Stopping probes at the gateway might be an attractive
+	    option anyway, but let us have a look at a few other
+	    options which will show some of <acronym>PF</acronym>'s
+	    flexibility.</para>
+	</sect4>
+
+	<sect4 id="pftut-letpingthru">
+	  <title>Letting <command>ping</command> Through</title>
+
+	  <para>The rule set we have developed so far has one clear
+	    disadvantage: common troubleshooting commands such as
+	    &man.ping.8; and &man.traceroute.8; will not work.  That
+	    may not matter too much to end users, and since it was
+	    <command>ping</command> which scared people into
+	    filtering or blocking <acronym>ICMP</acronym> traffic in
+	    the first place, there are apparently some people who feel
+	    we are better off without it.  If you are in my perceived
+	    target audience, you will be rather fond of having those
+	    troubleshooting tools avalable.  With a couple of small
+	    additions to the rule set, they will be.  &man.ping.8;
+	    uses <acronym>ICMP</acronym>, and in order to keep our
+	    rule set tidy, we start by defining another macro:</para>
+
+	  <programlisting>icmp_types = "echoreq"</programlisting>
+
+	  <para>and a rule which uses the definition,</para>
+
+	  <programlisting>pass inet proto icmp all icmp-type $icmp_types keep state</programlisting>
+
+	  <para>More or other types of <acronym>ICMP</acronym> packets
+	    may need to go through, and <literal>icmp_types</literal>
+	    can be expanded to a list of those packet types that are
+	    allowed.</para>
+	</sect4>
+
+	<sect4 id="pftut-helptraceroute">
+	  <title>Helping &man.traceroute.8;</title>
+
+	  <para>&man.traceroute.8; is another command which is quite
+	    useful when users claim that the Internet is not working.
+	    By default, Unix <command>traceroute</command> uses UDP
+	    connections according to a set formula based on
+	    destination.  The rule below works with
+	    <command>traceroute</command> on all unixes I've had
+	    access to, including GNU/Linux:</para>
+
+	  <programlisting># allow out the default range for traceroute(8):
+# "base+nhops*nqueries-1" (33434+64*3-1)
+pass out on $ext_if inet proto udp from any to any port 33433 &gt;&lt; 33626 keep state</programlisting>
+
+	  <para>Experience so far indicates that
+	    <command>traceroute</command> implementations on other
+	    operating systems work roughly the same.  Except, of
+	    course, on Microsoft Windows.  On that platform,
+	    <command>TRACERT.EXE</command> uses ICMP ECHO for this
+	    purpose.  So to let Windows traceroutes through, only the
+	    first rule is needed.  Unix <command>traceroute</command>
+	    can be instructed to use other protocols as well, and will
+	    behave remarkably like its Microsoft counterpart if
+	    <option>-I</option> is used.  Check the &man.traceroute.8;
+	    man page (or its source code, for that matter) for all the
+	    details.</para>
+
+	  <para>Under any circumstances, this solution was lifted
+	    from an openbsd-misc post.  I've found that list, and
+	    the searchable list archives (accessible among other
+	    places from <ulink
+	      url="http://marc.theaimsgroup.com/">http://marc.theaimsgroup.com/</ulink>),
+	    to be a very valuable resource whenever you need OpenBSD
+	    or <acronym>PF</acronym> related information.</para>
+	</sect4>
+
+	<sect4 id="pftut-pathmtudisc">
+	  <title>Path <acronym>MTU</acronym> Discovery</title>
+
+	  <para>Internet protocols are designed to be device
+	    independent, and one consequence of device independence is
+	    that the optimal packet size for a given connection cannot
+	    always be predicted reliably.  The main constraint on
+	    packet size is called the
+	    <firstterm>Maximum Transmission Unit</firstterm>, or
+	    <acronym>MTU</acronym>, which sets the upper limit on the
+	    packet size for an interface.  &man.ifconfig.8; shows the
+	    <acronym>MTU</acronym> for the network interfaces.</para>
+
+	  <para>Modern TCP/IP implementations expect to be able to
+	    determine the right packet size for a connection through a
+	    process which, simply put, involves sending packets of
+	    varying sizes with the <quote>Do not fragment</quote> flag
+	    set, expecting an <acronym>ICMP</acronym> return packet
+	    indicating <quote>type 3, code 4</quote> when the upper
+	    limit has been reached.  Now do not dive for the RFCs
+	    right away.  Type 3 means <quote>destination
+	      unreachable</quote>, while code 4 is short for
+	    <quote>fragmentation needed, but the do-not-fragment flag
+	      is set</quote>.  So if connections to networks which may
+	    have other <acronym>MTU</acronym>s than the local network
+	    seem sub-optimal, and there is no need to be that
+	    specific, the list of <acronym>ICMP</acronym> types can be
+	    changed slightly to let the
+	    <quote>destination unreachable</quote> packets through,
+	    too:</para>
+
+	  <programlisting>icmp_types = "{ echoreq, unreach }"</programlisting>
+
+	  <para>As we can see, this means we do not need to change
+	    the pass rule itself:</para>
+
+	  <programlisting>pass inet proto icmp all icmp-type $icmp_types keep state</programlisting>
+
+	  <para><acronym>PF</acronym> allows filtering on all
+	    variations of <acronym>ICMP</acronym> types and codes.
+	    For those who want to delve into what to pass (or not) of
+	    <acronym>ICMP</acronym> traffic, the list of possible
+	    types and codes are documented in the &man.icmp.4; and
+	    &man.icmp6.4; man pages.  The background information is
+	    available in the <acronym>RFC</acronym>s
+	    <footnote><para>The main internet <acronym>RFC</acronym>s
+		describing <acronym>ICMP</acronym> and
+		some related techhiques are RFC792, RFC950, RFC1191,
+		RFC1256, RFC2521, rfc2765, while necessary updates for
+		ICMP for IPv6 are found in RFC1885, RFC2463, RFC2466.
+		These documents are available in a number of places on
+		the net, such as the
+		<ulink url="http://www.ietf.org">ietf.org</ulink>
+		and
+		<ulink url="http://www.faqs.org">faqs.org</ulink>
+		web sites.</para></footnote>.</para>
+	</sect4>
+      </sect3>
+
+      <sect3 id="pftut-tables">
+	<title>Tables Make Life Easier</title>
+
+	<para>By this time it may appear that this gets awfully static
+	  and rigid.  There will after all be some kinds of data which
+	  are relevant to filtering and redirection at a given time,
+	  but do not deserve to be put into a configuration file!
+	  Quite right, and <acronym>PF</acronym> offers mechanisms for
+	  handling these situations as well.  Tables are one such
+	  feature, mainly useful as lists which can be manipulated
+	  without needing to reload the entire rule set, and where
+	  fast lookups are desirable.  Table names are always enclosed
+	  in <literal>&lt; &gt;</literal>, like this:</para>
+
+	<programlisting>table &lt;clients&gt; { 192.168.2.0/24, !192.168.2.5 }</programlisting>
+
+	<para>Here, the network <literal>192.168.2.0/24</literal>
+	  is part of the table, except the address
+	  <literal>192.168.2.5</literal>, which is excluded using
+	  the <literal>!</literal> operator (logical NOT).  It is
+	  also possible to load tables from files where each item is
+	  on a separate line, such as the file
+	  <filename>/etc/clients</filename>.</para>
+
+	<programlisting>192.168.2.0/24
+!192.168.2.5</programlisting>
+
+	<para>which in turn is used to initialize the table in
+	  <filename>/etc/pf.conf</filename>:</para>
+
+	<programlisting>table &lt;clients&gt; persist file /etc/clients</programlisting>
+
+	<para>Then, for example, one of our earlier rules can be
+	  changed to read</para>
+
+	<programlisting>pass inet proto tcp from &lt;clients&gt; to any port $client_out flags S/SA keep state</programlisting>
+
+	<para>to manage outgoing traffic from client computers.  With
+	  this in hand, the table's contents can be manipulated live,
+	  such as</para>
+
+	<screen>&prompt.root; <userinput>pfctl -t clients -T add 192.168.1/16</userinput></screen>
+
+	<para>Note that this changes the in-memory copy of the table
+	  only, meaning that the change will not survive a power
+	  failure or other reboot unless there are arrangements to
+	  store the changes.</para>
+
+	<para>One might opt to maintain the on-disk copy of the table
+	  using a &man.cron.8; job which dumps the table content to
+	  disk at regular intervals, using a command such as
+	  <command>pfctl -t clients -T show
+	    &gt;/etc/clients</command>.  Alternatively,
+	  <filename>/etc/clients</filename> could be edited, replacing
+	  the in-memory table contents with the file data:</para>
+
+	<screen>&prompt.root; <userinput>pfctl -t clients -T replace -f /etc/clients</userinput></screen>
+
+	<para>For operations performed frequently, administrators will
+	  sooner or later end up writing shell scripts for tasks
+	  such as inserting or removing items or replacing table
+	  contents.  The only real limitations lie in individual needs
+	  and creativity.</para>
+      </sect3>
+
+      <sect3 id="pftut-overload">
+	<title>Overload Tables</title>
+
+	<para>Those who run a Secure Shell login service which is
+	  accessible from the Internet have probably seen something
+	  like this in the authentication logs:</para>
+
+	<programlisting>Sep 26 03:12:34 skapet sshd[25771]: Failed password for root from 200.72.41.31 port 40992 ssh2
+Sep 26 03:12:34 skapet sshd[5279]: Failed password for root from 200.72.41.31 port 40992 ssh2
+Sep 26 03:12:35 skapet sshd[5279]: Received disconnect from 200.72.41.31: 11: Bye Bye
+Sep 26 03:12:44 skapet sshd[29635]: Invalid user admin from 200.72.41.31
+Sep 26 03:12:44 skapet sshd[24703]: input_userauth_request: invalid user admin
+Sep 26 03:12:44 skapet sshd[24703]: Failed password for invalid user admin from 200.72.41.31 port 41484 ssh2</programlisting>
+
+	<para>And so on.  This is what a brute force attack looks
+	  like.  Essentially somebody, or more likely, a cracked
+	  computer somewhere, is trying by brute force to find a
+	  combination of user name and password which will let them
+	  into your system.</para>
+
+	<para>The simplest response would be to write a
+	  <filename>pf.conf</filename> rule which blocks all access.
+	  This leads to another class of problems, including what to
+	  do in order to let people with legitimate business on the
+	  system access it anyway.  Some might consider moving the
+	  service to another port, but then again, the ones flooding
+	  on port 22 would probably be able to scan their way to port
+	  22222 for a repeat performance.</para>
+
+	<para>Since OpenBSD 3.7, and soon after in &os; version 6.0,
+	  <acronym>PF</acronym> has offered a slightly more elegant
+	  solution.  Pass rules can be written so they maintain
+	  certain limits on what connecting hosts can do.  For good
+	  measure, violators can be banished to a table of addresses
+	  which are denied some or all access.  If desired, it's even
+	  possible to drop all existing connections from machines
+	  which overreach the limits.  Here is how it is done:</para>
+
+	<para>First, set up the table.  In the tables section,
+	  add</para>
+
+	<programlisting>table &lt;bruteforce&gt; persist</programlisting>
+
+	<para>Then somewhere fairly early in the rule set, add a rule
+	  to block the bruteforcers:</para>
+
+	<programlisting>block quick from &lt;bruteforce&gt;</programlisting>
+
+	<para>And finally, the pass rule.</para>
+
+	<programlisting>pass inet proto tcp from any to $localnet port $tcp_services \
+    flags S/SA keep state \
+    (max-src-conn 100, max-src-conn-rate 15/5, \
+    overload &lt;bruteforce&gt; flush global)</programlisting>
+
+	<para>The first part here is identical to the main rule we
+	  constructed earlier.  The part in parentheses is the new
+	  stuff which will ease network load even further.</para>
+
+	<para><literal>max-src-conn</literal> is the number of
+	  simultaneous connections allowed from one host.  In this
+	  example, it is set at 100.  Other setups may want a slightly
+	  higher or lower value.</para>
+
+	<para><literal>max-src-conn-rate</literal> is the rate of new
+	  connections allowed from any single host, here 15
+	  connections per 5 seconds.  Again, the administrator is the
+	  one to judge what suits their setup.</para>
+
+	<para><literal>overload &lt;bruteforce&gt;</literal> means
+	  that any host which exceeds these limits gets its address
+	  added to the table <literal>bruteforce</literal>.  Our rule
+	  set blocks all traffic from addresses in the bruteforce
+	  table.</para>
+
+	<para>Finally, <literal>flush global</literal> says that when
+	  a host reaches the limit, that host's connections will be
+	  terminated (flushed).  The global part says that for good
+	  measure, this applies to connections which match other pass
+	  rules too.</para>
+
+	<para>The effect is dramatic.  From here on, bruteforcers
+	  more often than not will end up with
+	  <computeroutput>&quot;Fatal: timeout before
+	    authentication&quot;</computeroutput> messages, getting
+	  nowhere.</para>
+
+	<note>
+	  <para>These rules will <emphasis>not</emphasis> block slow
+	    bruteforcers, sometimes referred to as <ulink
+	      url="http://home.nuug.no/~peter/hailmary2013/">the Hail
+	      Mary Cloud</ulink>.</para>
+	</note>
+
+	<para>Once again, please keep in mind that this example rule
+	  is intended mainly as an illustration.  It is not unlikely
+	  that a particular network's needs are better served by
+	  rather different rules or combinations of rules.</para>
+
+	<para>If, for example, a generous number of connections in
+	  general are wanted, but the desire is to be a little more
+	  tight fisted when it comes to
+	  <application>ssh</application>, supplement the rule above
+	  with something like the one below, early on in the rule
+	  set:</para>
+
+	<programlisting>pass quick proto { tcp, udp } from any to any port ssh \
+    flags S/SA keep state \
+    (max-src-conn 15, max-src-conn-rate 5/3, \
+    overload &lt;bruteforce&gt; flush global)</programlisting>
+
+	<para>It should be possible to find the set of parameters
+	  which is just right for individual situations by reading the
+	  relevant man pages and the
+	  <ulink url="http://www.openbsd.org/faq/pf/">PF User
+	    Guide</ulink>, and perhaps a bit of
+	  experimentation.</para>
+
+	<note>
+	  <title>It May Not be Necessary to Block All
+	    Overloaders</title>
+
+	  <para>It is probably worth noting at this point that the
+	    <emphasis>overload</emphasis> mechanism is a general
+	    technique which does not have to apply exclusively to the
+	    <emphasis>ssh</emphasis> service, and it is not always
+	    optimal to block all traffic from offenders
+	    entirely.</para>
+
+	  <para>For example, an overload rule could be used to
+	    protect a mail service or a web service, and the overload
+	    table could be used in a rule to assign offenders to a
+	    queue with a minimal bandwidth allocation or, in the web
+	    case, to redirect to a specific web page.</para>
+	</note>
+
+	<sect4 id="pftut-expire">
+	  <title>Expiring Table Entries with
+	    <application>pfctl</application></title>
+
+	  <para>At this point, we have tables which will be filled by
+	    our <literal>overload</literal> rules, and since we could
+	    reasonably expect our gateways to have months of uptime,
+	    the tables will grow incrementally, taking up more memory
+	    as time goes by.</para>
+
+	  <para>Sometimes an IP address that was blocked last week due
+	    to a brute force attack was in fact a dynamically assigned
+	    one, which is now assigned to a different ISP customer who
+	    has a legitimate reason to try communicating with hosts in
+	    the local network.</para>
+
+	  <para>Situations like these were what caused Henning Brauer
+	    to add to <application>pfctl</application> the ability to
+	    expire table entries not referenced in a specified number
+	    of seconds (in OpenBSD 4.1).  For example, the
+	    command</para>
+
+	  <screen>&prompt.root; <userinput>pfctl -t bruteforce -T expire 86400</userinput></screen>
+
+	  <para>will remove <literal>&lt;bruteforce&gt;</literal>
+	    table entries which have not been referenced for 86400
+	    seconds.</para>
+	</sect4>
+
+	<sect4 id="pftut-expiretable">
+	  <title>The <application>expiretable</application>
+	    Tool</title>
+
+	  <para>Before <application>pfctl</application> acquired the
+	    ability to expire table entries, Henrik Gustafsson had
+	    written <application>expiretable</application>, which
+	    removes table entries which have not been accessed for a
+	    specified period of time.</para>
+
+	  <para>One useful example is to use the
+	    <application>expiretable</application> program as a way of
+	    removing outdated <literal>&lt;bruteforce&gt;</literal>
+	    table entries.</para>
+
+	  <para>For example, let
+	    <application>expiretable</application> remove
+	    <literal>&lt;bruteforce&gt;</literal> table entries older
+	    than 24 hours by adding an entry containing the following
+	    to <filename>/etc/rc.local</filename>:</para>
+
+	  <programlisting>/usr/local/sbin/expiretable -v -d -t 24h bruteforce</programlisting>
+
+	  <para><application>expiretable</application> is in the
+	    Ports&nbsp;Collection on &os; as <filename
+	      role="package">security/expiretable</filename>.</para>
+	</sect4>
+      </sect3>
+
+      <sect3 id="pftut-tools">
+	<title>Other <acronym>PF</acronym> Tools</title>
+
+	<para>Over time, a number of tools have been developed which
+	  interact with <acronym>PF</acronym> in various ways.</para>
+
+	<sect4 id="pftut-pftop">
+	  <title>The <application>pftop</application> Traffic
+	    Viewer</title>
+
+	  <para>Can Erkin Acar's <application>pftop</application>
+	    makes it possible to keep an eye on what passes into and
+	    out of the network.  <application>pftop</application> is
+	    available through the ports system as
+	    <filename role="package">sysutils/pftop</filename>.  The
+	    name is a strong hint at what it does -
+	    <application>pftop</application> shows a running snapshot
+	    of traffic in a format which is strongly inspired by
+	    &man.top.1;.</para>
+	</sect4>
+
+	<sect4 id="pftut-spamd">
+	  <title>The <application>spamd</application> Spam Deferral
+	    Daemon</title>
+
+	  <para>Not to be confused with the
+	    <application>spamd</application> daemon which comes
+	    bundled with <application>spamassassin</application>, the
+	    <acronym>PF</acronym> companion
+	    <application>spamd</application> was designed to run on a
+	    PF gateway to form part of the outer defense against spam.
+	    <application>spamd</application> hooks into the
+	    <acronym>PF</acronym> configuration via a set of
+	    redirections.</para>
+
+	  <para>The main point underlying the
+	    <application>spamd</application> design is the fact that
+	    spammers send a large number of messages, and the
+	    probability that you are the first person receiving a
+	    particular message is incredibly small.  In addition,
+	    spam is mainly sent via a few spammer friendly networks
+	    and a large number of hijacked machines.  Both the
+	    individual messages and the machines will be reported to
+	    blacklists fairly quickly, and this is the kind of data
+	    <application>spamd</application> can use to our advantage
+	    with <firstterm>blacklists</firstterm>.</para>
+
+	  <para>What <application>spamd</application> does to SMTP
+	    connections from addresses in the blacklist is to
+	    present its banner and immediately switch to a mode
+	    where it answers SMTP traffic one byte at the time.  This
+	    technique, which is intended to waste as much time as
+	    possible on the sending end while costing the receiver
+	    pretty much nothing, is called
+	    <firstterm>tarpitting</firstterm>.  The specific
+	    implementation with one byte SMTP replies is often
+	    referred to as <firstterm>stuttering</firstterm>.</para>
+
+	  <sect5 id="pftut-spamd-allblack">
+	    <title>A Basic Blacklisting
+	      <application>spamd</application></title>
+
+	    <para>Here is the basic procedure for setting up
+	      <application>spamd</application> with automatically
+	      updated blacklists:</para>
+
+	    <procedure>
+	      <step>
+		<para>Install the <filename
+		    role="package">mail/spamd/</filename> port.  In
+		  particular, be sure to read the package message and
+		  act upon what it says.  Specifically, to use
+		  <application>spamd</application>'s greylisting
+		  features, a file descriptor file system (see <ulink
+		    url="http://www.freebsd.org/cgi/man.cgi?query=fdescfs&amp;sektion=5">fdescfs(5)</ulink>)
+		  must be mounted at <filename>/dev/fd/</filename>.
+		  Do this by adding the following line to
+		  <filename>/etc/fstab</filename>:</para>
+
+		<programlisting> fdescfs /dev/fd fdescfs rw 0 0</programlisting>
+
+		<para>Make sure the <filename>fdescfs</filename> code
+		  is in the kernel, either compiled in or by loading
+		  the module with &man.kldload.8;.</para>
+	      </step>
+
+	      <step>
+		<para>Next, edit the rule set to include</para>
+
+		<programlisting>table &lt;spamd&gt; persist
+table &lt;spamd-white&gt; persist
+rdr pass on $ext_if inet proto tcp from &lt;spamd&gt; to \
+    { $ext_if, $localnet } port smtp -&gt; 127.0.0.1 port 8025
+rdr pass on $ext_if inet proto tcp from !&lt;spamd-white&gt; to \
+    { $ext_if, $localnet } port smtp -&gt; 127.0.0.1 port 8025</programlisting>
+
+		<para>The two tables &lt;spamd&gt; and
+		  &lt;spamd-white&gt; are essential.  SMTP traffic
+		  from the addresses in the first table plus the ones
+		  which are not in the other table are redirected to a
+		  daemon listening at port 8025.</para>
+	      </step>
+
+	      <step>
+		<para>The next step is to set up
+		  <application>spamd</application>'s own configuration
+		  in <filename>/usr/local/etc/spamd.conf</filename>
+		  supplemented by <filename>rc.conf</filename>
+		  parameters.</para>
+
+		<para>The supplied sample file offers quite a bit of
+		  explanation, and the man page offers additional
+		  information, but we will recap the essentials
+		  here.</para>
+
+		<para>One of the first lines without a
+		  <literal>#</literal> comment sign at the start
+		  contains the block which defines the
+		  <literal>all</literal> list, which specifies the
+		  lists actually used:</para>
+
+		<programlisting>all:\
+    :traplist:whitelist:</programlisting>
+
+		<para>Here, all the desired black lists are added,
+		  separated by colons (<literal>:</literal>).  To use
+		  whitelists to subtract addresses from the blacklist,
+		  add the name of the whitelist immediately after the
+		  name of each blacklist, i.e.,
+		  <literal>:blacklist:whitelist:</literal>.</para>
+
+		<para>Next up is a blacklist definition:</para>
+
+		<programlisting>traplist:\
+    :black:\
+    :msg="SPAM. Your address %A has sent spam within the last 24 hours":\
+    :method=http:\
+    :file=www.openbsd.org/spamd/traplist.gz</programlisting>
+
+		<para>Following the name, the first data field
+		  specifies the list type, in this case
+		  <literal>black</literal>.  The
+		  <literal>msg</literal> field contains the message to
+		  display to blacklisted senders during the SMTP
+		  dialogue.  The <literal>method</literal> field
+		  specifies how spamd-setup fetches the list data,
+		  here <literal>http</literal>.  The other options are
+		  fetching via <literal>ftp</literal>, from a
+		  <literal>file</literal> in a mounted file system or
+		  via <literal>exec</literal> of an external program.
+		  Finally the <literal>file</literal> field specifies
+		  the name of the file spamd expects to
+		  receive.</para>
+
+		<para>The definition of a whitelist follows much the
+		  same pattern:</para>
+
+		<programlisting>whitelist:\
+    :white:\
+    :method=file:\
+    :file=/var/mail/whitelist.txt</programlisting>
+
+		<para>but omits the message parameters since a
+		  message is not needed.</para>
+
+		<tip>
+		  <title>Choose Data Sources with Care</title>
+
+		  <para>Using all the blacklists in the sample
+		    <filename>spamd.conf</filename> will end up
+		    blacklisting large blocks of the Internet,
+		    including several Asian nations.  Administrators
+		    need to edit the file to end up with an optimal
+		    configuration.  The administrator is the judge of
+		    which data sources to use, and using lists other
+		    than the ones suggested in the sample file is
+		    possible.</para>
+		</tip>
+
+		<para>Put the lines for spamd and any startup
+		  parameters desired in
+		  <filename>/etc/rc.conf</filename>, for
+		  example:</para>
+
+		<programlisting>spamd_flags="-v" # for normal use: "" and see spamd-setup(8)</programlisting>
+
+		<para>When done with editing the setup,
+		  reload the rule set, start
+		  <application>spamd</application> with the options
+		  desired using the
+		  <filename>/usr/local/etc/rc.d/obspamd</filename>
+		  script, and complete the configuration using
+		  <command>spamd-setup</command>.  Finally, create a
+		  &man.cron.8; job which calls
+		  <command>spamd-setup</command> to update the tables
+		  at reasonable intervals.</para>
+	      </step>
+	    </procedure>
+
+	    <para>On a typical gateway in front of a mail server,
+	      hosts will start getting trapped within a few seconds to
+	      several minutes.</para>
+	  </sect5>
+
+	  <sect5 id="pftut-spamd-greylist">
+	    <title>Adding Greylisting to the
+	      <application>spamd</application> Setup</title>
+
+	    <para><application>spamd</application> also supports
+	      <firstterm>greylisting</firstterm>, which works by
+	      rejecting messages from unknown hosts temporarily with
+	      <replaceable>45n</replaceable> codes, letting messages
+	      from hosts which try again within a reasonable time
+	      through.  Traffic from well behaved hosts, that is,
+	      senders which are set up to behave within the limits set
+	      up in the relevant RFCs
+	      <footnote><para>The relevant RFCs are mainly RFC1123
+		  and RFC2821.</para></footnote>, will be let
+	      through.</para>
+
+	    <para>Greylisting as a technique was presented in a 2003
+	      paper by Evan Harris
+	      <footnote><para>The original
+		  Harris paper and a number of other useful articles
+		  and resources can be found at the <ulink
+		    url="http://www.greylisting.org/">greylisting.org</ulink>
+		  web site.</para></footnote>, and a number of
+	      implementations followed over the next few months.
+	      OpenBSD's <application>spamd</application> acquired its
+	      ability to greylist in OpenBSD 3.5, which was released
+	      in May 2004.</para>
+
+	    <para>The most amazing thing about greylisting, apart
+	      from its simplicity, is that it still works.  Spammers
+	      and malware writers have been very slow to adapt.</para>
+
+	    <para>The basic procedure for adding greylisting to your
+	      setup follows below.</para>
+
+	    <procedure>
+	      <step>
+		<para>If not done already, make sure the
+		  file descriptor file system (see &man.fdescfs.5;) is
+		  mounted at <filename>/dev/fd/</filename>.  Do this
+		  by adding the following line to
+		  <filename>/etc/fstab</filename>:</para>
+
+		<programlisting>fdescfs /dev/fd fdescfs rw 0 0</programlisting>
+
+		<para>and make sure the &man.fdescfs.5; code is in the
+		  kernel, either compiled in or by loading the module
+		  with &man.kldload.8;.</para>
+	      </step>
+
+	      <step>
+		<para>To run <application>spamd</application> in
+		  greylisting mode, <filename>/etc/rc.conf</filename>
+		  must be changed slightly by adding</para>
+
+		<programlisting>spamd_grey="YES"  # use spamd greylisting if YES</programlisting>
+
+		<para>Several greylisting related parameters can be
+		  fine-tuned with <command>spamd</command>'s command
+		  line parameters and the corresponding
+		  <filename>/etc/rc.conf</filename> settings.  Check
+		  the <application>spamd</application> man page to see
+		  what the parameters mean.</para>
+	      </step>
+
+	      <step>
+		<para>To complete the greylisting setup, restart
+		  <application>spamd</application> using the
+		  <filename>/usr/local/etc/rc.d/obspamd</filename>
+		  script.</para>
+	      </step>
+	    </procedure>
+
+	    <para>Behind the scenes, rarely mentioned and barely
+	      documented are two of <application>spamd</application>'s
+	      helpers, the <application>spamdb</application> database
+	      tool and the <application>spamlogd</application>
+	      whitelist updater, which both perform essential
+	      functions for the greylisting feature.  Of the two
+	      <application>spamlogd</application> works quietly in the
+	      background, while <application>spamdb</application> has
+	      been developed to offer some interesting
+	      features.</para>
+
+	    <note>
+	      <title>Restart <application>spamd</application> to
+		Enable Greylisting</title>
+
+	      <para>After following all steps in the tutorial
+		exactly up to this point,
+		<application>spamlogd</application> has been started
+		automatically already.  However, if the initial
+		<application>spamd</application> configuration did not
+		include greylisting,
+		<application>spamlogd</application> may not have been
+		started, and there may be strange symptoms, such as
+		greylists and whitelists not getting updated
+		properly.</para>
+
+	      <para>Under normal circumstances, it should not be
+		necessary to start <application>spamlogd</application>
+		by hand.  Restarting <application>spamd</application>
+		after enabling greylisting ensures
+		<application>spamlogd</application> is loaded and
+		available too.</para>
+	    </note>
+
+	    <para><application>spamdb</application> is the
+	      administrator's main interface to managing the black,
+	      grey and white lists via the contents of the
+	      <filename>/var/db/spamdb</filename> database.</para>
+	  </sect5>
+	</sect4>
+
+	<sect4 id="pftut-hygiene">
+	  <title>Network Hygiene: Blocking, Scrubbing and so
+	    On</title>
+
+	  <para>Our gateway does not feel quite complete without a few
+	    more items in the configuration which will make it behave
+	    a bit more sanely towards hosts on the wide net and our
+	    local network.</para>
+
+	  <sect5 id="pftut-blockpolicy">
+	    <title><literal>block-policy</literal></title>
+
+	    <para><literal>block-policy</literal> is an option which
+	      can be set in the <literal>options</literal> part of the
+	      ruleset, which precedes the redirection and filtering
+	      rules.  This option determines which feedback, if any,
+	      <acronym>PF</acronym> will give to hosts which try to
+	      create connections which are subsequently blocked.  The
+	      option has two possible values, <literal>drop</literal>,
+	      which drops blocked packets with no feedback, and
+	      <literal>return</literal>, which returns with status
+	      codes such as <computeroutput>Connection
+		refused</computeroutput> or similar.</para>
+
+	    <para>The correct strategy for block policies has been the
+	      subject of rather a lot of discussion.  We choose to
+	      play nicely and instruct our firewall to issue
+	      returns:</para>
+
+	    <programlisting>set block-policy return</programlisting>
+	  </sect5>
+
+	  <sect5 id="pftut-scrub">
+	    <title><literal>scrub</literal></title>
+
+	    <para>In <acronym>PF</acronym> versions up to OpenBSD 4.5
+	      inclusive, <literal>scrub</literal> is a keyword which
+	      enables network packet normalization, causing fragmented
+	      packets to be assembled and removing ambiguity.
+	      Enabling <literal>scrub</literal> provides a measure of
+	      protection against certain kinds of attacks based on
+	      incorrect handling of packet fragments.  A number of
+	      supplementing options are available, but we choose the
+	      simplest form which is suitable for most
+	      configurations.</para>
+
+	    <programlisting>scrub in all</programlisting>
+
+	    <para>Some services, such as NFS, require some specific
+	      fragment handling options.  This is extensively
+	      documented in the <acronym>PF</acronym> user guide and
+	      man pages provide all the information you could
+	      need.</para>
+
+	    <para>One fairly common example is this,</para>
+
+	    <programlisting>scrub in all fragment reassemble no-df max-mss 1440</programlisting>
+
+	    <para>meaning, we reassemble fragments, clear the
+	      <quote>do not fragment</quote> bit and set the maximum
+	      segment size to 1440 bytes.  Other variations are
+	      possible, and you should be able to cater to various
+	      specific needs by consulting the man pages and some
+	      experimentation.</para>
+	  </sect5>
+
+	  <sect5 id="pftut-antispoof">
+	    <title><literal>antispoof</literal></title>
+
+	    <para><literal>antispoof</literal> is a common special
+	      case of filtering and blocking.  This mechanism protects
+	      against activity from spoofed or forged IP addresses,
+	      mainly by blocking packets appearing on interfaces and
+	      in directions which are logically not possible.</para>
+
+	    <para>We specify that we want to weed out spoofed traffic
+	      coming in from the rest of the world and any spoofed
+	      packets which, however unlikely, were to originate in
+	      our own network:</para>
+
+	    <programlisting>antispoof for $ext_if
+antispoof for $int_if</programlisting>
+	  </sect5>
+
+	  <sect5 id="pftut-unrouteables">
+	    <title>Handling Non-Routable Addresses from
+	      Elsewhere</title>
+
+	    <para>Even with a properly configured gateway to handle
+	      network address translation for your own network, you
+	      may find yourself in the unenviable position of having
+	      to compensate for other people's
+	      misconfigurations.</para>
+
+	    <para>One depressingly common class of misconfigurations
+	      is the kind which lets traffic with non-routable
+	      addresses out to the Internet.  Traffic from
+	      non-routeable addresses have also played a part in
+	      several DOS attack techniques, so it may be worth
+	      considering explicitly blocking traffic from
+	      non-routeable addresses from entering your
+	      network.</para>
+
+	    <para>One possible solution is the one outlined below,
+	      which for good measure also blocks any attempt to
+	      initiate contact to non-routable addresses through the
+	      gateway's external interface:</para>
+
+	    <programlisting>martians = "{ 127.0.0.0/8, 192.168.0.0/16, 172.16.0.0/12, \
+	      10.0.0.0/8, 169.254.0.0/16, 192.0.2.0/24, \
+	      0.0.0.0/8, 240.0.0.0/4 }"
+
+block drop in quick on $ext_if from $martians to any
+block drop out quick on $ext_if from any to $martians</programlisting>
+
+	    <para>Here, the <literal>martians</literal> macro denotes
+	      the RFC 1918 addresses and a few other ranges which are
+	      mandated by various RFCs not to be in circulation on the
+	      open Internet.  Traffic to and from such addresses is
+	      quietly dropped on the gateway's external
+	      interface.</para>
+
+	    <para>The specific details of how to implement this kind
+	      of protection will vary, among other things according to
+	      your specific network configuration.  Your network
+	      design could for example dictate that you include or
+	      exclude other address ranges than these.</para>
+
+	    <para>This completes our simple NATing firewall for a
+	      small local network.  A more thorough tutorial is
+	      available at <ulink
+		url="http://home.nuug.no/~peter/pf/">http://home.nuug.no/~peter/pf/</ulink>,
+	      where you will also find slides from related
+	      presentations.</para>
+	  </sect5>
+	</sect4>
+      </sect3>
     </sect2>
   </sect1>
 
@@ -1974,7 +3431,7 @@ pass in quick on rl0 proto tcp from any to any port = 20 flags S keep state</pro
       <secondary>IPFW</secondary>
     </indexterm>
 
-    <para><acronym>IPFW</acronym>) is a stateful firewall written for
+    <para><acronym>IPFW</acronym> is a stateful firewall written for
       &os; which also provides a traffic shaper, packet scheduler,
       and in-kernel NAT.</para>
 
@@ -2233,8 +3690,7 @@ ipfw add deny out</programlisting>
       <para>The next example lists accounting information and the
 	packet count for matched rules along with the rules
 	themselves.  The first column is the rule number, followed by
-	the number of outgoing matched packets, followed by the number
-	of incoming matched packets, followed by the rule
+	the number of matched packets and bytes, followed by the rule
 	itself.</para>
 
       <screen>&prompt.root; <userinput>ipfw -a list</userinput></screen>
