@@ -15,7 +15,6 @@ DOCS+=  submitting.xml
 DOCS+=  who.xml
 DOCS+=  translations.xml
 DOCS+=	docproj.xml
-DOCS+=	todo.xml
 
 INDEXLINK= docproj.html
 

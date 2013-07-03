@@ -27,6 +27,7 @@
   <xsl:param name="make.single.year.ranges" select="1"/>
   <xsl:param name="docbook.css.source" select="''"/>
   <xsl:param name="generate.manifest" select="1"/>
+  <xsl:param name="generate.meta.abstract" select="1"/>
   <xsl:param name="html.longdesc" select="0"/>
 
   <xsl:param name="make.valid.html" select="1"/>
@@ -43,7 +44,7 @@
 
   <xsl:template name="user.footer.navigation">
     <p align="center"><small>This, and other documents, can be downloaded
-    from <a href="ftp://ftp.FreeBSD.org/pub/FreeBSD/doc/">ftp://ftp.FreeBSD.org/pub/FreeBSD/doc/</a></small></p>
+    from <a href="http://ftp.FreeBSD.org/pub/FreeBSD/doc/">http://ftp.FreeBSD.org/pub/FreeBSD/doc/</a></small></p>
 
     <p align="center"><small>For questions about FreeBSD, read the
     <a href="http://www.FreeBSD.org/docs.html">documentation</a> before

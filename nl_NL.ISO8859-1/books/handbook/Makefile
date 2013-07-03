@@ -2,7 +2,7 @@
 # $FreeBSD$
 #
 # %SOURCE%	en_US.ISO8859-1/books/handbook/Makefile
-# %SRCID%	41651
+# %SRCID%	41710
 #
 # Bouw het Nederlandse FreeBSD Handboek.
 #
@@ -302,7 +302,7 @@ XMLFLAGS+= ${CHAPTERS:S/\/chapter.xml//:S/^/-i chap./}
 XMLFLAGS+= -i chap.freebsd-glossary
 
 pgpkeyring: pgpkeys/chapter.xml
-	@${JADE} -V nochunks ${JADEOPTS} -d ${DSLPGP} -t xml ${XMLDECL} ${DOC}.parsed.print.xml
+	@${XSLTPROC} ${XSLPGP} ${DOC}.parsed.xml
 
 #
 # Handboekspecifieke variablen

@@ -59,6 +59,8 @@ XMLDOCS+=	report-2012-04-2012-06
 XMLDOCS+=	report-2012-07-2012-09
 XMLDOCS+=	report-2012-10-2012-12
 XMLDOCS+=	report-2013-01-2013-03
+XMLDOCS+=	report-2013-04-2013-06
+XMLDOCS+=	report-2013-05-devsummit
 
 XSLT.DEFAULT=	report.xsl
 

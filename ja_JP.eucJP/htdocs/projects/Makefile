@@ -1,6 +1,6 @@
 # $FreeBSD$
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.36
+# Original revision: r41483
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -12,6 +12,7 @@
 DOCS=	projects.xml
 DOCS+=	newbies.xml
 DOCS+=	cvsweb.xml
+#DOCS+=	summerofcode.xml
 #DOCS+=	summerofcode-2005.xml
 #DOCS+=	summerofcode-2006.xml
 #DOCS+=	summerofcode-2007.xml
@@ -23,11 +24,8 @@ DOCS+=	cvsweb.xml
 #DATA+=	2010-freebsd-gsoc.pdf
 #DATA+=	2011-freebsd-gsoc-thumbnail.jpg
 #DATA+=	2011-freebsd-gsoc.pdf
-
-#XML_IDEAS=		${DOC_PREFIX}/en/projects/ideas/ideas.xml
-#XSL_SOC=		${DOC_PREFIX}/en/projects/summerofcode.xsl
-
-#XMLDOCS=	summerofcode:${XSL_SOC}:${XML_IDEAS}:
+#DATA+=	2013-freebsd-gsoc-thumbnail.jpg
+#DATA+=	2013-freebsd-gsoc.pdf
 
 INDEXLINK= projects.html
 

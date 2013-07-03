@@ -7,7 +7,6 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS=	15.xml
 DOCS+=	16.xml
 DOCS+=	17.xml
 DOCS+=	index.xml
