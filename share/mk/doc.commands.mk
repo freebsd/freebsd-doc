@@ -69,6 +69,8 @@ HTML2PDBOPTS?=	-y -d0 -Idef ${HTML2PDBFLAGS}
 HTML2TXT?=	${PREFIX}/bin/w3m
 HTML2TXTOPTS?=	-dump ${HTML2TXTFLAGS}
 
+JING?=		${PREFIX}/bin/jing
+
 XMLLINT?=	${PREFIX}/bin/xmllint
 XSLTPROC?=	${PREFIX}/bin/xsltproc
 
