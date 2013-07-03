@@ -53,6 +53,8 @@ ZIPOPTS?=	-9X
 # Rendering and format conversion
 #
 
+DBLATEX?=	${PREFIX}/bin/dblatex
+
 DVIPS?=		${PREFIX}/bin/dvips
 .if defined(PAPERSIZE)
 DVIPSOPTS?=	-t ${PAPERSIZE:L}
