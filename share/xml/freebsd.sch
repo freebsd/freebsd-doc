@@ -51,6 +51,15 @@
     </rule>
   </pattern>
 
+  <pattern name="Check tables">
+    <rule context="//db:entry">
+      <report test="@colname and @spanname">You cannot use both colname and spanname attributes on table entries.</report>
+    </rule>
+    <rule context="//db:tgroup">
+      <report test="@cols != count((db:thead/db:row|db:tbody/db:row)[1]//db:entry)">The number of columns does not match the specified value (in section <xsl:value-of select="(ancestor::db:sect5[last()]|ancestor::db:sect4[last()]|ancestor::db:sect3[last()]|ancestor::db:sect2[last()]|ancestor::db:sect1[last()]|ancestor::db:chapter[last()])[last()]/@xml:id"/>).</report>
+    </rule>
+  </pattern>
+
   <!-- DB 5.0 constraints -->
 
   <pattern name="Glossary 'firstterm' type constraint">
