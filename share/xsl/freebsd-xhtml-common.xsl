@@ -6,6 +6,7 @@
                 version='1.0'
                 xmlns="http://www.w3.org/TR/xhtml1/transitional"
 		xmlns:str="http://exslt.org/strings"
+		xmlns:xhtml="http://www.w3.org/1999/xhtml"
 		extension-element-prefixes="str"
                 exclude-result-prefixes="#default">
 
@@ -160,6 +161,20 @@
 
   <xsl:template match="svnref">
     <xsl:call-template name="svnref.genlink"/>
+  </xsl:template>
+
+  <xsl:template match="xhtml:email">
+    <code class="email">
+      <xsl:text>&lt;</xsl:text>
+	<a class="email">
+	  <xsl:attribute name="href">
+	    <xsl:text>mailto:</xsl:text>
+	    <xsl:value-of select="."/>
+	  </xsl:attribute>
+	  <xsl:value-of select="."/>
+	</a>
+      <xsl:text>&gt;</xsl:text>
+    </code>
   </xsl:template>
 
   <xsl:template name="generate.citerefentry.link">
