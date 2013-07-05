@@ -1,6 +1,6 @@
 # $FreeBSD$
 # The FreeBSD Japanese Documentation Project
-# Original revision: 1.5
+# Original revision: r42048
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -10,13 +10,11 @@
 .endif
 
 SUBDIR =	dists
-#SUBDIR+=	docs
-SUBDIR+=	links
 
-DOCS =  advocacy.xml
 DOCS+=  howhelp.xml
 DOCS+=  index.xml
 DOCS+=  install.xml
+DOCS+=	links.xml
 
 XML.DEFAULT=	news.xml
 XMLDOCS=	newsflash
