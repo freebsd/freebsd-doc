@@ -166,13 +166,20 @@
   <xsl:template match="xhtml:email">
     <code class="email">
       <xsl:text>&lt;</xsl:text>
-	<a class="email">
-	  <xsl:attribute name="href">
-	    <xsl:text>mailto:</xsl:text>
-	    <xsl:value-of select="."/>
-	  </xsl:attribute>
-	  <xsl:value-of select="."/>
-	</a>
+      <xsl:choose>
+	<xsl:when test="@role='nolink'">
+	  <xsl:apply-templates />
+	</xsl:when>
+	<xsl:otherwise>
+	  <a class="email">
+	    <xsl:attribute name="href">
+	      <xsl:text>mailto:</xsl:text>
+	      <xsl:value-of select="."/>
+	    </xsl:attribute>
+	    <xsl:apply-templates />
+	  </a>
+	</xsl:otherwise>
+      </xsl:choose>
       <xsl:text>&gt;</xsl:text>
     </code>
   </xsl:template>
