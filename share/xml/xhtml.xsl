@@ -158,7 +158,7 @@
     <h1><xsl:value-of select="$title" /></h1>
 
     <xsl:for-each select="xhtml:html/xhtml:body">
-      <xsl:text>***</xsl:text><xsl:apply-templates />
+      <xsl:apply-templates />
     </xsl:for-each>
   </xsl:template>
 
