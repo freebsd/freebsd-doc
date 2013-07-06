@@ -58,6 +58,11 @@
     <rule context="//db:tgroup">
       <report test="@cols != count((db:thead/db:row|db:tbody/db:row)[1]//db:entry)">The number of columns does not match the specified value (in section <xsl:value-of select="(ancestor::db:sect5[last()]|ancestor::db:sect4[last()]|ancestor::db:sect3[last()]|ancestor::db:sect2[last()]|ancestor::db:sect1[last()]|ancestor::db:chapter[last()])[last()]/@xml:id"/>).</report>
     </rule>
+    <rule context="//db:table">
+      <report test=".//db:programlisting">Programlisting is not allowed in tables (in section <xsl:value-of select="(ancestor::db:sect5[last()]|ancestor::db:sect4[last()]|ancestor::db:sect3[last()]|ancestor::db:sect2[last()]|ancestor::db:sect1[last()]|ancestor::db:chapter[last()])[last()]/@xml:id"/>).</report>
+      <report test=".//db:screen">The screen element is not allowed in tables (in section <xsl:value-of select="(ancestor::db:sect5[last()]|ancestor::db:sect4[last()]|ancestor::db:sect3[last()]|ancestor::db:sect2[last()]|ancestor::db:sect1[last()]|ancestor::db:chapter[last()])[last()]/@xml:id"/>).</report>
+      <report test=".//db:footnote">Footnote is not allowed in tables (in section <xsl:value-of select="(ancestor::db:sect5[last()]|ancestor::db:sect4[last()]|ancestor::db:sect3[last()]|ancestor::db:sect2[last()]|ancestor::db:sect1[last()]|ancestor::db:chapter[last()])[last()]/@xml:id"/>).</report>
+    </rule>
   </pattern>
 
   <!-- DB 5.0 constraints -->
