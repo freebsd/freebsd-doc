@@ -162,7 +162,7 @@
     </xsl:for-each>
   </xsl:template>
 
-  <xsl:template match="xhtml:email">
+  <xsl:template match="email">
     <xsl:text>&lt;</xsl:text>
     <xsl:choose>
       <xsl:when test="@role='nolink'">

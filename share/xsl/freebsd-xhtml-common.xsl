@@ -6,7 +6,6 @@
                 version='1.0'
                 xmlns="http://www.w3.org/TR/xhtml1/transitional"
 		xmlns:str="http://exslt.org/strings"
-		xmlns:xhtml="http://www.w3.org/1999/xhtml"
 		extension-element-prefixes="str"
                 exclude-result-prefixes="#default">
 
@@ -73,6 +72,36 @@
 
   <xsl:template match="refentrytitle" mode="no.anchor.mode">
     <xsl:value-of select="."/>
+  </xsl:template>
+
+  <!-- Customization to allow role="nolink" -->
+  <xsl:template match="email">
+    <xsl:call-template name="inline.monoseq">
+      <xsl:with-param name="content">
+	<xsl:if test="not($email.delimiters.enabled = 0)">
+	  <xsl:text>&lt;</xsl:text>
+	</xsl:if>
+	<xsl:choose>
+	  <xsl:when test="@role='nolink'">
+	    <xsl:apply-templates/>
+	  </xsl:when>
+
+	  <xsl:otherwise>
+	    <a>
+	      <xsl:apply-templates select="." mode="common.html.attributes"/>
+	      <xsl:attribute name="href">
+		<xsl:text>mailto:</xsl:text>
+		<xsl:value-of select="."/>
+	      </xsl:attribute>
+	      <xsl:apply-templates/>
+	    </a>
+	  </xsl:otherwise>
+	</xsl:choose>
+	<xsl:if test="not($email.delimiters.enabled = 0)">
+	  <xsl:text>&gt;</xsl:text>
+	</xsl:if>
+      </xsl:with-param>
+    </xsl:call-template>
   </xsl:template>
 
   <!-- Add title class to emitted hX -->
@@ -161,27 +190,6 @@
 
   <xsl:template match="svnref">
     <xsl:call-template name="svnref.genlink"/>
-  </xsl:template>
-
-  <xsl:template match="xhtml:email">
-    <code class="email">
-      <xsl:text>&lt;</xsl:text>
-      <xsl:choose>
-	<xsl:when test="@role='nolink'">
-	  <xsl:apply-templates />
-	</xsl:when>
-	<xsl:otherwise>
-	  <a class="email">
-	    <xsl:attribute name="href">
-	      <xsl:text>mailto:</xsl:text>
-	      <xsl:value-of select="."/>
-	    </xsl:attribute>
-	    <xsl:apply-templates />
-	  </a>
-	</xsl:otherwise>
-      </xsl:choose>
-      <xsl:text>&gt;</xsl:text>
-    </code>
   </xsl:template>
 
   <xsl:template name="generate.citerefentry.link">
