@@ -78,7 +78,7 @@ echo "pgpkeys-officers.xml or pgpkeys-core.xml)."
 echo "Remember to keep the list sorted by last name!"
 echo
 echo "    <sect2 id=\"pgpkey-${me}\">"
-echo "      <title>&a.${me};</title>"
+echo "      <title>&a.${me}.email;</title>"
 echo "      &pgpkey.${me};"
 echo "    </sect2>"
 echo
