@@ -75,7 +75,7 @@ IMAGES_LIB?=
 SCHEMATRONS?=	${DOC_PREFIX}/share/xml/freebsd.sch
 XSLTPROCOPTS?=	--nonet
 
-DBLATEXOPTS?=	-I ${IMAGES_EN_DIR}/${DOC}s/${.CURDIR:T} -T simple -d
+DBLATEXOPTS?=	-I ${IMAGES_EN_DIR}/${DOC}s/${.CURDIR:T} -p ${DOC_PREFIX}/share/xsl/freebsd-dblatex.xsl -T simple -d
 
 KNOWN_FORMATS=	html html.tar html-split html-split.tar \
 		epub txt rtf ps pdf tex dvi tar pdb
