@@ -7,6 +7,7 @@
   xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS"
   xmlns:xhtml="http://www.w3.org/1999/xhtml"
+  xmlns:db="http://docbook.org/ns/docbook"
   xmlns:str="http://exslt.org/strings"
   xmlns="http://www.w3.org/1999/xhtml"
   exclude-result-prefixes="cvs xhtml"
@@ -157,7 +158,37 @@
   <xsl:template name="process.contentwrap">
     <h1><xsl:value-of select="$title" /></h1>
 
-    <xsl:copy-of xmlns:xhtml="http://www.w3.org/1999/xhtml" select="xhtml:html/xhtml:body/*" />
+    <xsl:for-each select="xhtml:html/xhtml:body">
+      <xsl:apply-templates />
+    </xsl:for-each>
+  </xsl:template>
+
+  <xsl:template match="db:email">
+    <xsl:text>&lt;</xsl:text>
+    <xsl:choose>
+      <xsl:when test="@role='nolink'">
+	<xsl:apply-templates />
+      </xsl:when>
+      <xsl:otherwise>
+	<a>
+	  <xsl:attribute name="href">
+	    <xsl:text>mailto:</xsl:text>
+	    <xsl:value-of select="." />
+	  </xsl:attribute>
+	  <xsl:apply-templates />
+	</a>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:text>&gt;</xsl:text>
+  </xsl:template>
+
+  <xsl:template match="xhtml:*">
+    <xsl:copy xmlns:xhtml="http://www.w3.org/1999/xhtml">
+      <xsl:for-each select="@*">
+        <xsl:copy />
+      </xsl:for-each>
+      <xsl:apply-templates />
+    </xsl:copy>
   </xsl:template>
 
   <xsl:template name="process.footer">
