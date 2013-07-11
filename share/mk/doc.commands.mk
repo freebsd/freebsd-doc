@@ -62,7 +62,6 @@ DVIPSOPTS?=	-t ${PAPERSIZE:L}
 DVIPSOPTS+=	${DVIPSFLAGS}
 
 FOP?=		${PREFIX}/bin/fop
-FOPOPTS?=
 
 GROFF?=		groff
 
