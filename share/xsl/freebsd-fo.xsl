@@ -23,6 +23,7 @@
   <xsl:param name="fop1.extensions" select="1"/>
 -->
 
+  <xsl:param name="hyphenate">false</xsl:param>
 <!--
   <xsl:param name="hyphenate.verbatim" select="1"/>
 -->
