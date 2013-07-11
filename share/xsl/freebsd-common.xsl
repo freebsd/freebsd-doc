@@ -8,7 +8,7 @@
   <!-- Global customisation -->
 
   <!-- Redefine variables, and replace templates as necessary here -->
-  <xsl:template match="hostid|username|groupname|devicename|maketarget|makevar|userinput|command">
+  <xsl:template match="hostid|username|groupname|devicename|maketarget|makevar|command">
     <xsl:call-template name="inline.monoseq"/>
   </xsl:template>
 
