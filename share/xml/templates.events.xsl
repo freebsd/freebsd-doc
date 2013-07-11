@@ -268,14 +268,6 @@
   <xsl:template match="event" mode="upcoming">
     <li>
       <xsl:call-template name="eventbody"/>
-      <p>Social links: <a rel="nofollow">
-      <xsl:if test="upcomingurl">
-        <xsl:attribute name="href"><xsl:value-of select="upcomingurl" /></xsl:attribute>
-      </xsl:if>
-      <xsl:if test="not(upcomingurl)">
-        <xsl:attribute name="href">http://upcoming.yahoo.com/search?type=Events&amp;q=<xsl:value-of select="name" />&amp;Search=GO</xsl:attribute>
-      </xsl:if>
-      upcoming</a></p>
     </li>
   </xsl:template>
 

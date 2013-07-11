@@ -65,7 +65,18 @@
     </rule>
   </pattern>
 
-  <!-- DB 5.0 constraints -->
+  <pattern name="Check indexes">
+    <rule context="//db:question">
+      <report test="./db:indexterm">Indexterm is not allowed directly in question, place it into a concrete paragraph (in section <xsl:value-of select="(ancestor::db:sect5[last()]|ancestor::db:sect4[last()]|ancestor::db:sect3[last()]|ancestor::db:sect2[last()]|ancestor::db:sect1[last()]|ancestor::db:chapter[last()])[last()]/@xml:id"/>).</report>
+    </rule>
+    <rule context="//db:answer">
+      <report test="./db:indexterm">Indexterm is not allowed directly in answer, place it into a concrete paragraph (in section <xsl:value-of select="(ancestor::db:sect5[last()]|ancestor::db:sect4[last()]|ancestor::db:sect3[last()]|ancestor::db:sect2[last()]|ancestor::db:sect1[last()]|ancestor::db:chapter[last()])[last()]/@xml:id"/>).</report>
+    </rule>
+  </pattern>
+
+<!--
+	Backported constraints from DocBook 5.0
+-->
 
   <pattern name="Glossary 'firstterm' type constraint">
      <rule context="db:firstterm[@linkend]">
