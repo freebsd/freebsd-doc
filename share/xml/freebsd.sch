@@ -74,6 +74,15 @@
     </rule>
   </pattern>
 
+  <pattern name="Check indexes">
+    <rule context="//question">
+      <report test="./indexterm">Indexterm is not allowed directly in question, place it into a concrete paragraph (in section <xsl:value-of select="(ancestor::sect5[last()]|ancestor::sect4[last()]|ancestor::sect3[last()]|ancestor::sect2[last()]|ancestor::sect1[last()]|ancestor::chapter[last()])[last()]/@id"/>).</report>
+    </rule>
+    <rule context="//answer">
+      <report test="./indexterm">Indexterm is not allowed directly in answer, place it into a concrete paragraph (in section <xsl:value-of select="(ancestor::sect5[last()]|ancestor::sect4[last()]|ancestor::sect3[last()]|ancestor::sect2[last()]|ancestor::sect1[last()]|ancestor::chapter[last()])[last()]/@id"/>).</report>
+    </rule>
+  </pattern>
+
 <!--
 	Backported constraints from DocBook 5.0
 -->
