@@ -29,6 +29,10 @@
 -->
   <xsl:param name="header.column.widths">1 5 1</xsl:param>
 
+  <xsl:param name="callout.graphics.path">imagelib/callouts/</xsl:param>
+  <xsl:param name="callout.graphics.extension">.png</xsl:param>
+  <xsl:param name="default.image.width">400</xsl:param>
+
 
 <xsl:template match="pubdate" mode="article.titlepage.recto.auto.mode"/>
 
