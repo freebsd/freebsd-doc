@@ -31,8 +31,10 @@
 
   <xsl:param name="callout.graphics.path">imagelib/callouts/</xsl:param>
   <xsl:param name="callout.graphics.extension">.png</xsl:param>
-  <xsl:param name="default.image.width">400</xsl:param>
 
+  <!-- Use the whole viewport and scale images to fit -->
+  <xsl:param name="default.image.width">400px</xsl:param>
+  <xsl:template name="image.scalefit">1</xsl:template>
 
 <xsl:template match="pubdate" mode="article.titlepage.recto.auto.mode"/>
 
