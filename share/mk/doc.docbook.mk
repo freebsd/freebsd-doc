@@ -75,7 +75,9 @@ IMAGES_LIB?=
 SCHEMATRONS?=	${DOC_PREFIX}/share/xml/freebsd.sch
 XSLTPROCOPTS?=	--nonet
 
-DBLATEXOPTS?=	-I ${IMAGES_EN_DIR}/${DOC}s/${.CURDIR:T} -p ${DOC_PREFIX}/share/xsl/freebsd-dblatex.xsl -T simple -d
+IMGDIR?=	${IMAGES_EN_DIR}/${DOC}s/${.CURDIR:T}
+CALLOUTDIR=	${.CURDIR}/imagelib/callouts
+DBLATEXOPTS?=	-I ${IMGDIR} -p ${DOC_PREFIX}/share/xsl/freebsd-dblatex.xsl -T simple -d
 FOPOPTS?=	-c ${DOC_PREFIX}/share/misc/fop.xconf
 
 KNOWN_FORMATS=	html html.tar html-split html-split.tar \
@@ -194,6 +196,10 @@ CLEANFILES+= ${_curimage:T} ${_curimage:H:T}/${_curimage:T}
 .elif ${_cf} == "pdf"
 CLEANFILES+= ${DOC}.aux ${DOC}.dvi ${DOC}.log ${DOC}.out ${DOC}.tex-pdf ${DOC}.tex-pdf-tmp \
 		${DOC}.tex ${DOC}.fo
+.if ${RENDERENGINE} == "fop"
+XSLTPROCOPTS+=	--param img.src.path "'${IMGDIR}/'"
+XSLTPROCOPTS+=	--param callout.graphics.path "'${CALLOUTDIR}/'"
+.endif
 .for _curimage in ${LOCAL_IMAGES_EPS:M*share*}
 CLEANFILES+= ${_curimage:T} ${_curimage:H:T}/${_curimage:T}
 .endfor
