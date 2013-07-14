@@ -75,7 +75,7 @@
   <xsl:template name="image.scalefit">1</xsl:template>
 
   <!-- Hyphenation -->  
-  <xsl:param name="hyphenate">false</xsl:param>
+  <xsl:param name="hyphenate">true</xsl:param>
   <xsl:param name="hyphenate.verbatim" select="0"/>
   <xsl:param name="hyphenate.verbatim.characters"> </xsl:param>
 
@@ -417,5 +417,13 @@
     <xsl:attribute name="border-bottom-color">black</xsl:attribute>
   </xsl:if>
 </xsl:template>
+
+  <!-- FOP hyphenation bug workaround -->
+  <xsl:template match="db:anchor">
+    <xsl:variable name="id">
+      <xsl:call-template name="object.id"/>
+    </xsl:variable>
+    <fo:inline id="{$id}">&#x200b;</fo:inline>
+  </xsl:template>
 
 </xsl:stylesheet>
