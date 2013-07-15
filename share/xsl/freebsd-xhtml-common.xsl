@@ -66,14 +66,6 @@
     </div>
   </xsl:template>
 
-  <xsl:template match="db:citerefentry" mode="no.anchor.mode">
-    <xsl:apply-templates select="*" mode="no.anchor.mode"/>
-  </xsl:template>
-
-  <xsl:template match="db:refentrytitle" mode="no.anchor.mode">
-    <xsl:value-of select="."/>
-  </xsl:template>
-
   <!-- Customization to allow role="nolink" -->
   <xsl:template match="db:email">
     <xsl:call-template name="inline.monoseq">
