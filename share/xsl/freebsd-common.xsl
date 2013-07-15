@@ -29,4 +29,14 @@
   <xsl:param name="generate.index" select="0"/>
 
   <xsl:param name="graphic.default.extension">png</xsl:param>
+
+  <!-- No links in TOC -->
+  <xsl:template match="db:citerefentry" mode="no.anchor.mode">
+    <xsl:apply-templates select="*" mode="no.anchor.mode"/>
+  </xsl:template>
+
+  <!-- No links in TOC -->
+  <xsl:template match="db:refentrytitle" mode="no.anchor.mode">
+    <xsl:value-of select="."/>
+  </xsl:template>
 </xsl:stylesheet>
