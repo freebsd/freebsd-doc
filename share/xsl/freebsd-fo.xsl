@@ -18,6 +18,9 @@
 	FO-SPECIFIC PARAMETER SETTINGS
   -->
 
+  <!-- We use FOP -->
+  <xsl:param name="fop1.extensions" select="1"/>
+
   <!-- Paper settings -->
   <xsl:param name="paper.type">B5</xsl:param>
   <xsl:param name="double.sided" select="1"/>
@@ -76,11 +79,12 @@
 
   <!-- Hyphenation -->  
   <xsl:param name="hyphenate">true</xsl:param>
-  <xsl:param name="hyphenate.verbatim" select="0"/>
+  <xsl:param name="hyphenate.verbatim" select="1"/>
   <xsl:param name="hyphenate.verbatim.characters"> </xsl:param>
 
   <!-- Base Fonts -->
   <xsl:param name="body.font.master">9.5</xsl:param>
+  <xsl:param name="monospace.font.family">DejaVu Sans Mono</xsl:param>
 
   <!-- Property sets -->
   <xsl:attribute-set name="chapter.title.properties">
@@ -139,14 +143,17 @@
   <xsl:attribute name="space-before">12pt</xsl:attribute>
   <xsl:attribute name="space-after">0</xsl:attribute>
   <xsl:attribute name="hyphenate">false</xsl:attribute>
-  <xsl:attribute name="wrap-option">no-wrap</xsl:attribute>
   <xsl:attribute name="white-space-collapse">false</xsl:attribute>
   <xsl:attribute name="white-space-treatment">preserve</xsl:attribute>
   <xsl:attribute name="linefeed-treatment">preserve</xsl:attribute>
   <xsl:attribute name="text-align">start</xsl:attribute>
   <xsl:attribute name="background-color">rgb(192,192,192)</xsl:attribute>
   <xsl:attribute name="wrap-option">wrap</xsl:attribute>
-  <xsl:attribute name="hyphenation-character">&#x25C4;</xsl:attribute>
+  <xsl:attribute name="hyphenation-character">&#x21BA;</xsl:attribute>
+  <xsl:attribute name="padding-right">3pt</xsl:attribute>
+  <xsl:attribute name="padding-top">3pt</xsl:attribute>
+  <xsl:attribute name="padding-left">3pt</xsl:attribute>
+  <xsl:attribute name="padding-bottom">3pt</xsl:attribute>
   </xsl:attribute-set>
 
   <xsl:attribute-set name="table.caption.properties">
