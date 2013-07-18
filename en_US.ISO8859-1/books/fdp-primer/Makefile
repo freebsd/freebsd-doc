@@ -32,6 +32,7 @@ SRCS+= doc-build/chapter.xml
 SRCS+= the-website/chapter.xml
 SRCS+= tools/chapter.xml
 SRCS+= translations/chapter.xml
+SRCS+= working-copy/chapter.xml
 SRCS+= writing-style/chapter.xml
 
 SRCS+= examples/appendix.xml
