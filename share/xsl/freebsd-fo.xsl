@@ -30,11 +30,11 @@
   <xsl:param name="force.blank.pages" select="1"/>
 
   <!-- Page margins and spacing -->
-  <xsl:param name="page.margin.bottom">3cm</xsl:param>
+  <xsl:param name="page.margin.bottom">2cm</xsl:param>
   <xsl:param name="page.margin.inner">3cm</xsl:param>
   <xsl:param name="page.margin.outer">2.5cm</xsl:param>
   <xsl:param name="page.margin.top">2.13cm</xsl:param>
-  <xsl:param name="body.margin.bottom">0.5cm</xsl:param>
+  <xsl:param name="body.margin.bottom">1cm</xsl:param>
   <xsl:param name="body.margin.top">1.0cm</xsl:param>
   <xsl:param name="body.margin.inner">0</xsl:param>
   <xsl:param name="body.margin.outer">0</xsl:param>
