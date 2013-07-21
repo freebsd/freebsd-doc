@@ -9,6 +9,8 @@
   <xsl:param name="latex.encoding">utf8</xsl:param>
   <xsl:param name="latex.hyperparam">linktocpage,colorlinks,linkcolor=blue,citecolor=blue,urlcolor=blue</xsl:param>
 
+  <xsl:template match="textobject"/>
+
   <xsl:template match="filename">
     <xsl:choose>
     <!-- \Url cannot stand in a section heading -->
