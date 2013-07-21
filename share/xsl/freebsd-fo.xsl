@@ -220,6 +220,20 @@
   <xsl:attribute name="line-height">12pt</xsl:attribute>
   </xsl:attribute-set>
 
+  <xsl:attribute-set name="example.properties" use-attribute-sets="formal.object.properties">
+  <xsl:attribute name="keep-together.within-column">auto</xsl:attribute>
+  <xsl:attribute name="border-style">solid</xsl:attribute>
+  <xsl:attribute name="border-width">1px</xsl:attribute>
+  <xsl:attribute name="margin-right">0</xsl:attribute>
+  <xsl:attribute name="margin-top">12pt</xsl:attribute>
+  <xsl:attribute name="margin-left">0</xsl:attribute>
+  <xsl:attribute name="margin-bottom">12pt</xsl:attribute>
+  <xsl:attribute name="padding-right">0.5cm</xsl:attribute>
+  <xsl:attribute name="padding-top">0.3cm</xsl:attribute>
+  <xsl:attribute name="padding-left">0.5cm</xsl:attribute>
+  <xsl:attribute name="padding-bottom">0.5cm</xsl:attribute>
+  </xsl:attribute-set>
+
   <!--
 	FO-SPECIFIC TEMPLATE CUSTOMIZATIONS
   -->
@@ -277,7 +291,7 @@
 
     <fo:block xsl:use-attribute-sets="formal.title.properties">
       <xsl:choose>
-	<xsl:when test="$placement = 'before'">
+	<xsl:when test="$placement = 'before' and local-name($object) != 'example'">
 	  <xsl:attribute name="keep-with-next.within-column">always</xsl:attribute>
           <xsl:attribute name="space-before.minimum">12pt</xsl:attribute>
           <xsl:attribute name="space-before.optimum">12pt</xsl:attribute>
@@ -287,7 +301,7 @@
           <xsl:attribute name="space-after.maximum">0</xsl:attribute>
 	</xsl:when>
 
-	<xsl:otherwise>
+	<xsl:when test="$placement = 'after'">
 	  <xsl:attribute name="keep-with-previous.within-column">always</xsl:attribute>
 	  <xsl:attribute name="space-before.minimum">0</xsl:attribute>
 	  <xsl:attribute name="space-before.optimum">0</xsl:attribute>
@@ -295,6 +309,12 @@
 	  <xsl:attribute name="space-after.minimum">12pt</xsl:attribute>
 	  <xsl:attribute name="space-after.optimum">12pt</xsl:attribute>
 	  <xsl:attribute name="space-after.maximum">12pt</xsl:attribute>
+	</xsl:when>
+
+	<xsl:otherwise>
+	  <xsl:attribute name="keep-with-next.within-column">always</xsl:attribute>
+	  <xsl:attribute name="font-weight">bold</xsl:attribute>
+	  <xsl:attribute name="font-size">14pt</xsl:attribute>
 	</xsl:otherwise>
       </xsl:choose>
       <xsl:apply-templates select="$object" mode="object.title.markup">
