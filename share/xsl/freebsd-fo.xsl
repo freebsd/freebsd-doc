@@ -279,14 +279,22 @@
       <xsl:choose>
 	<xsl:when test="$placement = 'before'">
 	  <xsl:attribute name="keep-with-next.within-column">always</xsl:attribute>
-	  <xsl:attribute name="space-before">12pt</xsl:attribute>
-	  <xsl:attribute name="space-after">3pt</xsl:attribute>
+          <xsl:attribute name="space-before.minimum">12pt</xsl:attribute>
+          <xsl:attribute name="space-before.optimum">12pt</xsl:attribute>
+          <xsl:attribute name="space-before.maximum">12pt</xsl:attribute>
+          <xsl:attribute name="space-after.minimum">0</xsl:attribute>
+          <xsl:attribute name="space-after.optimum">0</xsl:attribute>
+          <xsl:attribute name="space-after.maximum">0</xsl:attribute>
 	</xsl:when>
 
 	<xsl:otherwise>
 	  <xsl:attribute name="keep-with-previous.within-column">always</xsl:attribute>
-	  <xsl:attribute name="space-before">3pt</xsl:attribute>
-	  <xsl:attribute name="space-after">12pt</xsl:attribute>
+	  <xsl:attribute name="space-before.minimum">0</xsl:attribute>
+	  <xsl:attribute name="space-before.optimum">0</xsl:attribute>
+	  <xsl:attribute name="space-before.maximum">0</xsl:attribute>
+	  <xsl:attribute name="space-after.minimum">12pt</xsl:attribute>
+	  <xsl:attribute name="space-after.optimum">12pt</xsl:attribute>
+	  <xsl:attribute name="space-after.maximum">12pt</xsl:attribute>
 	</xsl:otherwise>
       </xsl:choose>
       <xsl:apply-templates select="$object" mode="object.title.markup">
