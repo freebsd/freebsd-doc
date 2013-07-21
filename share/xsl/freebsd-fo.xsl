@@ -68,6 +68,9 @@
   <xsl:param name="default.table.frame">hsides</xsl:param>
   <xsl:param name="default.table.rules">rows</xsl:param>
 
+  <!-- Lists -->
+  <xsl:param name="variablelist.as.blocks" select="1"/>
+
   <!-- Q & A -->
   <xsl:param name="qanda.defaultlabel">qanda</xsl:param>
 
@@ -135,6 +138,7 @@
   <xsl:value-of select="$monospace.font.family"></xsl:value-of>
   </xsl:attribute>
   <xsl:attribute name="font-size">8pt</xsl:attribute>
+  <xsl:attribute name="letter-spacing">-0.3pt</xsl:attribute>
   </xsl:attribute-set>
 
   <xsl:attribute-set name="monospace.verbatim.properties">
@@ -151,9 +155,12 @@
   <xsl:attribute name="wrap-option">wrap</xsl:attribute>
   <xsl:attribute name="hyphenation-character">&#x21BA;</xsl:attribute>
   <xsl:attribute name="padding-right">3pt</xsl:attribute>
-  <xsl:attribute name="padding-top">3pt</xsl:attribute>
+  <xsl:attribute name="padding-top">1pt</xsl:attribute>
   <xsl:attribute name="padding-left">3pt</xsl:attribute>
-  <xsl:attribute name="padding-bottom">3pt</xsl:attribute>
+  <xsl:attribute name="padding-bottom">1pt</xsl:attribute>
+  <xsl:attribute name="margin-right">0pt</xsl:attribute>
+  <xsl:attribute name="margin-left">0pt</xsl:attribute>
+  <xsl:attribute name="letter-spacing">0pt</xsl:attribute>
   </xsl:attribute-set>
 
   <xsl:attribute-set name="table.caption.properties">
@@ -195,6 +202,20 @@
   <xsl:attribute name="padding-bottom">0.5cm</xsl:attribute>
   </xsl:attribute-set>
 
+  <xsl:attribute-set name="list.item.spacing">
+  <xsl:attribute name="space-before">6pt</xsl:attribute>
+  </xsl:attribute-set>
+  
+  <xsl:attribute-set name="list.block.spacing">
+  <xsl:attribute name="space-before">6pt</xsl:attribute>
+  <xsl:attribute name="space-after">6pt</xsl:attribute>
+  </xsl:attribute-set>
+  
+  <xsl:attribute-set name="list.block.properties">
+  <xsl:attribute name="provisional-label-separation">0.2em</xsl:attribute>
+  <xsl:attribute name="provisional-distance-between-starts">1.5em</xsl:attribute>
+  <xsl:attribute name="line-height">12pt</xsl:attribute>
+  </xsl:attribute-set>
 
   <!--
 	FO-SPECIFIC TEMPLATE CUSTOMIZATIONS
