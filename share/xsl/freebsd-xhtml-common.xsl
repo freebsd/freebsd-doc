@@ -186,9 +186,9 @@
 
   <xsl:template name="generate.citerefentry.link">
     <xsl:text>http://www.FreeBSD.org/cgi/man.cgi?query=</xsl:text>
-    <xsl:value-of select="refentrytitle"/>
+    <xsl:value-of select="db:refentrytitle"/>
     <xsl:text>&#38;amp;sektion=</xsl:text>
-    <xsl:value-of select="manvolnum"/>
+    <xsl:value-of select="db:manvolnum"/>
   </xsl:template>
 
   <xsl:template name="nongraphical.admonition">
@@ -214,53 +214,16 @@
     </div>
   </xsl:template>
 
-  <xsl:template name="freebsd.authorgroup">
+  <xsl:template name="chapter.authorgroup">
     <span class="authorgroup">
-
-      <!-- XXX: our docs use a quirky semantics for this -->
-      <xsl:if test="(contrib|author/contrib)[1]">
-	<xsl:apply-templates select="(contrib|author/contrib)[1]"/>
-      </xsl:if>
-
-      <xsl:for-each select="author">
-	<xsl:apply-templates select="."/>
-
-	<xsl:choose>
-	  <xsl:when test="position() &lt; (last() - 1)">
-	    <xsl:text>, </xsl:text>
-	  </xsl:when>
-
-	  <xsl:when test="position() = (last() - 1)">
-	    <xsl:call-template name="gentext.space"/>
-	    <xsl:call-template name="gentext">
-	      <xsl:with-param name="key" select="'and'"/>
-	    </xsl:call-template>
-	    <xsl:call-template name="gentext.space"/>
-	  </xsl:when>
-	</xsl:choose>
-      </xsl:for-each>
-      <xsl:text>. </xsl:text>
+      <xsl:call-template name="freebsd.authorgroup"/>
     </span>
   </xsl:template>
 
-  <xsl:template match="db:contrib">
-    <xsl:apply-templates/>
-  </xsl:template>
-
-  <xsl:template name="freebsd.author">
-    <xsl:if test="contrib">
-      <xsl:apply-templates select="contrib"/>
-      <xsl:text> </xsl:text>
-    </xsl:if>
-    <xsl:apply-templates select="*[not(self::contrib)]"/>
-  </xsl:template>
-
-  <xsl:template name="chapter.authorgroup">
-    <xsl:call-template name="freebsd.authorgroup"/>
-  </xsl:template>
-
   <xsl:template name="section.authorgroup">
-    <xsl:call-template name="freebsd.authorgroup"/>
+    <span class="authorgroup">
+      <xsl:call-template name="freebsd.authorgroup"/>
+    </span>
   </xsl:template>
 
   <xsl:template name="chapter.author">
@@ -283,45 +246,6 @@
       <xsl:with-param name="repo" select="'doc'"/>
       <xsl:with-param name="rev" select="$rev"/>
     </xsl:call-template>
-  </xsl:template>
-
-  <xsl:template name="titlepage.pubdate">
-    <xsl:variable name="pubdate">
-      <xsl:choose>
-	<xsl:when test="contains(., '$FreeBSD')">
-	  <xsl:value-of select="str:split(., ' ')[4]"/>
-	</xsl:when>
-
-	<xsl:otherwise>
-	  <xsl:value-of select="."/>
-	</xsl:otherwise>
-      </xsl:choose>
-    </xsl:variable>
-
-    <xsl:variable name="committer">
-      <xsl:if test="contains(., '$FreeBSD')">
-	 <xsl:value-of select="str:split(., ' ')[6]"/>
-      </xsl:if>
-    </xsl:variable>
-
-    <xsl:call-template name="gentext">
-      <xsl:with-param name="key" select="'Lastmodified'"/>
-    </xsl:call-template>
-    <xsl:call-template name="gentext.space"/>
-    <xsl:call-template name="gentext">
-      <xsl:with-param name="key" select="'on'"/>
-    </xsl:call-template>
-    <xsl:call-template name="gentext.space"/>
-    <xsl:value-of select="$pubdate"/>
-    <xsl:if test="$committer">
-      <xsl:call-template name="gentext.space"/>
-      <xsl:call-template name="gentext">
-	<xsl:with-param name="key" select="'by'"/>
-      </xsl:call-template>
-      <xsl:call-template name="gentext.space"/>
-      <xsl:value-of select="$committer"/>
-    </xsl:if>
-    <xsl:text>.</xsl:text>
   </xsl:template>
 
   <!-- Hook in format navigation at the end of the titlepage -->
