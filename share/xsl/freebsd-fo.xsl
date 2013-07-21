@@ -17,6 +17,15 @@
   <!-- Include customized FO titlepage -->
   <xsl:import href="freebsd-fo-titlepage.xsl"/>
 
+  <xsl:param name="print">0</xsl:param>
+
+  <xsl:variable name="link.color">
+    <xsl:choose>
+      <xsl:when test="$print = 1">black</xsl:when>
+      <xsl:otherwise>blue</xsl:otherwise>
+    </xsl:choose>
+  </xsl:variable>
+
   <!--
 	FO-SPECIFIC PARAMETER SETTINGS
   -->
@@ -91,6 +100,16 @@
   <!-- Base Fonts -->
   <xsl:param name="body.font.master">9.5</xsl:param>
   <xsl:param name="monospace.font.family">DejaVu Sans Mono</xsl:param>
+
+  <!-- Linking -->
+  <xsl:param name="ulink.show" select="$print"/>
+  <xsl:param name="ulink.footnotes" select="$print"/>
+  <xsl:param name="email.mailto.enabled">
+    <xsl:choose>
+      <xsl:when test="$print = 1">0</xsl:when>
+      <xsl:otherwise>1</xsl:otherwise>
+    </xsl:choose>
+  </xsl:param>
 
   <!-- Property sets -->
   <xsl:attribute-set name="chapter.title.properties">
@@ -234,6 +253,12 @@
   <xsl:attribute name="padding-bottom">0.5cm</xsl:attribute>
   </xsl:attribute-set>
 
+  <xsl:attribute-set name="xref.properties">
+    <xsl:attribute name="color">
+      <xsl:value-of select="$link.color"/>
+    </xsl:attribute>
+  </xsl:attribute-set>
+
   <!--
 	FO-SPECIFIC TEMPLATE CUSTOMIZATIONS
   -->
@@ -332,7 +357,7 @@
     </xsl:variable>
 
     <fo:basic-link external-destination="url({$xhref})">
-      <fo:inline color="blue">
+      <fo:inline color="{$link.color}">
 	<xsl:value-of select="concat(db:refentrytitle, '(', db:manvolnum, ')')"/>
       </fo:inline>
     </fo:basic-link>
