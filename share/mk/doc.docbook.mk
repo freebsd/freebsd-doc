@@ -77,7 +77,7 @@ XSLTPROCOPTS?=	--nonet
 
 IMGDIR?=	${IMAGES_EN_DIR}/${DOC}s/${.CURDIR:T}
 CALLOUTDIR=	${.CURDIR}/imagelib/callouts
-DBLATEXOPTS?=	-I ${IMGDIR} -p ${DOC_PREFIX}/share/xsl/freebsd-dblatex.xsl -T simple -d
+DBLATEXOPTS?=	-I ${IMGDIR} -p ${DOC_PREFIX}/share/xsl/freebsd-dblatex.xsl -T simple -b xetex -d
 FOPOPTS?=	-c ${DOC_PREFIX}/share/misc/fop.xconf
 
 KNOWN_FORMATS=	html html.tar html-split html-split.tar \
