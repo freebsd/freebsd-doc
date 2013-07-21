@@ -12,7 +12,10 @@
   <xsl:import href="/usr/local/share/xsl/docbook-ns/fo/docbook.xsl"/>
 
   <!-- Include the common customizations -->
-  <xsl:include href="freebsd-common.xsl"/>
+  <xsl:import href="freebsd-common.xsl"/>
+
+  <!-- Include customized FO titlepage -->
+  <xsl:import href="freebsd-fo-titlepage.xsl"/>
 
   <!--
 	FO-SPECIFIC PARAMETER SETTINGS
@@ -454,4 +457,36 @@
     <fo:inline id="{$id}">&#x200b;</fo:inline>
   </xsl:template>
 
+<!--
+	TITLEPAGE TEMPLATES
+-->
+
+  <xsl:template name="svnref.genlink">
+    <xsl:param name="rev" select="."/>
+    <xsl:param name="repo" select="'base'"/>
+    <xsl:variable name="href">
+      <xsl:call-template name="svnweb.link">
+	<xsl:with-param name="repo" select="$repo"/>
+	<xsl:with-param name="rev" select="$rev"/>
+      </xsl:call-template>
+    </xsl:variable>
+
+    <fo:basic-link external-destination="url({$href})">
+      <fo:inline color="blue">
+        <xsl:value-of select="$rev"/>
+      </fo:inline>
+    </fo:basic-link>
+  </xsl:template>
+
+  <xsl:template name="chapter.authorgroup">
+    <fo:inline font-style="italic">
+      <xsl:call-template name="freebsd.authorgroup"/>
+    </fo:inline>
+  </xsl:template>
+
+  <xsl:template name="chapter.author">
+    <fo:inline font-style="italic">
+      <xsl:call-template name="freebsd.author"/>
+    </fo:inline>
+  </xsl:template>
 </xsl:stylesheet>
