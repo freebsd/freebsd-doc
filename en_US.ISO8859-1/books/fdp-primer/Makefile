@@ -21,19 +21,19 @@ INSTALL_ONLY_COMPRESSED?=
 # XML content
 SRCS=  book.xml
 SRCS+= overview/chapter.xml
-SRCS+= psgml-mode/chapter.xml
-SRCS+= see-also/chapter.xml
-SRCS+= xhtml-markup/chapter.xml
-SRCS+= docbook-markup/chapter.xml
-SRCS+= xml-primer/chapter.xml
-SRCS+= stylesheets/chapter.xml
+SRCS+= tools/chapter.xml
+SRCS+= working-copy/chapter.xml
 SRCS+= structure/chapter.xml
 SRCS+= doc-build/chapter.xml
 SRCS+= the-website/chapter.xml
-SRCS+= tools/chapter.xml
+SRCS+= xml-primer/chapter.xml
+SRCS+= xhtml-markup/chapter.xml
+SRCS+= docbook-markup/chapter.xml
+SRCS+= stylesheets/chapter.xml
 SRCS+= translations/chapter.xml
-SRCS+= working-copy/chapter.xml
 SRCS+= writing-style/chapter.xml
+SRCS+= psgml-mode/chapter.xml
+SRCS+= see-also/chapter.xml
 
 SRCS+= examples/appendix.xml
 
