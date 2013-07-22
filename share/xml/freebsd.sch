@@ -18,6 +18,9 @@
   <pattern name="Check filenames">
     <rule context="//db:filename">
       <report test="@role = 'directory'">Filename (<xsl:value-of select="."/>) has role="directory"; use class="directory"</report>
+      <report test="@role = 'package'">Filename (<xsl:value-of select="."/>) has role="package"; use the package element</report>
+      <report test="@role = 'port'">Filename (<xsl:value-of select="."/>) has role="port"; use the package element with role="port"</report>
+      <report test="@role != 'directory' and @role != 'package' and role != 'port'">Filename (<xsl:value-of select="."/>) has role attribute set; consider a properly set class attribute</report>
     </rule>
   </pattern>
 
