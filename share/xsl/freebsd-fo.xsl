@@ -155,6 +155,36 @@
   <xsl:attribute name="space-before">12pt</xsl:attribute>
   </xsl:attribute-set>
 
+  <xsl:attribute-set name="abstract.title.properties">
+  <xsl:attribute name="font-size">
+  <xsl:value-of select="$body.font.master * 2.0736"></xsl:value-of>
+  <xsl:text>pt</xsl:text>
+  </xsl:attribute>
+  <xsl:attribute name="text-align">left</xsl:attribute>
+  </xsl:attribute-set>
+
+  <xsl:attribute-set name="abstract.properties">
+  <xsl:attribute name="margin-left">0</xsl:attribute>
+  <xsl:attribute name="margin-right">0</xsl:attribute>
+  <xsl:attribute name="padding-left">0</xsl:attribute>
+  <xsl:attribute name="padding-right">0</xsl:attribute>
+  </xsl:attribute-set>
+
+<xsl:attribute-set name="toc.margin.properties">
+  <xsl:attribute name="margin-left">
+    <xsl:value-of select="'0'"/>
+  </xsl:attribute>
+  <xsl:attribute name="margin-right">
+    <xsl:value-of select="'0'"/>
+  </xsl:attribute>
+  <xsl:attribute name="padding-left">
+    <xsl:value-of select="'0'"/>
+  </xsl:attribute>
+  <xsl:attribute name="padding-right">
+    <xsl:value-of select="'0'"/>
+  </xsl:attribute>
+</xsl:attribute-set>
+
   <xsl:attribute-set name="monospace.properties">
   <xsl:attribute name="font-family">
   <xsl:value-of select="$monospace.font.family"></xsl:value-of>
@@ -362,46 +392,6 @@
       </fo:inline>
     </fo:basic-link>
   </xsl:template>
-
-<xsl:template match="pubdate" mode="article.titlepage.recto.auto.mode"/>
-
-<xsl:attribute-set name="abstract.title.properties">
-  <xsl:attribute name="font-size">
-    <xsl:value-of select="$body.font.master * 2.0736"></xsl:value-of>
-    <xsl:text>pt</xsl:text>
-  </xsl:attribute>
-  <xsl:attribute name="text-align">left</xsl:attribute>
-</xsl:attribute-set>
-
-<xsl:attribute-set name="abstract.properties">
-  <xsl:attribute name="margin-left">0</xsl:attribute>
-  <xsl:attribute name="margin-right">0</xsl:attribute>
-  <xsl:attribute name="padding-left">0</xsl:attribute>
-  <xsl:attribute name="padding-right">0</xsl:attribute>
-</xsl:attribute-set>
-
-<xsl:attribute-set name="toc.margin.properties">
-  <xsl:attribute name="margin-left">
-    <xsl:value-of select="'0'"/>
-  </xsl:attribute>
-  <xsl:attribute name="margin-right">
-    <xsl:value-of select="'0'"/>
-  </xsl:attribute>
-  <xsl:attribute name="padding-left">
-    <xsl:value-of select="'0'"/>
-  </xsl:attribute>
-  <xsl:attribute name="padding-right">
-    <xsl:value-of select="'0'"/>
-  </xsl:attribute>
-</xsl:attribute-set>
-
-<!--
-<xsl:template match="legalnotice" mode="article.titlepage.recto.auto.mode">
-  <fo:block xmlns:fo="http://www.w3.org/1999/XSL/Format" xsl:use-attribute-sets="article.titlepage.recto.style" text-align="start" font-family="{$body.fontset}">
-    <xsl:apply-templates select="." mode="article.titlepage.recto.mode"/>
-  </fo:block>
-</xsl:template>
--->
 
 <xsl:template match="db:abstract" mode="article.titlepage.recto.auto.mode">
 <fo:block xmlns:fo="http://www.w3.org/1999/XSL/Format" xsl:use-attribute-sets="article.titlepage.recto.style" space-before="0.5em" text-align="start" margin-left="0.5in" margin-right="0.5in" font-family="{$body.fontset}">
