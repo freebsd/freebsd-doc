@@ -510,6 +510,9 @@
     <fo:inline id="{$id}">&#x200b;</fo:inline>
   </xsl:template>
 
+  <!-- Suppress list titles -->
+  <xsl:template match="db:title" mode="list.title.mode"/>
+
 <!--
 	TITLEPAGE TEMPLATES
 -->
