@@ -100,8 +100,8 @@
   <!-- Base Fonts -->
   <xsl:param name="body.font.master">9.5</xsl:param>
   <xsl:param name="body.font.family">Gentium Plus</xsl:param>
-  <xsl:param name="sans.font.family">Andika</xsl:param>
-  <xsl:param name="title.font.family">Gentium Book Basic Bold</xsl:param>
+  <xsl:param name="sans.font.family">Droid Sans</xsl:param>
+  <xsl:param name="title.font.family">Droid Sans</xsl:param>
   <xsl:param name="monospace.font.family">DejaVu Sans Mono</xsl:param>
 
   <!-- Linking -->
