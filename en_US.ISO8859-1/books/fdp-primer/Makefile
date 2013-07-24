@@ -32,7 +32,6 @@ SRCS+= docbook-markup/chapter.xml
 SRCS+= stylesheets/chapter.xml
 SRCS+= translations/chapter.xml
 SRCS+= writing-style/chapter.xml
-SRCS+= psgml-mode/chapter.xml
 SRCS+= editor-config/chapter.xml
 SRCS+= see-also/chapter.xml
 
