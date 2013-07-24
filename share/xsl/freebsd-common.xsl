@@ -12,7 +12,7 @@
   <!-- Global customisation -->
 
   <!-- Redefine variables, and replace templates as necessary here -->
-  <xsl:template match="db:buildtarget|db:command|db:userinput">
+  <xsl:template match="db:buildtarget|db:command">
     <xsl:call-template name="inline.monoseq"/>
   </xsl:template>
 
