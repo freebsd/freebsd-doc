@@ -28,8 +28,6 @@
   <xsl:param name="section.autolabel" select="1"/>
   <xsl:param name="section.label.includes.component.label" select="1"/>
 
-  <xsl:param name="generate.index" select="0"/>
-
   <xsl:param name="graphic.default.extension">png</xsl:param>
 
   <!-- No links in TOC -->
