@@ -23,9 +23,6 @@
 #			them need to be generated.  Changing any file in
 #			SRCS causes the documents to be rebuilt.
 #
-#       HAS_INDEX       This document has index terms and so an index
-#                       can be created if specified with GEN_INDEX.
-#
 
 # ------------------------------------------------------------------------
 #
@@ -33,11 +30,6 @@
 #
 #	EXTRA_CATALOGS	Additional catalog files that should be used by
 #			any XML processing applications.
-#
-#       GEN_INDEX       If this document has an index (HAS_INDEX) and this
-#                       variable is defined, then index.xml will be added 
-#                       to the list of dependencies for source files, and 
-#                       collateindex.pl will be run to generate index.xml.
 #
 #	CSS_SHEET	Full path to a CSS stylesheet suitable for DocBook.
 #			Default is ${DOC_PREFIX}/share/misc/docbook.css
@@ -95,14 +87,6 @@ CSS_SHEET?=	${DOC_PREFIX}/share/misc/docbook.css
 # It is not necessary since doc.docbook.mk do it too.
 #
 NO_SUBDIR=      YES
-
-#
-# Index generation
-#
-
-.if defined(GEN_INDEX)
-XSLTPROCOPTS+= --param generate.index "1"
-.endif
 
 # ------------------------------------------------------------------------
 #
