@@ -396,12 +396,6 @@
     </fo:basic-link>
   </xsl:template>
 
-<xsl:template match="db:abstract" mode="article.titlepage.recto.auto.mode">
-<fo:block xmlns:fo="http://www.w3.org/1999/XSL/Format" xsl:use-attribute-sets="article.titlepage.recto.style" space-before="0.5em" text-align="start" margin-left="0.5in" margin-right="0.5in" font-family="{$body.fontset}">
-<xsl:apply-templates select="." mode="article.titlepage.recto.mode"/>
-</fo:block>
-</xsl:template>
-
 <!-- Customize header content -->
 <xsl:template name="header.content">
   <xsl:param name="pageclass" select="''"/>
