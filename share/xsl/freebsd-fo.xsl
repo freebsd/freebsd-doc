@@ -538,4 +538,33 @@
       <xsl:call-template name="freebsd.author"/>
     </fo:inline>
   </xsl:template>
+
+  <xsl:template match="db:title" mode="title.markup">
+    <xsl:apply-templates mode="titlepage.mode"/>
+  </xsl:template>
+
+  <xsl:template match="db:replaceable" mode="titlepage.mode">
+    <fo:inline font-style="italic">
+      <xsl:apply-templates/>
+    </fo:inline>
+  </xsl:template>
+
+  <xsl:template match="db:citerefentry" mode="titlepage.mode">
+    <xsl:variable name="xhref">
+      <xsl:text>http://www.FreeBSD.org/cgi/man.cgi?query=</xsl:text>
+      <xsl:value-of select="db:refentrytitle"/>
+      <xsl:text>&#38;amp;sektion=</xsl:text>
+      <xsl:value-of select="db:manvolnum"/>
+    </xsl:variable>
+
+    <fo:basic-link external-destination="url({$xhref})">
+      <xsl:value-of select="concat(db:refentrytitle, '(', db:manvolnum, ')')"/>
+    </fo:basic-link>
+  </xsl:template>
+
+  <xsl:template match="db:filename" mode="titlepage.mode">
+    <fo:inline font-family="$monospace.font.family">
+      <xsl:apply-templates/>
+    </fo:inline>
+  </xsl:template>
 </xsl:stylesheet>
