@@ -64,9 +64,6 @@
     <rule context="//entry">
       <report test="@colname and @spanname">You cannot use both colname and spanname attributes on table entries.</report>
     </rule>
-    <rule context="//tgroup">
-      <report test="@cols != count((thead/row|tbody/row)[1]//entry)">The number of columns does not match the specified value (in section <xsl:value-of select="(ancestor::sect5[last()]|ancestor::sect4[last()]|ancestor::sect3[last()]|ancestor::sect2[last()]|ancestor::sect1[last()]|ancestor::chapter[last()])[last()]/@id"/>).</report>
-    </rule>
     <rule context="//table">
       <report test=".//programlisting">Programlisting is not allowed in tables (in section <xsl:value-of select="(ancestor::sect5[last()]|ancestor::sect4[last()]|ancestor::sect3[last()]|ancestor::sect2[last()]|ancestor::sect1[last()]|ancestor::chapter[last()])[last()]/@id"/>).</report>
       <report test=".//screen">The screen element is not allowed in tables (in section <xsl:value-of select="(ancestor::sect5[last()]|ancestor::sect4[last()]|ancestor::sect3[last()]|ancestor::sect2[last()]|ancestor::sect1[last()]|ancestor::chapter[last()])[last()]/@id"/>).</report>
