@@ -17,10 +17,20 @@
 	JAPANESE-SPECIFIC PARAMETERS
   -->
 
+  <xsl:param name="local.l10n.xml" select="document('')"/>
+
+  <l:i18n xmlns:l="http://docbook.sourceforge.net/xmlns/l10n/1.0">
+    <l:l10n language="ja">
+      <l:context name="styles">
+	<l:template name="person-name" text="first-last"/>
+      </l:context>
+    </l:l10n>
+  </l:i18n>
+
   <!-- Base fonts -->
-  <xsl:param name="body.font.family">IPAPMincho</xsl:param>
-  <xsl:param name="sans.font.family">IPAPGothic</xsl:param>
-  <xsl:param name="title.font.family">IPAPGothic</xsl:param>
+  <xsl:param name="body.font.family">IPAPMincho, Gentium Plus</xsl:param>
+  <xsl:param name="sans.font.family">IPAPGothic, Droid Sans</xsl:param>
+  <xsl:param name="title.font.family">IPAPGothic, Droid Sans</xsl:param>
 
   <!-- Slightly reduce header font-size to make headers fit -->
   <xsl:attribute-set name="header.content.properties">
