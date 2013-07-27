@@ -557,7 +557,7 @@
   </xsl:template>
 
   <xsl:template match="db:filename" mode="titlepage.mode">
-    <fo:inline font-family="$monospace.font.family">
+    <fo:inline font-family="{$monospace.font.family}">
       <xsl:apply-templates/>
     </fo:inline>
   </xsl:template>
