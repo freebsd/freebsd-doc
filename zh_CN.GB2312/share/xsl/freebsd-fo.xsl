@@ -13,6 +13,9 @@
   <!-- Language-specific general customizations -->
   <xsl:import href="freebsd-common.xsl"/>
 
+  <!-- Pull in the CJK-specific stylesheet -->
+  <xsl:import href="http://www.FreeBSD.org/XML/doc/share/xsl/freebsd-fo-cjk.xsl"/>
+
   <!--
 	CHINESE-SPECIFIC PARAMETERS
   -->
