@@ -180,7 +180,7 @@
     </a>
   </xsl:template>
 
-  <xsl:template match="db:svnref">
+  <xsl:template match="db:revnumber">
     <xsl:call-template name="svnref.genlink"/>
   </xsl:template>
 
