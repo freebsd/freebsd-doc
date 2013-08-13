@@ -11,7 +11,7 @@
 # Build the FreeBSD Porter's Handbook.
 #
 
-MAINTAINER=andy@FreeBSD.org.ua
+MAINTAINER=pluknet@FreeBSD.org
 
 DOC?= book
 
