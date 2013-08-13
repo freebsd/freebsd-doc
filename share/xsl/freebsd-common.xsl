@@ -136,4 +136,6 @@
     </xsl:if>
     <xsl:apply-templates select="*[not(self::db:contrib)]"/>
   </xsl:template>
+
+  <xsl:param name="callout.graphics.number.limit">30</xsl:param>
 </xsl:stylesheet>
