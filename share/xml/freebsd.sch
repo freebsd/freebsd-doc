@@ -58,11 +58,6 @@
     <rule context="//db:entry">
       <report test="@colname and @spanname">You cannot use both colname and spanname attributes on table entries.</report>
     </rule>
-    <rule context="//db:table|//db:informaltable">
-      <report test=".//db:programlisting">Programlisting is not allowed in tables (in section <xsl:value-of select="(ancestor::db:sect5[last()]|ancestor::db:sect4[last()]|ancestor::db:sect3[last()]|ancestor::db:sect2[last()]|ancestor::db:sect1[last()]|ancestor::db:chapter[last()])[last()]/@xml:id"/>).</report>
-      <report test=".//db:screen">The screen element is not allowed in tables (in section <xsl:value-of select="(ancestor::db:sect5[last()]|ancestor::db:sect4[last()]|ancestor::db:sect3[last()]|ancestor::db:sect2[last()]|ancestor::db:sect1[last()]|ancestor::db:chapter[last()])[last()]/@xml:id"/>).</report>
-      <report test=".//db:footnote">Footnote is not allowed in tables (in section <xsl:value-of select="(ancestor::db:sect5[last()]|ancestor::db:sect4[last()]|ancestor::db:sect3[last()]|ancestor::db:sect2[last()]|ancestor::db:sect1[last()]|ancestor::db:chapter[last()])[last()]/@xml:id"/>).</report>
-    </rule>
   </pattern>
 
   <pattern name="Check indexes">
