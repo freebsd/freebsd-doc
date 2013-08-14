@@ -299,13 +299,12 @@ ${DOC}.html.tar: ${DOC}.html ${LOCAL_IMAGES_LIB} \
 ${DOC}.epub: ${DOC}.parsed.xml ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} \
 	${CSS_SHEET}
 	${XSLTPROC} ${XSLTPROCOPTS} ${XSLEPUB} ${DOC}.parsed.xml
-	${ECHO} "application/epub+zip" > mimetype
-	${CP} ${CSS_SHEET} OEBPS/
 .if defined(LOCAL_IMAGES_LIB) || defined(LOCAL_IMAGES_PNG)
-	${CP} ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} OEBPS/
+.for f in ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG}
+	${CP} ${f} OEBPS/
+.endfor
 .endif
-	${ZIP} ${ZIPOPTS} ${DOC}.epub mimetype
-	${ZIP} ${ZIPOPTS} -Dr ${DOC}.epub OEBPS META-INF
+	${ZIP} ${ZIPOPTS} -r -X ${DOC}.epub mimetype OEBPS META-INF
 
 # TXT --------------------------------------------------------------------
 
