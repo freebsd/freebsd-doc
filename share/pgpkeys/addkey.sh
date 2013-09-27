@@ -3,7 +3,7 @@
 # $FreeBSD$
 #
 
-LANG=C; export LANG
+LANG=en_US.UTF-8; export LANG
 unset LC_ALL
 unset LC_MESSAGES
 
