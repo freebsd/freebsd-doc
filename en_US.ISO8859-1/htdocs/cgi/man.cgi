@@ -235,6 +235,8 @@ $manPathDefault = 'FreeBSD 9.1-RELEASE';
 
     'FreeBSD 9.1-stable',
 "$manLocalDir/FreeBSD-9.1-stable/man:$manLocalDir/FreeBSD-9.1-stable/openssl/man",
+    'FreeBSD 9.2-RELEASE',
+"$manLocalDir/FreeBSD-9.2-RELEASE/man:$manLocalDir/FreeBSD-9.2-RELEASE/openssl/man",
     'FreeBSD 9.1-RELEASE',
 "$manLocalDir/FreeBSD-9.1-RELEASE/man:$manLocalDir/FreeBSD-9.1-RELEASE/openssl/man",
     'FreeBSD 9.0-RELEASE',
@@ -588,6 +590,7 @@ my %valid_arch = map { $_ => 1 }
 my $default_arch = 'i386';
 
 my %arch = ( 
+'FreeBSD 9.2-RELEASE' => { 'default' => 'i386', 'arch' => [qw/amd64 arm i386 powerpc sparc64/] } ,
 'FreeBSD 9.1-RELEASE' => { 'default' => 'i386', 'arch' => [qw/amd64 arm i386 powerpc sparc64/] } ,
 'FreeBSD 9.0-RELEASE' => { 'default' => 'i386', 'arch' => [qw/amd64 arm i386 powerpc sparc64/] } ,
 'FreeBSD 8.3-RELEASE' => { 'default' => 'i386', 'arch' => [qw/amd64 arm i386 powerpc sparc64/] } ,
