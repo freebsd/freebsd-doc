@@ -12,6 +12,7 @@ DOCS=	announce.xml \
 	schedule.xml
 
 DATA=	docbook.css \
+	errata.html \
 	installation.html
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"
