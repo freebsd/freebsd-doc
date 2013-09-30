@@ -13,6 +13,7 @@ DOCS=	announce.xml \
 
 DATA=	docbook.css \
 	errata.html \
+	hardware.html \
 	installation.html
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"
