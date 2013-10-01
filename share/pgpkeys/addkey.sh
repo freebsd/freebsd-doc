@@ -3,87 +3,158 @@
 # $FreeBSD$
 #
 
-LANG=en_US.UTF-8; export LANG
-unset LC_ALL
-unset LC_MESSAGES
+progname=$(basename $(realpath $0))
 
-me="$1"
-if [ -z "${me}" ]; then
-    me=$(id -nu)
-else
-    shift
-fi
+# Print an informational message
+info() {
+	echo "$@" >&2
+}
 
-id="$@"
-if [ -z "${id}" ]; then
-    id="${me}@freebsd.org"
-fi
+# Print a warning message
+warning() {
+	echo "WARNING: $@" >&2
+}
 
+# Print an error message and exit
+error() {
+	echo "ERROR: $@" >&2
+	exit 1
+}
+
+# Print usage message and exit
+usage() {
+	echo "usage: ${progname} [user] [keyid ...]\n" >&2
+	exit 1
+}
+
+# Look for gpg
 gpg=$(which gpg)
-if [ ! -x "${gpg}" ]; then
-    echo "GnuPG does not seem to be installed" >/dev/stderr
-    exit 1
+if [ -z "${gpg}" -o ! -x "${gpg}" ] ; then
+	error "gpg does not seem to be installed"
+fi
+gpg() {
+	"${gpg}" \
+	    --display-charset utf-8 \
+	    --no-greeting \
+	    --no-secmem-warning \
+	    --keyid-format long \
+	    --list-options no-show-uid-validity \
+	    "$@"
+}
+
+# Look up key by key ID
+getkeybyid() {
+	gpg --with-colons --list-keys "$1" 2>/dev/null | awk -F: \
+	    '$5 ~ /^\([0-9A-F]{8}\)?'"$1"'$/i && $12 ~ /ESC/ { print $5 }'
+}
+
+# Look up key by email
+getkeybyemail() {
+	gpg --with-colons --list-keys "$1" 2>/dev/null | awk -F: \
+	    '$10 ~ /<'"$1"'>/i && $12 ~ /ESC/ { print $5 }'
+}
+
+# The first command-line argument can be a user name or a key ID.
+if [ $# -gt 0 ] && expr "$1" : '^[a-z][0-9a-z-]*$' >/dev/null ; then
+	me="$1"
+	shift
+fi
+if [ -z "${me}" ] ; then
+	me=$(id -nu)
+fi
+if [ -z "${me}" ] ; then
+	error "Unable to determine user name."
+fi
+if ! expr "${me}" : '^[a-z][0-9a-z-]*$' >/dev/null ; then
+	error "${me} does not seem like a valid user name."
 fi
 
-echo "Retrieving key..."
-keylist=$(gpg --list-keys ${id})
-echo "${keylist}" | grep '^pub'
-id=$(echo "${keylist}" | awk '/^pub/ { print $2 }' | sed 's%.*/%%' | sort -u)
-id=$(echo $id)
-if [ "${#id}" -lt 8 ]; then
-    echo "Invalid key ID." >/dev/stderr
-    exit 1
-elif [ "${#id}" -gt 8 ]; then
-    echo "WARNING: Multiple keys; exporting all.  If this is not what you want," >/dev/stderr
-    echo "WARNING: you should specify a key ID on the command line." >/dev/stderr
+if [ $# -ne 0 ] ; then
+	# Verify the keys that were specified on the command line
+	for arg ; do
+		case $(expr "${arg}" : '^[0-9A-Fa-f]\{8,16\}$') in
+		8)
+			warning "${arg}: recommend using 16-digit keyid"
+			;&
+		16)
+			keyid=$(getkeybyid "${arg}")
+			if [ -n "${keyid}" ] ; then
+				keyids="${keyids} ${keyid}"
+			else
+				warning "${arg} not found"
+			fi
+			;;
+		*)
+			warning "${arg} does not appear to be a valid key ID"
+			;;
+		esac
+	done
+else
+	# Search for keys by freebsd.org email
+	email="${me}@FreeBSD.org"
+	keyids=$(getkeybyemail "${email}")
+	case $(echo "${keyids}" | wc -w) in
+	0)
+		error "no keys found for ${email}"
+		;;
+	1)
+		;;
+	*)
+		warning "Multiple keys found for <${email}>; exporting all."
+		warning "If this is not what you want, specify a key ID" \
+		    "on the command line."
+		;;
+	esac
 fi
-fp=$(gpg --fingerprint ${id})
-[ $? -eq 0 ] || exit 1
-key=$(gpg --no-version --armor --export ${id})
-[ $? -eq 0 ] || exit 1
 
+# :(
+if [ -z "${keyids}" ] ; then
+	error "no valid keys were found"
+fi
+
+# Generate key file
 keyfile="${me}.key"
-if [ -f "${keyfile}" ]; then
-    rcsid=$(grep '^<!-- \$Free.*-->$' "${keyfile}")
-fi
-if [ -z "${rcsid}" ]; then
-    rcsid='<!-- $''FreeBSD''$ -->'
-fi
-echo "Generating ${keyfile}..."
+info "Generating ${keyfile}..."
 (
-    echo "${rcsid}"
+    echo '<!-- $''FreeBSD''$ -->'
     echo '<!--'
-    echo "sh $0 ${me} ${id};"
+    echo "sh ${progname} ${me}" ${keyids} ";"
     echo '-->'
     echo '<programlisting role="pgpfingerprint"><![CDATA['
-    echo "${fp}"
+    gpg --fingerprint ${keyids}
     echo ']]></programlisting>'
     echo '<programlisting role="pgpkey"><![CDATA['
-    echo "${key}"
+    gpg --no-version --armor --export ${keyids}
     echo ']]></programlisting>'
 ) >"${keyfile}"
 
-echo "Adding key to entity list..."
-mv pgpkeys.ent pgpkeys.ent.orig || exit 1
-(
-    cat pgpkeys.ent.orig
-    printf '<!ENTITY pgpkey.%.*s SYSTEM "%s">' 16 "${me}" "${keyfile}"
-) | sort -u >pgpkeys.ent
+info "Adding key to entity list..."
+if ! grep -qwF "pgpkey.${me}" pgpkeys.ent ; then
+	mv pgpkeys.ent pgpkeys.ent.orig || exit 1
+	(
+		cat pgpkeys.ent.orig
+		echo "<!ENTITY pgpkey.${me} SYSTEM \"${keyfile}\">"
+	) | sort -u >pgpkeys.ent
+fi
 
-echo
-echo "Unless you are already listed there, you should now add the"
-echo "following text to pgpkeys-developers.xml (unless this is a"
-echo "role key or you are a core member. In that case add to"
-echo "pgpkeys-officers.xml or pgpkeys-core.xml)."
-echo "Remember to keep the list sorted by last name!"
-echo
-echo "    <sect2 id=\"pgpkey-${me}\">"
-echo "      <title>&a.${me}.email;</title>"
-echo "      &pgpkey.${me};"
-echo "    </sect2>"
-echo
-echo "If this is a new entry, don't forget to 'svn add ${keyfile}'"
-echo "and 'svn propset svn:keywords \"FreeBSD=%H\" ${keyfile}'"
-echo "and commit each of ${keyfile}, pgpkeys.ent and"
-echo "pgpkeys-developers.xml, pgpkeys-officers.xml, or"
-echo "pgpkeys-core.xml as required."
+cat <<EOF
+
+Unless you are already listed there, you should now add the following
+text to pgpkeys-developers.xml.  Remember to keep the list sorted by
+last name!
+
+    <sect2 id=\"pgpkey-${me}\">
+      <title>&a.${me}.email;</title>
+      &pgpkey.${me};
+    </sect2>
+
+If this is a role key or you are a core member, you should add it to
+either pgpkeys-officers.xml or pgpkeys-core.xml instead.
+
+If this is a new entry, don't forget to run the following commands
+before committing:
+
+% svn add ${keyfile}
+% svn propset svn:keywords \"FreeBSD=%H\" ${keyfile}
+
+EOF
