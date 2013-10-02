@@ -143,7 +143,7 @@ Unless you are already listed there, you should now add the following
 text to pgpkeys-developers.xml.  Remember to keep the list sorted by
 last name!
 
-    <sect2 id=\"pgpkey-${me}\">
+    <sect2 id="pgpkey-${me}">
       <title>&a.${me}.email;</title>
       &pgpkey.${me};
     </sect2>
@@ -155,6 +155,6 @@ If this is a new entry, don't forget to run the following commands
 before committing:
 
 % svn add ${keyfile}
-% svn propset svn:keywords \"FreeBSD=%H\" ${keyfile}
+% svn propset svn:keywords FreeBSD=%H ${keyfile}
 
 EOF
