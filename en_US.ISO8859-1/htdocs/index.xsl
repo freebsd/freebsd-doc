@@ -35,27 +35,23 @@
 
 		<div id="frontfeatureleft">
 			<div id="frontfeaturecontent">
-				<h1>
-				  Based on BSD &unix;
-				</h1>
+				<h1>The &os; Project</h1>
 
-				<p>FreeBSD&reg; is an advanced
-				  operating system for modern server,
-				  desktop, and embedded computer <a
-				  href="&base;/platforms/">platforms</a>.
-				  FreeBSD's code base has undergone
-				  over thirty years of continuous
-				  development, improvement, and
-				  optimization.  It is developed and
-				  maintained by a <a
-				  href="&base;/doc/en_US.ISO8859-1/articles/contributors/staff-committers.html">large
-				  team of individuals</a>.  FreeBSD
-				  provides advanced networking,
-				  impressive security features, and
-				  world class performance and is used
-				  by some of the world's <a
-				  href="&base;/doc/en_US.ISO8859-1/books/handbook/nutshell.html#introduction-nutshell-users">busiest
-				  web sites</a> and most pervasive
+				<p>&os; is an advanced computer
+				  operating system used to power
+				  modern servers, desktops and
+				  embedded
+				  <a href="&base;/platforms/">platforms</a>.
+				  A large
+				  <a
+				  href="&base;/doc/en_US.ISO8859-1/articles/contributors/staff-committers.html">community</a>
+				  has continually developed it for
+				  more than thirty years. Its advanced
+				  networking, security and storage
+				  features have made &os; the platform
+				  of choice for many of the
+				  <a href="&base;/doc/en_US.ISO8859-1/books/handbook/nutshell.html#introduction-nutshell-users">busiest web sites</a>
+				  and most pervasive
 				  embedded networking and storage
 				  devices.</p>
 
@@ -72,7 +68,7 @@
 			<div class="frontgetroundbox">
 			  <div class="frontgettop"><div><b style="display: none">.</b></div></div>
 				<div class="frontgetcontent">
-				  <a href="&base;/where.html">Get FreeBSD Now</a>
+				  <a href="&base;/where.html">Download &os;</a>
 				</div> <!-- frontgetcontent -->
 			  <div class="frontgetbot"><div><b style="display: none">.</b></div></div>
 			</div> <!-- frontgetroundbox -->
@@ -237,7 +233,7 @@
             	<div id="frontmedia">
 		   <div id="frontmediacontent" class="txtnewsevent">
 
-			<h2>IN THE MEDIA</h2>
+			<h2>PRESS</h2>
 			<div class="newseventswrap">
 
 			<xsl:call-template name="html-index-news-press-items">
