@@ -14,9 +14,9 @@ DOCS=	announce.xml \
 #	schedule.xml
 
 DATA=	docbook.css \
+	installation.html \
 #	errata.html \
 #	hardware.html \
-#	installation.html \
 #	readme.html
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"
