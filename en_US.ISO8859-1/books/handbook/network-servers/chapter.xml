@@ -88,6 +88,10 @@
 	  <command>syslogd</command>, to accept logs from remote
 	  hosts.</para>
       </listitem>
+
+      <listitem>
+	<para>How to set up <acronym>iSCSI</acronym>.</para>
+      </listitem>
     </itemizedlist>
 
     <para>This chapter assumes a basic knowledge of:</para>
@@ -6179,4 +6183,322 @@ Logging to FILE /var/log/messages</screen>
 	by local users.</para>
     </sect2>
   </sect1>
+
+  <sect1 id="network-iscsi">
+    <sect1info>
+      <authorgroup>
+	<author>
+	  <firstname>Edward Tomasz</firstname>
+	  <surname>Napierala</surname>
+	</author>
+      </authorgroup>
+    </sect1info>
+
+    <title>iSCSI Initiator and Target Configuration</title>
+
+    <para><acronym>iSCSI</acronym> is a way to share storage; to make
+      disk space at one machine (the server, in iSCSI nomenclature
+      known as the target) available to others (clients, in iSCSI
+      called initiators).  The main difference compared to e.g. NFS is
+      that NFS works at a filesystem level, while iSCSI works at block
+      device level - to the initiators, remote disks served via iSCSI
+      are just like physical disks; they have their respective device
+      nodes appearing in /dev/, which need to be separately
+      mounted.</para>
+
+    <sect2>
+      <title>iSCSI Target</title>
+
+      <para>Note: the native iSCSI target is supported starting with
+	&os; 10.0-RELEASE.  To use iSCSI in older versions, use
+	userspace target installed from ports, such as istgt.  This
+	chapter only applies to the native target.</para>
+
+      <sect3>
+	<title>Basic Operation</title>
+
+	<para>Configuring the iSCSI target is pretty straightforward:
+	  one needs to create <filename>/etc/ctl.conf</filename>
+	  configuration file, add an appropriate line to
+	  <filename>/etc/rc.conf</filename> to make sure the <ulink
+	    url="http://www.freebsd.org/cgi/man.cgi?query=ctld&amp;sektion=8&amp;manpath=FreeBSD+10-current">ctld(8)</ulink>
+	  daemon gets automatically started at boot, and then start
+	  the daemon.</para>
+
+	<para>Simple <ulink
+	  url="http://www.freebsd.org/cgi/man.cgi?query=ctl.conf&amp;sektion=5&amp;manpath=FreeBSD+10-current">ctl.conf(5)</ulink>
+	configuration file might look like this:</para>
+
+	<programlisting>portal-group pg0 {
+	discovery-auth-group no-authentication
+	listen 0.0.0.0
+	listen [::]
+}
+
+target iqn.2012-06.com.example:target0 {
+	auth-group no-authentication
+	portal-group pg0
+
+	lun 0 {
+		path /data/target0-0
+		size 4G
+	}
+}</programlisting>
+
+	<para>First entry in the config file defines a portal group
+	  called "pg0".  Portal groups define network addresses the
+	  <ulink
+	    url="http://www.freebsd.org/cgi/man.cgi?query=ctld&amp;sektion=8&amp;manpath=FreeBSD+10-current">ctld(8)</ulink>
+	  daemon will listen on.  First line ("discovery-auth-group
+	  no-authentication") means that every initiator is allowed to
+	  perform SendTargets iSCSI discovery without any kind of
+	  authentication.  Following two lines make <ulink
+	    url="http://www.freebsd.org/cgi/man.cgi?query=ctld&amp;sektion=8&amp;manpath=FreeBSD+10-current">ctld(8)</ulink>
+	  listen on all IPv4 ("listen 0.0.0.0") and IPv6 ("listen
+	  [::]") addresses configured on network interfaces, on
+	  default port (3560).  One does not always need to define
+	  a new portal group - there is a default one, called
+	  "default".  Difference between "default" and "pg0" above is
+	  that with the former, the iSCSI SendTargets discovery is
+	  always denied, while in the latter it is always
+	  allowed.</para>
+
+	<para>Second entry defines a single target.  Target has two
+	  meanings - it is a machine serving iSCSI, but it’s also
+	  a named group of LUNs.  In this example, we use the latter
+	  meaning.  The "iqn.2012-06.com.example:target0" is the
+	  target name.  For testing purposes it might be left as it
+	  is; otherwise, the "com.example" should be changed to the
+	  real domain name, reversed; the "2012-06" is the year and
+	  month of acquiring control of that domain name, and
+	  "target0" can be pretty much whatever.  There can be any
+	  number of targets defined in the config file.</para>
+
+	<para>First line in the target configuration ("auth-group
+	  no-authentication") allows every initiator to connect to it.
+	  Second line ("portal-group pg0") makes the target reachable
+	  through the "pg0" portal group.</para>
+
+	<para>After that come LUNs.  To the initiator, each LUN will be
+	  visible as a separate disk device - e.g.
+	  <filename>/dev/da0</filename>, <filename>/dev/da1</filename>
+	  etc.  There may be multiple LUNs defined for each target.
+	  LUNs are identified by numbers; LUN 0 is mandatory.  First
+	  line of LUN configuration ("path /data/target0-0") defines
+	  full path to a file or ZVOL backing the LUN.  The file must
+	  exist before starting <ulink
+	    url="http://www.freebsd.org/cgi/man.cgi?query=ctld&amp;sektion=8&amp;manpath=FreeBSD+10-current">ctld(8)</ulink>.
+	  Second line is optional and specifies the size.</para>
+
+	<para>To make sure <ulink
+	  url="http://www.freebsd.org/cgi/man.cgi?query=ctld&amp;sektion=8&amp;manpath=FreeBSD+10-current">ctld(8)</ulink>
+	daemon is started at boot, one needs to add the following line
+	to <filename>/etc/rc.conf</filename>:</para>
+
+	<programlisting>ctld_enable="YES"</programlisting>
+
+	<para>On a new server being configured as iSCSI target, the
+	  <ulink
+	    url="http://www.freebsd.org/cgi/man.cgi?query=ctld&amp;sektion=8&amp;manpath=FreeBSD+10-current">ctld(8)</ulink>
+	  can be started by running this command as root:</para>
+
+	<screen>&prompt.root; <userinput>service ctld
+	   start</userinput></screen>
+
+       <para>The <ulink
+	  url="http://www.freebsd.org/cgi/man.cgi?query=ctld&amp;sektion=8&amp;manpath=FreeBSD+10-current">ctld(8)</ulink>
+	daemon reads <ulink
+	  url="http://www.freebsd.org/cgi/man.cgi?query=ctl.conf&amp;sektion=5&amp;manpath=FreeBSD+10-current">ctl.conf(5)</ulink>
+	file when started.  To make configuration changes take effect
+	immediately, force <ulink
+	  url="http://www.freebsd.org/cgi/man.cgi?query=ctld&amp;sektion=8&amp;manpath=FreeBSD+10-current">ctld(8)</ulink>
+	to reread it:</para>
+
+	<screen>&prompt.root; <userinput>service ctld reload</userinput></screen>
+      </sect3>
+
+      <sect3>
+	<title>Authentication</title>
+
+	<para>The example above is inherently insecure - it uses no
+	  authentication whatsoever, granting anyone full access to
+	  all targets.  To require username and password to access
+	  targets, modify configuration like this:</para>
+
+	<programlisting>auth-group ag0 {
+	chap username1 secretsecret
+	chap username2 anothersecret
+}
+
+portal-group pg0 {
+	discovery-auth-group no-authentication
+	listen 0.0.0.0
+	listen [::]
+}
+
+target iqn.2012-06.com.example:target0 {
+	auth-group ag0
+	portal-group pg0
+	lun 0 {
+		path /data/target0-0
+		size 4G
+	}
+}</programlisting>
+
+	<para>The auth-group section defines username/password pairs.
+	  Initiator trying to connect to
+	  iqn.2012-06.com.example:target0 must specify either of
+	  those.  The SendTargets discovery is still permitted without
+	  any kind of authentication; to change it, set
+	  "discovery-auth-group" to something else.</para>
+
+	<para>Common case for iSCSI is to have a single exported
+	  target for every initiator.  As a shorthand for syntax
+	  above, one can specify username and password directly in the
+	  target entry, like this:</para>
+
+	<programlisting>target iqn.2012-06.com.example:target0 {
+	portal-group pg0
+	chap username1 secretsecret
+
+	lun 0 {
+		path /data/target0-0
+		size 4G
+	}
+}</programlisting>
+      </sect3>
+    </sect2>
+
+    <sect2>
+      <title>iSCSI Initiator</title>
+
+      <note>
+	<para>The current iSCSI initiator is supported starting with
+	  &os; 10.0-RELEASE.  To use iSCSI initiator available in
+	  older versions, refer to the <ulink
+	    url="http://www.freebsd.org/cgi/man.cgi?query=iscontrol&amp;sektion=8&amp;manpath=FreeBSD+10-current">iscontrol(8)</ulink>
+	  manual page.  This chapter only applies to the new
+	  initiator.</para>
+      </note>
+
+      <para>The iSCSI initiator requires <ulink
+	url="http://www.freebsd.org/cgi/man.cgi?query=iscsid&amp;sektion=8&amp;manpath=FreeBSD+10-current">iscsid(8)</ulink>
+      daemon to run.  It does not use any kind of configuration file.
+      To make sure it gets started automatically at boot, add the
+      following line to <filename>/etc/rc.conf</filename>:</para>
+
+      <programlisting>iscsid_enable="YES"</programlisting>
+
+      <para>On a new machine being configured as iSCSI initiator, the
+	<ulink
+	  url="http://www.freebsd.org/cgi/man.cgi?query=iscsid&amp;sektion=8&amp;manpath=FreeBSD+10-current">iscsid(8)</ulink>
+	can be started by running this command as root:</para>
+
+      <screen>&prompt.root; <userinput>service iscsid start</userinput></screen>
+
+      <para>There are two basic ways to connect to a target: by using
+	<ulink
+	  url="http://www.freebsd.org/cgi/man.cgi?query=iscsi.conf&amp;sektion=5&amp;manpath=FreeBSD+10-current">iscsi.conf(8)</ulink>
+	configuration file, or without it.</para>
+
+      <sect3>
+	<title>Connecting to a Target Without Using a Configuration
+	  File</title>
+
+	<para>To make the initiator connect to a single target, run
+	  this command as root:</para>
+
+	<screen>&prompt.root; <userinput>iscsictl -A -h 10.10.10.10 -t iqn.2012-06.com.example:target0</userinput></screen>
+
+	<para>To verify if it succeeded, run it without arguments.  It
+	  should output something like this:</para>
+
+	<programlisting>Target name                                     Target addr     State
+iqn.2012-06.com.example:target0                 10.10.10.10     Connected: da0</programlisting>
+
+	<para>This means the iSCSI session was successfully
+	  established, and you have <filename>/dev/da0</filename>
+	  representing the attached LUN.  Should the target
+	  ("iqn.2012-06.com.example:target0") export more than one
+	  LUN, there will be multiple device nodes in the <ulink
+	    url="http://www.freebsd.org/cgi/man.cgi?query=iscsictl&amp;sektion=8&amp;manpath=FreeBSD+10-current">iscictl(8)</ulink>
+	  output (e.g.  "Connected: da0 da1 da2").</para>
+
+	<para>Various errors are reported in system logs, and visible
+	  in the <ulink
+	    url="http://www.freebsd.org/cgi/man.cgi?query=iscsictl&amp;sektion=8&amp;manpath=FreeBSD+10-current">iscictl(8)</ulink>
+	  output.  For example, this usually means the <ulink
+	    url="http://www.freebsd.org/cgi/man.cgi?query=iscsid&amp;sektion=8&amp;manpath=FreeBSD+10-current">iscsid(8)</ulink>
+	  daemon is not running:</para>
+
+	<programlisting>Target name                                     Target addr     State
+iqn.2012-06.com.example:target0                 10.10.10.10     Waiting for iscsid(8)</programlisting>
+
+	<para>The following suggests network-level problem, such as
+	  wrong IP address or port:</para>
+
+	<programlisting>Target name                                     Target addr     State
+iqn.2012-06.com.example:target0                 10.10.10.11     Connection refused</programlisting>
+	<para>The following means the specified target name was
+	  wrong:</para>
+
+	<programlisting>Target name                                     Target addr     State
+iqn.2012-06.com.example:atrget0                 10.10.10.10     Not found</programlisting>
+
+	<para>The following means the target requires
+	  authentication:</para>
+
+	<programlisting>Target name                                     Target addr     State
+iqn.2012-06.com.example:target0                 10.10.10.10     Authentication failed</programlisting>
+
+	<para>To specify CHAP username and secret, use the following
+	  syntax:</para>
+
+	<screen>&prompt.root; <userinput>iscsictl -A -h 10.10.10.10 -t iqn.2012-06.com.example:target0 -u user -s secretsecret</userinput></screen>
+      </sect3>
+
+      <sect3>
+	<title>Connecting to a Target Using a Configuration
+	  File</title>
+
+	<para>To connect using a configuration file, create
+	  <filename>/etc/iscsi.conf</filename> that might look like
+	  this:</para>
+
+	<programlisting>t0 {
+	TargetAddress   = 10.10.10.10
+	TargetName      = iqn.2012-06.com.example:target0
+	AuthMethod      = CHAP
+	chapIName       = user
+	chapSecret      = secretsecret
+}</programlisting>
+
+	<para>The first line ("t0") specifies a nickname for the
+	  configuration file section, used at the initiator side to
+	  specify which configuration you want to use.  The following
+	  lines specify various parameters used during connection
+	  - target address and name are mandatory; others are
+	  optional; in this case they specify CHAP username and
+	  secret.</para>
+
+	<para>To connect to the target defined above, use:</para>
+
+	<screen>&prompt.root; <userinput>iscsictl -An t0</userinput></screen>
+
+	<para>To connect to all targets defined in the configuration
+	  file, use:</para>
+
+	<screen>&prompt.root; <userinput>iscsictl -Aa</userinput></screen>
+
+	<para>To make the initiator automatically connect to all
+	  targets in <filename>/etc/iscsi.conf</filename>, add the
+	  following to <filename>/etc/rc.conf</filename>:</para>
+
+	<programlisting>iscsictl_enable="YES"
+iscsictl_flags="-Aa"</programlisting>
+
+      </sect3>
+    </sect2>
+  </sect1>
+
 </chapter>
