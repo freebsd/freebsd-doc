@@ -27,9 +27,6 @@
   </xsl:template>
 
   <xsl:template name="process.contentwrap">
-	      <p>&os; is well supported by its active
-		community.</p>
-
 	      <p>There are more than one hundred <a
 		href="&base;/community/mailinglists.html">mailing
 		lists</a>, dozens of web-based <a
@@ -130,5 +127,37 @@
     GSearch.setOnLoadCallback(LoadVideoBar);
   </script>
               </div> <!-- Latest Videos -->
+	      <h2>Social Networking</h2>
+	      <p>&os; is represented on a number of different social
+	        networks.</p>
+
+	      <ul>
+
+	        <li>Thousands of users have tagged nearly 30,000
+	        unique web pages with the '<a
+	        href="http://del.icio.us/tag/freebsd">freebsd</a>' tag
+	        on <a href="http://del.icio.us">del.icio.us</a>.</li>
+
+		<li>There are thousands of photos from user group
+		meetings, conferences, and hackathons tagged as '<a
+		href="http://flickr.com/search/?z=t&amp;ss=2&amp;w=all&amp;q=freebsd&amp;m=text">freebsd</a>'
+		on <a href="http://www.flickr.com">flickr</a>.</li>
+
+		<li>There are hundreds of videos from conferences,
+		screencasts, and demonstrations relating to <a
+		href="http://www.youtube.com/results?search_query=freebsd&amp;search_type=&amp;aq=f">FreeBSD</a>
+		on <a href="http://www.youtube.com">YouTube</a>.  In particular, there is a new <a href="http://www.youtube.com/bsdconferences">BSD Conferences</a> channel with full length 1 hour taped presentations from FreeBSD technical conferences.</li>
+
+		<li>There is a <a
+		href="http://www.facebook.com/home.php#/group.php?gid=2204657214">FreeBSD
+		Users Group</a> on <a
+		href="http://www.facebook.com">Facebook</a> and a <a href="http://www.linkedin.com/groups?gid=47628">FreeBSD Group</a> on <a href="http://www.linkedin.com">LinkedIn</a>.</li>
+
+		<li>You can follow
+		<a href="http://twitter.com/freebsdblogs">@freebsdblogs</a>,
+		<a href="http://twitter.com/freebsd">@freebsd</a>, or
+		<a href="http://twitter.com/bsdevents">@bsdevents</a>
+		on <a href="http://twitter.com">Twitter</a>.</li>
+	      </ul>
   </xsl:template>
 </xsl:stylesheet>
