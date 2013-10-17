@@ -7,6 +7,6 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS=   irc.xml mailinglists.xml newsgroups.xml social.xml webresources.xml
+DOCS=   irc.xml mailinglists.xml newsgroups.xml webresources.xml
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"
