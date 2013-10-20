@@ -25,6 +25,7 @@ DOCS+= send-pr.xml
 DOCS+= support.xml
 DOCS+= where.xml
 DOCS+= 4xx.xml
+DOCS+= 5xx.xml
 
 XMLDOCS=	index:xsl:${XML_NEWS_NEWS}:
 DEPENDSET.index=transtable mirrors news press events \
