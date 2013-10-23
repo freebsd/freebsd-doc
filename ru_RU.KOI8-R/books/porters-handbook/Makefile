@@ -53,8 +53,6 @@ IMAGES_LIB+=	callouts/19.png
 IMAGES_LIB+=	callouts/20.png
 IMAGES_LIB+=	callouts/21.png
 
-# Entities
-#SRCS+= ../../../en_US.ISO8859-1/books/handbook/authors.ent
-
 DOC_PREFIX?= ${.CURDIR}/../../..
+
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"
