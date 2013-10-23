@@ -4,7 +4,7 @@
 # $FreeBSD$
 # $FreeBSDru: frdp/doc/ru_RU.KOI8-R/books/porters-handbook/Makefile,v 1.7 2003/09/26 02:34:16 andy Exp $
 #
-# Original reivision: 1.4
+# Original revision: r42686
 #
 
 #
@@ -29,6 +29,29 @@ INSTALL_ONLY_COMPRESSED?=
 SRCS=  book.xml
 SRCS+= uses.xml
 SRCS+= versions.xml
+
+# Images from the cross-document image library
+IMAGES_LIB+=	callouts/1.png
+IMAGES_LIB+=	callouts/2.png
+IMAGES_LIB+=	callouts/3.png
+IMAGES_LIB+=	callouts/4.png
+IMAGES_LIB+=	callouts/5.png
+IMAGES_LIB+=	callouts/6.png
+IMAGES_LIB+=	callouts/7.png
+IMAGES_LIB+=	callouts/8.png
+IMAGES_LIB+=	callouts/9.png
+IMAGES_LIB+=	callouts/10.png
+IMAGES_LIB+=	callouts/11.png
+IMAGES_LIB+=	callouts/12.png
+IMAGES_LIB+=	callouts/13.png
+IMAGES_LIB+=	callouts/14.png
+IMAGES_LIB+=	callouts/15.png
+IMAGES_LIB+=	callouts/16.png
+IMAGES_LIB+=	callouts/17.png
+IMAGES_LIB+=	callouts/18.png
+IMAGES_LIB+=	callouts/19.png
+IMAGES_LIB+=	callouts/20.png
+IMAGES_LIB+=	callouts/21.png
 
 # Entities
 #SRCS+= ../../../en_US.ISO8859-1/books/handbook/authors.ent
