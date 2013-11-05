@@ -207,7 +207,7 @@ foreach my $os ( keys %$sectionpath ) {
 );
 
 $manLocalDir    = '/usr/local/www/bsddoc/man';
-$manPathDefault = 'FreeBSD 9.1-RELEASE';
+$manPathDefault = 'FreeBSD 9.2-RELEASE';
 
 %manPath = (
     'FreeBSD 9.0-RELEASE and Ports',
@@ -230,11 +230,13 @@ $manPathDefault = 'FreeBSD 9.1-RELEASE';
 "$manLocalDir/FreeBSD-6.4-RELEASE/man:$manLocalDir/FreeBSD-6.4-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-6.2-RELEASE",
 
     'FreeBSD Ports', "$manLocalDir/FreeBSD-ports",
-    'FreeBSD 9-current',
-"$manLocalDir/FreeBSD-9-current/man:$manLocalDir/FreeBSD-9-current/openssl/man",
+    'FreeBSD 10-current',
+"$manLocalDir/FreeBSD-10-current/man:$manLocalDir/FreeBSD-10-current/openssl/man",
 
     'FreeBSD 9.1-stable',
 "$manLocalDir/FreeBSD-9.1-stable/man:$manLocalDir/FreeBSD-9.1-stable/openssl/man",
+    'FreeBSD 9.2-RELEASE',
+"$manLocalDir/FreeBSD-9.2-RELEASE/man:$manLocalDir/FreeBSD-9.2-RELEASE/openssl/man",
     'FreeBSD 9.1-RELEASE',
 "$manLocalDir/FreeBSD-9.1-RELEASE/man:$manLocalDir/FreeBSD-9.1-RELEASE/openssl/man",
     'FreeBSD 9.0-RELEASE',
@@ -588,6 +590,7 @@ my %valid_arch = map { $_ => 1 }
 my $default_arch = 'i386';
 
 my %arch = ( 
+'FreeBSD 9.2-RELEASE' => { 'default' => 'i386', 'arch' => [qw/amd64 arm i386 powerpc sparc64/] } ,
 'FreeBSD 9.1-RELEASE' => { 'default' => 'i386', 'arch' => [qw/amd64 arm i386 powerpc sparc64/] } ,
 'FreeBSD 9.0-RELEASE' => { 'default' => 'i386', 'arch' => [qw/amd64 arm i386 powerpc sparc64/] } ,
 'FreeBSD 8.3-RELEASE' => { 'default' => 'i386', 'arch' => [qw/amd64 arm i386 powerpc sparc64/] } ,
@@ -621,8 +624,8 @@ while ( ( $key, $val ) = each %manPath ) {
 
 # keywords must be in lower cases.
 %manPathAliases = (
-    'freebsd',         'FreeBSD 9.1-RELEASE',
-    'freebsd-release', 'FreeBSD 9.1-RELEASE',
+    'freebsd',         'FreeBSD 9.2-RELEASE',
+    'freebsd-release', 'FreeBSD 9.2-RELEASE',
 
     'freebsd-stable',  'FreeBSD 9.1-stable',
     'freebsd-stable9', 'FreeBSD 9.1-stable',
@@ -630,7 +633,7 @@ while ( ( $key, $val ) = each %manPath ) {
     'freebsd-stable7', 'FreeBSD 7.4-stable',
     'freebsd-stable6', 'FreeBSD 6.4-stable',
 
-    'freebsd-current',       'FreeBSD 9-current',
+    'freebsd-current',       'FreeBSD 10-current',
     'freebsd-release-ports', 'FreeBSD 9.0-RELEASE and Ports',
 
     'slackware',  'Linux Slackware 3.1',

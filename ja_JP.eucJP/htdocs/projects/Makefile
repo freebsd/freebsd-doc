@@ -1,6 +1,6 @@
 # $FreeBSD$
 # The FreeBSD Japanese Documentation Project
-# Original revision: r41483
+# Original revision: r42778
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -29,7 +29,7 @@ DOCS+=	cvsweb.xml
 
 INDEXLINK= projects.html
 
-#SUBDIR=	 acpi busdma c99 ideas mips bigdisk netperf
+#SUBDIR=	 acpi busdma ideas mips netperf
 SUBDIR=	mips
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"
