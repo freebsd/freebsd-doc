@@ -16,7 +16,6 @@ $closed_too    = 0;
 require './cgi-lib.pl';
 require './cgi-style.pl';
 require './query-pr-lib.pl';
-require 'getopts.pl';
 
 if (!$ENV{'QUERY_STRING'} or $ENV{'QUERY_STRING'} eq 'query') {
 	print &html_header("Query $project problem reports");
