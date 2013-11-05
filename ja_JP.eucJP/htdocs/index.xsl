@@ -5,7 +5,7 @@
 ]>
 
 <!-- $FreeBSD$ -->
-<!-- Original revision: r41116 -->
+<!-- Original revision: r42819 -->
 
 <xsl:stylesheet version="1.0"
   xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
@@ -38,25 +38,19 @@
 
 		  <div id="frontfeatureleft">
 		    <div id="frontfeaturecontent">
-			<h1>
-			  ベースは BSD UNIX<!-- &unix; -->(R)
-			</h1>
+			<h1>&os; プロジェクト</h1>
 
-			<p>FreeBSD<!-- &reg; -->(R) は、最新のサーバ、デスクトップおよび組み込み
+			<p>&os; は、最新のサーバ、デスクトップおよび組み込み
 			  <a href="&base;/platforms/">プラットフォーム</a>
 			  用の高性能なオペレーティングシステムです。
-			  FreeBSD のコードベースは、
-			  30 年以上にも渡って開発、改良、最適化が続けられています。
-			  <a href="&enbase;/doc/ja_JP.eucJP/articles/contributors/staff-committers.html"
-			    >多くの人々が参加する開発者チーム</a>
-			  が開発・保守をおこなっています。
-			  FreeBSD は高度なネットワーク、堅固なセキュリティ機能、
-			  世界最大クラスのパフォーマンスを提供し、
-			  世界最大規模の <a
-			  href = "&enbase;/doc/ja_JP.eucJP/books/handbook/nutshell.html#introduction-nutshell-users">ウェブサイト</a> や、
+			  多くの <a href="&enbase;/doc/ja_JP.eucJP/articles/contributors/staff-committers.html">コミュニティ</a>
+			  が 30 年以上にも渡って開発を続けています。
+			  高度なネットワーク、セキュリティ、
+			  およびストレージ機能により、
+			  &os; は数多くの <a
+			  href = "&enbase;/doc/ja_JP.eucJP/books/handbook/nutshell.html#introduction-nutshell-users">最大規模のウェブサイト</a>、
 			  広く普及している組み込みネットワーク機器、
-			  ストレージデバイスで利用されています。
-			</p>
+			  ストレージデバイスにおいて利用されています。</p>
 
 			<div id="txtfrontfeaturelink">
 			  &#187;<a href="&base;/about.html" title="詳しくはこちら">詳しくはこちら</a>
@@ -69,7 +63,7 @@
 			<div class="frontgettop"><div>&#160;</div>&#160;</div>
 
 			<div class="frontgetcontent">
-			  <a href="&base;/where.html">FreeBSD を入手する</a>
+			  <a href="&base;/where.html">&os; を入手する</a>
 			</div> <!-- frontgetcontent -->
 
 			<div class="frontgetbot"><div>&#160;</div>&#160;</div>
@@ -174,7 +168,7 @@
 		      <div class="frontnewroundbox">
 			<div class="frontnewtop"><div>&#160;</div>&#160;</div>
 			<div class="frontnewcontent">
-			  <a href="&base;/projects/newbies.html">FreeBSD が初めてという方は、こちらへどうぞ</a>
+			  <a href="&base;/projects/newbies.html">FreeBSD が初めての方</a>
 			</div> <!-- frontnewcontent -->
 			<div class="frontnewbot"><div>&#160;</div>&#160;</div>
 		      </div> <!-- frontnewroundbox -->

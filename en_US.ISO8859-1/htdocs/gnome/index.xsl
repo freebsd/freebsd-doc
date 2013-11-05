@@ -100,9 +100,9 @@
 	       	   web browsers, audio players, office programs, and
 	       	   more.</p>
 
-		       <p>The FreeBSD GNOME Project is a team of devoted
+		       <p>The &os; GNOME Project is a team of devoted
 			 developers and users that manage the
-			 integration of GNOME and FreeBSD.</p>
+			 integration of GNOME and &os;.</p>
 
 		<h2>How to install GNOME</h2>
 
@@ -129,15 +129,15 @@
 
               <h2>State of the port</h2>
 
-	      <p>GNOME for FreeBSD is currently fully supported on
-		8.3, 8-STABLE, 9.0, 9.1, and 9-STABLE, while
-                10.0-CURRENT is provided on a best effort basis.
-		Most of GNOME has been ported to FreeBSD, but there is still
-		<a href="docs/volunteer.html">plenty left to be done</a>!</p>
+	      <p>GNOME for &os; is currently fully supported on
+		8.4, 8-STABLE, 9.1, 9.2, and 9-STABLE, 10.0 and 10-STABLE while
+                11.0-CURRENT is provided on a best effort basis.
+		Work is being done to replace Gnome 2 with Mate and Gnome3.  
+		There is still <a href="docs/volunteer.html">plenty left to be done</a>!</p>
 
 	      <h2>One stop solution shop!</h2>
 
-	      <p>GNOME is simple and easy to build using the FreeBSD ports system, but
+	      <p>GNOME is simple and easy to build using the &os; ports system, but
 	        sometimes things simply go wrong. If GNOME -- or anything that uses
 		GNOME libraries -- is not building the way it should, simply run the
 		<a href="/gnome/gnomelogalyzer.sh">gnomelogalyzer.sh</a>

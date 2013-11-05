@@ -187,7 +187,7 @@
   <xsl:template name="generate.citerefentry.link">
     <xsl:text>http://www.FreeBSD.org/cgi/man.cgi?query=</xsl:text>
     <xsl:value-of select="db:refentrytitle"/>
-    <xsl:text>&#38;amp;sektion=</xsl:text>
+    <xsl:text>&amp;sektion=</xsl:text>
     <xsl:value-of select="db:manvolnum"/>
   </xsl:template>
 
