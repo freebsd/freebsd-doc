@@ -15,6 +15,7 @@
     </rule>
   </pattern>
 
+<!-- XXX: temporarily turned off
   <pattern name="Check filenames">
     <rule context="//db:filename">
       <report test="@role = 'directory'">Filename (<xsl:value-of select="."/>) has role="directory"; use class="directory"</report>
@@ -23,6 +24,7 @@
       <report test="@role != 'directory' and @role != 'package' and role != 'port'">Filename (<xsl:value-of select="."/>) has role attribute set; consider a properly set class attribute</report>
     </rule>
   </pattern>
+-->
 
   <pattern name="Check cross-reference validity">
     <rule context="//db:link">
