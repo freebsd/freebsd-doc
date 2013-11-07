@@ -120,10 +120,10 @@ info "Generating ${keyfile}..."
     echo '<!--'
     echo "sh ${progname} ${me}" ${keyids} ";"
     echo '-->'
-    echo '<programlisting role="pgpfingerprint"><![CDATA['
+    echo '<programlisting xmlns="http://docbook.org/ns/docbook" role="pgpfingerprint"><![CDATA['
     gpg --fingerprint ${keyids}
     echo ']]></programlisting>'
-    echo '<programlisting role="pgpkey"><![CDATA['
+    echo '<programlisting xmlns="http://docbook.org/ns/docbook" role="pgpkey"><![CDATA['
     gpg --no-version --armor --export ${keyids}
     echo ']]></programlisting>'
 ) >"${keyfile}"
@@ -143,7 +143,7 @@ Unless you are already listed there, you should now add the following
 text to pgpkeys-developers.xml.  Remember to keep the list sorted by
 last name!
 
-    <sect2 id="pgpkey-${me}">
+    <sect2 xmlns="http://docbook.org/ns/docbook" xml:id="pgpkey-${me}">
       <title>&a.${me}.email;</title>
       &pgpkey.${me};
     </sect2>
