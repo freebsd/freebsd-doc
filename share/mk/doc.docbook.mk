@@ -23,39 +23,16 @@
 #			them need to be generated.  Changing any file in
 #			SRCS causes the documents to be rebuilt.
 #
-#       HAS_INDEX       This document has index terms and so an index
-#                       can be created if specified with GEN_INDEX.
-#
 
 # ------------------------------------------------------------------------
 #
 # Variables used by both users and documents:
 #
-#	XMLFLAGS	Additional options to pass to various XML
-#			processors (e.g., jade, nsgmls).  Typically
-#			used to define "IGNORE" entities to "INCLUDE"
-#			 with "-i<entity-name>"
-#
-#	JADEFLAGS	Additional options to pass to Jade.  Typically
-#			used to set additional variables, such as
-#			"%generate-article-toc%".
-#
 #	EXTRA_CATALOGS	Additional catalog files that should be used by
 #			any XML processing applications.
 #
-#       GEN_INDEX       If this document has an index (HAS_INDEX) and this
-#                       variable is defined, then index.xml will be added 
-#                       to the list of dependencies for source files, and 
-#                       collateindex.pl will be run to generate index.xml.
-#
 #	CSS_SHEET	Full path to a CSS stylesheet suitable for DocBook.
 #			Default is ${DOC_PREFIX}/share/misc/docbook.css
-#
-#
-#	SPELLCHECK	Use the special spellcheck.dsl stylesheet to render
-#			HTML that is suitable for processing through a 
-#			spellchecker.  For example, PGP keys and filenames
-#			will be omitted from this output.
 #
 # Package building options:
 # 
@@ -65,21 +42,18 @@
 #                      provides better compression, but requires longer
 #                      time and utilizes more CPU resources than gzip(1).
 
+# Either dblatex or fop
+RENDERENGINE?=	fop
+
 #
 # Documents should use the += format to access these.
 #
 
 MASTERDOC?=	${.CURDIR}/${DOC}.xml
 
-# Either jade or fop
-RENDERENGINE?=	jade
+DB5RNC?=	${DOC_PREFIX}/share/xml/freebsd50.rnc
 
-XMLDECL?=	/usr/local/share/sgml/docbook/dsssl/modular/dtds/decls/xml.dcl
-
-DSLHTML?=	${DOC_PREFIX}/share/xml/spellcheck.dsl
-DSLPRINT?=	${DOC_PREFIX}/share/xml/default.dsl
-
-XSLPROF?=	/usr/local/share/xsl/docbook/profiling/profile.xsl
+XSLPROF?=	/usr/local/share/xsl/docbook-ns/profiling/profile.xsl
 XSLXHTML?=	${DOC_PREFIX}/${LANGCODE}/share/xsl/freebsd-xhtml.xsl
 XSLXHTMLCHUNK?=	${DOC_PREFIX}/${LANGCODE}/share/xsl/freebsd-xhtml-chunk.xsl
 XSLEPUB?=	${DOC_PREFIX}/${LANGCODE}/share/xsl/freebsd-epub.xsl
@@ -91,70 +65,28 @@ XSLSCH?=	/usr/local/share/xsl/iso-schematron/xslt1/iso_schematron_skeleton_for_x
 IMAGES_LIB?=
 
 SCHEMATRONS?=	${DOC_PREFIX}/share/xml/freebsd.sch
-
-.if exists(${PREFIX}/bin/jade) && !defined(OPENJADE)
-JADECATALOG?=	${PREFIX}/share/sgml/jade/catalog
-.else
-JADECATALOG?=	${PREFIX}/share/sgml/openjade/catalog
-.endif
-FREEBSDCATALOG=	${DOC_PREFIX}/share/xml/catalog
-LANGUAGECATALOG=${DOC_PREFIX}/${LANGCODE}/share/xml/catalog
-DSSSLCATALOG=	${PREFIX}/share/sgml/docbook/dsssl/modular/catalog
-.for c in ${LANGUAGECATALOG} ${FREEBSDCATALOG} ${DSSSLCATALOG} ${JADECATALOG}
-.if exists(${c})
-CATALOGS+=	-c ${c}
-.endif
-.endfor
-
-JADEOPTS?=	-ijade.compat -w no-valid ${JADEFLAGS} \
-		-D ${IMAGES_EN_DIR}/${DOC}s/${.CURDIR:T} -D ${CANONICALOBJDIR} \
-		${CATALOGS}
 XSLTPROCOPTS?=	--nonet
+
+IMGDIR?=	${IMAGES_EN_DIR}/${DOC}s/${.CURDIR:T}
+CALLOUTDIR=	${.CURDIR}/imagelib/callouts
+.if exists(${DOC_PREFIX}/${LANGCODE}/share/xsl/freebsd-dblatex.xsl)
+XSLDBLATEX=	${DOC_PREFIX}/${LANGCODE}/share/xsl/freebsd-dblatex.xsl
+.else
+XSLDBLATEX=	${DOC_PREFIX}/share/xsl/freebsd-dblatex.xsl
+.endif
+DBLATEXOPTS?=	-I ${IMGDIR} -p ${XSLDBLATEX} -T simple -b xetex -d
+FOPOPTS?=	-c ${DOC_PREFIX}/share/misc/fop.xconf
 
 KNOWN_FORMATS=	html html.tar html-split html-split.tar \
 		epub txt rtf ps pdf tex dvi tar pdb
 
 CSS_SHEET?=	${DOC_PREFIX}/share/misc/docbook.css
 
-PRINTOPTS?=	-ioutput.print -d ${DSLPRINT} ${PRINTFLAGS}
-
-.if defined(WWWFREEBSDORG)
-HTMLFLAGS+=	-V %html-header-script%
-.endif
-.if !defined(WITH_INLINE_LEGALNOTICE) || empty(WITH_INLINE_LEGALNOTICE)
-HTMLFLAGS+=	-V %generate-legalnotice-link%
-.endif
-.if defined(WITH_ARTICLE_TOC) && !empty(WITH_ARTICLE_TOC)
-HTMLFLAGS+=	-V %generate-article-toc%
-PRINTFLAGS+=	-V %generate-article-toc%
-.endif
-.if defined(WITH_BIBLIOXREF_TITLE) && !empty(WITH_BIBLIOXREF_TITLE)
-HTMLFLAGS+=	-V biblio-xref-title
-PRINTFLAGS+=	-V biblio-xref-title
-.endif
-.if defined(WITH_DOCFORMAT_NAVI_LINK) && !empty(WITH_DOCFORMAT_NAVI_LINK)
-HTMLFLAGS+=	-V %generate-docformat-navi-link%
-.elif (${FORMATS:Mhtml} == "html") && (${FORMATS:Mhtml-split} == "html-split")
-HTMLFLAGS+=	-V %generate-docformat-navi-link%
-.endif
-.if defined(WITH_ALL_TRADEMARK_SYMBOLS) && !empty(WITH_ALL_TRADEMARK_SYMBOLS)
-HTMLFLAGS+=	-V %show-all-trademark-symbols%
-PRINTFLAGS+=	-V %show-all-trademark-symbols%
-.endif
-
 #
 # Instruction for bsd.subdir.mk to not to process SUBDIR directive.
 # It is not necessary since doc.docbook.mk do it too.
 #
 NO_SUBDIR=      YES
-
-#
-# Index generation
-#
-
-.if defined(GEN_INDEX)
-XSLTPROCOPTS+= --param generate.index "1"
-.endif
 
 # ------------------------------------------------------------------------
 #
@@ -253,6 +185,11 @@ CLEANFILES+= ${_curimage:T} ${_curimage:H:T}/${_curimage:T}
 .elif ${_cf} == "pdf"
 CLEANFILES+= ${DOC}.aux ${DOC}.dvi ${DOC}.log ${DOC}.out ${DOC}.tex-pdf ${DOC}.tex-pdf-tmp \
 		${DOC}.tex ${DOC}.fo
+.if ${RENDERENGINE} == "fop"
+XSLTPROCOPTS+=	--param img.src.path "'${IMGDIR}/'"
+XSLTPROCOPTS+=	--param callout.graphics.path "'${CALLOUTDIR}/'"
+XSLTPROCOPTS+=	--maxdepth 6000
+.endif
 .for _curimage in ${LOCAL_IMAGES_EPS:M*share*}
 CLEANFILES+= ${_curimage:T} ${_curimage:H:T}/${_curimage:T}
 .endfor
@@ -309,35 +246,12 @@ CLEANFILES+= ${.CURDIR:T}.${_curformat}.${_curcomp}
 
 all: ${SRCS} ${_docs}
 
-# put languages which have a problem on rendering printable formats
-# by using TeX to NO_TEX_LANG.
-NO_TEX_LANG?=	ja_JP.eucJP ru_RU.KOI8-R
-
-# put languages which have a problem on rendering the plain text format
-# by using links1 to NO_PLAINTEXT_LANG.
-NO_PLAINTEXT_LANG?=	ja_JP.eucJP
-
-# put languages which have a problem on rendering the rtf format
-# by using jade to NO_RTF_LANG.
-NO_RTF_LANG?=
-
-.for _L in ${LANGCODE}
-.if ${NO_TEX_LANG:M${_L}} != ""
-NO_TEX=		yes
-.endif
-.if ${NO_PLAINTEXT_LANG:M${_L}} != ""
-NO_PLAINTEXT=	yes
-.endif
-.if ${NO_RTF_LANG:M${_L}} != ""
-NO_RTF=		yes
-.endif
-.endfor
-
 .if defined(SCHEMATRONS)
 .for sch in ${SCHEMATRONS}
-schxslts+=	${sch}.xsl
+schxslts+=	${sch:T}.xsl
+CLEANFILES+=	${sch:T}.xsl
 
-${sch}.xsl: ${sch}
+${sch:T}.xsl: ${sch}
 	${XSLTPROC} --param allow-foreign "true" ${XSLSCH} ${.ALLSRC} > ${.TARGET}
 .endfor
 .endif
@@ -345,23 +259,13 @@ ${sch}.xsl: ${sch}
 # Parsed XML  -------------------------------------------------------
 
 ${DOC}.parsed.xml: ${SRCS}
-	${GREP} '^<?xml version=.*?>' ${DOC}.xml > ${.TARGET}.tmp
-.if ${DOC} == "book"
-	${ECHO_CMD} '<!DOCTYPE book PUBLIC "-//FreeBSD//DTD DocBook XML V4.5-Based Extension//EN" "../../../share/xml/freebsd45.dtd">' >> ${.TARGET}.tmp
-.else
-	${ECHO_CMD} '<!DOCTYPE article PUBLIC "-//FreeBSD//DTD DocBook XML V4.5-Based Extension//EN" "../../../share/xml/freebsd45.dtd">' >> ${.TARGET}.tmp
-.endif
-	@${ECHO} "==> Basic validation"
-	${XMLLINT} --nonet --noent --valid --xinclude --dropdtd ${MASTERDOC} | \
-	${GREP} -v '^<?xml version=.*?>' >> ${.TARGET}.tmp
+	${XMLLINT} --nonet --noent --valid --dropdtd --xinclude ${MASTERDOC} > ${.TARGET}.tmp
 .if defined(PROFILING)
 	@${ECHO} "==> Profiling"
-	${XSLTPROC} ${PROFILING} ${XSLPROF} ${.TARGET}.tmp > ${.TARGET}
-	${RM} ${.TARGET}.tmp
+	${XSLTPROC} ${PROFILING} ${XSLPROF} ${.TARGET}.tmp > ${DOC}.parsed.print.xml
 .else
-	${MV} ${.TARGET}.tmp ${.TARGET}
-	${SED} 's|@@URL_RELPREFIX@@|http://www.FreeBSD.org|g' < ${.TARGET} > ${DOC}.parsed.print.xml
-	${SED} -i '' 's|@@URL_RELPREFIX@@|../../../..|g' ${.TARGET}
+	${SED} 's|@@URL_RELPREFIX@@|http://www.FreeBSD.org|g' < ${.TARGET}.tmp > ${DOC}.parsed.print.xml
+	${SED} 's|@@URL_RELPREFIX@@|../../../..|g' < ${.TARGET}.tmp > ${.TARGET}
 .endif
 
 # XHTML -------------------------------------------------------------
@@ -395,13 +299,12 @@ ${DOC}.html.tar: ${DOC}.html ${LOCAL_IMAGES_LIB} \
 ${DOC}.epub: ${DOC}.parsed.xml ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} \
 	${CSS_SHEET}
 	${XSLTPROC} ${XSLTPROCOPTS} ${XSLEPUB} ${DOC}.parsed.xml
-	${ECHO} "application/epub+zip" > mimetype
-	${CP} ${CSS_SHEET} OEBPS/
 .if defined(LOCAL_IMAGES_LIB) || defined(LOCAL_IMAGES_PNG)
-	${CP} ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} OEBPS/
+.for f in ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG}
+	${CP} ${f} OEBPS/
+.endfor
 .endif
-	${ZIP} ${ZIPOPTS} ${DOC}.epub mimetype
-	${ZIP} ${ZIPOPTS} -Dr ${DOC}.epub OEBPS META-INF
+	${ZIP} ${ZIPOPTS} -r -X ${DOC}.epub mimetype OEBPS META-INF
 
 # TXT --------------------------------------------------------------------
 
@@ -430,70 +333,12 @@ ${.CURDIR:T}.pdb.${_curcomp}: ${DOC}.pdb.${_curcomp}
 .endfor
 .endif
 
-# RTF --------------------------------------------------------------------
+# PS/PDF/RTF -----------------------------------------------------------------
 
-.if !target(${DOC}.rtf)
-.if !defined(NO_RTF)
-${DOC}.rtf: ${DOC}.parsed.xml ${LOCAL_IMAGES_EPS} ${PRINT_INDEX} \
-		${LOCAL_IMAGES_TXT} ${LOCAL_IMAGES_PNG}
-	${JADE} -V rtf-backend ${PRINTOPTS} -ioutput.rtf.images \
-		${JADEOPTS} -t rtf -o ${.TARGET}-nopng ${XMLDECL} \
-		${DOC}.parsed.xml
-	${FIXRTF} ${FIXRTFOPTS} < ${.TARGET}-nopng > ${.TARGET}
-.else
-${DOC}.rtf:
-	${TOUCH} ${.TARGET}
-.endif
-.endif
-
-# PS/PDF -----------------------------------------------------------------
-
-.if ${RENDERENGINE} == "jade"
-.if !defined(NO_TEX)
-${DOC}.tex: ${SRCS} ${LOCAL_IMAGES_EPS} ${PRINT_INDEX} \
-		${LOCAL_IMAGES_TXT} ${LOCAL_IMAGES_EN} \
-		${DOC}.parsed.xml
-	${JADE} -V tex-backend ${PRINTOPTS} \
-		${JADEOPTS} -t tex -o ${.TARGET} ${XMLDECL} ${DOC}.parsed.print.xml
-	${SED} -i '' -e 's|{1}\\def\\ScaleY%|{0.5}\\def\\ScaleY%|g' \
-		-e 's|{1}\\def\\EntitySystemId%|{0.5}\\def\\EntitySystemId%|g' \
-		${.TARGET}
-
-.if !target(${DOC}.dvi)
-${DOC}.dvi: ${DOC}.tex ${LOCAL_IMAGES_EPS}
-.for _curimage in ${LOCAL_IMAGES_EPS:M*share*}
-	${CP} -p ${_curimage} ${.CURDIR:H:H}/${_curimage:H:S|${IMAGES_EN_DIR}/||:S|${.CURDIR}||}
-.endfor
-	${JADETEX_PREPROCESS} < ${DOC}.tex > ${DOC}.tex-tmp
-	@${ECHO} "==> TeX pass 1/3"
-	-${JADETEX_CMD} '${TEX_CMDSEQ} \nonstopmode\input{${DOC}.tex-tmp}'
-	@${ECHO} "==> TeX pass 2/3"
-	-${JADETEX_CMD} '${TEX_CMDSEQ} \nonstopmode\input{${DOC}.tex-tmp}'
-	@${ECHO} "==> TeX pass 3/3"
-	-${JADETEX_CMD} '${TEX_CMDSEQ} \nonstopmode\input{${DOC}.tex-tmp}'
-.endif
-
-.if !target(${DOC}.pdf)
-${DOC}.pdf: ${DOC}.ps ${IMAGES_PDF}
-	${PS2PDF} ${DOC}.ps ${.TARGET}
-.endif
-
-${DOC}.ps: ${DOC}.dvi
-	${DVIPS} ${DVIPSOPTS} -o ${.TARGET} ${.ALLSRC}
-.else
-#  NO_TEX
-${DOC}.tex ${DOC}.dvi ${DOC}.ps:
-	${TOUCH} ${.TARGET}
-.if !target(${DOC}.pdf)
-${DOC}.pdf:
-	${TOUCH} ${.TARGET}
-.endif
-.endif
-
-.elif ${RENDERENGINE} == "fop"
 ${DOC}.fo: ${DOC}.xml ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} ${DOC}.parsed.xml
 	${XSLTPROC} ${XSLTPROCOPTS} ${XSLFO} ${DOC}.parsed.print.xml > ${.TARGET}
 
+.if ${RENDERENGINE} == "fop"
 ${DOC}.pdf: ${DOC}.fo ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG}
 	${FOP} ${FOPOPTS} ${DOC}.fo ${.TARGET}
 
@@ -502,8 +347,15 @@ ${DOC}.ps: ${DOC}.fo ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG}
 
 ${DOC}.rtf: ${DOC}.fo ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG}
 	${FOP} ${FOPOPTS} ${DOC}.fo ${.TARGET}
+.else
+# Default is dblatex
+${DOC}.pdf: ${DOC}.parsed.xml ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG}
+	${DBLATEX} ${DOC}.parsed.print.xml ${DBLATEXOPTS} -o ${.TARGET}
 
+${DOC}.ps: ${DOC}.parsed.xml ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG}
+	${DBLATEX} ${DOC}.parsed.print.xml ${DBLATEXOPTS} -o ${.TARGET}
 .endif
+	
 
 ${DOC}.tar: ${SRCS} ${LOCAL_IMAGES} ${LOCAL_CSS_SHEET}
 	${TAR} cf ${.TARGET} -C ${.CURDIR} ${SRCS} \
@@ -537,15 +389,8 @@ ${DOC}.${_curformat}:
 #
 
 lint validate: ${SRCS} ${schxslts}
-	@${GREP} '^<?xml version=.*?>' ${DOC}.xml > ${DOC}.parsed.xml
-.if ${DOC} == "book"
-	@${ECHO_CMD} '<!DOCTYPE book PUBLIC "-//FreeBSD//DTD DocBook XML V4.5-Based Extension//EN" "../../../share/xml/freebsd45.dtd">' >> ${DOC}.parsed.xml
-.else
-	@${ECHO_CMD} '<!DOCTYPE article PUBLIC "-//FreeBSD//DTD DocBook XML V4.5-Based Extension//EN" "../../../share/xml/freebsd45.dtd">' >> ${DOC}.parsed.xml
-.endif
 	@${ECHO} "==> Basic validation"
-	@${XMLLINT} --nonet --noent --valid --xinclude --dropdtd ${MASTERDOC} | \
-	${GREP} -v '^<?xml version=.*?>' >>${DOC}.parsed.xml
+	@${XMLLINT} --nonet --noent --valid --dropdtd --xinclude ${MASTERDOC} > ${DOC}.parsed.xml
 .if defined(schxslts)
 	@${ECHO} "==> Validating with Schematron constraints"
 .for sch in ${schxslts}
@@ -555,6 +400,10 @@ lint validate: ${SRCS} ${schxslts}
 		false; \
 	  fi )
 .endfor
+.endif
+.if exists(${JING})
+	@${ECHO} "==> Validating with RELAX NG"
+	@${JING} -c ${DB5RNC} ${DOC}.parsed.xml
 .endif
 	@${RM} -rf ${CLEANFILES} ${CLEANDIRS} ${DOC}.parsed.xml
 

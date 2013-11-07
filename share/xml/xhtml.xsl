@@ -7,6 +7,7 @@
   xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
   xmlns:cvs="http://www.FreeBSD.org/XML/CVS"
   xmlns:xhtml="http://www.w3.org/1999/xhtml"
+  xmlns:db="http://docbook.org/ns/docbook"
   xmlns:str="http://exslt.org/strings"
   xmlns="http://www.w3.org/1999/xhtml"
   exclude-result-prefixes="cvs xhtml"
@@ -162,7 +163,7 @@
     </xsl:for-each>
   </xsl:template>
 
-  <xsl:template match="email">
+  <xsl:template match="db:email">
     <xsl:text>&lt;</xsl:text>
     <xsl:choose>
       <xsl:when test="@role='nolink'">

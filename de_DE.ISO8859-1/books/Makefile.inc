@@ -8,4 +8,3 @@
 #
 
 DESTDIR?=	${DOCDIR}/de_DE.ISO8859-1/books/${.CURDIR:T}
-COLLATEINDEX+=-s Symbole
