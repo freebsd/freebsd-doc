@@ -259,13 +259,13 @@ ${sch:T}.xsl: ${sch}
 # Parsed XML  -------------------------------------------------------
 
 ${DOC}.parsed.xml: ${SRCS}
-	${XMLLINT} --nonet --noent --valid --dropdtd --xinclude ${MASTERDOC} > ${.TARGET}
+	${XMLLINT} --nonet --noent --valid --dropdtd --xinclude ${MASTERDOC} > ${.TARGET}.tmp
 .if defined(PROFILING)
 	@${ECHO} "==> Profiling"
 	${XSLTPROC} ${PROFILING} ${XSLPROF} ${.TARGET}.tmp > ${.TARGET}
 .else
-	${SED} 's|@@URL_RELPREFIX@@|http://www.FreeBSD.org|g' < ${.TARGET} > ${DOC}.parsed.print.xml
-	${SED} -i '' 's|@@URL_RELPREFIX@@|../../../..|g' ${.TARGET}
+	${SED} 's|@@URL_RELPREFIX@@|http://www.FreeBSD.org|g' < ${.TARGET}.tmp > ${DOC}.parsed.print.xml
+	${SED} 's|@@URL_RELPREFIX@@|../../../..|g' < ${.TARGET}.tmp > ${.TARGET}
 .endif
 
 # XHTML -------------------------------------------------------------
