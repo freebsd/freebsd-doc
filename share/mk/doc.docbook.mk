@@ -43,7 +43,7 @@
 #                      time and utilizes more CPU resources than gzip(1).
 
 # Either dblatex or fop
-RENDERENGINE?=	dblatex
+RENDERENGINE?=	fop
 
 #
 # Documents should use the += format to access these.
