@@ -211,8 +211,7 @@ IMAGES_LIB_DIR?=	${.CURDIR}/../../../share/images
 # The name of the directory *in* the document directory where files and
 # directory hierarchies should be copied to.  "images" is too generic, and
 # might clash with local document images, so use "imagelib" by default
-# instead.  If you redefine this then you must also update the
-# %callout-graphics-path% variable in the .dsl file.
+# instead.
 #
 LOCAL_IMAGES_LIB_DIR?= imagelib
 CLEANDIRS+=	${LOCAL_IMAGES_LIB_DIR}

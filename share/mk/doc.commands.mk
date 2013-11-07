@@ -53,6 +53,8 @@ ZIPOPTS?=	-9X
 # Rendering and format conversion
 #
 
+DBLATEX?=	${PREFIX}/bin/dblatex
+
 DVIPS?=		${PREFIX}/bin/dvips
 .if defined(PAPERSIZE)
 DVIPSOPTS?=	-t ${PAPERSIZE:L}
@@ -60,7 +62,6 @@ DVIPSOPTS?=	-t ${PAPERSIZE:L}
 DVIPSOPTS+=	${DVIPSFLAGS}
 
 FOP?=		${PREFIX}/bin/fop
-FOPOPTS?=
 
 GROFF?=		groff
 
@@ -69,12 +70,7 @@ HTML2PDBOPTS?=	-y -d0 -Idef ${HTML2PDBFLAGS}
 HTML2TXT?=	${PREFIX}/bin/links
 HTML2TXTOPTS?=	-dump ${HTML2TXTFLAGS}
 
-.if exists(${PREFIX}/bin/jade) && !defined(OPENJADE)
-JADE?=		${ENV} SP_ENCODING=XML ${PREFIX}/bin/jade
-.else
-JADE?=		${ENV} SP_ENCODING=XML ${PREFIX}/bin/openjade
-JADEFLAGS+=	-V openjade
-.endif
+JING?=		${PREFIX}/bin/jing
 
 XMLLINT?=	${PREFIX}/bin/xmllint
 XSLTPROC?=	${PREFIX}/bin/xsltproc
@@ -93,35 +89,11 @@ TEX_CMD?=	${PREFIX}/bin/tex
 PDFTEX_CMD?=	${PREFIX}/bin/pdftex
 .endif
 LATEX_CMD?=	${PREFIX}/bin/latex
-JADETEX_CMD?=	${PDFTEX_CMD} "&jadetex"
-JADETEX_PREPROCESS?=	/bin/cat
-PDFJADETEX_CMD?=${PDFTEX_CMD} "&pdfjadetex"
-PDFJADETEX_PREPROCESS?= /bin/cat
 PS2PDF?=	${PREFIX}/bin/ps2pdf
 FOP_CMD?=	${PREFIX}/share/fop/fop.sh
 XEP_CMD?=	sh ${HOME}/XEP/xep.sh
 JAVA_CMD?=	${PREFIX}/bin/javavm
 SAXON_CMD?=	${JAVA_CMD} -jar ${PREFIX}/share/java/classes/saxon.jar
-
-#
-# Currently, we have to use the FixRTF utility available as textproc/fixrtf
-# to apply several RTF fixups:
-#
-# 1. Embed PNGs into RTF. (Option: -p)
-# 2. Embed FreeBSD-specific information into RTF, such as organization name,
-#    building time. But unfortunately, so far only Microsoft Word can read
-#    them. In contrast, Microsoft Word Viewer and OpenOffice even cannot read
-#    this kind of information from RTF created by Microsoft Word and
-#    OpenOffice. (Option: -i)
-# 3. Do some locale-specific fixing. (Option: -e <encoding>)
-#
-# This is a transitional solution before Jade/OpenJade provides these features.
-#
-FIXRTF?=	${PREFIX}/bin/fixrtf
-FIXRTFOPTS?=	-i -p
-.if defined(SP_ENCODING)
-FIXRTFOPTS+=	-e ${SP_ENCODING}
-.endif
 
 #
 # Image processing

@@ -1,0 +1,1352 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!--
+     De Vinum Volume Manager
+     Door Greg Lehey (grog at lemis dot com)
+
+     Toegevoegd aan het Handboek door Hiten Pandya <hmp@FreeBSD.org>
+     en Tom Rhodes <trhodes@FreeBSD.org>
+
+     The Dutch FreeBSD Documentation Project
+
+     $FreeBSD$
+
+     %SOURCE%	en_US.ISO8859-1/books/handbook/vinum/chapter.xml
+     %SRCID%	40781
+-->
+<chapter xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink" version="5.0" xml:id="vinum-vinum">
+  <info><title>De VINUM volumebeheerder</title>
+    <authorgroup>
+      <author><personname><firstname>Greg</firstname><surname>Lehey</surname></personname><contrib>Geschreven door </contrib></author>
+    </authorgroup>
+    <authorgroup>
+      <author><personname><firstname>Erwin</firstname><surname>Kooi</surname></personname><contrib>Vertaald door </contrib></author>
+    </authorgroup>
+  </info>
+
+  
+
+  <sect1 xml:id="vinum-synopsis">
+    <title>Overzicht</title>
+
+    <para>Welke harde schijven er ook gebruikt worden, er zijn altijd
+      mogelijke problemen:</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>Ze kunnen te klein zijn.</para>
+      </listitem>
+
+      <listitem>
+	<para>Ze kunnen te traag zijn.</para>
+      </listitem>
+
+      <listitem>
+	<para>Ze kunnen te onbetrouwbaar zijn.</para>
+      </listitem>
+    </itemizedlist>
+
+    <para>Er zijn verschillende oplossingen voor deze problemen
+      voorgesteld en geïmplementeerd.  Eén manier waarop
+      gebruikers zich wapenen tegen een aantal van deze problemen is
+      door meerdere en soms ook redundante schijven te gebruiken.  Naast
+      ondersteuning voor verschillende kaarten en controllers die
+      hardware-RAID ondersteunen, bevat het &os; basissysteem ook de
+      Vinum Volume Manager, een
+      <quote>blokapparaatstuurprogramma</quote> waarmee virtuele
+      schijven gemaakt kunnen worden.  <emphasis>Vinum</emphasis> is een
+      zogenaamde <emphasis>Volume Manager</emphasis>, een stuurprogramma
+      voor virtuële schijven dat deze drie problemen in beschouwing
+      neemt.  Vinum biedt meer flexibiliteit, prestaties en
+      betrouwbaarheid dan traditionele schijfopslag en er kan RAID-0,
+      RAID-1 en RAID-5 mee gemaakt worden of een combinatie van deze
+      RAID-niveaus.</para>
+
+    <para>In dit hoofdstuk wordt een overzicht gegeven van de mogelijke
+      problemen die traditionele schijfopslag met zich meebrengt en de
+      Vinum Volume Manager wordt geïntroduceerd.</para>
+
+    <note>
+      <para>Vanaf &os;&nbsp;5, is Vinum herschreven om in de
+	GEOM-architectuur (<xref linkend="GEOM"/>) te passen, met behoud
+	van de originele ideëen, terminologie, en metagegevens die
+	op de schijf staan.  Deze herschrijving wordt
+	<emphasis>gvinum</emphasis> (voor <emphasis>GEOM
+	vinum</emphasis>) genoemd.  De volgende tekst refereert aan
+	<emphasis>Vinum</emphasis> als een abstracte naam, onafhankelijk
+	van de implementatievariant.  Alle commando-aanroepen dienen nu
+	met het commando <command>gvinum</command> gedaan te worden, en
+	de naam van de kernelmodule is veranderd van
+	<filename>vinum.ko</filename> naar
+	<filename>geom_vinum.ko</filename>, en alle apparaatknooppunten
+	bevinden zich in <filename>/dev/gvinum</filename> in
+	plaats van <filename>/dev/vinum</filename>.  Sinds
+	&os;&nbsp;6 is de oude implementatie van Vinum niet meer beschikbaar in
+	de broncode.</para>
+    </note>
+  </sect1>
+
+  <sect1 xml:id="vinum-intro">
+    <title>Schijfgrootte</title>
+
+    <indexterm><primary>Vinum</primary></indexterm>
+
+    <indexterm>
+      <primary>RAID</primary>
+
+      <secondary>software</secondary>
+    </indexterm>
+
+    <para>De capaciteit van schijven wordt groter, maar ook de vraag
+      naar capaciteit neemt toe.  Vaak is het gewenste bestandssysteem
+      groter dan de op dat moment beschikbare schijven.  Hoewel dit
+      probleem niet meer zo actueel als het tien jaar geleden was,
+      bestaat het nog steeds.  In sommige systemen is dit opgelost door
+      een virtuele harde schijf te maken die de gegevens op meerdere
+      fysieke harde schijven kan opslaan.</para>
+  </sect1>
+
+  <sect1 xml:id="vinum-access-bottlenecks">
+    <title>Snelheid van toegang</title>
+
+    <para>Moderne systemen hebben vaak simultaan toegang tot gegevens
+      nodig.  FTP en webservers kunnen bijvoorbeeld duizenden simultane
+      sessies onderhouden en hebben vaak meerdere 100 Mbit/s
+      verbindingen met de rest van de wereld.  De benodigde
+      gegevensdoorvoer is dan groter dan de meeste schijven kunnen
+      leveren.</para>
+
+    <para>Huidige schijven kunnen gegevens sequentieel overdragen met
+      ongeveer 70 MB/s, maar deze snelheid heeft geen waarde in een
+      omgeving waar onafhankelijke processen toegang tot de schijf
+      hebben.  In zo'n situatie is het interessanter om vanuit het
+      standpunt van de schijfstuurprogramma te kijken: de belangrijkste
+      parameter is dan de belasting die een bepaalde gegevensoverdracht
+      op het stuurprogramma plaatst.  Met andere woorden: wat is het
+      tijdsbeslag van een gegevensoverdracht op te schijf?</para>
+
+    <para>Bij elke gegevensoverdracht moet de schijf eerst zijn kop
+      positioneren, wachten tot de eerste sector onder de kop doorkomt
+      en vervolgens de overdracht starten.  Deze acties duren bijzonder
+      kort.  Het heeft geen enkele zin om ze te onderbreken.</para>
+
+    <para><anchor xml:id="vinum-latency"/>Neem een overdracht van ongeveer
+      10 kB: de huidige generatie high-performance schijven kan de kop
+      in 3.5 ms plaatsen.  De snelste schijven draaien met 15.000
+      toeren per minuut, dus de gemiddelde rotatie vertraging (een
+      halve omwenteling) bedraagt 2 ms.  Met 70&nbsp;MB/s de overdracht
+      zelf duurt ongeveer 150 &mu;s, bijna niets vergeleken met de tijd
+      die verloren is gegaan aan het positioneren.  In zulke gevallen
+      daalt de gegevensoverdracht naar iets meer dan 1 MB/s en is dus
+      duidelijk afhankelijk van de grootte van de over te dragen
+      gegevens.</para>
+
+    <para>De traditionele en logische oplossing voor dit probleem is
+      <quote>meer schijven</quote>: in plaats van één
+      grote schijf, meerdere kleine schijven met een zelfde totale
+      opslagcapaciteit.  Iedere schijf is in staat om onafhankelijk de
+      kop te plaatsen en de gegevens over te dragen, dus de effectieve
+      doorvoer neemt toe met een factor bijna gelijk aan het aantal
+      schijven.</para>
+
+    <para>De exacte verbetering van de doorvoer is natuurlijk kleiner
+      dan het aantal schijven, want hoewel iedere schijf in staat is om
+      parallel de gegevens over te dragen, er is geen garantie dat de
+      gegevens gelijk over de schijven verdeeld is.  De belasting op de
+      ene schijf zal dan ook groter zijn dan op de andere schijf.</para>
+
+    <indexterm>
+      <primary>aaneenschakelen</primary>
+
+      <secondary>schijven aaneenschakelen</secondary>
+    </indexterm>
+
+    <indexterm>
+      <primary>Vinum</primary>
+
+      <secondary>aaneenschakelen</secondary>
+    </indexterm>
+
+    <indexterm><primary>RAID</primary></indexterm>
+
+    <para>Een gelijke belasting van de schijven is in grote mate
+      afhankelijk van de manier waarop gegevens over de schijven zijn
+      verdeeld.  In het volgende stuk is de opslag van een virtuele
+      schijf voor te stellen als een verzameling sectoren die met een
+      nummer aangesproken kan worden, net als bladzijden in een boek.
+      De meest voor de hand liggende methode om een virtuele schijf
+      te maken is het achter elkaar plakken van de fysieke schijven.
+      Een virtueel boek zou dan opgebouwd zijn uit verschillende achter
+      elkaar zittende fysieke hoofdstukken.  Deze methode heet
+      <emphasis>aaneenschakelen</emphasis>
+      (<quote>concatenation</quote>) en heeft het voordeel dat schijven
+      verschillend van grootte kunnen zijn.  Dit werkt prima als
+      toegang tot de gegevens gelijk verdeeld is over de hele
+      gegevensverzameling.  Als die toegang beperkt is tot een klein
+      deel van de gegevensverzameling, is de snelheidsverbetering een
+      stuk kleiner.  <xref linkend="vinum-concat"/> laat de manier zien
+      hoe aaneengeschakelde schijven hun gegevens opslaan.</para>
+
+    <para>
+      <figure xml:id="vinum-concat">
+	<title>Aaneengeschakeld georganiseerd</title>
+
+	<mediaobject><imageobject><imagedata fileref="vinum/vinum-concat"/></imageobject></mediaobject>
+      </figure></para>
+
+    <indexterm>
+      <primary>verdelen</primary>
+
+      <secondary>schijven stripen</secondary>
+    </indexterm>
+
+    <indexterm>
+      <primary>Vinum</primary>
+
+      <secondary>verdelen</secondary>
+    </indexterm>
+
+    <para>Een andere methode is het verdelen van de totale opslag van
+      de virtuele schijf in kleinere stukjes van gelijke grootte en ze
+      achter elkaar op verschillende fysieke schijven op te slaan.
+      Bijvoorbeeld: de eerste 256 sectoren worden op schijf 1
+      opgeslagen, de tweede 256 sectoren op schijf 2 enzovoort, tot de
+      laatste schijf is gebuikt, waarna weer bij schijf 1 verder wordt
+      gegaan, net zolang tot de schijven vol zijn.  Deze methode heet
+      <emphasis>verdelen</emphasis> (<quote>striping</quote>) of
+      <acronym>RAID-0</acronym>.
+
+      <footnote>
+	<para><acronym>RAID</acronym> staat voor <emphasis>Redundant
+	    Array of Inexpensive Disks</emphasis> (Redundante Reeks van
+	  Goedkope Schijven) en biedt verschillende vormen van
+	  fouttolerantie.  Hoewel die laatste term wat misleidend is:
+	  het biedt namelijk geen redundantie.</para></footnote>.
+
+      Bij RAID-0 kost het iets meer moeite om de gegevens te vinden en
+      het kan extra I/O belasting met zich meebrengen als gegevens zijn
+      verdeeld over verschillende fysieke schijven.  Het kan echter ook
+      zorgen voor een constantere belasting van die schijven.
+      <xref linkend="vinum-striped"/> geeft weer hoe RAID-0 schijven hun
+      gegevens opslaan.</para>
+
+    <para>
+      <figure xml:id="vinum-striped">
+	<title>Verdeeld georganiseerd</title>
+
+	<mediaobject><imageobject><imagedata fileref="vinum/vinum-striped"/></imageobject></mediaobject>
+      </figure></para>
+  </sect1>
+
+  <sect1 xml:id="vinum-data-integrity">
+    <title>Betrouwbaarheid van gegevens</title>
+
+    <para>Het laatste probleem met de huidige schijven is dat ze
+      onbetrouwbaar zijn.  Hoewel de betrouwbaarheid de laatste jaren
+      enorm is toegenomen, blijven schijven het vitale onderdeel van
+      een server dat waarschijnlijk als eerste kapot gaat.  Als dat
+      gebeurt kan het catastrofale gevolgen hebben: het vervangen van
+      de schijf en het terugplaatsen van de gegevens kan dagen
+      kosten.</para>
+
+    <indexterm>
+      <primary>spiegelen</primary>
+
+      <secondary>schijven spiegelen</secondary>
+    </indexterm>
+
+    <indexterm>
+      <primary>Vinum</primary>
+
+      <secondary>spiegelen</secondary>
+    </indexterm>
+
+    <indexterm><primary>RAID-1</primary></indexterm>
+
+    <para>De traditionele manier om dit te voorkomen is
+      <emphasis>spiegelen</emphasis> (<quote>mirroring</quote>): het
+      hebben van een kopie van de gegevens op een andere fysieke schijf.
+      Sinds de uitvinding van RAID niveaus staat dit bekend als
+      RAID-1.  Een schrijfactie naar de virtuele schijf gebeurt op
+      beide fysieke schijven.  Een leesactie hoeft slechts vanaf
+      één te gebeuren.  Op deze manier kan de virtuele
+      schijf dus blijven werken als één van de twee
+      fysieke schijven kapot is.</para>
+
+    <para>RAID-1 heeft twee problemen:</para>
+
+    <orderedlist>
+      <listitem>
+	<para>Prijs.  Er is twee keer zoveel schijfruimte nodig als bij
+	  een niet-redundante schijf.</para>
+      </listitem>
+
+      <listitem>
+	<para>Prestatie.  Een schrijfactie moet op twee schijven
+	  gebeuren en kost dus twee keer zoveel bandbreedte.  Een
+	  leesactie hoeft maar op één schijf te gebeuren
+	  en heeft hier dus geen last van.</para>
+      </listitem>
+    </orderedlist>
+
+    <indexterm>
+      <primary>RAID-5</primary>
+    </indexterm>
+
+    <para>Een andere manier is <emphasis>pariteit</emphasis>,
+      uitgevoerd in <acronym>RAID</acronym> niveaus 2, 3, 4 en 5.
+      Van deze vier is <acronym>RAID-5</acronym> het meest interessant.
+      In Vinum is het geïmplementeerd als een variant van een
+      verdeelde organisatie waarbij één blok van elk deel
+      is gereserveerd voor de pariteit van één van de andere
+      blokken.  Voor Vinum is een <acronym>RAID-5</acronym> samenstelling
+      (<quote>plex</quote>) dan ook gelijk aan een verdeelde
+      samenstelling, met als verschil dat het een pariteitblok bevat in
+      ieder deel.  Zoals voorgeschreven door <acronym>RAID-5</acronym>
+      wisselt de locatie van dit pariteitblok van het ene deel naar het
+      andere.  De nummers in de gegevensblokken geven de relatieve
+      bloknummers aan.</para>
+
+    <para>
+      <figure xml:id="vinum-raid5-org">
+	<title>RAID-5 georganiseerd</title>
+
+	<mediaobject><imageobject><imagedata fileref="vinum/vinum-raid5-org"/></imageobject></mediaobject>
+      </figure></para>
+
+    <para>Vergeleken met spiegelen heeft <acronym>RAID-5</acronym> het
+      voordeel dat er beduidend minder opslagcapaciteit nodig is.
+      Lezen gebeurt op dezelfde manier als bij een verdeelde
+      organisatie, maar schrijven kost beduidend meer tijd, ongeveer
+      25% van de leesprestaties meer.  Als één schijf
+      uitvalt, kan de reeks doorwerken in een <emphasis>verslechterde
+	staat</emphasis> (<quote>degraded mode</quote>): gegevens van
+      een functionerende schijf kunnen zonder problemen gelezen worden,
+      maar gegevens van de defecte schijf moeten eerst worden
+      samengesteld uit de pariteit van de overeenkomende blokken van de
+      resterende schijven.</para>
+  </sect1>
+
+  <sect1 xml:id="vinum-objects">
+    <title>Vinum objecten</title>
+
+    <para>Om deze problemen op te lossen, hanteert vinum een
+      hiërarchie met vier niveaus van objecten:</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>Het meest zichtbare object is de virtuele schijf.  Dit
+	  object wordt <emphasis>volume</emphasis> genoemd.  Op een
+	  paar kleine details na, hebben volumes dezelfde
+	  eigenschappen als een &unix; schijf.  Het belangrijkste
+	  verschil is dat er geen beperking aan de grootte van de
+	  schijf is.</para>
+      </listitem>
+
+      <listitem>
+	<para>Volumes zijn opgebouwd uit
+	  <emphasis>samenstellingen</emphasis>, die elk de totale
+	  opslagcapaciteit van het volume hebben.  Dit niveau in de
+	  hiërarchie biedt daarom redundantie.  Een samenstelling
+	  is goed voor te stellen als een individuele schijf in een
+	  <acronym>RAID-1</acronym> systeem.  Iedere schijf bevat
+	  dezelfde gegevens.</para>
+      </listitem>
+
+      <listitem>
+	<para>Omdat Vinum bestaat binnen het &unix; opslagsysteem, moet
+	  het mogelijk zijn om &unix; partities te gebruiken als
+	  bouwstenen voor samenstellingen die uit meerdere schijven
+	  bestaan.  Maar het blijkt dat dit te inflexibel is: &unix;
+	  schijven hebben een beperkt aantal partities.  In plaats
+	  daarvan verdeelt Vinum een &unix; partitie (de schijf) in
+	  aaneengesloten stukken die <emphasis>subschijven</emphasis>
+	  worden genoemd.  Deze subschijven worden vervolgens als
+	  bouwstenen voor de samenstelling gebruikt.</para>
+      </listitem>
+
+      <listitem>
+	<para>Subschijven bestaan op Vinum
+	  <emphasis>schijven</emphasis>, op dit moment &unix;
+	  partities.  Een Vinum schijf kan een oneindig aantal
+	  subschijven bevatten.  Met uitzondering van een klein stukje
+	  aan het begin van de schijf, dat wordt gebruikt om informatie
+	  over de instellingen en de toestand op te slaan, is de gehele
+	  schijf beschikbaar voor de opslag van gegevens.</para>
+      </listitem>
+    </itemizedlist>
+
+    <para>In de volgende paragrafen wordt beschreven hoe deze objecten
+      de functionaliteit van Vinum leveren.</para>
+
+    <sect2>
+      <title>Volumegrootte overwegingen</title>
+
+      <para>Een samenstelling kan meerdere subschijven bevatten die
+	uitgespreid zijn over alle schijven in de Vinum instelling.
+	Dat houdt in dat de grootte van een individuele schijf geen
+	limiet is voor de samenstelling en dus niet voor het
+	volume.</para>
+    </sect2>
+
+    <sect2>
+      <title>Redundante gegevensopslag</title>
+
+      <para>Vinum implementeert <acronym>RAID-0</acronym> door meerdere
+	samenstellingen aan een volume te koppelen.  Elke samenstelling
+	representeert hierbij de gegevens in het volume.  Een volume kan
+	tussen de één en acht samenstellingen
+	bevatten.</para>
+
+      <para>Hoewel een samenstelling de totale gegevens van een volume
+	voorstelt, is het mogelijk dat delen van deze voorstelling
+	missen, door ontwerp (door geen subschijf voor delen van de
+	samenstelling te definiëren) of per ongeluk (door een
+	defecte schijf).  Zo lang tenminste één
+	samenstelling de gegevens voor het gehele volume kan leveren, is
+	het volume volledig bruikbaar.</para>
+    </sect2>
+
+    <sect2>
+      <title>Prestaties</title>
+
+      <para>Vinum implementeert aaneenschakelen en spiegelen op het
+	niveau van de samenstelling:</para>
+
+      <itemizedlist>
+	<listitem>
+	  <para>Een aaneengeschakelde samenstelling gebruikt de
+	    adresruimte van elke subschijf achter elkaar.</para>
+	</listitem>
+
+	<listitem>
+	  <para>Een verdeelde samenstelling spreiden de gegevens over
+	    iedere subschijf.  De subschijven moeten daarvoor allemaal
+	    dezelfde grootte hebben en er moeten tenminste twee
+	    subschijven zijn om onderscheid te kunnen maken met een
+	    aaneengeschakelde samenstelling.</para>
+	</listitem>
+      </itemizedlist>
+    </sect2>
+
+    <sect2>
+      <title>Welke samenstelling?</title>
+
+      <para>De versie van Vinum die met &os;&nbsp;&rel.current; wordt
+	meegeleverd, kent twee soorten samenstellingen:</para>
+
+      <itemizedlist>
+	<listitem>
+	  <para>Aaneengeschakelde samenstellingen zijn het meest
+	    flexibel: ze kunnen een oneindig aantal subschijven
+	    bevatten die verschillend van lengte mogen zijn.  De
+	    samenstelling kan uitgebreid worden door subschijven toe te
+	    voegen.  Ze kosten minder <acronym>CPU</acronym> tijd dan
+	    verdeelde samenstellingen, hoewel het verschil van de
+	    <acronym>CPU</acronym> belasting niet meetbaar is.  Aan de
+	    andere kant, ze zijn het meest kwetsbaar voor
+	    <quote>hot-spots</quote>, waar één schijf
+	    heel intensief gebruikt wordt en anderen ongebruikt
+	    blijven.</para>
+	</listitem>
+
+	<listitem>
+	  <para>Het grootste voordeel van verdeelde samenstellingen
+	    (<acronym>RAID-0</acronym>) is dat ze geen
+	    <quote>hot-spots</quote> hebben.  Door het kiezen van een
+	    optimale deelgrootte (veelal 256 kB) kan de belasting op de
+	    fysieke schijven gelijk getrokken worden.  De nadelen van
+	    deze aanpak zijn (minuscuul) complexere code en beperkingen
+	    aan de subschijven: ze moeten allemaal van gelijke grootte
+	    zijn en het uitbreiden van een samenstelling met extra
+	    subschijven is zo gecompliceerd, dat de huidige versie van
+	    Vinum dit niet ondersteunt.  Vinum voegt een extra,
+	    triviale, beperking toe: een verdeelde samenstelling moet
+	    tenminste twee subschijven hebben, omdat die anders niet
+	    onderscheiden kan worden van een aaneengeschakelde
+	    samenstelling.</para>
+	</listitem>
+      </itemizedlist>
+
+      <para>In <xref linkend="vinum-comparison"/> worden de voor- en
+	nadelen van elke samenstelling samengevat.</para>
+
+      <table xml:id="vinum-comparison" frame="none">
+	<title>Vinum samenstellingen</title>
+
+	<tgroup cols="5">
+	  <thead>
+	    <row>
+	      <entry>Samenstellingtype</entry>
+
+	      <entry>Minimaal aantal subschijven</entry>
+
+	      <entry>Subschijven toevoegen</entry>
+
+	      <entry>Gelijke grootte</entry>
+
+	      <entry>Toepassing</entry>
+	    </row>
+	  </thead>
+
+	  <tbody>
+	    <row>
+	      <entry>aaneengeschakeld</entry>
+
+	      <entry>1</entry>
+
+	      <entry>ja</entry>
+
+	      <entry>nee</entry>
+
+	      <entry>Veel gegevensopslag met maximale flexibiliteit en
+		gemiddelde performance.</entry>
+	    </row>
+
+	    <row>
+	      <entry>verdeeld</entry>
+
+	      <entry>2</entry>
+
+	      <entry>nee</entry>
+
+	      <entry>ja</entry>
+
+	      <entry>Hoge prestaties, ook bij veel gelijktijdige
+		toegang.</entry>
+	    </row>
+	  </tbody>
+	</tgroup>
+      </table>
+    </sect2>
+  </sect1>
+
+  <sect1 xml:id="vinum-examples">
+    <title>Voorbeelden</title>
+
+    <para>Vinum houdt een <emphasis>instellingendatabase</emphasis>
+      bij waarin beschreven staat welke objecten bekend zijn in het
+      systeem.  Bij het instellen vult de gebruiker deze database uit
+      één of meer instellingenbestanden met behulp van
+      het hulpprogramma &man.gvinum.8;.  Vinum bewaart een kopie van de
+      database op iedere slice (die Vinum <emphasis>apparaat</emphasis>
+      noemt) die door Vinum wordt beheerd.  Deze database wordt na
+      iedere statuswijziging bijgewerkt, zodat een na een herstart
+      accuraat de toestand van ieder Vinum object wordt weergegeven.</para>
+
+    <sect2>
+      <title>Het instellingenbestand</title>
+
+      <para>Het instellingenbestand beschrijft de individuele vinum
+	objecten.  De definitie van een eenvoudig volume kan er zo
+	uitzien:</para>
+
+      <programlisting>drive a device /dev/da3h
+    volume myvol
+      plex org concat
+        sd length 512m drive a</programlisting>
+
+      <para>Dit bestand beschrijft vier Vinum objecten:</para>
+
+      <itemizedlist>
+	<listitem>
+	  <para>De <emphasis>drive</emphasis> regel beschrijft een
+	    partitie (<emphasis>drive</emphasis>) en de relatieve
+	    positie ten opzichte van de onderliggende hardware.  Het
+	    heeft de symbolische naam <emphasis>a</emphasis>.  Deze
+	    scheiding van de symbolische naam van de schijf maakt het
+	    mogelijk om schijven te verplaatsen van de ene locatie naar
+	    de andere, zonder verwarring te veroorzaken.</para>
+	</listitem>
+
+	<listitem>
+	  <para>De <emphasis>volume</emphasis> regel beschrijft een
+	    volume.  Het enige benodigde attribuut is de naam:
+	    <emphasis>myvol</emphasis>.</para>
+	</listitem>
+
+	<listitem>
+	  <para>De <emphasis>plex</emphasis> regel beschrijft een
+	    samenstelling.  Het enige benodigde attribuut is de
+	    organisatie, in dit geval <emphasis>concat</emphasis>.  Er
+	    is geen naam nodig: het systeem genereert automatisch een
+	    naam door <emphasis>.p</emphasis><emphasis>x</emphasis> aan
+	    de volumenaam toe te voegen, waarbij <emphasis>x</emphasis>
+	    het nummer van de samenstelling in het volume is.  De naam
+	    van deze samenstelling wordt dus
+	    <emphasis>myvol.p0</emphasis>.</para>
+	</listitem>
+
+	<listitem>
+	  <para>De <emphasis>sd</emphasis> regel beschrijft een
+	    subschijf.  De minimale specificaties zijn de naam van een
+	    schijf waar de subschijf kan worden opgeslagen en de lengte
+	    van de subschijf.  Net als bij een samenstelling is er geen
+	    naam nodig: het systeem genereert automatisch een naam door
+	    <emphasis>.s</emphasis><emphasis>x</emphasis> aan de
+	    samenstellingnaam toe te voegen, waarbij
+	    <emphasis>x</emphasis> het nummer van de subschijf is.  De
+	    naam van deze subschijf is dus
+	    <emphasis>myvol.p0.s0</emphasis>.</para>
+	</listitem>
+      </itemizedlist>
+
+      <para>Na het verwerken van dit bestand ziet de uitvoer van
+	&man.gvinum.8; er als volgt uit:</para>
+
+      <programlisting width="97">
+      &prompt.root; gvinum -&gt; <userinput>create config1</userinput>
+      Configuration summary
+      Drives:       1 (4 configured)
+      Volumes:       1 (4 configured)
+      Plexes:       1 (8 configured)
+      Subdisks:      1 (16 configured)
+
+       D a                  State: up       Device /dev/da3h       Avail: 2061/2573 MB (80%)
+
+       V myvol              State: up       Plexes:      1  Size:       512 MB
+
+       P myvol.p0          C State: up       Subdisks:    1  Size:       512 MB
+
+       S myvol.p0.s0         State: up       PO:        0 B Size:       512 MB</programlisting>
+
+      <para>Deze uitvoer geeft de korte uitvoer van &man.gvinum.8; weer.
+	Het is grafisch weergegeven in
+	<xref linkend="vinum-simple-vol"/>.</para>
+
+      <para>
+	<figure xml:id="vinum-simple-vol">
+	  <title>Een eenvoudig Vinum volume</title>
+
+	  <mediaobject><imageobject><imagedata fileref="vinum/vinum-simple-vol"/></imageobject></mediaobject>
+	</figure></para>
+
+      <para>Deze en de volgende figuren stellen een volume voor dat
+	samenstellingen bevat die weer de subschijven bevatten.  In dit
+	triviale voorbeeld bevat het volume een samenstelling en deze
+	samenstelling bevat een subschijf.</para>
+
+      <para>Dit speciale volume heeft geen voordeel boven een gewone
+	schijf partitie.  Het bevat één samenstelling, dus
+	het is niet redundant.  De samenstelling bevat
+	één subschijf, dus er is geen verschil in de
+	plaats van de gegevens met een conventionele schijfpartitie.  In
+	de volgende paragrafen worden meer interessante instellingen
+	getoond.</para>
+    </sect2>
+
+    <sect2>
+      <title>Verbeterde betrouwbaarheid: spiegelen</title>
+
+      <para>De betrouwbaarheid van een volume wordt vergroot door
+	spiegelen.  Bij het opzetten van een gespiegeld volume is het
+	van belang dat subschijven van iedere samenstelling op een
+	andere schijf staan, zodat een defecte schijf niet beide
+	samenstellingen beïnvloedt.  De volgende instelling maakt
+	een gespiegeld volume:</para>
+
+      <programlisting>drive b device /dev/da4h
+       volume mirror
+      plex org concat
+       sd length 512m drive a
+         plex org concat
+           sd length 512m drive b</programlisting>
+
+      <para>In dit voorbeeld was het niet nodig om schijf
+	<emphasis>a</emphasis> opnieuw te definiëren, omdat Vinum
+	alle objecten bijhoudt in de instellingendatabase.  Na het
+	verwerken van deze definitie, ziet de instelling er als volgt
+	uit:</para>
+
+      <programlisting width="97">
+        Drives:        2 (4 configured)
+        Volumes:        2 (4 configured)
+        Plexes:        3 (8 configured)
+        Subdisks:      3 (16 configured)
+
+        D a                    State: up        Device /dev/da3h        Avail: 1549/2573 MB (60%)
+        D b                    State: up        Device /dev/da4h        Avail: 2061/2573 MB (80%)
+
+    V myvol              State: up        Plexes:      1  Size:        512 MB
+    V mirror             State: up        Plexes:      2  Size:        512 MB
+
+    P myvol.p0         C State: up        Subdisks:    1  Size:        512 MB
+    P mirror.p0        C State: up        Subdisks:    1  Size:        512 MB
+    P mirror.p1        C State: initializing     Subdisks:     1 Size:        512 MB
+
+    S myvol.p0.s0        State: up        PO:        0 B  Size:        512 MB
+    S mirror.p0.s0        State: up        PO:        0 B  Size:        512 MB
+    S mirror.p1.s0        State: empty    PO:        0 B  Size:        512 MB</programlisting>
+
+      <para>Het is grafisch weergegeven in
+	<xref linkend="vinum-mirrored-vol"/>.</para>
+
+      <para>
+	<figure xml:id="vinum-mirrored-vol">
+	  <title>Een gespiegeld Vinum volume</title>
+
+	  <mediaobject><imageobject><imagedata fileref="vinum/vinum-mirrored-vol"/></imageobject></mediaobject>
+	</figure></para>
+
+      <para>In dit voorbeeld bevat iedere samenstelling de volledige 512
+	MB van de opslagcapaciteit.  Net als in het vorige voorbeeld
+	bevat iedere samenstelling slechts één
+	subschijf.</para>
+    </sect2>
+
+    <sect2>
+      <title>Verbeterde prestatie</title>
+
+      <para>Het gespiegelde volume in het vorige voorbeeld is beter
+	bestand tegen hardware fouten dan een niet-gespiegeld volume,
+	maar de prestaties zijn lager: iedere schrijfactie naar het
+	volume moet op beide schijven worden uitgevoerd, waardoor een
+	groter deel van de bandbreedte van de schijf nodig is.  Als
+	prestaties een belangrijke rol spelen, moet er een andere
+	benadering gekozen worden: in plaats van spiegelen worden de
+	gegevens verdeeld over zoveel mogelijk schijven.  De volgende
+	instelling laat een volume zien waarbij een samenstelling
+	over vier schijven verdeeld is:</para>
+
+      <programlisting>drive c device /dev/da5h
+      drive d device /dev/da6h
+      volume stripe
+      plex org striped 512k
+        sd length 128m drive a
+        sd length 128m drive b
+        sd length 128m drive c
+        sd length 128m drive d</programlisting>
+
+      <para>Zoals eerder al te zien was, is het niet nodig om schijven
+	die al bekend zijn bij Vinum opnieuw te definiëren.  Na
+	het verwerken van deze definitie, ziet de instelling er zo
+	uit:</para>
+
+      <programlisting width="92">
+      Drives:             4 (4 configured)
+      Volumes:        3 (4 configured)
+      Plexes:             4 (8 configured)
+      Subdisks:      7 (16 configured)
+
+   D a                    State: up        Device /dev/da3h        Avail: 1421/2573 MB (55%)
+   D b                    State: up        Device /dev/da4h        Avail: 1933/2573 MB (75%)
+   D c                    State: up        Device /dev/da5h        Avail: 2445/2573 MB (95%)
+   D d                    State: up        Device /dev/da6h        Avail: 2445/2573 MB (95%)
+
+   V myvol                State: up        Plexes:      1  Size:        512 MB
+   V mirror               State: up        Plexes:      2  Size:        512 MB
+   V striped              State: up        Plexes:      1  Size:        512 MB
+
+   P myvol.p0           C State: up        Subdisks:    1  Size:        512 MB
+   P mirror.p0          C State: up        Subdisks:    1  Size:        512 MB
+   P mirror.p1          C State: initializing     Subdisks:     1 Size:        512 MB
+   P striped.p1           State: up        Subdisks:    1  Size:        512 MB
+
+   S myvol.p0.s0          State: up        PO:        0 B  Size:        512 MB
+   S mirror.p0.s0         State: up        PO:        0 B  Size:        512 MB
+   S mirror.p1.s0         State: empty     PO:        0 B  Size:        512 MB
+   S striped.p0.s0        State: up        PO:        0 B  Size:        128 MB
+   S striped.p0.s1        State: up        PO:      512 kB Size:        128 MB
+   S striped.p0.s2        State: up        PO:     1024 kB Size:        128 MB
+   S striped.p0.s3        State: up        PO:     1536 kB Size:        128 MB</programlisting>
+
+      <para>
+	<figure xml:id="vinum-striped-vol">
+	  <title>Een verdeeld Vinum volume</title>
+
+	  <mediaobject><imageobject><imagedata fileref="vinum/vinum-striped-vol"/></imageobject></mediaobject>
+	</figure></para>
+
+      <para>Dit volume wordt weergegeven in
+	<xref linkend="vinum-striped-vol"/>.  De grijstinten geven de
+	positie binnen de samenstelling aan: de lichtste strepen komen
+	het eerst, de donkerste het laatst.</para>
+    </sect2>
+
+    <sect2>
+      <title>Betrouwbaarheid en prestaties</title>
+
+      <para><anchor xml:id="vinum-resilience"/>Met voldoende hardware is het
+	mogelijk om een volume te bouwen met zowel verbeterde
+	betrouwbaarheid als verbeterde prestaties ten opzichte van een
+	standaard &unix; partitie.  De volgende instelling is een
+	voorbeeld van zo'n volume:</para>
+
+      <programlisting>volume raid10
+      plex org striped 512k
+        sd length 102480k drive a
+        sd length 102480k drive b
+        sd length 102480k drive c
+        sd length 102480k drive d
+        sd length 102480k drive e
+      plex org striped 512k
+        sd length 102480k drive c
+        sd length 102480k drive d
+        sd length 102480k drive e
+        sd length 102480k drive a
+        sd length 102480k drive b</programlisting>
+
+      <para>De subschijven van de tweede samenstelling zijn twee
+	schijven verschoven ten opzichte van die van de eerste
+	samenstelling.  Dit zorgt ervoor dat een schrijfactie niet naar
+	dezelfde schijven gaat, zelfs niet als die schrijfactie over
+	twee schijven plaatsvindt.</para>
+
+      <para><xref linkend="vinum-mirrored-vol"/> laat deze instelling
+	zien in grafische vorm.</para>
+
+      <para>
+	<figure xml:id="vinum-raid10-vol">
+	  <title>Een gespiegeld en verdeeld Vinum volume</title>
+
+	  <mediaobject><imageobject><imagedata fileref="vinum/vinum-raid10-vol"/></imageobject></mediaobject>
+	</figure></para>
+    </sect2>
+  </sect1>
+
+  <sect1 xml:id="vinum-object-naming">
+    <title>Objectnamen</title>
+
+    <para>Zoals eerder in dit hoofdstuk beschreven staat, kent Vinum
+      standaardnamen toe aan samenstellingen en subschijven.  Er mag
+      echter een andere naam aan gegeven worden.  Een andere naamgeving
+      wordt niet aangeraden: ervaring met de VERITAS volumebeheerder,
+      die een willekeurige object benaming toestaat, heeft laten zien
+      dat deze flexibiliteit geen beduidend voordeel heeft, terwijl het
+      de kans op verwarring vergroot.</para>
+
+    <para>Namen mogen bestaan uit alle karakters, behalve de spatie,
+      maar het wordt aanbevolen om alleen letters, cijfers en het
+      liggende streepje te gebruiken.  De namen van de volumes,
+      samenstellingen en subschijven kunnen 64 tekens lang zijn en de
+      namen van schijven kunnen 32 tekens lang zijn.</para>
+
+    <para>Vinum objecten worden apparaatknooppunten toegekend in de
+      hiërarchie <filename>/dev/gvinum</filename>.  Met
+      de instellingen uit de vorige paragraaf creërt Vinum de volgende
+      apparaatknooppunten:</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>Karakterapparaatingangen voor elk volume.  Dit zijn de
+	  primaire apparaten die door Vinum gebruikt worden.  De
+	  bovenstaande configuratie zou dus deze apparaten bevatten:
+	  <filename>/dev/gvinum/myvol</filename>,
+	  <filename>/dev/gvinum/mirror</filename>,
+	  <filename>/dev/gvinum/striped</filename>,
+	  <filename>/dev/gvinum/raid5</filename> en
+	  <filename>/dev/gvinum/raid10</filename>.</para>
+      </listitem>
+
+      <listitem>
+	<para>Alle volumes krijgen ingangen direct onder
+	  <filename>/dev/gvinum/</filename>.</para>
+      </listitem>
+
+      <listitem>
+	<para>De mappen
+	  <filename>/dev/gvinum/plex</filename>, en
+	  <filename>/dev/gvinum/sd</filename>, welke
+	  respectievelijk apparaatknooppunten voor elke plex en voor elke
+	  subschijf bevatten.</para>
+      </listitem>
+    </itemizedlist>
+
+    <para>Dit is een volgend voorbeeld:</para>
+
+    <programlisting>drive drive1 device /dev/sd1h
+        drive drive2 device /dev/sd2h
+        drive drive3 device /dev/sd3h
+        drive drive4 device /dev/sd4h
+    volume s64 setupstate
+      plex org striped 64k
+        sd length 100m drive drive1
+        sd length 100m drive drive2
+        sd length 100m drive drive3
+        sd length 100m drive drive4</programlisting>
+
+    <para>Na verwerking van dit bestand maakt &man.gvinum.8; de volgende
+      structuur aan in <filename>/dev/gvinum</filename>:</para>
+
+    <programlisting>drwxr-xr-x  2 root  wheel      512 Apr 13 16:46 plex
+        crwxr-xr--  1 root  wheel  91,   2 Apr 13 16:46 s64
+        drwxr-xr-x  2 root  wheel      512 Apr 13 16:46 sd
+
+
+      /dev/vinum/plex:
+  total 0
+  crwxr-xr--  1 root  wheel  25, 0x10000002 Apr 13 16:46 s64.p0
+
+      /dev/vinum/sd:
+  total 0
+  crwxr-xr--  1 root  wheel  91, 0x20000002 Apr 13 16:46 s64.p0.s0
+  crwxr-xr--  1 root  wheel  91, 0x20100002 Apr 13 16:46 s64.p0.s1
+  crwxr-xr--  1 root  wheel  91, 0x20200002 Apr 13 16:46 s64.p0.s2
+  crwxr-xr--  1 root  wheel  91, 0x20300002 Apr 13 16:46 s64.p0.s3</programlisting>
+
+    <para>Hoewel het wordt aangeraden om samenstellingen en subschijven
+      geen naam mee te geven, moeten Vinum schijven een naam hebben.
+      Hierdoor kan een schijf naar een andere locatie verplaatst worden
+      terwijl hij nog steeds automatisch herkend wordt.  Schijfnamen
+      mogen maximaal 32 tekens lang zijn.</para>
+
+    <sect2>
+      <title>Bestandssystemen maken</title>
+
+      <para>Volumes lijken voor het systeem identiek aan schijven, met
+	één uitzondering: in tegenstelling tot &unix;
+	schijven partitioneert Vinum het volume niet en het bevat dus
+	geen partitietabel.  Daarom was het nodig een paar
+	schijfhulpprogramma's te veranderen, met name &man.newfs.8;, dat
+	voorheen probeerde om de laatste letter van een Vinum
+	volumenaam als een partitie te zien.  Bijvoorbeeld: een schijf
+	kan een naam hebben als <filename>/dev/ad0a</filename> of <filename>/dev/da2h</filename>.  Deze namen stellen
+	respectievelijk de eerste partitie (<filename>a</filename>)
+	op de eerste (0) IDE schijf (<filename>ad</filename>) en de
+	achtste partitie (<filename>h</filename>) op de derde (2)
+	SCSI schijf (<filename>da</filename>) voor.  Een Vinum
+	volume kan daarentegen <filename>/dev/gvinum/concat</filename>
+	heten, een naam die geen enkele relatie met een partitienaam
+	heeft.</para>
+
+      <para>Gebruik &man.newfs.8; om een bestandssysteem op dit volume
+	aan te maken:</para>
+
+      <screen>&prompt.root; <userinput>newfs /dev/gvinum/concat</userinput></screen>
+    </sect2>
+  </sect1>
+
+  <sect1 xml:id="vinum-config">
+    <title>Vinum instellen</title>
+
+    <para>De <filename>GENERIC</filename> kernel bevat geen Vinum.  Het
+      is mogelijk een kernel te bouwen waar Vinum in zit, maar dit
+      wordt niet aangeraden.  De standaard manier om Vinum te starten
+      is als kernelmodule (<acronym>kld</acronym>).  Het is zelfs niet
+      nodig om &man.kldload.8; te gebruiken voor Vinum.  Als
+      &man.gvinum.8; wordt gestart en de module is niet geladen, dan
+      gebeurt dit alsnog automatisch.</para>
+
+    <sect2>
+      <title>Opstarten</title>
+
+      <para>Vinum slaat de instellingeninformatie op de schijfslices op
+	in ongeveer dezelfde vorm als de instellingenbestanden.  Bij
+	het lezen van de instellingendatabase herkent Vinum een aantal
+	sleutelwoorden die niet zijn toegestaan in
+	instellingenbestanden.  Een schijfinstelling kan bijvoorbeeld
+	de volgende tekst bevatten:</para>
+
+      <programlisting width="119">volume myvol state up
+volume bigraid state down
+plex name myvol.p0 state up org concat vol myvol
+plex name myvol.p1 state up org concat vol myvol
+plex name myvol.p2 state init org striped 512b vol myvol
+plex name bigraid.p0 state initializing org raid5 512b vol bigraid
+sd name myvol.p0.s0 drive a plex myvol.p0 state up len 1048576b driveoffset 265b plexoffset 0b
+sd name myvol.p0.s1 drive b plex myvol.p0 state up len 1048576b driveoffset 265b plexoffset 1048576b
+sd name myvol.p1.s0 drive c plex myvol.p1 state up len 1048576b driveoffset 265b plexoffset 0b
+sd name myvol.p1.s1 drive d plex myvol.p1 state up len 1048576b driveoffset 265b plexoffset 1048576b
+sd name myvol.p2.s0 drive a plex myvol.p2 state init len 524288b driveoffset 1048841b plexoffset 0b
+sd name myvol.p2.s1 drive b plex myvol.p2 state init len 524288b driveoffset 1048841b plexoffset 524288b
+sd name myvol.p2.s2 drive c plex myvol.p2 state init len 524288b driveoffset 1048841b plexoffset 1048576b
+sd name myvol.p2.s3 drive d plex myvol.p2 state init len 524288b driveoffset 1048841b plexoffset 1572864b
+sd name bigraid.p0.s0 drive a plex bigraid.p0 state initializing len 4194304b driveoff set 1573129b plexoffset 0b
+sd name bigraid.p0.s1 drive b plex bigraid.p0 state initializing len 4194304b driveoff set 1573129b plexoffset 4194304b
+sd name bigraid.p0.s2 drive c plex bigraid.p0 state initializing len 4194304b driveoff set 1573129b plexoffset 8388608b
+sd name bigraid.p0.s3 drive d plex bigraid.p0 state initializing len 4194304b driveoff set 1573129b plexoffset 12582912b
+sd name bigraid.p0.s4 drive e plex bigraid.p0 state initializing len 4194304b driveoff set 1573129b plexoffset 16777216b</programlisting>
+
+      <para>Duidelijke verschillen zijn de aanwezigheid van expliciete
+	locatie informatie en namen (beide zijn toegestaan, maar worden
+	afgeraden) en informatie over de toestand (die niet beschikbaar
+	is voor de gebruiker).  Vinum slaat geen informatie over
+	schijven op in de instellingen: het vindt de schijven door de
+	ingestelde schijven te scannen naar partities met een
+	vinum label.  Hierdoor kan Vinum zelfs schijven detecteren als
+	ze aan een andere &unix; schijf worden toegekend.</para>
+
+      <sect3 xml:id="vinum-rc-startup">
+	<title>Automatisch opstarten</title>
+
+	<para><emphasis>Gvinum</emphasis> start altijd automatisch op
+	  wanneer de kernelmodule eenmaal is geladen, via
+	  &man.loader.conf.5;.  Voeg
+	  <literal>geom_vinum_load="YES"</literal> toe aan
+	  <filename>/boot/loader.conf</filename> om de module
+	  <emphasis>GVinum</emphasis> tijdens het opstarten te
+	  laden.</para>
+
+	<para>Als Vinum met <command>gvinum start</command> wordt
+	  gestart, leest Vinum de instellingendatabase van
+	  één van de Vinum schijven.  Normaal gesproken
+	  bevat iedere schijf een identieke kopie van de
+	  instellingendatabase.  Het maakt dus niet uit welke schijf
+	  gelezen wordt.  Na een crash moet Vinum echter bepalen welke
+	  schijf het laatst is bijgewerkt en de instellingen van die
+	  schijf gebruiken.  Als het nodig is worden de instellingen
+	  van de oudere schijven daarna bijgewerkt, in volgorde van
+	  leeftijd.</para>
+      </sect3>
+    </sect2>
+  </sect1>
+
+  <sect1 xml:id="vinum-root">
+    <title>Het rootbestandssysteem op Vinum</title>
+
+    <para>Bij een machine die een volledig gespiegeld bestandssysteem
+      heeft, is het wenselijk ook het rootbestandssysteem te spiegelen.
+      Het bouwen van zo'n instelling is niet zo rechttoe-rechtaan als
+      bij een ander bestandssysteem omdat:</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>Het rootbestandssysteem al heel snel beschikbaar moet zijn
+	  tijdens het opstartproces, dus de Vinum infrastructuur moet
+	  dan al beschikbaar zijn.</para>
+      </listitem>
+
+      <listitem>
+	<para>Het volume met het rootbestandssysteem bevat ook de
+	  bootstrap en de kernel, die gelezen moeten worden door de
+	  eigen systeemprogramma's (bijvoorbeeld de BIOS op PC's), die
+	  meestal ingesteld kunnen worden om Vinum te gebruiken.</para>
+      </listitem>
+    </itemizedlist>
+
+    <para>In de volgende paragrafen wordt de term
+      <quote>rootvolume</quote> gebruikt voor het Vinum volume dat het
+      rootbestandssysteem bevat.  Het is waarschijnlijk een goed idee om
+      de naam <literal>root</literal> te gebruiken voor dit volume, maar
+      dit is niet technisch noodzakelijk.  Alle commandovoorbeelden in
+      de volgende stukken gaan echter uit van deze naam.</para>
+
+    <sect2>
+      <title>Vinum op tijd starten voor het rootbestandssysteem</title>
+
+      <para>Om dit te bereiken, moeten een aantal stappen worden
+	doorlopen:</para>
+
+      <itemizedlist>
+	<listitem>
+	  <para>Vinum moet beschikbaar zijn voor de kernel tijdens
+	    het opstarten.  De methode zoals beschreven in
+	    <xref linkend="vinum-rc-startup"/> is dus niet geschikt en
+	    de <literal>start_vinum</literal> parameter mag zelfs
+	    <emphasis>niet</emphasis> aanwezig zijn als de volgende
+	    opzet wordt gebruikt.  De eerste optie is Vinum statisch
+	    in de kernel te compileren, zodat het altijd beschikbaar
+	    is.  Maar die is vaak niet wenselijk.  Er is nog een
+	    mogelijkheid door <filename>/boot/loader</filename>
+	    (<xref linkend="boot-loader"/>) de Vinum kernel module te
+	    laten laden, voordat de kernel gestart wordt.  Dit wordt
+	    gedaan door de volgende regel in
+	    <filename>/boot/loader.conf</filename> op te nemen:</para>
+
+	  <programlisting>gvinum_load="YES"</programlisting>
+	</listitem>
+
+	<listitem>
+	  <para>Voor <emphasis>Gvinum</emphasis> wordt alles
+	    automatisch opgestart nadat de kernelmodule eenmaal is
+	    geladen, dus is alleen de procedure die hierboven is
+	    beschreven nodig.</para>
+	</listitem>
+      </itemizedlist>
+    </sect2>
+
+    <sect2>
+      <title>Een Vinum rootvolume beschikbaar maken voor
+	bootstrap</title>
+
+      <para>Omdat de huidige &os; bootstrap maar 7,5 KB code bevat en
+	al belast is met het lezen van bestanden (zoals
+	<filename>/boot/loader</filename>) van het UFS bestandssysteem,
+	is het bijna onmogelijk om het ook te leren hoe Vinum
+	informatie gelezen moet worden en deze dan te gebruiken om de
+	elementen van het bootvolume samen te stellen.  Er zijn daarom
+	een paar trucs nodig om de bootstrapcode wijs te maken dat er
+	een standaard <literal>"a"</literal> partitie aanwezig is met
+	het rootbestandssysteem.</para>
+
+      <para>Om dit mogelijk te maken, moet het rootvolume aan de
+	volgende eisen voldoen:</para>
+
+      <itemizedlist>
+	<listitem>
+	  <para>Het rootvolume mag niet verdeeld of RAID-5 zijn.</para>
+	</listitem>
+
+	<listitem>
+	  <para>Het rootvolume mag niet meer dan één
+	    aaneengeschakelde subschijf per samenstelling
+	    bevatten.</para>
+	</listitem>
+      </itemizedlist>
+
+      <para>Het is mogelijk en wenselijk om meer dan één
+	samenstelling te hebben, ieder met een replica van het
+	rootbestandssysteem.  Het bootstrapproces gebruikt wel maar
+	één van deze replica's om de bootstrap en alle
+	andere bestanden te vinden, tot het moment dat de kernel het
+	rootbestandssysteem laadt.  Iedere subschijf binnen deze
+	samenstellingen heeft dus zijn eigen <literal>"a"</literal>
+	partitievoorstelling nodig om dit apparaat opstartbaar te maken.
+	Het is niet verplicht dat iedere voorgestelde
+	<literal>"a"</literal> partitie op dezelfde offset is geplaatst
+	binnen het apparaat, vergeleken met andere apparaten die
+	samenstellingen van het rootvolume bevatten.  Het is wel een
+	goed idee om op die manier Vinum volumes te maken, zodat de
+	resulterende gespiegelde apparaten symmetrisch zijn.  Dit om
+	verwarring te voorkomen.</para>
+
+      <para>Om deze <literal>"a"</literal> partities voor ieder
+	apparaat dat een deel van het rootvolume bevat te maken, moet
+	het volgende worden gedaan:</para>
+
+      <procedure>
+	<step>
+	  <para>De locatie (offset vanaf het begin van het apparaat) en
+	    de grootte van de subschijf die onderdeel is van het
+	    rootvolume moet als volgt bekeken worden:</para>
+
+	  <screen>&prompt.root; <userinput>gvinum l -rv root</userinput></screen>
+
+	  <note><para>De Vinum offsets en groottes worden aangegeven in
+	    bytes.  Ze moeten door 512 worden gedeeld om de bloknummers
+	    te krijgen die in <command>bsdlabel</command> moeten
+	    worden gebruikt.</para></note>
+	</step>
+
+	<step>
+	  <para>Voor elk apparaat dat deelneemt aan het
+	    rootbestandssysteem moet het onderstaande command
+	    uitgevoerd worden:</para>
+
+	  <screen>&prompt.root; <userinput>bsdlabel -e apparaatnaam</userinput></screen>
+
+	  <para><replaceable>apparaatnaam</replaceable> moet of de naam
+	    van een schijf (zoals <filename>da0</filename>) voor
+	    schijven zonder slice-tabel zijn (ook wel: fdisk), of de
+	    naam van de slice zijn (zoals
+	    <filename>ad0s1</filename>).</para>
+
+	  <para>Als er al een <literal>"a"</literal> partitie op het
+	    apparaat aanwezig is (waarschijnlijk met een pre-Vinum
+	    rootbestandssysteem), moet die eerst worden hernoemd,
+	    zodat het wel toegankelijk blijft (voor de zekerheid), maar
+	    niet langer gebruikt wordt om het systeem van op te
+	    starten.  Actieve partities (zoals een rootbestandssysteem
+	    dat op dit moment aangekoppeld is) kan geen andere naam
+	    gegeven worden.  Dit moet dus gebeuren als het systeem vanaf
+	    een <quote>Fixit</quote> medium opgestart is of in twee
+	    stappen, waar (in een gespiegelde situatie) de schijf waar
+	    niet van opgestart is als eerste wordt aangepast.</para>
+
+	  <para>Daarna moet de offset van de Vinum partitie op dit
+	    apparaat (als het bestaat) opgeteld worden bij de offset
+	    van de rootvolume subschijf op dit apparaat.  De
+	    resulterende waarde wordt de <literal>"offset"</literal>
+	    waarde voor de nieuwe <literal>"a"</literal> partitie.  De
+	    <literal>"size"</literal> waarde voor deze partitie kan
+	    worden gehaald uit bovenstaande berekening.  De
+	    <literal>"fstype"</literal> wordt
+	    <literal>4.2BSD</literal>.  De <literal>"fsize"</literal>,
+	    <literal>"bsize"</literal> en <literal>"cpg"</literal>
+	    waardes moeten zo goed mogelijk worden gekozen om een
+	    daadwerkelijk bestandssysteem na te bootsen, hoewel ze
+	    vrij onbelangrijk zijn in deze context.</para>
+
+	  <para>Op deze manier wordt een nieuwe <literal>"a"</literal>
+	    partitie gemaakt dat de Vinum partitie op dit apparaat
+	    overlapt.  Het <command>bsdlabel</command> staat deze
+	    overlap alleen toe als de Vinum partitie gemarkeerd is met
+	    het bestandssysteemtype <literal>"vinum"</literal>.</para>
+	</step>
+
+	<step>
+	  <para>Dat is het!  Er bestaat nu een nep
+	    <literal>"a"</literal> partitie op ieder apparaat dat een
+	    replica van het rootvolume heeft.  Het is aan te bevelen
+	    om de resultaten nogmaals te verifiëren met iets
+	    als:</para>
+
+	  <screen>&prompt.root; <userinput>fsck -n /dev/devnaama</userinput></screen>
+	</step>
+      </procedure>
+
+      <note>
+	<para>Alle bestanden die controle informatie bevatten
+	  moeten relatief zijn ten opzichte van het
+	  rootbestandssysteem in het Vinum volume dat, bij het
+	  creëren van een Vinum volume, niet overeen hoeft te komen
+	  met het rootbestandssysteem dat op dit moment in gebruik is.
+	  Dit geldt in het bijzonder voor
+	  <filename>/etc/fstab</filename> en
+	  <filename>/boot/loader.conf</filename>.</para>
+      </note>
+
+      <para>Bij de volgende herstart zou de bootstrap de juiste
+	controle informatie moeten vinden in het nieuwe, op Vinum
+	gebaseerde, rootbestandssysteem en moeten starten.  Aan het
+	einde van het kernel initialisatie proces, nadat alle apparaten
+	aangemeld zijn, geeft het volgende bericht aan dat het opzetten
+	gelukt is:</para>
+
+      <screen>Mounting root from ufs:/dev/gvinum/root</screen>
+    </sect2>
+
+    <sect2>
+      <title>Een op Vinum gebaseerde rootinstallatie</title>
+
+      <para>Nadat het Vinum rootvolume is opgezet, geeft
+	<command>gvinum l -rv root</command> een volgend
+	resultaat:</para>
+
+      <screen>...
+Subdisk root.p0.s0:
+                Size:        125829120 bytes (120 MB)
+                State: up
+                Plex root.p0 at offset 0 (0 B)
+                Drive disk0 (/dev/da0h) at offset 135680 (132 kB)
+
+Subdisk root.p1.s0:
+                Size:        125829120 bytes (120 MB)
+                State: up
+                Plex root.p1 at offset 0 (0 B)
+                Drive disk1 (/dev/da1h) at offset 135680 (132 kB)</screen>
+
+      <para>De interessante waarden zijn <literal>135680</literal> voor
+	de offset (relatief ten opzichte van de partitie
+	<filename>/dev/da0h</filename>).  Dit vertaalt zich
+	naar 265 schijfblokken van 512 bytes in termen van
+	<command>bsdlabel</command>.
+	Zo is de grootte van dit rootvolume 245760 blokken van 512 bytes.
+	<filename>/dev/da1h</filename>, dat de tweede
+	replica van dit rootvolume bevat, is symmetrische opgezet.</para>
+
+      <para>Het bsdlabel voor deze apparaten kan er zo uitzien:</para>
+
+      <screen>...
+8 partitions:
+#       size   offset   fstype   [fsize bsize bps/cpg]
+  a:   245760     281   4.2BSD     2048 16384    0   # (Cyl.    0*- 15*)
+  c: 71771688       0   unused       0    0        # (Cyl.    0 - 4467*)
+  h: 71771672      16    vinum                     # (Cyl.    0*- 4467*)</screen>
+
+      <para>Hieruit blijkt dat de <literal>"size"</literal> parameter
+	voor de nep <literal>"a"</literal> partitie overeenkomt met
+	de waarde als hierboven beschreven en dat de
+	<literal>"offset"</literal> parameter de som is van de offset
+	binnen de Vinum partitie <literal>"h"</literal> en de offset
+	van deze partitie binnen het apparaat (of de slice).  Dit is
+	een normale opzet om problemen te voorkomen zoals in <xref linkend="vinum-root-panic"/> beschreven is.  Verder blijkt
+	dat de hele <literal>"a"</literal> partitie volledig binnen de
+	<literal>"h"</literal> partitie valt die alle Vinum gegevens
+	voor dit apparaat bevat.</para>
+
+      <para>In het bovenstaande voorbeeld is de volledige schijf voor
+	Vinum gereserveerd en er is geen restant van de pre-Vinum
+	rootpartitie, omdat dit een nieuwe schijf is die vanaf het begin
+	af aan bedoeld was als onderdeel van een Vinum instelling.</para>
+    </sect2>
+
+    <sect2>
+      <title>Problemen oplossen</title>
+
+      <para>Als er iets fout gaat moet er een manier zijn om dat te
+	herstellen.  De volgende lijst bevat een paar bekende valkuilen
+	en oplossingen.</para>
+
+      <sect3>
+	<title>Systeem bootstrap laadt, maar systeem start niet
+	  door</title>
+
+	<para>Als om wat voor reden dan ook het systeem niet doorgaat
+	  met opstarten, kan de bootstrap worden onderbroken door de
+	  <keycap>spatie</keycap> toets in te drukken tijdens de 10
+	  seconden waarschuwing.  Dan kunnen de loader variabelen
+	  (zoals <literal>vinum.autostart</literal>) bekeken worden
+	  met behulp van <command>show</command> en aangepast worden
+	  met <command>set</command> of
+	  <command>unset</command>.</para>
+
+	<para>Als het enige probleem was dat de Vinum kernelmodule
+	  nog niet in de lijst van modules staat die automatisch
+	  geladen wordt, dan zal <command>load geom_vinum</command>
+	  helpen.</para>
+
+	<para>Als alles in orde is, kan het opstartproces doorgestart
+	  worden met <command>boot -as</command>.  De opties
+	  <option>-as</option> geven de kernel aan om het
+	  rootbestandssysteem te vragen (<option>-a</option>),
+	  en het opstartproces te stoppen in single-user mode
+	  (<option>-s</option>), waarbij het rootbestandssysteem als
+	  alleen-lezen aangekoppeld wordt.  Op die manier is er geen
+	  risico op gegevensinconsistentie tussen de samenstellingen,
+	  zelfs niet als er maar één samenstelling van
+	  een multi-samenstellingen volume aangekoppeld is.</para>
+
+	<para>Op de prompt, waar om het rootbestandssysteem gevraagd
+	  wordt, kan ieder apparaat dat een valide rootbestandssysteem
+	  bevat worden opgegeven.  Als <filename>/etc/fstab</filename>
+	  goed is opgezet, is iets als
+	  <literal>ufs:/dev/gvinum/root</literal> te zien.  Een typische
+	  andere keuze kan <literal>ufs:da0d</literal> zijn, dat een
+	  hypothetische partitie is die het pre-Vinum
+	  rootbestandssysteem bevat.  Als één van de alias
+	  <literal>"a"</literal> partities ingevuld wordt die
+	  eigenlijk een referentie naar de subschijf van het Vinum
+	  rootapparaat zijn, dan wordt in een gespiegelde opzet maar
+	  éé kant van het gespiegelde volume aangekoppeld.
+	  Als dit bestandssysteem later als lezen/schrijven
+	  aangekoppeld wordt, moet(en) de andere samenstelling(en) van
+	  het rootvolume verwijderd worden, omdat deze samenstellingen
+	  anders inconsistente gegevens bevatten.</para>
+      </sect3>
+
+      <sect3>
+	<title>Alleen primaire bootstrap laadt</title>
+
+	<para>Als <filename>/boot/loader</filename> niet start, maar
+	  de primaire bootstrap laadt wel (zichtbaar door een enkel
+	  minteken in de linker bovenhoek van het scherm, direct na de
+	  start van het opstartproces), kan worden geprobeerd het
+	  primaire opstartproces te onderbreken door op de
+	  <keycap>spatie</keycap> toets te drukken.  Dit zorgt ervoor
+	  dat het opstartproces stopt bij de tweede fase (zie ook
+	  <xref linkend="boot-boot1"/>).  Hier kan worden geprobeerd
+	  vanaf een andere partitie te starten, bijvoorbeeld van de
+	  partitie waar het vorige rootbestandssysteem op stond, dat
+	  nu van de <literal>"a"</literal> verplaatst is.</para>
+      </sect3>
+
+      <sect3 xml:id="vinum-root-panic">
+	<title>Niets start, paniek van bootstrap</title>
+
+	<para>Dit gebeurt als de bootstrap is vernietigd door de Vinum
+	  installatie.  Helaas laat Vinum op dit moment slechts 4 KB
+	  vrij aan het begin van zijn partitie voordat de Vinum volume
+	  identificatie geschreven wordt.  De stage 1 en 2 bootstraps
+	  en de bsdlabel-informatie hebben ongeveer 8 KB nodig.  Dus
+	  als de Vinum partitie op offset 0 van de slice van de schijf
+	  begint die als opstartbaar was bedoeld, zal deze Vinum
+	  informatie de bootstrap vernielen.</para>
+
+	<para>Als bovenstaande situatie is omzeild, bijvoorbeeld door
+	  te starten vanaf een <quote>Fixit</quote> medium, en de
+	  bootstrap opnieuw is aangemaakt met
+	  <command>bsdlabel -B</command> zoals beschreven in
+	  <xref linkend="boot-boot1"/>, overschrijft de nieuwe bootstrap
+	  de Vinum identificatie en kan Vinum de Vinum schijven niet
+	  langer vinden.  Hoewel geen instellingsgegevens van Vinum of
+	  gegevens in de Vinum volumes overschreven wordt en alle
+	  gegevens hersteld kunnen worden door precies dezelfde
+	  instellingsgegevens van Vinum opnieuw in te vullen, is dit
+	  een lastige situatie om te herstellen.  Het zou nodig zijn om
+	  de complete Vinum partitie tenminste 4&nbsp;KB te
+	  verplaatsen, om te voorkomen dat de Vinum identificatie en de
+	  bootstrap met elkaar botsen.</para>
+      </sect3>
+    </sect2>
+  </sect1>
+</chapter>
