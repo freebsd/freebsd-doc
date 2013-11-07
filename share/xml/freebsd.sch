@@ -26,15 +26,19 @@
   </pattern>
 -->
 
+<!-- XXX: temporarily turned off
   <pattern name="Check cross-reference validity">
     <rule context="//db:link">
       <assert test="* or normalize-space()">Link (<xsl:value-of select="@linkend"/>) element must have a content; or use xref to auto-generate the linking text.</assert>
     </rule>
   </pattern>
+-->
 
   <pattern name="Check callout validity">
     <rule context="/">
+<!-- XXX
       <report test="//db:screenco">Callouts with screenco are not supported; use screen and co instead.</report>
+-->
       <report test="//db:programlistingco">Callouts with programlistingco are not supported; use programlisting and co instead.</report>
       <report test="//db:graphicco">Callouts on graphics are not supported.</report>
     </rule>
