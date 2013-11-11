@@ -111,7 +111,7 @@ ${XML_MIRRORS}: ${XML_MIRRORS_MASTER} \
 		--param 'transtable-word-group' "'country'" \
 		--param 'transtable-sortkey.xml' "'$@.sort'" \
 		${XSL_TRANSTABLE} ${XML_MIRRORS_MASTER}
-	${RM} -f $@.sort $@.sort.tmp
+#	${RM} -f $@.sort $@.sort.tmp
 .if ${LANGCODE} != .
 CLEANFILES+=	${XML_MIRRORS}
 CLEANFILES+=	${XML_MIRRORS}.sort
