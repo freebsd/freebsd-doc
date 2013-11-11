@@ -1,4 +1,4 @@
-<?xml version='1.0'?>
+<?xml version='1.0' encoding='iso-8859-2'?>
 
 <!-- $FreeBSD$ -->
 
@@ -7,12 +7,11 @@
                 xmlns="http://www.w3.org/TR/xhtml1/transitional"
                 exclude-result-prefixes="#default">
 
-  <!-- Pull in the language-independent stylesheet -->
-  <xsl:import href="http://www.FreeBSD.org/XML/doc/share/xsl/freebsd-xhtml.xsl"/>
-
-  <!-- Language-specific general customizations -->
-  <xsl:import href="freebsd-common.xsl"/>
-
-  <!-- Language-specific common XHTML customizations -->
-  <xsl:import href="freebsd-xhtml-common.xsl"/>
+  <xsl:template name="user.footer.navigation">
+    <p align="center"><small>Ha kérdése van a FreeBSD-vel kapcsolatban, a
+    következő címre írhat (angolul):
+    &lt;<a href="mailto:questions@FreeBSD.org">questions@FreeBSD.org</a>&gt;.<br/>
+    Ha ezzel a dokumentummal kapcsolatban van kérdése, kérjük erre a címre írjon:
+    &lt;<a href="mailto:gabor@FreeBSD.org">gabor@FreeBSD.org</a>&gt;.</small></p>
+  </xsl:template>
 </xsl:stylesheet>

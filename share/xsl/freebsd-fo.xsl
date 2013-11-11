@@ -11,11 +11,13 @@
   <!-- Pull in the base stylesheets -->
   <xsl:import href="http://docbook.sourceforge.net/release/xsl-ns/current/fo/docbook.xsl"/>
 
-  <!-- Include the common customizations -->
-  <xsl:import href="freebsd-common.xsl"/>
-
+  <xsl:import href="http://www.FreeBSD.org/XML/www/share/xsl/freebsd-common.xsl"/>
+  <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/xsl/freebsd-common.xsl"/>
   <!-- Include customized FO titlepage -->
   <xsl:import href="freebsd-fo-titlepage.xsl"/>
+
+  <!-- The localization layer is the same preference level of this file -->
+  <xsl:include href="http://www.FreeBSD.org/XML/www/lang/share/xsl/freebsd-fo.xsl"/>
 
   <xsl:param name="print">0</xsl:param>
 
