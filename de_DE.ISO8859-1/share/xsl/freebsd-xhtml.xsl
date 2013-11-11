@@ -1,4 +1,4 @@
-<?xml version='1.0'?>
+<?xml version='1.0' encoding='iso-8859-1'?>
 
 <!-- $FreeBSD$ -->
 
@@ -7,12 +7,10 @@
                 xmlns="http://www.w3.org/TR/xhtml1/transitional"
                 exclude-result-prefixes="#default">
 
-  <!-- Pull in the language-independent stylesheet -->
-  <xsl:import href="http://www.FreeBSD.org/XML/doc/share/xsl/freebsd-xhtml.xsl"/>
-
-  <!-- Language-specific general customizations -->
-  <xsl:import href="freebsd-common.xsl"/>
-
-  <!-- Language-specific common XHTML customizations -->
-  <xsl:import href="freebsd-xhtml-common.xsl"/>
+  <xsl:template name="user.footer.navigation">
+    <p align="center"><small>Wenn Sie Fragen zu FreeBSD haben, schicken Sie eine E-Mail an
+    &lt;<a href="mailto:de-bsd-questions@de.FreeBSD.org">de-bsd-questions@de.FreeBSD.org</a>&gt;.<br/>
+    Wenn Sie Fragen zu dieser Dokumentation haben, schicken Sie eine E-Mail an
+    &lt;<a href="mailto:de-bsd-translators@de.FreeBSD.org">de-bsd-translators@de.FreeBSD.org</a>&gt;.</small></p>
+  </xsl:template>
 </xsl:stylesheet>

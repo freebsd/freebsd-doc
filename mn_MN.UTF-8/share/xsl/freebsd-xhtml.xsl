@@ -1,4 +1,4 @@
-<?xml version='1.0'?>
+<?xml version='1.0' encoding='utf-8'?>
 
 <!-- $FreeBSD$ -->
 
@@ -7,12 +7,20 @@
                 xmlns="http://www.w3.org/TR/xhtml1/transitional"
                 exclude-result-prefixes="#default">
 
-  <!-- Pull in the language-independent stylesheet -->
-  <xsl:import href="http://www.FreeBSD.org/XML/doc/share/xsl/freebsd-xhtml.xsl"/>
+  <xsl:template name="user.footer.navigation">
+    <p align="center"><small>Энэ болон бусад баримтуудыг
+    <a href="ftp://ftp.FreeBSD.org/pub/FreeBSD/doc/">ftp://ftp.FreeBSD.org/pub/FreeBSD/doc/</a>
+    хаягаас татаж авч болно.</small></p>
 
-  <!-- Language-specific general customizations -->
-  <xsl:import href="freebsd-common.xsl"/>
-
-  <!-- Language-specific common XHTML customizations -->
-  <xsl:import href="freebsd-xhtml-common.xsl"/>
+    <p align="center"><small>FreeBSD-ийн талаар
+    &lt;<a href="mailto:questions@FreeBSD.org">questions@FreeBSD.org</a>&gt;
+    хаягтай холбоо барихаасаа өмнө
+    <a href="http://www.FreeBSD.org/docs.html">баримтыг</a> уншина уу.<br/>
+    Энэ бичиг баримттай холбоотой асуулт байвал
+    &lt;<a href="mailto:doc@FreeBSD.org">doc@FreeBSD.org</a>&gt;
+    хаягаар цахим захидал явуулна уу.<br/>
+    Энэ бичиг баримтын орчуулгатай холбоотой асуулт байвал
+    &lt;<a href="mailto:admin@mnbsd.org">admin@mnbsd.org</a>&gt;
+    хаягаар цахим захидал явуулна уу.</small></p>
+  </xsl:template>
 </xsl:stylesheet>

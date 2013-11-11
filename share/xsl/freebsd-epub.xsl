@@ -16,6 +16,9 @@
   <!-- Pull in common XHTML customizations -->
   <xsl:import href="freebsd-xhtml-common.xsl"/>
 
+  <!-- The localization layer is the same preference level of this file -->
+  <xsl:include href="http://www.FreeBSD.org/XML/www/lang/share/xsl/freebsd-epub.xsl"/>
+
   <xsl:param name="generate.legalnotice.link" select="'1'"/>
 
   <xsl:param name="docbook.css.source">../xml/docbook-epub.css.xml</xsl:param>

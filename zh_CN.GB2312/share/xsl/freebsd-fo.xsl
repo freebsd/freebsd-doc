@@ -7,12 +7,6 @@
                 xmlns="http://www.w3.org/TR/xhtml1/transitional"
                 exclude-result-prefixes="#default">
 
-  <!-- Pull in the language-independent stylesheet -->
-  <xsl:import href="http://www.FreeBSD.org/XML/doc/share/xsl/freebsd-fo.xsl"/>
-
-  <!-- Language-specific general customizations -->
-  <xsl:import href="freebsd-common.xsl"/>
-
   <!-- Pull in the CJK-specific stylesheet -->
   <xsl:import href="http://www.FreeBSD.org/XML/doc/share/xsl/freebsd-fo-cjk.xsl"/>
 
@@ -25,7 +19,7 @@
   <l:i18n xmlns:l="http://docbook.sourceforge.net/xmlns/l10n/1.0">
     <l:l10n language="zh_cn">
       <l:context name="title-numbered">
-	<l:template name="appendix" text="附录 %n. %t"/>
+	<l:template name="appendix" text="附〓 %n. %t"/>
 	<l:template name="article/appendix" text="%n. %t"/>
 	<l:template name="bridgehead" text="%n. %t"/>
 	<l:template name="chapter" text="第 %n 章 %t"/>
@@ -40,68 +34,68 @@
 	<l:template name="topic" text="%t" lang="en"/>
       </l:context>
       <l:context name="title">
-	<l:template name="appendix" text="附录 %n. %t"/>
+	<l:template name="appendix" text="附〓 %n. %t"/>
 	<l:template name="chapter" text="第 %n 章 %t"/>
 	<l:template name="equation" text="公式 %n. %t"/>
 	<l:template name="example" text="例 %n. %t"/>
-	<l:template name="figure" text="图 %n. %t"/>
+	<l:template name="figure" text="〓 %n. %t"/>
 	<l:template name="part" text="第 %n 部分 %t"/>
-	<l:template name="procedure.formal" text="过程 %n. %t"/>
-	<l:template name="productionset.formal" text="产品 %n"/>
+	<l:template name="procedure.formal" text="〓程 %n. %t"/>
+	<l:template name="productionset.formal" text="〓品 %n"/>
 	<l:template name="table" text="表 %n. %t"/>
        </l:context>
       <l:context name="xref">
 	<l:template name="answer" text="答： %n"/>
-	<l:template name="qandaentry" text="问： %n"/>
-	<l:template name="question" text="问： %n"/>
+	<l:template name="qandaentry" text="〓： %n"/>
+	<l:template name="question" text="〓： %n"/>
 	<l:template name="olink.document.citation" text=" in %o"/>
 	<l:template name="olink.page.citation" text=" (page %p)"/>
 	<l:template name="page.citation" text=" [%p]"/>
-	<l:template name="page" text="(第 %p 页)"/>
+	<l:template name="page" text="(第 %p 〓)"/>
 	<l:template name="docname" text=" 在 %o"/>
-	<l:template name="docnamelong" text=" 在文档标题 %o"/>
-	<l:template name="pageabbrev" text="(第 %p 页)"/>
-	<l:template name="Page" text="第 %p 页"/>
+	<l:template name="docnamelong" text=" 在文档〓〓 %o"/>
+	<l:template name="pageabbrev" text="(第 %p 〓)"/>
+	<l:template name="Page" text="第 %p 〓"/>
       </l:context>
       <l:context name="xref-number">
 	<l:template name="answer" text="答： %n"/>
-	<l:template name="appendix" text="附录 %n"/>
-	<l:template name="bridgehead" text="第 %n 节"/>
+	<l:template name="appendix" text="附〓 %n"/>
+	<l:template name="bridgehead" text="第 %n 〓"/>
 	<l:template name="chapter" text="第 %n 章"/>
 	<l:template name="equation" text="公式 %n"/>
 	<l:template name="example" text="例 %n"/>
-	<l:template name="figure" text="图 %n"/>
+	<l:template name="figure" text="〓 %n"/>
 	<l:template name="part" text="第 %n 部分"/>
-	<l:template name="procedure" text="过程 %n"/>
-	<l:template name="productionset" text="产品 %n"/>
-	<l:template name="qandadiv" text="答问集 %n"/>
-	<l:template name="qandaentry" text="问： %n"/>
-	<l:template name="question" text="问： %n"/>
-	<l:template name="sect1" text="第 %n 节"/>
-	<l:template name="sect2" text="第 %n 节"/>
-	<l:template name="sect3" text="第 %n 节"/>
-	<l:template name="sect4" text="第 %n 节"/>
-	<l:template name="sect5" text="第 %n 节"/>
-	<l:template name="section" text="第 %n 节"/>
+	<l:template name="procedure" text="〓程 %n"/>
+	<l:template name="productionset" text="〓品 %n"/>
+	<l:template name="qandadiv" text="答〓集 %n"/>
+	<l:template name="qandaentry" text="〓： %n"/>
+	<l:template name="question" text="〓： %n"/>
+	<l:template name="sect1" text="第 %n 〓"/>
+	<l:template name="sect2" text="第 %n 〓"/>
+	<l:template name="sect3" text="第 %n 〓"/>
+	<l:template name="sect4" text="第 %n 〓"/>
+	<l:template name="sect5" text="第 %n 〓"/>
+	<l:template name="section" text="第 %n 〓"/>
 	<l:template name="table" text="表 %n"/>
       </l:context>
       <l:context name="xref-number-and-title">
-	<l:template name="appendix" text="附录 %n, %t"/>
-	<l:template name="bridgehead" text="第 %n 节 “%t”"/>
+	<l:template name="appendix" text="附〓 %n, %t"/>
+	<l:template name="bridgehead" text="第 %n 〓 “%t”"/>
 	<l:template name="chapter" text="第 %n 章 %t"/>
 	<l:template name="equation" text="公式 %n “%t”"/>
 	<l:template name="example" text="例 %n “%t”"/>
-	<l:template name="figure" text="图 %n “%t”"/>
+	<l:template name="figure" text="〓 %n “%t”"/>
 	<l:template name="part" text="第 %n 部分 “%t”"/>
-	<l:template name="procedure" text="过程 %n, “%t”"/>
-	<l:template name="productionset" text="产品 %n, “%t”"/>
-	<l:template name="qandadiv" text="答问集 %n, “%t”"/>
-	<l:template name="sect1" text="第 %n 节 “%t”"/>
-	<l:template name="sect2" text="第 %n 节 “%t”"/>
-	<l:template name="sect3" text="第 %n 节 “%t”"/>
-	<l:template name="sect4" text="第 %n 节 “%t”"/>
-	<l:template name="sect5" text="第 %n 节 “%t”"/>
-	<l:template name="section" text="第 %n 节 “%t”"/>
+	<l:template name="procedure" text="〓程 %n, “%t”"/>
+	<l:template name="productionset" text="〓品 %n, “%t”"/>
+	<l:template name="qandadiv" text="答〓集 %n, “%t”"/>
+	<l:template name="sect1" text="第 %n 〓 “%t”"/>
+	<l:template name="sect2" text="第 %n 〓 “%t”"/>
+	<l:template name="sect3" text="第 %n 〓 “%t”"/>
+	<l:template name="sect4" text="第 %n 〓 “%t”"/>
+	<l:template name="sect5" text="第 %n 〓 “%t”"/>
+	<l:template name="section" text="第 %n 〓 “%t”"/>
 	<l:template name="table" text="表 %n “%t”"/>
       </l:context>
     </l:l10n>

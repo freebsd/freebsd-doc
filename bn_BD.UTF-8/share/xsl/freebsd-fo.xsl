@@ -10,13 +10,6 @@
 		xmlns:db="http://docbook.org/ns/docbook"
                 exclude-result-prefixes="db"
 		extension-element-prefixes="str">
-
-  <!-- Pull in the language-independent stylesheet -->
-  <xsl:import href="http://www.FreeBSD.org/XML/doc/share/xsl/freebsd-fo.xsl"/>
-
-  <!-- Language-specific general customizations -->
-  <xsl:import href="freebsd-common.xsl"/>
-
   <!--
 	BENGALI-SPECIFIC PARAMETERS
   -->

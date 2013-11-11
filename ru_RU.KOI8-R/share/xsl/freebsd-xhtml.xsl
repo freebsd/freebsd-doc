@@ -1,4 +1,4 @@
-<?xml version='1.0'?>
+<?xml version='1.0' encoding='koi8-r'?>
 
 <!-- $FreeBSD$ -->
 
@@ -7,12 +7,29 @@
                 xmlns="http://www.w3.org/TR/xhtml1/transitional"
                 exclude-result-prefixes="#default">
 
-  <!-- Pull in the language-independent stylesheet -->
-  <xsl:import href="http://www.FreeBSD.org/XML/doc/share/xsl/freebsd-xhtml.xsl"/>
+  <xsl:template name="user.footer.navigation">
+    <p align="center"><small>Этот, и другие документы, могут быть скачаны с
+    <a href="http://ftp.FreeBSD.org/pub/FreeBSD/doc/">http://ftp.FreeBSD.org/pub/FreeBSD/doc/</a>.</small></p>
 
-  <!-- Language-specific general customizations -->
-  <xsl:import href="freebsd-common.xsl"/>
+    <p align="center"><small>По вопросам, связанным с FreeBSD, прочитайте
+    <a href="http://www.FreeBSD.org/ru/docs.html">документацию</a> прежде чем писать в
+    &lt;<a href="mailto:questions@FreeBSD.org">questions@FreeBSD.org</a>&gt;.<br/>
+    По вопросам, связанным с этой документацией, пишите в рассылку
+    &lt;<a href="mailto:doc@FreeBSD.org">doc@FreeBSD.org</a>&gt;.<br/>
+    </small></p>
+  </xsl:template>
 
-  <!-- Language-specific common XHTML customizations -->
-  <xsl:import href="freebsd-xhtml-common.xsl"/>
+  <xsl:template name="docformatnav">
+    <xsl:variable name="single.fname">
+      <xsl:choose>
+        <xsl:when test="/book">book.html</xsl:when>
+        <xsl:when test="/article">article.html</xsl:when>
+      </xsl:choose>
+    </xsl:variable>
+
+    <div class="docformatnavi">
+      [ <a href="index.html">По разделам</a> /
+      <a href="{$single.fname}">Одним файлом</a> ]
+    </div>
+  </xsl:template>
 </xsl:stylesheet>
