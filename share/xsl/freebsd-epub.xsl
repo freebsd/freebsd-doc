@@ -4,6 +4,7 @@
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
 		xmlns:str="http://exslt.org/strings"
+		xmlns:db="http://docbook.org/ns/docbook"
 		xmlns="http://www.w3.org/1999/xhtml"
 		exclude-result-prefixes="db str"
 		extension-element-prefixes="str"
