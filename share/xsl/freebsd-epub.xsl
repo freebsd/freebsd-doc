@@ -10,7 +10,7 @@
                 version='1.0'>
 
   <!-- Pull in the base stylesheets -->
-  <xsl:import href="/usr/local/share/xsl/docbook-ns/epub3/chunk.xsl"/>
+  <xsl:import href="http://docbook.sourceforge.net/release/xsl-ns/current/epub3/chunk.xsl"/>
 
   <!-- Pull in common XHTML customizations -->
   <xsl:import href="freebsd-xhtml-common.xsl"/>

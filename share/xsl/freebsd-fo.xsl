@@ -9,7 +9,7 @@
                 version="1.0">
 
   <!-- Pull in the base stylesheets -->
-  <xsl:import href="/usr/local/share/xsl/docbook-ns/fo/docbook.xsl"/>
+  <xsl:import href="http://docbook.sourceforge.net/release/xsl-ns/current/fo/docbook.xsl"/>
 
   <!-- Include the common customizations -->
   <xsl:import href="freebsd-common.xsl"/>
