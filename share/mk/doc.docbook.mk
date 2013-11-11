@@ -53,12 +53,12 @@ MASTERDOC?=	${.CURDIR}/${DOC}.xml
 
 DB5RNC?=	${DOC_PREFIX}/share/xml/freebsd50.rnc
 
-XSLPROF?=	/usr/local/share/xsl/docbook-ns/profiling/profile.xsl
-XSLXHTML?=	${DOC_PREFIX}/${LANGCODE}/share/xsl/freebsd-xhtml.xsl
-XSLXHTMLCHUNK?=	${DOC_PREFIX}/${LANGCODE}/share/xsl/freebsd-xhtml-chunk.xsl
-XSLEPUB?=	${DOC_PREFIX}/${LANGCODE}/share/xsl/freebsd-epub.xsl
-XSLFO?=		${DOC_PREFIX}/${LANGCODE}/share/xsl/freebsd-fo.xsl
-XSLPGP?=	${DOC_PREFIX}/share/xsl/freebsd-pgpkeyring.xsl
+XSLPROF?=	http://docbook.sourceforge.net/release/xsl-ns/current/profiling/profile.xsl
+XSLXHTML?=	http://www.FreeBSD.org/XML/www/lang/share/xsl/freebsd-xhtml.xsl
+XSLXHTMLCHUNK?=	http://www.FreeBSD.org/XML/www/lang/share/xsl/freebsd-xhtml-chunk.xsl
+XSLEPUB?=	http://www.FreeBSD.org/XML/www/lang/share/xsl/freebsd-epub.xsl
+XSLFO?=		http://www.FreeBSD.org/XML/www/lang/share/xsl/freebsd-fo.xsl
+XSLPGP?=	http://www.FreeBSD.org/XML/www/share/xsl/freebsd-pgpkeyring.xsl
 
 XSLSCH?=	/usr/local/share/xsl/iso-schematron/xslt1/iso_schematron_skeleton_for_xslt1.xsl
 
