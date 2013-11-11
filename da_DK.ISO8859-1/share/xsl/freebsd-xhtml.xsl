@@ -1,4 +1,4 @@
-<?xml version='1.0'?>
+<?xml version='1.0' encoding='iso-8859-1'?>
 
 <!-- $FreeBSD$ -->
 
@@ -7,12 +7,14 @@
                 xmlns="http://www.w3.org/TR/xhtml1/transitional"
                 exclude-result-prefixes="#default">
 
-  <!-- Pull in the language-independent stylesheet -->
-  <xsl:import href="http://www.FreeBSD.org/XML/doc/share/xsl/freebsd-xhtml.xsl"/>
+  <xsl:template name="user.footer.navigation">
+    <p align="center"><small>Dette og andre dokumenter kan downloades fra
+    <a href="ftp://ftp.FreeBSD.org/pub/FreeBSD/doc/">ftp://ftp.FreeBSD.org/pub/FreeBSD/doc/</a></small></p>
 
-  <!-- Language-specific general customizations -->
-  <xsl:import href="freebsd-common.xsl"/>
-
-  <!-- Language-specific common XHTML customizations -->
-  <xsl:import href="freebsd-xhtml-common.xsl"/>
+    <p align="center"><small>For spørgsmål om FreeBSD, læs
+    <a href="http://www.FreeBSD.org/docs.html">documentationen</a> før du kontakter
+    &lt;<a href="mailto:questions@FreeBSD.org">questions@FreeBSD.org</a>&gt;.<br/>
+    For spørgsmål angående denne dokumentation, e-mail
+    &lt;<a href="mailto:doc@FreeBSD.org">doc@FreeBSD.org</a>&gt;.</small></p>
+  </xsl:template>
 </xsl:stylesheet>

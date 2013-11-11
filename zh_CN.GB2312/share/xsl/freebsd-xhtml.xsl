@@ -1,4 +1,4 @@
-<?xml version='1.0'?>
+<?xml version='1.0' encoding='gb2312'?>
 
 <!-- $FreeBSD$ -->
 
@@ -7,12 +7,14 @@
                 xmlns="http://www.w3.org/TR/xhtml1/transitional"
                 exclude-result-prefixes="#default">
 
-  <!-- Pull in the language-independent stylesheet -->
-  <xsl:import href="http://www.FreeBSD.org/XML/doc/share/xsl/freebsd-xhtml.xsl"/>
+  <xsl:template name="user.footer.navigation">
+    <p align="center"><small>本文档和其它文档可从这里下载：
+    <a href="ftp://ftp.FreeBSD.org/pub/FreeBSD/doc/">ftp://ftp.FreeBSD.org/pub/FreeBSD/doc/</a>.</small></p>
 
-  <!-- Language-specific general customizations -->
-  <xsl:import href="freebsd-common.xsl"/>
-
-  <!-- Language-specific common XHTML customizations -->
-  <xsl:import href="freebsd-xhtml-common.xsl"/>
+    <p align="center"><small>如果对于FreeBSD有问题，请先阅读
+    <a href="http://www.FreeBSD.org/docs.html">文档</a>，如不能解决再联系
+    &lt;<a href="mailto:questions@FreeBSD.org">questions@FreeBSD.org</a>&gt;.<br/>
+    关于本文档的问题请发信联系
+    &lt;<a href="mailto:doc@FreeBSD.org">doc@FreeBSD.org</a>&gt;.</small></p>
+  </xsl:template>
 </xsl:stylesheet>

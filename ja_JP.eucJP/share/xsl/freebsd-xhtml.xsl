@@ -1,4 +1,4 @@
-<?xml version='1.0'?>
+<?xml version='1.0' encoding='euc-jp'?>
 
 <!-- $FreeBSD$ -->
 
@@ -7,12 +7,15 @@
                 xmlns="http://www.w3.org/TR/xhtml1/transitional"
                 exclude-result-prefixes="#default">
 
-  <!-- Pull in the language-independent stylesheet -->
-  <xsl:import href="http://www.FreeBSD.org/XML/doc/share/xsl/freebsd-xhtml.xsl"/>
+  <xsl:template name="user.footer.navigation">
+    <p align="center"><small>本文書、および他の文書は
+    <a href="ftp://ftp.FreeBSD.org/pub/FreeBSD/doc/">ftp://ftp.FreeBSD.org/pub/FreeBSD/doc/</a>
+    からダウンロードできます。</small></p>
 
-  <!-- Language-specific general customizations -->
-  <xsl:import href="freebsd-common.xsl"/>
-
-  <!-- Language-specific common XHTML customizations -->
-  <xsl:import href="freebsd-xhtml-common.xsl"/>
+    <p align="center"><small>FreeBSD に関する質問がある場合には、
+    <a href="http://www.FreeBSD.org/ja/docs.html">ドキュメント</a> を読んだ上で
+    &lt;<a href="mailto:questions@FreeBSD.org">questions@FreeBSD.org</a>&gt; まで (英語で) 連絡してください。<br/>
+    本文書に関する質問については、
+    &lt;<a href="mailto:doc@FreeBSD.org">doc@FreeBSD.org</a>&gt; まで電子メールを (英語で) 送ってください。</small></p>
+  </xsl:template>
 </xsl:stylesheet>
