@@ -254,4 +254,10 @@
 
     <hr/>
   </xsl:template>
+
+  <xsl:template name="article.titlepage.separator">
+    <xsl:call-template name="docformatnav"/>
+
+    <hr/>
+  </xsl:template>
 </xsl:stylesheet>
