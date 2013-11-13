@@ -134,6 +134,10 @@ LOCAL_CSS_SHEET= ${CSS_SHEET:T}
 
 CLEANFILES+= ${DOC}.parsed.xml ${DOC}.parsed.print.xml
 
+.if ${FORMATS:R:Mhtml-split} && ${FORMATS:R:Mhtml}
+XSLTPROCOPTS+=	--param docformatnav "'1'"
+.endif
+
 .for _curformat in ${FORMATS}
 _cf=${_curformat}
 
@@ -254,7 +258,7 @@ ${sch:T}.xsl: ${sch}
 
 # Parsed XML  -------------------------------------------------------
 
-${DOC}.parsed.xml: ${SRCS}
+${DOC}.parsed.xml: ${SRCS} ${XML_INCLUDES}
 	${XMLLINT} --nonet --noent --valid --dropdtd --xinclude ${MASTERDOC} > ${.TARGET}.tmp
 .if defined(PROFILING)
 	@${ECHO} "==> Profiling"
@@ -269,11 +273,11 @@ ${DOC}.parsed.xml: ${SRCS}
 # XHTML -------------------------------------------------------------
 
 index.html: ${DOC}.parsed.xml ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} \
-	${HTML_SPLIT_INDEX} ${LOCAL_CSS_SHEET}
+	${HTML_SPLIT_INDEX} ${LOCAL_CSS_SHEET} ${XML_INCLUDES}
 	${XSLTPROC} ${XSLTPROCOPTS} ${XSLXHTMLCHUNK} ${DOC}.parsed.xml
 
 ${DOC}.html: ${DOC}.parsed.xml ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} \
-	${LOCAL_CSS_SHEET}     
+	${LOCAL_CSS_SHEET} ${XML_INCLUDES}
 	${XSLTPROC} ${XSLTPROCOPTS} ${XSLXHTML} ${DOC}.parsed.xml > ${.TARGET}
 
 ${DOC}.html-split.tar: HTML.manifest ${LOCAL_IMAGES_LIB} \
@@ -295,7 +299,7 @@ ${DOC}.html.tar: ${DOC}.html ${LOCAL_IMAGES_LIB} \
 # EPUB -------------------------------------------------------------
 
 ${DOC}.epub: ${DOC}.parsed.xml ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} \
-	${CSS_SHEET}
+	${CSS_SHEET} ${XML_INCLUDES}
 	${XSLTPROC} ${XSLTPROCOPTS} ${XSLEPUB} ${DOC}.parsed.xml
 .if defined(LOCAL_IMAGES_LIB) || defined(LOCAL_IMAGES_PNG)
 .for f in ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG}
@@ -333,7 +337,7 @@ ${.CURDIR:T}.pdb.${_curcomp}: ${DOC}.pdb.${_curcomp}
 
 # PS/PDF/RTF -----------------------------------------------------------------
 
-${DOC}.fo: ${DOC}.xml ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} ${DOC}.parsed.xml
+${DOC}.fo: ${DOC}.xml ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} ${DOC}.parsed.xml ${XML_INCLUDES}
 	${XSLTPROC} ${XSLTPROCOPTS} ${XSLFO} ${DOC}.parsed.print.xml > ${.TARGET}
 
 .if ${RENDERENGINE} == "fop"
