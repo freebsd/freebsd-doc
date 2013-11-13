@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1" ?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
-				"http://www.FreeBSD.org/XML/www/share/xml/xslt10-freebsd.dtd">
+				"http://www.FreeBSD.org/XML/share/xml/xslt10-freebsd.dtd">
 <!-- $FreeBSD$ -->
 
 <!--
@@ -14,7 +14,7 @@
                 xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
 		version="1.0">
 
-  <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/xml/libcommon.xsl"/>
+  <xsl:import href="http://www.FreeBSD.org/XML/lang/share/xml/libcommon.xsl"/>
 
   <xsl:variable name="svnKeyword" select="'$FreeBSD$'"/>
 

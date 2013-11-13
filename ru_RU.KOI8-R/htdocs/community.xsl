@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="koi8-r" ?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
-				"http://www.FreeBSD.org/XML/www/share/xml/xslt10-freebsd.dtd" [
+				"http://www.FreeBSD.org/XML/share/xml/xslt10-freebsd.dtd" [
 <!ENTITY title "Сообщество FreeBSD">
 ]>
 
@@ -18,8 +18,8 @@
   xmlns="http://www.w3.org/1999/xhtml"
   extension-element-prefixes="date">
 
-  <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/xml/libcommon.xsl"/>
-  <xsl:import href="http://www.FreeBSD.org/XML/www/share/xml/xhtml.xsl"/>
+  <xsl:import href="http://www.FreeBSD.org/XML/lang/share/xml/libcommon.xsl"/>
+  <xsl:import href="http://www.FreeBSD.org/XML/share/xml/xhtml.xsl"/>
 
   <xsl:key name="last-year-event-by-country" match="event[number(enddate/year) = (number(date:year()) - 1)]"
     use="location/country" />

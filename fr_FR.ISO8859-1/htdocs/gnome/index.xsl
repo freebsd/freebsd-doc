@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
-				"http://www.FreeBSD.org/XML/www/share/xml/xslt10-freebsd.dtd" [
+				"http://www.FreeBSD.org/XML/share/xml/xslt10-freebsd.dtd" [
 <!ENTITY title "Projet GNOME pour FreeBSD">
 ]>
 <!-- $FreeBSD$ -->
@@ -17,8 +17,8 @@
 		xmlns:rdf1="http://my.netscape.com/rdf/simple/0.9/"
 		exclude-result-prefixes="rdf rdf1" version="1.0">
 
-  <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/xml/libcommon.xsl"/>
-  <xsl:import href="http://www.FreeBSD.org/XML/www/share/xml/xhtml.xsl"/>
+  <xsl:import href="http://www.FreeBSD.org/XML/lang/share/xml/libcommon.xsl"/>
+  <xsl:import href="http://www.FreeBSD.org/XML/share/xml/xhtml.xsl"/>
 
   <xsl:variable name="svnKeyword" select="'$FreeBSD$'"/>
 
