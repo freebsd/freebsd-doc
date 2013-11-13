@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-2"?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD Fragment//EN"
-				"http://www.FreeBSD.org/XML/www/share/xml/xslt10-freebsd.dtd" [
+				"http://www.FreeBSD.org/XML/share/xml/xslt10-freebsd.dtd" [
 <!ENTITY title "Korábbi rendezvények">
 <!ENTITY rsslink "&base;/events/rss.xml">
 <!ENTITY rsstitle "Közelgő rendezvények">
@@ -45,8 +45,8 @@
   xmlns="http://www.w3.org/1999/xhtml"
   extension-element-prefixes="date">
 
-  <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/xml/libcommon.xsl"/>
-  <xsl:import href="http://www.FreeBSD.org/XML/www/share/xml/xhtml.xsl"/>
+  <xsl:import href="http://www.FreeBSD.org/XML/lang/share/xml/libcommon.xsl"/>
+  <xsl:import href="http://www.FreeBSD.org/XML/share/xml/xhtml.xsl"/>
 
   <!-- Do not add last modified date for old news/press -->
   <xsl:variable name="date"/>

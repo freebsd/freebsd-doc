@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1" ?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD Fragment//EN"
-				"http://www.FreeBSD.org/XML/www/share/xml/xslt10-freebsd.dtd">
+				"http://www.FreeBSD.org/XML/share/xml/xslt10-freebsd.dtd">
 
 <!-- $FreeBSD$ -->
 <!-- The FreeBSD Japanese Documentation Project -->
@@ -39,7 +39,7 @@
   extension-element-prefixes="date"
   exclude-result-prefixes="cvs">
 
-  <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/xml/libcommon.xsl"/>
+  <xsl:import href="http://www.FreeBSD.org/XML/lang/share/xml/libcommon.xsl"/>
 
   <xsl:output method="xml" indent="yes"/>
 

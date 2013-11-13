@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-2"?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD Fragment//EN"
-				"http://www.FreeBSD.org/XML/www/share/xml/xslt10-freebsd.dtd" [
+				"http://www.FreeBSD.org/XML/share/xml/xslt10-freebsd.dtd" [
 <!ENTITY title "&os; témájú rendezvények">
 <!ENTITY rsslink "&base;/events/rss.xml">
 <!ENTITY rsstitle "Közelgő &os; témájú rendezvények">
@@ -45,8 +45,8 @@
   xmlns="http://www.w3.org/1999/xhtml"
   extension-element-prefixes="date">
 
-  <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/xml/libcommon.xsl"/>
-  <xsl:import href="http://www.FreeBSD.org/XML/www/share/xml/xhtml.xsl"/>
+  <xsl:import href="http://www.FreeBSD.org/XML/lang/share/xml/libcommon.xsl"/>
+  <xsl:import href="http://www.FreeBSD.org/XML/share/xml/xhtml.xsl"/>
 
   <xsl:param name="startyear">2009</xsl:param>
   <xsl:param name="pastyears">2008 2007 2006 2005 2004 2003</xsl:param>

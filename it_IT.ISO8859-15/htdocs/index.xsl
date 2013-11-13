@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-15" ?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
-				"http://www.FreeBSD.org/XML/www/share/xml/xslt10-freebsd.dtd" [
+				"http://www.FreeBSD.org/XML/share/xml/xslt10-freebsd.dtd" [
 <!ENTITY title "The FreeBSD Project">
 ]>
 
@@ -15,8 +15,8 @@
   xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
   xmlns="http://www.w3.org/1999/xhtml">
 
-  <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/xml/libcommon.xsl" />
-  <xsl:import href="http://www.FreeBSD.org/XML/www/share/xml/xhtml.xsl"/>
+  <xsl:import href="http://www.FreeBSD.org/XML/lang/share/xml/libcommon.xsl" />
+  <xsl:import href="http://www.FreeBSD.org/XML/share/xml/xhtml.xsl"/>
 
   <xsl:variable name="svnKeyword">$FreeBSD$</xsl:variable>
 

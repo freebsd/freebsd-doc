@@ -33,7 +33,11 @@ SUBDIR+=	zh_TW.Big5
 
 DOC_PREFIX?=   ${.CURDIR}
 
+.if exists(/usr/bin/svnlite)
+SVN?=		/usr/bin/svnlite
+.else
 SVN?=		/usr/local/bin/svn
+.endif
 
 update:
 .if !exists(${SVN})
