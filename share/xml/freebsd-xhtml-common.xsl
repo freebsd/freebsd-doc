@@ -55,7 +55,6 @@
   </xsl:template>
 
   <xsl:template name="docformatnav">
-    <xsl:variable name="docformatnav.type" />
     <xsl:variable name="single.fname">
       <xsl:choose>
         <xsl:when test="/db:book">book.html</xsl:when>
