@@ -1,5 +1,6 @@
 <?xml version='1.0'?>
-
+<!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
+                     "http://www.FreeBSD.org/XML/share/xml/xslt10-freebsd.dtd">
 <!-- $FreeBSD$ -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
@@ -33,6 +34,7 @@
   <xsl:param name="make.valid.html" select="1"/>
   <xsl:param name="html.cleanup" select="1"/>
   <xsl:param name="make.clean.html" select="1"/>
+  <xsl:param name="docformatnav" select="0"/>
 
   <xsl:param name="local.l10n.xml" select="document('')"/>
   <i18n xmlns="http://docbook.sourceforge.net/xmlns/l10n/1.0">
@@ -53,6 +55,7 @@
   </xsl:template>
 
   <xsl:template name="docformatnav">
+    <xsl:variable name="docformatnav.type" />
     <xsl:variable name="single.fname">
       <xsl:choose>
         <xsl:when test="/db:book">book.html</xsl:when>
@@ -61,8 +64,25 @@
     </xsl:variable>
 
     <div class="docformatnavi">
-      [ <a href="index.html">Split HTML</a> /
-      <a href="{$single.fname}">Single HTML</a> ]
+      [
+      <xsl:choose>
+	<xsl:when test="$html.chunk = 0">
+	  <a href="index.html">&docnavi.split-html;</a>
+	</xsl:when>
+	<xsl:otherwise>
+	  &docnavi.split-html;
+	</xsl:otherwise>
+      </xsl:choose>
+      /
+      <xsl:choose>
+	<xsl:when test="$html.chunk = 0">
+	  &docnavi.single-html;
+	</xsl:when>
+	<xsl:otherwise>
+	  <a href="{$single.fname}">&docnavi.single-html;</a>
+	</xsl:otherwise>
+      </xsl:choose>
+      ]
     </div>
   </xsl:template>
 
@@ -250,13 +270,17 @@
 
   <!-- Hook in format navigation at the end of the titlepage -->
   <xsl:template name="book.titlepage.separator">
-    <xsl:call-template name="docformatnav"/>
+    <xsl:if test="not($docformatnav = 0)">
+      <xsl:call-template name="docformatnav" />
+    </xsl:if>
 
     <hr/>
   </xsl:template>
 
   <xsl:template name="article.titlepage.separator">
-    <xsl:call-template name="docformatnav"/>
+    <xsl:if test="not($docformatnav = 0)">
+      <xsl:call-template name="docformatnav" />
+    </xsl:if>
 
     <hr/>
   </xsl:template>

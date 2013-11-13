@@ -8,7 +8,7 @@
                 exclude-result-prefixes="#default">
 
   <!-- Pull in the CJK-specific stylesheet -->
-  <xsl:import href="http://www.FreeBSD.org/XML/share/xsl/freebsd-fo-cjk.xsl"/>
+  <xsl:import href="http://www.FreeBSD.org/XML/share/xml/freebsd-fo-cjk.xsl"/>
 
   <!--
 	JAPANESE-SPECIFIC PARAMETERS
