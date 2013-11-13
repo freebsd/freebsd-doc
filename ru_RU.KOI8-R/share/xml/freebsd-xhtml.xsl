@@ -18,18 +18,4 @@
     &lt;<a href="mailto:doc@FreeBSD.org">doc@FreeBSD.org</a>&gt;.<br/>
     </small></p>
   </xsl:template>
-
-  <xsl:template name="docformatnav">
-    <xsl:variable name="single.fname">
-      <xsl:choose>
-        <xsl:when test="/book">book.html</xsl:when>
-        <xsl:when test="/article">article.html</xsl:when>
-      </xsl:choose>
-    </xsl:variable>
-
-    <div class="docformatnavi">
-      [ <a href="index.html">По разделам</a> /
-      <a href="{$single.fname}">Одним файлом</a> ]
-    </div>
-  </xsl:template>
 </xsl:stylesheet>
