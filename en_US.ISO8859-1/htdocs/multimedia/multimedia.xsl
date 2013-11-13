@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1" ?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
-                                "http://www.FreeBSD.org/XML/www/share/xml/xslt10-freebsd.dtd" [
+                                "http://www.FreeBSD.org/XML/share/xml/xslt10-freebsd.dtd" [
 <!ENTITY title "FreeBSD Multimedia">
 ]>
 
@@ -12,7 +12,7 @@
 	xmlns="http://www.w3.org/1999/xhtml"
 	extension-element-prefixes="date">
 
-  <xsl:import href="http://www.FreeBSD.org/XML/www/share/xml/xhtml.xsl"/>
+  <xsl:import href="http://www.FreeBSD.org/XML/share/xml/xhtml.xsl"/>
   <xsl:import href="include.xsl"/>
 
   <xsl:key name="date" match="item" use="substring(@added, 1, 6)" />

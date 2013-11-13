@@ -54,11 +54,11 @@ MASTERDOC?=	${.CURDIR}/${DOC}.xml
 DB5RNC?=	${DOC_PREFIX}/share/xml/freebsd50.rnc
 
 XSLPROF?=	http://docbook.sourceforge.net/release/xsl-ns/current/profiling/profile.xsl
-XSLXHTML?=	http://www.FreeBSD.org/XML/www/share/xsl/freebsd-xhtml.xsl
-XSLXHTMLCHUNK?=	http://www.FreeBSD.org/XML/www/share/xsl/freebsd-xhtml-chunk.xsl
-XSLEPUB?=	http://www.FreeBSD.org/XML/www/share/xsl/freebsd-epub.xsl
-XSLFO?=		http://www.FreeBSD.org/XML/www/share/xsl/freebsd-fo.xsl
-XSLPGP?=	http://www.FreeBSD.org/XML/www/share/xsl/freebsd-pgpkeyring.xsl
+XSLXHTML?=	http://www.FreeBSD.org/XML/share/xml/freebsd-xhtml.xsl
+XSLXHTMLCHUNK?=	http://www.FreeBSD.org/XML/share/xml/freebsd-xhtml-chunk.xsl
+XSLEPUB?=	http://www.FreeBSD.org/XML/share/xml/freebsd-epub.xsl
+XSLFO?=		http://www.FreeBSD.org/XML/share/xml/freebsd-fo.xsl
+XSLPGP?=	http://www.FreeBSD.org/XML/share/xml/freebsd-pgpkeyring.xsl
 
 XSLSCH?=	/usr/local/share/xsl/iso-schematron/xslt1/iso_schematron_skeleton_for_xslt1.xsl
 
@@ -69,11 +69,7 @@ XSLTPROCOPTS?=	--nonet
 
 IMGDIR?=	${IMAGES_EN_DIR}/${DOC}s/${.CURDIR:T}
 CALLOUTDIR=	${.CURDIR}/imagelib/callouts
-.if exists(${DOC_PREFIX}/${LANGCODE}/share/xsl/freebsd-dblatex.xsl)
-XSLDBLATEX=	${DOC_PREFIX}/${LANGCODE}/share/xsl/freebsd-dblatex.xsl
-.else
-XSLDBLATEX=	${DOC_PREFIX}/share/xsl/freebsd-dblatex.xsl
-.endif
+XSLDBLATEX=	${DOC_PREFIX}/share/xml/freebsd-dblatex.xsl
 DBLATEXOPTS?=	-I ${IMGDIR} -p ${XSLDBLATEX} -T simple -b xetex -d
 FOPOPTS?=	-c ${DOC_PREFIX}/share/misc/fop.xconf
 
