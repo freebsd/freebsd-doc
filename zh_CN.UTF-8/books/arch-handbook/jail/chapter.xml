@@ -1,0 +1,636 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+     The FreeBSD Documentation Project
+     The FreeBSD Simplified Chinese Project
+
+     Original Revision: 1.22
+     $FreeBSD$
+-->
+<chapter xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink" version="5.0" xml:id="jail">
+  <info><title>Jail子系统</title>
+    <author><personname><firstname>Evan</firstname><surname>Sarmiento</surname></personname><affiliation>
+	<address><email>evms@cs.bu.edu</email></address>
+      </affiliation></author>
+    <copyright>
+      <year>2001</year>
+      <holder role="mailto:evms@cs.bu.edu">Evan Sarmiento</holder>
+    </copyright>
+    <authorgroup>
+      <author><personname/><contrib>&cnproj.translated.by;</contrib></author>
+    </authorgroup>
+  </info>
+  
+
+  <indexterm><primary>security(安全)</primary></indexterm>
+  <indexterm><primary>Jail(囚禁)</primary></indexterm>
+  <indexterm><primary>root(根用户，管理员用户)</primary></indexterm>
+  <para>在大多数&unix;系统中，用户<literal>root</literal>是万能的。这也就增加了许多危险。
+    如果一个攻击者获得了一个系统中的<literal>root</literal>，就可以在他的指尖掌握系统中所有的功能。
+    在FreeBSD里，有一些sysctl项削弱了<literal>root</literal>的权限，
+    这样就可以将攻击者造成的损害减小到最低限度。这些安全功能中，有一种叫安全级别。
+    另一种在FreeBSD 4.0及以后版本中提供的安全功能，就是&man.jail.8;。
+    <application>Jail</application>将一个运行环境的文件树根切换到某一特定位置，
+    并且对这样环境中叉分生成的进程做出限制。例如，
+    一个被监禁的进程不能影响这个<application>jail</application>之外的进程、不能使用一些特定的系统调用，
+    也就不能对主计算机造成破坏。<tip><title>译者注</title>
+    <para>英文单词“jail”的中文意思是“囚禁、监禁”。</para></tip></para>
+
+  <para><application>Jail</application>已经成为一种新型的安全模型。
+    人们可以在jail中运行各种可能很脆弱的服务器程序，如<application>Apache</application>、
+    <application>BIND</application>和<application>sendmail</application>。
+    这样一来，即使有攻击者取得了<application>jail</application>中的<literal>root</literal>，
+    这最多让人们皱皱眉头，而不会使人们惊慌失措。
+    本文主要关注<application>jail</application>的内部原理(源代码)。
+    如果你正在寻找设置<application>Jail</application>的指南性文档，
+    我建议你阅读我的另一篇文章，发表在Sys Admin Magazine, May 2001,
+    《Securing FreeBSD using <application>Jail</application>》。</para>
+
+  <sect1 xml:id="jail-arch">
+    <title>Jail的系统结构</title>
+
+    <para><application>Jail</application>由两部分组成：用户级程序，
+      也就是&man.jail.8;；还有在内核中Jail的实现代码：&man.jail.2;
+      系统调用和相关的约束。我将讨论用户级程序和<application>jail</application>在内核中的实现原理。</para>
+
+    <sect2>
+      <title>用户级代码</title>
+
+      <indexterm><primary>Jail(囚禁)</primary>
+	<secondary>userland program(用户级程序)</secondary></indexterm>
+
+      <para><application>Jail</application>的用户级源代码在<filename>/usr/src/usr.sbin/jail</filename>，
+        由一个文件<filename>jail.c</filename>组成。这个程序有这些参数：<application>jail</application>的路径，
+        主机名，IP地址，还有需要执行的命令。</para>
+
+      <sect3>
+        <title>数据结构</title>
+
+        <para>在<filename>jail.c</filename>中，我将最先注解的是一个重要结构体
+          <literal>struct jail j;</literal>的声明，这个结构类型的声明包含在
+          <filename>/usr/include/sys/jail.h</filename>之中。</para>
+
+        <para><literal>jail</literal>结构的定义是：</para>
+
+<programlisting><filename>/usr/include/sys/jail.h</filename>:
+
+struct jail {
+        u_int32_t       version;
+        char            *path;
+        char            *hostname;
+        u_int32_t       ip_number;
+};</programlisting>
+
+        <para>正如你所见，传送给命令&man.jail.8;的每个参数都在这里有对应的一项。
+          事实上，当命令&man.jail.8;被执行时，这些参数才由命令行真正传入：</para>
+
+        <programlisting><filename>/usr/src/usr.sbin/jail.c</filename>
+char path[PATH_MAX];
+...
+if(realpath(argv[0], path) == NULL)
+    err(1, "realpath: %s", argv[0]);
+if (chdir(path) != 0)
+    err(1, "chdir: %s", path);
+memset(&amp;j, 0, sizeof(j));
+j.version = 0;
+j.path = path;
+j.hostname = argv[1];</programlisting>
+
+      </sect3>
+
+      <sect3>
+        <title>网络</title>
+
+        <para>传给&man.jail.8;的参数中有一个是IP地址。这是在网络上访问<application>jail</application>时的地址。
+          &man.jail.8;将IP地址翻译成网络字节顺序，并存入<literal>j</literal>(<literal>jail</literal>类型的结构体)。</para>
+
+        <programlisting><filename>/usr/src/usr.sbin/jail/jail.c</filename>:
+struct in_addr in;
+...
+if (inet_aton(argv[2], &amp;in) == 0)
+    errx(1, "Could not make sense of ip-number: %s", argv[2]);
+j.ip_number = ntohl(in.s_addr);</programlisting>
+
+        <para>函数&man.inet.aton.3;“将指定的字符串解释为一个Internet地址，
+          并将其转存到指定的结构体中”。&man.inet.aton.3;设定了结构体in，
+          之后in中的内容再用&man.ntohl.3;转换成主机字节顺序，
+          并置入<literal>jail</literal>结构体的<literal>ip_number</literal>成员。</para>
+
+      </sect3>
+
+      <sect3>
+        <title>囚禁进程</title>
+
+        <para>最后，用户级程序囚禁进程。现在Jail自身变成了一个被囚禁的进程，
+          并使用&man.execv.3;执行用户指定的命令。</para>
+
+        <programlisting><filename>/usr/src/usr.sbin/jail/jail.c</filename>
+i = jail(&amp;j);
+...
+if (execv(argv[3], argv + 3) != 0)
+    err(1, "execv: %s", argv[3]);</programlisting>
+
+        <para>正如你所见，函数<literal>jail()</literal>被调用，参数是结构体<literal>jail</literal>中被填入数据项，
+         而如前所述，这些数据项又来自&man.jail.8;的命令行参数。
+         最后，执行了用户指定的命令。下面我将开始讨论<literal>jail</literal>在内核中的实现。</para>
+      </sect3>
+    </sect2>
+
+    <sect2>
+      <title>相关的内核源代码</title>
+
+      <indexterm><primary>Jail(囚禁)</primary>
+	<secondary>kernel architecture(内核架构)</secondary></indexterm>
+
+      <para>现在我们来看文件<filename>/usr/src/sys/kern/kern_jail.c</filename>。
+        在这里定义了&man.jail.2;的系统调用、相关的sysctl项，还有网络函数。</para>
+
+      <sect3>
+        <title>sysctl项</title>
+
+      <indexterm><primary>sysctl(系统控制项)</primary></indexterm>
+
+        <para>在<filename>kern_jail.c</filename>里定义了如下sysctl项:</para>
+
+        <programlisting><filename>/usr/src/sys/kern/kern_jail.c:</filename>
+
+int     jail_set_hostname_allowed = 1;
+SYSCTL_INT(_security_jail, OID_AUTO, set_hostname_allowed, CTLFLAG_RW,
+    &amp;jail_set_hostname_allowed, 0,
+    "Processes in jail can set their hostnames");
+    /* Jail中的进程可设定自身的主机名 */
+
+int     jail_socket_unixiproute_only = 1;
+SYSCTL_INT(_security_jail, OID_AUTO, socket_unixiproute_only, CTLFLAG_RW,
+    &amp;jail_socket_unixiproute_only, 0,
+    "Processes in jail are limited to creating UNIX/IPv4/route sockets only");
+    /* Jail中的进程被限制只能建立UNIX套接字、IPv4套接字、路由套接字 */
+
+int     jail_sysvipc_allowed = 0;
+SYSCTL_INT(_security_jail, OID_AUTO, sysvipc_allowed, CTLFLAG_RW,
+    &amp;jail_sysvipc_allowed, 0,
+    "Processes in jail can use System V IPC primitives");
+    /* Jail中的进程可以使用System V进程间通讯原语 */
+
+static int jail_enforce_statfs = 2;
+SYSCTL_INT(_security_jail, OID_AUTO, enforce_statfs, CTLFLAG_RW,
+    &amp;jail_enforce_statfs, 0,
+    "Processes in jail cannot see all mounted file systems");
+    /* jail 中的进程查看系统中挂接的文件系统时受到何种限制 */
+
+int    jail_allow_raw_sockets = 0;
+SYSCTL_INT(_security_jail, OID_AUTO, allow_raw_sockets, CTLFLAG_RW,
+    &amp;jail_allow_raw_sockets, 0,
+    "Prison root can create raw sockets");
+    /* jail 中的 root 用户是否可以创建 raw socket */
+
+int    jail_chflags_allowed = 0;
+SYSCTL_INT(_security_jail, OID_AUTO, chflags_allowed, CTLFLAG_RW,
+    &amp;jail_chflags_allowed, 0,
+    "Processes in jail can alter system file flags");
+    /* jail 中的进程是否可以修改系统级文件标记 */
+
+int     jail_mount_allowed = 0;
+SYSCTL_INT(_security_jail, OID_AUTO, mount_allowed, CTLFLAG_RW,
+    &amp;jail_mount_allowed, 0,
+    "Processes in jail can mount/unmount jail-friendly file systems");
+    /* jail 中的进程是否可以挂载或卸载对jail友好的文件系统 */</programlisting>
+
+        <para>这些sysctl项中的每一个都可以用命令&man.sysctl.8;访问。在整个内核中，
+          这些sysctl项按名称标识。例如，上述第一个sysctl项的名字是
+          <literal>security.jail.set_hostname_allowed</literal>。</para>
+      </sect3>
+
+      <sect3>
+        <title>&man.jail.2;系统调用</title>
+
+        <para>像所有的系统调用一样，系统调用&man.jail.2;带有两个参数，
+          <literal>struct thread *td</literal>和<literal>struct jail_args *uap</literal>。
+          <literal>td</literal>是一个指向<literal>thread</literal>结构体的指针，该指针用于描述调用&man.jail.2;的线程。
+          在这个上下文中，<literal>uap</literal>指向一个结构体，这个结构体中包含了一个指向从用户级
+          <filename>jail.c</filename>传送过来的<literal>jail</literal>结构体的指针。
+          在前面我讲述用户级程序时，你已经看到过一个<literal>jail</literal>结构体被作为参数传送给系统调用
+          &man.jail.2;。</para>
+
+        <programlisting><filename>/usr/src/sys/kern/kern_jail.c:</filename>
+/*
+ * struct jail_args {
+ *      struct jail *jail;
+ * };
+ */
+int
+jail(struct thread *td, struct jail_args *uap)</programlisting>
+
+        <para>于是<literal>uap-&gt;jail</literal>可以用于访问被传递给&man.jail.2;的<literal>jail</literal>结构体。
+          然后，&man.jail.2;使用&man.copyin.9;将<literal>jail</literal>结构体复制到内核内存空间中。
+                    &man.copyin.9;需要三个参数：要复制进内核内存空间的数据的地址
+                    <literal>uap-&gt;jail</literal>，在内核内存空间存放数据的<literal>j</literal>，
+          以及数据的大小。<literal>uap-&gt;jail</literal>指向的Jail结构体被复制进内核内存空间，
+          并被存放在另一个<literal>jail</literal>结构体<literal>j</literal>里。</para>
+
+        <programlisting><filename>/usr/src/sys/kern/kern_jail.c: </filename>
+error = copyin(uap-&gt;jail, &amp;j, sizeof(j));</programlisting>
+
+        <para>在jail.h中定义了另一个重要的结构体型prison。
+          结构体<literal>prison</literal>只被用在内核空间中。
+          下面是<literal>prison</literal>结构体的定义。</para>
+
+        <programlisting><filename>/usr/include/sys/jail.h</filename>:
+struct prison {
+        LIST_ENTRY(prison) pr_list;                     /* (a) all prisons */
+        int              pr_id;                         /* (c) prison id */
+        int              pr_ref;                        /* (p) refcount */
+        char             pr_path[MAXPATHLEN];           /* (c) chroot path */
+        struct vnode    *pr_root;                       /* (c) vnode to rdir */
+        char             pr_host[MAXHOSTNAMELEN];       /* (p) jail hostname */
+        u_int32_t        pr_ip;                         /* (c) ip addr host */
+        void            *pr_linux;                      /* (p) linux abi */
+        int              pr_securelevel;                /* (p) securelevel */
+        struct task      pr_task;                       /* (d) destroy task */
+        struct mtx       pr_mtx;
+        void            **pr_slots;                     /* (p) additional data */
+};</programlisting>
+
+        <para>然后，系统调用&man.jail.2;为一个<literal>prison</literal>结构体分配一块内存，
+          并在<literal>jail</literal>和<literal>prison</literal>结构体之间复制数据。</para>
+
+        <programlisting><filename>/usr/src/sys/kern/kern_jail.c</filename>:
+MALLOC(pr, struct prison *, sizeof(*pr), M_PRISON, M_WAITOK | M_ZERO);
+...
+error = copyinstr(j.path, &amp;pr-&gt;pr_path, sizeof(pr-&gt;pr_path), 0);
+if (error)
+    goto e_killmtx;
+...
+error = copyinstr(j.hostname, &amp;pr-&gt;pr_host, sizeof(pr-&gt;pr_host), 0);
+if (error)
+        goto e_dropvnref;
+pr-&gt;pr_ip = j.ip_number;</programlisting>
+
+        <para>下面，我们将讨论另外一个重要的系统调用&man.jail.attach.2;，它实现了将进程监禁的功能。</para>
+        <programlisting><filename>/usr/src/sys/kern/kern_jail.c</filename>
+/*
+ * struct jail_attach_args {
+ *      int jid;
+ * };
+ */
+int
+jail_attach(struct thread *td, struct jail_attach_args *uap)</programlisting>
+        <para>这个系统调用做出一些可以用于区分被监禁和未被监禁的进程的改变。
+          要理解&man.jail.attach.2;为我们做了什么，我们首先要理解一些背景信息。</para>
+        <para>在FreeBSD中，每个对内核可见的线程是通过其<literal>thread</literal>结构体来识别的，
+          同时，进程都由它们自己的<literal>proc</literal>结构体描述。
+          你可以在<filename>/usr/include/sys/proc.h</filename>中找到<literal>thread</literal>和<literal>proc</literal>结构体的定义。
+          例如，在任何系统调用中，参数<literal>td</literal>实际上是个指向调用线程的<literal>thread</literal>结构体的指针，
+          正如前面所说的那样。<literal>td</literal>所指向的<literal>thread</literal>结构体中的<literal>td_proc</literal>成员是一个指针，
+          这个指针指向<literal>td</literal>所表示的线程所属进程的<literal>proc</literal>结构体。
+          结构体<literal>proc</literal>包含的成员可以描述所有者的身份
+          (<literal>p_ucred</literal>)，进程资源限制(<literal>p_limit</literal>)，
+          等等。在由<literal>proc</literal>结构体的<literal>p_ucred</literal>成员所指向的ucred结构体的定义中，
+          还有一个指向<literal>prison</literal>结构体的指针(<literal>cr_prison</literal>)。</para>
+        <programlisting><filename>/usr/include/sys/proc.h: </filename>
+struct thread {
+    ...
+    struct proc *td_proc;
+    ...
+};
+struct proc {
+    ...
+    struct ucred *p_ucred;
+    ...
+};
+<filename>/usr/include/sys/ucred.h</filename>
+struct ucred {
+    ...
+    struct prison *cr_prison;
+    ...
+};</programlisting>
+
+        <para>在<filename>kern_jail.c</filename>中，函数<literal>jail()</literal>以给定的<literal>jid</literal>
+          调用函数<literal>jail_attach()</literal>。随后<literal>jail_attach()</literal>调用函数<literal>change_root()</literal>以改变
+          调用进程的根目录。接下来，<literal>jail_attach()</literal>创建一个新的<literal>ucred</literal>结构体，并在
+          成功地将<literal>prison</literal>结构体连接到这个<literal>ucred</literal>结构体后，将这个<literal>ucred</literal>结构体连接
+          到调用进程上。从此时起，这个调用进程就会被识别为被监禁的。
+          当我们以新创建的这个<literal>ucred</literal>结构体为参数调用内核路径<literal>jailed()</literal>时，
+          它将返回1来说明这个用户身份是和一个<application>jail</application>相连的。
+          在<application>jail</application>中叉分出来的所有进程的的公共祖先进程就是这个执行了&man.jail.2;的进程，
+          因为正是它调用了&man.jail.2;系统调用。当一个程序通过&man.execve.2;而被执行时，
+          它将从其父进程的<literal>ucred</literal>结构体继承被监禁的属性，
+          因而它也会拥有一个被监禁的<literal>ucred</literal>结构体。</para>
+
+        <programlisting><filename>/usr/src/sys/kern/kern_jail.c</filename>
+int
+jail(struct thread *td, struct jail_args *uap)
+{
+...
+    struct jail_attach_args jaa;
+...
+    error = jail_attach(td, &amp;jaa);
+    if (error)
+        goto e_dropprref;
+...
+}
+
+int
+jail_attach(struct thread *td, struct jail_attach_args *uap)
+{
+    struct proc *p;
+    struct ucred *newcred, *oldcred;
+    struct prison *pr;
+...
+    p = td-&gt;td_proc;
+...
+    pr = prison_find(uap-&gt;jid);
+...
+    change_root(pr-&gt;pr_root, td);
+...
+    newcred-&gt;cr_prison = pr;
+    p-&gt;p_ucred = newcred;
+...
+}</programlisting>
+        <para>当一个进程被从其父进程叉分来的时候，
+          系统调用&man.fork.2;将用<literal>crhold()</literal>来维护其身份凭证。
+          这样，很自然的就保持了子进程的身份凭证于其父进程一致，所以子进程也是被监禁的。</para>
+
+        <programlisting><filename>/usr/src/sys/kern/kern_fork.c</filename>:
+p2-&gt;p_ucred = crhold(td-&gt;td_ucred);
+...
+td2-&gt;td_ucred = crhold(p2-&gt;p_ucred);</programlisting>
+
+      </sect3>
+    </sect2>
+  </sect1>
+
+  <sect1 xml:id="jail-restrictions">
+    <title>系统对被囚禁程序的限制</title>
+
+    <para>在整个内核中，有一系列对被囚禁程序的约束措施。
+      通常，这些约束只对被囚禁的程序有效。如果这些程序试图突破这些约束，
+      相关的函数将出错返回。例如:</para>
+
+    <programlisting>
+if (jailed(td-&gt;td_ucred))
+    return EPERM;</programlisting>
+
+    <sect2>
+      <title>SysV进程间通信(IPC)</title>
+
+      <indexterm><primary>System V IPC(系统V进程间通信)</primary></indexterm>
+
+      <para>System V 进程间通信 (IPC) 是通过消息实现的。
+        每个进程都可以向其它进程发送消息， 告诉对方该做什么。
+        处理消息的函数是： &man.msgctl.3;、&man.msgget.3;、&man.msgsnd.3; 和
+                &man.msgrcv.3;。前面已经提到，一些 sysctl 开关可以影响 <application>jail</application> 的行为，
+        其中有一个是 <literal>security.jail.sysvipc_allowed</literal>。 在大多数系统上，
+        这个 sysctl 项会设成0。 如果将它设为1， 则会完全失去 <application>jail</application> 的意义：
+        因为那样在 <application>jail</application> 中特权进程就可以影响被监禁的环境外的进程了。
+        消息与信号的区别是：消息仅由一个信号编号组成。</para>
+
+      <para><filename>/usr/src/sys/kern/sysv_msg.c</filename>:</para>
+
+      <itemizedlist>
+        <listitem><para><literal>msgget(key, msgflg)</literal>:
+                      <literal>msgget</literal>返回(也可能创建)一个消息描述符，
+           以指派一个在其它函数中使用的消息队列。</para></listitem>
+
+        <listitem><para><literal>msgctl(msgid, cmd, buf)</literal>: 通过这个函数，
+           一个进程可以查询一个消息描述符的状态。</para></listitem>
+
+        <listitem><para><literal>msgsnd(msgid, msgp, msgsz, msgflg)</literal>:
+                     <literal>msgsnd</literal>向一个进程发送一条消息。</para></listitem>
+
+        <listitem><para><literal>msgrcv(msgid, msgp, msgsz, msgtyp, msgflg)</literal>:
+           进程用这个函数接收消息。</para></listitem>
+
+      </itemizedlist>
+
+      <para>在这些函数对应的系统调用的代码中，都有这样一个条件判断：</para>
+
+      <programlisting><filename>/usr/src/sys/kern/sysv_msg.c</filename>:
+if (!jail_sysvipc_allowed &amp;&amp; jailed(td-&gt;td_ucred))
+    return (ENOSYS);</programlisting>
+
+      <indexterm><primary>semaphores(信号量)</primary></indexterm>
+      <para>信号量系统调用使得进程可以通过一系列原子操作实现同步。
+         信号量为进程锁定资源提供了又一种途径。
+         然而，进程将为正在被使用的信号量进入等待状态，一直休眠到资源被释放。
+         在<application>jail</application>中如下的信号量系统调用将会失效: &man.semget.2;, &man.semctl.2;
+         和&man.semop.2;。</para>
+
+      <para><filename>/usr/src/sys/kern/sysv_sem.c</filename>:</para>
+
+      <itemizedlist>
+        <listitem>
+          <para><literal>semctl(semid, num, cmd, ...)</literal>:
+            <literal>semctl</literal>对在信号量队列中用<literal>semid</literal>标识的信号量执行<literal>cmd</literal>指定的命令。</para></listitem>
+
+        <listitem>
+          <para><literal>semget(key, nsems, flag)</literal>:
+            <literal>semget</literal>建立一个对应于<literal>key</literal>的信号量数组。</para>
+
+          <para><literal>参数key和flag与他们在msgget()的意义相同。</literal></para></listitem>
+
+        <listitem><para><literal>setop(semid, array, nops)</literal>:
+          <literal>semop</literal>对semid标识的信号量完成一组由array所指定的操作。</para></listitem>
+      </itemizedlist>
+
+      <indexterm><primary>shared memory(共享内存)</primary></indexterm>
+      <para>System V IPC使进程间可以共享内存。进程之间可以通过它们虚拟地址空间
+         的共享部分以及相关数据读写操作直接通讯。这些系统调用在被监禁的环境中将会失效:
+                  &man.shmdt.2;、&man.shmat.2;、&man.shmctl.2;和&man.shmget.2;</para>
+
+      <para><filename>/usr/src/sys/kern/sysv_shm.c</filename>:</para>
+
+      <itemizedlist>
+        <listitem><para><literal>shmctl(shmid, cmd, buf)</literal>:
+        <literal>shmctl</literal>对<literal>id</literal>标识的共享内存区域做各种各样的控制。</para></listitem>
+
+        <listitem><para><literal>shmget(key, size, flag)</literal>:
+        <literal>shmget</literal>建立/打开<literal>size</literal>字节的共享内存区域。</para></listitem>
+
+        <listitem><para><literal>shmat(shmid, addr, flag)</literal>:
+        <literal>shmat</literal>将<literal>shmid</literal>标识的共享内存区域指派到进程的地址空间里。</para></listitem>
+
+        <listitem><para><literal>shmdt(addr)</literal>:
+        <literal>shmdt</literal>取消共享内存区域的地址指派。</para></listitem>
+
+      </itemizedlist>
+    </sect2>
+
+    <sect2>
+      <title>套接字</title>
+
+      <indexterm><primary>sockets(套接字)</primary></indexterm>
+      <para><application>Jail</application>以一种特殊的方式处理&man.socket.2;系统调用和相关的低级套接字函数。
+         为了决定一个套接字是否允许被创建，它先检查sysctl项
+                 <literal>security.jail.socket_unixiproute_only</literal>是否被设置为1。
+         如果被设为1，套接字建立时将只能指定这些协议族：
+                  <literal>PF_LOCAL</literal>, <literal>PF_INET</literal>,
+                  <literal>PF_ROUTE</literal>。否则，&man.socket.2;将会返回出错。</para>
+
+      <programlisting><filename>/usr/src/sys/kern/uipc_socket.c</filename>:
+int
+socreate(int dom, struct socket **aso, int type, int proto,
+    struct ucred *cred, struct thread *td)
+{
+    struct protosw *prp;
+...
+    if (jailed(cred) &amp;&amp; jail_socket_unixiproute_only &amp;&amp;
+        prp-&gt;pr_domain-&gt;dom_family != PF_LOCAL &amp;&amp;
+        prp-&gt;pr_domain-&gt;dom_family != PF_INET &amp;&amp;
+        prp-&gt;pr_domain-&gt;dom_family != PF_ROUTE) {
+        return (EPROTONOSUPPORT);
+    }
+...
+}</programlisting>
+
+    </sect2>
+
+    <sect2>
+      <title>Berkeley包过滤器</title>
+
+      <indexterm><primary>Berkeley Packet Filter(伯克利包过滤器)</primary></indexterm>
+      <indexterm><primary>data link layer(数据链路层)</primary></indexterm>
+
+      <para><application>Berkeley包过滤器</application>提供了一个与协议无关的，直接通向数据链路层的低级接口。
+        现在<application>BPF</application>是否可以在监禁的环境中被使用是通过&man.devfs.8;来控制的。</para>
+    </sect2>
+
+    <sect2>
+      <title>网络协议</title>
+
+      <indexterm><primary>protocols(协议)</primary></indexterm>
+
+      <para>网络协议TCP, UDP, IP和ICMP很常见。IP和ICMP处于同一协议层次：第二层，
+        网络层。当参数<literal>nam</literal>被设置时，
+        有一些限制措施会防止被囚禁的程序绑定到一些网络接口上。
+                <literal>nam</literal>是一个指向<literal>sockaddr</literal>结构体的指针，
+        描述可以绑定服务的地址。一个更确切的定义：<literal>sockaddr</literal>“是一个模板，包含了地址的标识符和地址的长度”。
+        在函数<literal>in_pcbbind_setup()</literal>中<literal>sin</literal>是一个指向<literal>sockaddr_in</literal>结构体的指针，
+        这个结构体包含了套接字可以绑定的端口、地址、长度、协议族。
+        这就禁止了在<application>jail</application>中的进程指定不属于这个进程所存在于的<application>jail</application>的IP地址。</para>
+      <programlisting><filename>/usr/src/sys/kern/netinet/in_pcb.c</filename>:
+int
+in_pcbbind_setup(struct inpcb *inp, struct sockaddr *nam, in_addr_t *laddrp,
+    u_short *lportp, struct ucred *cred)
+{
+    ...
+    struct sockaddr_in *sin;
+    ...
+    if (nam) {
+        sin = (struct sockaddr_in *)nam;
+        ...
+        if (sin-&gt;sin_addr.s_addr != INADDR_ANY)
+            if (prison_ip(cred, 0, &amp;sin-&gt;sin_addr.s_addr))
+                return(EINVAL);
+        ...
+        if (lport) {
+            ...
+            if (prison &amp;&amp; prison_ip(cred, 0, &amp;sin-&gt;sin_addr.s_addr))
+                return (EADDRNOTAVAIL);
+            ...
+        }
+    }
+    if (lport == 0) {
+        ...
+        if (laddr.s_addr != INADDR_ANY)
+            if (prison_ip(cred, 0, &amp;laddr.s_addr))
+                return (EINVAL);
+        ...
+    }
+...
+    if (prison_ip(cred, 0, &amp;laddr.s_addr))
+        return (EINVAL);
+...
+}</programlisting>
+
+      <para>你也许想知道函数<literal>prison_ip()</literal>做什么。
+                <literal>prison_ip()</literal>有三个参数，一个指向身份凭证的指针(用<literal>cred</literal>表示)，
+        一些标志和一个IP地址。当这个IP地址不属于这个<application>jail</application>时，返回1；
+        否则返回0。正如你从代码中看见的，如果，那个IP地址确实不属于这个<application>jail</application>，
+        就不再允许向这个网络地址绑定协议。</para>
+
+      <programlisting><filename>/usr/src/sys/kern/kern_jail.c:</filename>
+int
+prison_ip(struct ucred *cred, int flag, u_int32_t *ip)
+{
+    u_int32_t tmp;
+
+    if (!jailed(cred))
+        return (0);
+    if (flag)
+        tmp = *ip;
+    else
+        tmp = ntohl(*ip);
+    if (tmp == INADDR_ANY) {
+        if (flag)
+            *ip = cred-&gt;cr_prison-&gt;pr_ip;
+        else
+            *ip = htonl(cred-&gt;cr_prison-&gt;pr_ip);
+        return (0);
+    }
+    if (tmp == INADDR_LOOPBACK) {
+        if (flag)
+            *ip = cred-&gt;cr_prison-&gt;pr_ip;
+        else
+            *ip = htonl(cred-&gt;cr_prison-&gt;pr_ip);
+        return (0);
+    }
+    if (cred-&gt;cr_prison-&gt;pr_ip != tmp)
+        return (1);
+    return (0);
+}</programlisting>
+    </sect2>
+
+    <sect2>
+      <title>文件系统</title>
+
+      <indexterm><primary>filesystem(文件系统)</primary></indexterm>
+      <para>如果完全级别大于0，即便是<application>jail</application>里面的<literal>root</literal>，
+        也不允许在Jail中取消或更改文件标志，如“不可修改”、“只可添加”、“不可删除”标志。</para>
+      <programlisting><filename>/usr/src/sys/ufs/ufs/ufs_vnops.c:</filename>
+static int
+ufs_setattr(ap)
+    ...
+{
+    ...
+        if (!priv_check_cred(cred, PRIV_VFS_SYSFLAGS, 0)) {
+            if (ip-&gt;i_flags
+                &amp; (SF_NOUNLINK | SF_IMMUTABLE | SF_APPEND)) {
+                    error = securelevel_gt(cred, 0);
+                    if (error)
+                        return (error);
+            }
+            ...
+        }
+}
+<filename>/usr/src/sys/kern/kern_priv.c</filename>
+int
+priv_check_cred(struct ucred *cred, int priv, int flags)
+{
+    ...
+    error = prison_priv_check(cred, priv);
+    if (error)
+        return (error);
+    ...
+}
+<filename>/usr/src/sys/kern/kern_jail.c</filename>
+int
+prison_priv_check(struct ucred *cred, int priv)
+{
+    ...
+    switch (priv) {
+    ...
+    case PRIV_VFS_SYSFLAGS:
+        if (jail_chflags_allowed)
+            return (0);
+        else
+            return (EPERM);
+    ...
+    }
+    ...
+}</programlisting>
+
+    </sect2>
+
+  </sect1>
+
+</chapter>

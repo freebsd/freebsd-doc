@@ -1,0 +1,602 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+     The FreeBSD Documentation Project
+     The FreeBSD Simplified Chinese Project
+
+     Original Revision: r36653
+     $FreeBSD$
+-->
+<!-- Need more documentation on praudit, auditreduce, etc.  Plus more info
+on the triggers from the kernel (log rotation, out of space, etc).
+And the /dev/audit special file if we choose to support that.  Could use
+some coverage of integrating MAC with Event auditing and perhaps discussion
+on how some companies or organizations handle auditing and auditing
+requirements. -->
+<chapter xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink" version="5.0" xml:id="audit">
+  <info><title>安全事件审计</title>
+    <authorgroup>
+      <author><personname><firstname>Tom</firstname><surname>Rhodes</surname></personname><contrib>原作 </contrib></author>
+      <author><personname><firstname>Robert</firstname><surname>Watson</surname></personname></author>
+    </authorgroup>
+  </info>
+
+  
+
+  <sect1 xml:id="audit-synopsis">
+    <title>概述</title>
+
+    <indexterm><primary>AUDIT</primary></indexterm>
+    <indexterm>
+      <primary>安全事件审计</primary>
+      <see>MAC</see>
+    </indexterm>
+
+    <para>&os; 中包含了对于细粒度安全事件审计的支持。
+      事件审计能够支持可靠的、 细粒度且可配置的， 对于各类与安全有关的系统事件，
+      包括登录、 配置变更， 以及文件和网络访问等的日志记录。
+      这些日志记录对于在正在运行的系统上实施监控、
+      入侵检测和事后分析都十分重要。 &os; 实现了 Sun 所发布的
+      <acronym>BSM</acronym> API 和文件格式，
+      并且与 &sun; 的 &solaris; 和 &apple; 的 &macos; X 审计实现兼容。</para>
+
+    <para>这一章的重点是安装和配置事件审计。 它介绍了事件策略， 并提供了一个审计的配置例子。</para>
+
+    <para>读完这章， 您将了解：</para>
+
+    <itemizedlist>
+      <listitem>
+        <para>事件审计是什么， 以及它如何工作。</para>
+      </listitem>
+
+      <listitem>
+	<para>如何在 &os; 上为用户和进程配置事件审计。</para>
+      </listitem>
+
+      <listitem>
+	<para>如何使用审计记录摘要和复审工具来对审计记录进行复审。</para>
+      </listitem>
+    </itemizedlist>
+
+    <para>阅读这章之前， 您应该：</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>理解 &unix; 和 &os; 的基础知识
+	  (<xref linkend="basics"/>)。</para>
+      </listitem>
+
+      <listitem>
+	<para>熟悉关于内核配置和编译的基本方法
+	  (<xref linkend="kernelconfig"/>)。</para>
+      </listitem>
+
+      <listitem>
+	<para>熟悉安全知识以及如何在 &os; 运用它们 (<xref linkend="security"/>)。</para>
+      </listitem>
+    </itemizedlist>
+
+    <warning>
+      <para>审计机制中存在一些已知的限制，
+	例如并不是所有与安全有关的系统事件都可以审计，
+	另外某些登录机制， 例如基于 X11 显示管理器，
+	以及第三方服务的登录机制， 都不会在用户的登录会话中正确配置审计。</para>
+
+      <para>安全审计机制能够对系统活动生成非常详细的记录信息： 在繁忙的系统中，
+	记帐数据如果配置不当会非常的大， 并在一周内迅速超过几个 GB 的尺寸。
+	管理员应考虑审计配置中的导致磁盘空间需求的这些问题。 例如，
+	可能需要为 <filename>/var/audit</filename> 目录单独分配一个文件系统，
+	以防止在审计日志所用的文件系统被填满时影响其它文件系统。</para>
+    </warning>
+
+  </sect1>
+
+  <sect1 xml:id="audit-inline-glossary">
+    <title>本章中的一些关键术语</title>
+
+    <para>在开始阅读这章之前， 我们需要解释一下与审计有关的一些关键的术语：</para>
+
+    <itemizedlist>
+      <listitem>
+	<para><emphasis>事件 (event)</emphasis>：
+	  可审计事件是指能够被审计子系统记录的任何事件。
+	  举例说来， 与安全有关的事件包括创建文件、
+	  建立网络连接， 以及以某一用户身份登录， 等等。
+	  任何事件必要么是 <quote>有主 (attributable)</quote> 的，
+	  即可以最终归于某一已通过验证的用户的身份， 反之， 则称该事件是
+	  <quote>无主 (non-attributable)</quote> 的。
+	  无主事件可以是发生在登录过程成功之前的任何事件， 例如尝试一次无效密码等。</para>
+      </listitem>
+
+      <listitem>
+        <para><emphasis>类 (class)</emphasis>： 事件类是指相关事件的一个命名集合，
+	  通常在筛选表达式中使用。 常用的事件类包括 <quote>创建文件</quote> (fc)、
+	  <quote>执行</quote> (ex) 和 <quote>登入和注销</quote>
+	  (lo)。</para>
+      </listitem>
+
+      <listitem>
+	<para><emphasis>记录 (record)</emphasis>： 记录是指描述一个安全事件的日志项。
+	  记录包括记录事件类型、 执行操作的主体 (用户) 信息、
+	  日期和事件信息， 以及与之相关的对象或参数信息， 最后是操作成功或失败。</para>
+      </listitem>
+
+      <listitem>
+	<para><emphasis>账目 (trail)</emphasis>： 审计账目， 或日志文件，
+	  包含了一系列描述安全事件的审计记录。 典型情况下，
+	  审计账目基本上是以事件发生的时间顺序记录的。 只有获得授权的进程，
+	  才能够向审计账目中提交记录。</para>
+      </listitem>
+
+      <listitem>
+	<para><emphasis>筛选表达式 (selection expression)</emphasis>：
+	  筛选表达式是包含一系列前缀和审计事件类名字，
+	  用以匹配事件的字符串。</para>
+      </listitem>
+
+      <listitem>
+	<para><emphasis>预选 (preselection)</emphasis>： 系统通过这一过程来识别事件是否是管理员所感兴趣的，
+	  从而避免为他们不感兴趣的事件生成记录。 预选配置使用一系列选择表达式，
+	  用以识别事件类别、 要审计的用户， 以及适用于验证过用户身份， 以及未验证用户身份的进程的全局配置。</para>
+      </listitem>
+
+      <listitem>
+	<para><emphasis>浓缩 (reduction)</emphasis>： 从现有的审计记帐中筛选出用于保留、
+	  打印或分析的过程。 除此之外， 它也表示从审计记帐中删去不需要的审计记录的过程。
+	  通过使用浓缩操作， 管理员可以实现预留审计数据的策略。 例如， 详细的审计记帐信息，
+	  可能会保留一个月之久， 但在这之后， 则对这些记帐信息执行浓缩操作，
+	  只保留登录信息用于存档。</para>
+      </listitem>
+    </itemizedlist>
+  </sect1>
+
+  <sect1 xml:id="audit-install">
+    <title>安装审计支持</title>
+
+    <para>对于事件审计的支持， 已经随标准的 <buildtarget>installworld</buildtarget>
+      过程完成。 管理员可以通过查看
+      <filename>/etc/security</filename> 的内容来确认这一点。
+      您应能看到一些名字以 <emphasis>audit</emphasis> 开头的文件，
+      例如 <filename>audit_event</filename>。</para>
+
+    <para>对于审计功能的用户态支持目前是作为 &os; 基本系统的一部分来安装的。
+      默认内核中也包含了对于事件审计的内核支持， 但如果您使用的是定制内核，
+      就必须在内核配置文件中明确指定希望添加这一支持：</para>
+
+    <programlisting>options	AUDIT</programlisting>
+
+    <para>接下来， 您应按照
+      <xref linkend="kernelconfig"/> 中所介绍的步骤来完成一次内核的编译和安装。</para>
+
+    <para>在编译好并安装了内核， 并重新启动了系统之后， 就可以在
+      &man.rc.conf.5; 中增加下列配置来启用审计服务了：</para>
+
+    <para>在编译、安装了开启审计功能的内核，并重新启动计算机之后，
+      就可以在 &man.rc.conf.5; 中增加下列配置来启用审计服务了：</para>
+
+    <programlisting>auditd_enable="YES"</programlisting>
+
+    <para>此后， 必须重新启动系统， 或通过下面的命令手工启动审计服务来启动审计支持：</para>
+
+    <programlisting>/etc/rc.d/auditd start</programlisting>
+  </sect1>
+
+  <sect1 xml:id="audit-config">
+    <title>对审计进行配置</title>
+
+    <para>所有用于安全审计的配置文件， 都可以在
+      <filename>/etc/security</filename> 找到。
+      要启动审计服务， 下面这些文件必须存在：</para>
+
+    <itemizedlist>
+      <listitem>
+	<para><filename>audit_class</filename> - 包含对于审计类的定义。</para>
+      </listitem>
+
+      <listitem>
+	<para><filename>audit_control</filename> - 控制审计子系统的特性，
+	  例如默认审计类、 在审计日志所在的卷上保留的最小空间、
+	  审计日志的最大尺寸， 等等。</para>
+      </listitem>
+
+      <listitem>
+	<para><filename>audit_event</filename> - 文字化的系统审计事件名称和描述，
+	  以及每个事件属于哪个类别。</para>
+      </listitem>
+
+      <listitem>
+	<para><filename>audit_user</filename> - 针对特定用户的审计需求，
+	  这些配置在登录时会与全局的默认值合并。</para>
+      </listitem>
+
+      <listitem>
+	<para><filename>audit_warn</filename> - 由 <application>auditd</application> 调用的一个可定制的 shell
+	  脚本， 用于在意外情况， 如用于审计日志的空间过少， 或审计日志文件被翻转时，
+	  生成警告信息。</para>
+      </listitem>
+    </itemizedlist>
+
+    <warning>
+      <para>在编辑和维护审计配置文件时一定要小心， 因为配置文件中的错误会导致记录事件不正确。</para>
+    </warning>
+
+    <sect2>
+      <title>事件筛选表达式</title>
+
+      <para>在审计配置文件中的许多地方会用到筛选表达式来确定哪些事件是需要审计的。
+	表达式中需要指定要匹配的事件类型， 并使用前缀指定是否应接受或忽略匹配的事件，
+	此外， 还可以指定一个可选项指明匹配成功或失败的操作。
+	选择表达式是按从左到右的顺序计算的， 而对于两个表达式的情形，
+	则是通过将后一个追加到前一个之后来实现的。</para>
+
+      <para>下面列出了在 <filename>audit_class</filename> 中的默认事件类型：</para>
+
+      <itemizedlist>
+	<listitem>
+	  <para><literal>all</literal> - <emphasis>all (全部)</emphasis> - 表示匹配全部事件类。</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>ad</literal> - <emphasis>administrative (管理)</emphasis>
+	    - 所有在系统上所进行的管理性操作。</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>ap</literal> - <emphasis>application (应用)</emphasis> -
+	    应用程序定义的动作。</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>cl</literal> - <emphasis>file close (文件关闭)</emphasis> -
+	    审计对 <function>close</function> 系统调用的操作。</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>ex</literal> - <emphasis>exec (执行)</emphasis> - 审计程序的执行。
+	    对于命令行参数和环境变量的审计是通过在 &man.audit.control.5;
+	    中 <literal>policy</literal> 的 <literal>argv</literal> 和 <literal>envv</literal>
+	    参数来控制的。</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>fa</literal> - <emphasis>file attribute access (造访文件属性)</emphasis>
+	    - 审计访问对象属性， 例如
+	    &man.stat.1;、 &man.pathconf.2; 以及类似事件。</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>fc</literal> - <emphasis>file create (创建文件)</emphasis>
+	    - 审计创建了文件的事件。</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>fd</literal> - <emphasis>file delete (删除文件)</emphasis>
+	    - 审计所发生的文件删除事件。</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>fm</literal> - <emphasis>file attribute modify (修改文件属性)</emphasis>
+	    - 审计文件属性发生变化的事件，
+	    例如 &man.chown.8;、 &man.chflags.1;、 &man.flock.2;，
+	    等等。</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>fr</literal> - <emphasis>file read (读文件数据)</emphasis>
+	    - 审计读取数据、 文件以读方式打开等事件。</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>fw</literal> - <emphasis>file write (写文件数据)</emphasis> -
+	    审计写入数据、 文件以写方式打开等事件。</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>io</literal> - <emphasis>ioctl</emphasis> -
+	    审计对 &man.ioctl.2; 系统调用的使用。</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>ip</literal> - <emphasis>ipc</emphasis> - 审计各种形式的进程间通信 (IPC)，
+	    包括 POSIX 管道和 System V <acronym>IPC</acronym> 操作。</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>lo</literal> - <emphasis>login_logout</emphasis> -
+	    审计系统中发生的 &man.login.1; 和 &man.logout.1; 事件。</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>na</literal> - <emphasis>non attributable (无主)</emphasis> -
+	    审计无法归类的事件。</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>no</literal> - <emphasis>invalid class (无效类)</emphasis> -
+	    表示不匹配任何事件。</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>nt</literal> - <emphasis>network (网络)</emphasis> -
+	    与网络操作有关的事件， 例如
+	    &man.connect.2; 和 &man.accept.2;。</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>ot</literal> - <emphasis>other (其它)</emphasis> -
+	    审计各类杂项事件。</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>pc</literal> - <emphasis>process (进程)</emphasis> -
+	    审计进程操作， 例如 &man.exec.3; 和
+	    &man.exit.3;。</para>
+	</listitem>
+
+      </itemizedlist>
+
+      <para>这些审计事件， 可以通过修改
+	<filename>audit_class</filename> 和
+	<filename>audit_event</filename> 这两个配置文件来进行定制。</para>
+
+      <para>这个列表中， 每个审计类均包含一个表示匹配成功/失败操作的前缀，
+	以及这一项是否是增加或删去对事件类或类型的匹配。</para>
+
+      <itemizedlist>
+	<listitem>
+	  <para>(none) 审计事件的成功和失败实例。</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>+</literal> 审计这一类的成功事件。</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>-</literal> 审计这一类的失败事件。</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>^</literal> 不审计本类中的成功或失败事件。</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>^+</literal> 不审计本类中的成功事件。</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>^-</literal> 不审计本类中的失败事件。</para>
+	</listitem>
+
+      </itemizedlist>
+
+      <para>下面例子中的筛选字符串表示筛选成功和失败的登录/注销事件，
+	而对执行事件， 则只审计成功的：</para>
+
+      <programlisting>lo,+ex</programlisting>
+
+    </sect2>
+
+    <sect2>
+      <title>配置文件</title>
+
+      <para>多数情况下， 在配置审计系统时，
+	管理员只需修改两个文件： <filename>audit_control</filename>
+	和 <filename>audit_user</filename>。 前者控制系统级的审计属性和策略，
+	而后者则用于针对具体的用户来微调。</para>
+
+      <sect3 xml:id="audit-auditcontrol">
+        <title><filename>audit_control</filename> 文件</title>
+
+	<para><filename>audit_control</filename> 文件指定了一系列用于审计子系统的默认设置。
+	  通过查看这个文件， 我们可以看到下面的内容：</para>
+
+	<programlisting>dir:/var/audit
+flags:lo
+minfree:20
+naflags:lo
+policy:cnt
+filesz:0</programlisting>
+
+	<para>这里的 <option>dir</option> 选项可以用来设置用于保存审计日志的一个或多个目录。
+	  如果指定了多个目录， 则将在填满一个之后换用下一个。 一般而言，
+	  审计通常都会配置为保存在一个专用的文件系统之下，
+	  以避免审计系统与其它子系统在文件系统满的时候所产生的冲突。
+	  </para>
+
+	<para><option>flags</option> 字段用于为有主事件配置系统级的预选条件。
+	  在前面的例子中， 所有用户成功和失败的登录和注销都会被审计。</para>
+
+	<para><option>minfree</option> 参数用于定义保存审计日志的文件系统上剩余空间的最小百分比。
+	  当超过这一阈值时， 将产生一个警告。 前面的例子中， 最小剩余空间比例设置成了两成。</para>
+
+	<para><option>naflags</option> 选项表示审计类审计无主事件，
+	  例如作为登录进程和系统服务的那些进程的事件。</para>
+
+	<para><option>policy</option> 选项用于指定一个以逗号分隔的策略标志表，
+	  以控制一系列审计行为。 默认的 <literal>cnt</literal> 标志表示系统应在审计失败时继续运行
+	  (强烈建议使用这个标志)。 另一个常用的标志是
+	  <literal>argv</literal>， 它表示在审计命令执行操作时，
+	  同时审计传给 &man.execve.2; 系统调用的命令行参数。</para>
+
+	<para><option>filesz</option> 选项指明了审计日志在自动停止记录和翻转之前允许的最大尺寸。
+	  默认值 0 表示禁用自动日志翻转。 如果配置的值不是零， 但小于最小值 512k，
+	  则这个配置会被忽略， 并在日志中记录这一消息。</para>
+      </sect3>
+
+      <sect3 xml:id="audit-audituser">
+	<title><filename>audit_user</filename> 文件</title>
+
+	<para><filename>audit_user</filename> 文件允许管理员为特定用户指定进一步的审计需求。
+	  每一行使用两个字段来配置用户的审计：
+	  第一个是 <literal>alwaysaudit</literal> 字段， 它指明了一组对该用户总会进行审计的事件；
+	  而第二个则是 <literal>neveraudit</literal> 字段，
+	  它指明了一系列对该用户不审计的事件。</para>
+
+	<para>在下述 <filename>audit_user</filename> 示例文件中，
+	  审计了 <systemitem class="username">root</systemitem> 用户的 登录/注销 事件， 以及成功的命令执行事件，
+	  此外， 还审计了 <systemitem class="username">www</systemitem> 用户的文件创建和成功的命令执行事件。
+	  如果与前面的示范 <filename>audit_control</filename> 文件配合使用，
+	  则 <systemitem class="username">root</systemitem> 的 <literal>lo</literal> 项就是多余的， 而对
+	  <systemitem class="username">www</systemitem> 用户而言， 其登录/注销事件也会被审计：</para>
+
+	<programlisting>root:lo,+ex:no
+www:fc,+ex:no</programlisting>
+
+      </sect3>
+    </sect2>
+  </sect1>
+
+  <sect1 xml:id="audit-administration">
+    <title>管理审计子系统</title>
+
+    <sect2>
+      <title>查看审计日志</title>
+
+      <para>审计记帐是以 BSM 二进制格式保存的， 因此必须使用工具来对其进行修改，
+	或将其转换为文本。 &man.praudit.1;
+	命令能够将记帐文件转换为简单的文本格式； 而
+	&man.auditreduce.1; 命令则可以为分析、 存档或打印目的来浓缩审计日志文件。
+	<command>auditreduce</command> 支持一系列筛选参数， 包括事件类型、 事件类、
+	用户、 事件的日期和时间， 以及文件路径或操作对象。</para>
+
+      <para>例如， <command>praudit</command> 工具会将指定的审计记帐转存为简单文本格式的审计日志：</para>
+
+      <screen>&prompt.root; <userinput>praudit /var/audit/AUDITFILE</userinput></screen>
+
+      <para>此处 <filename>AUDITFILE</filename> 是要转存的审计日志文件。</para>
+
+      <para>审计记帐中包括一系列审计记录， 这些记录由一系列短语 (token) 组成，
+	而 <command>praudit</command> 能把它们顺序显示为一行。
+	每个短语都属于某个特定的类型， 例如
+	<literal>header</literal> 表示审计记录头， 而
+	<literal>path</literal> 则表示在一次名字查找中的文件路径。 下面是一个
+	<literal>execve</literal> 事件的例子：</para>
+
+      <programlisting>header,133,10,execve(2),0,Mon Sep 25 15:58:03 2006, + 384 msec
+exec arg,finger,doug
+path,/usr/bin/finger
+attribute,555,root,wheel,90,24918,104944
+subject,robert,root,wheel,root,wheel,38439,38032,42086,128.232.9.100
+return,success,0
+trailer,133</programlisting>
+
+      <para>这个审计记录表示一次成功的 <literal>execve</literal>
+	调用， 执行了 <literal>finger doug</literal>。 在参数短语中是由 shell 提交给内核的命令行。
+	<literal>path</literal> 短语包含了由内核查找得到的可执行文件路径。 <literal>attribute</literal> 短语中包含了对可执行文件的描述，
+	特别地， 它包括了文件的权限模式， 用以确定应用程序是否是 setuid 的。
+	<literal>subject</literal>(主体) 短语描述了主体进程， 并顺序记录了审计用户 ID、 生效用户 ID 和组 ID、
+	实际用户 ID 和组 ID、 进程 ID、 会话 ID、 端口 ID， 以及登录地址。
+	注意审计用户 ID 和实际用户 ID 是不同的：
+	用户 <systemitem class="username">robert</systemitem> 在执行这个命令之前已经切换为
+	<systemitem class="username">root</systemitem> 帐户， 但它会以最初进行身份验证的用户身份进行审计。
+	最后， <literal>return</literal> 短语表示执行成功，
+	而 <literal>trailer</literal> 表示终结这一记录。</para>
+
+      <para><command>praudit</command>
+	可以选择使用 <option>-x</option> 参数来支持 XML 格式的输出。</para>
+
+    </sect2>
+
+    <sect2>
+      <title>浓缩审计记帐</title>
+
+      <para>由于审计日志可能会很大， 管理员可能会希望选择记录的一个子集来使用，
+	例如与特定用户相关的记录：</para>
+
+      <screen>&prompt.root; <userinput>auditreduce -u trhodes /var/audit/AUDITFILE | praudit</userinput></screen>
+
+    <para>这将选择保存在
+	<filename>AUDITFILE</filename> 中的所有由
+      <systemitem class="username">trhodes</systemitem> 产生的审计日志。</para>
+    </sect2>
+
+    <sect2>
+      <title>委派审计复审权限</title>
+
+      <para>在 <systemitem class="groupname">audit</systemitem> 组中的用户，
+	拥有读取 <filename>/var/audit</filename> 下的审计记帐的权限；
+	默认情况下， 这个组是空的， 因此只有 <systemitem class="username">root</systemitem> 用户可以读取审计记帐。
+	如果希望给某个用户指定审计复审权， 则可以将其加入 <systemitem class="groupname">audit</systemitem>。
+	由于查看审计日志的内容可以提供关于用户和进程行为的大量深度信息，
+	在您委派这些权力时， 请务必谨慎行事。</para>
+    </sect2>
+
+    <sect2>
+      <title>通过审计管道来实时监控</title>
+
+      <para>审计管道是位于设备文件系统中的自动复制 (cloning) 的虚拟设备，
+	用于让应用程序控制正在运行的审计记录流， 这主要是为了满足入侵检测和系统监控软件作者的需要。
+	不过， 对管理员而言， 审计管道设备也提供了一种无需冒审计记帐文件属主出现问题的麻烦，
+	或由于日志翻转而打断事件流的麻烦， 而实现实时监控的方便途径。 要跟踪实时事件流，
+	使用下面的命令行：</para>
+
+      <screen>&prompt.root; <userinput>praudit /dev/auditpipe</userinput></screen>
+
+      <para>默认情况下， 审计管道设备节点只有 <systemitem class="username">root</systemitem> 用户才能访问。 如果希望
+	<systemitem class="groupname">audit</systemitem> 组的成员能够访问它， 应在 <filename>devfs.rules</filename>
+	中加入下述 <literal>devfs</literal> 规则：</para>
+
+      <programlisting>add path 'auditpipe*' mode 0440 group audit</programlisting>
+
+      <para>请参见 &man.devfs.rules.5; 以了解关于配置 devfs 文件系统的进一步信息。</para>
+
+      <warning>
+	<para>很容易配置出审计事件反馈循环， 也就是查看事件的操作本身会产生更多的事件。
+	  例如， 如果所有的网络 I/O 均被审计， 又在 SSH 会话中执行
+	  &man.praudit.1;， 就会以很高的速率产生持续的审计事件流，
+	  因为每显示一个事件都会产生新的事件。 建议您在需要在审计管道设备上执行
+	  <command>praudit</command> 时， 选择一个没有进行细粒度
+	  I/O 审计的会话来运行。</para>
+      </warning>
+    </sect2>
+
+    <sect2>
+      <title>审计记帐文件的轮转</title>
+
+      <para>审计计账只由内核写入， 且只能由
+	<application>auditd</application> 管理。 管理员不应尝试使用 &man.newsyslog.conf.5;
+	或其它工具来完成审计日志的轮转工作。 您可以使用 <command>audit</command>
+	管理工具来关闭审计、 重新配置审计系统， 并完成日志轮转。
+	下面的命令将让审计服务创建新的审计日志，
+	并发信号给内核要求其使用新的日志。 旧日志将终止并被改名，
+	此时， 管理员就可以操作它了。</para>
+
+      <screen>&prompt.root; <userinput>audit -n</userinput></screen>
+
+      <warning>
+	<para>如果 <application>auditd</application> 服务程序没有在运行，
+	  则这个命令将失败并给出错误提示。</para>
+      </warning>
+
+      <para>在 <filename>/etc/crontab</filename> 加入如下设置，
+	将使 &man.cron.8; 每十二小时将日志轮转一次。</para>
+
+      <programlisting>0     */12       *       *       *       root    /usr/sbin/audit -n</programlisting>
+
+      <para>这些修改会在您保存 <filename>/etc/crontab</filename> 后生效。</para>
+
+      <para>对于审计记帐文件基于尺寸的自动翻转， 可以通过
+	&man.audit.control.5; 中的 <option>filesz</option> 选项来配置，
+	这个选项在这一章的配置文件一节中已经介绍过。</para>
+    </sect2>
+
+    <sect2>
+      <title>压缩审计记帐</title>
+
+      <para>由于审计记帐文件会变得很大， 通常会希望在审计服务关闭它时，
+	对其进行压缩或归档。 <filename>audit_warn</filename> 脚本可以用来在一系列与审计有关的事件发生时，
+	执行一些用户定义的操作， 这也包括在审计记帐翻转时进行清理操作。 举例而言， 可以在
+	<filename>audit_warn</filename> 脚本中加入下列内容来在审计记帐关闭时压缩它：</para>
+
+      <programlisting>#
+# Compress audit trail files on close.
+#
+if [ "$1" = closefile ]; then
+        gzip -9 $2
+fi</programlisting>
+
+      <para>其它存档操作也包括将审计记帐复制到一个中央的服务器， 删除旧的记帐文件，
+	或浓缩审计记帐并删除不需要的记录等。 这个脚本会在审计记帐文件正常关闭时执行一次，
+	因此在非正常关闭系统时， 就不会执行它了。</para>
+    </sect2>
+  </sect1>
+</chapter>

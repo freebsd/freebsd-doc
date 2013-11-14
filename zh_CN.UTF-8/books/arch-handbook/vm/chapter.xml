@@ -1,0 +1,234 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+     The FreeBSD Documentation Project
+     The FreeBSD Simplified Chinese Project
+
+     Original Revision: 1.10
+     $FreeBSD$
+-->
+<chapter xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink" version="5.0" xml:id="vm">
+  <info><title>虚拟内存系统</title>
+    <authorgroup>
+      <author><personname><firstname>Matthew</firstname><surname>Dillon</surname></personname><contrib>&cnproj.contributed.by;</contrib></author>
+    </authorgroup>
+    
+    <authorgroup>
+      <author><personname/><contrib>&cnproj.translated.by;</contrib></author>
+    </authorgroup>
+  </info>
+
+  
+
+    <sect1 xml:id="vm-physmem">
+      <title>物理内存的管理&mdash;<literal>vm_page_t</literal></title>
+
+      <indexterm><primary>virtual memory(虚拟内存)</primary></indexterm>
+      <indexterm><primary>physical memory(物理内存)</primary></indexterm>
+      <indexterm><primary><literal>vm_page_t</literal>结构体</primary></indexterm>
+      <para>物理内存通过结构体<literal>vm_page_t</literal>以页为基础进行管理。
+        物理内存的页由它们各自对应的结构体<literal>vm_page_t</literal>所代表，
+        这些结构体存放在若干个页管理队列中的一个里面。</para>
+
+      <para>一页可以处于在线(wired)、活动(active)，去活(inactive)、缓存(cache)、
+        自由(free)状态。除了在线状态，页一般被放置在一个双向链表队列里，
+        代表了它所处的状态。在线页不放置在任何队列里。</para>
+
+      <para>FreeBSD为缓存页和自由页实现了一个更为复杂的页队列机制，
+        以实现对页的分类管理。每一种状态都对应着多个队列，
+        队列的安排对应着处理器的一级、二级缓存。当需要分配一个新页时，
+        FreeBSD会试图把一个按一级、二级缓存对齐的页面分配给虚拟内存对象。</para>
+
+      <para>此外，一个页可以有一个引用计数，可以被一个忙计数锁定。
+        虚拟内存系统也实现了<quote>终极锁定</quote>(ultimate locked)状态，
+        一个页可以用页标志PG_BUSY表示这一状态。</para>
+
+      <para>总之，每个页队列都按照LRU(Least-Recently Used)的原则工作。
+        <tip><title>译者注</title><para>短语Least-Recently Used有两种理解方式：
+        1.将“least-recently”理解为反向比较级，意义为“最早”，整个短语理解为
+         “最近的使用时间最早”；2.将“least”和“recently”理解为副词，
+          都修饰“used”，整个短语理解为“最近最少使用”。
+          这两种理解方式的实际意义基本相同。</para></tip>
+          一个页常常最初处于在线或活动状态。在线时，页常常关联于某处的页表。
+          虚拟内存系统通过扫描在一个较活跃的页队列(LRU)确定页的年龄，
+          以便将他们移到一个较不活跃的页队列中。
+          移动到缓存中的页依然与一个VM对象关联，但被作为立即再用的候选。
+          在自由对列中的页是真正未被使用的。FreeBSD尽量不将页放在自由队列中，
+          但是必须保持一定数量的自由页，以便响应中断时分配。</para>
+
+      <para>如果一个进程试图访问一个不在页表中而在某一队列中的页
+         (例如去活队列或缓存队列)，一个相对耗费资源少的页错误发生，
+         导致页被重激活。如果页根本不存在于系统内存之中，进程必须被阻塞，
+         此时页被从磁盘中载入。<tip><title>译者注</title>
+         <para>Intel等厂商的CPU工作在保护模式时，可用来实现虚拟内存。
+         当寻址的地址空间对应着真实内存时，则正常读写；
+         当寻址的地址空间没有对应的真实内存时，CPU会产生一个“错误”，
+         通知操作系统与磁盘等设备进行交换，读寻址则调入存储内容，
+         写寻址则写出存储内容。这个“错误”
+         并非操作系统或应用程序开发人员犯下的错误，
+         尽管在CPU硬件实现中这与应用程序或操作系统内核崩溃的错误的发生机制相同。
+         参见Intel的CPU保护模式开发手册。</para></tip></para>
+
+      <indexterm><primary>paging queues(页队列)</primary></indexterm>
+
+      <para>FreeBSD动态的调整页队列，试图将各个队列中的页数维护在一个适当的比例上，
+        同时管理程序崩溃的已清理和未清理页。重新平衡的比例数值决定于系统内存的负担。
+        这种重新平衡由pageout守护进程实现，包括清理未清理页(与他们的后备存储同步)、
+        监视页被引用的活跃程度
+        (重置它们在LRU队列中的位置或在不同活跃程度的页队列间移动)、
+        当比例不平衡时在队列间迁移页，如此等等。
+        FreeBSD的VM系统会将重激活页而产生的错误频率调低到一个合理的数值，
+        由此确定某一页活跃/闲置的实际程度。
+        这可以为更好的决定何时清理/分配一个页做出决策。</para>
+    </sect1>
+
+    <sect1 xml:id="vm-cache">
+      <title>统一的缓存信息结构体&mdash;<literal>vm_object_t</literal></title>
+
+      <indexterm><primary>unified buffer cache(统一缓存)</primary></indexterm>
+      <indexterm><primary><literal>vm_object_t</literal>结构体</primary></indexterm>
+
+      <para>FreeBSD实现了统一的<quote>虚拟内存对象</quote>(VM对象)的设计思想。
+          VM对象可以与各种类型的内存使用方式相结合&mdash;直接使用(unbacked)、
+          交换(swap)、物理设备、文件。
+          由于文件系统使用相同的VM对象管理核内数据&mdash;文件的缓存，
+          所以这些缓存的结构也是统一的。</para>
+
+      <para>VM对象可以被<emphasis>影复制</emphasis>(shadowed)。
+         它们可以被堆放到其它类别VM对象堆栈的顶端。例如，可以有一个交换VM对象，
+         放置在文件VM对象堆栈的顶端，以实现MAP_PRIVATE的mmap()操作。
+         这样的入栈操作也可以用来实现各种各样的共享特性，
+         包括写入时复制(copy-on-write，用于日志文件系统)，以派生出地址空间。</para>
+
+      <para>应当注意，一个<literal>vm_page_t</literal>
+         结构体在任一个时刻只能与一个VM对象相关联。
+         VM对象影复本可以实现跨实例的共享相同的页。</para>
+    </sect1>
+
+    <sect1 xml:id="vm-fileio">
+      <title>文件系统输入/输出&mdash;<literal>buf</literal>结构体</title>
+
+      <indexterm><primary>vnode</primary></indexterm>
+      <para>vnode VM对象，比如文件VM对象，一般需要维护它们自己的清理(clean)/
+         未清理(dirty)信息，而不依赖于文件系统的清理/未清理维护。
+         例如，当VM系统要同步一个物理页和其对应的实际存储器，
+         VM系统就需要在写入到实际存储器前将该页标记为已清理。
+         另外，文件系统要能够将文件或文件元数据的各部分映射到内核虚拟内存
+         (KVM)中以便操作。</para>
+
+      <para>用来进行这些管理的实体就是众所周知的文件系统缓存，
+         <literal>struct buf</literal>或<literal>bp</literal>。
+         当文件系统需要对一个VM对象的一部分操作时，
+         它常会将这个对象的这部分映射到struct buf，
+         并且将struct buf中页映射到内核虚拟内存(KVM)中。
+         同样的，磁盘输入/输出通常要先将VM对象的各部分映射到buf结构体中，
+         然后对buf结构体进行输入/输出操作。
+         下层的vm_page_t在输入/输出期间通常被标记为“忙”。
+         文件系统缓存也会“忙”，这对于文件系统驱动程序非常有用，
+         对文件系统缓存操作比对VM真实页(hard)操作更好。</para>
+
+      <para>FreeBSD保留一定数量的内核虚拟内存来存放struct buf的映射，
+         但是这些buf结构体应该是被清理过的。这些内核虚拟内存仅用来存放映射，
+          并不限制缓存数据的能力。严格的说，物理数据缓存是
+          <literal>vm_page_t</literal>的一个功能，不是文件系统缓存的功能。
+          然而，由于文件系统缓存被用来处理输入/输出，
+          他们固有的限制了同时进行输入/输出可能的数量。
+          但是，由于通常有数千文件系统缓存可供使用，所以这并不会造成问题。</para>
+    </sect1>
+
+    <sect1 xml:id="vm-pagetables">
+      <title>映射页表&mdash;<literal>vm_map_t, vm_entry_t</literal></title>
+
+      <indexterm><primary>page tables(页表)</primary></indexterm>
+      <para>FreeBSD将物理页表结构从VM系统中分离了出来。各进程的所有页表可以脱离进程
+        (on the fly)重建，并且通常被认为是一次性的。特殊的页表，如内核虚拟内存(KVM)，
+        常常是被永久性预分配的；这些页表不是一次性的。</para>
+
+      <para>FreeBSD通过<literal>vm_map_t</literal>和<literal>vm_entry_t</literal>
+         结构将虚拟内存中<literal>vm_objects</literal>的各地址范围部分关联起来。
+         页表被直接的从
+  <literal>vm_map_t</literal>/<literal>vm_entry_t</literal>/<literal>vm_object_t</literal>
+         中有层次的合成出来。这里需要重申一下，我曾提到的“物理页仅直接与
+         <literal>vm_object</literal>相关联”并不很正确。<literal>vm_page_t</literal>
+         也被会被链接到正在与之相关联的页表中。当页表被调用时，
+         一个<literal>vm_page_t</literal>结构体可以被链接到几个<emphasis>pmaps</emphasis>。
+         然而，由于有了层次的关联，因此在对象中所有对同一页的引用会引用同一
+         <literal>vm_page_t</literal>结构体，这样就实现了跨区域(board)的缓存的统一。</para>
+    </sect1>
+
+    <sect1 xml:id="vm-kvm">
+      <title>KVM存储映射</title>
+
+      <para>FreeBSD使用KVM存放各种各样的内核结构体。在KVM中最大的单个实体是文件系统缓存。
+         那是与<literal>struct buf</literal>实体有关的映射。</para>
+
+      <para>不像Linux，FreeBSD<emphasis>不</emphasis>将所有的物理内存映射到KVM中。
+         这意味着FreeBSD可以在32位平台上管理超过4GB的内存配置。事实上，
+         如果mmu(译者注：可能是指“内存管理单元”，“Memory Management Unit”)
+         有足够的能力，FreeBSD理论上可以在32位平台上管理最多8TB的内存配置。
+         然而，大多数32平台只能映射4GB内存，这只能是一个争论点。</para>
+
+        <para>有几种机制可以管理KVM。管理KVM的主要机制是<emphasis>区域分配器</emphasis>
+          (zone allocator)。区域分配器管理着KVM的大块，再将大块切分为恒定大小的小块，
+          以便按照某一种类型的结构体分配。你可以使用命令<command>vmstat -m</command>
+          一览当前KVM分区使用情况。</para>
+    </sect1>
+
+    <sect1 xml:id="vm-tuning">
+      <title>调整FreeBSD的虚拟内存系统</title>
+
+      <para>开发者的协同努力使得FreeBSD可以自行动态调整内核。一般来说，
+         除了内核配置选项<option>maxusers</option>和<option>NMBCLUSTERS</option>，
+         你不需要做任何杂乱的事情。这些内核编译配置选项(一般)被指定在
+  <filename>/usr/src/sys/i386/conf/CONFIG_FILE</filename>
+        之中。所有可用内核配置选项的描述可在
+        <filename>/usr/src/sys/i386/conf/LINT</filename>中找到。</para>
+
+      <para>在一个大系统的配置中，你可能需要增加<option>maxusers</option>的值。
+          数值范围通常在10到128。注意，过度增加<option>maxusers</option>
+          的值可能导致系统从实际可用的KVM中溢出，从而引起无法预知的操作。
+          最好将<option>maxusers</option>设为一个合理的数值，并且添加其它选项，
+          如<option>NMBCLUSTERS</option>，来增加特定的资源。</para>
+
+      <para>如果你的系统要被重负荷的使用网络，你需要增加
+          <option>NMBCLUSTERS</option>的值。数值范围通常在1024到4096。</para>
+
+      <para><literal>NBUF</literal>也是传统的规划系统的参数。
+          这个参数决定系统可用来映射文件系统输入/输出缓存的KVM的数量。
+          注意：这个参数与统一的缓存没有任何关系。这个参数可在3.0-CURRENT
+          和以后的内核中被动态的调节，通常不应当被手动的调节。
+          我们推荐你<emphasis>不要</emphasis>指定<literal>NBUF</literal>。
+          让系统自行确定它。太小的值会导致非常低效的文件系统操作；
+          太大的值会使用页队列中缺少页面，而大量的页处于在线状态。</para>
+
+      <para>缺省情况下，FreeBSD内核编译时是不被优化的。
+          你可以在内核配置文件中用<literal>makeoptions</literal>
+          指定排错(debugging)和优化标志。注意，你一般不应使用<option>-g</option>，
+          除非你能够应付由此产生的大内核(典型的是7MB或更多)。</para>
+
+      <programlisting>makeoptions      DEBUG="-g"
+makeoptions      COPTFLAGS="-O -pipe"</programlisting>
+
+      <para>Sysctl提供了在运行时调整内核的方式。你通常不需要指定任何sysctl变量，
+          尤其是与VM相关的那些变量。</para>
+
+      <para>运行时VM和系统调整的影响相对直接一些。
+          首先，应当尽可能在UFS/FFS文件系统上使用Soft Updates。
+          在<filename>/usr/src/sys/ufs/ffs/README.softupdates</filename>
+          里有关于如何配置的指示。</para>
+
+      <indexterm><primary>swap partition(交换分区)</primary></indexterm>
+      <para>其次，应当配置足够多的交换空间。
+              你应当在每个物理磁盘上配置一个交换分区，最多4个，
+          甚至在你的<quote>工作</quote>磁盘上。你应当有至少2倍于主内存的交换空间；
+          假如你没有足够内存的话，交换分区还应更多。
+          你也应当按照你期望中的最大内存配置决定交换分区的大小，
+          这样以后就不再需要重新给磁盘分区了。
+          如果你处理系统崩溃后的内存倾倒(crash dump)，
+          第一个交换分区必须至少与主内存一样大，
+          <filename>/var/crash</filename>必须有足够的空间来承装倾倒。</para>
+
+      <para>NFS上的交换分区可以很好的被4.X或后来的系统使用，
+          但是你必须明白NFS服务器将要经受页装载操作很强的冲击。</para>
+    </sect1>
+
+</chapter>

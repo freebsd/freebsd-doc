@@ -1,0 +1,1757 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+     The FreeBSD Documentation Project
+     The FreeBSD Simplified Chinese Project
+
+     Original Revision: 1.75
+     $FreeBSD$
+-->
+<chapter xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink" version="5.0" xml:id="mac">
+  <info><title>强制访问控制</title>
+    <authorgroup>
+      <author><personname><firstname>Tom</firstname><surname>Rhodes</surname></personname><contrib>原作 </contrib></author>
+    </authorgroup>
+  </info>
+
+  
+
+  <sect1 xml:id="mac-synopsis">
+    <title>概要</title>
+
+    <indexterm><primary>MAC</primary></indexterm>
+    <indexterm>
+      <primary>强制访问控制</primary>
+      <see>MAC</see>
+    </indexterm>
+
+    <para>&os;&nbsp;5.X 在 &posix;.1e 草案的基础上引入了 TrustedBSD
+      项目提供的新的安全性扩展。 新安全机制中最重要的两个，
+      是文件系统访问控制列表 (<acronym>ACL</acronym>)
+      和强制访问控制 (<acronym>MAC</acronym>) 机制。
+      强制访问控制允许加载新的访问控制模块， 并借此实施新的安全策略，
+      其中一部分为一个很小的系统子集提供保护并加强特定的服务，
+      其他的则对所有的主体和客体提供全面的标签式安全保护。
+      定义中有关强制的部分源于如下事实，
+      控制的实现由管理员和系统作出，
+      而不像自主访问控制 (<acronym>DAC</acronym>, &os;
+      中的标准文件以及 System V <acronym>IPC</acronym> 权限)
+      那样是按照用户意愿进行的。</para>
+
+    <para>本章将集中讲述强制访问控制框架 (MAC 框架)
+      以及一套用以实施多种安全策略的插件式的安全策略模块。</para>
+
+    <para>阅读本章之后， 您将了解：</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>目前 &os; 中具有哪些 <acronym>MAC</acronym> 安全策略模块，
+	  以及与之相关的机制。</para>
+      </listitem>
+
+      <listitem>
+	<para><acronym>MAC</acronym> 安全策略模块将实施何种策略，
+	  以及标签式与非标签式策略之间的差异。</para>
+      </listitem>
+
+      <listitem>
+	<para>如何高效地配置系统令使其使用 <acronym>MAC</acronym> 框架。</para>
+      </listitem>
+
+      <listitem>
+	<para>如何配置 <acronym>MAC</acronym> 框架所提供的不同的安全策略模块。</para>
+      </listitem>
+
+      <listitem>
+        <para>如何用 <acronym>MAC</acronym> 框架构建更为安全的环境，
+	  并举例说明。</para>
+      </listitem>
+
+      <listitem>
+	<para>如何测试 <acronym>MAC</acronym> 配置以确保正确构建了框架。</para>
+      </listitem>
+    </itemizedlist>
+
+    <para>阅读本章之前， 您应该：</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>了解 &unix; 和 &os; 的基础 (<xref linkend="basics"/>)。</para>
+      </listitem>
+
+      <listitem>
+	<para>熟悉内核配置/编译 (<xref linkend="kernelconfig"/>) 的基础。</para>
+      </listitem>
+
+      <listitem>
+	<para>对安全及其如何与 &os; 相配合有些了解； (<xref linkend="security"/>)。</para>
+      </listitem>
+    </itemizedlist>
+
+    <warning>
+      <para>对本章信息的不当使用可能导致丧失系统访问权， 激怒用户，
+	或者无法访问 X11 提供的特性。 更重要的是， <acronym>MAC</acronym>
+	不能用于彻底保护一个系统。 <acronym>MAC</acronym> 框架仅用于增强现有安全策略；
+	如果没有健全的安全条例以及定期的安全检查，
+	系统将永远不会绝对安全。</para>
+
+      <para>此外还需要注意的是， 本章中所包含的例子仅仅是例子。
+	我们并不建议在一个生产用系统上进行这些特别的设置。
+        实施各种安全策略模块需要谨慎的考虑与测试，
+        因为那些并不完全理解所有机制如何工作的人，
+        可能会发现需要对整个系统中很多的文件或目录进行重新配置。</para>
+    </warning>
+
+    <sect2>
+      <title>未涉及的内容</title>
+
+      <para>本章涵盖了与 <acronym>MAC</acronym> 框架有关的诸多方面的安全问题；
+        而新的 <acronym>MAC</acronym> 安全策略模块的开发成果则不会涉及。
+        <acronym>MAC</acronym> 框架中所包含的一部分安全策略模块，
+        具有一些用于测试及新模块开发的特定属性，
+        其中包括 &man.mac.test.4;、 &man.mac.stub.4;
+        以及 &man.mac.none.4;。
+        关于这些安全策略模块及其提供的众多机制的详细信息，请参阅联机手册中的内容。</para>
+    </sect2>
+  </sect1>
+
+  <sect1 xml:id="mac-inline-glossary">
+    <title>本章出现的重要术语</title>
+
+    <para>在阅读本章之前， 有些关键术语需要解释，
+      希望能藉此扫清可能出现的疑惑， 并避免在文中对新术语、
+      新信息进行生硬的介绍。</para>
+
+    <itemizedlist>
+      <listitem>
+	<para><emphasis>区间</emphasis>(compartment)：
+	  (译注： <emphasis>区间</emphasis> 这一术语，
+	  在一些文献中也称做类别 (category)。 此外，
+	  在其它一些翻译文献中， 该术语也翻译为 <quote>象限</quote>。)
+	  指一组被划分或隔离的程序和数据， 其中，
+	  用户被明确地赋予了访问特定系统组件的权限。 同时，
+	  区间也能够表达分组， 例如工作组、 部门、 项目， 或话题。
+	  可以通过使用区间来实施 need-to-know 安全策略。</para>
+      </listitem>
+
+      <listitem>
+	<para><emphasis>高水位线</emphasis>(high water mark)：
+	  高水位线策略是一种允许提高安全级别， 以期访问更高级别的信息的安全策略。
+	  在多数情况下， 当进程结束时， 又会回到原先的安全级别。
+	  目前， &os; <acronym>MAC</acronym>
+	  框架尚未提供这样的策略， 在这里介绍其定义主要是希望给您一个完整的概念。</para>
+      </listitem>
+
+      <listitem>
+	<para><emphasis>完整性</emphasis>(integrity)： 作为一个关键概念，
+	  完整性是数据可信性的一种程度。
+          若数据的完整性提高， 则数据的可信性相应提高。</para>
+      </listitem>
+
+      <listitem>
+	<para><emphasis>标签</emphasis>(label)： 标签是一种可应用于文件、
+	  目录或系统其他客体的安全属性， 它也可以被认为是一种机密性印鉴。
+	  当一个文件被施以标签时， 其标签会描述这一文件的安全参数，
+          并只允许拥有相似安全性设置的文件、 用户、 资源等访问该文件。
+          标签值的涵义及解释取决于相应的策略配置：
+          某些策略会将标签当作对某一客体的完整性和保密性的表述，
+          而其它一些策略则会用标签保存访问规则。</para>
+      </listitem>
+
+      <listitem>
+	<para><emphasis>程度</emphasis>(level)： 对某种安全属性加强或削弱的设定。
+          若程度增加， 其安全性也相应增加。</para>
+      </listitem>
+
+      <listitem>
+	<para><emphasis>低水位线</emphasis>(low water mark)：
+	  低水位线策略允许降低安全级别， 以访问安全性较差的信息。
+	  多数情况下， 在进程结束时， 又会回到原先的安全级别。
+	  目前在 &os; 中唯一实现这一安全策略的是
+	  &man.mac.lomac.4;。</para>
+      </listitem>
+
+      <listitem>
+	<para><emphasis>多重标签</emphasis>(multilabel)： <option>multilabel</option>
+	  属性是一个文件系统选项。 该选项可在单用户模式下通过
+	  &man.tunefs.8; 程序进行设置。 可以在引导时使用的 &man.fstab.5;
+	  文件中， 也可在创建新文件系统时进行配置。
+	  该选项将允许管理员对不同客体施以不同的 <acronym>MAC</acronym> 标签。
+          该选项仅适用于支持标签的安全策略模块。</para>
+      </listitem>
+
+      <listitem>
+	<para><emphasis>客体</emphasis>(object)： 客体或系统客体是一种实体，
+	  信息随 <emphasis>主体</emphasis> 的导向在客体内部流动。
+	  客体包括目录、 文件、 区段、 显示器、 键盘、 存储器、
+	  磁存储器、 打印机及其它数据存储/转移设备。
+	  基本上， 客体就是指数据容器或系统资源。
+	  对 <emphasis>客体</emphasis> 的访问实际上意味着对数据的访问。</para>
+      </listitem>
+
+      <listitem>
+	<para><emphasis>策略</emphasis>(policy)： 一套用以规定如何达成目标的规则。
+          <emphasis>策略</emphasis> 一般用以描述如何对特定客体进行操作。
+          本章将在<emphasis>安全策略</emphasis>的范畴内讨论<emphasis>策略</emphasis>，
+          一套用以控制数据和信息流并规定其访问者的规则，就是其中一例。</para>
+      </listitem>
+
+      <listitem>
+	<para><emphasis>敏感性</emphasis>(sensitivity)： 通常在讨论
+	  <acronym>MLS</acronym> 时使用。
+	  敏感性程度曾被用来描述数据应该有何等的重要或机密。
+          若敏感性程度增加， 则保密的重要性或数据的机密性相应增强。</para>
+      </listitem>
+
+      <listitem>
+	<para><emphasis>单一标签</emphasis>(single label)：
+	  整个文件系统使用一个标签对数据流实施访问控制， 叫做单一标签。
+          当文件系统使用此设置时， 即无论何时当 <option>多重标签</option>
+          选项未被设定时， 所有文件都将遵守相同标签设定。</para>
+      </listitem>
+
+      <listitem>
+	<para><emphasis>主体</emphasis>(subject)： 主体就是引起信息在两个
+	  <emphasis>客体</emphasis> 间流动的任意活动实体，
+	  比如用户， 用户进程(译注：原文为 processor)， 系统进程等。
+	  在 &os; 中， 主体几乎总是代表用户活跃在某一进程中的一个线程。</para>
+      </listitem>
+    </itemizedlist>
+  </sect1>
+
+  <sect1 xml:id="mac-initial">
+    <title>关于 MAC 的说明</title>
+
+    <para>在掌握了所有新术语之后， 我们从整体上来考虑 <acronym>MAC</acronym>
+      是如何加强系统安全性的。 <acronym>MAC</acronym>
+      框架提供的众多安全策略模块可以用来保护网络及文件系统，
+      也可以禁止用户访问某些特定的端口、 套接字及其它客体。
+      将策略模块组合在一起以构建一个拥有多层次安全性的环境，
+      也许是其最佳的使用方式， 这可以通过一次性加载多个安全策略模块来实现。
+      在多层次安全环境中， 多重策略模块可以有效地控制安全性，
+      这一点与强化型 (hardening) 策略，
+	  即那种通常只强化系统中用于特定目的的元素的策略是不同的。
+      相比之下， 多重策略的唯一不足是需要系统管理员先期设置好参数，
+      如多重文件系统安全标志、 每一位用户的网络访问权限等等。</para>
+
+    <para>与采用框架方式实现的长期效果相比， 这些不足之处是微不足道的。
+      例如， 让系统具有为特定配置挑选必需的策略的能力， 有助于降低性能开销。
+      而减少对无用策略的支持， 不仅可以提高系统的整体性能，
+	  而且提供了更灵活的选择空间。 好的实施方案中应该考虑到整体的安全性要求，
+      并有效地利用框架所提供的众多安全策略模块。</para>
+
+    <para>这样一个使用 <acronym>MAC</acronym> 特性的系统，
+      至少要保证不允许用户任意更改安全属性； 所有的用户实用工具、
+      程序以及脚本， 必须在所选安全策略模块提供的访问规则的约束下工作；
+      并且系统管理员应掌握 <acronym>MAC</acronym> 访问规则的一切控制权。</para>
+
+    <para>细心选择正确的安全策略模块是系统管理员专有的职责。
+      某些环境也许需要限制网络的访问控制权，
+      在这种情况下， 使用 &man.mac.portacl.4;、 &man.mac.ifoff.4; 乃至
+      &man.mac.biba.4; 安全策略模块都会是不错的开始； 在其他情况下，
+      系统客体也许需要严格的机密性， 像 &man.mac.bsdextended.4; 和
+      &man.mac.mls.4; 这样的安全策略模块就是为此而设。</para>
+
+    <para>对安全策略模块的决定可依据网络配置进行，
+      也许只有特定的用户才应该被允许使用由 &man.ssh.1;
+      提供的程序以访问网络或互联网， &man.mac.portacl.4;
+      安全策略模块应该成为这种情况下的选择。 但对文件系统又该作些什么呢？
+      是由特定的用户或群组来确定某些目录的访问权限，
+      抑或是将特定客体设为保密以限制用户或组件访问特定文件？</para>
+
+    <para>在文件系统的例子中， 也许访问客体的权限对某些用户是保密的，
+      但对其他则不是。 比如， 一个庞大的开发团队，
+      也许会被分成许多由几人组成的小组， A 项目中的开发人员可能不被允许访问
+      B 项目开发人员创作的客体， 但同时他们还需要访问由 C
+      项目开发人员创作的客体， 这正符合上述情形。 使用由
+      <acronym>MAC</acronym> 框架提供的不同策略， 用户就可以被分成这种小组，
+      然后被赋予适当区域的访问权， 由此， 我们就不用担心信息泄漏的问题了。</para>
+
+    <para>因此， 每一种安全策略模块都有其处理系统整体安全问题的独特方法。
+      对安全策略模块的选择应在对安全策略深思熟虑的基础之上进行。 很多情况下，
+      整体安全策略需要重新修正并在系统上实施。 理解 <acronym>MAC</acronym>
+      框架提供的不同安全策略模块会帮助管理员就其面临的情形选择最佳的策略模块。</para>
+
+    <para>&os; 的默认内核并不包含 <acronym>MAC</acronym> 框架选项， 因此，
+      在尝试使用本章中的例子或信息之前， 您应该添加以下内核选项：</para>
+
+    <programlisting>options	MAC</programlisting>
+
+    <para>此外， 内核还需要重新编译并且重新安装。</para>
+
+    <caution>
+      <para>尽管有关 <acronym>MAC</acronym>
+	的许多联机手册中都声明它们可以被编译到内核中，
+        但对这些策略模块的使用仍可能导致锁死系统的网络及其他功能。
+        使用 <acronym>MAC</acronym> 就像使用防火墙一样，
+        因此必须要小心防止将系统完全锁死。 在使用 <acronym>MAC</acronym> 时，
+        应该考虑是否能够回退到之前的配置， 在远程进行配置更应加倍小心。</para>
+    </caution>
+  </sect1>
+
+  <sect1 xml:id="mac-understandlabel">
+    <title>理解 MAC 标签</title>
+
+    <para><acronym>MAC</acronym> 标签是一种安全属性，
+      它可以被应用于整个系统中的主体和客体。</para>
+
+    <para>配置标签时， 用户必须能够确切理解其所进行的操作。
+      客体所具有的属性取决于被加载的策略模块，
+      不同策略模块解释其属性的方式也差别很大。
+      由于缺乏理解或无法了解其间联系而导致的配置不当，
+      会引起意想不到的， 也许是不愿看到的系统异常。</para>
+
+    <para>客体上的安全标签是由安全策略模块决定的安全访问控制的一部分。
+      在某些策略模块中， 标签本身所包含的所有信息足以使其作出决策，
+      而在其它一些安全策略模块中， 标签则可能被作为一个庞大规则体系的一部分进行处理。</para>
+
+    <para>举例来说， 在文件上设定 <literal>biba/low</literal> 标签，
+      意味着此标签隶属 Biba 策略模块， 其值为 <quote>low</quote>。</para>
+
+    <para>某些在 &os; 中支持标签特性的策略会提供三个预定义的标签，
+      分别是 low、 high 及 equal 标签。
+      尽管这些标签在不同安全策略模块中会对访问控制采取不同措施，
+      但有一点是可以肯定的， 那就是 low 标签表示最低限度的设定，
+      equal 标签会将主体或客体设定为被禁用的或不受影响的，
+      high 标签则会应用 Biba 及 <acronym>MLS</acronym>
+      安全策略模块中允许的最高级别的设定。</para>
+
+    <para>在单一标签文件系统的环境中， 同一客体上只会应用一个标签，
+      于是， 一套访问权限将被应用于整个系统， 这也是很多环境所全部需要的。
+      另一些应用场景中， 我们需要将多重标签应用于文件系统的客体或主体，
+      如此一来， 就需要使用  &man.tunefs.8;
+      的 <option>multilabel</option> 选项。</para>
+
+    <para>在使用 Biba 和 <acronym>MLS</acronym> 时可以配置数值标签，
+      以标示分级控制中的层级程度。
+      数值的程度可以用来划分或将信息按组分类，
+      从而只允许同程度或更高程度的组对其进行访问。</para>
+
+    <para>多数情况下， 管理员将仅对整个文件系统设定单一标签。</para>
+
+    <para><emphasis>等一下， 这看起来很像 <acronym>DAC</acronym>！
+      但我认为 <acronym>MAC</acronym> 确实只将控制权赋予了管理员。 </emphasis>
+      此句话依然是正确的。 在某种程度上， <systemitem class="username">root</systemitem> 是实施控制的用户，
+      他配置安全策略模块以使用户们被分配到适当的类别/访问 levels 中。
+      唉， 很多安全策略模块同样可以限制 <systemitem class="username">root</systemitem> 用户。
+      对于客体的基本控制可能会下放给群组， 但 <systemitem class="username">root</systemitem>
+      用户随时可以废除或更改这些设定。
+      这就是如 Biba 及 <acronym>MLS</acronym>
+      这样一些安全策略模块所包含的 hierarchal/clearance 模型。</para>
+
+    <sect2>
+      <title>配置标签</title>
+
+      <para>实际上， 有关标签式安全策略模块配置的各种问题都是用基础系统组件实现的。
+        这些命令为客体和主体配置以及配置的实施和验证提供了一个简便的接口。</para>
+
+      <para>所有的配置都应该通过 &man.setfmac.8; 及 &man.setpmac.8; 组件实施。
+        <command>setfmac</command> 命令是用来对系统客体设置
+        <acronym>MAC</acronym> 标签的， 而 <command>setpmac</command>
+        则是用来对系统主体设置标签的。 例如：</para>
+
+      <screen>&prompt.root; <userinput>setfmac biba/high test</userinput></screen>
+
+      <para>若以上命令不发生错误则会直接返回命令提示符，
+	只有当发生错误时， 这些命令才会给出提示， 这和
+        &man.chmod.1; 和 &man.chown.8; 命令类似。
+        某些情况下， 以上命令产生的错误可能是
+        <errorname>Permission denied</errorname>，
+        一般在受限客体上设置或修改设置时会产生此错误。
+        <footnote><para>其它情况也能导致不同的执行失败。
+        例如， 文件可能并不隶属于尝试重标签该文件的用户，
+        客体可能不存在或着是只读的。 文件的某一属性、
+        进程的某一属性或新的自定义标签值的某一属性，
+        将使强制式策略不允许进程重标签文件。 例如：
+        低完整性的用户试图修改高完整性文件的标签，
+        或者低完整性的用户试图将低完整性文件的标签改为高完整性标签。</para></footnote>
+        系统管理员可使用以下命令解决此问题：</para>
+
+      <screen>&prompt.root; <userinput>setfmac biba/high test</userinput>
+<errorname>Permission denied</errorname>
+&prompt.root; <userinput>setpmac biba/low setfmac biba/high test</userinput>
+&prompt.root; <userinput>getfmac test</userinput>
+test: biba/high</screen>
+
+      <para>如上所示， 通过 <command>setpmac</command>
+	对被调用的进程赋予不同的标签， 以覆盖安全策略模块的设置。
+        <command>getpmac</command> 组件通常用于当前运行的进程，
+        如 <application>sendmail</application>：
+        尽管其使用进程编号来替代命令， 其逻辑是相同的。
+        如果用户试图对其无法访问的文件进行操作， 根据所加载的安全策略模块的规则，
+        函数 <function>mac_set_link</function>
+        将会给出 <errorname>Operation not permitted</errorname> 的错误提示。</para>
+
+      <sect3>
+	<title>一般标签类型</title>
+
+	<para>&man.mac.biba.4;、 &man.mac.mls.4; 及 &man.mac.lomac.4;
+	  策略模块提供了设定简单标签的功能， 其值应该是 high、 equal 及 low
+	  之一。 以下是对这些标签功能的简单描述：</para>
+
+	<itemizedlist>
+	  <listitem>
+	    <para><literal>low</literal>
+	      标签被认为是主体或客体所具有的最低层次的标签设定。
+              对主体或客体采用此设定， 将阻止其访问标签为 high 的客体或主体。</para>
+	  </listitem>
+
+	  <listitem>
+	    <para><literal>equal</literal> 标签只能被用于不希望受策略控制的客体上。</para>
+	  </listitem>
+
+	  <listitem>
+	    <para><literal>high</literal> 标签对客体或主体采用可能的最高设定。</para>
+	  </listitem>
+	</itemizedlist>
+
+	<para>至于每个策略模块， 每种设定都会产生不同的信息流指令。
+          阅读联机手册中相关的章节将进一步阐明这些一般标签配置的特点。</para>
+
+        <sect4>
+	  <title>标签高级配置</title>
+
+	  <para>如下所示， 用于 <literal>比较方式:区间+区间</literal>
+	    (<literal>comparison:compartment+compartment</literal>) 的标签等级数：</para>
+
+	  <programlisting>biba/10:2+3+6(5:2+3-20:2+3+4+5+6)</programlisting>
+
+	  <para>其含义为：</para>
+
+	  <para><quote>Biba 策略标签</quote>/<quote>等级 10</quote>
+	    ：<quote>区间 2、 3及6</quote>：
+	    (<quote>等级5 ...</quote>)</para>
+
+	  <para>本例中， 第一个等级将被认为是 <quote>有效区间</quote> 的
+	    <quote>有效等级</quote>， 第二个等级是低级等级，
+	    最后一个则是高级等级。 大多数配置中并不使用这些设置，
+	    实际上， 它们是为更高级的配置准备的。</para>
+
+	  <para>当把它们应用在系统客体上时， 则只有当前的等级/区间，
+	    因为它们反映可以实施访问控制的系统中可用的范围， 以及网络接口。</para>
+
+	  <para>等级和区间， 可以用来在一对主体和客体之间建立一种称为
+	    <quote>支配 (dominance)</quote> 的关系， 这种关系可能是主体支配客体，
+	    客体支配主体， 互不支配或互相支配。
+	    <quote>互相支配</quote> 这种情况会在两个标签相等时发生。
+	    由于 Biba 的信息流特性， 您可以设置一系列区间，
+	    <quote>need to know</quote>， 这可能发生于项目之间，
+	    而客体也由其对应的区间。 用户可以使用
+	    <command>su</command> 和 <command>setpmac</command>
+	    来将他们的权限进一步细分， 以便在没有限制的区间里访问客体。</para>
+
+	</sect4>
+      </sect3>
+
+      <sect3>
+	<title>用户和标签设置</title>
+
+	<para>用户本身也需要设置标签，
+	  以使其文件和进程能够正确地与系统上定义的安全策略互动，
+          这是通过使用登录分级在文件 <filename>login.conf</filename>
+          中配置的。 每个使用标签的策略模块都会进行用户分级设定。</para>
+
+	<para>以下是一个使用所有策略模块的例子：</para>
+
+	<programlisting>default:\
+	:copyright=/etc/COPYRIGHT:\
+	:welcome=/etc/motd:\
+	:setenv=MAIL=/var/mail/$,BLOCKSIZE=K:\
+	:path=~/bin:/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin:\
+	:manpath=/usr/share/man /usr/local/man:\
+	:nologin=/usr/sbin/nologin:\
+	:cputime=1h30m:\
+	:datasize=8M:\
+	:vmemoryuse=100M:\
+	:stacksize=2M:\
+	:memorylocked=4M:\
+	:memoryuse=8M:\
+	:filesize=8M:\
+	:coredumpsize=8M:\
+	:openfiles=24:\
+	:maxproc=32:\
+	:priority=0:\
+	:requirehome:\
+	:passwordtime=91d:\
+	:umask=022:\
+	:ignoretime@:\
+	:label=partition/13,mls/5,biba/10(5-15),lomac/10[2]:</programlisting>
+
+	<para><literal>label</literal> 选项用以设定用户分级默认标签，
+	  该标签将由 <acronym>MAC</acronym> 执行。
+	  用户绝不会被允许更改该值， 因此其从用户的观点看不是可选的。
+          当然， 在真实情况的配置中， 管理员不会希望启用所有策略模块。
+	  我们建议您在实施以上配置之前阅读本章的其余部分。</para>
+
+	<note>
+	  <para>用户也许会在首次登录后更改其标签，
+            尽管如此， 这仅仅是策略的主观局限性。
+            上面的例子告诉 Biba 策略， 进程的最小完整性是为5，
+            最大完整性为15， 默认且有效的标签为10。
+            进程将以10的完整性运行直至其决定更改标签，
+            这可能是由于用户使用了 setpmac 命令
+            (该操作将在登录时被 Biba 限制在一定用户范围之内)。</para>
+	</note>
+
+	<para>在所有情况下， 修改 <filename>login.conf</filename> 之后，
+          都必须使用 <command>cap_mkdb</command> 重编译登录分级 capability 数据库，
+          这在接下来的例子和讨论中就会有所体现。</para>
+
+	<para>很多站点可能拥有数目可观的用户需要不同的用户分级，
+	  注意到这点是大有裨益的。 深入来说就是需要事先做好计划，
+	  因为管理起来可能十分困难。</para>
+
+	<para>在 &os; 以后的版本中， 将包含一种将用户映射到标签的新方式，
+          尽管如此， 这也要到 &os;&nbsp;5.3 之后的某个时间才能实现。</para>
+      </sect3>
+
+      <sect3>
+	<title>网络接口和标签设定</title>
+
+	<para>也可以在网络接口上配置标签， 以控制进出网络的数据流。
+	  在所有情况下， 策略都会以适应客体的方式运作。 例如， 在
+	  <literal>biba</literal> 中设置为高的用户，
+	  就不能访问标记为低的网络接口。</para>
+
+	<para><option>maclabel</option> 可以作为
+	  <command>ifconfig</command> 的参数用于设置网络接口的
+	  <acronym>MAC</acronym> 标签。 例如：</para>
+
+	<screen>&prompt.root; <userinput>ifconfig bge0 maclabel biba/equal</userinput></screen>
+
+	<para>将在 &man.bge.4; 接口上设置 <literal>biba/equal</literal> 的
+	  <acronym>MAC</acronym> 标签。 当使用类似
+	  <literal>biba/high(low-high)</literal> 这样的标签时，
+	  整个标签应使用引号括起来； 否则将发生错误。</para>
+
+	<para>每一个支持标签的策略模块都提供了用于在网络接口上禁用该
+	  <acronym>MAC</acronym> 标签的系统控制变量。 将标签设置为
+	  <option>equal</option> 的效果与此类似。
+	  请参见 <command>sysctl</command> 的输出、 策略模块的联机手册，
+	  或本章接下来的内容， 以了解更进一步的详情。</para>
+      </sect3>
+    </sect2>
+
+    <sect2>
+      <title>用单一标签还是多重标签？</title>
+<!-- Stopped here with my edits -->
+      <para>默认情况下， 系统采用的是
+	<option>singlelabel</option> 选项。 但这对管理员意味着什么呢？
+	两种策略之间存在很多的不同之处， 它们在系统安全模型的灵活性方面，
+	提供了不同的选择。</para>
+
+      <para><option>singlelabel</option> 只允许在每个主体或客体上使用一个标签，
+	如 <literal>biba/high</literal>。
+	这降低了管理的开销， 但也同时降低了支持标签的策略的灵活性。
+	许多管理员可能更希望在安全策略中使用 <option>multilabel</option>。</para>
+
+      <para><option>multilabel</option> 选项允许每一个主体或客体拥有各自独立的
+	<acronym>MAC</acronym> 标签，
+	起作用与标准的、 只允许整个分区上使用一个的
+	<option>singlelabel</option> 选项类似。 <option>multilabel</option>
+	和 <option>single</option> 标签选项只有对实现了标签功能的那些策略，
+	如 Biba、 Lomac、
+	<acronym>MLS</acronym> 以及 <acronym>SEBSD</acronym>
+	才有意义。</para>
+
+      <para>很多情况下是不需要设置 <option>multilabel</option> 的。
+	考虑下列情形和安全模型：</para>
+
+      <itemizedlist>
+	<listitem>
+	  <para>使用了 <acronym>MAC</acronym> 以及许多混合策略的 &os;
+	    web-服务器。</para>
+	</listitem>
+
+	<listitem>
+	  <para>这台机器上的整个系统中只需要一个标签， 即
+	    <literal>biba/high</literal>。 此处的文件系统并不需要
+	    <option>multilabel</option> 选项，
+	    因为有效的 label 只有一个。</para>
+	</listitem>
+
+	<listitem>
+	  <para>因为这台机器将作为 Web 服务器使用，
+	    因此应该以 <literal>biba/low</literal> 运行 Web 服务，
+	    以杜绝向上写。 Biba 策略以及它如何运作将在稍后予以讨论，
+	    因此， 如果您感觉前面的说明难以理解的话， 请继续阅读下面的内容，
+	    再回来阅读这些内容就会有较为清晰的认识了。 服务器可以使用设置为
+	    <literal>biba/low</literal> 的单独的分区，
+	    用于保持其运行环境的状态。 这个例子中还省略了许多内容，
+	    例如， 如何为数据配置访问限制、 参数配置和用户的设置；
+	    它只是为前述的内容提供一个简单的例子。</para>
+	</listitem>
+      </itemizedlist>
+
+      <para>如果打算使用非标签式策略，
+	就不需要 <option>multilabel</option> 选项了。
+	这些策略包括 <literal>seeotheruids</literal>、
+	<literal>portacl</literal> 和 <literal>partition</literal>。</para>
+
+      <para>另一个需要注意的事情是， 在分区上使用
+	<option>multilabel</option> 并建立基于 <option>multilabel</option>
+	可能会提高系统管理的开销， 因为文件系统中的所有客体都需要指定标签。
+	这包括对目录、文件， 甚至设备节点。</para>
+
+      <para>接下来的命令将在需要使用多个标签的文件系统上设置
+	<option>multilabel</option>。 这一操作只能在单用户模式下完成：</para>
+
+      <screen>&prompt.root; <userinput>tunefs -l enable /</userinput></screen>
+
+      <para>交换区不需要如此配置。</para>
+
+      <note>
+	<para>某些用户可能会在根分区上配置
+	  <option>multilabel</option> 标志时遇到困难。
+	  如果发生这样的情况， 请复查本章的
+	  <xref linkend="mac-troubleshoot"/>。</para>
+      </note>
+    </sect2>
+  </sect1>
+
+  <sect1 xml:id="mac-planning">
+    <title>规划安全配置</title>
+
+    <para>在实施新技术时， 首先进行规划都是非常好的习惯。
+      在这段时间， 管理员一般都应 <quote>进行全面的考察</quote>，
+      这至少应包括下列因素：</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>方案实施的必要条件；</para>
+      </listitem>
+
+      <listitem>
+	<para>方案实施的目标；</para>
+      </listitem>
+    </itemizedlist>
+
+    <para>就实施 <acronym>MAC</acronym> 而言， 这包括：</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>如何在目标系统上对信息和资源进行分类。</para>
+      </listitem>
+
+      <listitem>
+	<para>需要限制哪类信息或资源的访问， 以及应采用何种限制。</para>
+      </listitem>
+
+      <listitem>
+	<para>需要使用哪些 <acronym>MAC</acronym> 模块来完成这些目标。</para>
+      </listitem>
+    </itemizedlist>
+
+    <para>尽管重新配置并修改系统资源和安全配置是可行的，
+      但查找整个系统并修复暨存的文件和用户帐号并不是一件轻而易举的事情。
+      规划有助于完成无问题且有效的可信系统实施。 <emphasis>事先</emphasis>
+      对采用 <acronym>MAC</acronym> 的可信系统， 以及其配置做试运行十分有益，
+      因为这对实施的成败至关重要。
+      草率散漫地配置 <acronym>MAC</acronym> 通常是导致失败的祸根。</para>
+
+    <para>不同的环境可能会有不同的需求。
+      建立多层次而完备的安全配置， 可以减少系统正式运转之后所需要的微调。
+      同样地， 接下来的章节将介绍管理员能够使用的各种不同的模块；
+      描述它们的使用和配置； 除此之外还有一些关于它们最适合的情景的介绍。
+      例如， web 服务器可能希望使用 &man.mac.biba.4; 和
+      &man.mac.bsdextended.4; 策略， 而其他情况下，
+      例如一台机器上只有少量的本地用户时， &man.mac.partition.4;
+      则是不错的选择。</para>
+  </sect1>
+
+  <sect1 xml:id="mac-modules">
+    <title>模块配置</title>
+
+    <para>在 <acronym>MAC</acronym> 框架中的每个模块，
+      都可以像前述那样连编入内核， 或作为运行时内核模块加载。
+      推荐的用法， 是通过在
+      <filename>/boot/loader.conf</filename> 加入适当的设置，
+      以便在系统启动时的初始化操作过程中加载这些模块。</para>
+
+    <para>接下来的一些小节， 将讨论许多
+      <acronym>MAC</acronym> 模块， 并简单介绍它们的功能。
+      此外， 这一章还将介绍一些具体环境中的用例。
+      某些模块支持一种称为标签 (labeling) 的用法，
+      它可以通过使用类似 <quote>允许做这个而不允许做那个</quote>
+      的标签来实现访问控制。 标签配置文件可以控制允许的文件访问方式、
+      网络通讯， 以及许多其他权限。 在前一节中，
+      我们已经展示了文件系统中如何通过 <option>multilabel</option>
+      标志来启用基于文件或分区的访问控制的方法。</para>
+
+    <para>单标签配置在整个系统中只强制一个标签的限制，
+      这也是 <command>tunefs</command> 选项为什么是
+      <option>multilabel</option> 的原因。</para>
+  </sect1>
+
+  <sect1 xml:id="mac-seeotheruids">
+    <title>MAC seeotheruids 模块</title>
+
+    <indexterm>
+      <primary>MAC 其他 UID 可见策略</primary>
+    </indexterm>
+    <para>模块名： <filename>mac_seeotheruids.ko</filename></para>
+
+    <para>对应的内核配置：
+      <literal>options MAC_SEEOTHERUIDS</literal></para>
+
+    <para>引导选项：
+      <literal>mac_seeotheruids_load="YES"</literal></para>
+
+    <para>&man.mac.seeotheruids.4; 模块模仿并扩展了
+      <literal>security.bsd.see_other_uids</literal> 和
+      <literal>security.bsd.see_other_gids</literal>
+      <command>sysctl</command> 变量。 这一模块并不需要预先配置标签，
+      它能够透明地与其他模块协同工作。</para>
+
+    <para>加载模块之后， 下列
+      <command>sysctl</command> 变量可以用来控制其功能：</para>
+
+    <itemizedlist>
+      <listitem>
+	<para><literal>security.mac.seeotheruids.enabled</literal>
+	  将启用模块的功能， 并使用默认的配置。
+	  这些默认设置将阻止用户看到其他用户的进程和 socket。</para>
+      </listitem>
+
+      <listitem>
+	<para>
+	  <literal>security.mac.seeotheruids.specificgid_enabled</literal>
+	  将允许特定的组从这一策略中和面。 要将某些组排除在这一策略之外， 可以用
+	  <literal>security.mac.seeotheruids.specificgid=XXX</literal>
+	  <command>sysctl</command> 变量。 前述例子中，
+	  <replaceable>XXX</replaceable> 应替换为希望不受限的组 ID 的数值形式。</para>
+      </listitem>
+
+      <listitem>
+	<para>
+	  <literal>security.mac.seeotheruids.primarygroup_enabled</literal>
+	  可以用来将特定的主要组排除在策略之外。 使用这一变量时， 不能同时设置
+	  <literal>security.mac.seeotheruids.specificgid_enabled</literal>。</para>
+      </listitem>
+    </itemizedlist>
+  </sect1>
+
+  <sect1 xml:id="mac-bsdextended">
+    <title>MAC bsdextended 模块</title>
+
+    <indexterm>
+    <primary>MAC</primary>
+      <secondary>文件系统防火墙策略</secondary>
+    </indexterm>
+    <para>模块名： <filename>mac_bsdextended.ko</filename></para>
+
+    <para>对应的内核配置：
+      <literal>options MAC_BSDEXTENDED</literal></para>
+
+    <para>引导选项：
+      <literal>mac_bsdextended_load="YES"</literal></para>
+
+    <para>&man.mac.bsdextended.4; 模块能够强制文件系统防火墙策略。
+      这一模块的策略提供了标准文件系统权限模型的一种扩展，
+      使得管理员能够建立一种类似防火墙的规则集，
+      以文件系统层次结构中的保护文件、 实用程序，以及目录。
+      在尝试访问文件系统客体时， 会遍历规则表，
+      直至找到匹配的规则， 或到达表尾。 这一行为可以通过修改
+      &man.sysctl.8; 参数，
+      security.mac.bsdextended.firstmatch_enabled 来进行设置。
+      与 &os; 中的其他防火墙设置类似， 也可以建一个文件来配置访问控制策略，
+      并通过 &man.rc.conf.5; 变量的配置在系统引导时加载它。</para>
+
+    <para>规则表可以通过工具 &man.ugidfw.8; 工具来输入，
+      其语法类似 &man.ipfw.8;。 此外还可以通过使用
+      &man.libugidfw.3; 库来开发其他的工具。</para>
+
+    <para>当使用这一模块模块时应极其小心；
+      不正确的使用将导致文件系统的某些部分无法访问。</para>
+
+    <sect2>
+      <title>例子</title>
+
+      <para>在加载了 &man.mac.bsdextended.4; 模块之后，
+	下列命令可以用来列出当前的规则配置：</para>
+
+      <screen>&prompt.root; <userinput>ugidfw list</userinput>
+0 slots, 0 rules</screen>
+
+      <para>如希望的那样， 目前还没有定义任何规则。 这意味着一切都还可以访问。
+	要创建一个阻止所有用户， 而保持
+	<systemitem class="username">root</systemitem> 不受影响的规则，
+	只需运行下面的命令：</para>
+
+      <screen>&prompt.root; <userinput>ugidfw add subject not uid root new object not uid root mode n</userinput></screen>
+
+      <para>这本身可能是一个很糟糕的主意，
+	因为它会阻止所有用户执行哪怕最简单的命令， 例如
+	<command>ls</command>。 更富于爱心的规则可能是：</para>
+
+      <screen>&prompt.root; <userinput>ugidfw set 2 subject uid user1 object uid user2 mode n</userinput>
+&prompt.root; <userinput>ugidfw set 3 subject uid user1 object gid user2 mode n</userinput></screen>
+
+      <para>这将阻止任何 <systemitem class="username">user1</systemitem>
+	对 <systemitem class="username"><replaceable>user2</replaceable></systemitem>
+	的主目录的全部访问， 包括目录列表。</para>
+
+      <para><systemitem class="username">user1</systemitem> 可以用
+	<option>not uid <replaceable>user2</replaceable></option>
+	代替。 这将同样的强制访问控制实施在所有用户， 而不是单个用户上。</para>
+
+      <note>
+	<para><systemitem class="username">root</systemitem> 用户不会受到这些变动的影响。</para>
+      </note>
+
+      <para>我们已经给出了
+	&man.mac.bsdextended.4; 模块如何帮助加强文件系统的大致介绍。
+	要了解更进一步的信息， 请参见
+	&man.mac.bsdextended.4; 和 &man.ugidfw.8; 联机手册。</para>
+    </sect2>
+  </sect1>
+
+  <sect1 xml:id="mac-ifoff">
+    <title>MAC ifoff 模块</title>
+
+    <indexterm>
+      <primary>MAC 接口屏蔽策略</primary>
+    </indexterm>
+    <para>模块名： <filename>mac_ifoff.ko</filename></para>
+
+    <para>对应的内核配置：
+      <literal>options MAC_IFOFF</literal></para>
+
+    <para>引导选项： <literal>mac_ifoff_load="YES"</literal></para>
+
+    <para>&man.mac.ifoff.4; 模块完全是为了立即禁止网络接口，
+      以及阻止在系统初启时启用网络接口而设计的。
+      它不需要再系统中配置任何标签， 也不依赖于其他 <acronym>MAC</acronym> 模块。</para>
+
+    <para>绝大多数特性都可以通过调整下面的
+      <command>sysctl</command> 来加以控制。</para>
+
+    <itemizedlist>
+      <listitem>
+	<para><literal>security.mac.ifoff.lo_enabled</literal> 表示
+	  启用/禁用 环回接口 (&man.lo.4;)
+	  上的全部流量。</para>
+      </listitem>
+
+      <listitem>
+	<para><literal>security.mac.ifoff.bpfrecv_enabled</literal> 表示
+	  启用/禁用 伯克利包过滤器 (&man.bpf.4;) 接口上的全部流量。</para>
+      </listitem>
+
+      <listitem>
+	<para><literal>security.mac.ifoff.other_enabled</literal> 将在所有其他接口
+	  启用/禁用 网络。</para>
+      </listitem>
+    </itemizedlist>
+
+    <para>最为常用的 &man.mac.ifoff.4;
+      用法之一是在不允许引导过程中出现网络流量的环境中监视网络。
+      另一个建议的用法是撰写一个使用
+      <package>security/aide</package> 的脚本，
+      以便自动地在受保护的目录中发现新的或修改过的文件时切断网络。</para>
+  </sect1>
+
+  <sect1 xml:id="mac-portacl">
+    <title>MAC portacl 模块</title>
+
+    <indexterm>
+      <primary>MAC 端口访问控制表策略</primary>
+    </indexterm>
+    <para>模块名： <filename>mac_portacl.ko</filename></para>
+
+    <para>对应的内核配置：
+      <literal>MAC_PORTACL</literal></para>
+
+    <para>引导选项： <literal>mac_portacl_load="YES"</literal></para>
+
+    <para>&man.mac.portacl.4; 模块可以用来通过一系列 <command>sysctl</command>
+      变量来限制绑定本地的 <acronym>TCP</acronym> 和 <acronym>UDP</acronym>
+      端口。 本质上 &man.mac.portacl.4; 使得
+      非-<systemitem class="username">root</systemitem> 用户能够绑定到它所指定的特权端口，
+      也就是那些编号小于 1024 的端口。</para>
+
+    <para>在加载之后， 这个模块将在所有的 socket 上启用
+      <acronym>MAC</acronym> 策略。 可以调整下列一些配置：</para>
+
+    <itemizedlist>
+      <listitem>
+	<para><literal>security.mac.portacl.enabled</literal> 将完全
+	  启用/禁用 策略。</para>
+      </listitem>
+
+      <listitem>
+	<para><literal>security.mac.portacl.port_high</literal>
+	  将设置为 &man.mac.portacl.4; 所保护的最高端口号。</para>
+      </listitem>
+
+      <listitem>
+	<para><literal>security.mac.portacl.suser_exempt</literal>
+	  如果设置为非零值， 表示将
+	  <systemitem class="username">root</systemitem> 用户排除在策略之外。</para>
+      </listitem>
+
+      <listitem>
+	<para><literal>security.mac.portacl.rules</literal>
+	  将指定实际的 mac_portacl 策略； 请参见下文。</para>
+      </listitem>
+    </itemizedlist>
+
+    <para>实际的 <literal>mac_portacl</literal> 策略，
+      是在 <literal>security.mac.portacl.rules</literal>
+      sysctl 所指定的一个下列形式的字符串：
+      <literal>rule[,rule,...]</literal> 其中可以给出任意多个规则。
+      每一个规则的形式都是：
+      <literal>idtype:id:protocol:port</literal>。 这里的
+      <parameter>idtype</parameter> 参数可以是
+      <literal>uid</literal> 或 <literal>gid</literal>，
+      分别表示将 <parameter>id</parameter> 参数解释为用户 id 或组 id。
+      <parameter>protocol</parameter> 参数可以用来确定希望应用到
+      <acronym>TCP</acronym> 或
+      <acronym>UDP</acronym> 协议上， 方法是把这一参数设置为
+      <literal>tcp</literal> 或 <literal>udp</literal>。 最后的
+      <parameter>port</parameter>
+      参数则给出了所指定的用户或组能够绑定的端口号。</para>
+
+    <note>
+      <para>由于规则集会直接由内核加以解释， 因此只能以数字形式表示用户 ID、
+	组 ID， 以及端口等参数。 换言之， 您不能使用用户、 组，
+	或端口服务的名字来指定它们。</para>
+    </note>
+
+    <para>默认情况下， 在 类-&unix; 系统中， 编号小于 1024
+      的端口只能为特权进程使用或绑定， 也就是那些以 <systemitem class="username">root</systemitem>
+      身份运行的进程。 为了让
+      &man.mac.portacl.4; 能够允许非特权进程绑定低于 1024 的端口，
+      就必须首先禁用标准的 &unix; 限制。 这可以通过把 &man.sysctl.8;
+      变量 <literal>net.inet.ip.portrange.reservedlow</literal> 和
+      <literal>net.inet.ip.portrange.reservedhigh</literal>
+      设置为 0 来实现。</para>
+
+    <para>请参见下面的例子， 或 &man.mac.portacl.4; 联机手册中的说明，
+      以了解进一步的信息。</para>
+
+    <sect2>
+      <title>例子</title>
+
+      <para>下面的例子更好地展示了前面讨论的内容：</para>
+
+      <screen>&prompt.root; <userinput>sysctl security.mac.portacl.port_high=1023</userinput>
+&prompt.root; <userinput>sysctl net.inet.ip.portrange.reservedlow=0 net.inet.ip.portrange.reservedhigh=0</userinput></screen>
+
+      <para>首先我们需要设置使 &man.mac.portacl.4; 管理标准的特权端口，
+	并禁用普通的 &unix; 绑定限制。</para>
+
+      <screen>&prompt.root; <userinput>sysctl security.mac.portacl.suser_exempt=1</userinput></screen>
+
+      <para>您的 <systemitem class="username">root</systemitem> 用户不应因此策略而失去特权，　因此请把
+	<literal>security.mac.portacl.suser_exempt</literal> 设置为一个非零的值。
+	现在您已经成功地配置了　&man.mac.portacl.4; 模块，
+	并使其默认与 类-&unix; 系统一样运行了。</para>
+
+      <screen>&prompt.root; <userinput>sysctl security.mac.portacl.rules=uid:80:tcp:80</userinput></screen>
+
+      <para>允许 <acronym>UID</acronym> 为 80 的用户 (正常情况下，
+	应该是 <systemitem class="username">www</systemitem> 用户) 绑定到 80 端口。
+	这样 <systemitem class="username">www</systemitem> 用户就能够运行 web 服务器， 而不需要使用
+	<systemitem class="username">root</systemitem> 权限了。</para>
+
+      <screen>&prompt.root; <userinput>sysctl security.mac.portacl.rules=uid:1001:tcp:110,uid:1001:tcp:995</userinput></screen>
+
+      <para>允许 <acronym>UID</acronym> 为
+	1001 的用户绑定 <acronym>TCP</acronym> 端口 110
+	(<quote>pop3</quote>) 和 995 (<quote>pop3s</quote>)。
+	这样用户就能够启动接受来发到 110 和 995 的连接请求的服务了。</para>
+    </sect2>
+  </sect1>
+
+  <sect1 xml:id="mac-partition">
+    <title>MAC partition (分区) 模块</title>
+
+    <indexterm>
+      <primary>MAC 进程分区策略</primary>
+    </indexterm>
+    <para>模块名： <filename>mac_partition.ko</filename></para>
+
+    <para>对应的内核配置：
+      <literal>options MAC_PARTITION</literal></para>
+
+    <para>引导选项：
+      <literal>mac_partition_load="YES"</literal></para>
+
+    <para>&man.mac.partition.4; 策略将把进程基于其
+      <acronym>MAC</acronym> 标签放到特定的 <quote>partitions</quote>
+      (分区) 中。 这是一种特殊类型的 &man.jail.8;，
+      但对两者进行比较意义不大。</para>
+
+    <para>这个模块应加到
+      &man.loader.conf.5; 文件中， 以便在启动过程中启用这些规则。</para>
+
+    <para>绝大多数这一策略的配置是通过 &man.setpmac.8; 工具来完成的，
+      它将在后面介绍。 这个策略可以使用下面的 <command>sysctl</command>：</para>
+
+    <itemizedlist>
+      <listitem>
+	<para><literal>security.mac.partition.enabled</literal>
+	  将启用强制的 <acronym>MAC</acronym> 进程
+	  partitions。</para>
+      </listitem>
+    </itemizedlist>
+
+    <para>当启用了这个规则时， 用户将只能看到他们自己的，
+      以及其他与他们同处一个 partition 的进程，
+      而不能使用能够越过 partition 的工具。 例如，
+      <literal>insecure</literal> class 中的用户，
+      就无法使用 <command>top</command> 命令，
+      以及其他需要产生新进程的工具。</para>
+
+    <para>要设置或删除 partition 标签中的工具， 需要使用
+      <command>setpmac</command>：</para>
+
+    <screen>&prompt.root; <userinput>setpmac partition/13 top</userinput></screen>
+
+    <para>这将把 <command>top</command> 命令加入到 <literal>insecure</literal> class
+      中的用户的标签集。 注意， 所有由 <literal>insecure</literal> class
+      中的用户产生的进程， 仍然会留在
+      <literal>partition/13</literal> 标签中。</para>
+
+    <sect2>
+      <title>例子</title>
+
+      <para>下面的命令将显示 partition 标签以及进程列表：</para>
+
+      <screen>&prompt.root; <userinput>ps Zax</userinput></screen>
+
+      <para>接下来的这个命令将允许察看其他用户的进程 partition 标签，
+	以及那个用户正在运行的进程：</para>
+
+      <screen>&prompt.root; <userinput>ps -ZU trhodes</userinput></screen>
+
+      <note>
+	<para>除非加载了 &man.mac.seeotheruids.4; 策略，
+	  否则用户就看不到 <systemitem class="username">root</systemitem> 的标签。</para>
+      </note>
+
+      <para>非常手工化的实现， 可能会在 <filename>/etc/rc.conf</filename>
+	中禁用所有的服务， 并用脚本来按不同的标签来启动它们。</para>
+
+      <note>
+	<para>下面的几个策略支持基于所给出的三种标签的完整性设定。
+	  这些选项， 连同它们的限制， 在模块的联机手册中进行了进一步介绍。</para>
+      </note>
+    </sect2>
+  </sect1>
+
+  <sect1 xml:id="mac-mls">
+    <title>MAC 多级 (Multi-Level) 安全模块</title>
+
+    <indexterm>
+      <primary>MAC 多级 (Multi-Level) 安全策略</primary>
+    </indexterm>
+    <para>模块名： <filename>mac_mls.ko</filename></para>
+
+    <para>对应的内核配置：
+      <literal>options MAC_MLS</literal></para>
+
+    <para>引导选项： <literal>mac_mls_load="YES"</literal></para>
+
+    <para>&man.mac.mls.4; 策略，
+      通过严格控制信息流向来控制系统中主体和客体的访问。</para>
+
+    <para>在 <acronym>MLS</acronym> 环境中，
+      <quote>许可 (clearance)</quote> 级别会在每一个主体或客体标签上进行设置，
+      连同对应的区间。 由于这些透明度或敏感度可以有六千多个层次，
+      因此为每一个主体或客体进行配置将是一件让任何系统管理员都感到头疼的任务。
+      所幸的是， 这个策略中已经包含了三个
+      <quote>立即可用的</quote> 标签。</para>
+
+    <para>这些标签是 <literal>mls/low</literal>、
+      <literal>mls/equal</literal> 以及 <literal>mls/high</literal>。
+      由于这些标签已经在联机手册中进行了介绍， 这里只给出简要的说明：</para>
+
+    <itemizedlist>
+      <listitem>
+	<para><literal>mls/low</literal> 标签包含了最低配置，
+	  从而允许其他客体支配它。 任何标记为 <literal>mls/low</literal>
+	  的客体将是地透明度的， 从而不允许访问更高级别的信息。
+	  此外， 这个标签也阻止拥有较高透明度的客体向其写入或传递信息。</para>
+      </listitem>
+
+      <listitem>
+	<para><literal>mls/equal</literal> 标签应放到不希望使用这一策略的客体上。</para>
+      </listitem>
+
+      <listitem>
+	<para><literal>mls/high</literal> 标签是允许的最高级别透明度。
+	  指定了这个标签的客体将支配系统中的其他客体； 但是，
+	  它们将不允许向较低级别的客体泄露信息。</para>
+      </listitem>
+    </itemizedlist>
+
+    <para><acronym>MLS</acronym> 提供了：</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>提供了一些非层次分类的层次安全模型；</para>
+      </listitem>
+
+      <listitem>
+	<para>固定规则： 不允许向上读， 不允许向下写
+	  (主体可以读取同级或较低级别的客体， 但不能读取高级别的。
+	  类似地， 主体可以向同级或较高级写， 而不能向下写)；</para>
+      </listitem>
+
+      <listitem>
+	<para>保密 (防止不适当的数据透露)；</para>
+      </listitem>
+
+      <listitem>
+	<para>系统设计的基础要点， 是在多个敏感级别之间并行地处理数据
+	  (而不泄露秘密的和机密的信息)。</para>
+      </listitem>
+    </itemizedlist>
+
+    <para>下列 <command>sysctl</command> 可以用来配置特殊服务和接口：</para>
+
+    <itemizedlist>
+      <listitem>
+	<para><literal>security.mac.mls.enabled</literal> 用来启用/禁用
+	  <acronym>MLS</acronym> 策略。</para>
+      </listitem>
+
+      <listitem>
+	<para><literal>security.mac.mls.ptys_equal</literal>
+	  将所有的 &man.pty.4; 设备标记为 <literal>mls/equal</literal>。</para>
+      </listitem>
+
+      <listitem>
+	<para><literal>security.mac.mls.revocation_enabled</literal>
+	  可以用来在标签转为较低 grade 时撤销客体访问权。</para>
+      </listitem>
+
+      <listitem>
+	<para><literal>security.mac.mls.max_compartments</literal>
+	  可以用来设置客体的最大区间层次； 基本上，
+	  这也就是系统中所允许的最大区间数。</para>
+      </listitem>
+    </itemizedlist>
+
+    <para>要管理 <acronym>MLS</acronym> 标签， 可以使用
+      &man.setfmac.8; 命令。 要在客体上指定标签，
+      需要使用下面的命令：</para>
+
+    <screen>&prompt.root; <userinput>setfmac mls/5 test</userinput></screen>
+
+    <para>下述命令用于取得文件
+      <filename>test</filename> 上的 <acronym>MLS</acronym> 标签：</para>
+
+    <screen>&prompt.root; <userinput>getfmac test</userinput></screen>
+
+    <para>以上是对于 <acronym>MLS</acronym> 策略提供功能的概要。
+      另一种做法是在 <filename>/etc</filename>
+      中建立一个主策略文件， 并在其中指定 <acronym>MLS</acronym> 策略信息，
+      作为 <command>setfmac</command> 命令的输入。 这种方法，
+      将在其他策略之后进行介绍。</para>
+
+    <sect2>
+      <title>规划托管敏感性</title>
+
+      <para>通过使用多级安全策略模块，
+	管理员可以规划如何控制敏感信息的流向。 默认情况下，
+	由于其默认的禁止向上读以及向下写的性质，
+	系统会默认将所有客体置于较低的状态。 这样，
+	所有的客体都可以访问，
+	而管理员则可以在配置阶段慢慢地进行提高信息的敏感度这样的修改。</para>
+
+      <para>除了前面介绍的三种基本标签选项之外，
+	管理员还可以根据需要将用户和用户组进行分组，
+	以阻止它们之间的信息流。 一些人们比较熟悉的信息限界词汇， 如
+	<literal>机密</literal>、 <literal>秘密</literal>，
+	以及 <literal>绝密</literal> 可以方便您理解这一概念。
+	管理员也可以简单地根据项目级别建不同的分组。
+	无论采用何种分类方法， 在实施限制性的策略之前，
+	都必须首先想好如何进行规划。</para>
+
+      <para>这个安全策略模块最典型的用例是电子商务的 web 服务器，
+	其上的文件服务保存公司的重要信息以及金融机构的情况。
+	对于只有两三个用户的个人工作站而言， 则可能不甚适用。</para>
+    </sect2>
+  </sect1>
+
+  <sect1 xml:id="mac-biba">
+    <title>MAC Biba 模块</title>
+
+    <indexterm>
+      <primary>MAC Biba 完整性策略</primary>
+    </indexterm>
+    <para>模块名： <filename>mac_biba.ko</filename></para>
+
+    <para>对应的内核配置： <literal>options MAC_BIBA</literal></para>
+
+    <para>引导选项： <literal>mac_biba_load="YES"</literal></para>
+
+    <para>&man.mac.biba.4; 模块将加载 <acronym>MAC</acronym>
+      Biba 策略。 这个策略与
+      <acronym>MLS</acronym> 策略非常类似，
+      只是信息流的规则有些相反的地方。
+      通俗地说， 这就是防止敏感信息向下传播， 而 <acronym>MLS</acronym>
+      策略则是防止敏感信息的向上传播； 因而，
+      这一节的许多内容都可以同时应用于两种策略。</para>
+
+    <para>在 Biba 环境中， <quote>integrity</quote> (完整性) 标签，
+      将设置在每一个主体或客体上。 这些标签是按照层次级别建立的。
+      如果客体或主体的级别被提升， 其完整性也随之提升。</para>
+
+    <para>被支持的标签是 <literal>biba/low</literal>，
+      <literal>biba/equal</literal> 以及 <literal>biba/high</literal>；
+      解释如下：</para>
+
+    <itemizedlist>
+      <listitem>
+	<para><literal>biba/low</literal> 标签是客体或主体所能拥有的最低完整性级别。
+	  在客体或主体上设置它，
+	  将阻止其在更高级别客体或主体对其进行的写操作，
+	  虽然读仍被允许。</para>
+      </listitem>
+
+      <listitem>
+	<para><literal>biba/equal</literal>
+	  标签只应在那些希望排除在策略之外的客体上设置。</para>
+      </listitem>
+
+      <listitem>
+	<para><literal>biba/high</literal> 允许向较低标签的客体上写，
+	  但不允许读那些客体。
+	  推荐在那些可能影响整个系统完整性的客体上设置这个标签。</para>
+      </listitem>
+    </itemizedlist>
+
+    <para>Biba 提供了：</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>层次式的完整性级别， 并提供了一组非层次式的完整性分类；</para>
+      </listitem>
+
+      <listitem>
+	<para>固定规则： 不允许向上写， 不允许向下读 (与
+	  <acronym>MLS</acronym> 相反)。 主体可以在它自己和较低的级别写，
+	  但不能向更高级别实施写操作。 类似地， 主体也可以读在其自己的，
+	  或更高级别的客体， 但不能读取较低级别的客体；</para>
+      </listitem>
+
+      <listitem>
+	<para>完整性 (防止对数据进行不正确的修改)；</para>
+      </listitem>
+
+      <listitem>
+	<para>完整性级别 (而不是 MLS 的敏感度级别)。</para>
+      </listitem>
+    </itemizedlist>
+
+    <para>下列 <command>sysctl</command> 可以用于维护 Biba 策略。</para>
+
+    <itemizedlist>
+      <listitem>
+	<para><literal>security.mac.biba.enabled</literal>
+	  可以用来在机器上启用/禁用是否实施 Biba 策略。</para>
+      </listitem>
+
+      <listitem>
+	<para><literal>security.mac.biba.ptys_equal</literal>
+	  可以用来在 &man.pty.4; 设备上禁用 Biba 策略。</para>
+      </listitem>
+
+      <listitem>
+	<para><literal>security.mac.biba.revocation_enabled</literal>
+	  将在支配主体发生变化时强制撤销对客体的访问权。</para>
+      </listitem>
+    </itemizedlist>
+
+    <para>要操作系统客体上的 Biba 策略，
+      需要使用 <command>setfmac</command> 和 <command>getfmac</command>
+      命令：</para>
+
+    <screen>&prompt.root; <userinput>setfmac biba/low test</userinput>
+&prompt.root; <userinput>getfmac test</userinput>
+test: biba/low</screen>
+
+    <sect2>
+      <title>规划托管完整性</title>
+
+      <para>与敏感性不同， 完整性是要确保不受信方不能对信息进行篡改。
+	这包括了在主体和客体之间传递的信息。
+	这能够确保用户只能修改甚至访问需要他们的信息。</para>
+
+      <para>&man.mac.biba.4; 安全策略模块允许管理员指定用户能够看到和执行的文件和程序，
+ 	并确保这些文件能够为系统及用户或用户组所信任， 而免受其他威胁。</para>
+
+      <para>在最初的规划阶段， 管理员必须做好将用户分成不同的等级、
+	级别和区域的准备。 在启动前后， 包括数据以及程序和使用工具在内的客体，
+	用户都会无法访问。 一旦启用了这个策略模块， 系统将默认使用高级别的标签，
+	而划分用户级别和等级的工作则交由管理员来进行配置。
+	与前面介绍的级别限界不同， 好的规划方法可能还包括 topic。
+	例如， 只允许开发人员修改代码库、 使用源代码编译器，
+	以及其他开发工具， 而其他用户则分入其他类别，
+	如测试人员、 设计人员， 以及普通用户，
+	这些用户可能只拥有读这些资料的权限。</para>
+
+      <para>通过其自然的安全控制， 完整性级别较低的主体，
+	就会无法向完整性级别高的主体进行写操作； 而完整性级别较高的主体，
+	也不能观察或读较低完整性级别的客体。 通过将客体的标签设为最低级，
+	可以阻止所有主体对其进行的访问操作。
+	这一安全策略模块预期的应用场合包括受限的 web 服务器、
+	开发和测试机， 以及源代码库。 而对于个人终端、
+	作为路由器的计算机， 以及网络防火墙而言，
+	它的用处就不大了。</para>
+    </sect2>
+  </sect1>
+
+  <sect1 xml:id="mac-lomac">
+    <title>MAC LOMAC 模块</title>
+
+    <indexterm>
+      <primary>MAC LOMAC</primary>
+    </indexterm>
+    <para>模块名： <filename>mac_lomac.ko</filename></para>
+
+    <para>对应的内核配置： <literal>options MAC_LOMAC</literal></para>
+    <para>引导选项： <literal>mac_lomac_load="YES"</literal></para>
+
+    <para>和 <acronym>MAC</acronym> Biba 策略不同，
+      &man.mac.lomac.4; 策略只允许在降低了完整性级别之后，
+      才允许在不破坏完整性规则的前提下访问较低完整性级别的客体。</para>
+
+    <para><acronym>MAC</acronym> 版本的 Low-watermark
+      完整性策略不应与较早的 &man.lomac.4; 实现相混淆，
+      除了使用浮动的标签来支持主体通过辅助级别区间降级之外，
+      其工作方式与 Biba 大体相似。 这一次要的区间以 <literal>[auxgrade]</literal> 的形式出现。
+      当指定包含辅助级别的 lomac 策略时，
+      其形式应类似于： <literal>lomac/10[2]</literal>
+      这里数字二 (2) 就是辅助级别。</para>
+
+    <para><acronym>MAC</acronym> LOMAC 策略依赖于系统客体上存在普适的标签，
+      这样就允许主体从较低完整性级别的客体读取， 并对主体的标签降级，
+	  以防止其在之后写高完整性级别的客体。 这就是前面讨论的
+      <literal>[auxgrade]</literal> 选项， 因此这个策略能够提供更大的兼容性，
+      而所需要的初始配置也要比 Biba 少。</para>
+
+    <sect2>
+      <title>例子</title>
+
+      <para>与 Biba 和 <acronym>MLS</acronym> 策略类似；
+	<command>setfmac</command> 和 <command>setpmac</command>
+	工具可以用来在系统客体上放置标签：</para>
+
+      <screen>&prompt.root; <userinput>setfmac /usr/home/trhodes lomac/high[low]</userinput>
+&prompt.root; <userinput>getfmac /usr/home/trhodes</userinput> lomac/high[low]</screen>
+
+      <para>注意， 这里的辅助级别是 <literal>low</literal>，
+	这一特性只由 <acronym>MAC</acronym>
+	LOMAC 策略提供。</para>
+    </sect2>
+  </sect1>
+
+  <sect1 xml:id="mac-implementing">
+    <title>MAC Jail 中的 Nagios</title>
+
+    <indexterm>
+      <primary>MAC Jail 中的 Nagios</primary>
+    </indexterm>
+
+    <para>下面给出了通过多种 <acronym>MAC</acronym> 模块，
+      并正确地配置策略来实现安全环境的例子。 这只是一个测试，
+      因此不应被看作四海一家的解决之道。 仅仅实现一个策略，
+      而忽略它不能解决任何问题， 并可能在生产环境中产生灾难性的后果。</para>
+
+    <para>在开始这些操作之前， 必须在每一个文件系统上设置
+      <literal>multilabel</literal> 选项，
+      这些操作在这一章开始的部分进行了介绍。 不完成这些操作，
+      将导致错误的结果。 首先， 请确认已经安装了
+      <package>net-mngt/nagios-plugins</package>、
+      <package>net-mngt/nagios</package>， 和
+      <package>www/apache13</package> 这些 ports，
+      并对其进行了配置， 且运转正常。</para>
+
+    <sect2>
+      <title>创建一个 insecure (不安全) 用户 Class</title>
+
+      <para>首先是在 <filename>/etc/login.conf</filename>
+	文件中加入一个新的用户 class：</para>
+
+      <programlisting>insecure:\
+:copyright=/etc/COPYRIGHT:\
+:welcome=/etc/motd:\
+:setenv=MAIL=/var/mail/$,BLOCKSIZE=K:\
+:path=~/bin:/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin
+:manpath=/usr/share/man /usr/local/man:\
+:nologin=/usr/sbin/nologin:\
+:cputime=1h30m:\
+:datasize=8M:\
+:vmemoryuse=100M:\
+:stacksize=2M:\
+:memorylocked=4M:\
+:memoryuse=8M:\
+:filesize=8M:\
+:coredumpsize=8M:\
+:openfiles=24:\
+:maxproc=32:\
+:priority=0:\
+:requirehome:\
+:passwordtime=91d:\
+:umask=022:\
+:ignoretime@:\
+:label=biba/10(10-10):</programlisting>
+
+      <para>并在 default 用户 class 中加入：</para>
+
+      <programlisting>:label=biba/high:</programlisting>
+
+      <para>一旦完成上述操作， 就需要运行下面的命令来重建数据库：</para>
+
+      <screen>&prompt.root; <userinput>cap_mkdb /etc/login.conf</userinput></screen>
+    </sect2>
+
+    <sect2>
+      <title>引导配置</title>
+
+      <para>现在暂时还不要重新启动， 我们还需要在
+	<filename>/boot/loader.conf</filename> 中增加下面几行，
+	以便让模块随系统初始化一同加载：</para>
+
+      <programlisting>mac_biba_load="YES"
+mac_seeotheruids_load="YES"</programlisting>
+    </sect2>
+
+    <sect2>
+      <title>配置用户</title>
+
+      <para>使用下面的命令将 <systemitem class="username">root</systemitem> 设为属于默认的 class：</para>
+
+      <screen>&prompt.root; <userinput>pw usermod root -L default</userinput></screen>
+
+      <para>所有非 <systemitem class="username">root</systemitem> 或系统的用户，
+	现在需要一个登录 class。 登录 class 是必须的，
+	否则这些用户将被禁止使用类似 &man.vi.1; 这样的命令。
+	下面的 <command>sh</command> 脚本应能完成这个工作：</para>
+
+      <screen>&prompt.root; <userinput>for x in `awk -F: '($3 &gt;= 1001) &amp;&amp; ($3 != 65534) { print $1 }' \</userinput>
+	<userinput>/etc/passwd`; do pw usermod $x -L default; done;</userinput></screen>
+
+      <para>将 <systemitem class="username">nagios</systemitem> 和
+	<systemitem class="username">www</systemitem> 这两个用户归入不安全 class：</para>
+
+      <screen>&prompt.root; <userinput>pw usermod nagios -L insecure</userinput></screen>
+      <screen>&prompt.root; <userinput>pw usermod www -L insecure</userinput></screen>
+    </sect2>
+
+    <sect2>
+      <title>创建上下文文件</title>
+
+      <para>接下来需要创建一个上下文文件； 您可以把下面的实例放到
+	<filename>/etc/policy.contexts</filename> 中。</para>
+
+      <programlisting># This is the default BIBA policy for this system.
+
+# System:
+/var/run                        biba/equal
+/var/run/*                      biba/equal
+
+/dev                            biba/equal
+/dev/*                          biba/equal
+
+/var				biba/equal
+/var/spool                      biba/equal
+/var/spool/*                    biba/equal
+
+/var/log                        biba/equal
+/var/log/*                      biba/equal
+
+/tmp				biba/equal
+/tmp/*				biba/equal
+/var/tmp			biba/equal
+/var/tmp/*			biba/equal
+
+/var/spool/mqueue		biba/equal
+/var/spool/clientmqueue		biba/equal
+
+# For Nagios:
+/usr/local/etc/nagios
+/usr/local/etc/nagios/*         biba/10
+
+/var/spool/nagios               biba/10
+/var/spool/nagios/*             biba/10
+
+# For apache
+/usr/local/etc/apache           biba/10
+/usr/local/etc/apache/*         biba/10</programlisting>
+
+      <para>这个策略通过在信息流上设置限制来强化安全。
+	在这个配置中， 包括 <systemitem class="username">root</systemitem> 和其他用户在内的用户，
+	都不允许访问 <application>Nagios</application>。 作为
+	<application>Nagios</application> 一部分的配置文件和进程，
+	都是完全独立的， 也称为 jailed。</para>
+
+      <para>接下来可以用下面的命令将其读入系统：</para>
+
+      <screen>&prompt.root; <userinput>setfsmac -ef /etc/policy.contexts /</userinput>
+&prompt.root; <userinput>setfsmac -ef /etc/policy.contexts /</userinput></screen>
+
+      <note>
+	<para>随环境不同前述的文件系统布局可能会有所不同；
+	  不过无论如何， 都只能在一个文件系统上运行它。</para>
+      </note>
+
+      <para>在 <filename>/etc/mac.conf</filename> 文件中的 main
+	小节需要进行下面的修改：</para>
+
+      <programlisting>default_labels file ?biba
+default_labels ifnet ?biba
+default_labels process ?biba
+default_labels socket ?biba</programlisting>
+    </sect2>
+
+    <sect2>
+      <title>启用网络</title>
+
+      <para>在
+	<filename>/boot/loader.conf</filename> 中增加下列内容：</para>
+
+      <programlisting>security.mac.biba.trust_all_interfaces=1</programlisting>
+
+      <para>将下述内容加入 <filename>rc.conf</filename> 中的网络接口配置。
+	如果主 Internet 配置是通过 <acronym>DHCP</acronym> 完成的，
+	则需要在每次系统启动之后手工执行类似的配置：</para>
+
+      <programlisting>maclabel biba/equal</programlisting>
+    </sect2>
+
+    <sect2>
+      <title>测试配置</title>
+
+      <indexterm>
+	<primary>MAC Configuration Testing (MAC 配置测试)</primary>
+      </indexterm>
+
+      <para>首先要确认 web 服务以及
+	<application>Nagios</application> 不会随系统的初始化和重启过程而自动启动。
+	在此之前， 请在此确认
+	<systemitem class="username">root</systemitem> 用户不能访问 <application>Nagios</application>
+	配置目录中的任何文件 如果 <systemitem class="username">root</systemitem> 能够在 <filename>/var/spool/nagios</filename>
+	中运行 &man.ls.1;， 则表示配置有误。 如果配置正确的话，
+	您会收到一条 <quote>permission denied</quote> 错误信息。</para>
+
+      <para>如果一切正常， <application>Nagios</application>、
+	<application>Apache</application>， 以及
+	<application>Sendmail</application> 就可以按照适应安全策略的方式启动了。
+	下面的命令将完成此工作：</para>
+
+      <screen>&prompt.root; <userinput>cd /etc/mail &amp;&amp; make stop &amp;&amp; \
+setpmac biba/equal make start &amp;&amp; setpmac biba/10\(10-10\) apachectl start &amp;&amp; \
+setpmac biba/10\(10-10\) /usr/local/etc/rc.d/nagios.sh forcestart</userinput></screen>
+
+      <para>再次检查是否一切正常。 如果不是的话， 请检查日志文件和错误信息。
+	此外， 还可以用 &man.sysctl.8; 来临时禁用 &man.mac.biba.4;
+	安全策略模块的强制措施， 并象之前那样进行配置和启动服务。</para>
+
+      <note>
+	<para><systemitem class="username">root</systemitem> 用户可以放心大胆地修改安全强制措施，
+	  并编辑配置文件。 下面的命令可以对安全策略进行降级， 并启动一个新的
+	  shell：</para>
+
+	<screen>&prompt.root; <userinput>setpmac biba/10 csh</userinput></screen>
+
+	<para>要阻止这种情况发生，
+	  就需要配置 &man.login.conf.5; 中许可的命令范围了。 如果 &man.setpmac.8;
+	  尝试执行超越许可范围的命令， 则会返回一个错误， 而不是执行命令。
+	  在这个例子中， 可以把 root 设为
+	  <literal>biba/high(high-high)</literal>。</para>
+      </note>
+    </sect2>
+  </sect1>
+
+  <sect1 xml:id="mac-userlocked">
+    <title>User Lock Down</title>
+
+    <para>这个例子针对的是一个相对较小的存储系统，
+      其用户数少于五十。 用户能够在其上登录，
+      除了存储数据之外， 还可以访问一些其他资源。</para>
+
+    <para>在这个场景中， &man.mac.bsdextended.4; 可以与
+      &man.mac.seeotheruids.4; 并存， 以达到禁止访问非授权资源，
+      同时隐藏其他用户的进程的目的。</para>
+
+    <para>首先， 在
+      <filename>/boot/loader.conf</filename> 中加入：</para>
+
+    <programlisting>mac_seeotheruids_load="YES"</programlisting>
+
+    <para>随后， 可以通过下述 rc.conf 变量来启用 &man.mac.bsdextended.4;
+      安全策略模块：</para>
+
+    <programlisting>ugidfw_enable="YES"</programlisting>
+
+    <para>默认规则保存在
+      <filename>/etc/rc.bsdextended</filename> 中，
+      并在系统初始化时加载； 但是， 其中的默认项可能需要进行一些改动。
+      因为这台机器只为获得了授权的用户提供服务， 因此除了最后两项之外，
+      其它内容都应保持注释的状态。 这两项规则将默认强制加载属于用户的系统客体。</para>
+
+    <para>在这台机器上添加需要的用户并重新启动。 出于测试的目的，
+      请在两个控制台上分别以不同的用户身份登录。
+      运行 <command>ps aux</command> 命令来看看是否能看到其他用户的进程。
+      此外， 在其他用户的主目录中运行 &man.ls.1; 命令，
+      如果配置正确， 则这个命令会失败。</para>
+
+    <para>不要尝试以 <systemitem class="username">root</systemitem> 用户的身份进行测试，
+      除非您已经修改了特定的 <command>sysctl</command> 来阻止超级用户的访问。</para>
+
+    <note>
+      <para>在添加新用户时， 他们的 &man.mac.bsdextended.4;
+	规则不会自动出现在规则集表中。 要迅速更新规则集，
+	只需简单地使用 &man.kldunload.8; 和 &man.kldload.8;
+	工具来卸载并重新加载安全策略模块。</para>
+    </note>
+  </sect1>
+
+  <sect1 xml:id="mac-troubleshoot">
+    <title>MAC 框架的故障排除</title>
+
+    <indexterm>
+      <primary>MAC 故障排除</primary>
+    </indexterm>
+
+    <para>在开发过程中， 有一些用户报告了正常配置下出现的问题。
+      其中的一些问题如下所示：</para>
+
+    <sect2>
+      <title>无法在 <filename>/</filename> 上启用
+	<option>multilabel</option> 选项</title>
+
+      <para><option>multilabel</option> 标志在根 (<filename>/</filename>)
+	分区上没有保持启用状态！</para>
+
+
+      <para>看起来每五十个用户中就有一个遇到这样的问题，
+	当然， 在我们的初始配置过程中也出现过这样的问题。
+	更进一步的观察使得我相信这个所谓的
+	<quote>bug</quote> 是由于文档中不确切的描述，
+	或对其产生的误解造成的。 无论它是因为什么引发的，
+	下面的步骤应该能够解决此问题：</para>
+
+      <procedure>
+	<step>
+	  <para>编辑 <filename>/etc/fstab</filename> 并将根分区设置为
+	    <option>ro</option>， 表示只读。</para>
+	</step>
+
+	<step>
+	  <para>重新启动并进入单用户模式。</para>
+	</step>
+
+	<step>
+	  <para>在 <filename>/</filename> 上运行
+	    <command>tunefs</command> <option>-l enable</option></para>
+	</step>
+
+	<step>
+	  <para>重新启动并进入正常的模式。</para>
+	</step>
+
+	<step>
+	  <para>运行 <command>mount</command> <option>-urw</option>
+	  <filename>/</filename> 并把 <filename>/etc/fstab</filename>
+	  中的 <option>ro</option> 改回 <option>rw</option>，
+	  然后再次重新启动。</para>
+	</step>
+
+	<step>
+	  <para>再次检查来自
+	  <command>mount</command> 的输出， 已确认根文件系统上正确地设置了
+	  <option>multilabel</option>。</para>
+	</step>
+     </procedure>
+    </sect2>
+
+    <sect2>
+      <title>在 <acronym>MAC</acronym> 之后无法启动 X11 了</title>
+
+      <para>在使用 <acronym>MAC</acronym> 建立安全的环境之后， 就无法启动
+	X 了！</para>
+
+      <para>这可能是由于 <acronym>MAC</acronym>
+	<literal>partition</literal> 策略， 或者对某个
+	<acronym>MAC</acronym> 标签策略进行了错误的配置导致的。
+	要调试这个问题， 请尝试：</para>
+
+      <procedure>
+	<step>
+	  <para>检查错误信息； 如果用户是在
+	    <literal>insecure</literal> class 中， 则
+	    <literal>partition</literal> 策略就可能导致问题。
+	    尝试将用户的 class 重新改为
+	    <literal>default</literal> class，
+	    并使用 <command>cap_mkdb</command> 命令重建数据库。
+	    如果这无法解决问题， 则进入第二步。</para>
+	</step>
+
+	<step>
+	  <para>仔细检查标签策略。 确认针对有问题的用户的策略是正确的， 特别是
+	    X11 应用， 以及 <filename>/dev</filename>
+	    项。</para>
+	</step>
+
+	<step>
+	  <para>如果这些都无法解决问题， 将出错消息和对您的环境的描述，
+	    发送到 <link xlink:href="http://www.TrustedBSD.org">TrustedBSD</link>
+	    网站上的 TrustedBSD 讨论邮件列表，
+	    或者 &a.questions; 邮件列表。</para>
+	</step>
+      </procedure>
+    </sect2>
+
+    <sect2>
+      <title>Error: &man..secure.path.3; cannot stat <filename>.login_conf</filename></title>
+
+      <para>当我试图从 <systemitem class="username">root</systemitem>
+	用户切换到其同中的其他用户时， 出现了错误提示
+	<errorname>_secure_path: unable to state .login_conf</errorname>。</para>
+
+      <para>这个提示通常在用户拥有高于它将要成为的那个用户的
+	标签设定时出现。 例如， 如果系统上的一个用户
+	<systemitem class="username">joe</systemitem> 拥有默认的
+	<option>biba/low</option> 标签， 而 <systemitem class="username">root</systemitem> 用户拥有
+	<option>biba/high</option>， 它也就不能查看
+	<systemitem class="username">joe</systemitem> 的主目录，
+	无论 <systemitem class="username">root</systemitem> 是否使用了
+	<command>su</command> 来成为 <systemitem class="username">joe</systemitem>。
+	这种情况下， Biba 完整性模型，
+	就不会允许 <systemitem class="username">root</systemitem> 查看在较低完整性级别中的客体。</para>
+    </sect2>
+
+    <sect2>
+      <title><systemitem class="username">root</systemitem> 用户名被破坏了！</title>
+
+      <para>在普通模式， 甚至是单用户模式中，
+	<systemitem class="username">root</systemitem> 不被识别。
+	<command>whoami</command> 命令返回了 0 (零) 而
+	<command>su</command> 则提示 <errorname>who are you?</errorname>。
+	到底发生了什么？</para>
+
+      <para>标签策略被禁用可能会导致这样的问题，
+	无论是通过 &man.sysctl.8; 或是卸载了策略模块。
+	如果打算禁用策略， 或者临时禁用它，
+	则登录性能数据库需要重新配置，
+	在其中删除 <option>label</option> 选项。
+	仔细检查 <filename>login.conf</filename>
+	以确保所有的 <option>label</option> 选项都已经删除， 然后使用
+	<command>cap_mkdb</command> 命令来重建数据库。</para>
+
+      <para>这种情况也可能在通过策略来限制访问
+	<filename>master.passwd</filename> 文件或对应的那个数据库时发生。
+	这主要是由于管理员修改受某一 label 限制的文件，
+	而与系统级的通用策略发生了冲突。 这时，
+	用户信息将由系统直接读取， 而在文件继承了新的 label
+	之后则会拒绝访问。 此时， 只需使用
+	&man.sysctl.8; 禁用这一策略， 一切就会恢复正常了。</para>
+    </sect2>
+  </sect1>
+</chapter>

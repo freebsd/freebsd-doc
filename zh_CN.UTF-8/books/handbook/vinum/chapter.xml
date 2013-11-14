@@ -1,0 +1,1135 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+	The Vinum Volume Manager
+	By Greg Lehey (grog at lemis dot com)
+
+	Added to the Handbook by Hiten Pandya <hmp@FreeBSD.org>
+	and Tom Rhodes <trhodes@FreeBSD.org>
+
+	For the FreeBSD Documentation Project
+	The FreeBSD Simplified Chinese Project
+
+	Original Revision: 1.49
+	$FreeBSD$
+-->
+<chapter xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink" version="5.0" xml:id="vinum-vinum">
+  <info><title>Vinum 卷管理程序</title>
+    <authorgroup>
+      <author><personname><firstname>Greg</firstname><surname>Lehey</surname></personname><contrib>原作 </contrib></author>
+    </authorgroup>
+  </info>
+
+  
+
+  <sect1 xml:id="vinum-synopsis">
+    <title>概述</title>
+
+    <para>无论您有什么样的磁盘，总会有一些潜在问题：</para>
+
+    <itemizedlist>
+      <listitem>
+        <para>它们可能容量太小。</para>
+      </listitem>
+
+      <listitem>
+        <para>它们可能速度太慢。</para>
+      </listitem>
+
+      <listitem>
+        <para>它们可能也太不可靠。</para>
+      </listitem>
+    </itemizedlist>
+
+    <para>针对这些问题， 人们提出并实现了许多不同的解决方案。
+      为了应对这些问题， 一些用户采用了多个， 有时甚至是冗余的磁盘这类方法。
+      除了支持许多种不同的硬件 RAID 控制器之外，
+      &os; 的基本系统中包括了 Vinum 卷管理器， 它是一个用以实现虚拟磁盘驱动器的块设备。
+      <emphasis>Vinum</emphasis> 是一种称为 <emphasis>卷管理器</emphasis>，
+      或者说用于解决前面这三种问题的虚拟磁盘驱动程序。 Vinum 能够提供比传统磁盘系统更好的灵活性、
+      性能和可靠性， 并实现了能够单独或配合使用 RAID-0、 RAID-1 和 RAID-5 模型。</para>
+
+    <para>这一章对传统磁盘存储的潜在问题进行了简要说明，并介绍了 Vinum 卷管理器。</para>
+
+    <note>
+      <para>从 &os;&nbsp;5 开始， 对 Vinum 进行了重写，
+	以便使其符合 GEOM 架构 (<xref linkend="GEOM"/>)，
+	同时保留其原有的设计创意、 术语， 以及保存在磁盘上的元数据格式。
+	这一重写的版本称为 <emphasis>gvinum</emphasis>
+	(表示 <emphasis> GEOM vinum</emphasis>)。 接下来的文字中
+    <emphasis>Vinum</emphasis> 是一个抽象的名字， 通常并不具体指某一特定的实现。
+	新版本中所有的指令都应通过 <command>gvinum</command> 命令来操作，
+	而对应的内核模块的名字， 也由
+	<filename>vinum.ko</filename> 改为了
+	<filename>geom_vinum.ko</filename>， 而在
+	<filename>/dev/vinum</filename> 中的所有设备节点，
+	也改为放到了 <filename>/dev/gvinum</filename>。
+	从 &os;&nbsp;6 开始， 旧版的 Vinum 实现已不再提供。</para>
+    </note>
+
+  </sect1>
+
+  <sect1 xml:id="vinum-intro">
+    <title>磁盘容量太小</title>
+
+    <indexterm><primary>Vinum</primary></indexterm>
+    <indexterm><primary>RAID</primary>
+    <secondary>software</secondary></indexterm>
+
+    <para>磁盘越大，存储的数据也就越多。您经常会发现您需要
+    一个比您可使用的磁盘大得多的文件系统。 无可否认，这个问题
+    已经没有十年前那样严峻了，但它仍然存在。通过创建一个在许多
+    磁盘上存储数据的抽象设备，一些系统可以解决这个问题。</para>
+  </sect1>
+
+  <sect1 xml:id="vinum-access-bottlenecks">
+    <title>访问瓶颈</title>
+
+    <para>现代系统经常需要用一个高度并发的方式来访问数据。
+      例如，巨大的FTP 或HTTP 服务器可以支持数以千计的并发会话，
+      可以有多个连到外部世界的100&nbsp;Mbit/s ,
+      这远远地超过了绝大多数磁盘的数据传输速率。</para>
+
+    <para>当前的磁盘驱动器最高可以以70&nbsp;MB/s的速度传输数据,
+     但这个值在一个有许多不受约束的进程访问一个驱动器的环境中变得并不重要，
+     它们可能只完成了这些值的一小部分。这样一种情况下，从磁盘子
+     系统的角度来看问题就更加有趣：重要的参数是在子系统上的负
+     荷，换句话说是传输占用了驱动器多少时间。</para>
+
+    <para>在任何磁盘传输中, 驱动器必须先寻道, 等待磁头访问第一个扇区,
+      然后执行传输.  这些动作看起来可能很细小:
+       我们不会感有任何中断。
+      </para>
+
+    <para><anchor xml:id="vinum-latency"/> 假设传输10&nbsp;kB数据，
+      : 现在的高性能磁盘平均寻道时间是3.5ms。
+        最快的驱动器可以旋转在15,000 rpm，, 所以平均寻址时间为2ms.
+       在70&nbsp;MB/s的速度传输时, 数据的传输时间大约150&nbsp;&mu;s,
+      几乎无法和寻址时间相比.  在这样一种情况下, 高效的传输也会降低到
+      1&nbsp;MB/s 显然传输的快慢依赖与所传输数据的大小。
+      </para>
+
+    <para>对于这个瓶颈的一般和明显的解决方法是采用
+      <quote>多个磁盘</quote>:而不是只使用一个大磁盘,
+      它使用几个比较小的磁盘联合起来形成一个大的磁盘.
+      每个磁盘都可以独立地进行传输数据，所以通过使用多个磁盘
+      大大提高了数据吞吐量。
+    </para>
+
+    <para>当然，所要求的吞吐量的提高要比磁盘的数量小得多。
+      尽管每个驱动器并行传输数据，但没有办法确保请求能够平均
+      分配到每个驱动器上。不可避免一个驱动器的负载可能比另一个要高得多。
+     </para>
+
+    <indexterm>
+      <primary>磁盘的串连</primary>
+    </indexterm>
+    <indexterm>
+      <primary>Vinum</primary>
+      <secondary>串连</secondary>
+    </indexterm>
+
+    <para>磁盘的负载平衡很大程度依赖于驱动器上数据的共享方式.
+      在下面的讨论中, 将磁盘存储想象成一个巨大的数据扇区，像一本书的页
+      那样用编号来设定地址. 最明显的方法是把虚拟磁盘分成许多连续的扇区组，
+      每个扇区大小就是独立的磁盘大小，用这种方法来存储数据，
+      就像把一本厚厚的书分成很多小的章节。 这个方法叫做
+      <emphasis>串联</emphasis>
+      它有一个优点就是磁盘不需要有任何特定的大小关系。
+      当访问到的虚拟磁盘根据它的地址空间来分布的时候， 它能工作得很好。
+      当访问集中在一个比较小的区域的时候，性能的提高没有显著的改进。
+      <xref linkend="vinum-concat"/>
+      举例说明了用串联组织的方式来分配存储单元的顺序。</para>
+
+    <para>
+      <figure xml:id="vinum-concat">
+	<title>串联组织</title>
+	<mediaobject><imageobject><imagedata fileref="vinum/vinum-concat"/></imageobject></mediaobject>
+      </figure>
+    </para>
+
+    <indexterm>
+      <primary>条带盘</primary>
+    </indexterm>
+    <indexterm>
+      <primary>Vinum</primary>
+      <secondary>条带</secondary>
+    </indexterm>
+    <indexterm>
+      <primary>RAID</primary>
+    </indexterm>
+
+    <para>另外一种影射方法是把地址空间分布在比较小的容量相同的磁盘上，
+     从而能够在不同的设备上存储它们。例如，前256 个扇区可能存储在第一
+     个磁盘上，接着的256 个扇区存储在另一个磁盘上等等。 写满最后一个磁
+     盘后，进程会重复以前的工作，直到所有的磁盘被写满。这个影射叫做
+      <emphasis>分段(striping)</emphasis> 或者 <acronym>RAID-0</acronym>
+
+    <footnote>
+      <para><acronym>RAID</acronym> 代表<emphasis>廉价冗余磁盘阵列 (Redundant
+      Array of Inexpensive Disks)</emphasis> 提供各种容错机制，
+      但后面这个术语可能会有些让人误解：它不提供冗余功能。</para> </footnote>.
+
+    分段要求很精确地寻址，通过多个磁盘进行数据传输的时候，它
+    可能会引起额外的I/O 负载，但它也可能提供更多的连续负载。
+    <xref linkend="vinum-striped"/>
+    显示了用分段形式分配的存储单元的顺序。</para>
+
+    <para>
+      <figure xml:id="vinum-striped">
+        <title>分段组织</title>
+	<mediaobject><imageobject><imagedata fileref="vinum/vinum-striped"/></imageobject></mediaobject>
+      </figure>
+    </para>
+  </sect1>
+
+  <sect1 xml:id="vinum-data-integrity">
+    <title>数据的完整性</title>
+
+      <para>现时磁盘的最后一个问题是它们不太可靠。
+      虽然磁盘驱动器的可靠性在过去几年有了很大的提高，
+      但它们仍然是服务器中最容易损坏的核心组件。
+      当它们发生故障的时候， 结果可能是灾难性的：
+      替换坏的磁盘驱动器并恢复数据可能要花费几天时间。
+      </para>
+
+      <indexterm>
+	<primary>磁盘镜像</primary>
+      </indexterm>
+      <indexterm>
+	<primary>Vinum</primary>
+	<secondary>镜像</secondary>
+      </indexterm>
+      <indexterm>
+	<primary>RAID-1</primary>
+      </indexterm>
+
+      <para>解决这个问题的传统方法是建立
+	<emphasis>镜象</emphasis>， 在不同的物理硬件上对数据做两个副本。
+	根据 <acronym>RAID</acronym> 级别出现的时间顺序， 这个技术也被叫做
+	<acronym>RAID 级别1</acronym> 或者
+	<acronym>RAID-1</acronym>。 任何写到卷的数据也会被写到镜象上，
+        所以可以从任何一个副本读取数据， 如果其中有一个出现故障，
+        数据也还可以从其他驱动器上访问到。</para>
+
+      <para>镜象有两个问题：</para>
+
+	<itemizedlist>
+	  <listitem>
+	    <para>价格.  它需要两倍的存储容量。</para>
+	  </listitem>
+
+	  <listitem>
+	    <para>性能影响。  写入操作必须在两个驱动器上执行，所以它们
+	    花费两倍的带宽。读取数据并不会影响性能： 它们甚至看起来会更快。</para>
+	  </listitem>
+	</itemizedlist>
+
+      <para><indexterm><primary>RAID-5</primary></indexterm>
+	一个可选的方案采用 <emphasis>奇偶校验</emphasis> 的方式，
+	用以实现 <acronym>RAID</acronym>  2、 3、 4 和
+	5。 这其中， <acronym>RAID-5</acronym> 是我们最感兴趣的。
+	在 Vinum 的实现中， 这是一个条带组织结构的变体，
+	其中， 每一个条带中都以一个专用的块，
+	来保存其它块的奇偶校验值。 这样，
+	<acronym>RAID-5</acronym> plex 除了在每个块中都包含了一个奇偶校验块之外，
+	实现 <acronym>RAID-5</acronym> 时也就和普通的条带 plex
+	一样了。 作为
+	<acronym>RAID-5</acronym> 的一项要求，
+	奇偶校验块在每一个条带中的顺序都是不同的。 数据块的编号，
+	决定了它的相对块号。</para>
+
+      <para>
+	<figure xml:id="vinum-raid5-org">
+	  <title>RAID-5 的组织</title>
+	  <mediaobject><imageobject><imagedata fileref="vinum/vinum-raid5-org"/></imageobject></mediaobject>
+	</figure>
+      </para>
+
+      <para>与镜像相比， <acronym>RAID-5</acronym>
+	最显著的优势在于只需使用少得多的存储空间。
+	读取类似于条带式存储的组织， 但写入会慢得多，
+	大约仅相当于读性能的 25%。 如果一个驱动器失效，
+	则阵列仍然可以在降级的模式运行：
+	读取来自正常的驱动器数据的操作照常进行，
+	但读取失效的驱动器的数据， 则来自于余下驱动器上相关的计算结果。
+      </para>
+  </sect1>
+
+  <sect1 xml:id="vinum-objects">
+    <title>Vinum 目标</title>
+      <para>为了解决这些问题，Vinum 提出了一个四层的目标结构：</para>
+
+      <itemizedlist>
+	<listitem>
+	  <para>最显著的目标是虚拟磁盘, 叫做
+	    <emphasis>卷(volume)</emphasis>.  卷本质上与一个UNIX 磁盘
+	    驱动器有同样的属性，虽然它们是有些不太一样。它们没有大小的限制。
+	    </para>
+	</listitem>
+
+	<listitem>
+	  <para>卷下面是 <emphasis>plexes</emphasis>,
+	    每一个表示卷的所有地址空间。在层次结构中的这个水平能够提供
+	    冗余功能。可以把plex 想象成用一个镜象排列的方式组织起来的
+	    独立磁盘，每个都包含同样的数据。</para>
+	</listitem>
+
+	<listitem>
+	  <para>由于Vinum 存在于UNIX 磁盘存储框架中,所以它也可能
+	  使用UNIX 分区作为多个磁盘plex 的组成部分,
+	   但事实上这并不可靠:UNIX 磁盘只能有有限数量的分区。
+	    取而代之，Vinum 把一个简单的UNIX 分区 (the <emphasis>drive</emphasis>)
+	    分解成叫做<emphasis>subdisks</emphasis>的相邻区域, 它可以使用这个
+           来为plex 建立块。</para>
+	</listitem>
+
+	<listitem>
+	  <para>Subdisks 位于 Vinum <emphasis>驱动器上</emphasis>,
+	   当前的UNIX 分区。Vinum 驱动器可以包含很多的subdisks。
+	    除了驱动器开始的一小块区域用来存储配置和描述信息以外，整个
+	    驱动器都可以用于存储数据。</para>
+	</listitem>
+      </itemizedlist>
+
+      <para>下面的章节描述了这些目标提供了Vinum 所要求的功能的方法。</para>
+
+    <sect2>
+      <title>卷的大小要求</title>
+
+      <para>在Vinum的配置中，Plex可以把多个subdisk 分布在所有的驱动上。
+       结果, 每个独立的驱动器的大小都不会限制plex 的大小，从而不会限制卷的大小
+	</para>
+    </sect2>
+
+    <sect2>
+      <title>多余的数据存储</title>
+      <para>Vinum 通过给一个卷连上多个plex 来完成镜象的功能。
+	每个plex 是一个在一个卷中的数据的描述。一个卷可以包含一个
+	到八个plex。</para>
+
+      <para>虽然一个plex 描述了一个卷的所有数据，,
+	但可能描述的部分被物理地丢失了。可能是设计的问题
+	（没有为plex 部分定义一个subdisk）也可能是意外的故障
+	（由于驱动器的故障导致）。只要至少有一个plex 能够为
+	 卷的完全地址范围提供数据，卷就能够正常工作。
+	</para>
+    </sect2>
+
+    <sect2>
+      <title>性能问题</title>
+
+      <para>Vinum 在plex 水平既执行串联也执行分段：</para>
+
+      <itemizedlist>
+	<listitem>
+	  <para>一个<emphasis>串连的plex</emphasis>轮流使用
+	    每个subdisk 的地址空间。</para>
+	</listitem>
+
+	<listitem>
+	  <para>一个 <emphasis>分段的plex</emphasis> 在每个subdisk 上
+	  划分数据. Subdisk 必须是大小一样的，为了从一个连接的plex 中
+	  区分开它，必须至少有两个subdisk。 </para>
+	</listitem>
+      </itemizedlist>
+    </sect2>
+
+    <sect2>
+      <title>哪种plex 组织更有效？</title>
+
+      <para>&os;&nbsp;&rel.current;提供的Vinum 版本能实现两种plex:</para>
+
+      <itemizedlist>
+	<listitem>
+	  <para>串联的plex 更加灵活：它们可以包含任何数量的subdisk，
+	  subdisk 也可能有不同的长度。Plex 可以通过添加额外的subdisk
+	  来得到扩展。  与分段 plex 不同， 它们需要的
+	    <acronym>CPU</acronym> 时钟更少， 尽管
+	     <acronym>CPU</acronym> 上的负载差异是不可测量的。
+	      另一方面，它们的负载可能不平衡，一个磁盘可能负载很重，
+	      而其他的可能很空闲。</para>
+        </listitem>
+
+	<listitem>
+	  <para>分段(<acronym>RAID-0</acronym>) plexes 的最大优点是
+	  它们减少了负载不平衡的情况: 通过选择一个最合适大小的分段
+	  (大约是256&nbsp;kB), 您甚至可以在各个组成的驱动器上降低负载
+	    .  这种方法的缺点是在subdisk 上受到非常复杂的编码限制
+	    : 它们必须是同样大小, 通过添加新的subdisk 来扩展一个plex
+	    是非常复杂的,以至Vinum 当前没有实现它.  Vinum 利用一个额外
+	    的，代价不高的限制：一个分段的plex 必须有至少两个subdisk，
+	    否则， 它就无法区分连接的 plex 了。</para>
+	</listitem>
+      </itemizedlist>
+
+      <para><xref linkend="vinum-comparison"/> 总结一下每个plex 组织
+      的优点和缺点.</para>
+
+      <table xml:id="vinum-comparison" frame="none">
+	<title>Vinum Plex组织图</title>
+	<tgroup cols="5">
+	  <thead>
+	    <row>
+	      <entry>Plex 类型</entry>
+	  	<entry>最少subdisks</entry>
+	  	<entry>可否添加subdisks</entry>
+	  	<entry>尺寸相同</entry>
+	  	<entry>应用</entry>
+	    </row>
+	  </thead>
+
+	  <tbody>
+	    <row>
+	      <entry>串联 </entry>
+	      <entry>1</entry>
+	      <entry>可以</entry>
+	      <entry>不必须</entry>
+	      <entry>带有很大弹性和适中性能的大数据量存储。
+	        </entry>
+	    </row>
+
+	    <row>
+	      <entry>分段</entry>
+	      <entry>2</entry>
+	      <entry>不可以</entry>
+	      <entry>必须</entry>
+	      <entry>大量并发访问时,具有较高性能。</entry>
+	    </row>
+	  </tbody>
+	</tgroup>
+      </table>
+    </sect2>
+  </sect1>
+
+  <sect1 xml:id="vinum-examples">
+    <title>一些例子</title>
+
+    <para>Vinum 维护着一个描述本系统中对象的 <emphasis>配置数据库</emphasis>。
+      开始时， 用户可以在 &man.gvinum.8; 工具来从若干配置文件生成配置数据库。
+      Vinum 在其控制的每个磁盘分区 (在
+      Vinum 中称为 <emphasis>device</emphasis>) 上都保存配置数据库的副本。
+      这一数据库在每次状态变化时均会更新， 因而重启每个 Vinum 对象时，
+      都能够恢复其状态。</para>
+
+    <sect2>
+      <title>配置文件</title>
+      <para>配置文件描述了独立的 Vinum.一个简单卷的定义可能是这样的:</para>
+
+      <programlisting>
+    drive a device /dev/da3h
+    volume myvol
+      plex org concat
+        sd length 512m drive a</programlisting>
+
+      <para>这个文件描述了四个Vinum 目标:</para>
+
+      <itemizedlist>
+	<listitem>
+	  <para><emphasis>drive</emphasis> 行描述了一个磁盘分区（驱动器）
+	    和与下面的硬件相关的它的位置。它给出了一个符号名
+	     <emphasis>a</emphasis>.  这个与设备名称分开的符号名允许
+	     磁盘从一个位置移动到另一个位置而不会搞混。
+	    </para>
+	</listitem>
+
+	<listitem>
+	  <para> <emphasis>volume</emphasis> 行描述了一个卷。
+	    唯一的必须属性是名称，在这个例子中是
+	    <emphasis>myvol</emphasis>.</para>
+	</listitem>
+
+	<listitem>
+	  <para><emphasis>plex</emphasis> 行定义了一个plex。
+	    唯一需要的参数是组织,在这个例子中是
+	    <emphasis>concat</emphasis>. 没有名称是必然的:
+	    系统自动通过添加suffix
+	    <emphasis>.p</emphasis><emphasis>x</emphasis>
+	    来从卷名称产生一个名字,这里的<emphasis>x</emphasis>
+	    是在卷中的plex 的编号。而这个plex 将被
+	    叫做<emphasis>myvol.p0</emphasis>。</para>
+
+
+	</listitem>
+
+	<listitem>
+	  <para> <emphasis>sd</emphasis> 行描述了一个subdisk。
+	    最小的说明是存储subdisk 的驱动器名称，和subdisk 的长度。
+	    对于plex，没有名称也是必然的：系统自动通过添加
+	    suffix <emphasis>.s</emphasis><emphasis>x</emphasis>
+	    来分配源自plex 的名称，这里 <emphasis>x</emphasis>是plex 中subdisk 的编号。
+	    Vinum 给这个subdisk 命名为<emphasis>myvol.p0.s0</emphasis>。</para>
+	</listitem>
+      </itemizedlist>
+
+      <para>处理完这个文件后， &man.gvinum.8; 会产生下面的输出：</para>
+
+      <programlisting width="97">
+      &prompt.root; gvinum -&gt; <userinput>create config1</userinput>
+      Configuration summary
+      Drives:         1 (4 configured)
+      Volumes:        1 (4 configured)
+      Plexes:         1 (8 configured)
+      Subdisks:       1 (16 configured)
+
+	D a                     State: up       Device /dev/da3h        Avail: 2061/2573 MB (80%)
+
+	V myvol                 State: up       Plexes:       1 Size:        512 MB
+
+	P myvol.p0            C State: up       Subdisks:     1 Size:        512 MB
+
+	S myvol.p0.s0           State: up       PO:        0  B Size:        512 MB</programlisting>
+
+      <para>这些输出内容展示了 &man.gvinum.8; 的简要列表格式。
+	在 <xref linkend="vinum-simple-vol"/> 中用图形展示了这个配置。</para>
+
+      <para>
+	<figure xml:id="vinum-simple-vol">
+	  <title>一个简单的Vinum 卷</title>
+	  <mediaobject><imageobject><imagedata fileref="vinum/vinum-simple-vol"/></imageobject></mediaobject>
+	</figure>
+      </para>
+
+      <para>下面这个图显示了一个由按顺序排列的subdisk 组成的plex。
+      在这个小小的例子中，卷包含一个plex，plex 包含一个subdisk。
+      </para>
+
+      <para>这个卷本身和普通的磁盘分区相比并没有什么特别的优越性，
+	它包含了一个 plex， 因此不是冗余的。 这个 plex
+	中包括了一个子磁盘， 因此这和从磁盘分区分配存储没什么两样。
+	接下来的几节， 将介绍一些更有用的配置方法。</para>
+    </sect2>
+
+    <sect2>
+      <title>提高容错性： 镜像</title>
+
+      <para>卷的容错性可以通过镜像来提高。 在配置镜像卷时，
+	确保 plex 分布在不同的驱动器上十分重要， 这样一个驱动器坏掉时，
+	就不会同时影响两个 plex。 下面的配置将映射卷：</para>
+
+      <programlisting>
+	drive b device /dev/da4h
+	volume mirror
+      plex org concat
+        sd length 512m drive a
+	  plex org concat
+	    sd length 512m drive b</programlisting>
+
+      <para>上面的例子中，
+	并不需要再次指定驱动器 <emphasis>a</emphasis>， 因为 Vinum
+	监控所有其配置数据库的对象。 完成定义之后，
+	配置如下所示：</para>
+
+
+      <programlisting width="97">
+	Drives:         2 (4 configured)
+	Volumes:        2 (4 configured)
+	Plexes:         3 (8 configured)
+	Subdisks:       3 (16 configured)
+
+	D a                     State: up       Device /dev/da3h        Avail: 1549/2573 MB (60%)
+	D b                     State: up       Device /dev/da4h        Avail: 2061/2573 MB (80%)
+
+    V myvol                 State: up       Plexes:       1 Size:        512 MB
+    V mirror                State: up       Plexes:       2 Size:        512 MB
+
+    P myvol.p0            C State: up       Subdisks:     1 Size:        512 MB
+    P mirror.p0           C State: up       Subdisks:     1 Size:        512 MB
+    P mirror.p1           C State: initializing     Subdisks:     1 Size:        512 MB
+
+    S myvol.p0.s0           State: up       PO:        0  B Size:        512 MB
+	S mirror.p0.s0          State: up       PO:        0  B Size:        512 MB
+	S mirror.p1.s0          State: empty    PO:        0  B Size:        512 MB</programlisting>
+
+      <para><xref linkend="vinum-mirrored-vol"/> 以图形方式展示了其结构。</para>
+
+      <para>
+	<figure xml:id="vinum-mirrored-vol">
+	  <title>镜像 Vinum 卷</title>
+	  <mediaobject><imageobject><imagedata fileref="vinum/vinum-mirrored-vol"/></imageobject></mediaobject>
+	</figure>
+      </para>
+
+      <para>这个例子中， 每一个 plex 包含了完整的 512&nbsp;MB
+	地址空间。 在前面的例子中， plex 则只包括一个子盘。</para>
+    </sect2>
+
+    <sect2>
+      <title>优化性能</title>
+
+      <para>前面例子中的镜像卷要比没有镜像的卷具有更好的容灾能力，
+	但它的性能要差一些： 每一次写入卷时， 需要同时写到两个驱动器上，
+	因而也就需要更大的磁盘访问带宽。 如果希望非常好的性能，
+	则需要另外一种方式： 不做镜像，
+	而将数据分成条带放到尽可能多的、不同的磁盘上。
+	下面给出了一个跨越四个磁盘驱动器的 plex 卷：</para>
+
+	<programlisting>
+	drive c device /dev/da5h
+	drive d device /dev/da6h
+	volume stripe
+	plex org striped 512k
+	  sd length 128m drive a
+	  sd length 128m drive b
+	  sd length 128m drive c
+	  sd length 128m drive d</programlisting>
+
+      <para>和之前类似， 并不需要定义 Vinum 已经知道的驱动器。
+	在完成定义之后， 将得到如下配置：</para>
+
+      <programlisting width="92">
+	Drives:         4 (4 configured)
+	Volumes:        3 (4 configured)
+	Plexes:         4 (8 configured)
+	Subdisks:       7 (16 configured)
+
+    D a                     State: up       Device /dev/da3h        Avail: 1421/2573 MB (55%)
+    D b                     State: up       Device /dev/da4h        Avail: 1933/2573 MB (75%)
+    D c                     State: up       Device /dev/da5h        Avail: 2445/2573 MB (95%)
+    D d                     State: up       Device /dev/da6h        Avail: 2445/2573 MB (95%)
+
+    V myvol                 State: up       Plexes:       1 Size:        512 MB
+    V mirror                State: up       Plexes:       2 Size:        512 MB
+    V striped               State: up       Plexes:       1 Size:        512 MB
+
+    P myvol.p0            C State: up       Subdisks:     1 Size:        512 MB
+    P mirror.p0           C State: up       Subdisks:     1 Size:        512 MB
+    P mirror.p1           C State: initializing     Subdisks:     1 Size:        512 MB
+    P striped.p1            State: up       Subdisks:     1 Size:        512 MB
+
+    S myvol.p0.s0           State: up       PO:        0  B Size:        512 MB
+    S mirror.p0.s0          State: up       PO:        0  B Size:        512 MB
+    S mirror.p1.s0          State: empty    PO:        0  B Size:        512 MB
+    S striped.p0.s0         State: up       PO:        0  B Size:        128 MB
+    S striped.p0.s1         State: up       PO:      512 kB Size:        128 MB
+    S striped.p0.s2         State: up       PO:     1024 kB Size:        128 MB
+    S striped.p0.s3         State: up       PO:     1536 kB Size:        128 MB</programlisting>
+
+      <para>
+	<figure xml:id="vinum-striped-vol">
+	  <title>条带化的 Vinum 卷</title>
+	  <mediaobject><imageobject><imagedata fileref="vinum/vinum-striped-vol"/></imageobject></mediaobject>
+	</figure>
+      </para>
+
+      <para>这个卷在
+	<xref linkend="vinum-striped-vol"/> 中给出。 条带的阴影部分，
+	表示在 plex 地址空间中的位置： 颜色最浅的在最前面，
+	而最深的在最后。</para>
+    </sect2>
+
+    <sect2>
+      <title>高性能容在</title>
+
+      <para><anchor xml:id="vinum-resilience"/>如果硬件足够多，
+	也能够构建比标准
+	&unix; 分区同时提高了容灾性和性能的卷。
+	典型的配置文件类似：</para>
+
+      <programlisting>
+	volume raid10
+      plex org striped 512k
+        sd length 102480k drive a
+        sd length 102480k drive b
+        sd length 102480k drive c
+        sd length 102480k drive d
+        sd length 102480k drive e
+      plex org striped 512k
+        sd length 102480k drive c
+        sd length 102480k drive d
+        sd length 102480k drive e
+        sd length 102480k drive a
+        sd length 102480k drive b</programlisting>
+
+      <para>第二个 plex 中的子盘和第一个 plex 中的错开了两个驱动器：
+	这能够帮助确保即使同时访问两个驱动器，
+	写操作也不会同时发生在同一个盘上。</para>
+
+      <para><xref linkend="vinum-raid10-vol"/> 给出了该卷的结构。</para>
+
+      <para>
+	<figure xml:id="vinum-raid10-vol">
+	  <title>镜像并条带化的 Vinum 卷</title>
+	  <mediaobject><imageobject><imagedata fileref="vinum/vinum-raid10-vol"/></imageobject></mediaobject>
+        </figure>
+      </para>
+    </sect2>
+  </sect1>
+
+  <sect1 xml:id="vinum-object-naming">
+    <title>对象命名</title>
+
+    <para>如前面所描述的那样， Vinum 会给 plex 和子盘指定默认的名字，
+      而这些名字也是可以定制的。 不推荐修改默认的名字：
+      使用允许给对象任意命名的 VERITAS
+      卷管理器的经验证明， 这一灵活性并没有带来太多的好处，
+      相反， 它很容易导致对象的混淆。</para>
+
+    <para>名字中可以包括任何非空白的字符， 但一般来说，
+      建议只使用字母、 数字和下划线。 卷、 plex， 以及子盘的名字，
+      可以包含最多 64 个字符， 而驱动器的名字， 则最长可以使用
+      32 个字符。</para>
+
+    <para>Vinum 对象会在
+      <filename>/dev/gvinum</filename> 之下生成设备节点。
+      前述的配置将使 Vinum 创建以下设备节点：</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>每个卷对应的设备项。 这些是 Vinum 使用的主要设备。
+	  因此， 前述配置包括下列设备：
+	  <filename>/dev/gvinum/myvol</filename>、
+	  <filename>/dev/gvinum/mirror</filename>、
+	  <filename>/dev/gvinum/striped</filename>、
+	  <filename>/dev/gvinum/raid5</filename> 以及
+	  <filename>/dev/gvinum/raid10</filename>。</para>
+      </listitem>
+
+      <listitem>
+	<para>所有卷的直接项都存放在
+	  <filename>/dev/gvinum/</filename> 中。</para>
+      </listitem>
+
+      <listitem>
+	<para>目录
+	  <filename>/dev/gvinum/plex</filename>， 以及
+	  <filename>/dev/gvinum/sd</filename> 中相应地存放了每个 plex
+	  以及子盘的设备节点。</para>
+      </listitem>
+    </itemizedlist>
+
+    <para>例如， 考虑下面的配置文件：</para>
+	<programlisting>
+	drive drive1 device /dev/sd1h
+	drive drive2 device /dev/sd2h
+	drive drive3 device /dev/sd3h
+	drive drive4 device /dev/sd4h
+    volume s64 setupstate
+      plex org striped 64k
+        sd length 100m drive drive1
+        sd length 100m drive drive2
+        sd length 100m drive drive3
+        sd length 100m drive drive4</programlisting>
+
+    <para>处理这个文件之后， &man.gvinum.8; 将在
+      <filename>/dev/gvinum</filename> 中建立下面的结构：</para>
+
+    <programlisting>
+	drwxr-xr-x  2 root  wheel       512 Apr 13 16:46 plex
+	crwxr-xr--  1 root  wheel   91,   2 Apr 13 16:46 s64
+	drwxr-xr-x  2 root  wheel       512 Apr 13 16:46 sd
+
+    /dev/vinum/plex:
+    total 0
+    crwxr-xr--  1 root  wheel   25, 0x10000002 Apr 13 16:46 s64.p0
+
+    /dev/vinum/sd:
+    total 0
+    crwxr-xr--  1 root  wheel   91, 0x20000002 Apr 13 16:46 s64.p0.s0
+    crwxr-xr--  1 root  wheel   91, 0x20100002 Apr 13 16:46 s64.p0.s1
+    crwxr-xr--  1 root  wheel   91, 0x20200002 Apr 13 16:46 s64.p0.s2
+    crwxr-xr--  1 root  wheel   91, 0x20300002 Apr 13 16:46 s64.p0.s3</programlisting>
+
+    <para>虽然 plex 和子盘一般并不推荐指定名字， 但还是必须给 Vinum
+      驱动器命名。 这样， 当把驱动器转移到不同的地方时，
+      它仍然能够被自动地识别出来。 驱动器名最长可以包含
+      32 个字符。</para>
+
+    <sect2>
+      <title>创建文件系统</title>
+
+	<para>对于系统而言， 卷和磁盘是一样的。
+	  唯一的例外是， 与 &unix; 驱动器不同， Vinum 并不对卷进行分区，
+	  因而它也就不包含分区表。 这要求修改某些磁盘工具，
+	  特别是 &man.newfs.8;， 它会试图将 Vinum 卷名当作分区标识。
+	  例如， 磁盘驱动器的名字可能是
+          <filename>/dev/ad0a</filename> 或
+	  <filename>/dev/da2h</filename>。
+	  这些名字分别表达在第一个 (0) IDE (<filename>ad</filename>)
+	  磁盘上的第一个分区 (<filename>a</filename>)，
+	  以及第三个 (2) SCSI 磁盘 (<filename>da</filename>)
+	  上的第八个分区 (<filename>h</filename>)。
+	  而相比而言， Vinum 卷可能叫做
+	  <filename>/dev/gvinum/concat</filename>，
+	  这个名字和分区名没有什么关系。</para>
+
+	<para>要在这个卷上创建文件系统， 则需要使用
+	  &man.newfs.8;：</para>
+
+	<screen>&prompt.root; <userinput>newfs /dev/gvinum/concat</userinput></screen>
+    </sect2>
+  </sect1>
+
+  <sect1 xml:id="vinum-config">
+    <title>配置 Vinum</title>
+
+    <para>在 <filename>GENERIC</filename> 内核中， 并不包含
+      Vinum。 可以编译一个定制的包含
+      Vinum 的内核， 然而并不推荐这样做。 启动
+      Vinum 的标准方法， 是使用内核模块 (<acronym>kld</acronym>)。
+      甚至不需要使用 &man.kldload.8; 来启动 Vinum： 在启动
+      &man.gvinum.8; 时， 它会检查这一模块是否已经加载，
+      如果没有， 则会自动地加载它。</para>
+
+
+    <sect2>
+      <title>启动</title>
+
+      <para>Vinum 将配置信息， 采用与配置文件一样的形式来存放到磁盘分区上。
+	当从配置数据库中读取时， Vinum 会识别一系列在配置文件中不可用的关键字。
+	例如， 磁盘配置文件可能包含下面的文字：</para>
+
+	<programlisting width="119">volume myvol state up
+volume bigraid state down
+plex name myvol.p0 state up org concat vol myvol
+plex name myvol.p1 state up org concat vol myvol
+plex name myvol.p2 state init org striped 512b vol myvol
+plex name bigraid.p0 state initializing org raid5 512b vol bigraid
+sd name myvol.p0.s0 drive a plex myvol.p0 state up len 1048576b driveoffset 265b plexoffset 0b
+sd name myvol.p0.s1 drive b plex myvol.p0 state up len 1048576b driveoffset 265b plexoffset 1048576b
+sd name myvol.p1.s0 drive c plex myvol.p1 state up len 1048576b driveoffset 265b plexoffset 0b
+sd name myvol.p1.s1 drive d plex myvol.p1 state up len 1048576b driveoffset 265b plexoffset 1048576b
+sd name myvol.p2.s0 drive a plex myvol.p2 state init len 524288b driveoffset 1048841b plexoffset 0b
+sd name myvol.p2.s1 drive b plex myvol.p2 state init len 524288b driveoffset 1048841b plexoffset 524288b
+sd name myvol.p2.s2 drive c plex myvol.p2 state init len 524288b driveoffset 1048841b plexoffset 1048576b
+sd name myvol.p2.s3 drive d plex myvol.p2 state init len 524288b driveoffset 1048841b plexoffset 1572864b
+sd name bigraid.p0.s0 drive a plex bigraid.p0 state initializing len 4194304b driveoff set 1573129b plexoffset 0b
+sd name bigraid.p0.s1 drive b plex bigraid.p0 state initializing len 4194304b driveoff set 1573129b plexoffset 4194304b
+sd name bigraid.p0.s2 drive c plex bigraid.p0 state initializing len 4194304b driveoff set 1573129b plexoffset 8388608b
+sd name bigraid.p0.s3 drive d plex bigraid.p0 state initializing len 4194304b driveoff set 1573129b plexoffset 12582912b
+sd name bigraid.p0.s4 drive e plex bigraid.p0 state initializing len 4194304b driveoff set 1573129b plexoffset 16777216b</programlisting>
+
+	<para>这里最明显的区别是， 指定了配置的位置信息、名称
+	  (这些在配置文件中还是可用的， 但不鼓励用户自行指定)
+	  以及状态信息 (这是用户不能指定的)。 Vinum
+	  并不在配置信息中保存关于驱动器的信息：
+	  它会扫描已经配置的磁盘驱动器上包含 Vinum 标识的分区。
+	  这使得 Vinum 能够在 &unix; 驱动器被指定了不同的
+	  ID 时也能够正确识别它们。</para>
+
+      <sect3 xml:id="vinum-rc-startup">
+	<title>自动启动</title>
+
+        <para>
+          <emphasis>Gvinum</emphasis> 在通过 &man.loader.conf.5;
+          加载了内核模块之后就能自动启动。
+          在启动时加载 <emphasis>Gvinum</emphasis> 模块，
+          需在 <filename>/boot/loader.conf</filename> 中加入
+          <literal>geom_vinum_load="YES"</literal>。</para>
+
+	<para>当使用 <command>gvinum
+	  start</command> 命令来启动 Vinum 时， Vinum 会从某一个 Vinum
+	  驱动器中读取配置数据库。 正常情况下，
+	  每个驱动器上都包含了同样的配置数据库副本，
+	  因此从哪个驱动器上读取是无所谓的。 但是， 在系统崩溃之后，
+	  Vinum 就必须检测哪一个驱动器上的配置数据库是最新的，
+	  并从上面读取配置。 如果需要， 它会更新其它驱动器上的配置。</para>
+
+      </sect3>
+    </sect2>
+  </sect1>
+
+  <sect1 xml:id="vinum-root">
+    <title>使用 Vinum 作为根文件系统</title>
+
+    <para>如果文件系统使用完全镜像的
+      Vinum 配置， 有时也会希望根文件系统也作了镜像。
+      这种配置要比镜像其它文件系统麻烦一些， 因为：</para>
+
+
+    <itemizedlist>
+      <listitem>
+	<para>根文件系统在引导过程中很早的时候就必须处于可用状态，
+	  因此 Vinum 的基础设施在这一时刻就应该可用了。</para>
+      </listitem>
+      <listitem>
+	<para>包含根文件系统的卷， 同时也保存了系统的引导程序和内核，
+	  因此它们必须能够被宿主系统的内建工具 (例如 PC 机的 BIOS)
+	  识别， 而通常是没办法让它们了解 Vinum 的细节的。</para>
+      </listitem>
+    </itemizedlist>
+
+    <para>下面几节中， 术语 <quote>根卷</quote>
+      标识包含根文件系统的 Vinum 卷。
+      把这个卷命名为 <literal>"root"</literal> 可能是个不错的主意，
+      不过从技术上说， 并不严格地要求这样做。 不过，
+      接下来的命令例子都使用这个名字。</para>
+
+    <sect2>
+      <title>及早启动 Vinum 以适应对根文件系统的要求</title>
+
+      <para>有许多关于它的尺度：</para>
+
+      <itemizedlist>
+	<listitem>
+	  <para>Vinum 必须在启动时可以被内核使用。 因此， 在
+	    <xref linkend="vinum-rc-startup"/> 中所介绍的方法，
+	    也就无法适应这一任务的需要了。 在接下来的配置中， 也
+	    <emphasis>不能</emphasis> 设置
+	    <literal>start_vinum</literal> 参数。 第一种方法是通过将
+	    Vinum 静态联编到内核中来实现， 这样，
+	    它就在任何时候都可用了， 虽然一般并不需要这样。
+	    另一种方法是通过
+	    <filename>/boot/loader</filename> (<xref linkend="boot-loader"/>) 来尽早加载 vinum 内核模块，
+	    这一操作发生在内核加载之前。 这可以通过将下面的配置：</para>
+
+	  <programlisting>geom_vinum_load="YES"</programlisting>
+
+	  <para>加入到
+	    <filename>/boot/loader.conf</filename> 文件中来实现。</para>
+	</listitem>
+
+	<listitem>
+	  <para>对 <emphasis>Gvinum</emphasis> 而言，
+	  所有的启动过程都是在内核模块加载时自动进行的， 因此上面的操作，
+	  也就是所要进行的全部工作了。</para>
+	</listitem>
+      </itemizedlist>
+    </sect2>
+
+    <sect2>
+      <title>让基于 Vinum 的卷在引导时可以访问</title>
+
+      <para>因为目前的 &os; 引导程序只有 7.5 KB 的代码，
+	并且已经承担了从 UFS 文件系统中读取文件 (例如
+	<filename>/boot/loader</filename>) 的重任，
+	因此完全没有办法再让它去分析 Vinum 配置数据中的 Vinum 结构，
+	并找到引导卷本身的信息。 因此，
+	需要一些技巧来为引导代码提供标准的 <literal>"a"</literal>
+	分区， 而它则包含了根文件系统。</para>
+
+      <para>要让这些得以实现， 根卷需要满足下面的条件：</para>
+
+      <itemizedlist>
+	<listitem>
+	  <para>根卷不能是条带卷或 RAID-5 卷。</para>
+	</listitem>
+
+	<listitem>
+	  <para>根卷 plex 不能包含连接的子盘。</para>
+	</listitem>
+      </itemizedlist>
+
+      <para>需要说明的是， 使用多个 plex， 每个 plex
+	都复制一份根文件系统的副本， 是需要而且是可行的。
+	然而， 引导过程只能使用这些副本中的一个来引导系统，
+	直到内核最终自行挂接根文件系统为止。 这些 plex 中的每个子盘，
+	在这之后会有它们自己的 <literal>"a"</literal>
+	分区， 以表达每一个可以引导的设备。
+	每一个 <literal>"a"</literal> 分区， 尽管并不需要和其它包含根卷的
+	plex 处于各自驱动器的同一位置。 但是， 这样创建 Vinum
+	卷使得镜像卷相互对称， 从而能够避免了混淆。</para>
+
+      <para>为了创建每一个根卷的 <literal>"a"</literal> 分区，
+	需要完成下面的操作：</para>
+
+      <procedure>
+	<step>
+	  <para>使用下面的命令来了解根卷成员子盘的位置
+	    (从设备开始的偏移量) 和尺寸：</para>
+
+	  <screen>&prompt.root; <userinput>gvinum l -rv root</userinput></screen>
+
+	  <para>需要注意的是， Vinum 偏移量和尺寸的单位是字节。
+	    它们必须是 512 的整数倍， 才能得到
+	    <command>bsdlabel</command> 命令所需的块号。</para>
+	</step>
+
+	<step>
+	  <para>在每一个根卷成员设备上， 执行命令：</para>
+
+	  <screen>&prompt.root; <userinput>bsdlabel -e devname</userinput></screen>
+
+	  <para>这其中， 对于没有 slice (也就是 fdisk) 表的磁盘，
+	    <replaceable>devname</replaceable> 必须是磁盘的名字
+	    (例如 <filename>da0</filename>)， 或者是 slice
+	    的名字 (例如 <filename>ad0s1</filename>)。</para>
+
+	  <para>如果设备上已经有了 <literal>"a"</literal> 分区
+	    (比如说， 包含 Vinum 之前的根文件系统)，
+	    则应改为其它的名字， 以便继续访问 (如果需要的话)，
+	    但它并不会继续用于启动系统。 注意， 活动的分区
+	    (类似正挂接的根文件系统) 不能被改名， 因此，
+	    要完成这项工作， 必须从
+	    <quote>Fixit</quote> 盘启动， 或者分两步操作，
+	    并 (在镜像情形中) 首先操作那些非引导盘。</para>
+
+	  <para>然后， 设备上 Vinum 分区的偏移 (如果有的话)
+	    必须加到这个设备上根卷对应的子盘上。
+	    其结果值， 将成为新的
+	    <literal>"a"</literal> 分区的
+	    <literal>"offset"</literal> 值。 这个分区的
+	    <literal>"size"</literal> 值， 可以根据前面的配置计算得出。
+	    <literal>"fstype"</literal> 应该是
+	    <literal>4.2BSD</literal>。
+	    <literal>"fsize"</literal>、 <literal>"bsize"</literal>，
+	    以及 <literal>"cpg"</literal> 值， 则应与文件系统的实际情况匹配，
+	    尽管在配置 Vinum 时并不重要。</para>
+
+	  <para>这样， 新的 <literal>"a"</literal> 分区，
+	    将创建并覆盖这一设备上的 Vinum 分区的范围。
+	    注意， <command>bsdlabel</command> 只有在
+	    Vinum 分区的 fstype 被标记为 <literal>"vinum"</literal>
+	    时， 才允许这样做。</para>
+	</step>
+
+	<step>
+	  <para>这就成了！ 所有的 <literal>"a"</literal> 分区现在都已存在，
+	    而且是根卷的一份副本。 强烈建议您再次验证其结果，
+	    方法是：</para>
+
+	  <screen>&prompt.root; <userinput>fsck -n /dev/devnamea</userinput></screen>
+	</step>
+      </procedure>
+
+      <para>务必注意， 所有包含控制信息的文件， 都必须放到
+	Vinum 卷上的根文件系统。 在启动新的 Vinum 根卷时，
+	它们可能和实际在用的根文件系统不匹配。
+	因此， <filename>/etc/fstab</filename>
+	和 <filename>/boot/loader.conf</filename> 这两个文件需要特别地注意。</para>
+
+      <para>在下次重启时， 引导程序需要从新的基于 Vinum
+	的根文件系统中获取适当的控制信息， 并据此工作。
+	在内核初始化过程的结尾部分， 在所有的设备都被宣示之后，
+	如果显示了下面的信息， 则表示配置成功：</para>
+
+      <screen>Mounting root from ufs:/dev/gvinum/root</screen>
+    </sect2>
+
+    <sect2>
+      <title>基于 Vinum 的根文件系统的配置范例</title>
+
+      <para>在 Vinum 根卷配置好之后，
+	<command>gvinum l -rv root</command> 的输出可能类似下面的样子：</para>
+
+	<screen>
+...
+Subdisk root.p0.s0:
+		Size:        125829120 bytes (120 MB)
+		State: up
+		Plex root.p0 at offset 0 (0  B)
+		Drive disk0 (/dev/da0h) at offset 135680 (132 kB)
+
+Subdisk root.p1.s0:
+		Size:        125829120 bytes (120 MB)
+		State: up
+		Plex root.p1 at offset 0 (0  B)
+		Drive disk1 (/dev/da1h) at offset 135680 (132 kB)
+	</screen>
+
+      <para>需要注意的值是 <literal>135680</literal>，
+	也就是偏移量 (相对于
+	<filename>/dev/da0h</filename> 分区)。
+        这相当于 <command>bsdlabel</command>
+	记法中的 265 个 512-字节的磁盘块。 类似地， 根卷的尺寸是 245760
+	个 512-字节的磁盘块。
+        <filename>/dev/da1h</filename> 中，
+	包含了根卷的第二个副本， 采用了同样的配置。</para>
+
+      <para>这些设备的 bsdlabel 类似下面的样子：</para>
+
+	<screen>
+...
+8 partitions:
+#        size   offset    fstype   [fsize bsize bps/cpg]
+  a:   245760      281    4.2BSD     2048 16384     0   # (Cyl.    0*- 15*)
+  c: 71771688        0    unused        0     0         # (Cyl.    0 - 4467*)
+  h: 71771672       16     vinum                        # (Cyl.    0*- 4467*)
+	</screen>
+
+      <para>可以看到， 伪装的 <literal>"a"</literal>
+	分区的 <literal>"size"</literal> 参数和前面的一样， 而
+	<literal>"offset"</literal> 参数则是 Vinum
+	分区 <literal>"h"</literal>， 以及设备中这一分区
+	(或 slice) 的偏移量之和。 这是一种典型的配置，
+	它能够避免在 <xref linkend="vinum-root-panic"/>
+	中介绍的问题。 此外， 我们也看到整个 <literal>"a"</literal>
+	分区完全处于设备上包含了 Vinum 数据的 <literal>"h"</literal>
+	分区之中。</para>
+
+      <para>注意， 在上面的配置中， 整个设备都是 Vinum 专用的，
+	而且没有留下 Vinum 之前的根分区， 因为它永久性地成为了新建的
+	Vinum 配置中的一个子盘。</para>
+    </sect2>
+
+    <sect2>
+      <title>故障排除</title>
+
+      <para>如果遇到了问题， 则需要从中恢复的办法。
+	下面列出了一些常见的缺陷， 及其解决方法。</para>
+
+      <sect3>
+	<title>系统的引导程序加载了， 但无法启动</title>
+
+	<para>如果由于某种原因系统不再继续启动，
+	  引导程序可以在 10-秒 倒计时的时候， 按
+	  <keycap>space</keycap> 键来停止。
+	  加载器变量 (例如 <literal>vinum.autostart</literal>)
+	  可以通过使用 <command>show</command> 命令来查看，
+	  并使用 <command>set</command> 和
+	  <command>unset</command> 命令来设置。</para>
+
+	<para>如果遇到的问题是由于 Vinum 的内核模块没有列入预加载的列表，
+	  而没有正确加载， 则简单使用
+	  <command>load geom_vinum</command> 会有所帮助。</para>
+
+	<para>此后， 可以使用
+	  <command>boot -as</command> 来继续启动过程。 选项
+	  <option>-as</option> 会要求内核询问所挂接的根文件系统
+	  (<option>-a</option>)， 并使引导过程在单用户模式停止
+	  (<option>-s</option>)， 此时根文件系统是以只读方式挂接的。
+	  这样， 即使只挂接了多 plex 卷中的一个 plex，
+	  也不会引致 plex 之间数据不一致的问题。</para>
+
+	<para>当提示输入要挂接的根文件系统时，
+	  可以输入任何一个包含根文件系统的设备。
+	  如果正确地配置了 <filename>/etc/fstab</filename>，
+	  则默认的应该是类似
+	  <literal>ufs:/dev/gvinum/root</literal>。
+	  一般可以使用类似
+	  <literal>ufs:da0d</literal> 这样的设备来代替它，
+	  因为它通常包括了 Vinum 之前的根文件系统。
+	  需要注意的是， 如果在这里输入了
+	  <literal>"a"</literal> 分区， 则它可能表达的实际上是
+	  Vinum 根设备的一个子盘， 而在镜像式配置中，
+	  这只会挂接镜像的根设备中的一个。
+	  如果之后将这个文件系统以读写方式挂接，
+	  则需要从 Vinum 根卷中删去其他的 plex，
+	  否则这些卷中可能会包含不一致的数据。</para>
+      </sect3>
+
+      <sect3>
+	<title>只加载了主引导程序</title>
+
+	<para>如果 <filename>/boot/loader</filename> 加载失败，
+	  而主引导程序加载正常 (在启动时， 屏幕最左边一列有一个旋转的线)，
+	  则可以尝试在此时中断主引导程序的过程， 方法是按
+	  <keycap>space</keycap> 键。 这将在引导的第二阶段暂停，
+	  具体可以参见 <xref linkend="boot-boot1"/>。
+	  此时， 可以尝试从另一个分区， 例如原先包含根文件系统，
+	  并不再叫作 <literal>"a"</literal> 的那个分区， 启动。</para>
+      </sect3>
+
+      <sect3 xml:id="vinum-root-panic">
+	<title>无法启动， 引导程序发生 panic</title>
+
+	<para>这种情况一般是由于 Vinum 安装过程中破坏了引导程序造成的。
+	  不幸的是， Vinum 目前只在分区开始的地方保留了 4 KB
+	  的空间， 之后就开始写 Vinum 头信息了。 然而，
+	  目前第一阶段和第二阶段的引导程序， 加上 bsdlabel
+	  嵌入的内容则需要 8 KB。 因此， 如果 Vinum
+	  分区从偏移量 0 开始， 而这个 slice 或磁盘能够启动，
+	  则 Vinum 的安装将毁掉引导程序。</para>
+
+	<para>类似地， 如果从上述情形中恢复， 例如，
+	  从 <quote>Fixit</quote> 盘启动， 并通过
+	  <command>bsdlabel -B</command> 按照 <xref linkend="boot-boot1"/> 中介绍的方法来恢复引导程序，
+	  则引导程序会覆盖掉 Vinum 头， 这样 Vinum 也就找不到它的磁盘了。
+	  尽管这并不会真的毁掉 Vinum 的配置数据， 或者 Vinum 卷上的数据，
+	  并且可以通过输入一模一样的 Vinum 配置数据来恢复，
+	  但从这种状况中完全恢复是非常困难的。 要真正解决问题，
+	  必须将整个 Vinum 分区向后移动至少 4 KB，
+	  以便使 Vinum 头和系统的引导程序不再冲突。</para>
+      </sect3>
+    </sect2>
+  </sect1>
+</chapter>
