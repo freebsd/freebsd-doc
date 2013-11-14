@@ -14,5 +14,7 @@
 
   <xsl:import href="http://www.FreeBSD.org/XML/lang/share/xml/freebsd-xhtml.xsl"/>
 
+  <xsl:output encoding="&doc.html.charset;" />
+
   <xsl:param name="html.chunk" select="'0'"/>
 </xsl:stylesheet>

@@ -18,6 +18,7 @@
 
   <!-- Redefine variables, and replace templates as necessary here -->
 
+  <xsl:param name="chunker.output.encoding" select="'&doc.html.charset;'"/>
   <xsl:param name="use.id.as.filename" select="1"/>
   <xsl:param name="html.stylesheet" select="'docbook.css'"/>
   <xsl:param name="link.mailto.url" select="'doc@FreeBSD.org'"/>
