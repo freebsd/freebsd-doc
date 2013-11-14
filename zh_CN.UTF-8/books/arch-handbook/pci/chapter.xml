@@ -1,0 +1,438 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+     The FreeBSD Documentation Project
+     The FreeBSD Simplified Chinese Project
+
+     Original Revision: 1.24
+     $FreeBSD$
+-->
+<chapter xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink" version="5.0" xml:id="pci">
+  <info><title>PCI设备</title>
+    <authorgroup>
+      <author><personname/><contrib>&cnproj.translated.by;</contrib></author>
+    </authorgroup>
+  </info>
+  
+
+  <indexterm><primary>PCI总线</primary></indexterm>
+
+  <para>本章将讨论FreeBSD为了给PCI总线上的设备编写驱动程序而提供的机制。</para>
+
+  <sect1 xml:id="pci-probe">
+    <title>探测与连接</title>
+
+    <para>这儿的信息是关于PCI总线代码如何迭代通过未连接的设备，并查看新
+      加载的kld是否会连接其中一个。</para>
+
+    <sect2>
+      <title>示例驱动程序源代码(<filename>mypci.c</filename>)</title>
+
+<programlisting>/*
+ * 与PCI函数进行交互的简单KLD
+ *
+ * Murray Stokely
+ */
+
+#include &lt;sys/param.h&gt;		/* kernel.h中使用的定义 */
+#include &lt;sys/module.h&gt;
+#include &lt;sys/systm.h&gt;
+#include &lt;sys/errno.h&gt;
+#include &lt;sys/kernel.h&gt;		/* 模块初始化中使用的类型 */
+#include &lt;sys/conf.h&gt;		/* cdevsw结构 */
+#include &lt;sys/uio.h&gt;		/* uio结构 */
+#include &lt;sys/malloc.h&gt;
+#include &lt;sys/bus.h&gt;		/* pci总线用到的结构、原型 */
+
+#include &lt;machine/bus.h&gt;
+#include &lt;sys/rman.h&gt;
+#include &lt;machine/resource.h&gt;
+
+#include &lt;dev/pci/pcivar.h&gt;	/* 为了使用get_pci宏! */
+#include &lt;dev/pci/pcireg.h&gt;
+
+/* softc保存我们每个实例的数据。 */
+struct mypci_softc {
+	device_t	my_dev;
+	struct cdev	*my_cdev;
+};
+
+/* 函数原型 */
+static d_open_t		mypci_open;
+static d_close_t	mypci_close;
+static d_read_t		mypci_read;
+static d_write_t	mypci_write;
+
+/* 字符设备入口点 */
+
+static struct cdevsw mypci_cdevsw = {
+	.d_version =	D_VERSION,
+	.d_open =	mypci_open,
+	.d_close =	mypci_close,
+	.d_read =	mypci_read,
+	.d_write =	mypci_write,
+	.d_name =	"mypci",
+};
+
+/*
+ * 在cdevsw例程中，我们通过结构体cdev中的成员si_drv1找出我们的softc。
+ * 当我们建立/dev项时，在我们的已附着的例程中，
+ * 我们设置这个变量指向我们的softc。
+ */
+
+int
+mypci_open(struct cdev *dev, int oflags, int devtype, d_thread_t *td)
+{
+	struct mypci_softc *sc;
+
+	/* Look up our softc. */
+	sc = dev-&gt;si_drv1;
+	device_printf(sc-&gt;my_dev, "Opened successfully.\n");
+	return (0);
+}
+
+int
+mypci_close(struct cdev *dev, int fflag, int devtype, d_thread_t *td)
+{
+	struct mypci_softc *sc;
+
+	/* Look up our softc. */
+	sc = dev-&gt;si_drv1;
+	device_printf(sc-&gt;my_dev, "Closed.\n");
+	return (0);
+}
+
+int
+mypci_read(struct cdev *dev, struct uio *uio, int ioflag)
+{
+	struct mypci_softc *sc;
+
+	/* Look up our softc. */
+	sc = dev-&gt;si_drv1;
+	device_printf(sc-&gt;my_dev, "Asked to read %d bytes.\n", uio-&gt;uio_resid);
+	return (0);
+}
+
+int
+mypci_write(struct cdev *dev, struct uio *uio, int ioflag)
+{
+	struct mypci_softc *sc;
+
+	/* Look up our softc. */
+	sc = dev-&gt;si_drv1;
+	device_printf(sc-&gt;my_dev, "Asked to write %d bytes.\n", uio-&gt;uio_resid);
+	return (0);
+}
+
+/* PCI支持函数 */
+
+/*
+ * 将某个设置的标识与这个驱动程序支持的标识相比较。
+ * 如果相符，设置描述字符并返回成功。
+ */
+static int
+mypci_probe(device_t dev)
+{
+
+	device_printf(dev, "MyPCI Probe\nVendor ID : 0x%x\nDevice ID : 0x%x\n",
+	    pci_get_vendor(dev), pci_get_device(dev));
+
+	if (pci_get_vendor(dev) == 0x11c1) {
+		printf("We've got the Winmodem, probe successful!\n");
+		device_set_desc(dev, "WinModem");
+		return (BUS_PROBE_DEFAULT);
+	}
+	return (ENXIO);
+}
+
+/* 只有当探测成功时才调用连接函数 */
+
+static int
+mypci_attach(device_t dev)
+{
+	struct mypci_softc *sc;
+
+	printf("MyPCI Attach for : deviceID : 0x%x\n", pci_get_devid(dev));
+
+	/* Look up our softc and initialize its fields. */
+	sc = device_get_softc(dev);
+	sc-&gt;my_dev = dev;
+
+	/*
+	 * Create a /dev entry for this device.  The kernel will assign us
+	 * a major number automatically.  We use the unit number of this
+	 * device as the minor number and name the character device
+	 * "mypci&lt;unit&gt;".
+	 */
+	sc-&gt;my_cdev = make_dev(<literal>&amp;</literal>mypci_cdevsw, device_get_unit(dev),
+	    UID_ROOT, GID_WHEEL, 0600, "mypci%u", device_get_unit(dev));
+	sc-&gt;my_cdev-&gt;si_drv1 = sc;
+	printf("Mypci device loaded.\n");
+	return (0);
+}
+
+/* 分离设备。 */
+
+static int
+mypci_detach(device_t dev)
+{
+	struct mypci_softc *sc;
+
+	/* Teardown the state in our softc created in our attach routine. */
+	sc = device_get_softc(dev);
+	destroy_dev(sc-&gt;my_cdev);
+	printf("Mypci detach!\n");
+	return (0);
+}
+
+/* 系统关闭期间在sync之后调用。 */
+
+static int
+mypci_shutdown(device_t dev)
+{
+
+	printf("Mypci shutdown!\n");
+	return (0);
+}
+
+/*
+ * 设备挂起例程。
+ */
+static int
+mypci_suspend(device_t dev)
+{
+
+	printf("Mypci suspend!\n");
+	return (0);
+}
+
+/*
+ * 设备恢复（重新开始）例程。
+ */
+static int
+mypci_resume(device_t dev)
+{
+
+	printf("Mypci resume!\n");
+	return (0);
+}
+
+static device_method_t mypci_methods[] = {
+	/* 设备接口 */
+	DEVMETHOD(device_probe,		mypci_probe),
+	DEVMETHOD(device_attach,	mypci_attach),
+	DEVMETHOD(device_detach,	mypci_detach),
+	DEVMETHOD(device_shutdown,	mypci_shutdown),
+	DEVMETHOD(device_suspend,	mypci_suspend),
+	DEVMETHOD(device_resume,	mypci_resume),
+
+	{ 0, 0 }
+};
+
+static devclass_t mypci_devclass;
+
+DEFINE_CLASS_0(mypci, mypci_driver, mypci_methods, sizeof(struct mypci_softc));
+DRIVER_MODULE(mypci, pci, mypci_driver, mypci_devclass, 0, 0);</programlisting>
+    </sect2>
+
+    <sect2>
+      <title>示例驱动程序的<filename>Makefile</filename></title>
+
+<programlisting># 驱动程序mypci的Makefile
+
+KMOD=	mypci
+SRCS=	mypci.c
+SRCS+=	device_if.h bus_if.h pci_if.h
+
+.include &lt;bsd.kmod.mk&gt;</programlisting>
+
+      <para>如果你将上面的源文件和
+	<filename>Makefile</filename>放入一个目录，你可以运行
+	<command>make</command>编译示例驱动程序。
+	还有，你可以运行<command>make load</command>
+	将驱动程序装载到当前正在运行的内核中，而<command>make
+	unload</command>可在装载后卸载驱动程序。
+	</para>
+    </sect2>
+
+    <sect2>
+      <title>更多资源</title>
+      <itemizedlist>
+	<listitem><simpara><link xlink:href="http://www.pcisig.org/">PCI
+	  Special Interest Group</link></simpara></listitem>
+
+	<listitem><simpara>PCI System Architecture, Fourth Edition by
+	  Tom Shanley, et al.</simpara></listitem>
+
+      </itemizedlist>
+    </sect2>
+  </sect1>
+
+  <sect1 xml:id="pci-bus">
+    <title>总线资源</title>
+
+    <indexterm><primary>PCI总线</primary><secondary>resources(资源)</secondary></indexterm>
+    <para>FreeBSD为从父总线请求资源提供了一种面向对象的机制。几乎所有设备
+      都是某种类型的总线（PCI, ISA, USB, SCSI等等）的孩子成员，并且这些设备
+      需要从他们的父总线获取资源（例如内存段, 中断线, 或者DMA通道）。</para>
+
+    <sect2>
+      <title>基地址寄存器</title>
+
+      <indexterm><primary>PCI总线</primary><secondary>Base Address Registers(基地址寄存器)</secondary></indexterm>
+
+      <para>为了对PCI设备做些有用的事情，你需要从PCI配置空间获取
+        <emphasis>Base Address Registers</emphasis> (BARs)。获取BAR时的
+        PCI特定的细节被抽象在函数<function>bus_alloc_resource()</function>中。
+      </para>
+
+      <para>例如，一个典型的驱动程序可能在<function>attach()</function>
+        函数中有些类似下面的东西：</para>
+
+<programlisting>    sc-&gt;bar0id = PCIR_BAR(0);
+    sc-&gt;bar0res = bus_alloc_resource(dev, SYS_RES_MEMORY, &amp;sc-&gt;bar0id,
+				  0, ~0, 1, RF_ACTIVE);
+    if (sc-&gt;bar0res == NULL) {
+        printf("Memory allocation of PCI base register 0 failed!\n");
+        error = ENXIO;
+        goto fail1;
+    }
+
+    sc-&gt;bar1id = PCIR_BAR(1);
+    sc-&gt;bar1res = bus_alloc_resource(dev, SYS_RES_MEMORY, &amp;sc-&gt;bar1id,
+				  0, ~0, 1, RF_ACTIVE);
+    if (sc-&gt;bar1res == NULL) {
+        printf("Memory allocation of PCI base register 1 failed!\n");
+        error =  ENXIO;
+        goto fail2;
+    }
+    sc-&gt;bar0_bt = rman_get_bustag(sc-&gt;bar0res);
+    sc-&gt;bar0_bh = rman_get_bushandle(sc-&gt;bar0res);
+    sc-&gt;bar1_bt = rman_get_bustag(sc-&gt;bar1res);
+    sc-&gt;bar1_bh = rman_get_bushandle(sc-&gt;bar1res);</programlisting>
+
+      <para>每个基址寄存器的句柄被保存在<varname remap="structname">softc</varname>
+        结构中，以便以后可以使用它们向设备写入。</para>
+
+      <para>然后就能使用这些句柄与<function>bus_space_*</function>函数一起
+        读写设备寄存器。例如，驱动程序可能包含如下的快捷函数，用来读取板子
+        特定的寄存器：</para>
+
+<programlisting>uint16_t
+board_read(struct ni_softc *sc, uint16_t address)
+{
+    return bus_space_read_2(sc-&gt;bar1_bt, sc-&gt;bar1_bh, address);
+}
+</programlisting>
+
+      <para>类似的，可以用下面的函数写寄存器：</para>
+
+<programlisting>void
+board_write(struct ni_softc *sc, uint16_t address, uint16_t value)
+{
+    bus_space_write_2(sc-&gt;bar1_bt, sc-&gt;bar1_bh, address, value);
+}
+</programlisting>
+
+      <para>这些函数以8位，16位和32位的版本存在，你应当相应地使用
+        <function>bus_space_{read|write}_{1|2|4}</function>。</para>
+
+      <note>
+	<para>在 FreeBSD 7.0 和更高版本中， 可以用
+	  <function>bus_*</function> 函数来代替
+	  <function>bus_space_*</function>。
+	  <function>bus_*</function> 函数使用的参数是 <type>struct
+	  resource *</type> 指针， 而不是 bus tag 和句柄。
+	  这样， 您就可以将 <varname remap="structname">softc</varname>
+	  中的 bus tag 和 bus 句柄这两个成员变量去掉， 并将
+	  <function>board_read()</function> 函数改写为：</para>
+
+<programlisting>uint16_t
+board_read(struct ni_softc *sc, uint16_t address)
+{
+	return (bus_read(sc-&gt;bar1res, address));
+}
+</programlisting>
+      </note>
+    </sect2>
+    <sect2>
+      <title>中断</title>
+
+      <indexterm><primary>PCI总线</primary><secondary>interrupts(中断)</secondary></indexterm>
+      <para>中断按照和分配内存资源相似的方式从面向对象的总线代码分配。首先，
+        必须从父总线分配IRQ资源，然后必须设置中断处理函数来处理这个IRQ。
+      </para>
+
+      <para>再一次，来自设备<function>attach()</function>函数的例子比文字
+        更具说明性。</para>
+
+<programlisting>/* 取得IRQ资源 */
+
+    sc-&gt;irqid = 0x0;
+    sc-&gt;irqres = bus_alloc_resource(dev, SYS_RES_IRQ, &amp;(sc-&gt;irqid),
+				  0, ~0, 1, RF_SHAREABLE | RF_ACTIVE);
+    if (sc-&gt;irqres == NULL) {
+	printf("IRQ allocation failed!\n");
+	error = ENXIO;
+	goto fail3;
+    }
+
+    /* 现在我们应当设置中断处理函数 */
+
+    error = bus_setup_intr(dev, sc-&gt;irqres, INTR_TYPE_MISC,
+			   my_handler, sc, &amp;(sc-&gt;handler));
+    if (error) {
+	printf("Couldn't set up irq\n");
+	goto fail4;
+    }
+</programlisting>
+
+      <para>在设备的分离例程中必须注意一些问题。你必须停顿设备的中断流，
+        并移除中断处理函数。一旦<function>bus_teardown_intr()</function>
+        返回，你知道你的中断处理函数不会再被调用，并且所有可能已经执行了
+        这个中断处理函数的线程都已经返回。由于此函数可以睡眠，调用此函数时
+        你必须不能拥有任何互斥体。</para>
+
+    </sect2>
+
+    <sect2>
+      <title>DMA</title>
+
+      <indexterm><primary>PCI总线</primary><secondary>DMA(直接内存访问)</secondary></indexterm>
+      <para>本节已废弃，只是由于历史原因而给出。处理这些问题的适当方法是
+        使用<function>bus_space_dma*()</function>函数。当更新这一节以反映
+        那样用法时，这段就可能被去掉。然而，目前API还不断有些变动，因此一旦
+        它们固定下来后，更新这一节来反映那些改动就很好了。</para>
+
+      <para>在PC上，想进行总线主控DMA的外围设备必须处理物理地址，由于
+        FreeBSD使用虚拟内存并且只处理虚地址，这仍是个问题。幸运的是，有个
+        函数，<function>vtophys()</function>可以帮助我们。</para>
+
+<programlisting>#include &lt;vm/vm.h&gt;
+#include &lt;vm/pmap.h&gt;
+
+#define vtophys(virtual_address) (...)
+</programlisting>
+
+      <para>然而这个解决办法在alpha上有点不一样，并且我们真正想要的是一个
+        称为<function>vtobus()</function>的函数。</para>
+
+<programlisting>#if defined(__alpha__)
+#define vtobus(va)      alpha_XXX_dmamap((vm_offset_t)va)
+#else
+#define vtobus(va)      vtophys(va)
+#endif
+</programlisting>
+
+    </sect2>
+
+    <sect2>
+      <title>取消分配资源</title>
+
+      <para>取消<function>attach()</function>期间分配的所有资源非常重要。
+        必须小心谨慎，即使在失败的条件下也要保证取消分配那些正确的东西，
+        这样当你的驱动程序去掉后系统仍然可以使用。</para>
+
+    </sect2>
+  </sect1>
+
+</chapter>

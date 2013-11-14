@@ -102,7 +102,7 @@ WEB_LANG=	da_DK.ISO8859-1 \
 		nl_NL.ISO8859-1 \
 		pt_BR.ISO8859-1 \
 		ru_RU.KOI8-R \
-		zh_CN.GB2312 \
+		zh_CN.UTF-8 \
 		zh_TW.Big5
 .endif
 .if !defined(ENGLISH_ONLY) || empty(ENGLISH_ONLY)

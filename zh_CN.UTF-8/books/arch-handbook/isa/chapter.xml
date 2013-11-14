@@ -1,0 +1,2146 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+     The FreeBSD Documentation Project
+
+     Original Revision: 1.20
+     $FreeBSD$
+-->
+<chapter xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink" version="5.0" xml:id="isa-driver">
+  <info><title>ISA设备驱动程序</title>
+    <authorgroup>
+      <author><personname><firstname>Sergey</firstname><surname>Babkin</surname></personname><contrib>&cnproj.written.by;</contrib></author>
+    </authorgroup>
+    <authorgroup>
+      <author><personname><firstname>Murray</firstname><surname>Stokely</surname></personname><contrib>&cnproj.modified.for.handbook.by;</contrib></author>
+      <author><personname><firstname>Valentino</firstname><surname>Vaschetto</surname></personname></author>
+      <author><personname><firstname>Wylie</firstname><surname>Stilwell</surname></personname></author>
+    </authorgroup>
+    <authorgroup>
+      <author><personname/><contrib>&cnproj.translated.by;</contrib></author>
+    </authorgroup>
+  </info>
+
+  
+
+  <sect1 xml:id="isa-driver-synopsis">
+    <title>概述</title>
+
+    <indexterm><primary>ISA(Industry Standard Architecture, 工业标准结构)</primary></indexterm>
+    <indexterm><primary>device driver(设备驱动程序)</primary><secondary>ISA(Industry Standard Architecture, 工业标准结构)</secondary></indexterm>
+
+    <para>本章介绍了编写ISA设备驱动程序相关的一些问题。这儿展示的伪代码
+      相当详细，很容易让人联想到真正的代码，不过这依然仅仅是伪代码。
+      它避免了与所讨论的主题无关的细节。真实的例子可以在实际驱动程序的
+      源代码中找到。<literal>ep</literal>和<literal>aha</literal>
+      更是信息的好来源。</para>
+  </sect1>
+
+  <sect1 xml:id="isa-driver-basics">
+    <title>基本信息</title>
+
+    <para>典型的ISA驱动程序需要以下包含文件：</para>
+
+<programlisting>#include &lt;sys/module.h&gt;
+#include &lt;sys/bus.h&gt;
+#include &lt;machine/bus.h&gt;
+#include &lt;machine/resource.h&gt;
+#include &lt;sys/rman.h&gt;
+
+#include &lt;isa/isavar.h&gt;
+#include &lt;isa/pnpvar.h&gt;</programlisting>
+
+    <para>它们描述了针对ISA和通用总线子系统的东西。</para>
+
+    <indexterm><primary>object-oriented(面向对象)</primary></indexterm>
+    <para>总线子系统是以面向对象的方式实现的，其主要结构通过相关联的
+      方法函数来访问。</para>
+
+    <indexterm><primary>bus methods(总线方法)</primary></indexterm>
+    <para>ISA驱动程序实现的总线方法的列表与任何其他总线的很相似。
+      对于名字为“xxx”的假想驱动程序，它们将是：</para>
+
+    <itemizedlist>
+      <listitem>
+        <para><function>static void xxx_isa_identify (driver_t *,
+          device_t);</function> 通常用于总线驱动程序而不是设备驱动程序。
+          但对于ISA设备，这个方法有特殊用途：如果设备提供某些设备特定的
+          （非PnP）方法自动侦测设备，这个例程可以实现它。</para>
+      </listitem>
+
+      <listitem>
+        <para><function>static int xxx_isa_probe (device_t
+          dev);</function> 在已知（或PnP）位置探测设备。对于已经部分配置的
+          设备，这个例程也能够提供设备特定的对某些参数的自动侦测。</para>
+      </listitem>
+
+      <listitem>
+        <para><function>static int xxx_isa_attach (device_t
+          dev);</function> 挂接和初始化设备。</para>
+      </listitem>
+
+      <listitem>
+        <para><function>static int xxx_isa_detach (device_t
+          dev);</function> 卸载设备驱动模块前解挂设备。</para>
+      </listitem>
+
+      <listitem>
+        <para><function>static int xxx_isa_shutdown (device_t
+          dev);</function> 系统关闭前执行设备的关闭。</para>
+      </listitem>
+
+      <listitem>
+        <para><function>static int xxx_isa_suspend (device_t
+          dev);</function> 系统进入节能状态前挂起设备。也可以中止
+          切换到节能状态。</para>
+      </listitem>
+
+      <listitem>
+        <para><function>static int xxx_isa_resume (device_t
+ 	  dev);</function> 从节能状态返回后恢复设备的活动状态。</para>
+      </listitem>
+
+    </itemizedlist>
+
+    <para><function>xxx_isa_probe()</function>和
+      <function>xxx_isa_attach()</function>是必须提供的，其余例程根据设备的
+      需要可以有选择地实现。</para>
+
+    <para>使用下面一组描述符将设备驱动链接到系统。</para>
+
+<programlisting>    /* 支持的总线方法表 */
+    static device_method_t xxx_isa_methods[] = {
+        /* 列出驱动程序支持的所有总线方法函数 */
+        /* 略去不支持的函数 */
+        DEVMETHOD(device_identify,  xxx_isa_identify),
+        DEVMETHOD(device_probe,     xxx_isa_probe),
+        DEVMETHOD(device_attach,    xxx_isa_attach),
+        DEVMETHOD(device_detach,    xxx_isa_detach),
+        DEVMETHOD(device_shutdown,  xxx_isa_shutdown),
+        DEVMETHOD(device_suspend,   xxx_isa_suspend),
+        DEVMETHOD(device_resume,    xxx_isa_resume),
+
+	{ 0, 0 }
+    };
+
+    static driver_t xxx_isa_driver = {
+        "xxx",
+        xxx_isa_methods,
+        sizeof(struct xxx_softc),
+    };
+
+
+    static devclass_t xxx_devclass;
+
+    DRIVER_MODULE(xxx, isa, xxx_isa_driver, xxx_devclass,
+        load_function, load_argument);</programlisting>
+
+      <indexterm><primary>softc(硬件设备的软件描述符，相关信息)</primary></indexterm>
+
+      <para>此处的结构<varname remap="structname">xxx_softc</varname>是一个设备
+        特定的结构，它包含私有的驱动程序数据和驱动程序资源的描述符。
+        总线代码会自动按需要为每个设备分配一个softc描述符。</para>
+
+      <indexterm><primary>kernel modules(内核模块)</primary></indexterm>
+
+      <para>如果驱动程序作为可加载模块实现，当驱动程序被加载或卸载时，
+        会调用<function>load_function()</function>函数进行驱动程序特定的
+        初始化或清理工作，并将load_argument作为函数的一个参量传递进去。
+        如果驱动程序不支持动态加载（换句话说，它必须被链接到内核中），则
+        这些值应当被设置为0，最后的定义将看起来如下所示：</para>
+
+      <programlisting> DRIVER_MODULE(xxx, isa, xxx_isa_driver,
+       xxx_devclass, 0, 0);</programlisting>
+
+      <indexterm><primary>PnP(Plug and Play, 即插即用)</primary></indexterm>
+
+      <para>如果驱动程序是为支持PnP的设备而写的，那么就必须定义一个包含
+        所有支持的PnP ID的表。这个表由此驱动程序所支持的PnP ID的列表
+        和以人可读的形式给出的、与这些ID对应的硬件类型和型号的描述
+        组成。看起来如下：</para>
+
+<programlisting>    static struct isa_pnp_id xxx_pnp_ids[] = {
+        /* 每个所支持的PnP ID占一行 */
+        { 0x12345678,   "Our device model 1234A" },
+        { 0x12345679,   "Our device model 1234B" },
+        { 0,        NULL }, /* 表结束 */
+    };</programlisting>
+
+      <para>如果驱动程序不支持PnP设备，它仍然需要一个空的PnP ID表，
+        如下所示：</para>
+
+<programlisting>    static struct isa_pnp_id xxx_pnp_ids[] = {
+        { 0,        NULL }, /* 表结束 */
+    };</programlisting>
+
+    </sect1>
+
+    <sect1 xml:id="isa-driver-device-t">
+      <title>Device_t指针</title>
+
+      <para><varname remap="structname">Device_t</varname>是为设备结构而定义的指针类型，
+        这里我们只关心从设备驱动程序编写者的角度看感兴趣的方法。下面的方法
+        用来操纵设备结构中的值：</para>
+
+      <itemizedlist>
+
+        <listitem><para><function>device_t
+	  device_get_parent(dev)</function> 获取设备的父总线。
+	  </para></listitem>
+
+        <listitem><para><function>driver_t
+	  device_get_driver(dev)</function> 获取指向其驱动程序结构的指针。
+	  </para></listitem>
+
+	<listitem><para><function>char
+	  *device_get_name(dev)</function> 获取驱动程序的名字，在我们的
+          例子中为<literal>"xxx"</literal>。</para></listitem>
+
+	<listitem><para><function>int device_get_unit(dev)</function>
+	  获取单元号（与每个驱动程序关联的设备从0开始编号）。
+	  </para></listitem>
+
+	<listitem><para><function>char
+	  *device_get_nameunit(dev)</function> 获取设备名，包括单元号。
+          例如<quote>xxx0</quote>，<quote>xxx1</quote>
+          等。</para></listitem>
+
+	<listitem><para><function>char
+	  *device_get_desc(dev)</function> 获取设备描述。通常它以人可读的
+          形式描述设备的确切型号。</para></listitem>
+
+	<listitem><para><function>device_set_desc(dev,
+	  desc)</function>设置描述信息。这使得设备描述指向desc字符串，
+          此后这个字符串就不能被解除分配。</para></listitem>
+
+	<listitem><para><function>device_set_desc_copy(dev,
+	  desc)</function> 设置描述信息。描述被拷贝到内部动态分配的
+          缓冲区，这样desc字符串在以后可以被改变而不会产生有害的结果。
+	  </para></listitem>
+
+	<listitem><para><function>void
+	  *device_get_softc(dev)</function> 获取指向与设备关联的设备描述符
+          （<varname remap="structname">xxx_softc</varname>结构）的指针。
+	  </para></listitem>
+
+	<listitem><para><function>u_int32_t
+	  device_get_flags(dev)</function> 获取配置文件中特定于设备的
+          标志。</para></listitem>
+
+      </itemizedlist>
+
+      <para>可以使用一个很方便的函数<function>device_printf(dev, fmt,
+	...)</function>从设备驱动程序中打印讯息。它自动在讯息前添加
+        单元名和冒号。</para>
+
+      <para>device_t的这些方法在文件<filename>kern/bus_subr.c</filename>
+        中实现。</para>
+
+    </sect1>
+
+    <sect1 xml:id="isa-driver-config">
+      <title>配置文件与自动配置期间识别和探测的顺序</title>
+
+      <indexterm><primary>ISA(Industry Standard Architecture, 工业标准结构)</primary><secondary>probing(探测)</secondary></indexterm>
+
+      <para>ISA设备在内核配置文件中的描述如下：</para>
+
+      <programlisting>device xxx0 at isa? port 0x300 irq 10 drq 5
+       iomem 0xd0000 flags 0x1 sensitive</programlisting>
+
+      <indexterm><primary>IRQ(中断请求)</primary></indexterm>
+
+      <para>端口值、IRQ值和其他值被转换成与设备关联的资源值。根据设备
+	对自动配置需要和支持程度的不同，这些值是可选的。例如，
+	某些设备根本不需要读DRQ，而有些则允许设备从设备配置端口读取
+	IRQ设置。如果机器有多个ISA总线，可以在配置文件中明确指定哪条
+	总线，如<literal>isa0</literal>或<literal>isa1</literal>，
+	否则将在所有ISA总线上搜索设备。</para>
+
+      <para><literal>敏感(sensitive)</literal>是一种资源请求，它指示
+	必须在所有非敏感设备之前探测设备。此特性虽被支持，但似乎从未
+	在目前的任何驱动程序中使用过。</para>
+
+      <para>对于老的ISA设备，很多情况下驱动程序仍然能够侦测配置参数。
+	但是系统中配置的每个设备必须具有一个配置行。如果系统中装有同一
+	类型的两个设备，但对应的驱动程序却只有一个配置行，例如:
+	<programlisting>device xxx0 at isa?</programlisting>
+	那么只有一个设备会被配置。</para>
+
+      <para>但对于支持通过PnP或专有协议进行自动识别的设备，一个配置行
+	就足够配置系统中的所有设备，如上面的配置行，或者简单地：</para>
+
+      <programlisting>device xxx at isa?</programlisting>
+
+      <para>如果设备驱动程序既支持能自动识别的设备又支持老设备，并且
+        两类设备同时安装在一台机器上，那么只要在配置文件中描述老设备
+        就足够了。自动识别的设备将被自动添加。</para>
+
+      <para>如果ISA设备是自动配置的，发生的事件如下：</para>
+
+      <para>所有设备驱动程序的识别例程（包括识别所有PnP设备的PnP识别
+        例程）以随机顺序被调用。他们识别出设备后就把设备添加到ISA总线
+        上的列表中。通常驱动程序的识别例程将新设备与它们的驱动
+        程序关联起来。而PnP识别例程并不知道其他驱动程序，因此不能将
+        驱动程序与它所添加的新设备关联起来。</para>
+
+      <para>使用PnP协议让PnP设备进入睡眠，以防止它们被探测为老设备。</para>
+
+      <para>被标记为<literal>敏感(sensitive)</literal>的非PnP设备的
+        探测例程被调用。如果探测设备成功，那么就为其调用挂接(attach)
+        例程。</para>
+
+      <para>所有非PnP设备的探测和连接例程以同样的方式被调用。</para>
+
+      <para>PnP设备从睡眠中恢复过来，并给它们分配所请求的资源：I/O、
+        内存地址范围、IRQ和DRQ，所有这些与已连接的老设备不会冲突。</para>
+
+      <para>对于每个PnP设备，所有ISA设备驱动程序的探测例程都会被调用。
+        第一个要求此设备的驱动程序将被连接。多个驱动程序以不同的优先权
+        要求一个设备的情况是可能的，这种情况下，具有最高优先权的驱动程序
+        将获胜。探测例程必须调用<function>ISA_PNP_PROBE()</function>将
+        真实的PnP ID和驱动程序支持的ID列表作比较，如果ID不在表中则返回
+        失败。这意味着每个驱动程序，包括不支持任何PnP设备的驱动程序，
+        都必须对未知的PnP设备无条件调用
+        <function>ISA_PNP_PROBE()</function>，对于未知设备， 至少要用一个
+        空的PnP ID表调用并返回失败。</para>
+
+      <para>探测例程遇到错误时会返回一个正值（错误码），成功时返回
+        零或负值。</para>
+
+      <para>负的返回值用于PnP设备支持多个接口的情况。例如，老的兼容接口
+        和新的高级接口通过不同的驱动程序来提供支持。两个驱动程序
+        都侦测设备。在探测例程中返回较高值的驱动程序优先（换句话说，
+        返回0的驱动程序具有最高的优先级，返回-1的其次，返回-2的更在
+        其后，如此下去）。如果多个驱动程序返回相同的值，那么最先调用的
+        获胜。因此，如果驱动程序返回0，就基本能够确信它获得优先权仲裁。
+      </para>
+
+      <para>设备特定的识别例程也能够将一类而不是单个驱动程序指派给设备。
+        就象使用PnP的情况一样，对于某一设备，会探测这一类中所有的驱动程序。
+        由于这个特性在任何现存的驱动程序中总均未实现，故本文档中不再予以
+        考虑。</para>
+
+      <para>由于探测老设备的时候PnP设备被禁用，它们不会被连接两次
+        （一次作为老设备，一次作为PnP）。但如果识别例程设备相关的，
+        这种情况下设备驱动程序有责任确保同一设备不会被设备驱动程序
+        连接两次：一次作为老的由用户配置的，一次作为自动识别的。</para>
+
+      <para>对于自动识别的设备（包括PnP和设备特定的）的另一个实践结论是，
+        不能从内核配置文件中向它们传递旗标。因此它们必须要么根本不使用
+        旗标，要么为所有自动识别的设备使用单元号为0的设备的旗标，或者
+        使用sysctl接口而不是旗标。</para>
+
+      <para>通过使用函数族<function>resource_query_*()</function>和
+        <function>resource_*_value()</function>直接访问配置资源，
+        从而可以提供其他不常用的配置。它们的实现位于
+        <filename>kern/subr_bus.c</filename>。老的IDE磁盘驱动器
+        <filename>i386/isa/wd.c</filename>包含这样使用的例子。
+        但必须优先使用配置的标准方法。将解析配置资源这类事情留给
+        总线配置代码。</para>
+
+    </sect1>
+
+    <sect1 xml:id="isa-driver-resources">
+      <title>资源</title>
+
+      <indexterm><primary>resources(资源)</primary></indexterm>
+      <indexterm><primary>device driver(设备驱动程序)</primary><secondary>resources(资源)</secondary></indexterm>
+
+      <para>用户写入到内核配置文件中的信息被作为配置资源处理，并传递到内核。
+        总线配置代码解析这部分信息并将其转换为结构device_t的值和与之
+        关联的总线资源。对于复杂情况下的配置，驱动程序可以直接使用
+        <function>resource_*</function> 函数访问配置资源。 然而，
+        通常既不需要也不推荐这样做，
+        因此这儿不再进一步讨论这个问题。</para>
+
+      <para>总线资源与每个设备相关联。通过类型和类型中的数字标识它们。
+        对于ISA总线，定义了下面的类型：</para>
+
+      <indexterm><primary>DMA channel(DMA通道)</primary></indexterm>
+
+      <itemizedlist>
+        <listitem>
+          <para><emphasis>SYS_RES_IRQ</emphasis> - 中断号</para>
+        </listitem>
+
+        <listitem>
+          <para><emphasis>SYS_RES_DRQ</emphasis> - ISA DMA通道号</para>
+        </listitem>
+
+	<listitem>
+	  <para><emphasis>SYS_RES_MEMORY</emphasis> - 映射到系统内存空间
+            的设备内存的范围
+          </para>
+	</listitem>
+
+        <listitem>
+          <para><emphasis>SYS_RES_IOPORT</emphasis> - 设备I/O寄存器的范围
+            </para>
+        </listitem>
+      </itemizedlist>
+
+      <para>类型内的枚举从0开始，因此如果设备有两个内存区域，它的
+        <literal>SYS_RES_MEMORY</literal> 类型的资源编号为0和1。
+        资源类型与C语言的类型无关，
+        所有资源值具有C语言 <literal>unsigned long</literal>
+        类型，并且必要时必须进行类型强制转换 (cast)。资源号不必连续，
+        尽管对于ISA它们一般是连续的。ISA设备允许的资源编号为：</para>
+
+      <programlisting>          IRQ: 0-1
+          DRQ: 0-1
+          MEMORY: 0-3
+          IOPORT: 0-7</programlisting>
+
+      <para>所有资源被表示为带有起始值和计数的范围。对于IRQ和DRQ资源，
+        计数一般等于1。内存的值引用物理地址。</para>
+
+      <para>对资源能够执行三种类型的动作：</para>
+
+      <itemizedlist>
+        <listitem><para>set/get</para></listitem>
+        <listitem><para>allocate/release</para></listitem>
+        <listitem><para>activate/deactivate</para></listitem>
+      </itemizedlist>
+
+      <para>Set设置资源使用的范围。Allocation保留出请求的范围，使得
+        其它设备不能再占用（并检查此范围没有被其它设备占用）。
+        Activation执行必要的动作使得驱动程序可以访问资源（例如，对于
+        内存，它将被映射到内核的虚拟地址空间）。</para>
+
+      <para>操作资源的函数有：</para>
+
+      <itemizedlist>
+        <listitem>
+          <para><function>int bus_set_resource(device_t dev, int type,
+            int rid, u_long start, u_long count)</function></para>
+
+          <para>为资源设置范围。成功则返回0，否则返回错误码。
+            一般此函数只有在<literal>type</literal>，
+            <literal>rid</literal>，<literal>start</literal>或
+            <literal>count</literal>之一的值超出了允许的范围才会
+            返回错误。</para>
+
+          <itemizedlist>
+            <listitem>
+              <para> dev - 驱动程序的设备</para>
+            </listitem>
+            <listitem>
+              <para> type - 资源类型，SYS_RES_* </para>
+            </listitem>
+            <listitem>
+              <para> rid - 类型内部的资源号（ID）</para>
+            </listitem>
+            <listitem>
+              <para> start, count - 资源范围 </para>
+            </listitem>
+          </itemizedlist>
+        </listitem>
+
+        <listitem>
+          <para><function>int bus_get_resource(device_t dev, int type,
+          int rid, u_long *startp, u_long *countp)</function></para>
+
+          <para>取得资源范围。成功则返回0，如果资源尚未定义则返回错误码。
+          </para>
+        </listitem>
+
+        <listitem>
+          <para><function>u_long bus_get_resource_start(device_t dev,
+            int type, int rid) u_long bus_get_resource_count (device_t
+            dev, int type, int rid)</function></para>
+
+          <para>便捷函数，只用来获取start或count。出错的情况下返回0，
+            因此如果0是资源的start合法值之一，将无法区分返回
+            的0是否指示错误。幸运的是，对于附加驱动程序，没有ISA资源的
+            start值从0开始。</para>
+        </listitem>
+
+        <listitem>
+          <para><function>void bus_delete_resource(device_t dev, int
+            type, int rid)</function></para>
+          <para>删除资源，令其未定义。</para>
+        </listitem>
+
+        <listitem>
+          <para><function>struct resource *
+            bus_alloc_resource(device_t dev, int type, int *rid,
+            u_long start, u_long end, u_long count, u_int
+            flags)</function></para>
+
+          <para>在start和end之间没有被其它设备占用的地方按count值
+            的范围分配一个资源。不过，不支持对齐。如果资源尚未被设置，
+            则自动创建它。start为0，end为~0（全1）的这对特殊值
+            意味着必须使用以前通过
+            <function>bus_set_resource()</function>设置的固定值：
+            start和count就是它们自己，end=(start+count)，这种情况下，
+            如果以前资源没有定义，则返回错误。尽管rid通过引用传递，
+            但它并不被ISA总线的资源分配代码设置（其它总线可能使用不同的
+            方法并可能修改它）。</para>
+        </listitem>
+      </itemizedlist>
+
+      <para>旗标是一个位映射，调用者感兴趣的有：</para>
+
+      <itemizedlist>
+        <listitem>
+          <para><emphasis>RF_ACTIVE</emphasis> - 使得资源分配后
+            被自动激活。</para>
+        </listitem>
+
+        <listitem>
+          <para><emphasis>RF_SHAREABLE</emphasis> - 资源可以同时
+            被多个驱动程序共享。</para>
+        </listitem>
+
+        <listitem>
+          <para><emphasis>RF_TIMESHARE</emphasis> - 资源可以被多个驱动
+            程序分时共享，也就是说，被多个驱动程序同时分配，但任何
+            给定时间只能被其中一个激活。</para>
+        </listitem>
+<!-- XXXDONT KNOW IT THESE SHOULD BE TWO SEPARATE LISTS OR NOT -->
+        <listitem>
+          <para>出错返回0。被分配的值可以使用
+            <function>rhand_*()</function>从返回的句柄获得。</para>
+        </listitem>
+        <listitem>
+          <para><function>int bus_release_resource(device_t dev, int
+            type, int rid, struct resource *r)</function></para>
+        </listitem>
+
+        <listitem>
+          <para>释放资源，r为<function>bus_alloc_resource()</function>
+            返回的句柄。成功则返回0，否则返回错误码。</para>
+        </listitem>
+
+        <listitem>
+          <para><function>int bus_activate_resource(device_t dev, int
+            type, int rid, struct resource *r)</function>
+            <function>int bus_deactivate_resource(device_t dev, int
+            type, int rid, struct resource *r)</function></para>
+        </listitem>
+
+        <listitem>
+          <para>激活或禁用资源。成功则返回0，否则返回错误码。如果
+            资源被分时共享且当前被另一驱动程序激活，则返回 <literal>EBUSY</literal>。
+          </para>
+        </listitem>
+
+        <listitem>
+          <para><function>int bus_setup_intr(device_t dev, struct
+            resource *r, int flags, driver_intr_t *handler, void *arg,
+            void **cookiep)</function> <function>int
+            bus_teardown_intr(device_t dev, struct resource *r, void
+            *cookie)</function></para>
+        </listitem>
+
+        <listitem>
+          <para>关联/分离中断处理程序与设备。成功则返回0，否则
+            返回错误码。</para>
+        </listitem>
+
+        <listitem>
+          <para>r - 被激活的描述IRQ的资源句柄。</para>
+          <para>flags - 中断优先级，如下之一：</para>
+
+          <itemizedlist>
+            <listitem>
+              <para><function>INTR_TYPE_TTY</function> - 终端和其它
+                类似的字符类型设备。使用
+                <function>spltty()</function>屏蔽它们。</para>
+            </listitem>
+            <listitem>
+              <para><function>(INTR_TYPE_TTY |
+                INTR_TYPE_FAST)</function> - 输入缓冲较小的终端类型
+                设备，而且输入上的数据丢失很关键（例如老式串口）。
+                使用<function>spltty()</function>屏蔽它们。</para>
+            </listitem>
+            <listitem>
+              <para><function>INTR_TYPE_BIO</function> - 块类型设备，
+                不包括CAM控制器上的。使用
+                <function>splbio()</function>屏蔽它们。</para>
+            </listitem>
+            <listitem>
+              <para><function>INTR_TYPE_CAM</function> - CAM （通用访问
+                方法Common Access Method）总线控制器。使用
+                <function>splcam()</function>屏蔽它们。</para>
+             </listitem>
+             <listitem>
+               <para><function>INTR_TYPE_NET</function> - 网络接口
+                 控制器。使用
+                <function>splimp()</function>屏蔽它们。</para>
+             </listitem>
+             <listitem>
+               <para><function>INTR_TYPE_MISC</function> -
+                各种其它设备。除了通过
+                <function>splhigh()</function>没有其它方法屏蔽它们。
+                <function>splhigh()</function>屏蔽所有中断。
+                </para>
+             </listitem>
+          </itemizedlist>
+        </listitem>
+      </itemizedlist>
+
+      <para>当中断处理程序执行时，匹配其优先级的所有其它中断都被屏蔽，
+        唯一的例外是MISC级别，它不会屏蔽其它中断，也不会被其它中断
+        屏蔽。</para>
+
+      <itemizedlist>
+        <listitem>
+          <para><emphasis>handler</emphasis> - 指向处理程序的指针，
+            类型driver_intr_t被定义为<function>void
+            driver_intr_t(void *)</function></para>
+        </listitem>
+        <listitem>
+          <para><emphasis>arg</emphasis> - 传递给处理程序的参量，标识
+            特定设备。由处理程序将它从void*转换为任何实际类型。ISA
+            中断处理程序的旧约定是使用单元号作为参量，新约定（推荐）
+            使用指向设备softc结构的指针。</para>
+        </listitem>
+        <listitem>
+          <para><emphasis>cookie[p]</emphasis> - 从
+            <function>setup()</function>接收的值，当传递给
+            <function>teardown()</function>
+            时用于标识处理程序。</para>
+        </listitem>
+      </itemizedlist>
+
+      <para>定义了若干方法来操作资源句柄(struct resource *)。设备驱动
+        程序编写者感兴趣的有：</para>
+
+      <itemizedlist>
+        <listitem>
+          <para><function>u_long rman_get_start(r) u_long
+            rman_get_end(r)</function> 取得被分配的资源范围的起始和结束。
+          </para>
+        </listitem>
+        <listitem>
+          <para><function>void *rman_get_virtual(r)</function> 取得
+            被激活的内存资源的虚地址。</para>
+        </listitem>
+      </itemizedlist>
+
+    </sect1>
+
+    <sect1 xml:id="isa-driver-busmem">
+      <title>总线内存映射</title>
+
+      <para>很多情况下设备驱动程序和设备之间的数据交换是通过内存
+        进行的。有两种可能的变体：</para>
+
+      <para>(a) 内存位于设备卡上</para>
+      <para>(b) 内存为计算机的主内存</para>
+
+      <para>情况(a)中，驱动程序可能需要在卡上的内存与主存之间来回
+        拷贝数据。为了将卡上的内存映射到内核的虚地址空间，卡上内存的
+        物理地址和长度必须被定义为<literal>SYS_RES_MEMORY</literal>资源。
+        然后资源就可以被分配并激活，它的虚地址通过使用
+        <function>rman_get_virtual()</function>获取。较老的驱动程序
+        将函数<function>pmap_mapdev()</function>用于此目的，现在
+        不应当再直接使用此函数。它已成为资源激活的一个内部步骤。</para>
+
+      <para>大多数ISA卡的内存配置为物理地位于640KB-1MB范围之间的
+        某个位置。某些ISA卡需要更大的内存范围，位于16M以下的某个
+        位置（由于ISA总线上24位地址限制）。这种情况下，如果机器有
+        比设备内存的起始地址更多的内存（换句话说，它们重叠），则
+        必须在被设备使用的内存起始地址处配置一个内存空洞。许多
+        BIOS允许在起始于14MB或15MB处配置1M的内存空洞。如果BIOS
+        正确地报告内存空洞，FreeBSD就能够正确处理它们（此特性
+        在老BIOS上可能会出问题）。</para>
+
+      <para>情况(b)中，只是数据的地址被发送到设备，设备使用DMA实际
+        访问主存中的数据。存在两个限制：首先，ISA卡只能访问16MB以下
+        的内存。其次，虚地址空间中连续的页面在物理地址空间中可能不
+        连续，设备可能不得不进行分散/收集操作。总线子系统为这些问题
+        提供现成现成的解决办法，剩下的必须由驱动程序自己完成。</para>
+
+      <para>DMA内存分配使用了两个结构， <varname>bus_dma_tag_t</varname>
+	和 <varname>bus_dmamap_t</varname>。
+        标签（tag）描述了DMA内存要求的特性。映射（map）表示按照这些
+        特性分配的内存块。多个映射可以与同一标签关联。</para>
+
+      <para>标签按照对特性的继承而被组织成树型层次结构。子标签继承父
+        标签的所有要求，可以令其更严格，但不允许放宽要求。</para>
+
+      <para>一般地，每个设备单元创建一个顶层标签（没有父标签）。如果
+        每个设备需要不同要求的内存区，则为每个内存区都会创建一个标签，这些
+        标签作为父标签的孩子。</para>
+
+      <para>使用标签创建映射的方法有两种。</para>
+
+      <para>其一，分配一大块符合标签要求的连续内存（以后可以被释放）。
+        这一般用于分配为了与设备通信而存在相对较长时间的那些内存区。
+        将这样的内存加载到映射中非常容易：它总是被看作位于适当物理
+        内存范围的一整块。</para>
+
+      <para>其二，将虚拟内存中的任意区域加载到映射中。这片内存的
+        每一页都被检查，看是否符合映射的要求。如何符合则留在原始位置。
+        如果不符合则分配一个新的符合要求的
+        <quote>反弹页面(bounce page)</quote>，用作中间存储。
+        当从不符合的原始页面写入数据时，数据首先被拷贝到反弹页面，
+        然后从反弹页面传递到设备。当读取时，数据将会从设备到反弹页面，
+        然后被拷贝到它们不符合的原始页面。原始和反弹页面之间的拷贝
+        处理被称作同步。这一般用于单次传输的基础之上：每次传输时
+        加载缓冲区，完成传输，卸载缓冲区。</para>
+
+      <para>工作在DMA内存上的函数有：</para>
+
+      <itemizedlist>
+        <listitem>
+        <para><function>int bus_dma_tag_create(bus_dma_tag_t parent,
+          bus_size_t alignment, bus_size_t boundary, bus_addr_t
+          lowaddr, bus_addr_t highaddr, bus_dma_filter_t *filter, void
+          *filterarg, bus_size_t maxsize, int nsegments, bus_size_t
+          maxsegsz, int flags, bus_dma_tag_t *dmat)</function></para>
+
+        <para>创建新标签。成功则返回0，否则返回错误码。</para>
+
+        <itemizedlist>
+          <listitem>
+            <para><emphasis>parent</emphasis> - 父标签或者NULL，
+              NULL用于创建顶层标签。</para>
+          </listitem>
+
+          <listitem>
+            <para><emphasis>alignment</emphasis> -
+              对将要分配给标签的内存区的对齐要求。<quote>no specific
+              alignment</quote>时值为1。仅应用于以后的
+              <function>bus_dmamem_alloc()</function>而不是
+              <function>bus_dmamap_create()</function>调用。</para>
+          </listitem>
+
+          <listitem>
+              <para><emphasis>boundary</emphasis> - 物理地址边界，
+                分配内存时不能穿过。对于<quote>no boundary</quote>
+                使用0。仅应用于以后的
+                <function>bus_dmamem_alloc()</function>而不是
+                <function>bus_dmamap_create()</function>调用。
+                必须为2的乘方。如果计划以非层叠DMA方式使用内存（也就是说，
+                DMA地址由ISA DMA控制器提供而不是设备自身），则由于DMA硬件
+                限制，边界必须不能大于64KB (64*1024)。</para>
+          </listitem>
+
+          <listitem>
+            <para><emphasis>lowaddr, highaddr</emphasis> - 名字稍微
+              有些误导。这些值用于限制可用于内存分配的物理地址的允许
+              范围。其确切含义根据以后不同的使用而有所不同。</para>
+
+            <itemizedlist>
+              <listitem>
+                <para>对于<function>bus_dmamem_alloc()</function>，
+                  从0到lowaddr-1的所有地址被视为允许，更高的地址不允许
+                  使用。</para>
+              </listitem>
+
+              <listitem>
+                <para>对于<function>bus_dmamap_create()</function>，
+                  闭区间[lowaddr; highaddr]之外的所有地址被视为可访问。
+                  范围之内的地址页面被传递给过滤函数，由它决定是否可访问。
+                  如果没有提供过滤函数，则整个区间被视为不可访问。</para>
+              </listitem>
+
+              <listitem>
+                <para>对于ISA设备，正常值（没有过滤函数）为：</para>
+                <para>lowaddr = BUS_SPACE_MAXADDR_24BIT</para>
+                <para>highaddr = BUS_SPACE_MAXADDR</para>
+              </listitem>
+            </itemizedlist>
+
+          </listitem>
+
+          <listitem>
+            <para><emphasis>filter, filterarg</emphasis> - 过滤函数及其
+              参数。如果filter为NULL，则当调用
+              <function>bus_dmamap_create()</function>时，整个区间
+              [lowaddr, highaddr]被视为不可访问。
+              否则，区间[lowaddr; highaddr]内的每个被试图访问的页面的
+              物理地址被传递给过滤函数，由它决定是否可访问。过滤函数的
+              原型为：<function>int filterfunc(void *arg,
+              bus_addr_t paddr)</function>。当页面可以被访问时它必须
+              返回0，否则返回非零值。</para>
+          </listitem>
+
+          <listitem>
+            <para><emphasis>maxsize</emphasis> - 通过此标签可以分配的
+              最大内存值（以字节计）。有时这个值很难估算，或者可以任意大，
+              这种情况下，对于ISA设备这个值可以设为
+              <literal>BUS_SPACE_MAXSIZE_24BIT</literal>。</para>
+          </listitem>
+
+          <listitem>
+            <para><emphasis>nsegments</emphasis> - 设备支持的分散/收集段
+              的最大数目。如果不加限制，则使用应当使用值
+              <literal>BUS_SPACE_UNRESTRICTED</literal>。
+              建议对父标签使用这个值，而为子孙标签指定实际限制。
+              nsegments值等于 <literal>BUS_SPACE_UNRESTRICTED</literal>
+              的标签不能用于实际加载映射，仅可以将它们作为父标签。 nsetments
+              的实际限制大约为250-300，再高的值将导致内核堆栈溢出（硬件
+              无法正常支持那么多的分散/收集缓冲区）。</para>
+          </listitem>
+
+          <listitem>
+            <para><emphasis>maxsegsz</emphasis> - 设备支持的分散/收集段
+              的最大尺寸。对于ISA设备的最大值为
+              <literal>BUS_SPACE_MAXSIZE_24BIT</literal>。</para>
+          </listitem>
+
+          <listitem>
+            <para><emphasis>flags</emphasis> - 	旗标的位图。感兴趣的旗标
+              只有：</para>
+
+            <itemizedlist>
+              <listitem>
+                <para><emphasis>BUS_DMA_ALLOCNOW</emphasis> - 创建标签时
+                  请求分配所有可能用到的反射页面。</para>
+              </listitem>
+
+              <listitem>
+                <para><emphasis>BUS_DMA_ISA</emphasis> - 比较神秘的一个标志，
+                  仅用于Alpha机器。i386机器没有定义它。Alpha机器的所有ISA设备
+                  都应当使用这个标志，但似乎还没有这样的驱动程序。</para>
+              </listitem>
+            </itemizedlist>
+          </listitem>
+
+          <listitem>
+            <para><emphasis>dmat</emphasis> - 指向返回的新标签的存储的
+              指针。</para>
+          </listitem>
+
+        </itemizedlist>
+
+      </listitem>
+
+      <listitem> <!-- Second entry in list alpha -->
+        <para><function>int bus_dma_tag_destroy(bus_dma_tag_t
+          dmat)</function></para>
+
+        <para>销毁标签。成功则返回0，否则返回错误码。</para>
+
+        <para>dmat - 被销毁的标签。</para>
+
+      </listitem>
+
+      <listitem> <!-- Third entry in list alpha -->
+        <para><function>int bus_dmamem_alloc(bus_dma_tag_t dmat,
+          void** vaddr, int flags, bus_dmamap_t
+          *mapp)</function></para>
+
+        <para>分配标签所描述的一块连续内存区。被分配的内存的大小为标签的
+          maxsize。成功则返回0，否则返回错误码。调用结果被用于获取内存的
+          物理地址，但在此之前必须用<function>bus_dmamap_load()</function>
+          将其加载。</para>
+
+            <itemizedlist>
+              <listitem>
+                <para>
+                  <emphasis>dmat</emphasis> - 标签
+                </para>
+              </listitem>
+              <listitem>
+                <para>
+                  <emphasis>vaddr</emphasis> - 指向存储的指针，该存储空间
+                  用于返回的分配区域的内核虚地址。
+                 </para>
+              </listitem>
+              <listitem>
+                <para>
+                  flags - 旗标的位图。唯一感兴趣的旗标为：
+                </para>
+                <itemizedlist>
+                  <listitem>
+                    <para>
+                      <emphasis>BUS_DMA_NOWAIT</emphasis> - 如果内存不能
+                      立即可用则返回错误。如果此标志没有设置，则允许例程
+                      睡眠，直到内存可用为止。
+                    </para>
+                  </listitem>
+                </itemizedlist>
+              </listitem>
+              <listitem>
+                <para>
+                  <emphasis>mapp</emphasis> - 指向返回的新映射的存储的指针。
+                </para>
+              </listitem>
+            </itemizedlist>
+          </listitem>
+
+          <listitem> <!-- Fourth entry in list alpha -->
+            <para>
+              <function>void bus_dmamem_free(bus_dma_tag_t dmat, void
+              *vaddr, bus_dmamap_t map)</function>
+            </para>
+            <para>
+              释放由<function>bus_dmamem_alloc()</function>分配的内存。
+              目前，对分配的带有ISA限制的内存的释放没有实现。因此，建议的
+              使用模型为尽可能长时间地保持和重用分配的区域。不要轻易地
+              释放某些区域，然后再短时间地分配它。这并不意味着不应当使用
+              <function>bus_dmamem_free()</function>：希望很快它就会被
+              完整地实现。
+            </para>
+
+            <itemizedlist>
+              <listitem>
+                <para><emphasis>dmat</emphasis> - 标签
+                </para>
+              </listitem>
+              <listitem>
+                <para>
+                  <emphasis>vaddr</emphasis> - 内存的内核虚地址
+                </para>
+              </listitem>
+              <listitem>
+                <para>
+                  <emphasis>map</emphasis> - 内存的映射（跟
+                  <function>bus_dmamem_alloc()</function>返回的一样）
+                </para>
+              </listitem>
+            </itemizedlist>
+          </listitem>
+
+          <listitem> <!-- The fifth entry in list alpha -->
+            <para>
+              <function>int bus_dmamap_create(bus_dma_tag_t dmat, int
+              flags, bus_dmamap_t *mapp)</function>
+            </para>
+            <para>
+              为标签创建映射，以后用于
+              <function>bus_dmamap_load()</function>。成功则返回0，否则
+              返回错误码。
+            </para>
+            <itemizedlist>
+              <listitem>
+                <para>
+                  <emphasis>dmat</emphasis> - 标签
+                </para>
+              </listitem>
+              <listitem>
+                <para>
+                  <emphasis>flags</emphasis> - 理论上是旗标的位图。但还
+                  从未定义过任何旗标，因此目前总是0。
+                </para>
+              </listitem>
+              <listitem>
+                <para>
+                  <emphasis>mapp</emphasis> - 指向返回的新映射的存储的指针。
+                </para>
+              </listitem>
+            </itemizedlist>
+          </listitem>
+
+          <listitem> <!-- Sixth entry in the alpha list -->
+            <para>
+              <function>int bus_dmamap_destroy(bus_dma_tag_t dmat,
+              bus_dmamap_t map)</function>
+            </para>
+            <para>
+              销毁映射。成功则返回0，否则返回错误码。
+            </para>
+
+            <itemizedlist>
+              <listitem>
+                <para>
+                  dmat - 与映射关联的标签
+                </para>
+              </listitem>
+              <listitem>
+                <para>
+                  map - 将要被销毁的映射
+                </para>
+              </listitem>
+            </itemizedlist>
+          </listitem>
+
+          <listitem> <!-- Seventh entry in list alpha -->
+            <para>
+              <function>int bus_dmamap_load(bus_dma_tag_t dmat,
+              bus_dmamap_t map, void *buf, bus_size_t buflen,
+              bus_dmamap_callback_t *callback, void *callback_arg, int
+              flags)</function>
+            </para>
+            <para>
+              加载缓冲区到映射中(映射必须事先由
+              <function>bus_dmamap_create()</function>或者
+              <function>bus_dmamem_alloc()</function>)创建。缓冲区的所有
+              页面都会被检查，看是否符合标签的要求，并为那些不符合的分配
+              反弹页面。会创建物理段描述符的数组，并将其传递给回调函数。
+              回调函数以某种方式处理这个数组。系统中的反弹缓冲区是受限的，
+              因此如果需要的反弹缓冲区不能立即获得，则将请求入队，当反弹
+              缓冲区可用时再调用回调函数。如果回调函数立即执行则返回0，
+              如果请求被排队，等待将来执行，则返回
+              <errorname>EINPROGRESS</errorname>。后一种情况下，
+              与排队的回调函数之间的同步由驱动程序负责。
+            </para>
+            <!--<blockquote>-->
+            <itemizedlist>
+              <listitem>
+                <para>
+                  <emphasis>dmat</emphasis> - 标签
+                </para>
+              </listitem>
+              <listitem>
+                <para>
+                  <emphasis>map</emphasis> - 映射
+                </para>
+              </listitem>
+              <listitem>
+                <para>
+                  <emphasis>buf</emphasis> - 缓冲区的内核虚地址
+                </para>
+              </listitem>
+              <listitem>
+                <para>
+                  <emphasis>buflen</emphasis> - 缓冲区的长度
+                </para>
+              </listitem>
+              <listitem>
+                <para>
+                  <emphasis>callback</emphasis>,<function>
+                  callback_arg</function> - 回调函数及其参数
+                </para>
+              </listitem>
+            </itemizedlist>
+            <!--</blockquote>-->
+            <para>
+              回调函数的原型为：
+            </para>
+            <para>
+              <function>void callback(void *arg, bus_dma_segment_t
+              *seg, int nseg, int error)</function>
+            </para>
+            <!--     <blockquote> -->
+            <itemizedlist>
+              <listitem>
+                <para>
+                  <emphasis>arg</emphasis> - 与传递给
+                  <function>bus_dmamap_load()</function>的callback_arg
+                  相同。
+                </para>
+              </listitem>
+              <listitem>
+                <para>
+                  <emphasis>seg</emphasis> - 段描述符的数组
+                </para>
+              </listitem>
+              <listitem>
+                <para>
+                  <emphasis>nseg</emphasis> - 数组中的描述符个数
+                </para>
+              </listitem>
+              <listitem>
+                <para>
+                  <emphasis>error</emphasis> - 表示段数目溢出：如被设为
+                  <errorname>EFBIG</errorname>，
+                  则标签允许的最大数目的段无法容纳缓冲区。
+                  这种情况下数组中的描述符的数目只有标签许可的那么多。
+                  对这种情况的处理由驱动程序决定：根据希望的语义，驱动
+                  程序可以视其为错误，或将缓冲区分为两个并单独处理第二个。
+                </para>
+              </listitem>
+            </itemizedlist>
+            <!--     </blockquote>  -->
+            <para>
+              段数组中的每一项包含如下字段：
+            </para>
+
+            <!--   <blockquote> -->
+            <itemizedlist>
+              <listitem>
+                <para>
+                  <emphasis>ds_addr</emphasis> - 段物理地址
+                </para>
+              </listitem>
+              <listitem>
+                <para>
+                  <emphasis>ds_len</emphasis> - 段长度
+                </para>
+              </listitem>
+            </itemizedlist>
+            <!--   </blockquote>-->
+          </listitem>
+
+          <listitem> <!-- Eighth entry in alpha list -->
+            <para>
+              <function>void bus_dmamap_unload(bus_dma_tag_t dmat,
+              bus_dmamap_t map)</function>
+            </para>
+            <para>unload the map.
+            </para>
+            <!--  <blockquote>  -->
+            <itemizedlist>
+              <listitem>
+                <para>
+                  <emphasis>dmat</emphasis> - 标签
+                </para>
+              </listitem>
+              <listitem>
+                <para>
+                  <emphasis>map</emphasis> - 已加载的映射
+                </para>
+              </listitem>
+            </itemizedlist>
+            <!--  </blockquote>  -->
+          </listitem>
+
+          <listitem> <!-- Ninth entry list alpha -->
+            <para>
+              <function>void bus_dmamap_sync (bus_dma_tag_t dmat,
+              bus_dmamap_t map, bus_dmasync_op_t op)</function>
+            </para>
+            <para>
+              与设备进行物理传输前后，将加载的缓冲区与其反弹页面进行同步。
+              此函数完成原始缓冲区与其映射版本之间所有必需的数据拷贝工作。
+              进行传输之前和之后必须对缓冲区进行同步。
+            </para>
+            <!--  <blockquote> -->
+            <itemizedlist>
+              <listitem>
+                <para>
+                  <emphasis>dmat</emphasis> - 标签
+                </para>
+              </listitem>
+              <listitem>
+                <para>
+                  <emphasis>map</emphasis> - 已加载的映射
+                </para>
+              </listitem>
+              <listitem>
+                <para>
+                  <emphasis>op</emphasis> - 要执行的同步操作的类型：
+                </para>
+              </listitem>
+            </itemizedlist>
+            <!-- <blockquote> -->
+            <itemizedlist>
+              <listitem>
+                <para>
+                  <function>BUS_DMASYNC_PREREAD</function> - 从设备到
+                  缓冲区的读操作之前
+                </para>
+              </listitem>
+              <listitem>
+                <para>
+                  <function>BUS_DMASYNC_POSTREAD</function> - 从设备到
+                  缓冲区的读操作之后
+                </para>
+              </listitem>
+              <listitem>
+                <para>
+                  <function>BUS_DMASYNC_PREWRITE</function> - 从缓冲区到
+                  设备的写操作之前
+                </para>
+              </listitem>
+              <listitem>
+                <para>
+                  <function>BUS_DMASYNC_POSTWRITE</function> - 从缓冲区到
+                  设备的写操作之后
+                </para>
+              </listitem>
+            </itemizedlist>
+          </listitem>
+        </itemizedlist>   <!-- End of list alpha -->
+<!-- </blockquote>
+</blockquote> -->
+
+        <para>
+          当前PREREAD和POSTWRITE为空操作，但将来可能会改变，因此驱动程序
+          中不能忽略它们。由<function>bus_dmamem_alloc()</function>
+          获得的内存不需要同步。
+        </para>
+        <para>
+          从<function>bus_dmamap_load()</function>中调用回调函数之前，
+          段数组是存储在栈中的。并且是按标签允许的最大数目的段预先分配
+          好的。这样由于i386体系结构上对段数目的实际限制约为250-300
+          （内核栈为4KB减去用户结构的大小，段数组条目的大小为8字节，和
+          其它必须留出来的空间）。由于数组基于最大数目而分配，因此这个值
+          必须不能设置成超出实际需要。幸运的是，对于大多数硬件而言，
+          所支持的段的最大数目低很多。但如果驱动程序想处理具有非常多
+          分散/收集段的缓冲区，则应当一部分一部分地处理：加载缓冲区的
+          一部分，传输到设备，然后加载缓冲区的下一部分，如此反复。
+        </para>
+        <para>
+          另一个实践结论是段数目可能限制缓冲区的大小。如果缓冲区中的
+          所有页面碰巧物理上不连续，则分片情况下支持的最大缓冲区尺寸
+          为(nsegments * page_size)。例如，如果支持的段的最大数目为10，
+          则在i386上可以确保支持的最大缓冲区大小为40K。如果希望更大的
+          则需要在驱动程序中使用一些特殊技巧。
+        </para>
+        <para>
+          如果硬件根本不支持分散/收集，或者驱动程序希望即使在严重分片的
+          情况下仍然支持某种缓冲区大小，则解决办法是：如果无法容纳下原始
+          缓冲区，就在驱动程序中分配一个连续的缓冲区作为中间存储。
+        </para>
+        <para>
+          下面是当使用映射时的典型调用顺序，根据对映射的具体使用而不同。
+          字符-&gt;用于显示时间流。
+        </para>
+        <para>
+          对于从连接到分离设备，这期间位置一直不变的缓冲区：</para>
+        <para>
+          bus_dmamem_alloc -&gt; bus_dmamap_load -&gt; ...use buffer... -&gt;
+          -&gt; bus_dmamap_unload -&gt; bus_dmamem_free
+        </para>
+
+        <para>对于从驱动程序外部传递进去，并且经常变化的缓冲区：
+
+        <!-- XXX is this correct? -->
+        <programlisting>          bus_dmamap_create -&gt;
+          -&gt; bus_dmamap_load -&gt; bus_dmamap_sync(PRE...) -&gt; do transfer -&gt;
+          -&gt; bus_dmamap_sync(POST...) -&gt; bus_dmamap_unload -&gt;
+          ...
+          -&gt; bus_dmamap_load -&gt; bus_dmamap_sync(PRE...) -&gt; do transfer -&gt;
+          -&gt; bus_dmamap_sync(POST...) -&gt; bus_dmamap_unload -&gt;
+          -&gt; bus_dmamap_destroy        </programlisting>
+
+        </para>
+        <para>
+          当加载由<function>bus_dmamem_alloc()</function>创建的映射时，传递
+          进去的缓冲区的地址和大小必须和
+          <function>bus_dmamem_alloc()</function>中使用的一样。这种情况下就
+          可以保证整个缓冲区被作为一个段而映射（因而回调可以基于此假设），
+          并且请求被立即执行（永远不会返回EINPROGRESS）。这种情况下回调函数
+          需要作的只是保存物理地址。
+        </para>
+        <para>
+          典型示例如下：
+        </para>
+
+        <programlisting>          static void
+        alloc_callback(void *arg, bus_dma_segment_t *seg, int nseg, int error)
+        {
+          *(bus_addr_t *)arg = seg[0].ds_addr;
+        }
+
+          ...
+          int error;
+          struct somedata {
+            ....
+          };
+          struct somedata *vsomedata; /* 虚地址 */
+          bus_addr_t psomedata; /* 物理总线相关的地址 */
+          bus_dma_tag_t tag_somedata;
+          bus_dmamap_t map_somedata;
+          ...
+
+          error=bus_dma_tag_create(parent_tag, alignment,
+           boundary, lowaddr, highaddr, /*filter*/ NULL, /*filterarg*/ NULL,
+           /*maxsize*/ sizeof(struct somedata), /*nsegments*/ 1,
+           /*maxsegsz*/ sizeof(struct somedata), /*flags*/ 0,
+           &#38;tag_somedata);
+          if(error)
+          return error;
+
+          error = bus_dmamem_alloc(tag_somedata, &#38;vsomedata, /* flags*/ 0,
+             &#38;map_somedata);
+          if(error)
+             return error;
+
+          bus_dmamap_load(tag_somedata, map_somedata, (void *)vsomedata,
+             sizeof (struct somedata), alloc_callback,
+             (void *) &#38;psomedata, /*flags*/0);        </programlisting>
+
+        <para>
+          代码看起来有点长，也比较复杂，但那是正确的使用方法。实际结果是：
+          如果分配多个内存区域，则总将它们组合成一个结构并作为整体分配
+          （如果对齐和边界限制允许的话）是一个很好的主意。
+        </para>
+        <para>
+          当加载任意缓冲区到由<function>bus_dmamap_create()</function>
+          创建的映射时，由于回调可能被延迟，因此必须采取特殊措施与回调
+          函数进行同步。代码看起来像下面的样子：
+        </para>
+
+        <programlisting>          {
+           int s;
+           int error;
+
+           s = splsoftvm();
+           error = bus_dmamap_load(
+               dmat,
+               dmamap,
+               buffer_ptr,
+               buffer_len,
+               callback,
+               /*callback_arg*/ buffer_descriptor,
+               /*flags*/0);
+           if (error == EINPROGRESS) {
+               /*
+                * 执行必要的操作以确保与回调的同步。
+                * 回调被确保直到我们执行了splx()或tsleep()才会被调用。
+                */
+              }
+           splx(s);
+          }        </programlisting>
+
+        <para>
+          处理请求的两种方法分别是：
+        </para>
+        <para>
+          1. 如果通过显式地标记请求已经结束来完成请求（例如CAM请求），则
+          将所有进一步的处理放入回调驱动程序中会比较简单，回调结束后会
+          标记请求。之后不需要太多额外的同步。由于流控制的原因，冻结请求
+          队列直到请求完成才释放可能是个好主意。
+        </para>
+        <para>
+          2. 如果请求是在函数返回时完成（例如字符设备上传统的读写请求），
+          则需要在缓冲区描述符上设置同步标志，并调用
+          <function>tsleep()</function>。后面当回调函数被调用时，它将
+          执行处理并检查同步标志。如果设置了同步标志，它应该发出一个
+          唤醒操作。在这种方法中，回调函数或者进行所由必需的处理（就像
+          前面的情况），或者简单在缓冲区描述符中存储段数组。回调完成
+          后，回调函数就能使用这个存储的段数组并进行所有的处理。
+        </para>
+     </sect1>
+<!--_________________________________________________________________________-->
+<!--~~~~~~~~~~~~~~~~~~~~END OF SECTION~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
+
+     <sect1 xml:id="isa-driver-dma">
+        <title>DMA</title>
+        <!-- Section Marked up by Wylie -->
+
+        <indexterm><primary>Direct Memory Access (DMA, 直接内存访问)</primary></indexterm>
+
+        <para>
+          ISA总线中Direct Memory Access (DMA)是通过DMA控制器（实际上是它们
+          中的两个，但这只是无关细节）实现的。为了使以前的ISA设备简单便宜，
+          总线控制和地址产生的逻辑都集中在DMA控制器中。幸运的是，FreeBSD
+          提供了一套函数，这些函数大多把DMA控制器的繁琐细节对设备驱动程序
+          隐藏了起来。
+        </para>
+
+        <para>
+          最简单情况是那些比较智能的设备。就象PCI上的总线主设备一样，
+          它们自己能产生总线周期和内存地址。它们真正从DMA控制器需要的
+          唯一事情是总线仲裁。所以为了此目的，它们假装是级联从DMA控制器。
+          当连接驱动程序时，系统DMA控制器需要做的唯一事情就是通过调用
+          如下函数在一个DMA通道上激活级联模式。
+        </para>
+
+        <para>
+          <function>void isa_dmacascade(int channel_number)</function>
+        </para>
+
+        <para>
+          所有进一步的活动通过对设备编程完成。当卸载驱动程序时，不需要
+          调用DMA相关的函数。
+        </para>
+
+        <para>
+          对于较简单的设备，事情反而变得复杂。使用的函数包括：
+        </para>
+
+        <itemizedlist>
+
+          <listitem>
+          <para>
+            <function>int isa_dma_acquire(int chanel_number)</function>
+          </para>
+          <para>
+            保留一个DMA通道。成功则返回0，如果通道已经被保留或被其它
+            驱动程序保留则返回EBUSY。大多数的ISA设备都不能共享DMA通道，
+            因此这个函数通常在连接设备时调用。总线资源的现代接口使得
+            这种保留成为多余，但目前仍必须使用。如果不使用，则后面其它
+            DMA例程将会panic。
+          </para>
+        </listitem>
+
+        <listitem>
+          <para>
+            <function>int isa_dma_release(int chanel_number)</function>
+          </para>
+          <para>
+            释放先前保留的DMA通道。释放通道时必须不能有正在进行中的
+            传输（另外，释放通道后设备必须不能再试图发起传输）。
+          </para>
+        </listitem>
+
+        <listitem>
+          <para>
+            <function>void isa_dmainit(int chan, u_int
+            bouncebufsize)</function>
+          </para>
+          <para>
+            分配由特定通道使用的反弹缓冲区。请求的缓冲区大小不能超过
+            64KB。以后，如果传输缓冲区碰巧不是物理连续的，或超出ISA
+            总线可访问的内存范围，或跨越64KB的边界，则会自动使用反弹
+            缓冲区。如果传输总是使用符合上述条件的缓冲区（例如，由
+            <function>bus_dmamem_alloc()</function>分配的那些），则
+            不需要调用<function>isa_dmainit()</function>。但使用此函数
+            会让通过DMA控制器传输任意数据变得非常方便。
+          </para>
+ <!-- <blockquote> -->
+          <itemizedlist>
+                <listitem>
+                  <para>
+                    <emphasis>chan</emphasis> - 通道号
+                  </para>
+                </listitem>
+                <listitem>
+                  <para>
+                    <emphasis>bouncebufsize</emphasis> - 以字节计数的反弹
+                    缓冲区的大小
+                  </para>
+                </listitem>
+          </itemizedlist>
+<!-- </blockquote> -->
+<!--</para> -->
+        </listitem>
+
+        <listitem>
+          <para>
+            <function>void isa_dmastart(int flags, caddr_t addr, u_int
+            nbytes, int chan)</function>
+          </para>
+          <para>
+            准备启动DMA传输。实际启动设备上的传输之前必需调用此函数
+            来设置DMA控制器。它检查缓冲区是否连续的且在ISA内存范围
+            之内，如果不是则自动使用反弹缓冲区。如果需要反弹缓冲区，
+            但反弹缓冲区没有用<function>isa_dmainit()</function>
+            设置，或对于请求的传输大小来说太小，则系统将panic。
+            写请求且使用反弹缓冲区的情况下，数据将被自动拷贝到反弹
+            缓冲区。
+          </para>
+        </listitem>
+        <listitem>
+          <para>flags - 位掩码，决定将要完成的操作的类型。方向位B_READ和
+            B_WRITE互斥。
+          </para>
+        <!--   <blockquote>  -->
+          <itemizedlist>
+            <listitem>
+              <para>
+                B_READ - 从ISA总线读到内存
+              </para>
+            </listitem>
+            <listitem>
+              <para>
+                B_WRITE - 从内存写到ISA总线上
+              </para>
+            </listitem>
+            <listitem>
+              <para>
+                B_RAW - 如果设置则DMA控制器将会记住缓冲区，并在传输结束后
+                自动重新初始化它自己，再次重复传输同一缓冲区（当然，驱动
+                程序可能发起设备的另一个传输之前改变缓冲区中的数据）。
+                如果没有设置，参数只对一次传输有效，在发起下一次传输之前
+                必须再次调用<function>isa_dmastart()</function>。只有在不
+                使用反弹缓冲区时使用B_RAW才有意义。
+              </para>
+            </listitem>
+          </itemizedlist>
+<!--   </blockquote>  -->
+        </listitem>
+        <listitem>
+          <para>
+            addr - 缓冲区的虚地址
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            nbytes - 缓冲区长度。必须小于等于64KB。不允许长度为0：因为
+            DMA控制器将会理解为64KB，而内核代码把它理解为0，那样就会导致
+            不可预测的效果。对于通道号等于和高于4的情况，长度必需为偶数，
+            因为这些通道每次传输2字节。奇数长度情况下，最后一个字节不被
+            传输。
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            chan - 通道号
+          </para>
+        </listitem>
+
+        <listitem>
+          <para>
+            <function>void isa_dmadone(int flags, caddr_t addr, int
+            nbytes, int chan)</function>
+          </para>
+          <para>
+            设备报告传输完成后，同步内存。如果是使用反弹缓冲区的读操作，
+            则将数据从反弹缓冲区拷贝到原始缓冲区。参量与
+            <function>isa_dmastart()</function>的相同。允许使用B_RAW标志，
+            但它一点也不会影响<function>isa_dmadone()</function>。
+          </para>
+        </listitem>
+
+        <listitem>
+          <para>
+            <function>int isa_dmastatus(int channel_number)</function>
+          </para>
+          <para>
+            返回当前传输中剩余的字节数。在
+            <function>isa_dmastart()</function>中设置了B_READ的情况下，
+            返回的数字一定不会等于零。传输结束时它会被自动复位到缓冲区的
+            长度。正式的用法是在设备发信号指示传输已完成时检查剩余的字节数。
+            如果字节数不为0，则此次传输可能有问题。
+          </para>
+        </listitem>
+
+        <listitem>
+          <para>
+            <function>int isa_dmastop(int channel_number)</function>
+          </para>
+          <para>
+            放弃当前的传输并返回剩余未传输的字节数。
+          </para>
+        </listitem>
+       </itemizedlist>
+     </sect1>
+
+     <sect1 xml:id="isa-driver-probe">
+     <title>xxx_isa_probe</title>
+     <!-- Section marked up by Wylie -->
+
+        <para>
+          这个函数探测设备是否存在。如果驱动程序支持自动侦测设备配置的
+          某些部分（如中断向量或内存地址），则自动侦测必须在此例程中完成。
+        </para>
+
+        <para>
+          对于任意其他总线，如果不能侦测到设备，或者侦测到但自检失败，
+          或者发生某些其他问题，则应当返回一个正值的错误。如果设备不
+          存在则必须返回值 <errorname>ENXIO</errorname>。
+          其他错误值可能表示其他条件。零或负值
+          意味着成功。大多数驱动程序返回零表示成功。
+        </para>
+
+        <para>
+          当PnP设备支持多个接口时使用负返回值。例如，不同驱动程序支持
+          老的兼容接口和较新的高级接口。则两个驱动程序都将侦测设备。
+          在探测例程中返回较高值的驱动程序获得优先（换句话说，返回0的
+          驱动程序具有最高的优先级，返回-1的其次，返回-2的更后，等等）。
+          这样，仅支持老接口的设备将被老驱动程序处理（其应当从探测例程中
+          返回-1），而同时也支持新接口的设备将由新驱动程序处理（其应当从
+          探测例程中返回0）。
+        </para>
+
+        <para>
+          设备描述符结构xxx_softc由系统在调用探测例程之前分配。如果
+          探测例程返回错误，描述符会被系统自动取消分配。因此如果出现
+          探测错误，驱动程序必须保证取消分配探测期间它使用的所有资源，
+          且确保没有什么能够阻止描述符被安全地取消分配。如果探测成功
+          完成，描述符将由系统保存并在以后传递给例程
+          <function>xxx_isa_attach()</function>。如果驱动程序返回负值，
+          就不能保证它将获得最高优先权且其连接例程会被调用。因此这种
+          情况下它也必须在返回前释放所有的资源，并在需要的时候在连接
+          例程中重新分配它们。当<function>xxx_isa_probe()</function>
+          返回0时，在返回前释放资源也是一个好主意，而且中规中矩的驱动
+          程序应当这样做。但在释放资源会存在某些问题的情况下，允许驱动
+          程序在从探测例程返回0和连接例程的执行之间保持资源。
+        </para>
+
+        <para>
+          典型的探测例程以取得设备描述符和单元号开始：
+        </para>
+
+        <programlisting>         struct xxx_softc *sc = device_get_softc(dev);
+          int unit = device_get_unit(dev);
+          int pnperror;
+          int error = 0;
+
+          sc-&gt;dev = dev; /* 链接回来 */
+          sc-&gt;unit = unit;        </programlisting>
+
+        <para>
+          然后检查PnP设备。检查是通过一个包含PnP ID列表的表进行的。此表
+          包含这个驱动程序支持的PnP ID和以人工可读形式给出的对应这些ID的
+          设备型号的描述。
+        </para>
+
+        <programlisting>
+        pnperror=ISA_PNP_PROBE(device_get_parent(dev), dev,
+        xxx_pnp_ids); if(pnperror == ENXIO) return ENXIO;
+        </programlisting>
+
+        <para>
+          ISA_PNP_PROBE的逻辑如下：如果卡（设备单元）没有被作为PnP侦测到，
+          则返回ENOENT。如果被作为PnP侦测到，但侦测到的ID不匹配表中的
+          任一ID，则返回ENXIO。最后，如果设备能支持PnP且匹配表中的一个
+          ID，则返回0，并且由<function>device_set_desc()</function>从
+          表中取得适当的描述进行设置。
+        </para>
+
+        <para>
+          如果设备驱动程序仅支持PnP设备，则情况看起来如下：
+        </para>
+
+        <programlisting>          if(pnperror != 0)
+              return pnperror;        </programlisting>
+
+        <para>
+          对于不支持PnP的驱动程序不需要特殊处理，因为驱动程序会传递空的
+          PnP ID表，且如果在PnP卡上调用会得到ENXIO。
+        </para>
+
+        <para>
+          探测例程通常至少需要某些最少量的资源，如I/O端口号，来发现并探测卡。
+          对于不同的硬件，驱动程序可能会自动发现其他必需的资源。PnP设备的
+          所有资源由PnP子系统预先设置，因此驱动程序不需要自己发现它们。</para>
+
+        <para>
+          通常访问设备所需要的最少信息就是端口号。然后某些设备允许从设备
+          配置寄存器中取得其余信息（尽管不是所有的设备都这样）。因此首先
+          我们尝试取得端口起始值：
+        </para>
+
+        <programlisting> sc-&gt;port0 = bus_get_resource_start(dev,
+        SYS_RES_IOPORT, 0 /*rid*/); if(sc-&gt;port0 == 0) return ENXIO;
+        </programlisting>
+
+        <para>
+          基端口地址被保存在softc结构中，以便将来使用。如果需要经常使用
+          端口，则每次都调用资源函数将会慢的无法忍受。如果我们没有得到
+          端口，则返回错误即可。相反，一些设备驱动程序相当聪明，尝试探测
+          所有可能的端口，如下：
+        </para>
+
+        <programlisting>
+          /* 此设备所有可能的基I/O端口地址表 */
+          static struct xxx_allports {
+              u_short port; /* 端口地址 */
+              short used; /* 旗标：此端口是否已被其他单元使用 */
+          } xxx_allports = {
+              { 0x300, 0 },
+              { 0x320, 0 },
+              { 0x340, 0 },
+              { 0, 0 } /* 表结束 */
+          };
+
+          ...
+          int port, i;
+          ...
+
+          port =  bus_get_resource_start(dev, SYS_RES_IOPORT, 0 /*rid*/);
+          if(port !=0 ) {
+              for(i=0; xxx_allports[i].port!=0; i++) {
+                  if(xxx_allports[i].used || xxx_allports[i].port != port)
+                      continue;
+
+                  /* 找到了 */
+                  xxx_allports[i].used = 1;
+                  /* 在已知端口上探测 */
+                  return xxx_really_probe(dev, port);
+              }
+              return ENXIO; /* 端口无法识别或已经被使用 */
+          }
+
+          /* 仅在需要猜测端口的时候才会到达这儿 */
+          for(i=0; xxx_allports[i].port!=0; i++) {
+              if(xxx_allports[i].used)
+                  continue;
+
+              /* 标记为已被使用 - 即使我们在此端口什么也没有发现
+               * 至少我们以后不会再次探测
+               */
+               xxx_allports[i].used = 1;
+
+              error = xxx_really_probe(dev, xxx_allports[i].port);
+              if(error == 0) /* 在那个端口找到一个设备 */
+                  return 0;
+          }
+          /* 探测过所有可能的地址，但没有可用的 */
+          return ENXIO;</programlisting>
+
+        <para>
+          当然，做这些事情通常应该使用驱动程序的
+          <function>identify()</function>例程。但可能有一个正当的理由来
+          说明为什么在函数<function>probe()</function>中完成更好：如果
+          这种探测会让一些其他敏感设备发疯。探测例程按旗标
+          <literal>sensitive</literal>排序：敏感设备首先被探测，然后是
+          其他设备。但<function>identify()</function>例程在所有探测之前
+          被调用，因此它们不会考虑敏感设备并可能扰乱这些设备。
+        </para>
+
+        <para>
+          现在，我们得到起始端口以后就需要设置端口数（PnP设备除外），因为
+          内核在配置文件中没有这个信息。
+        </para>
+
+        <programlisting>
+         if(pnperror /* 只对非PnP设备 */
+         &#38;&#38; bus_set_resource(dev, SYS_RES_IOPORT, 0, sc-&gt;port0,
+         XXX_PORT_COUNT)&lt;0)
+             return ENXIO;</programlisting>
+
+        <para>
+          最后分配并激活一片端口地址空间（特殊值start和end意思是说
+          <quote>使用我们通过<function>bus_set_resource()</function>
+          设置的那些值</quote>）：
+        </para>
+
+        <programlisting>
+          sc-&gt;port0_rid = 0;
+          sc-&gt;port0_r = bus_alloc_resource(dev, SYS_RES_IOPORT,
+          &#38;sc-&gt;port0_rid,
+              /*start*/ 0, /*end*/ ~0, /*count*/ 0, RF_ACTIVE);
+
+          if(sc-&gt;port0_r == NULL)
+              return ENXIO;</programlisting>
+
+        <para>
+          现在可以访问端口映射的寄存器后，我们就可以以某种方式向设备写入
+          数据并检查设备是否如我们期望的那样作出反应。如果没有，则说明
+          可能其他的设备在这个地址上，或者这个地址上根本没有设备。
+        </para>
+
+        <para>
+          通常驱动程序直到连接例程才会设置中断处理函数。这之前我们替代以
+          轮询模式进行探测，超时则以<function>DELAY()</function>实现。
+          探测例程必须确保不能永久挂起，设备上的所有等待必须在超时内完成。
+          如果设备不在这段时间内响应，则可能设备出故障或配置错误，驱动程序
+          必须返回错误，当确定超时间隔时，给设备一些额外时间以确保可靠：
+          尽管假定<function>DELAY()</function>在任何机器上都延时相同数量的
+          时间，但随具体CPU的不同，此函数还是有一定的误差幅度。
+        </para>
+
+        <para>
+          如果探测例程真的想检查中断是否真的工作，它可以也配置和探测中断。
+          但不建议这样。
+        </para>
+
+        <programlisting>
+          /* 以严重依赖于具体设备的方式实现 */
+          if(error = xxx_probe_ports(sc))
+              goto bad; /* 返回前释放资源 */
+        </programlisting>
+
+        <para>
+          依赖于所发现设备的确切型号，函数
+          <function>xxx_probe_ports()</function>也可能设置设备描述。但
+          如果只支持一种设备型号，则也可以硬编码的形式完成。当然，对于
+          PnP设备，PnP支持从表中自动设置描述。
+        </para>
+
+
+        <programlisting>          if(pnperror)
+              device_set_desc(dev, "Our device model 1234");
+        </programlisting>
+
+        <para>
+          探测例程应当或者通过读取设备配置寄存器来发现所有资源的范围，
+          或者确保由用户显式设置。我们将假定一个带板上内存的例子。
+          探测例程应当尽可能是非插入式的，这样分配和检查其余资源功能性
+          的工作就可以更好地留给连接例程来做。
+        </para>
+
+        <para>
+          内存地址可以在内核配置文件中指定，或者对应某些设备可以在非易失性
+          配置寄存器中预先配置。如果两种做法均可用却不同，那么应当用
+          哪个呢？可能用户厌烦在内核配置文件中明确设置地址，但他们知道
+          自己在干什么，则应当优先使用这个。一个实现的例子可能是这样的：
+        </para>
+        <programlisting>
+          /* 首先试图找出配置地址 */
+          sc-&gt;mem0_p = bus_get_resource_start(dev, SYS_RES_MEMORY, 0 /*rid*/);
+          if(sc-&gt;mem0_p == 0) { /* 没有，用户没指定 */
+              sc-&gt;mem0_p = xxx_read_mem0_from_device_config(sc);
+
+
+          if(sc-&gt;mem0_p == 0)
+                  /* 从设备配置寄存器也到不了这儿 */
+                  goto bad;
+          } else {
+              if(xxx_set_mem0_address_on_device(sc) &lt; 0)
+                  goto bad; /* 设备不支持那地址 */
+          }
+
+          /* 就像端口，设置内存大小，
+           * 对于某些设备，内存大小不是常数，
+           * 而应当从设备配置寄存器中读取，以适应设备的不同型号
+           * 另一个选择是让用户把内存大小设置为“msize”配置资源，
+           * 由ISA总线自动处理
+           */
+           if(pnperror) { /*仅对非PnP设备 */
+              sc-&gt;mem0_size = bus_get_resource_count(dev, SYS_RES_MEMORY, 0 /*rid*/);
+              if(sc-&gt;mem0_size == 0) /* 用户没有指定 */
+                  sc-&gt;mem0_size = xxx_read_mem0_size_from_device_config(sc);
+
+              if(sc-&gt;mem0_size == 0) {
+                  /* 假定这是设备非常老的一种型号，没有自动配置特性，
+                   * 用户也没有偏好设置，因此假定最低要求的情况
+                   * （当然，真实值将根据设备驱动程序而不同）
+                   */
+                  sc-&gt;mem0_size = 8*1024;
+              }
+
+              if(xxx_set_mem0_size_on_device(sc) &lt; 0)
+                  goto bad; /*设备不支持那个大小 */
+
+              if(bus_set_resource(dev, SYS_RES_MEMORY, /*rid*/0,
+                      sc-&gt;mem0_p, sc-&gt;mem0_size)&lt;0)
+                  goto bad;
+          } else {
+              sc-&gt;mem0_size = bus_get_resource_count(dev, SYS_RES_MEMORY, 0 /*rid*/);
+          }        </programlisting>
+
+        <para>
+          类似, 很容易检查IRQ和DRQ所用的资源。
+        </para>
+
+        <para>
+         如果一切进行正常，然后就可以释放所有资源并返回成功。
+        </para>
+
+        <programlisting>          xxx_free_resources(sc);
+          return 0;</programlisting>
+
+        <para>
+          最后，处理棘手情况。所有资源应当在返回前被释放。我们利用这样一个
+          事实：softc结构在传递给我们以前被零化，因此我们能够找出是否分配了
+          某些资源：如果分配则这些资源的描述符非零。
+        </para>
+
+        <programlisting>          bad:
+
+          xxx_free_resources(sc);
+          if(error)
+                return error;
+          else /* 确切错误未知 */
+              return ENXIO;</programlisting>
+
+        <para>
+          这是完整的探测例程。资源的释放从多个地方完成，因此将它挪到一个
+          函数中，看起来可能像下面的样子：
+        </para>
+
+<programlisting>static void
+           xxx_free_resources(sc)
+              struct xxx_softc *sc;
+          {
+              /* 检查每个资源，如果非0则释放 */
+
+              /* 中断处理函数 */
+              if(sc-&gt;intr_r) {
+                  bus_teardown_intr(sc-&gt;dev, sc-&gt;intr_r, sc-&gt;intr_cookie);
+                  bus_release_resource(sc-&gt;dev, SYS_RES_IRQ, sc-&gt;intr_rid,
+                      sc-&gt;intr_r);
+                  sc-&gt;intr_r = 0;
+              }
+
+              /* 我们分配过的所有种类的内存 */
+              if(sc-&gt;data_p) {
+                  bus_dmamap_unload(sc-&gt;data_tag, sc-&gt;data_map);
+                  sc-&gt;data_p = 0;
+              }
+               if(sc-&gt;data) { /* sc-&gt;data_map等于0有可能合法 */
+                  /* the map will also be freed */
+                  bus_dmamem_free(sc-&gt;data_tag, sc-&gt;data, sc-&gt;data_map);
+                  sc-&gt;data = 0;
+              }
+              if(sc-&gt;data_tag) {
+                  bus_dma_tag_destroy(sc-&gt;data_tag);
+                  sc-&gt;data_tag = 0;
+              }
+
+              ... 如果有，释放其他的映射和标签 ...
+
+              if(sc-&gt;parent_tag) {
+                  bus_dma_tag_destroy(sc-&gt;parent_tag);
+                  sc-&gt;parent_tag = 0;
+              }
+
+              /* 释放所有总线资源 */
+              if(sc-&gt;mem0_r) {
+                  bus_release_resource(sc-&gt;dev, SYS_RES_MEMORY, sc-&gt;mem0_rid,
+                      sc-&gt;mem0_r);
+                  sc-&gt;mem0_r = 0;
+              }
+              ...
+              if(sc-&gt;port0_r) {
+                  bus_release_resource(sc-&gt;dev, SYS_RES_IOPORT, sc-&gt;port0_rid,
+                      sc-&gt;port0_r);
+                  sc-&gt;port0_r = 0;
+              }
+          }</programlisting>
+
+     </sect1>
+
+     <sect1 xml:id="isa-driver-attach">
+     <title>xxx_isa_attach</title>
+     <!-- Section Marked up by Wylie -->
+
+        <para>如果探测例程返回成功并且系统选择连接那个驱动程序，则连接例程
+          负责将驱动程序实际连接到系统。如果探测例程返回0 ，则连接例程期望
+          接收完整的设备结构softc，此结构由探测例程设置。同时，如果探测例程
+          返回0，它可能期望这个设备的连接例程应当在将来的某点被调用。如果
+          探测例程返回负值，则驱动程序可能不会作此假设。
+        </para>
+
+        <para>如果成功完成，连接例程返回0，否则返回错误码。
+        </para>
+
+        <para>连接例程的启动跟探测例程相似，将一些常用数据取到一些更容易
+          访问的变量中。
+        </para>
+
+        <programlisting>          struct xxx_softc *sc = device_get_softc(dev);
+          int unit = device_get_unit(dev);
+          int error = 0;</programlisting>
+
+        <para>然后分配并激活所需资源。由于端口范围通常在从探测返回前就
+          被释放，因此需要重新分配。我们希望探测例程已经适当地设置了
+          所有的资源范围，并将它们保存在结构softc中。如果探测例程留下了
+          一些被分配的资源，就不需要再次分配（重新分配被视为错误）。
+        </para>
+
+        <programlisting>          sc-&gt;port0_rid = 0;
+          sc-&gt;port0_r = bus_alloc_resource(dev, SYS_RES_IOPORT,  &#38;sc-&gt;port0_rid,
+              /*start*/ 0, /*end*/ ~0, /*count*/ 0, RF_ACTIVE);
+
+          if(sc-&gt;port0_r == NULL)
+               return ENXIO;
+
+          /* 板上内存 */
+          sc-&gt;mem0_rid = 0;
+          sc-&gt;mem0_r = bus_alloc_resource(dev, SYS_RES_MEMORY,  &#38;sc-&gt;mem0_rid,
+              /*start*/ 0, /*end*/ ~0, /*count*/ 0, RF_ACTIVE);
+
+          if(sc-&gt;mem0_r == NULL)
+                goto bad;
+
+          /* 取得虚地址 */
+          sc-&gt;mem0_v = rman_get_virtual(sc-&gt;mem0_r);</programlisting>
+
+        <para>DMA请求通道(DRQ)以相似方式被分配。使用
+          <function>isa_dma*()</function>函数族进行初始化。例如：
+        </para>
+
+        <para><function>isa_dmacascade(sc-&gt;drq0);</function></para>
+
+        <para>中断请求线(IRQ)有点特殊。除了分配以外，驱动程序的中断处理
+          函数也应当与它关联。在古老的ISA驱动程序中，由系统传递给中断处理
+          函数的参量是设备单元号。但在现代驱动程序中，按照约定，建议传递
+          指向结构softc的指针。一个很重要的原因在于当结构softc被动态分配后，
+          从softc取得单元号很容易，而从单元号取得softc很困难。同时，这个
+          约定也使得用于不同总线的应用程序看起来统一，并允许它们共享代码：
+          每个总线有其自己的探测，连接，分离和其他总线相关的例程，而它们
+          之间可以共享大块的驱动程序代码。
+        </para>
+
+        <programlisting>
+          sc-&gt;intr_rid = 0;
+          sc-&gt;intr_r = bus_alloc_resource(dev, SYS_RES_MEMORY,  &#38;sc-&gt;intr_rid,
+                /*start*/ 0, /*end*/ ~0, /*count*/ 0, RF_ACTIVE);
+
+          if(sc-&gt;intr_r == NULL)
+              goto bad;
+
+          /*
+           * 假定对XXX_INTR_TYPE的定义依赖于驱动程序的类型，
+           * 例如INTR_TYPE_CAM用于CAM的驱动程序
+           */
+          error = bus_setup_intr(dev, sc-&gt;intr_r, XXX_INTR_TYPE,
+              (driver_intr_t *) xxx_intr, (void *) sc, &#38;sc-&gt;intr_cookie);
+          if(error)
+              goto bad;
+
+        </programlisting>
+
+
+        <para>如果驱动程序需要与内存进行DMA，则这块内存应当按前述方式分配：
+        </para>
+
+        <programlisting>          error=bus_dma_tag_create(NULL, /*alignment*/ 4,
+              /*boundary*/ 0, /*lowaddr*/ BUS_SPACE_MAXADDR_24BIT,
+              /*highaddr*/ BUS_SPACE_MAXADDR, /*filter*/ NULL, /*filterarg*/ NULL,
+              /*maxsize*/ BUS_SPACE_MAXSIZE_24BIT,
+              /*nsegments*/ BUS_SPACE_UNRESTRICTED,
+              /*maxsegsz*/ BUS_SPACE_MAXSIZE_24BIT, /*flags*/ 0,
+              &#38;sc-&gt;parent_tag);
+          if(error)
+              goto bad;
+
+          /* 很多东西是从父标签继承而来
+           * 假设sc-&gt;data指向存储共享数据的结构，例如一个环缓冲区可能是：
+           * struct {
+           *   u_short rd_pos;
+           *   u_short wr_pos;
+           *   char    bf[XXX_RING_BUFFER_SIZE]
+           * } *data;
+           */
+          error=bus_dma_tag_create(sc-&gt;parent_tag, 1,
+              0, BUS_SPACE_MAXADDR, 0, /*filter*/ NULL, /*filterarg*/ NULL,
+              /*maxsize*/ sizeof(* sc-&gt;data), /*nsegments*/ 1,
+              /*maxsegsz*/ sizeof(* sc-&gt;data), /*flags*/ 0,
+              &#38;sc-&gt;data_tag);
+          if(error)
+              goto bad;
+
+          error = bus_dmamem_alloc(sc-&gt;data_tag, &#38;sc-&gt;data, /* flags*/ 0,
+              &#38;sc-&gt;data_map);
+          if(error)
+               goto bad;
+
+          /* 在&#38;sc-&gt;data_p的情况下，xxx_alloc_callback()只是将物理地址
+           * 保存到作为其参量传递进去的指针中。
+           * 参看关于总线内存映射一节中的详细内容。
+           * 其实现可以像这样：
+           *
+           * static void
+           * xxx_alloc_callback(void *arg, bus_dma_segment_t *seg,
+           *     int nseg, int error)
+           * {
+           *    *(bus_addr_t *)arg = seg[0].ds_addr;
+           * }
+           */
+          bus_dmamap_load(sc-&gt;data_tag, sc-&gt;data_map, (void *)sc-&gt;data,
+              sizeof (* sc-&gt;data), xxx_alloc_callback, (void *) &#38;sc-&gt;data_p,
+              /*flags*/0);</programlisting>
+
+
+        <para>分配了所有的资源后，设备应当被初始化。初始化可能包括测试
+          所有特性，确保它们起作用。</para>
+
+        <programlisting>          if(xxx_initialize(sc) &lt; 0)
+               goto bad;        </programlisting>
+
+
+        <para>总线子系统将自动在控制台上打印由探测例程设置的设备描述。但
+          如果驱动程序想打印一些关于设备的额外信息，也是可能的，例如：</para>
+
+        <programlisting>
+        device_printf(dev, "has on-card FIFO buffer of %d bytes\n", sc-&gt;fifosize);
+        </programlisting>
+
+        <para>如果初始化例程遇到任何问题，建议返回错误之前打印有关信息。</para>
+
+        <para>连接例程的最后一步是将设备连接到内核中的功能子系统。完成
+          这个步骤的精确方式依赖于驱动程序的类型：字符设备、块设备、网络
+          设备、CAM SCSI总线设备等等。</para>
+
+        <para>如果所有均工作正常则返回成功。</para>
+
+        <programlisting>          error = xxx_attach_subsystem(sc);
+          if(error)
+              goto bad;
+
+          return 0;        </programlisting>
+
+        <para>最后，处理棘手情况。返回错误前，所有资源应当被取消分配。
+          我们利用这样一个事实：结构softc传递给我们之前被零化，因此我们
+          能找出是否分配了某些资源：如果分配则它们的描述符非零。</para>
+
+        <programlisting>          bad:
+
+          xxx_free_resources(sc);
+          if(error)
+              return error;
+          else /* exact error is unknown */
+              return ENXIO;</programlisting>
+
+        <para>这就是连接例程的全部。</para>
+
+     </sect1>
+
+
+     <sect1 xml:id="isa-driver-detach">
+       <title>xxx_isa_detach</title>
+
+        <para>
+          如果驱动程序中存在这个函数，且驱动程序被编译为可加载模块，则
+          驱动程序具有被卸载的能力。如果硬件支持热插拔，这是一个很重要的
+          特性。但ISA总线不支持热插拔，因此这个特性对于ISA设备不是特别
+          重要。卸载驱动程序的能力可能在调试时有用，但很多情况下只有在
+          老版本的驱动程序莫名其妙地卡住系统的情况下才需要安装新版本的
+          驱动程序，并且无论如何都需要重启，这样使得花费精力写分离例程
+          有些不值得。另一个宣称卸载允许在用于生产的机器上升级驱动程序的
+          论点看起来似乎更多的只是理论而已。升级驱动程序是一项危险的操作，
+          决不不应当在用于生产的机器上实行（并且当系统运行于安全模式时这
+          也是不被允许的）。然而，出于完整性考虑，还是会提供分离例程。
+        </para>
+
+        <para>
+          如果驱动程序成功分离，分离例程返回0，否则返回错误码。
+        </para>
+
+        <para>
+          分离逻辑是连接的镜像。要做的第一件事情就是将驱动程序从内核
+          子系统分离。如果设备当前正打开着，驱动程序有两个选择：拒绝分离
+          或者强制关闭并继续进行分离。选用哪种方式取决于特定内核子系统
+          执行强制关闭的能力和驱动程序作者的偏好。通常强制关闭似乎是
+          更好的选择。
+        <programlisting>          struct xxx_softc *sc = device_get_softc(dev);
+          int error;
+
+          error = xxx_detach_subsystem(sc);
+          if(error)
+              return error;</programlisting>
+        </para>
+        <para>
+          下一步，驱动程序可能希望复位硬件到某种一致的状态。包括停止任何
+          将要进行的传输，禁用DMA通道和中断以避免设备破坏内存。对于大多数
+          驱动程序而言，这正是关闭例程所做的，因此如果驱动程序中包括关闭
+          例程，我们只要调用它就可以了。
+        </para>
+        <para><function>xxx_isa_shutdown(dev);</function></para>
+
+        <para>
+          最后释放所有资源并返回成功。
+        <programlisting>          xxx_free_resources(sc);
+          return 0;</programlisting>
+
+        </para>
+     </sect1>
+
+     <sect1 xml:id="isa-driver-shutdown">
+       <title>xxx_isa_shutdown</title>
+
+        <para>
+          当系统要关闭的时候调用此例程。通过它使硬件进入某种一致的状态。
+          对于大多数ISA设备而言不需要特殊动作，因此这个函数并非真正必需，
+          因为不管怎样重启动时设备会被重新初始化。但有些设备必须按特定
+          步骤关闭，以确保在软重启后能被正确地检测到（对于很多使用私有
+          识别协议的设备特别有用）。很多情况下，在设备寄存器中禁用DMA和
+          中断，并停止将要进行的传输是个好主意。确切动作取决于硬件，因此
+          我们无法在此详细讨论。
+        </para>
+     </sect1>
+
+     <sect1 xml:id="isa-driver-intr">
+          <title>xxx_intr</title>
+
+        <indexterm><primary>interrupt handler(中断处理程序)</primary></indexterm>
+
+        <para>
+          当收到来自特定设备的中断时就会调用中断处理函数。ISA总线不支持
+          中断共享（某些特殊情况例外），因此实际上如果中断处理函数被调用，
+          几乎可以确信中断是来自其设备。然而，中断处理函数必须轮询设备
+          寄存器并确保中断是由它的设备产生的。如果不是，中断处理函数应当
+          返回。
+        </para>
+
+        <para>
+          ISA驱动程序的旧约定是取设备单元号作为参量。现在已经废弃，当
+          调用<function>bus_setup_intr()</function>时新驱动程序接收任何
+          在连接例程中为他们指定的参量。根据新约定，它应当是指向结构
+          softc的指针。因此中断处理函数通常像下面那样开始：
+        </para>
+
+        <programlisting>
+          static void
+          xxx_intr(struct xxx_softc *sc)
+          {
+
+        </programlisting>
+
+        <para>
+          它运行在由<function>bus_setup_intr()</function>的中断类型参数指定
+          的中断优先级上。这意味着禁用所有其他同类型的中断和所有软件中断。
+        </para>
+
+        <para>
+          为了避免竞争，中断处理例程通写成循环形式：
+        </para>
+
+        <programlisting>
+          while(xxx_interrupt_pending(sc)) {
+              xxx_process_interrupt(sc);
+              xxx_acknowledge_interrupt(sc);
+          }        </programlisting>
+
+        <para>
+          中断处理函数必须只向设备应答中断，但不能向中断控制器应答，后者由
+          系统负责处理。
+        </para>
+
+     </sect1>
+</chapter>
