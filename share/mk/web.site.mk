@@ -130,12 +130,14 @@ ORPHANS:=	${ORPHANS:N*.xml}
 .if defined(PREHTML)
 	${PREHTML} ${PREHTMLOPTS} ${.IMPSRC} > ${.IMPSRC}-tmp
 	${XMLLINT} ${XMLLINTOPTS} ${.IMPSRC}-tmp
-	${XSLTPROC} ${XSLTPROCOPTS} --debug -o ${.TARGET} ${DOC_PREFIX}/share/xml/xhtml.xsl ${.IMPSRC}-tmp || \
-			(${RM} -f ${.IMPSRC}-tmp ${.TARGET} && false)
+	${XSLTPROC} ${XSLTPROCOPTS} --debug -o ${.TARGET} \
+	    http://www.FreeBSD.org/XML/share/xml/xhtml.xsl ${.IMPSRC}-tmp || \
+	    (${RM} -f ${.IMPSRC}-tmp ${.TARGET} && false)
 	${RM} -f ${.IMPSRC}-tmp
 .else
 	${XMLLINT} ${XMLLINTOPTS} ${.IMPSRC}
-	${XSLTPROC} ${XSLTPROCOPTS} --debug -o ${.TARGET} ${DOC_PREFIX}/share/xml/xhtml.xsl ${.IMPSRC}
+	${XSLTPROC} ${XSLTPROCOPTS} --debug -o ${.TARGET} \
+	    http://www.FreeBSD.org/XML/share/xml/xhtml.xsl ${.IMPSRC}
 .endif
 
 ##################################################################
