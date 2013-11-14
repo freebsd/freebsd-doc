@@ -1,0 +1,623 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+     The FreeBSD Documentation Project
+     The FreeBSD Simplified Chinese Project
+
+    Original Revision: 1.10
+    $FreeBSD$
+-->
+<chapter xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink" version="5.0" xml:id="oss">
+  <info><title>声音子系统</title>
+    <authorgroup>
+      <author><personname><firstname>Jean-Francois</firstname><surname>Dockes</surname></personname><contrib>&cnproj.contributed.by;</contrib></author>
+    </authorgroup>
+    <authorgroup>
+      <author><personname/><contrib>&cnproj.translated.by;</contrib></author>
+    </authorgroup>
+    
+  </info>
+
+  
+
+  <sect1 xml:id="oss-intro">
+    <title>简介</title>
+
+    <indexterm><primary>sound subsystem(声音子系统)</primary></indexterm>
+
+    <para>FreeBSD声音子系统清晰地将通用声音处理问题与设备特定的问题分离
+      开来。这使得更容易加入对新设备的支持。</para>
+
+    <para> &man.pcm.4;框架是声音子系统的中心部分。它主要实现下面的组件：
+      </para>
+
+    <indexterm><primary>system call interface(系统调用接口)</primary></indexterm>
+
+    <itemizedlist>
+      <listitem>
+        <para>一个到数字化声音和混音器函数的系统调用接口（read, write,
+          ioctls）。ioctl命令集合兼容老的<emphasis>OSS</emphasis>
+	  或<emphasis>Voxware</emphasis>接口，允许一般多媒体应用程序
+	  不加修改地移植。</para>
+      </listitem>
+      <listitem>
+        <para>处理声音数据的公共代码（格式转换，虚拟通道）。</para>
+      </listitem>
+      <listitem>
+        <para>一个统一的软件接口，与硬件特定的音频接口模块接口
+          </para>
+      </listitem>
+      <listitem>
+        <para>对某些通用硬件接口（ac97）或共享的硬件特定代码
+	  （例如：ISA DMA例程）的额外支持。</para>
+      </listitem>
+    </itemizedlist>
+
+    <para>对特定声卡的支持是通过硬件特定的驱动程序来实现的，这些驱动程序
+      提供通道和混音器接口，插入到通用<filename>pcm</filename>代码中。
+      </para>
+
+    <para>本章中，术语<filename>pcm</filename>将指声音驱动程序的
+      中心，通用部分，这是对比硬件特定的模块而言的。</para>
+
+    <para>预期的驱动程序编写者当然希望从现有模块开始，并使用那些代码作为
+      最终参考。但是，由于声音代码十分简洁漂亮，这也基本上免除了注释。
+      本文档试图给出框架接口的一个概览，并回答改写现有代码时可能出现的
+      一些问题。</para>
+
+    <para>作为另外的途径，或者说除了从一个可工作的范例开始的办法之外，
+       你可以从<link xlink:href="http://people.FreeBSD.org/~cg/template.c">
+       http://people.FreeBSD.org/~cg/template.c</link>找到一个注释过的
+       驱动程序模板。</para>
+
+  </sect1>
+
+  <sect1 xml:id="oss-files">
+    <title>文件</title>
+
+    <para>除<filename>/usr/src/sys/sys/soundcard.h</filename>中的公共
+      ioctl接口定义外，所有的相关代码当前(FreeBSD 4.4)位于
+      <filename>/usr/src/sys/dev/sound/</filename>。</para>
+
+    <para>在<filename>/usr/src/sys/dev/sound/</filename>下面，
+      <filename>pcm/</filename>目录中保存着中心代码，
+      而<filename>isa/</filename>和<filename>pci/</filename>目录中有
+      ISA和PCI板的驱动程序。</para>
+
+  </sect1>
+
+  <sect1 xml:id="pcm-probe-and-attach">
+    <title>探测，连接等</title>
+
+    <para>声音驱动程序使用与任何硬件驱动程序模块相同的方法探测和连接（设备）。
+      你可能希望浏览一下手册中<link linkend="isa-driver">ISA</link>或<link linkend="pci">PCI</link>章节的内容来获取更多信息。</para>
+
+    <para>然而，声音驱动程序在某些方面又有些不同：</para>
+
+    <itemizedlist>
+
+      <listitem>
+        <para>他们将自己声明为<filename>pcm</filename>类设备，带有一个
+          设备私有结构<varname remap="structname">struct snddev_info</varname>：</para>
+
+          <programlisting>          static driver_t xxx_driver = {
+              "pcm",
+              xxx_methods,
+              sizeof(struct snddev_info)
+          };
+
+          DRIVER_MODULE(snd_xxxpci, pci, xxx_driver, pcm_devclass, 0, 0);
+          MODULE_DEPEND(snd_xxxpci, snd_pcm, PCM_MINVER, PCM_PREFVER,PCM_MAXVER);</programlisting>
+
+       <indexterm><primary>device driver(设备驱动程序)</primary><secondary>sound(声音)</secondary></indexterm>
+        <para>大多数声音驱动程序需要存储关于其设备的附加私有信息。私有数据
+          结构通常在连接例程中分配。其地址通过调用
+          <function>pcm_register()</function>和
+          <function>mixer_init()</function>传递给
+          <filename>pcm</filename>。后面<filename>pcm</filename>
+          将此地址作为调用声音驱动程序接口时的参数传递回来。</para>
+      </listitem>
+
+      <listitem>
+        <para>声音驱动程序的连接例程应当通过调用<function>mixer_init()
+          </function>向<filename>pcm</filename>声明它的MIXER或AC97
+          接口。对于MIXER接口，这会接着引起调用
+          <link linkend="xxxmixer-init">
+          <function>xxxmixer_init()</function></link>。</para>
+      </listitem>
+
+      <listitem>
+        <para>声音驱动程序的连接例程通过调用
+          <function>pcm_register(dev, sc, nplay, nrec)</function>
+          向<filename>pcm</filename>声明其通用CHANNEL配置，其中
+          <varname>sc</varname>是设备数据结构的地址，
+          在<filename>pcm</filename>以后的调用中将会用到它，
+          <varname>nplay</varname>和<varname>nrec</varname>是播放和录音
+          通道的数目。</para>
+      </listitem>
+
+      <listitem>
+        <para>声音驱动程序的连接例程通过调用
+          <function>pcm_addchan()</function>声明它的每个通道对象。这会在
+          <filename>pcm</filename>中建立起通道合成，并接着会引起调用
+            <link linkend="xxxchannel-init">
+            <function>xxxchannel_init()</function></link>
+            （译注：请参考原文）。</para>
+      </listitem>
+
+      <listitem>
+        <para>声音驱动程序的分离例程在释放其资源之前应当调用
+        <function>pcm_unregister()</function>。</para>
+      </listitem>
+    </itemizedlist>
+
+    <para>有两种可能的方法来处理非PnP设备：</para>
+    <itemizedlist>
+      <listitem>
+        <para>使用<function>device_identify()</function>方法
+          （范例：<filename>sound/isa/es1888.c</filename>）。
+          <function>device_identify()</function>方法在已知地址探测硬件，
+          如果发现支持的设备就会创建一个新的pcm设备，这个pcm设备接着
+          会被传递到probe/attach。</para>
+      </listitem>
+      <listitem>
+        <para>使用定制内核配置的方法，为pcm设备设置适当的hints（范例：
+          <filename>sound/isa/mss.c</filename>）。</para>
+      </listitem>
+    </itemizedlist>
+
+    <para><filename>pcm</filename>驱动程序应当实现
+    <function>device_suspend</function>，
+    <function>device_resume</function>和
+    <function>device_shutdown</function>例程，这样电源管理和模块卸载就能
+    正确地发挥作用。</para>
+
+  </sect1>
+
+  <sect1 xml:id="oss-interfaces">
+    <title>接口</title>
+
+    <para><filename>pcm</filename>核心与声音驱动程序之间的接口以术语
+      <link linkend="kernel-objects">内核对象</link>的叫法来定义。</para>
+
+    <para>声音驱动程序通常提供两种主要的接口：
+      <emphasis>CHANNEL</emphasis>以及
+      <emphasis>MIXER</emphasis>或<emphasis>AC97</emphasis>。</para>
+
+    <para><emphasis>AC97</emphasis>是一个很小的硬件访问（寄存器读/写）
+      接口，由驱动程序为带AC97编码解码器的硬件来实现。这种情况下，实际的
+      MIXER接口由<filename>pcm</filename>中共享的AC97代码提供。
+      </para>
+
+    <sect2>
+      <title>CHANNEL接口</title>
+
+      <sect3>
+        <title>函数参数的通常注意事项</title>
+
+        <para>声音驱动程序通常用一个私有数据结构来描述他们的设备，驱动
+	  程序所支持的播放和录音数据通道各有一个。</para>
+
+        <para>对于所有的CHANNEL接口函数，第一个参数是一个不透明的指针。
+	  </para>
+
+        <para>第二个参数是指向私有的通道数据结构的指针，
+          <function>channel_init()</function>是个例外，它的指针指向私有
+	  设备结构（并返回由<filename>pcm</filename>以后使用的通道指针）。
+	  </para>
+
+      </sect3>
+
+      <sect3>
+        <title>数据传输操作概览</title>
+
+        <para>对于声音数据传输，<filename>pcm</filename>核心与声音驱动
+	  程序是通过一个由<varname remap="structname">struct snd_dbuf</varname>描述的
+	  共享内存区域进行通信的。</para>
+
+        <para><varname remap="structname">struct snd_dbuf</varname>是
+          <filename>pcm</filename>私有的，声音驱动程序通过调用访问者
+	  函数（<function>sndbuf_getxxx()</function>）来获得感兴趣的值。
+	  </para>
+
+        <para>共享内存区域的大小等于
+          <function>sndbuf_getsize()</function>，并被分割为大小固定，且等于
+          <function>sndbuf_getblksz()</function>字节的很多块。</para>
+
+        <para>当播放时，常规的传输机制如下（将意思反过来就是录音）：
+          </para>
+
+        <itemizedlist>
+          <listitem>
+            <para><filename>pcm</filename>开始时填充缓冲区，然后以
+	      参数PCMTRIG_START调用声音驱动程序的<link linkend="channel-trigger">
+              <function>xxxchannel_trigger()</function></link>
+              。</para>
+          </listitem>
+
+          <listitem>
+            <para>声音驱动程序接着安排以
+	      <function>sndbuf_getblksz()</function>字节大小为块，重复将
+	      整个内存区域（<function>sndbuf_getbuf()</function>，
+              <function>sndbuf_getsize()</function>）传输到设备。对于每个
+	      传输块回调<filename>pcm</filename>函数
+	      <function>chn_intr()</function>（这通常在中断时间发生）。
+              </para>
+          </listitem>
+
+          <listitem>
+            <para><function>chn_intr()</function>安排将新数据拷贝到那些
+	      数据已传输到设备（现在空闲）的区域，并对
+              <varname remap="structname">snd_dbuf</varname>结构进行适当的更新。</para>
+          </listitem>
+
+        </itemizedlist>
+
+      </sect3>
+
+      <sect3 xml:id="xxxchannel-init">
+        <title>channel_init</title>
+
+        <para>调用<function>xxxchannel_init()</function>来初始化每个播放
+	  和录音通道。这个调用从声音驱动程序的连接例程中发起。（参看
+          <link linkend="pcm-probe-and-attach">探测和连接</link>一节）。</para>
+
+          <programlisting>          static void *
+          xxxchannel_init(kobj_t obj, void *data,
+             struct snd_dbuf *b, struct pcm_channel *c, int dir)<co xml:id="co-chinit-params"/>
+          {
+              struct xxx_info *sc = data;
+              struct xxx_chinfo *ch;
+               ...
+              return ch;<co xml:id="co-chinit-return"/>
+           }</programlisting>
+
+        <calloutlist>
+
+          <callout arearefs="co-chinit-params">
+            <para><varname>b</varname>为通道
+	      <varname remap="structname">struct snd_dbuf</varname>的地址。它应当在
+	      函数中通过调用<function>sndbuf_alloc()</function>来初始化。
+	      所用的缓冲区大小通常是设备'典型'传输大小的一个较小的倍数。
+              </para>
+
+            <para><varname>c</varname>为
+              <filename>pcm</filename>通道控制结构的指针。这是个不透明
+	      指针。函数应当将它保存到局部通道结构中，在后面调用
+              <filename>pcm</filename>函数（例如：
+              <function>chn_intr(c)</function>）时会使用它。</para>
+
+            <para><varname>dir</varname>指示通道方向
+              （<literal>PCMDIR_PLAY</literal>或
+	      <literal>PCMDIR_REC</literal>）。</para>
+          </callout>
+
+          <callout arearefs="co-chinit-return">
+            <para>函数应当返回一个指针，此指针指向用于控制此通道的私有
+	      区域。它将作为参数被传递到对其他通道接口的调用。
+              </para>
+          </callout>
+
+        </calloutlist>
+
+      </sect3>
+
+      <sect3>
+        <title>channel_setformat</title>
+
+        <para><function>xxxchannel_setformat()</function>应当按特定通道，
+	  特定声音格式设置硬件。</para>
+
+          <programlisting>          static int
+          xxxchannel_setformat(kobj_t obj, void *data, u_int32_t format)<co xml:id="co-chsetformat-params"/>
+          {
+              struct xxx_chinfo *ch = data;
+               ...
+              return 0;
+           }</programlisting>
+
+        <calloutlist>
+          <callout arearefs="co-chsetformat-params">
+            <para><varname>format</varname>为
+              <literal>AFMT_XXX value</literal>值之一
+              （<filename>soundcard.h</filename>）。</para>
+          </callout>
+
+        </calloutlist>
+      </sect3>
+
+      <sect3>
+        <title>channel_setspeed</title>
+
+        <para><function>xxxchannel_setspeed()</function>按指定的取样速度
+	  设置通道硬件，并返回返回可能调整过的速度。</para>
+
+        <programlisting>          static int
+          xxxchannel_setspeed(kobj_t obj, void *data, u_int32_t speed)
+          {
+              struct xxx_chinfo *ch = data;
+               ...
+              return speed;
+           }</programlisting>
+
+      </sect3>
+
+      <sect3>
+        <title>channel_setblocksize</title>
+
+        <para><function>xxxchannel_setblocksize()</function>设置块大小，
+	  这是<filename>pcm</filename>与声音驱动程序，以及声音驱动
+	  程序与设备之间的传输单位的大小。传输期间，每次传输这样大小的
+	  数据后，声音驱动程序都应当调用<filename>pcm</filename>的
+          <function>chn_intr()</function>。</para>
+
+        <para>大多数驱动程序只注意这儿的块大小，因为当实际传输开始时应该
+	  使用这个值。</para>
+
+        <programlisting>          static int
+          xxxchannel_setblocksize(kobj_t obj, void *data, u_int32_t blocksize)
+          {
+              struct xxx_chinfo *ch = data;
+                ...
+              return blocksize;<co xml:id="co-chsetblocksize-return"/>
+           }</programlisting>
+
+        <calloutlist>
+          <callout arearefs="co-chsetblocksize-return">
+            <para>函数返回可能调整过的块大小。如果块大小真的变化了，
+              这种情况下应当调用<function>sndbuf_resize()</function>调整
+	      缓冲区的大小。</para>
+
+          </callout>
+        </calloutlist>
+
+      </sect3>
+
+      <sect3 xml:id="channel-trigger">
+        <title>channel_trigger</title>
+
+        <para><function>xxxchannel_trigger()</function>由
+          <filename>pcm</filename>来控制驱动程序中的实际传输操作。
+          </para>
+
+        <programlisting>          static int
+          xxxchannel_trigger(kobj_t obj, void *data, int go)<co xml:id="co-chtrigger-params"/>
+          {
+              struct xxx_chinfo *ch = data;
+               ...
+              return 0;
+           }</programlisting>
+
+        <calloutlist>
+          <callout arearefs="co-chtrigger-params">
+            <para><varname>go</varname>定义当前调用的动作。可能的值为：
+              </para>
+              <itemizedlist>
+
+              <listitem>
+                <para><literal>PCMTRIG_START</literal>：驱动程序应当
+		  启动从/到通道缓冲区的数据传输。如果需要，应当通过
+                  <function>sndbuf_getbuf()</function>和
+                  <function>sndbuf_getsize()</function>检取缓冲区的
+		  基地址和大小。</para>
+              </listitem>
+
+              <listitem>
+                <para><literal>PCMTRIG_EMLDMAWR</literal> /
+                  <literal>PCMTRIG_EMLDMARD</literal>：告诉驱动程序，
+		  输入或输出缓冲区可能已被更新过了。大多数驱动程序只是
+		  忽略这些调用。</para>
+              </listitem>
+
+              <listitem>
+                <para><literal>PCMTRIG_STOP</literal> /
+                  <literal>PCMTRIG_ABORT</literal>：驱动程序应当停止当前
+		  的传输。</para>
+              </listitem>
+            </itemizedlist>
+
+          </callout>
+        </calloutlist>
+
+        <note><para>如果驱动程序使用ISA DMA，则应当在设备上执行动作前
+	  调用<function>sndbuf_isadma()</function>，并处理DMA芯片一方的
+	  事情。</para>
+          </note>
+
+      </sect3>
+
+      <sect3>
+        <title>channel_getptr</title>
+
+        <para><function>xxxchannel_getptr()</function>返回传输缓冲区中
+	  当前的缓冲。它通常由<function>chn_intr()</function>调用，而且
+          这也是为什么<filename>pcm</filename>知道它应当往哪儿传送
+	  新数据。</para>
+
+      </sect3>
+
+      <sect3>
+        <title>channel_free</title>
+
+        <para>调用<function>xxxchannel_free()</function>来释放通道资源，
+	  例如当驱动程序卸载时，并且如果通道数据结构是动态分配的，或者
+	  如果不使用<function>sndbuf_alloc()</function>进行缓冲区分配，
+	  则应当实现这个函数。</para>
+
+      </sect3>
+
+      <sect3>
+        <title>channel_getcaps</title>
+
+        <programlisting>          struct pcmchan_caps *
+          xxxchannel_getcaps(kobj_t obj, void *data)
+          {
+              return &amp;xxx_caps;<co xml:id="co-chgetcaps-return"/>
+           }</programlisting>
+
+        <calloutlist>
+
+          <callout arearefs="co-chgetcaps-return">
+            <para>这个例程返回指向（通常静态定义的）
+              <varname remap="structname">pcmchan_caps</varname>结构的指针（在
+              <filename>sound/pcm/channel.h</filename>中定义）。这个结构
+	      保存着最小和最大采样频率和被接受的声音格式。任何声音驱动
+	      程序都可以作为一个范例。</para>
+          </callout>
+
+        </calloutlist>
+
+      </sect3>
+
+      <sect3>
+        <title>更多函数</title>
+
+        <para><function>channel_reset()</function>,
+          <function>channel_resetdone()</function>和
+          <function>channel_notify()</function>用于特殊目的，未与权威人士
+          (&a.cg;)进行探讨之前不应当在驱动程序中实现它。</para>
+
+        <para>不赞成使用<function>channel_setdir()</function>.</para>
+      </sect3>
+
+    </sect2>
+
+    <sect2>
+      <title>MIXER接口</title>
+
+      <sect3 xml:id="xxxmixer-init">
+        <title>mixer_init</title>
+
+        <para><function>xxxmixer_init()</function>初始化硬件，并告诉
+          <filename>pcm</filename>什么混音器设备可用来播放和录音。
+          </para>
+
+        <programlisting>          static int
+          xxxmixer_init(struct snd_mixer *m)
+          {
+              struct xxx_info   *sc = mix_getdevinfo(m);
+              u_int32_t v;
+
+              [初始化硬件]
+
+              [为播放混音器设置v中适当的位]<co xml:id="co-mxini-sd"/>
+              mix_setdevs(m, v);
+              [为录音混音器设置v中适当的位]
+              mix_setrecdevs(m, v)
+
+              return 0;
+          }</programlisting>
+
+        <calloutlist>
+          <callout arearefs="co-mxini-sd">
+            <para>设置一个整数值中的位，并调用
+              <function>mix_setdevs()</function>和
+              <function>mix_setrecdevs()</function>来告诉
+              <filename>pcm</filename>存在什么设备。</para>
+          </callout>
+        </calloutlist>
+
+        <para>混音器的位定义可以在<filename>soundcard.h</filename>中
+	  找到。（<literal>SOUND_MASK_XXX</literal>值和
+          <literal>SOUND_MIXER_XXX</literal>移位）。</para>
+
+      </sect3>
+
+      <sect3>
+        <title>mixer_set</title>
+
+        <para><function>xxxmixer_set()</function>为混音器设备设置音量级别
+          (level)。</para>
+
+        <programlisting>          static int
+          xxxmixer_set(struct snd_mixer *m, unsigned dev,
+                           unsigned left, unsigned right)<co xml:id="co-mxset-params"/>
+          {
+              struct sc_info *sc = mix_getdevinfo(m);
+              [设置音量级别(level)]
+              return left | (right &lt;&lt; 8);<co xml:id="co-mxset-return"/>
+          }</programlisting>
+
+        <calloutlist>
+          <callout arearefs="co-mxset-params">
+            <para>设备被指定为 <literal>SOUND_MIXER_XXX</literal> 值</para>
+	    <para>在范围[0-100]之间指定音量值。零值应当让设备静音。</para>
+          </callout>
+
+          <callout arearefs="co-mxset-return">
+            <para>由于硬件(音量)级别(level)可能不匹配输入比例，会出现
+	      某些圆整，例程返回如上面所示的实际级别值（范围0-100内）。</para>
+          </callout>
+        </calloutlist>
+
+      </sect3>
+
+      <sect3>
+        <title>mixer_setrecsrc</title>
+
+        <para><function>xxxmixer_setrecsrc()</function>设定录音源设备。
+          </para>
+
+        <programlisting>          static int
+          xxxmixer_setrecsrc(struct snd_mixer *m, u_int32_t src)<co xml:id="co-mxsr-params"/>
+          {
+              struct xxx_info *sc = mix_getdevinfo(m);
+
+              [查看src中的非零位, 设置硬件]
+
+              [更新src反映实际动作]
+              return src;<co xml:id="co-mxsr-return"/>
+           }</programlisting>
+
+        <calloutlist>
+          <callout arearefs="co-mxsr-params">
+            <para>期望的录音设备由一个位域指定. </para>
+          </callout>
+
+          <callout arearefs="co-mxsr-return">
+            <para>返回设置用来录音的实际设备。一些驱动程序只能设置一个
+	      录音设备。如果出现错误，函数应当返回-1。</para>
+          </callout>
+        </calloutlist>
+      </sect3>
+
+      <sect3>
+        <title>mixer_uninit, mixer_reinit</title>
+
+        <para><function>xxxmixer_uninit()</function>应当确保不会发出任何
+	  声音，并且如果可能则应当让混音器硬件断电。</para>
+
+        <para><function>xxxmixer_reinit()</function>应当确保混音器硬件
+	  加电，并且恢复所有不受<function>mixer_set()</function>或
+          <function>mixer_setrecsrc()</function>控制的设置。</para>
+
+      </sect3>
+    </sect2>
+
+    <sect2>
+      <title>AC97接口</title>
+
+       <indexterm><primary>AC97</primary></indexterm>
+
+      <para><emphasis>AC97</emphasis>由带有AC97编码解码器的驱动程序实现。
+        它只有三个方法：</para>
+
+      <itemizedlist>
+
+        <listitem><para><function>xxxac97_init()</function>返回找到的
+          ac97编码解码器的数目。</para>
+        </listitem>
+
+        <listitem><para><function>ac97_read()</function>与
+          <function>ac97_write()</function>读写指定的寄存器。</para>
+        </listitem>
+
+      </itemizedlist>
+
+      <para>The <emphasis>AC97</emphasis>接口由
+        <filename>pcm</filename>中的AC97代码来执行高层操作。参看
+        <filename>sound/pci/maestro3.c</filename>或
+        <filename>sound/pci/</filename>下很多其他内容作为范例。</para>
+
+    </sect2>
+  </sect1>
+</chapter>

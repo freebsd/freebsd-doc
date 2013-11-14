@@ -1,0 +1,334 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+     The FreeBSD Documentation Project
+     The FreeBSD SMP Next Generation Project
+     The FreeBSD Simplified Chinese Project
+
+     Original Revision: 1.11
+     $FreeBSD$
+-->
+<chapter xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink" version="5.0" xml:id="locking">
+  <info><title>内核中的锁</title>
+    <authorgroup>
+      <author><personname/><contrib>&cnproj.translated.by;</contrib></author>
+    </authorgroup>
+  </info>
+  
+
+  <indexterm><primary>SMP Next Generation Project(下一代对称多处理工程)</primary></indexterm>
+  <para><emphasis>这一章由 FreeBSD SMP Next Generation Project 维护。
+    请将评论和建议发送给&a.smp;.</emphasis></para>
+
+
+  <indexterm><primary>locking(锁)</primary></indexterm>
+  <indexterm><primary>multi-processing(多处理)</primary></indexterm>
+  <indexterm><primary>mutexes(同时/独占, mutual exclusion)</primary></indexterm>
+  <indexterm><primary>lockmgr(锁管理器)</primary></indexterm>
+  <indexterm><primary>atomic operations(原子操作)</primary></indexterm>
+  <para>这篇文档提纲挈领的讲述了在FreeBSD内核中的锁，这些锁使得有效的多处理成为可能。
+   锁可以用几种方式获得。数据结构可以用mutex或&man.lockmgr.9;保护。
+   对于为数不多的若干个变量，假如总是使用原子操作访问它们，这些变量就可以得到保护。
+   <tip><title>译者注</title><para>仅读本章内容，还不足以找出<quote>mutex</quote>
+   和<quote>共享互斥锁</quote>的区别。似乎它们的功能有重叠之处，
+   前者比后者的功能选项更多。它们似乎都是&man.lockmgr.9;的子集。</para></tip></para>
+
+  <sect1 xml:id="locking-mutexes">
+    <title>Mutex</title>
+
+    <para>Mutex就是一种用来解决共享/排它矛盾的锁。
+     一个mutex在一个时刻只可以被一个实体拥有。如果另一个实体要获得已经被拥有的mutex，
+     就会进入等待，直到这个mutex被释放。在FreeBSD内核中，mutex被进程所拥有。</para>
+
+    <para>Mutex可以被递归的索要，但是mutex一般只被一个实体拥有较短的一段时间，
+     因此一个实体不能在持有mutex时睡眠。如果你需要在持有mutex时睡眠，
+     可使用一个 &man.lockmgr.9; 的锁。</para>
+
+    <para>每个mutex有几个令人感兴趣的属性:</para>
+
+    <variablelist>
+	<varlistentry>
+	<term>变量名</term>
+	<listitem>
+	  <para>在内核源代码中<type>struct mtx</type>变量的名字</para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<term>逻辑名</term>
+	<listitem>
+	  <para>由函数<function>mtx_init</function>指派的mutex的名字。
+            这个名字显示在KTR跟踪消息和witness出错与警告信息里。
+            这个名字还用于区分标识在witness代码中的各个mutex</para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<term>类型</term>
+	<listitem>
+	  <para>Mutex的类型，用标志<constant>MTX_*</constant>表示。
+            每个标志的意义在&man.mutex.9;有所描述。</para>
+
+	  <variablelist>
+	    <varlistentry>
+	      <term><constant>MTX_DEF</constant></term>
+	      <listitem>
+		<para>一个睡眠mutex</para>
+	      </listitem>
+	    </varlistentry>
+
+	    <varlistentry>
+	      <term><constant>MTX_SPIN</constant></term>
+	      <listitem>
+		<para>一个循环mutex</para>
+	      </listitem>
+	    </varlistentry>
+
+	    <varlistentry>
+	      <term><constant>MTX_RECURSE</constant></term>
+	      <listitem>
+		<para>这个mutex允许递归</para>
+	      </listitem>
+	    </varlistentry>
+	  </variablelist>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<term>保护对象</term>
+	<listitem>
+	  <para>这个入口所要保护的数据结构列表或数据结构成员列表。
+	    对于数据结构成员，将按照
+	    <varname remap="structname">结构名</varname>.<varname remap="structfield">成员名</varname>的形式命名。</para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<term>依赖函数</term>
+	<listitem>
+	  <para>仅当mutex被持有时才可以被调用的函数</para>
+	</listitem>
+      </varlistentry>
+    </variablelist>
+
+    <table frame="all" colsep="1" rowsep="1" pgwide="1">
+      <title>Mutex列表</title>
+
+      <indexterm><primary>locks(锁)</primary>
+        <secondary>sched_lock(调度器锁)</secondary></indexterm>
+
+      <indexterm><primary>locks(锁)</primary>
+        <secondary>vm86pcb_lock(虚拟8086模式进程控制块锁)</secondary></indexterm>
+
+      <indexterm><primary>locks(锁)</primary>
+        <secondary>Giant(巨锁)</secondary></indexterm>
+
+      <indexterm><primary>locks(锁)</primary>
+        <secondary>callout_lock(延时调用锁)</secondary></indexterm>
+
+      <tgroup cols="5">
+	<thead>
+	  <row>
+	    <entry>变量名</entry>
+	    <entry>逻辑名</entry>
+	    <entry>类型</entry>
+	    <entry>保护对象</entry>
+	    <entry>依赖函数</entry>
+	  </row>
+	</thead>
+
+	<!-- The scheduler lock -->
+	<tbody>
+	  <row>
+	    <entry>sched_lock</entry>
+	    <entry><quote>sched lock</quote>(调度器锁)</entry>
+	    <entry>
+	      <constant>MTX_SPIN</constant> |
+	      <constant>MTX_RECURSE</constant>
+	    </entry>
+	    <entry>
+	      <varname>_gmonparam</varname>,
+	      <varname>cnt.v_swtch</varname>,
+	      <varname>cp_time</varname>,
+	      <varname>curpriority</varname>,
+	      <varname remap="structname">mtx</varname>.<varname remap="structfield">mtx_blocked</varname>,
+	      <varname remap="structname">mtx</varname>.<varname remap="structfield">mtx_contested</varname>,
+	      <varname remap="structname">proc</varname>.<varname remap="structfield">p_procq</varname>,
+	      <varname remap="structname">proc</varname>.<varname remap="structfield">p_slpq</varname>,
+	      <varname remap="structname">proc</varname>.<varname remap="structfield">p_sflag</varname>,
+	      <varname remap="structname">proc</varname>.<varname remap="structfield">p_stat</varname>,
+	      <varname remap="structname">proc</varname>.<varname remap="structfield">p_estcpu</varname>,
+	      <varname remap="structname">proc</varname>.<varname remap="structfield">p_cpticks</varname>
+	      <varname remap="structname">proc</varname>.<varname remap="structfield">p_pctcpu</varname>,
+	      <varname remap="structname">proc</varname>.<varname remap="structfield">p_wchan</varname>,
+	      <varname remap="structname">proc</varname>.<varname remap="structfield">p_wmesg</varname>,
+	      <varname remap="structname">proc</varname>.<varname remap="structfield">p_swtime</varname>,
+	      <varname remap="structname">proc</varname>.<varname remap="structfield">p_slptime</varname>,
+	      <varname remap="structname">proc</varname>.<varname remap="structfield">p_runtime</varname>,
+	      <varname remap="structname">proc</varname>.<varname remap="structfield">p_uu</varname>,
+	      <varname remap="structname">proc</varname>.<varname remap="structfield">p_su</varname>,
+	      <varname remap="structname">proc</varname>.<varname remap="structfield">p_iu</varname>,
+	      <varname remap="structname">proc</varname>.<varname remap="structfield">p_uticks</varname>,
+	      <varname remap="structname">proc</varname>.<varname remap="structfield">p_sticks</varname>,
+	      <varname remap="structname">proc</varname>.<varname remap="structfield">p_iticks</varname>,
+	      <varname remap="structname">proc</varname>.<varname remap="structfield">p_oncpu</varname>,
+	      <varname remap="structname">proc</varname>.<varname remap="structfield">p_lastcpu</varname>,
+	      <varname remap="structname">proc</varname>.<varname remap="structfield">p_rqindex</varname>,
+	      <varname remap="structname">proc</varname>.<varname remap="structfield">p_heldmtx</varname>,
+	      <varname remap="structname">proc</varname>.<varname remap="structfield">p_blocked</varname>,
+	      <varname remap="structname">proc</varname>.<varname remap="structfield">p_mtxname</varname>,
+	      <varname remap="structname">proc</varname>.<varname remap="structfield">p_contested</varname>,
+	      <varname remap="structname">proc</varname>.<varname remap="structfield">p_priority</varname>,
+	      <varname remap="structname">proc</varname>.<varname remap="structfield">p_usrpri</varname>,
+	      <varname remap="structname">proc</varname>.<varname remap="structfield">p_nativepri</varname>,
+	      <varname remap="structname">proc</varname>.<varname remap="structfield">p_nice</varname>,
+	      <varname remap="structname">proc</varname>.<varname remap="structfield">p_rtprio</varname>,
+	      <varname>pscnt</varname>,
+	      <varname>slpque</varname>,
+	      <varname>itqueuebits</varname>,
+	      <varname>itqueues</varname>,
+	      <varname>rtqueuebits</varname>,
+	      <varname>rtqueues</varname>,
+	      <varname>queuebits</varname>,
+	      <varname>queues</varname>,
+	      <varname>idqueuebits</varname>,
+	      <varname>idqueues</varname>,
+	      <varname>switchtime</varname>,
+	      <varname>switchticks</varname>
+	    </entry>
+	    <entry>
+	      <function>setrunqueue</function>,
+	      <function>remrunqueue</function>,
+	      <function>mi_switch</function>,
+	      <function>chooseproc</function>,
+	      <function>schedclock</function>,
+	      <function>resetpriority</function>,
+	      <function>updatepri</function>,
+	      <function>maybe_resched</function>,
+	      <function>cpu_switch</function>,
+	      <function>cpu_throw</function>,
+	      <function>need_resched</function>,
+	      <function>resched_wanted</function>,
+	      <function>clear_resched</function>,
+	      <function>aston</function>,
+	      <function>astoff</function>,
+	      <function>astpending</function>,
+	      <function>calcru</function>,
+	      <function>proc_compare</function>
+	    </entry>
+	  </row>
+
+	  <!-- The vm86 pcb lock -->
+	  <row>
+	    <entry>vm86pcb_lock</entry>
+	    <entry><quote>vm86pcb lock</quote>(虚拟8086模式进程控制块锁)</entry>
+	    <entry>
+	      <constant>MTX_DEF</constant>
+	    </entry>
+	    <entry>
+	      <varname>vm86pcb</varname>
+	    </entry>
+	    <entry>
+	      <function>vm86_bioscall</function>
+	    </entry>
+	  </row>
+
+	  <!-- Giant -->
+	  <row>
+	    <entry>Giant</entry>
+	    <entry><quote>Giant</quote>(巨锁)</entry>
+	    <entry>
+	      <constant>MTX_DEF</constant> |
+	      <constant>MTX_RECURSE</constant>
+	    </entry>
+	    <entry>几乎可以是任何东西</entry>
+	    <entry>许多</entry>
+	  </row>
+
+	  <!-- The callout lock -->
+	  <row>
+	    <entry>callout_lock</entry>
+	    <entry><quote>callout lock</quote>(延时调用锁)</entry>
+	    <entry>
+	      <constant>MTX_SPIN</constant> |
+	      <constant>MTX_RECURSE</constant>
+	    </entry>
+	    <entry>
+	      <varname>callfree</varname>,
+	      <varname>callwheel</varname>,
+	      <varname>nextsoftcheck</varname>,
+	      <varname remap="structname">proc</varname>.<varname remap="structfield">p_itcallout</varname>,
+	      <varname remap="structname">proc</varname>.<varname remap="structfield">p_slpcallout</varname>,
+	      <varname>softticks</varname>,
+	      <varname>ticks</varname>
+	    </entry>
+	    <entry>
+	    </entry>
+	  </row>
+	</tbody>
+      </tgroup>
+    </table>
+  </sect1>
+
+  <sect1 xml:id="locking-sx">
+    <title>共享互斥锁</title>
+
+    <para>这些锁提供基本的读/写类型的功能，可以被一个正在睡眠的进程持有。
+      现在它们被统一到&man.lockmgr.9;之中。</para>
+      <indexterm><primary>locks(锁)</primary>
+        <secondary>shared exclusive(共享互斥)</secondary></indexterm>
+
+    <table>
+      <title>共享互斥锁列表</title>
+      <indexterm><primary>locks(锁)</primary>
+        <secondary>allproc_lock(全进程锁)</secondary></indexterm>
+      <indexterm><primary>locks(锁)</primary>
+        <secondary>proctree_lock(进程树锁)</secondary></indexterm>
+
+      <tgroup cols="2">
+	<thead>
+	  <row>
+	    <entry>变量名</entry>
+	    <entry>保护对象</entry>
+	  </row>
+	</thead>
+	<tbody>
+	  <row>
+	    <entry><varname>allproc_lock</varname></entry>
+	    <entry>
+	      <varname>allproc</varname>
+	      <varname>zombproc</varname>
+	      <varname>pidhashtbl</varname>
+	      <varname remap="structname">proc</varname>.<varname remap="structfield">p_list</varname>
+	      <varname remap="structname">proc</varname>.<varname remap="structfield">p_hash</varname>
+	      <varname>nextpid</varname>
+	    </entry>
+	  </row>
+	  <row>
+	    <entry><varname>proctree_lock</varname></entry>
+	    <entry>
+	      <varname remap="structname">proc</varname>.<varname remap="structfield">p_children</varname>
+	      <varname remap="structname">proc</varname>.<varname remap="structfield">p_sibling</varname>
+	    </entry>
+	  </row>
+	</tbody>
+      </tgroup>
+    </table>
+  </sect1>
+
+  <sect1 xml:id="locking-atomic">
+    <title>原子保护变量</title>
+
+    <indexterm><primary>atomically protected variables(原子保护变量)</primary></indexterm>
+
+    <para>原子保护变量并非由一个显在的锁保护的特殊变量，而是：
+      对这些变量的所有数据访问都要使用特殊的原子操作(&man.atomic.9;)。
+      尽管其它的基本同步机制(例如mutex)就是用原子保护变量实现的，
+      但是很少有变量直接使用这种处理方式。</para>
+
+    <itemizedlist>
+      <listitem>
+	<para><varname remap="structname">mtx</varname>.<varname remap="structfield">mtx_lock</varname></para>
+      </listitem>
+    </itemizedlist>
+  </sect1>
+</chapter>

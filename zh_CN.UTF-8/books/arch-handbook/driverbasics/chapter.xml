@@ -1,0 +1,555 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+     The FreeBSD Documentation Project
+     The FreeBSD Simplified Chinese Project
+
+     Original Revision: 1.37
+     $FreeBSD$
+-->
+<chapter xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink" version="5.0" xml:id="driverbasics">
+  <info><title>编写 FreeBSD 设备驱动程序</title>
+    <authorgroup>
+      <author><personname><firstname>Murray</firstname><surname>Stokely</surname></personname><contrib>&cnproj.written.by;</contrib></author>
+    </authorgroup>
+    <authorgroup>
+      <author><personname><firstname>J&ouml;rg</firstname><surname>Wunsch</surname></personname><contrib>基础性手册intro(4)：</contrib></author>
+    </authorgroup>
+    <authorgroup>
+      <author><personname/><contrib>&cnproj.translated.by;</contrib></author>
+    </authorgroup>
+  </info>
+  
+
+  <sect1 xml:id="driverbasics-intro">
+    <title>简介</title>
+
+    <indexterm><primary>device driver(设备驱动程序)</primary></indexterm>
+    <indexterm><primary>pseudo-device(伪设备)</primary></indexterm>
+    <para>本章简要介绍了如何为FreeBSD编写设备驱动程序。术语设备在
+      这儿的上下文中多用于指代系统中硬件相关的东西，如磁盘，打印机，
+      图形显式器及其键盘。设备驱动程序是操作系统中用于控制特定设备的
+      软件组件。也有所谓的伪设备，即设备驱动程序用软件模拟设备的行为，
+      而没有特定的底层硬件。设备驱动程序可以被静态地编译进系统，或者
+      通过动态内核链接工具‘kld’在需要时加载。</para>
+
+    <indexterm><primary>device nodes(设备节点)</primary></indexterm>
+    <indexterm><primary>MAKEDEV</primary></indexterm>
+
+    <para>类&unix;操作系统中的大多数设备都是通过设备节点来访问的，有时也
+      被称为特殊文件。这些文件在文件系统的层次结构中通常位于
+      <filename>/dev</filename>目录下。在FreeBSD 5.0-RELEASE以前的
+      发行版中, 对&man.devfs.5;的支持还没有被集成到FreeBSD中，每个设备
+      节点必须要静态创建，并且独立于相关设备驱动程序的存在。系统中大
+      多数设备节点是通过运行<command>MAKEDEV</command>创建的。</para>
+
+    <para>设备驱动程序可以粗略地分为两类，字符和网络设备驱动程序。</para>
+
+  </sect1>
+
+  <sect1 xml:id="driverbasics-kld">
+    <title>动态内核链接工具&mdash;KLD</title>
+
+    <indexterm><primary>kernel linking(内核链接)</primary><secondary>dynamic(动态)</secondary></indexterm>
+    <indexterm><primary>kernel loadable modules (KLD, 内核可装载模块)</primary></indexterm>
+    <para>kld接口允许系统管理员从运行的系统中动态地添加和删除功能。
+      这允许设备驱动程序的编写者将他们的新改动加载到运行的内核中，
+      而不用为了测试新改动而频繁地重启。</para>
+
+    <para>kld接口通过下面的特权命令使用：
+
+    <indexterm><primary>kernel modules(内核模块)</primary><secondary>loading(装载)</secondary></indexterm>
+    <indexterm><primary>kernel modules(内核模块)</primary><secondary>unloading(卸载)</secondary></indexterm>
+    <indexterm><primary>kernel modules(内核模块)</primary><secondary>listing(列清单)</secondary></indexterm>
+    <itemizedlist>
+      <listitem><simpara><command>kldload</command> - 加载新内核模块
+        </simpara></listitem>
+      <listitem><simpara><command>kldunload</command> - 卸载内核模块
+        </simpara></listitem>
+      <listitem><simpara><command>kldstat</command> - 列举当前加载的模块
+        </simpara></listitem>
+    </itemizedlist>
+    </para>
+
+    <para>内核模块的程序框架</para>
+
+<programlisting>/*
+ * KLD程序框架
+ * 受Andrew Reiter在Daemonnews上的文章所启发
+ */
+
+#include &lt;sys/types.h&gt;
+#include &lt;sys/module.h&gt;
+#include &lt;sys/systm.h&gt;  /* uprintf */
+#include &lt;sys/errno.h&gt;
+#include &lt;sys/param.h&gt;  /* kernel.h中用到的定义 */
+#include &lt;sys/kernel.h&gt; /* 模块初始化中使用的类型 */
+
+/*
+ * 加载处理函数，负责处理KLD的加载和卸载。
+ */
+
+static int
+skel_loader(struct module *m, int what, void *arg)
+{
+  int err = 0;
+
+  switch (what) {
+  case MOD_LOAD:                /* kldload */
+    uprintf("Skeleton KLD loaded.\n");
+    break;
+  case MOD_UNLOAD:
+    uprintf("Skeleton KLD unloaded.\n");
+    break;
+  default:
+    err = EOPNOTSUPP;
+    break;
+  }
+  return(err);
+}
+
+/* 向内核其余部分声明此模块 */
+
+static moduledata_t skel_mod = {
+  "skel",
+  skel_loader,
+  NULL
+};
+
+DECLARE_MODULE(skeleton, skel_mod, SI_SUB_KLD, SI_ORDER_ANY);</programlisting>
+
+
+    <sect2>
+      <title>Makefile</title>
+
+      <para>FreeBSD提供了一个makefile包含文件，利用它你可以快速地编译
+        你附加到内核的东西。</para>
+
+      <programlisting>SRCS=skeleton.c
+KMOD=skeleton
+
+.include &lt;bsd.kmod.mk&gt;</programlisting>
+
+      <para>简单地用这个makefile运行<command>make</command>就能够创建文件
+        <filename>skeleton.ko</filename>，键入如下命令可以把它加载到内核：
+<screen>&prompt.root; <userinput>kldload -v ./skeleton.ko</userinput></screen>
+      </para>
+    </sect2>
+  </sect1>
+
+  <sect1 xml:id="driverbasics-access">
+    <title>访问设备驱动程序</title>
+
+    <para>&unix; 提供了一套公共的系统调用供用户的应用程序使用。当用户访问
+      设备节点时，内核的上层将这些调用分发到相应的设备驱动程序。脚本
+      <command>/dev/MAKEDEV</command>为你的系统生成了大多数的设备节点，
+      但如果你正在开发你自己的驱动程序，可能需要用
+      <command>mknod</command>创建你自己的设备节点。
+    </para>
+
+    <sect2>
+      <title>创建静态设备节点</title>
+
+      <indexterm><primary>device nodes(设备节点)</primary><secondary>static(静态)</secondary></indexterm>
+      <indexterm><primary>mknod</primary></indexterm>
+
+      <para><command>mknod</command>命令需要四个参数来创建设备节点。
+        你必须指定设备节点的名字，设备的类型，设备的主号码和设备的从号码。
+      </para>
+    </sect2>
+
+    <sect2>
+      <title>动态设备节点</title>
+
+      <indexterm><primary>device nodes(设备节点)</primary><secondary>dynamic(动态)</secondary></indexterm>
+      <indexterm><primary>devfs</primary></indexterm>
+
+      <para>设备文件系统，或者说devfs，在全局文件系统名字空间中提供对
+        内核设备名字空间的访问。这消除了由于有设备驱动程序而没有静态
+        设备节点，或者有设备节点而没有安装设备驱动程序而带来的潜在问题。
+        Devfs仍在进展中，但已经能够工作得相当好了。</para>
+    </sect2>
+
+  </sect1>
+
+  <sect1 xml:id="driverbasics-char">
+    <title>字符设备</title>
+
+    <indexterm><primary>character devices(字符设备)</primary></indexterm>
+    <para>字符设备驱动程序直接从用户进程传输数据，或传输数据到用户进程。
+      这是最普通的一类设备驱动程序，源码树中有大量的简单例子。</para>
+
+    <para>这个简单的伪设备例子会记住你写给它的任何值，并且当你读取它的时候
+      会将这些值返回给你。下面显示了两个版本，一个适用于&os;&nbsp;4.X，
+      一个适用于&os;&nbsp;5.X。</para>
+
+    <example>
+      <title>适用于&os;&nbsp;4.X的回显伪设备驱动程序实例</title>
+
+      <programlisting>/*
+ * 简单‘echo’伪设备KLD
+ *
+ * Murray Stokely
+ */
+
+#define MIN(a,b) (((a) &lt; (b)) ? (a) : (b))
+
+#include &lt;sys/types.h&gt;
+#include &lt;sys/module.h&gt;
+#include &lt;sys/systm.h&gt;  /* uprintf */
+#include &lt;sys/errno.h&gt;
+#include &lt;sys/param.h&gt;  /* kernel.h中用到的定义 */
+#include &lt;sys/kernel.h&gt; /* 模块初始化中使用的类型 */
+#include &lt;sys/conf.h&gt;   /* cdevsw结构 */
+#include &lt;sys/uio.h&gt;    /* uio结构 */
+#include &lt;sys/malloc.h&gt;
+
+#define BUFFERSIZE 256
+
+/* 函数原型 */
+d_open_t	echo_open;
+d_close_t	echo_close;
+d_read_t	echo_read;
+d_write_t	echo_write;
+
+/* 字符设备入口点 */
+static struct cdevsw echo_cdevsw = {
+	echo_open,
+	echo_close,
+	echo_read,
+	echo_write,
+	noioctl,
+	nopoll,
+	nommap,
+	nostrategy,
+	"echo",
+	33,              /* 为lkms保留 - /usr/src/sys/conf/majors */
+	nodump,
+	nopsize,
+	D_TTY,
+	-1
+};
+
+typedef struct s_echo {
+	char msg[BUFFERSIZE];
+	int len;
+} t_echo;
+
+/* 变量 */
+static dev_t sdev;
+static int count;
+static t_echo *echomsg;
+
+MALLOC_DECLARE(M_ECHOBUF);
+MALLOC_DEFINE(M_ECHOBUF, "echobuffer", "buffer for echo module");
+
+/*
+ * 这个函数被kld[un]load(2)系统调用来调用，
+ * 以决定加载和卸载模块时需要采取的动作。
+ */
+
+static int
+echo_loader(struct module *m, int what, void *arg)
+{
+	int err = 0;
+
+	switch (what) {
+	case MOD_LOAD:                /* kldload */
+		sdev = make_dev(<literal>&amp;</literal>echo_cdevsw,
+		    0,
+		    UID_ROOT,
+		    GID_WHEEL,
+		    0600,
+		    "echo");
+		/* kmalloc分配供驱动程序使用的内存 */
+		MALLOC(echomsg, t_echo *, sizeof(t_echo), M_ECHOBUF, M_WAITOK);
+		printf("Echo device loaded.\n");
+		break;
+	case MOD_UNLOAD:
+		destroy_dev(sdev);
+		FREE(echomsg,M_ECHOBUF);
+		printf("Echo device unloaded.\n");
+		break;
+	default:
+		err = EOPNOTSUPP;
+		break;
+	}
+	return(err);
+}
+
+int
+echo_open(dev_t dev, int oflags, int devtype, struct proc *p)
+{
+	int err = 0;
+
+	uprintf("Opened device \"echo\" successfully.\n");
+	return(err);
+}
+
+int
+echo_close(dev_t dev, int fflag, int devtype, struct proc *p)
+{
+	uprintf("Closing device \"echo.\"\n");
+	return(0);
+}
+
+/*
+ * read函数接受由echo_write()存储的buf，并将其返回到用户空间，
+ * 以供其他函数访问。
+ * uio(9)
+ */
+
+int
+echo_read(dev_t dev, struct uio *uio, int ioflag)
+{
+	int err = 0;
+	int amt;
+
+	/*
+	 * 这个读操作有多大？
+	 * 与用户请求的大小一样，或者等于剩余数据的大小。
+	 */
+	amt = MIN(uio-&gt;uio_resid, (echomsg-&gt;len - uio-&gt;uio_offset &gt; 0) ?
+	    echomsg-&gt;len - uio-&gt;uio_offset : 0);
+	if ((err = uiomove(echomsg-&gt;msg + uio-&gt;uio_offset,amt,uio)) != 0) {
+		uprintf("uiomove failed!\n");
+	}
+	return(err);
+}
+
+/*
+ * echo_write接受一个字符串并将它保存到缓冲区，用于以后的访问。
+ */
+
+int
+echo_write(dev_t dev, struct uio *uio, int ioflag)
+{
+	int err = 0;
+
+	/* 将字符串从用户空间的内存复制到内核空间 */
+	err = copyin(uio-&gt;uio_iov-&gt;iov_base, echomsg-&gt;msg,
+	    MIN(uio-&gt;uio_iov-&gt;iov_len, BUFFERSIZE - 1));
+
+	/* 现在需要以null结束字符串，并记录长度 */
+	*(echomsg-&gt;msg + MIN(uio-&gt;uio_iov-&gt;iov_len, BUFFERSIZE - 1)) = 0;
+	echomsg-&gt;len = MIN(uio-&gt;uio_iov-&gt;iov_len, BUFFERSIZE);
+
+	if (err != 0) {
+		uprintf("Write failed: bad address!\n");
+	}
+	count++;
+	return(err);
+}
+
+DEV_MODULE(echo,echo_loader,NULL);</programlisting>
+    </example>
+
+    <example>
+      <title>适用于&os;&nbsp;5.X回显伪设备驱动程序实例</title>
+
+      <programlisting>/*
+ * 简单‘echo’伪设备 KLD
+ *
+ * Murray Stokely
+ *
+ * 此代码由S&oslash;ren (Xride) Straarup转换到5.X
+ */
+
+#include &lt;sys/types.h&gt;
+#include &lt;sys/module.h&gt;
+#include &lt;sys/systm.h&gt;  /* uprintf */
+#include &lt;sys/errno.h&gt;
+#include &lt;sys/param.h&gt;  /* kernel.h中用到的定义 */
+#include &lt;sys/kernel.h&gt; /* 模块初始化中使用的类型 */
+#include &lt;sys/conf.h&gt;   /* cdevsw结构 */
+#include &lt;sys/uio.h&gt;    /* uio结构 */
+#include &lt;sys/malloc.h&gt;
+
+#define BUFFERSIZE 256
+
+
+/* 函数原型 */
+static d_open_t      echo_open;
+static d_close_t     echo_close;
+static d_read_t      echo_read;
+static d_write_t     echo_write;
+
+/* 字符设备入口点 */
+static struct cdevsw echo_cdevsw = {
+	.d_version = D_VERSION,
+	.d_open = echo_open,
+	.d_close = echo_close,
+	.d_read = echo_read,
+	.d_write = echo_write,
+	.d_name = "echo",
+};
+
+typedef struct s_echo {
+	char msg[BUFFERSIZE];
+	int len;
+} t_echo;
+
+/* 变量 */
+static struct cdev *echo_dev;
+static int count;
+static t_echo *echomsg;
+
+MALLOC_DECLARE(M_ECHOBUF);
+MALLOC_DEFINE(M_ECHOBUF, "echobuffer", "buffer for echo module");
+
+/*
+ * 这个函数被kld[un]load(2)系统调用来调用,
+ * 以决定加载和卸载模块时需要采取的动作.
+ */
+
+static int
+echo_loader(struct module *m, int what, void *arg)
+{
+	int err = 0;
+
+	switch (what) {
+	case MOD_LOAD:                /* kldload */
+		echo_dev = make_dev(<literal>&amp;</literal>echo_cdevsw,
+		    0,
+		    UID_ROOT,
+		    GID_WHEEL,
+		    0600,
+		    "echo");
+		/* kmalloc分配供驱动程序使用的内存 */
+		echomsg = malloc(sizeof(t_echo), M_ECHOBUF, M_WAITOK);
+		printf("Echo device loaded.\n");
+		break;
+	case MOD_UNLOAD:
+		destroy_dev(echo_dev);
+		free(echomsg, M_ECHOBUF);
+		printf("Echo device unloaded.\n");
+		break;
+	default:
+		err = EOPNOTSUPP;
+		break;
+	}
+	return(err);
+}
+
+static int
+echo_open(struct cdev *dev, int oflags, int devtype, struct thread *p)
+{
+	int err = 0;
+
+	uprintf("Opened device \"echo\" successfully.\n");
+	return(err);
+}
+
+static int
+echo_close(struct cdev *dev, int fflag, int devtype, struct thread *p)
+{
+	uprintf("Closing device \"echo.\"\n");
+	return(0);
+}
+
+/*
+ * read函数接受由echo_write()存储的buf，并将其返回到用户空间，
+ * 以供其他函数访问。
+ * uio(9)
+ */
+
+static int
+echo_read(struct cdev *dev, struct uio *uio, int ioflag)
+{
+	int err = 0;
+	int amt;
+
+	/*
+	 * 这个读操作有多大？
+	 * 等于用户请求的大小，或者等于剩余数据的大小。
+	 */
+	amt = MIN(uio-&gt;uio_resid, (echomsg-&gt;len - uio-&gt;uio_offset &gt; 0) ?
+	     echomsg-&gt;len - uio-&gt;uio_offset : 0);
+	if ((err = uiomove(echomsg-&gt;msg + uio-&gt;uio_offset, amt, uio)) != 0) {
+		uprintf("uiomove failed!\n");
+	}
+	return(err);
+}
+
+/*
+ * echo_write接受一个字符串并将它保存到缓冲区, 用于以后的访问.
+ */
+
+static int
+echo_write(struct cdev *dev, struct uio *uio, int ioflag)
+{
+	int err = 0;
+
+	/* 将字符串从用户空间的内存复制到内核空间 */
+	err = copyin(uio-&gt;uio_iov-&gt;iov_base, echomsg-&gt;msg,
+	    MIN(uio-&gt;uio_iov-&gt;iov_len, BUFFERSIZE - 1));
+
+	/* 现在需要以null结束字符串，并记录长度 */
+	*(echomsg-&gt;msg + MIN(uio-&gt;uio_iov-&gt;iov_len, BUFFERSIZE - 1)) = 0;
+	echomsg-&gt;len = MIN(uio-&gt;uio_iov-&gt;iov_len, BUFFERSIZE);
+
+	if (err != 0) {
+		uprintf("Write failed: bad address!\n");
+	}
+	count++;
+	return(err);
+}
+
+DEV_MODULE(echo,echo_loader,NULL);</programlisting>
+    </example>
+
+    <para>在&os;&nbsp;4.X上安装此驱动程序，你将首先需要用如下命令在
+      你的文件系统上创建一个节点：</para>
+
+    <screen>&prompt.root; <userinput>mknod /dev/echo c 33 0</userinput></screen>
+
+    <para>驱动程序被加载后，你应该能够键入一些东西，如：</para>
+
+    <screen>&prompt.root; <userinput>echo -n "Test Data" &gt; /dev/echo</userinput>
+&prompt.root; <userinput>cat /dev/echo</userinput>
+Test Data</screen>
+
+    <para>真正的硬件设备在下一章描述。</para>
+
+    <para>补充资源
+    <itemizedlist>
+      <listitem><simpara><link xlink:href="http://ezine.daemonnews.org/200010/blueprints.html">Dynamic
+	Kernel Linker (KLD) Facility Programming Tutorial</link> -
+	<link xlink:href="http://www.daemonnews.org/">Daemonnews</link> October 2000</simpara></listitem>
+      <listitem><simpara><link xlink:href="http://ezine.daemonnews.org/200007/newbus-intro.html">How
+	to Write Kernel Drivers with NEWBUS</link> - <link xlink:href="http://www.daemonnews.org/">Daemonnews</link> July
+	2000</simpara></listitem>
+    </itemizedlist>
+    </para>
+  </sect1>
+
+  <sect1 xml:id="driverbasics-block">
+    <title>块设备(消亡中)</title>
+
+    <indexterm><primary>block devices(块设备)</primary></indexterm>
+    <para>其他&unix;系统支持另一类型的磁盘设备，称为块设备。块设备是内核
+      为它们提供缓冲的磁盘设备。这种缓冲使得块设备几乎没有用，或者说非常
+      不可靠。缓冲会重新安排写操作的次序，使得应用程序丧失了在任何时刻及时
+      知道准确的磁盘内容的能力。这导致对磁盘数据结构（文件系统，数据库等）的
+      可预测的和可靠的崩溃恢复成为不可能。由于写操作被延迟，内核无法向应用
+      程序报告哪个特定的写操作遇到了写错误，这又进一步增加了一致性问题。
+      由于这个原因，真正的应用程序从不依赖于块设备，事实上，几乎所有访问
+      磁盘的应用程序都尽力指定总是使用字符（或<quote>raw</quote>）设备。
+      由于实现将每个磁盘（分区）同具有不同语义的两个设备混为一谈，从而致使
+      相关内核代码极大地复杂化，作为推进磁盘I/O基础结构现代化的一部分，&os;
+      抛弃了对带缓冲的磁盘设备的支持。</para>
+  </sect1>
+
+  <sect1 xml:id="driverbasics-net">
+    <title>网络设备驱动程序</title>
+
+    <indexterm><primary>network devices(网络设备)</primary></indexterm>
+    <para>访问网络设备的驱动程序不需要使用设备节点。选择哪个驱动程序是
+      基于内核内部的其他决定而不是调用open()，对网络设备的使用通常由
+      系统调用socket(2)引入。</para>
+
+    <para>更多细节， 请参见 ifnet(9) 联机手册、 回环设备的源代码，
+      以及 Bill Paul 撰写的网络驱动程序。</para>
+
+  </sect1>
+
+</chapter>
