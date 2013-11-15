@@ -19,14 +19,14 @@
   <l:i18n xmlns:l="http://docbook.sourceforge.net/xmlns/l10n/1.0">
     <l:l10n language="zh_tw">
       <l:context name="title-numbered">
-	<l:template name="appendix" text="附〓 %n. %t"/>
+	<l:template name="appendix" text="附錄 %n. %t"/>
 	<l:template name="article/appendix" text="%n. %t" lang="en"/>
 	<l:template name="bridgehead" text="%t"/>
 	<l:template name="chapter" text="章 %n. %t"/>
 	<l:template name="part" text="部 %n. %t"/>
       </l:context>
       <l:context name="title-numbered">
-	<l:template name="appendix" text="附〓 %n. %t"/>
+	<l:template name="appendix" text="附錄 %n. %t"/>
 	<l:template name="article/appendix" text="%n. %t" lang="en"/>
 	<l:template name="chapter" text="章 %n. %t"/>
 	<l:template name="part" text="部 %n. %t"/>
