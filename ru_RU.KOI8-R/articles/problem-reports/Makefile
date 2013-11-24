@@ -4,7 +4,7 @@
 # $FreeBSD$
 # $FreeBSDru: frdp/doc/ru_RU.KOI8-R/articles/problem-reports/Makefile,v 1.3 2005/06/30 03:23:24 gad Exp $
 #
-# Original revision: r21827
+# Original revision: r39631
 #
 # Article: Writing FreeBSD Problem Reports
 

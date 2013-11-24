@@ -4,7 +4,7 @@
 # $FreeBSD$
 # $FreeBSDru: frdp/doc/ru_RU.KOI8-R/articles/console-server/Makefile,v 1.3 2004/09/06 07:19:39 marck Exp $
 #
-# Original revision: r21827
+# Original revision: r39631
 #
 # Article: Console Server
 #
