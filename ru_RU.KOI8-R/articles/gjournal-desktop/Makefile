@@ -3,7 +3,7 @@
 #
 # Article: Implementing UFS journaling on a desktop PC
 #
-# Original revision: r31928
+# Original revision: r39631
 #
 
 DOC?= article
