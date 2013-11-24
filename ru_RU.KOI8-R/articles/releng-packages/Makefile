@@ -3,7 +3,7 @@
 # $FreeBSDru: frdp/doc/ru_RU.KOI8-R/articles/releng-packages/Makefile,v 1.2 2005/07/01 07:07:44 gad Exp $
 # $FreeBSD$
 #
-# Original revision: r20561
+# Original revision: r39631
 #
 # Article: FreeBSD Release Engineering of Third Party Software Packages
 

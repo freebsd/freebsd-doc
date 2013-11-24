@@ -6,7 +6,7 @@
 #
 # Article: FreeBSD From Scratch
 #
-# Original revision: r20561
+# Original revision: r39631
 #
 
 DOC?= article

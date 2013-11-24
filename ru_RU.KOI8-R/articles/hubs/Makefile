@@ -4,7 +4,7 @@
 # $FreeBSD$
 # $FreeBSDru: frdp/doc/ru_RU.KOI8-R/articles/hubs/Makefile,v 1.3 2004/04/12 07:55:51 marck Exp $
 #
-# Original revision: r20561
+# Original revision: r39631
 #
 # Article: Mirroring FreeBSD
 

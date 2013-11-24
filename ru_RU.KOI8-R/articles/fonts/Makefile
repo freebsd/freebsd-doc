@@ -4,7 +4,7 @@
 # $FreeBSD$
 # $FreeBSDru: frdp/doc/ru_RU.KOI8-R/articles/fonts/Makefile,v 1.4 2005/12/06 17:56:24 gad Exp $
 #
-# Original revision: r21827
+# Original revision: r39631
 #
 # Article: Fonts and FreeBSD
 

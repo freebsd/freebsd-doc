@@ -4,7 +4,7 @@
 # $FreeBSD$
 # $FreeBSDru: frdp/doc/ru_RU.KOI8-R/articles/cvs-freebsd/Makefile,v 1.3 2005/01/03 08:14:37 marck Exp $
 #
-# Original revision: r21827
+# Original revision: r39631
 #
 
 DOC?= article

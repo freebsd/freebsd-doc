@@ -5,7 +5,7 @@
 # $FreeBSDru: frdp/doc/ru_RU.KOI8-R/articles/ipsec-must/Makefile,v 1.3 2004/02/20 07:52:54 andy Exp $
 # Article: Independent Verification of IPsec Functionality in FreeBSD
 #
-# Original revision: r21827
+# Original revision: r39631
 #
 
 DOC?= article
