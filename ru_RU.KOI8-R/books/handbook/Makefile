@@ -228,7 +228,6 @@ SRCS+=	preface/preface.xml
 SRCS+=	printing/chapter.xml
 SRCS+=	security/chapter.xml
 SRCS+=	serialcomms/chapter.xml
-SRCS+=	users/chapter.xml
 SRCS+=	x11/chapter.xml
 
 # Entities
