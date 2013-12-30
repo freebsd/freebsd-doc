@@ -230,8 +230,13 @@ $manPathDefault = 'FreeBSD 9.2-RELEASE';
 "$manLocalDir/FreeBSD-6.4-RELEASE/man:$manLocalDir/FreeBSD-6.4-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-6.2-RELEASE",
 
     'FreeBSD Ports', "$manLocalDir/FreeBSD-ports",
-    'FreeBSD 10-current',
-"$manLocalDir/FreeBSD-10-current/man:$manLocalDir/FreeBSD-10-current/openssl/man",
+    'FreeBSD 11-current',
+"$manLocalDir/FreeBSD-11-current/man:$manLocalDir/FreeBSD-11-current/openssl/man",
+
+    'FreeBSD 10.0-RELEASE',
+"$manLocalDir/FreeBSD-10.0-RELEASE/man:$manLocalDir/FreeBSD-10.0-RELEASE/openssl/man",
+    'FreeBSD 10.0-stable',
+"$manLocalDir/FreeBSD-10.0-stable/man:$manLocalDir/FreeBSD-10.0-stable/openssl/man",
 
     'FreeBSD 9.1-stable',
 "$manLocalDir/FreeBSD-9.1-stable/man:$manLocalDir/FreeBSD-9.1-stable/openssl/man",
@@ -590,6 +595,7 @@ my %valid_arch = map { $_ => 1 }
 my $default_arch = 'i386';
 
 my %arch = ( 
+'FreeBSD 10.0-RELEASE' => { 'default' => 'i386', 'arch' => [qw/amd64 arm i386 powerpc sparc64/] } ,
 'FreeBSD 9.2-RELEASE' => { 'default' => 'i386', 'arch' => [qw/amd64 arm i386 powerpc sparc64/] } ,
 'FreeBSD 9.1-RELEASE' => { 'default' => 'i386', 'arch' => [qw/amd64 arm i386 powerpc sparc64/] } ,
 'FreeBSD 9.0-RELEASE' => { 'default' => 'i386', 'arch' => [qw/amd64 arm i386 powerpc sparc64/] } ,
@@ -627,13 +633,14 @@ while ( ( $key, $val ) = each %manPath ) {
     'freebsd',         'FreeBSD 9.2-RELEASE',
     'freebsd-release', 'FreeBSD 9.2-RELEASE',
 
-    'freebsd-stable',  'FreeBSD 9.1-stable',
+    'freebsd-stable',  'FreeBSD 10.0-stable',
+    'freebsd-stable10', 'FreeBSD 10.0-stable',
     'freebsd-stable9', 'FreeBSD 9.1-stable',
     'freebsd-stable8', 'FreeBSD 8.3-stable',
     'freebsd-stable7', 'FreeBSD 7.4-stable',
     'freebsd-stable6', 'FreeBSD 6.4-stable',
 
-    'freebsd-current',       'FreeBSD 10-current',
+    'freebsd-current',       'FreeBSD 11-current',
     'freebsd-release-ports', 'FreeBSD 9.0-RELEASE and Ports',
 
     'slackware',  'Linux Slackware 3.1',
