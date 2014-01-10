@@ -399,6 +399,16 @@
     </fo:basic-link>
   </xsl:template>
 
+  <xsl:template match="db:package">
+    <xsl:variable name="xhref" select="concat('http://www.freebsd.org/cgi/url.cgi?ports/', ., '/pkg-descr')"/>
+
+    <fo:basic-link external-destination="url({$xhref})">
+      <fo:inline color="{$link.color}">
+        <xsl:apply-templates/>
+      </fo:inline>
+    </fo:basic-link>
+  </xsl:template>
+
 <!-- Customize header content -->
 <xsl:template name="header.content">
   <xsl:param name="pageclass" select="''"/>
