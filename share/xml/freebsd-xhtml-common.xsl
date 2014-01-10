@@ -86,6 +86,14 @@
     </div>
   </xsl:template>
 
+  <xsl:template match="db:package">
+    <xsl:variable name="url" select="concat('http://www.freebsd.org/cgi/url.cgi?ports/', ., '/pkg-descr')"/>
+
+    <a class="package" href="{$url}">
+      <xsl:apply-templates/>
+    </a>
+  </xsl:template>
+
   <!-- Customization to allow role="nolink" -->
   <xsl:template match="db:email">
     <xsl:call-template name="inline.monoseq">
