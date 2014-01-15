@@ -867,7 +867,7 @@
 
     <xsl:choose>
       <xsl:when test="$type = 'advisory'">
-	<xsl:for-each select="document($advisories.xml)/descendant::advisory[position() &lt;= 3]">
+	<xsl:for-each select="document($advisories.xml)/descendant::advisory[position() &lt;= 4]">
 	  <xsl:variable name="year" select="../../../name" />
           <xsl:variable name="month" select="../../name" />
           <xsl:variable name="day" select="../name" />
