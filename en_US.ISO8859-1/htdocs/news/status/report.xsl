@@ -93,6 +93,22 @@
 
     <xsl:apply-templates select="body"/>
 
+    <xsl:if test="sponsor">
+      <xsl:variable name="sponsors">
+	<xsl:for-each select="sponsor">
+	  <xsl:value-of select="."/>
+	  <xsl:choose>
+	    <xsl:when test="position() = last()">.</xsl:when>
+	    <xsl:when test="position() = (last() - 1)"> and </xsl:when>
+	    <xsl:when test="position() &lt; (last() - 1)">, </xsl:when>
+	    <xsl:otherwise>.</xsl:otherwise>
+	  </xsl:choose>
+	</xsl:for-each>
+      </xsl:variable>
+
+      <p>This project was sponsored by <xsl:value-of select="$sponsors"/></p>
+    </xsl:if>
+
     <xsl:apply-templates select="help"/>
 
     <hr/>
