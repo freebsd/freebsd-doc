@@ -7,7 +7,8 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS=	schedule.xml
+DOCS=	announce.xml
+DOCS+=	schedule.xml
 
 DATA=	docbook.css \
 	errata.html \
