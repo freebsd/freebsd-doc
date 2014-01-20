@@ -207,7 +207,7 @@ foreach my $os ( keys %$sectionpath ) {
 );
 
 $manLocalDir    = '/usr/local/www/bsddoc/man';
-$manPathDefault = 'FreeBSD 9.2-RELEASE';
+$manPathDefault = 'FreeBSD 10.0-RELEASE';
 
 %manPath = (
     'FreeBSD 9.0-RELEASE and Ports',
@@ -630,8 +630,8 @@ while ( ( $key, $val ) = each %manPath ) {
 
 # keywords must be in lower cases.
 %manPathAliases = (
-    'freebsd',         'FreeBSD 9.2-RELEASE',
-    'freebsd-release', 'FreeBSD 9.2-RELEASE',
+    'freebsd',         'FreeBSD 10.0-RELEASE',
+    'freebsd-release', 'FreeBSD 10.0-RELEASE',
 
     'freebsd-stable',  'FreeBSD 10.0-stable',
     'freebsd-stable10', 'FreeBSD 10.0-stable',
