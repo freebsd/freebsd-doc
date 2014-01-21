@@ -75,7 +75,7 @@ while [ $u -ge $l ]; do
     fi
 done;
 
-t="<!ENTITY man.$k.$s \"<citerefentry/<refentrytitle/$n/<manvolnum/$s//\">";
+t="<!ENTITY man.$k.$s \"<citerefentry xmlns='http://docbook.org/ns/docbook'><refentrytitle>$n</refentrytitle><manvolnum>$s</manvolnum></citerefentry>\">";
 echo "Inserting line $l:";
 echo $t;
 echo -n "Last chance to interrupt (or press enter to continue)> ";
