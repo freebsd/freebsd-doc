@@ -1197,6 +1197,10 @@
 	    </span><br />
 	    <a>
 	      <xsl:attribute name="href">
+		<xsl:choose>
+		  <xsl:when test="$news.project.xml = $news.project.xml-master">&enbase;/</xsl:when>
+		  <xsl:otherwise>&base;/</xsl:otherwise>
+		</xsl:choose>
 		<xsl:text>news/newsflash.html#</xsl:text>
 		<xsl:call-template name="html-news-generate-anchor">
 		  <xsl:with-param name="label" select="'event'" />
@@ -1311,6 +1315,10 @@
       </span><br />
       <a>
 	<xsl:attribute name="href">
+	  <xsl:choose>
+	    <xsl:when test="$news.press.xml = $news.press.xml-master">&enbase;/</xsl:when>
+	    <xsl:otherwise>&base;/</xsl:otherwise>
+	  </xsl:choose>
 	  <xsl:text>news/press.html#</xsl:text>
 	  <xsl:call-template name="html-news-generate-anchor">
 	    <xsl:with-param name="label" select="'story'" />
@@ -1429,7 +1437,7 @@
       <a>
         <xsl:attribute name="href">
 	  <xsl:choose>
-	    <xsl:when test="$events.xml = 'none'">&enbase;/</xsl:when>
+	    <xsl:when test="$events.xml = $events.xml-master">&enbase;/</xsl:when>
 	    <xsl:otherwise>&base;/</xsl:otherwise>
 	  </xsl:choose>
 	  <xsl:text>events/#</xsl:text>
