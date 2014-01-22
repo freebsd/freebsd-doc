@@ -513,6 +513,51 @@
   <!-- Suppress list titles -->
   <xsl:template match="db:title" mode="list.title.mode"/>
 
+  <!-- Soft-hyphen workaround for verbatim hyphenation -->
+  <xsl:template name="hyphenate.verbatim">
+    <xsl:param name="content"/>
+    <xsl:variable name="apos" select='"&apos;"'/>
+    <xsl:variable name="head" select="substring($content, 1, 1)"/>
+    <xsl:variable name="tail" select="substring($content, 2)"/>
+    <xsl:variable name="next" select="substring($tail, 1, 1)"/>
+    <xsl:choose>
+      <!-- Place soft-hyphen after space or non-breakable space. -->
+      <xsl:when test="$next = '&#xA;' or $next = '' or $next = '&quot;' or
+	$next = '.' or $next = ',' or $next = '-' or $next = '/' or
+	$next = $apos or $next = ':' or $next = '!' or $next = '|' or
+	$next = '?' or $next = ')'">
+	<xsl:value-of select="$head"/>
+      </xsl:when>
+      <xsl:when test="($head = ' ' or $head = '&#160;') and $next != '.' and
+	$next != '}' and $next != ' ' and $next != '&#160;'">
+	<xsl:text>&#160;</xsl:text>
+	<xsl:text>&#x00AD;</xsl:text>
+      </xsl:when>
+      <xsl:when test="$head = '.' and translate($next, '0123456789', '') != ''">
+	<xsl:text>.</xsl:text>
+	<xsl:text>&#x00AD;</xsl:text>
+      </xsl:when>
+      <xsl:when test="$hyphenate.verbatim.characters != '' and
+	translate($head, $hyphenate.verbatim.characters, '') = '' and
+	translate($next, $hyphenate.verbatim.characters, '') != ''">
+	<xsl:value-of select="$head"/>
+	<xsl:text>&#x00AD;</xsl:text>
+      </xsl:when>
+      <xsl:when test="$next = '('">
+	<xsl:value-of select="$head"/>
+	<xsl:text>&#x00AD;</xsl:text>
+      </xsl:when>
+      <xsl:otherwise>
+	<xsl:value-of select="$head"/>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:if test="$tail">
+      <xsl:call-template name="hyphenate.verbatim">
+	<xsl:with-param name="content" select="$tail"/>
+      </xsl:call-template>
+    </xsl:if>
+  </xsl:template>
+
 <!--
 	TITLEPAGE TEMPLATES
 -->
