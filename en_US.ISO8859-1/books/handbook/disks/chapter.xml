@@ -252,6 +252,154 @@
     <screen>&prompt.root; <userinput>mount /newdisk</userinput></screen>
   </sect1>
 
+  <sect1 xml:id="disks-growing">
+    <info>
+      <title>Resizing and Growing Disks</title>
+
+      <authorgroup>
+	<author>
+	  <personname>
+	    <firstname>Allan</firstname>
+	    <surname>Jude</surname>
+	  </personname>
+	  <contrib>Originally contributed by </contrib>
+	</author>
+      </authorgroup>
+    </info>
+
+    <indexterm>
+      <primary>disks</primary>
+      <secondary>resizing</secondary>
+    </indexterm>
+
+    <para>A disk's capacity can increase without any changes to the
+      data already present.  This happens commonly with virtual
+      machines, when the virtual disk turns out to be too small and is
+      enlarged.  Sometimes a disk image is written to a
+      <acronym>USB</acronym> memory stick, but does not use the full
+      capacity.  Here we describe how to resize or
+      <emphasis>grow</emphasis> disk contents to take advantage of
+      increased capacity.</para>
+
+    <para>Determine the device name of the disk to be resized by
+      inspecting <filename>/var/run/dmesg.boot</filename>.  In this
+      example, there is only one <acronym>SATA</acronym> disk in the
+      system, so the drive will appear as
+      <filename>ada0</filename>.</para>
+
+    <indexterm><primary>partitions</primary></indexterm>
+    <indexterm>
+      <primary><command>gpart</command></primary>
+    </indexterm>
+
+    <para>List the partitions on the disk to see the current
+      configuration:</para>
+
+    <screen>&prompt.root; <command>gpart show <replaceable>ada0</replaceable></command>
+=>      34  83886013  ada0  GPT  (48G) [CORRUPT]
+        34       128     1  freebsd-boot  (64k)
+       162  79691648     2  freebsd-ufs  (38G)
+  79691810   4194236     3  freebsd-swap  (2G)
+  83886046         1        - free -  (512B)</screen>
+
+    <note>
+      <para>If the disk was formatted with the <link
+	  xlink:href="http://en.wikipedia.org/wiki/GUID_Partition_Table">
+	<acronym>GPT</acronym></link> partitioning scheme, it may show
+	as <quote>corrupted</quote> because the <acronym>GPT</acronym>
+	backup partition table is no longer at the end of the
+	drive.  Fix the backup
+	partition table with
+	<command>gpart</command>:</para>
+
+      <screen>&prompt.root; <command>gpart recover <replaceable>ada0</replaceable></command>
+ada0 recovered</screen>
+    </note>
+
+    <para>Now the additional space on the disk is available for
+      use by a new partition, or an existing partition can be
+      expanded:</para>
+
+    <screen>&prompt.root; <command>gpart show <replaceable>ada0</replaceable></command>
+=>       34  102399933  ada0  GPT  (48G)
+         34        128     1  freebsd-boot  (64k)
+        162   79691648     2  freebsd-ufs  (38G)
+   79691810    4194236     3  freebsd-swap  (2G)
+   83886046   18513921        - free -  (8.8G)</screen>
+
+    <para>Partitions can only be resized into contiguous free space.
+      Here, the last partition on the disk is the swap partition, but
+      the second partition is the one that needs to be resized.  Swap
+      partitions only contain temporary data, so it can safely be
+      unmounted, deleted, and then recreated after resizing other
+      partitions.</para>
+
+    <screen>&prompt.root; <command>swapoff <replaceable>/dev/ada0p3</replaceable></command>
+&prompt.root; <command>gpart delete -i <replaceable>3</replaceable> <replaceable>ada0</replaceable></command>
+ada0p3 deleted
+&prompt.root; <command>gpart show <replaceable>ada0</replaceable></command>
+=>       34  102399933  ada0  GPT  (48G)
+         34        128     1  freebsd-boot  (64k)
+        162   79691648     2  freebsd-ufs  (38G)
+   79691810   22708157        - free -  (10G)</screen>
+
+    <warning>
+      <para>There is risk of data loss when modifying the partition
+	table of a mounted file system.  It is best to perform the
+	following steps on an unmounted file system while running from
+	a live <acronym>CD-ROM</acronym> or <acronym>USB</acronym>
+	device.  However, if absolutely necessary, a mounted file
+	system can be  resized after disabling GEOM safety
+	features:</para>
+
+      <screen>&prompt.root; <command>sysctl kern.geom.debugflags=16</command></screen>
+    </warning>
+
+    <para>Resize the partition, leaving room to recreate a swap
+      partition of the desired size.  This only modifies the size of
+      the partition.  The file system in the partition will be
+      expanded in a separate step.</para>
+
+    <screen>&prompt.root; <command>gpart resize -i <replaceable>2</replaceable> -a 4k -s <replaceable>47G</replaceable> <replaceable>ada0</replaceable></command>
+ada0p2 resized
+&prompt.root; <command>gpart show <replaceable>ada0</replaceable></command>
+=>       34  102399933  ada0  GPT  (48G)
+         34        128     1  freebsd-boot  (64k)
+        162   98566144     2  freebsd-ufs  (47G)
+   98566306    3833661        - free -  (1.8G)</screen>
+
+    <para>Recreate the swap partition:</para>
+
+    <screen>&prompt.root; <command>gpart add -t freebsd-swap -a 4k <replaceable>ada0</replaceable></command>
+ada0p3 added
+&prompt.root; <command>gpart show <replaceable>ada0</replaceable></command>
+=>       34  102399933  ada0  GPT  (48G)
+         34        128     1  freebsd-boot  (64k)
+        162   98566144     2  freebsd-ufs  (47G)
+   98566306    3833661     3  freebsd-swap  (1.8G)
+&prompt.root; <command>swapon <replaceable>/dev/ada0p3</replaceable></command></screen>
+
+    <para>Grow the <acronym>UFS</acronym> file system to use the new
+      capacity of the resized partition:</para>
+
+    <note>
+      <para>Growing a live <acronym>UFS</acronym> file system is only
+	possible in &os; 10.0-RELEASE and later.  For earlier
+	versions, the file system must not be mounted.</para>
+    </note>
+
+    <screen>&prompt.root; <command>growfs <replaceable>/dev/ada0p2</replaceable></command>
+Device is mounted read-write; resizing will result in temporary write suspension for /.
+It's strongly recommended to make a backup before growing the file system.
+OK to grow file system on /dev/ada0p2, mounted on /, from 38GB to 47GB? [Yes/No] <userinput>Yes</userinput>
+super-block backups (for fsck -b #) at:
+ 80781312, 82063552, 83345792, 84628032, 85910272, 87192512, 88474752,
+ 89756992, 91039232, 92321472, 93603712, 94885952, 96168192, 97450432</screen>
+
+    <para>Both the partition and the file system on it have now been
+      resized to use the newly-available disk space.</para>
+  </sect1>
+
   <sect1 xml:id="usb-disks">
     <info>
       <title>USB Storage Devices</title>
