@@ -26,7 +26,7 @@ $searchpage = '/search/search.html';
 $myurl = $ENV{'SCRIPT_NAME'};
 $ENV{PATH} = "/bin:/usr/bin:/usr/local/bin";
 
-require "open2.pl";
+use IPC::Open2 'open2';
 require "./cgi-lib.pl";
 require "./cgi-style.pl";
 
