@@ -6,7 +6,7 @@
 <!--
      $FreeBSD$
      $FreeBSDde$
-     basiert auf: 41116
+     basiert auf: 43575
 -->
 
 <xsl:stylesheet version="1.0"
@@ -39,27 +39,23 @@
 		<div id="frontfeatureleft">
 			<div id="frontfeaturecontent">
 				<h1>
-				  Auf BSD UNIX&reg; basierend
+				  The &os; Project
 				</h1>
 				<p>FreeBSD&reg; ist ein modernes Betriebssystem für
 				  Server, Desktops und eingebettete Systeme, das auf
 				  zahlreichen <a
 				  href="&base;/platforms/index.html">Plattformen</a>
-				  läuft.  Der Quellcode von FreeBSD wird seit
-				  mehr als 30 Jahren kontinuierlich weiterentwickelt,
-				  verbessert und optimiert.  Das System wird
-				  von einer <a
+				  läuft.  Der Quellcode von FreeBSD wird von einer <a
 				  href="&enbase;/doc/en_US.ISO8859-1/articles/contributors/staff-committers.html">
-				  großen Entwicklergruppe</a> gepflegt und erweitert.
-				  FreeBSD bietet Ihnen leistungsfähige
-				  und beeindruckende Netzwerk- und
-				  Sicherheitsfunktionen und eine exzellente
-				  Performance und wird deswegen beispielsweise von
-				  einigen der größten <a
+				  großen Entwicklergruppe</a> seit mehr als 30 Jahren
+				  kontinuierlich weiterentwickelt, verbessert und
+				  optimiert.  Seine leistungsfähigen und
+				  und beeindruckende Netzwerk-, Sicherheits- und
+				  Speicherfunktionen machen &os; zum Betriebssystem
+				  der Wahl für einige der größten <a
 				  href="&enbase;/doc/&url.doc.langcode;/books/handbook/nutshell.html#introduction-nutshell-users">
-				  Internet-Seiten</a> und von zahlreichen Anbietern
-				  eingebetteter Netzwerk- und Speichergeräte
-				  eingesetzt.</p>
+				  Internet-Seiten</a> und für zahlreiche Anbieter
+				  eingebetteter Netzwerk- und Speichergeräte.</p>
 
 				  <div id="txtfrontfeaturelink"> »<a
 				    href="&base;/about.html" title="Learn More">Mehr Informationen</a>
@@ -71,7 +67,7 @@
 			<div class="frontgetroundbox">
 			  <div class="frontgettop"><div>&nbsp;</div>&nbsp;</div>
 				<div class="frontgetcontent">
-				  <a href="&base;/where.html">FreeBSD beziehen</a>
+				  <a href="&base;/where.html">Download FreeBSD</a>
 				</div> <!-- frontgetcontent -->
 			  <div class="frontgetbot"><div>&nbsp;</div>&nbsp;</div>
 			</div> <!-- frontgetroundbox -->
@@ -84,7 +80,8 @@
 					  Produktion:&nbsp;<a href="&u.rel.announce;">&rel.current;</a>
 					</li>
 					<li>
-					  Produktion (alt):&nbsp;<a href="&u.rel2.announce;">&rel2.current;</a>
+					  Produktion (alt):&nbsp;<a href="&u.rel2.announce;">&rel2.current;</a>,
+					  <a href="&u.rel3.announce;">&rel3.current;</a>
 					</li>
 			    <xsl:if test="'&beta.testing;' != 'IGNORE'">
 					  <li>
