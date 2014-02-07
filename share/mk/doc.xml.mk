@@ -31,7 +31,8 @@ _XML_INCLIST=	libcommon.l10n.xsl \
 		iso8879.ent \
 		l10n.ent \
 		release.ent \
-		release.l10n.ent
+		release.l10n.ent \
+		authors.ent
 .for F in ${_XML_INCLIST}
 .if exists(${DOC_PREFIX}/${LANGCODE}/share/xml/${F})
 XML_INCLUDES+=	${DOC_PREFIX}/${LANGCODE}/share/xml/${F}
