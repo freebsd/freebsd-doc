@@ -9,6 +9,6 @@
 
 SUBDIR=	Section
 
-DATA=	MIMEIterator.pm Section.pm
+DATA=	MIMEIterator.pm Section.pm SectionIterator.pm
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"
