@@ -8,5 +8,6 @@
 .endif
 
 DOCS=   index.xml donors.xml
+DATA=	wantlist.html
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"
