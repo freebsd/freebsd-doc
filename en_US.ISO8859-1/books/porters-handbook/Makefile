@@ -19,6 +19,7 @@ INSTALL_ONLY_COMPRESSED?=
 #
 
 # XML content
+SRCS=  book.xml
 SRCS+= porting-why/chapter.xml
 SRCS+= new-port/chapter.xml
 SRCS+= quick-porting/chapter.xml
@@ -34,8 +35,6 @@ SRCS+= porting-dads/chapter.xml
 SRCS+= porting-samplem/chapter.xml
 SRCS+= keeping-up/chapter.xml
 SRCS+= appendices/chapter.xml
-
-SRCS=  book.xml
 SRCS+= uses.xml
 SRCS+= versions.xml
 
