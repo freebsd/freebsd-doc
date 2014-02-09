@@ -19,21 +19,21 @@ INSTALL_ONLY_COMPRESSED?=
 #
 
 # XML content
-#SRCS+= quick-porting/chapter.xml
-#SRCS+= own-port/chapter.xml
-#SRCS+= porting-why/chapter.xml
+SRCS+= porting-why/chapter.xml
+SRCS+= new-port/chapter.xml
+SRCS+= quick-porting/chapter.xml
+SRCS+= slow-porting/chapter.xml
 SRCS+= makefiles/chapter.xml
-#SRCS+= plist/chapter.xml
-#SRCS+= testing/chapter.xml
-#SRCS+= security/chapter.xml
-#SRCS+= porting-samplem/chapter.xml
-#SRCS+= appendices/chapter.xml
-#SRCS+= keeping-up/chapter.xml
-#SRCS+= porting-dads/chapter.xml
-#SRCS+= upgrading/chapter.xml
-#SRCS+= pkg-files/chapter.xml
-#SRCS+= specials/chapter.xml
-#SRCS+= slow-porting/chapter.xml
+SRCS+= special/chapter.xml
+SRCS+= plist/chapter.xml
+SRCS+= pkg-files/chapter.xml
+SRCS+= testing/chapter.xml
+SRCS+= upgrading/chapter.xml
+SRCS+= security/chapter.xml
+SRCS+= porting-dads/chapter.xml
+SRCS+= porting-samplem/chapter.xml
+SRCS+= keeping-up/chapter.xml
+SRCS+= appendices/chapter.xml
 
 SRCS=  book.xml
 SRCS+= uses.xml
