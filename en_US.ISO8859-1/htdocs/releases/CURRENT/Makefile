@@ -3,18 +3,15 @@
 DOC_PREFIX?=	${.CURDIR}/../../../..
 RELN_ROOT?=	${.CURDIR}/../../relnotes
 
-.if exists(${RELN_ROOT}/Makefile.inc)
-.include "${RELN_ROOT}/Makefile.inc"
-.endif
 .if exists(${.CURDIR}/Makefile.inc)
 .include "${.CURDIR}/Makefile.inc"
 .endif
 
-MAN4DIR?=	${DOC_PREFIX}/../src/share/man/man4
+DOCS?=	errata.xml \
+	readme.xml \
+	relnotes.xml
 
-SUBDIR=		errata \
-		hardware \
-		readme \
-		relnotes
+SUBDIR=	hardware
 
-.include "${DOC_PREFIX}/share/mk/doc.subdir.mk"
+.include "${RELN_ROOT}/share/mk/doc.relnotes.mk"
+.include "${DOC_PREFIX}/share/mk/web.site.mk"

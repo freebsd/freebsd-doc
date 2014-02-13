@@ -5,14 +5,14 @@ RELN_ROOT?=	${.CURDIR}/../../../relnotes
 
 DOC=		hardware
 
-.if exists(${RELN_ROOT}/Makefile.inc)
-.include "${RELN_ROOT}/Makefile.inc"
+.if exists(${.CURDIR}/../../../Makefile.inc)
+.include "${.CURDIR}/../../../Makefile.inc"
 .endif
 .if exists(${.CURDIR}/../Makefile.inc)
 .include "${.CURDIR}/../Makefile.inc"
 .endif
 
-DESTDIR?=	${DOCDIR}/relnotes/${BRANCH}/${DOC}
+#DESTDIR?=	${DOCDIR}/relnotes/${BRANCH}/${DOC}
 
 FORMATS?=	html
 INSTALL_COMPRESSED?=gz
