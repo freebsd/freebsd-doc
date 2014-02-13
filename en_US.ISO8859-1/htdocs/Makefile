@@ -79,9 +79,6 @@ SUBDIR+= support
 SUBDIR+= doc
 SUBDIR+= ports
 .endif
-.if defined(BUILD_RELNOTES)
-SUBDIR+= relnotes
-.endif
 
 # Non-XML
 SUBDIR+= cgi
