@@ -1,15 +1,18 @@
 # $FreeBSD$
 
 DOC_PREFIX?=	${.CURDIR}/../../../../..
-RELN_ROOT?=	${.CURDIR}/../..
+RELN_ROOT?=	${.CURDIR}/../../../relnotes
 
 DOC=		hardware
 
-.ifdef NO_LANGCODE_IN_DESTDIR
-DESTDIR?=	${DOCDIR}/${DOC}
-.else
-DESTDIR?=	${DOCDIR}/en_US.ISO8859-1/${DOC}
+.if exists(${RELN_ROOT}/Makefile.inc)
+.include "${RELN_ROOT}/Makefile.inc"
 .endif
+.if exists(${.CURDIR}/../Makefile.inc)
+.include "${.CURDIR}/../Makefile.inc"
+.endif
+
+DESTDIR?=	${DOCDIR}/relnotes/${BRANCH}/${DOC}
 
 FORMATS?=	html
 INSTALL_COMPRESSED?=gz
