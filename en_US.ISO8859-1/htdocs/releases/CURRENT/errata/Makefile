@@ -3,8 +3,6 @@
 DOC_PREFIX?=	${.CURDIR}/../../../../..
 RELN_ROOT?=	${.CURDIR}/../../../relnotes
 
-DOC=		errata
-
 .if exists(${RELN_ROOT}/Makefile.inc)
 .include "${RELN_ROOT}/Makefile.inc"
 .endif
@@ -12,14 +10,15 @@ DOC=		errata
 .include "${.CURDIR}/../Makefile.inc"
 .endif
 
-DESTDIR?=	${DOCDIR}/relnotes/${BRANCH}/${DOC}
-
 FORMATS?=	html
 INSTALL_COMPRESSED?=gz
 INSTALL_ONLY_COMPRESSED?=
 
-# XML content
+DOC=		article
+#DOCNAME=	errata
 SRCS+=		${DOC}.xml
+#SYMLINKS=	${DOCNAME}.html ${DOC}.html
 
+.include <bsd.own.mk>
 .include "${RELN_ROOT}/share/mk/doc.relnotes.mk"
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"

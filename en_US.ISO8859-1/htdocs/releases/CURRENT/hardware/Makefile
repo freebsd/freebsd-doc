@@ -3,8 +3,6 @@
 DOC_PREFIX?=	${.CURDIR}/../../../../..
 RELN_ROOT?=	${.CURDIR}/../../../relnotes
 
-DOC=		hardware
-
 .if exists(${RELN_ROOT}/Makefile.inc)
 .include "${RELN_ROOT}/Makefile.inc"
 .endif
@@ -12,16 +10,14 @@ DOC=		hardware
 .include "${.CURDIR}/../Makefile.inc"
 .endif
 
-DESTDIR?=	${DOCDIR}/relnotes/${BRANCH}/${DOC}
-
 FORMATS?=	html
 INSTALL_COMPRESSED?=gz
 INSTALL_ONLY_COMPRESSED?=
 
 JADEFLAGS+=	-V %generate-article-toc%
 
-# SGML content
-SRCS+=		${DOC}.xml
+DOC=		article
+SRCS+=		article.xml
 SRCS+=		${DEV-AUTODIR}/catalog-auto
 SRCS+=		${DEV-AUTODIR}/dev-auto.ent
 

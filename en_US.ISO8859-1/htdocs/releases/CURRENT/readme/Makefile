@@ -3,8 +3,6 @@
 DOC_PREFIX?=	${.CURDIR}/../../../../..
 RELN_ROOT?=	${.CURDIR}/../../../relnotes
 
-DOC=		readme
-
 .if exists(${RELN_ROOT}/Makefile.inc)
 .include "${RELN_ROOT}/Makefile.inc"
 .endif
@@ -12,14 +10,12 @@ DOC=		readme
 .include "${.CURDIR}/../Makefile.inc"
 .endif
 
-DESTDIR?=	${DOCDIR}/relnotes/${BRANCH}/${DOC}
-
 FORMATS?=	html
 INSTALL_COMPRESSED?=gz
 INSTALL_ONLY_COMPRESSED?=
 
-# XML content
-SRCS+=		${DOC}.xml
+DOC=		article
+SRCS+=		article.xml
 
 .include "${RELN_ROOT}/share/mk/doc.relnotes.mk"
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"

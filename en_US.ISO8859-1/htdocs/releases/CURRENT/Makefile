@@ -10,11 +10,27 @@ RELN_ROOT?=	${.CURDIR}/../../relnotes
 .include "${.CURDIR}/Makefile.inc"
 .endif
 
-MAN4DIR?=	${DOC_PREFIX}/../src/share/man/man4
-
-SUBDIR=		errata \
+XXX=		errata \
 		hardware \
 		readme \
 		relnotes
 
-.include "${DOC_PREFIX}/share/mk/doc.subdir.mk"
+.if ${.TARGET:M*install} != ""
+DATA=		docbook.css
+.  for _D in ${XXX}
+.   if exists(${.CURDIR}/${_D}.html)
+DATA+=		${_D}.html
+.   endif
+.  endfor
+. include "${DOC_PREFIX}/share/mk/web.site.mk"
+
+.else
+SUBDIR=		${XXX}
+. include "${DOC_PREFIX}/share/mk/doc.subdir.mk"
+.endif
+
+COMPAT_SYMLINK=	en
+LANGCODE=	en_US.ISO8859-1
+_LANGCODE=	en_US.ISO8859-1
+
+. include "${RELN_ROOT}/share/mk/doc.relnotes.mk"
