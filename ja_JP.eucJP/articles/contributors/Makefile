@@ -3,7 +3,7 @@
 #
 # Article: Contributors to FreeBSD
 #
-# Original revision: r36665
+# Original revision: r39631
 
 DOC?= article
 
