@@ -463,7 +463,6 @@
       be checked for project specific updates.</p>
 
     <ul>
-      <li><a href="&base;/java/newsflash.html">&java; on FreeBSD</a></li>
       <li><a href="http://freebsd.kde.org/">KDE on FreeBSD</a></li>
       <li><a href="&base;/gnome/newsflash.html">GNOME on FreeBSD</a></li>
     </ul>
