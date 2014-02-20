@@ -3,7 +3,7 @@
 				"http://www.FreeBSD.org/XML/share/xml/xslt10-freebsd.dtd">
 <!-- $FreeBSD$ -->
 <!-- The FreeBSD Japanese Documentation Project -->
-<!-- Original revision: r39141 -->
+<!-- Original revision: r43972 -->
 
 <xsl:stylesheet version="1.0"
   xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
@@ -105,7 +105,6 @@
     <p>それぞれのプロジェクトの最新情報は、次の各ウェブページをご覧ください。</p>
 
     <ul>
-      <li><a href="&base;/java/newsflash.html">&java; on FreeBSD</a></li>
       <li><a href="http://freebsd.kde.org/">KDE on FreeBSD</a></li>
       <li><a href="&enbase;/gnome/newsflash.html">GNOME on FreeBSD</a></li>
     </ul>
