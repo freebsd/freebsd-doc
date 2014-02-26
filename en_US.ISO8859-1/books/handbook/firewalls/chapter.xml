@@ -1987,6 +1987,140 @@ options    IPDIVERT			# enables NAT</programlisting>
       </variablelist>
     </sect2>
 
+    <sect2>
+	<title>Example Ruleset</title>
+
+	<para>This section demonstrates how to create an example
+	  stateful firewall ruleset script named
+	  <filename>/etc/ipfw.rules</filename>.  In this example, all
+	  connection rules use <literal>in</literal> or
+	  <literal>out</literal> to clarify the direction.  They also
+	  use <literal>via</literal>
+	  <replaceable>interface-name</replaceable> to specify
+	  the interface the packet is traveling over.</para>
+
+	<para>The firewall script begins by indicating that it is a
+	  Bourne shell script and flushes any existing rules.  It then
+	  creates the <literal>cmd</literal> variable so that
+	  <literal>ipfw add</literal> does not have to be typed at the
+	  beginning of every rule.  It also defines the
+	  <literal>pif</literal> variable which represents the name of
+	  the interface that is attached to the Internet.</para>
+
+	<programlisting>#!/bin/sh
+# Flush out the list before we begin.
+ipfw -q -f flush
+
+# Set rules command prefix
+cmd="ipfw -q add"
+pif="dc0"     # interface name of NIC attached to Internet</programlisting>
+
+	<para>The first two rules allow all traffic on the trusted
+	  internal interface and on the loopback interface:</para>
+
+	<programlisting># Change xl0 to LAN NIC interface name
+&dollar;cmd 00005 allow all from any to any via xl0
+
+# No restrictions on Loopback Interface
+&dollar;cmd 00010 allow all from any to any via lo0</programlisting>
+
+	<para>The next rule allows the packet through if it matches
+	  an existing entry in the dynamic rules table:</para>
+
+	<programlisting>&dollar;cmd 00015 check-state</programlisting>
+
+	<para>The next set of rules defines which stateful connections
+	  internal systems can create to hosts on the Internet:</para>
+
+	<programlisting># Allow access to public DNS
+# Replace x.x.x.x with the IP address of a public DNS server
+# and repeat for each DNS server in /etc/resolv.conf
+&dollar;cmd 00110 allow tcp from any to x.x.x.x 53 out via &dollar;pif setup keep-state
+&dollar;cmd 00111 allow udp from any to x.x.x.x 53 out via &dollar;pif keep-state
+
+# Allow access to ISP's DHCP server for cable/DSL configurations.
+# Use the first rule and check log for IP address.
+# Then, uncomment the second rule, input the IP address, and delete the first rule
+&dollar;cmd 00120 allow log udp from any to any 67 out via &dollar;pif keep-state
+#&dollar;cmd 00120 allow udp from any to x.x.x.x 67 out via &dollar;pif keep-state
+
+# Allow outbound HTTP and HTTPS connections
+&dollar;cmd 00200 allow tcp from any to any 80 out via &dollar;pif setup keep-state
+&dollar;cmd 00220 allow tcp from any to any 443 out via &dollar;pif setup keep-state
+
+# Allow outbound email connections
+&dollar;cmd 00230 allow tcp from any to any 25 out via &dollar;pif setup keep-state
+&dollar;cmd 00231 allow tcp from any to any 110 out via &dollar;pif setup keep-state
+
+# Allow outbound ping
+&dollar;cmd 00250 allow icmp from any to any out via &dollar;pif keep-state
+
+# Allow outbound NTP
+&dollar;cmd 00260 allow tcp from any to any 37 out via &dollar;pif setup keep-state
+
+# Allow outbound SSH
+&dollar;cmd 00280 allow tcp from any to any 22 out via &dollar;pif setup keep-state
+
+# deny and log all other outbound connections
+&dollar;cmd 00299 deny log all from any to any out via &dollar;pif</programlisting>
+
+	<para>The next set of rules controls connections from
+	  Internet hosts to the internal network.  It starts by
+	  denying packets typically associated with attacks and then
+	  explicitly allows specific types of connections.  All the
+	  authorized services that originate from the Internet use
+	  <literal>limit</literal> to prevent flooding.</para>
+
+	<programlisting># Deny all inbound traffic from non-routable reserved address spaces
+&dollar;cmd 00300 deny all from 192.168.0.0/16 to any in via &dollar;pif     #RFC 1918 private IP
+&dollar;cmd 00301 deny all from 172.16.0.0/12 to any in via &dollar;pif      #RFC 1918 private IP
+&dollar;cmd 00302 deny all from 10.0.0.0/8 to any in via &dollar;pif         #RFC 1918 private IP
+&dollar;cmd 00303 deny all from 127.0.0.0/8 to any in via &dollar;pif        #loopback
+&dollar;cmd 00304 deny all from 0.0.0.0/8 to any in via &dollar;pif          #loopback
+&dollar;cmd 00305 deny all from 169.254.0.0/16 to any in via &dollar;pif     #DHCP auto-config
+&dollar;cmd 00306 deny all from 192.0.2.0/24 to any in via &dollar;pif       #reserved for docs
+&dollar;cmd 00307 deny all from 204.152.64.0/23 to any in via &dollar;pif    #Sun cluster interconnect
+&dollar;cmd 00308 deny all from 224.0.0.0/3 to any in via &dollar;pif        #Class D &amp; E multicast
+
+# Deny public pings
+&dollar;cmd 00310 deny icmp from any to any in via &dollar;pif
+
+# Deny ident
+&dollar;cmd 00315 deny tcp from any to any 113 in via &dollar;pif
+
+# Deny all Netbios services.
+&dollar;cmd 00320 deny tcp from any to any 137 in via &dollar;pif
+&dollar;cmd 00321 deny tcp from any to any 138 in via &dollar;pif
+&dollar;cmd 00322 deny tcp from any to any 139 in via &dollar;pif
+&dollar;cmd 00323 deny tcp from any to any 81 in via &dollar;pif
+
+# Deny fragments
+&dollar;cmd 00330 deny all from any to any frag in via &dollar;pif
+
+# Deny ACK packets that did not match the dynamic rule table
+&dollar;cmd 00332 deny tcp from any to any established in via &dollar;pif
+
+# Allow traffic from ISP's DHCP server.
+# Replace x.x.x.x with the same IP address used in rule 00120.
+#&dollar;cmd 00360 allow udp from any to x.x.x.x 67 in via &dollar;pif keep-state
+
+# Allow HTTP connections to internal web server
+&dollar;cmd 00400 allow tcp from any to me 80 in via &dollar;pif setup limit src-addr 2
+
+# Allow inbound SSH connections
+&dollar;cmd 00410 allow tcp from any to me 22 in via &dollar;pif setup limit src-addr 2
+
+# Reject and log all other incoming connections
+&dollar;cmd 00499 deny log all from any to any in via &dollar;pif</programlisting>
+
+	<para>The last rule logs all packets that do not match any of
+	  the rules in the
+	  ruleset:</para>
+
+	<programlisting># Everything else is denied and logged 
+&dollar;cmd 00999 deny log all from any to any</programlisting>
+      </sect2>
+      
     <sect2 xml:id="firewalls-ipfw-cmd">
       <title>The <application>IPFW</application> Command</title>
 
@@ -2152,199 +2286,6 @@ ks="keep-state"        # just too lazy to key this each time
 &prompt.root; <userinput>ipfw -q add allow tcp from any to any 80 out via tun0 setup keep-state</userinput>
 &prompt.root; <userinput>ipfw -q add allow tcp from any to 192.0.2.11 53 out via tun0 setup keep-state</userinput>
 &prompt.root; <userinput>ipfw -q add 00611 allow udp from any to 192.0.2.11 53 out via tun0 keep-state</userinput></screen>
-      </sect3>
-
-      <sect3>
-	<title>An Example Stateful Ruleset</title>
-
-	<para>The following sample ruleset is a complete inclusive
-	  type ruleset.  Comment out any
-	  <literal>pass</literal> rules for services that are not
-	  required.  To avoid logging undesired messages, add a
-	  <literal>deny</literal> rule in the inbound section.
-	  Change the <filename>dc0</filename> in every rule to the
-	  device name of the interface that connects the system to the
-	  Internet.</para>
-
-	<para>There is a noticeable pattern in the usage of these
-	  rules.</para>
-
-	<itemizedlist>
-	  <listitem>
-	    <para>All statements that are a request to start a session
-	      to the Internet use
-	      <literal>keep-state</literal>.</para>
-	  </listitem>
-
-	  <listitem>
-	    <para>All the authorized services that originate from
-	      the Internet use <literal>limit</literal> to prevent
-	      flooding.</para>
-	  </listitem>
-
-	  <listitem>
-	    <para>All rules use <literal>in</literal> or
-	      <literal>out</literal> to clarify direction.</para>
-	  </listitem>
-
-	  <listitem>
-	    <para>All rules use <literal>via</literal>
-	      <replaceable>interface-name</replaceable> to specify
-	      the interface the packet is traveling over.</para>
-	  </listitem>
-	</itemizedlist>
-
-	<para>The following rules go into
-	  <filename>/etc/ipfw.rules</filename>:</para>
-
-	<programlisting>################ Start of IPFW rules file ###############################
-# Flush out the list before we begin.
-ipfw -q -f flush
-
-# Set rules command prefix
-cmd="ipfw -q add"
-pif="dc0"     # public interface name of NIC
-              # facing the public Internet
-
-#################################################################
-# No restrictions on Inside LAN Interface for private network
-# Not needed unless you have LAN.
-# Change xl0 to your LAN NIC interface name
-#################################################################
-#&dollar;cmd 00005 allow all from any to any via xl0
-
-#################################################################
-# No restrictions on Loopback Interface
-#################################################################
-&dollar;cmd 00010 allow all from any to any via lo0
-
-#################################################################
-# Allow the packet through if it has previous been added to the
-# the "dynamic" rules table by a allow keep-state statement.
-#################################################################
-&dollar;cmd 00015 check-state
-
-#################################################################
-# Interface facing Public Internet (Outbound Section)
-# Interrogate session start requests originating from behind the
-# firewall on the private network or from this gateway server
-# destined for the public Internet.
-#################################################################
-
-# Allow out access to my ISP's Domain name server.
-# x.x.x.x must be the IP address of your ISP.s DNS
-# Dup these lines if your ISP has more than one DNS server
-# Get the IP addresses from /etc/resolv.conf file
-&dollar;cmd 00110 allow tcp from any to x.x.x.x 53 out via &dollar;pif setup keep-state
-&dollar;cmd 00111 allow udp from any to x.x.x.x 53 out via &dollar;pif keep-state
-
-# Allow out access to my ISP's DHCP server for cable/DSL configurations.
-# This rule is not needed for .user ppp. connection to the public Internet.
-# so you can delete this whole group.
-# Use the following rule and check log for IP address.
-# Then put IP address in commented out rule &amp; delete first rule
-&dollar;cmd 00120 allow log udp from any to any 67 out via &dollar;pif keep-state
-#&dollar;cmd 00120 allow udp from any to x.x.x.x 67 out via &dollar;pif keep-state
-
-# Allow out non-secure standard www function
-&dollar;cmd 00200 allow tcp from any to any 80 out via &dollar;pif setup keep-state
-
-# Allow out secure www function https over TLS SSL
-&dollar;cmd 00220 allow tcp from any to any 443 out via &dollar;pif setup keep-state
-
-# Allow out send &amp; get email function
-&dollar;cmd 00230 allow tcp from any to any 25 out via &dollar;pif setup keep-state
-&dollar;cmd 00231 allow tcp from any to any 110 out via &dollar;pif setup keep-state
-
-# Allow out FBSD (make install &amp; CVSUP) functions
-# Basically give user root "GOD" privileges.
-&dollar;cmd 00240 allow tcp from me to any out via &dollar;pif setup keep-state uid root
-
-# Allow out ping
-&dollar;cmd 00250 allow icmp from any to any out via &dollar;pif keep-state
-
-# Allow out Time
-&dollar;cmd 00260 allow tcp from any to any 37 out via &dollar;pif setup keep-state
-
-# Allow out nntp news (i.e., news groups)
-&dollar;cmd 00270 allow tcp from any to any 119 out via &dollar;pif setup keep-state
-
-# Allow out secure FTP, Telnet, and SCP
-# This function is using SSH (secure shell)
-&dollar;cmd 00280 allow tcp from any to any 22 out via &dollar;pif setup keep-state
-
-# Allow out whois
-&dollar;cmd 00290 allow tcp from any to any 43 out via &dollar;pif setup keep-state
-
-# deny and log everything else that.s trying to get out.
-# This rule enforces the block all by default logic.
-&dollar;cmd 00299 deny log all from any to any out via &dollar;pif
-
-#################################################################
-# Interface facing Public Internet (Inbound Section)
-# Check packets originating from the public Internet
-# destined for this gateway server or the private network.
-#################################################################
-
-# Deny all inbound traffic from non-routable reserved address spaces
-&dollar;cmd 00300 deny all from 192.168.0.0/16 to any in via &dollar;pif  #RFC 1918 private IP
-&dollar;cmd 00301 deny all from 172.16.0.0/12 to any in via &dollar;pif     #RFC 1918 private IP
-&dollar;cmd 00302 deny all from 10.0.0.0/8 to any in via &dollar;pif          #RFC 1918 private IP
-&dollar;cmd 00303 deny all from 127.0.0.0/8 to any in via &dollar;pif        #loopback
-&dollar;cmd 00304 deny all from 0.0.0.0/8 to any in via &dollar;pif            #loopback
-&dollar;cmd 00305 deny all from 169.254.0.0/16 to any in via &dollar;pif   #DHCP auto-config
-&dollar;cmd 00306 deny all from 192.0.2.0/24 to any in via &dollar;pif       #reserved for docs
-&dollar;cmd 00307 deny all from 204.152.64.0/23 to any in via &dollar;pif  #Sun cluster interconnect
-&dollar;cmd 00308 deny all from 224.0.0.0/3 to any in via &dollar;pif         #Class D &amp; E multicast
-
-# Deny public pings
-&dollar;cmd 00310 deny icmp from any to any in via &dollar;pif
-
-# Deny ident
-&dollar;cmd 00315 deny tcp from any to any 113 in via &dollar;pif
-
-# Deny all Netbios service. 137=name, 138=datagram, 139=session
-# Netbios is MS/Windows sharing services.
-# Block MS/Windows hosts2 name server requests 81
-&dollar;cmd 00320 deny tcp from any to any 137 in via &dollar;pif
-&dollar;cmd 00321 deny tcp from any to any 138 in via &dollar;pif
-&dollar;cmd 00322 deny tcp from any to any 139 in via &dollar;pif
-&dollar;cmd 00323 deny tcp from any to any 81 in via &dollar;pif
-
-# Deny any late arriving packets
-&dollar;cmd 00330 deny all from any to any frag in via &dollar;pif
-
-# Deny ACK packets that did not match the dynamic rule table
-&dollar;cmd 00332 deny tcp from any to any established in via &dollar;pif
-
-# Allow traffic in from ISP's DHCP server. This rule must contain
-# the IP address of your ISP.s DHCP server as it.s the only
-# authorized source to send this packet type.
-# Only necessary for cable or DSL configurations.
-# This rule is not needed for .user ppp. type connection to
-# the public Internet. This is the same IP address you captured
-# and used in the outbound section.
-#&dollar;cmd 00360 allow udp from any to x.x.x.x 67 in via &dollar;pif keep-state
-
-# Allow in standard www function because I have apache server
-&dollar;cmd 00400 allow tcp from any to me 80 in via &dollar;pif setup limit src-addr 2
-
-# Allow in secure FTP, Telnet, and SCP from public Internet
-&dollar;cmd 00410 allow tcp from any to me 22 in via &dollar;pif setup limit src-addr 2
-
-# Allow in non-secure Telnet session from public Internet
-# labeled non-secure because ID &amp; PW are passed over public
-# Internet as clear text.
-# Delete this sample group if you do not have telnet server enabled.
-&dollar;cmd 00420 allow tcp from any to me 23 in via &dollar;pif setup limit src-addr 2
-
-# Reject &amp; Log all incoming connections from the outside
-&dollar;cmd 00499 deny log all from any to any in via &dollar;pif
-
-# Everything else is denied by default
-# deny and log all packets that fell through to see what they are
-&dollar;cmd 00999 deny log all from any to any
-################ End of IPFW rules file ###############################</programlisting>
       </sect3>
 
       <sect3>
