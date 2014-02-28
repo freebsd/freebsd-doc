@@ -43,6 +43,7 @@ DEPENDSET.community=usergroups events
 DATA=	favicon.ico
 DATA+=	freebsd.css
 DATA+=	google6bb24ed0b804d5e9.html
+DATA+=	gsoc.html
 DATA+=	index.css
 DATA+=	robots.txt
 
