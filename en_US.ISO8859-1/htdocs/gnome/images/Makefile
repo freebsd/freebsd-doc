@@ -30,7 +30,6 @@ DATA+=	gnome.png
 DATA+=	adamw.jpg
 DATA+=	ahze.jpg
 #DATA+=	bland.jpg
-DATA+=	hippobutt.jpg
 DATA+=	kwm.jpg
 DATA+=	marcus.jpg
 DATA+=	mezz.jpg
