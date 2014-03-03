@@ -7,6 +7,7 @@
                 version='1.0'
 		xmlns:str="http://exslt.org/strings"
                 xmlns:db="http://docbook.org/ns/docbook"
+		xmlns="http://www.w3.org/1999/xhtml"
                 exclude-result-prefixes="db"
 		extension-element-prefixes="str">
 
@@ -31,6 +32,7 @@
   <xsl:param name="generate.manifest" select="1"/>
   <xsl:param name="generate.meta.abstract" select="1"/>
   <xsl:param name="html.longdesc" select="0"/>
+  <xsl:param name="hyphenate.verbatim" select="1"/>
 
   <xsl:param name="make.valid.html" select="1"/>
   <xsl:param name="html.cleanup" select="1"/>
@@ -291,5 +293,44 @@
     </xsl:if>
 
     <hr/>
+  </xsl:template>
+
+  <xsl:template name="wrap.text">
+    <xsl:param name="content"/>
+
+    <xsl:for-each select="str:tokenize($content, '&#x0A;')">
+      <span class="verbatim"><xsl:value-of select="."/>&#x0A;</span>
+    </xsl:for-each>
+  </xsl:template>
+
+  <!-- XXX: breaks line numbering and syntax highlighting that we do not use
+       anyway -->
+  <xsl:template match="db:programlisting|db:screen|db:synopsis">
+    <xsl:variable name="id">
+      <xsl:call-template name="object.id"/>
+    </xsl:variable>
+
+    <xsl:call-template name="anchor"/>
+
+    <xsl:variable name="div.element">
+      <xsl:choose>
+	<xsl:when test="$make.clean.html != 0">div</xsl:when>
+	<xsl:otherwise>pre</xsl:otherwise>
+      </xsl:choose>
+    </xsl:variable>
+
+    <xsl:element name="{$div.element}" namespace="http://www.w3.org/1999/xhtml">
+      <xsl:apply-templates select="." mode="common.html.attributes"/>
+      <xsl:if test="@width != ''">
+	<xsl:attribute name="width">
+	  <xsl:value-of select="@width"/>
+	</xsl:attribute>
+      </xsl:if>
+      <xsl:call-template name="wrap.text">
+	<xsl:with-param name="content">
+	  <xsl:apply-templates/>
+	</xsl:with-param>
+      </xsl:call-template>
+    </xsl:element>
   </xsl:template>
 </xsl:stylesheet>
