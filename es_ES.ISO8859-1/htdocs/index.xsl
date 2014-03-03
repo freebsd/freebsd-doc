@@ -150,7 +150,7 @@
 					  <a href="&base;/support.html#mailing-list" title="Listas de distribución">Listas de distribución</a>
 					</li>
 					<li>
-					  <a href="&base;/support/bugreports.html" title="Reporte un Fallo">Reporte un Fallo</a>
+					  <a href="&base;/send-pr.html" title="Reporte un Fallo">Reporte un Fallo</a>
 					</li>
 					<li>
 					  <a href="&enbase;/doc/&url.doc.langcode;/books/faq/index.html" title="FAQ">FAQ</a>
