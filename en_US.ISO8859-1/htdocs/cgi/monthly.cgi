@@ -126,7 +126,12 @@ if ($Submit)
 		push(@hidden, hidden("Sponsor$Num"));
 
 		next unless $sponsor;
-		push(@sponsors, xml(2, "sponsor", "", xmltext(3, $sponsor)));
+		push(@sponsors, xml(1, "sponsor", "", xmltext(2, $sponsor)));
+	}
+
+	if (@sponsors)
+	{
+		push(@sponsors, "\n");
 	}
 
 	my @tasks;
@@ -161,7 +166,6 @@ if ($Submit)
                 xml(2, "p", "", xmltext(3, @info))),
             "\n",
             @sponsors,
-            "\n",
             xml(1, "help", "", @tasks),
         );
 	my $contents = join('', @contents);
