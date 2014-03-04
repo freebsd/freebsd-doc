@@ -11,6 +11,7 @@ my $debug  = param("debug") || "";
 
 my $NumDevelopers = 3;
 my $NumLinks      = 4;
+my $NumSponsors   = 2;
 my $NumTasks      = 5;
 
 my @messages;
@@ -118,6 +119,16 @@ if ($Submit)
 		}
 	}
 
+	my @sponsors;
+	foreach my $Num (1..$NumSponsors)
+	{
+		my $sponsor = param("Sponsor$Num")  || "";
+		push(@hidden, hidden("Sponsor$Num"));
+
+		next unless $sponsor;
+		push(@sponsors, xml(2, "sponsor", "", xmltext(3, $sponsor)));
+	}
+
 	my @tasks;
 	foreach my $Num (1..$NumTasks)
 	{
@@ -149,6 +160,8 @@ if ($Submit)
             xml(1, "body",
                 xml(2, "p", "", xmltext(3, @info))),
             "\n",
+            @sponsors,
+            "\n",
             xml(1, "help", "", @tasks),
         );
 	my $contents = join('', @contents);
@@ -178,6 +191,13 @@ foreach my $Num (1..$NumLinks)
 	push(@LinksTable,
 		 TR(td(textfield(-name => "Url$Num",      -size => 55)),
 			td(textfield(-name => "Desc$Num",     -size => 20))));
+}
+
+my @SponsorTable;
+foreach my $Num (1..$NumSponsors)
+{
+	push(@SponsorTable,
+		 TR(td(textarea(-name => "Sponsor$Num", -rows => 1, -cols => 60))));
 }
 
 my @TaskTable;
@@ -226,6 +246,13 @@ print
    blockquote(textarea(-name => "SubmittedInfo",
 					   -rows => 7,
 					   -cols => 60)),
+
+   h3("Sponsors (optional):"),
+   blockquote(table({"BORDER" => 0,
+					 "COLS"   => 1,
+					 "NOSAVE" => 1},
+					TR(td("Name")),
+					@SponsorTable)),
 
    h3("Open tasks (optional):"),
    blockquote(table({"BORDER" => 0,
