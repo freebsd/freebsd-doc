@@ -298,9 +298,27 @@
   <xsl:template name="wrap.text">
     <xsl:param name="content"/>
 
-    <xsl:for-each select="str:tokenize($content, '&#x0A;')">
-      <span class="verbatim"><xsl:value-of select="."/>&#x0A;</span>
-    </xsl:for-each>
+    <xsl:choose>
+      <xsl:when test="starts-with($content, '&#x0A;')">
+	<span class="verbatim">&#x200b;</span>
+
+	<xsl:call-template name="wrap.text">
+	  <xsl:with-param name="content" select="substring-after($content, '&#x0A;')"/>
+	</xsl:call-template>
+      </xsl:when>
+
+      <xsl:when test="contains($content, '&#x0A;')">
+	<span class="verbatim"><xsl:value-of select="substring-before($content, '&#x0A;')"/>&#x0A;</span>
+
+	<xsl:call-template name="wrap.text">
+	  <xsl:with-param name="content" select="substring-after($content, '&#x0A;')"/>
+	</xsl:call-template>
+      </xsl:when>
+
+      <xsl:otherwise>
+	<span class="verbatim"><xsl:value-of select="$content"/>&#x0A;</span>
+      </xsl:otherwise>
+    </xsl:choose>
   </xsl:template>
 
   <!-- XXX: breaks line numbering and syntax highlighting that we do not use
