@@ -288,7 +288,7 @@ XMLFLAGS+= ${CHAPTERS:S/\/chapter.xml//:S/^/-i chap./}
 XMLFLAGS+= -i chap.freebsd-glossary
 
 pgpkeyring: pgpkeys/chapter.xml ${DOC}.parsed.xml
-	@${XSLTPROC} ${XSLPGP} ${DOC}.parsed.xml
+	@${XSLTPROC} ${XSLTPROCOPTS} ${XSLPGP} ${DOC}.parsed.xml
 
 #
 # Handbook-specific variables
@@ -343,3 +343,8 @@ SRCS+=		mirrors.lastmod.inc \
 		eresources.xml.www.index.inc
 
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"
+
+# XXX
+.if defined(FINGERPRINTS_ONLY)
+XSLTPROCOPTS+=--param generate.fingerprint.only '1'
+.endif
