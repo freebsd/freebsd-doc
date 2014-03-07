@@ -1,5 +1,7 @@
 # $FreeBSD$
 
+DOC_PREFIX?=	${.CURDIR}/../..
+
 XSLPGP=		http://www.FreeBSD.org/XML/share/xml/freebsd-pgpkeyring.xsl
 
 FILES=		pgpkeyring.txt
