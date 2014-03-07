@@ -9,25 +9,6 @@
 
 # ------------------------------------------------------------------------
 #
-# Μεταβλητές σχετικές με το Εγχειρίδιο
-#
-#       WITH_PGPKEYS    Η εκτυπώσιμη μορφή του εγχειριδίου περιέχει κανονικά
-#                       μόνο τα fingerprints από τα PGP κλειδιά.  Αν θέλετε
-#                       να εκτυπώνονται ολόκληρα τα κλειδιά, τότε αυτή η
-#                       μεταβλητή πρέπει να είναι 'defined'.  Αυτή η επιλογή
-#                       δεν επηρεάζει σε τίποτα τις μορφές HTML.
-#
-# Make targets μόνο για το Εγχειρίδιο
-#
-#       pgpkeyring      This target will read the contents of
-#                       pgpkeys/chapter.xml and will extract all of
-#                       the pgpkeys to standard out.  This output can then
-#                       be redirected into a file and distributed as a
-#                       public keyring of FreeBSD developers that can
-#                       easily be imported into PGP/GPG.
-#
-# ------------------------------------------------------------------------
-#
 # Για να προσθέσετε ένα νέο κεφάλαιο στο Εγχειρίδιο:
 #
 # - Ενημερώστε αυτό το Makefile, το chapters.ent και το book.xml
@@ -292,16 +273,6 @@ CHAPTERS?= ${SRCS:M*chapter.xml}
 
 XMLFLAGS+= ${CHAPTERS:S/\/chapter.xml//:S/^/-i chap./}
 XMLFLAGS+= -i chap.freebsd-glossary
-
-pgpkeyring: pgpkeys/chapter.xml
-	@${JADE} -V nochunks ${OTHERFLAGS} ${JADEOPTS} -d ${DSLPGP} -t sgml ${MASTERDOC}
-
-#
-# Handbook-specific variables
-#
-.if defined(WITH_PGPKEYS)
-JADEFLAGS+=	-V withpgpkeys
-.endif
 
 URL_RELPREFIX?=	../../../..
 DOC_PREFIX?=	${.CURDIR}/../../..
