@@ -36,7 +36,7 @@ all-install:
 			INSTALL_COMPRESSED= install
 all-pgpkeyring:
 	@unset DESTDIR || true; \
-	 cd ${DOC_PREFIX}/${LANGCODE}/books/handbook; \
+	 cd ${DOC_PREFIX}/share/pgpkeys; \
 		${MAKE} \
 			pgpkeyring > ${.OBJDIR}/pgpkeyring.txt
 

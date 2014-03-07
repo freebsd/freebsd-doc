@@ -275,9 +275,6 @@ CHAPTERS?= ${SRCS:M*chapter.xml}
 XMLFLAGS+= ${CHAPTERS:S/\/chapter.xml//:S/^/-i chap./}
 XMLFLAGS+= -i chap.freebsd-glossary
 
-pgpkeyring: pgpkeys/chapter.xml
-	@${JADE} -V nochunks ${OTHERFLAGS} ${JADEOPTS} -d ${DSLPGP} -t sgml ${MASTERDOC}
-
 URL_RELPREFIX?=	../../../..
 DOC_PREFIX?= ${.CURDIR}/../../..
 

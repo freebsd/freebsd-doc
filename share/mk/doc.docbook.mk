@@ -58,7 +58,6 @@ XSLXHTML?=	http://www.FreeBSD.org/XML/share/xml/freebsd-xhtml.xsl
 XSLXHTMLCHUNK?=	http://www.FreeBSD.org/XML/share/xml/freebsd-xhtml-chunk.xsl
 XSLEPUB?=	http://www.FreeBSD.org/XML/share/xml/freebsd-epub.xsl
 XSLFO?=		http://www.FreeBSD.org/XML/share/xml/freebsd-fo.xsl
-XSLPGP?=	http://www.FreeBSD.org/XML/share/xml/freebsd-pgpkeyring.xsl
 
 XSLSCH?=	/usr/local/share/xsl/iso-schematron/xslt1/iso_schematron_skeleton_for_xslt1.xsl
 
