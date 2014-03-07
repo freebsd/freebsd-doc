@@ -131,7 +131,7 @@ release.1:
 .endif
 # Build PGP key ring
 	${RM} -f ${DOCKEYFILE}
-	cd ${DOC_PREFIX}/en_US.ISO8859-1/books/handbook && ${MAKE} pgpkeyring > ${DOCKEYFILE}
+	cd ${DOC_PREFIX}/share/pgpkeys && ${MAKE} pgpkeyring > ${DOCKEYFILE}
 # Construct the build.txt file with the documentation build info.
 	${RM} -f ${DOCBUILDFILE}
 	${TOUCH} ${DOCBUILDFILE}

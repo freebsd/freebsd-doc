@@ -5,25 +5,6 @@
 #
 
 # ------------------------------------------------------------------------
-#
-# Handbook-specific variables
-#
-#	WITH_PGPKEYS	The print version of the handbook only prints PGP
-#			fingerprints by default.  If you would like for the
-#			entire key to be displayed, then set this variable.
-#			This option has no affect on the HTML formats.
-#
-# Handbook-specific targets
-#
-#       pgpkeyring      This target will read the contents of
-#                       pgpkeys/chapter.xml and will extract all of
-#                       the pgpkeys to standard out.  This output can then
-#                       be redirected into a file and distributed as a
-#                       public keyring of FreeBSD developers that can
-#                       easily be imported into PGP/GPG.
-#
-# ------------------------------------------------------------------------
-#
 # To add a new chapter to the Handbook:
 #
 # - Update this Makefile, chapters.ent and book.xml
@@ -287,16 +268,6 @@ CHAPTERS?= ${SRCS:M*chapter.xml}
 XMLFLAGS+= ${CHAPTERS:S/\/chapter.xml//:S/^/-i chap./}
 XMLFLAGS+= -i chap.freebsd-glossary
 
-pgpkeyring: pgpkeys/chapter.xml ${DOC}.parsed.xml
-	@${XSLTPROC} ${XSLTPROCOPTS} ${XSLPGP} ${DOC}.parsed.xml
-
-#
-# Handbook-specific variables
-#
-.if defined(WITH_PGPKEYS)
-JADEFLAGS+=	-V withpgpkeys
-.endif
-
 URL_RELPREFIX?=	../../../..
 DOC_PREFIX?=	${.CURDIR}/../../..
 
@@ -343,8 +314,3 @@ SRCS+=		mirrors.lastmod.inc \
 		eresources.xml.www.index.inc
 
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"
-
-# XXX
-.if defined(FINGERPRINTS_ONLY)
-XSLTPROCOPTS+=--param generate.fingerprint.only '1'
-.endif

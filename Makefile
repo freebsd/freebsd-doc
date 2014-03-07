@@ -31,6 +31,8 @@ SUBDIR+=	zh_CN.UTF-8
 SUBDIR+=	zh_TW.Big5
 .endif
 
+SUBDIR+=	share
+
 DOC_PREFIX?=   ${.CURDIR}
 
 .if exists(/usr/bin/svnlite)
