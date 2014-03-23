@@ -50,7 +50,7 @@
 				  großen Entwicklergruppe</a> seit mehr als 30 Jahren
 				  kontinuierlich weiterentwickelt, verbessert und
 				  optimiert.  Seine leistungsfähigen und
-				  und beeindruckende Netzwerk-, Sicherheits- und
+				  beeindruckenden Netzwerk-, Sicherheits- und
 				  Speicherfunktionen machen &os; zum Betriebssystem
 				  der Wahl für einige der größten <a
 				  href="&enbase;/doc/&url.doc.langcode;/books/handbook/nutshell.html#introduction-nutshell-users">
