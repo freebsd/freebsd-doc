@@ -127,7 +127,7 @@ $i_topbar = qq`
 		  <li><a href="$hsty_base/doc/en_US.ISO8859-1/books/developers-handbook">Developer's Handbook</a></li>
 		  <li><a href="$hsty_base/cgi/man.cgi">Manual Pages</a></li>
 		  <li><a href="$hsty_base/doc/en_US.ISO8859-1/books/fdp-primer">Documentation Project Primer</a></li>
-		  <li><a href="$hsty_base/docs/books.html/">All Books and Articles</a></li>
+		  <li><a href="$hsty_base/docs/books.html">All Books and Articles</a></li>
 		</ul>
 	      </li>
 	    </ul>
