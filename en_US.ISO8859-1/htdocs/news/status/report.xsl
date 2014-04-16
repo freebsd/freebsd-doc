@@ -60,10 +60,15 @@
 
 	<hr/>
 
-	<!-- Process each project, sorted -->
-	<xsl:apply-templates select="report/project">
-	  <xsl:sort select="translate(title, $lowercase, $uppercase)"/>
-	</xsl:apply-templates>
+	<!-- For each category, process the corresponding projects and sort
+	     them by title, so they will be listed in the same order as
+	     they are in the table of contents -->
+	<xsl:for-each select="report/category">
+	  <xsl:variable name="cat-short" select="name"/>
+	  <xsl:apply-templates select="//project[@cat=$cat-short]">
+	    <xsl:sort select="translate(title, $lowercase, $uppercase)"/>
+	  </xsl:apply-templates>
+	</xsl:for-each>
 
 	<!-- Standard footer -->
 	<a href="../news.html">News Home</a> | <a href="status.html">Status Home</a>
