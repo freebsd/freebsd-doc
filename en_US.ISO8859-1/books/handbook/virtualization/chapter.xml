@@ -20,6 +20,16 @@
 	<contrib>Contributed by </contrib>
       </author>
     </authorgroup>
+
+    <authorgroup>
+      <author>
+	<personname>
+	  <firstname>Allan</firstname>
+	  <surname>Jude</surname>
+	</personname>
+	<contrib>bhyve section by </contrib>
+      </author>
+    </authorgroup>
   </info>
 
   <sect1 xml:id="virtualization-synopsis">
@@ -1110,8 +1120,8 @@ EndSection</programlisting>
     </sect2>
   </sect1>
 
-  <sect1 xml:id="virtualization-host">
-    <title>&os; as a Host</title>
+  <sect1 xml:id="virtualization-host-virtualbox">
+    <title>&os; as a Host with <application>VirtualBox</application></title>
 
     <para><application>&virtualbox;</application> is an actively
       developed, complete virtualization package, that is available
@@ -1273,7 +1283,310 @@ perm pass* 0660</programlisting>
 
       <screen>&prompt.root; <userinput>service devfs restart</userinput></screen>
     </sect2>
+  </sect1>
 
+  <sect1 xml:id="virtualization-host-bhyve">
+    <title>&os; as a Host with
+      <application>bhyve</application></title>
+
+    <para>Starting with &os; 10.0-RELEASE the BSD licensed hypervisor
+      <application>bhyve</application> is part of the base system.
+      <application>bhyve</application> supports a number of guests
+      including &os;, OpenBSD, and many flavors of &linux;.
+      <application>bhyve</application> currently only supports a
+      serial console and does not emulate a graphical console.
+      <application>bhyve</application> is a legacy-free hypervisor,
+      meaning that instead of translating instructions, and manually
+      managing memory mappings, it relies on the virtualization
+      offload features of newer <acronym>CPU</acronym>s.
+      <application>bhyve</application> also avoids emulating
+      compatible hardware for the guest, and instead relies on the
+      paravirtualization drivers, called
+      <literal>VirtIO</literal>.</para>
+
+    <para>Due to the design of <application>bhyve</application>, it is
+      only possible to use <application>bhyve</application> on
+      computers with newer processors that support &intel;
+      <acronym>EPT</acronym> (Extended Page Tables) or &amd;
+      <acronym>RVI</acronym> (Rapid Virtualization Indexing, also know
+      as <acronym>NPT</acronym> or Nested Page Tables).  Most newer
+      processors, specifically the &intel;&nbsp;&core; i3/i5/i7 and
+      &intel;&nbsp;&xeon; E3/E5/E7 support this feature, for a
+      complete list of &intel; processors that support
+      <acronym>EPT</acronym> see the <link
+      xlink:href="http://ark.intel.com/search/advanced?s=t&amp;ExtendedPageTables=true">&intel;
+      ARK</link>.  <acronym>RVI</acronym> is found on the 3rd
+      generation and later of the &amd.opteron; (Barcelona)
+      processors.  The easiest way to check for support of
+      <acronym>EPT</acronym> or <acronym>RVI</acronym> on a system is
+      to look for the <literal>POPCNT</literal> processor feature flag
+      on the <literal>Features2</literal> line in
+      <command>dmesg</command> or
+      <filename>/var/run/dmesg.boot</filename>.</para>
+
+    <sect2 xml:id="virtualization-bhyve-prep">
+      <title>Preparing the Host</title>
+
+      <para>The first step to creating a virtual machine in
+	<application>bhyve</application> is configuring the host
+	system.  Load the <application>bhyve</application> kernel
+	module called vmm.  Create a <filename>tap</filename>
+	interface for the network device in the virtual machine to
+	attach to.  Optionally create a bridge interface and add the
+	<filename>tap</filename> interface as well as the physical
+	interface as members to allow the virtual machine to have
+	access to the network.</para>
+
+      <screen>&prompt.root; <userinput>kldload vmm</userinput>
+&prompt.root; <userinput>kldload nmdm</userinput>
+&prompt.root; <userinput>ifconfig <replaceable>tap0</replaceable> create</userinput>
+&prompt.root; <userinput>sysctl net.link.tap.up_on_open=1</userinput>
+net.link.tap.up_on_open: 0 -> 1
+&prompt.root; <userinput>ifconfig <replaceable>bridge0</replaceable> create</userinput>
+&prompt.root; <userinput>ifconfig <replaceable>bridge0</replaceable> addm <replaceable>igb0</replaceable> addm <replaceable>tap0</replaceable></userinput>
+&prompt.root; <userinput>ifconfig <replaceable>bridge0</replaceable> up</userinput></screen>
+
+    </sect2>
+
+    <sect2 xml:id="virtualization-bhyve-freebsd">
+      <title>Creating a FreeBSD Guest</title>
+
+      <para>Create a file to use as the virtual disk for the guest
+	machine.</para>
+
+      <screen>&prompt.root; <userinput>truncate -s <replaceable>16G</replaceable> <filename>guest.img</filename></userinput></screen>
+
+      <para>Download an installation image of &os; to install:</para>
+
+      <screen>&prompt.root; <userinput>fetch <replaceable>ftp://ftp.freebsd.org/pub/FreeBSD/ISO-IMAGES-amd64/10.0/FreeBSD-10.0-RELEASE-amd64-bootonly.iso</replaceable></userinput>
+FreeBSD-10.0-RELEASE-amd64-bootonly.iso       100% of  209 MB  570 kBps 06m17s</screen>
+
+      <para>&os; comes with an example script for running a virtual
+	machine in <application>bhyve</application>.  The script will
+	start the virtual machine and run it in a loop, so it will
+	automatically restart if it crashes.  The script takes a
+	number of options to control the configuration of the machine.
+	<option>-c</option> controls the number of virtual CPUs.
+	<option>-m</option> limits the amount of memory available to
+	the guest.  <option>-t</option> defines which
+	<filename>tap</filename> device to use.  <option>-d</option>
+	indicates which disk image to use.  <option>-i</option> tells
+	<application>bhyve</application> to boot from the CD image
+	instead of the disk, and <option>-I</option> defines which CD
+	image to use.  Finally the last parameter is the name of the
+	virtual machine, used to track the running machines.  Start
+	the virtual machine in installation mode:</para>
+
+      <screen>&prompt.root; <userinput>sh <filename>/usr/share/examples/bhyve/vmrun.sh</filename> -c <replaceable>4</replaceable> -m <replaceable>1024M</replaceable> -t tap0 -d <filename>guest.img</filename> -i -I <filename>FreeBSD-10.0-RELEASE-amd64-bootonly.iso</filename> <replaceable>guestname</replaceable></userinput></screen>
+
+      <para>The system will boot and start the installer.  After
+	installing a system in the virtual machine, when the system
+	asks about dropping in to a shell at the end of the
+	installation, choose <guibutton>Yes</guibutton>.  A small
+	change needs to be made to make the system start with a serial
+	console.  Edit <filename>/etc/ttys</filename> and replace the
+	existing <literal>console</literal> line with:</para>
+
+      <programlisting>console "/usr/libexec/getty std.9600"    xterm   on  secure</programlisting>
+
+      <para>Reboot the virtual machine.  Rebooting the virtual machine
+	causes <application>bhyve</application> to exit.  However the
+	<filename>vmrun.sh</filename> script runs
+	<command>bhyve</command> in a loop and will automatically
+	restart it.  When this happens, choose the reboot option from
+	the boot loader menu, and this will escape the loop.  Now the
+	guest can be started from the virtual disk:</para>
+
+      <screen>&prompt.root; <userinput>sh <filename>/usr/share/examples/bhyve/vmrun.sh</filename> -c <replaceable>4</replaceable> -m <replaceable>1024M</replaceable> -t tap0 -d <filename>guest.img</filename> <replaceable>guestname</replaceable></userinput></screen>
+    </sect2>
+
+    <sect2 xml:id="virtualization-bhyve-linux">
+      <title>Creating a &linux; Guest</title>
+
+      <note><para><application>bhyve</application> requires
+	<package>sysutils/grub2-bhyve</package> in order to boot
+	operating systems other than &os;.</para></note>
+
+      <para>Create a file to use as the virtual disk for the guest
+	machine.</para>
+
+      <screen>&prompt.root; <userinput>truncate -s <replaceable>16G</replaceable> <filename>linux.img</filename></userinput></screen>
+
+      <para>Starting a virtual machine with
+	<application>bhyve</application> is a two step process.  First
+	a kernel must be loaded, then the guest can be started.
+	<package>sysutils/grub2-bhyve</package> is used to load the
+	&linux; kernel.  Create a <filename>device.map</filename> that
+	<application>grub</application> will use to map the virtual
+	devices to the files on the host system:</para>
+
+      <programlisting>(hd0) ./linux.img
+(cd0) ./somelinux.iso</programlisting>
+
+      <para>Use <package>sysutils/grub2-bhyve</package> to load the
+	&linux; kernel from the <acronym>ISO</acronym> image:</para>
+
+      <screen>&prompt.root; <userinput>grub-bhyve -m <filename>device.map</filename> -r cd0 -M <replaceable>1024M</replaceable> <replaceable>linuxguest</replaceable></userinput></screen>
+
+      <para>This will start grub.  If the installation CD contains a
+	<filename>grub.cfg</filename> then a menu will be displayed.
+	If not, the <literal>vmlinuz</literal> and
+	<literal>initrd</literal> files must be located and loaded
+	manually:</para>
+
+      <screen>grub> <userinput>ls</userinput>
+(hd0) (cd0) (cd0,msdos1) (host)
+grub> <userinput>ls (cd0)/isolinux</userinput>
+boot.cat boot.msg grub.conf initrd.img isolinux.bin isolinux.cfg memtest
+splash.jpg TRANS.TBL vesamenu.c32 vmlinuz
+grub> <userinput>linux (cd0)/isolinux/vmlinuz</userinput>
+grub> <userinput>initrd (cd0)/isolinux/initrd.img</userinput>
+grub> <userinput>boot</userinput></screen>
+
+      <para>Now that the &linux; kernel is loaded, the guest can be
+	started:</para>
+
+      <screen>&prompt.root; <userinput>bhyve -AI -H -P \
+-s 0:0,hostbridge \
+-s 1:0,lpc \
+-s 2:0,virtio-net,tap1 \
+-s 3:0,virtio-blk,./linux.img \
+-s 4:0,ahci-cd,./somelinux.iso \
+-l com1,stdio \
+-c <replaceable>4</replaceable> -m <replaceable>1024M</replaceable> <replaceable>linuxguest</replaceable></userinput></screen>
+
+      <para>The system will boot and start the installer.  After
+	installing a system in the virtual machine, reboot the virtual
+	machine.  This will cause <application>bhyve</application> to
+	exit.  The instance of the virtual machine needs to be
+	destroyed before it can be started again:</para>
+
+      <screen>&prompt.root; <userinput>bhyvectl --destroy --vm=<replaceable>linuxguest</replaceable></userinput></screen>
+
+      <para>Now the guest can be started directly from the virtual
+	disk.  Load the kernel:</para>
+
+      <screen>&prompt.root; <userinput>grub-bhyve -m <filename>device.map</filename> -r hd0,msdos1 -M <replaceable>1024M</replaceable> <replaceable>linuxguest</replaceable></userinput>
+grub> <userinput>ls</userinput>
+(hd0) (hd0,msdos2) (hd0,msdos1) (cd0) (cd0,msdos1) (host)
+(lvm/VolGroup-lv_swap) (lvm/VolGroup-lv_root)
+grub> <userinput>ls (hd0,msdos1)/</userinput>
+lost+found/ grub/ efi/ System.map-2.6.32-431.el6.x86_64 config-2.6.32-431.el6.x
+86_64 symvers-2.6.32-431.el6.x86_64.gz vmlinuz-2.6.32-431.el6.x86_64
+initramfs-2.6.32-431.el6.x86_64.img
+grub> <userinput>linux (hd0,msdos1)/vmlinuz-2.6.32-431.el6.x86_64 root=/dev/mapper/VolGroup-lv_root</userinput>
+grub> <userinput>initrd (hd0,msdos1)/initramfs-2.6.32-431.el6.x86_64.img</userinput>
+grub> <userinput>boot</userinput></screen>
+
+      <para>Boot the virtual machine:</para>
+
+      <screen>&prompt.root; <userinput>bhyve -AI -H -P \
+-s 0:0,hostbridge \
+-s 1:0,lpc \
+-s 2:0,virtio-net,tap1 \
+-s 3:0,virtio-blk,./linux.img \
+-l com1,stdio \
+-c <replaceable>4</replaceable> -m <replaceable>1024M</replaceable> <replaceable>linuxguest</replaceable></userinput></screen>
+
+      <para>&linux; will now boot in the virtual machine and
+	eventually present you with the login prompt.  Login and use
+	the virtual machine.  When you are finished, reboot the
+	virtual machine to exit <application>bhyve</application>.
+	Destroy the virtual machine instance:</para>
+
+      <screen>&prompt.root; <userinput>bhyvectl --destroy --vm=<replaceable>linuxguest</replaceable></userinput></screen>
+    </sect2>
+
+    <sect2 xml:id="virtualization-bhyve-nmdm">
+      <title>Virtual Machines Consoles</title>
+
+      <para>It is advantageous to wrap the
+	<application>bhyve</application> console in a session
+	management tool such as <package>sysutils/tmux</package> or
+	<package>sysutils/screen</package> in order to detach and
+	reattach to the console.  It is also possible to have the
+	console of <application>bhyve</application> be a null modem
+	device that can be accessed with <command>cu</command>.  Load
+	the <filename>nmdm</filename> kernel module, and replace
+	<option>-l com1,stdio</option> with
+	<option>-l com1,/dev/nmdm0A</option>.  The
+	<filename>/dev/nmdm</filename> devices are created
+	automatically as needed, each is a pair,
+	<filename>/dev/nmdm1A</filename> and
+	<filename>/dev/nmdm1B</filename> corresponding to the two ends
+	of the null modem cable.  See &man.nmdm.4; for more
+	information.</para>
+
+      <screen>&prompt.root; <userinput>bhyve -AI -H -P \
+-s 0:0,hostbridge \
+-s 1:0,lpc \
+-s 2:0,virtio-net,tap1 \
+-s 3:0,virtio-blk,./linux.img \
+-l com1,<replaceable>/dev/nmdm0A</replaceable> \
+-c <replaceable>4</replaceable> -m <replaceable>1024M</replaceable> <replaceable>linuxguest</replaceable></userinput>
+&prompt.root; <userinput>cu -l /dev/nmdm0B -s 9600</userinput>
+Connected
+
+Ubuntu 13.10 handbook ttyS0
+
+handbook login:</screen>
+
+    </sect2>
+
+    <sect2 xml:id="virtualization-bhyve-managing">
+      <title>Managing Virtual Machines</title>
+
+      <para>A device node is created in <filename
+	  role="directory">/dev/vmm</filename> for each virtual
+	machine.  This allows the administrator to easily see a list
+	of the running virtual machines:</para>
+
+      <screen>&prompt.root; <userinput>ls -al /dev/vmm</userinput>
+total 1
+dr-xr-xr-x   2 root  wheel    512 Mar 17 12:19 ./
+dr-xr-xr-x  14 root  wheel    512 Mar 17 06:38 ../
+crw-------   1 root  wheel  0x1a2 Mar 17 12:20 guestname
+crw-------   1 root  wheel  0x19f Mar 17 12:19 linuxguest
+crw-------   1 root  wheel  0x1a1 Mar 17 12:19 otherguest</screen>
+
+      <para>Virtual machines can be destroyed using
+	<command>bhyvectl</command>:</para>
+
+      <screen>&prompt.root; bhyvectl --destroy --vm=guestname</screen>
+    </sect2>
+
+    <sect2 xml:id="virtualization-bhyve-onboot">
+      <title>Persistent Configuration</title>
+
+      <para>In order to make the system able to start
+	<application>bhyve</application> guests at boot time, the
+	following configurations must be made in the specified
+	files:</para>
+
+      <procedure>
+	<step>
+	  <title><filename>/etc/sysctl.conf</filename></title>
+
+	  <programlisting>net.link.tap.up_on_open=1</programlisting>
+	</step>
+
+	<step>
+	  <title><filename>/boot/loader.conf</filename></title>
+
+	  <programlisting>vmm_load="YES"
+nmdm_load="YES"
+if_bridge_load="YES"
+if_tap_load="YES"</programlisting>
+	</step>
+
+	<step>
+	  <title><filename>/etc/rc.conf</filename></title>
+
+	  <programlisting>cloned_interfaces="bridge0 tap0"
+ifconfig_bridge0="addm igb0 addm tap0"</programlisting>
+	</step>
+      </procedure>
+    </sect2>
 <!--
   Note:  There is no working/end-user ready Xen support for FreeBSD as of 07-2010.
          Hide all information regarding Xen under FreeBSD.
