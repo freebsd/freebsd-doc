@@ -27,7 +27,6 @@ DOCS+=	proposing-committers.xml
 DOCS+=  releng.xml
 DOCS+=  resources.xml
 DOCS+=  software-license.xml
-DOCS+=	statistic.xml
 DOCS+=	working-with-hats.xml
 
 INDEXLINK=	internal.html
