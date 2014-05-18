@@ -240,8 +240,8 @@ $manPathDefault = 'FreeBSD 10.0-RELEASE';
     'FreeBSD 10.0-stable',
 "$manLocalDir/FreeBSD-10.0-stable/man:$manLocalDir/FreeBSD-10.0-stable/openssl/man",
 
-    'FreeBSD 9.1-stable',
-"$manLocalDir/FreeBSD-9.1-stable/man:$manLocalDir/FreeBSD-9.1-stable/openssl/man",
+    'FreeBSD 9.2-stable',
+"$manLocalDir/FreeBSD-9.2-stable/man:$manLocalDir/FreeBSD-9.2-stable/openssl/man",
     'FreeBSD 9.2-RELEASE',
 "$manLocalDir/FreeBSD-9.2-RELEASE/man:$manLocalDir/FreeBSD-9.2-RELEASE/openssl/man",
     'FreeBSD 9.1-RELEASE',
@@ -639,7 +639,7 @@ while ( ( $key, $val ) = each %manPath ) {
 
     'freebsd-stable',  'FreeBSD 10.0-stable',
     'freebsd-stable10', 'FreeBSD 10.0-stable',
-    'freebsd-stable9', 'FreeBSD 9.1-stable',
+    'freebsd-stable9', 'FreeBSD 9.2-stable',
     'freebsd-stable8', 'FreeBSD 8.3-stable',
     'freebsd-stable7', 'FreeBSD 7.4-stable',
     'freebsd-stable6', 'FreeBSD 6.4-stable',
