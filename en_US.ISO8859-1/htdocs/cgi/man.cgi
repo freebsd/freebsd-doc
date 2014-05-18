@@ -648,7 +648,7 @@ while ( ( $key, $val ) = each %manPath ) {
     'freebsd-stable6', 'FreeBSD 6.4-stable',
 
     'freebsd-current',       'FreeBSD 11-current',
-    'freebsd-release-ports', 'FreeBSD 9.0-RELEASE and Ports',
+    'freebsd-release-ports', 'FreeBSD 9.2-RELEASE and Ports',
 
     'slackware',  'Linux Slackware 3.1',
     'redhat',     'Red Hat Linux/i386 9',
