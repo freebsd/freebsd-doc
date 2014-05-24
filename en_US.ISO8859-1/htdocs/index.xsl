@@ -84,12 +84,12 @@
 					<a
 				href="&u.rel3.announce;">&rel3.current;</a></li>
 			    <xsl:if test="'&beta.upcoming;' != 'IGNORE'">
-					<li>Upcoming:<br/><a
-				href="&u.betarel.schedule;">&betarel.current;-&betarel.vers;</a></li>
+					<li>Upcoming: <a
+				href="&u.betarel.schedule;">&betarel.current;</a></li>
 			    </xsl:if>
 			    <xsl:if test="'&beta2.upcoming;' != 'IGNORE'">
-					<li>Upcoming:<br/><a
-				href="&u.betarel2.schedule;">&betarel2.current;-&betarel2.vers;</a></li>
+					<li>Upcoming: <a
+				href="&u.betarel2.schedule;">&betarel2.current;</a></li>
 			    </xsl:if>
 				  </ul>
 			  </div> <!-- FRONTRELEASESCONTENT -->
