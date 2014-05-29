@@ -1,0 +1,793 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    The FreeBSD Documentation Project
+
+    $FreeBSD$
+
+    Original revision: 1.15
+
+-->
+<chapter xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink" version="5.0" xml:id="jails">
+  <info><title>Jails</title>
+    <authorgroup>
+      <author><personname><firstname>Matteo</firstname><surname>Riondato</surname></personname><contrib>Contributed by </contrib></author>
+    </authorgroup>
+  </info>
+
+  
+
+  <indexterm><primary>jails</primary></indexterm>
+
+  <sect1 xml:id="jails-synopsis">
+    <title>概述</title>
+
+    <para>本章將介紹 &os; jail 為何，以及如何運用之法。
+      Jails 有時也常被認為是 <emphasis>chroot 環境</emphasis>
+      的加強型替代品之一，它對系統管理者而言是非常好用的工具，
+      此外，它的一些基本用法對進階使用者而言，也是相當有用。</para>
+
+    <para>讀完這章，您將了解︰</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>jail 是什麼，以及它在 &os; 上可以發揮的作用。</para>
+      </listitem>
+
+      <listitem>
+	<para>如何編譯、啟動、停止 jail。</para>
+      </listitem>
+
+      <listitem>
+	<para>jail 管理的基本概念：包括從 jail 內部或主機本身。</para>
+      </listitem>
+    </itemizedlist>
+
+    <para>其他有用的 jail 相關資源還有：</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>&man.jail.8; 線上說明。  這是有關 <command>jail</command>
+	  的完整說明 &mdash; &os; 內的啟動、停止、控制 &os; jail
+	  相關管理工具。</para>
+      </listitem>
+
+      <listitem>
+	<para>郵遞論壇(mailing lists)及舊信檔案館(archives)。
+	  &a.mailman.lists; 所提供的 &a.questions; 及其他郵遞論壇的舊信
+	  ，已有包括一堆 jail 的有用資料。  通常，搜尋舊信或者在
+	  &a.questions.name; 上發問，也相當有效。</para>
+      </listitem>
+    </itemizedlist>
+
+  </sect1>
+
+  <sect1 xml:id="jails-terms">
+    <title>Jail 相關術語</title>
+
+    <para>為協助更容易理解 &os; 系統的 jail 相關部分，
+      以及它們與 &os; 其他部分的相互作用關係，
+      以下列出本章將使用的術語：</para>
+
+    <variablelist>
+      <varlistentry>
+        <term>&man.chroot.2; (指令)</term>
+        <listitem>
+	  <para>&os; 的 system call 之一，其作用為改變 process
+	    及其衍生 process 所能運用的根目錄 (<filename>/</filename>
+	    dir)。</para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>&man.chroot.2; (環境)</term>
+        <listitem>
+	  <para>指在 <quote>chroot</quote> 中運行的 process 環境。
+	    這包括了類似檔案系統的可見部分、可用的 UID、GID、網路卡及其他 IPC
+	    機制等資源。</para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>&man.jail.8; (command)</term>
+        <listitem>
+	  <para>允許程式在 jail 環境下執行的系統管理工具。</para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>host (系統、process、帳號等等)</term>
+        <listitem>
+	  <para>jail 環境的控制系統。  host 系統可以使用全部可用的硬體資源，
+	    並能控制 jail 環境內外的 process。  host 系統與 jail 最大的差別在於
+	    ：在 host 系統中的 superuser processes 並不像在 jail
+	    環境那樣處處受到一堆限制。</para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>hosted (系統、process、帳號等等)</term>
+        <listitem>
+	  <para>可用資源受到 &os; jail 限制的 process、帳號、或其他設備資源
+	    。</para>
+	</listitem>
+      </varlistentry>
+    </variablelist>
+  </sect1>
+
+  <sect1 xml:id="jails-intro">
+    <title>背景故事</title>
+
+    <para>由於系統管理是困難又繁瑣的工作，因此人們開發許多好用工具，
+      以讓管理工作更加簡單輕鬆。  這些改善通常是讓系統能夠以更簡單的方式安裝、
+      設定、維護，而有些改善目標則是系統安全的正確設定，使其能真正發揮原本用途，
+      而非陷入安全風險之中。</para>
+
+    <para>&os; 系統所提供的一種用於強化安全的工具就是 <emphasis>jail</emphasis>
+      。  Jail 是由 &a.phk; 於 &os;&nbsp;4.X 開始導入，而在 &os;&nbsp;5.X
+      受到許多重大改良而集大成，成為強大而靈活的子系統，目前仍在持續開發、
+      以提高其可用性、效能與安全。</para>
+
+    <sect2 xml:id="jails-what">
+      <title>何為 Jail</title>
+
+      <para>BSD-like 作業系統自 4.2BSD 起即提供 &man.chroot.2;。
+	&man.chroot.8; 可用來變更一組 process 的根目錄位置，
+	藉此建立與實體系統中相隔離的安全環境。  處於 chrooted 環境的
+	process 會無法不能存取世外的檔案或資源。  由於此因素，
+	故即使攻擊者攻破某個處於 chroot 環境的 service，也不能攻破整個系統。
+	&man.chroot.8; 對於那些不太需要彈性或複雜又高級的簡單應用而言相當好用。
+	另外，在引入 chroot 概念的過程中，曾經發現許多可脫逃 chroot 環境的方式，
+	儘管這些問題在較新版本的 &os; kernel 均已修正，但很明顯地 &man.chroot.2;
+	絕非用於強化安全的理想解決方案。  因此，
+	勢必得實作新的子系統來解決這些問題。</para>
+
+      <para>這就是為何要開發 <emphasis>jail</emphasis> 的最主要原因。</para>
+
+      <para>Jail 在各種方式分進合擊，改進傳統 &man.chroot.2; 環境的概念。
+	在傳統的 &man.chroot.2; 環境中，只限制 process 對於檔案系統的存取部分，
+	而系統資源的其他部分(例如系統帳號、執行中的 process、網路子系統)則是由
+	chroot process 與 host 系統的其他 process 一起共享。
+	Jail 以『虛擬化』來擴展這模型，不單只有檔案系統的存取，還延伸到
+	系統帳號、&os; kernel 的網路子系統及其他系統資源的虛擬化。
+	關於這些 jail 環境存取的細微調控，請參閱 <xref linkend="jails-tuning"/>。</para>
+
+      <para>jail 具有下列四項特色：</para>
+
+      <itemizedlist>
+	<listitem>
+	  <para>目錄子樹(directory subtree) &mdash; 也就是進入 jail 的起點。
+	    一旦進入 jail 之後，process 就不再被允許跳到 subtree 以外。
+	    &amp;傳統會影響到 &man.chroot.2; 最初設計的安全問題，就不會再影響
+	    &os; jail。</para>
+	</listitem>
+
+	<listitem>
+	  <para>主機名稱(hostname) &mdash; 用於 jail 的 hostname。  由於
+	    jail 主要用於網路服務，因此若各 jail 皆有名稱，
+	    對於系統管理工作的簡化會相當有效。</para>
+	</listitem>
+
+	<listitem>
+	  <para><acronym>IP</acronym> address &mdash; 是用來給 jail 使用，
+	    並且在 jail 生命週期內都無法變更。  通常 jail 的 IP address
+	    是現有網卡的 alias address，但這並不是必須的。</para>
+	</listitem>
+
+	<listitem>
+	  <para>指令(Command) &mdash; 準備在 jail 內執行的完整路徑。  這指令是相對於
+	    jail 環境的根目錄，視 jail 環境的類型不同，而有所差異。</para>
+	</listitem>
+      </itemizedlist>
+
+      <para>除了上述之外，jail 也可擁有自己的帳號及 <systemitem class="username">root</systemitem>
+	帳號。  當然，這裡的<systemitem class="username">root</systemitem> 權力會受制於 jail 環境內。
+	並且從 host 系統的角度來看，jail 的 <systemitem class="username">root</systemitem>
+	並非無所不能的帳號。  此外 jail 的 <systemitem class="username">root</systemitem>
+	並不能執行其對於 &man.jail.8; 環境以外的一些關鍵性操作。
+	關於 <systemitem class="username">root</systemitem> 的能力與限制，將於稍後的
+	<xref linkend="jails-tuning"/> 介紹之。</para>
+    </sect2>
+  </sect1>
+
+  <sect1 xml:id="jails-build">
+    <title>建立和控制 Jail</title>
+
+    <para>有些系統管理者把 jail 分為下列兩種：<quote>complete(完全)</quote>
+      jail &mdash; 通常包括完整的 &os; 系統；另一種則為
+      <quote>service(服務)</quote> jail &mdash;
+      專門只跑某單一可能要用特殊權限的程式或 service。  這只是一種概念上的區分
+      ，並不影響如何建立 jail 的過程。  至於如何建立 jail 在 &man.jail.8;
+      內有更詳細的說明：</para>
+
+      <screen>&prompt.root; <userinput>setenv D /here/is/the/jail</userinput>
+&prompt.root; <userinput>mkdir -p $D</userinput> <co xml:id="jailpath"/>
+&prompt.root; <userinput>cd /usr/src</userinput>
+&prompt.root; <userinput>make world DESTDIR=$D</userinput> <co xml:id="jailworld"/>
+&prompt.root; <userinput>cd etc/</userinput> <footnote><para>&os; 6.0(含)
+之後就不需這步驟。</para></footnote>
+&prompt.root; <userinput>make distribution DESTDIR=$D</userinput> <co xml:id="jaildistrib"/>
+&prompt.root; <userinput>mount -t devfs $D/dev</userinput> <co xml:id="jaildevfs"/></screen>
+
+    <calloutlist>
+      <callout arearefs="jailpath">
+	<para>首先就是先為 jail 找個家。  該路徑是在 host 系統中的 jail
+	  實體位置。  習慣是放在 <filename>/usr/jail/jailname</filename>，
+	  <replaceable>jailname</replaceable> 請替換為該 jail 的 hostname
+	  以便辨別。  通常 <filename>/usr</filename>
+	  會有足夠空間來存放 jail 檔案系統，對於 <quote>complete</quote> jail
+	  而言，它通常包括了 &os; 預設安裝 base system 所有檔案的拷貝檔。</para>
+      </callout>
+
+      <callout arearefs="jailworld">
+	<para>該指令將會在 jail 目錄中安裝所需的 binary、library、manual 說明等
+	  。  這些是以傳統的 &os; 方式完成 &mdash; 即首先先編譯所有檔案，
+	  接著再裝到目的地。</para>
+      </callout>
+
+      <callout arearefs="jaildistrib">
+	<para>使用 <buildtarget>distribution</buildtarget> 這個
+	  <application>make</application> target 來裝所有會用到的設定檔。
+	  簡單來說該動作就是把 <filename>/usr/src/etc/</filename> 複製到 jail 環境內的
+	  <filename>/etc</filename>，也就是
+	  <filename>$D/etc/</filename>。</para>
+      </callout>
+
+      <callout arearefs="jaildevfs">
+	<para>對於 jail 環境而言，&man.devfs.8; 檔案系統的掛載並非必須，
+	  但另一方面，幾乎所有應用程式都會需要存取至少一個設備(device)，
+	  這主要取決於該程式目的而定。  控制 jail 所能存取的設備非常重要，
+	  因為不正確的設定，會讓攻擊者對 jail 有機可趁。  至於如何透過
+	  &man.devfs.8; 來控制的規則，可以參閱 &man.devfs.8; 及
+	  &man.devfs.conf.5; 說明。</para>
+      </callout>
+    </calloutlist>
+
+    <para>裝好 jail 之後，就可以用 &man.jail.8; 工具。  &man.jail.8;
+      需要四項必填參數，這些參數在 <xref linkend="jails-what"/> 有介紹過。
+      除了這四個參數之外，還可以指定其他參數，像是以特定帳號在 jail 中執行
+      process。  <option><replaceable>command</replaceable></option>
+      參數取決於 jail 類型而定；對於 <emphasis>virtual system(虛擬系統)
+      </emphasis>，那麼就選擇 <filename>/etc/rc</filename>，
+      因為它會完成真正 &os; 系統啟動所需的操作。  對於 <emphasis>service(服務)
+      </emphasis> jail 而言，執行的指令取決於將在 jail 內執行的 service
+      或應用程式而定。</para>
+
+    <para>Jail 通常要在系統開機時啟動，因此 &os; 的 <filename>rc</filename>
+      機制提供一些便利的方式來簡化這些工作：</para>
+
+    <procedure>
+      <step>
+	<para>開機時要啟動的 jail 清單要加到 &man.rc.conf.5; 設定檔：</para>
+
+	<programlisting>jail_enable="YES"   # 若設為 NO 則表示不自動啟動 jail
+jail_list="<replaceable>www</replaceable>"     # 若有許多 jail 則請以空白隔開來寫</programlisting>
+      </step>
+
+      <step>
+	<para>對於每一筆在 <varname>jail_list</varname> 所列出的 jail，
+	  也要在 &man.rc.conf.5; 做出相對應的設定：</para>
+
+	<programlisting>jail_<replaceable>www</replaceable>_rootdir="/usr/jail/www"     # jail 的根目錄
+jail_<replaceable>www</replaceable>_hostname="<replaceable>www</replaceable>.example.org"  # jail 的 hostname
+jail_<replaceable>www</replaceable>_ip="192.168.0.10"           # jail 的 IP address
+jail_<replaceable>www</replaceable>_devfs_enable="YES"          # 在 jail 內 mount devfs
+jail_<replaceable>www</replaceable>_devfs_ruleset="<replaceable>www_ruleset</replaceable>" # jail 內所用的 devfs 規則表</programlisting>
+
+	<para>在 &man.rc.conf.5; 所預設的 jail 啟動設定會跑
+	  <filename>/etc/rc</filename> 內的 jail script，也就是說會假設 jail
+	  是完整的虛擬系統。  若要用 service jail 類型，則要另外指定啟動指令，
+	  方法是設定對應的
+	  <varname>jail_<replaceable>jailname</replaceable>_exec_start</varname>
+	  設定。</para>
+
+	<note>
+	  <para>若欲知道所有可用的選項清單，請參閱 &man.rc.conf.5; 說明。</para>
+	</note>
+      </step>
+    </procedure>
+
+    <para>也可以透過手動執行 <filename>/etc/rc.d/jail</filename> script
+      來啟動或停止 <filename>rc.conf</filename> 所設定的 jail：</para>
+
+    <screen>&prompt.root; <userinput>/etc/rc.d/jail start www</userinput>
+&prompt.root; <userinput>/etc/rc.d/jail stop www</userinput></screen>
+
+    <para>目前尚無任何方法來很乾淨地關閉 &man.jail.8;。
+      此乃因為正常用來關閉系統的指令，目前尚不能在 jail 中使用。  目前關閉 jail
+      最佳的方式，是在 jail 內執行下列指令，或者 jail 外面透過 &man.jexec.8;
+      執行下列指令：</para>
+
+    <screen>&prompt.root; <userinput>sh /etc/rc.shutdown</userinput></screen>
+
+    <para>詳情請參閱 &man.jail.8; 說明。</para>
+  </sect1>
+
+  <sect1 xml:id="jails-tuning">
+    <title>微調與管理</title>
+
+    <para>可以為 jail 設定許多不同選項，並讓 &os; 的 host 系統與 jail
+      以各種不同方式組合搭配，以符合更多的應用用途。  本節要介紹的是：</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>用以微調 jail 行為與安全限制的選項。</para>
+      </listitem>
+
+      <listitem>
+	<para>可透過 &os; Ports Collection 安裝的高階 jail 管理程式，
+	  搭配這些程式可以達到一些 jail-based 解決方案。</para>
+      </listitem>
+    </itemizedlist>
+
+    <sect2 xml:id="jails-tuning-utilities">
+      <title>&os; 所提供的 jail tuning 工具</title>
+
+      <para>對於 jail 設定的微調，基本上都是透過設定 &man.sysctl.8; 變數來完成。
+	系統提供一組  sysctl 的特殊子樹，全部相關的選項都在該子樹內，也就是
+	&os; kernel 中的 <varname>security.jail.*</varname> 子樹。
+	下面則是與 jail 相關的主要 sysctl 設定及預設值，這些名稱都相當容易理解，
+	如欲更進一步的資訊，請參閱 &man.jail.8; 與 &man.sysctl.8; 說明：</para>
+
+      <itemizedlist>
+	<listitem>
+	  <para><varname>security.jail.set_hostname_allowed:
+	     1</varname></para>
+	</listitem>
+
+	<listitem>
+	  <para><varname>security.jail.socket_unixiproute_only:
+	     1</varname></para>
+	</listitem>
+
+	<listitem>
+	  <para><varname>security.jail.sysvipc_allowed:
+	     0</varname></para>
+	</listitem>
+
+	<listitem>
+	  <para><varname>security.jail.enforce_statfs:
+	     2</varname></para>
+	</listitem>
+
+	<listitem>
+	  <para><varname>security.jail.allow_raw_sockets:
+	     0</varname></para>
+	</listitem>
+
+	<listitem>
+	  <para><varname>security.jail.chflags_allowed:
+	    0</varname></para>
+	</listitem>
+
+	<listitem>
+	  <para><varname>security.jail.jailed: 0</varname></para>
+	</listitem>
+      </itemizedlist>
+
+      <para>系統管理者可在 <emphasis>host system</emphasis>
+	透過修改這些設定值來增加、取消 Jail 內 <systemitem class="username">root</systemitem>
+	帳號的預設限制。  請注意：有些限制是不能取消，在 &man.jail.8; 環境的
+	<systemitem class="username">root</systemitem> 不能掛載或卸載檔案系統。  此外亦不能載入、
+	卸載 &man.devfs.8; 規則、設定防火牆規則，或執行其他需修改 kernel
+	資料的管理作業，例如設定 kernel 的 <varname>securelevel</varname>
+	值。</para>
+
+      <para>&os; base system 內附一些基本工具，可用來查閱目前使用中的 jail、
+	並接上(attach) jail 以執行管理指令。  &man.jls.8; 及 &man.jexec.8;
+	均屬於 &os; base system 之一，可用來執行一些簡單工作：</para>
+
+      <itemizedlist>
+	<listitem>
+	  <para>列出有在使用的 jail 及其相對應的 jail identifier
+	    (<acronym>JID</acronym>)、<acronym>IP</acronym> address、
+	    hostname、路徑。</para>
+	</listitem>
+
+	<listitem>
+	  <para>接上(Attach)正在運作中的 jail，並在其中執行指令以進行管理工作。
+	    這點在當 <systemitem class="username">root</systemitem> 想乾淨關閉 jail 時相當有用，
+	    &man.jexec.8; 也可用在 jail 中啟動 shell 以便對其進行管理，
+	    比如：</para>
+
+	  <screen>&prompt.root; <userinput>jexec 1 tcsh</userinput></screen>
+	</listitem>
+      </itemizedlist>
+    </sect2>
+
+    <sect2 xml:id="jails-tuning-admintools">
+      <title>&os; Ports Collection 所提供的高階管理工具</title>
+
+    <para>在諸多 third-party 所提供的 jail 管理工具當中，<package>sysutils/jailutils</package> 是最完整也最好用的。
+      該套件是由一系列 &man.jail.8; 管理小工具所組成的。  詳情請參閱其網站介紹
+      。</para>
+    </sect2>
+  </sect1>
+
+  <sect1 xml:id="jails-application">
+    <title>Jail 的應用</title>
+
+    <sect2 xml:id="jails-service-jails">
+      <info><title>Service Jails</title>
+	<authorgroup>
+	  <author><personname><firstname>Daniel</firstname><surname>Gerzo</surname></personname><contrib>Contributed by </contrib></author>
+	</authorgroup>
+      </info>
+
+      
+
+      <para>本節主要以 &a.simon; 寫的 <uri xlink:href="http://simon.nitro.dk/service-jails.html">http://simon.nitro.dk/service-jails.html</uri> 為主，加上
+	Ken Tom <email>locals@gmail.com</email> 所更新的文章。
+	本節介紹如何設定 &os; 以 &man.jail.8; 功能來增加額外的安全層面。
+	這部分假設您系統跑的是 RELENG_6_0 或更新的版本，
+	並且對本章先前部分均能理解。</para>
+
+      <sect3 xml:id="jails-service-jails-design">
+       <title>Design</title>
+
+	<para>Jail 的主要問題之一在於如何對其進行更新、升級和管理。
+	  由於每個 jail 都是從頭重新編譯，對於單一 jail 而言，
+	  升級也許還不是很嚴重的問題，因為更新、升級並不會太麻煩。
+	  但對於一堆 jail 而言，升級不僅會耗費太多時間，並相當枯燥乏味。</para>
+
+	<warning>
+	  <para>這些設定的前提是您對 &os; 使用、功能運用上有相當的經驗，
+	    若下面的設定對您來說太過複雜，建議您該考慮用較簡易的系統，像是
+	    <package>sysutils/ezjail</package>，其提供更簡單的
+	    &os; jail 管理方式。</para>
+	</warning>
+
+	<para>基本的想法是在不同的 jail 中儘量以安全的方式來共用資源
+	  &mdash; 採用唯讀的 &man.mount.nullfs.8; 掛載，來讓升級更簡單，
+	  並把各個 service 放到不同的 jail 的作法會更加可行。  此外，
+	  其也提供對於如何增加、刪除、升級 jail 的簡便方式。</para>
+
+	<note>
+	  <para>service 常見的例子包括：
+	  <acronym>HTTP</acronym> server、<acronym>DNS</acronym>
+	  server、<acronym>SMTP</acronym> server 等等。</para>
+	</note>
+
+	<para>本節介紹的設定目的在於：</para>
+
+	<itemizedlist>
+	  <listitem>
+	    <para>建立簡易且容易理解的 jail 架構。  也就是說
+	      <emphasis>不必</emphasis>為每個 jail 都執行完整的 installworld
+	      。</para>
+	  </listitem>
+	  <listitem>
+	    <para>讓 jail 的新增、移除更簡單。</para>
+	  </listitem>
+	  <listitem>
+	    <para>讓 jail 的更新、升級更輕鬆。</para>
+	  </listitem>
+	  <listitem>
+	    <para>可以跑自行打造的 &os; 分支。</para>
+	  </listitem>
+	  <listitem>
+	    <para>對安全有更偏執狂的追求，儘可能降低被攻陷的可能。</para>
+	  </listitem>
+	  <listitem>
+	    <para>儘量節省空間與 inode。</para>
+	  </listitem>
+	</itemizedlist>
+
+	<para>如同先前所提到的，這設計主要是靠把唯讀的主要模版
+	  (也就是大家所熟知的 <application>nullfs</application>)掛載到每個
+	  jail，並且讓每個 jail 有個可讀、寫的設備，這設備可以是獨立實體硬碟、
+	  、分割區、或以 vnode 為後端的 &man.md.4; 設備。  在本例當中，
+	  我們採用可讀寫的 <application>nullfs</application> 掛載。</para>
+
+	<para>下面的表則介紹檔案系統的配置：</para>
+
+	<itemizedlist>
+	  <listitem>
+	    <para>每個 jail 都會掛載到 <filename>/home/j</filename> 底下的其中一個目錄。</para>
+	  </listitem>
+	  <listitem>
+	    <para><filename>/home/j/mroot</filename> 則是每個
+	      jail 共用的模版，並對於所有 jail 而言都是唯讀。</para>
+	  </listitem>
+	  <listitem>
+	    <para>每個 jail 在 <filename>/home/j</filename>
+	      底下都有一個相對應的空目錄。</para>
+	  </listitem>
+	  <listitem>
+	    <para>每個 jail 都會有 <filename>/s</filename> 目錄，
+	      該目錄會連到系統的可讀寫部分。</para>
+	  </listitem>
+	  <listitem>
+	    <para>每個 jail 都會在 <filename>/home/j/skel</filename> 目錄建立自屬的可讀寫空間
+	      。</para>
+	  </listitem>
+	  <listitem>
+	    <para>每個 jailspace (各 jail 可讀寫的部分) 都建在 <filename>/home/js</filename>&gt;。</para>
+	  </listitem>
+	</itemizedlist>
+
+	<note>
+	  <para>這邊假設所有 jail 都放在
+	    <filename>/home</filename> 分割區。  當然，
+	    也可以依自身需求更改，但接下來的例子中，
+	    也要記得修改相對應的地方。</para>
+	</note>
+	<!-- Insert an image or drawing here to illustrate the example. -->
+      </sect3>
+
+      <sect3 xml:id="jails-service-jails-template">
+	<title>建立模版</title>
+
+	<para>本節將逐步介紹如何建立 jail 要用的唯讀主模版。</para>
+
+	<para>建議先把 &os; 系統升級到最新的 -RELEASE 分支，至於如何做請參閱
+	  Handbook 的
+	  <link xlink:href="&url.books.handbook;/makeworld.html">相關章節</link>。
+	  當更新完成之後，就要進行 buildworld 程序，此外還要裝 <package>sysutils/cpdup</package> 套件。
+	  我們將用 &man.portsnap.8; 來下載 &os; Ports Collection，
+	  在 Handbook 中對 <link xlink:href="&url.books.handbook;/portsnap.html">Portsnap 章節</link>
+	  中有相關介紹，初學者可以看看。</para>
+
+	<procedure>
+	  <step>
+	    <para>首先，先建立唯讀的目錄結構給 jail 放 &os; binary，
+	      接著到 &os; source tree 目錄，並安裝 jail 模版：</para>
+
+	    <screen>&prompt.root; <userinput>mkdir -p /home/j/mroot</userinput>
+&prompt.root; <userinput>cd /usr/src</userinput>
+&prompt.root; <userinput>make installworld DESTDIR=/home/j/mroot</userinput></screen>
+	  </step>
+	  <step>
+	    <para>接著跟 &os; source tree 一樣，也把 &os; Ports Collection
+	      放一份供 jail 使用，以備 <application>mergemaster</application>
+	      ：</para>
+
+	    <screen>&prompt.root; <userinput>cd /home/j/mroot</userinput>
+&prompt.root; <userinput>mkdir usr/ports</userinput>
+&prompt.root; <userinput>portsnap -p /home/j/mroot/usr/ports fetch extract</userinput>
+&prompt.root; <userinput>cpdup /usr/src /home/j/mroot/usr/src</userinput></screen>
+	  </step>
+	  <step>
+	    <para>建立可讀寫部分的骨架：</para>
+
+	    <screen>&prompt.root; <userinput>mkdir /home/j/skel /home/j/skel/home /home/j/skel/usr-X11R6 /home/j/skel/distfiles</userinput>
+&prompt.root; <userinput>mv etc /home/j/skel</userinput>
+&prompt.root; <userinput>mv usr/local /home/j/skel/usr-local</userinput>
+&prompt.root; <userinput>mv tmp /home/j/skel</userinput>
+&prompt.root; <userinput>mv var /home/j/skel</userinput>
+&prompt.root; <userinput>mv root /home/j/skel</userinput></screen>
+	  </step>
+	  <step>
+	    <para>用 <application>mergemaster</application> 來裝漏掉的設定檔。
+	      接下來刪除 <application>mergemaster</application>
+	      所建立的多餘目錄：</para>
+
+	    <screen>&prompt.root; <userinput>mergemaster -t /home/j/skel/var/tmp/temproot -D /home/j/skel -i</userinput>
+&prompt.root; <userinput>cd /home/j/skel</userinput>
+&prompt.root; <userinput>rm -R bin boot lib libexec mnt proc rescue sbin sys usr dev</userinput></screen>
+	  </step>
+	  <step>
+	    <para>現在把可讀寫的檔案系統以 symlink 方式連到唯讀的檔案系統。
+	      請確認 symbolic link 是否有正確連到 <filename>s/</filename> 目錄，若目錄建立方式不對，
+	      或指向位置不對，可能會導致安裝失敗。</para>
+
+	    <screen>&prompt.root; <userinput>cd /home/j/mroot</userinput>
+&prompt.root; <userinput>mkdir s</userinput>
+&prompt.root; <userinput>ln -s s/etc etc</userinput>
+&prompt.root; <userinput>ln -s s/home home</userinput>
+&prompt.root; <userinput>ln -s s/root root</userinput>
+&prompt.root; <userinput>ln -s ../s/usr-local usr/local</userinput>
+&prompt.root; <userinput>ln -s ../s/usr-X11R6 usr/X11R6</userinput>
+&prompt.root; <userinput>ln -s ../../s/distfiles usr/ports/distfiles</userinput>
+&prompt.root; <userinput>ln -s s/tmp tmp</userinput>
+&prompt.root; <userinput>ln -s s/var var</userinput></screen>
+	  </step>
+	  <step>
+	    <para>最後則是新增 <filename>/home/j/skel/etc/make.conf</filename>
+	      ，並填入以下內容：</para>
+
+	      <programlisting>WRKDIRPREFIX?=  /s/portbuild</programlisting>
+
+
+	      <para>要設定 <literal>WRKDIRPREFIX</literal> 才可以讓各 jail
+		得以順利編譯 &os; ports。請記住 ports 目錄是屬唯讀檔案系統。
+		而搭配自訂的 <literal>WRKDIRPREFIX</literal> 才可以讓各 jail
+		在可讀寫空間進行編譯。</para>
+	  </step>
+	</procedure>
+      </sect3>
+
+      <sect3 xml:id="jails-service-jails-creating">
+	<title>建立 Jail</title>
+
+	<para>現在已經有完整的 &os; jail 模版，可以在
+	  <filename>/etc/rc.conf</filename> 內做相關設定。
+	  下面這例子則示範如何建立 3 個 jail：<quote>NS</quote>、
+	  <quote>MAIL</quote>、<quote>WWW</quote>。</para>
+
+	<procedure>
+	  <step>
+	    <para>在 <filename>/etc/fstab</filename> 加上下列設定，
+	      以便讓系統自動掛載各 jail 所需的唯讀模版與讀寫空間：</para>
+
+	    <programlisting>/home/j/mroot   /home/j/ns     nullfs  ro  0   0
+/home/j/mroot   /home/j/mail   nullfs  ro  0   0
+/home/j/mroot   /home/j/www    nullfs  ro  0   0
+/home/js/ns     /home/j/ns/s   nullfs  rw  0   0
+/home/js/mail   /home/j/mail/s nullfs  rw  0   0
+/home/js/www    /home/j/www/s  nullfs  rw  0   0</programlisting>
+
+	    <note>
+	      <para>分割區的 pass number 標示為 0 就不會在開機時做 &man.fsck.8;
+		檢查；而分割區的 dump number 標示為 0 則不會被 &man.dump.8;
+		所備份。
+		我們並不希望
+		<application>fsck</application> 檢查
+		<application>nullfs</application> 的掛載，或者讓
+		<application>dump</application> 備份 jail 內唯讀的 nullfs 掛載。
+		這也就是為何上述 <filename>fstab</filename>
+		每行設定後面都有兩欄為 <quote>0&nbsp;0</quote>。</para>
+	    </note>
+	  </step>
+	  <step>
+	    <para>在 <filename>/etc/rc.conf</filename> 內設定 jail：</para>
+
+	    <programlisting>jail_enable="YES"
+jail_set_hostname_allow="NO"
+jail_list="ns mail www"
+jail_ns_hostname="ns.example.org"
+jail_ns_ip="192.168.3.17"
+jail_ns_rootdir="/usr/home/j/ns"
+jail_ns_devfs_enable="YES"
+jail_mail_hostname="mail.example.org"
+jail_mail_ip="192.168.3.18"
+jail_mail_rootdir="/usr/home/j/mail"
+jail_mail_devfs_enable="YES"
+jail_www_hostname="www.example.org"
+jail_www_ip="62.123.43.14"
+jail_www_rootdir="/usr/home/j/www"
+jail_www_devfs_enable="YES"</programlisting>
+
+	    <warning>
+	      <para>之所以要把
+		<varname>jail_<replaceable>name</replaceable>_rootdir</varname>
+		從 <filename>/home</filename> 改為 <filename>/usr/home</filename> 的原因在於 &os;
+		預設安裝的 <filename>/home</filename> 目錄其實只是指向 <filename>/usr/home</filename> 的 symbolic link。  而
+		<varname>jail_<replaceable>name</replaceable>_rootdir</varname>
+		變數須為 <emphasis>實體目錄</emphasis> 而非 symbolic link，
+		否則 jail 會拒絕啟動。  可以用 &man.realpath.1;
+		來決定該變數。  詳情請參閱 &os;-SA-07:01.jail 安全通告。</para>
+	    </warning>
+	  </step>
+	  <step>
+	    <para>替每個 jail 建立必須的唯讀檔案系統掛載點：</para>
+
+	    <screen>&prompt.root; <userinput>mkdir /home/j/ns /home/j/mail /home/j/www</userinput></screen>
+	  </step>
+	  <step>
+	    <para>為每個 jail 安裝可讀寫的模版。  請注意這時要用 <package>sysutils/cpdup</package>
+	      ，它能確保每個目錄都有正確複製。</para>
+	    <!-- keramida: Why is cpdup required here?  Doesn't cpio(1)
+	     already include adequate functionality for performing this
+	     job *and* have the advantage of being part of the base
+	     system of FreeBSD? -->
+
+	    <screen>&prompt.root; <userinput>mkdir /home/js</userinput>
+&prompt.root; <userinput>cpdup /home/j/skel /home/js/ns</userinput>
+&prompt.root; <userinput>cpdup /home/j/skel /home/js/mail</userinput>
+&prompt.root; <userinput>cpdup /home/j/skel /home/js/www</userinput></screen>
+	  </step>
+	  <step>
+	    <para>如此一來就已完成 jail 環境建立，可以準備好要用了。
+	      請先為各 jail 掛載所須的檔案系統，再用
+	      <filename>/etc/rc.d/jail</filename> script 來啟動：</para>
+
+	    <screen>&prompt.root; <userinput>mount -a</userinput>
+&prompt.root; <userinput>/etc/rc.d/jail start</userinput></screen>
+	  </step>
+	</procedure>
+
+	<para>現在 jail 應該就會啟動了。  若要檢查是否有正常啟動，可以用
+	  &man.jls.8; 指令來看，該指令的執行結果應該類似下面：</para>
+
+	<screen>&prompt.root; <userinput>jls</userinput>
+   JID  IP Address      Hostname                      Path
+     3  192.168.3.17    ns.example.org                /home/j/ns
+     2  192.168.3.18    mail.example.org              /home/j/mail
+     1  62.123.43.14    www.example.org               /home/j/www</screen>
+
+	<para>此時就可以登入各 jail 並新增帳號與設定相關 service 要用的 daemon
+	  。  上面的 <literal>JID</literal> 欄代表正在運作中的 jail 編號。
+	  可用下列指令以在 <literal>JID</literal> 編號 3 的 jail
+	  執行管理工作：</para>
+
+	<screen>&prompt.root; <userinput>jexec 3 tcsh</userinput></screen>
+      </sect3>
+
+      <sect3 xml:id="jails-service-jails-upgrading">
+	<title>升級</title>
+
+	<para>有時由於安全問題或者 jail 內要用新功能，而需要把 &os;
+	  系統升級到更新。  這種安裝設計方式讓既有的 jail 升級變得更加容易。
+	  jail 也可以把 service 停機時間(downtime)降到最低，因為 jail
+	  只需在最後關鍵才需要重開。  此外，萬一新版有問題的話，
+	  它也提供輕鬆回溯到舊版的功能。</para>
+
+	<procedure>
+	  <step>
+	    <para>首先是照一般方式來升級 host system，再新增臨時的唯讀模版
+	      <filename>/home/j/mroot2</filename>：</para>
+
+	    <screen>&prompt.root; <userinput>mkdir /home/j/mroot2</userinput>
+&prompt.root; <userinput>cd /usr/src</userinput>
+&prompt.root; <userinput>make installworld DESTDIR=/home/j/mroot2</userinput>
+&prompt.root; <userinput>cd /home/j/mroot2</userinput>
+&prompt.root; <userinput>cpdup /usr/src usr/src</userinput>
+&prompt.root; <userinput>mkdir s</userinput></screen>
+
+	    <para>同樣地，在執行 <buildtarget>installworld</buildtarget>
+	      時會建立一些用不著的目錄，請把這些砍掉：</para>
+
+	    <screen>&prompt.root; <userinput>chflags -R 0 var</userinput>
+&prompt.root; <userinput>rm -R etc var root usr/local tmp</userinput></screen>
+	  </step>
+	  <step>
+	    <para>重新建立到主系統的可讀寫空間 symlink：</para>
+
+	    <screen>&prompt.root; <userinput>ln -s s/etc etc</userinput>
+&prompt.root; <userinput>ln -s s/root root</userinput>
+&prompt.root; <userinput>ln -s s/home home</userinput>
+&prompt.root; <userinput>ln -s ../s/usr-local usr/local</userinput>
+&prompt.root; <userinput>ln -s ../s/usr-X11R6 usr/X11R6</userinput>
+&prompt.root; <userinput>ln -s s/tmp tmp</userinput>
+&prompt.root; <userinput>ln -s s/var var</userinput></screen>
+	  </step>
+	  <step>
+	    <para>現在可以關閉 jail：</para>
+
+	    <screen>&prompt.root; <userinput>/etc/rc.d/jail stop</userinput></screen>
+	  </step>
+	  <step>
+	    <para>卸載原先的檔案系統：</para>
+	    <!-- keramida: Shouldn't we suggest a short script-based
+	     loop here, instead of tediously copying the same commands
+	     multiple times? -->
+
+	    <screen>&prompt.root; <userinput>umount /home/j/ns/s</userinput>
+&prompt.root; <userinput>umount /home/j/ns</userinput>
+&prompt.root; <userinput>umount /home/j/mail/s</userinput>
+&prompt.root; <userinput>umount /home/j/mail</userinput>
+&prompt.root; <userinput>umount /home/j/www/s</userinput>
+&prompt.root; <userinput>umount /home/j/www</userinput></screen>
+
+	    <note>
+	      <para>可讀寫空間(<filename>/s</filename>)
+		是掛載在唯讀檔案系統底下，故要先卸載。</para>
+	    </note>
+	  </step>
+	  <step>
+	    <para>把舊的唯讀系統搬走，換成新的。  如此一來，
+	      可同時保留先前系統的備份，以備萬一升級後有問題可回復。
+	      這邊的命名方式採新唯讀檔案系統的建立時間，此外原先 &os;
+	      Ports Collection 直接搬到新的檔案系統，以節省硬碟空間與 inode
+	      ：</para>
+
+	    <screen>&prompt.root; <userinput>cd /home/j</userinput>
+&prompt.root; <userinput>mv mroot mroot.20060601</userinput>
+&prompt.root; <userinput>mv mroot2 mroot</userinput>
+&prompt.root; <userinput>mv mroot.20060601/usr/ports mroot/usr</userinput></screen>
+	  </step>
+	  <step>
+	    <para>現在新的唯讀模版準備好了，只剩下重新掛載以及啟動 jail：</para>
+
+	    <screen>&prompt.root; <userinput>mount -a</userinput>
+&prompt.root; <userinput>/etc/rc.d/jail start</userinput></screen>
+	  </step>
+	</procedure>
+
+	<para>最後以 &man.jls.8; 來檢查 jail 是否均正常啟動。
+	  別忘了要在各 jail 內執行 mergemaster，還有相關設定檔以及
+	  rc.d scripts 均要更新。</para>
+      </sect3>
+    </sect2>
+  </sect1>
+</chapter>

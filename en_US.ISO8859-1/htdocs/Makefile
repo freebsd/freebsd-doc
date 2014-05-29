@@ -103,7 +103,7 @@ WEB_LANG=	da_DK.ISO8859-1 \
 		pt_BR.ISO8859-1 \
 		ru_RU.KOI8-R \
 		zh_CN.UTF-8 \
-		zh_TW.Big5
+		zh_TW.UTF-8
 .endif
 .if !defined(ENGLISH_ONLY) || empty(ENGLISH_ONLY)
 .for _D in ${WEB_LANG}

@@ -1,0 +1,1387 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+     The FreeBSD Documentation Project
+
+     $FreeBSD$
+     Original revision: 1.180
+-->
+<chapter xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink" version="5.0" xml:id="kernelconfig">
+  <info><title>設定 FreeBSD Kernel</title>
+    <authorgroup>
+      <author><personname><firstname>Jim</firstname><surname>Mock</surname></personname><contrib>更新、重排：</contrib></author>
+    </authorgroup>
+    <authorgroup>
+      <author><personname><firstname>Jake</firstname><surname>Hamby</surname></personname><contrib>  原作為：</contrib></author>
+    </authorgroup>
+  </info>
+
+  
+
+  <sect1 xml:id="kernelconfig-synopsis">
+    <title>概述</title>
+
+    <indexterm>
+      <primary>kernel</primary>
+      <secondary>building a custom kernel</secondary>
+    </indexterm>
+
+    <para>kernel 是整個 &os; 作業系統的核心。
+      它控制了系統的整體運作，包含和記憶體管理、安全控管、網路、硬碟存取等等。
+      儘管目前 &os; 大多可以用動態 module 來載入、卸載所需功能，
+      但有時候仍有必要學會重新調配 kernel。</para>
+
+    <para>讀完這章，您將了解︰</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>為何需要重新調配、編譯 kernel？</para>
+      </listitem>
+
+      <listitem>
+	<para>要怎麼修改 kernel 設定檔？</para>
+      </listitem>
+
+      <listitem>
+	<para>如何以 kernel 設定檔來建立、編譯新的 kernel 呢？</para>
+      </listitem>
+
+      <listitem>
+	<para>如何安裝新的 kernel。</para>
+      </listitem>
+
+      <listitem>
+	<para>如何處理 kernel 錯誤無法開機的情形。</para>
+      </listitem>
+    </itemizedlist>
+
+    <para>本章所舉例的相關指令都是以 <systemitem class="username">root</systemitem> 權限來進行。</para>
+  </sect1>
+
+  <sect1 xml:id="kernelconfig-custom-kernel">
+    <title>為何需要重新調配、編譯 kernel？</title>
+
+    <para>早期的 &os; 的 kernel 被戲稱為 <quote>monolithic</quote> kernel。
+    這意思是說當時的 kernel 是個大塊頭程式，且只支援固定的硬體而已。
+    如果您想改變 kernel 的設定，那麼必須編譯一個新的並重新開機，才能啟用。</para>
+
+    <para>現在的 &os; 已快速成長到新型態的管理模式，其重要特色是：
+      kernel 功能可以隨時依據需求，
+      而以動態載入或卸載相關的 kernel module。
+      這使得 kernel 能夠快速因應新的環境而作調整
+      (有點像是：筆記型電腦上的 PCMCIA 卡一樣即插即用)
+      ，或是增加其他原本的預設 kernel(<filename>GENERIC</filename>)所沒有的功能。
+      這種模式，就叫做 modular kernel(核心模組)。</para>
+
+    <para>儘管如此，還是有一些功能仍須編譯在 kernel 內才行。因為有時候是因為這些功能與 kernel
+      結合的相當複雜緊密，而無法將它們弄成可動態載入的 module
+      ；而有時候，則是因為沒有人有空來弄那些 kernel module 的實作。</para>
+
+    <para>重新調配、編譯 kernel 幾乎是每位 BSD 使用者所必須經歷的過程。
+      儘管這項工作可能比較耗時，但在 &os; 的使用上會有許多好處。
+      跟必須支援大多數各式硬體的 <filename>GENERIC</filename> kernel 相比的話，
+      自行調配 kernel 不同處在於：可以更『體貼』，只支援『自己硬體』的部分就好。
+      好處在於，譬如︰</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>開機速度更快：因為自行調配的 kernel 只需要偵測您系統上的硬體，
+	  所以讓啟動所花的過程更流暢快速。</para>
+      </listitem>
+
+      <listitem>
+	<para>佔用的記憶體更少：自行調配的 kernel 通常會比
+	  <filename>GENERIC</filename> 核心使用更少的記憶體，由於 kernel
+	  必須一直存放在記憶體內，因此這就顯得更加重要。因此，
+	  對於記憶體較小的系統來說，
+	  自行調配的 kernel 就可發揮更多的作用、揮灑空間。</para>
+      </listitem>
+
+      <listitem>
+	<para>可支援更多硬體：您可在自行調配的 kernel 增加一些原本
+	  <filename>GENERIC</filename> 核心沒有提供的硬體支援，像是音效卡之類的。</para>
+      </listitem>
+    </itemizedlist>
+  </sect1>
+
+  <sect1 xml:id="kernelconfig-devices">
+    <info><title>探測系統硬體</title>
+      <authorgroup>
+	<author><personname><firstname>Tom</firstname><surname>Rhodes</surname></personname><contrib>Written by </contrib></author>
+      </authorgroup>
+    </info>
+    
+
+    <para>在進行 kernel 設定的探索之旅前，
+      先把該機器各項硬體資訊作點調查會是明智之舉。
+      若 &os; 並非主要的作業系統，那麼也可以輕鬆透過目前所使用的作業系統，
+      來查看相關硬體資訊表。  舉例來說，&microsoft; 的
+      <application>裝置管理員(Device Manager)</application>
+      內通常會有目前有裝的硬體資訊。  而 <application>裝置管理員</application>
+      是在控制台。</para>
+
+    <note>
+      <para>&microsoft.windows; 某些版本則是先透過
+	<application>系統(System)</application> 再進入
+	<application>裝置管理員</application>。</para>
+    </note>
+
+    <para>若該機器尚未安裝任何作業系統，那麼就要親自找出相關硬體資訊。
+      其中一種方式是透過 &man.dmesg.8; 以及 &man.man.1;。  &os;
+      上大多硬體都會有相關的 man 說明有支援的規格型號，
+      並且開機的偵測過程中，也會列出有找到的硬體。  舉個例子，
+      下面這幾行是說有偵測到滑鼠，並且是以 <filename>psm</filename>
+      驅動程式：</para>
+
+    <programlisting>psm0: &lt;PS/2 Mouse&gt; irq 12 on atkbdc0
+psm0: [GIANT-LOCKED]
+psm0: [ITHREAD]
+psm0: model Generic PS/2 mouse, device ID 0</programlisting>
+
+    <para>驅動程式必須要在自訂的 kernel 設定檔內加入，或者是用
+      &man.loader.conf.5;。</para>
+
+    <para><command>dmesg</command> 有時只顯示系統訊息而沒有開機偵測的部份，
+      遇到這種情況請查閱 <filename>/var/run/dmesg.boot</filename> 檔。</para>
+
+    <para>另外也可以透過 &man.pciconf.8; 來列出更詳細的相關資訊。
+      舉例說明：</para>
+
+    <programlisting>ath0@pci0:3:0:0:        class=0x020000 card=0x058a1014 chip=0x1014168c rev=0x01 hdr=0x00
+    vendor     = 'Atheros Communications Inc.'
+    device     = 'AR5212 Atheros AR5212 802.11abg wireless'
+    class      = network
+    subclass   = ethernet</programlisting>
+
+    <para>上面顯示是透過 <command>pciconf -lv</command>
+      所看到的 <filename>ath</filename> 無線網卡驅動程式。  可以用
+      <command>man ath</command> 來查看
+      &man.ath.4; 的相關說明。</para>
+
+    <para>在使用 &man.man.1; 時，加上 <option>-k</option>
+      參數也可以提供比較精準的資訊。  以上述例子而言，可以改為打：</para>
+
+    <screen>&prompt.root; man -k <replaceable>Atheros</replaceable></screen>
+
+    <para>就會列出有含上述關鍵字的相關 man 說明：</para>
+
+    <programlisting>ath(4)                   - Atheros IEEE 802.11 wireless network driver
+ath_hal(4)               - Atheros Hardware Access Layer (HAL)</programlisting>
+
+    <para>知己知彼，先瞭解相關硬體環境，才能讓接下來的自訂 kernel
+      打造過程更為順利。</para>
+  </sect1>
+
+  <sect1 xml:id="kernelconfig-building">
+    <title>重新調配、編譯 kernel</title>
+    <indexterm>
+      <primary>kernel</primary>
+      <secondary>building / installing</secondary>
+    </indexterm>
+
+    <para>首先對 kernel 相關目錄作快速介紹。
+      這裡所提到的所有目錄都在 <filename>/usr/src/sys</filename> 內，
+      也可以用 <filename>/sys</filename> 這個 symbolic link 來連到這。
+      這裡的許多子目錄分別擺放 kernel 的各組成部分，但對打造 kernel
+      影響最重要的目錄是
+      <filename>arch/conf</filename>，
+      這裡是可以針對需求來修改自訂 kernel 相關設定。
+      此外，還有在編譯 kernel 過程中會暫時擺放的 <filename>compile</filename>
+      目錄。
+      剛講到的 <replaceable>arch</replaceable> 可以是右列架構之一：
+      <filename>i386</filename>、<filename>alpha</filename>、
+      <filename>amd64</filename>、<filename>ia64</filename>、
+      <filename>powerpc</filename>、<filename>sparc64</filename>、
+      <filename>pc98</filename>(在日本較流行的另一種 PC 硬體架構)。
+      在各特定硬體架構目錄的東西，只搭配相對應的硬體架構而已。
+      而其餘的原始碼則是與硬體架構無關，可以在所有 &os; 可裝的平台上共用。
+      整體目錄架構都是有邏輯可循，像是各項有支援的硬體設備、檔案系統，
+      以及相關選項通常都會擺在它們自己的子目錄內。</para>
+
+    <para>本章所用到的例子，都是你使用 i386 架構的機器。
+      請依實際情況，對相關目錄作調整即可。</para>
+
+    <note>
+      <para>若您系統上 <emphasis>沒裝</emphasis>
+	<filename>/usr/src/sys</filename> 目錄，
+	也就是說沒裝 kernel source code 的話，那麼最簡單安裝方式就是以
+	<systemitem class="username">root</systemitem> 權限來執行 <command>sysinstall</command>，
+	接著請選 <guimenuitem>Configure</guimenuitem>，然後選
+	<guimenuitem>Distributions</guimenuitem> 接著為
+	<guimenuitem>src</guimenuitem> 再選
+	<guimenuitem>base</guimenuitem> 最後選
+	<guimenuitem>sys</guimenuitem>。  若不喜歡用
+	<application>sysinstall</application> 而且手邊有
+	<quote>正式的</quote> &os; 光碟可以用的話，
+        那麼也可以用以下指令來安裝：</para>
+
+      <screen>&prompt.root; <userinput>mount /cdrom</userinput>
+&prompt.root; <userinput>mkdir -p /usr/src/sys</userinput>
+&prompt.root; <userinput>ln -s /usr/src/sys /sys</userinput>
+&prompt.root; <userinput>cat /cdrom/src/ssys.[a-d]* | tar -xzvf -</userinput>
+&prompt.root; <userinput>cat /cdrom/src/sbase.[a-d]* | tar -xzvf -</userinput></screen>
+    </note>
+
+    <para>接下來，切換到
+      <filename>arch/conf</filename> 目錄，
+      複製 <filename>GENERIC</filename> 設定檔為你想稱呼的新 kernel 名稱。
+      例如：</para>
+
+    <screen>&prompt.root; <userinput>cd /usr/src/sys/i386/conf</userinput>
+&prompt.root; <userinput>cp GENERIC MYKERNEL</userinput></screen>
+
+    <para>通常，命名方式都是大寫。如果你負責維護許多不同硬體架構的 &os;
+      機器的話，那麼照該機器名稱(hostname)來命名會是比較明智。
+      上面例子中之所以命名為 <filename>MYKERNEL</filename>
+      就是因為這緣故。</para>
+
+    <tip>
+      <para>建議不要把改過的 kernel 設定檔直接放在
+	<filename>/usr/src</filename>。  因為若編譯遇到其他問題時，
+	直接砍掉 <filename>/usr/src</filename> 再重練，
+	可能會是比較乾脆的選擇之一。
+	一旦真的砍了之後，你可能幾秒之後才會醒悟到：
+	你同時也砍掉自己改的 kernel 設定檔。
+	此外，也不要直接修改 <filename>GENERIC</filename>，因為下次你
+	<link linkend="cutting-edge">更新 source tree</link>時，
+	它會被新版覆蓋，而相關修改也將隨之而逝。</para>
+
+      <para>你也可考慮把 kernel 設定檔改放到其他地方，然後再到
+	<filename>i386</filename>
+	目錄內建個指向它的 symbolic link。</para>
+
+      <para>舉例：</para>
+
+      <screen>&prompt.root; <userinput>cd /usr/src/sys/i386/conf</userinput>
+&prompt.root; <userinput>mkdir /root/kernels</userinput>
+&prompt.root; <userinput>cp GENERIC /root/kernels/MYKERNEL</userinput>
+&prompt.root; <userinput>ln -s /root/kernels/MYKERNEL</userinput></screen>
+    </tip>
+
+    <para>現在，就開始用自己喜歡的編輯器來修改 <filename>MYKERNEL</filename>。
+      若才剛裝好 FreeBSD 而已，唯一可用的編輯器很可能是
+      <application>vi</application> 了，由於它的用法很多種，礙於篇幅將不詳細介紹，
+      你可在 <link linkend="bibliography">參考書目</link> 內找到相關書籍。
+      不過，&os; 也提供另一個更好用的編輯器，它叫做
+      <application>ee</application>，對新手而言，這可能是蠻好的選擇。
+      你可以任意修改檔案內的相關註解以說明相關設定為何，
+      或者其他想改的 <filename>GENERIC</filename> 設定內容。</para>
+    <indexterm><primary>SunOS</primary></indexterm>
+
+    <para>若你有在 &sunos; 或者其他種 BSD 作業系統下進行編譯 kernel 的經驗，
+      那麼應該已經很熟悉本篇所介紹的大部分步驟。
+      換句話說，若您之前用的是 DOS 這類作業系統，那麼
+      <filename>GENERIC</filename> 設定檔的內容就可能比較難懂些，沒關係，
+      我們將在下面的 <link linkend="kernelconfig-config">kernel 設定</link>
+      會循序漸進地介紹。</para>
+
+    <note>
+      <para>若有從 &os; 計劃去 <link linkend="cutting-edge">更新你的 source tree</link> 的話，
+        則切記在進行任何升級之前，務必要察看
+	<filename>/usr/src/UPDATING</filename>。
+	這檔會介紹在更新過程中的重大議題或要注意的事項。
+	由於 <filename>/usr/src/UPDATING</filename> 是對應於你機器上目前的
+	&os; source code 版本，因此會提供比本手冊更新的內容。</para>
+    </note>
+
+    <para>現在開始來編譯 kernel 吧。</para>
+
+    <procedure>
+      <title>編譯 Kernel</title>
+
+      <step>
+	<para>請切換至 <filename>/usr/src</filename> 目錄：</para>
+
+	<screen>&prompt.root; <userinput>cd /usr/src</userinput></screen>
+      </step>
+
+      <step>
+	<para>編譯 kernel：</para>
+
+	<screen>&prompt.root; <userinput>make buildkernel KERNCONF=MYKERNEL</userinput></screen>
+      </step>
+
+      <step>
+	<para>安裝新 kernel：</para>
+
+	<screen>&prompt.root; <userinput>make installkernel KERNCONF=MYKERNEL</userinput></screen>
+      </step>
+    </procedure>
+
+    <note>
+      <para>要有完整的 &os; source tree 才能編譯 kernel。</para>
+    </note>
+
+    <tip>
+      <para>預設情況下，在編譯自訂 kernel 時，<emphasis>全部的</emphasis>
+	kernel modules 也會一起重編。  若要快速升級 kernel，
+	或是只想重編所需的 kernel module，那麼在編譯 kernel 前要先改一下
+	<filename>/etc/make.conf</filename>，比如：</para>
+
+      <programlisting>MODULES_OVERRIDE = linux acpi sound/sound sound/driver/ds1 ntfs</programlisting>
+
+      <para>上面該設定值為所希望重編的 kernel module 列表。</para>
+
+      <programlisting>WITHOUT_MODULES = linux acpi sound/sound sound/driver/ds1 ntfs</programlisting>
+
+      <para>而上面這設定值則為不要編入的 kernel module 列表。  若想更瞭解其他
+	kernel 編譯的相關變數，請參閱 &man.make.conf.5; 說明。</para>
+    </tip>
+
+    <indexterm>
+      <primary><filename>/boot/kernel.old</filename></primary>
+    </indexterm>
+
+    <para>新的 kernel 會複製到 <filename>/boot/kernel</filename> 目錄內的
+      <filename>/boot/kernel/kernel</filename>，而舊的則移至
+      <filename>/boot/kernel.old/kernel</filename>。
+      現在呢，先關機，然後就會以新 kernel 重開機
+      若有問題的話，本章後面會介紹一些<link linkend="kernelconfig-trouble">疑難雜症</link>來協助你。
+      若新 kernel 無法開機的話，請參閱 <link linkend="kernelconfig-noboot">這裡</link> 以恢復系統運作。</para>
+
+    <note>
+      <para>至於開機過程的其他相關檔案、設定，比如 &man.loader.8;
+	及其設定，則放在 <filename>/boot</filename>。
+	Third party 或自訂的 kernel modules 則會放在
+	<filename>/boot/kernel</filename>，不過，
+	應注意要保持 kernel module 與 kernel 是否有同步，
+	這點很重要，否則會導致不穩或出問題。</para>
+    </note>
+  </sect1>
+
+  <sect1 xml:id="kernelconfig-config">
+    <info><title>kernel 設定檔解說</title>
+      <authorgroup>
+	<author><personname><firstname>Joel</firstname><surname>Dahl</surname></personname><contrib>Updated for &os; 6.X by </contrib></author>
+      </authorgroup>
+    </info>
+    
+    <indexterm>
+      <primary>kernel</primary>
+      <secondary>NOTES</secondary>
+    </indexterm>
+    <indexterm><primary>NOTES</primary></indexterm>
+    <indexterm>
+      <primary>kernel</primary>
+      <secondary>configuration file</secondary>
+    </indexterm>
+
+    <para>kernel 設定檔的內容格式相當簡單。
+      每一行都包括一個關鍵字，以及一個或多個參數。事實上，
+      很多行大多只有一個參數。任何以 <literal>#</literal>
+      開頭的敘述都將被視為註解而被忽略。
+      接下來將以在 <filename>GENERIC</filename> 所出現的順序一一介紹之。
+      <anchor xml:id="kernelconfig-options"/>若要看與該平台架構有關的各選項、設備列表，
+      請參閱與 <filename>GENERIC</filename> 檔同目錄的 <filename>NOTES</filename>
+      檔。  而與平台架構差異較無關的通用部份，則可參閱
+      <filename>/usr/src/sys/conf/NOTES</filename>。</para>
+
+    <note>
+      <para>若為了測試，而需要一份含有所有可用設定的設定檔，那麼請以
+	<systemitem class="username">root</systemitem> 身份下：</para>
+
+      <screen>&prompt.root; <userinput>cd /usr/src/sys/i386/conf &amp;&amp; make LINT</userinput></screen>
+    </note>
+
+    <indexterm>
+      <primary>kernel</primary>
+      <secondary>configuration file</secondary>
+    </indexterm>
+
+    <para>下面為 <filename>GENERIC</filename> 設定檔的範例，
+      其中包括說明用的註釋。  這例子應該與您機器上的
+      <filename>/usr/src/sys/i386/conf/GENERIC</filename>
+      相當接近。</para>
+
+    <indexterm>
+      <primary>kernel options</primary>
+      <secondary>machine</secondary>
+    </indexterm>
+
+    <programlisting>machine		i386</programlisting>
+
+    <para>此處是指機器架構，必須為
+      <literal>alpha</literal>、<literal>amd64</literal>、
+      <literal>i386</literal>、<literal>ia64</literal>、
+      <literal>pc98</literal>、<literal>powerpc</literal>、
+      <literal>sparc64</literal> 其中之一。</para>
+
+    <indexterm>
+      <primary>kernel options</primary>
+      <secondary>cpu</secondary>
+    </indexterm>
+    <programlisting>cpu          I486_CPU
+cpu          I586_CPU
+cpu          I686_CPU</programlisting>
+
+    <para>上面設定是指定要用哪一種 CPU 型號。  也可以同時加上多組 CPU 型號
+      (比如說萬一不確定是否要用 <literal>I586_CPU</literal> 或
+      <literal>I686_CPU</literal>)。  然而自訂 kernel 的話，建議先確認自己的
+      CPU 型號，然後只用最適合的那組就好了。  若不確定 CPU 到底是用哪一種，
+      可以查閱 <filename>/var/run/dmesg.boot</filename>
+      的開機訊息以確定。</para>
+
+    <indexterm>
+      <primary>kernel options</primary>
+
+      <secondary>ident</secondary>
+    </indexterm>
+
+    <programlisting>ident          GENERIC</programlisting>
+
+    <para>這是設定該 kernel 名稱為何，可以隨意命名之，像是取名為
+      <literal>MYKERNEL</literal>，若是有照先前說明來作大概會取這樣名字。
+      <literal>ident</literal> 後面的字串會在開機時顯示，因此若要辨認新 kernel
+      與常用 kernel 的話，就設定不同組名稱即可(比如在自訂實驗用的
+      kernel)。</para>
+
+    <programlisting>#To statically compile in device wiring instead of /boot/device.hints
+#hints          "GENERIC.hints"         # Default places to look for devices.</programlisting>
+
+    <para>&man.device.hints.5; 可用來設定各項驅動程式的選項。
+      開機時 &man.loader.8; 會檢查預設的 <filename>/boot/device.hints</filename>
+      設定檔。  使用 <literal>hints</literal> 選項，就可以把這些 hints
+      靜態編入 kernel 內。  如此一來就不必在 <filename>/boot</filename>
+      內建立 <filename>device.hints</filename> 檔。</para>
+
+    <!-- XXX: Add a comment here that explains when compiling hints into
+      the kernel is a good idea and why. -->
+
+    <programlisting>makeoptions     DEBUG=-g          # Build kernel with gdb(1) debug symbols</programlisting>
+
+    <para>加上 <option>-g</option> 選項的話，&os; 會在編譯過程加上 debug
+      用的資訊，透過這選項會讓 &man.gcc.1; 啟用 debug
+      所會用到的相關資訊。</para>
+
+    <programlisting>options          SCHED_4BSD         # 4BSD scheduler</programlisting>
+
+    <para>&os;. 傳統所用(並且是預設)的系統 CPU scheduler。  若您不清楚要如何設定
+      ，請保留這設定。</para>
+
+    <programlisting>options          PREEMPTION         # Enable kernel thread preemption</programlisting>
+
+    <para>Allows threads that are in the kernel to be preempted
+      by higher priority threads.  It helps with interactivity and
+      allows interrupt threads to run sooner rather than waiting.</para>
+
+    <programlisting>options          INET              # InterNETworking</programlisting>
+
+    <para>Networking support.  Leave this in, even if you do not plan to
+      be connected to a network.  Most programs require at least loopback
+      networking (i.e., making network connections within your PC), so
+      this is essentially mandatory.</para>
+
+    <programlisting>options          INET6             # IPv6 communications protocols</programlisting>
+
+    <para>This enables the IPv6 communication protocols.</para>
+
+    <programlisting>options          FFS               # Berkeley Fast Filesystem</programlisting>
+
+    <para>This is the basic hard drive file system.  Leave it in if you
+      boot from the hard disk.</para>
+
+    <programlisting>options          SOFTUPDATES       # Enable FFS Soft Updates support</programlisting>
+
+    <para>This option enables Soft Updates in the kernel, this will
+      help speed up write access on the disks.  Even when this
+      functionality is provided by the kernel, it must be turned on
+      for specific disks.  Review the output from &man.mount.8; to see
+      if Soft Updates is enabled for your system disks.  If you do not
+      see the <literal>soft-updates</literal> option then you will
+      need to activate it using the &man.tunefs.8; (for existing
+      file systems) or &man.newfs.8; (for new file systems)
+      commands.</para>
+
+    <programlisting>options          UFS_ACL           # Support for access control lists</programlisting>
+
+    <para>This option enables kernel support
+      for access control lists.  This relies on the use of extended
+      attributes and <acronym>UFS2</acronym>, and the feature is described
+      in detail in <xref linkend="fs-acl"/>.  <acronym>ACL</acronym>s are
+      enabled by default and should not be
+      disabled in the kernel if they have been used previously on a file
+      system, as this will remove the access control lists, changing the
+      way files are protected in unpredictable ways.</para>
+
+    <programlisting>options          UFS_DIRHASH       # Improve performance on big directories</programlisting>
+
+    <para>This option includes functionality to speed up disk
+      operations on large directories, at the expense of using
+      additional memory.  You would normally keep this for a large
+      server, or interactive workstation, and remove it if you are
+      using &os; on a smaller system where memory is at a premium and
+      disk access speed is less important, such as a firewall.</para>
+
+    <programlisting>options          MD_ROOT           # MD is a potential root device</programlisting>
+
+    <para>This option enables support for a memory backed virtual disk
+      used as a root device.</para>
+
+    <indexterm>
+      <primary>kernel options</primary>
+      <secondary>NFS</secondary>
+    </indexterm>
+    <indexterm>
+      <primary>kernel options</primary>
+      <secondary>NFS_ROOT</secondary>
+    </indexterm>
+    <programlisting>options          NFSCLIENT         # Network Filesystem Client
+options          NFSSERVER         # Network Filesystem Server
+options          NFS_ROOT          # NFS usable as /, requires NFSCLIENT</programlisting>
+
+    <para>The network file system.  Unless you plan to mount partitions
+      from a &unix; file server over TCP/IP, you can comment these
+      out.</para>
+
+    <indexterm>
+      <primary>kernel options</primary>
+      <secondary>MSDOSFS</secondary>
+    </indexterm>
+    <programlisting>options          MSDOSFS           # MSDOS Filesystem</programlisting>
+
+    <para>The &ms-dos; file system.  Unless you plan to mount a DOS formatted
+      hard drive partition at boot time, you can safely comment this out.
+      It will be automatically loaded the first time you mount a DOS
+      partition, as described above.  Also, the excellent
+      <package>emulators/mtools</package> software
+      allows you to access DOS floppies without having to mount and
+      unmount them (and does not require <literal>MSDOSFS</literal> at
+      all).</para>
+
+    <programlisting>options          CD9660            # ISO 9660 Filesystem</programlisting>
+
+    <para>The ISO 9660 file system for CDROMs.  Comment it out if you do
+      not have a CDROM drive or only mount data CDs occasionally (since it
+      will be dynamically loaded the first time you mount a data CD).
+      Audio CDs do not need this file system.</para>
+
+    <programlisting>options          PROCFS            # Process filesystem(requires PSEUDOFS)</programlisting>
+
+    <para>The process file system.  This is a <quote>pretend</quote>
+      file system mounted on <filename>/proc</filename> which allows
+      programs like &man.ps.1; to give you more information on what
+      processes are running.  Use of <literal>PROCFS</literal>
+      is not required under most circumstances, as most
+      debugging and monitoring tools have been adapted to run without
+      <literal>PROCFS</literal>: installs will not mount this file
+      system by default.</para>
+
+    <programlisting>options          PSEUDOFS          # Pseudo-filesystem framework</programlisting>
+
+    <para>6.X kernels making use of <literal>PROCFS</literal> must also
+      include support for <literal>PSEUDOFS</literal>.</para>
+
+    <programlisting>options          GEOM_GPT          # GUID Partition Tables.</programlisting>
+
+    <para>This option brings the ability to have a large number of
+      partitions on a single disk.</para>
+
+    <programlisting>options          COMPAT_43         # Compatible with BSD 4.3 [KEEP THIS!]</programlisting>
+
+    <para>Compatibility with 4.3BSD.  Leave this in; some programs will
+      act strangely if you comment this out.</para>
+
+    <programlisting>options          COMPAT_FREEBSD4   # Compatible with &os;4</programlisting>
+
+    <para>This option is required on &os;&nbsp;5.X &i386; and Alpha systems
+      to support applications compiled on older versions of &os;
+      that use older system call interfaces.  It is recommended that
+      this option be used on all &i386; and Alpha systems that may
+      run older applications; platforms that gained support only in
+      5.X, such as ia64 and &sparc64;, do not require this option.</para>
+
+    <programlisting>options          COMPAT_FREEBSD5   # 與 &os;5 相容</programlisting>
+
+    <para>此行是 &os;&nbsp;6.X 及更新的版本若需支援 &os;&nbsp;5.X
+      系統呼叫才需要設定。</para>
+
+    <programlisting>options          SCSI_DELAY=5000  # Delay (in ms) before probing SCSI</programlisting>
+
+    <para>This causes the kernel to pause for 5 seconds before probing
+      each SCSI device in your system.  If you only have IDE hard drives,
+      you can ignore this, otherwise you can try to lower this
+      number, to speed up booting.  Of course, if
+      you do this and &os; has trouble recognizing your SCSI devices,
+      you will have to raise it again.</para>
+
+    <programlisting>options          KTRACE            # ktrace(1) support</programlisting>
+
+    <para>This enables kernel process tracing, which is useful in
+      debugging.</para>
+
+    <programlisting>options          SYSVSHM           # SYSV-style shared memory</programlisting>
+
+    <para>This option provides for System&nbsp;V shared memory.  The most
+      common use of this is the XSHM extension in X, which many
+      graphics-intensive programs will automatically take advantage of for
+      extra speed.  If you use X, you will definitely want to include
+      this.</para>
+
+    <programlisting>options          SYSVMSG           # SYSV-style message queues</programlisting>
+
+    <para>Support for System&nbsp;V messages.  This option only adds
+      a few hundred bytes to the kernel.</para>
+
+    <programlisting>options          SYSVSEM           # SYSV-style semaphores</programlisting>
+
+    <para>Support for System&nbsp;V semaphores.  Less commonly used but only
+      adds a few hundred bytes to the kernel.</para>
+
+    <note>
+      <para>The <option>-p</option> option of the &man.ipcs.1; command will
+	list any processes using each of these System&nbsp;V facilities.</para>
+    </note>
+
+    <programlisting>options 	     _KPOSIX_PRIORITY_SCHEDULING # POSIX P1003_1B real-time extensions</programlisting>
+
+    <para>Real-time extensions added in the 1993 &posix;.  Certain
+      applications in the Ports Collection use these
+      (such as <application>&staroffice;</application>).</para>
+
+    <programlisting>options          KBD_INSTALL_CDEV  # install a CDEV entry in /dev</programlisting>
+
+    <para>This option is required to allow the creation of keyboard device
+      nodes in <filename>/dev</filename>.</para>
+
+    <programlisting>options          ADAPTIVE_GIANT    # Giant mutex is adaptive.</programlisting>
+
+    <para>Giant is the name of a mutual exclusion mechanism (a sleep mutex)
+      that protects a large set of kernel resources.  Today, this is an
+      unacceptable performance bottleneck which is actively being replaced
+      with locks that protect individual resources.  The
+      <literal>ADAPTIVE_GIANT</literal> option causes Giant to be included
+      in the set of mutexes adaptively spun on.  That is, when a thread
+      wants to lock the Giant mutex, but it is already locked by a thread
+      on another CPU, the first thread will keep running and wait for the
+      lock to be released.  Normally, the thread would instead go back to
+      sleep and wait for its next chance to run.  If you are not sure,
+      leave this in.</para>
+
+    <note>
+      <para>Note that on &os; 8.0-CURRENT and later versions, all mutexes are
+	adaptive by default, unless explicitly set to non-adaptive by
+	compiling with the <literal>NO_ADAPTIVE_MUTEXES</literal> option.  As
+	a result, Giant is adaptive by default now, and the
+	<literal>ADAPTIVE_GIANT</literal> option has been removed from the
+	kernel configuration.</para>
+    </note>
+
+
+    <indexterm>
+      <primary>kernel options</primary>
+      <secondary>SMP</secondary>
+    </indexterm>
+    <programlisting>device          apic               # I/O APIC</programlisting>
+
+    <para>The apic device enables the use of the I/O APIC for interrupt
+      delivery.  The apic device can be used in both UP and SMP kernels, but
+      is required for SMP kernels.  Add <literal>options SMP</literal> to
+      include support for multiple processors.</para>
+
+    <note>
+      <para>apic 只限 i386 架構才有，其他架構則不必加上這行。</para>
+    </note>
+
+    <programlisting>device          eisa</programlisting>
+
+    <para>Include this if you have an EISA motherboard.  This enables
+      auto-detection and configuration support for all devices on the EISA
+      bus.</para>
+
+    <programlisting>device          pci</programlisting>
+
+    <para>Include this if you have a PCI motherboard.  This enables
+      auto-detection of PCI cards and gatewaying from the PCI to ISA
+      bus.</para>
+
+    <programlisting># Floppy drives
+device          fdc</programlisting>
+
+    <para>This is the floppy drive controller.</para>
+
+    <programlisting># ATA and ATAPI devices
+device          ata</programlisting>
+
+    <para>This driver supports all ATA and ATAPI devices.  You only need
+      one <literal>device ata</literal> line for the kernel to detect all
+      PCI ATA/ATAPI devices on modern machines.</para>
+
+    <programlisting>device          atadisk                 # ATA disk drives</programlisting>
+
+    <para>This is needed along with <literal>device ata</literal> for
+      ATA disk drives.</para>
+
+    <programlisting>device          ataraid                 # ATA RAID drives</programlisting>
+
+    <para>This is needed along with <literal>device ata</literal> for ATA
+      RAID drives.</para>
+
+    <programlisting><anchor xml:id="kernelconfig-atapi"/>
+device          atapicd                 # ATAPI CDROM drives</programlisting>
+
+    <para>This is needed along with <literal>device ata</literal> for
+      ATAPI CDROM drives.</para>
+
+    <programlisting>device          atapifd                 # ATAPI floppy drives</programlisting>
+
+    <para>This is needed along with <literal>device ata</literal> for
+      ATAPI floppy drives.</para>
+
+    <programlisting>device          atapist                 # ATAPI tape drives</programlisting>
+
+    <para>This is needed along with <literal>device ata</literal> for
+      ATAPI tape drives.</para>
+
+    <programlisting>options         ATA_STATIC_ID           # Static device numbering</programlisting>
+
+    <para>This makes the controller number static; without this,
+      the device numbers are dynamically allocated.</para>
+
+    <programlisting># SCSI Controllers
+device          ahb        # EISA AHA1742 family
+device          ahc        # AHA2940 and onboard AIC7xxx devices
+options         AHC_REG_PRETTY_PRINT    # Print register bitfields in debug
+                                        # output.  Adds ~128k to driver.
+device          ahd        # AHA39320/29320 and onboard AIC79xx devices
+options         AHD_REG_PRETTY_PRINT    # Print register bitfields in debug
+				        # output.  Adds ~215k to driver.
+device          amd        # AMD 53C974 (Teckram DC-390(T))
+device          isp        # Qlogic family
+device          ispfw      # Firmware for QLogic HBAs- normally a module
+device          mpt        # LSI-Logic MPT-Fusion
+#device         ncr        # NCR/Symbios Logic
+device          sym        # NCR/Symbios Logic (newer chipsets + those of `ncr')
+device          trm        # Tekram DC395U/UW/F DC315U adapters
+
+device          adv        # Advansys SCSI adapters
+device          adw        # Advansys wide SCSI adapters
+device          aha        # Adaptec 154x SCSI adapters
+device          aic        # Adaptec 15[012]x SCSI adapters, AIC-6[23]60.
+device          bt         # Buslogic/Mylex MultiMaster SCSI adapters
+
+device          ncv        # NCR 53C500
+device          nsp        # Workbit Ninja SCSI-3
+device          stg        # TMC 18C30/18C50</programlisting>
+
+    <para>SCSI controllers.  Comment out any you do not have in your
+      system.  If you have an IDE only system, you can remove these
+      altogether.  The <literal>*_REG_PRETTY_PRINT</literal> lines are
+      debugging options for their respective drivers.</para>
+
+    <programlisting># SCSI peripherals
+device          scbus      # SCSI bus (required for SCSI)
+device          ch         # SCSI media changers
+device          da         # Direct Access (disks)
+device          sa         # Sequential Access (tape etc)
+device          cd         # CD
+device          pass       # Passthrough device (direct SCSI access)
+device          ses        # SCSI Environmental Services (and SAF-TE)</programlisting>
+
+    <para>SCSI peripherals.  Again, comment out any you do not have, or if
+      you have only IDE hardware, you can remove them completely.</para>
+
+    <note>
+      <para>The USB &man.umass.4; driver and a few other drivers use
+	the SCSI subsystem even though they are not real SCSI devices.
+	Therefore make sure not to remove SCSI support, if any such
+	drivers are included in the kernel configuration.</para>
+    </note>
+
+    <programlisting># RAID controllers interfaced to the SCSI subsystem
+device          amr        # AMI MegaRAID
+device          arcmsr     # Areca SATA II RAID
+device          asr        # DPT SmartRAID V, VI and Adaptec SCSI RAID
+device          ciss       # Compaq Smart RAID 5*
+device          dpt        # DPT Smartcache III, IV - See NOTES for options
+device          hptmv      # Highpoint RocketRAID 182x
+device          rr232x     # Highpoint RocketRAID 232x
+device          iir        # Intel Integrated RAID
+device          ips        # IBM (Adaptec) ServeRAID
+device          mly        # Mylex AcceleRAID/eXtremeRAID
+device          twa        # 3ware 9000 series PATA/SATA RAID
+
+# RAID controllers
+device          aac        # Adaptec FSA RAID
+device          aacp       # SCSI passthrough for aac (requires CAM)
+device          ida        # Compaq Smart RAID
+device          mfi        # LSI MegaRAID SAS
+device          mlx        # Mylex DAC960 family
+device          pst        # Promise Supertrak SX6000
+device          twe        # 3ware ATA RAID</programlisting>
+
+    <para>Supported RAID controllers.  If you do not have any of these,
+      you can comment them out or remove them.</para>
+
+    <programlisting># atkbdc0 controls both the keyboard and the PS/2 mouse
+device          atkbdc     # AT keyboard controller</programlisting>
+
+    <para>The keyboard controller (<literal>atkbdc</literal>) provides I/O
+      services for the AT keyboard and PS/2 style pointing devices.  This
+      controller is required by the keyboard driver
+      (<literal>atkbd</literal>) and the PS/2 pointing device driver
+      (<literal>psm</literal>).</para>
+
+    <programlisting>device          atkbd      # AT keyboard</programlisting>
+
+    <para>The <literal>atkbd</literal> driver, together with
+      <literal>atkbdc</literal> controller, provides access to the AT 84
+      keyboard or the AT enhanced keyboard which is connected to the AT
+      keyboard controller.</para>
+
+    <programlisting>device          psm        # PS/2 mouse</programlisting>
+
+    <para>Use this device if your mouse plugs into the PS/2 mouse
+      port.</para>
+
+    <programlisting>device          kbdmux        # keyboard multiplexer</programlisting>
+
+    <para>多重鍵盤的支援。  若不打算同時接多組鍵盤的話，
+      那麼若要移除該行也沒關係。</para>
+
+    <programlisting>device          vga        # VGA video card driver</programlisting>
+
+    <para>The video card driver.</para>
+
+    <programlisting>
+device          splash     # Splash screen and screen saver support</programlisting>
+
+    <para>Splash screen at start up!  Screen savers require this
+      too.</para>
+
+    <programlisting># syscons is the default console driver, resembling an SCO console
+device          sc</programlisting>
+
+    <para><literal>sc</literal> is the default console driver and
+      resembles a SCO console.  Since most full-screen programs access the
+      console through a terminal database library like
+      <filename>termcap</filename>, it should not matter whether you use
+      this or <literal>vt</literal>, the <literal>VT220</literal>
+      compatible console driver.  When you log in, set your
+      <envar>TERM</envar> variable to <literal>scoansi</literal> if
+      full-screen programs have trouble running under this console.</para>
+
+    <programlisting># Enable this for the pcvt (VT220 compatible) console driver
+#device          vt
+#options         XSERVER          # support for X server on a vt console
+#options         FAT_CURSOR       # start with block cursor</programlisting>
+
+    <para>This is a VT220-compatible console driver, backward compatible to
+      VT100/102.  It works well on some laptops which have hardware
+      incompatibilities with <literal>sc</literal>.  Also set your
+      <envar>TERM</envar> variable to <literal>vt100</literal> or
+      <literal>vt220</literal> when you log in.  This driver might also
+      prove useful when connecting to a large number of different machines
+      over the network, where <filename>termcap</filename> or
+      <filename>terminfo</filename> entries for the <literal>sc</literal>
+      device are often not available &mdash; <literal>vt100</literal>
+      should be available on virtually any platform.</para>
+
+    <programlisting>device          agp</programlisting>
+
+    <para>Include this if you have an AGP card in the system.  This
+      will enable support for AGP, and AGP GART for boards which
+      have these features.</para>
+
+    <indexterm>
+      <primary>APM</primary>
+    </indexterm>
+
+    <programlisting># Power management support (see NOTES for more options)
+#device          apm</programlisting>
+
+    <para>Advanced Power Management support.  Useful for laptops,
+      although in &os; 5.X and above this is disabled in
+      <filename>GENERIC</filename> by default.</para>
+
+    <programlisting># Add suspend/resume support for the i8254.
+device           pmtimer</programlisting>
+
+    <para>Timer device driver for power management events, such as APM and
+      ACPI.</para>
+
+    <programlisting># PCCARD (PCMCIA) support
+# PCMCIA and cardbus bridge support
+device          cbb               # cardbus (yenta) bridge
+device          pccard            # PC Card (16-bit) bus
+device          cardbus           # CardBus (32-bit) bus</programlisting>
+
+    <para>PCMCIA support.  You want this if you are using a
+      laptop.</para>
+
+    <programlisting># Serial (COM) ports
+device          sio               # 8250, 16[45]50 based serial ports</programlisting>
+
+    <para>These are the serial ports referred to as
+      <filename>COM</filename> ports in the &ms-dos;/&windows;
+      world.</para>
+
+    <note>
+      <para>If you have an internal modem on <filename>COM4</filename>
+	and a serial port at <filename>COM2</filename>, you will have
+	to change the IRQ of the modem to 2 (for obscure technical reasons,
+	IRQ2 = IRQ 9) in order to access it
+	from &os;.  If you have a multiport serial card, check the
+	manual page for &man.sio.4; for more information on the proper
+	values to add to your <filename>/boot/device.hints</filename>.
+	Some video cards (notably those based on
+	S3 chips) use IO addresses in the form of
+	<literal>0x*2e8</literal>, and since many cheap serial cards do
+	not fully decode the 16-bit IO address space, they clash with
+	these cards making the <filename>COM4</filename> port
+	practically unavailable.</para>
+
+      <para>Each serial port is required to have a unique IRQ (unless you
+        are using one of the multiport cards where shared interrupts are
+	supported), so the default IRQs for <filename>COM3</filename>
+	and <filename>COM4</filename> cannot be used.</para>
+    </note>
+
+    <programlisting># Parallel port
+device          ppc</programlisting>
+
+    <para>This is the ISA-bus parallel port interface.</para>
+
+    <programlisting>device          ppbus      # Parallel port bus (required)</programlisting>
+
+    <para>Provides support for the parallel port bus.</para>
+
+    <programlisting>device          lpt        # Printer</programlisting>
+
+    <para>Support for parallel port printers.</para>
+
+    <note>
+      <para>All three of the above are required to enable parallel printer
+	support.</para>
+    </note>
+
+    <programlisting>device          plip       # TCP/IP over parallel</programlisting>
+
+    <para>This is the driver for the parallel network interface.</para>
+
+    <programlisting>device          ppi        # Parallel port interface device</programlisting>
+
+    <para>The general-purpose I/O (<quote>geek port</quote>) + IEEE1284
+      I/O.</para>
+
+    <programlisting>#device         vpo        # Requires scbus and da</programlisting>
+
+    <indexterm><primary>zip drive</primary></indexterm>
+    <para>This is for an Iomega Zip drive.  It requires
+      <literal>scbus</literal> and <literal>da</literal> support.  Best
+      performance is achieved with ports in EPP 1.9 mode.</para>
+
+    <programlisting>#device         puc</programlisting>
+
+    <para>Uncomment this device if you have a <quote>dumb</quote> serial
+      or parallel PCI card that is supported by the &man.puc.4; glue
+      driver.</para>
+
+    <programlisting># PCI Ethernet NICs.
+device          de         # DEC/Intel DC21x4x (<quote>Tulip</quote>)
+device          em         # Intel PRO/1000 adapter Gigabit Ethernet Card
+device          ixgb       # Intel PRO/10GbE Ethernet Card
+device          txp        # 3Com 3cR990 (<quote>Typhoon</quote>)
+device          vx         # 3Com 3c590, 3c595 (<quote>Vortex</quote>)</programlisting>
+
+    <para>Various PCI network card drivers.  Comment out or remove any of
+      these not present in your system.</para>
+
+    <programlisting># PCI Ethernet NICs that use the common MII bus controller code.
+# NOTE: Be sure to keep the 'device miibus' line in order to use these NICs!
+device          miibus     # MII bus support</programlisting>
+
+    <para>MII bus support is required for some PCI 10/100 Ethernet NICs,
+      namely those which use MII-compliant transceivers or implement
+      transceiver control interfaces that operate like an MII.  Adding
+      <literal>device miibus</literal> to the kernel config pulls in
+      support for the generic miibus API and all of the PHY drivers,
+      including a generic one for PHYs that are not specifically handled
+      by an individual driver.</para>
+
+    <programlisting>device          bce        # Broadcom BCM5706/BCM5708 Gigabit Ethernet
+device          bfe        # Broadcom BCM440x 10/100 Ethernet
+device          bge        # Broadcom BCM570xx Gigabit Ethernet
+device          dc         # DEC/Intel 21143 and various workalikes
+device          fxp        # Intel EtherExpress PRO/100B (82557, 82558)
+device          lge        # Level 1 LXT1001 gigabit ethernet
+device          msk        # Marvell/SysKonnect Yukon II Gigabit Ethernet
+device          nge        # NatSemi DP83820 gigabit ethernet
+device          nve        # nVidia nForce MCP on-board Ethernet Networking
+device          pcn        # AMD Am79C97x PCI 10/100 (precedence over 'lnc')
+device          re         # RealTek 8139C+/8169/8169S/8110S
+device          rl         # RealTek 8129/8139
+device          sf         # Adaptec AIC-6915 (<quote>Starfire</quote>)
+device          sis        # Silicon Integrated Systems SiS 900/SiS 7016
+device          sk         # SysKonnect SK-984x &amp; SK-982x gigabit Ethernet
+device          ste        # Sundance ST201 (D-Link DFE-550TX)
+device          stge       # Sundance/Tamarack TC9021 gigabit Ethernet
+device          ti         # Alteon Networks Tigon I/II gigabit Ethernet
+device          tl         # Texas Instruments ThunderLAN
+device          tx         # SMC EtherPower II (83c170 <quote>EPIC</quote>)
+device          vge        # VIA VT612x gigabit ethernet
+device          vr         # VIA Rhine, Rhine II
+device          wb         # Winbond W89C840F
+device          xl         # 3Com 3c90x (<quote>Boomerang</quote>, <quote>Cyclone</quote>)</programlisting>
+
+    <para>Drivers that use the MII bus controller code.</para>
+
+    <programlisting># ISA Ethernet NICs.  pccard NICs included.
+device          cs         # Crystal Semiconductor CS89x0 NIC
+# 'device ed' requires 'device miibus'
+device          ed         # NE[12]000, SMC Ultra, 3c503, DS8390 cards
+device          ex         # Intel EtherExpress Pro/10 and Pro/10+
+device          ep         # Etherlink III based cards
+device          fe         # Fujitsu MB8696x based cards
+device          ie         # EtherExpress 8/16, 3C507, StarLAN 10 etc.
+device          lnc        # NE2100, NE32-VL Lance Ethernet cards
+device          sn         # SMC's 9000 series of Ethernet chips
+device          xe         # Xircom pccard Ethernet
+
+# ISA devices that use the old ISA shims
+#device         le</programlisting>
+
+    <para>ISA Ethernet drivers.  See
+      <filename>/usr/src/sys/i386/conf/NOTES</filename> for details
+of which cards are
+      supported by which driver.</para>
+
+    <programlisting># Wireless NIC cards
+device          wlan       # 802.11 support</programlisting>
+
+    <para>對 802.11 標準的支援。  若要無線上網，則需加上這行。</para>
+
+    <programlisting>device          wlan_wep        # 802.11 WEP support
+device          wlan_ccmp       # 802.11 CCMP support
+device          wlan_tkip       # 802.11 TKIP support</programlisting>
+
+    <para>對 802.11 加密設備的支援。  若要安全加密以及 802.11i 安全協定，
+      則需加上這行。</para>
+
+    <programlisting>device          an         # Aironet 4500/4800 802.11 wireless NICs.
+device          ath             # Atheros pci/cardbus NIC's
+device          ath_hal         # Atheros HAL (Hardware Access Layer)
+device          ath_rate_sample # SampleRate tx rate control for ath
+device          an         # Aironet 4500/4800 802.11 wireless NICs.
+device          awi        # BayStack 660 and others
+device          ral        # Ralink Technology RT2500 wireless NICs.
+device          wi         # WaveLAN/Intersil/Symbol 802.11 wireless NICs.
+#device         wl         # Older non 802.11 Wavelan wireless NIC.</programlisting>
+
+    <para>Support for various wireless cards.</para>
+
+    <programlisting># Pseudo devices
+device   loop          # Network loopback</programlisting>
+
+    <para>This is the generic loopback device for TCP/IP.  If you telnet
+      or FTP to <systemitem>localhost</systemitem> (a.k.a. <systemitem class="ipaddress">127.0.0.1</systemitem>) it will come back at you through
+      this device.  This is <emphasis>mandatory</emphasis>.</para>
+
+    <programlisting>device   random        # Entropy device</programlisting>
+
+    <para>Cryptographically secure random number generator.</para>
+
+    <programlisting>device   ether         # Ethernet support</programlisting>
+
+    <para><literal>ether</literal> is only needed if you have an Ethernet
+      card.  It includes generic Ethernet protocol code.</para>
+
+    <programlisting>device   sl            # Kernel SLIP</programlisting>
+
+    <para><literal>sl</literal> is for SLIP support.  This has been almost
+      entirely supplanted by PPP, which is easier to set up, better suited
+      for modem-to-modem connection, and more powerful.</para>
+
+    <programlisting>device   ppp           # Kernel PPP</programlisting>
+
+    <para>This is for kernel PPP support for dial-up connections.  There
+      is also a version of PPP implemented as a userland application that
+      uses <literal>tun</literal> and offers more flexibility and features
+      such as demand dialing.</para>
+
+    <programlisting>device   tun           # Packet tunnel.</programlisting>
+
+    <para>This is used by the userland PPP software.
+      See
+      the <link linkend="userppp">PPP</link> section of this book for more
+      information.</para>
+
+    <programlisting><anchor xml:id="kernelconfig-ptys"/>
+device   pty           # Pseudo-ttys (telnet etc)</programlisting>
+
+    <para>This is a <quote>pseudo-terminal</quote> or simulated login port.
+      It is used by incoming <command>telnet</command> and
+      <command>rlogin</command> sessions,
+      <application>xterm</application>, and some other applications such
+      as <application>Emacs</application>.</para>
+
+    <programlisting>device   md            # Memory <quote>disks</quote></programlisting>
+
+    <para>Memory disk pseudo-devices.</para>
+
+    <programlisting>device   gif           # IPv6 and IPv4 tunneling</programlisting>
+
+    <para>This implements IPv6 over IPv4 tunneling, IPv4 over IPv6 tunneling,
+      IPv4 over IPv4 tunneling, and IPv6 over IPv6 tunneling.  The
+      <literal>gif</literal> device is
+      <quote>auto-cloning</quote>, and will create device nodes as
+      needed.</para>
+
+    <programlisting>device   faith         # IPv6-to-IPv4 relaying (translation)</programlisting>
+
+    <para>This pseudo-device captures packets that are sent to it and
+      diverts them to the IPv4/IPv6 translation daemon.</para>
+
+    <programlisting># The `bpf' device enables the Berkeley Packet Filter.
+# Be aware of the administrative consequences of enabling this!
+# Note that 'bpf' is required for DHCP.
+device   bpf           # Berkeley packet filter</programlisting>
+
+    <para>This is the Berkeley Packet Filter.  This pseudo-device allows
+      network interfaces to be placed in promiscuous mode, capturing every
+      packet on a broadcast network (e.g., an Ethernet).  These packets
+      can be captured to disk and or examined with the &man.tcpdump.1;
+      program.</para>
+
+    <note>
+      <para>The &man.bpf.4; device is also used by
+	&man.dhclient.8; to obtain the IP address of the default router
+	(gateway) and so on.  If you use DHCP, leave this
+	uncommented.</para>
+    </note>
+
+    <programlisting># USB support
+device          uhci          # UHCI PCI-&gt;USB interface
+device          ohci          # OHCI PCI-&gt;USB interface
+device          ehci          # EHCI PCI-&gt;USB interface (USB 2.0)
+device          usb           # USB Bus (required)
+#device         udbp          # USB Double Bulk Pipe devices
+device          ugen          # Generic
+device          uhid          # <quote>Human Interface Devices</quote>
+device          ukbd          # Keyboard
+device          ulpt          # Printer
+device          umass         # Disks/Mass storage - Requires scbus and da
+device          ums           # Mouse
+device          ural          # Ralink Technology RT2500USB wireless NICs
+device          urio          # Diamond Rio 500 MP3 player
+device          uscanner      # Scanners
+# USB Ethernet, requires mii
+device          aue           # ADMtek USB Ethernet
+device          axe           # ASIX Electronics USB Ethernet
+device          cdce          # Generic USB over Ethernet
+device          cue           # CATC USB Ethernet
+device          kue           # Kawasaki LSI USB Ethernet
+device          rue           # RealTek RTL8150 USB Ethernet</programlisting>
+
+    <para>Support for various USB devices.</para>
+
+    <programlisting># FireWire support
+device          firewire      # FireWire bus code
+device          sbp           # SCSI over FireWire (Requires scbus and da)
+device          fwe           # Ethernet over FireWire (non-standard!)</programlisting>
+
+    <para>Support for various Firewire devices.</para>
+
+    <para>For more information and additional devices supported by
+      &os;, see
+      <filename>/usr/src/sys/i386/conf/NOTES</filename>.</para>
+
+      <sect2>
+        <title>Large Memory Configurations (<acronym>PAE</acronym>)</title>
+	<indexterm>
+	  <primary>Physical Address Extensions
+	    (<acronym>PAE</acronym>)</primary>
+	  <secondary>large memory</secondary>
+	</indexterm>
+
+	<para>Large memory configuration machines require access to
+	  more than the 4 gigabyte limit on User+Kernel Virtual
+	  Address (<acronym>KVA</acronym>) space.  Due to this
+	  limitation, Intel added support for 36-bit physical address
+	  space access in the &pentium; Pro and later line of CPUs.</para>
+
+	<para>The Physical Address Extension (<acronym>PAE</acronym>)
+	  capability of the &intel; &pentium; Pro and later CPUs
+	  allows memory configurations of up to 64 gigabytes.
+	  &os; provides support for this capability via the
+	  <option>PAE</option> kernel configuration option, available
+	  in all current release versions of &os;.  Due to
+	  the limitations of the Intel memory architecture, no distinction
+	  is made for memory above or below 4 gigabytes.  Memory allocated
+	  above 4 gigabytes is simply added to the pool of available
+	  memory.</para>
+
+	<para>To enable <acronym>PAE</acronym> support in the kernel,
+	  simply add the following line to your kernel configuration
+	  file:</para>
+
+	<programlisting>options		    PAE</programlisting>
+
+	<note>
+	  <para>The <acronym>PAE</acronym> support in &os; is only
+	    available for &intel; IA-32 processors.  It should also be
+	    noted, that the <acronym>PAE</acronym> support in &os; has
+	    not received wide testing, and should be considered beta
+	    quality compared to other stable features of &os;.</para>
+	</note>
+
+	<para><acronym>PAE</acronym> support in &os; has a few limitations:</para>
+
+	<itemizedlist>
+	  <listitem>
+	    <para>A process is not able to access more than 4
+	      gigabytes of VM space.</para>
+	  </listitem>
+
+	  <listitem>
+	    <para><acronym>KLD</acronym> modules cannot be loaded into
+	      a <acronym>PAE</acronym> enabled kernel, due to the
+	      differences in the build framework of a module and the
+	      kernel.</para>
+	  </listitem>
+
+	  <listitem>
+	    <para>Device drivers that do not use the &man.bus.dma.9;
+	      interface will cause data corruption in a
+	      <acronym>PAE</acronym> enabled kernel and are not
+	      recommended for use.  For this reason, a
+	      <filename>PAE</filename> kernel
+	      configuration file is provided in &os; which
+	      excludes all drivers not known to work in a <acronym>PAE</acronym> enabled
+	      kernel.</para>
+	  </listitem>
+
+	  <listitem>
+	    <para>Some system tunables determine memory resource usage
+	      by the amount of available physical memory.  Such
+	      tunables can unnecessarily over-allocate due to the
+	      large memory nature of a <acronym>PAE</acronym> system.
+	      One such example is the <option>kern.maxvnodes</option>
+	      sysctl, which controls the maximum number of vnodes allowed
+	      in the kernel.  It is advised to adjust this and other
+	      such tunables to a reasonable value.</para>
+	  </listitem>
+
+	  <listitem>
+	    <para>It might be necessary to increase the kernel virtual
+	      address (<acronym>KVA</acronym>) space or to reduce the
+	      amount of specific kernel resource that is heavily used
+	      (see above) in order to avoid <acronym>KVA</acronym>
+	      exhaustion.  The <option>KVA_PAGES</option> kernel option
+	      can be used for increasing the
+	      <acronym>KVA</acronym> space.</para>
+	  </listitem>
+	</itemizedlist>
+
+	<para>For performance and stability concerns, it is advised to
+	  consult the &man.tuning.7; manual page.  The &man.pae.4;
+	  manual page contains up-to-date information on &os;'s
+	  <acronym>PAE</acronym> support.</para>
+    </sect2>
+  </sect1>
+
+
+  <sect1 xml:id="kernelconfig-trouble">
+    <title>If Something Goes Wrong</title>
+
+    <para>There are five categories of trouble that can occur when
+      building a custom kernel.  They are:</para>
+
+    <variablelist>
+      <varlistentry>
+	<term><command>config</command> fails:</term>
+
+	<listitem>
+	  <para>If the &man.config.8; command fails when you
+	    give it your kernel description, you have probably made a
+	    simple error somewhere.  Fortunately,
+	    &man.config.8; will print the line number that it
+	    had trouble with, so that you can quickly locate the line
+	    containing the error.  For example, if you see:</para>
+
+	  <screen>config: line 17: syntax error</screen>
+
+	  <para>Make sure the
+	    keyword is typed correctly by comparing it to the
+	    <filename>GENERIC</filename> kernel or another
+	    reference.</para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<term><command>make</command> fails:</term>
+
+	<listitem>
+	  <para>If the <command>make</command> command fails, it usually
+	    signals an error in your kernel description which is not severe
+	    enough for &man.config.8; to catch.  Again, look
+	    over your configuration, and if you still cannot resolve the
+	    problem, send mail to the &a.questions; with your kernel
+	    configuration, and it should be diagnosed quickly.</para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<term>The kernel does not boot:<anchor xml:id="kernelconfig-noboot"/></term>
+
+	<listitem>
+	  <para>If your new kernel does not boot, or fails to
+	    recognize your devices, do not panic!  Fortunately, &os; has
+	    an excellent mechanism for recovering from incompatible
+	    kernels.  Simply choose the kernel you want to boot from at
+	    the &os; boot loader. You can access this when the system
+	    boot menu appears.  Select the <quote>Escape to a loader
+            prompt</quote> option, number six.  At the prompt, type
+            <command>unload kernel</command>
+            and then type
+	    <command>boot /boot/kernel.old/kernel</command>,
+            or the filename of any other kernel that will boot properly.
+            When reconfiguring a kernel, it is always a good idea to keep
+            a kernel that is known to work on hand.</para>
+
+	  <para>After booting with a good kernel you can check over your
+	    configuration file and try to build it again.  One helpful
+	    resource is the <filename>/var/log/messages</filename> file
+	    which records, among other things, all of the kernel messages
+	    from every successful boot.  Also, the &man.dmesg.8; command
+	    will print the kernel messages from the current boot.</para>
+
+	  <note>
+	    <para>If you are having trouble building a kernel, make sure
+	      to keep a <filename>GENERIC</filename>, or some other kernel
+	      that is known to work on hand as a different name that will
+	      not get erased on the next build.  You cannot rely on
+	      <filename>kernel.old</filename> because when installing a
+	      new kernel, <filename>kernel.old</filename> is overwritten
+	      with the last installed kernel which may be non-functional.
+	      Also, as soon as possible, move the working kernel to the
+	      proper <filename>/boot/kernel</filename>
+	      location or commands such
+	      as &man.ps.1; may not work properly.  To do this, simply
+	      rename the directory containing the good kernel:</para>
+
+	    <screen>&prompt.root; <userinput>mv /boot/kernel /boot/kernel.bad</userinput>
+&prompt.root; <userinput>mv /boot/kernel.good /boot/kernel</userinput></screen>
+
+
+	  </note>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<term>The kernel works, but &man.ps.1; does not work
+	  any more:</term>
+
+	<listitem>
+	  <para>If you have installed a different version of the kernel
+	    from the one that the system utilities have been built with,
+	    for example, a -CURRENT kernel on a -RELEASE, many system-status
+	    commands like &man.ps.1; and &man.vmstat.8; will not work any
+	    more.  You should <link linkend="makeworld">recompile and install
+	    a world</link> built with the same version of the source tree as
+	    your kernel.  This is one reason it is
+	    not normally a good idea to use a different version of the
+	    kernel from the rest of the operating system.</para>
+	</listitem>
+      </varlistentry>
+    </variablelist>
+  </sect1>
+</chapter>
