@@ -1,0 +1,2274 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+     The FreeBSD Documentation Project
+     $FreeBSD$
+     Original revision: 1.48
+-->
+<chapter xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink" version="5.0" xml:id="mac">
+  <info><title>Mandatory Access Control</title>
+    <authorgroup>
+      <author><personname><firstname>Tom</firstname><surname>Rhodes</surname></personname><contrib>Written by </contrib></author>
+    </authorgroup>
+  </info>
+
+  
+
+  <sect1 xml:id="mac-synopsis">
+    <title>Synopsis</title>
+
+    <indexterm><primary>MAC</primary></indexterm>
+    <indexterm>
+      <primary>Mandatory Access Control</primary>
+      <see>MAC</see>
+    </indexterm>
+
+    <para>&os;&nbsp;5.X introduced new security extensions from the
+      TrustedBSD project based on the &posix;.1e draft.  Two of the most
+      significant new security mechanisms are file system Access Control
+      Lists (<acronym>ACLs</acronym>) and Mandatory Access Control
+      (<acronym>MAC</acronym>) facilities.  Mandatory Access Control allows
+      new access control modules to be loaded, implementing new security
+      policies.  Some provide protections of a narrow subset of the
+      system, hardening a particular service, while others provide
+      comprehensive labeled security across all subjects and objects.
+      The mandatory part
+      of the definition comes from the fact that the enforcement of
+      the controls is done by administrators and the system, and is
+      not left up to the discretion of users as is done with
+      discretionary access control (<acronym>DAC</acronym>, the standard
+      file and System V <acronym>IPC</acronym> permissions on &os;).</para>
+
+    <para>This chapter will focus on the
+      Mandatory Access Control Framework (MAC Framework), and a set
+      of pluggable security policy modules enabling various security
+      mechanisms.</para>
+
+    <para>After reading this chapter, you will know:</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>What <acronym>MAC</acronym> security policy modules are currently
+          included in &os; and their associated mechanisms.</para>
+      </listitem>
+
+      <listitem>
+	<para>What <acronym>MAC</acronym> security policy modules implement as
+	  well as the difference between a labeled and non-labeled
+	  policy.</para>
+      </listitem>
+
+      <listitem>
+	<para>How to efficiently configure a system to use
+	  the <acronym>MAC</acronym> framework.</para>
+      </listitem>
+
+      <listitem>
+	<para>How to configure the different security policy modules included with the
+	  <acronym>MAC</acronym> framework.</para>
+      </listitem>
+
+      <listitem>
+        <para>How to implement a more secure environment using the
+	  <acronym>MAC</acronym> framework and the examples
+	  shown.</para>
+      </listitem>
+
+      <listitem>
+	<para>How to test the <acronym>MAC</acronym> configuration
+	  to ensure the framework has been properly implemented.</para>
+      </listitem>
+    </itemizedlist>
+
+    <para>Before reading this chapter, you should:</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>Understand &unix; and &os; basics
+	  (<xref linkend="basics"/>).</para>
+      </listitem>
+
+      <listitem>
+	<para>Be familiar with
+	  the basics of kernel configuration/compilation
+	  (<xref linkend="kernelconfig"/>).</para>
+      </listitem>
+
+      <listitem>
+	<para>Have some familiarity with security and how it
+	  pertains to &os; (<xref linkend="security"/>).</para>
+      </listitem>
+    </itemizedlist>
+
+    <warning>
+      <para>The improper use of the
+	information in this chapter may cause loss of system access,
+	aggravation of users, or inability to access the features
+	provided by X11.  More importantly, <acronym>MAC</acronym> should not
+	be relied upon to completely secure a system.  The
+	<acronym>MAC</acronym> framework only augments
+	existing security policy; without sound security practices and
+	regular security checks, the system will never be completely
+	secure.</para>
+
+      <para>It should also be noted that the examples contained
+	within this chapter are just that, examples.  It is not
+	recommended that these particular settings be rolled out
+	on a production system.  Implementing the various security policy modules takes
+	a good deal of thought.  One who does not fully understand
+	exactly how everything works may find him or herself going
+	back through the entire system and reconfiguring many files
+	or directories.</para>
+    </warning>
+
+    <sect2>
+      <title>What Will Not Be Covered</title>
+
+      <para>This chapter covers a broad range of security issues relating
+	to the <acronym>MAC</acronym> framework; however, the
+	development of new <acronym>MAC</acronym> security policy modules
+	will not be covered.  A number of security policy modules included with the
+	<acronym>MAC</acronym> framework have specific characteristics
+	which are provided for both testing and new module
+	development. These include the &man.mac.test.4;,
+	&man.mac.stub.4; and &man.mac.none.4;.
+        For more information on these security policy modules and the various
+	mechanisms they provide, please review the manual pages.</para>
+    </sect2>
+  </sect1>
+
+  <sect1 xml:id="mac-inline-glossary">
+    <title>Key Terms in this Chapter</title>
+
+    <para>Before reading this chapter, a few key terms must be
+      explained.  This will hopefully clear up any confusion that
+      may occur and avoid the abrupt introduction of new terms
+      and information.</para>
+
+    <itemizedlist>
+      <listitem>
+	<para><emphasis>compartment</emphasis>: A compartment is a
+	  set of programs and data to be partitioned or separated,
+	  where users are given explicit access to specific components
+	  of a system.  Also, a compartment represents a grouping,
+	  such as a work group, department, project, or topic.  Using
+	  compartments, it is possible to implement a need-to-know
+	  security policy.</para>
+      </listitem>
+
+      <listitem>
+	<para><emphasis>integrity</emphasis>: Integrity, as a key
+	  concept, is the level of trust which can be placed on data.
+	  As the integrity of the data is elevated, so does the ability
+	  to trust that data.</para>
+      </listitem>
+
+      <listitem>
+	<para><emphasis>label</emphasis>: A label is a security
+	  attribute which can be applied to files, directories, or
+	  other items in the system.  It could be considered
+	  a confidentiality stamp; when a label is placed on
+	  a file it describes the security properties for that specific
+	  file and will only permit access by files, users, resources,
+	  etc. with a similar security setting.  The meaning and
+	  interpretation of label values depends on the policy configuration: while
+	  some policies might treat a label as representing the
+	  integrity or secrecy of an object, other policies might use
+	  labels to hold rules for access.</para>
+      </listitem>
+
+      <listitem>
+	<para><emphasis>level</emphasis>: The increased or decreased
+	  setting of a security attribute.  As the level increases,
+	  its security is considered to elevate as well.</para>
+      </listitem>
+
+      <listitem>
+	<para><emphasis>multilabel</emphasis>: The
+	  <option>multilabel</option> property is a file system option
+	  which can be set in single user mode using the
+	  &man.tunefs.8; utility, during the boot operation
+	  using the &man.fstab.5; file, or during the creation of
+	  a new file system.  This option will permit an administrator
+	  to apply different <acronym>MAC</acronym> labels on different
+	  objects.  This option
+	  only applies to security policy modules which support labeling.</para>
+      </listitem>
+
+      <listitem>
+	<para><emphasis>object</emphasis>: An object or system
+	  object is an entity through which information flows
+	  under the direction of a <emphasis>subject</emphasis>.
+	  This includes directories, files, fields, screens, keyboards,
+	  memory, magnetic storage, printers or any other data
+	  storage/moving device.  Basically, an object is a data container or
+	  a system resource; access to an <emphasis>object</emphasis>
+	  effectively means access to the data.</para>
+      </listitem>
+
+      <listitem>
+	<para><emphasis>policy</emphasis>: A collection of rules
+	  which defines how objectives are to be achieved.  A
+	  <emphasis>policy</emphasis> usually documents how certain
+	  items are to be handled.  This chapter will
+	  consider the term <emphasis>policy</emphasis> in this
+	  context as a <emphasis>security policy</emphasis>; i.e.
+	  a collection of rules which will control the flow of data
+	  and information and define whom will have access to that
+	  data and information.</para>
+      </listitem>
+
+      <listitem>
+	<para><emphasis>sensitivity</emphasis>: Usually used when
+	  discussing <acronym>MLS</acronym>.  A sensitivity level is
+	  a term used to describe how important or secret the data
+	  should be.  As the sensitivity level increases, so does the
+	  importance of the secrecy, or confidentiality of the data.</para>
+      </listitem>
+
+      <listitem>
+	<para><emphasis>single label</emphasis>: A single label is
+	  when the entire file system uses one label to
+	  enforce access control over the flow of data.  When a file
+	  system has this set, which is any time when the
+	  <option>multilabel</option> option is not set, all
+	  files will conform to the same label setting.</para>
+      </listitem>
+
+      <listitem>
+	<para><emphasis>subject</emphasis>: a subject is any
+	  active entity that causes information to flow between
+	  <emphasis>objects</emphasis>; e.g. a user, user processor,
+	  system process, etc.  On &os;, this is almost always a thread
+	  acting in a process on behalf of a user.</para>
+      </listitem>
+    </itemizedlist>
+  </sect1>
+
+  <sect1 xml:id="mac-initial">
+    <title>Explanation of MAC</title>
+
+    <para>With all of these new terms in mind, consider how the
+      <acronym>MAC</acronym> framework augments the security of
+      the system as a whole.  The various security policy modules provided by
+      the <acronym>MAC</acronym> framework could be used to
+      protect the network and file systems, block users from
+      accessing certain ports and sockets, and more.  Perhaps
+      the best use of the policy modules is to blend them together, by loading
+      several security policy modules at a time for a multi-layered
+      security environment.  In a multi-layered security environment,
+      multiple policy modules are in effect to keep security in check.  This
+      is different to a hardening policy, which typically hardens
+      elements of a system that is used only for specific purposes.
+      The only downside is administrative overhead in cases of
+      multiple file system labels, setting network access control
+      user by user, etc.</para>
+
+    <para>These downsides are minimal when compared to the lasting
+      effect of the framework; for instance, the ability to pick and choose
+      which policies are required for a specific configuration keeps
+      performance overhead down.  The reduction of support for unneeded
+      policies can increase the overall performance of the system as well as
+      offer flexibility of choice.  A good implementation would
+      consider the overall security requirements and effectively implement
+      the various security policy modules offered by the framework.</para>
+
+    <para>Thus a system utilizing <acronym>MAC</acronym> features
+      should at least guarantee that a user will not be permitted
+      to change security attributes at will; all user utilities,
+      programs and scripts must work within the constraints of
+      the access rules provided by the selected security policy modules; and
+      that total control of the <acronym>MAC</acronym> access
+      rules are in the hands of the system administrator.</para>
+
+    <para>It is the sole duty of the system administrator to
+      carefully select the correct security policy modules.  Some environments
+      may need to limit access control over the network; in these
+      cases, the &man.mac.portacl.4;, &man.mac.ifoff.4; and even
+      &man.mac.biba.4; policy modules might make good starting points.  In other
+      cases, strict confidentiality of file system objects might
+      be required.  Policy modules such as &man.mac.bsdextended.4;
+      and &man.mac.mls.4; exist for this purpose.</para>
+
+    <para>Policy decisions could be made based on network
+      configuration.  Perhaps only certain users should be permitted
+      access to facilities provided by &man.ssh.1; to access the
+      network or the Internet.  The &man.mac.portacl.4; would be
+      the policy module of choice for these situations.  But what should be
+      done in the case of file systems?  Should all access to certain
+      directories be severed from other groups or specific
+      users?  Or should we limit user or utility access to specific
+      files by setting certain objects as classified?</para>
+
+    <para>In the file system case, access to objects might be
+      considered confidential to some users, but not to others.
+      For an example, a large development team might be broken
+      off into smaller groups of individuals.  Developers in
+      project A might not be permitted to access objects written
+      by developers in project B.  Yet they might need to access
+      objects created by developers in project C; that is quite a
+      situation indeed.  Using the different security policy modules provided by
+      the <acronym>MAC</acronym> framework; users could
+      be divided into these groups and then given access to the
+      appropriate areas without fear of information
+      leakage.</para>
+
+    <para>Thus, each security policy module has a unique way of dealing with
+      the overall security of a system.  Module selection should be based
+      on a well thought out security policy.  In many cases, the
+      overall policy may need to be revised and reimplemented on
+      the system.  Understanding the different security policy modules offered by
+      the <acronym>MAC</acronym> framework will help administrators
+      choose the best policies for their situations.</para>
+
+    <para>The default &os; kernel does not include the option for
+      the <acronym>MAC</acronym> framework; thus the following
+      kernel option must be added before trying any of the examples or
+      information in this chapter:</para>
+
+    <programlisting>options	MAC</programlisting>
+
+    <para>And the kernel will require a rebuild and a reinstall.</para>
+
+    <caution>
+      <para>While the various manual pages for <acronym>MAC</acronym>
+	policy modules state that they may be built into the kernel,
+	it is possible to lock the system out of
+	the network and more.  Implementing <acronym>MAC</acronym>
+	is much like implementing a firewall, care must be taken
+	to prevent being completely locked out of the system.  The
+	ability to revert back to a previous configuration should be
+	considered while the implementation of <acronym>MAC</acronym>
+	remotely should be done with extreme caution.</para>
+    </caution>
+  </sect1>
+
+  <sect1 xml:id="mac-understandlabel">
+    <title>Understanding MAC Labels</title>
+
+    <para>A <acronym>MAC</acronym> label is a security attribute
+      which may be applied to subjects and objects throughout
+      the system.</para>
+
+    <para>When setting a label, the user must be able to comprehend
+      what it is, exactly, that is being done.  The attributes
+      available on an object depend on the policy module loaded, and that
+      policy modules interpret their attributes in different
+      ways.  If improperly configured due to lack of comprehension, or
+      the inability to understand the implications, the result will
+      be the unexpected and perhaps, undesired, behavior of the
+      system.</para>
+
+    <para>The security label on an object is used as a part of a
+      security access control decision by a policy.  With some
+      policies, the label by itself contains all information necessary
+      to make a decision; in other models, the labels may be processed
+      as part of a larger rule set, etc.</para>
+
+    <para>For instance, setting the label of <literal>biba/low</literal>
+      on a file will represent a label maintained by the Biba security policy module,
+      with a value of <quote>low</quote>.</para>
+
+    <para>A few policy modules which support the labeling feature in
+      &os; offer three specific predefined labels.  These
+      are the low, high, and equal labels.  Although they enforce
+      access control in a different manner with each policy module, you
+      can be sure that the low label will be the lowest setting,
+      the equal label will set the subject or object to be disabled
+      or unaffected, and the high label will enforce the highest
+      setting available in the Biba and <acronym>MLS</acronym>
+      policy modules.</para>
+
+    <para>Within single label file system environments, only one label may be
+      used on objects.  This will enforce one set of
+      access permissions across the entire system and in many
+      environments may be all that is required.  There are a few
+      cases where multiple labels may be set on objects
+      or subjects in the file system.  For those cases, the
+      <option>multilabel</option> option may be passed to
+      &man.tunefs.8;.</para>
+
+    <para>In the case of Biba and <acronym>MLS</acronym>, a numeric
+      label may be set to indicate the precise level of hierarchical
+      control.  This numeric level is used to partition or sort
+      information into different groups of say, classification only
+      permitting access to that group or a higher group level.</para>
+
+    <para>In most cases the administrator will only be setting up a
+      single label to use throughout the file system.</para>
+
+    <para><emphasis>Hey wait, this is similar to <acronym>DAC</acronym>!
+      I thought <acronym>MAC</acronym> gave control strictly to the
+      administrator.</emphasis>  That statement still holds true, to some
+      extent as <systemitem class="username">root</systemitem> is the one in control and who
+      configures the policies so that users are placed in the
+      appropriate categories/access levels.  Alas, many policy modules can
+      restrict the <systemitem class="username">root</systemitem> user as well.  Basic
+      control over objects will then be released to the group, but
+      <systemitem class="username">root</systemitem> may revoke or modify the settings
+      at any time.  This is the hierarchal/clearance model covered
+      by policies such as Biba and <acronym>MLS</acronym>.</para>
+
+    <sect2>
+      <title>Label Configuration</title>
+
+      <para>Virtually all aspects of label policy module configuration
+	will be performed using the base system utilities.  These
+	commands provide a simple interface for object or subject
+	configuration or the manipulation and verification of
+	the configuration.</para>
+
+      <para>All configuration may be done by use of the
+	&man.setfmac.8; and &man.setpmac.8; utilities.
+	The <command>setfmac</command> command is used to set
+	<acronym>MAC</acronym> labels on system objects while the
+	<command>setpmac</command> command is used to set the labels
+	on system subjects.  Observe:</para>
+
+      <screen>&prompt.root; <userinput>setfmac biba/high test</userinput></screen>
+
+      <para>If no errors occurred with the command above, a prompt
+	will be returned.  The only time these commands are not
+	quiescent is when an error occurred; similarly to the
+	&man.chmod.1; and &man.chown.8; commands.  In some cases this
+	error may be a <errorname>Permission denied</errorname> and
+	is usually obtained when the label is being set or modified
+	on an object which is restricted.<footnote><para>Other conditions
+	may produce different failures.  For instance, the file may not
+	be owned by the	user attempting to relabel the object, the
+	object may not exist or	may be read only.  A mandatory policy
+	will not allow the process to relabel the file, maybe because
+	of a property of the file, a property of the process, or a
+	property of the proposed new label value.  For example: a user
+	running at low integrity tries to change the label of a high
+	integrity file.  Or perhaps a user running at low integrity
+	tries to change the label of a low integrity file to a high
+	integrity label.</para></footnote>  The system administrator
+	may use the following commands to overcome this:</para>
+
+      <screen>&prompt.root; <userinput>setfmac biba/high test</userinput>
+<errorname>Permission denied</errorname>
+&prompt.root; <userinput>setpmac biba/low setfmac biba/high test</userinput>
+&prompt.root; <userinput>getfmac test</userinput>
+test: biba/high</screen>
+
+      <para>As we see above, <command>setpmac</command>
+	can be used to override the policy module's settings by assigning
+	a different label to the invoked process.  The
+	<command>getpmac</command> utility is usually used with currently
+	running processes, such as <application>sendmail</application>:
+	although it takes a process ID in place of
+	a command the logic is extremely similar.  If users
+	attempt to manipulate a file not in their access, subject to the
+	rules of the loaded policy modules, the
+	<errorname>Operation not permitted</errorname> error
+	will be displayed by the <function>mac_set_link</function>
+	function.</para>
+
+      <sect3>
+	<title>Common Label Types</title>
+
+	<para>For the &man.mac.biba.4;, &man.mac.mls.4; and
+	  &man.mac.lomac.4; policy modules, the ability to assign
+	  simple labels is provided.  These take the form of high,
+	  equal and low, what follows is a brief description of
+	  what these labels provide:</para>
+
+	<itemizedlist>
+	  <listitem>
+	    <para>The <literal>low</literal> label is considered the
+	      lowest label setting an object or subject may have.
+	      Setting this on objects or subjects will block their
+	      access to objects or subjects marked high.</para>
+	  </listitem>
+
+	  <listitem>
+	    <para>The <literal>equal</literal> label should only be
+	      placed on objects considered to be exempt from the
+	      policy.</para>
+	  </listitem>
+
+	  <listitem>
+	    <para>The <literal>high</literal> label grants an object or
+	      subject the highest possible setting.</para>
+	  </listitem>
+	</itemizedlist>
+
+	<para>With respect to each policy module, each of those settings
+	  will instate a different information flow directive.  Reading
+	  the proper manual pages will further explain the traits of
+	  these generic label configurations.</para>
+
+        <sect4>
+	  <title>Advanced Label Configuration</title>
+
+	  <para>Numeric grade numbers used for
+	    <literal>comparison:compartment+compartment</literal>; thus
+	    the following:</para>
+
+	  <programlisting>biba/10:2+3+6(5:2+3-20:2+3+4+5+6)</programlisting>
+
+	  <para>May be interpreted as:</para>
+
+	  <para><quote>Biba Policy Label</quote>/<quote>Grade 10</quote>
+	    :<quote>Compartments 2, 3 and 6</quote>:
+	    (<quote>grade 5 ...</quote>)</para>
+
+	  <para>In this example, the first grade would be considered
+	    the <quote>effective grade</quote> with
+	    <quote>effective compartments</quote>, the second grade
+	    is the low grade and the last one is the high grade.
+	    In most configurations these settings will not be used;
+	    indeed, they offered for more advanced
+	    configurations.</para>
+
+	  <para>When applied to system objects, they will only have a
+	    current grade/compartments as opposed to system subjects
+	    as they reflect the range of available rights in the system,
+	    and network interfaces, where they are used for access
+	    control.</para>
+
+	  <para>The grade and compartments in a subject and object pair
+	    are used to construct a relationship referred to as
+	    <quote>dominance</quote>, in which a subject dominates an
+	    object, the object dominates the subject, neither dominates
+	    the other, or both dominate each other.  The
+	    <quote>both dominate</quote> case occurs when the two labels
+	    are equal.  Due to the information flow nature of Biba, you
+	    have rights to a set of compartments,
+	    <quote>need to know</quote>, that might correspond to
+	    projects, but objects also have a set of compartments.
+	    Users may have to subset their rights using
+	    <command>su</command> or <command>setpmac</command> in order
+	    to access objects in a compartment from which they are not
+	    restricted.</para>
+	</sect4>
+      </sect3>
+
+      <sect3>
+	<title>Users and Label Settings</title>
+
+	<para>Users themselves are required to have labels so that
+	  their files and processes may properly interact with the
+	  security policy defined on the system.  This is
+	  configured through the <filename>login.conf</filename> file
+	  by use of login classes.  Every policy module that uses labels
+	  will implement the user class setting.</para>
+
+	<para>An example entry containing every policy module setting is displayed
+	  below:</para>
+
+	<programlisting>default:\
+	:copyright=/etc/COPYRIGHT:\
+	:welcome=/etc/motd:\
+	:setenv=MAIL=/var/mail/$,BLOCKSIZE=K:\
+	:path=~/bin:/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin:\
+	:manpath=/usr/share/man /usr/local/man:\
+	:nologin=/usr/sbin/nologin:\
+	:cputime=1h30m:\
+	:datasize=8M:\
+	:vmemoryuse=100M:\
+	:stacksize=2M:\
+	:memorylocked=4M:\
+	:memoryuse=8M:\
+	:filesize=8M:\
+	:coredumpsize=8M:\
+	:openfiles=24:\
+	:maxproc=32:\
+	:priority=0:\
+	:requirehome:\
+	:passwordtime=91d:\
+	:umask=022:\
+	:ignoretime@:\
+	:label=partition/13,mls/5,biba/10(5-15),lomac10[2]:</programlisting>
+
+	<para>The <literal>label</literal> option is used to set the
+	  user class default label which will be enforced by
+	  <acronym>MAC</acronym>.  Users will never be permitted to
+	  modify this value, thus it can be considered not optional
+	  in the user case.  In a real configuration, however, the
+	  administrator will never wish to enable every policy module.
+	  It is recommended that the rest of this chapter be reviewed
+	  before any of this configuration is implemented.</para>
+
+	<note>
+	  <para>Users may change their label after the initial login;
+	    however, this change is subject constraints of the policy.
+	    The example above tells the Biba policy that a process's
+	    minimum integrity is 5, its maximum is 15, but the default
+	    effective label is 10.  The process will run at 10 until
+	    it chooses to change label, perhaps due to the user using
+	    the setpmac command, which will be constrained by Biba to
+	    the range set at login.</para>
+	</note>
+
+	<para>In all cases, after a change to
+	  <filename>login.conf</filename>, the login class capability
+	  database must be rebuilt using <command>cap_mkdb</command>
+	  and this will be reflected throughout every forthcoming
+	  example or discussion.</para>
+
+	<para>It is useful to note that many sites may have a
+	  particularly large number of users requiring several
+	  different user classes.  In depth planning is required
+	  as this may get extremely difficult to manage.</para>
+
+	<para>Future versions of &os; will include a new way to
+	  deal with mapping users to labels; however, this will
+	  not be available until some time after &os;&nbsp;5.3.</para>
+      </sect3>
+
+      <sect3>
+	<title>Network Interfaces and Label Settings</title>
+
+	<para>Labels may also be set on network interfaces to help
+	  control the flow of data across the network.  In all cases
+	  they function in the same way the policies function with
+	  respect to objects.  Users at high settings in
+	  <literal>biba</literal>, for example, will not be permitted
+	  to access network interfaces with a label of low.</para>
+
+	<para>The <option>maclabel</option> may be passed to
+	  <command>ifconfig</command> when setting the
+	  <acronym>MAC</acronym> label on network interfaces.  For
+	  example:</para>
+
+	<screen>&prompt.root; <userinput>ifconfig bge0 maclabel biba/equal</userinput></screen>
+
+	<para>will set the <acronym>MAC</acronym> label of
+	  <literal>biba/equal</literal> on the &man.bge.4; interface.
+	  When using a setting similar to
+	  <literal>biba/high(low-high)</literal> the entire label should
+	  be quoted; otherwise an error will be returned.</para>
+
+	<para>Each policy module which supports labeling has a tunable
+	  which may be used to disable the <acronym>MAC</acronym>
+	  label on network interfaces.  Setting the label to
+	  <option>equal</option> will have a similar effect.  Review
+	  the output from <command>sysctl</command>, the policy manual
+	  pages, or even the information found later in this chapter
+	  for those tunables.</para>
+      </sect3>
+    </sect2>
+
+    <sect2>
+      <title>Singlelabel or Multilabel?</title>
+<!-- Stopped here with my edits -->
+      <para>By default the system will use the
+	<option>singlelabel</option> option.  But what does this
+	mean to the administrator?  There are several differences
+	which, in their own right, offer pros and cons to the
+	flexibility in the systems security model.</para>
+
+      <para>The <option>singlelabel</option> only permits for one
+	label, for instance <literal>biba/high</literal> to be used
+	for each subject or object.  It provides for lower
+	administration overhead but decreases the flexibility of
+	policies which support labeling.  Many administrators may
+	want to use the <option>multilabel</option> option in
+	their security policy.</para>
+
+      <para>The <option>multilabel</option> option will permit each
+	subject or object to have its own independent
+	<acronym>MAC</acronym> label in
+	place of the standard <option>singlelabel</option> option
+	which will allow only one label throughout the partition.
+	The <option>multilabel</option> and <option>single</option>
+	label options are only required for the policies which
+	implement the labeling feature, including the Biba, Lomac,
+	<acronym>MLS</acronym> and <acronym>SEBSD</acronym>
+	policies.</para>
+
+      <para>In many cases, the <option>multilabel</option> may not need
+	to be set at all.  Consider the following situation and
+	security model:</para>
+
+      <itemizedlist>
+	<listitem>
+	  <para>&os; web-server using the <acronym>MAC</acronym>
+	    framework and a mix of the various policies.</para>
+	</listitem>
+
+	<listitem>
+	  <para>This machine only requires one label,
+	    <literal>biba/high</literal>, for everything in the system.
+	    Here the file system would not require the
+	    <option>multilabel</option> option as a single label
+	    will always be in effect.</para>
+	</listitem>
+
+	<listitem>
+	  <para>But, this machine will be a web server and should have
+	    the web server run at <literal>biba/low</literal> to prevent
+	    write up capabilities.  The Biba policy and how it works
+	    will be discussed later, so if the previous comment was
+	    difficult to interpret just continue reading and return.
+	    The server could use a separate partition set at
+	    <literal>biba/low</literal> for most if not all of its
+	    runtime state.  Much is lacking from this example, for
+	    instance the restrictions on data, configuration and user
+	    settings; however, this is just a quick example to prove the
+	    aforementioned point.</para>
+	</listitem>
+      </itemizedlist>
+
+      <para>If any of the non-labeling policies are to be used,
+	then the <option>multilabel</option> option would never
+	be required.  These include the <literal>seeotheruids</literal>,
+	<literal>portacl</literal> and <literal>partition</literal>
+	policies.</para>
+
+      <para>It should also be noted that using
+	<option>multilabel</option> with a partition and establishing
+	a security model based on <option>multilabel</option>
+	functionality could open the doors for higher administrative
+	overhead as everything in the file system would have a label.
+	This includes directories, files, and even device
+	nodes.</para>
+
+      <para>The following command will set <option>multilabel</option>
+	on the file systems to have multiple labels.  This may only be
+	done in single user mode:</para>
+
+      <screen>&prompt.root; <userinput>tunefs -l enable /</userinput></screen>
+
+      <para>This is not a requirement for the swap file
+	system.</para>
+
+      <note>
+	<para>Some users have experienced problems with setting the
+	  <option>multilabel</option> flag on the root partition.
+	  If this is the case, please review the
+	  <xref linkend="mac-troubleshoot"/> of this chapter.</para>
+      </note>
+    </sect2>
+
+    <sect2>
+      <title>Controlling MAC with Tunables</title>
+
+      <para>Without any modules loaded, there are still some parts
+        of <acronym>MAC</acronym> which may be configured using
+	the <command>sysctl</command> interface.  These tunables
+	are described below and in all cases the number one (1)
+	means enabled while the number zero (0) means
+	disabled:</para>
+
+      <itemizedlist>
+	<listitem>
+	  <para><literal>security.mac.enforce_fs</literal> defaults to
+	    one (1) and enforces <acronym>MAC</acronym> file system
+	    policies on the file systems.</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>security.mac.enforce_kld</literal> defaults to
+	    one (1) and enforces <acronym>MAC</acronym> kernel linking
+	    policies on the dynamic kernel linker (see
+	    &man.kld.4;).</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>security.mac.enforce_network</literal> defaults
+	    to one (1) and enforces <acronym>MAC</acronym> network
+	    policies.</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>security.mac.enforce_pipe</literal> defaults
+	    to one (1) and enforces <acronym>MAC</acronym> policies
+	    on pipes.</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>security.mac.enforce_process</literal> defaults
+	    to one (1) and enforces <acronym>MAC</acronym> policies
+	    on processes which utilize inter-process
+	    communication.</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>security.mac.enforce_socket</literal> defaults
+	    to one (1) and enforces <acronym>MAC</acronym> policies
+	    on sockets (see the &man.socket.2; manual page).</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>security.mac.enforce_system</literal> defaults
+	    to one (1) and enforces <acronym>MAC</acronym> policies
+	    on system activities such as accounting and
+	    rebooting.</para>
+	</listitem>
+
+	<listitem>
+	  <para><literal>security.mac.enforce_vm</literal> defaults
+	    to one (1) and enforces <acronym>MAC</acronym> policies
+	    on the virtual memory system.</para>
+	</listitem>
+      </itemizedlist>
+
+      <note>
+	<para>Every policy or <acronym>MAC</acronym> option supports
+	  tunables.  These usually hang off of the
+	  <literal>security.mac.&lt;policyname&gt;</literal> tree.
+	  To view all of the tunables from <acronym>MAC</acronym>
+	  use the following command:</para>
+
+	<screen>&prompt.root; <userinput>sysctl -da | grep mac</userinput></screen>
+      </note>
+
+      <para>This should be interpreted as all of the basic
+	<acronym>MAC</acronym> policies are enforced by default.
+	If the modules were built into the kernel the system
+	would be extremely locked down and most likely unable to
+	communicate with the local network or connect to the Internet,
+	etc.  This is why building the modules into the kernel is not
+	completely recommended.  Not because it limits the ability to
+	disable features on the fly with <command>sysctl</command>,
+	but it permits the administrator to instantly switch the
+	policies of a system without the requirement of rebuilding
+	and reinstalling a new system.</para>
+    </sect2>
+  </sect1>
+
+  <sect1 xml:id="mac-modules">
+    <title>Module Configuration</title>
+
+    <para>Every module included with the <acronym>MAC</acronym>
+      framework may be either compiled into the kernel as noted above
+      or loaded as a run-time kernel module.
+      The recommended method is to add the module name to the
+      <filename>/boot/loader.conf</filename> file so that it will load
+      during the initial boot operation.</para>
+
+    <para>The following sections will discuss the various
+      <acronym>MAC</acronym> modules and cover their features.
+      Implementing them into a specific environment will also
+      be a consideration of this chapter.  Some modules support
+      the use of labeling, which is controlling access by enforcing
+      a label such as <quote>this is allowed and this is not</quote>.
+      A label configuration file may control how files may be accessed,
+      network communication can be exchanged, and more.  The previous
+      section showed how the <option>multilabel</option> flag could
+      be set on file systems to enable per-file or per-partition
+      access control.</para>
+
+    <para>A single label configuration would enforce only one label
+      across the system, that is why the <command>tunefs</command>
+      option is called <option>multilabel</option>.</para>
+
+    <sect2 xml:id="mac-seeotheruids">
+      <title>The MAC seeotheruids Module</title>
+
+      <indexterm>
+        <primary>MAC See Other UIDs Policy</primary>
+      </indexterm>
+      <para>Module name: <filename>mac_seeotheruids.ko</filename></para>
+
+      <para>Kernel configuration line:
+        <literal>options MAC_SEEOTHERUIDS</literal></para>
+
+      <para>Boot option:
+	<literal>mac_seeotheruids_load="YES"</literal></para>
+
+      <para>The &man.mac.seeotheruids.4; module mimics and extends
+	the <literal>security.bsd.see_other_uids</literal> and
+	<literal>security.bsd.see_other_gids</literal>
+	<command>sysctl</command> tunables.  This option does
+	not require any labels to be set before configuration and
+	can operate transparently with the other modules.</para>
+
+      <para>After loading the module, the following
+	<command>sysctl</command> tunables may be used to control
+	the features:</para>
+
+      <itemizedlist>
+	<listitem>
+	  <para><literal>security.mac.seeotheruids.enabled</literal>
+	    will enable the module's features and use the default
+	    settings.  These default settings will deny users the
+	    ability to view processes and sockets owned by other
+	    users.</para>
+	</listitem>
+
+	<listitem>
+	  <para>
+	    <literal>security.mac.seeotheruids.specificgid_enabled</literal>
+	    will allow a certain group to be exempt from this policy.
+	    To exempt specific groups from this policy, use the
+	    <literal>security.mac.seeotheruids.specificgid=XXX</literal>
+	    <command>sysctl</command> tunable.  In the above example,
+	    the <replaceable>XXX</replaceable> should be replaced with the
+	    numeric group ID to be exempted.</para>
+	</listitem>
+
+	<listitem>
+	  <para>
+	    <literal>security.mac.seeotheruids.primarygroup_enabled</literal>
+	    is used to exempt specific primary groups from this policy.
+	    When using this tunable, the
+	    <literal>security.mac.seeotheruids.specificgid_enabled</literal>
+	    may not be set.</para>
+	</listitem>
+      </itemizedlist>
+    </sect2>
+  </sect1>
+
+  <sect1 xml:id="mac-bsdextended">
+    <title>The MAC bsdextended Module</title>
+
+    <indexterm>
+    <primary>MAC</primary>
+      <secondary>File System Firewall Policy</secondary>
+    </indexterm>
+    <para>Module name: <filename>mac_bsdextended.ko</filename></para>
+
+    <para>Kernel configuration line:
+      <literal>options MAC_BSDEXTENDED</literal></para>
+
+    <para>Boot option:
+      <literal>mac_bsdextended_load="YES"</literal></para>
+
+    <para>The &man.mac.bsdextended.4; module enforces the file system
+      firewall.  This module's policy provides an extension to the
+      standard file system permissions model, permitting an
+      administrator to create a firewall-like ruleset to protect files,
+      utilities, and directories in the file system hierarchy.</para>
+
+    <para>The policy may be created using a utility, &man.ugidfw.8;,
+      that has a syntax similar to that of &man.ipfw.8;.  More tools
+      can be written by using the functions in the
+      &man.libugidfw.3; library.</para>
+
+    <para>Extreme caution should be taken when working with this
+      module; incorrect use could block access to certain parts of
+      the file system.</para>
+
+    <sect2>
+      <title>Examples</title>
+
+      <para>After the &man.mac.bsdextended.4; module has
+	been loaded, the following command may be used to list the
+	current rule configuration:</para>
+
+      <screen>&prompt.root; <userinput>ugidfw list</userinput>
+0 slots, 0 rules</screen>
+
+      <para>As expected, there are no rules defined.  This means that
+	everything is still completely accessible.  To create a rule
+	which will block all access by users but leave
+	<systemitem class="username">root</systemitem> unaffected, simply run the
+	following command:</para>
+
+      <screen>&prompt.root; <userinput>ugidfw add subject not uid root new object not uid root mode n</userinput></screen>
+
+      <note>
+	<para>In releases prior to &os;&nbsp;5.3, the
+	  <parameter>add</parameter> parameter did not exist.  In those
+	  cases the <parameter>set</parameter> should be used
+	  instead.  See below for a command example.</para></note>
+
+      <para>This is a very bad idea as it will block all users from
+	issuing even the most simple commands, such as
+	<command>ls</command>.  A more patriotic list of rules
+	might be:</para>
+
+      <screen>&prompt.root; <userinput>ugidfw set 2 subject uid user1 object uid user2 mode n</userinput>
+&prompt.root; <userinput>ugidfw set 3 subject uid user1 object gid user2 mode n</userinput></screen>
+
+      <para>This will block any and all access, including directory
+	listings, to <systemitem class="username"><replaceable>user2</replaceable></systemitem>'s home
+	directory from the username <systemitem class="username">user1</systemitem>.</para>
+
+      <para>In place of <systemitem class="username">user1</systemitem>, the
+	<option>not uid <replaceable>user2</replaceable></option> could
+	be passed.  This will enforce the same access restrictions
+	above for all users in place of just one user.</para>
+
+      <note>
+	<para>The <systemitem class="username">root</systemitem> user will be unaffected
+	    by these changes.</para>
+      </note>
+
+      <para>This should give a general idea of how the
+	&man.mac.bsdextended.4; module may be used to help fortify
+	a file system.  For more information, see the
+	&man.mac.bsdextended.4; and the &man.ugidfw.8; manual
+	pages.</para>
+    </sect2>
+  </sect1>
+
+  <sect1 xml:id="mac-ifoff">
+    <title>The MAC ifoff Module</title>
+
+    <indexterm>
+      <primary>MAC Interface Silencing Policy</primary>
+    </indexterm>
+    <para>Module name: <filename>mac_ifoff.ko</filename></para>
+
+    <para>Kernel configuration line:
+      <literal>options MAC_IFOFF</literal></para>
+
+    <para>Boot option: <literal>mac_ifoff_load="YES"</literal></para>
+
+    <para>The &man.mac.ifoff.4; module exists solely to disable network
+      interfaces on the fly and keep network interfaces from being
+      brought up during the initial system boot.  It does not require
+      any labels to be set up on the system, nor does it have a
+      dependency on other <acronym>MAC</acronym> modules.</para>
+
+    <para>Most of the control is done through the
+      <command>sysctl</command> tunables listed below.</para>
+
+    <itemizedlist>
+      <listitem>
+	<para><literal>security.mac.ifoff.lo_enabled</literal> will
+	  enable/disable all traffic on the loopback (&man.lo.4;)
+	  interface.</para>
+      </listitem>
+
+      <listitem>
+	<para><literal>security.mac.ifoff.bpfrecv_enabled</literal> will
+	  enable/disable all traffic on the Berkeley Packet Filter
+	  interface (&man.bpf.4;)</para>
+      </listitem>
+
+      <listitem>
+	<para><literal>security.mac.ifoff.other_enabled</literal> will
+	  enable/disable traffic on all other interfaces.</para>
+      </listitem>
+    </itemizedlist>
+
+    <para>One of the most common uses of &man.mac.ifoff.4; is network
+      monitoring in an environment where network traffic should not
+      be permitted during the boot sequence.  Another suggested use
+      would be to write a script which uses
+      <package>security/aide</package> to automatically
+      block network traffic if it finds new or altered files in
+      protected directories.</para>
+  </sect1>
+
+  <sect1 xml:id="mac-portacl">
+    <title>The MAC portacl Module</title>
+
+    <indexterm>
+      <primary>MAC Port Access Control List Policy</primary>
+    </indexterm>
+    <para>Module name: <filename>mac_portacl.ko</filename></para>
+
+    <para>Kernel configuration line:
+      <literal>MAC_PORTACL</literal></para>
+
+    <para>Boot option: <literal>mac_portacl_load="YES"</literal></para>
+
+    <para>The &man.mac.portacl.4; module is used to limit binding to
+      local <acronym>TCP</acronym> and <acronym>UDP</acronym> ports
+      using a variety of <command>sysctl</command> variables.  In
+      essence &man.mac.portacl.4; makes it possible to allow
+      non-<systemitem class="username">root</systemitem> users to bind to specified
+      privileged ports, i.e. ports fewer than 1024.</para>
+
+    <para>Once loaded, this module will enable the
+      <acronym>MAC</acronym> policy on all sockets.  The following
+      tunables are available:</para>
+
+    <itemizedlist>
+      <listitem>
+	<para><literal>security.mac.portacl.enabled</literal> will
+	  enable/disable the policy completely.<footnote><para>Due to
+	  a bug the <literal>security.mac.portacl.enabled</literal>
+	  <command>sysctl</command> variable will not work on
+	  &os;&nbsp;5.2.1 or previous releases.</para></footnote></para>
+      </listitem>
+
+      <listitem>
+	<para><literal>security.mac.portacl.port_high</literal> will set
+	  the highest port number that &man.mac.portacl.4;
+	  will enable protection for.</para>
+      </listitem>
+
+      <listitem>
+	<para><literal>security.mac.portacl.suser_exempt</literal> will,
+	  when set to a non-zero value, exempt the
+	  <systemitem class="username">root</systemitem> user from this policy.</para>
+      </listitem>
+
+      <listitem>
+	<para><literal>security.mac.portacl.rules</literal> will
+	  specify the actual mac_portacl policy; see below.</para>
+      </listitem>
+    </itemizedlist>
+
+    <para>The actual <literal>mac_portacl</literal> policy, as
+      specified in the <literal>security.mac.portacl.rules</literal>
+      sysctl, is a text string of the form:
+      <literal>rule[,rule,...]</literal> with as many rules as
+      needed.  Each rule is of the form:
+      <literal>idtype:id:protocol:port</literal>.  The
+      <parameter>idtype</parameter> parameter can be
+      <literal>uid</literal> or <literal>gid</literal> and used to
+      interpret the <parameter>id</parameter> parameter as either a
+      user id or group id, respectively.  The
+      <parameter>protocol</parameter> parameter is used to determine if
+      the rule should apply to <acronym>TCP</acronym> or
+      <acronym>UDP</acronym> by setting the parameter to
+      <literal>tcp</literal> or <literal>udp</literal>.  The final
+      <parameter>port</parameter> parameter is the port number to allow
+      the specified user or group to bind to.</para>
+
+    <note>
+      <para>Since the ruleset is interpreted directly by the kernel
+	only numeric values can be used for the user ID, group ID, and
+	port parameters.  I.e. user, group, and port service names
+	cannot be used.</para>
+    </note>
+
+    <para>By default, on &unix;-like systems, ports fewer than 1024
+      can only be used by/bound to privileged processes,
+      i.e. those run as <systemitem class="username">root</systemitem>.  For
+      &man.mac.portacl.4; to allow non-privileged processes to bind
+      to ports below 1024 this standard &unix; restriction has to be
+      disabled.  This can be accomplished by setting the &man.sysctl.8;
+      variables <literal>net.inet.ip.portrange.reservedlow</literal> and
+      <literal>net.inet.ip.portrange.reservedhigh</literal>
+      to zero.</para>
+
+    <para>See the examples below or review the &man.mac.portacl.4;
+      manual page for further information.</para>
+
+    <sect2>
+      <title>Examples</title>
+
+      <para>The following examples should illuminate the above
+	discussion a little better:</para>
+
+      <screen>&prompt.root; <userinput>sysctl security.mac.portacl.port_high=1023</userinput>
+&prompt.root; <userinput>sysctl net.inet.ip.portrange.reservedlow=0 net.inet.ip.portrange.reservedhigh=0</userinput></screen>
+
+      <para>First we set &man.mac.portacl.4; to cover the standard
+	privileged ports and disable the normal &unix; bind
+	restrictions.</para>
+
+      <screen>&prompt.root; <userinput>sysctl security.mac.portacl.suser_exempt=1</userinput></screen>
+
+      <para>The <systemitem class="username">root</systemitem> user should not be crippled
+	by this policy, thus set the
+	<literal>security.mac.portacl.suser_exempt</literal> to a
+	non-zero value.  The &man.mac.portacl.4; module
+	has now been set up to behave the same way &unix;-like systems
+	behave by default.</para>
+
+      <screen>&prompt.root; <userinput>sysctl security.mac.portacl.rules=uid:80:tcp:80</userinput></screen>
+
+      <para>Allow the user with <acronym>UID</acronym> 80 (normally
+	the <systemitem class="username">www</systemitem> user) to bind to port 80.
+	This can be used to allow the <systemitem class="username">www</systemitem>
+	user to run a web server without ever having
+	<systemitem class="username">root</systemitem> privilege.</para>
+
+      <screen>&prompt.root; <userinput>sysctl security.mac.portacl.rules=uid:1001:tcp:110,uid:1001:tcp:995</userinput></screen>
+
+      <para>Permit the user with the <acronym>UID</acronym> of
+	1001 to	bind to the <acronym>TCP</acronym> ports 110
+	(<quote>pop3</quote>) and 995 (<quote>pop3s</quote>).
+	This will permit this user to start a server that accepts
+	connections on ports 110 and 995.</para>
+    </sect2>
+  </sect1>
+
+  <sect1 xml:id="mac-labelingpolicies">
+    <title>MAC Policies with Labeling Features</title>
+
+    <para>The next few sections will discuss <acronym>MAC</acronym>
+      policies which use labels.</para>
+
+    <para>From here on this chapter will focus on the features
+      of &man.mac.biba.4;, &man.mac.lomac.4;,
+      &man.mac.partition.4;, and &man.mac.mls.4;.</para>
+
+    <note>
+      <para>This is an example configuration only and should not be
+        considered for a production implementation.  The goal is
+	to document and show the syntax as well as examples for
+	implementation and testing.</para>
+    </note>
+
+    <para>For these policies to work correctly several
+      preparations must be made.</para>
+
+    <sect2 xml:id="mac-prep">
+      <title>Preparation for Labeling Policies</title>
+
+      <para>The following changes are required in the
+	<filename>login.conf</filename> file:</para>
+
+      <itemizedlist>
+	<listitem>
+	  <para>An <literal>insecure</literal> class, or another
+	    class of similar type, must be
+	    added.  The login class of <literal>insecure</literal>
+	    is not required and just used as an example here; different
+	    configurations may use another class name.</para>
+	</listitem>
+
+	<listitem>
+	  <para>The <literal>insecure</literal> class should have
+	    the following settings and definitions.  Several of these
+	    can be altered but the line which defines the default
+	    label is a requirement and must remain.</para>
+
+	  <programlisting>insecure:\
+	:copyright=/etc/COPYRIGHT:\
+	:welcome=/etc/motd:\
+	:setenv=MAIL=/var/mail/$,BLOCKSIZE=K:\
+	:path=~/bin:/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin:\
+	:manpath=/usr/share/man /usr/local/man:\
+	:nologin=/usr/sbin/nologin:\
+	:cputime=1h30m:\
+	:datasize=8M:\
+	:vmemoryuse=100M:\
+	:stacksize=2M:\
+	:memorylocked=4M:\
+	:memoryuse=8M:\
+	:filesize=8M:\
+	:coredumpsize=8M:\
+	:openfiles=24:\
+	:maxproc=32:\
+	:priority=0:\
+	:requirehome:\
+	:passwordtime=91d:\
+	:umask=022:\
+	:ignoretime@:\
+	:label=partition/13,mls/5,biba/low:</programlisting>
+
+	  <para>The &man.cap.mkdb.1; command needs to be ran on
+	    &man.login.conf.5; before any of the
+	    users can be switched over to the new class.</para>
+
+	  <para>The <systemitem class="username">root</systemitem> username should also be placed
+	    into a login class; otherwise, almost every command
+	    executed by <systemitem class="username">root</systemitem> will require the
+	    use of <command>setpmac</command>.</para>
+
+	  <warning>
+	    <para>Rebuilding the <filename>login.conf</filename>
+	      database may cause some errors later with the daemon
+	      class.  Simply uncommenting the daemon account and
+	      rebuilding the database should alleviate these
+	      issues.</para>
+	  </warning>
+	</listitem>
+
+	<listitem>
+	  <para>Ensure that all partitions on which
+	    <acronym>MAC</acronym> labeling will be implemented support
+	    the <option>multilabel</option>.  We must do this because
+	    many of the examples here contain different labels for
+	    testing purposes.  Review the output from the
+	    <command>mount</command> command as a precautionary
+            measure.</para>
+	</listitem>
+
+	<listitem>
+	  <para>Switch any users who will have the higher security
+	    mechanisms enforced over to the new user class.  A quick
+	    run of &man.pw.8; or &man.vipw.8; should do the
+	    trick.</para>
+	</listitem>
+      </itemizedlist>
+    </sect2>
+  </sect1>
+
+  <sect1 xml:id="mac-partition">
+    <title>The MAC partition Module</title>
+
+    <indexterm>
+      <primary>MAC Process Partition Policy</primary>
+    </indexterm>
+    <para>Module name: <filename>mac_partition.ko</filename></para>
+
+    <para>Kernel configuration line:
+      <literal>options MAC_PARTITION</literal></para>
+
+    <para>Boot option:
+      <literal>mac_partition_load="YES"</literal></para>
+
+    <para>The &man.mac.partition.4; policy will drop processes into
+      specific <quote>partitions</quote> based on their
+      <acronym>MAC</acronym> label.  Think of it as a special
+      type of &man.jail.8;, though that is hardly a worthy
+      comparison.</para>
+
+    <para>This is one module that should be added to the
+      &man.loader.conf.5; file so that it loads
+      and enables the policy during the boot process.</para>
+
+    <para>Most configuration for this policy is done using
+      the &man.setpmac.8; utility which will be explained below.
+      The following <command>sysctl</command> tunable is
+      available for this policy:</para>
+
+    <itemizedlist>
+      <listitem>
+	<para><literal>security.mac.partition.enabled</literal> will
+	  enable the enforcement of <acronym>MAC</acronym> process
+	  partitions.</para>
+      </listitem>
+    </itemizedlist>
+
+    <para>When this policy is enabled, users will only be permitted
+      to see their processes but will not be permitted to work with
+      certain utilities.  For instance, a user in the
+      <literal>insecure</literal> class above will not be permitted
+      to access the <command>top</command> command as well as many
+      other commands that must spawn a process.</para>
+
+    <para>To set or drop utilities into a partition label, use the
+      <command>setpmac</command> utility:</para>
+
+    <screen>&prompt.root; <userinput>setpmac partition/13 top</userinput></screen>
+
+    <para>This will add the <command>top</command> command to the
+      label set on users in the <literal>insecure</literal> class.
+      Note that all processes spawned by users
+      in the <literal>insecure</literal> class will stay in the
+      <literal>partition/13</literal> label.</para>
+
+    <sect2>
+      <title>Examples</title>
+
+      <para>The following command will show you the partition label
+	and the process list:</para>
+
+      <screen>&prompt.root; <userinput>ps Zax</userinput></screen>
+
+      <para>This next command will allow the viewing of another
+	user's process partition label and that user's currently
+	running processes:</para>
+
+      <screen>&prompt.root; <userinput>ps -ZU trhodes</userinput></screen>
+
+      <note>
+	<para>Users can see processes in <systemitem class="username">root</systemitem>'s
+	  label unless the &man.mac.seeotheruids.4; policy is
+	  loaded.</para>
+      </note>
+
+      <para>A really crafty implementation could have all of the
+	services disabled in <filename>/etc/rc.conf</filename> and
+	started by a script that starts them with the proper
+	labeling set.</para>
+
+      <note>
+	<para>The following policies support integer settings
+	  in place of the three default labels offered.  These options,
+	  including their limitations, are further explained in
+	  the module manual pages.</para>
+      </note>
+    </sect2>
+  </sect1>
+
+  <sect1 xml:id="mac-mls">
+    <title>The MAC Multi-Level Security Module</title>
+
+    <indexterm>
+      <primary>MAC Multi-Level Security Policy</primary>
+    </indexterm>
+    <para>Module name: <filename>mac_mls.ko</filename></para>
+
+    <para>Kernel configuration line:
+      <literal>options MAC_MLS</literal></para>
+
+    <para>Boot option: <literal>mac_mls_load="YES"</literal></para>
+
+    <para>The &man.mac.mls.4; policy controls access between subjects
+      and objects in the system by enforcing a strict information
+      flow policy.</para>
+
+    <para>In <acronym>MLS</acronym> environments, a
+      <quote>clearance</quote> level is set in each subject or objects
+      label, along with compartments.  Since these clearance or
+      sensibility levels can reach numbers greater than six thousand;
+      it would be a daunting task for any system administrator to
+      thoroughly configure each subject or object.  Thankfully, three
+      <quote>instant</quote> labels are already included in this
+      policy.</para>
+
+    <para>These labels are <literal>mls/low</literal>,
+      <literal>mls/equal</literal> and <literal>mls/high</literal>.
+      Since these labels are described in depth in the manual page,
+      they will only get a brief description here:</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>The <literal>mls/low</literal> label contains a low
+	  configuration which permits it to be dominated by all other
+	  objects.  Anything labeled with <literal>mls/low</literal>
+	  will have a low clearance level and not be permitted to access
+	  information of a higher level.  In addition, this label will
+	  prevent objects of a higher clearance level from writing or
+	  passing information on to them.</para>
+      </listitem>
+
+      <listitem>
+	<para>The <literal>mls/equal</literal> label should be
+	  placed on objects considered to be exempt from the
+	  policy.</para>
+      </listitem>
+
+      <listitem>
+	<para>The <literal>mls/high</literal> label is the highest level
+	  of clearance possible.  Objects assigned this label will
+	  hold dominance over all other objects in the system; however,
+	  they will not permit the leaking of information to objects
+	  of a lower class.</para>
+      </listitem>
+    </itemizedlist>
+
+    <para><acronym>MLS</acronym> provides for:</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>A hierarchical security level with a set of non
+	  hierarchical categories;</para>
+      </listitem>
+
+      <listitem>
+	<para>Fixed rules: no read up, no write down (a subject can
+	  have read access to objects on its own level or below, but
+	  not above.  Similarly, a subject can have write access to
+	  objects on its own level or above but not beneath.);</para>
+      </listitem>
+
+      <listitem>
+	<para>Secrecy (preventing inappropriate disclosure
+	  of data);</para>
+      </listitem>
+
+      <listitem>
+	<para>Basis for the design of systems that concurrently handle
+	  data at multiple sensitivity levels (without leaking
+	  information between secret and confidential).</para>
+      </listitem>
+    </itemizedlist>
+
+    <para>The following <command>sysctl</command> tunables are
+      available for the configuration of special services and
+      interfaces:</para>
+
+    <itemizedlist>
+      <listitem>
+	<para><literal>security.mac.mls.enabled</literal> is used to
+	  enable/disable the <acronym>MLS</acronym> policy.</para>
+      </listitem>
+
+      <listitem>
+	<para><literal>security.mac.mls.ptys_equal</literal> will label
+	  all &man.pty.4; devices as <literal>mls/equal</literal> during
+	  creation.</para>
+      </listitem>
+
+      <listitem>
+	<para><literal>security.mac.mls.revocation_enabled</literal> is
+	  used to revoke access to objects after their label changes
+	  to a label of a lower grade.</para>
+      </listitem>
+
+      <listitem>
+	<para><literal>security.mac.mls.max_compartments</literal> is
+	  used to set the maximum number of compartment levels with
+	  objects; basically the maximum compartment number allowed
+	  on a system.</para>
+      </listitem>
+    </itemizedlist>
+
+    <para>To manipulate the <acronym>MLS</acronym> labels, the
+      &man.setfmac.8; command has been provided.  To assign a label
+      to an object, issue the following command:</para>
+
+    <screen>&prompt.root; <userinput>setfmac mls/5 test</userinput></screen>
+
+    <para>To get the <acronym>MLS</acronym> label for the file
+      <filename>test</filename> issue the following command:</para>
+
+    <screen>&prompt.root; <userinput>getfmac test</userinput></screen>
+
+    <para>This is a summary of the <acronym>MLS</acronym>
+      policy's features.  Another approach is to create a master policy
+      file in <filename>/etc</filename> which
+      specifies the <acronym>MLS</acronym> policy information and to
+      feed that file into the <command>setfmac</command> command.  This
+      method will be explained after all policies are covered.</para>
+
+    <para>Observations: an object with lower clearance is unable to
+      observe higher clearance processes.  A basic policy would be
+      to enforce <literal>mls/high</literal> on everything not to be
+      read, even if it needs to be written.  Enforce
+      <literal>mls/low</literal> on everything not to be written, even
+      if it needs to be read.  And finally enforce
+      <literal>mls/equal</literal> on the rest.  All users marked
+      <literal>insecure</literal> should be set at
+      <literal>mls/low</literal>.</para>
+  </sect1>
+
+  <sect1 xml:id="mac-biba">
+    <title>The MAC Biba Module</title>
+
+    <indexterm>
+      <primary>MAC Biba Integrity Policy</primary>
+    </indexterm>
+    <para>Module name: <filename>mac_biba.ko</filename></para>
+
+    <para>Kernel configuration line: <literal>options MAC_BIBA</literal></para>
+
+    <para>Boot option: <literal>mac_biba_load="YES"</literal></para>
+
+    <para>The &man.mac.biba.4; module loads the <acronym>MAC</acronym>
+      Biba policy.  This policy works much like that of the
+      <acronym>MLS</acronym> policy with the exception that the rules
+      for information flow
+      are slightly reversed.  This is said to prevent the downward
+      flow of sensitive information whereas the <acronym>MLS</acronym>
+      policy prevents the upward flow of sensitive information; thus,
+      much of this section can apply to both policies.</para>
+
+    <para>In Biba environments, an <quote>integrity</quote> label is
+      set on each subject or object.  These labels are made up of
+      hierarchal grades, and non-hierarchal components.  As an object's
+      or subject's grade ascends, so does its integrity.</para>
+
+    <para>Supported labels are <literal>biba/low</literal>,
+      <literal>biba/equal</literal>, and <literal>biba/high</literal>;
+      as explained below:</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>The <literal>biba/low</literal> label is considered the
+	  lowest integrity an object or subject may have.  Setting
+	  this on objects or subjects will block their write access
+	  to objects or subjects marked high.  They still have read
+	  access though.</para>
+      </listitem>
+
+      <listitem>
+	<para>The <literal>biba/equal</literal> label should only be
+	  placed on objects considered to be exempt from the
+	  policy.</para>
+      </listitem>
+
+      <listitem>
+	<para>The <literal>biba/high</literal> label will permit
+	  writing to objects set at a lower label, but not
+	  permit reading that object.  It is recommended that this
+	  label be placed on objects that affect the integrity of
+	  the entire system.</para>
+      </listitem>
+    </itemizedlist>
+
+    <para>Biba provides for:</para>
+
+    <itemizedlist>
+      <listitem>
+	<para>Hierarchical integrity level with a set of non
+	  hierarchical integrity categories;</para>
+      </listitem>
+
+      <listitem>
+	<para>Fixed rules: no write up, no read down (opposite of
+	  <acronym>MLS</acronym>).  A subject can have write access
+	  to objects on its own level or below, but not above.  Similarly, a
+	  subject can have read access to objects on its own level
+	  or above, but not below;</para>
+      </listitem>
+
+      <listitem>
+	<para>Integrity (preventing inappropriate modification of
+	  data);</para>
+      </listitem>
+
+      <listitem>
+	<para>Integrity levels (instead of MLS sensitivity
+	  levels).</para>
+      </listitem>
+    </itemizedlist>
+
+    <para>The following <command>sysctl</command> tunables can
+      be used to manipulate the Biba policy.</para>
+
+    <itemizedlist>
+      <listitem>
+	<para><literal>security.mac.biba.enabled</literal> may be used
+	  to enable/disable enforcement of the Biba policy on the
+	  target machine.</para>
+      </listitem>
+
+      <listitem>
+	<para><literal>security.mac.biba.ptys_equal</literal> may be
+	  used to disable the Biba policy on &man.pty.4;
+	  devices.</para>
+      </listitem>
+
+      <listitem>
+	<para><literal>security.mac.biba.revocation_enabled</literal>
+	  will force the revocation of access to objects if the label
+	  is changed to dominate the subject.</para>
+      </listitem>
+    </itemizedlist>
+
+    <para>To access the Biba policy setting on system objects, use
+      the <command>setfmac</command> and <command>getfmac</command>
+      commands:</para>
+
+    <screen>&prompt.root; <userinput>setfmac biba/low test</userinput>
+&prompt.root; <userinput>getfmac test</userinput>
+test: biba/low</screen>
+
+    <para>Observations: a lower integrity subject is unable to write
+      to a higher integrity subject; a higher integrity subject cannot
+      observe or read a lower integrity object.</para>
+  </sect1>
+
+  <sect1 xml:id="mac-lomac">
+    <title>The MAC LOMAC Module</title>
+
+    <indexterm>
+      <primary>MAC LOMAC</primary>
+    </indexterm>
+    <para>Module name: <filename>mac_lomac.ko</filename></para>
+
+    <para>Kernel configuration line: <literal>options MAC_LOMAC</literal></para>
+    <para>Boot option: <literal>mac_lomac_load="YES"</literal></para>
+
+    <para>Unlike the <acronym>MAC</acronym> Biba policy, the
+      &man.mac.lomac.4; policy permits access to lower integrity
+      objects only after decreasing the integrity level to not disrupt
+      any integrity rules.</para>
+
+    <para>The <acronym>MAC</acronym> version of the Low-watermark
+      integrity policy, not to be confused with the older &man.lomac.4;
+      implementation, works almost identically to Biba, but with the
+      exception of using floating labels to support subject
+      demotion via an auxiliary grade compartment.  This secondary
+      compartment takes the form of <literal>[auxgrade]</literal>.
+      When assigning a lomac policy with an auxiliary grade, it
+      should look a little bit like: <literal>lomac/10[2]</literal>
+      where the number two (2) is the auxiliary grade.</para>
+
+    <para>The <acronym>MAC</acronym> LOMAC policy relies on the
+      ubiquitous labeling of all system objects with integrity labels,
+      permitting subjects to read from low integrity objects and then
+      downgrading the label on the subject to prevent future writes to
+      high integrity objects.  This is the
+      <literal>[auxgrade]</literal> option discussed above, thus the
+      policy may provide for greater compatibility and require less
+      initial configuration than Biba.</para>
+
+    <sect2>
+      <title>Examples</title>
+
+      <para>Like the Biba and <acronym>MLS</acronym> policies;
+	the <command>setfmac</command> and <command>setpmac</command>
+	utilities may be used to place labels on system objects:</para>
+
+      <screen>&prompt.root; <userinput>setfmac /usr/home/trhodes lomac/high[low]</userinput>
+&prompt.root; <userinput>getfmac /usr/home/trhodes</userinput> lomac/high[low]</screen>
+
+      <para>Notice the auxiliary grade here is <literal>low</literal>,
+	this is a feature provided only by the <acronym>MAC</acronym>
+	LOMAC policy.</para>
+    </sect2>
+  </sect1>
+
+  <sect1 xml:id="mac-implementing">
+    <title>Implementing a Secure Environment with MAC</title>
+
+    <indexterm>
+      <primary>MAC Example Implementation</primary>
+    </indexterm>
+
+    <para>The following demonstration will implement a secure
+      environment using various <acronym>MAC</acronym> modules
+      with properly configured policies.  This is only a test and
+      should not be considered the complete answer to everyone's
+      security woes.  Just implementing a policy and ignoring it
+      never works and could be disastrous in a production
+      environment.</para>
+
+    <para>Before beginning this process, the
+      <literal>multilabel</literal> option must be set on each file
+      system as stated at the beginning of this chapter.  Not doing
+      so will result in errors.</para>
+
+    <sect2>
+      <title>Create an insecure User Class</title>
+
+      <para>Begin the procedure by adding the following user class
+       to the <filename>/etc/login.conf</filename> file:</para>
+
+      <programlisting>insecure:\
+:copyright=/etc/COPYRIGHT:\
+:welcome=/etc/motd:\
+:setenv=MAIL=/var/mail/$,BLOCKSIZE=K:\
+:path=~/bin:/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin
+:manpath=/usr/share/man /usr/local/man:\
+:nologin=/usr/sbin/nologin:\
+:cputime=1h30m:\
+:datasize=8M:\
+:vmemoryuse=100M:\
+:stacksize=2M:\
+:memorylocked=4M:\
+:memoryuse=8M:\
+:filesize=8M:\
+:coredumpsize=8M:\
+:openfiles=24:\
+:maxproc=32:\
+:priority=0:\
+:requirehome:\
+:passwordtime=91d:\
+:umask=022:\
+:ignoretime@:\
+:label=partition/13,mls/5:</programlisting>
+
+      <para>And adding the following line to the default user
+	class:</para>
+
+      <programlisting>:label=mls/equal,biba/equal,partition/15:</programlisting>
+
+      <para>Once this is completed, the following command must be
+	issued to rebuild the database:</para>
+
+      <screen>&prompt.root; <userinput>cap_mkdb /etc/login.conf</userinput></screen>
+    </sect2>
+
+    <sect2>
+      <title>Boot with the Correct Modules</title>
+
+      <para>Add the following lines to
+	<filename>/boot/loader.conf</filename> so the required
+	modules will load during system initialization:</para>
+
+      <programlisting>mac_biba_load="YES"
+mac_mls_load="YES"
+mac_seeotheruids_load="YES"
+mac_partition_load="YES"</programlisting>
+    </sect2>
+
+    <sect2>
+      <title>Set All Users to Insecure</title>
+
+      <para>All user accounts that are not <systemitem class="username">root</systemitem>
+	or system users will now require a login class.  The login
+	class is required otherwise users will be refused access
+	to common commands such as &man.vi.1;.
+	The following <command>sh</command> script should do the
+	trick:</para>
+
+      <screen>&prompt.root; <userinput>for x in `awk -F: '($3 &gt;= 1001) &amp;&amp; ($3 != 65534) { print $1 }' \</userinput>
+	<userinput>/etc/passwd`; do pw usermod $x -L insecure; done;</userinput></screen>
+
+      <para>The <command>cap_mkdb</command> command will need to be
+	run on <filename>/etc/master.passwd</filename> after this
+	change.</para>
+    </sect2>
+
+    <sect2>
+      <title>Complete the Configuration</title>
+
+      <para>A contexts file should now be created; the following
+	example was taken from Robert Watson's example policy and
+	should be placed in
+	<filename>/etc/policy.contexts</filename>.</para>
+
+      <programlisting># This is the default BIBA/MLS policy for this system.
+
+.*                              biba/high,mls/high
+/sbin/dhclient                  biba/high(low),mls/high(low)
+/dev(/.*)?                      biba/equal,mls/equal
+# This is not an exhaustive list of all "privileged" devices.
+/dev/mdctl                      biba/high,mls/high
+/dev/pci                        biba/high,mls/high
+/dev/k?mem                      biba/high,mls/high
+/dev/io                         biba/high,mls/high
+/dev/agp.*                      biba/high,mls/high
+(/var)?/tmp(/.*)?               biba/equal,mls/equal
+/tmp/\.X11-unix                 biba/high(equal),mls/high(equal)
+/tmp/\.X11-unix/.*              biba/equal,mls/equal
+/proc(/.*)?                     biba/equal,mls/equal
+/mnt.*                          biba/low,mls/low
+(/usr)?/home                    biba/high(low),mls/high(low)
+(/usr)?/home/.*                 biba/low,mls/low
+/var/mail(/.*)?                 biba/low,mls/low
+/var/spool/mqueue(/.*)?         biba/low,mls/low
+(/mnt)?/cdrom(/.*)?             biba/high,mls/high
+(/usr)?/home/(ftp|samba)(/.*)?  biba/high,mls/high
+/var/log/sendmail\.st           biba/low,mls/low
+/var/run/utmp                   biba/equal,mls/equal
+/var/log/(lastlog|wtmp)         biba/equal,mls/equal</programlisting>
+
+      <para>This policy will enforce security by setting restrictions
+	on both the downward and upward flow of information with
+	regards to the directories and utilities listed on the
+	left.</para>
+
+      <para>This can now be read into our system by issuing the
+	following command:</para>
+
+      <screen>&prompt.root; <userinput>setfsmac -ef /etc/policy.contexts /</userinput>
+&prompt.root; <userinput>setfsmac -ef /etc/policy.contexts /usr</userinput></screen>
+
+      <note>
+	<para>The above file system layout may be different depending
+	  on environment.</para>
+      </note>
+
+      <para>The <filename>/etc/mac.conf</filename> file requires
+	the following modifications in the main section:</para>
+
+      <programlisting>default_labels file ?biba,?mls
+default_labels ifnet ?biba,?mls
+default_labels process ?biba,?mls,?partition
+default_labels socket ?biba,?mls</programlisting>
+    </sect2>
+
+    <sect2>
+      <title>Testing the Configuration</title>
+
+      <indexterm>
+	<primary>MAC Configuration Testing</primary>
+      </indexterm>
+
+      <para>Add a user with the <command>adduser</command> command
+	and place that user in the <literal>insecure</literal>
+	class for these tests.</para>
+
+      <para>The examples below will show a mix of
+	<systemitem class="username">root</systemitem> and regular user tests; use the
+	prompt to distinguish between the two.</para>
+
+      <sect3>
+	<title>Basic Labeling Tests</title>
+
+	<screen>&prompt.user; <userinput>getpmac</userinput>
+biba/15(15-15),mls/15(15-15),partition/15
+&prompt.root; <userinput>setpmac partition/15,mls/equal top</userinput></screen>
+
+	<note>
+	  <para>The top process will be killed before we start
+	    another top process.</para>
+	</note>
+      </sect3>
+
+      <sect3>
+	<title>MAC Seeotheruids Tests</title>
+
+	<screen>&prompt.user; <userinput>ps Zax</userinput>
+biba/15(15-15),mls/15(15-15),partition/15  1096 #C:  S      0:00.03 -su (bash)
+biba/15(15-15),mls/15(15-15),partition/15  1101 #C:  R+     0:00.01 ps Zax</screen>
+
+	<para>We should not be permitted to see any processes
+	  owned by other users.</para>
+      </sect3>
+
+      <sect3>
+	<title>MAC Partition Test</title>
+
+	<para>Disable the <acronym>MAC</acronym>
+	  <literal>seeotheruids</literal> policy for the rest of these
+	  tests:</para>
+
+	<screen>&prompt.root; <userinput>sysctl security.mac.seeotheruids.enabled=0</userinput>
+&prompt.user; <userinput>ps Zax</userinput>
+LABEL                                                   PID  TT  STAT      TIME COMMAND
+  biba/equal(low-high),mls/equal(low-high),partition/15  1122 #C:  S+     0:00.02 top
+  biba/15(15-15),mls/15(15-15),partition/15              1096 #C:  S      0:00.05 -su (bash)
+  biba/15(15-15),mls/15(15-15),partition/15              1123 #C:  R+     0:00.01 ps Zax</screen>
+
+	<para>All users should be permitted to see every process in
+	  their partition.</para>
+      </sect3>
+
+      <sect3>
+	<title>Testing Biba and MLS Labels</title>
+
+	<screen>&prompt.root; <userinput>setpmac partition/15,mls/equal,biba/high\(high-high\) top</userinput>
+&prompt.user; <userinput>ps Zax</userinput>
+LABEL                                                   PID  TT  STAT    TIME   COMMAND
+  biba/high(high-high),mls/equal(low-high),partition/15   1251 #C:  S+     0:00.02 top
+  biba/15(15-15),mls/15(15-15),partition/15               1096 #C:  S      0:00.06 -su (bash)
+  biba/15(15-15),mls/15(15-15),partition/15               1157 #C:  R+     0:00.00 ps Zax</screen>
+
+	<para>The Biba policy allows us to read higher-labeled
+	  objects.</para>
+
+	<screen>&prompt.root; <userinput>setpmac partition/15,mls/equal,biba/low top</userinput>
+&prompt.user; <userinput>ps Zax</userinput>
+LABEL                                       PID  TT  STAT      TIME COMMAND
+  biba/15(15-15),mls/15(15-15),partition/15  1096 #C:  S      0:00.07 -su (bash)
+  biba/15(15-15),mls/15(15-15),partition/15  1226 #C:  R+     0:00.01 ps Zax</screen>
+
+	<para>The Biba policy does not allow lower-labeled objects
+	  to be read; however, <acronym>MLS</acronym> does.</para>
+
+	<screen>&prompt.user; <userinput>ifconfig bge0 | grep maclabel</userinput>
+maclabel biba/low(low-low),mls/low(low-low)
+&prompt.user; <userinput>ping -c 1 192.0.34.166</userinput>
+PING 192.0.34.166 (192.0.34.166): 56 data bytes
+ping: sendto: Permission denied</screen>
+
+	<para>Users are unable to ping
+	  <systemitem class="fqdomainname">example.com</systemitem>, or any domain
+	  for that matter.</para>
+
+	<para>To prevent this error from occurring, run the following
+	  command:</para>
+
+	<screen>&prompt.root; <userinput>sysctl security.mac.biba.trust_all_interfaces=1</userinput></screen>
+
+	<para>This sets the default interface label to insecure mode,
+	  so the default Biba policy label will not be enforced.</para>
+
+	<screen>&prompt.root; <userinput>ifconfig bge0 maclabel biba/equal\(low-high\),mls/equal\(low-high\)</userinput>
+&prompt.user; <userinput>ping -c 1 192.0.34.166</userinput>
+PING 192.0.34.166 (192.0.34.166): 56 data bytes
+64 bytes from 192.0.34.166: icmp_seq=0 ttl=50 time=204.455 ms
+--- 192.0.34.166 ping statistics ---
+1 packets transmitted, 1 packets received, 0% packet loss
+round-trip min/avg/max/stddev = 204.455/204.455/204.455/0.000 ms</screen>
+
+	<para>By setting a more correct label, we can issue
+	  <command>ping</command> requests.</para>
+
+	<para>Now to create a few files for some read and write
+	  testing procedures:</para>
+
+	<screen>&prompt.root; <userinput>touch test1 test2 test3 test4 test5</userinput>
+&prompt.root; <userinput>getfmac test1</userinput>
+test1: biba/equal,mls/equal
+&prompt.root; <userinput>setfmac biba/low test1 test2; setfmac biba/high test4 test5; \
+  setfmac mls/low test1 test3; setfmac mls/high test2 test4</userinput>
+&prompt.root; <userinput>setfmac mls/equal,biba/equal test3 &amp;&amp; getfmac test?</userinput>
+test1: biba/low,mls/low
+test2: biba/low,mls/high
+test3: biba/equal,mls/equal
+test4: biba/high,mls/high
+test5: biba/high,mls/equal
+&prompt.root; <userinput>chown testuser:testuser test?</userinput></screen>
+
+	<para>All of these files should now be owned by our
+	  <systemitem class="username">testuser</systemitem> user.  And now for some read
+	  tests:</para>
+
+	<screen>&prompt.user; <userinput>ls</userinput>
+test1   test2   test3   test4   test5
+&prompt.user; <userinput>ls test?</userinput>
+ls: test1: Permission denied
+ls: test2: Permission denied
+ls: test4: Permission denied
+test3   test5</screen>
+
+	<para>We should not be permitted to observe pairs; e.g.:
+	  <literal>(biba/low,mls/low)</literal>,
+	  <literal>(biba/low,mls/high)</literal> and
+	  <literal>(biba/high,mls/high)</literal>.  And of course,
+	  read access should be denied.  Now for some write
+	  tests:</para>
+
+	<screen>&prompt.user; <userinput>for i in `echo test*`; do echo 1 &gt; $i; done</userinput>
+-su: test1: Permission denied
+-su: test4: Permission denied
+-su: test5: Permission denied</screen>
+
+	<para>Like with the read tests, write access should not be
+	  permitted to write pairs; e.g.:
+	  <literal>(biba/low,mls/high)</literal> and
+	  <literal>(biba/equal,mls/equal)</literal>.</para>
+
+	<screen>&prompt.user; <userinput>cat test?</userinput>
+cat: test1: Permission denied
+cat: test2: Permission denied
+1
+cat: test4: Permission denied</screen>
+
+	<para>And now as <systemitem class="username">root</systemitem>:</para>
+
+	<screen>&prompt.root; <userinput>cat test2</userinput>
+1</screen>
+      </sect3>
+    </sect2>
+  </sect1>
+
+  <sect1 xml:id="MAC-examplehttpd">
+    <title>Another Example: Using MAC to Constrain a Web Server</title>
+
+      <para>A separate location for the web data which users
+	must be capable of accessing will be appointed.  This
+	will permit <literal>biba/high</literal> processes access
+	rights to the web data.</para>
+
+      <para>Begin by creating a directory to store the web
+	data in:</para>
+
+      <screen>&prompt.root; <userinput>mkdir /usr/home/cvs</userinput></screen>
+
+      <para>Now initialize it with <command>cvs</command>:</para>
+
+      <screen>&prompt.root; <userinput>cvs -d /usr/home/cvs init</userinput></screen>
+
+      <para>The first goal is to enable the <literal>biba</literal>
+	policy, thus the <literal>mac_biba_enable="YES"</literal>
+	should be placed in
+	<filename>/boot/loader.conf</filename>.  This assumes
+	that support for <acronym>MAC</acronym> has been enabled
+	in the kernel.</para>
+
+      <para>From this point on everything in the system should
+	be set at <literal>biba/high</literal> by default.</para>
+
+      <para>The following modification must be made to the
+	<filename>login.conf</filename> file, under the default
+	user class:</para>
+
+      <programlisting>:ignoretime@:\
+	:umask=022:\
+	:label=biba/high:</programlisting>
+
+      <para>Every user should now be placed in the default class;
+	a command such as:</para>
+
+      <screen>&prompt.root; <userinput>for x in `awk -F: '($3 &gt;= 1001) &amp;&amp; ($3 != 65534) { print $1 }' \</userinput>
+	<userinput>/etc/passwd`; do pw usermod $x -L default; done;</userinput></screen>
+
+      <para>will accomplish this task in a few moments.</para>
+
+      <para>Now create another class, web, a copy of default,
+	with the label setting of <literal>biba/low</literal>.</para>
+
+      <para>Create a user who will be used to work with the
+	main web data stored in a <application>cvs</application>
+	repository.  This user must be placed in our new login
+	class, <systemitem class="username">web</systemitem>.</para>
+
+      <para>Since the default is <literal>biba/high</literal>
+	everywhere, the repository will be the same.  The web data must
+	also be the same for users to have read/write access to it;
+	however, since our web server will be serving data that
+	<literal>biba/high</literal> users must access, we will need to
+	downgrade the data as a	whole.</para>
+
+      <para>The perfect tools for this are &man.sh.1; and
+	&man.cron.8; and are already provided in &os;.  The following
+	script should do everything we want:</para>
+
+      <programlisting>PATH=/bin:/usr/bin:/usr/local/bin; export PATH;
+CVSROOT=/home/repo; export CVSROOT;
+cd /home/web;
+cvs -qR checkout -P htdocs;
+exit;</programlisting>
+
+      <note>
+	<para>In many cases the <command>cvs</command>
+	  Id tags must be placed into the web
+	  site data files.</para>
+      </note>
+
+      <para>This script may now be placed into
+	<systemitem class="username">web</systemitem>'s home directory and the following
+	&man.crontab.1; entry added:</para>
+
+      <programlisting># Check out the web data as biba/low every twelve hours:
+0       */12       *       *       *       web    /home/web/checkout.sh</programlisting>
+
+      <para>This will check out the <acronym>HTML</acronym> sources
+	every twelve hours on the machine.</para>
+
+      <para>The default startup method for the web server must also be
+	modified to start the process as <literal>biba/low</literal>.
+	This can be done by making the following modification to the
+	<filename>/usr/local/etc/rc.d/apache.sh</filename>
+	script:</para>
+
+      <programlisting>command="setpmac biba/low /usr/local/sbin/httpd"</programlisting>
+
+      <para>The <application>Apache</application> configuration must be
+	altered to work with the <literal>biba/low</literal> policy.  In
+	this case the software must be configured to append to the
+	log files in a directory set at <literal>biba/low</literal>
+	or else <errorname>access denied</errorname> errors will be
+	returned.</para>
+
+      <note>
+	<para>Following this example requires that the
+	  <literal>docroot</literal> directive be set to
+	  <filename>/home/web/htdocs</filename>; otherwise,
+	  <application>Apache</application> will fail when trying
+	  to locate the directory to serve documents from.</para>
+      </note>
+
+      <para>Other configuration variables must be altered as well,
+	including the <acronym>PID</acronym> file,
+	<literal>Scoreboardfile</literal>,
+	<literal>DocumentRoot</literal>, log file locations, or any
+	other variable which requires write access.
+	When using <literal>biba</literal>, all write access will be
+	denied to the server in areas <emphasis>not</emphasis> set at
+	<literal>biba/low</literal>.</para>
+<!--
+PROBLEM: CAN THIS WORK?  OR SHOULD IT BE start_precmd?  More testing need here.
+-->
+  </sect1>
+
+<!--
+XXX
+
+  <sect1 id="mac-examplesandbox">
+    <title>An Example of a MAC Sandbox</title>
+
+    <para>An example of placing users in a sandbox using
+      <acronym>MAC</acronym> should go here.</para>
+  </sect1>
+-->
+
+  <sect1 xml:id="mac-troubleshoot">
+    <title>Troubleshooting the MAC Framework</title>
+
+    <indexterm>
+      <primary>MAC Troubleshooting</primary>
+    </indexterm>
+
+    <para>During the development stage, a few users reported problems
+      with normal configuration.  Some of these problems
+      are listed below:</para>
+
+    <sect2>
+      <title>The <option>multilabel</option> option cannot be enabled on
+	<filename>/</filename></title>
+
+      <para>The <option>multilabel</option> flag does not stay
+	enabled on my root (<filename>/</filename>) partition!</para>
+
+
+      <para>It seems that one out of every fifty users has this
+	problem, indeed, we had this problem during our initial
+	configuration.  Further observation of this so called
+	<quote>bug</quote> has lead me to believe that it is a
+	result of either incorrect documentation or misinterpretation
+	of the documentation.  Regardless of why it happened, the
+	following steps may be taken to resolve it:</para>
+
+      <procedure>
+	<step>
+	  <para>Edit <filename>/etc/fstab</filename> and set the root
+	    partition at <option>ro</option> for read-only.</para>
+	</step>
+
+	<step>
+	  <para>Reboot into single user mode.</para>
+	</step>
+
+	<step>
+	  <para>Run <command>tunefs</command> <option>-l enable</option>
+	    on <filename>/</filename>.</para>
+	</step>
+
+	<step>
+	  <para>Reboot the system into normal mode.</para>
+	</step>
+
+	<step>
+	  <para>Run <command>mount</command> <option>-urw</option>
+	  <filename>/</filename> and change the <option>ro</option>
+	  back to <option>rw</option> in <filename>/etc/fstab</filename>
+	  and reboot the system again.</para>
+	</step>
+
+	<step>
+	  <para>Double-check the output from the
+	  <command>mount</command> to ensure that
+	  <option>multilabel</option> has been properly set on the
+	  root file system.</para>
+	</step>
+     </procedure>
+    </sect2>
+
+    <sect2>
+      <title>Cannot start a X11 server after <acronym>MAC</acronym></title>
+
+      <para>After establishing a secure environment with
+	<acronym>MAC</acronym>, I am no longer able to start
+	X!</para>
+
+      <para>This could be caused by the <acronym>MAC</acronym>
+	<literal>partition</literal> policy or by a mislabeling in
+	one of the <acronym>MAC</acronym> labeling policies.  To
+	debug, try the following:</para>
+
+      <procedure>
+	<step>
+	  <para>Check the error message; if the user is in the
+	    <literal>insecure</literal> class, the
+	    <literal>partition</literal> policy may be the culprit.
+	    Try setting the user's class back to the
+	    <literal>default</literal> class and rebuild the database
+	    with the <command>cap_mkdb</command> command.  If this
+	    does not alleviate the problem, go to step two.</para>
+	</step>
+
+	<step>
+	  <para>Double-check the label policies.  Ensure that the
+	    policies are set correctly for the user in question, the
+	    X11 application, and
+	    the <filename>/dev</filename>
+	    entries.</para>
+	</step>
+
+	<step>
+	  <para>If neither of these resolve the problem, send the
+	    error message and a description of your environment to
+	    the TrustedBSD discussion lists located at the
+	    <link xlink:href="http://www.TrustedBSD.org">TrustedBSD</link>
+	    website or to the &a.questions;
+	    mailing list.</para>
+	</step>
+      </procedure>
+    </sect2>
+
+    <sect2>
+      <title>Error: &man..secure.path.3; cannot stat <filename>.login_conf</filename></title>
+
+      <para>When I attempt to switch from the <systemitem class="username">root</systemitem>
+	to another user in the system, the error message
+	<errorname>_secure_path: unable to state .login_conf</errorname>.</para>
+
+      <para>This message is usually shown when the user has a higher
+	label setting then that of the user whom they are attempting to
+	become.  For instance a user on the system,
+	<systemitem class="username">joe</systemitem>, has a	default label of
+	<option>biba/low</option>.  The <systemitem class="username">root</systemitem> user,
+	who has a label of <option>biba/high</option>, cannot view
+	<systemitem class="username">joe</systemitem>'s home directory.  This will happen
+	regardless if <systemitem class="username">root</systemitem> has used the
+	<command>su</command> command to become <systemitem class="username">joe</systemitem>,
+	or not.  In this scenario, the Biba integrity model will not
+	permit <systemitem class="username">root</systemitem> to view objects set at a lower
+	integrity level.</para>
+    </sect2>
+
+    <sect2>
+      <title>The <systemitem class="username">root</systemitem> username is broken!</title>
+
+      <para>In normal or even single user mode, the
+	<systemitem class="username">root</systemitem> is not recognized.  The
+	<command>whoami</command> command returns 0 (zero) and
+	<command>su</command> returns <errorname>who are you?</errorname>.
+	What could be going on?</para>
+
+      <para>This can happen if a labeling policy has been disabled,
+	either by a &man.sysctl.8; or the policy module was unloaded.
+	If the policy is being disabled or has been temporarily
+	disabled, then the login capabilities database needs to be
+	reconfigured with the <option>label</option> option being
+	removed.  Double check the <filename>login.conf</filename>
+	file to ensure that all <option>label</option> options have
+	been removed and rebuild the database with the
+	<command>cap_mkdb</command> command.</para>
+    </sect2>
+  </sect1>
+</chapter>
