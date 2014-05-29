@@ -107,16 +107,16 @@ sub CgiError {
 sub PrintVariables {
   local (%in) = @_;
   local ($old, $out, $output);
-  $old = $*;  $* =1;
+  #$old = $*;  $* =1;
   $output .=  "<DL COMPACT>";
   foreach $key (sort keys(%in)) {
     foreach (split("\0", $in{$key})) {
-      ($out = $_) =~ s/\n/<BR>/g;
+      ($out = $_) =~ s/\n/<BR>/gm;
       $output .=  "<DT><B>$key</B><DD><I>$out</I><BR>";
     }
   }
   $output .=  "</DL>";
-  $* = $old;
+  #$* = $old;
   return $output;
 }
 1;
