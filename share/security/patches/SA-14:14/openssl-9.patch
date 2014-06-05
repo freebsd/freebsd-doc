@@ -1,0 +1,135 @@
+Index: crypto/openssl/ssl/d1_both.c
+===================================================================
+--- crypto/openssl/ssl/d1_both.c	(revision 267031)
++++ crypto/openssl/ssl/d1_both.c	(working copy)
+@@ -620,8 +620,17 @@ dtls1_reassemble_fragment(SSL *s, struct hm_header
+ 		frag->msg_header.frag_off = 0;
+ 		}
+ 	else
++		{
+ 		frag = (hm_fragment*) item->data;
++		if (frag->msg_header.msg_len != msg_hdr->msg_len)
++			{
++			item = NULL;
++			frag = NULL;
++			goto err;
++			}
++		}
+ 
++
+ 	/* If message is already reassembled, this must be a
+ 	 * retransmit and can be dropped.
+ 	 */
+@@ -777,6 +786,7 @@ dtls1_get_message_fragment(SSL *s, int st1, int st
+ 	int i,al;
+ 	struct hm_header_st msg_hdr;
+ 
++	redo:
+ 	/* see if we have the required fragment already */
+ 	if ((frag_len = dtls1_retrieve_buffered_fragment(s,max,ok)) || *ok)
+ 		{
+@@ -835,8 +845,7 @@ dtls1_get_message_fragment(SSL *s, int st1, int st
+ 					s->msg_callback_arg);
+ 			
+ 			s->init_num = 0;
+-			return dtls1_get_message_fragment(s, st1, stn,
+-				max, ok);
++			goto redo;
+ 			}
+ 		else /* Incorrectly formated Hello request */
+ 			{
+Index: crypto/openssl/ssl/s3_clnt.c
+===================================================================
+--- crypto/openssl/ssl/s3_clnt.c	(revision 267031)
++++ crypto/openssl/ssl/s3_clnt.c	(working copy)
+@@ -491,6 +491,7 @@ int ssl3_connect(SSL *s)
+ 		case SSL3_ST_CR_FINISHED_A:
+ 		case SSL3_ST_CR_FINISHED_B:
+ 
++			s->s3->flags |= SSL3_FLAGS_CCS_OK;
+ 			ret=ssl3_get_finished(s,SSL3_ST_CR_FINISHED_A,
+ 				SSL3_ST_CR_FINISHED_B);
+ 			if (ret <= 0) goto end;
+@@ -777,6 +778,7 @@ int ssl3_get_server_hello(SSL *s)
+ 		SSLerr(SSL_F_SSL3_GET_SERVER_HELLO,SSL_R_ATTEMPT_TO_REUSE_SESSION_IN_DIFFERENT_CONTEXT);
+ 		goto f_err;
+ 		}
++	    s->s3->flags |= SSL3_FLAGS_CCS_OK;
+ 	    s->hit=1;
+ 	    }
+ 	else	/* a miss or crap from the other end */
+@@ -2170,6 +2172,13 @@ int ssl3_send_client_key_exchange(SSL *s)
+ 			int ecdh_clnt_cert = 0;
+ 			int field_size = 0;
+ 
++			if (s->session->sess_cert == NULL) 
++				{
++				ssl3_send_alert(s,SSL3_AL_FATAL,SSL_AD_UNEXPECTED_MESSAGE);
++				SSLerr(SSL_F_SSL3_SEND_CLIENT_KEY_EXCHANGE,SSL_R_UNEXPECTED_MESSAGE);
++				goto err;
++				}
++
+ 			/* Did we send out the client's
+ 			 * ECDH share for use in premaster
+ 			 * computation as part of client certificate?
+Index: crypto/openssl/ssl/s3_pkt.c
+===================================================================
+--- crypto/openssl/ssl/s3_pkt.c	(revision 267031)
++++ crypto/openssl/ssl/s3_pkt.c	(working copy)
+@@ -1147,6 +1147,15 @@ start:
+ 			goto f_err;
+ 			}
+ 
++		if (!(s->s3->flags & SSL3_FLAGS_CCS_OK))
++			{
++			al=SSL_AD_UNEXPECTED_MESSAGE;
++			SSLerr(SSL_F_SSL3_READ_BYTES,SSL_R_CCS_RECEIVED_EARLY);
++			goto f_err;
++			}
++
++		s->s3->flags &= ~SSL3_FLAGS_CCS_OK;
++
+ 		rr->length=0;
+ 
+ 		if (s->msg_callback)
+@@ -1278,7 +1287,7 @@ int ssl3_do_change_cipher_spec(SSL *s)
+ 
+ 	if (s->s3->tmp.key_block == NULL)
+ 		{
+-		if (s->session == NULL) 
++		if (s->session == NULL || s->session->master_key_length == 0)
+ 			{
+ 			/* might happen if dtls1_read_bytes() calls this */
+ 			SSLerr(SSL_F_SSL3_DO_CHANGE_CIPHER_SPEC,SSL_R_CCS_RECEIVED_EARLY);
+Index: crypto/openssl/ssl/s3_srvr.c
+===================================================================
+--- crypto/openssl/ssl/s3_srvr.c	(revision 267031)
++++ crypto/openssl/ssl/s3_srvr.c	(working copy)
+@@ -523,6 +523,7 @@ int ssl3_accept(SSL *s)
+ 		case SSL3_ST_SR_CERT_VRFY_A:
+ 		case SSL3_ST_SR_CERT_VRFY_B:
+ 
++			s->s3->flags |= SSL3_FLAGS_CCS_OK;
+ 			/* we should decide if we expected this one */
+ 			ret=ssl3_get_cert_verify(s);
+ 			if (ret <= 0) goto end;
+@@ -533,6 +534,7 @@ int ssl3_accept(SSL *s)
+ 
+ 		case SSL3_ST_SR_FINISHED_A:
+ 		case SSL3_ST_SR_FINISHED_B:
++			s->s3->flags |= SSL3_FLAGS_CCS_OK;
+ 			ret=ssl3_get_finished(s,SSL3_ST_SR_FINISHED_A,
+ 				SSL3_ST_SR_FINISHED_B);
+ 			if (ret <= 0) goto end;
+Index: crypto/openssl/ssl/ssl3.h
+===================================================================
+--- crypto/openssl/ssl/ssl3.h	(revision 267031)
++++ crypto/openssl/ssl/ssl3.h	(working copy)
+@@ -344,6 +344,7 @@ typedef struct ssl3_buffer_st
+  * effected, but we can't prevent that.
+  */
+ #define SSL3_FLAGS_SGC_RESTART_DONE		0x0040
++#define SSL3_FLAGS_CCS_OK			0x0080
+ 
+ typedef struct ssl3_state_st
+ 	{
