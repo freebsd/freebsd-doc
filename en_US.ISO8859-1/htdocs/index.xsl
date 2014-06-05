@@ -78,8 +78,8 @@
 				  <h2><a href="&base;/releases/">LATEST RELEASES</a></h2>
 				  <ul id="frontreleaseslist">
 					<li>Production:&nbsp;<a
-				href="&u.rel.announce;">&rel.current;</a></li>
-					<li>Legacy: <a
+				href="&u.rel.announce;">&rel.current;</a>,<br />
+					<a
 				href="&u.rel2.announce;">&rel2.current;</a>,
 					<a
 				href="&u.rel3.announce;">&rel3.current;</a></li>
@@ -91,6 +91,7 @@
 					<li>Upcoming: <a
 				href="&u.betarel2.schedule;">&betarel2.current;</a></li>
 			    </xsl:if>
+					<li><a href="&base;/security/security.html#sup">Support Lifecycle</a></li>
 				  </ul>
 			  </div> <!-- FRONTRELEASESCONTENT -->
 			</div> <!-- FRONTRELEASES -->
