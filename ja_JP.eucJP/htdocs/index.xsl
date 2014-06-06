@@ -5,7 +5,7 @@
 ]>
 
 <!-- $FreeBSD$ -->
-<!-- Original revision: r44930 -->
+<!-- Original revision: r45016 -->
 
 <xsl:stylesheet version="1.0"
   xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
@@ -74,8 +74,8 @@
 			  <h2><a href="&base;/releases/">最新リリース</a></h2>
 			  <ul id="frontreleaseslist">
 			    <li>プロダクション:&nbsp;<a
-				href="&u.rel.announce;">&rel.current;</a></li>
-			    <li>レガシー: <a
+				href="&u.rel.announce;">&rel.current;</a>,<br />
+					<a
 				href="&u.rel2.announce;">&rel2.current;</a>,
 					<a
 				href="&u.rel3.announce;">&rel3.current;</a></li>
@@ -87,6 +87,7 @@
 			    <li>次回予定: <a
 				href="&u.betarel2.schedule;">&betarel2.current;</a></li>
 			    </xsl:if>
+					<li><a href="&base;/security/security.html#sup">サポートライフサイクル</a></li>
 			  </ul>
 			  </div> <!-- FRONTRELEASESCONTENT -->
 			</div> <!-- FRONTRELEASES -->
