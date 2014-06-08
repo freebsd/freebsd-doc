@@ -862,6 +862,6 @@ sub FooterLinks
 	my $url = $q->url(-full => 1, -query => 1);
 
 	return $q->div({-class => 'footerlinks'},
-		. $q->a({-href => $url . '&f=raw'}, 'Raw PR')
+		$q->a({-href => $url . '&f=raw'}, 'Raw PR')
 	);
 }
