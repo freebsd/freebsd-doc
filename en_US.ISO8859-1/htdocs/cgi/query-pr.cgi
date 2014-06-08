@@ -861,42 +861,7 @@ sub FooterLinks
 
 	my $url = $q->url(-full => 1, -query => 1);
 
-	my $pr       = $q->escapeHTML($gnatspr->FieldSingle('Number'));
-	my $cat      = $q->escapeHTML($gnatspr->FieldSingle('Category'));
-	my $synopsis = $q->escapeHTML($gnatspr->FieldSingle('Synopsis'));
-
-	my $mail = $gnatspr->Header('From');
-
-	# Try to extract just the e-mail address from the 'From' header
-	if ($mail) {
-		$mail =~ s/^\s*(.*)\s*$/$1/;
-		$mail =~ s/.*<(.*)>.*/$1/;
-		$mail =~ s/\s*\(.*\)\s*//;
-	}
-
-	my $replyto = $gnatspr->Header('Reply-To');
-
-	# ... same with the 'Reply-To' header
-	if ($replyto) {
-		$replyto =~ s/^\s*(.*)\s*$/$1/;
-		$replyto =~ s/.*<(.*)>.*/$1/;
-		$replyto =~ s/\s*\(.*\)\s*//;
-	}
-
-	# Prefer 'Reply-To' if present
-	$mail = $replyto if ($replyto);
-	$mail .= '@FreeBSD.org' unless ($mail =~ /@/);
-
-	# Prepare for mailto: link
-	$synopsis =~ s/[^a-zA-Z+.@-]/"%" . sprintf("%02X", unpack("C", $&))/eg;
-	$mail     =~ s/[^a-zA-Z+.@-]/"%" . sprintf("%02X", unpack("C", $&))/eg;
-
-	my $maillink = 'mailto:bug-followup@FreeBSD.org,'
-		. "$mail?subject=Re:%20$cat/$pr:%20$synopsis";
-
 	return $q->div({-class => 'footerlinks'},
-		$q->a({-href => $maillink}, 'Submit Followup')
-		. ' | ' . $q->a({-href => $url . '&f=raw'}, 'Raw PR')
-		. ' | ' . $q->a({-href => 'query-pr-summary.cgi?query'}, 'Find another PR')
+		. $q->a({-href => $url . '&f=raw'}, 'Raw PR')
 	);
 }
