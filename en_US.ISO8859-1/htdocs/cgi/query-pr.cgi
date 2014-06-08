@@ -34,14 +34,6 @@
 #                  malformed header)
 # - ports/138672 - Lots of attachments, multi-level MIME.
 # - ports/132344 - Base64-encoded attachment.
-#
-# TODO:
-#
-# - Charset and transfer encoding transformation.
-# - Refine linkifier.
-# - Better end-of-diff detection.
-# - Inline patches inside MIME parts (probably just the first part).
-# - Modernise HTML (may require altering site-wide CSS)
 #------------------------------------------------------------------------------
 
 BEGIN { push @INC, '.'; }

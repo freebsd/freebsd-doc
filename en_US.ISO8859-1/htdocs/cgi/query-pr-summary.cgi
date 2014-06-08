@@ -116,75 +116,10 @@ sub header_info {
 	print "Current $project problem reports\n";
     }
     if (!$input{'quiet'}) {
-       print "The following is a listing of current problems submitted by $project users. " .
-	  'These represent problem reports covering all versions including ' .
-	  'experimental development code and obsolete releases. ';
+       print "The following is an old and incomplete of current problems submitted by $project users. ";
        if ($html_mode) {
 	  print <<EOM;
-
-<p>
-Bugs can be in one of several states:
-</p>
-<dl>
-<dt class='o'><strong>o - open</strong></dt>
-<dd>A problem report has been submitted, no sanity checking
-performed.</dd>
-
-<dt class='a'><strong>a - analyzed</strong></dt>
-<dd>The problem is understood and a solution is being sought.</dd>
-
-<dt class='f'><strong>f - feedback</strong></dt>
-<dd>Further work requires additional information from the originator
-or the community&mdash;possibly confirmation of the effectiveness of a
-proposed solution.</dd>
-
-<dt class='p'><strong>p - patched</strong></dt>
-<dd>A patch has been committed, but some issues (MFC and / or
-confirmation from originator) are still open.</dd>
-
-<dt class='s'><strong>s - suspended</strong></dt>
-<dd>The problem is not being worked on, due to lack of information or
-resources.  This is a prime candidate for somebody who is looking for a
-project to do. If the problem cannot be solved at all, it will be
-closed, rather than suspended.</dd>
-
-<dt class='c'><strong>c - closed</strong></dt>
-<dd>A problem report is closed when any changes have been integrated,
-documented, and tested&mdash;or when fixing the problem is abandoned.</dd>
-</dl>
-EOM
-
-       } else {
-
-print <<EOM;
-
-Bugs can be in one of several states:
-
-o - open
-A problem report has been submitted, no sanity checking performed.
-
-a - analyzed
-The problem is understood and a solution is being sought.
-
-f - feedback
-Further work requires additional information from the
-     originator or the community - possibly confirmation of
-     the effectiveness of a proposed solution.
-
-p - patched
-A patch has been committed, but some issues (MFC and / or
-     confirmation from originator) are still open.
-
-s - suspended
-The problem is not being worked on, due to lack of information
-     or resources.  This is a prime candidate
-     for somebody who is looking for a project to do.
-     If the problem cannot be solved at all,
-     it will be closed, rather than suspended.
-
-c - closed
-A problem report is closed when any changes have been integrated,
-     documented, and tested -- or when fixing the problem is abandoned.
+<h1>FreeBSD has migrated to <a href="http://bugs.freebsd.org/search/">Bugzilla</a>.  Please update your bookmarks and try your search there.</h1>
 EOM
        }
     }
@@ -292,7 +227,7 @@ if ($input{'sort'} eq 'lastmod') {
 }
 
 if ($#prs < $[) {
-	print "${h1}Please try <a href='http://bugs.freebsd.org/search/'>bugzilla</a> for an update to date search mechanism.${h1_e}\n";
+	print "${h1}Please try <a href='http://bugs.freebsd.org/search/'>bugzilla</a> for an up to date search mechanism.${h1_e}\n";
 
 } elsif ($input{'responsible'} eq 'summary') {
 	&resp_summary;
@@ -452,6 +387,7 @@ sub read_gnats {
 	} elsif (/>Synopsis:/) {
 	    $syn = &getline($_);
 	    $syn =~ s/[\t]+/ /g;
+
 
 	} elsif (/^$/) {
 	    $_ = sprintf("%s/%s", $cat, $number);
