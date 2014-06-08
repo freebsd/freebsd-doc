@@ -292,7 +292,7 @@ if ($input{'sort'} eq 'lastmod') {
 }
 
 if ($#prs < $[) {
-	print "${h1}No matches to your query${h1_e}\n";
+	print "${h1}Please try <a href='http://bugs.freebsd.org/search/'>bugzilla</a> for an update to date search mechanism.${h1_e}\n";
 
 } elsif ($input{'responsible'} eq 'summary') {
 	&resp_summary;
