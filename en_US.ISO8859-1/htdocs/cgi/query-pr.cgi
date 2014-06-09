@@ -733,8 +733,7 @@ sub ErrorExit
 	my $url = $q->url(-full => 1, -query => 1);
 
 	if ($code == EXIT_NOPRS) {
-		print html_header("FreeBSD has migrated to <a href='http://bugs.freebsd.org/search/'>Bugzilla</a>.  This form is obsolete and incomplete.");
-		displayform();
+		print html_header("FreeBSD has migrated to <a href='http://bugs.freebsd.org/search/'>Bugzilla</a>.  Try your search there.");
 		print html_footer();
 	} elsif ($code == EXIT_DBBUSY) {
 		print html_header("PR Database Busy");
