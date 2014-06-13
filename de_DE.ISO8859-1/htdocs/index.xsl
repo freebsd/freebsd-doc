@@ -90,7 +90,7 @@
 				href="&u.betarel2.schedule;">&betarel2.current;</a></li>
 			    </xsl:if>
 					<li><a
-					  href="&base;/security/security.html#sup">Unterstützte
+					  href="&enbase;/security/security.html#sup">Unterstützte
 					  FreeBSD-Versionen</a></li>
 				  </ul>
 			  </div> <!-- FRONTRELEASESCONTENT -->
