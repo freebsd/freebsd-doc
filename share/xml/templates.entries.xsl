@@ -40,7 +40,7 @@
       commercial listing into several sections. If your company
       supports a FreeBSD-compatible product or service that should
       be added to this page, please fill out a
-      <a href="http://www.FreeBSD.org/send-pr.html">problem report</a> for
+      <a href="https://bugs.freebsd.org/bugzilla/enter_bug.cgi">problem report</a> for
       category www.  Submissions should be in HTML and a medium-sized
       paragraph in length.</p>
 
