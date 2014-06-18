@@ -3,7 +3,7 @@
 				"http://www.FreeBSD.org/XML/share/xml/xslt10-freebsd.dtd">
 <!-- $FreeBSD$ -->
 <!-- The FreeBSD Japanese Documentation Project -->
-<!-- Original revision: r43972 -->
+<!-- Original revision: r45075 -->
 
 <xsl:stylesheet version="1.0"
   xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
@@ -71,8 +71,8 @@
   <xsl:template name="html-usergroups-list-header">
     <p>FreeBSD は広く使われており、世界中にたくさんのユーザグループがあります。</p>
     <p>このリストに載っていないユーザグループをご存知でしたら、
-      ぜひ、<a href="http://www.freebsd.org/ja/send-pr.html">障害報告</a
-	> の www カテゴリを使って以下の情報をお知らせください。</p>
+      ぜひ、<a href="https://bugs.freebsd.org/bugzilla/enter_bug.cgi">障害報告</a>
+      の www カテゴリを使って以下の情報をお知らせください。</p>
     <ol>
       <li>ユーザグループのウェブサイトの URL</li>
       <li>訪問者とウェブサイトの管理のために、担当者の連絡先のメールアドレス</li>
