@@ -243,7 +243,7 @@
     <p>FreeBSD's widespread popularity has spawned a number of user groups
       around the world.</p>
     <p>If you know of a FreeBSD user group not listed here,
-      please fill out a <a href="http://www.freebsd.org/send-pr.html">
+      please fill out a <a href="https://bugs.freebsd.org/bugzilla/enter_bug.cgi">
 	problem report</a> for category www with the following information:</p>
     <ol>
       <li>A URL for the user group's website.</li>
