@@ -258,10 +258,10 @@ sub PrintPR
 	# Page title
 
 	print html_header(
-			"FreeBSD has migrated to Bugzilla.  You should examine the <a href='https://bugs.freebsd.org/"
+			"FreeBSD has migrated to Bugzilla.  Please check the current <a href='https://bugs.freebsd.org/"
 			. $gnatspr->FieldSingle('Number') . "'/>Bugzilla version</a> of this PR."
 	);
-	print ("<h3>This historical version is likely out of date and is for debugging purposes only!</h3>\n");
+	print ("<h3>The historical version shown below is likely out of date and is for debugging purposes only!</h3>\n");
 
 	print ("<h3>" .
 		$q->escapeHTML(
