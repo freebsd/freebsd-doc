@@ -61,6 +61,16 @@
 				  title="Learn More">Learn More</a>
 				  </div> <!-- TXTFRONTFEATURELINK -->
 
+				  <div id="txtfrontjournalblock">
+				    <br/>&#187;
+				    <span
+				     id="txtfrontjournallink">
+				      Get the <a
+				       href="http://www.freebsdjournal.com/"
+				       title="&os;&nbsp;Journal">&os;&nbsp;Journal</a>
+				    </span> <!-- TXTFRONTJOURNALLINK -->
+				  </div> <!-- TXTFRONTJOURNALBLOCK -->
+
 			  </div> <!-- FRONTFEATURECONTENT -->
 		  </div> <!-- FRONTFEATURELEFT -->
 
