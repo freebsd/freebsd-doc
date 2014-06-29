@@ -44,7 +44,7 @@ my @ENV_captures = qw/	REMOTE_HOST
 # Returns X-header style headers for inclusion in the header of a PR
 sub env2hdr (@) {
 	my $headers = "";
-	for my $var (shift @_) {
+	foreach my $var (@_) {
 		next unless $ENV{$var};
 		$headers .= "X-$var: $ENV{$var}\n";
 	}
