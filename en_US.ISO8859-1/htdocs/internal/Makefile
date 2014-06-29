@@ -47,6 +47,6 @@ homepage.html:  homepage.inc
 CLEANFILES+=	homepage.inc
 .endif
 
-DATA+=	README.mirror ssh-keys.asc
+DATA+=	ssh-keys.asc
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"
