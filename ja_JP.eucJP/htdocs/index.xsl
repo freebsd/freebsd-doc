@@ -5,7 +5,7 @@
 ]>
 
 <!-- $FreeBSD$ -->
-<!-- Original revision: r45016 -->
+<!-- Original revision: r45134 -->
 
 <xsl:stylesheet version="1.0"
   xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
@@ -55,6 +55,17 @@
 			<div id="txtfrontfeaturelink">
 			  &#187;<a href="&base;/about.html" title="詳しくはこちら">詳しくはこちら</a>
 			</div> <!-- TXTFRONTFEATURELINK -->
+
+			<div id="txtfrontjournalblock">
+			  <br/>&#187;
+			  <span
+			    id="txtfrontjournallink">
+			    <a
+			      href="http://www.freebsdjournal.com/"
+			        title="&os;&nbsp;Journal">&os;&nbsp;Journal</a>
+			    を入手
+			  </span> <!-- TXTFRONTJOURNALLINK -->
+			</div> <!-- TXTFRONTJOURNALBLOCK -->
 		    </div> <!-- FRONTFEATURECONTENT -->
 		  </div> <!-- FRONTFEATURELEFT -->
 
