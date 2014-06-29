@@ -28,7 +28,6 @@ SUBDIR+= linux-comparison
 SUBDIR+= linux-emulation
 SUBDIR+= linux-users
 SUBDIR+= mailing-list-faq
-SUBDIR+= mh
 SUBDIR+= nanobsd
 SUBDIR+= new-users
 SUBDIR+= p4-primer
