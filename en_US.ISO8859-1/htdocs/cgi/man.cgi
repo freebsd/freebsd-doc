@@ -209,7 +209,7 @@ foreach my $os ( keys %$sectionpath ) {
 );
 
 $manLocalDir    = '/usr/local/www/bsddoc/man';
-$manPathDefault = 'FreeBSD 10.0-RELEASE';
+$manPathDefault = 'FreeBSD 9.3-RELEASE';
 
 %manPath = (
     'FreeBSD 9.2-RELEASE and Ports',
@@ -241,6 +241,11 @@ $manPathDefault = 'FreeBSD 10.0-RELEASE';
 "$manLocalDir/FreeBSD-10.0-RELEASE/man:$manLocalDir/FreeBSD-10.0-RELEASE/openssl/man",
     'FreeBSD 10.0-stable',
 "$manLocalDir/FreeBSD-10.0-stable/man:$manLocalDir/FreeBSD-10.0-stable/openssl/man",
+
+    'FreeBSD 9.3-RELEASE',
+"$manLocalDir/FreeBSD-9.3-RELEASE/man:$manLocalDir/FreeBSD-9.3-RELEASE/openssl/man",
+    'FreeBSD 9.3-stable',
+"$manLocalDir/FreeBSD-9.3-stable/man:$manLocalDir/FreeBSD-9.3-stable/openssl/man",
 
     'FreeBSD 9.2-stable',
 "$manLocalDir/FreeBSD-9.2-stable/man:$manLocalDir/FreeBSD-9.2-stable/openssl/man",
@@ -602,6 +607,7 @@ my $default_arch = 'i386';
 
 my %arch = ( 
 'FreeBSD 10.0-RELEASE' => { 'default' => 'i386', 'arch' => [qw/amd64 arm i386 powerpc sparc64/] } ,
+'FreeBSD 9.3-RELEASE' => { 'default' => 'i386', 'arch' => [qw/amd64 arm i386 powerpc sparc64/] } ,
 'FreeBSD 9.2-RELEASE' => { 'default' => 'i386', 'arch' => [qw/amd64 arm i386 powerpc sparc64/] } ,
 'FreeBSD 9.1-RELEASE' => { 'default' => 'i386', 'arch' => [qw/amd64 arm i386 powerpc sparc64/] } ,
 'FreeBSD 9.0-RELEASE' => { 'default' => 'i386', 'arch' => [qw/amd64 arm i386 powerpc sparc64/] } ,
@@ -637,12 +643,12 @@ while ( ( $key, $val ) = each %manPath ) {
 
 # keywords must be in lower cases.
 %manPathAliases = (
-    'freebsd',         'FreeBSD 10.0-RELEASE',
-    'freebsd-release', 'FreeBSD 10.0-RELEASE',
+    'freebsd',         'FreeBSD 9.3-RELEASE',
+    'freebsd-release', 'FreeBSD 9.3-RELEASE',
 
     'freebsd-stable',  'FreeBSD 10.0-stable',
     'freebsd-stable10', 'FreeBSD 10.0-stable',
-    'freebsd-stable9', 'FreeBSD 9.2-stable',
+    'freebsd-stable9', 'FreeBSD 9.3-stable',
     'freebsd-stable8', 'FreeBSD 8.4-stable',
     'freebsd-stable7', 'FreeBSD 7.4-stable',
     'freebsd-stable6', 'FreeBSD 6.4-stable',
