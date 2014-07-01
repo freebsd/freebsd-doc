@@ -288,8 +288,6 @@ DOC_PREFIX?=	${.CURDIR}/../../..
 XMLDOCS=	lastmod:::mirrors.lastmod.inc \
 		mirrors-ftp-index:::mirrors.xml.ftp.index.inc \
 		mirrors-ftp:::mirrors.xml.ftp.inc \
-		mirrors-cvsup-index:::mirrors.xml.cvsup.index.inc \
-		mirrors-cvsup:::mirrors.xml.cvsup.inc \
 		eresources-index:::eresources.xml.www.index.inc \
 		eresources:::eresources.xml.www.inc
 DEPENDSET.DEFAULT=	transtable mirror
@@ -303,12 +301,6 @@ PARAMS.mirrors-ftp-index+=	--param 'type' "'ftp'" \
 PARAMS.mirrors-ftp+=	--param 'type' "'ftp'" \
 			--param 'proto' "'ftp'" \
 			--param 'target' "'handbook/mirrors/chapter.xml'"
-PARAMS.mirrors-cvsup-index+=	--param 'type' "'cvsup'" \
-				--param 'proto' "'cvsup'" \
-				--param 'target' "'index'"
-PARAMS.mirrors-cvsup+=	--param 'type' "'cvsup'" \
-			--param 'proto' "'cvsup'" \
-			--param 'target' "'handbook/mirrors/chapter.xml'"
 PARAMS.eresources-index+=	--param 'type' "'www'" \
 				--param 'proto' "'http'" \
 				--param 'target' "'index'"
@@ -319,8 +311,6 @@ PARAMS.eresources+=	--param 'type' "'www'" \
 SRCS+=		mirrors.lastmod.inc \
 		mirrors.xml.ftp.inc \
 		mirrors.xml.ftp.index.inc \
-		mirrors.xml.cvsup.inc \
-		mirrors.xml.cvsup.index.inc \
 		eresources.xml.www.inc \
 		eresources.xml.www.index.inc
 
