@@ -3,7 +3,7 @@
 #
 # Build the FreeBSD Handbook (Japanese).
 #
-# Original revision: r42118
+# Original revision: r45188
 #
 
 # ------------------------------------------------------------------------
@@ -35,6 +35,8 @@ IMAGES_EN+= bsdinstall/bsdinstall-adduser1.png
 IMAGES_EN+= bsdinstall/bsdinstall-adduser2.png
 IMAGES_EN+= bsdinstall/bsdinstall-adduser3.png
 IMAGES_EN+= bsdinstall/bsdinstall-boot-loader-menu.png
+IMAGES_EN+= bsdinstall/bsdinstall-boot-options-menu.png
+IMAGES_EN+= bsdinstall/bsdinstall-newboot-loader-menu.png
 IMAGES_EN+= bsdinstall/bsdinstall-choose-mode.png
 IMAGES_EN+= bsdinstall/bsdinstall-config-components.png
 IMAGES_EN+= bsdinstall/bsdinstall-config-hostname.png
@@ -58,6 +60,7 @@ IMAGES_EN+= bsdinstall/bsdinstall-distfile-verifying.png
 IMAGES_EN+= bsdinstall/bsdinstall-final-confirmation.png
 IMAGES_EN+= bsdinstall/bsdinstall-finalconfiguration.png
 IMAGES_EN+= bsdinstall/bsdinstall-final-modification-shell.png
+IMAGES_EN+= bsdinstall/bsdinstall-keymap-10.png
 IMAGES_EN+= bsdinstall/bsdinstall-keymap-select-default.png
 IMAGES_EN+= bsdinstall/bsdinstall-mainexit.png
 IMAGES_EN+= bsdinstall/bsdinstall-netinstall-files.png
@@ -75,6 +78,14 @@ IMAGES_EN+= bsdinstall/bsdinstall-timezone-confirm.png
 IMAGES_EN+= bsdinstall/bsdinstall-timezone-country.png
 IMAGES_EN+= bsdinstall/bsdinstall-timezone-region.png
 IMAGES_EN+= bsdinstall/bsdinstall-timezone-zone.png
+IMAGES_EN+= bsdinstall/bsdinstall-zfs-disk_info.png
+IMAGES_EN+= bsdinstall/bsdinstall-zfs-disk_select.png
+IMAGES_EN+= bsdinstall/bsdinstall-zfs-geli_password.png
+IMAGES_EN+= bsdinstall/bsdinstall-zfs-menu.png
+IMAGES_EN+= bsdinstall/bsdinstall-zfs-partmenu.png
+IMAGES_EN+= bsdinstall/bsdinstall-zfs-vdev_invalid.png
+IMAGES_EN+= bsdinstall/bsdinstall-zfs-vdev_type.png
+IMAGES_EN+= bsdinstall/bsdinstall-zfs-warning.png
 IMAGES_EN+= geom/striping.pic
 IMAGES_EN+= install/adduser1.scr
 IMAGES_EN+= install/adduser2.scr
@@ -284,8 +295,6 @@ DOC_PREFIX?=	${.CURDIR}/../../..
 XMLDOCS=	lastmod:::mirrors.lastmod.inc \
 		mirrors-ftp-index:::mirrors.xml.ftp.index.inc \
 		mirrors-ftp:::mirrors.xml.ftp.inc \
-		mirrors-cvsup-index:::mirrors.xml.cvsup.index.inc \
-		mirrors-cvsup:::mirrors.xml.cvsup.inc \
 		eresources-index:::eresources.xml.www.index.inc \
 		eresources:::eresources.xml.www.inc
 DEPENDSET.DEFAULT=	transtable mirror
@@ -299,12 +308,6 @@ PARAMS.mirrors-ftp-index+=	--param 'type' "'ftp'" \
 PARAMS.mirrors-ftp+=	--param 'type' "'ftp'" \
 			--param 'proto' "'ftp'" \
 			--param 'target' "'handbook/mirrors/chapter.xml'"
-PARAMS.mirrors-cvsup-index+=	--param 'type' "'cvsup'" \
-				--param 'proto' "'cvsup'" \
-				--param 'target' "'index'"
-PARAMS.mirrors-cvsup+=	--param 'type' "'cvsup'" \
-			--param 'proto' "'cvsup'" \
-			--param 'target' "'handbook/mirrors/chapter.xml'"
 PARAMS.eresources-index+=	--param 'type' "'www'" \
 				--param 'proto' "'http'" \
 				--param 'target' "'index'"
@@ -315,8 +318,6 @@ PARAMS.eresources+=	--param 'type' "'www'" \
 SRCS+=		mirrors.lastmod.inc \
 		mirrors.xml.ftp.inc \
 		mirrors.xml.ftp.index.inc \
-		mirrors.xml.cvsup.inc \
-		mirrors.xml.cvsup.index.inc \
 		eresources.xml.www.inc \
 		eresources.xml.www.index.inc
 
