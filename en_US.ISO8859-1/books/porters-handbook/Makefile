@@ -34,9 +34,8 @@ SRCS+= security/chapter.xml
 SRCS+= porting-dads/chapter.xml
 SRCS+= porting-samplem/chapter.xml
 SRCS+= keeping-up/chapter.xml
-SRCS+= appendices/chapter.xml
-SRCS+= uses.xml
-SRCS+= versions.xml
+SRCS+= uses/chapter.xml
+SRCS+= versions/chapter.xml
 
 # Images from the cross-document image library
 IMAGES_LIB+=	callouts/1.png
