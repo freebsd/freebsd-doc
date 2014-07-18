@@ -27,12 +27,10 @@ CGI+=	mid.cgi
 CGI+=	mirror.cgi
 CGI+=	missing_handler.cgi
 CGI+=	monthly.cgi
-CGI+=	pds.cgi
 CGI+=	ports.cgi
 CGI+=	query-pr.cgi
 CGI+=	query-pr-summary.cgi
 CGI+=	search.cgi
-CGI+=	url.cgi
 
 SUBDIR=	GnatsPR
 
