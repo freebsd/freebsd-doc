@@ -138,12 +138,6 @@ sub init_variables {
     # security
     $ENV{'PATH'} = '/bin:/usr/bin';
 
-    # ports download sources script
-    $pds = 'pds.cgi';
-
-    # make plain text URLs clickable cgi script
-    $url = 'url.cgi';
-
     # extension type for packages
     $packageExt = 'tbz';
 
