@@ -47,10 +47,7 @@
 		also maintain a <a
 		  href="http://wiki.FreeBSD.org/">wiki</a>, which
 		contains information about &os; development
-		and related projects.  You can also find &os; represented
-		on a variety of different <a
-		href="&base;/community/social.html">social
-		networking</a> sites.</p>
+		and related projects.</p>
 
 	      <p>Last year there were <xsl:value-of
 	        select="count(/events/event[number(enddate/year) =
