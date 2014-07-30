@@ -119,7 +119,7 @@ sub header_info {
        print "The following is an old and incomplete of current problems submitted by $project users. ";
        if ($html_mode) {
 	  print <<EOM;
-<h1>FreeBSD has migrated to <a href="http://bugs.freebsd.org/search/">Bugzilla</a>.  Please update your bookmarks and try your search there.</h1>
+<h1>FreeBSD has migrated to <a href="https://bugs.FreeBSD.org/search/">Bugzilla</a>.  Please update your bookmarks and try your search there.</h1>
 EOM
        }
     }
@@ -227,7 +227,7 @@ if ($input{'sort'} eq 'lastmod') {
 }
 
 if ($#prs < $[) {
-	print "${h1}Please try <a href='http://bugs.freebsd.org/search/'>bugzilla</a> for an up to date search mechanism.${h1_e}\n";
+	print "${h1}Please try <a href='https://bugs.FreeBSD.org/search/'>bugzilla</a> for an up to date search mechanism.${h1_e}\n";
 
 } elsif ($input{'responsible'} eq 'summary') {
 	&resp_summary;
