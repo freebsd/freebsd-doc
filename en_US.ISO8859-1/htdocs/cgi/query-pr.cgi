@@ -258,7 +258,7 @@ sub PrintPR
 	# Page title
 
 	print html_header(
-			"FreeBSD has migrated to Bugzilla.  Please check the current <a href='https://bugs.freebsd.org/"
+			"FreeBSD has migrated to Bugzilla.  Please check the current <a href='https://bugs.FreeBSD.org/"
 			. $gnatspr->FieldSingle('Number') . "'/>Bugzilla version</a> of this PR."
 	);
 	print "<h3>The historical version shown below is likely out of date and is for debugging purposes only!</h3>\n";
@@ -738,7 +738,7 @@ sub ErrorExit
 	my $url = $q->url(-full => 1, -query => 1);
 
 	if ($code == EXIT_NOPRS) {
-		print html_header("FreeBSD has migrated to <a href='http://bugs.freebsd.org/search/'>Bugzilla</a>.  Try your search there.");
+		print html_header("FreeBSD has migrated to <a href='https://bugs.FreeBSD.org/search/'>Bugzilla</a>.  Try your search there.");
 		print html_footer();
 	} elsif ($code == EXIT_DBBUSY) {
 		print html_header("PR Database Busy");
