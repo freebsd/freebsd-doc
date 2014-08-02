@@ -807,7 +807,7 @@
     <xsl:param name="prefixold" select="''" />
 
     <xsl:if test="$items">
-      <table>
+      <table xmlns="http://www.w3.org/1999/xhtml">
         <tr><th>Date</th><th><xsl:value-of select='$itemtype' /> name</th></tr>
         <xsl:for-each select="$items">
           <xsl:variable name="year" select="../../../name" />
