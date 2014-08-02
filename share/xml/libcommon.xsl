@@ -9,7 +9,6 @@
   xmlns:date="http://exslt.org/dates-and-times"
   xmlns:str="http://exslt.org/strings"
   extension-element-prefixes="date str"
-  xmlns="http://www.w3.org/1999/xhtml"
   exclude-result-prefixes="date cvs">
 
   <xsl:import href="./transtable-common.xsl" />
