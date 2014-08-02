@@ -30,7 +30,7 @@
 	      <p>There are more than one hundred <a
 		href="&base;/community/mailinglists.html">mailing
 		lists</a>, dozens of web-based <a
-		  href="http://forums.FreeBSD.org/">forums</a>, and
+		  href="https://forums.FreeBSD.org/">forums</a>, and
 		several <a
 		href="&base;/community/newsgroups.html">newsgroups</a>
 		available.  There are over <xsl:value-of

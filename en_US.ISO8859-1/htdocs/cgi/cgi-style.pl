@@ -135,7 +135,7 @@ $i_topbar = qq`
 	      <li><a href="$hsty_base/community.html">Community</a>
 		<ul>
 		  <li><a href="$hsty_base/community/mailinglists.html">Mailing Lists</a></li>
-		  <li><a href="http://forums.freebsd.org">Forums</a></li>
+		  <li><a href="https://forums.FreeBSD.org">Forums</a></li>
 		  <li><a href="$hsty_base/usergroups.html">User Groups</a></li>
 		  <li><a href="$hsty_base/events/events.html">Events</a></li>
 		</ul>
