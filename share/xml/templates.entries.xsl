@@ -38,11 +38,13 @@
 
     <p>For your convenience, we have divided our growing
       commercial listing into several sections. If your company
-      supports a FreeBSD-compatible product or service that should
+      supports a FreeBSD related product, service, consulting, or support that should
       be added to this page, please fill out a
-      <a href="https://www.FreeBSD.org/support.html">problem report</a> for
-      category www.  Submissions should be in HTML and a medium-sized
-      paragraph in length.</p>
+      <a href="https://www.FreeBSD.org/support/bugreports.html">problem report</a> in
+      category Documentation->Website.  Submissions should contain a medium-sized
+      paragraph in length, describing your company.  Please note that the inclusion
+      of vendors in our list does not signify our endorsement of their products or
+      services by the FreeBSD Project.</p>
 
     <xsl:choose>
       <xsl:when test="$basename = 'software.html'">
