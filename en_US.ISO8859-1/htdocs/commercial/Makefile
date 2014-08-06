@@ -14,8 +14,7 @@ XSLT.DEFAULT=		${XSL_ENTRIES}
 DEPENDSET.DEFAULT=	commercial
 
 XMLDOCS=	consult::${XML_COMMERCIAL_CONSULT}:
-PARAMS.consult=	--param pagename "'Consulting Services'" \
-		--param basename "'consult.html'"
+PARAMS.consult=	--param pagename "'Consulting Services'"
 
 XMLDOCS+=	consult_bycat::${XML_COMMERCIAL_CONSULT}:
 PARAMS.consult_bycat=\
