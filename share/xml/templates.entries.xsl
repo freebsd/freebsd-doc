@@ -46,25 +46,13 @@
       of vendors in our list does not signify our endorsement of their products or
       services by the FreeBSD Project.</p>
 
-    <xsl:choose>
-      <xsl:when test="$basename = 'software.html'">
-	<h2>Software Vendors</h2>
+    <h2><xsl:value-of select="$pagename" /></h2>
 
-	<p>This file has been divided into sub-categories for your
-	  convenience.	The following shortcuts will take you to the
-	  proper gallery entries.</p>
-
-      </xsl:when>
-      <xsl:when test="$basename = 'consult.html'">
-	<h2>Consulting Services</h2>
-
-	<p>This file has been divided into sub-categories for your convenience.
-	  The following shortcuts will take you to the proper gallery entries.</p>
-      </xsl:when>
-      <xsl:otherwise>
-	<h2><xsl:value-of select="$pagename" /></h2>
-      </xsl:otherwise>
-    </xsl:choose>
+    <xsl:if test="$basename = 'software.html' or $basename = 'consult.html'">
+      <p>This file has been divided into sub-categories for your
+        convenience.  The following shortcuts will take you to the
+        proper gallery entries.</p>
+    </xsl:if>
   </xsl:template>
 
   <xsl:template name="html-commercial-listing">
