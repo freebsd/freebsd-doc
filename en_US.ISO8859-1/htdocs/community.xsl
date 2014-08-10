@@ -151,10 +151,11 @@
 		href="http://www.facebook.com">Facebook</a> and a <a href="http://www.linkedin.com/groups?gid=47628">FreeBSD Group</a> on <a href="http://www.linkedin.com">LinkedIn</a>.</li>
 
 		<li>You can follow
-		<a href="http://twitter.com/freebsdblogs">@freebsdblogs</a>,
-		<a href="http://twitter.com/freebsd">@freebsd</a>, or
-		<a href="http://twitter.com/bsdevents">@bsdevents</a>
-		on <a href="http://twitter.com">Twitter</a>.</li>
+		<a href="https://twitter.com/freebsd">@freebsd</a>,
+		<a href="https://twitter.com/freebsdhelp">@freebsdhelp</a>,
+		<a href="https://twitter.com/freebsdblogs">@freebsdblogs</a>, or
+		<a href="https://twitter.com/bsdevents">@bsdevents</a>
+		on <a href="https://twitter.com">Twitter</a>.</li>
 	      </ul>
   </xsl:template>
 </xsl:stylesheet>
