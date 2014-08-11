@@ -234,8 +234,8 @@ for key in ${keyids} ; do
 		now_s=$( date "+%s" )
 		# 86400 == # seconds in a normal day
 		expire_int_d=$(( ( ${expires_s} - ${now_s} ) / 86400 ))
-		exp_min=$(( 1 \* 365 ))		# Min expiry time is 1 year
-		exp_max=$(( 3 \* 365 + 1 ))	# Max expiry time is 3 years
+		exp_min=$(( 1 * 365 ))		# Min expiry time is 1 year
+		exp_max=$(( 3 * 365 + 1 ))	# Max expiry time is 3 years
 						# We add 1 day because in a 3-year
 						# period, probability of a leap day
 						# is 297/400, about 0.74250
