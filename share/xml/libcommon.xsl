@@ -1124,7 +1124,7 @@
       <title><xsl:value-of select="$title" /></title>
       <link><xsl:value-of select="$link" /></link>
     </image>
-    <atom:link rel="self" type="application/rss+xml">
+    <atom:link type="application/rss+xml">
       <xsl:attribute name="href">
         <xsl:value-of select="$link" /><xsl:text>rss.xml</xsl:text>
       </xsl:attribute>
