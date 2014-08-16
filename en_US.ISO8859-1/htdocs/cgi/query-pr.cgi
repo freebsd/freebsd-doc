@@ -69,7 +69,6 @@ use constant EXIT_NOPATCH => 3;
 our $valid_category = '[a-z0-9][A-Za-z0-9-_]{1,25}';
 our $valid_pr       = '\d{1,8}';
 
-our $cvsweb_url    = 'http://www.FreeBSD.org/cgi/cvsweb.cgi/';
 our $stylesheet    = "$main::hsty_base/layout/css/query-pr.css";
 
 our $iscgi = defined $ENV{'SCRIPT_NAME'};
@@ -608,10 +607,6 @@ sub Linkify
 	# URLs
 	$html =~
 		s/((?:https?|ftps?):\/\/[^\s\/]+\/[][\w=.,\'\(\)\~\?\!\&\/\%\$\{\}:;@#+-]*)/<a href="$1">$1<\/a>/g;
-
-	# CVS files
-	$html =~
-		s/^RCS file: (\/home\/[A-Za-z0-9]+\/(.*?)),v$/RCS file: <a href="$cvsweb_url$2">$1<\/a>,v/mg;
 
 	return $html;
 }
