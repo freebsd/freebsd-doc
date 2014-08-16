@@ -61,10 +61,6 @@ sub init_variables {
 
     # 'ftp://ftp.FreeBSD.org/pub/FreeBSD/branches/-current/ports';
 
-    # URL of ports tree for download
-    $remotePrefixFtpDownload = 'http://cvsweb.FreeBSD.org/ports';
-    $remoteSuffixFtpDownload = '%s.tar.gz?tarball=1';
-
     # where to get -current packages
     local ($p)        = 'ftp://ftp.FreeBSD.org/pub/FreeBSD/ports/i386';
     local ($palpha)   = 'ftp://ftp.FreeBSD.org/pub/FreeBSD/ports/alpha';
@@ -333,16 +329,6 @@ sub out {
     $pathB =~ s/^$localPrefix/ports/o;
 
     $path         =~ s/^$localPrefix/$remotePrefixFtp/o;
-    $pathDownload =~ s/^$localPrefix/$remotePrefixFtpDownload/o;
-    if ($remoteSuffixFtpDownload) {
-        if ( substr( $remoteSuffixFtpDownload, 0, 2 ) eq '%s' ) {
-            $pathDownload =~ m,([^/]+)$,;
-            $pathDownload .= "/$1" . substr( $remoteSuffixFtpDownload, 2 );
-        }
-        else {
-            $pathDownload .= $remoteSuffixFtpDownload;
-        }
-    }
     $descfile =~ s/^$localPrefix/$remotePrefixFtp/o;
     $version = &encode_url($version);
 
