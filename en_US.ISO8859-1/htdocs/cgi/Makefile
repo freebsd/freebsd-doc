@@ -12,13 +12,10 @@ DATA+=	Gnats.pm
 DATA+=	GnatsPR.pm
 DATA+=	cgi-lib.pl
 DATA+=	cgi-style.pl
-DATA+=	cvsweb.conf
-DATA+=	cvsweb.conf-freebsd
 DATA+=	query-pr-lib.pl
 
 CGI=
 CGI+=	confirm-code.cgi
-CGI+=	cvsweb.cgi
 CGI+=	dosendpr.cgi
 CGI+=	getmsg.cgi
 CGI+=	mailindex.cgi
