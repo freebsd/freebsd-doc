@@ -11,6 +11,11 @@
 
   <!-- Global customisation -->
 
+  <!-- Generate link for revnumber -->
+  <xsl:template match="db:revnumber">
+    <xsl:call-template name="svnref.genlink"/>
+  </xsl:template>
+
   <!-- Redefine variables, and replace templates as necessary here -->
   <xsl:template match="db:buildtarget|db:command">
     <xsl:call-template name="inline.monoseq"/>
