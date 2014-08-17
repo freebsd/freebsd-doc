@@ -208,10 +208,6 @@
     </a>
   </xsl:template>
 
-  <xsl:template match="db:revnumber">
-    <xsl:call-template name="svnref.genlink"/>
-  </xsl:template>
-
   <xsl:template name="generate.citerefentry.link">
     <xsl:text>http://www.FreeBSD.org/cgi/man.cgi?query=</xsl:text>
     <xsl:value-of select="db:refentrytitle"/>
