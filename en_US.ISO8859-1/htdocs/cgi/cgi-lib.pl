@@ -77,7 +77,7 @@ sub MethGet {
 # MyURL
 # Returns a URL to the script
 sub MyURL  {
-  return  'http://' . $ENV{'SERVER_NAME'} .  $ENV{'SCRIPT_NAME'};
+  return  '//' . $ENV{'SERVER_NAME'} .  $ENV{'SCRIPT_NAME'};
 }
 # CgiError
 # Prints out an error message which containes appropriate headers,
