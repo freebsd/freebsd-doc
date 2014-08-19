@@ -209,7 +209,7 @@ foreach my $os ( keys %$sectionpath ) {
 );
 
 $manLocalDir    = '/usr/local/www/bsddoc/man';
-$manPathDefault = 'FreeBSD 9.3-RELEASE';
+$manPathDefault = 'FreeBSD 10.0-RELEASE';
 
 %manPath = (
     'FreeBSD 9.2-RELEASE and Ports',
