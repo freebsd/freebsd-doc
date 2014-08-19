@@ -16,7 +16,7 @@ if (!defined($hsty_base)) {
     if (!defined($ENV{'HTTP_HOST'}) ||
 	$ENV{'HTTP_HOST'} =~ /(cgi|hub|docs|people).freebsd.org/i) {
 
-	$hsty_base = 'http://www.FreeBSD.org'
+	$hsty_base = '//www.FreeBSD.org'
     } else {
 	$hsty_base = '..';
     }
@@ -76,7 +76,7 @@ $i_topbar = qq`
 
               <div id="search">
                 <form
-                action="http://www.FreeBSD.org/cgi/search.cgi"
+                action="//www.FreeBSD.org/cgi/search.cgi"
                 method="get">
                   <div>
                     <h2 class="blockhide"><label
@@ -145,8 +145,8 @@ $i_topbar = qq`
 	      <li><a href="$hsty_base/projects/index.html">Developers</a>
 		<ul>
 		  <li><a href="$hsty_base/projects/ideas/ideas.html">Project Ideas</a></li>
-		  <li><a href="http://svnweb.FreeBSD.org">SVN Repository</a></li>
-		  <li><a href="http://p4web.FreeBSD.org">Perforce Repository</a></li>
+		  <li><a href="//svnweb.FreeBSD.org">SVN Repository</a></li>
+		  <li><a href="//p4web.FreeBSD.org">Perforce Repository</a></li>
 		</ul>
 	      </li>
 	    </ul>
@@ -154,16 +154,16 @@ $i_topbar = qq`
 	      <li><a href="$hsty_base/support.html">Support</a>
 		<ul>
 		  <li><a href="$hsty_base/commercial/commercial.html">Vendors</a></li>
-		  <li><a href="http://security.FreeBSD.org/">Security Information</a></li>
+		  <li><a href="//security.FreeBSD.org/">Security Information</a></li>
 		  <li><a href="$hsty_base/cgi/query-pr-summary.cgi">Bug Reports</a></li>
 		  <li><a href="$hsty_base/send-pr.html">Submit Bug-report</a></li>
 		</ul>
 	      </li>
 	    </ul>
 	    <ul>
-	      <li><a href="http://www.freebsdfoundation.org/">Foundation</a>
+	      <li><a href="//www.freebsdfoundation.org/">Foundation</a>
 		<ul>
-		  <li><a href="http://www.freebsdfoundation.org/donate/">Donate</a></li>
+		  <li><a href="//www.freebsdfoundation.org/donate/">Donate</a></li>
 		</ul>
 	      </li>
 	    </ul>
