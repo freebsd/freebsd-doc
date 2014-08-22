@@ -51,41 +51,7 @@
       <body>
 	<div id="containerwrap">
 	  <div id="container">
-	    &header2.skipnav;
-
-	    <div id="headercontainer">
-	      <div id="header">
-
-		&header2.logo-red.label;
-
-		<div id="headerlogoleft">
-		  &header2.logo-red;
-		</div> <!-- HEADERLOGOLEFT -->
-
-		<div id="headerlogoright">
-		  &header2.donatebutton;
-
-		  &header2.searchnav.label;
-
-		  &header2.searchnav;
-
-		<div id="search">
-		  <form action="&cgibase;/search.cgi" method="get">
-		    <div>
-		      <h2 class="blockhide"><label for="words">&header2.word.search;</label></h2>
-
-		      &header2.searchinputs;
-		    </div>
-		  </form>
-		</div> <!-- SEARCH -->
-	      </div> <!-- HEADERLOGORIGHT -->
-	    </div> <!-- HEADER -->
-
-	    &header2.topnav.label;
-
-	    &header2.topnav;
-
-	  </div> <!-- HEADERCONTAINER -->
+	    &header2;
 
 	  <div id="content">
 	      <xsl:call-template name="process.content"/>
