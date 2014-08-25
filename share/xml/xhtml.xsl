@@ -53,7 +53,7 @@
 	  <div id="container">
 	    &header2;
 
-	  <div id="content">
+	    <div id="content">
 	      <xsl:call-template name="process.content"/>
 	    </div> <!-- CONTENT -->
 
