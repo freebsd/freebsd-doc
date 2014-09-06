@@ -34,7 +34,6 @@ SUBDIR+= p4-primer
 SUBDIR+= pam
 SUBDIR+= pgpkeys
 SUBDIR+= port-mentor-guidelines
-SUBDIR+= portbuild
 SUBDIR+= pr-guidelines
 SUBDIR+= problem-reports
 SUBDIR+= rc-scripting
