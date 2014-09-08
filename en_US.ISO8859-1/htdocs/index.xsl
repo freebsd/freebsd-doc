@@ -326,7 +326,7 @@
 	The mark FreeBSD is a registered trademark of The FreeBSD
 	Foundation and is used by The FreeBSD Project with the
 	permission of <a
-	  href="http://www.freebsdfoundation.org/documents/Guidelines.shtml">The
+	  href="https://www.freebsdfoundation.org/documents/Guidelines.shtml">The
 	FreeBSD Foundation</a>.
 	<a href="&base;/mailto.html" title="&header2.word.contact;">&header2.word.contact;</a>
   </xsl:template>
