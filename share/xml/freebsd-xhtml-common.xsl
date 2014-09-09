@@ -21,7 +21,7 @@
   <xsl:param name="chunker.output.encoding" select="'&doc.html.charset;'"/>
   <xsl:param name="use.id.as.filename" select="1"/>
   <xsl:param name="html.stylesheet" select="'docbook.css'"/>
-  <xsl:param name="link.mailto.url" select="'doc@FreeBSD.org'"/>
+  <xsl:param name="link.mailto.url" select="'mailto:doc@FreeBSD.org'"/>
   <xsl:param name="callout.graphics.path" select="'./imagelib/callouts/'"/>
   <xsl:param name="citerefentry.link" select="1"/>
   <xsl:param name="admon.style"/>
