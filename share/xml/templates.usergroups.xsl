@@ -16,7 +16,7 @@
   <xsl:key name="usergroup-by-country" match="entry"
     use="../@code" />
 
-  <xsl:variable name="charturl" select="'http://chart.apis.google.com/chart?cht=t&amp;chs=400x200&amp;chtm=world&amp;chco=ffffff,ffbe38,600000&amp;chf=bg,s,4D89F9'" />
+  <xsl:variable name="charturl" select="'https://chart.googleapis.com/chart?cht=t&amp;chs=400x200&amp;chtm=world&amp;chco=ffffff,ffbe38,600000&amp;chf=bg,s,4D89F9'" />
 
   <xsl:variable name="title">&title;</xsl:variable>
 
