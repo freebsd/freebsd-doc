@@ -64,7 +64,7 @@
 		<a href="&base;/events/events.html">events
 		page</a>.  There are dozens of videos from past events
 		on the <a
-		href="http://www.youtube.com/bsdconferences">BSD
+		href="//www.youtube.com/bsdconferences">BSD
 		Conferences</a> channel on YouTube.</p>
 
 <!-- The Latest Videos section is placed inside an invisible block, which
@@ -142,8 +142,8 @@
 
 		<li>There are hundreds of videos from conferences,
 		screencasts, and demonstrations relating to <a
-		href="http://www.youtube.com/results?search_query=freebsd&amp;search_type=&amp;aq=f">FreeBSD</a>
-		on <a href="http://www.youtube.com">YouTube</a>.  In particular, there is a new <a href="http://www.youtube.com/bsdconferences">BSD Conferences</a> channel with full length 1 hour taped presentations from FreeBSD technical conferences.</li>
+		href="//www.youtube.com/results?search_query=freebsd&amp;search_type=&amp;aq=f">FreeBSD</a>
+		on <a href="//www.youtube.com">YouTube</a>.  In particular, there is a new <a href="http://www.youtube.com/bsdconferences">BSD Conferences</a> channel with full length 1 hour taped presentations from FreeBSD technical conferences.</li>
 
 		<li>There is a <a
 		href="http://www.facebook.com/home.php#/group.php?gid=2204657214">FreeBSD
