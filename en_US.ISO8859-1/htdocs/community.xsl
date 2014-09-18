@@ -78,19 +78,19 @@
     <span style="color:#676767;font-size:11px;margin:10px;padding:4px;">Loading...</span>
   </div>
 
-  <script src="http://www.google.com/uds/api?file=uds.js&amp;v=1.0&amp;source=uds-vbw"
+  <script src="//www.google.com/uds/api?file=uds.js&amp;v=1.0&amp;source=uds-vbw"
     type="text/javascript"></script>
   <style type="text/css">
-    @import url("http://www.google.com/uds/css/gsearch.css");
+    @import url("//www.google.com/uds/css/gsearch.css");
   </style>
   <!-- Video Bar Code and Stylesheet -->
   <script type="text/javascript">
     window._uds_vbw_donotrepair = true;
   </script>
-  <script src="http://www.google.com/uds/solutions/videobar/gsvideobar.js?mode=new"
+  <script src="//www.google.com/uds/solutions/videobar/gsvideobar.js?mode=new"
     type="text/javascript"></script>
   <style type="text/css">
-    @import url("http://www.google.com/uds/solutions/videobar/gsvideobar.css");
+    @import url("//www.google.com/uds/solutions/videobar/gsvideobar.css");
   </style>
 
   <style type="text/css">
