@@ -240,14 +240,14 @@ sub readindex {
     };
 
     while (<C>) {
-        next if $query && !/$query/oi;
+        next if $query && !/$query/i;
         chop;
 
         @tmp            = split(/\|/);
-        $var{"$tmp[4]"} = $_;
+        $var{"$tmp[1]"} = $_;
         @s              = split( /\s+/, $tmp[6] );
         foreach (@s) {
-            $msec{"$tmp[4],$_"} = 1;
+            $msec{"$tmp[1],$_"} = 1;
         }
     }
     close C;
