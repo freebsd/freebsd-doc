@@ -24,7 +24,7 @@
       via <a href="sources.html">the sources</a>.</p>
 
     <p>This list is also available as RSS feed <a href="multimedia.xml"><img
-	src="http://www.freebsd.org/layout/images/ico_rss.png"
+	src="/layout/images/ico_rss.png"
 	alt="RSS Feed"/></a></p>
 
     <p>If you know any resources not listed here, or notice any dead links,
