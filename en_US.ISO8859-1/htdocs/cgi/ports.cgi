@@ -240,7 +240,7 @@ sub readindex {
     };
 
     while (<C>) {
-        next if $query && !/$query/i;
+        next if $query && !/$query/oi;
         chop;
 
         @tmp            = split(/\|/);
