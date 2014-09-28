@@ -3,7 +3,6 @@
 SUBDIR =
 SUBDIR+= bsdl-gpl
 SUBDIR+= building-products
-SUBDIR+= casestudy-argentina.com
 SUBDIR+= committers-guide
 SUBDIR+= compiz-fusion
 SUBDIR+= console-server
