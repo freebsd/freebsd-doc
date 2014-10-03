@@ -10,6 +10,10 @@
 DOCS=	schedule.xml \
 	todo.xml
 
-DATA=	docbook.css
+DATA=	docbook.css \
+	errata.html \
+	hardware.html \
+	readme.html \
+	relnotes.html
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"
