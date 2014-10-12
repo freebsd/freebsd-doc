@@ -1,6 +1,6 @@
 # $FreeBSD$
 # The FreeBSD Japanese Documentation Project
-# Original revision: r45723
+# Original revision: r45779
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -46,7 +46,6 @@ DEPENDSET.community=usergroups events
 # These will be directly installed.
 
 #DATA=	favicon.ico
-DATA+=	freebsd.css
 #DATA+=	google6bb24ed0b804d5e9.html
 #DATA+=	robots.txt
 
