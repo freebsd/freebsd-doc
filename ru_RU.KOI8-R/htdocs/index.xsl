@@ -10,7 +10,7 @@
      $FreeBSD$
      $FreeBSDru: frdp/www/ru/index.xsl,v 1.47 2006/01/16 21:27:51 gad Exp $
 
-     Original revision: 1.176
+     Original revision: 45134
 -->
 
 <xsl:stylesheet version="1.0"
@@ -31,6 +31,7 @@
   <xsl:param name="news.project.xml" select="'none'"/>
   <xsl:param name="events.xml-master" select="'none'"/>
   <xsl:param name="events.xml" select="'none'"/>
+  <xsl:param name="html.header.script.google" select="'IGNORE'"/>
 
   <xsl:variable name="svnKeyword">$FreeBSD$</xsl:variable>
 
@@ -52,15 +53,15 @@
 				  href="&base;/platforms/">платформ</a>.
 				  Её код прошёл через более чем тридцать
 				  лет непрерывного процесса развития,
-				  совершенствования и оптимизации. FreeBSD
+				  совершенствования и оптимизации.  &os;
 				  разрабатывается и поддерживается <a
 				  href="&enbase;/doc/en_US.ISO8859-1/articles/contributors/staff-committers.html">
-				  большой командой разработчиков</a>.  FreeBSD
+				  большой командой разработчиков</a>.  &os;
 				  обеспечивает современные сетевые возможности,
 				  впечатляющую безопасность и
 				  производительность на мировом уровне и
 				  используется на одних из <a
-				  href="&enbase;/doc/en_US.ISO8859-1/books/handbook/nutshell.html#INTRODUCTION-NUTSHELL-USERS">
+				  href="&enbase;/doc/en_US.ISO8859-1/books/handbook/nutshell.html#introduction-nutshell-users">
 				  самых загруженных веб-сайтов</a> мира и на
 				  наиболее распространенных встроенных сетевых
 				  устройствах и устройствах хранения.</p>
@@ -69,8 +70,18 @@
 				  id="txtfrontfeaturelink"> &#187;<a
 				  href="&base;/about.html"
 				  title="Подробнее">Подробнее</a>
-
 				  </div> <!-- TXTFRONTFEATURELINK -->
+
+                                <div id="txtfrontjournalblock">
+                                <br/>&#187;
+                                    <span
+                                     id="txtfrontjournallink">
+                                      Получить <a
+                                       href="http://www.freebsdjournal.com/"
+                                       title="&os;&nbsp;Journal">Ведомости &os;&nbsp;</a>
+                                    </span> <!-- TXTFRONTJOURNALLINK -->
+                                  </div> <!-- TXTFRONTJOURNALBLOCK -->
+
 			  </div> <!-- FRONTFEATURECONTENT -->
 		  </div> <!-- FRONTFEATURELEFT -->
 
@@ -78,7 +89,7 @@
 			<div class="frontgetroundbox">
 			  <div class="frontgettop"><div><b style="display: none">.</b></div></div>
 				<div class="frontgetcontent">
-				  <a href="&base;/where.html">Получить FreeBSD сейчас</a>
+				  <a href="&base;/where.html">Загрузить &os;</a>
 				</div> <!-- frontgetcontent -->
 			  <div class="frontgetbot"><div><b style="display: none">.</b></div></div>
 			</div> <!-- frontgetroundbox -->
@@ -88,21 +99,20 @@
 				  <h2><a href="&base;/releases/">ПОСЛЕДНИЕ РЕЛИЗЫ</a></h2>
 				  <ul id="frontreleaseslist">
 					<li>Продуктивный:&nbsp;<a
-				href="&u.rel.announce;">&rel.current;</a>,&nbsp;<a href="&u.rel2.announce;">&rel2.current;</a></li>
-					<li>Старый: <a
+				href="&u.rel.announce;">&rel.current;</a>,<br />
+					<a
+				href="&u.rel2.announce;">&rel2.current;</a>,
+					<a
 				href="&u.rel3.announce;">&rel3.current;</a></li>
-			    <xsl:if test="'&beta.testing;' != 'IGNORE'">
-					<li>
-					  <a href="&base;/where.html#helptest">Предстоящий:
-				            &betarel.current; - &betarel.vers;</a>
-					</li>
+			    <xsl:if test="'&beta.upcoming;' != 'IGNORE'">
+					<li>Предстоящий: <a
+				href="&u.betarel.schedule;">&betarel.current;</a></li>
 			    </xsl:if>
-			    <xsl:if test="'&beta2.testing;' != 'IGNORE'">
-					<li>
-					  <a href="&base;/where.html#helptest">Предстоящий:
-				            &betarel2.current; - &betarel2.vers;</a>
-					</li>
+			    <xsl:if test="'&beta2.upcoming;' != 'IGNORE'">
+					<li>Предстоящий: <a
+				href="&u.betarel2.schedule;">&betarel2.current;</a></li>
 			    </xsl:if>
+					<li><a href="&base;/security/security.html#sup">Support Lifecycle</a></li>
 				  </ul>
 			  </div> <!-- FRONTRELEASESCONTENT -->
 			</div> <!-- FRONTRELEASES -->
@@ -148,7 +158,7 @@
 			<div id="mirror">
 			  <form action="&cgibase;/mirror.cgi" method="get">
 				<div>
-				  <h2 class="blockhide"><label for="MIRRORSEL">Зеркало</label></h2>
+				  <h2 class="blockhide"><label for="mirrorsel">Зеркало</label></h2>
 				  <select id="mirrorsel" name="goto">
 					  <xsl:call-template name="html-index-mirrors-options-list">
 					    <xsl:with-param name="mirrors.xml" select="$mirrors.xml" />
@@ -319,5 +329,15 @@
             </div> <!-- FRONTNEMSCONTAINER -->
           </div> <!-- FRONTMAIN -->
         </div> <!-- FRONTCONTAINER -->
+  </xsl:template>
+
+  <xsl:template name="process.footer">
+    &copyright;
+
+    Название FreeBSD - это зарегистрированная торговая марка The FreeBSD
+    Foundation и используется The FreeBSD Project с разрешения <a
+      href="http://www.freebsdfoundation.org/documents/Guidelines.shtml">The
+    FreeBSD Foundation</a>.
+    <a href="&base;/mailto.html" title="&header2.word.contact;">&header2.word.contact;</a>
   </xsl:template>
 </xsl:stylesheet>
