@@ -25,8 +25,8 @@
     <xsl:param name="repo" select="'base'"/>
     <xsl:param name="rev"/>
 
-    <xsl:value-of select="concat('http://svnweb.freebsd.org/', $repo,
-      '?view=revision&amp;revision=', $rev)"/>
+    <xsl:value-of select="concat('https://svnweb.freebsd.org/changeset/',
+      $repo, '/', $rev)"/>
   </xsl:template>
 
   <xsl:param name="toc.section.depth" select="1"/>
