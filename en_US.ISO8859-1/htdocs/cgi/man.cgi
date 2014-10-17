@@ -212,6 +212,8 @@ $manLocalDir    = '/usr/local/www/bsddoc/man';
 $manPathDefault = 'FreeBSD 10.1-RELEASE';
 
 %manPath = (
+    'FreeBSD 10.1-RELEASE and Ports',
+"$manLocalDir/FreeBSD-10.1-RELEASE/man:$manLocalDir/FreeBSD-10.1-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-10.1-RELEASE/man",
     'FreeBSD 9.2-RELEASE and Ports',
 "$manLocalDir/FreeBSD-9.2-RELEASE/man:$manLocalDir/FreeBSD-9.2-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-9.2-RELEASE/man:$manLocalDir/FreeBSD-ports-9.2-RELEASE/misc",
     'FreeBSD 9.0-RELEASE and Ports',
@@ -660,7 +662,7 @@ while ( ( $key, $val ) = each %manPath ) {
     'freebsd-stable6', 'FreeBSD 6.4-stable',
 
     'freebsd-current',       'FreeBSD 11-current',
-    'freebsd-release-ports', 'FreeBSD 9.2-RELEASE and Ports',
+    'freebsd-release-ports', 'FreeBSD 10.1-RELEASE and Ports',
 
     'slackware',  'Linux Slackware 3.1',
     'redhat',     'Red Hat Linux/i386 9',
