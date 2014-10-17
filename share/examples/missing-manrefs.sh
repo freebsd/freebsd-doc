@@ -62,22 +62,29 @@ build_manpages() {
 	make -s -C ${srcs} DESTDIR=${outdir} \
 		SRCCONF=/dev/null __MAKE_CONF=/dev/null \
 		MANOWN=$USER MANGRP=$USER MANMODE=0666 \
-		NO_MLINKS=1 obj hier all-man maninstall
+		NO_MLINKS=1 -DNO_ROOT obj hier all-man maninstall
+	echo "Packaging manual pages..."
+	tar -zcvf ${outdir}.tgz -C ${outdir} \
+		usr/share/man usr/share/openssl
 }
 
 build_cleanup() {
 	make -s -C ${srcs} DESTDIR=${outdir} \
 		SRCCONF=/dev/null __MAKE_CONF=/dev/null \
-		NO_MLINKS=1 cleandir
+		NO_MLINKS=1 -DNO_ROOT cleandir
 }
 
 add_manref() {
 	_man=${_m}
 	_man=$(echo ${_man} | sed -e 's/\./_/g')
+	# Ugly fix to the atf-c++-api manual; I'm still not sure
+	# why add-manref.sh insists the entity should contain the '+'
+	# characters.
+	_man=$(echo ${_man} | sed -e 's/\+\+/../g')
 	_man=${_man%%_[0-9]}
-	_sec=${_man##*_}
-	yes | sh ${docs}/share/examples/add-manref.sh \
-		${docs}/share/xml/man-refs.ent ${_man} ${_sec}
+	_sec=${_m##*.}
+	yes | sh $(realpath ${docs})/share/examples/add-manref.sh \
+		$(realpath ${docs})/share/xml/man-refs.ent ${_man} ${_sec}
 }
 
 main() {
@@ -95,6 +102,7 @@ main() {
 	done
 	build_cleanup
 	rm -vr ${outdir} ${objdir}
+	echo "Packaged manual pages are in: ${outdir}.tgz"
 }
 
 main "$@"
