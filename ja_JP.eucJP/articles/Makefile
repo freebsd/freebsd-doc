@@ -1,10 +1,9 @@
 # $FreeBSD$
-# Original revision: r41535
+# Original revision: r45689
 
 SUBDIR =
 #SUBDIR+= bsdl-gpl
 #SUBDIR+= building-products
-#SUBDIR+= casestudy-argentina.com
 #SUBDIR+= committers-guide
 #SUBDIR+= compiz-fusion
 #SUBDIR+= console-server
@@ -13,7 +12,6 @@ SUBDIR+= contributing
 SUBDIR+= contributors
 #SUBDIR+= cups
 #SUBDIR+= custom-gcc
-#SUBDIR+= cvs-freebsd
 #SUBDIR+= explaining-bsd
 SUBDIR+= fbsd-from-scratch
 #SUBDIR+= filtering-bridges
@@ -30,13 +28,12 @@ SUBDIR+= ipsec-must
 #SUBDIR+= linux-emulation
 #SUBDIR+= linux-users
 #SUBDIR+= mailing-list-faq
-#SUBDIR+= mh
 #SUBDIR+= nanobsd
 #SUBDIR+= new-users
 #SUBDIR+= p4-primer
 #SUBDIR+= pam
+#SUBDIR+= pgpkeys
 #SUBDIR+= port-mentor-guidelines
-#SUBDIR+= portbuild
 #SUBDIR+= pr-guidelines
 SUBDIR+= problem-reports
 #SUBDIR+= rc-scripting
