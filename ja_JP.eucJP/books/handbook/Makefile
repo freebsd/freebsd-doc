@@ -3,7 +3,7 @@
 #
 # Build the FreeBSD Handbook (Japanese).
 #
-# Original revision: r45188
+# Original revision: r45602
 #
 
 # ------------------------------------------------------------------------
@@ -248,6 +248,7 @@ SRCS+= desktop/chapter.xml
 SRCS+= disks/chapter.xml
 SRCS+= eresources/chapter.xml
 #SRCS+= firewalls/chapter.xml
+#SRCS+= zfs/chapter.xml
 #SRCS+= filesystems/chapter.xml
 #SRCS+= geom/chapter.xml
 SRCS+= install/chapter.xml
