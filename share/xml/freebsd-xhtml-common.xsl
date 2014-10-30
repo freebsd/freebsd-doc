@@ -45,6 +45,10 @@
     </l:l10n>
   </i18n>
 
+  <xsl:template name="user.head.content">
+    <script type="text/javascript" src="/layout/js/google.js" />
+  </xsl:template>
+
   <xsl:template name="user.footer.navigation">
     <p align="center"><small>All FreeBSD documents are available for download
     at <a href="http://ftp.FreeBSD.org/pub/FreeBSD/doc/">http://ftp.FreeBSD.org/pub/FreeBSD/doc/</a></small></p>
