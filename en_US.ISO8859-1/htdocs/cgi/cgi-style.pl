@@ -75,21 +75,20 @@ $i_topbar = qq`
               </div>
 
               <div id="search">
-                <form
-                action="//www.FreeBSD.org/cgi/search.cgi"
-                method="get">
-                  <div>
-                    <h2 class="blockhide"><label
-                    for="words">Search</label></h2>
-                    <input type="hidden" name="max"
-                    value="25" /><input type="hidden" name="source"
-                    value="www" /><input id="words" name="words"
-                    type="text" size="20" maxlength="255"
-                    onfocus="if( this.value==this.defaultValue ) this.value='';"
-                     value="Search" />&nbsp;<input id="submit"
-                    name="submit" type="submit" value="Search" />
-                  </div>
-                </form>
+		<form method="get" id="search" action="https://duckduckgo.com/">
+		  <h2 class="blockhide"><label for="words">Search</label></h2>
+		  <input type="hidden" name="sites" value="www.FreeBSD.org,lists.FreeBSD.org,wiki.FreeBSD.org,forums.FreeBSD.org" />
+		  <input type="hidden" name="ka" value="v" />
+		  <input type="hidden" name="kt" value="v" />
+		  <input type="hidden" name="kh" value="1" />
+		  <input type="hidden" name="kj" value="r2" />
+		  <input id="words" name="q" type="text" size="20"
+		    maxlength="255"
+		    onfocus="if( this.value==this.defaultValue ) this.value='';"
+		    value="Search" />
+		  <span>&nbsp;</span>
+		  <input id="submit" name="submit" type="submit" value="Search" />
+		</form>
               </div>
             </div>
           </div>
