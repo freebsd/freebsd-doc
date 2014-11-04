@@ -64,15 +64,21 @@ $i_topbar = qq`
             <div id="headerlogoright">
               <h2 class="blockhide">Peripheral Links</h2>
 
-              <div id="searchnav">
-                <ul id="searchnavlist">
-                  <li><a href="$hsty_base/donations/"
-                  title="Donate">Donate</a></li>
-
-                  <li class="last-child"><a href="$hsty_base/mailto.html"
-                  title="Contact">Contact</a></li>
-                </ul>
-              </div>
+	      <div class="frontdonateroundbox">
+		<div class="frontdonatetop">
+		  <div>
+		    <b style="display: none;">.</b>
+		  </div>
+		</div>
+		<div class="frontdonatecontent">
+		  <a href="https://www.FreeBSDFoundation.org/donate/">Donate to FreeBSD</a>
+		</div>
+		<div class="frontdonatebot">
+		  <div>
+		    <b style="display: none;">.</b>
+		  </div>
+		</div>
+	      </div>
 
               <div id="search">
 		<form method="get" id="search" action="https://duckduckgo.com/">
