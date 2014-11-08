@@ -515,6 +515,9 @@ $manPathDefault = 'FreeBSD 10.1-RELEASE';
 
     'SuSE Linux/i386 ES 10 SP1', "$manLocalDir/SLES-10-SP1-i386",
 
+    'Debian 6.0.10', "$manLocalDir/Debian-6.0.10",
+    'Debian 7.7.0', "$manLocalDir/Debian-7.7.0",
+
     'HP-UX 11.22', "$manLocalDir/HP-UX-11.22",
     'HP-UX 11.20', "$manLocalDir/HP-UX-11.20",
     'HP-UX 11.11', "$manLocalDir/HP-UX-11.11",
