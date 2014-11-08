@@ -52,7 +52,7 @@ alarm(10);
 
 $debug        = 2;
 $www{'title'} = 'FreeBSD Man Pages';
-$www{'home'}  = 'http://www.FreeBSD.org';
+$www{'home'}  = 'https://www.FreeBSD.org';
 $www{'head'}  = $www{'title'};
 
 #$command{'man'} = '/usr/bin/man';    # 8Bit clean man
@@ -790,7 +790,7 @@ $sections = join( "|", @sections );    # sections regexp
 $mailto                    = 'wosch@FreeBSD.org';
 $mailtoURL                 = 'http://wolfram.schneider.org';
 $mailtoURL                 = "mailto:$mailto" if !$mailtoURL;
-$full_url                  = 'http://www.freebsd.org/cgi/man.cgi';
+$full_url                  = 'https://www.freebsd.org/cgi/man.cgi';
 $want_to_link_to_this_page = 1;
 
 &secure_env;
@@ -828,8 +828,8 @@ sub html_header {
     my $html_meta = q|
 <meta name="robots" content="nofollow" />
 <meta content="text/html; charset=iso-8859-1" http-equiv="Content-Type" />
-<link rel="search" type="application/opensearchdescription+xml" href="http://www.freebsd.org/search/opensearch/man.xml" title="FreeBSD Manpages" />
-<link rel="search" type="application/opensearchdescription+xml" href="http://www.freebsd.org/search/opensearch/man-freebsd-release-ports.xml" title="FreeBSD + Ports Manpages" />
+<link rel="search" type="application/opensearchdescription+xml" href="https://www.freebsd.org/search/opensearch/man.xml" title="FreeBSD Manpages" />
+<link rel="search" type="application/opensearchdescription+xml" href="https://www.freebsd.org/search/opensearch/man-freebsd-release-ports.xml" title="FreeBSD + Ports Manpages" />
 <style type="text/css">
 <!--
 b { color: #996600; }
@@ -1697,7 +1697,7 @@ Copyright (c) for man pages by OS vendors.
 <p/>
 <a href="ftp://ftp.2bsd.com">2.11 BSD</a>,
 <a href="http://www.hp.com">HP</a>,
-<a href="http://www.freebsd.org">FreeBSD</a>,
+<a href="https://www.freebsd.org">FreeBSD</a>,
 <a href="http://www.cs.vu.nl/~ast/minix.html">Minix</a>,
 <a href="http://www.netbsd.org">NetBSD</a>,
 <a href="http://www.openbsd.org">OpenBSD</a>,
@@ -1719,9 +1719,9 @@ macros like `appeared in NetBSD version 1.2' are not supported.</li>
 <li>Some OSs provide only formatted manual pages (catpages), e.g., NetBSD
 and OpenBSD. In this case it is not possible to create Postscript
 and troff output.</li>
-<li>The <a href="http://svnweb.freebsd.org/base/head/share/misc/bsd-family-tree?view=markup">
+<li>The <a href="https://svnweb.freebsd.org/base/head/share/misc/bsd-family-tree?view=markup">
 Unix family tree, BSD part</a>.</li>
-<li>The <a href="http://www.freebsd.org/cgi/ports.cgi">
+<li>The <a href="https://www.freebsd.org/cgi/ports.cgi">
 FreeBSD Ports Changes</a> script.</li>
 <li>Copyright (c) and download for man pages by 
 OS vendors</li>
@@ -1730,8 +1730,8 @@ OS vendors</li>
 <h2>Shortcuts for FreeBSD manual pages</h2>
 
 <ul>
-<li>which manpage: <a href="http://man.freebsd.org/which">http://man.freebsd.org/which</a></li>
-<li>socket(2) manpage: <a href="http://man.freebsd.org/socket/2">http://man.freebsd.org/socket/2</a></li>
+<li>which manpage: <a href="https://man.freebsd.org/which">https://man.freebsd.org/which</a></li>
+<li>socket(2) manpage: <a href="https://man.freebsd.org/socket/2">https://man.freebsd.org/socket/2</a></li>
 </ul>
 
 <p />
@@ -1781,7 +1781,7 @@ sections.
 sub faq_output {
     my $base = $BASE;
     $base =~ s,[^/]*$,,;
-    $base = 'http://www.freebsd.org/cgi/';    # XXX
+    $base = 'https://www.freebsd.org/cgi/';    # XXX
 
     &http_header("text/html");
     print &html_header( "FreeBSD manual page help", $base ) . "<h1>",
