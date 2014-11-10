@@ -8,7 +8,7 @@
 
 <!-- $FreeBSD$ -->
 <!-- The FreeBSD Japanese Documentation Project -->
-<!-- Original revision: 1.13 -->
+<!-- Original revision: r45681 -->
 
 <!-- Copyright (c) 2003 Simon L. Nielsen <simon@FreeBSD.org>
      Copyright (c) 2008 Murray M Stokely <murray@FreeBSD.org>
@@ -61,7 +61,7 @@
 	     enddate/day &gt;= date:day-in-month()))]"
     use="location/country" />
 
-  <xsl:variable name="charturl" select="'http://chart.apis.google.com/chart?cht=t&amp;chs=400x200&amp;chtm=world&amp;chco=ffffff,ffbe38,600000&amp;chf=bg,s,4D89F9'" />
+  <xsl:variable name="charturl" select="'https://chart.googleapis.com/chart?cht=t&amp;chs=400x200&amp;chtm=world&amp;chco=ffffff,ffbe38,600000&amp;chf=bg,s,4D89F9'" />
 
   <xsl:variable name="title">&title;</xsl:variable>
 
@@ -266,14 +266,6 @@
   <xsl:template match="event" mode="upcoming">
     <li>
       <xsl:call-template name="eventbody"/>
-      <p>ソーシャルリンク : <a rel="nofollow">
-      <xsl:if test="upcomingurl">
-        <xsl:attribute name="href"><xsl:value-of select="upcomingurl" /></xsl:attribute>
-      </xsl:if>
-      <xsl:if test="not(upcomingurl)">
-        <xsl:attribute name="href">http://upcoming.yahoo.com/search?type=Events&amp;q=<xsl:value-of select="name" />&amp;Search=GO</xsl:attribute>
-      </xsl:if>
-      upcoming</a></p>
     </li>
   </xsl:template>
 
