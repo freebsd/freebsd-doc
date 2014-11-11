@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="euc-jp" ?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
-	  "http://www.FreeBSD.org/XML/share/xml/xslt10-freebsd.dtd" [
+				"http://www.FreeBSD.org/XML/share/xml/xslt10-freebsd.dtd" [
 <!ENTITY title "FreeBSD のコミュニティ">
 ]>
 
 <!-- $FreeBSD$ -->
-<!-- Original revision: 1.9 -->
+<!-- Original revision: r45639 -->
 
 <xsl:stylesheet version="1.0"
   xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
@@ -16,12 +16,12 @@
   <xsl:import href="http://www.FreeBSD.org/XML/lang/share/xml/libcommon.xsl"/>
   <xsl:import href="http://www.FreeBSD.org/XML/share/xml/xhtml.xsl"/>
 
+  <xsl:variable name="title">&title;</xsl:variable>
+
   <xsl:key name="last-year-event-by-country" match="event[number(enddate/year) = (number(date:year()) - 1)]"
     use="location/country" />
 
   <xsl:key name="event-by-year" match="event" use="enddate/year" />
-
-  <xsl:variable name="title">&title;</xsl:variable>
 
   <xsl:template name="process.sidewrap">
     &nav.community;
@@ -33,7 +33,7 @@
 		<p><a href="&base;/community/mailinglists.html"
 		      >メーリングリスト</a> の数は 100 を超えており、
 		  たくさんのウェブベースの
-		  <a href="http://forums.FreeBSD.org/">フォーラム</a> や、
+		  <a href="https://forums.FreeBSD.org/">フォーラム</a> や、
 		  いくつもの <a href="&base;/community/newsgroups.html"
 		     >ニュースグループ</a> があります。
 		  世界
@@ -53,10 +53,7 @@
 		  また、開発者や活発な貢献者は、
 		  &os; の開発状況や関連プロジェクトの情報を
 		  <a href="http://wiki.FreeBSD.org/">wiki</a>
-		  にまとめています。
-		  &os; についての情報は、さまざまな
-		  <a href="&enbase;/community/social.html">ソーシャルネットワーク
-		  </a> サイトにおいても提供されています。</p>
+		  にまとめています。</p>
 
 		<p>昨年は、世界
 		  <xsl:value-of
@@ -76,7 +73,7 @@
 		  を提供しています。
 		  過去に開催されたイベントに関する数多くのビデオが、
 		  YouTube の
-		  <a href="http://www.youtube.com/bsdconferences">BSD
+		  <a href="//www.youtube.com/bsdconferences">BSD
 		    Conferences</a> チャネルで公開されています。</p>
 
 <!-- The Latest Videos section is placed inside an invisible block, which
@@ -90,19 +87,19 @@
 		    <span style="color:#676767;font-size:11px;margin:10px;padding:4px;">Loading...</span>
 		  </div>
 
-		  <script src="http://www.google.com/uds/api?file=uds.js&amp;v=1.0&amp;source=uds-vbw"
+		  <script src="//www.google.com/uds/api?file=uds.js&amp;v=1.0&amp;source=uds-vbw"
 			  type="text/javascript"></script>
 		  <style type="text/css">
-		    @import url("http://www.google.com/uds/css/gsearch.css");
+		    @import url("//www.google.com/uds/css/gsearch.css");
 		  </style>
   <!-- Video Bar Code and Stylesheet -->
 		  <script type="text/javascript">
 		    window._uds_vbw_donotrepair = true;
 		  </script>
-		  <script src="http://www.google.com/uds/solutions/videobar/gsvideobar.js?mode=new"
+		  <script src="//www.google.com/uds/solutions/videobar/gsvideobar.js?mode=new"
 			  type="text/javascript"></script>
 		  <style type="text/css">
-		    @import url("http://www.google.com/uds/solutions/videobar/gsvideobar.css");
+		    @import url("//www.google.com/uds/solutions/videobar/gsvideobar.css");
 		  </style>
 
 		  <style type="text/css">
@@ -137,5 +134,37 @@
 		    GSearch.setOnLoadCallback(LoadVideoBar);
 		  </script>
 		</div> <!-- Latest Videos -->
+	      <h2>ソーシャルネットワーク</h2>
+	      <p>&os; はさまざまなソーシャルネットワークで表現されています。</p>
+	      <ul>
+	        <li><a href="http://del.icio.us">del.icio.us</a> では、
+		何千ものユーザが、30,000 にもおよぶユニークなウェブページに '<a
+	        href="http://del.icio.us/tag/freebsd">freebsd</a>'
+		タグをつけています。</li>
+
+		<li><a href="http://www.flickr.com">flickr</a> では、
+		ユーザグループミーティング、
+		カンファレンスおよびハッカソンの数千もの写真に
+		'<a
+		href="http://flickr.com/search/?z=t&amp;ss=2&amp;w=all&amp;q=freebsd&amp;m=text">freebsd</a>' タグが付けられています。</li>
+
+		<li><a href="//www.youtube.com">YouTube</a> には、
+		何千もの <a
+		href="//www.youtube.com/results?search_query=freebsd&amp;search_type=&amp;aq=f">FreeBSD</a>
+		に関連したカンファレンス、スクリーンキャストおよびデモンストレーションのビデオがあります。
+		特に、新しい FreeBSD テクニカルカンファレンスの 1 時間規模のプレゼンテーションは、省略なく見ることができます。</li>
+
+		<li><a href="http://www.facebook.com">Facebook</a> には <a
+		href="http://www.facebook.com/home.php#/group.php?gid=2204657214">FreeBSD
+		Users Group</a>、<a href="http://www.linkedin.com">LinkedIn</a>
+		には <a href="http://www.linkedin.com/groups?gid=47628">FreeBSD Group</a> があります。</li>
+
+		<li><a href="https://twitter.com">Twitter</a> で
+		<a href="https://twitter.com/freebsd">@freebsd</a>,
+		<a href="https://twitter.com/freebsdhelp">@freebsdhelp</a>,
+		<a href="https://twitter.com/freebsdblogs">@freebsdblogs</a> または
+		<a href="https://twitter.com/bsdevents">@bsdevents</a>
+		をフォローしてください。</li>
+	      </ul>
   </xsl:template>
 </xsl:stylesheet>
