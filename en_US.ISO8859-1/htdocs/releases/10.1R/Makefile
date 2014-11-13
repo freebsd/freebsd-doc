@@ -10,7 +10,8 @@
 DOCS=	schedule.xml \
 	todo.xml
 
-DATA=	docbook.css \
+DATA=	installation.html \
+	docbook.css \
 	errata.html \
 	hardware.html \
 	readme.html \
