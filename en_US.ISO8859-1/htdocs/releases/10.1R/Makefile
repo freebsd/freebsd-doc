@@ -7,10 +7,12 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS=	schedule.xml \
+DOCS=	announce.xml \
+	schedule.xml \
 	todo.xml
 
-DATA=	installation.html \
+DATA=	announce.asc \
+	installation.html \
 	docbook.css \
 	errata.html \
 	hardware.html \
