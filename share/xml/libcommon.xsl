@@ -484,15 +484,15 @@
   <xsl:template name="html-news-list-press-preface">
     <p>If you know of any news stories featuring FreeBSD that we have not
       listed here, please send details to
-      <a href="mailto:www@FreeBSD.org">www@FreeBSD.org</a> so that we can
+      <a href="mailto:freebsd-doc@FreeBSD.org">freebsd-doc@FreeBSD.org</a> so that we can
       include them.</p>
   </xsl:template>
 
   <xsl:template name="html-events-list-preface">
     <p>If you know of any FreeBSD related events, or events that
       are of interest for FreeBSD users, which are not listed
-      here, please send details to <a href="mailto:www@FreeBSD.org"
-	>www@FreeBSD.org</a>, so they can be included.</p>
+      here, please send details to <a href="mailto:freebsd-doc@FreeBSD.org"
+	>freebsd-doc@FreeBSD.org</a>, so they can be included.</p>
 
     <p>Users with organisational software that understands the
       iCalendar format can subscribe to the
