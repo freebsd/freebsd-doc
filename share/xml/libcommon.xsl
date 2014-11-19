@@ -455,7 +455,7 @@
       the latest developments can be a chore!  To keep on top of things,
       be sure and check this page periodically.  Also, you may wish to
       subscribe to the
-      <a href="https://lists.freebsd.org/mailman/listinfo/freebsd-announce">freebsd-announce
+      <a href="https://lists.FreeBSD.org/mailman/listinfo/freebsd-announce">freebsd-announce
 	mailing list</a> or the <a href="rss.xml">RSS feed</a>.</p>
 
     <p>The following projects have their own news pages, which should
