@@ -455,7 +455,7 @@
       the latest developments can be a chore!  To keep on top of things,
       be sure and check this page periodically.  Also, you may wish to
       subscribe to the
-      <a href="http://lists.freebsd.org/mailman/listinfo/freebsd-announce">freebsd-announce
+      <a href="https://lists.freebsd.org/mailman/listinfo/freebsd-announce">freebsd-announce
 	mailing list</a> or the <a href="rss.xml">RSS feed</a>.</p>
 
     <p>The following projects have their own news pages, which should
@@ -974,7 +974,7 @@
                 xmlns="http://my.netscape.com/rdf/simple/0.9/">
     <channel>
       <title>FreeBSD Security Advisories</title>
-      <link>http://www.FreeBSD.org/security/</link>
+      <link>https://www.FreeBSD.org/security/</link>
       <description>Security advisories published from the FreeBSD Project</description>
     </channel>
   </xsl:template>
@@ -1029,7 +1029,7 @@
     <xsl:param name="advisories.xml" select="''" />
 
     <xsl:variable name="title">FreeBSD Security Advisories</xsl:variable>
-    <xsl:variable name="link">http://www.FreeBSD.org/security/</xsl:variable>
+    <xsl:variable name="link">https://www.FreeBSD.org/security/</xsl:variable>
 
     <title><xsl:value-of select="$title" /></title>
     <link><xsl:value-of select="$link" /></link>
@@ -1040,7 +1040,7 @@
     <docs>http://blogs.law.harvard.edu/tech/rss</docs>
     <ttl>120</ttl>
     <image>
-      <url>http://www.FreeBSD.org/logo/logo-full.png</url>
+      <url>https://www.FreeBSD.org/logo/logo-full.png</url>
       <title><xsl:value-of select="$title" /></title>
       <link><xsl:value-of select="$link" /></link>
     </image>
@@ -1063,7 +1063,7 @@
 	<title><xsl:value-of select="name"/></title>
 	<xsl:choose>
 	  <xsl:when test="@omithref = 'yes'">
-	    <link>http://www.FreeBSD.org/security</link>
+	    <link>https://www.FreeBSD.org/security</link>
 	  </xsl:when>
 	  <xsl:otherwise>
 	    <link><xsl:value-of select="concat('&ftpbase;', name, '.asc')" /></link>
@@ -1109,7 +1109,7 @@
     <xsl:param name="notices.xml" select="''" />
 
     <xsl:variable name="title">FreeBSD Errata Notices</xsl:variable>
-    <xsl:variable name="link">http://www.FreeBSD.org/security/</xsl:variable>
+    <xsl:variable name="link">https://www.FreeBSD.org/security/</xsl:variable>
 
     <title><xsl:value-of select="$title" /></title>
     <link><xsl:value-of select="$link" /></link>
@@ -1120,7 +1120,7 @@
     <docs>http://blogs.law.harvard.edu/tech/rss</docs>
     <ttl>120</ttl>
     <image>
-      <url>http://www.FreeBSD.org/logo/logo-full.png</url>
+      <url>https://www.FreeBSD.org/logo/logo-full.png</url>
       <title><xsl:value-of select="$title" /></title>
       <link><xsl:value-of select="$link" /></link>
     </image>
@@ -1143,7 +1143,7 @@
 	<title><xsl:value-of select="name"/></title>
 	<xsl:choose>
 	  <xsl:when test="@omithref = 'yes'">
-	    <link>http://www.FreeBSD.org/security</link>
+	    <link>https://www.FreeBSD.org/security</link>
 	  </xsl:when>
 	  <xsl:otherwise>
 	    <link><xsl:value-of select="concat('&ftpbase;', name, '.asc')" /></link>
