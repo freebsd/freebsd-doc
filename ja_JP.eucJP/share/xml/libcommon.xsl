@@ -3,7 +3,7 @@
 				"http://www.FreeBSD.org/XML/share/xml/xslt10-freebsd.dtd">
 <!-- $FreeBSD$ -->
 <!-- The FreeBSD Japanese Documentation Project -->
-<!-- Original revision: r45449 -->
+<!-- Original revision: r45999 -->
 
 <xsl:stylesheet version="1.0"
   xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
@@ -97,7 +97,7 @@
     <p>FreeBSD は急速に発展を続けるオペレーティングシステムなので、
       最新の進歩について行くのが面倒になる時がありますよね。
       情報通になるために、このページを定期的にチェックするようにしましょう。また、
-      <a href="http://lists.freebsd.org/mailman/listinfo/freebsd-announce">freebsd-announce
+      <a href="https://lists.freebsd.org/mailman/listinfo/freebsd-announce">freebsd-announce
 	メーリングリスト</a> や <a href="&base;/news/rss.xml">RSS フィード</a>
       を購読したいという方もいるかもしれませんね。</p>
 
@@ -144,9 +144,9 @@
   <!-- template: "html-news-list-press-preface" -->
   <xsl:template name="html-news-list-press-preface">
     <p>ここに載っていない FreeBSD に関連したニュース記事をご存じなら、
-      我々がここに載せられるように詳細を
-      <a href="mailto:www@freebsd.org">www@FreeBSD.org</a> まで
-      (英語で) 送ってください。</p>
+      我々がここに載せられるように詳細を <a
+	href="mailto:freebsd-doc@FreeBSD.org">freebsd-doc@FreeBSD.org</a>
+      まで (英語で) 送ってください。</p>
   </xsl:template>
 
   <!-- template: "html-press-make-olditems-list" -->
@@ -178,8 +178,8 @@
     <p>ここに載っていない FreeBSD に関連したイベントや、
       FreeBSD ユーザが興味をもちそうなイベントをご存じなら、
       我々がここに載せられるように詳細を
-      <a href="mailto:www@freebsd.org">www@FreeBSD.org</a> まで
-      (英語で) 送ってください。</p>
+      <a href="mailto:freebsd-doc@FreeBSD.org">freebsd-doc@FreeBSD.org</a>
+      まで (英語で) 送ってください。</p>
 
     <p>iCalendar 形式に対応したスケジュール管理ソフトウェアを使っているなら、
       ここに載っているすべてのイベントを集めた
