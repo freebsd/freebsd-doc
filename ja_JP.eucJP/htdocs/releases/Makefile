@@ -1,6 +1,6 @@
 # $FreeBSD$
 # The FreeBSD Japanese Documentation Project
-# Original revision: r45260
+# Original revision: r45901
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -11,7 +11,7 @@
 
 DOCS?=	index.xml
 
-#SUBDIR=	1.1 1.1.5 2.0 2.0.5R 2.1R
+#SUBDIR= 	1.0 1.1 1.1.5 2.0 2.0.5R 2.1R 2.1.5R 2.1.6R 2.1.7R 2.2R
 SUBDIR=		2.1.5R 2.1.6R 2.1.7R 2.2R
 SUBDIR+=	2.2.1R 2.2.2R 2.2.5R 2.2.6R 2.2.7R 2.2.8R 3.0R 3.1R 3.2R
 SUBDIR+=	3.3R 3.4R 3.5R 4.0R 4.1R 4.1.1R 4.2R 4.3R 4.4R 4.5R 4.6R
