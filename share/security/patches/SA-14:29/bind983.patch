@@ -1,0 +1,956 @@
+Index: contrib/bind9/CHANGES
+===================================================================
+--- contrib/bind9/CHANGES.orig
++++ contrib/bind9/CHANGES
+@@ -1,3 +1,15 @@
++4006.	[security]	A flaw in delegation handling could be exploited
++			to put named into an infinite loop.  This has
++			been addressed by placing limits on the number
++			of levels of recursion named will allow (default 7),
++			and the number of iterative queries that it will
++			send (default 50) before terminating a recursive
++			query (CVE-2014-8500).
++
++			The recursion depth limit is configured via the
++			"max-recursion-depth" option, and the query limit
++			via the "max-recursion-queries" option.  [RT #37580]
++
+ 	--- 9.8.3-P4 released ---
+ 
+ 3383.	[security]	A certain combination of records in the RBT could
+Index: contrib/bind9/bin/named/config.c
+===================================================================
+--- contrib/bind9/bin/named/config.c.orig
++++ contrib/bind9/bin/named/config.c
+@@ -15,8 +15,6 @@
+  * PERFORMANCE OF THIS SOFTWARE.
+  */
+ 
+-/* $Id: config.c,v 1.113.16.2 2011/02/28 01:19:58 tbox Exp $ */
+-
+ /*! \file */
+ 
+ #include <config.h>
+@@ -158,6 +156,8 @@
+ 	dnssec-accept-expired no;\n\
+ 	clients-per-query 10;\n\
+ 	max-clients-per-query 100;\n\
++	max-recursion-depth 7;\n\
++	max-recursion-queries 50;\n\
+ 	zero-no-soa-ttl-cache no;\n\
+ 	nsec3-test-zone no;\n\
+ 	allow-new-zones no;\n\
+Index: contrib/bind9/bin/named/query.c
+===================================================================
+--- contrib/bind9/bin/named/query.c.orig
++++ contrib/bind9/bin/named/query.c
+@@ -3761,12 +3761,11 @@
+ 		peeraddr = &client->peeraddr;
+ 	else
+ 		peeraddr = NULL;
+-	result = dns_resolver_createfetch2(client->view->resolver,
++	result = dns_resolver_createfetch3(client->view->resolver,
+ 					   qname, qtype, qdomain, nameservers,
+ 					   NULL, peeraddr, client->message->id,
+-					   client->query.fetchoptions,
+-					   client->task,
+-					   query_resume, client,
++					   client->query.fetchoptions, 0, NULL,
++					   client->task, query_resume, client,
+ 					   rdataset, sigrdataset,
+ 					   &client->query.fetch);
+ 
+Index: contrib/bind9/bin/named/server.c
+===================================================================
+--- contrib/bind9/bin/named/server.c.orig
++++ contrib/bind9/bin/named/server.c
+@@ -2566,6 +2566,16 @@
+ 					cfg_obj_asuint32(obj),
+ 					max_clients_per_query);
+ 
++	obj = NULL;
++	result = ns_config_get(maps, "max-recursion-depth", &obj);
++	INSIST(result == ISC_R_SUCCESS);
++	dns_resolver_setmaxdepth(view->resolver, cfg_obj_asuint32(obj));
++
++	obj = NULL;
++	result = ns_config_get(maps, "max-recursion-queries", &obj);
++	INSIST(result == ISC_R_SUCCESS);
++	dns_resolver_setmaxqueries(view->resolver, cfg_obj_asuint32(obj));
++
+ #ifdef ALLOW_FILTER_AAAA_ON_V4
+ 	obj = NULL;
+ 	result = ns_config_get(maps, "filter-aaaa-on-v4", &obj);
+Index: contrib/bind9/lib/dns/adb.c
+===================================================================
+--- contrib/bind9/lib/dns/adb.c.orig
++++ contrib/bind9/lib/dns/adb.c
+@@ -200,6 +200,7 @@
+ 	unsigned int                    magic;
+ 	dns_fetch_t                    *fetch;
+ 	dns_rdataset_t                  rdataset;
++	unsigned int			depth;
+ };
+ 
+ /*%
+@@ -299,8 +300,7 @@
+ static inline void violate_locking_hierarchy(isc_mutex_t *, isc_mutex_t *);
+ static isc_boolean_t clean_namehooks(dns_adb_t *, dns_adbnamehooklist_t *);
+ static void clean_target(dns_adb_t *, dns_name_t *);
+-static void clean_finds_at_name(dns_adbname_t *, isc_eventtype_t,
+-				unsigned int);
++static void clean_finds_at_name(dns_adbname_t *, isc_eventtype_t, unsigned int);
+ static isc_boolean_t check_expire_namehooks(dns_adbname_t *, isc_stdtime_t);
+ static isc_boolean_t check_expire_entry(dns_adb_t *, dns_adbentry_t **,
+ 					isc_stdtime_t);
+@@ -308,6 +308,7 @@
+ static isc_result_t dbfind_name(dns_adbname_t *, isc_stdtime_t,
+ 				dns_rdatatype_t);
+ static isc_result_t fetch_name(dns_adbname_t *, isc_boolean_t,
++			       unsigned int, isc_counter_t *qc,
+ 			       dns_rdatatype_t);
+ static inline void check_exit(dns_adb_t *);
+ static void destroy(dns_adb_t *);
+@@ -2743,6 +2744,19 @@
+ 		   isc_stdtime_t now, dns_name_t *target,
+ 		   in_port_t port, dns_adbfind_t **findp)
+ {
++	return (dns_adb_createfind2(adb, task, action, arg, name,
++				    qname, qtype, options, now,
++				    target, port, 0, NULL, findp));
++}
++
++isc_result_t
++dns_adb_createfind2(dns_adb_t *adb, isc_task_t *task, isc_taskaction_t action,
++		    void *arg, dns_name_t *name, dns_name_t *qname,
++		    dns_rdatatype_t qtype, unsigned int options,
++		    isc_stdtime_t now, dns_name_t *target,
++		    in_port_t port, unsigned int depth, isc_counter_t *qc,
++		    dns_adbfind_t **findp)
++{
+ 	dns_adbfind_t *find;
+ 	dns_adbname_t *adbname;
+ 	int bucket;
+@@ -2973,7 +2987,7 @@
+ 		 * Start V4.
+ 		 */
+ 		if (WANT_INET(wanted_fetches) &&
+-		    fetch_name(adbname, start_at_zone,
++		    fetch_name(adbname, start_at_zone, depth, qc,
+ 			       dns_rdatatype_a) == ISC_R_SUCCESS) {
+ 			DP(DEF_LEVEL,
+ 			   "dns_adb_createfind: started A fetch for name %p",
+@@ -2984,7 +2998,7 @@
+ 		 * Start V6.
+ 		 */
+ 		if (WANT_INET6(wanted_fetches) &&
+-		    fetch_name(adbname, start_at_zone,
++		    fetch_name(adbname, start_at_zone, depth, qc,
+ 			       dns_rdatatype_aaaa) == ISC_R_SUCCESS) {
+ 			DP(DEF_LEVEL,
+ 			   "dns_adb_createfind: "
+@@ -3727,6 +3741,12 @@
+ 		DP(DEF_LEVEL, "adb: fetch of '%s' %s failed: %s",
+ 		   buf, address_type == DNS_ADBFIND_INET ? "A" : "AAAA",
+ 		   dns_result_totext(dev->result));
++		/*
++		 * Don't record a failure unless this is the initial
++		 * fetch of a chain.
++		 */
++		if (fetch->depth > 1)
++			goto out;
+ 		/* XXXMLG Don't pound on bad servers. */
+ 		if (address_type == DNS_ADBFIND_INET) {
+ 			name->expire_v4 = ISC_MIN(name->expire_v4, now + 300);
+@@ -3764,9 +3784,8 @@
+ }
+ 
+ static isc_result_t
+-fetch_name(dns_adbname_t *adbname,
+-	   isc_boolean_t start_at_zone,
+-	   dns_rdatatype_t type)
++fetch_name(dns_adbname_t *adbname, isc_boolean_t start_at_zone,
++	   unsigned int depth, isc_counter_t *qc, dns_rdatatype_t type)
+ {
+ 	isc_result_t result;
+ 	dns_adbfetch_t *fetch = NULL;
+@@ -3811,12 +3830,14 @@
+ 		result = ISC_R_NOMEMORY;
+ 		goto cleanup;
+ 	}
++	fetch->depth = depth;
+ 
+-	result = dns_resolver_createfetch(adb->view->resolver, &adbname->name,
+-					  type, name, nameservers, NULL,
+-					  options, adb->task, fetch_callback,
+-					  adbname, &fetch->rdataset, NULL,
+-					  &fetch->fetch);
++	result = dns_resolver_createfetch3(adb->view->resolver, &adbname->name,
++					   type, name, nameservers, NULL,
++					   NULL, 0, options, depth, qc,
++					   adb->task, fetch_callback, adbname,
++					   &fetch->rdataset, NULL,
++					   &fetch->fetch);
+ 	if (result != ISC_R_SUCCESS)
+ 		goto cleanup;
+ 
+Index: contrib/bind9/lib/dns/include/dns/adb.h
+===================================================================
+--- contrib/bind9/lib/dns/include/dns/adb.h.orig
++++ contrib/bind9/lib/dns/include/dns/adb.h
+@@ -334,6 +334,13 @@
+ 		   dns_rdatatype_t qtype, unsigned int options,
+ 		   isc_stdtime_t now, dns_name_t *target,
+ 		   in_port_t port, dns_adbfind_t **find);
++isc_result_t
++dns_adb_createfind2(dns_adb_t *adb, isc_task_t *task, isc_taskaction_t action,
++		    void *arg, dns_name_t *name, dns_name_t *qname,
++		    dns_rdatatype_t qtype, unsigned int options,
++		    isc_stdtime_t now, dns_name_t *target, in_port_t port,
++		    unsigned int depth, isc_counter_t *qc,
++		    dns_adbfind_t **find);
+ /*%<
+  * Main interface for clients. The adb will look up the name given in
+  * "name" and will build up a list of found addresses, and perhaps start
+Index: contrib/bind9/lib/dns/include/dns/resolver.h
+===================================================================
+--- contrib/bind9/lib/dns/include/dns/resolver.h.orig
++++ contrib/bind9/lib/dns/include/dns/resolver.h
+@@ -271,6 +271,18 @@
+ 			  dns_rdataset_t *rdataset,
+ 			  dns_rdataset_t *sigrdataset,
+ 			  dns_fetch_t **fetchp);
++isc_result_t
++dns_resolver_createfetch3(dns_resolver_t *res, dns_name_t *name,
++			  dns_rdatatype_t type,
++			  dns_name_t *domain, dns_rdataset_t *nameservers,
++			  dns_forwarders_t *forwarders,
++			  isc_sockaddr_t *client, isc_uint16_t id,
++			  unsigned int options, unsigned int depth,
++			  isc_counter_t *qc, isc_task_t *task,
++			  isc_taskaction_t action, void *arg,
++			  dns_rdataset_t *rdataset,
++			  dns_rdataset_t *sigrdataset,
++			  dns_fetch_t **fetchp);
+ /*%<
+  * Recurse to answer a question.
+  *
+@@ -572,6 +584,30 @@
+  * \li	resolver to be valid.
+  */
+ 
++void
++dns_resolver_setmaxdepth(dns_resolver_t *resolver, unsigned int maxdepth);
++unsigned int
++dns_resolver_getmaxdepth(dns_resolver_t *resolver);
++/*%
++ * Get and set how many NS indirections will be followed when looking for
++ * nameserver addresses.
++ *
++ * Requires:
++ * \li	resolver to be valid.
++ */
++
++void
++dns_resolver_setmaxqueries(dns_resolver_t *resolver, unsigned int queries);
++unsigned int
++dns_resolver_getmaxqueries(dns_resolver_t *resolver);
++/*%
++ * Get and set how many iterative queries will be allowed before
++ * terminating a recursive query.
++ *
++ * Requires:
++ * \li	resolver to be valid.
++ */
++
+ ISC_LANG_ENDDECLS
+ 
+ #endif /* DNS_RESOLVER_H */
+Index: contrib/bind9/lib/dns/resolver.c
+===================================================================
+--- contrib/bind9/lib/dns/resolver.c.orig
++++ contrib/bind9/lib/dns/resolver.c
+@@ -21,6 +21,7 @@
+ 
+ #include <config.h>
+ 
++#include <isc/counter.h>
+ #include <isc/platform.h>
+ #include <isc/print.h>
+ #include <isc/string.h>
+@@ -113,6 +114,16 @@
+ #define MAXIMUM_QUERY_TIMEOUT 30 /* The maximum time in seconds for the whole query to live. */
+ #endif
+ 
++/* The default maximum number of recursions to follow before giving up. */
++#ifndef DEFAULT_RECURSION_DEPTH
++#define DEFAULT_RECURSION_DEPTH 7
++#endif
++
++/* The default maximum number of iterative queries to allow before giving up. */
++#ifndef DEFAULT_MAX_QUERIES
++#define DEFAULT_MAX_QUERIES 50
++#endif
++
+ /*%
+  * Maximum EDNS0 input packet size.
+  */
+@@ -214,12 +225,13 @@
+ 	isc_sockaddrlist_t		edns;
+ 	isc_sockaddrlist_t		edns512;
+ 	isc_sockaddrlist_t		bad_edns;
+-	dns_validator_t			*validator;
++	dns_validator_t *		validator;
+ 	ISC_LIST(dns_validator_t)       validators;
+ 	dns_db_t *			cache;
+ 	dns_adb_t *			adb;
+ 	isc_boolean_t			ns_ttl_ok;
+ 	isc_uint32_t			ns_ttl;
++	isc_counter_t *			qc;
+ 
+ 	/*%
+ 	 * The number of events we're waiting for.
+@@ -287,6 +299,7 @@
+ 	isc_boolean_t			timeout;
+ 	dns_adbaddrinfo_t 		*addrinfo;
+ 	isc_sockaddr_t			*client;
++	unsigned int			depth;
+ };
+ 
+ #define FCTX_MAGIC			ISC_MAGIC('F', '!', '!', '!')
+@@ -399,6 +412,8 @@
+ 	isc_timer_t *			spillattimer;
+ 	isc_boolean_t			zero_no_soa_ttl;
+ 	unsigned int			query_timeout;
++	unsigned int			maxdepth;
++	unsigned int			maxqueries;
+ 
+ 	/* Locked by lock. */
+ 	unsigned int			references;
+@@ -1545,6 +1560,7 @@
+ 		if (result != ISC_R_SUCCESS)
+ 			goto cleanup_dispatch;
+ 	}
++
+ 	fctx->querysent++;
+ 
+ 	ISC_LIST_APPEND(fctx->queries, query, link);
+@@ -2186,9 +2202,9 @@
+ 		 */
+ 		INSIST(!SHUTTINGDOWN(fctx));
+ 		fctx->attributes &= ~FCTX_ATTR_ADDRWAIT;
+-		if (event->ev_type == DNS_EVENT_ADBMOREADDRESSES)
++		if (event->ev_type == DNS_EVENT_ADBMOREADDRESSES) {
+ 			want_try = ISC_TRUE;
+-		else {
++		} else {
+ 			fctx->findfail++;
+ 			if (fctx->pending == 0) {
+ 				/*
+@@ -2217,7 +2233,7 @@
+ 	else if (want_done)
+ 		fctx_done(fctx, ISC_R_FAILURE, __LINE__);
+ 	else if (destroy) {
+-			fctx_destroy(fctx);
++		fctx_destroy(fctx);
+ 		if (bucket_empty)
+ 			empty_bucket(res);
+ 	}
+@@ -2471,12 +2487,13 @@
+ 	 * See what we know about this address.
+ 	 */
+ 	find = NULL;
+-	result = dns_adb_createfind(fctx->adb,
+-				    res->buckets[fctx->bucketnum].task,
+-				    fctx_finddone, fctx, name,
+-				    &fctx->name, fctx->type,
+-				    options, now, NULL,
+-				    res->view->dstport, &find);
++	result = dns_adb_createfind2(fctx->adb,
++				     res->buckets[fctx->bucketnum].task,
++				     fctx_finddone, fctx, name,
++				     &fctx->name, fctx->type,
++				     options, now, NULL,
++				     res->view->dstport,
++				     fctx->depth + 1, fctx->qc, &find);
+ 	if (result != ISC_R_SUCCESS) {
+ 		if (result == DNS_R_ALIAS) {
+ 			/*
+@@ -2584,6 +2601,14 @@
+ 
+ 	res = fctx->res;
+ 
++	if (fctx->depth > res->maxdepth) {
++		isc_log_write(dns_lctx, DNS_LOGCATEGORY_RESOLVER,
++			      DNS_LOGMODULE_RESOLVER, ISC_LOG_DEBUG(3),
++			      "too much NS indirection resolving '%s'",
++			      fctx->info);
++		return (DNS_R_SERVFAIL);
++	}
++
+ 	/*
+ 	 * Forwarders.
+ 	 */
+@@ -3059,6 +3084,16 @@
+ 		}
+ 	}
+ 
++	result = isc_counter_increment(fctx->qc);
++	if (result != ISC_R_SUCCESS) {
++		isc_log_write(dns_lctx, DNS_LOGCATEGORY_RESOLVER,
++			      DNS_LOGMODULE_RESOLVER, ISC_LOG_DEBUG(3),
++			      "exceeded max queries resolving '%s'",
++			      fctx->info);
++		fctx_done(fctx, DNS_R_SERVFAIL, __LINE__);
++		return;
++	}
++
+ 	result = fctx_query(fctx, addrinfo, fctx->options);
+ 	if (result != ISC_R_SUCCESS)
+ 		fctx_done(fctx, result, __LINE__);
+@@ -3157,6 +3192,7 @@
+ 		isc_mem_put(fctx->mctx, sa, sizeof(*sa));
+ 	}
+ 
++	isc_counter_detach(&fctx->qc);
+ 	isc_timer_detach(&fctx->timer);
+ 	dns_message_destroy(&fctx->rmessage);
+ 	dns_message_destroy(&fctx->qmessage);
+@@ -3485,7 +3521,8 @@
+ static isc_result_t
+ fctx_create(dns_resolver_t *res, dns_name_t *name, dns_rdatatype_t type,
+ 	    dns_name_t *domain, dns_rdataset_t *nameservers,
+-	    unsigned int options, unsigned int bucketnum, fetchctx_t **fctxp)
++	    unsigned int options, unsigned int bucketnum, unsigned int depth,
++	    isc_counter_t *qc, fetchctx_t **fctxp)
+ {
+ 	fetchctx_t *fctx;
+ 	isc_result_t result;
+@@ -3507,6 +3544,21 @@
+ 	fctx = isc_mem_get(mctx, sizeof(*fctx));
+ 	if (fctx == NULL)
+ 		return (ISC_R_NOMEMORY);
++
++	fctx->qc = NULL;
++	if (qc != NULL) {
++		isc_counter_attach(qc, &fctx->qc);
++	} else {
++		result = isc_counter_create(res->mctx,
++					    res->maxqueries, &fctx->qc);
++		if (result != ISC_R_SUCCESS)
++			goto cleanup_fetch;
++	}
++
++	/*
++	 * Make fctx->info point to a copy of a formatted string
++	 * "name/type".
++	 */
+ 	dns_name_format(name, buf, sizeof(buf));
+ 	dns_rdatatype_format(type, typebuf, sizeof(typebuf));
+ 	strcat(buf, "/");       /* checked */
+@@ -3514,7 +3566,7 @@
+ 	fctx->info = isc_mem_strdup(mctx, buf);
+ 	if (fctx->info == NULL) {
+ 		result = ISC_R_NOMEMORY;
+-		goto cleanup_fetch;
++		goto cleanup_counter;
+ 	}
+ 	FCTXTRACE("create");
+ 	dns_name_init(&fctx->name, NULL);
+@@ -3537,6 +3589,7 @@
+ 	fctx->state = fetchstate_init;
+ 	fctx->want_shutdown = ISC_FALSE;
+ 	fctx->cloned = ISC_FALSE;
++	fctx->depth = depth;
+ 	ISC_LIST_INIT(fctx->queries);
+ 	ISC_LIST_INIT(fctx->finds);
+ 	ISC_LIST_INIT(fctx->altfinds);
+@@ -3742,6 +3795,9 @@
+  cleanup_info:
+ 	isc_mem_free(mctx, fctx->info);
+ 
++ cleanup_counter:
++	isc_counter_detach(&fctx->qc);
++
+  cleanup_fetch:
+ 	isc_mem_put(mctx, fctx, sizeof(*fctx));
+ 
+@@ -5453,7 +5509,7 @@
+ 					char qbuf[DNS_NAME_FORMATSIZE];
+ 					char nbuf[DNS_NAME_FORMATSIZE];
+ 					char tbuf[DNS_RDATATYPE_FORMATSIZE];
+-					dns_rdatatype_format(fctx->type, tbuf,
++					dns_rdatatype_format(type, tbuf,
+ 							     sizeof(tbuf));
+ 					dns_name_format(name, nbuf,
+ 							     sizeof(nbuf));
+@@ -5462,7 +5518,7 @@
+ 					log_formerr(fctx,
+ 						    "unrelated %s %s in "
+ 						    "%s authority section",
+-						    tbuf, qbuf, nbuf);
++						    tbuf, nbuf, qbuf);
+ 					return (DNS_R_FORMERR);
+ 				}
+ 				if (type == dns_rdatatype_ns) {
+@@ -7504,6 +7560,8 @@
+ 	res->query_timeout = DEFAULT_QUERY_TIMEOUT;
+ 	res->ndisps = 0;
+ 	res->nextdisp = 0; /* meaningless at this point, but init it */
++	res->maxdepth = DEFAULT_RECURSION_DEPTH;
++	res->maxqueries = DEFAULT_MAX_QUERIES;
+ 	res->nbuckets = ntasks;
+ 	res->activebuckets = ntasks;
+ 	res->buckets = isc_mem_get(view->mctx,
+@@ -7943,9 +8001,9 @@
+ 			 dns_rdataset_t *sigrdataset,
+ 			 dns_fetch_t **fetchp)
+ {
+-	return (dns_resolver_createfetch2(res, name, type, domain,
++	return (dns_resolver_createfetch3(res, name, type, domain,
+ 					  nameservers, forwarders, NULL, 0,
+-					  options, task, action, arg,
++					  options, 0, NULL, task, action, arg,
+ 					  rdataset, sigrdataset, fetchp));
+ }
+ 
+@@ -7961,6 +8019,25 @@
+ 			  dns_rdataset_t *sigrdataset,
+ 			  dns_fetch_t **fetchp)
+ {
++	return (dns_resolver_createfetch3(res, name, type, domain,
++					  nameservers, forwarders, client, id,
++					  options, 0, NULL, task, action, arg,
++					  rdataset, sigrdataset, fetchp));
++}
++
++isc_result_t
++dns_resolver_createfetch3(dns_resolver_t *res, dns_name_t *name,
++			  dns_rdatatype_t type,
++			  dns_name_t *domain, dns_rdataset_t *nameservers,
++			  dns_forwarders_t *forwarders,
++			  isc_sockaddr_t *client, dns_messageid_t id,
++			  unsigned int options, unsigned int depth,
++			  isc_counter_t *qc, isc_task_t *task,
++			  isc_taskaction_t action, void *arg,
++			  dns_rdataset_t *rdataset,
++			  dns_rdataset_t *sigrdataset,
++			  dns_fetch_t **fetchp)
++{
+ 	dns_fetch_t *fetch;
+ 	fetchctx_t *fctx = NULL;
+ 	isc_result_t result = ISC_R_SUCCESS;
+@@ -8047,11 +8124,12 @@
+ 
+ 	if (fctx == NULL) {
+ 		result = fctx_create(res, name, type, domain, nameservers,
+-				     options, bucketnum, &fctx);
++				     options, bucketnum, depth, qc, &fctx);
+ 		if (result != ISC_R_SUCCESS)
+ 			goto unlock;
+ 		new_fctx = ISC_TRUE;
+-	}
++	} else if (fctx->depth > depth)
++		fctx->depth = depth;
+ 
+ 	result = fctx_join(fctx, task, client, id, action, arg,
+ 			   rdataset, sigrdataset, fetch);
+@@ -8821,3 +8899,27 @@
+ 
+ 	resolver->query_timeout = seconds;
+ }
++
++void
++dns_resolver_setmaxdepth(dns_resolver_t *resolver, unsigned int maxdepth) {
++	REQUIRE(VALID_RESOLVER(resolver));
++	resolver->maxdepth = maxdepth;
++}
++
++unsigned int
++dns_resolver_getmaxdepth(dns_resolver_t *resolver) {
++	REQUIRE(VALID_RESOLVER(resolver));
++	return (resolver->maxdepth);
++}
++
++void
++dns_resolver_setmaxqueries(dns_resolver_t *resolver, unsigned int queries) {
++	REQUIRE(VALID_RESOLVER(resolver));
++	resolver->maxqueries = queries;
++}
++
++unsigned int
++dns_resolver_getmaxqueries(dns_resolver_t *resolver) {
++	REQUIRE(VALID_RESOLVER(resolver));
++	return (resolver->maxqueries);
++}
+Index: contrib/bind9/lib/export/isc/Makefile.in
+===================================================================
+--- contrib/bind9/lib/export/isc/Makefile.in.orig
++++ contrib/bind9/lib/export/isc/Makefile.in
+@@ -63,7 +63,7 @@
+ # Alphabetically
+ OBJS =		@ISC_EXTRA_OBJS@ \
+ 		assertions.@O@ backtrace.@O@ backtrace-emptytbl.@O@ base32.@O@ \
+-		base64.@O@ buffer.@O@ bufferlist.@O@ \
++		base64.@O@ buffer.@O@ bufferlist.@O@ counter.@O@ \
+ 		error.@O@ event.@O@ \
+ 		hash.@O@ hex.@O@ hmacmd5.@O@ hmacsha.@O@ \
+ 		inet_aton.@O@ iterated_hash.@O@ lex.@O@ lfsr.@O@ log.@O@ \
+@@ -86,7 +86,7 @@
+ 
+ SRCS =		@ISC_EXTRA_SRCS@ \
+ 		assertions.c backtrace.c backtrace-emptytbl.c base32.c \
+-		base64.c buffer.c bufferlist.c \
++		base64.c buffer.c bufferlist.c counter.c \
+ 		error.c event.c \
+ 		hash.c hex.c hmacmd5.c hmacsha.c \
+ 		inet_aton.c iterated_hash.c lex.c log.c lfsr.c \
+Index: contrib/bind9/lib/isc/Makefile.in
+===================================================================
+--- contrib/bind9/lib/isc/Makefile.in.orig
++++ contrib/bind9/lib/isc/Makefile.in
+@@ -13,8 +13,6 @@
+ # OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+ # PERFORMANCE OF THIS SOFTWARE.
+ 
+-# $Id$
+-
+ srcdir =	@srcdir@
+ VPATH =		@srcdir@
+ top_srcdir =	@top_srcdir@
+@@ -53,7 +51,7 @@
+ OBJS =		@ISC_EXTRA_OBJS@ \
+ 		assertions.@O@ backtrace.@O@ base32.@O@ base64.@O@ \
+ 		bitstring.@O@ buffer.@O@ bufferlist.@O@ commandline.@O@ \
+-		error.@O@ event.@O@ \
++		counter.@O@ error.@O@ event.@O@ \
+ 		hash.@O@ heap.@O@ hex.@O@ hmacmd5.@O@ hmacsha.@O@ \
+ 		httpd.@O@ inet_aton.@O@ iterated_hash.@O@ \
+ 		lex.@O@ lfsr.@O@ lib.@O@ log.@O@ \
+@@ -69,8 +67,8 @@
+ # Alphabetically
+ SRCS =		@ISC_EXTRA_SRCS@ \
+ 		assertions.c backtrace.c base32.c base64.c bitstring.c \
+-		buffer.c bufferlist.c commandline.c error.c event.c \
+-		heap.c hex.c hmacmd5.c hmacsha.c \
++		buffer.c bufferlist.c commandline.c counter.c \
++		error.c event.c heap.c hex.c hmacmd5.c hmacsha.c \
+ 		httpd.c inet_aton.c iterated_hash.c \
+ 		lex.c lfsr.c lib.c log.c \
+ 		md5.c mem.c mutexblock.c \
+Index: contrib/bind9/lib/isc/counter.c
+===================================================================
+--- contrib/bind9/lib/isc/counter.c.orig
++++ contrib/bind9/lib/isc/counter.c
+@@ -0,0 +1,138 @@
++/*
++ * Copyright (C) 2014  Internet Systems Consortium, Inc. ("ISC")
++ *
++ * Permission to use, copy, modify, and/or distribute this software for any
++ * purpose with or without fee is hereby granted, provided that the above
++ * copyright notice and this permission notice appear in all copies.
++ *
++ * THE SOFTWARE IS PROVIDED "AS IS" AND ISC DISCLAIMS ALL WARRANTIES WITH
++ * REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
++ * AND FITNESS.  IN NO EVENT SHALL ISC BE LIABLE FOR ANY SPECIAL, DIRECT,
++ * INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
++ * LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE
++ * OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
++ * PERFORMANCE OF THIS SOFTWARE.
++ */
++
++/*! \file */
++
++#include <config.h>
++
++#include <stddef.h>
++
++#include <isc/counter.h>
++#include <isc/magic.h>
++#include <isc/mem.h>
++#include <isc/util.h>
++
++#define COUNTER_MAGIC			ISC_MAGIC('C', 'n', 't', 'r')
++#define VALID_COUNTER(r)		ISC_MAGIC_VALID(r, COUNTER_MAGIC)
++
++struct isc_counter {
++	unsigned int	magic;
++	isc_mem_t	*mctx;
++	isc_mutex_t	lock;
++	unsigned int	references;
++	unsigned int	limit;
++	unsigned int	used;
++};
++
++isc_result_t
++isc_counter_create(isc_mem_t *mctx, int limit, isc_counter_t **counterp) {
++	isc_result_t result;
++	isc_counter_t *counter;
++
++	REQUIRE(counterp != NULL && *counterp == NULL);
++
++	counter = isc_mem_get(mctx, sizeof(*counter));
++	if (counter == NULL)
++		return (ISC_R_NOMEMORY);
++
++	result = isc_mutex_init(&counter->lock);
++	if (result != ISC_R_SUCCESS) {
++		isc_mem_put(mctx, counter, sizeof(*counter));
++		return (result);
++	}
++
++	counter->mctx = NULL;
++	isc_mem_attach(mctx, &counter->mctx);
++
++	counter->references = 1;
++	counter->limit = limit;
++	counter->used = 0;
++
++	counter->magic = COUNTER_MAGIC;
++	*counterp = counter;
++	return (ISC_R_SUCCESS);
++}
++
++isc_result_t
++isc_counter_increment(isc_counter_t *counter) {
++	isc_result_t result = ISC_R_SUCCESS;
++
++	LOCK(&counter->lock);
++	counter->used++;
++	if (counter->limit != 0 && counter->used >= counter->limit)
++		result = ISC_R_QUOTA;
++	UNLOCK(&counter->lock);
++
++	return (result);
++}
++
++unsigned int
++isc_counter_used(isc_counter_t *counter) {
++	REQUIRE(VALID_COUNTER(counter));
++
++	return (counter->used);
++}
++
++void
++isc_counter_setlimit(isc_counter_t *counter, int limit) {
++	REQUIRE(VALID_COUNTER(counter));
++
++	LOCK(&counter->lock);
++	counter->limit = limit;
++	UNLOCK(&counter->lock);
++}
++
++void
++isc_counter_attach(isc_counter_t *source, isc_counter_t **targetp) {
++	REQUIRE(VALID_COUNTER(source));
++	REQUIRE(targetp != NULL && *targetp == NULL);
++
++	LOCK(&source->lock);
++	source->references++;
++	INSIST(source->references > 0);
++	UNLOCK(&source->lock);
++
++	*targetp = source;
++}
++
++static void
++destroy(isc_counter_t *counter) {
++	counter->magic = 0;
++	isc_mutex_destroy(&counter->lock);
++	isc_mem_putanddetach(&counter->mctx, counter, sizeof(*counter));
++}
++
++void
++isc_counter_detach(isc_counter_t **counterp) {
++	isc_counter_t *counter;
++	isc_boolean_t want_destroy = ISC_FALSE;
++
++	REQUIRE(counterp != NULL && *counterp != NULL);
++	counter = *counterp;
++	REQUIRE(VALID_COUNTER(counter));
++
++	*counterp = NULL;
++
++	LOCK(&counter->lock);
++	INSIST(counter->references > 0);
++	counter->references--;
++	if (counter->references == 0)
++		want_destroy = ISC_TRUE;
++	UNLOCK(&counter->lock);
++
++	if (want_destroy)
++		destroy(counter);
++}
+Index: contrib/bind9/lib/isc/include/isc/Makefile.in
+===================================================================
+--- contrib/bind9/lib/isc/include/isc/Makefile.in.orig
++++ contrib/bind9/lib/isc/include/isc/Makefile.in
+@@ -13,8 +13,6 @@
+ # OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+ # PERFORMANCE OF THIS SOFTWARE.
+ 
+-# $Id$
+-
+ srcdir =	@srcdir@
+ VPATH =		@srcdir@
+ top_srcdir =	@top_srcdir@
+@@ -27,7 +25,8 @@
+ # install target below.
+ #
+ HEADERS =	app.h assertions.h base64.h bind9.h bitstring.h boolean.h \
+-		buffer.h bufferlist.h commandline.h entropy.h error.h event.h \
++		buffer.h bufferlist.h \
++		commandline.h counter.h entropy.h error.h event.h \
+ 		eventclass.h file.h formatcheck.h fsaccess.h \
+ 		hash.h heap.h hex.h hmacmd5.h hmacsha.h \
+ 		httpd.h \
+Index: contrib/bind9/lib/isc/include/isc/counter.h
+===================================================================
+--- contrib/bind9/lib/isc/include/isc/counter.h.orig
++++ contrib/bind9/lib/isc/include/isc/counter.h
+@@ -0,0 +1,90 @@
++/*
++ * Copyright (C) 2014  Internet Systems Consortium, Inc. ("ISC")
++ *
++ * Permission to use, copy, modify, and/or distribute this software for any
++ * purpose with or without fee is hereby granted, provided that the above
++ * copyright notice and this permission notice appear in all copies.
++ *
++ * THE SOFTWARE IS PROVIDED "AS IS" AND ISC DISCLAIMS ALL WARRANTIES WITH
++ * REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
++ * AND FITNESS.  IN NO EVENT SHALL ISC BE LIABLE FOR ANY SPECIAL, DIRECT,
++ * INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
++ * LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE
++ * OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
++ * PERFORMANCE OF THIS SOFTWARE.
++ */
++
++#ifndef ISC_COUNTER_H
++#define ISC_COUNTER_H 1
++
++/*****
++ ***** Module Info
++ *****/
++
++/*! \file isc/counter.h
++ *
++ * \brief The isc_counter_t object is a simplified version of the
++ * isc_quota_t object; it tracks the consumption of limited
++ * resources, returning an error condition when the quota is
++ * exceeded.  However, unlike isc_quota_t, attaching and detaching
++ * from a counter object does not increment or decrement the counter.
++ */
++
++/***
++ *** Imports.
++ ***/
++
++#include <isc/lang.h>
++#include <isc/mutex.h>
++#include <isc/types.h>
++
++/*****
++ ***** Types.
++ *****/
++
++ISC_LANG_BEGINDECLS
++
++isc_result_t
++isc_counter_create(isc_mem_t *mctx, int limit, isc_counter_t **counterp);
++/*%<
++ * Allocate and initialize a counter object.
++ */
++
++isc_result_t
++isc_counter_increment(isc_counter_t *counter);
++/*%<
++ * Increment the counter.
++ *
++ * If the counter limit is nonzero and has been reached, then
++ * return ISC_R_QUOTA, otherwise ISC_R_SUCCESS. (The counter is
++ * incremented regardless of return value.)
++ */
++
++unsigned int
++isc_counter_used(isc_counter_t *counter);
++/*%<
++ * Return the current counter value.
++ */
++
++void
++isc_counter_setlimit(isc_counter_t *counter, int limit);
++/*%<
++ * Set the counter limit.
++ */
++
++void
++isc_counter_attach(isc_counter_t *source, isc_counter_t **targetp);
++/*%<
++ * Attach to a counter object, increasing its reference counter.
++ */
++
++void
++isc_counter_detach(isc_counter_t **counterp);
++/*%<
++ * Detach (and destroy if reference counter has dropped to zero)
++ * a counter object.
++ */
++
++ISC_LANG_ENDDECLS
++
++#endif /* ISC_COUNTER_H */
+Index: contrib/bind9/lib/isc/include/isc/types.h
+===================================================================
+--- contrib/bind9/lib/isc/include/isc/types.h.orig
++++ contrib/bind9/lib/isc/include/isc/types.h
+@@ -50,6 +50,7 @@
+ typedef ISC_LIST(isc_buffer_t)		isc_bufferlist_t;	/*%< Buffer List */
+ typedef struct isc_constregion		isc_constregion_t;	/*%< Const region */
+ typedef struct isc_consttextregion	isc_consttextregion_t;	/*%< Const Text Region */
++typedef struct isc_counter		isc_counter_t;		/*%< Counter */
+ typedef struct isc_entropy		isc_entropy_t;		/*%< Entropy */
+ typedef struct isc_entropysource	isc_entropysource_t;	/*%< Entropy Source */
+ typedef struct isc_event		isc_event_t;		/*%< Event */
+Index: contrib/bind9/lib/isccfg/namedconf.c
+===================================================================
+--- contrib/bind9/lib/isccfg/namedconf.c.orig
++++ contrib/bind9/lib/isccfg/namedconf.c
+@@ -15,8 +15,6 @@
+  * PERFORMANCE OF THIS SOFTWARE.
+  */
+ 
+-/* $Id$ */
+-
+ /*! \file */
+ 
+ #include <config.h>
+@@ -1244,6 +1242,8 @@
+ 	{ "max-cache-ttl", &cfg_type_uint32, 0 },
+ 	{ "max-clients-per-query", &cfg_type_uint32, 0 },
+ 	{ "max-ncache-ttl", &cfg_type_uint32, 0 },
++	{ "max-recursion-depth", &cfg_type_uint32, 0 },
++	{ "max-recursion-queries", &cfg_type_uint32, 0 },
+ 	{ "max-udp-size", &cfg_type_uint32, 0 },
+ 	{ "min-roots", &cfg_type_uint32, CFG_CLAUSEFLAG_NOTIMP },
+ 	{ "minimal-responses", &cfg_type_boolean, 0 },
+Index: lib/bind/isc/Makefile
+===================================================================
+--- lib/bind/isc/Makefile.orig
++++ lib/bind/isc/Makefile
+@@ -28,7 +28,7 @@
+ .PATH:		${SRCDIR}
+ SRCS+=		inet_pton.c \
+ 		assertions.c backtrace.c base32.c base64.c bitstring.c \
+-		buffer.c bufferlist.c commandline.c error.c event.c \
++		buffer.c bufferlist.c commandline.c counter.c error.c event.c \
+ 		fsaccess.c hash.c \
+ 		heap.c hex.c hmacmd5.c hmacsha.c \
+ 		httpd.c inet_aton.c \
+@@ -65,6 +65,7 @@
+ 		${SRCDIR}/include/isc/buffer.h \
+ 		${SRCDIR}/include/isc/bufferlist.h \
+ 		${SRCDIR}/include/isc/commandline.h \
++		${SRCDIR}/include/isc/counter.h \
+ 		${SRCDIR}/include/isc/entropy.h \
+ 		${SRCDIR}/include/isc/error.h \
+ 		${SRCDIR}/include/isc/event.h \
