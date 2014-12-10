@@ -1,0 +1,572 @@
+Index: contrib/bind9/CHANGES
+===================================================================
+--- contrib/bind9/CHANGES.orig
++++ contrib/bind9/CHANGES
+@@ -1,3 +1,14 @@
++4006.	[security]	A flaw in delegation handling could be exploited
++			to put named into an infinite loop.  This has
++			been addressed by placing limits on the number
++			of levels of recursion named will allow (default 7),
++			and the number of iterative queries that it will
++			send (default 50) before terminating a recursive
++			query (CVE-2014-8500).
++
++			The recursion depth limit is configured via the
++			"max-recursion-depth" option.  [RT #35780]
++
+ 	--- 9.9.5 released ---
+ 
+ 	--- 9.9.5rc2 released ---
+Index: contrib/bind9/bin/named/config.c
+===================================================================
+--- contrib/bind9/bin/named/config.c.orig
++++ contrib/bind9/bin/named/config.c
+@@ -15,8 +15,6 @@
+  * PERFORMANCE OF THIS SOFTWARE.
+  */
+ 
+-/* $Id: config.c,v 1.123 2012/01/06 23:46:41 tbox Exp $ */
+-
+ /*! \file */
+ 
+ #include <config.h>
+@@ -160,6 +158,7 @@
+ 	dnssec-accept-expired no;\n\
+ 	clients-per-query 10;\n\
+ 	max-clients-per-query 100;\n\
++	max-recursion-depth 7;\n\
+ 	zero-no-soa-ttl-cache no;\n\
+ 	nsec3-test-zone no;\n\
+ 	allow-new-zones no;\n\
+Index: contrib/bind9/bin/named/query.c
+===================================================================
+--- contrib/bind9/bin/named/query.c.orig
++++ contrib/bind9/bin/named/query.c
+@@ -3872,12 +3872,11 @@
+ 		peeraddr = &client->peeraddr;
+ 	else
+ 		peeraddr = NULL;
+-	result = dns_resolver_createfetch2(client->view->resolver,
++	result = dns_resolver_createfetch3(client->view->resolver,
+ 					   qname, qtype, qdomain, nameservers,
+ 					   NULL, peeraddr, client->message->id,
+-					   client->query.fetchoptions,
+-					   client->task,
+-					   query_resume, client,
++					   client->query.fetchoptions, 0,
++					   client->task, query_resume, client,
+ 					   rdataset, sigrdataset,
+ 					   &client->query.fetch);
+ 
+Index: contrib/bind9/bin/named/server.c
+===================================================================
+--- contrib/bind9/bin/named/server.c.orig
++++ contrib/bind9/bin/named/server.c
+@@ -3141,6 +3141,11 @@
+ 					cfg_obj_asuint32(obj),
+ 					max_clients_per_query);
+ 
++	obj = NULL;
++	result = ns_config_get(maps, "max-recursion-depth", &obj);
++	INSIST(result == ISC_R_SUCCESS);
++	dns_resolver_setmaxdepth(view->resolver, cfg_obj_asuint32(obj));
++
+ #ifdef ALLOW_FILTER_AAAA_ON_V4
+ 	obj = NULL;
+ 	result = ns_config_get(maps, "filter-aaaa-on-v4", &obj);
+Index: contrib/bind9/lib/dns/adb.c
+===================================================================
+--- contrib/bind9/lib/dns/adb.c.orig
++++ contrib/bind9/lib/dns/adb.c
+@@ -201,6 +201,7 @@
+ 	unsigned int                    magic;
+ 	dns_fetch_t                    *fetch;
+ 	dns_rdataset_t                  rdataset;
++	unsigned int			depth;
+ };
+ 
+ /*%
+@@ -301,7 +302,7 @@
+ static isc_boolean_t clean_namehooks(dns_adb_t *, dns_adbnamehooklist_t *);
+ static void clean_target(dns_adb_t *, dns_name_t *);
+ static void clean_finds_at_name(dns_adbname_t *, isc_eventtype_t,
+-				unsigned int);
++				isc_uint32_t, unsigned int);
+ static isc_boolean_t check_expire_namehooks(dns_adbname_t *, isc_stdtime_t);
+ static isc_boolean_t check_expire_entry(dns_adb_t *, dns_adbentry_t **,
+ 					isc_stdtime_t);
+@@ -309,7 +310,7 @@
+ static isc_result_t dbfind_name(dns_adbname_t *, isc_stdtime_t,
+ 				dns_rdatatype_t);
+ static isc_result_t fetch_name(dns_adbname_t *, isc_boolean_t,
+-			       dns_rdatatype_t);
++			       unsigned int, dns_rdatatype_t);
+ static inline void check_exit(dns_adb_t *);
+ static void destroy(dns_adb_t *);
+ static isc_boolean_t shutdown_names(dns_adb_t *);
+@@ -982,7 +983,7 @@
+ 	 * Clean up the name's various lists.  These two are destructive
+ 	 * in that they will always empty the list.
+ 	 */
+-	clean_finds_at_name(name, ev, DNS_ADBFIND_ADDRESSMASK);
++	clean_finds_at_name(name, ev, 0, DNS_ADBFIND_ADDRESSMASK);
+ 	result4 = clean_namehooks(adb, &name->v4);
+ 	result6 = clean_namehooks(adb, &name->v6);
+ 	clean_target(adb, &name->target);
+@@ -1407,7 +1408,7 @@
+  */
+ static void
+ clean_finds_at_name(dns_adbname_t *name, isc_eventtype_t evtype,
+-		    unsigned int addrs)
++		    isc_uint32_t qtotal, unsigned int addrs)
+ {
+ 	isc_event_t *ev;
+ 	isc_task_t *task;
+@@ -1467,6 +1468,7 @@
+ 			ev->ev_sender = find;
+ 			find->result_v4 = find_err_map[name->fetch_err];
+ 			find->result_v6 = find_err_map[name->fetch6_err];
++			find->qtotal += qtotal;
+ 			ev->ev_type = evtype;
+ 			ev->ev_destroy = event_free;
+ 			ev->ev_destroy_arg = find;
+@@ -1821,6 +1823,7 @@
+ 	h->flags = 0;
+ 	h->result_v4 = ISC_R_UNEXPECTED;
+ 	h->result_v6 = ISC_R_UNEXPECTED;
++	h->qtotal = 0;
+ 	ISC_LINK_INIT(h, publink);
+ 	ISC_LINK_INIT(h, plink);
+ 	ISC_LIST_INIT(h->list);
+@@ -2770,6 +2773,19 @@
+ 		   isc_stdtime_t now, dns_name_t *target,
+ 		   in_port_t port, dns_adbfind_t **findp)
+ {
++	return (dns_adb_createfind2(adb, task, action, arg, name,
++				    qname, qtype, options, now,
++				    target, port, 0, findp));
++}
++
++isc_result_t
++dns_adb_createfind2(dns_adb_t *adb, isc_task_t *task, isc_taskaction_t action,
++		    void *arg, dns_name_t *name, dns_name_t *qname,
++		    dns_rdatatype_t qtype, unsigned int options,
++		    isc_stdtime_t now, dns_name_t *target,
++		    in_port_t port, unsigned int depth,
++		    dns_adbfind_t **findp)
++{
+ 	dns_adbfind_t *find;
+ 	dns_adbname_t *adbname;
+ 	int bucket;
+@@ -3000,7 +3016,7 @@
+ 		 * Start V4.
+ 		 */
+ 		if (WANT_INET(wanted_fetches) &&
+-		    fetch_name(adbname, start_at_zone,
++		    fetch_name(adbname, start_at_zone, depth,
+ 			       dns_rdatatype_a) == ISC_R_SUCCESS) {
+ 			DP(DEF_LEVEL,
+ 			   "dns_adb_createfind: started A fetch for name %p",
+@@ -3011,7 +3027,7 @@
+ 		 * Start V6.
+ 		 */
+ 		if (WANT_INET6(wanted_fetches) &&
+-		    fetch_name(adbname, start_at_zone,
++		    fetch_name(adbname, start_at_zone, depth,
+ 			       dns_rdatatype_aaaa) == ISC_R_SUCCESS) {
+ 			DP(DEF_LEVEL,
+ 			   "dns_adb_createfind: "
+@@ -3627,6 +3643,7 @@
+ 	isc_result_t result;
+ 	unsigned int address_type;
+ 	isc_boolean_t want_check_exit = ISC_FALSE;
++	isc_uint32_t qtotal = 0;
+ 
+ 	UNUSED(task);
+ 
+@@ -3637,6 +3654,8 @@
+ 	adb = name->adb;
+ 	INSIST(DNS_ADB_VALID(adb));
+ 
++	qtotal = dev->qtotal;
++
+ 	bucket = name->lock_bucket;
+ 	LOCK(&adb->namelocks[bucket]);
+ 
+@@ -3754,6 +3773,12 @@
+ 		DP(DEF_LEVEL, "adb: fetch of '%s' %s failed: %s",
+ 		   buf, address_type == DNS_ADBFIND_INET ? "A" : "AAAA",
+ 		   dns_result_totext(dev->result));
++		/*
++		 * Don't record a failure unless this is the initial
++		 * fetch of a chain.
++		 */
++		if (fetch->depth > 1)
++			goto out;
+ 		/* XXXMLG Don't pound on bad servers. */
+ 		if (address_type == DNS_ADBFIND_INET) {
+ 			name->expire_v4 = ISC_MIN(name->expire_v4, now + 300);
+@@ -3785,15 +3810,14 @@
+ 	free_adbfetch(adb, &fetch);
+ 	isc_event_free(&ev);
+ 
+-	clean_finds_at_name(name, ev_status, address_type);
++	clean_finds_at_name(name, ev_status, qtotal, address_type);
+ 
+ 	UNLOCK(&adb->namelocks[bucket]);
+ }
+ 
+ static isc_result_t
+-fetch_name(dns_adbname_t *adbname,
+-	   isc_boolean_t start_at_zone,
+-	   dns_rdatatype_t type)
++fetch_name(dns_adbname_t *adbname, isc_boolean_t start_at_zone,
++	   unsigned int depth, dns_rdatatype_t type)
+ {
+ 	isc_result_t result;
+ 	dns_adbfetch_t *fetch = NULL;
+@@ -3838,12 +3862,14 @@
+ 		result = ISC_R_NOMEMORY;
+ 		goto cleanup;
+ 	}
++	fetch->depth = depth;
+ 
+-	result = dns_resolver_createfetch(adb->view->resolver, &adbname->name,
+-					  type, name, nameservers, NULL,
+-					  options, adb->task, fetch_callback,
+-					  adbname, &fetch->rdataset, NULL,
+-					  &fetch->fetch);
++	result = dns_resolver_createfetch3(adb->view->resolver, &adbname->name,
++					   type, name, nameservers, NULL,
++					   NULL, 0, options, depth, adb->task,
++					   fetch_callback, adbname,
++					   &fetch->rdataset, NULL,
++					   &fetch->fetch);
+ 	if (result != ISC_R_SUCCESS)
+ 		goto cleanup;
+ 
+Index: contrib/bind9/lib/dns/include/dns/adb.h
+===================================================================
+--- contrib/bind9/lib/dns/include/dns/adb.h.orig
++++ contrib/bind9/lib/dns/include/dns/adb.h
+@@ -118,6 +118,8 @@
+ 	isc_result_t			result_v6;	/*%< RO: v6 result */
+ 	ISC_LINK(dns_adbfind_t)		publink;	/*%< RW: client use */
+ 
++	isc_uint32_t			qtotal;
++
+ 	/* Private */
+ 	isc_mutex_t			lock;		/* locks all below */
+ 	in_port_t			port;
+@@ -334,6 +336,12 @@
+ 		   dns_rdatatype_t qtype, unsigned int options,
+ 		   isc_stdtime_t now, dns_name_t *target,
+ 		   in_port_t port, dns_adbfind_t **find);
++isc_result_t
++dns_adb_createfind2(dns_adb_t *adb, isc_task_t *task, isc_taskaction_t action,
++		    void *arg, dns_name_t *name, dns_name_t *qname,
++		    dns_rdatatype_t qtype, unsigned int options,
++		    isc_stdtime_t now, dns_name_t *target, in_port_t port,
++		    unsigned int depth, dns_adbfind_t **find);
+ /*%<
+  * Main interface for clients. The adb will look up the name given in
+  * "name" and will build up a list of found addresses, and perhaps start
+Index: contrib/bind9/lib/dns/include/dns/resolver.h
+===================================================================
+--- contrib/bind9/lib/dns/include/dns/resolver.h.orig
++++ contrib/bind9/lib/dns/include/dns/resolver.h
+@@ -82,6 +82,7 @@
+ 	isc_sockaddr_t *		client;
+ 	dns_messageid_t			id;
+ 	isc_result_t			vresult;
++	isc_uint32_t 			qtotal;
+ } dns_fetchevent_t;
+ 
+ /*
+@@ -274,6 +275,18 @@
+ 			  dns_rdataset_t *rdataset,
+ 			  dns_rdataset_t *sigrdataset,
+ 			  dns_fetch_t **fetchp);
++isc_result_t
++dns_resolver_createfetch3(dns_resolver_t *res, dns_name_t *name,
++			  dns_rdatatype_t type,
++			  dns_name_t *domain, dns_rdataset_t *nameservers,
++			  dns_forwarders_t *forwarders,
++			  isc_sockaddr_t *client, isc_uint16_t id,
++			  unsigned int options, unsigned int depth,
++			  isc_task_t *task,
++			  isc_taskaction_t action, void *arg,
++			  dns_rdataset_t *rdataset,
++			  dns_rdataset_t *sigrdataset,
++			  dns_fetch_t **fetchp);
+ /*%<
+  * Recurse to answer a question.
+  *
+@@ -575,6 +588,18 @@
+  * \li	resolver to be valid.
+  */
+ 
++void
++dns_resolver_setmaxdepth(dns_resolver_t *resolver, unsigned int maxdepth);
++unsigned int
++dns_resolver_getmaxdepth(dns_resolver_t *resolver);
++/*%
++ * Get and set how many NS indirections will be followed when looking for
++ * nameserver addresses.
++ *
++ * Requires:
++ * \li	resolver to be valid.
++ */
++
+ ISC_LANG_ENDDECLS
+ 
+ #endif /* DNS_RESOLVER_H */
+Index: contrib/bind9/lib/dns/resolver.c
+===================================================================
+--- contrib/bind9/lib/dns/resolver.c.orig
++++ contrib/bind9/lib/dns/resolver.c
+@@ -131,6 +131,16 @@
+ #define MAXIMUM_QUERY_TIMEOUT 30 /* The maximum time in seconds for the whole query to live. */
+ #endif
+ 
++/* The default maximum number of recursions to follow before giving up. */
++#ifndef DEFAULT_RECURSION_DEPTH
++#define DEFAULT_RECURSION_DEPTH 7
++#endif
++
++/* The default maximum number of iterative queries to allow before giving up. */
++#ifndef DEFAULT_MAX_QUERIES
++#define DEFAULT_MAX_QUERIES 50
++#endif
++
+ /*%
+  * Maximum EDNS0 input packet size.
+  */
+@@ -297,6 +307,7 @@
+ 	isc_uint64_t			duration;
+ 	isc_boolean_t			logged;
+ 	unsigned int			querysent;
++	unsigned int			totalqueries;
+ 	unsigned int			referrals;
+ 	unsigned int			lamecount;
+ 	unsigned int			neterr;
+@@ -307,6 +318,7 @@
+ 	isc_boolean_t			timeout;
+ 	dns_adbaddrinfo_t 		*addrinfo;
+ 	isc_sockaddr_t			*client;
++	unsigned int			depth;
+ };
+ 
+ #define FCTX_MAGIC			ISC_MAGIC('F', '!', '!', '!')
+@@ -418,6 +430,7 @@
+ 	isc_timer_t *			spillattimer;
+ 	isc_boolean_t			zero_no_soa_ttl;
+ 	unsigned int			query_timeout;
++	unsigned int			maxdepth;
+ 
+ 	/* Locked by lock. */
+ 	unsigned int			references;
+@@ -1093,6 +1106,7 @@
+ 			       event->result == DNS_R_NCACHENXRRSET);
+ 		}
+ 
++		event->qtotal = fctx->totalqueries;
+ 		isc_task_sendanddetach(&task, ISC_EVENT_PTR(&event));
+ 		count++;
+ 	}
+@@ -1533,7 +1547,9 @@
+ 		if (result != ISC_R_SUCCESS)
+ 			goto cleanup_dispatch;
+ 	}
++
+ 	fctx->querysent++;
++	fctx->totalqueries++;
+ 
+ 	ISC_LIST_APPEND(fctx->queries, query, link);
+ 	query->fctx->nqueries++;
+@@ -2186,9 +2202,10 @@
+ 		 */
+ 		INSIST(!SHUTTINGDOWN(fctx));
+ 		fctx->attributes &= ~FCTX_ATTR_ADDRWAIT;
+-		if (event->ev_type == DNS_EVENT_ADBMOREADDRESSES)
++		if (event->ev_type == DNS_EVENT_ADBMOREADDRESSES) {
+ 			want_try = ISC_TRUE;
+-		else {
++			fctx->totalqueries += find->qtotal;
++		} else {
+ 			fctx->findfail++;
+ 			if (fctx->pending == 0) {
+ 				/*
+@@ -2471,12 +2488,13 @@
+ 	 * See what we know about this address.
+ 	 */
+ 	find = NULL;
+-	result = dns_adb_createfind(fctx->adb,
+-				    res->buckets[fctx->bucketnum].task,
+-				    fctx_finddone, fctx, name,
+-				    &fctx->name, fctx->type,
+-				    options, now, NULL,
+-				    res->view->dstport, &find);
++	result = dns_adb_createfind2(fctx->adb,
++				     res->buckets[fctx->bucketnum].task,
++				     fctx_finddone, fctx, name,
++				     &fctx->name, fctx->type,
++				     options, now, NULL,
++				     res->view->dstport,
++				     fctx->depth + 1, &find);
+ 	if (result != ISC_R_SUCCESS) {
+ 		if (result == DNS_R_ALIAS) {
+ 			/*
+@@ -2584,6 +2602,11 @@
+ 
+ 	res = fctx->res;
+ 
++	if (fctx->depth > res->maxdepth) {
++		FCTXTRACE("too much NS indirection");
++		return (DNS_R_SERVFAIL);
++	}
++
+ 	/*
+ 	 * Forwarders.
+ 	 */
+@@ -3022,6 +3045,9 @@
+ 
+ 	REQUIRE(!ADDRWAIT(fctx));
+ 
++	if (fctx->totalqueries > DEFAULT_MAX_QUERIES)
++		fctx_done(fctx, DNS_R_SERVFAIL, __LINE__);
++
+ 	addrinfo = fctx_nextaddress(fctx);
+ 	if (addrinfo == NULL) {
+ 		/*
+@@ -3380,6 +3406,7 @@
+ 		 * Normal fctx startup.
+ 		 */
+ 		fctx->state = fetchstate_active;
++		fctx->totalqueries = 0;
+ 		/*
+ 		 * Reset the control event for later use in shutting down
+ 		 * the fctx.
+@@ -3449,6 +3476,7 @@
+ 	event->fetch = fetch;
+ 	event->client = client;
+ 	event->id = id;
++	event->qtotal = 0;
+ 	dns_fixedname_init(&event->foundname);
+ 
+ 	/*
+@@ -3485,7 +3513,8 @@
+ static isc_result_t
+ fctx_create(dns_resolver_t *res, dns_name_t *name, dns_rdatatype_t type,
+ 	    dns_name_t *domain, dns_rdataset_t *nameservers,
+-	    unsigned int options, unsigned int bucketnum, fetchctx_t **fctxp)
++	    unsigned int options, unsigned int bucketnum, unsigned int depth,
++	    fetchctx_t **fctxp)
+ {
+ 	fetchctx_t *fctx;
+ 	isc_result_t result;
+@@ -3537,6 +3566,7 @@
+ 	fctx->state = fetchstate_init;
+ 	fctx->want_shutdown = ISC_FALSE;
+ 	fctx->cloned = ISC_FALSE;
++	fctx->depth = depth;
+ 	ISC_LIST_INIT(fctx->queries);
+ 	ISC_LIST_INIT(fctx->finds);
+ 	ISC_LIST_INIT(fctx->altfinds);
+@@ -3555,6 +3585,7 @@
+ 	fctx->pending = 0;
+ 	fctx->restarts = 0;
+ 	fctx->querysent = 0;
++	fctx->totalqueries = 0;
+ 	fctx->referrals = 0;
+ 	TIME_NOW(&fctx->start);
+ 	fctx->timeouts = 0;
+@@ -7731,6 +7762,7 @@
+ 	res->spillattimer = NULL;
+ 	res->zero_no_soa_ttl = ISC_FALSE;
+ 	res->query_timeout = DEFAULT_QUERY_TIMEOUT;
++	res->maxdepth = DEFAULT_RECURSION_DEPTH;
+ 	res->nbuckets = ntasks;
+ 	res->activebuckets = ntasks;
+ 	res->buckets = isc_mem_get(view->mctx,
+@@ -8169,9 +8201,9 @@
+ 			 dns_rdataset_t *sigrdataset,
+ 			 dns_fetch_t **fetchp)
+ {
+-	return (dns_resolver_createfetch2(res, name, type, domain,
++	return (dns_resolver_createfetch3(res, name, type, domain,
+ 					  nameservers, forwarders, NULL, 0,
+-					  options, task, action, arg,
++					  options, 0, task, action, arg,
+ 					  rdataset, sigrdataset, fetchp));
+ }
+ 
+@@ -8187,6 +8219,25 @@
+ 			  dns_rdataset_t *sigrdataset,
+ 			  dns_fetch_t **fetchp)
+ {
++	return (dns_resolver_createfetch3(res, name, type, domain,
++					  nameservers, forwarders, client, id,
++					  options, 0, task, action, arg,
++					  rdataset, sigrdataset, fetchp));
++}
++
++isc_result_t
++dns_resolver_createfetch3(dns_resolver_t *res, dns_name_t *name,
++			  dns_rdatatype_t type,
++			  dns_name_t *domain, dns_rdataset_t *nameservers,
++			  dns_forwarders_t *forwarders,
++			  isc_sockaddr_t *client, dns_messageid_t id,
++			  unsigned int options, unsigned int depth,
++			  isc_task_t *task,
++			  isc_taskaction_t action, void *arg,
++			  dns_rdataset_t *rdataset,
++			  dns_rdataset_t *sigrdataset,
++			  dns_fetch_t **fetchp)
++{
+ 	dns_fetch_t *fetch;
+ 	fetchctx_t *fctx = NULL;
+ 	isc_result_t result = ISC_R_SUCCESS;
+@@ -8273,11 +8324,12 @@
+ 
+ 	if (fctx == NULL) {
+ 		result = fctx_create(res, name, type, domain, nameservers,
+-				     options, bucketnum, &fctx);
++				     options, bucketnum, depth, &fctx);
+ 		if (result != ISC_R_SUCCESS)
+ 			goto unlock;
+ 		new_fctx = ISC_TRUE;
+-	}
++	} else if (fctx->depth > depth)
++		fctx->depth = depth;
+ 
+ 	result = fctx_join(fctx, task, client, id, action, arg,
+ 			   rdataset, sigrdataset, fetch);
+@@ -9049,3 +9101,15 @@
+ 
+ 	resolver->query_timeout = seconds;
+ }
++
++void
++dns_resolver_setmaxdepth(dns_resolver_t *resolver, unsigned int maxdepth) {
++	REQUIRE(VALID_RESOLVER(resolver));
++	resolver->maxdepth = maxdepth;
++}
++
++unsigned int
++dns_resolver_getmaxdepth(dns_resolver_t *resolver) {
++	REQUIRE(VALID_RESOLVER(resolver));
++	return (resolver->maxdepth);
++}
+Index: contrib/bind9/lib/isccfg/namedconf.c
+===================================================================
+--- contrib/bind9/lib/isccfg/namedconf.c.orig
++++ contrib/bind9/lib/isccfg/namedconf.c
+@@ -1419,6 +1419,7 @@
+ 	{ "max-cache-ttl", &cfg_type_uint32, 0 },
+ 	{ "max-clients-per-query", &cfg_type_uint32, 0 },
+ 	{ "max-ncache-ttl", &cfg_type_uint32, 0 },
++	{ "max-recursion-depth", &cfg_type_uint32, 0 },
+ 	{ "max-udp-size", &cfg_type_uint32, 0 },
+ 	{ "min-roots", &cfg_type_uint32, CFG_CLAUSEFLAG_NOTIMP },
+ 	{ "minimal-responses", &cfg_type_boolean, 0 },

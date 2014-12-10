@@ -1,0 +1,288 @@
+Index: contrib/file/src/elfclass.h
+===================================================================
+--- contrib/file/src/elfclass.h.orig
++++ contrib/file/src/elfclass.h
+@@ -35,10 +35,12 @@
+ 	switch (type) {
+ #ifdef ELFCORE
+ 	case ET_CORE:
++		phnum = elf_getu16(swap, elfhdr.e_phnum);
++		if (phnum > MAX_PHNUM)
++			return toomany(ms, "program", phnum);
+ 		flags |= FLAGS_IS_CORE;
+ 		if (dophn_core(ms, clazz, swap, fd,
+-		    (off_t)elf_getu(swap, elfhdr.e_phoff),
+-		    elf_getu16(swap, elfhdr.e_phnum), 
++		    (off_t)elf_getu(swap, elfhdr.e_phoff), phnum,
+ 		    (size_t)elf_getu16(swap, elfhdr.e_phentsize),
+ 		    fsize, &flags) == -1)
+ 			return -1;
+@@ -46,18 +48,24 @@
+ #endif
+ 	case ET_EXEC:
+ 	case ET_DYN:
++		phnum = elf_getu16(swap, elfhdr.e_phnum);
++		if (phnum > MAX_PHNUM)
++			return toomany(ms, "program", phnum);
++		shnum = elf_getu16(swap, elfhdr.e_shnum);
++		if (shnum > MAX_SHNUM)
++			return toomany(ms, "section", shnum);
+ 		if (dophn_exec(ms, clazz, swap, fd,
+-		    (off_t)elf_getu(swap, elfhdr.e_phoff),
+-		    elf_getu16(swap, elfhdr.e_phnum), 
++		    (off_t)elf_getu(swap, elfhdr.e_phoff), phnum,
+ 		    (size_t)elf_getu16(swap, elfhdr.e_phentsize),
+-		    fsize, &flags, elf_getu16(swap, elfhdr.e_shnum))
+-		    == -1)
++		    fsize, &flags, shnum) == -1)
+ 			return -1;
+ 		/*FALLTHROUGH*/
+ 	case ET_REL:
++		shnum = elf_getu16(swap, elfhdr.e_shnum);
++		if (shnum > MAX_SHNUM)
++			return toomany(ms, "section", shnum);
+ 		if (doshn(ms, clazz, swap, fd,
+-		    (off_t)elf_getu(swap, elfhdr.e_shoff),
+-		    elf_getu16(swap, elfhdr.e_shnum),
++		    (off_t)elf_getu(swap, elfhdr.e_shoff), shnum,
+ 		    (size_t)elf_getu16(swap, elfhdr.e_shentsize),
+ 		    fsize, &flags, elf_getu16(swap, elfhdr.e_machine),
+ 		    (int)elf_getu16(swap, elfhdr.e_shstrndx)) == -1)
+Index: contrib/file/src/file.h
+===================================================================
+--- contrib/file/src/file.h.orig
++++ contrib/file/src/file.h
+@@ -482,6 +482,14 @@
+ protected void file_regfree(file_regex_t *);
+ protected void file_regerror(file_regex_t *, int, struct magic_set *);
+ 
++typedef struct {
++	char *buf;
++	uint32_t offset;
++} file_pushbuf_t;
++
++protected file_pushbuf_t *file_push_buffer(struct magic_set *);
++protected char  *file_pop_buffer(struct magic_set *, file_pushbuf_t *);
++
+ #ifndef COMPILE_ONLY
+ extern const char *file_names[];
+ extern const size_t file_nnames;
+Index: contrib/file/src/funcs.c
+===================================================================
+--- contrib/file/src/funcs.c.orig
++++ contrib/file/src/funcs.c
+@@ -491,3 +491,43 @@
+ 	file_magerror(ms, "regex error %d for `%s', (%s)", rc, rx->pat,
+ 	    errmsg);
+ }
++
++protected file_pushbuf_t *
++file_push_buffer(struct magic_set *ms)
++{
++	file_pushbuf_t *pb;
++
++	if (ms->event_flags & EVENT_HAD_ERR)
++		return NULL;
++
++	if ((pb = (CAST(file_pushbuf_t *, malloc(sizeof(*pb))))) == NULL)
++		return NULL;
++
++	pb->buf = ms->o.buf;
++	pb->offset = ms->offset;
++
++	ms->o.buf = NULL;
++	ms->offset = 0;
++
++	return pb;
++}
++
++protected char *
++file_pop_buffer(struct magic_set *ms, file_pushbuf_t *pb)
++{
++	char *rbuf;
++
++	if (ms->event_flags & EVENT_HAD_ERR) {
++		free(pb->buf);
++		free(pb);
++		return NULL;
++	}
++
++	rbuf = ms->o.buf;
++
++	ms->o.buf = pb->buf;
++	ms->offset = pb->offset;
++
++	free(pb);
++	return rbuf;
++}
+Index: contrib/file/src/readelf.c
+===================================================================
+--- contrib/file/src/readelf.c.orig
++++ contrib/file/src/readelf.c
+@@ -60,6 +60,18 @@
+ private uint32_t getu32(int, uint32_t);
+ private uint64_t getu64(int, uint64_t);
+ 
++#define MAX_PHNUM	256
++#define	MAX_SHNUM	1024
++
++private int
++toomany(struct magic_set *ms, const char *name, uint16_t num)
++{
++	if (file_printf(ms, ", too many %s header sections (%u)", name, num
++	    ) == -1)
++		return -1;
++	return 0;
++}
++
+ private uint16_t
+ getu16(int swap, uint16_t value)
+ {
+@@ -477,6 +489,13 @@
+ 	uint32_t namesz, descsz;
+ 	unsigned char *nbuf = CAST(unsigned char *, vbuf);
+ 
++	if (xnh_sizeof + offset > size) {
++		/*
++		 * We're out of note headers.
++		 */
++		return xnh_sizeof + offset;
++	}
++
+ 	(void)memcpy(xnh_addr, &nbuf[offset], xnh_sizeof);
+ 	offset += xnh_sizeof;
+ 
+@@ -492,13 +511,13 @@
+ 	if (namesz & 0x80000000) {
+ 	    (void)file_printf(ms, ", bad note name size 0x%lx",
+ 		(unsigned long)namesz);
+-	    return offset;
++	    return 0;
+ 	}
+ 
+ 	if (descsz & 0x80000000) {
+ 	    (void)file_printf(ms, ", bad note description size 0x%lx",
+ 		(unsigned long)descsz);
+-	    return offset;
++	    return 0;
+ 	}
+ 
+ 
+@@ -900,6 +919,7 @@
+ 	Elf32_Shdr sh32;
+ 	Elf64_Shdr sh64;
+ 	int stripped = 1;
++	size_t nbadcap = 0;
+ 	void *nbuf;
+ 	off_t noff, coff, name_off;
+ 	uint64_t cap_hw1 = 0;	/* SunOS 5.x hardware capabilites */
+@@ -988,6 +1008,8 @@
+ 				goto skip;
+ 			}
+ 
++			if (nbadcap > 5)
++				break;
+ 			if (lseek(fd, xsh_offset, SEEK_SET) == (off_t)-1) {
+ 				file_badseek(ms);
+ 				return -1;
+@@ -1053,6 +1075,8 @@
+ 					    (unsigned long long)xcap_tag,
+ 					    (unsigned long long)xcap_val) == -1)
+ 						return -1;
++					if (nbadcap++ > 2)
++						coff = xsh_size;
+ 					break;
+ 				}
+ 			}
+@@ -1233,7 +1257,7 @@
+ 	int flags = 0;
+ 	Elf32_Ehdr elf32hdr;
+ 	Elf64_Ehdr elf64hdr;
+-	uint16_t type;
++	uint16_t type, phnum, shnum;
+ 
+ 	if (ms->flags & (MAGIC_MIME|MAGIC_APPLE))
+ 		return 0;
+Index: contrib/file/src/softmagic.c
+===================================================================
+--- contrib/file/src/softmagic.c.orig
++++ contrib/file/src/softmagic.c
+@@ -67,6 +67,9 @@
+ private void cvt_64(union VALUETYPE *, const struct magic *);
+ 
+ #define OFFSET_OOB(n, o, i)	((n) < (o) || (i) > ((n) - (o)))
++
++#define MAX_RECURSION_LEVEL	10
++
+ /*
+  * softmagic - lookup one file in parsed, in-memory copy of database
+  * Passed the name and FILE * of one file to be typed.
+@@ -1193,14 +1196,15 @@
+     int flip, int recursion_level, int *printed_something,
+     int *need_separator, int *returnval)
+ {
+-	uint32_t soffset, offset = ms->offset;
++	uint32_t offset = ms->offset;
+ 	uint32_t lhs;
++	file_pushbuf_t *pb;
+ 	int rv, oneed_separator, in_type;
+-	char *sbuf, *rbuf;
++	char *rbuf;
+ 	union VALUETYPE *p = &ms->ms_value;
+ 	struct mlist ml;
+ 
+-	if (recursion_level >= 20) {
++	if (recursion_level >= MAX_RECURSION_LEVEL) {
+ 		file_error(ms, 0, "recursion nesting exceeded");
+ 		return -1;
+ 	}
+@@ -1644,19 +1648,23 @@
+ 	case FILE_INDIRECT:
+ 		if (offset == 0)
+ 			return 0;
++
+ 		if (nbytes < offset)
+ 			return 0;
+-		sbuf = ms->o.buf;
+-		soffset = ms->offset;
+-		ms->o.buf = NULL;
+-		ms->offset = 0;
++
++		if ((pb = file_push_buffer(ms)) == NULL)
++			return -1;
++
+ 		rv = file_softmagic(ms, s + offset, nbytes - offset,
+ 		    recursion_level, BINTEST, text);
++
+ 		if ((ms->flags & MAGIC_DEBUG) != 0)
+ 			fprintf(stderr, "indirect @offs=%u[%d]\n", offset, rv);
+-		rbuf = ms->o.buf;
+-		ms->o.buf = sbuf;
+-		ms->offset = soffset;
++
++		rbuf = file_pop_buffer(ms, pb);
++		if (rbuf == NULL && ms->event_flags & EVENT_HAD_ERR)
++			return -1;
++
+ 		if (rv == 1) {
+ 			if ((ms->flags & (MAGIC_MIME|MAGIC_APPLE)) == 0 &&
+ 			    file_printf(ms, F(ms, m, "%u"), offset) == -1) {
+@@ -1674,13 +1682,13 @@
+ 	case FILE_USE:
+ 		if (nbytes < offset)
+ 			return 0;
+-		sbuf = m->value.s;
+-		if (*sbuf == '^') {
+-			sbuf++;
++		rbuf = m->value.s;
++		if (*rbuf == '^') {
++			rbuf++;
+ 			flip = !flip;
+ 		}
+-		if (file_magicfind(ms, sbuf, &ml) == -1) {
+-			file_error(ms, 0, "cannot find entry `%s'", sbuf);
++		if (file_magicfind(ms, rbuf, &ml) == -1) {
++			file_error(ms, 0, "cannot find entry `%s'", rbuf);
+ 			return -1;
+ 		}
+ 
