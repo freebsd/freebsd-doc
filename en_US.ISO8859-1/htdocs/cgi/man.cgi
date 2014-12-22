@@ -1635,9 +1635,8 @@ ETX
 ETX
 
     my @format = ('html');
-    push( @format, ( 'pdf', 'ps' ) ) if !$no_pdf_output{$manpath};
-    push( @format, ( 'latin1', 'ascii' ) )
-      ;    # you need a 8 bit clean man, e.g. jp-man
+    push( @format, ( 'pdf' ) ) if !$no_pdf_output{$manpath};
+    push( @format, ( 'ascii' ) );
 
     foreach (@format) {
         print qq{<option value="$_">$_</option>\n};
