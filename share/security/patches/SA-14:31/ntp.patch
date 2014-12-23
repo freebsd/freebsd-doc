@@ -1,0 +1,145 @@
+Index: contrib/ntp/ntpd/ntp_config.c
+===================================================================
+--- contrib/ntp/ntpd/ntp_config.c.orig
++++ contrib/ntp/ntpd/ntp_config.c
+@@ -1887,7 +1887,7 @@
+ 
+ 		for (i = 0; i < 8; i++)
+ 			for (j = 1; j < 100; ++j) {
+-				rankey[i] = (char) (ntp_random() & 0xff);
++				rankey[i] = (char) (arc4random() & 0xff);
+ 				if (rankey[i] != 0) break;
+ 			}
+ 		rankey[8] = 0;
+Index: contrib/ntp/ntpd/ntp_control.c
+===================================================================
+--- contrib/ntp/ntpd/ntp_control.c.orig
++++ contrib/ntp/ntpd/ntp_control.c
+@@ -24,6 +24,10 @@
+ #include <netinet/in.h>
+ #include <arpa/inet.h>
+ 
++#ifndef MIN
++#define MIN(a, b) (((a) <= (b)) ? (a) : (b))
++#endif
++
+ /*
+  * Structure to hold request procedure information
+  */
+@@ -893,6 +897,7 @@
+ 	)
+ {
+ 	int overhead;
++	unsigned int currentlen;
+ 
+ 	overhead = 0;
+ 	if (!bin) {
+@@ -916,12 +921,22 @@
+ 	/*
+ 	 * Save room for trailing junk
+ 	 */
+-	if (dlen + overhead + datapt > dataend) {
++	while (dlen + overhead + datapt > dataend) {
+ 		/*
+ 		 * Not enough room in this one, flush it out.
+ 		 */
++		currentlen = MIN(dlen, dataend - datapt);
++
++		memcpy(datapt, dp, currentlen);
++
++		datapt += currentlen;
++		dp += currentlen;
++		dlen -= currentlen;
++		datalinelen += currentlen;
++
+ 		ctl_flushpkt(CTL_MORE);
+ 	}
++
+ 	memmove((char *)datapt, dp, (unsigned)dlen);
+ 	datapt += dlen;
+ 	datalinelen += dlen;
+Index: contrib/ntp/ntpd/ntp_crypto.c
+===================================================================
+--- contrib/ntp/ntpd/ntp_crypto.c.orig
++++ contrib/ntp/ntpd/ntp_crypto.c
+@@ -864,12 +864,24 @@
+ 			 * errors.
+ 			 */
+ 			if (vallen == (u_int) EVP_PKEY_size(host_pkey)) {
+-				RSA_private_decrypt(vallen,
++				u_int32 *cookiebuf = malloc(
++					RSA_size(host_pkey->pkey.rsa));
++				if (cookiebuf == NULL) {
++					rval = XEVNT_CKY;
++					break;
++				}
++				if (RSA_private_decrypt(vallen,
+ 				    (u_char *)ep->pkt,
+-				    (u_char *)&temp32,
++				    (u_char *)cookiebuf,
+ 				    host_pkey->pkey.rsa,
+-				    RSA_PKCS1_OAEP_PADDING);
+-				cookie = ntohl(temp32);
++				    RSA_PKCS1_OAEP_PADDING) != 4) {
++					rval = XEVNT_CKY;
++					free(cookiebuf);
++					break;
++				} else {
++					cookie = ntohl(*cookiebuf);
++					free(cookiebuf);
++				}
+ 			} else {
+ 				rval = XEVNT_CKY;
+ 				break;
+@@ -3914,7 +3926,7 @@
+ 		    rand_file);
+ 		exit (-1);
+ 	}
+-	get_systime(&seed);
++	arc4random_buf(&seed, sizeof(l_fp));
+ 	RAND_seed(&seed, sizeof(l_fp));
+ 	RAND_write_file(rand_file);
+ 	OpenSSL_add_all_algorithms();
+Index: contrib/ntp/ntpd/ntp_proto.c
+===================================================================
+--- contrib/ntp/ntpd/ntp_proto.c.orig
++++ contrib/ntp/ntpd/ntp_proto.c
+@@ -649,6 +649,7 @@
+ 		    has_mac)) {
+ 			is_authentic = AUTH_ERROR;
+ 			sys_badauth++;
++			return;
+ 		} else {
+ 			is_authentic = AUTH_OK;
+ 		}
+Index: contrib/ntp/util/ntp-keygen.c
+===================================================================
+--- contrib/ntp/util/ntp-keygen.c.orig
++++ contrib/ntp/util/ntp-keygen.c
+@@ -642,7 +642,7 @@
+ 	for (i = 1; i <= MD5KEYS; i++) {
+ 		for (j = 0; j < 16; j++) {
+ 			while (1) {
+-				temp = ntp_random() & 0xff;
++				temp = arc4random() & 0xff;
+ 				if (temp == '#')
+ 					continue;
+ 				if (temp > 0x20 && temp < 0x7f)
+@@ -675,7 +675,7 @@
+ 	FILE	*str;
+ 
+ 	fprintf(stderr, "Generating RSA keys (%d bits)...\n", modulus);
+-	rsa = RSA_generate_key(modulus, 3, cb, "RSA");
++	rsa = RSA_generate_key(modulus, 65537, cb, "RSA");
+ 	fprintf(stderr, "\n");
+ 	if (rsa == NULL) {
+ 		fprintf(stderr, "RSA generate keys fails\n%s\n",
+@@ -954,7 +954,7 @@
+ 	 */
+ 	fprintf(stderr,
+ 	    "Generating GQ parameters (%d bits)...\n", modulus);
+-	rsa = RSA_generate_key(modulus, 3, cb, "GQ");
++	rsa = RSA_generate_key(modulus, 65537, cb, "GQ");
+ 	fprintf(stderr, "\n");
+ 	if (rsa == NULL) {
+ 		fprintf(stderr, "RSA generate keys fails\n%s\n",
