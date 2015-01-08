@@ -1,6 +1,6 @@
 #!/bin/sh
 #-
-# Copyright (c) 2014 The FreeBSD Foundation
+# Copyright (c) 2014, 2015 The FreeBSD Foundation
 # All rights reserved.
 #
 # This software was developed by Glen Barber under sponsorship
@@ -57,9 +57,11 @@ outdir=$(mktemp -d /tmp/manrefresh.outdir.XXXXXX)
 objdir=$(mktemp -d /tmp/manrefresh.objdir.XXXXXX)
 
 build_manpages() {
-	MAKEOBJDIRPREFIX=${objdir}
-	export MAKEOBJDIRPREFIX
-	make -s -C ${srcs} DESTDIR=${outdir} \
+	export MAKEOBJDIRPREFIX=${objdir}
+	export DESTDIR=${outdir}
+	export TESTSBASE=${DESTDIR}/usr/tests
+	export TESTSDIR=${DESTDIR}/usr/tests
+	make -s -C ${srcs} DESTDIR=${DESTDIR} \
 		SRCCONF=/dev/null __MAKE_CONF=/dev/null \
 		MANOWN=$USER MANGRP=$USER MANMODE=0666 \
 		NO_MLINKS=1 -DNO_ROOT obj hier all-man maninstall
