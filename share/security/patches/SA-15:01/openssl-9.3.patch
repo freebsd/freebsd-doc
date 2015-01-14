@@ -1,0 +1,1582 @@
+Index: crypto/openssl/crypto/asn1/a_bitstr.c
+===================================================================
+--- crypto/openssl/crypto/asn1/a_bitstr.c	(revision 276867)
++++ crypto/openssl/crypto/asn1/a_bitstr.c	(working copy)
+@@ -136,11 +136,16 @@ ASN1_BIT_STRING *c2i_ASN1_BIT_STRING(ASN1_BIT_STRI
+ 
+ 	p= *pp;
+ 	i= *(p++);
++	if (i > 7)
++		{
++		i=ASN1_R_INVALID_BIT_STRING_BITS_LEFT;
++		goto err;
++		}
+ 	/* We do this to preserve the settings.  If we modify
+ 	 * the settings, via the _set_bit function, we will recalculate
+ 	 * on output */
+ 	ret->flags&= ~(ASN1_STRING_FLAG_BITS_LEFT|0x07); /* clear */
+-	ret->flags|=(ASN1_STRING_FLAG_BITS_LEFT|(i&0x07)); /* set */
++	ret->flags|=(ASN1_STRING_FLAG_BITS_LEFT|i); /* set */
+ 
+ 	if (len-- > 1) /* using one because of the bits left byte */
+ 		{
+Index: crypto/openssl/crypto/asn1/a_type.c
+===================================================================
+--- crypto/openssl/crypto/asn1/a_type.c	(revision 276867)
++++ crypto/openssl/crypto/asn1/a_type.c	(working copy)
+@@ -108,3 +108,49 @@ int ASN1_TYPE_set1(ASN1_TYPE *a, int type, const v
+ 
+ IMPLEMENT_STACK_OF(ASN1_TYPE)
+ IMPLEMENT_ASN1_SET_OF(ASN1_TYPE)
++
++/* Returns 0 if they are equal, != 0 otherwise. */
++int ASN1_TYPE_cmp(const ASN1_TYPE *a, const ASN1_TYPE *b)
++	{
++	int result = -1;
++
++	if (!a || !b || a->type != b->type) return -1;
++
++	switch (a->type)
++		{
++	case V_ASN1_OBJECT:
++		result = OBJ_cmp(a->value.object, b->value.object);
++		break;
++	case V_ASN1_NULL:
++		result = 0;	/* They do not have content. */
++		break;
++	case V_ASN1_INTEGER:
++	case V_ASN1_NEG_INTEGER:
++	case V_ASN1_ENUMERATED:
++	case V_ASN1_NEG_ENUMERATED:
++	case V_ASN1_BIT_STRING:
++	case V_ASN1_OCTET_STRING:
++	case V_ASN1_SEQUENCE:
++	case V_ASN1_SET:
++	case V_ASN1_NUMERICSTRING:
++	case V_ASN1_PRINTABLESTRING:
++	case V_ASN1_T61STRING:
++	case V_ASN1_VIDEOTEXSTRING:
++	case V_ASN1_IA5STRING:
++	case V_ASN1_UTCTIME:
++	case V_ASN1_GENERALIZEDTIME:
++	case V_ASN1_GRAPHICSTRING:
++	case V_ASN1_VISIBLESTRING:
++	case V_ASN1_GENERALSTRING:
++	case V_ASN1_UNIVERSALSTRING:
++	case V_ASN1_BMPSTRING:
++	case V_ASN1_UTF8STRING:
++	case V_ASN1_OTHER:
++	default:
++		result = ASN1_STRING_cmp((ASN1_STRING *) a->value.ptr,
++					 (ASN1_STRING *) b->value.ptr);
++		break;
++		}
++
++	return result;
++	}
+Index: crypto/openssl/crypto/asn1/a_verify.c
+===================================================================
+--- crypto/openssl/crypto/asn1/a_verify.c	(revision 276867)
++++ crypto/openssl/crypto/asn1/a_verify.c	(working copy)
+@@ -89,6 +89,12 @@ int ASN1_verify(i2d_of_void *i2d, X509_ALGOR *a, A
+ 		ASN1err(ASN1_F_ASN1_VERIFY,ASN1_R_UNKNOWN_MESSAGE_DIGEST_ALGORITHM);
+ 		goto err;
+ 		}
++
++	if (signature->type == V_ASN1_BIT_STRING && signature->flags & 0x7)
++		{
++		ASN1err(ASN1_F_ASN1_VERIFY, ASN1_R_INVALID_BIT_STRING_BITS_LEFT);
++		goto err;
++		}
+ 	
+ 	inl=i2d(data,NULL);
+ 	buf_in=OPENSSL_malloc((unsigned int)inl);
+@@ -144,6 +150,12 @@ int ASN1_item_verify(const ASN1_ITEM *it, X509_ALG
+ 		return -1;
+ 		}
+ 
++	if (signature->type == V_ASN1_BIT_STRING && signature->flags & 0x7)
++		{
++		ASN1err(ASN1_F_ASN1_ITEM_VERIFY, ASN1_R_INVALID_BIT_STRING_BITS_LEFT);
++		return -1;
++		}
++
+ 	EVP_MD_CTX_init(&ctx);
+ 	i=OBJ_obj2nid(a->algorithm);
+ 	type=EVP_get_digestbyname(OBJ_nid2sn(i));
+Index: crypto/openssl/crypto/asn1/asn1.h
+===================================================================
+--- crypto/openssl/crypto/asn1/asn1.h	(revision 276867)
++++ crypto/openssl/crypto/asn1/asn1.h	(working copy)
+@@ -769,6 +769,7 @@ DECLARE_ASN1_FUNCTIONS_fname(ASN1_TYPE, ASN1_ANY,
+ int ASN1_TYPE_get(ASN1_TYPE *a);
+ void ASN1_TYPE_set(ASN1_TYPE *a, int type, void *value);
+ int ASN1_TYPE_set1(ASN1_TYPE *a, int type, const void *value);
++int            ASN1_TYPE_cmp(const ASN1_TYPE *a, const ASN1_TYPE *b);
+ 
+ ASN1_OBJECT *	ASN1_OBJECT_new(void );
+ void		ASN1_OBJECT_free(ASN1_OBJECT *a);
+@@ -1260,6 +1261,7 @@ void ERR_load_ASN1_strings(void);
+ #define ASN1_R_ILLEGAL_TIME_VALUE			 184
+ #define ASN1_R_INTEGER_NOT_ASCII_FORMAT			 185
+ #define ASN1_R_INTEGER_TOO_LARGE_FOR_LONG		 128
++#define ASN1_R_INVALID_BIT_STRING_BITS_LEFT		 220
+ #define ASN1_R_INVALID_BMPSTRING_LENGTH			 129
+ #define ASN1_R_INVALID_DIGIT				 130
+ #define ASN1_R_INVALID_MIME_TYPE			 200
+@@ -1308,6 +1310,7 @@ void ERR_load_ASN1_strings(void);
+ #define ASN1_R_TIME_NOT_ASCII_FORMAT			 193
+ #define ASN1_R_TOO_LONG					 155
+ #define ASN1_R_TYPE_NOT_CONSTRUCTED			 156
++#define ASN1_R_TYPE_NOT_PRIMITIVE			 218
+ #define ASN1_R_UNABLE_TO_DECODE_RSA_KEY			 157
+ #define ASN1_R_UNABLE_TO_DECODE_RSA_PRIVATE_KEY		 158
+ #define ASN1_R_UNEXPECTED_EOC				 159
+Index: crypto/openssl/crypto/asn1/asn1_err.c
+===================================================================
+--- crypto/openssl/crypto/asn1/asn1_err.c	(revision 276867)
++++ crypto/openssl/crypto/asn1/asn1_err.c	(working copy)
+@@ -1,6 +1,6 @@
+ /* crypto/asn1/asn1_err.c */
+ /* ====================================================================
+- * Copyright (c) 1999-2008 The OpenSSL Project.  All rights reserved.
++ * Copyright (c) 1999-2014 The OpenSSL Project.  All rights reserved.
+  *
+  * Redistribution and use in source and binary forms, with or without
+  * modification, are permitted provided that the following conditions
+@@ -235,6 +235,7 @@ static ERR_STRING_DATA ASN1_str_reasons[]=
+ {ERR_REASON(ASN1_R_ILLEGAL_TIME_VALUE)   ,"illegal time value"},
+ {ERR_REASON(ASN1_R_INTEGER_NOT_ASCII_FORMAT),"integer not ascii format"},
+ {ERR_REASON(ASN1_R_INTEGER_TOO_LARGE_FOR_LONG),"integer too large for long"},
++{ERR_REASON(ASN1_R_INVALID_BIT_STRING_BITS_LEFT),"invalid bit string bits left"},
+ {ERR_REASON(ASN1_R_INVALID_BMPSTRING_LENGTH),"invalid bmpstring length"},
+ {ERR_REASON(ASN1_R_INVALID_DIGIT)        ,"invalid digit"},
+ {ERR_REASON(ASN1_R_INVALID_MIME_TYPE)    ,"invalid mime type"},
+@@ -283,6 +284,7 @@ static ERR_STRING_DATA ASN1_str_reasons[]=
+ {ERR_REASON(ASN1_R_TIME_NOT_ASCII_FORMAT),"time not ascii format"},
+ {ERR_REASON(ASN1_R_TOO_LONG)             ,"too long"},
+ {ERR_REASON(ASN1_R_TYPE_NOT_CONSTRUCTED) ,"type not constructed"},
++{ERR_REASON(ASN1_R_TYPE_NOT_PRIMITIVE)   ,"type not primitive"},
+ {ERR_REASON(ASN1_R_UNABLE_TO_DECODE_RSA_KEY),"unable to decode rsa key"},
+ {ERR_REASON(ASN1_R_UNABLE_TO_DECODE_RSA_PRIVATE_KEY),"unable to decode rsa private key"},
+ {ERR_REASON(ASN1_R_UNEXPECTED_EOC)       ,"unexpected eoc"},
+Index: crypto/openssl/crypto/asn1/tasn_dec.c
+===================================================================
+--- crypto/openssl/crypto/asn1/tasn_dec.c	(revision 276867)
++++ crypto/openssl/crypto/asn1/tasn_dec.c	(working copy)
+@@ -866,6 +866,14 @@ static int asn1_d2i_ex_primitive(ASN1_VALUE **pval
+ 		}
+ 	else if (cst)
+ 		{
++		if (utype == V_ASN1_NULL || utype == V_ASN1_BOOLEAN
++			|| utype == V_ASN1_OBJECT || utype == V_ASN1_INTEGER
++			|| utype == V_ASN1_ENUMERATED)
++			{
++			ASN1err(ASN1_F_ASN1_D2I_EX_PRIMITIVE,
++				ASN1_R_TYPE_NOT_PRIMITIVE);
++			return 0;
++			}
+ 		buf.length = 0;
+ 		buf.max = 0;
+ 		buf.data = NULL;
+Index: crypto/openssl/crypto/asn1/x_algor.c
+===================================================================
+--- crypto/openssl/crypto/asn1/x_algor.c	(revision 276867)
++++ crypto/openssl/crypto/asn1/x_algor.c	(working copy)
+@@ -128,3 +128,13 @@ void X509_ALGOR_get0(ASN1_OBJECT **paobj, int *ppt
+ 		}
+ 	}
+ 
++int X509_ALGOR_cmp(const X509_ALGOR *a, const X509_ALGOR *b)
++	{
++	int rv;
++	rv = OBJ_cmp(a->algorithm, b->algorithm);
++	if (rv)
++		return rv;
++	if (!a->parameter && !b->parameter)
++		return 0;
++	return ASN1_TYPE_cmp(a->parameter, b->parameter);
++	}
+Index: crypto/openssl/crypto/bn/asm/mips3.s
+===================================================================
+--- crypto/openssl/crypto/bn/asm/mips3.s	(revision 276867)
++++ crypto/openssl/crypto/bn/asm/mips3.s	(working copy)
+@@ -1584,17 +1584,17 @@ LEAF(bn_sqr_comba8)
+ 	dmultu	a_2,a_0		/* mul_add_c2(a[2],b[0],c3,c1,c2); */
+ 	mflo	t_1
+ 	mfhi	t_2
+-	slt	c_2,t_2,zero
+-	dsll	t_2,1
+-	slt	a2,t_1,zero
+-	daddu	t_2,a2
+-	dsll	t_1,1
+ 	daddu	c_3,t_1
+ 	sltu	AT,c_3,t_1
+-	daddu	t_2,AT
++	daddu	c_3,t_1
++	daddu	AT,t_2
++	sltu	t_1,c_3,t_1
++	daddu	c_1,AT
++	daddu	t_2,t_1
++	sltu	c_2,c_1,AT
+ 	daddu	c_1,t_2
+-	sltu	AT,c_1,t_2
+-	daddu	c_2,AT
++	sltu	t_2,c_1,t_2
++	daddu	c_2,t_2
+ 	dmultu	a_1,a_1		/* mul_add_c(a[1],b[1],c3,c1,c2); */
+ 	mflo	t_1
+ 	mfhi	t_2
+@@ -1609,63 +1609,63 @@ LEAF(bn_sqr_comba8)
+ 	dmultu	a_0,a_3		/* mul_add_c2(a[0],b[3],c1,c2,c3); */
+ 	mflo	t_1
+ 	mfhi	t_2
+-	slt	c_3,t_2,zero
+-	dsll	t_2,1
+-	slt	a2,t_1,zero
+-	daddu	t_2,a2
+-	dsll	t_1,1
+ 	daddu	c_1,t_1
+ 	sltu	AT,c_1,t_1
+-	daddu	t_2,AT
++	daddu	c_1,t_1
++	daddu	AT,t_2
++	sltu	t_1,c_1,t_1
++	daddu	c_2,AT
++	daddu	t_2,t_1
++	sltu	c_3,c_2,AT
+ 	daddu	c_2,t_2
+-	sltu	AT,c_2,t_2
+-	daddu	c_3,AT
++	sltu	t_2,c_2,t_2
++	daddu	c_3,t_2
+ 	dmultu	a_1,a_2		/* mul_add_c2(a[1],b[2],c1,c2,c3); */
+ 	mflo	t_1
+ 	mfhi	t_2
+-	slt	AT,t_2,zero
+-	daddu	c_3,AT
+-	dsll	t_2,1
+-	slt	a2,t_1,zero
+-	daddu	t_2,a2
+-	dsll	t_1,1
+ 	daddu	c_1,t_1
+ 	sltu	AT,c_1,t_1
+-	daddu	t_2,AT
++	daddu	c_1,t_1
++	daddu	AT,t_2
++	sltu	t_1,c_1,t_1
++	daddu	c_2,AT
++	daddu	t_2,t_1
++	sltu	AT,c_2,AT
+ 	daddu	c_2,t_2
+-	sltu	AT,c_2,t_2
+ 	daddu	c_3,AT
++	sltu	t_2,c_2,t_2
++	daddu	c_3,t_2
+ 	sd	c_1,24(a0)
+ 
+ 	dmultu	a_4,a_0		/* mul_add_c2(a[4],b[0],c2,c3,c1); */
+ 	mflo	t_1
+ 	mfhi	t_2
+-	slt	c_1,t_2,zero
+-	dsll	t_2,1
+-	slt	a2,t_1,zero
+-	daddu	t_2,a2
+-	dsll	t_1,1
+ 	daddu	c_2,t_1
+ 	sltu	AT,c_2,t_1
+-	daddu	t_2,AT
++	daddu	c_2,t_1
++	daddu	AT,t_2
++	sltu	t_1,c_2,t_1
++	daddu	c_3,AT
++	daddu	t_2,t_1
++	sltu	c_1,c_3,AT
+ 	daddu	c_3,t_2
+-	sltu	AT,c_3,t_2
+-	daddu	c_1,AT
++	sltu	t_2,c_3,t_2
++	daddu	c_1,t_2
+ 	dmultu	a_3,a_1		/* mul_add_c2(a[3],b[1],c2,c3,c1); */
+ 	mflo	t_1
+ 	mfhi	t_2
+-	slt	AT,t_2,zero
+-	daddu	c_1,AT
+-	dsll	t_2,1
+-	slt	a2,t_1,zero
+-	daddu	t_2,a2
+-	dsll	t_1,1
+ 	daddu	c_2,t_1
+ 	sltu	AT,c_2,t_1
+-	daddu	t_2,AT
++	daddu	c_2,t_1
++	daddu	AT,t_2
++	sltu	t_1,c_2,t_1
++	daddu	c_3,AT
++	daddu	t_2,t_1
++	sltu	AT,c_3,AT
+ 	daddu	c_3,t_2
+-	sltu	AT,c_3,t_2
+ 	daddu	c_1,AT
++	sltu	t_2,c_3,t_2
++	daddu	c_1,t_2
+ 	dmultu	a_2,a_2		/* mul_add_c(a[2],b[2],c2,c3,c1); */
+ 	mflo	t_1
+ 	mfhi	t_2
+@@ -1680,93 +1680,93 @@ LEAF(bn_sqr_comba8)
+ 	dmultu	a_0,a_5		/* mul_add_c2(a[0],b[5],c3,c1,c2); */
+ 	mflo	t_1
+ 	mfhi	t_2
+-	slt	c_2,t_2,zero
+-	dsll	t_2,1
+-	slt	a2,t_1,zero
+-	daddu	t_2,a2
+-	dsll	t_1,1
+ 	daddu	c_3,t_1
+ 	sltu	AT,c_3,t_1
+-	daddu	t_2,AT
++	daddu	c_3,t_1
++	daddu	AT,t_2
++	sltu	t_1,c_3,t_1
++	daddu	c_1,AT
++	daddu	t_2,t_1
++	sltu	c_2,c_1,AT
+ 	daddu	c_1,t_2
+-	sltu	AT,c_1,t_2
+-	daddu	c_2,AT
++	sltu	t_2,c_1,t_2
++	daddu	c_2,t_2
+ 	dmultu	a_1,a_4		/* mul_add_c2(a[1],b[4],c3,c1,c2); */
+ 	mflo	t_1
+ 	mfhi	t_2
+-	slt	AT,t_2,zero
+-	daddu	c_2,AT
+-	dsll	t_2,1
+-	slt	a2,t_1,zero
+-	daddu	t_2,a2
+-	dsll	t_1,1
+ 	daddu	c_3,t_1
+ 	sltu	AT,c_3,t_1
+-	daddu	t_2,AT
++	daddu	c_3,t_1
++	daddu	AT,t_2
++	sltu	t_1,c_3,t_1
++	daddu	c_1,AT
++	daddu	t_2,t_1
++	sltu	AT,c_1,AT
+ 	daddu	c_1,t_2
+-	sltu	AT,c_1,t_2
+ 	daddu	c_2,AT
++	sltu	t_2,c_1,t_2
++	daddu	c_2,t_2
+ 	dmultu	a_2,a_3		/* mul_add_c2(a[2],b[3],c3,c1,c2); */
+ 	mflo	t_1
+ 	mfhi	t_2
+-	slt	AT,t_2,zero
+-	daddu	c_2,AT
+-	dsll	t_2,1
+-	slt	a2,t_1,zero
+-	daddu	t_2,a2
+-	dsll	t_1,1
+ 	daddu	c_3,t_1
+ 	sltu	AT,c_3,t_1
+-	daddu	t_2,AT
++	daddu	c_3,t_1
++	daddu	AT,t_2
++	sltu	t_1,c_3,t_1
++	daddu	c_1,AT
++	daddu	t_2,t_1
++	sltu	AT,c_1,AT
+ 	daddu	c_1,t_2
+-	sltu	AT,c_1,t_2
+ 	daddu	c_2,AT
++	sltu	t_2,c_1,t_2
++	daddu	c_2,t_2
+ 	sd	c_3,40(a0)
+ 
+ 	dmultu	a_6,a_0		/* mul_add_c2(a[6],b[0],c1,c2,c3); */
+ 	mflo	t_1
+ 	mfhi	t_2
+-	slt	c_3,t_2,zero
+-	dsll	t_2,1
+-	slt	a2,t_1,zero
+-	daddu	t_2,a2
+-	dsll	t_1,1
+ 	daddu	c_1,t_1
+ 	sltu	AT,c_1,t_1
+-	daddu	t_2,AT
++	daddu	c_1,t_1
++	daddu	AT,t_2
++	sltu	t_1,c_1,t_1
++	daddu	c_2,AT
++	daddu	t_2,t_1
++	sltu	c_3,c_2,AT
+ 	daddu	c_2,t_2
+-	sltu	AT,c_2,t_2
+-	daddu	c_3,AT
++	sltu	t_2,c_2,t_2
++	daddu	c_3,t_2
+ 	dmultu	a_5,a_1		/* mul_add_c2(a[5],b[1],c1,c2,c3); */
+ 	mflo	t_1
+ 	mfhi	t_2
+-	slt	AT,t_2,zero
+-	daddu	c_3,AT
+-	dsll	t_2,1
+-	slt	a2,t_1,zero
+-	daddu	t_2,a2
+-	dsll	t_1,1
+ 	daddu	c_1,t_1
+ 	sltu	AT,c_1,t_1
+-	daddu	t_2,AT
++	daddu	c_1,t_1
++	daddu	AT,t_2
++	sltu	t_1,c_1,t_1
++	daddu	c_2,AT
++	daddu	t_2,t_1
++	sltu	AT,c_2,AT
+ 	daddu	c_2,t_2
+-	sltu	AT,c_2,t_2
+ 	daddu	c_3,AT
++	sltu	t_2,c_2,t_2
++	daddu	c_3,t_2
+ 	dmultu	a_4,a_2		/* mul_add_c2(a[4],b[2],c1,c2,c3); */
+ 	mflo	t_1
+ 	mfhi	t_2
+-	slt	AT,t_2,zero
+-	daddu	c_3,AT
+-	dsll	t_2,1
+-	slt	a2,t_1,zero
+-	daddu	t_2,a2
+-	dsll	t_1,1
+ 	daddu	c_1,t_1
+ 	sltu	AT,c_1,t_1
+-	daddu	t_2,AT
++	daddu	c_1,t_1
++	daddu	AT,t_2
++	sltu	t_1,c_1,t_1
++	daddu	c_2,AT
++	daddu	t_2,t_1
++	sltu	AT,c_2,AT
+ 	daddu	c_2,t_2
+-	sltu	AT,c_2,t_2
+ 	daddu	c_3,AT
++	sltu	t_2,c_2,t_2
++	daddu	c_3,t_2
+ 	dmultu	a_3,a_3		/* mul_add_c(a[3],b[3],c1,c2,c3); */
+ 	mflo	t_1
+ 	mfhi	t_2
+@@ -1781,108 +1781,108 @@ LEAF(bn_sqr_comba8)
+ 	dmultu	a_0,a_7		/* mul_add_c2(a[0],b[7],c2,c3,c1); */
+ 	mflo	t_1
+ 	mfhi	t_2
+-	slt	c_1,t_2,zero
+-	dsll	t_2,1
+-	slt	a2,t_1,zero
+-	daddu	t_2,a2
+-	dsll	t_1,1
+ 	daddu	c_2,t_1
+ 	sltu	AT,c_2,t_1
+-	daddu	t_2,AT
++	daddu	c_2,t_1
++	daddu	AT,t_2
++	sltu	t_1,c_2,t_1
++	daddu	c_3,AT
++	daddu	t_2,t_1
++	sltu	c_1,c_3,AT
+ 	daddu	c_3,t_2
+-	sltu	AT,c_3,t_2
+-	daddu	c_1,AT
++	sltu	t_2,c_3,t_2
++	daddu	c_1,t_2
+ 	dmultu	a_1,a_6		/* mul_add_c2(a[1],b[6],c2,c3,c1); */
+ 	mflo	t_1
+ 	mfhi	t_2
+-	slt	AT,t_2,zero
+-	daddu	c_1,AT
+-	dsll	t_2,1
+-	slt	a2,t_1,zero
+-	daddu	t_2,a2
+-	dsll	t_1,1
+ 	daddu	c_2,t_1
+ 	sltu	AT,c_2,t_1
+-	daddu	t_2,AT
++	daddu	c_2,t_1
++	daddu	AT,t_2
++	sltu	t_1,c_2,t_1
++	daddu	c_3,AT
++	daddu	t_2,t_1
++	sltu	AT,c_3,AT
+ 	daddu	c_3,t_2
+-	sltu	AT,c_3,t_2
+ 	daddu	c_1,AT
++	sltu	t_2,c_3,t_2
++	daddu	c_1,t_2
+ 	dmultu	a_2,a_5		/* mul_add_c2(a[2],b[5],c2,c3,c1); */
+ 	mflo	t_1
+ 	mfhi	t_2
+-	slt	AT,t_2,zero
+-	daddu	c_1,AT
+-	dsll	t_2,1
+-	slt	a2,t_1,zero
+-	daddu	t_2,a2
+-	dsll	t_1,1
+ 	daddu	c_2,t_1
+ 	sltu	AT,c_2,t_1
+-	daddu	t_2,AT
++	daddu	c_2,t_1
++	daddu	AT,t_2
++	sltu	t_1,c_2,t_1
++	daddu	c_3,AT
++	daddu	t_2,t_1
++	sltu	AT,c_3,AT
+ 	daddu	c_3,t_2
+-	sltu	AT,c_3,t_2
+ 	daddu	c_1,AT
++	sltu	t_2,c_3,t_2
++	daddu	c_1,t_2
+ 	dmultu	a_3,a_4		/* mul_add_c2(a[3],b[4],c2,c3,c1); */
+ 	mflo	t_1
+ 	mfhi	t_2
+-	slt	AT,t_2,zero
+-	daddu	c_1,AT
+-	dsll	t_2,1
+-	slt	a2,t_1,zero
+-	daddu	t_2,a2
+-	dsll	t_1,1
+ 	daddu	c_2,t_1
+ 	sltu	AT,c_2,t_1
+-	daddu	t_2,AT
++	daddu	c_2,t_1
++	daddu	AT,t_2
++	sltu	t_1,c_2,t_1
++	daddu	c_3,AT
++	daddu	t_2,t_1
++	sltu	AT,c_3,AT
+ 	daddu	c_3,t_2
+-	sltu	AT,c_3,t_2
+ 	daddu	c_1,AT
++	sltu	t_2,c_3,t_2
++	daddu	c_1,t_2
+ 	sd	c_2,56(a0)
+ 
+ 	dmultu	a_7,a_1		/* mul_add_c2(a[7],b[1],c3,c1,c2); */
+ 	mflo	t_1
+ 	mfhi	t_2
+-	slt	c_2,t_2,zero
+-	dsll	t_2,1
+-	slt	a2,t_1,zero
+-	daddu	t_2,a2
+-	dsll	t_1,1
+ 	daddu	c_3,t_1
+ 	sltu	AT,c_3,t_1
+-	daddu	t_2,AT
++	daddu	c_3,t_1
++	daddu	AT,t_2
++	sltu	t_1,c_3,t_1
++	daddu	c_1,AT
++	daddu	t_2,t_1
++	sltu	c_2,c_1,AT
+ 	daddu	c_1,t_2
+-	sltu	AT,c_1,t_2
+-	daddu	c_2,AT
++	sltu	t_2,c_1,t_2
++	daddu	c_2,t_2
+ 	dmultu	a_6,a_2		/* mul_add_c2(a[6],b[2],c3,c1,c2); */
+ 	mflo	t_1
+ 	mfhi	t_2
+-	slt	AT,t_2,zero
+-	daddu	c_2,AT
+-	dsll	t_2,1
+-	slt	a2,t_1,zero
+-	daddu	t_2,a2
+-	dsll	t_1,1
+ 	daddu	c_3,t_1
+ 	sltu	AT,c_3,t_1
+-	daddu	t_2,AT
++	daddu	c_3,t_1
++	daddu	AT,t_2
++	sltu	t_1,c_3,t_1
++	daddu	c_1,AT
++	daddu	t_2,t_1
++	sltu	AT,c_1,AT
+ 	daddu	c_1,t_2
+-	sltu	AT,c_1,t_2
+ 	daddu	c_2,AT
++	sltu	t_2,c_1,t_2
++	daddu	c_2,t_2
+ 	dmultu	a_5,a_3		/* mul_add_c2(a[5],b[3],c3,c1,c2); */
+ 	mflo	t_1
+ 	mfhi	t_2
+-	slt	AT,t_2,zero
+-	daddu	c_2,AT
+-	dsll	t_2,1
+-	slt	a2,t_1,zero
+-	daddu	t_2,a2
+-	dsll	t_1,1
+ 	daddu	c_3,t_1
+ 	sltu	AT,c_3,t_1
+-	daddu	t_2,AT
++	daddu	c_3,t_1
++	daddu	AT,t_2
++	sltu	t_1,c_3,t_1
++	daddu	c_1,AT
++	daddu	t_2,t_1
++	sltu	AT,c_1,AT
+ 	daddu	c_1,t_2
+-	sltu	AT,c_1,t_2
+ 	daddu	c_2,AT
++	sltu	t_2,c_1,t_2
++	daddu	c_2,t_2
+ 	dmultu	a_4,a_4		/* mul_add_c(a[4],b[4],c3,c1,c2); */
+ 	mflo	t_1
+ 	mfhi	t_2
+@@ -1897,78 +1897,78 @@ LEAF(bn_sqr_comba8)
+ 	dmultu	a_2,a_7		/* mul_add_c2(a[2],b[7],c1,c2,c3); */
+ 	mflo	t_1
+ 	mfhi	t_2
+-	slt	c_3,t_2,zero
+-	dsll	t_2,1
+-	slt	a2,t_1,zero
+-	daddu	t_2,a2
+-	dsll	t_1,1
+ 	daddu	c_1,t_1
+ 	sltu	AT,c_1,t_1
+-	daddu	t_2,AT
++	daddu	c_1,t_1
++	daddu	AT,t_2
++	sltu	t_1,c_1,t_1
++	daddu	c_2,AT
++	daddu	t_2,t_1
++	sltu	c_3,c_2,AT
+ 	daddu	c_2,t_2
+-	sltu	AT,c_2,t_2
+-	daddu	c_3,AT
++	sltu	t_2,c_2,t_2
++	daddu	c_3,t_2
+ 	dmultu	a_3,a_6		/* mul_add_c2(a[3],b[6],c1,c2,c3); */
+ 	mflo	t_1
+ 	mfhi	t_2
+-	slt	AT,t_2,zero
+-	daddu	c_3,AT
+-	dsll	t_2,1
+-	slt	a2,t_1,zero
+-	daddu	t_2,a2
+-	dsll	t_1,1
+ 	daddu	c_1,t_1
+ 	sltu	AT,c_1,t_1
+-	daddu	t_2,AT
++	daddu	c_1,t_1
++	daddu	AT,t_2
++	sltu	t_1,c_1,t_1
++	daddu	c_2,AT
++	daddu	t_2,t_1
++	sltu	AT,c_2,AT
+ 	daddu	c_2,t_2
+-	sltu	AT,c_2,t_2
+ 	daddu	c_3,AT
++	sltu	t_2,c_2,t_2
++	daddu	c_3,t_2
+ 	dmultu	a_4,a_5		/* mul_add_c2(a[4],b[5],c1,c2,c3); */
+ 	mflo	t_1
+ 	mfhi	t_2
+-	slt	AT,t_2,zero
+-	daddu	c_3,AT
+-	dsll	t_2,1
+-	slt	a2,t_1,zero
+-	daddu	t_2,a2
+-	dsll	t_1,1
+ 	daddu	c_1,t_1
+ 	sltu	AT,c_1,t_1
+-	daddu	t_2,AT
++	daddu	c_1,t_1
++	daddu	AT,t_2
++	sltu	t_1,c_1,t_1
++	daddu	c_2,AT
++	daddu	t_2,t_1
++	sltu	AT,c_2,AT
+ 	daddu	c_2,t_2
+-	sltu	AT,c_2,t_2
+ 	daddu	c_3,AT
++	sltu	t_2,c_2,t_2
++	daddu	c_3,t_2
+ 	sd	c_1,72(a0)
+ 
+ 	dmultu	a_7,a_3		/* mul_add_c2(a[7],b[3],c2,c3,c1); */
+ 	mflo	t_1
+ 	mfhi	t_2
+-	slt	c_1,t_2,zero
+-	dsll	t_2,1
+-	slt	a2,t_1,zero
+-	daddu	t_2,a2
+-	dsll	t_1,1
+ 	daddu	c_2,t_1
+ 	sltu	AT,c_2,t_1
+-	daddu	t_2,AT
++	daddu	c_2,t_1
++	daddu	AT,t_2
++	sltu	t_1,c_2,t_1
++	daddu	c_3,AT
++	daddu	t_2,t_1
++	sltu	c_1,c_3,AT
+ 	daddu	c_3,t_2
+-	sltu	AT,c_3,t_2
+-	daddu	c_1,AT
++	sltu	t_2,c_3,t_2
++	daddu	c_1,t_2
+ 	dmultu	a_6,a_4		/* mul_add_c2(a[6],b[4],c2,c3,c1); */
+ 	mflo	t_1
+ 	mfhi	t_2
+-	slt	AT,t_2,zero
+-	daddu	c_1,AT
+-	dsll	t_2,1
+-	slt	a2,t_1,zero
+-	daddu	t_2,a2
+-	dsll	t_1,1
+ 	daddu	c_2,t_1
+ 	sltu	AT,c_2,t_1
+-	daddu	t_2,AT
++	daddu	c_2,t_1
++	daddu	AT,t_2
++	sltu	t_1,c_2,t_1
++	daddu	c_3,AT
++	daddu	t_2,t_1
++	sltu	AT,c_3,AT
+ 	daddu	c_3,t_2
+-	sltu	AT,c_3,t_2
+ 	daddu	c_1,AT
++	sltu	t_2,c_3,t_2
++	daddu	c_1,t_2
+ 	dmultu	a_5,a_5		/* mul_add_c(a[5],b[5],c2,c3,c1); */
+ 	mflo	t_1
+ 	mfhi	t_2
+@@ -1983,48 +1983,48 @@ LEAF(bn_sqr_comba8)
+ 	dmultu	a_4,a_7		/* mul_add_c2(a[4],b[7],c3,c1,c2); */
+ 	mflo	t_1
+ 	mfhi	t_2
+-	slt	c_2,t_2,zero
+-	dsll	t_2,1
+-	slt	a2,t_1,zero
+-	daddu	t_2,a2
+-	dsll	t_1,1
+ 	daddu	c_3,t_1
+ 	sltu	AT,c_3,t_1
+-	daddu	t_2,AT
++	daddu	c_3,t_1
++	daddu	AT,t_2
++	sltu	t_1,c_3,t_1
++	daddu	c_1,AT
++	daddu	t_2,t_1
++	sltu	c_2,c_1,AT
+ 	daddu	c_1,t_2
+-	sltu	AT,c_1,t_2
+-	daddu	c_2,AT
++	sltu	t_2,c_1,t_2
++	daddu	c_2,t_2
+ 	dmultu	a_5,a_6		/* mul_add_c2(a[5],b[6],c3,c1,c2); */
+ 	mflo	t_1
+ 	mfhi	t_2
+-	slt	AT,t_2,zero
+-	daddu	c_2,AT
+-	dsll	t_2,1
+-	slt	a2,t_1,zero
+-	daddu	t_2,a2
+-	dsll	t_1,1
+ 	daddu	c_3,t_1
+ 	sltu	AT,c_3,t_1
+-	daddu	t_2,AT
++	daddu	c_3,t_1
++	daddu	AT,t_2
++	sltu	t_1,c_3,t_1
++	daddu	c_1,AT
++	daddu	t_2,t_1
++	sltu	AT,c_1,AT
+ 	daddu	c_1,t_2
+-	sltu	AT,c_1,t_2
+ 	daddu	c_2,AT
++	sltu	t_2,c_1,t_2
++	daddu	c_2,t_2
+ 	sd	c_3,88(a0)
+ 
+ 	dmultu	a_7,a_5		/* mul_add_c2(a[7],b[5],c1,c2,c3); */
+ 	mflo	t_1
+ 	mfhi	t_2
+-	slt	c_3,t_2,zero
+-	dsll	t_2,1
+-	slt	a2,t_1,zero
+-	daddu	t_2,a2
+-	dsll	t_1,1
+ 	daddu	c_1,t_1
+ 	sltu	AT,c_1,t_1
+-	daddu	t_2,AT
++	daddu	c_1,t_1
++	daddu	AT,t_2
++	sltu	t_1,c_1,t_1
++	daddu	c_2,AT
++	daddu	t_2,t_1
++	sltu	c_3,c_2,AT
+ 	daddu	c_2,t_2
+-	sltu	AT,c_2,t_2
+-	daddu	c_3,AT
++	sltu	t_2,c_2,t_2
++	daddu	c_3,t_2
+ 	dmultu	a_6,a_6		/* mul_add_c(a[6],b[6],c1,c2,c3); */
+ 	mflo	t_1
+ 	mfhi	t_2
+@@ -2039,17 +2039,17 @@ LEAF(bn_sqr_comba8)
+ 	dmultu	a_6,a_7		/* mul_add_c2(a[6],b[7],c2,c3,c1); */
+ 	mflo	t_1
+ 	mfhi	t_2
+-	slt	c_1,t_2,zero
+-	dsll	t_2,1
+-	slt	a2,t_1,zero
+-	daddu	t_2,a2
+-	dsll	t_1,1
+ 	daddu	c_2,t_1
+ 	sltu	AT,c_2,t_1
+-	daddu	t_2,AT
++	daddu	c_2,t_1
++	daddu	AT,t_2
++	sltu	t_1,c_2,t_1
++	daddu	c_3,AT
++	daddu	t_2,t_1
++	sltu	c_1,c_3,AT
+ 	daddu	c_3,t_2
+-	sltu	AT,c_3,t_2
+-	daddu	c_1,AT
++	sltu	t_2,c_3,t_2
++	daddu	c_1,t_2
+ 	sd	c_2,104(a0)
+ 
+ 	dmultu	a_7,a_7		/* mul_add_c(a[7],b[7],c3,c1,c2); */
+@@ -2070,9 +2070,9 @@ LEAF(bn_sqr_comba4)
+ 	.set	reorder
+ 	ld	a_0,0(a1)
+ 	ld	a_1,8(a1)
++	dmultu	a_0,a_0		/* mul_add_c(a[0],b[0],c1,c2,c3); */
+ 	ld	a_2,16(a1)
+ 	ld	a_3,24(a1)
+-	dmultu	a_0,a_0		/* mul_add_c(a[0],b[0],c1,c2,c3); */
+ 	mflo	c_1
+ 	mfhi	c_2
+ 	sd	c_1,0(a0)
+@@ -2093,17 +2093,17 @@ LEAF(bn_sqr_comba4)
+ 	dmultu	a_2,a_0		/* mul_add_c2(a[2],b[0],c3,c1,c2); */
+ 	mflo	t_1
+ 	mfhi	t_2
+-	slt	c_2,t_2,zero
+-	dsll	t_2,1
+-	slt	a2,t_1,zero
+-	daddu	t_2,a2
+-	dsll	t_1,1
+ 	daddu	c_3,t_1
+ 	sltu	AT,c_3,t_1
+-	daddu	t_2,AT
++	daddu	c_3,t_1
++	daddu	AT,t_2
++	sltu	t_1,c_3,t_1
++	daddu	c_1,AT
++	daddu	t_2,t_1
++	sltu	c_2,c_1,AT
+ 	daddu	c_1,t_2
+-	sltu	AT,c_1,t_2
+-	daddu	c_2,AT
++	sltu	t_2,c_1,t_2
++	daddu	c_2,t_2
+ 	dmultu	a_1,a_1		/* mul_add_c(a[1],b[1],c3,c1,c2); */
+ 	mflo	t_1
+ 	mfhi	t_2
+@@ -2118,48 +2118,48 @@ LEAF(bn_sqr_comba4)
+ 	dmultu	a_0,a_3		/* mul_add_c2(a[0],b[3],c1,c2,c3); */
+ 	mflo	t_1
+ 	mfhi	t_2
+-	slt	c_3,t_2,zero
+-	dsll	t_2,1
+-	slt	a2,t_1,zero
+-	daddu	t_2,a2
+-	dsll	t_1,1
+ 	daddu	c_1,t_1
+ 	sltu	AT,c_1,t_1
+-	daddu	t_2,AT
++	daddu	c_1,t_1
++	daddu	AT,t_2
++	sltu	t_1,c_1,t_1
++	daddu	c_2,AT
++	daddu	t_2,t_1
++	sltu	c_3,c_2,AT
+ 	daddu	c_2,t_2
+-	sltu	AT,c_2,t_2
+-	daddu	c_3,AT
++	sltu	t_2,c_2,t_2
++	daddu	c_3,t_2
+ 	dmultu	a_1,a_2		/* mul_add_c(a2[1],b[2],c1,c2,c3); */
+ 	mflo	t_1
+ 	mfhi	t_2
+-	slt	AT,t_2,zero
+-	daddu	c_3,AT
+-	dsll	t_2,1
+-	slt	a2,t_1,zero
+-	daddu	t_2,a2
+-	dsll	t_1,1
+ 	daddu	c_1,t_1
+ 	sltu	AT,c_1,t_1
+-	daddu	t_2,AT
++	daddu	c_1,t_1
++	daddu	AT,t_2
++	sltu	t_1,c_1,t_1
++	daddu	c_2,AT
++	daddu	t_2,t_1
++	sltu	AT,c_2,AT
+ 	daddu	c_2,t_2
+-	sltu	AT,c_2,t_2
+ 	daddu	c_3,AT
++	sltu	t_2,c_2,t_2
++	daddu	c_3,t_2
+ 	sd	c_1,24(a0)
+ 
+ 	dmultu	a_3,a_1		/* mul_add_c2(a[3],b[1],c2,c3,c1); */
+ 	mflo	t_1
+ 	mfhi	t_2
+-	slt	c_1,t_2,zero
+-	dsll	t_2,1
+-	slt	a2,t_1,zero
+-	daddu	t_2,a2
+-	dsll	t_1,1
+ 	daddu	c_2,t_1
+ 	sltu	AT,c_2,t_1
+-	daddu	t_2,AT
++	daddu	c_2,t_1
++	daddu	AT,t_2
++	sltu	t_1,c_2,t_1
++	daddu	c_3,AT
++	daddu	t_2,t_1
++	sltu	c_1,c_3,AT
+ 	daddu	c_3,t_2
+-	sltu	AT,c_3,t_2
+-	daddu	c_1,AT
++	sltu	t_2,c_3,t_2
++	daddu	c_1,t_2
+ 	dmultu	a_2,a_2		/* mul_add_c(a[2],b[2],c2,c3,c1); */
+ 	mflo	t_1
+ 	mfhi	t_2
+@@ -2174,17 +2174,17 @@ LEAF(bn_sqr_comba4)
+ 	dmultu	a_2,a_3		/* mul_add_c2(a[2],b[3],c3,c1,c2); */
+ 	mflo	t_1
+ 	mfhi	t_2
+-	slt	c_2,t_2,zero
+-	dsll	t_2,1
+-	slt	a2,t_1,zero
+-	daddu	t_2,a2
+-	dsll	t_1,1
+ 	daddu	c_3,t_1
+ 	sltu	AT,c_3,t_1
+-	daddu	t_2,AT
++	daddu	c_3,t_1
++	daddu	AT,t_2
++	sltu	t_1,c_3,t_1
++	daddu	c_1,AT
++	daddu	t_2,t_1
++	sltu	c_2,c_1,AT
+ 	daddu	c_1,t_2
+-	sltu	AT,c_1,t_2
+-	daddu	c_2,AT
++	sltu	t_2,c_1,t_2
++	daddu	c_2,t_2
+ 	sd	c_3,40(a0)
+ 
+ 	dmultu	a_3,a_3		/* mul_add_c(a[3],b[3],c1,c2,c3); */
+Index: crypto/openssl/crypto/bn/asm/x86_64-gcc.c
+===================================================================
+--- crypto/openssl/crypto/bn/asm/x86_64-gcc.c	(revision 276867)
++++ crypto/openssl/crypto/bn/asm/x86_64-gcc.c	(working copy)
+@@ -269,6 +269,10 @@ BN_ULONG bn_sub_words(BN_ULONG *r, BN_ULONG *a, BN
+ /* sqr_add_c(a,i,c0,c1,c2)  -- c+=a[i]^2 for three word number c=(c2,c1,c0) */
+ /* sqr_add_c2(a,i,c0,c1,c2) -- c+=2*a[i]*a[j] for three word number c=(c2,c1,c0) */
+ 
++/*
++ * Keep in mind that carrying into high part of multiplication result
++ * can not overflow, because it cannot be all-ones.
++ */
+ #if 0
+ /* original macros are kept for reference purposes */
+ #define mul_add_c(a,b,c0,c1,c2) {	\
+@@ -283,10 +287,10 @@ BN_ULONG bn_sub_words(BN_ULONG *r, BN_ULONG *a, BN
+ 	BN_ULONG ta=(a),tb=(b),t0;	\
+ 	t1 = BN_UMULT_HIGH(ta,tb);	\
+ 	t0 = ta * tb;			\
+-	t2 = t1+t1; c2 += (t2<t1)?1:0;	\
+-	t1 = t0+t0; t2 += (t1<t0)?1:0;	\
+-	c0 += t1; t2 += (c0<t1)?1:0;	\
++	c0 += t0; t2 = t1+((c0<t0)?1:0);\
+ 	c1 += t2; c2 += (c1<t2)?1:0;	\
++	c0 += t0; t1 += (c0<t0)?1:0;	\
++	c1 += t1; c2 += (c1<t1)?1:0;	\
+ 	}
+ #else
+ #define mul_add_c(a,b,c0,c1,c2)	do {	\
+@@ -324,22 +328,14 @@ BN_ULONG bn_sub_words(BN_ULONG *r, BN_ULONG *a, BN
+ 		: "=a"(t1),"=d"(t2)	\
+ 		: "a"(a),"m"(b)		\
+ 		: "cc");		\
+-	asm ("addq %0,%0; adcq %2,%1"	\
+-		: "+d"(t2),"+r"(c2)	\
+-		: "g"(0)		\
+-		: "cc");		\
+-	asm ("addq %0,%0; adcq %2,%1"	\
+-		: "+a"(t1),"+d"(t2)	\
+-		: "g"(0)		\
+-		: "cc");		\
+-	asm ("addq %2,%0; adcq %3,%1"	\
+-		: "+r"(c0),"+d"(t2)	\
+-		: "a"(t1),"g"(0)	\
+-		: "cc");		\
+-	asm ("addq %2,%0; adcq %3,%1"	\
+-		: "+r"(c1),"+r"(c2)	\
+-		: "d"(t2),"g"(0)	\
+-		: "cc");		\
++	asm ("addq %3,%0; adcq %4,%1; adcq %5,%2"	\
++		: "+r"(c0),"+r"(c1),"+r"(c2)		\
++		: "r"(t1),"r"(t2),"g"(0)		\
++		: "cc");				\
++	asm ("addq %3,%0; adcq %4,%1; adcq %5,%2"	\
++		: "+r"(c0),"+r"(c1),"+r"(c2)		\
++		: "r"(t1),"r"(t2),"g"(0)		\
++		: "cc");				\
+ 	} while (0)
+ #endif
+ 
+Index: crypto/openssl/crypto/bn/bn_asm.c
+===================================================================
+--- crypto/openssl/crypto/bn/bn_asm.c	(revision 276867)
++++ crypto/openssl/crypto/bn/bn_asm.c	(working copy)
+@@ -431,6 +431,10 @@ BN_ULONG bn_sub_words(BN_ULONG *r, const BN_ULONG
+ /* sqr_add_c(a,i,c0,c1,c2)  -- c+=a[i]^2 for three word number c=(c2,c1,c0) */
+ /* sqr_add_c2(a,i,c0,c1,c2) -- c+=2*a[i]*a[j] for three word number c=(c2,c1,c0) */
+ 
++/*
++ * Keep in mind that carrying into high part of multiplication result
++ * can not overflow, because it cannot be all-ones.
++ */
+ #ifdef BN_LLONG
+ #define mul_add_c(a,b,c0,c1,c2) \
+ 	t=(BN_ULLONG)a*b; \
+@@ -471,10 +475,10 @@ BN_ULONG bn_sub_words(BN_ULONG *r, const BN_ULONG
+ #define mul_add_c2(a,b,c0,c1,c2) {	\
+ 	BN_ULONG ta=(a),tb=(b),t0;	\
+ 	BN_UMULT_LOHI(t0,t1,ta,tb);	\
+-	t2 = t1+t1; c2 += (t2<t1)?1:0;	\
+-	t1 = t0+t0; t2 += (t1<t0)?1:0;	\
+-	c0 += t1; t2 += (c0<t1)?1:0;	\
++	c0 += t0; t2 = t1+((c0<t0)?1:0);\
+ 	c1 += t2; c2 += (c1<t2)?1:0;	\
++	c0 += t0; t1 += (c0<t0)?1:0;	\
++	c1 += t1; c2 += (c1<t1)?1:0;	\
+ 	}
+ 
+ #define sqr_add_c(a,i,c0,c1,c2)	{	\
+@@ -501,10 +505,10 @@ BN_ULONG bn_sub_words(BN_ULONG *r, const BN_ULONG
+ 	BN_ULONG ta=(a),tb=(b),t0;	\
+ 	t1 = BN_UMULT_HIGH(ta,tb);	\
+ 	t0 = ta * tb;			\
+-	t2 = t1+t1; c2 += (t2<t1)?1:0;	\
+-	t1 = t0+t0; t2 += (t1<t0)?1:0;	\
+-	c0 += t1; t2 += (c0<t1)?1:0;	\
++	c0 += t0; t2 = t1+((c0<t0)?1:0);\
+ 	c1 += t2; c2 += (c1<t2)?1:0;	\
++	c0 += t0; t1 += (c0<t0)?1:0;	\
++	c1 += t1; c2 += (c1<t1)?1:0;	\
+ 	}
+ 
+ #define sqr_add_c(a,i,c0,c1,c2)	{	\
+Index: crypto/openssl/crypto/bn/bntest.c
+===================================================================
+--- crypto/openssl/crypto/bn/bntest.c	(revision 276867)
++++ crypto/openssl/crypto/bn/bntest.c	(working copy)
+@@ -676,44 +676,98 @@ int test_mul(BIO *bp)
+ 
+ int test_sqr(BIO *bp, BN_CTX *ctx)
+ 	{
+-	BIGNUM a,c,d,e;
+-	int i;
++	BIGNUM *a,*c,*d,*e;
++	int i, ret = 0;
+ 
+-	BN_init(&a);
+-	BN_init(&c);
+-	BN_init(&d);
+-	BN_init(&e);
++	a = BN_new();
++	c = BN_new();
++	d = BN_new();
++	e = BN_new();
++	if (a == NULL || c == NULL || d == NULL || e == NULL)
++		{
++		goto err;
++		}
+ 
+ 	for (i=0; i<num0; i++)
+ 		{
+-		BN_bntest_rand(&a,40+i*10,0,0);
+-		a.neg=rand_neg();
+-		BN_sqr(&c,&a,ctx);
++		BN_bntest_rand(a,40+i*10,0,0);
++		a->neg=rand_neg();
++		BN_sqr(c,a,ctx);
+ 		if (bp != NULL)
+ 			{
+ 			if (!results)
+ 				{
+-				BN_print(bp,&a);
++				BN_print(bp,a);
+ 				BIO_puts(bp," * ");
+-				BN_print(bp,&a);
++				BN_print(bp,a);
+ 				BIO_puts(bp," - ");
+ 				}
+-			BN_print(bp,&c);
++			BN_print(bp,c);
+ 			BIO_puts(bp,"\n");
+ 			}
+-		BN_div(&d,&e,&c,&a,ctx);
+-		BN_sub(&d,&d,&a);
+-		if(!BN_is_zero(&d) || !BN_is_zero(&e))
+-		    {
+-		    fprintf(stderr,"Square test failed!\n");
+-		    return 0;
+-		    }
++		BN_div(d,e,c,a,ctx);
++		BN_sub(d,d,a);
++		if(!BN_is_zero(d) || !BN_is_zero(e))
++			{
++			fprintf(stderr,"Square test failed!\n");
++			goto err;
++			}
+ 		}
+-	BN_free(&a);
+-	BN_free(&c);
+-	BN_free(&d);
+-	BN_free(&e);
+-	return(1);
++
++	/* Regression test for a BN_sqr overflow bug. */
++	BN_hex2bn(&a,
++		"80000000000000008000000000000001FFFFFFFFFFFFFFFE0000000000000000");
++	BN_sqr(c, a, ctx);
++	if (bp != NULL)
++		{
++		if (!results)
++			{
++			BN_print(bp,a);
++			BIO_puts(bp," * ");
++			BN_print(bp,a);
++			BIO_puts(bp," - ");
++			}
++		BN_print(bp,c);
++		BIO_puts(bp,"\n");
++		}
++	BN_mul(d, a, a, ctx);
++	if (BN_cmp(c, d))
++		{
++		fprintf(stderr, "Square test failed: BN_sqr and BN_mul produce "
++			"different results!\n");
++		goto err;
++		}
++
++	/* Regression test for a BN_sqr overflow bug. */
++	BN_hex2bn(&a,
++		"80000000000000000000000080000001FFFFFFFE000000000000000000000000");
++	BN_sqr(c, a, ctx);
++	if (bp != NULL)
++		{
++		if (!results)
++			{
++			BN_print(bp,a);
++			BIO_puts(bp," * ");
++			BN_print(bp,a);
++			BIO_puts(bp," - ");
++			}
++		BN_print(bp,c);
++		BIO_puts(bp,"\n");
++		}
++	BN_mul(d, a, a, ctx);
++	if (BN_cmp(c, d))
++		{
++		fprintf(stderr, "Square test failed: BN_sqr and BN_mul produce "
++			"different results!\n");
++		goto err;
++		}
++	ret = 1;
++err:
++	if (a != NULL) BN_free(a);
++	if (c != NULL) BN_free(c);
++	if (d != NULL) BN_free(d);
++	if (e != NULL) BN_free(e);
++	return ret;
+ 	}
+ 
+ int test_mont(BIO *bp, BN_CTX *ctx)
+Index: crypto/openssl/crypto/dsa/dsa_asn1.c
+===================================================================
+--- crypto/openssl/crypto/dsa/dsa_asn1.c	(revision 276867)
++++ crypto/openssl/crypto/dsa/dsa_asn1.c	(working copy)
+@@ -200,7 +200,11 @@ int DSA_verify(int type, const unsigned char *dgst
+ 	     const unsigned char *sigbuf, int siglen, DSA *dsa)
+ 	{
+ 	DSA_SIG *s;
++	const unsigned char *p = sigbuf;
++	unsigned char *der = NULL;
++	int derlen = -1;
+ 	int ret=-1;
++
+ #ifdef OPENSSL_FIPS
+ 	if(FIPS_mode() && !(dsa->flags & DSA_FLAG_NON_FIPS_ALLOW))
+ 		{
+@@ -211,10 +215,18 @@ int DSA_verify(int type, const unsigned char *dgst
+ 
+ 	s = DSA_SIG_new();
+ 	if (s == NULL) return(ret);
+-	if (d2i_DSA_SIG(&s,&sigbuf,siglen) == NULL) goto err;
++	if (d2i_DSA_SIG(&s,&p,siglen) == NULL) goto err;
++	/* Ensure signature uses DER and doesn't have trailing garbage */
++	derlen = i2d_DSA_SIG(s, &der);
++	if (derlen != siglen || memcmp(sigbuf, der, derlen))
++		goto err;
+ 	ret=DSA_do_verify(dgst,dgst_len,s,dsa);
+ err:
++	if (derlen > 0)
++		{
++		OPENSSL_cleanse(der, derlen);
++		OPENSSL_free(der);
++		}
+ 	DSA_SIG_free(s);
+ 	return(ret);
+ 	}
+-
+Index: crypto/openssl/crypto/ecdsa/ecs_vrf.c
+===================================================================
+--- crypto/openssl/crypto/ecdsa/ecs_vrf.c	(revision 276867)
++++ crypto/openssl/crypto/ecdsa/ecs_vrf.c	(working copy)
+@@ -57,6 +57,7 @@
+  */
+ 
+ #include "ecs_locl.h"
++#include "cryptlib.h"
+ #ifndef OPENSSL_NO_ENGINE
+ #include <openssl/engine.h>
+ #endif
+@@ -84,13 +85,25 @@ int ECDSA_verify(int type, const unsigned char *dg
+ 		const unsigned char *sigbuf, int sig_len, EC_KEY *eckey)
+  	{
+ 	ECDSA_SIG *s;
++	const unsigned char *p = sigbuf;
++	unsigned char *der = NULL;
++	int derlen = -1;
+ 	int ret=-1;
+ 
+ 	s = ECDSA_SIG_new();
+ 	if (s == NULL) return(ret);
+-	if (d2i_ECDSA_SIG(&s, &sigbuf, sig_len) == NULL) goto err;
++	if (d2i_ECDSA_SIG(&s, &p, sig_len) == NULL) goto err;
++	/* Ensure signature uses DER and doesn't have trailing garbage */
++	derlen = i2d_ECDSA_SIG(s, &der);
++	if (derlen != sig_len || memcmp(sigbuf, der, derlen))
++		goto err;
+ 	ret=ECDSA_do_verify(dgst, dgst_len, s, eckey);
+ err:
++	if (derlen > 0)
++		{
++		OPENSSL_cleanse(der, derlen);
++		OPENSSL_free(der);
++		}
+ 	ECDSA_SIG_free(s);
+ 	return(ret);
+ 	}
+Index: crypto/openssl/crypto/x509/x509.h
+===================================================================
+--- crypto/openssl/crypto/x509/x509.h	(revision 276867)
++++ crypto/openssl/crypto/x509/x509.h	(working copy)
+@@ -870,6 +870,7 @@ X509_ALGOR *X509_ALGOR_dup(X509_ALGOR *xn);
+ int X509_ALGOR_set0(X509_ALGOR *alg, ASN1_OBJECT *aobj, int ptype, void *pval);
+ void X509_ALGOR_get0(ASN1_OBJECT **paobj, int *pptype, void **ppval,
+ 						X509_ALGOR *algor);
++int X509_ALGOR_cmp(const X509_ALGOR *a, const X509_ALGOR *b);
+ 
+ X509_NAME *X509_NAME_dup(X509_NAME *xn);
+ X509_NAME_ENTRY *X509_NAME_ENTRY_dup(X509_NAME_ENTRY *ne);
+Index: crypto/openssl/crypto/x509/x_all.c
+===================================================================
+--- crypto/openssl/crypto/x509/x_all.c	(revision 276867)
++++ crypto/openssl/crypto/x509/x_all.c	(working copy)
+@@ -73,6 +73,8 @@
+ 
+ int X509_verify(X509 *a, EVP_PKEY *r)
+ 	{
++	if (X509_ALGOR_cmp(a->sig_alg, a->cert_info->signature))
++		return 0;
+ 	return(ASN1_item_verify(ASN1_ITEM_rptr(X509_CINF),a->sig_alg,
+ 		a->signature,a->cert_info,r));
+ 	}
+Index: crypto/openssl/doc/ssl/SSL_CTX_set_options.pod
+===================================================================
+--- crypto/openssl/doc/ssl/SSL_CTX_set_options.pod	(revision 276867)
++++ crypto/openssl/doc/ssl/SSL_CTX_set_options.pod	(working copy)
+@@ -152,15 +152,7 @@ temporary/ephemeral DH parameters are used.
+ 
+ =item SSL_OP_EPHEMERAL_RSA
+ 
+-Always use ephemeral (temporary) RSA key when doing RSA operations
+-(see L<SSL_CTX_set_tmp_rsa_callback(3)|SSL_CTX_set_tmp_rsa_callback(3)>).
+-According to the specifications this is only done, when a RSA key
+-can only be used for signature operations (namely under export ciphers
+-with restricted RSA keylength). By setting this option, ephemeral
+-RSA keys are always used. This option breaks compatibility with the
+-SSL/TLS specifications and may lead to interoperability problems with
+-clients and should therefore never be used. Ciphers with EDH (ephemeral
+-Diffie-Hellman) key exchange should be used instead.
++This option is no longer implemented and is treated as no op.
+ 
+ =item SSL_OP_CIPHER_SERVER_PREFERENCE
+ 
+Index: crypto/openssl/doc/ssl/SSL_CTX_set_tmp_rsa_callback.pod
+===================================================================
+--- crypto/openssl/doc/ssl/SSL_CTX_set_tmp_rsa_callback.pod	(revision 276867)
++++ crypto/openssl/doc/ssl/SSL_CTX_set_tmp_rsa_callback.pod	(working copy)
+@@ -74,22 +74,15 @@ exchange and use EDH (Ephemeral Diffie-Hellman) ke
+ in order to achieve forward secrecy (see
+ L<SSL_CTX_set_tmp_dh_callback(3)|SSL_CTX_set_tmp_dh_callback(3)>).
+ 
+-On OpenSSL servers ephemeral RSA key exchange is therefore disabled by default
+-and must be explicitly enabled  using the SSL_OP_EPHEMERAL_RSA option of
+-L<SSL_CTX_set_options(3)|SSL_CTX_set_options(3)>, violating the TLS/SSL
+-standard. When ephemeral RSA key exchange is required for export ciphers,
+-it will automatically be used without this option!
++An application may either directly specify the key or can supply the key via a
++callback function. The callback approach has the advantage, that the callback
++may generate the key only in case it is actually needed. As the generation of a
++RSA key is however costly, it will lead to a significant delay in the handshake
++procedure.  Another advantage of the callback function is that it can supply
++keys of different size while the explicit setting of the key is only useful for
++key size of 512 bits to satisfy the export restricted ciphers and does give
++away key length if a longer key would be allowed.
+ 
+-An application may either directly specify the key or can supply the key via
+-a callback function. The callback approach has the advantage, that the
+-callback may generate the key only in case it is actually needed. As the
+-generation of a RSA key is however costly, it will lead to a significant
+-delay in the handshake procedure.  Another advantage of the callback function
+-is that it can supply keys of different size (e.g. for SSL_OP_EPHEMERAL_RSA
+-usage) while the explicit setting of the key is only useful for key size of
+-512 bits to satisfy the export restricted ciphers and does give away key length
+-if a longer key would be allowed.
+-
+ The B<tmp_rsa_callback> is called with the B<keylength> needed and
+ the B<is_export> information. The B<is_export> flag is set, when the
+ ephemeral RSA key exchange is performed with an export cipher.
+Index: crypto/openssl/ssl/d1_pkt.c
+===================================================================
+--- crypto/openssl/ssl/d1_pkt.c	(revision 276867)
++++ crypto/openssl/ssl/d1_pkt.c	(working copy)
+@@ -595,8 +595,6 @@ again:
+ 		/* now s->packet_length == DTLS1_RT_HEADER_LENGTH */
+ 		i=rr->length;
+ 		n=ssl3_read_n(s,i,i,1);
+-		if (n <= 0) return(n); /* error or non-blocking io */
+-
+ 		/* this packet contained a partial record, dump it */
+ 		if ( n != i)
+ 			{
+@@ -626,7 +624,8 @@ again:
+ 	 * would be dropped unnecessarily.
+ 	 */
+ 	if (!(s->d1->listen && rr->type == SSL3_RT_HANDSHAKE &&
+-		*p == SSL3_MT_CLIENT_HELLO) &&
++		s->packet_length > DTLS1_RT_HEADER_LENGTH &&
++		s->packet[DTLS1_RT_HEADER_LENGTH] == SSL3_MT_CLIENT_HELLO) &&
+ 		! dtls1_record_replay_check(s, bitmap, &(rr->seq_num)))
+ 		{
+ 		rr->length = 0;
+Index: crypto/openssl/ssl/d1_srvr.c
+===================================================================
+--- crypto/openssl/ssl/d1_srvr.c	(revision 276867)
++++ crypto/openssl/ssl/d1_srvr.c	(working copy)
+@@ -371,23 +371,11 @@ int dtls1_accept(SSL *s)
+ 
+ 			/* clear this, it may get reset by
+ 			 * send_server_key_exchange */
+-			if ((s->options & SSL_OP_EPHEMERAL_RSA)
+-#ifndef OPENSSL_NO_KRB5
+-				&& !(l & SSL_KRB5)
+-#endif /* OPENSSL_NO_KRB5 */
+-				)
+-				/* option SSL_OP_EPHEMERAL_RSA sends temporary RSA key
+-				 * even when forbidden by protocol specs
+-				 * (handshake may fail as clients are not required to
+-				 * be able to handle this) */
+-				s->s3->tmp.use_rsa_tmp=1;
+-			else
+-				s->s3->tmp.use_rsa_tmp=0;
++			s->s3->tmp.use_rsa_tmp=0;
+ 
+ 			/* only send if a DH key exchange, fortezza or
+ 			 * RSA but we have a sign only certificate */
+-			if (s->s3->tmp.use_rsa_tmp
+-			    || (l & (SSL_DH|SSL_kFZA))
++			if ((l & (SSL_DH|SSL_kFZA))
+ 			    || ((l & SSL_kRSA)
+ 				&& (s->cert->pkeys[SSL_PKEY_RSA_ENC].privatekey == NULL
+ 				    || (SSL_C_IS_EXPORT(s->s3->tmp.new_cipher)
+Index: crypto/openssl/ssl/s23_srvr.c
+===================================================================
+--- crypto/openssl/ssl/s23_srvr.c	(revision 276867)
++++ crypto/openssl/ssl/s23_srvr.c	(working copy)
+@@ -559,12 +559,14 @@ int ssl23_get_client_hello(SSL *s)
+ 	if ((type == 2) || (type == 3))
+ 		{
+ 		/* we have SSLv3/TLSv1 (type 2: SSL2 style, type 3: SSL3/TLS style) */
+-                s->method = ssl23_get_server_method(s->version);
+-		if (s->method == NULL)
++		SSL_METHOD *new_method;
++		new_method = ssl23_get_server_method(s->version);
++		if (new_method == NULL)
+ 			{
+ 			SSLerr(SSL_F_SSL23_GET_CLIENT_HELLO,SSL_R_UNSUPPORTED_PROTOCOL);
+ 			goto err;
+ 			}
++		s->method = new_method;
+ 
+ 		if (!ssl_init_wbio_buffer(s,1)) goto err;
+ 
+Index: crypto/openssl/ssl/s3_clnt.c
+===================================================================
+--- crypto/openssl/ssl/s3_clnt.c	(revision 276867)
++++ crypto/openssl/ssl/s3_clnt.c	(working copy)
+@@ -1122,8 +1122,21 @@ int ssl3_get_key_exchange(SSL *s)
+ 
+ 	if (!ok) return((int)n);
+ 
++	alg=s->s3->tmp.new_cipher->algorithms;
++	EVP_MD_CTX_init(&md_ctx);
++
+ 	if (s->s3->tmp.message_type != SSL3_MT_SERVER_KEY_EXCHANGE)
+ 		{
++		/*
++		 * Can't skip server key exchange if this is an ephemeral
++		 * ciphersuite.
++		 */
++		if (alg & (SSL_kEDH|SSL_kECDHE))
++			{
++			SSLerr(SSL_F_SSL3_GET_KEY_EXCHANGE, SSL_R_UNEXPECTED_MESSAGE);
++			al = SSL_AD_UNEXPECTED_MESSAGE;
++			goto f_err;
++			}
+ 		s->s3->tmp.reuse_message=1;
+ 		return(1);
+ 		}
+@@ -1160,12 +1173,17 @@ int ssl3_get_key_exchange(SSL *s)
+ 		}
+ 
+ 	param_len=0;
+-	alg=s->s3->tmp.new_cipher->algorithms;
+-	EVP_MD_CTX_init(&md_ctx);
+ 
+ #ifndef OPENSSL_NO_RSA
+ 	if (alg & SSL_kRSA)
+ 		{
++		/* Temporary RSA keys only allowed in export ciphersuites */
++		if (!SSL_C_IS_EXPORT(s->s3->tmp.new_cipher))
++			{
++			al=SSL_AD_UNEXPECTED_MESSAGE;
++			SSLerr(SSL_F_SSL3_GET_KEY_EXCHANGE,SSL_R_UNEXPECTED_MESSAGE);
++			goto f_err;
++			}
+ 		if ((rsa=RSA_new()) == NULL)
+ 			{
+ 			SSLerr(SSL_F_SSL3_GET_KEY_EXCHANGE,ERR_R_MALLOC_FAILURE);
+Index: crypto/openssl/ssl/s3_pkt.c
+===================================================================
+--- crypto/openssl/ssl/s3_pkt.c	(revision 276867)
++++ crypto/openssl/ssl/s3_pkt.c	(working copy)
+@@ -146,6 +146,8 @@ int ssl3_read_n(SSL *s, int n, int max, int extend
+ 	 * at once (as long as it fits into the buffer). */
+ 	if (SSL_version(s) == DTLS1_VERSION)
+ 		{
++		if (s->s3->rbuf.left == 0 && extend)
++			return 0;
+ 		if ( s->s3->rbuf.left > 0 && n > s->s3->rbuf.left)
+ 			n = s->s3->rbuf.left;
+ 		}
+Index: crypto/openssl/ssl/s3_srvr.c
+===================================================================
+--- crypto/openssl/ssl/s3_srvr.c	(revision 276867)
++++ crypto/openssl/ssl/s3_srvr.c	(working copy)
+@@ -354,18 +354,7 @@ int ssl3_accept(SSL *s)
+ 
+ 			/* clear this, it may get reset by
+ 			 * send_server_key_exchange */
+-			if ((s->options & SSL_OP_EPHEMERAL_RSA)
+-#ifndef OPENSSL_NO_KRB5
+-				&& !(l & SSL_KRB5)
+-#endif /* OPENSSL_NO_KRB5 */
+-				)
+-				/* option SSL_OP_EPHEMERAL_RSA sends temporary RSA key
+-				 * even when forbidden by protocol specs
+-				 * (handshake may fail as clients are not required to
+-				 * be able to handle this) */
+-				s->s3->tmp.use_rsa_tmp=1;
+-			else
+-				s->s3->tmp.use_rsa_tmp=0;
++			s->s3->tmp.use_rsa_tmp=0;
+ 
+ 
+ 			/* only send if a DH key exchange, fortezza or
+@@ -377,8 +366,7 @@ int ssl3_accept(SSL *s)
+ 			 * server certificate contains the server's 
+ 			 * public key for key exchange.
+ 			 */
+-			if (s->s3->tmp.use_rsa_tmp
+-			    || (l & SSL_kECDHE)
++			if ((l & SSL_kECDHE)
+ 			    || (l & (SSL_DH|SSL_kFZA))
+ 			    || ((l & SSL_kRSA)
+ 				&& (s->cert->pkeys[SSL_PKEY_RSA_ENC].privatekey == NULL
+@@ -2400,7 +2388,7 @@ int ssl3_get_cert_verify(SSL *s)
+ 	if (s->s3->tmp.message_type != SSL3_MT_CERTIFICATE_VERIFY)
+ 		{
+ 		s->s3->tmp.reuse_message=1;
+-		if ((peer != NULL) && (type | EVP_PKT_SIGN))
++		if (peer != NULL)
+ 			{
+ 			al=SSL_AD_UNEXPECTED_MESSAGE;
+ 			SSLerr(SSL_F_SSL3_GET_CERT_VERIFY,SSL_R_MISSING_VERIFY_MESSAGE);
+Index: crypto/openssl/ssl/ssl.h
+===================================================================
+--- crypto/openssl/ssl/ssl.h	(revision 276867)
++++ crypto/openssl/ssl/ssl.h	(working copy)
+@@ -526,9 +526,8 @@ typedef struct ssl_session_st
+ #define SSL_OP_SINGLE_ECDH_USE				0x00080000L
+ /* If set, always create a new key when using tmp_dh parameters */
+ #define SSL_OP_SINGLE_DH_USE				0x00100000L
+-/* Set to always use the tmp_rsa key when doing RSA operations,
+- * even when this violates protocol specs */
+-#define SSL_OP_EPHEMERAL_RSA				0x00200000L
++/* Does nothing: retained for compatibiity */
++#define SSL_OP_EPHEMERAL_RSA				0x0
+ /* Set on servers to choose the cipher according to the server's
+  * preferences */
+ #define SSL_OP_CIPHER_SERVER_PREFERENCE			0x00400000L
+Index: crypto/openssl/util/libeay.num
+===================================================================
+--- crypto/openssl/util/libeay.num	(revision 276867)
++++ crypto/openssl/util/libeay.num	(working copy)
+@@ -1807,6 +1807,7 @@ ASN1_UTCTIME_get                        2350	NOEXI
+ X509_REQ_digest                         2362	EXIST::FUNCTION:EVP
+ X509_CRL_digest                         2391	EXIST::FUNCTION:EVP
+ d2i_ASN1_SET_OF_PKCS7                   2397	NOEXIST::FUNCTION:
++X509_ALGOR_cmp                          2398	EXIST::FUNCTION:
+ EVP_CIPHER_CTX_set_key_length           2399	EXIST::FUNCTION:
+ EVP_CIPHER_CTX_ctrl                     2400	EXIST::FUNCTION:
+ BN_mod_exp_mont_word                    2401	EXIST::FUNCTION:
+@@ -3730,3 +3731,4 @@ JPAKE_STEP2_init                        4113	EXIST
+ pqueue_size                             4114	EXIST::FUNCTION:
+ OPENSSL_uni2asc                         4115	EXIST:NETWARE:FUNCTION:
+ OPENSSL_asc2uni                         4116	EXIST:NETWARE:FUNCTION:
++ASN1_TYPE_cmp                           4428	EXIST::FUNCTION:
