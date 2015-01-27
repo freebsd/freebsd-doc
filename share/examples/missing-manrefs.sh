@@ -36,12 +36,12 @@
 # against man-refs.ent.
 #
 
-PATH="/usr/bin:/bin:/usr/local/bin:/usr/sbin:/sbin"
-export PATH
+export PATH="/usr/bin:/bin:/usr/local/bin:/usr/sbin:/sbin"
 
 docs=${1}
 srcs=${2}
 sects=$(seq 1 9)
+package=
 
 usage() {
 	echo "Usage:"
@@ -57,6 +57,10 @@ outdir=$(mktemp -d /tmp/manrefresh.outdir.XXXXXX)
 objdir=$(mktemp -d /tmp/manrefresh.objdir.XXXXXX)
 
 build_manpages() {
+	MAKE_FLAGS=
+	if [ -z "${package}" ]; then
+		MAKE_FLAGS="NO_MLINKS=1"
+	fi
 	export MAKEOBJDIRPREFIX=${objdir}
 	export DESTDIR=${outdir}
 	export TESTSBASE=${DESTDIR}/usr/tests
@@ -64,16 +68,18 @@ build_manpages() {
 	make -s -C ${srcs} DESTDIR=${DESTDIR} \
 		SRCCONF=/dev/null __MAKE_CONF=/dev/null \
 		MANOWN=$USER MANGRP=$USER MANMODE=0666 \
-		NO_MLINKS=1 -DNO_ROOT obj hier all-man maninstall
-	echo "Packaging manual pages..."
-	tar -zcvf ${outdir}.tgz -C ${outdir} \
-		usr/share/man usr/share/openssl
+		${MAKE_FLAGS} -DNO_ROOT obj hier all-man maninstall
+	if [ ! -z "${package}" ]; then
+		echo "Packaging manual pages..."
+		tar -zcvf ${outdir}.tgz -C ${outdir} \
+			usr/share/man usr/share/openssl
+	fi
 }
 
 build_cleanup() {
 	make -s -C ${srcs} DESTDIR=${outdir} \
 		SRCCONF=/dev/null __MAKE_CONF=/dev/null \
-		NO_MLINKS=1 -DNO_ROOT cleandir
+		-DNO_ROOT cleandir
 }
 
 add_manref() {
@@ -102,8 +108,10 @@ main() {
 				|| add_manref ${_m}
 		done
 	done
+	package=1
+	build_manpages
 	build_cleanup
-	rm -vr ${outdir} ${objdir}
+	rm -fvr ${outdir} ${objdir}
 	echo "Packaged manual pages are in: ${outdir}.tgz"
 }
 
