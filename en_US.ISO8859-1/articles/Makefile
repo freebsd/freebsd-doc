@@ -42,6 +42,7 @@ SUBDIR+= releng-packages
 SUBDIR+= remote-install
 SUBDIR+= serial-uart
 SUBDIR+= solid-state
+SUBDIR+= vinum
 SUBDIR+= vm-design
 SUBDIR+= wp-toolbox
 
