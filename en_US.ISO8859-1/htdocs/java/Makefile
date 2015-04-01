@@ -8,7 +8,6 @@
 .endif
 
 DOCS+=  index.xml
-DOCS+=  install.xml
 
 DATA=	j2j.gif
 
