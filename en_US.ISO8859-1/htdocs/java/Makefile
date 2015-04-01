@@ -7,9 +7,6 @@
 .include "../Makefile.inc"
 .endif
 
-SUBDIR =	dists
-
-DOCS+=  howhelp.xml
 DOCS+=  index.xml
 DOCS+=  install.xml
 
