@@ -28,8 +28,9 @@
 	alt="RSS Feed"/></a></p>
 
     <p>If you know any resources not listed here, or notice any dead links,
-      please send details to <a
-	href="mailto:edwin\@FreeBSD.org">Edwin Groothuis</a> so that
+      please send details to the <a
+	href="mailto:freebsd-doc@FreeBSD.org">documentation mailing
+	list</a> so that
       it can be included or updated.</p>
   </xsl:template>
 
