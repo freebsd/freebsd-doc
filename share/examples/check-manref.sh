@@ -28,7 +28,7 @@ word_on_line () {
 	sed -E 's/^[[:digit:]]*:<\\!ENTITY man[.]([-[:alnum:].]*)[.][[:digit:]]* \".*$$/\1/'`;
 }
 
-if [ X$2 = X ]; then
+if [ -z "$2" ]; then
     echo "usage: $0 file section";
     exit 2;
 fi
@@ -38,21 +38,21 @@ s=$2;
 
 firstline=`grep -n "^<\\!ENTITY man[.][-[:alnum:].]*[.]$s \"" $i | \
     head -1 | cut -d: -f1`;
-if [ "X$firstline" = "X" ]; then
+if [ -z "$firstline" ]; then
     echo "Can't find first line of section $s.";
     exit 2;
 fi
 echo "First line of section $s is $firstline.";
 lastline=`grep -n "^<\\!ENTITY man[.][-[:alnum:].]*[.]$s \"" $i | \
     tail -1 | cut -d: -f1`;
-if [ "X$lastline" = "X" ]; then
+if [ -z "$lastline" ]; then
     echo "Can't find last line of section $s.";
     exit 2;
 fi
 echo "Last line of section $s is $lastline.";
 
-x=$firstline;
-while [ $x != $lastline ]; do
+x="$firstline";
+while [ "$x" != "$lastline" ]; do
     wol_l=$x;
     word_on_line;
     if [ "$last" ]; then
