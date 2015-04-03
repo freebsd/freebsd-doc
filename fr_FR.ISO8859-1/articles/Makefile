@@ -15,7 +15,6 @@ SUBDIR+= explaining-bsd
 SUBDIR+= filtering-bridges
 SUBDIR+= fonts
 SUBDIR+= ipsec-must
-SUBDIR+= laptop
 SUBDIR+= linux-users
 SUBDIR+= mh
 SUBDIR+= nanobsd
