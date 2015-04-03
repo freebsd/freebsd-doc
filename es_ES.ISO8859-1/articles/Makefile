@@ -7,7 +7,6 @@ SUBDIR+= contributing
 SUBDIR+= cvs-freebsd
 SUBDIR+= explaining-bsd
 SUBDIR+= fdp-es
-SUBDIR+= linux-comparison
 SUBDIR+= linux-users
 SUBDIR+= mailing-list-faq
 SUBDIR+= nanobsd
