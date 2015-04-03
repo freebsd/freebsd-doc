@@ -12,7 +12,6 @@ SUBDIR =	compiz-fusion
 SUBDIR+=	cups
 SUBDIR+=	explaining-bsd
 SUBDIR+=	gjournal-desktop
-SUBDIR+=	linux-comparison
 SUBDIR+=	linux-users
 
 DOC_PREFIX?= ${.CURDIR}/../..

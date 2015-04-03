@@ -9,7 +9,6 @@ SUBDIR = contributing
 SUBDIR+= contributing-ports
 SUBDIR+= explaining-bsd
 SUBDIR+= freebsd-update-server
-SUBDIR+= linux-comparison
 SUBDIR+= nanobsd
 SUBDIR+= new-users
 SUBDIR+= port-mentor-guidelines
