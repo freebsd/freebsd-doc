@@ -22,7 +22,6 @@ SUBDIR+= fonts
 #SUBDIR+= hubs
 SUBDIR+= ipsec-must
 #SUBDIR+= ldap-auth
-#SUBDIR+= linux-comparison
 #SUBDIR+= linux-emulation
 #SUBDIR+= linux-users
 #SUBDIR+= mailing-list-faq
