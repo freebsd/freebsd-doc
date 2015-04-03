@@ -105,6 +105,6 @@
   <xsl:param name="body.font.family">Gentium Plus, AR PL SungtiL GB</xsl:param>
   <xsl:param name="sans.font.family">Droid Sans, AR PL KaitiM GB</xsl:param>
   <xsl:param name="title.font.family">Droid Sans, Droid Sans Fallback</xsl:param>
-  <xsl:param name="monospace.font.family">DejaVu Sans Mono, Droid Sans Fallback</xsl:param>
+  <xsl:param name="monospace.font.family">Droid Sans Mono, Droid Sans Fallback</xsl:param>
 
 </xsl:stylesheet>
