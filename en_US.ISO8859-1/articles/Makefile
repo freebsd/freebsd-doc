@@ -21,7 +21,6 @@ SUBDIR+= geom-class
 SUBDIR+= gjournal-desktop
 SUBDIR+= hubs
 SUBDIR+= ipsec-must
-SUBDIR+= laptop
 SUBDIR+= ldap-auth
 SUBDIR+= linux-comparison
 SUBDIR+= linux-emulation
