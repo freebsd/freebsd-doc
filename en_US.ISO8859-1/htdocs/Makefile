@@ -56,7 +56,6 @@ SUBDIR+= docs
 SUBDIR+= donations
 SUBDIR+= events
 SUBDIR+= gnome
-SUBDIR+= handbook
 SUBDIR+= internal
 SUBDIR+= ipv6
 SUBDIR+= java
