@@ -12,7 +12,6 @@ SUBDIR+= contributors
 SUBDIR+= cups
 SUBDIR+= custom-gcc
 SUBDIR+= explaining-bsd
-SUBDIR+= fbsd-from-scratch
 SUBDIR+= filtering-bridges
 SUBDIR+= fonts
 SUBDIR+= freebsd-questions
