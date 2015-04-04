@@ -4,7 +4,6 @@ SUBDIR =
 SUBDIR+= bsdl-gpl
 SUBDIR+= building-products
 SUBDIR+= committers-guide
-SUBDIR+= compiz-fusion
 SUBDIR+= console-server
 SUBDIR+= contributing
 SUBDIR+= contributing-ports

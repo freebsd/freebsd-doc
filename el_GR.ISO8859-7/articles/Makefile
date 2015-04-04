@@ -4,7 +4,6 @@
 # %SRCID%	1.39
 
 SUBDIR = bsdl-gpl
-SUBDIR+= compiz-fusion
 SUBDIR+= contributing
 SUBDIR+= cvs-freebsd
 SUBDIR+= explaining-bsd
