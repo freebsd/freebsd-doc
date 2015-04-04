@@ -10,7 +10,6 @@ SUBDIR+= contributing
 #SUBDIR+= contributing-ports
 SUBDIR+= contributors
 #SUBDIR+= cups
-#SUBDIR+= custom-gcc
 #SUBDIR+= explaining-bsd
 #SUBDIR+= filtering-bridges
 SUBDIR+= fonts
