@@ -8,7 +8,6 @@
 
 MAINTAINER=	gabor@FreeBSD.org
 
-SUBDIR =	compiz-fusion
 SUBDIR+=	cups
 SUBDIR+=	explaining-bsd
 SUBDIR+=	gjournal-desktop
