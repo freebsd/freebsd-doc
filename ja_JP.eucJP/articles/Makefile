@@ -1,5 +1,5 @@
 # $FreeBSD$
-# Original revision: r45689
+# Original revision: r46450
 
 SUBDIR =
 #SUBDIR+= bsdl-gpl
@@ -40,6 +40,7 @@ SUBDIR+= problem-reports
 #SUBDIR+= remote-install
 #SUBDIR+= serial-uart
 #SUBDIR+= solid-state
+#SUBDIR+= vinum
 #SUBDIR+= vm-design
 
 # ROOT_SYMLINKS+= new-users
