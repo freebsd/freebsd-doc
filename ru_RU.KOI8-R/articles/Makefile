@@ -13,7 +13,6 @@ SUBDIR+= console-server
 SUBDIR+= contributing
 #SUBDIR+= contributors
 SUBDIR+= cups
-SUBDIR+= custom-gcc
 SUBDIR+= cvs-freebsd
 SUBDIR+= explaining-bsd
 #SUBDIR+= filtering-bridges
