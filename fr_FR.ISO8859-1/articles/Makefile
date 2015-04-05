@@ -16,7 +16,6 @@ SUBDIR+= filtering-bridges
 SUBDIR+= fonts
 SUBDIR+= ipsec-must
 SUBDIR+= linux-users
-SUBDIR+= mh
 SUBDIR+= nanobsd
 SUBDIR+= new-users
 SUBDIR+= pam
