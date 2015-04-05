@@ -12,7 +12,6 @@ SUBDIR+= committers-guide
 SUBDIR+= contributing
 #SUBDIR+= contributors
 SUBDIR+= cups
-SUBDIR+= cvs-freebsd
 SUBDIR+= explaining-bsd
 #SUBDIR+= filtering-bridges
 SUBDIR+= fonts

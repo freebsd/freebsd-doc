@@ -4,7 +4,6 @@
 SUBDIR =
 SUBDIR+= casestudy-argentina.com
 SUBDIR+= contributing
-SUBDIR+= cvs-freebsd
 SUBDIR+= explaining-bsd
 SUBDIR+= fdp-es
 SUBDIR+= linux-users

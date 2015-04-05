@@ -2,7 +2,6 @@
 
 SUBDIR =
 SUBDIR+= contributing
-SUBDIR+= cvs-freebsd
 SUBDIR+= freebsd-questions
 SUBDIR+= hubs
 SUBDIR+= mailing-list-faq
