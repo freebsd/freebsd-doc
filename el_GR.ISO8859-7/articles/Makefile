@@ -5,7 +5,6 @@
 
 SUBDIR = bsdl-gpl
 SUBDIR+= contributing
-SUBDIR+= cvs-freebsd
 SUBDIR+= explaining-bsd
 SUBDIR+= freebsd-questions
 SUBDIR+= gjournal-desktop

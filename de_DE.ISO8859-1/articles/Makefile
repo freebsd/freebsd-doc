@@ -6,7 +6,7 @@
 #       basiert auf:  1.42
 
 SUBDIR = contributing
-SUBDIR+= contributing-ports
+gUBDIR+= contributing-ports
 SUBDIR+= explaining-bsd
 SUBDIR+= freebsd-update-server
 SUBDIR+= nanobsd
