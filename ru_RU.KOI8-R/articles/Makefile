@@ -9,7 +9,6 @@
 
 SUBDIR =
 SUBDIR+= committers-guide
-SUBDIR+= console-server
 SUBDIR+= contributing
 #SUBDIR+= contributors
 SUBDIR+= cups
