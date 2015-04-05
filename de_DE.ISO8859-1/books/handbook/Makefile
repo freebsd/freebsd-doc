@@ -243,6 +243,7 @@ SRCS+= dtrace/chapter.xml
 SRCS+= eresources/chapter.xml
 SRCS+= filesystems/chapter.xml
 SRCS+= firewalls/chapter.xml
+SRCS+= zfs/chapter.xml
 SRCS+= geom/chapter.xml
 SRCS+= install/chapter.xml
 SRCS+= introduction/chapter.xml
