@@ -27,7 +27,6 @@ SUBDIR+= pr-guidelines
 SUBDIR+= problem-reports
 SUBDIR+= relaydelay
 SUBDIR+= releng
-SUBDIR+= releng-packages
 #SUBDIR+= serial-uart
 SUBDIR+= solid-state
 #SUBDIR+= vinum
