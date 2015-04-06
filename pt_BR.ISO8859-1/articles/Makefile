@@ -11,7 +11,6 @@
 SUBDIR =
 SUBDIR+= building-products
 SUBDIR+= contributing
-SUBDIR+= contributing-ports
 SUBDIR+= explaining-bsd
 SUBDIR+= freebsd-questions
 SUBDIR+= freebsd-update-server

@@ -5,7 +5,6 @@ SUBDIR+= bsdl-gpl
 SUBDIR+= building-products
 SUBDIR+= committers-guide
 SUBDIR+= contributing
-SUBDIR+= contributing-ports
 SUBDIR+= contributors
 SUBDIR+= cups
 SUBDIR+= explaining-bsd

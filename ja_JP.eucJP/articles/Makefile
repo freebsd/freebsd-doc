@@ -7,7 +7,6 @@ SUBDIR =
 #SUBDIR+= committers-guide
 #SUBDIR+= console-server
 SUBDIR+= contributing
-#SUBDIR+= contributing-ports
 SUBDIR+= contributors
 #SUBDIR+= cups
 #SUBDIR+= explaining-bsd
