@@ -1,11 +1,10 @@
 # $FreeBSD$
-# Original revision: r46450
+# Original revision: r46482
 
 SUBDIR =
 #SUBDIR+= bsdl-gpl
 #SUBDIR+= building-products
 #SUBDIR+= committers-guide
-#SUBDIR+= console-server
 SUBDIR+= contributing
 SUBDIR+= contributors
 #SUBDIR+= cups
