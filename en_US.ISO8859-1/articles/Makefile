@@ -32,7 +32,6 @@ SUBDIR+= problem-reports
 SUBDIR+= rc-scripting
 SUBDIR+= relaydelay
 SUBDIR+= releng
-SUBDIR+= releng-packages
 SUBDIR+= remote-install
 SUBDIR+= serial-uart
 SUBDIR+= solid-state

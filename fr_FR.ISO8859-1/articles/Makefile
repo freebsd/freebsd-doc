@@ -21,7 +21,6 @@ SUBDIR+= new-users
 SUBDIR+= pam
 SUBDIR+= pr-guidelines
 SUBDIR+= problem-reports
-SUBDIR+= releng-packages
 
 ROOT_SYMLINKS+= new-users
 
