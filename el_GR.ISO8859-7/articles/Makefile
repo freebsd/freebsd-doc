@@ -15,7 +15,6 @@ SUBDIR+= nanobsd
 SUBDIR+= new-users
 SUBDIR+= problem-reports
 SUBDIR+= releng
-SUBDIR+= releng-packages
 
 DOC_PREFIX?= ${.CURDIR}/../..
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"
