@@ -585,6 +585,7 @@ $manPathDefault = 'FreeBSD 10.1-RELEASE';
     'CentOS 6.5', "$manLocalDir/CentOS-6.5",
     'CentOS 6.6', "$manLocalDir/CentOS-6.6",
     'CentOS 7.0', "$manLocalDir/CentOS-7.0",
+    'CentOS 7.1', "$manLocalDir/CentOS-7.1",
 
     'HP-UX 11.22', "$manLocalDir/HP-UX-11.22",
     'HP-UX 11.20', "$manLocalDir/HP-UX-11.20",
@@ -749,10 +750,9 @@ while ( ( $key, $val ) = each %manPath ) {
 
     'slackware',  'Linux Slackware 3.1',
     'redhat',     'Red Hat Linux/i386 9',
-    'centos',     'CentOS Linux/amd64 6.3',
     'suse',       'SuSE Linux/i386 11.3',
     'debian',     'Debian 7.7.0',
-    'centos',     'CentOS 7.0',
+    'centos',     'CentOS 7.1',
     'linux',      'Debian 7.7.0',
     'darwin',     'Darwin 8.0.1/ppc',
     'opendarwin', 'OpenDarwin 7.2.1',
