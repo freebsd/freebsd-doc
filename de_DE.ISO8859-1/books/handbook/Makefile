@@ -1,7 +1,7 @@
 #
 # $FreeBSD$
 # $FreeBSDde: de-docproj/books/handbook/Makefile,v 1.67 2011/12/31 12:27:25 bcr Exp $
-# basiert auf: 1.119
+# basiert auf: 42118 
 #
 # Build the FreeBSD Handbook in its German translation.
 #
@@ -158,13 +158,6 @@ IMAGES_EN+= security/ipsec-network.pic
 IMAGES_EN+= security/ipsec-crypt-pkt.pic
 IMAGES_EN+= security/ipsec-encap-pkt.pic
 IMAGES_EN+= security/ipsec-out-pkt.pic
-IMAGES_EN+= vinum/vinum-concat.pic
-IMAGES_EN+= vinum/vinum-mirrored-vol.pic
-IMAGES_EN+= vinum/vinum-raid10-vol.pic
-IMAGES_EN+= vinum/vinum-raid5-org.pic
-IMAGES_EN+= vinum/vinum-simple-vol.pic
-IMAGES_EN+= vinum/vinum-striped-vol.pic
-IMAGES_EN+= vinum/vinum-striped.pic
 IMAGES_EN+= virtualization/parallels-freebsd1.png
 IMAGES_EN+= virtualization/parallels-freebsd2.png
 IMAGES_EN+= virtualization/parallels-freebsd3.png
@@ -264,7 +257,6 @@ SRCS+= printing/chapter.xml
 SRCS+= security/chapter.xml
 SRCS+= serialcomms/chapter.xml
 SRCS+= users/chapter.xml
-SRCS+= vinum/chapter.xml
 SRCS+= virtualization/chapter.xml
 SRCS+= x11/chapter.xml
 
