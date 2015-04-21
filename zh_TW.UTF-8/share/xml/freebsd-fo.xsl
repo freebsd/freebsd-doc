@@ -42,9 +42,10 @@
   </l:i18n>
 
   <!-- Base fonts -->
-  <xsl:param name="body.font.family">AR PL Mingti2L Big5, Gentium Plus</xsl:param>
-  <xsl:param name="sans.font.family">AR PL KaitiM Big5, Droid Sans</xsl:param>
-  <xsl:param name="title.font.family">AR PL KaitiM Big5, Droid Sans</xsl:param>
+  <xsl:param name="body.font.family">Gentium Plus, AR PL Mingti2L Big5</xsl:param>
+  <xsl:param name="sans.font.family">Droid Sans, AR PL KaitiM Big5</xsl:param>
+  <xsl:param name="title.font.family">Droid Sans, AR PL KaitiM Big5</xsl:param>
+  <xsl:param name="Monospace.font.family">Droid Sans Mono, Droid Sans Fallback</xsl:param>
 
   <!-- Slightly reduce header font-size to make headers fit -->
   <xsl:attribute-set name="header.content.properties">
