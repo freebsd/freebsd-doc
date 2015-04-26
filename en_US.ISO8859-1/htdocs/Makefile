@@ -15,7 +15,6 @@ DOCS+= applications.xml
 DOCS+= art.xml
 DOCS+= docs.xml
 DOCS+= features.xml
-DOCS+= internet.xml
 DOCS+= logo.xml
 DOCS+= mailto.xml
 DOCS+= privacy.xml
