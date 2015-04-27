@@ -9,8 +9,6 @@
 
 DOCS=   current.xml
 DOCS+=	doc-set.xml
-DOCS+=	handbook.xml
-DOCS+=	handbook3.xml
 DOCS+=  submitting.xml
 DOCS+=  who.xml
 DOCS+=  translations.xml
