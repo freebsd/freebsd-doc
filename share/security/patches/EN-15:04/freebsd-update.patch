@@ -1,0 +1,152 @@
+Index: usr.sbin/freebsd-update/freebsd-update.8
+===================================================================
+--- usr.sbin/freebsd-update/freebsd-update.8	(revision 282245)
++++ usr.sbin/freebsd-update/freebsd-update.8	(working copy)
+@@ -25,7 +25,7 @@
+ .\"
+ .\" $FreeBSD$
+ .\"
+-.Dd July 14, 2010
++.Dd March 2, 2015
+ .Dt FREEBSD-UPDATE 8
+ .Os FreeBSD
+ .Sh NAME
+@@ -36,10 +36,12 @@
+ .Op Fl b Ar basedir
+ .Op Fl d Ar workdir
+ .Op Fl f Ar conffile
++.Op Fl F
+ .Op Fl k Ar KEY
+ .Op Fl r Ar newrelease
+ .Op Fl s Ar server
+ .Op Fl t Ar address
++.Op Fl -not-running-from-cron
+ .Cm command ...
+ .Sh DESCRIPTION
+ The
+@@ -54,16 +56,16 @@ by the
+ .Fx
+ Release Engineering Team, e.g.,
+ .Fx
+-7.3-RELEASE and
++9.3-RELEASE and
+ .Fx
+-8.0-RELEASE, but not
++10.1-RELEASE, but not
+ .Fx
+-6.3-STABLE or
++9.3-STABLE or
+ .Fx
+-9.0-CURRENT.
++11-CURRENT.
+ .Sh OPTIONS
+ The following options are supported:
+-.Bl -tag -width "-f conffile"
++.Bl -tag -width "-r newrelease"
+ .It Fl b Ar basedir
+ Operate on a system mounted at
+ .Ar basedir .
+@@ -81,6 +83,10 @@ Read configuration options from
+ .Ar conffile .
+ (default:
+ .Pa /etc/freebsd-update.conf )
++.It Fl F
++Force
++.Nm Cm fetch
++to proceed where it normally would not, such as an unfinished upgrade
+ .It Fl k Ar KEY
+ Trust an RSA key with SHA256 of
+ .Ar KEY .
+@@ -98,12 +104,21 @@ Mail output of
+ command, if any, to
+ .Ar address .
+ (default: root, or as given in the configuration file.)
++.It Fl -not-running-from-cron
++Force
++.Nm Cm fetch
++to proceed when there is no controlling tty.
++This is for use by automated scripts and orchestration tools.
++Please do not run
++.Nm Cm fetch
++from crontab or similar using this flag, see:
++.Nm Cm cron
+ .El
+ .Sh COMMANDS
+ The
+ .Cm command
+ can be any one of the following:
+-.Bl -tag -width "-f conffile"
++.Bl -tag -width "rollback"
+ .It Cm fetch
+ Based on the currently installed world and the configuration
+ options set, fetch all available binary updates.
+Index: usr.sbin/freebsd-update/freebsd-update.sh
+===================================================================
+--- usr.sbin/freebsd-update/freebsd-update.sh	(revision 282245)
++++ usr.sbin/freebsd-update/freebsd-update.sh	(working copy)
+@@ -43,12 +43,15 @@ Options:
+                   (default: /var/db/freebsd-update/)
+   -f conffile  -- Read configuration options from conffile
+                   (default: /etc/freebsd-update.conf)
++  -F           -- Force a fetch operation to proceed
+   -k KEY       -- Trust an RSA key with SHA256 hash of KEY
+   -r release   -- Target for upgrade (e.g., 6.2-RELEASE)
+   -s server    -- Server from which to fetch updates
+                   (default: update.FreeBSD.org)
+   -t address   -- Mail output of cron command, if any, to address
+                   (default: root)
++  --not-running-from-cron
++               -- Run without a tty, for use by automated tools
+ Commands:
+   fetch        -- Fetch updates from server
+   cron         -- Sleep rand(3600) seconds, fetch updates, and send an
+@@ -399,6 +402,12 @@ init_params () {
+ 
+ 	# No commands specified yet
+ 	COMMANDS=""
++
++	# Force fetch to proceed
++	FORCEFETCH=0
++
++	# Run without a TTY
++	NOTTYOK=0
+ }
+ 
+ # Parse the command line
+@@ -411,6 +420,12 @@ parse_cmdline () {
+ 			if [ ! -z "${CONFFILE}" ]; then usage; fi
+ 			shift; CONFFILE="$1"
+ 			;;
++		-F)
++			FORCEFETCH=1
++			;;
++		--not-running-from-cron)
++			NOTTYOK=1
++			;;
+ 
+ 		# Configuration file equivalents
+ 		-b)
+@@ -665,6 +680,14 @@ fetch_check_params () {
+ 		echo "(Did you mean 'upgrade' instead?)"
+ 		exit 1
+ 	fi
++
++	# Check that we have updates ready to install
++	if [ -f ${BDHASH}-install/kerneldone -a $FORCEFETCH -eq 0 ]; then
++		echo "You have a partially completed upgrade pending"
++		echo "Run '$0 install' first."
++		echo "Run '$0 fetch -F' to proceed anyway."
++		exit 1
++	fi
+ }
+ 
+ # Perform sanity checks etc. before fetching upgrades.
+@@ -3202,7 +3225,7 @@ get_params () {
+ # Fetch command.  Make sure that we're being called
+ # interactively, then run fetch_check_params and fetch_run
+ cmd_fetch () {
+-	if [ ! -t 0 ]; then
++	if [ ! -t 0 -a $NOTTYOK -eq 0 ]; then
+ 		echo -n "`basename $0` fetch should not "
+ 		echo "be run non-interactively."
+ 		echo "Run `basename $0` cron instead."
