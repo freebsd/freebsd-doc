@@ -13,4 +13,13 @@
     Wenn Sie Fragen zu dieser Dokumentation haben, schicken Sie eine E-Mail an
     &lt;<a href="mailto:de-bsd-translators@de.FreeBSD.org">de-bsd-translators@de.FreeBSD.org</a>&gt;.</small></p>
   </xsl:template>
+
+  <xsl:param name="local.l10n.xml" select="document('')"/>
+  <i18n xmlns="http://docbook.sourceforge.net/xmlns/l10n/1.0">
+    <l:l10n xmlns:l="http://docbook.sourceforge.net/xmlns/l10n/1.0" language="de">
+      <l:gentext key="Lastmodified" text="Zuletzt bearbeitet"/>
+      <l:gentext key="on" text="am"/>
+    </l:l10n>
+  </i18n>
+  
 </xsl:stylesheet>
