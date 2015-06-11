@@ -1,5 +1,5 @@
 # $FreeBSD$
-# Original revision: 1.6
+# Original revision: r46616
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -8,7 +8,7 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS=	index.xml machines.xml refs.xml todo.xml
+DOCS=	index.xml machines.xml refs.xml
 #DATA=	i2inside.png mckinley-die.png merced-die.png montecito-die.png
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"
