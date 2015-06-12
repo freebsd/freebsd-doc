@@ -1,6 +1,6 @@
 # $FreeBSD$
 # The FreeBSD Japanese Documentation Project
-# Original revision: r46456
+# Original revision: r46611
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -17,7 +17,6 @@ DOCS+= applications.xml
 #DOCS+= art.xml
 DOCS+= docs.xml
 DOCS+= features.xml
-DOCS+= internet.xml
 #DOCS+= logo.xml
 DOCS+= mailto.xml
 #DOCS+= privacy.xml
