@@ -1,6 +1,6 @@
 # $FreeBSD$
 # The FreeBSD Japanese Documentation Project
-# Original revision: r45779
+# Original revision: r46456
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -61,7 +61,6 @@ SUBDIR+= docs
 #SUBDIR+= donations
 SUBDIR+= events
 #SUBDIR+= gnome
-SUBDIR+= handbook
 SUBDIR+= internal
 #SUBDIR+= ipv6
 SUBDIR+= java
