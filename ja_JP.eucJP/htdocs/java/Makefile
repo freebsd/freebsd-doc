@@ -1,6 +1,6 @@
 # $FreeBSD$
 # The FreeBSD Japanese Documentation Project
-# Original revision: r43646
+# Original revision: r46414
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -9,9 +9,6 @@
 .include "../Makefile.inc"
 .endif
 
-SUBDIR =	dists
-
-DOCS+=  howhelp.xml
 DOCS+=  index.xml
 DOCS+=  install.xml
 
