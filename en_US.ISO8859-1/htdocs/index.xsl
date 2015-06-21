@@ -80,18 +80,10 @@
 
 				    <p align="justify">Over the next
 				      48 hours the &os;.org email
-				      system will be having some
-				      extensive internal work
-				      performed.  It is likely that
-				      the mail system will be refusing
-				      connections for several hours at
-				      a time.<br /><br /> The nature
-				      of the work means there is some
-				      risk of transient, unexpected
-				      email bounces.  If this happens,
-				      please bear with us.  Give us
-				      a little time and resend as
-				      appropriate.</p>
+				      system will be undergoing
+				      extensive maintenence.  There
+				      will be minor disruptions,
+				      please bear with us.</p>
 				  </div>
 				  <!-- END IMPORTANT NOTICES -->
 
