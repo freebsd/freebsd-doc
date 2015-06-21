@@ -71,6 +71,30 @@
 				    </span> <!-- TXTFRONTJOURNALLINK -->
 				  </div> <!-- TXTFRONTJOURNALBLOCK -->
 
+				  <!-- IMPORTANT NOTICES -->
+				  <div
+				    style="width:640px; margin: 16px 16px 16px 32px; auto">
+
+				    <h2>ANNOUNCEMENT: Email Service
+				      Maintenance</h2>
+
+				    <p align="justify">Over the next
+				      48 hours the &os;.org email
+				      system will be having some
+				      extensive internal work
+				      performed.  It is likely that
+				      the mail system will be refusing
+				      connections for several hours at
+				      a time.<br /><br /> The nature
+				      of the work means there is some
+				      risk of transient, unexpected
+				      email bounces.  If this happens,
+				      please bear with us.  Give us
+				      a little time and resend as
+				      appropriate.</p>
+				  </div>
+				  <!-- END IMPORTANT NOTICES -->
+
 			  </div> <!-- FRONTFEATURECONTENT -->
 		  </div> <!-- FRONTFEATURELEFT -->
 
