@@ -84,6 +84,17 @@
 				      extensive maintenence.  There
 				      will be minor disruptions,
 				      please bear with us.</p>
+
+				    <p align="justify">[20150624]
+				      Update: While there are still a
+				      few loose ends to resolve, email
+				      services should be operating as
+				      normal now.  There are a few
+				      known issues with email archives
+				      on the website which are still
+				      being investigated.  Please bear
+				      with us while we resolve these
+				      outstanding (minor) issues.</p>
 				  </div>
 				  <!-- END IMPORTANT NOTICES -->
 
