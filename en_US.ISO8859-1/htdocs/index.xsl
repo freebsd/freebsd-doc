@@ -72,30 +72,15 @@
 				  </div> <!-- TXTFRONTJOURNALBLOCK -->
 
 				  <!-- IMPORTANT NOTICES -->
+				  <!--
 				  <div
 				    style="width:640px; margin: 16px 16px 16px 32px; auto">
 
-				    <h2>ANNOUNCEMENT: Email Service
-				      Maintenance</h2>
+				    <h2>ANNOUNCEMENT: [header]</h2>
 
-				    <p align="justify">Over the next
-				      48 hours the &os;.org email
-				      system will be undergoing
-				      extensive maintenence.  There
-				      will be minor disruptions,
-				      please bear with us.</p>
-
-				    <p align="justify">[20150624]
-				      Update: While there are still a
-				      few loose ends to resolve, email
-				      services should be operating as
-				      normal now.  There are a few
-				      known issues with email archives
-				      on the website which are still
-				      being investigated.  Please bear
-				      with us while we resolve these
-				      outstanding (minor) issues.</p>
+				    <p align="justify">[text]</p>
 				  </div>
+				  -->
 				  <!-- END IMPORTANT NOTICES -->
 
 			  </div> <!-- FRONTFEATURECONTENT -->
