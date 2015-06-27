@@ -14,7 +14,7 @@ if (!defined($hsty_base)) {
     # However, if we aren't running as a cgi, or if we're
     # running on cgi, hub, docs or people, use the absolute home path.
     if (!defined($ENV{'HTTP_HOST'}) ||
-	$ENV{'HTTP_HOST'} =~ /(cgi|hub|docs|people).freebsd.org/i) {
+	$ENV{'HTTP_HOST'} =~ /(cgi|hub|docs|people|mailarchive.ysv).freebsd.org/i) {
 
 	$hsty_base = '//www.FreeBSD.org'
     } else {
@@ -22,7 +22,7 @@ if (!defined($hsty_base)) {
     }
 }
 if (!defined($hsty_email)) {
-    $hsty_email = 'www@FreeBSD.org';
+    $hsty_email = 'Contact';
 }
 if (!defined($hsty_author)) {
     $hsty_author = "<a href='$hsty_base/mailto.html'>$hsty_email</a>";
@@ -83,7 +83,7 @@ $i_topbar = qq`
               <div id="search">
 		<form method="get" id="search" action="https://duckduckgo.com/">
 		  <h2 class="blockhide"><label for="words">Search</label></h2>
-		  <input type="hidden" name="sites" value="www.FreeBSD.org,lists.FreeBSD.org,wiki.FreeBSD.org,forums.FreeBSD.org" />
+		  <input type="hidden" name="sites" value="www.FreeBSD.org,docs.FreeBSD.org,lists.FreeBSD.org,wiki.FreeBSD.org,forums.FreeBSD.org" />
 		  <input type="hidden" name="ka" value="v" />
 		  <input type="hidden" name="kt" value="v" />
 		  <input type="hidden" name="kh" value="1" />
@@ -160,8 +160,8 @@ $i_topbar = qq`
 		<ul>
 		  <li><a href="$hsty_base/commercial/commercial.html">Vendors</a></li>
 		  <li><a href="//security.FreeBSD.org/">Security Information</a></li>
-		  <li><a href="$hsty_base/cgi/query-pr-summary.cgi">Bug Reports</a></li>
-		  <li><a href="$hsty_base/send-pr.html">Submit Bug-report</a></li>
+		  <li><a href="https://bugs.freebsd.org/bugzilla/search/">Bug Reports</a></li>
+		  <li><a href="$hsty_base/support.html">Submit Bug-report</a></li>
 		</ul>
 	      </li>
 	    </ul>

@@ -458,10 +458,10 @@ Search for:
     %d = (
         'name',       'Package Name',     'all',      'All',
         'maintainer', 'Maintainer',       'text',     'Description',
-        'pkgdescr',   'Long Description', 'requires', 'Requires',
+        'requires', 'Requires',
     );
 
-    foreach ( 'all', 'name', 'text', 'pkgdescr', 'maintainer', 'requires' ) {
+    foreach ( 'all', 'name', 'text', 'maintainer', 'requires' ) {
         print "<option"
           . ( ( $_ eq $stype ) ? ' selected="selected" ' : ' ' )
           . qq{value="$_">}
@@ -585,15 +585,6 @@ if ( $path_info eq "/source" ) {
     open( R, $0 ) || do { print "ick!\n"; &exit; };
     while (<R>) { print }
     close R;
-    &exit;
-}
-
-# Full text search in ports/<category>/port>/pkg-descr
-if ( $stype eq 'pkgdescr' ) {
-    local ($url) =
-      'http://www.FreeBSD.org/cgi/search.cgi?source=pkgdescr&max=25';
-    $query =~ s/\s+/+/g;
-    print "Location: $url&words=$query\n\n";
     &exit;
 }
 

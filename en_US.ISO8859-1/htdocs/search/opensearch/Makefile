@@ -16,9 +16,6 @@ DATA+=	opensearch.js
 DATA+=	man.xml
 DATA+=	man-freebsd-release-ports.xml
 DATA+=	ports.xml
-DATA+=	query-pr.xml
-DATA+=	web.xml
-DATA+=	web-all.xml
 DATA+=	message-id.xml
 
 # external sites
