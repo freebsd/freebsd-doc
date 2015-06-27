@@ -17,6 +17,7 @@ SUBDIR+= gjournal-desktop
 SUBDIR+= hubs
 SUBDIR+= ipsec-must
 SUBDIR+= ldap-auth
+SUBDIR+= leap-seconds
 SUBDIR+= linux-emulation
 SUBDIR+= linux-users
 SUBDIR+= mailing-list-faq
