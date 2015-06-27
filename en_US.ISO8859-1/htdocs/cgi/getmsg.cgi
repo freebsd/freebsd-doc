@@ -26,7 +26,7 @@ pre a:visited { color: #220000; }
 #
 # Files MUST be fully qualified and MUST start with this path.
 #
-$messagepath = "/usr/local/www/db/text/";
+$messagepath = "/usr/local/www/mailindex/archive/";
 $messagepathcurrent = "/usr/local/www/mid/archive/";
 $ftparchive = 'ftp://ftp.FreeBSD.org/pub/FreeBSD/doc/mailing-lists/archive';
 
