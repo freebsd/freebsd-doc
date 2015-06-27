@@ -14,7 +14,6 @@ DATA+=	global.css
 DATA+=	iefixes.css
 DATA+=	layout.css
 DATA+=	navigation.css
-DATA+=	query-pr.css
 DATA+=	table.css
 DATA+=	text.css
 

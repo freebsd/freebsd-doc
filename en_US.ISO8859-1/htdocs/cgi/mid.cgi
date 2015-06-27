@@ -32,10 +32,9 @@ require "./cgi-lib.pl";
 require "./cgi-style.pl";
 
 $home = '/usr/local/www/mailindex';
-$prefix= "/usr/local/www/db/text";
+$prefix= "/usr/local/www/mailindex/archive";
 $lookupdir = "$home/message-id"; # database(s) directory
 $databaseDefault = 'mid';           # default database
-$bindir = "$home/bin"; # where search scripts located
 $script = $ENV{'SCRIPT_NAME'};
 $shortid = 1;
 $lookCommand = "/usr/bin/look";
@@ -90,7 +89,7 @@ sub get_id {
 	local($id, $file, $start) = split($", $idlist[0]);
 	$location =~ s%/[^/]+$%%;
 	local($host) = $ENV{'HTTP_HOST'};
-	$location = 'http://' . $host . $location;
+	$location = '//' . $host . $location;
 	$start =~ s/\s+$//;
 
 	print "Location: $location/getmsg.cgi?fetch=$start+0+" .
