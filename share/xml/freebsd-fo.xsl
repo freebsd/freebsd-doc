@@ -37,7 +37,7 @@
   <xsl:param name="fop1.extensions" select="1"/>
 
   <!-- Paper settings -->
-  <xsl:param name="paper.type">B5</xsl:param>
+  <xsl:param name="paper.type">A4</xsl:param>
   <xsl:param name="double.sided" select="1"/>
   <xsl:param name="force.blank.pages" select="1"/>
 
