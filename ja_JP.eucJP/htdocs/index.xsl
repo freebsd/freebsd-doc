@@ -5,7 +5,7 @@
 ]>
 
 <!-- $FreeBSD$ -->
-<!-- Original revision: r45569 -->
+<!-- Original revision: r46866 -->
 
 <xsl:stylesheet version="1.0"
   xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
@@ -66,6 +66,19 @@
 			    ¤òÆþ¼ê
 			  </span> <!-- TXTFRONTJOURNALLINK -->
 			</div> <!-- TXTFRONTJOURNALBLOCK -->
+
+				  <!-- IMPORTANT NOTICES -->
+				  <!--
+				  <div
+				    style="width:640px; margin: 16px 16px 16px 32px; auto">
+
+				    <h2>ANNOUNCEMENT: [header]</h2>
+
+				    <p align="justify">[text]</p>
+				  </div>
+				  -->
+				  <!-- END IMPORTANT NOTICES -->
+
 		    </div> <!-- FRONTFEATURECONTENT -->
 		  </div> <!-- FRONTFEATURELEFT -->
 
