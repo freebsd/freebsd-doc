@@ -19,7 +19,3 @@ URL_RELPREFIX?=	../../../..
 DOC_PREFIX?=	${.CURDIR}/../../..
 
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"
-
-# disable hyphenation of long lines in verbatim blocks
-# like <programlistings> to prevent PDF build errors
-XSLTPROCOPTS+=	--param hyphenate.verbatim 0
