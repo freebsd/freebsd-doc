@@ -279,7 +279,7 @@ XML_NOTICES=		${DOC_PREFIX}/share/xml/notices.xml
 XSLTPROC_ENV+=	XML_CATALOG_FILES="${XML_CATALOG_FILES}"
 
 XSLTPROCOPTS=	${XSLTPROCFLAGS}
-XSLTPROCOPTS+=	--xinclude --nonet
+XSLTPROCOPTS+=	--xinclude --nonet --maxvars 20000
 .if defined(WWWFREEBSDORG)
 XSLTPROCOPTS+=	--param "html.header.script.google" "'INCLUDE'"
 .endif
