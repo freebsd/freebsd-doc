@@ -110,7 +110,7 @@
     <xsl:if test="sponsor">
       <xsl:variable name="sponsors">
 	<xsl:for-each select="sponsor">
-	  <xsl:value-of select="."/>
+	  <xsl:value-of select="normalize-space()"/>
 	  <xsl:choose>
 	    <xsl:when test="position() = last()">.</xsl:when>
 	    <xsl:when test="position() = (last() - 1)">, and </xsl:when>
@@ -141,19 +141,32 @@
     </p>
   </xsl:template>
 
-  <!-- Create a paragraph to hold the link information.  Iterate over each
-       <url> element, copying their data in.  All but the last link has a
-       terminating <br> in the output. -->
+  <!-- Create a table to hold the link information.  Iterate over each
+       <url> element, adding a row to hold the description and URL.
+       Both work as links. -->
   <xsl:template match="links">
-    <p>
+    <table title="Links">
+      <tr>
+	<td>Links</td>
+      </tr>
       <xsl:for-each select="url">
-	URL:
-	  <a href="{@href}" title="{.}">     <!-- Copy in the href attribute -->
-	    <xsl:value-of select="@href"/>
-	  </a>
-	<xsl:if test="position() != last()"><br/></xsl:if>
+	<tr>
+	  <td>
+	    <a href="{@href}" title="{@href}">
+	      <xsl:value-of select="normalize-space()"/>
+	    </a>
+	  </td>
+	  <td>
+	    URL: <a href="{@href}">
+	      <xsl:attribute name="title">
+		<xsl:value-of select="normalize-space()"/>
+	      </xsl:attribute>
+	      <xsl:value-of select="@href"/>
+	    </a>
+	  </td>
+	</tr>
       </xsl:for-each>
-    </p>
+    </table>
   </xsl:template>
 
   <!-- Body is a doddle.  Since it contains HTML we just copy in all the
