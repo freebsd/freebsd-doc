@@ -70,6 +70,7 @@ IMGDIR?=	${IMAGES_EN_DIR}/${DOC}s/${.CURDIR:T}
 CALLOUTDIR=	${.CURDIR}/imagelib/callouts
 XSLDBLATEX=	${DOC_PREFIX}/share/xml/freebsd-dblatex.xsl
 DBLATEXOPTS?=	-I ${IMGDIR} -p ${XSLDBLATEX} -T simple -b xetex -d
+FOPJAVAOPTS?=	-Xss1024k -Xmx1431552k
 FOPOPTS?=	-c ${DOC_PREFIX}/share/misc/fop.xconf
 
 KNOWN_FORMATS=	html html.tar html-split html-split.tar \
@@ -341,13 +342,13 @@ ${DOC}.fo: ${DOC}.xml ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} ${DOC}.parsed.xml 
 
 .if ${RENDERENGINE} == "fop"
 ${DOC}.pdf: ${DOC}.fo ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG}
-	${FOP} ${FOPOPTS} ${DOC}.fo ${.TARGET}
+	${SETENV} FOP_OPTS="${FOPJAVAOPTS}" ${FOP} ${FOPOPTS} ${DOC}.fo ${.TARGET}
 
 ${DOC}.ps: ${DOC}.fo ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG}
-	${FOP} ${FOPOPTS} ${DOC}.fo ${.TARGET}
+	${SETENV} FOP_OPTS="${FOPJAVAOPTS}" ${FOP} ${FOPOPTS} ${DOC}.fo ${.TARGET}
 
 ${DOC}.rtf: ${DOC}.fo ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG}
-	${FOP} ${FOPOPTS} ${DOC}.fo ${.TARGET}
+	${SETENV} FOP_OPTS="${FOPJAVAOPTS}" ${FOP} ${FOPOPTS} ${DOC}.fo ${.TARGET}
 .else
 # Default is dblatex
 ${DOC}.pdf: ${DOC}.parsed.xml ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG}
