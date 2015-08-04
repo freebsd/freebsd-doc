@@ -5,7 +5,7 @@
 ]>
 
 <!-- $FreeBSD$ -->
-<!-- Original revision: r46866 -->
+<!-- Original revision: r47151 -->
 
 <xsl:stylesheet version="1.0"
   xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
@@ -100,9 +100,7 @@
 			    <li>プロダクション:&nbsp;<a
 				href="&u.rel.announce;">&rel.current;</a>,<br />
 					<a
-				href="&u.rel2.announce;">&rel2.current;</a>,
-					<a
-				href="&u.rel3.announce;">&rel3.current;</a></li>
+				href="&u.rel2.announce;">&rel2.current;</a></li>
 			    <xsl:if test="'&beta.upcoming;' != 'IGNORE'">
 			    <li>次回予定: <a
 				href="&u.betarel.schedule;">&betarel.current;</a></li>
