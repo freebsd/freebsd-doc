@@ -12,6 +12,7 @@ DOCS=	index.xml \
 	todo.xml
 
 DATA=	docbook.css \
+	errata.html \
 	hardware.html \
 	readme.html \
 	relnotes.html
