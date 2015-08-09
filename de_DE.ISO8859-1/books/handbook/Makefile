@@ -1,7 +1,7 @@
 #
 # $FreeBSD$
 # $FreeBSDde: de-docproj/books/handbook/Makefile,v 1.67 2011/12/31 12:27:25 bcr Exp $
-# basiert auf: 42118 
+# basiert auf: r42118 
 #
 # Build the FreeBSD Handbook in its German translation.
 #
