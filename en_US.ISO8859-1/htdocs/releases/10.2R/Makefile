@@ -12,12 +12,14 @@ _REVISION?=	10.2
 _BRANCH?=	RELEASE
 THISRELEASE?=	${_OS}-${_REVISION}-${_BRANCH}
 
-DOCS=	index.xml \
+DOCS=	announce.xml \
+	index.xml \
 	schedule.xml \
 	signatures.xml \
 	todo.xml
 
-DATA=	docbook.css \
+DATA=	announce.asc \
+	docbook.css \
 	errata.html \
 	hardware.html \
 	readme.html \
