@@ -6,7 +6,7 @@
 <!--
      $FreeBSD$
      $FreeBSDde$
-     basiert auf: 45016
+     basiert auf: 47151
 -->
 
 <xsl:stylesheet version="1.0"
@@ -60,8 +60,19 @@
 				  <div id="txtfrontfeaturelink"> »<a
 				    href="&base;/about.html" title="Learn More">Mehr Informationen</a>
 				  </div> <!-- TXTFRONTFEATURELINK -->
-			</div> <!-- FRONTFEATURECONTENT -->
-		</div> <!-- FRONTFEATURELEFT -->
+
+				  <div id="txtfrontjournalblock">
+				    <br/>&#187;
+				    <span
+				     id="txtfrontjournallink">
+				      Lesen Sie das <a
+				       href="http://www.freebsdjournal.com/"
+				       title="&os;&nbsp;Journal">&os;&nbsp;Journal</a>!
+				    </span> <!-- TXTFRONTJOURNALLINK -->
+				  </div> <!-- TXTFRONTJOURNALBLOCK -->
+
+			  </div> <!-- FRONTFEATURECONTENT -->
+		  </div> <!-- FRONTFEATURELEFT -->
 
 		<div id="frontfeaturemiddle">
 			<div class="frontgetroundbox">
@@ -317,7 +328,7 @@
 	Die Marke FreeBSD ist eine eingetragene Marke der FreeBSD
 	Foundation und wird vom FreeBSD Project mit freundlicher Genehmigung
 	der <a
-	href="http://www.freebsdfoundation.org/documents/Guidelines.shtml">
+	href="https://www.freebsdfoundation.org/documents/Guidelines.shtml">
 	FreeBSD Foundation</a> verwendet.
 	<a href="&base;/mailto.html" title="&header2.word.contact;">&header2.word.contact;</a>
   </xsl:template>
