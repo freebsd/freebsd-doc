@@ -27,7 +27,7 @@ ${INDEX}:
 .endif
 
 HOSTNAME!= hostname
-.if ${HOSTNAME} == "hub.freebsd.org" || ${HOSTNAME} == "freefall.freebsd.org" || ${HOSTNAME} == "www.freebsd.org" || ${HOSTNAME} == "build-web.stream.FreeBSD.org"
+.if ${HOSTNAME} == "freefall.freebsd.org" || ${HOSTNAME} == "build-web.ysv.freebsd.org"
 CLUSTER_MACHINE=	YES
 .endif
 
@@ -60,25 +60,11 @@ Makefile.gen: categories-alpha.xml categories-grouped.xml index.xml \
 	done
 	${ECHO_CMD} >> Makefile.gen
 
-.if defined(CLUSTER_MACHINE)
-PORTS_TARGZ_URL?= ftp://ftp-master.FreeBSD.org/pub/FreeBSD/ports/ports/ports.tar.gz
-.else
-PORTS_TARGZ_URL?= ftp://ftp.FreeBSD.org/pub/FreeBSD/ports/ports/ports.tar.gz
-.endif
-
-ports.size:
-.if defined (NOPORTSNET)
-	touch ${.TARGET}
-.else
-	${RM} -f ${.TARGET}
-	${FETCH} -s ${PORTS_TARGZ_URL} > ${.TARGET}
-.endif
-
 # this builds: categories-alpha.xml, categories-grouped.xml,
 # master-index.xml, statistics.ent, <category>.xml
 CATEGORYLIST=`grep "^[a-z]" categories | sed -e s"/,.*//"`
 categories-alpha.xml: ${INDEX} categories categories.descriptions \
-	packages.exists ports.ent ports.size .NOTMAIN
+	packages.exists ports.ent .NOTMAIN
 	${RM} -f categories-alpha.xml categories-grouped.xml \
 		master-index.xml statistics.ent
 	for categoryfile in ${CATEGORYLIST}; do \
