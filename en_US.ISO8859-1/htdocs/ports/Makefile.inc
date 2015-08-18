@@ -10,7 +10,7 @@ CLEANFILES+=	${INDEX} ${INDEX}.bz2
 CLEANFILES+=	packages.exists.temp  packages.exists
 CLEANFILES+= 	${DYNAMIC_DOCS}
 CLEANFILES+=	Makefile.gen
-CLEANFILES+=	ports.count ports.size
+CLEANFILES+=	ports.count
 
 _ALLINSTALL= packages.exists categories
 
