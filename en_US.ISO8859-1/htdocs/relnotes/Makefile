@@ -15,7 +15,6 @@
 
 RELNOTES?=	CURRENT ${DOC_PREFIX}/../relnotes/doc/${LANGCODE} \
 		10-STABLE ${DOC_PREFIX}/../relnotes10/doc/${LANGCODE} \
-		9-STABLE ${DOC_PREFIX}/../relnotes9/doc/${LANGCODE} \
-		8-STABLE ${DOC_PREFIX}/../relnotes8/doc/${LANGCODE}
+		9-STABLE ${DOC_PREFIX}/../relnotes9/doc/${LANGCODE}
 
 .include "Makefile.inc"
