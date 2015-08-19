@@ -3,7 +3,7 @@
 #
 # Build the FreeBSD Handbook (Japanese).
 #
-# Original revision: r45602
+# Original revision: r47275
 #
 
 # ------------------------------------------------------------------------
@@ -87,71 +87,6 @@ IMAGES_EN+= bsdinstall/bsdinstall-zfs-vdev_invalid.png
 IMAGES_EN+= bsdinstall/bsdinstall-zfs-vdev_type.png
 IMAGES_EN+= bsdinstall/bsdinstall-zfs-warning.png
 IMAGES_EN+= geom/striping.pic
-IMAGES_EN+= install/adduser1.scr
-IMAGES_EN+= install/adduser2.scr
-IMAGES_EN+= install/adduser3.scr
-IMAGES_EN+= install/boot-loader-menu.scr
-IMAGES_EN+= install/boot-mgr.scr
-IMAGES_EN+= install/config-country.scr
-IMAGES_EN+= install/config-keymap.scr
-IMAGES_EN+= install/console-saver1.scr
-IMAGES_EN+= install/console-saver2.scr
-IMAGES_EN+= install/console-saver3.scr
-IMAGES_EN+= install/console-saver4.scr
-IMAGES_EN+= install/disklabel-auto.scr
-IMAGES_EN+= install/disklabel-ed1.scr
-IMAGES_EN+= install/disklabel-ed2.scr
-IMAGES_EN+= install/disklabel-fs.scr
-IMAGES_EN+= install/disklabel-root1.scr
-IMAGES_EN+= install/disklabel-root2.scr
-IMAGES_EN+= install/disklabel-root3.scr
-IMAGES_EN+= install/disk-layout.eps
-IMAGES_EN+= install/dist-set.scr
-IMAGES_EN+= install/dist-set2.scr
-IMAGES_EN+= install/docmenu1.scr
-IMAGES_EN+= install/ed0-conf.scr
-IMAGES_EN+= install/ed0-conf2.scr
-IMAGES_EN+= install/edit-inetd-conf.scr
-IMAGES_EN+= install/fdisk-drive1.scr
-IMAGES_EN+= install/fdisk-drive2.scr
-IMAGES_EN+= install/fdisk-edit1.scr
-IMAGES_EN+= install/fdisk-edit2.scr
-IMAGES_EN+= install/ftp-anon1.scr
-IMAGES_EN+= install/ftp-anon2.scr
-IMAGES_EN+= install/hdwrconf.scr
-IMAGES_EN+= install/keymap.scr
-IMAGES_EN+= install/main1.scr
-IMAGES_EN+= install/mainexit.scr
-IMAGES_EN+= install/main-std.scr
-IMAGES_EN+= install/main-options.scr
-IMAGES_EN+= install/main-doc.scr
-IMAGES_EN+= install/main-keymap.scr
-IMAGES_EN+= install/media.scr
-IMAGES_EN+= install/mouse1.scr
-IMAGES_EN+= install/mouse2.scr
-IMAGES_EN+= install/mouse3.scr
-IMAGES_EN+= install/mouse4.scr
-IMAGES_EN+= install/mouse5.scr
-IMAGES_EN+= install/mouse6.scr
-IMAGES_EN+= install/mta-main.scr
-IMAGES_EN+= install/net-config-menu1.scr
-IMAGES_EN+= install/net-config-menu2.scr
-IMAGES_EN+= install/nfs-server-edit.scr
-IMAGES_EN+= install/ntp-config.scr
-IMAGES_EN+= install/options.scr
-IMAGES_EN+= install/pkg-cat.scr
-IMAGES_EN+= install/pkg-confirm.scr
-IMAGES_EN+= install/pkg-install.scr
-IMAGES_EN+= install/pkg-sel.scr
-IMAGES_EN+= install/probstart.scr
-IMAGES_EN+= install/routed.scr
-IMAGES_EN+= install/security.scr
-IMAGES_EN+= install/sysinstall-exit.scr
-IMAGES_EN+= install/timezone1.scr
-IMAGES_EN+= install/timezone2.scr
-IMAGES_EN+= install/timezone3.scr
-IMAGES_EN+= install/userconfig.scr
-IMAGES_EN+= install/userconfig2.scr
 IMAGES_EN+= mail/mutt1.scr
 IMAGES_EN+= mail/mutt2.scr
 IMAGES_EN+= mail/mutt3.scr
@@ -160,12 +95,6 @@ IMAGES_EN+= mail/pine2.scr
 IMAGES_EN+= mail/pine3.scr
 IMAGES_EN+= mail/pine4.scr
 IMAGES_EN+= mail/pine5.scr
-
-IMAGES_EN+= install/example-dir1.eps
-IMAGES_EN+= install/example-dir2.eps
-IMAGES_EN+= install/example-dir3.eps
-IMAGES_EN+= install/example-dir4.eps
-IMAGES_EN+= install/example-dir5.eps
 #IMAGES_EN+= security/ipsec-network.pic
 #IMAGES_EN+= security/ipsec-crypt-pkt.pic
 #IMAGES_EN+= security/ipsec-encap-pkt.pic
@@ -251,7 +180,6 @@ SRCS+= eresources/chapter.xml
 #SRCS+= zfs/chapter.xml
 #SRCS+= filesystems/chapter.xml
 #SRCS+= geom/chapter.xml
-SRCS+= install/chapter.xml
 SRCS+= introduction/chapter.xml
 #SRCS+= jails/chapter.xml
 SRCS+= kernelconfig/chapter.xml
