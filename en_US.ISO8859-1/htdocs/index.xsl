@@ -100,7 +100,7 @@
 				  <h2><a href="&base;/releases/">LATEST RELEASES</a></h2>
 				  <ul id="frontreleaseslist">
 					<li>Production:&nbsp;<a
-				href="&u.rel.announce;">&rel.current;</a>,<br />
+				href="&u.rel.announce;">&rel.current;</a>,
 					<a
 				href="&u.rel2.announce;">&rel2.current;</a></li>
 			    <xsl:if test="'&beta.upcoming;' != 'IGNORE'">
