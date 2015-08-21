@@ -5,7 +5,7 @@
 ]>
 
 <!-- $FreeBSD$ -->
-<!-- Original revision: r47151 -->
+<!-- Original revision: r47280 -->
 
 <xsl:stylesheet version="1.0"
   xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
@@ -98,7 +98,7 @@
 			  <h2><a href="&base;/releases/">最新リリース</a></h2>
 			  <ul id="frontreleaseslist">
 			    <li>プロダクション:&nbsp;<a
-				href="&u.rel.announce;">&rel.current;</a>,<br />
+				href="&u.rel.announce;">&rel.current;</a>,
 					<a
 				href="&u.rel2.announce;">&rel2.current;</a></li>
 			    <xsl:if test="'&beta.upcoming;' != 'IGNORE'">
