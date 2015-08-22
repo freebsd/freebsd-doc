@@ -1,6 +1,6 @@
 #!/usr/bin/perl -T
 #
-# Copyright (c) 1996-2011 Wolfram Schneider <wosch@FreeBSD.org>
+# Copyright (c) 1996-2015 Wolfram Schneider <wosch@FreeBSD.org>
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -226,7 +226,7 @@ $manPathDefault = 'FreeBSD 10.2-RELEASE';
     'FreeBSD 10.2-RELEASE and Ports',
 "$manLocalDir/FreeBSD-10.2-RELEASE/man:$manLocalDir/FreeBSD-10.2-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-10.2-RELEASE/man:$manLocalDir/FreeBSD-ports-10.2-RELEASE/misc",
     'FreeBSD 10.1-RELEASE and Ports',
-"$manLocalDir/FreeBSD-10.1-RELEASE/man:$manLocalDir/FreeBSD-10.1-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-10.1-RELEASE/man",
+"$manLocalDir/FreeBSD-10.1-RELEASE/man:$manLocalDir/FreeBSD-10.1-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-10.1-RELEASE/man:$manLocalDir/FreeBSD-ports-10.1-RELEASE/misc",
     'FreeBSD 9.3-RELEASE and Ports',
 "$manLocalDir/FreeBSD-9.3-RELEASE/man:$manLocalDir/FreeBSD-9.3-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-9.3-RELEASE/man:$manLocalDir/FreeBSD-ports-9.3-RELEASE/misc",
     'FreeBSD 9.2-RELEASE and Ports',
