@@ -70,7 +70,12 @@ HTML2PDBOPTS?=	-y -d0 -Idef ${HTML2PDBFLAGS}
 HTML2TXT?=	${PREFIX}/bin/links
 HTML2TXTOPTS?=	-dump ${HTML2TXTFLAGS}
 
+ITSTOOL?=	${PREFIX}/bin/itstool
+
 JING?=		${PREFIX}/bin/jing
+
+MSGFMT?=	${PREFIX}/bin/msgfmt
+MSGMERGE?=	${PREFIX}/bin/msgmerge
 
 XMLLINT?=	${PREFIX}/bin/xmllint
 XSLTPROC?=	${PREFIX}/bin/xsltproc
