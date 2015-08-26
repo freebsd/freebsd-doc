@@ -8,6 +8,7 @@
 SUBDIR = contributing
 SUBDIR+= explaining-bsd
 SUBDIR+= freebsd-update-server
+SUBDIR+= leap-seconds 
 SUBDIR+= nanobsd
 SUBDIR+= new-users
 SUBDIR+= port-mentor-guidelines
