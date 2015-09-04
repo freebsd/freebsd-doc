@@ -1,7 +1,7 @@
 #
 # $FreeBSD$
 # $FreeBSDde$
-# basiert auf: r42410
+# basiert auf: r47339
 #
 # Build the FreeBSD Documentation Project Primer.
 #
@@ -32,6 +32,7 @@ SRCS+= xhtml-markup/chapter.xml
 SRCS+= docbook-markup/chapter.xml
 SRCS+= stylesheets/chapter.xml
 SRCS+= translations/chapter.xml
+SRCS+= po-translations/chapter.xml
 SRCS+= writing-style/chapter.xml
 SRCS+= editor-config/chapter.xml
 SRCS+= see-also/chapter.xml
