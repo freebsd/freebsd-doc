@@ -7,7 +7,8 @@
 .include "../Makefile.inc"
 .endif
 
-DOCS=	schedule.xml \
+DOCS=	index.xml \
+	schedule.xml \
 	todo.xml
 
 DATA=	docbook.css
