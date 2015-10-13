@@ -278,10 +278,11 @@ TRAN_DIR?=	${MASTERDOC:H}
 EN_DIR?=	${TRAN_DIR:S/${LANGCODE}/en_US.ISO8859-1/}
 PO_LANG?=	${LANGCODE:C/\..*$//}
 PO_CHARSET?=	${LANGCODE:tl:C/^.*\.//:S/^iso/iso-/:S/utf-8/UTF-8/}
-CLEANFILES+=	${DOC}.translate.xml ${PO_LANG}.mo ${PO_LANG}.mo
+CLEANFILES+=	${DOC}.translate.xml ${PO_LANG}.mo
 
 # fix settings in PO file
-POSET_CMD=	${SED} -i '' -e 's,^\(\"Language-Team:.*\\n\"\),\1\${.newline}\"Language: ${PO_LANG}\\n\",' \
+POSET_CMD=	${SED} -i '' -e '1s,^,\#$$FreeBSD$$\${.newline},' \
+			     -e 's,^\(\"Language-Team:.*\\n\"\),\1\${.newline}\"Language: ${PO_LANG}\\n\",' \
 			     -e 's,^\"Content-Type: text/plain; charset=.*\\n,\"Content-Type: text/plain; charset=${PO_CHARSET}\\n,'
 
 .if ${.TARGETS:Mpo} || ${.TARGETS:Mtran}
