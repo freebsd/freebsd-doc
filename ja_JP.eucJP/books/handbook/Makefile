@@ -3,7 +3,7 @@
 #
 # Build the FreeBSD Handbook (Japanese).
 #
-# Original revision: r47275
+# Original revision: r47551
 #
 
 # ------------------------------------------------------------------------
@@ -95,6 +95,11 @@ IMAGES_EN+= mail/pine2.scr
 IMAGES_EN+= mail/pine3.scr
 IMAGES_EN+= mail/pine4.scr
 IMAGES_EN+= mail/pine5.scr
+IMAGES_EN+= install/example-dir1.eps
+IMAGES_EN+= install/example-dir2.eps
+IMAGES_EN+= install/example-dir3.eps
+IMAGES_EN+= install/example-dir4.eps
+IMAGES_EN+= install/example-dir5.eps
 #IMAGES_EN+= security/ipsec-network.pic
 #IMAGES_EN+= security/ipsec-crypt-pkt.pic
 #IMAGES_EN+= security/ipsec-encap-pkt.pic
