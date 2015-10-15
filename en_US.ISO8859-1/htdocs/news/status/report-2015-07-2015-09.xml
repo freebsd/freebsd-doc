@@ -1207,4 +1207,147 @@
     </help>
   </project>
 
+  <project cat='arch'>
+    <title>Atomics</title>
+
+    <contact>
+      <person>
+	<name>
+	  <given>Konstantin</given>
+	  <common>Belousov</common>
+	</name>
+	<email>kib@FreeBSD.org</email>
+      </person>
+
+      <person>
+	<name>
+	  <given>Alan</given>
+	  <common>Cox</common>
+	</name>
+	<email>alc@FreeBSD.org</email>
+      </person>
+
+      <person>
+	<name>
+	  <given>Bruce</given>
+	  <common>Evans</common>
+	</name>
+	<email>bde@FreeBSD.org</email>
+      </person>
+    </contact>
+
+    <body>
+      <p>Atomic operations serve two fundamental purposes.  First, they
+	are the building blocks for expressing synchronization algorithms
+	in a single, machine-independent way using high-level languages.
+	In essense, atomics abstract the different building blocks
+	supported by the various architectures on which &os; runs,
+	making it easier to develop and reason about lock-less code by
+	hiding hardware-level details.</p>
+
+      <p>Atomics also provide the barrier operations that allow software
+	to control the effects on memory of out-of-order and speculative
+	execution in modern processors as well as optimizations by
+	compilers.  This capability is especially important to
+	multithreaded software, such as the &os; kernel, when running
+	on systems where multiple processors communicate through a shared
+	main memory.</p>
+
+      <p>Each machine architecture defines a memory model, which
+	specifies the possible effects on memory of out-of-order and
+	speculative execution.  More precisely, it specifies the extent to
+	which the machine may visibly reorder memory accesses in order to
+	optimize performance.  Unfortunately, there are almost as many
+	models as architectures.  Moreover, some architectures, for
+	instance IA32 or Sparcv9 TSO, are relatively strongly ordered.  In
+	contrast, others, like PowerPC or ARM, are very relaxed.  In
+	effect, atomics define a very relaxed abstract memory model for
+	&os;'s machine-independent code that can be efficiently
+	realized on any of these architectures.</p>
+
+      <p>However, most &os; development and testing still happens on
+      x86 machines, which, when combined with x86's strongly ordered
+      memory model, leads to errors in the use of atomics, specifically,
+      barriers.  In other words, the code is not properly written to
+      &os;'s abstract memory model, but the strong ordering of the
+      x86 architecture hides this fact.  The architectures impacted
+      by the code that incorrectly uses atomics are less popular or
+      have limited availability, and the resulting bugs from the misuse
+      of atomics are hard to diagnose.</p>
+
+      <p>The goal of this project is to audit and upgrade the usage of
+	lockless facilities, hopefully fixing bugs before they are
+	observed in the wild.</p>
+
+      <p>&os; defines its own set of atomics operations, like many
+	other operating systems.  But unlike other operating systems, &os;
+	models its atomics and barriers on the release consistency model,
+	which is also known as acquire/release model.  This is the same
+	model which is used by the C11 and C++11 language standards as
+	well as the new 64-bit ARM architecture.  Despite having
+	syntactical differences, C11 and &os; atomics share essentially
+	the same semantics.  Consequently, ample tutorials about the C11
+	memory model and algorithms expressed with C11 atomics can be
+	trivially reused under &os;.</p>
+
+      <p>One facility of C11 that was missing from &os; atomics,
+	was fences.  Fences are bidirectional barrier operations
+	which could not be expressed by the existing atomic+barrier
+	accesses.  They were added in r285283.</p>
+
+      <p>Due to the strong memory model implemented by x86 processors,
+	atomic_load_acq() and atomic_store_rel() can be implemented by
+	plain load and store instructions with only a compiler barrier; no
+	additional ordering constraints are required.  This simplification
+	of atomic_store_rel() was done some time ago in r236456.  The
+	atomic_load_acq() change was done in r285934, after careful review
+	of all its uses in the kernel and user-space to ensure that no
+	hidden dependency on a stronger implementation was left.</p>
+
+      <p>The only reordering in memory accesses which is allowed on
+	x86 is that loads may be reordered with older stores to different
+	locations.  This results from the use of store buffers at the
+	micro-architecural level.  So, to ensure sequentially consistent
+	behavior on x86, a store/load barrier needs to be issued, which
+	can be done with an MFENCE instruction or by any locked RMW
+	operation.  The latter approach is recommended by the optimization
+	guides from Intel and AMD.  It was noted that careful selection of
+	the scratch memory location, which is modified by the locked RWM
+	operation, can reduce the cost of barrier by avoiding false data
+	dependencies.  The corresponding optimization was committed in
+	r284901.</p>
+
+      <p>The atomic(9) man page was often a cause of confusion due to
+	both erroneous and ambiguous statements.  The most significant of
+	these issues were addressed in changes r286513 and r286784.</p>
+
+      <p>Some examples of our preemptive fixes to the misuse of atomics
+	that would only become evident on weakly ordered machines
+	are:</p>
+
+      <ul>
+	<li>A very important lockless algorithm, used in both the
+	  kernel and libc, is the timekeeping functionality implemented in
+	  <tt>kern/kern_tc.c</tt> and the userspace
+	  <tt>__vdso_gettimeofday</tt>.  This algorithm relied on x86 TSO
+	  behavior.  It was fixed in r284178 and r285286.</li>
+
+	<li>The <tt>kern/kern_intr.c</tt> lockless updates to the
+	  <tt>it_need</tt> indicator were corrected in r285607.</li>
+
+	<li>An issue with
+	  <tt>kern/subr_smp.c:smp_rendezvous_cpus()</tt> not guaranteeing
+	  the visibility of updates done on other CPUs to the caller was
+	  fixed in r285771.</li>
+
+	<li>The <tt>pthread_once()</tt> implementation was fixed to
+	  include missed barriers in r287556.</li>
+      </ul>
+    </body>
+
+    <sponsor>
+      The FreeBSD Foundation (Konstantin Belousov's work)
+    </sponsor>
+  </project>
+
 </report>
