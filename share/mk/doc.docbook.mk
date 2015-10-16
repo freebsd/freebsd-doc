@@ -278,6 +278,7 @@ TRAN_DIR?=	${MASTERDOC:H}
 EN_DIR?=	${TRAN_DIR:S/${LANGCODE}/en_US.ISO8859-1/}
 PO_LANG?=	${LANGCODE:C/\..*$//}
 PO_CHARSET?=	${LANGCODE:tl:C/^.*\.//:S/^iso/iso-/:S/utf-8/UTF-8/}
+EN_XMLLINT?=	${XMLLINT:S/${PO_LANG}/en_US/g}
 CLEANFILES+=	${DOC}.translate.xml ${PO_LANG}.mo
 
 # fix settings in PO file
@@ -292,9 +293,9 @@ ${DOC}.translate.xml:
 		exit 1 ; \
 	 fi
 	# normalize the English original into a single file
-	@${XMLLINT} --nonet --noent --valid --xinclude ${MASTERDOC_EN} > ${.TARGET}.tmp
+	@${EN_XMLLINT} --nonet --noent --valid --xinclude ${MASTERDOC_EN} > ${.TARGET}.tmp
 	# remove redundant namespace attributes
-	@${XMLLINT} --nsclean ${.TARGET}.tmp > ${.TARGET}
+	@${EN_XMLLINT} --nsclean ${.TARGET}.tmp > ${.TARGET}
 	@${RM} ${.TARGET}.tmp
 
 po: ${PO_LANG}.po
