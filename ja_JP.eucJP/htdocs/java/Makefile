@@ -1,6 +1,6 @@
 # $FreeBSD$
 # The FreeBSD Japanese Documentation Project
-# Original revision: r46414
+# Original revision: r46415
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -10,6 +10,5 @@
 .endif
 
 DOCS+=  index.xml
-DOCS+=  install.xml
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"
