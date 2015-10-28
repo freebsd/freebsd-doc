@@ -287,7 +287,11 @@ POSET_CMD=	${SED} -i '' -e '1s,^,\#$$FreeBSD$$\${.newline},' \
 			     -e 's,^\"Content-Type: text/plain; charset=.*\\n,\"Content-Type: text/plain; charset=${PO_CHARSET}\\n,'
 
 .if ${.TARGETS:Mpo} || ${.TARGETS:Mtran}
-${DOC}.translate.xml:
+
+MASTER_SRCS!=	${MAKE} -C ${EN_DIR} -V SRCS
+EN_SRCS=	${MASTER_SRCS:S,^,${EN_DIR}/,g}
+
+${DOC}.translate.xml:	${EN_SRCS}
 	@if [ "${TRAN_DIR}" == "${EN_DIR}" ]; then \
 		${ECHO} "build PO file in a non-English dir" ; \
 		exit 1 ; \
