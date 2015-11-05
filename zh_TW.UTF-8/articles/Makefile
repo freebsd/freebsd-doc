@@ -4,6 +4,7 @@ SUBDIR =
 SUBDIR+= contributing
 SUBDIR+= freebsd-questions
 SUBDIR+= hubs
+SUBDIR+= leap-seconds
 SUBDIR+= mailing-list-faq
 SUBDIR+= nanobsd
 SUBDIR+= pr-guidelines
