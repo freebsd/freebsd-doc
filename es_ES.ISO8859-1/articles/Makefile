@@ -5,6 +5,7 @@ SUBDIR =
 SUBDIR+= contributing
 SUBDIR+= explaining-bsd
 SUBDIR+= fdp-es
+SUBDIR+= leap-seconds
 SUBDIR+= linux-users
 SUBDIR+= mailing-list-faq
 SUBDIR+= nanobsd
