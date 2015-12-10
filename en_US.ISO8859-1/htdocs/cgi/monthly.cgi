@@ -53,7 +53,7 @@ sub xmltext
 {
 	my($Indent, @Text) = @_;
 
-	my $Spaces = " " x ($Indent*3);
+	my $Spaces = " " x ($Indent*2);
 
 	return map { "$Spaces$_\n" } @Text;
 }
@@ -241,7 +241,7 @@ print
 					 "COLS"   => 2,
 					 "NOSAVE" => 1},
 					TR(td("Url"),
-					   td("Description (optional)")),
+					   td("Description")),
 					@LinksTable)),
 
    h3("Present status:"),
