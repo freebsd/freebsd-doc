@@ -160,7 +160,7 @@ $i_topbar = qq`
 		<ul>
 		  <li><a href="$hsty_base/commercial/commercial.html">Vendors</a></li>
 		  <li><a href="//security.FreeBSD.org/">Security Information</a></li>
-		  <li><a href="https://bugs.freebsd.org/bugzilla/search/">Bug Reports</a></li>
+		  <li><a href="https://bugs.freebsd.org/search/">Bug Reports</a></li>
 		  <li><a href="$hsty_base/support.html">Submit Bug-report</a></li>
 		</ul>
 	      </li>
