@@ -558,4 +558,112 @@
 	portions and committed.</p>
     </body>
   </project>
+
+  <project cat='kern'>
+    <title>Kernel Vnode Cache Tuning</title>
+
+    <contact>
+      <person>
+	<name>
+	  <given>Kirk</given>
+	  <common>McKusick</common>
+	</name>
+	<email>mckusick@mckusick.com</email>
+      </person>
+
+      <person>
+	<name>
+	  <given>Bruce</given>
+	  <common>Evans</common>
+	</name>
+	<email>bde@FreeBSD.org</email>
+      </person>
+
+      <person>
+	<name>
+	  <given>Konstantin</given>
+	  <common>Belousov</common>
+	</name>
+	<email>kib@FreeBSD.org</email>
+      </person>
+
+      <person>
+	<name>
+	  <given>Peter</given>
+	  <common>Holm</common>
+	</name>
+	<email>pho@FreeBSD.org</email>
+      </person>
+
+      <person>
+	<name>
+	  <given>Mateusz</given>
+	  <common>Guzik</common>
+	</name>
+	<email>mjg@FreeBSD.org</email>
+      </person>
+    </contact>
+
+    <links>
+      <url href="https://reviews.FreeBSD.org/rS292895">MFC to stable/10</url>
+    </links>
+
+    <body>
+      <p>This completed project includes changes to better manage
+	the vnode freelist and to streamline the allocation and freeing of
+	vnodes.</p>
+
+      <p>Vnode cache recycling was reworked to meet free and unused
+	vnodes targets.  Free vnodes are rarely completely free; rather,
+	they are just ones that are cheap to recycle.  Usually they are
+	for files which have been stat'd but not read; these usually have
+	inode and namecache data attached to them.  The free vnode target
+	is the preferred minimum size of a sub-cache consisting mostly of
+	such files.  The system balances the size of this sub-cache with
+	its complement to try to prevent either from thrashing while the
+	other is relatively inactive.  The targets express a preference
+	for the best balance.</p>
+
+      <p>&quot;Above&quot; this target there are 2 further targets
+	(watermarks) related to the recyling of free vnodes.  In the
+	best-operating case, the cache is exactly full, the free list has
+	size between vlowat and vhiwat above the free target, and
+	recycling from the free list and normal use maintains this state.
+	Sometimes the free list is below vlowat or even empty, but this
+	state is even better for immediate use, provided the cache is not
+	full.  Otherwise, vnlru_proc() runs to reclaim enough vnodes
+	(usually non-free ones) to reach one of these states.  The
+	watermarks are currently hard-coded as 4% and 9% of the available
+	space.  These, and the default of 25% for wantfreevnodes, are too
+	large if the memory size is large.  E.g., 9% of 75% of MAXVNODES
+	is more than 566000 vnodes to reclaim whenever vnlru_proc()
+	becomes active.</p>
+
+      <p>The <tt>vfs.vlru_alloc_cache_src</tt> sysctl is removed.
+	New code frees namecache sources as the last chance to satisfy the
+	highest watermark, instead of selecting source vnodes randomly.
+	This provides good enough behaviour to keep vn_fullpath() working
+	in most situations.  Filesystem layouts with deep trees, where the
+	removed knob was required, is thus handled automatically.</p>
+
+      <p>As the kernel allocates and frees vnodes, it fully
+	initializes them on every allocation and fully releases them on
+	every free.  These are not trivial costs: it starts by zeroing a
+	large structure, then initializes a mutex, a lock manager lock, an
+	rw lock, four lists, and six pointers.  Looking at
+	<tt>vfs.vnodes_created</tt>, these operations are being done
+	millions of times an hour on a busy machine.</p>
+
+      <p>As a performance optimization, this code update uses the
+	uma_init and uma_fini routines to do these initializations and
+	cleanups only as the vnodes enter and leave the vnode zone.  With
+	this change, the initializations are done <tt>kern.maxvnodes</tt>
+	times at system startup, and then only rarely again.  The frees
+	are done only if the vnode zone shrinks, which never happens in
+	practice.  For those curious about the avoided work, look at the
+	vnode_init() and vnode_fini() functions in sys/kern/vfs_subr.c to
+	see the code that has been removed from the main vnode
+	allocation/free path.</p>
+    </body>
+  </project>
 </report>
