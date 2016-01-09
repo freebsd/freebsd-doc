@@ -1101,4 +1101,89 @@
       </task>
     </help>
   </project>
+
+  <project cat='kern'>
+    <title>Out of Memory Handler Rewrite</title>
+
+    <contact>
+      <person>
+	<name>
+	  <given>Konstantin</given>
+	  <common>Belousov</common>
+	</name>
+	<email>kib@FreeBSD.org</email>
+      </person>
+    </contact>
+
+    <body>
+      <p>The Out of Memory (OOM) code is intended to handle the
+	situation where the system needs free memory to make progress,
+	while no memory can be reused.  Most often, the situation is that
+	to free memory, the system needs more free memory.  Consider a
+	case where the system needs to page-out dirty pages, but needs to
+	allocate structures to track the writes.  OOM &quot;solves&quot;
+	the problem by killing some selection of user processes.  In other
+	words, it trades away system deadlock by suffering a partial loss
+	of user data.  The assumption is that it is better to kill a
+	process and recover data in other processes, than lose
+	everything.</p>
+
+      <p>Free memory in the &os; Virtual Memory (VM) system appears
+	from two sources.  One is the voluntary reclamation of pages used
+	by a process, for example unmapping private anonymous regions, or
+	the last unlink of an otherwise unreferenced file with cached
+	pages.  Another source is the pagedaemon, which forcefully frees
+	pages which carry data, of course, after the data is moved to some
+	other storage, like swap or file blocks.  OOM is triggered when
+	the pagedaemon definitely cannot free memory to satisfy the
+	requests.</p>
+
+      <p>The old criteria to trigger OOM action was a combination of
+	low free swap space and a low count of free pages (the later is
+	expressed precisely with the paging targets constants, but this is
+	not relevant to the discussion).  That test is mostly incorrect,
+	e.g., a low free page state might be caused by a greedy consumer
+	allocating all pages freed by the page daemon in the current pass,
+	but this does not preclude the page daemon from producing more
+	pages.  Also, since page-outs are asynchronous, the previous page
+	daemon pass might not immmediately produce any free pages, but
+	they would appear some short time later.</p>
+
+      <p>More seriously, low swap space does not necessarily indicate
+	that we are in trouble: lots of pages may not require swap
+	allocations to freed, e.g., clean pages or pages backed by files.
+	The last notion is serious, since swap-less systems were
+	considered as having full swap.</p>
+
+      <p>Instead of trying to deduce the deadlock from looking at
+	the current VM state, the new OOM handler tracks the history of
+	page daemon passes.  Only if several consequtive passes failed to
+	meet the paging target is an OOM kill considered neccessary.  The
+	count of consequent failed passes was selected empirically, by
+	testing on small (32M) and large (512G) machines.  Auto-tuning of
+	the counter is possible, but requires some more architectural
+	changes to the I/O subsystem.</p>
+
+      <p>Another issue was identified with the algorithm which
+	selects a victim process for OOM kill.  It compared the counts of
+	pages mapping entries (PTEs) installed into the machine paging
+	structures.  For different reasons, machine-dependent VM code
+	(pmap) may remove the pte for a memory-resident page.  Under some
+	circumstances, related to other measures to prevent low memory
+	deadlock, very large processes which consume all system memory,
+	could have few or no ptes, and the old OOM selector ignored the
+	process which caused the deadlock, killing unrelated
+	processes.</p>
+
+      <p>A new function vm_pageout_oom_pagecount() was written which
+	applies a reasonable heuristic to estimate the number of pages
+	which would be freed by killing the given process.  This
+	eliminates the effect of selecting small unrelated processes for
+	OOM kill.</p>
+
+      <p>The rewrite was committed to HEAD in r290917 and r290920.</p>
+    </body>
+
+    <sponsor>The FreeBSD Foundation</sponsor>
+  </project>
 </report>
