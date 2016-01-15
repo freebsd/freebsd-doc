@@ -14,7 +14,7 @@
 #
 #	DOC		This should be set to the name of the DocBook
 #			marked-up file, without the .xml suffix.
-#			
+#
 #			It also determins the name of the output files -
 #			${DOC}.html.
 #
@@ -35,7 +35,7 @@
 #			Default is ${DOC_PREFIX}/share/misc/docbook.css
 #
 # Package building options:
-# 
+#
 #       BZIP2_PACKAGE  Use bzip2(1) utility to compress package tarball
 #                      instead of gzip(1).  It results packages to have
 #                      suffix .tbz instead of .tgz.  Using bzip2(1)
@@ -383,7 +383,7 @@ ${DOC}.txt: ${DOC}.html
 .else
 ${DOC}.txt:
 	${TOUCH} ${.TARGET}
-.endif	
+.endif
 .endif
 
 # PDB --------------------------------------------------------------------
@@ -423,7 +423,7 @@ ${DOC}.pdf: ${DOC}.parsed.xml ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG}
 ${DOC}.ps: ${DOC}.parsed.xml ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG}
 	${DBLATEX} ${DOC}.parsed.print.xml ${DBLATEXOPTS} -o ${.TARGET}
 .endif
-	
+
 
 ${DOC}.tar: ${SRCS} ${LOCAL_IMAGES} ${LOCAL_CSS_SHEET}
 	${TAR} cf ${.TARGET} -C ${.CURDIR} ${SRCS} \
