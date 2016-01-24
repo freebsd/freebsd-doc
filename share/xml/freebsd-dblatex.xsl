@@ -7,7 +7,15 @@
   <!-- $FreeBSD$ -->
 
   <!-- The localization layer is the same preference level of this file -->
-  <xsl:include href="http://www.FreeBSD.org/XML/lang/share/xml/freebsd-dblatex.xsl"/>
+  <xsl:param name="page.margin.bottom">2cm</xsl:param>
+  <xsl:param name="page.margin.inner">3cm</xsl:param>
+  <xsl:param name="page.margin.outer">2.5cm</xsl:param>
+  <xsl:param name="page.margin.top">2.13cm</xsl:param>
+  <xsl:param name="monospace.font.family">Courier-New</xsl:param>
+  <xsl:param name="xref.hypermarkup">1</xsl:param>
+  <xsl:param name="latex.hyperparam">colorlinks,linkcolor=blue,pdfstartview=FitH</xsl:param>
+  <xsl:param name="literal.extensions">scale.by.width</xsl:param>
+  <xsl:param name="doc.lot.show">figure,table,example</xsl:param>
 
   <xsl:param name="latex.encoding">utf8</xsl:param>
   <xsl:param name="latex.hyperparam">linktocpage,colorlinks,linkcolor=blue,citecolor=blue,urlcolor=blue</xsl:param>
@@ -26,7 +34,7 @@
     </xsl:otherwise>
     </xsl:choose>
   </xsl:template>
- 
+
   <xsl:template match="text()" mode="tex.escape">
     <xsl:variable name="t1" select="str:replace(., '\', '\\')"/>
     <xsl:variable name="t2" select="str:replace($t1, '^', '\^')"/>
