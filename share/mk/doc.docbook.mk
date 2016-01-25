@@ -69,7 +69,7 @@ XSLTPROCOPTS?=	--nonet
 IMGDIR?=	${IMAGES_EN_DIR}/${DOC}s/${.CURDIR:T}
 CALLOUTDIR=	${.CURDIR}/imagelib/callouts
 XSLDBLATEX=	${DOC_PREFIX}/share/xml/freebsd-dblatex.xsl
-DBLATEXOPTS?=	-I ${IMGDIR} -p ${XSLDBLATEX} -T simple -b xetex -d
+DBLATEXOPTS?=	-I ${IMGDIR} -p ${XSLDBLATEX} -b xetex -d
 FOPJAVAOPTS?=	-Xss1024k -Xmx1431552k
 FOPOPTS?=	-c ${DOC_PREFIX}/share/misc/fop.xconf
 
