@@ -16,6 +16,9 @@
   <xsl:param name="latex.hyperparam">colorlinks,linkcolor=blue,pdfstartview=FitH</xsl:param>
   <xsl:param name="literal.extensions">scale.by.width</xsl:param>
   <xsl:param name="doc.lot.show">figure,table,example</xsl:param>
+  <xsl:param name="doc.pdfcreator.show">1</xsl:param>
+  <xsl:param name="latex.output.revhistory">0</xsl:param>
+  <xsl:param name="doc.collab.show">0</xsl:param>
 
   <xsl:param name="latex.encoding">utf8</xsl:param>
   <xsl:param name="latex.hyperparam">linktocpage,colorlinks,linkcolor=blue,citecolor=blue,urlcolor=blue</xsl:param>
