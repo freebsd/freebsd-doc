@@ -290,7 +290,9 @@ PO_CATALOG_FILES+=     ${EXTRA_CATALOGS}
 PO_XMLLINT=	env XML_CATALOG_FILES="${PO_CATALOG_FILES}" ${PREFIX}/bin/xmllint
 
 # fix settings in PO file
-POSET_CMD=	${SED} -i '' -e '1s,^,\#$$FreeBSD$$\${.newline},' \
+IDSTR1=		$$Free
+IDSTR2=		BSD$$
+POSET_CMD=	${SED} -i '' -e '1s,^,\#${IDSTR1}${IDSTR2}\${.newline},' \
 			     -e 's,^\(\"Language-Team:.*\\n\"\),\1\${.newline}\"Language: ${PO_LANG}\\n\",' \
 			     -e 's,^\"Content-Type: text/plain; charset=.*\\n,\"Content-Type: text/plain; charset=${PO_CHARSET}\\n,'
 
