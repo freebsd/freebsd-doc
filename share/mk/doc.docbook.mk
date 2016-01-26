@@ -299,18 +299,20 @@ POSET_CMD=	${SED} -i '' -e '1s,^,\#${IDSTR1}${IDSTR2}\${.newline},' \
 .if ${.TARGETS:Mpo} || ${.TARGETS:Mtran}
 
 MASTER_SRCS!=	${MAKE} -C ${EN_DIR} -V SRCS
-EN_SRCS=	${MASTER_SRCS:S,^,${EN_DIR}/,g}
 
-${DOC}.translate.xml:	${EN_SRCS}
+${DOC}.translate.xml:
 	@if [ "${TRAN_DIR}" == "${EN_DIR}" ]; then \
 		${ECHO} "build PO file in a non-English dir" ; \
 		exit 1 ; \
 	 fi
+	# some SRCS files might need to be generated, make sure they exist
+	@${MAKE} -C ${EN_DIR} ${MASTER_SRCS} > /dev/null
 	# normalize the English original into a single file
 	@${PO_XMLLINT} --nonet --noent --valid --xinclude ${MASTERDOC_EN} > ${.TARGET}.tmp
 	# remove redundant namespace attributes
 	@${PO_XMLLINT} --nsclean ${.TARGET}.tmp > ${.TARGET}
 	@${RM} ${.TARGET}.tmp
+	@${MAKE} -C ${EN_DIR} clean > /dev/null
 
 po: ${PO_LANG}.po
 .PHONY:	po
