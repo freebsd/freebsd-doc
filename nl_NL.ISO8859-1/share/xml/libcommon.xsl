@@ -197,7 +197,6 @@
     <xsl:param name="itemtype" select="''" />
     <xsl:param name="itemtype" select="''" />
     <xsl:param name="prefix" select="''" />
-    <xsl:param name="prefixold" select="''" />
 
     <xsl:if test="$items">
       <table>
@@ -220,12 +219,6 @@
 	      </xsl:when>
 	      <xsl:when test="@omithref='yes'">
 		<xsl:value-of select="name" />
-	      </xsl:when>
-	      <xsl:when test="name/@role='old'">
-		<a><xsl:attribute name="href">
-		    <xsl:value-of select="concat($prefixold, name, '.asc')" />
-		  </xsl:attribute>
-		  <xsl:value-of select="concat(name, '.asc')" /></a>
 	      </xsl:when>
 	      <xsl:otherwise>
 		<a><xsl:attribute name="href">
