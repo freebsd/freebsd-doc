@@ -782,7 +782,6 @@
           <xsl:with-param name="items" select="document($advisories.xml)//advisory" />
           <xsl:with-param name="itemtype" select="'Advisory'" />
           <xsl:with-param name="prefix" select="'&ftpbase;'" />
-          <xsl:with-param name="prefixold" select="'&ftpbaseold;'" />
         </xsl:call-template>
       </xsl:when>
 
@@ -791,7 +790,6 @@
 	  <xsl:with-param name="items" select="document($advisories.xml)//notice" />
 	  <xsl:with-param name="itemtype" select="'Errata Notice'" />
 	  <xsl:with-param name="prefix" select="'&ftpbaseerrata;'" />
-	  <xsl:with-param name="prefixold" select="'&ftpbaseerrata;'" />
 	</xsl:call-template>
       </xsl:when>
     </xsl:choose>
@@ -827,12 +825,6 @@
 	      </xsl:when>
 	      <xsl:when test="@omithref='yes'">
 		<xsl:value-of select="name" />
-	      </xsl:when>
-	      <xsl:when test="name/@role='old'">
-		<a><xsl:attribute name="href">
-		    <xsl:value-of select="concat($prefixold, name, '.asc')" />
-		  </xsl:attribute>
-		  <xsl:value-of select="concat(name, '.asc')" /></a>
 	      </xsl:when>
 	      <xsl:otherwise>
 		<a><xsl:attribute name="href">
