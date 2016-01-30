@@ -23,6 +23,8 @@ DATA=	ss224-1.png
 DATA+=	ss224-1-tn.png
 DATA+=	ss224-2.png
 DATA+=	ss224-2-tn.png
+DATA+=	ss316-1.png
+DATA+=	ss316-1-tn.png
 DATA+=	gnome.png
 
 # FreeBSD GNOME Vanity Project
