@@ -141,7 +141,7 @@ for how to geting stuff -->
 		  <li><a href="http://freebsd.kde.org/">KDE on FreeBSD</a></li>
 		  <li><a href="http://www.xfce.org/">XFCE Project</a></li>
 		  <li><a href="https://wiki.freebsd.org/Xfce">XFCE on FreeBSD</a></li>
-		  <li><a href="http://www.opengroup.org/desktop/">CDE (commercial)</a></li>
+		  <li><a href="http://www.opengroup.org/cde/">CDE</a></li>
 		</ul>
 
 	  	</div> <!-- contentwrap -->
