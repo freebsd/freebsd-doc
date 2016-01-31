@@ -39,7 +39,7 @@
 
 				<p>&os; is an advanced computer
 				  operating system used to power
-				  modern servers, desktops and
+				  modern servers, desktops, and
 				  embedded
 				  <a href="&base;/platforms/">platforms</a>.
 				  A large
@@ -47,7 +47,7 @@
 				  href="&base;/doc/en_US.ISO8859-1/articles/contributors/staff-committers.html">community</a>
 				  has continually developed it for
 				  more than thirty years. Its advanced
-				  networking, security and storage
+				  networking, security, and storage
 				  features have made &os; the platform
 				  of choice for many of the
 				  <a href="&base;/doc/en_US.ISO8859-1/books/handbook/nutshell.html#introduction-nutshell-users">busiest web sites</a>
