@@ -28,7 +28,10 @@
 
 	<!-- Generate a table of contents, sorted -->
 	<xsl:for-each select="report/category">
-	  <h3><xsl:value-of select="description"/></h3>
+	  <!-- category title and link -->
+	  <h3><a><xsl:attribute name="href">#<xsl:value-of
+	    select="translate(description,' ', '-')"/></xsl:attribute>
+	    <xsl:value-of select="description"/></a></h3>
 	  <xsl:variable name="cat-short" select="name"/>
 	  <ul>
 	    <xsl:for-each select="//project[@cat=$cat-short and @summary]">
@@ -66,6 +69,13 @@
 	<xsl:choose>
 	    <xsl:when test="report/category">
 		<xsl:for-each select="report/category">
+
+		<!-- category title -->
+		<br/><h1><a>
+		  <xsl:attribute name="name"><xsl:value-of select="translate(description, ' ', '-')"/></xsl:attribute>
+		  <xsl:attribute name="href">#<xsl:value-of select="translate(description, ' ', '-')"/></xsl:attribute>
+		  <xsl:value-of select="description"/></a></h1><br/>
+
 		<xsl:variable name="cat-short" select="name"/>
 		<xsl:apply-templates select="//project[@cat=$cat-short]">
 		    <xsl:sort select="translate(title, $lowercase, $uppercase)"/>
