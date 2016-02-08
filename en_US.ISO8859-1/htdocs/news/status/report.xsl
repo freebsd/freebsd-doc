@@ -98,8 +98,10 @@
   <xsl:template match="project">
     <h2><a>
 	<xsl:attribute name="name"><xsl:value-of
-	  select="translate(title, ' ', '-')"/></xsl:attribute><xsl:value-of
-	  select="title"/></a></h2>
+	  select="translate(title, ' ', '-')"/></xsl:attribute>
+	  <xsl:attribute name="href">#<xsl:value-of
+	  select="translate(title, ' ', '-')"/></xsl:attribute>
+	  <xsl:value-of select="title"/></a></h2>
 
     <xsl:apply-templates select="links"/>
 
