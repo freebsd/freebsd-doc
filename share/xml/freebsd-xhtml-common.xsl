@@ -217,6 +217,7 @@
     <xsl:value-of select="db:refentrytitle"/>
     <xsl:text>&amp;sektion=</xsl:text>
     <xsl:value-of select="db:manvolnum"/>
+    <xsl:text>&amp;manpath=FreeBSD+&rel.current;-RELEASE+and+Ports</xsl:text>
   </xsl:template>
 
   <xsl:template name="nongraphical.admonition">
