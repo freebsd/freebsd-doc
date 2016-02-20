@@ -1,6 +1,6 @@
 #!/usr/bin/perl -T
 #
-# Copyright (c) 1996-2015 Wolfram Schneider <wosch@FreeBSD.org>
+# Copyright (c) 1996-2016 Wolfram Schneider <wosch@FreeBSD.org>
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -154,6 +154,7 @@ $sectionpath = {
     'OpenBSD 5.5' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
     'OpenBSD 5.6' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
     'OpenBSD 5.7' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
+    'OpenBSD 5.8' => { 'path' => '1:2:3:3p:4:5:6:7:8:9', },
 
     'CentOS Linux/i386 3.9' => { 'path' => '1:2:3:3p:4:5:6:7:8:9:n', },
     'CentOS Linux/i386 4.8' => { 'path' => '1:1p:2:3:3p:4:5:6:7:8:9:n:0p', },
@@ -496,6 +497,7 @@ $manPathDefault = 'FreeBSD 10.2-RELEASE';
     'OpenBSD 5.5', "$manLocalDir/OpenBSD-5.5",
     'OpenBSD 5.6', "$manLocalDir/OpenBSD-5.6",
     'OpenBSD 5.7', "$manLocalDir/OpenBSD-5.7",
+    'OpenBSD 5.8', "$manLocalDir/OpenBSD-5.8",
 
     #'NetBSD 0.9',            "$manLocalDir/NetBSD-0.9",
     'NetBSD 1.0',   "$manLocalDir/NetBSD-1.0",
@@ -528,6 +530,7 @@ $manPathDefault = 'FreeBSD 10.2-RELEASE';
     'NetBSD 5.1',   "$manLocalDir/NetBSD-5.1",
     'NetBSD 6.0',   "$manLocalDir/NetBSD-6.0",
     'NetBSD 6.1.5', "$manLocalDir/NetBSD-6.1.5",
+    'NetBSD 7.0',   "$manLocalDir/NetBSD-7.0",
 
     '2.8 BSD',      "$manLocalDir/2.8BSD",
     '2.9.1 BSD',    "$manLocalDir/2.9.1BSD",
@@ -722,6 +725,7 @@ my %arch = (
 'NetBSD 5.1' => { 'arch' => [qw/acorn26 acorn32 alpha amiga arc atari cobalt dreamcast evbarm evbmips evbppc hp300 hp700 hpcarm hpcmips hpcsh i386 mac68k macppc mvme68k pmax prep sgimips sparc sparc64 sun2 sun3 vax x68k/] } ,
 'NetBSD 6.0' => { 'arch' => [qw/acorn26 acorn32 alpha amiga arc atari cobalt dreamcast evbarm evbmips evbppc hp300 hp700 hpcarm hpcmips hpcsh i386 mac68k macppc mvme68k pmax prep sgimips sparc sparc64 sun2 sun3 vax x68k/] } ,
 'NetBSD 6.1.5' => { 'arch' => [qw/acorn26 acorn32 algor alpha amd64 amiga arc atari bebox cats cesfic cobalt dreamcast emips evbarm evbmips evbppc evbsh3 hp300 hp700 hpcarm hpcmips hpcsh i386 ibmnws luna68k mac68k macppc mipsco mmeye mvme68k mvmeppc netwinder news68k newsmips next68k ofppc pmax prep sandpoint sbmips sgimips shark sparc sparc64 sun2 sun3 vax x68k x86/] } ,
+'NetBSD 7.0' => { 'arch' => [qw/acorn26 acorn32 algor alpha amd64 amiga arc atari bebox cats cesfic cobalt dreamcast emips evbarm evbmips evbppc evbsh3 hp300 hp700 hpcarm hpcmips hpcsh i386 ibmnws luna68k mac68k macppc mipsco mmeye mvme68k mvmeppc netwinder news68k newsmips next68k ofppc pmax prep sandpoint sbmips sgimips shark sparc sparc64 sun2 sun3 vax x68k x86/] } ,
 'OpenBSD 4.7' => { 'arch' => [qw/alpha amd64 armish aviion hp300 hppa hppa64 i386 landisk loongson luna88k mac68k macppc mvme68k mvme88k mvmeppc palm sgi socppc sparc sparc64 vax zaurus/] }, 
 'OpenBSD 4.8' => { 'arch' => [qw/alpha amd64 armish aviion hp300 hppa hppa64 i386 landisk loongson luna88k mac68k macppc mvme68k mvme88k mvmeppc palm sgi socppc sparc sparc64 vax zaurus/] }, 
 'OpenBSD 4.9' => { 'arch' => [qw/alpha amd64 armish aviion hp300 hppa hppa64 i386 landisk loongson luna88k mac68k macppc mvme68k mvme88k mvmeppc palm sgi socppc sparc sparc64 vax zaurus/] }, 
@@ -733,6 +737,7 @@ my %arch = (
 'OpenBSD 5.5' => { 'arch' => [qw/alpha amd64 armish armv7 aviion hp300 hppa hppa64 i386 landisk loongson luna88k macppc mvme68k mvme88k octeon sgi socppc sparc sparc64 vax zaurus/] }, 
 'OpenBSD 5.6' => { 'arch' => [qw/alpha amd64 armish armv7 aviion hppa hppa64 i386 landisk loongson luna88k macppc octeon sgi socppc sparc sparc64 vax zaurus/] }, 
 'OpenBSD 5.7' => { 'arch' => [qw/alpha amd64 armish armv7 aviion hppa hppa64 i386 landisk loongson luna88k macppc octeon sgi socppc sparc sparc64 vax zaurus/] }, 
+'OpenBSD 5.8' => { 'arch' => [qw/alpha amd64 armish armv7 aviion hppa hppa64 i386 landisk loongson luna88k macppc octeon sgi socppc sparc sparc64 vax zaurus/] }, 
 );
 
 # delete not existing releases
@@ -776,8 +781,8 @@ while ( ( $key, $val ) = each %manPath ) {
     'opendarwin', 'OpenDarwin 7.2.1',
     'macosx',     'Darwin 8.0.1/ppc',
 
-    'netbsd',        'NetBSD 6.1.5',
-    'openbsd',       'OpenBSD 5.7',
+    'netbsd',        'NetBSD 7.0',
+    'openbsd',       'OpenBSD 5.8',
     'v7',            'Unix Seventh Edition',
     'v7man',         'Unix Seventh Edition',
     'x11',           'X11R7.4',
@@ -1758,7 +1763,7 @@ sub faq {
       '$FreeBSD$';
     return qq{\
 <pre>
-Copyright (c) 1996-2012 <a href="$mailtoURL">Wolfram Schneider</a>
+Copyright (c) 1996-2016 <a href="$mailtoURL">Wolfram Schneider</a>
 Copyright (c) 1993-1995 Berkeley Software Design, Inc.
 
 This data is part of a licensed program from BERKELEY SOFTWARE
