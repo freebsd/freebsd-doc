@@ -389,7 +389,8 @@
       <xsl:text>http://www.FreeBSD.org/cgi/man.cgi?query=</xsl:text>
       <xsl:value-of select="db:refentrytitle"/>
       <xsl:text>&amp;sektion=</xsl:text>
-      <xsl:value-of select="db:manvolnum"/>&amp;manpath=freebsd-release-ports
+      <xsl:value-of select="db:manvolnum"/>
+      <xsl:text>&amp;manpath=freebsd-release-ports</xsl:text>
     </xsl:variable>
 
     <fo:basic-link external-destination="url({$xhref})">
