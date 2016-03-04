@@ -178,7 +178,7 @@
 					  <a href="&base;/community/mailinglists.html" title="Mailing Lists">Mailing Lists</a>
 					</li>
 					<li>
-					  <a href="&base;/support/bugreports.html" title="Report a Bug">Report a Bug</a>
+					  <a href="&base;/support/bugreports.html" title="Reporting Problems">Reporting Problems</a>
 					</li>
 					<li>
 					  <a href="&base;/doc/en_US.ISO8859-1/books/faq/index.html" title="FAQ">FAQ</a>
