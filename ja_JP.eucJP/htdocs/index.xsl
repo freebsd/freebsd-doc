@@ -5,7 +5,7 @@
 ]>
 
 <!-- $FreeBSD$ -->
-<!-- Original revision: r47418 -->
+<!-- Original revision: r48320 -->
 
 <xsl:stylesheet version="1.0"
   xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
@@ -177,7 +177,7 @@
 			      <a href="&base;/community/mailinglists.html" title="メーリングリスト">メーリングリスト</a>
 			    </li>
 			    <li>
-			      <a href="&base;/support/bugreports.html" title="バグの報告">バグの報告</a>
+			      <a href="&base;/support/bugreports.html" title="障害報告">障害報告</a>
 			    </li>
 			    <li>
 			      <a href="&enbase;/doc/&url.doc.langcode;/books/faq/index.html" title="FAQ">FAQ</a>
