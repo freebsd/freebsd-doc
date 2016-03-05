@@ -14,6 +14,7 @@ THISRELEASE?=	${_OS}-${_REVISION}-${_BRANCH}
 
 DOCS=	index.xml \
 	schedule.xml \
+	signatures.xml \
 	todo.xml
 
 DATA=	docbook.css
