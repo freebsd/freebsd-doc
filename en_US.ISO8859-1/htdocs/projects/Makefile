@@ -18,6 +18,8 @@ DOCS+=	summerofcode-2008.xml
 
 DATA=	2016-freebsd-gsoc-thumbnail.png
 DATA+=	2016-freebsd-gsoc.pdf
+DATA+=	2016-freebsd-gsoc-poland-thumbnail.png
+DATA+=	2016-freebsd-gsoc-poland.jpg
 
 INDEXLINK= projects.html
 
