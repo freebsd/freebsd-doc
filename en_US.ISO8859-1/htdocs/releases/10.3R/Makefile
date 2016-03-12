@@ -17,7 +17,8 @@ DOCS=	index.xml \
 	signatures.xml \
 	todo.xml
 
-DATA=	docbook.css
+DATA=	docbook.css \
+	relnotes.html
 
 # PGP-signed checksums
 _BIGIRON?=	amd64 \
