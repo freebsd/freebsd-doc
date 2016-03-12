@@ -1,7 +1,7 @@
 #
 # $FreeBSD$
 # $FreeBSDde: de-docproj/books/handbook/Makefile,v 1.67 2011/12/31 12:27:25 bcr Exp $
-# basiert auf: r42953
+# basiert auf: r44423
 #
 # Build the FreeBSD Handbook in its German translation.
 #
@@ -58,6 +58,7 @@ IMAGES_EN+= bsdinstall/bsdinstall-distfile-verifying.png
 IMAGES_EN+= bsdinstall/bsdinstall-final-confirmation.png
 IMAGES_EN+= bsdinstall/bsdinstall-finalconfiguration.png
 IMAGES_EN+= bsdinstall/bsdinstall-final-modification-shell.png
+IMAGES_EN+= bsdinstall/bsdinstall-keymap-10.png
 IMAGES_EN+= bsdinstall/bsdinstall-keymap-select-default.png
 IMAGES_EN+= bsdinstall/bsdinstall-mainexit.png
 IMAGES_EN+= bsdinstall/bsdinstall-netinstall-files.png
@@ -75,6 +76,14 @@ IMAGES_EN+= bsdinstall/bsdinstall-timezone-confirm.png
 IMAGES_EN+= bsdinstall/bsdinstall-timezone-country.png
 IMAGES_EN+= bsdinstall/bsdinstall-timezone-region.png
 IMAGES_EN+= bsdinstall/bsdinstall-timezone-zone.png
+IMAGES_EN+= bsdinstall/bsdinstall-zfs-disk_info.png
+IMAGES_EN+= bsdinstall/bsdinstall-zfs-disk_select.png
+IMAGES_EN+= bsdinstall/bsdinstall-zfs-geli_password.png
+IMAGES_EN+= bsdinstall/bsdinstall-zfs-menu.png
+IMAGES_EN+= bsdinstall/bsdinstall-zfs-partmenu.png
+IMAGES_EN+= bsdinstall/bsdinstall-zfs-vdev_invalid.png
+IMAGES_EN+= bsdinstall/bsdinstall-zfs-vdev_type.png
+IMAGES_EN+= bsdinstall/bsdinstall-zfs-warning.png
 IMAGES_EN+= geom/striping.pic
 IMAGES_EN+= install/adduser1.scr
 IMAGES_EN+= install/adduser2.scr
