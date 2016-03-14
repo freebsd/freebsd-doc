@@ -18,6 +18,8 @@ DOCS=	index.xml \
 	todo.xml
 
 DATA=	docbook.css \
+	hardware.html \
+	readme.html \
 	relnotes.html
 
 # PGP-signed checksums
