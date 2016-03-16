@@ -1,0 +1,48 @@
+--- sys/dev/hyperv/utilities/hv_kvp.c.orig
++++ sys/dev/hyperv/utilities/hv_kvp.c
+@@ -44,6 +44,7 @@
+ #include <sys/reboot.h>
+ #include <sys/lock.h>
+ #include <sys/taskqueue.h>
++#include <sys/selinfo.h>
+ #include <sys/sysctl.h>
+ #include <sys/poll.h>
+ #include <sys/proc.h>
+@@ -114,6 +115,8 @@
+ static struct hv_kvp_msg *hv_kvp_dev_buf;
+ struct proc *daemon_task;
+ 
++static struct selinfo hv_kvp_selinfo;
++
+ /*
+  * Global state to track and synchronize multiple
+  * KVP transaction requests from the host.
+@@ -628,6 +631,9 @@
+ 
+ 	/* Send the msg to user via function deamon_read - setting sema */
+ 	sema_post(&kvp_globals.dev_sema);
++
++	/* We should wake up the daemon, in case it's doing poll() */
++	selwakeup(&hv_kvp_selinfo);
+ }
+ 
+ 
+@@ -940,7 +946,7 @@
+  * for daemon to read.
+  */
+ static int
+-hv_kvp_dev_daemon_poll(struct cdev *dev __unused, int events, struct thread *td  __unused)
++hv_kvp_dev_daemon_poll(struct cdev *dev __unused, int events, struct thread *td)
+ {
+ 	int revents = 0;
+ 
+@@ -953,6 +959,9 @@
+ 	 */
+ 	if (kvp_globals.daemon_busy == true)
+ 		revents = POLLIN;
++	else
++		selrecord(td, &hv_kvp_selinfo);
++
+ 	mtx_unlock(&kvp_globals.pending_mutex);
+ 
+ 	return (revents);
