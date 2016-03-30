@@ -4,8 +4,7 @@
 # Build the FreeBSD Chinese FAQ
 #
 
-MAINTAINER=vanilla@FreeBSD.org ijliao@FreeBSD.org clive@FreeBSD.org \
-	   clsung@FreeBSD.org chinsan@FreeBSD.org
+MAINTAINER=doc@FreeBSD.org
 
 DOC?= book
 
@@ -23,5 +22,7 @@ WITH_BIBLIOXREF_TITLE?=YES
 # XML content
 SRCS=  book.xml
 
+URL_RELPREFIX?= ../../../..
 DOC_PREFIX?= ${.CURDIR}/../../..
+
 .include "${DOC_PREFIX}/share/mk/doc.project.mk"
