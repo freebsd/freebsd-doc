@@ -20,6 +20,7 @@ DOCS=	announce.xml \
 
 DATA=	announce.asc \
 	docbook.css \
+	errata.html \
 	hardware.html \
 	installation.html \
 	readme.html \
