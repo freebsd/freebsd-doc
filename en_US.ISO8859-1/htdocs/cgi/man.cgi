@@ -225,6 +225,8 @@ $manLocalDir    = '/usr/local/www/bsddoc/man';
 $manPathDefault = 'FreeBSD 10.3-RELEASE';
 
 %manPath = (
+    'FreeBSD 10.3-RELEASE and Ports',
+"$manLocalDir/FreeBSD-10.3-RELEASE/man:$manLocalDir/FreeBSD-10.3-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-10.3-RELEASE/man:$manLocalDir/FreeBSD-ports-10.3-RELEASE/misc",
     'FreeBSD 10.2-RELEASE and Ports',
 "$manLocalDir/FreeBSD-10.2-RELEASE/man:$manLocalDir/FreeBSD-10.2-RELEASE/openssl/man:$manLocalDir/FreeBSD-ports-10.2-RELEASE/man:$manLocalDir/FreeBSD-ports-10.2-RELEASE/misc",
     'FreeBSD 10.1-RELEASE and Ports',
@@ -270,6 +272,7 @@ $manPathDefault = 'FreeBSD 10.3-RELEASE';
     'FreeBSD 10.2-stable',
 "$manLocalDir/FreeBSD-10.2-stable/man:$manLocalDir/FreeBSD-10.2-stable/openssl/man",
 
+    'FreeBSD Ports 10.3-RELEASE', "$manLocalDir/FreeBSD-ports-10.3-RELEASE/man:$manLocalDir/FreeBSD-ports-10.3-RELEASE/misc",
     'FreeBSD Ports 10.2-RELEASE', "$manLocalDir/FreeBSD-ports-10.2-RELEASE/man:$manLocalDir/FreeBSD-ports-10.2-RELEASE/misc",
     'FreeBSD Ports 10.1-RELEASE', "$manLocalDir/FreeBSD-ports-10.1-RELEASE/man:$manLocalDir/FreeBSD-ports-10.1-RELEASE/misc",
     'FreeBSD Ports 10.0-RELEASE', "$manLocalDir/FreeBSD-ports-10.0-RELEASE/man:$manLocalDir/FreeBSD-ports-10.0-RELEASE/misc",
@@ -772,8 +775,8 @@ while ( ( $key, $val ) = each %manPath ) {
     'freebsd-stable6', 'FreeBSD 6.4-stable',
 
     'freebsd-current',       'FreeBSD 11-current',
-    'freebsd-release-ports', 'FreeBSD 10.2-RELEASE and Ports',
-    'freebsd-ports', 'FreeBSD Ports 10.2-RELEASE',
+    'freebsd-release-ports', 'FreeBSD 10.3-RELEASE and Ports',
+    'freebsd-ports', 'FreeBSD Ports 10.3-RELEASE',
 
     'slackware',  'Linux Slackware 3.1',
     'redhat',     'Red Hat Linux/i386 9',
