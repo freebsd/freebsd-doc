@@ -222,7 +222,7 @@ foreach my $os ( keys %$sectionpath ) {
 );
 
 $manLocalDir    = '/usr/local/www/bsddoc/man';
-$manPathDefault = 'FreeBSD 10.2-RELEASE';
+$manPathDefault = 'FreeBSD 10.3-RELEASE';
 
 %manPath = (
     'FreeBSD 10.2-RELEASE and Ports',
@@ -714,6 +714,7 @@ my %valid_arch = map { $_ => 1 }
 my $default_arch = 'i386';
 
 my %arch = ( 
+'FreeBSD 10.3-RELEASE' => { 'default' => 'i386', 'arch' => [qw/amd64 arm i386 powerpc sparc64/] } ,
 'FreeBSD 10.2-RELEASE' => { 'default' => 'i386', 'arch' => [qw/amd64 arm i386 powerpc sparc64/] } ,
 'FreeBSD 10.1-RELEASE' => { 'default' => 'i386', 'arch' => [qw/amd64 arm i386 powerpc sparc64/] } ,
 'FreeBSD 10.0-RELEASE' => { 'default' => 'i386', 'arch' => [qw/amd64 arm i386 powerpc sparc64/] } ,
@@ -760,8 +761,8 @@ while ( ( $key, $val ) = each %manPath ) {
 
 # keywords must be in lower cases.
 %manPathAliases = (
-    'freebsd',         'FreeBSD 10.2-RELEASE',
-    'freebsd-release', 'FreeBSD 10.2-RELEASE',
+    'freebsd',         'FreeBSD 10.3-RELEASE',
+    'freebsd-release', 'FreeBSD 10.3-RELEASE',
 
     'freebsd-stable',  'FreeBSD 10.2-stable',
     'freebsd-stable10', 'FreeBSD 10.2-stable',
