@@ -157,7 +157,7 @@
        <url> element, adding a row to hold the description and URL.
        Both work as links. -->
   <xsl:template match="links">
-    <table title="Links">
+    <table title="Links" style="white-space: nowrap;">
       <tr>
 	<td>Links</td>
       </tr>
