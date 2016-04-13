@@ -30,14 +30,14 @@
 	<xsl:for-each select="report/category">
 	  <!-- category title and link -->
 	  <h3><a><xsl:attribute name="href">#<xsl:value-of
-	    select="translate(description,' ', '-')"/></xsl:attribute>
+	    select="translate(normalize-space(description),' ', '-')"/></xsl:attribute>
 	    <xsl:value-of select="description"/></a></h3>
 	  <xsl:variable name="cat-short" select="name"/>
 	  <ul>
 	    <xsl:for-each select="//project[@cat=$cat-short and @summary]">
   	      <xsl:sort select="translate(title, $lowercase, $uppercase)"/>
 	      <li><a><xsl:attribute name="href">#<xsl:value-of
-	      select="translate(title, ' ',
+	      select="translate(normalize-space(title), ' ',
 	      '-')"/></xsl:attribute><xsl:value-of select="title"/></a>
 	      </li>
 	    </xsl:for-each>
@@ -45,7 +45,7 @@
 	    <xsl:for-each select="//project[@cat=$cat-short and not(@summary)]">
   	      <xsl:sort select="translate(title, $lowercase, $uppercase)"/>
 	      <li><a><xsl:attribute name="href">#<xsl:value-of
-	      select="translate(title, ' ',
+	      select="translate(normalize-space(title), ' ',
 	      '-')"/></xsl:attribute><xsl:value-of select="title"/></a>
 	      </li>
 	    </xsl:for-each>
@@ -55,7 +55,7 @@
 	  <xsl:for-each select="//project[not(@cat)]">
   	    <xsl:sort select="translate(title, $lowercase, $uppercase)"/>
 	    <li><a><xsl:attribute name="href">#<xsl:value-of
-	    select="translate(title, ' ',
+	    select="translate(normalize-space(title), ' ',
 	    '-')"/></xsl:attribute><xsl:value-of select="title"/></a>
 	    </li>
 	  </xsl:for-each>
@@ -72,8 +72,8 @@
 
 		<!-- category title -->
 		<br/><h1><a>
-		  <xsl:attribute name="name"><xsl:value-of select="translate(description, ' ', '-')"/></xsl:attribute>
-		  <xsl:attribute name="href">#<xsl:value-of select="translate(description, ' ', '-')"/></xsl:attribute>
+		  <xsl:attribute name="name"><xsl:value-of select="translate(normalize-space(description), ' ', '-')"/></xsl:attribute>
+		  <xsl:attribute name="href">#<xsl:value-of select="translate(normalize-space(description), ' ', '-')"/></xsl:attribute>
 		  <xsl:value-of select="description"/></a></h1><br/>
 
 		<xsl:variable name="cat-short" select="name"/>
@@ -108,9 +108,9 @@
   <xsl:template match="project">
     <h2><a>
 	<xsl:attribute name="name"><xsl:value-of
-	  select="translate(title, ' ', '-')"/></xsl:attribute>
+	  select="translate(normalize-space(title), ' ', '-')"/></xsl:attribute>
 	  <xsl:attribute name="href">#<xsl:value-of
-	  select="translate(title, ' ', '-')"/></xsl:attribute>
+	  select="translate(normalize-space(title), ' ', '-')"/></xsl:attribute>
 	  <xsl:value-of select="title"/></a></h2>
 
     <xsl:apply-templates select="links"/>
