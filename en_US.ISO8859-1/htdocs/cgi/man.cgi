@@ -614,6 +614,7 @@ $manPathDefault = 'FreeBSD 10.3-RELEASE';
     'Debian 5.0.10', "$manLocalDir/Debian-5.0.10/man:$manLocalDir/Debian-5.0.10/misc",
     'Debian 6.0.10', "$manLocalDir/Debian-6.0.10/man:$manLocalDir/Debian-6.0.10/misc",
     'Debian 7.7.0', "$manLocalDir/Debian-7.7.0",
+    'Debian 8.1.0', "$manLocalDir/Debian-8.1.0/man:$manLocalDir/Debian-8.1.0/misc",
 
     'HP-UX 11.22', "$manLocalDir/HP-UX-11.22",
     'HP-UX 11.20', "$manLocalDir/HP-UX-11.20",
