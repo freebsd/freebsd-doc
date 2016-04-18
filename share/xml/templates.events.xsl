@@ -142,8 +142,10 @@
       enddate/day &gt;= $curdate.day))]">
 
       <xsl:sort select="startdate/year" order="ascending"/>
-	<xsl:sort select="format-number(startdate/month, '00')" order="ascending"/>
-	<xsl:sort select="format-number(startdate/day, '00')" order="ascending"/>
+      <xsl:sort select="format-number(startdate/month, '00')"
+	order="ascending"/>
+      <xsl:sort select="format-number(startdate/day, '00')"
+	order="ascending"/>
 
       <h3>
 	<xsl:attribute name="id">
