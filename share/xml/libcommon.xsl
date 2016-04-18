@@ -253,11 +253,11 @@
 
     <p>Submissions should be in HTML. In keeping with the spirit of
       FreeBSD, we prefer user groups that are active and which conduct
-      their business in public.  If you can't find a group near you,
-      please consider finding other interested individuals near you
-      through <a
-      href="http://bsd.meetup.com/">http://bsd.meetup.com/</a> and
-      forming your own user group.</p>
+      their business in public.  If there is no local group,
+      <a
+      href="http://bsd.meetup.com/">http://bsd.meetup.com/</a> can
+      be used to locate interested individuals near by.  Consider
+      forming your own user group!</p>
 
     <h3>Regions:</h3>
   </xsl:template>
@@ -453,10 +453,9 @@
 
     <p>FreeBSD is a rapidly developing operating system.  Keeping up on
       the latest developments can be a chore!  To keep on top of things,
-      be sure and check this page periodically.  Also, you may wish to
-      subscribe to the
+      check this page periodically.  News is also announced on the
       <a href="https://lists.FreeBSD.org/mailman/listinfo/freebsd-announce">freebsd-announce
-	mailing list</a> or the <a href="rss.xml">RSS feed</a>.</p>
+	mailing list</a> and the <a href="rss.xml">RSS feed</a>.</p>
 
     <p>The following projects have their own news pages, which should
       be checked for project specific updates.</p>
@@ -470,8 +469,8 @@
       see the <a href="&base;/releases/index.html">Release Information</a>
       page.</p>
 
-    <p>For FreeBSD security information and a list of available
-      Security Advisories, please refer to the
+    <p>FreeBSD security information and a list of available
+      Security Advisories are available on the
       <a href="&base;/security/">Security Information</a> page.</p>
   </xsl:template>
 
@@ -482,19 +481,18 @@
 
   <!-- template: "html-news-list-press-preface" -->
   <xsl:template name="html-news-list-press-preface">
-    <p>If you know of any news stories featuring FreeBSD that we have
-      not listed here, please send details to <a
-	href="mailto:freebsd-doc@FreeBSD.org">freebsd-doc@FreeBSD.org</a>
-      so that we can include them.</p>
+    <p>Please send details of any news stories featuring FreeBSD
+      to <a
+	href="mailto:freebsd-doc@FreeBSD.org">freebsd-doc@FreeBSD.org</a>.</p>
   </xsl:template>
 
   <xsl:template name="html-events-list-preface">
-    <p>If you know of any FreeBSD related events, or events that
-      are of interest for FreeBSD users, which are not listed here,
-      please send details to <a href="mailto:freebsd-doc@FreeBSD.org"
-	>freebsd-doc@FreeBSD.org</a>, so they can be included.</p>
+    <p>Please send details of any FreeBSD related events or events that
+      are of interest for FreeBSD users which are not listed here
+      to <a href="mailto:freebsd-doc@FreeBSD.org"
+	>freebsd-doc@FreeBSD.org</a>.</p>
 
-    <p>Users with organisational software that understands the
+    <p>Users with organizational software that uses the
       iCalendar format can subscribe to the
       <a href="&base;/events/events.ics">FreeBSD events calendar</a>
       which contains all of the events listed here.</p>
