@@ -3,7 +3,7 @@
 				"http://www.FreeBSD.org/XML/share/xml/xslt10-freebsd.dtd">
 <!-- $FreeBSD$ -->
 <!-- The FreeBSD Japanese Documentation Project -->
-<!-- Original revision: r45999 -->
+<!-- Original revision: r48667 -->
 
 <xsl:stylesheet version="1.0"
   xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
@@ -81,10 +81,10 @@
     <p>報告は HTML 形式でお願いします。
       FreeBSD のポリシーから、
       活発なユーザグループの活動の公開は好ましいことです。
-      近くにユーザグループがなければ、ぜひ <a
+      近くにユーザグループがなければ、<a
 	href="http://bsd.meetup.com/">http://bsd.meetup.com/</a>
-      を使って近所にいる興味を持っている個人を見つけ、
-      ユーザグループを作ってください。</p>
+      を使って近所にいる興味を持っている個人を見つけてください。
+      そして、あなた自身のユーザグループを作ってください!</p>
 
     <h3>地域</h3>
   </xsl:template>
@@ -96,10 +96,12 @@
 
     <p>FreeBSD は急速に発展を続けるオペレーティングシステムなので、
       最新の進歩について行くのが面倒になる時がありますよね。
-      情報通になるために、このページを定期的にチェックするようにしましょう。また、
+      情報通になるために、このページを定期的にチェックするようにしましょう。
+      ニュースは、
       <a href="https://lists.freebsd.org/mailman/listinfo/freebsd-announce">freebsd-announce
-	メーリングリスト</a> や <a href="&base;/news/rss.xml">RSS フィード</a>
-      を購読したいという方もいるかもしれませんね。</p>
+	メーリングリスト</a> および
+      <a href="&base;/news/rss.xml">RSS フィード</a>
+      でもアナウンスされます。</p>
 
     <p>それぞれのプロジェクトの最新情報は、次の各ウェブページをご覧ください。</p>
 
@@ -112,9 +114,9 @@
       <a href="&base;/releases/index.html">リリース情報</a>
       のページをご覧ください。</p>
 
-    <p>FreeBSD セキュリティ情報やセキュリティ勧告の一覧については、
+    <p>FreeBSD セキュリティ情報やセキュリティ勧告の一覧は、
       <a href="&base;/security/">セキュリティ情報</a>
-      のページをご覧ください。</p>
+      ページにあります。</p>
   </xsl:template>
 
   <!-- template: "html-news-list-newsflash-homelink" -->
@@ -143,8 +145,7 @@
 
   <!-- template: "html-news-list-press-preface" -->
   <xsl:template name="html-news-list-press-preface">
-    <p>ここに載っていない FreeBSD に関連したニュース記事をご存じなら、
-      我々がここに載せられるように詳細を <a
+    <p>FreeBSD に関連したニュース記事の詳細を <a
 	href="mailto:freebsd-doc@FreeBSD.org">freebsd-doc@FreeBSD.org</a>
       まで (英語で) 送ってください。</p>
   </xsl:template>
@@ -175,9 +176,8 @@
   </xsl:template>
 
   <xsl:template name="html-events-list-preface">
-    <p>ここに載っていない FreeBSD に関連したイベントや、
-      FreeBSD ユーザが興味をもちそうなイベントをご存じなら、
-      我々がここに載せられるように詳細を
+    <p>ここに掲載されていない FreeBSD に関連したイベントや、
+      FreeBSD ユーザが興味をもちそうなイベント詳細をご存知でしたら、
       <a href="mailto:freebsd-doc@FreeBSD.org">freebsd-doc@FreeBSD.org</a>
       まで (英語で) 送ってください。</p>
 
