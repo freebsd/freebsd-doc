@@ -412,20 +412,20 @@ ${DOC}.fo: ${DOC}.xml ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} ${DOC}.parsed.xml 
 
 .if ${RENDERENGINE} == "fop"
 ${DOC}.pdf: ${DOC}.fo ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG}
-	${SETENV} FOP_OPTS="${FOPJAVAOPTS}" ${FOP} ${FOPOPTS} ${DOC}.fo ${.TARGET}
+	${SETENV} FOP_OPTS="${FOPJAVAOPTS}" ${FOP} ${FOPOPTS} ${DOC}.fo -pdf ${.TARGET}
 
 ${DOC}.ps: ${DOC}.fo ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG}
-	${SETENV} FOP_OPTS="${FOPJAVAOPTS}" ${FOP} ${FOPOPTS} ${DOC}.fo ${.TARGET}
+	${SETENV} FOP_OPTS="${FOPJAVAOPTS}" ${FOP} ${FOPOPTS} ${DOC}.fo -ps ${.TARGET}
 
 ${DOC}.rtf: ${DOC}.fo ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG}
-	${SETENV} FOP_OPTS="${FOPJAVAOPTS}" ${FOP} ${FOPOPTS} ${DOC}.fo ${.TARGET}
+	${SETENV} FOP_OPTS="${FOPJAVAOPTS}" ${FOP} ${FOPOPTS} ${DOC}.fo -rtf ${.TARGET}
 .else
 # Default is dblatex
 ${DOC}.pdf: ${DOC}.parsed.xml ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG}
-	${DBLATEX} ${DOC}.parsed.print.xml ${DBLATEXOPTS} -o ${.TARGET}
+	${DBLATEX} ${DOC}.parsed.print.xml ${DBLATEXOPTS} -tpdf -o ${.TARGET}
 
 ${DOC}.ps: ${DOC}.parsed.xml ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG}
-	${DBLATEX} ${DOC}.parsed.print.xml ${DBLATEXOPTS} -o ${.TARGET}
+	${DBLATEX} ${DOC}.parsed.print.xml ${DBLATEXOPTS} -tps -o ${.TARGET}
 .endif
 
 
