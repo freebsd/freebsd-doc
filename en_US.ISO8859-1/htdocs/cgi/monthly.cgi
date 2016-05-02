@@ -224,7 +224,7 @@ print
 
    h3("Category:"),
    popup_menu(-name => "Category",
-       -values => ['proj', 'docs', 'kern', 'bin', 'arch', 'ports', 'vendor',
+       -values => ['proj', 'doc', 'kern', 'bin', 'arch', 'ports', 'vendor',
         'misc', 'soc', 'team'], -default => 'proj'),
 
    h3("Developers:"),
