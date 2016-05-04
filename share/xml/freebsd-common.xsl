@@ -53,7 +53,7 @@
     <xsl:variable name="pubdate">
       <xsl:choose>
 	<xsl:when test="contains(., '$FreeBSD')">
-	  <xsl:value-of select="str:split(., ' ')[4]"/>
+	  <xsl:value-of select="$latestrevision.timestamp"/>
 	</xsl:when>
 
         <xsl:otherwise>
@@ -64,7 +64,7 @@
 
     <xsl:variable name="committer">
       <xsl:if test="contains(., '$FreeBSD')">
-	<xsl:value-of select="str:split(., ' ')[6]"/>
+	<xsl:value-of select="$latestrevision.committer"/>
       </xsl:if>
     </xsl:variable>
 
@@ -91,7 +91,7 @@
   <xsl:template name="svnref.genlink"/>
 
   <xsl:template name="titlepage.releaseinfo">
-    <xsl:variable name="rev" select="str:split(., ' ')[3]"/>
+    <xsl:variable name="rev" select="$latestrevision.number"/>
 
     <xsl:call-template name="gentext">
       <xsl:with-param name="key" select="'Revision'"/>
