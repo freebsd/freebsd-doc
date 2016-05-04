@@ -264,7 +264,7 @@
   </xsl:template>
 
   <xsl:template name="titlepage.releaseinfo">
-    <xsl:variable name="rev" select="str:split(., ' ')[3]"/>
+    <xsl:variable name="rev" select="$latestrevision.number"/>
 
     <xsl:call-template name="gentext">
       <xsl:with-param name="key" select="'Revision'"/>
