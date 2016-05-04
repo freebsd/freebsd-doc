@@ -371,9 +371,16 @@ ${DOC}.html.tar: ${DOC}.html ${LOCAL_IMAGES_LIB} \
 ${DOC}.epub: ${DOC}.parsed.xml ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} \
 	${CSS_SHEET} ${XML_INCLUDES}
 	${XSLTPROC} ${XSLTPROCOPTS} ${XSLEPUB} ${DOC}.parsed.xml
-.if defined(LOCAL_IMAGES_LIB) || defined(LOCAL_IMAGES_PNG)
-.for f in ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG}
-	${CP} ${f} OEBPS/
+.if defined(LOCAL_IMAGES_LIB)
+.for f in ${LOCAL_IMAGES_LIB}
+	[ -d "OEBPS/${f:H}" ] || ${MKDIR} -pv "OEBPS/${f:H}"
+	${CP} ${f} OEBPS/${f}
+.endfor
+.endif
+.if defined(LOCAL_IMAGES_PNG)
+.for f in ${LOCAL_IMAGES_PNG}
+	[ -d "OEBPS/${f:H:T}" ] || ${MKDIR} -pv "OEBPS/${f:H:T}"
+	${CP} -v ${f} OEBPS/${f:H:T}/${f:T}
 .endfor
 .endif
 	${ZIP} ${ZIPOPTS} -r -X ${DOC}.epub mimetype OEBPS META-INF
