@@ -1,0 +1,127 @@
+--- crypto/openssl/crypto/asn1/a_type.c.orig
++++ crypto/openssl/crypto/asn1/a_type.c
+@@ -126,9 +126,7 @@
+         result = 0;             /* They do not have content. */
+         break;
+     case V_ASN1_INTEGER:
+-    case V_ASN1_NEG_INTEGER:
+     case V_ASN1_ENUMERATED:
+-    case V_ASN1_NEG_ENUMERATED:
+     case V_ASN1_BIT_STRING:
+     case V_ASN1_OCTET_STRING:
+     case V_ASN1_SEQUENCE:
+--- crypto/openssl/crypto/asn1/tasn_dec.c.orig
++++ crypto/openssl/crypto/asn1/tasn_dec.c
+@@ -903,9 +903,7 @@
+         break;
+ 
+     case V_ASN1_INTEGER:
+-    case V_ASN1_NEG_INTEGER:
+     case V_ASN1_ENUMERATED:
+-    case V_ASN1_NEG_ENUMERATED:
+         tint = (ASN1_INTEGER **)pval;
+         if (!c2i_ASN1_INTEGER(tint, &cont, len))
+             goto err;
+--- crypto/openssl/crypto/asn1/tasn_enc.c.orig
++++ crypto/openssl/crypto/asn1/tasn_enc.c
+@@ -611,9 +611,7 @@
+         break;
+ 
+     case V_ASN1_INTEGER:
+-    case V_ASN1_NEG_INTEGER:
+     case V_ASN1_ENUMERATED:
+-    case V_ASN1_NEG_ENUMERATED:
+         /*
+          * These are all have the same content format as ASN1_INTEGER
+          */
+--- crypto/openssl/crypto/evp/e_aes_cbc_hmac_sha1.c.orig
++++ crypto/openssl/crypto/evp/e_aes_cbc_hmac_sha1.c
+@@ -59,6 +59,7 @@
+ # include <openssl/aes.h>
+ # include <openssl/sha.h>
+ # include "evp_locl.h"
++# include "constant_time_locl.h"
+ 
+ # ifndef EVP_CIPH_FLAG_AEAD_CIPHER
+ #  define EVP_CIPH_FLAG_AEAD_CIPHER       0x200000
+@@ -286,6 +287,8 @@
+             maxpad |= (255 - maxpad) >> (sizeof(maxpad) * 8 - 8);
+             maxpad &= 255;
+ 
++            ret &= constant_time_ge(maxpad, pad);
++
+             inp_len = len - (SHA_DIGEST_LENGTH + pad + 1);
+             mask = (0 - ((inp_len - len) >> (sizeof(inp_len) * 8 - 1)));
+             inp_len &= mask;
+--- crypto/openssl/crypto/evp/encode.c.orig
++++ crypto/openssl/crypto/evp/encode.c
+@@ -57,6 +57,7 @@
+  */
+ 
+ #include <stdio.h>
++#include <limits.h>
+ #include "cryptlib.h"
+ #include <openssl/evp.h>
+ 
+@@ -151,13 +152,13 @@
+                       const unsigned char *in, int inl)
+ {
+     int i, j;
+-    unsigned int total = 0;
++    size_t total = 0;
+ 
+     *outl = 0;
+     if (inl <= 0)
+         return;
+     OPENSSL_assert(ctx->length <= (int)sizeof(ctx->enc_data));
+-    if ((ctx->num + inl) < ctx->length) {
++    if (ctx->length - ctx->num > inl) {
+         memcpy(&(ctx->enc_data[ctx->num]), in, inl);
+         ctx->num += inl;
+         return;
+@@ -174,7 +175,7 @@
+         *out = '\0';
+         total = j + 1;
+     }
+-    while (inl >= ctx->length) {
++    while (inl >= ctx->length && total <= INT_MAX) {
+         j = EVP_EncodeBlock(out, in, ctx->length);
+         in += ctx->length;
+         inl -= ctx->length;
+@@ -183,6 +184,11 @@
+         *out = '\0';
+         total += j + 1;
+     }
++    if (total > INT_MAX) {
++        /* Too much output data! */
++        *outl = 0;
++        return;
++    }
+     if (inl != 0)
+         memcpy(&(ctx->enc_data[0]), in, inl);
+     ctx->num = inl;
+--- crypto/openssl/crypto/evp/evp_enc.c.orig
++++ crypto/openssl/crypto/evp/evp_enc.c
+@@ -334,7 +334,7 @@
+     bl = ctx->cipher->block_size;
+     OPENSSL_assert(bl <= (int)sizeof(ctx->buf));
+     if (i != 0) {
+-        if (i + inl < bl) {
++        if (bl - i > inl) {
+             memcpy(&(ctx->buf[i]), in, inl);
+             ctx->buf_len += inl;
+             *outl = 0;
+--- crypto/openssl/crypto/x509/x509_obj.c.orig
++++ crypto/openssl/crypto/x509/x509_obj.c
+@@ -117,8 +117,9 @@
+             type == V_ASN1_PRINTABLESTRING ||
+             type == V_ASN1_TELETEXSTRING ||
+             type == V_ASN1_VISIBLESTRING || type == V_ASN1_IA5STRING) {
+-            ascii2ebcdic(ebcdic_buf, q, (num > sizeof ebcdic_buf)
+-                         ? sizeof ebcdic_buf : num);
++            if (num > (int)sizeof(ebcdic_buf))
++                num = sizeof(ebcdic_buf);
++            ascii2ebcdic(ebcdic_buf, q, num);
+             q = ebcdic_buf;
+         }
+ #endif
