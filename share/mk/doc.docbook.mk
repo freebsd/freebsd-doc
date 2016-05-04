@@ -84,6 +84,18 @@ CSS_SHEET?=	${DOC_PREFIX}/share/misc/docbook.css
 #
 NO_SUBDIR=      YES
 
+#
+# Determine latest revision
+#
+LATESTREVISION!=${GREP} -Ehos '\$$[F]reeBSD: ([^\$$ ]+ ){5}\$$' ${SRCS} | \
+		${AWK} '{ print \
+		  " --param latestrevision.timestamp \"'\''"$$4" "$$5"'\''\"" \
+		  " --param latestrevision.committer \"'\''"$$6"'\''\"" \
+		  " --param latestrevision.number \"'\''"$$3"'\''\"" \
+		}' | ${SORT} | ${TAIL} -n1
+
+XSLTPROCOPTS+=	${LATESTREVISION}
+
 # ------------------------------------------------------------------------
 #
 # Look at ${FORMATS} and work out which documents need to be generated.
