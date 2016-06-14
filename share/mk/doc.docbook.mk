@@ -87,12 +87,35 @@ NO_SUBDIR=      YES
 #
 # Determine latest revision
 #
+# This needs to contain all of:
+# --param latestrevision.timestamp "'timestamp'"
+# --param latestrevision.committer "'committer'"
+# --param latestrevision.number "'revision id'"
+
+# If using git, use git log.  The revision won't work with the generated links,
+# because it is a hash, and git log doesn't know about git svn find-rev.
+.if exists(${DOC_PREFIX}/.git)
+LATESTREVISION!=cd ${.CURDIR} && git log -1 \
+	--pretty=format:'--param latestrevision.timestamp "'\''%ci'\''" --param latestrevision.committer "'\''%cn'\''" --param latestrevision.number "'\''%h'\''"' \
+	${SRCS}
+.else
+# svn doesn't allow multiple files passed to it, so try to get the latest with grep
 LATESTREVISION!=${GREP} -Ehos '\$$[F]reeBSD: ([^\$$ ]+ ){5}\$$' ${SRCS} | \
 		${AWK} '{ print \
 		  " --param latestrevision.timestamp \"'\''"$$4" "$$5"'\''\"" \
 		  " --param latestrevision.committer \"'\''"$$6"'\''\"" \
 		  " --param latestrevision.number \"'\''"$$3"'\''\"" \
 		}' | ${SORT} | ${TAIL} -n1
+.endif
+
+# And sometime, strange things happen, so let's try to be a bit clever so that
+# we always have something to output, so use file on the file modified last,
+# and use its changed timestamp, user.  Leave the revision as blank.
+.if empty(LATESTREVISION)
+LATESTREVISION!=stat -t '%F %T %Z' \
+	-f '--param latestrevision.timestamp "'\''%Sc'\''" --param latestrevision.committer "'\''%Su'\''" --param latestrevision.number "'\'''\''"' \
+	$(ls -t1 ${SRCS}|head -1)
+.endif
 
 XSLTPROCOPTS+=	${LATESTREVISION}
 
