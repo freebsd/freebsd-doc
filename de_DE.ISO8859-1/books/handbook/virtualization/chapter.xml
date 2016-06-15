@@ -5,12 +5,21 @@
 
      $FreeBSD$
      $FreeBSDde: de-docproj/books/handbook/virtualization/chapter.xml,v 1.14 2010/07/03 14:29:30 jkois Exp $
-     basiert auf: r41062
+     basiert auf: r44406
 -->
 <chapter xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink" version="5.0" xml:id="virtualization">
   <info><title>Virtualisierung</title>
     <authorgroup>
       <author><personname><firstname>Murray</firstname><surname>Stokely</surname></personname><contrib>Beigetragen von </contrib></author>
+    </authorgroup>
+    <authorgroup>
+      <author>
+	<personname>
+	  <firstname>Allan</firstname>
+	  <surname>Jude</surname>
+	</personname>
+	<contrib>bhyve Abschnitt beigetragen von </contrib>
+      </author>
     </authorgroup>
     <authorgroup>
       <author><personname><firstname>Oliver</firstname><surname>Peter</surname></personname><contrib>Übersetzt von </contrib></author>
@@ -1160,8 +1169,10 @@ EndSection</programlisting>
     </sect2>
   </sect1>
 
-  <sect1 xml:id="virtualization-host">
-    <info><title>&os; als Host</title>
+  <sect1 xml:id="virtualization-host-virtualbox">
+    <info><title>&os; als Host mit
+      <application>Virtualbox</application></title>
+
       <authorgroup>
         <author><personname><firstname>Benedict</firstname><surname>Reuschling</surname></personname><contrib>Übersetzt von </contrib></author>
         <author><personname><firstname>Christoph</firstname><surname>Sold</surname></personname></author>
@@ -1339,11 +1350,353 @@ add path 'usb/*' mode 0660 group operator</programlisting>
 	Berechtigungen für diese Geräte werden mit folgenden Zeilen
 	in <filename>/etc/devfs.conf</filename> konfiguriert:</para>
 
-      <programlisting>perm cd* 0600
+      <programlisting>perm cd* 0660
 perm xpt0 0660
 perm pass* 0660</programlisting>
 
       <screen>&prompt.root; <userinput>service devfs restart</userinput></screen>
+    </sect2>
+  </sect1>
+
+  <sect1 xml:id="virtualization-host-bhyve">
+    <info>
+      <title>&os; als Host mit
+	<application>bhyve</application></title>
+
+      <authorgroup>
+	<author>
+	  <personname>
+	    <firstname>Björn</firstname>
+	    <surname>Heidotting</surname>
+	  </personname>
+	  <contrib>Übersetzt von </contrib>
+	</author>
+      </authorgroup>
+    </info>
+
+    <para>Beginnend mit &os; 10.0-RELEASE ist
+      <application>bhyve</application>, ein
+      <acronym>BSD</acronym>-lizensierter Hypervisor, Teil des
+      Basissystems.  Dieser Hypervisor unterstützt eine Reihe von
+      Gastbetriebssystemen, darunter &os;, OpenBSD und viele &linux;
+      Distributionen.  Derzeit unterstützt
+      <application>bhyve</application> nur eine serielle Konsole und
+      kann keine graphische Konsole emulieren.
+      <application>bhyve</application> verwendet Offload-Funktionen
+      von neueren <acronym>CPU</acronym>s, um manuelle
+      Speicherzuordnungen und Anweisungen zu vermeiden.</para>
+
+    <para>Das Design von <application>bhyve</application> erfordert
+      einen Prozessor, der &intel; Extended Page Tables
+      (<acronym>EPT</acronym>), &amd; Rapid Vitualization
+      Indexing (<acronym>RVI</acronym>) oder Nested Page Tables
+      (<acronym>NPT</acronym>) unterstützt.  &os;- oder
+      &linux;-Gastsysteme mit mehr als einer <acronym>vCPU</acronym>
+      benötigen <acronym>VMX</acronym> unrestricted mode support
+      (<acronym>UG</acronym>).  Die meisten neueren Prozessoren,
+      speziell &intel;&nbsp;&core; i3/i5/i7 und &intel;&nbsp;&xeon;
+      E3/E5/E7, unterstützen diese Funktionen.  Unterstützung für
+      <acronym>UG</acronym> wurde mit Intel's Westmere
+      Mikroarchitektur eingeführt.  Eine vollständige Liste der
+      &intel;-Prozessoren mit <acronym>EPT</acronym>-Unterstützung
+      finden Sie unter <link
+	xlink:href="http://ark.intel.com/search/advanced?s=t&amp;ExtendedPageTables=true"/>.
+      <acronym>RVI</acronym> wird seit der dritten Generation der
+      &amd.opteron;-Prozessoren (Barcelona) unterstützt.  Um zu sehen
+      ob der Prozessor <application>bhyve</application> unterstützt,
+      prüfen Sie die Ausgabe von <command>dmesg</command> oder
+      <filename>/var/run/dmesg.boot</filename>.  Für &amd;-Prozessoren
+      suchen Sie in der Zeile <literal>Features2</literal> nach
+      <literal>POPCNT</literal>.  Für &intel;-Prozessoren suchen Sie
+      in der Zeile <literal>VT-x</literal> nach <literal>EPT</literal>
+      und <literal>UG</literal>.</para>
+
+    <sect2 xml:id="virtualization-bhyve-prep">
+      <title>Vorbereitung des Hosts</title>
+
+      <para>Der erste Schritt bei der Erstellung einer virtuellen
+	Maschine in <application>bhyve</application> ist die
+	Konfiguration des Host-Systems.  Laden Sie zunächst das
+	<application>bhyve</application> Kernelmodul:</para>
+
+      <screen>&prompt.root; <userinput>kldload vmm</userinput></screen>
+
+      <para>Erstellen Sie ein <filename>tap</filename>-Gerät, um
+	dieses mit der Netzwerk-Schnittstelle der virtuellen Maschine
+	zu verbinden.  Damit sich die Schnittstelle mit dem
+	Netzwerk verbinden kann, müssen Sie zusätzlich eine
+	Bridge-Schnittstelle erzeugen, bestehend aus dem
+	<filename>tap</filename>-Gerät und der physikalischen
+	Schnittstelle.  In diesem Beispiel wird die physikalische
+	Schnittstelle <filename>igb0</filename> verwendet:</para>
+
+      <screen>&prompt.root; <userinput>ifconfig <replaceable>tap0</replaceable> create</userinput>
+&prompt.root; <userinput>sysctl net.link.tap.up_on_open=1</userinput>
+net.link.tap.up_on_open: 0 -> 1
+&prompt.root; <userinput>ifconfig <replaceable>bridge0</replaceable> create</userinput>
+&prompt.root; <userinput>ifconfig <replaceable>bridge0</replaceable> addm <replaceable>igb0</replaceable> addm <replaceable>tap0</replaceable></userinput>
+&prompt.root; <userinput>ifconfig <replaceable>bridge0</replaceable> up</userinput></screen>
+    </sect2>
+
+    <sect2 xml:id="virtualization-bhyve-freebsd">
+      <title>Ein &os;-Gastsystem erstellen</title>
+
+      <para>Erzeugen Sie eine Datei, die als virtuelle Festplatte
+	für das Gastsystem verwendet wird.  Geben Sie die Größe und
+	den Namen der virtuellen Festplatte an:</para>
+
+      <screen>&prompt.root; <userinput>truncate -s <replaceable>16G</replaceable> <replaceable>guest.img</replaceable></userinput></screen>
+
+      <para>Laden Sie ein Installationsabbild von &os;:</para>
+
+      <screen>&prompt.root; <userinput>fetch <replaceable>ftp://ftp.freebsd.org/pub/FreeBSD/releases/ISO-IMAGES/10.2/FreeBSD-10.2-RELEASE-amd64-bootonly.iso</replaceable></userinput>
+FreeBSD-10.2-RELEASE-amd64-bootonly.iso       100% of  230 MB  570 kBps 06m17s</screen>
+
+      <para>&os; enthält ein Beispielskript um eine virtuelle Maschine
+	in <application>bhyve</application> auszuführen.  Das Skript
+	wird die virtuelle Maschine starten und sie in einer Schleife
+	ausführen.  Sollte die virtuelle Maschine abstürzen, wird sie
+	vom Skript automatisch neu gestartet.  Das Skript akzeptiert
+	einige Optionen, um die Konfiguration der virtuellen Maschine
+	zu kontrollieren: <option>-c</option> bestimmt die Anzahl der
+	virtuellen <acronym>CPU</acronym>s, <option>-m</option>
+	begrenzt den verfügbaren Speicher des Gastsystems,
+	<option>-t</option> bestimmt das verwendete
+	<filename>tap</filename>-Gerät, <option>-d</option> gibt das
+	zu benutzende Festplattenabbild an, <option>-i</option> sagt
+	<application>bhyve</application> dass es von
+	<acronym>CD</acronym> booten soll und <option>-I</option>
+	bestimmt das <acronym>CD</acronym>-Abbild.  Der letzte
+	Parameter ist der Name der virtuellen Maschine.  Dieses
+	Beispiel startet die virtuelle Maschine im
+	Installationsmodus:</para>
+
+      <screen>&prompt.root; <userinput>sh /usr/share/examples/bhyve/vmrun.sh -c <replaceable>4</replaceable> -m <replaceable>1024M</replaceable> -t <replaceable>tap0</replaceable> -d <replaceable>guest.img</replaceable> -i -I <replaceable>FreeBSD-10.0-RELEASE-amd64-bootonly.iso</replaceable> <replaceable>guestname</replaceable></userinput></screen>
+
+      <para>Die virtuelle Maschine wird starten und das
+	Installationsprogramm ausführen.  Nachdem das System in der
+	virtuellen Maschine installiert ist, werden Sie gefragt, ob
+	eine Shell gestartet werden soll. Wählen Sie
+	<guibutton>Yes</guibutton>.  Es muss noch eine kleine Änderung
+	vorgenommen werden, damit das System mit einer seriellen
+	Konsole startet.  Bearbeiten Sie
+	<filename>/etc/ttys</filename> und ersetzen Sie die vorhandene
+	<literal>ttyu0</literal>-Zeile durch:</para>
+
+      <programlisting>ttyu0   "/usr/libexec/getty 3wire"   xterm  on secure</programlisting>
+
+      <note>
+	<para>Beginnend mit &os;&nbsp;9.3-RELEASE und 10.1-RELEASE
+	  wird die Konsole automatisch konfiguriert.</para>
+      </note>
+
+      <para>Starten Sie die virtuelle Maschine neu.  Ein Neustart der
+	virtuellen Maschine wird <application>bhyve</application>
+	beenden, aber da das <filename>vmrun.sh</filename>-Skript in
+	einer Schleife läuft, wird <application>bhyve</application>
+	automatisch neu gestartet.  Wenn dies passiert, wählen Sie die
+	Option <literal>Reboot</literal> im Bootloader-Menü, um die
+	Schleife zu unterbrechen.  Anschließend kann das Gastsystem
+	von der virtuellen Festplatte gestartet werden:</para>
+
+      <screen>&prompt.root; <userinput>sh /usr/share/examples/bhyve/vmrun.sh -c <replaceable>4</replaceable> -m <replaceable>1024M</replaceable> -t <replaceable>tap0</replaceable> -d <replaceable>guest.img</replaceable> <replaceable>guestname</replaceable></userinput></screen>
+    </sect2>
+
+    <sect2 xml:id="virtualization-bhyve-linux">
+      <title>Ein &linux;-Gastsystem erstellen</title>
+
+      <para>Um andere Betriebssysteme als &os; zu booten, muss
+	zunächst der Port <package>sysutils/grub2-bhyve</package>
+	installiert werden.</para>
+
+      <para>Als nächstes erzeugen Sie eine Datei, die das Gastsystem
+	als virtuelle Festplatte verwenden kann:</para>
+
+      <screen>&prompt.root; <userinput>truncate -s <replaceable>16G</replaceable> <replaceable>linux.img</replaceable></userinput></screen>
+
+      <para>Der Start einer virtuellen Maschine mit
+	<application>bhyve</application> ist ein zweistufiger Prozess.
+	Zuerst muss ein Kernel geladen werden, dann kann das
+	Gastsystem gestartet werden.  Der &linux;-Kernel wird mit
+	<package>sysutils/grub2-bhyve</package> geladen.  Erstellen
+	Sie eine <filename>device.map</filename>, damit
+	<application>grub</application> die virtuellen Geräte den
+	Dateien auf dem Hostsystem zuordnen kann:</para>
+
+      <programlisting>(hd0) ./linux.img
+(cd0) ./somelinux.iso</programlisting>
+
+      <para>Benutzen Sie <package>sysutils/grub2-bhyve</package> um
+	den &linux;-Kernel vom <acronym>ISO</acronym>-Abbild zu
+	laden:</para>
+
+      <screen>&prompt.root; <userinput>grub-bhyve -m device.map -r cd0 -M <replaceable>1024M</replaceable> <replaceable>linuxguest</replaceable></userinput></screen>
+
+      <para>Damit wird <application>grub</application> gestartet.
+	Wenn die Installations-<acronym>CD</acronym> eine Datei namens
+	<filename>grub.cfg</filename> enthält, wird ein Menü
+	angezeigt.  Wenn nicht, müssen die Dateien
+	<filename>vmlinuz</filename> und <filename>initrd</filename>
+	manuell geladen werden:</para>
+
+      <screen>grub> <userinput>ls</userinput>
+(hd0) (cd0) (cd0,msdos1) (host)
+grub> <userinput>ls (cd0)/isolinux</userinput>
+boot.cat boot.msg grub.conf initrd.img isolinux.bin isolinux.cfg memtest
+splash.jpg TRANS.TBL vesamenu.c32 vmlinuz
+grub> <userinput>linux (cd0)/isolinux/vmlinuz</userinput>
+grub> <userinput>initrd (cd0)/isolinux/initrd.img</userinput>
+grub> <userinput>boot</userinput></screen>
+
+      <para>Nun, da der &linux;-Kernel geladen ist, kann das
+	Gastsystem gestartet werden:</para>
+
+      <screen>&prompt.root; <userinput>bhyve -A -H -P -s 0:0,hostbridge -s 1:0,lpc -s 2:0,virtio-net,<replaceable>tap1</replaceable> -s 3:0,virtio-blk,<replaceable>./linux.img</replaceable> \
+    -s 4:0,ahci-cd,<replaceable>./somelinux.iso</replaceable> -l com1,stdio -c <replaceable>4</replaceable> -m <replaceable>1024M</replaceable> <replaceable>linuxguest</replaceable></userinput></screen>
+
+      <para>Das System wird booten und das Installtionsprogramm
+	starten.  Starten Sie die virtuelle Maschine nach der
+	Installation des Betriebssystems neu.  Dies führt auch dazu,
+	dass <application>bhyve</application> beendet wird.  Die
+	Instanz der virtuellen Maschine muss zerstört werden, bevor
+	sie erneut in Betrieb genommen werden kann:</para>
+
+      <screen>&prompt.root; <userinput>bhyvectl --destroy --vm=<replaceable>linuxguest</replaceable></userinput></screen>
+
+      <para>Nun kann das Gastsystem direkt von der virtuellen
+	Festplatte gestartet werden.  Laden Sie den Kernel:</para>
+
+      <screen>&prompt.root; <userinput>grub-bhyve -m device.map -r hd0,msdos1 -M <replaceable>1024M</replaceable> <replaceable>linuxguest</replaceable></userinput>
+grub> <userinput>ls</userinput>
+(hd0) (hd0,msdos2) (hd0,msdos1) (cd0) (cd0,msdos1) (host)
+(lvm/VolGroup-lv_swap) (lvm/VolGroup-lv_root)
+grub> <userinput>ls (hd0,msdos1)/</userinput>
+lost+found/ grub/ efi/ System.map-2.6.32-431.el6.x86_64 config-2.6.32-431.el6.x
+86_64 symvers-2.6.32-431.el6.x86_64.gz vmlinuz-2.6.32-431.el6.x86_64
+initramfs-2.6.32-431.el6.x86_64.img
+grub> <userinput>linux (hd0,msdos1)/vmlinuz-2.6.32-431.el6.x86_64 root=/dev/mapper/VolGroup-lv_root</userinput>
+grub> <userinput>initrd (hd0,msdos1)/initramfs-2.6.32-431.el6.x86_64.img</userinput>
+grub> <userinput>boot</userinput></screen>
+
+      <para>Starten Sie die virtuelle Maschine:</para>
+
+      <screen>&prompt.root; <userinput>bhyve -A -H -P -s 0:0,hostbridge -s 1:0,lpc -s 2:0,virtio-net,<replaceable>tap1</replaceable> \$    -s 3:0,virtio-blk,<replaceable>./linux.img</replaceable> -l com1,stdio -c <replaceable>4</replaceable> -m <replaceable>1024M</replaceable> <replaceable>linuxguest</replaceable></userinput></screen>
+
+      <para>&linux; wird jetzt in der virtuellen Maschine gestartet
+	und präsentiert Ihnen vielleicht einen Anmeldeprompt.  Sie
+	können sich anmelden und die virtuelle Maschine benutzen.
+	Wenn Sie fertig sind, starten Sie die virtuelle Maschine neu,
+	um <application>bhyve</application> zu verlassen.
+	Anschließend zerstören Sie die Instanz der virtuellen
+	Maschine:</para>
+
+      <screen>&prompt.root; <userinput>bhyvectl --destroy --vm=<replaceable>linuxguest</replaceable></userinput></screen>
+    </sect2>
+
+    <sect2 xml:id="virtualization-bhyve-zfs">
+      <title>Verwendung von <acronym>ZFS</acronym> mit
+	<application>bhyve</application>-Gastsystemen</title>
+
+      <para>Wenn auf dem Host-Rechner <acronym>ZFS</acronym>
+	eingerichtet ist, können Sie <acronym>ZFS</acronym>-Volumes
+	anstelle eines Festplattenabbilds verwenden.  Dies kann
+	erhebliche Leistungsvorteile für das Gastsystem mit sich
+	bringen.  Ein <acronym>ZFS</acronym>-Volume kann wie folgt
+	erstellt werden:</para>
+
+      <screen>&prompt.root; <userinput>zfs create -V<replaceable>16G</replaceable> -o volmode=dev <replaceable>zroot/linuxdisk0</replaceable></userinput></screen>
+
+      <para>Geben Sie das <acronym>ZFS</acronym>-Volume beim Start
+	der virtuellen Maschine an:</para>
+
+      <screen>&prompt.root; <userinput>bhyve -A -H -P -s 0:0,hostbridge -s 1:0,lpc -s 2:0,virtio-net,<replaceable>tap1</replaceable> -s3:0,virtio-blk,<replaceable>/dev/zvol/zroot/linuxdisk0</replaceable> \
+    -l com1,<replaceable>stdio</replaceable> -c <replaceable>4</replaceable> -m <replaceable>1024M</replaceable> <replaceable>linuxguest</replaceable></userinput></screen>
+    </sect2>
+
+    <sect2 xml:id="virtualization-bhyve-nmdm">
+      <title>Konsolen in der virtuellen Maschine</title>
+
+      <para>Es ist vorteilhaft, die
+	<application>bhyve</application>-Konsole mit einem Werkzeug
+	wie <package>sysutils/tmux</package> oder
+	<package>sysutils/screen</package> zu bedienen.  Damit ist es
+	leicht, die Konsole zu verbinden oder zu trennen.  Es ist auch
+	möglich, die Konsole als Nullmodem-Gerät zu nutzen, auf das
+	Sie mit <command>cu</command> zugreifen können.  Laden Sie
+	dazu das <filename>nmdm</filename> Kernelmodul und ersetzen
+	Sie <option>-l com1,stdio</option> mit <option>-l
+	com1,/dev/nmdm0A</option>.  Die
+	<filename>/dev/nmdm</filename>-Geräte werden bei Bedarf
+	automatisch erstellt, jeweils paarweise, entsprechend den
+	beiden Enden eines Nullmodemkabels
+	(<filename>/dev/nmdm0A</filename> und
+	<filename>/dev/nmdm0B</filename>).  Weitere Informationen
+	finden Sie in &man.nmdm.4;.</para>
+
+      <screen>&prompt.root; <userinput>kldload nmdm</userinput>
+&prompt.root; <userinput>bhyve -A -H -P -s 0:0,hostbridge -s 1:0,lpc -s 2:0,virtio-net,<replaceable>tap1</replaceable> -s 3:0,virtio-blk,<replaceable>./linux.img</replaceable> \
+    -l com1,<replaceable>/dev/nmdm0A</replaceable> -c <replaceable>4</replaceable> -m <replaceable>1024M</replaceable> <replaceable>linuxguest</replaceable></userinput>
+&prompt.root; <userinput>cu -l <replaceable>/dev/nmdm0B</replaceable></userinput>
+Connected
+
+Ubuntu 13.10 handbook ttyS0
+
+handbook login:</screen>
+    </sect2>
+
+    <sect2 xml:id="virtualization-bhyve-managing">
+      <title>Virtuelle Maschinen verwalten</title>
+
+      <para>Für jede virtuelle Maschine wird unterhalb von
+	<filename>/dev/vmm</filename> ein Gerätename erzeugt.
+	Dadurch kann der Administrator einfach feststellen, welche
+	virtuellen Maschinen zur Zeit ausgeführt werden:</para>
+
+      <screen>&prompt.root; <userinput>ls -al /dev/vmm</userinput>
+total 1
+dr-xr-xr-x   2 root  wheel    512 Mar 17 12:19 ./
+dr-xr-xr-x  14 root  wheel    512 Mar 17 06:38 ../
+crw-------   1 root  wheel  0x1a2 Mar 17 12:20 guestname
+crw-------   1 root  wheel  0x19f Mar 17 12:19 linuxguest
+crw-------   1 root  wheel  0x1a1 Mar 17 12:19 otherguest</screen>
+
+      <para>Mit Hilfe von <command>bhyvectl</command> kann eine
+	virtuelle Maschine zerstört werden:</para>
+
+      <screen>&prompt.root; bhyvectl --destroy --vm=<replaceable>guestname</replaceable></screen>
+    </sect2>
+
+    <sect2 xml:id="virtualization-bhyve-onboot">
+      <title>Persistente Konfiguration</title>
+
+      <para>Um das System so zu konfigurieren, dass
+	<application>bhyve</application>-Gastsysteme beim Booten
+	gestartet werden, muss die folgenden Konfiguration in den
+	jeweiligen Dateien vorgenommen werden:</para>
+
+      <procedure>
+	<step>
+	  <title><filename>/etc/sysctl.conf</filename></title>
+
+	  <programlisting>net.link.tap.up_on_open=1</programlisting>
+	</step>
+
+	<step>
+	  <title><filename>/boot/loader.conf</filename></title>
+
+	  <programlisting>vmm_load="YES"
+nmdm_load="YES"
+if_bridge_load="YES"
+if_tap_load="YES"</programlisting>
+	</step>
+
+	<step>
+	  <title><filename>/etc/rc.conf</filename></title>
+
+	  <programlisting>cloned_interfaces="<replaceable>bridge0</replaceable> <replaceable>tap0</replaceable>"
+ifconfig_bridge0="addm <replaceable>igb0</replaceable> addm <replaceable>tap0</replaceable>"</programlisting>
+	</step>
+      </procedure>
     </sect2>
 
 <!--
