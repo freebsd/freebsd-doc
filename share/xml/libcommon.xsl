@@ -1153,13 +1153,13 @@
   </xsl:template>
 
   <!-- template: "html-index-news-project-items"
-       pulls in the 5 most recent project items -->
+       pulls in the 6 most recent project items -->
 
   <xsl:template name="html-index-news-project-items">
     <xsl:param name="news.project.xml-master" select="'none'" />
     <xsl:param name="news.project.xml" select="'none'" />
 
-    <xsl:for-each select="document($news.project.xml-master)/descendant::day[position() &lt; 5]">
+    <xsl:for-each select="document($news.project.xml-master)/descendant::day[position() &lt;= 6]">
       <xsl:variable name="year" select="ancestor::year/name" />
       <xsl:variable name="month" select="ancestor::month/name" />
       <xsl:variable name="day" select="name" />
@@ -1267,13 +1267,13 @@
   </xsl:template>
 
   <!-- template: "html-index-news-press-items"
-       pulls in the 5 most recent press items -->
+       pulls in the 6 most recent press items -->
 
   <xsl:template name="html-index-news-press-items">
     <xsl:param name="news.press.xml-master" select="'none'" />
     <xsl:param name="news.press.xml" select="''" />
 
-    <xsl:for-each select="document($news.press.xml-master)/descendant::story[position() &lt;= 5]">
+    <xsl:for-each select="document($news.press.xml-master)/descendant::story[position() &lt;= 6]">
       <xsl:variable name="year" select="../../name" />
       <xsl:variable name="month" select="../name" />
       <xsl:variable name="day" select="../name" />
