@@ -106,7 +106,22 @@
   <!-- A project creates a header, and then process the three components of
        a project report (links, contact details, project body) in turn -->
   <xsl:template match="project">
-    <h2><a>
+    <h2>
+    <xsl:if test="icon">
+      <xsl:variable name="icon">
+	<xsl:value-of select="icon"/>
+      </xsl:variable>
+
+      <xsl:element name="img">
+	<xsl:attribute name="src">
+	  <xsl:value-of select="concat('./images/', $icon)"/>
+	</xsl:attribute>
+	<xsl:attribute name="style">
+	  <xsl:text>display: inline</xsl:text>
+	</xsl:attribute>
+      </xsl:element>
+    </xsl:if>
+    <a>
 	<xsl:attribute name="name"><xsl:value-of
 	  select="translate(normalize-space(title), ' ', '-')"/></xsl:attribute>
 	  <xsl:attribute name="href">#<xsl:value-of
