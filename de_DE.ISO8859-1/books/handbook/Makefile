@@ -1,7 +1,7 @@
 #
 # $FreeBSD$
 # $FreeBSDde: de-docproj/books/handbook/Makefile,v 1.67 2011/12/31 12:27:25 bcr Exp $
-# basiert auf: r44423
+# basiert auf: r44889
 #
 # Build the FreeBSD Handbook in its German translation.
 #
@@ -41,6 +41,7 @@ IMAGES_EN+= bsdinstall/bsdinstall-adduser1.png
 IMAGES_EN+= bsdinstall/bsdinstall-adduser2.png
 IMAGES_EN+= bsdinstall/bsdinstall-adduser3.png
 IMAGES_EN+= bsdinstall/bsdinstall-boot-loader-menu.png
+IMAGES_EN+= bsdinstall/bsdinstall-boot-options-menu.png
 IMAGES_EN+= bsdinstall/bsdinstall-choose-mode.png
 IMAGES_EN+= bsdinstall/bsdinstall-config-components.png
 IMAGES_EN+= bsdinstall/bsdinstall-config-hostname.png
@@ -69,6 +70,7 @@ IMAGES_EN+= bsdinstall/bsdinstall-keymap-select-default.png
 IMAGES_EN+= bsdinstall/bsdinstall-mainexit.png
 IMAGES_EN+= bsdinstall/bsdinstall-netinstall-files.png
 IMAGES_EN+= bsdinstall/bsdinstall-netinstall-mirrorselect.png
+IMAGES_EN+= bsdinstall/bsdinstall-newboot-loader-menu.png
 IMAGES_EN+= bsdinstall/bsdinstall-part-entire-part.png
 IMAGES_EN+= bsdinstall/bsdinstall-part-guided-disk.png
 IMAGES_EN+= bsdinstall/bsdinstall-part-guided-manual.png
