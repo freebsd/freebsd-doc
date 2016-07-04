@@ -32,10 +32,16 @@ SED?=		/usr/bin/sed
 SETENV?=	/usr/bin/env
 SH?=		/bin/sh
 SORT?=		/usr/bin/sort
+STAT?=		/usr/bin/stat
 TAIL?=		/usr/bin/tail
 TOUCH?=		/usr/bin/touch
 TRUE?=		/usr/bin/true
 XARGS?=		/usr/bin/xargs
+
+#
+# Version control
+#
+GIT?=		/usr/local/bin/git
 
 #
 # Compession and decompression

@@ -88,33 +88,38 @@ NO_SUBDIR=      YES
 # Determine latest revision
 #
 # This needs to contain all of:
-# --param latestrevision.timestamp "'timestamp'"
-# --param latestrevision.committer "'committer'"
-# --param latestrevision.number "'revision id'"
+# --stringparam latestrevision.timestamp "timestamp"
+# --stringparam latestrevision.committer "committer"
+# --stringparam latestrevision.number "revision id"
 
 # If using git, use git log.  The revision won't work with the generated links,
 # because it is a hash, and git log doesn't know about git svn find-rev.
-.if exists(${DOC_PREFIX}/.git)
-LATESTREVISION!=cd ${.CURDIR} && git log -1 \
-	--pretty=format:'--param latestrevision.timestamp "'\''%ci'\''" --param latestrevision.committer "'\''%cn'\''" --param latestrevision.number "'\''%h'\''"' \
-	${SRCS}
+.if exists(${DOC_PREFIX}/.git) && exists(${GIT})
+LATESTREVISION!=cd ${.CURDIR} && ${GIT} log -1 --pretty=format:'\
+	--stringparam latestrevision.timestamp "%ci" \
+	--stringparam latestrevision.committer "%cn" \
+	--stringparam latestrevision.number "%h"' ${SRCS}
 .else
-# svn doesn't allow multiple files passed to it, so try to get the latest with grep
+# version numbers are expected to be in Subversion, but we cannot
+# require Subversion to be installed just to build the documents,
+# so use grep to find the version strings
 LATESTREVISION!=${GREP} -Ehos '\$$[F]reeBSD: ([^\$$ ]+ ){5}\$$' ${SRCS} | \
 		${AWK} '{ print \
-		  " --param latestrevision.timestamp \"'\''"$$4" "$$5"'\''\"" \
-		  " --param latestrevision.committer \"'\''"$$6"'\''\"" \
-		  " --param latestrevision.number \"'\''"$$3"'\''\"" \
+		  "--stringparam latestrevision.timestamp \""$$4" "$$5"\" " \
+		  "--stringparam latestrevision.committer \""$$6"\" " \
+		  "--stringparam latestrevision.number \""$$3"\" " \
 		}' | ${SORT} | ${TAIL} -n1
 .endif
 
-# And sometime, strange things happen, so let's try to be a bit clever so that
-# we always have something to output, so use file on the file modified last,
-# and use its changed timestamp, user.  Leave the revision as blank.
+# if neither Subversion nor Git revision numbers are available, use
+# the revision date from the timestamp of the most recent file and
+# set the revision number to "filedate"
 .if empty(LATESTREVISION)
-LATESTREVISION!=stat -t '%F %T %Z' \
-	-f '--param latestrevision.timestamp "'\''%Sc'\''" --param latestrevision.committer "'\''%Su'\''" --param latestrevision.number "'\'''\''"' \
-	$(ls -t1 ${SRCS}|head -1)
+LATESTREVISION!=${STAT} 2>/dev/null -t '%F %T %Z' -f '\
+	--stringparam latestrevision.timestamp "%Sc" \
+	--stringparam latestrevision.committer "%Su" \
+	--stringparam latestrevision.number "filedate"' \
+	${SRCS} | ${SORT} -r | ${TAIL} -n1
 .endif
 
 XSLTPROCOPTS+=	${LATESTREVISION}
