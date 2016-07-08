@@ -887,4 +887,148 @@
 	the update progress.</p>
     </body>
   </project>
+
+  <project cat='proj'>
+    <title>ASLR Interim State</title>
+
+    <contact>
+      <person>
+	<name>
+	  <given>Konstantin</given>
+	  <common>Belousov</common>
+	</name>
+	<email>kib@FreeBSD.org</email>
+      </person>
+    </contact>
+
+    <links>
+      <url href="http://kib.kiev.ua/kib/aslr">Patch home</url>
+    </links>
+
+    <body>
+      <p>This is an interim report on the technical state of the ASLR
+	patch.</p>
+
+      <p>The <tt>proccontrol(1)</tt> utility was written to manage and
+	query ASLR enforcement on a per-process basis.  It is required
+	for analyzing ASLR failures in specific programs.  This
+	utility leverages the <tt>procctl(2)</tt> interface which was
+	added to the previous version of the patch, with some bug
+	fixes.</p>
+
+      <p>With r300792, ASLR settings are reset to system-wide defaults
+	whenever a setuid binary is executed.</p>
+
+      <p>The command's syntax is:</p>
+
+      <p><tt>proccontrol -m (trace|aslr) [-q] [-s (enable|disable)]
+	[-p pid | command]</tt></p>
+
+      <p><tt>-m</tt> (specifies trace mode to control debugger
+	attachments)</p>
+
+      <p><tt>-q</tt> (queries the state of the specified mode for the
+	process with the PID specified by <tt>-p</tt> option)</p>
+
+      <p><tt>-e</tt> (toggles the feature on or off for the given
+	process or itself)</p>
+
+      <p>If the command is specified, it inherits the applied
+	settings from <tt>proccontrol</tt>.  For instance, to start a
+	build of a program with ASLR disabled, use
+	<tt>proccontrol -m aslr -s disable make</tt>.</p>
+
+      <p>The ports exp run was done with ASLR tuned up to the most
+	aggressive settings.  The results can be found in <a
+	  href="https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=208580">PR 208580</a>.</p>
+
+      <p>SBCL is an interesting case which illustrates several points.
+	It is much smaller than JDK, and its build system is easier to
+	work with.  The code provides a very non C-ish language
+	runtime which utilizes a lot of corner cases and non-standard
+	uses of VM, at least from the point of view of a typical C
+	programmer.</p>
+
+      <p>SBCL compiles Lisp forms into the machine native code and
+	manages its own arena for objects.  The precompiled Lisp
+	runtime is mapped from the <tt>core</tt> file.  SBCL relies on
+	the operating system's C runtime for the initial load of Lisp,
+	and needs a functional <tt>libc</tt> to issue many system
+	calls, including syscalls, as well as the dynamic loader.  The
+	end result is that there are unfixed <tt>mmap(2)</tt> calls
+	during both startup and runtime, interfering with the
+	<tt>MAP_FIXED mmaps</tt>.  The core file loading and arenas
+	are hard-coded to exist at fixed addresses.</p>
+
+      <p>This happens to work on the default address map, which is not
+	changed often, so the SBCL choices of the base addresses
+	evolved to work.  But any significant distortion of the
+	standard map results in <tt>SBCL mmap(MAP_FIXED)</tt> requests
+	to override memory from other allocators.</p>
+
+      <p>&os; uses the <tt>MAP_EXCL</tt> flag to <tt>mmap(2)</tt>,
+	which must be used in <tt>MAP_FIXED|MAP_EXCL</tt> form to
+	cause <tt>mmap(2)</tt> failure if the requested range is
+	already used.  I tried to force <tt>MAP_FIXED</tt> requests
+	from SBCL to implicitely set <tt>MAP_EXCL</tt>, but this did
+	not go well since SBCL sometimes pre-allocates regions for
+	later use with <tt>MAP_FIXED</tt>.  So, <tt>MAP_EXCL</tt>
+	mappings failed, dumping the process into <tt>ldb</tt>.</p>
+
+      <p>On Linux, if a kernel is detected in AS-randomization mode,
+	the initial SBCL runtime sets personality to non-random and
+	re-execs.  This might be a solution for &os; as well, after
+	the ASLR patch is committed, so that the <tt>procctl(2)</tt>
+	knob is officially available.</p>
+
+      <p>SBCL still has issues on Linux, even with re-exec, when
+	more aggressive randomization from PaX patch is applied, as
+	seen in <a
+	  href="https://bugs.launchpad.net/sbcl/+bug/1523213">bug
+	  1523213</a>.</p>
+
+      <p>The Emacs build procedure involves loading the
+	<tt>temacs</tt> image with the compiled Emacs Lisp files and
+	then dumping the memory to recreate the image with the
+	preloaded content, in order to shrink the start time.</p>
+
+      <p>Recent Emacs sources seem to generally avoid
+	<tt>MAP_FIXED</tt>, except in some situations.  When Emacs
+	does use the flag, it carefully checks that the selected
+	region is not busy.  In fact, Emacs would benefit from
+	<tt>MAP_EXCL</tt>.</p>
+
+      <p>I tried several runs of building Emacs and running the dumped
+	binary, but was not able to reproduce the issue.  It seems
+	that the code improved enough to tolerate ASLR both in Linux
+	and NetBSD without turning it off.</p>
+
+      <p>In my opinion, it is not reasonable to fight the issues in
+	the kernel as most of it is not fixable from the kernel side.
+	The <tt>procctl(2)</tt> interface and <tt>proccontrol(1)</tt>
+	utilities provide the override when needed, but are not
+	automated.</p>
+
+      <p>The set of ports which cannot be built with ASLR turned on
+	should be limited but fluid.  However, exp-runs may not
+	reliably uncover all problems due to randomization, as seen in
+	the Emacs example.  In the route to enable ASLR by default in
+	non-aggressive settings, the ports framework should provide an
+	option like <tt>ASLR_UNSAFE=yes</tt> which spawns
+	<tt>proccontrol -m aslr -s disable make</tt> for the build
+	stages of the unsafe port.  Users would still need to be aware
+	of <tt>proccontrol(1)</tt> in order to run the resulting
+	binary.</p>
+
+      <p>A recommended approach is a flag in the ELF binary to mark
+	it as not compatible with non-standard AS layouts.  This frees
+	users from having to use <tt>proccontrol(1)</tt>, but still
+	requires patching and upstreaming.  This approach is also
+	useful outside the context of ASLR.  However, the
+	mechanism is not yet ready, and developing it is a larger work
+	than ASLR itself.</p>
+    </body>
+
+    <sponsor>The FreeBSD Foundation</sponsor>
+  </project>
 </report>
