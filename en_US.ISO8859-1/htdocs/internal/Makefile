@@ -35,7 +35,7 @@ INDEXLINK=	internal.html
 # build the list of personal homepages of FreeBSD developers only
 # on the main FreeBSD machines
 hostname!= hostname
-.if !empty(hostname:M*.freebsd.org)
+.if !empty(hostname:tl:M*.freebsd.org)
 DOCS+=	homepage.xml
 
 .if !make(install)
