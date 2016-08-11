@@ -5,7 +5,7 @@
 ]>
 
 <!-- $FreeBSD$ -->
-<!-- Original revision: r48320 -->
+<!-- Original revision: r49131 -->
 
 <xsl:stylesheet version="1.0"
   xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
@@ -99,6 +99,8 @@
 			  <ul id="frontreleaseslist">
 			    <li>プロダクション:&nbsp;<a
 				href="&u.rel.announce;">&rel.current;</a>,
+					<a
+				href="&u.rel1.announce;">&rel1.current;</a>,
 					<a
 				href="&u.rel2.announce;">&rel2.current;</a>,
 					<a
