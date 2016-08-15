@@ -42,7 +42,7 @@
 		unique countries around the world.  There is also an
 		active <a href="&base;/community/irc.html">IRC</a>
 		community.  Many developers also maintain <a
-		href="http://planet.freebsdish.org">blogs</a> about
+		href="https://planet.freebsd.org">blogs</a> about
 	      	their &os; work.  Developers and key contributors
 		also maintain a <a
 		  href="http://wiki.FreeBSD.org/">wiki</a>, which
