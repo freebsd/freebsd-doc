@@ -10,6 +10,9 @@
 # <https://we.riseup.net/riseuplabs+paow/openpgp-best-practices#openpgp-key-checks>
 #
 
+# make sure we are in a well known language
+LANG=C
+
 \unalias -a
 
 progname=${0##*/}
