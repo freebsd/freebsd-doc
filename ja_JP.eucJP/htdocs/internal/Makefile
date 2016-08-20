@@ -1,6 +1,6 @@
 # $FreeBSD$
 # The FreeBSD Japanese Documentation Project
-# Original revision: r41462
+# Original revision: r49210
 
 .if exists(../Makefile.conf)
 .include "../Makefile.conf"
@@ -12,6 +12,7 @@
 DOCS+=  about.xml
 #DOCS+=	bylaws.xml
 #DOCS+=	clusteradm.xml
+#DOCS+=	code-of-conduct.xml
 #DOCS+=	core-vote.xml
 #DOCS+= data.xml
 DOCS+=	developer.xml
@@ -27,7 +28,8 @@ DOCS+=  mirror.xml
 #DOCS+=	policies.xml
 #DOCS+=	releng.xml
 #DOCS+=  resources.xml
-DOCS+=	statistic.xml
+#DOCS+=	statistic.xml
+#DOCS+=  software-license.xml
 #DOCS+=	working-with-hats.xml
 
 INDEXLINK=	internal.html
@@ -35,7 +37,7 @@ INDEXLINK=	internal.html
 # build the list of personal homepages of FreeBSD developers only
 # on the main FreeBSD machines
 #hostname!= hostname
-#.if !empty(hostname:M*.freebsd.org)
+#.if !empty(hostname:tl:M*.freebsd.org)
 #DOCS+=	homepage.xml
 #
 #.if !make(install)
@@ -48,6 +50,6 @@ INDEXLINK=	internal.html
 #CLEANFILES+=	homepage.inc
 #.endif
 #
-#DATA+=	README.mirror ssh-keys.asc
+#DATA+=	ssh-keys.asc
 
 .include "${DOC_PREFIX}/share/mk/web.site.mk"
