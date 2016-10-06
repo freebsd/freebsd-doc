@@ -6,7 +6,7 @@
 <!--
      $FreeBSD$
      $FreeBSDde$
-     basiert auf: 47418
+     basiert auf: 49131
 -->
 
 <xsl:stylesheet version="1.0"
@@ -89,6 +89,7 @@
 				  <ul id="frontreleaseslist">
 					<li>
 					  Produktion:&nbsp;<a href="&u.rel.announce;">&rel.current;</a>,
+					  <a href="&u.rel1.announce;">&rel1.current;</a>,
 					  <a href="&u.rel2.announce;">&rel2.current;</a>,
 					  <a href="&u.rel3.announce;">&rel3.current;</a>
 					</li>
@@ -167,8 +168,8 @@
 					  <a href="&base;/community/mailinglists.html" title="Mailinglisten">Mailinglisten</a>
 					</li>
 					<li>
-					  <a href="&base;/support/bugreports.html" title="Einen Fehler melden">
-					    Einen Fehler melden</a>
+					  <a href="&enbase;/support/bugreports.html" title="Ein Problem melden">
+					    Ein Problem melden</a>
 					</li>
 					<li>
 					  <a href="&enbase;/doc/&url.doc.langcode;/books/faq/index.html" title="FAQ">FAQ</a>
