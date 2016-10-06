@@ -168,7 +168,7 @@
 					  <a href="&base;/community/mailinglists.html" title="Mailinglisten">Mailinglisten</a>
 					</li>
 					<li>
-					  <a href="&enbase;/support/bugreports.html" title="Ein Problem melden">
+					  <a href="&base;/support/bugreports.html" title="Ein Problem melden">
 					    Ein Problem melden</a>
 					</li>
 					<li>
