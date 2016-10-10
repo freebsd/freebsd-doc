@@ -37,7 +37,7 @@ _BIGIRON?=	amd64 \
 
 _VMS?=		amd64 \
 		i386 \
-		aarch64
+		arm64-aarch64
 
 _ARM?=		BANANAPI \
 		BEAGLEBONE \
