@@ -2,7 +2,7 @@
 # The FreeBSD German Documentation Project
 # $FreeBSD$
 # $FreeBSDde$
-# basiert auf: r41060
+# basiert auf: r46611
 
 .if exists(Makefile.conf)
 .include "Makefile.conf"
@@ -19,7 +19,6 @@ DOCS+= applications.xml
 DOCS+= art.xml
 DOCS+= docs.xml
 DOCS+= features.xml
-DOCS+= internet.xml
 DOCS+= logo.xml
 DOCS+= mailto.xml
 DOCS+= relnotes.xml
@@ -31,8 +30,6 @@ DOCS+= where.xml
 
 #DATA=	favicon.ico
 #DATA+=	robots.txt
-#DATA+=	freebsd.css
-#DATA+=	vendors.html
 
 # Subdirectories
 # XML
@@ -41,8 +38,6 @@ SUBDIR+= developers
 SUBDIR+= docproj
 SUBDIR+= docs
 SUBDIR+= news
-SUBDIR+= FAQ
-SUBDIR+= handbook
 SUBDIR+= ipv6
 SUBDIR+= java
 SUBDIR+= platforms
