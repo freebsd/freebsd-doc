@@ -1,8 +1,8 @@
 # The FreeBSD Documentation Project
 # The FreeBSD German Documentation Project
 # $FreeBSD$
-# $FreeBSDde: de-www/Makefile,v 1.51 2011/06/13 21:33:54 jkois Exp $
-# basiert auf: 1.145
+# $FreeBSDde$
+# basiert auf: r41060
 
 .if exists(Makefile.conf)
 .include "Makefile.conf"
@@ -16,7 +16,6 @@
 DOCS= about.xml
 DOCS+= administration.xml
 DOCS+= applications.xml
-DOCS+= availability.xml
 DOCS+= art.xml
 DOCS+= docs.xml
 DOCS+= features.xml
