@@ -1358,4 +1358,70 @@
 	can.</p>
     </body>
   </project>
+
+  <project cat='kern'>
+    <title>Timekeeping Code Improvements</title>
+
+    <contact>
+      <person>
+	<name>
+	  <given>Konstantin</given>
+	  <common>Belousov</common>
+	</name>
+	<email>kib@FreeBSD.org</email>
+      </person>
+    </contact>
+
+    <body>
+      <p>Work was done to properly lock the time-keeping code.  The
+	existing code correctly interoperated with readers, both kernel-
+	and user-space, giving them lock-less access to the actual data
+	('timehands') needed to derive the time of day from the
+	timecounter hardware, in the presence of updaters.  But updates
+	of the timehands, which are performed by periodic clock
+	interrupts, the ntpd-driven sys_ntp_adjtime(2) syscall, the
+	settimeofday(2) syscall, pps sync, and possibly other sources,
+	were not coordinated.  Moreso, the NTP code was locked by Giant,
+	which did not really serve any purpose.</p>
+
+      <p>As result of the work, locking was applied to ensure that any
+	timehands adjustments are performed by single mutator.  An
+	interesting case is the parallel modification of the timehands
+	from the top of the kernel, for instance the settimeoday(2)
+	syscall, and a simultaneous clock tick event, where the syscall
+	has already acquired the resources.  In this case, it is highly
+	desirable to not block (spin) in the tick handler, and the
+	required adjustments are performed by the already executing call
+	from top half.  There, the typical trylock operation is desired,
+	which was surprisingly lacking from our spinlock implementation.
+	mtx_trylock_spin(9) was implemented and is used for this
+	purpose.</p>
+
+      <p>The userspace getttimeofday(2) implementation was enhanced to
+	allow syscall-less operation on machines that use HPET hardwire
+	for timecounters.  The HPET algorithm coexists with older
+	RDTSC-based code, allowing dynamic switching of timecounters.
+	HPET registers a page that is mmap(2)-ed readonly by libc into
+	userland application programs' address space as needed.
+	Measurements demonstrated modest improvements in gettimeofday(2)
+	performance, but not unexpectedly even the syscall-less HPET
+	timecounter is slower than invoking a syscall for RDTSC.</p>
+
+      <p>Some not strictly interwined but related code is the
+	time-bound sleep implementation.  Handling of races between
+	callouts and the top-half code that sets and processes the
+	timeouts depended on the many fine details of the
+	callout_stop(9) KPI (kernel programming interface).  In
+	particular, races or unpunctual KPI changes usually result in
+	the &quot;catch-all&quot; unkillable thread state with the
+	&quot;-&quot; waitchain bug.  The sleepqueue timeout code was
+	rewritten to stop depending on the KPI details, which removed
+	the source of recurring bugs, and also surprisingly simplified
+	the code.</p>
+    </body>
+
+    <sponsor>
+      The FreeBSD Foundation
+    </sponsor>
+  </project>
 </report>
