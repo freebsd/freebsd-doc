@@ -1424,4 +1424,105 @@
       The FreeBSD Foundation
     </sponsor>
   </project>
+
+  <project cat='arch'>
+    <title>UEFI Runtime Services</title>
+
+    <contact>
+      <person>
+	<name>
+	  <given>Konstantin</given>
+	  <common>Belousov</common>
+	</name>
+	<email>kib@FreeBSD.org</email>
+      </person>
+    </contact>
+
+    <body>
+      <p>UEFI (Unified Extensible Firmware Interface) specifies two
+	kinds of services for use by operating systems.  Boot Services are
+	designed for OS loaders to be able to load and initialize kernels,
+	while Runtime Services are supposed to be used by the kernels
+	during regular system operations.  The boot and runtime phases are
+	explicitely separated.  During boot, when loaders are executed,
+	the machine configuration is owned by UEFI.  During runtime, the
+	kernel manages the configuration, but needs to inform the firmware
+	about any changes that are made.</p>
+
+      <p>The model of split boot/runtime configuration makes assumptions
+	about the OS architecture that do not quite apply to the existing
+	&os; codebase.  For instance, the firmware notification of the
+	future runtime configuration must be done while the loader is
+	effectively still in control.  In technical terms, the
+	SetVirtualAddressMap() call must be made with the 1:1
+	physical:virtual mapping on amd64 systems, which for &os; means
+	that the call can be only issued by the loader.  But the loader
+	needs to know intimate details of the kernel address map to
+	provide the requested information.  This creates a new,
+	unfortunate, coupling between loader and kernel.</p>
+
+      <p>Reading the publicly available information about the MS
+	Windows boot process explained the UEFI control transfer
+	model.  The Windows loader constructs the address map for the
+	kernel, and with such a division of work the UEFI model is
+	reasonable.  The &os; kernel constructs its own address
+	space, only relying on a minimal map constructed by the
+	loader, which is enough for the pmap subsystem to bootstrap
+	itself and then to perform machine initialization in common
+	code.</p>
+
+      <p>Initial experiments with enabling runtime services were
+	centered around utilizing the direct address map (DMAP) on
+	amd64, which currently always exists and linearly maps at
+	least the lower 4G of physical addresses at some KVA location.
+	It was supposed that kernel would export the DMAP details like
+	linear base and guaranteed size for loader from its ELF image,
+	and provide the needed overflow map if the DMAP cannot
+	completely serve.  Unfortunately, two show-stopper bugs were
+	discovered with this approach.</p>
+
+      <p>First, EDK-based firmwares apparently require that the
+	runtime mapping exists simultaneously with the physical
+	mapping for the SetVirtualAddressMap() call.  Second, there
+	were references from other open-source projects mentioning
+	that some firmwares required the presence of the physical
+	mapping during runtime call.  Effectively, this forces both
+	kernel and loader to provide both mappings for all runtime
+	calls.</p>
+
+      <p>With such restrictions, informing the firmware about the
+	details of the kernel address space only adds useless work.
+	We could just as easily establish the 1:1 physical mapping
+	during runtime and get rid of SetVirtualAddressMap() entirely.
+	This approach was coded and the kernel interface to access
+	runtime services is based on it.</p>
+
+      <p>During the development, in particular, when trying to make
+	the loader modifications, it was quickly realized that there
+	were no fault-reporting facilities in loader.efi.  Machine
+	exceptions resulted in a silent hang.  Curiosly, in such a
+	situation the Intel firmware outputs the error code over the
+	serial port on 115200/8/1 settings, regardless of UEFI console
+	configuration, which was discovered by accident.
+	Unfortunately, the error code alone is not enough to diagnose
+	most problems.</p>
+
+      <p>A primitive fault reporter was written for loader.efi on
+	amd64, which intercepts exceptions from the firmware IDT and
+	dumps the machine state to the loader console.  Due to
+	complexity of the interception and possible bugs which might
+	do more harm than good there, the dumper is only activated by
+	explicit administrator action.</p>
+
+      <p>Note that the described work only provides the kernel
+	interfaces to make calling the EFI runtime services as easy as
+	calling a regular C function.  User-visible feature
+	development making use of the new interfaces is being
+	performed right now. </p>
+    </body>
+
+    <sponsor>
+      The FreeBSD Foundation
+    </sponsor>
+  </project>
 </report>
