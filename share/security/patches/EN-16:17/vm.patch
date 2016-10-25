@@ -1,0 +1,235 @@
+--- sys/kern/vfs_subr.c.orig
++++ sys/kern/vfs_subr.c
+@@ -2934,7 +2934,13 @@
+ 	    TAILQ_EMPTY(&vp->v_bufobj.bo_clean.bv_hd) &&
+ 	    vp->v_bufobj.bo_clean.bv_cnt == 0,
+ 	    ("vp %p bufobj not invalidated", vp));
+-	vp->v_bufobj.bo_flag |= BO_DEAD;
++
++	/*
++	 * For VMIO bufobj, BO_DEAD is set in vm_object_terminate()
++	 * after the object's page queue is flushed.
++	 */
++	if (vp->v_bufobj.bo_object == NULL)
++		vp->v_bufobj.bo_flag |= BO_DEAD;
+ 	BO_UNLOCK(&vp->v_bufobj);
+ 
+ 	/*
+--- sys/vm/vm_fault.c.orig
++++ sys/vm/vm_fault.c
+@@ -286,7 +286,7 @@
+ 	vm_prot_t prot;
+ 	long ahead, behind;
+ 	int alloc_req, era, faultcount, nera, reqpage, result;
+-	boolean_t growstack, is_first_object_locked, wired;
++	boolean_t dead, growstack, is_first_object_locked, wired;
+ 	int map_generation;
+ 	vm_object_t next_object;
+ 	vm_page_t marray[VM_FAULT_READ_MAX];
+@@ -423,11 +423,18 @@
+ 	fs.pindex = fs.first_pindex;
+ 	while (TRUE) {
+ 		/*
+-		 * If the object is dead, we stop here
++		 * If the object is marked for imminent termination,
++		 * we retry here, since the collapse pass has raced
++		 * with us.  Otherwise, if we see terminally dead
++		 * object, return fail.
+ 		 */
+-		if (fs.object->flags & OBJ_DEAD) {
++		if ((fs.object->flags & OBJ_DEAD) != 0) {
++			dead = fs.object->type == OBJT_DEAD;
+ 			unlock_and_deallocate(&fs);
+-			return (KERN_PROTECTION_FAILURE);
++			if (dead)
++				return (KERN_PROTECTION_FAILURE);
++			pause("vmf_de", 1);
++			goto RetryFault;
+ 		}
+ 
+ 		/*
+--- sys/vm/vm_meter.c.orig
++++ sys/vm/vm_meter.c
+@@ -93,30 +93,32 @@
+     CTLFLAG_MPSAFE, NULL, 0, sysctl_vm_loadavg, "S,loadavg",
+     "Machine loadaverage history");
+ 
++/*
++ * This function aims to determine if the object is mapped,
++ * specifically, if it is referenced by a vm_map_entry.  Because
++ * objects occasionally acquire transient references that do not
++ * represent a mapping, the method used here is inexact.  However, it
++ * has very low overhead and is good enough for the advisory
++ * vm.vmtotal sysctl.
++ */
++static bool
++is_object_active(vm_object_t obj)
++{
++
++	return (obj->ref_count > obj->shadow_count);
++}
++
+ static int
+ vmtotal(SYSCTL_HANDLER_ARGS)
+ {
+-	struct proc *p;
+ 	struct vmtotal total;
+-	vm_map_entry_t entry;
+ 	vm_object_t object;
+-	vm_map_t map;
+-	int paging;
++	struct proc *p;
+ 	struct thread *td;
+-	struct vmspace *vm;
+ 
+ 	bzero(&total, sizeof(total));
++
+ 	/*
+-	 * Mark all objects as inactive.
+-	 */
+-	mtx_lock(&vm_object_list_mtx);
+-	TAILQ_FOREACH(object, &vm_object_list, object_list) {
+-		VM_OBJECT_WLOCK(object);
+-		vm_object_clear_flag(object, OBJ_ACTIVE);
+-		VM_OBJECT_WUNLOCK(object);
+-	}
+-	mtx_unlock(&vm_object_list_mtx);
+-	/*
+ 	 * Calculate process statistics.
+ 	 */
+ 	sx_slock(&allproc_lock);
+@@ -136,11 +138,15 @@
+ 				case TDS_INHIBITED:
+ 					if (TD_IS_SWAPPED(td))
+ 						total.t_sw++;
+-					else if (TD_IS_SLEEPING(td) &&
+-					    td->td_priority <= PZERO)
+-						total.t_dw++;
+-					else
+-						total.t_sl++;
++					else if (TD_IS_SLEEPING(td)) {
++						if (td->td_priority <= PZERO)
++							total.t_dw++;
++						else
++							total.t_sl++;
++						if (td->td_wchan ==
++						    &cnt.v_free_count)
++							total.t_pw++;
++					}
+ 					break;
+ 
+ 				case TDS_CAN_RUN:
+@@ -158,29 +164,6 @@
+ 			}
+ 		}
+ 		PROC_UNLOCK(p);
+-		/*
+-		 * Note active objects.
+-		 */
+-		paging = 0;
+-		vm = vmspace_acquire_ref(p);
+-		if (vm == NULL)
+-			continue;
+-		map = &vm->vm_map;
+-		vm_map_lock_read(map);
+-		for (entry = map->header.next;
+-		    entry != &map->header; entry = entry->next) {
+-			if ((entry->eflags & MAP_ENTRY_IS_SUB_MAP) ||
+-			    (object = entry->object.vm_object) == NULL)
+-				continue;
+-			VM_OBJECT_WLOCK(object);
+-			vm_object_set_flag(object, OBJ_ACTIVE);
+-			paging |= object->paging_in_progress;
+-			VM_OBJECT_WUNLOCK(object);
+-		}
+-		vm_map_unlock_read(map);
+-		vmspace_free(vm);
+-		if (paging)
+-			total.t_pw++;
+ 	}
+ 	sx_sunlock(&allproc_lock);
+ 	/*
+@@ -206,9 +189,18 @@
+ 			 */
+ 			continue;
+ 		}
++		if (object->ref_count == 1 &&
++		    (object->flags & OBJ_NOSPLIT) != 0) {
++			/*
++			 * Also skip otherwise unreferenced swap
++			 * objects backing tmpfs vnodes, and POSIX or
++			 * SysV shared memory.
++			 */
++			continue;
++		}
+ 		total.t_vm += object->size;
+ 		total.t_rm += object->resident_page_count;
+-		if (object->flags & OBJ_ACTIVE) {
++		if (is_object_active(object)) {
+ 			total.t_avm += object->size;
+ 			total.t_arm += object->resident_page_count;
+ 		}
+@@ -216,7 +208,7 @@
+ 			/* shared object */
+ 			total.t_vmshr += object->size;
+ 			total.t_rmshr += object->resident_page_count;
+-			if (object->flags & OBJ_ACTIVE) {
++			if (is_object_active(object)) {
+ 				total.t_avmshr += object->size;
+ 				total.t_armshr += object->resident_page_count;
+ 			}
+--- sys/vm/vm_object.c.orig
++++ sys/vm/vm_object.c
+@@ -737,6 +737,10 @@
+ 
+ 		vinvalbuf(vp, V_SAVE, 0, 0);
+ 
++		BO_LOCK(&vp->v_bufobj);
++		vp->v_bufobj.bo_flag |= BO_DEAD;
++		BO_UNLOCK(&vp->v_bufobj);
++
+ 		VM_OBJECT_WLOCK(object);
+ 	}
+ 
+@@ -1722,6 +1726,9 @@
+ 		 * case.
+ 		 */
+ 		if (backing_object->ref_count == 1) {
++			vm_object_pip_add(object, 1);
++			vm_object_pip_add(backing_object, 1);
++
+ 			/*
+ 			 * If there is exactly one reference to the backing
+ 			 * object, we can collapse it into the parent.  
+@@ -1793,11 +1800,13 @@
+ 			KASSERT(backing_object->ref_count == 1, (
+ "backing_object %p was somehow re-referenced during collapse!",
+ 			    backing_object));
++			vm_object_pip_wakeup(backing_object);
+ 			backing_object->type = OBJT_DEAD;
+ 			backing_object->ref_count = 0;
+ 			VM_OBJECT_WUNLOCK(backing_object);
+ 			vm_object_destroy(backing_object);
+ 
++			vm_object_pip_wakeup(object);
+ 			object_collapses++;
+ 		} else {
+ 			vm_object_t new_backing_object;
+@@ -2130,6 +2139,7 @@
+ 		 */
+ 		if (!reserved && !swap_reserve_by_cred(ptoa(next_size),
+ 		    prev_object->cred)) {
++			VM_OBJECT_WUNLOCK(prev_object);
+ 			return (FALSE);
+ 		}
+ 		prev_object->charge += ptoa(next_size);
+--- sys/vm/vm_object.h.orig
++++ sys/vm/vm_object.h
+@@ -181,7 +181,6 @@
+  */
+ #define	OBJ_FICTITIOUS	0x0001		/* (c) contains fictitious pages */
+ #define	OBJ_UNMANAGED	0x0002		/* (c) contains unmanaged pages */
+-#define OBJ_ACTIVE	0x0004		/* active objects */
+ #define OBJ_DEAD	0x0008		/* dead objects (during rundown) */
+ #define	OBJ_NOSPLIT	0x0010		/* dont split this object */
+ #define OBJ_PIPWNT	0x0040		/* paging in progress wanted */
