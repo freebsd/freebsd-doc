@@ -21,13 +21,13 @@ DOCS+= send-pr.xml
 DOCS+= support.xml
 DOCS+= where.xml
 
-#XMLDOCS=	index:xsl:${XML_NEWS_NEWS}:
-#DEPENDSET.index=transtable mirrors news press events \
-#		advisories notices
+XMLDOCS=	index:xsl:${XML_NEWS_NEWS}:
+DEPENDSET.index=transtable mirrors news press events \
+		advisories notices
 
-#XMLDOCS+=	usergroups:${XSL_USERGROUPS}:${XML_USERGROUPS}:
-#DEPENDSET.usergroups=transtable usergroups
-#PARAMS.usergroups=	--param pagename "'FreeBSD User Groups'"
+XMLDOCS+=	usergroups:${XSL_USERGROUPS}:${XML_USERGROUPS}:
+DEPENDSET.usergroups=transtable usergroups
+PARAMS.usergroups=	--param pagename "'FreeBSD User Groups'"
 
 # Subdirectories
 # XML
