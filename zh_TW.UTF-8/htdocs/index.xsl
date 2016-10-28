@@ -1,19 +1,18 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8" ?>
 <!DOCTYPE xsl:stylesheet PUBLIC "-//FreeBSD//DTD FreeBSD XSLT 1.0 DTD//EN"
-				"http://www.FreeBSD.org/XML/www/share/xml/xslt10-freebsd.dtd" [
+				"http://www.FreeBSD.org/XML/share/xml/xslt10-freebsd.dtd" [
 <!ENTITY title "The FreeBSD Project">
 ]>
 
-<!-- The FreeBSD Traditional Chinese Documentation Project -->
-<!-- Original revision: 1.158 -->
 <!-- $FreeBSD$ -->
+<!-- Original revision: r49485 -->
 
 <xsl:stylesheet version="1.0"
   xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
   xmlns="http://www.w3.org/1999/xhtml">
 
-  <xsl:import href="http://www.FreeBSD.org/XML/www/lang/share/xml/libcommon.xsl"/>
-  <xsl:import href="http://www.FreeBSD.org/XML/www/share/xml/xhtml.xsl"/>
+  <xsl:import href="http://www.FreeBSD.org/XML/lang/share/xml/libcommon.xsl"/>
+  <xsl:import href="http://www.FreeBSD.org/XML/share/xml/xhtml.xsl"/>
 
   <!-- these params should be externally bound. The values
        here are not used actually -->
@@ -26,8 +25,7 @@
   <xsl:param name="news.project.xml" select="'none'"/>
   <xsl:param name="events.xml-master" select="'none'"/>
   <xsl:param name="events.xml" select="'none'"/>
-
-  <xsl:variable name="svnKeyword">$FreeBSD$</xsl:variable>
+  <xsl:param name="html.header.script.google" select="'IGNORE'"/>
 
   <xsl:variable name="title">&title;</xsl:variable>
 
@@ -38,88 +36,119 @@
 
 		<div id="frontfeatureleft">
 			<div id="frontfeaturecontent">
-				<h1>
-				  Based on BSD &unix;
-				</h1>
-				<p>
-				  FreeBSD&reg; 是一種先進的作業系統，可支援
-				  x86 相容(包括 Pentium&reg; 和 Athlon&trade;)、
-				  amd64 相容(包括 Opteron&trade;、 Athlon&trade;64 和 EM64T)、
-				  UltraSPARC&reg;、 IA-64、 PC-98 以及 ARM 架構的電腦。
-				  其源自於 BSD， 由加州大學伯克利分校開發的 &unix; 版本。 目前由
-				  <a href="&enbase;/doc/en_US.ISO8859-1/articles/contributors/staff-committers.html">有許多人參與的開發團隊</a> 所維護。
-				  此外，對各種 <a href="&base;/platforms/">硬體平台</a> 的支援程度，
-				  也各自有所不同。
-				</p>
-				<div id="txtfrontfeaturelink">
-				&#187;<a href="&base;/about.html" title="參閱詳情">參閱詳情</a>
-				</div> <!-- TXTFRONTFEATURELINK -->
-			</div> <!-- FRONTFEATURECONTENT -->
-		</div> <!-- FRONTFEATURELEFT -->
+				<h1>The &os; Project</h1>
+
+				<p>&os; 是一個使用於現代伺服器，桌面與嵌入式平台 <a href="&base;/platforms/">platforms</a> 的先進作業系統。
+				  由一群龐大的 
+				  <a
+				  href="&base;/doc/en_US.ISO8859-1/articles/contributors/staff-committers.html">社群</a>
+				持續超過三十年的開發。
+				由於它先進的網路、安全性與儲存方面的特色使得
+				  &os; 成為許多
+				  <a href="&base;/doc/zh_TW.UTF-8/books/handbook/nutshell.html#introduction-nutshell-users">大規模網站</a>
+			以及最普遍的嵌入式網路與儲存裝置的平台選擇。 </p>
+
+                                  <div
+				  id="txtfrontfeaturelink"> &#187;<a
+				  href="&base;/about.html"
+				  title="Learn More">參閱詳情</a>
+				  </div> <!-- TXTFRONTFEATURELINK -->
+
+				  <div id="txtfrontjournalblock">
+				    <br/>&#187;
+				    <span
+				     id="txtfrontjournallink">
+				      立即取得 <a
+				       href="http://www.freebsdjournal.com/"
+				       title="&os;&nbsp;Journal">&os;&nbsp;Journal</a>
+				    </span> <!-- TXTFRONTJOURNALLINK -->
+				  </div> <!-- TXTFRONTJOURNALBLOCK -->
+
+				  <!-- IMPORTANT NOTICES -->
+				  <!--
+				  <div
+				    style="width:640px; margin: 16px 16px 16px 32px; auto">
+
+				    <h2>ANNOUNCEMENT: [header]</h2>
+
+				    <p align="justify">[text]</p>
+				  </div>
+				  -->
+				  <!-- END IMPORTANT NOTICES -->
+
+			  </div> <!-- FRONTFEATURECONTENT -->
+		  </div> <!-- FRONTFEATURELEFT -->
 
 		<div id="frontfeaturemiddle">
 			<div class="frontgetroundbox">
 			  <div class="frontgettop"><div><b style="display: none">.</b></div></div>
 				<div class="frontgetcontent">
-				  <a href="&base;/where.html">立即取得 FreeBSD</a>
+				  <a href="&base;/where.html">下載 &os;</a>
 				</div> <!-- frontgetcontent -->
 			  <div class="frontgetbot"><div><b style="display: none">.</b></div></div>
 			</div> <!-- frontgetroundbox -->
 
 			<div id="frontreleases">
 			  <div id="frontreleasescontent" class="txtshortcuts">
-				  <h2><a href="&enbase;/releases/"> 最新版本 </a></h2>
+				  <h2><a href="&base;/releases/">最新版本</a></h2>
 				  <ul id="frontreleaseslist">
-					<li>
-					  <a href="&enbase;/&u.rel.announce;">Production Release &rel.current;</a>
-					</li>
-					<li>
-					  <a href="&enbase;/&u.rel2.announce;">(舊式)Production Release &rel2.current;</a>
-					</li>
-			    <xsl:if test="'&beta.testing;' != 'IGNORE'">
-					<li>
-					  <a href="&base;/where.html#helptest">即將發佈
-				            &betarel.current; - &betarel.vers;</a>
-					</li>
+					<li>Production:&nbsp;<a
+				href="&u.rel.announce;">&rel.current;</a>,
+					<a
+				href="&u.rel0.announce;">&rel0.current;</a>,
+					<a
+				href="&u.rel1.announce;">&rel1.current;</a>,
+					<a
+				href="&u.rel2.announce;">&rel2.current;</a>,
+					<a
+				href="&u.rel3.announce;">&rel3.current;</a></li>
+			    <xsl:if test="'&beta.upcoming;' != 'IGNORE'">
+					<li>即將發佈: <a
+				href="&u.betarel.schedule;">&betarel.current;</a></li>
 			    </xsl:if>
-			    <xsl:if test="'&beta2.testing;' != 'IGNORE'">
-					<li>
-					  <a href="&base;/where.html#helptest">即將發佈
-				            &betarel2.current; - &betarel2.vers;</a>
-					</li>
+			    <xsl:if test="'&beta2.upcoming;' != 'IGNORE'">
+					<li>即將發佈: <a
+				href="&u.betarel2.schedule;">&betarel2.current;</a></li>
 			    </xsl:if>
+					<li><a href="&base;/security/security.html#sup">支援生命週期</a></li>
 				  </ul>
 			  </div> <!-- FRONTRELEASESCONTENT -->
 			</div> <!-- FRONTRELEASES -->
 		</div> <!-- FRONTFEATUREMIDDLE -->
 
 		<div id="frontfeatureright">
-			<h2 class="blockhide">語言</h2>
+			<h2 class="blockhide">語言連結</h2>
 			<div id="languagenav">
 				<ul id="languagenavlist">
 				  <li>
-					<a href="&enbase;/de/" title="德語">de</a>
+					<a href="&base;/de/" title="德語">de</a>
 				  </li>
 				  <li>
-					<a href="&enbase;/" title="英語">en</a>
+					<a href="&base;/" title="英語">en</a>
 				  </li>
 				  <li>
-					<a href="&enbase;/es/" title="西語">es</a>
+					<a href="&base;/es/" title="西語">es</a>
 				  </li>
 				  <li>
-					<a href="&enbase;/fr/" title="法語">fr</a>
+					<a href="&base;/fr/" title="法語">fr</a>
 				  </li>
 				  <li>
-					<a href="&enbase;/it/" title="義語">it</a>
+					<a href="&base;/hu/" title="匈牙利語">hu</a>
 				  </li>
 				  <li>
-					<a href="&enbase;/ja/" title="日語">ja</a>
+					<a href="&base;/it/" title="義語">it</a>
 				  </li>
 				  <li>
-					<a href="&enbase;/ru/" title="俄語">ru</a>
+					<a href="&base;/ja/" title="日語">ja</a>
+				  </li>
+				  <li>
+					<a href="&base;/nl/" title="荷語">nl</a>
+				  </li>
+				  <li>
+					<a href="&base;/ru/" title="俄語">ru</a>
 				  </li>
 				  <li class="last-child">
-					<a href="&enbase;/zh_CN/" title="中文(簡體)">zh_CN</a>
+					<a href="&base;/zh_CN/" title="中文 (簡體)">zh_CN</a>
 				  </li>
 				</ul>
 			</div> <!-- LANGUAGENAV -->
@@ -143,19 +172,19 @@
 				  <h2>常用連結</h2>
 				  <ul id="frontshortcutslist">
 					<li>
-					  <a href="&enbase;/community/mailinglists.html" title="郵件論壇">郵件論壇</a>
+					  <a href="&base;/community/mailinglists.html" title="Mailing Lists">郵件論壇</a>
 					</li>
 					<li>
-					  <a href="&base;/send-pr.html" title="報告 Bug">報告 Bug</a>
+					  <a href="&base;/support/bugreports.html" title="Reporting Problems">問題回報</a>
 					</li>
 					<li>
-					  <a href="&enbase;/doc/zh_TW.UTF-8/books/faq/index.html" title="FAQ">FAQ</a>
+					  <a href="&base;/doc/en_US.ISO8859-1/books/faq/index.html" title="FAQ">FAQ</a>
 					</li>
 					<li>
-					  <a href="&enbase;/doc/zh_TW.UTF-8/books/handbook/index.html" title="Handbook">Handbook</a>
+					  <a href="&base;/doc/zh_TW.UTF-8/books/handbook/index.html" title="Handbook">使用手冊</a>
 					</li>
 					<li>
-					  <a href="&enbase;/ports/index.html" title="Ports">Ports</a>
+					  <a href="&base;/ports/index.html" title="Ports">Ports</a>
 					</li>
 
 				  </ul>
@@ -165,7 +194,7 @@
 			<div class="frontnewroundbox">
 			  <div class="frontnewtop"><div><b style="display: none">.</b></div></div>
 			    <div class="frontnewcontent">
-			      <a href="&enbase;/projects/newbies.html">不熟悉 FreeBSD？</a>
+			      <a href="&base;/projects/newbies.html">不熟悉 FreeBSD?</a>
 			    </div> <!-- frontnewcontent -->
 			  <div class="frontnewbot"><div><b style="display: none">.</b></div></div>
 			</div> <!-- frontnewroundbox -->
@@ -177,7 +206,7 @@
             <div id="frontnemscontainer">
             	<div id="frontnews">
             	   <div id="frontnewscontent" class="txtnewsevent">
-			<h2>新聞</h2>
+			<h2>最新新聞</h2>
 			<div class="newseventswrap">
 
 			<xsl:call-template name="html-index-news-project-items">
@@ -191,7 +220,7 @@
 					<a href="&base;/news/newsflash.html" title="更多新聞">更多新聞</a>
 				  </li>
 				  <li class="last-child">
-					<a href="&base;/news/news.rdf" title="新聞 RSS Feed"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="新聞 RSS Feed" /></a>
+					<a href="&base;/news/rss.xml" title="新聞 RSS Feed"><img class="rssimage" src="&base;/layout/images/ico_rss.png" width="27" height="12" alt="News RSS Feed" /></a>
 				  </li>
 				</ul>
 			  </div> <!-- unnamed -->
@@ -214,7 +243,7 @@
 			  <div>
 				<ul class="newseventslist">
 				  <li class="only-child">
-					<a href="&enbase;/events/" title="更多活動">更多活動</a>
+					<a href="&base;/events/" title="更多活動">更多活動</a>
 				  </li>
 				</ul>
 			  </div> <!-- unnamed -->
@@ -260,10 +289,10 @@
 			  <div>
 				<ul class="newseventslist">
 				  <li class="first-child">
-					<a href="&base;/security/" title="更多安全公告">更多</a>
+					<a href="&base;/security/advisories.html" title="更多安全公告">更多</a>
 				  </li>
 				  <li class="last-child">
-					<a href="&enbase;/security/advisories.rdf" title="安全公告 RSS Feed"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="安全公告 RSS Feed" /></a>
+					<a href="&base;/security/rss.xml" title="安全公告 RSS Feed"><img class="rssimage" src="&base;/layout/images/ico_rss.png" width="27" height="12" alt="安全公告 RSS Feed" /></a>
 				  </li>
 				</ul>
 			  </div> <!-- unnamed -->
@@ -278,6 +307,16 @@
 				<xsl:with-param name="type" select="'notice'" />
 			</xsl:call-template>
 
+			  <div>
+			    	<ul class="newseventslist">
+				  <li class="first-child">
+				    <a href="&base;/security/notices.html" title="更多勘誤公告">更多</a>
+				  </li>
+				  <li class="last-child">
+				    <a href="&base;/security/errata.xml" title="勘誤公告 RSS Feed"><img class="rssimage" src="&base;/layout/images/ico_rss.png" width="27" height="12" alt="勘誤公告 RSS Feed" /></a>
+				  </li>
+				</ul>
+			  </div> <!-- unnamed -->
 			</div> <!-- newseventswrap -->
 
 		   </div> <!-- FRONTSECURITYCONTENT -->
@@ -288,5 +327,14 @@
             </div> <!-- FRONTNEMSCONTAINER -->
           </div> <!-- FRONTMAIN -->
         </div> <!-- FRONTCONTAINER -->
+  </xsl:template>
+
+  <xsl:template name="process.footer">
+	&copyright;
+
+	FreeBSD 標誌是 FreeBSD 基金會的註冊商標
+	由 <a
+	  href="https://www.freebsdfoundation.org/documents/Guidelines.shtml">FreeBSD 基金會</a> 授權 FreeBSD 計劃使用。
+	<a href="&base;/mailto.html" title="&header2.word.contact;">&header2.word.contact;</a>
   </xsl:template>
 </xsl:stylesheet>
