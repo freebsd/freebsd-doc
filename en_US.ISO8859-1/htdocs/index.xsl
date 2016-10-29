@@ -154,8 +154,11 @@
 				  <li>
 					<a href="&base;/ru/" title="Russian">ru</a>
 				  </li>
-				  <li class="last-child">
+				  <li>
 					<a href="&base;/zh_CN/" title="Chinese (Simplified)">zh_CN</a>
+				  </li>
+				  <li class="last-child">
+					<a href="&base;/zh_TW/" title="Chinese (Traditional)">zh_TW</a>
 				  </li>
 				</ul>
 			</div> <!-- LANGUAGENAV -->
