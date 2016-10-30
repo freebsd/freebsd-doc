@@ -121,34 +121,37 @@
 			<div id="languagenav">
 				<ul id="languagenavlist">
 				  <li>
-					<a href="&base;/de/" title="德語">de</a>
+					<a href="&enbase;/de/" title="德語">de</a>
 				  </li>
 				  <li>
-					<a href="&base;/" title="英語">en</a>
+					<a href="&enbase;/" title="英語">en</a>
 				  </li>
 				  <li>
-					<a href="&base;/es/" title="西語">es</a>
+					<a href="&enbase;/es/" title="西語">es</a>
 				  </li>
 				  <li>
-					<a href="&base;/fr/" title="法語">fr</a>
+					<a href="&enbase;/fr/" title="法語">fr</a>
 				  </li>
 				  <li>
-					<a href="&base;/hu/" title="匈牙利語">hu</a>
+					<a href="&enbase;/hu/" title="匈牙利語">hu</a>
 				  </li>
 				  <li>
-					<a href="&base;/it/" title="義語">it</a>
+					<a href="&enbase;/it/" title="義語">it</a>
 				  </li>
 				  <li>
-					<a href="&base;/ja/" title="日語">ja</a>
+					<a href="&enbase;/ja/" title="日語">ja</a>
 				  </li>
 				  <li>
-					<a href="&base;/nl/" title="荷語">nl</a>
+					<a href="&enbase;/nl/" title="荷語">nl</a>
 				  </li>
 				  <li>
-					<a href="&base;/ru/" title="俄語">ru</a>
+					<a href="&enbase;/ru/" title="俄語">ru</a>
+				  </li>
+				  <li>
+					<a href="&enbase;/zh_CN/" title="中文 (簡體)">zh_CN</a>
 				  </li>
 				  <li class="last-child">
-					<a href="&base;/zh_CN/" title="中文 (簡體)">zh_CN</a>
+					<a href="&enbase;/zh_TW/" title="中文 (繁體)">zh_TW</a>
 				  </li>
 				</ul>
 			</div> <!-- LANGUAGENAV -->
