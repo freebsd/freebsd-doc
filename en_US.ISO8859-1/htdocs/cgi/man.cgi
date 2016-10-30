@@ -1805,20 +1805,20 @@ This script has the revsion: $id
 Copyright (c) for man pages by OS vendors.
 <p/>
 <a href="ftp://ftp.2bsd.com">2.11 BSD</a>,
-<a href="http://www.hp.com">HP</a>,
+<a href="https://www.hp.com">HP</a>,
 <a href="https://www.freebsd.org">FreeBSD</a>,
-<a href="http://www.cs.vu.nl/~ast/minix.html">Minix</a>,
-<a href="http://www.netbsd.org">NetBSD</a>,
-<a href="http://www.openbsd.org">OpenBSD</a>,
+<a href="http://www.minix3.org">Minix</a>,
+<a href="https://www.netbsd.org">NetBSD</a>,
+<a href="https://www.openbsd.org">OpenBSD</a>,
 <a href="http://plan9.bell-labs.com/plan9/">Plan 9</a>,
-<a href="http://www.redhat.com">Red Hat</a>,
-<a href="http://slackware.com">Slackware Linux</a>,
-<a href="http://www.sun.com">SunOS</a>,
-<a href="http://www.suse.com">SuSE</a>,
+<a href="https://www.redhat.com">Red Hat</a>,
+<a href="https://www.slackware.com">Slackware Linux</a>,
+<a href="https://www.sun.com">SunOS</a>,
+<a href="https://www.suse.com">SuSE</a>,
 <a href="http://www.digital.com">ULTRIX</a>,
-<a href="ftp://elib.zib.de/pub/netlib/att/cs/v7man">Unix Seventh Edition</a>,
+<a href="http://www.plan9.bell-labs.com/7thEdMan/">Unix Seventh Edition</a>,
 <a href="http://www.xfree86.org">XFree86</a>,
-<a href="http://www.x.org">X11R6</a>
+<a href="https://www.x.org">X11R6</a>
 
 <h2>FAQ</h2>
 <ul>
