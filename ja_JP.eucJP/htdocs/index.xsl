@@ -5,7 +5,7 @@
 ]>
 
 <!-- $FreeBSD$ -->
-<!-- Original revision: r49485 -->
+<!-- Original revision: r49606 -->
 
 <xsl:stylesheet version="1.0"
   xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
@@ -153,8 +153,11 @@
 			  <li>
 			    <a href="&enbase;/ru/" title="ロシア語">ru</a>
 			  </li>
-			  <li class="last-child">
+			  <li>
 			    <a href="&enbase;/zh_CN/" title="中国語 (簡体字)">zh_CN</a>
+			  </li>
+			  <li class="last-child">
+			    <a href="&enbase;/zh_TW/" title="中国語 (繁体字)">zh_CN</a>
 			  </li>
 			</ul>
 		      </div> <!-- LANGUAGENAV -->
