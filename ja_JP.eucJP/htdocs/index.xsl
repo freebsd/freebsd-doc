@@ -157,7 +157,7 @@
 			    <a href="&enbase;/zh_CN/" title="中国語 (簡体字)">zh_CN</a>
 			  </li>
 			  <li class="last-child">
-			    <a href="&enbase;/zh_TW/" title="中国語 (繁体字)">zh_CN</a>
+			    <a href="&enbase;/zh_TW/" title="中国語 (繁体字)">zh_TW</a>
 			  </li>
 			</ul>
 		      </div> <!-- LANGUAGENAV -->
