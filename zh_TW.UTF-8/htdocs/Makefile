@@ -38,7 +38,7 @@ SUBDIR+=	doc
 .endif
 
 # Non-XML
-SUBDIR+= layout
+#SUBDIR+= layout
 
 WEBDIR?=	data/zh_TW
 
