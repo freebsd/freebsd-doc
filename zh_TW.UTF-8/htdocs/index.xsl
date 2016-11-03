@@ -36,16 +36,16 @@
 
 		<div id="frontfeatureleft">
 			<div id="frontfeaturecontent">
-				<h1>The &os; Project</h1>
+				<h1> &os; 計劃</h1>
 
-				<p>&os; 是一個使用於現代伺服器，桌面與嵌入式平台 <a href="&base;/platforms/">platforms</a> 的先進作業系統。
+				<p>&os; 是一個使用於現代伺服器，桌面與嵌入式 <a href="&enbase;/platforms/">平台</a> 的先進作業系統。
 				  由一群龐大的 
 				  <a
-				  href="&base;/doc/en_US.ISO8859-1/articles/contributors/staff-committers.html">社群</a>
+				  href="&enbase;/doc/en_US.ISO8859-1/articles/contributors/staff-committers.html">社群</a>
 				持續超過三十年的開發。
 				由於它先進的網路、安全性與儲存方面的特色使得
 				  &os; 成為許多
-				  <a href="&base;/doc/zh_TW.UTF-8/books/handbook/nutshell.html#introduction-nutshell-users">大規模網站</a>
+				  <a href="&enbase;/doc/zh_TW.UTF-8/books/handbook/nutshell.html#introduction-nutshell-users">大型網站</a>
 			以及最普遍的嵌入式網路與儲存裝置的平台選擇。 </p>
 
                                   <div
@@ -175,19 +175,19 @@
 				  <h2>常用連結</h2>
 				  <ul id="frontshortcutslist">
 					<li>
-					  <a href="&base;/community/mailinglists.html" title="Mailing Lists">郵件論壇</a>
+					  <a href="&enbase;/community/mailinglists.html" title="Mailing Lists">郵件論壇</a>
 					</li>
 					<li>
-					  <a href="&base;/support/bugreports.html" title="Reporting Problems">問題回報</a>
+					  <a href="&enbase;/support/bugreports.html" title="Reporting Problems">問題回報</a>
 					</li>
 					<li>
-					  <a href="&base;/doc/en_US.ISO8859-1/books/faq/index.html" title="FAQ">FAQ</a>
+					  <a href="&enbase;/doc/en_US.ISO8859-1/books/faq/index.html" title="FAQ">FAQ</a>
 					</li>
 					<li>
-					  <a href="&base;/doc/zh_TW.UTF-8/books/handbook/index.html" title="Handbook">使用手冊</a>
+					  <a href="&enbase;/doc/zh_TW.UTF-8/books/handbook/index.html" title="Handbook">使用手冊</a>
 					</li>
 					<li>
-					  <a href="&base;/ports/index.html" title="Ports">Ports</a>
+					  <a href="&enbase;/ports/index.html" title="Ports">Ports</a>
 					</li>
 
 				  </ul>
@@ -223,7 +223,7 @@
 					<a href="&base;/news/newsflash.html" title="更多新聞">更多新聞</a>
 				  </li>
 				  <li class="last-child">
-					<a href="&base;/news/rss.xml" title="新聞 RSS Feed"><img class="rssimage" src="&base;/layout/images/ico_rss.png" width="27" height="12" alt="News RSS Feed" /></a>
+					<a href="&enbase;/news/rss.xml" title="新聞 RSS Feed"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="新聞 RSS Feed" /></a>
 				  </li>
 				</ul>
 			  </div> <!-- unnamed -->
@@ -246,7 +246,7 @@
 			  <div>
 				<ul class="newseventslist">
 				  <li class="only-child">
-					<a href="&base;/events/" title="更多活動">更多活動</a>
+					<a href="&enbase;/events/" title="更多活動">更多活動</a>
 				  </li>
 				</ul>
 			  </div> <!-- unnamed -->
@@ -269,7 +269,7 @@
 			  <div>
 				<ul class="newseventslist">
 				  <li class="only-child">
-					<a href="&base;/news/press.html" title="更多媒體報導">更多媒體報導</a>
+					<a href="&enbase;/news/press.html" title="更多媒體報導">更多媒體報導</a>
 				  </li>
 				</ul>
 			  </div> <!-- unnamed -->
@@ -292,10 +292,10 @@
 			  <div>
 				<ul class="newseventslist">
 				  <li class="first-child">
-					<a href="&base;/security/advisories.html" title="更多安全公告">更多</a>
+					<a href="&enbase;/security/advisories.html" title="更多安全公告">更多</a>
 				  </li>
 				  <li class="last-child">
-					<a href="&base;/security/rss.xml" title="安全公告 RSS Feed"><img class="rssimage" src="&base;/layout/images/ico_rss.png" width="27" height="12" alt="安全公告 RSS Feed" /></a>
+					<a href="&base;/security/rss.xml" title="安全公告 RSS Feed"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="安全公告 RSS Feed" /></a>
 				  </li>
 				</ul>
 			  </div> <!-- unnamed -->
@@ -313,10 +313,10 @@
 			  <div>
 			    	<ul class="newseventslist">
 				  <li class="first-child">
-				    <a href="&base;/security/notices.html" title="更多勘誤公告">更多</a>
+				    <a href="&enbase;/security/notices.html" title="更多勘誤公告">更多</a>
 				  </li>
 				  <li class="last-child">
-				    <a href="&base;/security/errata.xml" title="勘誤公告 RSS Feed"><img class="rssimage" src="&base;/layout/images/ico_rss.png" width="27" height="12" alt="勘誤公告 RSS Feed" /></a>
+				    <a href="&enbase;/security/errata.xml" title="勘誤公告 RSS Feed"><img class="rssimage" src="&enbase;/layout/images/ico_rss.png" width="27" height="12" alt="勘誤公告 RSS Feed" /></a>
 				  </li>
 				</ul>
 			  </div> <!-- unnamed -->
@@ -338,6 +338,6 @@
 	FreeBSD 標誌是 FreeBSD 基金會的註冊商標
 	由 <a
 	  href="https://www.freebsdfoundation.org/documents/Guidelines.shtml">FreeBSD 基金會</a> 授權 FreeBSD 計劃使用。
-	<a href="&base;/mailto.html" title="&header2.word.contact;">&header2.word.contact;</a>
+	<a href="&enbase;/mailto.html" title="&header2.word.contact;">&header2.word.contact;</a>
   </xsl:template>
 </xsl:stylesheet>
