@@ -6,7 +6,7 @@
 <!--
      $FreeBSD$
      $FreeBSDde$
-     basiert auf: 49485
+     basiert auf: 49606
 -->
 
 <xsl:stylesheet version="1.0"
@@ -141,9 +141,12 @@
 				  <li>
 					<a href="&enbase;/ru/" title="Russisch">ru</a>
 				  </li>
-				  <li class="last-child">
+				  <li>
 					<a href="&enbase;/zh_CN/" title="Chinesisch (vereinfacht)">zh_CN</a>
 				  </li>
+				  <li class="last-child">
+					<a href="&enbase;/zh_TW/" title="Chinesisch (traditionell)">zh_TW</a>
+				  </li>				  
 				</ul>
 			</div> <!-- LANGUAGENAV -->
 
