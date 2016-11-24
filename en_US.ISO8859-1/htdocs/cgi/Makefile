@@ -12,6 +12,7 @@ DATA+=	cgi-lib.pl
 DATA+=	cgi-style.pl
 
 CGI=
+CGI+=	fingerprints.cgi
 CGI+=	getmsg.cgi
 CGI+=	mailindex.cgi
 CGI+=	man.cgi
